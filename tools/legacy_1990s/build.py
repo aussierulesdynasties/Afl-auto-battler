@@ -32,7 +32,7 @@ import sys
 from collections import defaultdict
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from fetch import DG, cache_path, club_slugs, wiki_draft_url  # noqa: E402
+from fetch import DG, GROUND_ARTICLES, PRE_SEASONS, cache_path, club_slugs, wiki_draft_url  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 OUT = os.path.join(ROOT, "data", "legacy", "1990s")
@@ -116,8 +116,12 @@ def split_name(full: str) -> tuple[str, str]:
 
 
 def write(name: str, fields: list[str], rows: list[dict]) -> None:
-    os.makedirs(OUT, exist_ok=True)
-    with open(os.path.join(OUT, name), "w", newline="", encoding="utf-8") as fh:
+    write_to(OUT, name, fields, rows)
+
+
+def write_to(folder: str, name: str, fields: list[str], rows: list[dict]) -> None:
+    os.makedirs(folder, exist_ok=True)
+    with open(os.path.join(folder, name), "w", newline="", encoding="utf-8") as fh:
         w = csv.DictWriter(fh, fieldnames=fields, lineterminator="\n")
         w.writeheader()
         for r in rows:
@@ -383,7 +387,7 @@ def build_lists(cache: str) -> list[dict]:
 
 def build_season_stats(cache: str) -> list[dict]:
     rows = []
-    for y in SEASONS:
+    for y in list(PRE_SEASONS) + list(SEASONS):
         for r in parse_afltables_season(read(cache, f"https://afltables.com/afl/stats/{y}.html"), y):
             r["year"] = y
             r["source_url"] = f"https://afltables.com/afl/stats/{y}.html"
@@ -683,8 +687,9 @@ def afltables_finals(cache: str, y: int) -> dict:
 
 
 def build_ladders(cache: str) -> list[dict]:
+    """1989 too: its ladder set the order of the drafts that fed the 1990 lists."""
     rows = []
-    for y in SEASONS:
+    for y in [FIRST_SEASON - 1] + list(SEASONS):
         st = json.loads(read(cache, f"https://api.squiggle.com.au/?q=standings;year={y}") or "{}")
         sq = {}
         for s in st.get("standings", []):
@@ -712,18 +717,453 @@ def build_ladders(cache: str) -> list[dict]:
     return rows
 
 
+# ------------------------------------------------------------ the 1990 start
+#
+# What a career that starts in 1990 needs beyond the season files: each 1990
+# player's games before 1990, the lists as they stood at the start of 1990, the
+# 1990 coaches and captains, the era's rules and its grounds by name.
+
+LEGACY = os.path.dirname(OUT)
+WIKI = "https://en.wikipedia.org/wiki/"
+FIRST_SEASON = 1990
+
+
+def parse_bio_seasons(body: str) -> list[dict]:
+    """Season-by-season rows (home-and-away and finals together) from the first
+    table of an AFL Tables player page: year, team, jumper, games, goals."""
+    m = re.search(r'<table class="sortable".*?</table>', body, re.S)
+    out = []
+    for tr in re.findall(r"<tr>(.*?)</tr>", m.group(0) if m else "", re.S):
+        year = re.search(r'href="\.\./\.\./(\d{4})\.html', tr)
+        team = re.search(r'teams/([a-z]+)_idx\.html">([^<]+)</a>', tr)
+        if not year or not team:
+            continue
+        cells = [text(c) for c in re.findall(r"<td[^>]*>(.*?)</td>", tr, re.S)]
+        # Year, Team, #, GM, W-D-L, KI, MK, HB, DI, GL, ...
+        y = int(year.group(1))
+        out.append({"year": y, "club": at_code(team.group(1), y), "team": team.group(2), "num": cells[2],
+                    "games": cells[3] or "0", "goals": cells[9] or "0"})
+    return out
+
+
+def first_season_ids(cache: str, lists: list[dict]) -> dict[int, str]:
+    """AFL Tables id for every 1990 list row: from the 1990 stats match the
+    lists build made, else the same club, surname and first name (or jumper) in
+    the 1987-89 stats, for a player who did not play in 1990."""
+    pre = [r for y in PRE_SEASONS
+           for r in parse_afltables_season(read(cache, f"https://afltables.com/afl/stats/{y}.html"), y)]
+    ids = {}
+    for i, r in enumerate(lists):
+        if int(r["year"]) != FIRST_SEASON:
+            continue
+        if r.get("afltables_id"):
+            ids[i] = r["afltables_id"]
+            continue
+        cand = {a["afltables_id"] for a in pre if base(a["club"]) == base(r["club"])
+                and norm(a["last"]) == norm(r["last"]) and norm(a["first"]) == norm(r["first"])}
+        if len(cand) == 1:
+            ids[i] = cand.pop()
+    return ids
+
+
+def build_pre_careers(cache: str, lists: list[dict], ids: dict[int, str]) -> list[dict]:
+    rows = []
+    for i, aid in sorted(ids.items(), key=lambda kv: kv[1]):
+        r = lists[i]
+        url = "https://afltables.com/afl/stats/" + aid
+        for s in parse_bio_seasons(read(cache, url)):
+            if s["year"] >= FIRST_SEASON:
+                continue
+            rows.append({"afltables_id": aid, "first": r["first"], "last": r["last"], "year": s["year"],
+                         "club": s["club"], "team": s["team"], "num": s["num"], "games": s["games"],
+                         "goals": s["goals"], "source_url": url, "checked": CHECKED})
+    # One row per player-season-team, once even if two 1990 list rows share a bio.
+    seen, out = set(), []
+    for r in rows:
+        k = (r["afltables_id"], r["year"], r["team"])
+        if k not in seen:
+            seen.add(k)
+            out.append(r)
+    return out
+
+
+def build_opening_lists(cache: str, lists: list[dict], drafts: list[dict], ids: dict[int, str],
+                        careers: list[dict]) -> list[dict]:
+    """The 1990 lists as they stood before the season: Draftguru's 1990 lists
+    hold everyone listed during the season, so the 1990 mid-season draftees
+    (Draftguru's draft year 1989, "Mid-Season") come off.
+
+    games_before is the player's VFL games before 1990, from his AFL Tables
+    page. A player with no AFL Tables match who joined in 1986 or later and is
+    in none of the 1987-89 stats under his name played no VFL game before 1990
+    (0, said in before_from); anyone else without a match stays blank."""
+    pre_names = {(norm(a["first"]), norm(a["last"])) for y in PRE_SEASONS
+                 for a in parse_afltables_season(read(cache, f"https://afltables.com/afl/stats/{y}.html"), y)}
+    mid = {d["draftguru_id"] for d in drafts
+           if int(d["year"]) == FIRST_SEASON - 1 and d["draft"] == "mid_season" and d["draftguru_id"]}
+    before = defaultdict(lambda: [0, 0])
+    for c in careers:
+        before[c["afltables_id"]][0] += int(c["games"] or 0)
+        before[c["afltables_id"]][1] += int(c["goals"] or 0)
+    out = []
+    for i, r in enumerate(lists):
+        if int(r["year"]) != FIRST_SEASON or r["draftguru_id"] in mid:
+            continue
+        aid = ids.get(i, "")
+        g = before.get(aid)
+        if aid:
+            how = "afltables"
+            g = g or [0, 0]
+        elif (r.get("joined_year") and int(r["joined_year"]) >= 1986
+              and (norm(r["first"]), norm(r["last"])) not in pre_names):
+            how, g = "none_1987_89_joined_1986_on", [0, 0]
+        else:
+            how, g = "", None
+        out.append({
+            "club": r["club"], "num": r["num"], "first": r["first"], "last": r["last"], "list": r["list"],
+            "dob": r["dob"], "height_cm": r["height_cm"], "weight_kg": r.get("weight_kg", ""),
+            "games_before": g[0] if g else "", "goals_before": g[1] if g else "", "before_from": how,
+            "games_1990": r["games"], "goals_1990": r["goals"],
+            "joined_how": r.get("joined_how", ""), "joined_year": r.get("joined_year", ""),
+            "joined_from": r.get("joined_from", ""), "origin": r["origin"],
+            "draftguru_id": r["draftguru_id"], "afltables_id": aid,
+            "source_url": r["source_url"] + (" | https://afltables.com/afl/stats/" + aid if aid else ""),
+            "checked": CHECKED,
+        })
+    return out, len(mid)
+
+
+def fill_heights(cache: str, lists: list[dict]) -> None:
+    """A height Draftguru leaves blank, from the player's AFL Tables page."""
+    bio_cache: dict[str, dict] = {}
+    for r in lists:
+        if r["height_cm"]:
+            r["height_from"] = "draftguru"
+            continue
+        aid = r.get("afltables_id")
+        if not aid:
+            continue
+        if aid not in bio_cache:
+            bio_cache[aid] = parse_bio(read(cache, "https://afltables.com/afl/stats/" + aid))
+        if bio_cache[aid]["height"]:
+            r["height_cm"] = bio_cache[aid]["height"]
+            r["height_from"] = "afltables"
+
+
+def wiki_text(cache: str, page: str) -> str:
+    body = read(cache, WIKI + page)
+    body = re.sub(r"<style.*?</style>|<script.*?</script>", "", body, flags=re.S)
+    return body
+
+
+def table_rows(fragment: str) -> list[list[str]]:
+    # Split at each row's start: AFL Tables leaves some header rows unclosed.
+    return [[text(c) for c in re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", tr, re.S)]
+            for tr in re.split(r"<tr[^>]*>", fragment)[1:]]
+
+
+def leadership_1990(cache: str) -> list[tuple[str, str, str]]:
+    """(club code, coaches cell, leadership cell) from the "Club leadership"
+    table of Wikipedia's 1990 AFL season page."""
+    body = wiki_text(cache, "1990_AFL_season")
+    i = body.find('id="Club_leadership"')
+    seg = re.search(r"<table.*?</table>", body[i:], re.S) if i >= 0 else None
+    out = []
+    for cells in table_rows(seg.group(0) if seg else ""):
+        code = club_code(cells[0], FIRST_SEASON) if cells else ""
+        if code and len(cells) >= 6:
+            out.append((code, cells[1], cells[5]))
+    return out
+
+
+def roles(cell: str) -> list[tuple[str, str]]:
+    """'Tony Shaw (captain) Peter Daicos (v/captain) A, B (deputy v/captains)'
+    -> [(name, role)], one per person."""
+    out = []
+    for names, role in re.findall(r"\s*([^()]+?)\s*\(([^)]+)\)", cell):
+        for n in re.split(r",\s*| and ", names):
+            if n.strip():
+                out.append((n.strip(), role.strip()))
+    return out
+
+
+ROLE = {"senior": "senior", "reserves": "reserves", "under 19s": "under_19s",
+        "reserves & under 19s": "reserves_and_under_19s", "captain": "captain",
+        "v/captain": "vice_captain", "deputy v/c": "deputy_vice_captain",
+        "deputy v/captains": "deputy_vice_captain"}
+COACH_PAGE = {"BRB": "brisbaneb", "CAR": "carlton", "COL": "collingwood", "ESS": "essendon",
+              "FIT": "fitzroy", "FOO": "bullldogs", "GEE": "geelong", "HAW": "hawthorn",
+              "MEL": "melbourne", "NTH": "kangaroos", "RIC": "richmond", "STK": "stkilda",
+              "SYD": "swans", "WCE": "westcoast"}
+
+
+def afltables_coaches(cache: str, code: str) -> list[tuple[str, int, int]]:
+    """[(coach 'First Last', first season, last season)] from AFL Tables' club coaches page."""
+    body = read(cache, f"https://afltables.com/afl/stats/coaches/{COACH_PAGE[code]}.html")
+    out = []
+    for cells in table_rows(body):
+        if len(cells) > 2 and ", " in cells[0]:
+            m = re.match(r"(\d{4})(?:-(\d{4}))?$", cells[1])
+            if m:
+                last, _, first = cells[0].partition(", ")
+                out.append((f"{first} {last}", int(m.group(1)), int(m.group(2) or m.group(1))))
+    return out
+
+
+def build_coaches(cache: str) -> list[dict]:
+    rows = []
+    src = WIKI + "1990_AFL_season#Club_leadership"
+    for code, coaches, _ in leadership_1990(cache):
+        at = [(n, a, b) for n, a, b in afltables_coaches(cache, code) if a <= FIRST_SEASON <= b]
+        for name, role in roles(coaches):
+            r = ROLE.get(role.lower(), role.lower())
+            note = ""
+            if r == "senior":
+                # AFL Tables gives each coach's first and last season at the
+                # club, so a span is checked by surname (Col/Colin, Mick/Michael).
+                surname = norm(name.split(" ", 1)[-1])
+                hit = [n for n, _, _ in at if norm(n.split(" ", 1)[-1]) == surname]
+                others = [f"{n} {a}-{b}" for n, a, b in at if norm(n.split(" ", 1)[-1]) != surname]
+                note = ("NOT on AFL Tables' coaches for 1990" if not hit
+                        else "AFL Tables: coached the club across 1990")
+                if others:
+                    note += "; AFL Tables spans that also cover 1990: " + ", ".join(others)
+            rows.append({"club": code, "role": r, "name": name, "note": note,
+                         "source_url": src + (f" | https://afltables.com/afl/stats/coaches/{COACH_PAGE[code]}.html"
+                                              if r == "senior" else ""),
+                         "checked": CHECKED})
+    return rows
+
+
+def build_captains(cache: str, opening: list[dict]) -> list[dict]:
+    rows = []
+    for code, _, leaders in leadership_1990(cache):
+        for name, role in roles(leaders):
+            first, last = split_name(name)
+            on = [o for o in opening if o["club"] == code and norm(o["last"]) == norm(last)
+                  and norm(o["first"])[:3] == norm(first)[:3]]
+            rows.append({"club": code, "role": ROLE.get(role.lower(), role.lower()), "first": first, "last": last,
+                         "draftguru_id": on[0]["draftguru_id"] if len(on) == 1 else "",
+                         "source_url": WIKI + "1990_AFL_season#Club_leadership", "checked": CHECKED})
+    return rows
+
+
+# Era rules. Every value is a statement on the page quoted beside it, checked by
+# hand on CHECKED; a year no statement covers stays out (the game decides what
+# a missing year means). from_year..to_year is the span the statement covers.
+ERA_RULES = [
+    # rule, value, from, to, source page, the words that say it
+    ("salary_cap", 1250000, 1987, 1989, "AFL_salary_cap",
+     "The cap was set at some number A$ 1.25 million ... for 1987-1989 as per VFL agreement"),
+    ("salary_floor", 1125000, 1987, 1989, "AFL_salary_cap",
+     "with the salary floor set at 90% of the cap or $1.125 million"),
+    ("salary_cap", 1600000, 1991, 1991, "Australian_Football_League",
+     "Evolution of competition table: 1991 Victoria South Australia West Australia New South Wales Queensland $1,600,000"),
+    ("salary_cap", 9130000, 2013, 2013, "Australian_Football_League",
+     "this was $9,130,000 for the 2013 season with a salary floor of $8,673,500"),
+    ("salary_floor", 8673500, 2013, 2013, "Australian_Football_League",
+     "this was $9,130,000 for the 2013 season with a salary floor of $8,673,500"),
+    ("salary_cap", 10070000, 2015, 2015, "Australian_Football_League",
+     "increasing from $9.92m to $10.07m in 2015 and $10.22m to $10.37m in 2016"),
+    ("salary_cap", 10370000, 2016, 2016, "Australian_Football_League",
+     "increasing from $9.92m to $10.07m in 2015 and $10.22m to $10.37m in 2016"),
+    ("salary_cap", 13540000, 2022, 2022, "AFL_salary_cap",
+     "was A$13,540,000 for the 2022 season, with a salary floor of $12,863,000"),
+    ("salary_floor", 12863000, 2022, 2022, "AFL_salary_cap",
+     "was A$13,540,000 for the 2022 season, with a salary floor of $12,863,000"),
+    ("salary_cap", 15022778, 2023, 2023, "AFL_salary_cap",
+     "the aggregate Total Player Payment (TPP) figure was set in 2023 at $15,022,778"),
+    ("salary_floor_pct", 90, 1987, 2000, "AFL_salary_cap",
+     "salary floor set at 90% of the cap ... increased to 92.5% of the cap in 2001"),
+    ("salary_floor_pct", 92.5, 2001, 2012, "AFL_salary_cap",
+     "the salary floor was increased to 92.5% of the cap in 2001, and to 95% of the cap for 2013 onwards"),
+    ("salary_floor_pct", 95, 2013, 2026, "AFL_salary_cap", "and to 95% of the cap for 2013 onwards"),
+    ("senior_list_max", 52, 1993, 1993, "Rookie_list",
+     "the reduction in size of AFL lists from 52 to 42 players in 1994"),
+    ("senior_list_max", 42, 1994, 1994, "Rookie_list",
+     "the reduction in size of AFL lists from 52 to 42 players in 1994"),
+    ("rookie_list", 1, 1997, 2026, "Rookie_list", "The rookie list was established in 1997"),
+    ("interchange", 2, 1978, 1993, "Interchange_(Australian_rules_football)",
+     "1978 - the replacement of two substitutes with two interchanges; 1994 - the introduction of a third interchange"),
+    ("interchange", 3, 1994, 1997, "Interchange_(Australian_rules_football)",
+     "1994 - the introduction of a third interchange; 1998 - the introduction of a fourth interchange"),
+    ("interchange", 4, 1998, 2010, "Interchange_(Australian_rules_football)",
+     "1998 - the introduction of a fourth interchange; 2011 - ... three interchanges and a substitute"),
+    ("interchange", 3, 2011, 2015, "Interchange_(Australian_rules_football)",
+     "Between 2011 and 2015, there were three interchange players and one substitute"),
+    ("substitutes", 1, 2011, 2015, "Interchange_(Australian_rules_football)",
+     "Between 2011 and 2015, there were three interchange players and one substitute"),
+    ("interchange", 4, 2016, 2025, "Interchange_(Australian_rules_football)",
+     "2016 - the return to four interchanges without a substitute ... 2026 - ... a fifth interchange player"),
+    ("substitutes", 0, 2016, 2020, "Interchange_(Australian_rules_football)",
+     "There were no substitutes between 2016 and 2020"),
+    ("substitutes", 1, 2021, 2025, "Interchange_(Australian_rules_football)",
+     "2021 - ... a medical substitute as a fifth bench player ... 2026 - removal of the substitute"),
+    ("interchange", 5, 2026, 2026, "Interchange_(Australian_rules_football)",
+     "each team is permitted five interchange players, and a maximum of seventy-five total player interchanges"),
+    ("substitutes", 0, 2026, 2026, "Interchange_(Australian_rules_football)",
+     "2026 - removal of the substitute and introduction of a fifth interchange player"),
+    ("interchange_cap", 120, 2014, 2015, "Interchange_(Australian_rules_football)",
+     "2014 - the addition of an interchange cap, limiting teams to 120 interchanges per game"),
+    ("interchange_cap", 90, 2016, 2020, "Interchange_(Australian_rules_football)",
+     "2016 - ... reduction of the interchange cap to 90 per game"),
+    ("interchange_cap", 75, 2021, 2026, "Interchange_(Australian_rules_football)",
+     "2021 - the reduction of the interchange cap to 75 a game"),
+]
+
+
+def page_has(cache: str, page: str, words: str) -> bool:
+    """Every part of the quote ('...' or ';' between parts) is on the cached
+    page, comparing letters and digits only (so a dash or spacing never matters)."""
+    def squash(s: str) -> str:
+        return re.sub(r"[^a-z0-9]", "", s.lower())
+    page_text = squash(text(wiki_text(cache, page)))
+    parts = [re.sub(r"^(Evolution of competition table: |\d{4} - )", "", f)
+             for f in re.split(r"\s*\.\.\.\s*|;\s*", words) if f.strip()]
+    return all(squash(p)[:60] in page_text for p in parts)
+
+
+def build_era_rules(cache: str) -> list[dict]:
+    """Each rule's words must still be on its cached page (checked here, so a
+    stale quote fails the build rather than the data)."""
+    rows = []
+    for rule, value, a, b, page, words in ERA_RULES:
+        if not page_has(cache, page, words):
+            raise SystemExit(f"era rule {rule} {a}-{b}: '{words}' not found on {page}")
+        rows.append({"rule": rule, "value": value, "from_year": a, "to_year": b, "quote": words,
+                     "source_url": WIKI + page, "checked": CHECKED})
+    return rows
+
+
+# A ground's name in each season: the name it carried through that season's
+# home-and-away rounds (a change made during a season counts from the next).
+# Blank from_year: the ground's name before the first rename; blank to_year:
+# still the name. Each row quotes the page that says it, and the build checks
+# the words are still there. The ground key is AFL Tables' venue page.
+GROUND_NAMES = [
+    ("docklands", "Colonial Stadium", 2000, 2002, "Docklands_Stadium", "Colonial Stadium (2000–2002)"),
+    ("docklands", "Telstra Dome", 2003, 2008, "Docklands_Stadium",
+     "the stadium's name was changed to Telstra Dome in October 2002"),
+    ("docklands", "Etihad Stadium", 2009, 2018, "Docklands_Stadium",
+     "In March 2009, the naming rights transferred to Etihad Airways"),
+    ("docklands", "Marvel Stadium", 2019, None, "Docklands_Stadium",
+     "In September 2018, the stadium was renamed Marvel Stadium"),
+    ("kardinia_park", "Kardinia Park", None, 1998, "Kardinia_Park_(stadium)",
+     "Naming rights sponsors [ edit ] 1999–2001: Shell"),
+    ("kardinia_park", "Shell Stadium", 1999, 2001, "Kardinia_Park_(stadium)", "1999–2001: Shell 2002: Baytec"),
+    ("kardinia_park", "Baytec Stadium", 2002, 2002, "Kardinia_Park_(stadium)", "2002: Baytec 2002–11: Skilled"),
+    ("kardinia_park", "Skilled Stadium", 2003, 2011, "Kardinia_Park_(stadium)", "2002–11: Skilled 2012–17: Simonds"),
+    ("kardinia_park", "Simonds Stadium", 2012, 2017, "Kardinia_Park_(stadium)",
+     "2012–17: Simonds 2018–present: GMHBA"),
+    ("kardinia_park", "GMHBA Stadium", 2018, None, "Kardinia_Park_(stadium)",
+     "Since January 2018, the stadium has been commercially named GMHBA Stadium"),
+    ("football_park", "Football Park", None, 2001, "Football_Park",
+     "known under naming rights as AAMI Stadium from 2002"),
+    ("football_park", "AAMI Stadium", 2002, 2013, "Football_Park",
+     "From 1991 until 2013, the stadium (known under naming rights as AAMI Stadium from 2002)"),
+    ("subiaco", "Subiaco Oval", None, 2010, "Subiaco_Oval",
+     "Under naming rights the stadium was known as Patersons Stadium (2011–2014)"),
+    ("subiaco", "Patersons Stadium", 2011, 2014, "Subiaco_Oval",
+     "the stadium was known as Patersons Stadium (2011–2014) and Domain Stadium (2015–2017)"),
+    ("subiaco", "Domain Stadium", 2015, 2017, "Subiaco_Oval",
+     "the stadium was known as Patersons Stadium (2011–2014) and Domain Stadium (2015–2017)"),
+    ("princes_park", "Princes Park", None, 1993, "Princes_Park_(stadium)",
+     "The ground became known as Optus Oval in November 1993"),
+    ("princes_park", "Optus Oval", 1994, 2006, "Princes_Park_(stadium)", "Optus Oval (1994–2006)"),
+    ("princes_park", "MC Labour Park", 2007, 2008, "Princes_Park_(stadium)", "MC Labour Park (2007–2008)"),
+    ("princes_park", "Visy Park", 2009, 2014, "Princes_Park_(stadium)", "Visy Park (2009–2015)"),
+    ("princes_park", "Ikon Park", 2015, None, "Princes_Park_(stadium)",
+     "Since 2015, the ground has been commercially been known as Ikon Park"),
+    ("western_oval", "Western Oval", None, 1994, "Whitten_Oval",
+     "Formerly known as the Western Oval , the venue was renamed in 1995"),
+    ("western_oval", "Whitten Oval", 1995, None, "Whitten_Oval", "In 1995, the oval was renamed the Whitten Oval"),
+    ("waverley_park", "VFL Park", 1970, 1989, "Waverley_Park", "VFL Park (1970–1989)"),
+    ("waverley_park", "AFL Park", 1990, 1999, "Waverley_Park", "AFL Park (1990–1999)"),
+    ("stadium_australia", "Stadium Australia", 1999, 2001, "Stadium_Australia",
+     "The stadium lacked a naming rights sponsor in its formative years, bearing the name Stadium Australia"),
+    ("stadium_australia", "Telstra Stadium", 2002, 2007, "Stadium_Australia", "Telstra Stadium (2002–2007)"),
+    ("stadium_australia", "ANZ Stadium", 2008, 2020, "Stadium_Australia", "ANZ Stadium (2008–2020)"),
+    ("stadium_australia", "Stadium Australia", 2021, 2021, "Stadium_Australia",
+     "In December 2020, ANZ's naming rights to the stadium expired and it reverted to being Stadium Australia"),
+    ("stadium_australia", "Accor Stadium", 2022, None, "Stadium_Australia",
+     "In November 2021, French multinational hospitality company Accor acquired the rights"),
+    ("carrara", "Carrara Stadium", 1987, 2010, "Carrara_Stadium",
+     "bearing the names Carrara Stadium and Gold Coast Stadium between its opening in 1987 and 2011"),
+    ("carrara", "Metricon Stadium", 2011, 2022, "Carrara_Stadium", "to be known henceforth as Metricon Stadium"),
+    ("carrara", "Heritage Bank Stadium", 2023, 2023, "Carrara_Stadium",
+     "In 2023 the stadium was renamed Heritage Bank Stadium"),
+    ("carrara", "People First Stadium", 2024, None, "Carrara_Stadium",
+     "the stadium was renamed People First Stadium in March 2024"),
+    ("bruce_stadium", "Bruce Stadium", None, None, "Canberra_Stadium", "Former names Bruce Stadium"),
+]
+# Grounds the era's VFL/AFL knew by one name: the name, and the article that holds it.
+PLAIN_NAME = {"mcg": "M.C.G.", "scg": "S.C.G.", "waca": "W.A.C.A.", "gabba": "The Gabba",
+              "windy_hill": "Windy Hill", "moorabbin_oval": "Moorabbin Oval", "victoria_park": "Victoria Park",
+              "north_hobart": "North Hobart Oval", "manuka_oval": "Manuka Oval", "junction_oval": "Junction Oval",
+              "arden_st": "Arden Street Oval", "glenferrie_oval": "Glenferrie Oval"}
+
+
+def build_ground_names(cache: str) -> list[dict]:
+    rows = []
+    for ground, name, a, b, page, words in GROUND_NAMES:
+        if not page_has(cache, page, words):
+            raise SystemExit(f"ground name {ground} {name}: '{words}' not found on {page}")
+        rows.append({"ground": ground, "name": name, "from_year": a or "", "to_year": b or "", "quote": words,
+                     "source_url": WIKI + page, "checked": CHECKED})
+    for ground, name in PLAIN_NAME.items():
+        rows.append({"ground": ground, "name": name, "from_year": "", "to_year": "",
+                     "quote": "no naming-rights name in the VFL/AFL seasons it hosted",
+                     "source_url": WIKI + GROUND_ARTICLES[ground], "checked": CHECKED})
+    return rows
+
+
+def build_venues(cache: str) -> list[dict]:
+    """Games at each ground by season, from the AFL Tables season pages."""
+    rows = []
+    for y in list(PRE_SEASONS) + list(SEASONS):
+        body = read(cache, f"https://afltables.com/afl/seas/{y}.html")
+        n = defaultdict(int)
+        names = {}
+        for slug, name in re.findall(r'href="\.\./venues/([^"]+)\.html">([^<]+)</a>', body):
+            n[slug] += 1
+            names[slug] = name
+        for slug in sorted(n):
+            rows.append({"year": y, "ground": slug, "afltables_name": names[slug], "games": n[slug],
+                         "source_url": f"https://afltables.com/afl/seas/{y}.html", "checked": CHECKED})
+    return rows
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--cache", required=True)
     a = ap.parse_args()
     lists = build_lists(a.cache)
+    fill_heights(a.cache, lists)
+    ids = first_season_ids(a.cache, lists)
+    careers = build_pre_careers(a.cache, lists, ids)
+    write("careers_before_1990.csv", ["afltables_id", "first", "last", "year", "club", "team", "num", "games",
+                                      "goals", "source_url", "checked"], careers)
+    drafts, wiki_counts = build_drafts(a.cache)
+    opening, n_mid = build_opening_lists(a.cache, lists, drafts, ids, careers)
+    print(f"opening 1990 lists: {n_mid} mid-season draftees taken off")
+    write("lists_1990_opening.csv", ["club", "num", "first", "last", "list", "dob", "height_cm", "weight_kg",
+                                     "games_before", "goals_before", "before_from", "games_1990", "goals_1990", "joined_how",
+                                     "joined_year", "joined_from", "origin", "draftguru_id", "afltables_id",
+                                     "source_url", "checked"], opening)
+    write("coaches_1990.csv", ["club", "role", "name", "note", "source_url", "checked"], build_coaches(a.cache))
+    write("captains_1990.csv", ["club", "role", "first", "last", "draftguru_id", "source_url", "checked"],
+          build_captains(a.cache, opening))
+    write("venues.csv", ["year", "ground", "afltables_name", "games", "source_url", "checked"], build_venues(a.cache))
+    write_to(LEGACY, "era_rules.csv", ["rule", "value", "from_year", "to_year", "quote", "source_url", "checked"],
+             build_era_rules(a.cache))
+    write_to(LEGACY, "ground_names.csv", ["ground", "name", "from_year", "to_year", "quote", "source_url", "checked"],
+             build_ground_names(a.cache))
     write("lists.csv", ["year", "club", "num", "first", "last", "list", "underage", "dob", "height_cm",
                         "weight_kg", "position", "games", "goals", "coach_votes", "brownlow_votes",
                         "games_prior", "goals_prior", "games_career", "goals_career", "origin",
                         "first_drafted", "joined_how", "joined_year", "joined_from", "joined_pick",
                         "elevated_from_rookie", "joined_detail", "draftguru_id", "afltables_id",
-                        "source_url", "checked"], lists)
-    drafts, wiki_counts = build_drafts(a.cache)
+                        "height_from", "source_url", "checked"], lists)
     write("drafts.csv", ["year", "draft", "round", "pick", "club", "first", "last", "origin", "flag",
                          "flag_detail", "wiki_note", "wiki_player", "only_in", "draftguru_id", "source_url", "checked"], drafts)
     with open(os.path.join(OUT, "wikipedia_draft_counts.json"), "w", encoding="utf-8") as fh:

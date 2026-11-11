@@ -1,4 +1,18 @@
 year,pos,club,w,l,d,pts,pct,finals,note,source_url,checked
+1989,1,HAW,19,3,0,76,153.2,premiers,,https://afltables.com/afl/seas/1989.html | https://api.squiggle.com.au/?q=standings;year=1989,2026-11-11
+1989,2,ESS,17,5,0,68,131.4,prelim,,https://afltables.com/afl/seas/1989.html | https://api.squiggle.com.au/?q=standings;year=1989,2026-11-11
+1989,3,GEE,16,6,0,64,146.8,runners_up,,https://afltables.com/afl/seas/1989.html | https://api.squiggle.com.au/?q=standings;year=1989,2026-11-11
+1989,4,MEL,14,8,0,56,96.5,semi,,https://afltables.com/afl/seas/1989.html | https://api.squiggle.com.au/?q=standings;year=1989,2026-11-11
+1989,5,COL,13,9,0,52,112.8,elim,,https://afltables.com/afl/seas/1989.html | https://api.squiggle.com.au/?q=standings;year=1989,2026-11-11
+1989,6,FIT,12,10,0,48,97.4,,,https://afltables.com/afl/seas/1989.html | https://api.squiggle.com.au/?q=standings;year=1989,2026-11-11
+1989,7,SYD,11,11,0,44,100.1,,,https://afltables.com/afl/seas/1989.html | https://api.squiggle.com.au/?q=standings;year=1989,2026-11-11
+1989,8,CAR,9,12,1,38,92.4,,,https://afltables.com/afl/seas/1989.html | https://api.squiggle.com.au/?q=standings;year=1989,2026-11-11
+1989,9,NTH,9,13,0,36,89.6,,,https://afltables.com/afl/seas/1989.html | https://api.squiggle.com.au/?q=standings;year=1989,2026-11-11
+1989,10,BRB,8,14,0,32,78.8,,,https://afltables.com/afl/seas/1989.html | https://api.squiggle.com.au/?q=standings;year=1989,2026-11-11
+1989,11,WCE,7,15,0,28,86.7,,,https://afltables.com/afl/seas/1989.html | https://api.squiggle.com.au/?q=standings;year=1989,2026-11-11
+1989,12,STK,7,15,0,28,84.3,,,https://afltables.com/afl/seas/1989.html | https://api.squiggle.com.au/?q=standings;year=1989,2026-11-11
+1989,13,FOO,6,15,1,26,87.0,,,https://afltables.com/afl/seas/1989.html | https://api.squiggle.com.au/?q=standings;year=1989,2026-11-11
+1989,14,RIC,5,17,0,20,70.9,,,https://afltables.com/afl/seas/1989.html | https://api.squiggle.com.au/?q=standings;year=1989,2026-11-11
 1990,1,ESS,17,5,0,68,139.2,runners_up,,https://afltables.com/afl/seas/1990.html | https://api.squiggle.com.au/?q=standings;year=1990,2026-11-11
 1990,2,COL,16,6,0,64,130.2,premiers,,https://afltables.com/afl/seas/1990.html | https://api.squiggle.com.au/?q=standings;year=1990,2026-11-11
 1990,3,WCE,16,6,0,64,118.4,prelim,,https://afltables.com/afl/seas/1990.html | https://api.squiggle.com.au/?q=standings;year=1990,2026-11-11
