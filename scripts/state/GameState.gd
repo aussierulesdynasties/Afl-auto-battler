@@ -1952,6 +1952,9 @@ func begin_real_lists() -> void:
 			(league_lists[code] as Array).erase(p)
 			p["data_club"] = str(p.get("data_club", code))
 			p["club"] = str(mv["to"])
+			# Every player traded in lands on the senior list (row 88), a
+			# rookie at his old club included.
+			p.erase("list_type")
 			(league_lists[str(mv["to"])] as Array).append(p)
 			joined[str(mv["to"])] = true
 	for code in joined:
