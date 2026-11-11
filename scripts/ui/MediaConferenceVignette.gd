@@ -330,15 +330,18 @@ func _draw_desk(w: float, h: float, desk_y: float) -> void:
 	var flags := [Color(0.75, 0.12, 0.12), Color(0.12, 0.3, 0.7), Color(0.9, 0.9, 0.9), Color(0.1, 0.55, 0.3), Color(0.95, 0.65, 0.1)]
 	# Short desk microphones angled up at him; tips at his chest, clear of his face.
 	var mic_h := h * 0.07
+	# Close up, mic heads and flags at their real size against him (a ~6 cm head, a
+	# ~7 cm flag): the press-conference scale would make each head half his face.
+	var mu := u * (0.6 if figure_cap > 0.0 else 1.0)
 	for i in range(flags.size()):
 		var bx := w * (0.4 + 0.05 * i) + (i % 2) * 3.0 * u
 		var tip := Vector2(w * 0.5 + (bx - w * 0.5) * 0.55, desk_y - mic_h - (i % 3) * 2.0 * u)
 		var base := Vector2(bx, desk_y - h * 0.012)
 		draw_line(base, tip, Color(0.18, 0.18, 0.2), 2.0 * u, true)
 		draw_rect(Rect2(base + Vector2(-4, -4) * u, Vector2(8, 4) * u), Color(0.1, 0.1, 0.11), true)
-		var flag := Rect2(tip.lerp(base, 0.28) - Vector2(5, 4) * u, Vector2(10, 8) * u)
+		var flag := Rect2(tip.lerp(base, 0.28) - Vector2(5, 4) * mu, Vector2(10, 8) * mu)
 		draw_rect(flag, flags[i], true)
-		draw_circle(tip, 4.0 * u, Color(0.06, 0.06, 0.07))
+		draw_circle(tip, 4.0 * mu, Color(0.06, 0.06, 0.07), true, -1.0, true)
 	# A bottle and a glass of water at his elbow.
 	var bottle := Vector2(w * 0.66, desk_y - h * 0.012)
 	draw_rect(Rect2(bottle - Vector2(4 * u, h * 0.08), Vector2(8 * u, h * 0.08)), Color(0.6, 0.75, 0.85, 0.75), true)
