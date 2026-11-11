@@ -518,8 +518,13 @@ func _possession_phases(k: int) -> Array:
 			# the pack and let the logged winner collect it.
 			return [{"t": "flight", "to": loc, "dur": 0.55, "apex": 6.0, "h0": 1.0, "recv": a}] + tail
 		"free":
+			# The ball comes to the mark as a kick would: 0.4 s when it is close,
+			# and a kick's own time when it is not (a fixed 0.4 s sent it 52 m
+			# from the boundary line in one frame at 8x).
+			var back := _flight_shape("kick", (ball["pos"] as Vector2).distance_to(loc))
 			return [{"t": "wait", "dur": 0.3, "ease": true},
-					{"t": "flight", "to": loc, "dur": 0.4, "apex": 1.5, "recv": a}] + tail
+					{"t": "flight", "to": loc, "dur": maxf(0.4, back.x),
+						"apex": 1.5 if back.x <= 0.4 else back.y, "recv": a}] + tail
 		"loose":
 			return tail
 	var pk := _prev_real(k)
