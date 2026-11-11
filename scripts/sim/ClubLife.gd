@@ -189,6 +189,18 @@ static func goal_phrase(goal: Dictionary) -> String:
 ## Why the board moved after a match, in a sentence.
 static func match_reason(goal: Dictionary, opp_name: String, margin: int, losses_in_row: int) -> String:
 	var aim := goal_phrase(goal)
+	# The middle goal is to stay out of the bottom places, so its lines name
+	# those places (director's words, 2026-11-11), not a finish "in reach".
+	var text := str(goal.get("text", ""))
+	if str(goal.get("key", "")) == "top12" and text.begins_with(STAY_OUT):
+		var bottom := text.trim_prefix(STAY_OUT)
+		if margin < 0 and losses_in_row >= RESTLESS_AFTER:
+			return "%s losses in a row: the board is getting restless about %s." % [
+					MatchNotes.count_word(losses_in_row).capitalize(), bottom]
+		if margin > 0:
+			return "The win over %s keeps the club clear of %s." % [opp_name, bottom]
+		if margin < 0:
+			return "The loss to %s drags the club towards %s." % [opp_name, bottom]
 	if margin < 0 and losses_in_row >= RESTLESS_AFTER:
 		return "%s losses in a row: the board is getting restless about %s." % [
 				MatchNotes.count_word(losses_in_row).capitalize(), aim]
