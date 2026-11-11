@@ -4049,7 +4049,8 @@ func papers_record() -> Dictionary:
 
 ## The paper's ladder, best first: each club's best side as TeamRating reads it
 ## after the summer's injuries, near-ties to last year's finish, then nudged by
-## the practice matches ("moves": club -> {places, margin} for each it moved).
+## the practice matches ("moves": club -> {places, margin, earned, by} for each
+## club its result earned a move; "by" names what stopped one that fell short).
 func _build_papers() -> void:
 	var ratings := {}
 	var last := {}
@@ -4061,12 +4062,22 @@ func _build_papers() -> void:
 	# The practice matches nudge it (director, 2026-11-12): every club the same.
 	var margins: Dictionary = preseason.get("practice_margins", {}) if preseason.get("practice_margins") is Dictionary else {}
 	var order := PreSeason.practice_nudge(listed, margins)
+	# Every club its result earned a move, with what stopped any it fell short
+	# of: "top", "bottom", or the club in the way ("by").
 	var moves := {}
 	for code in margins:
 		var shift := PreSeason.practice_shift(int(margins[code]))
-		var places := listed.find(code) - order.find(code)
-		if shift != 0 and places != 0 and signi(places) == signi(shift):
-			moves[str(code)] = {"places": places, "margin": int(margins[code])}
+		if shift == 0:
+			continue
+		var at := order.find(code)
+		var places := listed.find(code) - at
+		var by := ""
+		if absi(places) < absi(shift):
+			if shift > 0:
+				by = "top" if at == 0 else str(order[at - 1])
+			else:
+				by = "bottom" if at == order.size() - 1 else str(order[at + 1])
+		moves[str(code)] = {"places": places, "margin": int(margins[code]), "earned": shift, "by": by}
 	var pred := order.find(my_club) + 1
 	var eligible := []
 	if pred > season.finalists():
@@ -4858,8 +4869,9 @@ func _practice_build(home: String, away: String, home_invites: Array, away_invit
 ## What a practice match leaves behind, at either club: a reserves game's
 ## development for the listed players who played, any injury to a listed
 ## player (never a prospect), and the club's note on each prospect it
-## trialled. Nothing reaches the ladder, the season's statistics, votes,
-## records or the board. Returns your report (for your club), or {}.
+## trialled. Nothing reaches the season's ladder, statistics, votes, records or
+## the board; the margin moves the club on the papers' pre-season ladder
+## (PreSeason.practice_nudge). Returns your report (for your club), or {}.
 func _practice_finish(club: String, built: Dictionary, res: Dictionary) -> Dictionary:
 	var stats_all: Dictionary = res.get("players", {})
 	# Each club's margin, for the papers' ladder (PreSeason.practice_nudge).
