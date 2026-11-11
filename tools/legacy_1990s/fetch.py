@@ -180,10 +180,14 @@ COACH_PAGES = ["brisbaneb", "carlton", "collingwood", "essendon", "fitzroy", "bu
 RULE_PAGES = ["AFL_salary_cap", "Australian_Football_League", "Interchange_(Australian_rules_football)",
               "Rookie_list"]
 # Era-rule sources off Wikipedia, by full URL: the AFL's annual reports (the
-# footyindustry.com archive) and AFL articles, for the salary caps of 1990-2012.
+# footyindustry.com archive) and AFL articles, and Canberra Times articles on Trove, for the salary caps.
 AR = "https://footyindustry.com/docs/AFL%20{}%20Annual%20{}.pdf"
 RULE_SOURCES = [AR.format(2006, "report"), AR.format(2010, "Report"), AR.format(2011, "Report"),
-                "https://www.afl.com.au/news/96194/an-ever-changing-game"]
+                AR.format(2019, "Report"), AR.format(2021, "Report"),
+                "https://www.afl.com.au/news/96194/an-ever-changing-game",
+                # Canberra Times articles on Trove: the 1993 cap; the 1995 and 1996 caps.
+                "https://trove.nla.gov.au/newspaper/article/118214696",
+                "https://trove.nla.gov.au/newspaper/article/130564397"]
 # AFL Tables venue page -> the ground's Wikipedia article (its infobox's former names).
 GROUND_ARTICLES = {
     "mcg": "Melbourne_Cricket_Ground", "waverley_park": "Waverley_Park", "princes_park": "Princes_Park_(stadium)",

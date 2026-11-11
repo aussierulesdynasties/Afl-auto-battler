@@ -951,6 +951,10 @@ def build_captains(cache: str, opening: list[dict]) -> list[dict]:
 AR06 = "https://footyindustry.com/docs/AFL%202006%20Annual%20report.pdf"
 AR10 = "https://footyindustry.com/docs/AFL%202010%20Annual%20Report.pdf"
 AR11 = "https://footyindustry.com/docs/AFL%202011%20Annual%20Report.pdf"
+AR19 = "https://footyindustry.com/docs/AFL%202019%20Annual%20Report.pdf"
+AR21 = "https://footyindustry.com/docs/AFL%202021%20Annual%20Report.pdf"
+# Trove's newspaper article pages carry the article's own (OCR) text.
+TROVE = "https://trove.nla.gov.au/newspaper/article/{}"
 # Era rules. Every value is a statement on the page quoted beside it, checked by
 # hand on CHECKED; a year no statement covers stays out (the game decides what
 # a missing year means). from_year..to_year is the span the statement covers.
@@ -969,6 +973,15 @@ ERA_RULES = [
     # beside the next row's label). A quote starts at its own year's figure.
     ("salary_cap", 1500000, 1990, 1990, "https://www.afl.com.au/news/96194/an-ever-changing-game",
      "Back in 1990 players were paid ... The then $1.5 million salary cap"),
+    # 1993, 1995 and 1996 from the Canberra Times: the AFL's own reports of
+    # those years (scanned) give no per-club cap but 1996's. No source found for
+    # 1992 or 1994, so they stay out.
+    ("salary_cap", 1750000, 1993, 1993, TROVE.format(118214696),
+     "after making it to last year's grand final ... the Blues had voluntarily disclosed they had exceeded the salary cap limit of $1.75 million"),
+    ("salary_cap", 2330000, 1995, 1995, TROVE.format(130564397),
+     "The commission also agreed to an increase in the salary cap next year from $2.33 million to $2.55 million"),
+    ("salary_cap", 2550000, 1996, 1996, TROVE.format(130564397),
+     "The commission also agreed to an increase in the salary cap next year from $2.33 million to $2.55 million"),
     ("salary_cap", 2900000, 1997, 1997, AR06,
      "TPP per club from 1997 ($m): 2.900 3.275 4.250 4.750 5.188"),
     ("salary_cap", 3275000, 1998, 1998, AR06,
@@ -1003,6 +1016,15 @@ ERA_RULES = [
      "this was $9,130,000 for the 2013 season with a salary floor of $8,673,500"),
     ("salary_floor", 8673500, 2013, 2013, "Australian_Football_League",
      "this was $9,130,000 for the 2013 season with a salary floor of $8,673,500"),
+    # 2014 and 2017-2021: TPP per club ($m) rows of the AFL 2019 report
+    # (2010-2019) and the AFL 2021 report (to 2021; 2020 is the COVID cut).
+    ("salary_cap", 9632000, 2014, 2014, AR19,
+     "TPP per club from 2014 ($m): 9.632 10.071 10.369 12.445 12.594 12.758"),
+    ("salary_cap", 12445000, 2017, 2017, AR19, "TPP per club from 2017 ($m): 12.445 12.594 12.758"),
+    ("salary_cap", 12594000, 2018, 2018, AR19, "TPP per club from 2018 ($m): 12.594 12.758"),
+    ("salary_cap", 12758000, 2019, 2019, AR19, "TPP per club from 2019 ($m): 12.758"),
+    ("salary_cap", 9056000, 2020, 2020, AR21, "TPP per club from 2020 ($m): 9.056 12.071"),
+    ("salary_cap", 12071000, 2021, 2021, AR21, "TPP per club from 2021 ($m): 12.071"),
     ("salary_cap", 10070000, 2015, 2015, "Australian_Football_League",
      "increasing from $9.92m to $10.07m in 2015 and $10.22m to $10.37m in 2016"),
     ("salary_cap", 10370000, 2016, 2016, "Australian_Football_League",
