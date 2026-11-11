@@ -3423,6 +3423,12 @@ func _refresh_rings() -> void:
 
 
 func _on_event(ev: Dictionary) -> void:
+	var shown_usec := Time.get_ticks_usec()     # row 6.51: the crowd's gap is measured from here
+	# The crowd first, so the roar and the siren start on the tick, not after the
+	# feed and the scoreboard are built (about 6 ms later, measured). A goal skipped
+	# past still counts toward the run the crowd is riding; it makes no sound.
+	if _crowd != null:
+		_crowd.event(str(ev.get("kind", "")), int(ev.get("side", 0)), shown_usec, not _skipping, int(ev.get("q", 0)))
 	var event_index := _playback_event_index
 	_playback_event_index += 1
 	# Skipping to the break releases a quarter's events at once: the rings and
@@ -3442,8 +3448,6 @@ func _on_event(ev: Dictionary) -> void:
 	if str(ev.get("kind", "")) == "goal":
 		_flash_score(int(ev.get("side", 0)))
 		_track_run(int(ev.get("side", 0)))
-	if _crowd != null and not _skipping:
-		_crowd.event(str(ev.get("kind", "")))
 	_queue_broadcast(ev, event_index)
 
 
