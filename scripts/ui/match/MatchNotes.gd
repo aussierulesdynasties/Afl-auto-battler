@@ -517,6 +517,41 @@ static func calls_lines(res: Dictionary, my_side: int, q: int) -> Array:
 	return out
 
 
+## The full-time "Your calls" list: every quarter's calls, at most `cap`
+## lines. Taken a quarter at a time in turn (each quarter's first line, then
+## each one's second) and shown in quarter order, so Q3 and Q4 are never
+## crowded out by Q1 and Q2 (bug: the first five lines were all Q1 and Q2).
+## A call the Why section already quoted (`told`: "q<n>" and "call:<line>")
+## is not said again.
+static func full_time_calls(res: Dictionary, my_side: int, told: Dictionary, cap := 5) -> Array:
+	var per_q := []
+	for q in range(1, 5):
+		var lines := []
+		for t in calls_lines(res, my_side, q):
+			if told.has("q%d" % q) and told.has("call:" + str(t)):
+				continue
+			lines.append(str(t))
+		per_q.append(lines)
+	var take := [0, 0, 0, 0]
+	var left := cap
+	var row := 0
+	while left > 0:
+		var any := false
+		for i in range(4):
+			if left > 0 and row < (per_q[i] as Array).size():
+				take[i] += 1
+				left -= 1
+				any = true
+		if not any:
+			break
+		row += 1
+	var out := []
+	for i in range(4):
+		for t in (per_q[i] as Array).slice(0, take[i]):
+			out.append("Q%d  ·  %s" % [i + 1, t])
+	return out
+
+
 static func _goals_word(g: int) -> String:
 	return "no goals" if g == 0 else ("1 goal" if g == 1 else "%d goals" % g)
 
