@@ -34,7 +34,7 @@ var _press_scroll := 0
 var _press_pos := Vector2.ZERO
 const GRID_TAB_NAMES := {"": "All", "DEF": "Def", "MID": "Mid", "RUCK": "Ruck", "FWD": "Fwd"}
 const GRID_POS_NAME := {"RUCK": "Ruck", "MID": "Mid", "DEF": "Def", "FWD": "Fwd"}
-const GRID_TRADE_OFF_LINE := "Each game earns development, and what he is developing as decides the stats it buys."
+const GRID_TRADE_OFF_LINE := "A player earns development every game. His development focus decides which stats it lifts."
 const GRID_TOUCH := 48.0         # a thumb target: tabs, back, Stat guide
 const CARD_PAD := 10             # inside a card, left and right
 const CARD_PAD_V := 6            # inside a card, top and bottom
@@ -128,10 +128,10 @@ func _show_intro() -> void:
 	var v: VBoxContainer = box["body"]
 	v.add_child(UiKit.heading("How training works", UiKit.TITLE))
 	for line in [
-		"Pick what kind of footballer each player should become. The development he earns after every game goes on exactly that - an inside midfielder on winning the ball, a key forward on marking and goals.",
-		"By position is the safe default: it trains what his position is judged on. Change it whenever you like; banked development is spent straight away.",
-		"Playing senior football develops a player fastest. Fit players you leave out develop in the reserves at about half the rate; injured and rested players barely at all.",
-		"Young players with room below their potential improve quickest.",
+		"Pick the kind of footballer each player becomes. That is his development focus. What a player earns each game goes on it. An inside midfielder works on winning the ball. A key forward works on marking and goals.",
+		"By position trains what a player's position is judged on. Change a focus any time. Banked development goes into the new one straight away.",
+		"Nothing develops a player like senior football. A fit player we leave out develops in the reserves, at about half the rate. Injured and rested players barely develop.",
+		"Young players a long way short of their potential improve quicker than the rest.",
 	]:
 		var l := UiKit.lbl(line, 14, UiKit.TEXT)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -258,7 +258,7 @@ func _summary() -> Control:
 		if line != "":
 			what = _news_line(line)
 		else:
-			what = UiKit.lbl("Training: no rating changes from the last game.", UiKit.SECONDARY, UiKit.MUTED)
+			what = UiKit.lbl("No rating moved after the last game.", UiKit.SECONDARY, UiKit.MUTED)
 			what.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		what.name = "TrainingNews"
 		v.add_child(what)
@@ -275,7 +275,7 @@ func _summary() -> Control:
 	# The season plan in words, one tap from the season line.
 	var plan_line := SeasonPlanSheet.line(self, func(): _build())
 	if int(report.get("count", 0)) <= 0 and not (compact and plan_line != null):
-		v.add_child(UiKit.lbl("No game played yet. Players develop after every match.", UiKit.BODY, UiKit.EMPH, true))
+		v.add_child(UiKit.lbl("No game played yet. Our players develop after every game.", UiKit.BODY, UiKit.EMPH, true))
 	if plan_line != null:
 		if compact:
 			_plan_as_button(plan_line as Button)
@@ -309,10 +309,10 @@ func _plan_picker(p: Dictionary, on_pick: Callable) -> Control:
 
 func _spend_notice(gains: Dictionary, ov_before: int, ov_after: int) -> String:
 	if ov_after > ov_before:
-		return "Development changed. Banked development lifted him from %d to %d." % [ov_before, ov_after]
+		return "Focus changed. Banked development lifted his OVR from %d to %d." % [ov_before, ov_after]
 	if not gains.is_empty():
-		return "Development changed. Banked development went straight into it."
-	return "Development changed. It takes effect after the next game."
+		return "Focus changed. Banked development went straight into it."
+	return "Focus changed. It starts after the next game."
 
 
 ## The season plan row as a button: outlined, a thumb tall, its second line in
@@ -503,9 +503,9 @@ func _apply_bulk_plan(key: String) -> void:
 		spent += maxi(0, before_xp - int(GameState.list_player(id).get("xp", 0)))
 		changed += 1
 	var label := GameState.train_plan_label(key)
-	_notice = "%s applied to %d %s." % [label, changed, "player" if changed == 1 else "players"]
+	_notice = "%s set for %d %s." % [label, changed, "player" if changed == 1 else "players"]
 	if spent > 0:
-		_notice += " Banked development was spent under the new focus."
+		_notice += " Banked development went straight into it."
 	if is_inside_tree():
 		_build()
 
@@ -1025,7 +1025,7 @@ func _detail_panel() -> Control:
 		TraitLink.tappable(hint, str(n["key"]))
 		body.add_child(hint)
 	if duty == "Reserves":
-		var res_line := UiKit.lbl("Developing in the reserves: +%d development points last game (a senior game is worth up to %d)." % [
+		var res_line := UiKit.lbl("Developing in the reserves: +%d development points last game. A senior game is worth up to %d." % [
 				GameState.xp_gain_for(_selected), _senior_game_xp()], 13, UiKit.MUTED)
 		res_line.name = "ReservesLine"
 		res_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1069,7 +1069,7 @@ func _stat_focus_panel(p: Dictionary) -> Control:
 	v.add_child(UiKit.lbl("Stat focus  ·  %d season" % year, 12, UiKit.MUTED, true))
 	var current := GameState.stat_focus(p)
 	if GameState.project_job(p) != "" and GameState.plan_for(p) == GameState.LEARN_PREFIX + GameState.project_job(p):
-		var hold := UiKit.lbl("On hold while he learns a position: all his training goes into the new role.", 13, UiKit.TEXT)
+		var hold := UiKit.lbl("On hold while he learns a position. All his training goes into the new role.", 13, UiKit.TEXT)
 		hold.name = "StatFocusHold"
 		hold.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(hold)
@@ -1080,7 +1080,7 @@ func _stat_focus_panel(p: Dictionary) -> Control:
 				UiKit.HEADING, UiKit.EMPH, true)
 		name_l.name = "StatFocusName"
 		v.add_child(name_l)
-		var locked := UiKit.lbl("Locked in for %d. About a third of his training goes into %s; his development drills get the rest. You can change it when the %d season opens." % [
+		var locked := UiKit.lbl("Locked in for %d. About a third of his training goes into %s. His development drills get the rest. Change it when the %d season opens." % [
 				year, GameState.train_stat_label(current).to_lower(), year + 1], 13, UiKit.TEXT)
 		locked.name = "StatFocusLocked"
 		locked.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1089,7 +1089,7 @@ func _stat_focus_panel(p: Dictionary) -> Control:
 		if _focus_notice != "":
 			v.add_child(UiKit.lbl(_focus_notice, UiKit.SECONDARY, UiKit.GOOD, true))
 		return box
-	var intro := "Extra work on one stat: about a third of his training goes into it, the rest into his development drills. Points on one stat get dearer as it climbs, so his OVR grows more slowly than on his plan alone. Locked in until the %d season." % [
+	var intro := "Extra work on one stat. About a third of his training goes into it. The rest goes into his development drills. Each point on one stat costs more as it climbs. So his OVR grows more slowly than with no stat focus. Locked in until the %d season." % [
 			year + 1]
 	if current != "":
 		intro = "Last season's focus, %s, carries on until you lock one in for %d. " % [
@@ -1115,7 +1115,7 @@ func _stat_focus_panel(p: Dictionary) -> Control:
 			var before := int(GameState.list_player(pid).get("overall", 0))
 			if GameState.set_stat_focus(pid, chosen):
 				var after := int(GameState.list_player(pid).get("overall", 0))
-				_focus_notice = "Banked development lifted him from %d to %d." % [before, after] if after > before else ""
+				_focus_notice = "Banked development lifted his OVR from %d to %d." % [before, after] if after > before else ""
 			_focus_choice = ""
 			_build())
 		v.add_child(lock)
@@ -1149,11 +1149,11 @@ static func _project_line(p: Dictionary) -> String:
 	var role := GameState.project_role(p)
 	var there := GameState.rating_as(p, role)
 	var own := int(p.get("overall", 0))
-	var head := "%s. As a %s he rates %d, his own game %d: " % [
+	var head := "%s. As a %s he rates %d. In his own position, %d. " % [
 		GameState.project_progress(p), str(GameState.LEARN_JOBS[job]["word"]), there, own]
 	if there >= own - GameState.PROJECT_PASS:
-		return head + "up to the standard, so he can be picked there after week %d." % GameState.PROJECT_WEEKS
-	return head + "within %d by week %d and he can be picked there." % [GameState.PROJECT_PASS, GameState.PROJECT_WEEKS]
+		return head + "That is up to the standard. He can be picked there after week %d." % GameState.PROJECT_WEEKS
+	return head + "Get within %d by week %d and he can be picked there." % [GameState.PROJECT_PASS, GameState.PROJECT_WEEKS]
 
 
 ## "Contested 72 · Disposal 64": what his plan is spending on.

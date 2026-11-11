@@ -74,6 +74,7 @@ func _run() -> void:
 		_gs.set_setting("seen_%s_intro" % key, true)
 	_gs.show_real_names = false
 	await _t("_test_rules")
+	await _t("_test_copy_rules")
 	await _t("_test_save_round_trip")
 	await _t("_test_old_save_backfill")
 	await _t("_test_club_move")
@@ -852,7 +853,7 @@ func _from_match(sz: Vector2i) -> void:
 		if note != null:
 			var opened: bool = await _scan_until(note, func() -> bool: return _open_node("PlayerProfile") != null)
 			var prof := _open_node("PlayerProfile")
-			var seen := "'%s' at %s in %s" % [(note as RichTextLabel).get_parsed_text(), note.get_global_rect(), root.get_visible_rect()]
+			var seen := "'%s' at %s in %s" % [str(note.get_meta("plain", "")), note.get_global_rect(), root.get_visible_rect()]
 			_check(opened and prof != null, "%s: a finger on a name in the match opens his profile (%s)" % [tag, seen])
 			if prof != null:
 				await _sheet_club_tap(prof, tag)
@@ -1100,3 +1101,22 @@ func _drag(pos: Vector2, rel: Vector2) -> void:
 	Input.parse_input_event(d)
 	Input.flush_buffered_events()
 	await process_frame
+
+
+## CopyRules (scripts/core/CopyRules.gd), the one banned list: it catches whole words in any
+## case, leaves look-alikes alone, keeps OVR and POT, and lets the broadcaster's feed shout.
+## Moved here from the retired copy_rules suite on 2026-11-12; its walk over the copy sources
+## is the static lint tools/lint/copy_voice.py.
+func _test_copy_rules() -> void:
+	_check(CopyRules.words_in("We should press higher") == ["should"], "'should' is advice")
+	_check(CopyRules.words_in("Shoulder: two weeks").is_empty(), "'Shoulder' is not 'should'")
+	_check(CopyRules.words_in("Our ROSTER, our Payroll") == ["roster", "payroll"], "any case, in order")
+	_check(CopyRules.words_in("Auto-pick names him") == ["auto-pick"], "a feature name is caught")
+	_check(CopyRules.words_in("The best  choice here") == ["best choice"], "a verdict across spaces")
+	_check(CopyRules.words_in("Best 22 · Best and fairest").is_empty(), "'Best 22' is football, not a verdict")
+	_check(CopyRules.check("Pick 4 · 72 OVR · 81 POT").is_empty(), "OVR and POT stay (director, 2026-11-10)")
+	_check(CopyRules.check("His opinion of you: 61/100") == ["/100"], "a raw meter reads 'out of 100'")
+	_check(CopyRules.check("He weighs it 61 out of 100").is_empty(), "'out of 100' passes")
+	_check(CopyRules.check("player_id | 3") == ["|", "_"], "code marks never reach the screen")
+	_check(CopyRules.check("What a goal!") == ["!"], "no shouting in the coach's voice")
+	_check(CopyRules.check("What a goal!", true).is_empty(), "the broadcaster's feed may shout")

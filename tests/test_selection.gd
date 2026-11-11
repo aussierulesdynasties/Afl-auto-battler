@@ -213,7 +213,7 @@ func _test_blooding_net_change() -> void:
 			"Young is 21 and under in whole years, as the game shows age")
 	y1["age"] = 28
 	r = GameState.blood_youth(side, pool)
-	_check(str(r["note"]) == "No young player is close enough to a starter's spot: this is your best side."
+	_check(str(r["note"]) == "No young player is close enough to take a senior spot. This is our best side."
 			and r["side"] == side, "Nobody young close enough: the best side, and it says so")
 
 

@@ -27,7 +27,7 @@ static func open(from: Node, on_close := Callable()) -> Control:
 	var head := UiKit.heading("When I sim the week", UiKit.H1)
 	head.name = "SimOrdersTitle"
 	v.add_child(head)
-	var plan := UiKit.lbl("Every match starts on your game plan, %s: change it in How we play." % CoachReport.plan_label(GameState.club_plan),
+	var plan := UiKit.lbl("Every match starts on our game plan: %s.\nWe can change it in How we play." % CoachReport.plan_label(GameState.club_plan),
 			UiKit.SMALL, UiKit.MUTED)
 	plan.name = "SimOrdersPlan"
 	plan.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

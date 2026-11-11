@@ -440,8 +440,8 @@ func _test_trade_picks_sheet(size: Vector2i) -> void:
 	var digits := verdict != null and RegEx.create_from_string("\\d").search(verdict.text) != null
 	_check(not digits, "The answer carries no value (%s)" % tag)
 	var give := ui.find_children("GiveRow_*", "Control", true, false)
-	var get := ui.find_children("GetRow_*", "Control", true, false)
-	_check(give.size() == 1 and get.size() == 1, "A pick on each side (%s: %d/%d)" % [tag, give.size(), get.size()])
+	var take := ui.find_children("GetRow_*", "Control", true, false)
+	_check(give.size() == 1 and take.size() == 1, "A pick on each side (%s: %d/%d)" % [tag, give.size(), take.size()])
 	var close: Button = ui.find_child("TradeSheetClose", true, false)
 	_check(close != null and viewport.grow(1).encloses(close.get_global_rect()), "Back to the draft is on screen (%s)" % tag)
 	if close != null:

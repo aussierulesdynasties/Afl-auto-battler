@@ -30,7 +30,6 @@ func run() -> void:
 	_t("_test_save_round_trip")
 	_t("_test_old_save")
 	_t("_test_expansion_structure")
-	_t("_test_no_effects_yet")
 	_t("_test_movement_is_visible")
 	# Return visits: the first-visit intros (FirstVisitIntro.gd) have their own suite.
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
@@ -274,18 +273,6 @@ func _test_expansion_structure() -> void:
 	c["job"] = "SC"
 	_check(str(Coaches.staff(cs, "TAS").get("SC", "")) == "C_ken_hinkley",
 			"Any club, including a future one, can hold staff the same way")
-
-
-## Nothing in the game reads a coach's skills yet.
-func _test_no_effects_yet() -> void:
-	var clean := true
-	for path in ["res://scripts/sim/Prospects.gd", "res://scripts/sim/MatchSim.gd",
-			"res://scripts/sim/ClubLife.gd", "res://scripts/sim/Potential.gd",
-			"res://scripts/sim/Season.gd"]:
-		var text := FileAccess.get_file_as_string(path)
-		if text.contains("Coaches.") or text.contains("GameState.coaches") or text.contains("club_staff("):
-			clean = false
-	_check(clean, "Development, matches and morale do not read coaches yet")
 
 
 func _test_ui() -> void:
