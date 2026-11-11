@@ -38,11 +38,13 @@ func run() -> void:
 	_t("_test_the_2026_row")
 	_t("_test_ladder_of")
 	_t("_test_record_weights")
+	_t("_test_club_years_today")
 	Datasets.add(FIXTURE, FIXTURE_ROW)
 	_t("_test_fixture_load")
 	_t("_test_back_to_2026")
 	_t("_test_save_keeps_dataset")
 	_t("_test_old_and_unknown_saves")
+	_t("_test_club_years_1990")
 	Datasets.remove(FIXTURE)
 	GameState.replay_seed = 0
 	GameState.reset()
@@ -300,3 +302,61 @@ func _test_old_and_unknown_saves() -> void:
 	state["dataset"] = "1066"
 	_check(not GameState._restore_career(state.duplicate(true)) and GameDB.dataset_id == "2026",
 			"A save whose set this build lacks is refused, not loaded onto other players")
+
+
+# ---------------------------------------------------------------------------
+# Clubs by year (P2): one club code across eras
+# ---------------------------------------------------------------------------
+func _test_club_years_today() -> void:
+	GameDB.reload()
+	_check(GameDB.active_clubs(2027).size() == 18 and not GameDB.clubs.has("FIT") and not GameDB.club_order.has("FIT"),
+			"Today's league is the eighteen clubs; Fitzroy is not loaded (%d)" % GameDB.active_clubs(2027).size())
+	_check(GameDB.club_name("BRL") == "Brisbane" and GameDB.club_short("BRL") == "Lions"
+			and GameDB.club_name("WBD") == "Western Bulldogs" and GameDB.club_name("NTH") == "North Melbourne",
+			"Today's names are clubs.csv's")
+	_check(str(GameDB.club_era("BRL", 1995)["short"]) == "Bears" and str(GameDB.club_era("BRL", 1997)["short"]) == "Lions",
+			"Brisbane are the Bears until 1996 and the Lions from 1997")
+	_check(str(GameDB.club_era("WBD", 1990)["name"]) == "Footscray" and str(GameDB.club_era("WBD", 1997)["name"]) == "Western Bulldogs",
+			"The Bulldogs are Footscray until 1996")
+	_check(str(GameDB.club_era("NTH", 2003)["name"]) == "Kangaroos" and str(GameDB.club_era("NTH", 2008)["name"]) == "North Melbourne",
+			"North are the Kangaroos from 1999 to 2007")
+	_check(str(GameDB.club_era("STK", 1990)["ground"]) == "Moorabbin Oval" and str(GameDB.club_era("HAW", 1995)["ground"]) == "Waverley Park"
+			and str(GameDB.club_era("COL", 1999)["ground"]) == "Victoria Park" and str(GameDB.club_era("COL", 2000)["ground"]) == "MCG",
+			"Each club's home ground is its era's")
+	_check(GameDB.ground_name("Marvel Stadium", 2005) == "Telstra Dome" and GameDB.ground_name("Marvel Stadium", 2027) == "Marvel Stadium"
+			and GameDB.ground_name("GMHBA Stadium", 1990) == "Kardinia Park", "A ground carries its name of the year")
+	_check(GameDB.club_era("BRL", 1995)["primary"] is Color and GameDB.club_era("BRL", 2027)["primary"] == GameDB.club_colours("BRL")[0],
+			"Era colours are colours, and today's are clubs.csv's")
+	_check(GameDB.club_code("BRB") == "BRL" and GameDB.club_code("FOO") == "WBD" and GameDB.club_code("FIT") == "FIT",
+			"The Bears and Footscray carry today's codes")
+	var l90 := GameDB.ladder_of(1990)
+	var codes := []
+	for r in l90:
+		codes.append(str(r["club"]))
+	_check(l90.size() == 14 and codes.has("BRL") and codes.has("WBD") and codes.has("FIT")
+			and not codes.has("BRB") and not codes.has("FOO"), "The 1990 ladder reads in today's codes (%s)" % str(codes))
+
+
+func _test_club_years_1990() -> void:
+	GameDB.reload(FIXTURE)
+	var want := {1990: 14, 1991: 15, 1995: 16, 1997: 16, 2026: 18}
+	var got := {}
+	for y in want:
+		got[y] = GameDB.active_clubs(y).size()
+	_check(got == want, "Clubs in the league: 14 in 1990, 15 in 1991, 16 in 1995 and 1997, 18 in 2026 (%s)" % str(got))
+	var c90 := GameDB.active_clubs(1990)
+	var c97 := GameDB.active_clubs(1997)
+	_check(c90.has("FIT") and not c90.has("ADE") and not c97.has("FIT") and c97.has("PAD") and c97.has("FRE"),
+			"Fitzroy play to 1996; Port Adelaide join in 1997")
+	_check(GameDB.enter_year("ADE") == 1991 and GameDB.enter_year("FRE") == 1995 and GameDB.enter_year("PAD") == 1997
+			and GameDB.enter_year("GCS") == 2011 and GameDB.enter_year("GWS") == 2012 and GameDB.enter_year("CAR") == 1989
+			and GameDB.leave_year("FIT") == 1996 and GameDB.leave_year("CAR") == 0,
+			"Entry and last years follow the clubs' history")
+	_check(GameDB.club_order.find("FIT") == GameDB.club_order.find("FRE") - 1, "Fitzroy sit in club order before Fremantle")
+	_check(GameDB.era_year == 1990 and GameDB.club_name("WBD") == "Footscray" and GameDB.club_short("BRL") == "Bears"
+			and GameDB.club_name("FIT") == "Fitzroy" and str(GameDB.club("STK")["ground"]) == "Moorabbin Oval",
+			"A 1990 start shows the clubs as they were in 1990")
+	GameDB.apply_era(1997)
+	_check(GameDB.club_name("WBD") == "Western Bulldogs" and GameDB.club_short("BRL") == "Lions"
+			and str(GameDB.club("STK")["ground"]) == "Waverley Park", "A new season shows that year's clubs")
+	GameDB.reload()

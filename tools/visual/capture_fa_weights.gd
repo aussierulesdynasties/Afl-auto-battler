@@ -2,7 +2,7 @@ extends SceneTree
 ## Review capture for row T1.R26 (free-agent talks: what each offer is worth
 ## to him, what he counts besides salary, and your offer's Gain / Cost), dark,
 ## Geelong's first off-season:
-##   godot --path . --script tools/visual/capture_fa_weights.gd -- --out /tmp/fa --size 390x844
+##   godot --path . --script tools/visual/capture_fa_weights.gd -- --out /tmp/fa --size 390x844 [--club FRE]
 ## Needs a real renderer and a window (keep it off screen with an override.cfg).
 ## Writes <out>_talks_top.png and <out>_talks_end.png (the sheet scrolled to its
 ## foot). Prints FA_WEIGHTS lines with the rows shown. Nothing touches a save.
@@ -25,10 +25,13 @@ func _shot() -> Image:
 
 func _run() -> void:
 	var out := "/tmp/fa"
+	var club := "GEE"
 	var a := OS.get_cmdline_user_args()
 	for i in range(a.size() - 1):
 		if str(a[i]) == "--out":
 			out = str(a[i + 1])
+		elif str(a[i]) == "--club":
+			club = str(a[i + 1])
 		elif str(a[i]) == "--size":
 			var wh := str(a[i + 1]).split("x")
 			W = int(wh[0])
@@ -45,7 +48,7 @@ func _run() -> void:
 	state.replay_seed = 2027
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		state.set_setting("seen_%s_intro" % key, true)
-	state.start_season("GEE", db.club_list("GEE"))
+	state.start_season(club, db.club_list(club))
 	UK.apply_appearance("dark")
 	root.size = Vector2i(W, H)
 	DisplayServer.window_set_size(Vector2i(W, H))
