@@ -56,9 +56,7 @@ func _run() -> void:
 	var rl = load("res://scripts/state/RookieList.gd")
 	for p in state.my_list:
 		p["contract_years"] = 3
-	# Pad with copies of the cheapest players; the last three pads are out of
-	# contract (kept by default, so they hold a spot) and are the ones the
-	# Contracts tab offers to release.
+	# Pad (when the real list is short of it) with copies of the cheapest players.
 	var cheap: Array = state.my_list.duplicate()
 	cheap.sort_custom(func(x, y): return int(x.get("salary", 0)) < int(y.get("salary", 0)))
 	var pads := []
@@ -72,8 +70,11 @@ func _run() -> void:
 		state.my_list.append(copy)
 		pads.append(copy)
 		n += 1
-	for i in range(maxi(0, pads.size() - 3), pads.size()):
-		pads[i]["contract_years"] = 1
+	# Three cheap players out of contract: the Contracts tab's Release buttons.
+	var oc := state.my_list.filter(func(q): return not state.retiring_now(q))
+	oc.sort_custom(func(x, y): return int(x.get("salary", 0)) < int(y.get("salary", 0)))
+	for q in oc.slice(0, 3):
+		q["contract_years"] = 1
 	print("short=", state.draft_room_short(), " spots=", state.draft_list_spots())
 	for step in [["", "_1_gate.png"], ["DraftRoomDelist", "_2_delist.png"], ["DraftRoomTrade", "_3_trade.png"]]:
 		var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
