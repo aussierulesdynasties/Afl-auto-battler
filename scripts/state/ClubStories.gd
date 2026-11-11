@@ -968,16 +968,26 @@ static func _apply(gs, e: Dictionary, p: Dictionary, facts: Dictionary, applied:
 			for q in _targets(gs, e, p):
 				q[str(e["op"])] = true
 		"expects_game":
+			# The game you promised: a side you named takes him in now, as a run
+			# does (director, 2026-11-12: "he should show as on the team the
+			# moment you accept the event"); auto-pick names him by itself.
+			var was_in: bool = gs.in_current_side(p)
+			var made_way: String = gs.name_promised(p)
 			p["expects_game"] = int(e.get("sting", 12))
+			# Named just now (not injured or suspended): say who made way.
+			var came_in: bool = not was_in and gs.in_current_side(p)
 			if str(facts.get("_result", "")) != "":
 				# The card's own result line speaks; on Auto-pick he is named anyway, so
 				# only a side you picked yourself needs the reminder.
 				if gs.my_selection().is_empty():
 					return ""
 				applied["_lead_result"] = true
-				return "He expects a game this week."
-			return ("%s feels heard. He's in the side this week." if gs.my_selection().is_empty()
-					else "%s feels heard, and expects a game this week.") % name
+				return gs.backed_in_words(made_way) if came_in else "He expects a game this week."
+			if gs.my_selection().is_empty():
+				return "%s feels heard. He's in the side this week." % name
+			if came_in:
+				return "%s feels heard. %s" % [name, gs.backed_in_words(made_way)]
+			return "%s feels heard, and expects a game this week." % name
 		"start_backing":
 			# His chance: a run of senior games (Backing). Leaving him out
 			# while fit breaks the promise, and that stings.
