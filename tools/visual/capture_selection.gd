@@ -8,6 +8,7 @@ extends SceneTree
 ## --oval: (old) scrolled down to the oval. --drag: mid-drag, the centre's token
 ## pressed and moved by real mouse events (the name preview under the pointer).
 ## --strategy KEY: that auto-pick applied, scrolled to its note (BuilderHint).
+## --list: the first-visit card already seen, so the players not picked show.
 ## --club CODE. (The phone's week is the match preview now:
 ## tools/visual/capture_match_preview.gd.)
 ## Writes <out>_sheet.png.
@@ -31,6 +32,7 @@ func _run() -> void:
 	var rounds := 0
 	var vs := ""
 	var strategy := ""
+	var list_view := false
 	var a := OS.get_cmdline_user_args()
 	for i in range(a.size()):
 		if str(a[i]) == "--out" and i + 1 < a.size():
@@ -51,6 +53,8 @@ func _run() -> void:
 			strategy = str(a[i + 1])
 		if str(a[i]) == "--picked":
 			picked = true
+		if str(a[i]) == "--list":
+			list_view = true
 		if str(a[i]) == "--oval":
 			oval = true
 		if str(a[i]) == "--drag":
@@ -85,7 +89,7 @@ func _run() -> void:
 	while vs != "" and str(state.my_next_opponent().get("code", "")) != vs and guard < 30:
 		state.advance()
 		guard += 1
-	if drag:
+	if drag or list_view:
 		state.set_setting("seen_selection_intro", true)  # the first-visit card would sit over the oval
 	var ui: Control = load("res://scenes/SelectionScene.tscn").instantiate()
 	if page != "":

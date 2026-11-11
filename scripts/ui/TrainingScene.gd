@@ -638,7 +638,7 @@ func _matches(p: Dictionary) -> bool:
 
 ## Training grid: player cards, two across, every one
 ## the same width and height. Top to bottom: his position and rating, his name
-## (two lines at most, one size), his best trait, then where he is in his
+## (two lines at most, one size), his best trait, his top three attributes, then where he is in his
 ## development, which is always the bottom line, so statuses sit level across
 ## a row whatever the names above them do. The club's colour tints the card and
 ## runs down its left edge. A tap on the card selects him, a
@@ -721,6 +721,10 @@ func _player_card(p: Dictionary) -> Control:
 		var room := UiKit.ellipsis(" ", CARD_FS_LOW, UiKit.TEXT, true)
 		room.name = "TraitRoom"
 		mid.add_child(room)
+	# His top three rated attributes, as every card shows them (row 150).
+	var three := PlayerSheet.top_three(p, CARD_FS_LOW)
+	three.custom_minimum_size.y = PlayerSheet.top_three_height(CARD_FS_LOW)
+	v.add_child(three)
 	# Bottom: one status line, always last, in a lighter weight than the trait.
 	var status := _card_status(p, id, text_w)
 	var st := UiKit.ellipsis(str(status[0]), CARD_FS_LOW, status[1])
@@ -774,11 +778,12 @@ static func _card_line_h() -> float:
 
 
 ## The same for every card: the room the fullest one needs (two lines of name,
-## a trait, a status, and the top row), so no row differs from another.
+## a trait, his top three, a status, and the top row), so no row differs from another.
 static func _card_height() -> float:
 	# Two lines of the label, with the gap the label puts between them.
 	var name_h := ceilf(UiKit.BOLD.get_height(UiKit.px(CARD_NAME_FS))) * 2.0 + 4.0
-	return ceilf(2.0 * CARD_PAD_V + UiKit.px(22) + name_h + 2.0 + _card_line_h() + _card_line_h())
+	return ceilf(2.0 * CARD_PAD_V + UiKit.px(22) + name_h + 2.0 + _card_line_h() + _card_line_h()
+			+ PlayerSheet.top_three_height(CARD_FS_LOW))
 
 
 ## How wide a card's words can run: the page less its margins and the list

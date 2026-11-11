@@ -320,6 +320,50 @@ static func top_attributes_block(v: VBoxContainer, p: Dictionary, hidden: bool, 
 		v.add_child(nl)
 
 
+## The same three on a compact card (Team builder, Training, Off-season;
+## director, 2026-11-10: "Yes, add them"): top_attributes_block's rows, the
+## attribute in the text colour and its rating beside it, without the heading
+## or the Needs work line. Three short rows for a card two across a phone;
+## `one_line` sets them side by side for a row as wide as the page, and they
+## wrap to a second line before anything is cut. `size` is the type role.
+static func top_three(p: Dictionary, size: int, one_line := false) -> Control:
+	var top := PlayerProfile.top_attributes(p)
+	var box: Container
+	if one_line:
+		var flow := HFlowContainer.new()
+		flow.add_theme_constant_override("h_separation", 14)
+		flow.add_theme_constant_override("v_separation", 0)
+		box = flow
+	else:
+		box = UiKit.vbox(0)
+		# As wide as its longest attribute, however wide the card: each rating
+		# stays beside its attribute (director, 2026-10-14, UiKit.near_figure).
+		box.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	box.name = "TopThree"
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for t in top:
+		var row := UiKit.hbox(5 if one_line else 8)
+		row.name = "TopAttr_" + str(t["key"])
+		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var sn := UiKit.line(str(t["label"]), size, UiKit.TEXT)
+		sn.name = "Attr"
+		sn.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		if not one_line:
+			sn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(sn)
+		var val := UiKit.line(str(t["value"]), size, UiKit.MUTED)
+		val.name = "Value"
+		val.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(val)
+		box.add_child(row)
+	return box
+
+
+## The height top_three's three rows take on a card, at the text size.
+static func top_three_height(size: int) -> float:
+	return 3.0 * ceilf(UiKit.FONT.get_height(UiKit.px(size)))
+
+
 ## "With us": his games and goals for your club, then up to three remembered
 ## facts (Remembered.gd), each on a line of its own, newest first. Null for
 ## someone yet to play for you.
