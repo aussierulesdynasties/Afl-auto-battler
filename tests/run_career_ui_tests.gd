@@ -1412,8 +1412,7 @@ func _test_report_a_problem() -> void:
 	report.start_feed("Round 3, Carlton v Collingwood")
 	for i in range(25):
 		report.note_feed("Q1 %d'  Line %d" % [i, i])
-	var lines: PackedStringArray = report.text("hub").split("
-")
+	var lines: PackedStringArray = report.text("hub").split("\n")
 	_check(lines[0] == "Aussie Rules Dynasties: problem report" and lines[1].begins_with("What happened:"),
 			"The note opens with its title and a line for what happened")
 	var want := ["Build: %s" % BuildInfo.label(), "Seed: ", "Round: ", "Screen: hub",
@@ -1660,7 +1659,7 @@ func _test_menu_and_career() -> void:
 	alt_enter.alt_pressed = true
 	alt_enter.pressed = true
 	root.get_node("ScreenLayout")._input(alt_enter)
-	_check(_state.fullscreen() == not was_full, "Alt+Enter switches between fullscreen and window")
+	_check(_state.fullscreen() == (not was_full), "Alt+Enter switches between fullscreen and window")
 	root.get_node("ScreenLayout")._input(alt_enter)
 	_check(_state.fullscreen() == was_full, "and back again")
 	_check(current_scene.find_child("MenuHelp", true, false) != null
@@ -1672,8 +1671,7 @@ func _test_menu_and_career() -> void:
 
 	# --- the offline promise and the browser's storage line (P-70, P-71) -----------
 	var promise: Label = current_scene.find_child("OfflinePromise", true, false)
-	_check(promise != null and promise.text == "Plays offline. No ads, no account.
-Your career stays on this device.",
+	_check(promise != null and promise.text == "Plays offline. No ads, no account.\nYour career stays on this device.",
 			"The menu prints the offline promise, saying the career stays on this device")
 	var main_script = load("res://scripts/ui/Main.gd")
 	_check(main_script.promise_text(true).ends_with("Your career stays in this browser.")

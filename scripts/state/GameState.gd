@@ -1570,10 +1570,8 @@ func import_career(bytes: PackedByteArray) -> String:
 		"":
 			return ""
 		"newer":
-			return "That backup is from a newer version of the game.
-Update the game to load it."
-	return "That file is not a career backup, or it is damaged.
-Your career is unchanged."
+			return "That backup is from a newer version of the game.\nUpdate the game to load it."
+	return "That file is not a career backup, or it is damaged.\nYour career is unchanged."
 
 
 ## The earlier saves kept for restoring, newest first (CareerSave.history).
