@@ -93,17 +93,20 @@ static func result_line(row: Dictionary) -> String:
 	var n := int(row.get("count", SITS_AT))
 	var pct := int(row.get("pct", clear_pct()))
 	if bool(row.get("cleared", false)):
-		return "%s had his %s concussion in %d years and the medical panel sat. The panel cleared him to play on (%d%% chance). Another concussion and it sits again." % [
+		return "%s had his %s concussion in %d years and the medical panel sat. The panel cleared him to play on (a %d%% chance). Another concussion and it sits again." % [
 				who, Almanac.ordinal(n), YEARS, pct]
-	return "%s had his %s concussion in %d years and the medical panel sat. The panel did not clear him (%d%% chance of being cleared): his career is over and your list is a player short." % [
+	return "%s had his %s concussion in %d years and the medical panel sat. The panel did not clear him to play on. He had a %d%% chance. His career is over and your list is a player short." % [
 			who, Almanac.ordinal(n), YEARS, pct]
 
 
-## The same, short enough to sit under the week's injuries.
+## The same, short enough to sit under the week's injuries: the result first,
+## then the chance he had. Whole sentences, so several are joined with a space.
 static func result_short(row: Dictionary) -> String:
-	return "%s %s (%d%% chance of being cleared)" % [str(row.get("name", "The player")),
-			"cleared to play on" if bool(row.get("cleared", false)) else "not cleared, career over",
-			int(row.get("pct", clear_pct()))]
+	var who := str(row.get("name", "The player"))
+	var pct := int(row.get("pct", clear_pct()))
+	if bool(row.get("cleared", false)):
+		return "%s cleared to play on (a %d%% chance)." % [who, pct]
+	return "%s not cleared to play on. He had a %d%% chance. His career is over." % [who, pct]
 
 
 ## A rival's sitting, for league news.

@@ -4249,7 +4249,7 @@ func _ft_summary(v: VBoxContainer) -> void:
 			week.add_child(inj)
 		var panel := GameState.my_medical_lines()
 		if not panel.is_empty():
-			var md := UiKit.lbl("Medical panel: " + ", ".join(panel), UiKit.BODY, UiKit.BAD, true)
+			var md := UiKit.lbl("Medical panel: " + " ".join(panel), UiKit.BODY, UiKit.BAD, true)
 			md.name = "YourMedical"
 			md.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			week.add_child(md)

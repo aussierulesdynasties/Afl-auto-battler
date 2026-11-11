@@ -2637,7 +2637,7 @@ func _my_result(v: VBoxContainer, res: Dictionary) -> void:
 		v.add_child(inj)
 	var panel := GameState.my_medical_lines()
 	if not panel.is_empty():
-		var md := UiKit.lbl("Medical panel: " + ", ".join(panel), UiKit.SMALL, UiKit.BAD, true)
+		var md := UiKit.lbl("Medical panel: " + " ".join(panel), UiKit.SMALL, UiKit.BAD, true)
 		md.name = "MyMedical"
 		md.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(md)
