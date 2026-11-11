@@ -51,6 +51,8 @@ const DEFAULTS := {
 	"papers_after": 6,
 	"papers_within": 22,
 	"papers_places": 1,
+	"papers_practice_one": 24,
+	"papers_practice_two": 42,
 	"seen_uncertainty": 0.7,
 	"guest_spare_number": 60,
 	"practice_week": 7,
@@ -835,6 +837,81 @@ static func predicted_order(ratings: Dictionary, last: Dictionary, expect: Dicti
 			return ea < eb
 		return str(a) < str(b))
 	return codes
+
+
+## The places a practice result moves a club on the paper's ladder (director,
+## 2026-11-12, "Nudge it"): a win by papers_practice_one points (four goals) or
+## more lifts it one, by papers_practice_two (seven goals) two; a loss by the
+## same drops it; anything closer, a draw or no match leaves it.
+static func practice_shift(margin: int) -> int:
+	var size := absi(margin)
+	var steps := 0
+	if size >= int(tune("papers_practice_two")):
+		steps = 2
+	elif size >= int(tune("papers_practice_one")):
+		steps = 1
+	return steps if margin > 0 else -steps
+
+
+## The paper's ladder after the practice matches: each club with a result
+## (`margins`: club -> its own points margin) has practice_shift places to move,
+## taken as swaps with the club next to it, top of the ladder first, until no
+## swap is left, so every place is still filled once. A winner climbs past any
+## club that did not win, a loser drops past any club that did not lose; a
+## winner never goes down, a loser never goes up, and neither moves further
+## than its result earned. The same results always print the same ladder.
+## Every club the same.
+static func practice_nudge(order: Array, margins: Dictionary) -> Array:
+	var out := order.duplicate()
+	var earned := {}
+	var left := {}
+	for code in out:
+		earned[str(code)] = practice_shift(int(margins[code])) if margins.has(code) else 0
+		left[str(code)] = earned[str(code)]
+	var swapped := true
+	while swapped:
+		swapped = false
+		for i in range(out.size() - 1):
+			var up := str(out[i])
+			var down := str(out[i + 1])
+			# A winner never goes down and a loser never goes up; one that has
+			# used its places goes no further.
+			if int(earned[up]) > 0 or int(earned[down]) < 0:
+				continue
+			if int(earned[down]) > 0 and int(left[down]) == 0:
+				continue
+			if int(earned[up]) < 0 and int(left[up]) == 0:
+				continue
+			var climbs := int(left[down]) > 0
+			var drops := int(left[up]) < 0
+			if not (climbs or drops):
+				continue
+			out[i] = down
+			out[i + 1] = up
+			if climbs:
+				left[down] = int(left[down]) - 1
+			if drops:
+				left[up] = int(left[up]) + 1
+			swapped = true
+	return out
+
+
+## The paper's word on a club the practice match moved `places` (up when
+## positive) after a result by `margin` points: "Up a spot on the back of a
+## 30-point practice win". "" when it did not move.
+static func practice_move_line(places: int, margin: int) -> String:
+	if places == 0 or margin == 0:
+		return ""
+	var size := absi(places)
+	var spots: String = {1: "a spot", 2: "two", 3: "three", 4: "four"}.get(size, "%d places" % size)
+	var pts := absi(margin)
+	if places > 0:
+		if size == 1:
+			return "Up %s on the back of a %d-point practice win" % [spots, pts]
+		return "Up %s after a %d-point practice thumping" % [spots, pts]
+	if size == 1:
+		return "Down %s after a %d-point practice loss" % [spots, pts]
+	return "Down %s after a %d-point practice hiding" % [spots, pts]
 
 
 ## The finish the coach names when he talks the club up: a few places above
