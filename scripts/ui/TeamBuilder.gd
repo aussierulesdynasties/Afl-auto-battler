@@ -105,7 +105,8 @@ var _pull_from := 0.0
 var _pull_lift := 0.0
 var _pulling := false
 var _pull_moved := false
-const PULL_H := 24.0      # the top edge's touch strip: the gap above the list and a little either side
+const PULL_H := 44.0      # the top edge's touch strip, a thumb high: the gap above the list and PULL_REACH more above it
+const PULL_REACH := 20.0
 const PULL_ABOVE := 18.0
 const PULL_SLOP := 8.0    # a press that moves less than this is a tap
 const SHEET_PAD := 12.0
@@ -448,8 +449,8 @@ func _set_lift(v: float) -> void:
 		return
 	_lift = v
 	_sheet.offset_top = -v
-	_pull.offset_top = -v - PULL_ABOVE
-	_pull.offset_bottom = -v - PULL_ABOVE + PULL_H
+	_pull.offset_top = -v - PULL_ABOVE - PULL_REACH
+	_pull.offset_bottom = -v - PULL_ABOVE - PULL_REACH + PULL_H
 	var sb: StyleBoxFlat = _sheet.get_theme_stylebox("panel")
 	var up := v > 0.5
 	if sb.draw_center != up:
@@ -465,7 +466,7 @@ func _draw_pull() -> void:
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(UiKit.TEXT, 0.6)
 	sb.set_corner_radius_all(2)
-	_pull.draw_style_box(sb, Rect2((_pull.size.x - w) * 0.5, PULL_ABOVE - 9.0, w, 4.0))
+	_pull.draw_style_box(sb, Rect2((_pull.size.x - w) * 0.5, PULL_REACH + PULL_ABOVE - 9.0, w, 4.0))
 
 
 func _on_pull(ev: InputEvent) -> void:
