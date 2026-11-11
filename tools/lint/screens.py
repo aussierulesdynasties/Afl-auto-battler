@@ -37,6 +37,7 @@ def check_font_size_one_place(root):
 ## cue that says the same thing, how many lines it is on]. The count pins each part to its
 ## lines, so a new line that happens to contain one still has to be read and counted.
 COLOUR_CUES = {
+    "PreSeasonScene.gd": [["UiKit.TEXT if ok else UiKit.BAD", "the medical panel line says cleared / not cleared", 1]],
     "CaptaincySheet.gd": [["UiKit.BAD if off_bad", "the reason he can't lead, in words", 1]],
     "ClubPage.gd": [["UiKit.GOOD if us > them", "Won / Lost / Drew", 1]],
     "CoachingScene.gd": [
@@ -51,6 +52,7 @@ COLOUR_CUES = {
     "DraftSpotsSheet.gd": [["str(line[2]) == \"bad\"", "the line says who will pass", 1]],
     "DraftTradeSheet.gd": [["bool(verdict[\"ok\"])", "the club's reason in words", 1]],
     "HubScene.gd": [
+        ["UiKit.TEXT if ok else UiKit.BAD", "the medical panel line says cleared / not cleared", 1],
         ["\"You have retired\" if retired", "You have retired / You have been sacked", 1],
         ["\"own_injury\"", "the note names the injury", 1],
         ["UiKit.GOOD if done", "Done / To do", 1],
@@ -64,6 +66,7 @@ COLOUR_CUES = {
         ["\"Out %s\"", "Out N weeks", 1],
         ["\"Unhappy\"", "Unhappy", 1]],
     "MatchScene.gd": [
+        ["UiKit.TEXT if ok else UiKit.BAD", "the medical panel line says cleared / not cleared", 1],
         ["pts > 0", "the signed +/- points", 2],
         ["margin_colour(m > 0)", "the signed final margin", 1],
         ["bool(f[2])", "the legs word", 1],

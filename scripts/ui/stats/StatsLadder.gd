@@ -258,8 +258,8 @@ static func _status(host: Control, count: int) -> Control:
 
 
 static func _title_of(key: String) -> String:
-	for set in [LADDER_WIDE, TEAM_STATS]:
-		for c in set:
+	for table in [LADDER_WIDE, TEAM_STATS]:
+		for c in table:
 			if str(c[0]) == key:
 				return str(c[1])
 	return key

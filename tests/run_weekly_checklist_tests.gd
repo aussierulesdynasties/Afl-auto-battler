@@ -216,8 +216,7 @@ func _test_intro_text() -> void:
 	var text := ""
 	if intro != null:
 		for l in intro.find_children("*", "Label", true, false):
-			text += (l as Label).text + "
-"
+			text += (l as Label).text + "\n"
 	_check(intro != null and not text.contains("no weekly checklist") and text.contains("never a gate"),
 			"The weekly-loop intro tells of the list")
 	_state.set_setting("seen_weekly_loop_intro", true)

@@ -27,10 +27,15 @@ ALLOW = {
     "data/stories/media.json": [2, "should", "row 140: a pundit's view, reported"],
     "scripts/sim/MatchSim.gd": [1, "should", "row 131: a shot's likelihood at the gate"],
     "scripts/sim/PlanTraits.gd": [1, "starters", "kept: the Fast Starters trait (a side that starts quickly, AFL usage), not the line-up sense"],
+    # Auto-pick is the Team selection button's name (director, 2026-11-12: "Auto pick. I already answered
+    # this question"); these lines name the button, so the word stays.
+    "scripts/sim/SkipOrders.gd": [2, "auto-pick", "kept: names the Auto-pick button (director, 2026-11-12)"],
     "scripts/state/GameState.gd": [1, "projection", "row 138"],
     "scripts/ui/DraftScene.gd": [1, "projection", "row 136: draft"],
+    "scripts/ui/FirstVisitIntro.gd": [1, "auto-pick", "kept: names the Auto-pick button (director, 2026-11-12)"],
     "scripts/ui/OffseasonScene.gd": [1, "payroll", "row 137: contracts and trades"],
     "scripts/ui/PreSeasonScene.gd": [10, "starter", "row 136: pre-season"],
+    "scripts/ui/SelectionScene.gd": [5, "auto-pick", "kept: the Auto-pick button and the lines that name it (director, 2026-11-12)"],
     "scripts/ui/StatGuide.gd": [1, "projection", "row 139: stats and menus"],
 }
 
@@ -60,20 +65,22 @@ HUB_OLD = [
     "Simming the week...",
 ]
 
-## The team builder and coaching pass (copy voice pass 5): per file, the rewritten lines and the
-## lines they replaced. Auto-pick is the Match committee now, on every screen that names it.
+## The team builder and coaching pass (copy voice pass 5, with the builder's tap hint, the trait
+## picker's none line and the sim sheet's plan line): per file, the rewritten lines and the
+## lines they replaced. The button stays Auto-pick (director, 2026-11-12: "Auto pick. I already answered
+## this question"), so its lines name it in the coach's voice.
 TEAM_PASS = {
     "scripts/ui/SelectionScene.gd": [[
-        "\"Match committee\"", "Dual ruck on. The match committee names a second ruck on the bench.",
-        "One ruck. The match committee fills the bench with the best of the rest.",
+        "\"Auto-pick\"", "Dual ruck on. Auto-pick names a second ruck on the bench.",
+        "One ruck. Auto-pick fills the bench with the best of the rest.",
         "Our side is confirmed for this week.", "\"Our team\"",
         "Projected: %s as they would line up this week. They name their side on match day. They kick the other way.",
-        "Picked at match committee until you move someone.",
-        "Saved as your Best 23. Choose it any week from Match committee.",
-        "Back to the side from before match committee.",
+        "Auto-pick names our side until you move someone.",
+        "Saved as your Best 23. Choose it any week from Auto-pick.",
+        "Back to our side from before Auto-pick.",
         "Leave the player out while he is fit and the promise breaks. It stings.",
-    ], ["\"Auto-pick\"", "Auto-pick names", "Auto-pick fills", "Side confirmed for", "\"Your team\"", "(projected:",
-        "Picked for you", "from Auto-pick", "before the auto-pick", "Leave a fit player out"]],
+    ], ["atch committee", "Dual ruck on: Auto-pick", "One ruck: Auto-pick", "Side confirmed for", "\"Your team\"", "(projected:",
+        "Picked for you", "Back to your side before the auto-pick", "Leave a fit player out"]],
     "scripts/ui/CoachingScene.gd": [[
         "Each plan buys an edge and gives something up. The note below says which.",
         "Each plan runs on one of our list's strengths. That is our side as picked, against every list in the league.",
@@ -84,21 +91,30 @@ TEAM_PASS = {
     ], ["gives something up;", "one of your list's", "Also on your list", "how your side wins", "on top of your plan",
         "of your game", "payroll %s"]],
     "scripts/ui/FirstVisitIntro.gd": [[
-        "Our match-day 23 for this week. The match committee picks it until you move someone.",
+        "Our match-day 23 for this week. Auto-pick names it until you move someone.",
         "Move players on and off the ground to set the side you want.",
         "Our game plan: how we play every week, set against what our list is good at.",
         "Each plan suits some lists more than others. We can change it before any match.",
     ], ["Your match-day 23", "is picked for you", "the team you want", "Your game plan: how your side",
         "Pick the plan that suits"]],
     "scripts/sim/SkipOrders.gd": [[
-        "The match committee picks the side in place of one you named.",
-        "The match committee picks the side in place of one you named, and keeps picking it for the finals until you name another.",
-    ], ["Auto-pick"]],
+        "Auto-pick names the side in place of one you named.",
+        "Auto-pick names the side in place of one you named, and keeps naming it for the finals until you name another.",
+    ], ["atch committee", "Auto-pick replaces"]],
     "scripts/state/GameState.gd": [[
         "Nobody needs a break. This is our best side.", "Not enough fresh players to rest anyone. This is our best side.",
         "No saved Best 23 yet. Set a side and save it.", "Our Best 23. Replacing unavailable players: %s.",
         "\"Our Best 23.\"", "No young player is close enough to take a senior spot. This is our best side.",
     ], ["this is your best side", "arrange a side and save it", "\"Your Best 23", "a starter's spot"]],
+    "scripts/ui/TeamBuilder.gd": [[
+        " two of our players to swap them. Or drag one onto the other.",
+    ], [" a player, then another (or drag one onto another) to swap them."]],
+    "scripts/sim/PlanTraits.gd": [[
+        "No trait. Just our game plan.",
+    ], ["No trait: your game plan as written."]],
+    "scripts/ui/SimOrdersSheet.gd": [[
+        "Every match starts on our game plan: %s.\\nWe can change it in How we play.",
+    ], ["Every match starts on your game plan", ": change it in How we play."]],
 }
 
 TRAINING = "scripts/ui/TrainingScene.gd"
@@ -221,6 +237,26 @@ def check(root, allow=None, sources=None, tales=None):
     for path in tales:
         if read_n.get(path, 0) <= 0:
             out.append(Finding(path, 0, "copy-voice", "the phrase bank was not read, phrase by phrase (%d strings)" % read_n.get(path, 0)))
+    return out
+
+
+## Phone first: a line of copy says "tap", never "click". A screen that names the pointer by
+## device asks ScreenLayout.tap_word() (a one-word literal, so the scan passes it).
+CLICK = re.compile(r"(?i)(?<![A-Za-z])click(s|ed|ing)?(?![A-Za-z])")
+
+
+def check_no_click(root, sources=None):
+    """No copy source has a line with "click" in it (moved from copy_rules _test_no_click)."""
+    out = []
+    for d in (SOURCES if sources is None else sources):
+        for path in gd_files(root, d, ext=(".gd", ".json")):
+            try:
+                strings = source_strings(path, read(root, path))
+            except ValueError:
+                continue  # copy-voice reports the broken JSON
+            for n, s in strings:
+                if CLICK.search(s):
+                    out.append(Finding(path, n, "no-click", "copy says 'tap', not 'click': \"%s\"" % s[:90]))
     return out
 
 
