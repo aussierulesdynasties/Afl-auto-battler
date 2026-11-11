@@ -854,25 +854,42 @@ static func practice_shift(margin: int) -> int:
 
 
 ## The paper's ladder after the practice matches: each club with a result
-## (`margins`: club -> its own points margin) aims practice_shift places up or
-## down, and the ladder is re-dealt so every place is still filled once. A club
-## that moves takes the place ahead of one that holds it; equal aims keep the
-## list order. Every club the same, and the same results always print the
-## same ladder.
+## (`margins`: club -> its own points margin) swaps places with the club
+## practice_shift places up or down, so every place is still filled once. The
+## biggest margins go first (then the list order); a club swaps once, and a
+## swap never pushes a winner down or a loser up (it tries a place nearer, or
+## stays). So no club moves more than two places, and the same results always
+## print the same ladder. Every club the same.
 static func practice_nudge(order: Array, margins: Dictionary) -> Array:
-	var rows := []
+	var out := order.duplicate()
+	var shifts := {}
+	var movers := []
 	for i in range(order.size()):
 		var code := str(order[i])
-		var shift := practice_shift(int(margins[code])) if margins.has(code) else 0
-		rows.append([i - shift, -shift, i, code])
-	rows.sort_custom(func(a, b):
-		for k in range(3):
-			if int(a[k]) != int(b[k]):
-				return int(a[k]) < int(b[k])
-		return false)
-	var out := []
-	for r in rows:
-		out.append(r[3])
+		shifts[code] = practice_shift(int(margins[code])) if margins.has(code) else 0
+		if int(shifts[code]) != 0:
+			movers.append([-absi(int(margins[code])), i, code])
+	movers.sort_custom(func(a, b): return int(a[0]) < int(b[0]) or (int(a[0]) == int(b[0]) and int(a[1]) < int(b[1])))
+	var locked := {}
+	for m in movers:
+		var code := str(m[2])
+		if locked.has(code):
+			continue
+		var shift := int(shifts[code])
+		var at := out.find(code)
+		for step in range(absi(shift), 0, -1):
+			var to := at - step * signi(shift)
+			if to < 0 or to >= out.size():
+				continue
+			var other := str(out[to])
+			# The club swapped the other way must not have earned the opposite.
+			if locked.has(other) or int(shifts[other]) * signi(shift) > 0:
+				continue
+			out[to] = code
+			out[at] = other
+			locked[other] = true
+			break
+		locked[code] = true
 	return out
 
 

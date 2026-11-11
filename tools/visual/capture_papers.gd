@@ -122,6 +122,10 @@ func _run() -> void:
 		print("seed ", _seed, " margin ", (state.preseason.get("practice_margins", {}) as Dictionary).get(club, "none"),
 				" pred ", rec0.get("pred"), " moves ", rec0.get("moves"), " order ", rec0.get("order"))
 		root.get_node("Router").go("hub")
+		var wait := 0
+		while (current_scene == null or current_scene.find_child("PapersLadder", true, false) == null) and wait < 600:
+			wait += 1
+			await process_frame
 		await _frames(10)
 		await _shot(out + "_real.png")
 		await _scroll(true)

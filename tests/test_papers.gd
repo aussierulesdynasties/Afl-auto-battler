@@ -115,12 +115,12 @@ func _test_practice_nudge() -> void:
 	_check(win == ["A", "B", "C", "E", "D", "F", "G", "H"],
 			"A comfortable win lifts the club one place and the club it passed drops one (%s)" % str(win))
 	var heavy := PreSeason.practice_nudge(base, {"E": 45})
-	_check(heavy == ["A", "B", "E", "C", "D", "F", "G", "H"], "A heavy win lifts the club two (%s)" % str(heavy))
+	_check(heavy == ["A", "B", "E", "D", "C", "F", "G", "H"], "A heavy win lifts the club two, swapping places with the club two above (%s)" % str(heavy))
 	var loss := PreSeason.practice_nudge(base, {"C": -30, "D": 30})
 	_check(loss == ["A", "B", "D", "C", "E", "F", "G", "H"],
 			"A comfortable loss drops the club one; its opponent's win lifts that club one (%s)" % str(loss))
 	var hiding := PreSeason.practice_nudge(base, {"B": -45})
-	_check(hiding == ["A", "C", "D", "B", "E", "F", "G", "H"], "A heavy loss drops the club two (%s)" % str(hiding))
+	_check(hiding == ["A", "D", "C", "B", "E", "F", "G", "H"], "A heavy loss drops the club two (%s)" % str(hiding))
 	_check(PreSeason.practice_nudge(base, {"C": 0, "D": 0}) == base, "A draw moves nobody")
 	_check(PreSeason.practice_nudge(base, {}) == base, "A club with no practice match does not move")
 	var ends := PreSeason.practice_nudge(base, {"A": 60, "B": 30, "H": -60, "G": -30})
@@ -128,6 +128,12 @@ func _test_practice_nudge() -> void:
 	var crowd := PreSeason.practice_nudge(base, {"A": -50, "B": 50, "C": 30, "D": -30, "E": 45, "F": -45})
 	var sorted := crowd.duplicate()
 	sorted.sort()
+	var fair := true
+	for code in ["A", "B", "C", "D", "E", "F"]:
+		var shift := PreSeason.practice_shift(int({"A": -50, "B": 50, "C": 30, "D": -30, "E": 45, "F": -45}[code]))
+		var moved := base.find(code) - crowd.find(code)
+		fair = fair and absi(moved) <= 2 and moved * shift >= 0
+	_check(fair, "No club moves more than two places, no winner goes down and no loser goes up (%s)" % str(crowd))
 	_check(sorted == base and crowd == PreSeason.practice_nudge(base, {"A": -50, "B": 50, "C": 30, "D": -30, "E": 45, "F": -45}),
 			"However the results fall, every club is printed once and the same results print the same ladder (%s)" % str(crowd))
 	_check(PreSeason.practice_move_line(1, 30) == "Up a spot on the back of a 30-point practice win"
