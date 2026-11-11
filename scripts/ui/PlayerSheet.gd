@@ -94,6 +94,14 @@ static func open(host: Control, p: Dictionary, on_close: Callable = Callable(),
 	sl.name = "ProfileState"
 	sl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(sl)
+	# His concussions once they matter (MedicalPanel): any club's player, a fact,
+	# with the panel's odds read from its one constant.
+	var head := MedicalPanel.warning(GameState.concussions_in_window(p))
+	if head != "":
+		var hl := UiKit.lbl(head, UiKit.SMALL, UiKit.BAD, true)
+		hl.name = "ProfileConcussions"
+		hl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(hl)
 	if Ratings.available(p) and not rival:
 		var readiness := UiKit.lbl(Workload.description(p), UiKit.SMALL, UiKit.MUTED)
 		readiness.name = "ProfileReadiness"

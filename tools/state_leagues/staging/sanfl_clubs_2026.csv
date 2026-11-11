@@ -1,0 +1,11 @@
+code,name,short,league,kind,afl_club,ground,primary,secondary,accent,sanfl_team_code,src,colour_src
+ADR,Adelaide,Crows,SANFL,reserves,ADE,,#0F1432,#FF001E,#FFAA00,ADL,https://sanfl.com.au/league/clubs/adelaide/,https://en.wikipedia.org/wiki/Adelaide_Football_Club
+CTD,Central District,Bulldogs,SANFL,standalone,,X Convenience Oval,,,,CNTRL,https://sanfl.com.au/league/clubs/central-district/,
+GLG,Glenelg,Tigers,SANFL,standalone,,Stratarama Stadium,#010101,#FEBC03,,TIGERS,https://sanfl.com.au/league/clubs/glenelg/,https://en.wikipedia.org/wiki/Glenelg_Football_Club
+NAD,North Adelaide,Roosters,SANFL,standalone,,Revo Fitness Oval,#E3030F,#FFFFFF,,NORTH,https://sanfl.com.au/league/clubs/north-adelaide/,https://en.wikipedia.org/wiki/North_Adelaide_Football_Club
+NWD,Norwood,Redlegs,SANFL,standalone,,Coopers Stadium,#001448,#EE0F49,,NWD,https://sanfl.com.au/league/clubs/norwood/,https://en.wikipedia.org/wiki/Norwood_Football_Club
+PAM,Port Adelaide,Magpies,SANFL,reserves,PAD,Alberton Oval,#000000,#FFFFFF,,PORT,https://sanfl.com.au/league/clubs/port-adelaide/,https://en.wikipedia.org/wiki/Port_Adelaide_Football_Club
+SAD,South Adelaide,Panthers,SANFL,standalone,,Magain Stadium,#021637,#FFFFFF,,SOUTH,https://sanfl.com.au/league/clubs/south-adelaide/,https://en.wikipedia.org/wiki/South_Adelaide_Football_Club
+STU,Sturt,Double Blues,SANFL,standalone,,Thomas Farms Oval,#6CACE4,#041E42,,STURT,https://sanfl.com.au/league/clubs/sturt/,https://en.wikipedia.org/wiki/Sturt_Football_Club
+WAD,West Adelaide,Bloods,SANFL,standalone,,Richmond Oval,#000000,#ED174B,,WEST,https://sanfl.com.au/league/clubs/west-adelaide/,https://en.wikipedia.org/wiki/West_Adelaide_Football_Club
+WWT,Woodville-West Torrens,Eagles,SANFL,standalone,,Maughan Thiem Kia Oval,#002A62,#00553D,#FFD400,EAGLES,https://sanfl.com.au/league/clubs/woodville-west-torrens/,https://en.wikipedia.org/wiki/Woodville-West_Torrens_Football_Club

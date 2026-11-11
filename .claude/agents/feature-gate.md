@@ -7,7 +7,7 @@ model: sonnet
 
 You assess one proposed feature against the design bible.
 
-Read `docs/DESIGN_BIBLE.md` (especially "The feature test" and "The core pillar: player agency") and the philosophy section of `CLAUDE.md` first.
+Read `docs/DESIGN_BIBLE.md` (especially "The feature test" and the four pillars) and the philosophy section of `CLAUDE.md` first.
 
 Answer in a few lines, in football words:
 

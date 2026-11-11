@@ -1,0 +1,11 @@
+code,name,short,league,kind,afl_affiliation,home_ground,home_ground_2026_name,colours,primary,secondary,accent,src
+CLA,Claremont,Tigers,WAFL,standalone,,Claremont Oval,Revo Fitness Stadium,Navy blue / Gold,#0C2340,#FFC62B,,https://en.wikipedia.org/wiki/Claremont_Football_Club https://wafl.com.au/club/claremont
+EFR,East Fremantle,Sharks,WAFL,standalone,,East Fremantle Oval,The Good Grocer Park,Blue / White,#0000CC,#FFFFFF,,https://en.wikipedia.org/wiki/East_Fremantle_Football_Club https://wafl.com.au/club/east-fremantle
+EPR,East Perth,Royals,WAFL,standalone,,Leederville Oval,Sullivan Logistics Stadium,Blue / Black,#003D7B,#000000,,https://en.wikipedia.org/wiki/East_Perth_Football_Club https://wafl.com.au/club/east-perth
+PEL,Peel Thunder,Thunder,WAFL,aligned,FRE,Rushton Park,Lane Group Stadium,Dark blue / White / Teal,,#FFFFFF,,https://en.wikipedia.org/wiki/Peel_Thunder_Football_Club https://wafl.com.au/club/peel-thunder
+PER,Perth,Demons,WAFL,standalone,,Lathlain Park,Mineral Resources Park,Black / Red,#000000,#DE132E,,https://en.wikipedia.org/wiki/Perth_Football_Club https://wafl.com.au/club/perth
+SFR,South Fremantle,Bulldogs,WAFL,standalone,,Fremantle Oval,Fremantle Community Bank Oval,White / Dark red,#FFFFFF,#B42125,,https://en.wikipedia.org/wiki/South_Fremantle_Football_Club https://wafl.com.au/club/south-fremantle
+SUB,Subiaco,Lions,WAFL,standalone,,Leederville Oval,Sullivan Logistics Stadium,Maroon / Gold,#860038,#FFC423,,https://en.wikipedia.org/wiki/Subiaco_Football_Club https://wafl.com.au/club/subiaco
+SWA,Swan Districts,Swans,WAFL,standalone,,Bassendean Oval,Steel Blue Oval,Black / White,#000000,#FFFFFF,,https://en.wikipedia.org/wiki/Swan_Districts_Football_Club https://wafl.com.au/club/swan-districts
+WPR,West Perth,Falcons,WAFL,standalone,,Arena Joondalup,HIF Health Insurance Oval,Red / Blue,,,,https://en.wikipedia.org/wiki/West_Perth_Football_Club https://wafl.com.au/club/west-perth
+WCR,West Coast,Eagles,WAFL,reserves,WCE,Lathlain Park,Mineral Resources Park,as AFL West Coast (clubs.csv WCE),,,,https://en.wikipedia.org/wiki/West_Australian_Football_League https://wafl.com.au/club/west-coast

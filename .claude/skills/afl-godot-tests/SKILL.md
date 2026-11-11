@@ -104,13 +104,22 @@ Work through these before blaming your change:
 After two or three similar fixes have failed, stop patching and gather different
 evidence: a minimal reproduction, the last good commit, the runtime state.
 
+## Static lints first
+
+Rules that only read source text (copy voice, colour cues, type roles, sim boundaries, the
+autoload compile rule, gdlint) live in `tools/lint/`, not in a suite:
+`python3 -I tools/lint/lint.py` runs them all in about 20 s with no Godot, and the Tests `lint`
+job runs them before any shard. A new "this file never contains X" check goes there with a test
+in `tools/lint/test_lint.py` (tools/lint/README.md); `run_tests.sh` runs the autoload rule
+before every suite run, so a runner that would hang fails in a second.
+
 ## CI
 
 - **Run it on GitHub, not on the PC (director, 2026-11-10: "utilise github as much as possible").** `run_on_github.yml`
   runs long suites, balance screens and history regeneration on any branch: `gh workflow run run_on_github.yml --ref <branch>
   -f what=suites -f suites="story preseason"`, `-f what=balance -f base=main`, `-f what=histories`. Audits go to `audit.yml`.
   A local Godot only when a job needs a window or a fast loop, through `C:/kt/test_slot.sh` (6 Godots in total).
-- `tests.yml`: `plan` → twelve `shard` jobs (`tools/ci_shards.py` lays out
+- `tests.yml`: `plan` and `lint` (tools/lint, ~1 min) → twelve `shard` jobs (`tools/ci_shards.py` lays out
   `tools/ci_shards.txt` plus any suite added since the last re-plan, about
   10-12 min; PRs skip `balance`/`league_balance` and run `calibration` only
   when `scripts/sim/` or `data/` changed; those three run nightly at 03:00
