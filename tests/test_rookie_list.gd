@@ -610,7 +610,7 @@ func _test_real_lists_rookie_categories() -> void:
 	# Lachlan McGlade and Garrison Kenh, Next Generation Academy), as it does
 	# for every club: they are the senior spots past the real 33.
 	var wce: Array = gs.league_lists["WCE"]
-	var tied := gs.intake_assignments.filter(func(a): return str(a["club"]) == "WCE").size()
+	var tied: int = gs.intake_assignments.filter(func(a): return str(a["club"]) == "WCE").size()
 	_check(RookieList.senior_count(wce) - tied == 33 and RookieList.cat_a_count(wce) == 10
 			and RookieList.cat_b_count(wce) == 2 and RookieList.list_size(wce) - tied == 43,
 			"West Coast starts as its real list: 33 senior, 10 Category A, 2 Category B, 43 of 44, plus %d tied prospects (%d, %d, %d, %d)" % [
