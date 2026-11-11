@@ -4309,10 +4309,14 @@ func _ft_summary(v: VBoxContainer) -> void:
 			var inj := UiKit.lbl("Injured: " + ", ".join(hurt), UiKit.BODY, UiKit.BAD, true)
 			inj.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			week.add_child(inj)
-		var panel := GameState.my_medical_lines()
-		if not panel.is_empty():
-			var md := UiKit.lbl("Medical panel: " + " ".join(panel), UiKit.BODY, UiKit.BAD, true)
-			md.name = "YourMedical"
+		# One line per sitting, the first headed "Medical panel:". A cleared
+		# player is good news: body ink; a career ended is the injury red.
+		var panel := GameState.my_medical_rows()
+		for i in range(panel.size()):
+			var ok := bool(panel[i]["cleared"])
+			var md := UiKit.lbl(("Medical panel: " if i == 0 else "") + str(panel[i]["text"]),
+					UiKit.BODY, UiKit.TEXT if ok else UiKit.BAD, not ok)
+			md.name = "YourMedical_%d" % i
 			md.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			week.add_child(md)
 		var report: Dictionary = GameState.last_training_report

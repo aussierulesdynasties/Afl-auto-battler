@@ -123,6 +123,19 @@ func _run() -> void:
 		# --stack SIDE: that side stacks every centre ball-up (the attacking
 		# setup, for the second demonstration).
 		(sim.bursts[int(args["stack"])] as Dictionary)["stack"] = 100000
+	var through := ""
+	if args.has("through"):
+		# --through SIDE:NAME: that side plays through its player of that real
+		# name in the midfield all match (the coach's play-through call, its
+		# plan held), and the oval rings him.
+		var tk := str(args["through"]).split(":")
+		var ts := int(tk[0])
+		for p in (sim.squads[ts].ground as Array):
+			if str(p.get("real_name", "")) == str(tk[1]):
+				through = str(p["id"])
+		(sim.squads[ts] as RefCounted).set("ai_plans", false)
+		sim.set_tactics(ts, {"gameplan": "balanced", "focus_mid": through})
+		print("CAPTURE through %s id %s" % [tk[1], through])
 	load("res://scripts/ui/match/MatchDirector.gd").set("debug_no_press_shape", args.has("noshape"))
 	var res: Dictionary
 	var call := str(args.get("call", ""))
@@ -192,6 +205,8 @@ func _run() -> void:
 	if args.has("shake"):
 		pitch.shake_share = float(args["shake"])
 	pitch.setup(res)
+	if through != "":
+		pitch.set_rings([through])
 	# --figures: the mini-figure prototype on (Settings > Match view), whatever the setting.
 	pitch.mini_figures = args.has("figures")
 	pitch.set_speed(float(args.get("speed", "1")))
@@ -209,6 +224,13 @@ func _run() -> void:
 				if seen == int(args.get("nth", "1")):
 					from = maxi(0, i - int(args.get("lead", "3")))
 					break
+	if through != "" and args.has("back-on"):
+		# --back-on: start at the play-through man's first interchange back on.
+		for i in range(res["events"].size()):
+			var e: Dictionary = res["events"][i]
+			if str(e["kind"]) == "sub" and str(e.get("player_id", "")) == through:
+				from = i
+				break
 	var guard := 0
 	while pitch.current_index() < from and guard < 200000:
 		pitch._process(dt)
@@ -260,8 +282,16 @@ func _run() -> void:
 			await process_frame
 			await process_frame
 			var img: Image = root.get_viewport().get_texture().get_image()
+			if args.has("full"):
+				img.save_png("%s_t%02d.png" % [out, tiles.size()])
 			img.resize(W / 3, H / 3, Image.INTERPOLATE_BILINEAR)
 			tiles.append(img)
+			for t in pitch.director.tokens:
+				if through != "" and str(t.get("pid", "")) == through:
+					print("CAPTURE frame %d %s slot %s role %s up the ground %.0f m (attacking frame), ball %s" % [
+							tiles.size() - 1, str(t["surname"]), str(t["slot"]), str(t["role"]),
+							(t["pos"] as Vector2).x * (1.0 if int(t["side"]) == 0 else -1.0),
+							str(pitch.director.ball["mode"])])
 	for i in range(start_idx, pitch.current_index()):
 		var ev: Dictionary = pitch.events[i]
 		events_seen.append("%s:%s" % [str(ev.get("kind", "")), str(ev.get("name", ""))])

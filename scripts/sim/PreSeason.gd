@@ -854,64 +854,139 @@ static func practice_shift(margin: int) -> int:
 
 
 ## The paper's ladder after the practice matches: each club with a result
-## (`margins`: club -> its own points margin) has practice_shift places to move,
-## taken as swaps with the club next to it, top of the ladder first, until no
-## swap is left, so every place is still filled once. A winner climbs past any
-## club that did not win, a loser drops past any club that did not lose; a
-## winner never goes down, a loser never goes up, and neither moves further
-## than its result earned. The same results always print the same ladder.
-## Every club the same.
+## (`margins`: club -> its own points margin) earns practice_shift places, so
+## its target is its listed place less what a win earned (or plus what a loss
+## earned), kept on the ladder. The movers take their places first, closest to
+## their targets, the higher target first and the higher-listed club first on a
+## tie; no club moves further than it earned, no winner goes down and no loser
+## goes up. Every other club then fills the places left, in its listed order.
+## A club only falls short of what it earned when the ladder ends or another
+## club's result took the place. Every place is filled once, the same results
+## always print the same ladder, and every club is treated the same.
 static func practice_nudge(order: Array, margins: Dictionary) -> Array:
-	var out := order.duplicate()
-	var earned := {}
-	var left := {}
-	for code in out:
-		earned[str(code)] = practice_shift(int(margins[code])) if margins.has(code) else 0
-		left[str(code)] = earned[str(code)]
-	var swapped := true
-	while swapped:
-		swapped = false
-		for i in range(out.size() - 1):
-			var up := str(out[i])
-			var down := str(out[i + 1])
-			# A winner never goes down and a loser never goes up; one that has
-			# used its places goes no further.
-			if int(earned[up]) > 0 or int(earned[down]) < 0:
+	var n := order.size()
+	var target := {}
+	var lo := {}
+	var hi := {}
+	var movers: Array = []
+	for i in range(n):
+		var code := str(order[i])
+		var earned := practice_shift(int(margins[code])) if margins.has(code) else 0
+		if earned == 0:
+			continue
+		target[code] = clampi(i - earned, 0, n - 1)
+		lo[code] = mini(i, int(target[code]))
+		hi[code] = maxi(i, int(target[code]))
+		movers.append(code)
+	movers.sort_custom(func(a: String, b: String) -> bool:
+		if int(target[a]) != int(target[b]):
+			return int(target[a]) < int(target[b])
+		return order.find(a) < order.find(b))
+	var taken := {}
+	var slot_of := {}
+	for k in range(movers.size()):
+		var code: String = movers[k]
+		var home := order.find(code)
+		var later := movers.slice(k + 1)
+		var best := -1
+		for s in range(int(lo[code]), int(hi[code]) + 1):
+			if taken.has(s):
 				continue
-			if int(earned[down]) > 0 and int(left[down]) == 0:
+			taken[s] = true
+			var fits := _places_fit(later, taken, lo, hi, n)
+			taken.erase(s)
+			if not fits:
 				continue
-			if int(earned[up]) < 0 and int(left[up]) == 0:
-				continue
-			var climbs := int(left[down]) > 0
-			var drops := int(left[up]) < 0
-			if not (climbs or drops):
-				continue
-			out[i] = down
-			out[i + 1] = up
-			if climbs:
-				left[down] = int(left[down]) - 1
-			if drops:
-				left[up] = int(left[up]) + 1
-			swapped = true
+			# Closest to the target; nearer its listed place on a tie.
+			var d := absi(s - int(target[code]))
+			if best < 0 or d < absi(best - int(target[code])) \
+					or (d == absi(best - int(target[code])) and absi(s - home) < absi(best - home)):
+				best = s
+		if best < 0:
+			best = home
+		taken[best] = true
+		slot_of[best] = code
+	var out: Array = []
+	var others: Array = []
+	for code in order:
+		if not target.has(str(code)):
+			others.append(str(code))
+	for s in range(n):
+		out.append(slot_of[s] if slot_of.has(s) else others.pop_front())
 	return out
 
 
-## The paper's word on a club the practice match moved `places` (up when
-## positive) after a result by `margin` points: "Up a spot on the back of a
-## 30-point practice win". "" when it did not move.
-static func practice_move_line(places: int, margin: int) -> String:
-	if places == 0 or margin == 0:
+## Can `clubs` each still take a free place inside its own [lo, hi]? (Free
+## places top down, each to the club whose last allowed place comes first: if
+## that fails, nothing does.)
+static func _places_fit(clubs: Array, taken: Dictionary, lo: Dictionary, hi: Dictionary, n: int) -> bool:
+	var left := clubs.duplicate()
+	for s in range(n):
+		if left.is_empty():
+			return true
+		if taken.has(s):
+			continue
+		var pick := ""
+		for code in left:
+			if int(hi[code]) < s:
+				return false
+			if int(lo[code]) <= s and (pick == "" or int(hi[code]) < int(hi[pick])):
+				pick = code
+		if pick != "":
+			left.erase(pick)
+	return left.is_empty()
+
+
+## The paper's word on a club whose practice result earned it `earned` places
+## (up when positive) and moved it `places`, after a result by `margin` points:
+## "Up a spot on the back of a 30-point practice win". The word follows the
+## margin: a win or loss under papers_practice_two points, a thumping or a
+## hiding from there. When the club moved less than it earned the line says
+## why: `by` is "top", "bottom", or the name of the club in the way, whose own
+## margin is `by_margin`. "" for a club its result did not earn a move.
+static func practice_move_line(places: int, margin: int, earned: int, by: String = "", by_margin: int = 0) -> String:
+	if earned == 0 or margin == 0:
 		return ""
+	var pts := absi(margin)
+	var heavy := pts >= int(tune("papers_practice_two"))
+	var word := ("thumping" if heavy else "win") if margin > 0 else ("hiding" if heavy else "loss")
+	var result := "a %d-point practice %s" % [pts, word]
 	var size := absi(places)
 	var spots: String = {1: "a spot", 2: "two", 3: "three", 4: "four"}.get(size, "%d places" % size)
-	var pts := absi(margin)
+	var short := absi(places) < absi(earned)
+	if places == 0:
+		if by == "top":
+			return "Stays top after %s" % result
+		if by == "bottom":
+			return "Stays last after %s" % result
+		return _practice_why("Holds its place after %s" % result, earned, by, by_margin)
+	if short and by == "top":
+		return "Up %s to the top after %s" % [spots, result]
+	if short and by == "bottom":
+		return "Down %s to the bottom after %s" % [spots, result]
+	var line := ""
 	if places > 0:
-		if size == 1:
-			return "Up %s on the back of a %d-point practice win" % [spots, pts]
-		return "Up %s after a %d-point practice thumping" % [spots, pts]
-	if size == 1:
-		return "Down %s after a %d-point practice loss" % [spots, pts]
-	return "Down %s after a %d-point practice hiding" % [spots, pts]
+		line = ("Up a spot on the back of %s" % result) if size == 1 else ("Up %s after %s" % [spots, result])
+	else:
+		line = "Down %s after %s" % [spots, result]
+	return _practice_why(line, earned, by, by_margin) if short else line
+
+
+## The reason a club moved less than its result earned: the club in the way.
+static func _practice_why(line: String, earned: int, by: String, by_margin: int) -> String:
+	if by == "" or by == "top" or by == "bottom":
+		return line
+	if earned > 0:
+		if by_margin > 0:
+			return "%s; %s's own win kept them in front" % [line, by]
+		if by_margin < 0:
+			return "%s; %s's slide took that place" % [line, by]
+		return "%s; %s could not be passed" % [line, by]
+	if by_margin < 0:
+		return "%s; %s's own loss kept them lower" % [line, by]
+	if by_margin > 0:
+		return "%s; %s's climb took that place" % [line, by]
+	return "%s; %s stayed below" % [line, by]
 
 
 ## The finish the coach names when he talks the club up: a few places above

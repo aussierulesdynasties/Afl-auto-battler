@@ -139,10 +139,26 @@ func _test_practice_nudge() -> void:
 	_check(pair == ["A", "B", "E", "F", "C", "D", "G", "H"], "Two heavy losers side by side both drop two (%s)" % str(pair))
 	_check(sorted == base and crowd == PreSeason.practice_nudge(base, {"A": -50, "B": 50, "C": 30, "D": -30, "E": 45, "F": -45}),
 			"However the results fall, every club is printed once and the same results print the same ladder (%s)" % str(crowd))
-	_check(PreSeason.practice_move_line(1, 30) == "Up a spot on the back of a 30-point practice win"
-			and PreSeason.practice_move_line(-2, -45) == "Down two after a 45-point practice hiding"
-			and PreSeason.practice_move_line(0, 30) == "",
-			"The paper says why a club moved, in points; nothing for a club that did not")
+	# A loser ahead of a club that did not play does not hold back a heavy
+	# winner below it: the winner still climbs both places it earned.
+	var past := PreSeason.practice_nudge(["L", "N", "W"], {"L": -30, "W": 50})
+	_check(past == ["W", "L", "N"], "A heavy winner climbs two past a loser and a club that did not move (%s)" % str(past))
+	var tight := PreSeason.practice_nudge(base, {"D": 30, "E": 45})
+	_check(tight == ["A", "B", "D", "E", "C", "F", "G", "H"],
+			"Two winners after the same place: the higher-listed one gets it, the other comes up one behind it (%s)" % str(tight))
+	_check(PreSeason.practice_move_line(1, 30, 1) == "Up a spot on the back of a 30-point practice win"
+			and PreSeason.practice_move_line(-2, -45, -2) == "Down two after a 45-point practice hiding"
+			and PreSeason.practice_move_line(-1, -30, -1) == "Down a spot after a 30-point practice loss"
+			and PreSeason.practice_move_line(2, 56, 2) == "Up two after a 56-point practice thumping"
+			and PreSeason.practice_move_line(0, 30, 0) == "" and PreSeason.practice_move_line(0, 0, 0) == "",
+			"The paper says why a club moved, in points, the word following the margin; nothing for a club its result did not move")
+	_check(PreSeason.practice_move_line(1, 56, 2, "Hawthorn", 30)
+			== "Up a spot on the back of a 56-point practice thumping; Hawthorn's own win kept them in front"
+			and PreSeason.practice_move_line(1, 56, 2, "top") == "Up a spot to the top after a 56-point practice thumping"
+			and PreSeason.practice_move_line(0, 30, 1, "top") == "Stays top after a 30-point practice win"
+			and PreSeason.practice_move_line(-1, -45, -2, "bottom") == "Down a spot to the bottom after a 45-point practice hiding"
+			and PreSeason.practice_move_line(-1, -50, -2, "Hawthorn", 30) == "Down a spot after a 50-point practice hiding; Hawthorn's climb took that place",
+			"A club that moved less than it earned is told why: the top, the bottom, or the club whose result took the place")
 	# In a career: every club's practice margin is kept, and the ladder printed is the nudged one.
 	_career("MEL")
 	_to_papers()
@@ -152,13 +168,29 @@ func _test_practice_nudge() -> void:
 	_check(played >= GameState.season.clubs.size() - 1 and margins.has("MEL"),
 			"Every club that played a practice match has its margin kept, yours too (%d)" % played)
 	var moves: Dictionary = rec.get("moves", {})
+	print("  papers' ladder %s" % str(rec["order"]))
+	print("  moves %s" % str(moves))
 	var ok := true
-	for code in moves:
-		var m: Dictionary = moves[code]
-		ok = ok and signi(int(m["places"])) == signi(PreSeason.practice_shift(int(m["margin"])))
+	var full := true
+	var named := 0
+	for code in margins:
+		var shift := PreSeason.practice_shift(int(margins[code]))
+		if shift == 0:
+			continue
+		named += 1 if moves.has(code) else 0
+		var m: Dictionary = moves.get(code, {"places": 0, "earned": 0, "by": ""})
+		var places := int(m["places"])
+		ok = ok and int(m["earned"]) == shift and places * shift >= 0 and absi(places) <= absi(shift)
+		# Short of what it earned only when the ladder's end stopped it or
+		# another club's own result took the place it was after.
+		if absi(places) < absi(shift):
+			var by := str(m["by"])
+			full = full and (["top", "bottom"].has(by) or PreSeason.practice_shift(int(margins.get(by, 0))) != 0)
+			print("  short: %s earned %d moved %d by %s" % [code, shift, places, by])
 	_check(ok and (rec["order"] as Array).size() == GameState.season.clubs.size()
 			and int(rec["pred"]) == (rec["order"] as Array).find("MEL") + 1,
-			"The printed ladder is whole, each named move is the way its result points, and your place is read from it")
+			"The printed ladder is whole, each named move is the way its result points and no further, and your place is read from it")
+	_check(full and named > 0, "Every club the practice match earned a move gets all of it unless the ladder's end or another club's result stops it (%d named)" % named)
 	_career()
 
 
