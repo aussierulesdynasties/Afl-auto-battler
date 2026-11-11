@@ -33,11 +33,20 @@ func _run() -> void:
 	state.set_player_plan(str(list[2]["id"]), str(state.plans_for(list[2])[1]) if state.plans_for(list[2]).size() > 1 else "position")
 	state.set_setting("seen_training_intro", true)
 	router.go("training")
+	# The router shows a loading screen first: wait for Training itself.
+	for i in range(900):
+		await process_frame
+		if current_scene != null and current_scene.has_method("_open_player"):
+			break
+	var scene = current_scene
+	if scene == null or not scene.has_method("_open_player"):
+		push_error("training scene did not open")
+		quit(1)
+		return
 	for i in range(45):
 		await process_frame
 	await _drawn()
 	root.get_texture().get_image().save_png(prefix + "_grid.png")
-	var scene = current_scene
 	var sc: ScrollContainer = scene.get("_list_scroll")
 	sc.scroll_vertical = 600
 	for i in range(4):

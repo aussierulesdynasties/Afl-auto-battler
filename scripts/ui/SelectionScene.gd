@@ -7,9 +7,11 @@ extends Control
 ##
 ## No scrolling (director, 2026-10-13: "team selection being scrollable doesnt
 ## feel good"): "The side" is the oval, the interchange and the players not
-## picked; "This week" (WeekPreview) is what the choice rests on. A PC shows
-## both, side by side; a phone shows the side, and the week has its own step
-## between Play match and the setup (the match preview, director 2026-11-07). Player roles,
+## picked. A PC puts the players not picked in a column beside the oval, with
+## the synergies and your own news under them (director, 2026-11-11); a phone
+## stacks them under the interchange. The week (the match-up line against line
+## and the assistant's report) has its own step between Play match and the
+## setup on every screen (the match preview, director 2026-11-07). Player roles,
 ## game plan and tags are not asked here: they are set on the match-day setup
 ## before Start (director, 2026-10-13), which opens this screen through
 ## Change the side and comes back to it with the new side (TODO row 25).
@@ -29,6 +31,7 @@ var _view := "mine"        # "mine" or "opp": the oval shows them, read-only
 var _line_cache := {}      # the other clubs' lines, built once a visit
 var _wide := false
 var _chemistry: Control           # the Team Chemistry sheet, open over the side
+var _list_host: VBoxContainer = null  # a wide screen's column for the players not picked
 
 
 func _ready() -> void:
@@ -101,13 +104,35 @@ func _build() -> void:
 		var cols := UiKit.hbox(14)
 		cols.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		_root.add_child(cols)
+		# The players not picked have the column beside the oval (director,
+		# 2026-11-11: "we need to be able to see more of the team selection
+		# below... its a problem on pc too"; "the assistant report doesnt need
+		# to live here. put the unselected players there"). The synergies and
+		# your own news, which move with the side, sit under them.
+		_week.with_report = false
+		_list_host = UiKit.vbox(6)
+		_list_host.name = "NotPickedColumn"
+		_list_host.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		cols.add_child(_scroller(_side_page(auto), "SelectionScroll"))
 		# The week keeps a readable measure: it does not stretch with the window.
-		var right := _scroller(_week.page(), "WeekScroll")
+		var right := UiKit.vbox(10)
+		right.name = "WeekColumn"
 		right.size_flags_horizontal = Control.SIZE_FILL
 		right.custom_minimum_size.x = clampf(UiKit.view_width(self) * 0.4, WEEK_W_MIN, WEEK_W_MAX)
+		var week_page := _week.page()
+		var week := _scroller(week_page, "WeekScroll")
+		week.size_flags_vertical = Control.SIZE_FILL
+		# The week's lines are as tall as what they say, never more than a third of the column.
+		var fit := func():
+			week.custom_minimum_size.y = minf(week_page.get_combined_minimum_size().y, right.size.y * 0.34)
+		week_page.minimum_size_changed.connect(fit)
+		right.resized.connect(fit)
+		fit.call_deferred()
+		right.add_child(_list_host)
+		right.add_child(week)
 		cols.add_child(right)
 	else:
+		_list_host = null
 		_root.add_child(_scroller(_side_page(auto), "SelectionScroll"))
 	if GameState.side_from_match and GameState.match_day_setup_open():
 		# Reached from the match-day setup: the way back is the primary action.
@@ -168,6 +193,7 @@ func _side_page(auto: bool) -> Control:
 	var builder := TeamBuilder.new()
 	builder.name = "TeamBuilder"
 	builder.stacked = true
+	builder.rest_host = _list_host if _wide else null
 	builder.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	builder.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	builder.start_note = _notice
@@ -189,8 +215,26 @@ func _side_page(auto: bool) -> Control:
 		_fill_actions(actions)
 		builder.interchange_actions = actions
 		builder.hint_extra = "Picked for you each week until you move someone." if auto else ""
-		# Team Chemistry (row 125), read at a glance above the oval; a tap says why.
-		page.add_child(ChemistryMeter.meter(_open_chemistry))
+		# Team Chemistry (row 125), read at a glance above the oval; a tap says
+		# why. It shares the line of the Your team / opponent switch, so the
+		# height it used goes to the players not picked.
+		var meter := ChemistryMeter.meter(_open_chemistry)
+		var tabs: Control = page.get_node_or_null("OvalView")
+		# (A larger text size, Settings, has no room for both on a phone's line.)
+		if tabs != null and (_wide or UiKit.text_scale <= 1.0):
+			var top := UiKit.hbox(12)
+			top.name = "SideTop"
+			tabs.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+			page.remove_child(tabs)
+			top.add_child(tabs)
+			if _wide:
+				# Beside a wide oval the bar is a meter, not a rule across the page.
+				meter.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+				meter.custom_minimum_size.x = 360
+			top.add_child(meter)
+			page.add_child(top)
+		else:
+			page.add_child(meter)
 		page.add_child(builder)
 		builder.setup(GameState.current_side(), _wide)
 	builder.inspect.connect(_open_profile)

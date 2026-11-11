@@ -11,6 +11,10 @@ extends RefCounted
 var host: Control
 ## A synergy completed from the guide changed the side: (note, side before).
 var side_changed := Callable()
+## false on Team selection (director, 2026-11-11: "the assistant report doesnt
+## need to live here. put the unselected players there"): no round heading,
+## report or line against line; they stay on the match preview.
+var with_report := true
 var _overlay: Control          # the report or the synergy guide, open over host
 var _name_index := {}
 var _name_key := ""
@@ -34,7 +38,9 @@ func page() -> Control:
 ## verdict. How they play is in the assistant's report.
 func fill(v: VBoxContainer) -> void:
 	var nxt := GameState.my_next_opponent()
-	if nxt.is_empty():
+	if not with_report:
+		pass
+	elif nxt.is_empty():
 		v.add_child(_strength_line())
 	else:
 		var code := str(nxt["code"])
