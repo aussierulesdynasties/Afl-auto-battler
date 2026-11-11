@@ -948,6 +948,9 @@ def build_captains(cache: str, opening: list[dict]) -> list[dict]:
     return rows
 
 
+AR06 = "https://footyindustry.com/docs/AFL%202006%20Annual%20report.pdf"
+AR10 = "https://footyindustry.com/docs/AFL%202010%20Annual%20Report.pdf"
+AR11 = "https://footyindustry.com/docs/AFL%202011%20Annual%20Report.pdf"
 # Era rules. Every value is a statement on the page quoted beside it, checked by
 # hand on CHECKED; a year no statement covers stays out (the game decides what
 # a missing year means). from_year..to_year is the span the statement covers.
@@ -959,6 +962,43 @@ ERA_RULES = [
      "with the salary floor set at 90% of the cap or $1.125 million"),
     ("salary_cap", 1600000, 1991, 1991, "Australian_Football_League",
      "Evolution of competition table: 1991 Victoria South Australia West Australia New South Wales Queensland $1,600,000"),
+    # Salary caps 1990 and 1997-2012, per club in dollars of the time. Before 1999
+    # the base cap; from 1999 Total Player Payments (TPP). The annual reports'
+    # ten-year tables give TPP per club in $m: the AFL 2006 report's row for
+    # 1997-2006 and the AFL 2010 report's for 2001-2010 (pdftotext puts that row
+    # beside the next row's label). A quote starts at its own year's figure.
+    ("salary_cap", 1500000, 1990, 1990, "https://www.afl.com.au/news/96194/an-ever-changing-game",
+     "Back in 1990 players were paid ... The then $1.5 million salary cap"),
+    ("salary_cap", 2900000, 1997, 1997, AR06,
+     "TPP per club from 1997 ($m): 2.900 3.275 4.250 4.750 5.188"),
+    ("salary_cap", 3275000, 1998, 1998, AR06,
+     "TPP per club from 1998 ($m): 3.275 4.250 4.750 5.188 5.563"),
+    ("salary_cap", 4250000, 1999, 1999, AR06,
+     "TPP per club from 1999 ($m): 4.250 4.750 5.188 5.563 5.938"),
+    ("salary_cap", 4750000, 2000, 2000, AR06,
+     "TPP per club from 2000 ($m): 4.750 5.188 5.563 5.938 6.116"),
+    ("salary_cap", 5188000, 2001, 2001, AR10,
+     "TPP per club from 2001 ($m): 5.188 5.563 5.938 6.116 6.301"),
+    ("salary_cap", 5563000, 2002, 2002, AR10,
+     "TPP per club from 2002 ($m): 5.563 5.938 6.116 6.301 6.473"),
+    ("salary_cap", 5938000, 2003, 2003, AR10,
+     "TPP per club from 2003 ($m): 5.938 6.116 6.301 6.473 6.944"),
+    ("salary_cap", 6116000, 2004, 2004, AR10,
+     "TPP per club from 2004 ($m): 6.116 6.301 6.473 6.944 7.431"),
+    ("salary_cap", 6301000, 2005, 2005, AR10,
+     "TPP per club from 2005 ($m): 6.301 6.473 6.944 7.431 7.694"),
+    ("salary_cap", 6473000, 2006, 2006, AR10,
+     "TPP per club from 2006 ($m): 6.473 6.944 7.431 7.694 7.950"),
+    ("salary_cap", 6944000, 2007, 2007, AR10,
+     "TPP per club from 2007 ($m): 6.944 7.431 7.694 7.950"),
+    ("salary_cap", 7431000, 2008, 2008, AR10,
+     "TPP per club from 2008 ($m): 7.431 7.694 7.950"),
+    ("salary_cap", 7694000, 2009, 2009, AR10,
+     "TPP per club from 2009 ($m): 7.694 7.950"),
+    ("salary_cap", 7950000, 2010, 2010, AR10,
+     "TPP per club from 2010 ($m): 7.950"),
+    ("salary_cap", 8210000, 2011, 2011, AR11, "2011 - $8.21 million a club (final year of current agreement)"),
+    ("salary_cap", 8787000, 2012, 2012, AR11, "2012 - $8.787 million a club (seven per cent increase)"),
     ("salary_cap", 9130000, 2013, 2013, "Australian_Football_League",
      "this was $9,130,000 for the 2013 season with a salary floor of $8,673,500"),
     ("salary_floor", 8673500, 2013, 2013, "Australian_Football_League",
@@ -1014,11 +1054,12 @@ ERA_RULES = [
 
 def page_has(cache: str, page: str, words: str) -> bool:
     """Every part of the quote ('...' or ';' between parts) is on the cached
-    page, comparing letters and digits only (so a dash or spacing never matters)."""
+    page, comparing letters and digits only (so a dash or spacing never matters).
+    A page is a Wikipedia title or a full URL (a PDF is cached as its text)."""
     def squash(s: str) -> str:
         return re.sub(r"[^a-z0-9]", "", s.lower())
-    page_text = squash(text(wiki_text(cache, page)))
-    parts = [re.sub(r"^(Evolution of competition table: |\d{4} - )", "", f)
+    page_text = squash(text(wiki_text(cache, page) if not page.startswith("https://") else read(cache, page)))
+    parts = [re.sub(r"^(Evolution of competition table: |TPP per club from \d{4} \(\$m\): |\d{4} - )", "", f)
              for f in re.split(r"\s*\.\.\.\s*|;\s*", words) if f.strip()]
     return all(squash(p)[:60] in page_text for p in parts)
 
@@ -1031,7 +1072,7 @@ def build_era_rules(cache: str) -> list[dict]:
         if not page_has(cache, page, words):
             raise SystemExit(f"era rule {rule} {a}-{b}: '{words}' not found on {page}")
         rows.append({"rule": rule, "value": value, "from_year": a, "to_year": b, "quote": words,
-                     "source_url": WIKI + page, "checked": CHECKED})
+                     "source_url": page if page.startswith("https://") else WIKI + page, "checked": CHECKED})
     return rows
 
 

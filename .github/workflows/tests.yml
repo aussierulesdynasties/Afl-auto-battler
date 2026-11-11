@@ -33,6 +33,12 @@ name: Tests
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+  # The merge queue (ruleset on main, director 2026-11-12) needs "test" on the queued
+  # group: the PR on top of main and every PR ahead of it. A group runs the full wall
+  # like a push to main (docs-only groups skip the game tests), and its green tree lets
+  # the push to main that follows skip its shards (tools/ci_same_tree.sh).
+  merge_group:
+    types: [checks_requested]
   push:
     branches: [main]
     paths-ignore:
@@ -83,6 +89,7 @@ jobs:
         env:
           IS_DRAFT: ${{ github.event.pull_request.draft }}
           PRETEND: ${{ inputs.changed_files }}
+          MQ_BASE: ${{ github.event.merge_group.base_sha }}
         run: |
           code=true
           reason=""
@@ -110,6 +117,14 @@ jobs:
               reason="${why#Skip: }"
             fi
             echo "$why"
+          fi
+          # A merge-queue group: diff the group's head against the main it was built on.
+          if [ "${{ github.event_name }}" = merge_group ]; then
+            git fetch -q --no-tags --depth=1 origin "$MQ_BASE"
+            if ! git diff --name-only "$MQ_BASE" HEAD | grep -qvE '^docs/|\.md$|^tools/audit/|^tools/visual/|^tools/lint/'; then
+              code=false
+              reason="merge queue group of documentation, audit or capture scripts or the static lints only"
+            fi
           fi
           if [ "$code" = false ]; then echo "Skipping the game tests ($reason)."; fi
           # Pull requests run calibration only when the sim or the data changed.
@@ -259,7 +274,7 @@ jobs:
   # so the shards start as soon as it passes.
   preflight:
     needs: plan
-    if: needs.plan.outputs.code == 'true' && github.event_name == 'pull_request'
+    if: needs.plan.outputs.code == 'true' && (github.event_name == 'pull_request' || github.event_name == 'merge_group')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -298,7 +313,7 @@ jobs:
     timeout-minutes: 40   # a shard plans ~240 s; 40 still covers a 900 s suite timeout run twice
     strategy:
       # PRs release runner slots promptly; main/manual diagnostics collect all failures.
-      fail-fast: ${{ github.event_name == 'pull_request' }}
+      fail-fast: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' }}
       matrix: ${{ fromJSON(needs.plan.outputs.shards) }}
     steps:
       - uses: actions/checkout@v4
@@ -325,7 +340,7 @@ jobs:
       - name: Run the suites in this shard
         env:
           SUITES: ${{ matrix.suites }}
-          STOP_ON_FAILURE: ${{ github.event_name == 'pull_request' && '1' || '0' }}
+          STOP_ON_FAILURE: ${{ (github.event_name == 'pull_request' || github.event_name == 'merge_group') && '1' || '0' }}
         # Flaky rule (#894, 2026-11-04): a failed shard retries once, and a pass on the retry is
         # green but flagged FLAKY. The retry runs only the suites that did not pass, and only
         # when none failed a check outright: the suites are seeded (tools/check_suite_seeds.sh),
@@ -446,7 +461,7 @@ jobs:
       # squashes this PR unchanged can skip its shards (tools/ci_same_tree.sh).
       - name: Record the tested tree
         id: tree
-        if: github.event_name == 'pull_request' && needs.plan.outputs.code == 'true' && needs.plan.outputs.partial != 'true' && needs.shard.result == 'success' && needs.extras.result == 'success' && needs.preflight.result == 'success' && needs.lint.result == 'success'
+        if: (github.event_name == 'pull_request' || github.event_name == 'merge_group') && needs.plan.outputs.code == 'true' && needs.plan.outputs.partial != 'true' && needs.shard.result == 'success' && needs.extras.result == 'success' && needs.preflight.result == 'success' && needs.lint.result == 'success'
         run: |
           tree=$(git rev-parse HEAD^{tree})
           echo "$tree" > "$RUNNER_TEMP/tree.txt"
