@@ -445,32 +445,40 @@ static func coach_rows(res: Dictionary, side: int) -> Dictionary:
 
 
 ## Who or what each of our calls was, for its row: {cause: "Our tag on Smith"}.
-## Read from the plans we ran each quarter (tactics_history) and the result's
-## own team sheet.
+## The game plan and the pep talk from the plans we ran each quarter
+## (tactics_history); the loose man, the defensive forward and the tag from
+## who earned the ledger's credit (MatchSim.impact_by), so a man sent loose by
+## the assistant or tagged from a moment card is the one named.
 static func call_names(res: Dictionary, side: int) -> Dictionary:
 	var plans := []
-	var tags := []
-	var loose := []
-	var minders := []
 	var peps := []
 	for h in res.get("tactics_history", []):
 		var p: Dictionary = ((h as Dictionary).get("plans", [{}, {}]) as Array)[side]
-		for pair in [[plans, MatchSim.plan_key(str(p.get("gameplan", "balanced")))], [tags, str(p.get("tag_id", ""))],
-				[loose, str(p.get("interceptor_id", ""))], [minders, str(p.get("spare_minder_id", ""))],
-				[peps, str(p.get("pep", "steady"))]]:
+		for pair in [[plans, MatchSim.plan_key(str(p.get("gameplan", "balanced")))], [peps, str(p.get("pep", "steady"))]]:
 			if str(pair[1]) != "" and not (pair[0] as Array).has(pair[1]):
 				(pair[0] as Array).append(pair[1])
+	var by: Array = res.get("impact_by", [])
+	var mine: Dictionary = by[side] if by.size() == 2 and by[side] is Dictionary else {}
 	var out := {
 		"gameplan": ("Our %s game plan" % CoachReport.plan_label(str(plans[0]))) if plans.size() == 1 else "Our game plans",
-		"tag": ("Our tag on %s" % _name_in(res, str(tags[0]))) if tags.size() == 1 else "Our tags",
-		"loose": ("%s as our loose man" % _name_in(res, str(loose[0]))) if loose.size() == 1 else "Our loose men",
-		"minder": ("%s as our defensive forward" % _name_in(res, str(minders[0]))) if minders.size() == 1 \
-				else "Our defensive forwards",
+		"tag": "Our tag",
+		"loose": "Our loose man",
+		"minder": "Our defensive forward",
 		"pep": "Our pep talks",
 		"bursts": "Our calls in play",
 		"moments": "Our calls at the moments",
 		"plan_trait": "Our game-plan trait",
 	}
+	var men := _earners(res, mine.get("tag", {}))
+	if not men.is_empty():
+		out["tag"] = ("Our tag on %s" if men.size() == 1 else "Our tags on %s") % _men_line(men)
+	men = _earners(res, mine.get("loose", {}))
+	if not men.is_empty():
+		out["loose"] = ("%s as our loose man" if men.size() == 1 else "%s as our loose men") % _men_line(men)
+	men = _earners(res, mine.get("minder", {}))
+	if not men.is_empty():
+		out["minder"] = ("%s as our defensive forward" if men.size() == 1
+				else "%s as our defensive forwards") % _men_line(men)
 	peps.erase("steady")
 	if peps.size() == 1:
 		out["pep"] = "Our pep talk, %s" % CoachReport.pep_label(str(peps[0]))
@@ -478,6 +486,30 @@ static func call_names(res: Dictionary, side: int) -> Dictionary:
 	if traits.size() == 2 and PlanTraits.name_of(str(traits[side])) != "":
 		out["plan_trait"] = "Our %s trait" % PlanTraits.name_of(str(traits[side]))
 	return out
+
+
+## The men who earned a named call's credit ({id: points}), biggest share
+## first, by name; a man worth under half a point is left out unless he is
+## the only one. [] with nobody on record.
+static func _earners(res: Dictionary, credit) -> Array:
+	if not credit is Dictionary or (credit as Dictionary).is_empty():
+		return []
+	var ids: Array = (credit as Dictionary).keys()
+	ids.sort_custom(func(a, b): return absf(float(credit[a])) > absf(float(credit[b])))
+	var out := []
+	for id in ids:
+		if out.is_empty() or absf(float(credit[id])) >= 0.5:
+			out.append(_name_in(res, str(id)))
+	return out
+
+
+## "Smith", "Smith and Jones", or "Smith and others".
+static func _men_line(names: Array) -> String:
+	if names.size() == 1:
+		return str(names[0])
+	if names.size() == 2:
+		return "%s and %s" % [names[0], names[1]]
+	return "%s and others" % names[0]
 
 
 ## A player's name from the result's team sheet, else the database.
