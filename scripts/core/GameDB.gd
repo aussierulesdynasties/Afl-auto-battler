@@ -988,7 +988,18 @@ func _read_rows(path: String) -> Array:
 
 
 func _load_clubs() -> Dictionary:
-	var rows := _read_rows(CLUBS_CSV)
+	var out := _load_club_rows(CLUBS_CSV)
+	if out.is_empty():
+		return out
+	var past := _load_club_rows(PAST_CLUBS_CSV)
+	for code in past:
+		if not out.has(code):
+			out[code] = past[code]
+	return out
+
+
+func _load_club_rows(path: String) -> Dictionary:
+	var rows := _read_rows(path)
 	var out := {}
 	if rows.size() < 2:
 		return out
@@ -1045,11 +1056,15 @@ func active_clubs(year: int) -> Array:
 # Clubs by year (Legacy mode): one club code across eras
 # ---------------------------------------------------------------------------
 ## A club's name, short name, colours, guernsey and home ground by year range
-## (data/clubs_by_year.csv). A blank cell is the club's own value in
-## data/clubs.csv; a club's rows also bound the years it fields a team.
-const CLUBS_BY_YEAR_CSV := "res://data/clubs_by_year.csv"
-## The names a ground carried before its present one (data/grounds_by_year.csv).
-const GROUNDS_BY_YEAR_CSV := "res://data/grounds_by_year.csv"
+## (data/legacy/clubs_by_year.csv). A blank cell is the club's own value in
+## data/clubs.csv; a club's rows also bound the years it fields a team. The
+## legacy files sit outside data/*.csv, so the pre-made histories' data stamp
+## (PremadeHistory.LIST_FILES) does not move with them.
+const CLUBS_BY_YEAR_CSV := "res://data/legacy/clubs_by_year.csv"
+## The names a ground carried before its present one.
+const GROUNDS_BY_YEAR_CSV := "res://data/legacy/grounds_by_year.csv"
+## Clubs that have left the competition, in clubs.csv's columns (Fitzroy).
+const PAST_CLUBS_CSV := "res://data/legacy/past_clubs.csv"
 ## Codes the historical data uses for a club that is one club across eras:
 ## the Brisbane Bears are the Lions' club, Footscray the Bulldogs'.
 const CLUB_CODE_ALIASES := {"BRB": "BRL", "FOO": "WBD"}
