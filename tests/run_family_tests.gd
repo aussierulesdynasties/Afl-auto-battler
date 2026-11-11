@@ -136,12 +136,7 @@ func _test_relations() -> void:
 	var board_without := _board_hash()
 	_rel.set_rows_for_test(null)
 	_check(board_with == board_without, "A seeded draft board is identical with and without the file")
-	var leaked := ""
-	for dir in ["res://scripts/sim", "res://scripts/state"]:
-		for f in DirAccess.get_files_at(dir):
-			if f.ends_with(".gd") and FileAccess.get_file_as_string(dir + "/" + f).contains("PlayerRelations"):
-				leaked = dir + "/" + f
-	_check(leaked == "", "No simulation or state script reads family ties " + leaked)
+	# That no sim or state script names PlayerRelations is a static lint: tools/lint/boundaries.py.
 
 	var host := Control.new()
 	host.set_anchors_preset(Control.PRESET_FULL_RECT)
