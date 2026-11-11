@@ -1518,8 +1518,7 @@ func _test_leadership() -> void:
 		if rn != "":
 			var rk := "%s|%s" % [str(p.get("club", "")), rn]
 			by_real[rk] = int(by_real.get(rk, 0)) + 1
-	var lines := FileAccess.get_file_as_string(Leadership.PATH).split("
-", false)
+	var lines := FileAccess.get_file_as_string(Leadership.PATH).split("\n", false)
 	var bad := []
 	for i in range(lines.size()):
 		var row := lines[i].strip_edges()
@@ -2048,7 +2047,7 @@ func _test_captain_cards_in_play() -> void:
 		var good := not StoryEngine.eligible_subject(ids["captain_slump_good"], ctx, GameState.story, w, rng).is_empty()
 		var flat := not StoryEngine.eligible_subject(ids["captain_slump_flat"], ctx, GameState.story, w, rng).is_empty()
 		var want_good: bool = scenario != "flat"
-		_check(good == want_good and flat == not want_good,
+		_check(good == want_good and flat == (not want_good),
 				"%s: the %s ending follows (good %s, flat %s)" % [scenario, "good" if want_good else "flat", str(good), str(flat)])
 
 
@@ -2440,8 +2439,7 @@ func _test_culture_copy_is_true() -> void:
 	_check(readers == ["CultureSection.gd", "GameState.gd"], "Only the screen and the news mover read a strand directly (%s)" % ", ".join(readers))
 	var gs := FileAccess.get_file_as_string("res://scripts/state/GameState.gd")
 	var at := gs.find("func _culture_move")
-	var body := gs.substr(at, gs.find("
-func ", at + 5) - at)
+	var body := gs.substr(at, gs.find("\nfunc ", at + 5) - at)
 	_check(gs.count("Culture.value(") == body.count("Culture.value("), "In GameState a strand is read directly only to make news")
 	# Play reads a strand in one place, by kind; each kind is applied where the screen says.
 	var effect_readers := []

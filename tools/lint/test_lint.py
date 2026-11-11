@@ -197,6 +197,48 @@ class AutoloadReach(Repo):
                             '\t# "a quote in a comment\n\tEngine2.f()\n')
         self.assertEqual(self.at(found), ["tests/run_x_tests.gd:6"])
 
+    def test_a_cycle_does_not_hide_a_later_runner(self):
+        # Alpha names Beta and Gamma, Beta names Alpha, Gamma names GameDB. Walking from run_a caches
+        # Beta's walk cut short at Alpha; run_b names Beta and must still be caught (2026-11-12 review).
+        self.write("scripts/sim/Alpha.gd", "class_name Alpha\nstatic func f():\n\tBeta.f()\n\tGamma.f()\n")
+        self.write("scripts/sim/Beta.gd", "class_name Beta\nstatic func f():\n\tAlpha.f()\n")
+        self.write("scripts/sim/Gamma.gd", "class_name Gamma\nstatic func f():\n\tGameDB.x\n")
+        self.write("tests/run_a_tests.gd", "extends SceneTree\nfunc _run():\n\tAlpha.f()\n")
+        self.write("tests/run_b_tests.gd", "extends SceneTree\nfunc _run():\n\tBeta.f()\n")
+        files = self.files + ["scripts/sim/Alpha.gd", "scripts/sim/Beta.gd", "scripts/sim/Gamma.gd",
+                              "tests/run_a_tests.gd", "tests/run_b_tests.gd"]
+        found = autoload_reach.check(self.root, files=files)
+        self.assertEqual(self.at(found), ["tests/run_a_tests.gd:3", "tests/run_b_tests.gd:3"])
+
+    def test_a_single_quoted_preload(self):
+        found = self.run_on("extends SceneTree\nconst D := preload('res://scripts/sim/Deck.gd')\n")
+        self.assertEqual(self.at(found), ["tests/run_x_tests.gd:2"])
+
+    def test_a_class_extending_a_path_is_followed(self):
+        self.write("scripts/sim/Child.gd", 'class_name Child\nextends "res://scripts/sim/Deck.gd"\n')
+        self.files.append("scripts/sim/Child.gd")
+        found = self.run_on("extends SceneTree\nfunc _run():\n\tChild.new()\n")
+        self.assertEqual(self.at(found), ["tests/run_x_tests.gd:3"])
+        self.assertIn("Child -> Deck.gd -> GameDB", found[0].message)
+
+    def test_a_runner_whose_base_extends_scenetree(self):
+        # A runner that extends a SceneTree base by path is started with --script too, and the base
+        # it compiles names Deck.
+        self.write("tests/base_runner.gd", "extends SceneTree\nfunc _go():\n\tpass\n")
+        self.write("tests/deck_base.gd", "extends SceneTree\nfunc _go():\n\tDeck.all()\n")
+        self.files += ["tests/base_runner.gd", "tests/deck_base.gd"]
+        self.assertEqual(self.run_on("extends 'res://tests/base_runner.gd'\nfunc _run():\n\tEngine2.f()\n")[0].line, 3)
+        found = self.run_on('extends "res://tests/deck_base.gd"\nfunc _run():\n\tpass\n')
+        self.assertIn("tests/run_x_tests.gd:1", self.at(found))
+
+    def test_a_local_shadows_only_its_own_function(self):
+        found = self.run_on('extends SceneTree\nfunc _a():\n\tvar Deck = load("res://scripts/sim/Deck.gd")\n'
+                            '\tDeck.all()\nfunc _b():\n\tDeck.all()\n')
+        self.assertEqual(self.at(found), ["tests/run_x_tests.gd:6"])  # _b names it unshadowed
+        self.assertEqual(len(found), 1)
+        self.assertEqual(self.run_on('extends SceneTree\nfunc _a():\n\tvar Deck = load("res://scripts/sim/Deck.gd")\n'
+                                     '\tDeck.all()\n'), [])
+
     def test_a_non_scenetree_script_may_name_anything(self):
         self.write("scripts/ui/Screen.gd", "extends Control\nfunc f():\n\tGameDB.x\n")
         self.assertEqual(autoload_reach.check(self.root, files=self.files + ["scripts/ui/Screen.gd"]), [])
@@ -220,7 +262,8 @@ class Gdlint(unittest.TestCase):
         root = os.path.abspath(os.path.join(gdlint_gate.HERE, "..", ".."))
         found = gdlint_gate.parse(root, self.OUT)
         files = ["scripts/sim/A.gd", "scripts/sim/B.gd"]
-        base = {("scripts/sim/A.gd", "unused-argument"): 2, ("scripts/sim/B.gd", "parse-error"): 1}
+        base = {("scripts/sim/A.gd", "unused-argument"): 2}
+        found = [f for f in found if f.rule != "parse-error"]
         self.assertEqual(gdlint_gate.gate(found, files, base), ([], []))
         base[("scripts/sim/A.gd", "unused-argument")] = 1
         new, _ = gdlint_gate.gate(found, files, base)
@@ -228,6 +271,16 @@ class Gdlint(unittest.TestCase):
                          ["scripts/sim/A.gd:167 gdlint/unused-argument", "scripts/sim/A.gd:170 gdlint/unused-argument"])
         base[("scripts/sim/A.gd", "unused-argument")] = 3
         self.assertEqual(len(gdlint_gate.gate(found, files, base)[1]), 1)  # a shrink note, not a failure
+
+    def test_a_parse_error_always_fails_even_baselined(self):
+        # A file gdtoolkit cannot parse is not linted at all, so a baseline of 1 parse-error would
+        # exempt the whole file (GameState.gd was, until 2026-11-12).
+        root = os.path.abspath(os.path.join(gdlint_gate.HERE, "..", ".."))
+        found = gdlint_gate.parse(root, self.OUT)
+        base = {("scripts/sim/A.gd", "unused-argument"): 2, ("scripts/sim/B.gd", "parse-error"): 1}
+        new, _ = gdlint_gate.gate(found, ["scripts/sim/A.gd", "scripts/sim/B.gd"], base)
+        self.assertEqual(["%s:%d %s" % (f.path, f.line, f.rule) for f in new], ["scripts/sim/B.gd:542 gdlint/parse-error"])
+        self.assertIn("write \\n", new[0].message)
 
 
 class TheRealTablesParse(unittest.TestCase):
