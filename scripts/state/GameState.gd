@@ -24,6 +24,10 @@ var custom_prospect_story := {}
 ## (every club keeps its real end-of-2026 list and the 2026 National Draft is
 ## run before 2027). Older saves have no field and are redrafts.
 var start_mode := "redraft"
+## The real league this career started from (Datasets, Legacy mode row 142):
+## GameDB holds this set while the career runs. reset(dataset) chooses it; the
+## save keeps it, and a save from before the choice is today's 2026 set.
+var dataset := Datasets.DEFAULT
 ## A challenge start (row 114, Challenge.gd): {} for none, else
 ## {"kind": "youth" | "rebuild" | "goal", ...}. Older saves have none.
 var challenge := {}
@@ -956,6 +960,7 @@ func _save_state() -> Dictionary:
 		"class_tiers": class_tiers,
 		"custom_prospect_id": custom_prospect_id,
 		"start_mode": start_mode,
+		"dataset": dataset,
 		"challenge": challenge,
 		"opening_draft": opening_draft,
 		"custom_club": custom_club,
@@ -1034,8 +1039,15 @@ func _restore_career(state: Dictionary) -> bool:
 	# (it touches nothing in the career and draws no random numbers).
 	if state.is_empty():
 		return false
+	# The league the career started from loads first: everything below reads it.
+	# A save from before the choice is the 2026 set; one whose set this build
+	# does not ship cannot be restored onto another league's players.
+	var ds := str(state.get("dataset", Datasets.DEFAULT))
+	if not Datasets.ready(ds):
+		push_error("GameState: the save's dataset '%s' is not in this build." % ds)
+		return false
 	Season.beat()
-	reset()
+	reset(ds)
 	# A pre-made history stops where Choose your club opens.
 	Season.beat()
 	sim_ahead = bool(state.get("sim_ahead", false))
@@ -1056,6 +1068,7 @@ func _restore_career(state: Dictionary) -> bool:
 		GameDB.register_club(ClubForge.row(custom_club))
 	Season.beat()
 	season_year = int(state.get("season_year", 2026))
+	GameDB.apply_era(season_year)
 	my_club = str(state.get("my_club", ""))
 	if state.get("season") is Dictionary:
 		var sv: Dictionary = state["season"]
@@ -1638,9 +1651,11 @@ func _unlinked_lists(lists: Dictionary) -> Dictionary:
 	return out
 
 
-func reset() -> void:
+## `next_dataset` is the real league the next career starts from (Datasets):
+## today's 2026 set unless a start or a save names another.
+func reset(next_dataset := Datasets.DEFAULT) -> void:
 	# Mid-career seasons mutate the loaded player dicts in place (intake,
-	# ageing, XP training). A new career must start from the pristine 2026
+	# ageing, XP training). A new career must start from the pristine
 	# dataset, so reload the data files before rebuilding anything. The caches
 	# built from the players (prospect shapes, story cards) are dropped with it,
 	# so a new career never reads one built under the last. PlayerProfile's rating
@@ -1651,8 +1666,10 @@ func reset() -> void:
 	# Boot already loaded the data and no career has touched it yet (the cold
 	# Continue, or the first New career): reuse it rather than parse every
 	# file again. A career changes the player dicts in place, so it is spent.
-	if not GameDB.pristine:
-		GameDB.reload()
+	# Another league's data is never reused, pristine or not.
+	dataset = next_dataset
+	if not GameDB.pristine or GameDB.dataset_id != dataset:
+		GameDB.reload(dataset)
 	GameDB.pristine = false
 	# Nothing of the last career's market or caches carries into this one
 	# (a second career in one process played its off-season differently).
@@ -1990,7 +2007,7 @@ func begin_real_lists() -> void:
 ## last and the runners-up second last (the simplified order the intake draft
 ## uses every year). Clubs missing from the ladder file go first, in club order.
 func opening_order(active: Array) -> Array:
-	var ladder := GameDB.ladder_2026()
+	var ladder := GameDB.ladder_of(GameDB.DATA_SEASON)
 	var rows := []
 	for r in ladder:
 		if active.has(str(r["club"])):
@@ -2627,6 +2644,8 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	ensure_contracts()
 	ExpansionBuild.set_relief(self, next_year)
 	season_year = next_year
+	# The clubs as they were this year (the Bears until 1997); today's years change nothing.
+	GameDB.apply_era(season_year)
 	if my_first_season == 0 and my_club != "" and not sim_ahead:
 		my_first_season = season_year
 	# Dynamic rivalries cool once a season when two clubs stop meeting.
@@ -3500,7 +3519,13 @@ func fitness_ceiling_step(p: Dictionary) -> int:
 		rec = fitness_record(club)
 	elif int(rec.get("year", 0)) != season_year:
 		return 0
-	return Conditioning.ceiling_step(rec, fitness_week(), fitness_bye_week(club), p)
+	var w := fitness_week()
+	# Only a young player on Develop and manage can get the point: ask for the
+	# bye (a walk of the whole fixture) only then. Same answer, a lot less work
+	# when every rival player's ceiling is asked for every week.
+	if Conditioning.xp_mult(Conditioning.plan_at(rec, w), p) <= 1.0:
+		return 0
+	return Conditioning.ceiling_step(rec, w, fitness_bye_week(club), p)
 
 
 ## Where your club stands, in words, for the hub and Training: "Building,
@@ -5059,7 +5084,7 @@ func last_finish_of(code: String) -> int:
 		return 0
 	var mine := false
 	var theirs := 0
-	for r in GameDB.ladder_2026():
+	for r in GameDB.ladder_of(GameDB.DATA_SEASON):
 		if str(r["club"]) == my_club:
 			mine = true
 		if str(r["club"]) == code:
@@ -6095,6 +6120,7 @@ func _grant_xp(club: String, list: Array, res: Dictionary, staffs = null) -> Dic
 	if staffs == null and not coaches.is_empty():
 		staffs = CoachEffects.staffs(coaches)
 	var staff: Dictionary = staffs.get(club, {}) if not coaches.is_empty() else {}
+	var plan := ""
 	for p in list:
 		var id := str(p["id"])
 		var on_ground := ground_ids.has(id)
@@ -6102,7 +6128,9 @@ func _grant_xp(club: String, list: Array, res: Dictionary, staffs = null) -> Dic
 		var stats: Dictionary = stats_all.get(id, {})
 		# Left out but fit to play: he turns out in the reserves.
 		var reserves := not on_ground and not on_bench and Ratings.available(p)
-		var gain := _club_xp(club, p, _xp_amount(stats, on_ground, on_bench, reserves), staff, on_ground)
+		if plan == "":
+			plan = fitness_plan(club)   # once a club, not once a player
+		var gain := _club_xp(club, p, _xp_amount(stats, on_ground, on_bench, reserves), staff, on_ground, plan)
 		p["xp"] = int(p.get("xp", 0)) + gain
 		p["xp_games"] = int(p.get("xp_games", 0)) + 1
 		total += gain
@@ -6132,7 +6160,8 @@ func _grant_xp(club: String, list: Array, res: Dictionary, staffs = null) -> Dic
 ## XP as his club turns it into development: its teachers (CoachEffects),
 ## your development department for the young, and the season plan. The same
 ## for a match's XP and a pre-season week's.
-func _club_xp(club: String, p: Dictionary, base: int, staff: Dictionary, on_ground: bool) -> int:
+## `plan`: the club's fitness plan when the caller already has it ("" asks).
+func _club_xp(club: String, p: Dictionary, base: int, staff: Dictionary, on_ground: bool, plan := "") -> int:
 	var gain := base
 	if not coaches.is_empty():
 		gain = int(round(float(gain) * CoachEffects.xp_mult(staff, p, on_ground)))
@@ -6147,7 +6176,7 @@ func _club_xp(club: String, p: Dictionary, base: int, staff: Dictionary, on_grou
 		var kx := float(Archetypes.KIDS_XP.get(CoachEffects.philosophical(staff, club == my_club), 1.0))
 		if kx != 1.0:
 			gain = int(round(float(gain) * kx))
-	var plan_xp := Conditioning.xp_mult(fitness_plan(club), p)
+	var plan_xp := Conditioning.xp_mult(plan if plan != "" else fitness_plan(club), p)
 	if plan_xp != 1.0:
 		gain = int(round(float(gain) * plan_xp))
 	# A patient club brings its young players on a touch quicker (Culture).
@@ -6320,16 +6349,22 @@ func open_jobs(p: Dictionary) -> Array:
 	return _jobs_open(p)
 
 
+## His own gates before any job is looked at: not learning one now, not done
+## with one this season, ratings on record, and the POT for one more position.
+func _may_project(p: Dictionary) -> bool:
+	if project_job(p) != "" or bool(p.get("projected", false)) or (p.get("attr", {}) as Dictionary).is_empty():
+		return false
+	if int(p.get("project_year", 0)) == season_year:
+		return false
+	var need := learn_pot_needed(p)
+	return need >= 0 and int(p.get("potential", p.get("overall", 0))) >= need
+
+
 ## The jobs open to him by his own gates (POT, size, how far the move is, one
 ## a season), whatever his club is already running.
 func _jobs_open(p: Dictionary) -> Array:
 	var out := []
-	if project_job(p) != "" or bool(p.get("projected", false)) or (p.get("attr", {}) as Dictionary).is_empty():
-		return out
-	if int(p.get("project_year", 0)) == season_year:
-		return out
-	var need := learn_pot_needed(p)
-	if need < 0 or int(p.get("potential", p.get("overall", 0))) < need:
+	if not _may_project(p):
 		return out
 	var have := Ratings.positions(p)
 	var own := int(p.get("overall", 0))
@@ -6643,7 +6678,13 @@ func _ai_project_choice(list: Array) -> Dictionary:
 	var best := {}
 	var best_key := []
 	for p in list:
-		if season_ceiling(p.duplicate()) - int(p.get("overall", 0)) > AI_PROJECT_ROOM:
+		# The cheap gates first: most players can't start a project at all.
+		if not _may_project(p):
+			continue
+		# season_ceiling notes his start-of-season rating when it is missing; ask
+		# a copy only then, so the check leaves him as it found him.
+		var ceiling := season_ceiling(p if p.has("season_start_ov") else p.duplicate())
+		if ceiling - int(p.get("overall", 0)) > AI_PROJECT_ROOM:
 			continue
 		for j in _jobs_open(p):
 			var role := str(LEARN_JOBS[j]["role"])
@@ -12213,6 +12254,15 @@ func _note_firsts(results: Array) -> void:
 ## match, so his games before it are one fewer than games_played.
 func _note_career_highs(results: Array) -> void:
 	var said := []
+	# Everyone on a list, by id, once for the round (the first list he is on, as
+	# _find_player finds him): a search of every list per player was most of this.
+	var by_id := {}
+	if season != null:
+		for code in season.lists:
+			for q in season.lists[code]:
+				var qid := str(q["id"])
+				if not by_id.has(qid):
+					by_id[qid] = q
 	for res in results:
 		var roster: Array = res.get("roster", [])
 		var stats_all: Dictionary = res.get("players", {})
@@ -12222,7 +12272,7 @@ func _note_career_highs(results: Array) -> void:
 		for side in range(mini(2, roster.size())):
 			for r in roster[side]:
 				var id := str(r.get("id", ""))
-				var p := _find_player(id)
+				var p: Dictionary = by_id.get(id, {})
 				if p.is_empty():
 					continue
 				var highs := CareerHighs.update(p, stats_all.get(id, {}), maxi(0, games_played(p) - 1),
