@@ -117,7 +117,7 @@ jobs:
       - name: Run ${{ matrix.suite }}
         env:
           SUITE: ${{ matrix.suite }}
-        run: SUITE_TIMEOUT=3000 SUITES_ONLY=1 GODOT="$HOME/godot/godot" LOG_DIR="$RUNNER_TEMP/test-logs" tools/run_tests.sh "$SUITE"
+        run: SUITE_TIMEOUT=3000 SUITES_ONLY=1 GODOT="$HOME/godot/godot" LOG_DIR="$RUNNER_TEMP/test-logs" bash tools/run_tests.sh "$SUITE"
       - name: Upload logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -166,8 +166,9 @@ jobs:
           ARM_A: ${{ inputs.a }}
           ARM_B: ${{ inputs.b }}
         run: |
+          case "$MATCHES" in ''|*[!0-9]*) echo "::error::matches must be a whole number, got '$MATCHES'"; exit 2 ;; esac
           set +e
-          cmd=(tools/balance.sh match "$MATCHES")
+          cmd=(bash tools/balance.sh match "$MATCHES")   # bash: a branch that lost the +x bit failed with exit 126
           [ -z "$ARM_A" ] || cmd+=(--a "$ARM_A")
           [ -z "$BASE" ] || cmd+=(--a-root ../_base)
           if [ -n "$ARM_B" ] || [ -n "$BASE" ]; then cmd+=(--b "$ARM_B"); fi
@@ -210,7 +211,7 @@ jobs:
       - name: Import the project
         run: timeout 600 "$HOME/godot/godot" --headless --path . --editor --import > import.log 2>&1 || true
       - name: Regenerate
-        run: GODOT="$HOME/godot/godot" JOBS=4 tools/histories/regen.sh
+        run: GODOT="$HOME/godot/godot" JOBS=4 bash tools/histories/regen.sh
       - name: Upload the histories
         uses: actions/upload-artifact@v4
         with:
@@ -248,7 +249,7 @@ jobs:
           REFS: ${{ inputs.refs }}
           REPS: ${{ inputs.reps }}
           ARGS: ${{ inputs.bench_args }}
-        run: GODOT="$HOME/godot/godot" OUT="$RUNNER_TEMP/bench" tools/perf/bench_refs.sh
+        run: GODOT="$HOME/godot/godot" OUT="$RUNNER_TEMP/bench" bash tools/perf/bench_refs.sh
       - name: Upload the logs
         if: always()
         uses: actions/upload-artifact@v4

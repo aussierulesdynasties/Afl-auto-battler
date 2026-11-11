@@ -2,13 +2,14 @@ name: Nightly long suites
 
 # Fast gate (director 2026-11-04): pull requests and the main-push gate skip the
 # long suites in tools/ci_long_suites.txt. This workflow runs them in full every
-# night and after each push to main, one suite per runner, and keeps one issue
-# open while they fail (closed by the next green run). It never blocks a pull request.
+# night, one suite per runner, and keeps one issue open while they fail (closed by
+# the next green run). It never blocks a pull request. It no longer runs on every
+# push to main (2026-11-12): 14 jobs of up to 28 minutes per merge took the runners
+# PR shards were queued for, and ~40 merges a day cancelled or failed 30 runs a day.
+# Dispatch it on a branch to check one change: gh workflow run nightly.yml --ref <branch>
 on:
   schedule:
     - cron: "0 16 * * *"   # 03:00 Melbourne (AEDT)
-  push:
-    branches: [main]
   workflow_dispatch:
 
 concurrency:
