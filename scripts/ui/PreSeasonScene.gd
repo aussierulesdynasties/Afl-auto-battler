@@ -328,6 +328,7 @@ func _papers_ladder() -> Control:
 	v.add_child(_section_head("The papers' ladder"))
 	var order: Array = GameState.papers_record().get("order", [])
 	var moves: Dictionary = GameState.papers_record().get("moves", {})
+	var margins: Dictionary = GameState.preseason.get("practice_margins", {}) if GameState.preseason.get("practice_margins") is Dictionary else {}
 	# A PC is short: the ladder is two columns of nine, so all of it is in view.
 	var cols: Array = [v, v]
 	if _wide():
@@ -360,7 +361,10 @@ func _papers_ladder() -> Control:
 		nm.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		# A club the practice match moved says so under its name.
 		var mv: Dictionary = moves.get(code, {})
-		var why := PreSeason.practice_move_line(int(mv.get("places", 0)), int(mv.get("margin", 0)))
+		var by := str(mv.get("by", ""))
+		var by_name := by if by == "" or by == "top" or by == "bottom" else GameDB.club_name(by)
+		var why := PreSeason.practice_move_line(int(mv.get("places", 0)), int(mv.get("margin", 0)),
+				int(mv.get("earned", mv.get("places", 0))), by_name, int(margins.get(by, 0)))
 		if why == "":
 			row.add_child(nm)
 		else:
