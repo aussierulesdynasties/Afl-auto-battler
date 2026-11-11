@@ -5,8 +5,9 @@ extends Control
 ## does what the button always did. A finger (or mouse) held still on it fills
 ## the button from the left, and its words change to say what the hold does;
 ## once the fill reaches the right edge the hold acts. Lifting early, moving off
-## the button or dragging further than SLOP stops the fill, and nothing happens.
-## The lift after a hold has acted does not tap the button as well.
+## the button or dragging further than SLOP stops the fill, and nothing happens:
+## a lift after the cue showed, after a drag, or after the hold acted never taps
+## the button. Only a quick, still press is a tap.
 ##
 ##   HoldPress.attach(button, "Skip home and away", _open_bulk_skip)
 ##
@@ -74,11 +75,24 @@ func _on_input(e: InputEvent) -> void:
 			_held = 0.0
 			set_process(true)
 		else:
+			# A hold let go once its cue showed was the coach changing his mind:
+			# the lift is not a tap either.
+			if _down and _held >= CUE_AFTER:
+				_fired = true
 			_stop()
+			# The button's pressed (if any) comes straight after this event;
+			# clear the flag after it so a later key press still taps.
+			_clear_fired.call_deferred()
 	elif e is InputEventMouseMotion and _down:
 		var p := (e as InputEventMouseMotion).position
 		if p.distance_to(_at) > SLOP or not Rect2(Vector2.ZERO, _button.size).has_point(p):
+			# A drag or a scroll: neither a hold nor, on lifting, a tap.
+			_fired = true
 			_stop()
+
+
+func _clear_fired() -> void:
+	_fired = false
 
 
 func _process(delta: float) -> void:
@@ -117,7 +131,7 @@ func _fit_text() -> void:
 	while n > FIT_MIN and font.get_string_size(_hold_text, HORIZONTAL_ALIGNMENT_LEFT, -1, n).x > room:
 		n -= 1
 	if n != fs:
-		_button.add_theme_font_size_override("font_size", n)
+		UiKit.set_font_size(_button, n, "font_size", true)
 
 
 func _stop() -> void:
@@ -128,13 +142,14 @@ func _stop() -> void:
 		_button.text = _text_was
 		_button.remove_theme_font_size_override("font_size")
 		if _size_was > 0:
-			_button.add_theme_font_size_override("font_size", _size_was)
+			UiKit.set_font_size(_button, _size_was, "font_size", true)
 		_size_was = 0
 	_text_was = ""
 	queue_redraw()
 
 
-## The button's release: a tap, unless the hold already acted.
+## The button's release: a tap, unless the hold acted, was let go after its
+## cue showed, or slipped into a drag.
 func _on_pressed() -> void:
 	if _fired:
 		_fired = false

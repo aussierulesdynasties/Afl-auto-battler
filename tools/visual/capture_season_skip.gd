@@ -58,6 +58,34 @@ func _hub(state: Node) -> Node:
 	return hub
 
 
+## On a wide screen (PC): the hub and the cue mid-press on the bottom-right week button.
+func _wide(state: Node, dir: String, phone: Vector2i) -> void:
+	var size := Vector2i(1280, 720)
+	root.size = size
+	DisplayServer.window_set_size(size)
+	await _frames(4)
+	var hub = await _hub(state)
+	var b := _held_button(hub)
+	if b == null:
+		push_error("wide: no button holds the skip")
+	else:
+		print("wide: %s holds %s at %s" % [b.name, str(b.get_meta("bulk_skip")), str(b.get_global_rect())])
+		var win := b.get_window()
+		var units := win.get_visible_rect().size
+		var at: Vector2 = (b.get_screen_transform() * (b.size * 0.5)) * (Vector2(win.size) / units)
+		_touch(at, true)
+		await create_timer(0.3).timeout
+		await _shot("%s/wide_hold_cue_%dx%d.png" % [dir, size.x, size.y], 2)
+		_touch(at, false)
+		await _frames(6)
+		hub.call("_close_skip_confirm")
+	hub.queue_free()
+	await _frames(2)
+	root.size = phone
+	DisplayServer.window_set_size(phone)
+	await _frames(4)
+
+
 ## The hub, the cue mid-press, then the survey's first question and the sheet
 ## the hold opens. `tag` names the season's phase.
 func _phase(hub: Node, tag: String, dir: String, size: Vector2i) -> void:
@@ -78,6 +106,12 @@ func _phase(hub: Node, tag: String, dir: String, size: Vector2i) -> void:
 	await create_timer(0.5).timeout
 	_touch(at, false)
 	await _frames(10)
+	if hub.find_child("SkipChoice", true, false) != null:
+		# In the home and away the hold asks how far: the choice, then the
+		# home and away's own survey as a finger on its answer opens it.
+		await _shot("%s/%s_opens_choice_%dx%d.png" % [dir, tag, size.x, size.y])
+		hub.call("_open_skip_confirm", "home_away")
+		await _frames(10)
 	await _shot("%s/%s_opens_q1_%dx%d.png" % [dir, tag, size.x, size.y])
 	var n := _question_count(hub)
 	hub.call("_skip_show", n)
@@ -123,6 +157,7 @@ func _run() -> void:
 	await _phase(hub, "homeaway", dir, size)
 	hub.queue_free()
 	await _frames(2)
+	await _wide(state, dir, size)
 	# The finals: the home and away played out, the first week of finals next.
 	print("skip home and away: ", state.skip_season({}, "home_away"))
 	state._settle_week_event()

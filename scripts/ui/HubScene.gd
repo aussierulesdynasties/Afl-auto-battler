@@ -391,12 +391,12 @@ func _build() -> void:
 		# Under the week column, the week's own decisions (Pick the side, Play
 		# match): pinned, so the live coaching option is always in view beside
 		# the quick Play round (director, web's pass 2026-10-12).
-		var week_row := _week_actions(season)
-		week_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		week_row.size_flags_vertical = Control.SIZE_SHRINK_END
 		# Play round sits with the match choices (Pick the side | Play match |
 		# Play round), so the bar reads as one group of match actions on the
 		# left and the club's screens on the right.
+		var week_row := _week_actions(season)
+		week_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		week_row.size_flags_vertical = Control.SIZE_SHRINK_END
 		if not season.is_season_over() and not _upcoming_match().is_empty():
 			week_row.add_child(_sim_round_button())
 		# The same split as the columns above, so the club buttons stand under the ladder.
@@ -1110,12 +1110,76 @@ func _week_section(season: Season) -> Control:
 func _with_bulk_skip(b: Button, season: Season) -> Button:
 	if season.is_season_over() or GameState.is_sacked():
 		return b
-	var to := "season" if season.is_regular_done() else "home_away"
+	# In the finals only the season is left to skip, so the hold goes straight to
+	# it. In the home and away a hold asks how far: to the finals, or the season.
+	var to := "season" if season.is_regular_done() else "choice"
 	b.set_meta("bulk_skip", to)
-	# The hold says the words of the sheet's own button.
-	HoldPress.attach(b, "Skip the season" if to == "season" else "Skip the home and away",
-			func() -> void: _open_skip_confirm(to))
+	if to == "season":
+		# The hold says the words of the sheet's own button.
+		HoldPress.attach(b, "Skip the season", func() -> void: _open_skip_confirm("season"))
+	else:
+		HoldPress.attach(b, "Skip ahead", _open_skip_choice)
 	return b
+
+
+## A home-and-away hold: how far to skip. Each answer goes on to the survey for
+## that skip; Cancel or Android Back closes it.
+func _open_skip_choice() -> void:
+	var season: Season = GameState.season
+	if season == null or season.is_season_over() or GameState.is_sacked() or season.is_regular_done():
+		return
+	_close_skip_confirm()
+	_skip_step = 0
+	var n := season.fixture.size() - season.round_index
+	var rounds := "%d round%s" % [n, "" if n == 1 else "s"]
+	var box := UiKit.modal_box(self, 460.0, 0.0, UiKit.AUTO_COLOUR, true)
+	_skip_confirm = box["overlay"]
+	_skip_confirm.name = "SkipChoice"
+	var v: VBoxContainer = box["body"]
+	var footer: VBoxContainer = box["footer"]
+	v.add_child(UiKit.heading("Skip ahead", UiKit.H1))
+	var opts := UiKit.vbox(8)
+	opts.name = "SkipChoices"
+	v.add_child(opts)
+	opts.add_child(_skip_choice_button("SkipChoiceHomeAway", "Skip the home and away",
+			"%s played out. If you make the finals, you coach them." % rounds, "home_away"))
+	opts.add_child(_skip_choice_button("SkipChoiceSeason", "Skip the season",
+			"%s and the finals played out. Trades and the draft stay yours." % rounds, "season"))
+	var cancel := UiKit.btn("Cancel", UiKit.NAME)
+	cancel.name = "SkipChoiceCancel"
+	cancel.custom_minimum_size = Vector2(0, 48)
+	cancel.pressed.connect(_close_skip_confirm)
+	footer.add_child(cancel)
+
+
+## One answer on the skip choice: its name in bold, what it covers under it.
+func _skip_choice_button(id: String, title: String, line: String, to: String) -> Control:
+	var wrap := MarginContainer.new()
+	wrap.name = id + "Wrap"
+	wrap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var b := UiKit.btn("", UiKit.SECONDARY)
+	b.name = id
+	b.custom_minimum_size.y = 64
+	wrap.add_child(b)
+	var pad := MarginContainer.new()
+	pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for side in ["left", "right"]:
+		pad.add_theme_constant_override("margin_" + side, 14)
+	for side in ["top", "bottom"]:
+		pad.add_theme_constant_override("margin_" + side, 10)
+	wrap.add_child(pad)
+	var col := UiKit.vbox(2)
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pad.add_child(col)
+	var name_l := UiKit.lbl(title, UiKit.NAME, UiKit.TEXT, true)
+	name_l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(name_l)
+	var words := UiKit.lbl(line, UiKit.SECONDARY, UiKit.MUTED)
+	words.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	words.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(words)
+	b.pressed.connect(func() -> void: _open_skip_confirm(to))
+	return wrap
 
 
 ## The survey before the skip (row 70, T5.Q20; director, 2026-11-07: "I do
@@ -1643,6 +1707,9 @@ func _play_label() -> String:
 
 
 ## The week's decision buttons: the primary action last, where the thumb is.
+## In a match week the season-skip hold is on Sim the week, the bottom-right
+## button in every layout; in a bye or a finals week without a match of our own,
+## on the week's sim button here.
 func _week_actions(season: Season) -> Control:
 	var buttons: Array = []
 	if season.is_season_over():
@@ -1676,7 +1743,7 @@ func _week_actions(season: Season) -> Control:
 		buttons.append(_nav_button("Pick the side", func(): Router.go("selection")))
 		var play := _nav_button(_play_label(), _on_play_pressed, true)
 		play.name = "PlayMatch"
-		buttons.append(_with_bulk_skip(play, season))
+		buttons.append(play)
 	var row := UiKit.hbox(8)
 	row.name = "WeekActions"
 	for b in buttons:
@@ -1684,11 +1751,12 @@ func _week_actions(season: Season) -> Control:
 	return row
 
 
-## Sim the week: the one quick sim, a single round.
+## Sim the week: the one quick sim, a single round. It sits at the bottom
+## right on a phone and a PC alike, so it carries the season skips' hold.
 func _sim_round_button() -> Button:
 	var sim := _nav_button("Sim the week", _on_sim_round_pressed)
 	sim.name = "SimRound"
-	return sim
+	return _with_bulk_skip(sim, GameState.season)
 
 
 ## How much of a phone's page height a card may be pushed down by: anything

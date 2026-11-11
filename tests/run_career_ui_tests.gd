@@ -1561,6 +1561,7 @@ func _run() -> void:
 	await _t("_test_rival_letter_taps")
 	await _t("_test_sim_asks_only_before_your_match")
 	await _t("_test_skip_long_press")
+	await _t("_test_skip_hold_wide")
 	await _t("_test_skip_season")
 	await _t("_test_skip_home_away")
 	await _t("_test_skip_home_away_kids")
@@ -5113,7 +5114,9 @@ func _test_skip_long_press() -> void:
 			and not on_hub.contains("Skip the rest of the home and away") and not on_hub.contains("Skip to the end of the"),
 			"The hub shows neither season skip as a line of its own")
 	var b := _bulk_skip_button()
-	_check(b != null and b.name == "PlayMatch" and str(b.get_meta("bulk_skip")) == "home_away", "Play match holds the home and away skip")
+	_check(b != null and b.name == "SimRound" and str(b.get_meta("bulk_skip")) == "choice", "Sim the week holds the skips")
+	var play_btn: Node = current_scene.find_child("PlayMatch", true, false)
+	_check(play_btn != null and play_btn.get_node_or_null("HoldCue") == null, "Play match is a plain button")
 	if b == null:
 		return
 	var r := b.get_global_rect()
@@ -5126,21 +5129,73 @@ func _test_skip_long_press() -> void:
 	# Halfway through a hold: the cue is filling, the words say what it does, nothing has opened.
 	_touch(mid, true)
 	await create_timer(0.3).timeout
-	_check(cue.progress > 0.2 and cue.progress < 0.95 and b.text == "Skip the home and away"
-			and current_scene.find_child("SkipSeasonSurvey", true, false) == null,
+	_check(cue.progress > 0.2 and cue.progress < 0.95 and b.text == "Skip ahead"
+			and current_scene.find_child("SkipChoice", true, false) == null,
 			"Mid-hold the cue fills (%.2f) and says %s, and nothing opens yet" % [cue.progress, b.text])
 	await create_timer(0.4).timeout
-	_check(current_scene.find_child("SkipSeasonSurvey", true, false) != null and current_scene._skip_to == "home_away",
-			"Held to the end, it opens the home and away skip while the finger is still down")
+	_check(current_scene.find_child("SkipChoice", true, false) != null,
+			"Held to the end, it opens the choice of skips while the finger is still down")
 	_touch(mid, false)
 	await _settle()
 	_check(current_scene.scene_file_path.ends_with("HubScene.tscn") and _state.season.round_index == start_round
 			and b.text == words_was and cue.progress == 0.0,
 			"Lifting the finger after it does not play the match too (round %d, %s)" % [_state.season.round_index, b.text])
+	# The choice offers both skips, thumb-sized, and each opens its own survey.
+	for pick in [["SkipChoiceHomeAway", "home_away", "Skip the home and away"], ["SkipChoiceSeason", "season", "Skip the season"]]:
+		var choice: Button = current_scene.find_child(str(pick[0]), true, false)
+		_check(choice != null and choice.size.y >= 48.0 and choice.size.x >= 280.0,
+				"The choice offers %s, thumb-sized (%s)" % [pick[2], choice.size if choice != null else "none"])
+		var said := []
+		if choice != null:
+			_texts(choice.get_parent(), said)
+		_check(said.has(str(pick[2])), "It is called %s (%s)" % [pick[2], said])
+		var why0: String = await Tap.tap(choice) if choice != null else "missing"
+		await _settle()
+		_check(why0 == "" and current_scene.find_child("SkipChoice", true, false) == null
+				and current_scene.find_child("SkipSeasonSurvey", true, false) != null and current_scene._skip_to == str(pick[1])
+				and _state.season.round_index == start_round,
+				"A finger on %s opens its survey and skips nothing yet (%s, %s)" % [pick[2], why0, current_scene._skip_to])
+		_router.handle_back(true)
+		await _settle()
+		_check(current_scene.find_child("SkipSeasonSurvey", true, false) == null, "Android Back closes the survey")
+		if pick[1] == "home_away":
+			b = _bulk_skip_button()
+			await Tap.hold_at(b, b.size * 0.5, HOLD_HELD)
+			await _settle()
+	b = _bulk_skip_button()
+	await Tap.hold_at(b, b.size * 0.5, HOLD_HELD)
+	await _settle()
 	_router.handle_back(true)
 	await _settle()
-	_check(current_scene.find_child("SkipSeasonSurvey", true, false) == null and current_scene.scene_file_path.ends_with("HubScene.tscn"),
-			"Android Back closes it, back to the hub")
+	_check(current_scene.find_child("SkipChoice", true, false) == null and current_scene.scene_file_path.ends_with("HubScene.tscn"),
+			"Android Back closes the choice, back to the hub")
+
+	# A hold let go once its cue shows, or a finger that slips, is neither a skip nor a tap.
+	b = _bulk_skip_button()
+	var seen_taps := [0]
+	var hold_cue = b.get_node("HoldCue")
+	var tap_was: Array = hold_cue._taps.duplicate()
+	hold_cue._taps = [func(): seen_taps[0] += 1]
+	mid = Tap.pixel_point(b, b.size * 0.5)
+	_touch(mid, true)
+	await create_timer(0.3).timeout
+	_touch(mid, false)
+	await _settle()
+	_check(seen_taps[0] == 0 and current_scene.find_child("SkipChoice", true, false) == null and _state.season.round_index == start_round,
+			"A hold let go after its cue showed does nothing (taps %d, round %d)" % [seen_taps[0], _state.season.round_index])
+	var slip := mid + Vector2(minf(30.0, b.size.x * 0.3), 0)
+	_touch(mid, true)
+	await create_timer(0.05).timeout
+	_drag(mid, slip)
+	await create_timer(0.05).timeout
+	_touch(slip, false)
+	await _settle()
+	_check(seen_taps[0] == 0 and _state.season.round_index == start_round,
+			"A finger that slips on the button and lifts there does nothing (taps %d)" % seen_taps[0])
+	var why_t: String = await Tap.tap(b)
+	await _settle()
+	_check(why_t == "" and seen_taps[0] == 1, "A quick still tap after them still taps (taps %d)" % seen_taps[0])
+	hold_cue._taps = tap_was
 
 	# A finger that drags off the button: no skip, no tap.
 	b = _bulk_skip_button()
@@ -5156,7 +5211,7 @@ func _test_skip_long_press() -> void:
 	await create_timer(0.6).timeout
 	_touch(off, false)
 	await _settle()
-	_check(current_scene.find_child("SkipSeasonSurvey", true, false) == null and taps[0] == 0 and cue.progress == 0.0
+	_check(current_scene.find_child("SkipChoice", true, false) == null and taps[0] == 0 and cue.progress == 0.0
 			and _state.season.round_index == start_round, "A drag off the button stops the hold, and nothing is tapped (%d)" % taps[0])
 
 	# A mouse held on it does the same as a finger.
@@ -5173,19 +5228,20 @@ func _test_skip_long_press() -> void:
 	Input.parse_input_event(up)
 	Input.flush_buffered_events()
 	await _settle()
-	_check(current_scene.find_child("SkipSeasonSurvey", true, false) != null and current_scene.scene_file_path.ends_with("HubScene.tscn")
-			and _state.season.round_index == start_round, "A mouse held on it opens the skip too, and plays nothing")
+	_check(current_scene.find_child("SkipChoice", true, false) != null and current_scene.scene_file_path.ends_with("HubScene.tscn")
+			and _state.season.round_index == start_round, "A mouse held on it opens the skips too, and plays nothing")
 	b.pressed.disconnect(on_tap)
 	_router.handle_back(true)
 	await _settle()
 
-	# A tap is the old Play match: the match preview, no skip.
+	# A tap is the old Sim the week: it asks first or sims the round, no skip.
 	b = _bulk_skip_button()
 	var why: String = await Tap.tap(b)
 	await _settle()
 	_check(why == "" and current_scene.find_child("SkipSeasonSurvey", true, false) == null
-			and not current_scene.scene_file_path.ends_with("HubScene.tscn"),
-			"A tap plays the week as before (%s, now %s)" % [why, current_scene.scene_file_path.get_file()])
+			and current_scene.find_child("SkipChoice", true, false) == null
+			and (current_scene.find_child("SimConfirm", true, false) != null or _state.season.round_index == start_round + 1),
+			"A tap sims the week as before (%s, round %d)" % [why, _state.season.round_index])
 
 	# In the finals the same hold skips to the end of them.
 	_skip_start_finals(5513)
@@ -5205,6 +5261,40 @@ func _test_skip_long_press() -> void:
 	_state.set_match_way(way_before)
 	_state.week_events = []
 	_state.media_conference = {}
+	_router.stack = ["main"]
+	root.size = size_before
+
+
+## On a wide screen (PC) the week's bottom-right button is Sim the week too:
+## the hold goes on whichever week button sits at the bottom right.
+func _test_skip_hold_wide() -> void:
+	var size_before := root.size
+	root.size = Vector2i(1280, 720)
+	_skip_start(5514)
+	_state.season.round_index = _state.season.fixture.size() - 3
+	var start_round: int = _state.season.round_index
+	_router.stack = ["main"]
+	_router.go("hub")
+	await _settle()
+	var b := _bulk_skip_button()
+	var play: Control = current_scene.find_child("PlayMatch", true, false)
+	_check(current_scene.find_child("HubFooterWide", true, false) != null, "The hub is in its wide layout")
+	_check(b != null and b.name == "SimRound" and play != null
+			and b.get_global_rect().end.x > play.get_global_rect().end.x and b.get_global_rect().position.y >= play.get_global_rect().position.y - 1.0,
+			"On a wide screen the hold is on the week's bottom-right button, Sim the week (%s at %s, Play match at %s)" % [
+			b.name if b != null else "none", b.get_global_rect() if b != null else "", play.get_global_rect() if play != null else ""])
+	_check(play != null and play.get_node_or_null("HoldCue") == null, "Play match is a plain button there")
+	if b == null:
+		root.size = size_before
+		return
+	_check(b.get_global_rect().position.y > 720.0 * 0.6, "It sits at the bottom (%s)" % b.get_global_rect())
+	var why: String = await Tap.hold_at(b, b.size * 0.5, HOLD_HELD)
+	await _settle()
+	_check(why == "" and current_scene.find_child("SkipChoice", true, false) != null and _state.season.round_index == start_round,
+			"A hold on it opens the choice of skips and sims nothing (%s, round %d)" % [why, _state.season.round_index])
+	_router.handle_back(true)
+	await _settle()
+	_check(current_scene.find_child("SkipChoice", true, false) == null, "Android Back closes it")
 	_router.stack = ["main"]
 	root.size = size_before
 
@@ -5364,9 +5454,12 @@ func _test_skip_home_away() -> void:
 	_router.go("hub")
 	await _settle()
 	var b := _bulk_skip_button()
-	_check(b != null and str(b.get_meta("bulk_skip")) == "home_away",
-			"In the home and away the week's button holds Skip the home and away")
+	_check(b != null and str(b.get_meta("bulk_skip")) == "choice",
+			"In the home and away the week's button holds the choice of skips")
 	var why: String = await Tap.hold_at(b, b.size * 0.5, HOLD_HELD) if b != null else "missing"
+	await _settle()
+	var ha: Button = current_scene.find_child("SkipChoiceHomeAway", true, false)
+	why = await Tap.tap(ha) if ha != null else "missing"
 	await _settle()
 	_check(why == "" and current_scene.find_child("SkipSeasonSurvey", true, false) != null and _state.season.round_index == start_round,
 			"A finger held on it opens the survey and skips nothing yet (%s)" % why)

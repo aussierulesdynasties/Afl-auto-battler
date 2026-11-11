@@ -106,7 +106,7 @@ func _run() -> void:
 		# The skip is a long press of the week's button (HoldPress): open what it opens.
 		var open: BaseButton = null
 		for n in current_scene.find_children("*", "Button", true, false):
-			if n.get_meta("bulk_skip", "") == "home_away":
+			if n.get_meta("bulk_skip", "") == "choice":
 				open = n as BaseButton
 		if open == null:
 			print("skip: no long press for the home and away")
