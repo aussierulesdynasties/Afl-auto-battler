@@ -138,7 +138,6 @@ The director's visual rulings V-R1 to V-R9 are in Rulings (director, 2026-11-04)
 |---|---|---|
 | V2 | Premiership streamers in club colours | plays once on the premiership screen only, a capture frame shows both club colours |
 | V3 | Brownlow winner reveal: 24 gold sparkles After: V2. | plays once on the winner reveal only, 24 sparkles, a capture frame |
-| V4 | Elevation scale and an automatic contrast test After: #1341, whose new screens its contrast test covers. | BG, PANEL, PANEL_ALT, INK and SURFACE in UiKit.gd form one ordered scale; one test walks every club (including a Forge club) and fails a primary fill under the contrast floor against its label, page or panel, or too close to BAD, and fails any text under the floor on every surface step |
 | V5 | Training results is the proof screen for the new look, then the hub, then the other screens After: V4, 135 and 6.34. | director approves Training results on his phone before the hub starts, then the hub before the rest |
 | V6 | Match chrome: scorebug 56 to 72 px, bottom decision sheet about a third of the height, one-button transport, goal and siren poster card After: 132. | captures at 390x844, the oval gets the freed height, every decision reachable with a real tap |
 | V7 | Navigation icon set (AI-assisted candidates) | one icon per hub destination, director approves or rejects |
