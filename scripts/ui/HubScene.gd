@@ -2281,6 +2281,10 @@ func _show_finals() -> void:
 	done.name = "FinalsDone"
 	done.pressed.connect(_close_finals)
 	(box["footer"] as VBoxContainer).add_child(done)
+	# The flag is decided: streamers in the premiers' colours, once per opening.
+	var f: Dictionary = GameState.season.finals
+	if bool(f.get("done", false)):
+		PremiershipStreamers.play_over(_finals_overlay, str(f.get("premier", "")), done)
 
 
 func _close_finals() -> void:
