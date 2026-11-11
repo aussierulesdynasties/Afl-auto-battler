@@ -123,6 +123,12 @@ GODOT=<godot console exe> tools/balance.sh match 1000 --a "--weather perfect" --
   (Awards.UMPIRE_WEIGHTS and UMPIRE_WIN; every other award stays on CoachReport.influence). `wide`
   adds more stats (reference only), and `replay` re-votes the real matches by the fit (top three
   each match) to show the fit gives real tallies from real stat lines.
+- **Rival reads.** `dynasty_run.gd --reads` records, as each off-season of a seeded career opens, how
+  often the reads the coach is shown on other clubs hold (`rival_reads.gd`: the POT range on another
+  club's player or a free agent, for every club as the reader at every Recruiting level; and the
+  free-agency gate's "the best other" figure before and after rivals answer). It reads the career and
+  changes nothing in it. `python tools/balance/rival_reads_report.py reads_*.json` adds the careers up.
+  Six careers of seven seasons (`--policy board --seasons 7 --manage list`) take about ten minutes.
 - **Runs** land in `.balance/<timestamp>/` (git-ignored, `.gdignore`d).
 
 ## When to use it
