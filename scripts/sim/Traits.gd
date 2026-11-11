@@ -3,8 +3,9 @@ extends RefCounted
 ## Player traits and line synergies.
 ##
 ## A trait is earned from a player's current stats (so training can unlock
-## one), and does one specific thing in a match. Players carry at most two
-## good traits, plus Hothead if their discipline is poor. Synergies switch on
+## one), and does one specific thing in a match. A player earns every good
+## trait whose line he clears, up to five (director, 2026-11-12), plus Hothead
+## if his discipline is poor. Synergies switch on
 ## when a line of the selected 18 carries the right mix of traits - so who
 ## you draft, trade for and pick matters beyond the overall rating.
 
@@ -92,7 +93,7 @@ const UNICORN_LINES := ["FWD", "MID", "DEF"]
 
 ## The wet-weather player (ARD-M4-016, the director's call): a contested
 ## ball-winner with clean hands. Earned from the stats like any trait, but on
-## top of the two, so it never pushes another trait or a synergy out; it does
+## top of the five, so it never pushes another trait or a synergy out; it does
 ## something only when it's wet.
 const WET_WEATHER := {"label": "Wet-weather player", "contested": 78, "disposal": 72,
 		"text": "In the wet: wins 10% more of the ball and makes 20% fewer clangers.",
@@ -123,7 +124,10 @@ static func power(key: String) -> float:
 	return float((SYNERGIES.get(key, {}) as Dictionary).get("power", 1.0))
 
 
-const MAX_GOOD := 2
+## Good traits a player can carry (director, 2026-11-12: "at maximum 5 traits
+## + unicorn"). Unicorn, Wet-weather player and Hothead come on top. Past five,
+## he keeps the five he clears by the most.
+const MAX_GOOD := 5
 const LINE_NAMES := {"RUCK": "ruck", "MID": "midfield", "DEF": "defence", "FWD": "forward line"}
 
 
@@ -182,8 +186,9 @@ static func is_bad(key: String) -> bool:
 	return (DEFS.get(key, {}) as Dictionary).has("max")
 
 
-## A player's traits: up to two good ones (the furthest past their line
-## first), then Hothead if it applies.
+## A player's traits: Unicorn, then every good trait whose line he clears, up
+## to MAX_GOOD (the furthest past their line first), then the wet-weather
+## player and Hothead if they apply.
 static func of(p: Dictionary) -> Array:
 	var attr: Dictionary = p.get("attr", {})
 	var roles := [str(p.get("role", "")), str(p.get("list_tag", ""))] + _positions(p)

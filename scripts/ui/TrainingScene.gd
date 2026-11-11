@@ -1133,8 +1133,6 @@ func _focus_trait_line(v: Control, p: Dictionary, stat: String) -> void:
 	var text := "%s at %d %s: %s." % [Traits.label(key), int(ft["min"]),
 			GameState.train_stat_label(stat).to_lower(),
 			"he is there" if gap == 0 else "%d to go" % gap]
-	if bool(ft["crowded"]):
-		text += " He carries two traits already, so it shows only once he is further past its line than he is past one of them."
 	var l := UiKit.lbl(text, 13, UiKit.EMPH, true)
 	l.name = "StatFocusTrait"
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
