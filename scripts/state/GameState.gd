@@ -24,6 +24,10 @@ var custom_prospect_story := {}
 ## (every club keeps its real end-of-2026 list and the 2026 National Draft is
 ## run before 2027). Older saves have no field and are redrafts.
 var start_mode := "redraft"
+## The real league this career started from (Datasets, Legacy mode row 142):
+## GameDB holds this set while the career runs. reset(dataset) chooses it; the
+## save keeps it, and a save from before the choice is today's 2026 set.
+var dataset := Datasets.DEFAULT
 ## A challenge start (row 114, Challenge.gd): {} for none, else
 ## {"kind": "youth" | "rebuild" | "goal", ...}. Older saves have none.
 var challenge := {}
@@ -956,6 +960,7 @@ func _save_state() -> Dictionary:
 		"class_tiers": class_tiers,
 		"custom_prospect_id": custom_prospect_id,
 		"start_mode": start_mode,
+		"dataset": dataset,
 		"challenge": challenge,
 		"opening_draft": opening_draft,
 		"custom_club": custom_club,
@@ -1034,8 +1039,15 @@ func _restore_career(state: Dictionary) -> bool:
 	# (it touches nothing in the career and draws no random numbers).
 	if state.is_empty():
 		return false
+	# The league the career started from loads first: everything below reads it.
+	# A save from before the choice is the 2026 set; one whose set this build
+	# does not ship cannot be restored onto another league's players.
+	var ds := str(state.get("dataset", Datasets.DEFAULT))
+	if not Datasets.ready(ds):
+		push_error("GameState: the save's dataset '%s' is not in this build." % ds)
+		return false
 	Season.beat()
-	reset()
+	reset(ds)
 	# A pre-made history stops where Choose your club opens.
 	Season.beat()
 	sim_ahead = bool(state.get("sim_ahead", false))
@@ -1638,9 +1650,11 @@ func _unlinked_lists(lists: Dictionary) -> Dictionary:
 	return out
 
 
-func reset() -> void:
+## `next_dataset` is the real league the next career starts from (Datasets):
+## today's 2026 set unless a start or a save names another.
+func reset(next_dataset := Datasets.DEFAULT) -> void:
 	# Mid-career seasons mutate the loaded player dicts in place (intake,
-	# ageing, XP training). A new career must start from the pristine 2026
+	# ageing, XP training). A new career must start from the pristine
 	# dataset, so reload the data files before rebuilding anything. The caches
 	# built from the players (prospect shapes, story cards) are dropped with it,
 	# so a new career never reads one built under the last. PlayerProfile's rating
@@ -1651,8 +1665,10 @@ func reset() -> void:
 	# Boot already loaded the data and no career has touched it yet (the cold
 	# Continue, or the first New career): reuse it rather than parse every
 	# file again. A career changes the player dicts in place, so it is spent.
-	if not GameDB.pristine:
-		GameDB.reload()
+	# Another league's data is never reused, pristine or not.
+	dataset = next_dataset
+	if not GameDB.pristine or GameDB.dataset_id != dataset:
+		GameDB.reload(dataset)
 	GameDB.pristine = false
 	# Nothing of the last career's market or caches carries into this one
 	# (a second career in one process played its off-season differently).
@@ -1990,7 +2006,7 @@ func begin_real_lists() -> void:
 ## last and the runners-up second last (the simplified order the intake draft
 ## uses every year). Clubs missing from the ladder file go first, in club order.
 func opening_order(active: Array) -> Array:
-	var ladder := GameDB.ladder_2026()
+	var ladder := GameDB.ladder_of(GameDB.DATA_SEASON)
 	var rows := []
 	for r in ladder:
 		if active.has(str(r["club"])):
@@ -5059,7 +5075,7 @@ func last_finish_of(code: String) -> int:
 		return 0
 	var mine := false
 	var theirs := 0
-	for r in GameDB.ladder_2026():
+	for r in GameDB.ladder_of(GameDB.DATA_SEASON):
 		if str(r["club"]) == my_club:
 			mine = true
 		if str(r["club"]) == code:
