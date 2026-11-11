@@ -67,6 +67,7 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `expansion` | Tasmania in 2028 and Canberra in 2030, and a Club Forge club entering with the career |
 | `expansion_package` | How a new club builds its list: state-league signings, early picks, the traded pick, out-of-contract signings, sign-on money, the Canberra choice, the approach card, premiers picking last |
 | `finals` | The wildcard finals bracket, extra time, draws |
+| `season_rules` | Season rules by year (legacy mode): the 1990-2025 table, each past year's fixture (14, 15, 16 and 18 clubs, a bye every round at 15), the final five, six and McIntyre eight played to a premier with the real years' pairings, a drawn final replayed, the Grand Final's venue, no Gather Round before 2023, and the 2026 league's fixture and finals byte-identical to before (golden digest) |
 | `gather_round` | Gather Round: one of rounds 3 to 7 at the host grounds, the home edge only at a club's own ground, the odd-count bye, its name in the fixture, hub and match, a live round across a save and load |
 | `save` | Saving and loading a career, including old-save migrations and the safe write: a failed or interrupted write never loses the career, and a failed swap leaves the newer save readable |
 | `chronology` | 2026 is history, careers start in 2027, and every system agrees |

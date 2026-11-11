@@ -164,7 +164,8 @@ static func pages(season: Season) -> Array:
 	if not season.finals.is_empty():
 		var weeks: Array = season.finals.get("weeks", [])
 		var last := weeks.size() + (0 if bool(season.finals.get("done", false)) else 1)
-		for w in range(mini(last, FINALS_WEEKS.size())):
+		var names := week_titles(season)
+		for w in range(mini(last, names.size())):
 			var matches := []
 			if w < weeks.size():
 				for r in weeks[w]:
@@ -177,8 +178,39 @@ static func pages(season: Season) -> Array:
 						continue
 					matches.append({"home": str(m["home"]), "away": str(m["away"]), "res": {},
 							"venue": season.finals_venue(m), "tag": str(m["tag"]), "label": str(m["label"])})
-			out.append({"title": str(FINALS_WEEKS[w]), "matches": matches, "played": w < weeks.size(),
+			out.append({"title": str(names[w]), "matches": matches, "played": w < weeks.size(),
 					"byes": [], "finals": true})
+	return out
+
+
+## Each finals week's page title, in order: the game league's five weeks, or
+## a past year's series ("Semi finals"), with a drawn final's replay week
+## named for the final it replays ("Grand Final Replay").
+static func week_titles(season: Season) -> Array:
+	if season.finals_format() == "wildcard10":
+		return FINALS_WEEKS
+	var out := []
+	var step := 0
+	var weeks: Array = season.finals.get("weeks", [])
+	var done := bool(season.finals.get("done", false))
+	for w in range(weeks.size() + (0 if done or season.finals.is_empty() else 1)):
+		var ms: Array = weeks[w] if w < weeks.size() else season.finals_week_matches()
+		var label := str((ms[0] as Dictionary).get("label", "")) if not ms.is_empty() else ""
+		if label.ends_with(" Replay"):
+			out.append(label)
+			continue
+		step += 1
+		var n := SeasonRules.week_name(season.finals_format(), step)
+		if n == "":
+			break
+		out.append(n if n == "Grand Final" else n.substr(0, 1) + n.substr(1).to_lower())
+	# The weeks still to come, so the picker shows the whole series.
+	while true:
+		var n := SeasonRules.week_name(season.finals_format(), step + 1)
+		if n == "" or done:
+			break
+		step += 1
+		out.append(n if n == "Grand Final" else n.substr(0, 1) + n.substr(1).to_lower())
 	return out
 
 
@@ -198,9 +230,9 @@ static func _status(season: Season, page: Dictionary) -> String:
 	var event := str(page.get("event", ""))
 	var tail := "" if event == "" else " · " + event
 	if bool(page["played"]):
-		return "Played · round %d of %d%s" % [idx, Season.REGULAR_ROUNDS, tail]
+		return "Played · round %d of %d%s" % [idx, season.regular_rounds(), tail]
 	var what := "Next round" if idx == season.round_index + 1 else "To play"
-	return "%s · round %d of %d%s" % [what, idx, Season.REGULAR_ROUNDS, tail]
+	return "%s · round %d of %d%s" % [what, idx, season.regular_rounds(), tail]
 
 
 ## One match as a tappable row: the two clubs one over the other, their
