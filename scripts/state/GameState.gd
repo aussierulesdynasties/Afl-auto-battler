@@ -4909,9 +4909,11 @@ func _practice_finish(club: String, built: Dictionary, res: Dictionary) -> Dicti
 	if not rows.is_empty():
 		_log_injuries(rows, "Practice match")
 	var sat := []
+	var sat_cleared := []
 	for row in last_medical.slice(sat_from):
 		if str(row.get("club", "")) == my_club:
 			sat.append(MedicalPanel.result_short(row))
+			sat_cleared.append(bool(row.get("cleared", false)))
 	var seen_rows := []
 	for p in draftee_pool:
 		var id := str(p.get("id", ""))
@@ -4950,7 +4952,7 @@ func _practice_finish(club: String, built: Dictionary, res: Dictionary) -> Dicti
 	return {"score": [int(score[0]), int(score[1])], "goals": res.get("goals", [0, 0]), "behinds": res.get("behinds", [0, 0]),
 			"names": [GameDB.club_name(str(built["home"])), GameDB.club_name(str(built["away"]))],
 			"opponent": str(built["away"]),
-			"stood": stood, "struggled": struggled, "hurt": hurt, "medical": sat, "prospects": seen_rows}
+			"stood": stood, "struggled": struggled, "hurt": hurt, "medical": sat, "medical_cleared": sat_cleared, "prospects": seen_rows}
 
 
 ## The practice week, once its matches are played.
@@ -7428,16 +7430,22 @@ func _medical_retire(club: String, p: Dictionary) -> void:
 
 
 ## The medical panel's sittings on your players in the week just played, as
-## short lines for the week's injuries: "Name was cleared to play on (a 50% chance)."
-## last_medical holds that week's sittings and nothing older
+## short lines for the week's injuries: "Name was cleared to keep playing once
+## he recovers (a 50% chance)." last_medical holds that week's sittings and nothing older
 ## (emptied before each round's injuries and at the rollover), so nothing is
 ## matched on a round's name: a home-and-away round, a final played or
 ## simulated and the practice match all show theirs.
 func my_medical_lines() -> Array:
+	return my_medical_rows().map(func(r): return str(r["text"]))
+
+
+## The same, each with whether he was cleared ({"text", "cleared"}): a cleared
+## player is good news and is not drawn in the injury red.
+func my_medical_rows() -> Array:
 	var out := []
 	for row in last_medical:
 		if str(row.get("club", "")) == my_club:
-			out.append(MedicalPanel.result_short(row))
+			out.append({"text": MedicalPanel.result_short(row), "cleared": bool(row.get("cleared", false))})
 	return out
 
 

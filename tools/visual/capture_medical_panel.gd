@@ -91,7 +91,7 @@ func _week(state, db, wants: Array, path: String) -> void:
 	await _frames(12)
 	hub.call("_show_results", state.last_results)
 	await _frames(40)
-	var line: Label = hub.find_child("MyMedical", true, false)
+	var line: Label = hub.find_child("MyMedical_0", true, false)
 	print("WEEK ", wants, " | hub line: ", line.text if line != null else "(no MyMedical)",
 			" | news: ", state.news[0].get("text", ""))
 	if line != null:
@@ -103,7 +103,7 @@ func _week(state, db, wants: Array, path: String) -> void:
 	var full = load("res://scenes/MatchScene.tscn").instantiate()
 	root.add_child(full)
 	await _frames(30)
-	var ml: Label = full.find_child("YourMedical", true, false)
+	var ml: Label = full.find_child("YourMedical_0", true, false)
 	print("SUMMARY ", wants, " | ", ml.text if ml != null else "(no YourMedical)")
 	if ml != null:
 		await _scroll_to(full, ml, 150)
