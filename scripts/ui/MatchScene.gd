@@ -312,6 +312,10 @@ const MOMENTUM_INFO_RUNAWAY := [
 ]
 
 
+## The line the first match you watch shows under the meter.
+const MOMENTUM_NOTE := "Momentum swings with each goal and fades with time; the side on top wins a little more of the ball. %s it for more."
+
+
 static func momentum_info() -> Array:
 	return MOMENTUM_INFO_RUNAWAY
 
@@ -347,6 +351,12 @@ func _momentum_bar() -> Control:
 	_mom_note.name = "MomentumNote"
 	_mom_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_mom_note.visible = false
+	# The first match you watch keeps the line's room from the first frame,
+	# unseen until momentum first moves, so the ground never shifts under it.
+	if _interactive and GameState.intro_due("momentum"):
+		_mom_note.text = MOMENTUM_NOTE % ScreenLayout.tap_word()
+		_mom_note.visible = true
+		_mom_note.modulate.a = 0.0
 	box.add_child(_mom_note)
 	_paint_momentum()
 	return box
@@ -364,11 +374,10 @@ func _paint_momentum() -> void:
 		_mom_word.text = "%s on top" % GameDB.club_short(code)
 		ClubDuel.on_colour(_mom_word)
 	# The first match you watch: once it first moves, one line says what it is.
-	if _interactive and not _mom_note.visible and absf(_momentum) >= MOMENTUM_EVEN \
-			and GameState.intro_due("momentum"):
+	# Its room is kept from the first frame (_momentum_bar); here it only shows.
+	if _mom_note.visible and _mom_note.modulate.a < 1.0 and absf(_momentum) >= MOMENTUM_EVEN:
 		GameState.set_setting("seen_momentum_intro", true)
-		_mom_note.text = "Momentum swings with each goal and fades with time; the side on top wins a little more of the ball. %s it for more." % ScreenLayout.tap_word()
-		_mom_note.visible = true
+		_mom_note.modulate.a = 1.0
 
 
 func _show_momentum_info() -> void:
