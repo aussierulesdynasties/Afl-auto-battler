@@ -148,6 +148,8 @@ func _initial_draft(mode: String, interview := false) -> void:
 			_walk(mode, "Appointment interview: %s" % (", ".join(it.map(func(t): return _tip_title(iv, t))) if not it.is_empty() else "no tip"))
 			await _close_tips(iv)
 			_check(_tips(iv).is_empty(), "Appointment interview: the tip closes (%s)" % mode)
+			if mode != "off":
+				await _interview_press_room(iv)
 		# The answers are career_ui's to prove; here the walk goes on to the board.
 		_state.interview_due = false
 		if iv != null:
@@ -183,6 +185,63 @@ func _initial_draft(mode: String, interview := false) -> void:
 	_state.open_preseason(false)
 	ui.queue_free()
 	await _settle()
+
+
+## Director, 2026-11-12: "the onboarding press interview has a LOT of empty space
+## taking up like 80% of the screen. theres no press scene". The interview opens
+## in the same press room as every press conference, drawn from the figure sheet
+## (not a fallback), the coach's name and the first answer take a finger's tap
+## past it, and the question page leaves no empty block under the answers.
+func _interview_press_room(iv: Control) -> void:
+	var SV = load("res://scripts/ui/match/StoppageVignette.gd")
+	var VF = load("res://scripts/ui/match/VignetteFigures.gd")
+	var stage: Control = iv.find_child("InterviewStage", true, false)
+	_check(stage != null and stage.is_visible_in_tree(), "Appointment interview: the press room is on the screen")
+	if stage == null:
+		return
+	var room: Control = stage.find_child("MediaConferenceVignette", false, false)
+	_check(room != null and room.get_script() == load("res://scripts/ui/MediaConferenceVignette.gd"),
+			"Appointment interview: the room is the press conference's own scene")
+	if room == null:
+		return
+	var mat := room.material as ShaderMaterial
+	_check(mat != null and mat.shader == SV.FIGURE_SHADER and mat.get_shader_parameter("mask_tex") == SV.FIGURE_MASK
+			and mat.get_shader_parameter("sheet_size") == VF.SHEET_SIZE,
+			"Appointment interview: the coach is drawn with the figure shader and its mask")
+	var sheet: Texture2D = SV.FIGURE_SHADE
+	_check(sheet != null and sheet.resource_path == "res://assets/vignette/figures_shade.png"
+			and Vector2i(sheet.get_size()) == Vector2i(VF.SHEET_SIZE),
+			"Appointment interview: the figure sheet loaded at its own size (%s, %s)" % [
+				sheet.resource_path if sheet != null else "none", sheet.get_size() if sheet != null else Vector2.ZERO])
+	_check(VF.strip("coach", "coach_seated", "front") is Dictionary and not (VF.strip("coach", "coach_seated", "front") as Dictionary).is_empty(),
+			"Appointment interview: the sheet holds the seated coach the room draws")
+	_check(room.size.x >= 300.0 and room.size.y >= 180.0, "Appointment interview: the room fills its stage (%s)" % room.size)
+	var field: LineEdit = iv.find_child("CoachName", true, false)
+	if field != null:
+		field.text = "Pat Reid"
+		field.text_changed.emit(field.text)
+		await _settle()
+		var why: String = await Tap.tap(iv.find_child("InterviewStart", true, false))
+		_check(why == "", "Appointment interview: Face the press takes a finger's tap (%s)" % why)
+		await _settle()
+	var answer: Control = iv.find_child("InterviewAnswer0", true, false)
+	_check(answer != null, "Appointment interview: the first question is up")
+	if answer == null:
+		return
+	await _settle()
+	# The room takes the height the question leaves: the last answer sits near the
+	# foot of the screen, not above an empty block.
+	var last: Control = iv.find_child("InterviewAnswer3", true, false)
+	var gap := float(root.size.y) - last.get_global_rect().end.y
+	_check(stage.size.y > 180.0 and gap < 140.0,
+			"Appointment interview: no empty block under the answers (room %d px high, %d px under the last answer)" % [stage.size.y, gap])
+	_check(stage.find_child("MediaConferenceVignette", false, false) == room,
+			"Appointment interview: the same room stays through the questions")
+	var why2: String = await Tap.tap(answer)
+	_check(why2 == "", "Appointment interview: an answer takes a finger's tap past the room (%s)" % why2)
+	await _settle()
+	var second := iv.find_children("*", "Label", true, false).filter(func(l): return str((l as Label).text).begins_with("Question 2 of"))
+	_check(not second.is_empty(), "Appointment interview: the next question follows the answer")
 
 
 func _hub(mode: String, label: String) -> Control:
