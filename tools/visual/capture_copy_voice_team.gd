@@ -47,7 +47,7 @@ func _run() -> void:
 		await _open("selection", "Selection")
 		await _shot("team_intro")
 
-	# The side as the match committee picks it: the hint under the interchange.
+	# The side as Auto-pick picks it: the hint under the interchange.
 	if _want("team"):
 		_fresh(intro_keys)
 		await _open("selection", "Selection")
@@ -83,7 +83,7 @@ func _run() -> void:
 		(ui4.find_child("SaveBest23", true, false) as BaseButton).emit_signal("pressed")
 		await _raise()
 		await _shot("team_saved")
-	# A match committee pick, its note, then Undo.
+	# An Auto-pick, its note, then Undo.
 	if _want("team_rest") or _want("team_undo"):
 		_fresh(intro_keys)
 		var ui5: Node = await _open("selection", "Selection")
