@@ -72,7 +72,7 @@ const FLAT_PEP := 0.5             # behind, Fire them up's lift halved
 const STRENGTHS := {
 	"sharp": {"name": "Sharp shooting", "lever": "goal", "size": SHARP_GOAL, "gate": "",
 			"line": "Your shots go through %s more often."},
-	"fast_start": {"name": "Fast starters", "lever": "goal", "size": FAST_START_GOAL, "gate": "q1",
+	"fast_start": {"name": "Fast out of the blocks", "lever": "goal", "size": FAST_START_GOAL, "gate": "q1",
 			"line": "First quarter: your shots go through %s more often."},
 	"late": {"name": "Strong finish", "lever": "goal", "size": LATE_GOAL, "gate": "q4",
 			"line": "Last quarter: your shots go through %s more often."},

@@ -158,7 +158,7 @@ func _test_gates() -> void:
 	var sim := _sim({"s": "fast_start", "c": "fade"}, 77, 0, "custom")
 	sim.current_quarter = 1
 	_check(sim._gt(0, "goal") == CustomPlan.FAST_START_GOAL and sim._gt(0, "legs") == 1.0,
-			"Fast starters: first quarter, sharper shots, legs as usual")
+			"Fast out of the blocks: first quarter, sharper shots, legs as usual")
 	sim.current_quarter = 4
 	_check(sim._gt(0, "goal") == 1.0 and sim._gt(0, "legs") == CustomPlan.LATE_LEGS,
 			"Fade late: last quarter, legs go quicker, shots as usual")
@@ -266,7 +266,9 @@ func _test_rivals_build_one() -> void:
 			and RegEx.create_from_string("[0-9]+%").search(report) == null,
 			"The report on a rival names its plan, in words (%s)" % report.left(300))
 	var sim := MatchSim.new(Squad.new("Geelong", GameDB.club_list("GEE"), true, "GEE"), theirs, 77)
-	_check(sim._plan(1) == "custom" and sim._gt(1, "opp_goal") == CustomPlan.LOCKDOWN_OPP_GOAL,
+	_check(sim._plan(1) == "custom" and is_equal_approx(sim._gt(1, "opp_goal"),
+			CustomPlan.lever(CustomPlan.entry("lockdown", true), "opp_goal", 1.0, sim._custom_up(1)))
+			and sim._gt(1, "opp_goal") < 1.0,
 			"It plays its own plan from the first bounce")
 	CoachEffects.usual = {}
 	CoachEffects.customs = {}

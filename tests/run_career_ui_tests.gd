@@ -2278,7 +2278,7 @@ Your career stays on this device.",
 	var why_own: String = (await Tap.tap(own_tile)) if own_tile != null else "no tile"
 	await _settle()
 	var own_l: Label = own_tile.find_child("Plan", true, false) if own_tile != null else null
-	_check(_state.club_plan == "custom" and own_l != null and own_l.text == CustomPlan.DEFAULT_NAME,
+	_check(_state.club_plan == "custom" and own_l != null and own_l.text == str(load("res://scripts/sim/CustomPlan.gd").DEFAULT_NAME),
 			"Once built, a tap makes your own plan the club's, under its name (a real tap: %s)" % why_own)
 	root.size = size_plan
 	_state.custom_plan = {}
