@@ -719,8 +719,7 @@ func _test_calls_every_quarter_screen() -> void:
 	var text := ""
 	if box != null:
 		for c in box.get_children():
-			text += str(c.get_meta("plain", c.get("text"))) + "
-"
+			text += str(c.get_meta("plain", c.get("text"))) + "\n"
 	for q in range(1, 5):
 		_check(text.contains("Q%d  ·  " % q), "calls: Your calls lists a Q%d call:\n%s" % [q, text])
 	Router.stack = []

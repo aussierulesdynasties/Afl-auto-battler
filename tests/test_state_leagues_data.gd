@@ -365,8 +365,8 @@ func _test_finals() -> void:
 			continue
 		for r in rows:
 			var hs := int(r["home_score"])
-			var as_ := int(r["away_score"])
-			_check(hs != as_ and r["winner"] == (r["home"] if hs > as_ else r["away"]), "%s final %s" % [lg, r["seq"]])
+			var away_sc := int(r["away_score"])
+			_check(hs != away_sc and r["winner"] == (r["home"] if hs > away_sc else r["away"]), "%s final %s" % [lg, r["seq"]])
 		var gf: Dictionary = rows[rows.size() - 1]
 		_check(gf["final"] == "GF" and gf["winner"] == PREMIERS[lg], "%s premiers %s" % [lg, gf["winner"]])
 		_check(leagues.get(lg, {}).get("premiers", "") == PREMIERS[lg], "%s leagues.csv premiers" % lg)
