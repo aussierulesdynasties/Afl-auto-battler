@@ -1156,9 +1156,17 @@ const COACHES_HITOUT_POINTS := 1.2
 ## lean, the same all match, so the two coaches can differ on a close call.
 ## Returns {player id: votes}; a player on neither coach's five is absent.
 static func coaches_votes(res: Dictionary, hitout_points := COACHES_HITOUT_POINTS) -> Dictionary:
+	# Each player's id, stats and rating (rated_players without the names and
+	# its sort: the coaches' own sort below orders them in full).
 	var everyone := []
+	var roster: Array = res.get("roster", [[], []])
+	var players: Dictionary = res.get("players", {})
 	for side in [0, 1]:
-		everyone.append_array(rated_players(res, side))
+		if roster.size() <= side:
+			continue
+		for p in roster[side]:
+			var st: Dictionary = players.get(str(p["id"]), {})
+			everyone.append({"id": str(p["id"]), "stats": st, "rating": rating(st)})
 	var votes := {}
 	for coach in [0, 1]:
 		var scored := []
