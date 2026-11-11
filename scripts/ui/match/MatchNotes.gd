@@ -517,6 +517,44 @@ static func calls_lines(res: Dictionary, my_side: int, q: int) -> Array:
 	return out
 
 
+## Your calls for the full-time summary, "Q3  ·  line", at most `cap` lines.
+## A quarter's lines can fill the whole cap on their own (plan, tag and three
+## players to go through = 5), so taking them in order showed Q1 and never Q3
+## or Q4 (director bug, 2026-11-12). The rule: every quarter with a call gets
+## its first line before any quarter gets a second, then its second before a
+## third, and so on; the lines picked are shown in quarter order. A line the
+## story above already quoted for that quarter (told "q<n>" and "call:<line>")
+## is left out before the picking.
+static func calls_summary(res: Dictionary, my_side: int, told: Dictionary = {}, cap := 5) -> Array:
+	var per: Array = []
+	for q in range(1, 5):
+		var keep: Array = []
+		for t in calls_lines(res, my_side, q):
+			if told.has("q%d" % q) and told.has("call:" + str(t)):
+				continue
+			keep.append("Q%d  ·  %s" % [q, str(t)])
+		per.append(keep)
+	var picked: Array = [[], [], [], []]
+	var taken := 0
+	var depth := 0
+	while taken < cap:
+		var any := false
+		for i in range(per.size()):
+			if taken >= cap:
+				break
+			if (per[i] as Array).size() > depth:
+				picked[i].append(per[i][depth])
+				taken += 1
+				any = true
+		if not any:
+			break
+		depth += 1
+	var out: Array = []
+	for p in picked:
+		out.append_array(p)
+	return out
+
+
 static func _goals_word(g: int) -> String:
 	return "no goals" if g == 0 else ("1 goal" if g == 1 else "%d goals" % g)
 
