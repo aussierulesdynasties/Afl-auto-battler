@@ -392,7 +392,35 @@ func _stories(state: Node, mine: Dictionary) -> void:
 	for k in dealt:
 		only = only and ["intl_first_game", "intl_learning_the_game", "intl_nz_rugby_offer"].has(str(k)) 				and not str(k).begins_with("intl_irish") and not str(k).begins_with("intl_africa")
 	_check(dealt.has("intl_first_game") and only, "The engine deals his first-game card, and only cards fit for him (%s)" % str(dealt.keys()))
+
+	# His cards wait their twelve weeks after one of their own, and a month after
+	# any other card about him: another card about him every ten weeks (a kid
+	# pushing for a game) used to hold them back all season.
+	var learn := StoryDeck.by_id(deck, "intl_learning_the_game")
+	var kid := StoryDeck.normalise({"id": "kid", "category": "training", "cooldown": 0,
+			"subject": {"kind": "player", "where": {"fit": true}, "pick": "random"}, "title": ["{name}"], "text": ["x"],
+			"choices": [{"key": "a", "label": "A", "effects": []}, {"key": "b", "label": "B", "effects": []}]})
+	var w := StoryEngine.week_abs(2028, 12)
+	var one := {"seed": 1, "year": 2028, "week": 12, "phase": "regular", "big": false, "club": club, "players": [f]}
+	var after_other := StoryEngine.new_state()
+	StoryEngine._record_pick(after_other, StoryEngine.build([kid], kid, f, club, RandomNumberGenerator.new(), w - 10), w - 10)
+	_check(_free(after_other, learn, one, w), "Ten weeks after another card about him, his international card can come")
+	after_other["subj"]["x"] = w - StoryEngine.SERIES_GAP + 1
+	_check(not _free(after_other, learn, one, w) and _free(after_other, learn, one, w + 1),
+			"A card about him inside the last %d weeks still holds his international card back" % StoryEngine.SERIES_GAP)
+	var after_own := StoryEngine.new_state()
+	StoryEngine._record_pick(after_own, StoryEngine.build(deck, learn, f, club, RandomNumberGenerator.new(), w - 11), w - 11)
+	var first_game := StoryDeck.by_id(deck, "intl_first_game")
+	_check(not _free(after_own, first_game, one, w) and _free(after_own, first_game, one, w + 1),
+			"Two international cards about him stay twelve weeks apart")
+	_check(not _free(after_own, kid, one, w - 4) and _free(after_own, kid, one, w - 3),
+			"Any other card about him still waits its own eight weeks after his international card")
 	StoryDeck.reload()
+
+
+## Can this card come for the one player in `ctx`, on this story's memory, in week `w`?
+func _free(story: Dictionary, card: Dictionary, ctx: Dictionary, w: int) -> bool:
+	return not StoryEngine.eligible_subject(card, ctx, story, w, RandomNumberGenerator.new()).is_empty()
 
 
 ## An old save: its draft class was made before international prospects, so
