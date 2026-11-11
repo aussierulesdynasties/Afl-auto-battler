@@ -605,12 +605,16 @@ func _test_real_lists_rookie_categories() -> void:
 	# West Coast as DraftGuru's 2027 list has it after the 2026 list period
 	# (checked 2026-11-12): 51 on the 2026 list, less Cripps (retired) and seven
 	# delistings, plus Trent Rivers and Jack Viney from Melbourne = 45: 33
-	# senior, 10 Category A, 2 Category B, so 43 of the 44.
+	# senior, 10 Category A, 2 Category B, so 43 of the 44. The game also lists
+	# its tied 2026 prospects before the draft (Harper Banfield, father-son;
+	# Lachlan McGlade and Garrison Kenh, Next Generation Academy), as it does
+	# for every club: they are the senior spots past the real 33.
 	var wce: Array = gs.league_lists["WCE"]
-	_check(RookieList.senior_count(wce) == 33 and RookieList.cat_a_count(wce) == 10
-			and RookieList.cat_b_count(wce) == 2 and RookieList.list_size(wce) == 43,
-			"West Coast starts as its real list: 33 senior, 10 Category A, 2 Category B, 43 of 44 (%d, %d, %d, %d)" % [
-				RookieList.senior_count(wce), RookieList.cat_a_count(wce), RookieList.cat_b_count(wce), RookieList.list_size(wce)])
+	var tied := gs.intake_assignments.filter(func(a): return str(a["club"]) == "WCE").size()
+	_check(RookieList.senior_count(wce) - tied == 33 and RookieList.cat_a_count(wce) == 10
+			and RookieList.cat_b_count(wce) == 2 and RookieList.list_size(wce) - tied == 43,
+			"West Coast starts as its real list: 33 senior, 10 Category A, 2 Category B, 43 of 44, plus %d tied prospects (%d, %d, %d, %d)" % [
+				tied, RookieList.senior_count(wce), RookieList.cat_a_count(wce), RookieList.cat_b_count(wce), RookieList.list_size(wce)])
 	var mel: Array = gs.league_lists["MEL"]
 	_check(RookieList.cat_a_count(mel) == 6 and RookieList.cat_b_count(mel) == 1 and RookieList.list_size(mel) == mel.size() - 1,
 			"Melbourne: six Category A, Ricky Mentha in a Category B spot outside the 44 (%d A, %d B, %d of 44)" % [
@@ -915,8 +919,8 @@ func _test_arrivals_need_senior_spot() -> void:
 			break
 	var v2 := Contracts.evaluate_trade(gee, [gee[0]], [sen], 1 << 40, mine, 1 << 40, 0.0, {"name": "Geelong"})
 	_check(str(v2["code"]) != "trade_senior_over", "Trades: a senior for a senior at 38 is not blocked by the senior list")
-	# A list over the 44 (West Coast's real 2026 list: 46 on the senior and
-	# Category A lists) can still trade one for one, never take on more; a
+	# A list over the 44 (West Coast's start: its real 43 on the senior and
+	# Category A lists plus three tied prospects, 46) can still trade one for one, never take on more; a
 	# Category B rookie is outside the 44.
 	var over: Array = []
 	for i in 46:
