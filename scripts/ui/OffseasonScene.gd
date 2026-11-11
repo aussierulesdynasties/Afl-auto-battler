@@ -1172,6 +1172,8 @@ func _player_card(p: Dictionary, detail: String) -> PanelContainer:
 	who.name = "PlayerName_" + str(p["id"])
 	h.add_child(NameLink.tappable(who, str(p["id"])))
 	info.add_child(_para(detail, 12, UiKit.MUTED))
+	# His top three rated attributes, as every card shows them (row 150).
+	info.add_child(PlayerSheet.top_three(p, UiKit.FINE, true))
 	return card
 
 
