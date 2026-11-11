@@ -5326,7 +5326,9 @@ func _auto_rotate(side: int) -> void:
 ## The coach's named tagger goes back on only in a midfielder's place, and
 ## first when one comes off, so he picks the tag up again (tagger_of).
 ## Each play-through pick (focus_mid/fwd/def) goes back on the same way: only
-## in a spot his call works from (FOCUS_SLOT_ROLES), and first when one does.
+## in a spot his call works from (FOCUS_SLOT_ROLES), which counts as his own
+## line, and first when one does; on every path (a forced change puts him in
+## another line only as the last man on the bench).
 const DEF_TIRED_GAP := 25.0
 
 
@@ -5339,7 +5341,7 @@ func _bench_for(side: int, role: String, min_energy: float, rotation := false) -
 		if fid != "":
 			focus[fid] = slot
 	var best := -1
-	var best_score := -1.0
+	var best_score := -INF
 	var best_fits := false
 	var def_waiting := false
 	for i in range(sq.bench.size()):
@@ -5347,7 +5349,20 @@ func _bench_for(side: int, role: String, min_energy: float, rotation := false) -
 		var e := float(energy.get(str(p["id"]), 100.0))
 		if rotation and str(_held.get(str(p["id"]), "")) == "rest":
 			continue
-		var fits := Traits.plays(p, role)
+		# A play-through pick goes back on only in a spot his call works from,
+		# and first when one comes up, so the call never waits from a slot in
+		# another line (director, 2026-11-12: the play-through midfielder
+		# "spent the whole quarter parked in the goal square"). The line his
+		# call names counts as his own, so a coach's out-of-position pick (a
+		# forward played through the midfield) goes back on there too. A routine
+		# change never puts him in another line; a forced one (an injury, a
+		# rest the coach called) does only when no one else is on the bench.
+		var focus_slot := str(focus.get(str(p["id"]), ""))
+		var in_his_line := focus_slot != "" and (FOCUS_SLOT_ROLES[focus_slot] as Array).has(role)
+		var out_of_line := focus_slot != "" and not in_his_line
+		if out_of_line and rotation:
+			continue
+		var fits := Traits.plays(p, role) or in_his_line
 		if e < min_energy:
 			if role != "DEF" or not fits:
 				continue
@@ -5357,15 +5372,9 @@ func _bench_for(side: int, role: String, min_energy: float, rotation := false) -
 		var is_named := rotation and named != "" and str(p["id"]) == named
 		if is_named and role != "MID":
 			continue
-		# A play-through pick goes back on only in a spot his call works from,
-		# and first when one comes up, so the call never waits from a slot in
-		# another line (director, 2026-11-12: the play-through midfielder
-		# "spent the whole quarter parked in the goal square").
-		var focus_slot := str(focus.get(str(p["id"]), "")) if rotation else ""
-		if focus_slot != "" and not (FOCUS_SLOT_ROLES[focus_slot] as Array).has(role):
-			continue
-		var is_focus := focus_slot != "" and fits
-		var score := e + (100.0 if fits else 0.0) + (200.0 if is_named or is_focus else 0.0)
+		var score := e + (100.0 if fits else 0.0) + (200.0 if is_named or in_his_line else 0.0)
+		if out_of_line:
+			score -= 1000.0
 		if score > best_score:
 			best = i
 			best_score = score

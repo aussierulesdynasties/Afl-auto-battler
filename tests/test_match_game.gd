@@ -79,6 +79,8 @@ func run() -> void:
 	_t("_test_tag_ends_with_injury")
 	_t("_test_named_tagger_back_on")
 	_t("_test_play_through_back_on_in_his_line")
+	_t("_test_play_through_forced_changes")
+	_t("_test_play_through_out_of_position")
 	_t("_test_play_through_mid_stands_in_midfield")
 	_t("_test_view_slots_stand_in_their_zone")
 	_t("_test_tag_hold")
@@ -3021,6 +3023,127 @@ func _test_play_through_back_on_in_his_line() -> void:
 					GameDB.player_display_name(pick), role])
 			_check(sim.focus_active(0, slot), "%s %s: back on, the call works again" % [club, slot])
 	_check(tried >= 10, "Enough clubs have a play-through pick who plays two lines (%d)" % tried)
+
+
+## A Melbourne side playing through Pickett, with him on the bench (fresh)
+## and the rest of the bench a little tired. Returns [sim, pid].
+func _focus_on_bench(seed: int) -> Array:
+	var sim := _sim(seed, "MEL", "FRE")
+	sim.moment_side = -1
+	var sq: Squad = sim.squads[0]
+	var pid := ""
+	for p in sq.ground:
+		if str(p.get("real_name", "")) == "Kysaiah Pickett":
+			pid = str(p["id"])
+	if pid == "":
+		return [sim, ""]
+	sim.tactics[0] = {"gameplan": "balanced", "focus_mid": pid}
+	sim._swap(0, sq.ground.find(sim._ground_player(0, pid)), 0)
+	for p in sq.ground + sq.bench:
+		sim.energy[str(p["id"])] = 100.0 if str(p["id"]) == pid else 90.0
+	return [sim, pid]
+
+
+func _ground_index(sim: MatchSim, role: String) -> int:
+	var sq: Squad = sim.squads[0]
+	for k in sq.ground.size():
+		if str((sq.ground[k] as Dictionary).get("role", "")) == role:
+			return k
+	return -1
+
+
+func _role_of(sim: MatchSim, id: String) -> String:
+	var g = sim._ground_player(0, id)
+	return "" if g == null else str(g["role"])
+
+
+## The forced changes keep the same rule (checker, 2026-11-12): an injury and
+## a rest the coach calls put the play-through pick on only in his own line,
+## and first there; in another line only when no one else is on the bench.
+func _test_play_through_forced_changes() -> void:
+	# An injury to a forward: Pickett stays on the bench.
+	var set_up := _focus_on_bench(9301)
+	var sim: MatchSim = set_up[0]
+	var pid: String = set_up[1]
+	_check(pid != "", "Kysaiah Pickett starts for Melbourne")
+	if pid == "":
+		return
+	var sq: Squad = sim.squads[0]
+	var fi := _ground_index(sim, "FWD")
+	sim._injury_plan = [{"side": 0, "id": str((sq.ground[fi] as Dictionary)["id"]), "at": 0, "weeks": 2, "kind": "hamstring"}]
+	sim._check_injuries()
+	_check(_role_of(sim, pid) == "", "A forward hurt: Pickett is not sent on in his place (%s)" % _role_of(sim, pid))
+	_check(sim.injuries.size() == 1 and str(sim.injuries[0]["on"]) != "", "Someone else replaces the hurt forward")
+	# An injury to a midfielder: Pickett goes on first, in the midfield.
+	var mi := _ground_index(sim, "MID")
+	sim._injury_plan = [{"side": 0, "id": str((sq.ground[mi] as Dictionary)["id"]), "at": 0, "weeks": 2, "kind": "hamstring"}]
+	sim._check_injuries()
+	_check(_role_of(sim, pid) == "MID", "A midfielder hurt: Pickett replaces him (%s)" % _role_of(sim, pid))
+	_check(sim.focus_active(0, "focus_mid"), "Back on after the injury, the call works again")
+
+	# The coach rests a tired forward: Pickett stays on the bench.
+	set_up = _focus_on_bench(9302)
+	sim = set_up[0]
+	sq = sim.squads[0]
+	fi = _ground_index(sim, "FWD")
+	var tired_id := str((sq.ground[fi] as Dictionary)["id"])
+	sim.pending_moment = {"kind": "tired", "side": 0, "player_id": tired_id, "default": 0,
+			"options": [{"key": "rest", "label": "Rest him"}, {"key": "keep", "label": "Keep him on"}]}
+	var m := sim.resolve_moment(0)
+	_check(_role_of(sim, tired_id) == "" and str(m.get("on_id", "")) != "", "The tired forward comes off")
+	_check(_role_of(sim, pid) == "", "A forward rested: Pickett is not sent on in his place (%s)" % _role_of(sim, pid))
+	# The coach rests a tired midfielder: Pickett goes on in his place.
+	mi = _ground_index(sim, "MID")
+	tired_id = str((sq.ground[mi] as Dictionary)["id"])
+	sim.pending_moment = {"kind": "tired", "side": 0, "player_id": tired_id, "default": 0,
+			"options": [{"key": "rest", "label": "Rest him"}, {"key": "keep", "label": "Keep him on"}]}
+	m = sim.resolve_moment(0)
+	_check(str(m.get("on_id", "")) == pid and _role_of(sim, pid) == "MID",
+			"A midfielder rested: Pickett comes on in the midfield (%s)" % _role_of(sim, pid))
+
+	# Last resort: Pickett alone on the bench still replaces a hurt forward.
+	set_up = _focus_on_bench(9303)
+	sim = set_up[0]
+	sq = sim.squads[0]
+	sq.bench = sq.bench.filter(func(p): return str(p["id"]) == pid)
+	fi = _ground_index(sim, "FWD")
+	sim._injury_plan = [{"side": 0, "id": str((sq.ground[fi] as Dictionary)["id"]), "at": 0, "weeks": 2, "kind": "hamstring"}]
+	sim._check_injuries()
+	_check(_role_of(sim, pid) == "FWD", "No one else on the bench: Pickett covers the hurt forward (%s)" % _role_of(sim, pid))
+
+
+## A coach's out-of-position pick (checker, 2026-11-12): a forward who is no
+## midfielder by position, picked as the play-through midfielder, goes back on
+## first in a midfield spot, at every club, as if he played there.
+func _test_play_through_out_of_position() -> void:
+	var tried := 0
+	var clubs: Array = GameDB.players_by_club.keys().filter(
+			func(c): return (GameDB.club_list(str(c)) as Array).size() >= 30)
+	clubs.sort()
+	for club in clubs:
+		var sim := _sim(9400 + tried, club, "SYD" if club != "SYD" else "GEE")
+		sim.moment_side = -1
+		var sq: Squad = sim.squads[0]
+		var pick = null
+		for p in sq.ground:
+			if str(p.get("role", "")) == "FWD" and not Traits.plays(p, "MID") and not Traits.plays(p, "RUCK"):
+				pick = p
+				break
+		if pick == null:
+			continue
+		tried += 1
+		var pid := str(pick["id"])
+		sim.tactics[0] = {"gameplan": "balanced", "focus_mid": pid}
+		sim._swap(0, sq.ground.find(pick), 0)
+		for p in sq.ground + sq.bench:
+			sim.energy[str(p["id"])] = 100.0 if str(p["id"]) == pid else 90.0
+		var mi := _ground_index(sim, "MID")
+		sim.energy[str((sq.ground[mi] as Dictionary)["id"])] = 5.0
+		sim._auto_rotate(0)
+		_check(_role_of(sim, pid) == "MID", "%s: %s, a forward picked to play through the midfield, goes on there (%s)"
+				% [club, GameDB.player_display_name(pick), _role_of(sim, pid)])
+		_check(sim.focus_active(0, "focus_mid"), "%s: on in the midfield, the call works" % club)
+	_check(tried >= 10, "Enough clubs have a forward who is no midfielder (%d)" % tried)
 
 
 ## The same at full speed: Melbourne play through Kysaiah Pickett for whole
