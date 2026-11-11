@@ -200,6 +200,10 @@ func _test_stoppage_location() -> void:
 		if not ["sub", "moment", "clanger", "free"].has(kind):
 			last = kind
 			last_fp = 0.0 if ["goal", "quarter"].has(kind) else float(ev["fp"])
+		elif kind == "free" and str(ev.get("free_cause", "")) == "ruck_contest":
+			# Holding or blocking in the ruck is paid where the ruckmen
+			# contested, the centre after a centre bounce.
+			last_fp = float(ev["fp"])
 	_check(ballups > 20, "Around-the-ground ball-ups are logged (%d)" % ballups)
 	_check(on_ground, "Every ball-up is on the ground")
 	_check(centre_ok, "A centre bounce only follows a goal or a quarter break")
@@ -612,7 +616,14 @@ func _test_legs_and_rotations() -> void:
 	while sim.current_quarter <= 4:
 		sim.run_quarter()
 	var res := sim.result()
-	_check(int(res["interchanges"][0]) > 5, "Coaches rotate players (%d interchanges)" % int(res["interchanges"][0]))
+	# A side running the Running machine synergy tires half as fast and needs
+	# few rotations (Geelong here, with five traits a player); every other
+	# side rotates.
+	var rotated := []
+	for s in range(2):
+		if not Traits.active((sim.squads[s] as Squad).ground).has("running_machine"):
+			rotated.append(int(res["interchanges"][s]))
+	_check(not rotated.is_empty() and rotated.min() > 5, "Coaches rotate players (%s interchanges, sides without a Running machine)" % str(rotated))
 	_check((res["roster"][0] as Array).size() > 18, "Bench players who came on are in the match roster")
 	var subs := 0
 	for ev in res["events"]:
@@ -1443,6 +1454,14 @@ func _fake(id: String, role: String, attr: Dictionary) -> Dictionary:
 	return {"id": id, "role": role, "attr": base, "overall": 70, "num": 1, "club": "GEE"}
 
 
+func _good_count(traits: Array) -> int:
+	var n := 0
+	for k in traits:
+		if not Traits.is_bad(k) and not ["unicorn", "wet_weather"].has(k):
+			n += 1
+	return n
+
+
 func _test_traits() -> void:
 	var shooter := _fake("t1", "FWD", {"accuracy": 80, "goalkicking": 70, "marking": 40})
 	var t := Traits.of(shooter)
@@ -1453,8 +1472,23 @@ func _test_traits() -> void:
 	for k in mt:
 		if not Traits.is_bad(k) and not ["unicorn", "wet_weather"].has(k):
 			good += 1
-	_check(good == Traits.MAX_GOOD and mt.has("hothead"), "At most two good traits, plus Hothead for poor discipline")
-	# The wet-weather player (M4-016) sits on top of the two, never in place of one.
+	_check(good == 4 and mt.has("hothead"), "Every trait whose line he clears, plus Hothead for poor discipline (%s)" % str(mt))
+	# Up to five (director, 2026-11-12): clearing four lines earns four; clearing
+	# seven keeps the five he clears by the most; Unicorn comes on top.
+	var four := Traits.of(_fake("t5", "MID", {"disposal": 90, "contested": 90, "accuracy": 75, "durability": 95}))
+	_check(_good_count(four) == 4 and four.has("ball_magnet") and four.has("bull") and four.has("sharpshooter") and four.has("engine"),
+			"A player clearing four trait lines carries all four (%s)" % str(four))
+	var seven_p := _fake("t6", "MID", {"disposal": 95, "contested": 95, "accuracy": 90, "durability": 96,
+			"creating": 77, "pressure": 70, "star": 61})
+	var seven := Traits.of(seven_p)
+	_check(Traits.MAX_GOOD == 5 and _good_count(seven) == 5, "Clearing seven trait lines, he carries five (%s)" % str(seven))
+	_check(seven.has("sharpshooter") and seven.has("bull") and seven.has("ball_magnet") and seven.has("lockdown")
+			and seven.has("engine") and not seven.has("playmaker") and not seven.has("big_game"),
+			"The five he keeps are the five he clears by the most (%s)" % str(seven))
+	seven_p["unicorn"] = true
+	var uni := Traits.of(seven_p)
+	_check(uni.has("unicorn") and _good_count(uni) == 5, "Unicorn comes on top of the five (%s)" % str(uni))
+	# The wet-weather player (M4-016) sits on top of the five, never in place of one.
 	_check(mt.has("wet_weather"), "A contested ball-winner with clean hands is a wet-weather player")
 	_check(not Traits.of(_fake("t4", "MID", {"contested": 90, "disposal": 70})).has("wet_weather"),
 			"Without clean hands he is not")
@@ -3547,7 +3581,8 @@ func _test_moment_calls_matter() -> void:
 			totals["surge"] / 40.0, totals["none"] / 40.0, totals["hold"] / 40.0])
 	# Set shots: the best call depends on the shot.
 	var best := {}
-	for i in range(30):
+	# Sixty matches: the call other than the shot is best only now and then.
+	for i in range(60):
 		var s3 := _sim(9300 + i)
 		s3.moment_side = 0
 		while s3.current_quarter <= 4:
