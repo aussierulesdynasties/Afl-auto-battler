@@ -11,7 +11,11 @@ Bulldogs from 1997), in any of lists, ladders and season stats; a duplicate
 list row; a ladder that does not add up or has the wrong number of finalists
 (final five 1990, six 1991-1993, eight from 1994); a Draftguru pick with no
 Wikipedia pick at the same number (outside the known differences below); a
-trade without both clubs.
+trade without both clubs. The 1990 start: 1987-89 stats and the 1989 ladder
+(14 clubs, 22 games, a final five) must hold the 1990 clubs; pre-1990 careers
+must agree with the season pages; no 1990 mid-season draftee may be on an
+opening list; one senior coach and a listed captain per club; era rules and
+ground names need a source and no overlapping years.
 
 Warnings (reported, never filled in): list sizes, list rows with no recorded
 way of joining, blank weights and positions, and the other gaps the sources
@@ -28,8 +32,10 @@ import sys
 from collections import Counter, defaultdict
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DIR = os.path.join(ROOT, "data", "legacy", "1990s")
+LEGACY = os.path.join(ROOT, "data", "legacy")
+DIR = os.path.join(LEGACY, "1990s")
 SEASONS = range(1990, 2000)
+PRE_SEASONS = range(1987, 1990)
 DRAFT_YEARS = range(1989, 2000)
 CORE = {"CAR", "COL", "ESS", "GEE", "HAW", "MEL", "NTH", "RIC", "STK", "SYD", "WCE"}
 
@@ -83,9 +89,13 @@ KNOWN_PICK_DIFFS: dict[tuple, str] = {
 }
 
 
-def load(name: str) -> list[dict]:
-    with open(os.path.join(DIR, name), encoding="utf-8") as fh:
+def load_at(folder: str, name: str) -> list[dict]:
+    with open(os.path.join(folder, name), encoding="utf-8") as fh:
         return list(csv.DictReader(fh))
+
+
+def load(name: str) -> list[dict]:
+    return load_at(DIR, name)
 
 
 def norm(s: str) -> str:
@@ -181,7 +191,7 @@ def main() -> int:
     for r in lists:
         dg_games[(r["year"], r["club"])] += int(r["games"])
     gdiff = [f"{k[0]} {k[1]} Draftguru {dg_games[k]} AFL Tables {at_games[k]}"
-             for k in sorted(at_games) if at_games[k] != dg_games[k]]
+             for k in sorted(at_games) if int(k[0]) in SEASONS and at_games[k] != dg_games[k]]
     if gdiff:
         warns.append(f"{len(gdiff)} club-seasons where player-games differ between sources: " + "; ".join(gdiff[:10]))
     for y in SEASONS:
@@ -268,6 +278,121 @@ def main() -> int:
         top = {r["club"] for r in rows if int(r["pos"]) <= FINALISTS[y]}
         if top != {r["club"] for r in rows if r["finals"]}:
             fails.append(f"{y} finalists are not the top {FINALISTS[y]} on the ladder")
+
+    # ------------------------------------------------- 1987-89 and the 1989 ladder
+    # The three seasons before the first one: the same 14 clubs as 1990.
+    for y in PRE_SEASONS:
+        have = {r["club"] for r in stats if int(r["year"]) == y}
+        if have != clubs_for(1990):
+            fails.append(f"{y} season_stats: clubs {sorted(have ^ clubs_for(1990))} missing or extra")
+        for c in clubs_for(1990):
+            n = at_games[(str(y), c)]
+            if n < 18 * 22:
+                fails.append(f"{y} {c}: AFL Tables player-games {n} < 18 x 22")
+    rows = [r for r in ladders if int(r["year"]) == 1989]
+    if len(rows) != 14 or sorted(int(r["pos"]) for r in rows) != list(range(1, 15)):
+        fails.append(f"1989 ladder has {len(rows)} rows, want 14")
+    if {r["club"] for r in rows} != clubs_for(1990):
+        fails.append("1989 ladder clubs are not the 1990 clubs")
+    for r in rows:
+        w, l, d = int(r["w"]), int(r["l"]), int(r["d"])
+        if w + l + d != 22 or int(r["pts"]) != 4 * w + 2 * d:
+            fails.append(f"1989 {r['club']} ladder row does not add up ({w}-{l}-{d}, {r['pts']} pts)")
+    fin = {r["club"]: r["finals"] for r in rows}
+    if fin.get("HAW") != "premiers" or fin.get("GEE") != "runners_up":
+        fails.append("1989 ladder: Hawthorn premiers and Geelong runners-up not recorded")
+    if {c for c, f in fin.items() if f} != {r["club"] for r in rows if int(r["pos"]) <= 5}:
+        fails.append("1989 finalists are not the top five")
+
+    # ----------------------------------------------------- careers before 1990
+    careers = load("careers_before_1990.csv")
+    by_season = Counter()
+    for s in stats:
+        if int(s["year"]) in PRE_SEASONS and s["afltables_id"]:
+            by_season[(s["afltables_id"], s["year"])] += int(s["gm"] or 0)
+    bio = Counter()
+    for c in careers:
+        if int(c["year"]) >= 1990:
+            fails.append(f"careers_before_1990 has a {c['year']} row for {c['first']} {c['last']}")
+        bio[(c["afltables_id"], c["year"])] += int(c["games"])
+    in_bio = {c["afltables_id"] for c in careers}
+    cdiff = [f"{k[0]} {k[1]}: bio {bio[k]}, season page {by_season[k]}"
+             for k in by_season if k in bio and bio[k] != by_season[k]]
+    missing = [f"{k[0]} {k[1]}" for k in by_season if k not in bio and k[0] in in_bio]
+    if cdiff or missing:
+        fails.append(f"{len(cdiff)} player-seasons 1987-89 where the bio's games differ from the season page,"
+                     f" {len(missing)} missing from the bio: " + "; ".join(cdiff[:10] + missing[:5]))
+
+    # ------------------------------------------------------- the opening 1990 lists
+    opening = load("lists_1990_opening.csv")
+    mid = {d["draftguru_id"] for d in drafts if d["year"] == "1989" and d["draft"] == "mid_season"}
+    on = [r for r in opening if r["draftguru_id"] in mid]
+    if on:
+        fails.append(f"{len(on)} 1990 mid-season draftees on the opening lists: " +
+                     "; ".join(f"{r['club']} {r['first']} {r['last']}" for r in on))
+    if {r["club"] for r in opening} != clubs_for(1990):
+        fails.append("opening lists: clubs are not the 1990 clubs")
+    full = Counter(r["club"] for r in lists if r["year"] == "1990")
+    size = Counter(r["club"] for r in opening)
+    for c in sorted(size):
+        if size[c] > full[c] or size[c] < 40:
+            fails.append(f"opening list {c} has {size[c]} players (full-season list {full[c]})")
+    if len({(r["club"], r["draftguru_id"]) for r in opening}) != len(opening):
+        fails.append("duplicate opening list row")
+    for r in opening:
+        if r["before_from"] and (r["games_before"] == "" or r["goals_before"] == ""):
+            fails.append(f"opening list {r['club']} {r['first']} {r['last']}: before_from without games")
+    blank = [r for r in opening if not r["before_from"]]
+    if blank:
+        warns.append(f"{len(blank)} opening-list players have no games before 1990 (no AFL Tables match, and"
+                     f" a namesake in 1987-89 or an earlier join): " +
+                     "; ".join(f"{r['club']} {r['first']} {r['last']}" for r in blank))
+
+    # --------------------------------------------------- coaches and captains 1990
+    coaches = load("coaches_1990.csv")
+    senior = Counter(r["club"] for r in coaches if r["role"] == "senior")
+    if set(senior) != clubs_for(1990) or any(n != 1 for n in senior.values()):
+        fails.append(f"coaches_1990: want one senior coach per 1990 club, have {dict(senior)}")
+    for r in coaches:
+        if r["role"] == "senior" and "NOT on AFL Tables" in r["note"]:
+            fails.append(f"coaches_1990 {r['club']} {r['name']}: {r['note']}")
+    captains = load("captains_1990.csv")
+    caps = Counter(r["club"] for r in captains if r["role"] == "captain")
+    if set(caps) != clubs_for(1990):
+        fails.append(f"captains_1990: clubs {sorted(set(caps) ^ clubs_for(1990))} have no captain")
+    listed90 = {(r["club"], r["draftguru_id"]) for r in opening}
+    for r in captains:
+        if (r["club"], r["draftguru_id"]) not in listed90:
+            fails.append(f"captains_1990 {r['club']} {r['first']} {r['last']} is not on the club's opening list")
+
+    # ------------------------------------------------------- era rules and grounds
+    for name, key in (("era_rules.csv", "rule"), ("ground_names.csv", "ground")):
+        spans = defaultdict(list)
+        for r in load_at(LEGACY, name):
+            if not r["source_url"].startswith("https://") or not r["quote"]:
+                fails.append(f"{name} {r[key]} {r['from_year']}-{r['to_year']}: no source or quote")
+            a_, b_ = int(r["from_year"] or 0), int(r["to_year"] or 9999)
+            if a_ > b_:
+                fails.append(f"{name} {r[key]}: from {a_} after to {b_}")
+            spans[r[key]].append((a_, b_))
+        for k, ss in spans.items():
+            ss.sort()
+            for (a1, b1), (a2, b2) in zip(ss, ss[1:]):
+                if a2 <= b1:
+                    fails.append(f"{name} {k}: spans {a1}-{b1} and {a2}-{b2} overlap")
+    grounds = {r["ground"] for r in load_at(LEGACY, "ground_names.csv")}
+    venues = load("venues.csv")
+    for v in venues:
+        if v["ground"] not in grounds:
+            fails.append(f"venues {v['year']} {v['ground']}: no name in ground_names.csv")
+    vyears = {int(v["year"]) for v in venues}
+    if vyears != set(PRE_SEASONS) | set(SEASONS):
+        fails.append(f"venues.csv covers {sorted(vyears)}, want 1987-1999")
+    for y in vyears:
+        n = sum(int(v["games"]) for v in venues if int(v["year"]) == y)
+        want = GAMES.get(y, 22) * CLUB_COUNT.get(y, 14) // 2
+        if n < want:
+            fails.append(f"venues {y}: {n} games, fewer than the {want} home-and-away games")
 
     # --------------------------------------------------------------- report
     print("Clubs per season:", " ".join(f"{y}:{len(clubs_for(y))}" for y in SEASONS))
