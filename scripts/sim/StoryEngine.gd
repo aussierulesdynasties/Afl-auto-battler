@@ -11,7 +11,12 @@ extends RefCounted
 ##
 ## Nothing repeats too soon: each card has its own cooldown, each player one
 ## too (no player on two cards within his card's subject cooldown), and no
-## category comes up more than twice in five weeks.
+## category comes up more than twice in five weeks. Cards of one series (the
+## international cards) count that player cooldown from the last card of their
+## own series about him, and wait SERIES_GAP weeks after any other card about
+## him: counted from any card, another card about him every ten weeks kept a
+## twelve-week wait from ever ending (director 2026-11-11: a story that can
+## never fire is a bug).
 ##
 ## Arcs: a choice can set a flag on its player or on the club, stamped with
 ## the week. A follow-up card names the flag and a window ("after" weeks, up to
@@ -27,6 +32,8 @@ const EVENT_CHANCE := 0.7
 const SECOND_CHANCE := 0.5
 const DIVERSITY_WEEKS := 5
 const DIVERSITY_MAX := 2
+## Played weeks a card of a series waits after any other card about its player.
+const SERIES_GAP := 4
 ## Weeks counted per season, finals included (24 rounds and up to 5 finals
 ## weeks fit inside), so a cooldown runs on across seasons.
 const SEASON_WEEKS := 30
@@ -282,8 +289,14 @@ static func eligible_subject(t: Dictionary, ctx: Dictionary, story: Dictionary, 
 		# No wait means no wait: Round 1's cards are drawn when the season is made, so
 		# their stamp is later than a pre-season week and the gap reads negative.
 		var wait := int(t.get("subject_cooldown", 0))
-		if wait > 0 and played_between(int(story["subj"].get(pid, NEVER)), w) < wait:
-			continue
+		if wait > 0:
+			var since := played_between(int(story["subj"].get(pid, NEVER)), w)
+			var series := str(t.get("series", ""))
+			if series == "":
+				if since < wait:
+					continue
+			elif since < mini(wait, SERIES_GAP) or played_between(int(story["subj"].get(_series_key(series, pid), NEVER)), w) < wait:
+				continue
 		if not meets(p, subject.get("where", {}), story["flags"].get(pid, {})):
 			continue
 		if not _arc_open_ok(t, story, pid, w):
@@ -365,6 +378,11 @@ static func choose(fits: Array, pick: String, rng: RandomNumberGenerator) -> Dic
 	return sorted[0]
 
 
+## Where the story keeps the week a card of this series was last about him.
+static func _series_key(series: String, pid: String) -> String:
+	return "%s|%s" % [series, pid]
+
+
 static func category_count(story: Dictionary, cat: String, w: int) -> int:
 	var n := 0
 	for row in story["cats"]:
@@ -381,6 +399,8 @@ static func _record_pick(story: Dictionary, card: Dictionary, w: int) -> void:
 	var pid := str(card.get("player_id", ""))
 	if pid != "":
 		story["subj"][pid] = w
+		if str(card.get("series", "")) != "":
+			story["subj"][_series_key(str(card["series"]), pid)] = w
 	(story["cats"] as Array).append([w, str(card["category"])])
 	while (story["cats"] as Array).size() > 10:
 		(story["cats"] as Array).pop_front()
@@ -414,6 +434,8 @@ static func build(deck: Array, t: Dictionary, subj: Dictionary, club: Dictionary
 		card["choice_notes"] = true
 	if player:
 		card["player_id"] = str(subj["id"])
+		if str(t.get("series", "")) != "":
+			card["series"] = str(t["series"])
 	if str(t.get("arc", "")) != "":
 		card["arc"] = str(t["arc"])
 		card["beat"] = str(t.get("beat", ""))
