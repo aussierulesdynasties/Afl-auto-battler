@@ -2,6 +2,9 @@
 
 importer="texture"
 type="CompressedTexture2D"
+uid="uid://clausfu5ob5w4"
+path.bptc="res://.godot/imported/coach_hd_hair_short_crop.png-4d0b736bb42eda3c770c1bed441b5cf7.bptc.ctex"
+path.astc="res://.godot/imported/coach_hd_hair_short_crop.png-4d0b736bb42eda3c770c1bed441b5cf7.astc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -10,6 +13,7 @@ metadata={
 [deps]
 
 source_file="res://assets/vignette/coach_hd_hair_short_crop.png"
+dest_files=["res://.godot/imported/coach_hd_hair_short_crop.png-4d0b736bb42eda3c770c1bed441b5cf7.bptc.ctex", "res://.godot/imported/coach_hd_hair_short_crop.png-4d0b736bb42eda3c770c1bed441b5cf7.astc.ctex"]
 
 [params]
 

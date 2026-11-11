@@ -2,6 +2,9 @@
 
 importer="texture"
 type="CompressedTexture2D"
+uid="uid://cx82x5psm065k"
+path.bptc="res://.godot/imported/coach_hd_mask.png-60770255db0986ccd9c03979eda7215e.bptc.ctex"
+path.astc="res://.godot/imported/coach_hd_mask.png-60770255db0986ccd9c03979eda7215e.astc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -10,6 +13,7 @@ metadata={
 [deps]
 
 source_file="res://assets/vignette/coach_hd_mask.png"
+dest_files=["res://.godot/imported/coach_hd_mask.png-60770255db0986ccd9c03979eda7215e.bptc.ctex", "res://.godot/imported/coach_hd_mask.png-60770255db0986ccd9c03979eda7215e.astc.ctex"]
 
 [params]
 
