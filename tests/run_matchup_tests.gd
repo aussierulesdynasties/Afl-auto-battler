@@ -888,9 +888,7 @@ func _test_old_club_rules() -> void:
 	_check(OC.line(rows[1], "Jack Gunston", "Carlton") == "Jack Gunston faces his old club: 100 games for Carlton."
 			and OC.line(rows[0], "Sam Walsh", "Fremantle") == "Sam Walsh faces his old club: 187 games for you.",
 			"Old club lines: %s | %s" % [OC.line(rows[1], "Jack Gunston", "Carlton"), OC.line(rows[0], "Sam Walsh", "Fremantle")])
-	var sim := FileAccess.get_file_as_string("res://scripts/sim/MatchSim.gd")
-	_check(sim != "" and not sim.contains("OldClubLines") and not sim.contains("old_club_lines"),
-			"Old club lines are presentation only: the match never reads them")
+	# That MatchSim never names OldClubLines is a static lint: tools/lint/boundaries.py.
 
 
 ## The Hub's preview: a Fremantle man on 100 games for the opponent gets a line,

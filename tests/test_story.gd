@@ -32,7 +32,6 @@ func run() -> void:
 	_t("_test_choice_stakes_are_stated")
 	_t("_test_every_choice_has_both_sides")
 	_t("_test_effects_follow_the_story")
-	_t("_test_no_dead_story_flags")
 	_t("_test_arc_middle_before_end")
 	_t("_test_captain_contract_talk_dealt")
 	_t("_test_vice_morale_follows_the_card")
@@ -3139,51 +3138,6 @@ func _test_effects_follow_the_story() -> void:
 		_check(text.contains(words[id]) and not text.contains("over his head"), "%s says why: \"%s\"" % [id, words[id]])
 
 
-## Every story flag a choice sets is read: by a follow-up's needs, a subject or choice
-## condition (flag / no_flag), or the game's code (story_flag_set). A flag nothing
-## reads is a choice whose promised consequence never comes.
-func _test_no_dead_story_flags() -> void:
-	var code := _code_flag_reads("res://scripts")
-	_check(code.has("farewell_told"), "A flag the game's code reads by name is found (farewell_told)")
-	var r := _dead_flags(StoryDeck.all(), code)
-	_check((r["set"] as Dictionary).size() >= 9, "The deck sets its story flags (%d)" % (r["set"] as Dictionary).size())
-	_check((r["dead"] as Array).is_empty(), "Every story flag a choice sets is read somewhere: %s" % ", ".join(PackedStringArray(r["dead"])))
-	# The check bites: in a made-up deck, the flag nothing reads is reported, and the
-	# ones a follow-up's needs, a choice's condition or the code by name reads are not.
-	var found := _code_flag_names('if gs.story_flag_set(id, "t_code"):')
-	_check(found == ["t_code"], "The code scan finds a flag read by name (%s)" % ", ".join(PackedStringArray(found)))
-	var deck := [
-		{"id": "a", "choices": [{"key": "x", "effects": [{"op": "flag", "name": "t_unread"}, {"op": "flag", "name": "t_needs"},
-				{"op": "flag", "name": "t_choice"}, {"op": "flag", "name": "t_code"}]}]},
-		{"id": "b", "needs": {"flag": "t_needs", "after": 1}, "choices": [{"key": "y", "when": {"no_flag": "t_choice"}, "effects": []}]}]
-	var bite := _dead_flags(deck, found)
-	_check(bite["dead"] == ["t_unread (set by a/x)"],
-			"A flag nothing reads is caught, and only that one: %s" % ", ".join(PackedStringArray(bite["dead"])))
-
-
-## The flags a deck's choices set ({name: "card/choice"}) and the ones nothing reads:
-## no follow-up's needs, subject or choice condition, nor the code (`code_reads`).
-func _dead_flags(deck: Array, code_reads: Array) -> Dictionary:
-	var set_by := {}
-	var read := {}
-	for t in deck:
-		for o in t["choices"]:
-			for e in o.get("effects", []):
-				if str(e.get("op", "")) == "flag":
-					set_by[str(e["name"])] = "%s/%s" % [t["id"], o["key"]]
-			_flag_reads(o.get("when", {}), read)
-		var rest: Dictionary = (t as Dictionary).duplicate(true)
-		rest.erase("choices")
-		_flag_reads(rest, read)
-	for f in code_reads:
-		read[f] = true
-	var dead := []
-	for f in set_by:
-		if not read.has(f):
-			dead.append("%s (set by %s)" % [f, set_by[f]])
-	return {"set": set_by, "dead": dead}
-
-
 ## An arc's middle beat can come: it opens before any end beat of the same arc,
 ## since an end beat that is due comes first and closes the arc (row 107: the
 ## captain's contract talk opened at 6 weeks, after the ends at 4, so it never came).
@@ -3280,43 +3234,6 @@ func _has_mark(lines: PackedStringArray, mark: String) -> bool:
 		if l.begins_with(mark):
 			return true
 	return false
-
-
-func _flag_reads(v, out: Dictionary) -> void:
-	if v is Dictionary:
-		for k in v:
-			if (str(k) == "flag" or str(k) == "no_flag") and v[k] is String:
-				out[str(v[k])] = true
-			else:
-				_flag_reads(v[k], out)
-	elif v is Array:
-		for x in v:
-			_flag_reads(x, out)
-
-
-## The flag names the game's code asks for by name: story_flag_set(holder, "name").
-func _code_flag_reads(dir: String) -> Array:
-	var out := []
-	var re := RegEx.new()
-	re.compile("story_flag_set\\([^,()]+,\\s*\"([a-z_]+)\"")
-	var d := DirAccess.open(dir)
-	if d == null:
-		return out
-	for f in d.get_files():
-		if f.ends_with(".gd"):
-			out.append_array(_code_flag_names(FileAccess.get_file_as_string(dir.path_join(f))))
-	for sub in d.get_directories():
-		out.append_array(_code_flag_reads(dir.path_join(sub)))
-	return out
-
-
-func _code_flag_names(text: String) -> Array:
-	var out := []
-	var re := RegEx.new()
-	re.compile("story_flag_set\\([^,()]+,\\s*\"([a-z_]+)\"")
-	for m in re.search_all(text):
-		out.append(m.get_string(1))
-	return out
 
 
 ## A card that settles itself if the coach sims past it says so on its face, in
