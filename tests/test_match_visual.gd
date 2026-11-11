@@ -1628,6 +1628,33 @@ func _test_press_shape(res: Dictionary) -> void:
 	var black: Color = pvs.press_zone_colour("COL")
 	_check(black.v < 0.2 and float(turf.g) - (turf.g * (1.0 - pa) + black.g * pa) >= 0.05,
 			"A club with no hue (Collingwood) gets a dark wash that still darkens the turf visibly")
+	# The end a side kicks to is drawn in that side's colour (director, 2026-11-11:
+	# "need to make it more obvious somehow which end your team is kicking toward").
+	# The colour is the disc's own, bright enough for a dark club to read on the turf,
+	# and the two ends never look alike.
+	var end_ok := true
+	var end_note := ""
+	for code in GameDB.clubs.keys():
+		var kit: Dictionary = pvs.kits_for(code, "FRE" if code != "FRE" else "MEL")[0]
+		var ec: Color = pvs.end_colour(kit)
+		var kb: Color = kit.get("base", Color.WHITE)
+		var same_hue: bool = kb.s < 0.2 or absf(fposmod((ec.h - kb.h) * 360.0 + 180.0, 360.0) - 180.0) < 1.0
+		var bright: bool = ec.v >= 0.9 or ec == pvs.END_BLACK
+		if not bright or not same_hue or UiKit.colour_distance(ec, turf) < 25.0:
+			end_ok = false
+			end_note += " %s (%s on turf %.0f)" % [code, ec.to_html(false), UiKit.colour_distance(ec, turf)]
+	_check(end_ok, "Every club's kicking-end colour is its disc's hue and reads on the turf:" + end_note)
+	var ends_apart := true
+	var apart_note := ""
+	for pair in [["FRE", "MEL"], ["CAR", "GEE"], ["COL", "STK"], ["WCE", "RIC"], ["BRL", "MEL"]]:
+		var ks: Array = pvs.kits_for(pair[0], pair[1])
+		var gap: float = UiKit.colour_distance(pvs.end_colour(ks[0]), pvs.end_colour(ks[1]))
+		if gap < 15.0:
+			ends_apart = false
+			apart_note += " %s v %s %.0f" % [pair[0], pair[1], gap]
+	_check(ends_apart, "The two ends are told apart by colour:" + apart_note)
+	_check(float(pvs.END_LINE_W) >= 2.5 and float(pvs.END_FILL_ALPHA) >= 0.4,
+			"The kicking end is drawn heavier than the ground's white lines, with the goal square filled")
 	d._tac[1] = {}
 	# The line, once: only the pressing side's opponents' disposals open it.
 	var tl := [{"at": 0, "side": 1, "plan": "defensive"}, {"at": 0, "side": 0, "plan": "balanced"}]
