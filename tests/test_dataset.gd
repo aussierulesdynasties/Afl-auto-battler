@@ -11,9 +11,11 @@ var checks := 0
 const SUITE_SEED := 1990
 
 ## md5 of the 2026 load, of a seeded real-lists opening, and of a seeded
-## three-round redraft season, as main produced them before P1.
-const GOLDEN_LOAD := "94876aac547014895ed75f971a92817c"
-const GOLDEN_REAL := "7576cb577da70d80f6222786c2710b94"
+## three-round redraft season, as main produced them before P1. The load and
+## real-lists prints moved with the 2026-11-12 real-list data (list types,
+## departures, signings of delisted players); the season print did not.
+const GOLDEN_LOAD := "b14cf7e3def654fd9b0a4ed92eeb0144"
+const GOLDEN_REAL := "41379c7d909f5140a4e3caf7746a76f2"
 ## A played match's floating point differs between Windows and Linux builds of
 ## Godot, so the season has one fingerprint per platform; each was taken on
 ## main before the change (Linux: run_on_github run 43024085570).
