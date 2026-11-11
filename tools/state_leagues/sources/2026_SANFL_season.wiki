@@ -1,0 +1,606 @@
+{{Short description|147th season of the South Australian National Football League}}
+{{Use Australian English|date=December 2025}}
+{{Infobox South Australian football season
+| competition     = SANFL
+| year            = 2026
+| image           = 
+| imagesize       = 
+| caption         = 
+| date            = {{nowrap|27 March – 20 September 2026}}
+| teams           = 10
+| premiers        = {{SANFL Nor}}
+| count           = 32
+| runnersup       = {{SANFL Stu}}
+| rucount         = 12
+| minor premiers  = {{SANFL Nor}}
+| mpcount         = 21
+| matches         = 
+| attendance      = 
+| magareymedal    = [[Nik Rokahr]]<br/>({{SANFL Nor}} – 38 votes)
+| kenfarmer       = [[Lachlan Hosie]]<br/>({{SANFL Gle}} – 62 goals)
+| sanflwbestandfairest = 
+| sanflwleadinggoalkicker = 
+| prevseason      = {{coloured link|gold|2025 SANFL season|2025}}
+| nextseason      = {{coloured link|gold|2027 SANFL season|2027}}
+}}
+The '''2026 SANFL season''' (officially known as the '''SANFL [[Hostplus]] League''' for sponsorship reasons) was the 147th season of the [[South Australian National Football League]] (SANFL), the highest-level men's [[Australian rules football]] competition in [[South Australia]].<ref>{{cite web|url=https://sanfl.com.au/league/news/2026-hostplus-sanfl-league-fixture-release/|title=2026 Hostplus SANFL League Fixture Released|work=sanfl.com.au|date=10 December 2025|author=Zac Milbank}}</ref> The season commenced on 27 March and concluded on 20 September.<ref>{{cite web|url=https://www.adelaidenow.com.au/subscribe/news/1/?sourceCode=AAWEB_WRE170_a_GGL&dest=https%3A%2F%2Fwww.adelaidenow.com.au%2Fsport%2Fsanfl-season-to-begin-with-a-bang-as-flag-favourites-sturt-and-norwood-go-headtohead-at-the-parade%2Fnews-story%2F41587dfcd79038d092d865d24ca432ec&memtype=anonymous&mode=premium&v21=HIGH-Segment-2-SCORE|title=SANFL Fixture Reveal: Blockbuster start to 2026 season|work=The Advertiser|date=10 December 2025|url-access=subscription}}</ref>
+
+{{SANFL Nor}} won the [[List of SANFL premiers|premiership]] for the 32nd time, defeating {{SANFL Stu}} by 14 points in the [[2026 SANFL Grand Final|Grand Final]]. It was the club's second premiership of the decade and brought them within four titles of the record held by {{SANFL Por}}. 
+
+==Background==
+The 2026 season marked the 147th season of the competition and the fourth since the competition's return to a full 18-game home-and-away season following the [[COVID-19 pandemic]]. The competition continued to consist of ten clubs, including the [[Australian Football League reserves affiliations|reserves teams]] of [[Adelaide Football Club|Adelaide]] and [[Port Adelaide Football Club|Port Adelaide]]. The top five teams at the conclusion of the home-and-away season qualified for the finals series, which culminated in the grand final at [[Adelaide Oval]].
+
+{{SANFL Stu}} entered the season as reigning premiers, having defeated [[Glenelg Football Club|Glenelg]] by 31 points in the [[2025 SANFL Grand Final|2025 grand final]] to deny the Bays the opportunity to become the first SANFL club to record three consecutive premierships since the 1950's.<ref>{{cite web |title=Sturt win 2025 Hostplus SANFL League Premiership |url=https://sanfl.com.au/league/news/sturt-win-2025-hostplus-sanfl-league-premiership/ |work=sanfl.com.au|date=22 September 2025}}</ref> Four clubs entered the 2026 season with new senior coaches. [[West Adelaide Football Club|West Adelaide]] appointed former Norwood premiership coach [[Nathan Bassett]], while [[North Adelaide Football Club|North Adelaide]], Glenelg and Port Adelaide also appointed new senior coaches. Port Adelaide appointed [[Jacob Surjan]] to lead its SANFL side.<ref>{{cite web |title=Coaching elite primed for 2026 Hostplus SANFL League |url=https://sanfl.com.au/league/news/coaching-elite-primed-for-2026-hostplus-sanfl-league/ |website=SANFL |date=30 January 2026}}</ref><ref>{{cite web |title=Jacob Surjan to coach Port Adelaide’s SANFL team in 2026 |url=https://sanfl.com.au/league/news/jacob-surjan-to-coach-port-adelaides-sanfl-team-in-2026/ |website=SANFL |date=24 October 2025}}</ref>
+
+==Clubs==
+===Venues and leadership===
+{| class="wikitable plainrowheaders"
+! style="text-align:middle" | Club
+! style="text-align:middle" | Coach
+! style="text-align:middle" | Captain(s)
+! style="text-align:middle" | Home ground(s)
+! style="text-align:middle" | Capacity
+! style="text-align:middle" | {{abbr|Ref(s)|References}}
+|-
+! style="text-align:left" | {{SANFL Adel}} <small>(R)</small>
+| [[Matthew Wright (Australian footballer)|Matthew Wright]]
+| [[Kieran Strachan]]
+| style="text-align:center;" |N/A{{efn|Under the terms of the agreement governing Adelaide's participation in the competition, the club did not have a designated home ground this season.}}
+| style="text-align:center;" |N/A
+| rowspan="10" style="text-align:center;" |<ref>{{cite web|url=https://sanfl.com.au/league/news/coaching-elite-primed-for-2026-hostplus-sanfl-league|title=Coaching elite primed for 2026 Hostplus SANFL League|work=sanfl.com.au|date=30 January 2026|author=Zac Milbank}}</ref><ref>{{cite web|url=https://sanfl.com.au/league/news/2026-hostplus-sanfl-league-leadership-groups|title=2026 Hostplus SANFL League Leadership Groups|work=sanfl.com.au|date=26 March 2026|author=Zac Milbank}}</ref><ref>{{cite web|url=https://norwoodfc.com.au/news/jade-sheedy-to-continue-as-norwood-coach/|title=Jade Sheedy to continue as Norwood Coach|date=2 October 2026|work=norwoodfc.com.au}}</ref><ref>{{cite web|url=https://sanfl.com.au/league/news/jarrad-wright-steps-down-as-south-adelaide-coach/|title=Jarrad Wright steps down as South Adelaide coach|work=sanfl.com.au|date=1 July 2026|author=Zac Milbank}}</ref><ref>{{cite web|url=https://www.safc.com.au/blog/2026-interim-coach|title=South Adelaide Announce Interim Coach|work=safc.com.au|date=7 July 2026}}</ref><ref>{{cite web|url=https://sanfl.com.au/league/news/marty-mattner-signs-two-year-extension-with-sturt/|title=Marty Mattner signs two-year extension with Sturt|date=16 June 2026|work=sanfl.com.au|author=Zac Milbank}}</ref><ref>{{cite web|url=https://sanfl.com.au/league/news/2026-hostplus-pocket-profile-woodville-west-torrens/|title=2026 Hostplus Pocket Profile – Woodville-West Torrens|date=16 February 2026|work=sanfl.com.au|author=Zac Milbank}}</ref>
+|-
+! style="text-align:left" | {{SANFL CD}}
+| [[Paul Thomas (footballer)|Paul Thomas]]
+| [[Kyle Presbury]]
+| [[Elizabeth Oval|X Convenience Oval]]
+| 18,000
+|-
+! style="text-align:left" | {{SANFL Gle}}
+| [[Matthew Clarke (Australian footballer)|Matthew Clarke]]
+| [[Liam McBean]]
+| [[Glenelg Oval|Stratarama Stadium]]
+| 14,000
+|-
+! style="text-align:left" | {{SANFL NA}}
+| [[Josh Francou]]
+| [[Alex Spina]]
+| [[Prospect Oval|Revo Fitness Oval]]
+| 15,000
+|-
+! style="text-align:left" | {{SANFL Nor}}
+| [[Jade Sheedy]]
+| [[Jacob Kennerley]]
+| [[Norwood Oval|Coopers Stadium]]
+| 9,700
+|-
+! style="text-align:left" | {{SANFL Por}} <small>(R)</small>
+| [[Jacob Surjan]]
+| [[Jez McLennan]]
+| [[Alberton Oval]]
+| 8,000
+|-
+! style="text-align:left" | {{SANFL SA}}
+| [[Jarrad Wright (footballer)|Jarrad Wright]] <small>(until round 9)</small><br>[[Jack Maher (footballer)|Jack Maher]] <small>(from round 10)</small>
+| [[Oscar Clavarino]]
+| [[Hickinbotham Oval|Magain Stadium]]
+| 10,000
+|-
+! style="text-align:left" | {{SANFL Stu}}
+| [[Martin Mattner]] 
+| [[Tom Lewis (Australian footballer)|Tom Lewis]]
+| [[Unley Oval|Thomas Farms Oval]]
+| 7,000
+|-
+! style="text-align:left" | {{SANFL WestA}}
+| [[Nathan Bassett]] 
+| [[Sam Frost]]
+| [[Richmond Oval (South Australia)|Richmond Oval]]
+| 9,000
+|-
+! style="text-align:left" | {{SANFL WWT}}
+| [[Sam Jacobs (footballer)|Sam Jacobs]] 
+| [[Riley Knight]]<br>[[James Rowe (Australian footballer)|James Rowe]]<br><small>(co-captains)</small>
+| [[Woodville Oval|Maughan Thiem Kia Oval]]
+| 11,000
+|}
+(R) = [[Australian Football League reserves affiliations|reserves team]] of an [[Australian Football League]] (AFL) club
+
+==Home-and-away season==
+* Source: [https://sanfl.com.au/league/matches/?league=sanfl&season=2026&round=2 2026 Season Results] at SANFL.com.au
+=== Round 1 ===
+{{AFLGameHeader|title=Round 1}}
+{{AFLGame|Friday 27 March (7:40&nbsp;pm)|{{SANFL Nor}}|9.12 (66)|A|{{SANFL Stu}}|10.11 (71)|[[Norwood Oval|Coopers Stadium]]|4,424|[https://sanfl.com.au/league/matches/130290101 Report]}}
+{{AFLGame|Saturday 28 March (2:10&nbsp;pm)|{{SANFL SthA}}|7.7 (49)|A|{{SANFL WWT}}|15.11 (101)|[[Magain Stadium]]|1,242|[https://sanfl.com.au/league/matches/130290102 Report]}}
+{{AFLGame|Saturday 28 March (2:10&nbsp;pm)|{{SANFL WestA}}|11.13 (79)|H|{{SANFL Adel}}|11.6 (72)|[[Richmond Oval (South Australia)|Richmond Oval]]|1,151|[https://sanfl.com.au/league/matches/130290103 Report]}}
+{{AFLGame|Saturday 28 March (4:10&nbsp;pm)|{{SANFL CD}}|11.7 (73)|A|{{SANFL NA}}|11.12 (78)|[[X Convenience Oval]]|1,982|[https://sanfl.com.au/league/matches/130290104 Report]}}
+{{AFLGame|Saturday 28 March (4:10&nbsp;pm)|{{SANFL Por}}|8.6 (54)|A|{{SANFL Gle}}|15.11 (101)|[[Alberton Oval]]|2,040|[https://sanfl.com.au/league/matches/130290105 Report]}}
+{{AFLGameFooter|notes=}}
+
+=== Round 2 ===
+{{AFLGameHeader|title=Round 2}}
+{{AFLGame|Thursday 2 April (7:40&nbsp;pm)|{{SANFL WWT}}|12.12 (84)|H|{{SANFL Adel}}|10.7 (67)|[[Maughan Thiem Kia Oval]]||[https://sanfl.com.au/league/matches/130290201 Report]}}
+{{AFLGame|Friday 3 April (2:10&nbsp;pm)|{{SANFL Gle}}|7.9 (51)|H|{{SANFL Nor}}|6.7 (43)|[[Stratarama Stadium]]|5,125|[https://sanfl.com.au/league/matches/130290202 Report]}}
+{{AFLGame|Friday 3 April (2:10&nbsp;pm)|{{SANFL WestA}}|11.5 (71)|D|{{SANFL CD}}|11.5 (71)|[[Richmond Oval (South Australia)|Richmond Oval]]|1,366|[https://sanfl.com.au/league/matches/130290203 Report]}}
+{{AFLGame|Friday 3 April (2:10&nbsp;pm)|{{SANFL SthA}}|10.10 (70)|H|{{SANFL Por}}|8.6 (54)|[[Magain Stadium]]|1,742|[https://sanfl.com.au/league/matches/130290205 Report]}}
+{{AFLGame|Friday 3 April (2:30&nbsp;pm)|{{SANFL NA}}|7.8 (50)|A|{{SANFL Stu}}|15.19 (109)|[[Prospect Oval|Revo Fitness Oval]]|5,244|[https://sanfl.com.au/league/matches/130290204 Report]}}
+{{AFLGameFooter|notes=}}
+
+=== Round 3 ===
+{{AFLGameHeader|title=Round 3}}
+{{AFLGame|Friday 17 April (7:40&nbsp;pm)|{{SANFL Nor}}|10.14 (74)|H|{{SANFL SthA}}|7.10 (52)|[[Norwood Oval|Coopers Stadium]]|1,871|[https://sanfl.com.au/league/matches/130290301 Report]}}
+{{AFLGame|Saturday 18 April (2:10&nbsp;pm)|{{SANFL Cen}}|11.8 (74)|A|{{SANFL Adel}}|12.11 (83)|[[Elizabeth Oval|X Convenience Oval]]|1,355|[https://sanfl.com.au/league/matches/130290302 Report]}}
+{{AFLGame|Saturday 18 April (2:10&nbsp;pm)|{{SANFL Gle}}|13.7 (85)|H|{{SANFL WestA}}|11.16 (82)|[[Glenelg Oval|Stratarama Stadium]]|2,686|[https://sanfl.com.au/league/matches/130290303 Report]}}
+{{AFLGame|Sunday 19 April (2:10&nbsp;pm)|{{SANFL Por}}|11.8 (74)|A|{{SANFL NA}}|14.7 (91)|[[Alberton Oval]]|1,421|[https://sanfl.com.au/league/matches/130290304 Report]}}
+{{AFLGame|Sunday 19 April (2:10&nbsp;pm)|{{SANFL Stu}}|14.11 (95)|A|{{SANFL WWT}}|15.7 (97)|[[Unley Oval|Thomas Farms Oval]]|3,251|[https://sanfl.com.au/league/matches/130290305 Report]}}
+{{AFLGameFooter|notes=}}
+
+=== Round 4 ===
+{{AFLGameHeader|title=Round 4}}
+{{AFLGame|Friday 24 April (7:40&nbsp;pm)|{{SANFL Nor}}|9.14 (68)|H|{{SANFL Por}}|9.7 (61)|[[Norwood Oval|Coopers Stadium]]||[https://sanfl.com.au/league/matches/130290401 Report]}}
+{{AFLGame|Friday 24 April (7:40&nbsp;pm)|{{SANFL WWT}}|16.14 (110)|H|{{SANFL WestA}}|10.9 (69)|[[Woodville Oval|Maughan Thiem Kia Oval]]||[https://sanfl.com.au/league/matches/130290402 Report]}}
+{{AFLGame|Saturday 25 April (2:10&nbsp;pm)|{{SANFL NA}}|9.6 (60)|A|{{SANFL Adel}}|10.13 (73)|[[Prospect Oval|Revo Fitness Oval]]|2,588|[https://sanfl.com.au/league/matches/130290403 Report]}}
+{{AFLGame|Saturday 25 April (2:30&nbsp;pm)|{{SANFL Stu}}|9.11 (65)|A|{{SANFL Gle}}|11.16 (82)|[[Unley Oval|Thomas Farms Oval]]|4,059|[https://sanfl.com.au/league/matches/130290404 Report]}}
+{{AFLGame|Sunday 26 April (1:10&nbsp;pm)|{{SANFL SthA}}|19.5 (119)|H|{{SANFL Cen}}|12.13 (85)|[[Hickinbotham Oval|Magain Stadium]]|992|[https://sanfl.com.au/league/matches/130290405 Report]}}
+{{AFLGameFooter|notes=}}
+
+=== Round 5 ===
+{{AFLGameHeader|title=Round 5}}
+{{AFLGame|Friday 1 May (4:30&nbsp;pm)|{{SANFL Adel}}|15.8 (98)|A|{{SANFL Por}}|18.10 (118)|[[Adelaide Oval]]||[https://sanfl.com.au/league/matches/130290501 Report]}}
+{{AFLGame|Saturday 2 May (2:10&nbsp;pm)|{{SANFL Gle}}|7.12 (54)|A|{{SANFL SthA}}|11.10 (76)|[[Glenelg Oval|Stratarama Stadium]]|1,784|[https://sanfl.com.au/league/matches/130290502 Report]}}
+{{AFLGame|Saturday 2 May (2:10&nbsp;pm)|{{SANFL Cen}}|2.10 (22)|A|{{SANFL Nor}}|10.11 (71)|[[Elizabeth Oval|X Convenience Oval]]|1,477|[https://sanfl.com.au/league/matches/130290503 Report]}}
+{{AFLGame|Sunday 3 May (2:10&nbsp;pm)|{{SANFL WestA}}|9.11 (65)|H|{{SANFL Stu}}|8.13 (61)|[[Richmond Oval (South Australia)|Hisense Stadium]]|1,582|[https://sanfl.com.au/league/matches/130290504 Report]}}
+{{AFLGame|Sunday 3 May (2:10&nbsp;pm)|{{SANFL NA}}|3.10 (28)|A|{{SANFL WWT}}|15.7 (97)|[[Prospect Oval|Revo Fitness Oval]]|1,973|[https://sanfl.com.au/league/matches/130290505 Report]}}
+{{AFLGameFooter|notes=}}
+
+=== Round 6 ===
+{{AFLGameHeader|title=Round 6}}
+{{AFLGame|Saturday 9 May (1:30&nbsp;pm)|{{SANFL Nor}}|21.8 (134)|H|{{SANFL WestA}}|4.7 (31)|Centenary Oval|1,467|[https://sanfl.com.au/league/matches/130290602 Report]}}
+{{AFLGame|Saturday 9 May (2:10&nbsp;pm)|{{SANFL Por}}|13.6 (84)|H|{{SANFL Cen}}|12.7 (79)|[[Alberton Oval]]|1,167|[https://sanfl.com.au/league/matches/130290601 Report]}}
+{{AFLGame|Saturday 9 May (2:10&nbsp;pm)|{{SANFL SthA}}|12.5 (77)|A|{{SANFL NA}}|15.9 (99)|[[Hickinbotham Oval|Magain Stadium]]|891|[https://sanfl.com.au/league/matches/130290603 Report]}}
+{{AFLGame|Saturday 9 May (2:10&nbsp;pm)|{{SANFL WWT}}|7.10 (52)|A|{{SANFL Gle}}|11.9 (75)|[[Woodville Oval|Maughan Thiem Kia Oval]]|1,484|[https://sanfl.com.au/league/matches/130290604 Report]}}
+{{AFLGame|Saturday 9 May (2:10&nbsp;pm)|{{SANFL Stu}}|18.9 (117)|H|{{SANFL Adel}}|10.9 (69)|[[Unley Oval|Thomas Farms Oval]]|2,438|[https://sanfl.com.au/league/matches/130290605 Report]}}
+{{AFLGameFooter|notes=}}
+
+=== Round 7 ===
+{{AFLGameHeader|title=Round 7}}
+{{AFLGame|Saturday 23 May (2:10&nbsp;pm)|{{SANFL NA}}|7.6 (48)|A|{{SANFL Nor}}|18.9 (117)|[[Prospect Oval|Revo Fitness Oval]]||[https://sanfl.com.au/league/matches/130290701 Report]}}
+{{AFLGame|Saturday 23 May (2:10&nbsp;pm)|{{SANFL Stu}}|15.15 (105)|H|{{SANFL Cen}}|4.7 (31)|[[Unley Oval|Thomas Farms Oval]]||[https://sanfl.com.au/league/matches/130290702 Report]}}
+{{AFLGame|Saturday 23 May (2:10&nbsp;pm)|{{SANFL SthA}}|14.9 (93)|H|{{SANFL WestA}}|9.14 (68)|[[Noarlunga Oval|Magain Stadium]]||[https://sanfl.com.au/league/matches/130290703 Report]}}
+{{AFLGame|Saturday 23 May (2:10&nbsp;pm)|{{SANFL Gle}}|10.14 (74)|A|{{SANFL Adel}}|12.9 (81)|[[Glenelg Oval|Stratarama Stadium]]||[https://sanfl.com.au/league/matches/130290704 Report]}}
+{{AFLGame|Saturday 23 May (2:10&nbsp;pm)|{{SANFL WWT}}|20.9 (129)|H|{{SANFL Por}}|6.7 (43)|[[Woodville Oval|Maughan Thiem Kia Oval]]||[https://sanfl.com.au/league/matches/130290705 Report]}}
+{{AFLGameFooter|notes=*[[Taylor Walker (footballer)|Taylor Walker]] ({{SANFL Adel}}) played his first SANFL match since 2014.<ref>{{cite web|url=https://www.afl.com.au/news/1522979/around-the-state-leagues-taylors-big-five-star-hawk-back-new-eagles-debut|title=Around the state leagues: Dee's day out, Blue stars, axed Lion responds|work=afl.com.au|date=24 May 2026}}</ref>}}
+
+=== Round 8 ===
+{{AFLGameHeader|title=Round 8}}
+{{AFLGame|Saturday 30 May (2:10&nbsp;pm)|{{SANFL Cen}}|7.14 (56)|H|{{SANFL WestA}}|6.10 (46)|[[Elizabeth Oval|X Convenience Oval]]||[https://sanfl.com.au/league/matches/130290801 Report]}}
+{{AFLGame|Sunday 31 May (2:10&nbsp;pm)|{{SANFL SthA}}|11.8 (74)|A|{{SANFL Stu}}|15.13 (103)|[[Hickinbotham Oval|Magain Stadium]]||[https://sanfl.com.au/league/matches/130290802 Report]}}
+{{AFLGame|Sunday 31 May (2:10&nbsp;pm)|{{SANFL Nor}}|13.15 (93)|H|{{SANFL WWT}}|7.7 (49)|[[Norwood Oval|Coopers Stadium]]||[https://sanfl.com.au/league/matches/130290803 Report]}}
+{{AFLGame|Sunday 31 May (2:10&nbsp;pm)|{{SANFL NA}}|5.11 (41)|A|{{SANFL Gle}}|13.8 (86)|[[Prospect Oval|Revo Fitness Oval]]||[https://sanfl.com.au/league/matches/130290804 Report]}}
+{{AFLGameFooter|notes=
+*Byes: {{SANFL Adel}}, {{SANFL Por}}
+}}
+
+=== Round 9 ===
+{{AFLGameHeader|title=Round 9}}
+{{AFLGame|Saturday 6 June (2:10&nbsp;pm)|{{SANFL WWT}}|9.11 (65)|H|{{SANFL Cen}}|8.11 (59)|[[Woodville Oval|Maughan Thiem Kia Oval]]||[https://sanfl.com.au/league/matches/130290901 Report]}}
+{{AFLGame|Saturday 6 June (2:10&nbsp;pm)|{{SANFL WestA}}|8.8 (56)|A|{{SANFL NA}}|8.13 (61)|[[Richmond Oval (South Australia)|Hisense Stadium]]||[https://sanfl.com.au/league/matches/130290902 Report]}}
+{{AFLGame|Saturday 6 June (2:10&nbsp;pm)|{{SANFL SthA}}|10.6 (66)|A|{{SANFL Adel}}|17.8 (110)|[[Hickinbotham Oval|Magain Stadium]]||[https://sanfl.com.au/league/matches/130290903 Report]}}
+{{AFLGame|Saturday 6 June (2:10&nbsp;pm)|{{SANFL Gle}}|17.9 (111)|H|{{SANFL Por}}|9.8 (62)|[[Glenelg Oval|Stratarama Stadium]]||[https://sanfl.com.au/league/matches/130290904 Report]}}
+{{AFLGame|Monday 8 June (2:10&nbsp;pm)|{{SANFL Stu}}|12.7 (79)|A|{{SANFL Nor}}|13.4 (82)|[[Unley Oval|Thomas Farms Oval]]||[https://sanfl.com.au/league/matches/130290905 Report]}}
+{{AFLGameFooter|notes=}}
+
+=== Round 10 ===
+{{AFLGameHeader|title=Round 10}}
+{{AFLGame|Saturday 13 June (2:10&nbsp;pm)|{{SANFL NA}}|12.8 (80)|H|{{SANFL Adel}}|12.7 (79)|[[Prospect Oval|Revo Fitness Oval]]||[https://sanfl.com.au/league/matches/130291001 Report]}}
+{{AFLGame|Saturday 13 June (2:10&nbsp;pm)|{{SANFL WWT}}|8.11 (59)|H|{{SANFL SthA}}|3.4 (22)|[[Woodville Oval|Maughan Thiem Kia Oval]]||[https://sanfl.com.au/league/matches/130291002 Report]}}
+{{AFLGame|Sunday 14 June (2:10&nbsp;pm)|{{SANFL Por}}|11.11 (77)|A|{{SANFL WestA}}|12.14 (86)|[[Alberton Oval]]||[https://sanfl.com.au/league/matches/130291003 Report]}}
+{{AFLGameFooter|notes=
+*Byes: {{SANFL Cen}}, {{SANFL Gle}}, {{SANFL Nor}}, {{SANFL Stu}}
+}}
+
+=== Round 11 ===
+{{AFLGameHeader|title=Round 11}}
+{{AFLGame|Saturday 20 June (2:10&nbsp;pm)|{{SANFL Cen}}|9.10 (64)|A|{{SANFL Gle}}|10.11 (71)|[[Elizabeth Oval|X Convenience Oval]]||[https://sanfl.com.au/league/matches/130291101 Report]}}
+{{AFLGame|Sunday 21 June (2:10&nbsp;pm)|{{SANFL Stu}}|17.9 (111)|H|{{SANFL Por}}|10.9 (69)|[[Unley Oval|Thomas Farms Oval]]||[https://sanfl.com.au/league/matches/130291102 Report]}}
+{{AFLGame|Sunday 21 June (2:10&nbsp;pm)|{{SANFL Nor}}|19.7 (121)|H|{{SANFL Adel}}|7.13 (55)|[[Norwood Oval|Coopers Stadium]]||[https://sanfl.com.au/league/matches/130291103 Report]}}
+{{AFLGameFooter|notes=
+*Byes: {{SANFL NA}}, {{SANFL SthA}}, {{SANFL WestA}}, {{SANFL WWT}}
+}}
+
+=== Round 12 ===
+{{AFLGameHeader|title=Round 12}}
+{{AFLGame|Saturday 27 June (2:10&nbsp;pm)|{{SANFL Gle}}|11.11 (77)|H|{{SANFL Stu}}|10.6 (66)|[[Glenelg Oval|Stratarama Stadium]]||[https://sanfl.com.au/league/matches/130291201 Report]}}
+{{AFLGame|Saturday 27 June (2:10&nbsp;pm)|{{SANFL NA}}|8.7 (55)|A|{{SANFL Cen}}|10.16 (76)|[[Prospect Oval|Revo Fitness Oval]]||[https://sanfl.com.au/league/matches/130291203 Report]}}
+{{AFLGame|Saturday 27 June (2:10&nbsp;pm)|{{SANFL WestA}}|14.7 (91)|H|{{SANFL WWT}}|7.7 (49)|[[Richmond Oval (South Australia)|Hisense Stadium]]||[https://sanfl.com.au/league/matches/130291204 Report]}}
+{{AFLGame|Saturday 27 June (3:10&nbsp;pm)|{{SANFL Por}}|12.5 (77)|A|{{SANFL Adel}}|19.15 (129)|[[Adelaide Oval]]||[https://sanfl.com.au/league/matches/130291205 Report]}}
+{{AFLGame|Sunday 28 June (2:10&nbsp;pm)|{{SANFL SthA}}|7.12 (54)|A|{{SANFL Nor}}|20.10 (130)|[[Hickinbotham Oval|Magain Stadium]]||[https://sanfl.com.au/league/matches/130291202 Report]}}
+{{AFLGameFooter|notes=}}
+
+=== Round 13 ===
+{{AFLGameHeader|title=Round 13}}
+{{AFLGame|Saturday 4 July (1:10&nbsp;pm)|{{SANFL Cen}}|8.8 (56)|A|{{SANFL Adel}}|16.10 (106|[[Elizabeth Oval|X Convenience Oval]]||[https://sanfl.com.au/league/matches/130291301 Report]}}
+{{AFLGame|Saturday 4 July (2:10&nbsp;pm)|{{SANFL WWT}}|13.4 (82)|H|{{SANFL NA}}|7.4 (46)|[[Woodville Oval|Maughan Thiem Kia Oval]]||[https://sanfl.com.au/league/matches/130291302 Report]}}
+{{AFLGame|Saturday 4 July (2:10&nbsp;pm)|{{SANFL Stu}}|10.14 (74)|H|{{SANFL WestA}}|10.10 (70)|[[Unley Oval|Thomas Farms Oval]]||[https://sanfl.com.au/league/matches/130291304 Report]}}
+{{AFLGame|Saturday 4 July (2:10&nbsp;pm)|{{SANFL Por}}|6.6 (42)|A|{{SANFL SthA}}|16.8 (104)|[[Alberton Oval]]||[https://sanfl.com.au/league/matches/130291305 Report]}}
+{{AFLGame|Saturday 4 July (4:30&nbsp;pm)|{{SANFL Nor}}|8.8 (56)|A|{{SANFL Gle}}|9.10 (64)|[[Norwood Oval|Coopers Stadium]]||[https://sanfl.com.au/league/matches/130291303 Report]}}
+{{AFLGameFooter|notes=}}
+
+=== Round 14 ===
+{{AFLGameHeader|title=Round 14}}
+{{AFLGame|Saturday 11 July (2:10&nbsp;pm)|{{SANFL WWT}}|5.4 (34)|A|{{SANFL Stu}}|9.6 (60)|[[Woodville Oval|Maughan Thiem Kia Oval]]||[https://sanfl.com.au/league/matches/130291403 Report]}}
+{{AFLGame|Saturday 11 July (2:10&nbsp;pm)|{{SANFL WestA}}|7.9 (51)|A|{{SANFL Nor}}|10.8 (68)|[[Richmond Oval (South Australia)|Richmond Oval]]||[https://sanfl.com.au/league/matches/130291404 Report]}}
+{{AFLGame|Saturday 11 July (4:10&nbsp;pm)|{{SANFL Cen}}|12.14 (86)|H|{{SANFL SthA}}|2.8 (20)|[[Lyndoch Recreation Park|Barossa Park]]||[https://sanfl.com.au/league/matches/130291401 Report]}}
+{{AFLGame|Sunday 12 July (2:10&nbsp;pm)|{{SANFL Gle}}|8.13 (61)|H|{{SANFL Adel}}|8.10 (58)|[[Glenelg Oval|Stratarama Stadium]]||[https://sanfl.com.au/league/matches/130291405 Report]}}
+{{AFLGame|Sunday 12 July (2:20&nbsp;pm)|{{SANFL NA}}|13.11 (89)|H|{{SANFL Por}}|4.8 (32)|[[Prospect Oval|Revo Fitness Oval]]||[https://sanfl.com.au/league/matches/130291402 Report]}}
+{{AFLGameFooter|notes=}}
+
+=== Round 15 ===
+{{AFLGameHeader|title=Round 15}}
+{{AFLGame|Saturday 18 July (2:10&nbsp;pm)|{{SANFL WestA}}|12.11 (83)|A|{{SANFL Adel}}|13.16 (94)|[[Richmond Oval (South Australia)|Hisense Stadium]]||[https://sanfl.com.au/league/matches/130291505 Report]}}
+{{AFLGame|Saturday 18 July (7:10&nbsp;pm)|{{SANFL Por}}|15.5 (95)|H|{{SANFL WWT}}|10.11 (71)|[[Alberton Oval]]||[https://sanfl.com.au/league/matches/130291504 Report]}}
+{{AFLGame|Sunday 19 July (2:10&nbsp;pm)|{{SANFL SthA}}|7.5 (47)|A|{{SANFL Gle}}|17.6 (108)|[[Hickinbotham Oval|Magain Stadium]]||[https://sanfl.com.au/league/matches/130291501 Report]}}
+{{AFLGame|Sunday 19 July (2:10&nbsp;pm)|{{SANFL Stu}}|12.15 (87)|H|{{SANFL NA}}|10.12 (72)|[[Unley Oval|Thomas Farms Oval]]||[https://sanfl.com.au/league/matches/130291502 Report]}}
+{{AFLGame|Sunday 19 July (2:40&nbsp;pm)|{{SANFL Nor}}|14.13 (97)|H|{{SANFL Cen}}|13.6 (84)|[[Norwood Oval|Coopers Stadium]]||[https://sanfl.com.au/league/matches/130291503 Report]}}
+{{AFLGameFooter|notes=}}
+
+=== Round 16 ===
+{{AFLGameHeader|title=Round 16}}
+{{AFLGame|Saturday 1 August (2:10&nbsp;pm)|{{SANFL Cen}}|4.11 (35)|A|{{SANFL Stu}}|13.7 (85)|[[Elizabeth Oval|X Convenience Oval]]||[https://sanfl.com.au/league/matches/130291601 Report]}}
+{{AFLGame|Saturday 1 August (2:10&nbsp;pm)|{{SANFL WestA}}|11.9 (75)|H|{{SANFL NA}}|6.8 (44)|[[Richmond Oval (South Australia)|Hisense Stadium]]||[https://sanfl.com.au/league/matches/130291604 Report]}}
+{{AFLGame|Saturday 1 August (2:10&nbsp;pm)|{{SANFL SthA}}|16.7 (103)|H|{{SANFL Adel}}|13.7 (85)|[[Hickinbotham Oval|Magain Stadium]]||[https://sanfl.com.au/league/matches/130291605 Report]}}
+{{AFLGame|Saturday 1 August (2:40&nbsp;pm)|{{SANFL Gle}}|15.17 (107)|H|{{SANFL WWT}}|6.6 (42)|[[Glenelg Oval|Stratarama Stadium]]||[https://sanfl.com.au/league/matches/130291603 Report]}}
+{{AFLGame|Sunday 2 August (1:10&nbsp;pm)|{{SANFL Por}}|3.8 (26)|A|{{SANFL Nor}}|14.12 (96)|[[Alberton Oval]]||[https://sanfl.com.au/league/matches/130291602 Report]}}
+{{AFLGameFooter|notes=}}
+
+=== Round 17 ===
+{{AFLGameHeader|title=Round 17}}
+{{AFLGame|Saturday 8 August (12:40&nbsp;pm)|{{SANFL Nor}}|21.10 (136)|H|{{SANFL NA}}|9.6 (60)|[[Norwood Oval|Coopers Stadium]]||[https://sanfl.com.au/league/matches/130291702 Report]}}
+{{AFLGame|Saturday 8 August (2:10&nbsp;pm)|{{SANFL Stu}}|19.11 (125)|H|{{SANFL SthA}}|11.10 (76)|[[Unley Oval|Thomas Farms Oval]]||[https://sanfl.com.au/league/matches/130291701 Report]}}
+{{AFLGame|Saturday 8 August (2:30&nbsp;pm)|{{SANFL Gle}}|11.10 (76)|H|{{SANFL Cen}}|10.12 (72)|[[Glenelg Oval|Stratarama Stadium]]||[https://sanfl.com.au/league/matches/130291703 Report]}}
+{{AFLGame|Sunday 9 August (1:10&nbsp;pm)|{{SANFL WWT}}|11.11 (77)|H|{{SANFL Adel}}|10.10 (70)|[[Woodville Oval|Maughan Thiem Kia Oval]]||[https://sanfl.com.au/league/matches/130291705 Report]}}
+{{AFLGame|Sunday 9 August (2:10&nbsp;pm)|{{SANFL WestA}}|19.14 (128)|H|{{SANFL Por}}|3.5 (23)|[[Richmond Oval (South Australia)|Hisense Stadium]]||[https://sanfl.com.au/league/matches/130291704 Report]}}
+{{AFLGameFooter|notes=}}
+
+=== Round 18 ===
+{{AFLGameHeader|title=Round 18}}
+{{AFLGame|Friday 14 August (7:40&nbsp;pm)|{{SANFL Nor}}|16.10 (106)|H|{{SANFL Adel}}|7.10 (52)|[[Norwood Oval|Coopers Stadium]]||[https://sanfl.com.au/league/matches/130291805/ Report]}}
+{{AFLGame|Saturday 15 August (1:10&nbsp;pm)|{{SANFL Por}}|11.8 (74)|A|{{SANFL Stu}}|17.11 (113)|[[Alberton Oval]]||[https://sanfl.com.au/league/matches/130291802/ Report]}}
+{{AFLGame|Saturday 15 August (2:10&nbsp;pm)|{{SANFL NA}}|6.9 (45)|A|{{SANFL SthA}}|14.12 (96)|[[Prospect Oval|Revo Fitness Oval]]||[https://sanfl.com.au/league/matches/130291801/ Report]}}
+{{AFLGame|Saturday 15 August (2:10&nbsp;pm)|{{SANFL Cen}}|10.6 (66)|H|{{SANFL WWT}}|9.9 (63)|[[Elizabeth Oval|X Convenience Oval]]||[https://sanfl.com.au/league/matches/130291803/ Report]}}
+{{AFLGame|Saturday 15 August (2:10&nbsp;pm)|{{SANFL WestA}}|8.8 (56)|H|{{SANFL Gle}}|5.7 (37)|[[Richmond Oval (South Australia)|Hisense Stadium]]||[https://sanfl.com.au/league/matches/130291804/ Report]}}
+{{AFLGameFooter|notes=}}
+
+=== Round 19 ===
+{{AFLGameHeader|title=Round 19}}
+{{AFLGame|Saturday 22 August (2:10&nbsp;pm)|{{SANFL Gle}}|15.10 (100)|H|{{SANFL NA}}|8.11 (59)|[[Glenelg Oval|Stratarama Stadium]]||[https://sanfl.com.au/league/matches/130291901/ Report]}}
+{{AFLGame|Saturday 22 August (2:10&nbsp;pm)|{{SANFL Cen}}|19.10 (124)|H|{{SANFL Por}}|9.5 (59)|[[Elizabeth Oval|X Convenience Oval]]||[https://sanfl.com.au/league/matches/130291902/ Report]}}
+{{AFLGame|Saturday 22 August (2:10&nbsp;pm)|{{SANFL WWT}}|9.4 (58)|A|{{SANFL Nor}}|17.8 (110)|[[Woodville Oval|Maughan Thiem Kia Oval]]||[https://sanfl.com.au/league/matches/130291903/ Report]}}
+{{AFLGame|Saturday 22 August (2:10&nbsp;pm)|{{SANFL WestA}}|7.9 (51)|A|{{SANFL SthA}}|11.6 (72)|[[Richmond Oval (South Australia)|Richmond Oval]]||[https://sanfl.com.au/league/matches/130291904/ Report]}}
+{{AFLGame|Saturday 22 August (2:10&nbsp;pm)|{{SANFL Stu}}|16.9 (105)|H|{{SANFL Adel}}|11.11 (77)|[[Unley Oval|Thomas Farms Oval]]||[https://sanfl.com.au/league/matches/130291905/ Report]}}
+{{AFLGameFooter|notes=}}
+
+==Ladder==
+<onlyinclude>{{#invoke:sports table|main|style=WDL
+<!--use_point_percentage for SANFL style, use_goal_percentage for AFL style-->
+|loss_before_draw=y|for_against_style=points|use_point_percentage=y
+
+<!--CAN CHANGE VALUE OF WINS AND DRAWS FOR DIFFERENT LEAGUES:--> 
+|winpoints=2|drawpoints=1
+
+|source=[https://sanfl.com.au/league/ladder/?league=sanfl&season=2026 sanfl.com.au]
+|update=complete
+
+|team1=Nor    |win_Nor=15  |loss_Nor=3    |draw_Nor=0   |pf_Nor=1668  |pa_Nor=968  |status_Nor=P
+|team2=Gle    |win_Gle=15  |loss_Gle=3    |draw_Gle=0   |pf_Gle=1420  |pa_Gle=1076
+|team3=Stu    |win_Stu=13  |loss_Stu=5    |draw_Stu=0   |pf_Stu=1631  |pa_Stu=1200
+|team4=WWT    |win_WWT=10  |loss_WWT=8    |draw_WWT=0   |pf_WWT=1319  |pa_WWT=1245
+|team5=WestA  |win_WestA=8 |loss_WestA=9  |draw_WestA=1 |pf_WestA=1263|pa_WestA=1276
+|team6=SthA   |win_SthA=8  |loss_SthA=10  |draw_SthA=0  |pf_SthA=1270 |pa_SthA=1479
+|team7=Ade    |win_Ade=7   |loss_Ade=11   |draw_Ade=0   |pf_Ade=1458  |pa_Ade=1541
+|team8=Cen    |win_Cen=5   |loss_Cen=12   |draw_Cen=1   |pf_Cen=1213  |pa_Cen=1354
+|team9=NthA   |win_NthA=5  |loss_NthA=13  |draw_NthA=0  |pf_NthA=1101 |pa_NthA=1530
+|team10=Por   |win_Por=3   |loss_Por=15   |draw_Por=0   |pf_Por=1124  |pa_Por=1798
+
+<!--POINTS ADJUSTMENTS. Only in special circumstances-->
+<!--
+|adjust_points_TTT=X
+|note_TTT=Note about adjustment
+-->
+
+<!--TEAM NAMES. No need to update beyond initial entering-->
+|name_Gle=[[Glenelg Football Club|Glenelg]]
+|name_NthA=[[North Adelaide Football Club|North Adelaide]]
+|name_Nor=[[Norwood Football Club|Norwood]]
+|name_WestA=[[West Adelaide Football Club|West Adelaide]]
+|name_Stu=[[Sturt Football Club|Sturt]]
+|name_SthA=[[South Adelaide Football Club|South Adelaide]]
+|name_Cen=[[Central District Football Club|Central District]]
+|name_WWT=[[Woodville-West Torrens Football Club|Woodville-West Torrens]]
+|name_Por=[[Port Adelaide Football Club|Port Adelaide (R)]]
+|name_Ade=[[Adelaide Football Club (SANFL)|Adelaide (R)]]
+
+<!--CLASSIFICATION RULES-->
+|class_rules = 1) points; 2) percentage; 3) number of points for.
+
+|result1=Q|result2=Q|result3=Q|result4=Q|result5=Q
+
+|res_col_header=Q
+|col_Q=green2|text_Q=[[2026 SANFL season#Finals series|Finals series]]|status_Gle=|status_text_P=Premiers
+}}</onlyinclude>
+
+(R) = Reserves for AFL Seniors
+
+==Finals series==
+===Week one – Qualifying and elimination finals===
+{{AFLGameHeader|title=Elimination final}}
+{{AFLGame|Sunday 30 August (12:15&nbsp;pm) |[[Woodville-West Torrens Football Club|Woodville-West Torrens]]|10.7 (67)|H|[[West Adelaide Football Club|West Adelaide]]|8.14 (62)|[[Adelaide Oval]]||[https://sanfl.com.au/league/matches/130300101 Report]}}
+{{AFLGameFooter}}
+{{AFLGameHeader|title=Qualifying final}}
+{{AFLGame|Sunday 30 August (3:15&nbsp;pm)|[[Glenelg Football Club|Glenelg]]|12.12 (84)|A|[[Sturt Football Club|Sturt]]|13.8 (86)|[[Adelaide Oval]]||[https://sanfl.com.au/league/matches/130300102 Report]}}
+{{AFLGameFooter}}
+
+===Week two – Semi-finals===
+{{AFLGameHeader|title=First Semi-final}}
+{{AFLGame|Sunday 6 September (12:15&nbsp;pm)|[[Glenelg Football Club|Glenelg]]|11.13 (79)|A|[[Woodville-West Torrens Football Club|Woodville-West Torrens]]|13.5 (83)|[[Adelaide Oval]]||[https://sanfl.com.au/league/matches/130300201 Report]}}
+{{AFLGameFooter}}
+{{AFLGameHeader|title=Second Semi-final}}
+{{AFLGame|Sunday 6 September (3:15&nbsp;pm)|[[Norwood Football Club|Norwood]]|8.10 (58)|H|[[Sturt Football Club|Sturt]]|5.9 (39)|[[Adelaide Oval]]||[https://sanfl.com.au/league/matches/130300202 Report]}}
+{{AFLGameFooter}}
+
+===Week three – Preliminary final===
+{{AFLGameDetailed
+| title = Preliminary final
+| date = Sunday, 13 September (3:15&nbsp;pm)
+| home team = [[Sturt Football Club|Sturt]]
+| home Q1 = 1.5 (11)
+| home Q2 = 5.10 (40)
+| home Q3 = 7.14 (56)
+| home final = 13.16 (94)
+| home goals = [[Ash Johnson|Johnson]] 6<br>[[Lachlan Burrows|Burrows]], [[Tom Emmett|Emmett]] 2<br>[[Sam Conforti|Conforti]], [[Loch Rawlinson|Rawlinson]], [[Luca Slade|Slade]] 1
+| winner = H
+| away team = [[Woodville-West Torrens Football Club|Woodville-West Torrens]]
+| away Q1 = 3.3 (21)
+| away Q2 = 6.3 (39)
+| away Q3 = 7.5 (47)
+| away final = 8.7 (55)
+| away goals = [[Kade Herbert|Herbert]] 3<br>[[Connor Ballenden|Ballenden]] 2<br>[[Adam D'Aloia|D'Aloia]], [[Nicholas Hayes|N. Hayes]], [[Daniel Sladojevic|Sladojevic]] 1
+| venue = [[Adelaide Oval]]
+| report = [https://sanfl.com.au/league/matches/130300301 Report]
+| broadcast = [[Seven Network]]
+}}
+
+===Week four – Grand Final===
+{{main|2026 SANFL Grand Final}}
+{{AFLGameDetailed
+| title           = 2026 SANFL Grand Final
+| date            = Sunday 20 September (2:30&nbsp;pm)
+| home team       = [[Norwood Football Club|Norwood]]
+| home Q1         = 4.4 (28)
+| home Q2         = 5.5 (35)
+| home Q3         = 8.6 (54)
+| home final      = 13.9 (87)
+| home goals      = Binder 4<br>Callow, Lowe 2<br>Hamilton, Heard, Ling, Murley, Swinnerton 1 
+| home best       =
+| home injuries   =
+| home reports    =
+| home substitute =
+| winner          = H
+| away team       = [[Sturt Football Club|Sturt]]
+| away Q1         = 3.2 (20)
+| away Q2         = 5.5 (35)
+| away Q3         = 11.6 (72)
+| away final      = 11.7 (73)
+| away goals      = Emmett 3<br>Hone, Johnson 2<br>Burrows, Fahey-Sparks, McEntee, Rawlinson 1
+| away best       =
+| away injuries   =
+| away reports    =
+| venue           = [[Adelaide Oval]]
+| crowd           = 38,340
+| report          = <ref>{{cite web|url=https://www.afl.com.au/news/1617371/norwood-defeat-sturt-in-grand-final-thriller-to-claim-2026-sanfl-premiership|title=Norwood defeat Sturt in Grand Final thriller to claim SANFL premiership|author=Zac Milbank|work=afl.com.au|date=20 September 2026}}</ref><ref>{{cite web|url=https://www.zerohanger.com/vfl-sanfl-and-wafl-grand-finals-box-hill-shock-win-peel-thunder-down-on-claremont-norwood-classic-182898/|title=VFL, SANFL and WAFL grand finals: Box Hill shock win, Peel thunder down on Claremont, Norwood classic|author=Aidan Cellini|date=20 September 2026|work=Zero Hangar}}</ref><ref>{{cite web|url=https://sanfl.com.au/league/matches/130300401/?viewing=players|work=sanfl.com.au|date=20 September 2026|title=Scorecard: Norwood v Sturt}}</ref>
+| umpires         = 
+| BOG award       = [[Jack Oatey Medal]]
+| BOG winner      = Baynen Lowe (Norwood)
+| broadcast       = [[Seven Network]]
+| anthem          =
+| notes           = 
+* The 38,340 spectators in attendance was the biggest since [[2019 SANFL Grand Final|2019]] and the 10th time in 14 years the Grand Final attracted over 30,000 fans.<ref>{{cite web|url=https://www.abc.net.au/news/2026-09-21/sanfl-is-alive-and-kicking-after-another-thriller-grand-final/107173680|title=The SANFL is alive and kicking after another thriller grand final|work=ABC News|date=21 September 2026|author=Aaron Bryans}}</ref>
+}}
+
+==Awards==
+*'''[[Magarey Medal]]'''
+:: [[Nik Rokahr]] – 38 votes ({{SANFL Nor}})
+*'''[[Ken Farmer Medal]]'''
+:: [[Lachlan Hosie]] – 62 goals ({{SANFL Gle}})
+*'''[[Bob Shearman|R.O Shearman Medal]]'''
+:: [[Nik Rokahr]] – 111 votes ({{SANFL Nor}})
+*'''[[South Australian National Football League#Awards|Stanley H. Lewis Trophy]]'''
+:: {{SANFL Nor}}
+*'''Reserves Premiers'''
+:: {{SANFL SA}}
+*'''Under 18s Premiers'''
+:: {{SANFL Gle}}
+*'''Under 16s Premiers'''
+:: {{SANFL Gle}}
+{{small|Sources:<ref>{{cite web|url=https://sanfl.com.au/league/news/lachie-hosie-wins-2026-ken-farmer-medal/|title=Lachie Hosie wins 2026 Ken Farmer Medal|author=Zac Milbank|work=sanfl.com.au|date=23 August 2026}}</ref><ref>{{cite web|url=https://www.abc.net.au/news/2026-09-08/phillips-and-mcavaney-given-sanfl-highest-honour/107127180|title=Erin Phillips and Bruce McAvaney honoured as Norwood player makes history|work=ABC News|date=7 September 2026|author=Matthew Ward Agius}}</ref><ref>{{cite web|url=https://sanfl.com.au/league/news/nik-rokahr-wins-2026-r-o-shearman-medal/|title=Nik Rokahr wins 2026 R. O. Shearman Medal|date=7 September 2026|work=sanfl.com.au|author=Zac Milbank}}</ref><ref>{{cite web|url=https://sanfl.com.au/league/news/norwood-win-2026-stanley-h-lewis-trophy/|title=Norwood win 2026 Stanley H. Lewis Trophy|work=sanfl.com.au|date=24 August 2026|author=Zac Milbank}}</ref><ref>{{cite web|url=https://sanfl.com.au/league/news/glenelg-win-2026-aami-talent-league-grand-final/|title=Glenelg win 2026 U18 AAMI Talent League Grand Final|work=sanfl.com.au|date=14 September 2026|author=Zac Milbank}}</ref><ref>{{cite web|url=https://sanfl.com.au/league/news/glenelg-win-2026-aami-talent-league-u16-grand-final/|title=Glenelg win 2026 AAMI Talent League U16 Grand Final|date=13 September 2026|work=sanfl.com.au|author=Zac Milbank}}</ref><ref>{{cite web|url=https://sanfl.com.au/league/news/south-adelaide-win-2026-reserves-premiership/|title=South Adelaide win 2026 Reserves Premiership|work=sanfl.com.au|date=20 September 2026|author=Zac Milbank}}</ref>}}
+
+{{Aussie rules team
+| title             = 2026 SANFL Team of the Year
+| backpocket1       = Cooper Murley (Norwood)
+| fullback          = Will Coomblas (Sturt)
+| backpocket2       = Cody Raak (North Adelaide)
+| halfbackflank1    = Harley Sparks (South Adelaide)
+| centrehalfback    = Aaron Francis (Norwood)
+| halfbackflank2    = Jonty Scharenberg (Glenelg)
+| wing1             = Josh Fahey (Central District)
+| centre            = Tom Lewis (Sturt) ([[Captain (sports)|c]])
+| wing2             = Kobe Ryan (West Adelaide)
+| halfforwardflank1 = Blake Drury (Adelaide)
+| centrehalfforward = Finn Heard (Norwood)
+| halfforwardflank2 = Corey Lyons (Glenelg)
+| forwardpocket1    = Jack Delean (South Adelaide)
+| fullforward       = Lachie Hosie (Glenelg)
+| forwardpocket2    = Tristan Binder (Norwood) 
+| ruck              = Reilly O’Brien (Adelaide)
+| ruckrover         = Ted Clohesy (Woodville-West Torrens)
+| rover             = Nik Rokahr (Norwood)
+| interchange1      = Chris Burgess (West Adelaide)
+| interchange2      = Angus Schumacher (North Adelaide)
+| interchange3      = Oliver Davis (South Adelaide)
+| interchange4      = Will Snelling (Sturt)
+| interchange5      = 
+| interchange6      =  
+| coach             = Jade Sheedy (Norwood)
+}}
+{{small|Source:<ref>{{cite web |last1=Milbank |first1=Zac |title=2026 The Advertiser SANFL Team of the Year |url=https://sanfl.com.au/league/news/2026-the-advertiser-sanfl-team-of-the-year/ |website=sanfl.com.au |date=3 September 2026}}</ref>}}
+
+==Representative matches==
+===SANFL vs VFL===
+For the third successive season, an [[Interstate matches in Australian rules football|interstate representative match]] was arranged against the [[Victorian Football League]] (VFL). As was the case with the [[2025 SANFL season#SANFL vs VFL|2025 fixture]], the match was timed to coincide with the AFL's [[Gather Round]] fixtures in Adelaide. The match was held as part of a double-header with the equivalent women's interstate match.<ref>{{cite web|url=https://www.sportingnews.com/au/afl/news/state-leagues-exhibition-games-set-afl-gather-round-2026-vfl-sanfl/afda5fa97995154a901bf8ec|title=State leagues exhibition games set for AFL Gather Round 2026|work=The Sporting News|date=10 December 2025|author=Jake Beddard|archive-url=https://web.archive.org/web/20251222063823/https://www.sportingnews.com/au/afl/news/state-leagues-exhibition-games-set-afl-gather-round-2026-vfl-sanfl/afda5fa97995154a901bf8ec|archive-date=22 December 2025|url-status=live}}</ref>
+{{AFLGameDetailed
+| title           = 2026 State Game
+| date            = Saturday, 11 April (2:30pm [[Time in Australia|ACST]])
+| winner          = A
+| home team       = [[South Australian National Football League|SANFL]]
+| home Q1         = 5.4 (34)
+| home Q2         = 7.9 (51)
+| home Q3         = 12.10 (82)
+| home final      = 14.14 (98)
+| home goals      = Scully 3<br>[[Liam McBean|McBean]], Allan, Doyle 2<br>[[Lachlan Hosie|Hosie]], Emmett, Beattie, Murley, Ryan 1
+| home best       = Lewis, Ryan, Scharenberg, Scully, Doyle
+| home injuries   =
+| home reports    =
+| away team       = [[Victorian Football League|VFL]]
+| away Q1         = 3.3 (21)
+| away Q2         = 7.8 (50)
+| away Q3         = 11.11 (77)
+| away final      = 15.13 (103)
+| away goals      = Podhajski 4<br>Clarke, Hagan, Brew, Tarrant 2<br>Hately, Billings, Declase 1
+| away best       = [[Riley Bonner|Bonner]], Hately, Bell, Parks, Podhajski
+| away injuries   =
+| away reports    =
+| venue           = [[Glenelg Oval|Stratarama Stadium]]
+| crowd           =
+| report          = <ref>{{cite web|url=https://sanfl.com.au/league/news/west-end-state-team-falls-to-vfl/|work=sanfl.com.au|date=11 April 2026|title=West End State Team falls to VFL|author=Luke Marchioro|archive-url=https://web.archive.org/web/20260412003807/https://sanfl.com.au/league/news/west-end-state-team-falls-to-vfl/|archive-date=12 April 2026|url-status=live}}</ref><ref>{{cite web|url=https://www.afl.com.au/news/1496788/vfl-defends-title-against-oldest-foe|title=VFL defends title against oldest foe|date=11 April 2026|work=afl.com.au|archive-url=https://web.archive.org/web/20260418024017/https://www.afl.com.au/news/1496788/vfl-defends-title-against-oldest-foe|archive-date=18 April 2026|url-status=live}}</ref>
+| umpires         = 
+| BOG award       = [[Fos Williams Medal]] (SANFL) & Frank Johnson Medal (VFL)
+| BOG winner      = Tom Lewis (SANFL) & [[Riley Bonner]] (VFL)
+| broadcast       = [[Seven Network]] & AFL.com.au<ref name=VicCaptainsStateGame>{{cite web|url=https://www.afl.com.au/news/1493159/pinnuck-and-tierney-appointed-big-v-captains|title=Pinnuck and Tierney appointed Big V captains|work=afl.com.au|date=9 April 2026|quote=The 2026 State Games will be available via AFL.com.au and the AFL Live Official App...The men's match will also be broadcast by the Seven Network via 7mate in South Australia and Victoria, and via 7plus nationally.|archive-url=https://web.archive.org/web/20260410000813/https://www.afl.com.au/news/1493159/pinnuck-and-tierney-appointed-big-v-captains|archive-date=10 April 2026|url-status=live}}</ref>
+| anthem          =
+| notes           = 
+}}
+
+====South Australian team====
+{{Aussie rules team | title = 2026 SANFL State Team vs. Victoria<ref name=VICteam26>{{cite web|url=https://www.afl.com.au/news/1493697/teams-sanfl-vs-vfl-state-game|title=TEAMS: SANFL vs VFL State Game|work=afl.com.au|date=9 April 2026|archive-url=https://web.archive.org/web/20260410000956/https://www.afl.com.au/news/1493697/teams-sanfl-vs-vfl-state-game|archive-date=10 April 2026|url-status=live}}</ref><ref>{{cite web|url=https://sanfl.com.au/league/news/sanfl-reveals-state-coaches-for-2026/|title=SANFL reveals State Coaches for 2026|work=sanfl.com.au|date=25 February 2026|author=Zac Milbank|archive-url=https://web.archive.org/web/20260410001128/https://sanfl.com.au/league/news/sanfl-reveals-state-coaches-for-2026/|archive-date=10 April 2026|url-status=live}}</ref><ref>{{cite web|url=https://sanfl.com.au/league/news/west-end-state-team-to-confront-vfl-in-gather-round/|title=West End State Team to confront VFL in Gather Round|work=sanfl.com.au|date=9 April 2026|quote=Glenelg premiership hero Liam McBean will again lead the West End State team into battle against the VFL after being confirmed as the Croweaters’ captain.|archive-url=https://web.archive.org/web/20260410001441/https://sanfl.com.au/league/news/west-end-state-team-to-confront-vfl-in-gather-round/|archive-date=10 April 2026|url-status=live}}</ref> | teamcolour = SA
+| backpocket1 = 4. Cooper Murley<br>({{SANFL Nor}})
+| fullback = 19. Will Coomblas<br>({{SANFL Stu}})
+| backpocket2 = 23. Oscar Clavarino<br>({{SANFL SA}})
+| halfbackflank1 = 3. Jonty Scharenberg<br>({{SANFL Gle}})
+| centrehalfback = 24. Zac Becker<br>({{SANFL Stu}})
+| halfbackflank2 = 16. Luca Whitelum<br>({{SANFL CD}})
+| wing1 = 1. Frank Szekely<br>({{SANFL NA}})
+| centre = 12. Tom Lewis<br>({{SANFL Stu}})
+| wing2 = 22. Matt Allen<br>({{SANFL Gle}})
+| halfforwardflank1 = 5. Sam Conforti<br>({{SANFL Stu}})
+| centrehalfforward = 27. Tom Scully<br>({{SANFL WestA}})
+| halfforwardflank2 = 17. Tom Emmett<br>({{SANFL Stu}})
+| forwardpocket1 = 20. [[Lachlan Hosie]]<br>({{SANFL Gle}})
+| fullforward = 10. [[Liam McBean]] (c)<br>({{SANFL Gle}})
+| forwardpocket2 = 6. [[Max Beattie]]<br>({{SANFL WWT}})
+| ruck = 25. Amos Doyle<br>({{SANFL Stu}})
+| ruckrover = 13. Baynen Lowe<br>({{SANFL Nor}})
+| rover = 14. Oliver Davis<br>({{SANFL SA}})
+| interchange1 = 21. Finn Heard<br>({{SANFL Nor}})
+| interchange2 = 9. Kobe Ryan<br>({{SANFL WestA}})
+| interchange3 = 11. [[Jed McEntee]]<br>({{SANFL Stu}})
+| interchange4 = 18. [[Aaron Francis]]<br>({{SANFL Nor}})
+| interchange5 = 7. Martin Frederick<br>({{SANFL Stu}})
+| emergency1 = 8. Corey Lyons<br>({{SANFL Gle}})
+| emergency2 = 26. [[Alex van Wyk|Alex Van Wyk]]<br>({{SANFL NA}})
+| emergency3 = 2. Ethan Grace<br>({{SANFL WWT}})
+| coach = [[Martin Mattner]]<br>({{SANFL Stu}})
+}}
+
+===WAFL vs SANFL===
+For the eighth successive season, an interstate representative match was fixtured between the SANFL and [[West Australian Football League]] (WAFL), with the two teams playing for the [[Haydn Bunton Jr.|Haydn Bunton Junior]] Cup.<ref>{{cite web|url=https://sanfl.com.au/league/news/2026-hostplus-sanfl-league-fixture-release/|title=2026 Hostplus SANFL League Fixture Released|date=24 December 2025|work=sanfl.com.au|quote=The West End State team will have its sights set on regaining the Haydn Bunton Junior Cup in the KIA State Game against the WAFL on the weekend of Saturday May 16 after it hosts the VFL at Stratarama Stadium on Saturday April 11 as part of the AFL Gather Round festivities.|archive-url=https://web.archive.org/web/20260201040856/https://sanfl.com.au/league/news/2026-hostplus-sanfl-league-fixture-release/|archive-date=1 February 2026|url-status=live}}</ref><ref>{{cite web|url=https://wafootball.com.au/news/historic-kia-state-game-triple-header-locked-in/|title=Historic Kia State Game triple-header locked in|work=WA Football|date=17 April 2026|author=Jordan McArdle|archive-url=https://web.archive.org/web/20260420033217/https://wafootball.com.au/news/historic-kia-state-game-triple-header-locked-in/|archive-date=20 April 2026|url-status=live}}</ref>
+{{AFLGameDetailed
+| title           = 2026 State Game
+| date            = Saturday, 16 May (3:10pm [[Time in Australia|AWST]])
+| winner          = H
+| home team       = [[West Australian Football League|WAFL]]
+| home Q1         = 4.1 (25)
+| home Q2         = 9.4 (58)
+| home Q3         = 11.9 (75)
+| home final      = 14.14 (98)
+| home goals      = Hinder 3<br>Hunter, Reidy 2<br>Bevan, Clarke, Davis, Jones, Mainwaring, Mayo, Sears 1
+| home best       = England, Bevan, Turner, Mayo, Ameduri, Hinder, Reidy
+| home injuries   =
+| home reports    =
+| away team       = [[South Australian National Football League|SANFL]]
+| away Q1         = 2.2 (14)
+| away Q2         = 3.3 (21)
+| away Q3         = 4.6 (30)
+| away final      = 9.8 (62)
+| away goals      = A. Grace, Thomas 3<br>Emmett, Francis, Herbert 1
+| away best       = Thomas, Lowe, E. Grace, A. Grace, Francis
+| away injuries   =
+| away reports    =
+| venue           = [[Sullivan Logistics Stadium]]
+| crowd           = 3,671
+| report          = <ref>{{cite web|url=https://sanfl.com.au/league/news/west-end-state-team-defeated-by-wafl-in-kia-state-game/|title=West End State Team defeated by WAFL in KIA State Game|date=16 May 2026|work=sanfl.com.au|author=Zac Milbank|archive-url=https://web.archive.org/web/20260518113446/https://sanfl.com.au/league/news/west-end-state-team-defeated-by-wafl-in-kia-state-game/|archive-date=18 May 2026|url-status=live}}</ref><ref>{{cite web|url=https://wafootball.com.au/news/kia-wafl-state-team-beat-sanfl-at-home-for-first-time-in-11-years/|title=Kia WAFL State Team beat SANFL at home for first time in 11 years|work=wafootball.com.au|date=16 May 2026|author=Jordan McArdle|archive-url=https://web.archive.org/web/20260520144805/https://wafootball.com.au/news/kia-wafl-state-team-beat-sanfl-at-home-for-first-time-in-11-years/|archive-date=20 May 2026|url-status=live}}</ref>
+| umpires         = 
+| BOG award       = [[Simpson Medal]] (WAFL) & [[Fos Williams Medal]] (SANFL)
+| BOG winner      = Callan England (WAFL) & Beau Thomas (SANFL)
+| broadcast       = [[Seven Network]]<ref>{{cite web|url=https://wafootball.com.au/news/kia-wafl-state-team-locked-in-for-sanfl-blockbuster/?_gl=1*jiypl9*_gcl_au*MTEyMzgwMDg5OC4xNzc1NjQ4NDY4|title=Kia WAFL State Team locked in for SANFL blockbuster|author=Jordan McArdle|date=14 May 2026|work=wafootball.com.au|quote=Western Australia will host South Australia from 3.10pm, with the game live and free on 7 and 7Plus, while tickets at just $10 from INTIX.|archive-url=https://web.archive.org/web/20260520144806/https://wafootball.com.au/news/kia-wafl-state-team-locked-in-for-sanfl-blockbuster/|archive-date=20 May 2026|url-status=live}}</ref>
+| anthem          =
+| notes           = 
+}}
+
+====South Australian team====
+{{Aussie rules team | title = 2026 SANFL State Team vs. Western Australia<ref>{{cite web|url=https://sanfl.com.au/league/news/west-end-state-team-named-for-2026-kia-state-game/|title=West End State Team named for 2026 KIA State Game|work=sanfl.com.au|date=14 May 2026|archive-url=https://web.archive.org/web/20260527022830/https://sanfl.com.au/league/news/west-end-state-team-named-for-2026-kia-state-game/|archive-date=27 May 2026|url-status=dead}}</ref> | teamcolour = SA
+| backpocket1 = 8. Joshua Hone<br>({{SANFL Stu}})
+| fullback = 21. Finn Heard<br>({{SANFL Nor}})
+| backpocket2 = 25. Beau Thomas<br>({{SANFL CD}})
+| halfbackflank1 = 12. Kade Herbert<br>({{SANFL WWT}})
+| centrehalfback = 17. [[Tom Emmett (footballer)|Tom Emmett]]<br>({{SANFL Stu}}) 
+| halfbackflank2 = 6. [[Max Beattie]]<br>({{SANFL WWT}})
+| wing1 = 19. [[Jacob Kennerley]]<br>({{SANFL Nor}})
+| centre = 10. Tom Lewis (c)<br>({{SANFL Stu}})
+| wing2 = 7. [[Martin Frederick]]<br>({{SANFL Stu}})
+| halfforwardflank1 = 20. Jez McLennan<br>({{SANFL Por}})
+| centrehalfforward = 18. [[Aaron Francis]]<br>({{SANFL Nor}})
+| halfforwardflank2 = 16. Luca Whitlum<br>({{SANFL CD}})
+| forwardpocket1 = 4. Cooper Murley<br>({{SANFL Nor}})
+| fullforward = 23. [[Thomas Donnelly (Australian footballer)|Thomas Donnelly]]<br>({{SANFL Nor}}) 
+| forwardpocket2 = 2. Ethan Grace<br>({{SANFL WWT}})
+| ruck = 27. Caleb May<br>({{SANFL WestA}})
+| ruckrover = 13. Baynen Lowe<br>({{SANFL Nor}})
+| rover = 3. [[Ted Clohesy]]<br>({{SANFL WWT}})
+| interchange1 = 15. Aiden Grace<br>({{SANFL CD}}) 
+| interchange2 = 5. Sam Conforti<br>({{SANFL Stu}})
+| interchange3 = 14. Finn Emilie-Brennan<br>({{SANFL SA}})
+| interchange4 = 24. Lukas Cooke<br>({{SANFL WWT}})
+| interchange5 = 9. Nik Rokahr<br>({{SANFL Nor}})
+| emergency1 = 26. [[Alex van Wyk|Alex Van Wyk]]<br>({{SANFL NA}})
+| emergency2 = 11. Jack Delean<br>({{SANFL SA}})
+| emergency3 = 1. [[Patrick Parnell]]<br>({{SANFL Gle}})
+| coach = [[Martin Mattner]]<br>({{SANFL Stu}})
+}}
+
+==See also==
+* [[2026 SANFL Women's League season]]
+
+==Notes==
+{{notelist}}
+
+==References==
+{{reflist|2}}
+
+==External links==
+*[https://sanfl.com.au/ SANFL official website]
+*[https://australianfootball.com/seasons/season/sanfl/107/men%2527s%2Bpremiership%2Bseason/3/3/2027 2026 SANFL season results and attendances] at AustralianFootball.com
+*[https://sanfl-content.imgix.net/content/uploads/2025/12/10160330/2026-Hostplus-SANFL-Mens-League-Fixture-1.pdf 2026 SANFL Fixture] 
+
+{{SANFL seasons}}
+
+[[Category:South Australian National Football League seasons]]
+[[Category:2026 in Australian rules football|SANFL]]

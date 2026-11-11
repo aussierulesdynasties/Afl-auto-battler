@@ -49,9 +49,9 @@ func _play(home: Array, away: Array, hcode: String, acode: String, seed: int, ca
 		if bool(ev.get("crumb", false)):
 			var role := str(roles.get(str(ev["player_id"]), "?"))
 			tally["crumb"][role] = int(tally["crumb"].get(role, 0)) + 1
-		var set := bool(ev.get("set", false))
-		tally["shots"][0 if set else 1] += 1
-		if set:
+		var is_set := bool(ev.get("set", false))
+		tally["shots"][0 if is_set else 1] += 1
+		if is_set:
 			var metres := snappedf(gl - absf(float(ev["fp"])), 5.0)
 			var bd: Array = tally["band"].get(metres, [0, 0])
 			bd[0] += 1 if kind == "goal" else 0

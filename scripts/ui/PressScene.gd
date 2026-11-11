@@ -145,7 +145,7 @@ static func where_text(conf: Dictionary) -> String:
 	var r := int(conf.get("round", 0))
 	var opp := str(conf.get("opp", ""))
 	var bits: PackedStringArray = []
-	if r > Season.REGULAR_ROUNDS:
+	if r > (GameState.season.regular_rounds() if GameState.season != null else Season.REGULAR_ROUNDS):
 		bits.append("Finals")
 	elif r > 0:
 		bits.append("Round %d" % r)

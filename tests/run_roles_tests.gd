@@ -459,7 +459,7 @@ func _test_selection_pages_tests() -> void:
 				and ui.find_children("BenchSpot_*", "Button", true, false).size() == 5,
 				"Phone: the 18 and the bench are all on the page (%s)" % tag)
 		var phone_hint: Label = ui.find_child("BuilderHint", true, false)
-		_check(phone_hint != null and phone_hint.text.contains("Tap a player, then another (or drag one onto another) to swap them.")
+		_check(phone_hint != null and phone_hint.text.contains("Tap two of our players to swap them. Or drag one onto the other.")
 				and not phone_hint.text.contains("Click"), "Phone: the help line says Tap, not Click (%s)" % tag)
 		var inter := ui.find_child("InterchangeRow", true, false)
 		var save: Button = ui.find_child("SaveBest23", true, false)
@@ -545,7 +545,7 @@ func _test_selection_pages_tests() -> void:
 			_check(_no_scroll(ui.find_child("SelectionScroll", true, false)) and _no_scroll(ui.find_child("WeekScroll", true, false)),
 					"PC: neither column scrolls (%s)" % ptag)
 			var pc_hint: Label = ui.find_child("BuilderHint", true, false)
-			_check(pc_hint != null and pc_hint.text.contains("Click a player"), "PC: the help line says Click (%s)" % ptag)
+			_check(pc_hint != null and pc_hint.text.contains("Click two of our players"), "PC: the help line says Click (%s)" % ptag)
 			var week_w := (ui.find_child("WeekColumn", true, false) as Control).size.x
 			_check(week_w >= 460.0 and week_w <= 600.5, "PC: the right column keeps a readable width, %d wide (%s)" % [int(week_w), ptag])
 			var sl2: RichTextLabel = ui.find_child("SynergyLine", true, false)
@@ -1023,16 +1023,7 @@ func _test_culture_ui_tests() -> void:
 	_check(ls.find_child("CultureOpen", true, false) == null and ls.find_child("CultureSheet", true, false) == null,
 			"My list has no Club culture row of its own any more")
 	_check(not ResourceLoader.exists("res://scripts/ui/CultureSheet.gd"), "The old Culture sheet's script is gone")
-	var callers := []
-	var stack := ["res://scripts"]
-	while not stack.is_empty():
-		var d: String = stack.pop_back()
-		for sub in DirAccess.get_directories_at(d):
-			stack.append(d + "/" + sub)
-		for f in DirAccess.get_files_at(d):
-			if f.ends_with(".gd") and FileAccess.get_file_as_string(d + "/" + f).contains("CultureSheet"):
-				callers.append(f)
-	_check(callers.is_empty(), "Nothing in the game opens a Culture sheet (%s)" % ", ".join(callers))
+	# That nothing in scripts/ names CultureSheet is a static lint: tools/lint/boundaries.py.
 	# The way in is a real tap on Captaincy; the culture sits under the leaders.
 	var open_btn: Button = ls.find_child("CaptaincyOpen", true, false)
 	var why: String = await Tap.tap(open_btn)

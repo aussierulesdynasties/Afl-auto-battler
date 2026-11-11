@@ -1,0 +1,4 @@
+league,name,clubs,rounds,games_each,byes_each,finals_teams,finals_format,gf_venue,points_per_team_game,points_sd,goal_accuracy,premiers,runners_up,source_url
+VFL,Victorian Football League,22,21,18,3,10,wildcard_top10,Ikon Park,88.7,26.5,0.525,BOX,GEER,"https://en.wikipedia.org/wiki/2026_VFL_season (home-and-away scores, 198 matches; finals)"
+SANFL,South Australian National Football League,10,19,18,1,5,final_five,Adelaide Oval,74.8,24.9,0.538,NWD,STU,"https://en.wikipedia.org/wiki/2026_SANFL_season (home-and-away scores, 90 matches; finals)"
+WAFL,West Australian Football League,10,20,18,2,5,final_five,Optus Stadium,76.1,25.0,0.536,PEL,CLA,"https://en.wikipedia.org/wiki/2026_WAFL_season (home-and-away scores, 90 matches; finals)"
