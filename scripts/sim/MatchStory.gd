@@ -496,8 +496,16 @@ static func _earners(res: Dictionary, credit) -> Array:
 		return []
 	var ids: Array = (credit as Dictionary).keys()
 	ids.sort_custom(func(a, b): return absf(float(credit[a])) > absf(float(credit[b])))
-	var out := []
+	# Name only men whose points went the same way as the row's total, so a
+	# man who cost us is never named on a row that shows a gain.
+	var total := 0.0
 	for id in ids:
+		total += float(credit[id])
+	var same := ids.filter(func(id): return float(credit[id]) * total >= 0.0)
+	if same.is_empty():
+		same = ids
+	var out := []
+	for id in same:
 		if out.is_empty() or absf(float(credit[id])) >= 0.5:
 			out.append(_name_in(res, str(id)))
 	return out
