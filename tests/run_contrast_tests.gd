@@ -15,6 +15,8 @@ extends SceneTree
 ## The floors: docs/VISUAL_STYLE_GUIDE.md names 4.5:1 for text against its
 ## panel (the screen lint rule). It names no floor for a fill, so a fill takes
 ## WCAG's 3:1 for a control's shape against what is beside it.
+##
+## Seeded by design: it measures fixed colours, nothing random runs.
 
 const TEXT_FLOOR := 4.5
 const FILL_FLOOR := 3.0
