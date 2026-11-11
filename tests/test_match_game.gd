@@ -3450,7 +3450,7 @@ func _test_ballup_moves_play_differently() -> void:
 		return {"called": called, "mine": sim.score(0) - int(before[0]), "theirs": sim.score(1) - int(before[1]),
 				"score": [sim.score(0), sim.score(1)], "metres": float((r["team"] as Array)[0].get("metres_gained", 0.0)),
 				"disposals": float((r["team"] as Array)[0].get("disposals", 0.0))}
-	var games := 16
+	var games := 32
 	var called := 0
 	var differ := 0
 	var flood := {"mine": 0, "theirs": 0, "metres": 0.0, "disposals": 0.0}
