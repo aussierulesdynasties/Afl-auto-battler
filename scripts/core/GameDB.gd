@@ -861,12 +861,14 @@ func _load_club_moves() -> Dictionary:
 		var key := _look_key({"first": _cell_str(cells, idx, "first"),
 				"last": _cell_str(cells, idx, "last"), "dob": _cell_str(cells, idx, "dob")})
 		out[key] = {"from": _cell_str(cells, idx, "from_club"), "to": _cell_str(cells, idx, "to_club"),
-				"kind": _cell_str(cells, idx, "kind")}
+				"kind": _cell_str(cells, idx, "kind"), "list": _cell_str(cells, idx, "list")}
 	return out
 
 
 ## The club this player joined in the 2026 trade period or free agency, as
-## {"from", "to", "kind"}; {} if he stayed where he played 2026.
+## {"from", "to", "kind", "list"}; {} if he stayed where he played 2026. "list"
+## is the list he joined where a source names it ("rookie" or "cat_b"; "" or
+## "senior" is the senior list).
 func club_move(p: Dictionary) -> Dictionary:
 	return club_moves.get(_look_key(p), {})
 
