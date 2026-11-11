@@ -3965,7 +3965,8 @@ func papers_record() -> Dictionary:
 
 
 ## The paper's ladder, best first: each club's best side as TeamRating reads it
-## after the summer's injuries, near-ties to last year's finish.
+## after the summer's injuries, near-ties to last year's finish, then nudged by
+## the practice matches ("moves": club -> {places, margin} for each it moved).
 func _build_papers() -> void:
 	var ratings := {}
 	var last := {}
@@ -3973,7 +3974,16 @@ func _build_papers() -> void:
 		var code := str(club)
 		ratings[code] = TeamRating.rating(season.lists[club])
 		last[code] = last_finish_of(code)
-	var order := PreSeason.predicted_order(ratings, last, club_expect)
+	var listed := PreSeason.predicted_order(ratings, last, club_expect)
+	# The practice matches nudge it (director, 2026-11-12): every club the same.
+	var margins: Dictionary = preseason.get("practice_margins", {}) if preseason.get("practice_margins") is Dictionary else {}
+	var order := PreSeason.practice_nudge(listed, margins)
+	var moves := {}
+	for code in margins:
+		var shift := PreSeason.practice_shift(int(margins[code]))
+		var places := listed.find(code) - order.find(code)
+		if shift != 0 and places != 0 and signi(places) == signi(shift):
+			moves[str(code)] = {"places": places, "margin": int(margins[code])}
 	var pred := order.find(my_club) + 1
 	var eligible := []
 	if pred > Season.FINALISTS:
@@ -3986,7 +3996,7 @@ func _build_papers() -> void:
 	var kind := ""
 	if not eligible.is_empty():
 		kind = PreSeason.pick_paper(eligible, PreSeason.papers_seed(career_seed, season_year, my_club))
-	preseason["papers"] = {"order": order, "pred": pred, "kind": kind,
+	preseason["papers"] = {"order": order, "moves": moves, "pred": pred, "kind": kind,
 			"pid": pid if kind == "breakout" else "", "claim": 0, "answered": false,
 			"choice": -2, "result": "", "seen": false}
 	mark_dirty()
@@ -4769,6 +4779,12 @@ func _practice_build(home: String, away: String, home_invites: Array, away_invit
 ## records or the board. Returns your report (for your club), or {}.
 func _practice_finish(club: String, built: Dictionary, res: Dictionary) -> Dictionary:
 	var stats_all: Dictionary = res.get("players", {})
+	# Each club's margin, for the papers' ladder (PreSeason.practice_nudge).
+	var sc: Array = res.get("score", [0, 0])
+	var margin := int(sc[0]) - int(sc[1])
+	if not (preseason.get("practice_margins") is Dictionary):
+		preseason["practice_margins"] = {}
+	(preseason["practice_margins"] as Dictionary)[club] = margin if club == str(built["home"]) else -margin
 	var guests: Array = (built["guests"] as Dictionary).get(club, [])
 	var played := {}
 	for id in (built["ids"] as Dictionary).get(club, []):

@@ -5,11 +5,16 @@ extends SceneTree
 ## Writes <out>_<kind>.png for each story (finish, pressure, breakout) as it
 ## opens, <out>_<kind>_low.png (scrolled to the ladder), and <out>_finish_answered.png
 ## (the club talked up). The story kind is forced for the look only.
+## --real keeps the paper's own ladder (the practice matches' nudge and all) and
+## writes <out>_real.png and <out>_real_low.png; --want-win N tries seeds from
+## --seed up until the club won its practice match by N points or more.
 
 var W := 390
 var H := 844
 var _seed := 4127
 var _risk := -1.0
+var _real := false
+var _want_win := -999
 
 
 func _initialize() -> void:
@@ -43,6 +48,10 @@ func _run() -> void:
 		if str(a[i]) == "--art" and str(a[i + 1]) == "off":
 			# The stops without their pictures, as they were (the before shot).
 			load("res://scripts/ui/UiArt.gd").set("dir", "res://assets/ui/none")
+		if str(a[i]) == "--real":
+			_real = true
+		if str(a[i]) == "--want-win":
+			_want_win = int(a[i + 1])
 		if str(a[i]) == "--seed":
 			_seed = int(a[i + 1])
 		if str(a[i]) == "--size":
@@ -76,8 +85,27 @@ func _run() -> void:
 	print("canvas ", root.get_visible_rect().size)
 	for i in range(3):
 		await process_frame
-	state.start_season(club, db.club_list(club))
-	state.open_preseason()
+	var tries := 0
+	while true:
+		state.reset()
+		state.career_seed = _seed
+		state.replay_seed = _seed
+		state.start_season(club, db.club_list(club))
+		state.open_preseason()
+		if _want_win == -999:
+			break
+		var g := 0
+		while state.preseason_active() and state.preseason_stop() != "papers" and g < 12:
+			g += 1
+			state.preseason_advance()
+		var margin := int((state.preseason.get("practice_margins", {}) as Dictionary).get(club, -999))
+		print("seed ", _seed, " practice margin ", margin)
+		tries += 1
+		if margin >= _want_win or tries >= 40:
+			break
+		_seed += 1
+	state.set_setting("seen_weekly_loop_intro", true)
+	state.set_setting("seen_training_intro", true)
 	if _risk >= 0.0:
 		load("res://scripts/sim/PreSeason.gd").data()["heavy_week_injury"] = _risk
 	for m in state.season.fixture[0]:
@@ -89,6 +117,17 @@ func _run() -> void:
 		guard += 1
 		state.preseason_advance()
 	print("stop ", state.preseason_stop())
+	if _real:
+		var rec0: Dictionary = state.papers_record()
+		print("seed ", _seed, " margin ", (state.preseason.get("practice_margins", {}) as Dictionary).get(club, "none"),
+				" pred ", rec0.get("pred"), " moves ", rec0.get("moves"), " order ", rec0.get("order"))
+		root.get_node("Router").go("hub")
+		await _frames(10)
+		await _shot(out + "_real.png")
+		await _scroll(true)
+		await _shot(out + "_real_low.png")
+		quit(0)
+		return
 	# For the look only: the paper has the club 13th, so the ladder and the words agree.
 	var order: Array = state.papers_record()["order"]
 	order.erase(club)

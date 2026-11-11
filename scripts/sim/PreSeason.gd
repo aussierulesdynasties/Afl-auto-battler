@@ -51,6 +51,8 @@ const DEFAULTS := {
 	"papers_after": 6,
 	"papers_within": 22,
 	"papers_places": 1,
+	"papers_practice_one": 24,
+	"papers_practice_two": 42,
 	"seen_uncertainty": 0.7,
 	"guest_spare_number": 60,
 	"practice_week": 7,
@@ -835,6 +837,61 @@ static func predicted_order(ratings: Dictionary, last: Dictionary, expect: Dicti
 			return ea < eb
 		return str(a) < str(b))
 	return codes
+
+
+## The places a practice result moves a club on the paper's ladder (director,
+## 2026-11-12, "Nudge it"): a win by papers_practice_one points (four goals) or
+## more lifts it one, by papers_practice_two (seven goals) two; a loss by the
+## same drops it; anything closer, a draw or no match leaves it.
+static func practice_shift(margin: int) -> int:
+	var size := absi(margin)
+	var steps := 0
+	if size >= int(tune("papers_practice_two")):
+		steps = 2
+	elif size >= int(tune("papers_practice_one")):
+		steps = 1
+	return steps if margin > 0 else -steps
+
+
+## The paper's ladder after the practice matches: each club with a result
+## (`margins`: club -> its own points margin) aims practice_shift places up or
+## down, and the ladder is re-dealt so every place is still filled once. A club
+## that moves takes the place ahead of one that holds it; equal aims keep the
+## list order. Every club the same, and the same results always print the
+## same ladder.
+static func practice_nudge(order: Array, margins: Dictionary) -> Array:
+	var rows := []
+	for i in range(order.size()):
+		var code := str(order[i])
+		var shift := practice_shift(int(margins[code])) if margins.has(code) else 0
+		rows.append([i - shift, -shift, i, code])
+	rows.sort_custom(func(a, b):
+		for k in range(3):
+			if int(a[k]) != int(b[k]):
+				return int(a[k]) < int(b[k])
+		return false)
+	var out := []
+	for r in rows:
+		out.append(r[3])
+	return out
+
+
+## The paper's word on a club the practice match moved `places` (up when
+## positive) after a result by `margin` points: "Up a spot on the back of a
+## 30-point practice win". "" when it did not move.
+static func practice_move_line(places: int, margin: int) -> String:
+	if places == 0 or margin == 0:
+		return ""
+	var size := absi(places)
+	var spots: String = {1: "a spot", 2: "two", 3: "three", 4: "four"}.get(size, "%d places" % size)
+	var pts := absi(margin)
+	if places > 0:
+		if size == 1:
+			return "Up %s on the back of a %d-point practice win" % [spots, pts]
+		return "Up %s after a %d-point practice thumping" % [spots, pts]
+	if size == 1:
+		return "Down %s after a %d-point practice loss" % [spots, pts]
+	return "Down %s after a %d-point practice hiding" % [spots, pts]
 
 
 ## The finish the coach names when he talks the club up: a few places above

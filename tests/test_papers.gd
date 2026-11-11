@@ -18,6 +18,7 @@ const CLUB := "FRE"
 func run() -> void:
 	GameState.replay_seed = SUITE_SEED
 	_t("_test_rules")
+	_t("_test_practice_nudge")
 	_t("_test_deck")
 	_t("_test_flow")
 	_t("_test_answers")
@@ -99,6 +100,57 @@ func _test_rules() -> void:
 	_check(PreSeason.pick_paper(["finish", "breakout"], s) == PreSeason.pick_paper(["finish", "breakout"], s)
 			and PreSeason.pick_paper([], s) == "finish",
 			"Which story runs is the pre-season's own seeded draw")
+
+
+## The practice match nudges the paper's ladder (director, 2026-11-12, "Nudge
+## it"): four goals moves a club a place, seven goals two; every club the same.
+func _test_practice_nudge() -> void:
+	PreSeason.reload()
+	_check(PreSeason.practice_shift(24) == 1 and PreSeason.practice_shift(41) == 1 and PreSeason.practice_shift(42) == 2
+			and PreSeason.practice_shift(23) == 0 and PreSeason.practice_shift(0) == 0
+			and PreSeason.practice_shift(-24) == -1 and PreSeason.practice_shift(-60) == -2,
+			"A win by four goals lifts a club one, by seven goals two; a loss the same down; closer or a draw, none")
+	var base := ["A", "B", "C", "D", "E", "F", "G", "H"]
+	var win := PreSeason.practice_nudge(base, {"E": 30, "F": -10})
+	_check(win == ["A", "B", "C", "E", "D", "F", "G", "H"],
+			"A comfortable win lifts the club one place and the club it passed drops one (%s)" % str(win))
+	var heavy := PreSeason.practice_nudge(base, {"E": 45})
+	_check(heavy == ["A", "B", "E", "C", "D", "F", "G", "H"], "A heavy win lifts the club two (%s)" % str(heavy))
+	var loss := PreSeason.practice_nudge(base, {"C": -30, "D": 30})
+	_check(loss == ["A", "B", "D", "C", "E", "F", "G", "H"],
+			"A comfortable loss drops the club one; its opponent's win lifts that club one (%s)" % str(loss))
+	var hiding := PreSeason.practice_nudge(base, {"B": -45})
+	_check(hiding == ["A", "C", "D", "B", "E", "F", "G", "H"], "A heavy loss drops the club two (%s)" % str(hiding))
+	_check(PreSeason.practice_nudge(base, {"C": 0, "D": 0}) == base, "A draw moves nobody")
+	_check(PreSeason.practice_nudge(base, {}) == base, "A club with no practice match does not move")
+	var ends := PreSeason.practice_nudge(base, {"A": 60, "B": 30, "H": -60, "G": -30})
+	_check(ends == base, "First cannot go higher and last cannot go lower; the ladder stays whole (%s)" % str(ends))
+	var crowd := PreSeason.practice_nudge(base, {"A": -50, "B": 50, "C": 30, "D": -30, "E": 45, "F": -45})
+	var sorted := crowd.duplicate()
+	sorted.sort()
+	_check(sorted == base and crowd == PreSeason.practice_nudge(base, {"A": -50, "B": 50, "C": 30, "D": -30, "E": 45, "F": -45}),
+			"However the results fall, every club is printed once and the same results print the same ladder (%s)" % str(crowd))
+	_check(PreSeason.practice_move_line(1, 30) == "Up a spot on the back of a 30-point practice win"
+			and PreSeason.practice_move_line(-2, -45) == "Down two after a 45-point practice hiding"
+			and PreSeason.practice_move_line(0, 30) == "",
+			"The paper says why a club moved, in points; nothing for a club that did not")
+	# In a career: every club's practice margin is kept, and the ladder printed is the nudged one.
+	_career("MEL")
+	_to_papers()
+	var margins: Dictionary = GameState.preseason.get("practice_margins", {})
+	var rec: Dictionary = GameState.papers_record()
+	var played := margins.size()
+	_check(played >= GameState.season.clubs.size() - 1 and margins.has("MEL"),
+			"Every club that played a practice match has its margin kept, yours too (%d)" % played)
+	var moves: Dictionary = rec.get("moves", {})
+	var ok := true
+	for code in moves:
+		var m: Dictionary = moves[code]
+		ok = ok and signi(int(m["places"])) == signi(PreSeason.practice_shift(int(m["margin"])))
+	_check(ok and (rec["order"] as Array).size() == GameState.season.clubs.size()
+			and int(rec["pred"]) == (rec["order"] as Array).find("MEL") + 1,
+			"The printed ladder is whole, each named move is the way its result points, and your place is read from it")
+	_career()
 
 
 func _test_deck() -> void:
