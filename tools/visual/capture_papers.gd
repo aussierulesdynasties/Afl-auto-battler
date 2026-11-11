@@ -132,6 +132,13 @@ func _run() -> void:
 		await _scroll(true)
 		await create_timer(0.5).timeout
 		await _shot(out + "_real_low.png")
+		# The ladder a few clubs at a time, each block of rows at the top of the
+		# page, with every club's power-ranking blurb (director, 2026-11-12).
+		for i in [0, 4, 8, 12]:
+			await _scroll_to("PapersRow_%d" % i)
+			await create_timer(0.3).timeout
+			await _shot(out + "_ladder_%02d.png" % (i + 1))
+		print("blurbs ", state.papers_blurbs())
 		quit(0)
 		return
 	# For the look only: the paper has the club 13th, so the ladder and the words agree.
@@ -176,6 +183,17 @@ func _scroll(to_foot: bool) -> void:
 	var sc := page.get_parent() as ScrollContainer if page != null else null
 	if sc != null:
 		sc.scroll_vertical = int(sc.get_v_scroll_bar().max_value) if to_foot else 0
+	await _frames(3)
+
+
+## Scroll the page so `node_name` sits at the top of it.
+func _scroll_to(node_name: String) -> void:
+	await _frames(3)
+	var page: Node = current_scene.find_child("PreSeasonPage", true, false)
+	var sc := page.get_parent() as ScrollContainer if page != null else null
+	var row := current_scene.find_child(node_name, true, false) as Control
+	if sc != null and row != null:
+		sc.scroll_vertical = int(row.global_position.y - (page as Control).global_position.y) - 8
 	await _frames(3)
 
 

@@ -4112,6 +4112,117 @@ func _papers_breakout() -> String:
 	return str(best.get("id", ""))
 
 
+## The paper's line on a club's practice move ("Up two after a 56-point
+## practice thumping"), or "" when its result did not move it.
+func papers_move_line(code: String) -> String:
+	var mv: Dictionary = (papers_record().get("moves", {}) as Dictionary).get(code, {})
+	if mv.is_empty():
+		return ""
+	var margins: Dictionary = preseason.get("practice_margins", {}) if preseason.get("practice_margins") is Dictionary else {}
+	var by := str(mv.get("by", ""))
+	var by_name := by if by == "" or by == "top" or by == "bottom" else GameDB.club_name(by)
+	return PreSeason.practice_move_line(int(mv.get("places", 0)), int(mv.get("margin", 0)),
+			int(mv.get("earned", mv.get("places", 0))), by_name, int(margins.get(by, 0)))
+
+
+## The papers' power rankings: club -> a line or two on it in a footy writer's
+## voice (PowerRankings), from its facts now. Every club the same, yours too;
+## words only. {} before the papers print.
+func papers_blurbs() -> Dictionary:
+	var order: Array = papers_record().get("order", [])
+	if order.is_empty():
+		return {}
+	return PowerRankings.blurbs(order, papers_facts())
+
+
+## Each club's facts for its power-ranking blurb (PowerRankings documents the
+## keys): its lines ranked against the league's, its best players, its best new
+## face, its best player out injured, its kid to watch, its practice result.
+func papers_facts() -> Dictionary:
+	var order: Array = papers_record().get("order", [])
+	var margins: Dictionary = preseason.get("practice_margins", {}) if preseason.get("practice_margins") is Dictionary else {}
+	var depth := {"DEF": 6, "MID": 6, "FWD": 6, "RUCK": 2}
+	var words := {"DEF": "defence", "MID": "midfield", "FWD": "forward line", "RUCK": "ruck stocks"}
+	# Each line's strength: the mean of its best few fit players.
+	var lines := {}
+	for code in order:
+		var by_role := {}
+		for p in season.lists[code]:
+			if int(p.get("injury_weeks", 0)) > 0:
+				continue
+			var r := str(p.get("role", ""))
+			if not depth.has(r):
+				continue
+			if not by_role.has(r):
+				by_role[r] = []
+			(by_role[r] as Array).append(p)
+		var mine := {}
+		for r in depth:
+			var ps: Array = by_role.get(r, [])
+			ps.sort_custom(func(a, b): return int(a.get("overall", 0)) > int(b.get("overall", 0)))
+			var top := ps.slice(0, int(depth[r]))
+			var sum := 0
+			for p in top:
+				sum += int(p.get("overall", 0))
+			mine[r] = {"value": float(sum) / float(maxi(1, int(depth[r]))),
+					"lead": GameDB.player_display_name(top[0]) if not top.is_empty() else ""}
+		lines[str(code)] = mine
+	var ranks := {}
+	for r in depth:
+		var codes := order.duplicate()
+		codes.sort_custom(func(a, b): return float(lines[str(a)][r]["value"]) > float(lines[str(b)][r]["value"]))
+		for i in range(codes.size()):
+			if not ranks.has(str(codes[i])):
+				ranks[str(codes[i])] = {}
+			ranks[str(codes[i])][r] = i + 1
+	var out := {}
+	for i in range(order.size()):
+		var code := str(order[i])
+		var list: Array = (season.lists[code] as Array).duplicate()
+		list.sort_custom(func(a, b): return int(a.get("overall", 0)) > int(b.get("overall", 0)))
+		var fit := list.filter(func(p): return int(p.get("injury_weeks", 0)) <= 0)
+		var f := {"name": GameDB.club_name(code), "pos": i + 1, "clubs": order.size(),
+				"last": last_finish_of(code), "move": papers_move_line(code)}
+		if fit.size() > 0:
+			f["star"] = GameDB.player_display_name(fit[0])
+		if fit.size() > 1:
+			f["second"] = GameDB.player_display_name(fit[1])
+		var best_r := ""
+		var worst_r := ""
+		for r in ["MID", "FWD", "DEF", "RUCK"]:
+			if best_r == "" or int(ranks[code][r]) < int(ranks[code][best_r]):
+				best_r = r
+			if worst_r == "" or int(ranks[code][r]) > int(ranks[code][worst_r]):
+				worst_r = r
+		f["line"] = {"word": words[best_r], "rank": int(ranks[code][best_r]), "lead": lines[code][best_r]["lead"]}
+		f["weak"] = {"word": words[worst_r], "rank": int(ranks[code][worst_r])}
+		# The best new face from another club who would make the side.
+		for k in range(mini(22, list.size())):
+			var p: Dictionary = list[k]
+			var stints: Array = Career.of(p).get("stints", [])
+			if int(p.get("joined", -1)) >= season_year - 1 and not stints.is_empty() \
+					and str((stints[-1] as Array)[0]) != code:
+				f["recruit"] = {"name": GameDB.player_display_name(p), "from": GameDB.club_name(str((stints[-1] as Array)[0]))}
+				break
+		for p in list:
+			if int(p.get("injury_weeks", 0)) > 0:
+				f["hurt"] = {"name": GameDB.player_display_name(p), "kind": Injuries.wording(str(p.get("injury_kind", "")))}
+				break
+		var young := {}
+		for p in fit:
+			if float(p.get("age", 30.0)) > 21.0 or (fit.size() > 0 and p == fit[0]):
+				continue
+			if young.is_empty() or int(p.get("potential", 0)) > int(young.get("potential", 0)):
+				young = p
+		if not young.is_empty():
+			f["young"] = {"name": GameDB.player_display_name(young), "age": int(float(young.get("age", 20.0)))}
+		if margins.has(code):
+			f["has_margin"] = true
+			f["margin"] = int(margins[code])
+		out[code] = f
+	return out
+
+
 ## The story to answer, as a card (the same card the weekly stories use), or
 ## {} when the papers have nothing to ask this year.
 func papers_card() -> Dictionary:
