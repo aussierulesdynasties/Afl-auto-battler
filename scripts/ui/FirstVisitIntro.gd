@@ -22,12 +22,12 @@ const TEXT := {
 		"His junior numbers and your scouts' guess at OVR and POT are on his sheet. Tap a name to weigh it up.",
 	]],
 	"selection": ["Picking the side", [
-		"Your match-day 23 for this week. Until you move someone, the best side is picked for you.",
-		"Move players on and off the field to set the team you want.",
+		"Our match-day 23 for this week. The match committee picks it until you move someone.",
+		"Move players on and off the ground to set the side you want.",
 	]],
 	"coaching": ["How we play", [
-		"Your game plan: how your side plays every week, set against what your list is good at.",
-		"Pick the plan that suits the players you have. You can change it before any match.",
+		"Our game plan: how we play every week, set against what our list is good at.",
+		"Each plan suits some lists more than others. We can change it before any match.",
 	]],
 	"list": ["Your list", [
 		"Every player on your list: who he is, whether he is fit, and how good he is.",
