@@ -7355,7 +7355,7 @@ func _medical_retire(club: String, p: Dictionary) -> void:
 
 
 ## The medical panel's sittings on your players in the week just played, as
-## short lines for the week's injuries: "Name cleared to play on (a 50% chance)."
+## short lines for the week's injuries: "Name was cleared to play on (a 50% chance)."
 ## last_medical holds that week's sittings and nothing older
 ## (emptied before each round's injuries and at the rollover), so nothing is
 ## matched on a round's name: a home-and-away round, a final played or

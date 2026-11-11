@@ -6,8 +6,9 @@ extends SceneTree
 ## Writes <dir>/medical_sheet.png (a player on four concussions in five years:
 ## the warning line on his sheet), medical_list.png (his row on the list),
 ## medical_list_out.png (a concussed team-mate on three),
-## medical_cleared.png and medical_retired.png (the hub the week the panel sat
-## on your player, each way). Never touches a real save.
+## medical_cleared.png, medical_retired.png and medical_two.png (the hub the
+## week the panel sat on your player, each way, and on two at once), each with
+## a _summary.png of the match summary's Your week. Never touches a real save.
 
 
 func _initialize() -> void:
@@ -66,19 +67,24 @@ func _pick(state, want: bool) -> Dictionary:
 	return best
 
 
-## The hub the week the panel sat on one of yours.
-func _week(state, db, want: bool, path: String) -> void:
+## The week the panel sat on yours (one sitting per entry of `wants`, each
+## cleared or not): the hub's result, then the match summary's Your week.
+func _week(state, db, wants: Array, path: String) -> void:
 	_career(state, db)
 	state.advance()
-	var p := _pick(state, want)
-	_past(state, p, 4)
-	p["injury_weeks"] = 2
-	p["injury_kind"] = "concussion"
-	var row := {"id": str(p["id"]), "club": "FRE", "weeks": 2, "kind": "concussion"}
-	state.last_injuries.append(row)
-	state._log_injuries([row], state.last_label)
+	var out_ids := []
+	for want in wants:
+		var p := _pick(state, want)
+		_past(state, p, 4)
+		p["injury_weeks"] = 2
+		p["injury_kind"] = "concussion"
+		var row := {"id": str(p["id"]), "club": "FRE", "weeks": 2, "kind": "concussion"}
+		state.last_injuries.append(row)
+		state._log_injuries([row], state.last_label)
+		if not want:
+			out_ids.append(str(p["id"]))
 	state.last_injuries = state._not_medically_out(state.last_injuries).filter(
-			func(r): return want or str(r["id"]) != str(p["id"]))
+			func(r): return not out_ids.has(str(r["id"])))
 	state.skip_media_conference()
 	var hub = load("res://scenes/HubScene.tscn").instantiate()
 	root.add_child(hub)
@@ -86,12 +92,23 @@ func _week(state, db, want: bool, path: String) -> void:
 	hub.call("_show_results", state.last_results)
 	await _frames(40)
 	var line: Label = hub.find_child("MyMedical", true, false)
-	print("WEEK ", "cleared" if want else "retired", " | hub line: ", line.text if line != null else "(no MyMedical)",
+	print("WEEK ", wants, " | hub line: ", line.text if line != null else "(no MyMedical)",
 			" | news: ", state.news[0].get("text", ""))
 	if line != null:
 		await _scroll_to(hub, line, 420)
-	await _shot(path)
+	await _shot(path + ".png")
 	hub.queue_free()
+	await _frames(2)
+	state.review_requested = true
+	var full = load("res://scenes/MatchScene.tscn").instantiate()
+	root.add_child(full)
+	await _frames(30)
+	var ml: Label = full.find_child("YourMedical", true, false)
+	print("SUMMARY ", wants, " | ", ml.text if ml != null else "(no YourMedical)")
+	if ml != null:
+		await _scroll_to(full, ml, 150)
+	await _shot(path + "_summary.png")
+	full.queue_free()
 	await _frames(2)
 
 
@@ -163,6 +180,7 @@ func _run() -> void:
 	list.queue_free()
 	await _frames(2)
 
-	await _week(state, db, true, out + "/medical_cleared.png")
-	await _week(state, db, false, out + "/medical_retired.png")
+	await _week(state, db, [true], out + "/medical_cleared")
+	await _week(state, db, [false], out + "/medical_retired")
+	await _week(state, db, [false, true], out + "/medical_two")
 	quit(0)

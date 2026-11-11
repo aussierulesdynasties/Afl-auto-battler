@@ -30,6 +30,7 @@ func run() -> void:
 	_t("_test_old_save_loads")
 	_t("_test_no_other_dice_move")
 	_t("_test_line_in_every_path")
+	_t("_test_two_in_a_week")
 	_t("_test_press_never_names_him")
 	_t("_test_retirement_is_on_the_books")
 	_t("_test_a_player_short_still_trades")
@@ -161,6 +162,13 @@ func _test_shown_percentage() -> void:
 				"The week's result states the chance (%s)" % MedicalPanel.result_short(row))
 		_check(MedicalPanel.result_line(row).begins_with("Sam Hale had his 5th concussion in 5 years"),
 				"It opens on his name and the count: %s" % MedicalPanel.result_line(row))
+	# The short lines are whole sentences, so a week of them reads as prose.
+	var gone := MedicalPanel.result_short({"name": "Josh Treacy", "cleared": false, "pct": 50})
+	_check(gone == "Josh Treacy was not cleared to play on. He had a 50% chance. His career is over.",
+			"The short line for a career ended is a whole sentence: %s" % gone)
+	var kept := MedicalPanel.result_short({"name": "Shai Bolton", "cleared": true, "pct": 50})
+	_check(kept == "Shai Bolton was cleared to play on (a 50% chance).",
+			"The short line for a player cleared is a whole sentence: %s" % kept)
 	# The sheet shows the same line for a player on four.
 	_career()
 	var p: Dictionary = GameState.my_list[0]
@@ -232,7 +240,7 @@ func _test_sits_at_five_and_each_after() -> void:
 			and str(news[0]["text"]).begins_with(GameDB.player_display_name(p)),
 			"The coach is told that week, with the chance: %s" % [news])
 	_check(GameState.my_medical_lines().size() == 1
-			and str(GameState.my_medical_lines()[0]).contains("cleared to play on (a %d%% chance)." % MedicalPanel.clear_pct()),
+			and str(GameState.my_medical_lines()[0]).contains("was cleared to play on (a %d%% chance)." % MedicalPanel.clear_pct()),
 			"The week's injury surface carries it: %s" % [GameState.my_medical_lines()])
 	# The next one is another sitting at the same odds.
 	p["injury_weeks"] = 0
@@ -272,7 +280,7 @@ func _test_not_cleared_ends_career() -> void:
 			and str(news[0].get("club", "")) == "FRE",
 			"The coach is told that week, with the chance: %s" % [news])
 	_check(GameState.my_medical_lines().size() == 1
-			and str(GameState.my_medical_lines()[0]).contains("not cleared to play on. He had a %d%% chance. His career is over." % MedicalPanel.clear_pct()),
+			and str(GameState.my_medical_lines()[0]).contains("was not cleared to play on. He had a %d%% chance. His career is over." % MedicalPanel.clear_pct()),
 			"The week's injury surface carries it: %s" % [GameState.my_medical_lines()])
 	var story := NewsFront.story(news[0], "FRE")
 	_check(str(story.get("headline", "")).contains(who) and str(story.get("headline", "")).contains("career"),
@@ -526,7 +534,7 @@ func _test_line_in_every_path() -> void:
 	GameState._process_injuries([{"home": "FRE", "away": "MEL", "round": 25, "label": "Semi Final 1", "tag": "SF1",
 			"injuries": [{"side": 0, "id": str(p["id"]), "weeks": 2, "kind": "concussion"}]}])
 	GameState._settle_medical()
-	_check(GameState.my_medical_lines().size() == 1 and str(GameState.my_medical_lines()[0]).contains("cleared to play on (a %d%% chance)." % MedicalPanel.clear_pct()),
+	_check(GameState.my_medical_lines().size() == 1 and str(GameState.my_medical_lines()[0]).contains("was cleared to play on (a %d%% chance)." % MedicalPanel.clear_pct()),
 			"A sitting in a simulated finals week is on the week's surface: %s" % [GameState.my_medical_lines()])
 	# A final he played, and this one ends a career.
 	GameState.last_label = "Preliminary Final"
@@ -534,7 +542,7 @@ func _test_line_in_every_path() -> void:
 			"injuries": [{"side": 1, "id": str(q["id"]), "weeks": 2, "kind": "concussion"}]}])
 	GameState._settle_medical()
 	_check(GameState.my_medical_lines().size() == 1
-			and str(GameState.my_medical_lines()[0]).contains("not cleared to play on. He had a %d%% chance. His career is over." % MedicalPanel.clear_pct())
+			and str(GameState.my_medical_lines()[0]).contains("was not cleared to play on. He had a %d%% chance. His career is over." % MedicalPanel.clear_pct())
 			and str(GameState.my_medical_lines()[0]).begins_with(GameDB.player_display_name(q)),
 			"A sitting in a final is on the week's surface, and last week's is gone: %s" % [GameState.my_medical_lines()])
 	# A rival's sitting the same week is never among yours.
@@ -559,7 +567,7 @@ func _test_line_in_every_path() -> void:
 	var rep: Dictionary = GameState._practice_finish("FRE", built, {"players": {}, "injuries": [
 			{"id": str(s["id"]), "weeks": 2, "kind": "concussion"}, {"id": str(t["id"]), "weeks": 2, "kind": "concussion"}]})
 	var sat: Array = rep.get("medical", [])
-	_check(sat.size() == 2 and str(sat[0]).contains("not cleared to play on. He had a %d%% chance. His career is over." % MedicalPanel.clear_pct()) and str(sat[1]).contains("cleared to play on (a %d%% chance)." % MedicalPanel.clear_pct()),
+	_check(sat.size() == 2 and str(sat[0]).contains("was not cleared to play on. He had a %d%% chance. His career is over." % MedicalPanel.clear_pct()) and str(sat[1]).contains("was cleared to play on (a %d%% chance)." % MedicalPanel.clear_pct()),
 			"The practice match report carries both sittings: %s" % [sat])
 	var hurt: Array = rep.get("hurt", [])
 	_check(hurt.size() == 1 and str(hurt[0]).begins_with(GameDB.player_display_name(t)),
@@ -574,6 +582,48 @@ func _test_line_in_every_path() -> void:
 	_check(line != null and line.text == str(sat[0]), "The report screen shows it: %s" % (line.text if line != null else "no line"))
 	view.free()
 	scene.free()
+
+
+## Two of yours before the panel in the same week: the hub's result and the
+## match summary's "Your week" give both sentences, joined by a space (a comma
+## after a full stop would read ".,").
+func _test_two_in_a_week() -> void:
+	_career()
+	GameState.advance()
+	var p := _pick("FRE", 5, true)
+	var q := _pick("FRE", 5, false)
+	_check(not p.is_empty() and not q.is_empty(), "One player for each answer exists in this seed")
+	if p.is_empty() or q.is_empty():
+		return
+	_past(p, 4)
+	_past(q, 4)
+	_concuss(p, "FRE")
+	_concuss(q, "FRE")
+	var lines := GameState.my_medical_lines()
+	_check(lines.size() == 2, "Both sittings are on the week's surface: %s" % [lines])
+	if lines.size() != 2:
+		return
+	var want := "Medical panel: %s %s" % [lines[0], lines[1]]
+	_check(want.contains(". " + GameDB.player_display_name(q)), "The second sentence follows the first's full stop: %s" % want)
+	# The hub's result for the round.
+	var hub: Control = load("res://scripts/ui/HubScene.gd").new()
+	var hv := VBoxContainer.new()
+	hub.call("_my_result", hv, GameState._my_result(GameState.last_results))
+	var hl := hv.find_child("MyMedical", true, false) as Label
+	_check(hl != null and hl.text == want, "The hub joins them with a space: %s" % (hl.text if hl != null else "no line"))
+	hv.free()
+	hub.free()
+	# The match summary's Your week.
+	var ms: Control = load("res://scripts/ui/MatchScene.gd").new()
+	ms.set("_res", GameState.last_match)
+	ms.set("_review", true)
+	ms.set("_my_side", 0 if str(GameState.last_match.get("home", "")) == GameState.my_club else 1)
+	var mv := VBoxContainer.new()
+	ms.call("_ft_summary", mv)
+	var ml := mv.find_child("YourMedical", true, false) as Label
+	_check(ml != null and ml.text == want, "The match summary joins them with a space: %s" % (ml.text if ml != null else "no line"))
+	mv.free()
+	ms.free()
 
 
 ## A player the panel has just ruled out is still on the list while the round

@@ -105,8 +105,8 @@ static func result_short(row: Dictionary) -> String:
 	var who := str(row.get("name", "The player"))
 	var pct := int(row.get("pct", clear_pct()))
 	if bool(row.get("cleared", false)):
-		return "%s cleared to play on (a %d%% chance)." % [who, pct]
-	return "%s not cleared to play on. He had a %d%% chance. His career is over." % [who, pct]
+		return "%s was cleared to play on (a %d%% chance)." % [who, pct]
+	return "%s was not cleared to play on. He had a %d%% chance. His career is over." % [who, pct]
 
 
 ## A rival's sitting, for league news.
