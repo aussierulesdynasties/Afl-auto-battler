@@ -54,6 +54,7 @@ func _run() -> void:
 	await _t("_test_finals_week_by_week")
 	await _t("_test_finals_cup")
 	await _t("_test_finals_status_paths")
+	await _t("_test_premiership_streamers")
 	await _t("_test_coach_approach_card")
 	await _t("_test_season_wrap")
 	await _t("_test_season_review_scrolls")
@@ -1333,6 +1334,166 @@ func _screen_text(node: Node) -> String:
 func _settle() -> void:
 	for i in range(6):
 		await process_frame
+
+
+## Premiership streamers (director, 2026-11-04: particles only for the
+## premiership and the Brownlow reveal). They fall once when the finals series
+## opens with the flag decided, in the premiers' two colours, go through a
+## finger, stay clear of Done, and play nowhere else.
+func _test_premiership_streamers() -> void:
+	var db = root.get_node("GameDB")
+	var feel = load("res://scripts/ui/Feel.gd")
+	var kit = load("res://scripts/ui/UiKit.gd")
+	_reset()
+	_state.start_season("FRE", db.club_list("FRE"))
+	_state.season.round_index = _state.season.fixture.size() - 1
+	_state.advance()
+	if not _state.training_report.is_empty():
+		_state.training_report["dismissed"] = true
+	root.size = Vector2i(390, 844)
+	feel.test_motion = true
+	var hub: Control = await _open_hub()
+	await _clear_hub(hub)
+	# September, the flag not yet decided: the series opens with no streamers.
+	hub.call("_show_finals")
+	await _frames(20)
+	_check(hub.find_child("FinalsSheet", true, false) != null
+			and hub.find_children("PremiershipStreamers", "", true, false).is_empty(),
+			"Before the Grand Final the finals series has no streamers")
+	hub.call("_close_finals")
+	hub.queue_free()
+	await _settle()
+	var guard := 0
+	while not _state.season.is_season_over() and guard < 12:
+		_state.advance()
+		guard += 1
+	var premier := str(_state.season.finals.get("premier", ""))
+	_check(premier != "", "A premier to celebrate")
+	if not _state.training_report.is_empty():
+		_state.training_report["dismissed"] = true
+	# Reduced motion: nothing falls.
+	feel.reduced = true
+	hub = await _open_hub()
+	await _clear_hub(hub)
+	hub.call("_show_finals")
+	await _settle()
+	_check(hub.find_children("PremiershipStreamers", "", true, false).is_empty(),
+			"With Reduced motion on, no streamers fall")
+	hub.call("_close_finals")
+	hub.queue_free()
+	await _settle()
+	feel.reduced = false
+	feel.moved.clear()
+	hub = await _open_hub()
+	await _clear_hub(hub)
+	var series: Button = hub.find_child("FinalsOpen", true, false)
+	await Tap.steady(series)
+	var why: String = await Tap.tap(series) if series != null else "no Finals button"
+	await _frames(20)
+	var found := hub.find_children("PremiershipStreamers", "", true, false)
+	_check(why == "" and found.size() == 1, "The flag decided: a tap on Finals starts the streamers (%s, %d)" % [why, found.size()])
+	if found.size() != 1:
+		feel.test_motion = false
+		hub.queue_free()
+		return
+	var fall: Control = found[0]
+	fall.set_process(false)   # the test moves the clock
+	var want: Array = [kit.club_ink(premier), kit.club_ink_second(premier)]
+	var cols: Array = fall.get("colours")
+	_check(str(fall.get("club")) == premier and cols.size() == 2 and (cols[0] as Color).is_equal_approx(want[0])
+			and (cols[1] as Color).is_equal_approx(want[1]) and not (want[0] as Color).is_equal_approx(want[1]),
+			"The streamers are the premiers' two colours")
+	_check(feel.moved.count("streamers") == 1, "They start once")
+	var done: Button = hub.find_child("FinalsDone", true, false)
+	var both := false
+	var clear := true
+	var t := 0.2
+	while t < float(fall.get("DURATION")):
+		fall.call("seek", t)
+		var seen := [false, false]
+		for r in fall.call("ribbons"):
+			var c: Color = r[1]
+			for i in 2:
+				var w: Color = want[i]
+				if is_equal_approx(c.r, w.r) and is_equal_approx(c.g, w.g) and is_equal_approx(c.b, w.b):
+					seen[i] = true
+			for pt in r[0]:
+				if (fall.global_position.y + (pt as Vector2).y) >= done.global_position.y:
+					clear = false
+		if is_equal_approx(t, 1.6):
+			both = seen[0] and seen[1]
+		t += 0.2
+	_check(both, "Mid-fall both colours are on screen")
+	_check(clear, "No streamer reaches the Done button at any moment")
+	# The bracket redraws when a stage is picked: no second fall.
+	fall.call("seek", 1.6)
+	var stage: Node = hub.find_child("FinalsStage", true, false)
+	var tab: Button = null
+	if stage != null:
+		for b in stage.find_children("*", "BaseButton", true, false):
+			if not (b as BaseButton).button_pressed:
+				tab = b
+				break
+	var tab_why: String = await Tap.tap(tab) if tab != null else "no stage tab"
+	await _settle()
+	var after := hub.find_children("PremiershipStreamers", "", true, false)
+	_check(tab_why == "" and after.size() == 1 and after[0] == fall and feel.moved.count("streamers") == 1,
+			"A tap goes through the streamers to the stage tabs, and no second fall starts (%s)" % tab_why)
+	# The fall ends and takes itself away; nothing plays again on this visit.
+	fall.call("seek", float(fall.get("DURATION")))
+	await _settle()
+	_check(hub.find_children("PremiershipStreamers", "", true, false).is_empty()
+			and feel.moved.count("streamers") == 1 and hub.find_child("FinalsSheet", true, false) != null,
+			"After one fall the streamers are gone and stay gone while the series is open")
+	hub.call("_close_finals")
+	await _settle()
+	# Done under a fall: the finger reaches it.
+	hub.call("_show_finals")
+	await _frames(20)
+	var again := hub.find_children("PremiershipStreamers", "", true, false)
+	_check(again.size() == 1, "Opening the series again is a new visit: one fall")
+	if again.size() == 1:
+		(again[0] as Control).set_process(false)
+		(again[0] as Control).call("seek", 1.6)
+	done = hub.find_child("FinalsDone", true, false)
+	var done_why: String = await Tap.tap(done) if done != null else "no Done"
+	await _settle()
+	_check(done_why == "" and hub.find_child("FinalsSheet", true, false) == null,
+			"Done closes the series under falling streamers (%s)" % done_why)
+	feel.test_motion = false
+	hub.queue_free()
+	await _settle()
+	# Nowhere else: only the hub's finals series names the streamers.
+	var users := []
+	_scripts_naming("res://scripts", "PremiershipStreamers", users)
+	users.sort()
+	_check(users == ["res://scripts/ui/HubScene.gd", "res://scripts/ui/PremiershipStreamers.gd"],
+			"Only the finals series plays streamers (%s)" % str(users))
+	var hub_src := FileAccess.get_file_as_string("res://scripts/ui/HubScene.gd")
+	_check(hub_src.count("PremiershipStreamers") == 1, "The hub starts them in one place only")
+
+
+## Close whatever opened over a fresh hub, as a player would.
+func _clear_hub(hub: Control) -> void:
+	var guard := 0
+	while hub.find_child("MediaConference", true, false) != null and guard < 4:
+		hub.call("handle_back")
+		await _settle()
+		guard += 1
+
+
+## Suites run on a fixed frame clock (60 a second): 20 frames lets a sheet rise.
+func _frames(n: int) -> void:
+	for i in n:
+		await process_frame
+
+
+func _scripts_naming(dir: String, word: String, out: Array) -> void:
+	for d in DirAccess.get_directories_at(dir):
+		_scripts_naming(dir + "/" + d, word, out)
+	for f in DirAccess.get_files_at(dir):
+		if f.ends_with(".gd") and FileAccess.get_file_as_string(dir + "/" + f).contains(word):
+			out.append(dir + "/" + f)
 
 
 func _check(condition: bool, message: String) -> void:
