@@ -11031,16 +11031,16 @@ func auto_pick(strategy: String) -> Dictionary:
 				if not in_side.has(str(p["id"])):
 					rested.append(GameDB.player_display_name(p))
 			var note := "Rested: %s." % ", ".join(rested) if not rested.is_empty() \
-					else "Nobody needs a break: this is your best side."
+					else "Nobody needs a break. This is our best side."
 			if not tired.is_empty() and fresh.size() < (18 + Ratings.INTERCHANGE):
-				note = "Not enough fresh players to rest anyone: this is your best side."
+				note = "Not enough fresh players to rest anyone. This is our best side."
 			return {"side": side, "note": note}
 		"youth":
 			var sel2 := Ratings.select_22(pool, dual)
 			return blood_youth(_as_selection(sel2["ground"], sel2["bench"]), pool)
 		"mine":
 			if best23.is_empty():
-				return {"side": {}, "note": "No saved Best 23 yet: arrange a side and save it."}
+				return {"side": {}, "note": "No saved Best 23 yet. Set a side and save it."}
 			var side3: Dictionary = best23.duplicate(true)
 			var by_id3 := {}
 			for p in my_list:
@@ -11065,8 +11065,8 @@ func auto_pick(strategy: String) -> Dictionary:
 						arr3[i] = str(best3["id"])
 						swaps.append("%s in for %s" % [GameDB.player_display_name(best3),
 								GameDB.player_display_name(p3) if p3 != null else "a departed player"])
-			return {"side": side3, "note": ("Your Best 23. %s (unavailable)." % "; ".join(swaps)) if not swaps.is_empty()
-					else "Your Best 23."}
+			return {"side": side3, "note": ("Our Best 23. Replacing unavailable players: %s." % "; ".join(swaps)) if not swaps.is_empty()
+					else "Our Best 23."}
 	var sel4 := Ratings.select_22(pool, dual)
 	return {"side": _as_selection(sel4["ground"], sel4["bench"]), "note": "Best side by rating and position."}
 
@@ -11122,7 +11122,7 @@ func blood_youth(side_in: Dictionary, pool: Array) -> Dictionary:
 				var laid := Roles.key_post_order(ids.map(func(id): return by_id[str(id)]), line)
 				side2[line] = laid.map(func(p): return str(p["id"]))
 	return {"side": side2, "note": _blooding_note(brought, dropped, by_id) if not brought.is_empty()
-			else "No young player is close enough to a starter's spot: this is your best side."}
+			else "No young player is close enough to take a senior spot. This is our best side."}
 
 
 ## Young for this pick: YOUTH_AGE or under in whole years, as the game shows

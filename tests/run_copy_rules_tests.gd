@@ -23,13 +23,10 @@ const ALLOW := {
 	"res://data/stories/media.json": [2, "should", "row 140: a pundit's view, reported"],
 	"res://scripts/sim/MatchSim.gd": [1, "should", "row 131: a shot's likelihood at the gate"],
 	"res://scripts/sim/PlanTraits.gd": [1, "starters", "kept: the Fast Starters trait (a side that starts quickly, AFL usage), not the line-up sense"],
-	"res://scripts/sim/SkipOrders.gd": [2, "auto-pick", "row 134: renamed with the Auto-pick button"],
-	"res://scripts/state/GameState.gd": [2, "starter, projection", "rows 134 and 138"],
-	"res://scripts/ui/CoachingScene.gd": [1, "payroll", "row 134: coaching"],
+	"res://scripts/state/GameState.gd": [1, "projection", "row 138"],
 	"res://scripts/ui/DraftScene.gd": [1, "projection", "row 136: draft"],
 	"res://scripts/ui/OffseasonScene.gd": [1, "payroll", "row 137: contracts and trades"],
 	"res://scripts/ui/PreSeasonScene.gd": [10, "starter", "row 136: pre-season"],
-	"res://scripts/ui/SelectionScene.gd": [4, "auto-pick", "row 134: renamed with the Auto-pick button"],
 	"res://scripts/ui/StatGuide.gd": [1, "projection", "row 139: stats and menus"],
 	"res://scripts/ui/TrainingScene.gd": [1, "should", "row 135: training"],
 }
@@ -59,6 +56,47 @@ const HUB_OLD := [
 	"Simming the week...",
 ]
 
+## The team builder and coaching pass (copy voice pass 5): per file, the rewritten lines and the
+## lines they replaced. Auto-pick is the Match committee now, on every screen that names it.
+const TEAM_PASS := {
+	"res://scripts/ui/SelectionScene.gd": [[
+		"\"Match committee\"", "Dual ruck on. The match committee names a second ruck on the bench.",
+		"One ruck. The match committee fills the bench with the best of the rest.",
+		"Our side is confirmed for this week.", "\"Our team\"",
+		"Projected: %s as they would line up this week. They name their side on match day. They kick the other way.",
+		"Picked at match committee until you move someone.",
+		"Saved as your Best 23. Choose it any week from Match committee.",
+		"Back to the side from before match committee.",
+		"Leave the player out while he is fit and the promise breaks. It stings.",
+	], ["\"Auto-pick\"", "Auto-pick names", "Auto-pick fills", "Side confirmed for", "\"Your team\"", "(projected:",
+		"Picked for you", "from Auto-pick", "before the auto-pick", "Leave a fit player out"]],
+	"res://scripts/ui/CoachingScene.gd": [[
+		"Each plan buys an edge and gives something up. The note below says which.",
+		"Each plan runs on one of our list's strengths. That is our side as picked, against every list in the league.",
+		"\"Also on our list\"", "After three games, how we win and get beaten shows here.",
+		"One strength and one cost, on top of our plan, every match. Or none.",
+		"No part of our game is costing us regularly.", "No one part of our game stands above the league.",
+		"%s of the %s salary cap",
+	], ["gives something up;", "one of your list's", "Also on your list", "how your side wins", "on top of your plan",
+		"of your game", "payroll %s"]],
+	"res://scripts/ui/FirstVisitIntro.gd": [[
+		"Our match-day 23 for this week. The match committee picks it until you move someone.",
+		"Move players on and off the ground to set the side you want.",
+		"Our game plan: how we play every week, set against what our list is good at.",
+		"Each plan suits some lists more than others. We can change it before any match.",
+	], ["Your match-day 23", "is picked for you", "the team you want", "Your game plan: how your side",
+		"Pick the plan that suits"]],
+	"res://scripts/sim/SkipOrders.gd": [[
+		"The match committee picks the side in place of one you named.",
+		"The match committee picks the side in place of one you named, and keeps picking it for the finals until you name another.",
+	], ["Auto-pick"]],
+	"res://scripts/state/GameState.gd": [[
+		"Nobody needs a break. This is our best side.", "Not enough fresh players to rest anyone. This is our best side.",
+		"No saved Best 23 yet. Set a side and save it.", "Our Best 23. Replacing unavailable players: %s.",
+		"\"Our Best 23.\"", "No young player is close enough to take a senior spot. This is our best side.",
+	], ["this is your best side", "arrange a side and save it", "\"Your Best 23", "a starter's spot"]],
+}
+
 
 func _initialize() -> void:
 	_run.call_deferred()
@@ -81,6 +119,7 @@ func _run() -> void:
 	_t("_test_rules")
 	_t("_test_sources")
 	_t("_test_hub_pass")
+	_t("_test_team_pass")
 	print(Ran.line("Copy rules", self))
 	quit(0 if _failures.is_empty() else 1)
 
@@ -154,6 +193,17 @@ func _test_hub_pass() -> void:
 		_check(src.contains(str(s)), "the hub says: %s" % s)
 	for s in HUB_OLD:
 		_check(not src.contains(str(s)), "the hub no longer says: %s" % s)
+
+
+## The team builder and coaching pass: each rewritten line is in its source, and none of the old ones.
+func _test_team_pass() -> void:
+	for path in TEAM_PASS:
+		var src := FileAccess.get_file_as_string(path)
+		var name := str(path).get_file()
+		for s in TEAM_PASS[path][0]:
+			_check(src.contains(str(s)), "%s says: %s" % [name, s])
+		for s in TEAM_PASS[path][1]:
+			_check(not src.contains(str(s)), "%s no longer says: %s" % [name, s])
 
 
 func _files(dir: String) -> Array:
