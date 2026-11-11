@@ -208,6 +208,13 @@ func _season_card(e: Dictionary) -> Control:
 	return card
 
 
+## The heading column of a row: as wide as the longest heading in use
+## ("Leading goalkicker"), so the line beside it keeps the rest of the card.
+const LABEL_W := 128.0
+## Room above a row, so a line that wraps reads as one row, apart from the next.
+const ROW_GAP := 4
+
+
 func _row(v: VBoxContainer, what: String, text: String, node: String) -> void:
 	if text == "":
 		return
@@ -219,14 +226,24 @@ func _row(v: VBoxContainer, what: String, text: String, node: String) -> void:
 	h.name = node
 	var a := UiKit.lbl(what, UiKit.SECONDARY, UiKit.MUTED)
 	if not stacked:
-		a.custom_minimum_size.x = 150
+		a.custom_minimum_size.x = LABEL_W
+		# The heading sits on its line's first row (director, 2026-11-11: the
+		# name on the left and the text on the right "dont seem to align very
+		# neatly"): centred on a line that wraps, it floated between the rows.
+		a.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		a.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+		h.add_theme_constant_override("separation", 12)
 	a.autowrap_mode = TextServer.AUTOWRAP_OFF
 	h.add_child(a)
 	var b := UiKit.lbl(text, UiKit.SECONDARY, UiKit.TEXT)
 	b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(b)
-	v.add_child(h)
+	var m := MarginContainer.new()
+	m.name = node + "Row"
+	m.add_theme_constant_override("margin_top", ROW_GAP)
+	m.add_child(h)
+	v.add_child(m)
 
 
 func _first_name(rows) -> String:
