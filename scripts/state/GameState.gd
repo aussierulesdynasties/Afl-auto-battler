@@ -3496,6 +3496,23 @@ func fitness_plan(club: String) -> String:
 func fitness_bye_week(club: String) -> int:
 	if season == null:
 		return -1
+	# The fixture is drawn once with the season: each club's bye is found once.
+	# (A loaded season's fixture is a new array, so it is found afresh.)
+	if not is_same(_bye_fixture, season.fixture) or _bye_rounds != season.fixture.size():
+		_bye_fixture = season.fixture
+		_bye_rounds = season.fixture.size()
+		_bye_weeks = {}
+	if not _bye_weeks.has(club):
+		_bye_weeks[club] = _find_bye_week(club)
+	return int(_bye_weeks[club])
+
+
+var _bye_fixture: Array = []
+var _bye_rounds := -1
+var _bye_weeks := {}
+
+
+func _find_bye_week(club: String) -> int:
 	for ri in range(season.fixture.size()):
 		var plays := false
 		for m in season.fixture[ri]:
@@ -7726,7 +7743,28 @@ func tests_market(p: Dictionary, list: Array) -> bool:
 ## measured against the best replacement it can actually get at his position.
 func ai_release_reason(code: String, p: Dictionary) -> String:
 	var list: Array = season.lists.get(code, [])
+	# A player in its best 22 is never delisted, so his replacement is never
+	# weighed: only the class ranking replacement_worth keeps is made as before.
+	if Contracts.needed(p, list):
+		_fill_repl_class(code)
+		return Contracts.ai_release_reason(p, list, cap_for(code))
 	return Contracts.ai_release_reason(p, list, cap_for(code), replacement_worth(code, p))
+
+
+## What replacement_worth leaves behind when it reaches the draft: the class
+## ranked once per class size (_repl_class), filled at the same calls it was.
+func _fill_repl_class(code: String) -> void:
+	if str(_repl_class.get("key", "")) == "%d:%d" % [season_year, draftee_pool.size()]:
+		return
+	var spot := 0
+	for pk in club_picks(code):
+		if int(pk["year"]) == season_year:
+			var at := int((pk["positions"] as Array)[0][0])
+			if spot == 0 or at < spot:
+				spot = at
+	if spot > 0:
+		_repl_class = {"key": "%d:%d" % [season_year, draftee_pool.size()],
+				"ranked": TradeValue.rank_prospects(_open_class(season_year))}
 
 
 ## The best a club can get in his place, on Contracts.worth's scale: the top
