@@ -8,6 +8,7 @@ cached so a re-run fetches nothing twice. Same method as tools/legacy_2010s.
     python tools/legacy_1990s/fetch.py --cache data/cache/legacy_1990s core      # lists, stats, ladders, drafts
     python tools/legacy_1990s/fetch.py --cache data/cache/legacy_1990s players   # one Draftguru page per listed player
     python tools/legacy_1990s/fetch.py --cache data/cache/legacy_1990s bios      # AFL Tables player pages (weight)
+    python tools/legacy_1990s/fetch.py --cache data/cache/legacy_1990s pre       # 1987-89, the 1990 start, era rules, grounds
 
 The cache is not committed (data/cache/ is gitignored); build.py reads it.
 """
@@ -137,13 +138,61 @@ def bios(cache: str) -> None:
     print("bios done")
 
 
+# ------------------------------------------------------------- the 1990 start
+# The seasons before the first one a career can start in: their stats, the 1989
+# ladder (the 1990 draft order) and the bios behind each player's games before 1990.
+PRE_SEASONS = range(1987, 1990)
+WIKI = "https://en.wikipedia.org/wiki/"
+# AFL Tables team slugs for its coaches pages, by the 1990 clubs.
+COACH_PAGES = ["brisbaneb", "carlton", "collingwood", "essendon", "fitzroy", "bullldogs", "geelong",
+               "hawthorn", "melbourne", "kangaroos", "richmond", "stkilda", "swans", "westcoast"]
+# Era rules: each value in era_rules.csv quotes one of these pages.
+RULE_PAGES = ["AFL_salary_cap", "Australian_Football_League", "Interchange_(Australian_rules_football)",
+              "Rookie_list"]
+# AFL Tables venue page -> the ground's Wikipedia article (its infobox's former names).
+GROUND_ARTICLES = {
+    "mcg": "Melbourne_Cricket_Ground", "waverley_park": "Waverley_Park", "princes_park": "Princes_Park_(stadium)",
+    "carrara": "Carrara_Stadium", "scg": "Sydney_Cricket_Ground", "western_oval": "Whitten_Oval",
+    "kardinia_park": "Kardinia_Park_(stadium)", "moorabbin_oval": "Moorabbin_Oval", "windy_hill": "Windy_Hill,_Essendon",
+    "subiaco": "Subiaco_Oval", "victoria_park": "Victoria_Park,_Melbourne", "waca": "WACA_Ground",
+    "football_park": "Football_Park", "gabba": "The_Gabba", "north_hobart": "North_Hobart_Oval",
+    "bruce_stadium": "Canberra_Stadium", "manuka_oval": "Manuka_Oval", "docklands": "Docklands_Stadium",
+    "stadium_australia": "Stadium_Australia", "junction_oval": "Junction_Oval",
+    "arden_st": "Arden_Street_Oval", "glenferrie_oval": "Glenferrie_Oval",
+}
+
+
+def pre(cache: str) -> None:
+    for y in PRE_SEASONS:
+        get(cache, f"https://afltables.com/afl/stats/{y}.html")
+        get(cache, f"https://afltables.com/afl/seas/{y}.html")
+    get(cache, "https://api.squiggle.com.au/?q=standings;year=1989")
+    get(cache, WIKI + "1990_AFL_season")
+    for slug in COACH_PAGES:
+        get(cache, f"https://afltables.com/afl/stats/coaches/{slug}.html")
+    for page in RULE_PAGES + sorted(set(GROUND_ARTICLES.values())):
+        get(cache, WIKI + page)
+    # Bios of the players in the 1987-89 stats not already cached (most are:
+    # anyone who also played in the 1990s). build.py reads only the ones whose
+    # player is on a 1990 list.
+    hrefs: set[str] = set()
+    for y in PRE_SEASONS:
+        hrefs.update(re.findall(r'href="(players/[^"]+\.html)"', get(cache, f"https://afltables.com/afl/stats/{y}.html")))
+    todo = sorted(h for h in hrefs if not os.path.exists(cache_path(cache, "https://afltables.com/afl/stats/" + h)))
+    print(f"{len(todo)} more AFL Tables bios")
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        list(pool.map(lambda h: get(cache, "https://afltables.com/afl/stats/" + h, pause=0.4), todo))
+    print("pre done")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--cache", required=True)
-    ap.add_argument("step", choices=["core", "players", "bios"])
+    ap.add_argument("step", choices=["core", "players", "bios", "pre"])
     a = ap.parse_args()
     os.makedirs(a.cache, exist_ok=True)
-    {"core": core, "players": players, "bios": bios}[a.step](a.cache)
+    {"core": core, "players": players, "bios": bios, "pre": pre}[a.step](a.cache)
 
 
 if __name__ == "__main__":
