@@ -75,7 +75,7 @@ func _status() -> Control:
 	var words := ""
 	var done := bool(f.get("done", false))
 	if not top.has(_me):
-		words = "You missed the top %d." % Season.FINALISTS + ("" if done else " The series plays on week by week.")
+		words = "You missed the top %d." % _season.finalists() + ("" if done else " The series plays on week by week.")
 	else:
 		var out_in := ""
 		for w in range(WEEKS.size()):
