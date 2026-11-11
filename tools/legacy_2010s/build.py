@@ -15,6 +15,7 @@ import json
 import os
 import re
 import sys
+import unicodedata
 from collections import defaultdict
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -22,7 +23,7 @@ from fetch import DG, cache_path  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 OUT = os.path.join(ROOT, "data", "legacy", "2010s")
-CHECKED = "2026-11-10"
+CHECKED = "2026-11-11"
 SEASONS = range(2010, 2020)
 DRAFT_YEARS = range(2009, 2020)
 
@@ -38,7 +39,7 @@ NAME = {
     "collingwood": "COL", "essendon": "ESS", "fremantle": "FRE", "geelong": "GEE",
     "gold coast": "GCS", "greater western sydney": "GWS", "gws": "GWS", "hawthorn": "HAW",
     "melbourne": "MEL", "north melbourne": "NTH", "kangaroos": "NTH", "port adelaide": "PAD",
-    "richmond": "RIC", "st kilda": "STK", "sydney": "SYD", "west coast": "WCE",
+    "richmond": "RIC", "st kilda": "STK", "sydney": "SYD", "sydney swans": "SYD", "west coast": "WCE",
     "western bulldogs": "WBD", "footscray": "WBD", "brisbane bears": "BRL", "fitzroy": "BRL",
 }
 # AFL Tables team slugs on the season stats page.
@@ -85,7 +86,19 @@ def split_name(full: str) -> tuple[str, str]:
 
 def write(name: str, fields: list[str], rows: list[dict]) -> None:
     os.makedirs(OUT, exist_ok=True)
-    with open(os.path.join(OUT, name), "w", newline="", encoding="utf-8") as fh:
+    path = os.path.join(OUT, name)
+    # A row whose facts are unchanged since the last build keeps the date they
+    # were first checked, so a rebuild only re-dates what actually changed.
+    earlier = {}
+    if "checked" in fields and os.path.exists(path):
+        with open(path, encoding="utf-8") as fh:
+            for old in csv.DictReader(fh):
+                earlier[tuple(old.get(k, "") for k in fields if k != "checked")] = old["checked"]
+    for r in rows:
+        key = tuple(str(r.get(k, "")) for k in fields if k != "checked")
+        if key in earlier:
+            r["checked"] = earlier[key]
+    with open(path, "w", newline="", encoding="utf-8") as fh:
         w = csv.DictWriter(fh, fieldnames=fields, lineterminator="\n")
         w.writeheader()
         for r in rows:
@@ -161,6 +174,7 @@ CLUBS_RE = (r"(Adelaide|Brisbane(?: Lions| Bears)?|Carlton|Collingwood|Essendon|
 def classify(event: str, club: str) -> dict | None:
     """Read one Draftguru movement line. Returns the join it records for club, if any."""
     event = re.sub(r"^\([^)]*\)\s*", "", event)  # "(Prelisted by Gold Coast) Traded from ..."
+    event = re.sub(r"^Delisted then ", "", event)  # "Delisted then Drafted by Essendon with ..."
     m = re.match(rf"Drafted by {CLUBS_RE} with (.+?) pick #(\d+)", event)
     if m and club_code(m.group(1)) == club:
         kind = m.group(2).lower().replace("-", "_").replace(" draft", "").replace(" ", "_")
@@ -198,7 +212,12 @@ def join_for(seq: list[tuple], club: str, season: int) -> dict:
     while k > 0 and years[k - 1][2] == club and years[k - 1][1] == years[k][1] - 1:
         k -= 1
     start_idx, start_year = years[k][0], years[k][1]
-    prev_idx = years[k - 1][0] if k > 0 else -1
+    # Look back past seasons on no AFL list (a zone selection two years before
+    # a club's first season, e.g. Kurt Aylett, NSW Zone 2010, GWS 2012).
+    j = k - 1
+    while j >= 0 and not years[j][2]:
+        j -= 1
+    prev_idx = years[j][0] if j >= 0 else -1
     events = [it[1] for it in seq[prev_idx + 1:start_idx] if it[0] == "event"]
     best = None
     for ev in events:
@@ -226,7 +245,9 @@ def join_for(seq: list[tuple], club: str, season: int) -> dict:
                 best = {"joined_how": how, "joined_detail": ev}
     if best:
         best = dict(best)
-        best["joined_year"] = start_year - 1
+        # The off-season before the stint, except a mid-season draft, which is
+        # held during the season the player joins.
+        best["joined_year"] = start_year if best["joined_how"] == "mid_season_draft" else start_year - 1
         if best["joined_how"] in ("trade",) or best["joined_how"].startswith("free_agent"):
             prior = [c for (_, y, c) in years[:k] if c]
             if prior and not best.get("joined_from"):
@@ -269,7 +290,9 @@ def parse_bio(body: str) -> dict:
 
 
 def norm(s: str) -> str:
-    return re.sub(r"[^a-z]", "", html.unescape(s).lower())
+    # Fold accents so Draftguru's "Ó hAilpín" meets AFL Tables' "OhAilpin".
+    s = unicodedata.normalize("NFKD", html.unescape(s))
+    return re.sub(r"[^a-z]", "", s.encode("ascii", "ignore").decode().lower())
 
 
 # ----------------------------------------------------------------- builders
@@ -414,7 +437,7 @@ def wiki_drafts(cache: str, year: int) -> dict:
                 c = text(c).lower()
                 span = re.search(r'colspan="?(\d+)', attrs)
                 name = ("round" if ("round" in c or c in ("rd.", "rd")) else "pick" if c in ("pick", "#", "no.") or "pick" in c
-                        else "player" if "player" in c or c == "name" else "club" if "drafted to" in c or c == "club"
+                        else "player" if "player" in c or c == "name" else "club" if "drafted to" in c or c in ("club", "afl club")
                         else "notes" if "note" in c else c)
                 cols.append(name)
                 cols.extend(f"{name}_{i}" for i in range(1, int(span.group(1)) if span else 1))
@@ -492,7 +515,10 @@ def build_drafts(cache: str) -> tuple[list[dict], dict]:
             w = wk["picks"].get((kind, pick), {}) if pick else {}
             flag = flag_of(r["signing"]) or wiki_flag(w.get("note", "") + " " + w.get("round", ""))
             rows.append({
-                "year": y, "draft": kind, "round": re.sub(r"\D", "", w.get("round", "")), "pick": r["pick"],
+                # Draftguru files the mid-season rookie draft (first held May 2019) on
+                # the previous year's page; the year here is the season it was held in.
+                "year": y + 1 if kind == "mid_season" else y,
+                "draft": kind, "round": re.sub(r"\D", "", w.get("round", "")), "pick": r["pick"],
                 "club": r["club"], "first": first, "last": last, "origin": r["origin"],
                 "flag": flag, "flag_detail": r["signing"], "wiki_note": w.get("note", ""),
                 "wiki_player": "" if w.get("passed") else w.get("player", ""),
@@ -560,6 +586,24 @@ def build_moves(cache: str, lists: list[dict]) -> list[dict]:
                 "from_club": j.get("joined_from", ""), "to_club": r["club"], "kind": kind,
                 "detail": j.get("joined_detail", ""), "draftguru_id": r["dg"],
                 "source_url": f"{url} | https://en.wikipedia.org/wiki/{y}_AFL_draft",
+                "checked": CHECKED,
+            })
+        # Free agents Wikipedia's table records and Draftguru's year page does not.
+        done = {(norm(m["last"]), m["to_club"]) for m in rows if m["year"] == y}
+        for fa in wiki_fas:
+            first, last = split_name(re.sub(r"\s*\[.*?\]|[*^†‡]+$", "", fa["player"]).strip())
+            # A delisted player re-signed by his own club (Essendon's James Kelly and
+            # Matt Dea, 2016) changed no club, so it is not a move.
+            if (norm(last), fa["to"]) in done or not fa["to"] or fa["from"] == fa["to"]:
+                continue
+            t = fa["type"].lower()
+            kind = ("delisted_free_agent" if "delisted" in t else "free_agent_unrestricted" if "unrestricted" in t
+                    else "free_agent_restricted" if "restricted" in t else "free_agent")
+            rows.append({
+                "year": y, "first": first, "last": last, "dob": "", "compensation": fa["compensation"],
+                "from_club": fa["from"], "to_club": fa["to"], "kind": kind,
+                "detail": f"Wikipedia: {fa['type']} from {fa['from']} to {fa['to']}",
+                "draftguru_id": "", "source_url": f"https://en.wikipedia.org/wiki/{y}_AFL_draft",
                 "checked": CHECKED,
             })
     return rows
