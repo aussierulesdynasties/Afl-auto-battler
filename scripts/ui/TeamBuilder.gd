@@ -92,6 +92,24 @@ var hint_extra := ""
 ## PC's Team selection puts them under the week); null keeps them under the
 ## interchange. Set before setup().
 var rest_host: Control = null
+## A phone's list pulls up (director, 2026-11-11: "List pulls up"): tap or drag
+## its top edge and it rises over the bottom half of the oval; a tap on the
+## oval, or picking a player, drops it back. Set before setup().
+var pull_up := false
+var _raised := false
+var _lift := 0.0
+var _slot: Control = null
+var _sheet: PanelContainer = null
+var _pull: Control = null
+var _pull_from := 0.0
+var _pull_lift := 0.0
+var _pulling := false
+var _pull_moved := false
+const PULL_H := 44.0      # the top edge's touch strip, a thumb high: the gap above the list and PULL_REACH more above it
+const PULL_REACH := 20.0
+const PULL_ABOVE := 18.0
+const PULL_SLOP := 8.0    # a press that moves less than this is a tap
+const SHEET_PAD := 12.0
 ## Controls that act on the side, set beside the "Interchange" word.
 var interchange_actions: Control = null
 ## A line under the interchange (a phone's way into the week).
@@ -157,6 +175,9 @@ func _build() -> void:
 		_pitch.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_pitch.mouse_filter = Control.MOUSE_FILTER_PASS
 	_pitch.draw.connect(_draw_pitch)
+	_pitch.gui_input.connect(func(ev: InputEvent):
+		if _raised and ev is InputEventMouseButton and ev.pressed and (ev as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
+			set_raised(false))
 	_pitch.resized.connect(_queue_place)
 	_placed_for = Vector2(-1, -1)
 	field.add_child(_pitch)
@@ -225,9 +246,12 @@ func _build() -> void:
 		rest.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		rest.size_flags_stretch_ratio = 0.35
 		rest.custom_minimum_size.y = 120
+	_slot = null
 	if rest_host != null:
 		UiKit.clear(rest_host)
 		rest_host.add_child(rest)
+	elif pull_up and stacked:
+		add_child(_list_slot(rest))
 	else:
 		add_child(rest)
 	# Role filter and search on one line when the page is stacked; where the
@@ -340,6 +364,133 @@ func _build() -> void:
 	else:
 		rest.add_child(_grid)
 	_fill_grid()
+
+
+## The list in a sheet that can rise: the slot keeps the list's place in the
+## page, and the sheet inside it grows upward over the oval.
+func _list_slot(rest: Control) -> Control:
+	_slot = Control.new()
+	_slot.name = "ListSlot"
+	_slot.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_slot.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_slot.size_flags_stretch_ratio = rest.size_flags_stretch_ratio
+	rest.custom_minimum_size.y = 0
+	_sheet = PanelContainer.new()
+	_sheet.name = "ListSheet"
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = UiKit.BG
+	sb.border_color = UiKit.LINE
+	sb.corner_radius_top_left = UiKit.RADIUS
+	sb.corner_radius_top_right = UiKit.RADIUS
+	# The surface runs past the list to the screen's edges and up under the
+	# top edge's strip, without moving what is in it.
+	sb.expand_margin_left = SHEET_PAD
+	sb.expand_margin_right = SHEET_PAD
+	sb.expand_margin_bottom = SHEET_PAD
+	sb.expand_margin_top = PULL_ABOVE - 4.0
+	sb.draw_center = false
+	_sheet.add_theme_stylebox_override("panel", sb)
+	_slot.add_child(_sheet)
+	_sheet.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_sheet.add_child(rest)
+	var slot := _slot
+	var sheet := _sheet
+	var fit := func():
+		var need := sheet.get_combined_minimum_size()
+		slot.custom_minimum_size = Vector2(need.x, maxf(120.0, need.y))
+	_sheet.minimum_size_changed.connect(fit)
+	fit.call()
+	_pull = Control.new()
+	_pull.name = "ListPull"
+	_pull.mouse_filter = Control.MOUSE_FILTER_STOP
+	_pull.mouse_default_cursor_shape = Control.CURSOR_VSIZE
+	_pull.anchor_right = 1.0
+	_pull.draw.connect(_draw_pull)
+	_pull.gui_input.connect(_on_pull)
+	_slot.add_child(_pull)
+	_set_lift(0.0)
+	_slot.resized.connect(_keep_lift)
+	_keep_lift.call_deferred()
+	return _slot
+
+
+## How far the list rises: its top edge to the middle of the oval.
+func lift_full() -> float:
+	if not is_instance_valid(_slot) or not is_instance_valid(_pitch):
+		return 0.0
+	return maxf(0.0, _slot.global_position.y - (_pitch.global_position.y + _pitch.size.y * 0.5))
+
+
+func is_raised() -> bool:
+	return _raised
+
+
+## Raise the list over the oval, or drop it back.
+func set_raised(on: bool, glide := true) -> void:
+	_raised = on and is_instance_valid(_slot)
+	if not is_instance_valid(_slot):
+		return
+	var to := lift_full() if _raised else 0.0
+	if glide and UiKit.motion_on() and is_inside_tree() and not is_equal_approx(_lift, to):
+		var tw := _slot.create_tween()
+		tw.tween_method(_set_lift, _lift, to, 0.16).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	else:
+		_set_lift(to)
+
+
+## A rebuild or a resize: the list stays where it was, raised or down.
+func _keep_lift() -> void:
+	if is_instance_valid(_slot) and not _pulling:
+		_set_lift(lift_full() if _raised else 0.0)
+
+
+func _set_lift(v: float) -> void:
+	if not is_instance_valid(_sheet) or not is_instance_valid(_pull):
+		return
+	_lift = v
+	_sheet.offset_top = -v
+	_pull.offset_top = -v - PULL_ABOVE - PULL_REACH
+	_pull.offset_bottom = -v - PULL_ABOVE - PULL_REACH + PULL_H
+	var sb: StyleBoxFlat = _sheet.get_theme_stylebox("panel")
+	var up := v > 0.5
+	if sb.draw_center != up:
+		sb.draw_center = up
+		sb.border_width_top = 1 if up else 0
+		_sheet.queue_redraw()
+	_pull.queue_redraw()
+
+
+## The top edge's grip: a short bar, as on any sheet that pulls up.
+func _draw_pull() -> void:
+	var w := 44.0
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(UiKit.TEXT, 0.6)
+	sb.set_corner_radius_all(2)
+	_pull.draw_style_box(sb, Rect2((_pull.size.x - w) * 0.5, PULL_REACH + PULL_ABOVE - 9.0, w, 4.0))
+
+
+func _on_pull(ev: InputEvent) -> void:
+	if ev is InputEventMouseButton and (ev as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
+		if ev.pressed:
+			_pulling = true
+			_pull_moved = false
+			_pull_from = (ev as InputEventMouseButton).global_position.y
+			_pull_lift = _lift
+		elif _pulling:
+			_pulling = false
+			if _pull_moved:
+				# Let go part way: it carries on the way it was going.
+				set_raised(_lift > lift_full() * (0.75 if _raised else 0.25))
+			else:
+				set_raised(not _raised)
+		_pull.accept_event()
+	elif ev is InputEventMouseMotion and _pulling:
+		var d := _pull_from - (ev as InputEventMouseMotion).global_position.y
+		if absf(d) > PULL_SLOP:
+			_pull_moved = true
+		if _pull_moved:
+			_set_lift(clampf(_pull_lift + d, 0.0, lift_full()))
+		_pull.accept_event()
 
 
 func _fill_grid() -> void:
@@ -560,6 +711,9 @@ func _why_out(p: Dictionary) -> String:
 ## First tap picks a player; the second swaps him with that player or spot.
 ## Tapping him again lets him go.
 func _tap(id: String, place: String) -> void:
+	# A raised list has done its job once a player is tapped: the whole side shows again.
+	if _raised:
+		set_raised(false, false)
 	if _picked == "":
 		if id == "":
 			return
