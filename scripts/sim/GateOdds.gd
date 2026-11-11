@@ -229,6 +229,11 @@ static func plan_lines(plan: String, up := 1.0, down := 1.0) -> Array:
 ## A plan's texts for a squad as it would take the field (CoachEffects applied).
 static func plan_texts_for(sq: Squad, plan: String, weather_key := "perfect") -> Array:
 	var up := MatchSim.upside_scale(sq, plan, weather_key)
+	# Your own plan (CustomPlan): its strength sized for this list today, its
+	# cost as written. Not built yet: no edge and no cost.
+	if MatchSim.plan_key(plan) == CustomPlan.KEY:
+		var own := CustomPlan.texts(sq.custom_plan, up)
+		return own if not own.is_empty() else [BALANCED_GAIN, BALANCED_COST]
 	var fit := PlanFit.fit(sq.ground, MatchSim.plan_key(plan))
 	var best := up / fit * PlanFit.FIT_MAX if fit > 0.0 else -1.0
 	return plan_texts(plan, up, MatchSim.cost_scale(sq, plan), best)
@@ -237,7 +242,7 @@ static func plan_texts_for(sq: Squad, plan: String, weather_key := "perfect") ->
 ## A pep talk's gain and cost for the quarter, unlabelled: [gain, cost], from
 ## the multipliers MatchSim._pep_mult, _contest_pep and _pep_heat use.
 ## `contest` is Fire them up's lift at the contest (MatchSim.fire_up_contest,
-## which carries the club's game-plan trait); the base lift when no sim is at hand.
+## which carries an own plan's Fire them up lever); the base lift when no sim is at hand.
 static func pep_texts(key: String, contest := MatchSim.PEP_FIRE_CONTEST) -> Array:
 	var c: Dictionary = MatchSim.PEP_CALM
 	var f: Dictionary = MatchSim.PEP_FIRE

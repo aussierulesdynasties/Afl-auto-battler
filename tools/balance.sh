@@ -7,7 +7,7 @@
 #   tools/balance.sh match 1000 --a-root <checkout of origin/main> --b "" # paired: main vs this branch
 #   tools/balance.sh match 1000 --a "--weather wet" --b "--weather perfect"
 #   tools/balance.sh match 1000 --a "--side-plan attacking" --b "--side-plan attacking --coach TA,GAMB"
-#   tools/balance.sh match 1000 --b "--plan-trait fortress"   # side i%2 runs a game-plan trait
+#   tools/balance.sh match 1000 --a "--side-plan balanced" --b "--custom-plan sharp,slow"   # side i%2 plays its own plan
 # Env: GODOT (binary), JOBS (workers, default cores-2), OUT (run dir).
 set -euo pipefail
 mode="${1:-match}"; n="${2:-1000}"; shift $(( $# >= 2 ? 2 : $# ))
