@@ -33,7 +33,9 @@ func run(root: Node) -> void:
 		"rookie_list": func(): RookieList.settle(gs),
 		"club_plan": func(): gs._sync_club_plan(),
 		"coach_tactics": func(): gs._refresh_coach_tactics(),
-		"usual_plans": func(): if not gs.season.is_season_over(): gs._settle_usual_plans(),
+		"usual_plans": func():
+			if not gs.season.is_season_over():
+				gs._settle_usual_plans(),
 		"conditioning": func(): gs._stamp_conditioning(),
 	}
 	var play := ["play", "log", "xp", "rivals", "after", "save"]

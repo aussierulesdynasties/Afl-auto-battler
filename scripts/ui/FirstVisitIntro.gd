@@ -22,7 +22,7 @@ const TEXT := {
 		"His junior numbers and your scouts' guess at OVR and POT are on his sheet. Tap a name to weigh it up.",
 	]],
 	"selection": ["Picking the side", [
-		"Our match-day 23 for this week. The match committee picks it until you move someone.",
+		"Our match-day 23 for this week. Auto-pick names it until you move someone.",
 		"Move players on and off the ground to set the side you want.",
 	]],
 	"coaching": ["How we play", [

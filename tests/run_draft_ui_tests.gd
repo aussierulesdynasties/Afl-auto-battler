@@ -235,8 +235,7 @@ func _test_start_season_footer() -> void:
 	_check(d.is_finished() and d.is_valid() and short_def > 0,
 			"Setup: a full list within the cap with no defenders (short %d)" % short_def)
 	_check(footer.text.begins_with("Short %d defenders" % short_def),
-			"A list short at defence says so: " + footer.text.replace("
-", " / "))
+			"A list short at defence says so: " + footer.text.replace("\n", " / "))
 	_check(not footer.text.contains("ready"), "...and does not say the list is ready")
 	_check(not fin.disabled, "The rules let a full list start short, so Start season is live")
 	var why: String = await Tap.tap(fin)
@@ -256,8 +255,7 @@ func _test_start_season_footer() -> void:
 	fin = ui.find_child("StartSeason", true, false)
 	_check(not d.is_valid() and fin.disabled, "Setup: over the cap, Start season is off")
 	_check(footer.text.contains("over the salary cap") and not footer.text.contains("ready"),
-			"An invalid list says why: " + footer.text.replace("
-", " / "))
+			"An invalid list says why: " + footer.text.replace("\n", " / "))
 	await Tap.tap(fin)
 	await _settle()
 	_check(_state.season == null and ui.is_inside_tree() and ui.get("_phase") == "board",
@@ -265,8 +263,7 @@ func _test_start_season_footer() -> void:
 	# ...and the coach can fix it here: My list offers Release, a real tap
 	# frees the player and reopens the draft for another pick.
 	_check(footer.text.contains("Release a player") and d.finished_list_refused(),
-			"The footer says how to fix it: " + footer.text.replace("
-", " / "))
+			"The footer says how to fix it: " + footer.text.replace("\n", " / "))
 	ui.call("_select_tab", "squad")
 	await _settle()
 	var rel: Button = null
@@ -294,8 +291,7 @@ func _test_start_season_footer() -> void:
 	footer = ui.find_child("UpcomingPicks", true, false)
 	fin = ui.find_child("StartSeason", true, false)
 	_check(d.short_positions() == "" and d.is_valid(), "Setup: a list with every position covered")
-	_check(footer.text.begins_with("Your list is ready."), "A covered list says it is ready: " + footer.text.replace("
-", " / "))
+	_check(footer.text.begins_with("Your list is ready."), "A covered list says it is ready: " + footer.text.replace("\n", " / "))
 	why = await Tap.tap(fin)
 	_check(why == "" and _state.season != null, "A finger's tap on Start season starts the season (%s)" % why)
 	ui.queue_free()

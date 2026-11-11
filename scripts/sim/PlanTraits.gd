@@ -131,7 +131,7 @@ const RIVAL_LINE := {
 }
 
 ## Running none.
-const NONE_LINE := "No trait: your game plan as written."
+const NONE_LINE := "No trait. Just our game plan."
 
 
 static func valid(id: String) -> String:

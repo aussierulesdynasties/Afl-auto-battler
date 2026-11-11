@@ -19,8 +19,11 @@ name: Tests
 # nightly workflow (nightly.yml) runs them in full. A pull request runs only the suites that cover its changed files, plus a
 # smoke set (tools/select_suites.py); anything it cannot trace (data/, project.godot,
 # the harness, this workflow) runs everything, and a push to main always runs the full wall.
-# One more job runs the
-# dataset, export-data and harness checks once. tools/run_tests.sh is the same
+# The "lint" job runs the static checks (tools/lint/README.md: copy voice, colour cues, type
+# roles, sim boundaries, the autoload compile rule, gdlint) and the pure-Python data checks with
+# no Godot, beside the plan and the preflight; the shards and the extras job need it, so a
+# broken rule stops the run in about a minute. One more job runs the
+# export-data and harness checks once. tools/run_tests.sh is the same
 # script you run locally, on every suite or on some of them.
 #
 # "test" is a required check on main. It is the last job and passes when the
@@ -72,8 +75,8 @@ jobs:
         with:
           fetch-depth: 2     # the PR merge commit and the base it merges into
 
-      # Anything outside docs/, *.md files and the audit and capture scripts
-      # (tools/audit/, tools/visual/) counts as code. A draft PR runs no game
+      # Anything outside docs/, *.md files, the audit and capture scripts and the lints
+      # (tools/audit/, tools/visual/, tools/lint/) counts as code. A draft PR runs no game
       # tests until it is marked ready for review.
       - name: Check for code changes
         id: changes
@@ -87,9 +90,9 @@ jobs:
             if [ "$IS_DRAFT" = "true" ]; then
               code=false
               reason="draft pull request: the game tests run when it is marked ready for review"
-            elif ! git diff --name-only HEAD^1 HEAD | grep -qvE '^docs/|\.md$|^tools/audit/|^tools/visual/'; then
+            elif ! git diff --name-only HEAD^1 HEAD | grep -qvE '^docs/|\.md$|^tools/audit/|^tools/visual/|^tools/lint/'; then
               code=false
-              reason="documentation, audit or capture scripts only"
+              reason="documentation, audit or capture scripts or the static lints only (the lint job checks those)"
             fi
           fi
           # roadmap_close.yml dispatches this on its docs/TODO.md-only commit to earn
@@ -201,6 +204,58 @@ jobs:
           python3 tools/test_select_suites.py
           python3 tools/check_ci_balance.py
 
+  # Static lints (tools/lint/README.md), no Godot: about a minute, beside plan and the preflight.
+  # The shards and the extras job need it, so a broken source rule fails the run before any
+  # suite starts instead of when its shard reaches the suite that used to check it. Pull
+  # requests run gdlint on their changed .gd files; pushes to main run it on every file.
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2     # the PR merge commit and the base it merges into
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: tools/lint/requirements.txt
+
+      - name: Install gdlint (gdtoolkit, pinned)
+        run: python -m pip install -r tools/lint/requirements.txt
+
+      - name: The lints' own tests
+        run: python3 -I tools/lint/test_lint.py
+
+      - name: Static lints
+        if: success() || failure()
+        run: |
+          if [ "${{ github.event_name }}" = pull_request ]; then
+            python3 -I tools/lint/lint.py --require-gdlint --changed HEAD^1
+          else
+            python3 -I tools/lint/lint.py --require-gdlint
+          fi
+
+      # The pure-Python checks that ran inside the Godot extras job until 2026-11-12.
+      - name: Dataset check
+        if: success() || failure()
+        run: python3 tools/validate_data.py
+
+      - name: No suite starts from the clock
+        if: success() || failure()
+        run: bash tools/check_suite_seeds.sh
+
+      - name: Intake / development harness
+        if: success() || failure()
+        run: python3 tools/intake_harness.py --quiet
+
+      - name: Offline promise (the Android preset requests vibrate only)
+        if: success() || failure()
+        run: |
+          python3 tools/test_android_permissions.py
+          python3 tools/check_android_permissions.py
+
   # A test runner that does not compile (or hangs on load) fails here in seconds,
   # not as a 15-minute shard timeout. Only the compile check: no suite runs here,
   # so the shards start as soon as it passes.
@@ -239,8 +294,8 @@ jobs:
 
   shard:
     name: shard ${{ matrix.shard }}
-    needs: [plan, preflight]
-    if: always() && needs.plan.result == 'success' && needs.plan.outputs.code == 'true' && (needs.preflight.result == 'success' || needs.preflight.result == 'skipped')
+    needs: [plan, lint, preflight]
+    if: always() && needs.plan.result == 'success' && needs.lint.result == 'success' && needs.plan.outputs.code == 'true' && (needs.preflight.result == 'success' || needs.preflight.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
@@ -310,13 +365,13 @@ jobs:
           path: ${{ runner.temp }}/timings
           if-no-files-found: warn
 
-  # What run_tests.sh does after the suites: the dataset check, the exported
-  # build's data check, the intake harness and the runner's own self-test.
-  # (The build-number check ran once, in plan.)
+  # What run_tests.sh does after the suites that needs Godot: the exported build's data check
+  # and the runner's own self-test. (The build-number check ran once, in plan; the dataset,
+  # seeds, intake harness and offline-promise checks run in lint.)
   extras:
     name: dataset and harness checks
-    needs: [plan, preflight]
-    if: always() && needs.plan.result == 'success' && needs.plan.outputs.code == 'true' && (needs.preflight.result == 'success' || needs.preflight.result == 'skipped') && github.event_name != 'schedule'
+    needs: [plan, lint, preflight]
+    if: always() && needs.plan.result == 'success' && needs.lint.result == 'success' && needs.plan.outputs.code == 'true' && (needs.preflight.result == 'success' || needs.preflight.result == 'skipped') && github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -346,7 +401,7 @@ jobs:
           mv "${name}" godot && chmod +x godot
 
       - name: Run the dataset, export and harness checks
-        run: SKIP_VERSION_CHECK=1 EXTRAS_ONLY=1 GODOT="$HOME/godot/godot" LOG_DIR="$RUNNER_TEMP/test-logs" tools/run_tests.sh
+        run: SKIP_STATIC=1 SKIP_VERSION_CHECK=1 EXTRAS_ONLY=1 GODOT="$HOME/godot/godot" LOG_DIR="$RUNNER_TEMP/test-logs" tools/run_tests.sh
 
       - name: Upload test logs
         if: failure()
@@ -357,7 +412,7 @@ jobs:
 
   # The required check. Its name stays "test" so branch protection is unchanged.
   test:
-    needs: [plan, preflight, shard, extras]
+    needs: [plan, lint, preflight, shard, extras]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -380,7 +435,7 @@ jobs:
       # squashes this PR unchanged can skip its shards (tools/ci_same_tree.sh).
       - name: Record the tested tree
         id: tree
-        if: github.event_name == 'pull_request' && needs.plan.outputs.code == 'true' && needs.plan.outputs.partial != 'true' && needs.shard.result == 'success' && needs.extras.result == 'success' && needs.preflight.result == 'success'
+        if: github.event_name == 'pull_request' && needs.plan.outputs.code == 'true' && needs.plan.outputs.partial != 'true' && needs.shard.result == 'success' && needs.extras.result == 'success' && needs.preflight.result == 'success' && needs.lint.result == 'success'
         run: |
           tree=$(git rev-parse HEAD^{tree})
           echo "$tree" > "$RUNNER_TEMP/tree.txt"
@@ -397,13 +452,18 @@ jobs:
         if: always()
         env:
           PREFLIGHT: ${{ needs.preflight.result }}
+          LINT: ${{ needs.lint.result }}
           PLAN: ${{ needs.plan.result }}
           CODE: ${{ needs.plan.outputs.code }}
           REASON: ${{ needs.plan.outputs.reason }}
           SHARDS: ${{ needs.shard.result }}
           EXTRAS: ${{ needs.extras.result }}
         run: |
-          echo "plan=$PLAN code=$CODE shards=$SHARDS extras=$EXTRAS"
+          echo "plan=$PLAN lint=$LINT code=$CODE shards=$SHARDS extras=$EXTRAS"
+          if [ "$LINT" != success ]; then
+            echo "::error::the lint job failed: a static rule, gdlint or a data check (tools/lint/README.md); its log names each file and line"
+            exit 1
+          fi
           if [ "$PLAN" != success ]; then
             echo "::error::the plan job failed: a suite is in two shards of tools/ci_shards.txt, a plan check failed, or the checkout failed"
             exit 1
