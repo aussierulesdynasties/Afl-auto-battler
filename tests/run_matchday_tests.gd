@@ -167,7 +167,7 @@ func _test_ground_fit() -> void:
 		await _settle()
 		var pitch = m.get("_pitch")
 		var wide: bool = sz.x > sz.y
-		_check(not pitch.camera_enabled and pitch.upright == not wide,
+		_check(not pitch.camera_enabled and pitch.upright == (not wide),
 				"The whole ground shows, left to right in a wide window and top to bottom on a phone held upright, web or not (%dx%d: camera %s, upright %s)" % [
 				sz.x, sz.y, str(pitch.camera_enabled), str(pitch.upright)])
 		if wide:
@@ -686,8 +686,7 @@ func _test_coach_descriptions(sz: Vector2i) -> void:
 		var gc: Array = load("res://scripts/sim/GateOdds.gd").pep_texts(k, _state.pending_sim.fire_up_contest(int(m.get("_my_side"))))
 		_check(note != null and note.is_visible_in_tree() and note.find_child("PepGain", true, false) != null
 				and note.find_child("PepCost", true, false) != null
-				and _flat(_text(note)) == _flat("Gain: %s
-Cost: %s" % [gc[0], gc[1]]),
+				and _flat(_text(note)) == _flat("Gain: %s\nCost: %s" % [gc[0], gc[1]]),
 				"The %s pep talk shows its own gain and cost (%s: %s)" % [k, tag, _text(note) if note else "-"])
 		pep_seen[_flat(_text(note)) if note != null else ""] = true
 	_check(pep_seen.size() == 4, "Each pep talk has its own words (%s)" % tag)
@@ -705,8 +704,7 @@ Cost: %s" % [gc[0], gc[1]]),
 	var usual := roundi(float(load("res://scripts/sim/Roles.gd").TAG_USUAL_TOUCHES))
 	var no_tag_ok := func() -> bool:
 		var t := _plain(tn)
-		return t.begins_with("Gain: your midfielders play their own game") and t.contains("
-Cost: ") 				and t.contains("usual %d touches" % usual) and tn.find_child("TagGain", true, false) != null 				and tn.find_child("TagCost", true, false) != null
+		return t.begins_with("Gain: your midfielders play their own game") and t.contains("\nCost: ") 				and t.contains("usual %d touches" % usual) and tn.find_child("TagGain", true, false) != null 				and tn.find_child("TagCost", true, false) != null
 	_check(tn != null and none != null and no_tag_ok.call(), "With no tag, the tag call says its gain and its cost (%s: %s)" % [tag, _plain(tn) if tn else "-"])
 	var named: Button = null
 	for b in box.find_child("TagPicker", true, false).find_children("TagPickerGrid_*", "Button", true, false):
@@ -718,8 +716,7 @@ Cost: ") 				and t.contains("usual %d touches" % usual) and tn.find_child("TagGa
 		var tw: String = await Tap.tap(named)
 		await _settle()
 		_check(tw == "" and _plain(tn).contains("usually gets %d touches" % usual) and _plain(tn).contains("on him, about ")
-				and _plain(tn).contains("
-Cost: ") and _plain(tn).contains(str(load("res://scripts/sim/GateOdds.gd").tag_gives())),
+				and _plain(tn).contains("\nCost: ") and _plain(tn).contains(str(load("res://scripts/sim/GateOdds.gd").tag_gives())),
 				"A real tap on a player sizes the tag: his touches, and what the tagger gives up (%s: %s)" % [tag, _plain(tn)])
 		var tw2: String = await Tap.tap(box.find_child("TagPickerGrid_", true, false))
 		await _settle()
@@ -745,8 +742,7 @@ Cost: ") and _plain(tn).contains(str(load("res://scripts/sim/GateOdds.gd").tag_g
 			return t.contains("Gives up " + gv.left(1).to_upper() + gv.substr(1) + " (") and t.contains("their man: Usually ") and t.contains(" touches. Tagged, about ") and not t.get_slice("Gives up", 1).contains("disposals") 					and (t.contains("season rating ") or t.contains("yet to play this season"))
 		_check(dflt != null and gives.call(words.call(dflt)) and words.call(dflt).contains("Your assistant's pick")
 				and mine_btn != null and gives.call(words.call(mine_btn)),
-				"Your assistant's tagger shows what he gives up, like the others, marked as the pick (%s: %s)" % [tag, words.call(dflt).replace("
-", " / ") if dflt else "-"])
+				"Your assistant's tagger shows what he gives up, like the others, marked as the pick (%s: %s)" % [tag, words.call(dflt).replace("\n", " / ") if dflt else "-"])
 		# Name bold on top, two labelled facts, their man's touches on a line of
 		# their own, the pick a quiet label on his card, your club's rule.
 		var cards: Array = who_box.find_children("Card_TaggerPickerGrid_*", "Control", true, false) if who_box != null else []
@@ -2520,11 +2516,21 @@ func _test_momentum_meter() -> void:
 	_check(bar != null and _text(bar).contains("Momentum") and word != null, "The meter is labelled Momentum")
 	m.call("_track_momentum", {"mom": 0.0})
 	_check(word != null and word.text == "Even", "Level, it says Even (%s)" % (word.text if word else "-"))
+	await _settle()
+	var note: Label = m.find_child("MomentumNote", true, false)
+	var pitch: Control = m.get("_pitch")
+	var ground_before: Rect2 = pitch.get_global_rect() if pitch != null else Rect2()
+	_check(note != null and note.modulate.a == 0.0 and not bool(_state.get_setting("seen_momentum_intro", false)),
+			"Before momentum moves, the line is unseen and not yet counted as seen")
 	m.call("_track_momentum", {"mom": 0.6})
 	_check(word.text == "%s on top" % db.club_short(str(res["home"])), "Home on top is named (%s)" % word.text)
-	var note: Label = m.find_child("MomentumNote", true, false)
-	_check(note != null and note.visible and bool(_state.get_setting("seen_momentum_intro", false)),
+	_check(note != null and note.visible and note.modulate.a == 1.0
+			and bool(_state.get_setting("seen_momentum_intro", false)),
 			"The first match you watch says what it is, once it moves")
+	await _settle()
+	var ground_after: Rect2 = pitch.get_global_rect() if pitch != null else Rect2(-1, -1, -1, -1)
+	_check(pitch != null and ground_before.size.y > 0.0 and ground_after == ground_before,
+			"The ground does not move when the line appears (%s -> %s)" % [ground_before, ground_after])
 	m.call("_track_momentum", {"mom": -0.6})
 	_check(word.text == "%s on top" % db.club_short(str(res["away"])), "Away on top is named (%s)" % word.text)
 	var why: String = await Tap.tap(bar)
@@ -2553,7 +2559,7 @@ func _test_momentum_meter() -> void:
 	await _settle()
 	m2.call("_track_momentum", {"mom": 0.6})
 	var note2: Label = m2.find_child("MomentumNote", true, false)
-	_check(note2 != null and not note2.visible, "The next match does not say it again")
+	_check(note2 != null and not note2.visible, "The next match does not say it again, nor keeps its room")
 	m2.queue_free()
 	await _settle()
 

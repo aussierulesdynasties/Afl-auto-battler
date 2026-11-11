@@ -1,9 +1,9 @@
 """gdlint (gdtoolkit, pinned in tools/lint/requirements.txt) over the GDScript, against a baseline.
 
 The config is tools/lint/gdlintrc: naming rules, unused arguments, whitespace and tab guards;
-layout and size rules are off. gdtoolkit's parser lags Godot 4.7 on a few legal forms (a newline
-inside a "..." string, `set`/`get` as a variable name, `x == not y`), so those files report
-"parse-error" and sit in the baseline like any other known problem.
+layout and size rules are off. gdtoolkit's parser lags Godot 4.7 on a few legal forms, and a
+file it cannot parse is not linted at all, so a parse error is never baselined: it always fails,
+naming the rewrite that parses (PARSE_HINT). Every tracked .gd parsed on 2026-11-12.
 
 tools/lint/gdlint_baseline.txt holds today's known problems as "count rule path". A file may
 have up to its baseline count of each rule; one more fails, naming each line of that rule in
@@ -24,6 +24,10 @@ VERSION = "4.5.0"
 PROBLEM = re.compile(r"^(.+?\.gd):(\d+): Error: (.*) \(([\w-]+)\)\s*$")
 PARSE_HEAD = re.compile(r"^(.+?\.gd):\s*$")
 AT_LINE = re.compile(r"\bline (\d+)")
+PARSE_HINT = ("gdtoolkit cannot parse this file, so gdlint checks none of it. Forms Godot accepts but "
+              "gdtoolkit 4.5.0 does not: a line break inside a \"...\" string (write \\n), `set` or `get` "
+              "as a variable name (rename it), `x == not y` (write `x == (not y)`), a one-line lambda "
+              "with an `if` body (put the body on its own lines)")
 
 
 def available():
@@ -121,9 +125,12 @@ def gate(found, files, base=None):
         by.setdefault((f.path, f.rule), []).append(f)
     out, notes = [], []
     for key in sorted(by):
-        allowed = base.get(key, 0)
+        allowed = 0 if key[1] == "parse-error" else base.get(key, 0)
         if len(by[key]) > allowed:
             for f in by[key]:
+                if f.rule == "parse-error":
+                    out.append(Finding(f.path, f.line, "gdlint/parse-error", f.message + ". " + PARSE_HINT))
+                    continue
                 out.append(Finding(f.path, f.line, "gdlint/" + f.rule, f.message + (
                     "" if not allowed else " (%d of this rule in this file, baseline %d)" % (len(by[key]), allowed))))
     linted = set(files)

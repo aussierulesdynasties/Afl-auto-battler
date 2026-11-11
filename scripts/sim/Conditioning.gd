@@ -561,8 +561,7 @@ static func department_words(hp_level: int) -> String:
 	if level < ClubBudget.STANDARD:
 		gains = [cost]
 		costs = [recovery, peak, plan]
-	return "%s
-%s" % [GateOdds.gain(" ".join(gains)), GateOdds.cost(" ".join(costs))]
+	return "%s\n%s" % [GateOdds.gain(" ".join(gains)), GateOdds.cost(" ".join(costs))]
 
 
 ## The plan sheet's department line: whose level the sizes and odds above are for.
