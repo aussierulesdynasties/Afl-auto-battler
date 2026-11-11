@@ -99,7 +99,7 @@ const TEAM_PASS := {
 ## The training pass (copy voice pass 6): the rewritten lines of TrainingScene.gd, and the lines
 ## they replaced. What a player trains as is his development focus, on every line that names it.
 const TRAINING_NEW := [
-	"Each game earns a player development. His development focus decides which stats it lifts.",
+	"A player earns development every game. His development focus decides which stats it lifts.",
 	"Pick the kind of footballer each player becomes. That is his development focus.",
 	"By position trains what a player's position is judged on. Change a focus any time.",
 	"Nothing develops a player like senior football. A fit player we leave out develops in the reserves, at about half the rate.",
