@@ -1654,7 +1654,12 @@ func _test_press_shape(res: Dictionary) -> void:
 			apart_note += " %s v %s %.0f" % [pair[0], pair[1], gap]
 	_check(ends_apart, "The two ends are told apart by colour:" + apart_note)
 	_check(float(pvs.END_LINE_W) >= 2.5 and float(pvs.END_FILL_ALPHA) >= 0.4,
-			"The kicking end is drawn heavier than the ground's white lines, with the goal square filled")
+			"The goal square a side kicks to is drawn heavier than the ground's white lines, and filled")
+	# Director, 2026-11-11: "the 50 metre arcs should also have the number 50 in them".
+	_check(int(pvs.fifty_font_size(2.2)) >= 13 and int(pvs.fifty_font_size(6.0)) == 42,
+			"The painted 50 grows with the ground and never drops under the oval's 13 px text floor")
+	_check(float(pvs.FIFTY_FROM_BOUNDARY_M) >= 8.0 and float(pvs.FIFTY_FROM_BOUNDARY_M) <= 25.0,
+			"Each arc's two 50s sit near the boundary, not in the corridor")
 	d._tac[1] = {}
 	# The line, once: only the pressing side's opponents' disposals open it.
 	var tl := [{"at": 0, "side": 1, "plan": "defensive"}, {"at": 0, "side": 0, "plan": "balanced"}]
