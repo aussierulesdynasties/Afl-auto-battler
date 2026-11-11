@@ -1,0 +1,30 @@
+rule,value,from_year,to_year,quote,source_url,checked
+salary_cap,1250000,1987,1989,The cap was set at some number A$ 1.25 million ... for 1987-1989 as per VFL agreement,https://en.wikipedia.org/wiki/AFL_salary_cap,2026-11-11
+salary_floor,1125000,1987,1989,with the salary floor set at 90% of the cap or $1.125 million,https://en.wikipedia.org/wiki/AFL_salary_cap,2026-11-11
+salary_cap,1600000,1991,1991,"Evolution of competition table: 1991 Victoria South Australia West Australia New South Wales Queensland $1,600,000",https://en.wikipedia.org/wiki/Australian_Football_League,2026-11-11
+salary_cap,9130000,2013,2013,"this was $9,130,000 for the 2013 season with a salary floor of $8,673,500",https://en.wikipedia.org/wiki/Australian_Football_League,2026-11-11
+salary_floor,8673500,2013,2013,"this was $9,130,000 for the 2013 season with a salary floor of $8,673,500",https://en.wikipedia.org/wiki/Australian_Football_League,2026-11-11
+salary_cap,10070000,2015,2015,increasing from $9.92m to $10.07m in 2015 and $10.22m to $10.37m in 2016,https://en.wikipedia.org/wiki/Australian_Football_League,2026-11-11
+salary_cap,10370000,2016,2016,increasing from $9.92m to $10.07m in 2015 and $10.22m to $10.37m in 2016,https://en.wikipedia.org/wiki/Australian_Football_League,2026-11-11
+salary_cap,13540000,2022,2022,"was A$13,540,000 for the 2022 season, with a salary floor of $12,863,000",https://en.wikipedia.org/wiki/AFL_salary_cap,2026-11-11
+salary_floor,12863000,2022,2022,"was A$13,540,000 for the 2022 season, with a salary floor of $12,863,000",https://en.wikipedia.org/wiki/AFL_salary_cap,2026-11-11
+salary_cap,15022778,2023,2023,"the aggregate Total Player Payment (TPP) figure was set in 2023 at $15,022,778",https://en.wikipedia.org/wiki/AFL_salary_cap,2026-11-11
+salary_floor_pct,90,1987,2000,salary floor set at 90% of the cap ... increased to 92.5% of the cap in 2001,https://en.wikipedia.org/wiki/AFL_salary_cap,2026-11-11
+salary_floor_pct,92.5,2001,2012,"the salary floor was increased to 92.5% of the cap in 2001, and to 95% of the cap for 2013 onwards",https://en.wikipedia.org/wiki/AFL_salary_cap,2026-11-11
+salary_floor_pct,95,2013,2026,and to 95% of the cap for 2013 onwards,https://en.wikipedia.org/wiki/AFL_salary_cap,2026-11-11
+senior_list_max,52,1993,1993,the reduction in size of AFL lists from 52 to 42 players in 1994,https://en.wikipedia.org/wiki/Rookie_list,2026-11-11
+senior_list_max,42,1994,1994,the reduction in size of AFL lists from 52 to 42 players in 1994,https://en.wikipedia.org/wiki/Rookie_list,2026-11-11
+rookie_list,1,1997,2026,The rookie list was established in 1997,https://en.wikipedia.org/wiki/Rookie_list,2026-11-11
+interchange,2,1978,1993,1978 - the replacement of two substitutes with two interchanges; 1994 - the introduction of a third interchange,https://en.wikipedia.org/wiki/Interchange_(Australian_rules_football),2026-11-11
+interchange,3,1994,1997,1994 - the introduction of a third interchange; 1998 - the introduction of a fourth interchange,https://en.wikipedia.org/wiki/Interchange_(Australian_rules_football),2026-11-11
+interchange,4,1998,2010,1998 - the introduction of a fourth interchange; 2011 - ... three interchanges and a substitute,https://en.wikipedia.org/wiki/Interchange_(Australian_rules_football),2026-11-11
+interchange,3,2011,2015,"Between 2011 and 2015, there were three interchange players and one substitute",https://en.wikipedia.org/wiki/Interchange_(Australian_rules_football),2026-11-11
+substitutes,1,2011,2015,"Between 2011 and 2015, there were three interchange players and one substitute",https://en.wikipedia.org/wiki/Interchange_(Australian_rules_football),2026-11-11
+interchange,4,2016,2025,2016 - the return to four interchanges without a substitute ... 2026 - ... a fifth interchange player,https://en.wikipedia.org/wiki/Interchange_(Australian_rules_football),2026-11-11
+substitutes,0,2016,2020,There were no substitutes between 2016 and 2020,https://en.wikipedia.org/wiki/Interchange_(Australian_rules_football),2026-11-11
+substitutes,1,2021,2025,2021 - ... a medical substitute as a fifth bench player ... 2026 - removal of the substitute,https://en.wikipedia.org/wiki/Interchange_(Australian_rules_football),2026-11-11
+interchange,5,2026,2026,"each team is permitted five interchange players, and a maximum of seventy-five total player interchanges",https://en.wikipedia.org/wiki/Interchange_(Australian_rules_football),2026-11-11
+substitutes,0,2026,2026,2026 - removal of the substitute and introduction of a fifth interchange player,https://en.wikipedia.org/wiki/Interchange_(Australian_rules_football),2026-11-11
+interchange_cap,120,2014,2015,"2014 - the addition of an interchange cap, limiting teams to 120 interchanges per game",https://en.wikipedia.org/wiki/Interchange_(Australian_rules_football),2026-11-11
+interchange_cap,90,2016,2020,2016 - ... reduction of the interchange cap to 90 per game,https://en.wikipedia.org/wiki/Interchange_(Australian_rules_football),2026-11-11
+interchange_cap,75,2021,2026,2021 - the reduction of the interchange cap to 75 a game,https://en.wikipedia.org/wiki/Interchange_(Australian_rules_football),2026-11-11

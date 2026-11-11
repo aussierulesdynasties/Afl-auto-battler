@@ -476,13 +476,23 @@ const WEIGH_LINE := "Besides salary he counts a best-23 spot as %s a season (a b
 ## Your free-agency offer as a gate (row T1.R26: "Gain / Cost everywhere"):
 ## Gain, he signs with you if yours is worth the most to him once rivals have
 ## answered; Cost, its salary on your cap for its term.
-const FA_GAIN := "he signs with you if yours is still worth the most to him after rivals answer (yours %s a season to him, the best other %s)"
+const FA_GAIN := "he signs with you if yours is still worth the most to him after rivals answer (yours %s a season to him, the best other %s). An offer only just worth the most still leads about %d times in 10 once they answer; when they go past it, leading again costs about %s a season more"
+## The odds on that Gain, measured (row T1.R26 L3, tools/balance/rival_reads.gd:
+## 931 talks over six seeded careers, tools/balance/rival_reads_measured.json):
+## the cheapest offer that leads still led after rivals answered in 380 of
+## 931 talks, about 4 in 10; when overtaken, the cheapest second offer that
+## led again cost a median $100k a season more in salary. It names the odds,
+## never the limit that wins him outright (director 2026-10-18: the gate gives
+## the size and the odds, never which option is better). tests/test_contracts.gd
+## holds both to the measured counts.
+const FA_HOLDS_IN_10 := 4
+const FA_RELEAD_EXTRA := 100000
 const FA_GAIN_ALONE := "no other club has offered: he signs with you (yours is worth %s a season to him)"
 const FA_COST := "%s a season on your cap for %d season%s, %s in all"
 
 
 static func fa_lines(salary: int, years: int, worth: int, best_other: int) -> Array:
-	var g := FA_GAIN_ALONE % money(worth) if best_other <= 0 else FA_GAIN % [money(worth), money(best_other)]
+	var g := FA_GAIN_ALONE % money(worth) if best_other <= 0 else FA_GAIN % [money(worth), money(best_other), FA_HOLDS_IN_10, money(FA_RELEAD_EXTRA)]
 	# Plain lines: the screen labels them with GateOdds.gain / cost (Contracts
 	# stays free of GameDB, so standalone runners compile it).
 	return [g, FA_COST % [money(salary), years, "" if years == 1 else "s", money(salary * years)]]
@@ -649,7 +659,11 @@ static func evaluate_trade(ai_list: Array, give: Array, take: Array, cap: int,
 	# leaves it no further over (a list seeded over the cap can still deal).
 	if _senior_over(ai_list, give, take) or _senior_over(my_list, take, give):
 		return _verdict(false, "trade_senior_over", ctx, {"n": RookieList.SENIOR_SPOTS})
-	if ai_after < MIN_LIST or my_after < MIN_LIST:
+	# No trade takes a side under the minimum. A side already under it stays
+	# able to deal as long as the trade leaves its list no smaller: only a
+	# medical retirement (GameState._medical_retire) puts a club there, and it
+	# stays a player short until its next intake (director, 2026-11-11).
+	if (ai_after < MIN_LIST and ai_after < ai_list.size()) or (my_after < MIN_LIST and my_after < my_list.size()):
 		return _verdict(false, "trade_list_under", ctx, {"n": MIN_LIST})
 	var ai_pay := payroll(ai_list) - payroll(give) + payroll(take)
 	if ai_pay > cap:
