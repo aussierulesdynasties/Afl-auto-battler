@@ -47,14 +47,10 @@ var _pick_club := false
 ## The web build's one line when the browser refuses to keep the save (P-71), or "".
 var _storage_line := ""
 
-## Placeholder title art. Swap the file (same path) to replace it.
-const LOGO := preload("res://assets/ui/aussie_rules_dynasties_logo_placeholder.png")
+## The title art is GameLogo (the one place the logo file is named).
 ## The logo's widest and tallest on screen, and its share of a short window.
 const LOGO_MAX_W := 560.0
 const LOGO_MAX_H_SHARE := 0.26
-## The lettering's part of the file (1536 x 1024, mostly black ground), with
-## a little room, so the tagline sits under the words rather than the ground.
-const LOGO_REGION := Rect2(90, 228, 1374, 614)
 const TAGLINE := "Build your dynasty."
 const NAME_OPTIONS := [["generated", "Generated"], ["real", "Real"]]
 ## The promise, printed once on the menu (P-70). tools/check_android_permissions.py
@@ -78,16 +74,13 @@ static func promise_text(web: bool) -> String:
 func _logo_art() -> TextureRect:
 	_logo = TextureRect.new()
 	_logo.name = "Logo"
-	var art := AtlasTexture.new()
-	art.atlas = LOGO
-	art.region = LOGO_REGION
-	_logo.texture = art
+	_logo.texture = GameLogo.art()
 	_logo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_logo.size_flags_horizontal = Control.SIZE_FILL
 	_logo.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if UiKit.appearance() == "light":
-		# The supplied placeholder has a black ground. In light mode key only
+		# The logo file has a black ground. In light mode key only
 		# that near-black ground out so the lettering keeps its real colours.
 		var shader := Shader.new()
 		shader.code = "shader_type canvas_item;\nvoid fragment(){ vec4 c=texture(TEXTURE,UV); float hi=max(c.r,max(c.g,c.b)); c.a*=smoothstep(0.04,0.16,hi); COLOR=c; }"
@@ -107,7 +100,7 @@ func _logo_art() -> TextureRect:
 func _fit_logo() -> void:
 	if not is_instance_valid(_logo):
 		return
-	var aspect := LOGO_REGION.size.y / LOGO_REGION.size.x
+	var aspect := GameLogo.aspect()
 	var w := minf(LOGO_MAX_W, UiKit.view_width(self) - 32.0)
 	var h := minf(w * aspect, UiKit.view_height(self) * LOGO_MAX_H_SHARE)
 	_logo.custom_minimum_size = Vector2(0, roundf(h))

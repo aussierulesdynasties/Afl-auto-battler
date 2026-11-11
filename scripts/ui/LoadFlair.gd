@@ -16,9 +16,7 @@ extends Control
 ## squashes. Reduced motion: the ball sits on the ground, still, in front of
 ## the posts (a ball in the air and not moving would be a hovering ball).
 
-const LOGO := preload("res://assets/ui/aussie_rules_dynasties_logo_placeholder.png")
-## The lettering inside the file (the same crop the title screen uses).
-const LOGO_REGION := Rect2(90, 228, 1374, 614)
+## The logo is GameLogo (the one place the logo file is named).
 const LOGO_MAX_W := 420.0
 
 ## One kick: time in the air, then a beat before the next one.
@@ -82,10 +80,7 @@ func _ready() -> void:
 	visible = false
 	_logo = TextureRect.new()
 	_logo.name = "LoadLogo"
-	var art := AtlasTexture.new()
-	art.atlas = LOGO
-	art.region = LOGO_REGION
-	_logo.texture = art
+	_logo.texture = GameLogo.art()
 	_logo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_logo.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -132,7 +127,7 @@ func close() -> void:
 func fit() -> float:
 	var view := get_viewport_rect().size
 	var logo_w := minf(LOGO_MAX_W, view.x - 64.0)
-	var logo_h := roundf(logo_w * LOGO_REGION.size.y / LOGO_REGION.size.x)
+	var logo_h := roundf(logo_w * GameLogo.aspect())
 	var stage_w := minf(view.x - 64.0, 300.0)
 	var stage_h := roundf(minf(stage_w * 0.68, view.y * 0.3))
 	stage_w = roundf(stage_h / 0.68)
