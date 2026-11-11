@@ -57,6 +57,7 @@ func run() -> void:
 	_t("_test_dev_talk")
 	_t("_test_dev_talk_follow_up")
 	_t("_test_dev_promise_kept_broken_lapsed")
+	_t("_test_dev_promise_named_side")
 	_t("_test_ten_seasons")
 	_t("_test_trust_in_play")
 	_t("_test_stories_never_move_the_dice")
@@ -3729,3 +3730,35 @@ func _test_dev_promise_kept_broken_lapsed() -> void:
 	_check(str(p["dev_talk"]["state"]) == "lapsed" and ClubLife.morale(p) == 60, "Season over first: the promise lapses, no sting")
 	_check(_news_has("so that promise lapses"), "...and the news says so")
 	_check(str(_dev_talk_fact(id)[0]["out"]) == "lapsed", "The career fact says lapsed")
+
+
+## Director, 2026-11-12: "he should show as on the team the moment you accept".
+## A side you named without him: once his promised games fall due he is named
+## in it, and they start (before, they never could: a trial needs him in the side).
+func _test_dev_promise_named_side() -> void:
+	_start()
+	var p := _dev_learner()
+	if p.is_empty():
+		_check(false, "Someone in the side can learn a position")
+		return
+	var id := str(p["id"])
+	GameState.dev_talk(p, "promise")
+	_judge(p, true)
+	var side := GameState.current_side()
+	for k in side:
+		(side[k] as Array).erase(id)
+	GameState.set_selection(side)
+	_check(_line_in(GameState.current_side(), id) == "", "(setup) a side you named leaves him out")
+	GameState._dev_promise_week()
+	var dt: Dictionary = p["dev_talk"]
+	_check(not (_line_in(GameState.current_side(), id) in ["", "BENCH"]) and _line_in(GameState.my_selection(), id) != "",
+			"Owed his games: he is named in your side at once (%s)" % _line_in(GameState.current_side(), id))
+	_check(str(dt["state"]) == "on" and str(GameState.role_trial.get("id", "")) == id and GameState.role_trial.has("promised"),
+			"...and his promised games start (%s, %s)" % [str(dt), str(GameState.role_trial)])
+	for r in range(GameState.DEV_PROMISE_GAMES):
+		p.erase("suspension_weeks")
+		p.erase("injury_weeks")
+		GameState.week_events = []
+		GameState.advance()
+		_check(GameState.last_side.has(id) or str(dt["state"]) == "kept", "Promised game %d: he took the field" % (r + 1))
+	_check(str(dt["state"]) == "kept", "Three games there and the promise is kept (%s)" % str(dt))
