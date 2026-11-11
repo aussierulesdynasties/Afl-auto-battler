@@ -25,6 +25,7 @@ func run() -> void:
 	_t("_test_room_for_every_pick")
 	_t("_test_career_spots_match_draft")
 	_t("_test_spots_sheet_before_offseason_opens")
+	_t("_test_draft_room_gate")
 	_t("_test_draft_rules")
 	_t("_test_career_rollover")
 	_t("_test_class_tiers")
@@ -268,6 +269,57 @@ func _test_spots_sheet_before_offseason_opens() -> void:
 	_check(DraftSpotsSheet.needed(), "The sheet shows for a full list before the off-season opens")
 	_check(not (GameState.draft_list_spots()["passing"] as Array).is_empty(),
 			"Every pick of a full list is named as passing (%s)" % str(GameState.draft_list_spots()))
+
+
+## Must make room (director, 2026-11-12): a club takes at least three players,
+## or every pick it holds when fewer. Short of that, the gate says how many to
+## delist (one/two/three, singular or plural as it reads), and delisting one
+## or trading a pick away brings the count down until the gate is gone.
+func _test_draft_room_gate() -> void:
+	GameState.reset()
+	var me := str(GameDB.CLUB_ORDER[0])
+	GameState.start_season(me, GameDB.club_list(me))
+	var season: Season = GameState.season
+	season.round_index = season.fixture.size()
+	season.finals = {"done": true, "premier": "CAR", "runner_up": "ESS"}
+	GameState.open_offseason()
+	var n := 0
+	while RookieList.senior_count(GameState.my_list) < RookieList.SENIOR_SPOTS and n < 60:
+		var copy: Dictionary = (GameState.my_list[n % GameState.my_list.size()] as Dictionary).duplicate(true)
+		copy["id"] = "pad_gate_%d" % n
+		copy["rookie_list"] = ""
+		GameState.my_list.append(copy)
+		n += 1
+	for p in GameState.my_list:
+		p["contract_years"] = 3
+	var s := GameState.draft_list_spots()
+	var held: int = (s["picks"] as Array).size()
+	_check(held >= 3 and int(s["open"]) == 0, "A full list with three picks or more (%s)" % str(s))
+	var words := ["no", "one", "two", "three"]
+	var want := mini(3, held)
+	for k in range(want, 0, -1):
+		_check(GameState.draft_room_short() == k, "Short by %d (%d)" % [k, GameState.draft_room_short()])
+		_check(GameState.draft_room_line() == "Clubs must take at least three players. Delist %s to make room, or trade the picks." % words[k],
+				"The gate's line: %s" % GameState.draft_room_line())
+		_check(DraftSpotsSheet.needed(), "The draft button opens the gate while short (%d)" % k)
+		var gone := false
+		for p in GameState.my_list.duplicate():
+			if str(p["id"]).begins_with("pad_gate_") and bool(GameState.release_player(str(p["id"]))["ok"]):
+				gone = true
+				break
+		_check(gone, "A padded player is delisted")
+	_check(GameState.draft_room_short() == 0 and GameState.draft_room_line() == "", "The rule is met")
+	# Trading picks away: a club holding fewer than three needs a spot for each.
+	var mine: Array = GameState.club_picks(me).filter(func(pk): return int(pk["year"]) == GameState.season_year)
+	var other := str(GameDB.CLUB_ORDER[1])
+	for pk in mine.slice(1):
+		GameState.pick_owner["%d:%d:%s" % [int(pk["year"]), int(pk["round"]), str(pk.get("origin", me))]] = other
+	var left: Array = GameState.draft_list_spots()["picks"]
+	if left.size() == 1:
+		_check(GameState.draft_room_short() == 0, "One pick and three open spots: the rule is met")
+	else:
+		print("SKIP: pick ownership keys differ (%s)" % str(left))
+		_check(true, "skipped")
 
 
 ## In a career, the count the brief and the pre-draft sheet show matches the

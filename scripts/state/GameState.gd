@@ -10280,6 +10280,31 @@ func draft_list_spots() -> Dictionary:
 	return out
 
 
+## The fewest players a club takes at the National Draft: three, or every pick
+## it holds when it holds fewer (director, 2026-11-12, "Must make room").
+const DRAFT_MIN_TAKE := 3
+
+## How many more senior spots your club must open before the National Draft
+## may start (0 when the rule is met): the picks you hold, up to three, less
+## the spots open when it opens (draft_list_spots). Delisting a player or
+## trading a pick away brings it down. Only a list that meets the rule passes
+## its other picks.
+func draft_room_short() -> int:
+	var s := draft_list_spots()
+	if bool(s["live"]):
+		return 0
+	return maxi(0, mini(DRAFT_MIN_TAKE, (s["picks"] as Array).size()) - int(s["open"]))
+
+
+## The gate's line (director, 2026-11-12): "Clubs must take at least three
+## players. Delist two to make room, or trade the picks." "" when met.
+func draft_room_line() -> String:
+	var n := draft_room_short()
+	if n <= 0:
+		return ""
+	return "Clubs must take at least three players. Delist %s to make room, or trade the picks." % _count_word(n)
+
+
 func _count_word(n: int, capital := false) -> String:
 	var words := ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
 			"eleven", "twelve"]
