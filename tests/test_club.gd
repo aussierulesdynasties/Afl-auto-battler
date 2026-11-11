@@ -1782,7 +1782,7 @@ func _test_how_we_play_quiet() -> void:
 	var cs = load("res://scripts/ui/CoachingScene.gd")
 	_check(cs._quiet_line("beaten", 4) == "Nothing stands out yet.", "Early on, an empty read is provisional")
 	var settled: String = cs._quiet_line("beaten", 12)
-	_check(not settled.contains("yet") and settled.contains("costing you"),
+	_check(not settled.contains("yet") and settled.contains("costing us"),
 			"Half a season in, no weakness is said plainly (%s)" % settled)
 	_check(not str(cs._quiet_line("win", 12)).contains("yet"), "...and so is no stand-out strength")
 
