@@ -530,7 +530,10 @@ func _test_full_season() -> void:
 			"The Norm Smith Medal is recorded on the honour roll beside the premier")
 	# The premiership side, kept for the club's page across generations (row T5.r158).
 	var side: Array = (GameState.honour_roll.back() as Dictionary).get("premier_side", [])
-	_check(side.size() >= 22 and side == PremiershipInk.premiership_ids(gf, GameState.premier()),
+	# Every man on the ground plus each bench player who came on: 22 or more in
+	# a side that rotates, fewer when a Running machine line (three Engines)
+	# barely rotates, which traits up to five make reachable (director, 2026-11-12).
+	_check(side.size() >= 18 and side == PremiershipInk.premiership_ids(gf, GameState.premier()),
 			"The honour roll keeps the men who played in the premiership side (%d)" % side.size())
 	var ns_news := ""
 	for item in GameState.news:
