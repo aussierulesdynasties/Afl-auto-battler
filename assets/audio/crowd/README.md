@@ -9,6 +9,8 @@ Original, generated, no third-party audio. Nothing here is sampled or downloaded
 | `crowd_behind.wav` | 1.5 s | A short lift of about 4 dB. |
 | `crowd_siren.wav` | 4 s | A roar with a two-tone siren (sines near 440 and 550 Hz). |
 
+The same four files do everything (row 6.51): `crowd_siren.wav` goes at the end of every quarter, and `scripts/ui/match/CrowdSound.gd` sets the level each time a file is played (louder through a run of goals, quieter for the away side). No file was added or changed.
+
 22050 Hz, mono, 16-bit. One gain is applied to all four so their levels stay in step; every peak is under −3 dBFS.
 
 ## How they are made
