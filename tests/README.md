@@ -15,13 +15,17 @@ pull request and every push to `main`, with Godot 4.7.2 downloaded and cached.
 A suite that hangs is stopped after 15 minutes (`SUITE_TIMEOUT`) and fails the
 run; a failing run uploads the logs as an artifact.
 
-CI runs the suites as five parallel shards, so a pull request takes about eight
-minutes instead of half an hour. `tools/ci_shards.txt` says which suites each
+CI runs the suites as twelve parallel shards. `tools/ci_shards.txt` says which suites each
 shard runs, planned from measured timings. Every `tests/run_<name>_tests.gd`
 is a suite, so a new one needs no list entry: `tools/ci_shards.py` puts it on
-the lightest shard until the weekly re-plan. One more job runs the dataset, export-data and intake
-harness checks once (`EXTRAS_ONLY=1 tools/run_tests.sh`). The required check
-named `test` is the last job and passes only when every shard and that job did.
+the lightest shard until the weekly re-plan. Before the shards, the `lint` job runs the
+static rules that need no Godot (`python3 -I tools/lint/lint.py`, see
+[tools/lint/README.md](../tools/lint/README.md): copy voice, colour cues, type roles, sim
+boundaries, the autoload compile rule, gdlint) and the dataset, suite-seed, intake-harness and
+offline-promise checks; a rule that only reads source text belongs there, not in a suite. One
+more job runs the export-data and harness self-test once (`EXTRAS_ONLY=1 tools/run_tests.sh`).
+The required check named `test` is the last job and passes only when lint, every shard and
+that job did.
 
 Run only the suites your change touches while you work; CI runs the rest.
 
@@ -55,6 +59,7 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `load_flair` | The load screens: logo and set shot on every wait with a line, the logo file named in one place (GameLogo) and marked a stand-in there, the ball's flight, Reduced motion, the boot splash, the rollover's beats changing nothing |
 | `intake` | The National Draft model: the 2026 class, projection, season rollover |
 | `intake_ui` | The National Draft on the shared draft screen |
+| `predraft_card` | The recruiting panel's "Before the draft" card on a fresh career, by real taps: after the press interview and before the first pick, straight after the club tap when no interview is due, never twice after backing out and reloading, none on the League redraft |
 | `rookie_list` | The rookie list: the National Draft fills the senior list (38), the Rookie Draft after it fills six rookie spots, upgrading a rookie, old saves, both lists on the list screen, real taps on the sheet and the upgrade, and (row 64) every prospect the National Draft passed over gets his rookie list chance |
 | `sir_doug_round` | Sir Doug Nicholls Round: Round 11 is marked, a club with a bye in it marks it the next round, a design slot per club ("none"), the record survives save and reload, old saves, the fixture page and match card on a 390-wide phone |
 | `own_prospect` | Row 64: the prospect you create (Alastair McNeil) in the first National Draft in both starts, the news lines of his career, the marks on his draft row and profile |
@@ -63,6 +68,7 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `expansion` | Tasmania in 2028 and Canberra in 2030, and a Club Forge club entering with the career |
 | `expansion_package` | How a new club builds its list: state-league signings, early picks, the traded pick, out-of-contract signings, sign-on money, the Canberra choice, the approach card, premiers picking last |
 | `finals` | The wildcard finals bracket, extra time, draws |
+| `season_rules` | Season rules by year (legacy mode): the 1990-2025 table, each past year's fixture (14, 15, 16 and 18 clubs, a bye every round at 15), the final five, six and McIntyre eight played to a premier with the real years' pairings, a drawn final replayed, the Grand Final's venue, no Gather Round before 2023, and the 2026 league's fixture and finals byte-identical to before (golden digest) |
 | `gather_round` | Gather Round: one of rounds 3 to 7 at the host grounds, the home edge only at a club's own ground, the odd-count bye, its name in the fixture, hub and match, a live round across a save and load |
 | `save` | Saving and loading a career, including old-save migrations and the safe write: a failed or interrupted write never loses the career, and a failed swap leaves the newer save readable |
 | `chronology` | 2026 is history, careers start in 2027, and every system agrees |
@@ -107,7 +113,7 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `balance` | A long-career guard: three seasons must not inflate the league |
 | `decision_scenes` | The in-match calls (tired, duel, hot, momentum, set shot) opening on a vignette scene: real players in their own kits, ball only at a palm, sheet frames in range, text card with vignettes off, a real tap on the call |
 | `assets` | The art and music as shipped: figure-sheet frames against the layout, vignettes playing their moves through, banners, music files, levels and the player |
-| `keyboard` | The phone keyboard on every screen with a text field: the window loses the keyboard's height (phone on its side, upright, tablet) and the same field keeps the focus and its text; text arriving the way the engine's web keyboard sends it fills the field and filters the list; the web export has the phone keyboard on |
+| `keyboard` | The phone keyboard on every screen with a text field: the window loses the keyboard's height (phone on its side, upright, tablet) and the same field keeps the focus and its text; text arriving the way the engine's web keyboard sends it fills the field and filters the list (the web export's keyboard preset is the `export-presets` lint) |
 | `international` | International prospects: one or two per generated class over 150 seeded years, never none or three, from seven countries; names from their own country's lists; raw but high-ceiling ratings shaped by their code; one drafted, kept across a save and a season rollover; an old save loads |
 | `namelink` | A player's name opens his profile: real touches at 390x844 and 1280x720 on the Training header, a row's Profile tap and a name in the week's news; a drag that starts on a name still scrolls; Back closes the profile and leaves the screen as it was. |
 | `nav_economy` | Weekly facts within two taps of the hub, the overflow walk at every text size, long-press football words, hub search and shortlist, the Sim the week standing orders |
