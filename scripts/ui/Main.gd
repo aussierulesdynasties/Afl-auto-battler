@@ -15,6 +15,8 @@ var _confirm_overlay: Control
 var _guide_overlay: Control
 var _settings_overlay: Control
 var _load_error: Label
+## "Last good save restored.", under Continue until the menu is left.
+var _restore_note := ""
 var _logo: TextureRect
 ## The setup's choices, applied only when the career starts.
 var _pick_real := true
@@ -156,6 +158,7 @@ func _ready() -> void:
 		if not UiKit.keyboard_resize(self):
 			_render())
 	_render()
+	_patch_notes_once()
 	if WebStorage.should_ask(WebStorage.on_web(), bool(GameState.get_setting(WebStorage.ASKED_KEY, false))):
 		WebStorage.ask()
 		_wait_for_storage_answer()
@@ -249,6 +252,11 @@ func _show_home() -> void:
 			info.name = "CareerMeta"
 			info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			col.add_child(info)
+		if _restore_note != "":
+			var note := UiKit.lbl(_restore_note, UiKit.BODY, UiKit.TEXT)
+			note.name = "RestoreNote"
+			note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			col.add_child(note)
 	_load_error = UiKit.lbl("", UiKit.BODY, UiKit.BAD)
 	_load_error.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_load_error.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -277,6 +285,10 @@ func _show_home() -> void:
 	quiet.alignment = FlowContainer.ALIGNMENT_CENTER
 	quiet.add_child(_quiet_btn("How to play", "MenuHelp", _show_help))
 	quiet.add_child(_quiet_btn("Settings", "MenuSettings", _show_settings))
+	# The save from before the one Continue opens (row T7.R84). Only asked of a
+	# career on disk: one in memory goes back through Settings, Earlier saves.
+	if saved and CareerSave.has_backup(GameState.save_path):
+		quiet.add_child(_quiet_btn(RESTORE_LAST_GOOD, "RestoreLastGood", _confirm_restore))
 	# Last in the row, desktop only (director, 2026-10-12): Android Back already leaves
 	# the app from this menu, iOS and the web have no quit of their own. The gate is the
 	# platform (ScreenLayout.is_desktop), never the window width.
@@ -297,11 +309,20 @@ func _show_home() -> void:
 		storage.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		storage.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		_content.add_child(storage)
-	var build := UiKit.lbl("Build " + BuildInfo.label(), UiKit.SMALL, UiKit.MUTED)
-	build.name = "BuildLabel"
-	build.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_content.add_child(UiKit.spacer(8))
-	_content.add_child(build)
+	# The quiet version line. When this version has patch notes it opens them
+	# again (they open by themselves once, the first time the version runs).
+	var build_text := "Build " + BuildInfo.label()
+	if PatchNotes.lines().is_empty():
+		var build := UiKit.lbl(build_text, UiKit.SMALL, UiKit.MUTED)
+		build.name = "BuildLabel"
+		build.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_content.add_child(UiKit.spacer(8))
+		_content.add_child(build)
+	else:
+		var build := _quiet_btn("%s  ·  %s" % [build_text, PATCH_NOTES_TITLE], "BuildLabel", _show_patch_notes)
+		build.add_theme_font_size_override("font_size", UiKit.SMALL)
+		build.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		_content.add_child(build)
 
 
 ## A secondary action that reads as text: no box, muted until pressed.
@@ -835,6 +856,97 @@ func _confirm_new_career() -> void:
 	cancel.custom_minimum_size = Vector2(0, 44)
 	cancel.pressed.connect(_close_confirm)
 	box["footer"].add_child(cancel)
+
+
+# ---------------------------------------------------------------------------
+# Restore last good save, and the patch notes (row T7.R84)
+# ---------------------------------------------------------------------------
+const RESTORE_LAST_GOOD := "Restore last good save"
+const RESTORE_UNREADABLE := "The save before your last one could not be read.\nYour career is unchanged."
+const RESTORED := "Last good save restored."
+const PATCH_NOTES_TITLE := "What's new"
+
+
+## Asks first, naming the save it goes back to. The two saves swap, so the
+## same entry undoes it.
+func _confirm_restore() -> void:
+	_restore_note = ""
+	var bak := CareerSave.backup(GameState.save_path)
+	if not bool(bak["ok"]):
+		_load_error.text = RESTORE_UNREADABLE
+		_load_error.visible = true
+		return
+	_close_confirm()
+	var box := UiKit.modal_box(self, 460.0, 320.0)
+	_confirm_overlay = box["overlay"]
+	_confirm_overlay.name = "RestoreConfirm"
+	var v: VBoxContainer = box["body"]
+	v.add_child(UiKit.lbl(RESTORE_LAST_GOOD + "?", 20, UiKit.EMPH, true))
+	var lead := UiKit.lbl("This goes back to the save before your last one:", 14, UiKit.TEXT)
+	lead.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(lead)
+	var which := UiKit.lbl(OptionsSheet._save_line(bak["meta"]), 14, UiKit.TEXT, true)
+	which.name = "RestoreWhich"
+	which.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(which)
+	var kept := UiKit.lbl("The save you have now is kept. Restore again to return to it.", 14, UiKit.TEXT)
+	kept.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(kept)
+	var go := UiKit.btn("Restore", UiKit.NAME, true)
+	go.name = "ConfirmRestore"
+	go.custom_minimum_size = Vector2(0, 44)
+	go.pressed.connect(func():
+		_close_confirm()
+		var ok := CareerSave.restore_backup(GameState.save_path)
+		_restore_note = RESTORED if ok else ""
+		_render()
+		if not ok:
+			_load_error.text = RESTORE_UNREADABLE
+			_load_error.visible = true)
+	box["footer"].add_child(go)
+	var cancel := UiKit.btn("Cancel", UiKit.NAME)
+	cancel.name = "CancelRestore"
+	cancel.custom_minimum_size = Vector2(0, 44)
+	cancel.pressed.connect(_close_confirm)
+	box["footer"].add_child(cancel)
+
+
+## The first time a version runs on a device that has run an earlier one, its
+## patch notes open over the menu; the version is recorded so they never open
+## by themselves again. A first run only records the version.
+func _patch_notes_once() -> void:
+	if _mode != "home":
+		return
+	var seen := str(GameState.get_setting(PatchNotes.SEEN_KEY, ""))
+	if seen == PatchNotes.version():
+		return
+	GameState.set_setting(PatchNotes.SEEN_KEY, PatchNotes.version())
+	if PatchNotes.due(seen):
+		_show_patch_notes()
+
+
+func _show_patch_notes() -> void:
+	_close_confirm()
+	var box := UiKit.modal_box(self, 460.0)
+	_confirm_overlay = box["overlay"]
+	_confirm_overlay.name = "PatchNotes"
+	var v: VBoxContainer = box["body"]
+	v.add_child(UiKit.lbl(PATCH_NOTES_TITLE, 20, UiKit.EMPH, true))
+	v.add_child(UiKit.lbl("Build %s" % PatchNotes.version(), UiKit.SMALL, UiKit.MUTED))
+	var notes := UiKit.vbox(12)
+	notes.name = "PatchNotesLines"
+	for text in PatchNotes.lines():
+		var line := UiKit.lbl(str(text), UiKit.BODY, UiKit.TEXT)
+		line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		notes.add_child(line)
+	v.add_child(UiKit.spacer(4))
+	v.add_child(notes)
+	v.add_child(UiKit.spacer(6))
+	var close := UiKit.btn("Close", UiKit.NAME, true)
+	close.name = "PatchNotesClose"
+	close.custom_minimum_size = Vector2(0, 44)
+	close.pressed.connect(_close_confirm)
+	box["footer"].add_child(close)
 
 
 func _close_confirm() -> void:

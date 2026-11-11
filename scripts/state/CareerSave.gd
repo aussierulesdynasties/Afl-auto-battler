@@ -648,6 +648,37 @@ static func restore_history(slot: int, path := DEFAULT_PATH, before := Callable(
 
 
 # ---------------------------------------------------------------------------
+# The last good save (row T7.R84)
+# ---------------------------------------------------------------------------
+## Is there a save from before the one in place (the backup every completed
+## save leaves)? Only that the file is there: the menu asks on every visit,
+## and reading it whole is a stall on a phone. backup() reads it.
+static func has_backup(path := DEFAULT_PATH) -> bool:
+	return FileAccess.file_exists(path + BACKUP_SUFFIX)
+
+
+## The save from before the one in place: {"ok", "meta"} (club, year, stage,
+## saved_at). Not ok when there is none or it cannot be read.
+static func backup(path := DEFAULT_PATH) -> Dictionary:
+	var c := _checked(path + BACKUP_SUFFIX)
+	return {"ok": bool(c["ok"]), "meta": (c["meta"] as Dictionary).duplicate(true)}
+
+
+## Make the save from before the one in place the career save. The two swap:
+## the save it replaces becomes the backup, so restoring again undoes it. A
+## damaged save in place is dropped instead (there is nothing in it to keep).
+## False, and nothing changed, when the backup cannot be read.
+static func restore_backup(path := DEFAULT_PATH) -> bool:
+	var blob := _blob_at(path + BACKUP_SUFFIX)
+	if blob.is_empty():
+		return false
+	for p in [path, path + TEMP_SUFFIX]:
+		if FileAccess.file_exists(p) and not bool(_checked(p)["ok"]):
+			DirAccess.remove_absolute(p)
+	return _write_blob(blob, path)
+
+
+# ---------------------------------------------------------------------------
 # Export and import (row 57)
 # ---------------------------------------------------------------------------
 ## Extension of an exported career file. The file is the save itself, so a
