@@ -23,12 +23,23 @@ const ZOOM_IN := 1.12
 const ZOOM_MAX := 1.24
 var club := ""
 ## 0 (the press conference): the scene is drawn to its frame. Above 0 (the
-## appointment interview): the coach is never drawn larger than this many screen
-## units per figure-sheet pixel, even at the camera's closest, so the sheet is
-## never blown up past its own detail; a frame bigger than that scene gets more
-## room around it (the media wall above and beside, the press pack in front),
-## never a bigger coach.
+## appointment interview): the camera sits tight on the desk, and the coach is
+## drawn from the close-up sheets (CoachCloseUp: the same coach rendered at 3x,
+## director 2026-11-12 "Re-render sharper"), never larger than this many screen
+## units per sheet pixel, even at the camera's closest; a frame bigger than that
+## gets more room around him (the media wall above and beside, the press pack in
+## front), never a blown-up coach.
 var figure_cap := 0.0
+## The close-up coach's share of the frame's height, head to desk, at the camera's
+## closest (the cap may hold him smaller).
+const CLOSE_FILL := 0.30
+## The desk top above his feet, metres: 0.2 of the scene's height (see _draw), where
+## he stands 0.62 of it at 1.84 m.
+const DESK_M := 0.2 * 1.84 / 0.62
+## The close-up sheets, loaded only while an interview's room is up (CoachCloseUp).
+const CLOSE_SHEETS := {"shade": "res://assets/vignette/coach_hd_shade.png",
+		"mask": "res://assets/vignette/coach_hd_mask.png", "design": "res://assets/vignette/coach_hd_design.png"}
+var _close := {}
 ## With figure_cap: how far down the frame (in screen units) the front of the
 ## press pack lands. Below it the nearest reporters' backs fill to the foot.
 ## Below 0: the foot of the frame.
@@ -86,13 +97,26 @@ func _gui_input(event: InputEvent) -> void:
 func scene_box() -> Rect2:
 	if figure_cap <= 0.0:
 		return Rect2(Vector2.ZERO, size)
-	# Standing he is 0.62 of the scene's height (see _draw): at ZOOM_MAX the sheet
-	# is then drawn at exactly figure_cap.
-	var hs := minf(size.y, figure_cap * VignetteFigures.PX_PER_M / ZOOM_MAX * 1.84 / 0.62)
-	var ws := minf(size.x, hs * 1.6)
-	var bottom := size.y if _bottom_now < 0.0 else _bottom_now / _zoom()
-	bottom = clampf(bottom, hs, size.y)
-	return Rect2((size.x - ws) * 0.5, bottom - hs, ws, hs)
+	# Close up: head to desk takes CLOSE_FILL of the frame at ZOOM_MAX, or less where
+	# the cap holds him. Standing he is 0.62 of the scene's height (see _draw).
+	var cap := figure_cap * CoachCloseUp.PX_PER_M
+	var px_m := minf(size.y * CLOSE_FILL / (_seated_reach() - DESK_M), cap)
+	var hs := px_m / ZOOM_MAX * 1.84 / 0.62
+	return Rect2(Vector2.ZERO, Vector2(hs * 1.6, hs))
+
+
+## The seated coach's head above his feet, metres (the close-up sheet's strip).
+func _seated_reach() -> float:
+	return CoachCloseUp.reach(CoachCloseUp.strip(BODY, "coach_seated", "front"), 0)
+
+
+## The part of the scene the frame shows now, in scene units.
+func _frame_local() -> Rect2:
+	if figure_cap <= 0.0:
+		return Rect2(-scene_box().position, size)
+	var inv := _view.affine_inverse()
+	var a := inv * Vector2.ZERO
+	return Rect2(a, inv * size - a)
 
 
 ## The camera's zoom now: in on him through the questions.
@@ -102,7 +126,14 @@ func _zoom() -> float:
 
 ## Screen units per figure-sheet pixel at the camera's closest (what the cap holds).
 func figure_scale() -> float:
-	return scene_box().size.y * 0.62 / 1.84 / VignetteFigures.PX_PER_M * ZOOM_MAX
+	var ppm := CoachCloseUp.PX_PER_M if figure_cap > 0.0 else VignetteFigures.PX_PER_M
+	return scene_box().size.y * 0.62 / 1.84 / ppm * ZOOM_MAX
+
+
+## Fixed-size details (lines, mic heads, the bottle) scaled with a close-up's scene,
+## so they keep their proportion to the coach; 1 in the press conference.
+func _unit(h: float) -> float:
+	return 1.0 if figure_cap <= 0.0 else h / 240.0
 
 
 func _draw() -> void:
@@ -124,9 +155,20 @@ func _draw() -> void:
 	var zoom := _zoom()
 	var focus := box.position + Vector2(x, desk_y - h * 0.12) + G.breathe(_t, size, 0.006)
 	if figure_cap > 0.0:
-		# Framed from the top of the room, so the press pack ends where scene_bottom says.
-		focus.y = size.y * 0.5 / zoom
-	_view = G.view(size, focus, zoom) * Transform2D(0.0, box.position)
+		# Tight on the desk: his head held at one height on the screen, head and desk
+		# centred in the room above the page (scene_bottom), the press pack's heads
+		# under the desk. Walking in he stands taller; the camera rides his head down
+		# as he sits, so he is never cut off at the top.
+		var vb := size.y if _bottom_now < 0.0 else _bottom_now
+		var block := (_seated_reach() - DESK_M) * pm * ZOOM_MAX
+		var head_y := maxf(vb * 0.05, (vb - block * 1.4) * 0.5)
+		var walk_reach := CoachCloseUp.reach(CoachCloseUp.strip(BODY, "coach_walk", "front_r"), 0)
+		var reach: float = G.glide(walk_reach, _seated_reach(), _t, WALK_END * 0.6, SIT_END)
+		var head := Vector2(x, feet_y - reach * pm)
+		_view = Transform2D(0.0, Vector2(zoom, zoom), 0.0,
+				Vector2(size.x * 0.5, head_y) - head * zoom + G.breathe(_t, size, 0.006) * zoom)
+	else:
+		_view = G.view(size, focus, zoom) * Transform2D(0.0, box.position)
 	draw_set_transform_matrix(_view)
 	_draw_wall(w, h, desk_y)
 	_draw_camera_rig(w, h)
@@ -152,30 +194,72 @@ func _draw() -> void:
 
 ## The coach figure, feet at feet (hidden behind the desk), pm pixels per metre.
 func _coach(feet: Vector2, pm: float, anim: String, facing: String, frame: int) -> void:
+	var look := Color(0.0, int(COACH_LOOK["skin"]) / 8.0, int(COACH_LOOK["hair"]) / 8.0, 1.0)
+	if figure_cap > 0.0:
+		_close_up(feet, pm, anim, facing, frame, look)
+		return
 	var info := VignetteFigures.strip(BODY, anim, facing)
 	frame = StoppageVignette.figure_frame(info, frame, anim, facing)
 	var k := pm / VignetteFigures.PX_PER_M
 	var origin := feet - Vector2(info["pivot"][0], info["pivot"][1]) * k
-	var look := Color(0.0, int(COACH_LOOK["skin"]) / 8.0, int(COACH_LOOK["hair"]) / 8.0, 1.0)
 	draw_texture_rect_region(StoppageVignette.FIGURE_SHADE, Rect2(origin, VignetteFigures.frame_size(info) * k),
 			VignetteFigures.source(info, frame), look)
 	StoppageVignette.draw_hair(self, origin, info, frame, k, look, str(COACH_LOOK["hair_style"]))
+
+
+## The coach from the close-up sheets (CoachCloseUp), his hair from its own atlas.
+func _close_up(feet: Vector2, pm: float, anim: String, facing: String, frame: int, look: Color) -> void:
+	_bind_close_up()
+	var CU := CoachCloseUp
+	var info := CU.strip(BODY, anim, facing)
+	frame = StoppageVignette.figure_frame(info, frame, anim, facing)
+	var k := pm / CU.PX_PER_M
+	var origin := feet - Vector2(info["pivot"][0], info["pivot"][1]) * k
+	draw_texture_rect_region(_close["shade"], Rect2(origin, CU.frame_size(info) * k), CU.source(info, frame), look)
+	var hair := CU.hair_for(info, str(COACH_LOOK["hair_style"]))
+	if not hair.is_empty():
+		draw_texture_rect_region(CU.hair_texture(hair), Rect2(origin + CU.hair_offset(hair) * k,
+				Vector2(hair["size"][0], hair["size"][1]) * k), CU.hair_source(hair, frame), look)
+
+
+## The figure material on the close-up sheets: their mask and design, their size
+## (how the shader tells a figure draw), and their hair atlas among the hair sizes.
+func _bind_close_up() -> void:
+	if not _close.is_empty():
+		return
+	for key in CLOSE_SHEETS:
+		_close[key] = load(CLOSE_SHEETS[key])
+	var mat := material as ShaderMaterial
+	mat.set_shader_parameter("mask_tex", _close["mask"])
+	mat.set_shader_parameter("design_tex", _close["design"])
+	mat.set_shader_parameter("sheet_size", CoachCloseUp.SHEET_SIZE)
+	var sizes: Array = Array(mat.get_shader_parameter("hair_sizes"))
+	var count := int(mat.get_shader_parameter("hair_count"))
+	for tex in CoachCloseUp.HAIR_TEXTURES:
+		var sz := Vector2i((tex as Texture2D).get_size())
+		if not sz in sizes.slice(0, count) and count < sizes.size():
+			sizes[count] = sz
+			count += 1
+	mat.set_shader_parameter("hair_sizes", sizes)
+	mat.set_shader_parameter("hair_count", count)
 
 ## The media wall: a step-and-repeat of plain club-colour tiles (no invented logos),
 ## lit from the front, and the room's dark edges.
 func _draw_wall(w: float, h: float, desk_y: float) -> void:
 	# The wall runs to every edge of the frame, so no dark strip shows as the camera moves.
 	# Scene coordinates: the frame starts at -at (wider and taller with figure_cap).
-	var at := scene_box().position
-	draw_rect(Rect2(-at, size), Color(0.12, 0.12, 0.14), true)
+	var fr := _frame_local()
+	var at := -fr.position
+	draw_rect(fr, Color(0.12, 0.12, 0.14), true)
 	var grid := Rect2(w * 0.04, h * 0.1, w * 0.92, desk_y - h * 0.06)
-	var wall := Rect2(-at.x, -at.y, size.x, grid.end.y + at.y)
+	var wall := Rect2(fr.position.x, fr.position.y, fr.size.x, grid.end.y - fr.position.y)
 	var a: Color = _colours[0] if not _colours.is_empty() else Color(0.3, 0.3, 0.32)
 	var b: Color = _colours[1] if _colours.size() > 1 else a.lightened(0.3)
 	var tw := grid.size.x / 7.0
 	var th := grid.size.y / 3.5
-	for row in range(-1 - ceili(at.y / th), 4):
-		for col in range(-1 - ceili(at.x / tw), 9 + ceili(at.x / tw)):
+	for row in range(mini(-1, floori((fr.position.y - grid.position.y) / th) - 1), 4):
+		for col in range(mini(-1, floori((fr.position.x - grid.position.x) / tw) - 1),
+				maxi(9, ceili((fr.end.x - grid.position.x) / tw) + 2)):
 			var off := tw * 0.5 if posmod(row, 2) == 1 else 0.0
 			var r := Rect2(grid.position + Vector2(col * tw - off + tw * 0.12, row * th + th * 0.18), Vector2(tw * 0.76, th * 0.64))
 			r = r.intersection(wall)
@@ -190,22 +274,22 @@ func _draw_wall(w: float, h: float, desk_y: float) -> void:
 	if at.y > h * 0.25:
 		var c := minf(at.y * 0.5, h * 0.3)
 		var top := -at.y
-		draw_rect(Rect2(-at.x, top, size.x, c), Color(0.06, 0.06, 0.07), true)
-		draw_rect(Rect2(-at.x, top + c - 1.5, size.x, 1.5), Color(1, 1, 1, 0.06), true)
+		draw_rect(Rect2(-at.x, top, fr.size.x, c), Color(0.06, 0.06, 0.07), true)
+		draw_rect(Rect2(-at.x, top + c - 1.5, fr.size.x, 1.5), Color(1, 1, 1, 0.06), true)
 		var ty := top + c * 0.55
 		var steel := Color(0.2, 0.2, 0.22)
-		draw_line(Vector2(-at.x, ty), Vector2(size.x - at.x, ty), steel, 2.0, true)
-		draw_line(Vector2(-at.x, ty + 7.0), Vector2(size.x - at.x, ty + 7.0), steel, 2.0, true)
+		draw_line(Vector2(-at.x, ty), Vector2(fr.size.x - at.x, ty), steel, 2.0, true)
+		draw_line(Vector2(-at.x, ty + 7.0), Vector2(fr.size.x - at.x, ty + 7.0), steel, 2.0, true)
 		var step := 14.0
 		var bx := -at.x
-		while bx < size.x - at.x:
+		while bx < fr.size.x - at.x:
 			draw_line(Vector2(bx, ty), Vector2(bx + step * 0.5, ty + 7.0), steel, 1.0, true)
 			draw_line(Vector2(bx + step * 0.5, ty + 7.0), Vector2(bx + step, ty), steel, 1.0, true)
 			bx += step
-		var lamps := 2 + 2 * ceili(at.x / w)
+		var lamps := 2 + 2 * ceili(maxf(0.0, at.x) / w)
 		for i in range(-lamps, lamps + 2):
 			var lx := w * (0.5 + 0.22 * (i - 0.5))
-			if lx < -at.x - 10.0 or lx > size.x - at.x + 10.0:
+			if lx < -at.x - 10.0 or lx > fr.size.x - at.x + 10.0:
 				continue
 			var can := Vector2(lx, ty + 9.0)
 			# The beam: soft, aimed in at the desk.
@@ -230,49 +314,51 @@ func _draw_desk(w: float, h: float, desk_y: float) -> void:
 	if skirt.get_luminance() < 0.06:
 		skirt = skirt.lightened(0.12)          # a black club's skirt still reads as cloth
 	# To the floor: in a frame taller than the scene it runs on down behind the press.
-	var drop := h * 0.24 if figure_cap <= 0.0 else maxf(h * 0.24, size.y - scene_box().position.y - desk_y)
+	var u := _unit(h)
+	var drop := h * 0.24 if figure_cap <= 0.0 else maxf(h * 0.24, _frame_local().end.y - desk_y)
 	draw_rect(Rect2(w * 0.1, desk_y, w * 0.8, drop), skirt, true)
 	for i in range(9):
 		var fx := w * (0.13 + 0.093 * i)
-		draw_line(Vector2(fx, desk_y + 2.0), Vector2(fx, desk_y + drop), skirt.darkened(0.3), 1.5, true)
+		draw_line(Vector2(fx, desk_y + 2.0), Vector2(fx, desk_y + drop), skirt.darkened(0.3), 1.5 * u, true)
 	draw_rect(Rect2(w * 0.1, desk_y, w * 0.8, h * 0.035), Color(1, 1, 1, 0.08), true)
 	var trim: Color = _colours[1] if _colours.size() > 1 else skirt.lightened(0.4)
-	draw_rect(Rect2(w * 0.1, desk_y + h * 0.05, w * 0.8, 2.0), Color(trim, 0.6), true)
+	draw_rect(Rect2(w * 0.1, desk_y + h * 0.05, w * 0.8, 2.0 * u), Color(trim, 0.6), true)
 	draw_rect(Rect2(w * 0.08, desk_y - h * 0.018, w * 0.84, h * 0.03), Color(0.22, 0.2, 0.19), true)
-	draw_rect(Rect2(w * 0.08, desk_y - h * 0.018, w * 0.84, 1.5), Color(1, 1, 1, 0.18), true)
+	draw_rect(Rect2(w * 0.08, desk_y - h * 0.018, w * 0.84, 1.5 * u), Color(1, 1, 1, 0.18), true)
 	# Name card in front of his place, blank.
 	draw_rect(Rect2(w * 0.43, desk_y - h * 0.05, w * 0.14, h * 0.035), Color(0.88, 0.88, 0.86), true)
 	var flags := [Color(0.75, 0.12, 0.12), Color(0.12, 0.3, 0.7), Color(0.9, 0.9, 0.9), Color(0.1, 0.55, 0.3), Color(0.95, 0.65, 0.1)]
 	# Short desk microphones angled up at him; tips at his chest, clear of his face.
 	var mic_h := h * 0.07
 	for i in range(flags.size()):
-		var bx := w * (0.4 + 0.05 * i) + (i % 2) * 3.0
-		var tip := Vector2(w * 0.5 + (bx - w * 0.5) * 0.55, desk_y - mic_h - (i % 3) * 2.0)
+		var bx := w * (0.4 + 0.05 * i) + (i % 2) * 3.0 * u
+		var tip := Vector2(w * 0.5 + (bx - w * 0.5) * 0.55, desk_y - mic_h - (i % 3) * 2.0 * u)
 		var base := Vector2(bx, desk_y - h * 0.012)
-		draw_line(base, tip, Color(0.18, 0.18, 0.2), 2.0, true)
-		draw_rect(Rect2(base + Vector2(-4, -4), Vector2(8, 4)), Color(0.1, 0.1, 0.11), true)
-		var flag := Rect2(tip.lerp(base, 0.28) - Vector2(5, 4), Vector2(10, 8))
+		draw_line(base, tip, Color(0.18, 0.18, 0.2), 2.0 * u, true)
+		draw_rect(Rect2(base + Vector2(-4, -4) * u, Vector2(8, 4) * u), Color(0.1, 0.1, 0.11), true)
+		var flag := Rect2(tip.lerp(base, 0.28) - Vector2(5, 4) * u, Vector2(10, 8) * u)
 		draw_rect(flag, flags[i], true)
-		draw_circle(tip, 4.0, Color(0.06, 0.06, 0.07))
+		draw_circle(tip, 4.0 * u, Color(0.06, 0.06, 0.07))
 	# A bottle and a glass of water at his elbow.
 	var bottle := Vector2(w * 0.66, desk_y - h * 0.012)
-	draw_rect(Rect2(bottle - Vector2(4, h * 0.08), Vector2(8, h * 0.08)), Color(0.6, 0.75, 0.85, 0.75), true)
-	draw_rect(Rect2(bottle - Vector2(2, h * 0.095), Vector2(4, h * 0.015)), Color(0.2, 0.4, 0.8), true)
-	draw_rect(Rect2(bottle + Vector2(10, -h * 0.04), Vector2(7, h * 0.04)), Color(0.8, 0.88, 0.95, 0.5), true)
+	draw_rect(Rect2(bottle - Vector2(4 * u, h * 0.08), Vector2(8 * u, h * 0.08)), Color(0.6, 0.75, 0.85, 0.75), true)
+	draw_rect(Rect2(bottle - Vector2(2 * u, h * 0.095), Vector2(4 * u, h * 0.015)), Color(0.2, 0.4, 0.8), true)
+	draw_rect(Rect2(bottle + Vector2(10 * u, -h * 0.04), Vector2(7 * u, h * 0.04)), Color(0.8, 0.88, 0.95, 0.5), true)
 
 ## A TV camera on its tripod at the side, shooting the desk.
 func _draw_camera_rig(w: float, h: float) -> void:
+	var u := _unit(h)
 	var head := Vector2(w * 0.9, h * 0.5)
 	var leg := Color(0.09, 0.09, 0.1)
 	for dx in [-0.05, 0.0, 0.05]:
-		draw_line(head + Vector2(0, h * 0.04), Vector2(head.x + w * dx, h * 0.93), leg, 2.0, true)
+		draw_line(head + Vector2(0, h * 0.04), Vector2(head.x + w * dx, h * 0.93), leg, 2.0 * u, true)
 	var body := Rect2(head - Vector2(w * 0.07, h * 0.06), Vector2(w * 0.12, h * 0.1))
 	draw_rect(body, Color(0.15, 0.15, 0.17), true)
-	draw_rect(Rect2(body.position, Vector2(body.size.x, 2.0)), Color(1, 1, 1, 0.15), true)   # rim light
+	draw_rect(Rect2(body.position, Vector2(body.size.x, 2.0 * u)), Color(1, 1, 1, 0.15), true)   # rim light
 	draw_rect(Rect2(head - Vector2(w * 0.12, h * 0.035), Vector2(w * 0.055, h * 0.055)), Color(0.1, 0.1, 0.11), true)
 	draw_circle(head - Vector2(w * 0.12, h * 0.0075), h * 0.02, Color(0.25, 0.32, 0.45))     # lens
 	draw_rect(Rect2(head + Vector2(-w * 0.03, -h * 0.09), Vector2(w * 0.05, h * 0.03)), Color(0.12, 0.12, 0.13), true)   # handle
-	draw_circle(head + Vector2(w * 0.04, -h * 0.045), 2.0, Color(0.9, 0.15, 0.15))   # tally light
+	draw_circle(head + Vector2(w * 0.04, -h * 0.045), 2.0 * u, Color(0.9, 0.15, 0.15))   # tally light
 
 ## The press in the foreground, from behind: heads and shoulders, each one different
 ## (size, place, tilt), phones and a recorder held up to the desk.
@@ -284,13 +370,13 @@ func _draw_press(w: float, h: float) -> void:
 			[0.63, 0.87, 0.95, 0.12, 1], [0.8, 0.93, 1.25, -0.08, 2], [0.97, 0.84, 1.05, 0.05, 0]]
 	var people := row.duplicate()
 	# A frame wider than the scene: the same pack carries on to each side.
-	var off := scene_box().position
-	for side in range(1, ceili(off.x / w) + 1):
+	var fr := _frame_local()
+	for side in range(1, ceili(maxf(maxf(0.0, -fr.position.x), fr.end.x - w) / w) + 1):
 		for p in row:
 			people.append([float(p[0]) - side, p[1], p[2], -float(p[3]), p[4]])
 			people.append([float(p[0]) + side, p[1], p[2], -float(p[3]), 0])
 	# A frame taller than the scene: their backs run down to its foot (under the page).
-	var foot := size.y - off.y
+	var foot := fr.end.y
 	for i in range(people.size()):
 		var p: Array = people[i]
 		var r: float = h * 0.085 * float(p[2])

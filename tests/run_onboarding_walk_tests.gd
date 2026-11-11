@@ -204,17 +204,23 @@ func _interview_press_room(iv: Control) -> void:
 			"Appointment interview: the room is the press conference's own scene")
 	if room == null:
 		return
+	# Director 2026-11-12 ("Re-render sharper"): the interview draws the coach from
+	# the close-up sheets (CoachCloseUp, rendered at 3x), with their own mask and design.
+	var CU = load("res://scripts/ui/match/CoachCloseUp.gd")
 	var mat := room.material as ShaderMaterial
-	_check(mat != null and mat.shader == SV.FIGURE_SHADER and mat.get_shader_parameter("mask_tex") == SV.FIGURE_MASK
-			and mat.get_shader_parameter("sheet_size") == VF.SHEET_SIZE,
-			"Appointment interview: the coach is drawn with the figure shader and its mask")
-	var sheet: Texture2D = SV.FIGURE_SHADE
-	_check(sheet != null and sheet.resource_path == "res://assets/vignette/figures_shade.png"
-			and Vector2i(sheet.get_size()) == Vector2i(VF.SHEET_SIZE),
-			"Appointment interview: the figure sheet loaded at its own size (%s, %s)" % [
+	var mask: Texture2D = mat.get_shader_parameter("mask_tex") if mat != null else null
+	_check(mat != null and mat.shader == SV.FIGURE_SHADER and mask != null
+			and mask.resource_path == "res://assets/vignette/coach_hd_mask.png"
+			and mat.get_shader_parameter("sheet_size") == CU.SHEET_SIZE,
+			"Appointment interview: the coach is drawn with the figure shader and the close-up mask")
+	var sheet: Texture2D = room.get("_close").get("shade")
+	_check(sheet != null and sheet.resource_path == "res://assets/vignette/coach_hd_shade.png"
+			and Vector2i(sheet.get_size()) == Vector2i(CU.SHEET_SIZE) and CU.PX_PER_M == 3.0 * VF.PX_PER_M,
+			"Appointment interview: the close-up sheet loaded at its own size, 3x the figure sheet (%s, %s)" % [
 				sheet.resource_path if sheet != null else "none", sheet.get_size() if sheet != null else Vector2.ZERO])
-	_check(VF.strip("coach", "coach_seated", "front") is Dictionary and not (VF.strip("coach", "coach_seated", "front") as Dictionary).is_empty(),
-			"Appointment interview: the sheet holds the seated coach the room draws")
+	for anim in [["coach_walk", "front_r"], ["coach_sit", "front"], ["coach_seated", "front"]]:
+		_check(CU.has("coach", anim[0], anim[1]) and not CU.hair_for(CU.strip("coach", anim[0], anim[1]), "short_crop").is_empty(),
+				"Appointment interview: the close-up sheet holds %s and its hair" % anim[0])
 	_check(room.size.x >= 300.0 and room.size.y >= 180.0, "Appointment interview: the room fills its stage (%s)" % room.size)
 	# Director's check, 2026-11-12 (blurry coach): the sheet is never blown up past
 	# its own pixels, even at the camera's closest; more screen means more room.
