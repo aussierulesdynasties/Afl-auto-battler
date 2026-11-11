@@ -1,0 +1,16 @@
+from_year,to_year,rounds,games,finalists,finals,gf_venue,gather_round,drawn_finals
+1990,1990,22,22,5,mcintyre5,MCG,0,replay_all
+1991,1991,24,22,6,final6_1991,Waverley Park,0,replay_gf
+1992,1992,24,22,6,final6,MCG,0,replay_gf
+1993,1993,22,20,6,final6,MCG,0,replay_gf
+1994,1994,24,22,8,mcintyre8,MCG,0,replay_gf
+1995,1999,22,22,8,mcintyre8,MCG,0,replay_gf
+2000,2010,22,22,8,afl8,MCG,0,replay_gf
+2011,2011,24,22,8,afl8,MCG,0,replay_gf
+2012,2015,23,22,8,afl8,MCG,0,replay_gf
+2016,2019,23,22,8,afl8,MCG,0,extra_time
+2020,2020,18,17,8,afl8,The Gabba,0,extra_time
+2021,2021,23,22,8,afl8,Optus Stadium,0,extra_time
+2022,2022,23,22,8,afl8,MCG,0,extra_time
+2023,2023,24,23,8,afl8,MCG,1,extra_time
+2024,2025,25,23,8,afl8,MCG,1,extra_time
