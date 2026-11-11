@@ -14,7 +14,10 @@ const SUITE_SEED := 1990
 ## three-round redraft season, as main produced them before P1.
 const GOLDEN_LOAD := "94876aac547014895ed75f971a92817c"
 const GOLDEN_REAL := "7576cb577da70d80f6222786c2710b94"
-const GOLDEN_SEASON := "b039d703c0783968328f937754c75eee"
+## A played match's floating point differs between Windows and Linux builds of
+## Godot, so the season has one fingerprint per platform; each was taken on
+## main before the change (Linux: run_on_github run 43024085570).
+const GOLDEN_SEASON := {"Windows": "b039d703c0783968328f937754c75eee", "Linux": "780ff5a200eee3f3481e3ea11111cc31"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and
@@ -183,7 +186,7 @@ func _test_golden_season() -> void:
 	var a := _season_print()
 	var b := _season_print()
 	_check(a == b, "A seeded season's first three rounds play the same twice")
-	_golden("seeded season", a, GOLDEN_SEASON)
+	_golden("seeded season", a, str(GOLDEN_SEASON.get(OS.get_name(), "")))
 
 
 # ---------------------------------------------------------------------------
