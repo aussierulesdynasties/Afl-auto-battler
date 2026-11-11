@@ -34,6 +34,7 @@ A failure prints `path:line: [rule] message` (and a GitHub annotation on CI).
 | green-decoration | screens.py | No green highlight surface (263025) in `scripts/ui`. | test_matchday `_test_no_green_decoration` |
 | boundaries | boundaries.py | Sim/state never read coaches, family ties or old club lines; nothing opens the old Culture sheet. | test_coaches `_test_no_effects_yet`, family, roles, matchup |
 | export-presets | boundaries.py | Web phone keyboard on; Android save backup on. | keyboard `_test_preset`, career_ui |
+| no-import-sidecars | boundaries.py | `captures/` and `docs/` keep a `.gdignore`, and no `*.import` sidecar is tracked under them (they conflicted in merges for no reason). | new (2026-11-12, CI conflicts) |
 | story-flags | story_flags.py | Every story flag a choice sets is read by a card or by `story_flag_set(..., "name")`. | test_story `_test_no_dead_story_flags` |
 | gdlint | gdlint_gate.py, gdlintrc | gdtoolkit's linter (naming, unused arguments, whitespace) against `gdlint_baseline.txt`. | new |
 

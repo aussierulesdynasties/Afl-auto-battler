@@ -48,8 +48,16 @@ true. This repo copy is the only one; the general rules it builds on are in the
   never share a count file. See `afl-godot-tests`.
 - ROADMAP/docs: keep both sides. `StatsHubScene.gd`, `MatchSim.gd`, capture tools
   are the other hot files; a PR touching them says so in its [MERGE NOTE].
-- Sync early: merge `origin/main` when you start work on a hot file and again
-  just before marking ready, not for the first time on merge day.
+- **Merge `origin/main` into a branch only when GitHub reports a conflict**
+  (`gh pr view <n> --json mergeStateStatus` says `DIRTY`) or the branch needs code that
+  exists only on main (2026-11-12). Pull-request CI already tests the merge of your branch
+  with current main, so a clean sync proves nothing new: it re-ran ~40 min of CI per push,
+  and half of the 54 clean syncs of 2026-11-10/11 turned a green branch red with main's own
+  breakage. When main's breakage is fixed, re-run your check (`gh run rerun <id> --failed`);
+  do not merge main to pick the fix up.
+- Before every push run `tools/prepush.sh` (the lint and plan checks CI runs, ~40 s, no
+  Godot; it names the suites CI will pick), then those suites through the test slot.
+- Iterate as a draft PR (drafts skip the game suites); mark it ready once.
 - Only the branch owner pushes to the branch. Another session sends the
   owner the exact conflict list and resolution, or does it in the owner's
   worktree only if the owner has said so.

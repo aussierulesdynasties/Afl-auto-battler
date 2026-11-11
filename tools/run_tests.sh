@@ -50,6 +50,11 @@ RUNNER_DIR="${RUNNER_DIR:-tests}"
 SUITES_ONLY="${SUITES_ONLY:-0}"
 # PR CI stops promptly; local/main/diagnostic runs default to all failures.
 STOP_ON_FAILURE="${STOP_ON_FAILURE:-0}"
+# SUITE_RESULTS=<file> appends one "<suite> <kind>" line per suite run: pass, checks (it ran
+# clean and reported failed checks: seeded, so it fails the same way again) or crash (a
+# timeout, a script error, no result line or a short function count: may be the engine).
+# The CI shard reads it to retry only what might be flaky.
+SUITE_RESULTS="${SUITE_RESULTS:-}"
 QUICK=0
 VERBOSE="${VERBOSE:-0}"
 while [ "$#" -gt 0 ]; do
@@ -166,6 +171,16 @@ for suite in ${SUITES[@]+"${SUITES[@]}"}; do
 		printf '%-5s %-11s %4ss  %s\n' "$status" "$suite" "$secs" "$detail"
 	fi
 	if [ "$status" = FAIL ]; then failed_names+=("$suite"); else passed=$((passed + 1)); fi
+	if [ -n "$SUITE_RESULTS" ]; then
+		kind=pass
+		if [ "$status" = FAIL ]; then
+			kind=crash
+			fails=$(echo "$result" | grep -oE "[0-9]+ failures" | grep -oE "[0-9]+")
+			if [ "$code" = 0 ] && [ -z "$short" ] && [ "${fails:-0}" -gt 0 ] \
+				&& ! grep -qE "SCRIPT ERROR|Parse Error|Compile Error" "$log"; then kind=checks; fi
+		fi
+		printf '%s %s\n' "$suite" "$kind" >> "$SUITE_RESULTS"
+	fi
 	if [ "$status" = FAIL ]; then
 		failed=1
 		note_error "suite '$suite' failed: $detail"
