@@ -21,7 +21,7 @@ static func week_in_season(gs) -> int:
 		return maxi(gs.preseason_week() - PreSeason.weeks(), 1 - StoryEngine.PRESEASON_WEEKS)
 	if not gs.season.is_regular_done():
 		return gs.season.round_index + 1
-	return Season.REGULAR_ROUNDS + (gs.season.finals.get("weeks", []) as Array).size() + 1
+	return gs.season.regular_rounds() + (gs.season.finals.get("weeks", []) as Array).size() + 1
 
 
 static func phase(gs) -> String:
@@ -93,8 +93,18 @@ static func context(gs, ph_override := "") -> Dictionary:
 	var week := week_in_season(gs)
 	var ph := phase(gs) if ph_override == "" else ph_override
 	return {"seed": int(gs.season.seed), "year": int(gs.season_year), "week": week, "phase": ph,
-			"big": ph == "finals" or (ph == "regular" and (week == 1 or week == Season.REGULAR_ROUNDS)),
+			"big": ph == "finals" or (ph == "regular" and (week == 1 or week == gs.season.regular_rounds())),
 			"club": club_facts(gs, week, ph), "players": player_facts(gs)}
+
+
+## The finals week as the cards count it, the wildcard series' weeks: 1 the
+## wildcard round, 2 the qualifying and elimination finals ... 5 the Grand
+## Final (6 once it is played). A four-week series (a past year's final five,
+## six or eight) starts at 2, so its Grand Final is 5 too; a replayed final's
+## week counts as the week it replays.
+static func finals_stage(gs, week: int) -> int:
+	return week - gs.season.regular_rounds() - int(gs.season.finals.get("replays", 0)) \
+			+ (5 - gs.season.finals_weeks())
 
 
 static func club_facts(gs, week: int, ph: String) -> Dictionary:
@@ -106,7 +116,7 @@ static func club_facts(gs, week: int, ph: String) -> Dictionary:
 			"year": int(gs.season_year), "losing_run": int(gs.losing_streak), "winning_run": _winning_run(gs),
 			"ladder": gs.my_position(), "board": gs.board_confidence(), "fit_count": fit,
 			"run_games": MatchNotes.count_word(Backing.RUN_GAMES),
-			"finals_week": week - Season.REGULAR_ROUNDS if ph == "finals" or ph == "season_end" else 0,
+			"finals_week": finals_stage(gs, week) if ph == "finals" or ph == "season_end" else 0,
 			"pre_week": gs.preseason_week() if ph == "preseason" else 0, "premiers": _premiers_last_year(gs)}
 	facts.merge(_leader_facts(gs), true)
 	facts.merge(_finals_facts(gs, ph), true)
@@ -169,8 +179,11 @@ static func _finals_facts(gs, ph: String) -> Dictionary:
 	out.merge(finals_2_facts(gs, ph), true)
 	out["finals_bye"] = gs.my_finals_status() == "bye"
 	var slots: Dictionary = gs.season.finals.get("slots", {})
-	out["lost_last_final"] = str(slots.get("L_QF1", "")) == gs.my_club or str(slots.get("L_QF2", "")) == gs.my_club
-	if int(gs.season.finals.get("week", 0)) == 5:
+	out["lost_last_final"] = false
+	for tag in gs.season.finals_tags():
+		if str(tag).begins_with("QF") and str(slots.get("L_" + str(tag), "")) == gs.my_club:
+			out["lost_last_final"] = true
+	if int(gs.season.finals.get("week", 0)) == gs.season.finals_weeks():
 		out.merge(_grand_final_story(gs), true)
 	return out
 
@@ -195,7 +208,7 @@ static func finals_2_facts(gs, ph: String) -> Dictionary:
 	var last := 0
 	for h in gs.board.get("history", []):
 		var y := int((h as Dictionary).get("year", 0))
-		if y < year and int(h.get("position", 99)) <= Season.FINALISTS and y > last:
+		if y < year and int(h.get("position", 99)) <= int(SeasonRules.for_year(y)["finalists"]) and y > last:
 			last = y
 	if last > 0:
 		out["last_final_year"] = last
@@ -205,7 +218,7 @@ static func finals_2_facts(gs, ph: String) -> Dictionary:
 		if opp != "":
 			var pos := _ladder_positions(gs.season)
 			out["underdog"] = int(pos.get(opp, 99)) < int(pos.get(gs.my_club, 99))
-		if int(gs.season.finals.get("week", 0)) == 5:
+		if int(gs.season.finals.get("week", 0)) == gs.season.finals_weeks():
 			out["forecast_line"] = _forecast_line(gs)
 		return out
 	if ph != "season_end":
@@ -213,8 +226,8 @@ static func finals_2_facts(gs, ph: String) -> Dictionary:
 	var status: String = gs.my_finals_status()
 	out["result"] = status
 	var slots: Dictionary = gs.season.finals.get("slots", {})
-	for tag in ["WC1", "WC2", "EF1", "EF2", "SF1", "SF2", "PF1", "PF2", "GF"]:
-		if str(slots.get("L_" + tag, "")) == gs.my_club:
+	for tag in gs.season.finals_tags():
+		if str(slots.get("L_" + tag, "")) == gs.my_club and not gs.season.loser_goes_on(tag, gs.my_club):
 			out["lost_final"] = str(FINAL_WORDS.get(tag.substr(0, 2), "final"))
 			out["lost_prelim"] = tag.begins_with("PF")
 	if status == "premier" or status == "runner_up":
@@ -250,7 +263,7 @@ static func _ladder_positions(sea) -> Dictionary:
 static func _forecast_line(gs) -> String:
 	for m in gs.season.finals_week_matches():
 		if str(m["home"]) == gs.my_club or str(m["away"]) == gs.my_club:
-			var w: String = gs.season.weather_for(str(m["home"]), str(m["away"]), Season.REGULAR_ROUNDS + 5, m)
+			var w: String = gs.season.weather_for(str(m["home"]), str(m["away"]), gs.season.finals_round(), m)
 			return str(FORECAST.get(w, FORECAST["perfect"]))
 	return ""
 
@@ -968,16 +981,26 @@ static func _apply(gs, e: Dictionary, p: Dictionary, facts: Dictionary, applied:
 			for q in _targets(gs, e, p):
 				q[str(e["op"])] = true
 		"expects_game":
+			# The game you promised: a side you named takes him in now, as a run
+			# does (director, 2026-11-12: "he should show as on the team the
+			# moment you accept the event"); auto-pick names him by itself.
+			var was_in: bool = gs.in_current_side(p)
+			var made_way: String = gs.name_promised(p)
 			p["expects_game"] = int(e.get("sting", 12))
+			# Named just now (not injured or suspended): say who made way.
+			var came_in: bool = not was_in and gs.in_current_side(p)
 			if str(facts.get("_result", "")) != "":
 				# The card's own result line speaks; on Auto-pick he is named anyway, so
 				# only a side you picked yourself needs the reminder.
 				if gs.my_selection().is_empty():
 					return ""
 				applied["_lead_result"] = true
-				return "He expects a game this week."
-			return ("%s feels heard. He's in the side this week." if gs.my_selection().is_empty()
-					else "%s feels heard, and expects a game this week.") % name
+				return gs.backed_in_words(made_way) if came_in else "He expects a game this week."
+			if gs.my_selection().is_empty():
+				return "%s feels heard. He's in the side this week." % name
+			if came_in:
+				return "%s feels heard. %s" % [name, gs.backed_in_words(made_way)]
+			return "%s feels heard, and expects a game this week." % name
 		"start_backing":
 			# His chance: a run of senior games (Backing). Leaving him out
 			# while fit breaks the promise, and that stings.

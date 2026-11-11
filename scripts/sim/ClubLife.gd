@@ -38,7 +38,8 @@ const MORALE_BASE := 70
 ##              (a list ranking alone makes the top four well under half
 ##              the time, so it never sets that demand by itself);
 ##   finals     the top seven lists (three inside the finals places, which
-##              are Season.FINALISTS at any number of clubs);
+##              are the season's finalists, Season.finalists(), at any
+##              number of clubs);
 ##   out of the bottom six  the rest of the lists above the bottom places,
 ##              asked to stay out of them: 12th or better of 18 ("the bottom
 ##              six"), 13th of 20 and 14th of 21 ("the bottom seven"). The
@@ -65,11 +66,12 @@ static func bottom_places(clubs: int) -> String:
 	return "the bottom %s" % (WORDS[n] if n >= 0 and n < WORDS.size() else str(n))
 
 
-static func board_goal(rank: int, prev := 0, clubs := 18) -> Dictionary:
+## `finalists`: how many make the finals this season (Season.finalists()).
+static func board_goal(rank: int, prev := 0, clubs := 18, finalists := Season.FINALISTS) -> Dictionary:
 	if rank <= TOP4_LIST_RANK and prev >= 1 and prev <= TOP4_LAST_FINISH:
 		return {"key": "top4", "text": "Finish in the top four", "pos": 4}
 	if rank <= FINALS_LIST_RANK:
-		return {"key": "finals", "text": "Make the finals", "pos": Season.FINALISTS}
+		return {"key": "finals", "text": "Make the finals", "pos": finalists}
 	var mid := top_two_thirds(clubs)
 	if rank <= mid:
 		return {"key": "top12", "text": STAY_OUT + bottom_places(clubs), "pos": mid}

@@ -82,6 +82,8 @@ var _momentum := 0.0            # the engine's momentum as shown: -1 (away on to
 var _mom_meter: Control       # MomentumMeter: draws the engine's momentum
 var _mom_word: Label          # who has it, in words
 var _mom_note: Label          # first match only: what it is
+var _mom_bar: Button          # the meter (its foot is the scoreboard's, the line aside)
+const SCORE_BAND_PAD := 8
 ## The break is the PC sheet (four columns): player cards say their detail
 ## on one line and choices sit 40 tall (a mouse, not a thumb).
 var _pc_break := false
@@ -193,7 +195,15 @@ func _fit_over() -> void:
 	if _over == null or _root == null or _root.get_child_count() == 0:
 		return
 	var board := _root.get_child(0) as Control
-	_over.offset_top = board.get_global_rect().end.y - get_global_rect().position.y if _stacked else 0.0
+	var foot := board.get_global_rect().end.y
+	# The first match's momentum line keeps its room under the meter, but a scene
+	# opening under the scoreboard never gives that room up: it starts where it
+	# would without the line, over it, so every match frames its scenes the same.
+	# Measured from the meter, which stays put while the line's wrap settles, so a
+	# sheet opened in the first frames is never resized under itself.
+	if _mom_note != null and _mom_note.visible and _mom_bar != null:
+		foot = _mom_bar.get_global_rect().end.y + SCORE_BAND_PAD
+	_over.offset_top = foot - get_global_rect().position.y if _stacked else 0.0
 
 
 func _mount_body(stack: bool) -> void:
@@ -282,7 +292,7 @@ func _scoreboard() -> Control:
 	var narrow := UiKit.view_width(self) < 640.0
 	# Both clubs' colours behind the score (director, 2026-10-08: not boring).
 	var v := UiKit.vbox(4)
-	var p := ClubDuel.band(str(_res["home"]), str(_res["away"]), v, 8, 0.35)
+	var p := ClubDuel.band(str(_res["home"]), str(_res["away"]), v, SCORE_BAND_PAD, 0.35)
 	var h := UiKit.hbox(6)
 	h.alignment = BoxContainer.ALIGNMENT_CENTER
 	v.add_child(h)
@@ -312,6 +322,10 @@ const MOMENTUM_INFO_RUNAWAY := [
 ]
 
 
+## The line the first match you watch shows under the meter.
+const MOMENTUM_NOTE := "Momentum swings with each goal and fades with time; the side on top wins a little more of the ball. %s it for more."
+
+
 static func momentum_info() -> Array:
 	return MOMENTUM_INFO_RUNAWAY
 
@@ -322,6 +336,7 @@ func _momentum_bar() -> Control:
 	b.flat = true
 	b.custom_minimum_size = Vector2(0, 30)
 	b.pressed.connect(_show_momentum_info)
+	_mom_bar = b
 	var v := UiKit.vbox(2)
 	v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -347,6 +362,12 @@ func _momentum_bar() -> Control:
 	_mom_note.name = "MomentumNote"
 	_mom_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_mom_note.visible = false
+	# The first match you watch keeps the line's room from the first frame,
+	# unseen until momentum first moves, so the ground never shifts under it.
+	if _interactive and GameState.intro_due("momentum"):
+		_mom_note.text = MOMENTUM_NOTE % ScreenLayout.tap_word()
+		_mom_note.visible = true
+		_mom_note.modulate.a = 0.0
 	box.add_child(_mom_note)
 	_paint_momentum()
 	return box
@@ -364,11 +385,10 @@ func _paint_momentum() -> void:
 		_mom_word.text = "%s on top" % GameDB.club_short(code)
 		ClubDuel.on_colour(_mom_word)
 	# The first match you watch: once it first moves, one line says what it is.
-	if _interactive and not _mom_note.visible and absf(_momentum) >= MOMENTUM_EVEN \
-			and GameState.intro_due("momentum"):
+	# Its room is kept from the first frame (_momentum_bar); here it only shows.
+	if _mom_note.visible and _mom_note.modulate.a < 1.0 and absf(_momentum) >= MOMENTUM_EVEN:
 		GameState.set_setting("seen_momentum_intro", true)
-		_mom_note.text = "Momentum swings with each goal and fades with time; the side on top wins a little more of the ball. %s it for more." % ScreenLayout.tap_word()
-		_mom_note.visible = true
+		_mom_note.modulate.a = 1.0
 
 
 func _show_momentum_info() -> void:
@@ -1054,8 +1074,7 @@ func _show_coach_box() -> void:
 		var gc := GateOdds.tag_break_texts(target, who_name, kept, benched, str(untagged[0]))
 		NameInk.set_line(tag_rows[0], str(gc[0]), _names())
 		NameInk.set_line(tag_rows[1], str(gc[1]), _names())
-		tag_note.set_meta("plain", GateOdds.gain(str(gc[0])) + "
-" + GateOdds.cost(str(gc[1])))
+		tag_note.set_meta("plain", GateOdds.gain(str(gc[0])) + "\n" + GateOdds.cost(str(gc[1])))
 	# The tag is offered on their listed midfielders only (director, 2026-10-14:
 	# "Only listed midfielders"): the names, and "Other midfielder..." for the
 	# listed midfielders not already shown, which is not drawn when none is
@@ -2943,8 +2962,7 @@ func _player_choice(node_name: String, none_label: String, roster: Array, first:
 func _card_text(r: Dictionary, detail: Callable) -> String:
 	# A card keeps its groups on their own lines (MatchNotes.card_detail).
 	var extra := str(detail.call(r, false)) if detail.is_valid() else ""
-	return _short_name(r) if extra == "" else "%s
-%s" % [_short_name(r), extra]
+	return _short_name(r) if extra == "" else "%s\n%s" % [_short_name(r), extra]
 
 
 ## A "Who tags" card (director, 2026-10-13: it must read at a glance): his name
@@ -3077,8 +3095,7 @@ func _player_sheet(title: String, roster: Array, current: String, detail: Callab
 				line += "  ·  " + game
 		elif game != "":
 			extra += "  ·  " + game
-		var b := UiKit.btn(line if extra == "" else line + "
-" + extra, 14)
+		var b := UiKit.btn(line if extra == "" else line + "\n" + extra, 14)
 		b.name = "Sheet_" + id
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		if extra == "":
@@ -4267,15 +4284,9 @@ func _ft_summary(v: VBoxContainer) -> void:
 
 	# Your calls, quarter by quarter: what each was about and how that went.
 	if mine and (_interactive or _review):
-		var did := []
-		for qq in range(1, 5):
-			for t in MatchNotes.calls_lines(_res, me, qq):
-				# The call the Why section already quoted is not said again.
-				if told_above.has("q%d" % qq) and told_above.has("call:" + str(t)):
-					continue
-				did.append("Q%d  ·  %s" % [qq, str(t)])
+		var did := MatchNotes.full_time_calls(_res, me, told_above, 5)
 		if not did.is_empty():
-			_glance_section(v, "Your calls", "FullTimeCalls", did.slice(0, 5))
+			_glance_section(v, "Your calls", "FullTimeCalls", did)
 
 	# A handful of numbers worth a glance; the full table is a tap away.
 	v.add_child(UiKit.spacer(UiKit.GAP))

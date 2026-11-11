@@ -110,7 +110,7 @@ static func ensure_foundation(gs, code: String) -> void:
 static func week(gs) -> void:
 	if gs.season == null or gs.season.is_regular_done():
 		return
-	if int(gs.season.round_index) < Season.REGULAR_ROUNDS - Expansion.APPROACH_ROUNDS_LEFT:
+	if int(gs.season.round_index) < gs.season.regular_rounds() - Expansion.APPROACH_ROUNDS_LEFT:
 		return
 	for code in building(gs) + first_season(gs):
 		if not _approached(state(gs, code), int(gs.season_year)):
