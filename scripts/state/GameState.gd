@@ -6717,11 +6717,22 @@ func _dev_promise_week() -> void:
 		return
 	for p in my_list:
 		var t := _dev_owed(p)
-		if t.is_empty() or int(p.get("injury_weeks", 0)) > 0:
+		# Injured, suspended or rested he cannot play: naming him would only push
+		# a fit man out, and his games wait.
+		if t.is_empty() or not Ratings.available(p):
 			continue
 		# A side you named takes him in, as Auto-pick does, so his games can start.
-		name_promised(p)
+		var named := not my_selection().is_empty()
+		var was_in := in_current_side(p)
+		var made_way := name_promised(p)
 		p["expects_game"] = DEV_PROMISE_STING
+		if named and not was_in:
+			var who := GameDB.player_display_name(p)
+			if in_current_side(p):
+				add_news("club", "%s is in the side this week for his promised games%s." % [who,
+						(", in place of %s" % made_way) if made_way != "" else ""])
+			else:
+				add_news("club", "%s is owed his promised games, but %s" % [who, NO_ROOM_WORDS.substr(0, 1).to_lower() + NO_ROOM_WORDS.substr(1)])
 		# His promised games were under way and the trial is gone (another
 		# trial took its place): they are owed again, and start once it is free.
 		if str(t["state"]) == "on" and (str(role_trial.get("id", "")) != str(p["id"]) or not role_trial.has("promised")):
@@ -6738,11 +6749,12 @@ func _dev_promise_week() -> void:
 ## After your match: a fit player owed his games who did not play was left out
 ## of them. The promise breaks (its sting is the promised game's, paid by the
 ## expects_game settling that follows).
-func _dev_promise_after_match(played: Dictionary) -> void:
+func _dev_promise_after_match(played: Dictionary, no_room := {}) -> void:
 	for p in my_list:
 		var t := _dev_owed(p)
-		if t.is_empty() or played.has(str(p["id"])) or int(p.get("injury_weeks", 0)) > 0 \
-				or _round_unavailable.has(str(p["id"])):
+		var pid := str(p["id"])
+		if t.is_empty() or played.has(pid) or no_room.has(pid) or int(p.get("injury_weeks", 0)) > 0 \
+				or _round_unavailable.has(pid):
 			continue
 		_dev_promise_broken(p, t, false)
 
@@ -11349,12 +11361,33 @@ const YOUTH_MAX := 3
 
 
 func auto_pick(strategy: String) -> Dictionary:
+	var r := _auto_pick(strategy)
+	if (r["side"] as Dictionary).is_empty():
+		return r
+	# A player you promised a game stays in, whatever the pick (select_22 does
+	# the same): the lowest-rated man of his line who is not owed one makes way.
+	var kept: PackedStringArray = []
+	for p in my_list:
+		if not _promised_game(p) or not Ratings.available(p):
+			continue
+		var swap := _swap_in((r["side"] as Dictionary).duplicate(true), p)
+		if not (swap.get("sel", {}) as Dictionary).is_empty():
+			r["side"] = swap["sel"]
+			var out: Dictionary = swap.get("out", {})
+			kept.append(GameDB.player_display_name(p) + ((" for %s" % GameDB.player_display_name(out)) if not out.is_empty() else ""))
+	if not kept.is_empty():
+		r["note"] = "%s Kept in as promised: %s." % [str(r["note"]), ", ".join(kept)]
+	return r
+
+
+func _auto_pick(strategy: String) -> Dictionary:
 	var pool: Array = my_list.filter(func(p): return Ratings.available(p))
 	var dual := 1 if user_dual_ruck else 0
 	match strategy:
 		"rest":
-			var tired: Array = pool.filter(func(p): return Workload.value(p) >= Workload.NEEDS_BREAK)
-			var fresh: Array = pool.filter(func(p): return Workload.value(p) < Workload.NEEDS_BREAK)
+			# A player you promised a game is not rested out of it.
+			var tired: Array = pool.filter(func(p): return Workload.value(p) >= Workload.NEEDS_BREAK and not _promised_game(p))
+			var fresh: Array = pool.filter(func(p): return Workload.value(p) < Workload.NEEDS_BREAK or _promised_game(p))
 			var sel := Ratings.select_22(fresh if fresh.size() >= (18 + Ratings.INTERCHANGE) else pool, dual)
 			var side := _as_selection(sel["ground"], sel["bench"])
 			var rested: PackedStringArray = []
@@ -11424,7 +11457,7 @@ func blood_youth(side_in: Dictionary, pool: Array) -> Dictionary:
 			var weakest := ""
 			for id in side2[line]:
 				var w = by_id.get(str(id))
-				if w == null or brought.has(str(id)) or is_young(w):
+				if w == null or brought.has(str(id)) or is_young(w) or _keeps_place(w):
 					continue
 				if weakest == "" or int(w["overall"]) < int(by_id[weakest]["overall"]):
 					weakest = str(id)
@@ -12927,6 +12960,9 @@ func _board_after_round(results: Array) -> void:
 			soft[str(p["id"])] = CoachEffects.soften(staff, p)
 	ClubLife.morale_after_match(my_list, played, margin > 0, soft, culture_effect(my_club, "sting"), _round_unavailable,
 			str(CoachEffects.arch_of(my_club)[1]))
+	# A promised man left out because every place was held by another promised
+	# man could not have been named: no promise of his breaks for this match.
+	var no_room := _no_room_ids(played)
 	# A player promised a run (Backing): each game he plays counts towards it.
 	# Left out while fit, the promise breaks and it stings, once, and the run
 	# is over; unable to play, the run waits. His one-week expectation is
@@ -12936,7 +12972,7 @@ func _board_after_round(results: Array) -> void:
 		if not Backing.is_active(p):
 			continue
 		var pid := str(p["id"])
-		var run_state := Backing.after_match(p, played.has(pid), not _backing_unavailable.has(pid),
+		var run_state := Backing.after_match(p, played.has(pid), not _backing_unavailable.has(pid) and not no_room.has(pid),
 				{"year": season_year, "label": str(res.get("label", ""))}, stats_all.get(pid, {}))
 		if run_state == "done" or run_state == "broken":
 			Backing.mark_asked(p, story_week())   # no new ask for a while (Backing.ASK_GAP)
@@ -12949,7 +12985,7 @@ func _board_after_round(results: Array) -> void:
 			_culture_move(my_club, "together", -StoryEngine.BROKEN_TOGETHER, "You broke your word on a player's run of games")
 		p.erase("expects_game")
 	# Games promised in a development talk (T5.r93): left out of them fit breaks it.
-	_dev_promise_after_match(played)
+	_dev_promise_after_match(played, no_room)
 	# A player promised a game (a talk, or a kid given his chance): leaving
 	# him out fit sours it. Once: the promise ends with the round.
 	for p in my_list:
@@ -12957,7 +12993,7 @@ func _board_after_round(results: Array) -> void:
 			var sting := int(p["expects_game"]) if typeof(p["expects_game"]) == TYPE_INT else 12
 			p.erase("expects_game")
 			if not played.has(str(p["id"])) and int(p.get("injury_weeks", 0)) <= 0 \
-					and not _round_unavailable.has(str(p["id"])):
+					and not _round_unavailable.has(str(p["id"])) and not no_room.has(str(p["id"])):
 				ClubLife.add_morale(p, -CoachEffects.softened(sting, float(soft.get(str(p["id"]), 0.0))))
 				Trust.change(relations, Trust.player_key(str(p["id"])), ClubStories.BROKEN_PROMISE_TRUST,
 						"You promised him a game and left him out", season_year, last_label)
@@ -13756,13 +13792,62 @@ func back_player(player_id: String) -> String:
 	var out := "%s has your word for %s games." % [GameDB.player_display_name(p),
 			MatchNotes.count_word(Backing.RUN_GAMES)]
 	if not named:
-		out += " " + backed_in_words(dropped)
+		out += " " + promised_in_words(p, dropped)
 	return out
 
 
 ## What naming him does to the side, in words: who he comes in for.
 static func backed_in_words(dropped: String) -> String:
 	return "He's in the side this week%s." % ((", in place of %s" % dropped) if dropped != "" else "")
+
+
+## Every one of the 23 is held by a player owed a game (or on a role trial):
+## a promised man cannot be named, and says so rather than claiming a place.
+const NO_ROOM_WORDS := "There's no room for him in the 23 this week: every spot is held by a player you've promised a game."
+
+
+## What a promise did to this week's side, in words, after name_promised: who
+## he came in for, or why he is not in it.
+func promised_in_words(p: Dictionary, dropped: String) -> String:
+	if in_current_side(p):
+		return backed_in_words(dropped)
+	if not Ratings.available(p):
+		if dropped != "":
+			return "He's named in place of %s, but can't play this week." % dropped
+		return "He can't play this week."
+	return NO_ROOM_WORDS
+
+
+## Owed a game this week: a run (Backing), a card's "a game this week", or
+## the games of a development talk.
+static func _promised_game(q: Dictionary) -> bool:
+	return Backing.is_active(q) or q.has("expects_game") or not _dev_owed(q).is_empty()
+
+
+## Never the one to make way for a promised player: another promised player,
+## or the player on a role trial (the trial needs him in the side).
+func _keeps_place(q: Dictionary) -> bool:
+	return _promised_game(q) or (not role_trial.is_empty() and str(role_trial.get("id", "")) == str(q.get("id", "")))
+
+
+## After a match: the fit promised players who could not have been named,
+## by id. In a side you named, every place in his line and on the bench was
+## held by a player who keeps it (_swap_in says no room); on Auto-pick, every
+## one who took the field was owed a game or on a trial.
+func _no_room_ids(played: Dictionary) -> Dictionary:
+	var out := {}
+	var sel := my_selection()
+	var all_kept := not played.is_empty()
+	for id in played:
+		var q := list_player(str(id))
+		if q.is_empty() or not _keeps_place(q):
+			all_kept = false
+	for p in my_list:
+		if not _promised_game(p) or played.has(str(p["id"])):
+			continue
+		if (all_kept if sel.is_empty() else _swap_in(sel.duplicate(true), p).has("no_room")):
+			out[str(p["id"])] = true
+	return out
 
 
 ## Start a run for one of your players: the week's match is his first game if
@@ -13823,12 +13908,20 @@ func in_current_side(p: Dictionary) -> bool:
 ## lowest-rated such player on the bench. The one who makes way goes to the
 ## players left out.
 func backing_swap(p: Dictionary) -> Dictionary:
-	var sel := my_selection()
+	return _swap_in(my_selection(), p)
+
+
+## backing_swap on any selection (`sel` is changed: pass a copy). {} when
+## `sel` is empty or he is already named (a man suspended or injured is still
+## named for his run, and it waits for him); {"no_room": true} when every
+## place in his line and on the bench is held by a player who keeps it
+## (_keeps_place) and the bench is full.
+func _swap_in(sel: Dictionary, p: Dictionary) -> Dictionary:
 	if sel.is_empty():
 		return {}
 	var id := str(p.get("id", ""))
 	for k in sel:
-		if k != "OUT" and (sel[k] as Array).has(id):
+		if k != "OUT" and sel[k] is Array and (sel[k] as Array).has(id):
 			return {}
 	var role := str(p.get("role", "MID"))
 	var lines: Array = ["MID", "WING"] if role == "MID" else [role]
@@ -13841,7 +13934,7 @@ func backing_swap(p: Dictionary) -> Dictionary:
 				var q := list_player(str(other_id))
 				if q.is_empty():
 					continue
-				if Backing.is_active(q) or q.has("expects_game"):
+				if _keeps_place(q):
 					continue
 				# Out this week anyway first; then the lowest rated.
 				var rank := float(q.get("overall", 0)) - (1000.0 if not Ratings.available(q) else 0.0)
@@ -13854,8 +13947,16 @@ func backing_swap(p: Dictionary) -> Dictionary:
 	var out_list: Array = (sel.get("OUT", []) as Array).duplicate()
 	out_list.erase(id)
 	if best.is_empty():
-		# Nobody can make way: he goes on the bench, and the pick fills round him.
+		# Nobody can make way: he goes on the bench if it has a spot (a sixth
+		# name would not make the 23), and the pick fills round him.
 		var bench: Array = (sel.get("BENCH", []) as Array).duplicate()
+		var fit_bench := 0
+		for b in bench:
+			var bq := list_player(str(b))
+			if not bq.is_empty() and Ratings.available(bq):
+				fit_bench += 1
+		if fit_bench >= Ratings.bench_size:
+			return {"no_room": true}
 		bench.append(id)
 		sel["BENCH"] = bench
 		sel["OUT"] = out_list
