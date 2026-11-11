@@ -56,6 +56,7 @@ func run(tree: SceneTree) -> void:
 	_t("_test_midseason_fills_rookie_spots")
 	_t("_test_midseason_pool_after_offseason")
 	_t("_test_real_lists_start")
+	_t("_test_real_lists_open_spots")
 	_t("_test_youth_only_drafts")
 	_t("_test_youth_only_midseason")
 	await _t("_test_undrafted_chance")
@@ -483,7 +484,9 @@ func _test_real_lists_start() -> void:
 	for code in gs.league_lists:
 		clubs += 1
 		var arr: Array = gs.league_lists[code]
-		_check(RookieList.rookie_count(arr) <= RookieList.CAT_A_SPOTS, "%s starts with at most six rookies" % code)
+		var real_rookies := RookieList.rookies(arr).filter(func(p): return str(p.get("list_type", "")) != "")
+		_check(RookieList.rookie_count(arr) <= maxi(RookieList.CAT_A_SPOTS, real_rookies.size()),
+				"%s starts with at most six rookies, or its real rookie list" % code)
 		_check(RookieList.rookie_count(arr) == RookieList.CAT_A_SPOTS or RookieList.senior_count(arr) <= RookieList.SENIOR_SPOTS,
 				"%s: over 38 seniors only once its rookie list is full" % code)
 		_check(int(draft.existing_sizes.get(code, -1)) == RookieList.senior_count(arr),
@@ -493,6 +496,9 @@ func _test_real_lists_start() -> void:
 				marked += 1
 	_check(clubs >= 18, "Every club has a list (%d)" % clubs)
 	_check(marked > 0, "The club lists' rookies start on the rookie list (%d)" % marked)
+	var rookies_before := {}
+	for code in gs.league_lists:
+		rookies_before[code] = RookieList.rookie_count(gs.league_lists[code])
 	gs.choose_real_club(CLUB)
 	while not draft.is_finished():
 		var candidate := draft._best_ai_pick(draft.current_club())
@@ -510,8 +516,55 @@ func _test_real_lists_start() -> void:
 	RookieList.settle(gs)
 	_check(bool(gs.rookie_draft.get("done", false)), "Passing ends your Rookie Draft and it runs to its end")
 	for code in gs.season.lists:
-		_check(RookieList.rookie_count(gs.season.lists[code]) <= RookieList.CAT_A_SPOTS,
-				"%s: at most six rookies after it" % code)
+		_check(RookieList.rookie_count(gs.season.lists[code]) <= maxi(RookieList.CAT_A_SPOTS, int(rookies_before.get(code, 0))),
+				"%s: at most six rookies after it, or no more than its real rookie list" % code)
+
+
+## Director's bug, 2026-11-12: as Melbourne in a real-lists career "I entered
+## the draft with just 1 draft pick available". The 2026 lists' rookies were
+## counted as seniors, so most clubs' senior lists were full. Each club now
+## starts with its real rookie list (data/list_types_2026.csv and the list
+## additions, from DraftGuru's 2026 lists) and its real 2026 departures and
+## moves, so it reaches the National Draft with the open spots it really had.
+## The bound: before the 2025 National Draft every club had 1 to 7 open
+## primary-list spots (ZeroHanger's club-by-club table,
+## zerohanger.com/afl-draft-the-amount-of-open-list-spots-each-team-has-170528);
+## DraftGuru's 2026 lists less the 2026 departures give 2 (West Coast) to 7
+## (Melbourne, Carlton, Fremantle). So every club has 1 to 8 open senior spots
+## and can use at least one pick, and Melbourne can use every pick it holds.
+func _test_real_lists_open_spots() -> void:
+	gs.reset()
+	gs.begin_real_lists()
+	var draft: Draft = gs.draft
+	_check(draft != null, "A real-lists career opens on the National Draft")
+	if draft == null:
+		return
+	var usable := 0
+	var held := 0
+	var bad := PackedStringArray()
+	for code in draft.draft_order:
+		var arr: Array = gs.league_lists[code]
+		var open := draft.open_spots(str(code))
+		var plan := draft.spots_plan(str(code))
+		var picks: Array = draft.upcoming_picks(str(code), 0)
+		held += picks.size()
+		usable += (plan["usable"] as Array).size()
+		if open < 1 or open > 8 or (plan["usable"] as Array).is_empty():
+			bad.append("%s %d open, %d of %d picks usable" % [code, open, (plan["usable"] as Array).size(), picks.size()])
+		for p in arr:
+			var kind := str(p.get("list_type", ""))
+			if kind in ["rookie", "cat_b"] and not RookieList.is_rookie(p):
+				bad.append("%s: %s (%s) is on the senior list" % [code, str(p.get("real_name", "?")), kind])
+	_check(bad.is_empty(), "Every club reaches the 2026 draft with 1 to 8 open senior spots, a usable pick and its real rookies on the rookie list (%s)" % ", ".join(bad))
+	_check(usable >= 2 * draft.draft_order.size(), "The clubs can use most of the picks they hold (%d of %d)" % [usable, held])
+	var mel: Dictionary = draft.spots_plan("MEL")
+	_check((mel["passing"] as Array).is_empty() and (mel["usable"] as Array).size() >= 3 and draft.open_spots("MEL") >= 6,
+			"Melbourne can use all its picks (%s usable, %d open spots)" % [str(mel["usable"]), draft.open_spots("MEL")])
+	var mentha := ""
+	for p in gs.league_lists["MEL"]:
+		if str(p.get("real_name", "")) == "Ricky Mentha":
+			mentha = str(p.get("rookie_list", ""))
+	_check(mentha == "B", "A Category B rookie (Ricky Mentha) starts on the rookie list as one (%s)" % mentha)
 
 
 ## Row 114: Youth only binds your club in every draft. The National Draft

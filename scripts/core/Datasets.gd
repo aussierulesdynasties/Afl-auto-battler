@@ -19,11 +19,12 @@ const DEFAULT := "2026"
 ## history: draft pedigree, rated past seasons and career stints
 ## origin: each player's home state
 ## list_additions, list_addition_stats: listed players with no game that season
+## list_types: which players who played that season were on a rookie list
 ## departures, club_moves: who left or changed club before the first season
 ## ladder: the data season's final ladder (no "year" column needed)
 ## ovr_overrides, potential_overrides: the director's hand-set numbers
 const FILE_KEYS := ["players", "draftees", "history", "origin", "list_additions", "list_addition_stats",
-		"departures", "club_moves", "ladder", "ovr_overrides", "potential_overrides"]
+		"list_types", "departures", "club_moves", "ladder", "ovr_overrides", "potential_overrides"]
 
 const _TABLE := {
 	# Today's start: the completed 2026 season, careers from 2027.
@@ -35,6 +36,7 @@ const _TABLE := {
 		"origin": "res://data/player_origin_2026.csv",
 		"list_additions": "res://data/list_additions_2026.csv",
 		"list_addition_stats": "res://data/list_additions_stats.csv",
+		"list_types": "res://data/list_types_2026.csv",
 		"departures": "res://data/departures_2026.csv",
 		"club_moves": "res://data/club_moves_2026.csv",
 		"ladder": "res://data/ladder_2026.csv",

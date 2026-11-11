@@ -262,6 +262,38 @@ def check_player_origin() -> list[str]:
     return problems
 
 
+def check_list_types() -> list[str]:
+    """data/list_types_2026.csv: the rookie-listed players among those with a
+    2026 game (DraftGuru's 2026 lists). Each row names a player in
+    players_enriched_2026.csv by club, first and last name (GameDB matches on
+    those), once, as rookie or cat_b, with a source."""
+    problems: list[str] = []
+    with open(os.path.join(ROOT, "data", "list_types_2026.csv"), encoding="utf-8", newline="") as f:
+        rows = list(csv.DictReader(f))
+    with open(ENRICHED_PATH, encoding="utf-8", newline="") as f:
+        loaded = {(r["club"], r["first"].lower(), r["last"].lower()) for r in csv.DictReader(f)}
+    seen: set = set()
+    for r in rows:
+        key = (r["club"], r["first"].lower(), r["last"].lower())
+        who = f"{r['club']} {r['first']} {r['last']}"
+        if key in seen:
+            problems.append(f"list type {who}: listed twice")
+        seen.add(key)
+        if key not in loaded:
+            problems.append(f"list type {who}: no such player in players_enriched_2026.csv")
+        if r["list"] not in ("rookie", "cat_b"):
+            problems.append(f"list type {who}: list {r['list']!r} is not rookie or cat_b")
+        if not r["source_url"].startswith("http") or not r["checked"]:
+            problems.append(f"list type {who}: needs a source URL and a checked date")
+    print(f"  list types: {len(rows)} rookie-listed players with a 2026 game")
+    return problems
+
+
+# traded, a free agent, a player another club delisted and then signed as a
+# delisted free agent, or one it took in a pre-draft selection.
+MOVE_KINDS = ("traded", "free_agent", "delisted_free_agent", "pre_draft")
+
+
 def check_club_moves() -> list[str]:
     """data/club_moves_2026.csv: players who changed club in the 2026 trade
     period and free agency. Each one is a player on a 2026 list at his from
@@ -291,9 +323,11 @@ def check_club_moves() -> list[str]:
             problems.append(f"club move {who}: not on {r['from_club']}'s 2026 list (the data has {listed.get(key)!r})")
         if r["to_club"] not in CLUB_ORDER or r["to_club"] == r["from_club"]:
             problems.append(f"club move {who}: to club {r['to_club']!r} is not another club")
-        if r["kind"] not in ("traded", "free_agent"):
-            problems.append(f"club move {who}: kind {r['kind']!r} is not traded or free_agent")
-        if not "2026-10-01" <= r["announced"] <= "2026-11-30":
+        if r["kind"] not in MOVE_KINDS:
+            problems.append(f"club move {who}: kind {r['kind']!r} is not one of {', '.join(MOVE_KINDS)}")
+        # DraftGuru lists a delisted free agent's or pre-draft signing, not its date.
+        undated = r["kind"] in ("delisted_free_agent", "pre_draft") and r["announced"] == ""
+        if not undated and not "2026-10-01" <= r["announced"] <= "2026-11-30":
             problems.append(f"club move {who}: announced {r['announced']!r} is outside the 2026 trade period and free agency")
         if not r["source_url"].startswith("http") or not r["checked"]:
             problems.append(f"club move {who}: needs a source URL and a checked date")
@@ -509,6 +543,7 @@ def main() -> int:
     problems.extend(check_trade_volume())
     problems.extend(check_player_origin())
     problems.extend(check_club_moves())
+    problems.extend(check_list_types())
     problems.extend(check_forge_locations())
     problems.extend(check_identity_rules())
     problems.extend(check_bio())

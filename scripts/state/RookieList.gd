@@ -7,9 +7,14 @@ extends RefCounted
 ##   senior list   everyone without a `rookie_list` key, up to SENIOR_SPOTS.
 ##                 National Draft picks, trades and free-agent signings go here.
 ##   rookie list   players with p["rookie_list"] == "A" (Category A), up to
-##                 CAT_A_SPOTS, on the rookie wage. The Rookie Draft and the
+##                 CAT_A_SPOTS, on the rookie wage. A real-lists career also
+##                 starts its real Category B rookies there ("B"), in the same
+##                 spots. The Rookie Draft and the
 ##                 mid-season rookie draft fill it.
-## Senior and rookie spots together never pass Contracts.MAX_LIST.
+## Senior and rookie spots together never pass Contracts.MAX_LIST, except
+## where a real-lists career starts a club over it, as the real club was
+## (seed_lists): it then signs no rookie, and makes no trade that leaves it
+## over, until it is back under.
 ##
 ## An old save has no key on anyone, so every existing player is on the
 ## senior list: the migration is the default, nothing is rewritten.
@@ -103,20 +108,30 @@ static func deal_years(p: Dictionary) -> int:
 # A new career
 # ---------------------------------------------------------------------------
 ## Split every club's starting list into its senior and rookie lists (a new
-## career only). A player the club list data marks as a rookie
-## (data/list_additions_2026.csv, `list`) goes on the rookie list first; then,
-## while a club has more than SENIOR_SPOTS seniors and a rookie spot left, its
-## youngest senior goes on the rookie list (younger first, then id). A club
-## still over SENIOR_SPOTS after that takes no National Draft pick until its
-## senior list is back under the cap. Same rule for every club.
-static func seed_lists(lists: Dictionary) -> void:
+## career only). With `real_types` (a real-lists career), the players the real
+## lists had as rookies (`list_type`, from data/list_types_2026.csv and
+## data/list_additions_2026.csv) go on the rookie list: Category A rookies
+## ("A") and Category B rookies ("B"), every one of them, never onto the
+## senior list. A club whose real rookie list is over CAT_A_SPOTS (West Coast
+## 2026: injury replacements signed mid-season) starts over it, as the real
+## club did before the rookie delisting period, and takes no Rookie Draft pick
+## until it is back under; its senior list, and so its National Draft picks,
+## are as the real club had them. Then, while a club has more than SENIOR_SPOTS seniors and a rookie spot
+## left, its youngest senior goes on the rookie list (younger first, then id).
+## A club still over SENIOR_SPOTS after that takes no National Draft pick
+## until its senior list is back under the cap. Same rule for every club.
+static func seed_lists(lists: Dictionary, real_types := true) -> void:
 	for code in lists:
 		var list: Array = lists[code]
-		for p in list:
-			if rookie_count(list) >= CAT_A_SPOTS:
-				break
-			if not is_rookie(p) and str(p.get("list_type", "")) == "rookie":
-				p["rookie_list"] = "A"
+		if real_types:
+			for p in list:
+				var kind := str(p.get("list_type", ""))
+				if is_rookie(p):
+					continue
+				if kind == "rookie":
+					p["rookie_list"] = "A"
+				elif kind == "cat_b" or kind == "catb":
+					p["rookie_list"] = "B"
 		var young := seniors(list)
 		young.sort_custom(func(a, b):
 			if float(a.get("age", 0.0)) != float(b.get("age", 0.0)):
