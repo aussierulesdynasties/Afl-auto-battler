@@ -4,9 +4,14 @@
     python tools/check_legacy_2010s.py            # report, exit 1 on a hard failure
     python tools/check_legacy_2010s.py --quiet    # counts only
 
-Hard failures (exit 1): a club missing from a season, a duplicate list row, a
-ladder that does not add up, a Draftguru pick with no Wikipedia pick at the
-same number (outside the known differences below), a move without both clubs.
+Hard failures (exit 1): a season without exactly its clubs (16 in 2010, 17 in
+2011 with Gold Coast, 18 from 2012 with GWS) in lists, season stats and the
+ladder; a club with a thin senior list or no rookie list; a duplicate list row;
+a ladder that does not add up; a draft year without a national and a rookie
+draft; a draft row naming no known club code; a Draftguru pick with no
+Wikipedia pick at the same number (outside the known differences below); a
+year without trades; free agents that do not match Wikipedia's count; a move
+without both clubs.
 
 Warnings (reported, never filled in): list sizes outside the published limits,
 list rows with no recorded way of joining, blank weights, positions and the
@@ -58,6 +63,22 @@ KNOWN_PICK_DIFFS = {
 }
 
 
+# Clubs per season: Gold Coast from 2011, GWS from 2012 (18 from then on).
+CLUB_COUNT = {y: 16 if y == 2010 else 17 if y == 2011 else 18 for y in SEASONS}
+# A list thinner than this means a club page was not read: the smallest real
+# senior list of the decade is in the low 30s.
+SENIOR_MIN = 30
+# Each draft year needs a national and a rookie draft with at least this many picks.
+DRAFT_MIN = {"national": 60, "rookie": 15}
+
+# Wikipedia free agents that changed no club, so moves.csv leaves them out.
+FA_NOT_MOVES = {2016: 2}  # James Kelly, Matt Dea: delisted and re-signed by Essendon
+
+
+def clubs_in(y: int) -> set[str]:
+    return set(CLUBS_2010) | ({"GCS"} if y >= 2011 else set()) | ({"GWS"} if y >= 2012 else set())
+
+
 def load(name: str) -> list[dict]:
     with open(os.path.join(DIR, name), encoding="utf-8") as fh:
         return list(csv.DictReader(fh))
@@ -93,10 +114,18 @@ def main() -> int:
         if n > 1:
             fails.append(f"duplicate list row {k}")
     for y in SEASONS:
-        want = set(CLUBS_2010) | ({"GCS"} if y >= 2011 else set()) | ({"GWS"} if y >= 2012 else set())
+        want = clubs_in(y)
         have = {c for (yy, c) in by if yy == y}
         if have != want:
             fails.append(f"{y}: clubs {sorted(have ^ want)} missing or extra")
+        if len(have) != CLUB_COUNT[y]:
+            fails.append(f"{y}: {len(have)} clubs have a list, want {CLUB_COUNT[y]}")
+        for c in want & have:
+            cnt = by[(y, c)]
+            if cnt["senior"] < SENIOR_MIN:
+                fails.append(f"{y} {c}: only {cnt['senior']} senior-list players")
+            if cnt["rookie"] + cnt["cat_b"] == 0:
+                fails.append(f"{y} {c}: no rookie list")
     over = []
     for (y, c), cnt in sorted(by.items()):
         rook_max = ROOKIE_MAX_NORTH if c in NORTH else ROOKIE_MAX
@@ -161,6 +190,19 @@ def main() -> int:
             if w_n != matched + extra:
                 fails.append(f"{y} {kind}: Wikipedia lists {w_n} picks; {matched} match Draftguru by number"
                              f" and {extra} are Wikipedia-only")
+    for y in range(2009, 2020):
+        for kind, lo in DRAFT_MIN.items():
+            n = sum(1 for k in list(dg_picks) + list(wk_picks) if k[0] == y and k[1] == kind)
+            if n < lo:
+                fails.append(f"{y} {kind} draft has {n} picks, want at least {lo}")
+    valid = set(CLUBS_2010) | {"GCS", "GWS"}
+    for d in drafts:
+        if d["club"] and d["club"] not in valid:
+            fails.append(f"draft {d['year']} {d['draft']} #{d['pick']} club {d['club']} is not a club code")
+    blank_club = [d for d in drafts if not d["club"]]
+    if blank_club:
+        warns.append(f"{len(blank_club)} draft rows have no club (the source names none): " +
+                     "; ".join(f"{d['year']} {d['draft']} #{d['pick']} {d['first']} {d['last']}" for d in blank_club))
     elev = sum(1 for k in wk_picks)
     warns.append(f"{elev} picks appear only on Wikipedia (rookie elevations through the national draft to 2013,"
                  f" re-listed players in later rookie drafts); kept with only_in=wikipedia")
@@ -180,16 +222,31 @@ def main() -> int:
                      f" season), so from_club is blank: " + "; ".join(outside))
     fa_rows = []
     for y in range(2012, 2020):
+        # moves.csv: Draftguru's free agents plus any only Wikipedia records.
         dg_fa = sum(1 for m in moves if int(m["year"]) == y and "free_agent" in m["kind"])
         w_fa = wiki.get(str(y), {}).get("free_agency", 0)
         fa_rows.append((y, dg_fa, w_fa))
-        if dg_fa != w_fa:
-            warns.append(f"{y} free agency: Draftguru {dg_fa}, Wikipedia {w_fa}")
+        if dg_fa + FA_NOT_MOVES.get(y, 0) != w_fa:
+            fails.append(f"{y} free agency: moves.csv {dg_fa}, Wikipedia {w_fa}")
+
+    for y in range(2009, 2020):
+        if not any(int(m["year"]) == y and m["kind"] == "traded" for m in moves):
+            fails.append(f"{y}: no trades recorded")
+    # ----------------------------------------------------- season stats
+    for y in SEASONS:
+        have = Counter(s["club"] for s in stats if int(s["year"]) == y)
+        if set(have) != clubs_in(y):
+            fails.append(f"{y} season stats: clubs {sorted(set(have) ^ clubs_in(y))} missing or extra")
+        for c, n in have.items():
+            if n < 25:
+                fails.append(f"{y} {c} season stats: only {n} players")
 
     # -------------------------------------------------------------- ladders
     for y in SEASONS:
         rows = [r for r in ladders if int(r["year"]) == y]
-        n = 16 if y == 2010 else 17 if y == 2011 else 18
+        if {r["club"] for r in rows} != clubs_in(y):
+            fails.append(f"{y} ladder clubs {sorted({r['club'] for r in rows} ^ clubs_in(y))} missing or extra")
+        n = CLUB_COUNT[y]
         if len(rows) != n or sorted(int(r["pos"]) for r in rows) != list(range(1, n + 1)):
             fails.append(f"{y} ladder has {len(rows)} rows, want {n}")
         for r in rows:
@@ -218,7 +275,7 @@ def main() -> int:
     print("Draft picks (year, draft, Draftguru, Wikipedia, Wikipedia-only):")
     for row in count_rows:
         print("  " + " ".join(str(x) for x in row))
-    print("Free agents (year, Draftguru, Wikipedia):", " ".join(f"{y}:{a}/{b}" for y, a, b in fa_rows))
+    print("Free agents (year, moves.csv, Wikipedia):", " ".join(f"{y}:{a}/{b}" for y, a, b in fa_rows))
     if not a.quiet:
         for w in warns:
             print("WARN", w)
