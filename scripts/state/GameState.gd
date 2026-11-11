@@ -1084,7 +1084,7 @@ func _restore_career(state: Dictionary) -> bool:
 	my_club = str(state.get("my_club", ""))
 	if state.get("season") is Dictionary:
 		var sv: Dictionary = state["season"]
-		season = Season.new(sv["clubs"], sv["lists"], int(sv["seed"]))
+		season = Season.new(sv["clubs"], sv["lists"], int(sv["seed"]), int(sv.get("year", 0)))
 		Season.beat()
 		CareerSave.apply_vars(season, sv)
 		Season.beat()
@@ -1093,7 +1093,7 @@ func _restore_career(state: Dictionary) -> bool:
 		# restored into the wildcard series (different slots, different
 		# weeks), so the finals restart from the ladder as it was saved.
 		if not season.finals.is_empty() \
-				and int((season.finals.get("top", []) as Array).size()) != Season.FINALISTS:
+				and int((season.finals.get("top", []) as Array).size()) != season.finalists():
 			season.finals = {}
 	Season.beat()
 	if state.get("draft") is Dictionary:
@@ -1567,10 +1567,8 @@ func import_career(bytes: PackedByteArray) -> String:
 		"":
 			return ""
 		"newer":
-			return "That backup is from a newer version of the game.
-Update the game to load it."
-	return "That file is not a career backup, or it is damaged.
-Your career is unchanged."
+			return "That backup is from a newer version of the game.\nUpdate the game to load it."
+	return "That file is not a career backup, or it is damaged.\nYour career is unchanged."
 
 
 ## The earlier saves kept for restoring, newest first (CareerSave.history).
@@ -1587,6 +1585,8 @@ func restore_saved_career(slot: int) -> bool:
 
 func _season_to_save() -> Dictionary:
 	var sv := CareerSave.object_vars(season)
+	# The shape is read again from the year on load (SeasonRules.for_year).
+	sv.erase("rules")
 	# The season's results keep every match's stat lines (StatBook); the
 	# season log keeps only scores, so no match is saved twice.
 	sv["results"] = _slim_rounds()
@@ -2224,6 +2224,12 @@ func _next_week_label() -> String:
 	if not season.is_regular_done():
 		return season.round_label(season.round_index)
 	var w := int(season.finals.get("week", 1))
+	if season.finals_format() != "wildcard10":
+		var again: Array = season.finals.get("replay", [])
+		var name := SeasonRules.week_name(season.finals_format(), w)
+		if not again.is_empty():
+			name = str((season.finals_week_matches()[0] as Dictionary).get("label", name))
+		return "the Grand Final" if name == "Grand Final" else ("the " + name.to_lower() if name != "" else "the finals")
 	return str({1: "the Wildcard Round", 2: "the qualifying and elimination finals", 3: "the semi finals",
 			4: "the preliminary finals", 5: "the Grand Final"}.get(w, "the finals"))
 
@@ -2652,7 +2658,7 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	# The season simulates only this year's active clubs; `lists` keeps an
 	# entry for every club so saves and rollovers never miss a key.
 	season = Season.new(GameDB.active_clubs(next_year).duplicate(), lists,
-			_clock_seed(3))
+			_clock_seed(3), next_year)
 	_sync_dual()
 	Season.beat()
 	# The cap moves with the new season before contracts are assigned.
@@ -3045,7 +3051,7 @@ func start_season(club_code: String, list: Array) -> void:
 		_rehome_players(lists)
 	# Fixtures, ladders and finals cover only the clubs active this year.
 	season = Season.new(GameDB.active_clubs(season_year).duplicate(), lists,
-			_clock_seed(4))
+			_clock_seed(4), season_year)
 	_sync_dual()
 	salary_cap = Contracts.salary_cap_for_year(season_year)
 	ensure_contracts()
@@ -3081,6 +3087,7 @@ func _build_pending_sim() -> void:
 	CoachEffects.apply(away)
 	pending_sim = MatchSim.new(home, away, int(_pending_build["seed"]))
 	pending_sim.finals_mode = bool(_pending_build["finals"])
+	pending_sim.extra_time_allowed = bool(_pending_build.get("extra_time", true))
 	pending_sim.weather = _pending_build["weather"]
 	pending_sim.moment_side = 0 if h == my_club else 1
 	pending_sim.always_offer_bounce = bounce_scene_every_match()
@@ -3233,19 +3240,20 @@ func _prepare_interactive_final() -> bool:
 			continue
 		others.append(season.match_sim(m["home"], m["away"], season.finals_seed(i),
 				season.finals_at_home(m), true,
-				season.weather_for(m["home"], m["away"], Season.REGULAR_ROUNDS + int(season.finals["week"]), m)))
+				season.weather_for(m["home"], m["away"], season.finals_round(), m)))
+		(others[others.size() - 1] as MatchSim).extra_time_allowed = season.finals_extra_time(m)
 		index.append(i)
 	_others = Season.start_all(others)
 	_others["index"] = index
 	var fm: Dictionary = matches[mine]
 	var at_home: Array = season.finals_at_home(fm)
 	pending_match = {"home": fm["home"], "away": fm["away"],
-			"round": Season.REGULAR_ROUNDS + int(season.finals["week"]),
+			"round": season.finals_round(),
 			"label": str(fm["label"]), "tag": str(fm["tag"]),
 			"venue": season.finals_venue(fm), "finals_index": mine}
 	_pending_build = {"at_home": at_home, "seed": season.finals_seed(mine), "finals": true,
-			"weather": season.weather_for(str(fm["home"]), str(fm["away"]),
-					Season.REGULAR_ROUNDS + int(season.finals["week"]), fm)}
+			"weather": season.weather_for(str(fm["home"]), str(fm["away"]), season.finals_round(), fm),
+			"extra_time": season.finals_extra_time(fm)}
 	_build_pending_sim()
 	pending_phase = "finals"
 	pending_label = str(fm["label"])
@@ -3444,17 +3452,28 @@ func _play_week() -> String:
 	elif not season.is_season_over():
 		ensure_finals()
 		var week := int(season.finals.get("week", 1))
+		var past := _finals_week_title()
 		last_results = season.play_finals_week()
 		last_phase = "finals"
 		var labels := {1: "Wildcard Round", 2: "Qualifying & Elimination Finals",
 				3: "Semi Finals", 4: "Preliminary Finals", 5: "Grand Final"}
-		last_label = str(labels.get(week, "Finals Week %d" % week))
+		last_label = str(labels.get(week, "Finals Week %d" % week)) if past == "" else past
 		if season.is_season_over():
 			last_phase = "done"
 	else:
 		last_phase = "done"
 		return "done"
 	return ""
+
+
+## The coming finals week's title in a past year's series ("Semi Finals",
+## "Qualifying Final Replay"); "" in the game's league (its own labels).
+func _finals_week_title() -> String:
+	if season.finals_format() == "wildcard10":
+		return ""
+	if not (season.finals.get("replay", []) as Array).is_empty():
+		return str((season.finals_week_matches()[0] as Dictionary).get("label", "Finals"))
+	return SeasonRules.week_name(season.finals_format(), int(season.finals.get("week", 1)))
 
 
 func _week_xp() -> String:
@@ -3497,7 +3516,7 @@ func fitness_week() -> int:
 		return 0
 	if not season.is_regular_done():
 		return season.round_index
-	return Season.REGULAR_ROUNDS + int(season.finals.get("week", 1)) - 1
+	return season.finals_round() - 1
 
 
 ## Only your club has a department budget; AI clubs run Standard (a known
@@ -3541,6 +3560,23 @@ func fitness_plan(club: String) -> String:
 func fitness_bye_week(club: String) -> int:
 	if season == null:
 		return -1
+	# The fixture is drawn once with the season: each club's bye is found once.
+	# (A loaded season's fixture is a new array, so it is found afresh.)
+	if not is_same(_bye_fixture, season.fixture) or _bye_rounds != season.fixture.size():
+		_bye_fixture = season.fixture
+		_bye_rounds = season.fixture.size()
+		_bye_weeks = {}
+	if not _bye_weeks.has(club):
+		_bye_weeks[club] = _find_bye_week(club)
+	return int(_bye_weeks[club])
+
+
+var _bye_fixture: Array = []
+var _bye_rounds := -1
+var _bye_weeks := {}
+
+
+func _find_bye_week(club: String) -> int:
 	for ri in range(season.fixture.size()):
 		var plays := false
 		for m in season.fixture[ri]:
@@ -4010,7 +4046,9 @@ func papers_record() -> Dictionary:
 
 
 ## The paper's ladder, best first: each club's best side as TeamRating reads it
-## after the summer's injuries, near-ties to last year's finish.
+## after the summer's injuries, near-ties to last year's finish, then nudged by
+## the practice matches ("moves": club -> {places, margin, earned, by} for each
+## club its result earned a move; "by" names what stopped one that fell short).
 func _build_papers() -> void:
 	var ratings := {}
 	var last := {}
@@ -4018,10 +4056,29 @@ func _build_papers() -> void:
 		var code := str(club)
 		ratings[code] = TeamRating.rating(season.lists[club])
 		last[code] = last_finish_of(code)
-	var order := PreSeason.predicted_order(ratings, last, club_expect)
+	var listed := PreSeason.predicted_order(ratings, last, club_expect)
+	# The practice matches nudge it (director, 2026-11-12): every club the same.
+	var margins: Dictionary = preseason.get("practice_margins", {}) if preseason.get("practice_margins") is Dictionary else {}
+	var order := PreSeason.practice_nudge(listed, margins)
+	# Every club its result earned a move, with what stopped any it fell short
+	# of: "top", "bottom", or the club in the way ("by").
+	var moves := {}
+	for code in margins:
+		var shift := PreSeason.practice_shift(int(margins[code]))
+		if shift == 0:
+			continue
+		var at := order.find(code)
+		var places := listed.find(code) - at
+		var by := ""
+		if absi(places) < absi(shift):
+			if shift > 0:
+				by = "top" if at == 0 else str(order[at - 1])
+			else:
+				by = "bottom" if at == order.size() - 1 else str(order[at + 1])
+		moves[str(code)] = {"places": places, "margin": int(margins[code]), "earned": shift, "by": by}
 	var pred := order.find(my_club) + 1
 	var eligible := []
-	if pred > Season.FINALISTS:
+	if pred > season.finalists():
 		eligible.append("finish")
 	if PreSeason.finishes_short(board.get("goal", {}) as Dictionary, pred):
 		eligible.append("pressure")
@@ -4031,7 +4088,7 @@ func _build_papers() -> void:
 	var kind := ""
 	if not eligible.is_empty():
 		kind = PreSeason.pick_paper(eligible, PreSeason.papers_seed(career_seed, season_year, my_club))
-	preseason["papers"] = {"order": order, "pred": pred, "kind": kind,
+	preseason["papers"] = {"order": order, "moves": moves, "pred": pred, "kind": kind,
 			"pid": pid if kind == "breakout" else "", "claim": 0, "answered": false,
 			"choice": -2, "result": "", "seen": false}
 	mark_dirty()
@@ -4810,10 +4867,17 @@ func _practice_build(home: String, away: String, home_invites: Array, away_invit
 ## What a practice match leaves behind, at either club: a reserves game's
 ## development for the listed players who played, any injury to a listed
 ## player (never a prospect), and the club's note on each prospect it
-## trialled. Nothing reaches the ladder, the season's statistics, votes,
-## records or the board. Returns your report (for your club), or {}.
+## trialled. Nothing reaches the season's ladder, statistics, votes, records or
+## the board; the margin moves the club on the papers' pre-season ladder
+## (PreSeason.practice_nudge). Returns your report (for your club), or {}.
 func _practice_finish(club: String, built: Dictionary, res: Dictionary) -> Dictionary:
 	var stats_all: Dictionary = res.get("players", {})
+	# Each club's margin, for the papers' ladder (PreSeason.practice_nudge).
+	var sc: Array = res.get("score", [0, 0])
+	var margin := int(sc[0]) - int(sc[1])
+	if not (preseason.get("practice_margins") is Dictionary):
+		preseason["practice_margins"] = {}
+	(preseason["practice_margins"] as Dictionary)[club] = margin if club == str(built["home"]) else -margin
 	var guests: Array = (built["guests"] as Dictionary).get(club, [])
 	var played := {}
 	for id in (built["ids"] as Dictionary).get(club, []):
@@ -4855,9 +4919,11 @@ func _practice_finish(club: String, built: Dictionary, res: Dictionary) -> Dicti
 	if not rows.is_empty():
 		_log_injuries(rows, "Practice match")
 	var sat := []
+	var sat_cleared := []
 	for row in last_medical.slice(sat_from):
 		if str(row.get("club", "")) == my_club:
 			sat.append(MedicalPanel.result_short(row))
+			sat_cleared.append(bool(row.get("cleared", false)))
 	var seen_rows := []
 	for p in draftee_pool:
 		var id := str(p.get("id", ""))
@@ -4896,7 +4962,7 @@ func _practice_finish(club: String, built: Dictionary, res: Dictionary) -> Dicti
 	return {"score": [int(score[0]), int(score[1])], "goals": res.get("goals", [0, 0]), "behinds": res.get("behinds", [0, 0]),
 			"names": [GameDB.club_name(str(built["home"])), GameDB.club_name(str(built["away"]))],
 			"opponent": str(built["away"]),
-			"stood": stood, "struggled": struggled, "hurt": hurt, "medical": sat, "prospects": seen_rows}
+			"stood": stood, "struggled": struggled, "hurt": hurt, "medical": sat, "medical_cleared": sat_cleared, "prospects": seen_rows}
 
 
 ## The practice week, once its matches are played.
@@ -5708,8 +5774,8 @@ func _must_win(us: String, them: String) -> bool:
 	if season == null or not season.ladder.has(us):
 		return false
 	var pts := int((season.ladder[us] as Dictionary).get("pts", 0))
-	var out_if_lose := _ahead_count(us, them, pts, true) >= Season.FINALISTS
-	var in_if_win := _ahead_count(us, them, pts + 4, true) < Season.FINALISTS
+	var out_if_lose := _ahead_count(us, them, pts, true) >= season.finalists()
+	var in_if_win := _ahead_count(us, them, pts + 4, true) < season.finalists()
 	return out_if_lose and in_if_win
 
 
@@ -5970,10 +6036,8 @@ func my_finals_status() -> String:
 		if str(season.finals.get("runner_up", "")) == my_club:
 			return "runner_up"
 		return "eliminated"
-	var slots: Dictionary = season.finals.get("slots", {})
-	for tag in ["WC1", "WC2", "EF1", "EF2", "SF1", "SF2", "PF1", "PF2", "GF"]:
-		if str(slots.get("L_" + tag, "")) == my_club:
-			return "eliminated"
+	if season.finals_eliminated(my_club):
+		return "eliminated"
 	for m in season.finals_week_matches():
 		if m["home"] == my_club or m["away"] == my_club:
 			return "alive"
@@ -5989,6 +6053,8 @@ func finals_outcome_line(res: Dictionary) -> String:
 		return ""
 	var slots: Dictionary = season.finals.get("slots", {})
 	var won: bool = str(slots.get("W_" + tag, "")) == my_club
+	if not ["wildcard10", "afl8"].has(season.finals_format()):
+		return _past_finals_outcome_line(res, tag, won)
 	match tag.substr(0, 2):
 		"WC":
 			return "Through! You reseed by ladder position for a qualifying or elimination final." \
@@ -6009,6 +6075,40 @@ func finals_outcome_line(res: Dictionary) -> String:
 			return ("%d PREMIERS" % season_year) if won \
 					else ("Runners-up in %d" % season_year)
 	return ""
+
+
+## finals_outcome_line for a past year's final five, six or McIntyre eight,
+## read from the bracket: where the result sends you next.
+func _past_finals_outcome_line(res: Dictionary, tag: String, won: bool) -> String:
+	if bool(res.get("replay_due", false)):
+		return "Level at the final siren: the final is played again next week."
+	if tag == "GF":
+		return ("%d PREMIERS" % season_year) if won else ("Runners-up in %d" % season_year)
+	if not won:
+		return "Second chance: you play again next week." if season.loser_goes_on(tag, my_club) 				else "Knocked out. Your season is over."
+	var spec := SeasonRules.bracket(season.finals_format())
+	var at := -1
+	var next_week := -1
+	var next_label := ""
+	for w in range(spec.size()):
+		for e in spec[w]:
+			if str(e[0]) == tag:
+				at = w
+	for w in range(at + 1, spec.size()):
+		for e in spec[w]:
+			var mine := str(e[2]) == "W_" + tag or str(e[3]) == "W_" + tag
+			for side in [str(e[2]), str(e[3])]:
+				if at == 0 and side.begins_with("RW") and season.finals_slot(side) == my_club:
+					mine = true
+			if mine and next_week < 0:
+				next_week = w
+				next_label = str(e[1])
+	if next_label == "Grand Final":
+		return "Into the Grand Final!" + (" A week off first." if next_week > at + 1 else "")
+	if next_week > at + 1:
+		return "Through, with a week off before the %s." % SeasonRules.week_name(
+				season.finals_format(), next_week + 1).to_lower()
+	return "Through to the %s." % SeasonRules.week_name(season.finals_format(), next_week + 1).to_lower()
 
 
 ## A player's club is the list he is on (Develop's room and the coaches'
@@ -6631,9 +6731,22 @@ func _dev_promise_week() -> void:
 		return
 	for p in my_list:
 		var t := _dev_owed(p)
-		if t.is_empty() or int(p.get("injury_weeks", 0)) > 0:
+		# Injured, suspended or rested he cannot play: naming him would only push
+		# a fit man out, and his games wait.
+		if t.is_empty() or not Ratings.available(p):
 			continue
+		# A side you named takes him in, as Auto-pick does, so his games can start.
+		var named := not my_selection().is_empty()
+		var was_in := in_current_side(p)
+		var made_way := name_promised(p)
 		p["expects_game"] = DEV_PROMISE_STING
+		if named and not was_in:
+			var who := GameDB.player_display_name(p)
+			if in_current_side(p):
+				add_news("club", "%s is in the side this week for his promised games%s." % [who,
+						(", in place of %s" % made_way) if made_way != "" else ""])
+			else:
+				add_news("club", "%s is owed his promised games, but %s" % [who, NO_ROOM_WORDS.substr(0, 1).to_lower() + NO_ROOM_WORDS.substr(1)])
 		# His promised games were under way and the trial is gone (another
 		# trial took its place): they are owed again, and start once it is free.
 		if str(t["state"]) == "on" and (str(role_trial.get("id", "")) != str(p["id"]) or not role_trial.has("promised")):
@@ -6650,11 +6763,12 @@ func _dev_promise_week() -> void:
 ## After your match: a fit player owed his games who did not play was left out
 ## of them. The promise breaks (its sting is the promised game's, paid by the
 ## expects_game settling that follows).
-func _dev_promise_after_match(played: Dictionary) -> void:
+func _dev_promise_after_match(played: Dictionary, no_room := {}) -> void:
 	for p in my_list:
 		var t := _dev_owed(p)
-		if t.is_empty() or played.has(str(p["id"])) or int(p.get("injury_weeks", 0)) > 0 \
-				or _round_unavailable.has(str(p["id"])):
+		var pid := str(p["id"])
+		if t.is_empty() or played.has(pid) or no_room.has(pid) or int(p.get("injury_weeks", 0)) > 0 \
+				or _round_unavailable.has(pid):
 			continue
 		_dev_promise_broken(p, t, false)
 
@@ -7009,7 +7123,7 @@ func _close_season_awards() -> void:
 	# The Golden Fist (T5.Q11c), from the season's book. A book begun part way
 	# through (an older save) asks for games in proportion to the rounds it saw.
 	var fist := Awards.golden_fist(season_stats, players, Awards.aa_min_games(
-			maxi(1, Season.REGULAR_ROUNDS - season_stats_from)) if season_stats_from > 0 else Awards.AA_MIN_GAMES)
+			maxi(1, season.regular_rounds() - season_stats_from), season.regular_rounds()) if season_stats_from > 0 else Awards.AA_MIN_GAMES)
 	if not fist.is_empty():
 		season_awards["golden_fist"] = fist
 	records = Awards.update_records(records, season_awards, season_log)
@@ -7338,16 +7452,22 @@ func _medical_retire(club: String, p: Dictionary) -> void:
 
 
 ## The medical panel's sittings on your players in the week just played, as
-## short lines for the week's injuries: "Name cleared to play on (a 50% chance)."
-## last_medical holds that week's sittings and nothing older
+## short lines for the week's injuries: "Name was cleared to keep playing once
+## he recovers (a 50% chance)." last_medical holds that week's sittings and nothing older
 ## (emptied before each round's injuries and at the rollover), so nothing is
 ## matched on a round's name: a home-and-away round, a final played or
 ## simulated and the practice match all show theirs.
 func my_medical_lines() -> Array:
+	return my_medical_rows().map(func(r): return str(r["text"]))
+
+
+## The same, each with whether he was cleared ({"text", "cleared"}): a cleared
+## player is good news and is not drawn in the injury red.
+func my_medical_rows() -> Array:
 	var out := []
 	for row in last_medical:
 		if str(row.get("club", "")) == my_club:
-			out.append(MedicalPanel.result_short(row))
+			out.append({"text": MedicalPanel.result_short(row), "cleared": bool(row.get("cleared", false))})
 	return out
 
 
@@ -7901,7 +8021,28 @@ func tests_market(p: Dictionary, list: Array) -> bool:
 ## measured against the best replacement it can actually get at his position.
 func ai_release_reason(code: String, p: Dictionary) -> String:
 	var list: Array = season.lists.get(code, [])
+	# A player in its best 22 is never delisted, so his replacement is never
+	# weighed: only the class ranking replacement_worth keeps is made as before.
+	if Contracts.needed(p, list):
+		_fill_repl_class(code)
+		return Contracts.ai_release_reason(p, list, cap_for(code))
 	return Contracts.ai_release_reason(p, list, cap_for(code), replacement_worth(code, p))
+
+
+## What replacement_worth leaves behind when it reaches the draft: the class
+## ranked once per class size (_repl_class), filled at the same calls it was.
+func _fill_repl_class(code: String) -> void:
+	if str(_repl_class.get("key", "")) == "%d:%d" % [season_year, draftee_pool.size()]:
+		return
+	var spot := 0
+	for pk in club_picks(code):
+		if int(pk["year"]) == season_year:
+			var at := int((pk["positions"] as Array)[0][0])
+			if spot == 0 or at < spot:
+				spot = at
+	if spot > 0:
+		_repl_class = {"key": "%d:%d" % [season_year, draftee_pool.size()],
+				"ranked": TradeValue.rank_prospects(_open_class(season_year))}
 
 
 ## The best a club can get in his place, on Contracts.worth's scale: the top
@@ -11240,12 +11381,33 @@ const YOUTH_MAX := 3
 
 
 func auto_pick(strategy: String) -> Dictionary:
+	var r := _auto_pick(strategy)
+	if (r["side"] as Dictionary).is_empty():
+		return r
+	# A player you promised a game stays in, whatever the pick (select_22 does
+	# the same): the lowest-rated man of his line who is not owed one makes way.
+	var kept: PackedStringArray = []
+	for p in my_list:
+		if not _promised_game(p) or not Ratings.available(p):
+			continue
+		var swap := _swap_in((r["side"] as Dictionary).duplicate(true), p)
+		if not (swap.get("sel", {}) as Dictionary).is_empty():
+			r["side"] = swap["sel"]
+			var out: Dictionary = swap.get("out", {})
+			kept.append(GameDB.player_display_name(p) + ((" for %s" % GameDB.player_display_name(out)) if not out.is_empty() else ""))
+	if not kept.is_empty():
+		r["note"] = "%s Kept in as promised: %s." % [str(r["note"]), ", ".join(kept)]
+	return r
+
+
+func _auto_pick(strategy: String) -> Dictionary:
 	var pool: Array = my_list.filter(func(p): return Ratings.available(p))
 	var dual := 1 if user_dual_ruck else 0
 	match strategy:
 		"rest":
-			var tired: Array = pool.filter(func(p): return Workload.value(p) >= Workload.NEEDS_BREAK)
-			var fresh: Array = pool.filter(func(p): return Workload.value(p) < Workload.NEEDS_BREAK)
+			# A player you promised a game is not rested out of it.
+			var tired: Array = pool.filter(func(p): return Workload.value(p) >= Workload.NEEDS_BREAK and not _promised_game(p))
+			var fresh: Array = pool.filter(func(p): return Workload.value(p) < Workload.NEEDS_BREAK or _promised_game(p))
 			var sel := Ratings.select_22(fresh if fresh.size() >= (18 + Ratings.INTERCHANGE) else pool, dual)
 			var side := _as_selection(sel["ground"], sel["bench"])
 			var rested: PackedStringArray = []
@@ -11315,7 +11477,7 @@ func blood_youth(side_in: Dictionary, pool: Array) -> Dictionary:
 			var weakest := ""
 			for id in side2[line]:
 				var w = by_id.get(str(id))
-				if w == null or brought.has(str(id)) or is_young(w):
+				if w == null or brought.has(str(id)) or is_young(w) or _keeps_place(w):
 					continue
 				if weakest == "" or int(w["overall"]) < int(by_id[weakest]["overall"]):
 					weakest = str(id)
@@ -12387,7 +12549,7 @@ func add_news(kind: String, text: String, when_label: String = "", extra := {}) 
 func _draft_class_news() -> void:
 	if season == null or season.is_season_over():
 		return
-	var reveal_round := ceili(float(Season.REGULAR_ROUNDS) / 2.0)
+	var reveal_round := ceili(float(season.regular_rounds()) / 2.0)
 	if season.round_index < reveal_round:
 		return
 	if str(class_tiers.get(str(season_year), "")) != "super":
@@ -12682,12 +12844,12 @@ func _open_board_season() -> void:
 	for i in range(ranks.size()):
 		var code := str(ranks[i][0])
 		club_expect[code] = i + 1
-		club_goals[code] = ClubLife.board_goal(i + 1, int(_last_finish.get(code, 0)), ranks.size())
+		club_goals[code] = ClubLife.board_goal(i + 1, int(_last_finish.get(code, 0)), ranks.size(), season.finalists())
 		if code == my_club:
 			rank = i + 1
 	if board.is_empty():
 		board = {"confidence": ClubLife.START_CONFIDENCE, "warned": false, "sacked": false, "history": []}
-	board["goal"] = club_goals.get(my_club, ClubLife.board_goal(rank, 0, ranks.size()))
+	board["goal"] = club_goals.get(my_club, ClubLife.board_goal(rank, 0, ranks.size(), season.finalists()))
 	board["rank"] = rank
 	board["clubs"] = ranks.size()
 	board["last_finish"] = int(_last_finish.get(my_club, 0))
@@ -12818,6 +12980,9 @@ func _board_after_round(results: Array) -> void:
 			soft[str(p["id"])] = CoachEffects.soften(staff, p)
 	ClubLife.morale_after_match(my_list, played, margin > 0, soft, culture_effect(my_club, "sting"), _round_unavailable,
 			str(CoachEffects.arch_of(my_club)[1]))
+	# A promised man left out because every place was held by another promised
+	# man could not have been named: no promise of his breaks for this match.
+	var no_room := _no_room_ids(played)
 	# A player promised a run (Backing): each game he plays counts towards it.
 	# Left out while fit, the promise breaks and it stings, once, and the run
 	# is over; unable to play, the run waits. His one-week expectation is
@@ -12827,7 +12992,7 @@ func _board_after_round(results: Array) -> void:
 		if not Backing.is_active(p):
 			continue
 		var pid := str(p["id"])
-		var run_state := Backing.after_match(p, played.has(pid), not _backing_unavailable.has(pid),
+		var run_state := Backing.after_match(p, played.has(pid), not _backing_unavailable.has(pid) and not no_room.has(pid),
 				{"year": season_year, "label": str(res.get("label", ""))}, stats_all.get(pid, {}))
 		if run_state == "done" or run_state == "broken":
 			Backing.mark_asked(p, story_week())   # no new ask for a while (Backing.ASK_GAP)
@@ -12840,7 +13005,7 @@ func _board_after_round(results: Array) -> void:
 			_culture_move(my_club, "together", -StoryEngine.BROKEN_TOGETHER, "You broke your word on a player's run of games")
 		p.erase("expects_game")
 	# Games promised in a development talk (T5.r93): left out of them fit breaks it.
-	_dev_promise_after_match(played)
+	_dev_promise_after_match(played, no_room)
 	# A player promised a game (a talk, or a kid given his chance): leaving
 	# him out fit sours it. Once: the promise ends with the round.
 	for p in my_list:
@@ -12848,7 +13013,7 @@ func _board_after_round(results: Array) -> void:
 			var sting := int(p["expects_game"]) if typeof(p["expects_game"]) == TYPE_INT else 12
 			p.erase("expects_game")
 			if not played.has(str(p["id"])) and int(p.get("injury_weeks", 0)) <= 0 \
-					and not _round_unavailable.has(str(p["id"])):
+					and not _round_unavailable.has(str(p["id"])) and not no_room.has(str(p["id"])):
 				ClubLife.add_morale(p, -CoachEffects.softened(sting, float(soft.get(str(p["id"]), 0.0))))
 				Trust.change(relations, Trust.player_key(str(p["id"])), ClubStories.BROKEN_PROMISE_TRUST,
 						"You promised him a game and left him out", season_year, last_label)
@@ -12954,7 +13119,7 @@ func _prepare_media_conference(results: Array) -> void:
 	# Only a real standout (6 goals or 40 disposals) is a star question: an
 	# ordinary game asks nothing (director 2026-11-06; ruling 5.52, never a
 	# schedule). MatchStory keeps its hero and "your best" for the match copy.
-	var round_no := season.round_index if last_phase == "regular" else Season.REGULAR_ROUNDS + int((season.finals.get("weeks", []) as Array).size())
+	var round_no := season.round_index if last_phase == "regular" else season.regular_rounds() + int((season.finals.get("weeks", []) as Array).size())
 	# How many of your side were young enough for the Philosopher to ask.
 	var young := 0
 	if roster.size() > side:
@@ -13080,7 +13245,7 @@ func _set_press_standing(journalist: String, v: int) -> void:
 func _fade_press_lifts() -> void:
 	if season == null:
 		return
-	var round_no := season.round_index if last_phase == "regular" else Season.REGULAR_ROUNDS + int((season.finals.get("weeks", []) as Array).size())
+	var round_no := season.round_index if last_phase == "regular" else season.regular_rounds() + int((season.finals.get("weeks", []) as Array).size())
 	var faded := {}
 	for p in my_list:
 		MediaConference.fade_lift(p, round_no)
@@ -13647,13 +13812,62 @@ func back_player(player_id: String) -> String:
 	var out := "%s has your word for %s games." % [GameDB.player_display_name(p),
 			MatchNotes.count_word(Backing.RUN_GAMES)]
 	if not named:
-		out += " " + backed_in_words(dropped)
+		out += " " + promised_in_words(p, dropped)
 	return out
 
 
 ## What naming him does to the side, in words: who he comes in for.
 static func backed_in_words(dropped: String) -> String:
 	return "He's in the side this week%s." % ((", in place of %s" % dropped) if dropped != "" else "")
+
+
+## Every one of the 23 is held by a player owed a game (or on a role trial):
+## a promised man cannot be named, and says so rather than claiming a place.
+const NO_ROOM_WORDS := "There's no room for him in the 23 this week: every spot is held by a player you've promised a game."
+
+
+## What a promise did to this week's side, in words, after name_promised: who
+## he came in for, or why he is not in it.
+func promised_in_words(p: Dictionary, dropped: String) -> String:
+	if in_current_side(p):
+		return backed_in_words(dropped)
+	if not Ratings.available(p):
+		if dropped != "":
+			return "He's named in place of %s, but can't play this week." % dropped
+		return "He can't play this week."
+	return NO_ROOM_WORDS
+
+
+## Owed a game this week: a run (Backing), a card's "a game this week", or
+## the games of a development talk.
+static func _promised_game(q: Dictionary) -> bool:
+	return Backing.is_active(q) or q.has("expects_game") or not _dev_owed(q).is_empty()
+
+
+## Never the one to make way for a promised player: another promised player,
+## or the player on a role trial (the trial needs him in the side).
+func _keeps_place(q: Dictionary) -> bool:
+	return _promised_game(q) or (not role_trial.is_empty() and str(role_trial.get("id", "")) == str(q.get("id", "")))
+
+
+## After a match: the fit promised players who could not have been named,
+## by id. In a side you named, every place in his line and on the bench was
+## held by a player who keeps it (_swap_in says no room); on Auto-pick, every
+## one who took the field was owed a game or on a trial.
+func _no_room_ids(played: Dictionary) -> Dictionary:
+	var out := {}
+	var sel := my_selection()
+	var all_kept := not played.is_empty()
+	for id in played:
+		var q := list_player(str(id))
+		if q.is_empty() or not _keeps_place(q):
+			all_kept = false
+	for p in my_list:
+		if not _promised_game(p) or played.has(str(p["id"])):
+			continue
+		if (all_kept if sel.is_empty() else _swap_in(sel.duplicate(true), p).has("no_room")):
+			out[str(p["id"])] = true
+	return out
 
 
 ## Start a run for one of your players: the week's match is his first game if
@@ -13665,14 +13879,26 @@ static func backed_in_words(dropped: String) -> String:
 func _start_backing(p: Dictionary) -> String:
 	if Backing.is_active(p):
 		return ""
-	var swap := backing_swap(p)
-	var dropped := backing_drop_name(p) if swap.is_empty() else ""
-	if not (swap.get("out", {}) as Dictionary).is_empty():
-		dropped = GameDB.player_display_name(swap["out"])
+	var dropped := name_promised(p)
 	var round_no := 0 if season.is_regular_done() else season.round_index + 1
 	Backing.start(p, season_year, round_no, games_played(p))
 	ClubLife.add_morale(p, Backing.THRILL)
 	p["expects_game"] = Backing.STING
+	mark_dirty()
+	return dropped
+
+
+## A game you promised him (a run, a card's "a game this week", the games of a
+## development talk): a side you named takes him in at once (backing_swap), so
+## the List, Selection and the match all show him from the moment you say it;
+## auto-pick names him by itself. Call it before he is marked as owed the game.
+## Returns the name of the player he comes in for, or "" (already in the side,
+## or nobody had to make way).
+func name_promised(p: Dictionary) -> String:
+	var swap := backing_swap(p)
+	var dropped := backing_drop_name(p) if swap.is_empty() else ""
+	if not (swap.get("out", {}) as Dictionary).is_empty():
+		dropped = GameDB.player_display_name(swap["out"])
 	if not (swap.get("sel", {}) as Dictionary).is_empty():
 		var keep: Dictionary = swap["sel"]
 		keep["DUAL_RUCK"] = user_dual_ruck
@@ -13680,7 +13906,7 @@ func _start_backing(p: Dictionary) -> String:
 		if stored.has("TRIAL"):
 			keep["TRIAL"] = stored["TRIAL"]
 		season.selections[my_club] = keep
-	mark_dirty()
+		mark_dirty()
 	return dropped
 
 
@@ -13702,12 +13928,20 @@ func in_current_side(p: Dictionary) -> bool:
 ## lowest-rated such player on the bench. The one who makes way goes to the
 ## players left out.
 func backing_swap(p: Dictionary) -> Dictionary:
-	var sel := my_selection()
+	return _swap_in(my_selection(), p)
+
+
+## backing_swap on any selection (`sel` is changed: pass a copy). {} when
+## `sel` is empty or he is already named (a man suspended or injured is still
+## named for his run, and it waits for him); {"no_room": true} when every
+## place in his line and on the bench is held by a player who keeps it
+## (_keeps_place) and the bench is full.
+func _swap_in(sel: Dictionary, p: Dictionary) -> Dictionary:
 	if sel.is_empty():
 		return {}
 	var id := str(p.get("id", ""))
 	for k in sel:
-		if k != "OUT" and (sel[k] as Array).has(id):
+		if k != "OUT" and sel[k] is Array and (sel[k] as Array).has(id):
 			return {}
 	var role := str(p.get("role", "MID"))
 	var lines: Array = ["MID", "WING"] if role == "MID" else [role]
@@ -13720,7 +13954,7 @@ func backing_swap(p: Dictionary) -> Dictionary:
 				var q := list_player(str(other_id))
 				if q.is_empty():
 					continue
-				if Backing.is_active(q) or q.has("expects_game"):
+				if _keeps_place(q):
 					continue
 				# Out this week anyway first; then the lowest rated.
 				var rank := float(q.get("overall", 0)) - (1000.0 if not Ratings.available(q) else 0.0)
@@ -13733,8 +13967,16 @@ func backing_swap(p: Dictionary) -> Dictionary:
 	var out_list: Array = (sel.get("OUT", []) as Array).duplicate()
 	out_list.erase(id)
 	if best.is_empty():
-		# Nobody can make way: he goes on the bench, and the pick fills round him.
+		# Nobody can make way: he goes on the bench if it has a spot (a sixth
+		# name would not make the 23), and the pick fills round him.
 		var bench: Array = (sel.get("BENCH", []) as Array).duplicate()
+		var fit_bench := 0
+		for b in bench:
+			var bq := list_player(str(b))
+			if not bq.is_empty() and Ratings.available(bq):
+				fit_bench += 1
+		if fit_bench >= Ratings.bench_size:
+			return {"no_room": true}
 		bench.append(id)
 		sel["BENCH"] = bench
 		sel["OUT"] = out_list
@@ -13856,10 +14098,10 @@ func _coach_market_ctx(the_coaches: Dictionary, archive: Dictionary) -> Dictiona
 	for i in range(table.size()):
 		var row: Dictionary = table[i]
 		var code := str(row["code"])
-		var goal: Dictionary = club_goals.get(code, ClubLife.board_goal(int(club_expect.get(code, ClubLife.default_rank(club_count))), 0, club_count))
+		var goal: Dictionary = club_goals.get(code, ClubLife.board_goal(int(club_expect.get(code, ClubLife.default_rank(club_count))), 0, club_count, season.finalists()))
 		var pos := i + 1
 		var met := ClubLife.goal_met(goal, pos, int(row.get("w", 0)), club_count)
-		results[code] = {"met": met, "finals": pos <= Season.FINALISTS,
+		results[code] = {"met": met, "finals": pos <= season.finalists(),
 				"severe": not met and pos >= table.size() - 2 and int(club_expect.get(code, club_count)) <= 10}
 	return {"coaches": the_coaches, "archive": archive,
 			"year": season_year, "my_club": my_club, "clubs": GameDB.active_clubs(season_year + 1),
@@ -14981,7 +15223,8 @@ func _culture_season() -> void:
 	for k in range(table.size()):
 		var code := str(table[k]["code"])
 		for st in Culture.season_steps(k + 1, table.size(), code == champion,
-				float(ages.get(code, age_mean)) - age_mean, float(disc.get(code, league_mean)) - league_mean):
+				float(ages.get(code, age_mean)) - age_mean, float(disc.get(code, league_mean)) - league_mean,
+				season.finalists()):
 			_culture_move(code, str(st["strand"]), int(st["d"]), str(st["why"]))
 		for s in Culture.STRANDS:
 			Culture.settle(relations, code, str(s[0]))

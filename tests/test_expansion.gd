@@ -561,6 +561,30 @@ func _test_created_club_rules() -> void:
 	_check(kit.get("primary") == ClubForge.palette_hex("navy") and kit.get("secondary") == ClubForge.palette_hex("red")
 			and kit.get("accent") == ClubForge.palette_hex("white") and kit.get("design") == "hoops",
 			"A place's tradition becomes a starting kit: its colours, a third, its pattern")
+	# A save keeps each colour's hex: the original fifteen never change, and
+	# the wider palette (director 2026-11-11) has no two colours alike.
+	var original := {"navy": "#13234B", "blue": "#1F4FA8", "sky": "#6CACE4", "teal": "#00808A",
+			"green": "#1E6B3A", "maroon": "#6E1F2E", "red": "#C8102E", "orange": "#E8762B", "gold": "#F2B231",
+			"yellow": "#F7D417", "brown": "#5C3A21", "purple": "#4B2A7B", "grey": "#8A8D91", "black": "#111111",
+			"white": "#F5F5F5"}
+	var moved := []
+	for id in original:
+		if ClubForge.palette_hex(id) != original[id]:
+			moved.append(id)
+	_check(moved.is_empty(), "The Forge's original colours keep their hex, so saved clubs load unchanged (%s)" % str(moved))
+	var ids := {}
+	var hexes := {}
+	var twins := []
+	for col in ClubForge.PALETTE:
+		if ids.has(col[0]) or hexes.has(str(col[2]).to_upper()):
+			twins.append(col[0])
+		ids[col[0]] = true
+		hexes[str(col[2]).to_upper()] = true
+	_check(ClubForge.PALETTE.size() >= 27 and twins.is_empty(),
+			"The Forge offers %d colours, each its own (%s)" % [ClubForge.PALETTE.size(), str(twins)])
+	var bottle := ClubForge.preset({"colour_tags": ["Bottle green", "Old gold"], "pattern_tags": []})
+	_check(bottle.get("primary") == ClubForge.palette_hex("bottle") and bottle.get("secondary") == ClubForge.palette_hex("oldgold"),
+			"Bottle green and old gold are their own colours in a place's tradition")
 	_check(ClubForge.preset({"colour_tags": ["blue"], "pattern_tags": []}).is_empty(),
 			"A place with one known colour gives no starting kit")
 	var preset_spec := _forge_spec()

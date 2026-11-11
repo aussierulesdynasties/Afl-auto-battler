@@ -77,11 +77,14 @@ func run(tree: SceneTree) -> void:
 	_t("_test_my_best_in_loss")
 	_t("_test_digest_survives_trim")
 	_t("_test_factors_never_repeat")
+	_t("_test_calls_every_quarter_pure")
+	_t("_test_calls_new_call_before_carried")
 	for size in [Vector2i(390, 844), Vector2i(1280, 720)]:
 		_tree.root.size = size
 		await _settle()
 		await _t("_test_summary", [size])
 		await _t("_test_no_repeats", [size])
+	await _t("_test_calls_every_quarter_screen")
 	GameState.delete_saved_career()
 	print(Ran.line("Match story", self))
 	for f in failures:
@@ -543,7 +546,7 @@ func _check_once(r: Dictionary, tag: String) -> void:
 	_check(factors != null and head != null, "%s: How it went is built" % tag)
 	if factors != null and head != null:
 		var empty := factors.get_child_count() == 0
-		_check(factors.visible == not empty and head.visible == not empty,
+		_check(factors.visible == (not empty) and head.visible == (not empty),
 				"%s: How it went shows only with something left to say (%d lines)" % [tag, factors.get_child_count()])
 	print("  %s: %s" % [tag, " | ".join(_summary_sentences(ft))])
 	Router.stack = []
@@ -605,6 +608,126 @@ func _test_no_repeats(size: Vector2i) -> void:
 		var goals := int((last["players"].get(ids[i], {}) as Dictionary).get("goals", 0))
 		_check(said.count(str(names[i])) == 1 and said.contains(Firsts.debut_line(str(names[i]), goals)),
 				"%s: %s's debut is said once (%s)" % [tag, str(names[i]), said.strip_edges()])
+	Router.stack = []
+	Router.go("hub")
+	await _settle(4)
+
+
+## A seeded match with a call in every quarter (director bug, 2026-11-12: "Your
+## calls" showed Q1, rarely Q2, never Q3 or Q4). Round 1's real result, with
+## your plan rewritten each quarter to a game plan, a tag and three players to
+## go through: five lines a quarter, twenty in all, against a cap of five.
+func _calls_every_quarter_result() -> Dictionary:
+	_fresh()
+	_rounds(1)
+	var res: Dictionary = (GameState.last_match as Dictionary).duplicate(true)
+	var me := _side(res)
+	var mine: Array = res["roster"][me]
+	var theirs: Array = res["roster"][1 - me]
+	var plans := ["attacking", "defensive", "contest", "controlled"]
+	for h in res["tactics_history"]:
+		var q := int(h["quarter"])
+		if q < 1 or q > 4:
+			continue
+		var p: Dictionary = h["plans"][me]
+		p["gameplan"] = plans[q - 1]
+		p["tag_id"] = str(theirs[q]["id"])
+		p["focus_mid"] = str(mine[q]["id"])
+		p["focus_fwd"] = str(mine[q + 4]["id"])
+		p["focus_def"] = str(mine[q + 8]["id"])
+	return res
+
+
+func _quarters_in(lines: Array) -> Array:
+	var qs := []
+	for t in lines:
+		qs.append(int(str(t).substr(1, 1)))
+	return qs
+
+
+func _test_calls_every_quarter_pure() -> void:
+	var res := _calls_every_quarter_result()
+	var me := _side(res)
+	var all := 0
+	for q in range(1, 5):
+		var n := (MatchNotes.calls_lines(res, me, q) as Array).size()
+		_check(n == 5, "calls: Q%d has five call lines (got %d)" % [q, n])
+		all += n
+	# Win Contest (Q3 here) names the last quarter's clearances in brackets, as
+	# the attacking and defensive lines do: "from 8 to 10" read as a rise.
+	var contest := str(MatchNotes.calls_lines(res, me, 3)[0])
+	var cl := RegEx.create_from_string("^Win Contest: clearances \\d+ to \\d+ \\(\\d+ to \\d+ in the second\\)\\.$")
+	_check(cl.search(contest) != null and not contest.contains("from"),
+			"calls: the contest line puts the last quarter in brackets (got %s)" % contest)
+	# The old summary: every line in quarter order, the first five kept.
+	var old := []
+	for q in range(1, 5):
+		for t in MatchNotes.calls_lines(res, me, q):
+			old.append("Q%d  ·  %s" % [q, str(t)])
+	_check(_quarters_in(old.slice(0, 5)) == [1, 1, 1, 1, 1],
+			"calls: in order, the first five are all Q1 (the bug reproduced): %s" % str(_quarters_in(old.slice(0, 5))))
+	var got := MatchNotes.full_time_calls(res, me, {})
+	_check(got.size() == 5, "calls: the summary keeps five of %d (got %d)" % [all, got.size()])
+	var qs := _quarters_in(got)
+	_check(qs == [1, 1, 2, 3, 4], "calls: each quarter's first call, then Q1's second, in quarter order (got %s)" % str(qs))
+	_check(got[0] == old[0] and got[2] == old[5] and got[3] == old[10] and got[4] == old[15],
+			"calls: each quarter's first line is its game plan")
+	# Calls only late in the match: all five slots go to Q3 and Q4.
+	for h in res["tactics_history"]:
+		if int(h["quarter"]) <= 2:
+			h["plans"][me] = {"gameplan": "balanced"}
+	qs = _quarters_in(MatchNotes.full_time_calls(res, me, {}))
+	_check(qs == [3, 3, 3, 4, 4], "calls: late calls only fill from Q3 and Q4 (got %s)" % str(qs))
+	# A line Why already quoted for its quarter is not said again.
+	var q3 := str(MatchNotes.calls_lines(res, me, 3)[0])
+	var told := {"q3": true, "call:" + q3: true}
+	_check(not MatchNotes.full_time_calls(res, me, told).has("Q3  ·  " + q3), "calls: a call Why quoted is left out")
+
+
+## A Q1 tag still in force in Q2 must not take Q2's place from the call made
+## in Q2 (capture 2026-11-12: Q2 showed "Tag on ..." and dropped the new
+## Through call). Q1 sets the tag; Q2 keeps it and adds a man to go through.
+func _test_calls_new_call_before_carried() -> void:
+	var res := _calls_every_quarter_result()
+	var me := _side(res)
+	var mine: Array = res["roster"][me]
+	var theirs: Array = res["roster"][1 - me]
+	var tag_id := str(theirs[1]["id"])
+	var thru_id := str(mine[5]["id"])
+	for h in res["tactics_history"]:
+		var q := int(h["quarter"])
+		if q == 1:
+			h["plans"][me] = {"gameplan": "balanced", "tag_id": tag_id}
+		elif q >= 2:
+			h["plans"][me] = {"gameplan": "balanced", "tag_id": tag_id, "focus_fwd": thru_id}
+	var q2: Array = MatchNotes.calls_lines(res, me, 2)
+	_check(q2.size() == 2 and str(q2[0]).begins_with("Tag on"),
+			"calls: fixture, Q2 lists the carried tag first (got %s)" % str(q2))
+	var got := MatchNotes.full_time_calls(res, me, {}, 2)
+	var want := "Q2  ·  " + str(q2[1])
+	_check(got.has(want) and str(q2[1]).begins_with("Through"),
+			"calls: Q2's place goes to the Through call made in Q2 (got %s)" % str(got))
+	_check(not got.has("Q2  ·  " + str(q2[0])), "calls: the Q1 tag carried into Q2 waits behind it (got %s)" % str(got))
+	# With room, the carried tag still shows after the new call.
+	var all := MatchNotes.full_time_calls(res, me, {}, 20)
+	_check(all.find(want) < all.find("Q2  ·  " + str(q2[0])), "calls: in Q2 the new call reads before the carried tag")
+
+
+## On the screen: the full-time Summary's Your calls lists Q3 and Q4.
+func _test_calls_every_quarter_screen() -> void:
+	_tree.root.size = Vector2i(390, 844)
+	var res := _calls_every_quarter_result()
+	GameState.last_match = res
+	var ft := await _review()
+	var box: Node = ft.find_child("FullTimeCalls", true, false) if ft != null else null
+	_check(box != null and (box as Control).is_visible_in_tree(), "calls: the Summary shows Your calls")
+	# A line naming a player is a RichTextLabel; its words ride as "plain".
+	var text := ""
+	if box != null:
+		for c in box.get_children():
+			text += str(c.get_meta("plain", c.get("text"))) + "\n"
+	for q in range(1, 5):
+		_check(text.contains("Q%d  ·  " % q), "calls: Your calls lists a Q%d call:\n%s" % [q, text])
 	Router.stack = []
 	Router.go("hub")
 	await _settle(4)

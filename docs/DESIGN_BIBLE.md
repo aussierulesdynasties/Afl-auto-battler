@@ -3,6 +3,8 @@
 _Director's decisions, brainstorm of 2026-10-09. Session record:
 [brainstorms/2026-10-09-design-bible.md](brainstorms/2026-10-09-design-bible.md)._
 
+_Updated 2026-11-12 with the director's consent: press-line wording, pillar order, story question._
+
 ## What this document is
 
 The bible holds the ultimate truth for Aussie Rules Dynasties. It is a philosophy
@@ -25,9 +27,19 @@ Brownlow. The satisfaction is that your vision and your faith paid off.
 understands the risk was theirs to take. Risks can pay off and risks can fail. It
 is up to the player, and the game is objective about it.
 
-## The core pillar: player agency
+## The first pillar: story
 
-Player agency is the core pillar. It is what sets this game apart from simulators
+A simulation that feels like a story, a legacy, a dynasty. The coach's career is
+the centre of the game.
+
+## The second pillar: a deep simulator
+
+It is real footy. Player ratings reflect reality, and decisions move the odds,
+never the certainty.
+
+## The third pillar: player agency
+
+Player agency is the third pillar. It is what sets this game apart from simulators
 that lean toward the uninteractive.
 
 - This is not a spreadsheet simulator.
@@ -35,7 +47,7 @@ that lean toward the uninteractive.
 - The game is designed for a player who plays most matches and sims the odd one.
   Playing hands-off is the gamer's call, and the risk of it is theirs.
 
-## The second pillar: readability and intuitive interfaces
+## The fourth pillar: readability and intuitive interfaces
 
 _Director, 2026-10-13._
 
@@ -92,8 +104,8 @@ matter.
 **Press conferences.** Answers affect the sim: player morale, board expectations
 and relationships with the press. Journalists have personalities.
 
-- An answer is a dice roll based on logic. The gamer should know that a comment
-  carries risk.
+- Every answer carries a named risk: the odds of each outcome are shown before
+  you answer.
 - The press conference tests media literacy, relationship management and board
   compliance.
 - The effect is visible afterwards. Criticise a young player and his morale may
@@ -138,6 +150,7 @@ the director:
 A feature must be justifiable based on its intent. It does not need to pass every
 question below, but it must answer to at least the intent it claims.
 
+- Does it add to the coach's story or the club's legacy?
 - Does it enhance the core philosophy of the game?
 - Does it increase immersion?
 - Does it create better roleplaying opportunities?
@@ -156,9 +169,48 @@ to real AFL, and the director's playtest passes the vibe check.
 Player ratings that reflect reality are part of this work, not a separate goal.
 Balance is still settling.
 
+## What this game will not have
+
+_Director, 2026-11-12: "All but 14 and 15" of the drafted list. Each line keeps
+the words of his that it comes from._
+
+- You coach the side; you never play the footy yourself. (2026-10-18: "Playable
+  control")
+- No microtransactions or real-money purchases. (2026-10-05: "Zero
+  microtransactions.")
+- No guaranteed wins: good coaching improves your chances but never makes a
+  result certain. (2026-10-09: "Decisions move the odds, never the certainty.")
+- The game never tells you which option is best. (2026-10-18: "The game never
+  says which option is better")
+- How your club looks or sounds never changes a result. (2026-10-09: "How the
+  club looks or sounds never does.")
+- No hidden help or cheats for either side, and no add-on special-ability perks.
+  (2026-10-05: "Reject RPG ability furniture and hidden AI resource advantages.")
+- No unseen hand that fixes close finishes or props up struggling rivals.
+  (2026-10-05: "Reject an AI director that rigs close finishes")
+- No made-up turning points in a quiet win. (2026-10-05: "A quiet professional
+  win needs no fabricated turning point.")
+- No permadeath, no fantasy-style recruiting, and no extra injuries just for
+  drama. (2026-10-05: "Reject permadeath, fantasy recruitment and increased
+  injury frequency for drama.")
+- Rival clubs never act on information they couldn't know. (2026-10-05: "Rivals
+  must not react to information they could not know.")
+- No compulsory weekly press conference. (2026-10-05: "mandatory conferences")
+- No separate dialogue system for conversations. (2026-10-05: "a separate
+  dialogue engine")
+- No personality quiz that gives the coach permanent bonuses. (2026-10-05: "a
+  personality quiz that assigns arbitrary permanent buffs")
+- No invented scandals about real-named players. (2026-10-11: "never an invented
+  scandal for a real-named player.")
+- No skipping ahead to the Grand Final; "Sim the week" is the only fast path.
+  (2026-11-03: "cut")
+- No landscape mode on phones; PC keeps its wide layout. (2026-11-05: "Drop
+  landscape")
+- No light theme for now: parked, not ruled out. (2026-10-13: "i dont want to
+  waste time on it")
+
 ## Open questions for the director
 
-- What will this game deliberately not have? Left open in the session.
 - How does weather affect a match? It is decided that it matters; the system is
   not designed.
 - Pre-timeskip survey (a roadmap item): a full survey, or the simpler version
