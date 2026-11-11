@@ -605,8 +605,8 @@ func _change_ends() -> void:
 	queue_redraw()
 
 
-## The 50 m arc and goal square at the end a side kicks to are drawn in that
-## side's colour, heavier than the ground's white lines, and the square is filled.
+## The goal square at the end a side kicks to is drawn in that side's colour,
+## heavier than the ground's white lines, and filled. The 50 m arc stays white.
 const END_LINE_W := 3.0
 const END_FILL_ALPHA := 0.55
 ## A kit colour darker than this is lifted to it, so navy, brown and black read
@@ -616,7 +616,7 @@ const END_MIN_S := 0.2
 const END_BLACK := Color(0.05, 0.05, 0.07)
 
 
-## The colour of the lines at the end a side kicks to: the base colour of the kit
+## The colour of the goal square at the end a side kicks to: the base colour of the kit
 ## its discs wear (so the end matches the players attacking it, clash strip
 ## included), lifted until it reads on the grass.
 static func end_colour(kit: Dictionary) -> Color:
@@ -1043,13 +1043,14 @@ func _draw() -> void:
 		var goal := _w2s_flat(Vector2(sgn * GOAL_LINE_M, 0.0))
 		var rad := 50.0 * s
 		var span := _arc_span(c, a, b, goal, rad)
-		# The end a side kicks to wears that side's colour (director, 2026-11-11:
-		# "need to make it more obvious somehow which end your team is kicking
-		# toward"). The ground's lines are drawn in the frame that mirrors at each
-		# change of ends, so the colours change ends with the sides.
+		# The goal square a side kicks to wears that side's colour (director,
+		# 2026-11-11: "need to make it more obvious somehow which end your team is
+		# kicking toward"; "the arc being coloured too is too much, the goal square
+		# is enough"). The ground's lines are drawn in the frame that mirrors at
+		# each change of ends, so the colours change ends with the sides.
 		var end_col := end_colour(_kits[0 if sgn > 0.0 else 1]) if _kits.size() == 2 else line_col
 		var end_lw := lw if _kits.size() != 2 else END_LINE_W
-		draw_arc(goal, rad, span.x, span.y, 48, end_col, end_lw, antialias)
+		draw_arc(goal, rad, span.x, span.y, 48, line_col, lw, antialias)
 		# Goal square: 9m deep, 6.4m wide across the goal line.
 		var depth := 9.0 * s
 		var width := 6.4 * s
