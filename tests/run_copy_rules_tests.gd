@@ -33,7 +33,6 @@ const ALLOW := {
 	"res://scripts/ui/PreSeasonScene.gd": [10, "starter", "row 136: pre-season"],
 	"res://scripts/ui/SelectionScene.gd": [5, "auto-pick", "kept: the Auto-pick button and the lines that name it (director, 2026-11-12)"],
 	"res://scripts/ui/StatGuide.gd": [1, "projection", "row 139: stats and menus"],
-	"res://scripts/ui/TrainingScene.gd": [1, "should", "row 135: training"],
 }
 
 ## The hub pass (copy voice pass 2): every rewritten line, and the line it replaced.
@@ -113,6 +112,33 @@ const TEAM_PASS := {
 	], ["Every match starts on your game plan", ": change it in How we play."]],
 }
 
+## The training pass (copy voice pass 6): the rewritten lines of TrainingScene.gd, and the lines
+## they replaced. What a player trains as is his development focus, on every line that names it.
+const TRAINING_NEW := [
+	"A player earns development every game. His development focus decides which stats it lifts.",
+	"Pick the kind of footballer each player becomes. That is his development focus.",
+	"By position trains what a player's position is judged on. Change a focus any time.",
+	"Nothing develops a player like senior football. A fit player we leave out develops in the reserves, at about half the rate.",
+	"Young players a long way short of their potential improve quicker than the rest.",
+	"No rating moved after the last game.", "No game played yet. Our players develop after every game.",
+	"Focus changed. Banked development lifted his OVR from %d to %d.",
+	"Focus changed. Banked development went straight into it.", "Focus changed. It starts after the next game.",
+	"%s set for %d %s.", "last game. A senior game is worth up to %d.",
+	"On hold while he learns a position. All his training goes into the new role.",
+	"His development drills get the rest. Change it when the %d season opens.",
+	"Each point on one stat costs more as it climbs. So his OVR grows more slowly than with no stat focus.",
+	"This one shows once he clears its mark by more than he clears one of theirs.",
+	"As a %s he rates %d. In his own position, %d. ", "That is up to the standard. He can be picked there after week %d.",
+	"Get within %d by week %d and he can be picked there.",
+]
+const TRAINING_OLD := [
+	"should become", "safe default", "whenever you like", "Fit players you leave out", "improve quickest",
+	"Training: no rating changes", "Players develop after every match", "what he is developing as",
+	"Development changed", "lifted him from", "applied to %d", "spent under the new focus",
+	"(a senior game", "learns a position:", "You can change it when", "get dearer", "on his plan alone",
+	"further past its line", "his own game %d", "\"up to the standard", "\"within %d by week",
+]
+
 
 func _initialize() -> void:
 	_run.call_deferred()
@@ -136,6 +162,7 @@ func _run() -> void:
 	_t("_test_sources")
 	_t("_test_hub_pass")
 	_t("_test_team_pass")
+	_t("_test_training_pass")
 	print(Ran.line("Copy rules", self))
 	quit(0 if _failures.is_empty() else 1)
 
@@ -220,6 +247,15 @@ func _test_team_pass() -> void:
 			_check(src.contains(str(s)), "%s says: %s" % [name, s])
 		for s in TEAM_PASS[path][1]:
 			_check(not src.contains(str(s)), "%s no longer says: %s" % [name, s])
+
+
+## The training pass: each rewritten line is in Training's source, and none of the old ones.
+func _test_training_pass() -> void:
+	var src := FileAccess.get_file_as_string("res://scripts/ui/TrainingScene.gd")
+	for s in TRAINING_NEW:
+		_check(src.contains(str(s)), "Training says: %s" % s)
+	for s in TRAINING_OLD:
+		_check(not src.contains(str(s)), "Training no longer says: %s" % s)
 
 
 func _files(dir: String) -> Array:

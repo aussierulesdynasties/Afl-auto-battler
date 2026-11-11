@@ -2611,6 +2611,66 @@ func _test_hot_player_moment() -> void:
 			"The tag call sizes what the man who goes gives up (%s)" % tag_o["cost"])
 	_check(str(leave_o["gain"]).begins_with("Gain: ") and str(leave_o["cost"]).begins_with("Cost: "),
 			"Leaving him has its gain and its cost too")
+	# A tag already on another of theirs: saying tag moves it, so the card says the
+	# hold it costs and what leaving it keeps, and the answer still moves the tag.
+	var other: Dictionary = {}
+	for p in (sim.squads[1] as Squad).ground:
+		if MatchSim.taggable(p) and str(p["id"]) != str(mid["id"]):
+			other = p
+			break
+	var again := _sim(77)
+	again.moment_side = 0
+	again.current_quarter = 2
+	again._chain_no = 200
+	again.tactics[0]["tag_id"] = str(other["id"])
+	again.player_stats[str(mid["id"])] = {"goals": 3.0}
+	again._boundary_moment()
+	var mv: Dictionary = again.pending_moment
+	var other_name := GameDB.player_display_name(other)
+	var who := GameDB.player_display_name(again.tagger_of(0))
+	var held := roundi(Roles.tag_touches(again.tagger_of(0), float(again.energy.get(str(again.tagger_of(0)["id"]), 100.0))))
+	_check(str(mv.get("kind", "")) == "hot" and str(mv["options"][0]["label"]) == "Move %s onto him" % who
+			and str(mv["options"][1]["label"]) == "Leave the tag on %s" % other_name,
+			"With a tag already on, the call is to move it or leave it (%s / %s)" % [mv["options"][0]["label"], mv["options"][1]["label"]])
+	_check(str(mv["options"][0]["cost"]) == "Cost: the tag comes off %s, who goes back to his usual %d touches" % [other_name, usual]
+			and not str(mv["options"][0]["cost"]).contains(GateOdds.tag_gives()),
+			"Moving the tag costs the hold on the other man, not a second share of the tagger's game (%s)" % mv["options"][0]["cost"])
+	_check(str(mv["options"][1]["gain"]) == "Gain: %s stays on %s, who is held to about %d touches" % [who, other_name, held]
+			and str(mv["options"][1]["cost"]).contains("his usual %d touches" % usual),
+			"Leaving the tag says what it keeps (%s)" % mv["options"][1]["gain"])
+	again.resolve_moment(0)
+	_check(again._tag_id(0) == str(mid["id"]), "Saying tag moves the tag to the man kicking goals")
+	# A tag on a man who has gone to the bench holds nobody: the card reads as a new tag.
+	var benched := _sim(77)
+	benched.moment_side = 0
+	benched.current_quarter = 2
+	benched._chain_no = 200
+	benched.tactics[0]["tag_id"] = "nobody_on_the_ground"
+	benched.player_stats[str(mid["id"])] = {"goals": 3.0}
+	benched._boundary_moment()
+	_check(str(benched.pending_moment["options"][0]["label"]).begins_with("Tag him with ")
+			and str(benched.pending_moment["options"][0]["cost"]).contains(GateOdds.tag_gives()),
+			"A tag on a man off the ground costs nothing to move: the card reads as a new tag")
+	# No midfielder of yours on the ground: no tag to offer, so no call that
+	# does nothing; it waits and comes once one is back on.
+	var bare := _sim(77)
+	bare.moment_side = 0
+	bare.current_quarter = 2
+	bare._chain_no = 200
+	var sq0 := bare.squads[0] as Squad
+	var kept_ground: Array = sq0.ground.duplicate()
+	sq0.ground = sq0.ground.filter(func(p): return not MatchSim.midfielder_on_ground(p))
+	bare.player_stats[str(mid["id"])] = {"goals": 3.0}
+	bare._boundary_moment()
+	_check(bare.tagger_of(0) == null and str(bare.pending_moment.get("kind", "")) != "hot",
+			"With no midfielder on the ground there is no tag call (%s)" % str(bare.pending_moment.get("title", "-")))
+	bare.pending_moment = {}
+	sq0.ground = kept_ground
+	bare._chain_no = 300
+	bare._boundary_moment()
+	_check(str(bare.pending_moment.get("kind", "")) == "hot"
+			and str(bare.pending_moment["options"][0]["label"]) == "Tag him with %s" % GameDB.player_display_name(bare.tagger_of(0)),
+			"Once a midfielder is back on, the call comes, naming him")
 
 
 ## Gate 1.12: key forward v key defender. Every link: a default set-up, a

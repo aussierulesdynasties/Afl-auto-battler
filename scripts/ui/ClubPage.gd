@@ -584,7 +584,7 @@ static func _tap(c: Control, fn: Callable) -> void:
 ## would show a retired player as he was in his first season.
 static func open_row(host: Control, row: Dictionary) -> Control:
 	var id := str(row.get("id", ""))
-	var gone: bool = str(row.get("how", "")) == "retired" or GameState.departed_names.has(id)
+	var gone: bool = ["retired", "medical"].has(str(row.get("how", ""))) or GameState.departed_names.has(id)
 	if not gone and not GameState._any_player(id).is_empty():
 		return ClubLink.keep(host, NameLink.open(host, id))
 	return open_facts(host, row)
@@ -648,6 +648,8 @@ static func _how(row: Dictionary) -> String:
 	match str(row.get("how", "")):
 		"retired":
 			return "Retired after the %d season." % int(row.get("left", 0))
+		"medical":
+			return "Retired on medical advice during the %d season, after repeated concussions." % int(row.get("left", 0))
 		"delisted":
 			return "Delisted after the %d season." % int(row.get("left", 0))
 		"free_agent":

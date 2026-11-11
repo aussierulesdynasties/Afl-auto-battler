@@ -47,12 +47,22 @@ const PEP_COST := {
 const TAG_GIVES := "%s of his own ball and contest work"
 # What the tag does to their man, in his touches a match (director, 2026-11-10).
 const TAG_TOUCHES := "Usually %d touches. Tagged, about %d."
-const TAG_NOTE := "%s tags %s: he gives up %s of his own game."
+# The Tag call at a break (director 2026-11-10, "Gain / Cost everywhere"):
+# labelled rows like every other break call, the size inside the line.
+const TAG_BREAK_GAIN := "%s usually gets %d touches; with %s on him, about %d"
+const TAG_BENCH_COST := "%s goes while %s is on the bench, and gives up %s"
+const TAG_NOBODY_GAIN := "none: you have no midfielder on the ground to go to him"
+const TAG_NONE_GAIN := "your midfielders play their own game: nobody gives up %s"
+const TAG_NONE_COST_ANY := "their midfielders get their usual %d touches"
 # The call when their midfielder is kicking a bag.
 const TAG_HOT_GAIN := "%s usually gets %d touches; with %s on him, about %d, until you call it off"
 const TAG_HOT_COST := "%s gives up %s"
 const TAG_LEAVE_GAIN := "your midfielders play their own game"
 const TAG_LEAVE_COST := "%s gets his usual %d touches"
+## The same call with a tag already on another of theirs: the man who goes is
+## already giving up his own game, so moving him costs the hold he has now.
+const TAG_MOVE_COST := "the tag comes off %s, who goes back to his usual %d touches"
+const TAG_STAY_GAIN := "%s stays on %s, who is held to about %d touches"
 
 # Skip to full time.
 const SKIP_FIRST := "Skip plays the match on the plan you took in, no tag, no talk. Nothing changed here is kept; every call in the match takes 'no change'."
@@ -124,10 +134,35 @@ static func tag_touches(tagger: Dictionary, legs: float) -> String:
 	return TAG_TOUCHES % [usual_touches(), tag_kept(tagger, legs)]
 
 
-## The line under the tag call: the cost, whoever goes (each man's hold is on
-## his own card, MatchNotes.tagger_card).
-static func tag_note(who_name: String, target_name: String) -> String:
-	return TAG_NOTE % [who_name, target_name, tag_gives_pct()]
+## The four lines of the in-match tag call (MatchSim "hot"): their midfielder
+## `hot_name` has kicked a bag, `stopper` would go to him and hold him to `kept`
+## touches. `on_now` is the man `stopper` is already tagging, "" for none: then
+## moving the tag costs that hold, and leaving it keeps it.
+static func tag_call_lines(hot_name: String, stopper: String, kept: int, on_now: String = "") -> Dictionary:
+	var usual := usual_touches()
+	var moving := on_now != ""
+	return {
+		"tag_gain": gain(TAG_HOT_GAIN % [hot_name, usual, stopper, kept]),
+		"tag_cost": cost(TAG_MOVE_COST % [on_now, usual] if moving else TAG_HOT_COST % [stopper, tag_gives()]),
+		"leave_gain": gain(TAG_STAY_GAIN % [stopper, on_now, kept] if moving else TAG_LEAVE_GAIN),
+		"leave_cost": cost(TAG_LEAVE_COST % [hot_name, usual]),
+	}
+
+
+## The break Tag call's Gain / Cost, unlabelled: [gain, cost]. `target` is the
+## man tagged ("" for no tag); `who` the midfielder who goes ("" when you have
+## none on the ground) and `kept` the touches he holds him to; `benched` your
+## named tagger when he is on the bench and `who` goes in his place. With no
+## tag, `their_best` is the midfielder of theirs who goes untagged ("" for any).
+static func tag_break_texts(target: String, who: String, kept: int, benched := "", their_best := "") -> Array:
+	var usual := usual_touches()
+	if target == "":
+		return [TAG_NONE_GAIN % tag_gives(),
+				TAG_LEAVE_COST % [their_best, usual] if their_best != "" else TAG_NONE_COST_ANY % usual]
+	if who == "":
+		return [TAG_NOBODY_GAIN, TAG_LEAVE_COST % [target, usual]]
+	var gave := TAG_BENCH_COST % [who, benched, tag_gives()] if benched != "" else TAG_HOT_COST % [who, tag_gives()]
+	return [TAG_BREAK_GAIN % [target, usual, who, kept], gave]
 
 
 static func skip_line(q: int) -> String:
