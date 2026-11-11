@@ -131,10 +131,25 @@ func _run() -> void:
 	while sc != null and not (sc is ScrollContainer):
 		sc = sc.get_parent()
 	if sc != null:
-		# The whole of Our calls in view: its last row (the final margin) near the bottom.
+		# A section heading starts the view: Why you won (so its call line and
+		# Our calls are read together) when the whole of Our calls still fits
+		# below it, else the Our calls heading itself.
 		var s := sc as ScrollContainer
-		var bottom := grid.get_global_rect().end.y
-		s.scroll_vertical = s.scroll_vertical + int(bottom - (s.global_position.y + s.size.y)) + 16
+		var heads := []
+		var why: Control = full.find_child("WhyReasons", true, false)
+		if why != null and why.get_index() > 0:
+			heads.append(why.get_parent().get_child(why.get_index() - 1))
+		var note: Control = full.find_child("CallsStoryNote", true, false)
+		if note != null and note.get_index() > 0:
+			heads.append(note.get_parent().get_child(note.get_index() - 1))
+		var end_y := grid.get_global_rect().end.y
+		var to := s.scroll_vertical
+		for hd in heads:
+			var top := (hd as Control).get_global_rect().position.y
+			to = s.scroll_vertical + int(top - s.global_position.y)
+			if end_y - top + 24 <= s.size.y:
+				break
+		s.scroll_vertical = to
 	await _frames(10)
 	print("calls grid on screen: ", grid.get_global_rect())
 	_save(out + "_calls.png")

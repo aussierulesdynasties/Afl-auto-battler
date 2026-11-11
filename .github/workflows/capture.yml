@@ -83,8 +83,12 @@ jobs:
 
       - name: Virtual display and software GL
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq xvfb libgl1-mesa-dri libglx-mesa0 ffmpeg > /dev/null
+          # The runner's apt mirror sometimes fails to resolve; retry 3 times, 20 s apart.
+          for try in 1 2 3; do
+            sudo apt-get -o Acquire::Retries=5 update -qq \n              && sudo apt-get -o Acquire::Retries=5 install -y -qq --fix-missing xvfb libgl1-mesa-dri libglx-mesa0 ffmpeg > /dev/null \n              && break
+            [ "$try" = 3 ] && exit 1
+            echo "apt failed (try $try), retrying in 20 s"; sleep 20
+          done
 
       - name: Cache Godot
         id: godot-cache
