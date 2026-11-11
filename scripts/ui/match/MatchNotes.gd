@@ -517,41 +517,38 @@ static func calls_lines(res: Dictionary, my_side: int, q: int) -> Array:
 	return out
 
 
-## Your calls for the full-time summary, "Q3  ·  line", at most `cap` lines.
-## A quarter's lines can fill the whole cap on their own (plan, tag and three
-## players to go through = 5), so taking them in order showed Q1 and never Q3
-## or Q4 (director bug, 2026-11-12). The rule: every quarter with a call gets
-## its first line before any quarter gets a second, then its second before a
-## third, and so on; the lines picked are shown in quarter order. A line the
-## story above already quoted for that quarter (told "q<n>" and "call:<line>")
-## is left out before the picking.
-static func calls_summary(res: Dictionary, my_side: int, told: Dictionary = {}, cap := 5) -> Array:
-	var per: Array = []
+## The full-time "Your calls" list: every quarter's calls, at most `cap`
+## lines. Taken a quarter at a time in turn (each quarter's first line, then
+## each one's second) and shown in quarter order, so Q3 and Q4 are never
+## crowded out by Q1 and Q2 (bug: the first five lines were all Q1 and Q2).
+## A call the Why section already quoted (`told`: "q<n>" and "call:<line>")
+## is not said again.
+static func full_time_calls(res: Dictionary, my_side: int, told: Dictionary, cap := 5) -> Array:
+	var per_q := []
 	for q in range(1, 5):
-		var keep: Array = []
+		var lines := []
 		for t in calls_lines(res, my_side, q):
 			if told.has("q%d" % q) and told.has("call:" + str(t)):
 				continue
-			keep.append("Q%d  ·  %s" % [q, str(t)])
-		per.append(keep)
-	var picked: Array = [[], [], [], []]
-	var taken := 0
-	var depth := 0
-	while taken < cap:
+			lines.append(str(t))
+		per_q.append(lines)
+	var take := [0, 0, 0, 0]
+	var left := cap
+	var row := 0
+	while left > 0:
 		var any := false
-		for i in range(per.size()):
-			if taken >= cap:
-				break
-			if (per[i] as Array).size() > depth:
-				picked[i].append(per[i][depth])
-				taken += 1
+		for i in range(4):
+			if left > 0 and row < (per_q[i] as Array).size():
+				take[i] += 1
+				left -= 1
 				any = true
 		if not any:
 			break
-		depth += 1
-	var out: Array = []
-	for p in picked:
-		out.append_array(p)
+		row += 1
+	var out := []
+	for i in range(4):
+		for t in (per_q[i] as Array).slice(0, take[i]):
+			out.append("Q%d  ·  %s" % [i + 1, t])
 	return out
 
 

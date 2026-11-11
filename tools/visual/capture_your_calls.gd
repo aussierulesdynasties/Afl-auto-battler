@@ -90,7 +90,7 @@ func _run() -> void:
 	res["label"] = state.pending_match["label"]
 	for q in range(1, 5):
 		print("Q%d lines: %s" % [q, str(MN.calls_lines(res, me, q))])
-	print("summary: ", MN.calls_summary(res, me))
+	print("summary: ", MN.full_time_calls(res, me, {}))
 	state.finish_interactive_match(res)
 	state.pending_sim = null
 	state.pending_match = {}

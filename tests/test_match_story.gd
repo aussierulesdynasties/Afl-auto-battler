@@ -659,7 +659,7 @@ func _test_calls_every_quarter_pure() -> void:
 			old.append("Q%d  ·  %s" % [q, str(t)])
 	_check(_quarters_in(old.slice(0, 5)) == [1, 1, 1, 1, 1],
 			"calls: in order, the first five are all Q1 (the bug reproduced): %s" % str(_quarters_in(old.slice(0, 5))))
-	var got := MatchNotes.calls_summary(res, me)
+	var got := MatchNotes.full_time_calls(res, me, {})
 	_check(got.size() == 5, "calls: the summary keeps five of %d (got %d)" % [all, got.size()])
 	var qs := _quarters_in(got)
 	_check(qs == [1, 1, 2, 3, 4], "calls: each quarter's first call, then Q1's second, in quarter order (got %s)" % str(qs))
@@ -669,12 +669,12 @@ func _test_calls_every_quarter_pure() -> void:
 	for h in res["tactics_history"]:
 		if int(h["quarter"]) <= 2:
 			h["plans"][me] = {"gameplan": "balanced"}
-	qs = _quarters_in(MatchNotes.calls_summary(res, me))
+	qs = _quarters_in(MatchNotes.full_time_calls(res, me, {}))
 	_check(qs == [3, 3, 3, 4, 4], "calls: late calls only fill from Q3 and Q4 (got %s)" % str(qs))
 	# A line Why already quoted for its quarter is not said again.
 	var q3 := str(MatchNotes.calls_lines(res, me, 3)[0])
 	var told := {"q3": true, "call:" + q3: true}
-	_check(not MatchNotes.calls_summary(res, me, told).has("Q3  ·  " + q3), "calls: a call Why quoted is left out")
+	_check(not MatchNotes.full_time_calls(res, me, told).has("Q3  ·  " + q3), "calls: a call Why quoted is left out")
 
 
 ## On the screen: the full-time Summary's Your calls lists Q3 and Q4.
