@@ -1,9 +1,10 @@
 extends SceneTree
 ## The season plan screens (season fitness PR2), for the director's look.
 ## Needs a real renderer:
-##   godot --path . --script tools/visual/capture_season_plan.gd -- --out /tmp/plan [--size 1280x720]
+##   godot --path . --script tools/visual/capture_season_plan.gd -- --out /tmp/plan [--size 1280x720] [--club FRE] [--only develop]
 ## Writes <out>_hub.png (the hub, the line in words), <out>_sheet.png (the
-## pre-season sheet), <out>_picked.png (Peak for September picked, not yet
+## pre-season sheet), <out>_develop.png (the same sheet scrolled to Develop
+## and manage), <out>_picked.png (Peak for September picked, not yet
 ## confirmed), <out>_hub_set.png (the hub after Confirm), <out>_training.png
 ## (Training, the same line), <out>_r14.png (round 14: a late change and what
 ## it costs), <out>_locked.png (between revision points) and <out>_late.png
@@ -11,6 +12,7 @@ extends SceneTree
 
 var W := 390
 var H := 844
+var CLUB := "GEE"
 
 
 func _initialize() -> void:
@@ -30,6 +32,7 @@ func _shot(path: String) -> void:
 
 func _run() -> void:
 	var out := "/tmp/plan"
+	var only := ""
 	var a := OS.get_cmdline_user_args()
 	for i in range(a.size() - 1):
 		if str(a[i]) == "--out":
@@ -38,6 +41,10 @@ func _run() -> void:
 			var wh := str(a[i + 1]).split("x")
 			W = int(wh[0])
 			H = int(wh[1])
+		if str(a[i]) == "--only":
+			only = str(a[i + 1])
+		if str(a[i]) == "--club":
+			CLUB = str(a[i + 1])
 	await process_frame
 	var state = root.get_node("GameState")
 	var db = root.get_node("GameDB")
@@ -67,7 +74,7 @@ func _run() -> void:
 		root.size = Vector2i(W, H)
 	for i in range(3):
 		await process_frame
-	state.start_season("GEE", db.club_list("GEE"))
+	state.start_season(CLUB, db.club_list(CLUB))
 	root.get_node("Router").go("hub")
 	await _frames(8)
 	await _to_line()
@@ -75,6 +82,11 @@ func _run() -> void:
 	await _press("SeasonPlanLine")
 	await _frames(4)
 	await _shot(out + "_sheet.png")
+	await _show("PlanRow_develop")
+	await _shot(out + "_develop.png")
+	if only == "develop":
+		quit(0)
+		return
 	await _press("Plan_peak")
 	await _shot(out + "_picked.png")
 	await _press("SeasonPlanConfirm")
@@ -140,6 +152,18 @@ func _to_line() -> void:
 	while p != null:
 		if p is ScrollContainer:
 			(p as ScrollContainer).ensure_control_visible(line as Control)
+			break
+		p = p.get_parent()
+	await _frames(3)
+
+
+## Scroll the open sheet so `node_name` is on screen.
+func _show(node_name: String) -> void:
+	var c: Node = current_scene.find_child(node_name, true, false)
+	var p: Node = c.get_parent() if c != null else null
+	while p != null:
+		if p is ScrollContainer:
+			(p as ScrollContainer).ensure_control_visible(c as Control)
 			break
 		p = p.get_parent()
 	await _frames(3)
