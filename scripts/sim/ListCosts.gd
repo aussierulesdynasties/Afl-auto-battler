@@ -13,6 +13,8 @@ const OLD_LEGS := ListStings.OLD_LEGS
 
 const HAGGLE_GAIN := "you save %s a season, %s under his ask"
 const HAGGLE_COST := "if he signs, his morale is %s lower all season"
+## Above his floor the sting is a share of the full one: the gate says both.
+const HAGGLE_COST_PART := "if he signs, his morale is %s lower all season (%s at his lowest, %s)"
 const HAGGLE_SHORT_GAIN := "none: he won't sign for under %s"
 const HAGGLE_SHORT_COST := "it uses 1 of your %d offers left"
 const HAGGLE_INSULT_COST := "he's insulted: it uses %d of your %d offers left and his morale drops %s"
@@ -21,7 +23,11 @@ const RELEASE_COST := "%s of his remaining contract (%s) stays on your cap next 
 const RELEASE_COST_NONE := "nothing stays on your cap: his contract is up"
 const ASK_GAIN := "%s chance he says yes and plays one more season"
 const ASK_GAIN_NONE := "0%% chance he says yes (%s)"
-const ASK_COST := "if he says yes, his legs are %s down all season (he tires %s faster)"
+const ASK_COST := "if he says yes, his legs are %s down all season (he tires %s faster) and you can't release him until next off-season"
+## Release refused for a man talked round this off-season.
+const HELD_REASON := "%s said he'd go around again for you: he can't be released until next off-season."
+## Under his card, in place of Release.
+const HELD_LINE := "He said he'd go around again: you can't release him until next off-season."
 const ASK_COST_NONE := "none: he retires either way"
 
 
@@ -33,6 +39,8 @@ static func _pct(share: float) -> String:
 ## who signs at `floor` or more (Contracts.respond), with `left` offers to go.
 ## [] when the offer is at or above his ask (no haggle, no sting). Under his
 ## floor he does not sign, so the gate says what the offer costs instead.
+## Between the two, the sting is sized by the share of the gap saved
+## (ListStings.haggle_points), and the gate gives the full one beside it.
 static func haggle_lines(salary: int, ask: int, floor_price := 0, left := Contracts.MAX_OFFERS) -> Array:
 	if salary >= ask or ask <= 0:
 		return []
@@ -40,8 +48,13 @@ static func haggle_lines(salary: int, ask: int, floor_price := 0, left := Contra
 		var insult := salary * Contracts.INSULT_DEN < floor_price * Contracts.INSULT_NUM
 		var cost := HAGGLE_INSULT_COST % [mini(Contracts.INSULT_STRIKES, left), left, _pct(Contracts.INSULT_MORALE / 100.0)] 				if insult else HAGGLE_SHORT_COST % left
 		return [GateOdds.gain(HAGGLE_SHORT_GAIN % Contracts.money(floor_price)), GateOdds.cost(cost)]
+	# With no floor given, the full sting (the size a deal at his floor carries).
+	var pts := ListStings.haggle_points(salary, ask, floor_price) if floor_price > 0 else HAGGLE_STING
+	var sting_line := HAGGLE_COST % _pct(pts / 100.0)
+	if pts < HAGGLE_STING:
+		sting_line = HAGGLE_COST_PART % [_pct(pts / 100.0), _pct(HAGGLE_STING / 100.0), Contracts.money(floor_price)]
 	return [GateOdds.gain(HAGGLE_GAIN % [Contracts.money(ask - salary), _pct(float(ask - salary) / float(ask))]),
-			GateOdds.cost(HAGGLE_COST % _pct(HAGGLE_STING / 100.0))]
+			GateOdds.cost(sting_line)]
 
 
 ## Seasons still to run on his contract after this one, from the off-season.

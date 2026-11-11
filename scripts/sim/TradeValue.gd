@@ -282,11 +282,15 @@ static func _held(p: Dictionary) -> Dictionary:
 
 ## Prospects best first by what a club can see of them (projected rating).
 static func rank_prospects(pool: Array) -> Array:
-	var ranked := pool.duplicate()
-	ranked.sort_custom(func(a, b):
-		var fa := future_rating(_held(a))
-		var fb := future_rating(_held(b))
-		if fa != fb:
-			return fa > fb
-		return str(a["id"]) < str(b["id"]))
+	# Each prospect's projection once, not once a comparison (the same order).
+	var rows := []
+	for p in pool:
+		rows.append([future_rating(_held(p)), str(p["id"]), p])
+	rows.sort_custom(func(a, b):
+		if a[0] != b[0]:
+			return a[0] > b[0]
+		return a[1] < b[1])
+	var ranked := []
+	for r in rows:
+		ranked.append(r[2])
 	return ranked

@@ -160,8 +160,10 @@ func _test_list_costs() -> void:
 	if not haggled.is_empty():
 		var yrs := int(Contracts.wants(haggled)["years"])
 		var stored := int(haggled.get("morale", ClubLife.MORALE_BASE))
-		var r := GameState.offer_contract(str(haggled["id"]), Contracts.lowest(haggled, yrs), yrs)
-		_check(bool(r["ok"]) and haggled.has("haggle_sting"), "Signed under his ask, he carries the sting (%s)" % r)
+		var least := Contracts.lowest(haggled, yrs) - GameState.culture_resign_discount(GameState.my_club, haggled, yrs)
+		var r := GameState.offer_contract(str(haggled["id"]), least, yrs)
+		_check(bool(r["ok"]) and haggled.has("haggle_sting") and ListStings.sting(haggled) == ListCosts.HAGGLE_STING,
+				"Signed at his floor, he carries the full sting (%s, %d)" % [r, ListStings.sting(haggled)])
 		_check(ClubLife.morale(haggled) == maxi(5, stored - ListCosts.HAGGLE_STING),
 				"His morale reads %d lower all season (%d from %d)" % [ListCosts.HAGGLE_STING, ClubLife.morale(haggled), stored])
 		ClubLife.add_morale(haggled, 5)
@@ -172,6 +174,32 @@ func _test_list_costs() -> void:
 			for p in GameState.season.lists[code]:
 				rival_stung = rival_stung or p.has("haggle_sting")
 	_check(rival_stung, "A rival re-signing under the ask stings its player too")
+	# A small haggle stings a little, sized by the share of the gap to his floor
+	# saved (director 2026-11-10, "Costs in the rule's spirit"), for every club.
+	_check(ListStings.haggle_points(995000, 1000000, 800000) == 1 and ListStings.haggle_points(900000, 1000000, 800000) == 5
+			and ListStings.haggle_points(800000, 1000000, 800000) == 10 and ListStings.haggle_points(700000, 1000000, 800000) == 10
+			and ListStings.haggle_points(1000000, 1000000, 800000) == 0,
+			"The sting scales with the share saved: $5k under stings 1, half way 5, the floor 10, his ask 0")
+	var small := {}
+	for p in Contracts.expiring(GameState.my_list):
+		var yrs := int(Contracts.wants(p)["years"])
+		if not bool(p.get("resigned", false)) and not GameState.resign_refused(p) and Contracts.lowest(p, yrs) < Contracts.asking_salary(p) - 20000:
+			small = p
+			break
+	if not small.is_empty():
+		var yrs := int(Contracts.wants(small)["years"])
+		var ask := Contracts.asking_salary(small)
+		var under := ask - 5000
+		var floor_p := Contracts.lowest(small, yrs) - GameState.culture_resign_discount(GameState.my_club, small, yrs)
+		var stored := ClubLife.morale(small)
+		var gate := ListCosts.haggle_lines(under, ask, floor_p)
+		var r2 := GameState.offer_contract(str(small["id"]), under, yrs)
+		var pts := ListStings.haggle_points(under, ask, floor_p)
+		_check(bool(r2["ok"]) and pts < ListCosts.HAGGLE_STING and ListStings.sting(small) == pts
+				and ClubLife.morale(small) == maxi(5, stored - pts),
+				"A small haggle stings a little: %d points, not %d (%s)" % [ListStings.sting(small), ListCosts.HAGGLE_STING, r2])
+		_check(str(gate[1]).contains("%d%% lower all season" % pts) and str(gate[1]).contains("10% at his lowest"),
+				"The gate states the sting's size and the full one at his floor (%s)" % gate[1])
 	# Meet his terms: no sting.
 	for p in Contracts.expiring(GameState.my_list):
 		if not bool(p.get("resigned", false)) and not GameState.resign_refused(p):
@@ -222,7 +250,20 @@ func _test_list_costs() -> void:
 			"The haggle gate states the saving and the morale cost (%s)" % [hl])
 	_check(ListCosts.haggle_lines(1000000, 1000000).is_empty(), "No haggle line at his ask")
 	var al := ListCosts.ask_lines("")
-	_check(str(al[0]).contains("40% chance") and str(al[1]).contains("15% down"), "The ask gate states the odds and the legs (%s)" % [al])
+	_check(str(al[0]).contains("40% chance") and str(al[1]).contains("15% down") and str(al[1]).contains("can't release him until next off-season"),
+			"The ask gate states the odds, the legs and the hold on releasing him (%s)" % [al])
+	# A yes holds him on the list: his club cannot release him until the next
+	# off-season, yours or a rival (director 2026-11-10).
+	var stayer := {}
+	for p in GameState.my_list:
+		if not GameState.retiring_now(p) and not str(p["id"]).begins_with("costs_extra"):
+			stayer = p
+	if not stayer.is_empty():
+		Retirement.apply(stayer, {"stays": true, "reason": ""}, GameState.season_year + 1)
+		var held := GameState.release_player(str(stayer["id"]))
+		_check(not bool(held["ok"]) and str(held["reason"]).contains("can't be released until next off-season")
+				and GameState.my_list.has(stayer), "A man talked round cannot be released this off-season (%s)" % str(held["reason"]))
+		_check(not ListStings.release_held(stayer, GameState.season_year + 2), "The hold ends with the next off-season")
 	var no := ListCosts.ask_lines("He isn't enjoying his footy any more.")
 	_check(str(no[0]).contains("0% chance he says yes (he isn't enjoying") and str(no[1]).contains("retires either way"),
 			"A retiree who will say no is shown as no chance, and no legs cost (%s)" % [no])
@@ -2044,6 +2085,8 @@ func _test_mixed_packages() -> void:
 	_check(tried == 4 and invariant, "Players and picks on both sides: the order they go in changes nothing")
 	# Five lesser pieces - three fringe players and two late picks - for a star.
 	var refused := true
+	var judged := 0
+	var full := 0
 	for rival in ["COL", "WCE", "SYD", "NTH"]:
 		var theirs := (GameState.season.lists[rival] as Array).duplicate()
 		theirs.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
@@ -2063,8 +2106,14 @@ func _test_mixed_packages() -> void:
 				padded.append({"id": "pad%d" % k, "overall": 40, "salary": 0})
 			var v := Contracts.evaluate_trade(GameState.season.lists[rival], [theirs[0]], give_assets,
 					999999999, padded, 999999999, m, ctx)
+			# A club whose list is full refuses on numbers before value: that
+			# club is no test of value, so it is counted apart.
+			if not v.has("in") and str(v.get("code", "")).begins_with("trade_") and str(v.get("code", "")).contains("over"):
+				full += 1
+				continue
 			refused = refused and v.has("in") and not bool(v["ok"])
-	_check(refused, "Three fringe players and two late picks never buy a club's best player, on any margin")
+			judged += 1
+	_check(refused and judged >= 6, "Three fringe players and two late picks never buy a club's best player, on any margin (%d judged on value, %d full lists)" % [judged, full])
 
 
 ## The market moving on its own when the off-season opens: rival clubs

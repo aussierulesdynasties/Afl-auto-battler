@@ -327,6 +327,7 @@ func _papers_ladder() -> Control:
 	v.name = "PapersLadder"
 	v.add_child(_section_head("The papers' ladder"))
 	var order: Array = GameState.papers_record().get("order", [])
+	var moves: Dictionary = GameState.papers_record().get("moves", {})
 	# A PC is short: the ladder is two columns of nine, so all of it is in view.
 	var cols: Array = [v, v]
 	if _wide():
@@ -357,7 +358,21 @@ func _papers_ladder() -> Control:
 		var nm := UiKit.lbl(GameDB.club_name(code), UiKit.BODY, UiKit.club_name_colour(UiKit.club_ink(code)), mine)
 		nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		nm.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		row.add_child(nm)
+		# A club the practice match moved says so under its name.
+		var mv: Dictionary = moves.get(code, {})
+		var why := PreSeason.practice_move_line(int(mv.get("places", 0)), int(mv.get("margin", 0)))
+		if why == "":
+			row.add_child(nm)
+		else:
+			var stack := UiKit.vbox(0)
+			stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			stack.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			stack.add_child(nm)
+			var note := UiKit.lbl(why, UiKit.SECONDARY, UiKit.MUTED)
+			note.name = "PapersMove_%d" % i
+			note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			stack.add_child(note)
+			row.add_child(stack)
 		(cols[0] if i < (order.size() + 1) / 2 else cols[1]).add_child(row)
 	return v
 
@@ -381,8 +396,7 @@ func _prospects_by_rank() -> Array:
 ## their read of his OVR and POT, as the draft board shows them.
 func _prospect_text(p: Dictionary, reads: Dictionary) -> String:
 	var r: Dictionary = reads.get(str(p["id"]), {})
-	return "%s  ·  %s, age %d
-Ranked %s  ·  %s OVR  ·  %s POT" % [GameDB.player_display_name(p),
+	return "%s  ·  %s, age %d\nRanked %s  ·  %s OVR  ·  %s POT" % [GameDB.player_display_name(p),
 			str(UiKit.ROLE_LABEL.get(str(p.get("role", "")), str(p.get("role", "")))), int(float(p.get("age", 18.0))),
 			PreSeason.ordinal(int(r.get("rank", 0))), DraftScouting.range_text(r.get("overall", [0, 0])),
 			DraftScouting.range_text(r.get("potential", [0, 0]))]
@@ -434,6 +448,16 @@ func _match_report(rep: Dictionary, prefix: String, pool: Array) -> Control:
 		for i in range(hurt.size()):
 			var l := UiKit.lbl(str(hurt[i]), UiKit.BODY, UiKit.BAD)
 			l.name = prefix + "Hurt_%d" % i
+			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			left.add_child(l)
+	# The medical panel sat on one of yours after a concussion in this match.
+	var medical: Array = rep.get("medical", [])
+	if not medical.is_empty():
+		left.add_child(UiKit.spacer(8))
+		left.add_child(_report_head("Medical panel"))
+		for i in range(medical.size()):
+			var l := UiKit.lbl(str(medical[i]), UiKit.BODY, UiKit.BAD)
+			l.name = prefix + "Medical_%d" % i
 			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			left.add_child(l)
 	var seen: Array = rep.get("prospects", [])
@@ -1009,8 +1033,7 @@ func _refresh_words() -> void:
 	if _base_head != null and is_instance_valid(_base_head):
 		var base: String = GameState.preseason_base()
 		_base_head.text = "This training builds %s." % str(PreSeason.BASE_LABEL[base])
-		_base_body.text = "%s
-%s" % [PreSeason.base_effect(base), PreSeason.base_rule(GameState.preseason_run_forecast())]
+		_base_body.text = "%s\n%s" % [PreSeason.base_effect(base), PreSeason.base_rule(GameState.preseason_run_forecast())]
 
 
 ## The time trial: the order they came home, the first five and the last
