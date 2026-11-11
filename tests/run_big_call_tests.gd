@@ -53,6 +53,7 @@ func _run() -> void:
 	await _t("_test_save_load")
 	await _t("_test_hub_row")
 	await _t("_test_every_kind_routes")
+	await _t("_test_promise_shows_on_list")
 	_state.delete_saved_career()
 	print(Ran.line("Big call", self))
 	for f in _failures:
@@ -328,3 +329,65 @@ func _test_every_kind_routes() -> void:
 	_check(not src.contains("\"route\": \"\""), "No big call is built with an empty route")
 	for kind in BigCalls.ORDER:
 		_check(src.contains("out[\"%s\"]" % kind), "Big call kind %s is built in candidates()" % kind)
+
+
+## Director, 2026-11-12: "i agreed on a 3 game run for a player in the hub
+## event, then when i checked the list he wasnt on the team ... he should show
+## as on the team the moment you accept the event". A side you named without
+## him: a real finger on the card's promise (a run, or a game this week), then
+## the List's board has him.
+func _test_promise_shows_on_list() -> void:
+	var size := root.size
+	root.size = Vector2i(390, 844)
+	for tid in ["training_kid_pushing", "selection_talk_dropped"]:
+		_fresh()
+		var side: Dictionary = _state.current_side()
+		var named := {}
+		for k in side:
+			for x in side[k]:
+				named[str(x)] = true
+		var kid := {}
+		for p in _state.my_list:
+			if str(p["role"]) == "RUCK" or named.has(str(p["id"])) or int(p.get("injury_weeks", 0)) > 0 \
+					or int(p.get("suspension_weeks", 0)) > 0:
+				continue
+			if kid.is_empty() or int(p["overall"]) < int(kid["overall"]):
+				kid = p
+		kid["career"] = {"games": 0, "goals": 0, "stints": [], "through": _state.season_year - 1, "unknown": []}
+		kid["age"] = 19.0
+		_state.set_selection(side)
+		var card: Dictionary = _state.story_card(tid, kid)
+		# The answer that promises him games: the run, or "a game this week".
+		var pick := -1
+		var opts: Array = card.get("options", [])
+		for i in range(opts.size()):
+			for e in ((opts[i] as Dictionary).get("effects", []) as Array):
+				if pick < 0 and str((e as Dictionary).get("op", "")) == ("start_backing" if tid == "training_kid_pushing" else "expects_game") \
+						and str((opts[i] as Dictionary).get("label", "")).begins_with("Back" if tid == "training_kid_pushing" else "Promise"):
+					pick = i
+		_check(pick >= 0, "%s: the card has an answer that promises him games" % tid)
+		_state.week_events = [card]
+		_router.stack = []
+		_router.go("hub")
+		for i in range(8):
+			await process_frame
+		var sheet := current_scene.find_child("EventSheet", true, false)
+		var btn := sheet.find_child("Event_%d" % pick, true, false) as Control if sheet != null else null
+		await Tap.steady(btn)
+		var why: String = (await Tap.tap(btn)) if btn != null else "no answer button"
+		for i in range(4):
+			await process_frame
+		_router.go("list")
+		for i in range(8):
+			await process_frame
+		var board := current_scene.find_child("Best22Board", true, false)
+		var on := false
+		if board != null:
+			var shown: Dictionary = board.get("_side")
+			for k in shown:
+				if shown[k] is Array and k != "OUT" and (shown[k] as Array).has(str(kid["id"])):
+					on = true
+		_check(why == "" and bool(card.get("resolved", false)) and on,
+				"%s: a real tap on the promise, and the List has him in the side at once (tap '%s', on the board %s)" % [tid, why, on])
+		_state.week_events = []
+	root.size = size
