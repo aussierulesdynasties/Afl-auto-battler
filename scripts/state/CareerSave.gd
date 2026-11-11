@@ -350,7 +350,7 @@ static func slim_results(v, with_box := false):
 ## and the game-plan traits tell full time what each call was worth (row 144).
 const REVIEW_KEYS := ["players", "roster", "team", "quarter_teams",
 		"injuries", "synergies", "duels", "duel_changes", "tactics_history", "weather",
-		"impact", "plan_traits"]
+		"impact", "impact_by", "plan_traits"]
 const REVIEW_EVENT_KINDS := ["goal", "behind", "quarter", "final"]
 
 

@@ -80,6 +80,9 @@ func run(tree: SceneTree) -> void:
 	_t("_test_calls_trace")
 	_t("_test_calls_kept")
 	_t("_test_calls_old_fixture")
+	_t("_test_calls_name_skip_loose")
+	_t("_test_calls_name_switched_loose")
+	_t("_test_calls_name_moment_tag")
 	for size in [Vector2i(390, 844), Vector2i(1280, 720)]:
 		_tree.root.size = size
 		await _settle()
@@ -725,3 +728,106 @@ func _test_calls_old_fixture() -> void:
 	_check(GameState.match_stories.size() == old + 1 and rec.get("coach_rows") is Dictionary
 			and not (rec["coach_rows"]["mine"] as Dictionary).is_empty(), "the next match keeps its coach rows")
 	GameState.delete_saved_career()
+
+
+## A match with your assistant on your side (MatchScene: Skip to full time and
+## the breaks run the same MatchSim calls), against a rival coach.
+func _assisted_sim(seed: int) -> MatchSim:
+	var a := Squad.new("FRE", GameDB.club_list("FRE"), true, "FRE")
+	a.assistant = true
+	var b := Squad.new("MEL", GameDB.club_list("MEL"), false, "MEL")
+	b.ai_plans = true
+	return MatchSim.new(a, b, seed)
+
+
+## Plays the match a quarter at a time: [result, loose man at each quarter's
+## start, our loose credit earned in each quarter].
+func _play_quarters(sim: MatchSim) -> Array:
+	var who := []
+	var pts := []
+	while sim.current_quarter <= 4:
+		who.append(str(sim.interceptor[0]))
+		var before := float((sim.impact[0] as Dictionary).get("loose", 0.0))
+		sim.run_quarter()
+		pts.append(float((sim.impact[0] as Dictionary).get("loose", 0.0)) - before)
+	if sim.needs_extra_time():
+		sim.run_extra_time()
+	return [sim.result(), who, pts]
+
+
+## Skip to full time before the first bounce: the assistant's loose man plays
+## the whole match and is named, not "Our loose men" (he was never in the
+## plans the quarters kept).
+func _test_calls_name_skip_loose() -> void:
+	var played := _play_quarters(_assisted_sim(4411))
+	var res: Dictionary = played[0]
+	var who: Array = played[1]
+	_check(who[0] != "" and who.count(who[0]) == who.size(), "one man plays loose all match (%s)" % str(who))
+	var want := "%s as our loose man" % MatchStory._name_in(res, str(who[0]))
+	var got := str(MatchStory.call_names(res, 0)["loose"])
+	_check(got == want, "the one loose man is named (%s, want %s)" % [got, want])
+
+
+## The coach box starts Q1 with A loose, then the match is skipped at quarter
+## time and the assistant sends B: the row names the man who earned the most
+## of the loose man's points, not A for the whole match.
+func _test_calls_name_switched_loose() -> void:
+	var sim := _assisted_sim(4412)
+	var pick := str(sim.interceptor[0])
+	var a := ""
+	for p in Matchups.defenders((sim.squads[0] as Squad).ground):
+		if str(p["id"]) != pick:
+			a = str(p["id"])
+			break
+	_check(a != "", "a second defender to start loose")
+	var t: Dictionary = (sim.tactics[0] as Dictionary).duplicate()
+	t["interceptor_id"] = a
+	sim.set_tactics(0, t)
+	var played := _play_quarters(sim)
+	var res: Dictionary = played[0]
+	var who: Array = played[1]
+	var pts: Array = played[2]
+	_check(str(who[0]) == a and str(who[1]) != a and str(who[1]) != "",
+			"A plays Q1 loose and the assistant sends another man at quarter time (%s)" % str(who))
+	var by := {}
+	for i in range(who.size()):
+		by[str(who[i])] = float(by.get(str(who[i]), 0.0)) + float(pts[i])
+	var best := ""
+	for id in by:
+		if best == "" or absf(float(by[id])) > absf(float(by[best])):
+			best = str(id)
+	_check(best != a, "the man after quarter time earned more than A (%s)" % str(by))
+	var got := str(MatchStory.call_names(res, 0)["loose"])
+	_check(got.begins_with(MatchStory._name_in(res, best) + " ") and got.contains("loose m"),
+			"the loose man's row leads with the biggest earner (%s, want %s first)" % [got, MatchStory._name_in(res, best)])
+
+
+## A tag called from a moment card in the last quarter (no tag before it, the
+## tag kept as the coach's call): the row names the man tagged.
+func _test_calls_name_moment_tag() -> void:
+	var sim := _assisted_sim(4413)
+	var t: Dictionary = (sim.tactics[0] as Dictionary).duplicate()
+	t["tag_id"] = ""
+	t["tag_set"] = true
+	sim.set_tactics(0, t)
+	for q in range(3):
+		sim.run_quarter()
+	sim.begin_quarter()
+	var hot := ""
+	for p in (sim.squads[1] as Squad).ground:
+		if MatchSim.taggable(p):
+			hot = str(p["id"])
+			break
+	_check(hot != "" and sim._tag_id(0) == "", "an untagged rival midfielder in the last quarter (%s)" % hot)
+	sim.pending_moment = {"kind": "hot", "player_id": hot, "side": 0, "default": 1, "q": 4,
+			"title": "He has kicked 3", "options": [{"key": "tag", "label": "Tag him"}, {"key": "leave", "label": "Back your defenders"}]}
+	sim.resolve_moment(0)
+	_check(sim._tag_id(0) == hot, "the card puts the tag on him")
+	sim.run_quarter()
+	if sim.needs_extra_time():
+		sim.run_extra_time()
+	var res := sim.result()
+	_check(absf(float((res["impact"][0] as Dictionary).get("tag", 0.0))) > 0.0, "the tag earned credit")
+	var want := "Our tag on %s" % MatchStory._name_in(res, hot)
+	var got := str(MatchStory.call_names(res, 0)["tag"])
+	_check(got == want, "the tagged man is named (%s, want %s)" % [got, want])
