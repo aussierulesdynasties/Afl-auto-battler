@@ -18,6 +18,7 @@ func run() -> void:
 	_t("_test_drift_cases")
 	_t("_test_season_end")
 	_t("_test_levers")
+	_t("_test_ballup_calls_tally")
 	_t("_test_gambler_swing")
 	_t("_test_rivals")
 	_t("_test_match_neutral")
@@ -140,6 +141,33 @@ func _season(a: Dictionary, plan: String, press: String) -> Dictionary:
 		for i in range(10):
 			Archetypes.tally_press(a, press)
 	return a
+
+
+## Row 151: the late centre ball-up still counts toward the Philosophical
+## drift. Push numbers forward is the Gambler's call (as Stack the stoppage,
+## which the gate no longer offers, was); Flood behind the ball earns nothing.
+func _test_ballup_calls_tally() -> void:
+	var a := Archetypes.blank()
+	Archetypes.tally_call(a, "push")
+	_check(int((a["tally"]["calls"] as Dictionary).get("GAMB", 0)) == 1, "Push numbers forward counts toward the Gambler")
+	Archetypes.tally_call(a, "flood")
+	Archetypes.tally_call(a, "none")
+	_check((a["tally"]["calls"] as Dictionary) == {"GAMB": 1}, "Flood behind the ball and no call count toward nothing (%s)" % [a["tally"]["calls"]])
+	Archetypes.tally_call(a, "stack")
+	_check(int(a["tally"]["calls"]["GAMB"]) == 2, "Stack the centre bounce (the goal-run gate) still counts")
+	var known := true
+	for k in Archetypes.CALL_KEY:
+		known = known and MatchSim.BURSTS.has(str(k))
+	_check(known and Archetypes.CALL_KEY.size() >= 2, "Every call that earns points is a call the match knows")
+	# Through the match record, as the season reads it: your answer at the gate.
+	GameState.reset()
+	GameState.start_season("GEE", GameDB.club_list("GEE"))
+	GameState.coach_arch = Archetypes.blank()
+	GameState._note_coach_arch([{"home": "GEE", "away": "COL", "moments": [
+			{"kind": "bounce", "side": 0, "call": "push"}, {"kind": "bounce", "side": 0, "call": "none"},
+			{"kind": "bounce", "side": 1, "call": "push"}]}])
+	_check((GameState.coach_arch["tally"]["calls"] as Dictionary) == {"GAMB": 1},
+			"A match where you pushed numbers forward tallies one Gambler call, an unanswered card none (%s)" % [GameState.coach_arch["tally"]["calls"]])
 
 
 func _test_levers() -> void:
