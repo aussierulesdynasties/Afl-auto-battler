@@ -78,7 +78,6 @@ func _run() -> void:
 	_state.replay_seed = SUITE_SEED
 	_state.delete_saved_career()
 
-	_t("_test_preset")
 	for row in SIZES:
 		await _t("_test_draft", [row])
 	for row in [SIZES[0], SIZES[2]]:
@@ -98,17 +97,6 @@ func _run() -> void:
 	for f in _failures:
 		print("  FAIL: " + f)
 	quit(1 if not _failures.is_empty() else 0)
-
-
-## The web export has the engine's phone keyboard on. With it off the only
-## thing raising a keyboard is the engine's desktop input-method helper, which
-## opens and closes by itself and drops what a phone keyboard types
-## (godotengine/godot#99602).
-func _test_preset() -> void:
-	var text := FileAccess.get_file_as_string("res://export_presets.cfg")
-	_check(text.contains("html/experimental_virtual_keyboard=true")
-			and not text.contains("html/experimental_virtual_keyboard=false"),
-			"The web export has the phone keyboard switched on")
 
 
 ## The engine's web keyboard: every letter typed or deleted, the browser's

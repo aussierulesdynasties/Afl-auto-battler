@@ -1023,16 +1023,7 @@ func _test_culture_ui_tests() -> void:
 	_check(ls.find_child("CultureOpen", true, false) == null and ls.find_child("CultureSheet", true, false) == null,
 			"My list has no Club culture row of its own any more")
 	_check(not ResourceLoader.exists("res://scripts/ui/CultureSheet.gd"), "The old Culture sheet's script is gone")
-	var callers := []
-	var stack := ["res://scripts"]
-	while not stack.is_empty():
-		var d: String = stack.pop_back()
-		for sub in DirAccess.get_directories_at(d):
-			stack.append(d + "/" + sub)
-		for f in DirAccess.get_files_at(d):
-			if f.ends_with(".gd") and FileAccess.get_file_as_string(d + "/" + f).contains("CultureSheet"):
-				callers.append(f)
-	_check(callers.is_empty(), "Nothing in the game opens a Culture sheet (%s)" % ", ".join(callers))
+	# That nothing in scripts/ names CultureSheet is a static lint: tools/lint/boundaries.py.
 	# The way in is a real tap on Captaincy; the culture sits under the leaders.
 	var open_btn: Button = ls.find_child("CaptaincyOpen", true, false)
 	var why: String = await Tap.tap(open_btn)

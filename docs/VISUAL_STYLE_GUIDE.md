@@ -240,7 +240,7 @@ line is signed by a staff member.
   to, consider, probability, chance of success, modifier, simulation, simming, Auto-pick,
   projection, roster, starter, payroll, best choice; "/100", "|", "_" in visible text; "!" outside
   the feed). Every UI test and `tools/visual/screen_lint.gd` read it, and
-  `tests/run_copy_rules_tests.gd` walks the copy sources for it.
+  the `copy-voice` lint (`tools/lint/copy_voice.py`, its ALLOW list) walks the copy sources for it.
 
 Models (keep, or match the shape): "Our midfield is winning the stoppages: clearances 14 to 9."
 "Usually 28 touches. Tagged, about 19." "Nothing promised, nothing owed." "Two seasons short of
