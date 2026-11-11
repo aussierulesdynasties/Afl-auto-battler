@@ -584,9 +584,15 @@ func _test_full_list_before_and_during_draft() -> void:
 		n += 1
 	for p in _state.my_list:
 		p["contract_years"] = 3
+	# Three cheap players out of contract: the ones Delist lands on.
+	var cheap: Array = _state.my_list.filter(func(q): return not _state.retiring_now(q))
+	cheap.sort_custom(func(x, y): return int(x.get("salary", 0)) < int(y.get("salary", 0)))
+	for q in cheap.slice(0, 3):
+		q["contract_years"] = 1
 	var spots: Dictionary = _state.draft_list_spots()
 	_check((spots["passing"] as Array).size() >= 1, "Some picks have no spot (%s)" % str(spots))
-	root.size = Vector2i(390, 844)
+	# The reference phone (director, 2026-11-12 check: no scrolling to reach a Release button).
+	root.size = Vector2i(360, 740)
 	# A coach past his first week: the hub's one-off intro (a setting, so it
 	# carries over from whichever suite ran before) would sit over the button.
 	_state.set_setting("seen_weekly_loop_intro", true)
@@ -633,6 +639,7 @@ func _test_full_list_before_and_during_draft() -> void:
 			var gate: Label = hub.find_child("DraftRoomGate", true, false)
 			_check(gate != null and gate.text == want_gate, "The gate says the rule: %s" % (gate.text if gate else "-"))
 			_check(hub.find_child("DraftSpotsStart", true, false) == null, "The gate has no start button")
+			_check(hub.find_child("EventSheet", true, false) == null, "The gate is the only sheet open")
 			for bn in ["DraftRoomDelist", "DraftRoomTrade"]:
 				var b: Button = hub.find_child(bn, true, false)
 				_check(b != null and vp.grow(1).encloses(b.get_global_rect()) and b.size.y >= 44,
@@ -667,6 +674,11 @@ func _test_full_list_before_and_during_draft() -> void:
 					"%s opens the off-season screen (%s)" % [round_trip, cur.scene_file_path if cur else "-"])
 			var want_tab := "contracts" if round_trip == "delist" else "trade"
 			_check(cur != null and str(cur.get("_tab")) == want_tab, "%s opens on the %s tab" % [round_trip, want_tab])
+			if round_trip == "delist" and cur != null:
+				# He lands on the players he can delist: a Release button is on screen.
+				var rel: Button = cur.find_child("Release", true, false)
+				_check(rel != null and Rect2(Vector2.ZERO, Vector2(root.size)).encloses(rel.get_global_rect()),
+						"Delist lands with a Release button on screen (%s)" % (str(rel.get_global_rect()) if rel else "none"))
 			_check(_state.offseason_open(), "Players can still be delisted: the off-season is open")
 		else:
 			_check(_state.draft != null and _state.draft.intake_mode, "Start the draft starts it")
