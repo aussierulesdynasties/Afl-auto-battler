@@ -204,6 +204,8 @@ func reload(dataset := Datasets.DEFAULT) -> void:
 	_use_dataset(dataset, row)
 	clubs = _load_clubs()
 	club_order = CLUB_ORDER.duplicate()
+	_load_club_years()
+	apply_era(START_YEAR)
 	_alias_candidates = []
 	_alias_next = 0
 	_real_names = {}
@@ -414,7 +416,7 @@ func _read_ladder(path: String, season: int) -> Array:
 		# A file of many seasons keeps the one asked for; a one-season file has no year.
 		if at.has("year") and int(row[at["year"]]) != season:
 			continue
-		out.append({"pos": int(row[at["pos"]]), "club": str(row[at["club"]]).strip_edges(),
+		out.append({"pos": int(row[at["pos"]]), "club": club_code(str(row[at["club"]]).strip_edges()),
 				"finals": str(row[at["finals"]]).strip_edges() if at.has("finals") else ""})
 	out.sort_custom(func(a, b): return int(a["pos"]) < int(b["pos"]))
 	return out
@@ -1034,8 +1036,164 @@ func set_enter_year(code: String, year: int) -> void:
 func active_clubs(year: int) -> Array:
 	var out := []
 	for code in club_order:
-		if enter_year(code) <= year:
+		if enter_year(code) <= year and (leave_year(code) == 0 or year <= leave_year(code)):
 			out.append(code)
+	return out
+
+
+# ---------------------------------------------------------------------------
+# Clubs by year (Legacy mode): one club code across eras
+# ---------------------------------------------------------------------------
+## A club's name, short name, colours, guernsey and home ground by year range
+## (data/clubs_by_year.csv). A blank cell is the club's own value in
+## data/clubs.csv; a club's rows also bound the years it fields a team.
+const CLUBS_BY_YEAR_CSV := "res://data/clubs_by_year.csv"
+## The names a ground carried before its present one (data/grounds_by_year.csv).
+const GROUNDS_BY_YEAR_CSV := "res://data/grounds_by_year.csv"
+## Codes the historical data uses for a club that is one club across eras:
+## the Brisbane Bears are the Lions' club, Footscray the Bulldogs'.
+const CLUB_CODE_ALIASES := {"BRB": "BRL", "FOO": "WBD"}
+## Clubs that have left the competition, each loaded only by a dataset whose
+## years include it, in the place CLUB_ORDER would give it.
+const PAST_CLUBS := {"FIT": "FRE"}
+## The fields a year's row may set.
+const ERA_FIELDS := ["name", "short", "primary", "secondary", "accent", "guernsey", "ground"]
+const COLOUR_FIELDS := ["primary", "secondary", "accent"]
+
+var _club_years := {}     # code -> Array of {from, to, field: value} rows, oldest first
+var _club_base := {}      # code -> the clubs.csv values of ERA_FIELDS
+var _ground_names := {}   # present ground name -> Array of {from, to, name}
+## The year the clubs' names and colours are shown for (apply_era).
+var era_year := 0
+
+
+## The one code a club has in every era (BRB is BRL, FOO is WBD).
+static func club_code(code: String) -> String:
+	return str(CLUB_CODE_ALIASES.get(code, code))
+
+
+## The last year a club fields a team, or 0 while it still does.
+func leave_year(code: String) -> int:
+	return int(clubs.get(code, {}).get("leave", 0))
+
+
+## Read the year rows and fit the clubs to this dataset's years: a club that
+## first played after the data season enters that year, one already playing
+## is there from the start, and one whose last season came before the first
+## playable year is not loaded at all.
+func _load_club_years() -> void:
+	_club_years = {}
+	_club_base = {}
+	_ground_names = {}
+	for r in _read_dicts(CLUBS_BY_YEAR_CSV):
+		var code := club_code(str(r.get("code", "")))
+		if code == "":
+			continue
+		var row := {"from": int(r.get("from", "0")), "to": int(r.get("to", "0")) if str(r.get("to", "")) != "" else 0}
+		for k in ERA_FIELDS:
+			if str(r.get(k, "")) != "":
+				row[k] = str(r[k])
+		if not _club_years.has(code):
+			_club_years[code] = []
+		(_club_years[code] as Array).append(row)
+	for r in _read_dicts(GROUNDS_BY_YEAR_CSV):
+		var g := str(r.get("ground", ""))
+		if not _ground_names.has(g):
+			_ground_names[g] = []
+		(_ground_names[g] as Array).append({"from": int(r.get("from", "0")), "to": int(r.get("to", "0")),
+				"name": str(r.get("name", ""))})
+	for code in _club_years:
+		(_club_years[code] as Array).sort_custom(func(a, b): return int(a["from"]) < int(b["from"]))
+	for code in clubs.keys():
+		var d: Dictionary = clubs[code]
+		var base := {}
+		for k in ERA_FIELDS:
+			base[k] = d.get(k, "")
+		_club_base[code] = base
+		var rows: Array = _club_years.get(code, [])
+		if rows.is_empty():
+			continue
+		var first := int(rows[0]["from"])
+		var last := 0
+		var open := false
+		for r in rows:
+			open = open or int(r["to"]) == 0
+			last = maxi(last, int(r["to"]))
+		if open:
+			last = 0
+		if first > DATA_SEASON:
+			d["enter"] = first
+		else:
+			d["enter"] = mini(int(d["enter"]), DATA_SEASON)
+		d["enter_data"] = int(d["enter"])
+		d["leave"] = last
+	for code in clubs.keys():
+		var gone := leave_year(code)
+		if gone > 0 and gone < START_YEAR:
+			clubs.erase(code)
+			_club_base.erase(code)
+		elif PAST_CLUBS.has(code) and not club_order.has(code):
+			var at := club_order.find(PAST_CLUBS[code])
+			club_order.insert(at if at >= 0 else club_order.size(), code)
+
+
+## A club as it was in `year`: its clubs.csv values with that year's row laid
+## over them. Colours come back as Colors. A created club is as it was made.
+func club_era(code: String, year: int) -> Dictionary:
+	var out: Dictionary = (_club_base.get(code, {}) as Dictionary).duplicate()
+	if out.is_empty():
+		return out
+	for r in _club_years.get(code, []):
+		if int(r["from"]) <= year and (int(r["to"]) == 0 or year <= int(r["to"])):
+			for k in ERA_FIELDS:
+				if r.has(k):
+					out[k] = _hex(r[k]) if COLOUR_FIELDS.has(k) else r[k]
+			break
+	return out
+
+
+## Show every club as it was in `year`: the career calls this when a season
+## starts, so the Bears are the Bears until 1997. Today's clubs in today's
+## years are their clubs.csv selves, unchanged.
+func apply_era(year: int) -> void:
+	era_year = year
+	for code in _club_base:
+		if not clubs.has(code):
+			continue
+		var d: Dictionary = clubs[code]
+		var now := club_era(code, year)
+		for k in ERA_FIELDS:
+			if d.get(k) != now[k]:
+				d[k] = now[k]
+				pristine = false
+
+
+## A ground's name in `year` (Docklands was Colonial Stadium in 2000).
+func ground_name(ground: String, year: int) -> String:
+	for r in _ground_names.get(ground, []):
+		if int(r["from"]) <= year and (int(r["to"]) == 0 or year <= int(r["to"])):
+			return str(r["name"])
+	return ground
+
+
+## Rows of a small CSV as dictionaries keyed by its header (quoted cells allowed).
+func _read_dicts(path: String) -> Array:
+	var out := []
+	if not FileAccess.file_exists(path):
+		return out
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f == null:
+		return out
+	var header := f.get_csv_line()
+	while not f.eof_reached():
+		var cells := f.get_csv_line()
+		if cells.size() < header.size() or str(cells[0]).strip_edges() == "":
+			continue
+		var d := {}
+		for i in range(header.size()):
+			d[header[i].strip_edges()] = cells[i].strip_edges()
+		out.append(d)
+	f.close()
 	return out
 
 
@@ -1147,7 +1305,7 @@ func _load_players() -> Array:
 		if cells.size() < header.size():
 			continue
 		var p := {}
-		p["club"] = str(cells[idx["club"]])
+		p["club"] = club_code(str(cells[idx["club"]]))
 		p["num"] = int(str(cells[idx["num"]])) if idx.has("num") else 0
 		p["last"] = str(cells[idx["last"]]) if idx.has("last") else ""
 		p["first"] = str(cells[idx["first"]]) if idx.has("first") else ""
