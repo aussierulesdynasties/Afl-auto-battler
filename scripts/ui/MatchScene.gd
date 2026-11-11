@@ -194,10 +194,10 @@ func _fit_over() -> void:
 		return
 	var board := _root.get_child(0) as Control
 	var foot := board.get_global_rect().end.y
-	# The first match's momentum line keeps its room while unseen, but a scene
-	# opening under the scoreboard does not give that room up: it starts where it
-	# would without the line, over the empty space.
-	if _mom_note != null and _mom_note.visible and _mom_note.modulate.a < 1.0:
+	# The first match's momentum line keeps its room under the meter, but a scene
+	# opening under the scoreboard never gives that room up: it starts where it
+	# would without the line, over it, so every match frames its scenes the same.
+	if _mom_note != null and _mom_note.visible:
 		foot -= _mom_note.size.y + 2.0
 	_over.offset_top = foot - get_global_rect().position.y if _stacked else 0.0
 
@@ -385,7 +385,6 @@ func _paint_momentum() -> void:
 	if _mom_note.visible and _mom_note.modulate.a < 1.0 and absf(_momentum) >= MOMENTUM_EVEN:
 		GameState.set_setting("seen_momentum_intro", true)
 		_mom_note.modulate.a = 1.0
-		_fit_over()
 
 
 func _show_momentum_info() -> void:
