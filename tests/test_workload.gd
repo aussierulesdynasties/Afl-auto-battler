@@ -103,15 +103,17 @@ func _test_budget_model() -> void:
 
 
 ## The Recruiting line's odds on other clubs' players are the reads' own.
-## The "1 in N" is the measured share (tools/balance/rival_reads_measured.json:
-## six seeded careers, every club reading every other list each off-season).
+## The "1 in N", and the "1 in N under 50 games", are the measured shares
+## (tools/balance/rival_reads_measured.json: six seeded careers, every club reading every other list each off-season).
 ## The "by up to" is the most DraftScouting.pot_read can miss by, its noise
 ## held to ERROR_CLAMP. And this career's opening lists, read here by every
 ## club at every level, miss no further and about as often: a little more
 ## often than over a career, because the reads sharpen as games are played.
 func _rival_pot_odds() -> void:
-	var measured: Array = JSON.parse_string(
-			FileAccess.get_file_as_string("res://tools/balance/rival_reads_measured.json"))["pot"]
+	var data: Dictionary = JSON.parse_string(
+			FileAccess.get_file_as_string("res://tools/balance/rival_reads_measured.json"))
+	var measured: Array = data["pot"]
+	var young: Array = data["young"]
 	var lists: Dictionary = GameState.season.lists
 	var ok := measured.size() == ClubBudget.SCOUT_UNCERTAINTY.size()
 	var shown := []
@@ -120,6 +122,9 @@ func _rival_pot_odds() -> void:
 		var stated_worst := int(ClubBudget.RIVAL_POT_WORST_MISS[level])
 		var row: Dictionary = measured[level] if level < measured.size() else {}
 		if int(round(float(row.get("reads", 0)) / maxf(1.0, float(row.get("misses", 0))))) != stated 				or int(row.get("worst", -1)) != stated_worst:
+			ok = false
+		var young_row: Dictionary = young[level] if level < young.size() else {}
+		if int(round(float(young_row.get("reads", 0)) / maxf(1.0, float(young_row.get("misses", 0))))) 				!= int(ClubBudget.RIVAL_POT_YOUNG_MISS_IN[level]) or int(young_row.get("reads", 0)) < 100000:
 			ok = false
 		var mult := ClubBudget.scouting_mult(level)
 		var most := 0
@@ -143,7 +148,8 @@ func _rival_pot_odds() -> void:
 		var one_in := int(round(float(reads) / float(maxi(1, misses))))
 		shown.append("1 in %d, worst %d, of %d" % [one_in, worst, reads])
 		if most != stated_worst or worst > stated_worst or reads < 5000 				or one_in > stated or one_in < stated - 2 				or not ClubBudget.benefit_text("recruiting", level).contains(
-						"Other clubs' players: about 1 POT read in %d misses, by up to %d." % [stated, stated_worst]):
+						"Other clubs' players: about 1 POT read in %d misses (1\u00a0in\u00a0%d under 50 games), by up to %d."
+						% [stated, int(ClubBudget.RIVAL_POT_YOUNG_MISS_IN[level]), stated_worst]):
 			ok = false
 	_check(ok, "The Recruiting line's odds on other clubs' players are the measured ones, and this career's reads agree (%s)"
 			% " / ".join(shown))
