@@ -13,7 +13,10 @@ const PLAN_NAMES := {
 	"defensive": "Defensive Press",
 	"contest": "Win Contest",
 	"controlled": "Controlled Tempo",
+	"custom": "Own plan",
 }
+## A rival's own plan, as your screens name it (yours goes by its name).
+const THEIR_OWN := "Their own plan"
 
 const PEP_NAMES := {
 	"steady": "Stay composed",
@@ -51,6 +54,8 @@ const PLAN_PARTS := {
 			"gain": "Fewer errors, less rattled by pressure, fresher legs.",
 			"cost": "Less ground gained.",
 			"beats": "Plays through a Defensive Press. Attack Corridor runs past it."},
+	# Your own plan (CustomPlan, director 2026-11-12): neutral, like Win Contest.
+	"custom": {"does": "Your own plan: the strength and the cost you picked. It beats no plan and no plan beats it."},
 }
 
 const PEP_SUMMARY := {
@@ -81,31 +86,22 @@ const IMPACT_LABELS := {
 	"moments": "calls at the moments", "loose": "loose defender",
 	"tag": "tag", "minder": "defensive forward",
 	"traits": "traits and synergies", "form": "team form",
-	"plan_trait": "game-plan trait",
 }
 
 
 ## Where the points came from between two impact snapshots (MatchSim.impact),
 ## from `side`'s point of view: [{"label", "pts"}], biggest first, anything
 ## under `min_pts` dropped. "Their gameplan -2.1" cost you 2.1 points.
-## A game-plan trait's line names it (traits: the match's MatchSim "plan_traits").
-static func impact_lines(now: Array, before: Array, side: int, min_pts := 0.3, traits := ["", ""]) -> Array:
+static func impact_lines(now: Array, before: Array, side: int, min_pts := 0.3) -> Array:
 	var out := []
 	for cause in IMPACT_LABELS:
 		var mine := _imp(now, side, cause) - _imp(before, side, cause)
 		var theirs := _imp(now, 1 - side, cause) - _imp(before, 1 - side, cause)
 		var label := str(IMPACT_LABELS[cause])
-		var my_label := label
-		var their_label := label
-		if cause == "plan_trait" and traits.size() == 2:
-			if PlanTraits.name_of(str(traits[side])) != "":
-				my_label = PlanTraits.name_of(str(traits[side])) + " (game-plan trait)"
-			if PlanTraits.name_of(str(traits[1 - side])) != "":
-				their_label = PlanTraits.name_of(str(traits[1 - side])) + " (game-plan trait)"
 		if absf(mine) >= min_pts:
-			out.append({"label": "Your " + my_label, "pts": mine})
+			out.append({"label": "Your " + label, "pts": mine})
 		if absf(theirs) >= min_pts:
-			out.append({"label": "Their " + their_label, "pts": -theirs})
+			out.append({"label": "Their " + label, "pts": -theirs})
 	out.sort_custom(func(a, b): return absf(float(a["pts"])) > absf(float(b["pts"])))
 	return out
 
@@ -137,8 +133,13 @@ static func _imp(arr: Array, side: int, cause: String) -> float:
 	return float(d.get(cause, 0.0))
 
 
-static func plan_label(key: String) -> String:
-	return str(PLAN_NAMES.get(MatchSim.plan_key(key), "Balanced"))
+## A plan's name. Your own plan goes by the name you gave it; with `mine`
+## false (a rival's), it is THEIR_OWN.
+static func plan_label(key: String, mine := true) -> String:
+	var k := MatchSim.plan_key(key)
+	if k == CustomPlan.KEY:
+		return CustomPlan.name_of(CoachEffects.my_custom) if mine else THEIR_OWN
+	return str(PLAN_NAMES.get(k, "Balanced"))
 
 
 static func plan_effect(key: String) -> String:
@@ -159,6 +160,11 @@ static func plan_summary(key: String, sq: Squad = null, weather_key := "perfect"
 		var sized := GateOdds.plan_texts_for(sq, key, weather_key)
 		out.append(GateOdds.gain(str(sized[0])) + ".")
 		out.append(GateOdds.cost(str(sized[1])) + ".")
+	elif MatchSim.plan_key(key) == CustomPlan.KEY:
+		var own := CustomPlan.texts(CoachEffects.my_custom)
+		if not own.is_empty():
+			out.append(GateOdds.gain(str(own[0])) + ".")
+			out.append(GateOdds.cost(str(own[1])) + ".")
 	else:
 		if d.has("gain"):
 			out.append("Gain: " + str(d["gain"]))

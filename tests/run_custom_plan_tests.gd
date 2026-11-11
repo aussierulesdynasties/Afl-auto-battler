@@ -1,5 +1,5 @@
 extends SceneTree
-## godot --headless --path . --script tests/run_plan_traits_tests.gd
+## godot --headless --path . --script tests/run_custom_plan_tests.gd
 ## Run a headless editor import first on a fresh clone to register global classes.
 
 
@@ -11,9 +11,9 @@ func _run() -> void:
 	await process_frame
 	_isolate_saves()
 	# A suite that fails to compile must fail the run, not hang it.
-	var script = load("res://tests/test_plan_traits.gd")
+	var script = load("res://tests/test_custom_plan.gd")
 	if script == null or not script.can_instantiate():
-		push_error("Could not load res://tests/test_plan_traits.gd")
+		push_error("Could not load res://tests/test_custom_plan.gd")
 		quit(1)
 		return
 	var suite = script.new()

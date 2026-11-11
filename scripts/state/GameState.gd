@@ -72,9 +72,10 @@ var season_tally := {}           # player id -> running season numbers (Awards)
 var season_stats := {}
 var season_stats_from := 0
 var club_plan := "balanced"      # your standing game plan, from the first bounce
-## Your game-plan trait (PlanTraits id, director 2026-11-10); "" = none. Saved
-## only when set, so an older save loads with none.
-var plan_trait := ""
+## Your own plan (CustomPlan: {"name", "s", "c"}, director 2026-11-12), the
+## sixth plan in How we play; {} = none built. Saved only when begun, so an
+## older save loads with none (and drops a game-plan trait it held).
+var custom_plan := {}
 var form_log := {}               # your player id -> his last three Player Ratings
 ## A story card's role trial: {id, role, left, home, auto, before, wrote}, or {}.
 ## One player plays his second position for `left` more of your games (see
@@ -1006,8 +1007,8 @@ func _save_state() -> Dictionary:
 		state["coach_name"] = coach_name
 	if not coach_arch.is_empty():
 		state["coach_arch"] = coach_arch
-	if plan_trait != "":
-		state["plan_trait"] = plan_trait
+	if not custom_plan.is_empty():
+		state["custom_plan"] = custom_plan
 	if interview_due:
 		state["interview_due"] = true
 	return state
@@ -1122,10 +1123,11 @@ func _restore_career(state: Dictionary) -> bool:
 	if not state.has("season_stats") and season != null:
 		# An older save, part way through a season: the book counts from here.
 		season_stats_from = season.round_index
+	# An older save's game-plan trait ("plan_trait", cut 2026-11-12) is dropped.
+	custom_plan = CustomPlan.clean(state.get("custom_plan", {}))
 	club_plan = MatchSim.plan_key(str(state.get("club_plan", "balanced")))
-	if not CLUB_PLANS.has(club_plan):
+	if not CLUB_PLANS.has(club_plan) or (club_plan == CustomPlan.KEY and not CustomPlan.ready(custom_plan)):
 		club_plan = "balanced"
-	plan_trait = PlanTraits.valid(str(state.get("plan_trait", "")))
 	form_log = state.get("form_log", {})
 	role_trial = state.get("role_trial", {}) if state.get("role_trial") is Dictionary else {}
 	trial_result = state.get("trial_result", {}) if state.get("trial_result") is Dictionary else {}
@@ -1236,6 +1238,7 @@ func _restore_career(state: Dictionary) -> bool:
 	_clean_plan_known()
 	rival_plans = state.get("rival_plans", {}) if state.get("rival_plans") is Dictionary else {}
 	CoachEffects.usual = _season_usuals()
+	CoachEffects.customs = _season_customs()
 	coach_name = str(state.get("coach_name", ""))
 	coach_arch = state.get("coach_arch", {}) if state.get("coach_arch") is Dictionary else {}
 	interview_due = bool(state.get("interview_due", false))
@@ -1714,8 +1717,8 @@ func reset(next_dataset := Datasets.DEFAULT) -> void:
 	season_stats = {}
 	season_stats_from = 0
 	club_plan = "balanced"
-	plan_trait = ""
-	CoachEffects.my_trait = ""
+	custom_plan = {}
+	CoachEffects.my_custom = {}
 	form_log = {}
 	role_trial = {}
 	training_block = {}
@@ -1803,6 +1806,7 @@ func reset(next_dataset := Datasets.DEFAULT) -> void:
 	rival_plans = {}
 	CoachEffects.known = {}
 	CoachEffects.usual = {}
+	CoachEffects.customs = {}
 	coach_name = ""
 	coach_arch = {}
 	interview_due = false
@@ -2576,6 +2580,7 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	season_team = {}
 	rival_plans = {}
 	CoachEffects.usual = {}
+	CoachEffects.customs = {}
 	season_awards = {}
 	rising_star_noms = {"from": 1, "rounds": []}
 	award_counts = AwardsCount.fresh(season_year, my_club)
@@ -4339,6 +4344,14 @@ func _season_usuals() -> Dictionary:
 	return rival_plans["usual"]
 
 
+## Each rival coach's own plan this season, for one who built one
+## (rival_plans "custom"): club -> CustomPlan; {} as _season_usuals.
+func _season_customs() -> Dictionary:
+	if int(rival_plans.get("year", 0)) != season_year or not (rival_plans.get("custom") is Dictionary):
+		return {}
+	return rival_plans["custom"]
+
+
 ## Before a round is played: a rival coach with no usual game yet this season
 ## settles on one, the plan the side he would field this week suits best,
 ## weighed by how well his club knows it (PlanFit.standing_plan, as the match
@@ -4365,8 +4378,17 @@ func _settle_usual_plans() -> void:
 		if not (rival_plans.get("usual") is Dictionary):
 			rival_plans["usual"] = {}
 		usual = rival_plans["usual"]
-		usual[code] = PlanFit.standing_plan(sq.ground, sq.plan_know)
+		# Every club gets it (director, 2026-11-09): some coaches build a plan
+		# of their own for the season, on seeded dice (CustomPlan.ai_builds).
+		if CustomPlan.ai_builds(code, season_year):
+			if not (rival_plans.get("custom") is Dictionary):
+				rival_plans["custom"] = {}
+			(rival_plans["custom"] as Dictionary)[code] = CustomPlan.ai_pick(code, season_year)
+			usual[code] = CustomPlan.KEY
+		else:
+			usual[code] = PlanFit.standing_plan(sq.ground, sq.plan_know)
 	CoachEffects.usual = usual
+	CoachEffects.customs = _season_customs()
 
 
 ## Press on from where the pre-season is waiting, to the next stop or to
@@ -5211,9 +5233,10 @@ func opponent_report(code: String) -> Array:
 		var what := str(THEIR_PLAN[usual])
 		play.append("Their usual game plan is %s. %s%s%s" % [RivalRead.called(usual),
 				what.left(1).to_upper(), what.substr(1), " " + legs if legs != "" else ""])
-	var trait_line := PlanTraits.rival_line(PlanTraits.for_plan(sq.usual_plan))
-	if trait_line != "":
-		play.append(trait_line)
+	if usual == CustomPlan.KEY:
+		var own := CustomPlan.rival_line(_season_customs().get(code, {}))
+		if own != "":
+			play.append(own)
 	var levels := {}
 	for plan in PreSeason.DRILL_PLANS:
 		levels[plan] = plan_level(code, str(plan))
@@ -13994,29 +14017,53 @@ func _fill_open_staff() -> void:
 # Coaching hub: the standing game plan, player form, how the side plays
 # ---------------------------------------------------------------------------
 ## The plans a club can stand on; the same six as the quarter-break calls.
-const CLUB_PLANS := ["balanced", "attacking", "defensive", "contest", "controlled"]
+const CLUB_PLANS := ["balanced", "attacking", "defensive", "contest", "controlled", "custom"]
 
 
 ## Your standing game plan: every match starts with it, played or simmed,
 ## and the quarter-break calls change it from there.
 func set_club_plan(key: String) -> void:
-	if not CLUB_PLANS.has(key):
+	if not CLUB_PLANS.has(key) or (key == CustomPlan.KEY and not CustomPlan.ready(custom_plan)):
 		return
 	club_plan = key
 	_sync_club_plan()
 	mark_dirty()
 
 
-## Your game-plan trait (PlanTraits id, or "" for none): every match from the
-## next bounce, played or simmed.
-func set_plan_trait(id: String) -> void:
-	plan_trait = PlanTraits.valid(id)
+## Your own plan's pick (CustomPlan): `part` "s" (the strength) or "c" (the
+## cost), `id` from that list. A pick that clashes with the other part is
+## refused (false). Every match on your own plan from the next bounce.
+func set_custom_pick(part: String, id: String) -> bool:
+	if part != "s" and part != "c":
+		return false
+	var p := custom_plan.duplicate()
+	if p.is_empty():
+		p = {"name": "", "s": "", "c": ""}
+	p[part] = id
+	if CustomPlan.clash(str(p.get("s", "")), str(p.get("c", ""))):
+		return false
+	var cleaned := CustomPlan.clean(p)
+	if str(cleaned.get(part, "")) != id:
+		return false
+	custom_plan = cleaned
+	_sync_club_plan()
+	mark_dirty()
+	return true
+
+
+## Your own plan's name ("" for the default, CustomPlan.DEFAULT_NAME).
+func set_custom_name(nm: String) -> void:
+	var p := custom_plan.duplicate()
+	if p.is_empty():
+		p = {"name": "", "s": "", "c": ""}
+	p["name"] = CustomPlan.name_clean(nm)
+	custom_plan = CustomPlan.clean(p)
 	_sync_club_plan()
 	mark_dirty()
 
 
 func _sync_club_plan() -> void:
-	CoachEffects.my_trait = plan_trait
+	CoachEffects.my_custom = custom_plan.duplicate()
 	if season != null:
 		season.plans = {my_club: club_plan} if club_plan != "balanced" else {}
 
