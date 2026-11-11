@@ -1,0 +1,501 @@
+{{Short description|142nd season of the West Australian Football League}}
+{{Use Australian English|date=January 2026}}
+{{Infobox West Australian football season
+| competition     = WAFL
+| year            = 2026
+| image           = 
+| imagesize       = 
+| caption         = 
+| date            = {{nowrap|3 April – 20 September 2026}}
+| teams           = 10
+| premiers        = {{WAFL|PT}}
+| count           = 4
+| runnersup       = {{WAFL|Cla}}
+| rucount         = 16
+| minor premiers  = {{WAFL|PT}}
+| mpcount         = 1
+| matches         = 
+| attendance      = 
+| sandovermedal  = [[Jake Florenca]]<br/>({{WAFL|SF}} – 27 votes)
+| bernienaylor    = [[Tyler Keitel]]<br/>({{WAFL|WP}} – 51 goals)
+| dharakerr = 
+| waflwleadinggoalkicker = 
+| prevseason      = {{coloured link|black|2025 WAFL season|2025}}
+| nextseason      = {{coloured link|black|2027 WAFL season|2027}}
+}}
+The '''2026 WAFL season''' was the 142nd season of the [[West Australian Football League]] (WAFL), the highest-level men's [[Australian rules football]] competition in [[Western Australia]]. The season began on 3 April and concluded on 20 September.<ref name=one>{{cite web|url=https://wafootball.com.au/news/easter-launch-for-2026-sullivan-logistics-wafl-season/|title=Easter launch for 2026 Sullivan Logistics WAFL season|work=WA Football|date=20 December 2025|author=Mark Readings}}</ref>
+
+{{WAFL|PT}} won the [[List of WAFL premiers|premiership]] for the fourth time, defeating {{WAFL|Cla}} by 62 points in the [[2026 WAFL season#Grand Final|Grand Final]]. It marked Peel's second title in three seasons and made the club the most successful side through the last 10 years, having won all four of their premierships in that time. 
+
+==Background==
+[[South Fremantle Football Club|South Fremantle]] entered the season off the back of their 15th premiership, having defeated [[East Perth Football Club|East Perth]] by two points in the [[2025 WAFL season#Grand final|grand final]]. WA Football confirmed that several of the rule changes adopted for the [[2026 AFL season]] would also be incorporated in the WAFL, including the discontinuation of the centre bounce and a last disposal out of bounds rule between the 50-metre arcs, among others.<ref>{{cite web|url=https://wafl.com.au/article/26620|work=WA Football|date=27 November 2025|title=WAFL joins AFL with rule changes for 2026}}</ref>
+
+==Clubs==
+===Venues and leadership===
+{| class="wikitable plainrowheaders"
+! style="text-align:middle" | Club
+! style="text-align:middle" | Coach
+! style="text-align:middle" | Captain(s)
+! style="text-align:middle" | Home ground(s)
+! style="text-align:middle" | Capacity
+! style="text-align:middle" | {{abbr|Ref(s)|References}}
+|-
+! style="text-align:left" | {{WAFL|Cla}} 
+| [[Ash Prescott]]
+| [[Bailey Rogers]]<br>[[Callan England]]<br><small>(co-captains)</small>
+| [[Claremont Oval|Revo Fitness Stadium]]
+| 5,000
+| rowspan="10" style="text-align:center;" |<ref>{{cite web|url=https://wafootball.com.au/news/2026-wafl-captains/|title=2026 Sullivan Logistics WAFL Captains|date=17 March 2026|work=WA Football|author=Mark Readings}}</ref><ref>{{cite web|url=https://wafootball.com.au/news/tigers-target-one-percenters/|title=Tigers Target One Percenters|date=11 March 2026|work=WA Football|author=Mark Readings}}</ref><ref>{{cite web|url=https://wafootball.com.au/news/baby-sharks-secret-to-success-in-2026/|title=Baby Sharks Secret to Success in 2026|date=17 March 2026|work=WA Football|author=Mark Readings}}</ref><ref>{{cite web|url=https://wafootball.com.au/news/east-perth-season-review/|title=East Perth Season Review|date=21 September 2026|work=WA Football|author=Mark Readings}}</ref><ref>{{cite web|url=https://peelthunder.com.au/news/ready-oldy-til-27/|title=Ready & Oldy til 27’|work=Peel Thunder|date=1 January 2026}}</ref><br><ref>{{cite web|url=https://wafootball.com.au/news/demons-embrace-expectations-in-2026/|title=Demons Embrace Expectations in 2026|date=11 March 2026|work=WA Football|author=Mark Readings}}</ref><ref>{{cite web|url=https://thewest.com.au/sport/wafl/wafl-2026-south-fremantle-premiership-coach-craig-white-re-signs-at-bulldogs-for-a-further-two-seasons-c-22389321|title=WAFL 2026: South Fremantle premiership coach Craig White re-signs at Bulldogs for a further two seasons|author=Mitchell Woodcock|work=The West Australian|date=5 June 2026|url-access=subscription}}</ref><ref>{{cite web|url=https://subiacofc.com.au/blog/subiaco-football-club-welcomes-jarrad-schofield-as-senior-coach/|title=Subiaco Football Club Welcomes Jarrad Schofield as Senior Coach|work=Subiaco Football Club|date=1 January 2026}}</ref><ref>{{cite web|url=https://swandistrictsfc.com.au/blog/ceo-message-reflecting-on-2025-and-looking-ahead-to-2026/|title=CEO Message: Reflecting on 2025 and Looking Ahead to 2026|work=Swan Districts|date=12 December 2025}}</ref><ref>{{cite web|url=https://www.westcoasteagles.com.au/news/1981384/wafl-eagles-set-for-growth-in-2026-season|title=WAFL: Eagles set for growth in 2026 season|date=26 March 2026|work=westcoasteagles.com.au}}</ref><ref>{{cite web|url=https://wafootball.com.au/news/falcons-bolstered-as-sanzone-enters-2026-with-optimism/|title=Falcons bolstered as Sanzone enters 2026 with optimism|date=18 March 2026|author=Jordan McArdle|work=WA Football}}</ref>
+|-
+! style="text-align:left" | {{WAFL|EF}}
+| [[Bill Monaghan]]
+| [[Kyle Baskerville]]
+| [[East Fremantle Oval|The Good Grocer Park]]
+| 5,000
+|-
+! style="text-align:left" | {{WAFL|EP}}
+| [[Ross McQueen]]
+| [[Hamish Brayshaw]]<br>[[Christian Ameduri]]<br><small>(co-captains)</small>
+| [[Leederville Oval|Sullivan Logistics Stadium]]
+| 10,000
+|-
+! style="text-align:left" | {{WAFL|PT}} <small>(A)</small>
+| [[Adam Read (coach)|Adam Read]]
+| [[Jack Sears (Australian footballer)|Jack Sears]]
+| [[Rushton Park|Lane Group Stadium]]
+| 9,000
+|-
+! style="text-align:left" | {{WAFL|Per}}
+| [[Mark Stone (Australian footballer)|Mark Stone]]
+| [[Corey Byrne]]<br>[[Charlie Constable]]<br><small>(co-captains)</small>
+| [[Lathlain Park|Mineral Resources Park]]
+| 5,000
+|-
+! style="text-align:left" | {{WAFL|SF}}
+| [[Craig White (Australian footballer)|Craig White]]
+| [[Chad Pearson]]
+| [[Fremantle Oval|Fremantle Community Bank Oval]]
+| 10,000
+|-
+! style="text-align:left" | {{WAFL|Sub}}
+| [[Jarrad Schofield]]
+| [[Greg Clark (Australian footballer)|Greg Clark]]
+| [[Leederville Oval|Sullivan Logistics Stadium]]
+| 10,000
+|-
+! style="text-align:left" | {{WAFL|SD}}
+| [[Andrew Pruyn]] 
+| [[Jesse Turner (Australian footballer)|Jesse Turner]]
+| [[Bassendean Oval|Steel Blue Oval]]
+| 15,000
+|-
+! style="text-align:left" | {{WAFL|WC}}
+| [[Kyal Horsley]] 
+| [[Callum Jamieson]]
+| [[Lathlain Park|Mineral Resources Park]]
+| 5,000
+|-
+! style="text-align:left" | {{WAFL|WP}}
+| [[Paul Sanzone]] 
+| [[Luke Meadows]]
+| [[Arena Joondalup|HIF Health Insurance Oval]]
+| 12,500
+|}
+(A) = Club is in a [[Australian Football League reserves affiliations|reserves affiliation]] with an [[Australian Football League]] (AFL) club
+
+==Home-and-away season==
+Source: Click [https://wafl.com.au/fixtures-and-results here]
+===Round 1===
+{{AFLGameHeader|title=Round 1}}
+{{AFLGame|Friday, 3 April (4:10&nbsp;pm)|{{WAFL|PT}}|13.13 (91)|H|{{WAFL|EF}}|11.12 (78)|[[Lane Group Stadium]]||[https://wafl.com.au/match/league-peel-thunder-v-east-fremantle-round-1-2026 Report]}}
+{{AFLGame|Friday, 3 April (5:10&nbsp;pm)|{{WAFL|Per}}|24.9 (153)|H|{{WAFL|WC}}|13.10 (88)|[[Mineral Resources Park]]||[https://wafl.com.au/match/league-perth-v-west-coast-round-1-2026 Report]}}
+{{AFLGame|Friday, 3 April (5:30&nbsp;pm)|{{WAFL|SD}}|9.9 (63)|A|{{WAFL|SF}}|16.12 (108)|[[Steel Blue Oval]]||[https://wafl.com.au/match/league-swan-districts-v-south-fremantle-round-1-2026 Report]}}
+{{AFLGame|Friday, 3 April (7:10&nbsp;pm)|{{WAFL|Sub}}|18.11 (119)|H|{{WAFL|EP}}|17.10 (112)|[[Sullivan Logistics Stadium]]||[https://wafl.com.au/match/league-subiaco-v-east-perth-round-1-2026 Report]}}
+{{AFLGame|Saturday, 4 April (6:30&nbsp;pm)|{{WAFL|WP}}|8.4 (52)|A|{{WAFL|Cla}}|19.12 (126)|[[HIF Health Insurance Oval]]||[https://wafl.com.au/match/league-west-perth-v-claremont-round-1-2026 Report]}}
+{{AFLGameFooter|notes=
+}}
+
+===Round 2===
+{{AFLGameHeader|title=Round 2}}
+{{AFLGame|Saturday, 11 April (3:40&nbsp;pm)|{{WAFL|SF}}|11.18 (84)|H|{{WAFL|Per}}|5.8 (38)|[[Fremantle Community Bank Oval]]||[https://wafl.com.au/match/league-south-fremantle-v-perth-round-2-2026 Report]}}
+{{AFLGame|Saturday, 11 April (4:10&nbsp;pm)|{{WAFL|EP}}|13.12 (90)|H|{{WAFL|SD}}|10.10 (70)|[[Sullivan Logistics Stadium]]||[https://wafl.com.au/match/league-east-perth-v-swan-districts-round-2-2026 Report]}}
+{{AFLGame|Saturday, 11 April (4:30&nbsp;pm)|{{WAFL|EF}}|10.11 (71)|H|{{WAFL|Sub}}|9.14 (68)|[[The Good Grocer Park]]||[https://wafl.com.au/match/league-east-fremantle-v-subiaco-round-2-2026 Report]}}
+{{AFLGame|Saturday, 11 April (4:30&nbsp;pm)|{{WAFL|Cla}}|7.10 (52)|H|{{WAFL|PT}}|6.5 (41)|[[Revo Fitness Stadium]]||[https://wafl.com.au/match/league-claremont-v-peel-thunder-round-2-2026 Report]}}
+{{AFLGame|Sunday, 12 April (3:10&nbsp;pm)|{{WAFL|WC}}|17.5 (107)|H|{{WAFL|WP}}|12.20 (92)|[[Mineral Resources Park]]||[https://wafl.com.au/match/league-west-coast-v-west-perth-round-2-2026 Report]}}
+{{AFLGameFooter|notes=
+}}
+
+===Round 3===
+{{AFLGameHeader|title=Round 3}}
+{{AFLGame|Saturday, 18 April (3:10&nbsp;pm)|{{WAFL|PT}}|9.11 (65)|A|{{WAFL|Per}}|10.6 (66)|[[Lane Group Stadium]]||[https://wafl.com.au/match/league-peel-thunder-v-perth-round-3-2026 Report]}}
+{{AFLGame|Saturday, 18 April (4:30&nbsp;pm)|{{WAFL|SD}}|12.14 (86)|H|{{WAFL|WP}}|9.10 (64)|[[Steel Blue Oval]]||[https://wafl.com.au/match/league-swan-districts-v-west-perth-round-3-2026 Report]}}
+{{AFLGame|Saturday, 18 April (4:40&nbsp;pm)|{{WAFL|SF}}|9.15 (69)|A|{{WAFL|Cla}}|11.8 (74)|[[Fremantle Community Bank Oval]]||[https://wafl.com.au/match/league-south-fremantle-v-claremont-round-3-2026 Report]}}
+{{AFLGame|Saturday, 18 April (7:10&nbsp;pm)|{{WAFL|EP}}|9.11 (65)|A|{{WAFL|EF}}|12.6 (78)|[[Sullivan Logistics Stadium]]||[https://wafl.com.au/match/league-east-perth-v-east-fremantle-round-3-2026 Report]}}
+{{AFLGame|Sunday, 19 April (1:10&nbsp;pm)|{{WAFL|WC}}|16.12 (108)|H|{{WAFL|Sub}}|12.9 (81)|[[Mineral Resources Park]]||[https://wafl.com.au/match/league-west-coast-v-subiaco-round-3-2026 Report]}}
+{{AFLGameFooter|notes=
+}}
+
+===Round 4===
+{{AFLGameHeader|title=Round 4}}
+{{AFLGame|Saturday, 25 April (2:10&nbsp;pm)|{{WAFL|Per}}|7.14 (56)|A|{{WAFL|EP}}|8.12 (60)|[[Mineral Resources Park]]||[https://wafl.com.au/match/league-perth-v-east-perth-round-4-2026 Report]}}
+{{AFLGame|Saturday, 25 April (2:30&nbsp;pm)|{{WAFL|Sub}}|10.8 (68)|H|{{WAFL|PT}}|10.7 (67)|[[Sullivan Logistics Stadium]]||[https://wafl.com.au/match/league-subiaco-v-peel-thunder-round-4-2026 Report]}}
+{{AFLGame|Saturday, 25 April (2:30&nbsp;pm)|{{WAFL|Cla}}|21.11 (137)|H|{{WAFL|EF}}|3.8 (26)|[[Revo Fitness Stadium]]||[https://wafl.com.au/match/league-claremont-v-east-fremantle-round-4-2026 Report]}}
+{{AFLGame|Sunday, 26 April (1:10&nbsp;pm)|{{WAFL|WC}}|14.10 (94)|H|{{WAFL|SD}}|13.15 (93)|[[Mineral Resources Park]]||[https://wafl.com.au/match/league-west-coast-v-swan-districts-round-4-2026 Report]}}
+{{AFLGame|Sunday, 26 April (2:10&nbsp;pm)|{{WAFL|WP}}|7.5 (47)|A|{{WAFL|SF}}|11.11 (77)|[[HIF Health Insurance Oval]]||[https://wafl.com.au/match/league-west-perth-v-south-fremantle-round-4-2026 Report]}}
+{{AFLGameFooter|notes=
+}}
+
+===Round 5===
+{{AFLGameHeader|title=Round 5}}
+{{AFLGame|Saturday, 2 May (1:10&nbsp;pm)|{{WAFL|PT}}|21.9 (135)|H|{{WAFL|WP}}|10.4 (64)|[[Lane Group Stadium]]||[https://wafl.com.au/match/league-peel-thunder-v-west-perth-round-5-2026 Report]}}
+{{AFLGame|Saturday, 2 May (2:10&nbsp;pm)|{{WAFL|WC}}|9.11 (65)|A|{{WAFL|EP}}|16.12 (108)|[[Mineral Resources Park]]||[https://wafl.com.au/match/league-west-coast-v-east-perth-round-5-2026 Report]}}
+{{AFLGame|Saturday, 2 May (2:10&nbsp;pm)|{{WAFL|Cla}}|14.17 (101)|H|{{WAFL|SD}}|9.8 (62)|[[Revo Fitness Stadium]]||[https://wafl.com.au/match/league-claremont-v-swan-districts-round-5-2026 Report]}}
+{{AFLGame|Saturday, 2 May (2:30&nbsp;pm)|{{WAFL|EF}}|7.5 (47)|A|{{WAFL|Per}}|11.12 (78)|[[The Good Grocer Park]]||[https://wafl.com.au/match/league-east-fremantle-v-perth-round-5-2026 Report]}}
+{{AFLGame|Saturday, 2 May (4:10&nbsp;pm)|{{WAFL|Sub}}|10.9 (69)|A|{{WAFL|SF}}|11.6 (72)|[[Sullivan Logistics Stadium]]||[https://wafl.com.au/match/league-subiaco-v-south-fremantle-round-5-2026 Report]}}
+{{AFLGameFooter|notes=
+}}
+
+===Round 6===
+{{AFLGameHeader|title=Round 6}}
+{{AFLGame|Saturday, 9 May (1:40&nbsp;pm)|{{WAFL|SF}}|19.11 (125)|H|{{WAFL|WC}}|10.4 (64)|[[Fremantle Community Bank Oval]]||[https://wafl.com.au/match/league-south-fremantle-v-west-coast-round-6-2026 Report]}}
+{{AFLGame|Saturday, 9 May (2:10&nbsp;pm)|{{WAFL|Per}}|8.11 (59)|A|{{WAFL|Cla}}|17.9 (111)|[[Mineral Resources Park]]||[https://wafl.com.au/match/league-perth-v-claremont-round-6-2026 Report]}}
+{{AFLGame|Saturday, 9 May (2:30&nbsp;pm)|{{WAFL|EP}}|8.8 (56)|A|{{WAFL|PT}}|9.8 (62)|[[Sullivan Logistics Stadium]]||[https://wafl.com.au/match/league-east-perth-v-peel-thunder-round-6-2026 Report]}}
+{{AFLGame|Saturday, 9 May (2:30&nbsp;pm)|{{WAFL|SD}}|16.9 (105)|H|{{WAFL|EF}}|9.9 (63)|[[Steel Blue Oval]]||[https://wafl.com.au/match/league-swan-districts-v-east-fremantle-round-6-2026 Report]}}
+{{AFLGame|Saturday, 9 May (4:10&nbsp;pm)|{{WAFL|WP}}|7.10 (52)|A|{{WAFL|Sub}}|15.9 (99)|[[HIF Health Insurance Oval]]||[https://wafl.com.au/match/league-west-perth-v-subiaco-round-6-2026 Report]}}
+{{AFLGameFooter|notes=
+}}
+
+===Round 7===
+{{AFLGameHeader|title=Round 7}}
+{{AFLGame|Saturday, 23 May (1:10&nbsp;pm)|{{WAFL|EF}}|15.12 (102)|H|{{WAFL|WC}}|11.9 (75)|[[The Good Grocer Park]]||[https://wafl.com.au/match/league-east-fremantle-v-west-coast-round-7-2026 Report]}}
+{{AFLGame|Saturday, 23 May (1:10&nbsp;pm)|{{WAFL|PT}}|13.10 (88)|H|{{WAFL|SF}}|10.10 (70)|[[Lane Group Stadium]]||[https://wafl.com.au/match/league-peel-thunder-v-south-fremantle-round-7-2026 Report]}}
+{{AFLGame|Saturday, 23 May (2:10&nbsp;pm)|{{WAFL|Per}}|21.15 (141)|H|{{WAFL|WP}}|9.9 (63)|[[Mineral Resources Park]]||[https://wafl.com.au/match/league-perth-v-west-perth-round-7-2026 Report]}}
+{{AFLGame|Saturday, 23 May (2:30&nbsp;pm)|{{WAFL|SD}}|8.7 (55)|A|{{WAFL|Sub}}|14.11 (95)|[[Steel Blue Oval]]||[https://wafl.com.au/match/league-swan-districts-v-subiaco-round-7-2026 Report]}}
+{{AFLGame|Saturday, 23 May (2:30&nbsp;pm)|{{WAFL|Cla}}|6.4 (40)|A|{{WAFL|EP}}|11.13 (79)|[[Revo Fitness Stadium]]||[https://wafl.com.au/match/league-claremont-v-east-perth-round-7-2026 Report]}}
+{{AFLGameFooter|notes=
+}}
+
+===Round 8===
+{{AFLGameHeader|title=Round 8}}
+{{AFLGame|Saturday, 30 May (2:30&nbsp;pm)|{{WAFL|Sub}}|8.11 (59)|A|{{WAFL|Cla}}|9.8 (62)|[[Sullivan Logistics Stadium]]||[https://wafl.com.au/match/league-subiaco-v-claremont-round-8-2026 Report]}}
+{{AFLGame|Saturday, 30 May (2:30&nbsp;pm)|{{WAFL|SD}}|10.9 (69)|H|{{WAFL|Per}}|8.10 (58)|[[Steel Blue Oval]]||[https://wafl.com.au/match/league-swan-districts-v-perth-round-8-2026 Report]}}
+{{AFLGame|Sunday, 31 May (1:10&nbsp;pm)|{{WAFL|WC}}|4.9 (33)|A|{{WAFL|PT}}|8.7 (55)|[[Mineral Resources Park]]||[https://wafl.com.au/match/league-west-coast-v-peel-thunder-round-8-2026 Report]}}
+{{AFLGame|Monday, 1 June (1:10&nbsp;pm)|{{WAFL|SF}}|9.11 (65)|A|{{WAFL|EF}}|15.9 (99)|[[Fremantle Community Bank Oval]]||[https://wafl.com.au/match/league-south-fremantle-v-east-fremantle-round-8-2026 Report]}}
+{{AFLGame|Monday, 1 June (2:30&nbsp;pm)|{{WAFL|WP}}|8.12 (60)|H|{{WAFL|EP}}|8.8 (56)|[[HIF Health Insurance Oval]]||[https://wafl.com.au/match/league-west-perth-v-east-perth-round-8-2026 Report]}}
+{{AFLGameFooter|notes=
+}}
+
+===Round 9===
+{{AFLGameHeader|title=Round 9}}
+{{AFLGame|Saturday, 6 June (1:10&nbsp;pm)|{{WAFL|PT}}|14.11 (95)|H|{{WAFL|SD}}|4.9 (33)|[[Lane Group Stadium]]||[https://wafl.com.au/match/league-peel-thunder-v-swan-districts-round-9-2026 Report]}}
+{{AFLGame|Saturday, 6 June (1:10&nbsp;pm)|{{WAFL|Cla}}|15.7 (97)|A|{{WAFL|WC}}|16.11 (107)|[[Revo Fitness Stadium]]||[https://wafl.com.au/match/league-claremont-v-west-coast-round-9-2026 Report]}}
+{{AFLGame|Saturday, 6 June (2:30&nbsp;pm)|{{WAFL|Per}}|12.3 (75)|H|{{WAFL|Sub}}|7.13 (55)|[[Mineral Resources Park]]||[https://wafl.com.au/match/league-perth-v-subiaco-round-9-2026 Report]}}
+{{AFLGame|Sunday, 7 June (2:10&nbsp;pm)|{{WAFL|EP}}|12.11 (83)|H|{{WAFL|SF}}|4.11 (35)|[[Sullivan Logistics Stadium]]||[https://wafl.com.au/match/league-east-perth-v-south-fremantle-round-9-2026 Report]}}
+{{AFLGameBye|{{WAFL|EF}}, {{WAFL|WP}}}}
+{{AFLGameFooter|notes=
+}}
+
+===Round 10===
+{{AFLGameHeader|title=Round 10}}
+{{AFLGame|Saturday, 13 June (2:30&nbsp;pm)|{{WAFL|EF}}|16.15 (111)|H|{{WAFL|WP}}|13.7 (85)|[[The Good Grocer Park]]||[https://wafl.com.au/match/league-east-fremantle-v-west-perth-round-10-2026 Report]}}
+{{AFLGame|Saturday, 13 June (2:30&nbsp;pm)|{{WAFL|Cla}}|14.7 (91)|A|{{WAFL|Per}}|17.6 (108)|[[Revo Fitness Stadium]]||[https://wafl.com.au/match/league-claremont-v-perth-round-10-2026 Report]}}
+{{AFLGame|Saturday, 13 June (2:30&nbsp;pm)|{{WAFL|SD}}|13.11 (89)|A|{{WAFL|WC}}|14.12 (96)|[[Steel Blue Oval]]||[https://wafl.com.au/match/league-swan-districts-v-west-coast-round-10-2026 Report]}}
+{{AFLGameBye|{{WAFL|EP}}, {{WAFL|PT}}, {{WAFL|SF}}, {{WAFL|Sub}}}}
+{{AFLGameFooter|notes=
+}}
+
+===Round 11===
+{{AFLGameHeader|title=Round 11}}
+{{AFLGame|Saturday, 20 June (2:10&nbsp;pm)|{{WAFL|Sub}}|11.6 (72)|H|{{WAFL|EF}}|7.5 (47)|[[Sullivan Logistics Stadium]]||[https://wafl.com.au/match/league-subiaco-v-east-fremantle-round-11-2026 Report]}}
+{{AFLGame|Saturday, 20 June (2:30&nbsp;pm)|{{WAFL|SF}}|11.12 (78)|H|{{WAFL|WP}}|5.9 (39)|[[Fremantle Community Bank Oval]]||[https://wafl.com.au/match/league-south-fremantle-v-west-perth-round-11-2026 Report]}}
+{{AFLGame|Saturday, 20 June (2:30&nbsp;pm)|{{WAFL|PT}}|23.4 (142)|H|{{WAFL|EP}}|6.8 (44)|[[Lane Group Stadium]]||[https://wafl.com.au/match/league-peel-thunder-v-east-perth-round-11-2026 Report]}}
+{{AFLGameBye|{{WAFL|WC}}, {{WAFL|Cla}}, {{WAFL|Per}}, {{WAFL|SD}}}}
+{{AFLGameFooter|notes=
+}}
+
+===Round 12===
+{{AFLGameHeader|title=Round 12}}
+{{AFLGame|Friday, 26 June (7:10&nbsp;pm)|{{WAFL|EP}}|10.5 (65)|H|{{WAFL|WC}}|8.12 (60)|[[Sullivan Logistics Stadium]]||[https://wafl.com.au/match/league-east-perth-v-west-coast-round-12-2026 Report]}}
+{{AFLGame|Saturday, 27 June (2:10&nbsp;pm)|{{WAFL|EF}}|10.5 (65)|A|{{WAFL|Cla}}|11.5 (71)|[[The Good Grocer Park]]||[https://wafl.com.au/match/league-east-fremantle-v-claremont-round-12-2026 Report]}}
+{{AFLGame|Saturday, 27 June (2:10&nbsp;pm)|{{WAFL|Per}}|12.7 (79)|H|{{WAFL|SF}}|6.9 (45)|[[Mineral Resources Park]]||[https://wafl.com.au/match/league-perth-v-south-fremantle-round-12-2026 Report]}}
+{{AFLGame|Saturday, 27 June (2:30&nbsp;pm)|{{WAFL|Sub}}|9.6 (60)|H|{{WAFL|SD}}|8.8 (56)|[[Sullivan Logistics Stadium]]||[https://wafl.com.au/match/league-subiaco-v-swan-districts-round-12-2026 Report]}}
+{{AFLGame|Saturday, 27 June (2:30&nbsp;pm)|{{WAFL|WP}}|5.4 (34)|A|{{WAFL|PT}}|17.20 (122)|[[HIF Health Insurance Oval]]||[https://wafl.com.au/match/league-west-perth-v-peel-thunder-round-12-2026 Report]}}
+{{AFLGameFooter|notes=
+}}
+
+===Round 13===
+{{AFLGameHeader|title=Round 13}}
+{{AFLGame|Friday, 3 July (7:10&nbsp;pm)|{{WAFL|WC}}|18.11 (119)|H|{{WAFL|EF}}|12.8 (80)|[[Mineral Resources Park]]||[https://wafl.com.au/match/league-west-coast-v-east-fremantle-round-13-2026 Report]}}
+{{AFLGame|Saturday, 4 July (1:10&nbsp;pm)|{{WAFL|PT}}|8.11 (59)|H|{{WAFL|Cla}}|8.8 (56)|[[Lane Group Stadium]]||[https://wafl.com.au/match/league-peel-thunder-v-claremont-round-13-2026 Report]}}
+{{AFLGame|Saturday, 4 July (2:30&nbsp;pm)|{{WAFL|SF}}|10.13 (73)|H|{{WAFL|Sub}}|11.6 (72)|[[Fremantle Community Bank Oval]]||[https://wafl.com.au/match/league-south-fremantle-v-subiaco-round-13-2026 Report]}}
+{{AFLGame|Saturday, 4 July (2:40&nbsp;pm)|{{WAFL|EP}}|15.13 (103)|H|{{WAFL|Per}}|8.4 (52)|[[Sullivan Logistics Stadium]]||[https://wafl.com.au/match/league-east-perth-v-perth-round-13-2026 Report]}}
+{{AFLGame|Saturday, 4 July (3:10&nbsp;pm)|{{WAFL|WP}}|9.12 (66)|A|{{WAFL|SD}}|13.13 (91)|[[HIF Health Insurance Oval]]||[https://wafl.com.au/match/league-west-perth-v-swan-districts-round-13-2026 Report]}}
+{{AFLGameFooter|notes=
+}}
+
+===Round 14===
+{{AFLGameHeader|title=Round 14}}
+{{AFLGame|Saturday, 11 July (2:10&nbsp;pm)|{{WAFL|Cla}}|7.11 (53)|A|{{WAFL|SF}}|9.10 (64)|[[Revo Fitness Stadium]]||[https://wafl.com.au/match/league-claremont-v-south-fremantle-round-14-2026 Report]}}
+{{AFLGame|Saturday, 11 July (2:30&nbsp;pm)|{{WAFL|EF}}|4.10 (34)|A|{{WAFL|PT}}|18.10 (118)|[[The Good Grocer Park]]||[https://wafl.com.au/match/league-east-fremantle-v-peel-thunder-round-14-2026 Report]}}
+{{AFLGame|Saturday, 11 July (2:30&nbsp;pm)|{{WAFL|SD}}|13.11 (89)|H|{{WAFL|EP}}|10.10 (70)|[[Steel Blue Oval]]||[https://wafl.com.au/match/league-swan-districts-v-east-perth-round-14-2026 Report]}}
+{{AFLGame|Sunday, 12 July (1:10&nbsp;pm)|{{WAFL|WC}}|9.4 (58)|A|{{WAFL|Per}}|18.12 (120)|[[Mineral Resources Park]]||[https://wafl.com.au/match/league-west-coast-v-boorloo-round-14-2026 Report]}}
+{{AFLGameBye|{{WAFL|Sub}}, {{WAFL|WP}}}}
+{{AFLGameFooter|notes=
+}}
+
+===Round 15===
+{{AFLGameHeader|title=Round 15}}
+{{AFLGame|Saturday, 18 July (2:10&nbsp;pm)|{{WAFL|Per}}|10.6 (66)|H|{{WAFL|EF}}|9.9 (63)|[[Mineral Resources Park]]||[https://wafl.com.au/match/league-boorloo-v-east-fremantle-round-15-2026 Report]}}
+{{AFLGame|Saturday, 18 July (2:30&nbsp;pm)|{{WAFL|Sub}}|18.6 (114)|H|{{WAFL|WP}}|15.16 (106)|[[Sullivan Logistics Stadium]]||[https://wafl.com.au/match/league-subiaco-v-west-perth-round-15-2026 Report]}}
+{{AFLGame|Saturday, 18 July (2:30&nbsp;pm)|{{WAFL|SF}}|7.10 (52)|H|{{WAFL|SD}}|5.11 (41)|[[Fremantle Community Bank Oval]]||[https://wafl.com.au/match/league-south-fremantle-v-swan-districts-round-15-2026 Report]}}
+{{AFLGameBye|{{WAFL|Cla}}, {{WAFL|EP}}, {{WAFL|PT}}, {{WAFL|WC}}}}
+{{AFLGameFooter|notes=
+}}
+
+===Round 16===
+{{AFLGameHeader|title=Round 16}}
+{{AFLGame|Saturday, 25 July (2:30&nbsp;pm)|{{WAFL|EP}}|8.3 (51)|A|{{WAFL|Cla}}|12.11 (83)|[[Sullivan Logistics Stadium]]||[https://wafl.com.au/match/league-east-perth-v-claremont-round-16-2026 Report]}}
+{{AFLGame|Saturday, 25 July (2:30&nbsp;pm)|{{WAFL|PT}}|11.11 (77)|H|{{WAFL|Sub}}|11.3 (69)|[[Lane Group Stadium]]||[https://wafl.com.au/match/league-peel-thunder-v-subiaco-round-16-2026 Report]}}
+{{AFLGame|Saturday, 25 July (4:30&nbsp;pm)|{{WAFL|WP}}|13.12 (90)|A|{{WAFL|WC}}|15.12 (102)|[[HIF Health Insurance Oval]]||[https://wafl.com.au/match/league-west-perth-v-west-coast-round-16-2026 Report]}}
+{{AFLGameBye|{{WAFL|EF}}, {{WAFL|Per}}, {{WAFL|SF}}, {{WAFL|SD}}}}
+{{AFLGameFooter|notes=
+}}
+
+===Round 17===
+{{AFLGameHeader|title=Round 17}}
+{{AFLGame|Saturday, 1 August (1:10&nbsp;pm)|{{WAFL|SD}}|7.4 (46)|A|{{WAFL|PT}}|13.10 (88)|[[Steel Blue Oval]]||[https://wafl.com.au/match/league-swan-districts-v-peel-thunder-round-17-2026 Report]}}
+{{AFLGame|Saturday, 1 August (2:30&nbsp;pm)|{{WAFL|Cla}}|13.12 (90)|H|{{WAFL|WP}}|10.7 (67)|[[Revo Fitness Stadium]]||[https://wafl.com.au/match/league-claremont-v-west-perth-round-17-2026 Report]}}
+{{AFLGame|Saturday, 1 August (2:30&nbsp;pm)|{{WAFL|Sub}}|10.10 (70)|H|{{WAFL|Per}}|9.15 (69)|[[Sullivan Logistics Stadium]]||[https://wafl.com.au/match/league-subiaco-v-perth-round-17-2026 Report]}}
+{{AFLGame|Saturday, 1 August (2:30&nbsp;pm)|{{WAFL|EF}}|9.7 (61)|A|{{WAFL|EP}}|12.11 (83)|[[The Good Grocer Park]]||[https://wafl.com.au/match/league-east-fremantle-v-east-perth-round-17-2026 Report]}}
+{{AFLGame|Sunday, 2 August (11:10&nbsp;am)|{{WAFL|WC}}|15.12 (102)|H|{{WAFL|SF}}|11.17 (83)|[[Mineral Resources Park]]||[https://wafl.com.au/match/league-west-coast-v-south-fremantle-round-17-2026 Report]}}
+{{AFLGameFooter|notes=
+}}
+
+===Round 18===
+{{AFLGameHeader|title=Round 18}}
+{{AFLGame|Saturday, 8 August (2:10&nbsp;pm)|{{WAFL|Per}}|5.9 (39)|A|{{WAFL|PT}}|8.6 (54)|[[Mineral Resources Park]]||[https://wafl.com.au/match/league-perth-v-peel-thunder-round-18-2026 Report]}}
+{{AFLGame|Saturday, 8 August (2:30&nbsp;pm)|{{WAFL|SD}}|3.11 (29)|A|{{WAFL|Cla}}|7.9 (51)|[[Steel Blue Oval]]||[https://wafl.com.au/match/league-swan-districts-v-claremont-round-18-2026 Report]}}
+{{AFLGame|Saturday, 8 August (2:30&nbsp;pm)|{{WAFL|Sub}}|8.8 (56)|A|{{WAFL|WC}}|10.13 (73)|[[Sullivan Logistics Stadium]]||[https://wafl.com.au/match/league-subiaco-v-west-coast-round-18-2026 Report]}}
+{{AFLGame|Saturday, 8 August (2:30&nbsp;pm)|{{WAFL|SF}}|4.8 (32)|A|{{WAFL|EP}}|7.10 (52)|[[Fremantle Community Bank Oval]]||[https://wafl.com.au/match/league-south-fremantle-v-east-perth-round-18-2026 Report]}}
+{{AFLGame|Saturday, 8 August (3:10&nbsp;pm)|{{WAFL|WP}}|14.12 (96)|H|{{WAFL|EF}}|7.9 (51)|[[HIF Health Insurance Oval]]||[https://wafl.com.au/match/league-west-perth-v-east-fremantle-round-18-2026 Report]}}
+{{AFLGameFooter|notes=
+}}
+
+===Round 19===
+{{AFLGameHeader|title=Round 19}}
+{{AFLGame|Saturday, 15 August (2:10&nbsp;pm)|{{WAFL|EF}}|9.10 (64)|A|{{WAFL|SF}}|15.8 (98)|[[The Good Grocer Park]]||[https://wafl.com.au/match/league-east-fremantle-v-south-fremantle-round-19-2026 Report]}}
+{{AFLGame|Saturday, 15 August (2:30&nbsp;pm)|{{WAFL|PT}}|11.16 (82)|A|{{WAFL|WC}}|14.7 (91)|[[Lane Group Stadium]]||[https://wafl.com.au/match/league-peel-thunder-v-west-coast-round-19-2026 Report]}}
+{{AFLGame|Saturday, 15 August (2:30&nbsp;pm)|{{WAFL|EP}}|18.11 (119)|H|{{WAFL|WP}}|8.7 (55)|[[Sullivan Logistics Stadium]]||[https://wafl.com.au/match/league-east-perth-v-west-perth-round-19-2026 Report]}}
+{{AFLGame|Saturday, 15 August (2:30&nbsp;pm)|{{WAFL|Cla}}|11.8 (74)|A|{{WAFL|Sub}}|11.9 (75)|[[Revo Fitness Stadium]]||[https://wafl.com.au/match/league-claremont-v-subiaco-round-19-2026 Report]}}
+{{AFLGame|Saturday, 15 August (3:10&nbsp;pm)|{{WAFL|Per}}|14.10 (94)|H|{{WAFL|SD}}|11.9 (75)|[[Mineral Resources Park]]||[https://wafl.com.au/match/league-perth-v-swan-districts-round-19-2026 Report]}}
+{{AFLGameFooter|notes=
+}}
+
+===Round 20===
+{{AFLGameHeader|title=Round 20}}
+{{AFLGame|Saturday, 22 August (2:10&nbsp;pm)|{{WAFL|EP}}|8.8 (56)|A|{{WAFL|Sub}}|14.7 (91)|[[Sullivan Logistics Stadium]]||[https://wafl.com.au/match/league-east-perth-v-subiaco-round-20-2026 Report]}}
+{{AFLGame|Saturday, 22 August (2:10&nbsp;pm)|{{WAFL|SF}}|12.6 (78)|H|{{WAFL|PT}}|11.8 (74)|[[Fremantle Community Bank Oval]]||[https://wafl.com.au/match/league-south-fremantle-v-peel-thunder-round-20-2026 Report]}}
+{{AFLGame|Saturday, 22 August (2:30&nbsp;pm)|{{WAFL|EF}}|11.10 (76)|A|{{WAFL|SD}}|15.11 (101)|[[The Good Grocer Park]]||[https://wafl.com.au/match/league-east-fremantle-v-swan-districts-round-20-2026 Report]}}
+{{AFLGame|Saturday, 22 August (3:10&nbsp;pm)|{{WAFL|WP}}|10.9 (69)|A|{{WAFL|Per}}|10.14 (74)|[[HIF Health Insurance Oval]]||[https://wafl.com.au/match/league-west-perth-v-perth-round-20-2026 Report]}}
+{{AFLGame|Saturday, 22 August (3:20&nbsp;pm)|{{WAFL|WC}}|14.13 (97)|A|{{WAFL|Cla}}|20.10 (130)|[[Mineral Resources Park]]||[https://wafl.com.au/match/league-west-coast-v-claremont-round-20-2026 Report]}}
+{{AFLGameFooter|notes=
+}}
+
+==Ladder==
+<onlyinclude>{{#invoke:Sports table|main|style=WDL
+|loss_before_draw=true|for_against_style=points|use_goal_percentage=yes
+|winpoints=4|drawpoints=2
+
+|update=complete
+|source=[https://wafl.com.au/ladders WAFL.com.au]
+
+|team_order=PT, Cla, Per, SF, EP, Sub, WCE, SD, EF, WP
+
+|win_PT=13   |loss_PT=5    |draw_PT=0   |pf_PT=1515    |pa_PT=1011  |status_PT=P
+|win_Cla=12  |loss_Cla=6   |draw_Cla=0  |pf_Cla=1499   |pa_Cla=1169
+|win_Per=11  |loss_Per=7   |draw_Per=0  |pf_Per=1425   |pa_Per=1270
+|win_SF=11   |loss_SF=7    |draw_SF=0   |pf_SF=1308    |pa_SF=1201
+|win_EP=10   |loss_EP=8    |draw_EP=0   |pf_EP=1352    |pa_EP=1250
+|win_Sub=10  |loss_Sub=8   |draw_Sub=0  |pf_Sub=1392   |pa_Sub=1305
+|win_WCE=10  |loss_WCE=8   |draw_WCE=0  |pf_WCE=1539   |pa_WCE=1701
+|win_SD=6    |loss_SD=12   |draw_SD=0   |pf_SD=1253    |pa_SD=1421
+|win_EF=5    |loss_EF=13   |draw_EF=0   |pf_EF=1216    |pa_EF=1593
+|win_WP=2    |loss_WP=16   |draw_WP=0   |pf_WP=1201    |pa_WP=1779
+
+<!--Points Deductions-->
+
+<!--TEAM NAMES. No need to update beyond initial entering-->
+|name_Cla=[[Claremont Football Club|Claremont]]
+|name_EF=[[East Fremantle Football Club|East Fremantle]]
+|name_EP=[[East Perth Football Club|East Perth]]
+|name_PT=[[Peel Thunder Football Club|Peel Thunder]]
+|name_Per=[[Perth Football Club|Perth]]
+|name_SF=[[South Fremantle Football Club|South Fremantle]]
+|name_Sub=[[Subiaco Football Club|Subiaco]]
+|name_SD=[[Swan Districts Football Club|Swan Districts]]
+|name_WCE=[[West Coast Eagles#Reserves team|West Coast]] (R)
+|name_WP=[[West Perth Football Club|West Perth]]
+
+<!--CLASSIFICATION RULES-->
+|class_rules = 1) points; 2) percentage; 3) number of points for.
+
+|result1=Q |result2=Q |result3=Q |result4=Q |result5=Q
+
+|res_col_header=Q
+|col_Q=green2 |text_Q=[[#Finals series|Finals series]]
+|status_text_P = Premiers
+}}</onlyinclude>
+
+(R) = Reserves for AFL seniors
+
+==Finals series==
+===Qualifying and elimination finals===
+{{AFLGameHeader|title=Qualifying final}}
+{{AFLGame|Saturday, 29 August (2:10&nbsp;pm)|[[Claremont Football Club|Claremont]]|12.5 (77)|H|[[Perth Football Club|Perth]]|8.12 (60)|[[Revo Fitness Stadium]]||[https://wafl.com.au/match/league-claremont-v-perth-finals-week-1-2026 Report]}}
+{{AFLGameFooter}}
+{{AFLGameHeader|title=Elimination final}}
+{{AFLGame|Sunday, 30 August (2:10&nbsp;pm)|[[South Fremantle Football Club|South Fremantle]]|7.10 (52)|A|[[East Perth Football Club|East Perth]]|8.9 (57)|[[Fremantle Community Bank Oval]]||[https://wafl.com.au/match/league-south-fremantle-v-east-perth-finals-week-1-2026 Report]}}
+{{AFLGameFooter}}
+
+===Semi-finals===
+{{AFLGameHeader|title=Semi finals}}
+{{AFLGame|Saturday, 5 September (2:30pm)|[[Peel Thunder Football Club|Peel Thunder]]|13.7 (85)|H|[[Claremont Football Club|Claremont]]|8.9 (57)|[[Lane Group Stadium]]||[https://wafl.com.au/match/league-peel-thunder-v-claremont-finals-week-2-2026 Report]}}
+{{AFLGame|Saturday, 5 September (2:30pm)|[[Perth Football Club|Perth]]|12.13 (85)|A|[[East Perth Football Club|East Perth]]|13.9 (87)|[[Mineral Resources Park]]||[https://wafl.com.au/match/league-perth-v-east-perth-finals-week-2-2026 Report]}}
+{{AFLGameFooter}}
+
+===Preliminary finals===
+{{AFLGameHeader|title=Preliminary final}}
+{{AFLGame|Sunday, 13 September (2:10pm)|[[Claremont Football Club|Claremont]]|8.10 (58)|H|[[East Perth Football Club|East Perth]]|7.8 (50)|[[Revo Fitness Stadium]]||[https://wafl.com.au/match/league-claremont-v-east-perth-preliminary-final-2026 Report]}} 
+{{AFLGameFooter}}
+
+===Grand Final===
+{{AFLGameDetailed
+| title = 2026 WAFL Grand Final
+| date = Sunday 20 September (1:10&nbsp;pm)
+| home team = [[Peel Thunder Football Club|Peel Thunder]]
+| home Q1 = 6.6 (42)
+| home Q2 = 12.9 (81)
+| home Q3 = 14.12 (96)
+| home final = 16.17 (113)
+| winner = H
+| away team = [[Claremont Football Club|Claremont]]
+| away Q1 = 1.3 (9)
+| away Q2 = 3.4 (22)
+| away Q3 = 5.9 (39)
+| away final = 7.9 (51)
+| venue = [[Perth Stadium|Optus Stadium]]
+| crowd = 19,210
+| report = <ref>{{cite web|url=https://wafootball.com.au/news/thunder-claim-fourth-wafl-flag-with-massive-win-over-tigers/|title=Thunder claim fourth WAFL flag with massive win over Tigers|work=WA Football|date=20 September 2026|author=Jordan McArdle}}</ref><ref>{{cite web|url=https://www.foxsports.com.au/afl/afl-2026-box-hill-hawks-def-geelong-in-vfl-grand-final-norm-goss-medal-winner-fremantle-affiliate-peel-thunder-in-wafl-grand-final-sanfl-grand-final/news-story/5badb21d578a1dfd74b1664eaad9d4cd|title=Hawks premiers after Cats VFL boilover; Freo star pushes case in WAFL — State League GF wrap
+|work=foxsports.com.au|date=20 September 2026|author=Max Laughton}}</ref>
+| umpires = 
+| BOG award = [[Simpson Medal]]
+| BOG winner = [[Jeremy Sharp]] (Peel Thunder)
+| home goals = Nicholls 3, Tuia 3, [[Tobyn Murray|Murray]] 2, Carr 2, Tregenza 2, Sanders, [[Jeremy Sharp|Sharp]], Sears, [[Cooper Simpson|Simpson]]
+| away goals = van Rooyen 2, Mainwaring 2, Delacey, Musika, [[Alec Waterman|Waterman]]
+| home best = [[Jeremy Sharp|Sharp]], [[Bailey Banfield|Banfield]], [[Jaeger O'Meara|O'Meara]], [[Brandon Walker|Walker]], Nicholls
+| away best = Pearce, Alvarez, England, Rogers, Mainwaring, Gale
+| home injuries = 
+| away injuries = 
+| home reports = 
+| away reports = 
+| broadcast = [[Seven Network]]
+}}
+
+==Awards==
+* '''[[Sandover Medal]]'''
+:: [[Jake Florenca]] ({{WAFL|SF}}) − 27 votes
+
+* '''[[Bernie Naylor Medal]]'''
+:: [[Tyler Keitel]] ({{WAFL|WP}}) − 51 goals
+
+* '''Rodriguez Shield'''
+:: {{WAFL|Cla}}
+
+* '''Reserves Premiers'''
+:: {{WAFL|SD}}
+
+* '''Colts Premiers'''
+:: {{WAFL|EF}}
+
+Sources:<ref>{{cite web|url=https://wafootball.com.au/news/bulldogs-midfielder-florenca-wins-sandover-medal/|title=Bulldogs midfielder Florenca wins Sandover Medal|author=Mark Readings|work=WA Football|date=14 September 2026}}</ref><ref>{{cite web|url=https://wafootball.com.au/news/keitel-wins-sixth-bernie-naylor-medal/|title=Keitel wins SIXTH Bernie Naylor Medal|work=wafootball.com.au|date=24 August 2026|author=Jordan McArdle}}</ref><ref>{{cite web|url=https://www.facebook.com/claremontfc/posts/claremont-football-club-take-home-the-2026-rodriguez-shield-for-overall-club-per/1712737860857422/|title=Claremont Football Club wins 2026 Rodriguez Shield|work=Claremont Football Club|publisher=Facebook|date=15 September 2026}}</ref><ref>{{cite web|url=https://wafootball.com.au/news/swans-win-thriller-to-claim-wafl-reserves-title-against-falcons/|title=Swans win thriller to claim WAFL Reserves title against Falcons|date=20 September 2026|work=WA Football|author=Jordan McArdle}}</ref><ref>{{cite web|url=https://wafootball.com.au/news/sharks-defeat-derby-rivals-for-egt-wafl-colts-premiership/|title=Sharks defeat Derby rivals for EGT WAFL Colts premiership|date=20 September 2026|work=WA Football|author=Jordan McArdle}}</ref>
+
+==Representative match==
+===WAFL vs SANFL===
+For the eighth successive season, an interstate representative match was fixtured between the WAFL and [[South Australian National Football League]] (SANFL), with the two teams playing for the [[Haydn Bunton Jr.|Haydn Bunton Junior]] Cup.<ref>{{cite web|url=https://sanfl.com.au/league/news/2026-hostplus-sanfl-league-fixture-release/|title=2026 Hostplus SANFL League Fixture Released|date=24 December 2025|work=sanfl.com.au|quote=The West End State team will have its sights set on regaining the Haydn Bunton Junior Cup in the KIA State Game against the WAFL on the weekend of Saturday May 16 after it hosts the VFL at Stratarama Stadium on Saturday April 11 as part of the AFL Gather Round festivities.}}</ref><ref>{{cite web|url=https://wafootball.com.au/news/historic-kia-state-game-triple-header-locked-in/?_gl=1*1hp34kn*_gcl_au*MTEyMzgwMDg5OC4xNzc1NjQ4NDY4|title=Historic Kia State Game triple-header locked in|work=WA Football|date=17 April 2026|author=Jordan McArdle}}</ref>
+{{AFLGameDetailed
+| title           = 2026 State Game
+| date            = Saturday, 16 May (3:10pm [[Time in Australia|AWST]])
+| winner          = H
+| home team       = [[West Australian Football League|WAFL]]
+| home Q1         = 4.1 (25)
+| home Q2         = 9.4 (58)
+| home Q3         = 11.9 (75)
+| home final      = 14.14 (98)
+| home goals      = Hinder 3<br>Hunter, Reidy 2<br>Bevan, Clarke, Davis, Jones, Mainwaring, Mayo, Sears 1
+| home best       = England, Bevan, Turner, Mayo, Ameduri, Hinder, Reidy
+| home injuries   =
+| home reports    =
+| away team       = [[South Australian National Football League|SANFL]]
+| away Q1         = 2.2 (14)
+| away Q2         = 3.3 (21)
+| away Q3         = 4.6 (30)
+| away final      = 9.8 (62)
+| away goals      = A. Grace, Thomas 3<br>Emmett, Francis, Herbert 1
+| away best       = Thomas, Lowe, E. Grace, A. Grace, Francis
+| away injuries   =
+| away reports    =
+| venue           = [[Sullivan Logistics Stadium]]
+| crowd           = 3,671
+| report          = <ref>{{cite web|url=https://sanfl.com.au/league/news/west-end-state-team-defeated-by-wafl-in-kia-state-game/|title=West End State Team defeated by WAFL in KIA State Game|date=16 May 2026|work=sanfl.com.au|author=Zac Milbank}}</ref><ref>{{cite web|url=https://wafootball.com.au/news/kia-wafl-state-team-beat-sanfl-at-home-for-first-time-in-11-years/?_gl=1*jiypl9*_gcl_au*MTEyMzgwMDg5OC4xNzc1NjQ4NDY4|title=Kia WAFL State Team beat SANFL at home for first time in 11 years|work=wafootball.com.au|date=16 May 2026|author=Jordan McArdle}}</ref>
+| umpires         = 
+| BOG award       = [[Simpson Medal]] (WAFL) & [[Fos Williams Medal]] (SANFL)
+| BOG winner      = Callan England (WAFL) & Beau Thomas (SANFL)
+| broadcast       = [[Seven Network]]<ref>{{cite web|url=https://wafootball.com.au/news/kia-wafl-state-team-locked-in-for-sanfl-blockbuster/?_gl=1*jiypl9*_gcl_au*MTEyMzgwMDg5OC4xNzc1NjQ4NDY4|title=Kia WAFL State Team locked in for SANFL blockbuster|author=Jordan McArdle|date=14 May 2026|work=wafootball.com.au|quote=Western Australia will host South Australia from 3.10pm, with the game live and free on 7 and 7Plus, while tickets at just $10 from INTIX.}}</ref>
+| anthem          =
+| notes           = 
+}}
+
+===Western Australian team===
+{{Aussie rules team | title = 2026 WAFL State Team vs. South Australia<ref>{{cite web|url=https://thewest.com.au/sport/wafl/wafl-2026-peel-thunder-premiership-coach-adam-read-to-coach-wa-again-after-drought-breaking-win-c-22115301|title=WAFL 2026: Peel Thunder premiership coach Adam Read to coach WA again after drought-breaking win|work=The West Australian|date=10 April 2026}} {{subscription required}}</ref><ref>{{cite web|url=https://wafootball.com.au/news/read-to-lead-kia-wafl-state-team-once-again/|title=Read to lead Kia WAFL State Team once again|author=Jordan McArdle|work=WA Football|date=10 April 2026}}</ref><ref>{{cite web|url=https://wafootball.com.au/news/kia-wafl-state-team-locked-in-for-sanfl-blockbuster/?_gl=1*jiypl9*_gcl_au*MTEyMzgwMDg5OC4xNzc1NjQ4NDY4|title=Kia WAFL State Team locked in for SANFL blockbuster|author=Jordan McArdle|date=14 May 2026|work=WA Football}}</ref> | teamcolour = WA
+| backpocket1 = 18. [[Ethan Hughes]] ({{WAFL|SF}})
+| fullback = 28. Noah Strom ({{WAFL|SF}})
+| backpocket2 = 10. Zac Guadagnin ({{WAFL|WP}}) 
+| halfbackflank1 = 8. [[Jamaine Jones]] ({{WAFL|SF}})
+| centrehalfback = 26. Chad Pearson ({{WAFL|SF}})
+| halfbackflank2 = 6. Stanley Wright ({{WAFL|EP}})
+| wing1 = 2. [[Stefan Giro]] ({{WAFL|Sub}})
+| centre = 1. Christian Ameduri (c) {{WAFL|EP}})
+| wing2 = 19. Jesse Turner ({{WAFL|SD}}) 
+| halfforwardflank1 = 3. Zac Mainwaring ({{WAFL|Cla}}) 
+| centrehalfforward = 31. Jaiden Hunter ({{WAFL|Cla}})
+| halfforwardflank2 = 4. Joeseph Hinder ({{WAFL|WP}})
+| forwardpocket1 = 16. Jiah Reidy ({{WAFL|SD}})
+| fullforward = 29. Aaron Clarke ({{WAFL|Per}})
+| forwardpocket2 = 17. Jack Sears ({{WAFL|PT}})
+| ruck = 33. [[Scott Jones (Australian footballer)|Scott Jones]] ({{WAFL|EP}})
+| ruckrover = 9. Callan England ({{WAFL|Cla}})
+| rover = 20. Lachlan Tardrew ({{WAFL|PT}})
+| interchange1 = 15. Kane Bevan ({{WAFL|WP}})
+| interchange2 = 12. Galen Savigni ({{WAFL|Sub}})
+| interchange3 = 25. Austin Davis ({{WAFL|Per}})
+| interchange4 = 23. Kyle Baskerville ({{WAFL|EF}})
+| interchange5 = 21. Jack Mayo ({{WAFL|Sub}})
+| emergency1 = 11. Scott Tuia ({{WAFL|PT}})
+| emergency2 = 14. Ryan Borchet ({{WAFL|Sub}})
+| emergency3 = 24. Corey Watts ({{WAFL|EP}})
+| coach = Adam Read ({{WAFL|PT}})
+}}
+
+==See also==
+* [[2026 WAFL Women's season]]
+
+==References==
+{{reflist}}
+
+==External links==
+* [https://wafl.com.au/ WAFL official website]
+
+{{WAFL seasons}}
+
+[[Category:West Australian Football League seasons]]
+[[Category:2026 in Australian rules football|WAFL]]

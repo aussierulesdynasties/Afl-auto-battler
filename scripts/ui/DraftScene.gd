@@ -133,15 +133,7 @@ func _ready() -> void:
 	add_child(_beat_timer)
 	get_viewport().size_changed.connect(_on_resize)
 	_build_layout()
-	# The recruiting panel meets once before each National Draft.
-	if _draft.intake_mode and _phase == "board" and not _draft.is_finished() \
-			and GameState.draft_meeting_year != GameState.season_year:
-		GameState.draft_meeting_year = GameState.season_year
-		# Saved at once: a career loaded mid-draft has had its meeting.
-		GameState.mark_dirty()
-		GameState.autosave()
-		_show_meeting()
-	elif _phase == "board":
+	if _phase == "board" and not _meet_if_due():
 		FirstVisitIntro.show_if_due.call_deferred(self, _intro_key())
 
 
@@ -423,7 +415,24 @@ func _on_club_chosen(code: String) -> void:
 		return
 	_club_backdrop()
 	_show_board()
-	FirstVisitIntro.show_if_due.call_deferred(self, _intro_key())
+	# A club taken on this screen meets its recruiting panel here, before the
+	# first pick, not only once the draft is opened again.
+	if not _meet_if_due():
+		FirstVisitIntro.show_if_due.call_deferred(self, _intro_key())
+
+
+## The recruiting panel meets once before each National Draft, once the club
+## is yours: true when it meets now.
+func _meet_if_due() -> bool:
+	if not _draft.intake_mode or _phase != "board" or _draft.is_finished() \
+			or GameState.draft_meeting_year == GameState.season_year:
+		return false
+	GameState.draft_meeting_year = GameState.season_year
+	# Saved at once: a career loaded mid-draft has had its meeting.
+	GameState.mark_dirty()
+	GameState.autosave()
+	_show_meeting()
+	return true
 
 
 ## Your club's colour behind the board once you have one (director,

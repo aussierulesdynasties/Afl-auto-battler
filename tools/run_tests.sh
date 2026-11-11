@@ -44,6 +44,8 @@ RUNNER_DIR="${RUNNER_DIR:-tests}"
 # SUITES_ONLY=1 skips the dataset, export and harness steps after the suites.
 # SKIP_VERSION_CHECK=1 leaves out the build-number check (CI runs it once, in plan).
 # EXTRAS_ONLY=1 runs only those steps (and the harness self-test), no suites.
+# SKIP_STATIC=1 leaves out the steps that need no Godot (static lints, dataset, suite seeds,
+# intake harness, offline promise): CI runs those in the Tests "lint" job.
 # CI splits the work this way: shards run SUITES_ONLY, one job runs EXTRAS_ONLY.
 SUITES_ONLY="${SUITES_ONLY:-0}"
 # PR CI stops promptly; local/main/diagnostic runs default to all failures.
@@ -88,6 +90,19 @@ note_error() {  # message
 }
 
 say "== Godot: $("$GODOT" --headless --version 2>/dev/null | tail -1)"
+# A runner that names, at compile time, a class whose chain reaches an autoload (StoryDeck ->
+# StoryEngine -> GameState) does not compile under --script, and Godot then hangs to the suite's
+# time limit (3000 s, 2026-11-11). The static check finds it in about a second, before any Godot
+# starts (tools/lint/autoload_reach.py); it runs wherever suites run: locally (--quick too), the
+# CI shards, nightly.yml and run_on_github.yml.
+if [ "${#SUITES[@]}" -gt 0 ] && [ "${SKIP_AUTOLOAD_LINT:-0}" != 1 ]; then
+	say "== Autoload reach (no Godot)"
+	if ! reach_out=$(python3 -I tools/lint/lint.py --only autoload-reach 2>&1); then
+		echo "$reach_out"
+		note_error "a script started with godot --script names an autoload-dependent class: it would hang its suite (tools/lint/autoload_reach.py)"
+		exit 1
+	fi
+fi
 if [ "$QUICK" = 1 ] && [ -d .godot ]; then
 say "== Quick: skipping the import (.godot exists; a script error still fails its suite)"
 summary+=("| import | skipped | --quick |")
@@ -176,6 +191,19 @@ for suite in ${SUITES[@]+"${SUITES[@]}"}; do
 done
 
 if [ "$SUITES_ONLY" != 1 ]; then
+# SKIP_STATIC=1 (CI's extras job): the pure-Python checks below and the static lints run in the
+# Tests "lint" job instead, which needs no Godot and fails in the first minute.
+if [ "${SKIP_STATIC:-0}" != 1 ]; then
+say "== Static lints (tools/lint)"
+if python3 -I tools/lint/lint.py > "$LOG_DIR/lint.log" 2>&1; then
+	summary+=("| lint | pass | |")
+else
+	grep -vE "^::" "$LOG_DIR/lint.log" | tail -25
+	note_error "tools/lint/lint.py found problems (each line names the file, line and rule)"
+	failed=1
+	summary+=("| lint | FAIL | see log |")
+fi
+
 say "== Dataset check"
 if python3 tools/validate_data.py > "$LOG_DIR/validate.log" 2>&1; then
 	summary+=("| validate_data | pass | |")
@@ -196,6 +224,8 @@ else
 	summary+=("| suite_seeds | FAIL | see log |")
 fi
 
+fi
+
 say "== Exported-build data check"
 if GODOT="$GODOT" tools/check_export_data.sh > "$LOG_DIR/export_data.log" 2>&1; then
 	summary+=("| export_data | pass | |")
@@ -206,6 +236,7 @@ else
 	summary+=("| export_data | FAIL | see log |")
 fi
 
+if [ "${SKIP_STATIC:-0}" != 1 ]; then
 say "== Intake / development harness"
 if python3 tools/intake_harness.py --quiet > "$LOG_DIR/intake_harness.log" 2>&1; then
 	summary+=("| intake_harness | pass | |")
@@ -214,6 +245,7 @@ else
 	note_error "tools/intake_harness.py failed"
 	failed=1
 	summary+=("| intake_harness | FAIL | see log |")
+fi
 fi
 
 # CI runs the build-number check once, in the plan job, and sets SKIP_VERSION_CHECK=1 here.
@@ -229,6 +261,7 @@ else
 fi
 fi
 
+if [ "${SKIP_STATIC:-0}" != 1 ]; then
 say "== Offline promise (Android preset requests vibrate only)"
 if python3 tools/test_android_permissions.py > "$LOG_DIR/offline_promise.log" 2>&1 		&& python3 tools/check_android_permissions.py >> "$LOG_DIR/offline_promise.log" 2>&1; then
 	summary+=("| offline_promise | pass | |")
@@ -237,6 +270,7 @@ else
 	note_error "tools/check_android_permissions.py: the Android preset asks for more than vibrate, which breaks the menu's offline promise"
 	failed=1
 	summary+=("| offline_promise | FAIL | see log |")
+fi
 fi
 fi
 

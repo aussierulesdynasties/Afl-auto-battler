@@ -185,7 +185,8 @@ func _build() -> void:
 	rv.add_child(UiKit.lbl("Final Ladder", UiKit.NAME, StatsSide.mine_ink(), true))
 	var ladder_w := _content_width() - 24.0 if narrow else (_content_width() * 0.5)
 	# At full height: the page scrolls, not the ladder inside it.
-	rv.add_child(UiKit.ladder_table(season.ladder_sorted(), GameState.my_club, ladder_w, 0, true))
+	rv.add_child(UiKit.ladder_table(season.ladder_sorted(), GameState.my_club, ladder_w, 0, true,
+			season.finalists()))
 
 	# --- the board -----------------------------------------------------------
 	var verdict := str(GameState.board.get("verdict", ""))
