@@ -78,6 +78,7 @@ func run(tree: SceneTree) -> void:
 	_t("_test_digest_survives_trim")
 	_t("_test_factors_never_repeat")
 	_t("_test_calls_every_quarter_pure")
+	_t("_test_calls_new_call_before_carried")
 	for size in [Vector2i(390, 844), Vector2i(1280, 720)]:
 		_tree.root.size = size
 		await _settle()
@@ -675,6 +676,35 @@ func _test_calls_every_quarter_pure() -> void:
 	var q3 := str(MatchNotes.calls_lines(res, me, 3)[0])
 	var told := {"q3": true, "call:" + q3: true}
 	_check(not MatchNotes.full_time_calls(res, me, told).has("Q3  ·  " + q3), "calls: a call Why quoted is left out")
+
+
+## A Q1 tag still in force in Q2 must not take Q2's place from the call made
+## in Q2 (capture 2026-11-12: Q2 showed "Tag on ..." and dropped the new
+## Through call). Q1 sets the tag; Q2 keeps it and adds a man to go through.
+func _test_calls_new_call_before_carried() -> void:
+	var res := _calls_every_quarter_result()
+	var me := _side(res)
+	var mine: Array = res["roster"][me]
+	var theirs: Array = res["roster"][1 - me]
+	var tag_id := str(theirs[1]["id"])
+	var thru_id := str(mine[5]["id"])
+	for h in res["tactics_history"]:
+		var q := int(h["quarter"])
+		if q == 1:
+			h["plans"][me] = {"gameplan": "balanced", "tag_id": tag_id}
+		elif q >= 2:
+			h["plans"][me] = {"gameplan": "balanced", "tag_id": tag_id, "focus_fwd": thru_id}
+	var q2: Array = MatchNotes.calls_lines(res, me, 2)
+	_check(q2.size() == 2 and str(q2[0]).begins_with("Tag on"),
+			"calls: fixture, Q2 lists the carried tag first (got %s)" % str(q2))
+	var got := MatchNotes.full_time_calls(res, me, {}, 2)
+	var want := "Q2  ·  " + str(q2[1])
+	_check(got.has(want) and str(q2[1]).begins_with("Through"),
+			"calls: Q2's place goes to the Through call made in Q2 (got %s)" % str(got))
+	_check(not got.has("Q2  ·  " + str(q2[0])), "calls: the Q1 tag carried into Q2 waits behind it (got %s)" % str(got))
+	# With room, the carried tag still shows after the new call.
+	var all := MatchNotes.full_time_calls(res, me, {}, 20)
+	_check(all.find(want) < all.find("Q2  ·  " + str(q2[0])), "calls: in Q2 the new call reads before the carried tag")
 
 
 ## On the screen: the full-time Summary's Your calls lists Q3 and Q4.
