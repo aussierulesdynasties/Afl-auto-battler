@@ -354,6 +354,7 @@ jobs:
       - name: Upload test logs
         if: failure()
         uses: actions/upload-artifact@v4
+        continue-on-error: true  # a GitHub storage outage must not fail tested code
         with:
           name: test-logs-shard-${{ matrix.shard }}
           path: ${{ runner.temp }}/test-logs
@@ -367,6 +368,7 @@ jobs:
           fi
 
       - uses: actions/upload-artifact@v4
+        continue-on-error: true  # a GitHub storage outage must not fail tested code
         if: always()
         with:
           name: suite-timings-${{ matrix.shard }}
@@ -414,6 +416,7 @@ jobs:
       - name: Upload test logs
         if: failure()
         uses: actions/upload-artifact@v4
+        continue-on-error: true  # a GitHub storage outage must not fail tested code
         with:
           name: test-logs-extras
           path: ${{ runner.temp }}/test-logs
@@ -450,6 +453,7 @@ jobs:
           echo "name=tested-tree-$tree" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@v4
+        continue-on-error: true  # a GitHub storage outage must not fail tested code
         if: steps.tree.outcome == 'success'
         with:
           name: ${{ steps.tree.outputs.name }}

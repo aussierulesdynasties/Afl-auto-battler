@@ -204,6 +204,7 @@ jobs:
       - name: Upload the sheets
         if: always() && steps.setup.outputs.ok == 'true'
         uses: actions/upload-artifact@v4
+        continue-on-error: true  # a GitHub storage outage must not fail tested code
         with:
           name: ui-review-sheets
           path: |
@@ -296,6 +297,7 @@ jobs:
       - name: Upload the sweep
         if: always() && steps.setup.outputs.ok == 'true'
         uses: actions/upload-artifact@v4
+        continue-on-error: true  # a GitHub storage outage must not fail tested code
         with:
           name: screen-sweep
           path: |
