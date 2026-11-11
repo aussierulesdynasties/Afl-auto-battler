@@ -506,7 +506,8 @@ const COLOUR_CUES := {
 		["\"Out %s\"", "Out N weeks", 1],
 		["\"Unhappy\"", "Unhappy", 1]],
 	"MatchScene.gd": [
-		["pts > 0", "the signed +/- points", 1],
+		["pts > 0", "the signed +/- points", 2],
+		["margin_colour(m > 0)", "the signed final margin", 1],
 		["bool(f[2])", "the legs word", 1],
 		["tone == \"good\"", "the goal row names the club", 1],
 		["margin_colour(winner == me)", "Won by / Lost by", 1]],
