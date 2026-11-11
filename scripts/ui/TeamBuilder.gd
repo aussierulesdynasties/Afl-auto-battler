@@ -88,6 +88,10 @@ var start_note := ""
 ## Remembered.drop_line), said on its own line under the note; "" for none.
 var memory_note := ""
 var hint_extra := ""
+## Where the players not picked go when the screen has a column for them (a
+## PC's Team selection puts them under the week); null keeps them under the
+## interchange. Set before setup().
+var rest_host: Control = null
 ## Controls that act on the side, set beside the "Interchange" word.
 var interchange_actions: Control = null
 ## A line under the interchange (a phone's way into the week).
@@ -221,7 +225,11 @@ func _build() -> void:
 		rest.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		rest.size_flags_stretch_ratio = 0.35
 		rest.custom_minimum_size.y = 120
-	add_child(rest)
+	if rest_host != null:
+		UiKit.clear(rest_host)
+		rest_host.add_child(rest)
+	else:
+		add_child(rest)
 	# Role filter and search on one line when the page is stacked; where the
 	# line is too narrow for both (a small phone at a larger text size,
 	# Settings) the search drops to its own line below, full width.
@@ -321,7 +329,7 @@ func _build() -> void:
 	# gives each card the width, so a full name and its lines stay whole.
 	_grid.columns = 2 if (_wide or UiKit.text_scale <= 1.0) else 1
 	if stacked and _wide:
-		_grid.columns = clampi(int(UiKit.view_width(self) / 400.0), 3, 8)
+		_grid.columns = 2 if rest_host != null else clampi(int(UiKit.view_width(self) / 400.0), 3, 8)
 	_grid.add_theme_constant_override("h_separation", 6)
 	_grid.add_theme_constant_override("v_separation", 6)
 	_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
