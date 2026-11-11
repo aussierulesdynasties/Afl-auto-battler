@@ -1099,37 +1099,22 @@ func _week_section(season: Season) -> Control:
 			continue
 		nv.add_child(UiKit.spacer(4))
 		nv.add_child(_event_card(i))
-
-	# The week's decisions are pinned under the page (_build), phone and PC, so
-	# Play match is never below the fold.
-	if not season.is_season_over():
-		if not season.is_regular_done():
-			nv.add_child(_skip_home_away_button())
-		nv.add_child(_skip_season_button())
 	return nv
 
 
-## Skip to the end of the season (director, 2026-11-07, 2026-11-08: "It's just
-## skipping games, no off season skipping"): a quiet word under the week,
-## never the main move. A tap opens the sheet that says what is decided for
-## you; nothing is skipped until its own button is pressed.
-func _skip_season_button() -> Button:
-	return _skip_button("Skip to the end of the %d season" % GameState.season_year, "SkipSeason", "season")
-
-
-## Skip just the home and away (director, 2026-11-09): the same survey, stopping
-## after the last round so the finals are yours to coach.
-func _skip_home_away_button() -> Button:
-	return _skip_button("Skip the rest of the home and away", "SkipHomeAway", "home_away")
-
-
-func _skip_button(text: String, node_name: String, to: String) -> Button:
-	var b := UiKit.text_action(text, UiKit.BODY)
-	b.name = node_name
-	b.add_theme_color_override("font_color", UiKit.MUTED)
-	b.custom_minimum_size = Vector2(0, 48)
-	b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	b.pressed.connect(_open_skip_confirm.bind(to))
+## The season skips live on a long press of the week's main button (director,
+## 2026-11-12: "skip home and away and skip to end of finals both dont belong
+## embedded in the hub, they should be long presses of the SKIP button in the
+## bottom right"). A tap still plays the week; a hold opens the survey for the
+## rest of the home and away, or in the finals for the rest of the finals.
+func _with_bulk_skip(b: Button, season: Season) -> Button:
+	if season.is_season_over() or GameState.is_sacked():
+		return b
+	var to := "season" if season.is_regular_done() else "home_away"
+	b.set_meta("bulk_skip", to)
+	# The hold says the words of the sheet's own button.
+	HoldPress.attach(b, "Skip the season" if to == "season" else "Skip the home and away",
+			func() -> void: _open_skip_confirm(to))
 	return b
 
 
@@ -1674,24 +1659,24 @@ func _week_actions(season: Season) -> Control:
 		buttons.append(_nav_button("Team", func(): Router.go("selection")))
 		var bye := _nav_button("Play Round %d" % (season.round_index + 1), _on_sim_round_pressed, true)
 		bye.name = "SimByeRound"
-		buttons.append(bye)
+		buttons.append(_with_bulk_skip(bye, season))
 	elif _upcoming_match().is_empty() and GameState.my_finals_status() == "bye":
 		# Still alive: sim only this week, never past your own final.
 		buttons.append(_nav_button("Team", func(): Router.go("selection")))
 		var off := _nav_button(_finals_play_label(), _on_sim_round_pressed, true)
 		off.name = "SimFinalsWeekOff"
-		buttons.append(off)
+		buttons.append(_with_bulk_skip(off, season))
 	elif _upcoming_match().is_empty():
 		# Out of the finals, the league still plays them week by week: each
 		# week's results come up before the next.
 		var week := _nav_button(_finals_play_label(), _on_sim_round_pressed, true)
 		week.name = "SimFinalsWeek"
-		buttons.append(week)
+		buttons.append(_with_bulk_skip(week, season))
 	else:
 		buttons.append(_nav_button("Pick the side", func(): Router.go("selection")))
 		var play := _nav_button(_play_label(), _on_play_pressed, true)
 		play.name = "PlayMatch"
-		buttons.append(play)
+		buttons.append(_with_bulk_skip(play, season))
 	var row := UiKit.hbox(8)
 	row.name = "WeekActions"
 	for b in buttons:

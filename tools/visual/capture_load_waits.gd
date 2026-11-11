@@ -103,11 +103,15 @@ func _run() -> void:
 			router.stack = []
 			router.go("hub")
 			await _settle()
-		var open := current_scene.find_child("SkipHomeAway", true, false) as BaseButton
+		# The skip is a long press of the week's button (HoldPress): open what it opens.
+		var open: BaseButton = null
+		for n in current_scene.find_children("*", "Button", true, false):
+			if n.get_meta("bulk_skip", "") == "home_away":
+				open = n as BaseButton
 		if open == null:
-			print("skip: no Skip the rest of the home and away")
+			print("skip: no long press for the home and away")
 		else:
-			open.pressed.emit()
+			current_scene.call("_open_skip_confirm", "home_away")
 			await _settle()
 			for i in range(8):
 				var nxt := current_scene.find_child("SkipNext", true, false) as BaseButton

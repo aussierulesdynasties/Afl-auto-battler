@@ -1,9 +1,9 @@
 extends SceneTree
-## Review capture for the season skip (director, 2026-11-07; 2026-11-08: games
-## only, no off-season), dark: the quiet button under the week on the hub, each
-## question of the survey before the skip, the sheet that says what is decided
-## for you, and the hub after the skip, the season over and the off-season still
-## yours. Needs a real renderer:
+## Review capture for the season skip, dark (director, 2026-11-07; 2026-11-12:
+## the skips are long presses of the week's button at the bottom right, not
+## lines on the hub). The hub in the home and away, the hold cue mid-press, the
+## survey and sheet a hold opens there; then the same in the finals. The press is
+## a real touch at the button's place on screen. Needs a real renderer:
 ##   godot --windowed --path . --script tools/visual/capture_season_skip.gd
 ## Environment: CAP_DIR (default "."), CAP_CLUB (default "FRE"), CAP_W / CAP_H
 ## (default 390 x 844). Never touches a real save.
@@ -18,8 +18,8 @@ func _frames(n := 8) -> void:
 		await process_frame
 
 
-func _shot(path: String) -> void:
-	await _frames()
+func _shot(path: String, settle := 8) -> void:
+	await _frames(settle)
 	var img := root.get_viewport().get_texture().get_image()
 	img.convert(Image.FORMAT_RGBA8)
 	if img.save_png(path) != OK:
@@ -27,16 +27,68 @@ func _shot(path: String) -> void:
 	print("CAPTURE ", path)
 
 
-func _scroll_to(scene: Node, target: Control, above := 70) -> void:
-	for b in scene.find_children("*", "ScrollContainer", true, false):
-		var box := b as ScrollContainer
-		if box.is_visible_in_tree() and box.is_ancestor_of(target):
-			box.scroll_vertical = maxi(0, int(target.global_position.y - box.global_position.y) - above + box.scroll_vertical)
-	await _frames()
-
-
 func _env(key: String, fallback: String) -> String:
 	return OS.get_environment(key) if OS.get_environment(key) != "" else fallback
+
+
+func _touch(at: Vector2, down: bool) -> void:
+	var t := InputEventScreenTouch.new()
+	t.index = 0
+	t.position = at
+	t.pressed = down
+	Input.parse_input_event(t)
+	Input.flush_buffered_events()
+
+
+func _held_button(hub: Node) -> Button:
+	for n in hub.find_children("*", "Button", true, false):
+		if (n as Button).has_meta("bulk_skip") and (n as Button).is_visible_in_tree():
+			return n as Button
+	return null
+
+
+func _hub(state: Node) -> Node:
+	state.week_events = []
+	state.media_conference = {}
+	var hub = load("res://scenes/HubScene.tscn").instantiate()
+	root.add_child(hub)
+	await _frames(12)
+	load("res://scripts/ui/TrainingReportSheet.gd").close_top(hub)
+	await _frames(4)
+	return hub
+
+
+## The hub, the cue mid-press, then the survey's first question and the sheet
+## the hold opens. `tag` names the season's phase.
+func _phase(hub: Node, tag: String, dir: String, size: Vector2i) -> void:
+	await _shot("%s/%s_hub_%dx%d.png" % [dir, tag, size.x, size.y])
+	var b := _held_button(hub)
+	if b == null:
+		push_error("%s: no button holds the skip" % tag)
+		return
+	print("%s: %s holds %s at %s" % [tag, b.name, str(b.get_meta("bulk_skip")), str(b.get_global_rect())])
+	# A finger lands in window pixels: the UI may be drawn scaled (ScreenLayout).
+	var win := b.get_window()
+	var units := win.get_visible_rect().size
+	var at: Vector2 = (b.get_screen_transform() * (b.size * 0.5)) * (Vector2(win.size) / units)
+	_touch(at, true)
+	await create_timer(0.24).timeout
+	await _shot("%s/%s_hold_cue_%dx%d.png" % [dir, tag, size.x, size.y], 2)
+	print("%s: cue %.2f, words '%s'" % [tag, float(b.get_node("HoldCue").get("progress")), b.text])
+	await create_timer(0.5).timeout
+	_touch(at, false)
+	await _frames(10)
+	await _shot("%s/%s_opens_q1_%dx%d.png" % [dir, tag, size.x, size.y])
+	var n := _question_count(hub)
+	hub.call("_skip_show", n)
+	await _frames(10)
+	await _shot("%s/%s_opens_confirm_%dx%d.png" % [dir, tag, size.x, size.y])
+	hub.call("_close_skip_confirm")
+	await _frames(4)
+
+
+func _question_count(hub: Node) -> int:
+	return (root.get_node("GameState").call("skip_questions", str(hub.get("_skip_to"))) as Array).size()
 
 
 func _run() -> void:
@@ -63,79 +115,24 @@ func _run() -> void:
 	bg.color = UK.BG
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.add_child(bg)
+	# A match week in the home and away (round 10).
 	for i in range(9):
 		state.advance()
 		state._settle_week_event()
-	state.week_events = []
-	state.media_conference = {}
-	var hub = load("res://scenes/HubScene.tscn").instantiate()
-	root.add_child(hub)
-	await _frames(12)
-	load("res://scripts/ui/TrainingReportSheet.gd").close_top(hub)
-	await _frames(4)
-	var b: Control = hub.find_child("SkipSeason", true, false)
-	if b == null:
-		push_error("no SkipSeason")
-	else:
-		await _scroll_to(hub, b, int(size.y * 0.6))
-	await _shot("%s/skip_hub_%dx%d.png" % [dir, size.x, size.y])
-	# The survey (row 70): each question, then the sheet that asks.
-	hub.call("_open_skip_confirm")
-	var keys: Array = load("res://scripts/sim/SkipOrders.gd").KEYS
-	for i in range(keys.size() + 1):
-		hub.call("_skip_show", i)
-		await _frames(10)
-		var name := "skip_confirm" if i == keys.size() else "skip_q%d_%s" % [i + 1, keys[i]]
-		await _shot("%s/%s_%dx%d.png" % [dir, name, size.x, size.y])
-	# Skip just the home and away: the sheet, then the hub with the finals to coach.
-	hub.call("_open_skip_confirm", "home_away")
-	hub.call("_skip_show", 0)
-	await _frames(10)
-	await _shot("%s/skip_ha_q1_%dx%d.png" % [dir, size.x, size.y])
-	var ha_next: Button = hub.find_child("SkipNext", true, false)
-	if ha_next != null:
-		ha_next.pressed.emit()
-		await _frames(8)
-		await _shot("%s/skip_ha_q2_%dx%d.png" % [dir, size.x, size.y])
-		hub._skip_show(0)
-		await _frames(4)
-	hub.call("_skip_show", keys.size())
-	await _frames(10)
-	await _shot("%s/skip_ha_confirm_%dx%d.png" % [dir, size.x, size.y])
-	hub.call("_close_skip_confirm")
-	var ha: Dictionary = state.skip_season({}, "home_away")
-	print("skip home and away: ", ha)
-	state.week_events = []
-	state.media_conference = {}
+	var hub = await _hub(state)
+	await _phase(hub, "homeaway", dir, size)
 	hub.queue_free()
 	await _frames(2)
-	hub = load("res://scenes/HubScene.tscn").instantiate()
-	root.add_child(hub)
-	await _frames(12)
+	# The finals: the home and away played out, the first week of finals next.
+	print("skip home and away: ", state.skip_season({}, "home_away"))
+	state._settle_week_event()
+	hub = await _hub(state)
 	var card: Button = hub.find_child("CarnivalDone", true, false)
 	if card != null:
 		card.pressed.emit()
 		await _frames(12)
+	# The finals' first training report opens over the hub: closed, as a coach would.
 	load("res://scripts/ui/TrainingReportSheet.gd").close_top(hub)
-	await _frames(4)
-	await _shot("%s/skip_ha_after_%dx%d.png" % [dir, size.x, size.y])
-	var whole: Control = hub.find_child("SkipSeason", true, false)
-	if whole != null:
-		await _scroll_to(hub, whole, int(size.y * 0.6))
-		await _shot("%s/skip_ha_after_foot_%dx%d.png" % [dir, size.x, size.y])
-	var res: Dictionary = state.skip_season()
-	print("skip: ", res)
-	hub.queue_free()
-	await _frames(2)
-	hub = load("res://scenes/HubScene.tscn").instantiate()
-	root.add_child(hub)
-	await _frames(12)
-	await _shot("%s/skip_after_%dx%d.png" % [dir, size.x, size.y])
-	# A card the skip left for the coach (as Sim the week leaves it): closed,
-	# the hub under it.
-	var done: Button = hub.find_child("CarnivalDone", true, false)
-	if done != null:
-		done.pressed.emit()
-		await _frames(12)
-		await _shot("%s/skip_after_hub_%dx%d.png" % [dir, size.x, size.y])
+	await _frames(6)
+	await _phase(hub, "finals", dir, size)
 	quit()
