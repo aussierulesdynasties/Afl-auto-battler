@@ -510,7 +510,7 @@ static func _calls_entries(res: Dictionary, my_side: int, q: int) -> Array:
 					+ ((" (%s and %s%s)." % [_i50_word(n.call(p_theirs, "inside50")), _goals_word(n.call(p_theirs, "goals")), prev]) if q >= 2 else "."))
 		"contest":
 			out.append(("%s: clearances %d to %d" % [label, n.call(mine, "clearances"), n.call(theirs, "clearances")])
-					+ ((", from %d to %d%s." % [n.call(p_mine, "clearances"), n.call(p_theirs, "clearances"), prev]) if q >= 2 else "."))
+					+ ((" (%d to %d%s)." % [n.call(p_mine, "clearances"), n.call(p_theirs, "clearances"), prev]) if q >= 2 else "."))
 		"controlled":
 			out.append(("%s: %d clangers" % [label, n.call(mine, "clangers")])
 					+ ((", from %d%s." % [n.call(p_mine, "clangers"), prev]) if q >= 2 else "."))
