@@ -171,7 +171,7 @@ static func build(host: Control) -> Control:
 		t.add_child(_row(host, r, specs, width, band, ROW_H if wide else ROW_H_NARROW))
 		band = not band
 		# The cut for the finals, as the ladder has always drawn it.
-		if _sort == "" and _filter == "all" and int(r["pos"]) == Season.FINALISTS 				and int(r["pos"]) < season.ladder.size():
+		if _sort == "" and _filter == "all" and int(r["pos"]) == season.finalists() 				and int(r["pos"]) < season.ladder.size():
 			t.add_child(UiKit.rule())
 	if shown.is_empty():
 		t.add_child(UiKit.lbl("No clubs to show.", UiKit.BODY, UiKit.MUTED))
@@ -757,7 +757,7 @@ static func visible_rows(season: Season, mine: String, filter: String, sort: Str
 		var pos := int(r["pos"])
 		match filter:
 			"top10":
-				if pos > Season.FINALISTS:
+				if pos > season.finalists():
 					continue
 			"near":
 				if my_pos <= 0 or absi(pos - my_pos) > 2:
