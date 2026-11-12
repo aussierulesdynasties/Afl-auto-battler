@@ -590,8 +590,8 @@ func _draft_pick(code: String, p: Dictionary) -> bool:
 		"club": code,
 		"player_id": id,
 		# Kept as a fallback for custom/test pools. The UI resolves the current
-		# display label from player_id so changing name mode never leaves stale
-		# names in the pick log.
+		# display label from player_id, so the pick log never shows a real
+		# player's hidden label.
 		"player_name": str(p.get("generic_name", p.get("name", "Player"))),
 		"role": Ratings.role_tag(p),
 		"overall": int(p["overall"]),

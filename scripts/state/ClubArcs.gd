@@ -377,7 +377,7 @@ static func _old_club_mem(gs, st: Dictionary, code: String) -> Dictionary:
 
 
 static func _player_hit(p: Dictionary) -> Dictionary:
-	return {"who": str(p["id"]), "mem": {"name": str(p.get("name", "")), "first": str(p.get("first", "")),
+	return {"who": str(p["id"]), "mem": {"name": GameDB.player_display_name(p), "first": str(p.get("first", "")),
 			"games": int(p.get("games", 0))}}
 
 
@@ -386,7 +386,7 @@ static func _person_name(gs, id: String) -> String:
 	if not p.is_empty():
 		return GameDB.player_display_name(p)
 	var gone: Dictionary = gs.departed_names.get(id, {})
-	return str(gone.get("generic_name", gone.get("name", "his father")))
+	return GameDB.player_display_name(gone) if not gone.is_empty() else "his father"
 
 
 ## The list's trust in you on the board's 0-100 scale (Trust runs -100..100).

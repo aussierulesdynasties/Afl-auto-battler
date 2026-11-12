@@ -26,7 +26,7 @@ func run() -> void:
 	_t("_test_complete_small_draft")
 	_t("_test_real_money_cap")
 	_t("_test_real_pool")
-	_t("_test_player_name_modes")
+	_t("_test_real_player_names")
 	_t("_test_plausible_names")
 	_t("_test_no_double_names")
 	_t("_test_cap_guard")
@@ -244,7 +244,7 @@ func _test_real_pool() -> void:
 	_verify_log(draft)
 
 
-func _test_player_name_modes() -> void:
+func _test_real_player_names() -> void:
 	var p: Dictionary = GameDB.players[0]
 	var overall := int(p["overall"])
 	_check(str(p["name"]) == str(p["generic_name"]),

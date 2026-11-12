@@ -108,6 +108,16 @@ func _test_triggers_from_state() -> void:
 	GameState.trade_requests[str(star["id"])] = {"year": GameState.season_year}
 	var hit := ClubArcs.trigger(GameState, st, CoachArcs.by_id(CoachArcs.all(), "star_wants_out"), ClubStories.context(GameState), false)
 	_check(str(hit.get("who", "")) == str(star["id"]), "a trade request triggers the star-wants-out arc about him: %s" % str(hit))
+	# The card names him as every screen does: his AFL name, never the hidden
+	# label a real player's "name" field holds (real names only, 2026-11-12).
+	var shown: String = GameDB.player_display_name(star)
+	_check(str(star.get("real_name", "")) != "" and shown != str(star.get("name", ""))
+			and str(hit.get("mem", {}).get("name", "")) == shown,
+			"the arc remembers him as %s, not %s: %s" % [shown, str(star.get("name", "")), str(hit.get("mem", {}))])
+	GameState.departed_names["GONE_DAD"] = {"generic_name": "Ari Bramble", "real_name": "Gary Ablett", "name": "Ari Bramble"}
+	_check(ClubArcs._person_name(GameState, "GONE_DAD") == "Gary Ablett" and ClubArcs._person_name(GameState, "NOBODY") == "his father",
+			"a retired real father is named for real, and an unknown one is \"his father\" (%s)" % ClubArcs._person_name(GameState, "GONE_DAD"))
+	GameState.departed_names.erase("GONE_DAD")
 	GameState.trade_requests.erase(str(star["id"]))
 	_check(ClubArcs.trigger(GameState, st, CoachArcs.by_id(CoachArcs.all(), "drought"), ClubStories.context(GameState), true).is_empty(),
 			"no drought for a coach with no seasons behind him")

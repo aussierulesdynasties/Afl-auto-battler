@@ -228,14 +228,20 @@ def why_rare(card, real, fict, deck):
     """Why a card is rare or absent, from its trigger and the counts."""
     cid = card["id"]
     bits = []
+    # The game shows real names only (director, 2026-11-12). A run from before
+    # that also carried careers with generated names: they are reported only
+    # when the run has them (fict["n"] > 0).
+    old = fict["n"] > 0
     if real["cond"][cid] == 0 and fict["cond"][cid] == 0:
         bits.append("its trigger was never true in %d weeks" % (real["weeks"] + fict["weeks"]))
+    elif real["cond"][cid] == 0 and not old:
+        bits.append("its trigger was never true in %d weeks" % real["weeks"])
     elif real["cond"][cid] == 0:
         bits.append("trigger never true with real names (%d weeks), true in %.0f%% of weeks with fictional names" % (real["weeks"], trig(fict, cid)))
     else:
         bits.append("trigger true in %.0f%% of weeks" % trig(real, cid))
     if card.get("private"):
-        bits.append("private card, so a real-named player is never picked (%.1f per 10 seasons with fictional names)" % per10(fict, cid))
+        bits.append("private card, so a real-named player is never picked" + (" (%.1f per 10 seasons with fictional names)" % per10(fict, cid) if old else ""))
     needs = card.get("needs")
     if needs:
         parent = None
@@ -245,8 +251,8 @@ def why_rare(card, real, fict, deck):
                     if e["op"] == "flag" and e["name"] == needs["flag"]:
                         parent = (t["id"], c["key"])
         if parent:
-            bits.append("follow-up of %s/%s, taken %d times with real names and %d with fictional" % (
-                parent[0], parent[1], real["choice"][parent], fict["choice"][parent]))
+            bits.append("follow-up of %s/%s, taken %d times" % (parent[0], parent[1], real["choice"][parent])
+                        + (" with real names and %d with fictional" % fict["choice"][parent] if old else ""))
     cd = card.get("cooldown")
     if cd:
         bits.append("cooldown %d weeks" % cd)
@@ -273,8 +279,8 @@ def card_block(t, fl, real, fict, allp, proposals):
     if any(f.startswith("BOARD-SAID-TWICE") for f in fl[cid]):
         flags.append("board mood said in the result and again by the engine (%s)" % ", ".join(f.split()[1] for f in fl[cid] if f.startswith("BOARD-SAID-TWICE")))
     title = t["title"][0]
-    lines = ['- **%s** "%s": %.1f per 10 seasons (fictional names %.1f), trigger true %.0f%% of weeks. Taken: %s.' % (
-        cid, title, per10(real, cid), per10(fict, cid), trig(real, cid), ", ".join(taken))]
+    lines = ['- **%s** "%s": %.1f per 10 seasons%s, trigger true %.0f%% of weeks. Taken: %s.' % (
+        cid, title, per10(real, cid), " (fictional names %.1f)" % per10(fict, cid) if fict["n"] > 0 else "", trig(real, cid), ", ".join(taken))]
     for f in flags:
         lines.append("  - flag: " + f)
     for field, now, better, why in p["copy"]:
@@ -306,11 +312,12 @@ def write_report(deck, fl, careers, out_path, date, run_ids):
     w("")
     w("Open requirement row 34 (director, 2026-10-12). Audit only: no data file is changed. Method: a static pass over "
       "`data/stories/*.json` (65 cards, %d choices) and the post-match press questions (`MediaConference.gd`); then %d seeded careers "
-      "of 10 seasons on CI (`tools/audit/cards_impl.gd`; 3 real lists and 3 redraft with real names on, 2 fictional-name controls); then a "
+      "of 10 seasons on CI (`tools/audit/cards_impl.gd`; real lists and redraft starts%s); then a "
       "copy pass against CLAUDE.md. Tools: `tools/audit/card_audit_report.py` (the static flags and this sheet) and "
       "`tools/audit/card_copy_proposals.py` (the hand-written flags and copy lines). Cards are answered by a seeded random choice, so "
       "every choice and follow-up can come up. \"Per 10 seasons\" is the pooled count over the %d real-names careers (%d seasons)."
-      % (nchoice, len(careers), real["n"], real["seasons"]))
+      % (nchoice, len(careers), ", with %d fictional-name controls from before real names only" % fict["n"] if fict["n"] > 0 else "",
+         real["n"], real["seasons"]))
     w("")
     w("## Summary")
     w("")
@@ -343,11 +350,14 @@ def write_report(deck, fl, careers, out_path, date, run_ids):
     w("")
     w("Real-names careers (%d, %d seasons), under 1 per 10 seasons. The last column says why, from the card's own trigger." % (real["n"], real["seasons"]))
     w("")
-    w("| Card | Real names | Fictional names | Why |")
-    w("|---|---|---|---|")
+    w("| Card | Real names | Fictional names | Why |" if fict["n"] > 0 else "| Card | Per 10 seasons | Why |")
+    w("|---|---|---|---|" if fict["n"] > 0 else "|---|---|---|")
     deck_by = {t["id"]: t for t in deck}
     for cid in sorted(rare, key=lambda c: (per10(real, c), c)):
-        w("| %s | %.1f | %.1f | %s |" % (cid, per10(real, cid), per10(fict, cid), why_rare(deck_by[cid], real, fict, deck)))
+        if fict["n"] > 0:
+            w("| %s | %.1f | %.1f | %s |" % (cid, per10(real, cid), per10(fict, cid), why_rare(deck_by[cid], real, fict, deck)))
+        else:
+            w("| %s | %.1f | %s |" % (cid, per10(real, cid), why_rare(deck_by[cid], real, fict, deck)))
     w("")
     w("## Press questions (the older cards)")
     w("")
@@ -362,7 +372,8 @@ def write_report(deck, fl, careers, out_path, date, run_ids):
     w("")
     w("## The sheet, card by card")
     w("")
-    w("Each card: id, title, appearances per 10 seasons (real names; fictional-name controls in brackets), how often its trigger was true, the choices taken in all careers, then flags and copy lines. A card with no lines under it has no defect found. `stakes`/`label`/`result`/`text`/`title` lines are \"current\" -> \"better\" (reason).")
+    w("Each card: id, title, appearances per 10 seasons%s, how often its trigger was true, the choices taken in all careers, then flags and copy lines. A card with no lines under it has no defect found. `stakes`/`label`/`result`/`text`/`title` lines are \"current\" -> \"better\" (reason)."
+      % (" (real names; fictional-name controls in brackets)" if fict["n"] > 0 else ""))
     for cat in CATS:
         cards = [t for t in deck if t["category"] == cat]
         w("")

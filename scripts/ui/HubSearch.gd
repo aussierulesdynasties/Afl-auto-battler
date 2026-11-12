@@ -72,7 +72,7 @@ static func matches(text: String) -> Array:
 	if GameState.season != null:
 		for code in GameState.season.lists:
 			for p in GameState.season.lists[code]:
-				var nm := str(p.get("name", ""))
+				var nm := GameDB.player_display_name(p)
 				var low := nm.to_lower()
 				if not low.contains(q):
 					continue
@@ -101,7 +101,7 @@ static func describe(id: String) -> Array:
 	var bits := [GameDB.club_short(code) if code != "" else "", DraftNight.position_words(p)]
 	if p.has("age"):
 		bits.append("%d" % int(p["age"]))
-	return [str(p.get("name", "")), "  ·  ".join(bits.filter(func(s): return str(s) != "")), code]
+	return [GameDB.player_display_name(p), "  ·  ".join(bits.filter(func(s): return str(s) != "")), code]
 
 
 static func _club_of(id: String, p: Dictionary) -> String:
