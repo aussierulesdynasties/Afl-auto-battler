@@ -2275,23 +2275,46 @@ func _test_menu_and_career() -> void:
 	var chosen_l: Label = plan.find_child("Plan", true, false) if plan != null else null
 	var other_tile: Node = current_scene.find_child("ClubPlan_attacking", true, false)
 	var other_l: Label = other_tile.find_child("Plan", true, false) if other_tile != null else null
-	# Game-plan trait (director 2026-11-10): a real tap picks it, and the note says
-	# what it gives and what it costs, with the size.
-	var trait_btn: Button = current_scene.find_child("PlanTrait_fortress", true, false)
-	_check(trait_btn != null and trait_btn.size.y >= 44, "Each game-plan trait is a thumb-sized tap")
-	var why_trait: String = (await Tap.tap(trait_btn)) if trait_btn != null else "no button"
-	await _settle()
-	var t_gain_row: Node = current_scene.find_child("TraitGain", true, false)
-	var t_cost_row: Node = current_scene.find_child("TraitCost", true, false)
-	var t_gain: Label = t_gain_row.find_child("Text", false, false) if t_gain_row != null else null
-	var t_cost: Label = t_cost_row.find_child("Text", false, false) if t_cost_row != null else null
-	_check(_state.plan_trait == "fortress" and t_gain != null and t_cost != null
-			and t_gain.text.contains("8%") and t_cost.text.contains("6%"),
-			"Choosing a trait makes it the club's, and says its gain and cost (a real tap: %s)" % why_trait)
-	_state.set_plan_trait("")
-	root.size = size_plan
 	_check(chosen_l != null and other_l != null and chosen_l.get_theme_font("font") == load("res://scripts/ui/UiKit.gd").BOLD
 			and other_l.get_theme_font("font") != load("res://scripts/ui/UiKit.gd").BOLD, "The chosen plan is bold, the others are regular")
+	# Your own plan (director 2026-11-12): a real tap picks a strength and a cost;
+	# a cost on the strength's own lever cannot be picked; once both are set the
+	# plan's tile can be tapped, and it carries the plan's name.
+	_state.custom_plan = {}
+	_state._sync_club_plan()
+	_router.handle_back(true)
+	await _settle()
+	_router.go("coaching")
+	await _settle()
+	var own_tile: Button = current_scene.find_child("ClubPlan_custom", true, false)
+	_check(own_tile != null and own_tile.disabled, "Your own plan cannot be picked before it is built")
+	var s_btn: Button = current_scene.find_child("OwnPlanStrength_clean", true, false)
+	_check(s_btn != null and s_btn.size.y >= 44, "Each strength is a thumb-sized tap")
+	var why_s: String = (await Tap.tap(s_btn)) if s_btn != null else "no button"
+	await _settle()
+	var loose: Button = current_scene.find_child("OwnPlanCost_loose", true, false)
+	_check(_state.custom_plan.get("s", "") == "clean" and loose != null and loose.disabled,
+			"A tap picks the strength, and a cost on the same lever is greyed out (a real tap: %s)" % why_s)
+	var c_btn: Button = current_scene.find_child("OwnPlanCost_slow", true, false)
+	var why_c: String = (await Tap.tap(c_btn)) if c_btn != null else "no button"
+	await _settle()
+	var s_row: Node = current_scene.find_child("OwnPlanStrengthLine", true, false)
+	var c_row: Node = current_scene.find_child("OwnPlanCostLine", true, false)
+	var s_text: Label = s_row.find_child("Text", false, false) if s_row != null else null
+	var c_text: Label = c_row.find_child("Text", false, false) if c_row != null else null
+	_check(_state.custom_plan.get("c", "") == "slow" and s_text != null and c_text != null
+			and s_text.text.contains("%") and s_text.text.contains("clangers") and c_text.text.contains("6%"),
+			"A tap picks the cost, and each pick says what it does with its size (a real tap: %s; %s / %s)"
+			% [why_c, s_text.text if s_text != null else "-", c_text.text if c_text != null else "-"])
+	own_tile = current_scene.find_child("ClubPlan_custom", true, false)
+	var why_own: String = (await Tap.tap(own_tile)) if own_tile != null else "no tile"
+	await _settle()
+	var own_l: Label = own_tile.find_child("Plan", true, false) if own_tile != null else null
+	_check(_state.club_plan == "custom" and own_l != null and own_l.text == str(load("res://scripts/sim/CustomPlan.gd").DEFAULT_NAME),
+			"Once built, a tap makes your own plan the club's, under its name (a real tap: %s)" % why_own)
+	root.size = size_plan
+	_state.custom_plan = {}
+	_state._sync_club_plan()
 	_state.set_club_plan("balanced")
 	_router.handle_back(true)
 	await _settle()

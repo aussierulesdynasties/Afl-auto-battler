@@ -62,7 +62,7 @@ func _build() -> void:
 		cols.add_child(left)
 		cols.add_child(right)
 	left.add_child(_how_we_play())
-	left.add_child(_plan_trait())
+	left.add_child(_own_plan())
 	left.add_child(_form())
 	left.add_child(_sim_orders())
 	right.add_child(_list_and_cap())
@@ -251,58 +251,78 @@ func _how_we_play() -> Control:
 
 
 # ---------------------------------------------------------------------------
-# Game-plan trait (director, 2026-11-10): one strength and one matched cost on
-# top of the plan, or none. A tap picks it; the lines under the grid say what
-# it gives and what it costs, with the size. Never which is better.
+# Your own plan (director, 2026-11-12): the sixth plan in How we play, built
+# here from one strength and one cost, and named. A tap picks each; the line
+# under each list says what the pick does, with its size (the strength as your
+# side carries it out today). A strength and a cost on the same lever cannot go
+# together, so those are greyed out. Never which is better.
 # ---------------------------------------------------------------------------
-func _plan_trait() -> Control:
+func _own_plan() -> Control:
 	var v := UiKit.vbox(6)
-	v.name = "PlanTraitSection"
-	v.add_child(_head("Game-plan trait"))
-	v.add_child(_wrapped("One strength and one cost, on top of our plan, every match. Or none.",
+	v.name = "OwnPlanSection"
+	v.add_child(_head("Your own plan"))
+	v.add_child(_wrapped("One strength and one cost, as a plan of its own. It beats no plan and no plan beats it. Pick it in How we play once both are set.",
 			UiKit.SMALL, UiKit.MUTED))
-	var opts := [["none", "None"]]
-	for id in PlanTraits.IDS:
-		opts.append([id, PlanTraits.name_of(id)])
-	var note := UiKit.vbox(3)
-	note.name = "TraitNote"
-	var cur := GameState.plan_trait if GameState.plan_trait != "" else "none"
-	v.add_child(UiKit.choice_grid("PlanTrait", opts, cur, 2 if _narrow() else 3, func(k: String):
-		GameState.set_plan_trait("" if k == "none" else k)
-		_trait_note(note, k)))
-	_trait_note(note, cur)
-	v.add_child(note)
-	return v
-
-
-## The chosen trait in words: its name, what it gives and what it costs.
-func _trait_note(into: VBoxContainer, id: String) -> void:
-	for c in into.get_children():
-		into.remove_child(c)
-		c.queue_free()
-	if id == "none" or PlanTraits.valid(id) == "":
-		var none := _wrapped(PlanTraits.NONE_LINE, UiKit.BODY, UiKit.TEXT)
-		none.name = "TraitNone"
-		into.add_child(none)
-		return
-	var title := UiKit.lbl(PlanTraits.name_of(id), UiKit.BODY, UiKit.TEXT, true)
-	title.name = "TraitName"
-	into.add_child(title)
-	for part in [["Gain:", PlanTraits.UPSIDE, "TraitGain"], ["Cost:", PlanTraits.COST, "TraitCost"]]:
+	var plan: Dictionary = GameState.custom_plan
+	var field := UiKit.search_field(CustomPlan.name_clean(str(plan.get("name", ""))), CustomPlan.DEFAULT_NAME)
+	field.name = "OwnPlanName"
+	field.clear_button_enabled = false
+	field.max_length = CustomPlan.NAME_MAX
+	var keep_name := func(_t := "") -> void:
+		if CustomPlan.name_clean(field.text) != CustomPlan.name_clean(str(GameState.custom_plan.get("name", ""))):
+			GameState.set_custom_name(field.text)
+			_rebuild_in_place()
+	field.text_submitted.connect(keep_name)
+	field.focus_exited.connect(keep_name)
+	v.add_child(field)
+	var scale := MatchSim.upside_scale(GameState.my_coached_squad(), CustomPlan.KEY)
+	var s := str(plan.get("s", ""))
+	var c := str(plan.get("c", ""))
+	for part in [["Strength", "s", true], ["Cost", "c", false]]:
+		var is_s: bool = part[2]
+		var cur := s if is_s else c
+		v.add_child(UiKit.spacer(2))
+		v.add_child(UiKit.lbl(str(part[0]), UiKit.BODY, UiKit.TEXT, true))
+		var ids: Array = CustomPlan.STRENGTH_IDS if is_s else CustomPlan.COST_IDS
+		var opts := []
+		for id in ids:
+			opts.append([id, str(CustomPlan.entry(str(id), is_s)["name"])])
+		var key := "OwnPlan%s" % ("Strength" if is_s else "Cost")
+		var grid := UiKit.choice_grid(key, opts, cur, 3 if _narrow() else 4, func(k: String):
+			if GameState.set_custom_pick(str(part[1]), k):
+				_rebuild_in_place())
+		# A pick on the same lever as the other part would cancel it out.
+		for id in ids:
+			var other := c if is_s else s
+			var clash := CustomPlan.clash(str(id), other) if is_s else CustomPlan.clash(other, str(id))
+			var b := grid.get_node_or_null("%s_%s" % [key, id]) as Button
+			if b != null and clash:
+				b.disabled = true
+				b.add_theme_color_override("font_disabled_color", Color(UiKit.MUTED, 0.45))
+		v.add_child(grid)
+		var says := "Pick one." if cur == "" else CustomPlan.line(cur, is_s, scale if is_s else 1.0)
 		var row := UiKit.hbox(6)
-		row.name = str(part[2])
-		var mk := UiKit.lbl(str(part[0]), UiKit.SECONDARY, UiKit.label_ink(), true)
+		row.name = key + "Line"
+		var mk := UiKit.lbl("Gain:" if is_s else "Cost:", UiKit.SECONDARY, UiKit.label_ink(), true)
 		mk.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		mk.autowrap_mode = TextServer.AUTOWRAP_OFF
 		row.add_child(mk)
-		var l := _wrapped(str((part[1] as Dictionary).get(id, "")), UiKit.SECONDARY, UiKit.TEXT)
+		var l := _wrapped(says, UiKit.SECONDARY, UiKit.TEXT if cur != "" else UiKit.MUTED)
 		l.name = "Text"
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(l)
-		into.add_child(row)
-	var basis := _wrapped(str(PlanTraits.BASIS.get(id, "")), UiKit.SMALL, UiKit.MUTED)
-	basis.name = "TraitBasis"
-	into.add_child(basis)
+		v.add_child(row)
+	return v
+
+
+## A pick or a new name rebuilds the page (the plan tile carries its name and
+## whether it can be picked), keeping the player's place on it.
+func _rebuild_in_place() -> void:
+	if not is_inside_tree() or is_queued_for_deletion():
+		return
+	var places := UiKit.scroll_places(_root)
+	_build()
+	UiKit.restore_places(_root, places)
 
 
 # ---------------------------------------------------------------------------

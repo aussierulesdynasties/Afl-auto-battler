@@ -157,9 +157,11 @@ static var usual := {}
 
 ## Your coach's archetype record (GameState.coach_arch, the same dictionary).
 static var my_arch := {}
-## Your game-plan trait (GameState.plan_trait, PlanTraits id). A rival runs
-## the one that goes with its usual game (PlanTraits.FOR_PLAN).
-static var my_trait := ""
+## Your own plan (GameState.custom_plan, CustomPlan). {} = none built.
+static var my_custom := {}
+## Each rival club's own plan this season, for a coach who built one
+## (GameState.rival_plans "custom", the same dictionary): club -> plan.
+static var customs := {}
 
 
 ## A club's senior coach's two archetypes this round: [Strategic, Philosophical]
@@ -210,7 +212,7 @@ static func apply_row(sq: Squad, t: Dictionary) -> void:
 			"" if bool(t["ai"]) else str((my_arch.get("held", {}) as Dictionary).get("s", "")),
 			str(t.get("arch_p", ""))]
 	sq.arch = Archetypes.levers(str(ids[0]), str(ids[1]))
-	sq.plan_trait = PlanTraits.for_plan(sq.usual_plan) if bool(t["ai"]) else my_trait
+	sq.custom_plan = (customs.get(sq.code, {}) as Dictionary).duplicate() if bool(t["ai"]) else my_custom.duplicate()
 	sq.tactics_exec *= float(sq.arch.get("exec", 1.0))
 
 

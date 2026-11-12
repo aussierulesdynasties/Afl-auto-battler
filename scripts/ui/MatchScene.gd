@@ -779,6 +779,14 @@ const GAMEPLANS := [
 	["defensive", "Defensive Press"], ["contest", "Win Contest"],
 	["controlled", "Controlled Tempo"],
 ]
+## The plans at a break: the five, then your own when it is built (CustomPlan).
+func _gameplans() -> Array:
+	var out := GAMEPLANS.duplicate()
+	if CustomPlan.ready(CoachEffects.my_custom):
+		out.append([CustomPlan.KEY, CoachReport.plan_label(CustomPlan.KEY)])
+	return out
+
+
 ## A PC break's choice buttons: a mouse, not a thumb (phones keep 44).
 const PC_CHOICE_H := 34.0
 
@@ -1027,7 +1035,7 @@ func _show_coach_box() -> void:
 		var known := GameState.plan_known_line(key)
 		plan_known.text = known
 		plan_known.visible = known != ""
-	var plan := _choice_grid("PlanPicker", GAMEPLANS, calls, "gameplan", 2 if narrow else 3, sync_note)
+	var plan := _choice_grid("PlanPicker", _gameplans(), calls, "gameplan", 2 if narrow else 3, sync_note)
 	# The heading and the plan under it stay together.
 	var plan_block := _call_block("Gameplan", plan)
 	plan_block.remove_meta("break_unit")
@@ -1857,7 +1865,7 @@ func _call_answer(key: String, calls: Dictionary, c: Dictionary) -> String:
 		return none if id == "" else _initial_name(GameDB.player_display_name_by_id(id, none))
 	match key:
 		"plan":
-			for g in GAMEPLANS:
+			for g in _gameplans():
 				if str(g[0]) == str(calls["gameplan"]):
 					return str(g[1])
 			return str(calls["gameplan"])
@@ -2546,7 +2554,7 @@ func _calls_record(kind: String) -> Control:
 		var plans: Array = e["plans"]
 		var side_words := func(side: int) -> String:
 			if kind == "gameplan":
-				return CoachReport.plan_label(str((plans[side] as Dictionary).get("gameplan", "balanced")))
+				return CoachReport.plan_label(str((plans[side] as Dictionary).get("gameplan", "balanced")), side == _my_side)
 			return CoachReport.pep_label(str((plans[side] as Dictionary).get("pep", "steady")))
 		var sides: Array = [_my_side, 1 - _my_side] if kind == "gameplan" else [_my_side]
 		var row := HFlowContainer.new()
@@ -2619,7 +2627,7 @@ func _calls_view(q: int) -> Control:
 		if q >= 2:
 			before = (snaps[q - 2] as Dictionary).get("impact", [{}, {}])
 	v.add_child(UiKit.section("What your calls did" + (" in Q%d" % q if q > 0 else "")))
-	var lines := CoachReport.impact_lines(now, before, _my_side, 0.3, _res.get("plan_traits", ["", ""]))
+	var lines := CoachReport.impact_lines(now, before, _my_side, 0.3)
 	if not lines.is_empty():
 		var wnote := UiKit.lbl(MatchNotes.CALLS_WORTH_NOTE, UiKit.SMALL, UiKit.MUTED)
 		wnote.name = "CallsWorthNote"
