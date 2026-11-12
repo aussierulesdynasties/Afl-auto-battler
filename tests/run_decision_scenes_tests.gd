@@ -519,12 +519,12 @@ func _test_first_call_warmed() -> void:
 	await _settle()
 	var colours := [db.club_colours(str(sim.squads[0].code)), db.club_colours(str(sim.squads[1].code))]
 	# One crowd all match: the call scenes seat the replay's (StoppageVignette.CROWD).
-	var seed_: int = load("res://scripts/ui/match/StoppageVignette.gd").CROWD
-	_check(seed_ == 11, "the call scenes seat the same crowd as the replay")
-	var key := "seats|%s|%d|%s" % [str(colours), seed_, (ground.seat_colour() as Color).to_html()]
+	var crowd_seed: int = load("res://scripts/ui/match/StoppageVignette.gd").CROWD
+	_check(crowd_seed == 11, "the call scenes seat the same crowd as the replay")
+	var key := "seats|%s|%d|%s" % [str(colours), crowd_seed, (ground.seat_colour() as Color).to_html()]
 	_check((crowd._cache as Dictionary).has(key), "the first call's crowd (home and away colours) is painted at the break")
 	if bool((ground.spec as Dictionary).get("hill", false)):
-		var hill := "seats|%s|%d|%s" % [str(colours), seed_ + 1, (ground.HILL as Color).to_html()]
+		var hill := "seats|%s|%d|%s" % [str(colours), crowd_seed + 1, (ground.HILL as Color).to_html()]
 		_check((crowd._cache as Dictionary).has(hill), "the ground's hill crowd is painted at the break")
 	_check(m.find_child("CallSceneWarm", true, false) == null, "the warm scene is gone before play")
 	_check(sim.current_minute == minute_was and (sim.events as Array).size() == events_was,
