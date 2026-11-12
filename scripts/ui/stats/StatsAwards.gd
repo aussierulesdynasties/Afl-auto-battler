@@ -43,11 +43,11 @@ static func build(host: Control) -> Control:
 		v.add_child(_rising(host))
 		return v
 	var played := mini(season.round_index, season.regular_rounds())
-	var info := "After Round %d. Nothing here is awarded until the season's end." % played
+	var info := "After %s. Nothing here is awarded until the season's end." % season.round_name(played - 1)
 	if season.is_regular_done():
 		info = "Home and away complete. The awards are presented after the Grand Final."
 	elif played == 0:
-		info = "The races start with Round 1. Nothing here is awarded until the season's end."
+		info = "The races start with %s. Nothing here is awarded until the season's end." % season.round_name(0)
 	var head := _para(info)
 	head.name = "AwardsProvisional"
 	v.add_child(head)
@@ -247,10 +247,10 @@ static func _rising(host: Control) -> Control:
 	var noms: Array = (rec.get("rounds", []) as Array).duplicate()
 	noms.sort_custom(func(a, b): return int(a["round"]) > int(b["round"]))
 	if noms.is_empty() and from <= 1:
-		v.add_child(_para("The first nomination comes after Round 1."))
+		v.add_child(_para("The first nomination comes after %s." % GameState.season.round_name(0)))
 	for i in range(noms.size()):
 		var n: Dictionary = noms[i]
-		var b := _player_row(host, str(n["id"]), str(n["club"]), "", "", "Round %d" % int(n["round"]), 0.0,
+		var b := _player_row(host, str(n["id"]), str(n["club"]), "", "", GameState.season.round_name(int(n["round"]) - 1), 0.0,
 				false, i % 2 == 1, false, ROUND_W)
 		b.name = "RisingStar_%d" % int(n["round"])
 		v.add_child(b)

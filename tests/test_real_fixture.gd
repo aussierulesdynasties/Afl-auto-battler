@@ -39,6 +39,7 @@ func run() -> void:
 	_t("_test_real_gather_round")
 	_t("_test_differing_clubs_draw")
 	_t("_test_real_2026")
+	_t("_test_opening_round_names")
 	_t("_test_after_2026_unchanged")
 	_t("_test_real_season_played_and_saved")
 	GameState.replay_seed = 0
@@ -206,6 +207,35 @@ func _test_real_2026() -> void:
 		var d := Season.new(codes.duplicate(), l, int(sd), 2026)
 		var e := Season.new(codes.duplicate(), l, int(sd), 2027)
 		_check(Golden.fixture_text(d) == Golden.fixture_text(e), "2026 with a created club, seed %d: the game's own draw" % sd)
+
+
+## A season with the AFL's Opening Round (a real 2024 on) names its rounds as
+## the AFL does: "Opening Round", then Round 1 to Round 24; a label reads back
+## to the round it names. Every other season counts from Round 1.
+func _test_opening_round_names() -> void:
+	var s := _season(2026, RealFixture.clubs_for(2026))
+	_check(s.has_opening_round(), "2026: an Opening Round")
+	_check(s.round_name(0) == "Opening Round" and s.round_name(1) == "Round 1" and s.round_name(24) == "Round 24",
+			"2026: Opening Round, Round 1 ... Round 24 (%s, %s, %s)" % [s.round_name(0), s.round_name(1), s.round_name(24)])
+	_check(s.round_progress(0) == "Opening Round" and s.round_progress(3) == "Round 3 of 24",
+			"2026: Opening Round, then Round 3 of 24 (%s)" % s.round_progress(3))
+	_check(s.round_of_label("Opening Round") == 1 and s.round_of_label("Round 1") == 2
+			and s.round_of_label("Round 24") == 25 and s.round_of_label("Grand Final") == 0,
+			"2026: a label reads back to the round it names")
+	# The real Gather Rounds were Round 4 (2024) and Round 5 (2025).
+	for c in [[2024, "Round 4 · Gather Round"], [2025, "Round 5 · Gather Round"]]:
+		var g := _season(int(c[0]), RealFixture.clubs_for(int(c[0])))
+		var got := g.round_label(g.gather_round())
+		_check(got == str(c[1]), "%d: the Gather Round is %s (%s)" % [c[0], c[1], got])
+	for y in [2023, 1990]:
+		var o := _season(y, RealFixture.clubs_for(y))
+		_check(not o.has_opening_round() and o.round_name(0) == "Round 1" and o.round_of_label("Round 1") == 1,
+				"%d: no Opening Round, Round 1 first" % y)
+	var created := RealFixture.clubs_for(2026)
+	created[17] = "TAS"
+	var c26 := Season.new(created, Golden.lists(created), 11, 2026)
+	_check(not c26.has_opening_round() and c26.round_progress(0) == "Round 1 of 24",
+			"2026 with a created club: Round 1 of 24 (%s)" % c26.round_progress(0))
 
 
 ## The game's league after 2026 is the same seeded fixture as before real

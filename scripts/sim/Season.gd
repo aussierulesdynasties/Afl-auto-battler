@@ -595,6 +595,44 @@ func real_fixture() -> Array:
 
 ## Whether this season plays a real fixture: its matches carry their real
 ## ground. Read from the fixture, so a saved season answers the same.
+## The AFL's Opening Round (2024 on): a real season of those years plays it
+## first, and the rounds after it count from 1, as the AFL numbers them.
+func has_opening_round() -> bool:
+	return year >= 2024 and is_real_fixture()
+
+
+## A home-and-away round's name as the AFL says it: "Opening Round", "Round 7".
+## Every screen names a round through this (or round_label), never round_i + 1.
+func round_name(round_i: int) -> String:
+	if has_opening_round():
+		return "Opening Round" if round_i == 0 else "Round %d" % round_i
+	return "Round %d" % (round_i + 1)
+
+
+## The AFL's number of the season's last round ("Round 3 of 24").
+func last_round_number() -> int:
+	return regular_rounds() - (1 if has_opening_round() else 0)
+
+
+## Where a round sits in the season: "Opening Round", "Round 3 of 24".
+func round_progress(round_i: int) -> String:
+	if has_opening_round() and round_i == 0:
+		return round_name(0)
+	return "%s of %d" % [round_name(round_i), last_round_number()]
+
+
+## The round a match label names, counted as round_index + 1 counts it
+## (the Opening Round is 1), or 0 for a final or no round.
+func round_of_label(label: String) -> int:
+	var l := label.split(" · ")[0].strip_edges()
+	if l == "Opening Round":
+		return 1 if has_opening_round() else 0
+	if not l.begins_with("Round "):
+		return 0
+	var n := l.trim_prefix("Round ").to_int()
+	return n + 1 if has_opening_round() else n
+
+
 func is_real_fixture() -> bool:
 	for r in fixture:
 		for m in r:
@@ -1221,7 +1259,7 @@ func round_at_home(round_i: int, home_code: String, away_code: String) -> Array:
 
 ## A home-and-away round's name: "Round 5", or "Round 5 · Gather Round".
 func round_label(round_i: int) -> String:
-	var label := "Round %d" % (round_i + 1)
+	var label := round_name(round_i)
 	if round_i >= 0 and round_i == gather_round():
 		label += " · " + GatherRound.NAME
 	return label

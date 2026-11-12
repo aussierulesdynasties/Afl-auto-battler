@@ -52,7 +52,7 @@ func fill(v: VBoxContainer) -> void:
 		var where := ("at home" if str(nxt["venue"]) == "home" else "away")
 		if nxt.has("event"):
 			where = "%s at %s" % [str(nxt["event"]), str(nxt["ground"])]
-		heading.add_child(UiKit.line("Round %d, %s" % [GameState.season.round_index + 1, where],
+		heading.add_child(UiKit.line("%s, %s" % [GameState.season.round_name(GameState.season.round_index), where],
 				UiKit.TITLE, UiKit.TEXT, true))
 		v.add_child(heading)
 		# Who plays whom: you and them, each club's ink and guernsey (director,

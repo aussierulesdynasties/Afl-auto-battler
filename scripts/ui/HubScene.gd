@@ -462,7 +462,7 @@ func _week_title(season: Season) -> String:
 	if season.is_season_over():
 		return "%d season" % GameState.season_year
 	if not season.is_regular_done():
-		return "Round %d of %d" % [season.round_index + 1, season.regular_rounds()]
+		return season.round_progress(season.round_index)
 	return _finals_label()
 
 
@@ -920,7 +920,7 @@ func _week_section(season: Season) -> Control:
 	elif _regular_bye(season):
 		nv.add_child(UiKit.lbl("Bye", UiKit.H1, UiKit.TEXT, true))
 		nv.add_child(UiKit.lbl(
-				"No game for us in Round %d. The rest of the league plays on." % (season.round_index + 1),
+				"No game for us in %s. The rest of the league plays on." % season.round_name(season.round_index),
 				UiKit.BODY, UiKit.MUTED))
 	elif _upcoming_match().is_empty():
 		match GameState.my_finals_status():
@@ -1727,7 +1727,7 @@ func _week_actions(season: Season) -> Control:
 	elif _regular_bye(season):
 		# A home-and-away bye: the season goes on, one round at a time.
 		buttons.append(_nav_button("Team", func(): Router.go("selection")))
-		var bye := _nav_button("Play Round %d" % (season.round_index + 1), _on_sim_round_pressed, true)
+		var bye := _nav_button("Play " + season.round_name(season.round_index), _on_sim_round_pressed, true)
 		bye.name = "SimByeRound"
 		buttons.append(_with_bulk_skip(bye, season))
 	elif _upcoming_match().is_empty() and GameState.my_finals_status() == "bye":
