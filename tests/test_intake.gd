@@ -1258,8 +1258,11 @@ func _test_real_lists_start() -> void:
 		for q in GameState.season.lists[code]:
 			if int(q.get("drafted_year", 0)) == GameDB.DATA_SEASON and str(q.get("drafted_type", "")) in ["FS", "NGA"]:
 				opening_ties.append(int(q.get("contract_years", 0)))
-	_check(opening_ties.size() == 7 and opening_ties.all(func(y): return y == Contracts.ROOKIE_YEARS),
-			"The 2026 class's seven father-son and NGA picks start 2027 with two seasons left (%s)" % str(opening_ties))
+	# Seven are tied in the class; West Coast, at 43 of the 44, has room for
+	# one of its three (RookieList.add_block), so five are listed as ties and
+	# its other two go through the open draft.
+	_check(opening_ties.size() == 5 and opening_ties.all(func(y): return y == Contracts.ROOKIE_YEARS),
+			"The 2026 class's five listed father-son and NGA picks start 2027 with two seasons left (%s)" % str(opening_ties))
 	var same_vet: Dictionary = {}
 	for q in GameState.my_list:
 		if str(q["id"]) == str(vet["id"]):
