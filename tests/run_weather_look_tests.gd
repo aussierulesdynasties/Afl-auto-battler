@@ -236,6 +236,15 @@ func _test_night_look_is_unchanged() -> void:
 	_check(Wx.shadow_alpha("perfect") == 0.32 and Wx.shadow_alpha("hot") == 0.58 and Wx.shadow_alpha("wet") == 0.18
 			and Wx.shadow_tight("hot") == 1.0, "Shadows under lights fall as they did")
 	_check(Ground._lit(Color(0.2, 0.3, 0.4), Color.WHITE, 0.0) == Color(0.2, 0.3, 0.4), "At night no stand colour moves toward daylight")
+	# The seats the crowd is painted on (whoever paints it ahead of a scene asks the ground).
+	var was: String = Kickoff.shown
+	Kickoff.shown = Kickoff.NIGHT
+	var seats: Color = Ground.seat_colour()
+	_check(seats == Color.html(str(Ground.spec.get("seat", "#121216"))), "Under lights the seats are the ground's own colour")
+	Kickoff.shown = Kickoff.DAY
+	_check(Ground.seat_colour() != seats and Ground.seat_colour() == Ground._seats_in(Kickoff.DAY),
+			"By day the ground names the paler seats it draws, so a crowd painted ahead is the one shown")
+	Kickoff.shown = was
 
 
 ## Hot must read as hot at a glance: set margins between a hot day and a mild one.
