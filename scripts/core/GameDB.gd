@@ -145,6 +145,13 @@ var LIST_ADDITIONS_CSV := "res://data/list_additions_2026.csv"
 ## they are rated from that record through Ratings.derive_all, like any listed
 ## player, not as draft prospects.
 var LIST_ADDITION_STATS_CSV := "res://data/list_additions_stats.csv"
+## Which players who played a 2026 game were on a rookie list, not the senior
+## list (data/list_types_2026.csv, from DraftGuru's 2026 lists, club by club):
+## "rookie" (Category A) or "cat_b" (Category B). Everyone else in
+## players_2026.csv is a senior-listed player. Read into p["list_type"], the key
+## the list additions carry, so a real-lists career splits each club's list the
+## way the club really had it (RookieList.seed_lists).
+var LIST_TYPES_CSV := "res://data/list_types_2026.csv"
 ## Who left a list at the end of 2026, before the National Draft: the key
 ## "first|last|dob" (lower case) to the kind ("retired", "delisted",
 ## "rookie_delisted", "catb_delisted").
@@ -231,6 +238,7 @@ func reload(dataset := Datasets.DEFAULT) -> void:
 	_real_names = {}
 	_state_aliases = {}
 	players = _load_players()
+	_apply_list_types(players)
 	_load_appearance()
 	_apply_origin(players)
 	Ratings.derive_all(players)
@@ -298,6 +306,7 @@ func _use_dataset(id: String, row: Dictionary) -> void:
 	ORIGIN_CSV = str(row.get("origin", ""))
 	LIST_ADDITIONS_CSV = str(row.get("list_additions", ""))
 	LIST_ADDITION_STATS_CSV = str(row.get("list_addition_stats", ""))
+	LIST_TYPES_CSV = str(row.get("list_types", ""))
 	DEPARTURES_CSV = str(row.get("departures", ""))
 	CLUB_MOVES_CSV = str(row.get("club_moves", ""))
 	LADDER_PATH = str(row.get("ladder", ""))
@@ -802,6 +811,37 @@ func club_additions(code: String) -> Array:
 	return list_additions.filter(func(q): return str(q.get("club", "")) == code)
 
 
+## Mark the rookie-listed players of the data season (LIST_TYPES_CSV) by
+## club, first and last name. A row that matches nobody is reported.
+func _apply_list_types(list: Array) -> void:
+	if LIST_TYPES_CSV == "" or not FileAccess.file_exists(LIST_TYPES_CSV):
+		return
+	var rows := _read_rows(LIST_TYPES_CSV)
+	if rows.size() < 2:
+		return
+	var header: Array = rows[0]
+	var idx := {}
+	for j in range(header.size()):
+		idx[header[j]] = j
+	var want := {}
+	for i in range(1, rows.size()):
+		var cells: Array = rows[i]
+		if cells.size() < header.size() or _cell_str(cells, idx, "list") == "":
+			continue
+		var key := ("%s|%s|%s" % [_cell_str(cells, idx, "club"), _cell_str(cells, idx, "first"),
+				_cell_str(cells, idx, "last")]).to_lower()
+		want[key] = _cell_str(cells, idx, "list")
+	var hit := {}
+	for p in list:
+		var key := ("%s|%s|%s" % [str(p.get("club", "")), str(p.get("first", "")), str(p.get("last", ""))]).to_lower()
+		if want.has(key):
+			p["list_type"] = want[key]
+			hit[key] = true
+	for key in want:
+		if not hit.has(key):
+			push_warning("GameDB: %s names %s, who is not in the players file." % [LIST_TYPES_CSV, key])
+
+
 func _load_departures() -> Dictionary:
 	var out := {}
 	if not FileAccess.file_exists(DEPARTURES_CSV):
@@ -846,12 +886,14 @@ func _load_club_moves() -> Dictionary:
 		var key := _look_key({"first": _cell_str(cells, idx, "first"),
 				"last": _cell_str(cells, idx, "last"), "dob": _cell_str(cells, idx, "dob")})
 		out[key] = {"from": _cell_str(cells, idx, "from_club"), "to": _cell_str(cells, idx, "to_club"),
-				"kind": _cell_str(cells, idx, "kind")}
+				"kind": _cell_str(cells, idx, "kind"), "list": _cell_str(cells, idx, "list")}
 	return out
 
 
 ## The club this player joined in the 2026 trade period or free agency, as
-## {"from", "to", "kind"}; {} if he stayed where he played 2026.
+## {"from", "to", "kind", "list"}; {} if he stayed where he played 2026. "list"
+## is the list he joined where a source names it ("rookie" or "cat_b"; "" or
+## "senior" is the senior list).
 func club_move(p: Dictionary) -> Dictionary:
 	return club_moves.get(_look_key(p), {})
 

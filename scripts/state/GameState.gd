@@ -1974,6 +1974,12 @@ func begin_real_lists() -> void:
 			(league_lists[code] as Array).erase(p)
 			p["data_club"] = str(p.get("data_club", code))
 			p["club"] = str(mv["to"])
+			# He lands on the list he really joined: the senior list (row 88),
+			# a rookie at his old club included, unless the data names a
+			# rookie list (a Category B signing, data/club_moves_2026.csv).
+			p.erase("list_type")
+			if str(mv.get("list", "")) in ["rookie", "cat_b"]:
+				p["list_type"] = str(mv["list"])
 			(league_lists[str(mv["to"])] as Array).append(p)
 			joined[str(mv["to"])] = true
 	for code in joined:
@@ -1992,9 +1998,14 @@ func begin_real_lists() -> void:
 		if str(q.get("id", "")) == custom_prospect_id and custom_prospect_id != "":
 			cls.append(q)
 	var open_pool := []
+	# The real rookies are marked first, so the 44 is counted as it stands
+	# (a Category B rookie is outside it) before any tied prospect is listed.
+	for code in league_lists:
+		RookieList.mark_real_types(league_lists[code])
 	for p in cls:
 		var tie := str(p.get("tied_club", ""))
-		if tie != "" and int(p.get("draft_year", 0)) == season_year and league_lists.has(tie):
+		if tie != "" and int(p.get("draft_year", 0)) == season_year and league_lists.has(tie) \
+				and _tie_fits(tie):
 			_assign_draftee(tie, p, str(p.get("tied_type", "tied")))
 		else:
 			open_pool.append(p)
@@ -2020,6 +2031,7 @@ func begin_real_lists() -> void:
 	draft = Draft.build_intake(open_pool, active.duplicate(), opening_order(active),
 			prospect_read_seed(), sizes, role_counts, role_pairs)
 	draft.senior_cap = RookieList.SENIOR_SPOTS
+	_draft_sees_44()
 	draft.user_max_age = Challenge.max_age(self)
 	OwnProspect.check(self)
 	mark_dirty()
@@ -2099,6 +2111,9 @@ func choose_real_club(code: String) -> void:
 	my_list = league_lists[code]
 	draft.scouting_mults[code] = recruiting_uncertainty_mult()
 	draft.start_for_user(code)
+	var no_spot_line := _ties_without_a_spot_line(code)
+	if no_spot_line != "":
+		add_news("draft", no_spot_line)
 	if rebuild:
 		add_news("challenge", "%s The 2026 National Draft is next." % Challenge.stated_line(self))
 	mark_dirty()
@@ -2116,8 +2131,57 @@ func _draft_sees_list(code: String) -> void:
 			c[r] = int(c[r]) + 1
 		pairs.append([r, str(p.get("role2", ""))])
 	draft.existing_sizes[code] = RookieList.draft_size(arr)
+	draft.list_44[code] = RookieList.list_size(arr)
 	draft.existing_role_counts[code] = c
 	draft.existing_roles[code] = pairs
+
+
+## The National Draft is told every club's list as the 44 counts it, so a
+## club at or over the 44 passes its picks (RookieList.add_block's rule).
+func _draft_sees_44() -> void:
+	for code in draft.existing_sizes:
+		if league_lists.has(code):
+			draft.list_44[code] = RookieList.list_size(league_lists[code])
+		elif draft.guests.has(code):
+			draft.list_44[code] = RookieList.list_size(ExpansionBuild.list_of(self, str(code)))
+
+
+## A father-son or academy player is listed before the draft only where the
+## 44 has room for him (RookieList.add_block: the same rule as every other
+## way onto a list; he may take the senior list past its spots, as he always
+## could). With no room he goes into the open draft, where any club may take him.
+func _tie_fits(code: String) -> bool:
+	var arr: Array = league_lists[code] if league_lists.has(code) else ExpansionBuild.list_of(self, code)
+	return RookieList.add_block(arr, "senior") != "list"
+
+
+## The tied prospects of `code` this year that it had no list spot for, by
+## name: they are in the open draft.
+func ties_without_a_spot(code: String) -> Array:
+	var out := []
+	if draft == null or code == "":
+		return out
+	for p in draft.pool:
+		if str(p.get("tied_club", "")) == code and int(p.get("draft_year", 0)) == season_year \
+				and not drafted_draftees.has(str(p["id"])):
+			out.append(GameDB.player_display_name(p))
+	return out
+
+
+## The news line for them ("" when there are none).
+func _ties_without_a_spot_line(code: String) -> String:
+	var names := ties_without_a_spot(code)
+	if names.is_empty():
+		return ""
+	return "%s No list spot for %s (father-son or academy), so %s in the open draft and any club may take %s." % [
+			RookieList.over_words(RookieList.list_size(league_lists[code])), _all_names(names),
+			"he is" if names.size() == 1 else "they are", "him" if names.size() == 1 else "them"]
+
+
+func _all_names(names: Array) -> String:
+	if names.size() <= 1:
+		return "".join(PackedStringArray(names))
+	return "%s and %s" % [", ".join(PackedStringArray(names.slice(0, names.size() - 1))), str(names[names.size() - 1])]
 
 
 # ---------------------------------------------------------------------------
@@ -2354,10 +2418,16 @@ func begin_intake_draft() -> bool:
 		var tied_this_year: bool = int(p.get("draft_year", 0)) == season_year
 		var academy: String = ExpansionBuild.academy_club(self, p)
 		if tie != "" and tied_this_year and league_lists.has(tie):
-			_assign_draftee(tie, p, str(p.get("tied_type", "tied")))
+			if _tie_fits(tie):
+				_assign_draftee(tie, p, str(p.get("tied_type", "tied")))
+			else:
+				open_pool.append(p)
 		elif academy != "":
 			ExpansionBuild.ensure_foundation(self, academy)
-			_assign_draftee(academy, p, "NGA")
+			if _tie_fits(academy):
+				_assign_draftee(academy, p, "NGA")
+			else:
+				open_pool.append(p)
 		else:
 			open_pool.append(p)
 	if my_club != "" and league_lists.has(my_club):
@@ -2404,6 +2474,10 @@ func begin_intake_draft() -> bool:
 	draft.senior_cap = RookieList.SENIOR_SPOTS
 	draft.user_max_age = Challenge.max_age(self)
 	ExpansionBuild.seat_guests(self, draft)
+	_draft_sees_44()
+	var no_spot_line := _ties_without_a_spot_line(my_club) if league_lists.has(my_club) else ""
+	if no_spot_line != "":
+		add_news("draft", no_spot_line)
 	# Recruiting funding narrows only our club's uncertainty; rivals use the
 	# same scouting model at Standard rather than hidden true ratings.
 	draft.scouting_mults[my_club] = recruiting_uncertainty_mult()
@@ -3016,7 +3090,7 @@ func start_season(club_code: String, list: Array) -> void:
 			unique_jumpers(lists[code])
 		# A re-drafted list of 44 splits into 38 seniors
 		# and six rookies, the youngest.
-		RookieList.seed_lists(lists)
+		RookieList.seed_lists(lists, false)
 		# The 2026 draft class had never been drafted: the club that took
 		# him in the League redraft first drafted him (home-grown, Challenge).
 		# Real players keep the club that drafted them in the AFL.
@@ -8855,8 +8929,9 @@ func offer_free_agent(player_id: String, salary: int, years: int) -> Dictionary:
 	if barred != "":
 		return {"ok": false, "answer": "", "code": "challenge", "reason": barred}
 	# A signing lands on the senior list (row 88), so it needs a senior spot.
-	if not RookieList.senior_spot_free(my_list):
-		return {"ok": false, "answer": "", "reason": "Your senior list is full (%d)." % RookieList.SENIOR_SPOTS}
+	var no_spot := RookieList.add_block(my_list, "senior")
+	if no_spot != "":
+		return {"ok": false, "answer": "", "reason": RookieList.block_words(my_list, no_spot)}
 	var talks: Dictionary = p.get("talks", {})
 	if talks.has("refused"):
 		return {"ok": false, "answer": "walk", "reason": Contracts.REFUSED_TALKS % int(talks["refused"])}
@@ -8980,10 +9055,11 @@ func _decide_fa(p: Dictionary) -> String:
 			continue
 		var code := str(o["club"])
 		var list: Array = season.lists.get(code, [])
-		var no_spot := not RookieList.senior_spot_free(list)
+		var why_not := RookieList.add_block(list, "senior")
+		var no_spot := why_not != ""
 		if no_spot or int(o["salary"]) > _cap_room_of(code):
 			if code == my_club:
-				mine_out = "fa_your_list" if no_spot else "fa_your_cap"
+				mine_out = ("fa_your_44" if why_not == "list" else "fa_your_list") if no_spot else "fa_your_cap"
 			continue
 		if code == my_club:
 			mine = o
@@ -10545,6 +10621,11 @@ func draft_spots_line(going: int = -1) -> String:
 	var picks: Array = s["picks"]
 	var line := "%s senior list spot%s, %s pick%s in the %d draft." % [_count_word(spots, true), "" if spots == 1 else "s",
 			_count_word(picks.size()), "" if picks.size() == 1 else "s", season_year]
+	if bool(s.get("by_44", false)):
+		# The 44, not the senior list, sets the spots: say which count it is.
+		line = "%s list spot%s (%d of %d on your senior and Category A rookie lists together), %s pick%s in the %d draft." % [
+				_count_word(spots, true), "" if spots == 1 else "s", int(s["list"]), int(s["list_cap"]),
+				_count_word(picks.size()), "" if picks.size() == 1 else "s", season_year]
 	var passing: Array = s["passing"]
 	if not passing.is_empty():
 		line = line.trim_suffix(".") + ": %s %s will pass unless you delist before it starts." % [
@@ -10561,13 +10642,19 @@ func draft_spots_line(going: int = -1) -> String:
 ## (_fa_close_plan), plus this year's father-son and academy ties. Retiring
 ## players still hold their spot: they leave at the rollover, after the draft.
 ## On draft night it is the draft's own count (Draft.spots_plan).
+## The 44 (senior and Category A rookie lists together) is counted beside the
+## senior list by the same rule every signing uses (RookieList.add_block):
+## "list" is that count, and "by_44" is true when it, not the senior list,
+## sets the open spots. A father-son or academy player is counted only while
+## the 44 has room for him.
 ## {"cap", "held", "open", "picks": [pick numbers, in order], "usable",
 ##  "passing", "retiring", "resign" (undecided players who re-sign as the
 ##  draft opens), "maybe" (players testing the market or holding your offer,
 ##  each of whom takes a spot if he signs with you), "ties", "live"}
 func draft_list_spots() -> Dictionary:
 	var out := {"cap": RookieList.SENIOR_SPOTS, "held": 0, "open": 0, "picks": [], "usable": [],
-			"passing": [], "retiring": 0, "resign": 0, "maybe": 0, "ties": 0, "live": false}
+			"passing": [], "retiring": 0, "resign": 0, "maybe": 0, "ties": 0, "live": false,
+			"list": 0, "list_cap": Contracts.MAX_LIST, "by_44": false}
 	if season == null or my_club == "":
 		return out
 	out["retiring"] = my_list.filter(func(q): return retiring_now(q)).size()
@@ -10580,8 +10667,11 @@ func draft_list_spots() -> Dictionary:
 		out["usable"] = plan["usable"]
 		out["passing"] = plan["passing"]
 		out["picks"] = (plan["usable"] as Array) + (plan["passing"] as Array)
+		out["list"] = draft.list_now(my_club)
+		out["by_44"] = draft.full_at_44(my_club)
 		return out
 	var held := RookieList.senior_count(my_list)
+	var in_44 := RookieList.list_size(my_list)
 	var resign := 0
 	var maybe := 0
 	if fa_closed_year != season_year:
@@ -10592,9 +10682,13 @@ func draft_list_spots() -> Dictionary:
 					maybe += 1
 					if not RookieList.is_rookie(p):
 						held -= 1
+					if not RookieList.is_cat_b(p):
+						in_44 -= 1
 				"release":
 					if not RookieList.is_rookie(p):
 						held -= 1
+					if not RookieList.is_cat_b(p):
+						in_44 -= 1
 				_:
 					resign += 1
 		for p in free_agents:
@@ -10603,15 +10697,18 @@ func draft_list_spots() -> Dictionary:
 	var ties := 0
 	for p in draftee_pool:
 		if not drafted_draftees.has(str(p["id"])) and str(p.get("tied_club", "")) == my_club \
-				and int(p.get("draft_year", 0)) == season_year:
+				and int(p.get("draft_year", 0)) == season_year and in_44 + ties < Contracts.MAX_LIST:
 			ties += 1
 	held += ties
+	in_44 += ties
 	var picks := []
 	for pk in club_picks(my_club):
 		if int(pk["year"]) == season_year and int(pk.get("spot", 0)) > 0:
 			picks.append(int(pk["spot"]))
 	picks.sort()
-	var open := maxi(0, int(out["cap"]) - held)
+	var open := maxi(0, mini(int(out["cap"]) - held, Contracts.MAX_LIST - in_44))
+	out["list"] = in_44
+	out["by_44"] = Contracts.MAX_LIST - in_44 < int(out["cap"]) - held
 	out["held"] = held
 	out["open"] = open
 	out["resign"] = resign
