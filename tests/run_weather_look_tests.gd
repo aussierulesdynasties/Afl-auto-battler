@@ -286,9 +286,11 @@ func _test_ball() -> void:
 			"No drift unless it is windy")
 
 
-func _sim(seed_n: int) -> MatchSim:
+func _sim(seed_n: int) -> Object:
 	var db = root.get_node("GameDB")
-	return MatchSim.new(Squad.new("FRE", db.club_list("FRE"), true, "FRE"), Squad.new("MEL", db.club_list("MEL"), false, "MEL"), seed_n)
+	var squad: Script = load("res://scripts/sim/Squad.gd")
+	var match_sim: Script = load("res://scripts/sim/MatchSim.gd")
+	return match_sim.new(squad.new("FRE", db.club_list("FRE"), true, "FRE"), squad.new("MEL", db.club_list("MEL"), false, "MEL"), seed_n)
 
 
 ## Looks never reach the match: the same seed plays the same match whatever sky and
@@ -296,9 +298,9 @@ func _sim(seed_n: int) -> MatchSim:
 func _test_same_match_under_every_sky() -> void:
 	Kickoff.forced_slot = ""
 	Grade.forced_weather = ""
-	var first := _sim(8128)
+	var first = _sim(8128)
 	first.weather = "windy"
-	var breeze := first.breeze_side
+	var breeze: int = first.breeze_side
 	var want: Dictionary = first.run()
 	_check((want["events"] as Array).size() > 100, "A whole match is played to compare (%d events)" % (want["events"] as Array).size())
 	var stage := Stage.new()
@@ -315,7 +317,7 @@ func _test_same_match_under_every_sky() -> void:
 			Kickoff.forced_slot = s
 			Grade.forced_weather = w
 			Kickoff.use_match({"home": "FRE", "away": "MEL", "label": "Round %d" % combos}, "Optus Stadium")
-			var sim := _sim(8128)
+			var sim = _sim(8128)
 			sim.weather = "windy"
 			stage.weather = w
 			stage.board = {"wind": 1 if sim.with_breeze(0) else -1}
