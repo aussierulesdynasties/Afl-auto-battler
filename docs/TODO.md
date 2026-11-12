@@ -72,7 +72,6 @@ The longest chain, which sets the finish: T1.R26, then 131, then the director's 
 | 171 | Visuals 6, proper PC layouts for every sheet. | 1920x1080 look sheet shown to the director |
 | 172 | A Club Forge club can start a Real 2026 lists career as a new club with the new-club draft package every new club gets (director 2026-11-12: "Yes, as a new club"; widens ruling 71). | a real-lists career with a Forge club drafts its package; his playtest |
 | 173 | In a 2027 League redraft, Tasmania joins in 2028, not round 1 of 2027 (director 2026-11-12: "Join in 2028"; PR #1172 had them from 2027). | 2027 ladder has 18 clubs, 2028 has 19 |
-| 190 | Itch hotfix, build 1.0.16 (director 2026-11-12: "get the fixes patched to itch as a 'hotfix'"): main with the sacked-coach fix (row 179), the match-day look (row 166) and the day's other fixes; version, patch notes and histories in one PR, then all three channels and a devlog post. | PR open |
 
 ## B. Built and ON: his playtest judges
 
