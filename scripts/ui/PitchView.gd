@@ -43,6 +43,7 @@ var upright := false:
 			upright = v
 			_nudge = PackedVector2Array()
 			_disc = PackedVector2Array()
+			_disc_k = PackedFloat32Array()
 			_cam = _clamp_cam(_cam)
 			queue_redraw()
 
@@ -68,7 +69,8 @@ var _flip_pending := false
 ## at any playback speed; the screen sets the rings, the view only draws.
 var rings := {}
 ## Tired and hurt players (PlayerMarks.build): pid -> {mark, words}. A short
-## mark beside the disc, on the oval and the bench strip; words on a long press.
+## mark beside the disc on the oval and beside the name in the bench's drawer; words
+## on a long press.
 var marks := {}
 ## The long press: where the finger is down and since when (-1 for none), and
 ## the words it brought up ({text, at, left}).
@@ -110,9 +112,39 @@ const RESTARTS := ["goal", "behind", "quarter", "ballup", "throwin", "free", "fi
 ## The turf is green in both appearances, so the ring is the dark theme's text
 ## colour fixed, not UiKit.TEXT, which turns dark in light mode.
 const RING_COLOUR := Color(0.945, 0.933, 0.902)
-## A player's token is never smaller than a thumb can tell apart (audit §8
-## Phase 3.1): a radius of 9 px is an 18 px disc, the number's floor too.
-const TOKEN_MIN := 9.0
+## A player's disc, half as big again as it was (director, 2026-11-12: "Bigger
+## discs, bench drawer", about 1.5x, the jumper number readable): never under a
+## radius of 13.5 px (a 27 px disc on a phone; it was 9 and 18), and DISC_SHARE of
+## the oval's half-width where the ground is bigger (it was 0.030). The number
+## grows with it, up to NUMBER_MAX px.
+const TOKEN_MIN := 13.5
+const DISC_SHARE := 0.045
+const NUMBER_MAX := 22.0
+## Shrink in packs (director, 2026-11-12: "Shrink in packs"; the gain "big discs
+## most of the time", the cost "sizes change during play, and numbers in a pack
+## are small"). A disc is the full size above in the open and beside one other
+## player: a pair is drawn apart, as it always was. In a pack it is drawn smaller:
+## its radius is PACK_FIT of the distance to the second-nearest other player on
+## the screen (pack_radius), so it starts to shrink once two players are within a
+## disc and a half's radius of it, and it is never under the old size (a radius of
+## SMALL_MIN px on a phone, SMALL_SHARE of the oval's half-width where the ground
+## is bigger: two thirds of the full size), which it reaches with two players
+## within a full radius. One function for both sides, read from where the players
+## are, not from where the discs are drawn. The size eases: it crosses the whole
+## range, full to small or back, in no less than RESIZE_SECS of the match's own
+## seconds, the clock the draw-apart moves on (at 1x on a phone, 0.62 px in a 30th
+## of a second), with reduced motion as without (a size that jumped would flicker).
+## Measured on a phone over five games (tests/test_match_motion.gd): 57% of
+## disc-frames at the full size. The measured alternatives: sized from the nearest
+## player so a pair just touches, 19%; from the nearest, two thirds of the gap,
+## 31%; from the second-nearest, half the gap, 42%; three quarters of it, 63%,
+## with twice the frames under the visibility floor.
+const PACK_FIT := 2.0 / 3.0
+const SMALL_MIN := 9.0
+const SMALL_SHARE := 0.030
+const RESIZE_SECS := 0.4
+## How far each disc is between the small size (0) and the full size (1), as drawn.
+var _disc_k := PackedFloat32Array()
 ## The ball's last few positions on the turf, for a short trail behind it.
 const TRAIL_N := 14
 var _trail: Array = []
@@ -134,7 +166,8 @@ const DISC_CLASH := 40.0
 ## by NUDGE_EASE and is pushed out again only as far as it must be, starting from
 ## where the discs were drawn last, so a pair keeps its sides and does not jitter.
 ## The view stays truthful: a disc is never drawn more than NUDGE_CAP (in disc
-## diameters: half a disc's width) from where its player is, so in a thick pack
+## diameters at the small size, small_radius: half the old disc's width, 4.3 m on
+## a phone, whatever size the disc is drawn at) from where its player is, so in a thick pack
 ## discs still overlap, and the draw order keeps the ball carrier and the two
 ## opponents nearest him on top (lead, 2026-10-14, provisional until the director
 ## looks). nudge_full lifts the cap, for the comparison capture only: every disc
@@ -152,15 +185,18 @@ const NUDGE_PASSES := 24
 var _nudge_h := -1.0
 var _nudge := PackedVector2Array()
 var _disc := PackedVector2Array()   # where each token is drawn, in pixels
-## The bench: each side's five as small discs, along the bottom of the view (the
-## stand's dark band on a phone) or down the sides of the ground when the window
-## is wider than the oval (a PC). BENCH_SHARE is a bench disc's size in token radii.
-## Full size on a phone, where a smaller disc's number was too small to read
-## (lead, 2026-10-14).
-const BENCH_SHARE := 1.0
-## The stand beyond the fence and the turf's edge in shadow, so the oval sits
-## in a ground rather than floating on black (audit §8 Phase 3.2).
-const STAND_COLOUR := Color(0.125, 0.11, 0.095)
+## The bench is in a drawer (director, 2026-11-12): a tab on the oval's bottom edge
+## opens both benches, and nothing of the bench is drawn over the ground or the
+## stands. BenchDrawer is this view's own child.
+var _bench: BenchDrawer
+## The stadium round the oval, from the replay's parts (director, 2026-11-12:
+## "Replay stadium everywhere"): OvalStadium, built once a match.
+var _stadium := OvalStadium.new()
+## What the last frame drew of it, for tests and captures: the time of day, the
+## flags flying (0 without wind) and which way they stream (+1 or -1 along the
+## ground as it is drawn).
+var stadium_drawn := {}
+## The fence between the turf and the front row.
 const FENCE_COLOUR := Color(0.36, 0.33, 0.29)
 ## PROTOTYPE, gated by the director's phone (audit §8 Phase 3.3): the few
 ## players nearest the ball drawn as small footballers from the vignette
@@ -168,7 +204,7 @@ const FENCE_COLOUR := Color(0.36, 0.33, 0.29)
 ## reads and holds 60 fps on the phone it becomes the view; otherwise it goes.
 var mini_figures := false
 const FIGURES_NEAR_BALL := 6
-const FIGURE_HEIGHT := 2.7        # figure height in token radii (tr 9 = 24 px)
+const FIGURE_HEIGHT := 1.8        # figure height in token radii (tr 13.5 = 24 px)
 var _figs: MiniFigures
 var _looks := {}
 
@@ -195,6 +231,10 @@ func _ready() -> void:
 	_figs.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_figs.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(_figs)
+	_bench = BenchDrawer.new()
+	_bench.name = "BenchDrawer"
+	_bench.view = self
+	add_child(_bench)
 
 
 # ---------------------------------------------------------------------------
@@ -213,7 +253,6 @@ func setup(p_result: Dictionary) -> void:
 	_order = []
 	_flip_pending = false
 	_trail = []
-	_crowd_tex = null
 	mini_figures = GameState.match_figures_on()
 	_looks = {}
 	if _figs != null:
@@ -222,6 +261,10 @@ func setup(p_result: Dictionary) -> void:
 	playing = false
 	director = MatchDirector.new()
 	director.setup(p_result, events)
+	if _bench != null:
+		# A new match: the drawer shut, its tab there when this match names a bench.
+		_bench.close()
+		_bench.sync()
 	period = 1
 	_caption = {}
 	_press_said = [false, false]
@@ -385,6 +428,8 @@ func set_marks(next: Dictionary) -> void:
 	if next == marks:
 		return
 	marks = next
+	if _bench != null:
+		_bench.sync()
 	queue_redraw()
 
 
@@ -414,20 +459,15 @@ func _gui_input(e: InputEvent) -> void:
 
 
 ## The marked player under `p` (a point in this view): {pid, words, at, r}, or
-## {} for none. The bench strip first, then the discs on the oval.
+## {} for none: the discs on the oval (the bench's marks are in its drawer).
 func marked_at(p: Vector2) -> Dictionary:
 	if marks.is_empty() or director == null:
 		return {}
-	var tr := token_radius()
-	for sp in bench_spots(tr):
-		var pid := str(sp["pid"])
-		if marks.has(pid) and (sp["pos"] as Vector2).distance_to(p) <= float(sp["r"]) * 1.4:
-			return {"pid": pid, "words": PlayerMarks.words(marks[pid], true), "at": sp["pos"], "r": sp["r"]}
 	var id := disc_at_point(p)
 	if id >= 0:
 		var pid2 := str(director.tokens[id].get("pid", ""))
 		if marks.has(pid2):
-			return {"pid": pid2, "words": PlayerMarks.words(marks[pid2], false), "at": _disc_at(id), "r": tr}
+			return {"pid": pid2, "words": PlayerMarks.words(marks[pid2], false), "at": _disc_at(id), "r": disc_radius(id)}
 	return {}
 
 
@@ -996,36 +1036,27 @@ func _draw() -> void:
 	var a := MatchMotion.HALF_LEN * s
 	var b := MatchMotion.HALF_WID * s
 
-	# The stand beyond the fence: a crowd in both clubs' colours, seen from the
-	# broadcast camera high above, kept dark so the play stays in front (row T3.R9).
-	draw_rect(Rect2(Vector2.ZERO, size), STAND_COLOUR, true)
-	draw_texture_rect(_crowd_texture(), Rect2(Vector2.ZERO, size), true, CROWD_TINT)
-	# The ground itself (turf, lines, posts) is drawn lying flat and, upright,
-	# turned as one piece: a quarter turn about the view's centre.
+	# The ground itself (stands, turf, lines, posts) is drawn lying flat and,
+	# upright, turned as one piece: a quarter turn about the view's centre.
 	var jolt := shake_offset() if _shake > 0.0 else Vector2.ZERO
-	if upright:
-		draw_set_transform_matrix(Transform2D(Vector2(0, -1), Vector2(1, 0), Vector2(0, size.y) + jolt))
+	var base := Transform2D(Vector2(0, -1), Vector2(1, 0), Vector2(0, size.y) + jolt) if upright \
+			else Transform2D(0.0, jolt)
+	draw_set_transform_matrix(base)
+	# The stadium round the fence, the replay's own seen from straight above: the
+	# crowd in its seats in both clubs' colours, the fascia, the roof's edge, the
+	# light towers (OvalStadium; built once a match, drawn as a few meshes).
+	var weather := str(result.get("weather", ""))
+	var tod := time_of_day(weather)
+	var colours := _club_colours()
+	var flat := _flat_size()
+	_stadium.draw_stands(self, Rect2(-flat, flat * 3.0), c, s, colours, weather, tod)
 	var fence := maxf(3.0, 2.0 * s)
 	draw_colored_polygon(_ellipse_points(c, a + fence, b + fence, 128), FENCE_COLOUR)
 
-	# Turf + mown stripes, as the day's weather leaves them (VignetteWeather).
-	var weather := str(result.get("weather", ""))
-	var grass := VignetteWeather.grass(weather, [Color(0.118, 0.333, 0.133), Color(0.133, 0.365, 0.149)])
-	draw_colored_polygon(_ellipse_points(c, a, b, 128), grass[0])
-	var stripes := 9
-	for i in range(stripes):
-		if i % 2 == 1:
-			continue
-		var x0 := c.x - a + (2.0 * a) * float(i) / float(stripes)
-		var x1 := c.x - a + (2.0 * a) * float(i + 1) / float(stripes)
-		draw_colored_polygon(_stripe(c, a, b, x0, x1), grass[1])
-	# The light towers: brighter grass in the middle, the turf darkening toward the
-	# fence, so the ground reads as lit, not as a flat shape (row T3.R9).
-	var lit := _ellipse_points(c, a, b, 96)
-	var uvs := PackedVector2Array()
-	for q in lit:
-		uvs.append(Vector2(0.5 + (q.x - c.x) / (2.0 * a), 0.5 + (q.y - c.y) / (2.0 * b)))
-	draw_colored_polygon(lit, Color.WHITE, uvs, _light_texture())
+	# Turf + mown stripes, the replay's grass as the day's weather leaves it, and
+	# the light over it: brighter in the middle, darker toward the fence.
+	_stadium.draw_turf(self, c, s, weather, tod, _light_texture())
+	_stadium.draw_pools(self, c, s, tod)
 	drawn_layers = ["turf"]
 	_draw_press_zone(c, a, b)
 	drawn_layers.append("press")
@@ -1092,20 +1123,22 @@ func _draw() -> void:
 			draw_circle(goal + Vector2(0, py * 3.2 * s), maxf(2.0, 0.55 * s), Color(1, 1, 1, 0.95))
 			draw_circle(goal + Vector2(0, py * 9.6 * s), maxf(1.5, 0.4 * s), Color(1, 1, 1, 0.7))
 
-	if upright:
-		draw_set_transform(jolt)
+	# In the wind, the flags on the roof stream toward the end the breeze favours
+	# (not lines over the grass: director, 2026-11-12).
+	var now := float(Time.get_ticks_msec()) / 1000.0
+	var windy := weather == VignetteWeather.WINDY
+	stadium_drawn = {"time": tod, "flags": _stadium.flag_spots().size() if windy else 0, "toward": breeze_toward()}
+	if windy:
+		_stadium.draw_flags(self, base, c, s, colours, now, breeze_toward())
+	draw_set_transform(jolt)
 	for at in fifties:
 		var mid := _to_screen(at)
 		var origin := mid + Vector2(-fifty.x * 0.5, UiKit.BOLD.get_ascent(fifty_fs) * 0.5 - UiKit.BOLD.get_descent(fifty_fs) * 0.5)
 		draw_string(UiKit.BOLD, origin, "50", HORIZONTAL_ALIGNMENT_LEFT, -1, fifty_fs, Color(1, 1, 1, 0.8))
-	# Rain falls and wind blows over the ground, under the players and the ball.
-	var now := float(Time.get_ticks_msec()) / 1000.0
+	# Rain falls over the ground, under the players and the ball.
 	VignetteWeather.draw_air(self, r, now, weather)
-	if weather == VignetteWeather.WINDY:
-		VignetteWeather.draw_wind_flat(self, r, now)
 	var tr := token_radius()
 	_layout_discs(tr)
-	_draw_bench(tr)
 	drawn_layers.append("discs")
 	_draw_tokens(tr)
 	_draw_rings(tr)
@@ -1117,7 +1150,7 @@ func _draw() -> void:
 	var act := director.actor
 	if act >= 0 and act < director.tokens.size():
 		var p := _disc_at(act)
-		draw_arc(p, tr * 1.9, 0, TAU, 28, Color(1, 1, 0.55, 0.95), 2.0, antialias)
+		draw_arc(p, disc_radius(act) * 1.9, 0, TAU, 28, Color(1, 1, 0.55, 0.95), 2.0, antialias)
 
 	_draw_ball(tr, s)
 
@@ -1548,7 +1581,7 @@ func _draw_rings(tr: float) -> void:
 		var p := _disc_at(int(t["id"]))
 		if p.x < -tr * 3.0 or p.y < -tr * 3.0 or p.x > size.x + tr * 3.0 or p.y > size.y + tr * 3.0:
 			continue
-		draw_arc(p, tr * 1.5, 0, TAU, 28, Color(RING_COLOUR, 0.9), 1.6, antialias)
+		draw_arc(p, disc_radius(int(t["id"])) * 1.5, 0, TAU, 28, Color(RING_COLOUR, 0.9), 1.6, antialias)
 
 
 ## The name over a player, in the type the team shape uses: bold, outlined so it
@@ -1568,9 +1601,17 @@ func _draw_role_labels(tr: float) -> void:
 		draw_string(UiKit.BOLD, origin, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1, 1, 1, 0.85))
 
 
-## The surnames' size: with the disc, never under the 13 px floor (row T3.R9).
+## The surnames' size: never under the 13 px floor (row T3.R9), and a little
+## bigger under the bigger discs of a PC, where there is room for it.
 static func role_label_size(tr: float) -> int:
-	return clampi(int(tr * 1.15), UiKit.FINE, 15)
+	return clampi(int(tr * 0.85), UiKit.FINE, 16)
+
+
+## The jumper number's size on a disc of radius tr: it grows and shrinks with the
+## disc, and is never under the 13 px floor (row T3.R9), which is what the
+## smallest disc in a pack carries on a phone (14 px on a full one).
+static func number_size(tr: float) -> int:
+	return int(clampf(tr * 1.1, float(UiKit.FINE), NUMBER_MAX))
 
 
 ## Where each surname goes: [{id, text, origin, rect}]. Under its disc first;
@@ -1592,6 +1633,7 @@ func role_label_layout(tr: float, fs: int) -> Array:
 		discs.append(_disc_at(i))
 	var placed := []
 	var out := []
+	var full := tr
 	for id in ids:
 		if id < 0 or id >= director.tokens.size() or int(id) == captioned:
 			continue
@@ -1606,6 +1648,8 @@ func role_label_layout(tr: float, fs: int) -> Array:
 		if p.x < -width or p.y < 0.0 or p.x > size.x + width or p.y > size.y + float(fs) * 2.0:
 			continue
 		var h := float(fs)
+		# Beside the disc as it is drawn (smaller in a pack).
+		tr = minf(full, disc_radius(id))
 		# Only places beside the disc: under, over, either side (a name far
 		# from its disc names the wrong player).
 		var spots := [
@@ -1627,7 +1671,7 @@ func role_label_layout(tr: float, fs: int) -> Array:
 				var origin: Vector2 = p + off
 				origin.x = clampf(origin.x, 2.0, maxf(2.0, size.x - width - 2.0))
 				var rect := Rect2(origin + Vector2(-1, -h), Vector2(width + 2.0, h + 3.0))
-				if _label_clear(rect, id, placed, discs, tr, strict):
+				if _label_clear(rect, id, placed, discs, full, strict):
 					chosen = [origin, rect]
 					break
 			if chosen != null:
@@ -1669,7 +1713,7 @@ func _label_clear(rect: Rect2, id: int, placed: Array, discs: Array, tr: float, 
 		var c: Vector2 = discs[i]
 		var nx := clampf(c.x, rect.position.x, rect.end.x)
 		var ny := clampf(c.y, rect.position.y, rect.end.y)
-		if Vector2(nx, ny).distance_to(c) < tr:
+		if Vector2(nx, ny).distance_to(c) < minf(tr, disc_radius(i)):
 			return false
 	return true
 
@@ -1806,20 +1850,44 @@ func _draw_ball(tr: float, s: float) -> void:
 
 
 ## How big the goal's ring may grow at `at` and stay in the view and off the
-## bench: upright, a goal is a few pixels from the top or bottom edge, and a ring
-## sized for the ground ran off the screen and over the bench in the corners.
+## bench's tab: upright, a goal is a few pixels from the top or bottom edge, and a
+## ring sized for the ground ran off the screen.
 func flash_room(at: Vector2, tr: float) -> float:
 	var room := minf(minf(at.x, size.x - at.x), minf(at.y, size.y - at.y)) - 3.0
-	for sp in bench_spots(tr):
-		var r: float = sp["r"]
-		room = minf(room, (sp["pos"] as Vector2).distance_to(at) - r - 6.0)
+	var tab := bench_tab_rect()
+	if tab.size.x > 0.0:
+		var near := Vector2(clampf(at.x, tab.position.x, tab.end.x), clampf(at.y, tab.position.y, tab.end.y))
+		room = minf(room, near.distance_to(at) - 6.0)
 	return maxf(tr, room)
 
 
-## The radius a player's disc is drawn at, in pixels.
+## The radius of a player's disc at its full size, in pixels: what a disc that
+## overlaps no other is drawn at. disc_radius is what each one is drawn at now.
 func token_radius() -> float:
 	var r := pitch_rect()
-	return maxf(TOKEN_MIN, minf(r.size.x, r.size.y) * 0.5 * 0.030 * sqrt(_zoom))
+	return maxf(TOKEN_MIN, minf(r.size.x, r.size.y) * 0.5 * DISC_SHARE * sqrt(_zoom))
+
+
+## The smallest radius a disc is drawn at, in a pack: the old size.
+func small_radius() -> float:
+	var r := pitch_rect()
+	return maxf(SMALL_MIN, minf(r.size.x, r.size.y) * 0.5 * SMALL_SHARE * sqrt(_zoom))
+
+
+## The radius a disc is drawn toward when the second-nearest other player is
+## `gap` px from his on the screen: PACK_FIT of the gap, between the small and the
+## full size. The same for both sides.
+static func pack_radius(gap: float, small: float, full: float) -> float:
+	return clampf(gap * PACK_FIT, small, full)
+
+
+## The radius token `id`'s disc is drawn at now, in pixels (the last layout's):
+## the one size the drawing, the tap, the draw-apart, the rings and marks round
+## a disc and the tests all read.
+func disc_radius(id: int) -> float:
+	if id >= 0 and id < _disc_k.size():
+		return lerpf(small_radius(), token_radius(), _disc_k[id])
+	return token_radius()
 
 
 ## Where token `id` is drawn: his place on the ground, nudged clear of a disc
@@ -1836,12 +1904,16 @@ func _disc_at(id: int) -> Vector2:
 ## part. The match's own positions are never touched.
 func _layout_discs(tr: float) -> void:
 	var n := director.tokens.size()
-	if _nudge.size() != n:
+	if _nudge.size() != n or _disc_k.size() != n:
 		_nudge.resize(n)
 		_nudge.fill(Vector2.ZERO)
+		_disc_k.resize(n)
+		_disc_k.fill(1.0)
 		_nudge_h = -1.0
 	# How far a disc may be moved apart, or back, since the last layout.
 	var budget := INF if nudge_full or _nudge_h < 0.0 else MatchMotion.WALK * _nudge_h * _scale()
+	# How far a disc's size may change since the last layout (the first is at once).
+	var resize := INF if _nudge_h < 0.0 else _nudge_h / RESIZE_SECS
 	_nudge_h = 0.0
 	var was := _nudge.duplicate()
 	var real := PackedVector2Array()
@@ -1852,13 +1924,33 @@ func _layout_discs(tr: float) -> void:
 		real[i] = _w2s(director.tokens[i]["pos"])
 		_nudge[i] *= NUDGE_EASE
 		pos[i] = real[i] + _nudge[i]
-	var want := tr * 2.0 * NUDGE_GAP
-	var cap := INF if nudge_full else tr * 2.0 * NUDGE_CAP
+	# Each disc's size, eased toward what the players round it leave room for.
+	var small := small_radius()
+	var rad := PackedFloat32Array()
+	rad.resize(n)
+	for i in range(n):
+		var near := INF
+		var next := INF
+		for j in range(n):
+			if j == i:
+				continue
+			var gap := real[i].distance_squared_to(real[j])
+			if gap < near:
+				next = near
+				near = gap
+			elif gap < next:
+				next = gap
+		var k := inverse_lerp(small, tr, pack_radius(sqrt(next), small, tr)) if tr > small else 1.0
+		_disc_k[i] = k if resize == INF else move_toward(_disc_k[i], k, resize)
+		rad[i] = lerpf(small, tr, _disc_k[i])
+	# A disc is never drawn further from its player than it was at the old size.
+	var cap := INF if nudge_full else small * 2.0 * NUDGE_CAP
 	for pass_no in range(NUDGE_PASSES):
 		var moved := false
 		for i in range(n):
 			for j in range(i + 1, n):
 				var d := pos[j] - pos[i]
+				var want := (rad[i] + rad[j]) * NUDGE_GAP
 				if absf(d.x) >= want or absf(d.y) >= want:
 					continue
 				var dist := d.length()
@@ -1944,13 +2036,23 @@ func top_disc() -> int:
 ## The player whose disc is drawn at `p` (a point in this view), -1 for none: the
 ## one drawn on top where discs overlap. For a tap on the oval.
 func disc_at_point(p: Vector2) -> int:
-	var tr := token_radius()
 	var order := draw_order()
+	# On a disc: the one drawn on top there, at the size it is drawn.
 	for k in range(order.size() - 1, -1, -1):
 		var id := int(order[k])
-		if _disc_at(id).distance_to(p) <= tr * 1.25:
+		if _disc_at(id).distance_to(p) <= disc_radius(id):
 			return id
-	return -1
+	# Beside one: the nearest within a thumb's reach, which is a full disc and a
+	# quarter whatever size the disc is drawn at (a small disc in a pack is no
+	# harder to press than a full one).
+	var reach := token_radius() * 1.25
+	var best := -1
+	for id2 in order:
+		var dist := _disc_at(int(id2)).distance_to(p)
+		if dist <= reach:
+			reach = dist
+			best = int(id2)
+	return best
 
 
 ## Where the discs are drawn now, for tests and the capture tool: a layout
@@ -1966,72 +2068,65 @@ func disc_positions_drawn() -> PackedVector2Array:
 	return _disc
 
 
-## The bench as it is drawn: [{side, num, pid, pos, r, column}], five a side while
-## the match says who they are (an old result without its bench shows none). The
-## home side's are on the left, the away side's on the right, whichever end they
-## kick to. Down the sides of the ground when the view is wider than the oval,
-## otherwise along the bottom of the view.
-func bench_spots(tr: float) -> Array:
-	var out := []
-	if director == null or director.bench.size() < 2:
-		return out
-	var br := maxf(7.0, tr * BENCH_SHARE)
-	var s := _scale()
-	var fence := maxf(3.0, 2.0 * s)
-	var side_band := size.x * 0.5 - (MatchMotion.HALF_WID if upright else MatchMotion.HALF_LEN) * s - fence
-	var column := side_band >= br * 2.0 + 10.0
-	var step := br * 2.0 + 4.0
-	for side in range(2):
-		var list: Array = director.bench[side]
-		for i in range(list.size()):
-			var p: Vector2
-			if column:
-				var x := side_band * 0.5 if side == 0 else size.x - side_band * 0.5
-				p = Vector2(x, size.y * 0.5 + (float(i) - float(list.size() - 1) * 0.5) * step)
-			else:
-				var x2 := 6.0 + br + float(i) * step
-				p = Vector2(x2 if side == 0 else size.x - x2, size.y - br - 5.0)
-			out.append({"side": side, "num": int(list[i]["num"]), "pid": str(list[i].get("pid", "")),
-					"pos": p, "r": br, "column": column})
-	return out
+## The bench's drawer (its tab, its panel, what it lists).
+func bench_drawer() -> BenchDrawer:
+	return _bench
 
 
-func _draw_bench(tr: float) -> void:
-	var spots := bench_spots(tr)
-	if spots.is_empty():
-		return
-	var br: float = spots[0]["r"]
-	var fs := int(clampf(br * 1.1, 9.0, 13.0))
-	var word := "Bench"
-	var ww := UiKit.BOLD.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.FINE).x
-	if not bool(spots[0]["column"]):
-		# In the bottom corners, where the oval's curve leaves the stand showing: a
-		# dark backing under each five so they read over whatever is under them,
-		# and the word above each.
-		var wide := 6.0 + 5.0 * (br * 2.0 + 4.0)
-		var tall := br * 2.0 + 24.0
-		draw_rect(Rect2(0.0, size.y - tall, wide, tall), Color(STAND_COLOUR, 0.82))
-		draw_rect(Rect2(size.x - wide, size.y - tall, wide, tall), Color(STAND_COLOUR, 0.82))
-		draw_string(UiKit.BOLD, Vector2(6.0, size.y - br * 2.0 - 10.0), word,
-				HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.FINE, Color(RING_COLOUR, 0.85))
-		draw_string(UiKit.BOLD, Vector2(size.x - 6.0 - ww, size.y - br * 2.0 - 10.0), word,
-				HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.FINE, Color(RING_COLOUR, 0.85))
-	else:
-		for side in range(2):
-			var top := INF
-			var x := 0.0
-			for sp in spots:
-				if int(sp["side"]) == side:
-					top = minf(top, (sp["pos"] as Vector2).y)
-					x = (sp["pos"] as Vector2).x
-			if top < INF:
-				draw_string(UiKit.BOLD, Vector2(x - ww * 0.5, top - br - 6.0), word,
-						HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.FINE, Color(RING_COLOUR, 0.85))
-	for sp in spots:
-		_draw_disc(sp["pos"], br, _kits[int(sp["side"])], str(sp["num"]), fs)
-		var m: Dictionary = marks.get(str(sp["pid"]), {})
-		if not m.is_empty():
-			PlayerMarks.paint(self, sp["pos"], br, str(m["mark"]), antialias)
+## The tab's pill on the view; an empty rect while there is no bench to open.
+func bench_tab_rect() -> Rect2:
+	if _bench == null or not _bench.has_bench():
+		return Rect2()
+	var t := _bench.tab()
+	return Rect2(t.position + Vector2(0.0, t.size.y - BenchDrawer.TAB_PILL_H), Vector2(t.size.x, BenchDrawer.TAB_PILL_H))
+
+
+func bench_open() -> bool:
+	return _bench != null and _bench.is_open
+
+
+func open_bench() -> void:
+	if _bench != null:
+		_bench.open()
+
+
+## Shuts the bench's drawer; true when it was open, so the screen's Back handler
+## can stop there.
+func close_bench() -> bool:
+	return _bench != null and _bench.close()
+
+
+## Day, twilight or night for this match (OvalStadium.time_of_day; a capture or a
+## test may set `time_override`).
+var time_override := ""
+
+func time_of_day(weather := "") -> String:
+	return time_override if time_override != "" else OvalStadium.time_of_day(weather)
+
+
+## Which way the breeze blows along the ground as it is drawn now, +1 or -1 on the
+## flat frame's long axis: toward the end the side kicking with it in the first
+## quarter kicks to then. That end is a fixed part of the ground; the sides change
+## ends, the flags do not. The match's own breeze is read, never changed; a result
+## that does not carry it and has no live match behind it blows to the +1 end.
+func breeze_toward() -> float:
+	var sim = null
+	if not result.has("breeze_side"):
+		var gs := get_node_or_null("/root/GameState")
+		if gs != null and "pending_sim" in gs:
+			sim = gs.get("pending_sim")
+			# Only the match on this oval: another match's breeze is not this one's.
+			if sim != null and (sim.squads.size() < 2 or str(sim.squads[0].code) != home_code 					or str(sim.squads[1].code) != away_code):
+				sim = null
+	return OvalStadium.breeze_toward(result, sim)
+
+
+func _club_colours() -> Array:
+	var cols := []
+	for code in [home_code, away_code]:
+		if str(code) != "":
+			cols.append(GameDB.club_colours(str(code)))
+	return cols
 
 
 ## One disc: the kit, a dark edge, and the number in white with a full dark edge
@@ -2068,17 +2163,19 @@ func ball_point() -> Vector2:
 
 ## A side's tokens: a disc in the club's home kit (its base colour and its
 ## design in the pattern colour), the number on it in white with a dark edge
-## so it reads on any kit, dropped when the disc is under 18 px.
-func _draw_tokens(tr: float) -> void:
+## so it reads on any kit. Each disc at its own size (disc_radius).
+func _draw_tokens(full: float) -> void:
 	var font := UiKit.BOLD
-	var fs := int(clampf(tr * 1.1, 9.0, 15.0))
 	for id in draw_order():
 		var t: Dictionary = director.tokens[id]
 		var kit: Dictionary = _kits[int(t["side"])]
 		var base: Color = kit.get("base", Color.WHITE)
 		var p := _disc_at(int(t["id"]))
-		if p.x < -tr * 3.0 or p.y < -tr * 3.0 or p.x > size.x + tr * 3.0 or p.y > size.y + tr * 3.0:
+		if p.x < -full * 3.0 or p.y < -full * 3.0 or p.x > size.x + full * 3.0 or p.y > size.y + full * 3.0:
 			continue
+		# The size this disc is drawn at now, and the number with it.
+		var tr := disc_radius(int(t["id"]))
+		var fs := number_size(tr)
 		if float(t["down"]) > 0.0:
 			# On the ground after a tackle.
 			draw_colored_polygon(_ellipse_points(p, tr * 1.15, tr * 0.62, 16), base.darkened(0.25))
@@ -2088,10 +2185,6 @@ func _draw_tokens(tr: float) -> void:
 		draw_circle(p + Vector2(0, tr * 0.22), tr, Color(0, 0, 0, 0.28))
 		_draw_kit(p, tr, kit)
 		_shade_disc(p, tr, base)
-		# Never under the 13 px floor: a disc too small for a readable number
-		# shows its kit alone (row T3.R9); a long press still names him.
-		if fs < UiKit.FINE:
-			continue
 		var label := str(t["num"])
 		var w := font.get_string_size(label, HORIZONTAL_ALIGNMENT_CENTER, -1, fs).x
 		var origin := p + Vector2(-w * 0.5, fs * 0.36)
@@ -2108,9 +2201,9 @@ func _draw_tokens(tr: float) -> void:
 		if m.is_empty() or float(t2["down"]) > 0.0:
 			continue
 		var p2 := _disc_at(int(t2["id"]))
-		if p2.x < -tr * 3.0 or p2.y < -tr * 3.0 or p2.x > size.x + tr * 3.0 or p2.y > size.y + tr * 3.0:
+		if p2.x < -full * 3.0 or p2.y < -full * 3.0 or p2.x > size.x + full * 3.0 or p2.y > size.y + full * 3.0:
 			continue
-		PlayerMarks.paint(self, p2, tr, str(m["mark"]), antialias)
+		PlayerMarks.paint(self, p2, disc_radius(int(t2["id"])), str(m["mark"]), antialias)
 
 
 ## The long press's words: the player's name and what his mark means, in a
@@ -2220,22 +2313,6 @@ func _look_for(pid: String) -> Dictionary:
 ## chevron or side panels in the pattern colour over the base; anything else
 ## is the base with an inner disc of the pattern colour. Shapes are drawn
 ## within the disc's chord so nothing pokes out of the circle.
-## The crowd in the stand: both clubs' supporters, painted once (VignetteCrowd)
-## and tiled; dimmed under CROWD_TINT so it never competes with the discs.
-const CROWD_TINT := Color(0.62, 0.62, 0.66)
-var _crowd_tex: Texture2D = null
-
-func _crowd_texture() -> Texture2D:
-	if _crowd_tex == null:
-		var cols := []
-		for k in ["home", "away"]:
-			var code := str(result.get(k, ""))
-			if code != "":
-				cols.append(GameDB.club_colours(code))
-		_crowd_tex = VignetteCrowd.stand(cols, 11)
-	return _crowd_tex
-
-
 ## The light on the turf, one radial texture for every match: a soft pool of
 ## light over the middle, the grass falling darker into the fence's shadow.
 static var _light_tex: Texture2D = null

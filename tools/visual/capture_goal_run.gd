@@ -1,7 +1,7 @@
 extends SceneTree
 ## Row 14: the run-of-goals call over the centre ball-up
 ## scene, and without the scene. Needs a real renderer:
-##   godot --path . --script tools/visual/capture_goal_run.gd -- --out /tmp/gr [--size 390x844] [--club COL]
+##   godot --path . --script tools/visual/capture_goal_run.gd -- --out /tmp/gr [--size 390x844] [--club FRE]
 ## Writes <out>_scene_<n>.png (the scene playing in, then frozen with the call up)
 ## and <out>_card.png (vignettes off).
 
@@ -59,7 +59,7 @@ func _stage(club: String, vignettes: bool) -> Control:
 
 
 func _run() -> void:
-	var club := "COL"
+	var club := "FRE"
 	var a := OS.get_cmdline_user_args()
 	for i in range(a.size() - 1):
 		match str(a[i]):

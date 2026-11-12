@@ -37,6 +37,8 @@ var _look := Appearance.UNCURATED   # the featured player's look
 var _build := "average"             # and his build, from his real height (build_for)
 var _view := Transform2D.IDENTITY   # the camera this frame (VignetteCamera)
 var _board := {}                    # the match's score, for the big screen (if the shot sees it)
+var _wind_end := 1                  # the end the breeze blows to (+1 the +y end, -1 the other)
+var _flags_only := {"off": true}    # the board for a shot that leaves the big screen out
 var weather := ""                   # the day's (VignetteWeather): the ground, the air, the shadows
 
 ## The figures are the vignettes' pre-rendered footballers (VignetteFigures,
@@ -103,6 +105,18 @@ func _ready() -> void:
 	set_process(true)
 
 
+## The end of the replay's ground the breeze blows to: +1 the +y end, where the side in
+## the play kicks, when that side kicks with the breeze in the play's quarter; -1 the
+## other. The side with the breeze in the first quarter is the result's "breeze_side";
+## the sides change ends every quarter. A result that does not say: the +y end.
+static func wind_end_of(p_result: Dictionary, p_event: Dictionary) -> int:
+	if not p_result.has("breeze_side"):
+		return 1
+	var side := clampi(int(p_event.get("side", 0)), 0, 1)
+	var first := side == int(p_result["breeze_side"])
+	return 1 if first == (int(p_event.get("q", 1)) % 2 == 1) else -1
+
+
 func setup(p_kind: String, p_event: Dictionary, p_scene: Dictionary, p_result: Dictionary) -> void:
 	kind = p_kind
 	event = p_event.duplicate(true)
@@ -120,10 +134,18 @@ func setup(p_kind: String, p_event: Dictionary, p_scene: Dictionary, p_result: D
 	weather = VignetteGrade.weather_of(str(result.get("weather", "")))
 	_look = GameDB.figure_look(p, weather == "wet") if p is Dictionary else Appearance.UNCURATED
 	_build = build_for(p if p is Dictionary else {})
+	# The rest of both sides in the shot are the clubs' own players, never the featured man.
+	var featured := str(event.get("player_id", ""))
+	_extra_looks = [VignetteExtras.club_looks(home, 8, weather == "wet", featured),
+			VignetteExtras.club_looks(away, 8, weather == "wet", featured)]
 	_board = {}
 	if event.has("goals") and event.has("behinds") and home != "" and away != "":
 		_board = {"codes": [home, away], "goals": event["goals"], "behinds": event["behinds"],
 				"q": int(event.get("q", 0))}
+	_wind_end = wind_end_of(result, event)
+	if not _board.is_empty():
+		_board["wind"] = _wind_end
+	_flags_only = {"off": true, "wind": _wind_end}
 	if _ui == self:
 		_ui = VignetteGrade.attach(self, weather, _draw_letterbox)
 	queue_redraw()
@@ -334,17 +356,9 @@ var _ground: VignetteGround.Cam
 ## the umpires ("U"): the goal umpire on the goal line, the field umpire, a boundary
 ## umpire on each side. [x, y, who, anim, facing, mirror]. Scenes leave out anyone
 ## standing where their own players are.
-const EXTRAS := [
-	[-5.5, 68.5, "F", "ready_turn", "back", false], [-4.0, 69.6, "D", "ready_b", "front", false],
-	[7.5, 63.0, "F", "ready", "back", false], [8.8, 64.4, "D", "ready_turn", "front", true],
-	[-14.0, 55.0, "F", "ready_b", "back", true], [-12.5, 56.6, "D", "ready", "front", false],
-	[16.0, 48.0, "F", "ready_turn", "back", true], [17.6, 49.6, "D", "ready_b", "front", true],
-	[3.0, 54.0, "D", "ready_turn", "front", false], [-22.0, 42.0, "D", "ready", "front", true],
-	[25.0, 58.0, "D", "ready_turn", "front", true], [26.5, 57.0, "F", "ready", "back", false],
-	[-27.0, 66.0, "F", "ready_turn", "back", false], [-9.0, 40.0, "F", "jog", "front", false],
-	[0.0, 80.0, "U", "ready", "front", false], [10.0, 43.0, "U", "ready_b", "front", true],
-	[-49.0, 50.0, "U", "ready", "front", true], [49.0, 50.0, "U", "ready", "front", false],
-]
+const EXTRAS := VignetteExtras.BROADCAST
+## Their looks: each club's own players (VignetteExtras.club_looks), set with the scene.
+var _extra_looks := [[], []]
 
 
 ## The extras, farthest first, leaving room round the scene's own players (keep).
@@ -368,13 +382,21 @@ func _draw_extras(keep: Array) -> void:
 		var i: int = x[3]
 		var who := str(e[2])
 		var kit := side if who == "F" else (1 - side if who == "D" else StoppageVignette.UMPIRE_KIT)
-		var look: Dictionary = StoppageVignette.UMPIRE_LOOK if who == "U" else Appearance.generated("extra%d" % i)
+		var look: Dictionary = StoppageVignette.UMPIRE_LOOK
+		var num := 0
+		if who != "U":
+			var own: Array = _extra_looks[kit] if kit < _extra_looks.size() else []
+			var mine: Dictionary = own[(i >> 1) % own.size()] if not own.is_empty() else {}
+			look = mine.get("look", Appearance.generated("extra%d" % i))
+			num = int(mine.get("num", 0))
+			if num <= 0:
+				num = 2 + (i * 7) % 40
 		var anim := str(e[3])
 		var frame := int(_t * 15.0) % 8 if anim == "jog" else int(_t * (2.4 + 0.25 * float(i % 5)) + i * 0.61) % 3
 		var p: Vector2 = x[1]
 		if anim == "jog":
 			p += _ground.fwd * -_t * 2.5                      # jogging back towards us
-		_player(p, 0.0, kit, anim, str(e[4]), frame, 0 if who == "U" else 2 + (i * 7) % 40, look, bool(e[5]))
+		_player(p, 0.0, kit, anim, str(e[4]), frame, num, look, bool(e[5]))
 
 
 ## The featured player's spot for this kind (the camera is built round him).
@@ -575,8 +597,13 @@ func _camera_aim() -> Array:
 ## goals at this end.
 func _draw_stadium() -> void:
 	# The speccy's tight shot would cut the big screen in half ("RE" and "EL"): it is left out there.
-	var board: Dictionary = {"off": true} if kind == SPECCY_FRONT and _sf_ready() else _board
+	var board: Dictionary = _flags_only if kind == SPECCY_FRONT and _sf_ready() else _board
+	if board.is_empty():
+		board = {"wind": _wind_end}
 	VignetteGround.draw_ground(self, _ground, _stage(), _colours, 11, board, weather, _t)
+	# The replay's camera moves the picture after the ground is worked out: the heat
+	# shimmer sits where the far turf lands on screen.
+	VignetteGrade.horizon(self, (_view * Vector2(size.x * 0.5, VignetteGround.far_turf(_ground))).y)
 	var pad: Color = (_colours[0] as Array)[0] if not (_colours[0] as Array).is_empty() else Color(0.7, 0.7, 0.72)
 	VignetteGround.draw_goals(self, _ground, 1, pad)
 
@@ -1023,7 +1050,7 @@ func siren_flight_point(at: Vector2, flight: float) -> Vector3:
 	var tt := flight * T
 	var v := (end.z - start.z + 4.9 * T * T) / T
 	p.z = maxf(0.0, start.z + v * tt - 4.9 * tt * tt)
-	return p
+	return _drifted(p, start, end, flight)
 
 
 ## A figure's palm on screen in a frame (hand 0 his left, 1 his right, -1 between the
@@ -1067,10 +1094,28 @@ func _ball_shadow(p: Vector2, h: float) -> void:
 	draw_set_transform_matrix(_view)
 
 
+## A kicked ball's spot pushed sideways by the day's wind (VignetteExtras.drift): across
+## its line from start to end, nothing at the boot and nothing where it lands, so it still
+## finishes where the match says.
+func _drifted(p: Vector3, start: Vector3, end: Vector3, flight: float) -> Vector3:
+	var wind := VignetteWeather.wind(weather)
+	if wind <= 0.0:
+		return p
+	var line := Vector2(end.x - start.x, end.y - start.y)
+	if line.length() < 0.01:
+		return p
+	# Across its line, to the side the wind blows it (the wind the flags stream in).
+	var across := Vector2(line.y, -line.x).normalized()
+	if across.dot(VignetteWeather.wind_world(_wind_end)) < 0.0:
+		across = -across
+	across *= VignetteExtras.drift(flight, wind)
+	return Vector3(p.x + across.x, p.y + across.y, p.z)
+
+
 ## A kicked ball: from the boot on screen into its flight in metres, the first moments
 ## blended from the boot so it leaves the foot exactly.
 func _ball_flight(boot: Vector2, start: Vector3, end: Vector3, peak: float, t: float) -> void:
-	var p := _flight(start, end, peak, t)
+	var p := _drifted(_flight(start, end, peak, t), start, end, t)
 	var s := _ground.project(Vector2(p.x, p.y), p.z)
 	if s.z <= 0.0:
 		return
@@ -1396,7 +1441,7 @@ func _figure(pos: Vector2, scale: float, side: int, anim: String, facing: String
 	var air := 0.0 if ground == Vector2.INF else maxf(0.0, (ground.y - pos.y) / pm)
 	if not _no_shadow:
 		draw_set_transform_matrix(_view * Transform2D(0.0, Vector2(1.0, 0.3), 0.0, shadow_at))
-		draw_circle(Vector2.ZERO, 0.4 * pm * (1.0 - 0.35 * minf(air, 1.5)),
+		draw_circle(Vector2.ZERO, 0.4 * pm * (1.0 - 0.35 * minf(air, 1.5)) * VignetteWeather.shadow_tight(weather),
 				Color(0, 0, 0, VignetteWeather.shadow_alpha(weather) * (1.0 - 0.4 * minf(air, 1.5))))
 		draw_set_transform_matrix(_view)
 	# The number, printed on the back of the guernsey by the shader.

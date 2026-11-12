@@ -43,7 +43,7 @@ const STAND_RISE := 24.0
 ## One copy of the crowd texture covers this much of the stand, along it.
 const CROWD_TILE := 30.0
 const NEAR := 0.6                 # metres in front of the camera: nearer is clipped
-const SKY := Color(0.025, 0.03, 0.035)
+const SKY := Color(0.025, 0.03, 0.035)   # at night; by day and at twilight: VignetteWeather.sky
 const GRASS := [Color(0.16, 0.39, 0.17), Color(0.18, 0.43, 0.19)]
 const APRON := Color(0.13, 0.32, 0.14)
 const PAINT := Color(0.97, 0.97, 0.95, 0.92)
@@ -91,11 +91,17 @@ static func _apply(ground: String) -> void:
 	_geometry.clear()
 
 
-## The ground's empty seats (the crowd texture's base colour).
+## The ground's empty seats (the crowd texture's base colour) as the ground last drew
+## them: under lights the ground's own colour, paler in daylight. Whoever paints the
+## crowd ahead of a scene asks here, so it paints the picture the scene will use.
 static func seat_colour() -> Color:
+	return _seats_in(VignetteKickoff.shown)
+
+
+static func _seats_in(slot: String) -> Color:
 	if spec.is_empty():
 		_apply(venue)
-	return Color.html(str(spec.get("seat", "#121216")))
+	return _lit(Color.html(str(spec.get("seat", "#121216"))), DAY_SEAT, VignetteKickoff.daylight(slot) * 0.85)
 
 
 ## The ground a match is played at: a final's own venue, else the home club's
@@ -110,6 +116,7 @@ static func ground_of(res: Dictionary) -> String:
 ## Draw this match's ground from now on (the static outlives the scene).
 static func use_match(res: Dictionary) -> void:
 	venue = ground_of(res)
+	VignetteKickoff.use_match(res, venue)
 
 
 ## Where the goal line runs: the boundary at the behind posts, L * sqrt(1 - (1.5 * GOAL_GAP / A)^2),
@@ -172,27 +179,44 @@ static func looking(pos: Vector2, height: float, target: Vector2, f: float, cx: 
 ## board: the match's score for the big screen ({codes: [home, away], goals, behinds,
 ## q}); empty, the screen shows the clubs' colours only.
 ## weather: the day's (VignetteWeather; MatchSim.weather) and t the scene's time, for
-## what moves with it (flags in the wind).
+## what moves with it (flags in the wind). On a windy day board "wind" says which end the
+## breeze blows to (+1 the +y end, -1 the other): the flags stream that way and the big
+## screen's arrow points there. The time of day comes from VignetteKickoff.
 static func draw_ground(ci: CanvasItem, cam: Cam, stage: Rect2, colours: Array, seed := 7, board := {},
 		weather := "", t := 0.0) -> void:
 	if spec.is_empty():
 		_apply(venue)
+	# The time of day (VignetteKickoff): night draws exactly as every ground did before
+	# there were day games.
+	var slot := slot_now(weather)
+	VignetteKickoff.shown = slot
+	VignetteGrade.sync(ci, weather, slot, far_turf(cam))
 	# Under a closed roof the sky is the roof's underside.
 	var closed: bool = spec.get("roof") == "closed"
-	ci.draw_rect(stage, Color.html(str(spec["roof_colour"])).darkened(0.35) if closed else SKY, true)
-	_draw_stands(ci, cam, colours, seed, board, weather, t)
+	var sky := VignetteWeather.sky(weather, slot)
+	if closed or sky.is_empty():
+		ci.draw_rect(stage, Color.html(str(spec["roof_colour"])).darkened(0.35) if closed else SKY, true)
+	else:
+		_draw_sky(ci, cam, stage, sky, VignetteKickoff.daylight(slot))
+	_draw_stands(ci, cam, colours, seed, board, weather, t, slot)
 	var tri := Tris.new()
-	_fence_and_apron(tri, cam, colours)
-	# The oval and its mown stripes, across the ground every 12 m.
-	var grass := VignetteWeather.grass(weather, GRASS)
+	_fence_and_apron(tri, cam, colours, slot)
+	# The oval and its mown stripes across the ground: bands STRIPE m wide (the old turf,
+	# for the capture tools' night proof: every 12 m).
+	var grass := VignetteWeather.grass(weather, GRASS, slot)
 	tri.poly(_clip(cam, _ellipse_ring(A, L, 0.0, 0.0, 180)), grass[0])
+	var step := STRIPE if fine_turf else 12.0
 	var y := -L
 	var n := 0
 	while y < L:
 		if n % 2 == 1:
-			tri.poly(_clip(cam, _band(y, minf(y + 12.0, L))), grass[1])
-		y += 12.0
+			tri.poly(_clip(cam, _band(y, minf(y + step, L))), grass[1])
+		y += step
 		n += 1
+	if fine_turf:
+		_turf_detail(tri, cam)
+	if weather == VignetteWeather.HOT:
+		_bleached(tri, cam, VignetteKickoff.daylight(slot))
 	# Worn turf where the game is heaviest: the goal squares and the centre circle.
 	for end in [-1.0, 1.0]:
 		var gy: float = GOAL_Y * end
@@ -202,10 +226,108 @@ static func draw_ground(ci: CanvasItem, cam: Cam, stage: Rect2, colours: Array, 
 	tri.poly(_clip(cam, _ellipse_ring(1.8, 1.4, 0.3, -0.2, 16)), WORN[1])
 	_markings(tri, cam)
 	tri.flush(ci)
-	if weather == VignetteWeather.WET:
+	# Wet turf holds the towers' glare only when the lights are what lights it: at night.
+	if weather == VignetteWeather.WET and slot == VignetteKickoff.NIGHT:
 		VignetteWeather.draw_sheen(ci, cam, _tower_spots(), A, L)
-	elif weather == VignetteWeather.WINDY:
-		VignetteWeather.draw_wind(ci, cam, t)
+
+
+## The time of day the ground is drawn in, in this weather: the match's (VignetteKickoff),
+## except that a ground with its roof closed is lit by its own lights whatever the hour,
+## so it always draws as it does at night.
+static func slot_now(weather: String) -> String:
+	if spec.is_empty():
+		_apply(venue)
+	if spec.get("roof") == "closed":
+		return VignetteKickoff.NIGHT
+	return VignetteKickoff.now(weather)
+
+
+## Capture tools only: false draws the turf as it was before the narrower stripes and
+## the mower's lines, to prove the night look is otherwise unchanged.
+static var fine_turf := true
+## The mown stripes' width across the ground, metres, and the mower's own lines inside
+## them (one pass of the mower), drawn only near the camera where they can be seen.
+const STRIPE := 6.0
+const MOWER := 0.75
+const MOWER_REACH := 42.0
+
+
+## Where the far edge of the turf is on the picture (screen y): the highest point of the
+## boundary the camera sees. The heat shimmer sits there, over the far turf and the fence.
+static func far_turf(cam: Cam) -> float:
+	var y := INF
+	for i in range(36):
+		var a := TAU * float(i) / 36.0
+		var s := cam.oval(Vector2(cos(a) * A, sin(a) * L), 0.0)
+		if s.z > 0.0:
+			y = minf(y, s.y)
+	return cam.hor if y == INF else y
+
+
+## A day or twilight sky: three colours from the top of the stage down to the horizon,
+## the horizon's colour on below it (the stands and the ground cover that).
+static func _draw_sky(ci: CanvasItem, cam: Cam, stage: Rect2, sky: Array, day := 1.0) -> void:
+	var x0 := stage.position.x
+	var x1 := stage.end.x
+	var top := stage.position.y
+	var hor := clampf(cam.hor, top + 2.0, stage.end.y)
+	var mid := lerpf(top, hor, 0.55)
+	var c0: Color = sky[0]
+	var c1: Color = sky[1]
+	var c2: Color = sky[2]
+	ci.draw_polygon(PackedVector2Array([Vector2(x0, top), Vector2(x1, top), Vector2(x1, mid), Vector2(x0, mid)]),
+			PackedColorArray([c0, c0, c1, c1]))
+	ci.draw_polygon(PackedVector2Array([Vector2(x0, mid), Vector2(x1, mid), Vector2(x1, hor), Vector2(x0, hor)]),
+			PackedColorArray([c1, c1, c2, c2]))
+	if hor < stage.end.y:
+		# Below the horizon nothing is sky: what shows between the stand and the fence is
+		# the shaded walkway under the front rows.
+		ci.draw_rect(Rect2(x0, hor, x1 - x0, stage.end.y - hor), Color(0.045, 0.045, 0.055).lerp(DAY_CONCRETE, day * 0.5), true)
+
+
+## What makes close turf read as mown grass, not flat blocks of colour:
+##   - the ground is cut both ways, so the stripes along it lie faintly over the ones
+##     across it (the checker every AFL ground is mown in);
+##   - inside each stripe, the mower's own lines, a pass at a time, each a touch lighter
+##     or darker than the next. Only near the camera: farther off they are finer than a
+##     pixel and would only crawl.
+static func _turf_detail(tri: Tris, cam: Cam) -> void:
+	var x := -A
+	var n := 0
+	while x < A:
+		if n % 2 == 1:
+			tri.poly(_clip(cam, _band_along(x, minf(x + STRIPE, A))), Color(0.0, 0.04, 0.0, 0.085))
+		x += STRIPE
+		n += 1
+	var eye: Vector2 = cam.to_scene.affine_inverse() * cam.pos
+	var first := floorf((eye.y - MOWER_REACH) / MOWER)
+	var last := ceilf((eye.y + MOWER_REACH) / MOWER)
+	for i in range(int(first), int(last)):
+		var y0 := float(i) * MOWER
+		if y0 < -L or y0 + MOWER > L:
+			continue
+		var h := hash(i * 9176 + 71)
+		var near := 1.0 - absf(y0 - eye.y) / MOWER_REACH
+		var strength := (0.025 + 0.05 * float(h % 97) / 97.0) * clampf(near * 1.6, 0.0, 1.0)
+		var colour := Color(1.0, 1.0, 0.82, strength) if i % 2 == 0 else Color(0.0, 0.05, 0.0, strength * 1.3)
+		tri.poly(_clip(cam, _band(y0, y0 + MOWER * 0.5)), colour)
+
+
+## A hot day's turf: dry, bleached patches scattered over the oval where the grass has
+## burnt off, each a pale straw patch with a paler middle. day: how much daylight (they
+## show by day; under lights the turf only yellows, as before).
+static func _bleached(tri: Tris, cam: Cam, day: float) -> void:
+	if day <= 0.0:
+		return
+	for i in range(70):
+		var h := hash(i * 6121 + 5)
+		var ang := TAU * float(h % 1009) / 1009.0
+		var out := sqrt(float((h / 1009) % 997) / 997.0) * 0.9
+		var at := Vector2(cos(ang) * A * out, sin(ang) * L * out)
+		var rx := 1.2 + 3.0 * float((h / 7) % 89) / 89.0
+		var ry := rx * (0.55 + 0.4 * float((h / 11) % 83) / 83.0)
+		tri.poly(_clip(cam, _ellipse_ring(rx, ry, at.x, at.y, 16)), Color(0.8, 0.74, 0.46, 0.2 * day))
+		tri.poly(_clip(cam, _ellipse_ring(rx * 0.55, ry * 0.5, at.x + rx * 0.12, at.y, 12)), Color(0.88, 0.83, 0.58, 0.16 * day))
 
 
 ## The goal posts at one end (end: +1 the far end of oval y, -1 the other), padded
@@ -338,7 +460,8 @@ static func _segment(tri: Tris, cam: Cam, a: Vector2, b: Vector2) -> void:
 
 ## The apron between the boundary and the fence, and the fence's boards in the clubs'
 ## colours, panel by panel.
-static func _fence_and_apron(tri: Tris, cam: Cam, colours: Array) -> void:
+static func _fence_and_apron(tri: Tris, cam: Cam, colours: Array, slot := VignetteKickoff.NIGHT) -> void:
+	var apron := VignetteWeather.daylit(APRON, slot)
 	var n := 180
 	for i in range(n):
 		var a0 := TAU * float(i) / n
@@ -350,7 +473,7 @@ static func _fence_and_apron(tri: Tris, cam: Cam, colours: Array) -> void:
 		# The apron runs on under the front of the stand, so no gap shows between them.
 		var back0 := Vector2(cos(a0) * (A + FENCE + 3.0), sin(a0) * (L + FENCE + 3.0))
 		var back1 := Vector2(cos(a1) * (A + FENCE + 3.0), sin(a1) * (L + FENCE + 3.0))
-		tri.poly(_clip(cam, [in0, in1, back1, back0]), APRON)
+		tri.poly(_clip(cam, [in0, in1, back1, back0]), apron)
 		# The boards: an upright quad on the fence line.
 		var c: Array = colours[(i / 3) % 2] if colours.size() > 1 else []
 		var board: Color = (c[0] as Color).darkened(0.25) if not c.is_empty() else Color(0.2, 0.2, 0.22)
@@ -371,20 +494,25 @@ static func _fence_and_apron(tri: Tris, cam: Cam, colours: Array) -> void:
 ## between them in the clubs' colours, the roof's edge with its row of lights, the big
 ## screen above the far end, the light towers behind, and the haze the lights make.
 static func _draw_stands(ci: CanvasItem, cam: Cam, colours: Array, seed: int, board: Dictionary,
-		weather := "", t := 0.0) -> void:
+		weather := "", t := 0.0, slot := VignetteKickoff.NIGHT) -> void:
+	# By day the stands are lit by the sky, not the lights: paler seats, concrete and
+	# roofs, and the lights off. day 0 (night) leaves every colour exactly as it was.
+	var day := VignetteKickoff.daylight(slot)
+	var lamps := VignetteKickoff.lights(slot)
 	# The ground's own seats (the MCG's are a pale blue-grey: Commons, "MCG Shane Warne Stand.png").
-	var tex := VignetteCrowd.seats(colours, seed, seat_colour())
+	var tex := VignetteCrowd.seats(colours, seed, _seats_in(slot))
 	# A grass hill: the crowd sitting on the bank (Bellerive, Manuka).
-	var hill: Texture2D = VignetteCrowd.seats(colours, seed + 1, HILL) if spec.get("hill", false) else null
+	var hill: Texture2D = VignetteCrowd.seats(colours, seed + 1, VignetteWeather.daylit(HILL, slot)) if spec.get("hill", false) else null
 	if ci.texture_filter != CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS:
 		ci.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-	_towers(ci, cam)
+	_towers(ci, cam, day, lamps)
 	var ring := _ring_columns(A + FENCE + 2.0, L + FENCE + 2.0, STAND_TILE / 16.0)
 	# Tiers, front to back: [inner offset, outer offset, inner height, outer height] beyond
 	# the fence line: the ground's own. The MCG rises in three, a band of boxes under each
 	# of the upper two.
 	var tiers: Array = spec["tiers"]
-	var roof_c := Color.html(str(spec.get("roof_colour", "#0f0f12")))
+	var roof_c := _lit(Color.html(str(spec.get("roof_colour", "#0f0f12"))), DAY_ROOF, day * 0.6)
+	var under := _lit(Color(0.045, 0.045, 0.055), DAY_CONCRETE, day * 0.75)
 	var lower: Array = tiers[0]
 	var upper: Array = tiers[tiers.size() - 1]
 	var shade := Tris.new()
@@ -394,12 +522,12 @@ static func _draw_stands(ci: CanvasItem, cam: Cam, colours: Array, seed: int, bo
 	for i in range(ring.size() - 1):
 		var a0: float = ring[i][0]
 		var a1: float = ring[i + 1][0]
-		var panel: Color = (c0 if (i / 6) % 2 == 0 else c1).darkened(0.35)
+		var panel: Color = (c0 if (i / 6) % 2 == 0 else c1).darkened(lerpf(0.35, 0.12, day))
 		for k in range(1, tiers.size()):
 			var below: Array = tiers[k - 1]
 			var tier: Array = tiers[k]
 			# The underside of the tier above and the concourse: dark, behind the fascia.
-			_wall(shade, cam, a0, a1, below[1], below[1], below[3], tier[2] + 0.5, Color(0.045, 0.045, 0.055))
+			_wall(shade, cam, a0, a1, below[1], below[1], below[3], tier[2] + 0.5, under)
 			# The fascia along the tier's front, panel by panel in the clubs' colours.
 			_wall(lit, cam, a0, a1, tier[0], tier[0], tier[2] - 2.2, tier[2], panel)
 			_wall(lit, cam, a0, a1, tier[0], tier[0], tier[2] - 0.25, tier[2], Color(1, 1, 1, 0.25))
@@ -422,7 +550,9 @@ static func _draw_stands(ci: CanvasItem, cam: Cam, colours: Array, seed: int, bo
 	lit.flush(ci)
 	if spec.get("trusses", false):
 		_mcg_trusses(ci, cam, ring, upper)
-	# In the wind, the flags people hold up along the front rows stream out.
+	# In the wind, the flags people hold up along the front rows stream out, toward the end
+	# the breeze blows to (the board's "wind"), wherever on the ground they are.
+	var blowing := VignetteWeather.wind_world(VignetteWeather.wind_end(board))
 	if VignetteWeather.wind(weather) > 0.0:
 		for i in range(1, ring.size(), 2):
 			var a: float = ring[i][0]
@@ -434,10 +564,14 @@ static func _draw_stands(ci: CanvasItem, cam: Cam, colours: Array, seed: int, bo
 				continue
 			var home := (i / 2) % 2 == 0
 			VignetteWeather.draw_flag(ci, Vector2(s.x, s.y), 2.4 * s.z, 2.4 * s.z, 1.5 * s.z,
-					c0 if home else c1, t, float(i) * 1.3, 1.0, _second(colours, 0 if home else 1))
-	# Lights under the roof's edge, every few metres.
+					c0 if home else c1, t, float(i) * 1.3, 1.0, _second(colours, 0 if home else 1),
+					VignetteWeather.flag_stream(cam, p, h + 2.4, blowing))
+	# Lights under the roof's edge, every few metres: on at night, coming on at twilight,
+	# off by day.
 	var lights := Tris.new()
 	for i in range(0, ring.size(), 2):
+		if lamps <= 0.0:
+			break
 		var a: float = ring[i][0]
 		var p := Vector2(cos(a) * (A + FENCE + 2.0 + upper[1] - 2.0), sin(a) * (L + FENCE + 2.0 + upper[1] - 2.0))
 		var s := cam.oval(p, upper[3] + 1.0)
@@ -445,7 +579,7 @@ static func _draw_stands(ci: CanvasItem, cam: Cam, colours: Array, seed: int, bo
 			continue
 		var r := maxf(0.8, 0.35 * s.z)
 		lights.poly([Vector2(s.x - r, s.y - r * 0.5), Vector2(s.x + r, s.y - r * 0.5),
-				Vector2(s.x + r, s.y + r * 0.5), Vector2(s.x - r, s.y + r * 0.5)], Color(1.0, 0.97, 0.88, 0.9))
+				Vector2(s.x + r, s.y + r * 0.5), Vector2(s.x - r, s.y + r * 0.5)], Color(1.0, 0.97, 0.88, 0.9 * lamps))
 	lights.flush(ci)
 	# In the wind, the flags along the roofs stream out in the clubs' colours.
 	var wind := VignetteWeather.wind(weather)
@@ -458,13 +592,36 @@ static func _draw_stands(ci: CanvasItem, cam: Cam, colours: Array, seed: int, bo
 				continue
 			var home := (i / 9) % 2 == 0
 			VignetteWeather.draw_flag(ci, Vector2(s.x, s.y), 7.0 * s.z, 5.0 * s.z, 2.6 * s.z,
-					c0 if home else c1, t, float(i) * 0.7, wind, _second(colours, 0 if home else 1))
-	_screen(ci, cam, c0, c1, board)
+					c0 if home else c1, t, float(i) * 0.7, wind, _second(colours, 0 if home else 1),
+					VignetteWeather.flag_stream(cam, p, upper[3] + 11.0, blowing))
+	_screen(ci, cam, c0, c1, board, 1, weather, day)
 	if int(spec.get("screens", 1)) > 1:
-		_screen(ci, cam, c0, c1, board, -1)
+		_screen(ci, cam, c0, c1, board, -1, weather, day)
 	elif spec.get("heritage_board", false):
 		_heritage_board(ci, cam)
-	_haze(ci, cam, weather)
+	_haze(ci, cam, weather, slot)
+
+
+## By day: empty seats, bare concrete, a roof and a light tower's steel in daylight.
+const DAY_SEAT := Color(0.42, 0.45, 0.5)
+const DAY_CONCRETE := Color(0.3, 0.31, 0.34)
+const DAY_ROOF := Color(0.74, 0.76, 0.79)
+const DAY_STEEL := Color(0.52, 0.54, 0.57)
+const DAY_LAMP := Color(0.72, 0.74, 0.76)
+
+
+## A colour under the lights turned toward its daylight colour: share 0 gives it back
+## untouched (night), so nothing at night moves by a shade.
+static func _lit(c: Color, by_day: Color, share: float) -> Color:
+	return c if share <= 0.0 else c.lerp(by_day, share)
+
+
+## Which way the big screen's wind arrow points at an end (+1 the +y end, -1 the other)
+## when the breeze blows to wind_end: up (+1) when it blows toward that screen's end,
+## since on any shot that shows the screen its end is the far one; down (-1) when it
+## blows back toward the camera's end.
+static func wind_arrow(wind_end: int, end := 1) -> int:
+	return 1 if wind_end * end > 0 else -1
 
 
 const STAND_TILE := 35.0          # metres of stand per copy of the seats texture
@@ -586,11 +743,14 @@ static func _wall(tri: Tris, cam: Cam, a0: float, a1: float, o0: float, o1: floa
 
 
 ## The light towers outside the stands: a mast and a bank of lights at the top of each,
-## glowing into the night.
-static func _towers(ci: CanvasItem, cam: Cam) -> void:
+## glowing into the night. day: how much daylight is on the steel; lamps: how strongly
+## the lights show (the glow goes with them; by day the bank is a dull grey frame).
+static func _towers(ci: CanvasItem, cam: Cam, day := 0.0, lamps := 1.0) -> void:
+	var steel := _lit(Color(0.09, 0.09, 0.1), DAY_STEEL, day)
+	var lamp := _lit(Color(0.98, 0.97, 0.9), DAY_LAMP, 1.0 - lamps)
 	match str(spec.get("towers", "masts")):
 		"mcg":
-			_mcg_towers(ci, cam)
+			_mcg_towers(ci, cam, steel, lamp, lamps)
 			return
 		"none":
 			return
@@ -600,11 +760,13 @@ static func _towers(ci: CanvasItem, cam: Cam) -> void:
 			continue
 		var top := cam.oval(p, 78.0)
 		var w := maxf(1.0, 1.4 * base.z)
-		ci.draw_rect(Rect2(base.x - w * 0.5, top.y, w, base.y - top.y), Color(0.09, 0.09, 0.1), true)
+		ci.draw_rect(Rect2(base.x - w * 0.5, top.y, w, base.y - top.y), steel, true)
 		var bank := Vector2(6.0, 4.0) * top.z
 		for g in range(6):
-			ci.draw_circle(Vector2(top.x, top.y), bank.x * (1.0 + g * 1.1), Color(1.0, 0.95, 0.82, 0.05 - g * 0.007))
-		ci.draw_rect(Rect2(Vector2(top.x, top.y) - bank * 0.5, bank), Color(0.98, 0.97, 0.9), true)
+			if lamps <= 0.0:
+				break
+			ci.draw_circle(Vector2(top.x, top.y), bank.x * (1.0 + g * 1.1), Color(1.0, 0.95, 0.82, (0.05 - g * 0.007) * lamps))
+		ci.draw_rect(Rect2(Vector2(top.x, top.y) - bank * 0.5, bank), lamp, true)
 
 
 ## The MCG's stands as seen from the ground (Commons, "MCG Shane Warne Stand.png",
@@ -655,8 +817,8 @@ const MCG_FRAME_H := 10.0
 const MCG_FRAME_W := 14.0
 const MCG_TILT := 15.0
 
-static func _mcg_towers(ci: CanvasItem, cam: Cam) -> void:
-	var steel := Color(0.09, 0.09, 0.1)
+static func _mcg_towers(ci: CanvasItem, cam: Cam, steel := Color(0.09, 0.09, 0.1),
+		lamp_colour := Color(0.98, 0.97, 0.9), lamps := 1.0) -> void:
 	for p in _tower_spots():
 		var base := cam.oval(p, 0.0)
 		var top := cam.oval(p, MCG_MAST)
@@ -684,7 +846,9 @@ static func _mcg_towers(ci: CanvasItem, cam: Cam) -> void:
 		var mid := (quad[0] + quad[1] + quad[2] + quad[3]) * 0.25
 		var reach := quad[0].distance_to(quad[1])
 		for g in range(6):
-			ci.draw_circle(mid, reach * (0.55 + g * 0.45), Color(1.0, 0.95, 0.82, 0.05 - g * 0.007))
+			if lamps <= 0.0:
+				break
+			ci.draw_circle(mid, reach * (0.55 + g * 0.45), Color(1.0, 0.95, 0.82, (0.05 - g * 0.007) * lamps))
 		ci.draw_colored_polygon(quad, steel)
 		# The lamps, rows across the frame.
 		var lamp := maxf(0.8, 0.45 * top.z)
@@ -693,7 +857,7 @@ static func _mcg_towers(ci: CanvasItem, cam: Cam) -> void:
 				var u := (float(col) + 0.5) / 9.0
 				var v := (float(row) + 0.5) / 4.0
 				var at: Vector2 = quad[0].lerp(quad[1], u).lerp(quad[3].lerp(quad[2], u), v)
-				ci.draw_rect(Rect2(at - Vector2(lamp, lamp * 0.7), Vector2(lamp * 2.0, lamp * 1.4)), Color(0.98, 0.97, 0.9), true)
+				ci.draw_rect(Rect2(at - Vector2(lamp, lamp * 0.7), Vector2(lamp * 2.0, lamp * 1.4)), lamp_colour, true)
 
 
 ## Where the big screen at an end (-1: the other one) lands on the screen; empty when it
@@ -709,8 +873,11 @@ static func screen_rect(cam: Cam, end := 1) -> Rect2:
 ## The big screen high above the far end, behind the goals, showing the match's score
 ## as it stands (board): each club's code by a chip of its colour, goals.behinds and
 ## the total, the quarter beneath. Lit, so it glows a little into the night. The MCG has
-## one at each end (end -1: the other one).
-static func _screen(ci: CanvasItem, cam: Cam, home: Color, away: Color, board: Dictionary, end := 1) -> void:
+## one at each end (end -1: the other one). On a windy day it carries the wind: an arrow
+## to the end the breeze blows to (board "wind": +1 the +y end, -1 the other; wind_arrow).
+## day: how much daylight; the screen's glow into the air fades with it.
+static func _screen(ci: CanvasItem, cam: Cam, home: Color, away: Color, board: Dictionary, end := 1,
+		weather := "", day := 0.0) -> void:
 	if bool(board.get("off", false)):
 		return                                   # a shot too tight for it: half a screen read as a fault
 	var r := screen_rect(cam, end)
@@ -718,7 +885,7 @@ static func _screen(ci: CanvasItem, cam: Cam, home: Color, away: Color, board: D
 		return
 	var c := Vector3(r.get_center().x, r.get_center().y, r.size.x / 30.0)
 	for g in range(4):
-		ci.draw_rect(r.grow((g + 1) * 1.4 * c.z), Color(0.6, 0.7, 0.9, 0.025), true)
+		ci.draw_rect(r.grow((g + 1) * 1.4 * c.z), Color(0.6, 0.7, 0.9, 0.025 * lerpf(1.0, 0.3, day)), true)
 	ci.draw_rect(r.grow(0.6 * c.z), Color(0.04, 0.04, 0.05), true)
 	ci.draw_rect(r, Color(0.05, 0.07, 0.11), true)
 	var codes: Array = board.get("codes", [])
@@ -749,16 +916,35 @@ static func _screen(ci: CanvasItem, cam: Cam, home: Color, away: Color, board: D
 	if q > 0:
 		ci.draw_string(font, Vector2(r.position.x, r.end.y - fs * 0.25), "Q%d" % q,
 				HORIZONTAL_ALIGNMENT_CENTER, r.size.x, int(fs * 0.6), Color(1, 1, 1, 0.6))
+	if weather == VignetteWeather.WINDY:
+		_wind_arrow(ci, r, fs, wind_arrow(VignetteWeather.wind_end(board), end))
+
+
+## The wind on the big screen, in its bottom left corner: the word and an arrow, up when
+## the breeze blows to this screen's end, down when it blows the other way.
+static func _wind_arrow(ci: CanvasItem, r: Rect2, fs: int, up: int) -> void:
+	var small := int(fs * 0.6)
+	var ink := Color(0.62, 0.86, 1.0, 0.95)
+	var base := Vector2(r.position.x + r.size.x * 0.05, r.end.y - fs * 0.25)
+	ci.draw_string(UiKit.BOLD, base, "WIND", HORIZONTAL_ALIGNMENT_LEFT, -1, small, ink)
+	var word := UiKit.BOLD.get_string_size("WIND", HORIZONTAL_ALIGNMENT_LEFT, -1, small).x
+	var mid := base + Vector2(word + small * 0.75, -small * 0.38)
+	var half := small * 0.48
+	var tip := mid + Vector2(0.0, -half * up)
+	var tail := mid + Vector2(0.0, half * up)
+	ci.draw_line(tail, tip, ink, maxf(1.0, small * 0.16), true)
+	ci.draw_colored_polygon(PackedVector2Array([tip + Vector2(0.0, -half * 0.35 * up),
+			tip + Vector2(-half * 0.6, half * 0.55 * up), tip + Vector2(half * 0.6, half * 0.55 * up)]), ink)
 
 
 ## The haze the lights make over the far side: a soft band of light on the horizon, over
 ## the far stands and the far turf.
-static func _haze(ci: CanvasItem, cam: Cam, weather := "") -> void:
+static func _haze(ci: CanvasItem, cam: Cam, weather := "", slot := VignetteKickoff.NIGHT) -> void:
 	var x0 := cam.cx - 4000.0
 	var x1 := cam.cx + 4000.0
 	var y := cam.hor
 	var band := 0.12 * cam.f
-	var haze := VignetteWeather.haze(weather)
+	var haze := VignetteWeather.haze(weather, slot)
 	var clear := Color(haze.r, haze.g, haze.b, 0.0)
 	ci.draw_polygon(PackedVector2Array([Vector2(x0, y - band * 2.0), Vector2(x1, y - band * 2.0), Vector2(x1, y), Vector2(x0, y)]),
 			PackedColorArray([clear, clear, haze, haze]))
@@ -809,6 +995,21 @@ static func _band(y0: float, y1: float) -> Array:
 	var key := ["band", y0, y1, A, L]
 	if not _geometry.has(key):
 		_geometry[key] = _band_made(y0, y1)
+	return _geometry[key]
+
+
+## The slice of the oval between x0 and x1 (a stripe mown along the ground).
+static func _band_along(x0: float, x1: float) -> Array:
+	var key := ["along", x0, x1, A, L]
+	if not _geometry.has(key):
+		var near := []
+		var far := []
+		for i in range(7):
+			var x := lerpf(x0, x1, float(i) / 6.0)
+			var y := L * sqrt(maxf(0.0, 1.0 - pow(x / A, 2.0)))
+			near.append(Vector2(x, -y))
+			far.push_front(Vector2(x, y))
+		_geometry[key] = near + far
 	return _geometry[key]
 
 

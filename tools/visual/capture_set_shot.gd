@@ -4,7 +4,7 @@ extends SceneTree
 ## call (MatchSim._offer_set_shot), so the headline is the one a match shows. Needs a
 ## real renderer (windowed, through C:/kt/gpu_slot.sh on this machine):
 ##   godot --path . --script tools/visual/capture_set_shot.gd -- --out /tmp/ss [--size 390x844]
-##       [--club COL] [--bands close,front,angle,pocket,long] [--venue MCG] [--topdown] [--clip]
+##       [--club FRE] [--bands close,front,angle,pocket,long] [--venue MCG] [--topdown] [--clip]
 ## Writes <out>_<band>.png (frozen, the call up) and prints a MEASURE line per band: where
 ## the kicker and the man on the mark stand on the oval, metres to the middle of the goal
 ## line, the angle off the line through the goals, and whether the 50 m arc lies between
@@ -85,7 +85,7 @@ func _stage(club: String, key: String, venue: String) -> Control:
 
 
 func _run() -> void:
-	var club := "COL"
+	var club := "FRE"
 	var venue := ""
 	var bands := ["close", "front", "angle", "pocket", "long"]
 	var topdown := false
@@ -232,7 +232,7 @@ func _frame_line(m: Control, vig, key: String) -> void:
 			continue
 		var pos: Vector2 = vig.call("_pos", t)
 		var feet: Vector2 = at.call(vig.call("_project", pos, vig.call("_lift", t)))
-		var head: Vector2 = at.call(vig.call("_project", pos, float(vig.call("_lift", t)) + float(vig.call("_figure_top", t))))
+		var head: Vector2 = at.call(vig.call("_project", pos, float(vig.call("_lift", t)) + float(vig.call("_head_top", t))))
 		line += " | %s feet %.0f,%.0f head %.0f" % [role, feet.x, feet.y, head.y]
 	var cam = vig.ground_cam()
 	for x in [-0.5, 0.5]:

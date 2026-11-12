@@ -348,9 +348,12 @@ static func slim_results(v, with_box := false):
 ## changes, and for the coach's report each side's plans by quarter and the
 ## weather (qa, 2026-10-11: they vanished after a reload). The impact ledger
 ## and the game-plan traits tell full time what each call was worth (row 144).
+## "breeze_side" is who kicked with the breeze first, so the reviewed match's flags and
+## the board's arrow point the way they did live; a save from before it has no such key
+## and its flags take the default end.
 const REVIEW_KEYS := ["players", "roster", "team", "quarter_teams",
 		"injuries", "synergies", "duels", "duel_changes", "tactics_history", "weather",
-		"impact", "impact_by", "plan_traits"]
+		"impact", "impact_by", "plan_traits", "breeze_side"]
 const REVIEW_EVENT_KINDS := ["goal", "behind", "quarter", "final"]
 
 

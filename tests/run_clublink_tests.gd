@@ -844,6 +844,16 @@ func _from_match(sz: Vector2i) -> void:
 			break
 	_check(pick != null, "%s: the calls offer a man to tag" % tag)
 	if pick != null:
+		# The names sit behind the tag's own row on the one pre-match screen (row 166):
+		# open it with a real tap on the row, as a coach would.
+		var body: Node = pick
+		while body != null and not str(body.name).begins_with("CallBody_"):
+			body = body.get_parent()
+		if body != null and not pick.is_visible_in_tree():
+			var row: Button = m.find_child("CallRow_" + str(body.name).trim_prefix("CallBody_"), true, false)
+			if row != null:
+				await Tap.tap(row)
+				await _settle()
 		var why: String = await Tap.tap(pick)
 		await _settle()
 		var note: Control = m.find_child("TagNote", true, false)

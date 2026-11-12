@@ -73,16 +73,32 @@ var _frozen := false
 var _hold := 0.0            # time since the freeze, for the last push-in
 
 
-func setup(sim: MatchSim, my_side: int, heading := "") -> void:
+## The big screen's board for a call scene: both clubs, the score (the one the header
+## shows when the match screen hands it over, else the match's own), the quarter, and the
+## end the breeze blows to. Your side kicks to the scene's +y end, so the breeze blows
+## there (+1) in a quarter your side kicks with it and to the other end (-1) otherwise.
+## Read only: nothing here touches the match.
+static func board_of(sim: MatchSim, my_side: int, shown := {}) -> Dictionary:
+	var goals: Array = shown.get("goals", [])
+	var behinds: Array = shown.get("behinds", [])
+	if goals.size() < 2 or behinds.size() < 2:
+		goals = [sim.goals(0), sim.goals(1)]
+		behinds = [sim.behinds(0), sim.behinds(1)]
+	return {"codes": [str((sim.squads[0] as Squad).code), str((sim.squads[1] as Squad).code)],
+			"goals": [int(goals[0]), int(goals[1])], "behinds": [int(behinds[0]), int(behinds[1])],
+			"q": sim.current_quarter, "wind": 1 if sim.with_breeze(my_side) else -1}
+
+
+## shown: the score the match screen's header shows ({goals: [home, away], behinds:
+## [home, away]}), so the big screen never runs ahead of it; empty, the match's own.
+func setup(sim: MatchSim, my_side: int, heading := "", shown := {}) -> void:
 	title = heading
 	tokens.clear()
 	# The day's weather, when MatchSim has one; more of them wear long sleeves in the wet.
 	weather = str(sim.get("weather")) if sim.get("weather") != null else ""
 	weather = VignetteGrade.weather_of(weather)
 	var wet := weather == "wet"
-	_board = {"codes": [str((sim.squads[0] as Squad).code), str((sim.squads[1] as Squad).code)],
-			"goals": [sim.goals(0), sim.goals(1)], "behinds": [sim.behinds(0), sim.behinds(1)],
-			"q": sim.current_quarter}
+	_board = board_of(sim, my_side, shown)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash("%s|%d" % [str((sim.squads[0] as Squad).code), sim.current_minute])
 	for side in range(2):
@@ -118,9 +134,15 @@ func setup(sim: MatchSim, my_side: int, heading := "") -> void:
 						"dur": rng.randf_range(1.3, 1.7) * (1.6 if tired else 1.0)})
 	_style_rucks()
 	facts = _commentary(sim, my_side)
+	# Everyone else: the wings, both arcs and the other umpires (the square is the bounce's own).
+	_cast = VignetteExtras.players(sim, my_side, tokens.map(func(t): return str(t["id"])), Vector2.ZERO, wet, true, live_spots) \
+			+ VignetteExtras.umpires(Vector2.ZERO, Vector2.INF)
+	_place_cast()
 	_t = 0.0
 	_hold = 0.0
+	_idle = 0.0
 	_frozen = false
+	_shot.clear()
 	_dress()
 	if _ui == self:
 		_ui = VignetteGrade.attach(self, weather, _draw_ui)
@@ -237,15 +259,50 @@ func is_frozen() -> bool:
 
 func _process(delta: float) -> void:
 	if _frozen:
-		if _hold < 0.4:
-			_hold += delta
-			queue_redraw()
+		_after_freeze(delta)
 		return
 	_t += delta
 	if _t >= FREEZE:
 		_t = FREEZE
 		_freeze()
 	queue_redraw()
+
+
+## After the freeze: the last push-in, then (a scene that idles) the clock the standing men,
+## the crowd and the weather keep moving on while the coach decides. Settings > Reduced
+## motion holds the frame still.
+func _after_freeze(delta: float) -> void:
+	if _hold < 0.4:
+		_hold += delta
+		queue_redraw()
+	elif _idles() and not _reduced():
+		_idle += delta
+		# The men shift their weight three times a second: twelve pictures a second is plenty.
+		if _idle - _idle_drawn >= 1.0 / 12.0:
+			_idle_drawn = _idle
+			queue_redraw()
+
+
+## Whether the men, the crowd and the weather keep moving after the freeze. Not the centre
+## bounce: its freeze is the top of the ruck contest, both men and the ball in the air, and
+## nothing moves round a ball that hangs.
+func _idles() -> bool:
+	return false
+
+
+func _reduced() -> bool:
+	var gs := get_node_or_null("/root/GameState")
+	return gs != null and gs.has_method("reduced_motion") and bool(gs.reduced_motion())
+
+
+## The scene's clock: the play-in, then the time spent waiting on the call.
+func clock() -> float:
+	return _t + _idle
+
+
+## When the scene freezes for the call, seconds in.
+func _freeze_at() -> float:
+	return FREEZE
 
 
 func _freeze() -> void:
@@ -327,61 +384,309 @@ static func _surname(full: String) -> String:
 
 
 # ---------------------------------------------------------------------------
-# The camera: the broadcast camera high behind your end, on a long lens. It opens wide on
-# the square and holds there while the set-up builds (both rucks, the mids, the umpire),
-# then zooms in on the contest as the ball goes up. It stays where it is: only the lens
-# moves, so the picture scales as one and nothing changes shape (it used to travel in
-# from 34 m to 18 m, and the square and the players warped as it came - director).
+# The camera: a broadcast camera behind your end, low and on a long lens, so the stand and
+# the crowd fill the top of the picture and the turf is a strip under the men's boots. It
+# opens wider on the square while the set-up builds (both rucks, the mids, the umpire), then
+# zooms in on the contest as the ball goes up. It stays where it is: only the lens moves, so
+# the picture scales as one and nothing changes shape (it used to travel in from 34 m to
+# 18 m, and the square and the players warped as it came - director).
+#
+# Where it stands is worked out from the picture wanted at the freeze, never guessed
+# (director, 2026-11-09 and the 2026-11-12 visual interview): the men a given size, the turf
+# from the far fence to the bottom of the picture no more than a third of it, the top of the
+# stand just under the title bar (_solve).
 # ---------------------------------------------------------------------------
-const CAM_D := 46.0               # metres behind the centre
-const CAM_H := 12.0               # and up (low enough that the stand stays in the zoom)
-## The zoom: the wide shot of the whole stoppage (as a camera at 27 m: both rucks and all six
-## mids across the frame, big enough to tell apart; at 36 m a phone drew them ~25 px tall), a
-## slow creep while it holds, the ruck contest's (as at 18.5 m) at the freeze, then a last punch-in.
-const ZOOM := [46.0 / 27.0, 46.0 / 25.0, 46.0 / 18.5, 46.0 / 17.0]
-## The centre of the ground, as a share of the screen's height: while the play
-## builds, and once the call is up (it takes the bottom of the screen).
-const CENTRE_Y := [0.58, 0.46]
-## On a wide window, how much closer than a plain height-fit, and where the centre sits: at 1.0
-## the ruckmen stood ~6% of the screen's height and the ball couldn't be read; at 2.0 the posts
-## and the crowd left the top of the screen (AFL BOSS, #578). 1.35 with the centre 62% down keeps
-## a strip of crowd and the posts above a readable contest.
-const LANDSCAPE_PUSH := 1.35
-const LANDSCAPE_CENTRE_Y := [0.62, 0.5]
-var _cam_d := CAM_D
-var _cam_h := CAM_H
+## At the settled freeze, as shares of the open picture (under the title bar, above the call):
+## the turf from the far fence's foot down to the bottom, and the gap left under the boots.
+const GRASS_SHARE := 0.32
+const FEET_SHARE := 0.07
+## How much of the screen the call takes when it is up, for working out the turf's share
+## before the call exists: a tall phone's and a wide window's.
+const CALL_SHARE := [0.4, 0.3]
+## The top of the stand sits this far under the title bar: a strip of sky for the towers.
+const STAND_TOP := 0.04
+## The contest stays this far under the title bar, pixels.
+const HEAD_ROOM := 30.0
+var _cam_d := 46.0
+var _cam_h := 12.0
 var _focal := 400.0
 var _horizon := 0.0
 var _cam_x := CAM_X
 var _zoom := 1.0                  # how far the lens has zoomed since the start
 var _pan := 0.0                   # pixels the camera has turned across, at this zoom
+## The camera worked out for this screen (_solve); empty until first asked for.
+var _shot := {}
+var _idle := 0.0                  # seconds waited on the call since the freeze settled
+var _idle_drawn := 0.0
+## Everyone else on the ground (VignetteExtras): drawn with the scene's men, never in tokens.
+var _cast: Array = []
+## Both sides in full and the umpires, before the scene keeps its own ground clear.
+var _cast_all: Array = []
+## Where the live oval has each man at this moment, by his id, in oval metres (x across,
+## y toward the goal your side kicks at): set by the match screen before setup. Empty:
+## the set-up tables place the cast (a scene opened without a live oval).
+var live_spots := {}
+
+
+## What the freeze frames, in the scene's metres: "near" how far up the scene the nearest
+## boots are and "mid" where across it the picture centres; "half" how far the men spread
+## either side of that; "top" the top of the action above the turf (the figures' larger-than-
+## life metres); "tall" how much of the open picture that may stand; "d" the lens's distance
+## from the near boots (0: found, so the stand fills the top); "x" how far across the camera
+## stands; "feet" the gap under the boots (a share, FEET_SHARE by default).
+func _subject() -> Dictionary:
+	# The ruck contest: both ruckmen up, the ball above them, the first midfielders either side.
+	# (The first midfielders stand five metres either side of the circle: both in the picture.)
+	return {"near": -1.5, "mid": 0.0, "half": 5.7, "top": 6.0, "tall": 0.55, "d": 0.0,
+			"x": CAM_X, "feet": 0.1}
+
+
+## The camera for this screen: worked out once per size.
+func shot() -> Dictionary:
+	if _shot.is_empty() or (_shot["size"] as Vector2) != size:
+		_shot = _solve()
+		_clear_posts()
+	return _shot
+
+
+## Whether an oval spot is inside the boundary line pushed out by margin metres.
+static func _inside(p: Vector2, margin: float) -> bool:
+	return pow(p.x / (VignetteGround.A + margin), 2.0) + pow(p.y / (VignetteGround.L + margin), 2.0) < 1.0
+
+
+## Where the camera stands and how long its lens is, from the picture wanted at the freeze.
+## A level lens draws a point h metres up and z metres away at horizon + f * (H - h) / z, so:
+##   s, pixels per metre at the near boots: the top of the action "tall" of the open picture,
+##      or the men's spread across 92% of the width, whichever is smaller;
+##   H, the camera's height: the turf between the near boots and the far fence's foot is
+##      s * H * Db / (d + Db) pixels tall (Db: boots to fence), set to the turf's share;
+##   d, its distance: the top of the stand (Hs up, Ds away) is drawn at
+##      boots - s * H + s * d * (H - Hs) / (d + Ds); the camera backs off, the lens growing
+##      with it, until that reaches the title bar - or the camera reaches the fence behind it.
+func _solve() -> Dictionary:
+	if VignetteGround.spec.is_empty():
+		VignetteGround.venue = VignetteGround.venue
+	var sub := _subject()
+	var bar := size.y * 0.075
+	var open := maxf(40.0, size.y - 2.0 * bar)
+	var feet_share := float(sub.get("feet", FEET_SHARE))
+	var s := minf(float(sub["tall"]) * open / float(sub["top"]), 0.92 * size.x / (2.0 * float(sub["half"])))
+	var feet := size.y - bar - feet_share * open
+	# The turf's strip is sized for the picture left above the call, so the share holds there.
+	var open_call := maxf(40.0, size.y * (1.0 - float(CALL_SHARE[1 if size.x > size.y else 0])) - bar)
+	var strip := (GRASS_SHARE - feet_share) * open_call
+	var back := _ground_to_scene().affine_inverse()
+	var here := Vector2(float(sub["mid"]), float(sub["near"]))
+	var db := 1.0
+	while db < 400.0 and _inside(back * (here + Vector2(0.0, db)), VignetteGround.FENCE):
+		db += 0.5
+	var tiers: Array = VignetteGround.spec["tiers"]
+	var upper: Array = tiers[tiers.size() - 1]
+	var ds := db + 2.0 + float(upper[1])
+	var hs := float(upper[3])
+	var want := bar + STAND_TOP * open
+	var x := float(sub["x"])
+	var d := float(sub["d"])
+	if d <= 0.0:
+		d = 9.0
+		while d < 120.0:
+			var h_try := strip * (d + db) / (s * db)
+			if feet - s * h_try + s * d * (h_try - hs) / (d + ds) <= want:
+				break
+			# The camera stays on the ground: never behind a goal line, its posts in front of it.
+			if not _inside(back * Vector2(x, float(sub["near"]) - d - 1.0), -1.0):
+				break
+			d += 0.5
+	var h := strip * (d + db) / (s * db)
+	return {"size": size, "bar": bar, "open": open, "s": s, "d": d, "h": h, "x": x, "feet": feet,
+			"feet_share": feet_share, "near": float(sub["near"]), "mid": float(sub["mid"]),
+			"top": float(sub["top"]), "db": db, "ds": ds, "hs": hs}
+
+
+## The call's room as the camera uses it: never more than six tenths of the picture (the
+## match screen has handed over a panel's height before the panel was laid out).
+func _room() -> float:
+	return minf(call_room, size.y * 0.6)
+
+
+## At the settled freeze: how far the lens eases out so the top of the action stays under
+## the title bar (x; 1 when it fits), and where the near boots sit above the call (y).
+func _freeze_fit() -> Vector2:
+	var bar: float = _shot["bar"]
+	var floor_y := size.y - maxf(_room(), bar)
+	var feet := floor_y - float(_shot["feet_share"]) * (floor_y - bar)
+	return Vector2(clampf((feet - bar - HEAD_ROOM) / (float(_shot["top"]) * float(_shot["s"])), 0.4, 1.0), feet)
 
 
 func _set_camera() -> void:
-	# The wide shot holds (a slow creep keeps it alive), then the push-in eases in and out.
-	var hold := clampf(_t / PUSH_IN, 0.0, 1.0)
-	var k := _smooth(clampf((_t - PUSH_IN) / (FREEZE - PUSH_IN), 0.0, 1.0))
-	var punch := _ease(clampf(_hold / 0.4, 0.0, 1.0))
-	# Fitted to the height on a wide window (director: "no reason to be so limited on PC"),
-	# pushed in LANDSCAPE_PUSH: the bounce is an action beat, so the contest fills the frame
-	# with the posts and the crowd along the top. A portrait phone keeps its framing.
-	var base := size.y * 0.7 * LANDSCAPE_PUSH if size.x > size.y else maxf(size.x * 1.5, size.y * 0.7)
-	var z: float = lerpf(lerpf(lerpf(ZOOM[0], ZOOM[1], hold), ZOOM[2], k), ZOOM[3], punch)
-	_focal = base * z
-	_zoom = z / ZOOM[0]
+	shot()
+	_apply_camera(_t, _hold)
+
+
+## The camera at t seconds into the play-in and hold seconds into the freeze's last move.
+func _apply_camera(t: float, hold_t: float) -> void:
+	# The wider shot holds (a slow creep keeps it alive), then the push-in eases in and out.
+	var hold := clampf(t / PUSH_IN, 0.0, 1.0)
+	var k := _smooth(clampf((t - PUSH_IN) / (FREEZE - PUSH_IN), 0.0, 1.0))
+	var punch := _ease(clampf(hold_t / 0.4, 0.0, 1.0))
+	var d: float = _shot["d"]
+	var s: float = _shot["s"]
+	var fit := _freeze_fit()
+	# Wide enough for the whole square's set-up (eight metres either side) where the screen
+	# has the width; a phone's stays closer, or the men are specks under an empty sky.
+	var wide := clampf(0.92 * size.x / (16.0 * s), 0.74, 0.9)
+	var z: float = lerpf(lerpf(lerpf(wide, wide * 1.04, hold), 0.95, k), fit.x, punch)
+	_cam_d = d - float(_shot["near"])
+	_cam_h = _shot["h"]
+	_cam_x = _shot["x"]
+	_focal = s * d * z
+	_zoom = z / wide
 	# The wide shot is turned onto the centre of the square, so the set-up sits in the middle
 	# of the picture; then it pans across with the ruckmen to the contest. A pan turns the
 	# camera on its head, which moves the whole picture as one; the camera itself stays
-	# at CAM_X (sliding it across would move the near turf more than the far, and the
+	# where it is (sliding it across would move the near turf more than the far, and the
 	# painted lines would skew as it went - director).
-	_cam_x = CAM_X
-	_pan = _focal * lerpf(-CAM_X, CAM_X * 0.35 - CAM_X, k) / (_cam_d + 5.0)
-	# Where the centre of the ground sits: low enough to fill the screen while the
-	# play builds, then lifted clear of the call as it slides up - the same push-in
-	# as the freeze, so one move makes room for the call rather than empty turf
-	# waiting for it all scene.
-	var at: Array = LANDSCAPE_CENTRE_Y if size.x > size.y else CENTRE_Y
-	_horizon = size.y * lerpf(at[0], at[1], punch) - _focal * _cam_h / _cam_d
+	_pan = _focal * (lerpf(0.0, float(_shot["mid"]), k) - _cam_x) / d
+	# The near boots sit at the bottom of the picture while the play builds, then lift clear
+	# of the call as it slides up - a tilt, the same move as the last push.
+	_horizon = lerpf(float(_shot["feet"]), fit.y, punch) - _focal * _cam_h / d
+
+
+## The men whose names show at the freeze: the rucks, the first midfielder each side and
+## anyone out on their feet. Not a roll call.
+func _named() -> Array:
+	return tokens.filter(func(t): return str(t["slot"]) in ["R", "C"] or bool(t["tired"]))
+
+
+## How far across the camera may step, in metres from where the scene put it, to get a goal
+## post out from behind a named man: nearest first.
+func _cam_steps() -> Array:
+	var out := [0.0]
+	for i in range(1, 17):
+		out.append(0.5 * i)
+		out.append(-0.5 * i)
+	return out
+
+
+## No goal or behind post rises out of a named man's head at the freeze: the camera steps
+## across until every post that tops a man stands clear of his shoulders.
+func _clear_posts() -> void:
+	var keep := Vector2(_t, _hold)
+	var base: float = _shot["x"]
+	_t = _freeze_at()
+	_hold = 0.4
+	for step in _cam_steps():
+		_shot["x"] = base + float(step)
+		_apply_camera(_t, _hold)
+		if _shot_good():
+			break
+		_shot["x"] = base
+	_t = keep.x
+	_hold = keep.y
+	_apply_camera(_t, _hold)
+
+
+## Whether the camera, stepped across to here, gives a picture this scene accepts.
+func _shot_good() -> bool:
+	return posts_clear()
+
+
+## Whether every post that rises above a named man's head stands clear of his shoulders,
+## with the camera and the men as they are now.
+func posts_clear() -> bool:
+	var cam := ground_cam()
+	for end in [-1.0, 1.0]:
+		for i in [-1.5, -0.5, 0.5, 1.5]:
+			var at := Vector2(i * VignetteGround.GOAL_GAP, VignetteGround.GOAL_Y * end)
+			var foot := cam.oval(at)
+			if foot.z <= 0.0:
+				continue
+			var tip := cam.oval(at, VignetteGround.GOAL_H if absf(i) < 1.0 else VignetteGround.BEHIND_H)
+			for t in _named():
+				var p := _pos(t)
+				var feet := _project(p, _lift(t))
+				var head := _project(p, _lift(t) + _head_top(t))
+				if foot.z >= feet.z or tip.y >= head.y:
+					continue          # nearer than he is, or it stops below the top of his head
+				# (The post itself, a hand's width, and a gap: its pad stops well below his head.)
+				if absf(foot.x - feet.x) < SHOULDER * FIGURE * feet.z + maxf(1.5, 0.2 * foot.z):
+					return false
+	return true
+
+
+## Half a man's width across the shoulders and arms, metres (before FIGURE).
+const SHOULDER := 0.42
+
+
+## The freeze's picture in numbers, for the tests and the capture tools: where the camera
+## stands and, down the screen, the title bar, the top of the stand, the far fence's foot
+## (where the turf starts), the named men's heads and boots and the bottom of the open
+## picture; and the turf's share of the whole frame and of the open picture.
+func shot_numbers() -> Dictionary:
+	shot()
+	var keep := Vector2(_t, _hold)
+	_t = _freeze_at()
+	_hold = 0.4
+	_apply_camera(_t, _hold)
+	var bar: float = _shot["bar"]
+	var floor_y := size.y - maxf(_room(), bar)
+	var here := Vector2(float(_shot["mid"]), float(_shot["near"]))
+	var fence := _project(here + Vector2(0.0, float(_shot["db"])))
+	var stand := _project(here + Vector2(0.0, float(_shot["ds"])), float(_shot["hs"]))
+	var head := INF
+	var feet := -INF
+	var tallest := 0.0
+	var men := _named()
+	for t in men if not men.is_empty() else tokens:
+		var p := _pos(t)
+		var top := _project(p, _lift(t) + _head_top(t)).y
+		var boots := _project(p, _lift(t)).y
+		head = minf(head, top)
+		feet = maxf(feet, _project(p).y)
+		tallest = maxf(tallest, boots - top)
+	var out := {"size": size, "cam_d": float(_shot["d"]), "cam_h": _cam_h, "cam_x": _cam_x,
+			"px_per_m": _focal / float(_shot["d"]), "bar": bar, "stand_top": stand.y, "horizon": _horizon,
+			"grass_top": fence.y, "head": head, "feet": feet, "floor": floor_y, "man_px": tallest,
+			"grass_of_frame": (floor_y - fence.y) / size.y,
+			"grass_of_open": (floor_y - fence.y) / maxf(1.0, floor_y - bar),
+			"stand_of_open": (fence.y - maxf(bar, stand.y)) / maxf(1.0, floor_y - bar)}
+	_t = keep.x
+	_hold = keep.y
+	_apply_camera(_t, _hold)
+	return out
+
+
+## Stands the cast in the scene (oval metres to the scene's), leaving out anyone who would
+## stand on one of the scene's own men or in his path, or nearer the camera than they are.
+func _place_cast() -> void:
+	var to_scene := _ground_to_scene()
+	var nearest := INF
+	for t in tokens:
+		nearest = minf(nearest, minf((t["to"] as Vector2).y, (t["from"] as Vector2).y))
+	var kept := []
+	_cast_all = _cast
+	for e in _cast:
+		var at: Vector2 = to_scene * (e["oval"] as Vector2)
+		if at.y < nearest + 1.0 or not _cast_fits(at):
+			continue
+		if tokens.any(func(t): return Geometry2D.get_closest_point_to_segment(at, t["from"], t["to"]).distance_to(at) < 3.0):
+			continue
+		e["at"] = at
+		kept.append(e)
+	_cast = kept
+
+
+## Whether one of the cast may stand at that spot of the scene (a scene keeps its own
+## ground clear).
+func _cast_fits(at: Vector2) -> bool:
+	# The centre square is the bounce's: four a side, no more.
+	return absf(at.x) > 26.0 or absf(at.y) > 26.0
+
+
+## What the cast watch: the ball.
+func _cast_focus() -> Vector2:
+	var b := _ball()
+	return Vector2(b.x, b.y)
 
 
 ## World (x across, y towards your goal, h up) to screen, and metres to pixels there.
@@ -462,6 +767,8 @@ func _draw() -> void:
 	var figures := []
 	for t in tokens:
 		figures.append({"at": _pos(t), "t": t})
+	for e in _cast:
+		figures.append({"at": e["at"], "t": e})
 	figures.append({"at": _umpire(), "t": {}})
 	figures.sort_custom(func(a, b): return (a["at"] as Vector2).y > (b["at"] as Vector2).y)
 	var b := _ball()
@@ -473,8 +780,8 @@ func _draw() -> void:
 		_draw_figure(f["at"], f["t"])
 	if not ball_drawn:
 		_draw_ball(b)
-	VignetteWeather.draw_air(self, Rect2(Vector2.ZERO, size), _t, weather)
-	VignetteAtmos.draw_front(self, Rect2(Vector2.ZERO, size), lights, weather, _t)
+	VignetteWeather.draw_air(self, Rect2(Vector2.ZERO, size), clock(), weather)
+	VignetteAtmos.draw_front(self, Rect2(Vector2.ZERO, size), lights, weather, clock())
 	if _frozen:
 		# The freeze: a flash on the cut, then the frame held a shade darker.
 		draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.18), true)
@@ -489,9 +796,15 @@ func _draw() -> void:
 ## and the far goals - all seen in perspective, so they hold their shape as it zooms.
 func _draw_ground() -> void:
 	var cam := ground_cam()
-	VignetteGround.draw_ground(self, cam, Rect2(Vector2.ZERO, size), _colours, 7, _screen_board(cam), weather, _t)
+	# The same crowd as the replay's (seed CROWD), so the stadium is one place all match.
+	VignetteGround.draw_ground(self, cam, Rect2(Vector2.ZERO, size), _colours, CROWD, _screen_board(cam), weather, clock())
+	VignetteCrowd.stir(self, cam, _colours, clock(), CROWD)
 	VignetteGround.draw_goals(self, cam, 1, _pad_colour())
 	VignetteGround.draw_goals(self, cam, -1, _pad_colour())
+
+
+## The crowd every match scene seats (BroadcastVignette draws the replay with the same).
+const CROWD := 11
 
 
 ## The score for the big screen through this camera; a scene can leave the screen out.
@@ -526,14 +839,16 @@ func _pad_colour() -> Color:
 func _draw_figure(at: Vector2, t: Dictionary) -> void:
 	if at.y + _cam_d < 1.2:
 		return               # beside or behind the camera
-	var ump := t.is_empty()
-	var lift := 0.0 if ump else _lift(t)
+	var ump := t.is_empty() or t.has("ump")
+	var lift := 0.0 if ump or t.has("extra") else _lift(t)
 	var base := _project(at, lift)
 	var ground := _project(at)
 	var m := base.z * FIGURE           # pixels per (larger than life) metre
-	var tired := not ump and bool(t["tired"])
+	if base.x < -1.5 * m or base.x > size.x + 1.5 * m:
+		return               # off the side of the picture
+	var tired := not ump and bool(t.get("tired", false))
 	# Your players have their backs to us; theirs and the umpire face the camera.
-	var back := not ump and bool(t["mine"])
+	var back := not ump and bool(t.get("mine", false))
 	var pick := _frame(t, lift, at, back)
 	# A move can name its own side (a fourth entry: the kick is only drawn from behind,
 	# three-quarters on).
@@ -551,14 +866,14 @@ func _draw_figure(at: Vector2, t: Dictionary) -> void:
 	var under := VignetteFigures.contact(info) * k
 	if mirror:
 		under.x = -under.x
-	var sh := 0.38 * m * (1.0 - lift * 0.35)
+	var sh := 0.38 * m * (1.0 - lift * 0.35) * VignetteWeather.shadow_tight(weather)
 	draw_set_transform(Vector2(ground.x, ground.y) + under, 0.0, Vector2(1.0, 0.32))
 	draw_circle(Vector2.ZERO, sh, Color(0, 0, 0, VignetteWeather.shadow_alpha(weather) + 0.03))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	var kit := UMPIRE_KIT if ump else int(t["side"])
 	var look: Dictionary = t.get("look", UMPIRE_LOOK)
 	draw_frame(self, Vector2(base.x, base.y), info, frame, k, look_colour(kit, look, mirror), mirror,
-			number_colour(kit, int(t["num"]), 1.0, mirror) if facing.begins_with("back") and m > 18.0 else Color(0, 0, 0, 0),
+			number_colour(kit, int(t.get("num", 0)), 1.0, mirror) if facing.begins_with("back") and m > 18.0 else Color(0, 0, 0, 0),
 			Transform2D.IDENTITY, str(look.get("hair_style", VignetteFigures.HAIR_BASE)), face_of(look),
 			ink_of(look))
 
@@ -688,6 +1003,8 @@ func _frame(t: Dictionary, lift: float, at := Vector2.ZERO, back := false) -> Ar
 		if _t >= UMP_IN[0] and _t < UMP_IN[1]:
 			return ["jog", int(_t * 10.0) % 8, false]
 		return _ready_pick({"num": 0, "id": "umpire"}, at, false)
+	if t.has("extra"):
+		return _cast_frame(t, at)
 	if lift > 0.0:
 		# The ruck contest, one-handed, each ruckman his own way (RUCK_STYLES).
 		var style: Dictionary = t.get("ruck", RUCK_STYLES[0])
@@ -705,8 +1022,22 @@ func _frame(t: Dictionary, lift: float, at := Vector2.ZERO, back := false) -> Ar
 ## head and shoulders turned to what he's watching when it's off to one side
 ## (mirrored for his right). Two men side by side never move as one.
 func _ready_pick(t: Dictionary, at: Vector2, back: bool) -> Array:
-	var cycle := int(_t * 3.0 * _rate(t, 0.7, 1.15) + float(t["num"]) * 0.37 + _rate(t, 0.0, 3.0)) % 3
-	var to := _look_at(t) - at
+	return _watch_pick(t, at, back, _look_at(t))
+
+
+## One of the cast: standing ready, watching the play, his back to us when it is beyond him.
+func _cast_frame(t: Dictionary, at: Vector2) -> Array:
+	var focus := _cast_focus()
+	var back := focus.y > at.y + 1.0
+	var pick := _watch_pick(t, at, back, focus)
+	return [pick[0], pick[1], pick[2], "back" if back else "front"]
+
+
+## _ready_pick, watching that spot of the scene. The scene's clock drives it, so a man goes
+## on shifting his weight while the coach decides (a scene that idles).
+func _watch_pick(t: Dictionary, at: Vector2, back: bool, target: Vector2) -> Array:
+	var cycle := int(clock() * 3.0 * _rate(t, 0.7, 1.15) + float(t["num"]) * 0.37 + _rate(t, 0.0, 3.0)) % 3
+	var to := target - at
 	# Across his line of sight: his back to us, his left is the screen's left.
 	var across := -to.x if back else to.x
 	if absf(to.x) < 0.35 * absf(to.y) + 1.0:
@@ -736,6 +1067,14 @@ func _figure_top(t: Dictionary) -> float:
 	return (tall + (0.75 if _lift(t) > 0.0 else 0.1)) * FIGURE
 
 
+## Where the top of his head is drawn above his boots (his hands, when he is up with his
+## arms raised), world metres: the sheets draw a man a little under his listed height, so a
+## name pinned here sits on his head and a post is judged against the head we see.
+func _head_top(t: Dictionary) -> float:
+	var tall := float(VignetteFigures.BODIES[_body(t)]["height_m"])
+	return (0.86 * tall + (0.36 if _lift(t) > 0.0 else 0.0) + 0.04) * FIGURE * (0.96 if bool(t.get("tired", false)) else 1.0)
+
+
 func _draw_ball(b: Vector3) -> void:
 	var g := _project(Vector2(b.x, b.y))
 	var s := _project(Vector2(b.x, b.y), b.z)
@@ -750,43 +1089,61 @@ func _draw_ball(b: Vector3) -> void:
 ## At the freeze: who is who, for the rucks, the first midfielder each side and
 ## anyone out on their feet. Not a roll call.
 func _draw_names() -> void:
-	var font: Font = UiKit.BOLD
-	var fs := int(clampf(size.x / 26.0, 12.0, 17.0))
-	var placed: Array[Rect2] = []
+	var keep := []
 	# The ball is the point of the frame: no name sits on it.
 	var b := _ball()
 	var bs := _project(Vector2(b.x, b.y), b.z)
 	var br := maxf(3.0, 0.2 * bs.z * FIGURE) + 4.0
-	placed.append(Rect2(bs.x - br, bs.y - br, br * 2.0, br * 2.0))
-	for t in tokens:
-		if not (str(t["slot"]) in ["R", "C"] or bool(t["tired"])):
-			continue
+	keep.append(Rect2(bs.x - br, bs.y - br, br * 2.0, br * 2.0))
+	_draw_tags(_named(), keep)
+
+
+## Where each name was drawn at the last freeze frame: {id, box, head} (tests).
+var tag_log: Array = []
+
+
+## A name for each of those men, on the overlay: white on a dark backing with his club's
+## colour down its edge, pinned to his head - over it, or under his boots, or beside his
+## head when another name, the ball (keep: boxes to stay off), the title bar or the call is
+## in the way. Only for a man whose head is in the picture.
+func _draw_tags(men: Array, keep: Array = []) -> void:
+	var font: Font = UiKit.BOLD
+	var fs := int(clampf(minf(size.x / 26.0, size.y / 50.0), 12.0, 20.0))
+	var bar := size.y * 0.075
+	var floor_y := size.y - maxf(_room(), bar)
+	var placed: Array = keep.duplicate()
+	tag_log.clear()
+	for t in men:
 		var at := _pos(t)
-		var head := _project(at, _lift(t) + _figure_top(t))
+		var head := _project(at, _lift(t) + _head_top(t))
+		var feet := _project(at, _lift(t))
+		if head.x < 0.0 or head.x > size.x or head.y > floor_y:
+			continue
 		var name := str(t["name"])
-		var nw := font.get_string_size(name, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-		var p := Vector2(clampf(head.x - nw * 0.5, 4.0, size.x - nw - 4.0), head.y - 6.0)
-		# Over his head; failing that beside it, left or right, then stacked
-		# upward - never over another name or the ball.
-		var box := Rect2(p - Vector2(0, fs), Vector2(nw, fs + 2))
-		var free := func(r: Rect2) -> bool: return not placed.any(func(q): return q.intersects(r))
-		if not free.call(box):
-			var side := box
-			for dx in [-(nw * 0.5 + 10.0), nw * 0.5 + 10.0]:
-				var c := Rect2(Vector2(clampf(head.x - nw * 0.5 + dx, 4.0, size.x - nw - 4.0), box.position.y + fs * 0.6), box.size)
-				if free.call(c):
-					side = c
-					break
-			box = side
-		var tries := 0
-		while tries < 4 and not free.call(box):
-			box.position.y -= fs + 3
-			tries += 1
-		p = Vector2(box.position.x, box.position.y + fs)
+		var box_size := Vector2(font.get_string_size(name, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 13.0, fs + 7.0)
+		var shoulder := SHOULDER * FIGURE * feet.z
+		var mid_x := clampf(head.x - box_size.x * 0.5, 4.0, size.x - box_size.x - 4.0)
+		var spots := [Vector2(mid_x, head.y - box_size.y - 4.0), Vector2(mid_x, feet.y + 5.0),
+				Vector2(head.x + shoulder + 4.0, head.y), Vector2(head.x - shoulder - 4.0 - box_size.x, head.y)]
+		var box := Rect2()
+		for spot in spots:
+			var r := Rect2(spot, box_size)
+			if r.position.x < 2.0 or r.end.x > size.x - 2.0 or r.position.y < bar + 2.0 or r.end.y > floor_y - 2.0:
+				continue
+			if placed.any(func(q): return (q as Rect2).intersects(r)):
+				continue
+			box = r
+			break
+		if not box.has_area():
+			# Nowhere free: over his head, held inside the picture.
+			box = Rect2(Vector2(mid_x, clampf(head.y - box_size.y - 4.0, bar + 2.0, maxf(bar + 2.0, floor_y - box_size.y - 2.0))), box_size)
 		placed.append(box)
-		_ui.draw_string(font, p + Vector2(1, 1), name, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0, 0, 0, 0.6))
-		_ui.draw_string(font, p, name, HORIZONTAL_ALIGNMENT_LEFT, -1, fs,
-				Color(1, 1, 1, 0.6) if bool(t["tired"]) and not (str(t["slot"]) in ["R", "C"]) else Color(1, 1, 1))
+		tag_log.append({"id": str(t.get("id", "")), "box": box, "head": Vector2(head.x, head.y), "feet": Vector2(feet.x, feet.y)})
+		var cols: Array = _colours[int(t["side"])] if int(t["side"]) < _colours.size() else []
+		_ui.draw_rect(box, Color(0.03, 0.04, 0.05, 0.82), true)
+		_ui.draw_rect(Rect2(box.position, Vector2(4.0, box.size.y)), (cols[0] as Color) if not cols.is_empty() else Color.WHITE, true)
+		_ui.draw_string(font, box.position + Vector2(9.0, fs + 1.0), name, HORIZONTAL_ALIGNMENT_LEFT, -1, fs,
+				Color(1, 1, 1, 0.7) if bool(t.get("dim", false)) else Color(1, 1, 1))
 
 
 ## Letterbox bars slide in on the cut; the call's heading rides the top one.

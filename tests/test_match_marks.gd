@@ -43,6 +43,7 @@ func run() -> void:
 	await _t("_test_under_the_discs", [res])
 	_t("_test_player_marks_built", [res])
 	await _t("_test_player_marks_long_press", [res])
+	await _t("_test_oval_stadium", [res])
 	GameState.replay_seed = 0
 	print(Ran.line("Match marks", self))
 
@@ -56,6 +57,7 @@ func _check(condition: bool, message: String) -> void:
 
 ## Runs one test function; it must make at least one check (tests/functions_ran.gd).
 const Ran := preload("res://tests/functions_ran.gd")
+const Tap := preload("res://tests/tap.gd")
 func _t(test: String, args := []) -> Variant:
 	return await Ran.one(self, test, args)
 
@@ -713,8 +715,11 @@ func _test_player_marks_built(_res: Dictionary) -> void:
 	_check(PlayerMarks.words(m["a"], false) == "Tired: running on empty", "tired words")
 
 
-## A real finger: held on a marked disc (and on a marked bench disc) the words
-## come up; a quick tap and a hold on an unmarked disc bring none.
+## A real finger: held on a marked disc the words come up, for the player under
+## the finger; a quick tap and a hold on an unmarked disc bring none. The bench is
+## in its drawer: a tap on the tab opens it (a hurt man's mark and words in his
+## row), a tap anywhere else or Back shuts it, and shut it never takes a press
+## meant for a disc.
 func _test_player_marks_long_press(res: Dictionary) -> void:
 	var tree := Engine.get_main_loop() as SceneTree
 	# A headless window is tiny: a phone's, so the finger lands on the view.
@@ -745,9 +750,12 @@ func _test_player_marks_long_press(res: Dictionary) -> void:
 		tree.root.size = was
 		return
 	var pid := str(pv.director.tokens[pick]["pid"])
-	var spots := pv.bench_spots(tr)
-	_check(not spots.is_empty(), "the bench strip is drawn")
-	var bpid := str(spots[0]["pid"]) if not spots.is_empty() else ""
+	var drawer: BenchDrawer = pv.bench_drawer()
+	var bench_rows := drawer.rows()
+	_check(bench_rows.size() == 10 and drawer.tab().visible, "the bench's tab is on the view, ten players behind it (%d)" % bench_rows.size())
+	var bpid := str(bench_rows[0]["pid"]) if not bench_rows.is_empty() else ""
+	_check(tr >= 13.5, "a disc is half as big again as the old 18 px (radius %.1f px)" % tr)
+	_check(PitchView.number_size(tr) >= 14, "the jumper number grows with the disc (%d px)" % PitchView.number_size(tr))
 	pv.set_marks({pid: {"mark": PlayerMarks.TIRED, "words": "Tired: running on empty"},
 			bpid: {"mark": PlayerMarks.HURT, "words": "Injured: calf strain"}})
 	# A quick tap: nothing.
@@ -757,15 +765,58 @@ func _test_player_marks_long_press(res: Dictionary) -> void:
 	await _touch(pv, pos[pick], 0.7, true)
 	_check(str(pv.tip.get("text", "")) == "Tired: running on empty",
 			"a long press on a tired disc says so (%s)" % str(pv.tip))
+	_check(str(pv.tip.get("name", "")) == GameDB.player_display_name_by_id(pid, "") and pv.tip.get("at", Vector2.ZERO) == pos[pick],
+			"the finger on a disc finds the player drawn there (%s)" % str(pv.tip))
+	_check(not pv.bench_open(), "a press on a disc leaves the bench's drawer shut")
 	await _touch_up(pv, pos[pick])
 	pv.tip = {}
-	# A hold on the hurt bench disc.
+	# The bench's drawer, with a real finger: the tab opens it.
 	if bpid != "":
-		await _touch(pv, spots[0]["pos"], 0.7, true)
-		_check(str(pv.tip.get("text", "")) == "Injured: calf strain, out for the day",
-				"a long press on a hurt bench disc says so (%s)" % str(pv.tip))
-		await _touch_up(pv, spots[0]["pos"])
-		pv.tip = {}
+		_check(drawer.worst_mark() == PlayerMarks.HURT, "the tab carries the hurt mark while a hurt man sits on the bench")
+		var why: String = await Tap.tap(drawer.tab())
+		_check(why == "" and pv.bench_open(), "a tap on the bench's tab opens the drawer (%s)" % why)
+		var hurt_row := {}
+		for row in drawer.rows():
+			if str(row["pid"]) == bpid:
+				hurt_row = row
+		# Which wording shows is worked out here from the row's room, not taken from the
+		# drawer: main's full "Injured: calf strain, out for the day" when it fits beside
+		# his disc, else the injury alone; never the bare "Hurt" at this size.
+		var full_words := "Injured: calf strain, out for the day"
+		var short_words := "Injured: calf strain"
+		var words_room: float = drawer.panel_rect().size.x * 0.5 - BenchDrawer.PAD - BenchDrawer.DISC_R * 2.0 - 12.0 - BenchDrawer.PAD * 0.5
+		var full_px: float = UiKit.FONT.get_string_size(full_words, HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.px(UiKit.FINE)).x
+		var short_px: float = UiKit.FONT.get_string_size(short_words, HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.px(UiKit.FINE)).x
+		var want_words := full_words if full_px <= words_room else short_words
+		print("BENCH WORDS room %.0f px, full %.0f px, short %.0f px, shown '%s'" % [words_room, full_px, short_px, str(hurt_row.get("words", ""))])
+		_check(str(hurt_row.get("mark", "")) == PlayerMarks.HURT and str(hurt_row.get("words", "")) == want_words and short_px <= words_room,
+				"the hurt man's row carries his mark and what it means, the %s form for its %.0f px of room (shown '%s', wanted '%s'; the full form is %.0f px, the short %.0f px)" % [
+				"full" if want_words == full_words else "short", words_room, str(hurt_row.get("words", "")), want_words, full_px, short_px])
+		_check(UiKit.FONT.get_string_size(str(hurt_row.get("words", "")), HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.px(UiKit.FINE)).x
+				<= (hurt_row["rect"] as Rect2).size.x, "his words fit his row")
+		# A tap inside the panel leaves it open; a tap anywhere else shuts it and goes no further.
+		var panel := drawer.panel_rect()
+		await _touch(pv, panel.get_center(), 0.1)
+		_check(pv.bench_open(), "a tap on the open panel leaves it open")
+		var away_from := Vector2(pv.size.x * 0.5, maxf(20.0, panel.position.y * 0.4))
+		await _touch(pv, away_from, 0.1)
+		_check(not pv.bench_open(), "a tap outside the panel shuts the drawer")
+		_check(pv.tip.is_empty(), "the tap that shuts the drawer does nothing else")
+		# Back shuts it too.
+		why = await Tap.tap(drawer.tab())
+		_check(why == "" and pv.bench_open(), "the tab opens the drawer again (%s)" % why)
+		var back := InputEventAction.new()
+		back.action = "ui_cancel"
+		back.pressed = true
+		Input.parse_input_event(back)
+		Input.flush_buffered_events()
+		await tree.process_frame
+		await tree.process_frame
+		_check(not pv.bench_open(), "Back shuts the open drawer")
+		# The tab itself shuts it as well.
+		await Tap.tap(drawer.tab())
+		why = await Tap.tap(drawer.tab())
+		_check(why == "" and not pv.bench_open(), "a second tap on the tab shuts the drawer (%s)" % why)
 	# A hold on a disc with no mark: nothing.
 	pv.set_marks({})
 	await _touch(pv, pos[pick], 0.7, true)
@@ -774,6 +825,73 @@ func _test_player_marks_long_press(res: Dictionary) -> void:
 	pv.queue_free()
 	await tree.process_frame
 	tree.root.size = was
+
+
+## The stadium round the live oval (director, 2026-11-12: "Replay stadium
+## everywhere"; wind shown by flags, not lines on the grass; night games): the
+## replay's grass, flags on the roof only in the wind and streaming to the end
+## the breeze favours, the day's light from the kick-off, and none of it moving a
+## disc.
+func _test_oval_stadium(res: Dictionary) -> void:
+	var tree := Engine.get_main_loop() as SceneTree
+	for w in ["perfect", "wet", "windy", "hot"]:
+		_check(OvalStadium.grass(w, OvalStadium.NIGHT) == VignetteWeather.grass(w, VignetteGround.GRASS),
+				"the oval's turf is the replay's grass, as the day's weather leaves it (%s)" % w)
+	_check(OvalStadium.time_from("night") == OvalStadium.NIGHT and OvalStadium.time_from("Twilight") == OvalStadium.TWILIGHT
+			and OvalStadium.time_from("day") == OvalStadium.DAY and OvalStadium.time_from({"slot": "twilight"}) == OvalStadium.TWILIGHT
+			and OvalStadium.time_from(null) == OvalStadium.NIGHT and OvalStadium.time_from("") == OvalStadium.NIGHT,
+			"a kick-off is day, twilight or night; without one it is night, the look every match had")
+	_check(OvalStadium.grass("perfect", OvalStadium.DAY) != OvalStadium.grass("perfect", OvalStadium.NIGHT)
+			and OvalStadium.grass("perfect", OvalStadium.TWILIGHT) != OvalStadium.grass("perfect", OvalStadium.NIGHT),
+			"the turf is lit differently by day, at twilight and at night")
+	_check(OvalStadium.breeze_toward({"breeze_side": 0}) == 1.0 and OvalStadium.breeze_toward({"breeze_side": 1}) == -1.0
+			and OvalStadium.breeze_toward({}) == 1.0,
+			"the flags stream to the end the side with the breeze kicks to in the first quarter")
+	var drawn := {}
+	var discs := {}
+	for look in [["windy", 0, ""], ["windy", 1, ""], ["perfect", 0, ""], ["perfect", 0, "day"], ["wet", 0, "twilight"]]:
+		var r := _with_call(res, "attacking", [], 60)
+		r["weather"] = look[0]
+		r["breeze_side"] = look[1]
+		var pv := PitchView.new()
+		pv.camera_enabled = false
+		pv.upright = true
+		tree.root.add_child(pv)
+		pv.size = Vector2(390, 640)
+		pv.time_override = str(look[2])
+		pv.setup(r)
+		pv.playing = false
+		for i in range(3):
+			await tree.process_frame
+		var key := "%s|%d|%s" % look
+		drawn[key] = pv.stadium_drawn.duplicate()
+		discs[key] = pv.disc_positions().duplicate()
+		if key == "windy|0|":
+			var outside := 0
+			for f in pv._stadium.flag_spots():
+				var at: Vector2 = f["at"]
+				if pow(at.x / MatchMotion.HALF_LEN, 2.0) + pow(at.y / MatchMotion.HALF_WID, 2.0) > 1.0:
+					outside += 1
+			_check(outside == 12 and pv._stadium.flag_spots().size() == 12, "twelve flags stand on the roof, none on the ground (%d)" % outside)
+			_check(pv.drawn_layers.size() >= 2 and str(pv.drawn_layers[0]) == "turf" and pv.drawn_layers.has("discs"),
+					"the turf is still drawn first and the discs over it (%s)" % str(pv.drawn_layers))
+			pv.period = 2
+			_check(pv.breeze_toward() == 1.0, "the sides change ends; the flags keep streaming to the same end")
+		pv.queue_free()
+		await tree.process_frame
+	_check(int(drawn["windy|0|"].get("flags", -1)) == 12 and float(drawn["windy|0|"].get("toward", 0.0)) == 1.0,
+			"in the wind the roof's flags fly, toward the breeze's end (%s)" % str(drawn["windy|0|"]))
+	_check(float(drawn["windy|1|"].get("toward", 0.0)) == -1.0, "the other side has the breeze: the flags stream the other way")
+	_check(int(drawn["perfect|0|"].get("flags", -1)) == 0, "on a still day no flag flies")
+	_check(str(drawn["perfect|0|"].get("time", "")) == OvalStadium.time_of_day(), "the oval takes the match's kick-off time")
+	_check(str(drawn["perfect|0|day"].get("time", "")) == "day" and str(drawn["wet|0|twilight"].get("time", "")) == "twilight",
+			"a day game and a twilight game are drawn as such")
+	var same := true
+	for key in discs:
+		if discs[key] != discs["perfect|0|"]:
+			same = false
+	_check(same and (discs["perfect|0|"] as PackedVector2Array).size() > 0,
+			"wind, rain and the time of day move no disc: every look draws the players in the same places")
 
 
 ## A finger down on the view at `local` for `secs` (real time), then lifted
