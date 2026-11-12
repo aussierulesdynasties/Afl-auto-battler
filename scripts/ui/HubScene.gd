@@ -2492,7 +2492,7 @@ func _show_midseason_pick() -> void:
 				DraftNight.position_words(p), int(p.get("age", 0)), MidseasonDraft.from_word(GameState, p)], 14, UiKit.TEXT)
 		txt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		txt.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		row.add_child(txt)
+		row.add_child(PlaysLikeLine.under(txt, p))
 		var pick := UiKit.btn("Pick", UiKit.NAME)
 		pick.name = "MidseasonPick_%s" % str(p["id"])
 		pick.custom_minimum_size = Vector2(88, 48)

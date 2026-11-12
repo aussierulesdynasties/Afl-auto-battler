@@ -43,7 +43,7 @@ static func open(host: Control, on_done: Callable, pass_line := PASS_PRESEASON) 
 				DraftNight.position_words(p), int(p.get("age", 0)), MidseasonDraft.from_word(GameState, p)], 14, UiKit.TEXT)
 		txt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		txt.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		row.add_child(txt)
+		row.add_child(PlaysLikeLine.under(txt, p))
 		var pick := UiKit.btn("Pick", UiKit.NAME)
 		pick.name = "RookiePick_%s" % str(p["id"])
 		pick.custom_minimum_size = Vector2(88, 48)
