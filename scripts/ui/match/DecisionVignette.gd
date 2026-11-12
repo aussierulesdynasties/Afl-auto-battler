@@ -84,7 +84,8 @@ static func set_spot(band_key: String, side := 1.0) -> Dictionary:
 			"kicker": mark + out * KICKER_BACK}
 
 
-func setup_decision(sim: MatchSim, my_side: int, moment: Dictionary) -> void:
+## shown: the score the match screen's header shows (StoppageVignette.board_of).
+func setup_decision(sim: MatchSim, my_side: int, moment: Dictionary, shown := {}) -> void:
 	kind = str(moment.get("kind", ""))
 	title = str(moment.get("title", ""))
 	# Near the goals the stand and the posts rise past the top: they stay off the scoreboard.
@@ -95,9 +96,7 @@ func setup_decision(sim: MatchSim, my_side: int, moment: Dictionary) -> void:
 	_end = float(END.get(kind, 3.0))
 	weather = VignetteGrade.weather_of(str(sim.get("weather")) if sim.get("weather") != null else "")
 	var wet := weather == "wet"
-	_board = {"codes": [str((sim.squads[0] as Squad).code), str((sim.squads[1] as Squad).code)],
-			"goals": [sim.goals(0), sim.goals(1)], "behinds": [sim.behinds(0), sim.behinds(1)],
-			"q": sim.current_quarter}
+	_board = board_of(sim, my_side, shown)
 	for side in range(2):
 		var code := str((sim.squads[side] as Squad).code)
 		_colours[side] = GameDB.club_colours(code)

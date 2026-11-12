@@ -73,16 +73,32 @@ var _frozen := false
 var _hold := 0.0            # time since the freeze, for the last push-in
 
 
-func setup(sim: MatchSim, my_side: int, heading := "") -> void:
+## The big screen's board for a call scene: both clubs, the score (the one the header
+## shows when the match screen hands it over, else the match's own), the quarter, and the
+## end the breeze blows to. Your side kicks to the scene's +y end, so the breeze blows
+## there (+1) in a quarter your side kicks with it and to the other end (-1) otherwise.
+## Read only: nothing here touches the match.
+static func board_of(sim: MatchSim, my_side: int, shown := {}) -> Dictionary:
+	var goals: Array = shown.get("goals", [])
+	var behinds: Array = shown.get("behinds", [])
+	if goals.size() < 2 or behinds.size() < 2:
+		goals = [sim.goals(0), sim.goals(1)]
+		behinds = [sim.behinds(0), sim.behinds(1)]
+	return {"codes": [str((sim.squads[0] as Squad).code), str((sim.squads[1] as Squad).code)],
+			"goals": [int(goals[0]), int(goals[1])], "behinds": [int(behinds[0]), int(behinds[1])],
+			"q": sim.current_quarter, "wind": 1 if sim.with_breeze(my_side) else -1}
+
+
+## shown: the score the match screen's header shows ({goals: [home, away], behinds:
+## [home, away]}), so the big screen never runs ahead of it; empty, the match's own.
+func setup(sim: MatchSim, my_side: int, heading := "", shown := {}) -> void:
 	title = heading
 	tokens.clear()
 	# The day's weather, when MatchSim has one; more of them wear long sleeves in the wet.
 	weather = str(sim.get("weather")) if sim.get("weather") != null else ""
 	weather = VignetteGrade.weather_of(weather)
 	var wet := weather == "wet"
-	_board = {"codes": [str((sim.squads[0] as Squad).code), str((sim.squads[1] as Squad).code)],
-			"goals": [sim.goals(0), sim.goals(1)], "behinds": [sim.behinds(0), sim.behinds(1)],
-			"q": sim.current_quarter}
+	_board = board_of(sim, my_side, shown)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash("%s|%d" % [str((sim.squads[0] as Squad).code), sim.current_minute])
 	for side in range(2):
@@ -843,7 +859,7 @@ func _draw_figure(at: Vector2, t: Dictionary) -> void:
 	var under := VignetteFigures.contact(info) * k
 	if mirror:
 		under.x = -under.x
-	var sh := 0.38 * m * (1.0 - lift * 0.35)
+	var sh := 0.38 * m * (1.0 - lift * 0.35) * VignetteWeather.shadow_tight(weather)
 	draw_set_transform(Vector2(ground.x, ground.y) + under, 0.0, Vector2(1.0, 0.32))
 	draw_circle(Vector2.ZERO, sh, Color(0, 0, 0, VignetteWeather.shadow_alpha(weather) + 0.03))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)

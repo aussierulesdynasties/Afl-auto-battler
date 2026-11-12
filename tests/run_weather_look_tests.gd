@@ -284,16 +284,28 @@ func _test_ball() -> void:
 	_check(Ball.night(), "At twilight the yellow ball is used")
 	Kickoff.shown = Kickoff.NIGHT
 	_check(Ball.night(), "At night the yellow ball is used")
-	var a := Vector2(100, 400)
-	var b := Vector2(300, 200)
-	var wind := Vector2(1, 0)
-	_check(Ball.drift(0.0, a, b, wind, "windy").length() < 0.001 and Ball.drift(1.0, a, b, wind, "windy").length() < 0.001,
+	# The kick's drift in the wind has one helper, VignetteExtras.drift; the replay turns it
+	# to the side the wind blows (BroadcastVignette._drifted), so the ball goes where the
+	# flags stream and still leaves the boot and lands where the match says.
+	_check(not _names(Ball).has("drift"), "The ball's drift has one home (VignetteExtras.drift)")
+	var extras = load("res://scripts/ui/match/VignetteExtras.gd")
+	_check(is_zero_approx(float(extras.drift(0.0, 1.0))) and is_zero_approx(float(extras.drift(1.0, 1.0))),
 			"A kick in the wind still leaves the boot and lands where the match says")
-	var mid: Vector2 = Ball.drift(0.5, a, b, wind, "windy")
-	_check(mid.length() > 2.0 and mid.dot(wind) > 0.0 and absf(mid.dot((b - a).normalized())) < 0.001,
-			"In flight it drifts across its line, the way the wind blows (%s)" % str(mid))
-	_check(Ball.drift(0.5, a, b, wind, "perfect") == Vector2.ZERO and Ball.drift(0.5, a, b, wind, "hot") == Vector2.ZERO,
+	_check(float(extras.drift(0.5, Wx.wind("perfect"))) == 0.0 and float(extras.drift(0.5, Wx.wind("hot"))) == 0.0,
 			"No drift unless it is windy")
+	var replay = load("res://scripts/ui/match/BroadcastVignette.gd").new()
+	replay.weather = "windy"
+	var from := Vector3(0.0, 30.0, 0.6)
+	var to := Vector3(2.0, 79.0, 3.0)
+	var line := Vector2(to.x - from.x, to.y - from.y).normalized()
+	for end in [1, -1]:
+		replay.set("_wind_end", end)
+		var straight := from.lerp(to, 0.5)
+		var bent: Vector3 = replay.call("_drifted", straight, from, to, 0.5)
+		var moved := Vector2(bent.x - straight.x, bent.y - straight.y)
+		_check(moved.length() > 1.5 and absf(moved.dot(line)) < 0.001 and moved.dot(Wx.wind_world(end)) > 0.0,
+				"In flight it drifts across its line, the way the wind blows (%s, breeze to end %d)" % [str(moved), end])
+	replay.free()
 
 
 func _sim(seed_n: int) -> Object:

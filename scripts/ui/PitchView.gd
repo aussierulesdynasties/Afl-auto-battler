@@ -1019,7 +1019,7 @@ func _draw() -> void:
 	# crowd in its seats in both clubs' colours, the fascia, the roof's edge, the
 	# light towers (OvalStadium; built once a match, drawn as a few meshes).
 	var weather := str(result.get("weather", ""))
-	var tod := time_of_day()
+	var tod := time_of_day(weather)
 	var colours := _club_colours()
 	var flat := _flat_size()
 	_stadium.draw_stands(self, Rect2(-flat, flat * 3.0), c, s, colours, weather, tod)
@@ -2017,8 +2017,8 @@ func close_bench() -> bool:
 ## test may set `time_override`).
 var time_override := ""
 
-func time_of_day() -> String:
-	return time_override if time_override != "" else OvalStadium.time_of_day()
+func time_of_day(weather := "") -> String:
+	return time_override if time_override != "" else OvalStadium.time_of_day(weather)
 
 
 ## Which way the breeze blows along the ground as it is drawn now, +1 or -1 on the

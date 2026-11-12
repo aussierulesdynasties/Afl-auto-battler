@@ -49,7 +49,6 @@ const OUTSIDE := {NIGHT: Color(0.035, 0.035, 0.045), TWILIGHT: Color(0.13, 0.10,
 ## front), at dusk, and in daylight.
 const STAND_LIGHT := {NIGHT: Color(0.74, 0.74, 0.80), TWILIGHT: Color(0.88, 0.78, 0.78), DAY: Color(1.0, 1.0, 1.0)}
 ## The turf by time of day, over the weather's colours.
-const TURF_LIGHT := {NIGHT: Color(1.0, 1.0, 1.0), TWILIGHT: Color(0.97, 0.90, 0.86), DAY: Color(1.10, 1.10, 1.04)}
 ## How strongly the towers show: their glow and their pools of light.
 const LAMPS := {NIGHT: 1.0, TWILIGHT: 0.6, DAY: 0.0}
 
@@ -68,21 +67,13 @@ var _flags: Array = []              # [{at, home}], ground metres
 
 static var _small := {}
 static var _pool_tex: Texture2D = null
-static var _kick_script = null
-static var _kick_looked := false
 
 
-## Day, twilight or night, from the match's kick-off time when the game has one
-## (VignetteKickoff.current); night, the look every match had before, otherwise.
-static func time_of_day() -> String:
-	if not _kick_looked:
-		_kick_looked = true
-		var path := "res://scripts/ui/match/VignetteKickoff.gd"
-		if ResourceLoader.exists(path):
-			_kick_script = load(path)
-	if _kick_script == null:
-		return NIGHT
-	return time_from(_kick_script.get("current"))
+## Day, twilight or night for the match being shown, in this weather: the same
+## pick the call scenes and the replays draw (VignetteKickoff.now), so the oval
+## and the scenes never disagree about the hour.
+static func time_of_day(weather := "") -> String:
+	return time_from(VignetteKickoff.now(weather))
 
 
 ## The three looks from whatever the kick-off says: a word ("day", "twilight",
@@ -103,14 +94,10 @@ static func time_from(now) -> String:
 	return NIGHT
 
 
-## The turf's two mown colours today: the replay's grass, as the weather leaves it,
-## in the day's light.
+## The turf's two mown colours today: the replay's grass, as the weather and the
+## time of day leave it (VignetteWeather.grass, the one the scenes use).
 static func grass(weather: String, tod := NIGHT) -> Array:
-	var light: Color = TURF_LIGHT.get(tod, Color.WHITE)
-	var out := []
-	for c in VignetteWeather.grass(weather, VignetteGround.GRASS):
-		out.append(Color(minf(1.0, c.r * light.r), minf(1.0, c.g * light.g), minf(1.0, c.b * light.b)))
-	return out
+	return VignetteWeather.grass(weather, VignetteGround.GRASS, tod)
 
 
 ## Which way the flags stream along the ground, +1 toward the end the home side

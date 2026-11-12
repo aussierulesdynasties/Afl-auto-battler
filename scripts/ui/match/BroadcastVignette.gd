@@ -37,6 +37,8 @@ var _look := Appearance.UNCURATED   # the featured player's look
 var _build := "average"             # and his build, from his real height (build_for)
 var _view := Transform2D.IDENTITY   # the camera this frame (VignetteCamera)
 var _board := {}                    # the match's score, for the big screen (if the shot sees it)
+var _wind_end := 1                  # the end the breeze blows to (+1 the +y end, -1 the other)
+var _flags_only := {"off": true}    # the board for a shot that leaves the big screen out
 var weather := ""                   # the day's (VignetteWeather): the ground, the air, the shadows
 
 ## The figures are the vignettes' pre-rendered footballers (VignetteFigures,
@@ -103,6 +105,18 @@ func _ready() -> void:
 	set_process(true)
 
 
+## The end of the replay's ground the breeze blows to: +1 the +y end, where the side in
+## the play kicks, when that side kicks with the breeze in the play's quarter; -1 the
+## other. The side with the breeze in the first quarter is the result's "breeze_side";
+## the sides change ends every quarter. A result that does not say: the +y end.
+static func wind_end_of(p_result: Dictionary, p_event: Dictionary) -> int:
+	if not p_result.has("breeze_side"):
+		return 1
+	var side := clampi(int(p_event.get("side", 0)), 0, 1)
+	var first := side == int(p_result["breeze_side"])
+	return 1 if first == (int(p_event.get("q", 1)) % 2 == 1) else -1
+
+
 func setup(p_kind: String, p_event: Dictionary, p_scene: Dictionary, p_result: Dictionary) -> void:
 	kind = p_kind
 	event = p_event.duplicate(true)
@@ -128,6 +142,10 @@ func setup(p_kind: String, p_event: Dictionary, p_scene: Dictionary, p_result: D
 	if event.has("goals") and event.has("behinds") and home != "" and away != "":
 		_board = {"codes": [home, away], "goals": event["goals"], "behinds": event["behinds"],
 				"q": int(event.get("q", 0))}
+	_wind_end = wind_end_of(result, event)
+	if not _board.is_empty():
+		_board["wind"] = _wind_end
+	_flags_only = {"off": true, "wind": _wind_end}
 	if _ui == self:
 		_ui = VignetteGrade.attach(self, weather, _draw_letterbox)
 	queue_redraw()
@@ -579,8 +597,13 @@ func _camera_aim() -> Array:
 ## goals at this end.
 func _draw_stadium() -> void:
 	# The speccy's tight shot would cut the big screen in half ("RE" and "EL"): it is left out there.
-	var board: Dictionary = {"off": true} if kind == SPECCY_FRONT and _sf_ready() else _board
+	var board: Dictionary = _flags_only if kind == SPECCY_FRONT and _sf_ready() else _board
+	if board.is_empty():
+		board = {"wind": _wind_end}
 	VignetteGround.draw_ground(self, _ground, _stage(), _colours, 11, board, weather, _t)
+	# The replay's camera moves the picture after the ground is worked out: the heat
+	# shimmer sits where the far turf lands on screen.
+	VignetteGrade.horizon(self, (_view * Vector2(size.x * 0.5, VignetteGround.far_turf(_ground))).y)
 	var pad: Color = (_colours[0] as Array)[0] if not (_colours[0] as Array).is_empty() else Color(0.7, 0.7, 0.72)
 	VignetteGround.draw_goals(self, _ground, 1, pad)
 
@@ -1081,7 +1104,11 @@ func _drifted(p: Vector3, start: Vector3, end: Vector3, flight: float) -> Vector
 	var line := Vector2(end.x - start.x, end.y - start.y)
 	if line.length() < 0.01:
 		return p
-	var across := Vector2(line.y, -line.x).normalized() * VignetteExtras.drift(flight, wind)
+	# Across its line, to the side the wind blows it (the wind the flags stream in).
+	var across := Vector2(line.y, -line.x).normalized()
+	if across.dot(VignetteWeather.wind_world(_wind_end)) < 0.0:
+		across = -across
+	across *= VignetteExtras.drift(flight, wind)
 	return Vector3(p.x + across.x, p.y + across.y, p.z)
 
 
@@ -1414,7 +1441,7 @@ func _figure(pos: Vector2, scale: float, side: int, anim: String, facing: String
 	var air := 0.0 if ground == Vector2.INF else maxf(0.0, (ground.y - pos.y) / pm)
 	if not _no_shadow:
 		draw_set_transform_matrix(_view * Transform2D(0.0, Vector2(1.0, 0.3), 0.0, shadow_at))
-		draw_circle(Vector2.ZERO, 0.4 * pm * (1.0 - 0.35 * minf(air, 1.5)),
+		draw_circle(Vector2.ZERO, 0.4 * pm * (1.0 - 0.35 * minf(air, 1.5)) * VignetteWeather.shadow_tight(weather),
 				Color(0, 0, 0, VignetteWeather.shadow_alpha(weather) * (1.0 - 0.4 * minf(air, 1.5))))
 		draw_set_transform_matrix(_view)
 	# The number, printed on the back of the guernsey by the shader.

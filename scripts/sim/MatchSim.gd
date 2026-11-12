@@ -4902,6 +4902,9 @@ func result() -> Dictionary:
 		"away": squads[1].code,
 		"tactics_history": tactics_history.duplicate(true),
 		"weather": weather,
+		# Which side kicks with the breeze in the first quarter, for the ground's flags and
+		# the big screen's arrow after the match (looks only: set from the seed at the start).
+		"breeze_side": breeze_side,
 		"timeline": timeline.duplicate(true),
 		"quarter_teams": quarter_teams.duplicate(true),
 		"extra_time": extra_time_played,

@@ -25,7 +25,6 @@ const PC_OVAL_SHARE := 2.0
 const PC_COLUMN_MIN_W := 300.0
 
 ## The scenes' kick-off light (its own script; this screen runs without it).
-const KICKOFF_SCRIPT := "res://scripts/ui/match/VignetteKickoff.gd"
 
 var _res := {}
 var _pitch: PitchView
@@ -176,15 +175,8 @@ func _ready() -> void:
 			GameDB.club_name(str(_res["home"])), GameDB.club_name(str(_res["away"]))])
 	# The ground the vignettes draw: the MCG has its own stands (FL-003); every other
 	# venue keeps the plain ground. Set every match, as the static outlives the scene.
+	# The same call sets the match's sky: day, twilight or night (VignetteKickoff).
 	VignetteGround.use_match(_res)
-	# The kick-off's light for this match, where that script is in the build.
-	if ResourceLoader.exists(KICKOFF_SCRIPT):
-		var kickoff := load(KICKOFF_SCRIPT) as Script
-		if kickoff != null:
-			for mth in kickoff.get_script_method_list():
-				if str(mth["name"]) == "use_match":
-					kickoff.call("use_match", _res)
-					break
 	_crowd = CrowdSound.new()
 	_crowd.name = "Crowd"
 	add_child(_crowd)
@@ -2584,20 +2576,6 @@ func _show_moment() -> void:
 		_moment_lines(v, o)
 
 
-## True when a scene's `method` takes one more argument after its first `after`,
-## and that one can hold a score ({goals, behinds}: a Dictionary, or untyped).
-static func _takes_score(scene: Object, method: String, after: int) -> bool:
-	for m in scene.get_method_list():
-		if str(m["name"]) != method:
-			continue
-		var args: Array = m["args"]
-		if args.size() <= after:
-			return false
-		var kind := int((args[after] as Dictionary).get("type", TYPE_NIL))
-		return kind == TYPE_DICTIONARY or kind == TYPE_NIL
-	return false
-
-
 ## The late centre-bounce call as a scene (ARD-M8-007 prototype): the match
 ## cuts to a close-up of that stoppage, the players set up, the ball goes up
 ## and it freezes; the call slides up over the frozen scene; the choice cuts
@@ -2624,14 +2602,9 @@ func _show_bounce_moment(m: Dictionary) -> void:
 	# two never disagree while the oval catches up with the sim.
 	var shown := {"goals": _shown_goals.duplicate(), "behinds": _shown_behinds.duplicate()}
 	if vignette is DecisionVignette:
-		if _takes_score(vignette, "setup_decision", 3):
-			vignette.call("setup_decision", GameState.pending_sim, _my_side, m, shown)
-		else:
-			(vignette as DecisionVignette).setup_decision(GameState.pending_sim, _my_side, m)
-	elif _takes_score(vignette, "setup", 3):
-		vignette.call("setup", GameState.pending_sim, _my_side, str(m.get("title", "")), shown)
+		(vignette as DecisionVignette).setup_decision(GameState.pending_sim, _my_side, m, shown)
 	else:
-		vignette.setup(GameState.pending_sim, _my_side, str(m.get("title", "")))
+		vignette.setup(GameState.pending_sim, _my_side, str(m.get("title", "")), shown)
 	# The call, held below the screen until the scene freezes.
 	var margin := MarginContainer.new()
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -2659,8 +2632,22 @@ func _show_bounce_moment(m: Dictionary) -> void:
 	call.add_child(text)
 	var buttons: Array = []
 	var options: Array = m.get("options", [])
+	# A PC's call sits over the oval's place, wider than it is tall: its choices stand
+	# side by side, each over its own gain and cost, so the call is a low band and
+	# the scene shows above it. A phone stacks them, as ever.
+	var across: HBoxContainer = null
+	if _pc and options.size() > 1:
+		across = UiKit.hbox(12)
+		across.name = "MomentOptions"
+		call.add_child(across)
 	for i in range(options.size()):
 		var o: Dictionary = options[i]
+		var into: Container = call
+		if across != null:
+			into = UiKit.vbox(6)
+			into.name = "MomentOption_%d" % i
+			into.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			across.add_child(into)
 		# Every choice stands equal: no filled first button that reads as the
 		# recommended one (director's PC playtest, 2026-10-07).
 		var b := UiKit.btn(str(o.get("label", "")), 16, false)
@@ -2668,10 +2655,18 @@ func _show_bounce_moment(m: Dictionary) -> void:
 		b.custom_minimum_size = Vector2(0, 46)
 		b.disabled = true
 		b.pressed.connect(_on_moment_choice.bind(i))
-		call.add_child(b)
+		into.add_child(b)
 		buttons.append(b)
-		_moment_lines(call, o)
+		_moment_lines(into, o)
 	panel.modulate.a = 0.0
+	# The scene keeps its men above the call: it is told the call's height once the
+	# call is up, and again whenever the laid-out panel changes height (its wrapped
+	# lines settle a frame or two after it is first shown).
+	var call_up := [false]
+	var tell_room := func() -> void:
+		if call_up[0] and is_instance_valid(vignette) and is_instance_valid(panel):
+			vignette.call_room = panel.size.y
+	panel.resized.connect(tell_room)
 	margin.add_theme_constant_override("margin_bottom", -600)
 	vignette.ready_for_call.connect(func() -> void:
 		for b in buttons:
@@ -2680,7 +2675,8 @@ func _show_bounce_moment(m: Dictionary) -> void:
 		if not is_instance_valid(margin):
 			return
 		panel.modulate.a = 1.0
-		vignette.call_room = panel.size.y
+		call_up[0] = true
+		tell_room.call()
 		var tw := margin.create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 		tw.tween_method(func(v: float) -> void: margin.add_theme_constant_override("margin_bottom", int(v)),
 				-600.0, 0.0, 0.3))
@@ -4569,6 +4565,9 @@ func _qcell(text: String, w: int, col: Color, fs: int, bold := false) -> Label:
 ## Router back hook. A live match cannot be abandoned half way (the rest of
 ## the round is already on the ladder), so back is swallowed until full time.
 func handle_back() -> bool:
+	# The bench's drawer on the oval shuts first.
+	if _pitch != null and _pitch.close_bench():
+		return true
 	# A player list opened from the break closes first.
 	if _sheet_overlay != null and is_instance_valid(_sheet_overlay):
 		_close_sheet()

@@ -164,26 +164,6 @@ static func flag_stream(cam: VignetteGround.Cam, p: Vector2, h: float, world: Ve
 	return Vector3(d.x / seen, d.y / seen, clampf(seen / (3.0 * a.z), 0.3, 1.0))
 
 
-## Wind lines on the flat pitch view. No longer part of the look (director, 2026-11-12:
-## the wind shows in flags, the scoreboard arrow and the ball's drift, never as lines on
-## the grass); kept only until the pitch view stops calling it.
-static func draw_wind_flat(ci: CanvasItem, rect: Rect2, t: float) -> void:
-	for i in range(14):
-		var h := hash(i * 3313 + 7)
-		var fy := 0.1 + 0.8 * float(h % 997) / 997.0
-		var speed := 0.16 + 0.08 * float((h / 997) % 89) / 89.0        # views a second
-		var length := (0.12 + 0.08 * float(h % 7) / 7.0) * rect.size.x
-		var x0 := fposmod(float((h / 5) % 991) / 991.0 + t * speed, 1.3) - 0.15
-		var pts := PackedVector2Array()
-		var cols := PackedColorArray()
-		for k in range(13):
-			var u := float(k) / 12.0
-			pts.append(rect.position + Vector2(x0 * rect.size.x + u * length,
-					fy * rect.size.y + sin(u * 3.0 + t * 2.0 + float(i)) * 3.0))
-			cols.append(Color(0.92, 0.95, 1.0, 0.3 * sin(u * PI)))
-		ci.draw_polyline_colors(pts, cols, 1.2, true)
-
-
 ## Wet turf holds the lights: for each light tower in view, a soft pool of glare on the
 ## grass between the camera and the tower, where light off a wet surface comes back to the
 ## eye. A low-contrast patch lying flat on the ground (an ellipse in oval metres, seen in

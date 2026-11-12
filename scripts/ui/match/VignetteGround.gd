@@ -190,7 +190,7 @@ static func draw_ground(ci: CanvasItem, cam: Cam, stage: Rect2, colours: Array, 
 	# there were day games.
 	var slot := slot_now(weather)
 	VignetteKickoff.shown = slot
-	VignetteGrade.sync(ci, weather, slot, _far_turf(cam))
+	VignetteGrade.sync(ci, weather, slot, far_turf(cam))
 	# Under a closed roof the sky is the roof's underside.
 	var closed: bool = spec.get("roof") == "closed"
 	var sky := VignetteWeather.sky(weather, slot)
@@ -254,7 +254,7 @@ const MOWER_REACH := 42.0
 
 ## Where the far edge of the turf is on the picture (screen y): the highest point of the
 ## boundary the camera sees. The heat shimmer sits there, over the far turf and the fence.
-static func _far_turf(cam: Cam) -> float:
+static func far_turf(cam: Cam) -> float:
 	var y := INF
 	for i in range(36):
 		var a := TAU * float(i) / 36.0
