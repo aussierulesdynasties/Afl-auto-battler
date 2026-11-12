@@ -85,8 +85,10 @@ var _mom_note: Label          # first match only: what it is
 var _mom_bar: Button          # the meter (its foot is the scoreboard's, the line aside)
 const SCORE_BAND_PAD := 8
 ## The break is the PC sheet (four columns): player cards say their detail
-## on one line and choices sit 40 tall (a mouse, not a thumb).
+## on one line and choices sit PC_CHOICE_H tall (a mouse, not a thumb).
 var _pc_break := false
+## True on a PC break from quarter time on: one line a call, the chosen call in a wide pane.
+var _pc_one_line := false
 var _pos_before := 0          # your ladder spot before this match
 var _lead: Label
 var _setup_line: RichTextLabel
@@ -742,6 +744,9 @@ func _gameplans() -> Array:
 	return out
 
 
+## A PC break's choice buttons: a mouse, not a thumb (phones keep 44).
+const PC_CHOICE_H := 34.0
+
 const PEP_TALKS := [
 	["steady", "Stay composed"], ["fire_up", "Fire them up"], ["calm", "Calm the group"],
 	["heat", "Bring the heat"],
@@ -771,6 +776,7 @@ func _show_coach_box() -> void:
 	# (director, 2026-10-09: "it looks like we are using a mobile UI on a PC").
 	var wide := _wide_break()
 	_pc_break = wide
+	_pc_one_line = wide and q > 1
 	var stats_pc: Button = null
 	var box := UiKit.modal_box(_over, minf(UiKit.view_width(self) - 48.0, 1560.0) if wide else 640.0, 0.0, _wash())
 	var overlay: Control = box["overlay"]
@@ -1353,10 +1359,11 @@ func _show_coach_box() -> void:
 		acts.add_child(start)
 		box["footer"].add_child(acts)
 		# A mouse, not a thumb: the choices sit 34 tall on the PC sheet, so the
-		# fullest break (both loose men, a tag card, your tally) fits 1280x720.
+		# fullest pre-bounce column (the pep talk and the three play-through
+		# picks, eight rows of choices) fits 1280x720 without scrolling.
 		for b in cols.find_children("*", "Button", true, false):
 			if (b as Button).custom_minimum_size.y == 44.0:
-				(b as Button).custom_minimum_size.y = 40.0
+				(b as Button).custom_minimum_size.y = PC_CHOICE_H
 		_break_pack_cols = [rep, col_a, col_b, col_c] if rep != v else [col_a, col_b, col_c]
 		_break_reading = []
 		if rep != v:
@@ -1670,7 +1677,11 @@ func _mount_one_line(c: Dictionary) -> void:
 			col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			col.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 			cols.add_child(col)
-		right.size_flags_stretch_ratio = 1.15
+		# The rows are one short line each, so their column is the narrowest and
+		# the open call gets the room: its Gain / Cost lines wrap less, and the
+		# tallest call still fits 1280x720.
+		mid.size_flags_stretch_ratio = 0.75
+		right.size_flags_stretch_ratio = 1.4
 		for n in [quarter_head, facts, legs]:
 			put.call(left, n)
 		if did_head != null:
@@ -1722,7 +1733,7 @@ func _mount_one_line(c: Dictionary) -> void:
 		# A mouse, not a thumb: the choices sit a little shorter on the PC sheet.
 		for b in cols.find_children("*", "Button", true, false):
 			if (b as Button).custom_minimum_size.y == 44.0 and not str(b.name).begins_with("CallRow_"):
-				(b as Button).custom_minimum_size.y = 40.0
+				(b as Button).custom_minimum_size.y = PC_CHOICE_H
 		# Every call is laid out once, unseen, so the pane can keep the room of
 		# the tallest; then only the first shows.
 		pane.modulate.a = 0.0
@@ -2961,7 +2972,13 @@ func _player_choice(node_name: String, none_label: String, roster: Array, first:
 			grid.move_child(other, 1)
 		if _pc_break:
 			for gb in grid.get_children():
-				(gb as Control).custom_minimum_size.y = 38.0
+				(gb as Control).custom_minimum_size.y = PC_CHOICE_H
+			# From quarter time the chosen call has a wide pane: five or six
+			# choices (none, the few in the game, Other) sit three to a row
+			# there, so the Tag call is two rows, not three, and the fullest
+			# break still fits 1280x720.
+			if _pc_one_line and grid.get_child_count() >= 5:
+				grid.columns = 3
 	rebuild.call(rebuild)
 	return box
 
