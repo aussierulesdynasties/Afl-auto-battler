@@ -40,6 +40,9 @@ func _run() -> void:
 		await _t("_test_framing", [size])
 	await _t("_test_cast_and_idle")
 	await _t("_test_wind_drift")
+	for size in [Vector2i(390, 844), Vector2i(1280, 720)]:
+		await _t("_test_call_leaves_the_scene", [size])
+	await _t("_test_board_wind_and_score")
 	print(Ran.line("Decision scenes", self))
 	for f in _failures:
 		print("  FAIL: ", f)
@@ -749,6 +752,120 @@ func _test_wind_drift() -> void:
 	B.weather = ""
 	_check((B.call("_drifted", a.lerp(b, 0.5), a, b, 0.5) as Vector3).is_equal_approx(a.lerp(b, 0.5)), "a calm day: the kick flies straight")
 	B.free()
+
+
+## The call as the match screen puts it up, with real-length gain and cost lines under
+## each choice (three choices, the most a call offers): once it is up the scene has been
+## told the laid-out panel's height, so its men stand above it. On a PC the scene and its
+## call sit over the oval's place and no wider, the choices side by side, and the call
+## takes well under half of the picture (it covered about 85% of a 1920 x 1080 screen
+## when the choices were stacked the full width). A real tap reaches a choice.
+func _test_call_leaves_the_scene(size: Vector2i) -> void:
+	var tag := "%dx%d" % [size.x, size.y]
+	var wide := size.x > size.y
+	var ctx := await _match(false, size)
+	var m: Control = ctx["m"]
+	var sim = ctx["sim"]
+	var me: int = ctx["me"]
+	# Android Back (the match screen's own handler) shuts the bench's drawer first and
+	# goes no further.
+	var pitch = m.get("_pitch")
+	pitch.open_bench()
+	_check(pitch.bench_open() and bool(m.call("handle_back")) and not pitch.bench_open() and is_instance_valid(m),
+			"%s: Back shuts the bench's drawer and stays on the match" % tag)
+	_state.set_vignettes_on(true)
+	sim.moment_side = me
+	var call := _moment(sim, me, "set_shot")
+	for o in call["options"]:
+		o["gain"] = "Gain: about 12% more of his shots from here are goals this quarter"
+		o["cost"] = "Cost: about 8% more of their next kick-ins reach the centre square"
+	call["text"] = "He has marked 40 out on a slight angle. Where does he go from here?"
+	sim.pending_moment = call
+	m.call("_show_moment")
+	await _settle()
+	var vig = m.find_child("DecisionVignette", true, false)
+	var panel: Control = m.find_child("BounceCall", true, false)
+	_check(vig != null and panel != null, "%s: the scene and its call are up" % tag)
+	if vig == null or panel == null:
+		m.queue_free()
+		await _settle()
+		return
+	_check(bool(m.get("_pc")) == wide, "%s: %s layout" % [tag, "the PC" if wide else "the phone"])
+	vig.finish_now()
+	_check(await _call_settled(m, vig), "%s: the call slides up over the frozen scene" % tag)
+	for i in range(6):
+		await process_frame
+	var scene: Rect2 = vig.get_global_rect()
+	var took: float = panel.size.y / maxf(scene.size.y, 1.0)
+	print("CALL ROOM %s scene %s panel %s share %.2f call_room %.0f" % [tag, str(scene.size), str(panel.size), took, float(vig.call_room)])
+	_check(absf(float(vig.call_room) - panel.size.y) < 1.0 and panel.size.y > 60.0,
+			"%s: the scene knows the height of the call as it is laid out (%.0f, the panel %.0f)" % [tag, float(vig.call_room), panel.size.y])
+	var buttons := panel.find_children("Moment_*", "Button", true, false)
+	var on := buttons.size() == 3
+	for b in buttons:
+		on = on and scene.grow(1.0).encloses((b as Button).get_global_rect()) and (b as Button).size.y >= 44.0
+	_check(on, "%s: every choice is on the scene and thumb-sized" % tag)
+	if wide:
+		var oval: Rect2 = (m.get("_pitch") as Control).get_global_rect()
+		_check(scene.position.distance_to(oval.position) < 2.0 and (scene.size - oval.size).length() < 2.0,
+				"%s: the scene is drawn in the oval's place (%s, the oval %s)" % [tag, str(scene), str(oval)])
+		_check(m.find_child("MomentOptions", true, false) != null
+				and absf((buttons[0] as Button).get_global_rect().position.y - (buttons[2] as Button).get_global_rect().position.y) < 1.0
+				and (buttons[0] as Button).get_global_rect().end.x <= (buttons[1] as Button).get_global_rect().position.x,
+				"%s: a PC's choices stand side by side" % tag)
+		_check(took <= 0.45, "%s: the call leaves the scene showing (it takes %.0f%% of the picture)" % [tag, took * 100.0])
+		var f: Dictionary = vig.shot_numbers()
+		_check(float(f["feet"]) <= float(f["floor"]) + 0.5 and float(f["head"]) >= float(f["bar"]) + 20.0,
+				"%s: the men stand between the title bar and the call (head %.0f, bar %.0f, boots %.0f, the call at %.0f)" % [
+				tag, float(f["head"]), float(f["bar"]), float(f["feet"]), float(f["floor"])])
+	else:
+		_check(m.find_child("MomentOptions", true, false) == null, "%s: a phone stacks its choices, as before" % tag)
+	var asked: int = sim.moments.size()
+	var why: String = await Tap.tap(buttons[2])
+	_check(why == "" and sim.moments.size() == asked + 1, "%s: a finger on a choice makes the call (%s)" % [tag, why])
+	m.queue_free()
+	await _settle()
+
+
+## The big screen in a call scene shows the score the header shows when the match screen
+## hands it over, and points its wind arrow to the end the breeze blows to: your side
+## kicks to the scene's far end, so the far end when your side has the breeze this
+## quarter. Reading it changes nothing in the match.
+func _test_board_wind_and_score() -> void:
+	var ctx := await _match()
+	var m: Control = ctx["m"]
+	var sim = ctx["sim"]
+	var me: int = ctx["me"]
+	var before: int = sim.rng.state
+	var V = load("res://scripts/ui/match/StoppageVignette.gd")
+	for q in [1, 2]:
+		sim.current_quarter = q
+		var board: Dictionary = V.board_of(sim, me)
+		_check(int(board["wind"]) == (1 if sim.with_breeze(me) else -1) and int(board["q"]) == q,
+				"quarter %d: the screen's wind is the end your side's breeze blows to (%d)" % [q, int(board["wind"])])
+		_check(int(V.board_of(sim, 1 - me)["wind"]) == -int(board["wind"]), "quarter %d: the other side sees it blow the other way" % q)
+	sim.current_quarter = 1
+	_check((V.board_of(sim, me)["goals"] as Array) == [sim.goals(0), sim.goals(1)]
+			and (V.board_of(sim, me)["behinds"] as Array) == [sim.behinds(0), sim.behinds(1)],
+			"with no score handed over the screen shows the match's own")
+	var shown := {"goals": [3, 1], "behinds": [2, 5]}
+	var vig = _scene(m, sim, me, "set_shot", Vector2(390, 844))
+	vig.setup_decision(sim, me, _moment(sim, me, "set_shot"), shown)
+	var b: Dictionary = vig.get("_board")
+	_check((b["goals"] as Array) == [3, 1] and (b["behinds"] as Array) == [2, 5], "the call scene's screen shows the score the header shows (%s)" % str(b))
+	var bounce = _scene(m, sim, me, "bounce", Vector2(390, 844))
+	bounce.setup(sim, me, "A call", shown)
+	b = bounce.get("_board")
+	_check((b["goals"] as Array) == [3, 1] and b.has("wind"), "the centre bounce's screen too, with the wind's end")
+	var R = load("res://scripts/ui/match/BroadcastVignette.gd")
+	_check(int(R.wind_end_of({"breeze_side": 0}, {"side": 0, "q": 1})) == 1 and int(R.wind_end_of({"breeze_side": 0}, {"side": 0, "q": 2})) == -1
+			and int(R.wind_end_of({"breeze_side": 0}, {"side": 1, "q": 1})) == -1 and int(R.wind_end_of({"breeze_side": 1}, {"side": 1, "q": 3})) == 1
+			and int(R.wind_end_of({}, {"side": 1, "q": 2})) == 1,
+			"a replay's wind blows to the end the side in the play kicks to when that side has the breeze that quarter")
+	_check(int(sim.result()["breeze_side"]) == int(sim.breeze_side), "the result says which side had the breeze first")
+	_check(sim.rng.state == before, "none of it draws from the match's generator")
+	m.queue_free()
+	await _settle()
 
 
 func _t(test: String, args := []) -> Variant:
