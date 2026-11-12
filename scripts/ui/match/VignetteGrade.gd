@@ -51,7 +51,7 @@ static func attach(host: Control, weather: String, ui_draw: Callable) -> Control
 
 ## Keeps a scene's grade in step with the ground it has just drawn (VignetteGround.draw_ground
 ## calls this every frame): the look for the weather and time of day shown, and where the
-## horizon is on the picture, for the heat shimmer. A scene with no grade: nothing happens.
+## far edge of the turf is on the picture, for the heat shimmer. A scene with no grade: nothing happens.
 ## horizon_y: the horizon's y on the scene, in its own pixels.
 static func sync(ci: CanvasItem, weather: String, slot: String, horizon_y: float) -> void:
 	var grade := ci.get_node_or_null("Grade") as ColorRect
@@ -119,9 +119,9 @@ static func _day(weather: String) -> Dictionary:
 					"hi_tint": Vector3(0.97, 1.0, 1.04), "lo_tint": Vector3(0.9, 0.96, 1.08),
 					"vignette": 0.3, "bloom": 0.04, "bloom_from": 0.8, "grain": 0.03, "shimmer": 0.0}
 		VignetteWeather.HOT:
-			return {"exposure": 1.2, "contrast": 1.42, "saturation": 1.2, "lift": 0.0,
-					"hi_tint": Vector3(1.14, 1.06, 0.84), "lo_tint": Vector3(0.98, 0.94, 0.9),
-					"vignette": 0.14, "bloom": 0.3, "bloom_from": 0.62, "grain": 0.022, "shimmer": 1.0}
+			return {"exposure": 1.12, "contrast": 1.36, "saturation": 1.02, "lift": 0.0,
+					"hi_tint": Vector3(1.08, 1.03, 0.86), "lo_tint": Vector3(0.98, 0.95, 0.92),
+					"vignette": 0.14, "bloom": 0.1, "bloom_from": 0.8, "grain": 0.022, "shimmer": 1.0}
 		_:
 			return {"exposure": 1.0, "contrast": 1.14, "saturation": 1.12, "lift": 0.0,
 					"hi_tint": Vector3(1.04, 1.01, 0.96), "lo_tint": Vector3(0.94, 0.97, 1.06),
@@ -137,7 +137,7 @@ static func _twilight(weather: String) -> Dictionary:
 					"hi_tint": Vector3(0.99, 0.99, 1.04), "lo_tint": Vector3(0.88, 0.94, 1.12),
 					"vignette": 0.36, "bloom": 0.1, "bloom_from": 0.66, "grain": 0.033, "shimmer": 0.0}
 		VignetteWeather.HOT:
-			return {"exposure": 1.08, "contrast": 1.3, "saturation": 1.2, "lift": 0.0,
+			return {"exposure": 1.05, "contrast": 1.3, "saturation": 1.12, "lift": 0.0,
 					"hi_tint": Vector3(1.18, 1.0, 0.8), "lo_tint": Vector3(0.94, 0.9, 1.04),
 					"vignette": 0.3, "bloom": 0.3, "bloom_from": 0.58, "grain": 0.026, "shimmer": 0.45}
 		_:

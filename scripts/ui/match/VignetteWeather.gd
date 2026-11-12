@@ -23,7 +23,7 @@ const HOT := "hot"
 const DAY_TURF := Color(1.42, 1.3, 1.22)
 ## Dry straw: what a hot day's turf leans to under lights, and by day.
 const STRAW_NIGHT := Color(0.46, 0.46, 0.22)
-const STRAW_DAY := Color(0.7, 0.64, 0.32)
+const STRAW_DAY := Color(0.62, 0.6, 0.34)
 
 
 ## A turf colour as the slot's light shows it.
@@ -40,10 +40,12 @@ static func grass(weather: String, base: Array, slot := VignetteKickoff.NIGHT) -
 	var lit := base.map(func(c: Color) -> Color: return daylit(c, slot))
 	match weather:
 		WET:
-			return lit.map(func(c: Color) -> Color: return Color(c.r * 0.62, c.g * 0.7, c.b * 0.82))
+			# Darker and bluer; by day a little less so, the sky still lighting it.
+			return lit.map(func(c: Color) -> Color:
+				return Color(c.r * lerpf(0.62, 0.74, d), c.g * lerpf(0.7, 0.8, d), c.b * lerpf(0.82, 0.86, d)))
 		HOT:
 			return lit.map(func(c: Color) -> Color:
-				return c.lerp(STRAW_NIGHT.lerp(STRAW_DAY, d), lerpf(0.42, 0.62, d)))
+				return c.lerp(STRAW_NIGHT.lerp(STRAW_DAY, d), lerpf(0.42, 0.5, d)))
 	return lit
 
 
@@ -55,7 +57,7 @@ static func shadow_alpha(weather: String) -> float:
 		WET:
 			return 0.18
 		HOT:
-			return lerpf(0.58, 0.86, d)
+			return lerpf(0.58, 0.72, d)
 	return lerpf(0.32, 0.44, d)
 
 

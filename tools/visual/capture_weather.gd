@@ -2,7 +2,8 @@ extends SceneTree
 ## The match scenes in every weather at every time of day (VignetteWeather, VignetteKickoff;
 ## TODO row 166): the centre bounce, a coach's call, a replay and the pre-match, each in
 ## perfect, wet, windy and hot weather as a day, a twilight and a night game, on a phone
-## (390x844) and a PC (1920x1080). Fremantle v Melbourne at Optus Stadium.
+## (390x844) and a PC (1920x1080). Fremantle at Optus Stadium: the bounce and the call
+## against its round 1 opponent, the replay and the warm-up against Melbourne.
 ##   godot --path . --script tools/visual/capture_weather.gd -- --out C:/caps/after
 ##       [--sizes phone,pc] [--slots day,twilight,night] [--weathers perfect,wet,windy,hot]
 ##       [--scenes bounce,call,replay,prematch] [--old-turf] [--wind -1]
@@ -82,13 +83,16 @@ func _run() -> void:
 		DisplayServer.window_set_size(px)
 		for i in range(6):
 			await process_frame
+		# What a scene is given in the game: the window in the project's own units (the
+		# picture is stretched to the window, so this is not the window's pixels).
+		var area: Vector2 = root.get_visible_rect().size
 		for slot in slots:
 			if kickoff != null:
 				kickoff.set("forced_slot", slot)
 			for w in weathers:
 				grade.set("forced_weather", w)
 				for scene in scenes:
-					var node: Control = _open(scene, w, Vector2(px))
+					var node: Control = _open(scene, w, area)
 					var img := await _shot(node, _time(scene))
 					img.save_png("%s/%s_%s_%s_%s.png" % [out, size_name, scene, w, slot])
 					n += 1
