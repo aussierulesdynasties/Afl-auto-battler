@@ -429,7 +429,7 @@ func para(text: String, size: int, colour: Color) -> Control:
 func _names() -> Dictionary:
 	var nxt := GameState.my_next_opponent()
 	var opp := str(nxt.get("code", ""))
-	var key := "%s|%s|%d|%s" % [GameState.my_club, opp, GameState.my_list.size(), str(GameState.show_real_names)]
+	var key := "%s|%s|%d" % [GameState.my_club, opp, GameState.my_list.size()]
 	if key != _name_key:
 		_name_key = key
 		var codes := [GameState.my_club]

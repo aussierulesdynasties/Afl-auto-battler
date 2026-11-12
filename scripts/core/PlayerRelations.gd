@@ -4,7 +4,7 @@ extends RefCounted
 ## (Melbourne)". Static, sourced facts from data/player_relations.csv (one
 ## direction per row; the other direction is made here). Nothing is saved and
 ## nothing here touches the simulation. Real players only: a generated player
-## has no family (yet), and with fictional names on the real names stay hidden.
+## has no sourced family: his comes from FamilyTies.
 
 const PATH := "res://data/player_relations.csv"
 ## What the same row says from the other person's side.
@@ -128,9 +128,8 @@ static func find(first: String, last: String, dob: String) -> Dictionary:
 ## (code, or ""), "note" (the words in brackets, "" if none)}.
 static func ties(p: Dictionary) -> Array:
 	var out: Array = []
-	# Sourced ties name real people, so only with real names on; a generated
-	# family (FamilyTies) is fictional either way and follows the display names.
-	if not bool(p.get("generated", false)) and GameState.show_real_names:
+	# Sourced ties name real people; a generated family (FamilyTies) is invented.
+	if not bool(p.get("generated", false)):
 		out = _sourced_ties(p)
 	out.append_array(_generated_ties(p))
 	return out

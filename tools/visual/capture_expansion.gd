@@ -63,7 +63,6 @@ func _run() -> void:
 	state.autosave_enabled = false
 	state.save_path = "user://capture_expansion.save"
 	state.settings_path = "user://capture_expansion_settings.cfg"
-	state.show_real_names = false
 	state.reset()
 	state.set_setting("seen_weekly_loop_intro", true)
 	state.set_setting("tutorials", false)

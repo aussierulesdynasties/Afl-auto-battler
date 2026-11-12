@@ -29,7 +29,6 @@ func _run() -> void:
 	# First-visit intros have their own suite; here every screen is a return visit.
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		_state.set_setting("seen_%s_intro" % key, true)
-	_state.show_real_names = true
 	_db = root.get_node("GameDB")
 	_rel = load("res://scripts/core/PlayerRelations.gd")
 	_sheet_script = load("res://scripts/ui/PlayerSheet.gd")
@@ -100,11 +99,6 @@ func _test_relations() -> void:
 	var gen := jack.duplicate(true)
 	gen["generated"] = true
 	_check(_rel.line(gen) == "", "A generated player has no family line")
-	var fictional := true
-	_state.show_real_names = false
-	fictional = _rel.line(jack) == ""
-	_state.show_real_names = true
-	_check(fictional, "With fictional names on, no real name leaks into a bio")
 
 	# Nothing is stored on the player.
 	var keys_before := jack.keys().size()
@@ -291,10 +285,6 @@ func _test_relations() -> void:
 		kid["family_real_last"] = str(dad["last"])
 		_check(_rel.line(kid).begins_with("Son of "), "The draftee's bio says son of: " + _rel.line(kid))
 		_check(_db.player_display_name(kid).ends_with(" " + str(dad["last"])), "He carries his father's real surname")
-		_state.show_real_names = false
-		_check(not _db.player_display_name(kid).ends_with(" " + str(dad["last"])) or str(dad["last"]) == "",
-				"With fictional names on, no real surname shows")
-		_state.show_real_names = true
 		_check(_rel.line(dad).contains("Father of "), "The father's bio says father of: " + _rel.line(dad))
 		var kid_id := str(kid["id"])
 		var line_before: String = _rel.line(kid)

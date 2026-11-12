@@ -38,7 +38,6 @@ func _run() -> void:
 	state.autosave_enabled = false
 	state.save_path = "user://capture_lead.save"
 	state.settings_path = "user://capture_lead_settings.cfg"
-	state.show_real_names = true
 	state.reset()
 	state.set_setting("seen_weekly_loop_intro", true)
 	DisplayServer.window_set_size(Vector2i(W, H))

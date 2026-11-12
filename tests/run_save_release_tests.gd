@@ -52,7 +52,6 @@ func _run() -> void:
 	var tag := OS.get_process_id()
 	_state.save_path = "user://test_save_release_%d.save" % tag
 	_state.settings_path = "user://test_save_release_%d.cfg" % tag
-	_state.show_real_names = false
 	_state.replay_seed = SUITE_SEED
 	_state.delete_saved_career()
 	root.size = Vector2i(390, 844)

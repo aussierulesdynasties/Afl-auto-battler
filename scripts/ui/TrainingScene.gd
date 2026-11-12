@@ -59,8 +59,6 @@ func _ready() -> void:
 		return
 	# Opening it ticks the job on the Hub's weekly checklist (when on).
 	WeekChecklist.mark(GameState, "training")
-	if not GameState.player_names_changed.is_connected(_on_names):
-		GameState.player_names_changed.connect(_on_names)
 	# Your club's colour behind the page, as on the hub and match day
 	# (director, 2026-10-10: every screen in the gameday style).
 	add_child(ClubBackdrop.new().setup(GameState.my_club))
@@ -148,11 +146,6 @@ func _show_intro() -> void:
 		_overlay.queue_free()
 		_overlay = null)
 	box["footer"].add_child(ok)
-
-
-func _on_names() -> void:
-	if is_inside_tree():
-		_build()
 
 
 func _build() -> void:

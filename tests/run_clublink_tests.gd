@@ -72,7 +72,6 @@ func _run() -> void:
 	_gs.settings_path = "user://test_clublink.cfg"
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		_gs.set_setting("seen_%s_intro" % key, true)
-	_gs.show_real_names = false
 	await _t("_test_rules")
 	await _t("_test_copy_rules")
 	await _t("_test_save_round_trip")

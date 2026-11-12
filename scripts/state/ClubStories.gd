@@ -597,7 +597,7 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
 			"intl_extension_ok": ClubLife.extension_wanted(p, {}, ClubLife.INTL_EXTENSION_MIN_OVR),
 			# Shown under his real name: no card invents a private life or
 			# misconduct for a real person (story research §4).
-			"real_named": bool(gs.show_real_names) and str(p.get("real_name", "")).strip_edges() != "",
+			"real_named": str(p.get("real_name", "")).strip_edges() != "",
 			# A dispute left to the captain: held when his Leadership is high enough, or
 			# fairly high and he trusts you (the rule is printed on the choice).
 			"leadership": lead, "captain": Captaincy.role_of(gs.captaincy_record(gs.my_club), id) == "captain",

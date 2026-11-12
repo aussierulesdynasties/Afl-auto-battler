@@ -33,7 +33,6 @@ func _run() -> void:
 	# and My list's intro would take the tap on the way in.
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		_state.set_setting("seen_%s_intro" % key, true)
-	_state.show_real_names = false
 	_state.tutorials = false
 	_state.replay_seed = 1301
 	_state.reset()

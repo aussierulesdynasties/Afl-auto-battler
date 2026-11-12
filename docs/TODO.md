@@ -245,6 +245,7 @@ Settled answers that are not build rows. The bible stays as it is unless he cons
 - Design bible updated with his consent: the press line reads "Every answer carries a named risk: the odds of each outcome are shown before you answer." ("Yes, reword it"); pillars restated story, deep simulator, agency, then readability, with a story question first in the feature test ("Add story, reorder"). Won't-have list: "Yes, draft it", then "All but 14 and 15": the other 17 lines are in the design bible's "What this game will not have".
 - Overnight (going to sleep): merge queue "Yes, turn it on"; Legacy money "Dollars of the time" and the 1990-2012 salary cap gaps "huh? look harder" (row 142); held-look PRs "Merge after your check", PR #1453 if its rerun balance screen has nothing OUT; itch "Yes, push one build" once all merged; press-room coach "Re-render sharper".
 - Game-plan traits are removed and replaced by a custom game plan: 1 strength and 1 cost from a list, a plan of its own, neutral like Win Contest (never counters or is countered), every club can run one (rows 158 and Custom plan).
+- Real names only: "remove 'generated names' from the game, Real Names only". The Player names choice is gone; row 56 has no fictional-names fallback (bible 3.35a).
 
 ## Current focus (moved from the bible, 2026-11-06)
 

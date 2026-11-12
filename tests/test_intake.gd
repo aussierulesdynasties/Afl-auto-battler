@@ -958,11 +958,7 @@ func _test_custom_prospect() -> void:
 			p = d
 	_check(not p.is_empty() and int(p["draft_year"]) == GameState.season_year and bool(p.get("user_created", false)),
 			"He joins the first National Draft class, marked as yours")
-	var named_ok := GameDB.player_display_name(p) == "Gabe Tester"
-	GameState.show_real_names = not GameState.show_real_names
-	named_ok = named_ok and GameDB.player_display_name(p) == "Gabe Tester"
-	GameState.show_real_names = not GameState.show_real_names
-	_check(named_ok, "His name is his in both name modes")
+	_check(GameDB.player_display_name(p) == "Gabe Tester", "He is shown under the name you gave him")
 	_check(str(p["role"]) == "FWD" and str(p["role2"]) == "MID" and int(p["height_cm"]) == 186
 			and str(p["foot"]) == "L" and int(p["number_pref"]) == 23
 			and GameDB.player_appearance(p)["hair_style"] == "mullet",

@@ -1031,8 +1031,6 @@ func _coach(who: String, status: String, club: String, job: String, stints: Arra
 ## it sam mitchell in photo 1 and then simon goodwin in photo 2?"): why the job
 ## is open, who the club signed, and who takes the job he leaves.
 func _test_coach_move_lines() -> void:
-	var real_was: bool = GameState.show_real_names
-	GameState.show_real_names = false
 	var y := 2027
 	var signed := _coach("Gary Lenehan", "club", "HAW", "SC", [["SYD", "SA", 2026, y], ["HAW", "SC", y + 1, 0]])
 	var cases := [
@@ -1077,4 +1075,3 @@ func _test_coach_move_lines() -> void:
 		_check(got == str(c[1]), "who replaces him at the club he leaves: %s" % got)
 	_check(ClubMoves.successor_line(FakeCoaches.new(), "FRE", "HAW", y) == "Fremantle have yet to name your replacement.",
 			"no successor yet: said so, club named")
-	GameState.show_real_names = real_was

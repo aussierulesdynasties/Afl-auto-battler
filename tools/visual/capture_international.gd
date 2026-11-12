@@ -34,7 +34,6 @@ func _run() -> void:
 	state.autosave_enabled = false
 	state.save_path = "user://capture.save"
 	state.settings_path = "user://capture_settings.cfg"
-	state.show_real_names = false
 	state.replay_seed = 2027
 	state.reset()
 	root.size = Vector2i(W, H)

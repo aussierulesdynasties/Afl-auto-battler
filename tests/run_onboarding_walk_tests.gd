@@ -37,7 +37,6 @@ func _run() -> void:
 	_state.autosave_enabled = false
 	_state.save_path = SAVE
 	_state.settings_path = SETTINGS
-	_state.show_real_names = false
 	root.size = Vector2i(390, 844)
 	await _t("_test_walk_initial_draft_and_week")
 	await _t("_test_walk_first_postseason")

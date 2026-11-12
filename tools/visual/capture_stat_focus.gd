@@ -24,7 +24,6 @@ func _run() -> void:
 	state.autosave_enabled = false
 	state.save_path = "user://capture_stat_focus.save"
 	state.settings_path = "user://capture_stat_focus.cfg"
-	state.show_real_names = false
 	state.replay_seed = SEED
 	db.reload()
 	state.reset()

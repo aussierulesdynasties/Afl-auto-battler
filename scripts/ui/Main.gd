@@ -19,7 +19,6 @@ var _load_error: Label
 var _restore_note := ""
 var _logo: TextureRect
 ## The setup's choices, applied only when the career starts.
-var _pick_real := true
 var _pick_board := "fair"
 var _pick_rivals := "shrewd"
 var _pick_tutorials := true
@@ -54,7 +53,6 @@ var _storage_line := ""
 const LOGO_MAX_W := 560.0
 const LOGO_MAX_H_SHARE := 0.26
 const TAGLINE := "Build your dynasty."
-const NAME_OPTIONS := [["generated", "Generated"], ["real", "Real"]]
 ## The promise, printed once on the menu (P-70). tools/check_android_permissions.py
 ## fails CI if the Android export ever asks for more than vibrate.
 const OFFLINE_PROMISE := "Plays offline. No ads, no account."
@@ -62,7 +60,6 @@ const OFFLINE_PROMISE := "Plays offline. No ads, no account."
 ## browser, the app and the desktop game on this device (it said "your phone" on all).
 const KEPT_ON_DEVICE := "Your career stays on this device."
 const KEPT_IN_BROWSER := "Your career stays in this browser."
-const NAMES_INFO := "Real shows each player's AFL name; generated names are invented. Ratings and results are the same either way."
 
 
 ## The promise as the menu prints it: two lines, the second naming where the save lives.
@@ -118,7 +115,6 @@ func _ready() -> void:
 	if GameState.new_career_setup_requested:
 		GameState.new_career_setup_requested = false
 		_mode = "setup"
-	_pick_real = GameState.show_real_names
 	_pick_board = GameState.new_career_dial(DifficultyDials.BOARD)
 	_pick_rivals = GameState.new_career_dial(DifficultyDials.RIVALS)
 	_pick_tutorials = GameState.new_career_tutorials()
@@ -364,7 +360,6 @@ func _show_load_error() -> void:
 
 
 func _on_new_career() -> void:
-	_pick_real = GameState.show_real_names
 	_pick_board = GameState.new_career_dial(DifficultyDials.BOARD)
 	_pick_rivals = GameState.new_career_dial(DifficultyDials.RIVALS)
 	_pick_tutorials = GameState.new_career_tutorials()
@@ -398,10 +393,11 @@ func _show_setup() -> void:
 	var above := Control.new()
 	above.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_content.add_child(above)
-	# A fifth choice (Canberra) no longer fits a phone at the usual spacing, and
-	# the button must stay on screen: on a short screen the rows sit closer.
+	# Six choices do not fit a phone at the usual spacing, and the button must
+	# stay on screen: on a short screen the rows sit closer, close enough that
+	# the whole setup fits a 390 x 844 phone without scrolling.
 	_setup_tight = UiKit.view_height(self) < 900.0
-	var form := UiKit.vbox(8 if _setup_tight else UiKit.SECTION)
+	var form := UiKit.vbox(5 if _setup_tight else UiKit.SECTION)
 	form.name = "NewCareerSetup"
 	form.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	form.custom_minimum_size.x = _column_width(440.0)
@@ -435,10 +431,6 @@ func _show_setup() -> void:
 	(_goal_row.get_node("GoalNote") as Label).visible = true
 	_goal_row.visible = _pick_challenge == "goal"
 	form.add_child(_goal_row)
-	form.add_child(_choice("Player names", "NameMode", NAME_OPTIONS,
-			"real" if _pick_real else "generated",
-			func(_k): return NAMES_INFO + " You can change this later in Settings.",
-			func(k): _pick_real = k == "real"))
 	form.add_child(_dial_choice(DifficultyDials.BOARD, "BoardPatience", _pick_board,
 			func(k): _pick_board = k))
 	form.add_child(_dial_choice(DifficultyDials.RIVALS, "RivalRecruiting", _pick_rivals,
@@ -673,7 +665,7 @@ func _choice(title: String, prefix: String, options: Array, current: String,
 ## open a "?" to learn what they are choosing. Sizes stay in
 ## data/difficulty_dials.json and never reach the screen.
 func _dial_choice(dial: String, prefix: String, current: String, on_pick: Callable) -> VBoxContainer:
-	var v := UiKit.vbox(8)
+	var v := UiKit.vbox(2 if _setup_tight else 8)
 	# The title takes the height of the other rows' header (their "?" is 44 high),
 	# so the setup keeps one rhythm.
 	var head := UiKit.lbl(DifficultyDials.title(dial), UiKit.H2, UiKit.TEXT, true)
@@ -724,7 +716,6 @@ func _on_start() -> void:
 
 
 func _start_new_career() -> void:
-	GameState.set_show_real_names(_pick_real)
 	GameState.set_new_career_dial(DifficultyDials.BOARD, _pick_board)
 	GameState.set_new_career_dial(DifficultyDials.RIVALS, _pick_rivals)
 	GameState.set_new_career_tutorials(_pick_tutorials)
@@ -1019,7 +1010,6 @@ func _show_help() -> void:
 			% Season.FINALISTS)
 			+ "7. In the off-season, re-sign, release, sign free agents and trade in Trades & Contracts, then draft the next class. The hub's League news follows the whole league.\n\n"
 			+ "Two dials are set when you start a new career. Board patience is how many poor seasons the board puts up with before it warns you, and then moves on you. Rival recruiting is how hard the other clubs bargain when they trade with you. Players develop by the same rules whatever you pick.\n\n"
-			+ "Player names are the real AFL names, such as Jordan Dawson, unless you choose otherwise. Settings switches to generated names without changing ratings or gameplay.\n\n"
 			+ "Rotate your device at any time. Your draft picks, search and filters stay intact.", 16)
 	v.add_child(UiKit.scroll(text))
 	var guide := UiKit.btn("Stat guide", UiKit.NAME)

@@ -2,8 +2,8 @@ extends RefCounted
 ## Row 34 (event-card audit): how often every story card comes up, and which
 ## choice the answers take, over a long career. Args after the impl name:
 ## seed club seasons [lists] [real] (`cards_impl 41 MEL 10 lists real`). "lists"
-## starts from the club's real list, otherwise a redraft start; "real" plays with
-## real names on, where private cards only pick players shown under a fictional name.
+## starts from the club's real list, otherwise a redraft start. Real names are
+## always on, so private cards only pick generated players ("real" changes nothing).
 ##
 ## The autopilot answers every card with a seeded random choice, so each choice and
 ## each arc beat can come up. Each week it also asks every card, against the live
@@ -161,9 +161,8 @@ func run() -> void:
 	var seed := int(args[1]) if args.size() > 1 else 1
 	var club := str(args[2]) if args.size() > 2 else "MEL"
 	var seasons := int(args[3]) if args.size() > 3 else 10
-	var real := args.has("real")
+	var real := true   # real names are always shown; a "real" argument changes nothing
 	GameState.reset()
-	GameState.show_real_names = real
 	GameState.career_seed = seed
 	GameState.replay_seed = seed
 	GameState.autosave_enabled = false

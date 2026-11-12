@@ -25,7 +25,7 @@ func run() -> void:
 	_t("_test_afl_unchanged")
 	_t("_test_no_key_no_leagues")
 	_t("_test_club_lookups")
-	_t("_test_name_switch")
+	_t("_test_state_names")
 	_t("_test_mature_recruit_clubs")
 	Datasets.remove(NO_STATE)
 	GameDB.reload()
@@ -150,20 +150,13 @@ func _test_club_lookups() -> void:
 			"Tasmania and Canberra field none in 2026")
 
 
-func _test_name_switch() -> void:
+func _test_state_names() -> void:
 	GameDB.reload()
-	var was: bool = GameState.show_real_names
 	var p: Dictionary = GameDB.state_list("WIL")[0]
-	GameState.show_real_names = true
 	var real_shown := GameDB.player_display_name(p)
 	var real_last := GameDB.card_surname(p)
-	GameState.show_real_names = false
-	var alias_shown := GameDB.player_display_name(p)
-	GameState.show_real_names = was
 	_check(real_shown == "%s %s" % [p["first"], p["last"]] and real_last == str(p["last"]),
-			"Real names on: a state man shows his own name (%s)" % real_shown)
-	_check(alias_shown != real_shown and alias_shown != "" and alias_shown == str(p["generic_name"]),
-			"Real names off: he shows a made-up name (%s)" % alias_shown)
+			"A state man shows his own name (%s)" % real_shown)
 	var afl_real := {}
 	var labels := {}
 	var clash: Array = []
@@ -175,7 +168,7 @@ func _test_name_switch() -> void:
 		if label == "" or labels.has(label) or afl_real.has(label):
 			clash.append(label)
 		labels[label] = true
-	_check(clash.is_empty(), "Every state man's made-up name is his own and no real AFL name (%d: %s)"
+	_check(clash.is_empty(), "Every state man's stored label is his own and no real AFL name (%d: %s)"
 			% [clash.size(), str(clash.slice(0, 3))])
 
 

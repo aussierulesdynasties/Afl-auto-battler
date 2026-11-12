@@ -828,11 +828,8 @@ func _test_apostrophe_names() -> void:
 				balyn = p
 	_check(dashed == 12, "Twelve real players carry an apostrophe in their surname (%d)" % dashed)
 	_check(lost.is_empty(), "No real surname has lost its apostrophe (%s)" % str(lost))
-	var was_real: bool = GameState.show_real_names
-	GameState.show_real_names = true
 	_check(not balyn.is_empty() and GameDB.player_display_name(balyn) == "Balyn O'Brien",
 			"A real O' name is shown with its apostrophe (%s)" % GameDB.player_display_name(balyn))
-	GameState.show_real_names = was_real
 	_check(not balyn.is_empty() and GameDB.player_looks(balyn) != Appearance.UNCURATED
 			and str(balyn.get("home_state", "")) == "SA",
 			"His curated look and his home state still find him")
@@ -1127,13 +1124,8 @@ func _test_card_names_never_blank() -> void:
 	_check(GameDB.card_surname(draftee) == "Hale", "a draftee with an empty surname shows the last word of his name")
 	var odd := {"last": "  ", "name": "Cal", "generic_name": "Cal"}
 	_check(GameDB.card_surname(odd) == "Cal", "a one-word name still shows")
-	var was_real := GameState.show_real_names
 	var listed := {"last": "Gawn", "name": "Max Gawn", "generic_name": "Mick Gorman", "real_name": "Max Gawn"}
-	GameState.show_real_names = true
-	_check(GameDB.card_surname(listed) == "Gawn", "a listed player keeps his surname with real names on")
-	GameState.show_real_names = false
-	_check(GameDB.card_surname(listed) == "Gorman", "fictional names never show the real surname (%s)" % GameDB.card_surname(listed))
-	GameState.show_real_names = was_real
+	_check(GameDB.card_surname(listed) == "Gawn", "a listed player shows his real surname, never the label underneath")
 
 
 ## Bug bash 2026-11-03: last season's ladder survives a reload, and an old

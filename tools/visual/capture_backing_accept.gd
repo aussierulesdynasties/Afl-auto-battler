@@ -69,7 +69,6 @@ func _run() -> void:
 	state.autosave_enabled = false
 	state.save_path = "user://capture_backing.save"
 	state.settings_path = "user://capture_backing_settings.cfg"
-	state.show_real_names = false
 	state.reset()
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		state.set_setting("seen_%s_intro" % key, true)

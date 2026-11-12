@@ -27,5 +27,4 @@ func _isolate_saves() -> void:
 	gs.autosave_enabled = false
 	gs.save_path = "user://test_expansion_package_career.save"
 	gs.settings_path = "user://test_expansion_package_settings.cfg"
-	gs.show_real_names = false
 	gs.delete_saved_career()

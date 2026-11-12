@@ -473,21 +473,20 @@ func register_draftees(list: Array) -> void:
 		late_draftees.append(p)
 
 
-## Real names are the default, and fictional labels are opt-in. Real-name mode shows the AFL name on its
-## own ("Jordan Dawson") — never "Squadmate 001 · plays like Jordan Dawson".
-## Generated prospects have no real name, so they keep the fictional label.
+## A real player is always shown under his AFL name, on its own ("Jordan
+## Dawson"; director, 2026-11-12: "Real Names only"). A generated prospect has
+## no real name, so he keeps the name he was given.
 func player_display_name(player: Dictionary) -> String:
 	if player.is_empty():
 		return ""
 	var generic := str(player.get("generic_name", player.get("name", ""))).strip_edges()
-	if GameState.show_real_names:
-		var real := str(player.get("real_name", "")).strip_edges()
-		if real != "":
-			return real
-		# A generated son or brother of a real player carries his real surname.
-		var fam := str(player.get("family_real_last", "")).strip_edges()
-		if fam != "" and generic != "":
-			return "%s %s" % [generic.get_slice(" ", 0), fam]
+	var real := str(player.get("real_name", "")).strip_edges()
+	if real != "":
+		return real
+	# A generated son or brother of a real player carries his real surname.
+	var fam := str(player.get("family_real_last", "")).strip_edges()
+	if fam != "" and generic != "":
+		return "%s %s" % [generic.get_slice(" ", 0), fam]
 	if generic != "":
 		return generic
 	return "Player"
@@ -509,21 +508,20 @@ func player_display_name_by_id(id: String, fallback := "") -> String:
 ## "last": "" (the key exists, so a plain get() never falls back), which left
 ## their cards without a name. Empty last: the last word of the shown name.
 func card_surname(player: Dictionary) -> String:
-	# The real surname only while real names are shown (as player_surname).
 	var last := str(player.get("last", "")).strip_edges()
-	if last != "" and GameState.show_real_names:
+	if last != "":
 		return last
 	var full := player_display_name(player)
 	var parts := full.split(" ", false)
 	return parts[parts.size() - 1] if not parts.is_empty() else full
 
 
-## A surname for a caption or a tight label: the real last name in real-name
-## mode, otherwise the last word of the fictional name. A long one is cut
+## A surname for a caption or a tight label: his last name, or for a generated
+## player without one the last word of his name. A long one is cut
 ## ("Papaioannou" reads "Papaioann.").
 func player_surname(player: Dictionary) -> String:
 	var raw := ""
-	if GameState.show_real_names and str(player.get("last", "")) != "":
+	if str(player.get("last", "")) != "":
 		raw = str(player["last"])
 	else:
 		var generic := str(player.get("generic_name", player.get("name", "Player")))
@@ -534,7 +532,7 @@ func player_surname(player: Dictionary) -> String:
 	return raw
 
 
-## Search can match the real name without showing it while fictional labels are on.
+## What a search matches: his real name and, for a generated player, his given one.
 func player_search_text(player: Dictionary) -> String:
 	return "%s %s" % [
 		str(player.get("generic_name", player.get("name", ""))),
@@ -1472,8 +1470,9 @@ func _load_players() -> Array:
 		p["last"] = str(cells[idx["last"]]) if idx.has("last") else ""
 		p["first"] = str(cells[idx["first"]]) if idx.has("first") else ""
 		p["real_name"] = "%s %s" % [p["first"], p["last"]]
-		# real_name stays available for the optional real-name view. The default
-		# display value is the generated alias, assigned after the pool loads.
+		# real_name is the name shown. "name" still takes a label from the shared
+		# pool after the load: it is never shown for him, but drawing it keeps the
+		# cursor, and so every generated prospect's name, where saves expect it.
 		p["generic_name"] = ""
 		p["name"] = ""
 		# Club + guernsey is the id, but a list can carry two players on one

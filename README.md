@@ -436,7 +436,7 @@ The career autosaves to `user://career.save`: after every round and every
 match you play, when a season or national draft starts or finishes, on screen
 changes after training or draft picks, and whenever the app is sent to the
 background or closed. **Continue** on the main menu picks it up, showing the
-club, year and stage. **New career** opens a short setup (player names,
+club, year and stage. **New career** opens a short setup (the start,
 the two difficulty dials); starting from it asks before replacing a saved career. A match is
 never saved half played: if the app dies mid-match, you replay that round
 (the other results are seeded, so they come out the same).
@@ -445,8 +445,7 @@ never saved half played: if the app dies mid-match, you replay that round
 are shared by reference all over a career (season lists, your list, the draft,
 the prospect pool), so each is written once and relinked on load. Match event
 logs and the derived `rates`/`norm` tables are not saved. A mid-season save is
-about 1.4 MB. The "Player names" choice is kept separately in
-`user://settings.cfg`.
+about 1.4 MB. Display settings are kept separately in `user://settings.cfg`.
 
 ## Back button
 
@@ -484,12 +483,11 @@ suites are in `tests/`; see [tests/README.md](tests/README.md) for commands and
 remaining device checks. Native Android/iOS sensor rotation and safe-area insets
 still need an on-device check.
 
-The game shows real AFL names by default (`Jordan Dawson`): the name alone, not a
-"plays like" comparison. **Player names** (in the New Career setup, or Settings
-on the main menu) switches to generated fictional labels such as `Ari Bramble`
-instead; ratings and results are the same either way, and a choice you make is
-kept. Numbered placeholders are never used. Generated prospects and custom
-players keep the names they were given. Club names remain
+The game shows every real player under his AFL name (`Jordan Dawson`): the name
+alone, not a "plays like" comparison. There is no generated-names option
+(director, 2026-11-12: "Real Names only"). Numbered placeholders are never used.
+Generated prospects and custom players, who have no real name, keep the names
+they were given. Club names remain
 visible, but no club badges, guernsey designs or player imagery are reproduced —
 guernseys are two
 circles in each club's registered colours. This presentation choice is not legal

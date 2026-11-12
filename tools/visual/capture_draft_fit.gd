@@ -68,7 +68,6 @@ func _run() -> void:
 	state.save_path = "user://capture_draft_fit.save"
 	state.settings_path = "user://capture_draft_fit_settings.cfg"
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(state.settings_path))
-	state.show_real_names = true
 	state.reset()
 	state.career_seed = 2031
 	state.replay_seed = 2031
