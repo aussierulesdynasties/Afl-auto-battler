@@ -590,8 +590,9 @@ table, shot conversion, every best and quiet player with his numbers and
   GWS, Richmond). Your club's real senior coach becomes free when your
   career starts. Coach aliases use their own first names (never a player's)
   with the shared surnames, in a fixed order, so a seeded coach has the same
-  alias in every career; real-name mode shows the real person, and a
-  generated coach keeps his alias. The seed is the researched Round 1 2026
+  alias in every career; a real coach is always shown under his real name
+  (director, 2026-11-12: "Real Names only"), and a generated coach keeps his
+  alias. The seed is the researched Round 1 2026
   world, kept as the historical source; a career (from 2027) carries it
   forward by continuity - everyone stays where the research put them, a
   stint's first year is that 2026, your club's senior coach coached 2026 and

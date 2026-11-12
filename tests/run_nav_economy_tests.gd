@@ -506,12 +506,19 @@ func _test_search_finds() -> void:
 	var hits := 0
 	for code in ["GEE", "SYD", "FRE"]:
 		var p: Dictionary = _gs.season.lists[code][3]
-		var surname := str(p["name"]).get_slice(" ", str(p["name"]).get_slice_count(" ") - 1)
+		# His AFL name, never the hidden label a real player's "name" field holds.
+		var shown: String = root.get_node("GameDB").player_display_name(p)
+		_check(str(p.get("real_name", "")) != "" and shown == str(p["real_name"]) and shown != str(p["name"]),
+				"%s's fourth listed player is a real one with a hidden label (%s / %s)" % [code, shown, p["name"]])
+		var surname := shown.get_slice(" ", shown.get_slice_count(" ") - 1)
 		var ids: Array = HS.matches(surname)
 		if ids.has(str(p["id"])):
 			hits += 1
 		else:
-			_check(false, "%s finds %s of %s (%s)" % [surname, p["name"], code, str(ids.slice(0, 5))])
+			_check(false, "%s finds %s of %s (%s)" % [surname, shown, code, str(ids.slice(0, 5))])
+		_check(str(HS.describe(str(p["id"]))[0]) == shown, "the row names him %s (%s)" % [shown, str(HS.describe(str(p["id"])))])
+		var label := str(p["name"])
+		_check(not (HS.matches(label) as Array).has(str(p["id"])), "his hidden label \"%s\" finds nobody" % label)
 	_check(hits == 3, "a surname finds the player at any club (%d of 3)" % hits)
 	_check(str(HS.describe(CL.SCHEME + "FRE")[0]) == "Fremantle", "a club row says the club")
 
@@ -540,11 +547,11 @@ func _test_search_taps() -> void:
 	var p: Dictionary = _gs.season.lists["SYD"][2]
 	var id := str(p["id"])
 	var field := sheet.find_child("SearchField", true, false) as LineEdit
-	field.text = str(p["name"])
+	field.text = root.get_node("GameDB").player_display_name(p)
 	field.text_changed.emit(field.text)
 	await _settle(3)
 	var row := sheet.find_child("Result_" + id, true, false) as Button
-	_check(row != null, "typing his name lists %s" % p["name"])
+	_check(row != null, "typing his name lists %s" % field.text)
 	if row == null:
 		return
 	# Seen, not just built: the name is drawn on one line across the row.
