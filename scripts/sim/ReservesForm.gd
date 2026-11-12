@@ -86,10 +86,10 @@ static func line(g: Dictionary) -> String:
 
 ## The marks: the MARKS players in `side_ids` whose last GAMES senior games
 ## sit furthest below their own season, and the MARKS players in `reserve_ids`
-## (fit, not in the side) with the best average over their last GAMES
-## reserves games, if they played in the twos at the club's latest match
-## (`latest_key`). {"cold": {id: {"recent", "season", "gap"}},
-## "hot": {id: {"recent", "games", "last"}}}. Fewer qualify, fewer marked.
+## (fit, not in the side) whose last GAMES reserves games sit furthest above
+## their own reserves season, if they played in the twos at the club's latest
+## match (`latest_key`). {"cold": {id: {"recent", "season", "gap"}},
+## "hot": {id: {"recent", "season", "gap", "games", "last"}}}. Fewer qualify, fewer marked.
 static func marks(side_ids: Array, reserve_ids: Array, form_log: Dictionary,
 		reserves_log: Dictionary, latest_key: String) -> Dictionary:
 	var cold := []
@@ -113,16 +113,19 @@ static func marks(side_ids: Array, reserve_ids: Array, form_log: Dictionary,
 	for id in reserve_ids:
 		var f: Dictionary = reserves_log.get(str(id), {})
 		var last: Array = f.get("last", [])
-		if last.is_empty() or latest_key == "" or str(f.get("key", "")) != latest_key:
+		var n := int(f.get("n", 0))
+		if last.size() < GAMES or n < SENIOR_MIN_GAMES or latest_key == "" or str(f.get("key", "")) != latest_key:
 			continue
 		var recent := 0.0
 		for g in last:
 			recent += float((g as Dictionary).get("pts", 0))
 		recent /= float(last.size())
-		hot.append({"id": str(id), "recent": int(round(recent)), "games": last.size(), "last": last.back(),
-				"exact": recent})
+		var season := float(f["sum"]) / float(n)
+		if recent > season:
+			hot.append({"id": str(id), "recent": int(round(recent)), "season": int(round(season)),
+					"gap": recent - season, "games": last.size(), "last": last.back()})
 	hot.sort_custom(func(a, b):
-		return float(a["exact"]) > float(b["exact"]) or (float(a["exact"]) == float(b["exact"]) and str(a["id"]) < str(b["id"])))
+		return float(a["gap"]) > float(b["gap"]) or (float(a["gap"]) == float(b["gap"]) and str(a["id"]) < str(b["id"])))
 	var out := {"cold": {}, "hot": {}}
 	for r in cold.slice(0, MARKS):
 		out["cold"][r["id"]] = r
@@ -141,23 +144,15 @@ static func cold_full(r: Dictionary) -> String:
 	return "Match rating, last %d games: %d a game. This season: %d a game." % [GAMES, int(r["recent"]), int(r["season"])]
 
 
-## The hot mark's short form, for a card: "Twos 82 · kicked 3, 22 touches".
+## The hot mark's short form, for a card, as the side's: "Form +12".
 static func hot_short(r: Dictionary) -> String:
-	var g: Dictionary = r["last"]
-	var bits := PackedStringArray()
-	if int(g.get("h", 0)) >= 10:
-		bits.append("%d hitouts" % int(g["h"]))
-	if int(g.get("g", 0)) > 0:
-		bits.append("kicked %d" % int(g["g"]))
-	bits.append("%d touches" % int(g.get("d", 0)))
-	return "Twos %d · %s" % [int(r["recent"]), ", ".join(bits)]
+	return "Form +%d" % (int(r["recent"]) - int(r["season"]))
 
 
-## The hot mark in full: "Last 3 games in the twos: 82 a game. Latest: ..."
+## The hot mark in full: "Match rating in the reserves, last 3 games: 82 a game. This season: 70 a game. Latest: ..."
 static func hot_full(r: Dictionary) -> String:
-	var n := int(r["games"])
-	return "Last %s in the twos: %d a game. Latest: %s." % [
-			"game" if n == 1 else "%d games" % n, int(r["recent"]), line(r["last"]).to_lower().trim_suffix(" in the twos")]
+	return "Match rating in the reserves, last %d games: %d a game. This season: %d a game. Latest: %s." % [
+			GAMES, int(r["recent"]), int(r["season"]), line(r["last"]).to_lower().trim_suffix(" in the twos")]
 
 
 ## His form on his profile, a sentence each: the senior games this season
@@ -184,7 +179,7 @@ static func profile_lines(form_log: Dictionary, reserves_log: Dictionary, id: St
 		for g in rlast:
 			rrecent += float((g as Dictionary).get("pts", 0))
 		rrecent /= float(maxi(1, rlast.size()))
-		out.append("Twos: %d a game over his last %s, %d over %s this season. Latest: %s." % [int(round(rrecent)),
+		out.append("Reserves: %d a game over his last %s, %d over %s this season. Latest: %s." % [int(round(rrecent)),
 				"game" if rlast.size() == 1 else "%d games" % rlast.size(),
 				int(round(float(r["sum"]) / float(rn))), "1 game" if rn == 1 else "%d games" % rn,
 				line(rlast.back()).to_lower().trim_suffix(" in the twos")])

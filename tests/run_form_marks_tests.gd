@@ -106,20 +106,23 @@ func _test_marks_pick() -> void:
 	}
 	var g := func(pts: int) -> Dictionary: return {"pts": pts, "d": 20, "g": 1, "h": 0}
 	var res := {
-		"r1": {"last": [g.call(90)], "sum": 90, "n": 1, "key": "K"},
-		"r2": {"last": [g.call(60), g.call(70), g.call(80)], "sum": 210, "n": 3, "key": "K"},
-		"r3": {"last": [g.call(100)], "sum": 100, "n": 1, "key": "OLD"},   # not in the twos last week
-		"r4": {"last": [g.call(50)], "sum": 50, "n": 1, "key": "K"},
-		"r5": {"last": [g.call(75)], "sum": 75, "n": 1, "key": "K"},
+		"r1": {"last": [g.call(80), g.call(80), g.call(80)], "sum": 350, "n": 5, "key": "K"},    # +10
+		"r2": {"last": [g.call(60), g.call(70), g.call(80)], "sum": 300, "n": 5, "key": "K"},    # +10
+		"r3": {"last": [g.call(100), g.call(100), g.call(100)], "sum": 300, "n": 5, "key": "OLD"},   # not in the twos last week
+		"r4": {"last": [g.call(50), g.call(50), g.call(50)], "sum": 240, "n": 5, "key": "K"},    # +2
+		"r5": {"last": [g.call(75), g.call(75), g.call(75)], "sum": 300, "n": 5, "key": "K"},    # +15
+		"r6": {"last": [g.call(90), g.call(90), g.call(90)], "sum": 270, "n": 3, "key": "K"},    # too few games
+		"r7": {"last": [g.call(40), g.call(40), g.call(40)], "sum": 300, "n": 5, "key": "K"},    # -20: not hot
 	}
-	var m: Dictionary = _rf.marks(["a", "b", "c", "d", "e", "f"], ["r1", "r2", "r3", "r4", "r5"], form, res, "K")
+	var m: Dictionary = _rf.marks(["a", "b", "c", "d", "e", "f"], ["r1", "r2", "r3", "r4", "r5", "r6", "r7"], form, res, "K")
 	var cold: Array = (m["cold"] as Dictionary).keys()
 	cold.sort()
 	_check(cold == ["a", "b", "e"], "The three furthest below their season (%s)" % str(cold))
 	var hot: Array = (m["hot"] as Dictionary).keys()
 	hot.sort()
-	_check(hot == ["r1", "r2", "r5"], "The three best in the twos last week (%s)" % str(hot))
+	_check(hot == ["r1", "r2", "r5"], "The three furthest above their reserves season, in the twos last week (%s)" % str(hot))
 	_check(_rf.cold_short(m["cold"]["b"]) == "Form -30", "The tile says the gap (%s)" % _rf.cold_short(m["cold"]["b"]))
+	_check(_rf.hot_short(m["hot"]["r5"]) == "Form +15", "A reserve's card says his gap the same way (%s)" % _rf.hot_short(m["hot"]["r5"]))
 	var few: Dictionary = _rf.marks(["c", "d"], ["r3", "r4"], form, res, "K")
 	_check((few["cold"] as Dictionary).keys() == ["d"] and (few["hot"] as Dictionary).keys() == ["r4"],
 			"Fewer qualify, fewer marked (%s)" % str(few))
@@ -216,7 +219,7 @@ func _test_selection_marks_taps() -> void:
 	var side: Dictionary = _gs.current_side()
 	var expect: Dictionary = _gs.form_marks(side)
 	_check((expect["cold"] as Dictionary).size() == 3, "Six rounds in, three in the side are below their season (%d)" % (expect["cold"] as Dictionary).size())
-	_check((expect["hot"] as Dictionary).size() == 3, "...and three in the twos are marked (%d)" % (expect["hot"] as Dictionary).size())
+	_check((expect["hot"] as Dictionary).size() >= 1 and (expect["hot"] as Dictionary).size() <= 3, "...and up to three in the twos are marked (%d)" % (expect["hot"] as Dictionary).size())
 	_router.go("selection")
 	await _settle(10)
 	var scene: Node = current_scene
@@ -270,5 +273,5 @@ func _test_selection_marks_taps() -> void:
 		current_scene.call("_open_profile", hid)
 		await _settle()
 		var hl: Label = current_scene.find_child("ProfileForm", true, false)
-		_check(hl != null and hl.text.contains("Twos: ") and hl.text.contains("Latest: "),
+		_check(hl != null and hl.text.contains("Reserves: ") and hl.text.contains("Latest: "),
 				"A reserve's profile gives his twos games (%s)" % (hl.text if hl else "-"))
