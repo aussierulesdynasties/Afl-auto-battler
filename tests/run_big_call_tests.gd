@@ -47,6 +47,8 @@ func _run() -> void:
 	await _t("_test_backing_from_state")
 	await _t("_test_backing_asked_once")
 	await _t("_test_backing_never_when_picked")
+	await _t("_test_backing_call_closes_when_picked")
+	await _t("_test_backing_never_a_regular")
 	await _t("_test_priority_and_one_per_week")
 	await _t("_test_captaincy")
 	await _t("_test_arc_beat_first")
@@ -192,6 +194,48 @@ func _test_backing_never_when_picked() -> void:
 	_check(picked, "He is in the side now")
 	_check(str(BigCalls.ready_to_back(_state).get("id", "")) != str(kid["id"]),
 			"In the side: the call never asks about him")
+
+
+## Director, 2026-11-12: "the game is asking if i wanna give a run of games to
+## a player already in the team". The week's call is kept all week: once you
+## name him in the side it is answered (he has his game), never left asking.
+func _test_backing_call_closes_when_picked() -> void:
+	_fresh()
+	var kid := _ready_kid()
+	if kid.is_empty():
+		_check(false, "MEL has a young player to back")
+		return
+	_next_week()
+	var c := WC.big_call(_state)
+	_check(str(c.get("kind", "")) == "backing" and str(c.get("ref", "")) == str(kid["id"]) and not bool(c.get("done", true)),
+			"Out of the side: the call asks to back him (%s)" % str(c))
+	var side: Dictionary = _state.my_selection()
+	var line := str(kid["role"])
+	var arr: Array = side.get(line, [])
+	arr[arr.size() - 1] = str(kid["id"])
+	side[line] = arr
+	_state.set_selection(side)
+	_check(_state.in_current_side(kid), "He is in the side now")
+	c = WC.big_call(_state)
+	_check(str(c.get("ref", "")) == str(kid["id"]) and bool(c.get("done", false)),
+			"Named in the side: the call is answered, not still asking (%s)" % str(c))
+	_check(not kid.has("backed") or (kid["backed"] as Array).is_empty(), "And no run was promised for him")
+
+
+## A young player who has been playing (he took the field last match) is no
+## call to give a run, even in a week he is left out.
+func _test_backing_never_a_regular() -> void:
+	_fresh()
+	var kid := _ready_kid()
+	if kid.is_empty():
+		_check(false, "MEL has a young player to back")
+		return
+	_check(str(BigCalls.ready_to_back(_state).get("id", "")) == str(kid["id"]), "Out of the side and not playing: he is the one ready")
+	_state.last_side = [str(kid["id"])]
+	_check(not _state.in_current_side(kid), "He is out of this week's side")
+	_check(str(BigCalls.ready_to_back(_state).get("id", "")) != str(kid["id"]),
+			"He played last week: the call never offers him a run")
+	_state.last_side = []
 
 
 func _test_priority_and_one_per_week() -> void:

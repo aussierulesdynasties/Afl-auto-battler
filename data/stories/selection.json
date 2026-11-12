@@ -657,7 +657,8 @@
 				"trial_place": "best",
 				"age_max": 23,
 				"games_max": 30,
-				"fit": true
+				"fit": true,
+				"selected": false
 			},
 			"pick": "highest:pot_gap"
 		},

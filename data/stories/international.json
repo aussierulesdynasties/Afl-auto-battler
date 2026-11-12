@@ -145,6 +145,10 @@
 			{
 				"key": "back",
 				"label": "Back {first} and show him vision",
+				"when": {
+					"selected": false,
+					"out_of_side": true
+				},
 				"effects": [
 					{
 						"op": "xp",

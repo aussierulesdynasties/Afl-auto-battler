@@ -849,6 +849,9 @@
 			{
 				"key": "talk_up",
 				"label": "Promise {first} a run in the side",
+				"when": {
+					"selected": false
+				},
 				"effects": [
 					{
 						"op": "trust",

@@ -764,6 +764,21 @@ func _test_backing_ui_tests() -> void:
 				"A player with a long record is not offered a run")
 		ui.call("handle_back")
 		await _settle()
+		# Director, 2026-11-12: "the game is asking if i wanna give a run of games
+		# to a player already in the team". A picked young player is offered his
+		# place kept, not a run he already has.
+		var keep_career = best["career"]
+		best["career"] = {"games": 2, "goals": 0, "stints": [], "through": through, "unknown": []}
+		await _profile_of(ui, str(best["id"]))
+		var sheet_p: Node = ui.find_child("PlayerProfile", true, false)
+		var act_p: Node = sheet_p.find_child("BackRun", true, false) if sheet_p != null else null
+		var detail_p: Node = sheet_p.find_child("Detail_BackRun", true, false) if sheet_p != null else null
+		_check(act_p != null and str(act_p.text) == "Keep in for three games"
+				and detail_p != null and not str(detail_p.text).contains("A run of"),
+				"A young player already in the side is offered his place kept, not a run (%s)" % (str(act_p.text) if act_p != null else "none"))
+		ui.call("handle_back")
+		await _settle()
+		best["career"] = keep_career
 	var row: Node = _card_of(ui, kid_id)
 	_check(row != null and ui.find_child("Backing_" + kid_id, true, false) == null,
 			"The kid is in the list, with nothing promised yet")
