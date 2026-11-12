@@ -893,7 +893,7 @@ static func make_custom(spec: Dictionary, year: int, career_seed: int) -> Dictio
 	var full := "%s %s" % [str(spec["first"]).strip_edges(), str(spec["last"]).strip_edges()]
 	p["first"] = str(spec["first"]).strip_edges()
 	p["last"] = str(spec["last"]).strip_edges()
-	# His name is his in every display mode (real names or fictional).
+	# A forged prospect has one name: the one you gave him.
 	p["real_name"] = full
 	p["generic_name"] = full
 	p["name"] = full

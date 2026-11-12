@@ -20,6 +20,8 @@ var _counter := {}
 var _scroll_box: ScrollContainer
 var _scroll_tab := ""
 var _scroll_positions := {}
+## The draft gate's Delist: open Contracts scrolled to "Out of contract" (once).
+var _land_on_expiring := false
 var _release_overlay: Control
 var _talk_overlay: Control
 var _talk_id := ""
@@ -40,6 +42,12 @@ func _ready() -> void:
 		Router.replace("main")
 		return
 	GameState.open_offseason()
+	# The draft's list gate sends the coach to the tab he chose (Delist or Trade).
+	if DraftSpotsSheet.route_tab != "":
+		_tab = DraftSpotsSheet.route_tab
+		DraftSpotsSheet.route_tab = ""
+		# Delist lands on the players he can delist, not on the Retiring cards.
+		_land_on_expiring = _tab == "contracts"
 	# Your club's colour behind the page, as on the hub and match day
 	# (director, 2026-10-10: every screen in the gameday style).
 	add_child(ClubBackdrop.new().setup(GameState.my_club))
@@ -128,6 +136,20 @@ func _build() -> void:
 		"budget":
 			_budget(body)
 	UiKit.restore_scroll(_scroll_box, int(_scroll_positions.get(_tab, 0)))
+	if _land_on_expiring and _tab == "contracts":
+		_land_on_expiring = false
+		_scroll_to_expiring.call_deferred(_scroll_box, body)
+
+
+## Scrolls the Contracts list so the "Out of contract" heading is at its top.
+func _scroll_to_expiring(sc: ScrollContainer, body: Control) -> void:
+	for i in range(2):
+		await get_tree().process_frame
+	if not is_instance_valid(sc) or not is_instance_valid(body):
+		return
+	var head := body.find_child("OutOfContractHead", true, false) as Control
+	if head != null:
+		sc.scroll_vertical = int(head.global_position.y - body.global_position.y)
 
 
 ## Your last delisting, free-agent signing or re-signing can be taken back
@@ -255,7 +277,9 @@ func _contracts(body: VBoxContainer) -> void:
 	_retiring(body)
 	if GameState.offseason_open():
 		body.add_child(_para("Leave one of your best 23 unsigned and he tests free agency: your offer stands at his asking price, but rivals can beat it. Other players re-sign for two seasons if the cap allows.", 12, UiKit.MUTED))
-	body.add_child(UiKit.lbl("Out of contract  (%d)" % expiring.size(), UiKit.BODY, UiKit.EMPH, true))
+	var head := UiKit.lbl("Out of contract  (%d)" % expiring.size(), UiKit.BODY, UiKit.EMPH, true)
+	head.name = "OutOfContractHead"
+	body.add_child(head)
 	if expiring.is_empty():
 		body.add_child(_para("Nobody is out of contract this year.", 13, UiKit.MUTED))
 	for p in expiring:
@@ -480,8 +504,11 @@ func _show_talks() -> void:
 		if odds != null:
 			odds.name = "TalksRefuse"
 			v.add_child(odds)
-	if _talk_fa and not RookieList.senior_spot_free(GameState.my_list):
+	var no_spot := RookieList.add_block(GameState.my_list, "senior") if _talk_fa else ""
+	if no_spot == "senior":
 		v.add_child(_para("Your senior list is full (%d): release a player first." % RookieList.SENIOR_SPOTS, 14, UiKit.BAD))
+	elif no_spot != "":
+		v.add_child(_para(RookieList.block_words(GameState.my_list, no_spot) + " Release a player first.", 14, UiKit.BAD))
 	for reason in terms.get("reasons", []):
 		var why := _para(str(reason), 14, UiKit.BAD if bool(terms["refuse"]) else UiKit.TEXT)
 		why.name = "FreeAgentReason"

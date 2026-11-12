@@ -34,7 +34,6 @@ func _isolate_saves() -> void:
 	var tag := OS.get_process_id()
 	gs.save_path = "user://test_save_suite_%d.save" % tag
 	gs.settings_path = "user://test_save_suite_%d.cfg" % tag
-	gs.show_real_names = false
 
 
 func gs_save_path() -> String:

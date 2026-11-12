@@ -108,6 +108,16 @@ func _test_triggers_from_state() -> void:
 	GameState.trade_requests[str(star["id"])] = {"year": GameState.season_year}
 	var hit := ClubArcs.trigger(GameState, st, CoachArcs.by_id(CoachArcs.all(), "star_wants_out"), ClubStories.context(GameState), false)
 	_check(str(hit.get("who", "")) == str(star["id"]), "a trade request triggers the star-wants-out arc about him: %s" % str(hit))
+	# The card names him as every screen does: his AFL name, never the hidden
+	# label a real player's "name" field holds (real names only, 2026-11-12).
+	var shown: String = GameDB.player_display_name(star)
+	_check(str(star.get("real_name", "")) != "" and shown != str(star.get("name", ""))
+			and str(hit.get("mem", {}).get("name", "")) == shown,
+			"the arc remembers him as %s, not %s: %s" % [shown, str(star.get("name", "")), str(hit.get("mem", {}))])
+	GameState.departed_names["GONE_DAD"] = {"generic_name": "Ari Bramble", "real_name": "Gary Ablett", "name": "Ari Bramble"}
+	_check(ClubArcs._person_name(GameState, "GONE_DAD") == "Gary Ablett" and ClubArcs._person_name(GameState, "NOBODY") == "his father",
+			"a retired real father is named for real, and an unknown one is \"his father\" (%s)" % ClubArcs._person_name(GameState, "GONE_DAD"))
+	GameState.departed_names.erase("GONE_DAD")
 	GameState.trade_requests.erase(str(star["id"]))
 	_check(ClubArcs.trigger(GameState, st, CoachArcs.by_id(CoachArcs.all(), "drought"), ClubStories.context(GameState), true).is_empty(),
 			"no drought for a coach with no seasons behind him")
@@ -1031,8 +1041,6 @@ func _coach(who: String, status: String, club: String, job: String, stints: Arra
 ## it sam mitchell in photo 1 and then simon goodwin in photo 2?"): why the job
 ## is open, who the club signed, and who takes the job he leaves.
 func _test_coach_move_lines() -> void:
-	var real_was: bool = GameState.show_real_names
-	GameState.show_real_names = false
 	var y := 2027
 	var signed := _coach("Gary Lenehan", "club", "HAW", "SC", [["SYD", "SA", 2026, y], ["HAW", "SC", y + 1, 0]])
 	var cases := [
@@ -1077,4 +1085,3 @@ func _test_coach_move_lines() -> void:
 		_check(got == str(c[1]), "who replaces him at the club he leaves: %s" % got)
 	_check(ClubMoves.successor_line(FakeCoaches.new(), "FRE", "HAW", y) == "Fremantle have yet to name your replacement.",
 			"no successor yet: said so, club named")
-	GameState.show_real_names = real_was

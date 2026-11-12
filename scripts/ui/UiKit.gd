@@ -1768,11 +1768,14 @@ static func trait_label(key: String) -> String:
 	return (WEAKNESS_MARK if Traits.is_bad(key) else "") + Traits.label(key)
 
 
-## A player's traits as one quiet line ("Ball magnet · Big-game player"),
-## Hothead in BAD with its mark. Empty when he has none. Hover or tap says what
-## each one does (TraitLink).
-static func trait_chips(p: Dictionary) -> HBoxContainer:
-	var h := hbox(10)
+## A player's traits as quiet words ("Ball magnet  Big-game player"), Hothead
+## in BAD with its mark, wrapping onto a second line when he carries many.
+## Empty when he has none. Hover or tap says what each one does
+## (TraitLink).
+static func trait_chips(p: Dictionary) -> HFlowContainer:
+	var h := HFlowContainer.new()
+	h.add_theme_constant_override("h_separation", 10)
+	h.add_theme_constant_override("v_separation", 2)
 	h.name = "Traits"
 	for t in Traits.of(p):
 		var l := line(trait_label(t), SMALL, BAD if Traits.is_bad(t) else MUTED)

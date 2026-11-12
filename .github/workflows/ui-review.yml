@@ -20,11 +20,19 @@ name: UI review sheets
 # marked ready, like the tests. A newer push to the same PR cancels the older
 # run (only the latest sheets matter).
 #
+# Since 2026-11-12 the sheets run only when someone will read them: on a PR with
+# the label "ui-review" (adding the label starts them) or by dispatch. Visual work
+# goes straight to the director (2026-11-05), and the sheets cost up to 40 runner
+# minutes a push. The sweep still runs on every ready PR that touches the paths
+# below, because it fails on a measured regression. When the runner's apt mirror
+# is down after 3 tries, a job warns and skips its steps instead of going red:
+# an infra fault says nothing about the PR.
+#
 #   gh run download <run-id> -n ui-review-sheets
 on:
   workflow_dispatch:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, labeled]
     paths:
       - "scripts/ui/**"
       - "scenes/**"
@@ -44,13 +52,19 @@ on:
 permissions:
   contents: read
 
+# A label event gets its own group, so labelling a PR never cancels its sweep.
 concurrency:
-  group: ui-review-${{ github.event.pull_request.number }}
+  group: ui-review-${{ github.event.pull_request.number || github.run_id }}-${{ github.event.action == 'labeled' && 'label' || 'push' }}
   cancel-in-progress: true
 
 jobs:
   sheets:
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
+    # Dispatch, or a ready PR labelled "ui-review" (a label event only when that label was added).
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.draft == false &&
+       contains(github.event.pull_request.labels.*.name, 'ui-review') &&
+       (github.event.action != 'labeled' || github.event.label.name == 'ui-review'))
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
@@ -59,16 +73,22 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Virtual display, software GL and Pillow
+        id: setup
         run: |
           # The runner's apt mirror sometimes fails to resolve; retry 3 times, 20 s apart.
           for try in 1 2 3; do
             sudo apt-get -o Acquire::Retries=5 update -qq && sudo apt-get -o Acquire::Retries=5 install -y -qq --fix-missing xvfb libgl1-mesa-dri libglx-mesa0 fonts-dejavu-core ffmpeg > /dev/null && break
-            [ "$try" = 3 ] && exit 1
+            if [ "$try" = 3 ]; then
+              echo "::warning::apt could not install the virtual display after 3 tries (runner mirror); skipping this run instead of failing it. Re-run the job."
+              echo "ok=false" >> "$GITHUB_OUTPUT"; exit 0
+            fi
             echo "apt failed (try $try), retrying in 20 s"; sleep 20
           done
           python3 -m pip install --quiet pillow
+          echo "ok=true" >> "$GITHUB_OUTPUT"
 
       - name: Cache Godot
+        if: steps.setup.outputs.ok == 'true'
         id: godot-cache
         uses: actions/cache@v4
         with:
@@ -76,7 +96,7 @@ jobs:
           key: godot-${{ env.GODOT_VERSION }}-linux-x86_64
 
       - name: Download Godot ${{ env.GODOT_VERSION }}
-        if: steps.godot-cache.outputs.cache-hit != 'true'
+        if: steps.setup.outputs.ok == 'true' && (steps.godot-cache.outputs.cache-hit != 'true')
         run: |
           mkdir -p ~/godot && cd ~/godot
           name="Godot_v${GODOT_VERSION}-stable_linux.x86_64"
@@ -88,6 +108,7 @@ jobs:
           mv "${name}" godot && chmod +x godot
 
       - name: Import the project
+        if: steps.setup.outputs.ok == 'true'
         run: |
           timeout 600 "$HOME/godot/godot" --headless --path . --editor --import > import.log 2>&1 || true
           if grep -qE "SCRIPT ERROR|Parse Error|Compile Error" import.log; then
@@ -97,6 +118,7 @@ jobs:
           fi
 
       - name: Capture the main screens, phone and PC
+        if: steps.setup.outputs.ok == 'true'
         run: |
           mkdir -p out/phone out/pc
           # The virtual screen is larger than any window here: a window bigger
@@ -112,6 +134,7 @@ jobs:
           ls -la out/phone out/pc
 
       - name: Figure scenes, 2x crops and a clip
+        if: steps.setup.outputs.ok == 'true'
         run: |
           # Phase 6.1 part 2: the figure scenes (the pre-match huddle and the
           # centre bounce are the ones that draw the footballers; the live
@@ -144,6 +167,7 @@ jobs:
           ls -la out/figures
 
       - name: Contact sheets
+        if: steps.setup.outputs.ok == 'true'
         run: |
           pr="#${{ github.event.pull_request.number }} at ${GITHUB_SHA::8}"
           shopt -s nullglob
@@ -178,8 +202,9 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload the sheets
-        if: always()
+        if: always() && steps.setup.outputs.ok == 'true'
         uses: actions/upload-artifact@v4
+        continue-on-error: true  # a GitHub storage outage must not fail tested code
         with:
           name: ui-review-sheets
           path: |
@@ -189,7 +214,8 @@ jobs:
 
   # P-77 "One sweep of every screen": the numbers behind the sheets.
   sweep:
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
+    # Every ready PR on the paths above; a label event never re-runs it.
+    if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.draft == false && github.event.action != 'labeled')
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
@@ -198,15 +224,21 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Virtual display and software GL
+        id: setup
         run: |
           # The runner's apt mirror sometimes fails to resolve; retry 3 times, 20 s apart.
           for try in 1 2 3; do
             sudo apt-get -o Acquire::Retries=5 update -qq && sudo apt-get -o Acquire::Retries=5 install -y -qq --fix-missing xvfb libgl1-mesa-dri libglx-mesa0 fonts-dejavu-core > /dev/null && break
-            [ "$try" = 3 ] && exit 1
+            if [ "$try" = 3 ]; then
+              echo "::warning::apt could not install the virtual display after 3 tries (runner mirror); skipping this run instead of failing it. Re-run the job."
+              echo "ok=false" >> "$GITHUB_OUTPUT"; exit 0
+            fi
             echo "apt failed (try $try), retrying in 20 s"; sleep 20
           done
+          echo "ok=true" >> "$GITHUB_OUTPUT"
 
       - name: Cache Godot
+        if: steps.setup.outputs.ok == 'true'
         id: godot-cache
         uses: actions/cache@v4
         with:
@@ -214,7 +246,7 @@ jobs:
           key: godot-${{ env.GODOT_VERSION }}-linux-x86_64
 
       - name: Download Godot ${{ env.GODOT_VERSION }}
-        if: steps.godot-cache.outputs.cache-hit != 'true'
+        if: steps.setup.outputs.ok == 'true' && (steps.godot-cache.outputs.cache-hit != 'true')
         run: |
           mkdir -p ~/godot && cd ~/godot
           name="Godot_v${GODOT_VERSION}-stable_linux.x86_64"
@@ -223,6 +255,7 @@ jobs:
           mv "${name}" godot && chmod +x godot
 
       - name: Import the project
+        if: steps.setup.outputs.ok == 'true'
         run: |
           timeout 600 "$HOME/godot/godot" --headless --path . --editor --import > import.log 2>&1 || true
           if grep -qE "SCRIPT ERROR|Parse Error|Compile Error" import.log; then
@@ -232,6 +265,7 @@ jobs:
           fi
 
       - name: Sweep every screen, phone and desktop
+        if: steps.setup.outputs.ok == 'true'
         run: |
           mkdir -p out
           # name:window:text size. The phone runs at all three Settings text
@@ -244,6 +278,7 @@ jobs:
           ls -la out
 
       - name: Check against the baseline and write the report
+        if: steps.setup.outputs.ok == 'true'
         run: |
           set +e
           python3 tools/screen_sweep.py --phone out/sweep_phone.json --pc out/sweep_pc.json             --phone-larger out/sweep_phone_larger.json --phone-largest out/sweep_phone_largest.json             --baseline tools/visual/screen_sweep_baseline.json             --doc out/SCREEN_SWEEP.md --date "$(date -u +%F)" | tee out/sweep_check.txt
@@ -260,8 +295,9 @@ jobs:
           exit $code
 
       - name: Upload the sweep
-        if: always()
+        if: always() && steps.setup.outputs.ok == 'true'
         uses: actions/upload-artifact@v4
+        continue-on-error: true  # a GitHub storage outage must not fail tested code
         with:
           name: screen-sweep
           path: |

@@ -1,6 +1,6 @@
 class_name PlanTiles
 extends RefCounted
-## The five game plans as tiles, each with the List profile strength it runs on
+## The game plans as tiles (the five, then your own, CustomPlan), each with the List profile strength it runs on
 ## and your list's word for it (director, 2026-10-09: "each strength profile
 ## marries to a gameplan"). Coaching and the plan chooser on team selection
 ## show the same tiles. Facts only: nothing says which plan to pick.
@@ -24,6 +24,11 @@ static func strength_line(key: String, words_by_dim: Dictionary, _ground: Array)
 	if PLAN_STRENGTH.has(key):
 		var dim := str(PLAN_STRENGTH[key])
 		return "%s · %s" % [ListProfile.LABEL[dim], str(words_by_dim.get(dim, ""))]
+	if key == CustomPlan.KEY:
+		# Your own plan: its strength once built; until then it cannot be picked.
+		if not CustomPlan.ready(GameState.custom_plan):
+			return "Build it below"
+		return str(CustomPlan.entry(str(GameState.custom_plan["s"]), true)["name"])
 	return "Plays it straight"
 
 
@@ -79,6 +84,7 @@ static func grid(columns: int, ground: Array, profile: Array, on_pick: Callable 
 			known_l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			face.add_child(known_l)
 		t.add_child(face)
+		t.disabled = k == CustomPlan.KEY and not CustomPlan.ready(GameState.custom_plan)
 		t.pressed.connect(func():
 			GameState.set_club_plan(k)
 			paint.call()

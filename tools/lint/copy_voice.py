@@ -26,10 +26,10 @@ ALLOW = {
     "data/stories/leadership.json": [1, "should", "row 140: a player's own question, reported"],
     "data/stories/media.json": [2, "should", "row 140: a pundit's view, reported"],
     "scripts/sim/MatchSim.gd": [1, "should", "row 131: a shot's likelihood at the gate"],
-    "scripts/sim/PlanTraits.gd": [1, "starters", "kept: the Fast Starters trait (a side that starts quickly, AFL usage), not the line-up sense"],
     # Auto-pick is the Team selection button's name (director, 2026-11-12: "Auto pick. I already answered
     # this question"); these lines name the button, so the word stays.
     "scripts/sim/SkipOrders.gd": [2, "auto-pick", "kept: names the Auto-pick button (director, 2026-11-12)"],
+
     "scripts/state/GameState.gd": [1, "projection", "row 138"],
     "scripts/ui/DraftScene.gd": [1, "projection", "row 136: draft"],
     "scripts/ui/FirstVisitIntro.gd": [1, "auto-pick", "kept: names the Auto-pick button (director, 2026-11-12)"],
@@ -85,7 +85,7 @@ TEAM_PASS = {
         "Each plan buys an edge and gives something up. The note below says which.",
         "Each plan runs on one of our list's strengths. That is our side as picked, against every list in the league.",
         "\"Also on our list\"", "After three games, how we win and get beaten shows here.",
-        "One strength and one cost, on top of our plan, every match. Or none.",
+        "One strength and one cost, as a plan of its own. It beats no plan and no plan beats it.",
         "No part of our game is costing us regularly.", "No one part of our game stands above the league.",
         "%s of the %s salary cap",
     ], ["gives something up;", "one of your list's", "Also on your list", "how your side wins", "on top of your plan",
@@ -109,9 +109,6 @@ TEAM_PASS = {
     "scripts/ui/TeamBuilder.gd": [[
         " two of our players to swap them. Or drag one onto the other.",
     ], [" a player, then another (or drag one onto another) to swap them."]],
-    "scripts/sim/PlanTraits.gd": [[
-        "No trait. Just our game plan.",
-    ], ["No trait: your game plan as written."]],
     "scripts/ui/SimOrdersSheet.gd": [[
         "Every match starts on our game plan: %s.\\nWe can change it in How we play.",
     ], ["Every match starts on your game plan", ": change it in How we play."]],
@@ -133,7 +130,6 @@ TRAINING_NEW = [
     "On hold while he learns a position. All his training goes into the new role.",
     "His development drills get the rest. Change it when the %d season opens.",
     "Each point on one stat costs more as it climbs. So his OVR grows more slowly than with no stat focus.",
-    "This one shows once he clears its mark by more than he clears one of theirs.",
     "As a %s he rates %d. In his own position, %d. ", "That is up to the standard. He can be picked there after week %d.",
     "Get within %d by week %d and he can be picked there.",
 ]

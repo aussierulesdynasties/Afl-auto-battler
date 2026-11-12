@@ -2280,6 +2280,7 @@ func _test_ask_price() -> void:
 		GameState.replay_seed = 6701
 		GameState.start_season(club, GameDB.club_list(club))
 		_to_offseason()
+		ClubMoves.settle_letter(GameState)   # a coach staying put says no to a rival board's letter; the off-season waits for his answer
 		seasons += 1
 		var dealt := 0
 		for rival in GameDB.active_clubs(GameState.season_year):

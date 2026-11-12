@@ -38,6 +38,12 @@ static func questions(to := "season") -> Array:
 			gain = "Nothing for them to exploit."
 			cost = "No extra edge."
 		plans.append({"key": k, "label": str(CoachReport.PLAN_NAMES[k]), "gain": gain, "cost": cost})
+	# Your own plan, once it is built (CustomPlan).
+	var own := CustomPlan.texts(CoachEffects.my_custom)
+	if not own.is_empty():
+		var up := func(t: String) -> String: return t.left(1).to_upper() + t.substr(1) + "."
+		plans.append({"key": CustomPlan.KEY, "label": CoachReport.plan_label(CustomPlan.KEY),
+				"gain": up.call(str(own[0])), "cost": up.call(str(own[1]))})
 	return [
 		{"key": "game_plan", "title": "How do we play?",
 			"lead": "Your game plan for every home and away match left. It stays your plan for the finals until you change it." if to == "home_away"

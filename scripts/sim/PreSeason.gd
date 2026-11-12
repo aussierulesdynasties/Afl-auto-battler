@@ -937,20 +937,44 @@ static func _places_fit(clubs: Array, taken: Dictionary, lo: Dictionary, hi: Dic
 	return left.is_empty()
 
 
+## Every club its practice result earned a move, from the ladder as `listed`
+## to the ladder printed (`order`, practice_nudge's): club -> {"places" it moved
+## (up when positive), "margin", "earned" (practice_shift's), "by"}. "by" is ""
+## for a club that moved all it earned; for one that fell short it is what
+## stopped it: "top", "bottom", or the club printed in the next place that way.
+static func practice_moves(listed: Array, order: Array, margins: Dictionary) -> Dictionary:
+	var moves := {}
+	for code in margins:
+		var shift := practice_shift(int(margins[code]))
+		var at := order.find(code)
+		if shift == 0 or at < 0:
+			continue
+		var places := listed.find(code) - at
+		var by := ""
+		if absi(places) < absi(shift):
+			if shift > 0:
+				by = "top" if at == 0 else str(order[at - 1])
+			else:
+				by = "bottom" if at == order.size() - 1 else str(order[at + 1])
+		moves[str(code)] = {"places": places, "margin": int(margins[code]), "earned": shift, "by": by}
+	return moves
+
+
 ## The paper's word on a club whose practice result earned it `earned` places
 ## (up when positive) and moved it `places`, after a result by `margin` points:
 ## "Up a spot on the back of a 30-point practice win". The word follows the
 ## margin: a win or loss under papers_practice_two points, a thumping or a
 ## hiding from there. When the club moved less than it earned the line says
-## why: `by` is "top", "bottom", or the name of the club in the way, whose own
-## margin is `by_margin`. "" for a club its result did not earn a move.
+## what stopped it: `by` is "top", "bottom", or the name of the club printed in
+## the next place that way (just ahead of a winner, just behind a loser), whose
+## own margin is `by_margin`. "" for a club its result did not earn a move.
 static func practice_move_line(places: int, margin: int, earned: int, by: String = "", by_margin: int = 0) -> String:
 	if earned == 0 or margin == 0:
 		return ""
 	var pts := absi(margin)
 	var heavy := pts >= int(tune("papers_practice_two"))
 	var word := ("thumping" if heavy else "win") if margin > 0 else ("hiding" if heavy else "loss")
-	var result := "a %d-point practice %s" % [pts, word]
+	var result := "%s-point practice %s" % [CopyRules.a_number(pts), word]
 	var size := absi(places)
 	var spots: String = {1: "a spot", 2: "two", 3: "three", 4: "four"}.get(size, "%d places" % size)
 	var short := absi(places) < absi(earned)
@@ -972,21 +996,25 @@ static func practice_move_line(places: int, margin: int, earned: int, by: String
 	return _practice_why(line, earned, by, by_margin) if short else line
 
 
-## The reason a club moved less than its result earned: the club in the way.
+## What stopped a club that moved less than its result earned: the club printed
+## in the next place that way, and that club's own result. Each ending says only
+## where that club sits and how it went, so it is true whether this club held
+## its place or moved part of the way.
 static func _practice_why(line: String, earned: int, by: String, by_margin: int) -> String:
 	if by == "" or by == "top" or by == "bottom":
 		return line
+	var whose := CopyRules.possessive(by)
 	if earned > 0:
 		if by_margin > 0:
-			return "%s; %s's own win kept them in front" % [line, by]
+			return "%s; %s own win leaves them just ahead" % [line, whose]
 		if by_margin < 0:
-			return "%s; %s's slide took that place" % [line, by]
-		return "%s; %s could not be passed" % [line, by]
+			return "%s; %s loss still leaves them just ahead" % [line, whose]
+		return "%s; %s sit just ahead" % [line, by]
 	if by_margin < 0:
-		return "%s; %s's own loss kept them lower" % [line, by]
+		return "%s; %s own loss leaves them just behind" % [line, whose]
 	if by_margin > 0:
-		return "%s; %s's climb took that place" % [line, by]
-	return "%s; %s stayed below" % [line, by]
+		return "%s; %s win still leaves them just behind" % [line, whose]
+	return "%s; %s sit just behind" % [line, by]
 
 
 ## The finish the coach names when he talks the club up: a few places above

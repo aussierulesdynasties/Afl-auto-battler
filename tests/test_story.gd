@@ -810,14 +810,12 @@ func _test_private_cards() -> void:
 	_check(leaks.is_empty() and reachable == private.size() * 2,
 			"Real names are treated like any other: every card can pick either (director, 2026-11-09) (%s, %d of %d)" % [
 			str(leaks), reachable, private.size() * 2])
-	GameState.show_real_names = true
 	var named_fact := ClubStories.player_fact(GameState, {"id": "r", "real_name": "Real Person", "name": "Fake Name",
 			"overall": 60}, false, {}, 1, 0)
-	GameState.show_real_names = false
-	var fake_fact := ClubStories.player_fact(GameState, {"id": "r", "real_name": "Real Person", "name": "Fake Name",
+	var made_fact := ClubStories.player_fact(GameState, {"id": "g", "generated": true, "name": "Made Up",
 			"overall": 60}, false, {}, 1, 0)
-	_check(bool(named_fact["real_named"]) and not bool(fake_fact["real_named"]),
-			"A player is real-named only while real names are on and he has one")
+	_check(bool(named_fact["real_named"]) and not bool(made_fact["real_named"]),
+			"A player is real-named when he has a real name; a generated player is not")
 
 
 ## Ten seasons of weeks through the engine, every card answered: nothing
@@ -1071,7 +1069,6 @@ func _trial_candidate() -> Dictionary:
 
 func _test_papers_cards_are_football() -> void:
 	_start()
-	GameState.show_real_names = true
 	_run_on(4)
 	var ctx := ClubStories.context(GameState)
 	var real_named := 0
@@ -1146,7 +1143,6 @@ func _test_papers_cards_are_football() -> void:
 	var dg := _effect(front, "delegate")
 	_check(int(((dg["held"] as Array)[0] as Dictionary)["d"]) > 0 and int(((dg["failed"] as Array)[0] as Dictionary)["d"]) < 0,
 			"...the room's morale rises if the group listens and falls if it does not")
-	GameState.show_real_names = false
 
 
 func _line_in(sel: Dictionary, id: String) -> String:
@@ -2871,38 +2867,34 @@ func _test_time_trial_names() -> void:
 
 	# In play: Run it names the real fittest and slowest, by the rating the match
 	# uses for running fitness, once each, from the senior list.
-	var names_before: bool = GameState.show_real_names
-	for real in [false, true]:
-		_start()
-		GameState.show_real_names = real
-		var list: Array = GameState.my_list
-		var injured: Dictionary = list[0]
-		injured["injury_weeks"] = 3
-		var avail := list.filter(func(q): return int(q.get("injury_weeks", 0)) <= 0)
-		avail.sort_custom(_by_durability)
-		var morale_before := ClubLife.morale(avail[10])
-		var card := GameState.story_card("training_time_trial")
-		var want := "Best over the two k: %s. Off the pace: %s." % [
-				StoryEngine.name_list([avail[0], avail[1], avail[2]].map(func(q): return GameDB.player_display_name(q))),
-				StoryEngine.name_list([avail[-1], avail[-2]].map(func(q): return GameDB.player_display_name(q)))]
-		_check(not str(card["options"][0]["result"]).is_empty() and str(card["options"][0]["result"]).contains("{best3}"),
-				"The card keeps the names until it is answered (%s)" % str(card["options"][0]["result"]))
-		GameState.week_event = card
-		var out := GameState.resolve_week_event(0)
-		_check(out == "The time trial's done. " + want, "Run it names who is fit (real names %s): %s" % [str(real), out])
-		_check(not out.contains("{") and not out.contains(GameDB.player_display_name(injured)),
-				"No braces left, and the injured player did not run (%s)" % out)
-		var named := []
-		for q in list:
-			if out.contains(GameDB.player_display_name(q)):
-				named.append(str(q["id"]))
-		_check(named.size() == 5, "Exactly five distinct players are named (%d)" % named.size())
-		var run := _choice("training_time_trial", "run")
-		_check(ClubLife.morale(avail[10]) == clampi(morale_before - 3, 5, 100)
-				and int(_effect(run, "xp")["d"]) == 5 and str(_effect(run, "xp")["who"]) == "all"
-				and int(_effect(run, "morale")["d"]) == -3 and str(_effect(run, "morale")["who"]) == "all",
-				"The effects are unchanged: morale -3 and 5 development for everyone")
-	GameState.show_real_names = names_before
+	_start()
+	var list: Array = GameState.my_list
+	var injured: Dictionary = list[0]
+	injured["injury_weeks"] = 3
+	var avail := list.filter(func(q): return int(q.get("injury_weeks", 0)) <= 0)
+	avail.sort_custom(_by_durability)
+	var morale_before := ClubLife.morale(avail[10])
+	var card := GameState.story_card("training_time_trial")
+	var want := "Best over the two k: %s. Off the pace: %s." % [
+			StoryEngine.name_list([avail[0], avail[1], avail[2]].map(func(q): return GameDB.player_display_name(q))),
+			StoryEngine.name_list([avail[-1], avail[-2]].map(func(q): return GameDB.player_display_name(q)))]
+	_check(not str(card["options"][0]["result"]).is_empty() and str(card["options"][0]["result"]).contains("{best3}"),
+			"The card keeps the names until it is answered (%s)" % str(card["options"][0]["result"]))
+	GameState.week_event = card
+	var out := GameState.resolve_week_event(0)
+	_check(out == "The time trial's done. " + want, "Run it names who is fit: %s" % out)
+	_check(not out.contains("{") and not out.contains(GameDB.player_display_name(injured)),
+			"No braces left, and the injured player did not run (%s)" % out)
+	var named := []
+	for q in list:
+		if out.contains(GameDB.player_display_name(q)):
+			named.append(str(q["id"]))
+	_check(named.size() == 5, "Exactly five distinct players are named (%d)" % named.size())
+	var run := _choice("training_time_trial", "run")
+	_check(ClubLife.morale(avail[10]) == clampi(morale_before - 3, 5, 100)
+			and int(_effect(run, "xp")["d"]) == 5 and str(_effect(run, "xp")["who"]) == "all"
+			and int(_effect(run, "morale")["d"]) == -3 and str(_effect(run, "morale")["who"]) == "all",
+			"The effects are unchanged: morale -3 and 5 development for everyone")
 
 
 ## Director 2026-10-12: when your captain retires or leaves, a vice-captain steps up by

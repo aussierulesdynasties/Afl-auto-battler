@@ -2,8 +2,8 @@ extends RefCounted
 ## The long-save proof for the week's story cards (club-life stories phase 1).
 ## An autopilot career that answers every card with a seeded choice, for ten
 ## seasons by default. Args after the impl name: seed club seasons [real] [lists]
-## (`stories_impl 1 MEL 10`; `stories_impl 1 MEL 10 real` plays with real names
-## on, where private cards only pick players shown under a fictional name).
+## (`stories_impl 1 MEL 10`). Real names are always on, so private cards only
+## pick generated players; "real" is accepted and changes nothing.
 ##
 ## Prints one STORY line a season, then SUMMARY: cards seen, distinct cards,
 ## the most-repeated cards, cards by category, arcs started / finished /
@@ -27,14 +27,13 @@ func run() -> void:
 	var seed := int(args[1]) if args.size() > 1 else 1
 	club = str(args[2]) if args.size() > 2 else "MEL"
 	var seasons := int(args[3]) if args.size() > 3 else 10
-	# "real" as a fourth argument plays with real names on: private cards then
-	# only pick players shown under a fictional name, and variety must hold.
-	var real := args.has("real")
+	# Real names are always on: private cards only pick generated players, and
+	# variety must hold.
+	var real := true   # real names are always shown; a "real" argument changes nothing
 	# "lists" starts from the club's real list, as a real-lists career does: the 2026
 	# captains are named from the first week, so the captain's cards can come up.
 	var real_lists := args.has("lists")
 	GameState.reset()
-	GameState.show_real_names = real
 	GameState.career_seed = seed
 	GameState.replay_seed = seed
 	GameState.autosave_enabled = false

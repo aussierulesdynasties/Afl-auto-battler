@@ -2,8 +2,8 @@ extends RefCounted
 ## Row 34 (event-card audit): how often every story card comes up, and which
 ## choice the answers take, over a long career. Args after the impl name:
 ## seed club seasons [lists] [real] (`cards_impl 41 MEL 10 lists real`). "lists"
-## starts from the club's real list, otherwise a redraft start; "real" plays with
-## real names on, where private cards only pick players shown under a fictional name.
+## starts from the club's real list, otherwise a redraft start. Real names are
+## always on, so private cards only pick generated players ("real" changes nothing).
 ##
 ## The autopilot answers every card with a seeded random choice, so each choice and
 ## each arc beat can come up. Each week it also asks every card, against the live
@@ -161,9 +161,7 @@ func run() -> void:
 	var seed := int(args[1]) if args.size() > 1 else 1
 	var club := str(args[2]) if args.size() > 2 else "MEL"
 	var seasons := int(args[3]) if args.size() > 3 else 10
-	var real := args.has("real")
 	GameState.reset()
-	GameState.show_real_names = real
 	GameState.career_seed = seed
 	GameState.replay_seed = seed
 	GameState.autosave_enabled = false
@@ -243,7 +241,7 @@ func run() -> void:
 	print("WEEKS %d" % weeks)
 	print("SEASONS %d" % seasons_played)
 	print("SUMMARY seed %d %s %s names %s%s | seasons %d | weeks %d | cards %d | distinct %d of %d" % [seed, club,
-			"lists" if args.has("lists") else "redraft", "real" if real else "fictional",
+			"lists" if args.has("lists") else "redraft", "real",
 			(" coach" + (" cover" if cover else "") + (" intl" if intl else "") + (" keep" if keep else "")
 					+ (" heavy" if heavy else "") + (" answer" if not fixed.is_empty() else "")) if cover or intl or keep or heavy or not fixed.is_empty() else "",
 			seasons_played, weeks,

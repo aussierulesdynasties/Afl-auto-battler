@@ -73,7 +73,6 @@ func _run() -> void:
 	gs.settings_path = "user://capture_ledger_drop_settings.cfg"
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		gs.set_setting("seen_%s_intro" % key, true)
-	gs.show_real_names = true
 	gs.career_seed = 2031
 	gs.replay_seed = 2031
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)

@@ -34,7 +34,6 @@ func _run() -> void:
 	_state.save_path = "user://test_first_visit.save"
 	_state.settings_path = "user://test_first_visit_settings.cfg"
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(_state.settings_path))
-	_state.show_real_names = false
 	_state.replay_seed = SUITE_SEED
 	_state.reset()
 	_state.start_season("COL", root.get_node("GameDB").club_list("COL"))

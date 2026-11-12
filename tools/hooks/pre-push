@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Runs tools/prepush.sh before every push (install: see tools/prepush.sh). Skip once with
+# git push --no-verify only when the push carries no code (it still runs on CI).
+exec bash "$(git rev-parse --show-toplevel)/tools/prepush.sh"

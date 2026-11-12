@@ -149,6 +149,16 @@ class Boundaries(Repo):
         self.write("export_presets.cfg", "html/experimental_virtual_keyboard=true\nuser_data_backup/allow=true\n")
         self.assertEqual(boundaries.check_presets(self.root), [])
 
+    def test_no_import_sidecars(self):
+        self.write("docs/shot.png.import", "[remap]\n")
+        self.write("captures/a.png", "")
+        got = boundaries.check_no_import_sidecars(self.root)
+        self.assertEqual(sorted(f.path for f in got), ["captures/.gdignore", "docs/.gdignore", "docs/shot.png.import"])
+        os.remove(os.path.join(self.root, "docs/shot.png.import"))
+        self.write("docs/.gdignore", "")
+        self.write("captures/.gdignore", "")
+        self.assertEqual(boundaries.check_no_import_sidecars(self.root), [])
+
 
 class StoryFlags(Repo):
     def test_the_check_bites(self):

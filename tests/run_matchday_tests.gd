@@ -28,7 +28,6 @@ func _run() -> void:
 	# Return visits: the first-visit intros (FirstVisitIntro.gd) have their own suite.
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		_state.set_setting("seen_%s_intro" % key, true)
-	_state.show_real_names = false
 	# Never the clock: every season in this suite starts from a fixed seed, so
 	# a run can't pass or fail on which opponent it happened to draw.
 	_state.replay_seed = SUITE_SEED
@@ -1414,11 +1413,9 @@ func _test_one_line_break(sz: Vector2i) -> void:
 ## call row's answer. COL v CAR at half time once needed 615 of 608.
 func _test_every_break_fits(club: String, vs: String, sz: Vector2i) -> void:
 	var db = root.get_node("GameDB")
-	var real: bool = _state.show_real_names
 	# The seed search below leaves the last seed tried: put the suite's back, so
 	# the tests after this one start from the season they were written for.
 	var seed_before: int = _state.replay_seed
-	_state.show_real_names = true
 	root.size = sz
 	for q in [2, 3, 4]:
 		var found := false
@@ -1497,7 +1494,6 @@ func _test_every_break_fits(club: String, vs: String, sz: Vector2i) -> void:
 			await _settle()
 		m.queue_free()
 		await _settle()
-	_state.show_real_names = real
 	_state.replay_seed = seed_before
 
 

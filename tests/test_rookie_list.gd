@@ -56,6 +56,12 @@ func run(tree: SceneTree) -> void:
 	_t("_test_midseason_fills_rookie_spots")
 	_t("_test_midseason_pool_after_offseason")
 	_t("_test_real_lists_start")
+	_t("_test_real_lists_open_spots")
+	_t("_test_real_lists_rookie_categories")
+	_t("_test_the_44_rule")
+	_t("_test_the_44_national_draft")
+	_t("_test_the_44_real_lists")
+	await _t("_test_three_category_b_head")
 	_t("_test_youth_only_drafts")
 	_t("_test_youth_only_midseason")
 	await _t("_test_undrafted_chance")
@@ -483,7 +489,9 @@ func _test_real_lists_start() -> void:
 	for code in gs.league_lists:
 		clubs += 1
 		var arr: Array = gs.league_lists[code]
-		_check(RookieList.rookie_count(arr) <= RookieList.CAT_A_SPOTS, "%s starts with at most six rookies" % code)
+		var real_rookies := RookieList.rookies(arr).filter(func(p): return str(p.get("list_type", "")) != "")
+		_check(RookieList.rookie_count(arr) <= maxi(RookieList.CAT_A_SPOTS, real_rookies.size()),
+				"%s starts with at most six rookies, or its real rookie list" % code)
 		_check(RookieList.rookie_count(arr) == RookieList.CAT_A_SPOTS or RookieList.senior_count(arr) <= RookieList.SENIOR_SPOTS,
 				"%s: over 38 seniors only once its rookie list is full" % code)
 		_check(int(draft.existing_sizes.get(code, -1)) == RookieList.senior_count(arr),
@@ -493,6 +501,9 @@ func _test_real_lists_start() -> void:
 				marked += 1
 	_check(clubs >= 18, "Every club has a list (%d)" % clubs)
 	_check(marked > 0, "The club lists' rookies start on the rookie list (%d)" % marked)
+	var rookies_before := {}
+	for code in gs.league_lists:
+		rookies_before[code] = RookieList.cat_a_count(gs.league_lists[code])
 	gs.choose_real_club(CLUB)
 	while not draft.is_finished():
 		var candidate := draft._best_ai_pick(draft.current_club())
@@ -510,8 +521,125 @@ func _test_real_lists_start() -> void:
 	RookieList.settle(gs)
 	_check(bool(gs.rookie_draft.get("done", false)), "Passing ends your Rookie Draft and it runs to its end")
 	for code in gs.season.lists:
-		_check(RookieList.rookie_count(gs.season.lists[code]) <= RookieList.CAT_A_SPOTS,
-				"%s: at most six rookies after it" % code)
+		_check(RookieList.cat_a_count(gs.season.lists[code]) <= maxi(RookieList.CAT_A_SPOTS, int(rookies_before.get(code, 0))),
+				"%s: at most six Category A rookies after it, or no more than its real rookie list" % code)
+
+
+## Director's bug, 2026-11-12: as Melbourne in a real-lists career "I entered
+## the draft with just 1 draft pick available". The 2026 lists' rookies were
+## counted as seniors, so most clubs' senior lists were full. Each club now
+## starts with its real rookie list (data/list_types_2026.csv and the list
+## additions, from DraftGuru's 2026 lists) and its real 2026 departures and
+## moves, so it reaches the National Draft with the open spots it really had.
+## The bound: before the 2025 National Draft every club had 1 to 7 open
+## primary-list spots (ZeroHanger's club-by-club table,
+## zerohanger.com/afl-draft-the-amount-of-open-list-spots-each-team-has-170528);
+## DraftGuru's 2026 lists less the 2026 departures give 2 (West Coast) to 7
+## (Melbourne, Carlton, Fremantle). So every club has 1 to 8 open senior spots
+## and can use at least one pick, and Melbourne can use every pick it holds.
+## West Coast is the exception (the checker on #1443, 2026-11-12): its real
+## 43 of the 44 and one tied prospect leave no room, so its picks pass.
+const AT_THE_44 := ["WCE"]
+
+
+func _test_real_lists_open_spots() -> void:
+	gs.reset()
+	gs.begin_real_lists()
+	var draft: Draft = gs.draft
+	_check(draft != null, "A real-lists career opens on the National Draft")
+	if draft == null:
+		return
+	var usable := 0
+	var held := 0
+	var bad := PackedStringArray()
+	for code in draft.draft_order:
+		var arr: Array = gs.league_lists[code]
+		var open := draft.open_spots(str(code))
+		var plan := draft.spots_plan(str(code))
+		var picks: Array = draft.upcoming_picks(str(code), 0)
+		held += picks.size()
+		usable += (plan["usable"] as Array).size()
+		if AT_THE_44.has(str(code)):
+			# The one club that starts at the 44: it adds nobody (RookieList.add_block),
+			# so every pick it holds passes.
+			if open != 0 or not (plan["usable"] as Array).is_empty() or RookieList.list_size(arr) < Contracts.MAX_LIST:
+				bad.append("%s at the 44 has %d open, %d usable" % [code, open, (plan["usable"] as Array).size()])
+		elif open < 1 or open > 8 or (plan["usable"] as Array).is_empty():
+			bad.append("%s %d open, %d of %d picks usable" % [code, open, (plan["usable"] as Array).size(), picks.size()])
+		for p in arr:
+			var kind := str(p.get("list_type", ""))
+			if kind in ["rookie", "cat_b"] and not RookieList.is_rookie(p):
+				bad.append("%s: %s (%s) is on the senior list" % [code, str(p.get("real_name", "?")), kind])
+	_check(bad.is_empty(), "Every club reaches the 2026 draft with 1 to 8 open senior spots, a usable pick and its real rookies on the rookie list; West Coast, at the 44, passes (%s)" % ", ".join(bad))
+	_check(usable >= 2 * draft.draft_order.size(), "The clubs can use most of the picks they hold (%d of %d)" % [usable, held])
+	var mel: Dictionary = draft.spots_plan("MEL")
+	_check((mel["passing"] as Array).is_empty() and (mel["usable"] as Array).size() >= 3 and draft.open_spots("MEL") >= 6,
+			"Melbourne can use all its picks (%s usable, %d open spots)" % [str(mel["usable"]), draft.open_spots("MEL")])
+	var mentha := ""
+	for p in gs.league_lists["MEL"]:
+		if str(p.get("real_name", "")) == "Ricky Mentha":
+			mentha = str(p.get("rookie_list", ""))
+	_check(mentha == "B", "A Category B rookie (Ricky Mentha) starts on the rookie list as one (%s)" % mentha)
+
+
+## The checker's fault on #1443: Category B rookies took Category A spots, so
+## Essendon (5 A + 2 B), Fremantle and Melbourne (6 A + 1 B each) started at
+## "7 / 6" and had no Rookie Draft or mid-season rookie pick. The AFL's rule:
+## up to six Category A rookies, and up to two Category B in their own spots,
+## outside the 44 (senior and Category A lists). Every club starts within
+## both, except where the real 2026 list was over (DraftGuru's 2026 lists,
+## less the 2026 departures): West Coast's ten Category A rookies (injury
+## replacements signed in 2026) and GWS's three Category B rookies.
+const CAT_A_OVER := {"WCE": 10}
+const CAT_B_OVER := {"GWS": 3}
+
+
+func _test_real_lists_rookie_categories() -> void:
+	gs.reset()
+	gs.begin_real_lists()
+	var bad := PackedStringArray()
+	for code in gs.league_lists:
+		var arr: Array = gs.league_lists[code]
+		var a := RookieList.cat_a_count(arr)
+		var b := RookieList.cat_b_count(arr)
+		if a > int(CAT_A_OVER.get(code, RookieList.CAT_A_SPOTS)):
+			bad.append("%s %d Category A" % [code, a])
+		if b > int(CAT_B_OVER.get(code, RookieList.CAT_B_SPOTS)):
+			bad.append("%s %d Category B" % [code, b])
+	_check(bad.is_empty(), "Every club starts with at most 6 Category A and 2 Category B rookies, or its real 2026 list (%s)" % ", ".join(bad))
+	for code in CAT_A_OVER:
+		_check(RookieList.cat_a_count(gs.league_lists[code]) > RookieList.CAT_A_SPOTS,
+				"%s's named exception is still real (%d Category A)" % [code, RookieList.cat_a_count(gs.league_lists[code])])
+	for code in CAT_B_OVER:
+		_check(RookieList.cat_b_count(gs.league_lists[code]) > RookieList.CAT_B_SPOTS,
+				"%s's named exception is still real (%d Category B)" % [code, RookieList.cat_b_count(gs.league_lists[code])])
+	var ess: Array = gs.league_lists["ESS"]
+	_check(RookieList.cat_a_count(ess) == 5 and RookieList.cat_b_count(ess) == 2 and RookieList.rookie_spot_free(ess),
+			"Essendon's two Category B rookies leave it a Category A spot (%d A, %d B)" % [RookieList.cat_a_count(ess), RookieList.cat_b_count(ess)])
+	# West Coast as DraftGuru's 2027 list has it after the 2026 list period
+	# (checked 2026-11-12): 51 on the 2026 list, less Cripps (retired) and seven
+	# delistings, plus Trent Rivers and Jack Viney from Melbourne = 45: 33
+	# senior, 10 Category A, 2 Category B, so 43 of the 44. The game also lists
+	# its tied 2026 prospects before the draft (Harper Banfield, father-son;
+	# Lachlan McGlade and Garrison Kenh, Next Generation Academy), as it does
+	# for every club: they are the senior spots past the real 33.
+	var wce: Array = gs.league_lists["WCE"]
+	var tied: int = gs.intake_assignments.filter(func(a): return str(a["club"]) == "WCE").size()
+	_check(RookieList.senior_count(wce) - tied == 33 and RookieList.cat_a_count(wce) == 10
+			and RookieList.cat_b_count(wce) == 2 and RookieList.list_size(wce) - tied == 43,
+			"West Coast starts as its real list: 33 senior, 10 Category A, 2 Category B, 43 of 44, plus %d tied prospects (%d, %d, %d, %d)" % [
+				tied, RookieList.senior_count(wce), RookieList.cat_a_count(wce), RookieList.cat_b_count(wce), RookieList.list_size(wce)])
+	var mel: Array = gs.league_lists["MEL"]
+	_check(RookieList.cat_a_count(mel) == 6 and RookieList.cat_b_count(mel) == 1 and RookieList.list_size(mel) == mel.size() - 1,
+			"Melbourne: six Category A, Ricky Mentha in a Category B spot outside the 44 (%d A, %d B, %d of 44)" % [
+				RookieList.cat_a_count(mel), RookieList.cat_b_count(mel), RookieList.list_size(mel)])
+	# A signing the data names as Category B joins as one (Isaac Keeler, Port
+	# Adelaide's pre-draft selection, DraftGuru's 2027 list).
+	var keeler := ""
+	for p in gs.league_lists["PAD"]:
+		if str(p.get("real_name", "")) == "Isaac Keeler":
+			keeler = str(p.get("rookie_list", "?"))
+	_check(keeler == "B", "Isaac Keeler joins Port Adelaide as a Category B rookie (%s)" % keeler)
 
 
 ## Row 114: Youth only binds your club in every draft. The National Draft
@@ -533,15 +661,12 @@ func _test_youth_only_drafts() -> void:
 			"Youth only: a 25-year-old cannot be drafted")
 	_check(draft.pick_block_reason(old).contains(" is 25, and you cannot"),
 			"Youth only: the board says why (%s)" % draft.pick_block_reason(old))
-	# The reason names the player the card shows: with real names on, his real
-	# surname, never the generated one underneath.
-	var was_real: bool = gs.show_real_names
-	gs.show_real_names = true
+	# The reason names the player the card shows: his real surname, never the
+	# generated label underneath.
 	var named := {"id": "youth_test_named", "age": 29.0, "name": "Tom Penhall", "real_name": "Flynn Perez"}
 	var why := Challenge.block_reason(gs, named)
 	_check(why.contains("Perez is 29") and not why.contains("Penhall"),
 			"Youth only: the reason names the player shown on the card (%s)" % why)
-	gs.show_real_names = was_real
 	_check(not draft.too_old_for_user({"id": "youth_test_ok", "age": 24.9}), "Youth only: a 24-year-old can be drafted")
 	while not draft.is_finished():
 		var candidate := draft._best_ai_pick(draft.current_club())
@@ -805,3 +930,309 @@ func _test_arrivals_need_senior_spot() -> void:
 			break
 	var v2 := Contracts.evaluate_trade(gee, [gee[0]], [sen], 1 << 40, mine, 1 << 40, 0.0, {"name": "Geelong"})
 	_check(str(v2["code"]) != "trade_senior_over", "Trades: a senior for a senior at 38 is not blocked by the senior list")
+	# A list over the 44 (West Coast's start: its real 43 on the senior and
+	# Category A lists plus three tied prospects, 46) can still trade one for one, never take on more; a
+	# Category B rookie is outside the 44.
+	var over: Array = []
+	for i in 46:
+		var q: Dictionary = (gee[i % gee.size()] as Dictionary).duplicate(true)
+		q["id"] = "over_%d" % i
+		if i >= 36:
+			q["rookie_list"] = "A"
+		else:
+			q.erase("rookie_list")
+		over.append(q)
+	var one := Contracts.evaluate_trade(over, [over[0]], [sen], 1 << 40, mine, 1 << 40, 0.0, {"name": "West Coast"})
+	_check(str(one["code"]) != "trade_list_over",
+			"Trades: a club over the 44 can still trade one for one (%s)" % str(one.get("code", "")))
+	var grow := Contracts.evaluate_trade(over, [over[0]], [sen, mine.filter(func(q): return q != sen)[0]], 1 << 40, mine, 1 << 40, 0.0, {"name": "West Coast"})
+	_check(str(grow["code"]) == "trade_list_over",
+			"Trades: a club over the 44 cannot take on more players (%s)" % str(grow.get("code", "")))
+	# 36 seniors and seven rookies, two of them Category B: five Category A,
+	# 41 of the 44, so a Category A spot is free.
+	var mixed: Array = over.slice(0, 43)
+	for i in 2:
+		(mixed[36 + i] as Dictionary)["rookie_list"] = "B"
+	_check(RookieList.list_size(mixed) == 41 and RookieList.cat_a_count(mixed) == 5 and RookieList.rookie_spot_free(mixed),
+			"Two Category B rookies sit outside the 44 and take no Category A spot (%d of 44)" % RookieList.list_size(mixed))
+
+
+## The checker's faults on #1443 (2026-11-12): only the senior spots were
+## checked, so a club over the 44 could still draft, sign and upgrade its way
+## further over. One rule now (RookieList.add_block): a club at or over the 44
+## (senior and Category A lists together) adds nobody unless the same move
+## takes a player off. `code`'s list is rebuilt as `s` seniors, `a` Category A
+## and `b` Category B rookies.
+func _shape(code: String, s: int, a: int, b: int) -> Array:
+	var list: Array = gs.season.lists[code]
+	var model: Array = list.duplicate()
+	list.clear()
+	for i in s + a + b:
+		var q: Dictionary = model[i] if i < model.size() else (model[i % model.size()] as Dictionary).duplicate(true)
+		if i >= model.size():
+			q["id"] = "%s_shape%d" % [str(q["id"]), i]
+		q.erase("rookie_list")
+		if i >= s:
+			q["rookie_list"] = "A" if i < s + a else "B"
+		q["club"] = code
+		q["contract_years"] = 3
+		list.append(q)
+	return list
+
+
+func _test_the_44_rule() -> void:
+	_new_career()
+	var over := _shape("GEE", 36, 10, 2)
+	var under_s := _shape("COL", 37, 6, 2)
+	var under_r := _shape("MEL", 38, 5, 0)
+	_check(RookieList.list_size(over) == 46 and RookieList.list_size(under_s) == 43 and RookieList.list_size(under_r) == 43,
+			"(setup) clubs at 46, 43 and 43 of the 44 (%d, %d, %d)" % [
+				RookieList.list_size(over), RookieList.list_size(under_s), RookieList.list_size(under_r)])
+	_check(RookieList.add_block(over, "senior") == "list" and RookieList.add_block(over, "A") == "list"
+			and not RookieList.senior_spot_free(over) and not RookieList.rookie_spot_free(over),
+			"A club at 46 has no senior spot and no rookie spot, though only 36 of its 38 senior spots are taken")
+	_check(RookieList.add_block(under_s, "senior") == "" and RookieList.senior_spot_free(under_s),
+			"A club at 43 with a free senior spot can add a senior")
+	_check(RookieList.add_block(under_r, "A") == "" and RookieList.rookie_spot_free(under_r),
+			"A club at 43 with a free Category A spot can add a rookie")
+	var at := _shape("SYD", 36, 8, 0)
+	_check(RookieList.add_block(at, "senior") == "list" and RookieList.add_block(at, "senior", "", [at[0]]) == "",
+			"A club at exactly 44 adds nobody, unless the same move takes a player off")
+	_check(RookieList.block_words(over, "list").contains("holds 46") and RookieList.block_words(over, "list").contains("limit is 44"),
+			"The coach is told the count and the limit (%s)" % RookieList.block_words(over, "list"))
+
+	# Upgrades. A Category B rookie joins the 44 when he is upgraded; a
+	# Category A rookie is in it already (the same move takes him off the
+	# rookie list).
+	var b_over: Dictionary = over[47]
+	var a_over: Dictionary = over[40]
+	_check(RookieList.upgrade_block(gs, "GEE", str(b_over["id"])).contains("limit is 44")
+			and not RookieList.upgrade(gs, "GEE", str(b_over["id"])) and RookieList.is_cat_b(b_over),
+			"At 46 a Category B rookie cannot be upgraded (%s)" % RookieList.upgrade_block(gs, "GEE", str(b_over["id"])))
+	_check(RookieList.upgrade_block(gs, "GEE", str(a_over["id"])) == "",
+			"At 46 a Category A rookie can be upgraded: the list is no bigger for it")
+	var b_under: Dictionary = under_s[44]
+	_check(RookieList.upgrade(gs, "COL", str(b_under["id"])) and RookieList.list_size(under_s) == 44,
+			"At 43 a Category B rookie is upgraded, and the club is then at 44 (%d)" % RookieList.list_size(under_s))
+	_shape("COL", 37, 6, 2)
+	_shape("SYD", 36, 8, 0)
+	# Rivals: none upgrades its way past the 44, and no Category B moves up at 46.
+	_shape("GEE", 36, 10, 2)
+	RookieList.ai_upgrades(gs)
+	var geelong: Array = gs.season.lists["GEE"]
+	_check(RookieList.list_size(geelong) == 46 and RookieList.cat_b_count(geelong) == 2
+			and RookieList.senior_count(geelong) == RookieList.SENIOR_SPOTS,
+			"A rival at 46 upgrades Category A rookies into its senior spots and stays at 46 (%d of 44, %d seniors, %d Category B)" % [
+				RookieList.list_size(geelong), RookieList.senior_count(geelong), RookieList.cat_b_count(geelong)])
+	var bad := PackedStringArray()
+	for code in gs.season.lists:
+		if RookieList.list_size(gs.season.lists[code]) > maxi(Contracts.MAX_LIST, 46 if str(code) == "GEE" else 0):
+			bad.append("%s %d" % [code, RookieList.list_size(gs.season.lists[code])])
+	_check(bad.is_empty(), "No rival's upgrades take it past the 44 (%s)" % ", ".join(bad))
+
+	# Rookie Draft and mid-season draft: a seat only with room in the 44.
+	_shape("GEE", 36, 5, 0)
+	_shape("COL", 38, 5, 0)
+	_shape("SYD", 39, 5, 0)
+	_check(RookieList.rookie_spot_free(gs.season.lists["COL"]) and RookieList.rookie_spot_free(gs.season.lists["GEE"])
+			and not RookieList.rookie_spot_free(gs.season.lists["SYD"]),
+			"Rookie Draft: a pick at 41 and at 43, none at 44 with a free Category A spot")
+	_shape("GEE", 36, 10, 2)
+	_shape(CLUB, 36, 10, 0)
+	var year: int = gs.season_year
+	var cls: Array = gs.draftee_pool.filter(func(q): return int(q.get("draft_year", year)) == year)
+	for i in mini(30, cls.size()):
+		(cls[i] as Dictionary)["draft_year"] = year - 1
+	MidseasonDraft._record(gs)
+	MidseasonDraft._open_draft(gs)
+	var order: Array = gs.midseason.get("order", [])
+	_check(not order.has("GEE") and not order.has("SYD") and not order.has(CLUB) and order.has("COL"),
+			"Mid-season draft: clubs at 46 and 44 have no pick, a club at 43 has one (%s)" % str(order))
+	MidseasonDraft.settle(gs)
+	_check(RookieList.list_size(gs.season.lists["GEE"]) == 46 and RookieList.list_size(gs.season.lists["COL"]) <= 44,
+			"...and after it the 46 is still 46 and the 43 is no more than 44")
+
+	# Free agency: you at 46 cannot offer; he cannot sign with a rival at 46,
+	# and can with one at 43.
+	gs.season.round_index = gs.season.fixture.size()
+	gs.offseason_year = gs.season_year
+	gs.salary_cap += 50000000
+	var mine := _shape(CLUB, 36, 10, 0)
+	_shape("GEE", 36, 10, 2)
+	_shape("COL", 37, 6, 2)
+	var stk: Array = gs.season.lists["STK"]
+	var fa: Dictionary = stk[stk.size() - 1]
+	gs._release("STK", fa, false, false)
+	var r: Dictionary = gs.offer_free_agent(str(fa["id"]), Contracts.asking_salary(fa), 2)
+	_check(not bool(r["ok"]) and str(r["reason"]).contains("holds 46") and str(r["reason"]).contains("limit is 44"),
+			"Free agency: no offer from a list of 46, and the reason says so (%s)" % str(r.get("reason", "")))
+	fa["offers"] = [{"club": CLUB, "salary": Contracts.SENIOR_MIN_2027 * 3, "years": 2, "role": "ground", "finish_t": 0.5},
+			{"club": "GEE", "salary": Contracts.SENIOR_MIN_2027 * 2, "years": 2, "role": "ground", "finish_t": 0.5}]
+	_check(gs._decide_fa(fa) == "" and RookieList.list_size(mine) == 46 and RookieList.list_size(gs.season.lists["GEE"]) == 46,
+			"Free agency: he signs with neither club at 46")
+	fa["offers"] = [{"club": "COL", "salary": Contracts.SENIOR_MIN_2027, "years": 1, "role": "depth", "finish_t": 0.5}]
+	_check(gs._decide_fa(fa) == "COL" and RookieList.list_size(gs.season.lists["COL"]) == 44,
+			"Free agency: a club at 43 signs him and is then at 44")
+
+	# Trades: one for one still stands at 46, two for one does not.
+	var sen: Dictionary = mine[0]
+	var gee: Array = gs.season.lists["GEE"]
+	var one := Contracts.evaluate_trade(gee, [gee[0]], [sen], 1 << 40, mine, 1 << 40, 0.0, {"name": "Geelong"})
+	_check(not str(one["code"]) in ["trade_list_over", "trade_senior_over"],
+			"Trades: two clubs at 46 can still trade one for one (%s)" % str(one["code"]))
+	var grow := Contracts.evaluate_trade(gee, [gee[0], gee[1]], [sen], 1 << 40, mine, 1 << 40, 0.0, {"name": "Geelong"})
+	_check(str(grow["code"]) == "trade_list_over", "Trades: a club at 46 cannot take two for one (%s)" % str(grow["code"]))
+	var col: Array = _shape("COL", 37, 6, 0)
+	var fit := Contracts.evaluate_trade(col, [col[0]], [mine[0], mine[1]], 1 << 40, mine, 1 << 40, 0.0, {"name": "Collingwood"})
+	_check(not str(fit["code"]) in ["trade_list_over", "trade_senior_over"],
+			"Trades: a club at 43 can take two for one (%s)" % str(fit["code"]))
+
+
+## The National Draft under the same rule: a club at 46 passes every pick (the
+## coach is told why, in his own club's case), a club at 43 takes one, and a
+## father-son or academy player is listed only where the 44 has room.
+func _test_the_44_national_draft() -> void:
+	_new_career()
+	gs.season.round_index = gs.season.fixture.size()
+	var year: int = gs.season_year
+	_shape(CLUB, 36, 10, 2)
+	_shape("GEE", 36, 10, 0)
+	_shape("COL", 37, 6, 2)
+	# Two prospects tied to clubs: Geelong (46) has no spot for its one,
+	# Collingwood (43) lists its one and is then at 44.
+	var open_class: Array = gs.draftee_pool.filter(func(q):
+		return int(q.get("draft_year", 0)) == year and str(q.get("tied_club", "")) == "")
+	_check(open_class.size() >= 4, "(setup) a class to draft (%d)" % open_class.size())
+	if open_class.size() < 4:
+		return
+	var gee_tie: Dictionary = open_class[open_class.size() - 1]
+	var col_tie: Dictionary = open_class[open_class.size() - 2]
+	var my_tie: Dictionary = open_class[open_class.size() - 3]
+	gee_tie["tied_club"] = "GEE"
+	gee_tie["tied_type"] = "father_son"
+	col_tie["tied_club"] = "COL"
+	col_tie["tied_type"] = "father_son"
+	my_tie["tied_club"] = CLUB
+	my_tie["tied_type"] = "father_son"
+	var before: Dictionary = gs.draft_list_spots()
+	_check(int(before["open"]) == 0 and bool(before["by_44"]) and int(before["list"]) == 46 and int(before["ties"]) == 0,
+			"Before the draft your club at 46 is shown no open spot, by the 44 (%s)" % str(before))
+	_check(gs.draft_spots_line().contains("46 of 44"), "...and the brief says which count it is (%s)" % gs.draft_spots_line())
+	var sheet := ""
+	for line in DraftSpotsSheet.lines(before):
+		sheet += str(line[0]) + " "
+	_check(sheet.contains("will hold 46 of 44") and sheet.contains("44 on its senior and Category A rookie lists together"),
+			"...and so does the sheet before the draft (%s)" % sheet)
+	_check(gs.begin_intake_draft(), "(setup) the National Draft opens")
+	var draft: Draft = gs.draft
+	if draft == null:
+		return
+	_check(not gs.drafted_draftees.has(str(gee_tie["id"])) and draft.pool.any(func(q): return str(q["id"]) == str(gee_tie["id"])),
+			"A club at 46 lists no father-son player: he is in the open draft")
+	_check(str(gs.drafted_draftees.get(str(col_tie["id"]), "")) == "COL" and RookieList.list_size(gs.league_lists["COL"]) == 44,
+			"A club at 43 lists its father-son player and is then at 44")
+	_check(gs.ties_without_a_spot(CLUB).size() == 1 and gs.news.any(func(n): return str(n.get("text", n)).contains("No list spot for")),
+			"Your own tied player with no spot is named in the news (%s)" % str(gs.ties_without_a_spot(CLUB)))
+	_check(draft.open_spots("GEE") == 0 and draft.open_spots(CLUB) == 0 and draft.open_spots("COL") == 0,
+			"Clubs at 46, 46 and 44 have no open spot (%d, %d, %d)" % [draft.open_spots("GEE"), draft.open_spots(CLUB), draft.open_spots("COL")])
+	_check(draft.full_at_44(CLUB) and draft.full_words(CLUB).contains("holds 46") and draft.full_words(CLUB).contains("limit is 44"),
+			"Your club is told why its picks pass (%s)" % draft.full_words(CLUB))
+	while not draft.is_finished():
+		var candidate := draft._best_ai_pick(draft.current_club())
+		if candidate.is_empty() or not draft._draft_pick(draft.current_club(), candidate):
+			draft._skip_current_pick()
+	_check(draft.count_for("GEE") == 0 and draft.count_for(CLUB) == 0 and draft.count_for("COL") == 0,
+			"No club at or over the 44 made a pick (%d, %d, %d)" % [draft.count_for("GEE"), draft.count_for(CLUB), draft.count_for("COL")])
+	var took := 0
+	for code in draft.draft_order:
+		took += draft.count_for(str(code))
+	_check(took > 0, "The clubs with room made their picks (%d)" % took)
+	var bad := PackedStringArray()
+	for code in draft.list_44:
+		if draft.count_for(str(code)) > 0 and draft.list_now(str(code)) > Contracts.MAX_LIST:
+			bad.append("%s %d" % [code, draft.list_now(str(code))])
+	_check(bad.is_empty(), "No club drafted past the 44 (%s)" % ", ".join(bad))
+	if not draft.user_passed.is_empty():
+		_check(draft.user_passed_line().contains("limit is 44"), "Your passed picks say why (%s)" % draft.user_passed_line())
+	else:
+		_check(draft.upcoming_picks(CLUB, 0).is_empty(), "Your club had no pick left to pass")
+
+
+## A real-lists career under the rule: after the opening National Draft and
+## the Rookie Draft no club has grown past the 44, the clubs that started at
+## it took nobody, and every club can still pick 22 and a bench.
+func _test_the_44_real_lists() -> void:
+	gs.reset()
+	gs.begin_real_lists()
+	var draft: Draft = gs.draft
+	_check(draft != null, "A real-lists career opens on the National Draft")
+	if draft == null:
+		return
+	var start := {}
+	for code in gs.league_lists:
+		start[code] = RookieList.list_size(gs.league_lists[code])
+	var wce: Array = gs.league_lists["WCE"]
+	var wce_ties: Array = gs.intake_assignments.filter(func(a): return str(a["club"]) == "WCE")
+	_check(int(start["WCE"]) == 44 and wce_ties.size() == 1 and draft.open_spots("WCE") == 0,
+			"West Coast: its real 43 and the one tied prospect the 44 has room for (%d of 44, %d tied, %d open)" % [
+				int(start["WCE"]), wce_ties.size(), draft.open_spots("WCE")])
+	_check(gs.ties_without_a_spot("WCE").size() == 2,
+			"...and its other two tied prospects are in the open draft (%s)" % str(gs.ties_without_a_spot("WCE")))
+	_check(draft.full_at_44("WCE") and draft.full_words("WCE").contains("44"),
+			"West Coast's coach is told the 44 is why (%s)" % draft.full_words("WCE"))
+	gs.choose_real_club("WCE")
+	_check(gs.news.any(func(n): return str(n.get("text", n)).contains("No list spot for")),
+			"Taking West Coast, the news names the tied players it had no spot for")
+	while not draft.is_finished():
+		var candidate := draft._best_ai_pick(draft.current_club())
+		if candidate.is_empty() or not draft._draft_pick(draft.current_club(), candidate):
+			draft._skip_current_pick()
+	_check(draft.count_for("WCE") == 0 and draft.user_passed_line().contains("44"),
+			"West Coast's picks pass, and the line says why (%s)" % draft.user_passed_line())
+	_check(gs.finish_intake_draft(), "The opening National Draft commits")
+	RookieList.settle(gs)
+	var bad := PackedStringArray()
+	var short := PackedStringArray()
+	for code in gs.season.lists:
+		var list: Array = gs.season.lists[code]
+		if RookieList.list_size(list) > maxi(Contracts.MAX_LIST, int(start.get(code, 0))):
+			bad.append("%s %d (started %d)" % [code, RookieList.list_size(list), int(start.get(code, 0))])
+		var roles := {"RUCK": 0, "MID": 0, "DEF": 0, "FWD": 0}
+		for p in list:
+			if roles.has(str(p["role"])):
+				roles[str(p["role"])] = int(roles[str(p["role"])]) + 1
+		if list.size() < Contracts.MIN_LIST or int(roles["RUCK"]) < 1 or int(roles["MID"]) < 6 \
+				or int(roles["DEF"]) < 6 or int(roles["FWD"]) < 6:
+			short.append("%s %d %s" % [code, list.size(), str(roles)])
+	_check(bad.is_empty(), "No club grew past the 44 through the opening drafts (%s)" % ", ".join(bad))
+	_check(short.is_empty(), "Every club can pick 22 and a bench: at least 32 listed, a ruck and six in each line (%s)" % ", ".join(short))
+
+
+## GWS's real 2026 list has three Category B rookies (Delana, Hamilton,
+## Madden: DraftGuru's 2026 and 2027 GWS lists, checked 2026-11-12) against
+## the usual two spots. The list screen says so, never "3 / 2" with no reason;
+## a club within its two spots still shows them as spots.
+func _test_three_category_b_head() -> void:
+	_new_career()
+	_shape(CLUB, 34, 5, 3)
+	var scene: Control = load("res://scenes/ListScene.tscn").instantiate()
+	scene.set("_pane", "list")
+	root.add_child(scene)
+	await _settle()
+	var bh := scene.find_child("CatBListHead", true, false) as Label
+	var why := scene.find_child("CatBListWhy", true, false) as Label
+	_check(bh != null and bh.text.strip_edges().ends_with("rookies  3") and not bh.text.contains("/"),
+			"Three Category B rookies show as a count, not as 3 / 2 (%s)" % (bh.text if bh else "none"))
+	_check(why != null and why.text.contains("real 2026 list had 3") and why.text.contains("usually has 2"),
+			"...and the line under it says why (%s)" % (why.text if why else "none"))
+	scene.queue_free()
+	await _settle()
+	_shape(CLUB, 34, 5, 2)
+	scene = load("res://scenes/ListScene.tscn").instantiate()
+	scene.set("_pane", "list")
+	root.add_child(scene)
+	await _settle()
+	bh = scene.find_child("CatBListHead", true, false) as Label
+	_check(bh != null and bh.text.contains("2 / 2"), "Two Category B rookies show their two spots (%s)" % (bh.text if bh else "none"))
+	scene.queue_free()
+	await _settle()

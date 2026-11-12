@@ -163,7 +163,13 @@ var _played := [{}, {}]      # side -> id -> true: everyone who took the field
 ## full-time summary, director 2026-10-11); "legs", "traits" and "form" are
 ## the players and the bounce of the ball, with whatever no line measures.
 var impact := [{}, {}]
-const DECISION_CAUSES := ["moments", "gameplan", "loose", "tag", "pep", "bursts", "minder", "plan_trait"]
+## Who earned each named-man call's credit (row 144): side -> {cause: {player
+## id: points}} for NAMED_CAUSES, so full time names the man who was actually
+## loose, minding or tagged when the points were earned, not the man the plan
+## first named. Bookkeeping only, like `impact`.
+var impact_by := [{}, {}]
+const NAMED_CAUSES := ["loose", "minder", "tag"]
+const DECISION_CAUSES := ["moments", "gameplan", "loose", "tag", "pep", "bursts", "minder"]
 ## The forward the loose man was on before he was sent loose: def side ->
 ## {"id": loose man, "fwd": forward id}. Without the call he would be on him.
 var _loose_was := [{}, {}]
@@ -469,10 +475,10 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	injury_rng.seed = seed * 13 + 7
 	breeze_side = posmod(hash("breeze|%d" % seed), 2)
 	arch_rng.seed = seed * 151 + 157
-	trait_rng.seed = seed * 163 + 167
+	custom_rng.seed = seed * 163 + 167
 	for side in range(2):
 		arch[side] = (squads[side] as Squad).arch.duplicate()
-		plan_trait[side] = PlanTraits.valid((squads[side] as Squad).plan_trait)
+		custom[side] = CustomPlan.clean((squads[side] as Squad).custom_plan) 				if CustomPlan.ready((squads[side] as Squad).custom_plan) else {}
 		var morale := _ar(side, "morale", 0.0)
 		if morale != 0.0:
 			for q in (squads[side] as Squad).ground + (squads[side] as Squad).bench:
@@ -1034,7 +1040,8 @@ func _press_on(side: int, zone := 1) -> float:
 ## press (PRESS_BROKEN_EXPOSED), or -1. Reset at each chain's start.
 var _broke_press := -1
 ## The side whose chain got out of its back third unpressured against The
-## Cluster (PlanTraits "broken"), or -1. Reset with _broke_press.
+## "Open on the break" cost of a side's own plan (CustomPlan "broken"), or -1.
+## Reset with _broke_press.
 var _broke_cluster := -1
 
 
@@ -1050,37 +1057,57 @@ func _ar(side: int, key: String, d := 1.0) -> float:
 	return float((arch[side] as Dictionary).get(key, d))
 
 
-## Each side's game-plan trait (PlanTraits id, director 2026-11-10); "" = none.
-var plan_trait := ["", ""]
-## The dice for a trait's extra injuries (Hard Trainers): their own stream, so a
-## match without one plays out exactly as before.
-var trait_rng := RandomNumberGenerator.new()
+## Each side's own plan (CustomPlan, Squad.custom_plan; director 2026-11-12),
+## cleaned: {"name", "s", "c"}; {} when the club has built none.
+var custom := [{}, {}]
+## The dice for an own plan's extra injuries ("Injury toll"): their own stream,
+## so a match without one plays out exactly as before.
+var custom_rng := RandomNumberGenerator.new()
 
 
-## A side's game-plan trait lever `key` (PlanTraits.LEVERS), or `d` when it has
-## none or the lever's gate is shut (quarter or scoreboard). With no trait every
-## lever is 1.0 (or 0.0 when added), so the match is the same to the bit.
+## A side's own-plan lever `key` (CustomPlan entries), or `d` while it is not
+## on its own plan, its plan pulls another lever, or the lever's gate is shut
+## (quarter or scoreboard). The strength grows with the side's execution, list
+## fit, knowledge and the weather like any plan's upside (_custom_up); the cost
+## is as written. Off its own plan every lever is 1.0 (or 0.0 when added), so
+## the match is the same to the bit.
 func _gt(side: int, key: String, d := 1.0) -> float:
-	var id: String = plan_trait[side]
-	if id == "":
+	var p: Dictionary = custom[side]
+	if p.is_empty() or _plan(side) != CustomPlan.KEY:
 		return d
-	var lv: Array = (PlanTraits.LEVERS[id] as Dictionary).get(key, [])
-	if lv.is_empty():
-		return d
-	match str(lv[1]):
+	var s := CustomPlan.entry(str(p["s"]), true)
+	if str(s.get("lever", "")) == key:
+		return CustomPlan.lever(s, key, d, _custom_up(side)) if _gate_open(side, str(s["gate"])) else d
+	var c := CustomPlan.entry(str(p["c"]), false)
+	if str(c.get("lever", "")) == key:
+		return CustomPlan.lever(c, key, d) if _gate_open(side, str(c["gate"])) else d
+	return d
+
+
+## How much of an own plan's written strength `side` carries out: the same
+## factors as any plan's upside (_pv). An own plan asks nothing special of a
+## list (fit 1.0, like Balanced) and no Strategic coach's plan is one.
+func _custom_up(side: int) -> float:
+	var k := CustomPlan.KEY
+	var scale := float((squads[side] as Squad).tactics_exec) 			* float((plan_fit[side] as Dictionary).get(k, 1.0)) 			* float((WEATHER_PLAN.get(weather, {}) as Dictionary).get(k, 1.0))
+	var know: Dictionary = (squads[side] as Squad).plan_know
+	if not know.is_empty():
+		scale *= float(know.get(k, 1.0))
+	return scale
+
+
+## Whether an own-plan entry's gate is open for `side` now.
+func _gate_open(side: int, gate: String) -> bool:
+	match gate:
 		"q1":
-			if current_quarter != 1:
-				return d
+			return current_quarter == 1
 		"q4":
-			if current_quarter < 4:
-				return d
+			return current_quarter >= 4
 		"lead":
-			if score(side) <= score(1 - side):
-				return d
+			return score(side) > score(1 - side)
 		"lead_big":
-			if float(score(side) - score(1 - side)) <= runaway_lead:
-				return d
-	return float(lv[0])
+			return float(score(side) - score(1 - side)) > runaway_lead
+	return true
 
 
 func _plan(side: int) -> String:
@@ -1666,8 +1693,8 @@ func contest_winner(use_fp: bool, fp: float) -> int:
 	var drag1: float = tags1[0] + tags1[1]
 	# A side's tag: what it takes out of their midfield, less what its tagger
 	# gives up of his own game.
-	_credit(0, "tag", (float(tags1[0]) - float(tags0[1])) / float(T["contest_swing"]) * POSSESSION_VALUE)
-	_credit(1, "tag", (float(tags0[0]) - float(tags1[1])) / float(T["contest_swing"]) * POSSESSION_VALUE)
+	_credit(0, "tag", (float(tags1[0]) - float(tags0[1])) / float(T["contest_swing"]) * POSSESSION_VALUE, _tag_id(0))
+	_credit(1, "tag", (float(tags0[0]) - float(tags1[1])) / float(T["contest_swing"]) * POSSESSION_VALUE, _tag_id(1))
 	var c0: float = squads[0].contest * _mid_fit(0) - drag0
 	var c1: float = squads[1].contest * _mid_fit(1) - drag1
 	var legs_edge: float = ((c0 + drag0 - c1 - drag1) - (squads[0].contest - squads[1].contest)) / float(T["contest_swing"])
@@ -1723,12 +1750,12 @@ func home_edge() -> float:
 
 func _contest_bonus(side: int, stoppage := false) -> float:
 	return _contest_plan(side) + _contest_pep(side) + _contest_calls(side, stoppage) \
-			+ _contest_traits(side) + _contest_plan_trait(side, stoppage)
+			+ _contest_traits(side) + _contest_own_plan(side, stoppage)
 
 
-## A game-plan trait's edge at a stoppage (Stoppage Kings, Kick-Mark Masters,
-## Fast Starters' first quarter).
-func _contest_plan_trait(side: int, stoppage: bool) -> float:
+## An own plan's edge at a stoppage ("Stoppage numbers", or its cost "Light
+## at stoppages"; CustomPlan).
+func _contest_own_plan(side: int, stoppage: bool) -> float:
 	return _gt(side, "stoppage", 0.0) if stoppage else 0.0
 
 
@@ -1754,7 +1781,7 @@ func _contest_pep_on(side: int) -> bool:
 
 
 ## What Fire them up adds at the contest for this side while it chases the
-## game: the base lift scaled by its game plan's pep trait, as the gate shows it.
+## game: the base lift scaled by its own plan's pep lever (CustomPlan), as the gate shows it.
 func fire_up_contest(side: int) -> float:
 	return PEP_FIRE_CONTEST * _gt(side, "pep")
 
@@ -2069,9 +2096,10 @@ func _credit_general_loose(side: int, target: Dictionary, defender: Dictionary, 
 	var spoil_p := _general_spoil_chance(target, defender)
 	var denied := (mark0 - mark_r) + (1.0 - mark_r) * (1.0 - spoil_p) * _roam_spoil_p(roamer)
 	var p_r := _roam_chance(opp)
-	_credit(opp, "loose", p_r * denied * TURNOVER_VALUE)
-	if not _spare_minder(side).is_empty():
-		_credit(side, "minder", (_roam_chance(opp, false) - p_r) * denied * TURNOVER_VALUE)
+	_credit(opp, "loose", p_r * denied * TURNOVER_VALUE, str(roamer.get("id", "")))
+	var minder := _spare_minder(side)
+	if not minder.is_empty():
+		_credit(side, "minder", (_roam_chance(opp, false) - p_r) * denied * TURNOVER_VALUE, str(minder.get("id", "")))
 
 
 ## A general-play aerial contest (_general_aerial): the loose man reads it
@@ -2108,7 +2136,7 @@ func _credit_aerial_loose(def_side: int, fp: float, receiver: Dictionary) -> voi
 		e += w * ours
 		el += wl * ours
 	if found and w_sum > 0.0 and wl_sum > 0.0:
-		_credit(def_side, "loose", (el / wl_sum - e / w_sum) * POSSESSION_VALUE)
+		_credit(def_side, "loose", (el / wl_sum - e / w_sum) * POSSESSION_VALUE, loose)
 
 
 ## An inside-50 entry, before it is played: what the defending coach's loose
@@ -2132,7 +2160,7 @@ func _credit_entry(side: int, shooter: Dictionary, feeder, defender, line_def, m
 			bare = _entry_ev(side, shooter, feeder, roamer, roamer, roamer, 0.0, 0.0)
 		else:
 			bare = _entry_ev(side, shooter, feeder, defender, matched, roamer, 0.0, 0.0)
-		_credit(opp, "loose", bare - actual)
+		_credit(opp, "loose", bare - actual, str(roamer.get("id", "")))
 	var minder := _spare_minder(side)
 	if not minder.is_empty():
 		# The defensive forward: the entry as played against the same entry
@@ -2159,7 +2187,7 @@ func _credit_entry(side: int, shooter: Dictionary, feeder, defender, line_def, m
 			var his := _entry_ev(side, minder, feeder, m_def if not m_def.is_empty() else line_def, m_def, roamer,
 					_roam_chance(opp, false) if m_roams else 0.0, _roam_go_chance(opp, false) if m_roams else 0.0)
 			worth -= minder_dp * (his - their_ev)
-		_credit(side, "minder", worth)
+		_credit(side, "minder", worth, mid)
 
 
 ## How much more often the defensive forward would be the target of an entry
@@ -2328,21 +2356,24 @@ const CLANGER_VALUE := 0.6
 
 func _credit_contest(side: int, stoppage: bool) -> void:
 	_credit(side, "gameplan", _contest_plan(side) * POSSESSION_VALUE)
-	# The call itself gets its base lift and the game plan's pep trait gets what it
+	# The call itself gets its base lift and its own plan's pep lever (booked to the game plan) gets what it
 	# added to (or took from) that lift, so the two add up to what the contest got.
 	var pep_base := PEP_FIRE_CONTEST if _contest_pep_on(side) else 0.0
 	_credit(side, "pep", pep_base * POSSESSION_VALUE)
 	_credit(side, "bursts", _contest_calls(side, stoppage) * POSSESSION_VALUE)
 	_credit(side, "traits", _contest_traits(side) * POSSESSION_VALUE)
-	_credit(side, "plan_trait", (_contest_plan_trait(side, stoppage)
+	_credit(side, "gameplan", (_contest_own_plan(side, stoppage)
 			+ pep_base * (_gt(side, "pep") - 1.0)) * POSSESSION_VALUE)
 
 
-func _credit(side: int, cause: String, pts: float) -> void:
+func _credit(side: int, cause: String, pts: float, who := "") -> void:
 	if pts == 0.0:
 		return
 	var d: Dictionary = impact[side]
 	d[cause] = float(d.get(cause, 0.0)) + pts
+	if who != "":
+		var by: Dictionary = (impact_by[side] as Dictionary).get_or_add(cause, {})
+		by[who] = float(by.get(who, 0.0)) + pts
 
 
 ## Pressure by zone. Where the ball is, from the carrier's end: his back
@@ -2820,7 +2851,7 @@ static func kick_range(kicker: Dictionary) -> float:
 ## in range: the nearest teammate (the short option). Pure: no dice.
 func kick_targets(side: int, from_fp: float, kicker: Dictionary) -> Array:
 	var from_atk := from_fp if side == 0 else -from_fp
-	var reach := kick_range(kicker) + _gt(side, "range", 0.0)
+	var reach := kick_range(kicker) * _gt(side, "reach")
 	var kid := str(kicker.get("id", ""))
 	var pool := []
 	var nearest = null
@@ -3374,7 +3405,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		if zone == 1:
 			p_base = pressure
 			pressure *= _gt(opp, "mid_press")
-			_credit(opp, "plan_trait", (pressure - p_base) * TURNOVER_VALUE)
+			_credit(opp, "gameplan", (pressure - p_base) * TURNOVER_VALUE)
 		if synergies[opp].has("lockdown_unit"):
 			var lock := Traits.power("lockdown_unit")
 			_credit(opp, "traits", pressure * (lock - 1.0) * TURNOVER_VALUE)
@@ -3472,7 +3503,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			if zone == 0:
 				var tp0 := turn_p
 				turn_p *= _gt(opp, "fwd_turnover")
-				_credit(opp, "plan_trait", (turn_p - tp0) * TURNOVER_VALUE)
+				_credit(opp, "gameplan", (turn_p - tp0) * TURNOVER_VALUE)
 			if rng.randf() < turn_p:
 				# Rushed into a pack: sometimes nobody gets it clean and the
 				# umpire calls a ball-up where it locked up.
@@ -3531,7 +3562,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		if disposal_kind == "kick":
 			if in_d50:
 				gain *= _tv("D50_KICK_GAIN", D50_KICK_GAIN)
-			gain = minf(gain, kick_range(carrier) + _gt(side, "range", 0.0))
+			gain = minf(gain, kick_range(carrier) * _gt(side, "reach"))
 		if is_kick_in:
 			gain *= 0.82 if not kick_in_play_on else 1.12
 		if not rushed and zone == 0 and _broke_cluster != side and _gt(opp, "broken") > 1.0:
@@ -4025,7 +4056,7 @@ func _intercept(side: int, who, could_mark: bool, contested := false) -> void:
 	# the ball marks more of them. A mark is a mark: he takes the next kick
 	# (the next chain starts from him, _chain_from["marked"]).
 	# could_mark: it came off the other side's kick inside 50, so their plan's
-	# intercept cost counts (PlanTraits "icept"), as on every intercept mark.
+	# intercept cost counts (CustomPlan "icept"), as on every intercept mark.
 	if could_mark and mark_rng.randf() < 0.35 * (0.5 + _a(who, "intercept") / 100.0) * _wx("aerial") * _gt(1 - side, "icept"):
 		_t(side, "marks")
 		_p(who, "marks")
@@ -4151,8 +4182,8 @@ func _swing_momentum(side: int, amount: float) -> void:
 	momentum = clampf(momentum + s * amount * (1.0 - s * momentum), -1.0, 1.0)
 
 
-## Front-Runners: the run of play counts more for a side well in front
-## (PlanTraits). 1.0 for everyone else.
+## Front-runners (an own plan's strength, CustomPlan): the run of play counts
+## more for a side well in front. 1.0 for everyone else.
 func _front_run() -> float:
 	if momentum == 0.0:
 		return 1.0
@@ -4280,17 +4311,17 @@ func shot_chance(side: int, shooter: Dictionary, marked: bool, spoilt: bool, cre
 	if credit:
 		_credit(opp, "gameplan", 6.0 * (before - goal_p))
 	before = goal_p
-	# Game-plan traits (PlanTraits): the shooter's, then the defence's.
+	# Own plans (CustomPlan): the shooter's, then the defence's. Booked to the
+	# game plan, as any plan's work is.
 	goal_p *= _gt(side, "goal")
 	if credit:
-		_credit(side, "plan_trait", 6.0 * (goal_p - before))
+		_credit(side, "gameplan", 6.0 * (goal_p - before))
 	before = goal_p
 	goal_p *= _gt(opp, "opp_goal")
-	goal_p *= _gt(opp, "exposed")
 	if _broke_cluster == side:
 		goal_p *= _gt(opp, "broken")
 	if credit:
-		_credit(opp, "plan_trait", 6.0 * (before - goal_p))
+		_credit(opp, "gameplan", 6.0 * (before - goal_p))
 	before = goal_p
 	var tr := 1.0
 	if _trait(shooter, "sharpshooter"):
@@ -4403,6 +4434,7 @@ func begin_quarter() -> void:
 				_ai_rematch(side)
 		if str(season_plans[side]) != "":
 			set_rotation_policy(side, auto_rotation(side, str(season_plans[side])))
+	_own_plan_injuries()
 	# Snapshot the plans in force this quarter - after the AI has picked its
 	# own, so the break says what they actually ran, not last quarter's plan.
 	# Before any rolls; duplicates only, no RNG draws.
@@ -4658,7 +4690,7 @@ func _play_one_chain(T: Dictionary) -> void:
 	_credit(side, "gameplan", clanger_p * (1.0 - cl_mult) * CLANGER_VALUE)
 	clanger_p *= cl_mult
 	var gt_cl := _gt(side, "clangers")
-	_credit(side, "plan_trait", clanger_p * (1.0 - gt_cl) * CLANGER_VALUE)
+	_credit(side, "gameplan", clanger_p * (1.0 - gt_cl) * CLANGER_VALUE)
 	clanger_p *= gt_cl
 	var pep_cl := _pep_mult(side, "clangers")
 	_credit(side, "pep", clanger_p * (1.0 - pep_cl) * CLANGER_VALUE)
@@ -4874,7 +4906,7 @@ func result() -> Dictionary:
 		"quarter_teams": quarter_teams.duplicate(true),
 		"extra_time": extra_time_played,
 		"impact": impact.duplicate(true),
-		"plan_traits": plan_trait.duplicate(),
+		"impact_by": impact_by.duplicate(true),
 		"moments": moments.duplicate(true),
 		"interchanges": interchanges.duplicate(),
 		"duels": duel_log.duplicate(true),
@@ -5148,16 +5180,34 @@ func _plan_injuries() -> void:
 			# match without one plays out exactly as before (row 119).
 			if inj.is_empty() and _ar(side, "inj") > 1.0 and arch_rng.randf() < _ar(side, "inj") - 1.0:
 				inj = Injuries.roll(arch_rng, p)
-			# Hard Trainers' extra injuries, on their own dice (PlanTraits).
-			if inj.is_empty() and _gt(side, "inj") > 1.0 and trait_rng.randf() < _gt(side, "inj") - 1.0:
-				inj = Injuries.roll(trait_rng, p)
-				if not inj.is_empty():
-					inj["plan_trait"] = plan_trait[side]
 			if inj.is_empty():
 				continue
 			inj["side"] = side
 			inj["id"] = str(p["id"])
 			inj["at"] = injury_rng.randi_range(2, 118)
+			_injury_plan.append(inj)
+
+
+## An own plan's "Injury toll" (CustomPlan "inj"): a side on it this quarter
+## takes extra injuries, a quarter's share of the match's, on their own dice
+## (custom_rng), so a match without one plays out exactly as before.
+func _own_plan_injuries() -> void:
+	if current_quarter > 4:
+		return
+	for side in range(2):
+		var extra := _gt(side, "inj") - 1.0
+		if extra <= 0.0:
+			continue
+		var sq: Squad = squads[side]
+		for p in sq.ground + sq.bench:
+			if custom_rng.randf() >= extra / 4.0:
+				continue
+			var inj := Injuries.roll(custom_rng, p)
+			if inj.is_empty():
+				continue
+			inj["side"] = side
+			inj["id"] = str(p["id"])
+			inj["at"] = (current_quarter - 1) * 30 + custom_rng.randi_range(2, 28)
 			_injury_plan.append(inj)
 
 
@@ -5308,10 +5358,57 @@ func _auto_rotate(side: int) -> void:
 			worst = i
 			worst_e = e
 	if worst < 0:
+		_first_stint(side)
 		return
 	var bi := _bench_for(side, str((sq.ground[worst] as Dictionary)["role"]), 85.0, true)
 	if bi >= 0:
 		_swap(side, worst, bi)
+
+
+## Every interchange player gets on the ground in an AFL match. From the second
+## quarter, when nobody is past his line (a side whose legs last, such as a
+## Running machine line), a bench player who has not yet played goes on for
+## the most tired man in a spot he can play; the usual rotations then take
+## over. The same for every club; a rest the coach called still holds, and the
+## named tagger and play-through picks keep their own rules.
+func _first_stint(side: int) -> void:
+	if current_quarter < 2:
+		return
+	var sq: Squad = squads[side]
+	var named := str((tactics[side] as Dictionary).get("tagger_id", "")) if _tag_id(side) != "" else ""
+	var focus := {}
+	for slot in FOCUS_SLOTS:
+		var fid := str((tactics[side] as Dictionary).get(slot, ""))
+		if fid != "":
+			focus[fid] = slot
+	for bi in range(sq.bench.size()):
+		var on: Dictionary = sq.bench[bi]
+		var on_id := str(on["id"])
+		if _played[side].has(on_id) or str(_held.get(on_id, "")) == "rest":
+			continue
+		var best := -1
+		var best_e := 101.0
+		var best_fits := false
+		for gi in range(sq.ground.size()):
+			var p: Dictionary = sq.ground[gi]
+			var pid := str(p["id"])
+			if str(_held.get(pid, "")) == "keep" or (named != "" and pid == named):
+				continue
+			var role := str(p["role"])
+			var focus_slot := str(focus.get(on_id, ""))
+			if focus_slot != "" and not (FOCUS_SLOT_ROLES[focus_slot] as Array).has(role):
+				continue
+			if named != "" and on_id == named and role != "MID":
+				continue
+			var fits := Traits.plays(on, role) or focus_slot != ""
+			var e := float(energy.get(pid, 100.0))
+			if (fits and not best_fits) or (fits == best_fits and e < best_e):
+				best = gi
+				best_e = e
+				best_fits = fits
+		if best >= 0:
+			_swap(side, best, bi)
+			return
 
 
 ## The freshest bench player (at or above `min_energy`) for a ground role,

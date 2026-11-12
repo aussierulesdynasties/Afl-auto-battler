@@ -87,19 +87,17 @@ Player statistics are factual season data compiled from AFL Tables, a long-runni
 volunteer-maintained archive. The AFL, its clubs and Champion Data do not endorse
 this project, and no player imagery or club badges are reproduced.
 
-### Fictional / real player labels
-The shipped data keeps each real name and a deterministic shuffle of generated
-random names (`Ari Bramble`, `Bex Cinder`, and so on). With no saved choice the
-player presentation shows the real AFL name on its own, such as `Jordan Dawson`
-(the director's choice of 2026-10-06, "for now"). **Player names** (New career
-setup, or Settings on the main menu) switches to the generated names instead, and
-a saved choice is kept. Every player has a generated name; numbered placeholders
-such as `Squadmate 001` are never shown. The real name is never prefixed with a
-fictional alias or a "plays like" comparison, and the mode does not change IDs,
-ratings, draft logic or match results.
+### Player names
+Every real player is shown under his AFL name on its own, such as `Jordan Dawson`
+(director, 2026-11-12: "remove 'generated names' from the game, Real Names
+only"). There is no names option in New career or Settings, and an old settings
+file that chose generated names loads and shows real names. Numbered placeholders
+such as `Squadmate 001` are never shown, and a real name is never prefixed with
+an alias or a "plays like" comparison. The loader still draws one label per
+player from the shared generated-name pool so that generated prospects' names
+stay where saves expect them; a real player's label is never shown.
 Players with no real-world counterpart (generated future draft classes) keep
-their fictional name in both modes. Draft history resolves labels by player ID
-so switching the mode never leaves an old name in a row or tooltip. This is a
+the name they were given. Draft history resolves labels by player ID. This is a
 product presentation choice, not legal advice or a licensing determination.
 
 ---
@@ -592,8 +590,9 @@ table, shot conversion, every best and quiet player with his numbers and
   GWS, Richmond). Your club's real senior coach becomes free when your
   career starts. Coach aliases use their own first names (never a player's)
   with the shared surnames, in a fixed order, so a seeded coach has the same
-  alias in every career; real-name mode shows the real person, and a
-  generated coach keeps his alias. The seed is the researched Round 1 2026
+  alias in every career; a real coach is always shown under his real name
+  (director, 2026-11-12: "Real Names only"), and a generated coach keeps his
+  alias. The seed is the researched Round 1 2026
   world, kept as the historical source; a career (from 2027) carries it
   forward by continuity - everyone stays where the research put them, a
   stint's first year is that 2026, your club's senior coach coached 2026 and

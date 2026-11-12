@@ -36,7 +36,6 @@ func _run() -> void:
 	gs.autosave_enabled = false
 	gs.save_path = "user://capture_talk.save"
 	gs.settings_path = "user://capture_talk.cfg"
-	gs.show_real_names = false
 	# Every seed set (tools/audit/README.md), so a rerun is the same picture.
 	seed(seed)
 	gs.reset()

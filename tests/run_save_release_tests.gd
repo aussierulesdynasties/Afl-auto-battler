@@ -52,7 +52,6 @@ func _run() -> void:
 	var tag := OS.get_process_id()
 	_state.save_path = "user://test_save_release_%d.save" % tag
 	_state.settings_path = "user://test_save_release_%d.cfg" % tag
-	_state.show_real_names = false
 	_state.replay_seed = SUITE_SEED
 	_state.delete_saved_career()
 	root.size = Vector2i(390, 844)
@@ -133,6 +132,21 @@ func _test_frozen_fixtures() -> void:
 				"%s is the same career: %s, two rounds played" % [name, want["club"]])
 		_check(_ladder() == want["ladder"], "%s: the ladder is as it was saved: %s" % [name, _ladder()])
 		_check(_state.my_list.size() > 30 and _state.my_list[0] is Dictionary, "%s: its list is back" % name)
+		# Traits come from the stats, not the file: a save from the two-trait
+		# days opens with every man carrying each trait he clears, up to five
+		# (director, 2026-11-12).
+		var most := 0
+		var over_two := 0
+		for code in _state.season.lists:
+			for p in _state.season.lists[code]:
+				var good := 0
+				for t in Traits.of(p):
+					if not Traits.is_bad(str(t)) and not ["unicorn", "wet_weather"].has(str(t)):
+						good += 1
+				most = maxi(most, good)
+				over_two += 1 if good > 2 else 0
+		_check(over_two > 0 and most <= Traits.MAX_GOOD,
+				"%s: its players carry up to five traits (%d carry three or more, the most %d)" % [name, over_two, most])
 		_state.advance()
 		_check(_state.season.round_index == 3, "%s plays on" % name)
 		_check(_state.save_career() and _version_on_disk() == CareerSave.VERSION,

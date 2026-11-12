@@ -30,7 +30,6 @@ func _run() -> void:
 	# in that table. Left due, it covers the list on a clean device and takes the
 	# real tap meant for a card; an earlier suite on the same device used to hide that.
 	_state.set_setting("seen_training_intro", true)
-	_state.show_real_names = false
 	_state.replay_seed = SUITE_SEED
 	var script = load("res://tests/test_roles.gd")
 	if script == null or not script.can_instantiate():

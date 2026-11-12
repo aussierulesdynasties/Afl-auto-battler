@@ -1148,6 +1148,10 @@ func _player_row(p: Dictionary) -> Control:
 	var kind_line := _row_line(" · ".join(kind), UiKit.MUTED)
 	kind_line.name = "Kind_" + str(p["id"])
 	face.add_child(kind_line)
+	# The real player he plays like at his best (director 2026-11-12): his own line.
+	var like := PlaysLikeLine.make(p)
+	if like != null:
+		face.add_child(like)
 	# Draft fit (row 127): how he suits your coach's game, as a fact with
 	# the scouts' read. Your club's colour: it is about your club.
 	for m in _fit_of(p):
@@ -1620,6 +1624,10 @@ func _open_player(id: String) -> void:
 	if not projected:
 		who.append(GameDB.club_name(str(p["club"])))
 	v.add_child(UiKit.lbl("  ·  ".join(who), UiKit.SECONDARY, UiKit.MUTED))
+	var like := PlaysLikeLine.make(p)
+	if like != null:
+		like.name = "DetailPlaysLike"
+		v.add_child(like)
 	var ped := PlayerProfile.pedigree(p)
 	if ped != "":
 		var pl := UiKit.lbl(ped, UiKit.SECONDARY, UiKit.MUTED)
@@ -2030,10 +2038,14 @@ func _refresh_mine() -> void:
 	if _draft.intake_mode:
 		if _draft.senior_cap > 0:
 			var open := _draft.open_spots(_club)
-			var head := UiKit.lbl("%d draftee%s signed · senior list %d / %d · %d spot%s open" % [
+			var head_words := "%d draftee%s signed · senior list %d / %d · %d spot%s open" % [
 				_draft.count(), "" if _draft.count() == 1 else "s",
-				_draft.list_cap() - open, _draft.list_cap(), open, "" if open == 1 else "s"],
-				15, UiKit.EMPH, true)
+				_draft.list_cap() - open, _draft.list_cap(), open, "" if open == 1 else "s"]
+			if _draft.full_at_44(_club):
+				# The 44 leaves no spot though the senior list has some: say which.
+				head_words = "%d draftee%s signed · list %d / %d (senior list and Category A rookies) · no spot open" % [
+					_draft.count(), "" if _draft.count() == 1 else "s", _draft.list_now(_club), Contracts.MAX_LIST]
+			var head := UiKit.lbl(head_words, 15, UiKit.EMPH, true)
 			head.name = "DraftListSpots"
 			head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			_mine_box.add_child(head)
@@ -2044,7 +2056,7 @@ func _refresh_mine() -> void:
 				pl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 				_mine_box.add_child(pl)
 			var rule := UiKit.lbl(
-				"Draftees join the senior list you kept. A club with a full senior list passes its picks, and players you kept cannot be delisted during the draft. The Rookie Draft follows.",
+				"Draftees join the senior list you kept. A club with a full senior list, or with %d on its senior and Category A rookie lists together, passes its picks, and players you kept cannot be delisted during the draft. The Rookie Draft follows." % Contracts.MAX_LIST,
 				13, UiKit.MUTED)
 			rule.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			_mine_box.add_child(rule)
@@ -2113,6 +2125,9 @@ func _refresh_mine() -> void:
 					v.add_child(UiKit.lbl("Pick %d · %d OVR · %s" % [
 							int(entry.get("pick", 0)), int(player["overall"]), Contracts.money(_draft.price(player))],
 							12, UiKit.MUTED))
+				var like := PlaysLikeLine.make(player)
+				if like != null:
+					v.add_child(like)
 				if stuck:
 					var row := UiKit.hbox(8)
 					v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -2428,8 +2443,8 @@ func _refresh_passed(clock_pick: int, done: bool) -> void:
 			seen.append(int(e["pick"]))
 	var text := ""
 	if _draft.intake_mode and not seen.is_empty():
-		text = "%s %s passed: your %slist is full (%d)." % ["Pick" if seen.size() == 1 else "Picks",
-				Draft.picks_words(seen), "senior " if _draft.senior_cap > 0 else "", _draft.list_cap()]
+		text = "%s %s passed: %s" % ["Pick" if seen.size() == 1 else "Picks",
+				Draft.picks_words(seen), _draft.full_words(_club)]
 	_passed_line.text = text
 	_passed_line.visible = text != ""
 

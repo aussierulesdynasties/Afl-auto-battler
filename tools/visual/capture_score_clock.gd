@@ -36,7 +36,6 @@ func _run() -> void:
 	load("res://scripts/ui/UiKit.gd").apply_appearance("dark")
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		state.set_setting("seen_%s_intro" % key, true)
-	state.show_real_names = false
 	root.size = Vector2i(_w, _h)
 	DisplayServer.window_set_size(Vector2i(_w, _h))
 	state.set_vignettes_on(true)

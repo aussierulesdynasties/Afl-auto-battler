@@ -43,7 +43,6 @@ func _run() -> void:
 	gs.autosave_enabled = false
 	gs.save_path = "user://capture_story.save"
 	gs.settings_path = "user://capture_story.cfg"
-	gs.show_real_names = false
 	seed(seed)
 	gs.reset()
 	gs.career_seed = seed
