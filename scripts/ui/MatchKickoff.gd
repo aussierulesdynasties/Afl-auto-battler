@@ -94,6 +94,8 @@ static func start(tree: SceneTree, replace := false) -> bool:
 	# bowl, milestones (GameState.banner_context).
 	var label := str(m["label"])
 	var banner_ctx := GameState.banner_context(m)
+	# The warm-up is under the same sky as the match: day, twilight or night (looks only).
+	VignetteKickoff.use_match(m, VignetteGround.ground_of(m))
 	# Gather Round: the warm-up is at the host ground the match is staged at.
 	if str(m.get("venue", "")) != "" and label.ends_with(GatherRound.NAME):
 		VignetteGround.use_match(m)

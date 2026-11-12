@@ -1,0 +1,114 @@
+{
+ "_about": "Share of 2026 AFL matches at each ground that started by day (before 16:00 local), at twilight (16:00 to 17:59) or at night (18:00 on), from data/raw/fixtures_2026.json (Squiggle). Built by tools/visual/build_kickoff_shares.py; do not edit by hand. Looks only: the match scenes pick their sky from it and the simulation never reads it.",
+ "min_games": 6,
+ "default": {
+  "day": 0.372,
+  "twilight": 0.165,
+  "night": 0.463,
+  "games": 218
+ },
+ "venues": {
+  "Adelaide Oval": {
+   "day": 0.214,
+   "twilight": 0.036,
+   "night": 0.75,
+   "games": 28
+  },
+  "Barossa Park": {
+   "day": 1.0,
+   "twilight": 0.0,
+   "night": 0.0,
+   "games": 2
+  },
+  "Bellerive Oval": {
+   "day": 1.0,
+   "twilight": 0.0,
+   "night": 0.0,
+   "games": 1
+  },
+  "Engie Stadium": {
+   "day": 0.25,
+   "twilight": 0.75,
+   "night": 0.0,
+   "games": 8
+  },
+  "GMHBA Stadium": {
+   "day": 0.0,
+   "twilight": 0.4,
+   "night": 0.6,
+   "games": 10
+  },
+  "Hands Oval": {
+   "day": 1.0,
+   "twilight": 0.0,
+   "night": 0.0,
+   "games": 1
+  },
+  "MCG": {
+   "day": 0.353,
+   "twilight": 0.157,
+   "night": 0.49,
+   "games": 51
+  },
+  "Manuka Oval": {
+   "day": 0.667,
+   "twilight": 0.333,
+   "night": 0.0,
+   "games": 3
+  },
+  "Marrara Oval": {
+   "day": 0.0,
+   "twilight": 0.0,
+   "night": 1.0,
+   "games": 2
+  },
+  "Marvel Stadium": {
+   "day": 0.565,
+   "twilight": 0.087,
+   "night": 0.348,
+   "games": 46
+  },
+  "Norwood Oval": {
+   "day": 1.0,
+   "twilight": 0.0,
+   "night": 0.0,
+   "games": 2
+  },
+  "Optus Stadium": {
+   "day": 0.28,
+   "twilight": 0.2,
+   "night": 0.52,
+   "games": 25
+  },
+  "People First Stadium": {
+   "day": 0.333,
+   "twilight": 0.333,
+   "night": 0.333,
+   "games": 9
+  },
+  "SCG": {
+   "day": 0.385,
+   "twilight": 0.077,
+   "night": 0.538,
+   "games": 13
+  },
+  "The Gabba": {
+   "day": 0.167,
+   "twilight": 0.25,
+   "night": 0.583,
+   "games": 12
+  },
+  "Traeger Park": {
+   "day": 1.0,
+   "twilight": 0.0,
+   "night": 0.0,
+   "games": 1
+  },
+  "York Park": {
+   "day": 0.75,
+   "twilight": 0.0,
+   "night": 0.25,
+   "games": 4
+  }
+ }
+}
