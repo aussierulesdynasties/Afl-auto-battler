@@ -37,6 +37,7 @@ def check_font_size_one_place(root):
 ## cue that says the same thing, how many lines it is on]. The count pins each part to its
 ## lines, so a new line that happens to contain one still has to be read and counted.
 COLOUR_CUES = {
+    "BenchDrawer.gd": [["UiKit.BAD if mark == PlayerMarks.HURT", "the line under the name says Injured: ... or Tired: ..., beside his mark", 1]],
     "PreSeasonScene.gd": [["UiKit.TEXT if ok else UiKit.BAD", "the medical panel line says cleared / not cleared", 1]],
     "CaptaincySheet.gd": [["UiKit.BAD if off_bad", "the reason he can't lead, in words", 1]],
     "ClubPage.gd": [["UiKit.GOOD if us > them", "Won / Lost / Drew", 1]],
