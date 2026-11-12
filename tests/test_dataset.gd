@@ -24,6 +24,10 @@ const GOLDEN_REAL := "6b9d20ef93eea2ce95f0a6d936f19727"
 ## main before the change (Linux: run_on_github run 43024085570). The own
 ## plan (CustomPlan) redrew the season: Linux from Tests run 43083470206; the
 ## Windows print still predates it and is refreshed on the next local run.
+## Result keys added after the golden was taken that record who earned a
+## call's credit, not what happened (row 144). "impact" and "plan_traits" were
+## already in main's results, so they stay in the hash.
+const BOOKKEEPING_KEYS := ["impact_by"]
 const GOLDEN_SEASON := {"Windows": "b039d703c0783968328f937754c75eee", "Linux": "f99bf57c4e3a8dfdc2409ecb11611bec"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
@@ -163,7 +167,20 @@ func _season_print() -> String:
 	out.append("%d|%d" % [GameState.season_year, GameState.season.round_index])
 	for row in GameState.season.ladder_sorted():
 		out.append(JSON.stringify(row, "", true))
-	out.append(JSON.stringify(GameState.season.results, "", true))
+	# Who earned each call's credit is bookkeeping, not play: leave it out so
+	# the hash still proves the season plays the same. Results are one array
+	# of match results per round.
+	var played: Array = []
+	for rnd in GameState.season.results:
+		var games: Array = []
+		for r in rnd:
+			var c = r.duplicate(true) if r is Dictionary else r
+			if c is Dictionary:
+				for k in BOOKKEEPING_KEYS:
+					(c as Dictionary).erase(k)
+			games.append(c)
+		played.append(games)
+	out.append(JSON.stringify(played, "", true))
 	return "\n".join(out)
 
 

@@ -67,7 +67,8 @@ COLOUR_CUES = {
         ["\"Unhappy\"", "Unhappy", 1]],
     "MatchScene.gd": [
         ["UiKit.TEXT if ok else UiKit.BAD", "the medical panel line says cleared / not cleared", 1],
-        ["pts > 0", "the signed +/- points", 1],
+        ["pts > 0", "the signed +/- points", 2],
+        ["margin_colour(m > 0)", "the signed final margin", 1],
         ["bool(f[2])", "the legs word", 1],
         ["tone == \"good\"", "the goal row names the club", 1],
         ["margin_colour(winner == me)", "Won by / Lost by", 1]],

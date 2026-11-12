@@ -4207,8 +4207,46 @@ func _ft_story(v: VBoxContainer, me: int) -> Dictionary:
 			rl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			rv.add_child(rl)
 		box.add_child(rv)
+	_ft_calls(box, me)
 	v.add_child(box)
 	return MatchStory.told_facts(st)
+
+
+## Our calls (row 144): each call beside what it added to the margin or took
+## off it, then theirs and the players and the bounce, adding up to the final
+## margin on the last row. Read from MatchStory.calls; nothing when the result
+## carries no impact ledger (a match saved before it was kept).
+func _ft_calls(box: VBoxContainer, me: int) -> void:
+	var c := MatchStory.calls(_res, me)
+	if c.is_empty():
+		return
+	box.add_child(UiKit.section("Our calls"))
+	var note := UiKit.lbl("What each call added to our margin, in points.", UiKit.SMALL, UiKit.MUTED)
+	note.name = "CallsStoryNote"
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(note)
+	var grid := GridContainer.new()
+	grid.name = "CallsStory"
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 16)
+	grid.add_theme_constant_override("v_separation", 4)
+	for r in c["rows"]:
+		var pts := int(r["pts"])
+		var nm := UiKit.lbl(str(r["name"]), UiKit.BODY, UiKit.TEXT if str(r["kind"]) == "call" else UiKit.MUTED)
+		nm.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		grid.add_child(nm)
+		var fig := UiKit.line("%+d" % pts, UiKit.BODY, UiKit.GOOD if pts > 0 else UiKit.BAD, true)
+		fig.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		grid.add_child(fig)
+	var m := int(c["margin"])
+	var total := UiKit.lbl("Final margin", UiKit.BODY, UiKit.TEXT, true)
+	total.name = "CallsStoryMargin"
+	grid.add_child(total)
+	var mf := UiKit.line("%+d" % m if m != 0 else "0", UiKit.BODY, UiKit.margin_colour(m > 0) if m != 0 else UiKit.TEXT, true)
+	mf.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	grid.add_child(mf)
+	box.add_child(grid)
 
 
 ## The Summary tab: the result, what it means, how it went, the best

@@ -246,28 +246,45 @@ static func reasons(res: Dictionary, side: int) -> Array:
 	return out.slice(0, MAX_REASONS)
 
 
+## What the "What your calls did" line's slot is in the impact ledger.
+## Players to go through have no ledger cause of their own.
+const CALL_SLOT_CAUSE := {"gameplan": "gameplan", "tag_id": "tag"}
+
+
 ## What your calls did, for the quarter that went most the result's way:
-## the first "What your calls did" line for it (MatchNotes.calls_lines), with
-## that quarter's score to each side. {} when no call was on record.
+## a "What your calls did" line for it (MatchNotes.calls_lines), with that
+## quarter's score to each side. Only a call whose ledger figure, as its own
+## row on "Our calls" shows it, went the result's way is cited, so a win is never put
+## down to a call the same screen says cost us (director, 2026-11-12); failing
+## that, the next quarter's call, else {}.
 static func call_reason(res: Dictionary, side: int, dir: int) -> Dictionary:
 	var qg: Array = res.get("q_goals", [])
 	var qb: Array = res.get("q_behinds", [])
-	var best_q := 0
-	var best_m := 0
+	# The points each call shows on Our calls; a call folded into "Our other
+	# calls" has no figure of its own there, so it is not cited either.
+	var shown := {}
+	for r in calls(res, side).get("rows", []):
+		if str(r["kind"]) == "call":
+			shown[str(r["cause"])] = int(r["pts"])
+	var qs := []
 	for i in range(mini(qg.size(), 4)):
 		var m := ((int(qg[i][side]) * 6 + int(qb[i][side])) - (int(qg[i][1 - side]) * 6 + int(qb[i][1 - side]))) * dir
-		if m > best_m and not MatchNotes.calls_lines(res, side, i + 1).is_empty():
-			best_m = m
-			best_q = i + 1
-	if best_q == 0:
-		return {}
-	var line := str(MatchNotes.calls_lines(res, side, best_q)[0])
-	var i := best_q - 1
-	var a := int(qg[i][side]) * 6 + int(qb[i][side])
-	var b := int(qg[i][1 - side]) * 6 + int(qb[i][1 - side])
-	return {"stat": "q%d_points" % best_q, "mine": a, "theirs": b, "quarter": best_q, "call": line,
-			"text": "Your call in the %s quarter (%s to %d): %s" % [MatchNotes.QUARTER_NAMES[i],
-			("won it %d" if a > b else "lost it %d") % a, b, line]}
+		if m > 0:
+			qs.append([m, i])
+	qs.sort_custom(func(x, y): return int(x[0]) > int(y[0]) or (int(x[0]) == int(y[0]) and int(x[1]) < int(y[1])))
+	for pair in qs:
+		var i := int(pair[1])
+		for e in MatchNotes._calls_entries(res, side, i + 1):
+			var cause := str(CALL_SLOT_CAUSE.get(str(e["key"]), ""))
+			if cause == "" or int(shown.get(cause, 0)) * dir <= 0:
+				continue
+			var line := str(e["line"])
+			var a := int(qg[i][side]) * 6 + int(qb[i][side])
+			var b := int(qg[i][1 - side]) * 6 + int(qb[i][1 - side])
+			return {"stat": "q%d_points" % (i + 1), "mine": a, "theirs": b, "quarter": i + 1, "call": line,
+					"cause": cause, "text": "Your call in the %s quarter (%s to %d): %s" % [MatchNotes.QUARTER_NAMES[i],
+					("won it %d" if a > b else "lost it %d") % a, b, line]}
+	return {}
 
 
 ## "Smith stars as Geelong beat Sydney by 23".
@@ -299,6 +316,11 @@ static func record(res: Dictionary, side: int, year: int) -> Dictionary:
 	var mine := {}
 	if int(st["margin"]) < 0:
 		mine = my_best(res, side)
+	var rows := coach_rows(res, side)
+	var all_names := call_names(res, side)
+	var names := {}
+	for cause in rows["mine"]:
+		names[cause] = all_names[cause]
 	return {"year": year, "label": str(res.get("label", "")), "round": int(res.get("round", 0)),
 			"club": codes[side], "opp": codes[1 - side], "margin": int(st["margin"]),
 			"hero_id": str(hero.get("id", "")), "hero_name": str(hero.get("name", "")),
@@ -310,7 +332,10 @@ static func record(res: Dictionary, side: int, year: int) -> Dictionary:
 			"my_best_line": str(mine.get("line", "")),
 			# The match turned on a comeback (ComebackTelling): yours in a win, against you in a loss.
 			"comeback": not ComebackTelling.turn_facts(res, side).is_empty(),
-			"final": str(res.get("tag", "")) != ""}
+			"final": str(res.get("tag", "")) != "",
+			# The impact ledger's coach rows (row 144, director 2026-11-10: "Yes, keep
+			# them") and the name of each of our calls: calls_from() retells them.
+			"coach_rows": rows, "call_names": names}
 
 
 ## Your side's hero of a record: the hero when he is yours, else your best
@@ -408,3 +433,162 @@ static func season_hero(d: Dictionary, tiebreak := {}) -> Dictionary:
 				and int(tiebreak.get(str(id), 0)) > int(tiebreak.get(str(best["id"]), 0))):
 			best = {"id": str(id), "name": str(heroes[id]["name"]), "count": n}
 	return best
+
+
+## Our calls at full time (row 144; design bible principle 3: the game shows
+## what each decision led to). Read from the result's impact ledger
+## (MatchSim.impact): the coach's rows are MatchSim.DECISION_CAUSES, the
+## points each call added to its side's margin, worked out from where the
+## ball went. Our biggest calls each get a row, the rest of ours one row,
+## theirs one row, and the players and the bounce what is left, so the rows
+## add up to the margin exactly.
+const MAX_CALL_ROWS := 3
+
+
+## The ledger's coach rows from `side`'s point of view: {"mine": {cause: pts},
+## "theirs": {cause: pts}}, each side's own credit, calls not made left out.
+## What the save keeps per match (MatchStory.record "coach_rows").
+static func coach_rows(res: Dictionary, side: int) -> Dictionary:
+	var imp: Array = res.get("impact", [])
+	var out := {"mine": {}, "theirs": {}}
+	if imp.size() < 2:
+		return out
+	for cause in MatchSim.DECISION_CAUSES:
+		for k in [["mine", side], ["theirs", 1 - side]]:
+			var pts := snappedf(float((imp[k[1]] as Dictionary).get(cause, 0.0)), 0.01)
+			if pts != 0.0:
+				out[k[0]][cause] = pts
+	return out
+
+
+## Who or what each of our calls was, for its row: {cause: "Our tag on Smith"}.
+## The game plan and the pep talk from the plans we ran each quarter
+## (tactics_history); the loose man, the defensive forward and the tag from
+## who earned the ledger's credit (MatchSim.impact_by), so a man sent loose by
+## the assistant or tagged from a moment card is the one named.
+static func call_names(res: Dictionary, side: int) -> Dictionary:
+	var plans := []
+	var peps := []
+	for h in res.get("tactics_history", []):
+		var p: Dictionary = ((h as Dictionary).get("plans", [{}, {}]) as Array)[side]
+		for pair in [[plans, MatchSim.plan_key(str(p.get("gameplan", "balanced")))], [peps, str(p.get("pep", "steady"))]]:
+			if str(pair[1]) != "" and not (pair[0] as Array).has(pair[1]):
+				(pair[0] as Array).append(pair[1])
+	var by: Array = res.get("impact_by", [])
+	var mine: Dictionary = by[side] if by.size() == 2 and by[side] is Dictionary else {}
+	var out := {
+		"gameplan": ("Our %s game plan" % CoachReport.plan_label(str(plans[0]))) if plans.size() == 1 else "Our game plans",
+		"tag": "Our tag",
+		"loose": "Our loose man",
+		"minder": "Our defensive forward",
+		"pep": "Our pep talks",
+		"bursts": "Our calls in play",
+		"moments": "Our calls at the moments",
+	}
+	var men := _earners(res, mine.get("tag", {}))
+	if not men.is_empty():
+		out["tag"] = ("Our tag on %s" if men.size() == 1 else "Our tags on %s") % _men_line(men)
+	men = _earners(res, mine.get("loose", {}))
+	if not men.is_empty():
+		out["loose"] = ("%s as our loose man" if men.size() == 1 else "%s as our loose men") % _men_line(men)
+	men = _earners(res, mine.get("minder", {}))
+	if not men.is_empty():
+		out["minder"] = ("%s as our defensive forward" if men.size() == 1
+				else "%s as our defensive forwards") % _men_line(men)
+	peps.erase("steady")
+	if peps.size() == 1:
+		out["pep"] = "Our pep talk, %s" % CoachReport.pep_label(str(peps[0]))
+	return out
+
+
+## The men who earned a named call's credit ({id: points}), biggest share
+## first, by name; a man worth under half a point is left out unless he is
+## the only one. [] with nobody on record.
+static func _earners(res: Dictionary, credit) -> Array:
+	if not credit is Dictionary or (credit as Dictionary).is_empty():
+		return []
+	var ids: Array = (credit as Dictionary).keys()
+	ids.sort_custom(func(a, b): return absf(float(credit[a])) > absf(float(credit[b])))
+	# Name only men whose points went the same way as the row's total, so a
+	# man who cost us is never named on a row that shows a gain.
+	var total := 0.0
+	for id in ids:
+		total += float(credit[id])
+	var same := ids.filter(func(id): return float(credit[id]) * total >= 0.0)
+	if same.is_empty():
+		same = ids
+	var out := []
+	for id in same:
+		if out.is_empty() or absf(float(credit[id])) >= 0.5:
+			out.append(_name_in(res, str(id)))
+	return out
+
+
+## "Smith", "Smith and Jones", or "Smith and others".
+static func _men_line(names: Array) -> String:
+	if names.size() == 1:
+		return str(names[0])
+	if names.size() == 2:
+		return "%s and %s" % [names[0], names[1]]
+	return "%s and others" % names[0]
+
+
+## A player's name from the result's team sheet, else the database.
+static func _name_in(res: Dictionary, id: String) -> String:
+	for side_list in res.get("roster", []):
+		for r in side_list:
+			if r is Dictionary and str(r.get("id", "")) == id:
+				return str(r.get("name", ""))
+	return GameDB.player_display_name_by_id(id, "him")
+
+
+## The calls rows for full time: {rows: [{kind, cause, name, pts, text}], margin}.
+## kind is "call" (one of ours), "other" (the rest of ours), "theirs" or
+## "rest" (the players and the bounce). pts are whole points; a row worth 0 is
+## left out. The rows' pts add up to `margin`. {} with no call on record.
+static func calls(res: Dictionary, side: int) -> Dictionary:
+	var score: Array = res.get("score", [])
+	if score.size() < 2:
+		return {}
+	return calls_from(coach_rows(res, side), call_names(res, side), int(score[side]) - int(score[1 - side]))
+
+
+## The same from a kept record's rows (MatchStory.record), so a match from
+## the save tells its calls the same way.
+static func calls_from(rows: Dictionary, names: Dictionary, margin: int) -> Dictionary:
+	var mine: Dictionary = rows.get("mine", {})
+	var theirs: Dictionary = rows.get("theirs", {})
+	if mine.is_empty() and theirs.is_empty():
+		return {}
+	var order := mine.keys()
+	order.sort_custom(func(a, b): return absf(float(mine[a])) > absf(float(mine[b])))
+	var out := []
+	var told := 0
+	var other := 0.0
+	for cause in order:
+		var whole := roundi(float(mine[cause]))
+		if out.size() < MAX_CALL_ROWS and whole != 0:
+			out.append(_call_row("call", str(cause), str(names.get(cause, "Our " + str(CoachReport.IMPACT_LABELS.get(cause, cause)))), whole))
+			told += whole
+		else:
+			other += float(mine[cause])
+	var o := roundi(other)
+	if o != 0:
+		out.append(_call_row("other", "", "Our other calls", o))
+		told += o
+	var t := 0.0
+	for cause in theirs:
+		t -= float(theirs[cause])
+	var tw := roundi(t)
+	if tw != 0:
+		out.append(_call_row("theirs", "", "Their calls", tw))
+		told += tw
+	if margin - told != 0:
+		out.append(_call_row("rest", "", "The players and the bounce", margin - told))
+	return {"rows": out, "margin": margin}
+
+
+static func _call_row(kind: String, cause: String, name: String, pts: int) -> Dictionary:
+	var n := absi(pts)
+	var worth := ("%d point%s our way" if pts > 0 else "cost us %d point%s") % [n, "" if n == 1 else "s"]
+	return {"kind": kind, "cause": cause, "name": name, "pts": pts, "text": "%s: %s." % [name, worth]}

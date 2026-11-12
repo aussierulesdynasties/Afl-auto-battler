@@ -163,6 +163,12 @@ var _played := [{}, {}]      # side -> id -> true: everyone who took the field
 ## full-time summary, director 2026-10-11); "legs", "traits" and "form" are
 ## the players and the bounce of the ball, with whatever no line measures.
 var impact := [{}, {}]
+## Who earned each named-man call's credit (row 144): side -> {cause: {player
+## id: points}} for NAMED_CAUSES, so full time names the man who was actually
+## loose, minding or tagged when the points were earned, not the man the plan
+## first named. Bookkeeping only, like `impact`.
+var impact_by := [{}, {}]
+const NAMED_CAUSES := ["loose", "minder", "tag"]
 const DECISION_CAUSES := ["moments", "gameplan", "loose", "tag", "pep", "bursts", "minder"]
 ## The forward the loose man was on before he was sent loose: def side ->
 ## {"id": loose man, "fwd": forward id}. Without the call he would be on him.
@@ -1687,8 +1693,8 @@ func contest_winner(use_fp: bool, fp: float) -> int:
 	var drag1: float = tags1[0] + tags1[1]
 	# A side's tag: what it takes out of their midfield, less what its tagger
 	# gives up of his own game.
-	_credit(0, "tag", (float(tags1[0]) - float(tags0[1])) / float(T["contest_swing"]) * POSSESSION_VALUE)
-	_credit(1, "tag", (float(tags0[0]) - float(tags1[1])) / float(T["contest_swing"]) * POSSESSION_VALUE)
+	_credit(0, "tag", (float(tags1[0]) - float(tags0[1])) / float(T["contest_swing"]) * POSSESSION_VALUE, _tag_id(0))
+	_credit(1, "tag", (float(tags0[0]) - float(tags1[1])) / float(T["contest_swing"]) * POSSESSION_VALUE, _tag_id(1))
 	var c0: float = squads[0].contest * _mid_fit(0) - drag0
 	var c1: float = squads[1].contest * _mid_fit(1) - drag1
 	var legs_edge: float = ((c0 + drag0 - c1 - drag1) - (squads[0].contest - squads[1].contest)) / float(T["contest_swing"])
@@ -2090,9 +2096,10 @@ func _credit_general_loose(side: int, target: Dictionary, defender: Dictionary, 
 	var spoil_p := _general_spoil_chance(target, defender)
 	var denied := (mark0 - mark_r) + (1.0 - mark_r) * (1.0 - spoil_p) * _roam_spoil_p(roamer)
 	var p_r := _roam_chance(opp)
-	_credit(opp, "loose", p_r * denied * TURNOVER_VALUE)
-	if not _spare_minder(side).is_empty():
-		_credit(side, "minder", (_roam_chance(opp, false) - p_r) * denied * TURNOVER_VALUE)
+	_credit(opp, "loose", p_r * denied * TURNOVER_VALUE, str(roamer.get("id", "")))
+	var minder := _spare_minder(side)
+	if not minder.is_empty():
+		_credit(side, "minder", (_roam_chance(opp, false) - p_r) * denied * TURNOVER_VALUE, str(minder.get("id", "")))
 
 
 ## A general-play aerial contest (_general_aerial): the loose man reads it
@@ -2129,7 +2136,7 @@ func _credit_aerial_loose(def_side: int, fp: float, receiver: Dictionary) -> voi
 		e += w * ours
 		el += wl * ours
 	if found and w_sum > 0.0 and wl_sum > 0.0:
-		_credit(def_side, "loose", (el / wl_sum - e / w_sum) * POSSESSION_VALUE)
+		_credit(def_side, "loose", (el / wl_sum - e / w_sum) * POSSESSION_VALUE, loose)
 
 
 ## An inside-50 entry, before it is played: what the defending coach's loose
@@ -2153,7 +2160,7 @@ func _credit_entry(side: int, shooter: Dictionary, feeder, defender, line_def, m
 			bare = _entry_ev(side, shooter, feeder, roamer, roamer, roamer, 0.0, 0.0)
 		else:
 			bare = _entry_ev(side, shooter, feeder, defender, matched, roamer, 0.0, 0.0)
-		_credit(opp, "loose", bare - actual)
+		_credit(opp, "loose", bare - actual, str(roamer.get("id", "")))
 	var minder := _spare_minder(side)
 	if not minder.is_empty():
 		# The defensive forward: the entry as played against the same entry
@@ -2180,7 +2187,7 @@ func _credit_entry(side: int, shooter: Dictionary, feeder, defender, line_def, m
 			var his := _entry_ev(side, minder, feeder, m_def if not m_def.is_empty() else line_def, m_def, roamer,
 					_roam_chance(opp, false) if m_roams else 0.0, _roam_go_chance(opp, false) if m_roams else 0.0)
 			worth -= minder_dp * (his - their_ev)
-		_credit(side, "minder", worth)
+		_credit(side, "minder", worth, mid)
 
 
 ## How much more often the defensive forward would be the target of an entry
@@ -2359,11 +2366,14 @@ func _credit_contest(side: int, stoppage: bool) -> void:
 			+ pep_base * (_gt(side, "pep") - 1.0)) * POSSESSION_VALUE)
 
 
-func _credit(side: int, cause: String, pts: float) -> void:
+func _credit(side: int, cause: String, pts: float, who := "") -> void:
 	if pts == 0.0:
 		return
 	var d: Dictionary = impact[side]
 	d[cause] = float(d.get(cause, 0.0)) + pts
+	if who != "":
+		var by: Dictionary = (impact_by[side] as Dictionary).get_or_add(cause, {})
+		by[who] = float(by.get(who, 0.0)) + pts
 
 
 ## Pressure by zone. Where the ball is, from the carrier's end: his back
@@ -4896,6 +4906,7 @@ func result() -> Dictionary:
 		"quarter_teams": quarter_teams.duplicate(true),
 		"extra_time": extra_time_played,
 		"impact": impact.duplicate(true),
+		"impact_by": impact_by.duplicate(true),
 		"moments": moments.duplicate(true),
 		"interchanges": interchanges.duplicate(),
 		"duels": duel_log.duplicate(true),
