@@ -122,8 +122,13 @@ static func career_over(gs) -> bool:
 	return gs.is_sacked() and offers(gs).is_empty()
 
 
-## He takes the job at `code`, one of his offers. The move waits for the
-## rollover like any other; the reprieve is spent.
+## He takes the job at `code`, one of his offers, and moves now (apply_move, as
+## accept_letter does): the off-season was held while he chose (GameState.
+## open_offseason) and opens at the new club, so its staff, contracts, trades
+## and draft are his and the club that sacked him gets no more calls from him
+## (row 179, director 2026-11-12). A club yet to play has no list to run: he
+## takes over at its first National Draft and has this off-season where he was.
+## The reprieve is spent.
 static func take_job(gs, code: String) -> bool:
 	var st := ClubArcs._st(gs)
 	var pick := {}
@@ -143,6 +148,13 @@ static func take_job(gs, code: String) -> bool:
 	gs.board["verdict"] = "Sacked. You have taken the senior job at %s." % GameDB.club_name(code)
 	gs.add_news(ClubArcs.NEWS_KIND, "Sacked by %s, you have taken the senior job at %s for %d." % [
 			GameDB.club_name(from), GameDB.club_name(code), year + 1])
+	if is_joining(gs, code):
+		gs.open_offseason(true)
+		return true
+	apply_move(gs)
+	if gs.season != null:
+		gs.my_list = gs.season.lists.get(str(gs.my_club), [])
+	gs.open_offseason()
 	return true
 
 
