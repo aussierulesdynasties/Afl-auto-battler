@@ -9,12 +9,14 @@ extends SceneTree
 ## pressed and moved by real mouse events (the name preview under the pointer).
 ## --strategy KEY: that auto-pick applied, scrolled to its note (BuilderHint).
 ## --list: the first-visit card already seen, so the players not picked show.
-## --club CODE. (The phone's week is the match preview now:
+## --club CODE. --window WxH: the W x H canvas drawn into a window this big
+## (960x540 at 1920x1080, as a PC at 200%). (The phone's week is the match preview now:
 ## tools/visual/capture_match_preview.gd.)
 ## Writes <out>_sheet.png.
 
 var W := 1280
 var H := 720
+var WIN := Vector2i.ZERO
 
 
 func _initialize() -> void:
@@ -41,6 +43,9 @@ func _run() -> void:
 			var wh := str(a[i + 1]).split("x")
 			W = int(wh[0])
 			H = int(wh[1])
+		if str(a[i]) == "--window" and i + 1 < a.size():
+			var ww := str(a[i + 1]).split("x")
+			WIN = Vector2i(int(ww[0]), int(ww[1]))
 		if str(a[i]) == "--club" and i + 1 < a.size():
 			club = str(a[i + 1])
 		if str(a[i]) == "--page" and i + 1 < a.size():
@@ -70,11 +75,13 @@ func _run() -> void:
 	state.reset()
 	# The window is sized so the UI has exactly W x H units, whatever this
 	# screen's DPI scale is (ScreenLayout divides the window by it).
-	root.size = Vector2i(W, H)
-	DisplayServer.window_set_size(Vector2i(W, H))
-	# One unit is one pixel, as on a phone's reference size (not this PC's DPI).
+	var px := WIN if WIN != Vector2i.ZERO else Vector2i(W, H)
+	root.size = px
+	DisplayServer.window_set_size(px)
+	# One unit is one pixel, as on a phone's reference size (not this PC's DPI);
+	# with --window, one unit is window/canvas pixels.
 	var sl = root.get_node("ScreenLayout")
-	sl.ui_scale = 1.0 / maxf(0.01, sl.desktop_density(Vector2(W, H), DisplayServer.screen_get_scale(),
+	sl.ui_scale = (float(px.x) / float(W)) / maxf(0.01, sl.desktop_density(Vector2(px), DisplayServer.screen_get_scale(),
 			DisplayServer.screen_get_dpi() if OS.get_name() == "Windows" else 0))
 	sl._update_scale()
 	for i in range(6):

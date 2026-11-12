@@ -382,6 +382,7 @@ func _offseason_trace() -> Dictionary:
 	out["coaches"] = hash(JSON.stringify(GameState.coaches, "", true))
 	out["season_team"] = hash(JSON.stringify(GameState.season_team, "", true))
 	out["form_log"] = hash(JSON.stringify(GameState.form_log, "", true))
+	out["reserves_log"] = hash(JSON.stringify(GameState.reserves_log, "", true))
 	out["fixture"] = hash(str(GameState.season.fixture))
 	out["offseason_log"] = str(GameState.offseason_log)
 	var rounds := []

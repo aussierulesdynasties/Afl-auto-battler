@@ -107,6 +107,15 @@ static func open(host: Control, p: Dictionary, on_close: Callable = Callable(),
 		readiness.name = "ProfileReadiness"
 		readiness.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(readiness)
+	# His form this season, senior and in the twos (ReservesForm): the numbers
+	# behind a form mark on Team selection. Your own players only.
+	var form_lines := ReservesForm.profile_lines(GameState.form_log, GameState.reserves_log, str(p.get("id", ""))) \
+			if not rival else PackedStringArray()
+	if not form_lines.is_empty():
+		var fl := UiKit.lbl("Match ratings. " + " ".join(form_lines), UiKit.SMALL, UiKit.TEXT)
+		fl.name = "ProfileForm"
+		fl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(fl)
 	# His chemistry as a bar (row 125): any club's man, a fact.
 	if TeamFamiliarity.line(p) != "":
 		var fam := UiKit.vbox(2)
