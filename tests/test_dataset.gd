@@ -11,13 +11,24 @@ var checks := 0
 const SUITE_SEED := 1990
 
 ## md5 of the 2026 load, of a seeded real-lists opening, and of a seeded
-## three-round redraft season, as main produced them before P1.
-const GOLDEN_LOAD := "94876aac547014895ed75f971a92817c"
-const GOLDEN_REAL := "7576cb577da70d80f6222786c2710b94"
+## three-round redraft season, as main produced them before P1. The load and
+## real-lists prints moved with the 2026-11-12 real-list data (list types,
+## departures, signings of delisted players and the list each joined); the
+## season print did not. The real-lists print moved again that day with the
+## 44 rule (RookieList.add_block): West Coast, at 43 of the 44, lists one of
+## its three tied prospects and passes its picks, so the opening draft differs.
+const GOLDEN_LOAD := "9baf6f36b146d2bfafd65e07b3235c55"
+const GOLDEN_REAL := "6b9d20ef93eea2ce95f0a6d936f19727"
 ## A played match's floating point differs between Windows and Linux builds of
 ## Godot, so the season has one fingerprint per platform; each was taken on
-## main before the change (Linux: run_on_github run 43024085570).
-const GOLDEN_SEASON := {"Windows": "b039d703c0783968328f937754c75eee", "Linux": "780ff5a200eee3f3481e3ea11111cc31"}
+## main before the change (Linux: run_on_github run 43024085570). The own
+## plan (CustomPlan) redrew the season: Linux from Tests run 43083470206; the
+## Windows print still predates it and is refreshed on the next local run.
+## Result keys added after the golden was taken that record who earned a
+## call's credit, not what happened (row 144). "impact" and "plan_traits" were
+## already in main's results, so they stay in the hash.
+const BOOKKEEPING_KEYS := ["impact_by"]
+const GOLDEN_SEASON := {"Windows": "05a96ea659dcfe349e9afec75b01b45a", "Linux": "9c00f9caf199debd6cc6a20325ba8cba"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and
@@ -156,7 +167,20 @@ func _season_print() -> String:
 	out.append("%d|%d" % [GameState.season_year, GameState.season.round_index])
 	for row in GameState.season.ladder_sorted():
 		out.append(JSON.stringify(row, "", true))
-	out.append(JSON.stringify(GameState.season.results, "", true))
+	# Who earned each call's credit is bookkeeping, not play: leave it out so
+	# the hash still proves the season plays the same. Results are one array
+	# of match results per round.
+	var played: Array = []
+	for rnd in GameState.season.results:
+		var games: Array = []
+		for r in rnd:
+			var c = r.duplicate(true) if r is Dictionary else r
+			if c is Dictionary:
+				for k in BOOKKEEPING_KEYS:
+					(c as Dictionary).erase(k)
+			games.append(c)
+		played.append(games)
+	out.append(JSON.stringify(played, "", true))
 	return "\n".join(out)
 
 

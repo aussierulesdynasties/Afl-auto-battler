@@ -42,16 +42,8 @@ func _ready() -> void:
 			var places := UiKit.scroll_places(_root)
 			_build()
 			UiKit.restore_places(_root, places))
-	if not GameState.player_names_changed.is_connected(_on_names):
-		GameState.player_names_changed.connect(_on_names)
 	_build()
 	FirstVisitIntro.show_if_due.call_deferred(self, "list")
-
-
-func _on_names() -> void:
-	if is_inside_tree():
-		_squad = GameState.my_squad()
-		_build()
 
 
 func _narrow() -> bool:
@@ -251,7 +243,8 @@ func _full_list_panel() -> Control:
 
 	# Two lists (row 88): the senior list, then the rookie list, each with its spots.
 	var seniors := RookieList.seniors(GameState.my_list)
-	var rookies := RookieList.rookies(GameState.my_list)
+	var rookies := RookieList.rookies(GameState.my_list).filter(func(q): return not RookieList.is_cat_b(q))
+	var cat_b := RookieList.rookies(GameState.my_list).filter(func(q): return RookieList.is_cat_b(q))
 	var sh := UiKit.lbl("Senior list  %d / %d" % [seniors.size(), RookieList.SENIOR_SPOTS], UiKit.BODY, UiKit.EMPH, true)
 	sh.name = "SeniorListHead"
 	lbox.add_child(sh)
@@ -267,6 +260,26 @@ func _full_list_panel() -> Control:
 		lbox.add_child(none)
 	else:
 		_role_groups(lbox, rookies, true)
+	# Category B rookies have their own two spots, outside the 44 (real lists).
+	if not cat_b.is_empty():
+		lbox.add_child(UiKit.spacer(8))
+		# A club that started with more than two, as its real 2026 list had
+		# (GWS: three), shows the count alone and says why: "3 / 2" is no rule.
+		var over_b: bool = cat_b.size() > RookieList.CAT_B_SPOTS
+		var bh := UiKit.lbl("Category B rookies  %d" % cat_b.size() if over_b
+				else "Category B rookies  %d / %d" % [cat_b.size(), RookieList.CAT_B_SPOTS], UiKit.BODY, UiKit.EMPH, true)
+		bh.name = "CatBListHead"
+		lbox.add_child(bh)
+		var why_words := "Their own spots: they take no rookie list spot and don't count in the 44."
+		if over_b:
+			why_words = "The club's real 2026 list had %d; a club usually has %d spots for them. They take no rookie list spot and don't count in the 44." % [
+					cat_b.size(), RookieList.CAT_B_SPOTS]
+		var why := UiKit.lbl(why_words,
+				UiKit.SMALL, UiKit.MUTED)
+		why.name = "CatBListWhy"
+		why.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		lbox.add_child(why)
+		_role_groups(lbox, cat_b, true)
 	return right
 
 

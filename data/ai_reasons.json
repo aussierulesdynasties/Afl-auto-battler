@@ -30,6 +30,7 @@
 		"fa_first": "{player} chose {club}: their offer was the same as yours and came first.",
 		"fa_your_cap": "{player} chose {club}: you no longer had the cap room for your offer.",
 		"fa_your_list": "{player} chose {club}: your senior list was full.",
+		"fa_your_44": "{player} chose {club}: your list was at its limit (the senior list and Category A rookies together).",
 		"draft_must_ruck": "{club} passed on {player}: they had to take a ruck, and every list needs two.",
 		"draft_cap": "{club} passed on {player}: they couldn't fit his price under their cap.",
 		"draft_ruck_full": "{club} passed on {player}: they already have three rucks.",

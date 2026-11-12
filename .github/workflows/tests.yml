@@ -222,7 +222,7 @@ jobs:
   # Static lints (tools/lint/README.md), no Godot: about a minute, beside plan and the preflight.
   # The shards and the extras job need it, so a broken source rule fails the run before any
   # suite starts instead of when its shard reaches the suite that used to check it. Pull
-  # requests run gdlint on their changed .gd files; pushes to main run it on every file.
+  # requests and pushes to main both run gdlint on every file, so a PR sees what main will.
   lint:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -245,13 +245,10 @@ jobs:
 
       - name: Static lints
         if: success() || failure()
-        run: |
-          # A merge-queue group lints every file, like a push to main.
-          if [ "${{ github.event_name }}" = pull_request ]; then
-            python3 -I tools/lint/lint.py --require-gdlint --changed HEAD^1
-          else
-            python3 -I tools/lint/lint.py --require-gdlint
-          fi
+        # Every event lints every file the same way (about 30 s): a PR that linted only its own
+        # files passed while the merged tree failed on main, and every open PR went red with it
+        # (2026-11-11: 12 main pushes red in lint for 1.6 h).
+        run: python3 -I tools/lint/lint.py --require-gdlint
 
       # The pure-Python checks that ran inside the Godot extras job until 2026-11-12.
       - name: Dataset check
@@ -313,7 +310,7 @@ jobs:
     needs: [plan, lint, preflight]
     if: always() && needs.plan.result == 'success' && needs.lint.result == 'success' && needs.plan.outputs.code == 'true' && (needs.preflight.result == 'success' || needs.preflight.result == 'skipped')
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 40   # a shard plans ~240 s; 40 still covers a 900 s suite timeout run twice
     strategy:
       # PRs release runner slots promptly; main/manual diagnostics collect all failures.
       fail-fast: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' }}
@@ -344,17 +341,27 @@ jobs:
         env:
           SUITES: ${{ matrix.suites }}
           STOP_ON_FAILURE: ${{ (github.event_name == 'pull_request' || github.event_name == 'merge_group') && '1' || '0' }}
-        # Flaky rule (director 2026-11-04): a failed shard re-runs once; a pass on
-        # the retry is green but flagged FLAKY in the log and summary. A shard over
-        # 10 minutes only warns (move its slow suite to tools/ci_long_suites.txt).
+        # Flaky rule (#894, 2026-11-04): a failed shard retries once, and a pass on the retry is
+        # green but flagged FLAKY. The retry runs only the suites that did not pass, and only
+        # when none failed a check outright: the suites are seeded (tools/check_suite_seeds.sh),
+        # so "N checks, F failures" fails the same way twice, while a crash, a script error or a
+        # timeout may be the engine. A shard over 10 minutes only warns.
         run: |
           start=$(date +%s)
-          run() { SUITES_ONLY=1 GODOT="$HOME/godot/godot" LOG_DIR="$RUNNER_TEMP/test-logs" tools/run_tests.sh $SUITES; }
-          if ! run; then
-            echo "::warning::shard ${{ matrix.shard }} failed; retrying once"
-            run
-            echo "::warning::FLAKY: shard ${{ matrix.shard }} ($SUITES) passed only on retry"
-            echo "FLAKY: shard ${{ matrix.shard }} ($SUITES) passed only on retry" >> "$GITHUB_STEP_SUMMARY"
+          results="$RUNNER_TEMP/suite-results.tsv"
+          run() { : > "$results"; SUITE_RESULTS="$results" SUITES_ONLY=1 GODOT="$HOME/godot/godot" LOG_DIR="$RUNNER_TEMP/test-logs" tools/run_tests.sh "$@"; }
+          if ! run $SUITES; then
+            real=$(awk '$2 == "checks" {print $1}' "$results" | xargs)
+            if [ -n "$real" ]; then
+              echo "::error::shard ${{ matrix.shard }}: failed checks in $real (seeded, so a retry would fail the same way; not retried)"
+              exit 1
+            fi
+            again=""
+            for s in $SUITES; do awk -v s="$s" '$1 == s && $2 == "pass" {f=1} END {exit !f}' "$results" || again="$again $s"; done
+            echo "::warning::shard ${{ matrix.shard }} failed (crash, script error or timeout); retrying once:$again"
+            run $again
+            echo "::warning::FLAKY: shard ${{ matrix.shard }} ($again) passed only on retry"
+            echo "FLAKY: shard ${{ matrix.shard }} ($again) passed only on retry" >> "$GITHUB_STEP_SUMMARY"
           fi
           took=$(( $(date +%s) - start ))
           if [ "$took" -gt 600 ]; then echo "::warning::shard ${{ matrix.shard }} took ${took}s (gate target 600s)"; fi
@@ -362,6 +369,7 @@ jobs:
       - name: Upload test logs
         if: failure()
         uses: actions/upload-artifact@v4
+        continue-on-error: true  # a GitHub storage outage must not fail tested code
         with:
           name: test-logs-shard-${{ matrix.shard }}
           path: ${{ runner.temp }}/test-logs
@@ -375,6 +383,7 @@ jobs:
           fi
 
       - uses: actions/upload-artifact@v4
+        continue-on-error: true  # a GitHub storage outage must not fail tested code
         if: always()
         with:
           name: suite-timings-${{ matrix.shard }}
@@ -422,6 +431,7 @@ jobs:
       - name: Upload test logs
         if: failure()
         uses: actions/upload-artifact@v4
+        continue-on-error: true  # a GitHub storage outage must not fail tested code
         with:
           name: test-logs-extras
           path: ${{ runner.temp }}/test-logs
@@ -458,6 +468,7 @@ jobs:
           echo "name=tested-tree-$tree" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@v4
+        continue-on-error: true  # a GitHub storage outage must not fail tested code
         if: steps.tree.outcome == 'success'
         with:
           name: ${{ steps.tree.outputs.name }}

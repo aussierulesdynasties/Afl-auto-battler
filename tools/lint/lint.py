@@ -37,6 +37,7 @@ RULES = {
     "green-decoration": screens.check_green_decoration,
     "boundaries": boundaries.check,
     "export-presets": boundaries.check_presets,
+    "no-import-sidecars": boundaries.check_no_import_sidecars,
     "story-flags": story_flags.check,
 }
 

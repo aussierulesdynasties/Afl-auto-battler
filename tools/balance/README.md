@@ -52,11 +52,11 @@ GODOT=<godot console exe> tools/balance.sh match 1000 --a "--weather perfect" --
   line carries each man's disposals and goals under `through`. A plain match makes no play-through call (rival clubs
   never pick one), so a change to how the calls play needs this flag in both arms to show anything. For main against
   a branch that adds the flag, copy `balance_body.gd` into the main checkout first, so both arms make the same calls.
-- **A game-plan trait** (`--plan-trait ID`, director 2026-11-10): side `i % 2` runs that trait (`PlanTraits.IDS`).
-  `--b "--plan-trait fortress"` against a plain A is what the trait does; the closing side_compare line gives the
-  carrying side's margin B-A with its se, its own lines and the other side's goals, intercept marks and clearances.
-  `--rival-traits` gives every side without `--plan-trait` the trait of the plan its side suits
-  (`PlanTraits.FOR_PLAN`), as rival clubs run in a career; put it in both arms to screen a trait among them.
+- **Your own plan** (`--custom-plan S,C`, director 2026-11-12): side `i % 2` plays its own plan of strength S
+  and cost C (`CustomPlan.STRENGTH_IDS`, `CustomPlan.COST_IDS`; a pair on the same lever is refused) all match.
+  `--a "--side-plan balanced" --b "--custom-plan sharp,slow"` is what that plan does against playing Balanced; the
+  closing side_compare line gives the carrying side's margin B-A with its se, its own lines and the other side's
+  goals, intercept marks and clearances.
 - **Main against the branch** (every A/B of a change): `--a-root <checkout of origin/main> --b ""` plays
   arm A from that other checkout and arm B from this one, on the same seeds. There are no feature switches:
   a change is in the game once merged, so the only A/B is main against the branch. Each worker log starts with

@@ -2025,14 +2025,18 @@ func _test_fact_talks() -> void:
 	else:
 		_check(str(f[-1]["out"]) == "waiting", "Left out and fit: still waiting (%s)" % str(f[-1]))
 	# Left out after an explanation: still waiting.
+	# A fit player with games this season, so there are numbers to go through
+	# (which of the list has played moves with the seeded matches).
 	var other: Dictionary = {}
 	for q in GameState.my_list:
-		if str(q["id"]) != vid and int(q.get("injury_weeks", 0)) <= 0:
+		if str(q["id"]) != vid and int(q.get("injury_weeks", 0)) <= 0 				and (other.is_empty() or GameState._kpi_text(q) != "" or GameState._kpi_text(other) == ""):
 			other = q
 	var oid := str(other["id"])
+	var other_kpi: String = GameState._kpi_text(other)
+	_check(other_kpi != "", "A fit player of yours has played this season (%s)" % GameDB.player_display_name(other))
 	GameState.week_event = _talk_card(other, "waiting", GameState.talk_info({})[oid])
 	GameState.resolve_week_event(0)
-	_check(str(GameState.week_event.get("outcome", "")).contains(GameState._kpi_text(other)),
+	_check(other_kpi != "" and str(GameState.week_event.get("outcome", "")).contains(other_kpi),
 			"Explaining it says his numbers (%s)" % str(GameState.week_event.get("outcome", "")))
 	var side: Dictionary = GameState.current_side()
 	for k in side:

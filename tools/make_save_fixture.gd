@@ -24,7 +24,6 @@ func _run() -> void:
 	gs.autosave_enabled = false
 	gs.save_path = "user://make_save_fixture_%d.save" % OS.get_process_id()
 	gs.settings_path = "user://make_save_fixture_%d.cfg" % OS.get_process_id()
-	gs.show_real_names = false
 	gs.replay_seed = SEED
 	gs.reset()
 	gs.career_seed = SEED

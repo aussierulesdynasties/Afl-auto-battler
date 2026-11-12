@@ -362,13 +362,29 @@ func _player_row(r: Dictionary, figure: String, ink: Color) -> Control:
 	var fig := UiKit.line(figure, UiKit.BODY, UiKit.TEXT, true)
 	fig.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	# A name column that ends where its figure starts, not a screen away - on a phone too.
-	UiKit.near_figure(who, fig, 150.0 if compact else (200.0 if UiKit.view_width(self) >= 760.0 else 170.0))
+	var name_w := 150.0 if compact else (200.0 if UiKit.view_width(self) >= 760.0 else 170.0)
+	UiKit.near_figure(who, fig, name_w)
+	# The name gives way, never the figure: in a PC's two columns the row is narrower
+	# than the name column, the figure and the Profile tap together, and the figure
+	# was drawn over "Profile". The name shortens to what the row has left.
+	who.custom_minimum_size.x = 0.0
+	b.resized.connect(func() -> void:
+		var room := b.size.x - NameLink.PROFILE_W - 8.0 - fig.get_combined_minimum_size().x
+		who.custom_minimum_size.x = clampf(room, 0.0, name_w))
 	h.add_child(who)
 	h.add_child(fig)
 	for n in [h, who, fig]:
 		(n as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(h)
-	NameLink.profile_tap(b, id)
+	var tap := NameLink.profile_tap(b, id)
+	if compact:
+		# A PC's row is 28 high: the tap keeps to it (a button's own 44 hung "Profile"
+		# below its row, over the next one).
+		tap.custom_minimum_size.y = 0.0
+		for state in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+			tap.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+		tap.set_anchors_and_offsets_preset(Control.PRESET_RIGHT_WIDE)
+		tap.offset_left = -NameLink.PROFILE_W
 	v.add_child(b)
 	if _open == id:
 		var st: Dictionary = r["st"]

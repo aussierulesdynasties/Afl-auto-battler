@@ -59,8 +59,6 @@ func _ready() -> void:
 		return
 	# Opening it ticks the job on the Hub's weekly checklist (when on).
 	WeekChecklist.mark(GameState, "training")
-	if not GameState.player_names_changed.is_connected(_on_names):
-		GameState.player_names_changed.connect(_on_names)
 	# Your club's colour behind the page, as on the hub and match day
 	# (director, 2026-10-10: every screen in the gameday style).
 	add_child(ClubBackdrop.new().setup(GameState.my_club))
@@ -148,11 +146,6 @@ func _show_intro() -> void:
 		_overlay.queue_free()
 		_overlay = null)
 	box["footer"].add_child(ok)
-
-
-func _on_names() -> void:
-	if is_inside_tree():
-		_build()
 
 
 func _build() -> void:
@@ -1133,8 +1126,6 @@ func _focus_trait_line(v: Control, p: Dictionary, stat: String) -> void:
 	var text := "%s at %d %s: %s." % [Traits.label(key), int(ft["min"]),
 			GameState.train_stat_label(stat).to_lower(),
 			"he is there" if gap == 0 else "%d to go" % gap]
-	if bool(ft["crowded"]):
-		text += " He carries %s traits already. This one shows once he clears its mark by more than he clears one of theirs." % MatchNotes.count_word(Traits.MAX_GOOD)
 	var l := UiKit.lbl(text, 13, UiKit.EMPH, true)
 	l.name = "StatFocusTrait"
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

@@ -13,7 +13,6 @@ func _run() -> void:
 	gs.autosave_enabled = false
 	gs.save_path = "user://test_team_familiarity_career.save"
 	gs.settings_path = "user://test_team_familiarity_settings.cfg"
-	gs.show_real_names = false
 	gs.delete_saved_career()
 	var suite = load("res://tests/test_team_familiarity.gd").new()
 	await suite.run(root)

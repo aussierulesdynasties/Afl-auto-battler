@@ -26,7 +26,7 @@ func run() -> void:
 	_t("_test_complete_small_draft")
 	_t("_test_real_money_cap")
 	_t("_test_real_pool")
-	_t("_test_player_name_modes")
+	_t("_test_real_player_names")
 	_t("_test_plausible_names")
 	_t("_test_no_double_names")
 	_t("_test_cap_guard")
@@ -244,15 +244,9 @@ func _test_real_pool() -> void:
 	_verify_log(draft)
 
 
-func _test_player_name_modes() -> void:
+func _test_real_player_names() -> void:
 	var p: Dictionary = GameDB.players[0]
-	var previous := GameState.show_real_names
 	var overall := int(p["overall"])
-	GameState.set_show_real_names(false)
-	_check(GameDB.player_display_name(p) == str(p["generic_name"]),
-			"Player labels default to fictional names")
-	_check(not GameDB.player_display_name(p).contains("plays like"),
-			"Fictional labels are the name itself")
 	_check(str(p["name"]) == str(p["generic_name"]),
 			"The loaded pool does not expose a real name as its default field")
 	var seen := {}
@@ -261,15 +255,12 @@ func _test_player_name_modes() -> void:
 		_check(_is_generated_name(label), "Season pool uses a generated name (%s)" % label)
 		_check(not seen.has(label), "Season aliases are unique (%s)" % label)
 		seen[label] = true
-		_check(GameDB.player_display_name(person) == label,
-				"Fictional mode shows the generated name")
-	GameState.set_show_real_names(true)
 	for person in GameDB.players:
 		var real := str(person.get("real_name", "")).strip_edges()
 		_check(GameDB.player_display_name(person) == real,
-				"Real-name mode shows only the AFL name (%s)" % real)
+				"A real player shows only his AFL name (%s)" % real)
 		_check(not GameDB.player_display_name(person).contains("plays like"),
-				"Real-name mode does not add a comparison")
+				"His name carries no comparison")
 	for person in GameDB.draftees:
 		var label := str(person.get("generic_name", ""))
 		_check(_is_generated_name(label), "Draft class uses a generated name (%s)" % label)
@@ -278,7 +269,7 @@ func _test_player_name_modes() -> void:
 		var real := str(person.get("real_name", "")).strip_edges()
 		if real != "":
 			_check(GameDB.player_display_name(person) == real,
-					"Real-name mode shows a prospect's AFL name on its own")
+					"A real prospect shows his AFL name on its own")
 	var dawson := {}
 	for person in GameDB.players:
 		if str(person.get("real_name", "")) == "Jordan Dawson":
@@ -286,13 +277,13 @@ func _test_player_name_modes() -> void:
 			break
 	_check(not dawson.is_empty(), "Jordan Dawson is in the loaded pool")
 	_check(GameDB.player_display_name(dawson) == "Jordan Dawson",
-			"Real-name mode writes Jordan Dawson, not a plays-like label")
+			"Jordan Dawson is written as Jordan Dawson, not a plays-like label")
 	_check(GameDB.player_display_name_by_id(str(dawson["id"])) == "Jordan Dawson",
 			"Pick/result lookups resolve the real name by stable player ID")
-	_check(int(p["overall"]) == overall, "Name mode never changes the player rating")
+	_check(int(p["overall"]) == overall, "Showing a name never changes the player rating")
 	var generated := {"generic_name": "Ari Bramble", "name": "Ari Bramble", "real_name": ""}
 	_check(GameDB.player_display_name(generated) == "Ari Bramble",
-			"Players with no real AFL name keep the generated name in real-name mode")
+			"Players with no real AFL name keep the name they were given")
 	# Past the shuffled pool, names are still generated — never Squadmate 001.
 	var saved_next: int = GameDB._alias_next
 	GameDB._alias_next = GameDB._alias_candidates.size()
@@ -308,7 +299,6 @@ func _test_player_name_modes() -> void:
 				"Overflow aliases do not collide (%s)" % label)
 		extra_seen[label] = true
 	GameDB._alias_next = saved_next
-	GameState.set_show_real_names(previous)
 
 
 ## ARD-M8-009: twenty generated classes read like Australian football

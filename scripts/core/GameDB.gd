@@ -145,6 +145,13 @@ var LIST_ADDITIONS_CSV := "res://data/list_additions_2026.csv"
 ## they are rated from that record through Ratings.derive_all, like any listed
 ## player, not as draft prospects.
 var LIST_ADDITION_STATS_CSV := "res://data/list_additions_stats.csv"
+## Which players who played a 2026 game were on a rookie list, not the senior
+## list (data/list_types_2026.csv, from DraftGuru's 2026 lists, club by club):
+## "rookie" (Category A) or "cat_b" (Category B). Everyone else in
+## players_2026.csv is a senior-listed player. Read into p["list_type"], the key
+## the list additions carry, so a real-lists career splits each club's list the
+## way the club really had it (RookieList.seed_lists).
+var LIST_TYPES_CSV := "res://data/list_types_2026.csv"
 ## Who left a list at the end of 2026, before the National Draft: the key
 ## "first|last|dob" (lower case) to the kind ("retired", "delisted",
 ## "rookie_delisted", "catb_delisted").
@@ -159,6 +166,9 @@ var DEPARTURES_CSV := "res://data/departures_2026.csv"
 var club_moves := {}
 var CLUB_MOVES_CSV := "res://data/club_moves_2026.csv"
 var late_draftees := []    # generated future classes registered at runtime
+## The launch lists at their peak, for "Plays like" (PlaysLike.build_pool): taken at
+## load, before a career ages anyone, so the comparison never moves.
+var plays_like_pool := []
 var appearance := {}       # "first|last|dob" -> {skin, hair, status, club}: curated looks
 var skin_mix: Array = Appearance.DEFAULT_SKIN_MIX
 var loaded := false
@@ -231,6 +241,7 @@ func reload(dataset := Datasets.DEFAULT) -> void:
 	_real_names = {}
 	_state_aliases = {}
 	players = _load_players()
+	_apply_list_types(players)
 	_load_appearance()
 	_apply_origin(players)
 	Ratings.derive_all(players)
@@ -263,6 +274,7 @@ func reload(dataset := Datasets.DEFAULT) -> void:
 	departures = _load_departures()
 	club_moves = _load_club_moves()
 	mark_unicorns(players + draftees)
+	plays_like_pool = PlaysLike.build_pool(players)
 	late_draftees = []
 	# Last, so every AFL list, rating and alias above is drawn as before.
 	_load_state_leagues()
@@ -298,6 +310,7 @@ func _use_dataset(id: String, row: Dictionary) -> void:
 	ORIGIN_CSV = str(row.get("origin", ""))
 	LIST_ADDITIONS_CSV = str(row.get("list_additions", ""))
 	LIST_ADDITION_STATS_CSV = str(row.get("list_addition_stats", ""))
+	LIST_TYPES_CSV = str(row.get("list_types", ""))
 	DEPARTURES_CSV = str(row.get("departures", ""))
 	CLUB_MOVES_CSV = str(row.get("club_moves", ""))
 	LADDER_PATH = str(row.get("ladder", ""))
@@ -473,21 +486,20 @@ func register_draftees(list: Array) -> void:
 		late_draftees.append(p)
 
 
-## Real names are the default, and fictional labels are opt-in. Real-name mode shows the AFL name on its
-## own ("Jordan Dawson") — never "Squadmate 001 · plays like Jordan Dawson".
-## Generated prospects have no real name, so they keep the fictional label.
+## A real player is always shown under his AFL name, on its own ("Jordan
+## Dawson"; director, 2026-11-12: "Real Names only"). A generated prospect has
+## no real name, so he keeps the name he was given.
 func player_display_name(player: Dictionary) -> String:
 	if player.is_empty():
 		return ""
 	var generic := str(player.get("generic_name", player.get("name", ""))).strip_edges()
-	if GameState.show_real_names:
-		var real := str(player.get("real_name", "")).strip_edges()
-		if real != "":
-			return real
-		# A generated son or brother of a real player carries his real surname.
-		var fam := str(player.get("family_real_last", "")).strip_edges()
-		if fam != "" and generic != "":
-			return "%s %s" % [generic.get_slice(" ", 0), fam]
+	var real := str(player.get("real_name", "")).strip_edges()
+	if real != "":
+		return real
+	# A generated son or brother of a real player carries his real surname.
+	var fam := str(player.get("family_real_last", "")).strip_edges()
+	if fam != "" and generic != "":
+		return "%s %s" % [generic.get_slice(" ", 0), fam]
 	if generic != "":
 		return generic
 	return "Player"
@@ -509,21 +521,20 @@ func player_display_name_by_id(id: String, fallback := "") -> String:
 ## "last": "" (the key exists, so a plain get() never falls back), which left
 ## their cards without a name. Empty last: the last word of the shown name.
 func card_surname(player: Dictionary) -> String:
-	# The real surname only while real names are shown (as player_surname).
 	var last := str(player.get("last", "")).strip_edges()
-	if last != "" and GameState.show_real_names:
+	if last != "":
 		return last
 	var full := player_display_name(player)
 	var parts := full.split(" ", false)
 	return parts[parts.size() - 1] if not parts.is_empty() else full
 
 
-## A surname for a caption or a tight label: the real last name in real-name
-## mode, otherwise the last word of the fictional name. A long one is cut
+## A surname for a caption or a tight label: his last name, or for a generated
+## player without one the last word of his name. A long one is cut
 ## ("Papaioannou" reads "Papaioann.").
 func player_surname(player: Dictionary) -> String:
 	var raw := ""
-	if GameState.show_real_names and str(player.get("last", "")) != "":
+	if str(player.get("last", "")) != "":
 		raw = str(player["last"])
 	else:
 		var generic := str(player.get("generic_name", player.get("name", "Player")))
@@ -534,7 +545,7 @@ func player_surname(player: Dictionary) -> String:
 	return raw
 
 
-## Search can match the real name without showing it while fictional labels are on.
+## What a search matches: his real name and, for a generated player, his given one.
 func player_search_text(player: Dictionary) -> String:
 	return "%s %s" % [
 		str(player.get("generic_name", player.get("name", ""))),
@@ -802,6 +813,37 @@ func club_additions(code: String) -> Array:
 	return list_additions.filter(func(q): return str(q.get("club", "")) == code)
 
 
+## Mark the rookie-listed players of the data season (LIST_TYPES_CSV) by
+## club, first and last name. A row that matches nobody is reported.
+func _apply_list_types(list: Array) -> void:
+	if LIST_TYPES_CSV == "" or not FileAccess.file_exists(LIST_TYPES_CSV):
+		return
+	var rows := _read_rows(LIST_TYPES_CSV)
+	if rows.size() < 2:
+		return
+	var header: Array = rows[0]
+	var idx := {}
+	for j in range(header.size()):
+		idx[header[j]] = j
+	var want := {}
+	for i in range(1, rows.size()):
+		var cells: Array = rows[i]
+		if cells.size() < header.size() or _cell_str(cells, idx, "list") == "":
+			continue
+		var key := ("%s|%s|%s" % [_cell_str(cells, idx, "club"), _cell_str(cells, idx, "first"),
+				_cell_str(cells, idx, "last")]).to_lower()
+		want[key] = _cell_str(cells, idx, "list")
+	var hit := {}
+	for p in list:
+		var key := ("%s|%s|%s" % [str(p.get("club", "")), str(p.get("first", "")), str(p.get("last", ""))]).to_lower()
+		if want.has(key):
+			p["list_type"] = want[key]
+			hit[key] = true
+	for key in want:
+		if not hit.has(key):
+			push_warning("GameDB: %s names %s, who is not in the players file." % [LIST_TYPES_CSV, key])
+
+
 func _load_departures() -> Dictionary:
 	var out := {}
 	if not FileAccess.file_exists(DEPARTURES_CSV):
@@ -846,12 +888,14 @@ func _load_club_moves() -> Dictionary:
 		var key := _look_key({"first": _cell_str(cells, idx, "first"),
 				"last": _cell_str(cells, idx, "last"), "dob": _cell_str(cells, idx, "dob")})
 		out[key] = {"from": _cell_str(cells, idx, "from_club"), "to": _cell_str(cells, idx, "to_club"),
-				"kind": _cell_str(cells, idx, "kind")}
+				"kind": _cell_str(cells, idx, "kind"), "list": _cell_str(cells, idx, "list")}
 	return out
 
 
 ## The club this player joined in the 2026 trade period or free agency, as
-## {"from", "to", "kind"}; {} if he stayed where he played 2026.
+## {"from", "to", "kind", "list"}; {} if he stayed where he played 2026. "list"
+## is the list he joined where a source names it ("rookie" or "cat_b"; "" or
+## "senior" is the senior list).
 func club_move(p: Dictionary) -> Dictionary:
 	return club_moves.get(_look_key(p), {})
 
@@ -1472,8 +1516,9 @@ func _load_players() -> Array:
 		p["last"] = str(cells[idx["last"]]) if idx.has("last") else ""
 		p["first"] = str(cells[idx["first"]]) if idx.has("first") else ""
 		p["real_name"] = "%s %s" % [p["first"], p["last"]]
-		# real_name stays available for the optional real-name view. The default
-		# display value is the generated alias, assigned after the pool loads.
+		# real_name is the name shown. "name" still takes a label from the shared
+		# pool after the load: it is never shown for him, but drawing it keeps the
+		# cursor, and so every generated prospect's name, where saves expect it.
 		p["generic_name"] = ""
 		p["name"] = ""
 		# Club + guernsey is the id, but a list can carry two players on one

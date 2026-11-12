@@ -47,7 +47,6 @@ func _run() -> void:
 	state.autosave_enabled = false
 	state.save_path = "user://capture_plan_know.save"
 	state.settings_path = "user://capture_plan_know_settings.cfg"
-	state.show_real_names = true
 	state.reset()
 	state.career_seed = 4127
 	state.replay_seed = 4127

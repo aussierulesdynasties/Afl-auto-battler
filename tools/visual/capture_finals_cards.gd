@@ -95,7 +95,6 @@ func _run() -> void:
 	state.autosave_enabled = false
 	state.save_path = "user://capture_finals.save"
 	state.settings_path = "user://capture_finals_settings.cfg"
-	state.show_real_names = false
 	DisplayServer.window_set_size(Vector2i(W, H))
 	root.size = Vector2i(W, H)
 	for i in range(3):

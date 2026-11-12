@@ -13,7 +13,6 @@ func _run() -> void:
 	gs.autosave_enabled = false
 	gs.save_path = "user://test_premade_history_career.save"
 	gs.settings_path = "user://test_premade_history_settings.cfg"
-	gs.show_real_names = false
 	gs.delete_saved_career()
 	var suite = load("res://tests/test_premade_history.gd").new()
 	suite.run()

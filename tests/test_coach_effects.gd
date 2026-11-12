@@ -361,7 +361,7 @@ func _test_in_career() -> void:
 			"(setup) read from the empty table after loading, a squad has no coaching on it")
 	_check(is_equal_approx(got.tactics_exec, want.tactics_exec) and is_equal_approx(got.tactics_read, want.tactics_read)
 			and got.plan_know == want.plan_know and got.arch == want.arch and got.assistant == want.assistant
-			and got.plan_trait == want.plan_trait and is_equal_approx(got.together, want.together)
+			and got.custom_plan == want.custom_plan and is_equal_approx(got.together, want.together)
 			and got.ai_plans == want.ai_plans and got.usual_plan == want.usual_plan,
 			"After loading, the coaching screen's squad has the coaching the match gives it (exec %.3f for %.3f, read %.3f for %.3f)" % [
 			got.tactics_exec, want.tactics_exec, got.tactics_read, want.tactics_read])

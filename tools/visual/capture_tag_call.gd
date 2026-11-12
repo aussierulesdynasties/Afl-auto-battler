@@ -87,7 +87,6 @@ func _run() -> void:
 	state.autosave_enabled = false
 	state.save_path = "user://capture_tc.save"
 	state.settings_path = "user://capture_tc_settings.cfg"
-	state.show_real_names = true
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		state.set_setting("seen_%s_intro" % key, true)
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)

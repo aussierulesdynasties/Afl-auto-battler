@@ -238,10 +238,8 @@ func _test_career_beats() -> void:
 			and OwnProspect.season_line("Alastair McNeil", "ESS", 2028, {}) == "Alastair McNeil did not play a senior game for Essendon in 2028.",
 			"A bust is told plainly")
 	_check(_mine(gs).all(func(n): return str(n["text"]).contains("Alastair McNeil")),
-			"Every line names him as created, in this name mode")
-	gs.show_real_names = not gs.show_real_names
-	_check(GameDB.player_display_name(p) == "Alastair McNeil", "His name is his in the other name mode too")
-	gs.show_real_names = not gs.show_real_names
+			"Every line names him as created")
+	_check(GameDB.player_display_name(p) == "Alastair McNeil", "He is shown under the name you gave him")
 
 
 ## The same story through the game's own paths, no look called by hand: a

@@ -1,4 +1,4 @@
-"""Paired margin of side i%2 (the side tools/balance.sh's --coach, --side-plan and --plan-trait set),
+"""Paired margin of side i%2 (the side tools/balance.sh's --coach, --side-plan and --custom-plan set),
 arm B against arm A on the same seeds: python3 side_compare.py <run dir>."""
 import glob, json, math, sys
 

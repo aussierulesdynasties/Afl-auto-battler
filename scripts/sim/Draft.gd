@@ -19,6 +19,12 @@ var existing_sizes := {}              # code -> kept list length (intake only)
 ## a career's intake sets the senior list (RookieList), and existing_sizes
 ## counts senior players only.
 var senior_cap := 0
+## code -> the list as the 44 counts it when the draft opened (senior and
+## Category A; RookieList.list_size). A club at or over Contracts.MAX_LIST
+## passes its picks whatever its senior list holds (RookieList.add_block: the
+## same rule as every other way onto a list). A club with no entry is bound
+## by the senior list alone.
+var list_44 := {}
 ## Youth only (Challenge.gd): your club may not take a player older than this.
 ## 0 for no limit. Rival clubs are never bound.
 var user_max_age := 0
@@ -367,7 +373,7 @@ func remaining_pool() -> int:
 func _list_full(code: String) -> bool:
 	if not intake_mode:
 		return false
-	return int(existing_sizes.get(code, 0)) + count_for(code) >= list_cap()
+	return open_spots(code) <= 0
 
 
 ## Intake: where a list is full for this draft (the senior list in a career).
@@ -377,7 +383,33 @@ func list_cap() -> int:
 
 ## Intake: the list spots `code` still has open tonight.
 func open_spots(code: String) -> int:
-	return maxi(0, list_cap() - int(existing_sizes.get(code, 0)) - count_for(code))
+	var open := list_cap() - int(existing_sizes.get(code, 0)) - count_for(code)
+	if list_44.has(code):
+		open = mini(open, Contracts.MAX_LIST - list_now(code))
+	return maxi(0, open)
+
+
+## `code`'s list as the 44 counts it, tonight's picks included (0 when the
+## draft was not told).
+func list_now(code: String) -> int:
+	return int(list_44[code]) + count_for(code) if list_44.has(code) else 0
+
+
+## True when it is the 44, not the senior list, that leaves `code` no spot.
+func full_at_44(code: String) -> bool:
+	return list_44.has(code) and list_now(code) >= Contracts.MAX_LIST \
+			and int(existing_sizes.get(code, 0)) + count_for(code) < list_cap()
+
+
+## Why `code` has no spot, as the coach reads it after "Pick 49 passed: ".
+func full_words(code: String) -> String:
+	if full_at_44(code):
+		var n := list_now(code)
+		if n > Contracts.MAX_LIST:
+			return "your list holds %d and the limit is %d (senior list and Category A rookies together), so nobody joins until it is back under %d." % [
+					n, Contracts.MAX_LIST, Contracts.MAX_LIST]
+		return "your list is full (%d: senior list and Category A rookies together)." % Contracts.MAX_LIST
+	return "your %slist is full (%d)." % ["senior " if senior_cap > 0 else "", list_cap()]
 
 
 ## Intake: `code`'s picks still to come, split by whether a list spot is left
@@ -406,8 +438,7 @@ func user_passed_line() -> String:
 	if user_passed.is_empty():
 		return ""
 	var nums := user_passed.map(func(e): return int(e["pick"]))
-	return "%s %s passed: your %slist is full (%d)." % ["Pick" if nums.size() == 1 else "Picks",
-			picks_words(nums), "senior " if senior_cap > 0 else "", list_cap()]
+	return "%s %s passed: %s" % ["Pick" if nums.size() == 1 else "Picks", picks_words(nums), full_words(user_club)]
 
 
 func _note_user_pass(code: String) -> void:
@@ -590,8 +621,8 @@ func _draft_pick(code: String, p: Dictionary) -> bool:
 		"club": code,
 		"player_id": id,
 		# Kept as a fallback for custom/test pools. The UI resolves the current
-		# display label from player_id so changing name mode never leaves stale
-		# names in the pick log.
+		# display label from player_id, so the pick log never shows a real
+		# player's hidden label.
 		"player_name": str(p.get("generic_name", p.get("name", "Player"))),
 		"role": Ratings.role_tag(p),
 		"overall": int(p["overall"]),

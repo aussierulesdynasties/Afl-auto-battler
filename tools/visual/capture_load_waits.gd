@@ -58,7 +58,6 @@ func _run() -> void:
 	_state.settings_path = "user://capture_load_waits.cfg"
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		_state.set_setting("seen_%s_intro" % key, true)
-	_state.show_real_names = false
 	_state.set_confirm_sim_round(false)
 	load("res://scripts/ui/UiKit.gd").apply_appearance("dark")
 	root.size = Vector2i(_w, _h)

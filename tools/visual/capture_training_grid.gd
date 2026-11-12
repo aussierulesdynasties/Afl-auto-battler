@@ -17,7 +17,6 @@ func _run() -> void:
 	state.autosave_enabled = false
 	state.save_path = "user://capture_training.save"
 	state.settings_path = "user://capture_training.cfg"
-	state.show_real_names = false
 	db.reload()
 	state.reset()
 	var club := OS.get_environment("CAP_CLUB") if OS.get_environment("CAP_CLUB") != "" else "FRE"

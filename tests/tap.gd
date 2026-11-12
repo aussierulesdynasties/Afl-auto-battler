@@ -34,8 +34,16 @@ static func tap_at(c: Control, local: Vector2, must_reach := true) -> String:
 	var p := c.get_parent()
 	while p != null:
 		if p is ScrollContainer:
-			(p as ScrollContainer).ensure_control_visible(c)
+			var sc := p as ScrollContainer
+			sc.ensure_control_visible(c)
 			await tree.process_frame
+			# A row taller than the list's window never fits: the player drags the spot he wants into view.
+			var spot: Vector2 = c.get_global_transform() * local
+			var view := sc.get_global_rect()
+			if not view.has_point(spot):
+				sc.scroll_vertical += int(round(spot.y - view.get_center().y))
+				sc.scroll_horizontal += int(round(spot.x - view.get_center().x))
+				await tree.process_frame
 			break
 		p = p.get_parent()
 	var at := pixel_point(c, local)
