@@ -55,6 +55,7 @@ func run() -> void:
 	_t("_test_ladder_of")
 	_t("_test_record_weights")
 	_t("_test_club_years_today")
+	_t("_test_real_1990")
 	Datasets.add(FIXTURE, FIXTURE_ROW)
 	_t("_test_fixture_load")
 	_t("_test_back_to_2026")
@@ -389,3 +390,56 @@ func _test_club_years_1990() -> void:
 	_check(GameDB.club_name("WBD") == "Western Bulldogs" and GameDB.club_short("BRL") == "Lions"
 			and str(GameDB.club("STK")["ground"]) == "Waverley Park", "A new season shows that year's clubs")
 	GameDB.reload()
+
+
+## The real 1990 start (TODO row 142, L1): the 14 clubs' lists rated on 1989,
+## each position scaled on its own season (director 2026-11-13), and a real
+## player's ceiling set by his real peak, give or take luck.
+func _test_real_1990() -> void:
+	_check(Datasets.ready("1990"), "The 1990 start's files ship")
+	GameDB.reload("1990")
+	_check(GameDB.dataset_id == "1990" and GameDB.DATA_SEASON == 1989 and GameDB.START_YEAR == 1990,
+			"The 1990 set loads on 1989's season")
+	var per_club := {}
+	var ovr := []
+	var top := 0
+	var stars := 0
+	var peaked := 0
+	var peak_ok := true
+	for p in GameDB.players:
+		var c := str(p.get("club", ""))
+		per_club[c] = int(per_club.get(c, 0)) + 1
+		var o := int(p.get("overall", 0))
+		ovr.append(o)
+		top = maxi(top, o)
+		if o >= 80:
+			stars += 1
+		if int(p.get("real_peak", 0)) > 0:
+			peaked += 1
+			var pot := int(p.get("potential", 0))
+			if pot < o or abs(pot - clampi(int(p["real_peak"]), o, Potential.MAX_POT)) > int(Potential.REAL_PEAK_LUCK) + 1:
+				peak_ok = false
+	_check(per_club.size() == 14 and not per_club.has("ADE") and per_club.has("FIT"),
+			"Fourteen clubs carry a list, Fitzroy's among them and no Adelaide (%s)" % str(per_club.keys()))
+	# A list is its played men plus those yet to play a senior game (list_additions).
+	var listed := per_club.duplicate()
+	for q in GameDB.list_additions:
+		var c := str(q.get("club", ""))
+		listed[c] = int(listed.get(c, 0)) + 1
+	var thin := 0
+	for c in listed:
+		if int(listed[c]) < 42:
+			thin += 1
+	_check(thin == 0 and listed.size() == 14, "Every 1990 club has a full list (%s)" % str(listed))
+	ovr.sort()
+	var median := int(ovr[ovr.size() / 2])
+	_check(median >= 57 and median <= 65, "The 1990 median sits where 2026's does (%d)" % median)
+	var share := float(stars) / float(ovr.size())
+	_check(share >= 0.04 and share <= 0.12 and top < 99,
+			"About 7%% of the 1990 lists rate 80 or more and nobody tops out (%d of %d, best %d)" % [stars, ovr.size(), top])
+	_check(peaked > 200 and peak_ok, "A real peak sets each ceiling, give or take luck (%d players)" % peaked)
+	_check(Potential.peak_from_year == 1986, "Recent seasons count from the 1990 set's own data season")
+	GameDB.reload()
+	_check(Ratings.era_anchors.is_empty() and Potential.peak_from_year == 2023,
+			"Back on 2026, positions scale on 2026's anchors again")
+	_golden("load after the 1990 set", _load_print(), GOLDEN_LOAD)
