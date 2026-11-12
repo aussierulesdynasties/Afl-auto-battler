@@ -2744,7 +2744,7 @@ func _test_menu_and_career() -> void:
 	var plan_btns := picker.find_children("PlayerPlan_*", "Button", false, false) if picker != null else []
 	# Positions he could learn sit in their own group under the plans.
 	var learn_grid: Node = current_scene.find_child("PlayerLearn", true, false)
-	var learn_btns := learn_grid.find_children("PlayerLearn_*", "Button", false, false) if learn_grid != null else []
+	var learn_btns: Array = learn_grid.find_children("PlayerLearn_*", "Button", false, false) if learn_grid != null else []
 	_check(plan_btns.size() + learn_btns.size() == _state.plans_for(first).size(),
 			"Every plan he can follow is shown (%d)" % (plan_btns.size() + learn_btns.size()))
 	var small_plan := false
