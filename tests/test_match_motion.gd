@@ -198,18 +198,11 @@ static func _median(v: Array) -> float:
 	return 0.5 * (float(c[(c.size() - 1) / 2]) + float(c[c.size() / 2]))
 
 
-## The bench strip's two corners on the phone, grown by a disc's radius: no
-## structure spot may put a disc under them.
+## The Bench tab on the phone (the bench strip it replaced filled both bottom
+## corners), grown by most of a disc's radius: no structure spot may put a disc
+## under it.
 static func _bench_rects(pv: PitchView) -> Array:
-	var tr := pv.token_radius()
-	var spots: Array = pv.bench_spots(tr)
-	if spots.is_empty() or bool(spots[0]["column"]):
-		return []
-	var br: float = spots[0]["r"]
-	var wide := 6.0 + 5.0 * (br * 2.0 + 4.0)
-	var tall := br * 2.0 + 24.0
-	return [Rect2(0.0, pv.size.y - tall, wide, tall).grow(tr),
-			Rect2(pv.size.x - wide, pv.size.y - tall, wide, tall).grow(tr)]
+	return [BenchDrawer.pill_in(pv.size).grow(pv.token_radius() * 0.8)]
 
 
 ## How far inside the boundary line `p` is, in metres.
@@ -244,12 +237,9 @@ func _test_measures_prove_themselves(res: Dictionary) -> void:
 			"The visibility measure sees a pile: every disc shows when they stand apart (%.2f), half the side under a pack does not (%.2f)" % [apart, piled])
 	var pv := _phone(res, 1.0)
 	var rects := _bench_rects(pv)
-	var pocket: Vector2 = pv._w2s(Vector2(-80.0, -20.0)) if (pv._w2s(Vector2(-80.0, 0.0)).y > PHONE.y * 0.5) \
-			else pv._w2s(Vector2(80.0, -20.0))
-	var hit := false
-	for rc in rects:
-		hit = hit or (rc as Rect2).has_point(pocket)
-	_check(rects.size() == 2 and hit, "The bench-strip measure sees a back pocket (80 m from the centre, 20 m across) under the strip")
+	var on_tab: Vector2 = BenchDrawer.pill_in(pv.size).get_center()
+	_check(rects.size() == 1 and (rects[0] as Rect2).has_point(on_tab) and not (rects[0] as Rect2).has_point(pv._w2s(Vector2.ZERO)),
+			"The bench-tab measure sees a disc on the tab, and not one at the centre bounce")
 	pv.free()
 
 
@@ -295,7 +285,7 @@ func _test_motion_limits(res: Dictionary) -> void:
 					"1x: Attack Corridor in possession: no two of a line of three closer than %.0f m across the ground (closest %.1f m over %d gaps)" % [
 					MatchDirector.LANE_GAP, lane_gap, lane_n])
 			_check(inside >= MatchDirector.STRUCT_MARGIN - 0.01 and under == 0,
-					"1x: every structure spot is at least %.0f m inside the boundary line (closest %.1f m) and none under the phone's bench strip (%d)" % [
+					"1x: every structure spot is at least %.0f m inside the boundary line (closest %.1f m) and none under the phone's Bench tab (%d)" % [
 					MatchDirector.STRUCT_MARGIN, inside, under])
 			_check(pack_n > 20 and pack_most <= 6,
 					"1x: while a Win Contest side's stoppage pack forms and the ball goes up, no more than six of its discs are within 6 m of the ball (%d at most over %d frames)" % [pack_most, pack_n])
