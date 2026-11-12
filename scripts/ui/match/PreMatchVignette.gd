@@ -81,7 +81,7 @@ static func open(host: Node, my_code: String, opp_code: String, my_ground: Array
 ## the crowd painted for these two clubs' colours, as the scene's ground will ask for it.
 static func warm(my_code: String, opp_code: String) -> void:
 	var seat := VignetteGround.seat_colour()
-	VignetteCrowd.seats([GameDB.club_colours(my_code), GameDB.club_colours(opp_code)], 7, seat)
+	VignetteCrowd.seats([GameDB.club_colours(my_code), GameDB.club_colours(opp_code)], CROWD, seat)
 
 
 ## Finals footy: the fixture is a final. Every final's label says so ("Semi
@@ -101,7 +101,7 @@ func setup_prematch(my_code: String, opp_code: String, my_ground: Array, opp_gro
 	_codes = [my_code, opp_code]
 	tokens.clear()
 	# The day's weather, when the hub passes it; more of them wear long sleeves in the wet.
-	weather = str(banner_ctx.get("weather", ""))
+	weather = VignetteGrade.weather_of(str(banner_ctx.get("weather", "")))
 	var wet := weather == "wet"
 	_mine = mini(SQUAD, my_ground.size())
 	for p in my_ground.slice(0, SQUAD):
@@ -118,7 +118,23 @@ func setup_prematch(my_code: String, opp_code: String, my_ground: Array, opp_gro
 	_slots = _huddle_slots()
 	_frozen = false
 	_dress()
+	# The same broadcast grade as the centre bounce and the replay; the bars and the words
+	# go on its overlay, so they stay ungraded.
+	if _ui == self:
+		_ui = VignetteGrade.attach(self, weather, _draw_ui)
 	queue_redraw()
+
+
+## On the overlay, over the grade: the bars, the words and the fades to black.
+func _draw_ui() -> void:
+	var fade := clampf(_t / CUT_IN, 0.0, 1.0)
+	_draw_bars(fade)
+	_draw_copy(fade)
+	var black := 1.0 - fade
+	if _phase == RUN:
+		black = maxf(black, clampf((_t - _since - (RUN_TIME - 0.25)) / 0.25, 0.0, 1.0))
+	if black > 0.0:
+		_ui.draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, black), true)
 
 
 ## The words on the banner: a rhyme or a taunt for the occasion from Banners.pick (the
@@ -474,7 +490,6 @@ func _draw() -> void:
 		_tear_cache = _tear_times(_cross_cache)
 		_cross_key = _since
 	_set_camera()
-	var fade := clampf(_t / CUT_IN, 0.0, 1.0)
 	_draw_ground()
 	_draw_pennants()
 	var figs := []
@@ -491,13 +506,8 @@ func _draw() -> void:
 	if not banner_drawn:
 		_draw_banner()
 	VignetteWeather.draw_air(self, Rect2(Vector2.ZERO, size), _t, weather)
-	_draw_bars(fade)
-	_draw_copy(fade)
-	var black := 1.0 - fade
-	if _phase == RUN:
-		black = maxf(black, clampf((_t - _since - (RUN_TIME - 0.25)) / 0.25, 0.0, 1.0))
-	if black > 0.0:
-		draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, black), true)
+	if _ui == self:
+		_draw_ui()
 
 
 ## Premiership pennants (FL-008; the art agent's spec): an old VFL pennant for each
@@ -759,5 +769,5 @@ func _draw_copy(fade: float) -> void:
 	var font: Font = UiKit.BOLD
 	var fs := int(clampf(size.x / 24.0, 13.0, 18.0))
 	var w := font.get_string_size(copy, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-	draw_string(font, Vector2((size.x - w) * 0.5, size.y - bar * 0.5 + fs * 0.36), copy,
+	_ui.draw_string(font, Vector2((size.x - w) * 0.5, size.y - bar * 0.5 + fs * 0.36), copy,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1, 1, 1, 0.85))

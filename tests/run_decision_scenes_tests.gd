@@ -36,6 +36,10 @@ func _run() -> void:
 		await _t("_test_tap", [kind])
 	await _t("_test_no_chosen_defender")
 	await _t("_test_first_call_warmed")
+	for size in [Vector2i(390, 844), Vector2i(1920, 1080)]:
+		await _t("_test_framing", [size])
+	await _t("_test_cast_and_idle")
+	await _t("_test_wind_drift")
 	print(Ran.line("Decision scenes", self))
 	for f in _failures:
 		print("  FAIL: ", f)
@@ -219,6 +223,9 @@ func _test_kind(kind: String) -> void:
 ## the call with their names clear of the title bar; the man on the mark showing past the
 ## kicker; the big screen either in full from first frame to last or left out, and showing
 ## what the scoreboard shows.
+var _goal_look := {}
+
+
 func _test_set_spots() -> void:
 	var VG = load("res://scripts/ui/match/VignetteGround.gd")
 	var V = load("res://scripts/ui/match/DecisionVignette.gd")
@@ -262,7 +269,9 @@ func _test_set_spots() -> void:
 			var kicker: Vector2 = vig.spot_of(vig.token_of("kicker"))
 			var mark: Vector2 = vig.spot_of(vig.token_of("on_the_mark"))
 			var out := kicker.distance_to(goal)
-			_check(absf(out - metres) <= 2.0, "%s: the kicker is %.1f m out, within 2 m of the call's %d" % [at, out, int(metres)])
+			# The kicker walks back from his mark, five to eight metres, as a set shot is taken.
+			_check(absf(out - metres - float(V.KICKER_BACK)) <= 0.5 and float(V.KICKER_BACK) >= 5.0 and float(V.KICKER_BACK) <= 8.0,
+					"%s: the kicker is %.1f m out, five to eight metres behind the call's %d" % [at, out, int(metres)])
 			_check(absf(mark.distance_to(goal) - metres) < 0.5 and mark.distance_to(goal) < out,
 					"%s: the man on the mark stands on the call's metres, nearer the goals than the kicker" % at)
 			var over := rad_to_deg(absf((mark - kicker).angle_to(goal - kicker)))
@@ -272,7 +281,7 @@ func _test_set_spots() -> void:
 			var angle: float = off_line.call(kicker)
 			_check(absf(float(off_line.call(mark)) - float(V.SET_SPOTS[key])) < 0.5 and (angle > 60.0 if key == "pocket" else angle < 30.0),
 					"%s: drawn %.1f deg off the line through the goals: under 30, the straight-in-front cell the sim converts it at; the pocket over 60" % [at, angle])
-			_check((out > 50.0) == (key == "long"), "%s: the 50 m arc is %s him" % [at, "in front of" if key == "long" else "behind"])
+			_check((mark.distance_to(goal) > 50.0) == (key == "long"), "%s: the 50 m arc is %s his mark" % [at, "in front of" if key == "long" else "behind"])
 			# In the picture: both posts and both men between the title bar and the call, with
 			# room over each head for his name, and no post hidden behind a man.
 			var panel: Control = m.find_child("BounceCall", true, false)
@@ -286,11 +295,13 @@ func _test_set_spots() -> void:
 			for role in ["kicker", "on_the_mark"]:
 				var t: Dictionary = vig.token_of(role)
 				var feet: Vector3 = vig.call("_project", vig.call("_pos", t), vig.call("_lift", t))
-				var head: Vector3 = vig.call("_project", vig.call("_pos", t), float(vig.call("_lift", t)) + float(vig.call("_figure_top", t)))
+				var head: Vector3 = vig.call("_project", vig.call("_pos", t), float(vig.call("_lift", t)) + float(vig.call("_head_top", t)))
 				men = men and feet.y < bottom and head.y > bar + 24.0 and feet.x > 0.0 and feet.x < vig.size.x
 				# feet.z is pixels per metre at his distance: half his width with his arms in (x),
 				# half his head's (y).
 				body[role] = Vector3(feet.x, 0.5 * feet.z, 0.15 * feet.z)
+				body[role + "|feet"] = feet
+				body[role + "|head"] = head
 			_check(men, "%s: both men stand above the call, their names clear of the title bar" % at)
 			var posts := true
 			var clear := true
@@ -300,13 +311,36 @@ func _test_set_spots() -> void:
 				post_x.append(int(p.x))
 				if absf(x) < 1.0:
 					posts = posts and p.z > 0.0 and p.x > 0.0 and p.x < vig.size.x and p.y > bar and p.y < bottom
-				for role in body:
-					clear = clear and absf(p.x - (body[role] as Vector3).x) > (body[role] as Vector3).y
+				# A post is a fault when it stands beyond a man and tops him: it would rise out of his head.
+				var tip: Vector3 = cam.oval(Vector2(x * float(VG.GOAL_GAP), goal.y), float(VG.GOAL_H) if absf(x) < 1.0 else float(VG.BEHIND_H))
+				for role in ["kicker", "on_the_mark"]:
+					if p.z < (body[role + "|feet"] as Vector3).z and tip.y < (body[role + "|head"] as Vector3).y:
+						clear = clear and absf(p.x - (body[role] as Vector3).x) > (body[role] as Vector3).y
 			_check(posts, "%s: both goal posts stand in the scene, above the call" % at)
-			_check(clear, "%s: no goal or behind post rises from behind a man (posts at %s, men %s)" % [at, str(post_x), str(body)])
+			_check(clear and bool(vig.posts_clear()), "%s: no goal or behind post rises out of a man's head (posts at %s, men %s)" % [at, str(post_x), str(body)])
 			var k: Vector3 = body["kicker"]
 			var d: Vector3 = body["on_the_mark"]
-			_check(d.x - k.x > k.z + d.z, "%s: the man on the mark shows past the kicker's right shoulder, his head clear" % at)
+			# The man on the mark is up the ground from the kicker, as a set shot looks from behind
+			# the kicker: between him and the goals across the picture, smaller, his boots higher up
+			# it, his head clear of the kicker's. (The old scene stood them shoulder to shoulder, a
+			# step apart: director, 2026-11-12, "set shot by real distance and angle".)
+			var kf: Vector3 = body["kicker|feet"]
+			var df: Vector3 = body["on_the_mark|feet"]
+			var goal_x: float = cam.oval(goal).x
+			_check(minf(k.x, goal_x) < d.x and d.x < maxf(k.x, goal_x),
+					"%s: the man on the mark stands between the kicker and the goals (kicker %d, mark %d, goals %d)" % [at, int(k.x), int(d.x), int(goal_x)])
+			_check(df.z < kf.z * 0.85 and df.y < kf.y - 4.0, "%s: the man on the mark is smaller and higher up the picture than the kicker" % at)
+			_check(absf(d.x - k.x) > k.z + d.z, "%s: the man on the mark's head is clear of the kicker's" % at)
+			# How far and how narrow the goals look follows the spot: the posts as tall on screen
+			# as the distance makes them, the gap between them as wide as the angle leaves it.
+			var gl: Vector3 = cam.oval(Vector2(-0.5 * float(VG.GOAL_GAP), goal.y))
+			var gr: Vector3 = cam.oval(Vector2(0.5 * float(VG.GOAL_GAP), goal.y))
+			var gap_px := absf(gr.x - gl.x)
+			var tall_px: float = absf(cam.oval(goal, float(VG.GOAL_H)).y - cam.oval(goal).y)
+			if not _goal_look.has(phone):
+				_goal_look[phone] = {}
+			_goal_look[phone][key] = Vector2(gap_px, tall_px)
+
 			# The big screen: decided once for the scene, never popping out mid-scene; when it
 			# shows, neither the title bar nor a side of the picture cuts it, from the cut-in to
 			# the freeze.
@@ -319,8 +353,6 @@ func _test_set_spots() -> void:
 				cuts += 1 if bool(vig.screen_cut_at(end, 0.01 * float(j))) else 0
 			_check(shown_off == first_off, "%s: the big screen is the same at the cut-in as on the freeze" % at)
 			_check(shown_off == (cuts > 0), "%s: the big screen is left out only when the title bar or a side would cut it (%d frames)" % [at, cuts])
-			if phone == Vector2i(390, 844) and key == "close":
-				_check(shown_off, "%s: 25 out the big screen rises under the title bar, so it is left out" % at)
 			var sr: Rect2 = VG.screen_rect(cam)
 			if not shown_off and sr.has_area():
 				_check(sr.position.x >= 0.0 and sr.end.x <= vig.size.x and sr.position.y + sr.size.y * 0.15 >= bar,
@@ -331,6 +363,18 @@ func _test_set_spots() -> void:
 					str(board.get("behinds")), str(m.get("_shown_goals")), str(m.get("_shown_behinds"))])
 			m.queue_free()
 			await _settle()
+	# From 25 out the goals stand taller than from 35, from 35 than from 55; from the pocket the
+	# gap between the posts is far narrower for its height than from straight in front.
+	for phone in _goal_look:
+		var g: Dictionary = _goal_look[phone]
+		_check(g.size() == 5, "every spot's goals were measured at %s" % str(phone))
+		if g.size() < 5:
+			continue
+		_check((g["close"] as Vector2).y > (g["front"] as Vector2).y * 1.15 and (g["front"] as Vector2).y > (g["angle"] as Vector2).y * 1.1
+				and (g["angle"] as Vector2).y > (g["long"] as Vector2).y * 1.08,
+				"at %s the goals look nearer from 25 than 35 than 45 than 55 (%s)" % [str(phone), str(g)])
+		_check((g["pocket"] as Vector2).x / (g["pocket"] as Vector2).y < 0.7 * (g["front"] as Vector2).x / (g["front"] as Vector2).y,
+				"at %s the goals look narrow from the pocket (%s)" % [str(phone), str(g)])
 	# The big screen's place is the ground's: 30 by 13 m, 30 m up, 40 m past the far fence,
 	# and nothing when it is behind the camera.
 	var c = VG.Cam.new()
@@ -474,10 +518,13 @@ func _test_first_call_warmed() -> void:
 			"the warm scene shows one pixel at most and takes no taps")
 	await _settle()
 	var colours := [db.club_colours(str(sim.squads[0].code)), db.club_colours(str(sim.squads[1].code))]
-	var key := "seats|%s|%d|%s" % [str(colours), 7, (ground.seat_colour() as Color).to_html()]
+	# One crowd all match: the call scenes seat the replay's (StoppageVignette.CROWD).
+	var crowd_seed: int = load("res://scripts/ui/match/StoppageVignette.gd").CROWD
+	_check(crowd_seed == 11, "the call scenes seat the same crowd as the replay")
+	var key := "seats|%s|%d|%s" % [str(colours), crowd_seed, (ground.seat_colour() as Color).to_html()]
 	_check((crowd._cache as Dictionary).has(key), "the first call's crowd (home and away colours) is painted at the break")
 	if bool((ground.spec as Dictionary).get("hill", false)):
-		var hill := "seats|%s|%d|%s" % [str(colours), 8, (ground.HILL as Color).to_html()]
+		var hill := "seats|%s|%d|%s" % [str(colours), crowd_seed + 1, (ground.HILL as Color).to_html()]
 		_check((crowd._cache as Dictionary).has(hill), "the ground's hill crowd is painted at the break")
 	_check(m.find_child("CallSceneWarm", true, false) == null, "the warm scene is gone before play")
 	_check(sim.current_minute == minute_was and (sim.events as Array).size() == events_was,
@@ -497,6 +544,211 @@ func _test_first_call_warmed() -> void:
 	m.queue_free()
 	await _settle()
 	_state.set_vignettes_on(true)
+
+
+## One of the scenes, alone, at that size: the centre bounce or a call scene.
+func _scene(m: Control, sim, me: int, kind: String, size: Vector2):
+	var vig
+	if kind == "bounce":
+		vig = load("res://scripts/ui/match/StoppageVignette.gd").new()
+		m.add_child(vig)
+		vig.size = size
+		vig.setup(sim, me, "A call")
+	else:
+		vig = load("res://scripts/ui/match/DecisionVignette.gd").new()
+		m.add_child(vig)
+		vig.size = size
+		vig.setup_decision(sim, me, _moment(sim, me, kind))
+	return vig
+
+
+## Director, 2026-11-12 (visual interview, match day): "tighter cameras": at the freeze the
+## turf between the far fence and the bottom of the picture is no more than a third of the
+## frame, the stand and the crowd fill the top, the men are big, their heads under the title
+## bar, no post rising out of a head, every name pinned by its man's head. Measured from the
+## scene's own projection (framing), for each call scene and the centre bounce, on a phone
+## and a PC, before the call is up and with it up.
+func _test_framing(size: Vector2i) -> void:
+	var ctx := await _match(true, size)
+	var m: Control = ctx["m"]
+	var sim = ctx["sim"]
+	var me: int = ctx["me"]
+	var wide := size.x > size.y
+	var scenes: Array = KINDS + ["bounce"]
+	_check(scenes.size() == 6, "five call scenes and the centre bounce are measured")
+	for kind in scenes:
+		var at := "%s at %dx%d" % [kind, size.x, size.y]
+		var vig = _scene(m, sim, me, str(kind), Vector2(size))
+		vig.finish_now()
+		vig.set("_hold", 0.4)
+		var up: float = float(size.y) * (0.3 if wide else 0.4)
+		for room in [0.0, up]:
+			vig.call_room = room
+			var f: Dictionary = vig.shot_numbers()
+			var tag := "%s, the call %s" % [at, "up" if room > 0.0 else "down"]
+			print("FRAMING %s room=%d %s" % [at, int(room), str(f)])
+			_check(float(f["grass_of_frame"]) <= 1.0 / 3.0 + 0.005 and float(f["grass_of_frame"]) > 0.03,
+					"%s: the turf is a third of the frame or less (%.2f)" % [tag, float(f["grass_of_frame"])])
+			_check(float(f["head"]) >= float(f["bar"]) + 20.0, "%s: every head is under the title bar (%.0f, bar %.0f)" % [tag, float(f["head"]), float(f["bar"])])
+			_check(float(f["feet"]) <= float(f["floor"]) + 0.5, "%s: every man's boots are above the call (%.0f, call at %.0f)" % [tag, float(f["feet"]), float(f["floor"])])
+			_check(float(f["man_px"]) >= float(size.y) * (0.12 if kind in ["bounce", "momentum"] else 0.18),
+					"%s: the men are big (%.0f px of %d)" % [tag, float(f["man_px"]), size.y])
+			# (A set shot from long range looks the length of the ground: its stand fills the top
+			# once the picture has tilted clear of the call.)
+			_check((kind == "set_shot" and room <= 0.0) or float(f["stand_top"]) <= float(f["bar"]) + 0.3 * (float(f["floor"]) - float(f["bar"])),
+					"%s: the stand fills the top of the picture (its top at %.0f, bar %.0f)" % [tag, float(f["stand_top"]), float(f["bar"])])
+			vig.call("_apply_camera", float(vig.call("_freeze_at")), 0.4)
+			_check(bool(vig.posts_clear()), "%s: no goal or behind post rises out of a named man's head" % tag)
+		# The names, as drawn with the call up: each on the overlay by its own man's head.
+		vig.queue_redraw()
+		await _settle()
+		var tags: Array = vig.tag_log
+		var named: Array = vig.call("_named")
+		if kind != "momentum":
+			_check(not named.is_empty() and tags.size() == named.size(), "%s: each man the call is about has his name (%d of %d)" % [at, tags.size(), named.size()])
+		var near := true
+		var bar: float = float(size.y) * 0.075
+		for t in tags:
+			var box: Rect2 = t["box"]
+			var head: Vector2 = t["head"]
+			# By his head, or (a man in the air, the ball over him) under his boots: touching him.
+			var boots: Vector2 = t["feet"]
+			var gap := Vector2(maxf(0.0, maxf(box.position.x - head.x, head.x - box.end.x)),
+					maxf(0.0, maxf(box.position.y - head.y, minf(head.y, boots.y) - box.end.y))).length()
+			if box.position.y >= boots.y:
+				gap = Vector2(maxf(0.0, maxf(box.position.x - boots.x, boots.x - box.end.x)), box.position.y - boots.y).length()
+			near = near and gap <= float(size.y) * 0.12 and box.position.y >= bar and box.end.y <= float(size.y) - up + 0.5 \
+					and box.position.x >= 0.0 and box.end.x <= float(size.x)
+		_check(near, "%s: every name sits by its man's head, under the title bar and above the call (%s)" % [at, str(tags)])
+		_check(vig.get("_ui") != vig, "%s: the names and bars draw on the overlay above the grade" % at)
+		vig.queue_free()
+		await _settle()
+	m.queue_free()
+	await _settle()
+
+
+## Director, 2026-11-12: "full sides, umpires and crowd" and "figures that move while the
+## coach decides". The rest of both sides and the umpires stand round every call scene
+## (VignetteExtras) as real players of this match, never among the men the call is about;
+## after the freeze the scene's clock runs on, so a standing man's frame changes; with
+## Settings > Reduced motion it holds still. The duel and the centre bounce freeze with men
+## and the ball in the air, and stay held.
+func _test_cast_and_idle() -> void:
+	var ctx := await _match()
+	var m: Control = ctx["m"]
+	var sim = ctx["sim"]
+	var me: int = ctx["me"]
+	var db = root.get_node("GameDB")
+	var ids := {}
+	var side_of := {}
+	for side in range(2):
+		for p in sim.squads[side].ground:
+			ids[str(p["id"])] = p
+			side_of[str(p["id"])] = side
+	var was_reduced: bool = bool(_state.reduced_motion())
+	# Everyone on the ground has a place, the same every time it is asked, and the match's
+	# own random numbers are not touched.
+	var X = load("res://scripts/ui/match/VignetteExtras.gd")
+	var rng_was: int = sim.rng.state
+	var all: Array = X.players(sim, me, [], Vector2(10.0, 30.0), false)
+	var again: Array = X.players(sim, me, [], Vector2(10.0, 30.0), false)
+	_check(all.size() == ids.size() and all.size() >= 30 and str(all) == str(again) and sim.rng.state == rng_was,
+			"both sides in full have a place on the ground, the same each time, the match untouched (%d men)" % all.size())
+	var inside := true
+	var spread := {}
+	for e in all:
+		var at: Vector2 = e["oval"]
+		inside = inside and pow(at.x / 68.0, 2.0) + pow(at.y / 80.0, 2.0) <= 1.0
+		spread[Vector2i(at / 2.0)] = true
+	_check(inside and spread.size() >= all.size() - 4, "every man stands inside the boundary, in a spot of his own")
+	var officials: Array = X.umpires(Vector2(10.0, 30.0))
+	var count := {}
+	for e in officials:
+		count[str(e["ump"])] = int(count.get(str(e["ump"]), 0)) + 1
+	_check(count == {"field": 3, "boundary": 2, "goal": 2}, "three field, two boundary and two goal umpires (%s)" % str(count))
+	for kind in KINDS + ["bounce"]:
+		var vig = _scene(m, sim, me, str(kind), Vector2(360, 740))
+		var cast: Array = vig.get("_cast")
+		var own := {}
+		for t in vig.tokens:
+			own[str(t["id"])] = true
+		var players := 0
+		var umps := {}
+		var real := true
+		var apart := true
+		for e in cast:
+			if e.has("ump"):
+				umps[str(e["ump"])] = true
+				continue
+			players += 1
+			var id := str(e["id"])
+			real = real and ids.has(id) and e["look"] == db.figure_look(ids.get(id, {}), false) and int(e["side"]) == int(side_of.get(id, -1))
+			apart = apart and not own.has(id)
+		# A long lens on two men shows few others; the centre of the ground shows most of both sides.
+		_check(players >= (8 if kind in ["bounce", "momentum"] else 0) and real and not cast.is_empty(),
+				"%s: the rest of both sides stand round the scene, each a real player in his own look (%d in the shot)" % [kind, players])
+		_check(apart and not vig.tokens.any(func(t): return t.has("extra")), "%s: none of them is counted among the men the call is about" % kind)
+		_check(not umps.is_empty(), "%s: the umpires are on the ground (%s)" % [kind, str(umps.keys())])
+		# After the freeze the clock runs on.
+		_state.set_reduced_motion(false)
+		vig.finish_now()
+		vig.set("_hold", 0.4)
+		var c0: float = vig.clock()
+		vig.call("_process", 0.5)
+		vig.call("_process", 0.5)
+		var moved: bool = float(vig.clock()) > c0 + 0.9
+		var held: bool = kind in ["duel", "bounce"]
+		_check(moved != held, "%s: %s" % [kind, "frozen in the air, the scene holds" if held else "the scene keeps moving while the coach decides"])
+		if moved:
+			var changed := false
+			var before := []
+			for t in vig.tokens:
+				before.append(vig.call("_frame", t, vig.call("_lift", t), vig.call("_pos", t), bool(t["mine"])))
+			for step in range(8):
+				vig.call("_process", 0.11)
+				for i in range(vig.tokens.size()):
+					var t: Dictionary = vig.tokens[i]
+					changed = changed or vig.call("_frame", t, vig.call("_lift", t), vig.call("_pos", t), bool(t["mine"])) != before[i]
+			_check(changed, "%s: a standing man shifts his weight after the freeze" % kind)
+			var looped := true
+			for t in vig.tokens:
+				var pick: Array = vig.call("_frame", t, vig.call("_lift", t), vig.call("_pos", t), bool(t["mine"]))
+				looped = looped and not (str(pick[0]) in ["idle", "celebrate"])
+			_check(looped, "%s: nobody stands on a single held frame" % kind)
+			# Reduced motion: held.
+			_state.set_reduced_motion(true)
+			var c1: float = vig.clock()
+			vig.call("_process", 0.5)
+			_check(is_equal_approx(float(vig.clock()), c1), "%s: reduced motion holds the frame still" % kind)
+		vig.queue_free()
+	_state.set_reduced_motion(was_reduced)
+	m.queue_free()
+	await _settle()
+
+
+## A kick drifts in the wind and still lands where the match says: no drift at the boot or
+## where it lands, most in the middle, none on a calm day.
+func _test_wind_drift() -> void:
+	var X = load("res://scripts/ui/match/VignetteExtras.gd")
+	var W = load("res://scripts/ui/match/VignetteWeather.gd")
+	_check(is_zero_approx(float(X.drift(0.0, 1.0))) and is_zero_approx(float(X.drift(1.0, 1.0))) and is_zero_approx(float(X.drift(1.4, 1.0))),
+			"the wind moves the ball nothing at the boot and nothing where it lands")
+	_check(float(X.drift(0.5, 1.0)) > 1.5 and float(X.drift(0.5, 1.0)) < 4.0 and float(X.drift(0.25, 1.0)) < float(X.drift(0.5, 1.0)),
+			"mid-flight it drifts a couple of metres")
+	_check(is_zero_approx(float(X.drift(0.5, float(W.wind(""))))), "a calm day: no drift")
+	var B = load("res://scripts/ui/match/BroadcastVignette.gd").new()
+	B.weather = str(W.WINDY)
+	var a := Vector3(0.0, 30.0, 0.6)
+	var b := Vector3(2.0, 79.0, 3.0)
+	var d0: Vector3 = B.call("_drifted", a, a, b, 0.0)
+	var d1: Vector3 = B.call("_drifted", b, a, b, 1.0)
+	var mid: Vector3 = B.call("_drifted", a.lerp(b, 0.5), a, b, 0.5)
+	_check(d0.is_equal_approx(a) and d1.is_equal_approx(b), "the replay's kick leaves the boot and lands where the match says in the wind")
+	_check(Vector2(mid.x, mid.y).distance_to(Vector2(1.0, 54.5)) > 1.5 and is_equal_approx(mid.z, a.lerp(b, 0.5).z),
+			"...and bends across its line in between, no higher or lower")
+	B.weather = ""
+	_check((B.call("_drifted", a.lerp(b, 0.5), a, b, 0.5) as Vector3).is_equal_approx(a.lerp(b, 0.5)), "a calm day: the kick flies straight")
+	B.free()
 
 
 func _t(test: String, args := []) -> Variant:

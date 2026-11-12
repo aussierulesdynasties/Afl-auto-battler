@@ -147,9 +147,53 @@ static func draw(ci: CanvasItem, rect: Rect2, colours: Array, t: float, seed := 
 		var py := rng.randf_range(0.45, 0.95) * rect.size.y
 		var phase := rng.randf() * TAU
 		# Up for about a second in every five, easing up and down.
-		var up := smoothstep(0.75, 0.95, sin(t * 1.2 + phase))
+		var up := rise(t, phase)
 		if up > 0.0:
 			var size := lerpf(1.2, 2.6, py / rect.size.y) * unit
 			var col: Color = (colours[n % colours.size()] as Array)[0] if not colours.is_empty() else Color.WHITE
 			ci.draw_rect(Rect2(rect.position + Vector2(px, py - size * 2.0 * up), Vector2(size * 0.6, size * 1.4)),
 					Color(col.darkened(0.3), 0.6 * up), true)
+
+
+## How far out of his seat a supporter is at time t (0 sitting .. 1 up with an arm raised):
+## up for about a second in every five, easing up and down.
+static func rise(t: float, phase: float) -> float:
+	return smoothstep(0.75, 0.95, sin(t * 1.2 + phase))
+
+
+## How many supporters round the whole ground take their turn to stand.
+const STIR := 260
+
+## The same stir through a ground camera (VignetteGround.Cam), for the scenes that draw the
+## real stadium: supporters in the lower tier, all round the ground, stand with an arm up and
+## sit again, a few at a time, in the two clubs' colours. t: the scene's clock (hold it still
+## and the crowd holds still). The same people stand in the same seats for a seed.
+static func stir(ci: CanvasItem, cam: VignetteGround.Cam, colours: Array, t: float, seed := 11) -> void:
+	if VignetteGround.spec.is_empty():
+		return
+	var tier: Array = (VignetteGround.spec["tiers"] as Array)[0]
+	var ax := VignetteGround.A + VignetteGround.FENCE + 2.0
+	var ay := VignetteGround.L + VignetteGround.FENCE + 2.0
+	var rect := Rect2(Vector2.ZERO, (ci as Control).size) if ci is Control else Rect2(0, 0, 4096, 4096)
+	for n in range(STIR):
+		var up := rise(t, _unit(seed, n, 2) * TAU)
+		if up <= 0.0:
+			continue
+		var k := _unit(seed, n, 1)
+		var a := _unit(seed, n, 0) * TAU
+		var o := lerpf(float(tier[0]), float(tier[1]), k)
+		var s := cam.oval(Vector2(cos(a) * (ax + o), sin(a) * (ay + o)), lerpf(float(tier[2]), float(tier[3]), k) + 0.5)
+		if s.z < 1.2 or not rect.has_point(Vector2(s.x, s.y)):
+			continue
+		var col: Color = Color(0.8, 0.8, 0.82)
+		if not colours.is_empty() and not (colours[n % colours.size()] as Array).is_empty():
+			col = (colours[n % colours.size()] as Array)[0]
+		var tall := (0.45 + 0.55 * up) * s.z
+		ci.draw_rect(Rect2(s.x - 0.26 * s.z, s.y - tall, 0.52 * s.z, tall), Color(col.darkened(0.25), 0.9 * up), true)
+		ci.draw_rect(Rect2(s.x + 0.2 * s.z, s.y - tall - 0.55 * s.z * up, 0.14 * s.z, 0.6 * s.z),
+				Color(0.72, 0.55, 0.43, 0.9 * up), true)
+
+
+## A number from 0 to 1 for supporter n of a seed (its own hash: no shared generator).
+static func _unit(seed: int, n: int, field: int) -> float:
+	return float(absi(hash("%d|%d|%d" % [seed, n, field])) % 10007) / 10006.0
