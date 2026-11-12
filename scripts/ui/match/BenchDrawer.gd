@@ -99,10 +99,16 @@ func _ready() -> void:
 	sync()
 
 
+## Where the tab's pill is drawn on a view of `view_size`: the bottom-left corner,
+## off the turf. One place for the drawer, the oval and the tests to read it.
+static func pill_in(view_size: Vector2) -> Rect2:
+	return Rect2(EDGE, view_size.y - EDGE - TAB_PILL_H, TAB_SIZE.x, TAB_PILL_H)
+
+
 func _place() -> void:
 	if _tab == null:
 		return
-	_tab.position = Vector2(EDGE, size.y - TAB_SIZE.y - EDGE)
+	_tab.position = Vector2(EDGE, size.y - TAB_SIZE.y - EDGE)   # its pill: pill_in(size)
 	_tab.size = TAB_SIZE
 	_shade.queue_redraw()
 
