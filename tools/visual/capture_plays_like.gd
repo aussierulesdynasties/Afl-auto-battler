@@ -66,7 +66,6 @@ func _run() -> void:
 	_state.autosave_enabled = false
 	_state.save_path = "user://capture_plays_like.save"
 	_state.settings_path = "user://capture_plays_like.cfg"
-	_state.show_real_names = true
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 	DisplayServer.window_set_size(Vector2i(W, H))
 	await _frames(10)

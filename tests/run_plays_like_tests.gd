@@ -61,7 +61,6 @@ func _run() -> void:
 	_state.save_path = "user://test_plays_like.save"
 	_state.settings_path = "user://test_plays_like.cfg"
 	_state.delete_saved_career()
-	_state.show_real_names = true
 	_state.replay_seed = SUITE_SEED
 	root.size = PHONE
 	for y in range(FIRST_YEAR, FIRST_YEAR + CLASSES):
@@ -422,17 +421,9 @@ func _test_its_own_line_not_his_name() -> void:
 	var line: String = PL.line(p)
 	_check(line.begins_with("Plays like: ") and line.length() > "Plays like: ".length(), "The line reads \"Plays like: <name>\" (%s)" % line)
 	_check(not _db.player_display_name(p).to_lower().contains("plays like"), "His display name still carries no \"plays like\"")
-	# Generated player names: the compared player goes by his name in that career.
-	var e: Dictionary = PL.nearest(p, _db.plays_like_pool)
-	_state.show_real_names = false
-	var alias: String = PL.line(p)
-	_state.show_real_names = true
-	_check(alias == "Plays like: " + str(e["generic_name"]) and not alias.contains(str(e["real_name"])),
-			"With generated names on, the line uses his generated name (%s)" % alias)
 	# The longest line fits a phone row beside its button.
-	# The widest line, by real name and by generated name, fits a phone row beside its button.
 	var UK = load("res://scripts/ui/UiKit.gd")
-	for key in ["real_name", "generic_name"]:
+	for key in ["real_name"]:
 		var widest := ""
 		var w := 0.0
 		for c in _db.plays_like_pool:

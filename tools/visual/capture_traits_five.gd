@@ -40,7 +40,6 @@ func _run() -> void:
 	state.autosave_enabled = false
 	state.save_path = "user://capture_traits_five.save"
 	state.settings_path = "user://capture_traits_five.cfg"
-	state.show_real_names = true
 	state.replay_seed = 2027
 	db.reload()
 	state.reset()
