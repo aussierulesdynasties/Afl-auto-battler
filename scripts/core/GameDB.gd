@@ -159,6 +159,9 @@ var DEPARTURES_CSV := "res://data/departures_2026.csv"
 var club_moves := {}
 var CLUB_MOVES_CSV := "res://data/club_moves_2026.csv"
 var late_draftees := []    # generated future classes registered at runtime
+## The launch lists at their peak, for "Plays like" (PlaysLike.build_pool): taken at
+## load, before a career ages anyone, so the comparison never moves.
+var plays_like_pool := []
 var appearance := {}       # "first|last|dob" -> {skin, hair, status, club}: curated looks
 var skin_mix: Array = Appearance.DEFAULT_SKIN_MIX
 var loaded := false
@@ -263,6 +266,7 @@ func reload(dataset := Datasets.DEFAULT) -> void:
 	departures = _load_departures()
 	club_moves = _load_club_moves()
 	mark_unicorns(players + draftees)
+	plays_like_pool = PlaysLike.build_pool(players)
 	late_draftees = []
 	# Last, so every AFL list, rating and alias above is drawn as before.
 	_load_state_leagues()
