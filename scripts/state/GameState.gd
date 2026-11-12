@@ -13611,7 +13611,8 @@ func press_context(option: int) -> Dictionary:
 		restore = Trust.opinion_move(Trust.value(relations, Trust.player_key(str(o["player"]))), -int(owed.back()))
 	return {"journalist": j, "verdict": press_verdict(kind), "name": name,
 			"standing": press_standing(j) if MediaConference.JOURNALISTS.has(j) else 0, "facts": press_facts(option),
-			"lost": MediaConference.after_loss(media_conference), "restore": restore}
+			"lost": MediaConference.after_loss(media_conference), "won": MediaConference.after_win(media_conference),
+			"restore": restore}
 
 
 ## The line under answer `option` (MediaConference.odds_line).
