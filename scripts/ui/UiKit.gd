@@ -39,6 +39,11 @@ static var TEXT := Color("f1eee6")
 static var MUTED := Color("a39e93")
 static var FAINT := Color("6e695f")       # disabled
 static var EMPH := Color("f1eee6")        # emphasis is weight, not a colour
+## Section headings and titles: a shade off the body text so a heading never
+## blends into the copy under it (director, 2026-11-12: "titles of sections tend
+## to blend with the body text and nothing stands out").
+static var HEAD := Color("f1eee6")
+static var HEAD_DARK := Color("e8cf9c")
 static var GOOD := Color("8cc49a")        # a genuinely good state, never decoration
 static var BAD := Color("e38b73")
 static var ACCENT := Color("c8412b")      # the primary action, and nothing else
@@ -57,6 +62,7 @@ static func apply_appearance(mode: String) -> void:
 		MUTED = Color("6f685f")
 		FAINT = Color("9a9287")
 		EMPH = TEXT
+		HEAD = TEXT
 		GOOD = Color("3f7650")
 		BAD = Color("a74734")
 		ACCENT = Color("b63c29")
@@ -71,6 +77,7 @@ static func apply_appearance(mode: String) -> void:
 		MUTED = Color("a39e93")
 		FAINT = Color("6e695f")
 		EMPH = TEXT
+		HEAD = HEAD_DARK
 		GOOD = Color("8cc49a")
 		BAD = Color("e38b73")
 		ACCENT = Color("c8412b")
@@ -601,9 +608,14 @@ static func rule() -> ColorRect:
 	return r
 
 
-## A section heading: sentence case, weight not colour.
+## A section heading: sentence case, bold, in the heading ink.
 static func section(text: String) -> Label:
-	return lbl(text, H2, TEXT, true)
+	return lbl(text, H2, HEAD, true)
+
+
+## A small heading inside a section ("Calls so far"): body size, bold, heading ink.
+static func subhead(text: String) -> Label:
+	return lbl(text, SECONDARY, HEAD, true)
 
 
 ## Clubs whose data order is not the colour a supporter names first. The data
@@ -973,7 +985,7 @@ static func ellipsis(text: String, fs := 16, color := AUTO_COLOUR, bold := false
 
 
 static func heading(text: String, fs := H1) -> Label:
-	var l := lbl(text, mini(fs, 30), TEXT, true)
+	var l := lbl(text, mini(fs, 30), HEAD, true)
 	l.add_theme_font_override("font", DISPLAY)
 	shade(l, mini(fs, 30))
 	return l

@@ -57,6 +57,8 @@ The longest chain, which sets the finish: T1.R26, then 131, then the director's 
 | 169 | Visuals 4, money, draft, new career: cap meters and deal cards; draft list gets the screen, prospect bars, draft stage; jumper club picker, setup steps, press-room interview, coach card. | look sheet shown to the director |
 | 170 | Visuals 5, season end, pre-season, ceremonies to the farewell's standard; then player faces and hair. | look sheet shown to the director |
 | 171 | Visuals 6, proper PC layouts for every sheet. | 1920x1080 look sheet shown to the director |
+| 172 | A Club Forge club can start a Real 2026 lists career as a new club with the new-club draft package every new club gets (director 2026-11-12: "Yes, as a new club"; widens ruling 71). | a real-lists career with a Forge club drafts its package; his playtest |
+| 173 | In a 2027 League redraft, Tasmania joins in 2028, not round 1 of 2027 (director 2026-11-12: "Join in 2028"; PR #1172 had them from 2027). | 2027 ladder has 18 clubs, 2028 has 19 |
 
 ## B. Built and ON: his playtest judges
 
@@ -247,6 +249,7 @@ Settled answers that are not build rows. The bible stays as it is unless he cons
 
 ## Rulings (director, 2026-11-12)
 
+- His 1.0.15 reports: section headings take a sand ink, e8cf9c ("Sand (B)"); Defensive Press is renamed High Press ("Rename High Press"; same plan, old saves map); rows 172 and 173.
 - Visual overhaul interview: match day first, one look sheet per area, rig and Tripo without asking; answers in the Director Bible (rows 166-171). Trades check: "Decline the letter in the test".
 - Auto-pick keeps its name: "Auto pick. I already answered this question". It is the Team selection button's name and exempt from the engine-word ban (row 134).
 - Every draftee in every draft shows one line "Plays like: <real AFL player>", from facts: same position, about his level ("level must be included"), similar height, closest ratings at max potential (`PlaysLike.gd`). A line under the name, never in it.
