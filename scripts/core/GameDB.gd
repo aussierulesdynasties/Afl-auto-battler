@@ -182,6 +182,26 @@ var baseline_spread := 0.0   # standard deviation of the 2026 overalls
 var _alias_candidates: Array = []
 var _alias_next := 0
 var _real_names := {}
+var _state_aliases := {}   # alias -> true: labels given to state league men
+
+## The state leagues (TODO row 128): the VFL, SANFL and WAFL of the data season,
+## loaded only by a dataset whose row names a state_leagues folder (2026). They
+## sit beside the AFL, never in it: clubs, club_order, players and
+## players_by_club stay the AFL's, and loading them moves no AFL rating, id or
+## alias. club(), club_name(), club_short() and club_colours() also answer for
+## a state code.
+var STATE_LEAGUES_DIR := ""
+const STATE_LEAGUE_IDS := ["VFL", "SANFL", "WAFL"]
+## The 2026 League stat columns a state file may carry; a league that does not
+## record one leaves it blank, and the man's stat_cols lists only those it has.
+const STATE_STAT_KEYS := ["gm", "gl", "bh", "di", "ki", "hb", "mk", "tk", "ho", "cl", "if50", "rb", "cm",
+		"ff", "fa"]
+const STATE_INT_KEYS := ["res_gm", "res_gl", "colts_gm", "colts_gl", "career_gm_pre2026"]
+var state_leagues := {}          # id -> leagues.csv row, numbers typed
+var state_clubs := {}            # code -> club row: league, kind, afl_club, colours as Color
+var state_players := []          # state-only men; AFL-listed men are in state_links, not here
+var state_players_by_club := {}  # code -> Array of state_players rows
+var state_links := []            # afl_links rows: an AFL id and the state club he also played for
 
 
 ## A player's age at the start of the first playable season (START_DATE),
@@ -216,6 +236,7 @@ func reload(dataset := Datasets.DEFAULT) -> void:
 	_alias_candidates = []
 	_alias_next = 0
 	_real_names = {}
+	_state_aliases = {}
 	players = _load_players()
 	_apply_list_types(players)
 	_load_appearance()
@@ -251,6 +272,8 @@ func reload(dataset := Datasets.DEFAULT) -> void:
 	club_moves = _load_club_moves()
 	mark_unicorns(players + draftees)
 	late_draftees = []
+	# Last, so every AFL list, rating and alias above is drawn as before.
+	_load_state_leagues()
 
 
 	loaded = not players.is_empty()
@@ -289,25 +312,27 @@ func _use_dataset(id: String, row: Dictionary) -> void:
 	LADDER_PATH = str(row.get("ladder", ""))
 	OVR_CSV = str(row.get("ovr_overrides", ""))
 	POTENTIAL_CSV = str(row.get("potential_overrides", ""))
+	STATE_LEAGUES_DIR = str(row.get(Datasets.STATE_LEAGUES_KEY, ""))
 
 
 # ---------------------------------------------------------------------------
 # Lookups
 # ---------------------------------------------------------------------------
+## An AFL club, or a state league club by its state code.
 func club(code: String) -> Dictionary:
-	return clubs.get(code, {})
+	return clubs.get(code, state_clubs.get(code, {}))
 
 
 func club_name(code: String) -> String:
-	return str(clubs.get(code, {}).get("name", code))
+	return str(club(code).get("name", code))
 
 
 func club_short(code: String) -> String:
-	return str(clubs.get(code, {}).get("short", code))
+	return str(club(code).get("short", code))
 
 
 func club_colours(code: String) -> Array:
-	var c: Dictionary = clubs.get(code, {})
+	var c: Dictionary = club(code)
 	return [c.get("primary", Color.WHITE), c.get("secondary", Color.DIM_GRAY),
 			c.get("accent", Color.GOLD)]
 
@@ -1254,6 +1279,101 @@ func _read_dicts(path: String) -> Array:
 	return out
 
 
+# ---------------------------------------------------------------------------
+# State leagues (TODO row 128)
+# ---------------------------------------------------------------------------
+func _load_state_leagues() -> void:
+	state_leagues = {}
+	state_clubs = {}
+	state_players = []
+	state_players_by_club = {}
+	state_links = []
+	if STATE_LEAGUES_DIR == "":
+		return
+	var season := DATA_SEASON
+	for row in _read_dicts("%s/leagues.csv" % STATE_LEAGUES_DIR):
+		var id := str(row["league"])
+		for k in ["clubs", "rounds", "games_each", "byes_each", "finals_teams"]:
+			row[k] = int(row[k])
+		for k in ["points_per_team_game", "points_sd", "goal_accuracy"]:
+			row[k] = float(row[k])
+		state_leagues[id] = row
+	for id in STATE_LEAGUE_IDS:
+		if not state_leagues.has(id):
+			continue
+		var stem := "%s/%s_%%s_%d.csv" % [STATE_LEAGUES_DIR, str(id).to_lower(), season]
+		var codes := []
+		for row in _read_dicts(stem % "clubs"):
+			row["primary"] = _hex(row["primary"])
+			row["secondary"] = _hex(row["secondary"])
+			# A club with no third colour (most of the WAFL) tints with its second.
+			row["accent"] = _hex(row["accent"]) if str(row["accent"]) != "" else row["secondary"]
+			state_clubs[str(row["code"])] = row
+			state_players_by_club[str(row["code"])] = []
+			codes.append(str(row["code"]))
+		state_leagues[id]["club_codes"] = codes
+		for row in _read_dicts(stem % "players"):
+			var p := _state_player(row)
+			state_players.append(p)
+			if state_players_by_club.has(p["club"]):
+				state_players_by_club[p["club"]].append(p)
+	state_links = _read_dicts("%s/afl_links_%d.csv" % [STATE_LEAGUES_DIR, season])
+	_assign_state_aliases(state_players)
+	if not state_leagues.is_empty():
+		print("GameDB: state leagues %s: %d clubs, %d state-only players, %d AFL links"
+				% ["/".join(state_leagues.keys()), state_clubs.size(), state_players.size(), state_links.size()])
+
+
+## One state man from his file row. His id is the file's sid (club_first_last),
+## never an AFL id. Stats stay as the 2026 League totals; stat_cols names the
+## columns his league records (ratings come later, step 3).
+func _state_player(row: Dictionary) -> Dictionary:
+	var p := {
+		"id": str(row["sid"]), "league": str(row["league"]), "club": str(row["club"]),
+		"list": str(row["list"]), "num": int(row["num"]) if str(row["num"]).is_valid_int() else 0,
+		"first": str(row["first"]), "last": str(row["last"]),
+		"dob": str(row["dob"]), "dob_src": str(row["dob_src"]),
+		"height_cm": float(row["height_cm"]) if str(row["height_cm"]) != "" else 0.0,
+		"height_src": str(row["height_src"]),
+		"weight_kg": float(row["weight_kg"]) if str(row["weight_kg"]) != "" else 0.0,
+		"real_pos": str(row["pos"]), "junior_club": str(row["junior_club"]), "note": str(row["note"]),
+		"data_club": str(row["club"]), "src": DATA_SEASON,
+	}
+	p["real_name"] = "%s %s" % [p["first"], p["last"]]
+	p["age"] = age_at_start(str(p["dob"]), 0.0)
+	var cols := []
+	for k in STATE_STAT_KEYS:
+		if str(row.get(k, "")) != "":
+			p[k] = float(row[k])
+			cols.append(k)
+	p["stat_cols"] = cols
+	for k in STATE_INT_KEYS:
+		p[k] = int(row[k]) if str(row.get(k, "")).is_valid_int() else 0
+	return p
+
+
+## A state league's club codes, in file order ([] for a league not loaded).
+func league_clubs(id: String) -> Array:
+	return state_leagues.get(id, {}).get("club_codes", [])
+
+
+## True for a state league club's code.
+func is_state_club(code: String) -> bool:
+	return state_clubs.has(code)
+
+
+## The state league side an AFL club fields (its reserves or aligned side), or "".
+func state_side_of(afl_code: String) -> String:
+	for code in state_clubs:
+		if str(state_clubs[code]["afl_club"]) == afl_code:
+			return str(code)
+	return ""
+
+
+func state_list(code: String) -> Array:
+	return state_players_by_club.get(code, [])
+
+
 func _assign_fictional_names(list: Array) -> void:
 	assign_aliases(list)
 
@@ -1274,11 +1394,38 @@ func assign_aliases(list: Array) -> void:
 	for i in range(list.size()):
 		var label := _alias_at(_alias_next)
 		_alias_next += 1
-		while _real_names.has(label) or alias_is_double(label):
+		while _real_names.has(label) or alias_is_double(label) or _state_aliases.has(label):
 			label = _alias_at(_alias_next)
 			_alias_next += 1
 		list[i]["generic_name"] = label
 		list[i]["name"] = label
+
+
+## State league men draw their labels from the far end of the same pool,
+## walking back, so the AFL's cursor above hands out exactly the labels it did
+## before the state leagues loaded; the two meet only after tens of thousands of
+## generated players, and then the cursor skips a state label. A state label is
+## never an AFL man's real name nor a state man's.
+func _assign_state_aliases(list: Array) -> void:
+	_ensure_alias_pool()
+	var state_real := {}
+	for p in list:
+		state_real[str(p.get("real_name", ""))] = true
+	var back := _alias_candidates.size() - 1
+	for p in list:
+		var label := ""
+		while label == "" or _real_names.has(label) or state_real.has(label) or alias_is_double(label) \
+				or _state_aliases.has(label):
+			label = _alias_at(back) if back >= 0 else _overflow_alias(STATE_ALIAS_OVERFLOW - back)
+			back -= 1
+		_state_aliases[label] = true
+		p["generic_name"] = label
+		p["name"] = label
+
+
+## Where state labels start in the three-word overflow, should the pool run out:
+## far past anything the AFL cursor reaches.
+const STATE_ALIAS_OVERFLOW := 5000000
 
 
 ## True when a name's first word equals its last word ("Reid Reid"). Such a

@@ -1,6 +1,6 @@
 # State leagues data (VFL, SANFL, WAFL 2026)
 
-Builds `data/state_leagues/` (TODO row 128, step 1). Data only: nothing in the game reads it yet.
+Builds `data/state_leagues/` (TODO row 128, step 1). `GameDB` loads it through the 2026 dataset's `state_leagues` key (step 2): `state_leagues`, `state_clubs`, `state_players`, `state_links`.
 
 ```
 python tools/state_leagues/build.py           # rewrite data/state_leagues/*.csv (+ keep .import files)

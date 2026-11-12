@@ -26,6 +26,12 @@ const DEFAULT := "2026"
 const FILE_KEYS := ["players", "draftees", "history", "origin", "list_additions", "list_addition_stats",
 		"list_types", "departures", "club_moves", "ladder", "ovr_overrides", "potential_overrides"]
 
+## One more key, a folder rather than a file: state_leagues, the VFL, SANFL and
+## WAFL of the data season (TODO row 128; data/state_leagues/, built by
+## tools/state_leagues/build.py). A row without it plays with no state leagues,
+## exactly as before they existed.
+const STATE_LEAGUES_KEY := "state_leagues"
+
 const _TABLE := {
 	# Today's start: the completed 2026 season, careers from 2027.
 	"2026": {
@@ -42,6 +48,7 @@ const _TABLE := {
 		"ladder": "res://data/ladder_2026.csv",
 		"ovr_overrides": "res://data/ovr_overrides.csv",
 		"potential_overrides": "res://data/potential_overrides.csv",
+		"state_leagues": "res://data/state_leagues",
 	},
 	# The 1990 start: lists rated on 1989, the season just played (design P3
 	# builds these files; until they ship, ready() leaves this start out).
