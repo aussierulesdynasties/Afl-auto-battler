@@ -65,7 +65,7 @@ SEASONS = [2021, 2022, 2023, 2024, 2025]
 CAREER_SEASONS = list(range(2004, 2026))
 DRAFT_YEARS = list(range(2006, 2026))
 MIN_SEASON_GAMES = 8
-UA = "AFLAutoBattler/1.0 (https://github.com/gabebartolo-spec/Afl-auto-battler; data tool)"
+UA = "AFLAutoBattler/1.0 (https://github.com/aussierulesdynasties/Afl-auto-battler; data tool)"
 
 # AFL Tables column header -> our stat key.
 HEADER_KEYS = {
