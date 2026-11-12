@@ -593,7 +593,7 @@ func _test_said_once_and_said_right() -> void:
 	var shares: Array = GateOdds.plan_shares("defensive")
 	_check((shares[1] as Array).size() == 4 and str(GateOdds.PLAN_COST["defensive"]).count("%s") == 4
 			and str(GateOdds.PLAN_COST["defensive"]).contains("less ground a kick"),
-			"The Defensive Press gate states every cost the match applies, the ground lost a kick included")
+			"The High Press gate states every cost the match applies, the ground lost a kick included")
 
 
 func _test_engine_rules() -> void:

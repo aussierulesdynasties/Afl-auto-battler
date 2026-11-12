@@ -10,7 +10,7 @@ extends RefCounted
 const PLAN_NAMES := {
 	"balanced": "Balanced",
 	"attacking": "Attack Corridor",
-	"defensive": "Defensive Press",
+	"defensive": "High Press",
 	"contest": "Win Contest",
 	"controlled": "Controlled Tempo",
 	"custom": "Own plan",
@@ -42,7 +42,7 @@ const PLAN_PARTS := {
 	"attacking": {"does": "Go through the corridor.",
 			"gain": "More ground and better shots.",
 			"cost": "More turnovers, heavier legs, and they score more on the rebound.",
-			"beats": "Beats Controlled Tempo. A Defensive Press squeezes it."},
+			"beats": "Beats Controlled Tempo. A High Press squeezes it."},
 	"defensive": {"does": "Hunt the ball high and lock it in their half.",
 			"gain": "Win it back in their half.",
 			"cost": "Heavier legs, rushed shots, and space behind if they break it.",
@@ -53,7 +53,7 @@ const PLAN_PARTS := {
 	"controlled": {"does": "Keep the ball. Asks nothing special of your list.",
 			"gain": "Fewer errors, less rattled by pressure, fresher legs.",
 			"cost": "Less ground gained.",
-			"beats": "Plays through a Defensive Press. Attack Corridor runs past it."},
+			"beats": "Plays through a High Press. Attack Corridor runs past it."},
 	# Your own plan (CustomPlan, director 2026-11-12): neutral, like Win Contest.
 	"custom": {"does": "Your own plan: the strength and the cost you picked. It beats no plan and no plan beats it."},
 }

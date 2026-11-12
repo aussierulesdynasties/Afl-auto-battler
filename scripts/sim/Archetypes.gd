@@ -57,7 +57,7 @@ const SWING_LOSS := -2
 
 ## What each archetype does, in football words (the reveal and the coach sheet).
 const UPSIDE := {
-	"DS": "On Defensive Press your press bites harder and they kick fewer of their shots.",
+	"DS": "On High Press your press bites harder and they kick fewer of their shots.",
 	"TA": "On Attack Corridor you kick more of your shots and gain more ground.",
 	"CC": "On Win Contest you win more of the stoppages.",
 	"PC": "On Controlled Tempo you turn it over less and your legs last longer.",
@@ -67,7 +67,7 @@ const UPSIDE := {
 	"GAMB": "You kick more of your shots, and wins lift the group more.",
 }
 const COST := {
-	"DS": "On Defensive Press you kick fewer of your own, gain less ground and burn more legs.",
+	"DS": "On High Press you kick fewer of your own, gain less ground and burn more legs.",
 	"TA": "On Attack Corridor you give away more clangers, burn more legs and leave more open on the turnover.",
 	"CC": "On Win Contest you gain less ground and leave more open on the turnover.",
 	"PC": "On Controlled Tempo you gain less ground.",
@@ -82,7 +82,7 @@ const OFF_PLAN := "On any other plan you coach it as written."
 ## Rival coaches' reports never put an archetype's name on a real coach
 ## (Coaches.gd): they say what he does (RivalRead.coach_line style).
 const RIVAL_LINE := {
-	"DS": "his side's press bites harder on Defensive Press, and burns more legs",
+	"DS": "his side's press bites harder on High Press, and burns more legs",
 	"TA": "his side takes the game on through the corridor, and leaves more open behind it",
 	"CC": "his side wins more stoppages on Win Contest, and gains less ground",
 	"PC": "his side keeps it on Controlled Tempo with fewer turnovers, and gains less ground",

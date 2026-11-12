@@ -34,7 +34,7 @@ const PEP_GAIN := {
 	"steady": "no extra wear on the legs and no frayed tempers",
 	"fire_up": "a %s better chance at every contest while you are behind; nothing level or in front",
 	"calm": "%s fewer clangers, %s less pressure felt, legs tire %s slower",
-	"heat": "%s more pressure on their ball carriers (%s on top of a Defensive Press)",
+	"heat": "%s more pressure on their ball carriers (%s on top of a High Press)",
 }
 const PEP_COST := {
 	"steady": "no lift at the contest and no extra pressure",
