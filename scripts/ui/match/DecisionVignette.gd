@@ -489,8 +489,8 @@ func screen_cut_at(t: float, hold: float) -> bool:
 	# (half the screen), so the answer is the same before the call exists as after.
 	var room := call_room
 	var cut := false
-	for r_ in [room, maxf(room, size.y * 0.5)]:
-		call_room = r_
+	for tall in [room, maxf(room, size.y * 0.5)]:
+		call_room = tall
 		_apply_camera(t, hold)
 		var r := VignetteGround.screen_rect(ground_cam())
 		cut = cut or (r.has_area() and (r.position.y + r.size.y * 0.15 < size.y * 0.075 or r.position.x < 0.0 or r.end.x > size.x))
