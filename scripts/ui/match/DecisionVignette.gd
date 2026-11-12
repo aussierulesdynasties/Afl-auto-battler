@@ -103,9 +103,24 @@ func setup_decision(sim: MatchSim, my_side: int, moment: Dictionary, shown := {}
 		_codes[side] = code
 	var them := 1 - my_side
 	var me := _pick(sim, my_side, str(moment.get("player_id", "")))
+	# The duel and the man kicking a bag stand where the live oval has that man, the camera
+	# turned to whichever way has the most players behind him (director, 2026-11-12: "Why
+	# not show people in their actual positions?"). The tired star's scene is the
+	# interchange gate, wherever he was; the set shot stands where the call says he marked.
+	var about := str(moment.get("player_id", ""))
+	if kind in ["duel", "hot"] and live_spots.has(about):
+		var here: Vector2 = VignetteExtras.keep_in(live_spots[about])
+		var others := []
+		for id in live_spots:
+			if str(id) != about:
+				others.append(live_spots[id])
+		_stage = {"at": here, "look": VignetteExtras.best_look(here, others, _stage["look"])}
 	_to_scene = _frame_from(_stage["at"], _stage["look"])
 	var focus: Vector2 = _stage["at"]
+	# The field umpire stands behind the men, in the camera's picture.
 	var near_umpire := Vector2(7.0, 6.0)
+	if kind != "tired":
+		near_umpire = _to_scene.affine_inverse() * Vector2(-2.9, 12.0) - focus
 	match kind:
 		"tired":
 			# He walks in off the wing, out on his feet; his replacement is up off the bench,
@@ -171,7 +186,7 @@ func setup_decision(sim: MatchSim, my_side: int, moment: Dictionary, shown := {}
 			near_umpire = _to_scene.affine_inverse() * Vector2(-lean * (SHOT_SIDE + 2.5), KICKER_BACK + 2.0) - focus
 	_style_rucks()
 	# Everyone else on the ground, where that part of it puts them, and the umpires.
-	_cast = VignetteExtras.players(sim, my_side, tokens.map(func(t): return str(t["id"])), focus, wet) \
+	_cast = VignetteExtras.players(sim, my_side, tokens.map(func(t): return str(t["id"])), focus, wet, false, live_spots) \
 			+ VignetteExtras.umpires(focus, near_umpire)
 	_place_cast()
 	_t = 0.0

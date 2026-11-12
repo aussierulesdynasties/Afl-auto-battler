@@ -1671,7 +1671,13 @@ func _test_pc_break_worst_case(club := "COL") -> void:
 	# own margin (UiKit.modal_box keeps 24) and its edge and footer.
 	var most := _break_most(box)
 	print("PC BREAK %s worst %.0f most %.0f oval %s" % [club, worst, most, str((m.get("_pitch") as Control).get_global_rect())])
-	_check(most > 0.0 and worst <= most - 6.0, "...with at least 6 px to spare (%s: %.0f of %.0f)" % [club, worst, most])
+	# The break docked over the oval at 1280x720 has 604 px for its body (the oval's 700
+	# less the sheet's margin, edge and footer; it was 608 across the whole window).
+	# Measured 2026-11-12, every switch on: Collingwood 473, GWS 463, St Kilda 490.
+	_check(absf(most - 604.0) < 1.0 and worst <= 604.0 - 6.0, "...with at least 6 px to spare (%s: %.0f of 604; the sheet gives %.0f)" % [club, worst, most])
+	var page_now: Control = box.find_child("BreakPage", true, false) if box != null else null
+	if page_now != null:
+		print("PC PAGE %s quarter and legs column %.0f high, %.0f wide" % [club, page_now.get_combined_minimum_size().y, page_now.size.x])
 	_check(heights.size() == 1, "Choosing another call never changes the sheet's height (%s: %s)" % [club, str(heights.keys())])
 	# The synergies line is a fact for the game plan: it sits in that call.
 	var syn: Node = box.find_child("SynergyBlock", true, false) if box != null else null

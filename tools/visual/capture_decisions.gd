@@ -7,6 +7,9 @@ extends SceneTree
 ## beats 0-2 playing in, 3 the freeze, 4 the freeze with the call's room taken off the bottom
 ## and (where the scene keeps moving) 0.7 s later. Fremantle v Melbourne, seeded.
 ## --kinds tired,duel,...,bounce: only those. --weather wet (or windy, hot). --clubs FRE,MEL.
+## --live SECONDS: the scenes open over a real match screen's oval, SECONDS into the first
+## quarter (the club is --clubs' first, the opponent whoever the fixture gives), so every
+## man stands where the live oval has him, as in a game. Prints LIVE lines.
 ## Prints FRAMING lines (the scene's own projection: horizon, heads, boots, how much of the
 ## frame is turf) and ART lines: every figure move drawn (strip and frames asked for), proof
 ## the sheet's moves were used and not a fallback.
@@ -29,12 +32,14 @@ func _run() -> void:
 	var kinds := ["tired", "duel", "hot", "momentum", "set_shot", "bounce"]
 	var weather := ""
 	var clubs := ["FRE", "MEL"]
+	var live_after := -1.0
 	for i in range(a.size() - 1):
 		match str(a[i]):
 			"--out": out = str(a[i + 1])
 			"--weather": weather = str(a[i + 1])
 			"--kinds": kinds = Array(str(a[i + 1]).split(","))
 			"--clubs": clubs = Array(str(a[i + 1]).split(","))
+			"--live": live_after = float(a[i + 1])
 			"--size":
 				var wh := str(a[i + 1]).split("x")
 				W = int(wh[0])
@@ -54,13 +59,37 @@ func _run() -> void:
 	var squad_script = load("res://scripts/sim/Squad.gd")
 	var sim = load("res://scripts/sim/MatchSim.gd").new(squad_script.new(clubs[0], db.club_list(clubs[0]), true, clubs[0]),
 			squad_script.new(clubs[1], db.club_list(clubs[1]), false, clubs[1]), 2027)
+	var me := 0
+	var live := {}
+	if live_after >= 0.0:
+		state.reset()
+		state.replay_seed = 2027
+		state.start_season(clubs[0], db.club_list(clubs[0]))
+		state.prepare_interactive_match()
+		var m: Control = load("res://scenes/MatchScene.tscn").instantiate()
+		root.add_child(m)
+		for i in range(8):
+			await process_frame
+		(m.find_child("StartQuarter", true, false) as Button).emit_signal("pressed")
+		for i in range(8):
+			await process_frame
+		var pitch = m.get("_pitch")
+		var left := live_after
+		while left > 0.0:
+			pitch.director.advance(0.1)
+			left -= 0.1
+		sim = state.pending_sim
+		me = int(m.get("_my_side"))
+		live = m.call("_live_spots")
+		print("LIVE %s v %s, %.0f s in, %d men on the oval" % [sim.squads[me].code, sim.squads[1 - me].code, live_after, live.size()])
+		m.visible = false
+		m.process_mode = Node.PROCESS_MODE_DISABLED
 	if weather != "":
 		sim.weather = weather
 	var DV = load("res://scripts/ui/match/DecisionVignette.gd")
 	var Stoppage = load("res://scripts/ui/match/StoppageVignette.gd")
 	Stoppage.log_frames = true
 	Stoppage.frame_log.clear()
-	var me := 0
 	sim.moment_side = me
 	var moments: Dictionary = _moments(sim, me)
 	var canvas: Vector2 = root.get_visible_rect().size
@@ -74,6 +103,7 @@ func _run() -> void:
 		root.add_child(vig)
 		vig.size = canvas
 		vig.set_process(false)
+		vig.live_spots = live
 		await process_frame
 		if k == "bounce":
 			vig.setup(sim, me, "Centre bounce")

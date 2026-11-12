@@ -2621,6 +2621,7 @@ func _show_bounce_moment(m: Dictionary) -> void:
 	# A scene that takes the score is handed the one the scoreboard shows, so the
 	# two never disagree while the oval catches up with the sim.
 	var shown := {"goals": _shown_goals.duplicate(), "behinds": _shown_behinds.duplicate()}
+	vignette.live_spots = _live_spots()
 	if vignette is DecisionVignette:
 		(vignette as DecisionVignette).setup_decision(GameState.pending_sim, _my_side, m, shown)
 	else:
@@ -3412,6 +3413,21 @@ func _on_event(ev: Dictionary) -> void:
 		_flash_score(int(ev.get("side", 0)))
 		_track_run(int(ev.get("side", 0)))
 	_queue_broadcast(ev, event_index)
+
+
+## Where the live oval has each man right now, by his id, in a call scene's metres (x
+## across, y toward the goal your side kicks at): the scene shows the same ground the
+## coach was watching (director, 2026-11-12: "Why not show people in their actual
+## positions?"). Read only.
+func _live_spots() -> Dictionary:
+	var out := {}
+	if _pitch == null or _pitch.director == null:
+		return out
+	var sgn := MatchDirector._dir(_my_side)
+	for token in _pitch.director.tokens:
+		var p: Vector2 = token.get("pos", Vector2.ZERO)
+		out[str(token.get("pid", ""))] = Vector2(p.y, p.x) * sgn
+	return out
 
 
 ## A vignette reads the positions the presentation has already staged. It

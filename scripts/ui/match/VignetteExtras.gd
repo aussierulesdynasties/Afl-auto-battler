@@ -40,9 +40,10 @@ static func hashf(key: String) -> float:
 ## with his own look, standing where his line sets up (oval metres: x across, y toward the
 ## goal my_side kicks at) and drawn toward focus as play would draw him. bounce: the
 ## centre-bounce set-up (wings on the wings, six in each arc, the square left to the men
-## at the bounce). Each entry: the fields a scene's own figures have, plus "extra": true and
+## at the bounce). live: each man's spot on the live oval by his id (oval metres), used in
+## place of the set-up tables for every man it has. Each entry: the fields a scene's own figures have, plus "extra": true and
 ## "oval": where he stands.
-static func players(sim: MatchSim, my_side: int, taken: Array, focus: Vector2, wet: bool, bounce := false) -> Array:
+static func players(sim: MatchSim, my_side: int, taken: Array, focus: Vector2, wet: bool, bounce := false, live := {}) -> Array:
 	var out := []
 	for side in range(2):
 		var sq: Squad = sim.squads[side]
@@ -73,6 +74,10 @@ static func players(sim: MatchSim, my_side: int, taken: Array, focus: Vector2, w
 			if not bounce:
 				at = at.lerp(focus, float(PULL.get(role, 0.2)))
 			at += Vector2(hashf(id + "|x") - 0.5, hashf(id + "|y") - 0.5) * (1.5 if bounce else 4.0)
+			# Where the live oval has him at this moment, when the match screen says
+			# (director, 2026-11-12: "Why not show people in their actual positions?").
+			if live.has(id):
+				at = live[id]
 			out.append({"extra": true, "side": side, "mine": side == my_side, "slot": "X", "role": "extra",
 					"id": id, "tall": MatchSim._is_ruckman(p), "look": GameDB.figure_look(p, wet),
 					"height_cm": float(p.get("height_cm", 0.0)), "name": "", "num": int(p.get("num", 0)),
@@ -101,6 +106,40 @@ static func umpires(focus: Vector2, near := Vector2(7.0, 6.0)) -> Array:
 				"slot": "X", "role": "extra", "id": "umpire%d" % i, "tall": false, "look": UMPIRE_LOOK,
 				"height_cm": 0.0, "name": "", "num": 0, "tired": false, "oval": spots[i][1]})
 	return out
+
+
+## The directions a call scene's camera may look, round the compass.
+const LOOKS := 24
+
+
+## How many of those spots (oval metres) a long lens at `at`, looking along `look`, has
+## behind its men: 5 to 75 metres up the scene, inside a wedge about seven degrees a side.
+static func wedge_count(at: Vector2, look: Vector2, spots: Array) -> int:
+	var fwd := look.normalized()
+	var n := 0
+	for sp in spots:
+		var rel: Vector2 = (sp as Vector2) - at
+		var f := rel.dot(fwd)
+		if f >= 5.0 and f <= 75.0 and absf(rel.cross(fwd)) <= 0.12 * (f + 16.0):
+			n += 1
+	return n
+
+
+## Which way a call scene's camera looks from `at`: the direction with the most of the
+## other players behind the men (wedge_count); between equals, the one nearest `prefer`.
+static func best_look(at: Vector2, spots: Array, prefer: Vector2) -> Vector2:
+	var best := prefer.normalized()
+	var most := wedge_count(at, best, spots)
+	var close := 1.0
+	for i in range(LOOKS):
+		var dir := Vector2.from_angle(TAU * float(i) / float(LOOKS))
+		var n := wedge_count(at, dir, spots)
+		var c := dir.dot(prefer.normalized())
+		if n > most or (n == most and c > close):
+			best = dir
+			most = n
+			close = c
+	return best
 
 
 ## That spot, held a couple of metres inside the boundary line.

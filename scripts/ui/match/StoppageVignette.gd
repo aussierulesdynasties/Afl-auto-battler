@@ -135,7 +135,7 @@ func setup(sim: MatchSim, my_side: int, heading := "", shown := {}) -> void:
 	_style_rucks()
 	facts = _commentary(sim, my_side)
 	# Everyone else: the wings, both arcs and the other umpires (the square is the bounce's own).
-	_cast = VignetteExtras.players(sim, my_side, tokens.map(func(t): return str(t["id"])), Vector2.ZERO, wet, true) \
+	_cast = VignetteExtras.players(sim, my_side, tokens.map(func(t): return str(t["id"])), Vector2.ZERO, wet, true, live_spots) \
 			+ VignetteExtras.umpires(Vector2.ZERO, Vector2.INF)
 	_place_cast()
 	_t = 0.0
@@ -420,6 +420,12 @@ var _idle := 0.0                  # seconds waited on the call since the freeze 
 var _idle_drawn := 0.0
 ## Everyone else on the ground (VignetteExtras): drawn with the scene's men, never in tokens.
 var _cast: Array = []
+## Both sides in full and the umpires, before the scene keeps its own ground clear.
+var _cast_all: Array = []
+## Where the live oval has each man at this moment, by his id, in oval metres (x across,
+## y toward the goal your side kicks at): set by the match screen before setup. Empty:
+## the set-up tables place the cast (a scene opened without a live oval).
+var live_spots := {}
 
 
 ## What the freeze frames, in the scene's metres: "near" how far up the scene the nearest
@@ -658,6 +664,7 @@ func _place_cast() -> void:
 	for t in tokens:
 		nearest = minf(nearest, minf((t["to"] as Vector2).y, (t["from"] as Vector2).y))
 	var kept := []
+	_cast_all = _cast
 	for e in _cast:
 		var at: Vector2 = to_scene * (e["oval"] as Vector2)
 		if at.y < nearest + 1.0 or not _cast_fits(at):
