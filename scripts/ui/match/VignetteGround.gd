@@ -91,11 +91,17 @@ static func _apply(ground: String) -> void:
 	_geometry.clear()
 
 
-## The ground's empty seats (the crowd texture's base colour).
+## The ground's empty seats (the crowd texture's base colour) as the ground last drew
+## them: under lights the ground's own colour, paler in daylight. Whoever paints the
+## crowd ahead of a scene asks here, so it paints the picture the scene will use.
 static func seat_colour() -> Color:
+	return _seats_in(VignetteKickoff.shown)
+
+
+static func _seats_in(slot: String) -> Color:
 	if spec.is_empty():
 		_apply(venue)
-	return Color.html(str(spec.get("seat", "#121216")))
+	return _lit(Color.html(str(spec.get("seat", "#121216"))), DAY_SEAT, VignetteKickoff.daylight(slot) * 0.85)
 
 
 ## The ground a match is played at: a final's own venue, else the home club's
@@ -494,7 +500,7 @@ static func _draw_stands(ci: CanvasItem, cam: Cam, colours: Array, seed: int, bo
 	var day := VignetteKickoff.daylight(slot)
 	var lamps := VignetteKickoff.lights(slot)
 	# The ground's own seats (the MCG's are a pale blue-grey: Commons, "MCG Shane Warne Stand.png").
-	var tex := VignetteCrowd.seats(colours, seed, _lit(seat_colour(), DAY_SEAT, day * 0.85))
+	var tex := VignetteCrowd.seats(colours, seed, _seats_in(slot))
 	# A grass hill: the crowd sitting on the bank (Bellerive, Manuka).
 	var hill: Texture2D = VignetteCrowd.seats(colours, seed + 1, VignetteWeather.daylit(HILL, slot)) if spec.get("hill", false) else null
 	if ci.texture_filter != CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS:
