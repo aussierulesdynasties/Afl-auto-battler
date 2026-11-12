@@ -40,8 +40,12 @@ const REHAB_GAP := 15
 ## Automatic rehab: a short 2026 and a recent peak this far above it.
 const REHAB_GAMES := 12
 const REHAB_PEAK_GAP := 12
-## Seasons that count as "recent" for the peak.
-const PEAK_FROM_YEAR := 2023
+## Seasons that count as "recent" for the peak: the data season's last three
+## (2023 for today's start). GameDB sets it with the dataset.
+static var peak_from_year := 2023
+## Informed potential (director 2026-11-11, "Informed", TODO row 142): a real
+## player's real peak sets his ceiling in a past start, give or take this luck.
+const REAL_PEAK_LUCK := 3.0
 ## A 30-year-old's peak is not all coming back: ease it per year past 29.
 const PEAK_AGE_EASE := 1.5
 
@@ -101,6 +105,18 @@ static func assign(p: Dictionary) -> void:
 		return
 	var ov := int(p.get("overall", 50))
 	var rng := _rng(p)
+	# A past start knows each real player's real peak (p["real_peak"], his best
+	# real season from the data season on): that sets his ceiling, give or take
+	# luck, not capped by position, the stars of each class tending to become
+	# the sim's stars.
+	var real_peak := float(p.get("real_peak", 0))
+	if real_peak > 0.0:
+		var luck := rng.randf_range(-REAL_PEAK_LUCK, REAL_PEAK_LUCK)
+		p["potential"] = clampi(int(round(real_peak + luck)), ov, MAX_POT)
+		var games := float(p.get("gm", 0.0))
+		if games > 0.0 and games < REHAB_GAMES and real_peak - float(ov) >= REHAB_PEAK_GAP:
+			p["rehab"] = true
+		return
 	var pot: float
 	if bool(p.get("projected", false)):
 		pot = _draftee_potential(p, rng)
@@ -142,7 +158,7 @@ static func reachable_peak(p: Dictionary) -> float:
 static func recent_peak(p: Dictionary) -> float:
 	var best := 0.0
 	for season in p.get("history", []):
-		if int(season[0]) >= PEAK_FROM_YEAR:
+		if int(season[0]) >= peak_from_year:
 			best = maxf(best, float(season[1]))
 	if best <= 0.0:
 		return 0.0
