@@ -4952,8 +4952,9 @@ func _test_sacked_job_choice_taps() -> void:
 			"Each club with a job open has a Take button that reads whole on a 390 phone")
 	var why: String = await Tap.tap(take) if take != null else "missing"
 	await _settle()
-	_check(why == "" and not _state.is_sacked() and str(_state.coach_arcs["move"].get("to", "")) == code,
-			"A finger on Take the job ends the sacking and the move is set for %s (%s)" % [code, why])
+	# Row 179: he is that club's coach from the tap, so every off-season call is theirs.
+	_check(why == "" and not _state.is_sacked() and str(_state.my_club) == code and _state.my_list == _state.season.lists.get(code, []),
+			"A finger on Take the job ends the sacking and he coaches %s from that day, not Fremantle (%s; club %s)" % [code, why, str(_state.my_club)])
 	_check(current_scene.find_child("SackedCard", true, false) == null, "The hub rebuilds without the sacked card")
 	# Row T5.Q25: Tasmania join the league next season, so their job is one of
 	# the three, with no ladder finish; a finger on it sets the move, which is

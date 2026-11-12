@@ -8118,6 +8118,10 @@ func season_closed() -> bool:
 func open_offseason(keep_staff := false) -> void:
 	if season == null or offseason_year == season_year or ClubMoves.letter_open(self):
 		return
+	# Sacked with jobs to choose from: the off-season waits for his choice and
+	# opens at the club he takes (ClubMoves.take_job), never at the one he left.
+	if is_sacked() and not ClubMoves.offers(self).is_empty():
+		return
 	ensure_contracts()
 	# The season is over: every unfinished project is judged where it stands.
 	for code in season.lists:
