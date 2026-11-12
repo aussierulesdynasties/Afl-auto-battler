@@ -4,7 +4,8 @@ extends SceneTree
 ## Writes <out>_popup.png (the new report over the hub), <out>_sheet_end.png
 ## (its foot: retraining), <out>_hub.png (the hub once it is closed),
 ## <out>_training.png (the line on Training) and <out>_training_sheet.png (the
-## report opened from it).
+## report opened from it) and <out>_learn.png (its first Learn button: his
+## Training page at the new-position choices).
 
 var W := 390
 var H := 844
@@ -109,5 +110,20 @@ func _run() -> void:
 	for i in range(30):
 		await process_frame
 	(await _shot()).save_png(out + "_training_sheet.png")
+	# The report's first Learn button: his Training page at the new-position choices.
+	var sheet2 = current_scene.find_child("TrainingReportSheet", true, false)
+	var learn: Button = null
+	if sheet2 != null:
+		for b in sheet2.find_children("LearnGo_*", "Button", true, false):
+			learn = b
+			break
+	if learn == null:
+		print("no Learn button")
+		quit(1)
+		return
+	learn.emit_signal("pressed")
+	for i in range(30):
+		await process_frame
+	(await _shot()).save_png(out + "_learn.png")
 	print("wrote ", out)
 	quit(0)

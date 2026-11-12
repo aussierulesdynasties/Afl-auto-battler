@@ -3,8 +3,10 @@ extends RefCounted
 ## The monthly training report (TrainingReport.gd). A new one opens over the
 ## hub once (HubScene._show_training_report); after that it is one tap from the line on
 ## Training. A sheet on a phone, a narrower pane on a PC. Tap a
-## name for his profile; tap someone who can learn a position to go to his
-## choice in Training. Facts only: nothing here says what to do.
+## name for his profile; under someone who can learn a position, a "Learn key
+## forward" button per position goes to that choice on his Training page
+## (director, 2026-11-12: "i cant find the button to retrain them"). Facts
+## only: nothing here says what to do.
 
 const WIDE := 760.0
 
@@ -156,13 +158,27 @@ static func _retrain_row(host: Control, body: VBoxContainer, e: Dictionary, on_r
 	var p := GameState.list_player(str(e["id"]))
 	if p.is_empty():
 		return
-	var v := UiKit.vbox(0)
+	var v := UiKit.vbox(4)
 	v.name = "Retrain_" + str(e["id"])
 	body.add_child(v)
 	var id := str(e["id"])
+	# His name opens his profile, as every name on the report does.
 	v.add_child(_name_button(host, id, GameDB.player_display_name(p), func():
-		overlay.queue_free()
-		on_retrain.call(id)))
-	var l := UiKit.lbl("Can learn " + " or ".join(e["jobs"]), UiKit.SECONDARY, UiKit.TEXT)
-	l.name = "Jobs"
-	v.add_child(l)
+		PlayerSheet.open(host, GameState.list_player(id))))
+	# The way in: one button per position, worded as the choice it leads to.
+	var go := HFlowContainer.new()
+	go.name = "Jobs"
+	go.add_theme_constant_override("h_separation", 8)
+	go.add_theme_constant_override("v_separation", 6)
+	v.add_child(go)
+	var words: Array = e["jobs"]
+	var keys: Array = e.get("keys", [])
+	for i in range(words.size()):
+		var b := UiKit.btn("Learn %s  ›" % str(words[i]), UiKit.SECONDARY)
+		b.name = "LearnGo_" + (str(keys[i]) if i < keys.size() else str(i))
+		b.custom_minimum_size = Vector2(0, 44)
+		b.add_theme_color_override("font_color", UiKit.readable_ink(UiKit.team_colour()))
+		b.pressed.connect(func():
+			overlay.queue_free()
+			on_retrain.call(id))
+		go.add_child(b)
