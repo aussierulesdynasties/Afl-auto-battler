@@ -25,6 +25,23 @@ var _score_away: Label
 ## The band behind both scores: its width is what the two scores must share.
 var _score_band: Control
 var _clock: Label
+## What the clock says while no football is being played: "Pre-match" until the
+## first bounce, the break's name at each break, "Full time" at the end. Empty
+## while a quarter is on, when the clock shows its minute ("Q3 12'").
+var _clock_word := ""
+## Each stoppage's words, longest first: the clock takes the first that fits its
+## place between the scores (a phone's is 84 wide).
+const CLOCK_WORDS := {
+	"pre": ["Pre-match"],
+	"q1": ["Quarter time", "Qtr time"],
+	"q2": ["Half time"],
+	"q3": ["Three-quarter time", "3/4 time"],
+	"full": ["Full time"],
+}
+const CLOCK_BREAKS := {1: "pre", 2: "q1", 3: "q2", 4: "q3"}
+## The play, speed and skip buttons, under the oval or beside it. Out of sight
+## and out of reach while a sheet is up over them (_sync_under_sheet).
+var _controls_box: Control
 var _feed: VBoxContainer
 var _feed_scroll: ScrollContainer
 var _play_btn: Button
@@ -151,6 +168,7 @@ func _ready() -> void:
 	_pitch.finished.connect(_on_finished)
 	_pitch.ends_changed.connect(_on_ends_changed)
 	_update_scoreboard({"q": 1, "min": 0, "score": [0, 0], "kind": "info"})
+	_set_clock_word("pre")
 	if _interactive and GameState.match_way_live == "skip":
 		# Skip (the poster): straight to full time on the plan you took in,
 		# as Skip to full time before the first bounce.
@@ -187,6 +205,26 @@ func _build() -> void:
 	_over.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_over)
 	_over.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_over.child_entered_tree.connect(func(_n: Node) -> void: _sync_under_sheet.call_deferred())
+	_over.child_exiting_tree.connect(func(_n: Node) -> void: _sync_under_sheet.call_deferred())
+
+
+## The play, speed and skip buttons are not drawn and take no tap, click or key
+## while a break, a call, a sheet or full time is up: they showed through the
+## dimmed page under every sheet, as buttons that looked live and were not.
+## They keep their place, so the oval and the feed do not move when a sheet closes.
+func _sync_under_sheet() -> void:
+	if _controls_box == null or not is_instance_valid(_controls_box) or _over == null:
+		return
+	var covered := false
+	for c in _over.get_children():
+		if c is Control and (c as Control).visible and not c.is_queued_for_deletion() \
+				and (c as Control).mouse_filter == Control.MOUSE_FILTER_STOP:
+			covered = true
+	_controls_box.modulate.a = 0.0 if covered else 1.0
+	for b in _controls_box.find_children("*", "BaseButton", true, false):
+		(b as BaseButton).mouse_filter = Control.MOUSE_FILTER_IGNORE if covered else Control.MOUSE_FILTER_STOP
+		(b as BaseButton).focus_mode = Control.FOCUS_NONE if covered else Control.FOCUS_ALL
 
 
 ## The overlays' top: the scoreboard's foot on a phone; a wide screen's break
@@ -483,8 +521,11 @@ func _score_middle(narrow: bool) -> Control:
 	var mid := UiKit.vbox(0)
 	mid.alignment = BoxContainer.ALIGNMENT_CENTER
 	mid.custom_minimum_size = Vector2(84 if narrow else 132, 0)
-	_clock = UiKit.line("Q%d %d'" % [_shown_q, _shown_min], 17 if narrow else 24, UiKit.TEXT, true)
+	_clock = UiKit.line(_clock_text(_shown_q, _shown_min), 17 if narrow else 24, UiKit.TEXT, true)
 	_clock.name = "Clock"
+	_clock.set_meta("fs", 17 if narrow else 24)
+	_clock.set_meta("room", 84.0 if narrow else 132.0)
+	_paint_clock()
 	_clock.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	ClubDuel.on_colour(_clock)
 	mid.add_child(_clock)
@@ -504,6 +545,8 @@ func _venue() -> String:
 
 func _controls() -> Control:
 	var v := UiKit.vbox(6)
+	v.name = "MatchControls"
+	_controls_box = v
 
 	var row := UiKit.hbox(5)
 	v.add_child(row)
@@ -756,6 +799,7 @@ func _show_coach_box() -> void:
 	# opens, not at the siren: in the moment between the two, a tap still
 	# lands on the break that has just sounded, and the button says so.
 	_breaks_played = q - 1
+	_set_clock_word(str(CLOCK_BREAKS.get(q, "")))
 	_sync_controls()
 	# The calls fill the screen at every break, so the actions sit at the
 	# bottom with the choices just above them.
@@ -3311,6 +3355,7 @@ func _simulate_next_quarter(t: Dictionary) -> void:
 	_last_tactics = t.duplicate()
 	_apply_quarter_tactics(t)
 	_show_setup(t)
+	_set_clock_word("")
 	GameState.pending_sim.begin_quarter()
 	_advance_segment()
 
@@ -3693,6 +3738,12 @@ func _update_scoreboard(ev: Dictionary) -> void:
 		_shown_behinds = [int(b[0]), int(b[1])]
 	_shown_q = int(ev.get("q", _shown_q))
 	_shown_min = int(ev.get("min", _shown_min))
+	if str(ev.get("kind", "")) == "final":
+		_clock_word = "full"
+	elif _clock_word != "" and (_skipping or (_pitch != null and _pitch.playing)):
+		# The ball is in play (a match watched, not coached, has no break sheet to
+		# say so; nor has a skip to full time).
+		_clock_word = ""
 	_paint_scoreboard()
 
 
@@ -3712,8 +3763,7 @@ func _paint_scoreboard() -> void:
 	_score_home.text = UiKit.scoreline(_shown_goals[0], _shown_behinds[0])
 	_score_away.text = UiKit.scoreline(_shown_goals[1], _shown_behinds[1])
 	_fit_scores()
-	if _clock != null:
-		_clock.text = _clock_text(_shown_q, _shown_min)
+	_paint_clock()
 	if _lead != null and is_instance_valid(_lead):
 		var narrow := UiKit.view_width(self) < 640.0
 		var name_of := func(c): return GameDB.club_short(str(c)) if narrow else GameDB.club_name(str(c))
@@ -3742,6 +3792,43 @@ func _fit_scores() -> void:
 			break
 	for l: Label in [_score_home, _score_away]:
 		UiKit.set_font_size(l, fs)
+
+
+## The stoppage the clock names ("pre", "q1", "q2", "q3", "full"), or "" once
+## the ball is in play again.
+func _set_clock_word(word: String) -> void:
+	if _clock_word == word:
+		return
+	_clock_word = word
+	_paint_clock()
+
+
+## The clock between the scores: the stoppage's name while one is on, else the
+## minute of the quarter. A stoppage's name is longer than a minute: it steps
+## down in size, then to its shorter form, until it fits between the scores.
+## The scores never give up room to it.
+func _paint_clock() -> void:
+	if _clock == null or not is_instance_valid(_clock):
+		return
+	var base := int(_clock.get_meta("fs", 17))
+	if _clock_word == "":
+		_clock.text = _clock_text(_shown_q, _shown_min)
+		UiKit.set_font_size(_clock, base)
+		return
+	var room := float(_clock.get_meta("room", 84.0))
+	var font: Font = _clock.get_theme_font("font")
+	var words: Array = CLOCK_WORDS[_clock_word]
+	var floor_fs := mini(base, UiKit.SMALL)
+	for w in words:
+		var fs := base
+		while fs >= floor_fs:
+			if font.get_string_size(str(w), HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.px(fs)).x <= room:
+				_clock.text = str(w)
+				UiKit.set_font_size(_clock, fs)
+				return
+			fs -= 1
+	_clock.text = str(words[words.size() - 1])
+	UiKit.set_font_size(_clock, floor_fs)
 
 
 ## "Q3 12'": the minute of the quarter, like a ground's clock. MatchSim
