@@ -72,7 +72,7 @@ static func build(host: Control) -> Control:
 	v.add_child(brownlow)
 	v.add_child(_rising(host))
 	if played > 0:
-		var min_games := Awards.aa_min_games(played)
+		var min_games := Awards.aa_min_games(played, season.regular_rounds())
 		var team := Awards.projected_all_australian(GameState.season_tally, _players(), min_games)
 		v.add_child(_aa(host, team, false, min_games))
 	return v
