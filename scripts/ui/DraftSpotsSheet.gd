@@ -71,9 +71,15 @@ static func lines(s: Dictionary) -> Array:
 	var out := []
 	var picks: Array = s["picks"]
 	var passing: Array = s["passing"]
-	out.append(["Your senior list will hold %d of %d when the draft opens: %d spot%s for %d pick%s." % [
-			int(s["held"]), int(s["cap"]), int(s["open"]), "" if int(s["open"]) == 1 else "s",
-			picks.size(), "" if picks.size() == 1 else "s"], true, "", "DraftSpotsCount"])
+	if bool(s.get("by_44", false)):
+		# The 44, not the senior list, sets the spots: the count shown is that one.
+		out.append(["Your senior and Category A rookie lists together will hold %d of %d when the draft opens: %d spot%s for %d pick%s." % [
+				int(s["list"]), int(s["list_cap"]), int(s["open"]), "" if int(s["open"]) == 1 else "s",
+				picks.size(), "" if picks.size() == 1 else "s"], true, "", "DraftSpotsCount"])
+	else:
+		out.append(["Your senior list will hold %d of %d when the draft opens: %d spot%s for %d pick%s." % [
+				int(s["held"]), int(s["cap"]), int(s["open"]), "" if int(s["open"]) == 1 else "s",
+				picks.size(), "" if picks.size() == 1 else "s"], true, "", "DraftSpotsCount"])
 	if not passing.is_empty():
 		out.append(["%s %s will pass." % ["Pick" if passing.size() == 1 else "Picks", Draft.picks_words(passing)],
 				true, "bad", "DraftSpotsPassing"])
@@ -90,7 +96,7 @@ static func lines(s: Dictionary) -> Array:
 				int(s["maybe"]), "" if int(s["maybe"]) == 1 else "s"], false, "", "DraftSpotsMaybe"])
 	if int(s["retiring"]) > 0:
 		out.append(["Retiring players hold their spot until the draft is over.", false, "", "DraftSpotsRetiring"])
-	out.append(["A club with a full senior list passes its picks. Out-of-contract players can be delisted before the draft starts, and any player traded away; contracted players cannot be delisted. Rookies do not take a senior spot.",
+	out.append(["A club with a full senior list passes its picks, and so does a club with %d on its senior and Category A rookie lists together. Out-of-contract players can be delisted before the draft starts, and any player traded away; contracted players cannot be delisted. Rookies do not take a senior spot." % int(s.get("list_cap", Contracts.MAX_LIST)),
 			false, "", "DraftSpotsRule"])
 	return out
 

@@ -655,12 +655,14 @@ static func evaluate_trade(ai_list: Array, give: Array, take: Array, cap: int,
 	# The 44 (senior and Category A lists; a Category B rookie is outside it):
 	# no side may end past it, unless it was already past it and the trade
 	# leaves it no further over (a real list seeded over it can still deal).
-	if _list_over(ai_list, give, take) or _list_over(my_list, take, give):
+	var ai_block := RookieList.trade_block(ai_list, give, take)
+	var my_block := RookieList.trade_block(my_list, take, give)
+	if ai_block == "list" or my_block == "list":
 		return _verdict(false, "trade_list_over", ctx, {"n": MAX_LIST})
 	# Every player traded in lands on the senior list (row 88): a side may not
 	# end past its senior spots, unless it was already past them and the trade
 	# leaves it no further over (a list seeded over the cap can still deal).
-	if _senior_over(ai_list, give, take) or _senior_over(my_list, take, give):
+	if ai_block == "senior" or my_block == "senior":
 		return _verdict(false, "trade_senior_over", ctx, {"n": RookieList.SENIOR_SPOTS})
 	# No trade takes a side under the minimum. A side already under it stays
 	# able to deal as long as the trade leaves its list no smaller: only a
@@ -742,22 +744,6 @@ static func evaluate_trade(ai_list: Array, give: Array, take: Array, cap: int,
 	out["in"] = in_value
 	out["out"] = out_value
 	return out
-
-
-## Would `list`, giving `out` and getting `got`, end past the 44 (and further
-## past it than it started)? Everyone traded in lands on the senior list.
-static func _list_over(list: Array, out: Array, got: Array) -> bool:
-	var before := RookieList.list_size(list)
-	var after := before - RookieList.list_size(out) + got.size()
-	return after > maxi(MAX_LIST, before)
-
-
-## Would `list`, giving `out` and getting `got`, end past its senior spots
-## (and further past them than it started)?
-static func _senior_over(list: Array, out: Array, got: Array) -> bool:
-	var before := RookieList.senior_count(list)
-	var after := before - RookieList.senior_count(out) + got.size()
-	return after > maxi(RookieList.SENIOR_SPOTS, before)
 
 
 ## A trade answer: {"ok", "code", "reason"}, the reason the code's sentence
