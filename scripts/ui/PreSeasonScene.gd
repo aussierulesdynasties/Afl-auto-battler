@@ -355,16 +355,16 @@ func _papers_ladder() -> Control:
 	# of it is in view without scrolling.
 	var cols: Array = [v]
 	if wide:
-		var set := UiKit.hbox(20)
-		set.name = "PapersLadderColumns"
+		var columns := UiKit.hbox(20)
+		columns.name = "PapersLadderColumns"
 		cols = []
 		for c in range(PAPERS_COLUMNS):
 			var col := UiKit.vbox(4 if short else 6)
 			col.name = "PapersLadderColumn_%d" % c
 			col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			set.add_child(col)
+			columns.add_child(col)
 			cols.append(col)
-		v.add_child(set)
+		v.add_child(columns)
 	var per := int(ceil(float(order.size()) / float(cols.size())))
 	for i in range(order.size()):
 		var code := str(order[i])
