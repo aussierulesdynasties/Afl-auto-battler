@@ -595,9 +595,12 @@ func _test_call_visibility(results: Array) -> void:
 		var moved := (float(m.get(what, 0.0)) - float(bal.get(what, 0.0))) * float(c[4])
 		said.append("%s %.1f m" % [str(c[0]), moved])
 		var floor_m := CALL_FLOOR - (ATTACK_CALL_SLACK if key == "attacking|[]" else 0.0)
-		_check(BalanceGate.held(moved >= floor_m, "match motion: call moves Fremantle from Balanced"), "%s moves Fremantle %.1f m from Balanced (%.1f against %.1f), at least %.1f m" % [
+		_check(moved >= floor_m, "%s moves Fremantle %.1f m from Balanced (%.1f against %.1f), at least %.1f m" % [
 				str(c[0]), moved, float(m.get(what, 0.0)), float(bal.get(what, 0.0)), floor_m])
 	print("  calls against Balanced, as drawn: " + ", ".join(said))
+	var st: Dictionary = done["balanced|[\"stack\"]"]
+	print("  Stack the stoppage, the set-up alone (6-6-6 holds it): %.1f m front to back against Balanced's %.1f" % [
+			float(st.get("set.span", 0.0)), float(bal.get("set.span", 0.0))])
 	# Pass 4 (the motion critic's third look): Attack Corridor is a narrower
 	# whole team, not a pile on the ball; Win Contest puts numbers round the ball.
 	var att: Dictionary = done["attacking|[]"]
@@ -694,10 +697,13 @@ func _shape_of(r: Dictionary, events := -1, crowd := false) -> Dictionary:
 			continue
 		var stop := d._stoppage_on()
 		var world := _drawn_world(pv, drawn)
-		if d.mode == "centre":
-			# A centre bounce, set-up included: how far Fremantle stands, on
-			# average, from its own middle front to back (Stack the stoppage
-			# brings both half-lines and the pockets up toward the square).
+		var setting := d.mode == "centre"
+		if setting or (stop and d._centre_stoppage()):
+			# A centre bounce, set-up and clearance: how far Fremantle stands,
+			# on average, from its own middle front to back (Stack the
+			# stoppage sets both lines on the arcs, 6-6-6, then crashes the
+			# half-lines in once the ball is up; the set-up alone, held by
+			# 6-6-6, is printed as "set" for the record).
 			var cx := []
 			for i in range(world.size()):
 				if int(d.tokens[i]["side"]) == 0:
@@ -712,6 +718,11 @@ func _shape_of(r: Dictionary, events := -1, crowd := false) -> Dictionary:
 				acc["ctr.span"] = [0.0, 0]
 			acc["ctr.span"][0] += sp
 			acc["ctr.span"][1] += 1
+			if setting:
+				if not acc.has("set.span"):
+					acc["set.span"] = [0.0, 0]
+				acc["set.span"][0] += sp
+				acc["set.span"][1] += 1
 		if stop and d._pi < d._phases.size() and str((d._phases[d._pi] as Dictionary).get("t", "")) in ["setup", "wait"]:
 			continue   # 6-6-6: nobody may crash in before the ball is up
 		var b: Vector2 = d.ball["pos"]

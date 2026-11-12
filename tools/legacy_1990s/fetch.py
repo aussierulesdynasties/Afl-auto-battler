@@ -28,7 +28,7 @@ import tempfile
 import time
 import urllib.request
 
-UA = "Mozilla/5.0 (compatible; AflAutoBattler-data/1.0; +https://github.com/gabebartolo-spec/Afl-auto-battler)"
+UA = "Mozilla/5.0 (compatible; AflAutoBattler-data/1.0; +https://github.com/aussierulesdynasties/Afl-auto-battler)"
 DG = "https://www.draftguru.com.au"
 SEASONS = range(1990, 2000)
 # Draftguru's year pages start with the first National Draft (1986). The 1989
