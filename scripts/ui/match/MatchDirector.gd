@@ -2137,7 +2137,7 @@ func _crash_late(t: Dictionary, g: Vector2) -> void:
 ## two of a side's spots pile up (they part front to back, SPOT_GAP apart); at a
 ## Win Contest stoppage nobody but the pack stands inside CONTEST_KEEP of the
 ## ball; and every spot stays STRUCT_MARGIN inside the boundary and out of the
-## pockets under the phone's bench strip. `spots` is id -> spot, changed in place.
+## pockets, clear of the bench's tab on a phone. `spots` is id -> spot, changed in place.
 func _structure_limits(side: int, spots: Dictionary, ball_p: Vector2, crash: bool) -> void:
 	for id in spots:
 		spots[id] = _keep_in(spots[id])
@@ -2239,8 +2239,8 @@ func _structure_limits(side: int, spots: Dictionary, ball_p: Vector2, crash: boo
 
 
 ## A structure spot kept STRUCT_MARGIN inside the boundary line and out of the
-## pockets the phone's bench strip covers (beyond POCKET_Y across, deeper than
-## POCKET_X): a disc there would sit on the line or under the strip.
+## pockets (beyond POCKET_Y across, deeper than POCKET_X): a disc there would
+## sit on the line or under the bench's tab on a phone.
 static func _keep_in(p: Vector2) -> Vector2:
 	p = MatchMotion.clamp_to_oval(p, STRUCT_MARGIN)
 	if absf(p.y) > POCKET_Y and absf(p.x) > POCKET_X:
@@ -2680,10 +2680,12 @@ const SPOT_GAP := 7.0
 ## Structure spots stay this far inside the boundary line (a phone disc is 4.3 m
 ## in radius, so the whole disc is on the ground)...
 const STRUCT_MARGIN := 5.0
-## ...and out of the pockets the phone's bench strip covers (the upright oval,
-## 300 x 387: the strip's top edge is 73 m from the centre beyond 16 m across;
-## less a disc's radius): beyond POCKET_Y across, never deeper than POCKET_X.
-const POCKET_X := 68.0
+## ...and out of the pocket the bench's tab covers on a phone (the upright oval,
+## 300 x 387: the tab's top edge is 74 m from the centre, from 25 m across out to
+## the corner; less a disc's radius, 6.5 m since the bigger discs of 2026-11-12,
+## when this was 68 under the old bench strip). Kept in all four pockets, so the
+## ends match: beyond POCKET_Y across, never deeper than POCKET_X.
+const POCKET_X := 67.0
 const POCKET_Y := 11.0
 
 

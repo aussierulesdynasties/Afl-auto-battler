@@ -31,9 +31,12 @@ const VISIBLE_WORST := 0.55
 const CALL_FLOOR := 8.0
 ## A column (the critic's Attack Corridor pile, pass 3): three or more of a
 ## side's discs within COLUMN_ACROSS of each other across the ground, each
-## within COLUMN_ALONG of the next along it (a disc on a phone is 8.6 m across).
-const COLUMN_ACROSS := 4.0
-const COLUMN_ALONG := 9.0
+## within COLUMN_ALONG of the next along it. Both are in disc widths as the view
+## draws them (_disc_metres), so the measure follows the disc: they were 4 m and
+## 9 m when a disc on a phone was 8.7 m across; it is 13 m since the director's
+## bigger discs (2026-11-12), and a file of touching discs is that much longer.
+const COLUMN_ACROSS := 0.46
+const COLUMN_ALONG := 1.04
 ## Heavily overlapping: centres within this many radii (a quarter of a disc covered).
 const HEAVY := 1.5
 ## Attack Corridor's spread across the ground in possession, on average (Balanced
@@ -122,6 +125,9 @@ func _result(seed: int) -> Dictionary:
 
 func _phone(r: Dictionary, speed: float) -> PitchView:
 	var pv := PitchView.new()
+	# In the tree, so the view builds its bench drawer and the tab is where the
+	# match screen draws it.
+	(Engine.get_main_loop() as SceneTree).root.add_child(pv)
 	pv.size = PHONE
 	pv.camera_enabled = false
 	pv.upright = true
@@ -129,6 +135,11 @@ func _phone(r: Dictionary, speed: float) -> PitchView:
 	pv.set_speed(speed)
 	pv.play()
 	return pv
+
+
+## A disc's width on the ground as the view draws it now, in metres.
+static func _disc_metres(pv: PitchView) -> float:
+	return 2.0 * pv.token_radius() / pv._scale()
 
 
 ## The drawn discs back on the ground, in metres (the view's own mapping inverted).
@@ -198,11 +209,17 @@ static func _median(v: Array) -> float:
 	return 0.5 * (float(c[(c.size() - 1) / 2]) + float(c[c.size() / 2]))
 
 
-## The Bench tab on the phone (the bench strip it replaced filled both bottom
-## corners), grown by most of a disc's radius: no structure spot may put a disc
-## under it.
+## What of the bench is drawn over the phone's oval through play, grown by a
+## disc's radius: the drawer's tab as the view draws it (the bench strip it
+## replaced filled both bottom corners; director, 2026-11-12: "Bigger discs,
+## bench drawer"). No structure spot may put a disc under it. The open panel is
+## not in the measure: it covers the ground only while the coach holds it open,
+## and _motion_pass counts the frames it is.
 static func _bench_rects(pv: PitchView) -> Array:
-	return [BenchDrawer.pill_in(pv.size).grow(pv.token_radius() * 0.8)]
+	var tab := pv.bench_tab_rect()
+	if tab.size.x <= 0.0 or tab.size.y <= 0.0:
+		return []
+	return [tab.grow(pv.token_radius())]
 
 
 ## How far inside the boundary line `p` is, in metres.
@@ -237,9 +254,19 @@ func _test_measures_prove_themselves(res: Dictionary) -> void:
 			"The visibility measure sees a pile: every disc shows when they stand apart (%.2f), half the side under a pack does not (%.2f)" % [apart, piled])
 	var pv := _phone(res, 1.0)
 	var rects := _bench_rects(pv)
-	var on_tab: Vector2 = BenchDrawer.pill_in(pv.size).get_center()
-	_check(rects.size() == 1 and (rects[0] as Rect2).has_point(on_tab) and not (rects[0] as Rect2).has_point(pv._w2s(Vector2.ZERO)),
-			"The bench-tab measure sees a disc on the tab, and not one at the centre bounce")
+	# The tab is in the view's bottom left corner: the pocket under it is at the
+	# end drawn at the bottom, on the side drawn on the left.
+	var deep := -80.0 if pv._w2s(Vector2(-80.0, 0.0)).y > PHONE.y * 0.5 else 80.0
+	var left := -25.0 if pv._w2s(Vector2(0.0, -25.0)).x < PHONE.x * 0.5 else 25.0
+	var hit := false
+	var other := false
+	for rc in rects:
+		hit = hit or (rc as Rect2).has_point(pv._w2s(Vector2(deep, left)))
+		other = other or (rc as Rect2).has_point(pv._w2s(Vector2(deep, -left))) or (rc as Rect2).has_point(pv._w2s(Vector2.ZERO))
+	_check(rects.size() == 1 and hit and not other and pv.bench_tab_rect().is_equal_approx(BenchDrawer.pill_in(pv.size))
+			and not pv.bench_open() and pv.bench_spots(pv.token_radius()).is_empty(),
+			"The bench measure sees a back pocket (80 m from the centre, 25 m across) under the bench's tab, and not the pocket beside it or the centre bounce; the drawer is shut and no bench disc is on the view (%d rect, the tab at %s)" % [
+			rects.size(), str(pv.bench_tab_rect())])
 	pv.free()
 
 
@@ -262,6 +289,7 @@ func _test_motion_limits(res: Dictionary) -> void:
 		var lane_n: int = m["lane_n"]
 		var inside: float = m["inside"]
 		var under: int = m["under"]
+		var drawer_open: int = m["drawer_open"]
 		var pack_most: int = m["pack_most"]
 		var pack_n: int = m["pack_n"]
 		var tag := "%dx" % int(speed)
@@ -284,9 +312,9 @@ func _test_motion_limits(res: Dictionary) -> void:
 			_check(lane_n > 50 and lane_gap >= MatchDirector.LANE_GAP - 0.01,
 					"1x: Attack Corridor in possession: no two of a line of three closer than %.0f m across the ground (closest %.1f m over %d gaps)" % [
 					MatchDirector.LANE_GAP, lane_gap, lane_n])
-			_check(inside >= MatchDirector.STRUCT_MARGIN - 0.01 and under == 0,
-					"1x: every structure spot is at least %.0f m inside the boundary line (closest %.1f m) and none under the phone's Bench tab (%d)" % [
-					MatchDirector.STRUCT_MARGIN, inside, under])
+			_check(inside >= MatchDirector.STRUCT_MARGIN - 0.01 and under == 0 and drawer_open == 0 and int(m["bench_rects"]) == 1,
+					"1x: every structure spot is at least %.0f m inside the boundary line (closest %.1f m), none under the bench's tab on the phone (%d), and the bench's drawer stays shut through play (open in %d frames)" % [
+					MatchDirector.STRUCT_MARGIN, inside, under, drawer_open])
 			_check(pack_n > 20 and pack_most <= 6,
 					"1x: while a Win Contest side's stoppage pack forms and the ball goes up, no more than six of its discs are within 6 m of the ball (%d at most over %d frames)" % [pack_most, pack_n])
 			print("  motion 1x: narrowest line %.1f m, corridor lane gap %.1f m, closest to the line %.1f m, contest pack %d" % [
@@ -388,6 +416,7 @@ func _motion_pass(r2: Dictionary, speed: float, light := false) -> Dictionary:
 	var lane_n := 0
 	var inside := INF
 	var under := 0
+	var drawer_open := 0
 	var pack_most := 0
 	var pack_n := 0
 	var inner_most := 0
@@ -403,6 +432,8 @@ func _motion_pass(r2: Dictionary, speed: float, light := false) -> Dictionary:
 	while pv.playing and guard < 200000:
 		guard += 1
 		pv._process(FRAME)
+		if pv.bench_open():
+			drawer_open += 1
 		var drawn: PackedVector2Array = pv.disc_positions()
 		var s: float = pv._scale()
 		var flipped: bool = pv.period != period
@@ -538,7 +569,7 @@ func _motion_pass(r2: Dictionary, speed: float, light := false) -> Dictionary:
 						narrow_n += 1
 	var still_playing: bool = pv.playing
 	pv.free()
-	return {"playing": still_playing, "frames": frames, "swaps": swaps, "swaps_hands": swaps_hands, "tok_most": tok_most, "draw_most": draw_most, "h": h, "vis_min": vis_min, "vis_n": vis_n, "vis_low": vis_low, "narrow": narrow, "narrow_n": narrow_n, "lane_gap": lane_gap, "lane_n": lane_n, "inside": inside, "under": under, "pack_most": pack_most, "pack_n": pack_n, "inner_most": inner_most, "inner_side_most": inner_side_most, "pack_gap": pack_gap}
+	return {"playing": still_playing, "frames": frames, "swaps": swaps, "swaps_hands": swaps_hands, "tok_most": tok_most, "draw_most": draw_most, "h": h, "vis_min": vis_min, "vis_n": vis_n, "vis_low": vis_low, "narrow": narrow, "narrow_n": narrow_n, "lane_gap": lane_gap, "lane_n": lane_n, "inside": inside, "under": under, "drawer_open": drawer_open, "bench_rects": rects.size(), "pack_most": pack_most, "pack_n": pack_n, "inner_most": inner_most, "inner_side_most": inner_side_most, "pack_gap": pack_gap}
 
 
 ## P-12 visibility floor, measured as the motion critic measures the clips: on
@@ -758,7 +789,8 @@ func _shape_of(r: Dictionary, events := -1, crowd := false) -> Dictionary:
 						touch += 1
 					if dd < HEAVY * tr:
 						heavy += 1
-			var file := file_length(own, COLUMN_ACROSS, COLUMN_ALONG)
+			var disc_m := _disc_metres(pv)
+			var file := file_length(own, COLUMN_ACROSS * disc_m, COLUMN_ALONG * disc_m)
 			m["touch"] = touch
 			m["heavy"] = heavy
 			m["file3"] = 1.0 if file >= 3 else 0.0
