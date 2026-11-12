@@ -369,18 +369,31 @@ func _test_sacked_way_back() -> void:
 	_check(jobs.all(func(o): return _ratings_only(str(o["list"]), str(o["code"]))),
 			"sacked: each offer gives the list as its ratings now and in three years, no list word: %s" % str(jobs.map(func(o): return o["list"])))
 	_check((st["move"] as Dictionary).is_empty() and int(st["coach"]["reprieves"]) == 1, "sacked: no move until he chooses; one reprieve left")
+	# Row 179 (director 2026-11-12: "after a sacking I still pick Shepparton's staff
+	# and make its trades"): no off-season opens at the club that sacked him.
+	GameState.open_offseason()
+	_check(GameState.offseason_year != GameState.season_year and GameState.my_club == old,
+			"sacked: no off-season opens at %s while he chooses (off-season %d, season %d)" % [old, GameState.offseason_year, GameState.season_year])
 	_check(not ClubMoves.take_job(GameState, old), "sacked: he cannot take a job that was not offered")
 	var to := str(jobs[-1]["code"]) if not jobs.is_empty() else ""
+	# Bug-bash 2 (2026-11-10): the old board's press move stays with the old
+	# board; the new board starts clean and fades nothing from it.
+	GameState.media_memory["board_lift"] = 3
 	_check(ClubMoves.take_job(GameState, to), "sacked: he takes the job at %s" % to)
 	_check(not GameState.is_sacked(), "sacked: the career goes on (no sacked card)")
-	_check(str(st["move"].get("why", "")) == "sacked" and str(st["move"].get("to", "")) == to, "sacked: a job at another club: %s" % str(st["move"]))
+	# He moves the day he signs: every off-season call is the new club's.
+	var moved: Dictionary = st["coach"]["moved"]
+	_check(str(moved.get("why", "")) == "sacked" and str(moved.get("to", "")) == to and (st["move"] as Dictionary).is_empty(),
+			"sacked: a job at another club: %s" % str(moved))
+	_check(GameState.my_club == to and GameState.offseason_year == GameState.season_year,
+			"sacked: the off-season opens at %s, not %s (club %s, off-season %d, season %d)" % [
+			to, old, GameState.my_club, GameState.offseason_year, GameState.season_year])
+	_check(GameState.my_list == GameState.season.lists.get(to, []) and not GameState.my_list.is_empty(),
+			"sacked: the list he runs is %s's (%d players)" % [to, GameState.my_list.size()])
 	_check(int(st["coach"]["sackings"]) == sacks_before + 1 and int(st["coach"]["reprieves"]) == 0,
 			"sacked: the sacking is on his record and the reprieve is spent: %s" % str(st["coach"]))
 	_check((st["offers"] as Array).is_empty(), "sacked: the offers are gone once he chooses")
 	_check(str(st["done"].get("assistant", {}).get("ending", "")) == "took_job", "assistant: resolves 'took_job': %s" % str(st["done"].get("assistant", {})))
-	# Bug-bash 2 (2026-11-10): the old board's press move stays with the old
-	# board; the new board starts clean and fades nothing from it.
-	GameState.media_memory["board_lift"] = 3
 	_check(GameState.start_next_season(), "sacked: the season rolls on")
 	_check(not GameState.media_memory.has("board_lift") and GameState.board_confidence() == ClubLife.START_CONFIDENCE,
 			"sacked: the old board's press move is gone at the new club (%s, %d)" % [

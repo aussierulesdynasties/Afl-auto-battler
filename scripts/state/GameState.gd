@@ -84,6 +84,10 @@ var club_plan := "balanced"      # your standing game plan, from the first bounc
 ## older save loads with none (and drops a game-plan trait it held).
 var custom_plan := {}
 var form_log := {}               # your player id -> his last three Player Ratings
+## Your players' games in the reserves this season (ReservesForm): id ->
+## {"last", "sum", "n", "key"}. Display only. Optional in a save: an older
+## save loads with none.
+var reserves_log := {}
 ## A story card's role trial: {id, role, left, home, auto, before, wrote}, or {}.
 ## One player plays his second position for `left` more of your games (see
 ## start_role_trial); optional in a save, absent means no trial.
@@ -886,6 +890,7 @@ func _save_state() -> Dictionary:
 		"season_stats_from": season_stats_from,
 		"club_plan": club_plan,
 		"form_log": form_log,
+		"reserves_log": reserves_log,
 		"role_trial": role_trial,
 		"trial_result": trial_result,
 		"pos_ratings": pos_ratings,
@@ -1135,6 +1140,7 @@ func _restore_career(state: Dictionary) -> bool:
 	if not CLUB_PLANS.has(club_plan) or (club_plan == CustomPlan.KEY and not CustomPlan.ready(custom_plan)):
 		club_plan = "balanced"
 	form_log = state.get("form_log", {})
+	reserves_log = state.get("reserves_log", {}) if state.get("reserves_log") is Dictionary else {}
 	role_trial = state.get("role_trial", {}) if state.get("role_trial") is Dictionary else {}
 	trial_result = state.get("trial_result", {}) if state.get("trial_result") is Dictionary else {}
 	pos_ratings = state.get("pos_ratings", {}) if state.get("pos_ratings") is Dictionary else {}
@@ -1729,6 +1735,7 @@ func reset(next_dataset := Datasets.DEFAULT) -> void:
 	custom_plan = {}
 	CoachEffects.my_custom = {}
 	form_log = {}
+	reserves_log = {}
 	role_trial = {}
 	training_block = {}
 	training_report = {}
@@ -2661,6 +2668,7 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	season_stats = {}
 	season_stats_from = 0
 	form_log = {}
+	reserves_log = {}
 	role_trial = {}
 	training_block = {}
 	training_report = {}
@@ -6425,10 +6433,42 @@ func _grant_match_xp(res: Dictionary) -> void:
 	_xp_grant_key = key
 	TrainingReport.before_game(self)
 	last_training_report = grant_match_xp(res)
+	_note_reserves_games(last_training_report, key)
 	# Training plans spend the fresh XP straight away.
 	last_training_report["auto"] = apply_train_plans()
 	last_training_report["projects"] = _advance_projects()
 	TrainingReport.after_game(self)
+
+
+## Your players left out but fit play in the reserves (the XP's own test,
+## _grant_xp): each gets a game line and a rating there (ReservesForm).
+## Display only, with its own seeded roll: nothing else in the career moves.
+func _note_reserves_games(report: Dictionary, key: String) -> void:
+	for row in report.get("rows", []):
+		if not bool(row.get("reserves", false)):
+			continue
+		var id := str(row["id"])
+		var p := list_player(id)
+		if p.is_empty():
+			continue
+		ReservesForm.record(reserves_log, id,
+				ReservesForm.game(p, ReservesForm.seed_for(career_seed, "%d|%s" % [season_year, key], id)), key)
+
+
+## The form marks on Team selection for a side (ReservesForm.marks): the
+## coldest three in it and the hottest three fit players left out.
+func form_marks(side: Dictionary) -> Dictionary:
+	var in_side := {}
+	var side_ids := []
+	for line in side:
+		for id in side[line]:
+			in_side[str(id)] = true
+			side_ids.append(str(id))
+	var reserve_ids := []
+	for p in my_list:
+		if not in_side.has(str(p["id"])) and Ratings.available(p):
+			reserve_ids.append(str(p["id"]))
+	return ReservesForm.marks(side_ids, reserve_ids, form_log, reserves_log, _xp_grant_key)
 
 
 ## Every player on the list is paid. Named players and good games earn more;
@@ -8077,6 +8117,10 @@ func season_closed() -> bool:
 ## `keep_staff`: the season's close already took your staff for the wrap.
 func open_offseason(keep_staff := false) -> void:
 	if season == null or offseason_year == season_year or ClubMoves.letter_open(self):
+		return
+	# Sacked with jobs to choose from: the off-season waits for his choice and
+	# opens at the club he takes (ClubMoves.take_job), never at the one he left.
+	if is_sacked() and not ClubMoves.offers(self).is_empty():
 		return
 	ensure_contracts()
 	# The season is over: every unfinished project is judged where it stands.

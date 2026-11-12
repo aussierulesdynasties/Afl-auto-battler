@@ -333,6 +333,11 @@ static func _appoint(c: Dictionary, club: String, job: String, year: int, seed: 
 	c["since"] = year + 1
 	c["note"] = ""
 	c.erase("unemployed_since")
+	# A record made before these lists were kept (an old save, a mid-season move) has neither.
+	if not c.has("stints"):
+		c["stints"] = []
+	if not c.has("moves"):
+		c["moves"] = []
 	(c["stints"] as Array).append([club, job, year + 1, 0])
 	(c["moves"] as Array).append(year + 1)
 	if job == "SC":

@@ -117,6 +117,9 @@ var after_bench: Control = null
 ## With field_only: a line under each name in place of position and OVR
 ## (id -> text; the All-Australian team shows each player's club).
 var notes := {}
+## The form marks (ReservesForm.marks): the coldest three in the side and the
+## hottest three in the twos. Your own side only; read again each build.
+var _marks := {"cold": {}, "hot": {}}
 
 
 func setup(side: Dictionary, wide: bool, list: Array = [], read_only := false) -> void:
@@ -154,6 +157,8 @@ func _build() -> void:
 	if after_bench != null and after_bench.get_parent() != null:
 		after_bench.get_parent().remove_child(after_bench)
 	UiKit.clear(self)
+	_marks = GameState.form_marks(_side) if not (_read_only or _rival or field_only) \
+			else {"cold": {}, "hot": {}}
 	var field := UiKit.vbox(4 if stacked else 8)
 	field.name = "BuilderField"
 	field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -533,7 +538,14 @@ func _fill_grid() -> void:
 		if q != "" and not GameDB.player_display_name(p).to_lower().contains(q):
 			continue
 		out.append(p)
-	out.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+	# The three in the best form in the twos lead the list, where their mark is
+	# seen without a scroll; the rest by OVR.
+	var hot: Dictionary = _marks["hot"]
+	out.sort_custom(func(a, b):
+		var ha := hot.has(str(a["id"]))
+		if ha != hot.has(str(b["id"])):
+			return ha
+		return int(a["overall"]) > int(b["overall"]))
 	for p in out:
 		var c := _card(str(p["id"]), false, "")
 		c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -610,6 +622,17 @@ func _card(id: String, on_field: bool, place: String) -> Button:
 			face.add_child(ready)
 			b.custom_minimum_size.y = 58
 		b.tooltip_text = GameDB.player_display_name(p) + ("\n" + _trial_note(id) if _trial_note(id) != "" else "")
+		if (_marks["cold"] as Dictionary).has(id):
+			# Among the three furthest below their own season: the gap on the
+			# tile, both numbers in the tooltip and on his profile.
+			var r: Dictionary = _marks["cold"][id]
+			var cold := UiKit.lbl(ReservesForm.cold_short(r), UiKit.TINY, UiKit.BAD, true)
+			cold.name = "FormCold_" + id
+			cold.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			cold.autowrap_mode = TextServer.AUTOWRAP_OFF
+			face.add_child(cold)
+			b.custom_minimum_size.y += 14.0
+			b.tooltip_text += "\n" + ReservesForm.cold_full(r)
 	else:
 		var row := UiKit.hbox(6)
 		face.add_child(row)
@@ -648,6 +671,15 @@ func _card(id: String, on_field: bool, place: String) -> Button:
 		third_l.name = "Third"
 		face.add_child(third_l)
 		var three_h := PlayerSheet.top_three_height(UiKit.FINE)
+		if (_marks["hot"] as Dictionary).has(id):
+			# Among the three in the best form in the twos: his rating there and
+			# his latest game, above his attributes.
+			var r: Dictionary = _marks["hot"][id]
+			var hot := UiKit.ellipsis(ReservesForm.hot_short(r), 12, UiKit.GOOD, true)
+			hot.name = "FormHot_" + id
+			face.add_child(hot)
+			three_h += 16.0
+			b.tooltip_text = ReservesForm.hot_full(r)
 		face.add_child(PlayerSheet.top_three(p, UiKit.FINE))
 		b.custom_minimum_size = Vector2(160, 62 + three_h)
 		if _wide:
