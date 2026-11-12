@@ -12335,9 +12335,9 @@ func set_stat_focus(player_id: String, key: String) -> bool:
 
 ## The trait a stat focus grows him toward (row 103, 4.Q10): a trait his
 ## role can earn from that stat that he does not have yet, {key, min, gap,
-## crowded} ({} when none). "crowded" when he already carries MAX_GOOD good
-## traits: reaching the line then shows the new one only once he is further
-## past it than he is past one he has (Traits.of keeps the furthest two).
+## crowded} ({} when none). "crowded" when he already carries MAX_GOOD (five)
+## good traits, so a rival club's player aims at nothing more (Traits.of keeps
+## the five furthest past their lines). The screen never explains it.
 func focus_trait(p: Dictionary, stat: String) -> Dictionary:
 	if stat == "":
 		return {}
