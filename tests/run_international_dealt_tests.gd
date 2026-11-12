@@ -218,6 +218,7 @@ func _test_the_dealer_draws_his_cards() -> void:
 	_check(drafted == careers, "Fremantle drafts an international in every seeded career (%d of %d)" % [drafted, careers])
 	_check(with_card * CAREERS >= NEED * drafted,
 			"The game deals an international his own card in his first season in most careers (%d of %d)" % [with_card, drafted])
-	_check(int(tally.get("free", 0)) >= int(tally.get("wait", 0)),
-			"His cards are open more weeks than another card's wait holds them (%d open, %d held)" % [int(tally.get("free", 0)), int(tally.get("wait", 0))])
+	# Director, 2026-11-12: "Allow a small margin": six seeded careers move a week or two with any change to play.
+	_check(int(tally.get("free", 0)) * 10 >= int(tally.get("wait", 0)) * 9,
+			"His cards are open about as many weeks as another card's wait holds them, within 10%% (%d open, %d held)" % [int(tally.get("free", 0)), int(tally.get("wait", 0))])
 	_check(crowded == 0, "His international cards come a month or more after any card about him, and twelve weeks apart (%d did not)" % crowded)
