@@ -16,8 +16,12 @@ const GOLDEN_LOAD := "94876aac547014895ed75f971a92817c"
 const GOLDEN_REAL := "7576cb577da70d80f6222786c2710b94"
 ## A played match's floating point differs between Windows and Linux builds of
 ## Godot, so the season has one fingerprint per platform; each was taken on
-## main before the change (Linux: run_on_github run 43024085570).
-const GOLDEN_SEASON := {"Windows": "b039d703c0783968328f937754c75eee", "Linux": "780ff5a200eee3f3481e3ea11111cc31"}
+## main before the change (Linux: run_on_github run 43024085570). Retaken
+## 2026-11-12 when generated names were removed: the results carry each
+## player's shown name, so the text changed and nothing else (on main the two
+## name modes gave the same ladder, and the same results once every string
+## was blanked; Linux from Tests run 43133650124).
+const GOLDEN_SEASON := {"Windows": "5da108fb223ebe51cf57d0075ad46750", "Linux": "4f25ba5ea9dd776672cb8890c293d10b"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and
