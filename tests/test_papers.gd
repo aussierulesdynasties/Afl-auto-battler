@@ -21,6 +21,7 @@ func run() -> void:
 	_t("_test_practice_nudge")
 	_t("_test_power_rankings")
 	_t("_test_copy_grammar")
+	_t("_test_blurb_matches_rank")
 	_t("_test_move_lines_true")
 	_t("_test_deck")
 	_t("_test_flow")
@@ -239,6 +240,75 @@ func _test_copy_grammar() -> void:
 			and str(said.get("18-point win", "")).contains("An 18-point practice win") and str(said.get("80-point loss", "")).contains("An 80-point practice loss")
 			and str(said.get("42-point win", "")).contains("A 42-point practice win") and str(said.get("1-point loss", "")).contains("A 1-point practice loss"),
 			"An 8-point, an 11-point, an 18-point and an 80-point result; a 42-point and a 1-point one (%s)" % str(said.get("8-point win", "")))
+
+	# Last year's finish in a lead, at every place: no "a 8th-place finish".
+	bad = []
+	for last in range(1, 19):
+		for pos in range(1, 19):
+			var g := {"name": "Ascot", "pos": pos, "clubs": 18, "last": last, "star": "Sam Smith",
+					"line": {"word": "midfield", "rank": 12, "lead": "Sam Smith"}}
+			var used := {}
+			for k in range(4):
+				for hit in RegEx.create_from_string("(?i)\\b(an?) (\\d+)(st|nd|rd|th)").search_all(PowerRankings.blurb("C%d" % k, g, used)):
+					if hit.get_string(1).to_lower() != CopyRules.article(int(hit.get_string(2))):
+						bad.append(hit.get_string(0))
+	_check(bad.is_empty(), "A lead's a/an follows last year's finish, 1st to 18th (%s)" % str(bad.slice(0, 5)))
+
+
+## The blurb agrees with the ladder printed beside it (an independent read of
+## 540 blurbs, 2026-11-12): only the club printed first is the side to beat, and
+## a lead on last year's climb or slide never sits before a practice move the
+## other way.
+func _test_blurb_matches_rank() -> void:
+	var first_words := ["side to beat", "Hard to look past", "head of most tipsters"]
+	var wrong: Array = []
+	var seconds := {}
+	for k in range(40):
+		for pos in range(1, 19):
+			var f := {"name": "Ascot", "pos": pos, "clubs": 18, "star": "Sam Smith", "second": "Tom Brown",
+					"line": {"word": "midfield", "rank": 1 + (pos + k) % 18, "lead": "Sam Smith"}}
+			var b := PowerRankings.blurb("C%d" % k, f, {})
+			var claims := false
+			for w in first_words:
+				claims = claims or b.contains(w)
+			if claims != (pos == 1):
+				wrong.append("%d: %s" % [pos, b])
+			if pos == 2:
+				seconds[b] = true
+	_check(wrong.is_empty(), "Only the club printed 1st is called the side to beat (%s)" % str(wrong.slice(0, 3)))
+	_check(seconds.size() >= 2, "The club printed 2nd has its own leads (%s)" % str(seconds.keys()))
+	var one_ladder := PowerRankings.blurbs(["AAA", "BBB"], {
+			"AAA": {"name": "Ascot", "pos": 1, "clubs": 18, "star": "Sam Smith"},
+			"BBB": {"name": "Benalla", "pos": 2, "clubs": 18, "star": "Tom Brown"}})
+	_check(str(one_ladder["BBB"]).contains("Benalla") and not str(one_ladder["BBB"]).contains("side to beat")
+			and not str(one_ladder["BBB"]).contains("Hard to look past") and not str(one_ladder["BBB"]).contains("head of most"),
+			"On one ladder the 2nd club reads as the challenger (%s)" % str(one_ladder["BBB"]))
+	# Climb and slide leads against the practice move, every pair of places.
+	var climb_words := ["pushing well higher", "big jump", "tipped to climb"]
+	var slide_words := ["slide is coming", "Questions hang over", "A drop is tipped"]
+	var clash: Array = []
+	var kept := 0
+	for last in range(1, 19):
+		for pos in range(1, 19):
+			for mv in ["", "Up two after a 56-point practice thumping", "Down two after a 46-point practice hiding",
+					"Holds its place after a 30-point practice win"]:
+				for k in range(3):
+					var f := {"name": "Ascot", "pos": pos, "clubs": 18, "last": last, "star": "Sam Smith", "move": mv,
+							"line": {"word": "midfield", "rank": 12, "lead": "Sam Smith"}}
+					var b := PowerRankings.blurb("C%d" % k, f, {})
+					var climbs := false
+					for w in climb_words:
+						climbs = climbs or b.contains(w)
+					var slides := false
+					for w in slide_words:
+						slides = slides or b.contains(w)
+					kept += 1 if (climbs or slides) else 0
+					if (climbs and mv.begins_with("Down ")) or (slides and mv.begins_with("Up ")):
+						clash.append(b)
+					if (climbs and last - pos < 4) or (slides and pos - last < 4):
+						clash.append("untrue: " + b)
+	_check(clash.is_empty(), "No climb lead before a practice fall, no slide lead before a practice rise (%s)" % str(clash.slice(0, 3)))
+	_check(kept >= 200, "...and climb and slide leads still print when the practice move agrees or is absent (%d)" % kept)
 
 
 ## Every move line says something true (the 2026-11-12 capture printed "Holds
