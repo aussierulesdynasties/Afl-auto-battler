@@ -70,10 +70,11 @@ static var _pool_tex: Texture2D = null
 
 
 ## Day, twilight or night for the match being shown, in this weather: the same
-## pick the call scenes and the replays draw (VignetteKickoff.now), so the oval
-## and the scenes never disagree about the hour.
+## pick the call scenes and the replays draw (VignetteGround.slot_now: the match's
+## kick-off, and night under a closed roof), so the oval and the scenes never
+## disagree about the hour.
 static func time_of_day(weather := "") -> String:
-	return time_from(VignetteKickoff.now(weather))
+	return time_from(VignetteGround.slot_now(weather))
 
 
 ## The three looks from whatever the kick-off says: a word ("day", "twilight",

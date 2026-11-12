@@ -69,7 +69,8 @@ var _flip_pending := false
 ## at any playback speed; the screen sets the rings, the view only draws.
 var rings := {}
 ## Tired and hurt players (PlayerMarks.build): pid -> {mark, words}. A short
-## mark beside the disc, on the oval and the bench strip; words on a long press.
+## mark beside the disc on the oval and beside the name in the bench's drawer; words
+## on a long press.
 var marks := {}
 ## The long press: where the finger is down and since when (-1 for none), and
 ## the words it brought up ({text, at, left}).
@@ -2065,12 +2066,6 @@ func disc_positions() -> PackedVector2Array:
 ## capture tool's motion print.
 func disc_positions_drawn() -> PackedVector2Array:
 	return _disc
-
-
-## No bench disc is drawn on the view any more (the bench is in its drawer):
-## always empty. Kept because other tools ask where the bench is drawn.
-func bench_spots(_tr: float) -> Array:
-	return []
 
 
 ## The bench's drawer (its tab, its panel, what it lists).

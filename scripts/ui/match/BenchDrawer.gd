@@ -186,7 +186,7 @@ func _signature() -> String:
 
 ## Back (Escape on a PC, the phone's Back) shuts an open drawer first.
 func _input(e: InputEvent) -> void:
-	if is_open and e.is_action_pressed("ui_cancel"):
+	if is_open and is_visible_in_tree() and e.is_action_pressed("ui_cancel"):
 		close()
 		get_viewport().set_input_as_handled()
 

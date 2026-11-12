@@ -63,6 +63,8 @@ func _run() -> void:
 		await _t("_test_pre_match_one_screen", [sz])
 	for sz in [Vector2i(1280, 720), Vector2i(1920, 1080), Vector2i(390, 844)]:
 		await _t("_test_pc_oval_left", [sz])
+	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
+		await _t("_test_bench_shuts_under_a_break", [sz])
 	_t("_test_club_ink_all")
 	for club in ["COL", "GWS", "STK"]:
 		await _t("_test_pc_break_worst_case", [club])
@@ -671,7 +673,8 @@ func _test_coach_descriptions(sz: Vector2i) -> void:
 		for c in pep_grid.find_children("*", "Button", true, false):
 			pep_btn = c
 	var why: String = await _tap_call(m, pep_btn)
-	_check(why == "", "A finger reaches a call through its row (%s: %s)" % [tag, why])
+	_check(why == "" and _tap_steps.size() <= 1 and not _tap_steps.has("back"),
+			"A finger reaches a call through its row: one tap on the row at most, then the choice (%s: %s, steps %s)" % [tag, why, str(_tap_steps)])
 	await _settle()
 	var legs_text := _text(m.find_child("LegsView", true, false))
 
@@ -1471,11 +1474,16 @@ func _visible_buttons(scope: Node) -> int:
 	return n
 
 
+## What the last _tap_call did before its tap on the control itself: "row", "change",
+## "back". A check that a call is one tap from the break reads it.
+var _tap_steps: Array = []
+
 ## A real tap on a control wherever the break keeps it, reached as a player
 ## would: a choice behind its call's row (the row is tapped first), a Who tags
 ## card (a phone opens them from the Tag call's Change), or something on the
 ## break itself (a phone's open call is closed first, with Back).
 func _tap_call(m: Node, c: Control) -> String:
+	_tap_steps = []
 	if c == null or not is_instance_valid(c):
 		return "missing"
 	var box: Node = m.find_child("CoachBox", true, false)
@@ -1493,6 +1501,7 @@ func _tap_call(m: Node, c: Control) -> String:
 	if who != null and who.is_ancestor_of(c) and not c.is_visible_in_tree() and change != null:
 		var w_change: String = await _tap_call(m, change)
 		await _settle()
+		_tap_steps.append("change")
 		return ("Change: " + w_change) if w_change != "" else await Tap.tap(c)
 	if holder != null or (box != null and box.is_ancestor_of(c)):
 		for i in range(4):
@@ -1501,10 +1510,12 @@ func _tap_call(m: Node, c: Control) -> String:
 			if sheets.is_empty() or sheets.back() == holder:
 				break
 			m.call("handle_back")
+			_tap_steps.append("back")
 			await _settle()
 	if body != null and not c.is_visible_in_tree():
 		var row: Button = m.find_child("CallRow_" + str(body.name).trim_prefix("CallBody_"), true, false)
 		var w_row: String = await Tap.tap(row)
+		_tap_steps.append("row")
 		await _settle()
 		if w_row != "":
 			return "row: " + w_row
@@ -1659,6 +1670,7 @@ func _test_pc_break_worst_case(club := "COL") -> void:
 	# The most the sheet may give its body: the oval's height less the sheet's
 	# own margin (UiKit.modal_box keeps 24) and its edge and footer.
 	var most := _break_most(box)
+	print("PC BREAK %s worst %.0f most %.0f oval %s" % [club, worst, most, str((m.get("_pitch") as Control).get_global_rect())])
 	_check(most > 0.0 and worst <= most - 6.0, "...with at least 6 px to spare (%s: %.0f of %.0f)" % [club, worst, most])
 	_check(heights.size() == 1, "Choosing another call never changes the sheet's height (%s: %s)" % [club, str(heights.keys())])
 	# The synergies line is a fact for the game plan: it sits in that call.
@@ -1682,6 +1694,10 @@ func _test_pc_break_worst_case(club := "COL") -> void:
 	_check(w_best == "" and best_blk != null and best_blk.is_visible_in_tree()
 			and best_sheet.get_global_rect().grow(2.0).encloses(oval) and oval.grow(2.0).encloses(best_sheet.get_global_rect()),
 			"A real tap opens Best so far over the oval, the score and the feed still beside it (%s: %s)" % [club, w_best])
+	# What Best so far would need under the legs line, against the room the break has left.
+	print("PC BEST %s block %.0f high, %.0f wide in its sheet; break body %.0f of %.0f" % [club,
+			best_blk.get_combined_minimum_size().y if best_blk != null else -1.0,
+			best_blk.size.x if best_blk != null else -1.0, worst, most])
 	_check(m.call("handle_back") == true, "Back closes Best so far (%s)" % club)
 	await _settle()
 	_check(m.find_child("CallSheet_best", true, false) == null and m.find_child("CoachBox", true, false) != null,
@@ -4147,17 +4163,15 @@ func _test_tag_tap_keeps_columns(sz: Vector2i) -> void:
 		m.queue_free()
 		await _settle()
 		return
-	# A phone's sheet is centred, so a note that wraps re-centres all of it:
-	# measure from the sheet's own title, and only a move inside the sheet counts.
-	var top: Control = null if pc else scope.find_child("CallSheetTitle", true, false) as Control
-	var origin := func() -> Vector2: return top.get_global_rect().position if top != null else Vector2.ZERO
-	var names := ["CallRows", "CallRow_plan", "CallRow_tag", "LegsView", "StartQuarter"] if pc else []
+	# Where each thing is on the screen, as main pins it: the whole sheet jumping on a
+	# phone is the fault too, so the sheet's title is pinned with what is in it.
+	var names := ["CallRows", "CallRow_plan", "CallRow_tag", "LegsView", "StartQuarter"] if pc else ["CallSheetTitle"]
 	names.append_array(["TagPicker", "TagQuestion", "WhoTagsLine"])
 	var before := {}
 	for n in names:
 		var c: Control = m.find_child(n, true, false)
 		if c != null and c.is_visible_in_tree():
-			before[n] = c.get_global_rect().position - (origin.call() as Vector2)
+			before[n] = c.get_global_rect().position
 	# Who tags is there before any tag, shut (A2: nothing appears and shoves).
 	var who0: Control = m.find_child("WhoTagsLine", true, false)
 	var shut := who0 != null and who0.is_visible_in_tree()
@@ -4170,14 +4184,14 @@ func _test_tag_tap_keeps_columns(sz: Vector2i) -> void:
 		if str(b.name) != "TagPickerGrid_":
 			named = b
 			break
-	_check(named != null and before.size() >= 3, "A tag target and the sections are there (%s: %d)" % [tag, before.size()])
+	_check(named != null and before.size() >= (8 if pc else 4), "A tag target and every section pinned are there (%s: %d of %d)" % [tag, before.size(), names.size()])
 	if named != null:
 		var why: String = await Tap.tap(named)
 		await _settle()
 		_check(why == "", "A real tap picks the tag target (%s: %s)" % [tag, why])
 		for n in before:
 			var c2: Control = m.find_child(n, true, false)
-			var now: Vector2 = (c2.get_global_rect().position - (origin.call() as Vector2)) if c2 != null else Vector2(-1, -1)
+			var now: Vector2 = c2.get_global_rect().position if c2 != null else Vector2(-1, -1)
 			_check(c2 != null and (now - (before[n] as Vector2)).length() < 6.0,
 					"%s stays where it was after the tag tap, not sideways and not down (%s: %s -> %s)" % [n, tag,
 					str(before[n]), str(now)])
@@ -4491,6 +4505,87 @@ func _test_pre_match_one_screen(sz: Vector2i) -> void:
 ## feed, a few live numbers and the controls. A break, a call, Best so far and
 ## full time open over the oval, so the score and the feed stay in view. The
 ## live numbers are the stats sheet's own. A phone keeps its layout.
+## The bench's drawer never stays open under what opens over the oval (verifier,
+## 2026-11-12: left open under a break, a call, a replay or full time, it took the first
+## Back). Opened with a real tap in play, it is shut when the first call or the break
+## comes up, and Back on a sheet over the break closes that sheet, first press.
+func _test_bench_shuts_under_a_break(sz: Vector2i) -> void:
+	var tag := "%dx%d" % [sz.x, sz.y]
+	var db = root.get_node("GameDB")
+	var scenes_were: bool = _state.vignettes_on()
+	_state.set_vignettes_on(false)
+	_state.reset()
+	_state.replay_seed = SUITE_SEED
+	_state.start_season("FRE", db.club_list("FRE"))
+	root.size = sz
+	_check(_state.prepare_interactive_match(), "A live match is prepared for the bench's drawer (%s)" % tag)
+	var sim = _state.pending_sim
+	var m: Control = load("res://scenes/MatchScene.tscn").instantiate()
+	root.add_child(m)
+	await _settle()
+	await _settle()
+	var pitch: Control = m.get("_pitch")
+	var start: Button = m.find_child("StartQuarter", true, false)
+	var why: String = await Tap.tap(start)
+	await _settle()
+	_check(why == "" and m.find_child("CoachBox", true, false) == null, "A real tap on Start begins the match (%s: %s)" % [tag, why])
+	# In play: a finger opens the drawer from its tab.
+	var tab: Button = pitch.bench_drawer().tab()
+	why = await Tap.tap(tab)
+	await _settle()
+	_check(why == "" and pitch.bench_open(), "In play a tap on the tab opens the bench's drawer (%s: %s)" % [tag, why])
+	pitch.set_speed(8.0)
+	var guard := 0
+	var open_under := []
+	var calls := 0
+	while m.find_child("CoachBox", true, false) == null and guard < 6000:
+		guard += 1
+		var mo = m.get("_moment_overlay")
+		if mo != null and is_instance_valid(mo) and not sim.pending_moment.is_empty():
+			await process_frame
+			calls += 1
+			if pitch.bench_open():
+				open_under.append("call %d" % calls)
+				# Back with the drawer still open would go to the drawer: the fault.
+			# The next call starts from an open drawer too.
+			m.call("_on_moment_choice", int(sim.pending_moment.get("default", 0)))
+			await process_frame
+			pitch.open_bench()
+			continue
+		if pitch.playing:
+			pitch._process(0.25)
+		await process_frame
+	var box: Control = m.find_child("CoachBox", true, false)
+	_check(box != null and open_under.is_empty() and not pitch.bench_open(),
+			"The drawer is shut under every call and under the break (%s: %d calls, open under %s, open at the break %s)" % [
+			tag, calls, str(open_under), str(pitch.bench_open())])
+	if box == null:
+		_state.set_vignettes_on(scenes_were)
+		m.queue_free()
+		await _settle()
+		return
+	await _settle()
+	# A sheet over the break: the first Back closes it, and the break stays.
+	var stats: Button = m.find_child("BreakStats", true, false)
+	var sheet_name := "BreakStatsSheet"
+	if stats == null or not stats.is_visible_in_tree():
+		# A phone's break has Match stats inside Best so far: that sheet is the one a tap opens.
+		stats = m.find_child("BestSoFarOpen", true, false)
+		sheet_name = "CallSheet_best"
+	why = (await Tap.tap(stats)) if stats != null else "no sheet to open"
+	await _settle()
+	var sheet: Node = m.find_child(sheet_name, true, false)
+	_check(why == "" and sheet != null and not pitch.bench_open(), "A real tap opens a sheet over the break, the drawer still shut (%s: %s, %s)" % [tag, sheet_name, why])
+	var handled: bool = m.call("handle_back")
+	await _settle()
+	sheet = m.find_child(sheet_name, true, false)
+	_check(handled and (sheet == null or sheet.is_queued_for_deletion()) and m.find_child("CoachBox", true, false) != null,
+			"The first Back closes the sheet, not a drawer under it, and the break stays (%s)" % tag)
+	_state.set_vignettes_on(scenes_were)
+	m.queue_free()
+	await _settle()
+
+
 func _test_pc_oval_left(sz: Vector2i) -> void:
 	var tag := "%dx%d" % [sz.x, sz.y]
 	var db = root.get_node("GameDB")
@@ -4527,8 +4622,9 @@ func _test_pc_oval_left(sz: Vector2i) -> void:
 		return
 	var oval := pitch.get_global_rect()
 	var share := oval.size.x / view.size.x
-	_check(share >= 0.58 and share <= 0.70 and oval.end.x <= col.get_global_rect().position.x + 1.0,
-			"The oval takes about the left two-thirds, the column to its right (%s: %.0f%%)" % [tag, share * 100.0])
+	_check(share >= 0.62 and share <= 0.70 and oval.end.x <= col.get_global_rect().position.x + 1.0,
+			"The oval takes the left two-thirds (62%% to 70%% of the width), the column to its right (%s: %.1f%%, %.0f of %.0f px)" % [
+			tag, share * 100.0, oval.size.x, view.size.x])
 	var out := []
 	for nm in ["ScoreBand", "MomentumBar", "SetupLine", "Feed", "LiveStats", "MatchControls"]:
 		var n: Control = (m.get("_score_band") as Control) if nm == "ScoreBand" else m.find_child(nm, true, false) as Control
@@ -4549,8 +4645,9 @@ func _test_pc_oval_left(sz: Vector2i) -> void:
 	_check(shots != null and (shots.find_child("Home", true, false) as Label).text == "0" and m.find_child("LiveStatsWhen", true, false) == null
 			and m.find_child("LiveClub_0", true, false) != null and m.find_child("LiveClub_1", true, false) != null,
 			"Before the bounce the numbers are nil-all under both clubs' names, with no break's totals yet (%s)" % tag)
-	(box.find_child("StartQuarter", true, false) as Button).emit_signal("pressed")
+	var start_why: String = await Tap.tap(box.find_child("StartQuarter", true, false) as Button)
 	await _settle()
+	_check(start_why == "" and m.find_child("CoachBox", true, false) == null, "A real tap on Start begins the match (%s: %s)" % [tag, start_why])
 	# The first quarter, fast, the real playback path; a call takes its default.
 	pitch.set_speed(8.0)
 	var guard := 0

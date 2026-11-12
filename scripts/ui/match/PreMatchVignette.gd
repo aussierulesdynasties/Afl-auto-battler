@@ -530,6 +530,26 @@ const PENNANT_BAND := 0.15
 ## Roughly the value of the stand behind them: a colour within 0.15 of it vanishes.
 const STAND_VALUE := 0.1
 
+## The end the breeze blows to in the match that follows: +1 the +y end (the end your
+## side kicks to first), -1 the other. MatchKickoff sets it once the match is made; the
+## stand's flags, the big screen's arrow and the pennants read it.
+func set_wind_end(end: int) -> void:
+	_board = {"wind": -1 if end < 0 else 1}
+	queue_redraw()
+
+
+## Which way the pennants pull out in the wind: +1 turns them as rotated() does for a
+## positive angle (their tails to the left of the screen), -1 the other way. They stream
+## the way the stand's flags do: the breeze (VignetteWeather.wind_world for the board's
+## end) as this scene's camera sees it at the middle of the wire.
+func pennant_lean() -> float:
+	var cam := ground_cam()
+	var at := cam.to_scene.affine_inverse() * Vector2(0.0, PENNANT_AT)
+	var stream := VignetteWeather.flag_stream(cam, at, PENNANT_TOP,
+			VignetteWeather.wind_world(VignetteWeather.wind_end(_board)))
+	return -1.0 if stream.x > 0.0 else 1.0
+
+
 func _draw_pennants() -> void:
 	if flags.is_empty():
 		return
@@ -561,7 +581,7 @@ func _draw_pennants() -> void:
 		# Stirring on a still night; in the wind they pull out to one side and flick.
 		var wind := VignetteWeather.wind(weather)
 		var sway := deg_to_rad(lerpf(2.5, 9.0, wind) * sin(float(flags[k]) * 1.7 + _t * lerpf(0.9, 4.5, wind))
-				+ 24.0 * wind)
+				+ 24.0 * wind * pennant_lean())
 		var at := Vector2(top.x, top.y + float(posmod(k * 7, 5) - 2))
 		var l := at + Vector2(-half, 0).rotated(sway)
 		var r := at + Vector2(half, 0).rotated(sway)

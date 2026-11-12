@@ -2107,11 +2107,9 @@ func _test_discs_apart() -> void:
 		_check(moved_engine == 0, "%s: drawing the discs apart moves no player" % str(view[2]))
 		_check(ball_off <= 1.0, "%s: a held ball is drawn at its holder's disc (%.2f m off)" % [str(view[2]), ball_off])
 		# Fully apart lifts the cap, for the comparison capture only; the player
-		# never sees it. Its bar was 24 m with 18 px discs (seed 31 inside this suite:
-		# 21.0 m); the discs are half as big again (director, 2026-11-12), so a pack
-		# drawn fully apart spreads half as far again: 36. The capped view the player
-		# sees keeps its 20 m bar.
-		var far_m := 36.0 if bool(view[3]) else 20.0
+		# never sees it. Main's bar, 24 m (seed 31 inside this suite: 21.0 m on main),
+		# kept as it was; the capped view the player sees keeps its 20 m bar.
+		var far_m := 24.0 if bool(view[3]) else 20.0
 		_check(worst_nudge_m < far_m, "%s: no disc is drawn far from its player (%.1f m at most)" % [str(view[2]), worst_nudge_m])
 		print("  discs apart, %s: closest %.2f diameters (players %.2f), biggest nudge %.1f m" % [
 				str(view[2]), closest, real_closest, worst_nudge_m])
@@ -2327,7 +2325,6 @@ func _test_bench_strip() -> void:
 		pv.setup(res)
 		var what := str(view[2])
 		var drawer: BenchDrawer = pv.bench_drawer()
-		_check(pv.bench_spots(pv.token_radius()).is_empty(), "%s: no bench disc is drawn over the ground or the stands" % what)
 		var tab := pv.bench_tab_rect()
 		_check(drawer.tab().visible and tab.size.x > 0.0 and Rect2(Vector2.ZERO, pv.size).encloses(tab),
 				"%s: the bench's tab is inside the view (%s)" % [what, str(tab)])
@@ -2545,7 +2542,6 @@ func _test_upright_oval(res: Dictionary) -> void:
 			on_turf += 1
 	_check(tab.size.x > 0.0 and Rect2(Vector2.ZERO, pv2.size).encloses(tab) and on_turf == 0,
 			"Upright, the bench's tab sits in the view and off the turf (%s, %d corners on the turf)" % [str(tab), on_turf])
-	_check(pv2.bench_spots(pv2.token_radius()).is_empty(), "Upright, no bench disc is drawn on the view")
 	# A goal's ring at either end: never past the view's edge, never over the tab.
 	var bad := []
 	for gx in [MatchMotion.GOAL_X, -MatchMotion.GOAL_X]:
@@ -2555,8 +2551,8 @@ func _test_upright_oval(res: Dictionary) -> void:
 		if at.y - r < 0.0 or at.y + r > pv2.size.y or at.x - r < 0.0 or at.x + r > pv2.size.x:
 			bad.append("off the view at %s" % str(at))
 		var near := Vector2(clampf(at.x, tab.position.x, tab.end.x), clampf(at.y, tab.position.y, tab.end.y))
-		if near.distance_to(at) < r and r > pv2.token_radius():
-			bad.append("over the bench's tab")
+		if near.distance_to(at) < r:
+			bad.append("over the bench's tab (ring %.1f px, tab %.1f px away)" % [r, near.distance_to(at)])
 	_check(bad.is_empty(), "Upright, a goal's ring stays in the view and off the bench's tab at both ends (%s)" % ", ".join(bad))
 	pv2.free()
 

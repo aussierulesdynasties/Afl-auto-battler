@@ -779,8 +779,19 @@ func _test_player_marks_long_press(res: Dictionary) -> void:
 		for row in drawer.rows():
 			if str(row["pid"]) == bpid:
 				hurt_row = row
-		_check(str(hurt_row.get("mark", "")) == PlayerMarks.HURT and str(hurt_row.get("words", "")).begins_with("Injured: calf strain"),
-				"the hurt man's row carries his mark and what it means (%s)" % str(hurt_row.get("words", "")))
+		# Which wording shows is worked out here from the row's room, not taken from the
+		# drawer: main's full "Injured: calf strain, out for the day" when it fits beside
+		# his disc, else the injury alone; never the bare "Hurt" at this size.
+		var full_words := "Injured: calf strain, out for the day"
+		var short_words := "Injured: calf strain"
+		var words_room: float = drawer.panel_rect().size.x * 0.5 - BenchDrawer.PAD - BenchDrawer.DISC_R * 2.0 - 12.0 - BenchDrawer.PAD * 0.5
+		var full_px: float = UiKit.FONT.get_string_size(full_words, HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.px(UiKit.FINE)).x
+		var short_px: float = UiKit.FONT.get_string_size(short_words, HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.px(UiKit.FINE)).x
+		var want_words := full_words if full_px <= words_room else short_words
+		print("BENCH WORDS room %.0f px, full %.0f px, short %.0f px, shown '%s'" % [words_room, full_px, short_px, str(hurt_row.get("words", ""))])
+		_check(str(hurt_row.get("mark", "")) == PlayerMarks.HURT and str(hurt_row.get("words", "")) == want_words and short_px <= words_room,
+				"the hurt man's row carries his mark and what it means, the %s form for its %.0f px of room (shown '%s', wanted '%s'; the full form is %.0f px, the short %.0f px)" % [
+				"full" if want_words == full_words else "short", words_room, str(hurt_row.get("words", "")), want_words, full_px, short_px])
 		_check(UiKit.FONT.get_string_size(str(hurt_row.get("words", "")), HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.px(UiKit.FINE)).x
 				<= (hurt_row["rect"] as Rect2).size.x, "his words fit his row")
 		# A tap inside the panel leaves it open; a tap anywhere else shuts it and goes no further.

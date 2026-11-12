@@ -61,6 +61,9 @@ func _run() -> void:
 	_t("_test_hot_differs_from_perfect")
 	_t("_test_ball")
 	await _t("_test_same_match_under_every_sky")
+	_t("_test_wind_end_with_the_screen_left_out")
+	_t("_test_pre_match_wind_follows_the_match")
+	_t("_test_reading_the_breeze_draws_nothing")
 	Kickoff.forced_slot = ""
 	Grade.forced_weather = ""
 	print(Ran.line("Weather look", self))
@@ -207,8 +210,17 @@ func _test_slot_of_a_match() -> void:
 	Ground.venue = "Marvel Stadium"
 	_check(Ground.spec.get("roof") == "closed" and Ground.slot_now("perfect") == Kickoff.NIGHT,
 			"Under a closed roof the ground is lit as at night whatever the hour")
+	# The oval is under the same roof as the scenes (it read the kick-off alone and drew
+	# a daylight oval round night call scenes; verifier, 2026-11-12).
+	var Oval = load("res://scripts/ui/match/OvalStadium.gd")
+	for s in Kickoff.SLOTS:
+		Kickoff.forced_slot = s
+		_check(Oval.time_of_day("perfect") == Oval.NIGHT and Oval.time_of_day("perfect") == Oval.time_from(Ground.slot_now("perfect")),
+				"Under a closed roof the oval is a night ground too, at a %s kick-off (%s)" % [s, Oval.time_of_day("perfect")])
+	Kickoff.forced_slot = Kickoff.DAY
 	Ground.venue = "MCG"
 	_check(Ground.slot_now("perfect") == Kickoff.DAY, "An open ground takes the hour")
+	_check(Oval.time_of_day("perfect") == Oval.DAY, "An open ground's oval takes the hour too (%s)" % Oval.time_of_day("perfect"))
 	Ground.venue = ""
 	Kickoff.forced_slot = ""
 	Kickoff.use_match({})
@@ -360,6 +372,115 @@ func _test_same_match_under_every_sky() -> void:
 	Kickoff.forced_slot = ""
 	Grade.forced_weather = ""
 	Kickoff.use_match({})
+
+
+## A call scene that leaves the big screen out still says which end the breeze blows to,
+## so its stand flags stream the right way (they took the default end; verifier, 2026-11-12).
+func _test_wind_end_with_the_screen_left_out() -> void:
+	var Decision = load("res://scripts/ui/match/DecisionVignette.gd")
+	for end in [1, -1]:
+		var v = Decision.new()
+		v.size = Vector2(390, 844)
+		v.set("_board", {"codes": ["FRE", "MEL"], "goals": [1, 2], "behinds": [3, 4], "q": 2, "wind": end})
+		v.set("_screen_off", 1)
+		v.set("_screen_off_size", v.size)
+		var off: Dictionary = v.call("_screen_board", null)
+		_check(bool(off.get("off", false)) and off.has("wind") and Wx.wind_end(off) == end and not off.has("goals"),
+				"With the big screen left out the scene still blows to the %s end (%s)" % ["far" if end > 0 else "near", str(off)])
+		v.set("_screen_off", 0)
+		var on: Dictionary = v.call("_screen_board", null)
+		_check(not on.has("off") and Wx.wind_end(on) == end, "With the screen in, the board is the match's own (%s)" % str(on))
+		v.free()
+
+
+## The warm-up's stand flags, its screen's arrow and its pennants stream to the end the
+## match's breeze blows to: your side kicks to the far end first, so the far end when your
+## side has the breeze in the first quarter.
+func _test_pre_match_wind_follows_the_match() -> void:
+	var Kick = load("res://scripts/ui/MatchKickoff.gd")
+	var Stoppage = load("res://scripts/ui/match/StoppageVignette.gd")
+	var PreMatch = load("res://scripts/ui/match/PreMatchVignette.gd")
+	var seen := {}
+	var seed_n := 8128
+	while seen.size() < 2 and seed_n < 8160:
+		var sim = _sim(seed_n)
+		seed_n += 1
+		seen[int(sim.breeze_side)] = true
+		for home in [true, false]:
+			var me := 0 if home else 1
+			var want := 1 if int(sim.breeze_side) == me else -1
+			var board: Dictionary = Stoppage.board_of(sim, me)
+			_check(Kick.wind_end_for(sim, home) == want and int(board["wind"]) == want,
+					"Seed %d, %s: the warm-up blows to the end the first quarter's scenes do (%d, the scene's board %d, want %d)" % [
+					seed_n - 1, "at home" if home else "away", Kick.wind_end_for(sim, home), int(board["wind"]), want])
+	_check(seen.size() == 2, "Matches with the breeze each way were tried (%s)" % str(seen.keys()))
+	_check(Kick.wind_end_for(null, true) == 1, "With no match made, the warm-up takes the default end")
+	var leans := {}
+	for end in [1, -1]:
+		var v = PreMatch.new()
+		v.size = Vector2(390, 844)
+		root.add_child(v)
+		v.setup_prematch("FRE", "MEL", [], [], "Round 1", false, {"flags": [2030, 2031, 2032], "weather": "windy"})
+		v.set_wind_end(end)
+		var cam = v.ground_cam()
+		var board: Dictionary = v.call("_screen_board", cam)
+		_check(Wx.wind_end(board) == end and not board.has("off"), "The warm-up's ground is handed the %s end (%s)" % ["far" if end > 0 else "near", str(board)])
+		# The pennants pull out the way a flag at the wire streams in that wind.
+		var at: Vector2 = cam.to_scene.affine_inverse() * Vector2(0.0, PreMatch.PENNANT_AT)
+		var stream: Vector3 = Wx.flag_stream(cam, at, PreMatch.PENNANT_TOP, Wx.wind_world(end))
+		# rotated() by a positive angle swings a hanging pennant's tail to the left.
+		var tail := Vector2(0.0, 1.0).rotated(deg_to_rad(24.0) * float(v.pennant_lean()))
+		_check(absf(float(v.pennant_lean())) == 1.0 and tail.x * stream.x > 0.0,
+				"The pennants' tails pull out the way the breeze streams there (%s end: tail x %.2f, stream x %.2f)" % [
+				"far" if end > 0 else "near", tail.x, stream.x])
+		leans[end] = [float(v.pennant_lean()), stream]
+		v.free()
+	print("PENNANT LEAN far %s near %s" % [str(leans[1]), str(leans[-1])])
+
+
+## breeze_side is a plain hash of the match's seed: working it out, and every look that
+## reads it, takes no draw from any of the match's generators.
+func _test_reading_the_breeze_draws_nothing() -> void:
+	var Kick = load("res://scripts/ui/MatchKickoff.gd")
+	var Stoppage = load("res://scripts/ui/match/StoppageVignette.gd")
+	var Oval = load("res://scripts/ui/match/OvalStadium.gd")
+	var Broadcast = load("res://scripts/ui/match/BroadcastVignette.gd")
+	var sides := {}
+	for seed_n in range(8128, 8148):
+		var each = _sim(seed_n)
+		sides[int(each.breeze_side)] = true
+		_check(int(each.breeze_side) == posmod(hash("breeze|%d" % seed_n), 2),
+				"Seed %d: who has the breeze first is a hash of the seed alone (%d)" % [seed_n, int(each.breeze_side)])
+	_check(sides.size() == 2, "Both sides get the breeze first across 20 seeds (%s)" % str(sides.keys()))
+	var sim = _sim(8128)
+	sim.weather = "windy"
+	var gens := {}
+	for prop in sim.get_property_list():
+		var val = sim.get(str(prop["name"]))
+		if val is RandomNumberGenerator:
+			gens[str(prop["name"])] = (val as RandomNumberGenerator).state
+	_check(gens.size() >= 10, "The match's generators are all watched (%d)" % gens.size())
+	seed(4242)
+	var mark := randi()
+	seed(4242)
+	for i in range(50):
+		Kick.wind_end_for(sim, i % 2 == 0)
+		Stoppage.board_of(sim, i % 2)
+		Oval.breeze_toward({}, sim)
+		Broadcast.wind_end_of({"breeze_side": sim.breeze_side}, {"side": i % 2, "q": 1 + i % 4})
+		sim.with_breeze(i % 2)
+	var moved := []
+	for nm in gens:
+		if (sim.get(nm) as RandomNumberGenerator).state != gens[nm]:
+			moved.append(nm)
+	_check(moved.is_empty(), "No generator of the match moved while the looks read the breeze (%s)" % str(moved))
+	_check(randi() == mark, "Nor did the shared generator")
+	var plain = _sim(8128)
+	plain.weather = "windy"
+	var a: Dictionary = sim.run()
+	var b: Dictionary = plain.run()
+	_check(a["events"] == b["events"] and a["score"] == b["score"] and (a["events"] as Array).size() > 100,
+			"The match read 250 times plays the same as one never read (%s v %s)" % [str(a["score"]), str(b["score"])])
 
 
 func _t(test: String, args := []) -> Variant:

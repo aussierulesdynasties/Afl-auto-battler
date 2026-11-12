@@ -250,7 +250,16 @@ func _dock(ov: Control) -> void:
 	if ov == null or not is_instance_valid(ov):
 		return
 	ov.set_meta("docked", true)
+	_shut_bench()
 	_fit_docked()
+
+
+## The bench's drawer shuts when anything opens over the oval (a break, a call, a
+## scene, a replay, a sheet, full time): left open underneath, it took the first Back
+## that the thing on top should have had.
+func _shut_bench() -> void:
+	if _pitch != null:
+		_pitch.close_bench()
 
 
 func _undock(ov: Control) -> void:
@@ -932,12 +941,23 @@ func _warm_call_scene() -> void:
 	var vignette := StoppageVignette.new()
 	vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	holder.add_child(vignette)
-	vignette.size = get_viewport_rect().size
+	# The size the first real call draws at: the oval's place on a PC (where calls are
+	# docked), the whole screen on a phone.
+	vignette.size = warm_size()
 	vignette.setup(GameState.pending_sim, _my_side, "")
 	for i in range(WARM_FRAMES):
 		await get_tree().process_frame
 	if is_instance_valid(holder):
 		holder.queue_free()
+
+
+## The size the warm-up scene draws at: the docked scene's on a PC; on a phone the
+## overlay layer's, which is the screen under the score header.
+func warm_size() -> Vector2:
+	var r := _dock_rect()
+	if r.size != Vector2.ZERO:
+		return r.size
+	return _over.size if _over != null and _over.size.x > 1.0 and _over.size.y > 1.0 else get_viewport_rect().size
 
 
 func _close_coach() -> void:
@@ -3084,6 +3104,7 @@ func _show_break_stats(players_first := false) -> void:
 	var overlay: Control = box["overlay"]
 	overlay.name = "BreakStatsSheet"
 	_report_overlay = overlay
+	_shut_bench()
 	var v: VBoxContainer = box["body"]
 	v.add_child(UiKit.ellipsis("Match stats", UiKit.H1, UiKit.TEXT, true))
 	var box_score := _stats_page(v, true, players_first)
@@ -3326,7 +3347,7 @@ func _append_new_events() -> void:
 # ---------------------------------------------------------------------------
 # Playback hooks
 # ---------------------------------------------------------------------------
-## Tired and hurt players carry a short mark on the oval and the bench strip
+## Tired and hurt players carry a short mark on the oval and in the bench's drawer
 ## (PlayerMarks): the hurt from the injuries played so far, either side; the
 ## tired from your own side's legs, in a match you coach.
 func _refresh_marks() -> void:

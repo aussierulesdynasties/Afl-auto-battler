@@ -109,10 +109,21 @@ static func start(tree: SceneTree, replace := false) -> bool:
 		busy = false
 		return false
 	GameState.match_way_live = way
+	# The warm-up's flags stream to the end the match's breeze blows to (a look only: the
+	# match already knows who kicks with it first, and reading that draws nothing).
+	scene.set_wind_end(wind_end_for(GameState.pending_sim, str(m["home"]) == mine))
 	scene.play_through(PRE_MATCH_SECONDS)
 	await scene.done
 	_go(replace)
 	return true
+
+
+## The end the breeze blows to in the first quarter, for the pre-match scene: +1 the end
+## your side kicks to, when your side has the breeze first; -1 the other. No match: +1.
+static func wind_end_for(sim, at_home: bool) -> int:
+	if sim == null:
+		return 1
+	return 1 if int(sim.breeze_side) == (0 if at_home else 1) else -1
 
 
 static func _go(replace: bool) -> void:

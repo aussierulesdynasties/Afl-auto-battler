@@ -476,7 +476,8 @@ func _screen_board(_cam: VignetteGround.Cam) -> Dictionary:
 		for i in range(1, 9):
 			cut = cut or screen_cut_at(_end, 0.05 * float(i))
 		_screen_off = 1 if cut else 0
-	return {"off": true} if _screen_off == 1 else _board
+	# Left out, the board still says which end the breeze blows to: the stand flags read it.
+	return {"off": true, "wind": _board.get("wind", 1)} if _screen_off == 1 else _board
 
 
 ## Whether the big screen would be cut, by the title bar (into its writing, below its top

@@ -272,8 +272,8 @@ func _test_measures_prove_themselves(res: Dictionary) -> void:
 		hit = hit or (rc as Rect2).has_point(pv._w2s(Vector2(deep, left)))
 		other = other or (rc as Rect2).has_point(pv._w2s(Vector2(deep, -left))) or (rc as Rect2).has_point(pv._w2s(Vector2.ZERO))
 	_check(rects.size() == 1 and hit and not other and pv.bench_tab_rect().is_equal_approx(BenchDrawer.pill_in(pv.size))
-			and not pv.bench_open() and pv.bench_spots(pv.token_radius()).is_empty(),
-			"The bench measure sees a back pocket (80 m from the centre, 25 m across) under the bench's tab, and not the pocket beside it or the centre bounce; the drawer is shut and no bench disc is on the view (%d rect, the tab at %s)" % [
+			and not pv.bench_open(),
+			"The bench measure sees a back pocket (80 m from the centre, 25 m across) under the bench's tab, and not the pocket beside it or the centre bounce; the drawer is shut (%d rect, the tab at %s)" % [
 			rects.size(), str(pv.bench_tab_rect())])
 	pv.free()
 
