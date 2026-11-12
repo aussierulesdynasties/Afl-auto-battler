@@ -12,5 +12,13 @@
 		"Players can earn up to five traits.",
 		"The papers' pre-season ladder has a line on every club, and your practice match can move you a place or two.",
 		"Your press interview comes before the draft, in the press room."
+	],
+	"1.0.16": [
+		"Fixed: a sacked coach who takes a new job now runs his new club from the day he signs, not the club that sacked him.",
+		"Match day has a new look: weather, night games, tighter call scenes with both sides in place, and a bench drawer you tap open.",
+		"Team selection marks the players in the worst and best form, and players left out now play reserves games.",
+		"The training report has a Learn button for every player who can learn a position.",
+		"The hub tells you the week your fitness plan can change.",
+		"Fixed: the press no longer says the board hears excuses after a win."
 	]
 }
