@@ -344,8 +344,12 @@ func _open_profile(id: String) -> void:
 	var actions := []
 	if GameState.can_back(p):
 		var run := MatchNotes.count_word(Backing.RUN_GAMES)
-		actions.append({"name": "BackRun", "label": "Back for %s games" % run,
-				"detail": "A run of %s senior games, starting with the next. Leave the player out while he is fit and the promise breaks. It stings." % run,
+		# Already in the side: the promise keeps him there, it gives him nothing he has.
+		var picked := GameState.in_current_side(p)
+		actions.append({"name": "BackRun", "label": ("Keep in for %s games" if picked else "Back for %s games") % run,
+				"detail": ("His place is safe for the next %s games, whatever his form." if picked
+						else "A run of %s senior games, starting with the next.") % run
+						+ " Leave the player out while he is fit and the promise breaks. It stings.",
 				"run": _back.bind(id)})
 	_sheet = PlayerSheet.open(self, p, func(): _sheet = null, actions)
 

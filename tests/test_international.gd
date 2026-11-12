@@ -328,7 +328,8 @@ func _stories(state: Node, mine: Dictionary) -> void:
 	_check(bad.is_empty(), "Every choice shows a Gain and a Cost, filled in: %s" % " | ".join(PackedStringArray(bad)))
 	var played := 0
 	for t in cards:
-		for i in range((t["choices"] as Array).size()):
+		# The choices the card offers him (a run only when he is out of the side).
+		for i in range((state.story_card(str(t["id"]), mine)["options"] as Array).size()):
 			var card: Dictionary = state.story_card(str(t["id"]), mine)
 			var said: String = ClubStories.apply_choice(state, card, i)
 			played += 1
