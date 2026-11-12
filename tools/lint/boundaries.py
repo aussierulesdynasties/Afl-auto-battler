@@ -1,6 +1,9 @@
 """Boundary rules: what may never reach the sim or the state, and two export settings. Moved
 from the Godot suites on 2026-11-12, rule for rule (each names the suite it came from).
 """
+import os
+import subprocess
+
 from common import Finding, gd_files, read
 
 # [rule, files (or a folder walk), banned substrings, why]. A walk is ("dir", recursive).
@@ -66,4 +69,35 @@ def check_presets(root):
     return out
 
 
-CHECKS = [check, check_presets]
+# Folders Godot never imports: their .gdignore stops the editor writing *.import sidecars there,
+# which conflicted in merges with no meaning (9 at once in #1330's merge of main, 2026-11-11).
+NO_IMPORT = ["captures", "docs"]
+
+
+def _tracked(root, folder):
+    """Files under folder: the tracked ones in a git checkout, else every file on disk."""
+    r = subprocess.run(["git", "ls-files", "--", folder], cwd=root, capture_output=True, text=True)
+    if r.returncode == 0 and os.path.exists(os.path.join(root, ".git")):
+        return [f for f in r.stdout.split("\n") if f]
+    out = []
+    for dirpath, _dirs, files in os.walk(os.path.join(root, folder)):
+        out += [os.path.relpath(os.path.join(dirpath, f), root).replace(os.sep, "/") for f in files]
+    return out
+
+
+def check_no_import_sidecars(root):
+    out = []
+    for folder in NO_IMPORT:
+        if not os.path.isdir(os.path.join(root, folder)):
+            continue
+        if not os.path.isfile(os.path.join(root, folder, ".gdignore")):
+            out.append(Finding(folder + "/.gdignore", 0, "no-import-sidecars",
+                               "missing: Godot would import %s/ and write .import files there" % folder))
+        for f in sorted(_tracked(root, folder)):
+            if f.endswith(".import"):
+                out.append(Finding(f, 0, "no-import-sidecars",
+                                   "a Godot import sidecar under %s/: git rm --cached it (.gitignore keeps it out)" % folder))
+    return out
+
+
+CHECKS = [check, check_presets, check_no_import_sidecars]

@@ -38,3 +38,7 @@ build_info.txt
 # Test dumps for a person to read (coach_arcs story log)
 tests/output/
 .balance/
+
+# Godot never imports captures/ or docs/ (each has a .gdignore); no sidecars there.
+captures/**/*.import
+docs/**/*.import
