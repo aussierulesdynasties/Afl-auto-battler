@@ -6,7 +6,13 @@ extends SceneTree
 ## the stats view, a coach's call, a vignette, live play and full time - and
 ## in each the two scores and the clock are shown, inside the screen, and
 ## nothing drawn over the match covers them.
+## Match day's bugs (director, 2026-11-12): the clock names each stoppage
+## ("Pre-match", "Quarter time", "Half time", "Three-quarter time", "Full time"),
+## the play and skip buttons are neither drawn nor tappable under a sheet (real
+## taps), and in the stats' player rows no figure, name and Profile tap overlap,
+## on a phone (390x844) and a PC (1280x720 units, a 1920x1080 window's canvas).
 
+const Tap := preload("res://tests/tap.gd")
 const SUITE_SEED := 2027
 const PHONE := Vector2i(390, 844)
 
@@ -30,6 +36,8 @@ func _run() -> void:
 		_state.set_setting("seen_%s_intro" % key, true)
 	_state.show_real_names = false
 	await _t("_test_score_and_clock_stay")
+	for sz in [PHONE, Vector2i(1280, 720)]:
+		await _t("_test_stoppage_clock_and_covered_controls", [sz])
 	print(Ran.line("Score and clock", self))
 	quit(0 if _failures.is_empty() else 1)
 
@@ -130,6 +138,217 @@ func _test_score_and_clock_stay() -> void:
 	_check(vignette_seen, "The walk reached a vignette (%s)" % str(_seen.keys()))
 	m.queue_free()
 	await _settle()
+
+
+## The clock's words at each stoppage, longest first (it takes the first that fits).
+const STOPPAGES := [["Pre-match"], ["Quarter time", "Qtr time"], ["Half time"], ["Three-quarter time", "3/4 time"]]
+const STOPPAGE_NAMES := ["before the first bounce", "quarter time", "half time", "three-quarter time"]
+
+
+## One coached match, skipped from break to break with real taps. At every
+## stoppage the clock names it, and the play, speed and skip buttons under the
+## sheet are not drawn and do nothing when tapped where they sit. While the
+## ball is in play the clock counts minutes and the buttons work. The stats'
+## player rows are checked at half time and at full time.
+func _test_stoppage_clock_and_covered_controls(sz: Vector2i) -> void:
+	var db = root.get_node("GameDB")
+	var tag := "%dx%d" % [sz.x, sz.y]
+	_state.set_vignettes_on(false)
+	_state.reset()
+	_state.replay_seed = SUITE_SEED
+	_state.start_season("FRE", db.club_list("FRE"))
+	root.size = sz
+	_state.set_match_way("watch")
+	_state.set_vignettes_on(false)
+	_check(_state.prepare_interactive_match(), "A live match is prepared (%s)" % tag)
+	var m: Control = load("res://scenes/MatchScene.tscn").instantiate()
+	root.add_child(m)
+	await _settle()
+	var sim = _state.pending_sim
+	var controls: Control = m.find_child("MatchControls", true, false)
+	_check(controls != null, "The match has its play and skip buttons (%s)" % tag)
+	if controls == null:
+		m.queue_free()
+		await _settle()
+		return
+	var taps := 0
+	for q in range(1, 5):
+		var at := "%s, %s" % [STOPPAGE_NAMES[q - 1], tag]
+		var box: Node = m.find_child("CoachBox", true, false)
+		_check(box != null and sim.current_quarter == q, "The break is up (%s)" % at)
+		if box == null:
+			break
+		_check_clock(m, STOPPAGES[q - 1], at)
+		taps += await _check_dead_controls(m, controls, at)
+		if q == 3:
+			m.call("_show_break_stats")
+			await _settle()
+			var sheet: Node = m.find_child("BreakStatsSheet", true, false)
+			_check(sheet != null, "Match stats opens (%s)" % at)
+			_check_clock(m, STOPPAGES[q - 1], "match stats, " + at)
+			taps += await _check_dead_controls(m, controls, "match stats, " + at)
+			if sheet != null:
+				_check_player_rows(sheet, "match stats, " + at)
+			m.call("handle_back")
+			await _settle()
+		var why: String = await Tap.tap(m.find_child("StartQuarter", true, false))
+		await _settle()
+		_check(why == "" and m.find_child("CoachBox", true, false) == null, "A real tap on Start starts the quarter (%s: %s)" % [at, why])
+		var clock: Label = m.get("_clock")
+		_check(clock.text.begins_with("Q") and clock.text.ends_with("'"),
+				"With the ball in play the clock counts minutes (after %s: '%s')" % [at, clock.text])
+		# A coach's call that came up in those frames takes its default.
+		var g := 0
+		while m.get("_moment_overlay") != null and is_instance_valid(m.get("_moment_overlay")) \
+				and not sim.pending_moment.is_empty() and g < 20:
+			g += 1
+			m.call("_on_moment_choice", int(sim.pending_moment.get("default", 0)))
+			await _settle()
+		var live := []
+		for b in controls.find_children("*", "BaseButton", true, false):
+			if (b as Control).mouse_filter != Control.MOUSE_FILTER_STOP:
+				live.append(str(b.name))
+		_check(is_equal_approx(controls.modulate.a, 1.0) and live.is_empty(),
+				"With no sheet up the play and skip buttons are drawn and take taps (after %s: alpha %.2f, dead %s)" % [
+				at, controls.modulate.a, str(live)])
+		var skip: Button = m.find_child("SkipToBreak", true, false)
+		if q == 4:
+			skip = null
+			for b in controls.find_children("*", "Button", true, false):
+				if (b as Button).text == "Skip to full time":
+					skip = b
+		why = await Tap.tap(skip)
+		for i in range(4):
+			await _settle()
+		_check(why == "", "A real tap on %s works while the ball is in play (after %s: %s)" % [
+				skip.text if skip != null else "the skip button", at, why])
+	_check(bool(m.get("_fulltime_shown")) and m.find_child("FullTime", true, false) != null, "The match reaches full time (%s)" % tag)
+	_check_clock(m, ["Full time"], "full time, " + tag)
+	taps += await _check_dead_controls(m, controls, "full time, " + tag)
+	# Where a tall sheet's own buttons sit over every one of them (a phone's opening
+	# break) there is no such spot to tap; across the match there are many.
+	_check(taps >= 8, "Covered buttons were tapped where they sit (%s: %d real taps)" % [tag, taps])
+	var tab: Button = m.find_child("ReviewTab_stats", true, false)
+	var why_tab: String = await Tap.tap(tab)
+	await _settle()
+	var ft: Node = m.find_child("FullTime", true, false)
+	_check(why_tab == "" and ft != null, "A real tap opens full time's Stats tab (%s: %s)" % [tag, why_tab])
+	if ft != null:
+		_check_player_rows(ft, "full time Stats, " + tag)
+	_check_clock(m, ["Full time"], "full time Stats, " + tag)
+	m.queue_free()
+	_state.pending_sim = null
+	await _settle()
+
+
+## The clock reads one of `words` (the longest that fits) and fits its place between the scores.
+func _check_clock(m: Control, words: Array, at: String) -> void:
+	var clock: Label = m.get("_clock")
+	if clock == null or not is_instance_valid(clock):
+		_check(false, "The clock exists (%s)" % at)
+		return
+	var room := float(clock.get_meta("room", 0.0))
+	var font: Font = clock.get_theme_font("font")
+	var wide := font.get_string_size(clock.text, HORIZONTAL_ALIGNMENT_LEFT, -1, clock.get_theme_font_size("font_size")).x
+	_check(words.has(clock.text), "The clock names the stoppage (%s: '%s', want %s)" % [at, clock.text, str(words)])
+	print("stoppage clock %s: '%s' %.0f of %.0f at %d px" % [at, clock.text, wide, room, clock.get_theme_font_size("font_size")])
+	_check(wide <= room + 0.5 and clock.get_theme_font_size("font_size") >= 13,
+			"The clock's words fit between the scores at a readable size (%s: '%s' is %.0f of %.0f at %d px)" % [
+			at, clock.text, wide, room, clock.get_theme_font_size("font_size")])
+	# The longest form that fits is the one shown: a shorter form only when the full words do not fit.
+	if clock.text != str(words[0]):
+		var full := font.get_string_size(str(words[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
+		_check(full > room, "The short form is used only where the full words do not fit (%s: '%s' is %.0f of %.0f)" % [
+				at, str(words[0]), full, room])
+
+
+## Under a sheet the play, speed and skip buttons are not drawn, and a real tap
+## where each one sits presses nothing and changes nothing in the match.
+func _check_dead_controls(m: Control, controls: Control, at: String) -> int:
+	_check(is_zero_approx(controls.modulate.a), "The play and skip buttons are not drawn under the sheet (%s: alpha %.2f)" % [at, controls.modulate.a])
+	var sim = _state.pending_sim
+	var pitch = m.get("_pitch")
+	var snap := func() -> Array:
+		return [sim.current_quarter if sim != null else -1, bool(m.get("_skipping")), bool(m.get("_finished")),
+				int(m.get("_playback_event_index")), bool(pitch.playing), float(pitch.speed), int(m.get("_breaks_played")),
+				_sheet_names(m)]
+	var tapped := 0
+	for b in controls.find_children("*", "BaseButton", true, false):
+		var btn := b as BaseButton
+		if not btn.visible:
+			continue
+		# A sheet's own button over the same spot is the sheet's business: the tap there
+		# is its tap. The finger lands on a part of the button no sheet button is over.
+		var spot := Vector2.INF
+		for f in [Vector2(0.5, 0.5), Vector2(0.2, 0.5), Vector2(0.8, 0.5), Vector2(0.5, 0.25), Vector2(0.5, 0.75)]:
+			if spot == Vector2.INF and not _sheet_button_at(m, btn.get_global_rect().position + btn.size * f):
+				spot = btn.size * f
+		if spot == Vector2.INF:
+			continue
+		var before: Array = snap.call()
+		var why: String = await Tap.tap_at(btn, spot, false)
+		await _settle()
+		var after: Array = snap.call()
+		tapped += 1
+		_check(why != "" and before == after and btn.focus_mode == Control.FOCUS_NONE,
+				"A real tap where '%s' sits under the sheet does nothing (%s: pressed %s, match %s -> %s)" % [
+				btn.text if btn is Button else str(btn.name), at, str(why == ""), str(before), str(after)])
+	return tapped
+
+
+## The sheets up over the match, by name.
+func _sheet_names(m: Control) -> Array:
+	var out := []
+	var over: Node = m.get("_over")
+	for c in over.get_children():
+		if not c.is_queued_for_deletion():
+			out.append(str(c.name))
+	return out
+
+
+## True when one of the sheets' own buttons is under `point`.
+func _sheet_button_at(m: Control, point: Vector2) -> bool:
+	var over: Node = m.get("_over")
+	for b in over.find_children("*", "BaseButton", true, false):
+		if (b as Control).is_visible_in_tree() and (b as Control).get_global_rect().has_point(point):
+			return true
+	return false
+
+
+## The stats' player rows: his name, his figure and the Profile tap each keep
+## their own room, and the tap stays inside its row.
+func _check_player_rows(sheet: Node, at: String) -> void:
+	var rows := sheet.find_children("BoxPlayer_*", "Button", true, false)
+	var seen := 0
+	var bad := []
+	for r in rows:
+		var b := r as Button
+		if not b.is_visible_in_tree():
+			continue
+		var tap: Control = null
+		for c in b.get_children():
+			if str(c.name).begins_with("Profile_"):
+				tap = c
+		var h: Control = b.get_child(0)
+		var who: Control = h.get_child(0)
+		var fig: Control = h.get_child(1)
+		if tap == null:
+			bad.append("%s: no Profile tap" % b.name)
+			continue
+		seen += 1
+		var tr := tap.get_global_rect()
+		var fr := fig.get_global_rect()
+		var wr := who.get_global_rect()
+		if fr.intersects(tr):
+			bad.append("%s: figure %s over Profile %s" % [b.name, str(fr), str(tr)])
+		if wr.intersects(fr) or wr.intersects(tr):
+			bad.append("%s: name %s over figure %s or Profile %s" % [b.name, str(wr), str(fr), str(tr)])
+		if not b.get_global_rect().grow(0.5).encloses(tr):
+			bad.append("%s: Profile %s leaves its row %s" % [b.name, str(tr), str(b.get_global_rect())])
+		if wr.size.x < 60.0:
+			bad.append("%s: name only %.0f wide" % [b.name, wr.size.x])
+	_check(seen >= 4, "The stats show player rows (%s: %d)" % [at, seen])
+	_check(bad.is_empty(), "In every player row the name, the figure and Profile keep clear of each other (%s: %s)" % [at, str(bad)])
 
 
 func _open_stats(m: Control, stats: Button, name: String) -> void:
