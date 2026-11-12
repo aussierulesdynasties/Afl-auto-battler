@@ -333,10 +333,38 @@ STRETCH_TARGETS = {"MID": (37.74, 49.36, 78.04), "DEF": (43.07, 49.41, 73.72),
                    "FWD": (38.38, 49.48, 78.04), "RUCK": (37.50, 49.36, 73.56)}
 
 
+# A past start's own anchors (Ratings.era_anchors); empty keeps 2026's.
+ERA_ANCHORS = {}
+
+
+def fit_era_anchors(players, min_games=12.0):
+    """Ratings.fit_era_anchors: each position's [p10, p50, p98] raw blend on
+    this season's players, then every overall rated again on them."""
+    by_role = {}
+    for p in players:
+        if p["gm"] >= min_games:
+            core = role_core(p["attr"], p["role"])
+            by_role.setdefault(p["role"], []).append(
+                0.70 * core + 0.22 * p["attr"]["star"] + 0.08 * p["attr"]["durability"])
+    ERA_ANCHORS.clear()
+    for role in STRETCH_ANCHORS:
+        vals = by_role.get(role, [])
+        if len(vals) >= 10:
+            ERA_ANCHORS[role] = (_pctile(vals, 0.10), _pctile(vals, 0.50), _pctile(vals, 0.98))
+    for p in players:
+        core = role_core(p["attr"], p["role"])
+        overall = 0.70 * core + 0.22 * p["attr"]["star"] + 0.08 * p["attr"]["durability"]
+        overall = position_stretch(overall, p["role"])
+        conf = min(1.0, p["gm"] / 14.0)
+        overall = 40.0 + (overall - 40.0) * (0.40 + 0.60 * conf)
+        p["overall"] = scale_overall(overall)
+        p["value"] = salary_value(p["overall"])
+
+
 def position_stretch(raw, role):
     if role not in STRETCH_ANCHORS:
         return raw
-    g10, g50, g98 = STRETCH_ANCHORS[role]
+    g10, g50, g98 = ERA_ANCHORS.get(role, STRETCH_ANCHORS[role])
     t10, t50, t98 = STRETCH_TARGETS[role]
     if raw <= g10:
         return raw + (t10 - g10)
