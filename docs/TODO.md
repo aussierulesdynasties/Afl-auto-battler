@@ -247,6 +247,7 @@ Settled answers that are not build rows. The bible stays as it is unless he cons
 
 - Visual overhaul interview: match day first, one look sheet per area, rig and Tripo without asking; answers in the Director Bible (rows 166-171). Trades check: "Decline the letter in the test".
 - Auto-pick keeps its name: "Auto pick. I already answered this question". It is the Team selection button's name and exempt from the engine-word ban (row 134).
+- Every draftee in every draft shows one line "Plays like: <real AFL player>", from facts: same position, about his level ("level must be included"), similar height, closest ratings at max potential (`PlaysLike.gd`). A line under the name, never in it.
 - Approved and merged: PR #1397's free-agency odds and Recruiting miss line (T1.R26 L3), and PR #1402's player-sheet concussion line (row 154).
 - Sim speed: "Speed up the engine", drift "Inside AFL bands" (row 159). Weather: "Yes, at a break" (row 160). Feed colours: "not sure, you choose", so his 2026-11-10 ruling stands: our goals in our club's colour, red conceded, grey for the rest, no blue (row 161). Pre-match calls: "Stay pre-bounce". Vignettes: "Yes, every card" (row 162). Autopilot: "Too harsh", soften to mid-table (row 163). Draft: "Must make room" (row 164).
 - PR #1401's look (row 134): "Passes, merge it". Teaching: already ruled 2026-11-04, XP scaling; open question 4.Q1 closed.

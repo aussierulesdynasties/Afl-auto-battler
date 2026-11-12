@@ -1148,6 +1148,10 @@ func _player_row(p: Dictionary) -> Control:
 	var kind_line := _row_line(" · ".join(kind), UiKit.MUTED)
 	kind_line.name = "Kind_" + str(p["id"])
 	face.add_child(kind_line)
+	# The real player he plays like at his best (director 2026-11-12): his own line.
+	var like := PlaysLikeLine.make(p)
+	if like != null:
+		face.add_child(like)
 	# Draft fit (row 127): how he suits your coach's game, as a fact with
 	# the scouts' read. Your club's colour: it is about your club.
 	for m in _fit_of(p):
@@ -1620,6 +1624,10 @@ func _open_player(id: String) -> void:
 	if not projected:
 		who.append(GameDB.club_name(str(p["club"])))
 	v.add_child(UiKit.lbl("  ·  ".join(who), UiKit.SECONDARY, UiKit.MUTED))
+	var like := PlaysLikeLine.make(p)
+	if like != null:
+		like.name = "DetailPlaysLike"
+		v.add_child(like)
 	var ped := PlayerProfile.pedigree(p)
 	if ped != "":
 		var pl := UiKit.lbl(ped, UiKit.SECONDARY, UiKit.MUTED)
