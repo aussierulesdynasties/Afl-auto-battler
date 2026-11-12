@@ -20,7 +20,7 @@ import sys
 import time
 import urllib.request
 
-UA = "Mozilla/5.0 (compatible; AflAutoBattler-data/1.0; +https://github.com/gabebartolo-spec/Afl-auto-battler)"
+UA = "Mozilla/5.0 (compatible; AflAutoBattler-data/1.0; +https://github.com/aussierulesdynasties/Afl-auto-battler)"
 DG = "https://www.draftguru.com.au"
 SEASONS = range(2000, 2010)
 # Draft years whose pages can explain how a 2000-2009 listed player joined.
