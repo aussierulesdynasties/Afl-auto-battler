@@ -837,14 +837,14 @@ func reserve_for(code: String) -> int:
 
 
 var _reserve_at := -1
-var _reserve_cache := float(Contracts.SENIOR_MIN_2027)
+var _reserve_cache := float(Contracts.senior_min(GameDB.START_YEAR))
 
 
 ## The average price of the cheapest players still available, taking as many
 ## as the league still has list spots to fill. Rebuilt once per pick.
 func _reserve_per_spot() -> float:
 	if intake_mode:
-		return float(Contracts.SENIOR_MIN_2027)
+		return float(Contracts.senior_min(GameDB.START_YEAR))
 	if _reserve_at == pick_index:
 		return _reserve_cache
 	_reserve_at = pick_index
@@ -854,16 +854,16 @@ func _reserve_per_spot() -> float:
 	var values: Array = []
 	for q in pool:
 		if not picked.has(str(q["id"])):
-			values.append(int(q["value"]))
+			values.append(cost_of(q))
 	values.sort()
 	var n := mini(open, values.size())
 	if n <= 0:
-		_reserve_cache = float(Contracts.SENIOR_MIN_2027)
+		_reserve_cache = float(Contracts.senior_min(GameDB.START_YEAR))
 		return _reserve_cache
 	var total := 0
 	for i in range(n):
 		total += int(values[i])
-	_reserve_cache = maxf(float(Contracts.SENIOR_MIN_2027), float(total) / float(n))
+	_reserve_cache = maxf(float(Contracts.senior_min(GameDB.START_YEAR)), float(total) / float(n))
 	return _reserve_cache
 
 
@@ -1221,7 +1221,13 @@ func user_view(p: Dictionary) -> Dictionary:
 ## clear"). Row T1.R26 L1 (everything follows the read) still moves what you
 ## see of his ratings, traits and Pick for me; never his salary.
 func price_for(_code: String, p: Dictionary) -> int:
-	return int(p["value"])
+	return cost_of(p)
+
+
+## His salary in the opening season's dollars (the budget's year,
+## compute_budget): Legacy mode prices a 1990 draft in 1990 dollars.
+static func cost_of(p: Dictionary) -> int:
+	return Contracts.dollars(int(p["value"]), GameDB.START_YEAR)
 
 
 ## Your price for him (price_for your club).
@@ -1586,7 +1592,7 @@ func can_pick_player(p: Dictionary) -> bool:
 			return false
 		var forced_role := _forced_role(user_club)
 		return forced_role == "" or Ratings.plays_role(p, forced_role)
-	return not picked.has(str(p["id"])) and count() < target_size and remaining() >= int(p["value"])
+	return not picked.has(str(p["id"])) and count() < target_size and remaining() >= cost_of(p)
 
 
 ## Your turn, and no player left fits both your cap and your list's needs.
@@ -1670,8 +1676,8 @@ func pick_block_reason(p: Dictionary) -> String:
 		return ""
 	if count() >= target_size:
 		return "Your list is full."
-	if remaining() < int(p["value"]):
-		return "Not enough salary cap: he costs %s and you have %s left." % [Contracts.money(int(p["value"])), Contracts.money(remaining())]
+	if remaining() < cost_of(p):
+		return "Not enough salary cap: he costs %s and you have %s left." % [Contracts.money(cost_of(p)), Contracts.money(remaining())]
 	return ""
 
 
@@ -1690,7 +1696,7 @@ func pick(p: Dictionary) -> bool:
 		return false
 	if count() >= target_size:
 		return false
-	if remaining() < int(p["value"]):
+	if remaining() < cost_of(p):
 		return false
 	picked[p["id"]] = p
 	order.append(p["id"])
