@@ -17,6 +17,22 @@ const SETTLE_FRAMES := 2
 static func tap(c: Control) -> String:
 	if c == null or not is_instance_valid(c):
 		return "no control"
+	# A match call's controls sit behind the call's own row (pre-match and at every
+	# break, row 166): a coach taps the row first, so the test does, with a real tap.
+	if not c.is_visible_in_tree():
+		var body: Node = c
+		while body != null and not str(body.name).begins_with("CallBody_"):
+			body = body.get_parent()
+		if body != null:
+			var row := c.get_tree().root.find_child("CallRow_" + str(body.name).trim_prefix("CallBody_"), true, false) as Control
+			if row != null and row.is_visible_in_tree():
+				var why: String = await tap_at(row, row.size * 0.5, false)
+				if why != "":
+					return "its row: " + why
+				for i in range(SETTLE_FRAMES + 4):
+					await row.get_tree().process_frame
+				if not is_instance_valid(c):
+					return "no control"
 	return await tap_at(c, c.size * 0.5, false)
 
 
