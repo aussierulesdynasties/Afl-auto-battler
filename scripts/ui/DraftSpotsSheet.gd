@@ -9,8 +9,17 @@ extends RefCounted
 ## only possible before the draft starts (out-of-contract players, on the
 ## Contracts tab; any player can be traded). Two answers, no advice: go to
 ## Trades & Contracts or start the draft.
+##
+## Must make room (director, 2026-11-12): a club takes at least three players,
+## or every pick it holds when fewer. While your list is short of that
+## (GameState.draft_room_short) the sheet is a gate: it says how many to delist,
+## the draft cannot start, and its two routes are Delist (the Contracts tab) and
+## Trade (the Trade tab). Once the rule is met, the picks left over pass as before.
 
 const NAME := "DraftSpots"
+## The off-season tab the gate's route opens ("" for the screen's own default).
+## OffseasonScene reads it once on opening and clears it.
+static var route_tab := ""
 
 
 ## True when the coach should see the sheet first: a pick of his would pass,
@@ -27,6 +36,8 @@ static func needed() -> bool:
 	g.open_offseason()
 	var s: Dictionary = g.draft_list_spots()
 	var picks: Array = s["picks"]
+	if g.draft_room_short() > 0:
+		return true
 	return not (s["passing"] as Array).is_empty() \
 			or (int(s["maybe"]) > 0 and picks.size() > int(s["open"]) - int(s["maybe"]))
 
@@ -49,6 +60,28 @@ static func open(host: Control, on_start: Callable) -> Control:
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(l)
 	var footer: VBoxContainer = box["footer"]
+	var gate: String = GameState.draft_room_line()
+	if gate != "":
+		# The gate: no start until the list meets the rule; two routes to meet it.
+		var said := UiKit.lbl(gate, 15, UiKit.BAD, true)
+		said.name = "DraftRoomGate"
+		said.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(said)
+		v.move_child(said, 1)
+		var row := UiKit.hbox(8)
+		footer.add_child(row)
+		for r in [["DraftRoomDelist", "Delist", "contracts"], ["DraftRoomTrade", "Trade", "trade"]]:
+			var b := UiKit.btn(str(r[1]), UiKit.NAME, str(r[2]) == "contracts")
+			b.name = str(r[0])
+			b.custom_minimum_size = Vector2(0, 48)
+			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			var tab := str(r[2])
+			b.pressed.connect(func() -> void:
+				overlay.queue_free()
+				route_tab = tab
+				Router.go("offseason"))
+			row.add_child(b)
+		return overlay
 	var delist := UiKit.btn("Trades & Contracts", UiKit.NAME)
 	delist.name = "DraftSpotsDelist"
 	delist.custom_minimum_size = Vector2(0, 48)
@@ -71,29 +104,30 @@ static func lines(s: Dictionary) -> Array:
 	var out := []
 	var picks: Array = s["picks"]
 	var passing: Array = s["passing"]
+	# Small counts in words, as the gate's line says them; list sizes stay digits.
 	if bool(s.get("by_44", false)):
 		# The 44, not the senior list, sets the spots: the count shown is that one.
-		out.append(["Your senior and Category A rookie lists together will hold %d of %d when the draft opens: %d spot%s for %d pick%s." % [
-				int(s["list"]), int(s["list_cap"]), int(s["open"]), "" if int(s["open"]) == 1 else "s",
-				picks.size(), "" if picks.size() == 1 else "s"], true, "", "DraftSpotsCount"])
+		out.append(["Your senior and Category A rookie lists together will hold %d of %d when the draft opens: %s spot%s for %s pick%s." % [
+				int(s["list"]), int(s["list_cap"]), GameState._count_word(int(s["open"])), "" if int(s["open"]) == 1 else "s",
+				GameState._count_word(picks.size()), "" if picks.size() == 1 else "s"], true, "", "DraftSpotsCount"])
 	else:
-		out.append(["Your senior list will hold %d of %d when the draft opens: %d spot%s for %d pick%s." % [
-				int(s["held"]), int(s["cap"]), int(s["open"]), "" if int(s["open"]) == 1 else "s",
-				picks.size(), "" if picks.size() == 1 else "s"], true, "", "DraftSpotsCount"])
+		out.append(["Your senior list will hold %d of %d when the draft opens: %s spot%s for %s pick%s." % [
+				int(s["held"]), int(s["cap"]), GameState._count_word(int(s["open"])), "" if int(s["open"]) == 1 else "s",
+				GameState._count_word(picks.size()), "" if picks.size() == 1 else "s"], true, "", "DraftSpotsCount"])
 	if not passing.is_empty():
 		out.append(["%s %s will pass." % ["Pick" if passing.size() == 1 else "Picks", Draft.picks_words(passing)],
 				true, "bad", "DraftSpotsPassing"])
 	if int(s["resign"]) > 0:
-		out.append(["That counts %d undecided player%s who re-sign%s when the draft opens." % [
-				int(s["resign"]), "" if int(s["resign"]) == 1 else "s", "s" if int(s["resign"]) == 1 else ""],
+		out.append(["That counts %s undecided player%s who re-sign%s when the draft opens." % [
+				GameState._count_word(int(s["resign"])), "" if int(s["resign"]) == 1 else "s", "s" if int(s["resign"]) == 1 else ""],
 				false, "", "DraftSpotsResign"])
 	if int(s["ties"]) > 0:
-		out.append(["It counts %d father-son or academy player%s who join%s your list first." % [
-				int(s["ties"]), "" if int(s["ties"]) == 1 else "s", "s" if int(s["ties"]) == 1 else ""],
+		out.append(["It counts %s father-son or academy player%s who join%s your list first." % [
+				GameState._count_word(int(s["ties"])), "" if int(s["ties"]) == 1 else "s", "s" if int(s["ties"]) == 1 else ""],
 				false, "", "DraftSpotsTies"])
 	if int(s["maybe"]) > 0:
-		out.append(["%d player%s testing the market or holding your offer could still sign; each who does takes a spot." % [
-				int(s["maybe"]), "" if int(s["maybe"]) == 1 else "s"], false, "", "DraftSpotsMaybe"])
+		out.append(["%s player%s testing the market or holding your offer could still sign; each who does takes a spot." % [
+				GameState._count_word(int(s["maybe"]), true), "" if int(s["maybe"]) == 1 else "s"], false, "", "DraftSpotsMaybe"])
 	if int(s["retiring"]) > 0:
 		out.append(["Retiring players hold their spot until the draft is over.", false, "", "DraftSpotsRetiring"])
 	out.append(["A club with a full senior list passes its picks, and so does a club with %d on its senior and Category A rookie lists together. Out-of-contract players can be delisted before the draft starts, and any player traded away; contracted players cannot be delisted. Rookies do not take a senior spot." % int(s.get("list_cap", Contracts.MAX_LIST)),
