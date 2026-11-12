@@ -48,6 +48,9 @@ The longest chain, which sets the finish: T1.R26, then 131, then the director's 
 | 161 | Feed colours (director 2026-11-10: "your club's colour, not blue"; re-asked in error 2026-11-12, he said "not sure, you choose", so the 11-10 ruling stands): our goals in our club's colour (his 2026-11-10 ruling, not blue), goals against red, everything else grey. After: 132. | the feed shows our goals in our club's colour, goals against red and every other line grey, with no blue; 390 px captures shown to the director |
 | 162 | A vignette for every decision card (director 2026-11-12: "Yes, every card"; today only the centre ball-up has one, 2.Q12). Builds on row 13 (time pauses on a vignette at a decision). | every decision card opens on its own vignette, proven per card in a capture that shows the intended art loaded; captures shown to the director |
 | 163 | Soften autopilot (director 2026-11-12: "Too harsh"): a club on autopilot drifts to mid-table, not last (today about 18th by year five). The same rule runs for every club. | a seeded multi-season audit (with the T8.83 batch) shows an autopilot club settling mid-table; managed clubs still do better |
+| 174 | Ask-around answers: player names in club ink (director 2026-11-12: "sanders uncoloured?", Ryley Sanders plain in Essendon's offer). A fresh off-season probe inked every name; find the state that drops it. | test with that state |
+| 175 | No trades for a called pick (director 2026-11-12: "why are adelaide trading for pick 42 if the pick already called"; listed after pick 51). | draft-night test: no trade names a used pick |
+| 176 | Season review "Trade period": clubs and players in their colours (director 2026-11-12: "no colour coding on names"). | capture, every name inked |
 | 166 | Visuals 1, match day (director interview 2026-11-12, first): one replay stadium in every view; tight, full, moving call scenes; set shot by distance; one-screen pre-match; bigger discs, bench drawer; wind, hot, night; PC oval left, panels right; scoreboard and overlap bugs. Detail: Director Bible, "Visual overhaul interview". | one before-and-after look sheet, every frame self-checked, shown to the director |
 | 167 | Visuals 2, event cards and press: chips, a picture per event, big finals cards; odds bars, journalist on screen, rules behind a tap, pictured result. | look sheet shown to the director |
 | 168 | Visuals 3, hub and frame: checklist rows, stripes top only, club-colour buttons, row style, bigger and brighter small text, motion. | look sheet shown to the director |
@@ -257,6 +260,7 @@ Settled answers that are not build rows. The bible stays as it is unless he cons
 - Overnight (going to sleep): merge queue "Yes, turn it on"; Legacy money "Dollars of the time" and the 1990-2012 salary cap gaps "huh? look harder" (row 142); held-look PRs "Merge after your check", PR #1453 if its rerun balance screen has nothing OUT; itch "Yes, push one build" once all merged; press-room coach "Re-render sharper".
 - Game-plan traits are removed and replaced by a custom game plan: 1 strength and 1 cost from a list, a plan of its own, neutral like Win Contest (never counters or is countered), every club can run one (rows 158 and Custom plan).
 - Real names only: "remove 'generated names' from the game, Real Names only". The Player names choice is gone; row 56 has no fictional-names fallback (bible 3.35a).
+- Form on team selection: "Reserves games". A weekly reserves rating shows for players in the reserves, display only, no sim effect.
 
 ## Current focus (moved from the bible, 2026-11-06)
 
