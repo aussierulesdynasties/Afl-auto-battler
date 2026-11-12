@@ -244,7 +244,13 @@ func reload(dataset := Datasets.DEFAULT) -> void:
 	_apply_list_types(players)
 	_load_appearance()
 	_apply_origin(players)
+	Ratings.era_anchors = {}
 	Ratings.derive_all(players)
+	# A past start scales each position on its own data season (director
+	# 2026-11-13, "Scale each position per season"); a set on today's season
+	# (2026's, or a test copy of it) keeps 2026's.
+	if DATA_SEASON != int(Datasets.get_set(Datasets.DEFAULT).get("data_season", DATA_SEASON)):
+		Ratings.fit_era_anchors(players)
 	_apply_history(players)
 	for p in players:
 		Ratings.rate_on_record(p, DATA_SEASON)
@@ -302,6 +308,7 @@ func reload(dataset := Datasets.DEFAULT) -> void:
 func _use_dataset(id: String, row: Dictionary) -> void:
 	dataset_id = id
 	DATA_SEASON = int(row["data_season"])
+	Potential.peak_from_year = DATA_SEASON - 3
 	START_YEAR = int(row["start_year"])
 	START_DATE = str(row["start_date"])
 	PLAYERS_ENRICHED_CSV = str(row.get("players", ""))
@@ -705,6 +712,8 @@ func _load_list_additions() -> Array:
 		p["height_source"] = "club list"
 		var list_type := _cell_str(cells, idx, "list")
 		p["list_type"] = list_type
+		if _cell_str(cells, idx, "peak") != "":
+			p["real_peak"] = _cell_int(cells, idx, "peak")
 		var pos := _cell_str(cells, idx, "position")
 		p["role"] = pos if pos in ["RUCK", "MID", "DEF", "FWD"] else listed_role(p)
 		p["role2"] = ""
@@ -1676,6 +1685,8 @@ func _apply_history_rows(list: Array) -> void:
 					var code := str(first[0]).split(":")[0].strip_edges()
 					if code != "" and code != "?":
 						p["drafted_club"] = code
+		if idx.has("peak") and str(cells[idx["peak"]]) != "":
+			p["real_peak"] = int(str(cells[idx["peak"]]))
 		var hist := []
 		for chunk in str(cells[idx["seasons"]]).split(";", false):
 			var parts := chunk.split(":")

@@ -50,12 +50,14 @@ const _TABLE := {
 		"potential_overrides": "res://data/potential_overrides.csv",
 		"state_leagues": "res://data/state_leagues",
 	},
-	# The 1990 start: lists rated on 1989, the season just played (design P3
-	# builds these files; until they ship, ready() leaves this start out).
+	# The 1990 start: lists rated on 1989, the season just played, built by
+	# tools/legacy_1990s/build_start.py (TODO row 142, phase L1).
 	"1990": {
 		"data_season": 1989, "start_year": 1990, "start_date": "1990-03-01",
 		"players": "res://data/legacy/1990/players_1990.csv",
 		"history": "res://data/legacy/1990/history_1990.csv",
+		"list_additions": "res://data/legacy/1990/list_additions_1990.csv",
+		"list_addition_stats": "res://data/legacy/1990/list_addition_stats_1990.csv",
 	},
 }
 
