@@ -32,7 +32,6 @@ func _run() -> void:
 	state.save_path = "user://capture.save"
 	state.settings_path = "user://capture_settings.cfg"
 	state.reset()
-	state.show_real_names = true
 	state.replay_seed = 2027
 	root.size = Vector2i(W, H)
 	DisplayServer.window_set_size(Vector2i(W, H))

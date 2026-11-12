@@ -133,6 +133,9 @@ func _test_training_grid() -> void:
 	gs.start_season("FRE", db.club_list("FRE"))
 	# A long surname, to prove it is never cut.
 	gs.my_list[0]["generic_name"] = "Alexander Papaioannou-Featherstone"
+	# He is a real player, so the name shown is his real one: the long name goes there too.
+	gs.my_list[0]["real_name"] = "Alexander Papaioannou-Featherstone"
+	gs.my_list[0]["last"] = "Papaioannou-Featherstone"
 	gs.my_list[1]["injury_weeks"] = 3
 	root.size = Vector2i(390, 844)
 	var scene: Control = load("res://scenes/TrainingScene.tscn").instantiate()
@@ -466,4 +469,3 @@ func _isolate_saves() -> void:
 	# Return visits: the first-visit intros (FirstVisitIntro.gd) have their own suite.
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		gs.set_setting("seen_%s_intro" % key, true)
-	gs.show_real_names = false

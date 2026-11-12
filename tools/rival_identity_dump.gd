@@ -30,7 +30,6 @@ func _run() -> void:
 	gs.autosave_enabled = false
 	gs.save_path = "user://rival_identity_dump.save"
 	gs.settings_path = "user://rival_identity_dump.cfg"
-	gs.show_real_names = false
 	var identity: GDScript = load(IDENTITY_PATH)
 	var rows: Array = identity.play_all()
 	var f := FileAccess.open(str(args[0]), FileAccess.WRITE)

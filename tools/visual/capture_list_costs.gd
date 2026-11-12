@@ -43,7 +43,6 @@ func _run() -> void:
 	state.settings_path = "user://capture_list_costs.cfg"
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		state.set_setting("seen_%s_intro" % key, true)
-	state.show_real_names = false
 	UK.apply_appearance("dark")
 	root.size = Vector2i(_w, _h)
 	# No hover tooltips from the idle mouse: the tool drives the screen by calls.

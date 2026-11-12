@@ -85,7 +85,6 @@ func _run() -> void:
 	gs.autosave_enabled = false
 	gs.save_path = "user://capture_dev_talk.save"
 	gs.settings_path = "user://capture_dev_talk.cfg"
-	gs.show_real_names = false
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 	DisplayServer.window_set_size(Vector2i(W, H))
 	root.size = Vector2i(W, H)

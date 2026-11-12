@@ -33,7 +33,6 @@ func _run() -> void:
 	_state.settings_path = "user://test_settings.cfg"
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		_state.set_setting("seen_%s_intro" % key, true)
-	_state.show_real_names = false
 	await _t("_test_levels")
 	await _t("_test_sirens_once")
 	await _t("_test_watched_match")

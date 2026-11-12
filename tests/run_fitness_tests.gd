@@ -30,4 +30,3 @@ func _isolate_saves() -> void:
 	gs.event_sheets = false
 	gs.save_path = "user://test_career.save"
 	gs.settings_path = "user://test_settings.cfg"
-	gs.show_real_names = false

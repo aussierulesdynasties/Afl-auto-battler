@@ -54,7 +54,6 @@ func _run() -> void:
 	# Return visits: the first-visit intros (FirstVisitIntro.gd) have their own suite.
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		_gs.set_setting("seen_%s_intro" % key, true)
-	_gs.show_real_names = false
 	for club in ["FRE", "MEL"]:
 		for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
 			await _t("_test_training", [club, sz])

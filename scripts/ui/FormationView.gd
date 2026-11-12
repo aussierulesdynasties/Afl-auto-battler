@@ -58,8 +58,6 @@ var _callout_box: VBoxContainer
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	custom_minimum_size = Vector2(180, 160)
-	if not GameState.player_names_changed.is_connected(_on_names):
-		GameState.player_names_changed.connect(_on_names)
 	_ensure_callout()
 
 
@@ -74,12 +72,6 @@ func setup(ground: Array, bench: Array, club: String, chosen := false) -> void:
 	_placed = _assign(ground, bench, chosen)
 	_hide_callout()
 	queue_redraw()
-
-
-func _on_names() -> void:
-	queue_redraw()
-	if _selected >= 0:
-		_show_callout(_selected)
 
 
 func _assign(ground: Array, bench: Array, chosen := false) -> Array:

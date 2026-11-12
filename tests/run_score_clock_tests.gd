@@ -28,7 +28,6 @@ func _run() -> void:
 	_state.settings_path = "user://test_settings.cfg"
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		_state.set_setting("seen_%s_intro" % key, true)
-	_state.show_real_names = false
 	await _t("_test_score_and_clock_stay")
 	print(Ran.line("Score and clock", self))
 	quit(0 if _failures.is_empty() else 1)

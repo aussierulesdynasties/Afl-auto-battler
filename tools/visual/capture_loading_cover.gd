@@ -45,7 +45,6 @@ func _run() -> void:
 	state.settings_path = "user://capture_loading_cover.cfg"
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		state.set_setting("seen_%s_intro" % key, true)
-	state.show_real_names = false
 	state.set_confirm_sim_round(false)
 	load("res://scripts/ui/Feel.gd").reduced = reduced
 	load("res://scripts/ui/UiKit.gd").apply_appearance("dark")

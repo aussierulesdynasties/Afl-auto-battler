@@ -533,15 +533,12 @@ func _test_youth_only_drafts() -> void:
 			"Youth only: a 25-year-old cannot be drafted")
 	_check(draft.pick_block_reason(old).contains(" is 25, and you cannot"),
 			"Youth only: the board says why (%s)" % draft.pick_block_reason(old))
-	# The reason names the player the card shows: with real names on, his real
-	# surname, never the generated one underneath.
-	var was_real: bool = gs.show_real_names
-	gs.show_real_names = true
+	# The reason names the player the card shows: his real surname, never the
+	# generated label underneath.
 	var named := {"id": "youth_test_named", "age": 29.0, "name": "Tom Penhall", "real_name": "Flynn Perez"}
 	var why := Challenge.block_reason(gs, named)
 	_check(why.contains("Perez is 29") and not why.contains("Penhall"),
 			"Youth only: the reason names the player shown on the card (%s)" % why)
-	gs.show_real_names = was_real
 	_check(not draft.too_old_for_user({"id": "youth_test_ok", "age": 24.9}), "Youth only: a 24-year-old can be drafted")
 	while not draft.is_finished():
 		var candidate := draft._best_ai_pick(draft.current_club())

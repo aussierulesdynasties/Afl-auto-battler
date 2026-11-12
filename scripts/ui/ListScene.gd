@@ -42,16 +42,8 @@ func _ready() -> void:
 			var places := UiKit.scroll_places(_root)
 			_build()
 			UiKit.restore_places(_root, places))
-	if not GameState.player_names_changed.is_connected(_on_names):
-		GameState.player_names_changed.connect(_on_names)
 	_build()
 	FirstVisitIntro.show_if_due.call_deferred(self, "list")
-
-
-func _on_names() -> void:
-	if is_inside_tree():
-		_squad = GameState.my_squad()
-		_build()
 
 
 func _narrow() -> bool:

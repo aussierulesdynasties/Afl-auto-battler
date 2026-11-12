@@ -5,12 +5,9 @@ extends Node
 ## Every scene reads from here and nothing else, so scene changes never lose
 ## the season.
 
-## Name presentation is a player preference rather than a career setting. With
-## no saved choice the game shows each AFL name on its own; generated fictional
-## labels are opt-in. Neither changes the simulation or IDs. Generated and custom
-## players have no real name and keep the name they were given.
-signal player_names_changed
-var show_real_names := true
+## Every real player is shown under his AFL name (director, 2026-11-12: "Real
+## Names only"). Generated and custom players have no real name and keep the
+## name they were given. An old settings file's display/real_names is ignored.
 ## Transient navigation request. Settings can send the user straight to New
 ## career setup without touching the existing save.
 var new_career_setup_requested := false
@@ -419,8 +416,7 @@ func _ready() -> void:
 	CareerSave.beat_hook = Season.beat   # load screen keeps moving while players decode
 	PreSeason.data()   # its sizes are read once, before any scouting read needs one
 	var cfg := ConfigFile.new()
-	if cfg.load(settings_path) == OK:
-		show_real_names = bool(cfg.get_value("display", "real_names", true))
+	cfg.load(settings_path)
 	UiKit.apply_appearance(str(cfg.get_value("ui", "appearance", "dark")))
 	UiKit.apply_text_size(str(cfg.get_value("ui", "text_size", "standard")))
 	_carry_old_sound_levels(cfg)
@@ -718,17 +714,6 @@ func set_match_way(w: String) -> void:
 		set_setting("match_way", w)
 
 
-func set_show_real_names(enabled: bool) -> void:
-	if show_real_names == enabled:
-		return
-	show_real_names = enabled
-	var cfg := ConfigFile.new()
-	cfg.load(settings_path)
-	cfg.set_value("display", "real_names", enabled)
-	cfg.save(settings_path)
-	player_names_changed.emit()
-
-
 # ---------------------------------------------------------------------------
 # Saving and loading
 # ---------------------------------------------------------------------------
@@ -828,7 +813,7 @@ func write_history(path: String, meta: Dictionary) -> bool:
 func begin_from_history(first_season: int) -> bool:
 	if replay_seed != 0 or custom_prospect_id != "":
 		return false
-	var path := PremadeHistory.pick(first_season, show_real_names)
+	var path := PremadeHistory.pick(first_season)
 	if path == "":
 		return false
 	var state := CareerSave.read_packed(path)

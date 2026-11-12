@@ -46,7 +46,6 @@ func _run() -> void:
 		state.set_setting("seen_%s_intro" % key, true)
 	state.set_setting("seen_weekly_loop_intro", true)
 	state.set_setting("tutorials", false)
-	state.show_real_names = false
 	root.size = Vector2i(_w, _h)
 	DisplayServer.window_set_size(Vector2i(_w, _h))
 	state.set_vignettes_on(false)

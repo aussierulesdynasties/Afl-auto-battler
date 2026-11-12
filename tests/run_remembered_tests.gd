@@ -52,7 +52,6 @@ func _run() -> void:
 	_gs.settings_path = "user://test_remembered.cfg"
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		_gs.set_setting("seen_%s_intro" % key, true)
-	_gs.show_real_names = false
 	_gs.replay_seed = SUITE_SEED
 	_t("_test_drop_line_words")
 	_t("_test_your_draft_rules")

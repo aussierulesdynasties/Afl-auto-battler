@@ -25,7 +25,6 @@ func _run() -> void:
 	state.autosave_enabled = false
 	state.save_path = "user://capture_synergy_fit.save"
 	state.settings_path = "user://capture_synergy_fit.cfg"
-	state.show_real_names = false
 	state.replay_seed = SEED
 	db.reload()
 	state.reset()

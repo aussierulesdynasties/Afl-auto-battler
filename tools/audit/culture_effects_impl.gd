@@ -60,7 +60,6 @@ func run() -> void:
 	var on := (int(args[4]) if args.size() > 4 else 1) == 1
 	var force: PackedStringArray = str(args[5]).split(",") if args.size() > 5 else PackedStringArray()
 	GameState.reset()
-	GameState.show_real_names = false
 	GameState.career_seed = seed
 	GameState.replay_seed = seed
 	GameState.autosave_enabled = false
