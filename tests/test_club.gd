@@ -27,6 +27,7 @@ func run() -> void:
 	_t("_test_backing_card_guard")
 	_t("_test_backing_named_side")
 	_t("_test_backing_ask_closes_when_picked")
+	_t("_test_run_offer_only_out_of_side")
 	_t("_test_backing_suspended_named_side")
 	_t("_test_promised_game_named_side")
 	_t("_test_promise_no_room")
@@ -1378,6 +1379,56 @@ func _test_backing_ask_closes_when_picked() -> void:
 	_check(bool(c.get("resolved", false)) and not Backing.is_active(kid),
 			"Picked by you: his ask is answered, and no run is promised (%s)" % str(c.get("outcome", "")))
 	GameState.week_events = []
+
+
+## Director, 2026-11-12: "the game is asking if i wanna give a run of games to
+## a player already in the team". Every card that can promise a run offers it
+## only to a player out of the side, or (a captain's slump, about a picked
+## player) says what it means without offering him a run he already has.
+func _test_run_offer_only_out_of_side() -> void:
+	for t in StoryDeck.all():
+		var where: Dictionary = (t.get("subject", {}) as Dictionary).get("where", {})
+		for c in t.get("choices", []):
+			var runs := false
+			for e in (c as Dictionary).get("effects", []):
+				runs = runs or str((e as Dictionary).get("op", "")) == "start_backing"
+			if not runs:
+				continue
+			var cw: Dictionary = (c as Dictionary).get("when", {})
+			var out_only := (where.has("selected") and not bool(where["selected"])) 					or (cw.has("selected") and not bool(cw["selected"]))
+			var picked_only := where.has("selected") and bool(where["selected"])
+			_check(out_only or (picked_only and not str(c.get("label", "")).to_lower().contains("run")),
+					"%s/%s: a run is offered only to a player out of the side, or worded for a picked one" % [
+						str(t["id"]), str(c.get("key", ""))])
+	_fresh_season()
+	var kid := _kid(_spare_kid(), 0)
+	kid["age"] = 19.0
+	_named_side_without(kid)
+	var learn := GameState.story_card("intl_learning_the_game", kid)
+	_check(_keys(learn).has("back"), "Out of the side: the international may be backed with a run")
+	GameState.week_events = [learn]
+	var side := GameState.my_selection()
+	var line := str(kid["role"])
+	var arr: Array = side.get(line, [])
+	arr[arr.size() - 1] = str(kid["id"])
+	side[line] = arr
+	GameState.set_selection(side)
+	var c: Dictionary = GameState.week_events[0]
+	_check(not bool(c.get("resolved", false)) and not _keys(c).has("back") and _keys(c) == ["skills", "twos"]
+			and int(c.get("default", -1)) == 0,
+			"Named in the side after the card came: the run goes, the card's other choices stay (%s)" % str(_keys(c)))
+	_check(not _keys(GameState.story_card("intl_learning_the_game", kid)).has("back"),
+			"In the side: the international's card offers no run")
+	_check(not _keys(GameState.story_card("media_papers_breakout", kid)).has("talk_up"),
+			"In the side: the papers' tip offers no run in the side")
+	GameState.week_events = []
+
+
+func _keys(card: Dictionary) -> Array:
+	var out := []
+	for o in card.get("options", []):
+		out.append(str((o as Dictionary).get("key", "")))
+	return out
 
 
 ## A suspended kid backed while a side is named: named at once, the run waits

@@ -809,6 +809,76 @@ func _test_press_loss_lift() -> void:
 	_check(most <= MC.LOSS_LIFT_CAP, "After a loss no answer lifts a player past %d (%d)" % [MC.LOSS_LIFT_CAP, most])
 
 
+## Every outcome reads true to the result just played (director 2026-11-12:
+## "i won the game, why would the board hear excuses?"): after a win no line
+## says excuses or a loss, after a loss none says a win; odds and sizes stay.
+func _test_press_result_words() -> void:
+	var MC = load("res://scripts/sim/MediaConference.gd")
+	_press_reset()
+	# His case: a debut after a win, the method answer.
+	var debut := func(score: Array) -> Dictionary:
+		return MC.pick({"club": "FRE", "opponent_name": "Carlton", "round": 8, "year": int(_state.season_year),
+				"result": {"home": "FRE", "away": "CAR", "score": score},
+				"debut": {"id": "d1", "name": "Sam Lee"}}, {})
+	_state.media_conference = debut.call([80, 70])
+	var won_line: String = _state.press_odds_line(1)
+	var won_chance: int = _state.press_chance(1)
+	_check(str(_state.media_conference.get("key", "")) == "debut" and not won_line.contains("excuses")
+			and won_line.contains("the board isn't convinced, board -1%"),
+			"After a win the method answer's downside is no excuse (%s)" % won_line)
+	_state.media_conference = debut.call([70, 80])
+	var lost_line: String = _state.press_odds_line(1)
+	_check(lost_line.contains("the board hears excuses, board -1%") and _state.press_chance(1) == won_chance,
+			"After a loss it still hears excuses, at the same odds (%s)" % lost_line)
+	_state.media_conference = {}
+	var w: Dictionary = MC.effects("method", {"won": true})
+	var l: Dictionary = MC.effects("method", {"lost": true})
+	var same := true
+	for o in ["a", "b"]:
+		for k in ["board", "morale", "his"]:
+			same = same and int(w[o][k]) == int(l[o][k])
+	_check(same, "A win's words never change an answer's sizes")
+	_check(MC.after_win({"margin": 4}) and not MC.after_win({"margin": 0}) and not MC.after_win({"margin": -4})
+			and MC.after_win({"key": "big_win"}) and not MC.after_win({"key": "debut"}),
+			"A conference knows whether it followed a win")
+	# Every question over wins and losses: no outcome or answer in the other result's words.
+	var loss_words := ["excuse", "the loss", " lost", "losing", "beat you", "bounce back", "let him down",
+			"let us down", "cost us", "fell short"]
+	var win_words := ["the win", " won", "winning", "isn't convinced"]
+	var bad := []
+	var asked := 0
+	var who := {"id": "p1", "name": "Jack Smith"}
+	for margin in [-60, -45, -20, -10, -3, 3, 10, 20, 45, 60]:
+		for extra in [{}, {"debut": {"id": "d1", "name": "Sam Lee"}}, {"star": {"id": "p1", "name": "Jack Smith", "line": "kicked six"}},
+				{"milestone": {"id": "p1", "name": "Jack Smith", "games": 100}}, {"young": 6},
+				{"injuries": [who]}, {"my_pos": 2, "opp_pos": 16}, {"my_pos": 16, "opp_pos": 2},
+				{"losing_run": 3, "winning_run": 4}, {"final": {"label": "semi-final", "status": "alive"}},
+				{"final": {"label": "semi-final", "status": "eliminated"}}]:
+			var ctx := {"club": "FRE", "opponent_name": "Carlton", "round": 12, "year": 2027,
+					"result": {"home": "FRE", "away": "CAR", "score": [70 + maxi(0, margin), 70 + maxi(0, -margin)],
+					"goals": [10, 10], "behinds": [10, 10]},
+					"named": {"heavy_loss": who, "big_win": who, "young_side": who}}
+			ctx.merge(extra)
+			var q: Dictionary = MC.pick(ctx, {})
+			if q.is_empty():
+				continue
+			asked += 1
+			var words: Array = loss_words if margin > 0 else win_words
+			for i in range(q["options"].size()):
+				var o: Dictionary = q["options"][i]
+				var kind: String = MC.kind_of(o, i)
+				var c := {"journalist": str(q["journalist"]), "name": str(o.get("name", "him")),
+						"lost": MC.after_loss(q), "won": MC.after_win(q)}
+				var fx: Dictionary = MC.effects(kind, c)
+				var text := " ".join([MC.odds_line(kind, 50, fx, c), MC.after_line(kind, "a", fx),
+						MC.after_line(kind, "b", fx), str(o["label"]) if margin > 0 else ""]).to_lower()
+				for word in words:
+					if (" " + text).contains(word):
+						bad.append("%+d %s: %s" % [margin, q["key"], word])
+	_check(asked >= 60 and bad.is_empty(),
+			"No press outcome reads against the result (%d questions): %s" % [asked, str(bad)])
+
+
 ## (f) Only a real standout (6 goals or 40 disposals) is a star question.
 func _test_press_standout_only() -> void:
 	var MC = load("res://scripts/sim/MediaConference.gd")
@@ -1535,6 +1605,7 @@ func _run() -> void:
 	_t("_test_press_rolls")
 	_t("_test_press_caps_and_fade")
 	_t("_test_press_loss_lift")
+	_t("_test_press_result_words")
 	_t("_test_press_standing")
 	_t("_test_press_personas")
 	_t("_test_press_named")
@@ -2224,7 +2295,7 @@ func _test_menu_and_career() -> void:
 	var press_tile: Node = hwp.find_child("ClubPlan_defensive", true, false) if hwp != null else null
 	var press_word: Label = press_tile.find_child("Strength", true, false) if press_tile != null else null
 	_check(press_word != null and press_word.text.begins_with("Pressure · "),
-			"Defensive Press shows the list's Pressure beside it (%s)" % (press_word.text if press_word else "-"))
+			"High Press shows the list's Pressure beside it (%s)" % (press_word.text if press_word else "-"))
 	var lp: Node = current_scene.find_child("ListProfile", true, false)
 	var lp_rows: Array = lp.find_children("Profile_*", "Button", true, false) if lp != null else []
 	_check(lp_rows.size() == 2 and lp.find_child("Profile_finishing", true, false) != null
@@ -2742,7 +2813,11 @@ func _test_menu_and_career() -> void:
 	_check(picker != null and current_scene.find_children("*", "OptionButton", true, false).is_empty(),
 			"Plans are taps, not a dropdown")
 	var plan_btns := picker.find_children("PlayerPlan_*", "Button", false, false) if picker != null else []
-	_check(plan_btns.size() == _state.plans_for(first).size(), "Every plan he can follow is shown (%d)" % plan_btns.size())
+	# Positions he could learn sit in their own group under the plans.
+	var learn_grid: Node = current_scene.find_child("PlayerLearn", true, false)
+	var learn_btns: Array = learn_grid.find_children("PlayerLearn_*", "Button", false, false) if learn_grid != null else []
+	_check(plan_btns.size() + learn_btns.size() == _state.plans_for(first).size(),
+			"Every plan he can follow is shown (%d)" % (plan_btns.size() + learn_btns.size()))
 	var small_plan := false
 	for b in plan_btns:
 		if b.size.y < 44:

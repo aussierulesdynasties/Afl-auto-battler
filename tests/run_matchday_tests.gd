@@ -820,7 +820,7 @@ func _test_coach_descriptions(sz: Vector2i) -> void:
 	m.call("_show_setup", calls)
 	await _settle()
 	var line: Control = m.find_child("SetupLine", true, false)
-	var full := "Your plan: Defensive Press  ·  tagging %s  ·  %s loose behind the ball" % [
+	var full := "Your plan: High Press  ·  tagging %s  ·  %s loose behind the ball" % [
 			db.player_display_name_by_id(str(calls["tag_id"]), ""), db.player_display_name_by_id(str(calls["interceptor_id"]), "")]
 	_check(line != null and line.visible and _plain(line) == full, "The plan line names every call (%s)" % tag)
 	_check(line.autowrap_mode != TextServer.AUTOWRAP_OFF and (line is RichTextLabel or line.text_overrun_behavior == TextServer.OVERRUN_NO_TRIMMING),

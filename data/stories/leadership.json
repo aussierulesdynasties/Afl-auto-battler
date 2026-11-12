@@ -957,7 +957,7 @@
 			},
 			{
 				"key": "back",
-				"label": "Back {first} for a run of games",
+				"label": "Tell {first} his spot is safe",
 				"effects": [
 					{
 						"op": "start_backing"

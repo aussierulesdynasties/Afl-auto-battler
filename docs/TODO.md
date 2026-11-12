@@ -10,7 +10,7 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
 
 A row starts when everything in its "After:" note is done. Rows in the same step run side by side, except rows that edit the same file, which merge one at a time: `tools/lint/copy_voice.py` (its ALLOW counts are exact), `GameState.gd`, `UiKit.gd`, `StoppageVignette.gd`, and the figure shader and sheets.
 
-1. Land the open PRs (#1341 list costs, #1347 draft reads, #1348 free-agency weights). Put the waiting looks and questions to the director (sections C and H, the 6.34 captures, the hair contact sheets) and send the debug APK for row 31. Start the rows with nothing to wait for: 145, 148, 149, 150, 151, T8.85, T7.R84, 6.40, 6.42, 6.51, 6.53, V2, V9, T5.r164. The director's playtests in section B can happen at any time.
+1. Put the waiting looks and questions to the director (sections C and H, the 6.34 captures, the hair contact sheets). Start the rows with nothing to wait for: 6.40, 6.42, 6.53, V2, V9. The director's playtests in section B can happen at any time.
 2. The rest of T1.R26; V4; 134 and 135 (after 150); the row 34 re-check; 164 (its PR is in flight).
 3. 131 (after T1.R26 and 151); 136, 137 and 138; 139; V5; the P-43 press slice of T7.R87; T8.Q20; 6.38.
 4. 132, then 161 (row 9's feed colours); T2.25; 140; 6.63; 32, then 128 (both change the save, so one at a time); T8.78 after 128. The director looks at 5 and 16 and playtests 13, 14 and 15.
@@ -28,13 +28,12 @@ The longest chain, which sets the finish: T1.R26, then 131, then the director's 
 
 | # | What | Done looks like |
 |---|---|---|
+| 179 | FIRST, game-breaking (director 2026-11-12, 1.0.15: "im still doing shepparton trades too, so the game is fundamentally broken, huge bug"; "i got sacked from shepparton and yet im still picking their replacement coaches"). After a sacking the coach still runs the old club: Staff shows Shepparton with "Senior coach: You" and Appoint, and its trades are his. Every club call (staff, trades, list, selection) follows the new club, or none. | test: sacked coach makes no call for the old club |
 | 142 | Next after the 2026-11-12 merges and fixes (director 2026-11-12: "after these merges and fixes id like you to make a /plan for the implementation of the legacy mode including an interview with me"): plan mode, interview him, then the plan. Legacy mode, first slice 1990 (director 2026-11-11: "id like you to start building the legacy mode starting 1990 now too"; replaces the parked 2010 first slice). Start dates in the end (director 2026-11-11: "in the end id like players to be able to pick the following start dates: 1990, 2000, 2010, 2020, current season, 2028 (tassie), 2030 (canberra)"): seven starts. The four past ones run on that era's real lists; the current season is today's start; 2028 is the Tasmania start that already exists (2027 plays without you, row 129); 2030 starts with Canberra entering, its enter year already set in clubs.csv, on the same pattern. 1990 is built first. Director 2026-11-11: data for 1990, 2000, 2010 and 2020 is gathered now, and "once you gather all the data, start putting it into the game". His answers the same day (Director Bible, legacy rulings): the Fitzroy merger always happens unless you are a regular finalist (then a slim chance it still does); real controversy penalties land, behind one on/off switch at game creation; personal-conduct events name the club only; era grounds and guernseys are in the 1990 slice. "all guernseys need a 90s and 2000s and 2010s version too": every club gets a guernsey for each of those decades. Watch (director 2026-11-11: "if the playing data for historical decades is significantly different in its averages and is subsequently overrating/underrating the players, let me know, keep an eye on it" / "because the game of AFL has changed dramatically in those eras so the stats might be different"): each decade's rating build reports its stat averages against the 2026 base and the spread of ratings it produces (players rated 80+, list medians per club); if a decade's averages push ratings up or down away from the 2026 shape, tell the director with the numbers before it ships. His fallback (same day): "if the balance changes considerably from era to era we will have to create a clever inflation immune/era-scaling player rating". Ground names (director 2026-11-11: "note that the name of 'Marvel' stadium has changed regularly in the past 30 years, it must carry its IRL era-appropriate name / a short news story in the feed can commemorate when the names change"): Docklands carries its real name for the year (Colonial Stadium, Telstra Dome, Etihad Stadium, Marvel Stadium), and every other renamed ground does the same; a short news-feed story marks each change. Potential is informed (director 2026-11-11, "Informed"): a real player's real peak sets his ceiling, give or take luck. Money (director 2026-11-12, "Dollars of the time"): salaries, the cap and every money figure show in that season's dollars; the 1990-2012 salary cap figures are to be found, not left as gaps ("huh? look harder"). His rulings 2026-11-10 in the Director Bible: era-accurate drafts with the sim's picks (an alternative history), era rules arriving in the year they began, real historical events, ratings per era, play from 1990 to 2100 and beyond. Mostly data: each 1990 club's real list rated like the 2026 lists, and the 1990 league (14 clubs: Fitzroy and the Brisbane Bears; Adelaide 1991, Fremantle 1995, Port 1997). The 2010s data and its tools are in data/legacy/2010s and tools/legacy_2010s (#1324). State league results simulate very fast (row 128) applies to any era league too. | A career can start in 1990 at any of that year's clubs on its real list, rated per era, play the 1990 season in that year's league shape, and roll into 1991 with the real draft class entering (picks are the sim's); captures approved by the director |
-| 158 | Custom game plan (director 2026-11-12: "I asked for a custom gameplan feature, where the player can create their own unique gameplan that impacts real stats in the matches. By picking from a list of unique positives and negatives"; "1 strength, 1 cost"). Remove the game-plan traits (scripts/sim/PlanTraits.gd and their UI); add a plan of its own where the coach picks 1 strength and 1 cost from a list, each moving real match stats. Neutral like Win Contest: it never counters another plan and no plan counters it. Every club can run one; AI clubs build their own. The gate states each upside and downside with its size as a percentage in football words, never which is better. Branch feat/custom-game-plan. Sizes: row Custom plan in section Z. | traits gone from code, save and UI; the custom plan picks, saves and plays for the coach and AI clubs; a real-tap test of the picker; captures shown to him |
 | 156 | More colours in the Club Forge (director 2026-11-11: "also please add more colours to the Club Forge"). | The Forge offers a wider colour choice for guernsey and club colours; captures approved by the director |
 | 157 | A bespoke event-card deck for each club (director 2026-11-11: "i want a bespoke deck of event cards unique to each club, at least 1 per season from 1990-present (though the event cards dont need to strictly be year appropriate, i just want 25ish cards for each club) / this includes Tasmania, Canberra and even Fitzroy and Brisbane"). About 25 cards for each of 22 clubs. Every campaign uses them (director 2026-11-11: "to be clear, i want a bespoke club specific deck for each club which can be used in all modern era campaigns as well"), and they are era agnostic (same day: "i think club decks should be era agnostic, but YEARs should also have their own bespoke events (if appropriate, not EVERY year)"): no club card depends on a year. Year events are a separate set, drawn from the 1990-2026 off-field dramas research (C:/kt/era_dramas), one or more for a season only where history gives one. Research drafts first, in C:/kt/club_decks (not in the repo). Personal conduct stays at club level; controversies sit behind the on/off switch (row 142). | Every club, in the 2026 career and every legacy start, including Tasmania, Canberra, Fitzroy and the Brisbane Bears, has about 25 cards of its own in the game, each effect following its premise; the director has read them |
 | 154 | Medical retirement check for concussion (director 2026-11-11: "if a player gets 5 or more concussions within a 5 year period, they should have to pass a medical retirement check"; "Flat odds each time"; the panel sits "Straight after the fifth"). Every club. Built in PR #1402 (merged); its player-sheet concussion line approved (director 2026-11-12); the cleared chance is one number, first value 50%, his to tune. | A player with five or more concussions in five seasons faces the panel the week of each such concussion at one stated chance; a fail ends his career that week; the count and the odds show on his sheet before it happens; league-wide medical retirements measure above zero and at or under 0.25 a season in the T8.83 batch run ("its quite rare IRL too, maybe 0.25 per year or less", 2026-11-11), with the league concussion total and its balance screen reported; and the director approves the captures |
 | 152 | Home grounds for the fictional and expansion clubs (row 6.44; director 2026-11-10): each plays at a real regional ground near its town, e.g. Bellerive or Manuka, with its own ground look. After: the director's look at the six no-name captures in 6.44 | each such club's home ground draws as its real regional ground in a match, and the director has looked |
-| 144 | Match story, third slice: a richer match story at full time. The save keeps the impact ledger's coach rows per match (director 2026-11-10: "Yes, keep them"; save-schema change, W7 review), since today the coach's in-match calls are dropped at the end of each round After: 133. | a seeded full-time story whose every number traces to the result |
 | 131 | Copy voice pass 1, gates (with T1.R26): scripts/sim/GateOdds.gd, MatchSim.gd call cards, CoachReport.gd pep talks and plans; MatchSim's "He should kick it" After: T1.R26 and 151. | every visible line on it reads in the senior coach's voice (docs/VISUAL_STYLE_GUIDE.md §5.1, director 2026-11-10: B), its entries in tools/lint/copy_voice.py ALLOW are gone, its pinned-wording tests updated, and he approves the before/after 390 px captures |
 | 132 | Copy voice pass 3, match view and feed: MatchScene.gd lines and the feed's punctuation; the feed keeps a broadcaster's voice and its "!" (director 2026-11-10, #1303). Row 9's feed colours are row 161 (our goals in our club's colour, not blue, per the 2026-11-10 ruling; goals against red; the rest grey). After: T1.R26 and 131 | every visible line on it reads in the senior coach's voice (docs/VISUAL_STYLE_GUIDE.md §5.1, director 2026-11-10: B), its entries in tools/lint/copy_voice.py ALLOW are gone, its pinned-wording tests updated, and he approves the before/after 390 px captures |
 | 133 | Copy voice pass 4, breaks: MatchNotes.gd, CoachReport.gd break report, MatchStory.gd After: T1.R26, 131 and the director's look at 5. | every visible line on it reads in the senior coach's voice (docs/VISUAL_STYLE_GUIDE.md §5.1, director 2026-11-10: B), its entries in tools/lint/copy_voice.py ALLOW are gone, its pinned-wording tests updated, and he approves the before/after 390 px captures |
@@ -50,13 +49,28 @@ The longest chain, which sets the finish: T1.R26, then 131, then the director's 
 | 161 | Feed colours (director 2026-11-10: "your club's colour, not blue"; re-asked in error 2026-11-12, he said "not sure, you choose", so the 11-10 ruling stands): our goals in our club's colour (his 2026-11-10 ruling, not blue), goals against red, everything else grey. After: 132. | the feed shows our goals in our club's colour, goals against red and every other line grey, with no blue; 390 px captures shown to the director |
 | 162 | A vignette for every decision card (director 2026-11-12: "Yes, every card"; today only the centre ball-up has one, 2.Q12). Builds on row 13 (time pauses on a vignette at a decision). | every decision card opens on its own vignette, proven per card in a capture that shows the intended art loaded; captures shown to the director |
 | 163 | Soften autopilot (director 2026-11-12: "Too harsh"): a club on autopilot drifts to mid-table, not last (today about 18th by year five). The same rule runs for every club. | a seeded multi-season audit (with the T8.83 batch) shows an autopilot club settling mid-table; managed clubs still do better |
-| 164 | The draft needs list room (director 2026-11-12: "Must make room"). If your list is full, the draft does not start until you delist enough players for three picks or trade the picks away; rival clubs delist their weakest the same way. A PR from the same 2026-11-12 batch is in flight. | the draft waits on a full list until three spots are free or the picks are traded; rivals delist their weakest; a real-tap check of the block and the delist path |
+| 174 | Ask-around answers: player names in club ink (director 2026-11-12: "sanders uncoloured?", Ryley Sanders plain in Essendon's offer). A fresh off-season probe inked every name; find the state that drops it. | test with that state |
+| 175 | No trades for a called pick (director 2026-11-12: "why are adelaide trading for pick 42 if the pick already called"). | draft-night test: no trade names a used pick |
+| 176 | Season review "Trade period": clubs and players in their colours (director 2026-11-12: "no colour coding on names"). | capture, every name inked |
+| 177 | Ladder Rating is your best 23 (director 2026-11-12: "ladder should always show your best 23 rating"; preview said 9th, ladder equal last). Preview ranks Squad.strength; ladder averages OVR (TeamRating). | test: both agree |
+| 178 | Tagging: their man's own touches (director 2026-11-12: "says 27 touches 100% of the time"). It is a constant, Roles.TAG_USUAL_TOUCHES. | test: two men, two numbers |
+| 180 | Club Forge Back on PC (director 2026-11-12: "back button in the club forge on pc still doesnt work"), with his other 1.0.15 reports on the same branch: camp card drills Attack Corridor for a custom plan ("why is it attack corridor?"); plan fluency reads medium mid pre-season ("fluency is medium in two plans I had just trained to high"); season stats "changing tabs shifts the screen"; full-time Stats fits PC. Built, uncommitted, fix/forge-back-fresh-launch (C:/kt/combo); back_nav "the match reaches a break" fails. | suites back_nav stats matchday plan_know pass; PR merged |
+| 181 | Forge scrollbar drag (director 2026-11-12: "if u grab that slidey bar it gets bad"; wheel fine). Not reproduced in 3 probes: ask him which build. | his drag feels smooth |
+| 182 | Runs of games only for players out of the side ("asking if i wanna give a run of games to a player already in the team"). PR #1495. | PR merged |
+| 183 | Team selection shows each player's fatigue as a number ("should show a numerical value of their fatigue level"). Workflow w080bhpci, no PR yet. | capture approved |
+| 184 | A Learn button for every player the training report names ("i cant find the button to retrain them"). PR #1496. | PR merged |
+| 185 | Team selection form marks: worst 3 in the side, best 3 reserves ("highlight the 3 players in the side in the worst form, and the 3 players in reserve in the best form"; reserves "just use the same format", Form +N). PR #1500. | capture approved |
+| 186 | Hub asks when the fitness plan can change ("too easy to miss"). PR #1497. | PR merged |
+| 187 | Bench icons show the name on hover ("bench icons sohuld be hoverable to show the name"). In PR #1488 (row 166). | PR merged |
+| 188 | Press: no "the board hears excuses" after a win ("i won the game, why would the board hear excuses?"). PR #1493. Coach report "Needs a lift" names a player with 0 disposals: workflow ww0cw5vo5, no PR yet. | both merged |
 | 166 | Visuals 1, match day (director interview 2026-11-12, first): one replay stadium in every view; tight, full, moving call scenes; set shot by distance; one-screen pre-match; bigger discs, bench drawer; wind, hot, night; PC oval left, panels right; scoreboard and overlap bugs. Detail: Director Bible, "Visual overhaul interview". Call scenes (director 2026-11-12: "Why not show people in their actual positions? a lot of the vignettes will have an empty field behind the scene"): every scene stands where the live oval has the men at that moment and shows the other players where the oval has them, not at a fixed spot with a set-up table. | one before-and-after look sheet, every frame self-checked, shown to the director |
 | 167 | Visuals 2, event cards and press: chips, a picture per event, big finals cards; odds bars, journalist on screen, rules behind a tap, pictured result. | look sheet shown to the director |
 | 168 | Visuals 3, hub and frame: checklist rows, stripes top only, club-colour buttons, row style, bigger and brighter small text, motion. | look sheet shown to the director |
 | 169 | Visuals 4, money, draft, new career: cap meters and deal cards; draft list gets the screen, prospect bars, draft stage; jumper club picker, setup steps, press-room interview, coach card. | look sheet shown to the director |
 | 170 | Visuals 5, season end, pre-season, ceremonies to the farewell's standard; then player faces and hair. | look sheet shown to the director |
 | 171 | Visuals 6, proper PC layouts for every sheet. | 1920x1080 look sheet shown to the director |
+| 172 | A Club Forge club can start a Real 2026 lists career as a new club with the new-club draft package every new club gets (director 2026-11-12: "Yes, as a new club"; widens ruling 71). | a real-lists career with a Forge club drafts its package; his playtest |
+| 173 | In a 2027 League redraft, Tasmania joins in 2028, not round 1 of 2027 (director 2026-11-12: "Join in 2028"; PR #1172 had them from 2027). | 2027 ladder has 18 clubs, 2028 has 19 |
 
 ## B. Built and ON: his playtest judges
 
@@ -77,10 +91,12 @@ Every switch went on for good in #1072 and #1074 (director 2026-11-06: "i dont w
 | 15 | Late-game centre ball-up: two distinct choices | #899 #1074 | his playtest, after row 151 (the two new moves) and copy pass 131 |
 | 24 | Training as a compact player card grid with roles and traits | #928 | his playtest on his phone. After: 135, T3.R9 and 6.34 |
 | 65 | Draftees start lower: picks 1-5 about 62, 6-20 about 56, POT kept (4.Q9) | #1031 #1050 | his playtest |
-| 78 | Rare big margins come back through Momentum (T8.Q4) | #1029 #1038 | his playtest; balance in Z (row Balance) |
+| 78 | Rare big margins come back through Momentum (T8.Q4) | #1029 #1038 | his playtest; balance in Z (row Balance). Director 2026-11-12: "the score is unrealistic" (125 to 20) |
 | 89 | Midfield intercepts (T8.Q8) | #1024 | his playtest (measured about 2.58 a game against real 2.5; team intercepts 68.2 against about 63.4); balance in Z (row Balance) |
 | 92 | Back-zone carries retuned (T9.Q22) | #1023 | his playtest; balance in Z (row Balance) |
 | 103 | Synergies within reach on recruit screens; a stat focus grows a trait, for every club (4.Q10) | #1240 | his playtest; balance in Z (row Balance); numbers: Z, synergy numbers up |
+| 158 | Custom game plan: the coach picks one strength and one cost, each moving real match stats; counters nothing; AI clubs build their own; the game-plan traits are gone | #1458 #1482 | his playtest; the sizes are first guesses, balance in Z (row Custom plan) |
+| 164 | The draft needs list room: a full list must delist or trade before the draft starts, three players at least; rivals work to the same rule | #1443 #1470 #1482 | his playtest. Open faults: an upgrade during a paused draft can pass the 44; the expansion forced trade skips the 44 check |
 
 ## C. Needs his look or call (shown, then ask)
 
@@ -167,18 +183,16 @@ The director's visual rulings V-R1 to V-R9 are in Rulings (director, 2026-11-04)
 Settled answers that are not build rows. The bible stays as it is unless he consents to a change.
 
 - A TODO row is authorisation to build it; a roadmap entry alone is not. With no task, work the TODO.
-- Any doubt is a fail (critic agents are gone since 2026-11-05: every visual goes to him after the session's own frame check). This fully replaces the 2026-10-18 "don't chase marginal gains" line.
+- Any doubt is a fail; every visual goes to him after the session's own frame check (no critic agents since 2026-11-05).
 - Game, simulation and story carry equal importance. Secondary buttons are outlines.
 - Press answers are seeded rolls with the odds and both outcomes shown (the bible line stands; already shipped).
 - Polish goal 1 (player agency in matchups and rotation changes) stays open as written.
 - Teaching is XP scaling, not the season-ceiling point.
-- Personality types and captaincy are both wanted, later (section F). Culture sizes were reviewed in #988 (row 68).
-- 4.Q5 (Ask around, untouchable, pick order from round 18, pick trade on draft night) are all built: untouchable and pick order from round 18 (#783), pick trades on draft night (#848), Ask around (#971).
-- Row 13 gets all five scenes and waits for the 1.11 playtest gate (on since #1074, no switches). Time pauses at a decision, so scenes never fight live speed.
-- Weather has full effect on play (T1.Q2, T2.Q2, 6.Q10, T8.Q7): wet tackles move toward the real +12% (row 61); how it looks never touches the sim. Weather is off the bible's open list.
-- Ladder goes into Season stats (T3.Q13, T9.Q29): the hub nav bar loses Ladder, no other nav change (shipped).
-- Price: free for now. Platforms: web, Windows and an Android APK on itch; Google Play only on his written yes (US$25 fee and signing key).
-- Old PRs #745, #761 and #765 were already merged; nothing to close.
+- Personality types and captaincy: wanted, later (section F).
+- Row 13: all five scenes, waits for the 1.11 playtest gate; time pauses at a decision.
+- Weather has full effect on play; wet tackles toward the real +12% (row 61); its look never touches the sim.
+- Ladder lives in Season stats; the hub nav bar has no Ladder.
+- Free for now: web, Windows and Android APK on itch; Google Play only on his written yes.
 - Visual direction (section V; style guide updated to match V-R1 to V-R4):
   - V-R1 CLAUDE.md governs over the style guide: gradients and glows are allowed when deliberate.
   - V-R2 The primary button may be filled with club colour. A red club may clash with BAD, so a contrast and collision check is required.
@@ -190,31 +204,30 @@ Settled answers that are not build rows. The bible stays as it is unless he cons
   - V-R8 Figure sheets and the eight vignette scenes are kept; any deletion waits for a future decision.
   - V-R9 Nav icons and the wordmark are AI-assisted candidates; the director approves or rejects.
 - Draft AI key-forward spread (2026-11-05): "Leave it as is". Young talls keep their potential credit; no change.
-- Draft AI veterans (2026-11-05): "viney yes, but petracca and stewart should be 125-150"; "petracca is being underrated based on low games, hes very very good". Petracca overridden to 87; building clubs count a retired season at 0.35 dilution. Now Petracca 128, Stewart 138, Viney 301 mean pick.
+- Draft AI veterans (2026-11-05): "petracca and stewart should be 125-150"; Petracca overridden to 87; building clubs count a retired season at 0.35.
 
 ## Rulings (director, 2026-11-06)
 
 - GitHub deletes a PR's branch when it merges (T7.O20; turned on 2026-11-06).
-- League balance and calibration suites run nightly only, not on every PR (T7.O14). Superseded for balance-threshold checks by the 2026-11-10 ruling (they move out of the nightly).
+- League balance and calibration suites run nightly only (T7.O14); balance-threshold checks leave the nightly (2026-11-10).
 - Phone performance budgets and a CI perf gate: not now (T7.O19).
-- Tests: "do a small amount on my pc the rest github" (T7.O20b): GitHub keeps CI; local runs stay small (balance screens, single suites). No self-hosted runner.
+- Tests: "do a small amount on my pc the rest github": CI on GitHub, local runs small. No self-hosted runner.
 - Trade value keeps counting 60% of unproven growth (T8.Q13).
 - The visual sim reacting to coaching goes before the Season stats patch (T9.Q7).
 - Skills travel with the player: "their skills dont change based on position" (T9.Q27). Tap v mobile rucks, swingmen, tall v small defenders and unicorns stay deferred.
 - Playtest gate 1.12 "Can I feel my decisions?" is adopted (T9.Q28).
 - No single first among the audit's biggest gaps: "all are important no focus on anything particular" (T9.Q30).
-- Cascadeur Indie: written yes to buy (6.Q20). The exact price is shown to him first and he makes the purchase; the gather-on-the-run and other animation calls stay open.
-- The bible's Current focus section moves here (T5.Q21, his consent 2026-11-06); see Current focus below.
+- Cascadeur Indie: written yes to buy (6.Q20); show him the price, he buys it.
 - Kept as they are: Club Forge create a player, the Coaching screen (T1.Q7).
-- 1.x is not frozen: features can still land (T7.O4). AFLW moves to later; Google Play is much later. Team selection as two screens is later (T3.R41).
+- 1.x is not frozen (T7.O4). AFLW later; Google Play much later; two-screen Team selection later (T3.R41).
 - The game deliberately has no paid extras, no ads and no direct player control on the field (T5.Q21).
 
 ## Rulings (director, 2026-11-10)
 
-- Audits and balance come last: "I also want to defer all audits until after all other roadmap rows are done"; "pointless to constantly audit an ever changing database; we can rigorously audit and balance after the game is fully featured." They sit in section Z.
+- Audits and balance come last, after every other row: "we can rigorously audit and balance after the game is fully featured" (section Z).
 - A build row whose done-test contains an audit closes when the build ships; the audit moves to section Z as its own row ("Yes, split them").
 - Balance-threshold test checks move out of the nightly.
-- The career story (procedural copy, first slice): on the player sheet and on Brownlow night; up to five sentences, like the almanac; a career with nothing worth a story shows nothing, no filler line; Claude drafts the phrasings in the senior-coach voice and he edits them; one plain register everywhere, a failed pick told plainly, no warmer farewell text. Look approved from the 390px captures ("Approve, ship it"). Built in #1334 (CareerTale); the season and match stories are rows 145 and 144.
+- Career story: player sheet and Brownlow night, up to five sentences, nothing when there is no story, one plain senior-coach register (a failed pick told plainly, no warmer farewell); built in #1334 (rows 144, 145).
 - Compact player cards (Team builder, Training, Off-season) show the top three attributes: "Yes, add them" (row 1).
 - Row 14's goal-run moves stand (Stack the centre bounce, Flood behind the ball). Row 15's late centre ball-up changes to Flood behind the ball and Push numbers forward.
 - Your own goals in the feed show in your club's colour, not blue (D6 Q74).
@@ -229,32 +242,31 @@ Settled answers that are not build rows. The bible stays as it is unless he cons
 
 ## Rulings (director, 2026-11-11)
 
-- The press interview that sets the coaching style comes before the draft: "its meant to go before the draft". It opens as soon as the coach takes a club, in every start mode, and Continue returns to the draft board for the first pick (row 141 follow-up; 1.0.14 shipped it after the National Draft).
+- The coaching-style press interview comes before the draft ("its meant to go before the draft"), in every start mode; Continue returns to the draft board (row 141).
 
 - Concussion: "if a player gets 5 or more concussions within a 5 year period, they should have to pass a medical retirement check". The check is "Flat odds each time"; the panel sits "Straight after the fifth", so a fail ends the career that week (row 154).
 - Stretch goal, not assigned: "smart phone/social media hub including contacts, a folder for players screenshots, perhaps a home for stats and news too" (row 153, section F).
-- Looks approved ("Yes, ship it"): the kicking-end goal square and painted 50s, the saves menu and What's new sheet, premiership streamers on the Finals series sheet at every opening, the primary-button contrast floor, and the rotation marks on the Develop and manage card.
 
 - Stretch goal, not assigned: Club Opinion, each rival club's opinion of the coach, separate from the Board (row 155, section F).
 
-- Concussion medical retirements stay rare (director 2026-11-11, asked after 30 measured seasons gave no panel at all): "its quite rare IRL too, maybe 0.25 per year or less". Target: league-wide medical retirements at or under 0.25 a season (about one every four seasons), and above zero, measured over many seasons. Auto-pick keeps its name (director, same day: "Keep 'Auto-pick'").
+- Concussion medical retirements stay rare: "maybe 0.25 per year or less", above zero, measured over many seasons.
 
-- Row 128 started (director 2026-11-11: "ok so start building 128 and 144 now"). State league results simulate very fast (director 2026-11-11: "just make sure the state league results are simulated very fast"): every state league match except the coach's own uses a quick result model, not the full match engine; a whole state league round adds under 5% to Sim the week, measured. When the coach is coaching in the state league, it flips (director 2026-11-11: "if you are currently coaching in the VFL, the league simulation operates like normal. Contrarily, the AFLs simulation would then become minor background"): the state league plays like the AFL does now, and every AFL match uses the quick result model and sits in the background.
+- State league (row 128): "just make sure the state league results are simulated very fast": every match but the coach's own uses a quick result model, under 5% added to Sim the week. Coaching in the state league flips it: the AFL becomes the quick background.
 
-- Legacy mode starts now, from 1990 (director 2026-11-11: "id like you to start building the legacy mode starting 1990 now too"): row 142 moves to Build now.
+- Legacy mode from 1990 is in Build now (row 142).
 
 ## Rulings (director, 2026-11-12)
 
-- Visual overhaul interview: match day first, one look sheet per area, rig and Tripo without asking; answers in the Director Bible (rows 166-171). Trades check: "Decline the letter in the test".
-- Auto-pick keeps its name: "Auto pick. I already answered this question". It is the Team selection button's name and exempt from the engine-word ban (row 134).
+- His 1.0.15 reports: section headings take a sand ink, e8cf9c ("Sand (B)"); Defensive Press is renamed High Press ("Rename High Press"; same plan, old saves map); rows 172 and 173.
+- Visual overhaul: match day first, one look sheet per area, rig and Tripo without asking (rows 166-171; answers in the Director Bible). Trades check: "Decline the letter in the test".
+- Auto-pick keeps its name ("I already answered this question"), exempt from the engine-word ban (row 134).
 - Every draftee in every draft shows one line "Plays like: <real AFL player>", from facts: same position, about his level ("level must be included"), similar height, closest ratings at max potential (`PlaysLike.gd`). A line under the name, never in it.
-- Approved and merged: PR #1397's free-agency odds and Recruiting miss line (T1.R26 L3), and PR #1402's player-sheet concussion line (row 154).
-- Sim speed: "Speed up the engine", drift "Inside AFL bands" (row 159). Weather: "Yes, at a break" (row 160). Feed colours: "not sure, you choose", so his 2026-11-10 ruling stands: our goals in our club's colour, red conceded, grey for the rest, no blue (row 161). Pre-match calls: "Stay pre-bounce". Vignettes: "Yes, every card" (row 162). Autopilot: "Too harsh", soften to mid-table (row 163). Draft: "Must make room" (row 164).
-- PR #1401's look (row 134): "Passes, merge it". Teaching: already ruled 2026-11-04, XP scaling; open question 4.Q1 closed.
-- Design bible updated with his consent: the press line reads "Every answer carries a named risk: the odds of each outcome are shown before you answer." ("Yes, reword it"); pillars restated story, deep simulator, agency, then readability, with a story question first in the feature test ("Add story, reorder"). Won't-have list: "Yes, draft it", then "All but 14 and 15": the other 17 lines are in the design bible's "What this game will not have".
-- Overnight (going to sleep): merge queue "Yes, turn it on"; Legacy money "Dollars of the time" and the 1990-2012 salary cap gaps "huh? look harder" (row 142); held-look PRs "Merge after your check", PR #1453 if its rerun balance screen has nothing OUT; itch "Yes, push one build" once all merged; press-room coach "Re-render sharper".
+- Sim speed "Speed up the engine", drift inside AFL bands (row 159). Weather "Yes, at a break" (160). Feed colours: our goals in our colour, red conceded, grey the rest, no blue (161). Pre-match calls stay pre-bounce. Vignettes on every card (162). Autopilot to mid-table (163). Draft "Must make room" (164).
+- Design bible updated with his consent: the press risk line, pillars (story, deep simulator, agency, readability), a story question first in the feature test, and "What this game will not have" (all but 14 and 15).
+- Merge queue on. Legacy money "Dollars of the time"; 1990-2012 cap gaps "look harder" (row 142). Press-room coach "Re-render sharper".
 - Game-plan traits are removed and replaced by a custom game plan: 1 strength and 1 cost from a list, a plan of its own, neutral like Win Contest (never counters or is countered), every club can run one (rows 158 and Custom plan).
 - Real names only: "remove 'generated names' from the game, Real Names only". The Player names choice is gone; row 56 has no fictional-names fallback (bible 3.35a).
+- Form on team selection: "Reserves games". A weekly reserves rating shows for players in the reserves, display only, no sim effect.
 
 ## Current focus (moved from the bible, 2026-11-06)
 

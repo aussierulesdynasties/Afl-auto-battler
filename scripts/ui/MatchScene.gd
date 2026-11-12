@@ -135,7 +135,7 @@ var _ft_tabs: HBoxContainer
 var _ft_tab := "summary"        # summary (home), stats or report
 var _run_side := -1            # who kicked the last goal, and how many in a row
 var _run_len := 0
-var _press_said := [false, false]  # the Defensive Press line, once a side
+var _press_said := [false, false]  # the High Press line, once a side
 var _call_mem := MatchNotes.call_state()  # the structural calls' lines (MatchNotes.call_lines)
 var _name_index := {}           # name -> club for NameInk, built once per match
 var _duel_mem := {}             # the feed's memory of the forward-50 duels (MatchNotes.duel_feed_line)
@@ -1004,7 +1004,7 @@ func _simulate_remaining() -> void:
 # ---------------------------------------------------------------------------
 const GAMEPLANS := [
 	["balanced", "Balanced"], ["attacking", "Attack Corridor"],
-	["defensive", "Defensive Press"], ["contest", "Win Contest"],
+	["defensive", "High Press"], ["contest", "Win Contest"],
 	["controlled", "Controlled Tempo"],
 ]
 ## The plans at a break: the five, then your own when it is built (CustomPlan).
@@ -2341,7 +2341,7 @@ func _fill_note_lines(into: VBoxContainer, text: String) -> void:
 
 
 ## The calls so far this match, one line a quarter played, under a call's words:
-## "Q1  Demons: Defensive Press  ·  Crows: Attack Corridor". Game plans are
+## "Q1  Demons: High Press  ·  Crows: Attack Corridor". Game plans are
 ## shown for both clubs (the break already tells you theirs). Pep talks and
 ## rotations of the other club are hidden from the coach, so those show only
 ## yours. Nothing before the first bounce.
@@ -2353,7 +2353,7 @@ func _calls_record(kind: String) -> Control:
 	var v := UiKit.vbox(3)
 	v.name = "CallsRecord_" + kind
 	v.add_child(UiKit.spacer(6))
-	v.add_child(UiKit.lbl("Calls so far", UiKit.SECONDARY, UiKit.TEXT, true))
+	v.add_child(UiKit.subhead("Calls so far"))
 	for e in hist:
 		var plans: Array = e["plans"]
 		var side_words := func(side: int) -> String:
@@ -2404,7 +2404,7 @@ func _synergy_block() -> Control:
 	var syn: Array = GameState.pending_sim.synergies
 	var v := UiKit.vbox(3)
 	v.name = "SynergyBlock"
-	v.add_child(UiKit.lbl("Synergies", UiKit.SECONDARY, UiKit.TEXT, true))
+	v.add_child(UiKit.subhead("Synergies"))
 	v.add_child(_plan_row("Yours:", _synergy_names(syn[_my_side]), "SynYours", true))
 	v.add_child(_plan_row("Theirs:", _synergy_names(syn[1 - _my_side]), "SynTheirs", true))
 	return v
@@ -3301,7 +3301,7 @@ func _focus_note_text(slot: String, id: String) -> String:
 	return MatchNotes.focus_slot_note(slot, who, working, not on)
 
 
-## "Defensive Press · tagging Walsh": your calls for this quarter, one line.
+## "High Press · tagging Walsh": your calls for this quarter, one line.
 func _show_setup(t: Dictionary) -> void:
 	if _setup_line == null or not is_instance_valid(_setup_line):
 		return
@@ -4702,7 +4702,7 @@ func _career_high_feed(ev: Dictionary) -> bool:
 	return not lines.is_empty()
 
 
-## The Defensive Press taking hold, once a side a match: the first time the
+## The High Press taking hold, once a side a match: the first time the
 ## side whose plan it is defends after setting it (V2, press pilot).
 func _press_feed(event_index: int, ev: Dictionary) -> void:
 	var presser := MatchNotes.press_trigger(_res.get("timeline", []), event_index, ev, _press_said)

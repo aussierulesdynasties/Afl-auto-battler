@@ -11310,31 +11310,54 @@ func set_selection(selection: Dictionary) -> void:
 ## you have since named in the side: he has his game, so the question no longer
 ## stands (director, 2026-11-10: "often theyre already in the team"). It closes
 ## as unanswered without its cost; his wait before he asks again still runs.
+## A card about something else that also offers him a run (the papers' tip, an
+## international learning the game) keeps its other choices and loses that one
+## (director, 2026-11-12: "the game is asking if i wanna give a run of games to
+## a player already in the team").
 func _settle_answered_run_asks() -> void:
 	for c in week_events:
-		var card: Dictionary = c
-		if bool(card.get("resolved", false)):
+		_settle_run_ask(c)
+
+
+## _settle_answered_run_asks for one card (a week's card or the papers').
+func _settle_run_ask(card: Dictionary) -> void:
+	if card.is_empty() or bool(card.get("resolved", false)):
+		return
+	var p := list_player(str(card.get("player_id", "")))
+	if p.is_empty() or not in_current_side(p):
+		return
+	# A card about a picked player (a captain's slump) means its run for him: it stays.
+	var t := StoryDeck.by_id(StoryDeck.all(), str(card.get("tid", "")))
+	var where: Dictionary = (t.get("subject", {}) as Dictionary).get("where", {})
+	if where.has("selected") and bool(where["selected"]):
+		return
+	var options: Array = card.get("options", [])
+	var keep := []
+	var d := int(card.get("default", -1))
+	var new_d := -1
+	for i in range(options.size()):
+		var runs := false
+		for e in ((options[i] as Dictionary).get("effects", []) as Array):
+			if str((e as Dictionary).get("op", "")) == "start_backing":
+				runs = true
+		if runs:
 			continue
-		var p := list_player(str(card.get("player_id", "")))
-		if p.is_empty() or not in_current_side(p):
-			continue
-		# Only a card about a player out of the side (a captain's slump offers
-		# a picked player a run, and stays).
-		var t := StoryDeck.by_id(StoryDeck.all(), str(card.get("tid", "")))
-		var where: Dictionary = (t.get("subject", {}) as Dictionary).get("where", {})
-		if not (where.has("selected") and not bool(where["selected"])):
-			continue
-		var asks_run := false
-		for o in (card.get("options", []) as Array):
-			for e in ((o as Dictionary).get("effects", []) as Array):
-				if str((e as Dictionary).get("op", "")) == "start_backing":
-					asks_run = true
-		if not asks_run:
-			continue
-		card["resolved"] = true
-		card["choice"] = -1
-		card["outcome"] = "%s is in the side this week: he has his game." % GameDB.player_display_name(p)
-		StoryEngine.record_choice(story, card, -1, story_week())
+		if i == d:
+			new_d = keep.size()
+		keep.append(options[i])
+	if keep.size() == options.size():
+		return
+	var asks_run := where.has("selected") and not bool(where["selected"])
+	if not asks_run and not keep.is_empty():
+		card["options"] = keep
+		card["default"] = new_d
+		mark_dirty()
+		return
+	card["resolved"] = true
+	card["choice"] = -1
+	card["outcome"] = "%s is in the side this week: he has his game." % GameDB.player_display_name(p)
+	StoryEngine.record_choice(story, card, -1, story_week())
+	mark_dirty()
 
 
 # ---------------------------------------------------------------------------
@@ -13611,7 +13634,8 @@ func press_context(option: int) -> Dictionary:
 		restore = Trust.opinion_move(Trust.value(relations, Trust.player_key(str(o["player"]))), -int(owed.back()))
 	return {"journalist": j, "verdict": press_verdict(kind), "name": name,
 			"standing": press_standing(j) if MediaConference.JOURNALISTS.has(j) else 0, "facts": press_facts(option),
-			"lost": MediaConference.after_loss(media_conference), "restore": restore}
+			"lost": MediaConference.after_loss(media_conference), "won": MediaConference.after_win(media_conference),
+			"restore": restore}
 
 
 ## The line under answer `option` (MediaConference.odds_line).

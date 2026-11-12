@@ -137,7 +137,7 @@ static func link_text(r: Dictionary) -> String:
 ## Who can learn a new position now, by the rule the Training menu uses
 ## (GameState.learnable_jobs; the club's two-project limit aside, which only
 ## decides whether the menu offers it today). Those who became available this
-## month come first. [{"id", "jobs": ["key forward"], "new": bool}]
+## month come first. [{"id", "jobs": ["key forward"], "keys": ["key_fwd"], "new": bool}]
 static func retrain_list(gs, r: Dictionary) -> Dictionary:
 	var fresh: Array = r.get("new_retrain", [])
 	var out := []
@@ -148,7 +148,7 @@ static func retrain_list(gs, r: Dictionary) -> Dictionary:
 		var words := []
 		for j in jobs:
 			words.append(str(GameState.LEARN_JOBS[j]["word"]))
-		out.append({"id": str(p["id"]), "jobs": words, "new": fresh.has(str(p["id"])),
+		out.append({"id": str(p["id"]), "jobs": words, "keys": jobs.duplicate(), "new": fresh.has(str(p["id"])),
 				"pot": int(p.get("potential", 0))})
 	out.sort_custom(func(a, c):
 		if bool(a["new"]) != bool(c["new"]):

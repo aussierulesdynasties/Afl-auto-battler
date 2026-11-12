@@ -46,10 +46,12 @@ const FRINGE := 3
 
 
 ## The best young player who could be backed and is good enough to hold a spot:
-## rated within FRINGE of the list's 22nd best, not in this week's side already,
-## and not asked about a run inside Backing.ASK_GAP weeks (director, 2026-11-10:
-## "keeps asking the same players over and over often theyre already in the
-## team"). {} when there is none.
+## rated within FRINGE of the list's 22nd best, not in this week's side already
+## nor a regular in it lately (ClubStories.out_of_side), and not asked about a
+## run inside Backing.ASK_GAP weeks (director, 2026-11-10: "keeps asking the
+## same players over and over often theyre already in the team"; 2026-11-12:
+## "the game is asking if i wanna give a run of games to a player already in
+## the team"). {} when there is none.
 static func ready_to_back(gs) -> Dictionary:
 	var roster: Array = gs.club_roster(gs.my_club)
 	if roster.size() < 22:
@@ -71,6 +73,8 @@ static func ready_to_back(gs) -> Dictionary:
 		var ov := int(p.get("overall", 0))
 		if ov < bar or in_side.has(str(p.get("id", ""))) or not Backing.may_ask(p, w):
 			continue
+		if not ClubStories.out_of_side(gs, p):
+			continue
 		if gs.can_back(p) and (best.is_empty() or ov > int(best.get("overall", 0))):
 			best = p
 	return best
@@ -91,8 +95,9 @@ static func done(gs, kind: String, ref: String) -> bool:
 		"captain_review":
 			return WeekChecklist.is_done(gs, "captaincy")
 		"backing":
+			# Named in the side since the call was made: he has his game.
 			var p: Dictionary = gs.list_player(ref)
-			return p.is_empty() or Backing.is_active(p)
+			return p.is_empty() or Backing.is_active(p) or gs.in_current_side(p)
 	return true
 
 
