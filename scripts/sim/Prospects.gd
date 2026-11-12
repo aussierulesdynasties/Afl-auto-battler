@@ -1094,15 +1094,30 @@ static func generate_depth_pool(count: int, year: int, salt: String) -> Array:
 
 ## Senior state-league clubs a mature-age expansion recruit comes from, by
 ## state (WA and SA's junior clubs are already their senior clubs).
+## A VFL club is named by its code in data/state_leagues (GameDB.state_clubs),
+## so a club that leaves the league (Aspley, 2026) drops out with the data.
+## AFL Sydney and the TSL are outside the state leagues and stay named here.
 const STATE_LEAGUE_CLUBS := {
-	"VICM": [["Box Hill Hawks", "VFL"], ["Williamstown", "VFL"], ["Port Melbourne", "VFL"],
-			["Coburg", "VFL"], ["Werribee", "VFL"], ["Frankston", "VFL"]],
-	"VICC": [["Werribee", "VFL"], ["Frankston", "VFL"], ["Williamstown", "VFL"]],
-	"QLD": [["Southport Sharks", "VFL"], ["Aspley", "VFL"]],
+	"VICM": ["BOX", "WIL", "PTM", "COB", "WER", "FRA"],
+	"VICC": ["WER", "FRA", "WIL"],
+	"QLD": ["SOU"],
 	"NSW": [["Sydney University", "AFL Sydney"], ["Pennant Hills", "AFL Sydney"]],
 	"TAS": [["Clarence", "TSL"], ["Glenorchy", "TSL"], ["North Launceston", "TSL"],
 			["Launceston", "TSL"], ["Kingborough", "TSL"]],
 }
+
+
+## [name, league] pairs of the senior clubs a mature-age recruit from `state`
+## can come from; a state code the dataset did not load is left out.
+static func state_league_clubs(state: String) -> Array:
+	var out := []
+	for c in STATE_LEAGUE_CLUBS.get(state, []):
+		if c is Array:
+			out.append(c)
+		elif GameDB.is_state_club(str(c)):
+			var row: Dictionary = GameDB.state_clubs[str(c)]
+			out.append([str(row["name"]), str(row["league"])])
+	return out
 
 
 ## An expansion player of 20 or more did not come out of the under-18s in the
@@ -1115,7 +1130,7 @@ static func _mature_entry(p: Dictionary) -> void:
 	var age := float(p.get("age", 18.0))
 	if age < 20.0:
 		return
-	var clubs: Array = STATE_LEAGUE_CLUBS.get(str(p.get("draft_state", "")), [])
+	var clubs: Array = state_league_clubs(str(p.get("draft_state", "")))
 	if not clubs.is_empty():
 		var club: Array = clubs[_rng_for("mature|%s" % str(p["id"])).randi_range(0, clubs.size() - 1)]
 		p["draft_team"] = str(club[0])
