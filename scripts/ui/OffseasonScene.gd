@@ -480,8 +480,11 @@ func _show_talks() -> void:
 		if odds != null:
 			odds.name = "TalksRefuse"
 			v.add_child(odds)
-	if _talk_fa and not RookieList.senior_spot_free(GameState.my_list):
+	var no_spot := RookieList.add_block(GameState.my_list, "senior") if _talk_fa else ""
+	if no_spot == "senior":
 		v.add_child(_para("Your senior list is full (%d): release a player first." % RookieList.SENIOR_SPOTS, 14, UiKit.BAD))
+	elif no_spot != "":
+		v.add_child(_para(RookieList.block_words(GameState.my_list, no_spot) + " Release a player first.", 14, UiKit.BAD))
 	for reason in terms.get("reasons", []):
 		var why := _para(str(reason), 14, UiKit.BAD if bool(terms["refuse"]) else UiKit.TEXT)
 		why.name = "FreeAgentReason"

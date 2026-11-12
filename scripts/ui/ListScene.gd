@@ -271,11 +271,20 @@ func _full_list_panel() -> Control:
 	# Category B rookies have their own two spots, outside the 44 (real lists).
 	if not cat_b.is_empty():
 		lbox.add_child(UiKit.spacer(8))
-		var bh := UiKit.lbl("Category B rookies  %d / %d" % [cat_b.size(), RookieList.CAT_B_SPOTS], UiKit.BODY, UiKit.EMPH, true)
+		# A club that started with more than two, as its real 2026 list had
+		# (GWS: three), shows the count alone and says why: "3 / 2" is no rule.
+		var over_b: bool = cat_b.size() > RookieList.CAT_B_SPOTS
+		var bh := UiKit.lbl("Category B rookies  %d" % cat_b.size() if over_b
+				else "Category B rookies  %d / %d" % [cat_b.size(), RookieList.CAT_B_SPOTS], UiKit.BODY, UiKit.EMPH, true)
 		bh.name = "CatBListHead"
 		lbox.add_child(bh)
-		var why := UiKit.lbl("Their own spots: they take no rookie list spot and don't count in the 44.",
+		var why_words := "Their own spots: they take no rookie list spot and don't count in the 44."
+		if over_b:
+			why_words = "The club's real 2026 list had %d; a club usually has %d spots for them. They take no rookie list spot and don't count in the 44." % [
+					cat_b.size(), RookieList.CAT_B_SPOTS]
+		var why := UiKit.lbl(why_words,
 				UiKit.SMALL, UiKit.MUTED)
+		why.name = "CatBListWhy"
 		why.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		lbox.add_child(why)
 		_role_groups(lbox, cat_b, true)

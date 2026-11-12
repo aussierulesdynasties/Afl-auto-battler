@@ -14,9 +14,11 @@ const SUITE_SEED := 1990
 ## three-round redraft season, as main produced them before P1. The load and
 ## real-lists prints moved with the 2026-11-12 real-list data (list types,
 ## departures, signings of delisted players and the list each joined); the
-## season print did not.
+## season print did not. The real-lists print moved again that day with the
+## 44 rule (RookieList.add_block): West Coast, at 43 of the 44, lists one of
+## its three tied prospects and passes its picks, so the opening draft differs.
 const GOLDEN_LOAD := "9baf6f36b146d2bfafd65e07b3235c55"
-const GOLDEN_REAL := "9cc599139063e7d4577773ada7a13389"
+const GOLDEN_REAL := "6b9d20ef93eea2ce95f0a6d936f19727"
 ## A played match's floating point differs between Windows and Linux builds of
 ## Godot, so the season has one fingerprint per platform; each was taken on
 ## main before the change (Linux: run_on_github run 43024085570).
