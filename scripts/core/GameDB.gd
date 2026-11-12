@@ -247,8 +247,9 @@ func reload(dataset := Datasets.DEFAULT) -> void:
 	Ratings.era_anchors = {}
 	Ratings.derive_all(players)
 	# A past start scales each position on its own data season (director
-	# 2026-11-13, "Scale each position per season"); today's keeps 2026's.
-	if dataset != Datasets.DEFAULT:
+	# 2026-11-13, "Scale each position per season"); a set on today's season
+	# (2026's, or a test copy of it) keeps 2026's.
+	if DATA_SEASON != int(Datasets.get_set(Datasets.DEFAULT).get("data_season", DATA_SEASON)):
 		Ratings.fit_era_anchors(players)
 	_apply_history(players)
 	for p in players:
