@@ -1477,7 +1477,10 @@ func _week_job_row(text: String, done: bool, route: String, big := false) -> But
 	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	h.add_child(t)
 	b.tooltip_text = text
-	if route != "":
+	if route == WeekChecklist.PLAN_SHEET:
+		# The fitness plan opens over the Hub, at its change step.
+		b.pressed.connect(func(): SeasonPlanSheet.open(self, func(): _build()))
+	elif route != "":
 		# A call answered here (press, approach) reloads the Hub in place so the
 		# conference reopens, without stacking the Hub twice.
 		b.pressed.connect(func():
