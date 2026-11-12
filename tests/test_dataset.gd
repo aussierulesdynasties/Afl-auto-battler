@@ -26,8 +26,13 @@ const GOLDEN_REAL := "6b9d20ef93eea2ce95f0a6d936f19727"
 ## Windows print still predates it and is refreshed on the next local run.
 ## Result keys added after the golden was taken that record who earned a
 ## call's credit, not what happened (row 144). "impact" and "plan_traits" were
-## already in main's results, so they stay in the hash.
-const BOOKKEEPING_KEYS := ["impact_by"]
+## already in main's results, so they stay in the hash. "breeze_side" (the
+## match-day look, 2026-11-12) records which side had the breeze first, a
+## number the match already drew from its seed before the first bounce, so the
+## ground's flags can be drawn from a saved result: with it left out the
+## season's print is the one taken before it was written down, which is the
+## proof that writing it down changed no result and no draw.
+const BOOKKEEPING_KEYS := ["impact_by", "breeze_side"]
 const GOLDEN_SEASON := {"Windows": "05a96ea659dcfe349e9afec75b01b45a", "Linux": "9c00f9caf199debd6cc6a20325ba8cba"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:

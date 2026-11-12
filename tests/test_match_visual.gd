@@ -2081,9 +2081,11 @@ func _test_discs_apart() -> void:
 				if pv.director.tokens[i]["pos"] != before[i]:
 					moved_engine += 1
 				worst_nudge_m = maxf(worst_nudge_m, drawn[i].distance_to(real[i]) / pv._scale())
-				worst_nudge_discs = maxf(worst_nudge_discs, drawn[i].distance_to(real[i]) / (2.0 * tr))
+				# Each disc at the size it is drawn (smaller in a pack).
+				var ri: float = pv.disc_radius(i)
+				worst_nudge_discs = maxf(worst_nudge_discs, drawn[i].distance_to(real[i]) / (2.0 * ri))
 				for j in range(i + 1, drawn.size()):
-					closest = minf(closest, drawn[i].distance_squared_to(drawn[j]) / (4.0 * tr * tr))
+					closest = minf(closest, drawn[i].distance_squared_to(drawn[j]) / pow(ri + pv.disc_radius(j), 2.0))
 					real_closest = minf(real_closest, real[i].distance_squared_to(real[j]) / (4.0 * tr * tr))
 			var holder := int(pv.director.ball.get("holder", -1))
 			if str(pv.director.ball.get("mode", "")) == "held" and holder >= 0:
@@ -2105,8 +2107,8 @@ func _test_discs_apart() -> void:
 		_check(moved_engine == 0, "%s: drawing the discs apart moves no player" % str(view[2]))
 		_check(ball_off <= 1.0, "%s: a held ball is drawn at its holder's disc (%.2f m off)" % [str(view[2]), ball_off])
 		# Fully apart lifts the cap, for the comparison capture only; the player
-		# never sees it. Eight seeds alone: 18.4 m at most (main 19.4); seed 31
-		# inside this suite: 21.0 m (main 17.0), so its bar is 24.
+		# never sees it. Main's bar, 24 m (seed 31 inside this suite: 21.0 m on main),
+		# kept as it was; the capped view the player sees keeps its 20 m bar.
 		var far_m := 24.0 if bool(view[3]) else 20.0
 		_check(worst_nudge_m < far_m, "%s: no disc is drawn far from its player (%.1f m at most)" % [str(view[2]), worst_nudge_m])
 		print("  discs apart, %s: closest %.2f diameters (players %.2f), biggest nudge %.1f m" % [
@@ -2303,46 +2305,65 @@ func _label_run(what: String, ringed_count: int) -> void:
 	pv.free()
 
 
-## The bench strip: five a side, inside the view, and an interchange swaps the
-## man coming on for the man going off, when the oval shows it.
+## The bench drawer (director, 2026-11-12: "Bigger discs, bench drawer"): no bench
+## disc is drawn on the view; a tab on the oval's bottom edge opens a panel of both
+## benches, five a side, each with his number and his name; and an interchange
+## swaps the man coming on for the man going off, when the oval shows it.
 func _test_bench_strip() -> void:
 	var res := _sim(31, "FRE", "MEL").run()
 	res["home"] = "FRE"
 	res["away"] = "MEL"
 	_check((res["bench"] as Array).size() == 2 and (res["bench"][0] as Array).size() == 5
 			and (res["bench"][1] as Array).size() == 5, "A match says who started on each bench: five a side")
+	var root := (Engine.get_main_loop() as SceneTree).root
 	for view in [[Vector2(370, 490), true, "phone"], [Vector2(900, 590), false, "PC"]]:
 		var pv := PitchView.new()
+		root.add_child(pv)
 		pv.size = view[0]
 		pv.camera_enabled = view[1]
+		pv.upright = str(view[2]) == "phone"
 		pv.setup(res)
-		var spots := pv.bench_spots(pv.token_radius())
-		var per := [0, 0]
-		var inside := true
-		for sp in spots:
-			per[int(sp["side"])] += 1
-			var p: Vector2 = sp["pos"]
-			var r: float = sp["r"]
-			if p.x - r < 0.0 or p.y - r < 0.0 or p.x + r > pv.size.x or p.y + r > pv.size.y:
-				inside = false
-		_check(per == [5, 5] and inside, "%s: five bench discs a side, all inside the view (%s)" % [str(view[2]), str(per)])
-		if str(view[2]) == "PC":
-			_check(bool(spots[0]["column"]), "PC: the bench runs down the sides of the ground, using the width")
-			var a := MatchMotion.HALF_LEN * pv._scale()
-			var clear := true
-			for sp in spots:
-				if absf((sp["pos"] as Vector2).x - pv.size.x * 0.5) < a + float(sp["r"]):
-					clear = false
-			_check(clear, "PC: no bench disc sits on the ground")
-		else:
-			_check(not bool(spots[0]["column"]), "Phone: the bench runs along the bottom of the view")
-			var ground_bottom: float = pv.size.y * 0.5 + MatchMotion.HALF_WID * pv.pitch_rect().size.x / (2.0 * MatchMotion.HALF_LEN) * 1.5
-			_check((spots[0]["pos"] as Vector2).y - float(spots[0]["r"]) > ground_bottom,
-					"Phone: the bench sits below the oval at its closest zoom, in the stand's band")
+		var what := str(view[2])
+		var drawer: BenchDrawer = pv.bench_drawer()
+		var tab := pv.bench_tab_rect()
+		_check(drawer.tab().visible and tab.size.x > 0.0 and Rect2(Vector2.ZERO, pv.size).encloses(tab),
+				"%s: the bench's tab is inside the view (%s)" % [what, str(tab)])
+		_check(drawer.tab().size.y >= 48.0 and drawer.tab().size.x >= 48.0, "%s: the tab is a thumb's target (%s)" % [what, str(drawer.tab().size)])
+		_check(tab.end.x < pv.size.x * 0.5 and tab.position.y > pv.size.y * 0.5, "%s: the tab sits in the view's bottom corner" % what)
+		_check(not pv.bench_open(), "%s: the drawer starts shut" % what)
+		pv.open_bench()
+		_check(pv.bench_open(), "%s: the drawer opens" % what)
+		var panel := drawer.panel_rect()
+		_check(Rect2(Vector2.ZERO, pv.size).encloses(panel) and not panel.intersects(tab),
+				"%s: the open panel is inside the view and clear of its tab (%s)" % [what, str(panel)])
+		var rows := drawer.rows()
+		var per := [[], []]
+		var fits := true
+		var named := true
+		for row in rows:
+			(per[int(row["side"])] as Array).append(int(row["num"]))
+			if not panel.encloses(row["rect"]):
+				fits = false
+			if str(row["name"]) == "" or str(row["pid"]) == "":
+				named = false
+			var half: float = panel.position.x + panel.size.x * 0.5
+			if (int(row["side"]) == 0) != ((row["disc"] as Vector2).x < half):
+				fits = false
+		var want := [[], []]
+		for side in range(2):
+			for b in pv.director.bench[side]:
+				(want[side] as Array).append(int(b["num"]))
+		_check(per == want and (per[0] as Array).size() == 5 and (per[1] as Array).size() == 5,
+				"%s: the panel lists both benches, five a side, by jumper number (%s)" % [what, str(per)])
+		_check(fits, "%s: every row is inside the panel, the home side's on the left" % what)
+		_check(named, "%s: every player on the bench has his name beside his number" % what)
+		_check(pv.close_bench() and not pv.bench_open() and not pv.close_bench(),
+				"%s: the drawer shuts, and says so once (Back stops there only when it was open)" % what)
 		pv.free()
 	# Rotations: at every interchange the bench stays five, the man on leaves it
 	# and the man off joins it, and nobody is on the ground and the bench at once.
 	var pv3 := PitchView.new()
+	root.add_child(pv3)
 	pv3.size = Vector2(370, 490)
 	var wrong := []
 	var subs := [0]
@@ -2374,16 +2395,24 @@ func _test_bench_strip() -> void:
 	var closing := []
 	for b in pv3.director.bench[0]:
 		closing.append(int(b["num"]))
-	_check(subs[0] > 0 and wrong.is_empty(), "Every interchange swaps one man on the bench strip (%d interchanges; wrong at %s)" % [
+	_check(subs[0] > 0 and wrong.is_empty(), "Every interchange swaps one man on the bench (%d interchanges; wrong at %s)" % [
 			subs[0], ", ".join(wrong.slice(0, 5))])
 	_check(opening != closing, "The bench changes as the match rotates")
+	var listed := []
+	for row in pv3.bench_drawer().rows():
+		if int(row["side"]) == 0:
+			listed.append(int(row["num"]))
+	_check(listed == closing, "The drawer lists the bench as the rotations left it (%s, the match says %s)" % [str(listed), str(closing)])
 	pv3.free()
 	var old := res.duplicate()
 	old.erase("bench")
 	var pv4 := PitchView.new()
+	root.add_child(pv4)
 	pv4.size = Vector2(370, 490)
 	pv4.setup(old)
-	_check(pv4.bench_spots(pv4.token_radius()).is_empty(), "An old result with no bench shows no strip, and plays")
+	pv4.open_bench()
+	_check(not pv4.bench_drawer().tab().visible and pv4.bench_tab_rect().size.x == 0.0 and not pv4.bench_open(),
+			"An old result with no bench shows no tab and opens no drawer, and plays")
 	pv4.free()
 
 
@@ -2492,33 +2521,28 @@ func _test_upright_oval(res: Dictionary) -> void:
 	_check(carrier_missed == 0, "A point on the ball carrier's disc finds him, upright and flat (%d misses)" % carrier_missed)
 	up.free()
 	flat.free()
-	# The bench, upright: five a side in the bottom corners, inside the view, off the turf.
+	# The bench's tab, upright: in the bottom corner, inside the view, off the turf.
 	var bres := _sim(31, "FRE", "MEL").run()
 	bres["home"] = "FRE"
 	bres["away"] = "MEL"
 	var pv2 := PitchView.new()
+	(Engine.get_main_loop() as SceneTree).root.add_child(pv2)
 	pv2.size = Vector2(370, 490)
 	pv2.camera_enabled = false
 	pv2.upright = true
 	pv2.setup(bres)
-	var spots := pv2.bench_spots(pv2.token_radius())
+	var tab := pv2.bench_tab_rect()
 	var s := pv2._scale()
 	var on_turf := 0
-	var outside := 0
-	for sp in spots:
-		var q: Vector2 = (sp["pos"] as Vector2) - pv2.size * 0.5
-		var r: float = sp["r"]
-		var ex := (absf(q.x) - r) / (MatchMotion.HALF_WID * s)
-		var ey := (absf(q.y) - r) / (MatchMotion.HALF_LEN * s)
+	for corner in [tab.position, tab.end, Vector2(tab.end.x, tab.position.y), Vector2(tab.position.x, tab.end.y)]:
+		var q: Vector2 = (corner as Vector2) - pv2.size * 0.5
+		var ex := q.x / (MatchMotion.HALF_WID * s)
+		var ey := q.y / (MatchMotion.HALF_LEN * s)
 		if ex * ex + ey * ey < 1.0:
 			on_turf += 1
-		var at: Vector2 = sp["pos"]
-		if at.x - r < 0.0 or at.y - r < 0.0 or at.x + r > pv2.size.x or at.y + r > pv2.size.y:
-			outside += 1
-	_check(spots.size() == 10 and on_turf == 0 and outside == 0,
-			"Upright, the bench's ten discs sit in the view and off the turf (%d, %d on the turf, %d outside)" % [spots.size(), on_turf, outside])
-	_check(absf(float(spots[0]["r"]) - pv2.token_radius()) < 0.5, "Upright, a bench disc is as big as a player's on the ground")
-	# A goal's ring at either end: never past the view's edge, never over the bench.
+	_check(tab.size.x > 0.0 and Rect2(Vector2.ZERO, pv2.size).encloses(tab) and on_turf == 0,
+			"Upright, the bench's tab sits in the view and off the turf (%s, %d corners on the turf)" % [str(tab), on_turf])
+	# A goal's ring at either end: never past the view's edge, never over the tab.
 	var bad := []
 	for gx in [MatchMotion.GOAL_X, -MatchMotion.GOAL_X]:
 		var at: Vector2 = pv2._w2s(Vector2(gx, 0.0))
@@ -2526,10 +2550,10 @@ func _test_upright_oval(res: Dictionary) -> void:
 		var r := minf(biggest, pv2.flash_room(at, pv2.token_radius()))
 		if at.y - r < 0.0 or at.y + r > pv2.size.y or at.x - r < 0.0 or at.x + r > pv2.size.x:
 			bad.append("off the view at %s" % str(at))
-		for sp in spots:
-			if (sp["pos"] as Vector2).distance_to(at) < r + float(sp["r"]):
-				bad.append("over bench disc %d" % int(sp["num"]))
-	_check(bad.is_empty(), "Upright, a goal's ring stays in the view and off the bench at both ends (%s)" % ", ".join(bad))
+		var near := Vector2(clampf(at.x, tab.position.x, tab.end.x), clampf(at.y, tab.position.y, tab.end.y))
+		if near.distance_to(at) < r:
+			bad.append("over the bench's tab (ring %.1f px, tab %.1f px away)" % [r, near.distance_to(at)])
+	_check(bad.is_empty(), "Upright, a goal's ring stays in the view and off the bench's tab at both ends (%s)" % ", ".join(bad))
 	pv2.free()
 
 

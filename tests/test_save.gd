@@ -23,6 +23,7 @@ func run() -> void:
 	_t("_test_second_career_plays_like_first")
 	_t("_test_reload_before_offseason")
 	_t("_test_review_after_reload")
+	_t("_test_breeze_end_survives")
 	_t("_test_training_survives")
 	_t("_test_adjusted_players_survive")
 	_t("_test_no_save_mid_match")
@@ -202,6 +203,50 @@ func _test_review_after_reload() -> void:
 			if str(before[k]) != str(after.get(k, "")):
 				bad.append("round %d %s" % [i + 1, k])
 	_check(bad.is_empty() and checked == 4, "Review match reads the same after a reload (%s)" % ", ".join(bad))
+
+
+## Who kicked with the breeze first is kept with your last match, so the reviewed match's
+## flags, the board's arrow and a replay's wind point after a reload the way they did live
+## (verifier, 2026-11-12: the key was not saved and every reloaded match blew to the default
+## end). A save from before the key still loads, and its flags take the default end.
+func _test_breeze_end_survives() -> void:
+	_new_season("MEL")
+	var bad := []
+	var seen := {0: 0, 1: 0}
+	var rounds := 0
+	while rounds < 10 and (int(seen[0]) == 0 or int(seen[1]) == 0):
+		GameState.advance()
+		rounds += 1
+		var live: Dictionary = GameState.last_match
+		if not live.has("breeze_side"):
+			bad.append("round %d: the played match does not say who had the breeze" % rounds)
+			continue
+		var side := int(live["breeze_side"])
+		seen[side] = int(seen[side]) + 1
+		var toward := OvalStadium.breeze_toward(live)
+		var ev := {"side": 0, "q": 1}
+		var end := BroadcastVignette.wind_end_of(live, ev)
+		GameState.save_career()
+		GameState.load_career()
+		var back: Dictionary = GameState.last_match
+		if not back.has("breeze_side") or int(back["breeze_side"]) != side:
+			bad.append("round %d: side %d came back as %s" % [rounds, side, str(back.get("breeze_side", "nothing"))])
+		if OvalStadium.breeze_toward(back) != toward or toward != (-1.0 if side == 1 else 1.0):
+			bad.append("round %d: the oval's flags blew to %.0f live and %.0f reloaded" % [rounds, toward, OvalStadium.breeze_toward(back)])
+		if BroadcastVignette.wind_end_of(back, ev) != end or end != (1 if side == 0 else -1):
+			bad.append("round %d: a replay's wind end was %d live and %d reloaded" % [rounds, end, BroadcastVignette.wind_end_of(back, ev)])
+	_check(bad.is_empty() and int(seen[0]) > 0 and int(seen[1]) > 0,
+			"The breeze's end reads the same after a reload, for a match each way (%d rounds: %d with the home side first, %d with the away side; %s)" % [
+			rounds, int(seen[0]), int(seen[1]), ", ".join(bad)])
+	# A save written before the key: the same career with the key taken out of the file.
+	GameState.last_match.erase("breeze_side")
+	var saved := GameState.save_career()
+	var loaded := GameState.load_career()
+	var old: Dictionary = GameState.last_match
+	_check(not old.is_empty() and not old.has("breeze_side") and str(old.get("home", "")) != "",
+			"A save with no breeze end in it loads, your last match with it (saved %s, loaded %s)" % [str(saved), str(loaded)])
+	_check(OvalStadium.breeze_toward(old) == 1.0 and BroadcastVignette.wind_end_of(old, {"side": 1, "q": 2}) == 1,
+			"A match saved before the key draws its flags to the default end (%.0f)" % OvalStadium.breeze_toward(old))
 
 
 ## Every block of the full-time review MatchScene builds from the result.
