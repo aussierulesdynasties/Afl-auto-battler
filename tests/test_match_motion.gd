@@ -26,14 +26,7 @@ const FRAME := 1.0 / 30.0
 ## never drops below 76%; the critic's worst frames were 15.7 of 18 discs with
 ## Attack Corridor and 12.3 with Win Contest), and VISIBLE_WORST in every frame.
 const VISIBLE_FLOOR := 0.72
-## The bigger discs (director's visual overhaul, 2026-11-12: about 1.5x, so a
-## disc on this phone is 12.8 m across, not 8.6) cover each other more in a pack.
-## The bars follow what the bigger discs measure on the same five games: 6.6% of
-## frames under the floor (0.2% at the old size) and 50% at worst (66%), so 8
-## frames in 100 and 45%. Half of a new disc is still more area than the whole
-## of an old one.
-const VISIBLE_LOW_SHARE := 0.08
-const VISIBLE_WORST := 0.45
+const VISIBLE_WORST := 0.55
 ## Every shape moves its side at least this far from Balanced, measured as below.
 const CALL_FLOOR := 8.0
 ## A column (the critic's Attack Corridor pile, pass 3): three or more of a
@@ -57,14 +50,11 @@ const ATTACK_SPREAD_HI := 12.5
 ## (0.5 until 2026-11-06; every feature on measured 7.2 m, just under 7.2 after
 ## main's stat focus merged in, so the floor sat at 7.0; the 1.0.7 tuning
 ## measured 6.6 m, so 6.5: director, 2026-11-06, loosen to measured).
-## The bigger discs (2026-11-12) are drawn further apart in the corridor, so it
-## reads 13.0 m wide, not 11.5: measured 6.3 m, so 6.0.
-const ATTACK_CALL_SLACK := 2.0
+const ATTACK_CALL_SLACK := 1.5
 ## The ball-up ring: closest pair of a side, on average.
 const RING_GAP := 1.5
 ## Attack Corridor's longest file at most this much past Balanced's, on average.
-## (0.75 until the bigger discs, 2026-11-12: measured 0.80 past Balanced, so 1.0.)
-const FILE_SLACK := 1.0
+const FILE_SLACK := 0.75
 ## Balanced is the bar for crowding (lead, 2026-10-18), measured in the same run:
 ## the corridor is 45% narrower, so it may have this much more heavy overlap and
 ## this many more points of file-of-three frames, and no longer a file. The rest
@@ -362,8 +352,8 @@ func _test_motion_averaged(results: Array) -> void:
 		for k in keys:
 			mean[k] = float(mean[k]) + float(v[k]) / float(results.size())
 	var g := results.size()
-	_check(vis_n > 1000 and float(mean["vis_low_share"]) <= VISIBLE_LOW_SHARE and float(mean["vis_min0"]) >= VISIBLE_WORST and float(mean["vis_min1"]) >= VISIBLE_WORST,
-			"1x over %d games: at least %.0f%% of each side's disc area shows in 92 frames in 100 (%.2f%% below, on average), and %.0f%% in every frame (Fremantle %.0f%%, Melbourne %.0f%% at worst, on average)" % [
+	_check(vis_n > 1000 and float(mean["vis_low_share"]) <= 0.01 and float(mean["vis_min0"]) >= VISIBLE_WORST and float(mean["vis_min1"]) >= VISIBLE_WORST,
+			"1x over %d games: at least %.0f%% of each side's disc area shows in 99 frames in 100 (%.2f%% below, on average), and %.0f%% in every frame (Fremantle %.0f%%, Melbourne %.0f%% at worst, on average)" % [
 			g, 100.0 * VISIBLE_FLOOR, 100.0 * float(mean["vis_low_share"]), 100.0 * VISIBLE_WORST, 100.0 * float(mean["vis_min0"]), 100.0 * float(mean["vis_min1"])])
 	_check(pack_n > 20 and float(mean["inner_most"]) <= 4.0 and float(mean["inner_side_most"]) <= 2.0 and float(mean["pack_gap"]) >= RING_GAP,
 			"1x over %d games: a Win Contest ball-up is a ring as the ball goes up: at most four discs within 3 m of the ball (%.2f on average), two a side (%.2f), and two of a side %.1f m apart at closest in the pack, 9 m round it (%.2f m on average; a pair with one of the four on the ball as players, the rest as drawn)" % [
