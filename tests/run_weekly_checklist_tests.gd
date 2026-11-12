@@ -55,6 +55,7 @@ func _run() -> void:
 	await _t("_test_layout_sizes")
 	await _t("_test_intro_text")
 	await _t("_test_real_taps_on_a_phone")
+	await _t("_test_fitness_plan_ask")
 	print(Ran.line("Weekly checklist", self))
 	for f in _failures:
 		print("  FAIL: " + f)
@@ -247,5 +248,78 @@ func _test_real_taps_on_a_phone() -> void:
 	var page := _find("SidePage") as Control
 	_check(page != null and page.get_global_rect().end.x <= float(current_scene.get_viewport_rect().size.x) + 0.5,
 			"Phone: once confirmed, Team still fits the screen's width")
+	root.size = SIZES[0]
+	await _settle(2)
+
+
+func _plan_open() -> Control:
+	var sheet := _find("SeasonPlanSheet") as Control
+	return sheet if sheet != null and not sheet.is_queued_for_deletion() else null
+
+
+## The fitness plan's revision points (director, 2026-11-12: "something needs to
+## offer you a fitness plan change when it becomes available too easy to miss"):
+## the week it can change, the Hub asks; a real tap opens the plan sheet able to
+## change it; kept, the ask is ticked; outside a window it never shows.
+func _test_fitness_plan_ask() -> void:
+	var cond = load("res://scripts/sim/Conditioning.gd")
+	_fresh()
+	var bye: int = _state.fitness_bye_week(_state.my_club)
+	var windows: Array = cond.revision_weeks(bye)
+	for w in range(1, 23):
+		_state.season.round_index = w
+		var has := false
+		for it in WC.items(_state):
+			has = has or str(it["key"]) == "fitness"
+		_check(has == windows.has(w), "Week %d: the fitness ask shows only at a revision point (%s)" % [w, windows])
+	_state.season.round_index = 0
+	var at_zero := false
+	for it in WC.items(_state):
+		at_zero = at_zero or str(it["key"]) == "fitness"
+	_check(not at_zero, "Before round 1 the plan is the pre-season's: no ask")
+	_state.season.round_index = 5 if not windows.has(5) else 6
+	await _hub()
+	_check(_find("WeekJob_fitness") == null, "Outside a window the Hub has no fitness ask")
+
+	_state.season.round_index = cond.ROUND_14
+	root.size = SIZES[1]
+	await _hub()
+	_check(_mark_text("fitness") == "To do", "Round 14: the Hub asks to review the fitness plan")
+	var left_before: int = WC.left(_state)
+	var row := _find("WeekJob_fitness") as Control
+	await Tap.steady(row)
+	var why: String = await Tap.tap(row)
+	await _settle()
+	var sheet := _plan_open()
+	_check(why == "" and sheet != null, "Phone: a tap on the ask opens the fitness plan (%s)" % why)
+	var other := ""
+	for key in cond.PLANS:
+		if str(key) != _state.fitness_plan(_state.my_club):
+			other = str(key)
+			break
+	var pick := _find("Plan_" + other) as Control
+	_check(pick != null and _find("SeasonPlanConfirm") != null,
+			"The sheet opens at its change step: plans to pick and Confirm")
+	if pick != null:
+		why = await Tap.tap(pick)
+		await _settle()
+		var confirm := _find("SeasonPlanConfirm") as Button
+		_check(why == "" and confirm != null and not confirm.disabled,
+				"Phone: picking another plan makes it confirmable (%s)" % why)
+	# He keeps the plan he had: Close, nothing confirmed.
+	var keep := _find("SeasonPlanClose") as Control
+	why = await Tap.tap(keep)
+	await _settle()
+	_check(why == "" and _plan_open() == null, "Phone: Close shuts the sheet (%s)" % why)
+	_check(_state.fitness_plan(_state.my_club) != other, "Closing keeps the plan in force")
+	_check(_mark_text("fitness") == "Done" and WC.left(_state) == left_before - 1,
+			"Kept, the fitness ask is ticked and no longer counts as a job")
+	# The window closes: the next week has no ask.
+	var after: int = cond.ROUND_14 + 1
+	while windows.has(after):
+		after += 1
+	_state.season.round_index = after
+	await _hub()
+	_check(_find("WeekJob_fitness") == null, "The week after, the window shut, the ask is gone")
 	root.size = SIZES[0]
 	await _settle(2)

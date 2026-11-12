@@ -13,6 +13,11 @@ extends RefCounted
 ## did this week (confirmed the side, opened Training); "seen" remembers that a job
 ## came up this week, so it stays on the list, ticked, once it is dealt with.
 
+## The fitness job's "route": not a Router screen but the season plan sheet,
+## opened over the Hub (SeasonPlanSheet).
+const PLAN_SHEET := "season_plan"
+
+
 ## The week's own record, reset when the week moves on.
 static func _week(gs) -> Dictionary:
 	var wk: int = gs.story_week()
@@ -76,6 +81,14 @@ static func items(gs) -> Array:
 		return out
 	out.append({"key": "team", "text": "Look over the side", "done": _done(gs, "team"), "route": "selection"})
 	out.append({"key": "training", "text": "Check training", "done": _done(gs, "training"), "route": "training"})
+	# A revision point of the fitness plan (the bye, round 14, the last month):
+	# the week it can change, the Hub asks once (director, 2026-11-12: "something
+	# needs to offer you a fitness plan change when it becomes available too easy
+	# to miss"). Ticked once the plan sheet is opened that week, kept or changed.
+	# Week 0 is left to the pre-season, where the plan is set.
+	if gs.fitness_week() > 0 and gs.can_revise_fitness():
+		out.append({"key": "fitness", "text": "Review the fitness plan: it's open this week",
+				"done": _done(gs, "fitness"), "route": PLAN_SHEET})
 	# The open jobs the Coaching button counts.
 	var jobs: int = gs.staff_vacancies.size()
 	if _seen(gs, "coaching", jobs > 0):
