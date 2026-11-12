@@ -4,5 +4,13 @@
 		"League news covers every match of the round.",
 		"A Tribunal verdict shows whether your challenge won, the ban before and after, and what it cost you.",
 		"Each player's sheet tells the story of his career."
+	],
+	"1.0.15": [
+		"Build your own game plan on the Coaching screen: pick one strength and one cost, and name it.",
+		"Full time tells you what each of your calls led to.",
+		"Every draftee shows a real AFL player he plays like.",
+		"Players can earn up to five traits.",
+		"The papers' pre-season ladder has a line on every club, and your practice match can move you a place or two.",
+		"Your press interview comes before the draft, in the press room."
 	]
 }
