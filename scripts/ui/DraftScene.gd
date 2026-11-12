@@ -2125,6 +2125,9 @@ func _refresh_mine() -> void:
 					v.add_child(UiKit.lbl("Pick %d · %d OVR · %s" % [
 							int(entry.get("pick", 0)), int(player["overall"]), Contracts.money(_draft.price(player))],
 							12, UiKit.MUTED))
+				var like := PlaysLikeLine.make(player)
+				if like != null:
+					v.add_child(like)
 				if stuck:
 					var row := UiKit.hbox(8)
 					v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
