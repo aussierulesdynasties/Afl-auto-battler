@@ -20,7 +20,7 @@ import sys
 import time
 import urllib.request
 
-UA = "Mozilla/5.0 (compatible; AflAutoBattler-data/1.0; +https://github.com/gabebartolo-spec/Afl-auto-battler)"
+UA = "Mozilla/5.0 (compatible; AflAutoBattler-data/1.0; +https://github.com/aussierulesdynasties/Afl-auto-battler)"
 DG = "https://www.draftguru.com.au"
 SEASONS = range(2020, 2026)
 # Draft years build.py reads: the 2019 off-season feeds a 2020 start; 2025 is the
