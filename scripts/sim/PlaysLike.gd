@@ -9,18 +9,20 @@ class_name PlaysLike
 ##   1. Position. Only real players of the prospect's own position (DEF, MID,
 ##      RUCK, FWD) are compared. A database with no real player of that
 ##      position falls back to every real player.
-##   2. The ratings at max potential, level included. The prospect's ratings
-##      are lifted evenly until his overall is his POT (as development lifts
-##      them); each real player's are set the same way to his own peak (the
-##      higher of his POT and his best rated season on record). Real players
-##      whose peak overall is within NEAR_LEVEL of the prospect's POT are
-##      compared if there is at least one; otherwise the whole position is.
-##      The distance is the root-mean-square gap over the rated attributes,
-##      in rating points, plus LEVEL_POINTS for each point between the two
-##      peak overalls.
-##   3. Height. Of those, real players within NEAR_CM of the prospect are
-##      compared if there is at least one; otherwise all of them are. Either
-##      way each centimetre of difference adds CM_POINTS to the distance.
+##   2. Level and height together. The prospect's level is his POT; a real
+##      player's is his peak (the higher of his POT and his best rated season
+##      on record). Real players who are BOTH within NEAR_LEVEL of that POT and
+##      within NEAR_CM of his height are compared if there is at least one;
+##      otherwise the whole position is, and step 3 charges the excess.
+##   3. The ratings at max potential. Each man's ratings are lifted evenly
+##      toward his level (as development lifts them) and compared attribute by
+##      attribute, as raw rating points. Durability is left out: it says how
+##      often he plays, not how. An attribute the prospect is strong in (above
+##      his own average) counts for more, so the named player has his
+##      strengths. The distance is that weighted root-mean-square gap, plus
+##      LEVEL_POINTS for each point between POT and peak, plus CM_POINTS for
+##      each centimetre, plus FAR_POINTS for each point beyond NEAR_LEVEL and
+##      each centimetre beyond NEAR_CM.
 ## Lowest distance wins; a tie goes to the lower id, so the answer never moves.
 ##
 ## The real players are the launch lists as loaded (GameDB.plays_like_pool, a
@@ -28,25 +30,33 @@ class_name PlaysLike
 ## likened to a 2026 player and a reload gives the same name. Display only:
 ## nothing in the sim reads it, and every club sees the same line.
 
-## The attributes in the overall rating; temperament is not one of them.
+## The attributes compared: those in the overall rating that say how he plays
+## (not durability, and not temperament, which is not in the rating).
 const KEYS := ["disposal", "contested", "marking", "pressure", "intercept", "carry",
-		"goalkicking", "accuracy", "creating", "ruck", "durability", "star"]
+		"goalkicking", "accuracy", "creating", "ruck", "star"]
 ## "Similar height": real players this close are preferred over all others.
 const NEAR_CM := 4.0
-## "About his level": a real player whose peak overall is this close to the
-## prospect's POT is preferred over all others, of any height.
+## "About his level": real players whose peak overall is this close to the
+## prospect's POT are preferred over all others.
 const NEAR_LEVEL := 5.0
 ## Rating points one centimetre of height difference is worth.
 const CM_POINTS := 0.5
-## Rating points one point of peak-overall difference is worth, on top of the
-## attribute gap (which already carries the level).
-const LEVEL_POINTS := 2.0
+## Rating points one point between the prospect's POT and the real player's
+## peak is worth, on top of the attribute gap (which carries the level too).
+const LEVEL_POINTS := 1.5
+## Extra rating points for each centimetre beyond NEAR_CM and each level point
+## beyond NEAR_LEVEL, when nobody is inside both.
+const FAR_POINTS := 2.0
+## Each point an attribute sits above the prospect's own average adds this much
+## to that attribute's weight in the gap.
+const STRENGTH_WEIGHT := 0.3
 const LABEL := "Plays like: "
 
 
-## A player's ratings at his peak: {id, real_name, generic_name, role, height,
-## peak, vec}. `real` uses a listed player's best season on record as well as
-## his POT; a prospect's peak is his POT. {} when he has no ratings.
+## A player's ratings at his peak: {id, real_name, generic_name, role, club,
+## height, peak, vec}. `peak` is his level: a prospect's POT; for `real`, a
+## listed player's best season on record when that is higher. {} when he has
+## no ratings.
 static func profile(p: Dictionary, real := false) -> Dictionary:
 	var attr: Dictionary = p.get("attr", {})
 	if attr.is_empty():
@@ -65,8 +75,8 @@ static func profile(p: Dictionary, real := false) -> Dictionary:
 		vec.append(float(at_peak[key]))
 	return {"id": str(p.get("id", "")), "real_name": str(p.get("real_name", "")),
 			"generic_name": str(p.get("generic_name", p.get("name", ""))), "role": role,
-			"height": float(p.get("height_cm", 0.0)),
-			"peak": float(Ratings.rate_overall(at_peak, role, 14.0)), "vec": vec}
+			"club": str(p.get("club", "")), "height": float(p.get("height_cm", 0.0)),
+			"peak": peak, "vec": vec}
 
 
 ## The real players a prospect can be likened to: everyone on the launch lists
@@ -84,19 +94,40 @@ static func build_pool(players: Array) -> Array:
 	return out
 
 
-## The distance between two profiles, in rating points (see the header).
-static func distance(a: Dictionary, b: Dictionary) -> float:
+## The gap between two profiles' ratings, in rating points: root-mean-square
+## over KEYS, each attribute weighted by how far above `a`'s own average it is.
+static func rating_gap(a: Dictionary, b: Dictionary) -> float:
 	var va: PackedFloat32Array = a["vec"]
 	var vb: PackedFloat32Array = b["vec"]
+	var mean := 0.0
+	for x in va:
+		mean += x
+	mean /= float(va.size())
 	var sq := 0.0
+	var weights := 0.0
 	for i in range(va.size()):
-		sq += (va[i] - vb[i]) * (va[i] - vb[i])
-	return sqrt(sq / float(va.size())) + LEVEL_POINTS * absf(float(a["peak"]) - float(b["peak"])) \
-			+ CM_POINTS * absf(float(a["height"]) - float(b["height"]))
+		var w := 1.0 + STRENGTH_WEIGHT * maxf(0.0, va[i] - mean)
+		sq += w * (va[i] - vb[i]) * (va[i] - vb[i])
+		weights += w
+	return sqrt(sq / weights)
+
+
+## The distance from prospect `a` to real player `b`, in rating points (see the header).
+static func distance(a: Dictionary, b: Dictionary) -> float:
+	var level := absf(float(a["peak"]) - float(b["peak"]))
+	var cm := absf(float(a["height"]) - float(b["height"]))
+	return rating_gap(a, b) + LEVEL_POINTS * level + CM_POINTS * cm \
+			+ FAR_POINTS * (maxf(0.0, level - NEAR_LEVEL) + maxf(0.0, cm - NEAR_CM))
+
+
+## Whether real player `e` is within NEAR_LEVEL of `me`'s POT and within NEAR_CM of his height.
+static func _inside_both(me: Dictionary, e: Dictionary) -> bool:
+	return absf(float(e["peak"]) - float(me["peak"])) <= NEAR_LEVEL 			and absf(float(e["height"]) - float(me["height"])) <= NEAR_CM
 
 
 ## The real player `p` plays like, as a pool entry; {} when there is nobody to
-## compare him with. Never himself: a real player is not likened to his own name.
+## compare him with. Never himself: his own id, or his own real name at his own
+## height (two different real players can share a name).
 static func nearest(p: Dictionary, pool: Array) -> Dictionary:
 	var me := profile(p)
 	if me.is_empty():
@@ -105,19 +136,17 @@ static func nearest(p: Dictionary, pool: Array) -> Dictionary:
 	var same := []
 	var others := []
 	for e in pool:
-		if str(e["id"]) == str(me["id"]) or (own_name != "" and str(e["real_name"]) == own_name):
+		if str(e["id"]) == str(me["id"]) or (own_name != "" and str(e["real_name"]) == own_name
+				and is_equal_approx(float(e["height"]), float(me["height"]))):
 			continue
 		others.append(e)
 		if str(e["role"]) == str(me["role"]):
 			same.append(e)
 	if same.is_empty():
 		same = others
-	var level := same.filter(func(e): return absf(float(e["peak"]) - float(me["peak"])) <= NEAR_LEVEL)
-	if level.is_empty():
-		level = same
-	var near := level.filter(func(e): return absf(float(e["height"]) - float(me["height"])) <= NEAR_CM)
+	var near := same.filter(func(e): return _inside_both(me, e))
 	if near.is_empty():
-		near = level
+		near = same
 	var best := {}
 	var best_d := INF
 	for e in near:
@@ -128,11 +157,21 @@ static func nearest(p: Dictionary, pool: Array) -> Dictionary:
 	return best
 
 
-## The compared player's name as this career shows names (his real name, or his
-## generated one when the coach chose generated names). "" when there is none.
+## A pool entry's name as this career shows names (his real name, or his
+## generated one when the coach chose generated names). Two real players who
+## share that name are told apart by club: "Bailey Williams (Eagles)".
+static func shown_name(e: Dictionary, pool: Array) -> String:
+	var n := GameDB.player_display_name(e)
+	for other in pool:
+		if str(other["id"]) != str(e["id"]) and GameDB.player_display_name(other) == n:
+			return "%s (%s)" % [n, GameDB.club_short(str(e["club"]))]
+	return n
+
+
+## The compared player's name as this career shows it. "" when there is none.
 static func name_of(p: Dictionary) -> String:
 	var e := nearest(p, GameDB.plays_like_pool)
-	return "" if e.is_empty() else GameDB.player_display_name(e)
+	return "" if e.is_empty() else shown_name(e, GameDB.plays_like_pool)
 
 
 ## "Plays like: Marcus Bontempelli", or "" when there is nobody to compare.

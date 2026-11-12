@@ -82,6 +82,14 @@ func _run() -> void:
 
 	# The National Draft: the board, then a prospect opened.
 	_career(club)
+	# The scouting list (My list > Scouting): the coming class, read every week.
+	var sc: Control = load("res://scenes/ScoutingScene.tscn").instantiate()
+	root.add_child(sc)
+	await _frames(20)
+	_lines(sc, "scouting")
+	await _shot(out + "_scouting.png")
+	sc.queue_free()
+	await _frames(5)
 	_state.season.round_index = _state.season.fixture.size()
 	_state.open_offseason()
 	_state.begin_intake_draft()
@@ -100,8 +108,22 @@ func _run() -> void:
 	await _shot(out + "_national_open.png")
 	ui.call("_close_player")
 
-	# The Rookie Draft: finish the National Draft, the sheet opens on the next screen.
+	# My list, once our first pick is made.
 	var draft = _state.draft
+	var turns := 0
+	while not draft.is_finished() and str(draft.current_club()) != club and turns < 400:
+		turns += 1
+		var ai: Dictionary = draft._best_ai_pick(draft.current_club())
+		if ai.is_empty() or not draft._draft_pick(draft.current_club(), ai):
+			draft._skip_current_pick()
+	if str(draft.current_club()) == club and draft.pick(draft.board("", "", "", "overall", true)[0]):
+		ui.call("_refresh")
+		ui.call("_select_tab", "squad")
+		await _frames(20)
+		_lines(ui.find_child("PickedName_*", true, false).get_parent(), "my list")
+		await _shot(out + "_mylist.png")
+
+	# The Rookie Draft: finish the National Draft, the sheet opens on the next screen.
 	while not draft.is_finished():
 		var c: Dictionary = draft._best_ai_pick(draft.current_club())
 		if c.is_empty() or not draft._draft_pick(draft.current_club(), c):

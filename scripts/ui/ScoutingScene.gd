@@ -135,6 +135,10 @@ func _row(p: Dictionary, reads: Dictionary, fit: Dictionary, entry: Dictionary, 
 	who.add_child(_line("%s  ·  age %d" % [
 			str(UiKit.ROLE_LABEL.get(str(p.get("role", "")), str(p.get("role", "")))),
 			int(float(p.get("age", 18.0)))], UiKit.TEXT))
+	# The real player he plays like at his best (director 2026-11-12): his own line.
+	var like := PlaysLikeLine.make(p)
+	if like != null:
+		who.add_child(like)
 	top.add_child(who)
 	var b := UiKit.btn("Remove" if on_list else ("List full" if is_full else "Add"), UiKit.NAME)
 	b.name = ("ScoutRemove_" if on_list else "ClassAdd_") + id
