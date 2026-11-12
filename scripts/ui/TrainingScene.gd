@@ -50,6 +50,9 @@ var _list_scroll: ScrollContainer
 var _rows: VBoxContainer
 var _detail_scroll: ScrollContainer
 var _overlay: Control
+## Opened from the training report's "Learn ..." button: bring his new-position
+## choices into view once the page is built.
+var _scroll_to_learn := false
 
 
 func _ready() -> void:
@@ -76,7 +79,7 @@ func _ready() -> void:
 		var want := open_player_id
 		open_player_id = ""
 		if not GameState.list_player(want).is_empty():
-			_open_player(want)
+			_open_to_learn(want)
 	if GameState.intro_due("training"):
 		GameState.set_setting("seen_training_intro", true)
 		_show_intro()
@@ -258,7 +261,7 @@ func _summary() -> Control:
 		var rises := GameState.training_rise_lines()
 		if not rises.is_empty():
 			v.add_child(_rise_list(rises))
-		var month := TrainingReportSheet.link(self, _open_player)
+		var month := TrainingReportSheet.link(self, _open_to_learn)
 		if month != null:
 			v.add_child(month)
 		else:
@@ -283,21 +286,70 @@ func _summary() -> Control:
 	return panel
 
 
-## This player's plans as taps: Position plan, his roles' archetypes,
-## then positions he could learn. The chosen one is outlined.
+## This player's plans as taps: Position plan and his roles' archetypes. The
+## chosen one is outlined. Positions he could learn have their own group
+## (_learn_picker).
 func _plan_picker(p: Dictionary, on_pick: Callable) -> Control:
 	# A dual-role player's Position plan trains his first role: say which.
 	var first := str(p.get("role", ""))
 	var dual := str(p.get("role2", "")) != "" and str(p.get("role2", "")) != first
 	var options := []
 	for key in GameState.plans_for(p):
+		if key.begins_with(GameState.LEARN_PREFIX):
+			continue
 		var label := GameState.train_plan_label(key)
 		if key == "position" and dual:
 			label = "By position (%s)" % PlayerProfile.role_word(first).to_lower()
-		elif key.begins_with(GameState.LEARN_PREFIX):
-			label = "Learn " + str(GameState.LEARN_JOBS[key.trim_prefix(GameState.LEARN_PREFIX)]["word"])
 		options.append([key, label])
 	return UiKit.choice_grid("PlayerPlan", options, GameState.plan_for(p), 2, on_pick)
+
+
+## The positions he could learn, under their own heading, so the training
+## report's "Learn key forward" button lands on a "Learn key forward" choice
+## (director, 2026-11-12: "i cant find the button to retrain them"). The rule
+## is the report's (GameState.open_jobs): when the club already runs its two
+## projects, it names who holds them instead of offering a tap. Null when he
+## cannot learn one at all.
+func _learn_picker(p: Dictionary, on_pick: Callable) -> Control:
+	var learning := GameState.project_job(p)
+	var open: Array = GameState.open_jobs(p)
+	if learning == "" and open.is_empty():
+		return null
+	var v := UiKit.vbox(4)
+	v.name = "LearnPosition"
+	v.add_child(UiKit.lbl("Learn a new position", 12, UiKit.MUTED, true))
+	var options := []
+	for key in GameState.plans_for(p):
+		if key.begins_with(GameState.LEARN_PREFIX):
+			options.append([key, "Learn " + str(GameState.LEARN_JOBS[key.trim_prefix(GameState.LEARN_PREFIX)]["word"])])
+	if options.is_empty():
+		var names := []
+		for q in GameState.my_list:
+			if GameState.project_job(q) != "":
+				names.append(GameDB.player_display_name(q))
+		var words := []
+		for j in open:
+			words.append(str(GameState.LEARN_JOBS[j]["word"]))
+		var full := UiKit.lbl("He can learn %s, but two players are already learning a position (%s). He can start when one of them finishes or comes off it." % [
+				" or ".join(words), " and ".join(names)], 13, UiKit.TEXT)
+		full.name = "LearnFull"
+		full.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(full)
+		return v
+	if learning == "":
+		# What a project costs, before the tap that starts it.
+		var key0 := str(options[0][0])
+		var text := GameState.train_plan_description(key0)
+		if options.size() > 1:
+			var word := str(GameState.LEARN_JOBS[key0.trim_prefix(GameState.LEARN_PREFIX)]["word"])
+			text = text.replace("as %s %s instead" % ["an" if word.substr(0, 1) in ["a", "e", "i", "o", "u"] else "a", word],
+					"in the new position instead")
+		var cost := UiKit.lbl(text, 13, UiKit.TEXT)
+		cost.name = "LearnCost"
+		cost.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(cost)
+	v.add_child(UiKit.choice_grid("PlayerLearn", options, GameState.plan_for(p), 2, on_pick))
+	return v
 
 
 func _spend_notice(gains: Dictionary, ov_before: int, ov_after: int) -> String:
@@ -911,6 +963,12 @@ func _senior_game_xp() -> int:
 	return GameState.XP_SENIOR_GAME
 
 
+## From the training report: his page, scrolled to his new-position choices.
+func _open_to_learn(id: String) -> void:
+	_scroll_to_learn = true
+	_open_player(id)
+
+
 func _open_player(id: String) -> void:
 	_selected = id
 	_showing_detail = true
@@ -919,6 +977,14 @@ func _open_player(id: String) -> void:
 	_focus_choice = ""
 	_focus_notice = ""
 	_build()
+
+
+## Scroll the player page so `c` shows (after layout has placed it).
+func _bring_into_view(c: Control) -> void:
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if is_instance_valid(c) and is_instance_valid(_detail_scroll):
+		_detail_scroll.ensure_control_visible(c)
 
 
 func _detail_panel() -> Control:
@@ -994,13 +1060,20 @@ func _detail_panel() -> Control:
 	if working != "":
 		fv.add_child(UiKit.lbl("Working on: " + working, 12, UiKit.MUTED))
 	var pid := _selected
-	var pick := _plan_picker(p, func(key: String):
+	var on_pick := func(key: String):
 		var q := GameState.list_player(pid)
 		var before := int(q.get("overall", 0))
 		var gains := GameState.set_player_plan(pid, key)
 		_notice = _spend_notice(gains, before, int(GameState.list_player(pid).get("overall", 0)))
-		_build())
-	fv.add_child(pick)
+		_build()
+	fv.add_child(_plan_picker(p, on_pick))
+	var learn := _learn_picker(p, on_pick)
+	if learn != null:
+		fv.add_child(UiKit.spacer(6))
+		fv.add_child(learn)
+		if _scroll_to_learn:
+			_scroll_to_learn = false
+			_bring_into_view.call_deferred(learn)
 	if _notice != "":
 		fv.add_child(UiKit.lbl(_notice, UiKit.SECONDARY, UiKit.GOOD, true))
 	body.add_child(_stat_focus_panel(p))

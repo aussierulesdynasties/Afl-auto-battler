@@ -2742,7 +2742,11 @@ func _test_menu_and_career() -> void:
 	_check(picker != null and current_scene.find_children("*", "OptionButton", true, false).is_empty(),
 			"Plans are taps, not a dropdown")
 	var plan_btns := picker.find_children("PlayerPlan_*", "Button", false, false) if picker != null else []
-	_check(plan_btns.size() == _state.plans_for(first).size(), "Every plan he can follow is shown (%d)" % plan_btns.size())
+	# Positions he could learn sit in their own group under the plans.
+	var learn_grid: Node = current_scene.find_child("PlayerLearn", true, false)
+	var learn_btns := learn_grid.find_children("PlayerLearn_*", "Button", false, false) if learn_grid != null else []
+	_check(plan_btns.size() + learn_btns.size() == _state.plans_for(first).size(),
+			"Every plan he can follow is shown (%d)" % (plan_btns.size() + learn_btns.size()))
 	var small_plan := false
 	for b in plan_btns:
 		if b.size.y < 44:

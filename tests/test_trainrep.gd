@@ -68,6 +68,7 @@ func run(tree: SceneTree) -> void:
 		_tree.root.size = size
 		await _settle()
 		await _t("_test_taps", [size])
+		await _t("_test_retrain_full", [size])
 		await _t("_test_after_results", [size])
 		await _t("_test_after_event_card", [size])
 		await _t("_test_after_results_back", [size])
@@ -301,26 +302,50 @@ func _test_taps(size: Vector2i) -> void:
 	_check(entries.is_empty() or sheet != null, "%s: the report reopens for the retraining entry" % tag)
 	if not entries.is_empty() and sheet != null:
 		var id0 := str(entries[0]["id"])
+		var key0 := str(entries[0]["keys"][0])
+		var word0 := str(entries[0]["jobs"][0])
 		var row: Control = sheet.find_child("Retrain_" + id0, true, false)
-		var rb: Control = row.find_child("Name_" + id0, true, false) if row != null else null
-		_check(rb != null, "%s: the retraining entry is there" % tag)
+		# Director, 2026-11-12: "i cant find the button to retrain them". Each
+		# position he could learn is a button on the report, worded as the
+		# choice it leads to.
+		var nb: Control = row.find_child("Name_" + id0, true, false) if row != null else null
+		var rb: Button = row.find_child("LearnGo_" + key0, true, false) as Button if row != null else null
+		_check(rb != null, "%s: the report has a Learn button beside the player who can learn a position" % tag)
+		_check(rb == null or rb.text.begins_with("Learn " + word0), "%s: it reads \"Learn %s\"" % [tag, word0])
+		_check(rb == null or rb.size.y >= 44, "%s: it is a thumb tall" % tag)
+		var all_have := true
+		for e in entries:
+			var er: Node = sheet.find_child("Retrain_" + str(e["id"]), true, false)
+			for k in e["keys"]:
+				if er == null or er.find_child("LearnGo_" + str(k), true, false) == null:
+					all_have = false
+		_check(all_have, "%s: every player the report names has a Learn button for every position it names" % tag)
+		if nb != null:
+			_check(await Tap.tap(nb) == "", "%s: a finger taps his name" % tag)
+			await _settle(4)
+			_check(hub.find_child("PlayerProfile", true, false) != null, "%s: his name opens his profile, as every name on the report does" % tag)
+			Router.handle_back()
+			await _settle(3)
 		if rb != null:
-			var scrolls := sheet.find_children("*", "ScrollContainer", true, false)
-			if not scrolls.is_empty():
-				(scrolls[0] as ScrollContainer).ensure_control_visible(rb)
-			await _settle(2)
-			_check(await Tap.tap(rb) == "", "%s: a finger taps the retraining entry" % tag)
+			_check(await Tap.tap(rb) == "", "%s: a finger taps Learn %s" % [tag, word0])
 			for i in range(60):
 				await _tree.process_frame
 			await _settle(6)
+			var tr := _tree.current_scene
 			_check(Router.current() == "training", "%s: it opens Training" % tag)
-			_check(_tree.current_scene.find_child("PlayerPlan", true, false) != null, "%s: on his plan choices" % tag)
-			var want := "Learn " + str(entries[0]["jobs"][0])
-			var has := false
-			for b in _tree.current_scene.find_children("*", "Button", true, false):
-				if (b as Button).text == want:
-					has = true
-			_check(has, "%s: his \"%s\" choice is there" % [tag, want])
+			var grid: Node = tr.find_child("PlayerLearn", true, false)
+			_check(grid != null, "%s: on his new-position choices" % tag)
+			var learn_b: Button = grid.find_child("PlayerLearn_" + GameState.LEARN_PREFIX + key0, false, false) as Button if grid != null else null
+			_check(learn_b != null and learn_b.text == "Learn " + word0, "%s: his \"Learn %s\" choice is there" % [tag, word0])
+			var cost: Control = tr.find_child("LearnCost", true, false)
+			_check(cost != null, "%s: what learning costs is said before the tap" % tag)
+			if learn_b != null:
+				var r := learn_b.get_global_rect()
+				_check(r.position.y >= 0.0 and r.end.y <= float(size.y) + 0.5, "%s: the choice is on screen without scrolling (%.0f-%.0f)" % [tag, r.position.y, r.end.y])
+				_check(await Tap.tap(learn_b) == "", "%s: a finger taps Learn %s" % [tag, word0])
+				await _settle(4)
+				_check(GameState.project_job(GameState.list_player(id0)) == key0, "%s: he starts learning %s" % [tag, word0])
+				_check(str(GameState.list_player(id0).get("train_plan", "")) == GameState.LEARN_PREFIX + key0, "%s: and it is his plan" % tag)
 	# Training keeps the read report: Back to the list, then its line reopens it.
 	if Router.current() != "training":
 		Router.go("training")
@@ -339,6 +364,59 @@ func _test_taps(size: Vector2i) -> void:
 		Router.handle_back()
 		await _settle(3)
 		_check(_tree.current_scene.find_child("TrainingReportSheet", true, false) == null, "%s: Back closes it in Training" % tag)
+
+
+## The club already runs its two projects: the report still names who could
+## learn, and his Training page says the same, naming who holds the places,
+## instead of showing nothing (the report said yes, Training had no choice).
+func _test_retrain_full(size: Vector2i) -> void:
+	var tag := "%dx%d full" % [size.x, size.y]
+	_fresh()
+	_boost_potential(4)
+	_rounds(4)
+	GameState.skip_media_conference()
+	var rt := TrainingReport.retrain_list(GameState, GameState.training_report)
+	var entries: Array = rt["entries"]
+	_check(entries.size() >= 3, "%s: three or more can learn (%d)" % [tag, entries.size()])
+	if entries.size() < 3:
+		return
+	for i in range(2):
+		var e: Dictionary = entries[entries.size() - 1 - i]
+		GameState.set_player_plan(str(e["id"]), GameState.LEARN_PREFIX + str(e["keys"][0]))
+	_check(GameState.active_projects() == GameState.PROJECT_MAX, "%s: the club runs two projects" % tag)
+	rt = TrainingReport.retrain_list(GameState, GameState.training_report)
+	entries = rt["entries"]
+	_check(bool(rt["full"]) and not entries.is_empty(), "%s: the report says the club is full and still names who could learn" % tag)
+	if entries.is_empty():
+		return
+	GameState.training_report["dismissed"] = false
+	var hub := await _hub()
+	var sheet := hub.find_child("TrainingReportSheet", true, false)
+	_check(sheet != null and sheet.find_child("ReportRetrainFull", true, false) != null, "%s: the report says two are already learning" % tag)
+	if sheet == null:
+		return
+	var id0 := str(entries[0]["id"])
+	var rb: Control = sheet.find_child("LearnGo_" + str(entries[0]["keys"][0]), true, false)
+	var row: Node = sheet.find_child("Retrain_" + id0, true, false)
+	if row != null:
+		rb = row.find_child("LearnGo_" + str(entries[0]["keys"][0]), true, false)
+	_check(rb != null and await Tap.tap(rb) == "", "%s: a finger taps his Learn button" % tag)
+	for i in range(60):
+		await _tree.process_frame
+	await _settle(6)
+	var tr := _tree.current_scene
+	_check(Router.current() == "training", "%s: it opens Training" % tag)
+	var full: Label = tr.find_child("LearnFull", true, false) as Label
+	_check(full != null, "%s: his page says why he cannot start yet" % tag)
+	_check(tr.find_child("PlayerLearn", true, false) == null, "%s: and offers no choice it would refuse" % tag)
+	if full != null:
+		var named := 0
+		for q in GameState.my_list:
+			if GameState.project_job(q) != "" and full.text.contains(GameDB.player_display_name(q)):
+				named += 1
+		_check(named == 2, "%s: it names the two learning now (%s)" % [tag, full.text])
+		var r := full.get_global_rect()
+		_check(r.position.y >= 0.0 and r.end.y <= float(size.y) + 0.5, "%s: on screen without scrolling" % tag)
 
 
 ## The report lands with the round's results: the results come first, the
