@@ -4,34 +4,67 @@ extends RefCounted
 ## "wet", "windy" or "hot"). Presentation only: the look follows the weather and changes
 ## nothing. Restrained: nothing here covers the ball or a name.
 ##   wet    darker, sheened turf (the lights in it), a cooler overcast, light rain;
-##   windy  flags on the stand roofs streaming, banners and pennants pulling;
-##   hot    drier, yellower turf, firmer shadows, a warm haze over the far side.
+##   windy  flags on the stand roofs and in the crowd streaming toward the end the
+##          breeze blows to, an arrow on the big screen (director, 2026-11-12: no lines
+##          drawn over the grass);
+##   hot    by day: harsh light, dry yellowed turf with bleached patches, a tight dark
+##          shadow under every player, a pale washed-out sky and a shimmer on the horizon.
 ## Anything else (perfect, unknown or none) draws as before.
+## The time of day (VignetteKickoff: day, twilight or night) sets the light all of this is
+## seen in; with no slot given, every function here answers for a night game, exactly as
+## before there were day games.
 
 const WET := "wet"
 const WINDY := "windy"
 const HOT := "hot"
 
 
-## The turf's two mown colours, by weather.
-static func grass(weather: String, base: Array) -> Array:
+## Turf under daylight: brighter and a touch warmer than under the lights.
+const DAY_TURF := Color(1.42, 1.3, 1.22)
+## Dry straw: what a hot day's turf leans to under lights, and by day.
+const STRAW_NIGHT := Color(0.46, 0.46, 0.22)
+const STRAW_DAY := Color(0.7, 0.64, 0.32)
+
+
+## A turf colour as the slot's light shows it.
+static func daylit(c: Color, slot: String) -> Color:
+	var d := VignetteKickoff.daylight(slot)
+	if d <= 0.0:
+		return c
+	return c.lerp(Color(minf(c.r * DAY_TURF.r, 1.0), minf(c.g * DAY_TURF.g, 1.0), minf(c.b * DAY_TURF.b, 1.0), c.a), d)
+
+
+## The turf's mown colours, by weather and time of day.
+static func grass(weather: String, base: Array, slot := VignetteKickoff.NIGHT) -> Array:
+	var d := VignetteKickoff.daylight(slot)
+	var lit := base.map(func(c: Color) -> Color: return daylit(c, slot))
 	match weather:
 		WET:
-			return base.map(func(c: Color) -> Color: return Color(c.r * 0.62, c.g * 0.7, c.b * 0.82))
+			return lit.map(func(c: Color) -> Color: return Color(c.r * 0.62, c.g * 0.7, c.b * 0.82))
 		HOT:
-			return base.map(func(c: Color) -> Color: return c.lerp(Color(0.46, 0.46, 0.22), 0.42))
-	return base
+			return lit.map(func(c: Color) -> Color:
+				return c.lerp(STRAW_NIGHT.lerp(STRAW_DAY, d), lerpf(0.42, 0.62, d)))
+	return lit
 
 
-## How strongly a figure's shadow falls (alpha), by weather: overcast softens it,
-## a hard sun firms it.
+## How strongly a figure's shadow falls (alpha), by weather and the time of day being
+## drawn: overcast softens it, the sun firms it, a hot day's sun makes it a dark pool.
 static func shadow_alpha(weather: String) -> float:
+	var d := VignetteKickoff.daylight(VignetteGround.slot_now(weather))
 	match weather:
 		WET:
 			return 0.18
 		HOT:
-			return 0.58
-	return 0.32
+			return lerpf(0.58, 0.86, d)
+	return lerpf(0.32, 0.44, d)
+
+
+## How wide a figure's shadow is against its usual size: on a hot day the sun is high and
+## the shadow pulls in tight under the boots.
+static func shadow_tight(weather: String) -> float:
+	if weather != HOT:
+		return 1.0
+	return lerpf(1.0, 0.8, VignetteKickoff.daylight(VignetteGround.slot_now(weather)))
 
 
 ## How hard the wind pulls flags and banners: 0 calm, 1 a strong breeze.
@@ -40,21 +73,46 @@ static func wind(weather: String) -> float:
 
 
 ## The haze over the far side: its colour and strength.
-static func haze(weather: String) -> Color:
+static func haze(weather: String, slot := VignetteKickoff.NIGHT) -> Color:
+	var d := VignetteKickoff.daylight(slot)
 	match weather:
 		HOT:
-			return Color(1.0, 0.86, 0.6, 0.32)
+			return Color(1.0, 0.86, 0.6, 0.32).lerp(Color(1.0, 0.95, 0.8, 0.5), d)
 		WET:
-			return Color(0.74, 0.8, 0.9, 0.26)
-	return Color(0.85, 0.88, 1.0, 0.13)
+			return Color(0.74, 0.8, 0.9, 0.26).lerp(Color(0.8, 0.83, 0.87, 0.34), d)
+	return Color(0.85, 0.88, 1.0, 0.13).lerp(Color(0.9, 0.95, 1.0, 0.2), d)
+
+
+## The sky behind the stands by weather and time of day: three colours (the top of the
+## picture, part way down, the horizon). Empty at night: the night sky is one flat dark
+## colour (VignetteGround.SKY).
+static func sky(weather: String, slot: String) -> Array:
+	match slot:
+		VignetteKickoff.DAY:
+			match weather:
+				WET:
+					return [Color(0.42, 0.46, 0.51), Color(0.55, 0.59, 0.63), Color(0.69, 0.71, 0.73)]
+				HOT:
+					return [Color(0.5, 0.68, 0.9), Color(0.78, 0.86, 0.93), Color(0.99, 0.96, 0.86)]
+			return [Color(0.24, 0.47, 0.82), Color(0.47, 0.67, 0.9), Color(0.78, 0.88, 0.96)]
+		VignetteKickoff.TWILIGHT:
+			match weather:
+				WET:
+					return [Color(0.13, 0.15, 0.21), Color(0.25, 0.25, 0.32), Color(0.45, 0.4, 0.41)]
+				HOT:
+					return [Color(0.16, 0.16, 0.36), Color(0.62, 0.34, 0.4), Color(1.0, 0.62, 0.26)]
+			return [Color(0.08, 0.11, 0.28), Color(0.36, 0.27, 0.45), Color(0.96, 0.56, 0.32)]
+	return []
 
 
 ## Over the scene, under the names and the bars, at time t: wet, an overcast and rain
 ## falling across it (streaks thin enough that the ball and the players read through
-## them). rect: the screen to cover. (The wind is drawn on the ground: draw_wind.)
+## them). rect: the screen to cover. Under Settings > Reduced motion the rain holds still.
 static func draw_air(ci: CanvasItem, rect: Rect2, t: float, weather: String) -> void:
 	if weather != WET:
 		return
+	if Feel.reduced:
+		t = 0.0
 	ci.draw_rect(rect, Color(0.05, 0.08, 0.12, 0.13), true)       # overcast
 	var n := int(clampf(rect.size.x * rect.size.y / 1900.0, 40.0, 420.0))
 	var lean := Vector2(-0.18, 1.0).normalized()                  # it falls slanting a touch
@@ -72,54 +130,41 @@ static func draw_air(ci: CanvasItem, rect: Rect2, t: float, weather: String) -> 
 
 
 ## Which way the wind blows, oval metres: down the ground toward the +y end (the end the
-## scenes attack), a little across it.
+## scenes attack), a little across it. wind_world turns it for the end the breeze really
+## blows to.
 const WIND_DIR := Vector2(0.25, 1.0)
 
 
-## Wind lines over the ground, seen through cam at time t: long faint wisps a few metres
-## up, streaming down the ground toward the windy end and shrinking into the distance
-## with it. Drawn with the ground, so the players, the ball and the names stay in front.
-static func draw_wind(ci: CanvasItem, cam: VignetteGround.Cam, t: float) -> void:
-	# Worked in the scene's own coordinates (the camera's), the wind's direction carried over.
-	var dir := cam.to_scene.basis_xform(WIND_DIR).normalized()
-	var across := Vector2(dir.y, -dir.x)
-	var right := Vector2(cam.fwd.y, -cam.fwd.x)
-	for i in range(28):
-		var h := hash(i * 4507 + 29)
-		var ahead := 7.0 + float((h / 1013) % 991) / 991.0 * 38.0    # metres in front of the camera
-		var side := (float(h % 1013) / 1013.0 - 0.5) * ahead * 0.9   # within the view
-		var up := 1.5 + float((h / 7) % 83) / 83.0 * 5.0             # in the air, not on the turf
-		var speed := 12.0 + float(h % 7)                             # metres a second
-		var length := 4.0 + float(h % 5)
-		var span := 80.0
-		var run := fposmod(t * speed + float(h % 677), span) - span * 0.5
-		var start := cam.pos + cam.fwd * ahead + right * side + dir * run
-		var curl := 1.0 if h % 3 == 0 else 0.0                       # now and then a wisp curls over
-		var pts := PackedVector2Array()
-		var cols := PackedColorArray()
-		var ok := true
-		for k in range(17):
-			var u := float(k) / 16.0
-			# An S of a wisp, its tail lifting; a curl turns the head over on itself.
-			var off := sin(u * TAU * 0.9 + t * 3.0 + float(i)) * 0.7
-			var lift := u * u * 0.8
-			var along := length * u
-			if curl > 0.0 and u > 0.7:
-				var c := (u - 0.7) / 0.3 * PI * 1.4
-				along = length * 0.7 + sin(c) * 0.9
-				lift += (1.0 - cos(c)) * 0.9
-			var s3 := cam.project(start + dir * along + across * off, up + lift)
-			if s3.z <= 0.0:
-				ok = false
-				break
-			pts.append(Vector2(s3.x, s3.y))
-			cols.append(Color(0.94, 0.96, 1.0, 0.24 * sin(u * PI)))           # fades in and out
-		if ok:
-			ci.draw_polyline_colors(pts, cols, 1.3, true)
+## The wind's direction on the ground (oval metres) when the breeze blows to an end:
+## +1 the +y end, -1 the other. A scene passes the end as its board's "wind".
+static func wind_world(end: int) -> Vector2:
+	return Vector2(WIND_DIR.x, WIND_DIR.y * (-1.0 if end < 0 else 1.0)).normalized()
 
 
-## The wind on the flat pitch view: the same wisps from above, streaming toward one end
-## (+x on the view), under the players.
+## The end the breeze blows to, from a scene's board ({"wind": +1 or -1}); +1 when the
+## scene does not say.
+static func wind_end(board: Dictionary) -> int:
+	return -1 if int(board.get("wind", 1)) < 0 else 1
+
+
+## How a flag at oval point p, h metres up, streams on screen in a wind blowing along
+## world (oval metres): x and y the direction on screen (a unit vector) and z how much of
+## its length shows (1 side on, less as the wind blows along the line of sight).
+static func flag_stream(cam: VignetteGround.Cam, p: Vector2, h: float, world: Vector2) -> Vector3:
+	var a := cam.oval(p, h)
+	var b := cam.oval(p + world * 3.0, h)
+	if a.z <= 0.0 or b.z <= 0.0:
+		return Vector3(1.0, 0.0, 1.0)
+	var d := Vector2(b.x - a.x, b.y - a.y)
+	var seen := d.length()
+	if seen < 0.001:
+		return Vector3(1.0, 0.0, 0.3)
+	return Vector3(d.x / seen, d.y / seen, clampf(seen / (3.0 * a.z), 0.3, 1.0))
+
+
+## Wind lines on the flat pitch view. No longer part of the look (director, 2026-11-12:
+## the wind shows in flags, the scoreboard arrow and the ball's drift, never as lines on
+## the grass); kept only until the pitch view stops calling it.
 static func draw_wind_flat(ci: CanvasItem, rect: Rect2, t: float) -> void:
 	for i in range(14):
 		var h := hash(i * 3313 + 7)
@@ -215,8 +260,12 @@ static func draw_sheen(ci: CanvasItem, cam: VignetteGround.Cam, towers: Array, a
 ## A flag on a pole in a club's colours (the top half colour, the bottom half second),
 ## streaming with the wind at time t: pole foot at foot, pole height pole_h px, flag w x h
 ## px, phase so a crowd's flags don't wave as one. wind_strength 0 hangs it, 1 streams it.
+## stream: which way it streams on screen and how much of its length shows (flag_stream);
+## left out, straight to the right at full length.
 static func draw_flag(ci: CanvasItem, foot: Vector2, pole_h: float, w: float, h: float, colour: Color,
-		t: float, phase: float, wind_strength: float, second := Color(1, 1, 1)) -> void:
+		t: float, phase: float, wind_strength: float, second := Color(1, 1, 1),
+		stream := Vector3(1.0, 0.0, 1.0)) -> void:
+	var dir := Vector2(stream.x, stream.y)
 	var top := foot - Vector2(0, pole_h)
 	ci.draw_line(foot, top, Color(0.8, 0.8, 0.82), maxf(1.0, w * 0.045), true)
 	var steps := 12
@@ -228,8 +277,9 @@ static func draw_flag(ci: CanvasItem, foot: Vector2, pole_h: float, w: float, h:
 		# A wave runs out from the pole; the free end flicks most.
 		var ripple := sin(u * 7.0 - t * 12.0 + phase) * h * 0.18 * u * wind_strength
 		var droop := (1.0 - wind_strength) * u * h * 0.9
-		var x := top.x + u * w * lerpf(0.35, 1.0, wind_strength) * (1.0 - 0.06 * sin(t * 7.0 + phase) * u)
-		var y := top.y + ripple + droop
+		var out := dir * (u * w * stream.z * lerpf(0.35, 1.0, wind_strength) * (1.0 - 0.06 * sin(t * 7.0 + phase) * u))
+		var x := top.x + out.x
+		var y := top.y + out.y + ripple + droop
 		upper.append(Vector2(x, y + u * h * 0.06))
 		middle.append(Vector2(x, y + h * 0.5))
 		lower.append(Vector2(x, y + h - u * h * 0.06 - droop * 0.6))
