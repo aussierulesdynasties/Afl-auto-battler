@@ -1,6 +1,6 @@
 # Era dramas and year events, 1990-2026
 
-`dramas.csv`: 86 events. Each row has the season it fires (`season`), the years it spans, the clubs, what happened, the real penalty, its kind, whether it is about personal conduct, a game hook, and a source. Text marked UNCERTAIN is unverified, and so are sources that disagree with each other. Figures come from web sources (Wikipedia, afl.com.au, club sites, AAP, SEN), not primary AFL records.
+`dramas.csv`: 97 events, at least one for every season 1990-2026. Each row has the season it fires (`season`), the years it spans, the clubs, what happened, the real penalty, its kind, whether it is about personal conduct, a game hook, and a source. Text marked UNCERTAIN is unverified, and so are sources that disagree with each other. Figures come from web sources (Wikipedia, afl.com.au, club sites, AAP, SEN), not primary AFL records.
 
 How the rulings apply:
 - Every controversy (cap breaches, drugs, tanking, betting, conduct) sits behind the new-game switch "Controversies: on or off". Penalties land as they did in history.
@@ -12,21 +12,23 @@ How the rulings apply:
 
 | Decade | Events |
 | --- | --- |
-| 1990s | 22 |
-| 2000s | 13 |
+| 1990s | 28 |
+| 2000s | 18 |
 | 2010s | 28 |
 | 2020s (to 2026) | 23 |
 
-By kind: stadium 13, coach/board 11, expansion 8, club survival 7, racism and vilification 7, salary cap and draft 7, drugs 7, relocation and sold home games 6, rules and broadcasting 6, player pay 4, club culture 3, integrity and betting 2, COVID 2, governance 2, concussion 1.
+By kind: coach/board 15, stadium 13, expansion 8, club survival 8, salary cap and draft 8, relocation and sold home games 8, rules and broadcasting 8, racism and vilification 7, drugs 7, player pay 4, club culture 3, governance 3, integrity and betting 2, COVID 2, concussion 1.
 
 Docklands has a news story at each name: Colonial Stadium (2000), Telstra Dome (2002), Etihad Stadium (2009), Marvel Stadium (2018).
 
-## Years with no event, and why
+## The four seasons filled on 2026-11-13
 
-- **1994**: nothing season-specific was found or verified. Fremantle's licence (awarded around then) fires as its 1995 entry instead.
-- **1998**: the only candidate is the AFLPA reaching 100% membership, which is not an event a coach acts on.
-- **2004**: no verified off-field drama. A 2004 pre-season sexual assault allegation was left out on purpose (see gaps).
-- **2006**: the Seven/Ten rights deal for 2007-11 was not verified. Hawthorn's Tasmania deal already fires in 2001.
+1994, 1998, 2004 and 2006 had no event; eleven were added (director 2026-11-13: "i need that research for every year 1990-2026"):
+- **1994**: the final eight; Fitzroy moves to the Western Oval; the Melbourne-Fitzroy merger that fell over.
+- **1998**: the six-club cap sweep (UNCERTAIN: one source chain); Brisbane's mid-season coach sacking; Collingwood's new president.
+- **2004**: Hawthorn's "promised a flag" coach exit; the Bulldogs' first home game in Darwin. Thinnest year: no verified cap, merger or board drama. Left out: Melbourne's $30,000 paperwork fine (too small), the Bulldogs' 2004 coach sacking (a second coach row; available), Richmond's 2004 coach exit (sensitive: his later death).
+- **2006**: Sirengate (St Kilda v Fremantle, result overturned); Seven and Ten win the 2007-11 rights (now verified); St Kilda's coach exit after the elimination final.
+- Also available if wanted: Footscray's coach sacked two rounds into 1994; St Kilda's coach sacked at the end of 1998.
 
 ## The strongest twenty for game events
 
