@@ -43,6 +43,7 @@ var upright := false:
 			upright = v
 			_nudge = PackedVector2Array()
 			_disc = PackedVector2Array()
+			_disc_k = PackedFloat32Array()
 			_cam = _clamp_cam(_cam)
 			queue_redraw()
 
@@ -118,6 +119,31 @@ const RING_COLOUR := Color(0.945, 0.933, 0.902)
 const TOKEN_MIN := 13.5
 const DISC_SHARE := 0.045
 const NUMBER_MAX := 22.0
+## Shrink in packs (director, 2026-11-12: "Shrink in packs"; the gain "big discs
+## most of the time", the cost "sizes change during play, and numbers in a pack
+## are small"). A disc is the full size above in the open and beside one other
+## player: a pair is drawn apart, as it always was. In a pack it is drawn smaller:
+## its radius is PACK_FIT of the distance to the second-nearest other player on
+## the screen (pack_radius), so it starts to shrink once two players are within a
+## disc and a half's radius of it, and it is never under the old size (a radius of
+## SMALL_MIN px on a phone, SMALL_SHARE of the oval's half-width where the ground
+## is bigger: two thirds of the full size), which it reaches with two players
+## within a full radius. One function for both sides, read from where the players
+## are, not from where the discs are drawn. The size eases: it crosses the whole
+## range, full to small or back, in no less than RESIZE_SECS of the match's own
+## seconds, the clock the draw-apart moves on (at 1x on a phone, 0.62 px in a 30th
+## of a second), with reduced motion as without (a size that jumped would flicker).
+## Measured on a phone over five games (tests/test_match_motion.gd): 57% of
+## disc-frames at the full size. The measured alternatives: sized from the nearest
+## player so a pair just touches, 19%; from the nearest, two thirds of the gap,
+## 31%; from the second-nearest, half the gap, 42%; three quarters of it, 63%,
+## with twice the frames under the visibility floor.
+const PACK_FIT := 2.0 / 3.0
+const SMALL_MIN := 9.0
+const SMALL_SHARE := 0.030
+const RESIZE_SECS := 0.4
+## How far each disc is between the small size (0) and the full size (1), as drawn.
+var _disc_k := PackedFloat32Array()
 ## The ball's last few positions on the turf, for a short trail behind it.
 const TRAIL_N := 14
 var _trail: Array = []
@@ -139,7 +165,8 @@ const DISC_CLASH := 40.0
 ## by NUDGE_EASE and is pushed out again only as far as it must be, starting from
 ## where the discs were drawn last, so a pair keeps its sides and does not jitter.
 ## The view stays truthful: a disc is never drawn more than NUDGE_CAP (in disc
-## diameters: half a disc's width) from where its player is, so in a thick pack
+## diameters at the small size, small_radius: half the old disc's width, 4.3 m on
+## a phone, whatever size the disc is drawn at) from where its player is, so in a thick pack
 ## discs still overlap, and the draw order keeps the ball carrier and the two
 ## opponents nearest him on top (lead, 2026-10-14, provisional until the director
 ## looks). nudge_full lifts the cap, for the comparison capture only: every disc
@@ -435,12 +462,11 @@ func _gui_input(e: InputEvent) -> void:
 func marked_at(p: Vector2) -> Dictionary:
 	if marks.is_empty() or director == null:
 		return {}
-	var tr := token_radius()
 	var id := disc_at_point(p)
 	if id >= 0:
 		var pid2 := str(director.tokens[id].get("pid", ""))
 		if marks.has(pid2):
-			return {"pid": pid2, "words": PlayerMarks.words(marks[pid2], false), "at": _disc_at(id), "r": tr}
+			return {"pid": pid2, "words": PlayerMarks.words(marks[pid2], false), "at": _disc_at(id), "r": disc_radius(id)}
 	return {}
 
 
@@ -1123,7 +1149,7 @@ func _draw() -> void:
 	var act := director.actor
 	if act >= 0 and act < director.tokens.size():
 		var p := _disc_at(act)
-		draw_arc(p, tr * 1.9, 0, TAU, 28, Color(1, 1, 0.55, 0.95), 2.0, antialias)
+		draw_arc(p, disc_radius(act) * 1.9, 0, TAU, 28, Color(1, 1, 0.55, 0.95), 2.0, antialias)
 
 	_draw_ball(tr, s)
 
@@ -1554,7 +1580,7 @@ func _draw_rings(tr: float) -> void:
 		var p := _disc_at(int(t["id"]))
 		if p.x < -tr * 3.0 or p.y < -tr * 3.0 or p.x > size.x + tr * 3.0 or p.y > size.y + tr * 3.0:
 			continue
-		draw_arc(p, tr * 1.5, 0, TAU, 28, Color(RING_COLOUR, 0.9), 1.6, antialias)
+		draw_arc(p, disc_radius(int(t["id"])) * 1.5, 0, TAU, 28, Color(RING_COLOUR, 0.9), 1.6, antialias)
 
 
 ## The name over a player, in the type the team shape uses: bold, outlined so it
@@ -1580,9 +1606,11 @@ static func role_label_size(tr: float) -> int:
 	return clampi(int(tr * 0.85), UiKit.FINE, 16)
 
 
-## The jumper number's size on a disc of radius tr: it grows with the disc.
+## The jumper number's size on a disc of radius tr: it grows and shrinks with the
+## disc, and is never under the 13 px floor (row T3.R9), which is what the
+## smallest disc in a pack carries on a phone (14 px on a full one).
 static func number_size(tr: float) -> int:
-	return int(clampf(tr * 1.1, 9.0, NUMBER_MAX))
+	return int(clampf(tr * 1.1, float(UiKit.FINE), NUMBER_MAX))
 
 
 ## Where each surname goes: [{id, text, origin, rect}]. Under its disc first;
@@ -1604,6 +1632,7 @@ func role_label_layout(tr: float, fs: int) -> Array:
 		discs.append(_disc_at(i))
 	var placed := []
 	var out := []
+	var full := tr
 	for id in ids:
 		if id < 0 or id >= director.tokens.size() or int(id) == captioned:
 			continue
@@ -1618,6 +1647,8 @@ func role_label_layout(tr: float, fs: int) -> Array:
 		if p.x < -width or p.y < 0.0 or p.x > size.x + width or p.y > size.y + float(fs) * 2.0:
 			continue
 		var h := float(fs)
+		# Beside the disc as it is drawn (smaller in a pack).
+		tr = minf(full, disc_radius(id))
 		# Only places beside the disc: under, over, either side (a name far
 		# from its disc names the wrong player).
 		var spots := [
@@ -1639,7 +1670,7 @@ func role_label_layout(tr: float, fs: int) -> Array:
 				var origin: Vector2 = p + off
 				origin.x = clampf(origin.x, 2.0, maxf(2.0, size.x - width - 2.0))
 				var rect := Rect2(origin + Vector2(-1, -h), Vector2(width + 2.0, h + 3.0))
-				if _label_clear(rect, id, placed, discs, tr, strict):
+				if _label_clear(rect, id, placed, discs, full, strict):
 					chosen = [origin, rect]
 					break
 			if chosen != null:
@@ -1681,7 +1712,7 @@ func _label_clear(rect: Rect2, id: int, placed: Array, discs: Array, tr: float, 
 		var c: Vector2 = discs[i]
 		var nx := clampf(c.x, rect.position.x, rect.end.x)
 		var ny := clampf(c.y, rect.position.y, rect.end.y)
-		if Vector2(nx, ny).distance_to(c) < tr:
+		if Vector2(nx, ny).distance_to(c) < minf(tr, disc_radius(i)):
 			return false
 	return true
 
@@ -1829,10 +1860,33 @@ func flash_room(at: Vector2, tr: float) -> float:
 	return maxf(tr, room)
 
 
-## The radius a player's disc is drawn at, in pixels.
+## The radius of a player's disc at its full size, in pixels: what a disc that
+## overlaps no other is drawn at. disc_radius is what each one is drawn at now.
 func token_radius() -> float:
 	var r := pitch_rect()
 	return maxf(TOKEN_MIN, minf(r.size.x, r.size.y) * 0.5 * DISC_SHARE * sqrt(_zoom))
+
+
+## The smallest radius a disc is drawn at, in a pack: the old size.
+func small_radius() -> float:
+	var r := pitch_rect()
+	return maxf(SMALL_MIN, minf(r.size.x, r.size.y) * 0.5 * SMALL_SHARE * sqrt(_zoom))
+
+
+## The radius a disc is drawn toward when the second-nearest other player is
+## `gap` px from his on the screen: PACK_FIT of the gap, between the small and the
+## full size. The same for both sides.
+static func pack_radius(gap: float, small: float, full: float) -> float:
+	return clampf(gap * PACK_FIT, small, full)
+
+
+## The radius token `id`'s disc is drawn at now, in pixels (the last layout's):
+## the one size the drawing, the tap, the draw-apart, the rings and marks round
+## a disc and the tests all read.
+func disc_radius(id: int) -> float:
+	if id >= 0 and id < _disc_k.size():
+		return lerpf(small_radius(), token_radius(), _disc_k[id])
+	return token_radius()
 
 
 ## Where token `id` is drawn: his place on the ground, nudged clear of a disc
@@ -1849,12 +1903,16 @@ func _disc_at(id: int) -> Vector2:
 ## part. The match's own positions are never touched.
 func _layout_discs(tr: float) -> void:
 	var n := director.tokens.size()
-	if _nudge.size() != n:
+	if _nudge.size() != n or _disc_k.size() != n:
 		_nudge.resize(n)
 		_nudge.fill(Vector2.ZERO)
+		_disc_k.resize(n)
+		_disc_k.fill(1.0)
 		_nudge_h = -1.0
 	# How far a disc may be moved apart, or back, since the last layout.
 	var budget := INF if nudge_full or _nudge_h < 0.0 else MatchMotion.WALK * _nudge_h * _scale()
+	# How far a disc's size may change since the last layout (the first is at once).
+	var resize := INF if _nudge_h < 0.0 else _nudge_h / RESIZE_SECS
 	_nudge_h = 0.0
 	var was := _nudge.duplicate()
 	var real := PackedVector2Array()
@@ -1865,13 +1923,33 @@ func _layout_discs(tr: float) -> void:
 		real[i] = _w2s(director.tokens[i]["pos"])
 		_nudge[i] *= NUDGE_EASE
 		pos[i] = real[i] + _nudge[i]
-	var want := tr * 2.0 * NUDGE_GAP
-	var cap := INF if nudge_full else tr * 2.0 * NUDGE_CAP
+	# Each disc's size, eased toward what the players round it leave room for.
+	var small := small_radius()
+	var rad := PackedFloat32Array()
+	rad.resize(n)
+	for i in range(n):
+		var near := INF
+		var next := INF
+		for j in range(n):
+			if j == i:
+				continue
+			var gap := real[i].distance_squared_to(real[j])
+			if gap < near:
+				next = near
+				near = gap
+			elif gap < next:
+				next = gap
+		var k := inverse_lerp(small, tr, pack_radius(sqrt(next), small, tr)) if tr > small else 1.0
+		_disc_k[i] = k if resize == INF else move_toward(_disc_k[i], k, resize)
+		rad[i] = lerpf(small, tr, _disc_k[i])
+	# A disc is never drawn further from its player than it was at the old size.
+	var cap := INF if nudge_full else small * 2.0 * NUDGE_CAP
 	for pass_no in range(NUDGE_PASSES):
 		var moved := false
 		for i in range(n):
 			for j in range(i + 1, n):
 				var d := pos[j] - pos[i]
+				var want := (rad[i] + rad[j]) * NUDGE_GAP
 				if absf(d.x) >= want or absf(d.y) >= want:
 					continue
 				var dist := d.length()
@@ -1957,13 +2035,23 @@ func top_disc() -> int:
 ## The player whose disc is drawn at `p` (a point in this view), -1 for none: the
 ## one drawn on top where discs overlap. For a tap on the oval.
 func disc_at_point(p: Vector2) -> int:
-	var tr := token_radius()
 	var order := draw_order()
+	# On a disc: the one drawn on top there, at the size it is drawn.
 	for k in range(order.size() - 1, -1, -1):
 		var id := int(order[k])
-		if _disc_at(id).distance_to(p) <= tr * 1.25:
+		if _disc_at(id).distance_to(p) <= disc_radius(id):
 			return id
-	return -1
+	# Beside one: the nearest within a thumb's reach, which is a full disc and a
+	# quarter whatever size the disc is drawn at (a small disc in a pack is no
+	# harder to press than a full one).
+	var reach := token_radius() * 1.25
+	var best := -1
+	for id2 in order:
+		var dist := _disc_at(int(id2)).distance_to(p)
+		if dist <= reach:
+			reach = dist
+			best = int(id2)
+	return best
 
 
 ## Where the discs are drawn now, for tests and the capture tool: a layout
@@ -2080,17 +2168,19 @@ func ball_point() -> Vector2:
 
 ## A side's tokens: a disc in the club's home kit (its base colour and its
 ## design in the pattern colour), the number on it in white with a dark edge
-## so it reads on any kit, dropped when the disc is under 18 px.
-func _draw_tokens(tr: float) -> void:
+## so it reads on any kit. Each disc at its own size (disc_radius).
+func _draw_tokens(full: float) -> void:
 	var font := UiKit.BOLD
-	var fs := number_size(tr)
 	for id in draw_order():
 		var t: Dictionary = director.tokens[id]
 		var kit: Dictionary = _kits[int(t["side"])]
 		var base: Color = kit.get("base", Color.WHITE)
 		var p := _disc_at(int(t["id"]))
-		if p.x < -tr * 3.0 or p.y < -tr * 3.0 or p.x > size.x + tr * 3.0 or p.y > size.y + tr * 3.0:
+		if p.x < -full * 3.0 or p.y < -full * 3.0 or p.x > size.x + full * 3.0 or p.y > size.y + full * 3.0:
 			continue
+		# The size this disc is drawn at now, and the number with it.
+		var tr := disc_radius(int(t["id"]))
+		var fs := number_size(tr)
 		if float(t["down"]) > 0.0:
 			# On the ground after a tackle.
 			draw_colored_polygon(_ellipse_points(p, tr * 1.15, tr * 0.62, 16), base.darkened(0.25))
@@ -2100,10 +2190,6 @@ func _draw_tokens(tr: float) -> void:
 		draw_circle(p + Vector2(0, tr * 0.22), tr, Color(0, 0, 0, 0.28))
 		_draw_kit(p, tr, kit)
 		_shade_disc(p, tr, base)
-		# Never under the 13 px floor: a disc too small for a readable number
-		# shows its kit alone (row T3.R9); a long press still names him.
-		if fs < UiKit.FINE:
-			continue
 		var label := str(t["num"])
 		var w := font.get_string_size(label, HORIZONTAL_ALIGNMENT_CENTER, -1, fs).x
 		var origin := p + Vector2(-w * 0.5, fs * 0.36)
@@ -2120,9 +2206,9 @@ func _draw_tokens(tr: float) -> void:
 		if m.is_empty() or float(t2["down"]) > 0.0:
 			continue
 		var p2 := _disc_at(int(t2["id"]))
-		if p2.x < -tr * 3.0 or p2.y < -tr * 3.0 or p2.x > size.x + tr * 3.0 or p2.y > size.y + tr * 3.0:
+		if p2.x < -full * 3.0 or p2.y < -full * 3.0 or p2.x > size.x + full * 3.0 or p2.y > size.y + full * 3.0:
 			continue
-		PlayerMarks.paint(self, p2, tr, str(m["mark"]), antialias)
+		PlayerMarks.paint(self, p2, disc_radius(int(t2["id"])), str(m["mark"]), antialias)
 
 
 ## The long press's words: the player's name and what his mark means, in a

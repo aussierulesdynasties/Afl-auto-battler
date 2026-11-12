@@ -31,12 +31,11 @@ const VISIBLE_WORST := 0.55
 const CALL_FLOOR := 8.0
 ## A column (the critic's Attack Corridor pile, pass 3): three or more of a
 ## side's discs within COLUMN_ACROSS of each other across the ground, each
-## within COLUMN_ALONG of the next along it. Both are in disc widths as the view
-## draws them (_disc_metres), so the measure follows the disc: they were 4 m and
-## 9 m when a disc on a phone was 8.7 m across; it is 13 m since the director's
-## bigger discs (2026-11-12), and a file of touching discs is that much longer.
-const COLUMN_ACROSS := 0.46
-const COLUMN_ALONG := 1.04
+## within COLUMN_ALONG of the next along it, in metres (a disc in a pack on a
+## phone is 8.6 m across: the director's bigger discs, 2026-11-12, shrink to
+## that size where they would overlap, "Shrink in packs").
+const COLUMN_ACROSS := 4.0
+const COLUMN_ALONG := 9.0
 ## Heavily overlapping: centres within this many radii (a quarter of a disc covered).
 const HEAVY := 1.5
 ## Attack Corridor's spread across the ground in possession, on average (Balanced
@@ -137,9 +136,13 @@ func _phone(r: Dictionary, speed: float) -> PitchView:
 	return pv
 
 
-## A disc's width on the ground as the view draws it now, in metres.
-static func _disc_metres(pv: PitchView) -> float:
-	return 2.0 * pv.token_radius() / pv._scale()
+## The radius each disc is drawn at now, in pixels (PitchView.disc_radius: a
+## disc is smaller while it would overlap another).
+static func _radii(pv: PitchView) -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	for i in range(pv.director.tokens.size()):
+		out.append(pv.disc_radius(i))
+	return out
 
 
 ## The drawn discs back on the ground, in metres (the view's own mapping inverted).
@@ -156,8 +159,9 @@ static func _drawn_world(pv: PitchView, drawn: PackedVector2Array) -> Array:
 
 
 ## The share of `side`'s disc area that shows, with the discs drawn at `drawn`
-## (radius `r`) in the order `order` (last on top). Sampled on a grid in each disc.
-static func visible_share(drawn: PackedVector2Array, sides: Array, side: int, order: Array, r: float) -> float:
+## (each at its own radius, `radii`) in the order `order` (last on top). Sampled
+## on a grid in each disc; every disc counts the same, the small as the full.
+static func visible_share(drawn: PackedVector2Array, sides: Array, side: int, order: Array, radii: PackedFloat32Array) -> float:
 	var rank := {}
 	for k in range(order.size()):
 		rank[int(order[k])] = k
@@ -167,10 +171,11 @@ static func visible_share(drawn: PackedVector2Array, sides: Array, side: int, or
 		if int(sides[i]) != side:
 			continue
 		n += 1
+		var r := radii[i]
 		var over := []
 		for j in range(drawn.size()):
-			if j != i and int(rank[j]) > int(rank[i]) and drawn[j].distance_to(drawn[i]) < 2.0 * r:
-				over.append(drawn[j])
+			if j != i and int(rank[j]) > int(rank[i]) and drawn[j].distance_to(drawn[i]) < r + radii[j]:
+				over.append(j)
 		if over.is_empty():
 			total += 1.0
 			continue
@@ -184,7 +189,7 @@ static func visible_share(drawn: PackedVector2Array, sides: Array, side: int, or
 				all += 1
 				var hid := false
 				for c in over:
-					if (c as Vector2).distance_to(q) <= r:
+					if drawn[int(c)].distance_to(q) <= radii[int(c)]:
 						hid = true
 						break
 				if not hid:
@@ -244,12 +249,15 @@ func _test_measures_prove_themselves(res: Dictionary) -> void:
 		drawn.append(Vector2(100.0 + 30.0 * float(i % 6), 100.0 + 30.0 * float(i / 6)))
 		sides.append(0 if i < 18 else 1)
 		order.append(i)
-	var apart := visible_share(drawn, sides, 0, order, 9.0)
+	var nine := PackedFloat32Array()
+	nine.resize(36)
+	nine.fill(9.0)
+	var apart := visible_share(drawn, sides, 0, order, nine)
 	for i in range(18, 36):
 		drawn[i] = Vector2(100.0, 100.0) + Vector2(float(i % 3), float(i % 2)) * 4.0
 	for i in range(0, 9):
 		drawn[i] = Vector2(102.0, 101.0)
-	var piled := visible_share(drawn, sides, 0, order, 9.0)
+	var piled := visible_share(drawn, sides, 0, order, nine)
 	_check(is_equal_approx(apart, 1.0) and piled < VISIBLE_FLOOR,
 			"The visibility measure sees a pile: every disc shows when they stand apart (%.2f), half the side under a pack does not (%.2f)" % [apart, piled])
 	var pv := _phone(res, 1.0)
@@ -305,6 +313,11 @@ func _test_motion_limits(res: Dictionary) -> void:
 				tag, draw_most, draw_most / h, MatchMotion.SPRINT + MatchMotion.WALK])
 		print("  motion %s: %d frames, largest player step %.2f m (%.1f m/s), largest disc step %.2f m (%.1f m/s)" % [
 				tag, frames, tok_most, tok_most / h, draw_most, draw_most / h])
+		var step_cap: float = (float(m["size_full_px"]) - float(m["size_small_px"])) * h / PitchView.RESIZE_SECS
+		_check(float(m["size_step"]) <= step_cap * 1.001 + 0.0005,
+				"%s: a disc's drawn size eases, it never pops: its radius changes by at most %.2f px in a frame (largest %.2f px; the whole range, %.1f to %.1f px, takes %.1f s of the match)" % [
+				tag, step_cap, float(m["size_step"]), float(m["size_small_px"]), float(m["size_full_px"]), PitchView.RESIZE_SECS])
+		print("  disc size %s: largest change in a frame %.3f px (cap %.3f)" % [tag, float(m["size_step"]), step_cap])
 		if speed == 1.0:
 			_check(narrow_n > 50 and narrow >= MatchDirector.LINE_WIDTH_MIN - 0.01,
 					"1x: in possession each line keeps at least %.0f m of spread across the ground, every call but Attack Corridor (narrowest %.1f m over %d lines)" % [
@@ -369,8 +382,24 @@ func _test_motion_averaged(results: Array) -> void:
 		mean[k] = 0.0
 	var vis_n := 1 << 30
 	var pack_n := 1 << 30
+	var size_n := 0
+	var size_full := 0
+	var size_clear_n := 0
+	var size_not_full := 0
+	var size_least := INF
+	var size_most := 0.0
+	var size_small_px := 0.0
+	var size_full_px := 0.0
 	for res in results:
 		var m := _motion_pass(_motion_calls(res), 1.0, true)
+		size_n += int(m["size_n"])
+		size_full += int(m["size_full"])
+		size_clear_n += int(m["size_clear_n"])
+		size_not_full += int(m["size_not_full"])
+		size_least = minf(size_least, float(m["size_least"]))
+		size_most = maxf(size_most, float(m["size_most"]))
+		size_small_px = float(m["size_small_px"])
+		size_full_px = float(m["size_full_px"])
 		vis_n = mini(vis_n, int(m["vis_n"]))
 		pack_n = mini(pack_n, int(m["pack_n"]))
 		var v := {"vis_low_share": float(m["vis_low"]) / maxf(1.0, float(m["vis_n"])),
@@ -380,6 +409,23 @@ func _test_motion_averaged(results: Array) -> void:
 		for k in keys:
 			mean[k] = float(mean[k]) + float(v[k]) / float(results.size())
 	var g := results.size()
+	# Shrink in packs (director, 2026-11-12): full size in the open, never under
+	# the old size, and big discs most of the time.
+	var full_share := float(size_full) / maxf(1.0, float(size_n))
+	_check(size_clear_n > 1000 and size_not_full == 0,
+			"1x over %d games: a disc with no other player within two full radii of his (%.1f px) for %.1f s of the match is drawn at the full 1.5x size, radius %.1f px (%d disc-frames stood clear, %d not at full size)" % [
+			g, 2.0 * size_full_px, PitchView.RESIZE_SECS, size_full_px, size_clear_n, size_not_full])
+	_check(size_n > 1000 and size_least >= size_small_px - 0.001 and size_small_px >= PitchView.SMALL_MIN and size_most <= size_full_px + 0.001,
+			"1x over %d games: no disc is ever drawn under the old size, radius %.1f px, or over the full one, %.1f px (smallest %.2f px, biggest %.2f px)" % [
+			g, size_small_px, size_full_px, size_least, size_most])
+	_check(PitchView.number_size(size_small_px) >= UiKit.FINE,
+			"The jumper number on the smallest disc is never under the %d px floor (%d px; %d px on a full disc)" % [
+			UiKit.FINE, PitchView.number_size(size_small_px), PitchView.number_size(size_full_px)])
+	_check(full_share > 0.5,
+			"1x over %d games: most disc-frames are at the full size (%.1f%% of %d)" % [g, 100.0 * full_share, size_n])
+	print("  disc size over %d games, 1x: %.1f%% of %d disc-frames at the full size, smallest radius %.2f px, %d clear disc-frames (%d not full), number %d px on the smallest disc and %d px on a full one" % [
+			g, 100.0 * full_share, size_n, size_least, size_clear_n, size_not_full,
+			PitchView.number_size(size_small_px), PitchView.number_size(size_full_px)])
 	_check(vis_n > 1000 and float(mean["vis_low_share"]) <= 0.01 and float(mean["vis_min0"]) >= VISIBLE_WORST and float(mean["vis_min1"]) >= VISIBLE_WORST,
 			"1x over %d games: at least %.0f%% of each side's disc area shows in 99 frames in 100 (%.2f%% below, on average), and %.0f%% in every frame (Fremantle %.0f%%, Melbourne %.0f%% at worst, on average)" % [
 			g, 100.0 * VISIBLE_FLOOR, 100.0 * float(mean["vis_low_share"]), 100.0 * VISIBLE_WORST, 100.0 * float(mean["vis_min0"]), 100.0 * float(mean["vis_min1"])])
@@ -428,6 +474,21 @@ func _motion_pass(r2: Dictionary, speed: float, light := false) -> Dictionary:
 	var swaps := 0
 	var swaps_hands := 0
 	var frames := 0
+	# The drawn sizes: how many disc-frames are at the full size, the smallest and
+	# biggest radius, the biggest change in a frame, and the discs that have stood
+	# clear of every other player (two full radii) for the time a size takes to
+	# ease, which must be at the full size.
+	var size_n := 0
+	var size_full := 0
+	var size_clear_n := 0
+	var size_not_full := 0
+	var size_least := INF
+	var size_most := 0.0
+	var size_step := 0.0
+	var prev_radii := PackedFloat32Array()
+	var clear := PackedInt32Array()
+	clear.resize(d.tokens.size())
+	var settle := int(ceil(PitchView.RESIZE_SECS / h)) + 1
 	var guard := 0
 	while pv.playing and guard < 200000:
 		guard += 1
@@ -436,6 +497,29 @@ func _motion_pass(r2: Dictionary, speed: float, light := false) -> Dictionary:
 			drawer_open += 1
 		var drawn: PackedVector2Array = pv.disc_positions()
 		var s: float = pv._scale()
+		var radii := _radii(pv)
+		var full_px: float = pv.token_radius()
+		var spots_px := PackedVector2Array()
+		for t in d.tokens:
+			spots_px.append(pv._w2s(t["pos"]))
+		for i in range(radii.size()):
+			var near := INF
+			for j in range(radii.size()):
+				if j != i:
+					near = minf(near, spots_px[i].distance_squared_to(spots_px[j]))
+			clear[i] = clear[i] + 1 if near >= 4.0 * full_px * full_px else 0
+			size_n += 1
+			size_least = minf(size_least, radii[i])
+			size_most = maxf(size_most, radii[i])
+			if radii[i] >= full_px - 0.001:
+				size_full += 1
+			if clear[i] >= settle:
+				size_clear_n += 1
+				if radii[i] < full_px - 0.001:
+					size_not_full += 1
+			if not prev_radii.is_empty():
+				size_step = maxf(size_step, absf(radii[i] - prev_radii[i]))
+		prev_radii = radii
 		var flipped: bool = pv.period != period
 		period = pv.period
 		if not prev_tok.is_empty():
@@ -458,7 +542,7 @@ func _motion_pass(r2: Dictionary, speed: float, light := false) -> Dictionary:
 		if not light and not prev_rank.is_empty() and not flipped and order_now != prev_order:
 			for i in range(drawn.size()):
 				for j in range(i + 1, drawn.size()):
-					if drawn[i].distance_to(drawn[j]) >= 2.0 * tr0:
+					if drawn[i].distance_to(drawn[j]) >= radii[i] + radii[j]:
 						continue
 					if (int(rank[i]) > int(rank[j])) == (int(prev_rank[i]) > int(prev_rank[j])):
 						continue
@@ -522,9 +606,8 @@ func _motion_pass(r2: Dictionary, speed: float, light := false) -> Dictionary:
 				inner_side_most = maxi(inner_side_most, maxi(per[0], per[1]))
 		if guard % 4 == 0:
 			var order := pv.draw_order()
-			var tr := pv.token_radius()
 			for side in range(2):
-				var vs := visible_share(drawn, sides, side, order, tr)
+				var vs := visible_share(drawn, sides, side, order, radii)
 				vis_min[side] = minf(float(vis_min[side]), vs)
 				vis_n += 1
 				if vs < VISIBLE_FLOOR:
@@ -568,8 +651,13 @@ func _motion_pass(r2: Dictionary, speed: float, light := false) -> Dictionary:
 						narrow = minf(narrow, _sd(lines[key]))
 						narrow_n += 1
 	var still_playing: bool = pv.playing
+	var size_small_px: float = pv.small_radius()
+	var size_full_px: float = pv.token_radius()
 	pv.free()
-	return {"playing": still_playing, "frames": frames, "swaps": swaps, "swaps_hands": swaps_hands, "tok_most": tok_most, "draw_most": draw_most, "h": h, "vis_min": vis_min, "vis_n": vis_n, "vis_low": vis_low, "narrow": narrow, "narrow_n": narrow_n, "lane_gap": lane_gap, "lane_n": lane_n, "inside": inside, "under": under, "drawer_open": drawer_open, "bench_rects": rects.size(), "pack_most": pack_most, "pack_n": pack_n, "inner_most": inner_most, "inner_side_most": inner_side_most, "pack_gap": pack_gap}
+	return {"size_n": size_n, "size_full": size_full, "size_clear_n": size_clear_n, "size_not_full": size_not_full,
+			"size_least": size_least, "size_most": size_most, "size_step": size_step,
+			"size_small_px": size_small_px, "size_full_px": size_full_px,
+			"playing": still_playing, "frames": frames, "swaps": swaps, "swaps_hands": swaps_hands, "tok_most": tok_most, "draw_most": draw_most, "h": h, "vis_min": vis_min, "vis_n": vis_n, "vis_low": vis_low, "narrow": narrow, "narrow_n": narrow_n, "lane_gap": lane_gap, "lane_n": lane_n, "inside": inside, "under": under, "drawer_open": drawer_open, "bench_rects": rects.size(), "pack_most": pack_most, "pack_n": pack_n, "inner_most": inner_most, "inner_side_most": inner_side_most, "pack_gap": pack_gap}
 
 
 ## P-12 visibility floor, measured as the motion critic measures the clips: on
@@ -771,9 +859,10 @@ func _shape_of(r: Dictionary, events := -1, crowd := false) -> Dictionary:
 				"med_rad": _median(rads)}
 		if crowd:
 			# How crowded Fremantle's discs are as drawn: pairs overlapping at
-			# all (closer than a disc across) and heavily (centres within
-			# HEAVY radii, a quarter of the disc covered), and its longest file.
-			var tr: float = pv.token_radius()
+			# all (closer than the two discs' radii, as drawn) and heavily
+			# (centres within HEAVY of their mean radius, a quarter of the disc
+			# covered), and its longest file.
+			var radii := _radii(pv)
 			var touch := 0
 			var heavy := 0
 			var own := []
@@ -785,12 +874,11 @@ func _shape_of(r: Dictionary, events := -1, crowd := false) -> Dictionary:
 					if int(d.tokens[j]["side"]) != 0:
 						continue
 					var dd := drawn[i].distance_to(drawn[j])
-					if dd < 2.0 * tr:
+					if dd < radii[i] + radii[j]:
 						touch += 1
-					if dd < HEAVY * tr:
+					if dd < HEAVY * 0.5 * (radii[i] + radii[j]):
 						heavy += 1
-			var disc_m := _disc_metres(pv)
-			var file := file_length(own, COLUMN_ACROSS * disc_m, COLUMN_ALONG * disc_m)
+			var file := file_length(own, COLUMN_ACROSS, COLUMN_ALONG)
 			m["touch"] = touch
 			m["heavy"] = heavy
 			m["file3"] = 1.0 if file >= 3 else 0.0

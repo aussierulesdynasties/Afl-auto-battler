@@ -2081,9 +2081,11 @@ func _test_discs_apart() -> void:
 				if pv.director.tokens[i]["pos"] != before[i]:
 					moved_engine += 1
 				worst_nudge_m = maxf(worst_nudge_m, drawn[i].distance_to(real[i]) / pv._scale())
-				worst_nudge_discs = maxf(worst_nudge_discs, drawn[i].distance_to(real[i]) / (2.0 * tr))
+				# Each disc at the size it is drawn (smaller in a pack).
+				var ri: float = pv.disc_radius(i)
+				worst_nudge_discs = maxf(worst_nudge_discs, drawn[i].distance_to(real[i]) / (2.0 * ri))
 				for j in range(i + 1, drawn.size()):
-					closest = minf(closest, drawn[i].distance_squared_to(drawn[j]) / (4.0 * tr * tr))
+					closest = minf(closest, drawn[i].distance_squared_to(drawn[j]) / pow(ri + pv.disc_radius(j), 2.0))
 					real_closest = minf(real_closest, real[i].distance_squared_to(real[j]) / (4.0 * tr * tr))
 			var holder := int(pv.director.ball.get("holder", -1))
 			if str(pv.director.ball.get("mode", "")) == "held" and holder >= 0:
