@@ -51,6 +51,12 @@ The longest chain, which sets the finish: T1.R26, then 131, then the director's 
 | 162 | A vignette for every decision card (director 2026-11-12: "Yes, every card"; today only the centre ball-up has one, 2.Q12). Builds on row 13 (time pauses on a vignette at a decision). | every decision card opens on its own vignette, proven per card in a capture that shows the intended art loaded; captures shown to the director |
 | 163 | Soften autopilot (director 2026-11-12: "Too harsh"): a club on autopilot drifts to mid-table, not last (today about 18th by year five). The same rule runs for every club. | a seeded multi-season audit (with the T8.83 batch) shows an autopilot club settling mid-table; managed clubs still do better |
 | 164 | The draft needs list room (director 2026-11-12: "Must make room"). If your list is full, the draft does not start until you delist enough players for three picks or trade the picks away; rival clubs delist their weakest the same way. A PR from the same 2026-11-12 batch is in flight. | the draft waits on a full list until three spots are free or the picks are traded; rivals delist their weakest; a real-tap check of the block and the delist path |
+| 166 | Visuals 1, match day (director interview 2026-11-12, first): one replay stadium in every view; tight, full, moving call scenes; set shot by distance; one-screen pre-match; bigger discs, bench drawer; wind, hot, night; PC oval left, panels right; scoreboard and overlap bugs. Detail: Director Bible, "Visual overhaul interview". | one before-and-after look sheet, every frame self-checked, shown to the director |
+| 167 | Visuals 2, event cards and press: chips, a picture per event, big finals cards; odds bars, journalist on screen, rules behind a tap, pictured result. | look sheet shown to the director |
+| 168 | Visuals 3, hub and frame: checklist rows, stripes top only, club-colour buttons, row style, bigger and brighter small text, motion. | look sheet shown to the director |
+| 169 | Visuals 4, money, draft, new career: cap meters and deal cards; draft list gets the screen, prospect bars, draft stage; jumper club picker, setup steps, press-room interview, coach card. | look sheet shown to the director |
+| 170 | Visuals 5, season end, pre-season, ceremonies to the farewell's standard; then player faces and hair. | look sheet shown to the director |
+| 171 | Visuals 6, proper PC layouts for every sheet. | 1920x1080 look sheet shown to the director |
 
 ## B. Built and ON: his playtest judges
 
@@ -239,6 +245,7 @@ Settled answers that are not build rows. The bible stays as it is unless he cons
 
 ## Rulings (director, 2026-11-12)
 
+- Visual overhaul interview: match day first, one look sheet per area, rig and Tripo without asking; answers in the Director Bible (rows 166-171). Trades check: "Decline the letter in the test".
 - Auto-pick keeps its name: "Auto pick. I already answered this question". It is the Team selection button's name and exempt from the engine-word ban (row 134).
 - Every draftee in every draft shows one line "Plays like: <real AFL player>", from facts: same position, about his level ("level must be included"), similar height, closest ratings at max potential (`PlaysLike.gd`). A line under the name, never in it.
 - Approved and merged: PR #1397's free-agency odds and Recruiting miss line (T1.R26 L3), and PR #1402's player-sheet concussion line (row 154).
