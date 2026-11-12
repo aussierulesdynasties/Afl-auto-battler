@@ -50,7 +50,6 @@ func _run() -> void:
 	_state.autosave_enabled = false
 	_state.save_path = "user://test_career.save"
 	_state.settings_path = "user://test_settings.cfg"
-	_state.show_real_names = false
 	_state.replay_seed = 2027
 	SV = load("res://scripts/ui/match/StoppageVignette.gd")
 	_t("_test_figure_sheets")

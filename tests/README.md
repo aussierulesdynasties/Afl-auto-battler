@@ -110,7 +110,7 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `calibration` | The engine against real 2026 numbers (seeded matches) |
 | `back_carries` | Back-zone carrying (row 92): the back zone's role weights, the defender leading it |
 | `state_leagues_data` | The VFL, SANFL and WAFL 2026 files in data/state_leagues/ (row 128, step 1): schema, pinned counts, AFL links to real ids, no AFL man as a state man, one side per AFL club, 30 senior men per list, the 2026 ladders and finals |
-| `state_leagues_gamedb` | GameDB loads the state leagues (row 128, step 2): 3 leagues and 42 clubs from the 2026 set, the AFL load exactly as without them, no state leagues for a set without the key, club lookups for state codes, the Player names switch on state men, mature-age recruits' VFL clubs from the data |
+| `state_leagues_gamedb` | GameDB loads the state leagues (row 128, step 2): 3 leagues and 42 clubs from the 2026 set, the AFL load exactly as without them, no state leagues for a set without the key, club lookups for state codes, state men shown under their real names, mature-age recruits' VFL clubs from the data |
 | `balance` | A long-career guard: three seasons must not inflate the league |
 | `decision_scenes` | The in-match calls (tired, duel, hot, momentum, set shot) opening on a vignette scene: real players in their own kits, ball only at a palm, sheet frames in range, text card with vignettes off, a real tap on the call |
 | `assets` | The art and music as shipped: figure-sheet frames against the layout, vignettes playing their moves through, banners, music files, levels and the player |

@@ -40,19 +40,17 @@ func _test_fresh() -> void:
 	GameDB.reload()
 	var now := PremadeHistory.stamps()
 	for first in PremadeHistory.STARTS:
-		for real in [true, false]:
-			for n in PremadeHistory.COUNT:
-				var p := PremadeHistory.path_for(first, real, n)
-				_check(FileAccess.file_exists(p), "%s is missing: %s" % [p, REGEN])
-				var meta := CareerSave.read_packed_meta(p)
-				for key in ["save_version", "career_version", "list_stamp", "list_files"]:
-					_check(str(meta.get(key, "")) == str(now[key]), "%s %s is %s" % [p, key, REGEN])
-				_check(int(meta.get("first_season", 0)) == first and bool(meta.get("real_names", not real)) == real,
-						"%s holds the start its name says" % p)
-				# Tuning moves too fast for every sim PR to carry binaries, so a
-				# build is what stops on this one (tools/export_builds.sh).
-				if str(meta.get("sim_code", "")) != str(now["sim_code"]):
-					print("NOTE: %s is behind the sim code; regenerate before a build" % p)
+		for n in PremadeHistory.COUNT:
+			var p := PremadeHistory.path_for(first, n)
+			_check(FileAccess.file_exists(p), "%s is missing: %s" % [p, REGEN])
+			var meta := CareerSave.read_packed_meta(p)
+			for key in ["save_version", "career_version", "list_stamp", "list_files"]:
+				_check(str(meta.get(key, "")) == str(now[key]), "%s %s is %s" % [p, key, REGEN])
+			_check(int(meta.get("first_season", 0)) == first, "%s holds the start its name says" % p)
+			# Tuning moves too fast for every sim PR to carry binaries, so a
+			# build is what stops on this one (tools/export_builds.sh).
+			if str(meta.get("sim_code", "")) != str(now["sim_code"]):
+				print("NOTE: %s is behind the sim code; regenerate before a build" % p)
 
 
 func _test_refuses() -> void:
@@ -107,7 +105,7 @@ func _test_keeps_choices() -> void:
 	_check(GameState.begin_from_history(2030), "History with choices")
 	var history_seeds := []
 	for n in PremadeHistory.COUNT:
-		history_seeds.append(int(CareerSave.read_packed(PremadeHistory.path_for(2030, GameState.show_real_names, n)).get("career_seed", 0)))
+		history_seeds.append(int(CareerSave.read_packed(PremadeHistory.path_for(2030, n)).get("career_seed", 0)))
 	_check(GameState.career_seed > 0 and not history_seeds.has(GameState.career_seed), "The career has its own seed")
 	_check(GameState.board_patience == "ruthless" and GameState.rival_recruiting == "cutthroat", "The dials stay")
 	_check(not GameState.tutorials, "Tips stay off")

@@ -90,7 +90,6 @@ func _run() -> void:
 	state.autosave_enabled = false
 	state.save_path = "user://capture_way.save"
 	state.settings_path = "user://capture_way_settings.cfg"
-	state.show_real_names = true
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 	DisplayServer.window_set_size(Vector2i(W, H))
 	await _frames(10)

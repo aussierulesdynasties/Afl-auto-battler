@@ -50,7 +50,6 @@ func _run() -> void:
 	state.autosave_enabled = false
 	state.save_path = "user://capture_event_sheet.save"
 	state.settings_path = "user://capture_event_sheet_settings.cfg"
-	state.show_real_names = false
 	state.reset()
 	state.set_setting("seen_weekly_loop_intro", true)
 	DisplayServer.window_set_size(Vector2i(W, H))

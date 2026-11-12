@@ -43,7 +43,6 @@ func _run() -> void:
 	state.autosave_enabled = false
 	state.save_path = "user://capture_stakes.save"
 	state.settings_path = "user://capture_stakes_settings.cfg"
-	state.show_real_names = false
 	state.reset()
 	state.set_setting("seen_weekly_loop_intro", true)
 	if W >= 760:

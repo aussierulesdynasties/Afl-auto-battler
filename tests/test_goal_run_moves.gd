@@ -22,7 +22,6 @@ func run() -> void:
 	_state = root.get_node("GameState")
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		_state.set_setting("seen_%s_intro" % key, true)
-	_state.show_real_names = false
 	_state.replay_seed = 2027
 	root.get_node("GameDB").reload()
 	await _t("_test_on_offers_two_moves")

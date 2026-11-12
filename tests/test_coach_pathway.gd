@@ -115,13 +115,8 @@ func _test_identity() -> void:
 	_check(str(c["cid"]) == "C_P_P1" and str(c["former_player_id"]) == "P1", "Coach id C_P_<player id>, player id kept")
 	_check(str(c["real_name"]) == "Rory Laird" and str(c["generic_name"]) == "Lachlan Mercer",
 			"He keeps his real name and exactly his fictional name: no new alias")
-	var real := GameState.show_real_names
-	GameState.show_real_names = true
-	var both_real := GameDB.player_display_name(c) == GameDB.player_display_name(p)
-	GameState.show_real_names = false
-	var both_fic := GameDB.player_display_name(c) == GameDB.player_display_name(p)
-	GameState.show_real_names = real
-	_check(both_real and both_fic, "Coach and player show the same name in either name mode")
+	_check(GameDB.player_display_name(c) == "Rory Laird" and GameDB.player_display_name(p) == "Rory Laird",
+			"Coach and player show the same real name")
 	_check(not c.has("id") and not c.has("attr") and not c.has("role"), "The coach record is not a player record")
 	_check(str(c["origin"]) == "player" and (c["stints"] as Array).is_empty(), "A new coach, no coaching history yet")
 

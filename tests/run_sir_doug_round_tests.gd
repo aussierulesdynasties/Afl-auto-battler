@@ -27,4 +27,3 @@ func _isolate_saves() -> void:
 	gs.autosave_enabled = false
 	gs.save_path = "user://test_sir_doug_round.save"
 	gs.settings_path = "user://test_settings.cfg"
-	gs.show_real_names = false

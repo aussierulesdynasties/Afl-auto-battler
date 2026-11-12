@@ -34,7 +34,6 @@ func run() -> void:
 	var club := str(args[2]) if args.size() > 2 else "FRE"
 	var seasons := int(args[3]) if args.size() > 3 else 20
 	GameState.reset()
-	GameState.show_real_names = false
 	GameState.career_seed = seed
 	GameState.replay_seed = seed
 	GameState.autosave_enabled = false

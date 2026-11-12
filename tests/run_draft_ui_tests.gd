@@ -31,7 +31,6 @@ func _run() -> void:
 	# Return visits: the first-visit intros (FirstVisitIntro.gd) have their own suite.
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		_state.set_setting("seen_%s_intro" % key, true)
-	_state.show_real_names = false
 	_db = root.get_node("GameDB")
 	await _t("_test_board")
 	await _settle()

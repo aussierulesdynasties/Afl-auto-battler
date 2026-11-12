@@ -187,16 +187,11 @@ func _test_names() -> void:
 	_check(str((Coaches.seed("GEE")["C_josh_fraser"] as Dictionary)["generic_name"])
 			== str((cs["C_josh_fraser"] as Dictionary)["generic_name"]),
 			"A seeded coach's alias is the same in every career")
-	var was := GameState.show_real_names
-	GameState.show_real_names = false
 	var fraser: Dictionary = cs["C_josh_fraser"]
-	_check(GameDB.player_display_name(fraser) == str(fraser["generic_name"]), "Generated names by default")
-	GameState.show_real_names = true
 	_check(GameDB.player_display_name(fraser) == "Josh Fraser", "Real names show the real coach")
 	var gen: Dictionary = cs["C_G2026_1"]
 	_check(GameDB.player_display_name(gen) == str(gen["generic_name"]),
-			"A generated coach keeps his generated name in real-name mode")
-	GameState.show_real_names = was
+			"A generated coach keeps the name he was given")
 
 
 func _test_grades_and_fit() -> void:

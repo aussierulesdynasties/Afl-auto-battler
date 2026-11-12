@@ -21,7 +21,6 @@ func _run() -> void:
 	state.autosave_enabled = false
 	state.save_path = "user://capture_training.save"
 	state.settings_path = "user://capture_training.cfg"
-	state.show_real_names = false
 	db.reload()
 	state.reset()
 	state.start_season("COL", db.club_list("COL"))

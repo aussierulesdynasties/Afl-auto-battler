@@ -52,7 +52,6 @@ func _run() -> void:
 	_state.settings_path = "user://test_ui_motion.cfg"
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		_state.set_setting("seen_%s_intro" % key, true)
-	_state.show_real_names = false
 	_state.replay_seed = SUITE_SEED
 	root.size = Vector2i(390, 844)
 	_feel.test_motion = true

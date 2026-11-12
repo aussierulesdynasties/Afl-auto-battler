@@ -34,7 +34,6 @@ func _run() -> void:
 	_state.settings_path = "user://test_settings.cfg"
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		_state.set_setting("seen_%s_intro" % key, true)
-	_state.show_real_names = false
 	await _t("_test_score_and_clock_stay")
 	for sz in [PHONE, Vector2i(1280, 720)]:
 		await _t("_test_stoppage_clock_and_covered_controls", [sz])

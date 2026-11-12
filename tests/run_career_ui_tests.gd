@@ -1526,7 +1526,6 @@ func _run() -> void:
 	_state.autosave_enabled = false
 	_state.save_path = "user://test_career.save"
 	_state.settings_path = "user://test_settings.cfg"
-	_state.show_real_names = false
 	_state.replay_seed = SUITE_SEED
 	_state.delete_saved_career()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://test_settings.cfg"))
@@ -1602,8 +1601,7 @@ func _test_menu_and_career() -> void:
 			"No Continue Career without a save")
 
 	# --- the menu is the title and a few actions, no setup -------------------
-	_check(current_scene.find_child("BoardPatience_ruthless", true, false) == null
-			and current_scene.find_child("NameMode_real", true, false) == null,
+	_check(current_scene.find_child("BoardPatience_ruthless", true, false) == null,
 			"The menu itself carries no setup controls")
 	_check(not _screen_text().contains("players ·") and not _screen_text().contains("Quit"),
 			"No data line or Quit on the menu (the button is Exit game)")
@@ -1736,12 +1734,10 @@ func _test_menu_and_career() -> void:
 			and kit.BG.r < 0.2, "Dark appearance restores the original palette")
 	current_scene.find_child("MenuSettings", true, false).emit_signal("pressed")
 	await _settle()
-	var real_setting: Button = current_scene.find_child("SettingsNames_real", true, false)
-	_check(real_setting != null, "Settings offers player names")
-	if real_setting != null:
-		real_setting.emit_signal("pressed")
-		await _settle()
-	_check(_state.show_real_names, "Choosing Real in Settings shows real names straight away")
+	_check(current_scene.find_child("SettingsNames_real", true, false) == null
+			and current_scene.find_child("SettingsNames_generated", true, false) == null
+			and not _screen_text().contains("Player names"),
+			"Settings has no player names choice: real names are the only names")
 	var mute_on: Button = current_scene.find_child("SettingsMuteSounds_on", true, false)
 	var mute_off: Button = current_scene.find_child("SettingsMuteSounds_off", true, false)
 	_check(mute_on != null and mute_off != null, "Settings offers Mute")
@@ -1758,11 +1754,10 @@ func _test_menu_and_career() -> void:
 			"Sounds can be switched back on")
 	_check(OS.has_feature("web") or current_scene.find_child("QuitGame", true, false) != null,
 			"Quit lives in Settings")
-	current_scene.find_child("SettingsNames_generated", true, false).emit_signal("pressed")
 	_router.handle_back(false)
 	await _settle()
-	_check(_router.current() == "main" and current_scene.find_child("Settings", true, false) == null
-			and not _state.show_real_names, "Back closes Settings")
+	_check(_router.current() == "main" and current_scene.find_child("Settings", true, false) == null,
+			"Back closes Settings")
 
 	# --- Club Forge: make a player, bring him into a career ------------------
 	_state.set_forge_player({})
@@ -2048,13 +2043,16 @@ func _test_menu_and_career() -> void:
 	root.size = window_before
 	await _settle()
 
-	# --- new career setup: names and the two dials, applied only on start ----
+	# --- new career setup: the two dials, applied only on start --------------
 	current_scene.find_child("NewCareer", true, false).emit_signal("pressed")
 	await _settle()
 	var ruthless_btn: Button = current_scene.find_child("BoardPatience_ruthless", true, false)
 	var cutthroat_btn: Button = current_scene.find_child("RivalRecruiting_cutthroat", true, false)
-	_check(ruthless_btn != null and cutthroat_btn != null and current_scene.find_child("NameMode_real", true, false) != null,
-			"New career asks for player names and the two difficulty dials")
+	_check(ruthless_btn != null and cutthroat_btn != null, "New career asks for the two difficulty dials")
+	_check(current_scene.find_child("NameMode_real", true, false) == null
+			and current_scene.find_child("NameMode_generated", true, false) == null
+			and not _screen_text().contains("Player names") and not _screen_text().to_lower().contains("generated names"),
+			"New career has no player names choice: real names are the only names")
 	var note: Label = current_scene.find_child("BoardPatienceNote", true, false)
 	var rival_note: Label = current_scene.find_child("RivalRecruitingNote", true, false)
 	_check(note != null and note.visible and note.text == DifficultyDials.text("board_patience", "fair")
@@ -2086,7 +2084,6 @@ func _test_menu_and_career() -> void:
 	await _settle()
 	current_scene.find_child("BoardPatience_ruthless", true, false).emit_signal("pressed")
 	current_scene.find_child("RivalRecruiting_cutthroat", true, false).emit_signal("pressed")
-	current_scene.find_child("NameMode_real", true, false).emit_signal("pressed")
 	_check(current_scene.find_child("ForgedClub_in", true, false) != null, "New career offers your Forge club")
 	# On a phone, where the setup form scrolls.
 	var win_was := root.size
@@ -2106,7 +2103,7 @@ func _test_menu_and_career() -> void:
 	await _settle()
 	_check(_router.current() == "draft", "Starting the career goes on to choosing a club")
 	_check(_state.new_career_dial("board_patience") == "ruthless" and _state.board_patience == "ruthless"
-			and _state.rival_recruiting == "cutthroat" and _state.show_real_names, "The career starts with the picks made")
+			and _state.rival_recruiting == "cutthroat", "The career starts with the picks made")
 	var brought := false
 	for d in _state.draftee_pool:
 		brought = brought or (str(d["id"]) == _state.custom_prospect_id and str(d.get("last", "")) == "Forge")
@@ -2120,7 +2117,6 @@ func _test_menu_and_career() -> void:
 	_state.set_forge_club({})
 	_state.set_new_career_dial("board_patience", "fair")
 	_state.set_new_career_dial("rival_recruiting", "shrewd")
-	_state.set_show_real_names(false)
 	_state.reset()
 	# Tutorials belong to the career: kept through save and load, changed in Settings.
 	_state.start_season("SYD", _db.club_list("SYD"))
@@ -4652,7 +4648,6 @@ func _test_list_words_fit(sz: Vector2i) -> void:
 	root.size = sz
 	_state.reset()
 	# Real names, as the critics saw them (the made-up ones are shorter).
-	_state.show_real_names = true
 	_state.start_season("COL", _db.club_list("COL"))
 	_router.stack = []
 	_router.go("main")
@@ -4664,7 +4659,6 @@ func _test_list_words_fit(sz: Vector2i) -> void:
 		await _settle()
 	_captaincy_whole(tag)
 	if sz.x < 760:
-		_state.show_real_names = false
 		return
 	var ovals := current_scene.find_children("*", "FormationView", true, false)
 	_check(not ovals.is_empty(), "My list shows the Best 23 oval (%s)" % tag)
@@ -4677,7 +4671,6 @@ func _test_list_words_fit(sz: Vector2i) -> void:
 					touching.append("%s/%s" % [str(rects[i]), str(rects[j])])
 		_check(rects.size() >= 18 and touching.is_empty(),
 				"No two names on the Best 23 oval come within 8 px (%s, %d names: %s)" % [tag, rects.size(), str(touching.slice(0, 3))])
-	_state.show_real_names = false
 
 
 func _test_list_shape_fits_phones() -> void:

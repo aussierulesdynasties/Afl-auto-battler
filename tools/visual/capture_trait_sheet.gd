@@ -34,7 +34,6 @@ func _run() -> void:
 	gs.autosave_enabled = false
 	gs.save_path = "user://cap_trait.save"
 	gs.settings_path = "user://cap_trait.cfg"
-	gs.show_real_names = false
 	gs.reset()
 	gs.set_setting("seen_training_intro", true)
 	gs.start_season(club, db.club_list(club))

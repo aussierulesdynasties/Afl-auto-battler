@@ -32,7 +32,6 @@ func _run() -> void:
 	_router = root.get_node("Router")
 	_state.save_path = SAVE
 	_state.settings_path = SETTINGS
-	_state.show_real_names = false
 	root.size = Vector2i(390, 844)
 	await _t("_test_real_lists_card_first_time")
 	await _t("_test_rebuild_card_first_time")

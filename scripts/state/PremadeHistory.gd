@@ -17,15 +17,15 @@ const LIST_FILES := ["data/*.csv", "data/international_prospects.json"]
 const SIM_CODE := ["scripts/sim/*.gd", "scripts/state/*.gd", "scripts/core/*.gd"]
 
 
-static func path_for(first_season: int, real_names: bool, n: int) -> String:
-	return "%s%d_%s_%d.hist" % [DIR, first_season, "real" if real_names else "fict", n]
+static func path_for(first_season: int, n: int) -> String:
+	return "%s%d_real_%d.hist" % [DIR, first_season, n]
 
 
 ## A fresh history for this start, or "" (then the years are played live).
-static func pick(first_season: int, real_names: bool) -> String:
+static func pick(first_season: int) -> String:
 	var fresh := []
 	for n in COUNT:
-		var p := path_for(first_season, real_names, n)
+		var p := path_for(first_season, n)
 		if FileAccess.file_exists(p) and problem(CareerSave.read_packed_meta(p)) == "":
 			fresh.append(p)
 	return "" if fresh.is_empty() else str(fresh[randi() % fresh.size()])
