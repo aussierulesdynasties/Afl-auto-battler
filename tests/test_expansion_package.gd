@@ -327,6 +327,7 @@ func _test_second_year_and_end() -> void:
 			extra.append([str(c["club"]), int(c["index"]) + 1])
 	_check(extra.size() == 2 and str(extra[0][0]) != "TAS" and int(extra[0][1]) == 5 and str(extra[1][0]) == "TAS" and int(extra[1][1]) == 9,
 			"The second draft: Tasmania trades pick 5 and holds pick 9 on top of its own (%s)" % str(extra))
+	_must_trade_asks_the_list_rule()
 	_run_draft()
 	GameState.finish_intake_draft()
 	var st: Dictionary = GameState.expansion["TAS"]
@@ -366,6 +367,113 @@ func _test_second_year_and_end() -> void:
 	(st["relief"] as Dictionary)["2030"] = third
 	_check(ExpansionBuild.building(GameState).is_empty() and ExpansionBuild.first_season(GameState).is_empty(),
 			"From its third season Tasmania is treated like every other club")
+
+
+## Tasmania's list rebuilt as `seniors` senior players and `cat_a` Category A
+## rookies. `state_league`: how many of the seniors are state-league signings
+## (the lowest rated of the list); every other player is not one.
+func _tas_shape(seniors: int, cat_a: int, state_league: int) -> Array:
+	var list: Array = GameState.season.lists["TAS"]
+	var model: Array = list.duplicate()
+	model.sort_custom(func(a, b): return int(a["overall"]) < int(b["overall"]))
+	list.clear()
+	for i in seniors + cat_a:
+		var q: Dictionary = (model[i % model.size()] as Dictionary).duplicate(true)
+		q["id"] = ("FND_TAS_t_%02d" if i < state_league else "TASX_%02d") % i
+		q["overall"] = 50 + i
+		q.erase("rookie_list")
+		if i >= seniors:
+			q["rookie_list"] = "A"
+		q["club"] = "TAS"
+		q["contract_years"] = 3
+		list.append(q)
+	return list
+
+
+## The must-trade pick offered round the league. [did the trade happen, the
+## senior count after, the 44 after].
+func _must_trade(pick: int) -> Array:
+	var st: Dictionary = GameState.expansion["TAS"]
+	(st["traded_picks"] as Array).erase("%d:%d" % [int(GameState.season_year), pick])
+	var picks: Array = Expansion.later_draft_picks("TAS")
+	ExpansionBuild.forced_trade(GameState, "TAS", picks, pick)
+	var traded := false
+	for e in picks:
+		if int(e["pick"]) == pick:
+			traded = bool(e.get("traded", false)) and str(e["club"]) != "TAS"
+	var list: Array = GameState.season.lists["TAS"]
+	return [traded, RookieList.senior_count(list), RookieList.list_size(list)]
+
+
+## The checker's fault on #1443 (2026-11-12): the senior player a must-trade
+## pick brings in joined a playing club's list without asking the list rule,
+## so a club at 38 seniors and 44 ended at 39 and 45. Runs inside
+## _test_second_year_and_end, on the night Tasmania (playing its first season)
+## has just made that trade; every list is put back as it was afterwards.
+func _must_trade_asks_the_list_rule() -> void:
+	var pick := Expansion.LATER_MUST_TRADE_PICK
+	var coach: String = GameState.my_club
+	var kept := []   # [the list, its players, a copy of each player]
+	for code in GameState.season.lists:
+		var arr: Array = GameState.season.lists[code]
+		kept.append([arr, arr.duplicate(), arr.duplicate(true)])
+	var news_was: Array = GameState.news.duplicate()
+	var log_was: Array = GameState.offseason_log.duplicate()
+	var done_was: Array = (GameState.expansion["TAS"]["traded_picks"] as Array).duplicate()
+	_check(GameState.season.lists.has("TAS") and coach != "TAS", "(setup) Tasmania is a rival that is playing")
+	# A rival with a free senior spot: the trade is made and fills it.
+	_tas_shape(RookieList.SENIOR_SPOTS - 1, 6, 0)
+	var got := _must_trade(pick)
+	_check(bool(got[0]) and int(got[1]) == RookieList.SENIOR_SPOTS and int(got[2]) == Contracts.MAX_LIST,
+			"A rival with one senior spot free trades the pick and is then full (%s)" % str(got))
+	# A full rival with a state-league signing: he makes way, one in and one out.
+	var full := _tas_shape(RookieList.SENIOR_SPOTS, 6, 2)
+	got = _must_trade(pick)
+	_check(bool(got[0]) and int(got[1]) == RookieList.SENIOR_SPOTS and int(got[2]) == Contracts.MAX_LIST
+			and not _ids(full).has("FND_TAS_t_00") and _ids(full).has("FND_TAS_t_01"),
+			"A full rival lets its lowest-rated state-league signing go for the player traded in (%s, state-league now %s)" % [
+				str(got), str(_ids(full).filter(func(id): return str(id).begins_with("FND_")))])
+	# A full rival with none left: nobody joins, the pick stays.
+	_tas_shape(RookieList.SENIOR_SPOTS, 6, 0)
+	got = _must_trade(pick)
+	_check(not bool(got[0]) and int(got[1]) == RookieList.SENIOR_SPOTS and int(got[2]) == Contracts.MAX_LIST,
+			"A full rival with no state-league signing left keeps the pick: nobody joins a full list (%s)" % str(got))
+	# Senior spots free but the 44 full, and no state-league senior to let go.
+	_tas_shape(RookieList.SENIOR_SPOTS - 2, 8, 0)
+	got = _must_trade(pick)
+	_check(not bool(got[0]) and int(got[2]) == Contracts.MAX_LIST,
+			"A rival at 44 with senior spots free still adds nobody (%s)" % str(got))
+	# The coach's club: never trimmed for him, so a full list keeps the pick and he is told.
+	GameState.my_club = "TAS"
+	var mine := _tas_shape(RookieList.SENIOR_SPOTS, 6, 2)
+	GameState.news.clear()
+	got = _must_trade(pick)
+	var told := ""
+	for n in GameState.news:
+		if str(n.get("text", "")).begins_with("Pick %d was to be traded" % pick):
+			told = str(n["text"])
+	_check(not bool(got[0]) and int(got[1]) == RookieList.SENIOR_SPOTS and int(got[2]) == Contracts.MAX_LIST
+			and _count_prefix(mine, "FND_") == 2,
+			"The coach's full club keeps the pick and nobody is delisted for him (%s)" % str(got))
+	_check(told.contains("your list is full (44") and told.ends_with("the pick stays with you."),
+			"...and the news says why (%s)" % told)
+	_tas_shape(RookieList.SENIOR_SPOTS - 1, 6, 0)
+	got = _must_trade(pick)
+	_check(bool(got[0]) and int(got[1]) == RookieList.SENIOR_SPOTS and int(got[2]) == Contracts.MAX_LIST,
+			"The coach's club with a spot free makes the trade (%s)" % str(got))
+	GameState.my_club = coach
+	for row in kept:
+		var arr: Array = row[0]
+		arr.clear()
+		for i in (row[1] as Array).size():
+			var p: Dictionary = row[1][i]
+			p.clear()
+			p.merge(row[2][i])
+			arr.append(p)
+	GameState.news.assign(news_was)
+	GameState.offseason_log.assign(log_was)
+	(GameState.expansion["TAS"]["traded_picks"] as Array).assign(done_was)
+	GameState._bars.clear()
 
 
 ## A new club asks about your player: you are told, and can re-sign him.

@@ -247,6 +247,11 @@ static func upgrade_block(gs, code: String, player_id: String) -> String:
 		return "He is not on the list."
 	if not is_rookie(p):
 		return "He is already on the senior list."
+	# The National Draft counted every list when it opened (Draft.open_spots),
+	# so nobody moves up under it: a spot filled mid-draft would be filled
+	# again by a pick. Same rule for every club.
+	if gs.draft != null and gs.draft.intake_mode:
+		return "The National Draft is open. No rookie is upgraded until it is over: its picks were counted against your list as it stood when the draft began."
 	match add_block(list, "senior", str(p.get("rookie_list", ""))):
 		"senior":
 			return "The senior list is full (%d). A senior spot opens when a player retires, is delisted or traded." % SENIOR_SPOTS
