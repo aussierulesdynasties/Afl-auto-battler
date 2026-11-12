@@ -50,10 +50,10 @@ func _run() -> void:
 	quit()
 
 
-func _cell(UK, code: String, text: String) -> Control:
+func _cell(ui_kit, code: String, text: String) -> Control:
 	var v := VBoxContainer.new()
 	var c := CenterContainer.new()
-	c.add_child(UK.club_marker(code, 110.0))
+	c.add_child(ui_kit.club_marker(code, 110.0))
 	v.add_child(c)
 	var l := Label.new()
 	l.text = text
