@@ -734,7 +734,10 @@ func _fifty_phases(k: int) -> Array:
 		out.append({"t": "hold", "who": who, "carry": at, "run": true, "mode": "stoppage",
 				"max": d / float(tokens[who]["top"]) * 1.6 + 0.5})
 	elif d > 1.0:
-		out.append({"t": "flight", "to": at, "dur": clampf(0.35 + d / 110.0, 0.35, 0.9),
+		# Never quicker than a kick covers the ground: 0.35 + d / 110 sent a
+		# 50 m penalty's ball at 62.2 m a second (picture_truth, ball speed).
+		out.append({"t": "flight", "to": at,
+				"dur": maxf(clampf(0.35 + d / 110.0, 0.35, 0.9), _flight_shape("kick", d).x),
 				"apex": 1.2, "recv": who, "mode": "stoppage"})
 	out += [{"t": "emit", "log": true}, {"t": "wait", "dur": 0.25, "ease": true}]
 	return out
