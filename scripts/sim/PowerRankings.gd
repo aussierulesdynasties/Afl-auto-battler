@@ -25,6 +25,10 @@ const LEADS := {
 		"Hard to look past {c}: {s} leads a list with very few holes.",
 		"{c} sit at the head of most tipsters' lists, and {s} gives them a match-winner most clubs would love.",
 	],
+	"second": [
+		"Only one club is rated above {c}, and {s} is a big reason they sit so high.",
+		"{c} are tipped to push the favourites all the way, with {s} leading the charge.",
+	],
 	"bottom": [
 		"It shapes as a long year for {c}, and {s} cannot carry them alone.",
 		"{c} are tipped to finish near the bottom; {s} is the one sure thing on the list.",
@@ -37,7 +41,7 @@ const LEADS := {
 	],
 	"fall": [
 		"{c} finished {last} last year, but the paper reckons a slide is coming and {s} will need help.",
-		"Questions hang over {c} after a {last}-place finish, and {s} cannot answer them all.",
+		"Questions hang over {c} after finishing {last}, and {s} cannot answer them all.",
 		"A drop is tipped for {c} from {last} last year, with too much resting on {s}.",
 	],
 	"recruit": [
@@ -196,13 +200,19 @@ static func _lead_angles(f: Dictionary) -> Array:
 	var pos := int(f.get("pos", 0))
 	var n := int(f.get("clubs", 18))
 	var last := int(f.get("last", 0))
-	if pos > 0 and pos <= 2:
+	# Only the club printed first is called the side to beat; second is the challenger.
+	if pos == 1:
 		out.append("top")
+	elif pos == 2:
+		out.append("second")
 	if pos > 0 and pos >= n - 1:
 		out.append("bottom")
-	if last > 0 and pos > 0 and last - pos >= 4:
+	# A lead on the year-on-year climb or slide never sits before a practice
+	# move the other way ("tipped to climb ... Down two after a 46-point hiding").
+	var move := str(f.get("move", ""))
+	if last > 0 and pos > 0 and last - pos >= 4 and not move.begins_with("Down "):
 		out.append("rise")
-	if last > 0 and pos > 0 and pos - last >= 4:
+	if last > 0 and pos > 0 and pos - last >= 4 and not move.begins_with("Up "):
 		out.append("fall")
 	if not (f.get("recruit", {}) as Dictionary).is_empty():
 		out.append("recruit")
