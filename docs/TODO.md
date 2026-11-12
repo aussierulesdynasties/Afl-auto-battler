@@ -79,7 +79,7 @@ Every switch went on for good in #1072 and #1074 (director 2026-11-06: "i dont w
 | 15 | Late-game centre ball-up: two distinct choices | #899 #1074 | his playtest, after row 151 (the two new moves) and copy pass 131 |
 | 24 | Training as a compact player card grid with roles and traits | #928 | his playtest on his phone. After: 135, T3.R9 and 6.34 |
 | 65 | Draftees start lower: picks 1-5 about 62, 6-20 about 56, POT kept (4.Q9) | #1031 #1050 | his playtest |
-| 78 | Rare big margins come back through Momentum (T8.Q4) | #1029 #1038 | his playtest; balance in Z (row Balance) |
+| 78 | Rare big margins come back through Momentum (T8.Q4) | #1029 #1038 | his playtest; balance in Z (row Balance). Director 2026-11-12: "the score is unrealistic" (Melbourne 18.17 (125) beat Western Bulldogs 2.8 (20)) |
 | 89 | Midfield intercepts (T8.Q8) | #1024 | his playtest (measured about 2.58 a game against real 2.5; team intercepts 68.2 against about 63.4); balance in Z (row Balance) |
 | 92 | Back-zone carries retuned (T9.Q22) | #1023 | his playtest; balance in Z (row Balance) |
 | 103 | Synergies within reach on recruit screens; a stat focus grows a trait, for every club (4.Q10) | #1240 | his playtest; balance in Z (row Balance); numbers: Z, synergy numbers up |
