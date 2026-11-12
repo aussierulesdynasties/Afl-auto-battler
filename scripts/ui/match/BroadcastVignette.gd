@@ -120,6 +120,10 @@ func setup(p_kind: String, p_event: Dictionary, p_scene: Dictionary, p_result: D
 	weather = VignetteGrade.weather_of(str(result.get("weather", "")))
 	_look = GameDB.figure_look(p, weather == "wet") if p is Dictionary else Appearance.UNCURATED
 	_build = build_for(p if p is Dictionary else {})
+	# The rest of both sides in the shot are the clubs' own players, never the featured man.
+	var featured := str(event.get("player_id", ""))
+	_extra_looks = [VignetteExtras.club_looks(home, 8, weather == "wet", featured),
+			VignetteExtras.club_looks(away, 8, weather == "wet", featured)]
 	_board = {}
 	if event.has("goals") and event.has("behinds") and home != "" and away != "":
 		_board = {"codes": [home, away], "goals": event["goals"], "behinds": event["behinds"],
@@ -334,17 +338,9 @@ var _ground: VignetteGround.Cam
 ## the umpires ("U"): the goal umpire on the goal line, the field umpire, a boundary
 ## umpire on each side. [x, y, who, anim, facing, mirror]. Scenes leave out anyone
 ## standing where their own players are.
-const EXTRAS := [
-	[-5.5, 68.5, "F", "ready_turn", "back", false], [-4.0, 69.6, "D", "ready_b", "front", false],
-	[7.5, 63.0, "F", "ready", "back", false], [8.8, 64.4, "D", "ready_turn", "front", true],
-	[-14.0, 55.0, "F", "ready_b", "back", true], [-12.5, 56.6, "D", "ready", "front", false],
-	[16.0, 48.0, "F", "ready_turn", "back", true], [17.6, 49.6, "D", "ready_b", "front", true],
-	[3.0, 54.0, "D", "ready_turn", "front", false], [-22.0, 42.0, "D", "ready", "front", true],
-	[25.0, 58.0, "D", "ready_turn", "front", true], [26.5, 57.0, "F", "ready", "back", false],
-	[-27.0, 66.0, "F", "ready_turn", "back", false], [-9.0, 40.0, "F", "jog", "front", false],
-	[0.0, 80.0, "U", "ready", "front", false], [10.0, 43.0, "U", "ready_b", "front", true],
-	[-49.0, 50.0, "U", "ready", "front", true], [49.0, 50.0, "U", "ready", "front", false],
-]
+const EXTRAS := VignetteExtras.BROADCAST
+## Their looks: each club's own players (VignetteExtras.club_looks), set with the scene.
+var _extra_looks := [[], []]
 
 
 ## The extras, farthest first, leaving room round the scene's own players (keep).
@@ -368,13 +364,21 @@ func _draw_extras(keep: Array) -> void:
 		var i: int = x[3]
 		var who := str(e[2])
 		var kit := side if who == "F" else (1 - side if who == "D" else StoppageVignette.UMPIRE_KIT)
-		var look: Dictionary = StoppageVignette.UMPIRE_LOOK if who == "U" else Appearance.generated("extra%d" % i)
+		var look: Dictionary = StoppageVignette.UMPIRE_LOOK
+		var num := 0
+		if who != "U":
+			var own: Array = _extra_looks[kit] if kit < _extra_looks.size() else []
+			var mine: Dictionary = own[(i >> 1) % own.size()] if not own.is_empty() else {}
+			look = mine.get("look", Appearance.generated("extra%d" % i))
+			num = int(mine.get("num", 0))
+			if num <= 0:
+				num = 2 + (i * 7) % 40
 		var anim := str(e[3])
 		var frame := int(_t * 15.0) % 8 if anim == "jog" else int(_t * (2.4 + 0.25 * float(i % 5)) + i * 0.61) % 3
 		var p: Vector2 = x[1]
 		if anim == "jog":
 			p += _ground.fwd * -_t * 2.5                      # jogging back towards us
-		_player(p, 0.0, kit, anim, str(e[4]), frame, 0 if who == "U" else 2 + (i * 7) % 40, look, bool(e[5]))
+		_player(p, 0.0, kit, anim, str(e[4]), frame, num, look, bool(e[5]))
 
 
 ## The featured player's spot for this kind (the camera is built round him).
@@ -1023,7 +1027,7 @@ func siren_flight_point(at: Vector2, flight: float) -> Vector3:
 	var tt := flight * T
 	var v := (end.z - start.z + 4.9 * T * T) / T
 	p.z = maxf(0.0, start.z + v * tt - 4.9 * tt * tt)
-	return p
+	return _drifted(p, start, end, flight)
 
 
 ## A figure's palm on screen in a frame (hand 0 his left, 1 his right, -1 between the
@@ -1067,10 +1071,24 @@ func _ball_shadow(p: Vector2, h: float) -> void:
 	draw_set_transform_matrix(_view)
 
 
+## A kicked ball's spot pushed sideways by the day's wind (VignetteExtras.drift): across
+## its line from start to end, nothing at the boot and nothing where it lands, so it still
+## finishes where the match says.
+func _drifted(p: Vector3, start: Vector3, end: Vector3, flight: float) -> Vector3:
+	var wind := VignetteWeather.wind(weather)
+	if wind <= 0.0:
+		return p
+	var line := Vector2(end.x - start.x, end.y - start.y)
+	if line.length() < 0.01:
+		return p
+	var across := Vector2(line.y, -line.x).normalized() * VignetteExtras.drift(flight, wind)
+	return Vector3(p.x + across.x, p.y + across.y, p.z)
+
+
 ## A kicked ball: from the boot on screen into its flight in metres, the first moments
 ## blended from the boot so it leaves the foot exactly.
 func _ball_flight(boot: Vector2, start: Vector3, end: Vector3, peak: float, t: float) -> void:
-	var p := _flight(start, end, peak, t)
+	var p := _drifted(_flight(start, end, peak, t), start, end, t)
 	var s := _ground.project(Vector2(p.x, p.y), p.z)
 	if s.z <= 0.0:
 		return
