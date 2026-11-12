@@ -4060,22 +4060,7 @@ func _build_papers() -> void:
 	# The practice matches nudge it (director, 2026-11-12): every club the same.
 	var margins: Dictionary = preseason.get("practice_margins", {}) if preseason.get("practice_margins") is Dictionary else {}
 	var order := PreSeason.practice_nudge(listed, margins)
-	# Every club its result earned a move, with what stopped any it fell short
-	# of: "top", "bottom", or the club in the way ("by").
-	var moves := {}
-	for code in margins:
-		var shift := PreSeason.practice_shift(int(margins[code]))
-		if shift == 0:
-			continue
-		var at := order.find(code)
-		var places := listed.find(code) - at
-		var by := ""
-		if absi(places) < absi(shift):
-			if shift > 0:
-				by = "top" if at == 0 else str(order[at - 1])
-			else:
-				by = "bottom" if at == order.size() - 1 else str(order[at + 1])
-		moves[str(code)] = {"places": places, "margin": int(margins[code]), "earned": shift, "by": by}
+	var moves := PreSeason.practice_moves(listed, order, margins)
 	var pred := order.find(my_club) + 1
 	var eligible := []
 	if pred > season.finalists():
@@ -9399,7 +9384,7 @@ func _pick_name(year: int, rnd: int, origin: String, at: int) -> String:
 	if year == season_year and at > 0 and draft_night_open():
 		return "pick %d tonight" % at   # the night's own words: the number on the board
 	var nth: String = ["first", "second", "third", "fourth"][clampi(rnd - 1, 0, 3)]
-	var name := "%s %d %s-round pick" % [GameDB.club_name(origin) + ("'" if GameDB.club_name(origin).ends_with("s") else "'s"),
+	var name := "%s %d %s-round pick" % [CopyRules.possessive(GameDB.club_name(origin)),
 			year, nth]
 	return name + (" (No. %d)" % at if at > 0 else "")
 
