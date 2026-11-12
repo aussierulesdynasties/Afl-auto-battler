@@ -232,9 +232,11 @@ static func pick(ctx: Dictionary, recent: Dictionary) -> Dictionary:
 				_named(ms, "back_named", "%s has earned every one of them."), mv))
 	var debut: Dictionary = ctx.get("debut", {})
 	if not debut.is_empty():
+		# Asked after any result: after a win nobody "let him down".
 		candidates.append(_q("debut", "bogan", "%s played his first game today. Do you keep him in the side?" %
 				str(debut.get("name", "The new boy")), round_no,
-				"The senior blokes let him down today.", "He did the job we picked him for.",
+				"The senior blokes left him to do too much." if margin > 0 else "The senior blokes let him down today.",
+				"He did the job we picked him for.",
 				"The whole group got around him.",
 				_named(debut, "back_named", "%s belongs at this level.")))
 
@@ -447,8 +449,10 @@ const CALLOUT_OPINION_DROP := 1
 ## every listed player's morale ("morale") or one named player's ("his"), and
 ## may move his opinion of you ("opinion", in points out of 100);
 ## "odds" is its words at the gate, "after" what the coach reads once it has
-## landed (%s is the named player). "both" names what moves the same way
-## whichever way it lands, by the sign of the shared board move.
+## landed (%s is the named player). "won" replaces "odds" and "after" when the
+## match was won, so no outcome reads as a loss after a win (effects()).
+## "both" names what moves the same way whichever way it lands, by the sign of
+## the shared board move.
 const ANSWERS := {
 	"criticise": {"base": 50, "pull": 1, "young": -15, "result": {},
 		"both": {0: "board unchanged"},
@@ -457,7 +461,10 @@ const ANSWERS := {
 	"method": {"base": 50, "pull": 0, "young": 0, "result": {"heavy_loss": -15, "big_win": 15},
 		"both": {0: "morale unchanged"},
 		"a": {"board": 1, "morale": 0, "his": 0, "odds": "the board buys it", "after": "The board bought it"},
-		"b": {"board": -1, "morale": 0, "his": 0, "odds": "the board hears excuses", "after": "The board heard excuses"}},
+		"b": {"board": -1, "morale": 0, "his": 0, "odds": "the board hears excuses", "after": "The board heard excuses",
+			# After a win there is nothing to excuse (director 2026-11-12: "i won
+			# the game, why would the board hear excuses?"). Same odds, same size.
+			"won": {"odds": "the board isn't convinced", "after": "The board wasn't convinced"}}},
 	"back": {"base": 60, "pull": -1, "young": 10, "result": {},
 		"both": {0: "board unchanged"},
 		"a": {"board": -1, "morale": 2, "his": 0, "odds": "the players lift", "after": "The players lifted"},
@@ -581,6 +588,18 @@ static func after_loss(mc: Dictionary) -> bool:
 	return ["heavy_loss", "injury"].has(str(mc.get("key", "")))
 
 
+## Questions only a win asks, for a save from before the margin was kept.
+const WIN_KEYS := ["big_win", "final_win", "comeback", "upset_win", "winning_run"]
+
+
+## Whether the pending conference followed a win (margin, or for an old save
+## the question: only a win asks these).
+static func after_win(mc: Dictionary) -> bool:
+	if mc.has("margin"):
+		return int(mc["margin"]) > 0
+	return WIN_KEYS.has(str(mc.get("key", "")))
+
+
 static func is_named(kind: String) -> bool:
 	return NAMED_KINDS.has(kind)
 
@@ -643,7 +662,8 @@ static func reason_line(part: Dictionary) -> String:
 ## What an answer does once the journalist's personality and the record check
 ## have had their say: {"a": {board, morale, his, odds, after}, "b": ..., "both",
 ## "notes": the twists that changed it, in words}. `ctx`: {"journalist",
-## "verdict", "name": the named player, "lost": the match was a loss,
+## "verdict", "name": the named player, "lost": the match was a loss, "won":
+## it was a win (an outcome's "won" words),
 ## "restore": opinion points backing him gives back from an earlier call-out}.
 ## Every size stays inside its cap (LOSS_LIFT_CAP for a lift after a loss). A
 ## named answer lists every size on both outcomes ("full").
@@ -655,6 +675,12 @@ static func effects(kind: String, ctx: Dictionary = {}) -> Dictionary:
 	var out := {"notes": [], "full": is_named(kind)}
 	for w in ["a", "b"]:
 		var o: Dictionary = (s[w] as Dictionary).duplicate()
+		# A win's words for an outcome that would read as a loss (sizes unchanged).
+		var won: Dictionary = o.get("won", {})
+		o.erase("won")
+		if bool(ctx.get("won", false)) and not won.is_empty():
+			o["odds"] = str(won["odds"])
+			o["after"] = str(won["after"])
 		o["opinion"] = int(o.get("opinion", 0))
 		# Backing him by name gives back what calling him out cost, either way it lands.
 		if kind == "back_named":
