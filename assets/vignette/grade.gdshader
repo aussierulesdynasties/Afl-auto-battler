@@ -20,8 +20,8 @@ uniform float bloom_from = 0.62;    // luma where bloom starts
 uniform float grain = 0.025;
 uniform float grain_speed = 1.0;    // 0 under Settings > Reduced motion: still grain, still shimmer
 uniform float shimmer = 0.0;        // heat shimmer strength (0: none)
-uniform float horizon = 0.4;        // where the horizon is, down the picture (0 top, 1 bottom)
-uniform float shimmer_band = 0.07;  // how far above and below the horizon it reaches
+uniform float horizon = 0.4;        // where the far edge of the turf is, down the picture (0 top, 1 bottom)
+uniform float shimmer_band = 0.05;  // how far above and below the horizon it reaches
 
 float luma(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
 
@@ -36,13 +36,17 @@ void fragment() {
 	float near = shimmer * (1.0 - smoothstep(0.0, shimmer_band, abs(UV.y - horizon)));
 	float ph = TIME * grain_speed * 5.0;
 	vec2 uv = SCREEN_UV + near * vec2(
-			sin(UV.y * 430.0 + ph) * 0.0017 + sin(UV.y * 170.0 - ph * 0.7) * 0.0011,
-			sin(UV.x * 95.0 + ph * 1.3) * 0.0013);
-	vec3 c = textureLod(screen_tex, uv, 0.0).rgb * exposure;
+			sin(UV.y * 430.0 + ph) * 0.0009 + sin(UV.y * 170.0 - ph * 0.7) * 0.0006,
+			sin(UV.x * 95.0 + ph * 1.3) * 0.0006);
+	vec3 c = textureLod(screen_tex, uv, 0.0).rgb;
 	// Bloom: a blurred mip, only what is brighter than bloom_from, added back.
-	vec3 b = textureLod(screen_tex, uv, 3.0).rgb * exposure;
+	vec3 b = textureLod(screen_tex, uv, 3.0).rgb;
 	vec3 glow = max(b - vec3(bloom_from), vec3(0.0)) / (1.0 - bloom_from);
 	c += glow * bloom;
+	// A hard sun: brighter, held at white so the curve below never folds a highlight over.
+	if (exposure != 1.0) {
+		c = min(c * exposure, vec3(1.0));
+	}
 	// Contrast: a smooth S-curve pivoting at 0.5, mixed in by strength.
 	vec3 s = c * c * (3.0 - 2.0 * c);
 	c = mix(c, clamp(s, 0.0, 1.0), clamp(contrast - 1.0, 0.0, 1.0) * 2.0);

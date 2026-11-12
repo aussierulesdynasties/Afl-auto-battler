@@ -184,14 +184,14 @@ static func draw_ground(ci: CanvasItem, cam: Cam, stage: Rect2, colours: Array, 
 	# there were day games.
 	var slot := slot_now(weather)
 	VignetteKickoff.shown = slot
-	VignetteGrade.sync(ci, weather, slot, cam.hor)
+	VignetteGrade.sync(ci, weather, slot, _far_turf(cam))
 	# Under a closed roof the sky is the roof's underside.
 	var closed: bool = spec.get("roof") == "closed"
 	var sky := VignetteWeather.sky(weather, slot)
 	if closed or sky.is_empty():
 		ci.draw_rect(stage, Color.html(str(spec["roof_colour"])).darkened(0.35) if closed else SKY, true)
 	else:
-		_draw_sky(ci, cam, stage, sky)
+		_draw_sky(ci, cam, stage, sky, VignetteKickoff.daylight(slot))
 	_draw_stands(ci, cam, colours, seed, board, weather, t, slot)
 	var tri := Tris.new()
 	_fence_and_apron(tri, cam, colours, slot)
@@ -246,9 +246,21 @@ const MOWER := 0.75
 const MOWER_REACH := 42.0
 
 
+## Where the far edge of the turf is on the picture (screen y): the highest point of the
+## boundary the camera sees. The heat shimmer sits there, over the far turf and the fence.
+static func _far_turf(cam: Cam) -> float:
+	var y := INF
+	for i in range(36):
+		var a := TAU * float(i) / 36.0
+		var s := cam.oval(Vector2(cos(a) * A, sin(a) * L), 0.0)
+		if s.z > 0.0:
+			y = minf(y, s.y)
+	return cam.hor if y == INF else y
+
+
 ## A day or twilight sky: three colours from the top of the stage down to the horizon,
 ## the horizon's colour on below it (the stands and the ground cover that).
-static func _draw_sky(ci: CanvasItem, cam: Cam, stage: Rect2, sky: Array) -> void:
+static func _draw_sky(ci: CanvasItem, cam: Cam, stage: Rect2, sky: Array, day := 1.0) -> void:
 	var x0 := stage.position.x
 	var x1 := stage.end.x
 	var top := stage.position.y
@@ -262,7 +274,9 @@ static func _draw_sky(ci: CanvasItem, cam: Cam, stage: Rect2, sky: Array) -> voi
 	ci.draw_polygon(PackedVector2Array([Vector2(x0, mid), Vector2(x1, mid), Vector2(x1, hor), Vector2(x0, hor)]),
 			PackedColorArray([c1, c1, c2, c2]))
 	if hor < stage.end.y:
-		ci.draw_rect(Rect2(x0, hor, x1 - x0, stage.end.y - hor), c2, true)
+		# Below the horizon nothing is sky: what shows between the stand and the fence is
+		# the shaded walkway under the front rows.
+		ci.draw_rect(Rect2(x0, hor, x1 - x0, stage.end.y - hor), Color(0.045, 0.045, 0.055).lerp(DAY_CONCRETE, day * 0.5), true)
 
 
 ## What makes close turf read as mown grass, not flat blocks of colour:
@@ -299,15 +313,15 @@ static func _turf_detail(tri: Tris, cam: Cam) -> void:
 static func _bleached(tri: Tris, cam: Cam, day: float) -> void:
 	if day <= 0.0:
 		return
-	for i in range(54):
+	for i in range(70):
 		var h := hash(i * 6121 + 5)
 		var ang := TAU * float(h % 1009) / 1009.0
 		var out := sqrt(float((h / 1009) % 997) / 997.0) * 0.9
 		var at := Vector2(cos(ang) * A * out, sin(ang) * L * out)
-		var rx := 2.5 + 6.5 * float((h / 7) % 89) / 89.0
+		var rx := 1.2 + 3.0 * float((h / 7) % 89) / 89.0
 		var ry := rx * (0.55 + 0.4 * float((h / 11) % 83) / 83.0)
-		tri.poly(_clip(cam, _ellipse_ring(rx, ry, at.x, at.y, 16)), Color(0.86, 0.78, 0.46, 0.34 * day))
-		tri.poly(_clip(cam, _ellipse_ring(rx * 0.55, ry * 0.5, at.x + rx * 0.12, at.y, 12)), Color(0.95, 0.9, 0.62, 0.3 * day))
+		tri.poly(_clip(cam, _ellipse_ring(rx, ry, at.x, at.y, 16)), Color(0.8, 0.74, 0.46, 0.2 * day))
+		tri.poly(_clip(cam, _ellipse_ring(rx * 0.55, ry * 0.5, at.x + rx * 0.12, at.y, 12)), Color(0.88, 0.83, 0.58, 0.16 * day))
 
 
 ## The goal posts at one end (end: +1 the far end of oval y, -1 the other), padded
