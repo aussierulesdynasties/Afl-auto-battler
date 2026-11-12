@@ -60,6 +60,10 @@ static func open(host: Control, on_close: Callable = Callable()) -> Control:
 	var overlay: Control = box["overlay"]
 	overlay.name = "SeasonPlanSheet"
 	var state := {"draft": GameState.fitness_plan(GameState.my_club), "wide": wide}
+	if GameState.can_revise_fitness():
+		# The coach has looked at the plan while it can change: the Hub's
+		# "Review the fitness plan" job is dealt with, kept or changed.
+		WeekChecklist.mark(GameState, "fitness")
 	var done := func():
 		overlay.queue_free()
 		if on_close.is_valid():
