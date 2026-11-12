@@ -89,16 +89,21 @@ func _build() -> void:
 			first = i + 1
 	if stop == "papers":
 		if _wide():
-			# A PC: the story on the left, the ladder beside it.
+			# A PC: the story on the left with the fitness plan and the weeks to
+			# come under it, the ladder beside them (its 18 blurbs need the height).
 			var pcols := UiKit.hbox(28)
-			var pl := _papers_story()
+			var pl := UiKit.vbox(8)
+			pl.name = "PapersLeft"
+			pl.add_child(_papers_story())
+			pl.add_child(_season_plan_section(true))
+			pl.add_child(_blocks_section(first, false))
 			pl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			pcols.add_child(pl)
 			var pr := _papers_ladder()
 			pr.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			# Two columns of nine clubs, each with the paper's line under it: the
-			# ladder takes the wider share so a line fits on one row.
-			pr.size_flags_stretch_ratio = 2.0
+			# Three columns of six clubs, each with its whole blurb under it: the
+			# ladder takes the wider share.
+			pr.size_flags_stretch_ratio = PAPERS_LADDER_SHARE
 			pcols.add_child(pr)
 			page.add_child(pcols)
 		else:
@@ -128,9 +133,10 @@ func _build() -> void:
 	else:
 		if stop == "trial":
 			page.add_child(_trial_section())
-		else:
+			page.add_child(_blocks_section(first, _wide()))
+		elif not (stop == "papers" and _wide()):
 			page.add_child(_season_plan_section())
-		page.add_child(_blocks_section(first, _wide()))
+			page.add_child(_blocks_section(first, _wide()))
 	if stop == "trial" and not _wide():
 		# At the time trial the base answers the blocks below it, not the list:
 		# it sits with them at the foot of the page, never pinned over the names.
@@ -323,63 +329,87 @@ func _papers_story() -> Control:
 	return v
 
 
+## A PC prints the papers' ladder in this many columns, so every club and its
+## whole blurb is in view at once.
+const PAPERS_COLUMNS := 3
+## The ladder's width on a PC, against the story's 1.
+const PAPERS_LADDER_SHARE := 1.9
+## A PC window shorter than this (1280x720) prints the blurbs at the fine-print
+## size with tighter rows, so all 18 stay in view; a taller one has the room for
+## the usual size.
+const PAPERS_SHORT := 800.0
+
+
 ## The ladder the papers printed, best first: your club in bold, every club
-## in its own colour.
+## in its own colour, and under each its power-ranking blurb (its practice move
+## the last sentence). A phone and a PC print the same words.
 func _papers_ladder() -> Control:
 	var v := UiKit.vbox(10)
 	v.name = "PapersLadder"
 	v.add_child(_section_head("The papers' ladder"))
 	var order: Array = GameState.papers_record().get("order", [])
-	# Each club's power-ranking blurb, its practice move folded in.
-	var blurbs: Dictionary = {} if _wide() else GameState.papers_blurbs()
-	# A PC is short: the ladder is two columns of nine, so all of it is in view.
-	var cols: Array = [v, v]
-	if _wide():
-		var pair := UiKit.hbox(24)
-		pair.name = "PapersLadderColumns"
-		# A PC row is one short move line, so it packs as tight as main's ladder.
-		var left := UiKit.vbox(2)
-		var right := UiKit.vbox(2)
-		left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		pair.add_child(left)
-		pair.add_child(right)
-		v.add_child(pair)
-		cols = [left, right]
+	var blurbs: Dictionary = GameState.papers_blurbs()
+	var wide := _wide()
+	var short := wide and get_viewport() != null and get_viewport().get_visible_rect().size.y < PAPERS_SHORT
+	# A PC is short and wide: the ladder runs down side-by-side columns, so all
+	# of it is in view without scrolling.
+	var cols: Array = [v]
+	if wide:
+		var set := UiKit.hbox(20)
+		set.name = "PapersLadderColumns"
+		cols = []
+		for c in range(PAPERS_COLUMNS):
+			var col := UiKit.vbox(4 if short else 6)
+			col.name = "PapersLadderColumn_%d" % c
+			col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			set.add_child(col)
+			cols.append(col)
+		v.add_child(set)
+	var per := int(ceil(float(order.size()) / float(cols.size())))
 	for i in range(order.size()):
 		var code := str(order[i])
-		var row := UiKit.hbox(10)
-		row.name = "PapersRow_%d" % i
-		row.custom_minimum_size = Vector2(0, 28)
-		var pos := UiKit.figure(str(i + 1), UiKit.NUMBER)
-		pos.custom_minimum_size = Vector2(26, 0)
+		# The place, the club's marker and its name: one line.
+		var head := UiKit.hbox(8 if wide else 10)
+		var pos := UiKit.figure(str(i + 1), UiKit.HEADING if wide else UiKit.NUMBER)
+		pos.custom_minimum_size = Vector2(22 if wide else 26, 0)
 		pos.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		pos.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-		row.add_child(pos)
-		var mark := UiKit.club_marker(code, 20.0)
-		mark.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-		row.add_child(mark)
+		pos.size_flags_vertical = Control.SIZE_SHRINK_CENTER if wide else Control.SIZE_SHRINK_BEGIN
+		head.add_child(pos)
+		var mark := UiKit.club_marker(code, 18.0 if wide else 20.0)
+		mark.size_flags_vertical = Control.SIZE_SHRINK_CENTER if wide else Control.SIZE_SHRINK_BEGIN
+		head.add_child(mark)
 		var mine := code == GameState.my_club
 		var nm := UiKit.lbl(GameDB.club_name(code), UiKit.BODY, UiKit.club_name_colour(UiKit.club_ink(code)), mine)
 		nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		nm.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		# The paper's word on each club sits under its name: on a phone the
-		# power-ranking blurb, with its practice move as the last sentence; on a
-		# PC, where all 18 clubs stay in view, the practice move alone.
-		var why := GameState.papers_move_line(code) if _wide() else str(blurbs.get(code, GameState.papers_move_line(code)))
-		if why == "":
-			row.add_child(nm)
-		else:
-			var stack := UiKit.vbox(0)
-			stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			stack.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-			stack.add_child(nm)
-			var note := UiKit.lbl(why, UiKit.SECONDARY, UiKit.MUTED)
+		var why := str(blurbs.get(code, GameState.papers_move_line(code)))
+		var note: Label = null
+		if why != "":
+			note = UiKit.lbl(why, UiKit.FINE if short else UiKit.SECONDARY, UiKit.MUTED)
 			note.name = "PapersBlurb_%d" % i
 			note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			stack.add_child(note)
-			row.add_child(stack)
-		(cols[0] if i < (order.size() + 1) / 2 else cols[1]).add_child(row)
+		var row: Control = head
+		if wide:
+			# A PC column is narrow: the blurb runs its full width under the
+			# club's line, so it wraps to fewer rows.
+			head.add_child(nm)
+			if note != null:
+				row = UiKit.vbox(0)
+				row.add_child(head)
+				row.add_child(note)
+		else:
+			head.custom_minimum_size = Vector2(0, 28)
+			if note == null:
+				head.add_child(nm)
+			else:
+				var stack := UiKit.vbox(0)
+				stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				stack.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+				stack.add_child(nm)
+				stack.add_child(note)
+				head.add_child(stack)
+		row.name = "PapersRow_%d" % i
+		(cols[mini(i / per, cols.size() - 1)] as Control).add_child(row)
 	return v
 
 
@@ -668,7 +698,7 @@ func _section_head(text: String) -> Label:
 ## on the sheet the hub and Training already open. One full-width row, its
 ## chevron at its own right edge; the plan's name under it is at full strength
 ## here, because this is the stop where it is chosen.
-func _season_plan_section() -> Control:
+func _season_plan_section(in_column := false) -> Control:
 	var v: BoxContainer = UiKit.hbox(20) if _wide() else UiKit.vbox(4)
 	v.name = "PreSeasonSeasonPlan"
 	var head := _section_head("Season fitness plan")
@@ -687,6 +717,11 @@ func _season_plan_section() -> Control:
 			# them, not at the far edge of the screen.
 			line.custom_minimum_size = Vector2(380, 44)
 			line.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		if in_column:
+			# Sharing a column (the papers on a PC): the row takes what is left
+			# beside its heading, so the column is no wider than its share.
+			line.custom_minimum_size = Vector2(0, 44)
+			line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		v.add_child(line)
 	return v
 
@@ -698,7 +733,11 @@ func _blocks_section(first: int, across: bool) -> Control:
 	v.name = "PreSeasonBlocks"
 	v.add_child(_section_head("Training blocks" if first == 0 else "The weeks to come"))
 	var holder: BoxContainer = UiKit.hbox(20) if across else UiKit.vbox(UiKit.SECTION)
-	v.add_child(holder)
+	# No blocks left (week 8): no empty holder, so no gap for it either.
+	if first < PreSeason.block_count():
+		v.add_child(holder)
+	else:
+		holder.free()
 	for i in range(first, PreSeason.block_count()):
 		var b := _block(i)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL

@@ -443,9 +443,9 @@ static func offer_view(p: Dictionary, o: Dictionary, other: Dictionary, club_nam
 		"security":
 			return "More contract security."
 		"push":
-			return "Prefers %s offer: they are pushing to win now." % (club_name + ("'" if club_name.ends_with("s") else "'s"))
+			return "Prefers %s offer: they are pushing to win now." % CopyRules.possessive(club_name)
 		"club":
-			return "Prefers %s offer after their stronger season." % (club_name + ("'" if club_name.ends_with("s") else "'s"))
+			return "Prefers %s offer after their stronger season." % CopyRules.possessive(club_name)
 	return ""
 
 

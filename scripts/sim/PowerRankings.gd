@@ -94,7 +94,7 @@ const LEADS := {
 }
 
 ## Second sentences, by angle, after a lead that left room. {h} injured
-## player, {kind} the injury, {m} practice margin, {weak} worst line, {y}
+## player, {kind} the injury, {m} practice margin ({am} with its article), {weak} worst line, {y}
 ## young player, {age} his age, {s2} the next best player.
 const TAILS := {
 	"hurt": [
@@ -104,11 +104,11 @@ const TAILS := {
 		"{kind} to {h} takes some shine off the start.",
 	],
 	"won": [
-		"A {m}-point practice win was a tidy enough hit-out.",
+		"{am}-point practice win was a tidy enough hit-out.",
 		"They got through the practice match {m} points up without showing their hand.",
 	],
 	"lost": [
-		"A {m}-point practice loss told us little either way.",
+		"{am}-point practice loss told us little either way.",
 		"The {m}-point practice loss is nothing to panic about.",
 	],
 	"weak": [
@@ -186,7 +186,7 @@ static func _values(f: Dictionary) -> Dictionary:
 		"r": str(rec.get("name", "")), "from": str(rec.get("from", "")),
 		"h": str(hurt.get("name", "")), "kind": str(hurt.get("kind", "")),
 		"y": str(young.get("name", "")), "age": str(int(young.get("age", 0))),
-		"m": str(absi(int(f.get("margin", 0)))),
+		"m": str(absi(int(f.get("margin", 0)))), "am": CopyRules.a_number(int(f.get("margin", 0))),
 	}
 
 

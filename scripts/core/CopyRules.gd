@@ -52,3 +52,26 @@ static func check(text: String, feed := false) -> Array:
 	if not feed and text.contains(SHOUT):
 		out.append(SHOUT)
 	return out
+
+
+## A name's possessive, for any screen: "Carlton's", and an apostrophe alone after a
+## name ending in s ("Western Bulldogs'").
+static func possessive(name: String) -> String:
+	return name + ("'" if name.ends_with("s") or name.ends_with("S") else "'s")
+
+
+## "a" or "an" before a number, as it is said aloud: an 8, an 11, an 18, an 80,
+## an 800, an 11,000; a 1, a 10, a 12, a 100 (one hundred), a 180.
+static func article(n: int) -> String:
+	var s := str(absi(n))
+	if s.begins_with("8"):
+		return "an"
+	# Eleven and eighteen, alone or counting thousands or millions.
+	if (s.begins_with("11") or s.begins_with("18")) and s.length() % 3 == 2:
+		return "an"
+	return "a"
+
+
+## A number with its article: "an 8", "a 42".
+static func a_number(n: int) -> String:
+	return "%s %d" % [article(n), absi(n)]
