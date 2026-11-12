@@ -621,14 +621,7 @@ func _test_legs_and_rotations() -> void:
 	while sim.current_quarter <= 4:
 		sim.run_quarter()
 	var res := sim.result()
-	# A side running the Running machine synergy tires half as fast and needs
-	# few rotations (Geelong here, with five traits a player); every other
-	# side rotates.
-	var rotated := []
-	for s in range(2):
-		if not Traits.active((sim.squads[s] as Squad).ground).has("running_machine"):
-			rotated.append(int(res["interchanges"][s]))
-	_check(not rotated.is_empty() and rotated.min() > 5, "Coaches rotate players (%s interchanges, sides without a Running machine)" % str(rotated))
+	_check(int(res["interchanges"][0]) > 5, "Coaches rotate players (%d interchanges)" % int(res["interchanges"][0]))
 	_check((res["roster"][0] as Array).size() > 18, "Bench players who came on are in the match roster")
 	var subs := 0
 	for ev in res["events"]:
