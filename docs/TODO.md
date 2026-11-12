@@ -10,7 +10,7 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
 
 A row starts when everything in its "After:" note is done. Rows in the same step run side by side, except rows that edit the same file, which merge one at a time: `tools/lint/copy_voice.py` (its ALLOW counts are exact), `GameState.gd`, `UiKit.gd`, `StoppageVignette.gd`, and the figure shader and sheets.
 
-1. Land the open PRs (#1341 list costs, #1347 draft reads, #1348 free-agency weights). Put the waiting looks and questions to the director (sections C and H, the 6.34 captures, the hair contact sheets) and send the debug APK for row 31. Start the rows with nothing to wait for: 145, 148, 149, 150, 151, T8.85, T7.R84, 6.40, 6.42, 6.51, 6.53, V2, V9, T5.r164. The director's playtests in section B can happen at any time.
+1. Put the waiting looks and questions to the director (sections C and H, the 6.34 captures, the hair contact sheets). Start the rows with nothing to wait for: 6.40, 6.42, 6.53, V2, V9. The director's playtests in section B can happen at any time.
 2. The rest of T1.R26; V4; 134 and 135 (after 150); the row 34 re-check; 164 (its PR is in flight).
 3. 131 (after T1.R26 and 151); 136, 137 and 138; 139; V5; the P-43 press slice of T7.R87; T8.Q20; 6.38.
 4. 132, then 161 (row 9's feed colours); T2.25; 140; 6.63; 32, then 128 (both change the save, so one at a time); T8.78 after 128. The director looks at 5 and 16 and playtests 13, 14 and 15.
@@ -49,8 +49,10 @@ The longest chain, which sets the finish: T1.R26, then 131, then the director's 
 | 162 | A vignette for every decision card (director 2026-11-12: "Yes, every card"; today only the centre ball-up has one, 2.Q12). Builds on row 13 (time pauses on a vignette at a decision). | every decision card opens on its own vignette, proven per card in a capture that shows the intended art loaded; captures shown to the director |
 | 163 | Soften autopilot (director 2026-11-12: "Too harsh"): a club on autopilot drifts to mid-table, not last (today about 18th by year five). The same rule runs for every club. | a seeded multi-season audit (with the T8.83 batch) shows an autopilot club settling mid-table; managed clubs still do better |
 | 174 | Ask-around answers: player names in club ink (director 2026-11-12: "sanders uncoloured?", Ryley Sanders plain in Essendon's offer). A fresh off-season probe inked every name; find the state that drops it. | test with that state |
-| 175 | No trades for a called pick (director 2026-11-12: "why are adelaide trading for pick 42 if the pick already called"; listed after pick 51). | draft-night test: no trade names a used pick |
+| 175 | No trades for a called pick (director 2026-11-12: "why are adelaide trading for pick 42 if the pick already called"). | draft-night test: no trade names a used pick |
 | 176 | Season review "Trade period": clubs and players in their colours (director 2026-11-12: "no colour coding on names"). | capture, every name inked |
+| 177 | Ladder Rating is your best 23 (director 2026-11-12: "ladder should always show your best 23 rating"; preview said 9th, ladder equal last). Preview ranks Squad.strength; ladder averages OVR (TeamRating). | test: both agree |
+| 178 | Tagging: their man's own touches (director 2026-11-12: "says 27 touches 100% of the time"). It is a constant, Roles.TAG_USUAL_TOUCHES. | test: two men, two numbers |
 | 166 | Visuals 1, match day (director interview 2026-11-12, first): one replay stadium in every view; tight, full, moving call scenes; set shot by distance; one-screen pre-match; bigger discs, bench drawer; wind, hot, night; PC oval left, panels right; scoreboard and overlap bugs. Detail: Director Bible, "Visual overhaul interview". | one before-and-after look sheet, every frame self-checked, shown to the director |
 | 167 | Visuals 2, event cards and press: chips, a picture per event, big finals cards; odds bars, journalist on screen, rules behind a tap, pictured result. | look sheet shown to the director |
 | 168 | Visuals 3, hub and frame: checklist rows, stripes top only, club-colour buttons, row style, bigger and brighter small text, motion. | look sheet shown to the director |
@@ -79,7 +81,7 @@ Every switch went on for good in #1072 and #1074 (director 2026-11-06: "i dont w
 | 15 | Late-game centre ball-up: two distinct choices | #899 #1074 | his playtest, after row 151 (the two new moves) and copy pass 131 |
 | 24 | Training as a compact player card grid with roles and traits | #928 | his playtest on his phone. After: 135, T3.R9 and 6.34 |
 | 65 | Draftees start lower: picks 1-5 about 62, 6-20 about 56, POT kept (4.Q9) | #1031 #1050 | his playtest |
-| 78 | Rare big margins come back through Momentum (T8.Q4) | #1029 #1038 | his playtest; balance in Z (row Balance). Director 2026-11-12: "the score is unrealistic" (Melbourne 18.17 (125) beat Western Bulldogs 2.8 (20)) |
+| 78 | Rare big margins come back through Momentum (T8.Q4) | #1029 #1038 | his playtest; balance in Z (row Balance). Director 2026-11-12: "the score is unrealistic" (125 to 20) |
 | 89 | Midfield intercepts (T8.Q8) | #1024 | his playtest (measured about 2.58 a game against real 2.5; team intercepts 68.2 against about 63.4); balance in Z (row Balance) |
 | 92 | Back-zone carries retuned (T9.Q22) | #1023 | his playtest; balance in Z (row Balance) |
 | 103 | Synergies within reach on recruit screens; a stat focus grows a trait, for every club (4.Q10) | #1240 | his playtest; balance in Z (row Balance); numbers: Z, synergy numbers up |
