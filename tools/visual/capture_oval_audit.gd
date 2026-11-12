@@ -447,16 +447,21 @@ func _state_line(what: String, full: bool) -> Dictionary:
 	line["scale"] = snappedf(float(_pitch._scale()), 0.01)
 	line["speed"] = float(_pitch.speed)
 	line["caption"] = str(_pitch.caption_text())
-	if _pitch.has_method("bench_spots"):
+	if _pitch.has_method("bench_tab_rect"):
 		var drawn := []
 		for dp in _pitch._disc:
 			drawn.append([roundi(origin.x + dp.x), roundi(origin.y + dp.y)])
 		line["drawn"] = drawn
 		line["tr"] = snappedf(float(_pitch.token_radius()), 0.1)
+		# The bench is in its drawer now: where its tab is drawn, whether the drawer
+		# is open, and who it lists ([side, number, mark]).
+		var tab: Rect2 = _pitch.bench_tab_rect()
+		line["bench_tab"] = [roundi(origin.x + tab.position.x), roundi(origin.y + tab.position.y), roundi(tab.size.x), roundi(tab.size.y)]
+		line["bench_open"] = bool(_pitch.bench_open())
 		var bench := []
-		for sp in _pitch.bench_spots(_pitch.token_radius()):
-			bench.append([int(sp["side"]), int(sp["num"]), roundi(origin.x + sp["pos"].x), roundi(origin.y + sp["pos"].y)])
-		line["bench_drawn"] = bench
+		for row in _pitch.bench_drawer().rows():
+			bench.append([int(row["side"]), int(row["num"]), str(row["mark"])])
+		line["bench_rows"] = bench
 		line["clash"] = bool(_pitch.clash)
 	line["rings"] = (_pitch.rings as Dictionary).size()
 	line["role_labels"] = d.role_labels()

@@ -98,7 +98,7 @@ func _run() -> void:
 			if not got_hurt and _has(marks, "hurt"):
 				got_hurt = true
 				await _still(pitch, marks, "hurt", "hurt")
-			if got_hurt and not got_bench and _on_bench(pitch, marks, "hurt") != Vector2.INF:
+			if got_hurt and not got_bench and _on_bench(pitch, "hurt"):
 				got_bench = true
 				await _still(pitch, marks, "hurt", "hurt_bench")
 		await process_frame
@@ -168,22 +168,28 @@ func _on_ground(pitch, marks: Dictionary, kind: String) -> Vector2:
 	return Vector2.INF
 
 
-func _on_bench(pitch, marks: Dictionary, kind: String) -> Vector2:
-	for sp in pitch.bench_spots(pitch.token_radius()):
-		var m: Dictionary = marks.get(str(sp["pid"]), {})
-		if not m.is_empty() and str(m["mark"]) == kind:
-			return sp["pos"]
-	return Vector2.INF
+## Whether a man with this mark is on the bench: he is in the bench's drawer
+## now, not on the view (BenchDrawer.rows).
+func _on_bench(pitch, kind: String) -> bool:
+	for row in pitch.bench_drawer().rows():
+		if str(row["mark"]) == kind:
+			return true
+	return false
 
 
-## The plain still, then the long-press words over the marked player (the bench
-## first for a hurt man, he is usually taken off).
+## The plain still, then the bench's drawer open when the marked player is in it
+## (a hurt man is usually taken off), then the long-press words over him on the
+## ground.
 func _still(pitch, marks: Dictionary, kind: String, tag: String) -> void:
 	await _frames(4)
 	await _shot(tag)
-	var p := _on_bench(pitch, marks, kind)
-	if p == Vector2.INF:
-		p = _on_ground(pitch, marks, kind)
+	if _on_bench(pitch, kind):
+		pitch.open_bench()
+		await _frames(2)
+		await _shot(tag + "_bench")
+		pitch.close_bench()
+		await _frames(2)
+	var p := _on_ground(pitch, marks, kind)
 	if p != Vector2.INF and pitch.show_tip_at(p):
 		await _frames(2)
 		await _shot(tag + "_held")

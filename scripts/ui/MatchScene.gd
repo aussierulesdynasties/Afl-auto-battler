@@ -14,8 +14,17 @@ const QUIET_KINDS := ["kick", "handball", "sub", "ballup", "throwin", "mark", "t
 const RUN_LINE := 3
 ## MatchSim's minutes per quarter (it stamps Q2 from 31, Q3 from 61...).
 const QUARTER_MINUTES := 30
-## The score figure on a wide (PC) window; _fit_scores shrinks from here.
+## The score figure on a wide window that keeps the scoreboard across the top
+## (a phone on its side); _fit_scores shrinks from here.
 const WIDE_SCORE := 46
+## A PC's score figure, in the column beside the oval; _fit_scores shrinks from here.
+const PC_SCORE := 36
+## A PC (director, 2026-11-12: "oval left, panels right"): the oval's share of
+## the width against the column's, and the least the column is given.
+const PC_OVAL_SHARE := 2.0
+const PC_COLUMN_MIN_W := 300.0
+
+## The scenes' kick-off light (its own script; this screen runs without it).
 
 var _res := {}
 var _pitch: PitchView
@@ -44,6 +53,7 @@ const CLOCK_BREAKS := {1: "pre", 2: "q1", 3: "q2", 4: "q3"}
 var _controls_box: Control
 var _feed: VBoxContainer
 var _feed_scroll: ScrollContainer
+var _feed_waiting: Label     # a PC, before the bounce: what the feed will hold
 var _play_btn: Button
 var _speed_btns: Array = []
 var _finished := false
@@ -60,6 +70,16 @@ var _legs_seen := {}
 var _my_side := 0
 var _margin: MarginContainer
 var _stacked := false
+## A PC: the oval takes the left two-thirds, and the scoreboard, the feed, the
+## numbers and the controls stand in one column to its right (_right).
+var _pc := false
+var _right: VBoxContainer
+var _board: Control          # the scoreboard: across the top, or first in a PC's column
+## A PC's numbers beside the oval (LiveStats): scoring shots and inside 50s as
+## they happen, the rest as the stats sheet had them at the last break.
+var _live_stats: VBoxContainer
+var _live_i50 := [0, 0]
+var _live_break := 0         # the break those totals are from: 0 none yet, 1-3, 4 or more the end
 var _last_tactics := {}
 var _skipping := false
 ## Skip to the next break (director, 2026-11-06): beside Skip to full time in
@@ -155,6 +175,7 @@ func _ready() -> void:
 			GameDB.club_name(str(_res["home"])), GameDB.club_name(str(_res["away"]))])
 	# The ground the vignettes draw: the MCG has its own stands (FL-003); every other
 	# venue keeps the plain ground. Set every match, as the static outlives the scene.
+	# The same call sets the match's sky: day, twilight or night (VignetteKickoff).
 	VignetteGround.use_match(_res)
 	_crowd = CrowdSound.new()
 	_crowd.name = "Crowd"
@@ -197,9 +218,10 @@ func _build() -> void:
 	_root = UiKit.vbox(8)
 	_margin.add_child(_root)
 
-	_root.add_child(_scoreboard())
 	_mount_body(UiKit.view_width(self) < 640.0)
 	_root.add_child(_body)
+	_board = _scoreboard()
+	_place_board()
 	# T3.R42 (P-26): on a phone the score and the clock never leave the screen.
 	# Breaks, sheets, calls and scenes open in the space under the scoreboard.
 	_over = Control.new()
@@ -209,6 +231,68 @@ func _build() -> void:
 	_over.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_over.child_entered_tree.connect(func(_n: Node) -> void: _sync_under_sheet.call_deferred())
 	_over.child_exiting_tree.connect(func(_n: Node) -> void: _sync_under_sheet.call_deferred())
+	_pitch.item_rect_changed.connect(_fit_docked)
+
+
+## The scoreboard's place: across the top, or the head of a PC's column.
+func _place_board() -> void:
+	if _board.get_parent() != null:
+		_board.get_parent().remove_child(_board)
+	var host: Node = _right if _pc and _right != null else _root
+	host.add_child(_board)
+	host.move_child(_board, 0)
+
+
+## A PC: a break, a call, a scene, a replay or full time opens over the oval and
+## no wider, so the score, the feed and the numbers beside it stay in view
+## (director, 2026-11-12). A phone's take the room under the scoreboard, as ever.
+func _dock(ov: Control) -> void:
+	if ov == null or not is_instance_valid(ov):
+		return
+	ov.set_meta("docked", true)
+	_shut_bench()
+	_fit_docked()
+
+
+## The bench's drawer shuts when anything opens over the oval (a break, a call, a
+## scene, a replay, a sheet, full time): left open underneath, it took the first Back
+## that the thing on top should have had.
+func _shut_bench() -> void:
+	if _pitch != null:
+		_pitch.close_bench()
+
+
+func _undock(ov: Control) -> void:
+	if ov == null or not is_instance_valid(ov) or not ov.has_meta("docked"):
+		return
+	ov.remove_meta("docked")
+	ov.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
+
+## The oval's place on screen, in _over's own units; nothing until it is laid out.
+func _dock_rect() -> Rect2:
+	if not _pc or _pitch == null or _over == null:
+		return Rect2()
+	var r := _pitch.get_global_rect()
+	if r.size.x < 40.0 or r.size.y < 40.0:
+		return Rect2()
+	return Rect2(r.position - _over.get_global_rect().position, r.size)
+
+
+func _fit_docked() -> void:
+	if _over == null:
+		return
+	var r := _dock_rect()
+	for c in _over.get_children():
+		var ov := c as Control
+		if ov == null or not ov.has_meta("docked") or ov.is_queued_for_deletion():
+			continue
+		if r.size == Vector2.ZERO:
+			ov.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		else:
+			ov.set_anchors_preset(Control.PRESET_TOP_LEFT)
+			ov.position = r.position
+			ov.size = r.size
 
 
 ## The play, speed and skip buttons are not drawn and take no tap, click or key
@@ -232,10 +316,9 @@ func _sync_under_sheet() -> void:
 ## The overlays' top: the scoreboard's foot on a phone; a wide screen's break
 ## keeps the whole height (its band carries the score).
 func _fit_over() -> void:
-	if _over == null or _root == null or _root.get_child_count() == 0:
+	if _over == null or _board == null or not is_instance_valid(_board):
 		return
-	var board := _root.get_child(0) as Control
-	var foot := board.get_global_rect().end.y
+	var foot := _board.get_global_rect().end.y
 	# The first match's momentum line keeps its room under the meter, but a scene
 	# opening under the scoreboard never gives that room up: it starts where it
 	# would without the line, over it, so every match frames its scenes the same.
@@ -243,13 +326,17 @@ func _fit_over() -> void:
 	# sheet opened in the first frames is never resized under itself.
 	if _mom_note != null and _mom_note.visible and _mom_bar != null:
 		foot = _mom_bar.get_global_rect().end.y + SCORE_BAND_PAD
+	# A phone on its side keeps the whole height; a PC's open over the oval (_dock).
 	_over.offset_top = foot - get_global_rect().position.y if _stacked else 0.0
+	_fit_docked()
 
 
 func _mount_body(stack: bool) -> void:
 	# Stack the feed under the oval on a narrow phone. Landscape keeps the
 	# oval beside the feed, and the pitch itself is never rebuilt.
 	_stacked = stack
+	_pc = not stack and _wide_break()
+	_right = null
 	if stack:
 		_body = UiKit.vbox(8)
 	else:
@@ -268,7 +355,7 @@ func _mount_body(stack: bool) -> void:
 	_pitch.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	# The feed is a handful of lines (scores, breaks, calls): on a phone the
 	# oval gets the height.
-	_pitch.size_flags_stretch_ratio = 2.2 if stack else 1.5
+	_pitch.size_flags_stretch_ratio = 2.2 if stack else (PC_OVAL_SHARE if _pc else 1.5)
 	_body.add_child(_pitch)
 
 	if _side_panel == null:
@@ -283,8 +370,15 @@ func _mount_body(stack: bool) -> void:
 		_setup_line.name = "SetupLine"
 		_setup_line.visible = false
 		sv.add_child(_setup_line)
+		_feed_waiting = UiKit.lbl("Play by play from the first bounce.", UiKit.SECONDARY, UiKit.MUTED)
+		_feed_waiting.name = "FeedWaiting"
+		_feed_waiting.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		sv.add_child(_feed_waiting)
 		_feed = UiKit.vbox(4)
 		_feed.name = "Feed"
+		_feed.child_entered_tree.connect(func(_n: Node) -> void:
+			if is_instance_valid(_feed_waiting):
+				_feed_waiting.visible = false)
 		_feed_scroll = UiKit.scroll(_feed)
 		# Following the play, a line cut off at the top would leave a stray end of
 		# a sentence ("time.") over the newest lines: see _hide_cut_rows.
@@ -292,9 +386,25 @@ func _mount_body(stack: bool) -> void:
 		bar.value_changed.connect(func(_v: float) -> void: _hide_cut_rows())
 		bar.changed.connect(_hide_cut_rows)
 		sv.add_child(_feed_scroll)
+		_live_stats = UiKit.vbox(2)
+		_live_stats.name = "LiveStats"
+		sv.add_child(_live_stats)
 		sv.add_child(_controls())
 	_fit_side_panel()
-	_body.add_child(_side_panel)
+	if _pc:
+		# The column beside the oval: the scoreboard (_place_board), then the panel.
+		_right = UiKit.vbox(8)
+		_right.name = "MatchColumn"
+		_right.custom_minimum_size = Vector2(PC_COLUMN_MIN_W, 0)
+		_right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_right.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		_right.size_flags_stretch_ratio = 1.0
+		_right.add_child(_side_panel)
+		_body.add_child(_right)
+	else:
+		_body.add_child(_side_panel)
+	_feed_waiting.visible = _pc and _feed.get_child_count() == 0
+	_paint_live_stats()
 
 
 ## A phone held upright shows the whole ground running top to bottom, goals at
@@ -319,6 +429,10 @@ func _fit_side_panel() -> void:
 		_side_panel.custom_minimum_size = Vector2(0, UiKit.px(120 if short else 168))
 		_side_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_side_panel.size_flags_stretch_ratio = 1.0
+	elif _pc:
+		_side_panel.custom_minimum_size = Vector2.ZERO
+		_side_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_side_panel.size_flags_stretch_ratio = 1.0
 	else:
 		_side_panel.custom_minimum_size = Vector2(220, 0)
 		_side_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -329,7 +443,7 @@ func _fit_side_panel() -> void:
 ## Names sit above the score, not beside it. A wrapping label in a tight hbox
 ## collapses to one character per line and pushes the oval off the phone.
 func _scoreboard() -> Control:
-	var narrow := UiKit.view_width(self) < 640.0
+	var narrow := _board_narrow()
 	# Both clubs' colours behind the score (director, 2026-10-08: not boring).
 	var v := UiKit.vbox(4)
 	var p := ClubDuel.band(str(_res["home"]), str(_res["away"]), v, SCORE_BAND_PAD, 0.35)
@@ -368,6 +482,12 @@ const MOMENTUM_NOTE := "Momentum swings with each goal and fades with time; the 
 
 static func momentum_info() -> Array:
 	return MOMENTUM_INFO_RUNAWAY
+
+
+## The scoreboard's short form (short club names, the smaller figures): a phone,
+## and a PC's column beside the oval, which is about a phone wide.
+func _board_narrow() -> bool:
+	return _pc or UiKit.view_width(self) < 640.0
 
 
 func _momentum_bar() -> Control:
@@ -436,6 +556,7 @@ func _show_momentum_info() -> void:
 	var box := UiKit.modal_box(_over, 520.0, 0.0, _wash())
 	var overlay: Control = box["overlay"]
 	overlay.name = "MomentumInfo"
+	_dock(overlay)
 	_sheet_overlay = overlay
 	var v: VBoxContainer = box["body"]
 	v.add_child(UiKit.heading("Momentum", UiKit.TITLE))
@@ -481,6 +602,101 @@ class MomentumMeter extends Control:
 		draw_rect(Rect2(mid - 1.0, 0, 2.0, size.y), UiKit.TEXT)
 
 
+## A PC's numbers beside the oval. Scoring shots are the scoreboard's and inside
+## 50s are counted as each is played, so both are right to the second. The rest
+## (disposals, marks, tackles, clearances) are the stats sheet's own totals at
+## the last break, and say which break: the feed of play cannot count them.
+const LIVE_STATS := [["disposals", "Disposals"], ["marks", "Marks"], ["tackles", "Tackles"], ["clearances", "Clearances"]]
+const LIVE_BREAKS := {1: "At quarter time", 2: "At half time", 3: "At three-quarter time"}
+
+
+func _track_live_stats(ev: Dictionary) -> void:
+	var kind := str(ev.get("kind", ""))
+	if kind == "inside50":
+		var side := int(ev.get("side", -1))
+		if side == 0 or side == 1:
+			_live_i50[side] = int(_live_i50[side]) + 1
+	elif kind == "quarter":
+		_live_break = maxi(_live_break, int(ev.get("q", 0)))
+	elif kind != "goal" and kind != "behind":
+		return
+	if not _skipping:
+		_paint_live_stats()
+
+
+## Both sides' totals as the stats sheet has them at break n (at the end: the match's), or [].
+func _team_at_break(n: int) -> Array:
+	if _finished:
+		return _res.get("team", [])
+	var quarters: Array = _res.get("quarter_teams", [])
+	if n >= 1 and quarters.size() >= n:
+		return (quarters[n - 1] as Dictionary).get("team", [])
+	return []
+
+
+func _paint_live_stats() -> void:
+	if _live_stats == null or not is_instance_valid(_live_stats):
+		return
+	# A PC's column has the room; a phone keeps the oval and the feed.
+	_live_stats.visible = _pc
+	if not _pc:
+		return
+	UiKit.clear(_live_stats)
+	var team := _team_at_break(_live_break)
+	# At the end the sheet's own count of inside 50s stands (a match skipped to
+	# its end played none of them here).
+	if team.size() == 2 and _finished:
+		_live_i50 = [int(round(float((team[0] as Dictionary).get("inside50", 0.0)))),
+				int(round(float((team[1] as Dictionary).get("inside50", 0.0))))]
+	var inks := UiKit.club_ink_pair(str(_res["home"]), str(_res["away"]))
+	var head := UiKit.hbox(4)
+	head.name = "LiveStatsHead"
+	for side in [0, 1]:
+		var club := UiKit.ellipsis(GameDB.club_short(str(_res["home"] if side == 0 else _res["away"])),
+				UiKit.SMALL, UiKit.club_name_colour(inks[side]), true)
+		club.name = "LiveClub_%d" % side
+		club.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		club.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if side == 0 else HORIZONTAL_ALIGNMENT_RIGHT
+		head.add_child(club)
+	_live_stats.add_child(UiKit.rule())
+	_live_stats.add_child(head)
+	_live_stats.add_child(_live_row("shots", "Scoring shots",
+			int(_shown_goals[0]) + int(_shown_behinds[0]), int(_shown_goals[1]) + int(_shown_behinds[1])))
+	_live_stats.add_child(_live_row("inside50", "Inside 50s", int(_live_i50[0]), int(_live_i50[1])))
+	if team.size() != 2:
+		return
+	var when := UiKit.line(str(LIVE_BREAKS.get(_live_break, "At full time" if _finished else "After four quarters")),
+			UiKit.SMALL, UiKit.MUTED)
+	when.name = "LiveStatsWhen"
+	when.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_live_stats.add_child(when)
+	for row in LIVE_STATS:
+		_live_stats.add_child(_live_row(str(row[0]), str(row[1]),
+				int(round(float((team[0] as Dictionary).get(str(row[0]), 0.0)))),
+				int(round(float((team[1] as Dictionary).get(str(row[0]), 0.0))))))
+
+
+## One number for each side, home on the left as on the scoreboard, the larger
+## in bold (more is not always better, so no good or bad colour).
+func _live_row(key: String, label: String, home: int, away: int) -> Control:
+	var h := UiKit.hbox(4)
+	h.name = "LiveRow_" + key
+	var a := UiKit.figure(str(home), UiKit.NAME, UiKit.TEXT if home >= away else UiKit.MUTED)
+	a.name = "Home"
+	a.custom_minimum_size = Vector2(44, 0)
+	h.add_child(a)
+	var lab := UiKit.ellipsis(label, UiKit.SECONDARY, UiKit.TEXT)
+	lab.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	h.add_child(lab)
+	var b := UiKit.figure(str(away), UiKit.NAME, UiKit.TEXT if away >= home else UiKit.MUTED)
+	b.name = "Away"
+	b.custom_minimum_size = Vector2(44, 0)
+	b.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	h.add_child(b)
+	return h
+
+
 ## Every event carries the engine's momentum as it stood ("mom"): the meter
 ## shows exactly that, nothing of its own.
 func _track_momentum(ev: Dictionary) -> void:
@@ -501,7 +717,7 @@ func _score_column(code: String, home: bool, narrow: bool) -> Control:
 	ClubDuel.on_colour(name)
 	v.add_child(name)
 	# A wide screen's score is the headline across a 1920 band, not a caption in it (row T3.R9).
-	var score := UiKit.figure("0.0 (0)", UiKit.RATING if narrow else WIDE_SCORE, Color.WHITE)
+	var score := UiKit.figure("0.0 (0)", PC_SCORE if _pc else (UiKit.RATING if narrow else WIDE_SCORE), Color.WHITE)
 	ClubDuel.on_colour(score)
 	score.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT if home \
 			else HORIZONTAL_ALIGNMENT_LEFT
@@ -683,6 +899,7 @@ func _on_skip_to_break() -> void:
 	_break_skip.disabled = false
 	_refresh_rings()
 	_paint_momentum()
+	_paint_live_stats()
 	_on_finished()
 
 
@@ -724,12 +941,23 @@ func _warm_call_scene() -> void:
 	var vignette := StoppageVignette.new()
 	vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	holder.add_child(vignette)
-	vignette.size = get_viewport_rect().size
+	# The size the first real call draws at: the oval's place on a PC (where calls are
+	# docked), the whole screen on a phone.
+	vignette.size = warm_size()
 	vignette.setup(GameState.pending_sim, _my_side, "")
 	for i in range(WARM_FRAMES):
 		await get_tree().process_frame
 	if is_instance_valid(holder):
 		holder.queue_free()
+
+
+## The size the warm-up scene draws at: the docked scene's on a PC; on a phone the
+## overlay layer's, which is the screen under the score header.
+func warm_size() -> Vector2:
+	var r := _dock_rect()
+	if r.size != Vector2.ZERO:
+		return r.size
+	return _over.size if _over != null and _over.size.x > 1.0 and _over.size.y > 1.0 else get_viewport_rect().size
 
 
 func _close_coach() -> void:
@@ -802,9 +1030,6 @@ const PEP_TALKS := [
 func _show_coach_box() -> void:
 	if _coach_overlay != null and is_instance_valid(_coach_overlay):
 		return
-	# A new break: nothing to pack again until this one is built.
-	_break_pack_cols = []
-	_break_reading = []
 	_pitch.pause()
 	var sim: MatchSim = GameState.pending_sim
 	var q := sim.current_quarter
@@ -820,12 +1045,25 @@ func _show_coach_box() -> void:
 	# (director, 2026-10-09: "it looks like we are using a mobile UI on a PC").
 	var wide := _wide_break()
 	_pc_break = wide
-	_pc_one_line = wide and q > 1
+	_pc_one_line = wide
 	var stats_pc: Button = null
 	var box := UiKit.modal_box(_over, minf(UiKit.view_width(self) - 48.0, 1560.0) if wide else 640.0, 0.0, _wash())
 	var overlay: Control = box["overlay"]
 	overlay.name = "CoachBox"
 	_coach_overlay = overlay
+	if wide:
+		# Over the oval the sheet has the oval's height, not the window's: it
+		# keeps less of it for its own edge.
+		var shell: Node = box["body"]
+		while shell != null and not (shell is PanelContainer):
+			shell = shell.get_parent()
+		if shell != null:
+			var edge := (shell as PanelContainer).get_theme_stylebox("panel").duplicate() as StyleBoxFlat
+			if edge != null:
+				edge.content_margin_top = 8.0
+				edge.content_margin_bottom = 8.0
+				(shell as PanelContainer).add_theme_stylebox_override("panel", edge)
+	_dock(overlay)
 	if q == 1:
 		_warm_call_scene()
 	var v: VBoxContainer = box["body"]
@@ -833,60 +1071,24 @@ func _show_coach_box() -> void:
 	# The break leads with both clubs' colours (director, 2026-10-08).
 	# On a PC the title and the score share one line: the band is wide.
 	var bv: BoxContainer = UiKit.hbox(16) if wide else UiKit.vbox(2)
-	var band := ClubDuel.band(str(_res["home"]), str(_res["away"]), bv, 14)
+	var band := ClubDuel.band(str(_res["home"]), str(_res["away"]), bv, 6 if wide else 14)
 	band.name = "BreakBand"
 	(band.get_child(0) as ClubDuel).live()   # match day's atmosphere settles in (Feel)
 	v.add_child(band)
-	# Wide (PC, director 2026-10-11: no column scrolls at 1280x720): the
-	# quarter just played and the play-through calls, then the calls in three
-	# columns - the plan, the tag and the talk; the defensive set-up. A phone keeps one column, every call
-	# in it.
-	# Below 1200 units the first column sits above the other three.
-	var rep: VBoxContainer = v
-	var col_a: VBoxContainer = v
-	var col_b: VBoxContainer = v
-	var col_c: VBoxContainer = v
-	var cols: HBoxContainer = null
+	# One line a call, before the bounce and at every break (director,
+	# 2026-10-14; before the bounce too, 2026-11-12: "one screen, tap to
+	# change"): every call is built into a store, out of sight, and laid out by
+	# _mount_one_line as a row that shows its pick and opens on a tap.
 	# How many from the game so far each player call shows before "Other
 	# player...": two on a wide screen, so every call fits without scrolling.
-	var quick := 0
-	# From quarter time on the break is one line a call (director, 2026-10-14):
-	# every call is built as before, into a store, and laid out by
-	# _mount_one_line. The menu before the first ball-up is unchanged.
-	var one_line := q > 1
-	var store: VBoxContainer = null
-	if one_line:
-		quick = 2 if wide else 0
-		store = UiKit.vbox(6)
-		store.name = "CallStore"
-		store.visible = false
-		rep = store
-		col_a = store
-		col_b = store
-		col_c = store
-	if wide and not one_line:
-		var four := UiKit.view_width(self) >= 1200.0
-		quick = 2
-		cols = HBoxContainer.new()
-		cols.name = "BreakColumns"
-		cols.add_theme_constant_override("separation", 24 if four else 32)
-		col_a = UiKit.vbox(6)
-		col_b = UiKit.vbox(6)
-		col_c = UiKit.vbox(6)
-		if four:
-			rep = UiKit.vbox(6)
-			v.add_child(cols)
-		for c in ([rep, col_a, col_b, col_c] if four else [col_a, col_b, col_c]):
-			c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			c.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-			cols.add_child(c)
-	# The calls of the PC pre-bounce break (three columns once dealt), by what they are, for _deal_calls.
-	var calls_by := {}
-	var group := func(key: String, node: Node) -> void:
-		if node != null:
-			if not calls_by.has(key):
-				calls_by[key] = []
-			(calls_by[key] as Array).append(node)
+	var quick := 2 if wide else 0
+	var store := UiKit.vbox(6)
+	store.name = "CallStore"
+	store.visible = false
+	var rep: VBoxContainer = store
+	var col_a: VBoxContainer = store
+	var col_b: VBoxContainer = store
+	var col_c: VBoxContainer = store
 	var title := UiKit.heading(str(titles.get(q, "Quarter %d" % q)), UiKit.H1)
 	title.name = "BreakTitle"
 	if wide:
@@ -937,7 +1139,6 @@ func _show_coach_box() -> void:
 		var played := UiKit.section(str({2: "First quarter", 3: "Second quarter",
 				4: "Third quarter"}.get(q, "Last quarter")))
 		played.name = "QuarterHeading"
-		played.set_meta("break_unit", true)
 		rep.add_child(played)
 		rep.add_child(_quarter_view(q - 1))
 		var did := MatchNotes.calls_lines(_res, _my_side, q - 1) \
@@ -947,7 +1148,6 @@ func _show_coach_box() -> void:
 			rep.add_child(UiKit.spacer(UiKit.GAP))
 			var did_head := UiKit.section("What your calls did")
 			did_head.name = "CallsDidHeading"
-			did_head.set_meta("break_unit", true)
 			rep.add_child(did_head)
 			var dnote := UiKit.lbl(MatchNotes.CALLS_DID_NOTE, UiKit.SMALL, UiKit.MUTED)
 			dnote.name = "CallsDidNote"
@@ -961,12 +1161,8 @@ func _show_coach_box() -> void:
 				dv.add_child(dl)
 			rep.add_child(dv)
 	rep.add_child(UiKit.spacer(UiKit.GAP))
-	if cols != null and cols.get_parent() == null:
-		v.add_child(cols)
 	var calls_head := UiKit.section("Your calls" if q == 1 else "Next quarter")
-	calls_head.set_meta("break_unit", true)
 	col_a.add_child(calls_head)
-	group.call("gameplan", calls_head)
 
 	# Your calls, as taps: nothing here is a settings form. Short lists sit
 	# in plain view; a player list shows the few in the game so far and
@@ -1038,12 +1234,9 @@ func _show_coach_box() -> void:
 	var plan := _choice_grid("PlanPicker", _gameplans(), calls, "gameplan", 2 if narrow else 3, sync_note)
 	# The heading and the plan under it stay together.
 	var plan_block := _call_block("Gameplan", plan)
-	plan_block.remove_meta("break_unit")
 	col_a.add_child(plan_block)
 	col_a.add_child(plan_known)
 	col_a.add_child(plan_note)
-	for n in [plan_block, plan_known, plan_note]:
-		group.call("gameplan", n)
 	sync_note.call(str(calls["gameplan"]))
 
 	# Tag: their most influential so far first, anyone on the ground a tap away.
@@ -1164,7 +1357,6 @@ func _show_coach_box() -> void:
 	tag_block.add_child(tag_ask)
 	tag_block.move_child(tag_ask, 1)
 	col_a.add_child(tag_block)
-	group.call("tag", tag_block)
 	if tagger != null and not others.is_empty():
 		# Your assistant's man carries the same facts as the others, so
 		# they can be compared card for card.
@@ -1180,16 +1372,10 @@ func _show_coach_box() -> void:
 				others.slice(0, 2 if _pc_break else 3),
 				calls, "tagger_id", "Who goes to him?", sync_tag, tag_detail, card, "Other tagger…")
 		var wb := _call_block("Who tags", who_tags)
-		# The follow-up to Tag: packed with its question, never ahead of it.
-		wb.set_meta("break_follow", true)
-		if not one_line:
-			who_block.append(wb)
 		who_wb = wb
 		col_a.add_child(wb)
-		group.call("tag", wb)
 	sync_tag.call("")
 	col_a.add_child(tag_note)
-	group.call("tag", tag_note)
 
 	# Play through, three calls (director, 2026-10-07; back 2026-11-07): each
 	# offers the men who fill that job now, and says what it does or that it
@@ -1221,7 +1407,6 @@ func _show_coach_box() -> void:
 		block.add_child(note)
 		block.add_child(gc_rows)
 		(rep if rep != v else col_a).add_child(block)
-		group.call("pt", block)
 
 	# Defensive set-up (director, 2026-11-03: Defensive forward and Loose
 	# interceptor fold into one call). The coach picks the shape; the men are
@@ -1304,11 +1489,8 @@ func _show_coach_box() -> void:
 	var more: VBoxContainer = col_c
 	var syn_label: Control = _synergy_block()
 	if syn_label != null:
-		syn_label.set_meta("break_unit", true)
 		more.add_child(syn_label)
-		group.call("facts", syn_label)
 	more.add_child(def_block)
-	group.call("df", def_block)
 
 	# Wide: the pep talk sits under the tag, so every column fits a 720-unit
 	# screen. Rotations are no longer a call (director, 2026-11-03): they
@@ -1331,8 +1513,6 @@ func _show_coach_box() -> void:
 	var pep_block := _call_block("Pep talk", pep)
 	col_a.add_child(pep_block)
 	col_a.add_child(pep_note)
-	group.call("pep", pep_block)
-	group.call("pep", pep_note)
 	sync_pep.call(str(calls["pep"]))
 
 	if wide:
@@ -1340,16 +1520,11 @@ func _show_coach_box() -> void:
 		tail.add_child(def_block)
 	var legs := _legs_view()
 	(rep if rep != v else tail).add_child(legs)
-	group.call("facts", legs)
-	if calls_by.has("facts"):
-		(calls_by["facts"] as Array).erase(legs)
-		(calls_by["facts"] as Array).push_front(legs)
 	# The synergies line is about the two sides' strengths, like the legs line:
 	# on a PC sheet it sits right under it, never alone at the top of a column
 	# without a heading (BOSS QC, 2026-10-11).
 	if wide and syn_label != null and syn_label.get_parent() != null:
 		syn_label.get_parent().remove_child(syn_label)
-		syn_label.remove_meta("break_unit")
 		(rep if rep != v else tail).add_child(syn_label)
 	# Who is playing well, on the break (director, 2026-10-11): on a PC in the
 	# report column; on a phone below the choices, so nothing the next quarter
@@ -1385,51 +1560,15 @@ func _show_coach_box() -> void:
 	# One primary action on the break; the way out is said as words.
 	var skip := UiKit.text_action("Skip to full time", UiKit.BODY)
 	skip.pressed.connect(_on_skip)
-	if one_line:
-		_mount_one_line({"box": box, "store": store, "calls": calls, "wide": wide, "start": start, "skip": skip,
-				"stats_pc": stats_pc, "tagger": tagger, "my_mids": my_mids, "who_wb": who_wb, "who_hook": who_hook,
-				"opp_spare": opp_spare, "sim": sim, "syn": syn_label})
-	elif wide:
-		# A PC sheet's actions sit together at the right, not as full-width bars.
-		var acts := UiKit.hbox(12)
-		acts.alignment = BoxContainer.ALIGNMENT_END
-		acts.add_child(_skip_note(sim.current_quarter, true))
-		skip.custom_minimum_size = Vector2(220, 48)
-		start.custom_minimum_size = Vector2(300, 48)
-		if stats_pc != null:
-			stats_pc.custom_minimum_size = Vector2(180, 48)
-			acts.add_child(stats_pc)
-		acts.add_child(skip)
-		acts.add_child(start)
-		box["footer"].add_child(acts)
-		# A mouse, not a thumb: the choices sit 34 tall on the PC sheet, so the
-		# fullest pre-bounce column (the pep talk and the three play-through
-		# picks, eight rows of choices) fits 1280x720 without scrolling.
-		for b in cols.find_children("*", "Button", true, false):
-			if (b as Button).custom_minimum_size.y == 44.0:
-				(b as Button).custom_minimum_size.y = PC_CHOICE_H
-		_break_pack_cols = [rep, col_a, col_b, col_c] if rep != v else [col_a, col_b, col_c]
-		_break_reading = []
-		if rep != v:
-			# The pane's scrollbar is always there: with a tag picked, Who tags opens and the
-			# pane may scroll, and a bar appearing then would narrow every column (director,
-			# 2026-10-14: nothing moves sideways after the tag tap).
-			var pane_up: Node = cols
-			while pane_up != null and not (pane_up is ScrollContainer):
-				pane_up = pane_up.get_parent()
-			if pane_up != null:
-				(pane_up as ScrollContainer).vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_ALWAYS
-			_deal_calls.call_deferred(_break_pack_cols, calls_by)
-		else:
-			_balance_break_columns.call_deferred(_break_pack_cols)
-	else:
-		box["footer"].add_child(start)
-		box["footer"].add_child(skip)
-		v.add_child(_skip_note(q, false))
+	_mount_one_line({"box": box, "store": store, "calls": calls, "wide": wide, "start": start, "skip": skip,
+			"stats_pc": stats_pc, "tagger": tagger, "my_mids": my_mids, "who_wb": who_wb, "who_hook": who_hook,
+			"opp_spare": opp_spare, "sim": sim, "syn": syn_label})
 	if q == 1 and GameState.match_day_setup_open():
-		var side := UiKit.text_action("Change the side", UiKit.BODY)
+		# The side is its own row above the calls (director, 2026-11-12): what it
+		# is, quietly, and what a tap does in bold, as every call's row reads.
+		var side := _call_row("side", "Your side")
 		side.name = "ChangeSide"
-		side.custom_minimum_size = skip.custom_minimum_size
+		NameInk.set_line(side.get_meta("answer") as RichTextLabel, "Change the side", {})
 		side.pressed.connect(func():
 			# Your calls go into the match before you leave, so they are still
 			# set when you come back (GameState.rebuild_pending_side).
@@ -1440,13 +1579,14 @@ func _show_coach_box() -> void:
 			GameState.side_from_match = true
 			_close_coach()
 			Router.go("selection"))
-		var at := skip.get_parent()
-		at.add_child(side)
-		at.move_child(side, skip.get_index())
+		var side_at: Node = overlay.find_child("SideRow", true, false)
+		if side_at != null:
+			side_at.add_child(side)
+			side_at.add_child(UiKit.rule())
 	# A call the quarter broke brightens twice (Feel; never a nag).
 	for picker in MatchNotes.broken_calls(_res, sim.injuries, _my_side, q, _last_tactics):
 		var found := overlay.find_child(str(picker) + "*", true, false)
-		if found != null and one_line:
+		if found != null:
 			# The call's row brightens: its picker is behind the row.
 			var up: Node = found
 			while up != null and not str(up.name).begins_with("CallBody_"):
@@ -1454,8 +1594,6 @@ func _show_coach_box() -> void:
 			var row: Node = overlay.find_child("CallRow_" + str(up.name).trim_prefix("CallBody_"), true, false) if up != null else null
 			if row != null:
 				UiKit.attention(row as CanvasItem)
-		elif found != null:
-			UiKit.attention(found.get_parent() as CanvasItem)
 
 
 # ---------------------------------------------------------------------------
@@ -1564,7 +1702,7 @@ func _mount_one_line(c: Dictionary) -> void:
 	var who_name: Label = null
 	var who_sub: Label = null
 	var who_change: Button = null
-	if who_wb != null and not wide:
+	if who_wb != null:
 		who_line = UiKit.hbox(8)
 		who_line.name = "WhoTagsLine"
 		var wc := UiKit.vbox(0)
@@ -1608,7 +1746,7 @@ func _mount_one_line(c: Dictionary) -> void:
 		fact.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.call("plan", [take.call("PlanPicker", true), take.call("PlanNote"), _calls_record("gameplan"), c["syn"]])
 	body.call("pep", [take.call("PepPicker", true), take.call("PepNote"), _calls_record("pep")])
-	body.call("tag", [fact, take.call("TagPicker", true), who_wb if wide else who_line, take.call("TagNote")])
+	body.call("tag", [fact, take.call("TagPicker", true), who_line, take.call("TagNote")])
 	var through: Array = []
 	for slot in MatchNotes.FOCUS_ORDER:
 		through.append(take.call("FocusPicker_" + str(slot), true))
@@ -1640,6 +1778,7 @@ func _mount_one_line(c: Dictionary) -> void:
 			(r.get_meta("rule") as ColorRect).color = UiKit.club_vivid(str(GameState.my_club), UiKit.SURFACE) if changed else Color.TRANSPARENT
 	_break_refresh.call()
 
+	var q := sim.current_quarter
 	var quarter_head: Control = take.call("QuarterHeading")
 	var facts: Control = take.call("QuarterFacts")
 	var did_head: Control = take.call("CallsDidHeading")
@@ -1654,40 +1793,73 @@ func _mount_one_line(c: Dictionary) -> void:
 		if n.get_parent() != null:
 			n.get_parent().remove_child(n)
 		to.add_child(n)
-	if not wide:
-		# A phone: the quarter, what your calls did, the rows. Best so far and
-		# the full numbers are one tap away, beside the heading.
+	# The page, on a phone and beside the open call on a PC: the quarter just
+	# played (from quarter time on) or your side (before the bounce), then the
+	# rows. Best so far, what your calls did and the full numbers are one tap
+	# away, so the break keeps the same height whatever the quarter threw up.
+	var page: VBoxContainer = v
+	var pane: MarginContainer = null
+	var pane_title: Label = null
+	if wide:
+		var cols := UiKit.hbox(24)
+		cols.name = "BreakColumns"
+		page = UiKit.vbox(6)
+		page.name = "BreakPage"
+		page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		page.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		page.size_flags_stretch_ratio = 0.85
+		cols.add_child(page)
+		var right := UiKit.vbox(6)
+		right.name = "BreakOpenCall"
+		right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		right.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		right.size_flags_stretch_ratio = 1.15
+		cols.add_child(right)
+		pane_title = UiKit.section("")
+		pane_title.name = "CallPaneTitle"
+		right.add_child(pane_title)
+		pane = MarginContainer.new()
+		pane.name = "CallPane"
+		right.add_child(pane)
+		for key in order:
+			put.call(pane, bodies[key])
+		v.add_child(cols)
+	if q > 1:
 		var head := UiKit.hbox(8)
 		if quarter_head != null:
 			quarter_head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			put.call(head, quarter_head)
-		var stats: Control = take.call("BreakStats")
-		var open_best := UiKit.text_action("Best so far", UiKit.BODY)
-		open_best.name = "BestSoFarOpen"
-		# In the sheet the two ways to the full numbers share one row of text
-		# links, not two more bars above Done.
-		var links := UiKit.hbox(8)
-		links.name = "BreakLinks"
-		var all_link: Control = best.find_child("BestSoFarAll", true, false) if best != null else null
-		for lk in [stats, all_link]:
-			if lk == null:
-				continue
-			if lk.get_parent() != null:
-				lk.get_parent().remove_child(lk)
-			lk.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			_outline_link(lk as Button)
-			links.add_child(lk)
-		open_best.pressed.connect(func(): _open_break_sheet("best", "", [best, links], store))
-		head.add_child(open_best)
-		v.add_child(head)
+		if best != null:
+			var open_best := UiKit.text_action("Best so far", UiKit.BODY)
+			open_best.name = "BestSoFarOpen"
+			# In the sheet the two ways to the full numbers share one row of text
+			# links, not two more bars above Done. A PC has "All player stats" in
+			# the sheet's heading and Match stats beside Start.
+			var links: HBoxContainer = null
+			if not wide:
+				links = UiKit.hbox(8)
+				links.name = "BreakLinks"
+				var stats: Control = take.call("BreakStats")
+				var all_link: Control = best.find_child("BestSoFarAll", true, false)
+				for lk in [stats, all_link]:
+					if lk == null:
+						continue
+					if lk.get_parent() != null:
+						lk.get_parent().remove_child(lk)
+					lk.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+					_outline_link(lk as Button)
+					links.add_child(lk)
+			open_best.pressed.connect(func(): _open_break_sheet("best", "", [best, links], store))
+			head.add_child(open_best)
+		page.add_child(head)
 		for n in [facts, legs]:
-			put.call(v, n)
+			put.call(page, n)
 		# What your calls did can run long (every call, tag and lasting moment):
-		# on a phone it is one row that opens the lot in a sheet, so the break
-		# keeps the same height whatever the quarter threw up.
+		# it is one row that opens the lot in a sheet.
 		if did != null:
 			if did_head != null and did_head.get_parent() != null:
 				did_head.get_parent().remove_child(did_head)
+				did_head.queue_free()
 			if did.get_parent() != null:
 				did.get_parent().remove_child(did)
 			store.add_child(did)
@@ -1696,8 +1868,22 @@ func _mount_one_line(c: Dictionary) -> void:
 			open_did.alignment = HORIZONTAL_ALIGNMENT_LEFT
 			var did_note: Node = store.find_child("CallsDidNote", true, false)
 			open_did.pressed.connect(func(): _open_break_sheet("did", "What your calls did", [did_note, did], store))
-			v.add_child(open_did)
-		v.add_child(rows)
+			page.add_child(open_did)
+	else:
+		# Before the bounce: the side (its row is added by _show_coach_box while
+		# the side can still change), then your calls. Nobody has played, so
+		# there is no quarter to read and no Best so far.
+		var side_row := UiKit.vbox(0)
+		side_row.name = "SideRow"
+		page.add_child(side_row)
+	var calls_head := UiKit.section("Your calls" if q == 1 else "Next quarter")
+	calls_head.name = "CallsHeading"
+	page.add_child(calls_head)
+	page.add_child(rows)
+	if q == 1:
+		put.call(page, legs)
+	if not wide:
+		page.add_child(_skip_note(q, false))
 		for key in order:
 			var k := str(key)
 			(row_of[key] as Button).pressed.connect(func(): _open_break_sheet(k, str(CALL_TITLES[k]), [bodies[k]], store))
@@ -1707,45 +1893,9 @@ func _mount_one_line(c: Dictionary) -> void:
 		one.add_child(skip)
 		one.add_child(start)
 		box["footer"].add_child(one)
-		v.add_child(_skip_note(sim.current_quarter, false))
 	else:
-		# A PC: the quarter and Best so far, the rows, and the chosen call beside
-		# them. The pane keeps the room of its tallest call, so choosing another
-		# row never moves the sheet.
-		var cols := UiKit.hbox(28)
-		cols.name = "BreakColumns"
-		var left := UiKit.vbox(6)
-		var mid := UiKit.vbox(6)
-		var right := UiKit.vbox(6)
-		for col in [left, mid, right]:
-			col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			col.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-			cols.add_child(col)
-		# The rows are one short line each, so their column is the narrowest and
-		# the open call gets the room: its Gain / Cost lines wrap less, and the
-		# tallest call still fits 1280x720.
-		mid.size_flags_stretch_ratio = 0.75
-		right.size_flags_stretch_ratio = 1.4
-		for n in [quarter_head, facts, legs]:
-			put.call(left, n)
-		if did_head != null:
-			left.add_child(UiKit.spacer(4))
-		for n in [did_head, did]:
-			put.call(left, n)
-		left.add_child(UiKit.spacer(4))
-		put.call(left, best)
-		var next_head := UiKit.section("Next quarter")
-		mid.add_child(next_head)
-		mid.add_child(rows)
-		var pane_title := UiKit.section("")
-		pane_title.name = "CallPaneTitle"
-		right.add_child(pane_title)
-		var pane := MarginContainer.new()
-		pane.name = "CallPane"
-		right.add_child(pane)
-		for key in order:
-			put.call(pane, bodies[key])
-		v.add_child(cols)
+		# A PC: the chosen call sits open beside the rows. The pane keeps the
+		# room of its tallest call, so choosing another row never moves the sheet.
 		var plain := UiKit.style(Color.TRANSPARENT, 8, 0)
 		plain.set_border_width_all(0)
 		var chosen_sb := UiKit.style(Color.TRANSPARENT, 8, UiKit.RADIUS, UiKit.TEXT)
@@ -1762,21 +1912,24 @@ func _mount_one_line(c: Dictionary) -> void:
 		for key in order:
 			var k := str(key)
 			(row_of[key] as Button).pressed.connect(func(): select.call(k))
+		# A PC sheet's actions sit together at the right, not as full-width bars.
 		var acts := UiKit.hbox(12)
+		acts.name = "BreakActions"
 		acts.alignment = BoxContainer.ALIGNMENT_END
-		acts.add_child(_skip_note(sim.current_quarter, true))
-		skip.custom_minimum_size = Vector2(220, 48)
-		start.custom_minimum_size = Vector2(300, 48)
+		# What Skip does reads beside it, at the left of the same row.
+		acts.add_child(_skip_note(q, true))
+		skip.custom_minimum_size = Vector2(150, 48)
+		start.custom_minimum_size = Vector2(200, 48)
 		var stats_pc: Button = c["stats_pc"]
 		if stats_pc != null:
-			stats_pc.custom_minimum_size = Vector2(180, 48)
+			stats_pc.custom_minimum_size = Vector2(110, 48)
 			acts.add_child(stats_pc)
 		acts.add_child(skip)
 		acts.add_child(start)
 		box["footer"].add_child(acts)
 		# A mouse, not a thumb: the choices sit a little shorter on the PC sheet.
-		for b in cols.find_children("*", "Button", true, false):
-			if (b as Button).custom_minimum_size.y == 44.0 and not str(b.name).begins_with("CallRow_"):
+		for b in pane.find_children("*", "Button", true, false):
+			if (b as Button).custom_minimum_size.y == 44.0:
 				(b as Button).custom_minimum_size.y = PC_CHOICE_H
 		# Every call is laid out once, unseen, so the pane can keep the room of
 		# the tallest; then only the first shows.
@@ -1824,7 +1977,9 @@ func _call_row(key: String, label: String) -> Button:
 	var what := UiKit.line(label, UiKit.SECONDARY, UiKit.MUTED)
 	what.name = "RowLabel"
 	top.add_child(what)
-	var changed := UiKit.line("· changed this break", UiKit.SECONDARY, UiKit.TEXT)
+	# Before the bounce there is no break to have changed it at.
+	var before_bounce := GameState.pending_sim != null and GameState.pending_sim.current_quarter <= 1
+	var changed := UiKit.line("· changed" if before_bounce else "· changed this break", UiKit.SECONDARY, UiKit.TEXT)
 	changed.name = "RowChanged"
 	changed.visible = false
 	top.add_child(changed)
@@ -1985,9 +2140,12 @@ func _skip_note(q: int, wide: bool) -> Label:
 
 func _open_break_sheet(node_name: String, title: String, parts: Array, home: Node) -> void:
 	# Best so far is a bottom sheet: the thumb's end of the screen, not floating.
-	var box := UiKit.modal_box(_over, 640.0, 0.0, _wash(), node_name == "best", node_name == "best")
+	# A PC's sits over the oval like the break under it, centred; a mouse has no thumb's end.
+	var foot := node_name == "best" and not _pc_break
+	var box := UiKit.modal_box(_over, 640.0, 0.0, _wash(), foot, foot)
 	var ov: Control = box["overlay"]
 	ov.name = "CallSheet_" + node_name
+	_dock(ov)
 	# The break behind a sheet is out of sight: nothing of it reads, or shows
 	# half-cut, past the sheet's edge.
 	(ov as ColorRect).color = Color(0, 0, 0, 1.0)
@@ -2002,12 +2160,12 @@ func _open_break_sheet(node_name: String, title: String, parts: Array, home: Nod
 		if (p as Node).get_parent() != null:
 			(p as Node).get_parent().remove_child(p)
 		# Best so far: the links sit at the thumb's end with Done, the votes above.
-		(box["footer"] as Node if node_name == "best" and (p as Node).name == "BreakLinks" else v).add_child(p)
+		(box["footer"] as Node if foot and (p as Node).name == "BreakLinks" else v).add_child(p)
 	var done := UiKit.btn("Done", UiKit.HEADING, true)
 	done.name = "CallDone"
 	done.custom_minimum_size = Vector2(0, 48)
 	done.pressed.connect(_close_top_break_sheet)
-	if node_name == "best":
+	if foot:
 		# Done is the one primary action, in the club fill.
 		_club_fill_button(done)
 		box["footer"].add_child(done)
@@ -2089,360 +2247,6 @@ func _close_top_break_sheet() -> void:
 func _close_break_sheets() -> void:
 	while not _break_sheets.is_empty():
 		_close_top_break_sheet()
-
-
-## The PC break's call columns and its calls in the order it was built, so a
-## call shown later (Who tags, once there is a tag) packs the break again.
-var _break_pack_cols: Array = []
-var _break_reading: Array = []
-
-
-## A PC break's calls read in one order down and across the call columns;
-## where each column ends follows what is in it this break (a loose defender
-## of theirs, a second ruck), so the tallest column is as short as it can be
-## and nothing scrolls on a 720-unit screen. A call keeps its words under it.
-func _balance_break_columns(cols: Array, again := false) -> void:
-	if not again:
-		await get_tree().process_frame
-	if not is_instance_valid(cols[0]):
-		return
-	# Packed again (a call shown or hidden since): from the reading order the
-	# break was built in, never from the last packing.
-	if _break_reading.is_empty():
-		for c in cols:
-			for n in (c as Node).get_children():
-				_break_reading.append(n)
-	else:
-		for n in _break_reading:
-			if is_instance_valid(n):
-				(n as Node).get_parent().remove_child(n)
-				(cols[0] as Node).add_child(n)
-	# Calls in reading order: a call starts a unit; its notes go with it.
-	var units := _break_units(cols)
-	var sep := float((cols[0] as VBoxContainer).get_theme_constant("separation"))
-	var h: Array = _unit_heights(units, sep)
-	# Where each column ends, so the tallest column is as short as it can be
-	# (every split of the units, in order, into that many columns).
-	var n_units := units.size()
-	var ends := _best_split(h, cols.size())
-	var col := 0
-	for k in range(n_units):
-		while col < cols.size() - 1 and k >= int(ends[col]):
-			col += 1
-		var dest: Node = cols[col]
-		for n in units[k]:
-			(n as Node).get_parent().remove_child(n)
-			dest.add_child(n)
-	# The reading order is kept while it fits. When even the best run of units
-	# is too tall for the screen (both loose men, a tag card, your tally), pack
-	# by height instead: the tallest call goes to the shortest column, and each
-	# column still lists its calls in reading order.
-	if not again:
-		await get_tree().process_frame
-	if not is_instance_valid(cols[0]):
-		return
-	var sc: ScrollContainer = null
-	var up: Node = cols[0]
-	while up != null and sc == null:
-		sc = up as ScrollContainer
-		up = up.get_parent()
-	# Tight counts too: under 8 px to spare, the next line or a longer name
-	# would tip it over, so look for the shorter deal.
-	if sc == null or (sc.get_child(0) as Control).get_combined_minimum_size().y <= sc.size.y - 8.0:
-		return
-	var order := range(n_units)
-	order.sort_custom(func(a, b): return float(h[a]) > float(h[b]))
-	var load_h: Array = []
-	var picks: Array = []
-	for c in range(cols.size()):
-		load_h.append(0.0)
-		picks.append([])
-	for k in order:
-		var lo := 0
-		for c in range(1, cols.size()):
-			if float(load_h[c]) < float(load_h[lo]):
-				lo = c
-		load_h[lo] = float(load_h[lo]) + float(h[k])
-		(picks[lo] as Array).append(k)
-	# Then improve it: move or swap units out of the tallest column while that
-	# lowers the tallest column.
-	var improved := true
-	while improved:
-		improved = false
-		var tall := 0
-		for c in range(1, cols.size()):
-			if float(load_h[c]) > float(load_h[tall]):
-				tall = c
-		var top := float(load_h[tall])
-		for k in (picks[tall] as Array).duplicate():
-			for c in range(cols.size()):
-				if c == tall:
-					continue
-				if float(load_h[c]) + float(h[k]) < top - 0.5:
-					(picks[tall] as Array).erase(k)
-					(picks[c] as Array).append(k)
-					load_h[tall] = float(load_h[tall]) - float(h[k])
-					load_h[c] = float(load_h[c]) + float(h[k])
-					improved = true
-					break
-				for k2 in (picks[c] as Array).duplicate():
-					var d := float(h[k]) - float(h[k2])
-					if d > 0.5 and float(load_h[c]) + d < top - 0.5:
-						(picks[tall] as Array).erase(k)
-						(picks[c] as Array).erase(k2)
-						(picks[tall] as Array).append(k2)
-						(picks[c] as Array).append(k)
-						load_h[tall] = float(load_h[tall]) - d
-						load_h[c] = float(load_h[c]) + d
-						improved = true
-						break
-				if improved:
-					break
-			if improved:
-				break
-	# The greedy answer can sit a whole call above the best there is (Best so
-	# far on the fullest PC break: 551 against 532 with the same blocks), so
-	# look for the true shortest tallest column before placing anything.
-	var exact := _shortest_tallest(h, cols.size(), load_h.max())
-	if not exact.is_empty():
-		picks = exact
-	for c in range(cols.size()):
-		(picks[c] as Array).sort()
-		for k in picks[c]:
-			for n in units[k]:
-				(n as Node).get_parent().remove_child(n)
-				(cols[c] as Node).add_child(n)
-	# Best so far shows three a side on a PC, as on a phone, while the break
-	# still fits 720 high; when even the best deal overflows, the third of each
-	# side goes (the older two-a-side break) and the calls are dealt again.
-	if _coach_overlay == null or not is_instance_valid(_coach_overlay):
-		return
-	if (sc.get_child(0) as Control).get_combined_minimum_size().y > sc.size.y - 8.0:
-		var dropped := false
-		for r in _coach_overlay.find_children("BestRow_*", "", true, false):
-			if (r as Node).has_meta("best_third"):
-				(r as Node).get_parent().remove_child(r)
-				(r as Node).queue_free()
-				dropped = true
-		if dropped:
-			_balance_break_columns(cols, true)
-			return
-
-
-## Before the first ball-up on a three-column PC sheet the calls are dealt by what
-## they are (director, 2026-10-15: empty space is a defect; "PC is not a big
-## phone"): the game plan leads the first column and the tag the second. The
-## rest (the pep talk, the defensive set-up, the three play-through calls, and
-## the legs and synergies lines) go where they make the three columns most
-## alike in height, under what fits 720 high (director, 2026-11-03: three
-## columns, none more than a fifth empty).
-## Where a call sits is dealt once: a call that opens later (Who tags) grows its
-## own column and never moves another call.
-const DEAL_FIRST := {"gameplan": 0, "tag": 1}
-const DEAL_ORDER := ["gameplan", "tag", "pep", "df", "pt", "facts"]
-
-
-func _deal_calls(cols: Array, groups: Dictionary) -> void:
-	await get_tree().process_frame
-	if not is_instance_valid(cols[0]):
-		return
-	var sep := float((cols[0] as VBoxContainer).get_theme_constant("separation"))
-	var keys: Array = []
-	for k in DEAL_ORDER:
-		if groups.has(k):
-			keys.append(k)
-	# Anything that was not named (a spacer) is left out of the columns.
-	var named := {}
-	for k in keys:
-		for n in groups[k]:
-			named[n] = true
-	for c in cols:
-		for n in (c as Node).get_children():
-			if not named.has(n):
-				(n as Control).visible = false
-	# What each kind of call takes up: its visible parts and the gaps between.
-	var h := {}
-	for k in keys:
-		var t := 0.0
-		for n in groups[k]:
-			if (n as Control).visible:
-				t += (n as Control).get_combined_minimum_size().y + sep
-		h[k] = t
-	# The room the columns have: the pane's, less everything else in it.
-	var budget := INF
-	var sc: ScrollContainer = null
-	var up: Node = cols[0]
-	while up != null and sc == null:
-		sc = up as ScrollContainer
-		up = up.get_parent()
-	if sc != null:
-		var inner := sc.get_child(0) as Control
-		var around: float = inner.get_combined_minimum_size().y - (cols[0] as Node).get_parent().get_combined_minimum_size().y
-		budget = sc.size.y - around - 8.0
-	var free: Array = []
-	for k in keys:
-		if not DEAL_FIRST.has(k):
-			free.append(k)
-	# Three columns before the first ball-up (director, 2026-11-03: with four
-	# match calls cut, four columns left one 378 tall beside one of 161). The
-	# last column built is emptied into the others and leaves the row.
-	var n := mini(3, cols.size())
-	var base := []
-	for i in range(n):
-		base.append(0.0)
-	for k in keys:
-		if DEAL_FIRST.has(k):
-			base[int(DEAL_FIRST[k])] += float(h[k])
-	# Every way of placing the free kinds: the one that fits the pane and leaves the
-	# least empty room under the shortest column (else the shortest tallest).
-	var best := []
-	var best_score := [INF, INF, INF]
-	var total := int(pow(n, free.size()))
-	for code in range(total):
-		var load_h := base.duplicate()
-		var at := []
-		var rest := code
-		for k in free:
-			var c := rest % n
-			rest = int(floorf(rest / float(n)))
-			at.append(c)
-			load_h[c] += float(h[k])
-		var mx := float(load_h.max())
-		var mn := float(load_h.min())
-		var over := 1.0 if mx > budget else 0.0
-		var score := [over, mx if over > 0.0 else mx - mn, mx]
-		if score < best_score:
-			best_score = score
-			best = at
-	var where := {}
-	for k in keys:
-		if DEAL_FIRST.has(k):
-			where[k] = int(DEAL_FIRST[k])
-	for i in range(free.size()):
-		where[free[i]] = int(best[i]) if not best.is_empty() else n - 1
-	for k in keys:
-		for nd in groups[k]:
-			if (nd as Node).get_parent() != null:
-				(nd as Node).get_parent().remove_child(nd)
-			(cols[int(where[k])] as Node).add_child(nd)
-	for i in range(n, cols.size()):
-		var spare: Node = cols[i]
-		if spare.get_parent() != null:
-			spare.get_parent().remove_child(spare)
-		spare.queue_free()
-	cols.resize(n)
-
-
-func _unit_heights(units: Array, sep: float) -> Array:
-	var h: Array = []
-	for u in units:
-		var t := 0.0
-		for n in u:
-			# Who tags keeps its room hidden or not, so showing it later never
-			# moves a call to another column (director, 2026-10-14).
-			if (n as Control).visible or (n as Node).has_meta("break_follow"):
-				t += (n as Control).get_combined_minimum_size().y + sep
-		h.append(t)
-	return h
-
-
-## Every way of dealing the units (heights h) into `parts` columns, searched
-## for the one whose tallest column is shortest; tallest calls first, and a
-## branch is dropped the moment it cannot beat the best so far. Returns the
-## unit numbers in each column, or an empty array when nothing beats `above`
-## (the answer the caller already has).
-static func _shortest_tallest(h: Array, parts: int, above: float) -> Array:
-	var order := range(h.size())
-	order.sort_custom(func(a, b): return float(h[a]) > float(h[b]))
-	var state := {"best": above - 0.5, "picks": [], "steps": 0}
-	var load_h: Array = []
-	var cur: Array = []
-	for c in range(parts):
-		load_h.append(0.0)
-		cur.append([])
-	_deal(order, 0, h, load_h, cur, state)
-	return state["picks"] as Array
-
-
-static func _deal(order: Array, i: int, h: Array, load_h: Array, cur: Array, state: Dictionary) -> void:
-	state["steps"] = int(state["steps"]) + 1
-	if int(state["steps"]) > 400000:
-		return
-	if i == order.size():
-		var top := 0.0
-		for l in load_h:
-			top = maxf(top, float(l))
-		if top < float(state["best"]):
-			state["best"] = top
-			var copy := []
-			for col in cur:
-				copy.append((col as Array).duplicate())
-			state["picks"] = copy
-		return
-	var k: int = order[i]
-	var seen := []
-	for c in range(load_h.size()):
-		# Two columns with the same load so far are the same choice.
-		if seen.has(float(load_h[c])):
-			continue
-		seen.append(float(load_h[c]))
-		var after := float(load_h[c]) + float(h[k])
-		if after >= float(state["best"]):
-			continue
-		load_h[c] = after
-		(cur[c] as Array).append(k)
-		_deal(order, i + 1, h, load_h, cur, state)
-		(cur[c] as Array).pop_back()
-		load_h[c] = after - float(h[k])
-
-
-## The break's calls as units in reading order: a node marked "break_unit"
-## starts one, and the nodes after it (its notes) go with it. A node marked
-## "break_follow" is the follow-up to the question before it (Tag, then who
-## tags; a loose man, then his cards): it never starts a unit, so a packing
-## pass can never put the answer before its question or in another column.
-static func _break_units(cols: Array) -> Array:
-	var units: Array = []
-	for c in cols:
-		for n in (c as Node).get_children():
-			if units.is_empty() or ((n as Node).has_meta("break_unit") and not (n as Node).has_meta("break_follow")):
-				units.append([n])
-			else:
-				(units[-1] as Array).append(n)
-	return units
-
-
-## Split heights h, in order, into `parts` runs so the largest run is
-## smallest; returns where each run ends (exclusive).
-static func _best_split(h: Array, parts: int) -> Array:
-	var n := h.size()
-	var pre := [0.0]
-	for x in h:
-		pre.append(float(pre[-1]) + float(x))
-	# best[p][i]: the tallest column splitting the first i units into p columns.
-	var best: Array = []
-	var cut: Array = []
-	for p in range(parts + 1):
-		best.append([])
-		cut.append([])
-		for i in range(n + 1):
-			(best[p] as Array).append(INF)
-			(cut[p] as Array).append(0)
-	best[0][0] = 0.0
-	for p in range(1, parts + 1):
-		for i in range(n + 1):
-			for j in range(i + 1):
-				var top := maxf(float(best[p - 1][j]), float(pre[i]) - float(pre[j]))
-				if top < float(best[p][i]) - 0.5:
-					best[p][i] = top
-					cut[p][i] = j
-	var ends: Array = []
-	ends.resize(parts)
-	var i := n
-	for p in range(parts, 0, -1):
-		ends[p - 1] = i
-		i = int(cut[p][i])
-	return ends
 
 
 ## A landscape PC window wide enough for the break sheet's columns (the
@@ -2761,6 +2565,7 @@ func _show_moment() -> void:
 	var box := UiKit.modal_box(_over, 560.0, 440.0, _wash())
 	_moment_overlay = box["overlay"]
 	_moment_overlay.name = "MomentCard"
+	_dock(_moment_overlay)
 	var v: VBoxContainer = box["body"]
 	v.add_child(UiKit.lbl("Coach's call  ·  %s" % _clock_text(int(m.get("q", 1)), int(m.get("min", 0))),
 			UiKit.SMALL, UiKit.MUTED))
@@ -2802,6 +2607,7 @@ func _show_bounce_moment(m: Dictionary) -> void:
 	overlay.name = "MomentCard"
 	overlay.set_meta("scene", true)
 	_moment_overlay = overlay
+	_dock(overlay)
 	var vignette: StoppageVignette
 	if str(m.get("kind", "")) == "bounce" or bool(m.get("moves", false)):
 		vignette = StoppageVignette.new()
@@ -2812,10 +2618,14 @@ func _show_bounce_moment(m: Dictionary) -> void:
 	overlay.add_child(vignette)
 	vignette.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	vignette.clip_contents = true   # its stand and light towers stay off the scoreboard
+	# A scene that takes the score is handed the one the scoreboard shows, so the
+	# two never disagree while the oval catches up with the sim.
+	var shown := {"goals": _shown_goals.duplicate(), "behinds": _shown_behinds.duplicate()}
+	vignette.live_spots = _live_spots()
 	if vignette is DecisionVignette:
-		(vignette as DecisionVignette).setup_decision(GameState.pending_sim, _my_side, m)
+		(vignette as DecisionVignette).setup_decision(GameState.pending_sim, _my_side, m, shown)
 	else:
-		vignette.setup(GameState.pending_sim, _my_side, str(m.get("title", "")))
+		vignette.setup(GameState.pending_sim, _my_side, str(m.get("title", "")), shown)
 	# The call, held below the screen until the scene freezes.
 	var margin := MarginContainer.new()
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -2843,8 +2653,22 @@ func _show_bounce_moment(m: Dictionary) -> void:
 	call.add_child(text)
 	var buttons: Array = []
 	var options: Array = m.get("options", [])
+	# A PC's call sits over the oval's place, wider than it is tall: its choices stand
+	# side by side, each over its own gain and cost, so the call is a low band and
+	# the scene shows above it. A phone stacks them, as ever.
+	var across: HBoxContainer = null
+	if _pc and options.size() > 1:
+		across = UiKit.hbox(12)
+		across.name = "MomentOptions"
+		call.add_child(across)
 	for i in range(options.size()):
 		var o: Dictionary = options[i]
+		var into: Container = call
+		if across != null:
+			into = UiKit.vbox(6)
+			into.name = "MomentOption_%d" % i
+			into.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			across.add_child(into)
 		# Every choice stands equal: no filled first button that reads as the
 		# recommended one (director's PC playtest, 2026-10-07).
 		var b := UiKit.btn(str(o.get("label", "")), 16, false)
@@ -2852,10 +2676,18 @@ func _show_bounce_moment(m: Dictionary) -> void:
 		b.custom_minimum_size = Vector2(0, 46)
 		b.disabled = true
 		b.pressed.connect(_on_moment_choice.bind(i))
-		call.add_child(b)
+		into.add_child(b)
 		buttons.append(b)
-		_moment_lines(call, o)
+		_moment_lines(into, o)
 	panel.modulate.a = 0.0
+	# The scene keeps its men above the call: it is told the call's height once the
+	# call is up, and again whenever the laid-out panel changes height (its wrapped
+	# lines settle a frame or two after it is first shown).
+	var call_up := [false]
+	var tell_room := func() -> void:
+		if call_up[0] and is_instance_valid(vignette) and is_instance_valid(panel):
+			vignette.call_room = panel.size.y
+	panel.resized.connect(tell_room)
 	margin.add_theme_constant_override("margin_bottom", -600)
 	vignette.ready_for_call.connect(func() -> void:
 		for b in buttons:
@@ -2864,7 +2696,8 @@ func _show_bounce_moment(m: Dictionary) -> void:
 		if not is_instance_valid(margin):
 			return
 		panel.modulate.a = 1.0
-		vignette.call_room = panel.size.y
+		call_up[0] = true
+		tell_room.call()
 		var tw := margin.create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 		tw.tween_method(func(v: float) -> void: margin.add_theme_constant_override("margin_bottom", int(v)),
 				-600.0, 0.0, 0.3))
@@ -2915,7 +2748,6 @@ func _call_heading(label: String) -> Label:
 
 func _call_block(label: String, control: Control) -> Control:
 	var v := UiKit.vbox(4 if _pc_break else 6)
-	v.set_meta("break_unit", true)
 	v.add_child(_call_heading(label))
 	v.add_child(control)
 	return v
@@ -3148,6 +2980,7 @@ func _player_sheet(title: String, roster: Array, current: String, detail: Callab
 	var overlay: Control = box["overlay"]
 	overlay.name = "PlayerSheet"
 	_sheet_overlay = overlay
+	_dock(overlay)
 	var v: VBoxContainer = box["body"]
 	v.add_child(UiKit.ellipsis(title, UiKit.H2, UiKit.TEXT, true))
 	var players: Dictionary = _res.get("players", {})
@@ -3272,6 +3105,7 @@ func _show_break_stats(players_first := false) -> void:
 	var overlay: Control = box["overlay"]
 	overlay.name = "BreakStatsSheet"
 	_report_overlay = overlay
+	_shut_bench()
 	var v: VBoxContainer = box["body"]
 	v.add_child(UiKit.ellipsis("Match stats", UiKit.H1, UiKit.TEXT, true))
 	var box_score := _stats_page(v, true, players_first)
@@ -3295,7 +3129,6 @@ const BEST_ROW_GAP_PC := 2
 func _best_so_far() -> Control:
 	var box := UiKit.vbox(4 if _pc_break else VOTES_STEP)
 	box.name = "BestSoFar"
-	box.set_meta("break_unit", true)
 	var head := UiKit.hbox(8)
 	var title := UiKit.section("Best so far")
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -3515,7 +3348,7 @@ func _append_new_events() -> void:
 # ---------------------------------------------------------------------------
 # Playback hooks
 # ---------------------------------------------------------------------------
-## Tired and hurt players carry a short mark on the oval and the bench strip
+## Tired and hurt players carry a short mark on the oval and in the bench's drawer
 ## (PlayerMarks): the hurt from the injuries played so far, either side; the
 ## tired from your own side's legs, in a match you coach.
 func _refresh_marks() -> void:
@@ -3567,6 +3400,7 @@ func _on_event(ev: Dictionary) -> void:
 		_refresh_rings()
 	_update_scoreboard(ev)
 	_track_momentum(ev)
+	_track_live_stats(ev)
 	_feed_add(ev)
 	# A career best at a goal is that goal's one extra line: no battle or
 	# story line stacks on it.
@@ -3579,6 +3413,21 @@ func _on_event(ev: Dictionary) -> void:
 		_flash_score(int(ev.get("side", 0)))
 		_track_run(int(ev.get("side", 0)))
 	_queue_broadcast(ev, event_index)
+
+
+## Where the live oval has each man right now, by his id, in a call scene's metres (x
+## across, y toward the goal your side kicks at): the scene shows the same ground the
+## coach was watching (director, 2026-11-12: "Why not show people in their actual
+## positions?"). Read only.
+func _live_spots() -> Dictionary:
+	var out := {}
+	if _pitch == null or _pitch.director == null:
+		return out
+	var sgn := MatchDirector._dir(_my_side)
+	for token in _pitch.director.tokens:
+		var p: Vector2 = token.get("pos", Vector2.ZERO)
+		out[str(token.get("pid", ""))] = Vector2(p.y, p.x) * sgn
+	return out
 
 
 ## A vignette reads the positions the presentation has already staged. It
@@ -3651,6 +3500,7 @@ func _show_broadcast(kind: String, ev: Dictionary, snap: Dictionary) -> void:
 	_broadcast_busy = true
 	var overlay := UiKit.cover(_over)
 	overlay.name = "BroadcastVignetteOverlay"
+	_dock(overlay)
 	overlay.color = Color(0.015, 0.018, 0.02, 1.0)
 	_broadcast_overlay = overlay
 	# STYLE-06 (row 6.34): the cut to the close-up eases in with the figures
@@ -3790,7 +3640,7 @@ func _paint_scoreboard() -> void:
 	_fit_scores()
 	_paint_clock()
 	if _lead != null and is_instance_valid(_lead):
-		var narrow := UiKit.view_width(self) < 640.0
+		var narrow := _board_narrow()
 		var name_of := func(c): return GameDB.club_short(str(c)) if narrow else GameDB.club_name(str(c))
 		_lead.text = MatchNotes.lead_text(str(_res["home"]), str(_res["away"]), [
 				_shown_goals[0] * 6 + _shown_behinds[0], _shown_goals[1] * 6 + _shown_behinds[1]], name_of)
@@ -3802,11 +3652,14 @@ func _paint_scoreboard() -> void:
 func _fit_scores() -> void:
 	if _score_band == null or not is_instance_valid(_score_band) or _score_home == null:
 		return
-	var narrow := UiKit.view_width(self) < 640.0
-	var band := minf(_score_band.size.x, UiKit.view_width(self) - 2.0 * _score_band.global_position.x)
+	var narrow := _board_narrow()
+	# A PC's band is its column's width; a phone's never runs past the screen's edge.
+	var band := _score_band.size.x if _pc else minf(_score_band.size.x, UiKit.view_width(self) - 2.0 * _score_band.global_position.x)
 	# The band's padding (8 a side), the row's two gaps (6) and the clock between.
 	var room := (band - 16.0 - 12.0 - (84.0 if narrow else 132.0)) / 2.0
 	var sizes := [UiKit.RATING, UiKit.SCORE, UiKit.NUMBER] if narrow else [WIDE_SCORE, 36, UiKit.RATING, UiKit.SCORE]
+	if _pc:
+		sizes = [PC_SCORE, UiKit.RATING, UiKit.SCORE, UiKit.NUMBER]
 	var font: Font = _score_home.get_theme_font("font")
 	var fs: int = sizes[-1]
 	for s: int in sizes:
@@ -3991,6 +3844,11 @@ func _on_finished() -> void:
 		return
 	_skipping = false
 	_finished = true
+	# A match skipped to its end never painted the meter on the way (_track_momentum):
+	# it says who had the run of play at the siren, not the "Even" it started on.
+	_paint_momentum()
+	_live_break = 5
+	_paint_live_stats()
 	if _crowd != null:
 		_crowd.full_time()
 	_fulltime_shown = true
@@ -4133,6 +3991,12 @@ func _render_ft() -> void:
 			_ft_tab = key
 			_render_ft())
 		_ft_tabs.add_child(b)
+	# A PC: the Summary reads over the oval, the score and the feed still beside
+	# it; the Stats tab is the one page of every number, and takes the screen.
+	if _ft_tab == "stats":
+		_undock(_ft_box["overlay"])
+	else:
+		_dock(_ft_box["overlay"])
 	match _ft_tab:
 		"stats":
 			_ft_stats(v)
@@ -4738,6 +4602,9 @@ func _qcell(text: String, w: int, col: Color, fs: int, bold := false) -> Label:
 ## Router back hook. A live match cannot be abandoned half way (the rest of
 ## the round is already on the ladder), so back is swallowed until full time.
 func handle_back() -> bool:
+	# The bench's drawer on the oval shuts first.
+	if _pitch != null and _pitch.close_bench():
+		return true
 	# A player list opened from the break closes first.
 	if _sheet_overlay != null and is_instance_valid(_sheet_overlay):
 		_close_sheet()
@@ -4790,25 +4657,26 @@ func _reflow() -> void:
 	if _margin != null:
 		UiKit.apply_insets(_margin, 10)
 	var stack := UiKit.view_width(self) < 640.0
-	if stack != _stacked:
-		_body.remove_child(_pitch)
-		_body.remove_child(_side_panel)
-		var idx := _body.get_index()
+	# The scoreboard is made again for the new width, in its new place.
+	if _board != null and is_instance_valid(_board):
+		if _board.get_parent() != null:
+			_board.get_parent().remove_child(_board)
+		_board.queue_free()
+	if stack != _stacked or (not stack and _wide_break()) != _pc:
+		_pitch.get_parent().remove_child(_pitch)
+		_side_panel.get_parent().remove_child(_side_panel)
 		_root.remove_child(_body)
 		_body.queue_free()
 		_mount_body(stack)
 		_root.add_child(_body)
-		_root.move_child(_body, idx)
 	else:
 		_orient_pitch(stack)
 		_fit_side_panel()
-	var old := _root.get_child(0)
-	_root.remove_child(old)
-	old.queue_free()
-	var board := _scoreboard()
-	_root.add_child(board)
-	_root.move_child(board, 0)
+	_board = _scoreboard()
+	_place_board()
 	_paint_scoreboard()
+	_paint_live_stats()
+	_fit_docked.call_deferred()
 
 
 
