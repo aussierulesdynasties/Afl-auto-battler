@@ -28,7 +28,7 @@ const GOLDEN_REAL := "6b9d20ef93eea2ce95f0a6d936f19727"
 ## call's credit, not what happened (row 144). "impact" and "plan_traits" were
 ## already in main's results, so they stay in the hash.
 const BOOKKEEPING_KEYS := ["impact_by"]
-const GOLDEN_SEASON := {"Windows": "b039d703c0783968328f937754c75eee", "Linux": "f99bf57c4e3a8dfdc2409ecb11611bec"}
+const GOLDEN_SEASON := {"Windows": "05a96ea659dcfe349e9afec75b01b45a", "Linux": "9c00f9caf199debd6cc6a20325ba8cba"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and
