@@ -451,6 +451,29 @@ static func draft_picks(gs, n_clubs: int, pool_size: int) -> Array:
 	return comps
 
 
+## Whether the senior player a must-trade pick brings in fits `code`'s list.
+## A club still building always says yes: _make_room trims its state-league
+## signings afterwards. A club that is playing asks the one list rule
+## (RookieList.add_block), as every other arrival does. A rival with no room
+## lets its lowest-rated state-league signing go to make it; the coach's club
+## is never trimmed for him, so its trade waits on a free spot.
+static func _trade_fits(gs, code: String) -> bool:
+	if not gs.season.lists.has(code):
+		return true
+	var list: Array = gs.season.lists[code]
+	if RookieList.add_block(list) == "":
+		return true
+	if code == str(gs.my_club):
+		return false
+	var state_league := list.filter(func(p): return str(p["id"]).begins_with("FND_") and not RookieList.is_cat_b(p))
+	state_league.sort_custom(func(a, b): return int(a["overall"]) < int(b["overall"]))
+	for p in state_league:
+		if RookieList.add_block(list, "senior", "", [p]) == "":
+			list.erase(p)
+			return true
+	return false
+
+
 ## The club's lowest-rated state-league signings make way, so every pick it
 ## still holds fits in the senior spots the draft fills.
 static func _make_room(gs, code: String, picks: Array) -> void:
@@ -555,6 +578,13 @@ static func forced_trade(gs, code: String, picks: Array, pick_no: int) -> void:
 				best_club = str(club)
 	if best.is_empty():
 		return   # nobody would deal: the pick stays, and the news says nothing
+	if not _trade_fits(gs, code):
+		# The list rule every arrival answers to (RookieList.add_block): no
+		# senior spot, or no room in the 44, and the pick stays with the club.
+		if code == str(gs.my_club):
+			gs.add_news("trade", "Pick %d was to be traded for a senior player, but %s So the pick stays with you." % [
+					pick_no, RookieList.block_words(list_of(gs, code), RookieList.add_block(list_of(gs, code))).replace("Your", "your")])
+		return
 	(gs.season.lists[best_club] as Array).erase(best)
 	# His deal runs on from where it was, ticked down a season at the rollover
 	# like everyone's (the list he joins is not ticked).

@@ -60,6 +60,7 @@ func run(tree: SceneTree) -> void:
 	_t("_test_real_lists_rookie_categories")
 	_t("_test_the_44_rule")
 	_t("_test_the_44_national_draft")
+	_t("_test_no_upgrade_under_the_draft")
 	_t("_test_the_44_real_lists")
 	await _t("_test_three_category_b_head")
 	_t("_test_youth_only_drafts")
@@ -1089,6 +1090,55 @@ func _test_the_44_rule() -> void:
 	var fit := Contracts.evaluate_trade(col, [col[0]], [mine[0], mine[1]], 1 << 40, mine, 1 << 40, 0.0, {"name": "Collingwood"})
 	_check(not str(fit["code"]) in ["trade_list_over", "trade_senior_over"],
 			"Trades: a club at 43 can take two for one (%s)" % str(fit["code"]))
+
+
+## The checker's fault on #1443 (2026-11-12): the National Draft counts each
+## list when it opens, so a rookie upgraded while it was paused (Back, then
+## Coaching, My list) took a spot the draft then filled again: 36 seniors, 6
+## Category A and 1 Category B ended at 45 with 39 seniors. Nobody is upgraded
+## while the draft is open.
+func _test_no_upgrade_under_the_draft() -> void:
+	_new_career()
+	gs.season.round_index = gs.season.fixture.size()
+	_shape(CLUB, 36, 6, 1)
+	_check(gs.begin_intake_draft(), "(setup) the National Draft opens")
+	if gs.draft == null:
+		return
+	var list: Array = gs.season.lists[CLUB]
+	var cat_b: Dictionary = {}
+	var cat_a: Dictionary = {}
+	for p in list:
+		if RookieList.is_cat_b(p):
+			cat_b = p
+		elif RookieList.is_rookie(p):
+			cat_a = p
+	var seniors := RookieList.senior_count(list)
+	var size := RookieList.list_size(list)
+	var open: int = gs.draft.open_spots(CLUB)
+	_check(not cat_b.is_empty() and not cat_a.is_empty() and open >= 1
+			and open == mini(RookieList.SENIOR_SPOTS - seniors, Contracts.MAX_LIST - size),
+			"(setup) %d seniors and %d in the 44, with a Category A and a Category B rookie: %d spots open tonight" % [seniors, size, open])
+	for rk in [cat_b, cat_a]:
+		if rk.is_empty():
+			continue
+		var why := RookieList.upgrade_block(gs, CLUB, str(rk["id"]))
+		_check(why.contains("National Draft is open") and not RookieList.upgrade(gs, CLUB, str(rk["id"]))
+				and RookieList.is_rookie(rk),
+				"A Category %s rookie is not upgraded while the National Draft is open (%s)" % [str(rk["rookie_list"]), why])
+	_check(RookieList.senior_count(list) == seniors and RookieList.list_size(list) == size
+			and gs.draft.open_spots(CLUB) == open, "...and the list the draft counted is unchanged")
+	var draft: Draft = gs.draft
+	while not draft.is_finished():
+		var candidate := draft._best_ai_pick(draft.current_club())
+		if candidate.is_empty() or not draft._draft_pick(draft.current_club(), candidate):
+			draft._skip_current_pick()
+	var took := draft.count_for(CLUB)
+	_check(took <= open and size + took <= Contracts.MAX_LIST and seniors + took <= RookieList.SENIOR_SPOTS,
+			"The draft's picks fit the list it counted: %d picks onto %d seniors and %d in the 44" % [took, seniors, size])
+	_check(gs.finish_intake_draft() and gs.draft == null, "(setup) the draft closes")
+	var left: Array = RookieList.rookies(gs.season.lists[CLUB])
+	_check(left.is_empty() or not RookieList.upgrade_block(gs, CLUB, str(left[0]["id"])).contains("National Draft"),
+			"Once the draft is over, upgrades answer to the list rule alone again")
 
 
 ## The National Draft under the same rule: a club at 46 passes every pick (the
