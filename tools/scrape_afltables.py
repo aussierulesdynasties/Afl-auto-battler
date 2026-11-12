@@ -48,7 +48,7 @@ FALLBACK_YEAR = 2025
 MIN_GAMES = 6
 USER_AGENT = (
     "Mozilla/5.0 (compatible; AflAutoBattler/1.0; "
-    "+https://github.com/gabebartolo-spec/Afl-auto-battler)"
+    "+https://github.com/aussierulesdynasties/Afl-auto-battler)"
 )
 
 # CSV schema. Order matters -- GameDB.gd reads columns positionally.

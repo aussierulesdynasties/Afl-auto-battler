@@ -129,7 +129,9 @@ func _click(c: Control) -> String:
 		(c as BaseButton).pressed.disconnect(on_press)
 	if watch and not hit[0]:
 		var top := root.gui_get_hovered_control()
-		return "the click on %s (at %s, rect %s) went to %s" % [c.name, str(at), str(c.get_global_rect()), top.name if top != null else "nothing"]
+		if not is_instance_valid(c):
+			return "the click at %s freed the control without pressing it" % str(at)
+		return "the click on %s (at %s, rect %s) went to %s" % [c.name, str(at), str(c.get_global_rect()), top.name if is_instance_valid(top) else "nothing"]
 	return ""
 
 
