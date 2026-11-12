@@ -309,6 +309,49 @@ func _test_blurb_matches_rank() -> void:
 						clash.append("untrue: " + b)
 	_check(clash.is_empty(), "No climb lead before a practice fall, no slide lead before a practice rise (%s)" % str(clash.slice(0, 3)))
 	_check(kept >= 200, "...and climb and slide leads still print when the practice move agrees or is absent (%d)" % kept)
+	# Whole ladders as the papers print them (60 ladders, 1,080 blurbs, the frames
+	# shared across the 18 clubs): every club has a last-season finish and a
+	# third of them a practice move.
+	var rng := RandomNumberGenerator.new()
+	rng.seed = SUITE_SEED
+	var faults: Array = []
+	var ord_re := RegEx.create_from_string("(?i)\\b(an?) (\\d+)")
+	var read := 0
+	for ladder in range(60):
+		var codes: Array = []
+		for i in range(18):
+			codes.append("L%02d" % i)
+		var lasts := _shuffled(codes, rng)
+		var facts := {}
+		for i in range(18):
+			var mv := ""
+			var roll := rng.randi_range(0, 5)
+			var pts := rng.randi_range(1, 90)
+			if roll == 0 and i > 0:
+				mv = PreSeason.practice_move_line(rng.randi_range(1, 3), pts, 3)
+			elif roll == 1 and i < 17:
+				mv = PreSeason.practice_move_line(-rng.randi_range(1, 3), -pts, -3)
+			facts[codes[i]] = {"name": "Club %d" % i, "pos": i + 1, "clubs": 18, "last": lasts.find(codes[i]) + 1,
+					"star": "Sam Smith", "second": "Tom Brown", "move": mv,
+					"line": {"word": "midfield", "rank": rng.randi_range(1, 18), "lead": "Jack Jones"}}
+		var printed := PowerRankings.blurbs(codes, facts)
+		for i in range(18):
+			var b := str(printed[codes[i]])
+			var mv := str(facts[codes[i]]["move"])
+			read += 1
+			for hit in ord_re.search_all(b):
+				if hit.get_string(1).to_lower() != CopyRules.article(int(hit.get_string(2))):
+					faults.append("a/an: " + b)
+			for w in first_words:
+				if b.contains(w) and i != 0:
+					faults.append("%d called first: %s" % [i + 1, b])
+			for w in climb_words:
+				if b.contains(w) and mv.begins_with("Down "):
+					faults.append("climb then down: " + b)
+			for w in slide_words:
+				if b.contains(w) and mv.begins_with("Up "):
+					faults.append("slide then up: " + b)
+	_check(read == 1080 and faults.is_empty(), "1,080 blurbs on whole ladders with last year's finishes: right a/an, one side to beat, no lead against its move line (%s)" % str(faults.slice(0, 3)))
 
 
 ## Every move line says something true (the 2026-11-12 capture printed "Holds
