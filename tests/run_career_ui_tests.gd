@@ -4290,6 +4290,20 @@ func _test_every_start_reaches_interview() -> void:
 		name_field.text_changed.emit(name_field.text)
 		await Tap.tap(current_scene.find_child("InterviewStart", true, false))
 		await _settle()
+		# The coach you beat is named as every screen names him: a real one by
+		# his real name, never an invented label (real names only, 2026-11-12).
+		var asked := current_scene.find_child("InterviewQuestion", true, false) as Label
+		var labels := 0
+		var real_named := 0
+		for cid in _state.coaches:
+			var co: Dictionary = _state.coaches[cid]
+			var lab := str(co.get("generic_name", ""))
+			var rn := str(co.get("real_name", ""))
+			if asked != null and rn != "" and lab != "" and lab != rn:
+				labels += 1 if asked.text.contains(lab) else 0
+				real_named += 1 if asked.text.contains(rn) else 0
+		_check(asked != null and labels == 0 and (real_named == 1 or asked.text.contains("a long list of names")),
+				"%s: the first question names the beaten coach by his real name (%s)" % [label, asked.text if asked != null else "no question"])
 		var answered := ""
 		for a in picks:
 			answered += await Tap.tap(current_scene.find_child("InterviewAnswer%d" % int(a), true, false))

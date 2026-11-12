@@ -239,19 +239,20 @@ func _question() -> void:
 	_fit()
 
 
-## The candidate you beat for the job: a free former senior coach, always by
-## his fictional name (never a real person), the same one for the same club.
+## The candidate you beat for the job: a free former senior coach, under the
+## name every other screen gives him (real names only, director 2026-11-12),
+## the same one for the same club.
 func _beaten() -> String:
 	var ids := GameState.coaches.keys()
 	ids.sort()
 	for cid in ids:
 		var c: Dictionary = GameState.coaches[cid]
-		if str(c.get("status", "")) == "free" and bool(c.get("former_sc", false)) and str(c.get("generic_name", "")) != "":
+		if str(c.get("status", "")) == "free" and bool(c.get("former_sc", false)) and GameDB.player_display_name(c) != "Player":
 			var held_here := false
 			for st in c.get("stints", []):
 				held_here = held_here or str(st[0]) == GameState.coach_club()
 			if not held_here:
-				return str(c["generic_name"])
+				return GameDB.player_display_name(c)
 	return "a long list of names"
 
 

@@ -104,7 +104,7 @@ static func block_reason(gs, p: Dictionary) -> String:
 	return ""
 
 
-## The surname the screen shows (real or generated names), so the reason never
+## The surname the screen shows, so the reason never
 ## leans on an unnamed "he" or names someone the card does not.
 static func surname(p: Dictionary) -> String:
 	var parts := GameDB.player_display_name(p).strip_edges().split(" ", false)

@@ -161,7 +161,6 @@ func run() -> void:
 	var seed := int(args[1]) if args.size() > 1 else 1
 	var club := str(args[2]) if args.size() > 2 else "MEL"
 	var seasons := int(args[3]) if args.size() > 3 else 10
-	var real := true   # real names are always shown; a "real" argument changes nothing
 	GameState.reset()
 	GameState.career_seed = seed
 	GameState.replay_seed = seed
@@ -242,7 +241,7 @@ func run() -> void:
 	print("WEEKS %d" % weeks)
 	print("SEASONS %d" % seasons_played)
 	print("SUMMARY seed %d %s %s names %s%s | seasons %d | weeks %d | cards %d | distinct %d of %d" % [seed, club,
-			"lists" if args.has("lists") else "redraft", "real" if real else "fictional",
+			"lists" if args.has("lists") else "redraft", "real",
 			(" coach" + (" cover" if cover else "") + (" intl" if intl else "") + (" keep" if keep else "")
 					+ (" heavy" if heavy else "") + (" answer" if not fixed.is_empty() else "")) if cover or intl or keep or heavy or not fixed.is_empty() else "",
 			seasons_played, weeks,

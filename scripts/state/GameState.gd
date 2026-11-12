@@ -959,6 +959,7 @@ func _save_state() -> Dictionary:
 		"custom_prospect_id": custom_prospect_id,
 		"start_mode": start_mode,
 		"dataset": dataset,
+		"names_real": 1,   # no generated name of a real player is written (RealNamesSwap)
 		"challenge": challenge,
 		"opening_draft": opening_draft,
 		"custom_club": custom_club,
@@ -1046,6 +1047,11 @@ func _restore_career(state: Dictionary) -> bool:
 		return false
 	Season.beat()
 	reset(ds)
+	# A save from a build that could show generated names (before 2026-11-12)
+	# may have written them into its news, stories and records: swapped once.
+	if int(state.get("names_real", 0)) < 1:
+		Season.beat()
+		load("res://scripts/state/RealNamesSwap.gd").apply(state, GameDB.players)
 	# A pre-made history stops where Choose your club opens.
 	Season.beat()
 	sim_ahead = bool(state.get("sim_ahead", false))

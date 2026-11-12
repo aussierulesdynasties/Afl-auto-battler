@@ -5,7 +5,7 @@ extends SceneTree
 ## into the main checkout if it has none) and diff the two files.
 ##   godot --headless --path . --script tools/rival_identity_dump.gd -- <out.json>
 ## It records on the suites' data (tools/run_tests.sh: no hand-set OVR rows,
-## generic names, no save touched), so it plays the matches the suite reads.
+## no save touched), so it plays the matches the suite reads.
 
 ## Loaded at run time: the autoloads (GameDB) must exist before it compiles.
 const IDENTITY_PATH := "res://tests/rival_identity.gd"

@@ -22,6 +22,7 @@ func run() -> void:
 	_t("_test_marquee_games")
 	_t("_test_banner_context")
 	_t("_test_real_names_only")
+	_t("_test_old_save_names_swapped")
 	_menu("fair", "shrewd")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
@@ -338,6 +339,66 @@ func _test_news() -> void:
 			"The news survives a save and load")
 
 
+## A career saved while generated names were shown wrote them into its news and
+## records as text. Loading it swaps each one for the real name, once; a
+## generated player's own name and a name two people carry are left alone.
+func _test_old_save_names_swapped() -> void:
+	var Swap = load("res://scripts/state/RealNamesSwap.gd")
+	var state := {
+		"lists": {"ADE": [
+			{"id": "R_1", "generic_name": "Ari Bramble", "name": "Ari Bramble", "real_name": "Jordan Dawson", "note": "Ari Bramble is captain"},
+			{"id": "R_2", "generic_name": "Sam Twice", "name": "Sam Twice", "real_name": "Ben Keays"},
+			{"id": "R_3", "generic_name": "Lee Shared", "name": "Lee Shared", "real_name": "Rory Laird"},
+			{"id": "GEN_9", "generic_name": "Zed Quill", "name": "Zed Quill"},
+			{"id": "GEN_10", "generic_name": "Lee Shared", "name": "Lee Shared"},
+			{"id": "GEN_11", "generic_name": "Tom Vale", "name": "Tom Vale", "family_real_last": "Dawson"}]},
+		"coaches": {"C_1": {"cid": "C_1", "generic_name": "Sam Twice", "real_name": "Matthew Nicks"},
+				"C_2": {"cid": "C_2", "generic_name": "Brett Harper", "real_name": "Ken Hinkley"}},
+		"coach_arcs": {"people": {"chairman": "Brett Harper"}, "log": ["Brett Harper, the chairman, rang."]},
+		"news": [{"text": "Ari Bramble's 200th. Ari Brambleton sat out; Zed Quill, Lee Shared, Sam Twice and Tom Vale played.", "who": "R_1"}],
+		"log": [{"id": "R_1", "name": "Ari Bramble"}, ["Ari Bramble", "Bramble"]],
+		"packed": PackedStringArray(["Coleman: Ari Bramble (Adelaide)"]),
+	}
+	var changed: int = Swap.apply(state)
+	_check(str(state["news"][0]["text"]) == "Jordan Dawson's 200th. Ari Brambleton sat out; Zed Quill, Lee Shared, Sam Twice and Tom Dawson played.",
+			"A real player's generated name in a line becomes his real one; a longer name, a generated player's name, a name a generated player shares and a name two real people carry stay (%s)" % str(state["news"][0]["text"]))
+	_check(str(state["log"][0]["name"]) == "Jordan Dawson" and str(state["log"][1][0]) == "Jordan Dawson" and str(state["log"][1][1]) == "Bramble",
+			"A stored name beside an id is swapped; a lone surname is not (%s)" % str(state["log"]))
+	_check(str(state["packed"][0]) == "Coleman: Jordan Dawson (Adelaide)", "A packed line is swapped (%s)" % str(state["packed"]))
+	var rec: Dictionary = state["lists"]["ADE"][0]
+	_check(str(rec["name"]) == "Ari Bramble" and str(rec["generic_name"]) == "Ari Bramble" and str(rec["note"]) == "Jordan Dawson is captain",
+			"His own record keeps its hidden label; other text on it is swapped (%s)" % str(rec))
+	_check(str(state["coach_arcs"]["log"][0]) == "Brett Harper, the chairman, rang.",
+			"An invented chairman who shares a real coach's hidden label keeps his name (%s)" % str(state["coach_arcs"]["log"][0]))
+	_check(changed == 5, "Five strings changed (%d)" % changed)
+	_check(int(Swap.apply(state)) == 0, "A second pass changes nothing")
+
+	# A whole career: text written under the generated name, saved without the
+	# mark this build writes, comes back under the real name.
+	GameState.reset()
+	GameState.replay_seed = 2027
+	GameState.start_season("FRE", GameDB.club_list("FRE"))
+	var p: Dictionary = GameState.my_list[0]
+	var real := str(p.get("real_name", ""))
+	var label := str(p.get("generic_name", ""))
+	_check(real != "" and label != "" and label != real, "Fremantle's first listed player is real and has a hidden label (%s / %s)" % [real, label])
+	GameState.news.push_front({"kind": "milestone", "text": "%s played his 200th game." % label, "year": 2026})
+	var old: Dictionary = GameState._save_state()
+	_check(int(old.get("names_real", 0)) == 1, "A save from this build is marked as carrying real names only")
+	old.erase("names_real")
+	_check(CareerSave.write(old, GameState._save_meta(), GameState.save_path), "The old-style save is written")
+	_check(GameState.load_career(), "The old-style save loads")
+	_check(str(GameState.news[0].get("text", "")) == "%s played his 200th game." % real,
+			"Its news names him %s, not %s (%s)" % [real, label, str(GameState.news[0].get("text", ""))])
+	var back: Dictionary = GameState._find_player(str(p["id"]))
+	_check(GameDB.player_display_name(back) == real and str(back.get("generic_name", "")) == label,
+			"He is shown as %s and his record is otherwise as it was saved" % real)
+	# A save this build wrote is not touched again, whatever it says.
+	GameState.news.push_front({"kind": "milestone", "text": "%s is a name in a headline." % label, "year": 2026})
+	_check(GameState.save_career() and GameState.load_career() and str(GameState.news[0].get("text", "")).begins_with(label),
+			"A save already marked is loaded as written")
+
+
 ## Real names only (director, 2026-11-12): there is no names choice, a settings
 ## file that once chose generated names loads and is ignored, and generated
 ## players keep the name they were given.
@@ -348,14 +409,17 @@ func _test_real_names_only() -> void:
 	# A settings file from a build that still had the choice, set to generated.
 	var old := ConfigFile.new()
 	old.set_value("display", "real_names", false)
-	old.set_value("ui", "text_size", "standard")
+	old.set_value("ui", "text_size", "larger")
 	old.save(path)
 	var kept = gs_script.new()
 	kept.settings_path = path
 	kept._ready()
 	_check(not ("show_real_names" in kept) and not kept.has_method("set_show_real_names"),
 			"There is no names choice left to read or set")
-	_check(kept.text_size() == "standard", "An old settings file that chose generated names still loads")
+	# "larger" is not the default, so this fails if the old file is not read.
+	_check(kept.text_size() == "larger" and UiKit.text_size() == "larger",
+			"An old settings file that chose generated names still loads: its text size is read (%s)" % kept.text_size())
+	UiKit.apply_text_size("standard")
 	kept.free()
 	DirAccess.remove_absolute(abs_path)
 	var generated := {"id": "GEN_9", "generic_name": "Zed Quill", "name": "Zed Quill"}
