@@ -61,6 +61,7 @@ func run() -> void:
 	_t("_test_save_keeps_dataset")
 	_t("_test_old_and_unknown_saves")
 	_t("_test_club_years_1990")
+	_t("_test_ground_names_1990")
 	Datasets.remove(FIXTURE)
 	GameState.replay_seed = 0
 	GameState.reset()
@@ -389,3 +390,76 @@ func _test_club_years_1990() -> void:
 	_check(GameDB.club_name("WBD") == "Western Bulldogs" and GameDB.club_short("BRL") == "Lions"
 			and str(GameDB.club("STK")["ground"]) == "Waverley Park", "A new season shows that year's clubs")
 	GameDB.reload()
+
+
+## Legacy grounds (plan L9): one key per ground whatever it was called, its
+## name of the year on every screen, and one story the season it changes.
+func _test_ground_names_1990() -> void:
+	GameDB.reload(FIXTURE)
+	_check(GameDB.ground_key("Princes Park") == "Ikon Park" and GameDB.ground_key("princes_park") == "Ikon Park"
+			and GameDB.ground_key("Optus Oval") == "Ikon Park" and GameDB.ground_key("Carrara") == "People First Stadium"
+			and GameDB.ground_key("MCG") == "MCG", "Every name a ground has had is the one ground")
+	_check(str(GameDB.club_era("CAR", 1990)["ground"]) == "Ikon Park" and str(GameDB.club_era("WBD", 1990)["ground"]) == "Whitten Oval"
+			and str(GameDB.club_era("BRL", 1990)["ground"]) == "People First Stadium",
+			"The clubs' era grounds are the grounds' keys")
+	_check(GameDB.ground_name("Ikon Park", 1990) == "Princes Park" and GameDB.ground_name("Ikon Park", 1994) == "Optus Oval"
+			and GameDB.ground_name("Waverley Park", 1991) == "AFL Park" and GameDB.ground_name("People First Stadium", 1990) == "Carrara Stadium"
+			and GameDB.ground_name("Whitten Oval", 1994) == "Western Oval" and GameDB.ground_name("MCG", 1990) == "MCG",
+			"Each ground carries its name of the year; the MCG keeps its own")
+	_check(GameDB.ground_name("GMHBA Stadium", 2017) == "Simonds Stadium" and GameDB.ground_name("GMHBA Stadium", 2018) == "GMHBA Stadium",
+			"Kardinia Park was Simonds Stadium to 2017 (ground_names.csv, the sourced table)")
+	_check(GameDB.ground_renamed_from("Ikon Park", 1994) == "Princes Park" and GameDB.ground_renamed_from("Ikon Park", 1995) == ""
+			and GameDB.ground_renamed_from("Marvel Stadium", 2000) == "" and GameDB.ground_renamed_from("MCG", 1994) == "",
+			"A rename is a dated name giving way to another; a ground opening is not one")
+	_check(GameDB.ground_shown("Ikon Park") == "Princes Park" and GameDB.ground_shown("Ikon Park", 2000) == "Optus Oval",
+			"The screens show the ground's name in the season shown (%s)" % GameDB.ground_shown("Ikon Park"))
+	# The club page, the fixture and the next-match line show the year's name.
+	var host := Control.new()
+	ClubPage.open(host, "CAR")
+	var fact: Node = host.find_child("Ground", true, false)
+	var said := str((fact as RichTextLabel).text) if fact is RichTextLabel else ""
+	_check(said.contains("Princes Park") and not said.contains("Ikon Park"),
+			"Carlton's page names its 1990 home ground Princes Park (%s)" % said)
+	host.free()
+	var lists := {}
+	for c in GameDB.active_clubs(1994):
+		lists[c] = []
+	var s94 := Season.new(GameDB.active_clubs(1994), lists, SUITE_SEED, 1994)
+	GameDB.apply_era(1994)
+	var venues := {}
+	for page in StatsFixture.pages(s94):
+		for m in page["matches"]:
+			venues[str(m["venue"])] = true
+	_check(venues.has("Optus Oval") and venues.has("AFL Park") and not venues.has("Ikon Park") and not venues.has("Waverley Park"),
+			"The 1994 fixture names Optus Oval and AFL Park (%s)" % str(venues.keys()))
+	# The rename story: once, the season it happens, with the clubs at home there.
+	var old_season = GameState.season
+	var old_year: int = GameState.season_year
+	GameState.news = []
+	GameState.milestone_log = {}
+	for y in [1994, 1995]:
+		GameState.season_year = y
+		GameDB.apply_era(y)
+		GameState.season = Season.new(GameDB.active_clubs(y), lists, SUITE_SEED, y)
+		GameState._ground_rename_news()
+	GameState._ground_rename_news()
+	var told := GameState.news.filter(func(n): return str(n.get("kind", "")) == "ground")
+	var lines := told.map(func(n): return str(n["text"]))
+	_check(told.size() == 2 and lines.has("Western Oval takes a new name this season: from Round 1 it is Whitten Oval, home of Fitzroy and Footscray.")
+			and lines.has("Princes Park takes a new name this season: from Round 1 it is Optus Oval, home of Carlton."),
+			"1994 and 1995 each tell their ground's new name once (%s)" % str(lines))
+	var story := NewsFront.story(told[0] if told.size() > 0 else {}, "CAR")
+	_check(str(story["headline"]) == "Western Oval becomes Whitten Oval" and str(story["club"]) in ["FIT", "WBD"],
+			"The story's headline is the old and new name, in the home club's colours (%s)" % str(story["headline"]))
+	GameState.news = []
+	GameState.season_year = 2027
+	GameDB.reload()
+	GameDB.apply_era(2027)
+	GameState.season = Season.new(GameDB.active_clubs(2027), {}, SUITE_SEED, 2027)
+	GameState._ground_rename_news()
+	_check(GameState.news.is_empty(), "Today's grounds keep their names: a 2027 season tells no rename")
+	GameState.season = old_season
+	GameState.season_year = old_year
+	GameState.news = []
+	GameState.milestone_log = {}
+
