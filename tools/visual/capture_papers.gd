@@ -6,7 +6,8 @@ extends SceneTree
 ## opens, <out>_<kind>_low.png (scrolled to the ladder), and <out>_finish_answered.png
 ## (the club talked up). The story kind is forced for the look only.
 ## --real keeps the paper's own ladder (the practice matches' nudge and all) and
-## writes <out>_real.png and <out>_real_low.png; --want-win N tries seeds from
+## writes <out>_real.png and <out>_real_low.png, and on a phone <out>_ladder_NN.png
+## (the ladder three clubs further down each time, so every blurb can be read); --want-win N tries seeds from
 ## --seed up until the club won its practice match by N points or more.
 
 var W := 390
@@ -36,28 +37,35 @@ func _run() -> void:
 	var out := "/tmp/pre"
 	var club := "FRE"
 	var a := OS.get_cmdline_user_args()
-	for i in range(a.size() - 1):
-		if str(a[i]) == "--out":
-			out = str(a[i + 1])
-		if str(a[i]) == "--club":
-			club = str(a[i + 1])
-		if str(a[i]) == "--risk":
+	# Every argument is read, the last one too (a trailing --real); a flag that
+	# takes a value reads "" when none follows it.
+	for i in range(a.size()):
+		var flag := str(a[i])
+		var value := str(a[i + 1]) if i + 1 < a.size() else ""
+		if flag == "--real":
+			_real = true
+		if value == "":
+			continue
+		if flag == "--out":
+			out = value
+		if flag == "--club":
+			club = value
+		if flag == "--risk":
 			# A bigger Heavy-week risk than the game's, so the "Hurt in training"
 			# list is sure to show (for the look only; never a balance read).
-			_risk = float(a[i + 1])
-		if str(a[i]) == "--art" and str(a[i + 1]) == "off":
+			_risk = float(value)
+		if flag == "--art" and value == "off":
 			# The stops without their pictures, as they were (the before shot).
 			load("res://scripts/ui/UiArt.gd").set("dir", "res://assets/ui/none")
-		if str(a[i]) == "--real":
-			_real = true
-		if str(a[i]) == "--want-win":
-			_want_win = int(a[i + 1])
-		if str(a[i]) == "--seed":
-			_seed = int(a[i + 1])
-		if str(a[i]) == "--size":
-			var wh := str(a[i + 1]).split("x")
-			W = int(wh[0])
-			H = int(wh[1])
+		if flag == "--want-win":
+			_want_win = int(value)
+		if flag == "--seed":
+			_seed = int(value)
+		if flag == "--size":
+			var wh := value.split("x")
+			if wh.size() == 2:
+				W = int(wh[0])
+				H = int(wh[1])
 	await process_frame
 	var state = root.get_node("GameState")
 	var db = root.get_node("GameDB")
@@ -70,6 +78,7 @@ func _run() -> void:
 	state.replay_seed = _seed
 	state.set_setting("seen_weekly_loop_intro", true)
 	state.set_setting("seen_training_intro", true)
+	state.set_setting("seen_preseason_intro", true)
 	# The canvas a player's screen gives the game, whatever this machine's display density.
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 	DisplayServer.window_set_size(Vector2i(W, H))
@@ -106,6 +115,7 @@ func _run() -> void:
 		_seed += 1
 	state.set_setting("seen_weekly_loop_intro", true)
 	state.set_setting("seen_training_intro", true)
+	state.set_setting("seen_preseason_intro", true)
 	if _risk >= 0.0:
 		load("res://scripts/sim/PreSeason.gd").data()["heavy_week_injury"] = _risk
 	for m in state.season.fixture[0]:
@@ -122,16 +132,21 @@ func _run() -> void:
 		print("seed ", _seed, " margin ", (state.preseason.get("practice_margins", {}) as Dictionary).get(club, "none"),
 				" pred ", rec0.get("pred"), " moves ", rec0.get("moves"), " order ", rec0.get("order"))
 		root.get_node("Router").go("hub")
-		var wait := 0
-		while (current_scene == null or current_scene.find_child("PapersLadder", true, false) == null) and wait < 600:
-			wait += 1
-			await process_frame
+		if not await _wait_for("PapersLadder"):
+			return
 		# Past the loading card and the wipe into the screen.
 		await create_timer(3.0).timeout
 		await _shot(out + "_real.png")
 		await _scroll(true)
 		await create_timer(0.5).timeout
 		await _shot(out + "_real_low.png")
+		# The ladder a few clubs at a time, each block of rows at the top of the
+		# page, with every club's power-ranking blurb (director, 2026-11-12).
+		for i in ([] if W >= 900 else [0, 3, 6, 9, 12, 15]):
+			await _scroll_to("PapersRow_%d" % i)
+			await create_timer(0.3).timeout
+			await _shot(out + "_ladder_%02d.png" % (i + 1))
+		print("blurbs ", state.papers_blurbs())
 		quit(0)
 		return
 	# For the look only: the paper has the club 13th, so the ladder and the words agree.
@@ -147,7 +162,8 @@ func _run() -> void:
 		rec["result"] = ""
 		rec["pid"] = state._papers_breakout() if kind == "breakout" else ""
 		root.get_node("Router").go("hub")
-		await _frames(10)
+		if not await _wait_for("PapersTitle"):
+			return
 		print("scene ", current_scene.name, " ", kind)
 		await _shot(out + "_" + kind + ".png")
 		await _scroll(true)
@@ -158,11 +174,29 @@ func _run() -> void:
 	rec2["pid"] = ""
 	rec2["answered"] = false
 	root.get_node("Router").go("hub")
-	await _frames(10)
+	if not await _wait_for("Papers_2"):
+		return
 	await _press("Papers_2")
 	await _frames(6)
 	await _shot(out + "_finish_answered.png")
 	quit(0)
+
+
+## Waits (10 s of frames at most) for the screen to open with `node_name` on
+## it. When no scene opens, or the node never shows, it says so and quits with
+## an error rather than hanging or shooting an empty window.
+func _wait_for(node_name: String) -> bool:
+	var wait := 0
+	while (current_scene == null or current_scene.find_child(node_name, true, false) == null) and wait < 600:
+		wait += 1
+		await process_frame
+	if current_scene == null or current_scene.find_child(node_name, true, false) == null:
+		push_error("capture_papers: %s never showed (%s)" % [node_name,
+				"no scene opened" if current_scene == null else "scene %s" % current_scene.name])
+		quit(1)
+		return false
+	await _frames(10)
+	return true
 
 
 func _frames(n: int) -> void:
@@ -172,16 +206,27 @@ func _frames(n: int) -> void:
 
 func _scroll(to_foot: bool) -> void:
 	await _frames(3)
-	var page: Node = current_scene.find_child("PreSeasonPage", true, false)
+	var page: Node = current_scene.find_child("PreSeasonPage", true, false) if current_scene != null else null
 	var sc := page.get_parent() as ScrollContainer if page != null else null
 	if sc != null:
 		sc.scroll_vertical = int(sc.get_v_scroll_bar().max_value) if to_foot else 0
 	await _frames(3)
 
 
+## Scroll the page so `node_name` sits at the top of it.
+func _scroll_to(node_name: String) -> void:
+	await _frames(3)
+	var page: Node = current_scene.find_child("PreSeasonPage", true, false) if current_scene != null else null
+	var sc := page.get_parent() as ScrollContainer if page != null else null
+	var row := current_scene.find_child(node_name, true, false) as Control if current_scene != null else null
+	if sc != null and row != null:
+		sc.scroll_vertical = int(row.global_position.y - (page as Control).global_position.y) - 8
+	await _frames(3)
+
+
 func _press(node_name: String) -> void:
 	await _frames(3)
-	var b: Node = current_scene.find_child(node_name, true, false)
+	var b: Node = current_scene.find_child(node_name, true, false) if current_scene != null else null
 	if b is Button:
 		(b as Button).emit_signal("pressed")
 	else:
