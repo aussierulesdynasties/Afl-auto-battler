@@ -259,4 +259,4 @@ func _test_old_save() -> void:
 	_season(GameState.coach_arch, "defensive", "criticise")
 	GameState._coach_arch_season_end()
 	_check(str(GameState.coach_arch["held"]["s"]) == "DS" and str(GameState.coach_arch["held"]["p"]) == "HARD",
-			"One season of Defensive Press and criticism earns DS and Hardline (%s)" % [GameState.coach_arch.get("held")])
+			"One season of High Press and criticism earns DS and Hardline (%s)" % [GameState.coach_arch.get("held")])

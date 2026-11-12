@@ -325,7 +325,7 @@ func _test_record_words() -> void:
 			CoachReport.plan_label("controlled")], "Only in front")
 	# The season line never names a plan as their habit beside the usual game
 	# the report has just named (director, 2026-11-08: Essendon read "usual
-	# game, Defensive Press" then "This season: mostly Controlled Tempo").
+	# game, High Press" then "This season: mostly Controlled Tempo").
 	_check(not s.contains(CoachReport.plan_label("defensive")), "Their usual game is not said twice: %s" % s)
 	_check(_say(RivalRead.season_line(rows, "attacking")) == "This season they've gone to %s when in front." % [
 			CoachReport.plan_label("controlled")], "Chasing with their usual game is not a change")

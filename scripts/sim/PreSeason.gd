@@ -785,7 +785,7 @@ static func with_plan_block(blocks: Array, phase: String, usual: String) -> Arra
 	return out
 
 
-## "Fluency in Defensive Press rises a step for every 2 weeks on it."
+## "Fluency in High Press rises a step for every 2 weeks on it."
 static func drill_sentence(plans: Array) -> String:
 	var names := []
 	for p in clean_drills(plans):

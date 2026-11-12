@@ -930,7 +930,7 @@ func set_tactics(side: int, t: Dictionary) -> void:
 
 ## Gameplan trade-offs. Every plan gives something up, and the main three
 ## counter each other: Attack Corridor beats Controlled Tempo (no pressure to
-## punish it), Controlled Tempo beats the Defensive Press (it plays through
+## punish it), Controlled Tempo beats the High Press (it plays through
 ## the pressure), and the press beats Attack Corridor (it squeezes the
 ## corridor into turnovers). Keys: goal (own conversion), opp_goal (theirs),
 ## exposed (their conversion when you turn it over), gain (metres),
@@ -1116,7 +1116,8 @@ func _plan(side: int) -> String:
 
 ## ARD-M4-015 (the director, 2026-10-06: "merge the duplicates"): "Fast
 ## movement" was Attack Corridor and "High press" was Defensive Press under
-## older names, the same effects. Old saves and replays map across.
+## older names, the same effects; renamed High Press again (director 2026-11-12:
+## "Rename High Press"). Old saves and replays map across.
 ## Through stars (#874) is cut (director, 2026-11-07: the three play-through
 ## calls are back instead): an old save or replay on it plays Balanced.
 const PLAN_ALIAS := {"fast": "attacking", "press": "defensive", "through_stars": "balanced"}
@@ -1800,7 +1801,7 @@ const PEP_FIRE := {"clangers": 1.10, "pace": 1.20}
 ## the most pressure of the variants tried, legs burning far quicker.
 const PEP_HEAT := {"pace": 1.60}
 const PEP_HEAT_PRESS := 1.08
-## Heat on top of the Defensive Press: the same hunting, so the gains overlap and
+## Heat on top of the High Press: the same hunting, so the gains overlap and
 ## only this share of heat's pressure bonus is added (the legs cost stays in full).
 const PEP_HEAT_ON_PRESS := 0.5
 
@@ -2387,7 +2388,7 @@ const PRESS_ZONES := [
 	{"FWD": 0.22, "MID": 0.60, "RUCK": 0.30, "DEF": 0.85},
 ]
 const PRESS_ZONE_EDGE := 20.0
-## The Defensive Press by zone, from the carrier's end (PRESS_ZONES order):
+## The High Press by zone, from the carrier's end (PRESS_ZONES order):
 ## the pressure he meets. Their back third is where we push up and hunt; in
 ## their forward third our numbers are up the ground, so our own defence
 ## presses less. About the same pressure overall, moved up the ground.

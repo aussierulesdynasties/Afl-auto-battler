@@ -376,8 +376,8 @@ func _test_word_source() -> void:
 		_check(all.has(str(t[0])), "the guide's topic %s is a word" % t[0])
 	_check(all.has("OVR") and all.has("POT") and not all.has("XP"), "OVR and POT are words; XP is not said on the screens")
 	# Words in a line: whole words, longest first, in reading order.
-	var found: Array = FW.find_in("A Defensive Press asks for pressure; impressive.")
-	_check(found == ["Defensive Press", "Pressure"], "words in a line (%s)" % str(found))
+	var found: Array = FW.find_in("A High Press asks for pressure; impressive.")
+	_check(found == ["High Press", "Pressure"], "words in a line (%s)" % str(found))
 	_check(FW.word_at("Go with Attack Corridor now", 12) == "Attack Corridor", "the word under a letter")
 	_check(FW.word_at("Go with Attack Corridor now", 2) == "", "no word under a plain letter")
 

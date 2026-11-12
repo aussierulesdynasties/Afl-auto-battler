@@ -2320,7 +2320,7 @@ func _structure_spot(t: Dictionary, ball_p: Vector2, poss: int) -> Vector2:
 		x -= 3.0
 	var press_up := not has and _pressing(side, bx)
 	if press_up:
-		# Defensive Press: while the ball is in their opponents' back half or the
+		# High Press: while the ball is in their opponents' back half or the
 		# middle, the whole side compresses into one band around the ball
 		# (V1, press pilot): the forwards on the opponents' last line just
 		# ahead of it, the midfield within 25 m of it, the backs pushed up to
@@ -2412,7 +2412,7 @@ func _structure_spot(t: Dictionary, ball_p: Vector2, poss: int) -> Vector2:
 	return _keep_in(world)
 
 
-## The Defensive Press, drawn (V1, press pilot). `bx` is the ball's distance
+## The High Press, drawn (V1, press pilot). `bx` is the ball's distance
 ## up the ground from `side`'s own goal end (positive: in its opponents'
 ## back half). The shape is high while the ball is in the opponents' back half
 ## or the middle, and only for a side whose recorded plan is the press.
@@ -2427,7 +2427,7 @@ const PRESS_FRAME_SHIFT := 9.0    # ...and looks toward its high line
 const PRESS_FROM := -10.0
 
 
-## The press zone, drawn: whether `side` plays the Defensive Press right now.
+## The press zone, drawn: whether `side` plays the High Press right now.
 ## The tint follows the plan, with the ball only turning it up (director,
 ## 2026-10-14: it was seen in the first quarter and then "disappeared"). The old
 ## rule showed it only while the side was without the ball and the ball was up

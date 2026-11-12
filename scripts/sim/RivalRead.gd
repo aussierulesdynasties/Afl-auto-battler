@@ -308,12 +308,12 @@ static func phrase(plan: String) -> String:
 	return "a balanced game" if k == "balanced" else CoachReport.plan_label(k)
 
 
-## Only the Defensive Press takes "the" (director, 2026-11-08); "the Attack
+## Only the High Press takes "the" (director, 2026-11-08); "the Attack
 ## Corridor" and "the Controlled Tempo" are wrong (director, 2026-11-09).
 const THE := {"defensive": true}
 
 
-## A plan as the report names it: "the Defensive Press", "Win Contest", "a
+## A plan as the report names it: "the High Press", "Win Contest", "a
 ## balanced game".
 static func called(plan: String) -> String:
 	var k := MatchSim.plan_key(plan)

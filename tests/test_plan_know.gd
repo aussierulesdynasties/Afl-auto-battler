@@ -173,7 +173,7 @@ func _test_words() -> void:
 			and PreSeason.known_line(0) == "Plan fluency: low", "The three lines, in the director's words")
 	var g := PreSeason.gain_line("solid", "plan", 1, ["defensive"])
 	var c := PreSeason.cost_line("solid", "plan", 1)
-	_check(g.begins_with("Fluency in Defensive Press") and "step" in g, "A Game plan block says what it drills and what that gains")
+	_check(g.begins_with("Fluency in High Press") and "step" in g, "A Game plan block says what it drills and what that gains")
 	_check(c == "Running and Skills work both get half the time.",
 			"...and costs the time its running and skills would have had")
 	var pair := PreSeason.gain_line("solid", "plan", 0, ["contest", "attacking"])
@@ -510,7 +510,7 @@ func _test_screens() -> void:
 		_check(await _tap(pick_stars, "Win Contest at the break"), "A finger picks another plan")
 		_check(note.text == "Plan fluency: low" and note.visible and note.get_theme_color("font_color") == UiKit.TEXT,
 				"...and the line follows it, at full strength: " + note.text)
-		await _tap(match_scene.find_child("PlanPicker_defensive", true, false) as Button, "Defensive Press at the break")
+		await _tap(match_scene.find_child("PlanPicker_defensive", true, false) as Button, "High Press at the break")
 		_check(note.text == "Plan fluency: medium", "...in the same three words: " + note.text)
 
 
@@ -779,7 +779,7 @@ func _test_part_screen() -> void:
 	_check(await _tap(scene.find_child("Focus1_plan", true, false) as Button, "Game plan on the two-week block"), "A finger sets the two-week block to Game plan")
 	var contest := scene.find_child("Drill1_contest", true, false) as Button
 	_check(contest.text == "Win Contest\nmedium", "Before any drilling a plan says where it stands: " + contest.text.replace("\n", " / "))
-	_check((scene.find_child("Drill1_defensive", true, false) as Button).text == "Defensive Press\n50% to medium",
+	_check((scene.find_child("Drill1_defensive", true, false) as Button).text == "High Press\n50% to medium",
 			"...and one part way says how far along")
 	var h0: float = contest.size.y
 	_check(await _tap(contest, "Win Contest to split the block"), "A finger splits the block with Win Contest")

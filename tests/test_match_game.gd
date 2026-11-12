@@ -4517,7 +4517,7 @@ func _test_defensive_forward() -> void:
 			"An AI club names the forward a coach would send, by the same rule")
 
 
-## The Defensive Press (director, 2026-10-11): it hunts the ball high and
+## The High Press (director, 2026-10-11): it hunts the ball high and
 ## leaves space behind. The side it presses meets more pressure in its back
 ## third, about Balanced's in the middle, and less in its forward third; a
 ## chain that breaks the press scores more easily; the AI's press is the
@@ -4645,7 +4645,7 @@ func _test_defensive_forward_cards() -> void:
 
 
 ## ARD-M4-015: eight plan names become six. An old save's "fast" plays as
-## Attack Corridor and "press" as Defensive Press: the same match, the same
+## Attack Corridor and "press" as High Press: the same match, the same
 ## names on every screen.
 func _test_six_plans() -> void:
 	var a := _sim(9100)
@@ -4656,7 +4656,7 @@ func _test_six_plans() -> void:
 	var rb := b.run()
 	_check(ra["score"] == rb["score"] and (ra["events"] as Array).size() == (rb["events"] as Array).size(),
 			"An old save's Fast movement plays exactly as Attack Corridor")
-	_check(CoachReport.plan_label("fast") == "Attack Corridor" and CoachReport.plan_label("press") == "Defensive Press"
+	_check(CoachReport.plan_label("fast") == "Attack Corridor" and CoachReport.plan_label("press") == "High Press"
 			and not MatchSim.PLANS.has("fast") and not MatchSim.PLANS.has("press") and MatchSim.PLANS.size() == 4,
 			"Five plans (balanced and four others), and the old names read as the merged ones")
 

@@ -206,7 +206,7 @@ static func run_line(club: String, n: int) -> String:
 	return "%s have kicked %s in a row." % [GameDB.club_name(club), count_word(n)]
 
 
-## The Defensive Press taking hold (V2, press pilot), said once a side a match.
+## The High Press taking hold (V2, press pilot), said once a side a match.
 static func press_line(club: String) -> String:
 	return "%s push up to press." % GameDB.club_name(club)
 

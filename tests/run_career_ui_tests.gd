@@ -2224,7 +2224,7 @@ func _test_menu_and_career() -> void:
 	var press_tile: Node = hwp.find_child("ClubPlan_defensive", true, false) if hwp != null else null
 	var press_word: Label = press_tile.find_child("Strength", true, false) if press_tile != null else null
 	_check(press_word != null and press_word.text.begins_with("Pressure · "),
-			"Defensive Press shows the list's Pressure beside it (%s)" % (press_word.text if press_word else "-"))
+			"High Press shows the list's Pressure beside it (%s)" % (press_word.text if press_word else "-"))
 	var lp: Node = current_scene.find_child("ListProfile", true, false)
 	var lp_rows: Array = lp.find_children("Profile_*", "Button", true, false) if lp != null else []
 	_check(lp_rows.size() == 2 and lp.find_child("Profile_finishing", true, false) != null

@@ -1512,7 +1512,7 @@ func _test_flood_shape(res: Dictionary) -> void:
 	d._tac[1] = {}
 
 
-## Defensive Press pilot, V1-V3 (director, 2026-10-11): from its recorded plan, a
+## High Press pilot, V1-V3 (director, 2026-10-11): from its recorded plan, a
 ## side that presses stands higher while the ball is in its opponents' back half
 ## or the middle, narrower, and only then; the plan changes nothing else.
 func _test_press_shape(res: Dictionary) -> void:
@@ -1913,8 +1913,8 @@ func _test_call_lines(res: Dictionary) -> void:
 			"A short call the break ends gives one line, at the break (%s)" % str(at_break))
 	var off: Array = walk.call([{"at": 0, "side": 0, "plan": "defensive", "bursts": []}, open[1],
 			{"at": int(qs[0]) + 1, "side": 0, "plan": "balanced", "bursts": []}])
-	_check(off.size() == 2 and str(off[0][1]) == "%s: Defensive Press is on until quarter time." % ric
-			and str(off[1][1]) == "%s: Defensive Press ends at quarter time." % ric
+	_check(off.size() == 2 and str(off[0][1]) == "%s: High Press is on until quarter time." % ric
+			and str(off[1][1]) == "%s: High Press ends at quarter time." % ric
 			and int(off[1][0]) == int(qs[0]) + 1,
 			"A plan from the first bounce is marked, and its end at the break names the break, once (%s)" % str(off))
 	# The director's half-time feed: both coaches drop their plans at the break.
@@ -1940,7 +1940,7 @@ func _test_call_lines(res: Dictionary) -> void:
 			"Plans dropped at half time are said once each, as the break's, unclocked (%s, %d clocked)" % [str(ht), stamped])
 	var mid: Array = walk.call([{"at": 0, "side": 0, "plan": "defensive", "bursts": []}, open[1],
 			{"at": int(qs[0]) + 20, "side": 0, "plan": "balanced", "bursts": []}])
-	_check(mid.size() == 3 and str(mid[2][1]) == "%s: Defensive Press ends." % ric and int(mid[2][0]) == int(qs[0]) + 20,
+	_check(mid.size() == 3 and str(mid[2][1]) == "%s: High Press ends." % ric and int(mid[2][0]) == int(qs[0]) + 20,
 			"A plan dropped during a quarter keeps its plain line, at the play (%s)" % str(mid))
 
 

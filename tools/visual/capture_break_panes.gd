@@ -4,6 +4,7 @@ extends SceneTree
 ##   godot --path . --script tools/visual/capture_break_panes.gd -- --out /tmp/bp --size 1280x720 [--club FRE --vs MEL] [--seed 2050] [--logical 1280x720] [--tag]
 ## --size is the canvas in UI units. --logical draws a bigger window the way the game does on a PC: ScreenLayout
 ## gives a 2560x1440 window a 1280x720 canvas at twice the pixels, so --size 2560x1440 --logical 1280x720.
+## --head <hex> draws headings in that ink, to compare heading colours.
 ## --tag picks a tag first (Who tags shows), to measure the fullest pre-bounce pane.
 ## Writes <out>_pre_1..n.png (the pane from the top, then scrolled on), <out>_qt.png, <out>_qtplan.png,
 ## <out>_qtstats.png, <out>_fulltimestats.png, and prints each column's height, what is in it and how much
@@ -26,6 +27,7 @@ func _run() -> void:
 	var club := "FRE"
 	var vs := "MEL"
 	var seed_from := 2050
+	var head := ""
 	var a := OS.get_cmdline_user_args()
 	for i in range(a.size()):
 		if str(a[i]) == "--tag":
@@ -37,6 +39,7 @@ func _run() -> void:
 			"--club": club = str(a[i + 1])
 			"--vs": vs = str(a[i + 1])
 			"--seed": seed_from = int(a[i + 1])
+			"--head": head = str(a[i + 1])
 			"--logical":
 				var lwh := str(a[i + 1]).split("x")
 				_lw = int(lwh[0])
@@ -51,7 +54,10 @@ func _run() -> void:
 	state.autosave_enabled = false
 	state.save_path = "user://capture_break_panes.save"
 	state.settings_path = "user://capture_break_panes.cfg"
-	load("res://scripts/ui/UiKit.gd").apply_appearance("dark")
+	var kit = load("res://scripts/ui/UiKit.gd")
+	if head != "":
+		kit.HEAD_DARK = Color(head)
+	kit.apply_appearance("dark")
 	_vp = SubViewport.new()
 	_vp.size = Vector2i(_w, _h)
 	_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
