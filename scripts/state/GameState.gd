@@ -3167,6 +3167,7 @@ func _build_pending_sim() -> void:
 	pending_sim.finals_mode = bool(_pending_build["finals"])
 	pending_sim.extra_time_allowed = bool(_pending_build.get("extra_time", true))
 	pending_sim.weather = _pending_build["weather"]
+	pending_sim.season_year = season.year
 	pending_sim.moment_side = 0 if h == my_club else 1
 	pending_sim.always_offer_bounce = bounce_scene_every_match()
 	pending_sim.set_tactics(pending_sim.moment_side, {"gameplan": club_plan})
@@ -5044,6 +5045,7 @@ func _practice_build(home: String, away: String, home_invites: Array, away_invit
 	CoachEffects.apply(h["squad"])
 	CoachEffects.apply(a["squad"])
 	var sim := MatchSim.new(h["squad"], a["squad"], PreSeason.practice_seed(career_seed, season_year, home, away))
+	sim.season_year = season_year
 	for side in range(2):
 		sim.season_plans[side] = fitness_plan(str([home, away][side]))
 		if [home, away][side] == my_club:
