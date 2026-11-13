@@ -120,7 +120,10 @@ static func player_ink(club: String) -> Color:
 ## `text` as BBCode: each name in `index` wrapped in its club's ink, the rest
 ## escaped. Empty when the text names no one in the index. `clubs` false leaves
 ## club names as plain words (a button, whose own tap is the point).
-static func markup(text: String, index: Dictionary, clubs := true) -> String:
+## `as_club` true puts each player in exactly his club's name colour, red clubs
+## included (a list of club moves where every name wears its colours; director
+## 2026-11-12, row 176: "no colour coding on names").
+static func markup(text: String, index: Dictionary, clubs := true, as_club := false) -> String:
 	var spans := spans_in(text, index)
 	var out := ""
 	var at := 0
@@ -133,8 +136,9 @@ static func markup(text: String, index: Dictionary, clubs := true) -> String:
 		named = true
 		out += _escape(text.substr(at, int(s[0]) - at))
 		# A club's own name: its strongest real colour (ClubLink.colour); a
-		# player's name: his club's ink (player_ink).
-		var col := ClubLink.colour(str(s[2])) if id.begins_with(ClubLink.SCHEME) else player_ink(str(s[2]))
+		# player's name: his club's ink (player_ink), or with `as_club` exactly his
+		# club's name colour.
+		var col := ClubLink.colour(str(s[2])) if id.begins_with(ClubLink.SCHEME) or as_club else player_ink(str(s[2]))
 		var ink := "[color=#%s]%s[/color]" % [col.to_html(false), _escape(shown).replace(" ", NBSP)]
 		out += NameLink.url(ink, id) if id != "" else ink
 		at = int(s[1])
@@ -196,8 +200,8 @@ static func _escape(t: String) -> String:
 ## wrap) with each name in its club's ink. Taps and swipes pass through it as
 ## they do a Label. `plain` rides on it as metadata for anything that reads the
 ## words.
-static func label(text: String, index: Dictionary, fs := UiKit.BODY, color := UiKit.AUTO_COLOUR, bold := false) -> Control:
-	var bb := markup(text, index)
+static func label(text: String, index: Dictionary, fs := UiKit.BODY, color := UiKit.AUTO_COLOUR, bold := false, as_club := false) -> Control:
+	var bb := markup(text, index, true, as_club)
 	if bb == "":
 		return UiKit.lbl(text, fs, color, bold)
 	if color == UiKit.AUTO_COLOUR:
