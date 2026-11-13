@@ -9639,9 +9639,12 @@ func club_picks(code: String) -> Array:
 ## This draft year's traded picks for the draft: {"round:origin": owner}.
 func draft_pick_owners(year: int) -> Dictionary:
 	var out := {}
+	var active := GameDB.active_clubs(year)
 	for key in pick_owner:
 		var parts := str(key).split(":")
-		if int(parts[0]) == year:
+		# A pick held by a club no longer in the league (Fitzroy after 1996)
+		# goes back to the club it came from.
+		if int(parts[0]) == year and active.has(str(pick_owner[key])):
 			out["%s:%s" % [parts[1], parts[2]]] = str(pick_owner[key])
 	return out
 
