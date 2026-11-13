@@ -479,7 +479,14 @@ static func _make_room(gs, code: String, picks: Array) -> void:
 		if ra != rb:
 			return rb
 		return int(a["overall"]) < int(b["overall"]))
+	# A club already playing (its first off-season) delists them as any club
+	# does: free agents any club may sign, an unsigned one's career ending on
+	# the record. Into the pool they would age out unseen (Prospects.age_pool).
+	var playing: bool = gs.season != null and gs.season.lists.has(code)
 	for p in state_league.slice(0, over):
+		if playing:
+			gs._release(code, p, false, false)
+			continue
 		list.erase(p)
 		if str(p.get("real_name", "")) != "":
 			p["club"] = ""
