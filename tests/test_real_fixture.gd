@@ -42,6 +42,8 @@ func run() -> void:
 	_t("_test_opening_round_names")
 	_t("_test_after_2026_unchanged")
 	_t("_test_real_season_played_and_saved")
+	_t("_test_career_rolls_into_real_years")
+	_t("_test_career_with_other_clubs_draws")
 	GameState.replay_seed = 0
 	print(Ran.line("Real fixture", self))
 
@@ -271,3 +273,80 @@ func _test_real_season_played_and_saved() -> void:
 	for row in s.ladder_sorted():
 		p += int(row["p"])
 	_check(p == 18 * 22, "2015: all 198 real games on the ladder (%d club-games)" % p)
+
+
+## The first round's pairs, "HOME-AWAY", in order.
+func _pairs(rounds: Array) -> Array:
+	var out := []
+	if rounds.is_empty():
+		return out
+	for m in rounds[0]:
+		out.append("%s-%s" % [m["home"], m["away"]])
+	return out
+
+
+## Take a career's season to its end without playing it, then roll it on: the
+## rollover is the career's own (GameState.start_next_season).
+func _roll(year: int) -> bool:
+	GameState.season.round_index = GameState.season.fixture.size()
+	var ok: bool = GameState.start_next_season()
+	_check(ok and GameState.season_year == year + 1 and int(GameState.season.year) == year + 1,
+			"The career rolls from %d to %d" % [year, year + 1])
+	return ok
+
+
+## A 1990 start is the first season of a campaign (director 2026-11-13): each
+## rollover picks up the next year's real fixture as clubs join and leave.
+func _test_career_rolls_into_real_years() -> void:
+	GameState.reset("1990")
+	GameState.replay_seed = SUITE_SEED
+	GameState.tutorials = false
+	GameState.start_season("CAR", GameDB.club_list("CAR"))
+	var counts := {1990: 14, 1991: 15, 1994: 15, 1995: 16, 1996: 16, 1997: 16}
+	for y in range(1990, 1998):
+		var s: Season = GameState.season
+		var clubs: Array = s.clubs.duplicate()
+		var real := RealFixture.for_season(y, clubs)
+		_check(int(s.year) == y and not real.is_empty() and s.is_real_fixture()
+				and s.fixture.size() == real.size() and _pairs(s.fixture) == _pairs(real),
+				"%d: the career plays the real %d fixture (%d rounds)" % [y, y, s.fixture.size()])
+		if counts.has(y):
+			_check(clubs.size() == counts[y], "%d: %d clubs (%d)" % [y, counts[y], clubs.size()])
+		if y == 1990:
+			_check(not clubs.has("ADE") and clubs.has("FIT"), "1990: Fitzroy play, Adelaide not yet")
+		if y == 1991:
+			_check(clubs.has("ADE"), "1991: Adelaide join the league")
+		if y == 1995:
+			_check(clubs.has("FRE"), "1995: Fremantle join the league")
+		if y == 1997:
+			_check(not clubs.has("FIT") and clubs.has("PAD"), "1997: Fitzroy are gone after 1996; Port Adelaide join")
+		if y < 1997 and not _roll(y):
+			break
+	GameState.reset()
+
+
+## A career whose clubs part from history (it left Adelaide out) draws its own
+## season the year they part, and every club plays its games.
+func _test_career_with_other_clubs_draws() -> void:
+	GameState.reset("1990")
+	GameState.replay_seed = SUITE_SEED
+	GameState.tutorials = false
+	GameDB.set_enter_year("ADE", 9999)
+	GameState.start_season("CAR", GameDB.club_list("CAR"))
+	_check(GameState.season.is_real_fixture(), "1990 is still the real 1990 (Adelaide had not joined)")
+	if _roll(1990):
+		var s: Season = GameState.season
+		_check(s.clubs.size() == 14 and not s.clubs.has("ADE") and not s.is_real_fixture()
+				and RealFixture.for_season(1991, s.clubs).is_empty(),
+				"1991 without Adelaide: the clubs differ from history, so the season is drawn")
+		var games := {}
+		for r in s.fixture:
+			for m in r:
+				for c in [m["home"], m["away"]]:
+					games[c] = int(games.get(c, 0)) + 1
+		var even := games.size() == 14
+		for c in games:
+			even = even and abs(int(games[c]) - int(games[s.clubs[0]])) <= 0
+		_check(even and s.fixture.size() > 0,
+				"The drawn 1991 gives all 14 clubs the same number of games (%s)" % str(games.values()))
+	GameState.reset()
