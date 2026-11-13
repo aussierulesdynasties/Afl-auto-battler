@@ -134,6 +134,8 @@ func _test_fitzroy_draft() -> void:
 	GameState.season_year = 1996
 	GameState.legacy = {"finals": {"1994": [], "1995": [], "1996": []}}
 	GameState.pick_owner = {"1996:1:CAR": "FIT"}
+	# The off-season works on league_lists (open_offseason fills it).
+	GameState._ensure_league_lists()
 	var fit: Array = (GameState.league_lists.get("FIT", []) as Array).duplicate()
 	var lions_before: int = (GameState.league_lists["BRL"] as Array).size()
 	var pool_before := GameState.draftee_pool.size()
@@ -152,13 +154,20 @@ func _test_fitzroy_draft() -> void:
 			"Fitzroy has no seat at the 1996 draft (%s)" % str(GameState.intake_order()))
 	_check(not GameState.draft_pick_owners(1996).has("1:CAR"), "A pick Fitzroy held goes back to its club (%s)" % str(GameState.draft_pick_owners(1996)))
 	_check(GameState.news.any(func(n): return "go into the 1996 National Draft" in str(n.get("text", ""))), "The news says where the rest go")
-	# Nobody drafted them: the old end their careers, the young stay in the pool.
-	var old := left.filter(func(q): return float(q.get("age", 30.0)) + 1.0 >= 22.0)
+	# Nobody drafted them: the old end their careers, the young stay in the
+	# pool, and one who really played on waits for the Rookie Draft first.
+	var ahead := left.filter(func(q): return float(q.get("age", 30.0)) + 1.0 >= 22.0 			and LegacyRollover.career_ahead(q, 1996))
+	var old := left.filter(func(q): return float(q.get("age", 30.0)) + 1.0 >= 22.0 and not ahead.has(q))
 	LegacyRollover._sweep_leftovers(GameState)
 	_check(old.all(func(q): return not GameState.draftee_pool.has(q) and GameState.departed_names.has(str(q["id"]))),
 			"An undrafted leftover who would age out ends his career on the record (%d)" % old.size())
 	_check(GameState.draftee_pool.filter(func(q): return bool(q.get("fitzroy_left", false))).size() == left.size() - old.size(),
-			"A young one stays in the pool for next year")
+			"A young one, or one with a real career ahead, stays in the pool for the drafts")
+	_check(ahead.all(func(q): return int(q.get("relisted", 0)) == 1996),
+			"One with a real career ahead is relisted for the Rookie Draft (%d)" % ahead.size())
+	GameState.relisted_unpicked()
+	_check(ahead.all(func(q): return not GameState.draftee_pool.has(q) and GameState.departed_names.has(str(q["id"]))),
+			"Passed over in the Rookie Draft too, his career ends on the record")
 	GameState.pick_owner = {}
 
 
@@ -563,7 +572,9 @@ func _no_package(code: String, year: int) -> void:
 			"%s approach and sign nobody's players and trade no pick before %d (%s)" % [code, year, str(st.keys())])
 	var list: Array = GameState.league_lists.get(code, [])
 	var from_rivals := list.filter(func(p): return p.has("joined") or str(p.get("released_by", "")) != "")
-	_check(from_rivals.is_empty(), "No rival loses a player to %s for %d (%d)" % [code, year, from_rivals.size()])
+	_check(from_rivals.is_empty(), "No rival loses a player to %s for %d (%s)" % [code, year, ", ".join(from_rivals.map(func(p):
+			return "%s joined %s released_by %s drafted %s" % [str(p.get("real_name", p["id"])), str(p.get("joined", "-")),
+					str(p.get("released_by", "-")), str(p.get("drafted_year", "-"))]))])
 	var comp := GameState.news.filter(func(n): return "compensation" in str(n.get("text", "")).to_lower() 			and GameDB.club_name(code) in str(n.get("text", "")))
 	_check(comp.is_empty(), "No compensation pick for a player lost to %s (%s)" % [code, str(comp.slice(0, 1))])
 	_check(list.size() <= EraRules.list_max(year) and list.size() >= EraRules.list_min(year)

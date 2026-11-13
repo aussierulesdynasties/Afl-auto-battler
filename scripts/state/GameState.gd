@@ -11507,7 +11507,7 @@ func _close_free_agency() -> void:
 ## An unsigned free agent with a real career ahead joins this off-season's
 ## draft pool: his last club's claim is gone, any club may draft him.
 func _relist(p: Dictionary) -> void:
-	for key in ["offers", "market_round", "market_log", "talks", "fa_kept"]:
+	for key in ["offers", "market_round", "market_log", "talks", "fa_kept", "released_by", "comp_eligible"]:
 		p.erase(key)
 	p["club"] = ""
 	p["contract_years"] = 0
