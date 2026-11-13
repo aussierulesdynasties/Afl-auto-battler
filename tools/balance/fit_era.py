@@ -37,11 +37,9 @@ STATS = [("disposals", "disposals"), ("handballs", "handballs"), ("marks", "mark
          ("tackles", "tackles"), ("goals", "goals"), ("behinds", "behinds"),
          ("hitouts", "hitouts"), ("frees_for", "frees_for")]
 RIDGE = 0.02
-# Frees weigh less in the fit: only about a third of them come through the one
-# rate that moves them (clanger_is_free, bounded below a sure free), so the 1990s'
-# extra frees are not reachable, and at full weight the miss would pull every
-# other stat off to share it. The shortfall stays on frees, where it is reported.
-WEIGHT = {"frees_for": 0.2}
+# A stat's weight in the fit (1 unless named). Frees once weighed 0.2, when only
+# clanger_is_free moved them; free_rate (the contextual frees) now reaches them.
+WEIGHT = {}
 FIRST, LAST = 1990, 2025
 
 
@@ -160,7 +158,7 @@ def main():
     if os.path.exists(OUT):
         import csv
         for r in csv.DictReader(open(OUT, encoding="utf-8")):
-            cur[int(r["year"])] = np.log(np.array([float(r[k]) for k in KEYS]))
+            cur[int(r["year"])] = np.log(np.array([float(r.get(k) or 1.0) for k in KEYS]))
     x = {y: solve(E, t[y]) for y in t}
     if o.correct:
         got = read_year_run(o.correct)
