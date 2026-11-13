@@ -257,8 +257,16 @@ func _tell_all() -> Dictionary:
 	return out
 
 
+## Every premade history's stories are checked for every player straight from
+## the shipped history, during its intake draft (a coach can open a sheet
+## there). One start, the 2028 one (its draft is short), also plays out the
+## draft and is checked again with this year's draftees on the lists, then
+## saved and reloaded. The 2030 start's MEL draft added ~10 s and changed no
+## story (measured 2026-11-14: 727 players, 113 told, 0 changed by the draft).
 func _test_premade_histories() -> void:
 	var told := 0
+	_check(PremadeHistory.STARTS.has(2028) and PremadeHistory.STARTS.size() >= 2,
+			"The premade histories include the 2028 start (%s)" % str(PremadeHistory.STARTS))
 	for first in PremadeHistory.STARTS:
 		GameState.reset()
 		GameState.tutorials = false
@@ -269,6 +277,12 @@ func _test_premade_histories() -> void:
 		_check(GameState.begin_from_history(first), "History %d starts" % first)
 		var code := "TAS" if first == 2028 else "MEL"
 		GameState.choose_sim_ahead_club(code)
+		var stories := _tell_all()
+		told += _fact_check_all("%d draft" % first, stories)
+		# The same save tells the same story.
+		_check(var_to_str(_tell_all()) == var_to_str(stories), "%d: the same save, the same stories" % first)
+		if first != 2028:
+			continue
 		var draft: Draft = GameState.draft
 		var guard := 0
 		while not draft.is_finished() and guard < 500:
@@ -276,15 +290,10 @@ func _test_premade_histories() -> void:
 			draft.auto_until_user_turn()
 			if draft.is_user_turn():
 				draft.pick_for_me()
-		GameState.finish_intake_draft()
-		var stories := _tell_all()
-		for id in stories:
-			_fact_check("%d %s" % [first, id], stories[id])
-			if not (stories[id] as Array).is_empty():
-				told += 1
-		# The same save tells the same story, after a save and reload too.
-		var again := _tell_all()
-		_check(var_to_str(again) == var_to_str(stories), "%d: the same save, the same stories" % first)
+		_check(GameState.finish_intake_draft(), "%d: the intake draft finishes" % first)
+		stories = _tell_all()
+		_fact_check_all("%d season" % first, stories)
+		# The same story after a save and reload too.
 		_check(GameState.save_career(), "%d: the career saves" % first)
 		_check(GameState.load_career(), "%d: the career reloads" % first)
 		var reloaded := _tell_all()
@@ -299,6 +308,16 @@ func _test_premade_histories() -> void:
 		GameState.delete_saved_career()
 	GameState.replay_seed = SUITE_SEED
 	_check(told > 0, "Some players in the premade histories have a story (%d)" % told)
+
+
+## Fact-checks every story; returns how many players have one.
+func _fact_check_all(where: String, stories: Dictionary) -> int:
+	var told := 0
+	for id in stories:
+		_fact_check("%s %s" % [where, id], stories[id])
+		if not (stories[id] as Array).is_empty():
+			told += 1
+	return told
 
 
 ## The sheet shows the story above his facts, and a fact the story says is not
