@@ -8199,12 +8199,20 @@ func open_offseason(keep_staff := false) -> void:
 	if not keep_staff:
 		offseason_staff = Coaches.staff(coaches, my_club) if not coaches.is_empty() else {}
 	_decide_retirements()
-	# A free agent kept in the pool last off-season (_fa_staying) whom no club
-	# took in a year: his AFL career ends here.
+	# A free agent whom no club took in a year (kept in the pool last
+	# off-season, _fa_staying, or let go before the season): his AFL career
+	# ends here, on the record. One whose club is gone (Fitzroy's players after
+	# the merger, LegacyRollover.merge_lists, freed after the last market
+	# closed) has had no market yet: he goes to this one.
+	var carried := []
+	var playing := GameDB.active_clubs(season_year)
 	for p in free_agents:
-		if p.has("fa_kept"):
+		var by := str(p.get("released_by", ""))
+		if not p.has("fa_kept") and by != "" and not playing.has(by):
+			carried.append(p)
+		else:
 			_career_over(p, "delisted")
-	free_agents = []
+	free_agents = carried
 	# A new club's approaches are settled first: it had first call.
 	ExpansionBuild.resolve(self)
 	# No rating or injury moves while rivals re-sign: each list's best 22 only
