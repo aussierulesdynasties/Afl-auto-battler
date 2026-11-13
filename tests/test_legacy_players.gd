@@ -284,7 +284,10 @@ func _caps(year: int) -> Array:
 	for code in active:
 		if str(code) == GameState.my_club:
 			continue
-		var list: Array = GameState.season.lists.get(code, [])
+		# A top-up player (Essendon 2016, YearEvents.top_up) is signed for the
+		# year on top of the list, as the real rule allowed: not in its spots.
+		var list: Array = (GameState.season.lists.get(code, []) as Array).filter(func(q):
+				return int(q.get("top_up", 0)) != year)
 		var seniors := RookieList.senior_count(list)
 		var cat_a := RookieList.cat_a_count(list)
 		if seniors > RookieList.senior_spots() or cat_a > RookieList.cat_a_spots() or list.size() < Contracts.min_list():
