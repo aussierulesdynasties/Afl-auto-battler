@@ -44,8 +44,8 @@ func _rounds(n: int) -> void:
 
 ## The suite's one seeded season, twelve rounds in (Fremantle), played once and
 ## read by every test that needs real results. The read-only tests run on it
-## first; the ones that change it (no_repeats, records_persist, old_save) run
-## after them, in that order.
+## first; no_repeats, which changes it, runs
+## after them. The save tests play their own short careers.
 var _shared_played := false
 
 
@@ -262,7 +262,10 @@ func _test_reasons_call_agrees_with_ledger() -> void:
 
 
 func _test_records_persist() -> void:
-	_shared()
+	# Its own short career: the shared season's last match is changed by the
+	# tests before it, so "the last record names the hero" is read on a fresh one.
+	_fresh()
+	_rounds(3)
 	var mine := _my_matches()
 	_check(GameState.match_stories.size() == mine.size() and mine.size() >= 2,
 			"one story per match of yours (%d of %d)" % [GameState.match_stories.size(), mine.size()])
@@ -292,7 +295,8 @@ func _test_records_persist() -> void:
 
 
 func _test_old_save() -> void:
-	_shared()
+	_fresh()
+	_rounds(2)
 	GameState.match_stories = []
 	_check(GameState.save_career(), "an old-style save is written")
 	GameState.match_stories = [{"junk": 1}]
