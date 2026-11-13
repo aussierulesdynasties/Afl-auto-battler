@@ -2026,6 +2026,7 @@ func begin_real_lists() -> void:
 	intake_assignments = []
 	# The real 2026 class, and the career's own prospect if it has one.
 	var cls: Array = _career_copies(GameDB.draftees)
+	Prospects.roll_fine_wine(cls, "real-class-%d" % career_seed)   # 1 in 52, as a generated class
 	for q in draftee_pool:
 		if str(q.get("id", "")) == custom_prospect_id and custom_prospect_id != "":
 			cls.append(q)
