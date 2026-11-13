@@ -354,6 +354,23 @@ func _wx(key: String, default := 1.0) -> float:
 ## (se 0.3), the same within the noise.
 const HOT_DRAIN := 1.12
 var _rates_cache := {}
+## The season this match is played in (legacy mode, row 142 L5): a past season
+## plays its era's football (EraFootball, multipliers on Ratings.T applied in
+## _rates() before the weather's). 0, and 2026 on, play today's.
+var season_year := 0:
+	set(v):
+		season_year = v
+		era_rates = EraFootball.rates_for(v)
+		_rates_cache = {}
+var era_rates := {}
+
+
+## An era multiplier on one of the engine's own umpiring chances (EraFootball.SIM
+## keys; 1.0 today): `free_rate` scales the contextual frees (high contact,
+## holding the ball, marking contests) the way each era's umpires paid them.
+## A harness `--tune free_rate=F` multiplies it too (the fit's step run).
+func _era(key: String) -> float:
+	return float(era_rates.get(key, 1.0)) * float(tune.get(key, 1.0))
 
 
 func _rates() -> Dictionary:
@@ -366,6 +383,10 @@ func _rates() -> Dictionary:
 		for k in tune:
 			if _rates_cache.has(k):
 				_rates_cache[k] = tune[k]
+		# The season's own football (legacy, row 142 L5): {} from 2026 on.
+		for k in era_rates:
+			if _rates_cache.has(k):
+				_rates_cache[k] = float(_rates_cache[k]) * float(era_rates[k])
 		var mult: Dictionary = WEATHER_RATES.get(weather, {})
 		for k in mult:
 			_rates_cache[k] = float(_rates_cache[k]) * float(mult[k])
@@ -1909,7 +1930,8 @@ func _high_contact_free(tackler) -> bool:
 	var p := HIGH_CONTACT_BASE * (1.35 - 0.70 * discipline / 100.0)
 	if _trait(tackler, "hothead"):
 		p *= 1.45
-	return free_rng.randf() < clampf(p, 0.006, 0.045)
+	var era := _era("free_rate")
+	return free_rng.randf() < clampf(p * era, 0.006, 0.045 * era)
 
 
 ## Holding the ball only exists after a legal tackle actually stops the carrier.
@@ -1921,7 +1943,8 @@ func _holding_ball_free(carrier, touches: int) -> bool:
 	var p := HTB_PRIOR if touches > 1 else HTB_NO_PRIOR
 	p *= 1.18 - 0.30 * _a(carrier, "contested") / 100.0
 	p *= 1.12 - 0.24 * _a(carrier, "disposal") / 100.0
-	return free_rng.randf() < clampf(p, 0.05, 0.28)
+	var era := _era("free_rate")
+	return free_rng.randf() < clampf(p * era, 0.05, 0.28 * era)
 
 
 ## A genuine aerial contest can be infringed by either side. Poor discipline
@@ -1935,11 +1958,14 @@ func _marking_free(side: int, attacker, defender) -> Dictionary:
 		def_p *= 1.35
 	if _trait(attacker, "hothead"):
 		att_p *= 1.35
+	var era := _era("free_rate")
+	def_p *= era
+	att_p *= era
 	var r := free_rng.randf()
-	if r < clampf(def_p, 0.004, 0.035):
+	if r < clampf(def_p, 0.004, 0.035 * era):
 		return {"side": side, "offender": defender, "recipient": attacker,
 				"cause": "marking", "label": "Holding in the marking contest"}
-	if r < clampf(def_p, 0.004, 0.035) + clampf(att_p, 0.003, 0.025):
+	if r < clampf(def_p, 0.004, 0.035 * era) + clampf(att_p, 0.003, 0.025 * era):
 		return {"side": 1 - side, "offender": attacker, "recipient": defender,
 				"cause": "marking", "label": "Blocking in the marking contest"}
 	return {}
