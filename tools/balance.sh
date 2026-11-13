@@ -8,20 +8,34 @@
 #   tools/balance.sh match 1000 --a "--weather wet" --b "--weather perfect"
 #   tools/balance.sh match 1000 --a "--side-plan attacking" --b "--side-plan attacking --coach TA,GAMB"
 #   tools/balance.sh match 1000 --a "--side-plan balanced" --b "--custom-plan sharp,slow"   # side i%2 plays its own plan
+#   tools/balance.sh year 1000 --years "1990 2000 2010 2020 2026"   # each season's football against that season's real rates
 # Env: GODOT (binary), JOBS (workers, default cores-2), OUT (run dir).
 set -euo pipefail
 mode="${1:-match}"; n="${2:-1000}"; shift $(( $# >= 2 ? 2 : $# ))
-arm_a=""; arm_b=""; paired=0; a_root=""
+arm_a=""; arm_b=""; paired=0; a_root=""; years="1990 2000 2010 2020 2026"
 while [ $# -gt 0 ]; do
   case "$1" in
+    --years) years="$2"; shift 2 ;;
     --a) arm_a="$2"; shift 2 ;;
     --b) arm_b="$2"; paired=1; shift 2 ;;
     --a-root) a_root="$2"; shift 2 ;;
     *) echo "unknown arg $1"; exit 2 ;;
   esac
 done
-[ "$mode" = "match" ] || { echo "modes: match"; exit 2; }
 root="$(cd "$(dirname "$0")/.." && pwd)"
+# Year mode (legacy, row 142 L5): one arm a season, each played in its own year
+# (worker --year Y, its era's football), then one table against each season's
+# real rates (afl_year_rates.json). Seeds are the same in every season.
+if [ "$mode" = "year" ]; then
+  base="${OUT:-$root/.balance/$(date +%Y%m%d-%H%M%S)-year}"; mkdir -p "$base"; touch "$base/.gdignore"
+  for y in $years; do
+    OUT="$base/$y" bash "$0" match "$n" --a "--year $y${arm_a:+ $arm_a}" >"$base.$y.log" 2>&1       || { echo "year $y failed: $base.$y.log"; tail -20 "$base.$y.log"; exit 1; }
+  done
+  rm -f "$base".*.log
+  (cd "$root/tools/balance" && python year_report.py --run "$base") | tee "$base/year_report.md"
+  exit 0
+fi
+[ "$mode" = "match" ] || { echo "modes: match, year"; exit 2; }
 godot="${GODOT:-godot}"
 cores="$(nproc 2>/dev/null || echo 4)"
 jobs="${JOBS:-$(( cores > 3 ? cores - 2 : 1 ))}"
@@ -62,4 +76,5 @@ b_label="${arm_b:-base}"; [ -z "$arm_b" ] && [ -n "$a_root" ] && b_label="this b
 [ "$paired" = 1 ] && args+=("--b=$b_label")
 python "$root/tools/balance/balance_report.py" "${args[@]}" | tee "$out/report.md"
 # Paired: the margin of side i%2 (the side --coach, --side-plan and --plan-trait set), arm B against A.
-[ "$paired" = 1 ] && python3 "$root/tools/balance/side_compare.py" "$out" | tee -a "$out/report.md"
+# (an if, not &&: as the last line, a false test made a one-arm run exit 1)
+if [ "$paired" = 1 ]; then python3 "$root/tools/balance/side_compare.py" "$out" | tee -a "$out/report.md"; fi

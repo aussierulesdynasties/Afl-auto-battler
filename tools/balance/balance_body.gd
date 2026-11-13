@@ -72,6 +72,14 @@ func play(from: int, count: int, out: String, weather: String,
 	for i in range(args.size() - 1):
 		if str(args[i]) == "--plan-know":
 			plan_know = float(args[i + 1])
+	# --year Y (legacy, row 142 L5): every match is played in season Y, so it
+	# plays that era's football (EraFootball). The lists stay the real 2026 ones:
+	# each season's players are rated against their own season, so the era's
+	# level of the game is the era row's alone.
+	var year := 0
+	for i in range(args.size() - 1):
+		if str(args[i]) == "--year":
+			year = int(args[i + 1])
 	var lists := {}
 	var class_ids := {}
 	if start == "real":
@@ -143,6 +151,7 @@ func play(from: int, count: int, out: String, weather: String,
 			cside.ai_plans = false
 		var sim := MatchSim.new(sq_h, sq_a, 500000 + i)
 		sim.weather = weather
+		sim.season_year = year
 		if side_plan != "":
 			(sim.tactics[i % 2] as Dictionary)["gameplan"] = side_plan
 		if setup == "league":
