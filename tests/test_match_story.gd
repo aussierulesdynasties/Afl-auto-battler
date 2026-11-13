@@ -42,6 +42,21 @@ func _rounds(n: int) -> void:
 		GameState.advance()
 
 
+## The suite's one seeded season, twelve rounds in (Fremantle), played once and
+## read by every test that needs real results. The read-only tests run on it
+## first; the ones that change it (no_repeats, records_persist, old_save) run
+## after them, in that order.
+var _shared_played := false
+
+
+func _shared() -> void:
+	if _shared_played:
+		return
+	_shared_played = true
+	_fresh()
+	_rounds(12)
+
+
 func _has_win_and_loss() -> bool:
 	var won := false
 	var lost := false
@@ -69,16 +84,22 @@ func run(tree: SceneTree) -> void:
 	GameState.settings_path = "user://test_match_story.cfg"
 	GameState.delete_saved_career()
 	_t("_test_pure_hero")
+	# On the one shared season (_shared): the tests that only read it, then the
+	# ones that change it.
 	_t("_test_hero_matches_stats")
 	_t("_test_reasons_trace")
 	_t("_test_reasons_call_agrees_with_ledger")
-	_t("_test_records_persist")
-	_t("_test_old_save")
+	_t("_test_calls_trace")
 	_t("_test_arc_facts_and_digest")
 	_t("_test_my_best_in_loss")
-	_t("_test_digest_survives_trim")
 	_t("_test_factors_never_repeat")
-	_t("_test_calls_trace")
+	for size in [Vector2i(390, 844), Vector2i(1280, 720)]:
+		_tree.root.size = size
+		await _settle()
+		await _t("_test_no_repeats", [size])
+	_t("_test_records_persist")
+	_t("_test_old_save")
+	_t("_test_digest_survives_trim")
 	_t("_test_calls_kept")
 	_t("_test_calls_old_fixture")
 	_t("_test_calls_name_skip_loose")
@@ -91,7 +112,6 @@ func run(tree: SceneTree) -> void:
 		_tree.root.size = size
 		await _settle()
 		await _t("_test_summary", [size])
-		await _t("_test_no_repeats", [size])
 	await _t("_test_calls_every_quarter_screen")
 	GameState.delete_saved_career()
 	print(Ran.line("Match story", self))
@@ -130,8 +150,7 @@ func _test_pure_hero() -> void:
 
 
 func _test_hero_matches_stats() -> void:
-	_fresh()
-	_rounds(4)
+	_shared()
 	var n := 0
 	var ok := true
 	for res in GameState.season_log:
@@ -157,13 +176,12 @@ func _test_hero_matches_stats() -> void:
 			ok = false
 			print("  hero mismatch: %s vs %s (%d)" % [str(hero), str(best_ids), best])
 		n += 1
-	_check(n >= 30, "four rounds give enough matches (%d)" % n)
+	_check(n >= 30, "the season gives enough matches (%d)" % n)
 	_check(ok, "every match's hero is the winners' best by goals, disposals, tackles, clearances and clutch goals")
 
 
 func _test_reasons_trace() -> void:
-	_fresh()
-	_rounds(4)
+	_shared()
 	var bad := []
 	var counts := {}
 	for res in GameState.season_log:
@@ -213,8 +231,7 @@ func _test_reasons_trace() -> void:
 ## calls showed it at -2). A real result whose cited call's ledger figure is
 ## flipped against the result: the cited line goes, or another takes its place.
 func _test_reasons_call_agrees_with_ledger() -> void:
-	_fresh()
-	_rounds(4)
+	_shared()
 	var tried := 0
 	var bad := []
 	for res0 in GameState.season_log:
@@ -245,8 +262,7 @@ func _test_reasons_call_agrees_with_ledger() -> void:
 
 
 func _test_records_persist() -> void:
-	_fresh()
-	_rounds(3)
+	_shared()
 	var mine := _my_matches()
 	_check(GameState.match_stories.size() == mine.size() and mine.size() >= 2,
 			"one story per match of yours (%d of %d)" % [GameState.match_stories.size(), mine.size()])
@@ -276,8 +292,7 @@ func _test_records_persist() -> void:
 
 
 func _test_old_save() -> void:
-	_fresh()
-	_rounds(2)
+	_shared()
 	GameState.match_stories = []
 	_check(GameState.save_career(), "an old-style save is written")
 	GameState.match_stories = [{"junk": 1}]
@@ -327,8 +342,7 @@ func _test_summary(size: Vector2i) -> void:
 ## hero_streak / hero_count / close_losses equal a count made by hand from
 ## match_stories, and the season digest totals equal the per-match records.
 func _test_arc_facts_and_digest() -> void:
-	_fresh()
-	_rounds(12)
+	_shared()
 	var year := int(GameState.season_year)
 	var recs: Array = GameState.match_stories.filter(func(r): return int(r["year"]) == year)
 	var counts := {}
@@ -380,6 +394,7 @@ func _test_arc_facts_and_digest() -> void:
 
 ## In a loss the record names your best player: yours, and the top by hero points.
 func _test_my_best_in_loss() -> void:
+	_shared()
 	var found := false
 	for r in GameState.season_log:
 		var side := 0 if str(r["home"]) == GameState.my_club else (1 if str(r["away"]) == GameState.my_club else -1)
@@ -434,8 +449,7 @@ func _side(r: Dictionary) -> int:
 ## Pure: How it went never says a fact the story above it already told, over
 ## twelve seeded rounds.
 func _test_factors_never_repeat() -> void:
-	_fresh()
-	_rounds(12)
+	_shared()
 	var bad := []
 	var cut := 0
 	for r in _my_matches():
@@ -616,8 +630,11 @@ func _check_once(r: Dictionary, tag: String) -> void:
 
 func _test_no_repeats(size: Vector2i) -> void:
 	var tag := "%dx%d" % [size.x, size.y]
-	_fresh()
-	_rounds(8)
+	_shared()
+	# What this test writes (the last match shown, two debuts in the milestone
+	# log) is put back at its end, so the next size reads the season as played.
+	var kept_last: Dictionary = GameState.last_match
+	var kept_log: Dictionary = GameState.milestone_log.duplicate(true)
 	# Play on until the season has both a win and a loss to read: how many
 	# rounds that takes is the sim's business, not this test's.
 	var extra := 0
@@ -671,14 +688,15 @@ func _test_no_repeats(size: Vector2i) -> void:
 	Router.stack = []
 	Router.go("hub")
 	await _settle(4)
+	GameState.last_match = kept_last
+	GameState.milestone_log = kept_log
 
 
 ## Our calls at full time (row 144): every number traces to the result. Each
 ## call row is its impact-ledger credit rounded, the other rows are the sums
 ## they name, and all of them add up to the final margin.
 func _test_calls_trace() -> void:
-	_fresh()
-	_rounds(4)
+	_shared()
 	var bad := []
 	var seen := 0
 	var kinds := {}

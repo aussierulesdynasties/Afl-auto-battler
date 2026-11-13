@@ -67,6 +67,18 @@ func _to_papers() -> bool:
 	return GameState.preseason_stop() == "papers"
 
 
+## The career as it stands, kept in memory, and put back: a career at the papers
+## is played to once and restored from here (a reload, not eight pre-season weeks
+## and a practice match again).
+func _snap() -> Dictionary:
+	return GameState._save_state().duplicate(true)
+
+
+func _restore(state: Dictionary) -> void:
+	_check(GameState._restore_career(state.duplicate(true)) and GameState.preseason_stop() == "papers",
+			"(setup) the career at the papers is put back")
+
+
 ## Put the papers' story on a chosen kind, as if they had run it.
 func _force(kind: String, pred := 13) -> void:
 	var rec: Dictionary = GameState.papers_record()
@@ -562,6 +574,7 @@ func _test_flow() -> void:
 	_check(["finish", "breakout", "pressure", ""].has(str(rec["kind"])), "One story, of the three kinds, or none")
 	var order1: Array = (rec["order"] as Array).duplicate()
 	var kind1 := str(rec["kind"])
+	var at_papers := _snap()
 	_career()
 	_to_papers()
 	_check(GameState.papers_record()["order"] == order1 and str(GameState.papers_record()["kind"]) == kind1,
@@ -571,14 +584,11 @@ func _test_flow() -> void:
 	_check(not GameState.preseason_active() and GameState.board["goal"] == goal_before,
 			"Pressing on without an answer goes to Round 1, and the board's goal is as it was")
 	# The papers never touch the match: the same pre-season, with and without
-	# the papers' answer, plays the same first round.
-	_career()
-	_to_papers()
-	GameState.preseason_advance()
+	# the papers' answer, plays the same first round (this career, unanswered,
+	# against the first one put back at the papers and answered).
 	GameState.advance()
 	var sig_a := str(GameState.season_log.back()["score"])
-	_career()
-	_to_papers()
+	_restore(at_papers)
 	_force("finish")
 	GameState.papers_answer(2)
 	GameState.preseason_advance()
@@ -598,9 +608,11 @@ func _lines(card: Dictionary, i: int) -> PackedStringArray:
 
 
 func _test_answers() -> void:
+	# Reading a story's card answers nothing: one career at the papers reads all three.
+	_career()
+	_to_papers()
+	var at_papers := _snap()
 	for kind in ["finish", "pressure", "breakout"]:
-		_career()
-		_to_papers()
 		_force(kind)
 		var card := GameState.papers_card()
 		_check(not card.is_empty() and (card["options"] as Array).size() == 3,
@@ -631,8 +643,7 @@ func _test_answers() -> void:
 			_check(not p.is_empty() and text.contains(GameDB.player_display_name(p)) and float(p["age"]) <= 22.0,
 					"The breakout story names a young player on the list")
 	# Talking the club up.
-	_career()
-	_to_papers()
+	_restore(at_papers)
 	_force("finish")
 	var board0 := GameState.board_confidence()
 	var goal0 := (GameState.board["goal"] as Dictionary).duplicate()
@@ -664,8 +675,7 @@ func _test_answers() -> void:
 			"The cost of talking up says when the papers come back, what answering them costs, and that the target does not move (%s)" % cost_line)
 	# Backing it, deflecting: nothing on the record.
 	for pair in [[0], [1]]:
-		_career()
-		_to_papers()
+		_restore(at_papers)
 		_force("finish")
 		var b0 := GameState.board_confidence()
 		GameState.papers_answer(int(pair[0]))
@@ -674,8 +684,7 @@ func _test_answers() -> void:
 		_check(GameState.board_confidence() == b0 + (-1 if int(pair[0]) == 0 else -2),
 				"Answer %d moves the board by what its Gain and Cost say" % int(pair[0]))
 	# The breakout: talking him up is a promised run, with its sting if broken.
-	_career()
-	_to_papers()
+	_restore(at_papers)
 	_force("breakout")
 	var pid := str(GameState.papers_record()["pid"])
 	var kid: Dictionary = GameState.list_player(pid)
@@ -698,8 +707,12 @@ func _test_reckoning() -> void:
 	var t := StoryDeck.by_id(deck, "media_papers_reckoning")
 	# Claim 1st: any other place is behind it.
 	GameState.preseason["papers"]["claim"] = 1
+	# Up to nine rounds, stopping once the card has been dealt (it needs the
+	# talk six weeks old first: data/stories/media.json "after": 6).
 	for i in range(9):
 		GameState.advance()
+		if GameState.story["last"].has("media_papers_reckoning"):
+			break
 	var ctx := ClubStories.context(GameState)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 1
@@ -759,7 +772,14 @@ func _test_silence_and_sim() -> void:
 
 
 func _test_saves() -> void:
+	# One career: kept at week 5 on its way to the papers (the older save below).
 	_career()
+	var guard := 0
+	while GameState.preseason_week() < 5 and guard < 12:
+		guard += 1
+		GameState.preseason_advance()
+	var week5 := _snap()
+	var w5 := GameState.preseason_week()
 	_to_papers()
 	_force("pressure")
 	GameState.papers_answer(2)
@@ -773,11 +793,8 @@ func _test_saves() -> void:
 	GameState.preseason_advance()
 	_check(not GameState.preseason_active(), "...and goes on to Round 1")
 	# A pre-season saved before the papers existed (it stood mid pre-season) plays on to them.
-	_career()
-	var guard := 0
-	while GameState.preseason_week() < 5 and guard < 12:
-		guard += 1
-		GameState.preseason_advance()
+	_check(GameState._restore_career(week5.duplicate(true)) and GameState.preseason_week() == w5,
+			"(setup) the career is put back at week %d" % w5)
 	GameState.preseason.erase("papers")
 	GameState.save_career()
 	GameState.reset()
@@ -794,6 +811,7 @@ func _test_screen() -> void:
 	GameState.set_setting("seen_weekly_loop_intro", true)
 	GameState.set_setting("seen_training_intro", true)
 	_to_papers()
+	var stk := _snap()
 	_force("finish")
 	Router.stack = ["main"]
 	Router.go("hub")
@@ -826,8 +844,7 @@ func _test_screen() -> void:
 	await _frames(tree, 6)
 	_check(not GameState.preseason_active() and Router.current() == "hub", "...and the hub is next")
 	# The tipped player's name wears his club's colour.
-	_career("STK")
-	_to_papers()
+	_restore(stk)
 	_force("breakout")
 	Router.stack = ["main"]
 	Router.go("hub")
@@ -838,9 +855,8 @@ func _test_screen() -> void:
 	_check(head is RichTextLabel and NameInk.plain(head).contains(GameDB.player_display_name(who))
 			and (head as RichTextLabel).text.contains("[color="),
 			"The breakout's name in the headline is in his club's colour")
-	# Wide.
-	_career("STK")
-	_to_papers()
+	# Wide. (The breakout above was only read, never answered: forcing the
+	# finish story puts the papers back to an unanswered finish.)
 	_force("finish")
 	tree.root.size = Vector2i(1280, 720)
 	Router.stack = ["main"]
@@ -856,10 +872,14 @@ func _test_screen() -> void:
 	# Every club's power-ranking blurb, whole, on a phone and on a PC of either
 	# size (the 2026-11-12 capture: a PC printed only the practice move, so eight
 	# clubs had no words), and on a PC all of it in view without scrolling.
-	for size in [Vector2i(390, 844), Vector2i(1280, 720), Vector2i(1920, 1080)]:
-		for club in ["STK", CLUB]:
+	# One career per club, at its papers as they ran, shown at each size.
+	for club in ["STK", CLUB]:
+		if club == "STK":
+			_restore(stk)
+		else:
 			_career(club)
 			_to_papers()
+		for size in [Vector2i(390, 844), Vector2i(1280, 720), Vector2i(1920, 1080)]:
 			tree.root.size = size
 			Router.stack = ["main"]
 			Router.go("hub")
