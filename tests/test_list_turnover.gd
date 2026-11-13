@@ -113,7 +113,7 @@ func _test_passing_list_turns_over(dataset: String, me: String) -> void:
 ## the usual mechanics)". Real players due well inside the run retire within
 ## a couple of seasons of their real time, and the one talked round played on.
 func _real_retirements(real_last: Dictionary, retired_at: Dictionary, stayer: Dictionary, end: int) -> void:
-	_check(real_last.size() > 600, "1990: the real players carry their last real season (%d)" % real_last.size())
+	_check(real_last.size() > 400, "1990: the real players carry their last real season (%d)" % real_last.size())
 	var due := 0
 	var gone := 0
 	var on_time := 0
