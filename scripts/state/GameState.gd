@@ -2531,6 +2531,8 @@ func begin_intake_draft() -> bool:
 	# The National Draft fills the senior list; the Rookie Draft follows.
 	draft.senior_cap = RookieList.senior_spots()
 	draft.user_max_age = Challenge.max_age(self)
+	for code in sizes:
+		draft.leaving[code] = (league_lists.get(code, []) as Array).filter(func(q): return retiring_now(q)).size()
 	ExpansionBuild.seat_guests(self, draft)
 	_draft_sees_44()
 	var no_spot_line := _ties_without_a_spot_line(my_club) if league_lists.has(my_club) else ""
