@@ -1,5 +1,5 @@
 {
- "_about": "Monthly March to September climate means per AFL venue, from Bureau of Meteorology 'Climate statistics for Australian locations' station tables (https://www.bom.gov.au/climate/averages/tables/cw_<station>.shtml, fetched 2026-10-06). rain_days is BoM's 'Mean number of days of rain >= 1 mm'; rain is rain_days divided by the days in the month (a share of days). wind_3pm_kmh is BoM's 'Mean 3pm wind speed (km/h)' and mean_max_c is 'Mean maximum temperature (C)'. BoM's summary tables do not give days of strong wind or days over 25 C, so there is no wind or hot share here; those are the means. Marvel Stadium is roofed: always a perfect day (no data). Station and years per number are in 'sources'. See docs/research/WEATHER_EVIDENCE.md.",
+ "_about": "Monthly March to September climate means per AFL venue, from Bureau of Meteorology 'Climate statistics for Australian locations' station tables (https://www.bom.gov.au/climate/averages/tables/cw_<station>.shtml, fetched 2026-10-06). rain_days is BoM's 'Mean number of days of rain >= 1 mm'; rain is rain_days divided by the days in the month (a share of days). wind_3pm_kmh is BoM's 'Mean 3pm wind speed (km/h)' and mean_max_c is 'Mean maximum temperature (C)'. BoM's summary tables do not give days of strong wind or days over 25 C, so there is no wind or hot share here; those are the means. Marvel Stadium is roofed: always a perfect day (no data). Station and years per number are in 'sources'. See docs/research/WEATHER_EVIDENCE.md. Grounds the AFL has left (Legacy mode) read their city's station, as that city's ground today does ('note' on each).",
  "months": [
   "Mar",
   "Apr",
@@ -594,6 +594,430 @@
      "mean_max_c": 18.0
     }
    }
+  },
+  "Waverley Park": {
+   "clubs": "HAW, STK (1990s)",
+   "sources": {
+    "rain": "086071",
+    "mean_max": "086071",
+    "wind": "086071"
+   },
+   "months": {
+    "Mar": {
+     "rain_days": 6.1,
+     "rain": 0.197,
+     "wind_3pm_kmh": 13.1,
+     "mean_max_c": 23.9
+    },
+    "Apr": {
+     "rain_days": 7.9,
+     "rain": 0.263,
+     "wind_3pm_kmh": 12.9,
+     "mean_max_c": 20.3
+    },
+    "May": {
+     "rain_days": 9.7,
+     "rain": 0.313,
+     "wind_3pm_kmh": 12.5,
+     "mean_max_c": 16.7
+    },
+    "Jun": {
+     "rain_days": 9.4,
+     "rain": 0.313,
+     "wind_3pm_kmh": 12.6,
+     "mean_max_c": 14.1
+    },
+    "Jul": {
+     "rain_days": 9.7,
+     "rain": 0.313,
+     "wind_3pm_kmh": 14.1,
+     "mean_max_c": 13.5
+    },
+    "Aug": {
+     "rain_days": 10.4,
+     "rain": 0.335,
+     "wind_3pm_kmh": 15.2,
+     "mean_max_c": 15.0
+    },
+    "Sep": {
+     "rain_days": 10.4,
+     "rain": 0.347,
+     "wind_3pm_kmh": 15.8,
+     "mean_max_c": 17.3
+    }
+   },
+   "note": "A ground the AFL has left (Legacy mode): its city's station, the same as MCG's."
+  },
+  "Victoria Park": {
+   "clubs": "COL (to 1999)",
+   "sources": {
+    "rain": "086071",
+    "mean_max": "086071",
+    "wind": "086071"
+   },
+   "months": {
+    "Mar": {
+     "rain_days": 6.1,
+     "rain": 0.197,
+     "wind_3pm_kmh": 13.1,
+     "mean_max_c": 23.9
+    },
+    "Apr": {
+     "rain_days": 7.9,
+     "rain": 0.263,
+     "wind_3pm_kmh": 12.9,
+     "mean_max_c": 20.3
+    },
+    "May": {
+     "rain_days": 9.7,
+     "rain": 0.313,
+     "wind_3pm_kmh": 12.5,
+     "mean_max_c": 16.7
+    },
+    "Jun": {
+     "rain_days": 9.4,
+     "rain": 0.313,
+     "wind_3pm_kmh": 12.6,
+     "mean_max_c": 14.1
+    },
+    "Jul": {
+     "rain_days": 9.7,
+     "rain": 0.313,
+     "wind_3pm_kmh": 14.1,
+     "mean_max_c": 13.5
+    },
+    "Aug": {
+     "rain_days": 10.4,
+     "rain": 0.335,
+     "wind_3pm_kmh": 15.2,
+     "mean_max_c": 15.0
+    },
+    "Sep": {
+     "rain_days": 10.4,
+     "rain": 0.347,
+     "wind_3pm_kmh": 15.8,
+     "mean_max_c": 17.3
+    }
+   },
+   "note": "A ground the AFL has left (Legacy mode): its city's station, the same as MCG's."
+  },
+  "Windy Hill": {
+   "clubs": "ESS (to 1991)",
+   "sources": {
+    "rain": "086071",
+    "mean_max": "086071",
+    "wind": "086071"
+   },
+   "months": {
+    "Mar": {
+     "rain_days": 6.1,
+     "rain": 0.197,
+     "wind_3pm_kmh": 13.1,
+     "mean_max_c": 23.9
+    },
+    "Apr": {
+     "rain_days": 7.9,
+     "rain": 0.263,
+     "wind_3pm_kmh": 12.9,
+     "mean_max_c": 20.3
+    },
+    "May": {
+     "rain_days": 9.7,
+     "rain": 0.313,
+     "wind_3pm_kmh": 12.5,
+     "mean_max_c": 16.7
+    },
+    "Jun": {
+     "rain_days": 9.4,
+     "rain": 0.313,
+     "wind_3pm_kmh": 12.6,
+     "mean_max_c": 14.1
+    },
+    "Jul": {
+     "rain_days": 9.7,
+     "rain": 0.313,
+     "wind_3pm_kmh": 14.1,
+     "mean_max_c": 13.5
+    },
+    "Aug": {
+     "rain_days": 10.4,
+     "rain": 0.335,
+     "wind_3pm_kmh": 15.2,
+     "mean_max_c": 15.0
+    },
+    "Sep": {
+     "rain_days": 10.4,
+     "rain": 0.347,
+     "wind_3pm_kmh": 15.8,
+     "mean_max_c": 17.3
+    }
+   },
+   "note": "A ground the AFL has left (Legacy mode): its city's station, the same as MCG's."
+  },
+  "Moorabbin Oval": {
+   "clubs": "STK (to 1992)",
+   "sources": {
+    "rain": "086071",
+    "mean_max": "086071",
+    "wind": "086071"
+   },
+   "months": {
+    "Mar": {
+     "rain_days": 6.1,
+     "rain": 0.197,
+     "wind_3pm_kmh": 13.1,
+     "mean_max_c": 23.9
+    },
+    "Apr": {
+     "rain_days": 7.9,
+     "rain": 0.263,
+     "wind_3pm_kmh": 12.9,
+     "mean_max_c": 20.3
+    },
+    "May": {
+     "rain_days": 9.7,
+     "rain": 0.313,
+     "wind_3pm_kmh": 12.5,
+     "mean_max_c": 16.7
+    },
+    "Jun": {
+     "rain_days": 9.4,
+     "rain": 0.313,
+     "wind_3pm_kmh": 12.6,
+     "mean_max_c": 14.1
+    },
+    "Jul": {
+     "rain_days": 9.7,
+     "rain": 0.313,
+     "wind_3pm_kmh": 14.1,
+     "mean_max_c": 13.5
+    },
+    "Aug": {
+     "rain_days": 10.4,
+     "rain": 0.335,
+     "wind_3pm_kmh": 15.2,
+     "mean_max_c": 15.0
+    },
+    "Sep": {
+     "rain_days": 10.4,
+     "rain": 0.347,
+     "wind_3pm_kmh": 15.8,
+     "mean_max_c": 17.3
+    }
+   },
+   "note": "A ground the AFL has left (Legacy mode): its city's station, the same as MCG's."
+  },
+  "Ikon Park": {
+   "clubs": "CAR, FIT, HAW (1990s, as Princes Park)",
+   "sources": {
+    "rain": "086071",
+    "mean_max": "086071",
+    "wind": "086071"
+   },
+   "months": {
+    "Mar": {
+     "rain_days": 6.1,
+     "rain": 0.197,
+     "wind_3pm_kmh": 13.1,
+     "mean_max_c": 23.9
+    },
+    "Apr": {
+     "rain_days": 7.9,
+     "rain": 0.263,
+     "wind_3pm_kmh": 12.9,
+     "mean_max_c": 20.3
+    },
+    "May": {
+     "rain_days": 9.7,
+     "rain": 0.313,
+     "wind_3pm_kmh": 12.5,
+     "mean_max_c": 16.7
+    },
+    "Jun": {
+     "rain_days": 9.4,
+     "rain": 0.313,
+     "wind_3pm_kmh": 12.6,
+     "mean_max_c": 14.1
+    },
+    "Jul": {
+     "rain_days": 9.7,
+     "rain": 0.313,
+     "wind_3pm_kmh": 14.1,
+     "mean_max_c": 13.5
+    },
+    "Aug": {
+     "rain_days": 10.4,
+     "rain": 0.335,
+     "wind_3pm_kmh": 15.2,
+     "mean_max_c": 15.0
+    },
+    "Sep": {
+     "rain_days": 10.4,
+     "rain": 0.347,
+     "wind_3pm_kmh": 15.8,
+     "mean_max_c": 17.3
+    }
+   },
+   "note": "A ground the AFL has left (Legacy mode): its city's station, the same as MCG's."
+  },
+  "Whitten Oval": {
+   "clubs": "WBD, FIT (1990s, as the Western Oval)",
+   "sources": {
+    "rain": "086071",
+    "mean_max": "086071",
+    "wind": "086071"
+   },
+   "months": {
+    "Mar": {
+     "rain_days": 6.1,
+     "rain": 0.197,
+     "wind_3pm_kmh": 13.1,
+     "mean_max_c": 23.9
+    },
+    "Apr": {
+     "rain_days": 7.9,
+     "rain": 0.263,
+     "wind_3pm_kmh": 12.9,
+     "mean_max_c": 20.3
+    },
+    "May": {
+     "rain_days": 9.7,
+     "rain": 0.313,
+     "wind_3pm_kmh": 12.5,
+     "mean_max_c": 16.7
+    },
+    "Jun": {
+     "rain_days": 9.4,
+     "rain": 0.313,
+     "wind_3pm_kmh": 12.6,
+     "mean_max_c": 14.1
+    },
+    "Jul": {
+     "rain_days": 9.7,
+     "rain": 0.313,
+     "wind_3pm_kmh": 14.1,
+     "mean_max_c": 13.5
+    },
+    "Aug": {
+     "rain_days": 10.4,
+     "rain": 0.335,
+     "wind_3pm_kmh": 15.2,
+     "mean_max_c": 15.0
+    },
+    "Sep": {
+     "rain_days": 10.4,
+     "rain": 0.347,
+     "wind_3pm_kmh": 15.8,
+     "mean_max_c": 17.3
+    }
+   },
+   "note": "A ground the AFL has left (Legacy mode): its city's station, the same as MCG's."
+  },
+  "Football Park": {
+   "clubs": "ADE, PAD (1991-2013)",
+   "sources": {
+    "rain": "023000",
+    "mean_max": "023000",
+    "wind": "023000"
+   },
+   "months": {
+    "Mar": {
+     "rain_days": 3.5,
+     "rain": 0.113,
+     "wind_3pm_kmh": 16.3,
+     "mean_max_c": 26.1
+    },
+    "Apr": {
+     "rain_days": 6.5,
+     "rain": 0.217,
+     "wind_3pm_kmh": 15.3,
+     "mean_max_c": 22.2
+    },
+    "May": {
+     "rain_days": 10.2,
+     "rain": 0.329,
+     "wind_3pm_kmh": 14.2,
+     "mean_max_c": 18.6
+    },
+    "Jun": {
+     "rain_days": 11.1,
+     "rain": 0.37,
+     "wind_3pm_kmh": 14.1,
+     "mean_max_c": 15.8
+    },
+    "Jul": {
+     "rain_days": 11.9,
+     "rain": 0.384,
+     "wind_3pm_kmh": 16.8,
+     "mean_max_c": 15.0
+    },
+    "Aug": {
+     "rain_days": 11.6,
+     "rain": 0.374,
+     "wind_3pm_kmh": 18.8,
+     "mean_max_c": 16.1
+    },
+    "Sep": {
+     "rain_days": 9.3,
+     "rain": 0.31,
+     "wind_3pm_kmh": 18.7,
+     "mean_max_c": 18.5
+    }
+   },
+   "note": "A ground the AFL has left (Legacy mode): its city's station, the same as Adelaide Oval's."
+  },
+  "Subiaco Oval": {
+   "clubs": "WCE, FRE (to 2017)",
+   "sources": {
+    "rain": "009021",
+    "mean_max": "009021",
+    "wind": "009021"
+   },
+   "months": {
+    "Mar": {
+     "rain_days": 2.3,
+     "rain": 0.074,
+     "wind_3pm_kmh": 18.6,
+     "mean_max_c": 29.8
+    },
+    "Apr": {
+     "rain_days": 5.2,
+     "rain": 0.173,
+     "wind_3pm_kmh": 16.3,
+     "mean_max_c": 25.7
+    },
+    "May": {
+     "rain_days": 9.7,
+     "rain": 0.313,
+     "wind_3pm_kmh": 14.7,
+     "mean_max_c": 21.9
+    },
+    "Jun": {
+     "rain_days": 13.6,
+     "rain": 0.453,
+     "wind_3pm_kmh": 15.5,
+     "mean_max_c": 19.1
+    },
+    "Jul": {
+     "rain_days": 14.9,
+     "rain": 0.481,
+     "wind_3pm_kmh": 16.0,
+     "mean_max_c": 18.0
+    },
+    "Aug": {
+     "rain_days": 13.0,
+     "rain": 0.419,
+     "wind_3pm_kmh": 16.9,
+     "mean_max_c": 18.7
+    },
+    "Sep": {
+     "rain_days": 10.2,
+     "rain": 0.34,
+     "wind_3pm_kmh": 18.7,
+     "mean_max_c": 20.4
+    }
+   },
+   "note": "A ground the AFL has left (Legacy mode): its city's station, the same as Optus Stadium's."
   }
  }
 }
