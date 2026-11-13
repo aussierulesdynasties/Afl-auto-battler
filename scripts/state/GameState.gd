@@ -142,7 +142,8 @@ var rivalry_history := {}        # canonical club pair -> emergent rivalry evide
 ## The first season whose finals are counted per player (p["finals_games"]). 0 for a
 ## career begun with the count; an older save counts from its next finals.
 var finals_counted_since := 0
-## Club achievements unlocked this career: id -> {"year", "detail"}.
+## Achievements unlocked this career: id -> {"year", "club"} ("club": the
+## club that earned it, or the club you coached for a coach achievement).
 ## Definitions live in scripts/sim/Achievements.gd.
 var achievements := {}
 ## G7: the career's durable facts, {player id: [row, ...]} (CareerFacts.gd).
@@ -1200,7 +1201,12 @@ func _restore_career(state: Dictionary) -> bool:
 	# An older save has played finals nobody counted: its count starts with the next ones.
 	finals_counted_since = int(state.get("finals_counted_since",
 			int(state.get("season_year", 0)) + (1 if season != null and not season.finals.is_empty() else 0)))
-	achievements = state.get("achievements", {})
+	# Only the current catalogue: the first twenty (scrapped 2026-11-14) go.
+	achievements = {}
+	var saved_ach: Dictionary = state.get("achievements", {}) if state.get("achievements") is Dictionary else {}
+	for id in saved_ach:
+		if not Achievements.definition(str(id)).is_empty():
+			achievements[str(id)] = saved_ach[id]
 	career_facts = state.get("career_facts", {})
 	milestone_log = Milestones.normalise(state.get("milestone_log"), self)
 	_last_finish = state.get("last_finish") if state.get("last_finish") is Dictionary else {}
@@ -7456,6 +7462,10 @@ func _close_season_awards() -> void:
 		"my_record": my_record(),
 		"my_finals": _my_last_final(),
 		"my_aa": _my_all_australians(),
+		# The final ladder (codes, top to bottom) and the finalists, for the
+		# achievements that span seasons (Achievements.gd). Older entries lack them.
+		"ladder_order": season.ladder_sorted().map(func(r): return str(r["code"])),
+		"finalists": (season.finals.get("top", []) as Array).duplicate(),
 	})
 	# The season hero (director, 2026-11-03): a named club award on the honour
 	# roll, the most match-hero awards (match story digest) this season.
@@ -7562,17 +7572,23 @@ func _my_all_australians() -> Array:
 func _close_season_achievements() -> void:
 	if season == null:
 		return
-	# Past seasons only - this season's flag comes in as ctx["premier"], and
-	# the honour roll already carries the entry for it.
-	var history := []
-	for entry in honour_roll:
-		if int(entry.get("year", 0)) == season_year:
-			continue
-		if str(entry.get("premier", "")) != "":
-			history.append([int(entry.get("year", 0)), str(entry.get("premier", ""))])
 	var enter := {}
+	var forge := []
 	for code in GameDB.club_order:
 		enter[code] = GameDB.enter_year(code)
+		if bool((GameDB.clubs.get(code, {}) as Dictionary).get("custom", false)):
+			forge.append(code)
+	# This season's results in order, finals last (tagged).
+	var matches := []
+	for rnd in season.results:
+		for res in rnd:
+			matches.append({"home": str(res["home"]), "away": str(res["away"]),
+					"score": res["score"], "tag": ""})
+	for week in season.finals.get("weeks", []):
+		for res in week:
+			matches.append({"home": str(res["home"]), "away": str(res["away"]),
+					"score": res["score"], "tag": str(res.get("tag", "F"))})
+	var gf := _grand_final_result()
 	var ctx := {
 		"year": season_year,
 		"premier": premier(),
@@ -7580,16 +7596,54 @@ func _close_season_achievements() -> void:
 		"ladder": season.ladder,
 		"finalists": season.finals.get("top", []),
 		"finals_slots": season.finals.get("slots", {}),
-		"history": history,
-		"active": GameDB.active_clubs(season_year),
 		"enter": enter,
+		"my_club": my_club,
+		"forge": forge,
+		"matches": matches,
+		"gf": {"home": str(gf["home"]), "away": str(gf["away"]), "score": gf["score"]} if not gf.is_empty() else {},
+		"roll": honour_roll,
+		"yours": _achievement_draftees(),
 	}
-	for id in Achievements.check_season(achievements, ctx):
-		achievements[id] = {"year": season_year}
+	var found := Achievements.check_season(achievements, ctx)
+	for id in found:
+		var club := str(found[id])
+		achievements[id] = {"year": season_year, "club": club}
 		var defn: Dictionary = Achievements.definition(id)
-		add_news("achievement", "Achievement unlocked: %s - %s (%s)" % [
-				str(defn["name"]), GameDB.club_name(str(defn["club"])),
-				GameDB.club_short(str(defn["club"]))])
+		if Achievements.is_coach(defn):
+			add_news("achievement", "Achievement unlocked: %s - %s" % [
+					str(defn["name"]), str(defn["desc"])])
+		else:
+			add_news("achievement", "Achievement unlocked: %s - %s (%s)" % [
+					str(defn["name"]), GameDB.club_name(club), GameDB.club_short(club)])
+
+
+## This season's honoured players and premiership side that you drafted,
+## {id: [draft year, pick, kind]} (CoachLedger.your_draft), for the
+## achievements about your draftees.
+func _achievement_draftees() -> Dictionary:
+	var out := {}
+	if my_club == "" or honour_roll.is_empty():
+		return out
+	var e: Dictionary = honour_roll[-1]
+	var ids := []
+	for key in ["brownlow", "coleman", "rising_star", "coaches_award", "norm_smith", "my_bf"]:
+		var rows: Array = e.get(key, [])
+		if not rows.is_empty() and rows[0] is Dictionary:
+			ids.append(str((rows[0] as Dictionary).get("id", "")))
+	for id in e.get("my_aa", []):
+		ids.append(str(id))
+	for id in e.get("premier_side", []):
+		ids.append(str(id))
+	for id in ids:
+		if id == "" or out.has(id):
+			continue
+		var p := _any_player(id)
+		if p.is_empty():
+			continue
+		var d := CoachLedger.your_draft(p, honour_roll, my_club, season_year, my_first_season, start_mode)
+		if not d.is_empty():
+			out[id] = d
+	return out
 
 
 ## A readable player name for an awards row, even for a retired player.
