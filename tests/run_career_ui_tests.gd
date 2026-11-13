@@ -5007,10 +5007,20 @@ func _test_sacked_job_choice_taps() -> void:
 			"A club joining next season offers its job, saying when it joins (%s)" % (tas_why.text if tas_why != null else "missing"))
 	take = current_scene.find_child("TakeJob_TAS", true, false)
 	_check(take != null and take.get_combined_minimum_size().x <= take.size.x + 0.5, "Tasmania's Take button reads whole on a 390 phone")
+	# The sacking comes at the season's close: the home-and-away rounds are done.
+	_state.season.round_index = _state.season.fixture.size()
 	why = await Tap.tap(take) if take != null else "missing"
+	for i in range(900):
+		if _router.current() == "draft" and not bool(root.get_node("ScreenTransition").busy):
+			break
+		await process_frame
 	await _settle()
-	_check(why == "" and not _state.is_sacked() and str(_state.coach_arcs["move"].get("to", "")) == "TAS" and _state.my_club == "FRE",
-			"A finger on Take the job at Tasmania sets the move for their first draft; he is at Fremantle until then (%s)" % why)
+	# Row 189: Fremantle play out the off-season under their own staff and he
+	# goes straight to Tasmania's first National Draft as their coach.
+	_check(why == "" and not _state.is_sacked() and _router.current() == "draft" and _state.my_club == "TAS"
+			and _state.draft != null and _state.draft.user_club == "TAS",
+			"A finger on Take the job at Tasmania opens their first National Draft with him as their coach (%s; screen %s, club %s)" % [
+			why, _router.current(), _state.my_club])
 	# A fresh sacking: retire instead, and the record is read out.
 	_sacked_with_offers()
 	_router.go("hub")

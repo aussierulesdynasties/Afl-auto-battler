@@ -799,8 +799,7 @@ func _job_offers(v: VBoxContainer, jobs: Array) -> void:
 			row.add_child(_offer_line("The list: " + str(o["list"]), UiKit.TEXT))
 		row.add_child(_offer_line("The board's goal: " + str(o["goal"]), UiKit.TEXT))
 		var take := _nav_button("Take the job", func():
-			if ClubMoves.take_job(GameState, code):
-				_build())
+			_move_clubs(code, func(): return ClubMoves.take_job(GameState, code)))
 		take.name = "TakeJob_%s" % code
 		row.add_child(take)
 	v.add_child(UiKit.rule())
@@ -2087,14 +2086,29 @@ func _letter_card() -> Control:
 			_build())
 	stay.name = "RivalLetterStay"
 	var take := _nav_button("Take the job", func():
-		if ClubMoves.accept_letter(GameState):
-			_build())
+		_move_clubs(code, func(): return ClubMoves.accept_letter(GameState)))
 	take.name = "RivalLetterTake"
 	row.add_child(stay)
 	row.add_child(take)
 	v.add_child(row)
 	v.add_child(UiKit.rule())
 	return v
+
+
+## He takes a job (`sign` makes the move). A club yet to play is his from its
+## first National Draft, which opens at once: the club he leaves plays out its
+## off-season under its own staff (GameState.offseason_without_you, row 189),
+## so the cover goes up first and the draft screen follows.
+func _move_clubs(code: String, sign: Callable) -> void:
+	if not ClubMoves.is_joining(GameState, code):
+		if bool(sign.call()):
+			_build()
+		return
+	ScreenTransition.run("Playing out the %d off-season..." % int(GameState.season_year), func():
+		if bool(sign.call()) and GameState.club_yet_to_play():
+			Router.go("draft")
+			return
+		_build())
 
 
 ## Where an offering club stands: its ladder finish and why the job is open,

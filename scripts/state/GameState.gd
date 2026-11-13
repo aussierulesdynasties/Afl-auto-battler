@@ -8179,6 +8179,43 @@ func season_closed() -> bool:
 	return season == null or offseason_year == season_year or int(season_awards.get("year", 0)) == season_year
 
 
+## True only inside offseason_without_you: the off-season runs with no club of
+## his, and the rivals' trade market still opens (_open_trade_market).
+var _leaving_offseason := false
+
+
+## He has signed with a club yet to play (ClubMoves.take_job / accept_letter)
+## and takes over at its first National Draft, which opens now. The club he
+## leaves runs this off-season as any rival does: its re-signings, delistings,
+## trades and free agency are its own staff's, its open staff jobs are filled as
+## Auto-fill would, and no call of the old club's (a contract, a trade, a staff
+## job) is his (row 189, director 2026-11-12). Run as the years played without
+## you are (my_club ""), so every rule is the one rival clubs live by.
+func offseason_without_you() -> bool:
+	if season == null or not (season.is_season_over() or season.is_regular_done()):
+		return false
+	var club := my_club
+	var list := my_list
+	my_club = ""
+	my_list = []
+	_leaving_offseason = true
+	open_offseason(true)
+	_close_free_agency()
+	_leaving_offseason = false
+	my_club = club
+	my_list = list
+	# His old office: staff jobs filled as the club's own staff would, every
+	# undecided assistant kept, and nothing left on the Hub for him to answer.
+	_settle_staff_contracts()
+	_fill_open_staff()
+	staff_vacancies = []
+	coach_approaches = []
+	trade_requests = {}
+	trade_offers = []
+	week_events = []
+	return begin_intake_draft()
+
+
 ## Season over: rivals decide on their expiring players at once - keep who
 ## is worth his new price, let the rest go to free agency. Yours wait for you.
 ## `keep_staff`: the season's close already took your staff for the wrap.
@@ -10300,17 +10337,21 @@ func _club_order(tag: String) -> Array:
 ## The off-season's trade market: rival clubs trade with each other where
 ## both come out ahead, then a few put offers to you.
 func _open_trade_market() -> void:
-	if my_club == "" or not season.lists.has(my_club):
+	# The club he is leaving for one yet to play trades as any rival does
+	# (offseason_without_you): the rivals' trades run, with no offers to him.
+	var you := my_club != "" and season.lists.has(my_club)
+	if not you and not _leaving_offseason:
 		return
 	# A mark on a player who has since left (retired, delisted, traded) goes.
 	for id in untouchable.keys():
-		if not my_list.any(func(q): return str(q["id"]) == str(id)):
+		if you and not my_list.any(func(q): return str(q["id"]) == str(id)):
 			untouchable.erase(id)
 	var prospects := trade_prospects()
 	_freeze_league(true)
 	_requested_trades(prospects)
 	_ai_trades(prospects)
-	_make_trade_offers(prospects)
+	if you:
+		_make_trade_offers(prospects)
 	_freeze_league(false)
 
 
