@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://biybnuoncxkqw"
+
+[deps]
+
+files=["res://data/legacy/second_tier/leagues.name.translation", "res://data/legacy/second_tier/leagues.from.translation", "res://data/legacy/second_tier/leagues.to.translation", "res://data/legacy/second_tier/leagues.complete.translation", "res://data/legacy/second_tier/leagues.source.translation", "res://data/legacy/second_tier/leagues.evidence.translation"]
+
+source_file="res://data/legacy/second_tier/leagues.csv"
+dest_files=["res://data/legacy/second_tier/leagues.name.translation", "res://data/legacy/second_tier/leagues.from.translation", "res://data/legacy/second_tier/leagues.to.translation", "res://data/legacy/second_tier/leagues.complete.translation", "res://data/legacy/second_tier/leagues.source.translation", "res://data/legacy/second_tier/leagues.evidence.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true
