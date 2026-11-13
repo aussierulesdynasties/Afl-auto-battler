@@ -1104,7 +1104,7 @@ func _show_coach_box() -> void:
 		if gather:
 			label = GatherRound.NAME
 		var where := UiKit.ellipsis("%s  ·  %s v %s  ·  %s" % [label,
-				GameDB.club_short(str(_res["home"])), GameDB.club_short(str(_res["away"])), _venue()], UiKit.BODY, UiKit.TEXT, true)
+				GameDB.club_short(str(_res["home"])), GameDB.club_short(str(_res["away"])), GameDB.ground_shown(_venue())], UiKit.BODY, UiKit.TEXT, true)
 		where.name = "BreakWhere"
 		if gather:
 			where.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

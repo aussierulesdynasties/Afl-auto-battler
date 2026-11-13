@@ -149,7 +149,7 @@ static func pages(season: Season) -> Array:
 				if str(r.get("home", "")) == str(m["home"]) and str(r.get("away", "")) == str(m["away"]):
 					res = r
 			matches.append({"home": str(m["home"]), "away": str(m["away"]), "res": res,
-					"venue": season.round_venue(i, str(m["home"]), str(m["away"])), "tag": "",
+					"venue": GameDB.ground_shown(season.round_venue(i, str(m["home"]), str(m["away"])), season.year), "tag": "",
 					"label": season.round_label(i)})
 			playing[str(m["home"])] = true
 			playing[str(m["away"])] = true
@@ -170,14 +170,14 @@ static func pages(season: Season) -> Array:
 			if w < weeks.size():
 				for r in weeks[w]:
 					matches.append({"home": str(r["home"]), "away": str(r["away"]), "res": r,
-							"venue": str(r.get("venue", "")), "tag": str(r.get("tag", "")),
+							"venue": GameDB.ground_shown(str(r.get("venue", "")), season.year), "tag": str(r.get("tag", "")),
 							"label": str(r.get("label", ""))})
 			else:
 				for m in season.finals_week_matches():
 					if str(m["home"]) == "" or str(m["away"]) == "":
 						continue
 					matches.append({"home": str(m["home"]), "away": str(m["away"]), "res": {},
-							"venue": season.finals_venue(m), "tag": str(m["tag"]), "label": str(m["label"])})
+							"venue": GameDB.ground_shown(season.finals_venue(m), season.year), "tag": str(m["tag"]), "label": str(m["label"])})
 			out.append({"title": str(names[w]), "matches": matches, "played": w < weeks.size(),
 					"byes": [], "finals": true})
 	return out

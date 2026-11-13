@@ -1,5 +1,5 @@
 {
- "_about": "Share of 2026 AFL matches at each ground that started by day (before 16:00 local), at twilight (16:00 to 17:59) or at night (18:00 on), from data/raw/fixtures_2026.json (Squiggle). Built by tools/visual/build_kickoff_shares.py; do not edit by hand. Looks only: the match scenes pick their sky from it and the simulation never reads it.",
+ "_about": "Share of 2026 AFL matches at each ground that started by day (before 16:00 local), at twilight (16:00 to 17:59) or at night (18:00 on), from data/raw/fixtures_2026.json (Squiggle); a ground the AFL has left, its 1990-1999 matches (data/raw/fixtures_1990s.json). Built by tools/visual/build_kickoff_shares.py; do not edit by hand. Looks only: the match scenes pick their sky from it and the simulation never reads it.",
  "min_games": 6,
  "default": {
   "day": 0.372,
@@ -26,11 +26,23 @@
    "night": 0.0,
    "games": 1
   },
+  "Bruce Stadium": {
+   "day": 1.0,
+   "twilight": 0.0,
+   "night": 0.0,
+   "games": 1
+  },
   "Engie Stadium": {
    "day": 0.25,
    "twilight": 0.75,
    "night": 0.0,
    "games": 8
+  },
+  "Football Park": {
+   "day": 0.406,
+   "twilight": 0.15,
+   "night": 0.444,
+   "games": 133
   },
   "GMHBA Stadium": {
    "day": 0.0,
@@ -43,6 +55,12 @@
    "twilight": 0.0,
    "night": 0.0,
    "games": 1
+  },
+  "Ikon Park": {
+   "day": 1.0,
+   "twilight": 0.0,
+   "night": 0.0,
+   "games": 198
   },
   "MCG": {
    "day": 0.353,
@@ -68,6 +86,18 @@
    "night": 0.348,
    "games": 46
   },
+  "Moorabbin Oval": {
+   "day": 1.0,
+   "twilight": 0.0,
+   "night": 0.0,
+   "games": 24
+  },
+  "North Hobart": {
+   "day": 1.0,
+   "twilight": 0.0,
+   "night": 0.0,
+   "games": 4
+  },
   "Norwood Oval": {
    "day": 1.0,
    "twilight": 0.0,
@@ -92,6 +122,12 @@
    "night": 0.538,
    "games": 13
   },
+  "Subiaco Oval": {
+   "day": 0.602,
+   "twilight": 0.263,
+   "night": 0.136,
+   "games": 118
+  },
   "The Gabba": {
    "day": 0.167,
    "twilight": 0.25,
@@ -103,6 +139,36 @@
    "twilight": 0.0,
    "night": 0.0,
    "games": 1
+  },
+  "Victoria Park": {
+   "day": 1.0,
+   "twilight": 0.0,
+   "night": 0.0,
+   "games": 45
+  },
+  "WACA": {
+   "day": 0.039,
+   "twilight": 0.039,
+   "night": 0.922,
+   "games": 51
+  },
+  "Waverley Park": {
+   "day": 0.946,
+   "twilight": 0.0,
+   "night": 0.054,
+   "games": 259
+  },
+  "Whitten Oval": {
+   "day": 1.0,
+   "twilight": 0.0,
+   "night": 0.0,
+   "games": 84
+  },
+  "Windy Hill": {
+   "day": 1.0,
+   "twilight": 0.0,
+   "night": 0.0,
+   "games": 15
   },
   "York Park": {
    "day": 0.75,

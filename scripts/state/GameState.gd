@@ -2798,6 +2798,7 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	pending_label = ""
 	_open_board_season()
 	_captaincy_refresh()
+	_ground_rename_news()
 	_culture_rollover()
 	_build_season_wrap(next_year)
 	# The season those careers ended in is wrapped up: nothing reads them again.
@@ -3173,6 +3174,7 @@ func start_season(club_code: String, list: Array) -> void:
 		department_budget_year = season_year
 	_open_board_season()
 	_captaincy_refresh()
+	_ground_rename_news()
 	last_phase = "regular"
 	last_label = "Round 1"
 	last_training_report = {}
@@ -5490,7 +5492,7 @@ func next_fixture_line() -> String:
 		return ""
 	if nxt.has("event"):
 		return "Next: %s, v %s at %s." % [season.round_label(season.round_index),
-				GameDB.club_name(str(nxt["code"])), str(nxt["ground"])]
+				GameDB.club_name(str(nxt["code"])), GameDB.ground_shown(str(nxt["ground"]))]
 	return "Next: Round %d %s %s." % [season.round_index + 1,
 			"v" if str(nxt["venue"]) == "home" else "at", GameDB.club_name(str(nxt["code"]))]
 
@@ -12868,6 +12870,44 @@ func add_news(kind: String, text: String, when_label: String = "", extra := {}) 
 	news.push_front(item)
 	if news.size() > MAX_NEWS:
 		news.resize(MAX_NEWS)
+
+
+## A ground the season is played at that takes a new name this year gets one
+## story before Round 1 (Princes Park became Optus Oval in 1994): the old name,
+## the new one and the clubs that call it home. Today's grounds keep their
+## names, so a career from 2026 never sees one.
+func _ground_rename_news() -> void:
+	if season == null:
+		return
+	var homes := {}   # ground key -> club codes at home there
+	for code in season.clubs:
+		var g := GameDB.ground_key(season.home_ground(str(code)))
+		if not homes.has(g):
+			homes[g] = []
+		(homes[g] as Array).append(str(code))
+	var used := homes.keys()
+	var gather := season.gather_round()
+	for i in range(season.fixture.size()):
+		for m in season.fixture[i]:
+			var v := GameDB.ground_key(season.round_venue(i, str(m["home"]), str(m["away"])) if i == gather
+					else season.home_ground(str(m["home"])))
+			if not used.has(v):
+				used.append(v)
+	var gf := GameDB.ground_key(season.grand_final_venue())
+	if not used.has(gf):
+		used.append(gf)
+	for g in used:
+		var old := GameDB.ground_renamed_from(str(g), season_year)
+		if old == "" or not Milestones.tell_once(self, "ground|%s|%d" % [g, season_year]):
+			continue
+		var now := GameDB.ground_name(str(g), season_year)
+		var clubs: Array = homes.get(g, [])
+		var names := PackedStringArray(clubs.map(func(c): return GameDB.club_name(str(c))))
+		var text := "%s takes a new name this season: from Round 1 it is %s" % [old, now]
+		if names.size() > 0:
+			text += ", home of %s" % " and ".join(names)
+		add_news("ground", text + ".", "Pre-season", {"club": str(clubs[0]) if clubs.size() > 0 else "",
+				"old": old, "new": now})
 
 
 ## Around halfway through the home-and-away season, recruiting has seen

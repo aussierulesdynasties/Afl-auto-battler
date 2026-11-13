@@ -48,7 +48,7 @@ static func open(host: Control, code: String) -> Control:
 	var c: Dictionary = GameDB.clubs.get(code, {})
 	var ground := str(c.get("ground", ""))
 	if ground != "":
-		body.add_child(_fact("Home ground", ground, "Ground"))
+		body.add_child(_fact("Home ground", GameDB.ground_shown(ground), "Ground"))
 	body.add_child(_fact("Senior coach", _coach(code, mine), "Coach"))
 	body.add_child(_leaders(code))
 
