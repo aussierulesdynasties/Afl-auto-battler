@@ -25,6 +25,18 @@ func run() -> void:
 	_t("_test_brand_choice", [1])
 	_t("_test_brand_sim_bears")
 	_t("_test_colours_apart")
+	_t("_test_no_historical_trades")
+	_t("_test_canon_move", ["ablett_gcs", "rival"])
+	_t("_test_canon_move", ["ablett_gcs", "let_go"])
+	_t("_test_canon_move", ["ablett_gcs", "fight"])
+	_t("_test_canon_move", ["franklin_syd", "rival"])
+	_t("_test_canon_move", ["franklin_syd", "fight"])
+	_t("_test_canon_move", ["merrett_flag", "rival"])
+	_t("_test_canon_move", ["scully_gws", "let_go"])
+	_t("_test_canon_chain")
+	_t("_test_canon_retire", ["rioli_home", "rival"])
+	_t("_test_canon_retire", ["rioli_home", "let_go"])
+	_t("_test_canon_retire", ["jurrah_home", "fight"])
 	_t("_test_campaign")
 	GameState.replay_seed = 0
 	GameDB.reload()
@@ -225,9 +237,9 @@ func _list_sum(list: Array) -> Array:
 
 ## A career whose Fitzroy fought off the merger has 17 clubs in 1997 (Port
 ## enter, the Bears carry on: director 2026-11-13). 1997's 22 rounds cannot
-## hold 22 games each for 17 (187 matches, 176 places), so each club plays
-## the most they fit, 20; the season runs with byes, every club meets every
-## other, and the final eight plays out to a premier.
+## hold 22 games each for 17 (187 matches, 176 places), so the season adds
+## rounds (director: "Add rounds"): 24 rounds, 22 games each, two byes each,
+## every club meets every other, and the final eight plays out to a premier.
 func _test_seventeen_clubs() -> void:
 	GameState.reset("1990")
 	LegacyRollover.keep_fitzroy()
@@ -243,9 +255,12 @@ func _test_seventeen_clubs() -> void:
 		var src: String = c if donors.has(c) else str(donors[i % donors.size()])
 		lists[c] = GameState._career_copies(GameDB.club_list(src))
 	var season := Season.new(codes, lists, 1997, 1997)
-	_check(season.fixture.size() == season.regular_rounds() and season.regular_rounds() == 22,
-			"1997 keeps its 22 rounds with 17 clubs (%d)" % season.fixture.size())
-	_check(season.games_per_club() == 20, "Each of the 17 plays 20 games (%d)" % season.games_per_club())
+	_check(season.fixture.size() == season.regular_rounds() and season.regular_rounds() == 24,
+			"1997 with 17 clubs runs to 24 rounds (%d)" % season.fixture.size())
+	_check(season.games_per_club() == 22, "Each of the 17 plays the year's 22 games (%d)" % season.games_per_club())
+	var real_1997 := Season.new(GameDB.active_clubs(1997).filter(func(c): return c != "FIT"), lists, 1997, 1997)
+	_check(real_1997.regular_rounds() == 22 and real_1997.games_per_club() == 22,
+			"The real 16-club 1997 keeps 22 rounds and 22 games (%d, %d)" % [real_1997.regular_rounds(), real_1997.games_per_club()])
 	var games := {}
 	var pairs := {}
 	var byes := {}
@@ -265,7 +280,7 @@ func _test_seventeen_clubs() -> void:
 			if not seen.has(c):
 				byes[c] = int(byes.get(c, 0)) + 1
 	_check(twice_in_a_round == 0, "No club plays twice in a round (%d)" % twice_in_a_round)
-	_check(codes.all(func(c): return int(games.get(c, 0)) == 20), "Every club plays 20 games (%s)" % str(games))
+	_check(codes.all(func(c): return int(games.get(c, 0)) == 22), "Every club plays 22 games (%s)" % str(games))
 	_check(pairs.size() == 17 * 16 / 2, "Every club meets every other (%d of 136 pairs)" % pairs.size())
 	_check(codes.all(func(c): return int(byes.get(c, 0)) == 2), "Every club has two byes (%s)" % str(byes))
 	var guard := 0
@@ -354,7 +369,8 @@ func _test_campaign() -> void:
 	_check(loaded.has("legacy") and (loaded["legacy"] as Dictionary).has("finals"), "The save keeps the Legacy record")
 
 
-## `code` enters `year` on its real list: the real players, a full list.
+## `code` enters `year` on a list built from its real one: its real players
+## the career has nowhere else, filled to the real list's size.
 func _entered(code: String, year: int) -> void:
 	var list: Array = GameState.league_lists.get(code, [])
 	var rows := 0
@@ -368,17 +384,192 @@ func _entered(code: String, year: int) -> void:
 			var nm := "%s %s" % [str(r["first"]), str(r["last"])]
 			if not names.has(nm):
 				absent.append("%s%s" % [nm, " (known)" if str(r["known"]) == "1" else ""])
-	var real := list.filter(func(p): return str(p.get("real_name", "")).strip_edges() != "" and str(p.get("club", "")) == code)
 	_check(GameDB.active_clubs(year).has(code), "%s plays in %d" % [code, year])
-	_check(list.size() >= rows - 8 and list.size() <= rows and real.size() == list.size(),
-			"%s enter %d on their real list (%d of its %d; not there: %s)" % [code, year, list.size(), rows, ", ".join(absent)])
-	var expansion := list.filter(func(p): return str(p.get("id", "")).begins_with("EXP_"))
-	_check(expansion.is_empty(), "%s field no generated players" % code)
+	_check(list.size() == rows and list.all(func(p): return str(p.get("club", code)) == code),
+			"%s enter %d on a full list (%d of its real %d; not there: %s)" % [code, year, list.size(), rows, ", ".join(absent)])
+	var real := list.filter(func(p): return names.has(str(p.get("real_name", ""))) and str(p.get("real_name", "")) != "")
+	_check(real.size() >= rows / 2, "%s's list is mostly its real players (%d of %d)" % [code, real.size(), rows])
 	var rated := list.filter(func(p): return int(p.get("overall", 0)) > 30)
 	_check(rated.size() == list.size(), "Every %s player is rated" % code)
-	_check(GameState.news.any(func(n): return "on their real list" in str(n.get("text", "")) and GameDB.club_name(code) in str(n.get("text", ""))),
+	_check(GameState.news.any(func(n): return "built from their real one" in str(n.get("text", "")) and GameDB.club_name(code) in str(n.get("text", ""))),
 			"The news tells of %s's entry" % code)
 
 
 func _skip_season() -> void:
 	GameState.season.round_index = GameState.season.fixture.size()
+
+
+## start_season fills season.lists; a real career's league_lists is the same
+## arrays (begin_real_lists), which the canon stories search.
+func _start(code: String) -> void:
+	GameState.start_season(code, GameDB.club_list(code))
+	for c in GameState.season.lists:
+		GameState.league_lists[c] = GameState.season.lists[c]
+
+
+## "historical trades arent in the sim" (director, 2026-11-13): a new club's
+## real player who is on another club's list stays there, and the new club
+## fills his place.
+func _test_no_historical_trades() -> void:
+	GameState.reset("1990")
+	_start("GEE")
+	var rows := 0
+	var real := []
+	for r in GameDB._read_dicts(LegacyRollover.ENTRY_CSV):
+		if str(r["club"]) == "ADE" and int(r["year"]) == 1991:
+			rows += 1
+			if str(r.get("known", "")) == "1":
+				real.append(r)
+	# Put three of Adelaide's real 1991 players on 1990 lists, as a career
+	# that drafted them would.
+	var held := {}
+	var clubs := ["GEE", "HAW", "CAR"]
+	for i in 3:
+		var p: Dictionary = (GameState.league_lists[clubs[i]] as Array)[i + 1]
+		p["real_name"] = "%s %s" % [str(real[i]["first"]), str(real[i]["last"])]
+		p["dob"] = str(real[i].get("dob", ""))
+		held[str(p["id"])] = clubs[i]
+	var got: Dictionary = LegacyRollover.entry_list(GameState, "ADE", 1991)
+	var list: Array = got["list"]
+	var stayed := 0
+	for id in held:
+		var still: Array = GameState.league_lists[held[id]]
+		if still.any(func(p): return str(p["id"]) == id):
+			stayed += 1
+	_check(stayed == held.size(), "Every one of them stays at his club (%d of %d)" % [stayed, held.size()])
+	_check(not list.any(func(p): return held.has(str(p.get("id", "")))), "None of them is on Adelaide's list")
+	_check((got["moved"] as Array).is_empty(), "No player moves to Adelaide from another club")
+	_check(list.size() == rows, "Adelaide's list is full all the same (%d of %d)" % [list.size(), rows])
+	GameDB.reload("1990")
+
+
+## Puts the canon story's player on `from`'s list; returns him.
+func _plant(m: Dictionary, from: String) -> Dictionary:
+	var star: Dictionary = (GameState.league_lists[from] as Array)[0]
+	star["real_name"] = "%s %s" % [str(m["first"]), str(m["last"])]
+	star["dob"] = str(m["dob"])
+	return star
+
+
+## Round CANON_ROUND of the season before the story's year: his coach's cards.
+func _canon_cards(m: Dictionary) -> Array:
+	GameState.season_year = int(m["year"]) - 1
+	GameState.season.round_index = LegacyRollover.CANON_ROUND
+	GameState.week_events = []
+	LegacyRollover.week(GameState)
+	return GameState.week_events.filter(func(e): return str(e.get("tid", "")) == LegacyRollover.CANON_TID)
+
+
+## A canon move: "His coach, with odds" (director, 2026-11-13). `how`: "rival"
+## (he is at a rival club: no card, he goes), "let_go" (your card, you let him
+## go) or "fight" (your card, you fight: he stays exactly when the seeded roll
+## is within KEEP_PCT). "just have a story no matter where he is": he starts at
+## Hawthorn, wherever he really was.
+func _test_canon_move(id: String, how: String) -> void:
+	var m := LegacyRollover.canon(id)
+	var from := "HAW"
+	var seen := {}
+	for seed in range(1, 40):
+		GameState.reset("1990")
+		GameState.career_seed = seed
+		_start("CAR" if how == "rival" else from)
+		var star := _plant(m, from)
+		var cards := _canon_cards(m)
+		var e: Dictionary = LegacyRollover._canon_st(GameState).get(id, {})
+		var to := str(e.get("to", ""))
+		_check(to != "" and to != from, "%s: he has somewhere to go (%s)" % [id, to])
+		if str(m["to"]) != "":
+			_check(to == str(m["to"]), "%s: to the club he really joined" % id)
+		else:
+			_check(to == str(GameState.season.ladder_sorted()[0]["code"]), "%s: to the ladder's leader" % id)
+		if how == "rival":
+			_check(cards.is_empty(), "%s: no card when he is at a rival club" % id)
+		else:
+			_check(cards.size() == 1, "%s: his coach gets the card (%d)" % [id, cards.size()])
+			if cards.is_empty():
+				return
+			var rule := str(cards[0]["options"][0]["rule"])
+			_check(("%d%% he stays" % LegacyRollover.KEEP_PCT) in rule and ("%d%% he goes anyway" % (100 - LegacyRollover.KEEP_PCT)) in rule,
+					"%s: the gate states the odds (%s)" % [id, rule])
+			LegacyRollover.answered(GameState, cards[0], 0 if how == "fight" else 1)
+			LegacyRollover.week(GameState)
+			_check(GameState.week_events.size() == 1, "%s: the card comes once" % id)
+		LegacyRollover.canon_moves(GameState, int(m["year"]))
+		var moved := false
+		if GameDB.enter_year(to) == int(m["year"]):
+			var got: Dictionary = LegacyRollover.entry_list(GameState, to, int(m["year"]))
+			moved = (got["list"] as Array).has(star)
+		else:
+			moved = (GameState.league_lists.get(to, []) as Array).has(star)
+		var at_home := (GameState.league_lists[from] as Array).has(star)
+		_check(moved != at_home, "%s: he is at exactly one club (moved %s, home %s)" % [id, moved, at_home])
+		if how != "fight":
+			_check(moved, "%s (%s): he goes, as he really did" % [id, how])
+			break
+		var kept := int(e.get("roll", 101)) <= LegacyRollover.KEEP_PCT
+		_check(at_home == kept, "%s: fought for, he stays exactly on a roll within %d (roll %d, home %s)" % [
+				id, LegacyRollover.KEEP_PCT, int(e.get("roll", -1)), at_home])
+		if kept:
+			_check(int(star.get("contract_years", 0)) == LegacyRollover.KEEP_YEARS, "%s: kept on %d more seasons" % [id, LegacyRollover.KEEP_YEARS])
+		seen[kept] = true
+		if seen.size() == 2:
+			break
+	if how == "fight":
+		_check(seen.size() == 2, "%s: over the seeds, fighting both keeps and loses him (%s)" % [id, str(seen.keys())])
+	GameDB.reload("1990")
+
+
+## Grundy's two moves, from wherever the sim has him: Melbourne, then Sydney.
+func _test_canon_chain() -> void:
+	GameState.reset("1990")
+	_start("CAR")
+	var star := _plant(LegacyRollover.canon("grundy_mel"), "HAW")
+	for id in ["grundy_mel", "grundy_syd"]:
+		var m := LegacyRollover.canon(id)
+		_canon_cards(m)
+		LegacyRollover.canon_moves(GameState, int(m["year"]))
+		_check((GameState.league_lists[str(m["to"])] as Array).has(star), "%s: Grundy plays for %s" % [id, str(m["to"])])
+	_check(not (GameState.league_lists["HAW"] as Array).has(star) and not (GameState.league_lists["MEL"] as Array).has(star),
+			"Grundy is on one list only")
+	GameDB.reload("1990")
+
+
+## An early retirement (Jurrah, Rioli): "either make an early retirement or be
+## convinced to play on" (director, 2026-11-13). The rollover retires him
+## unless the club talked him round.
+func _test_canon_retire(id: String, how: String) -> void:
+	var m := LegacyRollover.canon(id)
+	var from := "HAW"
+	var seen := {}
+	for seed in range(1, 40):
+		GameState.reset("1990")
+		GameState.career_seed = seed
+		_start("CAR" if how == "rival" else from)
+		var star := _plant(m, from)
+		var cards := _canon_cards(m)
+		_check(GameState.retiring_now(star), "%s: he is set to retire" % id)
+		if how == "rival":
+			_check(cards.is_empty(), "%s: no card when he is at a rival club" % id)
+			break
+		_check(cards.size() == 1, "%s: his coach gets the card (%d)" % [id, cards.size()])
+		if cards.is_empty():
+			return
+		var rule := str(cards[0]["options"][0]["rule"])
+		_check(("%d%% he plays on" % LegacyRollover.KEEP_PCT) in rule, "%s: the gate states the odds (%s)" % [id, rule])
+		LegacyRollover.answered(GameState, cards[0], 0 if how == "fight" else 1)
+		if how != "fight":
+			_check(GameState.retiring_now(star), "%s: let go, he retires" % id)
+			break
+		var e: Dictionary = LegacyRollover._canon_st(GameState).get(id, {})
+		var kept := int(e.get("roll", 101)) <= LegacyRollover.KEEP_PCT
+		_check(GameState.retiring_now(star) != kept, "%s: talked to, he plays on exactly on a roll within %d (roll %d)" % [
+				id, LegacyRollover.KEEP_PCT, int(e.get("roll", -1))])
+		LegacyRollover.canon_moves(GameState, int(m["year"]))
+		var news := GameState.news.filter(func(n): return str(m["last"]) in str(n.get("text", "")))
+		_check(news.size() == 1 and (("playing on" in str(news[0]["text"])) == kept), "%s: the news says what he chose" % id)
+		seen[kept] = true
+		if seen.size() == 2:
+			break
+	if how == "fight":
+		_check(seen.size() == 2, "%s: over the seeds, talking to him both keeps and loses him (%s)" % [id, str(seen.keys())])
+	GameDB.reload("1990")
