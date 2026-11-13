@@ -1,0 +1,17 @@
+league,name,from,to,complete,source_url,evidence
+AFLR,AFL Reserves,1990,1991,yes,https://en.wikipedia.org/wiki/AFL_reserves,known as VFL reserves before 1990; AFL ran it to end of 1991
+AFLR,AFL Reserves,1992,1999,yes,https://en.wikipedia.org/wiki/AFL_reserves,VSFL ran the AFL reserves 1992-1999; merged into the VFL after 1999
+VFA,Victorian Football Association,1990,1994,yes,https://en.wikipedia.org/wiki/1994_VFA_season,"standalone VFA, one division"
+VFA,Victorian Football Association,1995,1995,yes,https://en.wikipedia.org/wiki/1995_VFA_season,VFA administration merged into VSFL end of 1994; VFA name kept for 1995
+VFL,Victorian Football League,1996,1999,yes,https://en.wikipedia.org/wiki/1996_VFL_season,VFA renamed VFL in 1996
+VFL,Victorian Football League,2000,2019,yes,https://en.wikipedia.org/wiki/2000_VFL_season,merged with the AFL reserves competition from 2000; 2020 not held (cancelled 4 July without a match)
+VFL,Victorian Football League,2021,,yes,https://en.wikipedia.org/wiki/2021_VFL_season,NEAFL absorbed 2021; several 2021 rounds and the finals cancelled by lockdowns
+SANFL,South Australian National Football League,1990,,yes,https://en.wikipedia.org/wiki/South_Australian_National_Football_League,10 clubs 1990; 9 clubs 1991-2013; 10 from 2014; 8 in 2020 (Adelaide and Port reserves barred by the AFL)
+WAFL,Western Australia State Football League,1990,1990,yes,https://en.wikipedia.org/wiki/West_Australian_Football_League,Infobox gives this name for 1990 only
+WAFL,West Australian Football League,1991,1996,yes,https://en.wikipedia.org/wiki/West_Australian_Football_League,League returned to the WAFL name in 1991
+WAFL,Westar Rules,1997,2000,yes,https://en.wikipedia.org/wiki/West_Australian_Football_League,Named Westar Rules 1997-2000; Peel joined as the ninth club in 1997
+WAFL,West Australian Football League,2001,,yes,https://en.wikipedia.org/wiki/West_Australian_Football_League,"Current name adopted 2001; 9 clubs in 2020 (West Coast in recess, season began 18 July); 10 clubs 2019 and 2021-2026"
+QAFL,Queensland Australian Football League,1990,2010,no,https://en.wikipedia.org/wiki/Queensland_Australian_Football_League,"Queensland state league; top Qld tier to 2010 and below the NEAFL 2011-2020; founding and current-name years not researched; held for longer, years here are those AFL-listed players played in it; its own clubs not listed"
+SYDAFL,Sydney AFL,2000,2002,no,https://en.wikipedia.org/wiki/AFL_Sydney,"Renamed Sydney AFL in 1998 per history section (lead says 1988: conflict); AFL Sydney from 2009; held for longer, years here are those AFL-listed players played in it; its own clubs not listed"
+ACTAFL,AFL Canberra,2003,2010,no,https://en.wikipedia.org/wiki/North_East_Australian_Football_League,"Canberra league; merged with the QAFL top tier to form the NEAFL in 2011; ACT clubs later returned to it; held for longer, years here are those AFL-listed players played in it; its own clubs not listed"
+NEAFL,North East Australian Football League,2011,2019,yes,https://en.wikipedia.org/wiki/North_East_Australian_Football_League,Formed Nov 2010 from QAFL and AFL Canberra; conferences 2011-2013; 2020 season cancelled (COVID); merged into the VFL from 2021

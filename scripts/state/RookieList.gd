@@ -13,7 +13,7 @@ extends RefCounted
 ##                 there ("B"), up to CAT_B_SPOTS of their own: as in the AFL,
 ##                 a Category B rookie takes no Category A spot and sits
 ##                 outside the 44 (list_size). No draft signs one.
-## Senior and Category A spots together never pass Contracts.MAX_LIST, except
+## Senior and Category A spots together never pass Contracts.max_list(), except
 ## where a real-lists career starts a club over it, as the real club was
 ## (seed_lists). One rule (add_block, the same for every club and every way
 ## onto a list): a club at or over the 44 adds nobody unless the same move
@@ -52,6 +52,9 @@ const CAT_A_SPOTS := 6
 ## Category B rookies, outside the Category A spots and the 44 (the AFL's rule).
 const CAT_B_SPOTS := 2
 const SENIOR_SPOTS := Contracts.MAX_LIST - CAT_A_SPOTS
+## The constants above are the game's league. Every rule below reads the
+## season's own spots (Legacy mode, EraRules): a 1993 club has 52 senior
+## spots and no rookie list; from GAME_FROM on these equal the constants.
 const KIND := "rookie"
 const NOBODY_LEFT_NEWS := "Rookie Draft: nobody was left when your pick came up, so your draft ended."
 ## Nobody to take from the start: one line instead of two.
@@ -63,6 +66,29 @@ const TWO_YEAR_UNDER := 21.0
 ## another, so they are still there for the mid-season draft. You may still
 ## take any of them.
 const AI_LEAVES := 12
+
+
+## The season's senior spots (SENIOR_SPOTS in the game's league).
+static func senior_spots() -> int:
+	return EraRules.senior_spots()
+
+
+## The season's Category A spots (CAT_A_SPOTS; 0 before the rookie list).
+static func cat_a_spots() -> int:
+	return EraRules.cat_a_spots()
+
+
+## The season's Category B spots (CAT_B_SPOTS; 0 before Category B).
+static func cat_b_spots() -> int:
+	return EraRules.cat_b_spots()
+
+
+## Whether the season has a rookie list at all (1997 on): no Rookie Draft
+## before it.
+## Read for the list year: the off-season before 1997 already holds the first
+## rookie draft.
+static func in_force() -> bool:
+	return EraRules.on("rookie_list", EraRules.list_year())
 
 
 static func is_rookie(p: Dictionary) -> bool:
@@ -120,11 +146,11 @@ static func draft_size(list: Array) -> int:
 ## the same move takes off the list. Every draft, signing and upgrade asks
 ## here; a trade asks trade_block, the same rule for a swap.
 static func add_block(list: Array, to := "senior", from := "", off: Array = []) -> String:
-	if from != "A" and list_size(list) - list_size(off) >= Contracts.MAX_LIST:
+	if from != "A" and list_size(list) - list_size(off) >= Contracts.max_list():
 		return "list"
-	if to == "senior" and senior_count(list) - senior_count(off) >= SENIOR_SPOTS:
+	if to == "senior" and senior_count(list) - senior_count(off) >= senior_spots():
 		return "senior"
-	if to == "A" and cat_a_count(list) - cat_a_count(off) >= CAT_A_SPOTS:
+	if to == "A" and cat_a_count(list) - cat_a_count(off) >= cat_a_spots():
 		return "rookie"
 	return ""
 
@@ -135,23 +161,23 @@ static func block_words(list: Array, why: String) -> String:
 		"list":
 			return over_words(list_size(list))
 		"senior":
-			return "Your senior list is full (%d)." % SENIOR_SPOTS
+			return "Your senior list is full (%d)." % senior_spots()
 		"rookie":
-			return "Your rookie list is full (%d)." % CAT_A_SPOTS
+			return "Your rookie list is full (%d)." % cat_a_spots()
 	return ""
 
 
 ## The 44 said in full, for a list of `n` (senior and Category A) at or over it.
 static func over_words(n: int) -> String:
-	if n > Contracts.MAX_LIST:
+	if n > Contracts.max_list():
 		return "Your list holds %d and the limit is %d (senior list and Category A rookies together), so nobody joins until it is back under %d." % [
-				n, Contracts.MAX_LIST, Contracts.MAX_LIST]
-	return "Your list is full (%d: senior list and Category A rookies together)." % Contracts.MAX_LIST
+				n, Contracts.max_list(), Contracts.max_list()]
+	return "Your list is full (%d: senior list and Category A rookies together)." % Contracts.max_list()
 
 
 ## Spots left in the 44 (never under 0).
 static func room(list: Array) -> int:
-	return maxi(0, Contracts.MAX_LIST - list_size(list))
+	return maxi(0, Contracts.max_list() - list_size(list))
 
 
 static func senior_spot_free(list: Array) -> bool:
@@ -168,10 +194,10 @@ static func rookie_spot_free(list: Array) -> bool:
 ## it ends no bigger: the same move takes a player off.
 static func trade_block(list: Array, out: Array, got: Array) -> String:
 	var before := list_size(list)
-	if before - list_size(out) + got.size() > maxi(Contracts.MAX_LIST, before):
+	if before - list_size(out) + got.size() > maxi(Contracts.max_list(), before):
 		return "list"
 	var seniors_before := senior_count(list)
-	if seniors_before - senior_count(out) + got.size() > maxi(SENIOR_SPOTS, seniors_before):
+	if seniors_before - senior_count(out) + got.size() > maxi(senior_spots(), seniors_before):
 		return "senior"
 	return ""
 
@@ -199,13 +225,13 @@ static func deal_years(p: Dictionary) -> int:
 ## data/list_additions_2026.csv) go on the rookie list: Category A rookies
 ## ("A") and Category B rookies ("B"), every one of them, never onto the
 ## senior list. Category B rookies take their own spots, never a Category A
-## one. A club whose real Category A list is over CAT_A_SPOTS (West Coast
+## one. A club whose real Category A list is over cat_a_spots() (West Coast
 ## 2026: injury replacements signed mid-season) starts over it, as the real
 ## club did before the rookie delisting period, and takes no Rookie Draft pick
 ## until it is back under; its senior list, and so its National Draft picks,
-## are as the real club had them. Then, while a club has more than SENIOR_SPOTS seniors and a rookie spot
+## are as the real club had them. Then, while a club has more than senior_spots() seniors and a rookie spot
 ## left, its youngest senior goes on the rookie list (younger first, then id).
-## A club still over SENIOR_SPOTS after that takes no National Draft pick
+## A club still over senior_spots() after that takes no National Draft pick
 ## until its senior list is back under the cap. Same rule for every club.
 static func seed_lists(lists: Dictionary, real_types := true) -> void:
 	for code in lists:
@@ -218,7 +244,7 @@ static func seed_lists(lists: Dictionary, real_types := true) -> void:
 				return float(a.get("age", 0.0)) < float(b.get("age", 0.0))
 			return str(a["id"]) < str(b["id"]))
 		for p in young:
-			if senior_count(list) <= SENIOR_SPOTS or cat_a_count(list) >= CAT_A_SPOTS:
+			if senior_count(list) <= senior_spots() or cat_a_count(list) >= cat_a_spots():
 				break
 			p["rookie_list"] = "A"
 
@@ -249,11 +275,11 @@ static func upgrade_block(gs, code: String, player_id: String) -> String:
 		return "He is already on the senior list."
 	match add_block(list, "senior", str(p.get("rookie_list", ""))):
 		"senior":
-			return "The senior list is full (%d). A senior spot opens when a player retires, is delisted or traded." % SENIOR_SPOTS
+			return "The senior list is full (%d). A senior spot opens when a player retires, is delisted or traded." % senior_spots()
 		"list":
 			# Only a Category B rookie gets here: he is outside the 44 until upgraded.
 			return "%s A Category B rookie is outside the %d until he is upgraded, so he needs a spot in it." % [
-					over_words(list_size(list)), Contracts.MAX_LIST]
+					over_words(list_size(list)), Contracts.max_list()]
 	return ""
 
 
@@ -286,7 +312,7 @@ static func ai_upgrades(gs) -> Array:
 				return int(a.get("overall", 0)) > int(b.get("overall", 0))
 			return str(a["id"]) < str(b["id"]))
 		for p in rk:
-			if senior_count(list) >= SENIOR_SPOTS:
+			if senior_count(list) >= senior_spots():
 				break
 			if upgrade(gs, str(code), str(p["id"])):
 				done.append({"club": str(code), "id": str(p["id"]), "name": GameDB.player_display_name(p)})
@@ -302,6 +328,12 @@ static func open_draft(gs, order: Array) -> void:
 	if gs.season == null:
 		return
 	if int(gs.rookie_draft.get("year", 0)) == gs.season_year:
+		return
+	# No rookie list yet (a Legacy season before 1997): no Rookie Draft, and
+	# the record says so, done, so nothing waits on it.
+	if not in_force():
+		gs.rookie_draft = {"year": gs.season_year, "order": [], "next": 0, "round": 1,
+				"passed": {}, "picks": [], "upgrades": [], "done": true}
 		return
 	var clubs := []
 	for code in order:

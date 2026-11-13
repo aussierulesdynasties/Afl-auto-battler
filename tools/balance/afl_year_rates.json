@@ -1,0 +1,3095 @@
+{
+ "source": "data/legacy/<decade>/season_stats.csv (AFL Tables season totals, finals included) summed per club and divided by the club's games (the most games any of its players played), season by season, as build_team_rates.py does for 2026; 2026 is afl_team_rates.json. A stat is left out of a season AFL Tables did not record it (inside 50s, clearances, rebound 50s and contested marks start in 1998). Behinds are player-credited (no rushed behinds). Per team per match; mean, lowest, highest and spread across the season's clubs. Regenerate with tools/balance/build_year_rates.py.",
+ "years": {
+  "1987": {
+   "clubs": 14,
+   "team_games": 318,
+   "per_team_match": {
+    "disposals": {
+     "mean": 303.58,
+     "min": 284.41,
+     "max": 335.54,
+     "sd": 14.02
+    },
+    "kicks": {
+     "mean": 200.02,
+     "min": 183.92,
+     "max": 213.29,
+     "sd": 8.88
+    },
+    "handballs": {
+     "mean": 103.56,
+     "min": 79.92,
+     "max": 123.5,
+     "sd": 12.73
+    },
+    "marks": {
+     "mean": 67.28,
+     "min": 55.0,
+     "max": 76.95,
+     "sd": 6.89
+    },
+    "tackles": {
+     "mean": 25.19,
+     "min": 17.27,
+     "max": 33.18,
+     "sd": 3.73
+    },
+    "hitouts": {
+     "mean": 19.36,
+     "min": 11.91,
+     "max": 26.18,
+     "sd": 4.65
+    },
+    "frees_for": {
+     "mean": 29.1,
+     "min": 25.55,
+     "max": 31.83,
+     "sd": 1.99
+    },
+    "goals": {
+     "mean": 15.16,
+     "min": 12.73,
+     "max": 18.21,
+     "sd": 1.6
+    },
+    "behinds": {
+     "mean": 11.75,
+     "min": 9.32,
+     "max": 13.67,
+     "sd": 1.4
+    }
+   }
+  },
+  "1988": {
+   "clubs": 14,
+   "team_games": 320,
+   "per_team_match": {
+    "disposals": {
+     "mean": 308.28,
+     "min": 288.77,
+     "max": 335.33,
+     "sd": 14.72
+    },
+    "kicks": {
+     "mean": 208.46,
+     "min": 192.82,
+     "max": 222.5,
+     "sd": 6.76
+    },
+    "handballs": {
+     "mean": 99.81,
+     "min": 79.96,
+     "max": 117.62,
+     "sd": 12.45
+    },
+    "marks": {
+     "mean": 69.54,
+     "min": 59.5,
+     "max": 79.38,
+     "sd": 5.39
+    },
+    "tackles": {
+     "mean": 23.16,
+     "min": 19.87,
+     "max": 25.05,
+     "sd": 1.52
+    },
+    "hitouts": {
+     "mean": 18.02,
+     "min": 11.91,
+     "max": 26.43,
+     "sd": 3.74
+    },
+    "frees_for": {
+     "mean": 26.78,
+     "min": 22.82,
+     "max": 32.09,
+     "sd": 2.3
+    },
+    "goals": {
+     "mean": 13.95,
+     "min": 10.91,
+     "max": 18.42,
+     "sd": 1.85
+    },
+    "behinds": {
+     "mean": 11.7,
+     "min": 10.27,
+     "max": 14.5,
+     "sd": 1.15
+    }
+   }
+  },
+  "1989": {
+   "clubs": 14,
+   "team_games": 315,
+   "per_team_match": {
+    "disposals": {
+     "mean": 310.84,
+     "min": 286.32,
+     "max": 344.64,
+     "sd": 16.88
+    },
+    "kicks": {
+     "mean": 209.62,
+     "min": 190.73,
+     "max": 231.0,
+     "sd": 10.13
+    },
+    "handballs": {
+     "mean": 101.22,
+     "min": 84.23,
+     "max": 129.45,
+     "sd": 11.07
+    },
+    "marks": {
+     "mean": 69.57,
+     "min": 51.45,
+     "max": 86.0,
+     "sd": 8.28
+    },
+    "tackles": {
+     "mean": 24.88,
+     "min": 20.5,
+     "max": 30.27,
+     "sd": 2.84
+    },
+    "hitouts": {
+     "mean": 19.5,
+     "min": 12.5,
+     "max": 26.35,
+     "sd": 4.1
+    },
+    "frees_for": {
+     "mean": 28.93,
+     "min": 23.09,
+     "max": 35.4,
+     "sd": 3.04
+    },
+    "goals": {
+     "mean": 13.78,
+     "min": 10.14,
+     "max": 19.35,
+     "sd": 2.34
+    },
+    "behinds": {
+     "mean": 11.45,
+     "min": 9.05,
+     "max": 13.92,
+     "sd": 1.53
+    }
+   }
+  },
+  "1990": {
+   "clubs": 14,
+   "team_games": 322,
+   "per_team_match": {
+    "disposals": {
+     "mean": 311.63,
+     "min": 293.41,
+     "max": 338.81,
+     "sd": 14.57
+    },
+    "kicks": {
+     "mean": 203.34,
+     "min": 185.68,
+     "max": 218.31,
+     "sd": 8.75
+    },
+    "handballs": {
+     "mean": 108.29,
+     "min": 91.5,
+     "max": 129.45,
+     "sd": 11.14
+    },
+    "marks": {
+     "mean": 67.16,
+     "min": 53.91,
+     "max": 77.36,
+     "sd": 7.12
+    },
+    "tackles": {
+     "mean": 24.08,
+     "min": 20.5,
+     "max": 27.64,
+     "sd": 2.05
+    },
+    "hitouts": {
+     "mean": 18.88,
+     "min": 13.23,
+     "max": 23.45,
+     "sd": 3.09
+    },
+    "frees_for": {
+     "mean": 24.8,
+     "min": 23.23,
+     "max": 27.09,
+     "sd": 1.22
+    },
+    "goals": {
+     "mean": 14.28,
+     "min": 11.23,
+     "max": 16.59,
+     "sd": 1.65
+    },
+    "behinds": {
+     "mean": 11.67,
+     "min": 9.77,
+     "max": 12.95,
+     "sd": 0.94
+    }
+   }
+  },
+  "1991": {
+   "clubs": 15,
+   "team_games": 344,
+   "per_team_match": {
+    "disposals": {
+     "mean": 323.13,
+     "min": 298.27,
+     "max": 348.0,
+     "sd": 12.57
+    },
+    "kicks": {
+     "mean": 207.47,
+     "min": 191.64,
+     "max": 223.8,
+     "sd": 8.05
+    },
+    "handballs": {
+     "mean": 115.66,
+     "min": 95.46,
+     "max": 132.18,
+     "sd": 10.74
+    },
+    "marks": {
+     "mean": 68.23,
+     "min": 58.0,
+     "max": 73.92,
+     "sd": 5.15
+    },
+    "tackles": {
+     "mean": 23.34,
+     "min": 19.23,
+     "max": 29.68,
+     "sd": 3.22
+    },
+    "hitouts": {
+     "mean": 18.33,
+     "min": 10.55,
+     "max": 26.08,
+     "sd": 4.25
+    },
+    "frees_for": {
+     "mean": 23.8,
+     "min": 20.0,
+     "max": 26.14,
+     "sd": 1.47
+    },
+    "goals": {
+     "mean": 14.72,
+     "min": 11.73,
+     "max": 18.32,
+     "sd": 1.9
+    },
+    "behinds": {
+     "mean": 11.57,
+     "min": 9.45,
+     "max": 14.12,
+     "sd": 1.32
+    }
+   }
+  },
+  "1992": {
+   "clubs": 15,
+   "team_games": 344,
+   "per_team_match": {
+    "disposals": {
+     "mean": 313.01,
+     "min": 288.55,
+     "max": 343.88,
+     "sd": 13.7
+    },
+    "kicks": {
+     "mean": 202.37,
+     "min": 187.41,
+     "max": 212.84,
+     "sd": 7.68
+    },
+    "handballs": {
+     "mean": 110.63,
+     "min": 96.44,
+     "max": 139.82,
+     "sd": 12.42
+    },
+    "marks": {
+     "mean": 69.2,
+     "min": 60.73,
+     "max": 78.96,
+     "sd": 6.6
+    },
+    "tackles": {
+     "mean": 27.37,
+     "min": 19.77,
+     "max": 33.36,
+     "sd": 3.48
+    },
+    "hitouts": {
+     "mean": 20.14,
+     "min": 15.0,
+     "max": 25.86,
+     "sd": 2.88
+    },
+    "frees_for": {
+     "mean": 25.35,
+     "min": 21.82,
+     "max": 28.84,
+     "sd": 2.05
+    },
+    "goals": {
+     "mean": 14.99,
+     "min": 11.73,
+     "max": 20.27,
+     "sd": 1.85
+    },
+    "behinds": {
+     "mean": 11.33,
+     "min": 8.64,
+     "max": 13.57,
+     "sd": 1.36
+    }
+   }
+  },
+  "1993": {
+   "clubs": 15,
+   "team_games": 314,
+   "per_team_match": {
+    "disposals": {
+     "mean": 312.43,
+     "min": 283.2,
+     "max": 345.7,
+     "sd": 16.54
+    },
+    "kicks": {
+     "mean": 200.51,
+     "min": 177.35,
+     "max": 215.42,
+     "sd": 8.64
+    },
+    "handballs": {
+     "mean": 111.91,
+     "min": 87.76,
+     "max": 143.22,
+     "sd": 13.78
+    },
+    "marks": {
+     "mean": 68.33,
+     "min": 53.52,
+     "max": 83.14,
+     "sd": 6.45
+    },
+    "tackles": {
+     "mean": 29.67,
+     "min": 20.25,
+     "max": 36.7,
+     "sd": 4.01
+    },
+    "hitouts": {
+     "mean": 19.53,
+     "min": 14.15,
+     "max": 22.95,
+     "sd": 2.7
+    },
+    "frees_for": {
+     "mean": 26.45,
+     "min": 22.61,
+     "max": 31.2,
+     "sd": 2.1
+    },
+    "goals": {
+     "mean": 15.19,
+     "min": 12.25,
+     "max": 18.95,
+     "sd": 1.67
+    },
+    "behinds": {
+     "mean": 11.3,
+     "min": 9.6,
+     "max": 12.35,
+     "sd": 0.61
+    }
+   }
+  },
+  "1994": {
+   "clubs": 15,
+   "team_games": 348,
+   "per_team_match": {
+    "disposals": {
+     "mean": 295.1,
+     "min": 271.32,
+     "max": 315.88,
+     "sd": 11.84
+    },
+    "kicks": {
+     "mean": 185.19,
+     "min": 173.36,
+     "max": 198.04,
+     "sd": 7.92
+    },
+    "handballs": {
+     "mean": 109.92,
+     "min": 90.21,
+     "max": 129.62,
+     "sd": 11.11
+    },
+    "marks": {
+     "mean": 66.16,
+     "min": 55.32,
+     "max": 79.78,
+     "sd": 5.66
+    },
+    "tackles": {
+     "mean": 28.97,
+     "min": 22.08,
+     "max": 33.09,
+     "sd": 2.95
+    },
+    "hitouts": {
+     "mean": 19.37,
+     "min": 13.59,
+     "max": 26.05,
+     "sd": 3.31
+    },
+    "frees_for": {
+     "mean": 21.66,
+     "min": 19.38,
+     "max": 26.0,
+     "sd": 1.63
+    },
+    "goals": {
+     "mean": 13.63,
+     "min": 11.23,
+     "max": 15.67,
+     "sd": 1.29
+    },
+    "behinds": {
+     "mean": 10.41,
+     "min": 8.82,
+     "max": 12.12,
+     "sd": 1.07
+    }
+   }
+  },
+  "1995": {
+   "clubs": 16,
+   "team_games": 370,
+   "per_team_match": {
+    "disposals": {
+     "mean": 290.29,
+     "min": 262.96,
+     "max": 323.21,
+     "sd": 14.49
+    },
+    "kicks": {
+     "mean": 185.42,
+     "min": 177.27,
+     "max": 197.24,
+     "sd": 6.57
+    },
+    "handballs": {
+     "mean": 104.87,
+     "min": 80.8,
+     "max": 126.79,
+     "sd": 11.45
+    },
+    "marks": {
+     "mean": 67.68,
+     "min": 53.18,
+     "max": 78.92,
+     "sd": 8.18
+    },
+    "tackles": {
+     "mean": 27.73,
+     "min": 21.23,
+     "max": 33.27,
+     "sd": 3.42
+    },
+    "hitouts": {
+     "mean": 19.25,
+     "min": 12.68,
+     "max": 23.32,
+     "sd": 2.6
+    },
+    "frees_for": {
+     "mean": 19.32,
+     "min": 17.55,
+     "max": 22.6,
+     "sd": 1.18
+    },
+    "goals": {
+     "mean": 13.6,
+     "min": 10.5,
+     "max": 17.0,
+     "sd": 1.79
+    },
+    "behinds": {
+     "mean": 10.27,
+     "min": 8.73,
+     "max": 12.76,
+     "sd": 1.08
+    }
+   }
+  },
+  "1996": {
+   "clubs": 16,
+   "team_games": 370,
+   "per_team_match": {
+    "disposals": {
+     "mean": 295.82,
+     "min": 277.45,
+     "max": 318.12,
+     "sd": 10.91
+    },
+    "kicks": {
+     "mean": 188.12,
+     "min": 161.82,
+     "max": 198.5,
+     "sd": 9.76
+    },
+    "handballs": {
+     "mean": 107.7,
+     "min": 91.86,
+     "max": 120.68,
+     "sd": 7.97
+    },
+    "marks": {
+     "mean": 70.51,
+     "min": 59.86,
+     "max": 83.76,
+     "sd": 6.23
+    },
+    "tackles": {
+     "mean": 29.81,
+     "min": 23.55,
+     "max": 33.6,
+     "sd": 2.82
+    },
+    "hitouts": {
+     "mean": 19.64,
+     "min": 15.14,
+     "max": 24.09,
+     "sd": 2.63
+    },
+    "frees_for": {
+     "mean": 20.14,
+     "min": 17.18,
+     "max": 22.55,
+     "sd": 1.51
+    },
+    "goals": {
+     "mean": 13.66,
+     "min": 9.36,
+     "max": 16.76,
+     "sd": 1.88
+    },
+    "behinds": {
+     "mean": 9.9,
+     "min": 7.82,
+     "max": 12.36,
+     "sd": 1.16
+    }
+   }
+  },
+  "1997": {
+   "clubs": 16,
+   "team_games": 370,
+   "per_team_match": {
+    "disposals": {
+     "mean": 290.86,
+     "min": 267.23,
+     "max": 310.23,
+     "sd": 10.9
+    },
+    "kicks": {
+     "mean": 188.57,
+     "min": 170.73,
+     "max": 195.23,
+     "sd": 6.86
+    },
+    "handballs": {
+     "mean": 102.29,
+     "min": 86.16,
+     "max": 115.0,
+     "sd": 7.15
+    },
+    "marks": {
+     "mean": 70.9,
+     "min": 59.2,
+     "max": 79.54,
+     "sd": 5.91
+    },
+    "tackles": {
+     "mean": 28.4,
+     "min": 22.55,
+     "max": 33.38,
+     "sd": 2.93
+    },
+    "hitouts": {
+     "mean": 20.04,
+     "min": 12.84,
+     "max": 27.19,
+     "sd": 3.31
+    },
+    "frees_for": {
+     "mean": 17.79,
+     "min": 15.39,
+     "max": 20.71,
+     "sd": 1.57
+    },
+    "goals": {
+     "mean": 13.01,
+     "min": 9.41,
+     "max": 15.16,
+     "sd": 1.3
+    },
+    "behinds": {
+     "mean": 9.88,
+     "min": 8.36,
+     "max": 11.68,
+     "sd": 0.94
+    }
+   }
+  },
+  "1998": {
+   "clubs": 16,
+   "team_games": 370,
+   "per_team_match": {
+    "disposals": {
+     "mean": 299.69,
+     "min": 283.2,
+     "max": 320.82,
+     "sd": 10.59
+    },
+    "kicks": {
+     "mean": 192.0,
+     "min": 185.56,
+     "max": 201.17,
+     "sd": 4.95
+    },
+    "handballs": {
+     "mean": 107.69,
+     "min": 87.48,
+     "max": 122.82,
+     "sd": 8.75
+    },
+    "marks": {
+     "mean": 72.97,
+     "min": 61.16,
+     "max": 84.13,
+     "sd": 5.07
+    },
+    "tackles": {
+     "mean": 30.79,
+     "min": 26.5,
+     "max": 37.95,
+     "sd": 3.49
+    },
+    "inside_50s": {
+     "mean": 51.89,
+     "min": 48.26,
+     "max": 55.62,
+     "sd": 2.69
+    },
+    "clearances": {
+     "mean": 34.63,
+     "min": 29.77,
+     "max": 38.73,
+     "sd": 2.78
+    },
+    "hitouts": {
+     "mean": 31.62,
+     "min": 26.48,
+     "max": 40.62,
+     "sd": 3.96
+    },
+    "frees_for": {
+     "mean": 18.33,
+     "min": 16.09,
+     "max": 21.21,
+     "sd": 1.26
+    },
+    "goals": {
+     "mean": 13.49,
+     "min": 11.41,
+     "max": 15.92,
+     "sd": 1.36
+    },
+    "behinds": {
+     "mean": 9.68,
+     "min": 8.09,
+     "max": 11.96,
+     "sd": 0.93
+    },
+    "rebound_50s": {
+     "mean": 31.95,
+     "min": 29.19,
+     "max": 35.59,
+     "sd": 2.01
+    }
+   }
+  },
+  "1999": {
+   "clubs": 16,
+   "team_games": 370,
+   "per_team_match": {
+    "disposals": {
+     "mean": 300.78,
+     "min": 276.18,
+     "max": 329.46,
+     "sd": 14.06
+    },
+    "kicks": {
+     "mean": 194.23,
+     "min": 174.59,
+     "max": 207.4,
+     "sd": 8.33
+    },
+    "handballs": {
+     "mean": 106.55,
+     "min": 83.84,
+     "max": 129.35,
+     "sd": 10.02
+    },
+    "marks": {
+     "mean": 76.33,
+     "min": 63.45,
+     "max": 86.59,
+     "sd": 7.02
+    },
+    "contested_marks": {
+     "mean": 14.56,
+     "min": 11.61,
+     "max": 18.4,
+     "sd": 2.16
+    },
+    "tackles": {
+     "mean": 24.82,
+     "min": 21.32,
+     "max": 28.12,
+     "sd": 1.96
+    },
+    "inside_50s": {
+     "mean": 52.83,
+     "min": 49.3,
+     "max": 57.76,
+     "sd": 2.34
+    },
+    "clearances": {
+     "mean": 39.03,
+     "min": 35.17,
+     "max": 41.48,
+     "sd": 1.88
+    },
+    "hitouts": {
+     "mean": 30.71,
+     "min": 23.04,
+     "max": 36.84,
+     "sd": 4.04
+    },
+    "frees_for": {
+     "mean": 18.9,
+     "min": 16.96,
+     "max": 20.71,
+     "sd": 1.03
+    },
+    "goals": {
+     "mean": 13.85,
+     "min": 11.65,
+     "max": 16.76,
+     "sd": 1.57
+    },
+    "behinds": {
+     "mean": 9.63,
+     "min": 8.32,
+     "max": 10.88,
+     "sd": 0.65
+    },
+    "rebound_50s": {
+     "mean": 32.91,
+     "min": 30.28,
+     "max": 38.92,
+     "sd": 2.33
+    }
+   }
+  },
+  "2000": {
+   "clubs": 16,
+   "team_games": 370,
+   "per_team_match": {
+    "disposals": {
+     "mean": 311.84,
+     "min": 293.48,
+     "max": 338.68,
+     "sd": 12.26
+    },
+    "kicks": {
+     "mean": 200.88,
+     "min": 193.05,
+     "max": 214.24,
+     "sd": 5.9
+    },
+    "handballs": {
+     "mean": 110.96,
+     "min": 87.96,
+     "max": 133.64,
+     "sd": 9.5
+    },
+    "marks": {
+     "mean": 83.04,
+     "min": 73.5,
+     "max": 98.75,
+     "sd": 6.15
+    },
+    "contested_marks": {
+     "mean": 13.23,
+     "min": 10.32,
+     "max": 17.12,
+     "sd": 1.56
+    },
+    "tackles": {
+     "mean": 31.79,
+     "min": 28.17,
+     "max": 37.76,
+     "sd": 2.77
+    },
+    "inside_50s": {
+     "mean": 55.57,
+     "min": 50.5,
+     "max": 63.84,
+     "sd": 3.75
+    },
+    "clearances": {
+     "mean": 38.12,
+     "min": 33.95,
+     "max": 40.45,
+     "sd": 1.73
+    },
+    "hitouts": {
+     "mean": 30.04,
+     "min": 21.91,
+     "max": 34.84,
+     "sd": 2.98
+    },
+    "frees_for": {
+     "mean": 17.91,
+     "min": 16.05,
+     "max": 19.78,
+     "sd": 1.15
+    },
+    "goals": {
+     "mean": 15.12,
+     "min": 12.36,
+     "max": 19.32,
+     "sd": 1.92
+    },
+    "behinds": {
+     "mean": 9.98,
+     "min": 8.21,
+     "max": 12.44,
+     "sd": 1.22
+    },
+    "rebound_50s": {
+     "mean": 34.61,
+     "min": 31.36,
+     "max": 41.29,
+     "sd": 2.56
+    }
+   }
+  },
+  "2001": {
+   "clubs": 16,
+   "team_games": 370,
+   "per_team_match": {
+    "disposals": {
+     "mean": 300.59,
+     "min": 283.36,
+     "max": 320.12,
+     "sd": 10.54
+    },
+    "kicks": {
+     "mean": 191.98,
+     "min": 181.14,
+     "max": 201.88,
+     "sd": 6.01
+    },
+    "handballs": {
+     "mean": 108.62,
+     "min": 94.09,
+     "max": 120.29,
+     "sd": 7.23
+    },
+    "marks": {
+     "mean": 82.95,
+     "min": 70.78,
+     "max": 96.64,
+     "sd": 6.43
+    },
+    "contested_marks": {
+     "mean": 12.93,
+     "min": 10.91,
+     "max": 14.84,
+     "sd": 1.15
+    },
+    "tackles": {
+     "mean": 35.54,
+     "min": 31.86,
+     "max": 39.64,
+     "sd": 2.31
+    },
+    "inside_50s": {
+     "mean": 51.31,
+     "min": 43.45,
+     "max": 56.2,
+     "sd": 3.13
+    },
+    "clearances": {
+     "mean": 36.61,
+     "min": 32.4,
+     "max": 43.26,
+     "sd": 2.56
+    },
+    "hitouts": {
+     "mean": 29.05,
+     "min": 20.55,
+     "max": 37.09,
+     "sd": 5.4
+    },
+    "frees_for": {
+     "mean": 17.02,
+     "min": 15.18,
+     "max": 19.21,
+     "sd": 1.12
+    },
+    "goals": {
+     "mean": 14.16,
+     "min": 11.27,
+     "max": 16.76,
+     "sd": 1.54
+    },
+    "behinds": {
+     "mean": 9.67,
+     "min": 7.68,
+     "max": 12.52,
+     "sd": 1.18
+    },
+    "rebound_50s": {
+     "mean": 31.58,
+     "min": 26.52,
+     "max": 36.87,
+     "sd": 2.59
+    }
+   }
+  },
+  "2002": {
+   "clubs": 16,
+   "team_games": 370,
+   "per_team_match": {
+    "disposals": {
+     "mean": 293.58,
+     "min": 272.61,
+     "max": 310.55,
+     "sd": 10.0
+    },
+    "kicks": {
+     "mean": 183.59,
+     "min": 171.91,
+     "max": 197.88,
+     "sd": 6.71
+    },
+    "handballs": {
+     "mean": 109.99,
+     "min": 89.17,
+     "max": 122.27,
+     "sd": 7.51
+    },
+    "marks": {
+     "mean": 78.65,
+     "min": 66.96,
+     "max": 90.09,
+     "sd": 7.5
+    },
+    "contested_marks": {
+     "mean": 12.18,
+     "min": 10.52,
+     "max": 14.0,
+     "sd": 1.04
+    },
+    "tackles": {
+     "mean": 42.98,
+     "min": 35.95,
+     "max": 47.86,
+     "sd": 2.83
+    },
+    "inside_50s": {
+     "mean": 50.67,
+     "min": 46.36,
+     "max": 56.92,
+     "sd": 2.85
+    },
+    "clearances": {
+     "mean": 36.0,
+     "min": 31.27,
+     "max": 40.84,
+     "sd": 2.44
+    },
+    "hitouts": {
+     "mean": 31.47,
+     "min": 21.23,
+     "max": 38.4,
+     "sd": 5.21
+    },
+    "frees_for": {
+     "mean": 14.97,
+     "min": 13.26,
+     "max": 16.5,
+     "sd": 1.05
+    },
+    "goals": {
+     "mean": 13.79,
+     "min": 11.09,
+     "max": 16.64,
+     "sd": 1.55
+    },
+    "behinds": {
+     "mean": 9.61,
+     "min": 7.55,
+     "max": 11.4,
+     "sd": 1.14
+    },
+    "rebound_50s": {
+     "mean": 31.73,
+     "min": 27.78,
+     "max": 35.73,
+     "sd": 2.21
+    }
+   }
+  },
+  "2003": {
+   "clubs": 16,
+   "team_games": 370,
+   "per_team_match": {
+    "disposals": {
+     "mean": 294.24,
+     "min": 261.5,
+     "max": 309.55,
+     "sd": 11.01
+    },
+    "kicks": {
+     "mean": 186.09,
+     "min": 171.95,
+     "max": 200.12,
+     "sd": 8.24
+    },
+    "handballs": {
+     "mean": 108.16,
+     "min": 89.55,
+     "max": 126.14,
+     "sd": 8.63
+    },
+    "marks": {
+     "mean": 82.36,
+     "min": 60.5,
+     "max": 94.12,
+     "sd": 8.73
+    },
+    "contested_marks": {
+     "mean": 12.45,
+     "min": 10.0,
+     "max": 16.3,
+     "sd": 1.49
+    },
+    "tackles": {
+     "mean": 42.84,
+     "min": 35.23,
+     "max": 46.43,
+     "sd": 2.74
+    },
+    "inside_50s": {
+     "mean": 50.4,
+     "min": 47.71,
+     "max": 53.77,
+     "sd": 1.69
+    },
+    "clearances": {
+     "mean": 35.15,
+     "min": 30.0,
+     "max": 39.32,
+     "sd": 2.34
+    },
+    "hitouts": {
+     "mean": 32.6,
+     "min": 23.0,
+     "max": 43.79,
+     "sd": 5.09
+    },
+    "frees_for": {
+     "mean": 15.2,
+     "min": 13.0,
+     "max": 16.73,
+     "sd": 1.04
+    },
+    "goals": {
+     "mean": 13.75,
+     "min": 11.77,
+     "max": 15.17,
+     "sd": 1.04
+    },
+    "behinds": {
+     "mean": 9.56,
+     "min": 7.86,
+     "max": 10.96,
+     "sd": 0.95
+    },
+    "rebound_50s": {
+     "mean": 32.01,
+     "min": 27.38,
+     "max": 36.73,
+     "sd": 2.05
+    }
+   }
+  },
+  "2004": {
+   "clubs": 16,
+   "team_games": 370,
+   "per_team_match": {
+    "disposals": {
+     "mean": 291.78,
+     "min": 267.59,
+     "max": 310.0,
+     "sd": 11.17
+    },
+    "kicks": {
+     "mean": 183.38,
+     "min": 165.38,
+     "max": 190.68,
+     "sd": 6.67
+    },
+    "handballs": {
+     "mean": 108.4,
+     "min": 91.27,
+     "max": 122.08,
+     "sd": 8.64
+    },
+    "marks": {
+     "mean": 82.77,
+     "min": 70.55,
+     "max": 90.32,
+     "sd": 5.76
+    },
+    "contested_marks": {
+     "mean": 11.09,
+     "min": 9.04,
+     "max": 12.86,
+     "sd": 1.05
+    },
+    "tackles": {
+     "mean": 45.01,
+     "min": 40.36,
+     "max": 49.44,
+     "sd": 3.06
+    },
+    "inside_50s": {
+     "mean": 49.89,
+     "min": 44.96,
+     "max": 55.52,
+     "sd": 3.0
+    },
+    "clearances": {
+     "mean": 33.8,
+     "min": 31.86,
+     "max": 36.28,
+     "sd": 1.31
+    },
+    "hitouts": {
+     "mean": 33.56,
+     "min": 26.32,
+     "max": 40.14,
+     "sd": 3.94
+    },
+    "frees_for": {
+     "mean": 14.85,
+     "min": 13.17,
+     "max": 17.41,
+     "sd": 1.22
+    },
+    "goals": {
+     "mean": 13.48,
+     "min": 11.18,
+     "max": 16.36,
+     "sd": 1.64
+    },
+    "behinds": {
+     "mean": 9.45,
+     "min": 6.82,
+     "max": 11.04,
+     "sd": 1.25
+    },
+    "rebound_50s": {
+     "mean": 35.63,
+     "min": 31.48,
+     "max": 38.45,
+     "sd": 2.24
+    }
+   }
+  },
+  "2005": {
+   "clubs": 16,
+   "team_games": 370,
+   "per_team_match": {
+    "disposals": {
+     "mean": 309.68,
+     "min": 281.5,
+     "max": 334.18,
+     "sd": 16.25
+    },
+    "kicks": {
+     "mean": 191.87,
+     "min": 177.85,
+     "max": 202.96,
+     "sd": 7.1
+    },
+    "handballs": {
+     "mean": 117.81,
+     "min": 95.91,
+     "max": 139.36,
+     "sd": 12.73
+    },
+    "marks": {
+     "mean": 91.36,
+     "min": 77.88,
+     "max": 98.08,
+     "sd": 5.86
+    },
+    "contested_marks": {
+     "mean": 9.57,
+     "min": 6.73,
+     "max": 12.21,
+     "sd": 1.26
+    },
+    "tackles": {
+     "mean": 43.82,
+     "min": 37.67,
+     "max": 51.12,
+     "sd": 3.27
+    },
+    "inside_50s": {
+     "mean": 50.18,
+     "min": 46.55,
+     "max": 54.27,
+     "sd": 2.52
+    },
+    "clearances": {
+     "mean": 32.54,
+     "min": 30.41,
+     "max": 35.12,
+     "sd": 1.45
+    },
+    "hitouts": {
+     "mean": 30.72,
+     "min": 23.64,
+     "max": 36.68,
+     "sd": 3.82
+    },
+    "frees_for": {
+     "mean": 17.25,
+     "min": 15.76,
+     "max": 19.58,
+     "sd": 0.94
+    },
+    "goals": {
+     "mean": 13.84,
+     "min": 12.27,
+     "max": 16.0,
+     "sd": 0.95
+    },
+    "behinds": {
+     "mean": 9.29,
+     "min": 7.91,
+     "max": 10.18,
+     "sd": 0.58
+    },
+    "rebound_50s": {
+     "mean": 36.57,
+     "min": 32.88,
+     "max": 41.5,
+     "sd": 2.25
+    }
+   }
+  },
+  "2006": {
+   "clubs": 16,
+   "team_games": 370,
+   "per_team_match": {
+    "disposals": {
+     "mean": 338.89,
+     "min": 300.24,
+     "max": 364.73,
+     "sd": 14.57
+    },
+    "kicks": {
+     "mean": 207.11,
+     "min": 197.32,
+     "max": 229.91,
+     "sd": 7.28
+    },
+    "handballs": {
+     "mean": 131.78,
+     "min": 102.52,
+     "max": 157.42,
+     "sd": 12.42
+    },
+    "marks": {
+     "mean": 109.11,
+     "min": 94.6,
+     "max": 123.74,
+     "sd": 7.21
+    },
+    "contested_marks": {
+     "mean": 9.59,
+     "min": 8.46,
+     "max": 11.45,
+     "sd": 0.86
+    },
+    "tackles": {
+     "mean": 49.01,
+     "min": 41.32,
+     "max": 58.72,
+     "sd": 4.6
+    },
+    "inside_50s": {
+     "mean": 50.03,
+     "min": 46.95,
+     "max": 53.33,
+     "sd": 2.2
+    },
+    "clearances": {
+     "mean": 31.43,
+     "min": 27.91,
+     "max": 38.68,
+     "sd": 2.49
+    },
+    "hitouts": {
+     "mean": 30.05,
+     "min": 24.73,
+     "max": 38.08,
+     "sd": 3.64
+    },
+    "frees_for": {
+     "mean": 16.62,
+     "min": 14.73,
+     "max": 18.69,
+     "sd": 0.89
+    },
+    "goals": {
+     "mean": 13.36,
+     "min": 11.32,
+     "max": 15.52,
+     "sd": 1.24
+    },
+    "behinds": {
+     "mean": 9.54,
+     "min": 7.36,
+     "max": 11.12,
+     "sd": 0.83
+    },
+    "rebound_50s": {
+     "mean": 37.87,
+     "min": 32.83,
+     "max": 41.73,
+     "sd": 2.34
+    }
+   }
+  },
+  "2007": {
+   "clubs": 16,
+   "team_games": 370,
+   "per_team_match": {
+    "disposals": {
+     "mean": 344.68,
+     "min": 322.13,
+     "max": 383.92,
+     "sd": 18.54
+    },
+    "kicks": {
+     "mean": 201.82,
+     "min": 186.86,
+     "max": 220.6,
+     "sd": 8.02
+    },
+    "handballs": {
+     "mean": 142.87,
+     "min": 107.96,
+     "max": 179.62,
+     "sd": 17.53
+    },
+    "marks": {
+     "mean": 103.6,
+     "min": 85.4,
+     "max": 113.68,
+     "sd": 7.49
+    },
+    "contested_marks": {
+     "mean": 10.08,
+     "min": 8.23,
+     "max": 12.44,
+     "sd": 0.98
+    },
+    "tackles": {
+     "mean": 52.76,
+     "min": 44.86,
+     "max": 58.2,
+     "sd": 3.88
+    },
+    "inside_50s": {
+     "mean": 51.12,
+     "min": 47.82,
+     "max": 57.64,
+     "sd": 2.11
+    },
+    "clearances": {
+     "mean": 31.9,
+     "min": 28.91,
+     "max": 36.26,
+     "sd": 2.09
+    },
+    "hitouts": {
+     "mean": 31.15,
+     "min": 21.55,
+     "max": 40.65,
+     "sd": 4.59
+    },
+    "frees_for": {
+     "mean": 18.97,
+     "min": 16.3,
+     "max": 21.84,
+     "sd": 1.3
+    },
+    "goals": {
+     "mean": 13.78,
+     "min": 12.14,
+     "max": 17.2,
+     "sd": 1.23
+    },
+    "behinds": {
+     "mean": 9.65,
+     "min": 8.52,
+     "max": 11.52,
+     "sd": 0.81
+    },
+    "rebound_50s": {
+     "mean": 34.07,
+     "min": 31.42,
+     "max": 39.0,
+     "sd": 2.01
+    }
+   }
+  },
+  "2008": {
+   "clubs": 16,
+   "team_games": 370,
+   "per_team_match": {
+    "disposals": {
+     "mean": 354.36,
+     "min": 320.14,
+     "max": 412.32,
+     "sd": 22.29
+    },
+    "kicks": {
+     "mean": 199.73,
+     "min": 181.64,
+     "max": 216.32,
+     "sd": 10.54
+    },
+    "handballs": {
+     "mean": 154.63,
+     "min": 124.38,
+     "max": 200.64,
+     "sd": 16.57
+    },
+    "marks": {
+     "mean": 103.33,
+     "min": 87.27,
+     "max": 119.59,
+     "sd": 8.96
+    },
+    "contested_marks": {
+     "mean": 9.84,
+     "min": 7.73,
+     "max": 11.21,
+     "sd": 0.9
+    },
+    "tackles": {
+     "mean": 53.51,
+     "min": 48.73,
+     "max": 59.92,
+     "sd": 3.3
+    },
+    "inside_50s": {
+     "mean": 49.82,
+     "min": 43.14,
+     "max": 57.8,
+     "sd": 3.22
+    },
+    "clearances": {
+     "mean": 32.22,
+     "min": 28.73,
+     "max": 35.25,
+     "sd": 1.65
+    },
+    "hitouts": {
+     "mean": 32.24,
+     "min": 24.45,
+     "max": 40.05,
+     "sd": 4.29
+    },
+    "frees_for": {
+     "mean": 20.22,
+     "min": 18.17,
+     "max": 24.12,
+     "sd": 1.37
+    },
+    "goals": {
+     "mean": 14.1,
+     "min": 10.64,
+     "max": 17.28,
+     "sd": 1.72
+    },
+    "behinds": {
+     "mean": 9.38,
+     "min": 7.5,
+     "max": 11.24,
+     "sd": 0.99
+    },
+    "rebound_50s": {
+     "mean": 32.78,
+     "min": 29.12,
+     "max": 35.77,
+     "sd": 1.79
+    }
+   }
+  },
+  "2009": {
+   "clubs": 16,
+   "team_games": 370,
+   "per_team_match": {
+    "disposals": {
+     "mean": 373.19,
+     "min": 346.45,
+     "max": 417.52,
+     "sd": 19.82
+    },
+    "kicks": {
+     "mean": 196.43,
+     "min": 185.55,
+     "max": 215.88,
+     "sd": 9.68
+    },
+    "handballs": {
+     "mean": 176.76,
+     "min": 156.82,
+     "max": 210.12,
+     "sd": 15.02
+    },
+    "marks": {
+     "mean": 97.19,
+     "min": 87.41,
+     "max": 108.6,
+     "sd": 5.69
+    },
+    "contested_marks": {
+     "mean": 10.31,
+     "min": 7.23,
+     "max": 12.0,
+     "sd": 1.21
+    },
+    "tackles": {
+     "mean": 62.0,
+     "min": 54.5,
+     "max": 73.16,
+     "sd": 4.78
+    },
+    "inside_50s": {
+     "mean": 49.09,
+     "min": 44.55,
+     "max": 54.52,
+     "sd": 3.08
+    },
+    "clearances": {
+     "mean": 34.07,
+     "min": 28.14,
+     "max": 37.55,
+     "sd": 2.4
+    },
+    "hitouts": {
+     "mean": 35.87,
+     "min": 28.08,
+     "max": 44.59,
+     "sd": 4.64
+    },
+    "frees_for": {
+     "mean": 17.88,
+     "min": 14.52,
+     "max": 20.56,
+     "sd": 1.67
+    },
+    "goals": {
+     "mean": 13.22,
+     "min": 11.09,
+     "max": 15.44,
+     "sd": 1.35
+    },
+    "behinds": {
+     "mean": 9.47,
+     "min": 7.59,
+     "max": 11.08,
+     "sd": 0.95
+    },
+    "rebound_50s": {
+     "mean": 33.11,
+     "min": 27.83,
+     "max": 36.41,
+     "sd": 2.24
+    }
+   }
+  },
+  "2010": {
+   "clubs": 16,
+   "team_games": 371,
+   "per_team_match": {
+    "disposals": {
+     "mean": 369.84,
+     "min": 338.09,
+     "max": 441.33,
+     "sd": 23.56
+    },
+    "kicks": {
+     "mean": 201.01,
+     "min": 183.95,
+     "max": 223.5,
+     "sd": 11.6
+    },
+    "handballs": {
+     "mean": 168.83,
+     "min": 153.55,
+     "max": 217.83,
+     "sd": 14.93
+    },
+    "marks": {
+     "mean": 94.37,
+     "min": 80.59,
+     "max": 112.21,
+     "sd": 8.46
+    },
+    "contested_marks": {
+     "mean": 11.44,
+     "min": 9.77,
+     "max": 14.96,
+     "sd": 1.53
+    },
+    "tackles": {
+     "mean": 67.77,
+     "min": 60.16,
+     "max": 74.81,
+     "sd": 4.03
+    },
+    "inside_50s": {
+     "mean": 50.09,
+     "min": 47.0,
+     "max": 56.85,
+     "sd": 2.92
+    },
+    "clearances": {
+     "mean": 35.14,
+     "min": 31.5,
+     "max": 37.71,
+     "sd": 1.82
+    },
+    "hitouts": {
+     "mean": 36.18,
+     "min": 28.64,
+     "max": 41.64,
+     "sd": 3.36
+    },
+    "frees_for": {
+     "mean": 19.35,
+     "min": 16.82,
+     "max": 22.23,
+     "sd": 1.55
+    },
+    "goals": {
+     "mean": 13.03,
+     "min": 11.18,
+     "max": 17.21,
+     "sd": 1.57
+    },
+    "behinds": {
+     "mean": 9.58,
+     "min": 8.5,
+     "max": 12.08,
+     "sd": 0.98
+    },
+    "rebound_50s": {
+     "mean": 33.58,
+     "min": 29.5,
+     "max": 37.5,
+     "sd": 2.13
+    }
+   }
+  },
+  "2011": {
+   "clubs": 17,
+   "team_games": 391,
+   "per_team_match": {
+    "disposals": {
+     "mean": 359.79,
+     "min": 334.41,
+     "max": 398.67,
+     "sd": 18.43
+    },
+    "kicks": {
+     "mean": 205.01,
+     "min": 184.18,
+     "max": 232.0,
+     "sd": 13.85
+    },
+    "handballs": {
+     "mean": 154.78,
+     "min": 134.46,
+     "max": 175.17,
+     "sd": 8.94
+    },
+    "marks": {
+     "mean": 86.85,
+     "min": 72.92,
+     "max": 107.08,
+     "sd": 9.1
+    },
+    "contested_marks": {
+     "mean": 12.77,
+     "min": 9.95,
+     "max": 16.96,
+     "sd": 1.86
+    },
+    "tackles": {
+     "mean": 69.07,
+     "min": 61.45,
+     "max": 78.92,
+     "sd": 4.08
+    },
+    "inside_50s": {
+     "mean": 51.69,
+     "min": 43.05,
+     "max": 62.21,
+     "sd": 4.83
+    },
+    "clearances": {
+     "mean": 38.05,
+     "min": 34.48,
+     "max": 43.21,
+     "sd": 2.13
+    },
+    "hitouts": {
+     "mean": 39.37,
+     "min": 29.18,
+     "max": 49.8,
+     "sd": 5.38
+    },
+    "frees_for": {
+     "mean": 20.2,
+     "min": 18.14,
+     "max": 22.55,
+     "sd": 1.17
+    },
+    "goals": {
+     "mean": 13.45,
+     "min": 9.73,
+     "max": 17.75,
+     "sd": 1.98
+    },
+    "behinds": {
+     "mean": 9.67,
+     "min": 6.68,
+     "max": 11.38,
+     "sd": 1.17
+    },
+    "rebound_50s": {
+     "mean": 34.52,
+     "min": 30.0,
+     "max": 38.45,
+     "sd": 2.15
+    }
+   }
+  },
+  "2012": {
+   "clubs": 18,
+   "team_games": 414,
+   "per_team_match": {
+    "disposals": {
+     "mean": 356.7,
+     "min": 328.36,
+     "max": 380.73,
+     "sd": 13.14
+    },
+    "kicks": {
+     "mean": 205.69,
+     "min": 186.41,
+     "max": 219.24,
+     "sd": 10.01
+    },
+    "handballs": {
+     "mean": 151.0,
+     "min": 133.4,
+     "max": 167.68,
+     "sd": 9.79
+    },
+    "marks": {
+     "mean": 88.05,
+     "min": 75.04,
+     "max": 95.41,
+     "sd": 5.58
+    },
+    "contested_marks": {
+     "mean": 11.6,
+     "min": 9.2,
+     "max": 14.5,
+     "sd": 1.42
+    },
+    "tackles": {
+     "mean": 63.58,
+     "min": 54.0,
+     "max": 73.2,
+     "sd": 5.18
+    },
+    "inside_50s": {
+     "mean": 51.04,
+     "min": 38.23,
+     "max": 59.6,
+     "sd": 5.37
+    },
+    "clearances": {
+     "mean": 37.65,
+     "min": 33.77,
+     "max": 41.64,
+     "sd": 2.05
+    },
+    "hitouts": {
+     "mean": 39.61,
+     "min": 30.05,
+     "max": 51.17,
+     "sd": 4.87
+    },
+    "frees_for": {
+     "mean": 18.95,
+     "min": 16.4,
+     "max": 22.17,
+     "sd": 1.53
+    },
+    "goals": {
+     "mean": 13.25,
+     "min": 8.27,
+     "max": 17.4,
+     "sd": 2.42
+    },
+    "behinds": {
+     "mean": 9.52,
+     "min": 6.5,
+     "max": 13.16,
+     "sd": 1.49
+    },
+    "rebound_50s": {
+     "mean": 33.36,
+     "min": 29.59,
+     "max": 38.91,
+     "sd": 2.8
+    }
+   }
+  },
+  "2013": {
+   "clubs": 18,
+   "team_games": 414,
+   "per_team_match": {
+    "disposals": {
+     "mean": 358.32,
+     "min": 318.55,
+     "max": 378.83,
+     "sd": 15.77
+    },
+    "kicks": {
+     "mean": 206.86,
+     "min": 181.77,
+     "max": 222.64,
+     "sd": 10.54
+    },
+    "handballs": {
+     "mean": 151.46,
+     "min": 131.04,
+     "max": 169.41,
+     "sd": 10.11
+    },
+    "marks": {
+     "mean": 88.32,
+     "min": 70.72,
+     "max": 100.59,
+     "sd": 8.03
+    },
+    "contested_marks": {
+     "mean": 10.68,
+     "min": 7.27,
+     "max": 12.71,
+     "sd": 1.23
+    },
+    "tackles": {
+     "mean": 62.85,
+     "min": 56.04,
+     "max": 71.12,
+     "sd": 4.15
+    },
+    "inside_50s": {
+     "mean": 50.58,
+     "min": 39.82,
+     "max": 57.6,
+     "sd": 4.7
+    },
+    "clearances": {
+     "mean": 37.36,
+     "min": 32.82,
+     "max": 42.08,
+     "sd": 2.47
+    },
+    "hitouts": {
+     "mean": 39.46,
+     "min": 31.3,
+     "max": 47.27,
+     "sd": 4.67
+    },
+    "frees_for": {
+     "mean": 18.06,
+     "min": 15.77,
+     "max": 20.23,
+     "sd": 1.38
+    },
+    "goals": {
+     "mean": 13.38,
+     "min": 9.5,
+     "max": 16.56,
+     "sd": 1.74
+    },
+    "behinds": {
+     "mean": 9.42,
+     "min": 6.86,
+     "max": 10.64,
+     "sd": 1.02
+    },
+    "rebound_50s": {
+     "mean": 33.39,
+     "min": 30.88,
+     "max": 36.5,
+     "sd": 1.75
+    }
+   }
+  },
+  "2014": {
+   "clubs": 18,
+   "team_games": 413,
+   "per_team_match": {
+    "disposals": {
+     "mean": 363.03,
+     "min": 341.36,
+     "max": 396.32,
+     "sd": 14.66
+    },
+    "kicks": {
+     "mean": 205.51,
+     "min": 189.23,
+     "max": 224.26,
+     "sd": 9.03
+    },
+    "handballs": {
+     "mean": 157.53,
+     "min": 131.36,
+     "max": 173.36,
+     "sd": 9.71
+    },
+    "marks": {
+     "mean": 88.12,
+     "min": 71.59,
+     "max": 107.39,
+     "sd": 7.59
+    },
+    "contested_marks": {
+     "mean": 9.61,
+     "min": 7.36,
+     "max": 11.46,
+     "sd": 1.16
+    },
+    "tackles": {
+     "mean": 66.5,
+     "min": 61.5,
+     "max": 72.36,
+     "sd": 3.54
+    },
+    "inside_50s": {
+     "mean": 50.24,
+     "min": 40.5,
+     "max": 56.24,
+     "sd": 4.09
+    },
+    "clearances": {
+     "mean": 38.25,
+     "min": 33.92,
+     "max": 41.33,
+     "sd": 2.23
+    },
+    "hitouts": {
+     "mean": 41.01,
+     "min": 32.86,
+     "max": 53.5,
+     "sd": 4.94
+    },
+    "frees_for": {
+     "mean": 16.74,
+     "min": 14.77,
+     "max": 18.96,
+     "sd": 1.08
+    },
+    "goals": {
+     "mean": 12.55,
+     "min": 8.64,
+     "max": 16.72,
+     "sd": 1.85
+    },
+    "behinds": {
+     "mean": 8.92,
+     "min": 6.73,
+     "max": 10.6,
+     "sd": 1.01
+    },
+    "rebound_50s": {
+     "mean": 33.89,
+     "min": 29.56,
+     "max": 38.71,
+     "sd": 2.32
+    }
+   }
+  },
+  "2015": {
+   "clubs": 18,
+   "team_games": 412,
+   "per_team_match": {
+    "disposals": {
+     "mean": 363.17,
+     "min": 323.36,
+     "max": 395.15,
+     "sd": 16.84
+    },
+    "kicks": {
+     "mean": 203.69,
+     "min": 188.45,
+     "max": 226.54,
+     "sd": 8.7
+    },
+    "handballs": {
+     "mean": 159.48,
+     "min": 130.55,
+     "max": 182.92,
+     "sd": 11.06
+    },
+    "marks": {
+     "mean": 90.12,
+     "min": 76.18,
+     "max": 105.19,
+     "sd": 6.67
+    },
+    "contested_marks": {
+     "mean": 10.7,
+     "min": 8.55,
+     "max": 13.1,
+     "sd": 1.04
+    },
+    "tackles": {
+     "mean": 65.68,
+     "min": 56.64,
+     "max": 72.09,
+     "sd": 4.62
+    },
+    "inside_50s": {
+     "mean": 50.28,
+     "min": 44.14,
+     "max": 56.12,
+     "sd": 3.72
+    },
+    "clearances": {
+     "mean": 38.76,
+     "min": 34.62,
+     "max": 41.96,
+     "sd": 2.07
+    },
+    "hitouts": {
+     "mean": 42.78,
+     "min": 34.27,
+     "max": 58.54,
+     "sd": 6.41
+    },
+    "frees_for": {
+     "mean": 18.13,
+     "min": 16.76,
+     "max": 21.91,
+     "sd": 1.24
+    },
+    "goals": {
+     "mean": 12.49,
+     "min": 9.95,
+     "max": 16.38,
+     "sd": 1.78
+    },
+    "behinds": {
+     "mean": 8.56,
+     "min": 7.5,
+     "max": 11.0,
+     "sd": 0.83
+    },
+    "rebound_50s": {
+     "mean": 33.99,
+     "min": 28.8,
+     "max": 37.82,
+     "sd": 2.39
+    }
+   }
+  },
+  "2016": {
+   "clubs": 18,
+   "team_games": 414,
+   "per_team_match": {
+    "disposals": {
+     "mean": 374.82,
+     "min": 337.45,
+     "max": 410.81,
+     "sd": 17.31
+    },
+    "kicks": {
+     "mean": 205.09,
+     "min": 184.18,
+     "max": 220.0,
+     "sd": 8.41
+    },
+    "handballs": {
+     "mean": 169.74,
+     "min": 153.27,
+     "max": 198.38,
+     "sd": 12.28
+    },
+    "marks": {
+     "mean": 88.48,
+     "min": 72.73,
+     "max": 101.73,
+     "sd": 7.45
+    },
+    "contested_marks": {
+     "mean": 11.4,
+     "min": 8.5,
+     "max": 14.0,
+     "sd": 1.4
+    },
+    "tackles": {
+     "mean": 69.74,
+     "min": 60.14,
+     "max": 78.77,
+     "sd": 4.55
+    },
+    "inside_50s": {
+     "mean": 52.05,
+     "min": 45.45,
+     "max": 58.04,
+     "sd": 4.1
+    },
+    "clearances": {
+     "mean": 36.63,
+     "min": 33.09,
+     "max": 40.79,
+     "sd": 2.11
+    },
+    "hitouts": {
+     "mean": 39.65,
+     "min": 30.41,
+     "max": 47.86,
+     "sd": 4.78
+    },
+    "frees_for": {
+     "mean": 18.76,
+     "min": 16.82,
+     "max": 20.57,
+     "sd": 1.17
+    },
+    "goals": {
+     "mean": 12.83,
+     "min": 9.09,
+     "max": 16.5,
+     "sd": 1.88
+    },
+    "behinds": {
+     "mean": 9.11,
+     "min": 7.73,
+     "max": 11.29,
+     "sd": 0.9
+    },
+    "rebound_50s": {
+     "mean": 35.22,
+     "min": 30.0,
+     "max": 40.96,
+     "sd": 2.81
+    }
+   }
+  },
+  "2017": {
+   "clubs": 18,
+   "team_games": 414,
+   "per_team_match": {
+    "disposals": {
+     "mean": 382.29,
+     "min": 359.68,
+     "max": 405.18,
+     "sd": 14.43
+    },
+    "kicks": {
+     "mean": 211.04,
+     "min": 192.36,
+     "max": 225.68,
+     "sd": 8.31
+    },
+    "handballs": {
+     "mean": 171.25,
+     "min": 134.0,
+     "max": 196.82,
+     "sd": 14.71
+    },
+    "marks": {
+     "mean": 93.38,
+     "min": 83.09,
+     "max": 105.73,
+     "sd": 7.25
+    },
+    "contested_marks": {
+     "mean": 11.14,
+     "min": 9.09,
+     "max": 13.74,
+     "sd": 1.3
+    },
+    "tackles": {
+     "mean": 68.44,
+     "min": 61.64,
+     "max": 76.04,
+     "sd": 3.73
+    },
+    "inside_50s": {
+     "mean": 52.21,
+     "min": 46.0,
+     "max": 59.26,
+     "sd": 3.68
+    },
+    "clearances": {
+     "mean": 36.73,
+     "min": 34.26,
+     "max": 42.24,
+     "sd": 1.95
+    },
+    "hitouts": {
+     "mean": 39.85,
+     "min": 31.76,
+     "max": 45.4,
+     "sd": 3.8
+    },
+    "frees_for": {
+     "mean": 18.8,
+     "min": 16.55,
+     "max": 20.56,
+     "sd": 1.11
+    },
+    "goals": {
+     "mean": 12.89,
+     "min": 10.5,
+     "max": 15.8,
+     "sd": 1.24
+    },
+    "behinds": {
+     "mean": 9.45,
+     "min": 7.41,
+     "max": 11.61,
+     "sd": 1.21
+    },
+    "rebound_50s": {
+     "mean": 35.57,
+     "min": 32.5,
+     "max": 39.18,
+     "sd": 1.8
+    }
+   }
+  },
+  "2018": {
+   "clubs": 18,
+   "team_games": 414,
+   "per_team_match": {
+    "disposals": {
+     "mean": 373.5,
+     "min": 339.91,
+     "max": 399.12,
+     "sd": 14.55
+    },
+    "kicks": {
+     "mean": 212.28,
+     "min": 201.36,
+     "max": 227.2,
+     "sd": 7.56
+    },
+    "handballs": {
+     "mean": 161.22,
+     "min": 128.88,
+     "max": 181.54,
+     "sd": 13.98
+    },
+    "marks": {
+     "mean": 90.03,
+     "min": 77.41,
+     "max": 101.08,
+     "sd": 5.77
+    },
+    "contested_marks": {
+     "mean": 10.86,
+     "min": 8.14,
+     "max": 13.88,
+     "sd": 1.48
+    },
+    "tackles": {
+     "mean": 64.8,
+     "min": 58.09,
+     "max": 70.0,
+     "sd": 3.58
+    },
+    "inside_50s": {
+     "mean": 52.49,
+     "min": 45.18,
+     "max": 59.88,
+     "sd": 3.52
+    },
+    "clearances": {
+     "mean": 36.65,
+     "min": 33.23,
+     "max": 39.55,
+     "sd": 1.7
+    },
+    "hitouts": {
+     "mean": 38.77,
+     "min": 27.82,
+     "max": 50.52,
+     "sd": 6.38
+    },
+    "frees_for": {
+     "mean": 20.52,
+     "min": 17.54,
+     "max": 22.4,
+     "sd": 1.39
+    },
+    "goals": {
+     "mean": 11.94,
+     "min": 8.23,
+     "max": 14.76,
+     "sd": 1.72
+    },
+    "behinds": {
+     "mean": 9.02,
+     "min": 6.91,
+     "max": 10.76,
+     "sd": 0.87
+    },
+    "rebound_50s": {
+     "mean": 37.0,
+     "min": 30.83,
+     "max": 43.22,
+     "sd": 2.96
+    }
+   }
+  },
+  "2019": {
+   "clubs": 18,
+   "team_games": 414,
+   "per_team_match": {
+    "disposals": {
+     "mean": 370.7,
+     "min": 343.64,
+     "max": 401.42,
+     "sd": 15.73
+    },
+    "kicks": {
+     "mean": 219.02,
+     "min": 202.73,
+     "max": 232.19,
+     "sd": 7.56
+    },
+    "handballs": {
+     "mean": 151.68,
+     "min": 125.62,
+     "max": 174.23,
+     "sd": 14.18
+    },
+    "marks": {
+     "mean": 91.16,
+     "min": 81.41,
+     "max": 104.21,
+     "sd": 5.7
+    },
+    "contested_marks": {
+     "mean": 11.4,
+     "min": 10.09,
+     "max": 13.77,
+     "sd": 1.01
+    },
+    "tackles": {
+     "mean": 62.53,
+     "min": 56.91,
+     "max": 66.18,
+     "sd": 2.61
+    },
+    "inside_50s": {
+     "mean": 51.89,
+     "min": 45.23,
+     "max": 58.09,
+     "sd": 3.1
+    },
+    "clearances": {
+     "mean": 38.03,
+     "min": 33.92,
+     "max": 41.88,
+     "sd": 2.42
+    },
+    "hitouts": {
+     "mean": 38.59,
+     "min": 24.43,
+     "max": 53.32,
+     "sd": 6.99
+    },
+    "frees_for": {
+     "mean": 18.83,
+     "min": 17.12,
+     "max": 20.78,
+     "sd": 1.02
+    },
+    "goals": {
+     "mean": 11.54,
+     "min": 8.82,
+     "max": 12.88,
+     "sd": 1.11
+    },
+    "behinds": {
+     "mean": 8.6,
+     "min": 7.23,
+     "max": 10.17,
+     "sd": 0.78
+    },
+    "rebound_50s": {
+     "mean": 39.26,
+     "min": 36.27,
+     "max": 44.27,
+     "sd": 2.05
+    }
+   }
+  },
+  "2020": {
+   "clubs": 18,
+   "team_games": 324,
+   "per_team_match": {
+    "disposals": {
+     "mean": 295.48,
+     "min": 279.47,
+     "max": 315.0,
+     "sd": 10.5
+    },
+    "kicks": {
+     "mean": 174.45,
+     "min": 156.59,
+     "max": 189.33,
+     "sd": 7.67
+    },
+    "handballs": {
+     "mean": 121.03,
+     "min": 98.16,
+     "max": 142.83,
+     "sd": 12.42
+    },
+    "marks": {
+     "mean": 69.87,
+     "min": 59.18,
+     "max": 83.57,
+     "sd": 5.79
+    },
+    "contested_marks": {
+     "mean": 9.1,
+     "min": 7.94,
+     "max": 10.56,
+     "sd": 0.72
+    },
+    "tackles": {
+     "mean": 50.49,
+     "min": 44.06,
+     "max": 57.32,
+     "sd": 3.15
+    },
+    "inside_50s": {
+     "mean": 41.32,
+     "min": 36.12,
+     "max": 46.95,
+     "sd": 3.03
+    },
+    "clearances": {
+     "mean": 29.92,
+     "min": 25.71,
+     "max": 34.58,
+     "sd": 2.2
+    },
+    "hitouts": {
+     "mean": 29.51,
+     "min": 18.39,
+     "max": 36.47,
+     "sd": 3.95
+    },
+    "frees_for": {
+     "mean": 16.06,
+     "min": 13.53,
+     "max": 18.41,
+     "sd": 1.21
+    },
+    "goals": {
+     "mean": 8.7,
+     "min": 6.82,
+     "max": 10.48,
+     "sd": 0.99
+    },
+    "behinds": {
+     "mean": 6.34,
+     "min": 4.59,
+     "max": 9.21,
+     "sd": 1.05
+    },
+    "rebound_50s": {
+     "mean": 31.89,
+     "min": 27.37,
+     "max": 37.06,
+     "sd": 2.39
+    }
+   }
+  },
+  "2021": {
+   "clubs": 18,
+   "team_games": 414,
+   "per_team_match": {
+    "disposals": {
+     "mean": 364.99,
+     "min": 348.77,
+     "max": 382.42,
+     "sd": 10.94
+    },
+    "kicks": {
+     "mean": 217.76,
+     "min": 204.09,
+     "max": 226.96,
+     "sd": 7.42
+    },
+    "handballs": {
+     "mean": 147.23,
+     "min": 126.38,
+     "max": 167.64,
+     "sd": 11.56
+    },
+    "marks": {
+     "mean": 94.71,
+     "min": 79.86,
+     "max": 107.41,
+     "sd": 7.12
+    },
+    "contested_marks": {
+     "mean": 11.49,
+     "min": 9.14,
+     "max": 13.95,
+     "sd": 1.15
+    },
+    "tackles": {
+     "mean": 57.29,
+     "min": 48.64,
+     "max": 62.16,
+     "sd": 4.19
+    },
+    "inside_50s": {
+     "mean": 51.33,
+     "min": 46.55,
+     "max": 56.54,
+     "sd": 2.79
+    },
+    "clearances": {
+     "mean": 35.47,
+     "min": 30.05,
+     "max": 39.77,
+     "sd": 2.42
+    },
+    "hitouts": {
+     "mean": 34.39,
+     "min": 26.36,
+     "max": 44.12,
+     "sd": 4.57
+    },
+    "frees_for": {
+     "mean": 19.07,
+     "min": 17.09,
+     "max": 21.14,
+     "sd": 1.08
+    },
+    "goals": {
+     "mean": 11.49,
+     "min": 9.14,
+     "max": 13.88,
+     "sd": 1.3
+    },
+    "behinds": {
+     "mean": 8.46,
+     "min": 6.59,
+     "max": 10.0,
+     "sd": 0.86
+    },
+    "rebound_50s": {
+     "mean": 39.05,
+     "min": 36.09,
+     "max": 42.55,
+     "sd": 1.81
+    }
+   }
+  },
+  "2022": {
+   "clubs": 18,
+   "team_games": 413,
+   "per_team_match": {
+    "disposals": {
+     "mean": 359.93,
+     "min": 325.91,
+     "max": 383.33,
+     "sd": 16.42
+    },
+    "kicks": {
+     "mean": 216.51,
+     "min": 199.5,
+     "max": 230.59,
+     "sd": 8.12
+    },
+    "handballs": {
+     "mean": 143.42,
+     "min": 110.64,
+     "max": 164.79,
+     "sd": 13.79
+    },
+    "marks": {
+     "mean": 92.0,
+     "min": 74.64,
+     "max": 102.95,
+     "sd": 7.41
+    },
+    "contested_marks": {
+     "mean": 10.66,
+     "min": 9.59,
+     "max": 11.58,
+     "sd": 0.57
+    },
+    "tackles": {
+     "mean": 58.44,
+     "min": 50.0,
+     "max": 67.59,
+     "sd": 4.28
+    },
+    "inside_50s": {
+     "mean": 52.36,
+     "min": 42.52,
+     "max": 57.68,
+     "sd": 4.27
+    },
+    "clearances": {
+     "mean": 36.8,
+     "min": 32.5,
+     "max": 40.0,
+     "sd": 2.17
+    },
+    "hitouts": {
+     "mean": 35.87,
+     "min": 26.5,
+     "max": 42.86,
+     "sd": 4.87
+    },
+    "frees_for": {
+     "mean": 20.25,
+     "min": 18.71,
+     "max": 22.23,
+     "sd": 0.91
+    },
+    "goals": {
+     "mean": 12.06,
+     "min": 8.77,
+     "max": 14.52,
+     "sd": 1.45
+    },
+    "behinds": {
+     "mean": 8.41,
+     "min": 5.76,
+     "max": 10.08,
+     "sd": 1.04
+    },
+    "rebound_50s": {
+     "mean": 39.61,
+     "min": 34.64,
+     "max": 45.45,
+     "sd": 2.3
+    }
+   }
+  },
+  "2023": {
+   "clubs": 18,
+   "team_games": 432,
+   "per_team_match": {
+    "disposals": {
+     "mean": 362.43,
+     "min": 336.0,
+     "max": 390.96,
+     "sd": 15.79
+    },
+    "kicks": {
+     "mean": 214.16,
+     "min": 196.7,
+     "max": 231.0,
+     "sd": 7.92
+    },
+    "handballs": {
+     "mean": 148.27,
+     "min": 118.0,
+     "max": 176.52,
+     "sd": 14.7
+    },
+    "marks": {
+     "mean": 90.74,
+     "min": 82.92,
+     "max": 103.12,
+     "sd": 5.82
+    },
+    "contested_marks": {
+     "mean": 10.51,
+     "min": 7.61,
+     "max": 13.12,
+     "sd": 1.13
+    },
+    "tackles": {
+     "mean": 61.2,
+     "min": 55.54,
+     "max": 67.22,
+     "sd": 3.34
+    },
+    "inside_50s": {
+     "mean": 52.59,
+     "min": 43.39,
+     "max": 58.4,
+     "sd": 3.49
+    },
+    "clearances": {
+     "mean": 37.12,
+     "min": 33.7,
+     "max": 42.23,
+     "sd": 2.4
+    },
+    "hitouts": {
+     "mean": 38.19,
+     "min": 29.6,
+     "max": 46.83,
+     "sd": 4.86
+    },
+    "frees_for": {
+     "mean": 17.65,
+     "min": 15.46,
+     "max": 19.52,
+     "sd": 1.28
+    },
+    "goals": {
+     "mean": 12.08,
+     "min": 8.87,
+     "max": 13.87,
+     "sd": 1.26
+    },
+    "behinds": {
+     "mean": 8.45,
+     "min": 6.48,
+     "max": 10.3,
+     "sd": 1.09
+    },
+    "rebound_50s": {
+     "mean": 39.8,
+     "min": 36.35,
+     "max": 43.65,
+     "sd": 2.13
+    }
+   }
+  },
+  "2024": {
+   "clubs": 18,
+   "team_games": 432,
+   "per_team_match": {
+    "disposals": {
+     "mean": 355.07,
+     "min": 315.83,
+     "max": 380.35,
+     "sd": 14.53
+    },
+    "kicks": {
+     "mean": 212.44,
+     "min": 190.91,
+     "max": 232.63,
+     "sd": 9.8
+    },
+    "handballs": {
+     "mean": 142.62,
+     "min": 124.91,
+     "max": 163.64,
+     "sd": 11.33
+    },
+    "marks": {
+     "mean": 92.21,
+     "min": 81.17,
+     "max": 110.48,
+     "sd": 7.22
+    },
+    "contested_marks": {
+     "mean": 9.59,
+     "min": 7.87,
+     "max": 11.12,
+     "sd": 0.97
+    },
+    "tackles": {
+     "mean": 59.94,
+     "min": 50.52,
+     "max": 66.96,
+     "sd": 3.89
+    },
+    "inside_50s": {
+     "mean": 51.7,
+     "min": 45.26,
+     "max": 56.54,
+     "sd": 3.5
+    },
+    "clearances": {
+     "mean": 37.0,
+     "min": 33.17,
+     "max": 40.41,
+     "sd": 2.13
+    },
+    "hitouts": {
+     "mean": 37.71,
+     "min": 29.57,
+     "max": 45.65,
+     "sd": 3.96
+    },
+    "frees_for": {
+     "mean": 17.74,
+     "min": 14.87,
+     "max": 19.57,
+     "sd": 1.22
+    },
+    "goals": {
+     "mean": 12.24,
+     "min": 9.17,
+     "max": 14.12,
+     "sd": 1.36
+    },
+    "behinds": {
+     "mean": 8.47,
+     "min": 5.17,
+     "max": 10.85,
+     "sd": 1.29
+    },
+    "rebound_50s": {
+     "mean": 38.77,
+     "min": 35.0,
+     "max": 42.13,
+     "sd": 2.17
+    }
+   }
+  },
+  "2025": {
+   "clubs": 18,
+   "team_games": 432,
+   "per_team_match": {
+    "disposals": {
+     "mean": 354.68,
+     "min": 316.39,
+     "max": 375.91,
+     "sd": 13.64
+    },
+    "kicks": {
+     "mean": 207.94,
+     "min": 184.04,
+     "max": 232.07,
+     "sd": 11.53
+    },
+    "handballs": {
+     "mean": 146.74,
+     "min": 128.88,
+     "max": 164.91,
+     "sd": 9.97
+    },
+    "marks": {
+     "mean": 88.38,
+     "min": 76.75,
+     "max": 104.41,
+     "sd": 7.07
+    },
+    "contested_marks": {
+     "mean": 9.35,
+     "min": 7.35,
+     "max": 11.3,
+     "sd": 1.23
+    },
+    "tackles": {
+     "mean": 60.16,
+     "min": 51.96,
+     "max": 65.4,
+     "sd": 3.31
+    },
+    "inside_50s": {
+     "mean": 51.56,
+     "min": 44.13,
+     "max": 56.78,
+     "sd": 3.85
+    },
+    "clearances": {
+     "mean": 37.53,
+     "min": 31.39,
+     "max": 41.13,
+     "sd": 2.52
+    },
+    "hitouts": {
+     "mean": 39.19,
+     "min": 32.52,
+     "max": 48.16,
+     "sd": 4.22
+    },
+    "frees_for": {
+     "mean": 19.4,
+     "min": 17.17,
+     "max": 21.74,
+     "sd": 1.17
+    },
+    "goals": {
+     "mean": 12.2,
+     "min": 8.87,
+     "max": 16.04,
+     "sd": 1.93
+    },
+    "behinds": {
+     "mean": 8.77,
+     "min": 7.04,
+     "max": 10.15,
+     "sd": 0.95
+    },
+    "rebound_50s": {
+     "mean": 38.63,
+     "min": 35.26,
+     "max": 43.5,
+     "sd": 2.12
+    }
+   }
+  },
+  "2026": {
+   "clubs": 18,
+   "team_games": 434,
+   "per_team_match": {
+    "disposals": {
+     "mean": 367.36,
+     "min": 335.87,
+     "max": 390.57,
+     "sd": 16.28
+    },
+    "kicks": {
+     "mean": 212.26,
+     "min": 191.52,
+     "max": 240.35,
+     "sd": 11.6
+    },
+    "handballs": {
+     "mean": 155.09,
+     "min": 124.48,
+     "max": 176.56,
+     "sd": 13.82
+    },
+    "marks": {
+     "mean": 91.63,
+     "min": 77.92,
+     "max": 109.08,
+     "sd": 7.84
+    },
+    "contested_marks": {
+     "mean": 9.0,
+     "min": 7.26,
+     "max": 10.88,
+     "sd": 1.13
+    },
+    "tackles": {
+     "mean": 57.34,
+     "min": 48.19,
+     "max": 66.4,
+     "sd": 4.36
+    },
+    "inside_50s": {
+     "mean": 52.97,
+     "min": 45.61,
+     "max": 60.36,
+     "sd": 3.94
+    },
+    "clearances": {
+     "mean": 36.09,
+     "min": 32.35,
+     "max": 39.92,
+     "sd": 1.84
+    },
+    "hitouts": {
+     "mean": 35.72,
+     "min": 28.16,
+     "max": 43.96,
+     "sd": 5.14
+    },
+    "frees_for": {
+     "mean": 18.74,
+     "min": 16.48,
+     "max": 20.76,
+     "sd": 1.15
+    },
+    "goals": {
+     "mean": 12.88,
+     "min": 9.09,
+     "max": 16.24,
+     "sd": 1.98
+    },
+    "behinds": {
+     "mean": 9.47,
+     "min": 7.7,
+     "max": 11.19,
+     "sd": 0.9
+    },
+    "rebound_50s": {
+     "mean": 39.31,
+     "min": 37.0,
+     "max": 41.88,
+     "sd": 1.5
+    }
+   }
+  }
+ }
+}

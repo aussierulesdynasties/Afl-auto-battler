@@ -56,12 +56,17 @@ func run() -> void:
 	_t("_test_record_weights")
 	_t("_test_club_years_today")
 	_t("_test_real_1990")
+	_t("_test_legacy_start_1990")
+	_t("_test_legacy_rolls_into_1991")
+	_t("_test_legacy_redraft_1990")
 	Datasets.add(FIXTURE, FIXTURE_ROW)
 	_t("_test_fixture_load")
 	_t("_test_back_to_2026")
 	_t("_test_save_keeps_dataset")
 	_t("_test_old_and_unknown_saves")
 	_t("_test_club_years_1990")
+	_t("_test_ground_names_1990")
+	_t("_test_guernseys_by_year")
 	Datasets.remove(FIXTURE)
 	GameState.replay_seed = 0
 	GameState.reset()
@@ -118,8 +123,12 @@ func _load_print() -> String:
 	codes.sort()
 	for code in codes:
 		var c: Dictionary = GameDB.clubs[code]
+		# pattern3 (L9's anchor colour) came after this golden; today's kits repeat
+		# pattern2 in it, which _test_guernseys_by_year checks.
+		var g := GameDB.club_guernsey(code)
+		g.erase("pattern3")
 		out.append("%s|%s|%s|%s|%d|%s" % [code, str(c.get("name", "")), str(c.get("short", "")),
-				str(c.get("ground", "")), int(c.get("enter", 0)), str(GameDB.club_guernsey(code))])
+				str(c.get("ground", "")), int(c.get("enter", 0)), str(g)])
 	out.append(str(GameDB.club_order))
 	out.append(str(GameDB.active_clubs(GameDB.START_YEAR)))
 	var dk: Array = GameDB.departures.keys()
@@ -392,6 +401,165 @@ func _test_club_years_1990() -> void:
 	GameDB.reload()
 
 
+## Legacy grounds (plan L9): one key per ground whatever it was called, its
+## name of the year on every screen, and one story the season it changes.
+func _test_ground_names_1990() -> void:
+	GameDB.reload(FIXTURE)
+	_check(GameDB.ground_key("Princes Park") == "Ikon Park" and GameDB.ground_key("princes_park") == "Ikon Park"
+			and GameDB.ground_key("Optus Oval") == "Ikon Park" and GameDB.ground_key("Carrara") == "People First Stadium"
+			and GameDB.ground_key("MCG") == "MCG", "Every name a ground has had is the one ground")
+	_check(str(GameDB.club_era("CAR", 1990)["ground"]) == "Ikon Park" and str(GameDB.club_era("WBD", 1990)["ground"]) == "Whitten Oval"
+			and str(GameDB.club_era("BRL", 1990)["ground"]) == "People First Stadium",
+			"The clubs' era grounds are the grounds' keys")
+	_check(GameDB.ground_name("Ikon Park", 1990) == "Princes Park" and GameDB.ground_name("Ikon Park", 1994) == "Optus Oval"
+			and GameDB.ground_name("Waverley Park", 1991) == "AFL Park" and GameDB.ground_name("People First Stadium", 1990) == "Carrara Stadium"
+			and GameDB.ground_name("Whitten Oval", 1994) == "Western Oval" and GameDB.ground_name("MCG", 1990) == "MCG",
+			"Each ground carries its name of the year; the MCG keeps its own")
+	_check(GameDB.ground_name("GMHBA Stadium", 2017) == "Simonds Stadium" and GameDB.ground_name("GMHBA Stadium", 2018) == "GMHBA Stadium",
+			"Kardinia Park was Simonds Stadium to 2017 (ground_names.csv, the sourced table)")
+	_check(GameDB.ground_renamed_from("Ikon Park", 1994) == "Princes Park" and GameDB.ground_renamed_from("Ikon Park", 1995) == ""
+			and GameDB.ground_renamed_from("Marvel Stadium", 2000) == "" and GameDB.ground_renamed_from("MCG", 1994) == "",
+			"A rename is a dated name giving way to another; a ground opening is not one")
+	_check(GameDB.ground_shown("Ikon Park") == "Princes Park" and GameDB.ground_shown("Ikon Park", 2000) == "Optus Oval",
+			"The screens show the ground's name in the season shown (%s)" % GameDB.ground_shown("Ikon Park"))
+	# The club page, the fixture and the next-match line show the year's name.
+	var host := Control.new()
+	ClubPage.open(host, "CAR")
+	var fact: Node = host.find_child("Ground", true, false)
+	var said := str((fact as RichTextLabel).text) if fact is RichTextLabel else ""
+	_check(said.contains("Princes Park") and not said.contains("Ikon Park"),
+			"Carlton's page names its 1990 home ground Princes Park (%s)" % said)
+	host.free()
+	var lists := {}
+	for c in GameDB.active_clubs(1994):
+		lists[c] = []
+	var s94 := Season.new(GameDB.active_clubs(1994), lists, SUITE_SEED, 1994)
+	GameDB.apply_era(1994)
+	var venues := {}
+	for page in StatsFixture.pages(s94):
+		for m in page["matches"]:
+			venues[str(m["venue"])] = true
+	_check(venues.has("Optus Oval") and venues.has("AFL Park") and not venues.has("Ikon Park") and not venues.has("Waverley Park"),
+			"The 1994 fixture names Optus Oval and AFL Park (%s)" % str(venues.keys()))
+	# The rename story: once, the season it happens, with the clubs at home there.
+	var old_season = GameState.season
+	var old_year: int = GameState.season_year
+	GameState.news = []
+	GameState.milestone_log = {}
+	for y in [1994, 1995]:
+		GameState.season_year = y
+		GameDB.apply_era(y)
+		GameState.season = Season.new(GameDB.active_clubs(y), lists, SUITE_SEED, y)
+		GameState._ground_rename_news()
+	GameState._ground_rename_news()
+	var told := GameState.news.filter(func(n): return str(n.get("kind", "")) == "ground")
+	var lines := told.map(func(n): return str(n["text"]))
+	_check(told.size() == 2 and lines.has("Western Oval takes a new name this season: from Round 1 it is Whitten Oval, home of Fitzroy and Footscray.")
+			and lines.has("Princes Park takes a new name this season: from Round 1 it is Optus Oval, home of Carlton."),
+			"1994 and 1995 each tell their ground's new name once (%s)" % str(lines))
+	var story := NewsFront.story(told[0] if told.size() > 0 else {}, "CAR")
+	_check(str(story["headline"]) == "Western Oval becomes Whitten Oval" and str(story["club"]) in ["FIT", "WBD"],
+			"The story's headline is the old and new name, in the home club's colours (%s)" % str(story["headline"]))
+	GameState.news = []
+	GameState.season_year = 2027
+	GameDB.reload()
+	GameDB.apply_era(2027)
+	GameState.season = Season.new(GameDB.active_clubs(2027), {}, SUITE_SEED, 2027)
+	GameState._ground_rename_news()
+	_check(GameState.news.is_empty(), "Today's grounds keep their names: a 2027 season tells no rename")
+	GameState.season = old_season
+	GameState.season_year = old_year
+	GameState.news = []
+	GameState.milestone_log = {}
+
+
+## Legacy guernseys (TODO row 142, L9): each club wears the guernsey of the
+## season being played, 1990 to 2026, and today's kits are clubs.csv's untouched.
+func _test_guernseys_by_year() -> void:
+	GameDB.reload()
+	var raw := {}
+	for r in GameDB._read_dicts("res://data/clubs.csv"):
+		raw[str(r["code"])] = str(r["guernsey"])
+	var today_ok := true
+	for y in [2026, 2027]:
+		GameDB.apply_era(y)
+		for code in raw:
+			if GameDB.clubs.has(code) and str(GameDB.clubs[code]["guernsey"]) != raw[code]:
+				today_ok = false
+			var g := GameDB.club_guernsey(code)
+			if g["pattern3"] != g["pattern2"]:
+				today_ok = false
+	_check(today_ok and GameDB.club_colours("WCE")[0] == Color("#003087"),
+			"A 2026 career's clubs wear clubs.csv's guernseys and colours, unchanged")
+	GameDB.reload(FIXTURE)
+	# Every design the year rows name is drawn by the figures, the crest and the discs.
+	var named := {}
+	for r in GameDB._read_dicts(GameDB.CLUBS_BY_YEAR_CSV):
+		var g := str(r.get("guernsey", ""))
+		if g != "":
+			named[g.split(":")[0]] = true
+	var drawn := true
+	for d in named:
+		drawn = drawn and GameDB.GUERNSEY_DESIGNS.has(d) and GuernseyCrest.BADGE_DESIGNS.has(d)
+	var sheet := GuernseyCrest.BADGE_DESIGN_SHEET.get_size()
+	_check(drawn and int(sheet.y / 256.0) * 4 >= GuernseyCrest.BADGE_DESIGNS.size(),
+			"Every era design is in the figures' list and on the crest's sheet (%s)" % str(named.keys()))
+	# Season by season, as the rollover applies each new year.
+	var want := {
+		1990: {"WBD": "dogs90", "SYD": "swans90", "WCE": "wings", "BRL": "yoke", "STK": "panels"},
+		1995: {"FRE": "anchor", "WCE": "wings", "BRL": "chevron"},
+		1997: {"PAD": "power97", "STK": "saints97", "WBD": "dogs97", "BRL": "yoke", "SYD": "yoke"},
+		2002: {"STK": "panels", "WCE": "eagles00"},
+		2007: {"ADE": "crows06", "PAD": "power97"},
+		2010: {"FRE": "anchor", "BRL": "lions10", "ADE": "lowhoops", "PAD": "chevron"},
+		2011: {"FRE": "chevrons", "GCS": "sides", "WBD": "dogs97"},
+		2012: {"GWS": "giants12", "WBD": "twohoops"},
+		2014: {"BRL": "yoke"},
+		2016: {"WCE": "wings"},
+		2021: {"GWS": "giants"},
+		2026: {"GCS": "sides", "WCE": "wings", "FRE": "chevrons"},
+	}
+	var wrong := []
+	for y in want:
+		GameDB.apply_era(y)
+		for code in want[y]:
+			var g := GameDB.club_guernsey(code)
+			if str(g["design"]) != str(want[y][code]):
+				wrong.append("%s %d: %s" % [code, y, g["design"]])
+	_check(wrong.is_empty(), "Each season's clubs wear that season's guernsey (%s)" % str(wrong))
+	GameDB.apply_era(1997)
+	var navy97: Color = GameDB.club_colours("WCE")[0]
+	GameDB.apply_era(2005)
+	var navy05: Color = GameDB.club_colours("WCE")[0]
+	GameDB.apply_era(2018)
+	_check(navy97 == Color("#021A31") and navy05 == Color("#05173F") and GameDB.club_colours("WCE")[0] == Color("#003087"),
+			"West Coast are navy 1995-2017 and royal blue again from 2018")
+	GameDB.apply_era(2024)
+	var gold_sides: Color = GameDB.club_guernsey("GCS")["pattern"]
+	GameDB.apply_era(2025)
+	_check(gold_sides == Color("#FFDD00") and GameDB.club_guernsey("GCS")["pattern"] == Color("#9E140C"),
+			"Gold Coast's side panels are gold to 2024 and red from 2025")
+	# Fremantle's anchor: four colours, all the way to the figures and the crest.
+	GameDB.apply_era(2000)
+	var fre := GameDB.club_guernsey("FRE")
+	_check(fre["pattern"] == Color.WHITE and fre["pattern2"] == Color("#065D1E") and fre["pattern3"] == Color("#DC0000"),
+			"The anchor is white, with green on the wearer's right and red on his left")
+	var mat := StoppageVignette.figure_material([fre, GameDB.club_guernsey("WCE")])
+	var p3 = mat.get_shader_parameter("kit_pattern3")
+	var designs = mat.get_shader_parameter("kit_design")
+	_check(p3[0] == Color("#DC0000") and p3[1] == GameDB.club_guernsey("WCE")["pattern2"]
+			and int(designs[0]) == GameDB.GUERNSEY_DESIGNS.find("anchor"),
+			"The figures get the anchor's red; a kit without a third colour repeats its second")
+	var crest := UiKit.club_marker("FRE") as GuernseyCrest
+	_check(crest != null and crest.design == "anchor" and crest.third == Color("#DC0000"),
+			"Fremantle's 2000 marker is the anchor, its red included")
+	if crest:
+		crest.free()
+	_check(PitchView.disc_design(fre) == "yoke" and PitchView.disc_design(GameDB.club_guernsey("WCE")) == "panels",
+			"On the oval the era guernseys draw as the discs' own shapes")
+	GameDB.reload()
+
+
 ## The real 1990 start (TODO row 142, L1): the 14 clubs' lists rated on 1989,
 ## each position scaled on its own season (director 2026-11-13), and a real
 ## player's ceiling set by his real peak, give or take luck.
@@ -443,3 +611,182 @@ func _test_real_1990() -> void:
 	_check(Ratings.era_anchors.is_empty() and Potential.peak_from_year == 2023,
 			"Back on 2026, positions scale on 2026's anchors again")
 	_golden("load after the 1990 set", _load_print(), GOLDEN_LOAD)
+
+
+## A 1990 career (TODO row 142, L2): you take Melbourne on its real 1990 list
+## and replace its real senior coach, John Northey, who joins the coach pool
+## any club may hire from (director 2026-11-13, "You replace him", "Joins the
+## coach pool"). Every other club keeps its real 1990 senior coach, and the
+## clubs' real 1990 captains lead them.
+func _test_legacy_start_1990() -> void:
+	var want := _start_1990("MEL")
+	_check(GameState.season != null and GameState.season_year == 1990 and GameState.my_club == "MEL",
+			"A 1990 career starts in 1990 at the club chosen (%d, %s)" % [GameState.season_year, GameState.my_club])
+	var mine := {}
+	for p in GameState.my_list:
+		mine[str(p["id"])] = true
+	var missing := 0
+	for id in want:
+		if not mine.has(id):
+			missing += 1
+	_check(not want.is_empty() and missing <= 3,
+			"Melbourne start on their real 1990 list (%d of %d on it)" % [want.size() - missing, want.size()])
+	_check(GameState.season.clubs.size() == 14, "Fourteen clubs play 1990 (%d)" % GameState.season.clubs.size())
+	var by_name := {}
+	for cid in GameState.coaches:
+		var c: Dictionary = GameState.coaches[cid]
+		if str(c.get("real_name", "")) != "":
+			by_name[str(c["real_name"])] = c
+	var northey: Dictionary = by_name.get("John Northey", {})
+	_check(not northey.is_empty() and str(northey.get("status", "")) == "free" and str(northey.get("club", "")) == ""
+			and bool(northey.get("former_sc", false)),
+			"You replace John Northey, and he is in the coach pool (%s)" % str(northey.get("status", "missing")))
+	_check(not northey.is_empty() and CoachMarket.would_take(northey, "STK", "SA", 1990),
+			"Another club can hire him")
+	var mel := Coaches.staff(GameState.coaches, "MEL")
+	_check(not mel.has("SC") and mel.size() == 5, "Melbourne's senior job is yours; its five assistants are hired (%s)" % str(mel.keys()))
+	var real_sc := 0
+	for club in GameState.season.clubs:
+		if club == "MEL":
+			continue
+		var cid := str(Coaches.staff(GameState.coaches, club).get("SC", ""))
+		if cid != "" and str(GameState.coaches[cid].get("real_name", "")) != "":
+			real_sc += 1
+	_check(real_sc == 13, "The other 13 clubs keep their real 1990 senior coach (%d)" % real_sc)
+	var wce := str(Coaches.staff(GameState.coaches, "WCE").get("SC", ""))
+	_check(wce != "" and str(GameState.coaches[wce].get("real_name", "")) == "Michael Malthouse",
+			"West Coast's is Michael Malthouse")
+	var lions := str(Coaches.staff(GameState.coaches, "BRL").get("SC", ""))
+	_check(lions != "" and str(GameState.coaches[lions].get("real_name", "")) == "Norm Dare",
+			"The Bears' code reads as Brisbane's: Norm Dare")
+	# The real 1990 captains: Melbourne's Garry Lyon was not captain until 1993.
+	var caps := 0
+	for club in GameState.season.clubs:
+		for p in (GameState.season.lists[club] as Array):
+			if Leadership.role_2026(p) == "captain":
+				caps += 1
+	_check(caps >= 12, "The clubs' real 1990 captains carry the armband's record (%d)" % caps)
+	GameState.reset()
+	_check(GameDB.dataset_id == "2026" and Leadership.path == Leadership.PATH and Leadership.shown_through == 2027,
+			"A new career is the 2026 set, its captains and coaches again")
+	var c26 := Coaches.seed("GEE")
+	_check(c26.has("C_chris_scott") and str(c26["C_chris_scott"].get("status", "")) == "free",
+			"A 2026 career still seeds 2026's coaches, Chris Scott making way at Geelong")
+
+
+## A 1990 career at `club`, as Choose your club starts it; returns the ids of
+## the club's real 1990 list.
+func _start_1990(club: String) -> Dictionary:
+	GameState.reset("1990")
+	GameState.replay_seed = SUITE_SEED
+	GameState.career_seed = SUITE_SEED
+	GameState.begin_real_lists()
+	var want := {}
+	for p in GameDB.club_list(club) + GameDB.club_additions(club):
+		want[str(p["id"])] = true
+	GameState.choose_real_club(club)
+	var guard := 0
+	while GameState.draft != null and not GameState.draft.is_finished() and guard < 400:
+		guard += 1
+		if GameState.draft.is_user_turn():
+			var board: Array = GameState.draft.board("", "", "", "overall", true)
+			if board.is_empty() or not GameState.draft.pick(board[0]):
+				break
+	GameState.finish_intake_draft()
+	return want
+
+
+## 1990 is the start of a campaign that plays on to 2026 and beyond (director
+## 2026-11-13: "its simply the start of a 36+ year campaign"), not a one-year
+## task: the career rolls into 1991 on the same set, the coach you replaced is
+## still in the coaching world (where the sim took him: "Sim decides"), every
+## other club still has a senior coach, and the 1990 captains' record is not
+## shown as current in 1991.
+func _test_legacy_rolls_into_1991() -> void:
+	_start_1990("MEL")
+	var northey_id := ""
+	for cid in GameState.coaches:
+		if str(GameState.coaches[cid].get("real_name", "")) == "John Northey":
+			northey_id = str(cid)
+	var guard := 0
+	while not GameState.season.is_season_over() and guard < 60:
+		guard += 1
+		GameState.advance()
+	_check(GameState.season.is_season_over(), "The 1990 season plays out (%d weeks)" % guard)
+	_check(GameState.start_next_season(), "The 1990 career rolls on")
+	_check(GameState.season_year == 1991 and GameState.my_club == "MEL" and GameDB.dataset_id == "1990"
+			and GameState.dataset == "1990",
+			"It is 1991 at Melbourne, still the career begun in 1990 (%d, %s, set %s)" % [
+				GameState.season_year, GameState.my_club, GameDB.dataset_id])
+	var northey: Dictionary = GameState.coaches.get(northey_id, {})
+	_check(northey_id != "" and str(northey.get("real_name", "")) == "John Northey"
+			and ["free", "club", "away", "out"].has(str(northey.get("status", ""))),
+			"John Northey is still in the coaching world in 1991 (%s%s)" % [
+				str(northey.get("status", "missing")), "" if str(northey.get("club", "")) == "" else " at " + str(northey.get("club", ""))])
+	_check(Coaches.staff(GameState.coaches, "MEL").get("SC", "") == "",
+			"Melbourne's senior job is still yours")
+	var no_sc := []
+	for club in GameState.season.clubs:
+		if club != "MEL" and str(Coaches.staff(GameState.coaches, club).get("SC", "")) == "":
+			no_sc.append(club)
+	_check(no_sc.is_empty(), "Every other club has a senior coach in 1991 (%s)" % str(no_sc))
+	var shown := 0
+	for club in GameState.season.clubs:
+		for p in (GameState.season.lists[club] as Array):
+			if Leadership.role_line(p, GameState.season_year) != "":
+				shown += 1
+	_check(shown == 0, "The 1990 captains' record is not shown as current in 1991 (%d)" % shown)
+	GameState.reset()
+
+
+## A 1990 League redraft (director 2026-11-13: "make a 1990 redraft campaign
+## possible too"): the 14 clubs of 1990 re-draft from one pool of their
+## players, no club that joined later is in it, and you still take over from
+## your club's real senior coach, who joins the coach pool. The season is 1990
+## and rolls into 1991 on the same set.
+func _test_legacy_redraft_1990() -> void:
+	GameState.reset("1990")
+	GameState.replay_seed = SUITE_SEED
+	GameState.career_seed = SUITE_SEED
+	GameState.begin_draft()
+	var draft: Draft = GameState.draft
+	var late := []
+	for code in ["ADE", "PA", "PTA", "FRE", "GC", "GCS", "GWS", "TAS", "CANB"]:
+		if draft.clubs.has(code):
+			late.append(code)
+	_check(draft.clubs.size() == 14 and draft.clubs.has("MEL") and late.is_empty() and GameState.expansion_from == 0,
+			"The 1990 League redraft has the 14 clubs of 1990 and no later club (%d clubs, %s)" % [draft.clubs.size(), str(late)])
+	var real_ids := {}
+	for p in GameDB.all_players_sorted():
+		real_ids[str(p["id"])] = true
+	draft.start_for_user("MEL")
+	var guard := 0
+	draft.auto_until_user_turn()
+	while not draft.is_finished() and guard < 8000:
+		guard += 1
+		var cand := draft._best_ai_pick(draft.current_club())
+		if cand.is_empty() or not draft._draft_pick(draft.current_club(), cand):
+			draft._skip_current_pick()
+		draft.auto_until_user_turn()
+	_check(draft.is_finished(), "The 1990 League redraft completes")
+	var mine: Array = draft.list()
+	var from_1990 := 0
+	for p in mine:
+		from_1990 += 1 if real_ids.has(str(p.get("id", ""))) else 0
+	GameState.start_season("MEL", mine)
+	var by_name := {}
+	for cid in GameState.coaches:
+		var c: Dictionary = GameState.coaches[cid]
+		if str(c.get("real_name", "")) != "":
+			by_name[str(c["real_name"])] = c
+	var northey: Dictionary = by_name.get("John Northey", {})
+	_check(GameState.season_year == 1990 and GameState.my_club == "MEL" and GameState.season.ladder.size() == 14,
+			"You coach Melbourne in 1990 on a 14-club ladder (%d, %s, %d clubs)" % [
+				GameState.season_year, GameState.my_club, GameState.season.ladder.size()])
+	_check(str(northey.get("status", "")) == "free" and str(northey.get("club", "")) == ""
+			and not Coaches.staff(GameState.coaches, "MEL").has("SC")
+			and str(GameState.coaches.get(str(Coaches.staff(GameState.coaches, "WCE").get("SC", "")), {}).get("real_name", "")) == "Michael Malthouse",
+			"A redraft still replaces John Northey, who is a free coach; West Coast keep Mick Malthouse (%s)" % str(northey.get("status", "missing")))
+	_check(mine.size() >= 30 and from_1990 > 0,
+			"Your redrafted list is drawn from the 1990 pool (%d players, %d real)" % [mine.size(), from_1990])
+	GameState.reset()

@@ -17,6 +17,8 @@ extends RefCounted
 ## rollover.
 
 const MIN_LIST := 32
+## The game's list limit (senior and Category A rookies). A Legacy season
+## reads its own year's limit: max_list().
 const MAX_LIST := 44
 const MAX_YEARS := 4
 ## Rivals fill their lists from free agency up to this size.
@@ -37,7 +39,61 @@ const SALARY_STEP := 100000
 const FUTURE_GROWTH := 1.03
 
 
+## Legacy mode (director 2026-11-12, "Dollars of the time"): a season the
+## real record covers (data/legacy/era_rules.csv, EraRules) shows salaries,
+## the cap and every money figure in that season's dollars. The model is
+## priced in 2027 dollars; `dollars` scales it by that year's cap over the
+## 2027 cap. Today's seasons (no era cap) scale by exactly 1, untouched.
+## GameState sets `money_year` with the season (its season_year setter).
+static var money_year := 0
+
+
+## The season's list limit, senior and Category A rookies together: MAX_LIST
+## in the game's league, the real limit of the year in a Legacy season
+## (EraRules: 52 senior in 1993, no rookie list before 1997, ...).
+static func max_list() -> int:
+	return EraRules.list_max()
+
+
+## The real cap for an era season, or 0 when the record has none (2026 on).
+static func era_cap(year: int) -> int:
+	if year <= 0 or year >= 2027:
+		return 0
+	return int(EraRules.value("salary_cap", year, 0.0))
+
+
+## That season's dollars per 2027 dollar: 1.0 outside the era record.
+static func era_scale(year: int) -> float:
+	var cap := era_cap(year)
+	return 1.0 if cap <= 0 else float(cap) / float(CAP_2027)
+
+
+## `amount` 2027 model dollars in `year`'s dollars (default: the season being
+## played), to the nearest $1k. Unchanged outside the era record.
+static func dollars(amount: int, year := -1) -> int:
+	var s := era_scale(money_year if year < 0 else year)
+	if s == 1.0:
+		return amount
+	return int(round(float(amount) * s / 1000.0)) * 1000
+
+
+## The senior minimum wage and one offer step, in this season's dollars. The
+## minimum is the CBA's own base payment where the record has it (senior_min).
+static func senior_min(year := -1) -> int:
+	var y := money_year if year < 0 else year
+	if era_cap(y) > 0 and EraRules.has("senior_min", y):
+		return int(EraRules.value("senior_min", y))
+	return dollars(SENIOR_MIN_2027, year)
+
+
+static func salary_step(year := -1) -> int:
+	return maxi(1000, dollars(SALARY_STEP, year))
+
+
 static func salary_cap_for_year(year: int) -> int:
+	var era := era_cap(year)
+	if era > 0:
+		return era
 	if year <= 2027:
 		return CAP_2027
 	var cap := float(CAP_2027)
@@ -47,6 +103,8 @@ static func salary_cap_for_year(year: int) -> int:
 
 
 static func indexed_money_2027(amount: int, year: int) -> int:
+	if era_cap(year) > 0:
+		return dollars(amount, year)
 	var value := float(amount)
 	for y in range(2028, year + 1):
 		value *= FUTURE_GROWTH
@@ -79,7 +137,9 @@ static func old_points_to_salary(points: int) -> int:
 ## preference and compensation use this normalised value so moving to dollars
 ## does not make money overwhelm role, security, rating or age.
 static func salary_score(salary: int) -> float:
-	return clampf(1.0 + 9.0 * (float(salary) - 155000.0) / (1250000.0 - 155000.0), 1.0, 12.0)
+	# Read in 2027 dollars, so an era season's offers weigh the same.
+	var s := float(salary) / era_scale(money_year)
+	return clampf(1.0 + 9.0 * (s - 155000.0) / (1250000.0 - 155000.0), 1.0, 12.0)
 
 
 ## First contracts for a list: younger players on longer deals. Seeded by
@@ -99,7 +159,7 @@ static func assign_initial(list: Array) -> void:
 		else:
 			years = rng.randi_range(1, 2)
 		p["contract_years"] = years
-		p["salary"] = int(p.get("value", 3))
+		p["salary"] = dollars(int(p.get("value", 3)))
 
 
 ## A first-year National Draft deal (a draftee's, on the senior list; the
@@ -122,7 +182,7 @@ static func draftee_deal(p: Dictionary, year := 2027) -> void:
 
 ## What re-signing (or signing) this player costs now.
 static func asking_salary(p: Dictionary) -> int:
-	var price := Ratings.salary_value(int(p.get("overall", 50)))
+	var price := dollars(Ratings.salary_value(int(p.get("overall", 50))))
 	# An unhappy player wants paying to stay.
 	if ClubLife.morale(p) < 40:
 		price = ceili(price * 1.25)
@@ -238,8 +298,8 @@ static func lowest(p: Dictionary, years: int) -> int:
 	var want := wants(p)
 	var price := int(want["salary"])
 	if years < int(want["years"]):
-		return price + SALARY_STEP
-	return maxi(SENIOR_MIN_2027, int(round(float(price) * (1.0 - 0.2 * (1.0 - leverage(p))) / 5000.0)) * 5000)
+		return price + salary_step()
+	return maxi(senior_min(), int(round(float(price) * (1.0 - 0.2 * (1.0 - leverage(p))) / 5000.0)) * 5000)
 
 
 ## His answer to `salary` over `years`, given how many offers have already
@@ -373,9 +433,10 @@ static func best_offer(p: Dictionary, offers: Array) -> Dictionary:
 ## player he will be (TradeValue.future_rating / now_rating).
 static func club_max(p: Dictionary, role: String, cap_room: int, phase := "") -> int:
 	var ask := asking_salary(p)
-	var most := ask + 2 * SALARY_STEP if role == "ground" else (ask + SALARY_STEP if role == "bench" else lowest(p, ai_years(p)))
+	var step := salary_step()
+	var most := ask + 2 * step if role == "ground" else (ask + step if role == "bench" else lowest(p, ai_years(p)))
 	if growth_premium(p, phase):
-		most += SALARY_STEP
+		most += step
 	return mini(most, cap_room)
 
 
@@ -403,7 +464,7 @@ static func rival_response(p: Dictionary, own: Dictionary, leader: Dictionary, m
 	var years_options := [int(own["years"])]
 	if wanted > int(own["years"]):
 		years_options.append(wanted)
-	for salary in range(int(own["salary"]), most + 1, SALARY_STEP):
+	for salary in range(int(own["salary"]), most + 1, salary_step()):
 		for years in years_options:
 			var trial: Dictionary = own.duplicate()
 			trial["salary"] = salary
@@ -457,7 +518,9 @@ const POINT_DOLLARS := (1250000.0 - 155000.0) / 9.0
 
 ## Dollars a season that `points` of his score are worth, to the nearest $10k.
 static func points_money(points: float) -> int:
-	return int(round(points * POINT_DOLLARS / 10000.0)) * 10000
+	var s := era_scale(money_year)
+	var unit := 10000.0 if s == 1.0 else 1000.0
+	return int(round(points * POINT_DOLLARS * s / unit)) * int(unit)
 
 
 ## What offer `o` is worth to him a season, in dollars: its salary plus his
@@ -465,7 +528,9 @@ static func points_money(points: float) -> int:
 ## and its push to win, each at its offer_score weight. A higher worth is the
 ## offer he prefers (`prefers`), ties aside.
 static func worth_to_him(p: Dictionary, o: Dictionary) -> int:
-	return int(round(((offer_score(p, o) - 1.0) * POINT_DOLLARS + float(SENIOR_MIN_2027)) / 10000.0)) * 10000
+	var s := era_scale(money_year)
+	var unit := 10000.0 if s == 1.0 else 1000.0
+	return int(round(((offer_score(p, o) - 1.0) * POINT_DOLLARS * s + float(senior_min())) / unit)) * int(unit)
 
 
 ## How he weighs any offer besides its salary, each part in dollars a season
@@ -597,7 +662,7 @@ static func pick_words(after: int, clubs: int) -> String:
 static func payroll(list: Array) -> int:
 	var total := 0
 	for p in list:
-		total += int(p.get("salary", p.get("value", SENIOR_MIN_2027)))
+		total += int(p["salary"]) if p.has("salary") else dollars(int(p.get("value", SENIOR_MIN_2027)))
 	return total
 
 
@@ -658,12 +723,12 @@ static func evaluate_trade(ai_list: Array, give: Array, take: Array, cap: int,
 	var ai_block := RookieList.trade_block(ai_list, give, take)
 	var my_block := RookieList.trade_block(my_list, take, give)
 	if ai_block == "list" or my_block == "list":
-		return _verdict(false, "trade_list_over", ctx, {"n": MAX_LIST})
+		return _verdict(false, "trade_list_over", ctx, {"n": max_list()})
 	# Every player traded in lands on the senior list (row 88): a side may not
 	# end past its senior spots, unless it was already past them and the trade
 	# leaves it no further over (a list seeded over the cap can still deal).
 	if ai_block == "senior" or my_block == "senior":
-		return _verdict(false, "trade_senior_over", ctx, {"n": RookieList.SENIOR_SPOTS})
+		return _verdict(false, "trade_senior_over", ctx, {"n": RookieList.senior_spots()})
 	# No trade takes a side under the minimum. A side already under it stays
 	# able to deal as long as the trade leaves its list no smaller: only a
 	# medical retirement (GameState._medical_retire) puts a club there, and it

@@ -198,11 +198,11 @@ func _budget(body: VBoxContainer) -> void:
 			else GameState.season_year + 1
 	body.add_child(UiKit.lbl("Club budget · %d" % year, UiKit.NAME, UiKit.EMPH, true))
 	body.add_child(_para(
-			"$%.1fm to allocate for the football year. It resets next off-season; there is no bank balance to hoard." \
-			% ClubBudget.ANNUAL_M, 13, UiKit.MUTED))
+			"%s to allocate for the football year. It resets next off-season; there is no bank balance to hoard." \
+			% ClubBudget.money_m(ClubBudget.ANNUAL_M, year), 13, UiKit.MUTED))
 	var spent := GameState.department_budget_spent_m()
 	var remaining := GameState.department_budget_remaining_m()
-	var summary := UiKit.lbl("$%.1fm allocated  ·  $%.1fm remaining" % [spent, maxf(0.0, remaining)],
+	var summary := UiKit.lbl("%s allocated  ·  %s remaining" % [ClubBudget.money_m(spent, year), ClubBudget.money_m(maxf(0.0, remaining), year)],
 			14, UiKit.TEXT, true)
 	summary.name = "BudgetSummary"
 	body.add_child(summary)
@@ -226,8 +226,8 @@ func _budget(body: VBoxContainer) -> void:
 		var label := UiKit.lbl(str(ClubBudget.AREA_LABEL[area]), UiKit.BODY, UiKit.TEXT, true)
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		head.add_child(label)
-		head.add_child(UiKit.line("%s · $%.1fm" % [
-				ClubBudget.level_label(level), ClubBudget.cost_m(level)], 13, UiKit.MUTED, true))
+		head.add_child(UiKit.line("%s · %s" % [
+				ClubBudget.level_label(level), ClubBudget.money_m(ClubBudget.cost_m(level), year)], 13, UiKit.MUTED, true))
 
 		var current := _para(ClubBudget.benefit_text(area, level), 13, UiKit.TEXT)
 		current.name = "BudgetBenefit_" + area
@@ -237,8 +237,8 @@ func _budget(body: VBoxContainer) -> void:
 		next_text.name = "BudgetNext_" + area
 		next_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		if level < ClubBudget.LEVELS.size() - 1:
-			next_text.text = "Raise to %s ($%.1fm): %s" % [
-					ClubBudget.level_label(level + 1), ClubBudget.cost_m(level + 1),
+			next_text.text = "Raise to %s (%s): %s" % [
+					ClubBudget.level_label(level + 1), ClubBudget.money_m(ClubBudget.cost_m(level + 1), year),
 					ClubBudget.benefit_text(area, level + 1)]
 		else:
 			next_text.text = "Maximum funding."
@@ -512,7 +512,7 @@ func _show_talks() -> void:
 			v.add_child(odds)
 	var no_spot := RookieList.add_block(GameState.my_list, "senior") if _talk_fa else ""
 	if no_spot == "senior":
-		v.add_child(_para("Your senior list is full (%d): release a player first." % RookieList.SENIOR_SPOTS, 14, UiKit.BAD))
+		v.add_child(_para("Your senior list is full (%d): release a player first." % RookieList.senior_spots(), 14, UiKit.BAD))
 	elif no_spot != "":
 		v.add_child(_para(RookieList.block_words(GameState.my_list, no_spot) + " Release a player first.", 14, UiKit.BAD))
 	for reason in terms.get("reasons", []):
@@ -545,9 +545,9 @@ func _show_talks() -> void:
 	var less := UiKit.btn("−", UiKit.HEADING)
 	less.name = "SalaryDown"
 	less.custom_minimum_size = Vector2(56, 44)
-	less.disabled = _offer_salary <= Contracts.SENIOR_MIN_2027
+	less.disabled = _offer_salary <= Contracts.senior_min()
 	less.pressed.connect(func():
-		_offer_salary = maxi(Contracts.SENIOR_MIN_2027, _offer_salary - Contracts.SALARY_STEP)
+		_offer_salary = maxi(Contracts.senior_min(), _offer_salary - Contracts.salary_step())
 		_show_talks())
 	srow.add_child(less)
 	var amount := UiKit.lbl(Contracts.money(_offer_salary), 20, UiKit.TEXT, true)
@@ -559,7 +559,7 @@ func _show_talks() -> void:
 	more.name = "SalaryUp"
 	more.custom_minimum_size = Vector2(56, 44)
 	more.pressed.connect(func():
-		_offer_salary += Contracts.SALARY_STEP
+		_offer_salary += Contracts.salary_step()
 		_show_talks())
 	srow.add_child(more)
 	# Your own player's current salary is already on the books; a free
