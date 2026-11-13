@@ -76,6 +76,19 @@ const INTERCHANGE := 5
 ## The bench size selection uses: INTERCHANGE, changed only by audits that
 ## compare squad sizes on the same seeds (tools/audit/interchange_impl.gd).
 static var bench_size := INTERCHANGE
+
+
+## The season's bench: bench_size in the game's league, the year's interchange
+## count in a Legacy season (EraRules: two to 1993, three 1994-97, four
+## 1998-2010, three 2011-15, four 2016-25).
+static func bench() -> int:
+	return EraRules.interchange() if EraRules.is_era(EraRules.year) else bench_size
+
+
+## Substitutes named beside the bench in a Legacy season (EraRules): one in
+## 2011-15 and 2021-25, none in the game's league.
+static func subs() -> int:
+	return EraRules.substitutes()
 ## Audits only: false reproduces the old bench (best of the rest, no line
 ## cover, no dual ruck) for a before/after comparison.
 static var bench_rules := true
@@ -760,14 +773,14 @@ static func select_22(list_players: Array, dual := -1) -> Dictionary:
 		used[spare_ruck["id"]] = true
 	for line in (BENCH_COVER if bench_rules else []):
 		for p in pool:
-			if bench.size() >= bench_size:
+			if bench.size() >= bench():
 				break
 			if not used.has(p["id"]) and str(p.get("role", "")) == line:
 				bench.append(p)
 				used[p["id"]] = true
 				break
 	for p in pool:
-		if bench.size() >= bench_size:
+		if bench.size() >= bench():
 			break
 		if not used.has(p["id"]):
 			bench.append(p)
@@ -776,7 +789,7 @@ static func select_22(list_players: Array, dual := -1) -> Dictionary:
 	# The AI's call: a second ruck earns the last spot when he is close to
 	# the player he'd replace.
 	if dual == -1 and bench_rules and not spare_ruck.is_empty() and not used.has(spare_ruck["id"]) \
-			and bench.size() >= bench_size and bench_size > BENCH_COVER.size():
+			and bench.size() >= bench() and bench() > BENCH_COVER.size():
 		var last: Dictionary = bench[bench.size() - 1]
 		if float(spare_ruck["overall"]) >= float(last["overall"]) - DUAL_RUCK_MARGIN:
 			used.erase(last["id"])
@@ -919,14 +932,14 @@ static func select_side(list_players: Array, selection: Dictionary = {}) -> Dict
 				have += 1
 	var bench: Array = []
 	for id in selection.get("BENCH", []):
-		if bench.size() >= bench_size:
+		if bench.size() >= bench():
 			break
 		if by_id.has(str(id)) and not used.has(str(id)):
 			bench.append(by_id[str(id)])
 			used[str(id)] = true
 	for pass_tier in [0, 2]:
 		for p in pool:
-			if bench.size() >= bench_size:
+			if bench.size() >= bench():
 				break
 			var id := str(p["id"])
 			if not used.has(id) and int(tier.get(id, 0)) == pass_tier:

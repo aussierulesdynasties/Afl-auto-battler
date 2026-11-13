@@ -17,6 +17,8 @@ extends RefCounted
 ## rollover.
 
 const MIN_LIST := 32
+## The game's list limit (senior and Category A rookies). A Legacy season
+## reads its own year's limit: max_list().
 const MAX_LIST := 44
 const MAX_YEARS := 4
 ## Rivals fill their lists from free agency up to this size.
@@ -44,6 +46,13 @@ const FUTURE_GROWTH := 1.03
 ## 2027 cap. Today's seasons (no era cap) scale by exactly 1, untouched.
 ## GameState sets `money_year` with the season (its season_year setter).
 static var money_year := 0
+
+
+## The season's list limit, senior and Category A rookies together: MAX_LIST
+## in the game's league, the real limit of the year in a Legacy season
+## (EraRules: 52 senior in 1993, no rookie list before 1997, ...).
+static func max_list() -> int:
+	return EraRules.list_max()
 
 
 ## The real cap for an era season, or 0 when the record has none (2026 on).
@@ -714,12 +723,12 @@ static func evaluate_trade(ai_list: Array, give: Array, take: Array, cap: int,
 	var ai_block := RookieList.trade_block(ai_list, give, take)
 	var my_block := RookieList.trade_block(my_list, take, give)
 	if ai_block == "list" or my_block == "list":
-		return _verdict(false, "trade_list_over", ctx, {"n": MAX_LIST})
+		return _verdict(false, "trade_list_over", ctx, {"n": max_list()})
 	# Every player traded in lands on the senior list (row 88): a side may not
 	# end past its senior spots, unless it was already past them and the trade
 	# leaves it no further over (a list seeded over the cap can still deal).
 	if ai_block == "senior" or my_block == "senior":
-		return _verdict(false, "trade_senior_over", ctx, {"n": RookieList.SENIOR_SPOTS})
+		return _verdict(false, "trade_senior_over", ctx, {"n": RookieList.senior_spots()})
 	# No trade takes a side under the minimum. A side already under it stays
 	# able to deal as long as the trade leaves its list no smaller: only a
 	# medical retirement (GameState._medical_retire) puts a club there, and it
