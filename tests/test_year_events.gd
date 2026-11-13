@@ -42,6 +42,9 @@ func run() -> void:
 	_t("_test_switch_off_fires_no_controversy")
 	_t("_test_forfeited_pick_skipped")
 	_t("_test_save_keeps_state")
+	_t("_test_supplements_switch_apart")
+	_t("_test_supplements_bans_land_and_lift")
+	_t("_test_supplements_switch_saved")
 	GameDB.reload()
 	print(Ran.line("Year events", self))
 
@@ -73,7 +76,7 @@ func _test_data_whole() -> void:
 		for p in e.get("penalties", []):
 			if not bool(e.get("controversy", false)):
 				bad.append(id + " penalty without controversy")
-			if not ["fine", "lose_pick", "finals_ban", "trade_ban"].has(str(p.get("op", ""))):
+			if not ["fine", "lose_pick", "finals_ban", "trade_ban", "record_list", "season_ban", "top_up"].has(str(p.get("op", ""))):
 				bad.append(id + " op")
 	_check(bad.is_empty(), "Every event has an id, a season 1990-2026, a headline, beats, its research rows and real clubs (%s)" % str(bad))
 
@@ -102,8 +105,9 @@ func _test_fine_cut() -> void:
 
 
 ## A 1990 career at Essendon, moved season by season through the sample.
-func _start_1990(club: String, controversies: bool) -> void:
+func _start_1990(club: String, controversies: bool, supplements = null) -> void:
 	GameState.set_setting("controversies", controversies)
+	GameState.set_setting("supplements", controversies if supplements == null else bool(supplements))
 	GameState.reset("1990")
 	GameState.career_seed = SUITE_SEED
 	GameState.replay_seed = SUITE_SEED
@@ -242,3 +246,111 @@ func _test_save_keeps_state() -> void:
 	state.erase("year_events")
 	_check(GameState._restore_career(state.duplicate(true)) and GameState.controversies and GameState.year_events.is_empty(),
 			"An older save loads with Controversies on and nothing fired")
+
+
+# ---------------------------------------------------------------------------
+# The supplements saga's own switch (director, 2026-11-13).
+
+## Is this year event the supplements saga's?
+func _supplements(id: String) -> bool:
+	return id in ["supplements_saga", "supplements_bans"]
+
+
+func _test_supplements_switch_apart() -> void:
+	# Controversies on, the saga off: the other 2013 scandal fires, the saga never does.
+	_start_1990("ESS", true, false)
+	_check(GameState.controversies and not GameState.supplements, "A career with Controversies on and the saga off")
+	_jump(2013)
+	_jump(2016)
+	_check(_fired().has("tanking_inquiry") and not _fired().has("supplements_saga") and not _fired().has("supplements_bans"),
+			"Saga off: no saga, no bans; the tanking inquiry still fires (%s)" % str(_fired()))
+	_check(GameState.pick_owner_of(2013, 1, "ESS") == "ESS" and YearEvents.finals_banned(GameState).is_empty(),
+			"Saga off: Essendon keep their picks and their finals")
+	var banned := 0
+	for code in GameState.season.lists:
+		for p in GameState.season.lists[code]:
+			if YearEvents.is_banned(p):
+				banned += 1
+	_check(banned == 0, "Saga off: nobody is banned (%d)" % banned)
+	# Controversies off, the saga on: only the saga fires.
+	_start_1990("ESS", false, true)
+	_jump(2013)
+	_jump(2016)
+	_check(_fired().has("supplements_saga") and _fired().has("supplements_bans") and not _fired().has("tanking_inquiry"),
+			"Controversies off does not switch the saga off (%s)" % str(_fired()))
+	GameState.set_setting("controversies", true)
+	GameState.set_setting("supplements", true)
+
+
+## Give a listed player a banned player's surname and birthday.
+func _as(p: Dictionary, first: String, last: String, dob: String) -> Dictionary:
+	p["first"] = first
+	p["last"] = last
+	p["dob"] = dob
+	return p
+
+
+func _move(p: Dictionary, from: String, to: String) -> void:
+	(GameState.season.lists[from] as Array).erase(p)
+	p["club"] = to
+	(GameState.season.lists[to] as Array).append(p)
+
+
+func _test_supplements_bans_land_and_lift() -> void:
+	_start_1990("ESS", true, true)
+	var ess: Array = GameState.season.lists["ESS"]
+	var watson := _as(ess[0], "Jobe", "Watson", "1985-02-08")
+	var hurley := _as(ess[1], "Michael", "Hurley", "1990-06-01")
+	var carlisle := _as(ess[2], "Jake", "Carlisle", "1991-10-01")
+	# Melksham is at Melbourne when the saga breaks: this save never had him at Essendon.
+	var melksham := _as(GameState.season.lists["MEL"][0], "Jake", "Melksham", "1991-08-29")
+	_jump(2013)
+	_check(_fired().has("supplements_saga"), "2013: the saga breaks")
+	# The save trades Carlisle to St Kilda before the bans.
+	_move(carlisle, "ESS", "STK")
+	var list_before: int = (GameState.season.lists["ESS"] as Array).size()
+	GameState.season_year = 2016
+	var want := mini(2, MidseasonDraft.pool(GameState).size())
+	_jump(2016)
+	_check(_fired().has("supplements_bans") and _news_has("supplements_bans"), "2016: the bans fire and make the news")
+	_check(YearEvents.is_banned(watson) and YearEvents.is_banned(hurley), "Essendon's banned players are banned for 2016")
+	_check(YearEvents.is_banned(carlisle) and str(carlisle["club"]) == "STK",
+			"A banned player the save traded away is still banned at his new club")
+	_check(not YearEvents.is_banned(melksham), "A player who was never at Essendon in this save is not banned")
+	_check(not Ratings.available(watson) and not Backing.fit(watson), "A banned player cannot play")
+	var side := Ratings.select_side(GameState.season.lists["ESS"])
+	var ids := []
+	for slot in side.values():
+		if slot is Array:
+			for q in slot:
+				ids.append(str(q["id"]) if q is Dictionary else str(q))
+	_check(not ids.has(str(watson["id"])) and not ids.has(str(hurley["id"])),
+			"Essendon's side is picked without its banned players")
+	# The top-up rule: one for each of Essendon's own banned, up to ten, this season only.
+	var tops := []
+	for p in GameState.season.lists["ESS"]:
+		if int(p.get("top_up", 0)) == 2016:
+			tops.append(p)
+	_check(want > 0 and tops.size() == want and (GameState.season.lists["ESS"] as Array).size() == list_before + want,
+			"Essendon top up one player for each of their two banned (%d of %d)" % [tops.size(), want])
+	_check(tops.all(func(p): return int(p.get("contract_years", 0)) == 1),
+			"A top-up player is signed for this season only")
+	# 2017: back.
+	GameState.season_year = 2017
+	GameState.season.round_index = 0
+	YearEvents.week(GameState)
+	_check(not YearEvents.is_banned(watson) and not YearEvents.is_banned(carlisle) and Ratings.available(watson),
+			"2017: the banned players are back")
+	_check((YearEvents.state(GameState)["season_bans"] as Dictionary).is_empty(), "The bans are cleared once lifted")
+
+
+func _test_supplements_switch_saved() -> void:
+	_start_1990("ESS", true, false)
+	var state: Dictionary = GameState._save_state()
+	_check(GameState._restore_career(state.duplicate(true)) and GameState.controversies and not GameState.supplements,
+			"A save keeps the saga switch apart from Controversies")
+	state.erase("supplements")
+	state["controversies"] = false
+	_check(GameState._restore_career(state.duplicate(true)) and not GameState.supplements,
+			"An older save has the saga under Controversies")
+	GameState.set_setting("supplements", true)

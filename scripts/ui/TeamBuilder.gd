@@ -758,6 +758,8 @@ func _why_out(p: Dictionary) -> String:
 		return "Injured, %d wk" % int(p["injury_weeks"])
 	if int(p.get("suspension_weeks", 0)) > 0:
 		return "Suspended"
+	if p.has("season_ban"):
+		return "Banned for %d" % int(p["season_ban"])
 	return "Unavailable"
 
 
