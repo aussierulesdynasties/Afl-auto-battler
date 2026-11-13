@@ -92,7 +92,9 @@ func _show_week_ask() -> void:
 	# opens when the hub comes back.
 	if not GameState.media_conference_pending() and _show_new_event():
 		return
-	if not MidseasonDraft.carnival_lines(GameState).is_empty():
+	if YearEvents.top_up_waiting(GameState):
+		TopUpSheet.open(self, _after_ask)
+	elif not MidseasonDraft.carnival_lines(GameState).is_empty():
 		_show_carnival()
 	elif MidseasonDraft.waiting(GameState):
 		_show_midseason_pick()
@@ -1216,6 +1218,8 @@ static func skip_lines(season: Season, year: int, answers: Dictionary, to := "se
 	# A pick left unmade passes when the next round is played (MidseasonDraft, RookieList).
 	if season.round_index < MidseasonDraft.DRAFT_AFTER or MidseasonDraft.waiting(GameState) or RookieList.waiting(GameState):
 		stop += " Any rookie pick that comes up along the way is passed."
+	if YearEvents.top_up_waiting(GameState):
+		stop += " The top-up spots you have not filled stay empty."
 	out.append(["SkipStop", stop, false])
 	return out
 
@@ -2408,6 +2412,8 @@ func handle_back() -> bool:
 		_close_midseason(true)
 		return true
 	if RookieDraftSheet.close_open(self):
+		return true
+	if TopUpSheet.close_open(self):
 		return true
 	if DraftSpotsSheet.close_open(self):
 		return true
