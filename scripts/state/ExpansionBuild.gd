@@ -483,6 +483,7 @@ static func _make_room(gs, code: String, picks: Array) -> void:
 		list.erase(p)
 		if str(p.get("real_name", "")) != "":
 			p["club"] = ""
+			p["draft_year"] = int(gs.season_year)
 			gs.draftee_pool.append(p)
 
 
