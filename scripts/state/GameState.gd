@@ -2598,7 +2598,7 @@ func finish_intake_draft() -> bool:
 
 ## Roll every list forward one year and rebuild the season. Split out so a
 ## career can continue even when there is no prospect pool to draft.
-func _start_next_season(next_year: int, signed: int) -> void:
+func _start_next_season(next_year: int, signed: int, min_left := 0) -> void:
 	# His first postseason is over, seen or not; a season played without
 	# you is not his (bug-bash 6).
 	if my_first_season != 0 and season_year >= my_first_season:
@@ -2707,7 +2707,7 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	# ages or retires; given back after ageing, before the re-anchor (row 90).
 	var train_unwind := Prospects.training_unwind(league_lists, next_year)
 	Season.beat()
-	intake_summary = Prospects.age_league(league_lists, next_year)
+	intake_summary = Prospects.age_league(league_lists, next_year, min_left)
 	Season.beat()
 	intake_summary["signed"] = signed
 	# A free agent still in the pool (_fa_staying) is a year older too; out of
@@ -2969,7 +2969,8 @@ func start_next_season() -> bool:
 			return false  # an intake still in progress blocks the rollover
 		draft = null  # a completed career draft sitting in the slot is spent
 	_ensure_league_lists()
-	_start_next_season(season_year + 1, 0)
+	# No draft refills the lists, so no retirement takes one under the minimum.
+	_start_next_season(season_year + 1, 0, Contracts.MIN_LIST)
 	autosave()
 	return true
 
