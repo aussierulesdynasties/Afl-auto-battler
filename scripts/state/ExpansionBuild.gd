@@ -467,7 +467,7 @@ static func _make_room(gs, code: String, picks: Array) -> void:
 	for e in picks:
 		if str(e["club"]) == code:
 			held += 1
-	var over := RookieList.draft_size(list) + held - RookieList.SENIOR_SPOTS
+	var over := RookieList.draft_size(list) + held - RookieList.senior_spots()
 	if over <= 0:
 		return
 	var state_league := list.filter(func(p): return str(p["id"]).begins_with("FND_"))
