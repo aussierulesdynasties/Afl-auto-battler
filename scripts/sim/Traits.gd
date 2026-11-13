@@ -127,9 +127,9 @@ static func wet_weather(p: Dictionary) -> bool:
 ## chance of possessing the trait too"). Born, not trained, and on top of the
 ## five like Unicorn. A real player has it when he was on an AFL list in the
 ## season he turned FINE_WINE_AGE or older (data/fine_wine.csv, built by
-## tools/build_fine_wine.py from the 1990-2026 lists); a generated draftee rolls
-## FINE_WINE_DRAFTEE_ODDS once, when his class is made (Prospects), and carries
-## p["fine_wine"]. Every club alike.
+## tools/build_fine_wine.py from the 1990-2026 lists); every draftee whose
+## career is still ahead of him rolls FINE_WINE_DRAFTEE_ODDS once
+## (Prospects.roll_fine_wine) and carries p["fine_wine"]. Every club alike.
 ##
 ## The numbers come from real careers (docs/FINE_WINE_EVIDENCE.md): 36 of 2,789
 ## players who joined a list at 21 or younger (1991 on, born by 1990) were still

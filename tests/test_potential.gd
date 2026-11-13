@@ -553,7 +553,7 @@ func _test_fine_wine_draftee_rate() -> void:
 	for b in range(400):
 		var cls := []
 		for i in range(50):
-			cls.append({})
+			cls.append({"generated": true})
 		Prospects.roll_fine_wine(cls, "test-%d" % b)
 		for p in cls:
 			total += 1
@@ -563,6 +563,16 @@ func _test_fine_wine_draftee_rate() -> void:
 	_check(absf(rate - Traits.FINE_WINE_DRAFTEE_ODDS) < 0.003,
 			"Draftees roll Fine Wine at about the set odds (%.2f%% of %d, set %.2f%%)" % [
 			100.0 * rate, total, 100.0 * Traits.FINE_WINE_DRAFTEE_ODDS])
+	# A real draftee rolls; a real player whose career could already reach 35 does not.
+	var kids := []
+	var veterans := []
+	for i in range(4000):
+		kids.append({"dob": "2008-05-01"})
+		veterans.append({"dob": "1985-05-01"})
+	Prospects.roll_fine_wine(kids, "kids")
+	Prospects.roll_fine_wine(veterans, "veterans")
+	_check(kids.any(func(p): return bool(p.get("fine_wine", false))) and not veterans.any(func(p): return bool(p.get("fine_wine", false))),
+			"A real draftee rolls; a real veteran's record decides")
 	var in_classes := 0
 	var prospects := 0
 	for year in range(2027, 2067):
