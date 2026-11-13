@@ -63,6 +63,20 @@ const _TABLE := {
 		"leadership": "res://data/leadership_2026.csv",
 		"state_leagues": "res://data/state_leagues",
 	},
+	# The 2010 start: lists rated on 2009, coaches rated from their records
+	# before 2010, the 2010 captains (tools/legacy_2010s/build_start.py and
+	# build_leaders.py; TODO row 142). Gold Coast (2011) and GWS (2012) enter
+	# as the sim's own expansion.
+	"2010": {
+		"data_season": 2009, "start_year": 2010, "start_date": "2010-03-01",
+		"players": "res://data/legacy/2010/players_2010.csv",
+		"coaches": "res://data/legacy/2010/coaches_2010.csv",
+		"leadership": "res://data/legacy/2010/captains_2010.csv",
+		"history": "res://data/legacy/2010/history_2010.csv",
+		"list_additions": "res://data/legacy/2010/list_additions_2010.csv",
+		"list_addition_stats": "res://data/legacy/2010/list_addition_stats_2010.csv",
+		"second_tier": "res://data/legacy/second_tier",
+	},
 	# The 1990 start: lists rated on 1989, the season just played, built by
 	# tools/legacy_1990s/build_start.py (TODO row 142, phase L1).
 	"1990": {
