@@ -104,6 +104,7 @@ func _run() -> void:
 	for i in range(10):
 		await process_frame
 	menu.call("_on_new_career")
+	menu.call("_on_pick_year", "2026")  # past the year step (row 142 L2)
 	await process_frame
 	await _press(menu, "StartMode_real")
 	await _press(menu, "Canberra_yes")

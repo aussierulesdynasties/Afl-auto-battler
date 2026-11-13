@@ -46,6 +46,7 @@ func _run() -> void:
 	root.add_child(main)
 	await _frames(10)
 	main.call("_on_new_career")
+	main.call("_on_pick_year", "2026")  # past the year step (row 142 L2)
 	await _frames(6)
 	_press(main, "StartMode_redraft")
 	_press(main, "Canberra_yes")

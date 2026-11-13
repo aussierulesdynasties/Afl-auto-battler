@@ -743,6 +743,22 @@ static func staff_new_clubs(coaches: Dictionary, clubs: Array, my_club: String, 
 	return filled
 
 
+## Every job nobody holds at `clubs` (your senior job aside) taken by a new
+## coach, generated as a new club's are: a past season's start, whose file
+## names only the senior coaches (Coaches.seed_era). `year` is the season
+## before the first.
+static func fill_with_new(coaches: Dictionary, clubs: Array, my_club: String, year: int, seed: int) -> void:
+	var log := {"generated": 0}
+	for club in clubs:
+		var held := Coaches.staff(coaches, club)
+		for job in FILL_ORDER:
+			if held.has(job) or (job == "SC" and club == my_club):
+				continue
+			var c := _generate(coaches, year, seed, log, job)
+			ensure_fields(c, year + 1)
+			_appoint(c, club, job, year, seed)
+
+
 ## The highest vacancy left: a job at an active club nobody holds.
 static func _next_vacancy(coaches: Dictionary, clubs: Array, my_club: String) -> Dictionary:
 	var held := {}

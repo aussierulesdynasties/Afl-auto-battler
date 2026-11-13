@@ -58,6 +58,7 @@ func _new_career(start: String, challenge := "none") -> void:
 	await _settle()
 	_check((await Tap.tap(current_scene.find_child("NewCareer", true, false))) == "", "New career takes a tap (%s)" % start)
 	await _settle()
+	await _pick_year()
 	current_scene.set("_pick_start", start)
 	current_scene.set("_pick_challenge", challenge)
 	current_scene.call("_start_new_career")
@@ -258,3 +259,14 @@ func _check(ok: bool, what: String) -> void:
 
 func _t(test: String, args := []) -> Variant:
 	return await Ran.one(self, test, args)
+
+
+## New career opens the year step first (Legacy mode, row 142 L2): a real tap
+## on today's league reaches the options these checks read. No step, no tap.
+func _pick_year(id := "2026") -> String:
+	var b := current_scene.find_child("StartYear_" + id, true, false) as Control
+	if b == null:
+		return ""
+	var why: String = await Tap.tap(b)
+	await _settle()
+	return why
