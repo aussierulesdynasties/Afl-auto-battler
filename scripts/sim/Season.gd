@@ -53,6 +53,7 @@ func _init(club_codes: Array, club_lists: Dictionary, p_seed: int = 0, p_year: i
 	for c in clubs:
 		lists[c] = club_lists.get(c, [])
 	seed = p_seed
+	rules["rounds"] = rounds_to_fit(int(rules.get("rounds", REGULAR_ROUNDS)), int(rules.get("games", 0)), clubs.size())
 	ladder = {}
 	for c in clubs:
 		ladder[c] = {"code": c, "p": 0, "w": 0, "l": 0, "d": 0,
@@ -64,28 +65,8 @@ func _init(club_codes: Array, club_lists: Dictionary, p_seed: int = 0, p_year: i
 # The season's shape
 # ---------------------------------------------------------------------------
 ## Home-and-away rounds this season (24 in the game's league; 22 in 1990).
-## A year's real games count with more clubs than it really had (a Legacy
-## career whose Fitzroy fought off the merger: 17 clubs in 1997) adds rounds
-## until every club plays that count (director, 2026-11-13: "Add rounds").
-## Every real season already fits its count.
 func regular_rounds() -> int:
-	var r := int(rules.get("rounds", REGULAR_ROUNDS))
-	var g := int(rules.get("games", 0))
-	var n := clubs.size()
-	if g <= 0 or n < 2:
-		return r
-	while _fit(r, n) < g:
-		r += 1
-	return r
-
-
-## The most games each of `n` clubs can play in `rounds` rounds, with an even
-## total of games (each match is two clubs' games).
-static func _fit(rounds: int, n: int) -> int:
-	var fit := 2 * rounds * (n / 2) / n
-	while fit > 0 and (fit * n) % 2 == 1:
-		fit -= 1
-	return fit
+	return int(rules.get("rounds", REGULAR_ROUNDS))
 
 
 ## How many clubs make the finals (10; five in 1990, six 1991-93, eight after).
@@ -123,10 +104,30 @@ func finals_round() -> int:
 ## count and 22 at an odd one (one bye or two in the 24 rounds).
 func games_per_club() -> int:
 	var g := int(rules.get("games", 0))
-	if g <= 0:
-		return regular_rounds() - 1 if clubs.size() % 2 == 0 else regular_rounds() - 2
-	# regular_rounds() adds rounds until the count fits.
-	return g
+	if g > 0:
+		return g
+	return regular_rounds() - 1 if clubs.size() % 2 == 0 else regular_rounds() - 2
+
+
+## A year's real games count with more clubs than it really had (a Legacy
+## career whose Fitzroy fought off the merger: 17 clubs in 1997) adds rounds
+## until every club plays that count (director, 2026-11-13: "Add rounds").
+## Every real season already fits its count, so it keeps its rounds.
+static func rounds_to_fit(rounds: int, games: int, n: int) -> int:
+	if games <= 0 or n < 2:
+		return rounds
+	while _fit(rounds, n) < games:
+		rounds += 1
+	return rounds
+
+
+## The most games each of `n` clubs can play in `rounds` rounds, with an even
+## total of games (each match is two clubs' games).
+static func _fit(rounds: int, n: int) -> int:
+	var fit := 2 * rounds * (n / 2) / n
+	while fit > 0 and (fit * n) % 2 == 1:
+		fit -= 1
+	return fit
 
 
 # ---------------------------------------------------------------------------
