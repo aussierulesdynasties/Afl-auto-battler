@@ -1647,6 +1647,7 @@ func _run() -> void:
 	await _t("_test_new_career_challenge_taps")
 	await _t("_test_canberra_2030_warning")
 	await _t("_test_every_start_reaches_interview")
+	await _t("_test_year_step_taps")
 	await _t("_test_pc_hub_and_list_layout")
 	for sz in [Vector2i(2560, 1440), Vector2i(1920, 1080), Vector2i(1280, 720)]:
 		await _t("_test_hub_ladder_fills_right", [sz])
@@ -2117,6 +2118,7 @@ func _test_menu_and_career() -> void:
 	# --- new career setup: the two dials, applied only on start --------------
 	current_scene.find_child("NewCareer", true, false).emit_signal("pressed")
 	await _settle()
+	await _pick_year()
 	var ruthless_btn: Button = current_scene.find_child("BoardPatience_ruthless", true, false)
 	var cutthroat_btn: Button = current_scene.find_child("RivalRecruiting_cutthroat", true, false)
 	_check(ruthless_btn != null and cutthroat_btn != null, "New career asks for the two difficulty dials")
@@ -2153,6 +2155,7 @@ func _test_menu_and_career() -> void:
 			and _state.new_career_dial("board_patience") == "fair", "Back leaves the setup without changing anything")
 	current_scene.find_child("NewCareer", true, false).emit_signal("pressed")
 	await _settle()
+	await _pick_year()
 	current_scene.find_child("BoardPatience_ruthless", true, false).emit_signal("pressed")
 	current_scene.find_child("RivalRecruiting_cutthroat", true, false).emit_signal("pressed")
 	_check(current_scene.find_child("ForgedClub_in", true, false) != null, "New career offers your Forge club")
@@ -3288,6 +3291,7 @@ func _test_menu_and_career() -> void:
 	var new_btn: Button = current_scene.find_child("NewCareer", true, false)
 	new_btn.emit_signal("pressed")
 	await _settle()
+	await _pick_year()
 	current_scene.find_child("StartCareer", true, false).emit_signal("pressed")
 	await _settle()
 	var confirm = current_scene.find_child("ConfirmNewCareer", true, false)
@@ -4184,6 +4188,7 @@ func _test_new_career_canberra_choice() -> void:
 		await _settle()
 		await Tap.tap(current_scene.find_child("NewCareer", true, false))
 		await _settle()
+		await _pick_year()
 		var yes := current_scene.find_child("Canberra_yes", true, false)
 		var no := current_scene.find_child("Canberra_no", true, false)
 		var both_there: bool = yes != null and no != null  # gone once the draft opens
@@ -4218,6 +4223,7 @@ func _test_canberra_2030_warning() -> void:
 	await _settle()
 	await Tap.tap(current_scene.find_child("NewCareer", true, false))
 	await _settle()
+	await _pick_year()
 	# A League redraft with Canberra is no 2030 start: no warning.
 	var t0: String = await Tap.tap(current_scene.find_child("Canberra_yes", true, false))
 	await _settle()
@@ -4295,6 +4301,7 @@ func _test_every_start_reaches_interview() -> void:
 		["Rebuild with Canberra", "real", "rebuild", true, false],
 		["Youth only", "redraft", "youth", false, false],
 		["Your goal", "real", "goal", false, false],
+		["The 1990 season", "real", "none", false, false, "1990"],
 	]
 	var picks := [1, 0, 2, 1, 3, 0, 1]
 	for st in starts:
@@ -4309,6 +4316,7 @@ func _test_every_start_reaches_interview() -> void:
 		await _settle()
 		await Tap.tap(current_scene.find_child("NewCareer", true, false))
 		await _settle()
+		await _pick_year(str(st[5]) if st.size() > 5 else "2026")
 		var menu := current_scene
 		menu.set("_pick_start", str(st[1]))
 		menu.set("_pick_challenge", str(st[2]))
@@ -4395,6 +4403,11 @@ func _test_every_start_reaches_interview() -> void:
 				break
 			await process_frame
 		await _settle()
+		if st.size() > 5:
+			# A past season has no draft before it: Continue starts the season.
+			_check(cont == "" and _router.current() in ["hub", "preseason"] and _state.season != null and _state.season_year == 1990,
+					"%s: Continue starts the 1990 season, no empty draft board (tap %s, at %s)" % [label, cont, _router.current()])
+			continue
 		_check(cont == "" and _router.current() == "draft" and str(current_scene.get("_phase")) == "board",
 				"%s: Continue goes back to the draft board (tap %s, at %s, phase %s)" % [
 					label, cont, _router.current(), current_scene.get("_phase")])
@@ -4447,6 +4460,7 @@ func _test_new_career_forged_row_redraft_only() -> void:
 	await _settle()
 	await Tap.tap(current_scene.find_child("NewCareer", true, false))
 	await _settle()
+	await _pick_year()
 	var row := current_scene.find_child("ForgedClub", true, false) as Control
 	var note := current_scene.find_child("ForgedClubOnlyNote", true, false) as Label
 	_check(row != null and note != null and row.is_visible_in_tree() and not note.is_visible_in_tree(),
@@ -4487,6 +4501,7 @@ func _test_new_career_challenge_taps() -> void:
 	await _settle()
 	await Tap.tap(current_scene.find_child("NewCareer", true, false))
 	await _settle()
+	await _pick_year()
 	var start := current_scene.find_child("StartCareer", true, false) as Button
 	var note := current_scene.find_child("ChallengeNote", true, false) as Label
 	_check(current_scene.find_child("Challenge_none", true, false) != null and note != null
@@ -4573,6 +4588,7 @@ func _test_new_career_keeps_the_save() -> void:
 			"The title offers Continue for the saved career")
 	var t1: String = await Tap.tap(current_scene.find_child("NewCareer", true, false))
 	await _settle()
+	await _pick_year()
 	var t2: String = await Tap.tap(current_scene.find_child("StartCareer", true, false))
 	await _settle()
 	var t3: String = await Tap.tap(current_scene.find_child("ConfirmNewCareer", true, false))
@@ -4589,7 +4605,9 @@ func _test_new_career_keeps_the_save() -> void:
 	_check(back_tap == "" and _router.current() == "main" and str(current_scene.get("_mode")) == "setup",
 			"Back on Choose your club steps back to the New career options (%s; now %s, mode %s)" % [back_tap, _router.current(), str(current_scene.get("_mode"))])
 	_check(str(_state.saved_career_meta().get("club", "")) == "COL", "...and the old career is still saved")
-	# And back to the title, where Continue still offers it.
+	# And back to the title (through the year step), where Continue still offers it.
+	_router.handle_back(false)
+	await _settle()
 	_router.handle_back(false)
 	await _settle()
 	var meta: Node = current_scene.find_child("CareerMeta", true, false)
@@ -4599,6 +4617,7 @@ func _test_new_career_keeps_the_save() -> void:
 	# Escape on Choose your club does the same.
 	await Tap.tap(current_scene.find_child("NewCareer", true, false))
 	await _settle()
+	await _pick_year()
 	await Tap.tap(current_scene.find_child("StartCareer", true, false))
 	await _settle()
 	await Tap.tap(current_scene.find_child("ConfirmNewCareer", true, false))
@@ -5691,3 +5710,108 @@ func _test_skip_orders() -> void:
 	_state.week_events = []
 	_check(picked == {"usual": -1, "players": 1, "board": 0},
 			"Questions during the week: unanswered, the players' answer, the board's answer (%s)" % picked)
+
+
+## New career opens the year step first (Legacy mode, row 142 L2): a real tap
+## on today's league reaches the options these checks read. No step, no tap.
+func _pick_year(id := "2026") -> String:
+	var b := current_scene.find_child("StartYear_" + id, true, false) as Control
+	if b == null:
+		return ""
+	var why: String = await Tap.tap(b)
+	await _settle()
+	return why
+
+
+## The year step (Legacy mode, TODO row 142 L2; director 2026-11-13, "Year step
+## in setup"), by real taps: New career asks the season first, today's league on
+## top; 1990 leaves out what belongs to today's league (the start, a challenge,
+## Canberra) and goes straight to Choose your club on the 14 clubs' real lists;
+## Back walks the same way home.
+func _test_year_step_taps() -> void:
+	_state.delete_saved_career()
+	_state.reset()
+	_router.stack = []
+	_router.go("main")
+	await _settle()
+	var t1: String = await Tap.tap(current_scene.find_child("NewCareer", true, false))
+	await _settle()
+	var menu := current_scene
+	var y26 := menu.find_child("StartYear_2026", true, false) as Control
+	var y90 := menu.find_child("StartYear_1990", true, false) as Control
+	_check(t1 == "" and str(menu.get("_mode")) == "year" and y26 != null and y90 != null
+			and y26.is_visible_in_tree() and y90.is_visible_in_tree() and y26.get_index() < y90.get_index()
+			and y26.size.y >= 88.0 and y90.size.y >= 88.0,
+			"New career asks the season first, today's league on top, each a thumb-sized tap (tap %s, mode %s)" % [t1, menu.get("_mode")])
+	_router.handle_back(false)
+	await _settle()
+	_check(str(current_scene.get("_mode")) == "home", "Back from the year step is the title screen (%s)" % current_scene.get("_mode"))
+	await Tap.tap(current_scene.find_child("NewCareer", true, false))
+	await _settle()
+	var t2: String = await _pick_year("1990")
+	menu = current_scene
+	var said := menu.find_child("SetupYear", true, false) as Label
+	var start_row := menu.get("_start_row") as Control
+	var challenge_row := menu.get("_challenge_row") as Control
+	var canberra_row := menu.get("_canberra_row") as Control
+	_check(t2 == "" and str(menu.get("_mode")) == "setup" and said != null and said.text == "Starting in 1990"
+			and start_row != null and not start_row.is_visible_in_tree()
+			and challenge_row != null and not challenge_row.is_visible_in_tree()
+			and canberra_row != null and not canberra_row.is_visible_in_tree(),
+			"1990 is set up without today's start, challenge or Canberra (tap %s, %s)" % [t2, said.text if said != null else "no year line"])
+	_router.handle_back(false)
+	await _settle()
+	_check(str(current_scene.get("_mode")) == "year", "Back from the setup is the year step (%s)" % current_scene.get("_mode"))
+	await _pick_year("1990")
+	var t3: String = await Tap.tap(current_scene.find_child("StartCareer", true, false))
+	for i in range(900):
+		if _router.current() == "draft" and not bool(root.get_node("ScreenTransition").busy):
+			break
+		await process_frame
+	await _settle()
+	var tiles := [0]
+	_count_named(current_scene, "Choose_", func(): tiles[0] += 1)
+	_check(t3 == "" and _router.current() == "draft" and _state.dataset == "1990" and str(root.get_node("GameDB").dataset_id) == "1990"
+			and _state.opening_draft and int(tiles[0]) == 14 and current_scene.find_child("Choose_MEL", true, false) != null,
+			"Start career opens Choose your club on the 14 clubs of 1990 (tap %s, at %s, set %s, %d clubs)" % [
+				t3, _router.current(), _state.dataset, int(tiles[0])])
+	var t4: String = await Tap.tap(current_scene.find_child("Choose_MEL", true, false))
+	for i in range(300):
+		if _router.current() != "draft" and not bool(root.get_node("ScreenTransition").busy):
+			break
+		await process_frame
+	await _settle()
+	_check(t4 == "" and _state.my_club == "MEL" and _router.current() == "interview",
+			"Melbourne by a tap: you face the press first (tap %s, at %s)" % [t4, _router.current()])
+	# Seven answers and Continue start the 1990 season; the coaching world is
+	# seeded then, with John Northey out of Melbourne's top job and free.
+	var answered := ""
+	for i in range(12):
+		if current_scene.find_child("InterviewDone", true, false) != null:
+			break
+		answered += await Tap.tap(current_scene.find_child("InterviewAnswer0", true, false))
+		await _settle()
+	var t5: String = await Tap.tap(current_scene.find_child("InterviewDone", true, false))
+	for i in range(600):
+		if _router.current() != "interview" and not bool(root.get_node("ScreenTransition").busy):
+			break
+		await process_frame
+	await _settle()
+	var northey := ""
+	for cid in _state.coaches:
+		if str(_state.coaches[cid].get("real_name", "")) == "John Northey":
+			northey = str(_state.coaches[cid].get("status", ""))
+	_check(answered == "" and t5 == "" and _router.current() in ["hub", "preseason"] and _state.season_year == 1990
+			and northey == "free",
+			"Continue starts Melbourne's 1990 season with John Northey a free coach (tap %s, at %s, %s)" % [
+				t5, _router.current(), northey])
+	_state.delete_saved_career()
+	_state.reset()
+	_router.stack = []
+
+
+func _count_named(n: Node, prefix: String, hit: Callable) -> void:
+	if n is Control and str(n.name).begins_with(prefix) and (n as Control).is_visible_in_tree():
+		hit.call()
+	for c in n.get_children():
+		_count_named(c, prefix, hit)

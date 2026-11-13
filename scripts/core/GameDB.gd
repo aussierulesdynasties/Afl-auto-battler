@@ -29,6 +29,9 @@ const CLUBS_CSV := "res://data/clubs.csv"
 var PLAYERS_ENRICHED_CSV := "res://data/players_enriched_2026.csv"
 var DRAFTEES_CSV := "res://data/draftees_2026.csv"
 var POTENTIAL_CSV := "res://data/potential_overrides.csv"
+## The season's coaching staff and captains (Datasets keys coaches, leadership).
+var COACHES_CSV := "res://data/coaches_2026.csv"
+var LEADERSHIP_CSV := "res://data/leadership_2026.csv"
 var OVR_CSV := "res://data/ovr_overrides.csv"
 ## Which override rows (file|club|first|last) found their player, and the rows
 ## that found nobody in the players or the list additions.
@@ -323,6 +326,10 @@ func _use_dataset(id: String, row: Dictionary) -> void:
 	LADDER_PATH = str(row.get("ladder", ""))
 	OVR_CSV = str(row.get("ovr_overrides", ""))
 	POTENTIAL_CSV = str(row.get("potential_overrides", ""))
+	# A set that names no staff or captains (a test league) keeps 2026's.
+	COACHES_CSV = str(row.get("coaches", Coaches.SEED_CSV))
+	LEADERSHIP_CSV = str(row.get("leadership", Leadership.PATH))
+	Leadership.use(LEADERSHIP_CSV, START_YEAR, CLUB_CODE_ALIASES)
 	STATE_LEAGUES_DIR = str(row.get(Datasets.STATE_LEAGUES_KEY, ""))
 
 

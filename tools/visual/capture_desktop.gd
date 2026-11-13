@@ -57,6 +57,7 @@ func _run() -> void:
 	root.add_child(main)
 	shots.append(await _shot())
 	main._on_new_career()
+	main._on_pick_year("2026")  # past the year step (row 142 L2)
 	shots.append(await _shot())
 	main.queue_free()
 	state.start_season("MEL", db.club_list("MEL"))
