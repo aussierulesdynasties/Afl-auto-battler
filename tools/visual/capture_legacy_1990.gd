@@ -101,4 +101,10 @@ func _run() -> void:
 	if sc != null:
 		(sc as ScrollContainer).scroll_vertical = int((sc as ScrollContainer).size.y) - 40
 		await _shot("2_full_list_%s_down" % club)
+	# The captain's row (Roos, a defender), well down the list.
+	for l in ls.find_children("*", "Label", true, false):
+		if (l as Label).text.contains("Paul Roos") and sc != null:
+			(sc as ScrollContainer).ensure_control_visible(l)
+			await _shot("2_full_list_%s_roos" % club)
+			break
 	quit(0)
