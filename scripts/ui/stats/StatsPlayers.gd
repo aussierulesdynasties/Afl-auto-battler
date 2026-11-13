@@ -1012,7 +1012,7 @@ static func _season_grid(row: Dictionary, wide: bool, p := {}) -> Control:
 			var lab := UiKit.ellipsis(_cap(str(c[2])), UiKit.SMALL, UiKit.TEXT)
 			lab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			h.add_child(lab)
-			h.add_child(_cell(fmt(t, key, false) + ("%" if StatBook.RATES.has(key) else ""), (72.0 if key == "fines" else 56.0), UiKit.TEXT, UiKit.SMALL, true))
+			h.add_child(_cell(fmt(t, key, false) + ("%" if StatBook.RATES.has(key) else ""), 56.0, UiKit.TEXT, UiKit.SMALL, true))
 			var per := "" if (StatBook.RATES.has(key) or key == "kh" or key == "fines") else fmt(value(r, key, true), key, true) + " a game"
 			h.add_child(_cell(per, 84.0, UiKit.MUTED, UiKit.SMALL))
 			box.add_child(h)
@@ -1064,7 +1064,7 @@ static func _career(p: Dictionary) -> Control:
 	var paid := TribunalFines.career_total(p)
 	if paid > 0:
 		var n := TribunalFines.career_count(p)
-		var f := UiKit.lbl("Tribunal fines: %s in all (%d %s)" % [TribunalFines.money(paid), n,
+		var f := UiKit.lbl("Tribunal fines: %s (%d %s)" % [TribunalFines.money(paid), n,
 				"fine" if n == 1 else "fines"], UiKit.SMALL, UiKit.TEXT)
 		f.name = "CareerFines"
 		v.add_child(f)
