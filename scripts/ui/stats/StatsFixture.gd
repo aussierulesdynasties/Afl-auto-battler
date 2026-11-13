@@ -73,10 +73,10 @@ static func build(host: Control) -> Control:
 	if not bool(page["finals"]):
 		var sd_round := SirDougRound.round_of(GameState)
 		if sd_round >= 0 and _page == sd_round:
-			var sd_name := UiKit.lbl(SirDougRound.NAME, UiKit.BODY, UiKit.EMPH, true)
+			var sd_name := UiKit.lbl(SirDougRound.name_for(GameState.season_year), UiKit.BODY, UiKit.EMPH, true)
 			sd_name.name = "SirDougRoundName"
 			v.add_child(sd_name)
-			var sd_blurb := UiKit.lbl(SirDougRound.BLURB, UiKit.SMALL, UiKit.MUTED)
+			var sd_blurb := UiKit.lbl(SirDougRound.blurb_for(GameState.season_year), UiKit.SMALL, UiKit.MUTED)
 			sd_blurb.name = "SirDougRoundBlurb"
 			v.add_child(sd_blurb)
 		var late := SirDougRound.after_bye(GameState, _page)
@@ -85,7 +85,7 @@ static func build(host: Control) -> Control:
 			for c in late:
 				names.append(GameDB.club_short(str(c)))
 			var who := names[0] if names.size() == 1 else "%s and %s" % [", ".join(names.slice(0, names.size() - 1)), names[names.size() - 1]]
-			var sd_late := UiKit.lbl("%s after the bye: %s" % [SirDougRound.NAME, who],
+			var sd_late := UiKit.lbl("%s after the bye: %s" % [SirDougRound.name_for(GameState.season_year), who],
 					UiKit.SMALL, UiKit.EMPH)
 			sd_late.name = "SirDougAfterBye"
 			v.add_child(sd_late)
