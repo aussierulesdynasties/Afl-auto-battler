@@ -81,6 +81,9 @@ static func goal_head(who: String, club: String) -> String:
 static func feed_line(ev: Dictionary, home: String, away: String) -> Dictionary:
 	var kind := str(ev.get("kind", ""))
 	if kind == "sub" and bool(ev.get("substitute", false)):
+		# On for a hurt man: the injury line names him (story_feed_line).
+		if bool(ev.get("for_injury", false)):
+			return {}
 		return {"text": substitute_words(ev, home, away), "tier": "play"}
 	if not FEED_KINDS.has(kind):
 		return {}
@@ -108,7 +111,7 @@ static func feed_line(ev: Dictionary, home: String, away: String) -> Dictionary:
 ## The substitute coming on (Legacy: the 2011-15 substitute, the 2021-25
 ## medical sub). An interchange stays on the oval; the substitute is for the
 ## rest of the match, so the feed calls it: "Medical sub: Smith on for Jones
-## (Demons)".
+## (Demons)". One on for a hurt man is named in the injury line instead.
 static func substitute_words(ev: Dictionary, home: String, away: String) -> String:
 	var club := home if int(ev.get("side", -1)) == 0 else away
 	return "%s: %s on for %s (%s)" % ["Medical sub" if bool(ev.get("medical", false)) else "Substitute",
@@ -1585,6 +1588,10 @@ static func story_feed_line(mem: Dictionary, ev: Dictionary) -> String:
 	if kind == "injury":
 		var on := str(ev.get("on", ""))
 		var hurt := "%s (%s) is hurt and won't return" % [who, club]
+		var sub_word := {"medical": "the medical sub, ", "substitute": "the substitute, "}
+		var as_sub := str(sub_word.get(str(ev.get("on_sub", "")), ""))
+		if on != "" and as_sub != "":
+			return "%s: %s%s, comes on." % [hurt, as_sub, _pname(on)]
 		if on != "":
 			return "%s: %s comes on." % [hurt, _pname(on)]
 		return hurt + "."

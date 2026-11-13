@@ -69,26 +69,46 @@ func _run() -> void:
 	start.pressed.emit()
 	var pitch = m.get("_pitch")
 	pitch.set_speed(8.0)
-	var want := "Medical sub:" if EraRules.medical_sub() else "Substitute:"
+	# One frame per look: the injury line naming the substitute, and (2011-15)
+	# the three-quarter-time change, which has its own line.
+	var looks := {"_injury": "the medical sub, " if EraRules.medical_sub() else "the substitute, "}
+	if not EraRules.medical_sub():
+		looks["_tactical"] = "Substitute:"
 	var guard := 0
-	var max_frames := int(str(a.get("frames", "40000")))
-	var line := ""
-	while line == "" and guard < max_frames:
+	var max_frames := int(str(a.get("frames", "150000")))
+	var found := 0
+	while not looks.is_empty() and guard < max_frames:
 		guard += 1
 		await process_frame
-		if guard % 30 == 0:
-			line = _feed_line(m, want)
-			# A break or a coach's call stops play: carry on.
-			if line == "" and not bool(pitch.get("playing")):
-				var b := _go_on(m)
-				if b != null:
-					b.pressed.emit()
-	pitch.playing = false
-	for i in range(20):
-		await process_frame
-	root.get_viewport().get_texture().get_image().save_png(_out + ".png")
-	print("CAPTURE %s.png | %dx%d | year %d | frames %d | line '%s'" % [_out, w, h, year, guard, line])
-	quit(0 if line != "" else 1)
+		if guard % 30 != 0:
+			continue
+		for key in looks.keys():
+			var line := _feed_line(m, str(looks[key]))
+			if line == "":
+				continue
+			# Found at a break (the three-quarter-time change): the break card
+			# covers the feed, so start the quarter and look once play is on.
+			var start_q: Button = m.find_child("StartQuarter", true, false)
+			if start_q != null and start_q.is_visible_in_tree() and not start_q.disabled:
+				start_q.pressed.emit()
+				for i in range(int(str(a.get("after", "20")))):
+					await process_frame
+			var was: bool = pitch.get("playing")
+			pitch.playing = false
+			for i in range(20):
+				await process_frame
+			root.get_viewport().get_texture().get_image().save_png(_out + str(key) + ".png")
+			print("CAPTURE %s%s.png | %dx%d | year %d | frames %d | line '%s'" % [_out, key, w, h, year, guard, line])
+			looks.erase(key)
+			found += 1
+			pitch.playing = was
+		# A break or a coach's call stops play: carry on.
+		if not bool(pitch.get("playing")):
+			var b := _go_on(m)
+			if b != null:
+				b.pressed.emit()
+	print("CAPTURE done: %d found, missing %s" % [found, str(looks.keys())])
+	quit(0 if looks.is_empty() else 1)
 
 
 func _feed_line(m: Node, want: String) -> String:
@@ -108,6 +128,9 @@ const _NOT_OPTIONS := ["1x", "2x", "4x", "8x", "Skip to full time", "Pause"]
 
 ## The control that carries play on: the next quarter's start, or a call's first option.
 func _go_on(m: Node) -> Button:
+	var first: Button = m.find_child("Moment_0", true, false)
+	if first != null and first.is_visible_in_tree() and not first.disabled:
+		return first
 	var start: Button = m.find_child("StartQuarter", true, false)
 	if start != null and start.is_visible_in_tree() and not start.disabled:
 		return start

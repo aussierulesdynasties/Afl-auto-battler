@@ -5248,13 +5248,14 @@ func _check_injuries() -> void:
 		if gi >= 0 and not sq.sub.is_empty():
 			# The substitute takes the hurt man's place; he is off for good.
 			on = str((sq.sub[0] as Dictionary)["id"])
-			_bring_sub(side, gi)
+			_bring_sub(side, gi, true)
 			(injured_off[side] as Array).append(hurt)
 			var rec_s := {"side": side, "id": id, "q": current_quarter, "min": current_minute,
 					"weeks": int(inj["weeks"]), "kind": str(inj["kind"]), "on": on}
 			injuries.append(rec_s)
 			_emit("injury", side, fp, hurt, "%s is hurt: %s" % [GameDB.player_display_name(hurt), Injuries.wording(str(inj["kind"]))])
 			events[events.size() - 1]["on"] = on
+			events[events.size() - 1]["on_sub"] = "medical" if EraRules.medical_sub() else "substitute"
 			_refill_duel(side, id)
 			_drop_tag_on(id)
 			continue
@@ -5528,7 +5529,9 @@ func _three_quarter_sub() -> void:
 
 ## The substitute replaces ground player `gi` for the rest of the match (the
 ## caller decides where the man going off is kept). No interchange counted.
-func _bring_sub(side: int, gi: int) -> void:
+## `injury`: he comes on for a hurt man, whose injury line names him, so his
+## own event stays out of the feed (MatchNotes).
+func _bring_sub(side: int, gi: int, injury := false) -> void:
 	var sq: Squad = squads[side]
 	var on: Dictionary = sq.sub[0]
 	sq.sub.clear()
@@ -5545,7 +5548,7 @@ func _bring_sub(side: int, gi: int) -> void:
 		"q": current_quarter, "min": current_minute, "kind": "sub", "side": side, "fp": fp,
 		"name": GameDB.player_display_name(on_slot), "player_id": id,
 		"num": int(on["num"]), "off_num": int(off["num"]), "club": _side_club(side, on),
-		"substitute": true, "medical": EraRules.medical_sub(),
+		"substitute": true, "medical": EraRules.medical_sub(), "for_injury": injury,
 		"off_name": GameDB.player_display_name(off),
 		"text": "%s: %s on for %s" % ["Medical sub" if EraRules.medical_sub() else "Substitute",
 				GameDB.player_display_name(on_slot), GameDB.player_display_name(off)],

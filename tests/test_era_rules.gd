@@ -379,7 +379,15 @@ func _test_tactical_sub_2011() -> void:
 		var club := "GEE" if int(e["side"]) == 0 else "CAR"
 		var want := "Substitute: %s on for %s (%s)" % [e["name"], e["off_name"], GameDB.club_short(club)]
 		var line := MatchNotes.feed_line(e, "GEE", "CAR")
-		_check(str(line.get("text", "")) == want, "Feed calls the substitute: '%s'" % str(line.get("text", "")))
+		if bool(e.get("for_injury", false)):
+			# On for a hurt man: the injury line names him, once.
+			_check(line.is_empty(), "A substitute on for an injury is said once, in the injury line")
+		else:
+			_check(str(line.get("text", "")) == want, "Feed calls the substitute: '%s'" % str(line.get("text", "")))
+	for e in _events(sim, "injury"):
+		if str(e.get("on_sub", "")) != "":
+			var said := MatchNotes.story_feed_line({}, e)
+			_check(said.contains("won't return: the substitute, "), "The injury line names the substitute: '%s'" % said)
 	for e in sim.events:
 		if str(e.get("kind", "")) == "sub" and not bool(e.get("substitute", false)):
 			_check(MatchNotes.feed_line(e, "GEE", "CAR").is_empty(), "An interchange stays out of the feed")
@@ -401,9 +409,13 @@ func _test_medical_sub_2021() -> void:
 			seen_injury = true
 			_check(not subs.is_empty(), "Seed %d: the injury brings the substitute on" % seed)
 			for e in subs:
-				var line := str(MatchNotes.feed_line(e, "GEE", "CAR").get("text", ""))
-				_check(line.begins_with("Medical sub: %s on for %s (" % [e["name"], e["off_name"]]),
-						"Feed calls the medical sub: '%s'" % line)
+				_check(MatchNotes.feed_line(e, "GEE", "CAR").is_empty(),
+						"The medical sub is said once, in the injury line")
+			for e in hurt:
+				if str(e.get("on", "")) != "":
+					var said := MatchNotes.story_feed_line({}, e)
+					_check(said.contains("won't return: the medical sub, ") and said.ends_with(", comes on."),
+							"The injury line names the medical sub: '%s'" % said)
 			break
 	_check(seen_injury, "Some 2021 match in 40 seeds has an injury")
 
