@@ -24,6 +24,15 @@ func _shot(path: String) -> void:
 	print("wrote ", path)
 
 
+## Scroll the setup to its foot, so the saga's note reads in full.
+func _bottom(sc: ScrollContainer) -> void:
+	if sc == null:
+		return
+	await _frames(5)
+	sc.scroll_vertical = int(sc.get_v_scroll_bar().max_value)
+	await _frames(5)
+
+
 func _run() -> void:
 	var out := "supplements"
 	var cli := OS.get_cmdline_user_args()
@@ -55,6 +64,11 @@ func _run() -> void:
 	await _frames(30)
 	main.find_child("NewCareer", true, false).emit_signal("pressed")
 	await _frames(30)
+	# The year step comes first; the saga is a 1990 career's.
+	var year = main.find_child("StartYear_1990", true, false)
+	if year != null:
+		year.emit_signal("pressed")
+		await _frames(30)
 	for info in ["ControversiesInfo", "SupplementsInfo"]:
 		var b = main.find_child(info, true, false)
 		if b == null:
@@ -70,10 +84,10 @@ func _run() -> void:
 	var n: Node = row.get_parent()
 	while n != null and not (n is ScrollContainer):
 		n = n.get_parent()
-	if n != null:
-		await _frames(5)
-		(n as ScrollContainer).ensure_control_visible(row)
+	var sc := n as ScrollContainer
+	await _bottom(sc)
 	await _shot("%s_on.png" % out)
 	main.find_child("Controversies_off", true, false).emit_signal("pressed")
+	await _bottom(sc)
 	await _shot("%s_apart.png" % out)
 	quit()
