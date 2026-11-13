@@ -103,9 +103,19 @@ func finals_round() -> int:
 ## count and 22 at an odd one (one bye or two in the 24 rounds).
 func games_per_club() -> int:
 	var g := int(rules.get("games", 0))
-	if g > 0:
-		return g
-	return regular_rounds() - 1 if clubs.size() % 2 == 0 else regular_rounds() - 2
+	if g <= 0:
+		return regular_rounds() - 1 if clubs.size() % 2 == 0 else regular_rounds() - 2
+	# A year's real count with more clubs than it really had (a Legacy career
+	# whose Fitzroy fought off the merger: 17 clubs in 1997's 22 rounds) can
+	# hold more matches than the rounds do: each club plays the most the
+	# rounds fit, an even total of games. Every real season fits its count.
+	var n := clubs.size()
+	if n >= 2:
+		var fit := 2 * regular_rounds() * (n / 2) / n
+		while fit > 0 and (fit * n) % 2 == 1:
+			fit -= 1
+		g = mini(g, fit)
+	return g
 
 
 # ---------------------------------------------------------------------------

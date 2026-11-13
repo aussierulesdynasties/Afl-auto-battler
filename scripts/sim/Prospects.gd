@@ -659,7 +659,10 @@ static func age_pool(pool: Array, year: int, drafted: Dictionary) -> Array:
 			p["age"] = float(p.get("age", 18.0)) + 1.0
 		else:
 			age_player(p, year)
-		if float(p.get("age", 18.0)) >= 22.0:
+		# A real class's mature-age pick (a Legacy career) is in his own draft
+		# whatever his age; passed over, he ages out like anyone else.
+		var own_real := bool(p.get("real_class", false)) and int(p.get("draft_year", 0)) == year
+		if float(p.get("age", 18.0)) >= 22.0 and not own_real:
 			continue  # aged out of draft eligibility
 		out.append(p)
 	return out
