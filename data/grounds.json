@@ -1,5 +1,6 @@
 {
   "_about": "How each ground looks in the vignettes. Looks only: nothing here reaches the match sim. length and width are the playing surface in metres (published figures). tiers: [inner offset, outer offset, inner height, outer height] beyond the fence, front to back. hill: the front tier is a grass bank with the crowd sitting on it. roof: edge (a thin dark lip), canopy (a pale roof reaching out over the top tier), closed (a roof over the whole ground). towers: mcg (the MCG's six tubular masts), masts (plain masts), none (lights on the roof). screens: 1 or 2 big screens. heritage_board: the old scoreboard at the other end. A ground not listed draws the default; a listed ground without a published length and width (Barossa Park) takes the default size. Norwood Oval: 164 x 109, afl.com.au/venues/46.",
+  "_old_grounds": "Grounds the AFL has left (Legacy mode, 1990 on), as they were in the 1990s; the screens name each by its year (data/legacy/ground_names.csv). Sizes: Waverley Park 200 x 160, en.wikipedia.org/wiki/Waverley_Park; Victoria Park 160 x 130, afl.com.au (austadiums 161 x 128); Windy Hill 159 x 130, en.wikipedia.org/wiki/Windy_Hill,_Essendon; Moorabbin Oval 159 x 128, afl.com.au/venues/78; Ikon Park (Princes Park) 157 x 136, afl.com.au; Whitten Oval (Western Oval) 160 x 121, afl.com.au/venues/40 (today's figure; the 1990s oval was long and narrow); Football Park 165 x 135, en.wikipedia.org/wiki/Football_Park; Subiaco Oval 175 x 122, en.wikipedia.org/wiki/Subiaco_Oval. Lights in the 1990s: Waverley Park 4 towers (1977), Football Park 4 (1984); Victoria Park, Windy Hill, Moorabbin, Princes Park and the Western Oval none sourced, Subiaco none until 1997. Tiers and seat colours are drawn to fit, not measured.",
   "default": {
     "length": 160, "width": 136,
     "tiers": [[2.0, 26.0, 1.5, 13.0], [30.0, 52.0, 17.0, 34.0]],
@@ -83,6 +84,30 @@
       "tiers": [[2.0, 14.0, 1.2, 4.5], [17.0, 26.0, 6.0, 13.0]],
       "seat": "#2c3328", "roof": "edge", "roof_colour": "#0f0f12",
       "towers": "masts", "tower_count": 4, "screens": 1, "hill": true
+    },
+    "Waverley Park": {
+      "length": 200, "width": 160, "tiers": [[2.0, 34.0, 1.2, 12.0], [38.0, 56.0, 14.0, 30.0]], "seat": "#3a3d42", "roof": "edge", "roof_colour": "#0f0f12", "towers": "masts", "tower_count": 4, "screens": 1
+    },
+    "Victoria Park": {
+      "length": 160, "width": 130, "tiers": [[2.0, 16.0, 1.2, 6.0], [19.0, 30.0, 7.5, 17.0]], "seat": "#1c1c1e", "roof": "edge", "roof_colour": "#0f0f12", "towers": "none", "tower_count": 0, "screens": 1
+    },
+    "Windy Hill": {
+      "length": 159, "width": 130, "tiers": [[2.0, 16.0, 1.2, 6.0], [19.0, 30.0, 7.5, 17.0]], "seat": "#2a1416", "roof": "edge", "roof_colour": "#0f0f12", "towers": "none", "tower_count": 0, "screens": 1
+    },
+    "Moorabbin Oval": {
+      "length": 159, "width": 128, "tiers": [[2.0, 16.0, 1.2, 6.0], [19.0, 30.0, 7.5, 17.0]], "seat": "#2b1a1c", "roof": "edge", "roof_colour": "#0f0f12", "towers": "none", "tower_count": 0, "screens": 1
+    },
+    "Ikon Park": {
+      "length": 157, "width": 136, "tiers": [[2.0, 18.0, 1.2, 8.0], [21.0, 34.0, 9.5, 21.0]], "seat": "#16213d", "roof": "edge", "roof_colour": "#0f0f12", "towers": "none", "tower_count": 0, "screens": 1
+    },
+    "Whitten Oval": {
+      "length": 160, "width": 121, "tiers": [[2.0, 16.0, 1.2, 6.0], [19.0, 30.0, 7.5, 17.0]], "seat": "#1b2a4a", "roof": "edge", "roof_colour": "#0f0f12", "towers": "none", "tower_count": 0, "screens": 1
+    },
+    "Football Park": {
+      "length": 165, "width": 135, "tiers": [[2.0, 26.0, 1.5, 12.0], [30.0, 50.0, 15.0, 30.0]], "seat": "#a7aab0", "roof": "edge", "roof_colour": "#0f0f12", "towers": "masts", "tower_count": 4, "screens": 1
+    },
+    "Subiaco Oval": {
+      "length": 175, "width": 122, "tiers": [[2.0, 20.0, 1.4, 9.0], [24.0, 38.0, 11.0, 24.0]], "seat": "#1d2a44", "roof": "edge", "roof_colour": "#0f0f12", "towers": "none", "tower_count": 0, "screens": 1
     }
   }
 }

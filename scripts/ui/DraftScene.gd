@@ -301,7 +301,7 @@ func _show_club_select() -> void:
 		pick_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		row.add_child(pick_label)
 		v.add_child(UiKit.lbl(GameDB.club_name(code), UiKit.HEADING, UiKit.TEXT, true))
-		v.add_child(UiKit.ellipsis(str(GameDB.club(code).get("ground", "")), UiKit.SMALL, UiKit.MUTED))
+		v.add_child(UiKit.ellipsis(GameDB.ground_shown(str(GameDB.club(code).get("ground", ""))), UiKit.SMALL, UiKit.MUTED))
 		_ignore_mouse(inner)
 		if waits.has(code):
 			b.pressed.connect(_open_wait_sheet.bind(code))

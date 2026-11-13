@@ -946,6 +946,7 @@ func _week_section(season: Season) -> Control:
 		var ground := str(mine.get("venue", ""))
 		if ground == "":
 			ground = str(GameDB.club(str(mine["home"])).get("ground", ""))
+		ground = GameDB.ground_shown(ground)
 		# Who, then where: "Essendon", "Away · Marvel Stadium" (the director's
 		# PC playtest, 2026-10-07: "Marvel Stadium / at Essendon" read as if
 		# Essendon were the ground).
