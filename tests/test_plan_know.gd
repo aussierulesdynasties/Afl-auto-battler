@@ -88,24 +88,30 @@ func _press_on() -> void:
 		GameState.preseason_advance()
 
 
-func _roll() -> void:
-	if GameState.begin_intake_draft():
-		var d: Draft = GameState.draft
-		var guard := 0
-		while not d.is_finished() and guard < 5000:
-			guard += 1
-			var c: Dictionary = d._best_ai_pick(d.current_club())
-			if c.is_empty() or not d._draft_pick(d.current_club(), c):
-				d._skip_current_pick()
-		GameState.finish_intake_draft()
-	else:
-		GameState.start_next_season()
+## A year on, straight to the next pre-season. Every plan slips, and the plan
+## you play goes in the last block, where the rollover opens that pre-season
+## (GameState.open_preseason, which _start_next_season calls); the rollover
+## itself, the season's rounds, the off-season market and the National Draft
+## never read or write the plan record, and the rollover alone costs about
+## 28 s. So the season is set back to its first round a year on and the
+## pre-season opened by hand, through the same call.
+func _year_on() -> void:
+	var year := GameState.season_year
+	GameState.season_year = year + 1
+	GameState.season.round_index = 0
+	GameState.open_preseason()
+	_check(GameState.season_year == year + 1 and GameState.preseason_active() and GameState.preseason_week() == 0,
+			"(setup) the next year's pre-season is open")
 
 
-func _finish_season() -> void:
-	while not GameState.season.is_season_over():
-		GameState.advance()
-	GameState.open_offseason()
+## One played round as the match engine reports it, for the fade rule
+## (GameState._note_plans_played): each entry of `mine` is the plan your side
+## played in a quarter, against a Melbourne side on Balanced.
+func _round(mine: Array) -> Array:
+	var history := []
+	for plan in mine:
+		history.append({"plans": [{"gameplan": plan}, {"gameplan": "balanced"}]})
+	return [{"home": CLUB, "away": "MEL", "tactics_history": history}]
 
 
 ## Two real sides with the squads' familiarity as given ({} = plain).
@@ -211,17 +217,23 @@ func _test_match_effect() -> void:
 			"The press known barely presses less, and leaves the other side alone")
 	_check(is_equal_approx(_sim({"balanced": barely}, {}, "balanced", "balanced")._pv(0, "goal"), 1.0),
 			"Balanced has no upside to lose")
-	var diff := 0.0
-	var n := 24
-	for s in range(n):
-		var ra := _sim({}, {}, "contest", "balanced", 900 + s).run()
-		var rb := _sim({"contest": barely}, {}, "contest", "balanced", 900 + s).run()
-		diff += float(int(ra["score"][0]) - int(ra["score"][1])) - float(int(rb["score"][0]) - int(rb["score"][1]))
-	# A smoke test on real matches; the checks above prove the rule itself. The paired margin swings
-	# 15 points a match (standard error 3.0 over these 24), so this bar sits three errors under the
-	# measured +1.2 over 200 seeds (tools/audit/plan_know_impl.gd): a redraw of the dice does not
-	# trip it, a real inversion does.
-	_check(diff / float(n) > -8.0, "Over %d matches, knowing a plan well is not worse than barely (margin %+.1f)" % [n, diff / float(n)])
+	# The checks above prove the rule at the one place the engine reads a plan's
+	# upside (MatchSim._pv). A real match on the same dice proves a played match
+	# reads it: knowing the plan barely changes how the match goes. Attacking,
+	# whose goal upside the checks above show moving on these two sides; up to
+	# three seeds, as one match can end on the same score. How much it moves the
+	# margin is measured over 200 seeds by tools/audit/plan_know_impl.gd (+1.2
+	# points), not replayed on every CI run (director, 2026-11-14).
+	var seen := []
+	var moved := false
+	for s in range(3):
+		var ra := _sim({}, {}, "attacking", "balanced", 900 + s).run()
+		var rb := _sim({"attacking": barely}, {}, "attacking", "balanced", 900 + s).run()
+		seen.append("%s/%s" % [str(ra["score"]), str(rb["score"])])
+		if str(ra["score"]) + str(ra.get("goals", "")) != str(rb["score"]) + str(rb.get("goals", "")):
+			moved = true
+			break
+	_check(moved, "A played match reads how well the side knows its plan (known well/barely: %s)" % ", ".join(seen))
 
 
 func _test_drilling() -> void:
@@ -296,13 +308,12 @@ func _test_ai() -> void:
 	for club in GameState.season.clubs:
 		before[str(club)] = GameState._usual_plan(str(club))
 	_press_on()
-	_finish_season()
 	# What the season did to each record is the fade test's business: here every
 	# club is known well on the plan it opened on, so the off-season is on its own.
 	for code in before:
 		if PreSeason.DRILL_PLANS.has(str(before[code])):
 			GameState.plan_known[code][before[code]] = PreSeason.WELL
-	_roll()
+	_year_on()
 	var drilled := {}
 	for club in GameState.season.clubs:
 		for b in GameState.preseason_blocks(str(club)):
@@ -324,13 +335,11 @@ func _test_ai() -> void:
 ## engine really opens with: the same side, weighed by the same plan knowledge.
 func _test_report_matches_sim() -> void:
 	PreSeason.reload()
+	# One career through the three stages: the report and the sim below only read it.
+	_career(true)
 	for stage in ["fresh career", "after the pre-season", "each usual plan barely known"]:
-		_career(true)
-		if stage != "fresh career":
+		if stage == "after the pre-season":
 			_press_on()
-		if stage == "a season on":
-			_finish_season()
-			_roll()
 		if stage == "each usual plan barely known":
 			# Knowledge apart from the list: a club that has let its usual plan
 			# slip opens with another, and the report must say so too. The
@@ -368,30 +377,39 @@ func _test_off_season_and_fade() -> void:
 	GameState.open_preseason()
 	GameState.plan_known[CLUB]["contest"] = 1
 	_press_on()
-	PreSeason.data()["fade_rounds"] = 3
-	for i in range(2):
-		GameState.advance()
-	_check(GameState.plan_level(CLUB, "contest") == 1, "Two rounds unplayed: a plan has not faded yet")
+	# One real round proves the round's results reach the record: with a plan
+	# fading after one round unplayed, the plan you play stays and one you never
+	# touched slips a step.
+	PreSeason.data()["fade_rounds"] = 1
 	GameState.advance()
+	_check(GameState.plan_level(CLUB, "contest") == 0, "A real round: the plan left unplayed knows it a step less")
+	_check(GameState.plan_level(CLUB, "attacking") == 2, "...while the plan played stays well")
+	# The counting itself, round by round, on the rule the round calls.
+	PreSeason.data()["fade_rounds"] = 3
+	GameState.plan_known[CLUB]["contest"] = 1
+	GameState.plan_idle[CLUB]["contest"] = 0
+	GameState.plan_idle[CLUB]["attacking"] = 0
+	for i in range(2):
+		GameState._note_plans_played(_round(["attacking", "attacking", "attacking", "attacking"]))
+	_check(GameState.plan_level(CLUB, "contest") == 1, "Two rounds unplayed: a plan has not faded yet")
+	GameState._note_plans_played(_round(["attacking", "attacking", "attacking", "attacking"]))
 	_check(GameState.plan_level(CLUB, "contest") == 0, "...but after the third it knows it a step less")
 	_check(GameState.plan_level(CLUB, "attacking") == 2, "...while the plan played every week stays well")
 	for i in range(4):
-		GameState.advance()
+		GameState._note_plans_played(_round(["attacking"]))
 	_check(GameState.plan_level(CLUB, "contest") == 0, "...and nothing fades below barely")
 	# Balanced is the plan put down: your assistant calls the main three in
 	# your name (chasing, protecting, countering), never Balanced unless it is
 	# the plan you went in with, so once dropped nothing plays it.
 	GameState.plan_known[CLUB]["contest"] = 2
 	GameState.plan_idle[CLUB]["contest"] = 0
-	GameState.set_club_plan("contest")
 	for i in range(4):
-		GameState.advance()
+		GameState._note_plans_played(_round(["contest", "attacking", "contest", "contest"]))
 	_check(GameState.plan_level(CLUB, "contest") == 2, "A plan played in matches keeps its place")
 	GameState.plan_known[CLUB]["defensive"] = 2
 	GameState.plan_idle[CLUB]["defensive"] = 0
-	GameState.set_club_plan("defensive")
 	for i in range(4):
-		GameState.advance()
+		GameState._note_plans_played(_round(["defensive", "defensive", "controlled", "defensive"]))
 	_check(GameState.plan_level(CLUB, "defensive") == 2, "...as does the one taken up")
 	_check(GameState.plan_level(CLUB, "contest") <= 1, "...and the one put down fades")
 	var snapshot := _levels()
@@ -403,11 +421,10 @@ func _test_off_season_and_fade() -> void:
 	_check(_levels() == snapshot and _idles() == idle, "...and it comes back as saved")
 	PreSeason.reload()
 	GameState.set_club_plan("controlled")
-	_finish_season()
 	GameState.plan_known[CLUB]["controlled"] = 2
 	GameState.plan_known[CLUB]["contest"] = 1
 	GameState.plan_known[CLUB]["defensive"] = 2
-	_roll()
+	_year_on()
 	_check(GameState.plan_level(CLUB, "contest") == 0 and GameState.plan_level(CLUB, "defensive") == 1
 			and GameState.plan_level(CLUB, "balanced") == 2,
 			"Over the off-season every plan slips a step, and nothing but Balanced is safe")
@@ -421,8 +438,8 @@ func _test_old_saves() -> void:
 	PreSeason.reload()
 	_career(false)
 	GameState.set_club_plan("contest")
-	for i in range(2):
-		GameState.advance()
+	# A save from two rounds in: the rounds themselves are not what is tested.
+	GameState.season.round_index = 2
 	GameState.save_career()
 	var state := CareerSave.read(GameState.save_path)
 	state.erase("plan_known")
@@ -712,11 +729,9 @@ func _test_part_carry() -> void:
 	_check(GameState.plan_fluency(CLUB, "contest") == 0.5, "An unplayed plan fades a whole step and keeps its part")
 	PreSeason.reload()
 	# Next year: what is left of the part meets the next pre-season's weeks.
-	GameState.plan_known[CLUB]["contest"] = 1.5
 	GameState.set_club_plan("attacking")
-	_finish_season()
 	GameState.plan_known[CLUB]["contest"] = 1.5
-	_roll()
+	_year_on()
 	_check(GameState.plan_fluency(CLUB, "contest") == 0.5, "Over the off-season the plan slips a step and the part stays")
 	GameState.preseason_add_drill(1)
 	_check(GameState.plan_fluency_after_drills(GameState.card_drill_plan()) >= 0.5, "A card's one week now counts")
