@@ -287,10 +287,24 @@ func _caps(year: int) -> Array:
 		var list: Array = GameState.season.lists.get(code, [])
 		var seniors := RookieList.senior_count(list)
 		var cat_a := RookieList.cat_a_count(list)
-		if seniors > RookieList.senior_spots() or cat_a > RookieList.cat_a_spots() or list.size() < Contracts.MIN_LIST:
+		if seniors > RookieList.senior_spots() or cat_a > RookieList.cat_a_spots() or list.size() < Contracts.min_list():
 			bad.append("%s %d: %d seniors of %d, %d rookies of %d, %d listed" % [code, year, seniors,
 					RookieList.senior_spots(), cat_a, RookieList.cat_a_spots(), list.size()])
 	return bad
+
+
+## The opening draft as the draft screen plays it: the coach takes the best
+## player on the board at each of his picks, the rivals pick for themselves.
+func _opening_draft() -> void:
+	var guard := 0
+	while GameState.draft != null and not GameState.draft.is_finished() and guard < 2000:
+		guard += 1
+		if GameState.draft.is_user_turn():
+			var board: Array = GameState.draft.board("", "", "", "overall", true)
+			if board.is_empty() or not GameState.draft.pick(board[0]):
+				GameState.draft._skip_current_pick()
+		else:
+			GameState.draft.auto_until_user_turn()
 
 
 ## Run a career from `dataset` for `seasons` rollovers, checking each.
@@ -299,7 +313,14 @@ func _career(dataset: String, seasons: int) -> Dictionary:
 	GameState.reset(dataset)
 	GameState.autosave_enabled = false
 	GameState.career_seed = SUITE_SEED
-	GameState.start_season(COACHED, GameDB.club_list(COACHED))
+	# As Choose your club starts a past season (Main: begin_real_lists): each
+	# club's whole real list, its list additions included, and the opening
+	# National Draft. start_season's test fallback has neither, so a 2000
+	# start opened on 29-32 players a club.
+	GameState.begin_real_lists()
+	GameState.choose_real_club(COACHED)
+	_opening_draft()
+	GameState.finish_intake_draft()
 	RookieList.settle(GameState)
 	var real_seen := {}   # real class id -> {name, draft_year}
 	var life := {}        # id -> ever on a list during the run
