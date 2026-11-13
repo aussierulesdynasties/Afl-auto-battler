@@ -432,7 +432,7 @@ func _node(week: int, m: Array) -> Control:
 		b.add_theme_stylebox_override(st, sb)
 	var v := UiKit.vbox(3)
 	v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 8)
-	var venue := _season.finals_venue({"tag": tag, "home": home}) if home != "" else ""
+	var venue := GameDB.ground_shown(_season.finals_venue({"tag": tag, "home": home}), _season.year) if home != "" else ""
 	v.add_child(UiKit.ellipsis(str(m[1]) + (("  ·  " + venue) if venue != "" else ""), UiKit.SMALL, UiKit.MUTED))
 	var win := str(_season.finals["slots"].get("W_" + tag, ""))
 	for side in [0, 1]:
