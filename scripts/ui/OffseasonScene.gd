@@ -1038,7 +1038,10 @@ func _package(body: VBoxContainer, title: String, ids: Array, club: String, pref
 	for id in ids.duplicate():
 		var row := UiKit.hbox(8)
 		row.name = prefix + str(id).replace(":", "_")
-		var what := UiKit.ellipsis(_asset_line(str(id), club), 14, UiKit.TEXT)
+		# A player wears his club's ink, as in the Ask around answers (row 174:
+		# "sanders uncoloured?"); a pick stays plain.
+		var ink := UiKit.TEXT if str(id).begins_with("pick:") else NameInk.player_ink(club)
+		var what := UiKit.ellipsis(_asset_line(str(id), club), 14, ink)
 		what.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(what)
 		var rm := UiKit.btn("Remove", UiKit.SECONDARY)
