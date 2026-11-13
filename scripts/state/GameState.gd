@@ -8218,6 +8218,7 @@ func open_offseason(keep_staff := false) -> void:
 				# one they delisted cannot.
 				_release(code, p, why == "cap")
 	TradeValue.remember_bars(false)
+	_era_trim_rivals()
 	# Released together, after every club has settled, so one club's tested
 	# player is not another's replacement while it decides.
 	for p in testing:
@@ -8253,6 +8254,41 @@ func open_offseason(keep_staff := false) -> void:
 ## free agents number about 115 a year and about 10 move (2023: 11; 2024: at
 ## least 8); at 28 the game measured 10-17 a year after the new club's first.
 const TEST_MARKET_AGE := 28.0
+
+
+## Legacy mode (EraRules): when next season's lists are smaller (52 to 42 in
+## 1994, eight rookies to six in 2013), each rival delists its least valuable
+## players (Contracts.worth) down to the new limits, as the real clubs did. Yours makes room by
+## the same rule at the draft (draft_room_short). Today's seasons never shrink.
+func _era_trim_rivals() -> void:
+	if not EraRules.is_era(season_year):
+		return
+	for code in season.lists:
+		if code == my_club:
+			continue
+		var list: Array = season.lists[code]
+		var guard := 0
+		while guard < 60:
+			guard += 1
+			# Who retires at the rollover leaves anyway: he takes no spot.
+			var staying := list.filter(func(q): return not retiring_now(q))
+			var rookies_over := RookieList.cat_a_count(staying) > RookieList.cat_a_spots()
+			var seniors_over := RookieList.senior_count(staying) > RookieList.senior_spots()
+			if not (rookies_over or seniors_over) or list.size() <= Contracts.MIN_LIST:
+				break
+			var worst := {}
+			for p in staying:
+				var kind := str(p.get("rookie_list", ""))
+				if (seniors_over and kind == "") or (not seniors_over and kind == "A"):
+					# Least worth goes first: rating blended with potential and
+					# discounted for age (Contracts.worth), never rating alone, so a
+					# 69 at 20 with 75 to come stays ahead of a 70 at 35
+					# (director, 2026-11-13: "smart delistings, not binary ones").
+					if worst.is_empty() or Contracts.worth(p) < Contracts.worth(worst) 							or (Contracts.worth(p) == Contracts.worth(worst) and str(p["id"]) < str(worst["id"])):
+						worst = p
+			if worst.is_empty():
+				break
+			_release(code, worst, false)
 
 
 func tests_market(p: Dictionary, list: Array) -> bool:

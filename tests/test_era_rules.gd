@@ -10,6 +10,9 @@ var failures: Array[String] = []
 var checks := 0
 
 const SUITE_SEED := 1990
+## The default career's first season (Datasets "2026"): GameDB.START_YEAR
+## changes with the loaded set.
+const GAME_YEAR := 2027
 
 
 func run() -> void:
@@ -21,9 +24,8 @@ func run() -> void:
 	_t("_test_rule_table")
 	_t("_test_today_is_untouched")
 	_t("_test_1990_season")
-	_t("_test_rollover_1990_to_1991")
-	_t("_test_rollover_1993_to_1994")
-	_t("_test_rollover_1996_to_1997")
+	_t("_test_campaign_1990_to_1998")
+	_t("_test_smart_delisting")
 	_t("_test_rollover_2011_to_2012")
 	_t("_test_rollover_2025_to_2026")
 	_t("_test_tactical_sub_2011")
@@ -49,12 +51,23 @@ func _t(test: String, args := []) -> Variant:
 	return await Ran.one(self, test, args)
 
 
-## A career whose first season is `year` (the 1990 lists are not shipped yet,
-## so today's lists stand in: the rules are what is under test).
+## A career whose first season is `year`: the real 1990 start's league (its
+## clubs come and go by year) for an era season, today's for a game year.
+## Past 1990 the 1990 lists stand in (the rules are what is under test), and
+## a club that joined since gets the list a rollover would build it.
 func _career(year: int, club := "GEE") -> void:
-	GameState.reset()
+	GameState.reset("1990" if EraRules.is_era(year) else Datasets.DEFAULT)
 	GameState.season_year = year
 	GameState.start_season(club, GameDB.club_list(club))
+	var built := false
+	for code in GameState.season.lists:
+		if (GameState.season.lists[code] as Array).is_empty():
+			var list := Prospects.generate_expansion_list(code, year)
+			GameState.season.lists[code] = list
+			GameState.league_lists[code] = list
+			built = true
+	if built:
+		GameState.ensure_contracts()
 
 
 ## The season's home-and-away rounds are skipped; the finals are played.
@@ -67,16 +80,42 @@ func _to_offseason() -> void:
 		GameState.advance()
 
 
-## The off-season, then the rollover into the next season.
+## The off-season, then the rollover into the next season the way a career
+## takes it: the National Draft (your picks made for you), then the Rookie
+## Draft that opens in the new season.
 func _roll() -> bool:
 	_to_offseason()
-	GameState.open_offseason()
+	_open_off()
 	GameState._close_free_agency()
-	return GameState.start_next_season()
+	return _draft_and_start()
+
+
+## A rival board's letter, or a sacking with jobs on offer, holds the
+## off-season until the coach answers: he stays put, or takes the first job.
+func _open_off() -> void:
+	if ClubMoves.letter_open(GameState):
+		ClubMoves.decline_letter(GameState)
+	if GameState.is_sacked() and not ClubMoves.offers(GameState).is_empty():
+		ClubMoves.take_job(GameState, str(ClubMoves.offers(GameState)[0].get("code", "")))
+	GameState.open_offseason()
+
+
+## The National Draft is left out: the 1990s drafts are not this suite's
+## subject. The rollover, then the Rookie Draft as finish_intake_draft opens it.
+func _draft_and_start() -> bool:
+	var order := GameState.intake_order()
+	var ok := GameState.start_next_season()
+	RookieList.open_draft(GameState, order)
+	for i in range(50):
+		if not RookieList.waiting(GameState):
+			break
+		RookieList.settle(GameState)
+	return ok
 
 
 ## Every list in the league is within the season's limits.
 func _lists_within(label: String) -> void:
+	_check(GameState.season.lists.size() >= 14, "%s: the league has its clubs (%d)" % [label, GameState.season.lists.size()])
 	var over := []
 	for code in GameState.season.lists:
 		var list: Array = GameState.season.lists[code]
@@ -163,10 +202,10 @@ func _test_today_is_untouched() -> void:
 				and RookieList.cat_b_spots() == RookieList.CAT_B_SPOTS
 				and RookieList.in_force() and EraRules.on("free_agency") and EraRules.on("midseason_draft"),
 				"%d: bench, lists and switches are the game's" % y)
-	_career(GameDB.START_YEAR)
+	_career(GAME_YEAR)
 	var sq := Squad.new("GEE", GameState.my_list, true, "GEE")
 	_check(sq.bench.size() == Ratings.INTERCHANGE and sq.sub.is_empty(),
-			"A %d side names %d on the bench and no substitute" % [GameDB.START_YEAR, sq.bench.size()])
+			"A %d side names %d on the bench and no substitute" % [GAME_YEAR, sq.bench.size()])
 
 
 ## A 1990 season: two on the bench, a 52-man list, no rookie list.
@@ -181,56 +220,101 @@ func _test_1990_season() -> void:
 			"A 1990 side is 18 and two (%d and %d)" % [sq.ground.size(), sq.bench.size()])
 
 
-## 1990 to 1991: no rookie draft, no free agency, still two on the bench.
-func _test_rollover_1990_to_1991() -> void:
+## The 1990 start rolled season by season to 1998: each season plays under
+## its own rules, switched at the rollover (lists from 52 to 42 in 1994, the
+## third interchange in 1994, the first rookie lists in 1997, the fourth
+## interchange in 1998), and no player walks to free agency.
+func _test_campaign_1990_to_1998() -> void:
 	_career(1990)
-	_to_offseason()
-	GameState.open_offseason()
-	_check(EraRules.list_ahead and Contracts.max_list() == 52, "The 1990 off-season plans 1991's 52-man lists")
-	var testing := 0
-	for code in GameState.season.lists:
-		for p in GameState.season.lists[code]:
-			if GameState.tests_market(p, GameState.season.lists[code]):
-				testing += 1
-	_check(testing == 0, "No 1990 player tests the free-agent market (%d)" % testing)
-	GameState._close_free_agency()
-	_check(GameState.start_next_season(), "1990 rolls into 1991")
-	_check(GameState.season_year == 1991 and EraRules.year == 1991 and not EraRules.list_ahead,
-			"The rules year follows the season")
-	_check(Ratings.bench() == 2, "1991: still two on the bench")
-	var rookies := 0
-	for code in GameState.season.lists:
-		for p in GameState.season.lists[code]:
-			if str(p.get("rookie_list", "")) != "":
-				rookies += 1
-	_check(rookies == 0, "No rookie list in 1991 (%d listed as rookies)" % rookies)
-	_lists_within("1991")
+	# season: [bench, max list, rookie list]
+	var want := {1990: [2, 52, false], 1991: [2, 52, false], 1992: [2, 52, false], 1993: [2, 52, false],
+			1994: [3, 42, false], 1995: [3, 42, false], 1996: [3, 42, false], 1997: [3, 48, true], 1998: [4, 48, true]}
+	for y in range(1990, 1999):
+		_check(GameState.season_year == y and EraRules.year == y and not EraRules.list_ahead,
+				"The rules year follows the season (%d, %d)" % [GameState.season_year, EraRules.year])
+		var got := [Ratings.bench(), Contracts.max_list(), RookieList.in_force()]
+		_check(str(got) == str(want[y]), "%d plays under %s, want %s" % [y, str(got), str(want[y])])
+		_lists_within(str(y))
+		var active := GameDB.active_clubs(y).size()
+		var fielded := 0
+		var sizes := {}
+		for code in GameState.season.lists:
+			sizes[code] = (GameState.season.lists[code] as Array).size()
+			if int(sizes[code]) >= 23:
+				fielded += 1
+		_check(fielded == active, "%d: all %d clubs can field a side: %s" % [y, active, str(sizes)])
+		var sq := Squad.new(GameState.my_club, GameState.my_list, true, GameState.my_club)
+		_check(sq.ground.size() == 18 and sq.bench.size() == int(want[y][0]) and sq.sub.is_empty(),
+				"%d: a side of 18 and %d" % [y, sq.bench.size()])
+		var rookies := 0
+		for code in GameState.season.lists:
+			for p in GameState.season.lists[code]:
+				if str(p.get("rookie_list", "")) != "":
+					rookies += 1
+		_check((rookies > 0) == bool(want[y][2]), "%d: rookie-listed players %d" % [y, rookies])
+		if y == 1998:
+			break
+		_to_offseason()
+		_open_off()
+		_check(EraRules.list_ahead and Contracts.max_list() == int(want[y + 1][1]),
+				"The %d off-season plans %d's lists of %d (ahead %s, off-season year %d, sacked %s)" % [y, y + 1,
+				Contracts.max_list(), str(EraRules.list_ahead), GameState.offseason_year, str(GameState.is_sacked())])
+		var testing := 0
+		for code in GameState.season.lists:
+			for p in GameState.season.lists[code]:
+				if GameState.tests_market(p, GameState.season.lists[code]):
+					testing += 1
+		_check(testing == 0, "No %d player tests the free-agent market (%d)" % [y, testing])
+		GameState._close_free_agency()
+		_check(_draft_and_start(), "%d rolls into %d" % [y, y + 1])
 
 
-## 1993 to 1994: the list falls from 52 to 42 and a third interchange joins.
-func _test_rollover_1993_to_1994() -> void:
+## A rival over next season's smaller list delists on worth, not rating
+## alone (director, 2026-11-13): a 69 at 20 with 75 to come stays, a 70 at 35
+## goes.
+func _test_smart_delisting() -> void:
 	_career(1993)
-	_check(Ratings.bench() == 2 and Contracts.max_list() == 52, "1993: two on the bench, 52 on the list")
-	_check(_roll(), "1993 rolls into 1994")
-	_check(Ratings.bench() == 3 and Contracts.max_list() == 42, "1994: three on the bench, 42 on the list")
-	_lists_within("1994")
-	print("L4DEBUG keys=%s my=%d year=%d club=%s" % [str(GameState.season.lists.keys()), GameState.my_list.size(), GameState.season_year, GameState.my_club])
-	var sq := Squad.new("GEE", GameState.my_list, true, "GEE")
-	_check(sq.bench.size() == 3, "A 1994 side names three on the bench (%d)" % sq.bench.size())
-
-
-## 1996 to 1997: the first rookie lists, filled at the 1996 off-season's draft.
-func _test_rollover_1996_to_1997() -> void:
-	_career(1996)
-	_check(not RookieList.in_force() and RookieList.cat_a_spots() == 0, "1996: no rookie list")
 	_to_offseason()
-	GameState.open_offseason()
-	_check(RookieList.in_force() and RookieList.cat_a_spots() == 6,
-			"The 1996 off-season plans 1997's six rookie spots")
-	GameState._close_free_agency()
-	_check(GameState.start_next_season(), "1996 rolls into 1997")
-	_check(GameState.season_year == 1997 and RookieList.in_force(), "1997 has a rookie list")
-	_lists_within("1997")
+	var rival := "CAR"
+	var list: Array = GameState.season.lists[rival]
+	var kid := {}
+	var vet := {}
+	for p in list:
+		if str(p.get("rookie_list", "")) != "" or GameState.retiring_now(p):
+			continue
+		if kid.is_empty():
+			kid = p
+		elif vet.is_empty():
+			vet = p
+	kid.merge({"overall": 69, "potential": 75, "age": 20.0, "contract_years": 3}, true)
+	vet.merge({"overall": 70, "potential": 70, "age": 35.0, "contract_years": 3}, true)
+	vet.erase("retiring")
+	# Everyone else outranks both, so one of the two must go to reach 42.
+	var others := 0
+	for p in list:
+		if p != kid and p != vet:
+			p["overall"] = maxi(int(p.get("overall", 0)), 80)
+			p["age"] = minf(float(p.get("age", 25.0)), 27.0)
+			others += 1
+	var base: Dictionary = {}
+	for p in list:
+		if p != kid and p != vet and str(p.get("rookie_list", "")) == "":
+			base = p
+			break
+	while RookieList.senior_count(list.filter(func(q): return not GameState.retiring_now(q))) < 43:
+		var extra: Dictionary = base.duplicate(true)
+		extra["id"] = "era_extra_%d" % list.size()
+		extra["rookie_list"] = ""
+		extra.erase("retiring")
+		list.append(extra)
+	EraRules.year = 1993
+	EraRules.list_ahead = true
+	GameState._era_trim_rivals()
+	_check(list.has(kid), "The 69-rated 20-year-old with 75 to come is kept")
+	_check(not list.has(vet), "The 70-rated 35-year-old is delisted first")
+	_check(RookieList.senior_count(list.filter(func(q): return not GameState.retiring_now(q))) <= 42,
+			"The list is down to 42")
+	EraRules.list_ahead = false
 
 
 ## 2011 to 2012: free agency begins in the 2012 off-season, not before.
@@ -243,13 +327,13 @@ func _test_rollover_2011_to_2012() -> void:
 	_check(EraRules.on("free_agency"), "2012: free agency")
 	# Today's lists stand in, so their clubs' tenures postdate 2012: the gate
 	# is checked on the players who test the market in a game year.
-	_career(GameDB.START_YEAR)
+	_career(GAME_YEAR)
 	var testers := []
 	for code in GameState.season.lists:
 		for p in GameState.season.lists[code]:
 			if GameState.tests_market(p, GameState.season.lists[code]):
 				testers.append([p, code])
-	_check(not testers.is_empty(), "Some %d players test the market (%d)" % [GameDB.START_YEAR, testers.size()])
+	_check(not testers.is_empty(), "Some %d players test the market (%d)" % [GAME_YEAR, testers.size()])
 	var walk := {2011: 0, 2012: 0}
 	for y in walk:
 		EraRules.year = y
