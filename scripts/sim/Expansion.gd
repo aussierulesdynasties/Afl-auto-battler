@@ -83,7 +83,8 @@ const EARLY_HOME := {"ADE": "SA", "PAD": "SA", "FRE": "WA"}
 ## 2011 entry; always on in the game's own seasons). Every club entering in
 ## the same season is treated the same.
 static func concessions(code: String) -> bool:
-	return EraRules.on("expansion_concessions", GameDB.enter_year(code))
+	var y := GameDB.enter_year(code)
+	return not EraRules.is_era(y) or EraRules.value("expansion_concessions", y) > 0.0
 
 
 ## How many players the club signs from the state leagues before anything
