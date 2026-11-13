@@ -294,6 +294,7 @@ const ERA_SECOND_ROLES := {"reserves": "Reserves coach", "under_19s": "Under-19s
 ## the file does not name are filled by new coaches, as a new club's are.
 static func seed_era(my_club: String, path: String, year: int) -> Dictionary:
 	var names := _alias_pool()
+	var rated := _era_ratings(path, year)
 	var out := {}
 	var i := 0
 	for r in _read_seed(path):
@@ -309,7 +310,8 @@ static func seed_era(my_club: String, path: String, year: int) -> Dictionary:
 			"cid": cid, "real_name": real,
 			"generic_name": str(names[i % names.size()]),
 			"former_player_id": "",
-			"skills": (ERA_SC_SKILLS if role == "senior" else ERA_SECOND_SKILLS).duplicate(),
+			"skills": (rated[real] if rated.has(real)
+					else ERA_SC_SKILLS if role == "senior" else ERA_SECOND_SKILLS).duplicate(),
 			"spec": "" if role == "senior" else "DEV",
 			"status": "away", "club": "", "job": "", "free_from": 0, "stints": [],
 			"former_sc": role == "senior", "note": "", "origin": "seed", "played": {},
@@ -328,6 +330,21 @@ static func seed_era(my_club: String, path: String, year: int) -> Dictionary:
 		out[cid] = c
 	# The jobs the file does not name, at every club of the season.
 	CoachMarket.fill_with_new(out, GameDB.active_clubs(year), my_club, year - 1, COACH_NAME_SEED)
+	return out
+
+
+## Each coach's skills rated from his real record before `year`
+## (coach_ratings_<year>.csv beside the staff file, built by
+## tools/legacy_1990s/rate_coaches.py; director 2026-11-13, "Rate from records").
+## A coach the file does not rate keeps the flat era skills.
+static func _era_ratings(path: String, year: int) -> Dictionary:
+	var file := path.get_base_dir().path_join("coach_ratings_%d.csv" % year)
+	var out := {}
+	if not FileAccess.file_exists(file):
+		return out
+	for r in _read_seed(file):
+		out[str(r.get("name", "")).strip_edges()] = {"teach": int(r.get("teach", 0)),
+				"tactics": int(r.get("tactics", 0)), "manage": int(r.get("manage", 0))}
 	return out
 
 
