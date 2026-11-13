@@ -9,8 +9,8 @@ extends SceneTree
 const FIRST := 1990
 const LAST := 2026
 const LEFT := 150.0
-const CELL := 196.0
-const ROW := 176.0
+const CELL := 250.0
+const ROW := 204.0
 
 
 func _initialize() -> void:
@@ -37,6 +37,9 @@ func _run() -> void:
 	db.reload("1990")  # the 1990 start keeps Fitzroy and the Bears
 	var codes: Array = db.clubs.keys()
 	codes.sort_custom(func(a, b): return str(db.club_era(a, LAST).get("name", a)) < str(db.club_era(b, LAST).get("name", b)))
+	# Clubs that join after 2026 (Tasmania, Canberra) have no season on the chart.
+	var played: Array = db.active_clubs(FIRST) + db.active_clubs(LAST)
+	codes = codes.filter(func(c): return played.has(c))
 	if not only.is_empty():
 		codes = codes.filter(func(c): return only.has(c))
 	# Each club's eras: the seasons it played, grouped where the guernsey and colours repeat.
@@ -144,23 +147,23 @@ func _row(UK, SV: GDScript, db, r: Dictionary, y: float, w: int, cell: float, ro
 		# The era cell: crest, then the figure from the front and from behind.
 		var crest_box := CenterContainer.new()
 		crest_box.position = Vector2(x, y + 4)
-		crest_box.size = Vector2(70 * scale, 70 * scale)
-		var crest = UK.colour_marker([kit["base"], kit["pattern"], kit["pattern2"]], 66.0 * scale, str(kit["design"]), code)
+		crest_box.size = Vector2(86 * scale, 86 * scale)
+		var crest = UK.colour_marker([kit["base"], kit["pattern"], kit["pattern2"]], 82.0 * scale, str(kit["design"]), code)
 		crest.third = kit.get("pattern3", kit["pattern2"])
 		crest_box.add_child(crest)
 		root.add_child(crest_box)
 		var fig := Control.new()
-		fig.position = Vector2(x + 70 * scale, y)
-		fig.size = Vector2(cell - 70 * scale, row_h)
+		fig.position = Vector2(x + 86 * scale, y)
+		fig.size = Vector2(cell - 86 * scale, row_h)
 		fig.material = SV.figure_material([kit])
 		fig.draw.connect(func():
 			var col: Color = SV.look_colour(0, {"skin": 1, "hair": 2, "hair_style": "short_crop"})
-			var fx := 28.0 * scale
+			var fx := 40.0 * scale
 			for facing in ["front", "back"]:
 				var info := VignetteFigures.strip("average", "idle", facing)
-				SV.draw_frame(fig, Vector2(fx, 118.0 * scale), info, 0, 0.5 * scale, col, false,
+				SV.draw_frame(fig, Vector2(fx, 176.0 * scale), info, 0, 0.88 * scale, col, false,
 						Color(0, 0, 0, 0), Transform2D.IDENTITY, "short_crop")
-				fx += 56.0 * scale)
+				fx += 78.0 * scale)
 		root.add_child(fig)
 		var years := Label.new()
 		var span_text := str(era["from"]) if era["from"] == era["to"] else "%d-%d" % [era["from"], era["to"]]
@@ -169,7 +172,9 @@ func _row(UK, SV: GDScript, db, r: Dictionary, y: float, w: int, cell: float, ro
 		years.text = span_text
 		if era["name"] != _label(base):
 			years.text += "\n" + era["name"]
-		years.position = Vector2(x + 2, y + 76 * scale)
+		years.position = Vector2(x + 2, y + 94 * scale)
+		years.size = Vector2(86 * scale, 60)
+		years.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		years.add_theme_font_size_override("font_size", 14)
 		years.add_theme_color_override("font_color", Color(1, 1, 1, 0.85))
 		root.add_child(years)
