@@ -7,6 +7,10 @@ Inputs (all in data/legacy/, gathered by tools/legacy_<decade>s):
   <decade>s/season_stats.csv     AFL Tables season totals, 1987-2025
   1990s/careers_before_1990.csv  each player's seasons before 1990
   1990s/drafts.csv               draft pedigree (1989 on)
+  honours/club_bf.csv            club best-and-fairests, 1987-2025 (Wikipedia)
+  honours/all_australian.csv     All-Australian teams: 1987-88 carnivals, 1991 on
+  honours/team_of_the_year.csv   the VFL/AFL Team of the Year 1989-90, which the
+                                 AFL counts as All-Australian
 
 Outputs (data/legacy/1990/):
   players_1990.csv          players_enriched schema: the opening lists rated on
@@ -14,7 +18,8 @@ Outputs (data/legacy/1990/):
   history_1990.csv          player_history schema: rated 1987-89 seasons,
                             career stints before 1990, draft pedigree, and
                             peak = his best real season from 1989 on (the
-                            director's "Informed" potential, 2026-11-11)
+                            director's "Informed" potential, 2026-11-11), and
+                            honours = his honours score (below)
   list_additions_1990.csv,  listed players with no 1989 game: their latest
   list_addition_stats_1990.csv  season, or none for a new player
 
@@ -25,6 +30,13 @@ squares fit, per game, on 2003-07 (the first full seasons), of each missing
 stat on kicks, marks, handballs, goals, behinds, hitouts, tackles and frees.
 A season's stat counts as unrecorded when most of its rows are blank; a
 blank in a recorded season is zero.
+
+Honours (director 2026-11-13, "Add honours"): the stats miss what made some
+players great (Roos, Fitzroy's captain, rated 71), so each honour in the three
+seasons before the start scores a point - a club best-and-fairest, an All-
+Australian or Team of the Year pick, a Brownlow top 3 (4th-10th score half) -
+weighted by how recent (the last season in full, then 0.75, 0.5). The game
+lifts an honoured player's rating to a floor on that score (Ratings.HONOURS_*).
 
 Every season is rated against its own season's players (tools/sim_harness.py
 derive_ratings, the Python mirror of Ratings.gd), each position scaled on
@@ -59,6 +71,8 @@ FEATURES = ["ki", "mk", "hb", "gl", "bh", "ho", "tk", "ff", "fa"]
 TARGETS = ["rb", "if50", "cl", "cg", "cp", "up", "cm", "mi", "one_pct", "bo", "ga"]
 FIT_YEARS = range(2003, 2008)
 PEAK_GAMES = 8
+HONOURS_W = {DATA_SEASON: 1.0, DATA_SEASON - 1: 0.75, DATA_SEASON - 2: 0.5}
+HONOURS_FILES = ["club_bf.csv", "all_australian.csv", "team_of_the_year.csv"]
 ENRICHED = ["club", "num", "last", "first", "gm", "ki", "mk", "hb", "di", "gl", "bh", "ho", "tk", "rb",
             "if50", "cl", "cg", "ff", "fa", "br", "cp", "up", "cm", "mi", "onepct", "bo", "ga", "pctp",
             "src", "real_pos", "dob", "age", "height_cm", "weight_kg", "debut", "height_source"]
@@ -256,6 +270,52 @@ def rate_seasons(by_year, model):
     return rated
 
 
+# ---------------------------------------------------------------- honours --
+def honours(by_year, rated):
+    """{afltables_id: score} over HONOURS_W's seasons. A named honour finds its
+    player by the season's own rows: name and club, else a name unique that
+    season, else a surname unique at that club (Steve / Stephen Malaxos). An
+    honour with no match is printed."""
+    def plain(last):
+        return "".join(ch for ch in last.lower().replace(" sr.", "").replace(" jr.", "") if ch.isalpha())
+    score = defaultdict(float)
+    for y, w in HONOURS_W.items():
+        by_name = defaultdict(set)
+        by_name_club = {}
+        by_last_club = defaultdict(set)
+        for r in by_year.get(y, []):
+            k = (r["first"].strip().lower(), plain(r["last"]))
+            by_name[k].add(r["afltables_id"])
+            by_name_club[k + (code(r["club"]),)] = r["afltables_id"]
+            by_last_club[(k[1], code(r["club"]))].add(r["afltables_id"])
+        for fn in HONOURS_FILES:
+            with open(os.path.join(LEG, "honours", fn), newline="", encoding="utf-8") as fh:
+                for r in csv.DictReader(fh):
+                    if int(r["year"]) != y or r["club"] == "OTHER":
+                        continue
+                    k = (r["first"].strip().lower(), plain(r["last"]))
+                    pid = by_name_club.get(k + (code(r["club"]),))
+                    if pid is None and len(by_name[k]) == 1:
+                        pid = next(iter(by_name[k]))
+                    if pid is None and len(by_last_club[(k[1], code(r["club"]))]) == 1:
+                        pid = next(iter(by_last_club[(k[1], code(r["club"]))]))
+                    if pid is None:
+                        print("honours: no %d player for %s %s (%s, %s)" % (y, r["first"], r["last"], r["club"], fn))
+                        continue
+                    score[pid] += w
+        # Brownlow placings on the season's votes (a mid-season move is one season).
+        votes = sorted(((float(e[2]["br"] or 0), pid) for pid, e in rated.get(y, {}).items()), reverse=True)
+        for v, pid in votes:
+            if v <= 0:
+                break
+            place = 1 + sum(1 for o, _ in votes if o > v)
+            if place <= 3:
+                score[pid] += w
+            elif place <= 10:
+                score[pid] += 0.5 * w
+    return score
+
+
 # ------------------------------------------------------------------ lists --
 def stints(career_rows):
     """club:first:last:games:goals, oldest first, a stint per unbroken run."""
@@ -295,6 +355,7 @@ def age_at(dob):
 
 
 def build(by_year, model, rated):
+    hon = honours(by_year, rated)
     with open(os.path.join(LEG, "1990s", "lists_1990_opening.csv"), newline="", encoding="utf-8") as fh:
         lists = list(csv.DictReader(fh))
     with open(os.path.join(LEG, "1990s", "careers_before_1990.csv"), newline="", encoding="utf-8") as fh:
@@ -348,7 +409,8 @@ def build(by_year, model, rated):
             history.append({"club": club, "num": L["num"], "slug": pid.rsplit("/", 1)[-1].replace(".html", ""),
                             "draft_year": d["year"] if d else "", "draft_type": "national" if d and d["draft"] == "national" else (d["draft"] if d else ""),
                             "draft_pick": d["pick"] if d else "", "seasons": ";".join(seasons),
-                            "career": stints(careers.get(pid, [])), "peak": peak or ""})
+                            "career": stints(careers.get(pid, [])), "peak": peak or "",
+                            "honours": "%.3g" % hon[pid] if hon.get(pid) else ""})
         else:
             additions.append({"first": L["first"], "last": L["last"], "dob": L["dob"], "club": club,
                               "position": "", "height_cm": L["height_cm"], "list": L["list"],
@@ -436,7 +498,7 @@ def main():
     os.makedirs(OUT_DIR, exist_ok=True)
     write(os.path.join(OUT_DIR, "players_1990.csv"), ENRICHED, players)
     write(os.path.join(OUT_DIR, "history_1990.csv"),
-          ["club", "num", "slug", "draft_year", "draft_type", "draft_pick", "seasons", "career", "peak"], history)
+          ["club", "num", "slug", "draft_year", "draft_type", "draft_pick", "seasons", "career", "peak", "honours"], history)
     write(os.path.join(OUT_DIR, "list_additions_1990.csv"),
           ["first", "last", "dob", "club", "position", "height_cm", "list", "peak", "source_url", "checked"], additions)
     write(os.path.join(OUT_DIR, "list_addition_stats_1990.csv"), ADD_STATS, add_stats)
