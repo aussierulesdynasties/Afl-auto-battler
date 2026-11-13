@@ -1022,12 +1022,16 @@ func is_regular_done() -> bool:
 # ---------------------------------------------------------------------------
 ## The finals series of the season's format (SeasonRules.BRACKETS): the
 ## wildcard bracket of the class doc in the game's league, the McIntyre final
-## five, the final six or a final eight in a past year.
-func start_finals() -> void:
+## five, the final six or a final eight in a past year. A club the league has
+## thrown out of the finals (`barred`, YearEvents) is passed over, and the
+## next club on the ladder takes its place.
+func start_finals(barred: Array = []) -> void:
 	var top := []
 	for row in ladder_sorted():
 		if top.size() >= finalists():
 			break
+		if barred.has(str(row["code"])):
+			continue
 		top.append(row["code"])
 	finals = {
 		"week": 1,
