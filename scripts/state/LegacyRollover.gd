@@ -121,6 +121,10 @@ static func real_class(year: int) -> Array:
 		p["draft_class"] = true
 		if str(r.get("peak", "")) != "":
 			p["real_peak"] = int(str(r["peak"]))
+		# His last real season (build_rollovers): he retires about then, as
+		# a start list's real player does (Prospects.should_retire).
+		if str(r.get("last_season", "")) != "":
+			p["real_last"] = int(str(r["last_season"]))
 		Prospects.project(p)
 		out.append(p)
 	GameDB.assign_aliases(out)

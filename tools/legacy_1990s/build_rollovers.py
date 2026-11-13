@@ -12,7 +12,7 @@ Inputs (data/legacy/, gathered by tools/legacy_<decade>s; data/draftees_2026.csv
   1990s/lists_1990_opening.csv  the players a 1990 career already has
 
 Outputs (data/legacy/):
-  classes.csv      year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak
+  classes.csv      year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak,last_season
                    One row per prospect in the class drafted at the end of
                    `year`: the National Draft in pick order, then that year's
                    Rookie Draft. `club` is the club that really took him
@@ -20,6 +20,8 @@ Outputs (data/legacy/):
                    history; director 2026-11-10). `tie` is father-son.
                    `peak` is his best real season (8+ games), the "Informed"
                    potential (director 2026-11-11); blank if he never had one.
+                   `last_season` is his last year on a real list (blank if
+                   still listed in 2025 or never listed): he retires about then.
   entry_lists.csv  year,club,num,first,last,dob,height_cm,list,role,peak,known,src,ovr + stats
                    A new club's real list in its first season (Adelaide 1991,
                    Fremantle 1995, Port Adelaide 1997, Gold Coast 2011, GWS
@@ -50,6 +52,7 @@ from collections import defaultdict
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import build_start as B  # noqa: E402
+import last_seasons as LS  # noqa: E402
 
 LEG = B.LEG
 ROOT = B.ROOT
@@ -59,7 +62,8 @@ LAST_DATA = 2025
 REAL_2026 = os.path.join(ROOT, "data", "draftees_2026.csv")
 # A club's first season: its real list that year is the list it fields.
 ENTRIES = {"ADE": 1991, "FRE": 1995, "PAD": 1997, "GCS": 2011, "GWS": 2012}
-CLASS_COLS = ["year", "rank", "kind", "club", "first", "last", "dob", "height_cm", "role", "origin", "tie", "peak"]
+CLASS_COLS = ["year", "rank", "kind", "club", "first", "last", "dob", "height_cm", "role", "origin", "tie", "peak",
+              "last_season"]
 ENTRY_COLS = ["year", "club", "num", "first", "last", "dob", "height_cm", "list", "role", "peak", "known", "src", "ovr"] + B.ADD_STATS[4:28]
 
 
@@ -128,6 +132,18 @@ def main():
     seen = set(r["draftguru_id"] for r in read(os.path.join(LEG, "1990s", "lists_1990_opening.csv"))
                if r["draftguru_id"])
     seen_names = set()
+    # His last season on a real list, as the start lists carry it
+    # (last_seasons.py): a drafted real player retires about when he did
+    # (director, 2026-11-13: "make all historical players retirement start
+    # roughly when it did irl"). Blank before his class or once the lists end.
+    by_slug, by_dob, by_full, top = LS.last_years()
+
+    def last_of(pid, first, last, dob, year):
+        slug = os.path.basename(pid or "").replace(".html", "")
+        hit = by_slug.get(slug, 0) if slug else 0
+        if not hit and dob:
+            hit = by_dob.get("%s|%s" % (LS._norm(last), dob), 0)                 or by_full.get("%s|%s|%s" % (LS._norm(first), LS._norm(last), dob), 0)
+        return str(hit) if year < hit < top else ""
     # Who a career already has, by name: the 1990 lists, then each class as
     # it is added. A redraft the source gives no draftguru id or date of
     # birth (Andrew Peck, 1990 pre-season pick redrafted in 1991) is that
@@ -181,6 +197,7 @@ def main():
                 "height_cm": b.get("height_cm", ""), "role": role_of(pid, rated, b.get("height_cm", "")),
                 "origin": r["origin"], "tie": "FS" if r["flag"] == "father_son" else "",
                 "peak": peak_of(pid, rated, year + 1),
+                "last_season": last_of(pid, r["first"], r["last"], dob, year),
             })
             seen_names.add((r["first"], r["last"], dob))
             known_names.add((r["first"], r["last"]))
@@ -202,6 +219,7 @@ def main():
                 "height_cm": r["height_cm"], "role": role_of(pid, rated, r["height_cm"]),
                 "origin": r["origin"], "tie": tie_of(r),
                 "peak": peak_of(pid, rated, year + 1),
+                "last_season": last_of(pid, r["first"], r["last"], r["dob"], year),
             })
             seen_names.add((r["first"], r["last"], r["dob"]))
             known_names.add((r["first"], r["last"]))
@@ -215,7 +233,7 @@ def main():
         classes.append({"year": 2026, "rank": n26, "kind": "national", "club": r["tied_club"],
                         "first": r["first"], "last": r["last"], "dob": r["dob"], "height_cm": r["height_cm"],
                         "role": pos, "origin": "%s (%s)" % (r["team"], r["league"]),
-                        "tie": r["tied_type"] if r["tied_club"] else "", "peak": ""})
+                        "tie": r["tied_type"] if r["tied_club"] else "", "peak": "", "last_season": ""})
 
     entries = []
     for club, year in sorted(ENTRIES.items(), key=lambda kv: kv[1]):
