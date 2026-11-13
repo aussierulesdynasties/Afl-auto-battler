@@ -9,6 +9,8 @@ extends Control
 var primary := Color.WHITE
 var secondary := Color.DIM_GRAY
 var accent := Color.GOLD
+## A design's third pattern colour (only Fremantle's anchor has one: its red).
+var third := Color.GOLD
 var design := "plain"
 var code := ""
 
@@ -22,7 +24,10 @@ const BADGE_PARTS := preload("res://assets/ui/badge/badge_parts.png")
 const BADGE_DESIGN_SHEET := preload("res://assets/ui/badge/badge_designs.png")
 ## The designs sheet's cells, in order (the coach's suit has none).
 const BADGE_DESIGNS := ["plain", "stripes", "hoops", "sash", "yoke", "band", "chevrons", "panels", "chevron",
-		"sides", "tiers", "shoulders", "map", "lowhoops", "giants", "wings", "twohoops"]
+		"sides", "tiers", "shoulders", "map", "lowhoops", "giants", "wings", "twohoops",
+		# Designs clubs wore in earlier seasons (Legacy mode), the figures' own shapes.
+		"anchor", "power97", "eagles00", "swans90", "giants12", "saints97", "lions10",
+		"dogs90", "dogs97", "crows06"]
 var _mat: ShaderMaterial
 var _letters := Control.new()
 
@@ -44,6 +49,7 @@ static func make(p: Color, s: Color, a: Color, p_design := "plain", p_code := ""
 	c.primary = p
 	c.secondary = s
 	c.accent = a
+	c.third = a
 	c.design = p_design
 	c.code = p_code
 	c.name = "ClubMarker"
@@ -196,6 +202,7 @@ func _draw() -> void:
 	_mat.set_shader_parameter("primary", primary)
 	_mat.set_shader_parameter("secondary", secondary)
 	_mat.set_shader_parameter("accent", accent)
+	_mat.set_shader_parameter("third", third)
 	_mat.set_shader_parameter("design_cell", maxi(0, BADGE_DESIGNS.find(design)))
 	_mat.set_shader_parameter("highlight", ["", "body", "pattern", "trim"].find(highlight))
 	draw_texture_rect(BADGE_LIGHT, Rect2(Vector2.ZERO, Vector2(sz, sz)), false)
