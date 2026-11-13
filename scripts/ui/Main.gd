@@ -505,10 +505,13 @@ func _show_year_step() -> void:
 ## it is, and one line on what you take on. Side by side (`tall`), the figure
 ## sits above the words.
 func _year_button(id: String, tall := false) -> Button:
-	var year := _start_year_of(id)
-	var words: Array = FUTURE_WORDS.get(id, YEAR_WORDS.get(id, ["The %d season" % year, ""]))
+	var year := int(Datasets.get_set(id).get("start_year", 0))
+	var words: Array = YEAR_WORDS.get(id, ["The %d season" % year, ""])
 	var b := UiKit.btn("", UiKit.NAME)
 	b.name = "StartYear_" + id
+	if FUTURE_STARTS.has(id):
+		year = _start_year_of(id)
+		words = FUTURE_WORDS[id]
 	# A button does not grow with its children: room for the figure above three lines when tall.
 	b.custom_minimum_size = Vector2(0, 136 if tall else 104)
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
