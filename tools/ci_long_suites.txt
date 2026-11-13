@@ -18,6 +18,7 @@ match_motion
 legacy_2000_long
 back_nav
 preseason
+legacy_2010_long
 # The balance harness suites ran nightly before this rule and still do.
 balance
 league_balance
