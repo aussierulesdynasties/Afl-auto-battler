@@ -492,9 +492,15 @@ func _test_concessions_by_entry() -> void:
 	for code in want:
 		_check(ExpansionBuild.concessions(code) == want[code],
 				"%s (entering %d): concessions %s" % [code, GameDB.enter_year(code), str(want[code])])
-	_check(not EraRules.on("expansion_concessions", 2010) and EraRules.on("expansion_concessions", 2011)
-			and EraRules.on("expansion_concessions", 2028) and EraRules.on("expansion_concessions", 2030),
-			"The concessions begin with the 2011 entry and stand for Tasmania and Canberra")
+	var y_of := {}
+	for code in ["GCS", "TAS"]:
+		y_of[code] = GameDB.enter_year(code)
+	GameDB.set_enter_year("GCS", 2010)
+	GameDB.set_enter_year("TAS", 2028)
+	_check(not ExpansionBuild.concessions("GCS"), "A club entering in 2010 would have no concessions")
+	_check(ExpansionBuild.concessions("TAS"), "Tasmania, entering in 2028, has them")
+	GameDB.set_enter_year("GCS", int(y_of["GCS"]))
+	GameDB.set_enter_year("TAS", int(y_of["TAS"]))
 	_check(Expansion.foundation_size("ADE") == EraRules.senior_spots(1991) and Expansion.foundation_size("GCS") == Expansion.FOUNDATION_SIZE,
 			"Adelaide sign a whole senior list (%d), Gold Coast %d" % [Expansion.foundation_size("ADE"), Expansion.FOUNDATION_SIZE])
 	GameDB.reload("1990")
