@@ -93,6 +93,7 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `awards` | Brownlow, Coleman, best and fairest, All-Australian |
 | `achievements` | Club achievements |
 | `contracts` | Contracts, free agency and trades (seeded: a clock seed once made the pick-limit check flaky) |
+| `era_money` | Legacy money (row 142, L3): GameDB.era_rule reads data/legacy/era_rules.csv; a 1990 career shows the $1.5m cap and 1990-dollar contracts, minimums, offer steps and club budget; 2026 on scale by exactly 1 |
 | `recruit_undo` | Undo for a delisting, a free-agent signing and a re-signing (row 119): exact restore of list, cap, contracts, pool and news, newest first, gone once the national draft starts or after a reload, a real tap on Undo at 390 x 844 |
 | `league` | The two difficulty dials (saved, old saves mapped, trade bargaining) and the league news feed |
 | `club` | The board, morale and the weekly event card |
@@ -129,7 +130,7 @@ By area:
 - `MatchSim.gd`, `MatchNotes.gd`: `match_game`, `matchday`, `roles`; add `pressure` for pressure changes. `calibration` and `balance` only when you changed scoring or ratings (they are the slow ones).
 - `UiKit.gd` or any screen: `career_ui`, plus that screen's own suite (`draft_ui`, `intake_ui`, `matchday`, `match_visual`).
 - The draft, prospects or potential: `draft`, `intake`, `potential`, `ai`.
-- Contracts, money or trades: `contracts`, `recruit_undo`, `save`.
+- Contracts, money or trades: `contracts`, `era_money`, `recruit_undo`, `save`.
 - Anything stored on a player or a club: `save` as well, so an old career still loads.
 - Coaches and staff: `coaches`, `coach_market`, `coach_pathway`, `coach_effects`.
 

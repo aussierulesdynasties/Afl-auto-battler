@@ -5,7 +5,8 @@ shader_type canvas_item;
 //   parts_tex: R trim (collar, armholes, edge), G the inside of the back through the neck,
 //              B the ARD patch on the chest, A coverage.
 //   designs_tex: one cell per GuernseyCrest.BADGE_DESIGNS entry, 4 a row: R the pattern
-//              colour's shapes, G the second colour's (drawn in the trim colour, as the crest).
+//              colour's shapes, G the second colour's (drawn in the trim colour, as the crest),
+//              B a third colour's (only the anchor's).
 // Every colour is a uniform, so created clubs work too.
 
 uniform sampler2D parts_tex : filter_linear_mipmap;
@@ -13,6 +14,7 @@ uniform sampler2D designs_tex : filter_linear_mipmap;
 uniform vec4 primary : source_color = vec4(1.0);
 uniform vec4 secondary : source_color = vec4(0.4, 0.4, 0.4, 1.0);
 uniform vec4 accent : source_color = vec4(1.0, 0.84, 0.0, 1.0);
+uniform vec4 third : source_color = vec4(1.0, 0.84, 0.0, 1.0);
 uniform int design_cell = 0;
 uniform int design_rows = 5;
 // Club Forge outlines the part under the pointer: 0 none, 1 body, 2 pattern, 3 trim.
@@ -26,10 +28,11 @@ void fragment() {
 	vec4 lit = texture(TEXTURE, UV);
 	vec4 parts = texture(parts_tex, UV);
 	vec2 cell = vec2(float(design_cell % 4), float(design_cell / 4));
-	vec2 d = texture(designs_tex, (cell + UV) / vec2(4.0, float(design_rows))).rg;
+	vec3 d = texture(designs_tex, (cell + UV) / vec2(4.0, float(design_rows))).rgb;
 	vec3 col = primary.rgb;
 	col = mix(col, secondary.rgb, d.r);
 	col = mix(col, accent.rgb, d.g);
+	col = mix(col, third.rgb, d.b);
 	col = mix(col, accent.rgb, parts.r);
 	col = mix(col, primary.rgb * 0.45, parts.g);
 	vec3 patch = lum(primary.rgb) > 0.5 ? vec3(0.09, 0.07, 0.05) : vec3(0.95);

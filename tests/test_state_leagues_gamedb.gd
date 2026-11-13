@@ -120,7 +120,10 @@ func _test_no_key_no_leagues() -> void:
 			"Without them no VFL club is named for a recruit; the TSL still is")
 	if Datasets.ready("1990"):
 		GameDB.reload("1990")
-		_check(GameDB.state_clubs.is_empty(), "The 1990 load has no state clubs")
+		_check(GameDB.state_players.is_empty() and GameDB.state_links.is_empty()
+				and GameDB.state_leagues.keys() == GameDB.second_tier.shape(1990).keys(),
+				"The 1990 load holds 1990's leagues below the AFL (row 142), with no state players (%s)"
+				% str(GameDB.state_leagues.keys()))
 	GameDB.reload()
 
 

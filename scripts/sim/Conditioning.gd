@@ -548,11 +548,11 @@ static func department_words(hp_level: int) -> String:
 	elif t < -0.0001:
 		plan = HP_PLAN_DOWN % pct(-t)
 	var diff := ClubBudget.cost_m(level) - ClubBudget.cost_m(ClubBudget.STANDARD)
-	var cost := HP_COST_EVEN % ("$%.1fm" % ClubBudget.cost_m(level))
+	var cost := HP_COST_EVEN % ClubBudget.money_m(ClubBudget.cost_m(level))
 	if diff > 0.001:
-		cost = HP_COST_MORE % ("$%.1fm" % diff)
+		cost = HP_COST_MORE % ClubBudget.money_m(diff)
 	elif diff < -0.001:
-		cost = HP_COST_LESS % ("$%.1fm" % -diff)
+		cost = HP_COST_LESS % ClubBudget.money_m(-diff)
 	# Gain / Cost (director 2026-11-10): what the level buys is its gain and
 	# what it gives up, money or legs, its cost. Below Standard the money it
 	# frees is the gain and the weaker department the cost.

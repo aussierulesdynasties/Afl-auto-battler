@@ -1893,7 +1893,10 @@ static func club_marker(code: String, size := 22.0) -> Control:
 		trim = g["pattern2"]
 	# The old flag's footprint (size less its 2 px of frame), so lists of clubs
 	# - the ladder above all - keep their row heights.
-	return GuernseyCrest.make(g["base"], g["pattern"], trim, str(g["design"]), code, size - 2.0)
+	var crest := GuernseyCrest.make(g["base"], g["pattern"], trim, str(g["design"]), code, size - 2.0)
+	if g.has("pattern3"):
+		crest.third = g["pattern3"]
+	return crest
 
 
 ## The same guernsey from colours alone (Club Forge shows a club before it

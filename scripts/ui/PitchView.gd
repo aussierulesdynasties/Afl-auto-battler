@@ -793,13 +793,26 @@ static func disc_samples(kit: Dictionary) -> Array:
 	return out
 
 
+## The designs clubs wore in earlier seasons, drawn on a disc as the nearest of
+## the disc's shapes: a top half, a band, two hoops or a side.
+const DISC_FAMILY := {"anchor": "yoke", "power97": "yoke", "swans90": "yoke", "saints97": "yoke",
+		"lions10": "yoke", "eagles00": "panels", "giants12": "panels", "dogs90": "band",
+		"dogs97": "band", "crows06": "lowhoops"}
+
+
+## The disc shape a kit's design draws as.
+static func disc_design(kit: Dictionary) -> String:
+	var design := str(kit.get("design", "plain"))
+	return str(DISC_FAMILY.get(design, design))
+
+
 ## The colour of the disc at (x, y) in the unit circle: the geometry _draw_kit
 ## draws.
 static func kit_colour_at(kit: Dictionary, x: float, y: float) -> Color:
 	var base: Color = kit.get("base", Color.WHITE)
 	var pat: Color = kit.get("pattern", Color.DIM_GRAY)
 	var ring = kit.get("ring", null)
-	var design := str(kit.get("design", "plain"))
+	var design := disc_design(kit)
 	var d := sqrt(x * x + y * y)
 	var col := base
 	if ring != null and d > 0.8:
@@ -2352,7 +2365,7 @@ func _draw_kit(p: Vector2, tr: float, kit: Dictionary) -> void:
 static func paint_kit(ci: CanvasItem, p: Vector2, tr: float, kit: Dictionary, aa: bool) -> void:
 	var base: Color = kit.get("base", Color.WHITE)
 	var pat: Color = kit.get("pattern", Color.DIM_GRAY)
-	var design := str(kit.get("design", "plain"))
+	var design := disc_design(kit)
 	ci.draw_circle(p, tr, base)
 	var r := tr * 0.94
 	match design:

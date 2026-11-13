@@ -6,7 +6,7 @@ IN when inside the 18 clubs' lowest..highest, NEAR when within mean +-2 sd,
 else OUT. Paired runs also show B - A with its standard error over seeds, so a
 change is real when |delta| > 2 se.
 """
-import argparse, csv, glob, json, math, os, statistics as st
+import argparse, csv, glob, json, math, os, re, statistics as st
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 # sim stat -> afl_team_rates key (score is computed from goals/behinds there)
@@ -1180,6 +1180,27 @@ def tag_section(A, B):
         print(f"Tagging side wins {100 * sum(wins) / len(wins):.1f}%.")
 
 
+def year_ref(o):
+    """The real per-team-match rates to mark against, and their label: 2026
+    (afl_team_rates.json), or a past season's (afl_year_rates.json, legacy row 142 L5)
+    when --year or an arm's own --year names one. A stat that season did not record
+    is absent, so it reads "-" rather than being marked against another year."""
+    year = o.year
+    if not year:
+        for arm in (o.b, o.a):
+            m = re.search(r"--year\s+(\d{4})", arm or "")
+            if m:
+                year = int(m.group(1))
+                break
+    if year and year != 2026:
+        years = json.load(open(os.path.join(HERE, "afl_year_rates.json"), encoding="utf-8"))["years"]
+        if str(year) not in years:
+            raise SystemExit(f"no real rates for {year} in afl_year_rates.json")
+        return years[str(year)]["per_team_match"], f"real {year} (afl_year_rates.json, AFL Tables season totals)"
+    return (json.load(open(os.path.join(HERE, "afl_team_rates.json")))["per_team_match"],
+            "real 2026 (afl_team_rates.json)")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--run", required=True)
@@ -1187,8 +1208,11 @@ def main():
     ap.add_argument("--secs", type=int, default=0)
     ap.add_argument("--a", default="base")
     ap.add_argument("--b", default=None)
+    ap.add_argument("--year", type=int, default=0,
+                    help="mark against this season's real rates (afl_year_rates.json);"
+                         " default: the --year in B's or A's args, else 2026")
     o = ap.parse_args()
-    real = json.load(open(os.path.join(HERE, "afl_team_rates.json")))["per_team_match"]
+    real, ref_label = year_ref(o)
     A = load(o.run, "a")
     B = load(o.run, "b") if o.b else {}
     keys = sorted({k for r in A.values() for t in r["teams"] for k in t if isinstance(t[k], (int, float))})
@@ -1196,6 +1220,7 @@ def main():
     rate = len(A) * (2 if B else 1) / max(1, o.secs)
     print(f"# Balance run: {len(A)} matches{' x2 arms' if B else ''}, {o.secs}s ({rate:.1f} matches/s)\n")
     print(f"A = `{o.a}`" + (f", B = `{o.b}` (same seeds)" if B else "") + "\n")
+    print(f"Real reference: {ref_label}\n")
     head = "| stat (per team-match) | AFL mean | AFL range | A | mark |"
     if B:
         head += " B | mark | B-A | se | sig |"

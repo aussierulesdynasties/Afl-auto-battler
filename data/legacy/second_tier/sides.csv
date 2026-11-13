@@ -1,0 +1,182 @@
+league,code,name,kind,afl_club,from,to,source_url,evidence
+AFLR,BRLR,Brisbane Bears reserves,reserves,BRL,1990,1992,https://en.wikipedia.org/wiki/AFL_reserves,Brisbane Bears competed 1989-1992 (1991 premiers); disbanded after 1992; Lions never competed
+AFLR,CARR,Carlton reserves,reserves,CAR,1990,1999,https://en.wikipedia.org/wiki/AFL_reserves,"final-clubs table: in AFL reserves to 1999, moved to VFL in 2000"
+AFLR,COLR,Collingwood reserves,reserves,COL,1990,1999,https://en.wikipedia.org/wiki/AFL_reserves,"final-clubs table: in AFL reserves to 1999, moved to VFL in 2000"
+AFLR,ESSR,Essendon reserves,reserves,ESS,1990,1999,https://en.wikipedia.org/wiki/AFL_reserves,"final-clubs table: in AFL reserves to 1999, moved to VFL in 2000"
+AFLR,FITR,Fitzroy reserves,reserves,FIT,1990,1996,https://en.wikipedia.org/wiki/AFL_reserves,Fitzroy reserves 1919-1996; disbanded after Fitzroy merged with Brisbane end of 1996
+AFLR,FOO,Footscray / Western Bulldogs reserves,reserves,WBD,1990,1999,https://en.wikipedia.org/wiki/AFL_reserves,Footscray renamed Western Bulldogs in 1997; reserves moved to VFL in 2000
+AFLR,GEER,Geelong reserves,reserves,GEE,1990,1999,https://en.wikipedia.org/wiki/AFL_reserves,"final-clubs table: in AFL reserves to 1999, moved to VFL in 2000"
+AFLR,HAWR,Hawthorn reserves,reserves,HAW,1990,1999,https://en.wikipedia.org/wiki/AFL_reserves,disbanded after 1999 (Hawthorn affiliated with Box Hill from 2000)
+AFLR,MELR,Melbourne reserves,reserves,MEL,1990,1999,https://en.wikipedia.org/wiki/AFL_reserves,disbanded after 1999 (Melbourne affiliated with Sandringham from 2000)
+AFLR,NTHR,North Melbourne (Kangaroos) reserves,reserves,NTH,1990,1999,https://en.wikipedia.org/wiki/AFL_reserves,officially Kangaroos in 1999; reserves 1925-1999
+AFLR,RICR,Richmond reserves,reserves,RIC,1990,1999,https://en.wikipedia.org/wiki/AFL_reserves,"final-clubs table: in AFL reserves to 1999, moved to VFL in 2000"
+AFLR,STKR,St Kilda reserves,reserves,STK,1990,1999,https://en.wikipedia.org/wiki/AFL_reserves,"final-clubs table: in AFL reserves to 1999, moved to VFL in 2000"
+AFLR,SYDR,Sydney Swans reserves,reserves,SYD,1990,1999,https://en.wikipedia.org/wiki/AFL_reserves,Sydney (ex-South Melbourne) kept playing in the reserves; 1999 field = Victorian clubs plus Sydney
+VFA,BOX,Box Hill,standalone,,1990,1995,https://en.wikipedia.org/wiki/1995_VFA_season,on every VFA ladder 1990-1995; given an A licence for 1995
+VFA,BRU,Brunswick-Broadmeadows,standalone,,1990,1991,https://en.wikipedia.org/wiki/1991_VFA_season,"withdrew after three matches of 1991, record expunged, then folded"
+VFA,CAM,Camberwell,standalone,,1990,1990,https://en.wikipedia.org/wiki/1991_VFA_season,withdrew shortly before the 1991 season
+VFA,COB,Coburg,standalone,,1990,1995,https://en.wikipedia.org/wiki/1995_VFA_season,on every VFA ladder 1990-1995; given an A licence for 1995
+VFA,DAN,Dandenong,standalone,,1990,1994,https://en.wikipedia.org/wiki/1995_VFA_season,"1995 page: given a B licence, left senior VFA after 1994"
+VFA,FRA,Frankston,standalone,,1990,1995,https://en.wikipedia.org/wiki/1995_VFA_season,on every VFA ladder 1990-1995; given an A licence for 1995
+VFA,OAK,Oakleigh,standalone,,1990,1994,https://en.wikipedia.org/wiki/1995_VFA_season,"1995 page: given a B licence, left senior VFA after 1994"
+VFA,PRA,Prahran,standalone,,1990,1994,https://en.wikipedia.org/wiki/1995_VFA_season,"1995 page: took a B licence, withdrew from senior competition 16 Sep 1994"
+VFA,PRE,Preston,standalone,,1990,1995,https://en.wikipedia.org/wiki/1995_VFA_season,on every VFA ladder 1990-1995; given an A licence for 1995
+VFA,PTM,Port Melbourne,standalone,,1990,1995,https://en.wikipedia.org/wiki/1995_VFA_season,on every VFA ladder 1990-1995; given an A licence for 1995
+VFA,SAN,Sandringham,standalone,,1990,1995,https://en.wikipedia.org/wiki/1995_VFA_season,on every VFA ladder 1990-1995; given an A licence for 1995
+VFA,SPV,Springvale,standalone,,1990,1995,https://en.wikipedia.org/wiki/1995_VFA_season,on every VFA ladder 1990-1995; given an A licence for 1995
+VFA,WER,Werribee,standalone,,1990,1995,https://en.wikipedia.org/wiki/1995_VFA_season,on every VFA ladder 1990-1995; given an A licence for 1995
+VFA,WIL,Williamstown,standalone,,1990,1995,https://en.wikipedia.org/wiki/1995_VFA_season,on every VFA ladder 1990-1995; given an A licence for 1995
+VFL,ASP,Aspley,standalone,,2021,2021,https://en.wikipedia.org/wiki/2022_VFL_season,"present in the VFL: sole season 2021, then withdrew"
+VFL,BEN,Bendigo Diggers,standalone,,1998,2002,https://en.wikipedia.org/wiki/2000_VFL_season,licensed from 1998; stand-alone 2000-2002
+VFL,BEN,Bendigo Bombers,aligned,ESS,2003,2011,https://en.wikipedia.org/wiki/2003_VFL_season,Essendon affiliated with Bendigo 2003; nickname Diggers to Bombers
+VFL,BEN,Bendigo Gold,aligned,ESS,2012,2012,https://en.wikipedia.org/wiki/2012_VFL_season,"renamed Bendigo Gold for 2012, final Essendon-aligned season"
+VFL,BEN,Bendigo Gold,standalone,,2013,2014,https://en.wikipedia.org/wiki/2015_VFL_season,stand-alone 2013-2014; withdrew and disbanded before 2015
+VFL,BOX,Box Hill,standalone,,1996,1999,https://en.wikipedia.org/wiki/1996_VFL_season,on 1996-1999 ladders; no AFL link before 2000
+VFL,BOX,Box Hill Hawks,aligned,HAW,2000,,https://en.wikipedia.org/wiki/Australian_Football_League_reserves_affiliations,Hawthorn affiliated with Box Hill 2000-present; nickname Mustangs to Hawks
+VFL,BRLR,Brisbane Lions VFL,reserves,BRL,2021,,https://en.wikipedia.org/wiki/2021_VFL_season,present in the VFL: NEAFL reserves teams joined 2021
+VFL,CARR,Carlton reserves,reserves,CAR,2000,2002,https://en.wikipedia.org/wiki/2003_VFL_season,"Carlton reserves in VFL 2000-2002, withdrew when Bullants affiliation began"
+VFL,CARR,Carlton VFL,reserves,CAR,2021,,https://en.wikipedia.org/wiki/2021_VFL_season,Carlton fielded its own standalone reserves team from 2021
+VFL,CAS,Casey Scorpions,aligned,STK,2006,2008,https://en.wikipedia.org/wiki/Australian_Football_League_reserves_affiliations,Springvale relocated to Casey as Casey Scorpions 2006; St Kilda affiliate to 2008
+VFL,CAS,Casey Scorpions / Casey Demons,aligned,MEL,2009,,https://en.wikipedia.org/wiki/2009_VFL_season,Melbourne affiliated with Casey from 2009; renamed Casey Demons 2017
+VFL,COB,Coburg,standalone,,1996,2000,https://en.wikipedia.org/wiki/1999_VFL_season,Coburg-Fitzroy Lions from Aug 1999 (Fitzroy sponsorship) until 2000
+VFL,COB,Coburg Tigers,aligned,RIC,2001,2013,https://en.wikipedia.org/wiki/2001_VFL_season,Richmond affiliated with Coburg 2001-2013; nickname Lions to Tigers
+VFL,COB,Coburg,standalone,,2014,,https://en.wikipedia.org/wiki/2014_VFL_season,Richmond-Coburg alignment ended; Coburg continued stand-alone as Lions
+VFL,COLR,Collingwood reserves,reserves,COL,2000,2000,https://en.wikipedia.org/wiki/2000_VFL_season,one of six clubs entering reserves directly in 2000
+VFL,COLR,Collingwood VFL,reserves,COL,2008,,https://en.wikipedia.org/wiki/2008_VFL_season,Collingwood began fielding its own reserves team again in 2008
+VFL,ESSR,Essendon reserves,reserves,ESS,2000,2002,https://en.wikipedia.org/wiki/2003_VFL_season,Essendon reserves withdrew when Bendigo affiliation began 2003
+VFL,ESSR,Essendon VFL,reserves,ESS,2013,,https://en.wikipedia.org/wiki/2013_VFL_season,Essendon began fielding its own reserves team in 2013
+VFL,FOO,Footscray,reserves,WBD,2014,,https://en.wikipedia.org/wiki/2014_VFL_season,"Bulldogs stand-alone reserves team, playing as Footscray"
+VFL,FRA,Frankston,standalone,,1996,2016,https://en.wikipedia.org/wiki/2006_VFL_season,never AFL-affiliated; 2003 and 2006 pages list it as stand-alone
+VFL,FRA,Frankston,standalone,,2018,,https://en.wikipedia.org/wiki/2017_VFL_season,"licence terminated after 2016, missed 2017, readmitted 2018"
+VFL,GCSR,Gold Coast,standalone,,2010,2010,https://en.wikipedia.org/wiki/2010_VFL_season,"present in the VFL: Gold Coast club added 2010, left for the AFL 2011; the club had no AFL side until 2011"
+VFL,GCSR,Gold Coast Suns VFL,reserves,GCS,2021,,https://en.wikipedia.org/wiki/2021_VFL_season,present in the VFL: NEAFL reserves teams joined 2021
+VFL,GEER,Geelong VFL,reserves,GEE,2000,,https://en.wikipedia.org/wiki/Australian_Football_League_reserves_affiliations,Geelong fielded a stand-alone reserves team 2000-present
+VFL,GWSR,GWS Giants VFL,reserves,GWS,2021,,https://en.wikipedia.org/wiki/2021_VFL_season,present in the VFL: NEAFL reserves teams joined 2021
+VFL,MUR,Murray Kangaroos,aligned,NTH,2000,2002,https://en.wikipedia.org/wiki/2000_VFL_season,new club run by North Melbourne and Ovens & Murray FL; folded after 2002
+VFL,NBR,North Ballarat,standalone,,1996,2005,https://en.wikipedia.org/wiki/1996_VFL_season,joined 1996; stand-alone (2003 page names it)
+VFL,NBR,North Ballarat,aligned,NTH,2006,2015,https://en.wikipedia.org/wiki/2016_VFL_season,North partial affiliation 2006-2015 (shared with Tasmania then Werribee)
+VFL,NBR,North Ballarat,standalone,,2016,2017,https://en.wikipedia.org/wiki/2018_VFL_season,stand-alone 2016-2017; licence suspended after 2017
+VFL,NBU,Northern Bullants,standalone,,2000,2002,https://en.wikipedia.org/wiki/2000_VFL_season,Preston became the Northern Bullants in 2000; stand-alone to 2002
+VFL,NBU,Northern Bullants,aligned,CAR,2003,2011,https://en.wikipedia.org/wiki/2003_VFL_season,Carlton affiliated with the Northern Bullants from 2003
+VFL,NBU,Northern Blues,aligned,CAR,2012,2019,https://en.wikipedia.org/wiki/2012_VFL_season,renamed Northern Blues 2012; Carlton ended affiliation 26 Mar 2020
+VFL,NBU,Northern Bullants,standalone,,2021,2025,https://en.wikipedia.org/wiki/2021_VFL_season,back in 2021 as stand-alone under Northern Bullants name; licence revoked for 2026
+VFL,NTHR,North Melbourne VFL,reserves,NTH,2018,,https://en.wikipedia.org/wiki/2018_VFL_season,North Melbourne entered its reserves team in the VFL seniors 2018
+VFL,PRE,Preston Knights,standalone,,1996,1999,https://en.wikipedia.org/wiki/2000_VFL_season,competed as Preston Knights from 1996 (merged with Northern Knights U18s)
+VFL,PTM,Port Melbourne,standalone,,1996,1999,https://en.wikipedia.org/wiki/1996_VFL_season,on 1996-1999 ladders
+VFL,PTM,Port Melbourne,aligned,SYD,2000,2002,https://en.wikipedia.org/wiki/2000_VFL_season,Sydney partial affiliation 2000-2002; Sydney broke it off a year early
+VFL,PTM,Port Melbourne,aligned,NTH,2003,2005,https://en.wikipedia.org/wiki/2003_VFL_season,Kangaroos affiliated with Port Melbourne 2003-2005
+VFL,PTM,Port Melbourne,standalone,,2006,,https://en.wikipedia.org/wiki/2006_VFL_season,North-Port affiliation ended; Port continued as stand-alone senior team
+VFL,RICR,Richmond reserves,reserves,RIC,2000,2000,https://en.wikipedia.org/wiki/2000_VFL_season,one of six clubs entering reserves directly in 2000
+VFL,RICR,Richmond VFL,reserves,RIC,2014,,https://en.wikipedia.org/wiki/2014_VFL_season,Richmond re-entered a stand-alone reserves team in 2014
+VFL,SAN,Sandringham,standalone,,1996,1999,https://en.wikipedia.org/wiki/1996_VFL_season,on 1996-1999 ladders
+VFL,SAN,Sandringham,aligned,MEL,2000,2008,https://en.wikipedia.org/wiki/2009_VFL_season,Melbourne ended nine-year affiliation with Sandringham after 2008
+VFL,SAN,Sandringham,aligned,STK,2009,2025,https://en.wikipedia.org/wiki/2009_VFL_season,St Kilda affiliated with Sandringham 2009; ended after 2025
+VFL,SAN,Sandringham,standalone,,2026,,https://en.wikipedia.org/wiki/2026_VFL_season,Sandringham continued in the competition as a standalone team
+VFL,SOU,Southport,standalone,,2021,,https://en.wikipedia.org/wiki/2021_VFL_season,present in the VFL: Southport Sharks joined from the NEAFL 2021
+VFL,SPV,Springvale,standalone,,1996,2000,https://en.wikipedia.org/wiki/2000_VFL_season,not among the five 2000 affiliations
+VFL,SPV,Springvale,aligned,STK,2001,2005,https://en.wikipedia.org/wiki/2001_VFL_season,St Kilda affiliated with Springvale 2001
+VFL,STKR,St Kilda reserves,reserves,STK,2000,2000,https://en.wikipedia.org/wiki/2000_VFL_season,one of six clubs entering reserves directly in 2000
+VFL,STKR,St Kilda VFL,reserves,STK,2026,,https://en.wikipedia.org/wiki/2026_VFL_season,AFL granted St Kilda a VFL licence for 2026
+VFL,SYDR,Sydney Swans VFL,reserves,SYD,2021,,https://en.wikipedia.org/wiki/2021_VFL_season,present in the VFL: NEAFL reserves teams joined 2021
+VFL,TASD,Tasmania Devils,standalone,,2026,,https://en.wikipedia.org/wiki/2026_VFL_season,present in the VFL: Tasmania licensed from 2026 ahead of 2028 AFL entry
+VFL,TASV,Tasmanian Devils,standalone,,2001,2005,https://en.wikipedia.org/wiki/2001_VFL_season,admitted 2001; stand-alone (2003 page)
+VFL,TASV,Tasmanian Devils,aligned,NTH,2006,2007,https://en.wikipedia.org/wiki/2006_VFL_season,North split affiliation with North Ballarat and Tasmania 2006-2007
+VFL,TASV,Tasmanian Devils,standalone,,2008,2008,https://en.wikipedia.org/wiki/2009_VFL_season,stand-alone 2008; withdrew and disbanded after 2008
+VFL,TRA,Traralgon,standalone,,1996,1997,https://en.wikipedia.org/wiki/1998_VFL_season,joined 1996; departed end of November 1997
+VFL,WER,Werribee,standalone,,1996,1999,https://en.wikipedia.org/wiki/1996_VFL_season,expelled late 1996 then readmitted; on 1996-1999 ladders
+VFL,WER,Werribee,aligned,WBD,2000,2007,https://en.wikipedia.org/wiki/2008_VFL_season,"Bulldogs split Werribee/Williamstown 2000, full Werribee 2001-2007"
+VFL,WER,Werribee,aligned,NTH,2008,2017,https://en.wikipedia.org/wiki/2018_VFL_season,"North partial affiliation 2008-2015, full 2016-2017; ended after 2017"
+VFL,WER,Werribee,standalone,,2018,,https://en.wikipedia.org/wiki/2018_VFL_season,Werribee continued to field a stand-alone senior team
+VFL,WIL,Williamstown,standalone,,1996,1999,https://en.wikipedia.org/wiki/1996_VFL_season,kept its licence over Werribee in 1996; on 1996-1999 ladders
+VFL,WIL,Williamstown,aligned,WBD,2000,2000,https://en.wikipedia.org/wiki/2000_VFL_season,Bulldogs split their players between Werribee and Williamstown in 2000
+VFL,WIL,Williamstown,aligned,COL,2001,2007,https://en.wikipedia.org/wiki/2008_VFL_season,Collingwood ended seven-year affiliation with Williamstown after 2007
+VFL,WIL,Williamstown,aligned,WBD,2008,2013,https://en.wikipedia.org/wiki/2014_VFL_season,Bulldogs affiliated with Williamstown 2008-2013
+VFL,WIL,Williamstown,standalone,,2014,,https://en.wikipedia.org/wiki/2014_VFL_season,Williamstown continued as a stand-alone VFL club
+VFL,,No second tier in 2020,none,CAR,2020,2020,https://en.wikipedia.org/wiki/2020_VFL_season,"2020 VFL suspended 16 March, cancelled 4 July without a match"
+VFL,,No second tier in 2020,none,COL,2020,2020,https://en.wikipedia.org/wiki/2020_VFL_season,"2020 VFL suspended 16 March, cancelled 4 July without a match"
+VFL,,No second tier in 2020,none,ESS,2020,2020,https://en.wikipedia.org/wiki/2020_VFL_season,"2020 VFL suspended 16 March, cancelled 4 July without a match"
+VFL,,No second tier in 2020,none,GEE,2020,2020,https://en.wikipedia.org/wiki/2020_VFL_season,"2020 VFL suspended 16 March, cancelled 4 July without a match"
+VFL,,No second tier in 2020,none,HAW,2020,2020,https://en.wikipedia.org/wiki/2020_VFL_season,"2020 VFL suspended 16 March, cancelled 4 July without a match"
+VFL,,No second tier in 2020,none,MEL,2020,2020,https://en.wikipedia.org/wiki/2020_VFL_season,"2020 VFL suspended 16 March, cancelled 4 July without a match"
+VFL,,No second tier in 2020,none,NTH,2020,2020,https://en.wikipedia.org/wiki/2020_VFL_season,"2020 VFL suspended 16 March, cancelled 4 July without a match"
+VFL,,No second tier in 2020,none,RIC,2020,2020,https://en.wikipedia.org/wiki/2020_VFL_season,"2020 VFL suspended 16 March, cancelled 4 July without a match"
+VFL,,No second tier in 2020,none,STK,2020,2020,https://en.wikipedia.org/wiki/2020_VFL_season,"2020 VFL suspended 16 March, cancelled 4 July without a match"
+VFL,,No second tier in 2020,none,WBD,2020,2020,https://en.wikipedia.org/wiki/2020_VFL_season,"2020 VFL suspended 16 March, cancelled 4 July without a match"
+SANFL,ADR,Adelaide,reserves,ADE,2014,2019,https://en.wikipedia.org/wiki/Adelaide_Football_Club_(SANFL),Granted a licence for a dedicated reserves team; first SANFL match 6 April 2014
+SANFL,ADR,Adelaide,reserves,ADE,2021,,https://en.wikipedia.org/wiki/Adelaide_Football_Club_(SANFL),"2020: did not field a team due to COVID-19; back from 2021, 7th in 2026"
+SANFL,CTD,Central District,standalone,,1990,,https://en.wikipedia.org/wiki/South_Australian_National_Football_League,In the SANFL since 1964; listed 1990 and 2026
+SANFL,GLG,Glenelg,standalone,,1990,,https://en.wikipedia.org/wiki/South_Australian_National_Football_League,In the SANFL since 1921; listed 1990 and 2026
+SANFL,NAD,North Adelaide,standalone,,1990,,https://en.wikipedia.org/wiki/South_Australian_National_Football_League,In the SANFL since 1888; listed 1990 and 2026
+SANFL,NWD,Norwood,standalone,,1990,,https://en.wikipedia.org/wiki/South_Australian_National_Football_League,In the SANFL since 1878; listed 1990 and 2026
+SANFL,PAM,Port Adelaide,standalone,,1990,2013,https://en.wikipedia.org/wiki/Port_Adelaide_Magpies,From 1997 the SANFL required its side be completely separate from the AFL club; season pages call it Port Adelaide
+SANFL,PAM,Port Adelaide,reserves,PAD,2014,2019,https://en.wikipedia.org/wiki/Port_Adelaide_Magpies,Sept 2013 deal: from 2014 unselected Power-listed players play for the SANFL side; league lists it as Port Adelaide 1877-
+SANFL,PAM,Port Adelaide,reserves,PAD,2021,,https://en.wikipedia.org/wiki/Port_Adelaide_Magpies,No SANFL side in 2020 under AFL COVID restrictions; returned 2021; in the 2026 league
+SANFL,SAD,South Adelaide,standalone,,1990,,https://en.wikipedia.org/wiki/South_Australian_National_Football_League,In the SANFL since 1877; listed 1990 and 2026
+SANFL,STU,Sturt,standalone,,1990,,https://en.wikipedia.org/wiki/South_Australian_National_Football_League,In the SANFL since 1901; listed 1990 and 2026
+SANFL,WAD,West Adelaide,standalone,,1990,,https://en.wikipedia.org/wiki/South_Australian_National_Football_League,In the SANFL since 1897; listed 1990 and 2026
+SANFL,WOO,Woodville,standalone,,1990,1990,https://en.wikipedia.org/wiki/1990_SANFL_season,1990 was the last season before Woodville and West Torrens merged
+SANFL,WTO,West Torrens,standalone,,1990,1990,https://en.wikipedia.org/wiki/1990_SANFL_season,1990 was the last season before Woodville and West Torrens merged
+SANFL,WWT,Woodville-West Torrens,standalone,,1991,,https://en.wikipedia.org/wiki/South_Australian_National_Football_League,Clubs merged at the end of 1990; in the league from 1991
+SANFL,,Adelaide-listed players released to SANFL clubs,host,ADE,1991,2013,https://en.wikipedia.org/wiki/Adelaide_Football_Club_(SANFL),Before 2014 listed players were released to SANFL clubs when not selected; e.g. Lindner back at West Adelaide in 1991
+SANFL,,Port Adelaide Power-listed players drafted to SANFL clubs,host,PAD,1997,2013,https://en.wikipedia.org/wiki/2014_Port_Adelaide_Football_Club_season,Before 2014 listed players were drafted to other SANFL clubs (mini-draft); the Magpies could pick Power players with their own picks
+SANFL,,No second tier in 2020,none,ADE,2020,2020,https://en.wikipedia.org/wiki/Adelaide_Football_Club_(SANFL),2020: did not field a team due to COVID-19
+SANFL,,No second tier in 2020,none,PAD,2020,2020,https://en.wikipedia.org/wiki/Port_Adelaide_Magpies,No SANFL side in 2020 under AFL COVID restrictions
+WAFL,CLA,Claremont,standalone,,1990,1998,https://en.wikipedia.org/wiki/West_Australian_Football_League,In the WAFL since 1926
+WAFL,CLA,Claremont,host,WCE,1999,1999,https://www.footyalmanac.com.au/new-look-wafl-in-2014/,1999 host club system: West Coast players aligned to Claremont
+WAFL,CLA,Claremont,standalone,,2000,,https://www.footyalmanac.com.au/new-look-wafl-in-2014/,From 2000 East Perth was West Coast's host club; Claremont listed 2026
+WAFL,EFR,East Fremantle,standalone,,1990,,https://en.wikipedia.org/wiki/West_Australian_Football_League,In the WAFL since 1898; listed 2026
+WAFL,EPR,East Perth,standalone,,1990,1999,https://en.wikipedia.org/wiki/West_Australian_Football_League,In the WAFL since 1906
+WAFL,EPR,East Perth,host,WCE,2000,2001,https://en.wikipedia.org/wiki/East_Perth_Football_Club,Host club for West Coast players recruited from interstate 2000 to 2001
+WAFL,EPR,East Perth,standalone,,2002,2013,https://www.footyalmanac.com.au/new-look-wafl-in-2014/,Host club system abandoned 2002; in 2013 took only West Coast new recruits and some rookies
+WAFL,EPR,East Perth,aligned,WCE,2014,2018,https://en.wikipedia.org/wiki/East_Perth_Football_Club,From 2014 until 2018 East Perth was West Coast's host club
+WAFL,EPR,East Perth,standalone,,2019,,https://en.wikipedia.org/wiki/West_Australian_Football_League,West Coast fielded its own reserves from 2019
+WAFL,PEL,Peel Thunder,standalone,,1997,2013,https://en.wikipedia.org/wiki/Peel_Thunder_Football_Club,"Formed 1996, joined as an expansion team in 1997; in 2013 took Fremantle new recruits only"
+WAFL,PEL,Peel Thunder,aligned,FRE,2014,2019,https://en.wikipedia.org/wiki/Peel_Thunder_Football_Club,In 2014 Peel became directly aligned with Fremantle; Fremantle reserves play only for Peel
+WAFL,PEL,Peel Thunder,standalone,,2020,2020,https://wafootball.com.au/news/howlett-buoyant-over-young-thunder-prospects/,13 May 2020: Peel had no access to Fremantle AFL-listed players in 2020
+WAFL,PEL,Peel Thunder,aligned,FRE,2021,,https://en.wikipedia.org/wiki/Peel_Thunder_Football_Club,In 2014 Peel became directly aligned with Fremantle; Fremantle reserves play only for Peel
+WAFL,PER,Perth,standalone,,1990,,https://en.wikipedia.org/wiki/West_Australian_Football_League,In the WAFL since 1899; listed 2026
+WAFL,SFR,South Fremantle,standalone,,1990,1998,https://en.wikipedia.org/wiki/West_Australian_Football_League,In the WAFL since 1900
+WAFL,SFR,South Fremantle,host,FRE,1999,1999,https://www.footyalmanac.com.au/new-look-wafl-in-2014/,1999 host club system: all Fremantle players aligned to South Fremantle
+WAFL,SFR,South Fremantle,host,FRE,2000,2001,https://australianrules.com.au/2016/09/22/the-matter-of-wafl-alignment-by-les-everett/,"Named Fremantle's host club in the 2001 grand final; 2000 host not named explicitly (system watered down, interstate recruits only)"
+WAFL,SFR,South Fremantle,standalone,,2002,,https://www.footyalmanac.com.au/new-look-wafl-in-2014/,Host club system abandoned in 2002
+WAFL,SUB,Subiaco,standalone,,1990,,https://en.wikipedia.org/wiki/West_Australian_Football_League,In the WAFL since 1901; listed 2026
+WAFL,SWA,Swan Districts,standalone,,1990,,https://en.wikipedia.org/wiki/West_Australian_Football_League,In the WAFL since 1934; listed 2026
+WAFL,WCR,West Coast,reserves,WCE,2019,2019,https://en.wikipedia.org/wiki/West_Australian_Football_League,West Coast AFL reserves team entered the WAFL in 2019
+WAFL,WCR,West Coast,reserves,WCE,2021,,https://en.wikipedia.org/wiki/2020_WAFL_season,Pandemic forced West Coast into recess for 2020; in the 2026 league
+WAFL,WPR,West Perth,standalone,,1990,,https://en.wikipedia.org/wiki/West_Australian_Football_League,In the WAFL since 1891; listed 2026
+WAFL,,West Coast-listed players at their WAFL club of origin,host,WCE,1990,1998,https://eaglepedia.fandom.com/wiki/Reserves,1987-1998: WA players stayed at club of origin; interstate recruits allocated by mini-draft
+WAFL,,Fremantle-listed players at home WAFL clubs; interstate recruits allocated (incl. mini-draft),host,FRE,1995,1998,https://australianrules.com.au/2016/09/22/the-matter-of-wafl-alignment-by-les-everett/,"Local recruits usually stayed at home clubs; interstate recruits allocated, including by mini-draft"
+WAFL,,West Coast-listed players back at their own WAFL clubs,host,WCE,2002,2012,https://www.footyalmanac.com.au/new-look-wafl-in-2014/,Host club system abandoned in 2002
+WAFL,,Fremantle-listed players at own WAFL clubs; interstate recruits by annual WAFL Allocation,host,FRE,2002,2012,https://www.afl.com.au/news/54766/2008-wafl-allocations,Host system abandoned 2002; 2008 article lists 44 Fremantle players by WAFL club via annual allocation
+WAFL,,2013 interim: West Coast new recruits to East Perth; senior-listed players at original clubs,host,WCE,2013,2013,https://www.footyalmanac.com.au/new-look-wafl-in-2014/,Interstate recruits went to the aligned club; senior-listed players stayed at original clubs
+WAFL,,2013 interim: Fremantle new recruits to Peel; senior-listed players at original clubs,host,FRE,2013,2013,https://www.footyalmanac.com.au/new-look-wafl-in-2014/,Interstate recruits went to the aligned club; senior-listed players stayed at original clubs
+WAFL,,Fremantle-listed players barred from WAFL (Peel had no Fremantle players),none,FRE,2020,2020,https://wafootball.com.au/news/howlett-buoyant-over-young-thunder-prospects/,13 May 2020: Peel won't have access to any Fremantle AFL-listed players in 2020
+WAFL,,West Coast-listed players barred from WAFL (reserves in recess),none,WCE,2020,2020,https://en.wikipedia.org/wiki/2020_WAFL_season,Pandemic forced West Coast into recess; AFL said listed players would not play state leagues in 2020
+QAFL,BRLR,Brisbane Lions reserves,reserves,BRL,1998,2010,https://en.wikipedia.org/wiki/Brisbane_Lions,Stand-alone reserves in QAFL 1998-2010; first called Lion Cubs; played as Suncoast Lions from 2004 (to 2008 per lions.com.au; to 2011 per Wikipedia); 2001 premiers
+QAFL,,Bears/Lions players to the QAFL clubs,host,BRL,1993,1997,https://en.wikipedia.org/wiki/Australian_Football_League_reserves_affiliations,"Bears 1993-96 ""returned to an affiliation with the entire QAFL""; Lions 1997 the same (non-selected players drafted to individual QAFL clubs)"
+SYDAFL,SYDR,Sydney Redbacks,reserves,SYD,2000,2002,https://en.wikipedia.org/wiki/AFL_Sydney,Swans fielded the Redbacks in Sydney AFL from 2000; withdrew before 2000 finals; 2001-02 kept as development side
+ACTAFL,SYDR,Sydney Swans reserves,reserves,SYD,2003,2010,https://en.wikipedia.org/wiki/Australian_Football_League_reserves_affiliations,Stand-alone reserves team in AFL Canberra 2003-2010; premiers 2005-2008
+NEAFL,AIN,Ainslie,standalone,,2011,2015,https://en.wikipedia.org/wiki/2015_NEAFL_season,Founding Eastern Conference club; back to ACTAFL 2016
+NEAFL,ASP,Aspley,standalone,,2011,2019,https://en.wikipedia.org/wiki/North_East_Australian_Football_League,Founding NEAFL club from QAFL; to VFL 2021
+NEAFL,BBH,Broadbeach,standalone,,2011,2013,https://en.wikipedia.org/wiki/2014_NEAFL_season,Licence revoked after 2013; back to QAFL 2014
+NEAFL,BEL,Belconnen,standalone,,2011,2014,https://en.wikipedia.org/wiki/2015_NEAFL_season,Did not renew licence after 2014
+NEAFL,BRLR,Brisbane Lions reserves,reserves,BRL,2011,2019,https://en.wikipedia.org/wiki/North_East_Australian_Football_League,Founding NEAFL member; premiers 2012 2013 2017 2019; 2020 season cancelled
+NEAFL,CAN,Eastlake / Canberra Demons,standalone,,2011,2019,https://en.wikipedia.org/wiki/Canberra_Demons,Eastlake 2011-2015; rebranded Canberra Demons 2016; declined to join VFL 2021
+NEAFL,GCSR,Gold Coast Suns reserves,reserves,GCS,2011,2019,https://en.wikipedia.org/wiki/North_East_Australian_Football_League,Founding NEAFL member 2011 (Northern Conference to 2013); 2020 season cancelled
+NEAFL,GWSR,Greater Western Sydney,standalone,,2011,2011,https://en.wikipedia.org/wiki/2012_NEAFL_season,2011 was GWS's senior side before AFL entry in 2012
+NEAFL,GWSR,UWS Giants,reserves,GWS,2012,2019,https://en.wikipedia.org/wiki/2012_NEAFL_season,2011 was GWS's pre-AFL senior side (AFL entry 2012); reserves from 2012 as UWS Giants; 2016 premiers
+NEAFL,LAB,Labrador,standalone,,2011,2013,https://en.wikipedia.org/wiki/2014_NEAFL_season,Licence revoked after 2013; back to QAFL 2014
+NEAFL,MOR,Morningside,standalone,,2011,2013,https://en.wikipedia.org/wiki/2014_NEAFL_season,Licence revoked after 2013; back to QAFL 2014
+NEAFL,MTG,Mount Gravatt,standalone,,2011,2013,https://en.wikipedia.org/wiki/2014_NEAFL_season,Licence revoked after 2013; back to QAFL 2014
+NEAFL,NTT,NT Thunder,standalone,,2011,2019,https://en.wikipedia.org/wiki/North_East_Australian_Football_League,Founding Northern Conference club; folded after 2019
+NEAFL,QUE,Queanbeyan,standalone,,2011,2014,https://en.wikipedia.org/wiki/2015_NEAFL_season,Did not renew licence after 2014
+NEAFL,RED,Redland,standalone,,2011,2019,https://en.wikipedia.org/wiki/North_East_Australian_Football_League,Founding NEAFL club; merged into Redland-Victoria Point (QAFL) 2021
+NEAFL,SHL,Sydney Hills (East Coast Eagles),standalone,,2012,2014,https://en.wikipedia.org/wiki/2012_NEAFL_season,Joined from AFL Sydney 2012; did not renew licence after 2014
+NEAFL,SOU,Southport,standalone,,2011,2019,https://en.wikipedia.org/wiki/North_East_Australian_Football_League,Founding NEAFL club; to VFL 2021
+NEAFL,SYDR,Sydney Swans reserves,reserves,SYD,2011,2019,https://en.wikipedia.org/wiki/North_East_Australian_Football_League,Founding NEAFL member 2011 (Eastern Conference to 2013); 2020 season cancelled
+NEAFL,SYU,Sydney University,standalone,,2012,2019,https://en.wikipedia.org/wiki/Sydney_University_Australian_National_Football_Club,"Club infobox ""NEAFL (2012-2019)""; back to AFL Sydney 2021"
+NEAFL,TUG,Tuggeranong,standalone,,2011,2013,https://en.wikipedia.org/wiki/2014_NEAFL_season,Licence revoked after 2013; back to ACTAFL 2014
+NEAFL,,No second tier in 2020,none,BRL,2020,2020,https://en.wikipedia.org/wiki/North_East_Australian_Football_League,2020 NEAFL season cancelled for COVID; the league folded into the VFL
+NEAFL,,No second tier in 2020,none,SYD,2020,2020,https://en.wikipedia.org/wiki/North_East_Australian_Football_League,2020 NEAFL season cancelled for COVID; the league folded into the VFL
+NEAFL,,No second tier in 2020,none,GCS,2020,2020,https://en.wikipedia.org/wiki/North_East_Australian_Football_League,2020 NEAFL season cancelled for COVID; the league folded into the VFL
+NEAFL,,No second tier in 2020,none,GWS,2020,2020,https://en.wikipedia.org/wiki/North_East_Australian_Football_League,2020 NEAFL season cancelled for COVID; the league folded into the VFL
