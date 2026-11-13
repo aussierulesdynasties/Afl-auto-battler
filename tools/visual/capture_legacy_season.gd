@@ -105,6 +105,11 @@ func _run() -> void:
 		root.add_child(hub)
 		await _frames(240)
 		await _shot("6_hub_r1")
+		# The hub opens the week's event card itself: Later it, so the news shows alone.
+		var later: Button = root.find_child("EventLater", true, false)
+		if later != null:
+			later.emit_signal("pressed")
+			await _frames(20)
 		if await _reveal("NewsCard"):
 			await _shot("6_hub_news")
 		var more: Button = root.find_child("NewsMore", true, false)
