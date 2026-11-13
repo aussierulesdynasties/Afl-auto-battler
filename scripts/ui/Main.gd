@@ -24,7 +24,7 @@ var _pick_rivals := "shrewd"
 var _pick_tutorials := true
 var _pick_controversies := true
 var _pick_supplements := true
-## Canberra joins (in the 2027 redraft, or in 2030 on the real lists).
+## Canberra joins (in 2030).
 var _pick_canberra := false
 var _canberra_row: VBoxContainer
 ## The coach has read and confirmed the 2030 warning for this setup (Canberra
@@ -810,17 +810,17 @@ func _forged_joins() -> bool:
 			and not GameState.forge_club().is_empty()
 
 
-## The Canberra question's rule, for the start picked (director, 2026-11-08):
-## a redraft takes Tasmania, and Canberra on Yes, into the 2027 draft as
-## equals; the real lists with Canberra play 2027-2029 without you and start
-## in 2030; Rebuild keeps its 2027 start.
+## The Canberra question's rule, for the start picked: a redraft is the 2027
+## clubs only, Tasmania joining in 2028 and Canberra on Yes in 2030 (director,
+## 2026-11-12: "Join in 2028"); the real lists with Canberra play 2027-2029
+## without you and start in 2030; Rebuild keeps its 2027 start.
 func _canberra_line(k: String) -> String:
 	var fixed := " It cannot be changed once the career starts."
 	if _pick_start != "real" and _pick_challenge != "rebuild":
-		var n := 19 + (1 if k == "yes" else 0) + (1 if _forged_joins() else 0)
+		var n := 18 + (1 if _forged_joins() else 0)
 		if k == "yes":
-			return ("Tasmania and Canberra draft in the 2027 League redraft as equals: no priority picks and no extra cap room. %d clubs from 2027, and either new club can be yours." % n) + fixed
-		return ("Tasmania drafts in the 2027 League redraft as an equal and can be yours. %d clubs from 2027; Canberra never join." % n) + fixed
+			return ("%d clubs draft in the 2027 League redraft. Tasmania join in 2028 and Canberra in 2030, each building their first list as a new club: %d clubs from 2030. To coach a new club, pick its start year." % [n, n + 2]) + fixed
+		return ("%d clubs draft in the 2027 League redraft. Tasmania join in 2028 and build their first list as a new club: %d clubs from 2028. Canberra never join. To coach Tasmania, pick the 2028 start." % [n, n + 1]) + fixed
 	if _pick_challenge == "rebuild":
 		if k == "yes":
 			return "Rebuild starts in 2027, or take Tasmania (2028) or Canberra (2030) and build from nothing. 20 clubs from 2030." + fixed
