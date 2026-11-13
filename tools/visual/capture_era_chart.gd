@@ -56,7 +56,8 @@ func _run() -> void:
 			if not eras.is_empty() and eras[-1]["key"] == key:
 				eras[-1]["to"] = y
 			else:
-				eras.append({"key": key, "from": y, "to": y, "kit": g.duplicate(), "name": _label(db.clubs[code])})
+				eras.append({"key": key, "from": y, "to": y, "kit": g.duplicate(), "name": _label(db.clubs[code]),
+						"club": (db.clubs[code] as Dictionary).duplicate()})
 		widest = maxi(widest, eras.size())
 		rows.append({"code": code, "eras": eras, "span": span})
 	var cell := CELL * scale
@@ -170,8 +171,12 @@ func _row(ui_kit, sv: GDScript, db, r: Dictionary, y: float, w: int, cell: float
 		if era["to"] == LAST and era["from"] != LAST:
 			span_text = "%d-now" % era["from"]
 		years.text = span_text
-		if era["name"] != _label(base):
-			years.text += "\n" + era["name"]
+		# The name worn that season, where it differs: "Footscray", "Bears", "Kangaroos".
+		var then: Dictionary = era["club"]
+		if str(then.get("name", "")) != str(base.get("name", "")):
+			years.text += "\n" + str(then.get("name", ""))
+		elif str(then.get("short", "")) != str(base.get("short", "")):
+			years.text += "\n" + str(then.get("short", ""))
 		years.position = Vector2(x + 2, y + 94 * scale)
 		years.size = Vector2(86 * scale, 60)
 		years.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
