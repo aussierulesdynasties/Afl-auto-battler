@@ -49,7 +49,7 @@
 		"text": ["The practice matches have thrown up the cross-town club. It counts for nothing on the ladder, but a big crowd will turn up and both sets of fans will treat it like it does."],
 		"choices": [
 			{"key": "best", "label": "Pick the best 22 and go hard",
-			 "effects": [{"op": "odds", "chance": 50, "hit": [{"op": "morale", "d": 3, "who": "all"}], "hit_result": "The Crows won it, and the city knew."}, {"op": "odds", "chance": 15, "hit": [{"op": "forgo_xp", "d": 4, "who": "side"}], "hit_result": "A starter tweaked a hamstring and missed a block of training."}],
+			 "effects": [{"op": "odds", "chance": 50, "hit": [{"op": "morale", "d": 3, "who": "all"}], "hit_result": "The Crows won it, and the city knew."}, {"op": "odds", "chance": 15, "hit": [{"op": "forgo_xp", "d": 4, "who": "side"}], "hit_result": "One of the best 22 tweaked a hamstring and missed a block of training."}],
 			 "result": "The best side goes out to win a game that doesn't count."},
 			{"key": "kids", "label": "Play the kids and the fringe",
 			 "effects": [{"op": "xp", "d": 3, "who": "all"}, {"op": "odds", "chance": 65, "hit": [{"op": "board", "d": -2, "was": "members"}], "hit_result": "The kids lost it, and the city let you hear about it."}],
@@ -242,7 +242,7 @@
 		"category": "contracts",
 		"subject": {"kind": "club"},
 		"title": ["The quiet side deal"],
-		"text": ["A key forward will sign cheap if the club privately promises to trade him to the club of his choice later and tops up his pay through a third party. It's against the rules. Nobody needs to know."],
+		"text": ["A key forward will sign cheap if the club privately promises to trade him to the club of his choice later and tops up his pay through a third party. It's against the rules. Nobody would ever know."],
 		"choices": [
 			{"key": "deal", "label": "Do the deal",
 			 "effects": [{"op": "morale", "d": 2, "who": "all"}, {"op": "odds", "chance": 35, "hit": [{"op": "board", "d": -6}], "hit_result": "The league found out. Fines, lost picks, and a board that no longer trusts you."}],
@@ -281,7 +281,7 @@
 		"when": {"losing_run_min": 1},
 		"subject": {"kind": "player", "pick": "highest:leadership"},
 		"title": ["Talkback town"],
-		"text": ["Adelaide is a footy town with a lot of radio. After the loss, one host spends an hour asking whether {name} should keep the captaincy."],
+		"text": ["Adelaide is a footy town with a lot of radio. After the loss, one host spends an hour asking whether {name} is still the right captain."],
 		"choices": [
 			{"key": "ring", "label": "Ring the station and back him live",
 			 "effects": [{"op": "trust", "d": 4, "why": "You backed him on air"}, {"op": "board", "d": -1}, {"op": "odds", "chance": 40, "hit": [{"op": "morale", "d": -2, "who": "subject"}], "hit_result": "Your call kept the story alive another week."}],
@@ -395,7 +395,7 @@
 		"text": ["The club can take a pre-season game to a country town in South Australia. The locals are thrilled. The ground is rock hard."],
 		"choices": [
 			{"key": "seniors", "label": "Go, and play the seniors",
-			 "effects": [{"op": "board", "d": 5, "was": "members"}, {"op": "odds", "chance": 15, "hit": [{"op": "forgo_xp", "d": 4, "who": "side"}], "hit_result": "A starter jarred a knee on the hard ground and missed a block."}],
+			 "effects": [{"op": "board", "d": 5, "was": "members"}, {"op": "odds", "chance": 15, "hit": [{"op": "forgo_xp", "d": 4, "who": "side"}], "hit_result": "One of the best 22 jarred a knee on the hard ground and missed a block."}],
 			 "result": "The whole state hears about it. The ground is as hard as promised."},
 			{"key": "kids", "label": "Go, play the kids, seniors run clinics",
 			 "effects": [{"op": "xp", "d": 3, "who": "all"}, {"op": "board", "d": -1, "was": "members"}],

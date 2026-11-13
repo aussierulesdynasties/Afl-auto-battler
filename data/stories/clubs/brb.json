@@ -351,7 +351,7 @@
 		"category": "media",
 		"subject": {"kind": "club"},
 		"title": ["\"Basket case\""],
-		"text": ["A Melbourne columnist says the Bears are a basket case the league should cut loose. You can invite him up for a week inside the club or let him write from a distance."],
+		"text": ["A Melbourne columnist says the Bears are a basket case the league ought to cut loose. You can invite him up for a week inside the club or let him write from a distance."],
 		"choices": [
 			{"key": "invite", "label": "Invite him up",
 			 "effects": [{"op": "odds", "chance": 55, "hit": [{"op": "board", "d": 3}], "miss": [{"op": "board", "d": -2}, {"op": "morale", "d": -1, "who": "all"}], "hit_result": "He wrote a fair piece. Melbourne read a different story.", "miss_result": "He found what he came looking for."}],

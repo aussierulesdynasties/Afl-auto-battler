@@ -287,7 +287,7 @@
 		"category": "board",
 		"subject": {"kind": "club"},
 		"title": ["Merger whispers"],
-		"text": ["The club is in debt again, and a cross-town club has quietly suggested the two should merge. The board wants to explore it. The members don't know yet."],
+		"text": ["The club is in debt again, and a cross-town club has quietly suggested the two ought to merge. The board wants to explore it. The members don't know yet."],
 		"choices": [
 			{"key": "explore", "label": "Explore it quietly",
 			 "effects": [{"op": "board", "d": 3}, {"op": "odds", "chance": 40, "hit": [{"op": "board", "d": -5, "was": "members"}, {"op": "morale", "d": -3, "who": "all"}], "miss": [], "hit_result": "It leaks, and the members revolt."}],

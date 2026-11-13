@@ -309,7 +309,7 @@
 		"phase": ["preseason"],
 		"subject": {"kind": "club"},
 		"title": ["The cricket's on"],
-		"text": ["The Gabba is a cricket ground through summer, so the club can't use it for match simulation. You could hire another big ground, or train at a suburban oval."],
+		"text": ["The Gabba is a cricket ground through summer, so the club can't use it for match-day practice. You could hire another big ground, or train at a suburban oval."],
 		"choices": [
 			{"key": "hire", "label": "Hire a full-sized ground",
 			 "effects": [{"op": "xp", "d": 4, "who": "all"}, {"op": "board", "d": -2, "was": "funds"}],

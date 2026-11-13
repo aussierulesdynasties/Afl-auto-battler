@@ -94,7 +94,7 @@
 		"category": "training",
 		"subject": {"kind": "club"},
 		"title": ["Frost on Manuka"],
-		"text": ["It was minus five at seven this morning and the ground is white. The physios want the session moved indoors; the senior players say Canberra teams should own the cold."],
+		"text": ["It was minus five at seven this morning and the ground is white. The physios want the session moved indoors; the senior players say Canberra teams ought to own the cold."],
 		"choices": [
 			{"key": "outside", "label": "Train outside, it's our weather",
 			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "Canberra teams own the cold"}, {"op": "xp", "d": 6, "who": "side"}, {"op": "odds", "chance": 15, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "The cold got into their legs by the weekend."}],
@@ -185,7 +185,7 @@
 			{"key": "laugh", "label": "Tell her she's welcome, and to bring a coat",
 			 "effects": [{"op": "board", "d": 3}, {"op": "morale", "d": -2, "who": "side"}],
 			 "result": "The government that funds the ground stays onside. The players wanted the coach to stand up for the town."},
-			{"key": "crack", "label": "Say Canberra people should back Canberra",
+			{"key": "crack", "label": "Say Canberra people ought to back Canberra",
 			 "effects": [{"op": "morale", "d": 5, "who": "side"}, {"op": "culture", "strand": "together", "d": 1, "why": "The coach stood up for the town"}, {"op": "board", "d": -4}],
 			 "result": "The group loves it. The government funds the ground, and the board feels it."}
 		]
@@ -429,7 +429,7 @@
 		"when": {"ladder_min": 15, "round_min": 14},
 		"subject": {"kind": "club"},
 		"title": ["Losing for a pick"],
-		"text": ["The club is near the bottom, and a talkback host says the coach should rest the stars and finish last for the best pick. A board member has said the same behind closed doors."],
+		"text": ["The club is near the bottom, and a talkback host says you ought to rest the stars and finish last for the first pick. A board member has said the same behind closed doors."],
 		"choices": [
 			{"key": "rest", "label": "Rest the senior players",
 			 "effects": [{"op": "xp", "d": 10, "who": "side"}, {"op": "morale", "d": -8, "who": "all"}, {"op": "culture", "strand": "standards", "d": -3, "why": "The club stopped playing to win"}, {"op": "board", "d": -2}],

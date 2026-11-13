@@ -155,7 +155,7 @@
 		"title": ["\"Carlton still thinks it owns the game\""],
 		"text": ["A columnist writes that Carlton walks around like the club that owns the competition, and that the playing group believes its own press. The players have read it."],
 		"choices": [
-			{"key": "expect", "label": "Say this club should expect to win",
+			{"key": "expect", "label": "Say this club expects to win",
 			 "effects": [{"op": "culture", "strand": "ambition", "d": 2, "why": "You said out loud that Carlton plays to win flags"}, {"op": "morale", "d": 2, "who": "all"}, {"op": "board", "d": -1}, {"op": "slow_start", "who": "side", "chance": 15, "on": "week"}],
 			 "result": "The group walks taller. The line will follow you after a loss."},
 			{"key": "nothing", "label": "Say we've won nothing yet",
@@ -243,7 +243,7 @@
 		"phase": ["season_end"],
 		"subject": {"kind": "club"},
 		"title": ["A champion's son is in the draft pool"],
-		"text": ["The son of a Carlton champion can join as a father-son pick. Taking him uses the club's best pick this year, and the recruiters had that pick marked for someone else."],
+		"text": ["The son of a Carlton champion can join as a father-son pick. Taking him uses the club's first pick this year, and the recruiters had that pick marked for someone else."],
 		"choices": [
 			{"key": "take", "label": "Take him",
 			 "effects": [{"op": "morale", "d": 2, "who": "all"}, {"op": "board", "d": 2, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The family line in navy blue goes on"}, {"op": "culture", "strand": "ambition", "d": -1, "why": "The recruiters lost the kid they rated higher"}],
@@ -351,7 +351,7 @@
 		"choices": [
 			{"key": "straight", "label": "Say it straight",
 			 "effects": [{"op": "morale", "d": 4, "who": "all"}, {"op": "board", "d": -5}],
-			 "result": "You say the football department should run the football. The players love it. The board does not."},
+			 "result": "You say the football department ought to run the football. The players love it. The board does not."},
 			{"key": "page", "label": "Say we're all on the same page",
 			 "effects": [{"op": "board", "d": 2}, {"op": "morale", "d": -2, "who": "side"}],
 			 "result": "A safe answer. The senior players hear you dodge it."}

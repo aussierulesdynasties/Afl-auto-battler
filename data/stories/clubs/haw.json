@@ -129,7 +129,7 @@
 		"subject": {"kind": "club"},
 		"when": {"opp_deck": "ESS"},
 		"title": ["Bad blood with the Bombers"],
-		"text": ["The papers dig up the old Hawthorn and Essendon wars: brawls, big finals, no love lost. Radio wants a line from you, and the players want to know if they should stand up."],
+		"text": ["The papers dig up the old Hawthorn and Essendon wars: brawls, big finals, no love lost. Radio wants a line from you, and the players want to know if they're expected to stand up."],
 		"choices": [
 			{"key": "stand", "label": "Say we won't take a backward step",
 			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "board", "d": -3}],

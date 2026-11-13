@@ -360,7 +360,7 @@
 		"title": ["The southern suburbs want players"],
 		"text": ["The fast-growing southern suburbs are the club's heartland, and their junior league wants players at its clinic every week this month."],
 		"choices": [
-			{"key": "roster", "label": "A roster of players every week",
+			{"key": "rota", "label": "A rota of players every week",
 			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The players turned up for the southern suburbs every week"}, {"op": "forgo_xp", "d": 4, "who": "all"}],
 			 "result": "The juniors get players every week. Training is a little lighter for it."},
 			{"key": "once", "label": "Once, with the captain",

@@ -220,7 +220,7 @@
 			{"key": "back", "label": "Back the board's position",
 			 "effects": [{"op": "board", "d": 4}, {"op": "culture", "strand": "together", "d": -2, "why": "The suburb feels the club chose the machines over it"}],
 			 "result": "The board is grateful. The welfare group goes to the papers."},
-			{"key": "out", "label": "Say the club should get out of them",
+			{"key": "out", "label": "Say the club ought to get out of them",
 			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "You put the suburb ahead of the takings"}, {"op": "board", "d": -6, "was": "funds"}],
 			 "result": "Your answer leads the news. The board is furious about the money."}
 		]
@@ -354,7 +354,7 @@
 		"category": "board",
 		"subject": {"kind": "club"},
 		"title": ["The president promises the top four"],
-		"text": ["The club president has just told a radio station that the side should make the top four. Nobody asked you first."],
+		"text": ["The club president has just told a radio station that the side will make the top four. Nobody asked you first."],
 		"choices": [
 			{"key": "back", "label": "Back him publicly",
 			 "effects": [{"op": "board", "d": 4}, {"op": "odds", "chance": 50, "hit": [{"op": "board", "d": -6}], "hit_result": "The side drifts outside the four, and the president's words come back on you."}],
@@ -406,7 +406,7 @@
 		"category": "members",
 		"subject": {"kind": "club"},
 		"title": ["A heritage guernsey for one round"],
-		"text": ["Marketing wants a heritage guernsey for one round, with a merchandise run behind it. The traditionalists say the stripes should never change; younger fans want it."],
+		"text": ["Marketing wants a heritage guernsey for one round, with a merchandise run behind it. The traditionalists say the stripes must never change; younger fans want it."],
 		"choices": [
 			{"key": "wear", "label": "Wear the heritage guernsey",
 			 "effects": [{"op": "board", "d": 4, "was": "funds"}, {"op": "culture", "strand": "together", "d": -1, "why": "The traditionalists say the stripes are not for sale"}],

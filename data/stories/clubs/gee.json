@@ -183,7 +183,7 @@
 		"subject": {"kind": "club"},
 		"when": {"opp_deck": "HAW"},
 		"title": ["Hawks week"],
-		"text": ["Hawthorn next. Neither club's supporters need to be told why it matters, and the players want a big week."],
+		"text": ["Hawthorn next. Neither club's supporters have to be told why it matters, and the players want a big week."],
 		"choices": [
 			{"key": "big", "label": "Make it a big week",
 			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "heavy_legs", "who": "side"}],

@@ -61,7 +61,7 @@
 		"subject": {"kind": "club"},
 		"when": {"round_max": 6},
 		"title": ["Evicted by the Easter Show"],
-		"text": ["The Easter Show takes over the Showground for a fortnight: cattle sheds and showbags where the centre square should be. The club has to play and train somewhere else."],
+		"text": ["The Easter Show takes over the Showground for a fortnight: cattle sheds and showbags where the centre square ought to be. The club has to play and train somewhere else."],
 		"choices": [
 			{"key": "manuka", "label": "Take both games to Manuka",
 			 "effects": [{"op": "board", "d": 3}, {"op": "odds", "chance": 20, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "Two weeks out of a suitcase catch up with them."}],
@@ -95,7 +95,7 @@
 		"category": "media",
 		"subject": {"kind": "club"},
 		"title": ["\"Move the club to Canberra\""],
-		"text": ["A big crowd at Manuka, a thin one at the Showground the next week, and the columnists say the Giants should pack up and move to the capital. The coach is asked where the club's heart is."],
+		"text": ["A big crowd at Manuka, a thin one at the Showground the next week, and the columnists say the Giants ought to pack up and move to the capital. The coach is asked where the club's heart is."],
 		"choices": [
 			{"key": "west", "label": "\"We're western Sydney's club.\"",
 			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "odds", "chance": 25, "hit": [{"op": "morale", "d": -3, "who": "side"}], "hit_result": "Canberra heard it too, and the next Manuka crowd is flat."}],
@@ -274,7 +274,7 @@
 		"phase": ["preseason"],
 		"subject": {"kind": "club"},
 		"title": ["Summer in the west"],
-		"text": ["It's 42 degrees at the training base and the fitness staff want the session moved to dawn. Some senior players say they should train in the heat: they'll have to play in it."],
+		"text": ["It's 42 degrees at the training base and the fitness staff want the session moved to dawn. Some senior players say they ought to train in the heat: they'll have to play in it."],
 		"choices": [
 			{"key": "heat", "label": "Train in the heat",
 			 "effects": [{"op": "running", "d": 1}, {"op": "odds", "chance": 25, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "The heat takes more out of them than it gives."}],
@@ -294,7 +294,7 @@
 		"title": ["The Showground in summer"],
 		"text": ["The Showground doubles as a cricket ground in summer, and the club's own ovals are booked up. The players want a few sessions on the main surface before the season."],
 		"choices": [
-			{"key": "hire", "label": "Pay to hire it for match simulation",
+			{"key": "hire", "label": "Pay to hire it for match-day practice",
 			 "effects": [{"op": "xp", "d": 6, "who": "side"}, {"op": "board", "d": -3, "was": "funds"}],
 			 "result": "Match-day drills on the match-day ground. It isn't cheap."},
 			{"key": "base", "label": "Make do at the training base",

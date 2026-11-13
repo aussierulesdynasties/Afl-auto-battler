@@ -346,7 +346,7 @@
 		"category": "media",
 		"subject": {"kind": "club"},
 		"title": ["He's back, in their colours"],
-		"text": ["A former Fitzroy favourite who left for a richer club is coming back as an opponent this week. The press want to know whether the members should cheer him or boo him."],
+		"text": ["A former Fitzroy favourite who left for a richer club is coming back as an opponent this week. The press want to know whether the members will cheer him or boo him."],
 		"choices": [
 			{"key": "applaud", "label": "Ask the members to applaud him",
 			 "effects": [{"op": "board", "d": 2}, {"op": "culture", "strand": "together", "d": 2, "why": "The club thanked one of its own"}, {"op": "culture", "strand": "ambition", "d": -1, "why": "Some members say it's too soon to clap him"}],
