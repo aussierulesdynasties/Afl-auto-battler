@@ -385,6 +385,9 @@ func _mount_body(stack: bool) -> void:
 		var bar := _feed_scroll.get_v_scroll_bar()
 		bar.value_changed.connect(func(_v: float) -> void: _hide_cut_rows())
 		bar.changed.connect(_hide_cut_rows)
+		# Room for a two-line row whatever wraps above it (a two-line plan with
+		# a tag left the feed one clipped line on a phone).
+		_feed_scroll.custom_minimum_size.y = ceil(UiKit.px(UiKit.SMALL) * 2.7)
 		sv.add_child(_feed_scroll)
 		_live_stats = UiKit.vbox(2)
 		_live_stats.name = "LiveStats"
@@ -3624,10 +3627,13 @@ func _update_scoreboard(ev: Dictionary) -> void:
 
 ## The sides have changed ends: the next period is starting, so the clock shows
 ## it from its first minute rather than the last minute of the one before.
-func _on_ends_changed(_period: int) -> void:
+## The period is the pitch's own count (2 for the second quarter, 5 for extra
+## time), not one more than shown: a substitute's change logged at the break
+## already shows the next quarter.
+func _on_ends_changed(period: int) -> void:
 	if _finished or _skipping:
 		return
-	_shown_q += 1
+	_shown_q = period
 	_shown_min = (_shown_q - 1) * QUARTER_MINUTES
 	_paint_scoreboard()
 
@@ -3720,7 +3726,7 @@ func _clock_text(q: int, minute: int) -> String:
 
 func _feed_add(ev: Dictionary) -> void:
 	var kind := str(ev.get("kind", ""))
-	if QUIET_KINDS.has(kind):
+	if QUIET_KINDS.has(kind) and not bool(ev.get("substitute", false)):
 		return
 	var line := MatchNotes.feed_line(ev, str(_res["home"]), str(_res["away"]))
 	if line.is_empty():
@@ -3793,6 +3799,11 @@ func _trim_feed() -> void:
 	await get_tree().process_frame
 	if is_instance_valid(_feed_scroll):
 		_feed_scroll.scroll_vertical = int(_feed_scroll.get_v_scroll_bar().max_value)
+		# The newest row taller than the feed's room (a two-line row under a
+		# two-line plan): open on its first line, never hide it as cut.
+		var last := _feed.get_child(_feed.get_child_count() - 1) as Control if _feed.get_child_count() > 0 else null
+		if last != null and last.size.y > _feed_scroll.size.y:
+			_feed_scroll.scroll_vertical = int(last.position.y)
 		_hide_cut_rows()
 
 

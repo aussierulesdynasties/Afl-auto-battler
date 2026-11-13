@@ -2075,7 +2075,7 @@ func _refresh_mine() -> void:
 			if _draft.full_at_44(_club):
 				# The 44 leaves no spot though the senior list has some: say which.
 				head_words = "%d draftee%s signed · list %d / %d (senior list and Category A rookies) · no spot open" % [
-					_draft.count(), "" if _draft.count() == 1 else "s", _draft.list_now(_club), Contracts.MAX_LIST]
+					_draft.count(), "" if _draft.count() == 1 else "s", _draft.list_now(_club), Contracts.max_list()]
 			var head := UiKit.lbl(head_words, 15, UiKit.EMPH, true)
 			head.name = "DraftListSpots"
 			head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -2087,7 +2087,7 @@ func _refresh_mine() -> void:
 				pl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 				_mine_box.add_child(pl)
 			var rule := UiKit.lbl(
-				"Draftees join the senior list you kept. A club with a full senior list, or with %d on its senior and Category A rookie lists together, passes its picks, and players you kept cannot be delisted during the draft. The Rookie Draft follows." % Contracts.MAX_LIST,
+				"Draftees join the senior list you kept. A club with a full senior list, or with %d on its senior and Category A rookie lists together, passes its picks, and players you kept cannot be delisted during the draft. The Rookie Draft follows." % Contracts.max_list(),
 				13, UiKit.MUTED)
 			rule.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			_mine_box.add_child(rule)

@@ -130,7 +130,7 @@ static func lines(s: Dictionary) -> Array:
 				GameState._count_word(int(s["maybe"]), true), "" if int(s["maybe"]) == 1 else "s"], false, "", "DraftSpotsMaybe"])
 	if int(s["retiring"]) > 0:
 		out.append(["Retiring players hold their spot until the draft is over.", false, "", "DraftSpotsRetiring"])
-	out.append(["A club with a full senior list passes its picks, and so does a club with %d on its senior and Category A rookie lists together. Out-of-contract players can be delisted before the draft starts, and any player traded away; contracted players cannot be delisted. Rookies do not take a senior spot." % int(s.get("list_cap", Contracts.MAX_LIST)),
+	out.append(["A club with a full senior list passes its picks, and so does a club with %d on its senior and Category A rookie lists together. Out-of-contract players can be delisted before the draft starts, and any player traded away; contracted players cannot be delisted. Rookies do not take a senior spot." % int(s.get("list_cap", Contracts.max_list())),
 			false, "", "DraftSpotsRule"])
 	return out
 

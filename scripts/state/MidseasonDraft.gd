@@ -161,6 +161,14 @@ static func _open_draft(gs) -> void:
 	var rec := _record(gs)
 	if rec.has("order"):
 		return
+	# A Legacy season before the mid-season rookie draft began (EraRules):
+	# none is held, and the record says so, done.
+	if not EraRules.on("midseason_draft"):
+		rec["order"] = []
+		rec["next"] = 0
+		rec["picks"] = []
+		rec["done"] = true
+		return
 	var order := []
 	var ladder: Array = gs.season.ladder_sorted()
 	ladder.reverse()
@@ -171,7 +179,9 @@ static func _open_draft(gs) -> void:
 		var list: Array = gs.season.lists[code]
 		# A pick fills a rookie spot (RookieList), or the spot a medical
 		# retirement left on a list now under the minimum (director, 2026-11-11).
-		if RookieList.rookie_spot_free(list) or _short(list):
+		# Before the rookie list (Legacy, the mid-season drafts to 1993) a
+		# pick fills an open senior spot.
+		if RookieList.rookie_spot_free(list) or _short(list) 				or (not RookieList.in_force() and RookieList.senior_spot_free(list)):
 			order.append(code)
 	rec["order"] = order
 	rec["next"] = 0
