@@ -80,7 +80,7 @@ func _test_rolls_past_2027() -> void:
 			_check(false, "%d rolls into %d" % [from, from + 1])
 			return
 		var y := GameState.season_year
-		var want_clubs := 16 if y < 2011 else (17 if y == 2011 else 18)
+		var want_clubs := 16 if y < 2011 else (17 if y == 2011 else (18 if y < 2028 else 19))  # Tasmania enters in 2028 (data/clubs.csv)
 		var short := []
 		for code in GameState.season.clubs:
 			if GameState.season.lists.get(code, []).size() < 30:
