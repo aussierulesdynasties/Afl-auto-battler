@@ -1023,4 +1023,18 @@ func _test_real_lists_play_to_2030() -> void:
 	_check(GameState.load_career() and GameState.my_club == "CANB" and not GameState.sim_ahead
 			and GameState.season_year == 2030,
 			"It loads as a 2030 Canberra career")
+	# The campaign never ends (director: "campaigns can go for eternity"): the
+	# 2030 start rolls on into 2031 and beyond, twenty clubs, Canberra yours.
+	for year in [2031, 2032]:
+		_rollover()
+		_check(GameState.season_year == year and GameState.season != null
+				and GameState.season.ladder.size() == 20 and GameState.season.ladder.has("CANB")
+				and GameState.my_club == "CANB" and GameState.my_list.size() >= Prospects.MIN_LIST,
+				"The 2030 start rolls into %d: 20 clubs, Canberra yours on a full list (%d, %d clubs, list %d)" % [
+					year, GameState.season_year, GameState.season.ladder.size() if GameState.season != null else 0,
+					GameState.my_list.size()])
+	_check(GameState.save_career(), "The 2032 career saves")
+	GameState.reset()
+	_check(GameState.load_career() and GameState.my_club == "CANB" and GameState.season_year == 2032,
+			"It loads as a 2032 Canberra career")
 	GameState.reset()
