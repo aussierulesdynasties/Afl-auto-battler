@@ -196,6 +196,8 @@ static func _time(year: int, label: String) -> int:
 	var within := 0
 	if label.begins_with("Round"):
 		within = int(label.get_slice(" ", 1))
+	elif label.begins_with("Opening Round"):
+		within = 0
 	elif label != "":
 		var stage := label.rstrip("0123456789 ")
 		# The wildcard round is finals week one, before the qualifying finals.

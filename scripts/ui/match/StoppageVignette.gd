@@ -223,6 +223,8 @@ static func figure_material(kits: Array, mat: ShaderMaterial = null) -> ShaderMa
 		mat.set_shader_parameter("mask_tex", FIGURE_MASK)
 		mat.set_shader_parameter("design_tex", FIGURE_DESIGN)
 		mat.set_shader_parameter("digits_tex", FIGURE_DIGITS)
+		mat.set_shader_parameter("kit_atlas", GameDB.kit_atlas())
+		mat.set_shader_parameter("kit_grid", GameDB.kit_grid())
 		mat.set_shader_parameter("sheet_size", VignetteFigures.SHEET_SIZE)
 		mat.set_shader_parameter("skin_tones", _eight(Appearance.SKIN))
 		mat.set_shader_parameter("hair_tones", _eight(Appearance.HAIR))
@@ -241,7 +243,10 @@ static func figure_material(kits: Array, mat: ShaderMaterial = null) -> ShaderMa
 			fields[f].append(kit[f])
 		# Only the anchor uses a third pattern colour; kits without one repeat the second.
 		fields["pattern3"].append(kit.get("pattern3", kit["pattern2"]))
-		fields["design"].append(float(maxi(0, GameDB.GUERNSEY_DESIGNS.find(str(kit["design"])))))
+		# A Legacy season's real guernsey is a picture in the kit atlas: design 100 + its cell.
+		var cell := int(kit.get("kit_cell", -1))
+		fields["design"].append(float(100 + cell) if cell >= 0
+				else float(maxi(0, GameDB.GUERNSEY_DESIGNS.find(str(kit["design"])))))
 		# Hoops on the socks, a kit option (0: the usual band).
 		fields["extra"].append(Vector4(0.0, float(clampi(int(kit.get("sock_hoops", 0)), 0, 3)), 0.0, 0.0))
 	for f in fields:
