@@ -1,8 +1,9 @@
 code,from,to,name,short,primary,secondary,accent,guernsey,ground,note
 ADE,1991,2013,,,,,,,Football Park,
 ADE,2014,,,,,,,,,
-BRL,1990,1992,Brisbane,Bears,#7A0019,#FFC72C,#FFFFFF,,Carrara,Brisbane Bears; guernsey design is today's until era art ships
-BRL,1993,1996,Brisbane,Bears,#7A0019,#FFC72C,#FFFFFF,,The Gabba,Brisbane Bears
+BRL,1990,1991,Brisbane,Bears,#DE3163,#FFD938,#FFFFFF,yoke:s/p/a/p,Carrara,Brisbane Bears: gold with a cerise yoke 1989-91 (footyjumpers.com/brisbanehome.htm; Wikipedia kit colours)
+BRL,1992,1992,Brisbane,Bears,#AB0534,#FFD938,#FFFFFF,chevron:p/s/a/p,Carrara,Brisbane Bears: maroon with a gold V and white trim 1992-96 (en.wikipedia.org/wiki/Brisbane_Bears)
+BRL,1993,1996,Brisbane,Bears,#AB0534,#FFD938,#FFFFFF,chevron:p/s/a/p,The Gabba,Brisbane Bears
 BRL,1997,,,,,,,,,Brisbane Lions (Bears and Fitzroy merged)
 CAR,1897,2005,,,,,,,Princes Park,
 CAR,2006,,,,,,,,,
@@ -11,7 +12,7 @@ COL,2000,,,,,,,,,
 ESS,1897,1991,,,,,,,Windy Hill,
 ESS,1992,1999,,,,,,,MCG,
 ESS,2000,,,,,,,,,
-FIT,1897,1993,,,,,,,Princes Park,Fitzroy's guernsey is a placeholder until era art ships
+FIT,1897,1993,,,,,,,Princes Park,
 FIT,1994,1996,,,,,,,Western Oval,last season 1996
 FRE,1995,2017,,,,,,,Subiaco Oval,
 FRE,2018,,,,,,,,,

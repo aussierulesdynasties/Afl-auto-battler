@@ -1141,8 +1141,20 @@ func active_clubs(year: int) -> Array:
 ## legacy files sit outside data/*.csv, so the pre-made histories' data stamp
 ## (PremadeHistory.LIST_FILES) does not move with them.
 const CLUBS_BY_YEAR_CSV := "res://data/legacy/clubs_by_year.csv"
-## The names a ground carried before its present one.
-const GROUNDS_BY_YEAR_CSV := "res://data/legacy/grounds_by_year.csv"
+## Every name a ground has carried, by year range, sourced (tools/legacy_1990s
+## writes it). A row with no years only says what the ground was called; it
+## renames nothing.
+const GROUND_NAMES_CSV := "res://data/legacy/ground_names.csv"
+## The ground each ground_names.csv id is in the game (fixtures, looks, weather):
+## its name today, or the last name it had while the AFL played there. An id
+## not listed is its own row's name.
+const GROUND_KEYS := {"docklands": "Marvel Stadium", "kardinia_park": "GMHBA Stadium",
+		"football_park": "Football Park", "subiaco": "Subiaco Oval", "princes_park": "Ikon Park",
+		"western_oval": "Whitten Oval", "waverley_park": "Waverley Park", "stadium_australia": "Accor Stadium",
+		"carrara": "People First Stadium", "mcg": "MCG", "scg": "SCG", "waca": "WACA", "gabba": "The Gabba"}
+## Names the club and rules tables use for a ground that are none of its
+## recorded names.
+const GROUND_ALIASES := {"Carrara": "People First Stadium"}
 ## Clubs that have left the competition, in clubs.csv's columns (Fitzroy).
 const PAST_CLUBS_CSV := "res://data/legacy/past_clubs.csv"
 ## Codes the historical data uses for a club that is one club across eras:
@@ -1157,7 +1169,8 @@ const COLOUR_FIELDS := ["primary", "secondary", "accent"]
 
 var _club_years := {}     # code -> Array of {from, to, field: value} rows, oldest first
 var _club_base := {}      # code -> the clubs.csv values of ERA_FIELDS
-var _ground_names := {}   # present ground name -> Array of {from, to, name}
+var _ground_names := {}   # ground key -> Array of {from, to, name}, oldest first
+var _ground_keys := {}    # any id or name a ground has had -> its key
 ## The year the clubs' names and colours are shown for (apply_era).
 var era_year := 0
 
@@ -1179,7 +1192,7 @@ func leave_year(code: String) -> int:
 func _load_club_years() -> void:
 	_club_years = {}
 	_club_base = {}
-	_ground_names = {}
+	_load_ground_names()
 	for r in _read_dicts(CLUBS_BY_YEAR_CSV):
 		var code := club_code(str(r.get("code", "")))
 		if code == "":
@@ -1187,16 +1200,10 @@ func _load_club_years() -> void:
 		var row := {"from": int(r.get("from", "0")), "to": int(r.get("to", "0")) if str(r.get("to", "")) != "" else 0}
 		for k in ERA_FIELDS:
 			if str(r.get(k, "")) != "":
-				row[k] = str(r[k])
+				row[k] = ground_key(str(r[k])) if k == "ground" else str(r[k])
 		if not _club_years.has(code):
 			_club_years[code] = []
 		(_club_years[code] as Array).append(row)
-	for r in _read_dicts(GROUNDS_BY_YEAR_CSV):
-		var g := str(r.get("ground", ""))
-		if not _ground_names.has(g):
-			_ground_names[g] = []
-		(_ground_names[g] as Array).append({"from": int(r.get("from", "0")), "to": int(r.get("to", "0")),
-				"name": str(r.get("name", ""))})
 	for code in _club_years:
 		(_club_years[code] as Array).sort_custom(func(a, b): return int(a["from"]) < int(b["from"]))
 	for code in clubs.keys():
@@ -1264,12 +1271,69 @@ func apply_era(year: int) -> void:
 	apply_second_tier(year)
 
 
-## A ground's name in `year` (Docklands was Colonial Stadium in 2000).
+## Read ground_names.csv: each ground's dated names under its key, and every
+## id and name it has had pointing at that key.
+func _load_ground_names() -> void:
+	_ground_names = {}
+	_ground_keys = GROUND_ALIASES.duplicate()
+	for r in _read_dicts(GROUND_NAMES_CSV):
+		var id := str(r.get("ground", ""))
+		var name := str(r.get("name", ""))
+		var key := str(GROUND_KEYS.get(id, name))
+		_ground_keys[id] = key
+		_ground_keys[name] = key
+		_ground_keys[key] = key
+		var from := str(r.get("from_year", ""))
+		var to := str(r.get("to_year", ""))
+		if from == "" and to == "":
+			continue
+		if not _ground_names.has(key):
+			_ground_names[key] = []
+		(_ground_names[key] as Array).append({"from": int(from) if from != "" else 0,
+				"to": int(to) if to != "" else 0, "name": name})
+	for key in _ground_names:
+		(_ground_names[key] as Array).sort_custom(func(a, b): return int(a["from"]) < int(b["from"]))
+
+
+## The game's one name for a ground, from any id or name it has had
+## ("princes_park", "Optus Oval" and "Princes Park" are all Ikon Park).
+func ground_key(ground: String) -> String:
+	return str(_ground_keys.get(ground, ground))
+
+
+## A ground's name in `year` (Docklands was Colonial Stadium in 2000); a year
+## no dated name covers keeps the ground's own name.
 func ground_name(ground: String, year: int) -> String:
-	for r in _ground_names.get(ground, []):
+	var key := ground_key(ground)
+	for r in _ground_names.get(key, []):
 		if int(r["from"]) <= year and (int(r["to"]) == 0 or year <= int(r["to"])):
 			return str(r["name"])
-	return ground
+	return key
+
+
+## A ground as the screens show it: its name in `year`, or in the season the
+## clubs are shown for (apply_era) when no year is given.
+func ground_shown(ground: String, year := 0) -> String:
+	if ground == "":
+		return ""
+	var y := year if year > 0 else era_year
+	return ground_name(ground, y) if y > 0 else ground_key(ground)
+
+
+## The name a ground carried the season before `year`, when that is a dated
+## name and `year` brings another one (Princes Park became Optus Oval in
+## 1994); "" otherwise. A ground opening under a name is not a rename.
+func ground_renamed_from(ground: String, year: int) -> String:
+	var key := ground_key(ground)
+	var before := ""
+	var now := ""
+	for r in _ground_names.get(key, []):
+		var covers := func(y: int) -> bool: return int(r["from"]) <= y and (int(r["to"]) == 0 or y <= int(r["to"]))
+		if covers.call(year - 1):
+			before = str(r["name"])
+		if covers.call(year):
+			now = str(r["name"])
+	return before if before != "" and now != "" and before != now else ""
 
 
 ## Rows of a small CSV as dictionaries keyed by its header (quoted cells allowed).
