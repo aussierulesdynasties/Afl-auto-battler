@@ -640,7 +640,7 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
 		var back := "He goes back to his usual spot."
 		if tr.has("promised"):
 			# The games you promised him in a development talk: he has had them.
-			out["trial_tail"] = "You promised him this chance in Round %d. %s" % [int(tr["promised"]), back]
+			out["trial_tail"] = "You promised him this chance in %s. %s" % [gs.season.round_name(int(tr["promised"]) - 1), back]
 		elif bool(tr["ok"]):
 			out["trial_tail"] = ("%s He starts training as a %s with three weeks already banked." % [back, str(tr["word"])]
 					if bool(tr["trained"]) else "%s He cannot start training there just now." % back)
@@ -691,9 +691,9 @@ static func _hurt_in_round(gs, p: Dictionary) -> int:
 	if inj.is_empty():
 		return 0
 	var f: Dictionary = inj[-1]
-	if int(f["y"]) != int(gs.season_year) or not str(f["at"]).begins_with("Round"):
+	var hurt: int = gs.season.round_of_label(str(f["at"])) if gs.season != null else 0
+	if int(f["y"]) != int(gs.season_year) or hurt == 0:
 		return 0
-	var hurt := str(f["at"]).trim_prefix("Round ").to_int()
 	var last := int(lg[1])
 	return hurt if hurt >= last and hurt <= last + 1 else 0
 
@@ -924,7 +924,7 @@ static func _apply(gs, e: Dictionary, p: Dictionary, facts: Dictionary, applied:
 				gs.board["confidence"] = clampi(gs.board_confidence() + d, 0, 100)
 			applied["board"] = int(applied.get("board", 0)) + d
 		"trust":
-			var when := "Round %d" % int(facts.get("round", 0)) if int(facts.get("finals_week", 0)) == 0 else "Finals"
+			var when: String = gs.season.round_name(int(facts.get("round", 1)) - 1) if int(facts.get("finals_week", 0)) == 0 else "Finals"
 			if int(facts.get("pre_week", 0)) > 0:
 				when = "Pre-season"
 			var key := Trust.player_key(str(p["id"]))
