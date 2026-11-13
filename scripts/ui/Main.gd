@@ -446,7 +446,8 @@ func _show_year_step() -> void:
 ## sits above the words.
 func _year_button(id: String, tall := false) -> Button:
 	var year := int(Datasets.get_set(id).get("start_year", 0))
-	var words: Array = YEAR_WORDS.get(id, ["The %d season" % year, ""])
+	# A start's row may carry its own words (Datasets "words").
+	var words: Array = Datasets.get_set(id).get("words", YEAR_WORDS.get(id, ["The %d season" % year, ""]))
 	var b := UiKit.btn("", UiKit.NAME)
 	b.name = "StartYear_" + id
 	# A button does not grow with its children: room for the figure above three lines when tall.

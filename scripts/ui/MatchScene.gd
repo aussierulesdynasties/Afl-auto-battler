@@ -3715,7 +3715,8 @@ func _paint_clock() -> void:
 func _clock_text(q: int, minute: int) -> String:
 	if q >= 5:
 		return "ET %d'" % clampi(minute - 120, 0, 99)
-	return "Q%d %d'" % [q, clampi(minute - (q - 1) * QUARTER_MINUTES, 0, QUARTER_MINUTES)]
+	var into := clampi(minute - (q - 1) * QUARTER_MINUTES, 0, QUARTER_MINUTES)
+	return "Q%d %d'" % [q, EraFootball.clock_minutes(into, GameState.season_year)]
 
 
 func _feed_add(ev: Dictionary) -> void:

@@ -1739,7 +1739,7 @@ static func _when(ev: Dictionary) -> String:
 	var q := int(ev.get("q", 1))
 	if q > 4:
 		return "in extra time"
-	var m := int(ev.get("min", 0)) - (q - 1) * 30
+	var m := EraFootball.clock_minutes(int(ev.get("min", 0)) - (q - 1) * 30, GameState.season_year)
 	var qn: String = QUARTER_NAMES[mini(q - 1, 4)]
 	if m <= 3:
 		return "early in the %s quarter" % qn
