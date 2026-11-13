@@ -23,10 +23,26 @@ const NAME := "Sir Doug Nicholls Round"
 ## Short and factual. No claim about any guernsey or artwork.
 const BLURB := "Pastor Sir Doug Nicholls, a Yorta Yorta man, played for Fitzroy in the 1930s and became the first Aboriginal person to be knighted. The round in his name celebrates Aboriginal and Torres Strait Islander players and their place in the game."
 const NO_DESIGN := "none"
+## The real years (Legacy): the league's Indigenous Round began in 2007 and took
+## Sir Doug Nicholls' name in 2016. A season before 2007 has no such round.
+const FIRST_YEAR := 2007
+const NAMED_YEAR := 2016
+const OLD_NAME := "Indigenous Round"
+const OLD_BLURB := "The round celebrates Aboriginal and Torres Strait Islander players and their place in the game."
 
 
 static func active(gs) -> bool:
-	return gs != null and gs.season != null
+	return gs != null and gs.season != null and int(gs.season_year) >= FIRST_YEAR
+
+
+## The round's name in `year`: Indigenous Round from 2007, Sir Doug Nicholls
+## Round from 2016.
+static func name_for(year: int) -> String:
+	return NAME if year >= NAMED_YEAR else OLD_NAME
+
+
+static func blurb_for(year: int) -> String:
+	return BLURB if year >= NAMED_YEAR else OLD_BLURB
 
 
 ## This season's record, written once per season (reloads read it back).
