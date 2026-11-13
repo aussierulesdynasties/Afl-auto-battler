@@ -39,6 +39,7 @@ func _run() -> void:
 				H = int(wh[1])
 	await process_frame
 	var gs = root.get_node("GameState")
+	var YE = load("res://scripts/sim/YearEvents.gd")
 	var db = root.get_node("GameDB")
 	gs.autosave_enabled = false
 	gs.save_path = "user://capture_year.save"
@@ -78,7 +79,7 @@ func _run() -> void:
 	# Each event's card, in its own club's career, in its own season.
 	for id in ids.split(","):
 		var e := {}
-		for x in YearEvents.all():
+		for x in YE.all():
 			if str(x["id"]) == id:
 				e = x
 		if e.is_empty() or not e.has("card"):
@@ -92,7 +93,8 @@ func _run() -> void:
 		gs.start_season(club, db.club_list(club))
 		gs.season_year = int(e["season"])
 		gs.season.round_index = mini(int(e.get("round", 0)), gs.season.fixture.size())
-		var cards := YearEvents.week(gs)
+		# A round-0 event already fired as the season opened: its card is in the week.
+		var cards: Array = gs.week_events + YE.week(gs)
 		var card := {}
 		for c in cards:
 			if str(c.get("year_event", "")) == id:

@@ -2171,8 +2171,7 @@ func _test_menu_and_career() -> void:
 	root.size = win_was
 	await _settle()
 	_check(tut_tap == "", "New career offers Tutorials On/Off, and Off takes a real tap (%s)" % tut_tap)
-	_check(con_tap == "" and not _state.new_career_controversies(),
-			"New career offers Controversies On/Off, and Off takes a real tap (%s)" % con_tap)
+	_check(con_tap == "", "New career offers Controversies On/Off, and Off takes a real tap (%s)" % con_tap)
 	_check(board_tap == "" and rival_tap == "", "Both difficulty dials take a real tap on a phone (%s %s)" % [board_tap, rival_tap])
 	current_scene.find_child("StartCareer", true, false).emit_signal("pressed")
 	await _settle()

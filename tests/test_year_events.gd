@@ -98,7 +98,7 @@ func _test_fine_cut() -> void:
 	var small := YearEvents.fine_cut_m(85000, 2003)
 	_check(big > 1.0 and big <= YearEvents.CUT_MAX_M, "A large fine bites hard (%.1f)" % big)
 	_check(small >= YearEvents.CUT_MIN_M and small < big, "A small fine bites a little (%.1f)" % small)
-	_check(YearEvents.fine_cut_m(2000000, 2013) == YearEvents.CUT_MAX_M, "The biggest fine is held at the cap of the cut")
+	_check(YearEvents.fine_cut_m(9000000, 2013) == YearEvents.CUT_MAX_M, "A fine near the whole cap is held at the most a cut can be")
 
 
 ## A 1990 career at Essendon, moved season by season through the sample.
@@ -155,8 +155,10 @@ func _test_campaign_fires_across_decades() -> void:
 			"Carlton lose their first and second-round picks in 2002 and 2003")
 	_check(YearEvents.budget_cut_m(GameState, 1997) > 0.0 and YearEvents.budget_cut_m(GameState, 2003) == 0.0,
 			"Essendon's 1996 fine cuts its 1997 football budget; Carlton's fine is not yours to pay")
-	_check(YearEvents.budget_cut_m(GameState, 2014) == YearEvents.CUT_MAX_M,
-			"Essendon's 2013 fine takes the most a fine can from 2014's budget")
+	var cut_2014 := YearEvents.fine_cut_m(2000000, 2013)
+	_check(cut_2014 > 2.0 and is_equal_approx(YearEvents.budget_cut_m(GameState, 2014), cut_2014),
+			"Essendon's $2m fine in 2013 takes %.1f from 2014's budget" % cut_2014)
+	GameState.season_year = 2014
 	_check(YearEvents.trade_banned(GameState, "SYD") and not YearEvents.trade_banned(GameState, "ESS"),
 			"Sydney are barred from trading players in")
 	GameState.season_year = 2016
@@ -172,7 +174,7 @@ func _test_campaign_fires_across_decades() -> void:
 	# no longer fits steps down.
 	GameState.season_year = 2014
 	GameState._ensure_department_budget()
-	_check(is_equal_approx(GameState.department_budget_annual_m(), ClubBudget.ANNUAL_M - YearEvents.CUT_MAX_M)
+	_check(is_equal_approx(GameState.department_budget_annual_m(), ClubBudget.ANNUAL_M - cut_2014)
 			and ClubBudget.total_m(GameState.department_budget) <= GameState.department_budget_annual_m() + 0.001,
 			"2014's football budget is cut and the departments fit it (%.1f of %.1f)" % [
 			ClubBudget.total_m(GameState.department_budget), GameState.department_budget_annual_m()])
@@ -185,9 +187,8 @@ func _test_campaign_fires_across_decades() -> void:
 ## The real path: a 1990 week's events come out of the weekly event, at the
 ## front of the week.
 func _test_week_fires_in_its_season() -> void:
+	# The season's opening week runs the week's events (_open_board_season).
 	_start_1990("BRL", true)
-	GameState.season.round_index = 0
-	GameState._next_week_event()
 	_check(_fired().has("bears_owner_collapse") and _fired().has("vfl_becomes_afl") and not _fired().has("save_our_skins"),
 			"Round 1, 1990: the Bears' owner and the AFL's new name fire; Richmond's round-14 appeal waits (%s)" % str(_fired()))
 	var first: Dictionary = GameState.week_events[0] if not GameState.week_events.is_empty() else {}
