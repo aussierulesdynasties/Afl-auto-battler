@@ -154,6 +154,7 @@ def draft_type(d):
 
 
 def build(by_year, rated, lists):
+    last_of = last_listed()
     careers = careers_before(by_year)
     drafts = load_drafts()
     players, history, additions, add_stats, list_types = [], [], [], [], []
@@ -184,7 +185,8 @@ def build(by_year, rated, lists):
                             "slug": pid.rsplit("/", 1)[-1].replace(".html", ""),
                             "draft_year": d["year"] if d else "", "draft_type": draft_type(d),
                             "draft_pick": d["pick"] if d else "", "seasons": ";".join(seasons),
-                            "career": B.stints(careers.get(pid, [])), "peak": peak or ""})
+                            "career": B.stints(careers.get(pid, [])), "peak": peak or "",
+                            "last_season": last_of(L)})
             if L["list"] in ("rookie", "cat_b"):
                 list_types.append({"club": club, "first": L["first"], "last": L["last"], "dob": L["dob"],
                                    "list": L["list"], "source_url": L["source_url"].split(" | ")[0],
@@ -192,7 +194,8 @@ def build(by_year, rated, lists):
         else:
             additions.append({"first": L["first"], "last": L["last"], "dob": L["dob"], "club": club,
                               "position": L.get("position", ""), "height_cm": L["height_cm"], "list": L["list"],
-                              "peak": peak or "", "source_url": L["source_url"], "checked": L["checked"]})
+                              "peak": peak or "", "last_season": last_of(L), "source_url": L["source_url"],
+                              "checked": L["checked"]})
             latest = None
             for y in range(DATA_SEASON - 1, DATA_SEASON - 4, -1):
                 got = rated.get(y, {}).get(pid) if pid else None
@@ -334,36 +337,30 @@ def era_report(by_year, rated):
 
 
 # ------------------------------------------------------- real last seasons --
-def last_seasons(by_year, lists):
-    """Each 2020 listed player's real last AFL season, for retirement around
-    the real year (director 2026-11-13: "make all historical players
-    retirement start roughly when it did irl"). The last season is the later
-    of his last year on an AFL list (2020-25, by Draftguru id) and his last
-    game (by AFL Tables id). Blank when he is on a 2026 list: he follows the
-    normal sim."""
-    listed = defaultdict(int)
-    with open(os.path.join(LEG, "2020s", "lists.csv"), newline="", encoding="utf-8") as fh:
-        for r in csv.DictReader(fh):
-            if r["draftguru_id"]:
-                listed[r["draftguru_id"]] = max(listed[r["draftguru_id"]], int(r["year"]))
-    played = defaultdict(int)
-    for y, rows in by_year.items():
-        for r in rows:
-            if r["afltables_id"] and r["gm"] not in ("", "0"):
-                played[r["afltables_id"]] = max(played[r["afltables_id"]], y)
-    on_2026 = set()
-    for f in ("players_enriched_2026.csv", "list_additions_2026.csv"):
-        with open(os.path.join(ROOT, "data", f), newline="", encoding="utf-8") as fh:
+def last_listed():
+    """Each player's last year on an AFL list, for retirement around the real
+    year (director 2026-11-13: "make all historical players retirement start
+    roughly when it did irl"): the max `year` in every decade's lists.csv, by
+    AFL Tables id, then by surname + dob. Blank when he was still listed in
+    2025, the last list: he follows the normal sim. The shape the 1990, 2000
+    and 2010 starts share (GameDB reads it as real_last)."""
+    by_id, by_name = defaultdict(int), defaultdict(int)
+    for dec in ("1990s", "2000s", "2010s", "2020s"):
+        with open(os.path.join(LEG, dec, "lists.csv"), newline="", encoding="utf-8") as fh:
             for r in csv.DictReader(fh):
-                on_2026.add((norm(r["first"]), norm(r["last"]), r["dob"]))
-                on_2026.add(("", norm(r["last"]), r["dob"]))
-    out = []
-    for L in lists:
-        active = ("", norm(L["last"]), L["dob"]) in on_2026 if L["dob"] else             (norm(L["first"]), norm(L["last"]), "") in on_2026
-        last = max(listed.get(L["draftguru_id"], 0), played.get(L["afltables_id"], 0), YEAR)
-        out.append({"club": L["club"], "num": L["num"], "first": L["first"], "last": L["last"], "dob": L["dob"],
-                    "last_season": "" if active else last})
-    return out
+                y = int(r["year"])
+                if r["afltables_id"]:
+                    by_id[r["afltables_id"]] = max(by_id[r["afltables_id"]], y)
+                if r["dob"]:
+                    k = (norm(r["last"]), r["dob"])
+                    by_name[k] = max(by_name[k], y)
+    last_list = max(max(by_id.values()), max(by_name.values()))
+
+    def of(L):
+        y = by_id.get(L["afltables_id"], 0) if L["afltables_id"] else 0
+        y = y or by_name.get((norm(L["last"]), L["dob"]), 0)
+        return "" if y in (0, last_list) else y
+    return of
 
 
 def main():
@@ -380,18 +377,17 @@ def main():
     os.makedirs(OUT_DIR, exist_ok=True)
     B.write(os.path.join(OUT_DIR, "players_2020.csv"), B.ENRICHED, players)
     B.write(os.path.join(OUT_DIR, "history_2020.csv"),
-            ["club", "num", "slug", "draft_year", "draft_type", "draft_pick", "seasons", "career", "peak"], history)
+            ["club", "num", "slug", "draft_year", "draft_type", "draft_pick", "seasons", "career", "peak",
+             "last_season"], history)
     B.write(os.path.join(OUT_DIR, "list_additions_2020.csv"),
-            ["first", "last", "dob", "club", "position", "height_cm", "list", "peak", "source_url", "checked"],
-            additions)
+            ["first", "last", "dob", "club", "position", "height_cm", "list", "peak", "last_season", "source_url",
+             "checked"], additions)
     B.write(os.path.join(OUT_DIR, "list_addition_stats_2020.csv"), B.ADD_STATS, add_stats)
     B.write(os.path.join(OUT_DIR, "list_types_2020.csv"),
             ["club", "first", "last", "dob", "list", "source_url", "checked"], list_types)
-    gone = last_seasons(by_year, lists)
-    B.write(os.path.join(OUT_DIR, "last_seasons_2020.csv"), ["club", "num", "first", "last", "dob", "last_season"],
-            gone)
-    print("last seasons: %d still listed in 2026, %d retired by then"
-          % (sum(1 for g in gone if g["last_season"] == ""), sum(1 for g in gone if g["last_season"] != "")))
+    gone = [r["last_season"] for r in history + additions]
+    print("last seasons: %d still listed in 2025, %d gone by then"
+          % (gone.count(""), len(gone) - gone.count("")))
     print("players %d, additions %d (%d with an earlier season), rookie/cat B who played %d"
           % (len(players), len(additions), len(add_stats), len(list_types)))
     coaches, captains = build_staff(a.cache, lists)
