@@ -346,12 +346,7 @@ func _open_wait_sheet(code: String) -> void:
 	overlay.name = "WaitForClub"
 	var v: VBoxContainer = box["body"]
 	v.add_child(UiKit.heading("Start with %s in %d?" % [name_, year], UiKit.H1))
-	var without := "%d plays" % (year - 1) if year - 1 == GameDB.START_YEAR else "%d to %d play" % [GameDB.START_YEAR, year - 1]
-	var lines := [
-			"%s join the league in %d, so your first season is %d." % [name_, year, year],
-			"%s out without you. Their staff sign %d state-league players, chase out-of-contract players at rival clubs and trade picks 5, 7, 11 and 13 for senior players." % [
-				without, Expansion.FOUNDATION_SIZE],
-			"You take over at the %d National Draft with picks 1, 3 and 9, the first pick of each later round, and any players from their academy." % (year - 1)]
+	var lines := WaitWords.lines(code)
 	if Challenge.kind(GameState) == "rebuild":
 		lines.append("Your Rebuild is %s, built from nothing. %s keep their three best." % [
 				name_, GameDB.club_name(str(GameState.challenge.get("club", "")))])
@@ -381,8 +376,7 @@ func _wait_for_club(code: String) -> void:
 	if not GameState.waiting_clubs().has(code):
 		return
 	var first_season := GameDB.enter_year(code)
-	var playing := "%d" % (first_season - 1) if first_season - 1 == GameDB.START_YEAR else "%d to %d" % [GameDB.START_YEAR, first_season - 1]
-	ScreenTransition.run("Playing %s..." % playing, func():
+	ScreenTransition.run("Playing %s..." % WaitWords.years_without(code), func():
 		await ScreenTransition.drawn()
 		if GameState.begin_from_history(first_season):
 			GameState.choose_sim_ahead_club(code)
