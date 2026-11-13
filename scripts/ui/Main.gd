@@ -395,7 +395,9 @@ func _on_new_career() -> void:
 ## Each start's words: the heading and the one line under it. The figure is the
 ## first season the coach plays.
 const YEAR_WORDS := {
+	"2020": ["The hub season", "18 clubs on their real lists, a 17-round season of shortened games. Take over from your club's senior coach and coach on through the years."],
 	"2026": ["Today's league", "18 clubs. The real lists after the 2026 season, or a league redraft."],
+	"2000": ["From the turn of the century", "16 clubs on their real lists. Take over from your club's senior coach and coach on through the years to today."],
 	"1990": ["From the first AFL season", "14 clubs on their real lists. Take over from your club's senior coach and coach on through the years to today."],
 }
 
