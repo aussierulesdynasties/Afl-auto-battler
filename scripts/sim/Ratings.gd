@@ -821,6 +821,7 @@ static func key_posts(ground: Array) -> void:
 static func available(p: Dictionary) -> bool:
 	return int(p.get("injury_weeks", 0)) <= 0 \
 			and int(p.get("suspension_weeks", 0)) <= 0 \
+			and not p.has("season_ban") \
 			and not bool(p.get("rested", false))
 
 
