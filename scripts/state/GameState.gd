@@ -2207,7 +2207,7 @@ func _tie_fits(code: String) -> bool:
 		return false
 	if why == "senior" and code != my_club and EraRules.is_era(season_year) \
 			and season != null and season.lists.has(code):
-		var staying := arr.filter(func(q): return not retiring_now(q))
+		var staying := staying_on(arr)
 		if RookieList.senior_count(staying) >= RookieList.senior_spots():
 			var worst := _least_worth(staying, "")
 			if not worst.is_empty():
@@ -8473,7 +8473,7 @@ func _era_trim_rivals() -> void:
 		while guard < 60:
 			guard += 1
 			# Who retires at the rollover leaves anyway: he takes no spot.
-			var staying := list.filter(func(q): return not retiring_now(q))
+			var staying := staying_on(list)
 			var rookies_over := RookieList.cat_a_count(staying) > RookieList.cat_a_spots()
 			var seniors_over := RookieList.senior_count(staying) > RookieList.senior_spots()
 			if not (rookies_over or seniors_over) or list.size() <= Contracts.min_list():
@@ -8617,6 +8617,15 @@ func _decide_retirements() -> void:
 			if bool(res["stays"]) and int(p.get("overall", 0)) >= NEWS_MIN_OVR:
 				add_news("retirement", "%s (%s) has decided to play on in %d." % [
 						GameDB.player_display_name(p), GameDB.club_name(str(code)), year])
+
+
+## Who is still on `list` after the coming rollover: everyone but its
+## retirees, of whom the rollover takes at most MAX_RETIRE_PER_CLUB, in list
+## order (Prospects.age_league), as the draft counts them (begin_intake_draft).
+## A trim that counted every retiree left 1994's lists at 43-44 of 42.
+func staying_on(list: Array) -> Array:
+	var going := list.filter(func(q): return retiring_now(q)).slice(0, Prospects.MAX_RETIRE_PER_CLUB)
+	return list.filter(func(q): return not going.has(q))
 
 
 ## Retiring at the coming rollover, and not talked round.
