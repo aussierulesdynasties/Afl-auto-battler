@@ -138,7 +138,8 @@ static func real_class(year: int) -> Array:
 ## did (director, 2026-11-13: "the sim will not replicate historical draftee
 ## clubs"). Each is rated on his last AFL season before `year`, fitted to his
 ## rating on that season's own scale, or as a prospect if he has none. At most
-## Expansion.FOUNDATION_SIZE, the best of them; the rest go into the draft
+## Expansion.foundation_size (a club entering before the expansion
+## concessions signs its whole first senior list), the best of them; the rest go into the draft
 ## before `year` (returned as "pool"); fewer, and the club tops up with
 ## state-league signings as any new club does.
 ## Returns {"list": players, "pool": players for the draft}.
@@ -178,14 +179,15 @@ static func foundation(gs, code: String, year: int) -> Dictionary:
 	GameDB.register_draftees(list)
 	list.sort_custom(func(a, b): return int(a.get("overall", 0)) > int(b.get("overall", 0)))
 	var pool := []
-	while list.size() > Expansion.FOUNDATION_SIZE:
+	var size := Expansion.foundation_size(code)
+	while list.size() > size:
 		var p: Dictionary = list.pop_back()
 		p["club"] = ""
 		p["draft_year"] = year - 1
 		pool.append(p)
-	if list.size() < Expansion.FOUNDATION_SIZE:
+	if list.size() < size:
 		var more: Array = Expansion.foundation_list(code, year - 1, int(gs.career_seed))
-		list.append_array(more.slice(0, Expansion.FOUNDATION_SIZE - list.size()))
+		list.append_array(more.slice(0, size - list.size()))
 	for p in list:
 		p["club"] = code
 		if str(p.get("note", "")) == "":

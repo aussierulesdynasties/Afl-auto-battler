@@ -25,13 +25,14 @@ const PATH := "res://data/legacy/era_rules.csv"
 const GAME := {
 	"senior_list_max": 38, "rookie_list_max": 6, "cat_b_rookie": 2, "list_min": 37,
 	"interchange": 5, "substitutes": 0, "medical_sub": 0,
-	"rookie_list": 1, "free_agency": 1, "midseason_draft": 1,
+	"rookie_list": 1, "free_agency": 1, "midseason_draft": 1, "expansion_concessions": 1,
 }
 ## The first season that plays GAME whatever the file says.
 const GAME_FROM := 2026
 ## Switches: off in an era season with no row (the rookie list before 1997,
 ## free agency before 2012). Counts fall back to GAME's value.
-const SWITCHES := ["rookie_list", "free_agency", "midseason_draft", "medical_sub", "substitutes", "cat_b_rookie"]
+const SWITCHES := ["rookie_list", "free_agency", "midseason_draft", "medical_sub", "substitutes", "cat_b_rookie",
+		"expansion_concessions"]
 
 ## The season being played (GameState sets it with season_year); 0 = none.
 static var year := 0
