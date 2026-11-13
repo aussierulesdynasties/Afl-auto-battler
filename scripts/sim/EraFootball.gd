@@ -27,10 +27,21 @@ const KEYS := ["chains_per_game", "handball_share", "mark_share_of_kicks", "pres
 const SIM := ["free_rate"]
 ## The first season today's football is played in: no era row from here on.
 const TODAY := 2026
+## A season whose matches were shorter, as a share of the usual length. 2020:
+## "Every match shortened to 80% of its usual length; Quarters of 16 minutes
+## plus time-on" (data/legacy/2020s/seasons.csv). Its era row already plays
+## fewer chains; this is what the clock and the minutes in the words show.
+const SHORT_MATCH := {2020: 0.8}
 
 static var _rows := {}
 static var _loaded := false
 static var _lock := Mutex.new()
+
+
+## `minutes` of the match engine's quarter (30 to a quarter) as a ground's
+## clock showed them in `year`: fewer in a season of shortened matches.
+static func clock_minutes(minutes: int, year: int) -> int:
+	return int(round(float(minutes) * float(SHORT_MATCH.get(year, 1.0))))
 
 
 ## The multipliers on Ratings.T (KEYS) and the umpiring chances (SIM) for a match played in `year` ({} for today's
