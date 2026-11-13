@@ -115,7 +115,7 @@ func _span(db, code: String) -> Vector2i:
 	return Vector2i(lo, hi)
 
 
-func _row(UK, SV: GDScript, db, r: Dictionary, y: float, w: int, cell: float, row_h: float, scale: float) -> void:
+func _row(ui_kit, sv: GDScript, db, r: Dictionary, y: float, w: int, cell: float, row_h: float, scale: float) -> void:
 	var code: String = r["code"]
 	var base := db.club_era(code, LAST) as Dictionary
 	var name := Label.new()
@@ -148,20 +148,20 @@ func _row(UK, SV: GDScript, db, r: Dictionary, y: float, w: int, cell: float, ro
 		var crest_box := CenterContainer.new()
 		crest_box.position = Vector2(x, y + 4)
 		crest_box.size = Vector2(86 * scale, 86 * scale)
-		var crest = UK.colour_marker([kit["base"], kit["pattern"], kit["pattern2"]], 82.0 * scale, str(kit["design"]), code)
+		var crest = ui_kit.colour_marker([kit["base"], kit["pattern"], kit["pattern2"]], 82.0 * scale, str(kit["design"]), code)
 		crest.third = kit.get("pattern3", kit["pattern2"])
 		crest_box.add_child(crest)
 		root.add_child(crest_box)
 		var fig := Control.new()
 		fig.position = Vector2(x + 86 * scale, y)
 		fig.size = Vector2(cell - 86 * scale, row_h)
-		fig.material = SV.figure_material([kit])
+		fig.material = sv.figure_material([kit])
 		fig.draw.connect(func():
-			var col: Color = SV.look_colour(0, {"skin": 1, "hair": 2, "hair_style": "short_crop"})
+			var col: Color = sv.look_colour(0, {"skin": 1, "hair": 2, "hair_style": "short_crop"})
 			var fx := 40.0 * scale
 			for facing in ["front", "back"]:
 				var info := VignetteFigures.strip("average", "idle", facing)
-				SV.draw_frame(fig, Vector2(fx, 176.0 * scale), info, 0, 0.88 * scale, col, false,
+				sv.draw_frame(fig, Vector2(fx, 176.0 * scale), info, 0, 0.88 * scale, col, false,
 						Color(0, 0, 0, 0), Transform2D.IDENTITY, "short_crop")
 				fx += 78.0 * scale)
 		root.add_child(fig)
