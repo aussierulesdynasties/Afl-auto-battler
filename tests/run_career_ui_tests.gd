@@ -5869,6 +5869,9 @@ func _test_top_up_sheet_taps() -> void:
 	root.size = Vector2i(390, 844)
 	_router.stack = ["main"]
 	_state.week_events = []
+	# A fresh career has nobody unsigned yet: pass over a few of this year's class.
+	for p in (_state.draftee_pool as Array).slice(0, 4):
+		p["draft_year"] = _state.season_year - 1
 	ye.state(_state)["top_up"] = {"year": _state.season_year, "club": "ESS", "left": 2, "most": 2, "signed": []}
 	var pool: Array = md.pool(_state)
 	_check(not pool.is_empty(), "Someone is left to sign (%d)" % pool.size())

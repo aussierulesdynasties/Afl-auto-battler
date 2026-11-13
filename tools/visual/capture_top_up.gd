@@ -55,6 +55,10 @@ func _run() -> void:
 	gs.replay_seed = 2016
 	gs.start_season("ESS", root.get_node("GameDB").club_list("ESS"))
 	gs.week_events = []
+	# A fresh career has nobody unsigned yet; a real 2016 save has last year's
+	# passed-over prospects. Pass over a dozen of this year's class to stand in.
+	for p in (gs.draftee_pool as Array).slice(0, 12):
+		p["draft_year"] = gs.season_year - 1
 	ye.state(gs)["top_up"] = {"year": gs.season_year, "club": "ESS", "left": 10, "most": 10, "signed": []}
 	var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
 	root.add_child(hub)
