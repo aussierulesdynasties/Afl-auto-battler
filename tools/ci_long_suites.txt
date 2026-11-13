@@ -16,6 +16,8 @@ matchday
 match_motion
 back_nav
 preseason
+# A Legacy campaign rolled 1990 -> 2026 (row 142): timed out at 900 s on PR shards.
+legacy_rollover
 # The balance harness suites ran nightly before this rule and still do.
 balance
 league_balance
