@@ -1663,10 +1663,10 @@ func _gate_odds() -> void:
 	_check(literal.is_empty(), "No match-day gate template carries a number of its own (%s)" % str(literal))
 	var pct := func(x: float) -> String: return GO.pct(x)
 	_check(GO.tag_gives().contains(pct.call(Ms.TAGGER_COST)) and GO.tag_gives().contains(pct.call(1.0 - Ms.TAGGER_BALL))
-			and str(GO.tag_break_texts("B", "A", 20)[1]).contains(GO.tag_gives())
-			and str(GO.tag_break_texts("", "A", 20)[0]).contains(GO.tag_gives())
-			and str(GO.tag_break_texts("", "A", 20, "", "C")[1]).contains("C gets his usual %d touches" % GO.usual_touches())
-			and str(GO.tag_break_texts("B", "", 0)[0]).begins_with("none"),
+			and str(GO.tag_break_texts("B", "A", 20, 26)[1]).contains(GO.tag_gives())
+			and str(GO.tag_break_texts("", "A", 20, 26)[0]).contains(GO.tag_gives())
+			and str(GO.tag_break_texts("", "A", 20, 26, "", "C", 23)[1]).contains("C gets his usual 23 touches")
+			and str(GO.tag_break_texts("B", "", 0, 26)[0]).begins_with("none"),
 			"Tag: the share of his own game given up, from the tagger's constants (%s)" % GO.tag_gives())
 	_check(GO.skip_line(1).contains("plan you took in") and GO.skip_line(3).contains("last quarter's calls")
 			and GO.skip_line(3).contains("no change") and GO.skip_line(1).contains("Nothing changed here is kept"),

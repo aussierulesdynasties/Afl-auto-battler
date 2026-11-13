@@ -84,6 +84,7 @@ func run() -> void:
 	_t("_test_play_through_mid_stands_in_midfield")
 	_t("_test_view_slots_stand_in_their_zone")
 	_t("_test_tag_hold")
+	_t("_test_tag_own_touches")
 	_t("_test_match_story")
 	_t("_test_first_goal_feed")
 	_t("_test_traits_surfaced")
@@ -2601,6 +2602,55 @@ func _test_bring_the_heat() -> void:
 			"It says it shows next week only while its effort carries into the week's load (%.0f against %.0f)" % [week_load[1], week_load[0]])
 
 
+## Row 178 (director 2026-11-12: "says 27 touches 100% of the time"): the tag card
+## says the man's own touches. Two of their midfielders with different ratings get
+## two different counts, untagged and tagged; each is what the sim's carry pick
+## reads (Disposal, Carry, a wing), and the hold is the multiplier the sim plays
+## (MatchSim._tag_share) taking its measured count of touches off him.
+func _test_tag_own_touches() -> void:
+	var sim := _sim(8420, "GEE", "SYD")
+	var theirs: Array = (sim.squads[1] as Squad).ground.filter(func(p): return MatchSim.taggable(p))
+	theirs.sort_custom(func(a, b): return Roles.usual_touches(a) > Roles.usual_touches(b))
+	var busy: Dictionary = theirs[0]
+	var quiet: Dictionary = theirs[theirs.size() - 1]
+	var tagger: Dictionary = MatchSim.tagger_for((sim.squads[0] as Squad).ground)
+	var legs := float(sim.energy.get(str(tagger["id"]), 100.0))
+	_check(GateOdds.usual_touches(busy) != GateOdds.usual_touches(quiet)
+			and GateOdds.tag_kept(tagger, legs, busy) != GateOdds.tag_kept(tagger, legs, quiet)
+			and GateOdds.tag_touches(tagger, legs, busy) != GateOdds.tag_touches(tagger, legs, quiet),
+			"Two of their midfielders, two counts on the card (%s / %s)" % [GateOdds.tag_touches(tagger, legs, busy), GateOdds.tag_touches(tagger, legs, quiet)])
+	# His usual count is the fit on the ratings the sim picks its carrier on.
+	var f: Array = Roles.USUAL_TOUCHES_FIT
+	for p in [busy, quiet]:
+		var a: Dictionary = p["attr"]
+		var want := float(f[0]) + float(f[1]) * float(a["disposal"]) + float(f[2]) * float(a["carry"]) + (float(f[3]) if Roles.on_wing(p) else 0.0)
+		_check(is_equal_approx(Roles.usual_touches(p), maxf(Roles.USUAL_TOUCHES_MIN, want)),
+				"%s usually gets what the sim gives his ratings (%.1f)" % [str(p["id"]), want])
+	# Tagged: the hold the sim plays with this man on him, as touches off his own count.
+	sim.set_tactics(0, {"gameplan": "balanced", "tag_id": str(quiet["id"]), "tagger_id": str(tagger["id"]), "tag_set": true})
+	var share := sim._tag_share(0)
+	var lost := (Roles.TAG_USUAL_TOUCHES - Roles.touches_at(share)) * (Roles.TAG_LOSS_WING if Roles.on_wing(quiet) else Roles.TAG_LOSS_INSIDE)
+	_check(is_equal_approx(share, Roles.tag_keep(tagger, legs))
+			and is_equal_approx(Roles.tag_touches(tagger, legs, quiet), maxf(Roles.usual_touches(quiet) * Roles.TAG_KEEP_FLOOR, Roles.usual_touches(quiet) - lost)),
+			"Tagged, the card takes the sim's own hold off his own count (%.2f, %.1f lost)" % [share, lost])
+	# A wing loses more to the same hold than an inside man of the same count:
+	# his running ball is the ball a tag takes.
+	var inside := quiet.duplicate(true)
+	inside["line"] = "C"
+	var wing := quiet.duplicate(true)
+	wing["line"] = "WING"
+	(wing["attr"] as Dictionary)["disposal"] = float((wing["attr"] as Dictionary)["disposal"]) - float(f[3]) / float(f[1])
+	_check(is_equal_approx(Roles.usual_touches(inside), Roles.usual_touches(wing))
+			and Roles.tag_touches(tagger, legs, wing) < Roles.tag_touches(tagger, legs, inside),
+			"Held the same, a wing keeps less than an inside man who usually gets as much")
+	# The hot-player call and the break call say the same man's counts.
+	var lines := GateOdds.tag_call_lines("Q", "T", GateOdds.tag_kept(tagger, legs, quiet), GateOdds.usual_touches(quiet))
+	var brk: Array = GateOdds.tag_break_texts("Q", "T", GateOdds.tag_kept(tagger, legs, quiet), GateOdds.usual_touches(quiet))
+	var said := "usually gets %d touches; with T on him, about %d" % [GateOdds.usual_touches(quiet), GateOdds.tag_kept(tagger, legs, quiet)]
+	_check(str(lines["tag_gain"]).contains(said) and str(brk[0]).contains(said),
+			"The in-play call and the break call size the same man the same (%s)" % said)
+
+
 ## A tag is a midfield job: a forward kicking a bag never gets a tag card
 ## (that would be a choice with no effect); a midfielder does, and the card
 ## names the midfielder who would go to him.
@@ -2630,10 +2680,11 @@ func _test_hot_player_moment() -> void:
 			and str(m["options"][0]["label"]).contains(GameDB.player_display_name(tagger)),
 			"A midfielder kicking a bag can be tagged, by the midfielder who would go to him")
 	# The call says what each answer does and costs, sized from what the sim plays
-	# (row 120): what he keeps with this man on him, and what this man gives up.
+	# (row 120): what he keeps with this man on him, and what this man gives up,
+	# in his own touches (row 178).
 	var legs := float(sim.energy.get(str(tagger["id"]), 100.0))
-	var want := roundi(Roles.tag_touches(tagger, legs))
-	var usual := roundi(Roles.TAG_USUAL_TOUCHES)
+	var want := roundi(Roles.tag_touches(tagger, legs, mid))
+	var usual := roundi(Roles.usual_touches(mid))
 	var tag_o: Dictionary = m["options"][0]
 	var leave_o: Dictionary = m["options"][1]
 	_check(str(tag_o["gain"]).begins_with("Gain: ") and str(tag_o["gain"]).contains("usually gets %d touches" % usual)
@@ -2660,11 +2711,12 @@ func _test_hot_player_moment() -> void:
 	var mv: Dictionary = again.pending_moment
 	var other_name := GameDB.player_display_name(other)
 	var who := GameDB.player_display_name(again.tagger_of(0))
-	var held := roundi(Roles.tag_touches(again.tagger_of(0), float(again.energy.get(str(again.tagger_of(0)["id"]), 100.0))))
+	var held := roundi(Roles.tag_touches(again.tagger_of(0), float(again.energy.get(str(again.tagger_of(0)["id"]), 100.0)), other))
+	var other_usual := roundi(Roles.usual_touches(other))
 	_check(str(mv.get("kind", "")) == "hot" and str(mv["options"][0]["label"]) == "Move %s onto him" % who
 			and str(mv["options"][1]["label"]) == "Leave the tag on %s" % other_name,
 			"With a tag already on, the call is to move it or leave it (%s / %s)" % [mv["options"][0]["label"], mv["options"][1]["label"]])
-	_check(str(mv["options"][0]["cost"]) == "Cost: the tag comes off %s, who goes back to his usual %d touches" % [other_name, usual]
+	_check(str(mv["options"][0]["cost"]) == "Cost: the tag comes off %s, who goes back to his usual %d touches" % [other_name, other_usual]
 			and not str(mv["options"][0]["cost"]).contains(GateOdds.tag_gives()),
 			"Moving the tag costs the hold on the other man, not a second share of the tagger's game (%s)" % mv["options"][0]["cost"])
 	_check(str(mv["options"][1]["gain"]) == "Gain: %s stays on %s, who is held to about %d touches" % [who, other_name, held]

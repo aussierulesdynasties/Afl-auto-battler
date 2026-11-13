@@ -1272,9 +1272,16 @@ func _show_coach_box() -> void:
 		var book: Dictionary = GameState.season_stats.get(id, {})
 		var games := int(book.get("games", 0))
 		return StatsPlayers.season_rating(book.get("s", {}) as Dictionary) / float(games) if games > 0 else -1.0
+	# Their man, whose own touches every hold is sized on (row 178): the man
+	# tagged, and with no tag the one No tag leaves free (set below).
+	var untagged_id: Array = [""]
+	var their_man := func() -> Dictionary:
+		var id := str(calls["tag_id"]) if str(calls["tag_id"]) != "" else str(untagged_id[0])
+		return _their_player(sim, id)
 	var tag_detail := func(r: Dictionary, wide: bool) -> String:
 		var p: Dictionary = my_mids.get(str(r["id"]), r)
-		return MatchNotes.tagger_card_detail(p, float(sim.energy.get(str(r["id"]), 100.0)), wide, season_rating.call(str(r["id"])))
+		return MatchNotes.tagger_card_detail(p, float(sim.energy.get(str(r["id"]), 100.0)), wide,
+				season_rating.call(str(r["id"])), their_man.call())
 	# What the tag does and costs, as labelled Gain / Cost rows like every other
 	# break call (director 2026-11-10, "Gain / Cost everywhere"), the touches
 	# inside the line. A name in either line opens his profile on a tap.
@@ -1306,6 +1313,9 @@ func _show_coach_box() -> void:
 	var who_block: Array = []
 	var who_wb: Control = null
 	var who_hook: Array = [Callable()]
+	# Each tagger card's "Their man" line, [label, button, his id]: it follows
+	# the man picked to tag (_dress_tagger_card).
+	var holds_lines: Array = []
 	var sync_tag := func(_key: String) -> void:
 		if (who_hook[0] as Callable).is_valid():
 			(who_hook[0] as Callable).call()
@@ -1324,8 +1334,21 @@ func _show_coach_box() -> void:
 		if str(calls["tagger_id"]) != "" and not my_mids.has(str(calls["tagger_id"])):
 			benched = GameDB.player_display_name_by_id(str(calls["tagger_id"]), "your tagger")
 		var who_name := GameDB.player_display_name(who) if who != null else ""
-		var kept := GateOdds.tag_kept(who, float(sim.energy.get(str(who["id"]), 100.0))) if who != null else 0
-		var gc := GateOdds.tag_break_texts(target, who_name, kept, benched, str(untagged[0]))
+		var man: Dictionary = their_man.call()
+		var kept := GateOdds.tag_kept(who, float(sim.energy.get(str(who["id"]), 100.0)), man) if who != null else 0
+		var gc := GateOdds.tag_break_texts(target, who_name, kept, GateOdds.usual_touches(man), benched,
+				str(untagged[0]), GateOdds.usual_touches(man))
+		for h in holds_lines:
+			if not is_instance_valid(h[0]):
+				continue
+			var mid: Dictionary = my_mids.get(str(h[2]), {})
+			if mid.is_empty():
+				continue
+			var old := (h[0] as Label).text
+			var now := GateOdds.tag_touches(mid, float(sim.energy.get(str(h[2]), 100.0)), man)
+			(h[0] as Label).text = now
+			if is_instance_valid(h[1]):
+				(h[1] as Button).set_meta("card_text", str((h[1] as Button).get_meta("card_text", "")).replace(old, now))
 		NameInk.set_line(tag_rows[0], str(gc[0]), _names())
 		NameInk.set_line(tag_rows[1], str(gc[1]), _names())
 		tag_note.set_meta("plain", GateOdds.gain(str(gc[0])) + "\n" + GateOdds.cost(str(gc[1])))
@@ -1348,8 +1371,10 @@ func _show_coach_box() -> void:
 	var busiest := _busiest_mid(sim)
 	if not busiest.is_empty():
 		untagged[0] = str(busiest["name"])
+		untagged_id[0] = str(busiest["id"])
 	elif not tag_first.is_empty():
 		untagged[0] = GameDB.player_display_name_by_id(str(tag_first[0]["id"]), "")
+		untagged_id[0] = str(tag_first[0]["id"])
 	var tag := _player_choice("TagPicker", "No tag", opp_listed, tag_first, calls, "tag_id",
 			MatchNotes.tag_question(), sync_tag, Callable(), Callable(), "Other player…", true)
 	# The question is drawn over the choices, as the loose interceptor's is.
@@ -1370,7 +1395,11 @@ func _show_coach_box() -> void:
 			if who.is_empty():
 				return
 			var pid := str(who.get("id", ""))
-			_dress_tagger_card(b, _short_name(who), MatchNotes.tagger_card(who, float(sim.energy.get(pid, 100.0)), season_rating.call(pid)), id == "")
+			_dress_tagger_card(b, _short_name(who), MatchNotes.tagger_card(who, float(sim.energy.get(pid, 100.0)),
+					season_rating.call(pid), their_man.call()), id == "")
+			var hv := b.get_parent().find_child("CardHoldsValue", true, false)
+			if hv != null:
+				holds_lines.append([hv, b, pid])
 		var who_tags := _player_choice("TaggerPicker", _card_text(tagger, tag_detail) + "\nYour assistant's pick", others,
 				others.slice(0, 2 if _pc_break else 3),
 				calls, "tagger_id", "Who goes to him?", sync_tag, tag_detail, card, "Other tagger…")
@@ -2121,7 +2150,7 @@ func _busiest_mid(sim: MatchSim) -> Dictionary:
 		var n := int(float(st.get("disposals", 0.0)))
 		if n > most:
 			most = n
-			top = {"name": GameDB.player_display_name(r), "disposals": n}
+			top = {"name": GameDB.player_display_name(r), "disposals": n, "id": str(r["id"])}
 	return top
 
 
@@ -2948,6 +2977,7 @@ func _dress_tagger_card(b: Button, who_name: String, c: Dictionary, is_pick: boo
 	holds.name = "CardHolds"
 	holds.add_child(UiKit.line(str(c["holds_label"]), UiKit.SECONDARY, UiKit.MUTED))
 	var holds_value := UiKit.lbl(str(c["holds"]), UiKit.BODY, UiKit.TEXT)
+	holds_value.name = "CardHoldsValue"
 	holds_value.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	holds_value.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	holds.add_child(holds_value)
@@ -2969,6 +2999,17 @@ func _dress_tagger_card(b: Button, who_name: String, c: Dictionary, is_pick: boo
 		if n != b:
 			(n as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
 	pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+
+## Their player `id` as the sim has him today (on the ground or the bench), or {}.
+func _their_player(sim: MatchSim, id: String) -> Dictionary:
+	if id == "" or sim == null:
+		return {}
+	var sq: Squad = sim.squads[1 - _my_side]
+	for p in sq.ground + sq.bench:
+		if str(p["id"]) == id:
+			return p
+	return {}
 
 
 func _short_name(r: Dictionary) -> String:
