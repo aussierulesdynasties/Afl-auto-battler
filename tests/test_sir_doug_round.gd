@@ -45,6 +45,7 @@ func run(tree: SceneTree) -> void:
 	_t("_test_round_and_slots")
 	_t("_test_bye_next_round")
 	_t("_test_back_to_back_byes")
+	_t("_test_era_gate")
 	_t("_test_save_reload_keeps_record")
 	_t("_test_old_save")
 	_t("_test_new_season")
@@ -136,6 +137,24 @@ func _test_back_to_back_byes() -> void:
 
 
 ## "Store the selected season design in the save so reloading cannot change it."
+## Legacy: the round keeps its real years. None before 2007, Indigenous Round
+## from 2007, Sir Doug Nicholls Round from 2016.
+func _test_era_gate() -> void:
+	_new_career()
+	var now := int(gs.season_year)
+	gs.season_year = 1990
+	gs.sir_doug = {}
+	_check(SirDougRound.round_of(gs) == -1, "A 1990 season has no Indigenous Round (%d)" % SirDougRound.round_of(gs))
+	_check(SirDougRound.round_for(gs, CLUB) == -1, "...and no club marks one")
+	gs.season_year = 2010
+	gs.sir_doug = {}
+	_check(SirDougRound.round_of(gs) == 10, "A 2010 season has the round (%d)" % SirDougRound.round_of(gs))
+	_check(SirDougRound.name_for(2010) == "Indigenous Round", "In 2010 it is Indigenous Round")
+	_check(SirDougRound.name_for(2016) == SirDougRound.NAME, "From 2016 it is Sir Doug Nicholls Round")
+	gs.season_year = now
+	gs.sir_doug = {}
+
+
 func _test_save_reload_keeps_record() -> void:
 	_new_career()
 	# A record written by another build (another round, a stored design id).
