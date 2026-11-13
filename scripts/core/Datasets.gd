@@ -63,6 +63,18 @@ const _TABLE := {
 		"leadership": "res://data/leadership_2026.csv",
 		"state_leagues": "res://data/state_leagues",
 	},
+	# The 2000 start: lists rated on 1999, built by
+	# tools/legacy_2000s/build_start_2000.py on the 1990 pipeline (row 142).
+	"2000": {
+		"data_season": 1999, "start_year": 2000, "start_date": "2000-03-01",
+		"players": "res://data/legacy/2000/players_2000.csv",
+		"coaches": "res://data/legacy/2000s/coaches_2000.csv",
+		"leadership": "res://data/legacy/2000s/captains_2000.csv",
+		"history": "res://data/legacy/2000/history_2000.csv",
+		"list_additions": "res://data/legacy/2000/list_additions_2000.csv",
+		"list_addition_stats": "res://data/legacy/2000/list_addition_stats_2000.csv",
+		"second_tier": "res://data/legacy/second_tier",
+	},
 	# The 1990 start: lists rated on 1989, the season just played, built by
 	# tools/legacy_1990s/build_start.py (TODO row 142, phase L1).
 	"1990": {
