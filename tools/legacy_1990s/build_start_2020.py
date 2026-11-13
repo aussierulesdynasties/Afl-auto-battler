@@ -333,6 +333,39 @@ def era_report(by_year, rated):
     return "\n".join(lines) + "\n"
 
 
+# ------------------------------------------------------- real last seasons --
+def last_seasons(by_year, lists):
+    """Each 2020 listed player's real last AFL season, for retirement around
+    the real year (director 2026-11-13: "make all historical players
+    retirement start roughly when it did irl"). The last season is the later
+    of his last year on an AFL list (2020-25, by Draftguru id) and his last
+    game (by AFL Tables id). Blank when he is on a 2026 list: he follows the
+    normal sim."""
+    listed = defaultdict(int)
+    with open(os.path.join(LEG, "2020s", "lists.csv"), newline="", encoding="utf-8") as fh:
+        for r in csv.DictReader(fh):
+            if r["draftguru_id"]:
+                listed[r["draftguru_id"]] = max(listed[r["draftguru_id"]], int(r["year"]))
+    played = defaultdict(int)
+    for y, rows in by_year.items():
+        for r in rows:
+            if r["afltables_id"] and r["gm"] not in ("", "0"):
+                played[r["afltables_id"]] = max(played[r["afltables_id"]], y)
+    on_2026 = set()
+    for f in ("players_enriched_2026.csv", "list_additions_2026.csv"):
+        with open(os.path.join(ROOT, "data", f), newline="", encoding="utf-8") as fh:
+            for r in csv.DictReader(fh):
+                on_2026.add((norm(r["first"]), norm(r["last"]), r["dob"]))
+                on_2026.add(("", norm(r["last"]), r["dob"]))
+    out = []
+    for L in lists:
+        active = ("", norm(L["last"]), L["dob"]) in on_2026 if L["dob"] else             (norm(L["first"]), norm(L["last"]), "") in on_2026
+        last = max(listed.get(L["draftguru_id"], 0), played.get(L["afltables_id"], 0), YEAR)
+        out.append({"club": L["club"], "num": L["num"], "first": L["first"], "last": L["last"], "dob": L["dob"],
+                    "last_season": "" if active else last})
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--cache", default=CACHE, help="tools/legacy_2020s/fetch.py's cache (Wikipedia's 2020 season page)")
@@ -354,6 +387,11 @@ def main():
     B.write(os.path.join(OUT_DIR, "list_addition_stats_2020.csv"), B.ADD_STATS, add_stats)
     B.write(os.path.join(OUT_DIR, "list_types_2020.csv"),
             ["club", "first", "last", "dob", "list", "source_url", "checked"], list_types)
+    gone = last_seasons(by_year, lists)
+    B.write(os.path.join(OUT_DIR, "last_seasons_2020.csv"), ["club", "num", "first", "last", "dob", "last_season"],
+            gone)
+    print("last seasons: %d still listed in 2026, %d retired by then"
+          % (sum(1 for g in gone if g["last_season"] == ""), sum(1 for g in gone if g["last_season"] != "")))
     print("players %d, additions %d (%d with an earlier season), rookie/cat B who played %d"
           % (len(players), len(additions), len(add_stats), len(list_types)))
     coaches, captains = build_staff(a.cache, lists)
