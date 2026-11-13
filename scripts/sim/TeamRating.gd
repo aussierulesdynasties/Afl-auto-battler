@@ -50,7 +50,7 @@ static func forecast(list: Array, years := FORECAST_YEARS) -> int:
 		return 0
 	projected.sort()
 	projected.reverse()
-	var take := mini(18 + Ratings.bench_size, projected.size())
+	var take := mini(18 + Ratings.bench(), projected.size())
 	var total := 0.0
 	for i in range(take):
 		total += float(projected[i])

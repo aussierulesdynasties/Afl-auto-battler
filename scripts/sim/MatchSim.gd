@@ -93,6 +93,9 @@ var injuries: Array = []
 var reports: Array = []
 ## Players gone off injured, per side; they take no further part.
 var injured_off := [[], []]
+## Players the substitute replaced for good (2011-15, EraRules), not hurt:
+## they took part, so the box score keeps them.
+var subbed_off := [[], []]
 ## Who won the ball back for the chain being played ({"side", "id"}), so a
 ## goal from a turnover can say whose intercept it came from.
 var _won_back := {}
@@ -4518,6 +4521,8 @@ func end_quarter() -> Dictionary:
 		quarter, squads[0].name, goals(0), behinds(0), score(0),
 		squads[1].name, goals(1), behinds(1), score(1)])
 	current_quarter += 1
+	if quarter == 3:
+		_three_quarter_sub()
 	if quarter < 4:
 		for side in range(2):
 			if _assisted(side):
@@ -4872,6 +4877,7 @@ func rosters() -> Array:
 			if _played[side].has(str(p["id"])):
 				on.append(p)
 		on.append_array(injured_off[side])
+		on.append_array(subbed_off[side])
 		for p in on:
 			r.append({
 				"id": str(p["id"]), "num": int(p["num"]),
@@ -5265,6 +5271,20 @@ func _check_injuries() -> void:
 		_injury_plan.erase(inj)
 		var hurt: Dictionary = sq.ground[gi] if gi >= 0 else sq.bench[bi]
 		var on := ""
+		if gi >= 0 and not sq.sub.is_empty():
+			# The substitute takes the hurt man's place; he is off for good.
+			on = str((sq.sub[0] as Dictionary)["id"])
+			_bring_sub(side, gi, true)
+			(injured_off[side] as Array).append(hurt)
+			var rec_s := {"side": side, "id": id, "q": current_quarter, "min": current_minute,
+					"weeks": int(inj["weeks"]), "kind": str(inj["kind"]), "on": on}
+			injuries.append(rec_s)
+			_emit("injury", side, fp, hurt, "%s is hurt: %s" % [GameDB.player_display_name(hurt), Injuries.wording(str(inj["kind"]))])
+			events[events.size() - 1]["on"] = on
+			events[events.size() - 1]["on_sub"] = "medical" if EraRules.medical_sub() else "substitute"
+			_refill_duel(side, id)
+			_drop_tag_on(id)
+			continue
 		if gi >= 0:
 			var rep := _bench_for(side, str(hurt["role"]), 0.0)
 			if rep >= 0:
@@ -5509,6 +5529,59 @@ func _bench_for(side: int, role: String, min_energy: float, rotation := false) -
 	if role == "DEF" and def_waiting and not best_fits:
 		return -1
 	return best
+
+
+## The substitute of 2011-15 (EraRules, not the medical one) comes on at
+## three-quarter time if no injury has called him: the most tired man on the
+## ground goes off for good, as clubs used the sub to freshen the last
+## quarter. A side with no substitute (every 2026 match) is untouched.
+func _three_quarter_sub() -> void:
+	if EraRules.medical_sub():
+		return
+	for side in range(2):
+		var sq: Squad = squads[side]
+		if sq.sub.is_empty() or sq.ground.is_empty():
+			continue
+		var gi := 0
+		for i in range(1, sq.ground.size()):
+			if float(energy.get(str(sq.ground[i]["id"]), 100.0)) < float(energy.get(str(sq.ground[gi]["id"]), 100.0)):
+				gi = i
+		var off: Dictionary = sq.ground[gi]
+		_bring_sub(side, gi)
+		(subbed_off[side] as Array).append(off)
+		_refill_duel(side, str(off["id"]))
+		_drop_tag_on(str(off["id"]))
+
+
+## The substitute replaces ground player `gi` for the rest of the match (the
+## caller decides where the man going off is kept). No interchange counted.
+## `injury`: he comes on for a hurt man, whose injury line names him, so his
+## own event stays out of the feed (MatchNotes).
+func _bring_sub(side: int, gi: int, injury := false) -> void:
+	var sq: Squad = squads[side]
+	var on: Dictionary = sq.sub[0]
+	sq.sub.clear()
+	var off: Dictionary = sq.ground[gi]
+	var slot := str(off["role"])
+	var on_slot: Dictionary = on if str(on["role"]) == slot else Ratings._for_slot(on, slot)
+	sq.ground[gi] = on_slot
+	var id := str(on["id"])
+	energy_caps[id] = Workload.energy_cap(on)
+	energy[id] = _start_energy(on)
+	_played[side][id] = true
+	_fit_cache.clear()
+	events.append({
+		"q": current_quarter, "min": current_minute, "kind": "sub", "side": side, "fp": fp,
+		"name": GameDB.player_display_name(on_slot), "player_id": id,
+		"num": int(on["num"]), "off_num": int(off["num"]), "club": _side_club(side, on),
+		"substitute": true, "medical": EraRules.medical_sub(), "for_injury": injury,
+		"off_name": GameDB.player_display_name(off),
+		"text": "%s: %s on for %s" % ["Medical sub" if EraRules.medical_sub() else "Substitute",
+				GameDB.player_display_name(on_slot), GameDB.player_display_name(off)],
+		"score": [score(0), score(1)], "goals": [goals(0), goals(1)],
+		"behinds": [behinds(0), behinds(1)],
+	})
+	_recheck_tags()
 
 
 func _swap(side: int, gi: int, bi: int) -> void:
