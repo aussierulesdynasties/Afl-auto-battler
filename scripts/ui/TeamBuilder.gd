@@ -231,7 +231,7 @@ func _build() -> void:
 	bench.add_theme_constant_override("v_separation", 6)
 	field.add_child(bench)
 	var bench_ids: Array = _side["BENCH"]
-	for i in range(maxi(Ratings.INTERCHANGE, bench_ids.size())):
+	for i in range(maxi(Ratings.bench(), bench_ids.size())):
 		var bid := str(bench_ids[i]) if i < bench_ids.size() else ""
 		var bc := _card(bid, true, "BENCH:%d" % i)
 		bc.name = "BenchSpot_%d" % i
