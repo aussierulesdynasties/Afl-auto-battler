@@ -50,7 +50,6 @@ const _TABLE := {
 	# runs on with no end year.
 	"2020": {
 		"data_season": 2019, "start_year": 2020, "start_date": "2020-03-01",
-		"words": ["The hub season", "18 clubs on their real lists, a 17-round season of shortened games. Take over from your club's senior coach and coach on through the years."],
 		"players": "res://data/legacy/2020/players_2020.csv",
 		"coaches": "res://data/legacy/2020s/coaches_2020.csv",
 		"leadership": "res://data/legacy/2020s/captains_2020.csv",

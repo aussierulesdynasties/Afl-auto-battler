@@ -388,6 +388,7 @@ func _on_new_career() -> void:
 ## Each start's words: the heading and the one line under it. The figure is the
 ## first season the coach plays.
 const YEAR_WORDS := {
+	"2020": ["The hub season", "18 clubs on their real lists, a 17-round season of shortened games. Take over from your club's senior coach and coach on through the years."],
 	"2026": ["Today's league", "18 clubs. The real lists after the 2026 season, or a league redraft."],
 	"1990": ["From the first AFL season", "14 clubs on their real lists. Take over from your club's senior coach and coach on through the years to today."],
 }
@@ -446,8 +447,7 @@ func _show_year_step() -> void:
 ## sits above the words.
 func _year_button(id: String, tall := false) -> Button:
 	var year := int(Datasets.get_set(id).get("start_year", 0))
-	# A start's row may carry its own words (Datasets "words").
-	var words: Array = Datasets.get_set(id).get("words", YEAR_WORDS.get(id, ["The %d season" % year, ""]))
+	var words: Array = YEAR_WORDS.get(id, ["The %d season" % year, ""])
 	var b := UiKit.btn("", UiKit.NAME)
 	b.name = "StartYear_" + id
 	# A button does not grow with its children: room for the figure above three lines when tall.
@@ -1174,7 +1174,7 @@ func _show_help() -> void:
 			% GameDB.active_clubs(GameDB.START_YEAR).size())
 			+ "2. Draft from one shared player pool under the same cap. The random order reverses each round. Rivals pick between your turns. Tap a player to see what kind of footballer he is; only the Draft button picks him.\n\n"
 			+ "3. Track every selection in Picks. The position cards in the pool show your list's coverage; tap one to filter the pool. Carry at least two rucks.\n\n"
-			+ "4. Play 24 rounds, with matches driven by your players' rated abilities. Set your tactics in the coach box. After each game every player develops: his development (By position to start) decides the kind of footballer he becomes, and fit players you leave out develop in the reserves at about half the senior rate. Choose each player's development in Training.\n\n"
+			+ "4. Play the home-and-away season, with matches driven by your players' rated abilities. Set your tactics in the coach box. After each game every player develops: his development (By position to start) decides the kind of footballer he becomes, and fit players you leave out develop in the reserves at about half the senior rate. Choose each player's development in Training.\n\n"
 			+ "5. Pick your own side on the Team screen, or let the best 23 be picked around injuries. Two of your five midfielders play the wings: a runner suits it, a ball-winner is wasted there. A tagger makes a tag bite.\n\n"
 			+ ("6. Finish in the top %d to play finals and chase the flag. The top four start in the qualifying finals, 5-10 in the wildcards and eliminations. The season's awards, the honour roll and league records are in the Season Review.\n\n"
 			% Season.FINALISTS)
