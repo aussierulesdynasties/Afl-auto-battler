@@ -44,6 +44,21 @@ const STATE_LEAGUES_KEY := "state_leagues"
 const SECOND_TIER_KEY := "second_tier"
 
 const _TABLE := {
+	# The 2020 start: lists rated on 2019, built by
+	# tools/legacy_1990s/build_start_2020.py (TODO row 142). 2020 plays its
+	# real shortened season (EraFootball, the real fixture); the campaign then
+	# runs on with no end year.
+	"2020": {
+		"data_season": 2019, "start_year": 2020, "start_date": "2020-03-01",
+		"players": "res://data/legacy/2020/players_2020.csv",
+		"coaches": "res://data/legacy/2020s/coaches_2020.csv",
+		"leadership": "res://data/legacy/2020s/captains_2020.csv",
+		"history": "res://data/legacy/2020/history_2020.csv",
+		"list_additions": "res://data/legacy/2020/list_additions_2020.csv",
+		"list_addition_stats": "res://data/legacy/2020/list_addition_stats_2020.csv",
+		"list_types": "res://data/legacy/2020/list_types_2020.csv",
+		"second_tier": "res://data/legacy/second_tier",
+	},
 	# Today's start: the completed 2026 season, careers from 2027.
 	"2026": {
 		"data_season": 2026, "start_year": 2027, "start_date": "2027-03-01",
