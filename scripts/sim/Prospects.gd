@@ -380,7 +380,10 @@ static func _shifted_overall(a: Dictionary, role: String, offset: float,
 ## Ages and redevelops every player on every list in place. Mutates the
 ## player dicts (they are shared with GameDB; a New Career resets via
 ## GameDB.reload()). Returns {"retired": [...], "developed": n, "declined": n}.
-static func age_league(lists: Dictionary, year: int) -> Dictionary:
+## `min_left` is the smallest a list may be left at: 0 after a National Draft,
+## which refills every list; a rollover with no draft (start_next_season)
+## keeps each list at Contracts.MIN_LIST, as nobody drafts in their places.
+static func age_league(lists: Dictionary, year: int, min_left := 0) -> Dictionary:
 	var retired := []
 	var developed := 0
 	var declined := 0
@@ -401,12 +404,12 @@ static func age_league(lists: Dictionary, year: int) -> Dictionary:
 			var go := should_retire(p, year) or int(p.get("retiring", 0)) == year
 			if int(p.get("play_on", 0)) == year:
 				go = false
-			# Never held back by the list size: the draft makes every club,
-			# yours included, fill the places its retirees leave
+			# After a draft, never held back by the list size: the draft made
+			# every club, yours included, fill the places its retirees leave
 			# (Draft.leaving), so a list that passes at the minimum still
 			# turns over (2026-11-13: a coach who passed every draft kept
 			# the same 32 for 36 years).
-			if go and dropped < MAX_RETIRE_PER_CLUB:
+			if go and dropped < MAX_RETIRE_PER_CLUB and arr.size() - dropped > min_left:
 				dropped += 1
 				retired.append({"id": str(p["id"]), "name": str(p.get("generic_name", p.get("name", "Player"))),
 						"club": str(code), "age": float(p.get("age", 26.0)),
