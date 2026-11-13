@@ -9812,6 +9812,21 @@ func team_outlook(club: String) -> Dictionary:
 			"line": TeamRating.line(phase, now, later)}
 
 
+## A club's best side as the match preview ranks it (Squad.strength, the This
+## week sheet's Overall): its side as picked (yours as you picked it), the best
+## 18 on the ground from the era's match-day squad (18 and the interchange: 23
+## today, 22 in the seasons of a four-man bench), injured players out. The
+## ladder's Rating column shows this, so the ladder and the preview always rank
+## the clubs alike (row 177, director 2026-11-12: "ladder should always show your
+## best 23 rating"). Every club the same rule. -1 without a list.
+func club_strength(club: String) -> float:
+	if season == null or not season.lists.has(club) or (season.lists[club] as Array).is_empty():
+		return -1.0
+	if club == my_club:
+		return my_squad().strength()
+	return Squad.new(club, season.lists[club], false, club, season.selections.get(club, {})).strength()
+
+
 func club_phase(club: String) -> String:
 	if season == null or not season.lists.has(club):
 		return "building"

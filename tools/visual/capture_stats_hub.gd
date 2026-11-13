@@ -15,7 +15,8 @@ extends SceneTree
 ##   --section KEY   ladder, players, awards, fixture or trophies (default fixture)
 ##   --size WxH      window size (default 390x844)    --light   light appearance
 ##   --rounds N      rounds played before the capture (default 6)
-## A fresh Collingwood career, seeded. Never touches a real save.
+##   --club CODE     the career's club (default COL)
+## A fresh career (Collingwood unless --club), seeded. Never touches a real save.
 
 var _w := 390
 var _h := 844
@@ -30,6 +31,7 @@ func _run() -> void:
 	var section := "fixture"
 	var mode := "dark"
 	var rounds := 6
+	var club := "COL"
 	var a := OS.get_cmdline_user_args()
 	for i in range(a.size()):
 		match str(a[i]):
@@ -45,6 +47,8 @@ func _run() -> void:
 				rounds = int(str(a[i + 1]))
 			"--light":
 				mode = "light"
+			"--club":
+				club = str(a[i + 1])
 	await process_frame
 	var state = root.get_node("GameState")
 	var db = root.get_node("GameDB")
@@ -57,7 +61,7 @@ func _run() -> void:
 	state.replay_seed = 2031
 	state.set_setting("seen_training_intro", true)
 	state.set_setting("seen_season_stats_intro", true)
-	state.start_season("COL", db.club_list("COL"))
+	state.start_season(club, db.club_list(club))
 	for i in range(rounds):
 		state.advance()
 	UK.apply_appearance(mode)
