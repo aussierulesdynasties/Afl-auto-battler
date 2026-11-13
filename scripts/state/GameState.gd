@@ -288,7 +288,11 @@ var _round_unavailable := {}
 ## Career loop: season 1 is the 2026 season. Every completed season ends with
 ## a national intake draft (keep your list, sign the rookies), then the same
 ## league rolls into the next year with one season of ageing applied.
-var season_year := 2026
+var season_year := 2026:
+	set(value):
+		season_year = value
+		# Money shows in this season's dollars (Legacy mode, Contracts.dollars).
+		Contracts.money_year = value
 ## Rolled once per career: decides each generated draft class's quality tier
 ## (Prospects.class_tier), so a reload never re-rolls a class.
 var career_seed := 0
@@ -1522,7 +1526,7 @@ func _migrate_money_units() -> void:
 		if draft != null and draft.league_mode:
 			draft.budget = Contracts.salary_cap_for_year(GameDB.START_YEAR)
 			draft._reserve_at = -1
-			draft._reserve_cache = float(Contracts.SENIOR_MIN_2027)
+			draft._reserve_cache = float(Contracts.senior_min(GameDB.START_YEAR))
 			for code in draft.club_lists:
 				draft.club_spend[code] = 0
 				for p in draft.club_lists[code]:
@@ -2743,6 +2747,9 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	Season.beat()
 	# The cap moves with the new season before contracts are assigned.
 	salary_cap = Contracts.salary_cap_for_year(next_year)
+	# Money too: contracts assigned below are in the new season's dollars
+	# (season_year, whose setter also does this, moves only further down).
+	Contracts.money_year = next_year
 	# Expansion lists are born here, so their contracts must be assigned
 	# here too (start_season does the same for the first season).
 	ensure_contracts()
@@ -2771,6 +2778,7 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	pending_label = ""
 	_open_board_season()
 	_captaincy_refresh()
+	_ground_rename_news()
 	_culture_rollover()
 	_build_season_wrap(next_year)
 	# The season those careers ended in is wrapped up: nothing reads them again.
@@ -3146,6 +3154,7 @@ func start_season(club_code: String, list: Array) -> void:
 		department_budget_year = season_year
 	_open_board_season()
 	_captaincy_refresh()
+	_ground_rename_news()
 	last_phase = "regular"
 	last_label = "Round 1"
 	last_training_report = {}
@@ -3169,6 +3178,7 @@ func _build_pending_sim() -> void:
 	pending_sim.finals_mode = bool(_pending_build["finals"])
 	pending_sim.extra_time_allowed = bool(_pending_build.get("extra_time", true))
 	pending_sim.weather = _pending_build["weather"]
+	pending_sim.season_year = season.year
 	pending_sim.moment_side = 0 if h == my_club else 1
 	pending_sim.always_offer_bounce = bounce_scene_every_match()
 	pending_sim.set_tactics(pending_sim.moment_side, {"gameplan": club_plan})
@@ -5046,6 +5056,7 @@ func _practice_build(home: String, away: String, home_invites: Array, away_invit
 	CoachEffects.apply(h["squad"])
 	CoachEffects.apply(a["squad"])
 	var sim := MatchSim.new(h["squad"], a["squad"], PreSeason.practice_seed(career_seed, season_year, home, away))
+	sim.season_year = season_year
 	for side in range(2):
 		sim.season_plans[side] = fitness_plan(str([home, away][side]))
 		if [home, away][side] == my_club:
@@ -5463,7 +5474,7 @@ func next_fixture_line() -> String:
 		return ""
 	if nxt.has("event"):
 		return "Next: %s, v %s at %s." % [season.round_label(season.round_index),
-				GameDB.club_name(str(nxt["code"])), str(nxt["ground"])]
+				GameDB.club_name(str(nxt["code"])), GameDB.ground_shown(str(nxt["ground"]))]
 	return "Next: Round %d %s %s." % [season.round_index + 1,
 			"v" if str(nxt["venue"]) == "home" else "at", GameDB.club_name(str(nxt["code"]))]
 
@@ -8089,7 +8100,7 @@ func set_department_budget(area: String, level: int) -> Dictionary:
 	if not ClubBudget.valid_area(area) or level < 0 or level >= ClubBudget.LEVELS.size():
 		return {"ok": false, "reason": "Unknown funding level."}
 	if not can_set_department_budget(area, level):
-		return {"ok": false, "reason": "That allocation would exceed the $%.1fm annual club budget." % ClubBudget.ANNUAL_M}
+		return {"ok": false, "reason": "That allocation would exceed the %s annual club budget." % ClubBudget.money_m(ClubBudget.ANNUAL_M)}
 	department_budget[area] = level
 	department_budget_year = season_year + 1
 	mark_dirty()
@@ -8506,7 +8517,7 @@ func offer_contract(player_id: String, salary: int, years: int) -> Dictionary:
 	if bool(talks.get("walked", false)):
 		return {"ok": false, "answer": "walk", "reason": "Talks have broken down: he will test free agency."}
 	years = clampi(years, 1, Contracts.MAX_YEARS)
-	salary = maxi(Contracts.SENIOR_MIN_2027, salary)
+	salary = maxi(Contracts.senior_min(), salary)
 	if my_payroll() - int(p.get("salary", 0)) + salary > cap_for(my_club):
 		return {"ok": false, "answer": "", "reason": "Not enough cap room for %s a season." % Contracts.money(salary)}
 	# Under 50, he may refuse you whatever you offer (director 2026-11-08).
@@ -9077,7 +9088,7 @@ func offer_free_agent(player_id: String, salary: int, years: int) -> Dictionary:
 	if int(p.get("market_round", 0)) >= Contracts.FA_ROUNDS:
 		return {"ok": false, "answer": "", "reason": "You have made your final offer."}
 	years = clampi(years, 1, Contracts.MAX_YEARS)
-	salary = maxi(Contracts.SENIOR_MIN_2027, salary)
+	salary = maxi(Contracts.senior_min(), salary)
 	var name := GameDB.player_display_name(p)
 	var terms := free_agent_terms(player_id)
 	if bool(terms["refuse"]):
@@ -12841,6 +12852,44 @@ func add_news(kind: String, text: String, when_label: String = "", extra := {}) 
 	news.push_front(item)
 	if news.size() > MAX_NEWS:
 		news.resize(MAX_NEWS)
+
+
+## A ground the season is played at that takes a new name this year gets one
+## story before Round 1 (Princes Park became Optus Oval in 1994): the old name,
+## the new one and the clubs that call it home. Today's grounds keep their
+## names, so a career from 2026 never sees one.
+func _ground_rename_news() -> void:
+	if season == null:
+		return
+	var homes := {}   # ground key -> club codes at home there
+	for code in season.clubs:
+		var g := GameDB.ground_key(season.home_ground(str(code)))
+		if not homes.has(g):
+			homes[g] = []
+		(homes[g] as Array).append(str(code))
+	var used := homes.keys()
+	var gather := season.gather_round()
+	for i in range(season.fixture.size()):
+		for m in season.fixture[i]:
+			var v := GameDB.ground_key(season.round_venue(i, str(m["home"]), str(m["away"])) if i == gather
+					else season.home_ground(str(m["home"])))
+			if not used.has(v):
+				used.append(v)
+	var gf := GameDB.ground_key(season.grand_final_venue())
+	if not used.has(gf):
+		used.append(gf)
+	for g in used:
+		var old := GameDB.ground_renamed_from(str(g), season_year)
+		if old == "" or not Milestones.tell_once(self, "ground|%s|%d" % [g, season_year]):
+			continue
+		var now := GameDB.ground_name(str(g), season_year)
+		var clubs: Array = homes.get(g, [])
+		var names := PackedStringArray(clubs.map(func(c): return GameDB.club_name(str(c))))
+		var text := "%s takes a new name this season: from Round 1 it is %s" % [old, now]
+		if names.size() > 0:
+			text += ", home of %s" % " and ".join(names)
+		add_news("ground", text + ".", "Pre-season", {"club": str(clubs[0]) if clubs.size() > 0 else "",
+				"old": old, "new": now})
 
 
 ## Around halfway through the home-and-away season, recruiting has seen

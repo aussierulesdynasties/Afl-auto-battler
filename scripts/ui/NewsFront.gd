@@ -183,6 +183,13 @@ static func story(item: Dictionary, my_club := "") -> Dictionary:
 		if who != "":
 			s["headline"] = ("Medical panel clears %s" % who) if ok else ("Medical panel ends %s's career" % who)
 		return _mine(s, my_club)
+	elif kind == "ground":
+		# A ground's new name for the season (GameState._ground_rename_news).
+		if str(item.get("old", "")) != "" and str(item.get("new", "")) != "":
+			s["headline"] = "%s becomes %s" % [str(item["old"]), str(item["new"])]
+			s["standfirst"] = text
+		s.merge({"club": str(item.get("club", "")), "weight": 40}, true)
+		return _mine(s, my_club)
 	elif kind == "trade":
 		s["weight"] = 35
 	elif kind == "own_prospect":

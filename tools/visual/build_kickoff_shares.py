@@ -9,6 +9,11 @@ Squiggle's venue names are mapped to the keys of data/grounds.json; a ground tha
 in grounds.json keeps its Squiggle name. A ground with fewer than MIN_GAMES matches is
 listed with its count but the game uses the league-wide share for it.
 
+Grounds the AFL has left (Legacy mode's 1990s: Waverley Park, Victoria Park, Princes Park...)
+take their shares from data/raw/fixtures_1990s.json (Squiggle, 1990-1999), by the same
+rule, under their keys in data/grounds.json. A ground already in the 2026 table keeps its
+2026 share.
+
     python tools/visual/build_kickoff_shares.py            # rewrite the file
     python tools/visual/build_kickoff_shares.py --check    # exit 1 if the file is stale
 """
@@ -19,6 +24,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 SRC = ROOT / "data" / "raw" / "fixtures_2026.json"
+OLD = ROOT / "data" / "raw" / "fixtures_1990s.json"
 OUT = ROOT / "data" / "kickoff_by_venue.json"
 SLOTS = ["day", "twilight", "night"]
 MIN_GAMES = 6
@@ -31,6 +37,11 @@ NAMES = {
     "Kardinia Park": "GMHBA Stadium",
     "Carrara": "People First Stadium",
     "Sydney Showground": "Engie Stadium",
+    # The 1990s grounds, under data/grounds.json's keys (GameDB.GROUND_KEYS).
+    "Princes Park": "Ikon Park",
+    "Western Oval": "Whitten Oval",
+    "Subiaco": "Subiaco Oval",
+    "W.A.C.A.": "WACA",
 }
 
 
@@ -56,11 +67,17 @@ def build() -> dict:
         s = slot_of(g["localtime"])
         by_venue[NAMES.get(g["venue"], g["venue"])][s] += 1
         league[s] += 1
+    old = defaultdict(Counter)
+    for g in json.loads(OLD.read_text(encoding="utf-8"))["games"]:
+        old[NAMES.get(g["venue"], g["venue"])][slot_of(g["date"])] += 1
+    for v, c in old.items():
+        if v not in by_venue:
+            by_venue[v] = c
     venues = {v: shares(c) for v, c in sorted(by_venue.items())}
     return {
         "_about": "Share of 2026 AFL matches at each ground that started by day (before 16:00 local), "
                   "at twilight (16:00 to 17:59) or at night (18:00 on), from data/raw/fixtures_2026.json "
-                  "(Squiggle). Built by tools/visual/build_kickoff_shares.py; do not edit by hand. Looks "
+                  "(Squiggle); a ground the AFL has left, its 1990-1999 matches (data/raw/fixtures_1990s.json). Built by tools/visual/build_kickoff_shares.py; do not edit by hand. Looks "
                   "only: the match scenes pick their sky from it and the simulation never reads it.",
         "min_games": MIN_GAMES,
         "default": shares(league),

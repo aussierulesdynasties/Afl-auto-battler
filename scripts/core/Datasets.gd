@@ -37,6 +37,12 @@ const FILE_KEYS := ["players", "draftees", "history", "origin", "list_additions"
 ## exactly as before they existed.
 const STATE_LEAGUES_KEY := "state_leagues"
 
+## And a Legacy start's second tier (TODO row 142, L7): the folder of each
+## season's real leagues and sides below the AFL (data/legacy/second_tier/,
+## SecondTier). Each season start lays that season's shape over the state
+## leagues; a row with a state_leagues folder never reads it.
+const SECOND_TIER_KEY := "second_tier"
+
 const _TABLE := {
 	# Today's start: the completed 2026 season, careers from 2027.
 	"2026": {
@@ -69,6 +75,7 @@ const _TABLE := {
 		"history": "res://data/legacy/1990/history_1990.csv",
 		"list_additions": "res://data/legacy/1990/list_additions_1990.csv",
 		"list_addition_stats": "res://data/legacy/1990/list_addition_stats_1990.csv",
+		"second_tier": "res://data/legacy/second_tier",
 	},
 }
 

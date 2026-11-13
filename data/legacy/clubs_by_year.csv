@@ -1,9 +1,14 @@
 code,from,to,name,short,primary,secondary,accent,guernsey,ground,note
-ADE,1991,2013,,,,,,,Football Park,
+ADE,1991,2005,,,,,,,Football Park,
+ADE,2006,2009,,,,,,crows06:p/s/a/p,Football Park,low hoops cut by navy side panels 2006-09 (footyjumpers.com/adelaidehome.htm Adelaide-2007)
+ADE,2010,2013,,,,,,,Football Park,
 ADE,2014,,,,,,,,,
-BRL,1990,1992,Brisbane,Bears,#7A0019,#FFC72C,#FFFFFF,,Carrara,Brisbane Bears; guernsey design is today's until era art ships
-BRL,1993,1996,Brisbane,Bears,#7A0019,#FFC72C,#FFFFFF,,The Gabba,Brisbane Bears
-BRL,1997,,,,,,,,,Brisbane Lions (Bears and Fitzroy merged)
+BRL,1990,1991,Brisbane,Bears,#DE3163,#FFD938,#FFFFFF,yoke:s/p/a/p,Carrara,Brisbane Bears: gold with a cerise yoke 1989-91 (footyjumpers.com/brisbanehome.htm; Wikipedia kit colours)
+BRL,1992,1992,Brisbane,Bears,#AB0534,#FFD938,#FFFFFF,chevron:p/s/a/p,Carrara,Brisbane Bears: maroon with a gold V and white trim 1992-96 (en.wikipedia.org/wiki/Brisbane_Bears)
+BRL,1993,1996,Brisbane,Bears,#AB0534,#FFD938,#FFFFFF,chevron:p/s/a/p,The Gabba,Brisbane Bears
+BRL,1997,2009,,,,,,,,Brisbane Lions (Bears and Fitzroy merged); today's design 1997-2009
+BRL,2010,2013,,,,,,lions10:p/s/a/p,,blue to mid-chest with a front-facing lion 2010-13 (footyjumpers.com/brisbanehome.htm Brisbane-2010)
+BRL,2014,,,,,,,,,
 CAR,1897,2005,,,,,,,Princes Park,
 CAR,2006,,,,,,,,,
 COL,1897,1999,,,,,,,Victoria Park,
@@ -11,13 +16,16 @@ COL,2000,,,,,,,,,
 ESS,1897,1991,,,,,,,Windy Hill,
 ESS,1992,1999,,,,,,,MCG,
 ESS,2000,,,,,,,,,
-FIT,1897,1993,,,,,,,Princes Park,Fitzroy's guernsey is a placeholder until era art ships
+FIT,1897,1993,,,,,,,Princes Park,
 FIT,1994,1996,,,,,,,Western Oval,last season 1996
-FRE,1995,2017,,,,,,,Subiaco Oval,
+FRE,1995,2010,,,,,,anchor:p/#FFFFFF/#065D1E/p/#DC0000,Subiaco Oval,the anchor 1995-2010: green and red sampled from footyjumpers.com/fremantlehome.htm Fremantle-1995
+FRE,2011,2017,,,,,,,Subiaco Oval,
 FRE,2018,,,,,,,,,
 GEE,1897,,,,,,,,,
-GCS,2011,,,,,,,,,
-GWS,2012,,,,,,,,,
+GCS,2011,2024,,,,,,sides:p/s/a/p,,gold side panels 2011-24 (footyjumpers.com/goldcoasthome.htm Gold-Coast-2011-Home)
+GCS,2025,,,,,,,,,
+GWS,2012,2020,,,,,,giants12:p/s/a/s,,orange top with a white G cut into the charcoal 2012-20 (footyjumpers.com/GWShome.htm GWS-2012-Home)
+GWS,2021,,,,,,,,,
 HAW,1925,1991,,,,,,,Princes Park,
 HAW,1992,1999,,,,,,,Waverley Park,
 HAW,2000,,,,,,,,,
@@ -26,15 +34,23 @@ NTH,1925,1998,,,,,,,MCG,
 NTH,1999,1999,Kangaroos,Kangaroos,,,,,MCG,
 NTH,2000,2007,Kangaroos,Kangaroos,,,,,,
 NTH,2008,,,,,,,,,
-PAD,1997,2013,,,,,,,Football Park,
+PAD,1997,2009,,,,,,power97:s/p/#FFFFFF/s,Football Park,teal top and claw slashes 1997-2009 (footyjumpers.com/porthome.htm Port-1997-Home)
+PAD,2010,2013,,,,,,,Football Park,
 PAD,2014,,,,,,,,,
 RIC,1908,,,,,,,,,
 STK,1897,1992,,,,,,,Moorabbin Oval,
-STK,1993,1999,,,,,,,Waverley Park,
-STK,2000,,,,,,,,,
-SYD,1897,,,,,,,,,
-WCE,1987,2017,,,,,,,Subiaco Oval,
+STK,1993,1996,,,,,,,Waverley Park,
+STK,1997,1999,,,,,,saints97:p/s/a/s,Waverley Park,the cross guernsey 1997-2001 (footyjumpers.com/stkildahome.htm StKilda-1997-Home1)
+STK,2000,2001,,,,,,saints97:p/s/a/s,,
+STK,2002,,,,,,,,,
+SYD,1897,1991,,,,,,swans90:s/p/a/p,,Opera House guernsey on white to 1991 (footyjumpers.com/swanshome.htm Sydney-1990)
+SYD,1992,,,,,,,,,
+WCE,1987,1994,,,,,,,Subiaco Oval,
+WCE,1995,1999,,,#021A31,,,,Subiaco Oval,navy wings 1995-99 (navy sampled from footyjumpers.com/westcoasthome.htm West-Coast-1995)
+WCE,2000,2015,,,#05173F,,,eagles00:p/s/a/p,Subiaco Oval,navy white and gold tricolour 2000-15 (navy sampled from West-Coast-2000)
+WCE,2016,2017,,,#0D1D42,,,,Subiaco Oval,navy wings 2016-17 (navy sampled from West-Coast-2016)
 WCE,2018,,,,,,,,,
-WBD,1925,1996,Footscray,Bulldogs,,,,,Western Oval,Footscray until 1996
-WBD,1997,1999,,,,,,,Western Oval,
-WBD,2000,,,,,,,,,
+WBD,1925,1996,Footscray,Bulldogs,,,,dogs90:s/p/a/s,Western Oval,Footscray until 1996: a wide red hoop edged white (footyjumpers.com/footscrayhome.htm Footscray-1990)
+WBD,1997,1999,,,,,,dogs97:s/p/a/s,Western Oval,red chest hoop and red back 1997-2011 (Footscray-1998)
+WBD,2000,2011,,,,,,dogs97:s/p/a/s,,
+WBD,2012,,,,,,,,,
