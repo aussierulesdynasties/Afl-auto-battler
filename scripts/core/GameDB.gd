@@ -234,6 +234,7 @@ func reload(dataset := Datasets.DEFAULT) -> void:
 	_use_dataset(dataset, row)
 	clubs = _load_clubs()
 	club_order = CLUB_ORDER.duplicate()
+	era_pins = {}
 	_load_club_years()
 	apply_era(START_YEAR)
 	_alias_candidates = []
@@ -1118,6 +1119,22 @@ func set_enter_year(code: String, year: int) -> void:
 		(clubs[code] as Dictionary)["enter"] = year
 
 
+## A club the data has leave keeps playing, for this career only (Fitzroy,
+## when they fight off the merger). reload() puts the data's year back.
+func keep_club(code: String) -> void:
+	pristine = false
+	if clubs.has(code):
+		(clubs[code] as Dictionary)["leave"] = 0
+
+
+## Keep `code` looking as it did in `year` from then on, for this career only.
+func pin_era(code: String, year: int) -> void:
+	pristine = false
+	era_pins[code] = year
+	if era_year > 0:
+		apply_era(era_year)
+
+
 ## The clubs active in a given season year, in club order. Fixtures, ladders,
 ## drafts and selections all iterate this - never CLUB_ORDER - so expansion
 ## clubs (and a created one) join the competition on schedule without any
@@ -1158,6 +1175,10 @@ var _club_base := {}      # code -> the clubs.csv values of ERA_FIELDS
 var _ground_names := {}   # present ground name -> Array of {from, to, name}
 ## The year the clubs' names and colours are shown for (apply_era).
 var era_year := 0
+## code -> the last year whose look a club keeps, for this career only (the
+## Bears stay the Bears when Fitzroy fight off the merger; LegacyRollover).
+## reload() clears it.
+var era_pins := {}
 
 
 ## The one code a club has in every era (BRB is BRL, FOO is WBD).
@@ -1236,6 +1257,8 @@ func club_era(code: String, year: int) -> Dictionary:
 	var out: Dictionary = (_club_base.get(code, {}) as Dictionary).duplicate()
 	if out.is_empty():
 		return out
+	if era_pins.has(code):
+		year = mini(year, int(era_pins[code]))
 	for r in _club_years.get(code, []):
 		if int(r["from"]) <= year and (int(r["to"]) == 0 or year <= int(r["to"])):
 			for k in ERA_FIELDS:
