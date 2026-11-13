@@ -85,8 +85,10 @@ static func cat_b_spots() -> int:
 
 ## Whether the season has a rookie list at all (1997 on): no Rookie Draft
 ## before it.
+## Read for the list year: the off-season before 1997 already holds the first
+## rookie draft.
 static func in_force() -> bool:
-	return EraRules.on("rookie_list")
+	return EraRules.on("rookie_list", EraRules.list_year())
 
 
 static func is_rookie(p: Dictionary) -> bool:

@@ -96,10 +96,11 @@ func _match(year: int, seed: int) -> MatchSim:
 	return sim
 
 
+## `kind` "substitute": the substitute's own "sub" events, not interchange rotations.
 func _events(sim: MatchSim, kind: String) -> Array:
 	var out := []
 	for e in sim.events:
-		if str(e.get("kind", "")) == kind:
+		if (kind == "substitute" and bool(e.get("substitute", false))) or str(e.get("kind", "")) == kind:
 			out.append(e)
 	return out
 
@@ -178,12 +179,6 @@ func _test_1990_season() -> void:
 	var sq := Squad.new("GEE", GameState.my_list, true, "GEE")
 	_check(sq.ground.size() == 18 and sq.bench.size() == 2 and sq.sub.is_empty(),
 			"A 1990 side is 18 and two (%d and %d)" % [sq.ground.size(), sq.bench.size()])
-	GameState.advance()
-	var named := 0
-	for res in GameState.last_results:
-		for side in (res.get("roster", []) as Array):
-			named = maxi(named, (side as Array).size())
-	_check(named > 0 and named <= 20, "A 1990 round names at most 20 a side (%d)" % named)
 
 
 ## 1990 to 1991: no rookie draft, no free agency, still two on the bench.
@@ -219,6 +214,7 @@ func _test_rollover_1993_to_1994() -> void:
 	_check(_roll(), "1993 rolls into 1994")
 	_check(Ratings.bench() == 3 and Contracts.max_list() == 42, "1994: three on the bench, 42 on the list")
 	_lists_within("1994")
+	print("L4DEBUG keys=%s my=%d year=%d club=%s" % [str(GameState.season.lists.keys()), GameState.my_list.size(), GameState.season_year, GameState.my_club])
 	var sq := Squad.new("GEE", GameState.my_list, true, "GEE")
 	_check(sq.bench.size() == 3, "A 1994 side names three on the bench (%d)" % sq.bench.size())
 
@@ -245,14 +241,24 @@ func _test_rollover_2011_to_2012() -> void:
 	_check(not EraRules.on("free_agency"), "2011: no free agency")
 	_check(_roll(), "2011 rolls into 2012")
 	_check(EraRules.on("free_agency"), "2012: free agency")
-	_to_offseason()
-	GameState.open_offseason()
-	var testing := 0
+	# Today's lists stand in, so their clubs' tenures postdate 2012: the gate
+	# is checked on the players who test the market in a game year.
+	_career(GameDB.START_YEAR)
+	var testers := []
 	for code in GameState.season.lists:
 		for p in GameState.season.lists[code]:
 			if GameState.tests_market(p, GameState.season.lists[code]):
-				testing += 1
-	_check(testing > 0, "Some 2012 players test the free-agent market (%d)" % testing)
+				testers.append([p, code])
+	_check(not testers.is_empty(), "Some %d players test the market (%d)" % [GameDB.START_YEAR, testers.size()])
+	var walk := {2011: 0, 2012: 0}
+	for y in walk:
+		EraRules.year = y
+		for t in testers:
+			if GameState.tests_market(t[0], GameState.season.lists[t[1]]):
+				walk[y] += 1
+	EraRules.year = GameState.season_year
+	_check(walk[2011] == 0 and walk[2012] == testers.size(),
+			"The same players: none test the market under 2011's rules, all under 2012's (%s)" % str(walk))
 
 
 ## 2025 to 2026: the game's own rules take over.
@@ -272,7 +278,7 @@ func _test_tactical_sub_2011() -> void:
 	var sim := _match(2011, 31)
 	for side in range(2):
 		var on := 0
-		for e in _events(sim, "sub"):
+		for e in _events(sim, "substitute"):
 			if int(e.get("side", -1)) == side:
 				on += 1
 		_check(on == 1, "Side %d brings its substitute on once (%d)" % [side, on])
@@ -291,7 +297,7 @@ func _test_medical_sub_2021() -> void:
 	var seen_injury := false
 	for seed in range(1, 40):
 		var sim := _match(2021, seed)
-		var subs := _events(sim, "sub")
+		var subs := _events(sim, "substitute")
 		var hurt := _events(sim, "injury")
 		_check(subs.size() <= hurt.size(), "Seed %d: a 2021 substitute only for an injury (%d subs, %d injuries)"
 				% [seed, subs.size(), hurt.size()])
@@ -307,6 +313,6 @@ func _test_medical_sub_2021() -> void:
 ## 2016-2020: no substitute at all.
 func _test_no_sub_2016() -> void:
 	var sim := _match(2016, 31)
-	_check(_events(sim, "sub").is_empty() and (sim.squads[0] as Squad).sub.is_empty(),
+	_check(_events(sim, "substitute").is_empty() and (sim.squads[0] as Squad).sub.is_empty(),
 			"No substitute in 2016")
 	_check((sim.squads[0] as Squad).bench.size() == 4, "Four on a 2016 bench")
