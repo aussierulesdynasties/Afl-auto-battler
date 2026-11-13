@@ -49,6 +49,9 @@ var _pick_club := false
 ## The season the career starts in (Datasets id; TODO row 142 L2): picked on the
 ## year step, which shows only when this build can start more than one.
 var _pick_dataset := Datasets.DEFAULT
+## A start on today's lists after the league grows (row 142: "2028 (tassie),
+## 2030 (canberra)"): the first season, 2028 or 2030, or 0 for any other start.
+var _pick_future := 0
 ## The web build's one line when the browser refuses to keep the save (P-71), or "".
 var _storage_line := ""
 
@@ -380,6 +383,7 @@ func _on_new_career() -> void:
 	_pick_prospect = not GameState.forge_player().is_empty()
 	_pick_club = not GameState.forge_club().is_empty()
 	_pick_dataset = Datasets.DEFAULT
+	_pick_future = 0
 	_mode = "year" if _has_year_step() else "setup"
 	_render()
 
@@ -396,14 +400,59 @@ const YEAR_WORDS := {
 }
 
 
-## The step shows when this build has more than one start (Datasets.ready_ids).
+## The starts on today's real lists that wait for a new club (TODO row 142;
+## director 2026-11-11: "2028 (tassie), 2030 (canberra)"): the year step's id,
+## the club whose entry year is the first season, and the words on its card.
+## 2028 is the Tasmania start (row 129: 2027 plays without you and Tasmania are
+## yours); 2030 is Canberra's entry (2027 to 2029 play without you, then any
+## of the 20 clubs).
+const FUTURE_STARTS := {"2028": "TAS", "2030": "CANB"}
+const FUTURE_WORDS := {
+	"2028": ["Tasmania join", "19 clubs. 2027 plays out without you, then you build Tasmania's first list."],
+	"2030": ["Canberra join", "20 clubs. 2027 to 2029 play out without you, then any club can be yours, Canberra included."],
+}
+
+
+## Every start the year step offers, in order: today's league first, the
+## starts that wait for a new club, then back through the years.
+func _year_ids() -> Array:
+	var ids := Datasets.ready_ids()
+	ids.reverse()
+	var at := ids.find(Datasets.DEFAULT)
+	if at >= 0:
+		var later := FUTURE_STARTS.keys()
+		later.sort()
+		for i in range(later.size()):
+			ids.insert(at + 1 + i, later[i])
+	return ids
+
+
+## The step shows when this build has more than one start.
 func _has_year_step() -> bool:
-	return Datasets.ready_ids().size() > 1
+	return _year_ids().size() > 1
 
 
 ## A start in a past season (not today's league).
 func _past_start() -> bool:
 	return _pick_dataset != Datasets.DEFAULT
+
+
+## Today's league as it starts in 2027: not a past season, and not a start
+## that waits for Tasmania or Canberra.
+func _today_start() -> bool:
+	return not _past_start() and _pick_future == 0
+
+
+## The first season the coach plays for a year step id.
+func _start_year_of(id: String) -> int:
+	if FUTURE_STARTS.has(id):
+		return GameDB.data_enter_year(str(FUTURE_STARTS[id]))
+	return int(Datasets.get_set(id).get("start_year", 0))
+
+
+## The first season of the start picked.
+func _first_season() -> int:
+	return _pick_future if _pick_future > 0 else int(Datasets.get_set(_pick_dataset).get("start_year", 2027))
 
 
 func _show_year_step() -> void:
@@ -432,12 +481,23 @@ func _show_year_step() -> void:
 	starts.columns = 2 if wide else 1
 	starts.add_theme_constant_override("h_separation", UiKit.SECTION)
 	starts.add_theme_constant_override("v_separation", UiKit.SECTION)
-	form.add_child(starts)
-	# Today's league first, then back through the years.
-	var ids := Datasets.ready_ids()
-	ids.reverse()
+	# Today's league first, the new clubs' starts, then back through the years.
+	var ids := _year_ids()
 	for id in ids:
 		starts.add_child(_year_button(str(id), wide))
+	# Every start on one screen when they fit; when they do not (seven starts
+	# on a phone), the starts scroll under the heading.
+	var rows := ceili(ids.size() / float(starts.columns))
+	var tall := rows * (136.0 if wide else 104.0) + (rows - 1) * UiKit.SECTION
+	var room := UiKit.view_height(self) - 220.0
+	if tall > room:
+		var sc := UiKit.scroll(starts)
+		sc.name = "StartsScroll"
+		sc.custom_minimum_size.y = maxf(room, 240.0)
+		sc.size_flags_vertical = Control.SIZE_FILL
+		form.add_child(sc)
+	else:
+		form.add_child(starts)
 	var below := Control.new()
 	below.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	below.size_flags_stretch_ratio = SETUP_BELOW
@@ -452,6 +512,9 @@ func _year_button(id: String, tall := false) -> Button:
 	var words: Array = YEAR_WORDS.get(id, ["The %d season" % year, ""])
 	var b := UiKit.btn("", UiKit.NAME)
 	b.name = "StartYear_" + id
+	if FUTURE_STARTS.has(id):
+		year = _start_year_of(id)
+		words = FUTURE_WORDS[id]
 	# A button does not grow with its children: room for the figure above three lines when tall.
 	b.custom_minimum_size = Vector2(0, 136 if tall else 104)
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -484,8 +547,25 @@ func _year_button(id: String, tall := false) -> Button:
 
 
 func _on_pick_year(id: String) -> void:
-	_pick_dataset = id
 	_sim_ahead_ok = false
+	if FUTURE_STARTS.has(id):
+		# Today's real lists, played on until the new club joins: Tasmania in
+		# 2028 without Canberra (director 2026-11-09, "Yes, start 2028"),
+		# Canberra in 2030. A challenge and the Club Forge belong to the 2027 start.
+		_pick_dataset = Datasets.DEFAULT
+		_pick_future = _start_year_of(id)
+		_pick_start = "real"
+		_pick_challenge = "none"
+		_pick_goal = ""
+		_pick_canberra = str(FUTURE_STARTS[id]) == "CANB"
+		_mode = "setup"
+		_render()
+		return
+	if _pick_future > 0:
+		# Back from a new club's start: today's league asks Canberra afresh.
+		_pick_canberra = false
+	_pick_future = 0
+	_pick_dataset = id
 	if _past_start():
 		# A past season starts on its real lists, or a League redraft of its
 		# clubs (director 2026-11-13); a challenge, Canberra and your Club Forge
@@ -542,10 +622,16 @@ func _show_setup() -> void:
 	title.custom_minimum_size.y = (UiKit.H1 * 1.15) if _setup_tight else (UiKit.H1 * 1.4 + 6)
 	form.add_child(title)
 	if _has_year_step():
-		var yr := UiKit.lbl("Starting in %d" % int(Datasets.get_set(_pick_dataset).get("start_year", 0)),
-				UiKit.NAME, UiKit.MUTED)
+		var yr := UiKit.lbl("Starting in %d" % _first_season(), UiKit.NAME, UiKit.MUTED)
 		yr.name = "SetupYear"
 		form.add_child(yr)
+	if _pick_future > 0:
+		# A new club's start has one shape (today's real lists), said in one
+		# line in place of the start row.
+		var how := UiKit.lbl(_future_line(), UiKit.SMALL, UiKit.MUTED)
+		how.name = "SetupYearNote"
+		how.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		form.add_child(how)
 	var first := int(Datasets.get_set(_pick_dataset).get("start_year", 2027))
 	_start_row = _choice("Start", "StartMode",
 			[["redraft", "League redraft"], ["real", "Real %d lists" % (first if _past_start() else 2026)]],
@@ -556,6 +642,7 @@ func _show_setup() -> void:
 			_on_pick_start)
 	# A past start says up front that you replace your club's senior coach.
 	(_start_row.get_node("StartModeNote") as Label).visible = _past_start()
+	_start_row.visible = _pick_future == 0
 	form.add_child(_start_row)
 	# A challenge start (ruling 115): one rule, said here before you begin.
 	_challenge_row = _choice("Challenge", "Challenge",
@@ -573,10 +660,10 @@ func _show_setup() -> void:
 				_pick_goal = k
 				_refresh_start())
 	(_goal_row.get_node("GoalNote") as Label).visible = true
-	_goal_row.visible = _pick_challenge == "goal" and not _past_start()
+	_goal_row.visible = _pick_challenge == "goal" and _today_start()
 	form.add_child(_goal_row)
 	# A past season: its real lists or a redraft, and no challenge (today's league only).
-	_challenge_row.visible = not _past_start()
+	_challenge_row.visible = _today_start()
 	form.add_child(_dial_choice(DifficultyDials.BOARD, "BoardPatience", _pick_board,
 			func(k): _pick_board = k))
 	form.add_child(_dial_choice(DifficultyDials.RIVALS, "RivalRecruiting", _pick_rivals,
@@ -605,12 +692,12 @@ func _show_setup() -> void:
 				if _pick_canberra and _plays_years_without_you() and not _sim_ahead_ok:
 					_open_sim_ahead_sheet(false))
 	_canberra_row.name = "Canberra"
-	_canberra_row.visible = not _past_start()
+	_canberra_row.visible = _today_start()
 	form.add_child(_canberra_row)
 	# Your Club Forge player, if you made one: he enters this career's first
 	# National Draft like any other prospect.
 	var forged := GameState.forge_player()
-	if not forged.is_empty() and not _past_start():
+	if not forged.is_empty() and _today_start():
 		var who := "%s %s" % [forged.get("first", ""), forged.get("last", "")]
 		form.add_child(_choice("Your prospect", "Prospect", [["in", "Bring " + who], ["out", "Not this time"]],
 				"in" if _pick_prospect else "out",
@@ -623,7 +710,7 @@ func _show_setup() -> void:
 	_forged_row = null
 	_forged_note = null
 	var club := GameState.forge_club()
-	if not club.is_empty() and not _past_start():
+	if not club.is_empty() and _today_start():
 		_forged_row = _choice("Your club", "ForgedClub", [["in", "Bring " + str(club.get("name", ""))], ["out", "Not this time"]],
 				"in" if _pick_club else "out",
 				func(_k): return "It joins the competition as an extra club and drafts its list in the League Draft like everyone else. Choose it as your club next, or coach against it.",
@@ -644,7 +731,8 @@ func _show_setup() -> void:
 		_show_forged_row()
 	# The button sits under the scrolling choices, always on screen: with the two
 	# dials the setup is taller than a phone, and the button was below the fold.
-	var start := UiKit.btn("Choose your club", UiKit.H2, true)
+	var start := UiKit.btn("Take %s" % GameDB.club_name("TAS") if _pick_future > 0 and not _pick_canberra
+			else "Choose your club", UiKit.H2, true)
 	start.name = "StartCareer"
 	start.custom_minimum_size = Vector2(_column_width(440.0), 52)
 	start.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -739,6 +827,20 @@ func _real_start_line() -> String:
 	if _pick_canberra and _pick_challenge != "rebuild":
 		return "Every club keeps its real end-of-2026 list. The league plays 2027 to 2029 without you; then you choose your club and start in 2030."
 	return "Every club keeps its real end-of-2026 list. You run your club through the 2026 National Draft, then play 2027; or take Tasmania and start in 2028."
+
+
+## A new club's start in one line: what plays without you, and what is yours.
+func _future_line() -> String:
+	if not _pick_canberra:
+		return "Every club keeps its real end-of-2026 list. %d plays out without you; you take over %s at the %d National Draft and build their first list. The league stays at 19 clubs." % [
+			_pick_future - 1, GameDB.club_name("TAS"), _pick_future - 1]
+	return "Every club keeps its real end-of-2026 list. %d to %d play out without you; then you choose any of the 20 clubs, %s included, and start in %d." % [
+		_today_first(), _pick_future - 1, GameDB.club_name("CANB"), _pick_future]
+
+
+## Today's league's first season (2027), whichever season GameDB holds now.
+func _today_first() -> int:
+	return int(Datasets.get_set(Datasets.DEFAULT).get("start_year", 2027))
 
 
 ## A past start, either way: you take over from your club's senior coach.
@@ -903,6 +1005,11 @@ func _start_new_career() -> void:
 	GameState.set_canberra(_pick_canberra)
 	# A new career opens with the appointment interview (row 119).
 	GameState.interview_due = true
+	if _pick_future > 0 and not _pick_canberra:
+		# The Tasmania start: 2027 without you, then Tasmania are yours.
+		GameState.challenge = {}
+		_play_until_club("TAS")
+		return
 	GameState.challenge = _challenge_state()
 	if _pick_challenge == "rebuild":
 		_pick_start = "real"
@@ -925,8 +1032,11 @@ func _start_new_career() -> void:
 	Router.go("draft")
 
 
-## This setup starts in 2030: real 2026 lists with Canberra, and no Rebuild.
+## This setup starts in 2030 (real 2026 lists with Canberra, and no Rebuild),
+## or is the 2028 Tasmania start.
 func _plays_years_without_you() -> bool:
+	if _pick_future > 0:
+		return true
 	return not _past_start() and _pick_start == "real" and _pick_canberra and _pick_challenge != "rebuild"
 
 
@@ -936,16 +1046,18 @@ func _plays_years_without_you() -> bool:
 ## the Choose your club button it starts the career at once.
 func _open_sim_ahead_sheet(from_start: bool) -> void:
 	_close_confirm()
-	var first := GameState.SIM_AHEAD_TO
+	var tas := _pick_future > 0 and not _pick_canberra
+	var first := _pick_future if tas else GameState.SIM_AHEAD_TO
 	var box := UiKit.modal_box(self, 460.0, 0.0)
 	_confirm_overlay = box["overlay"]
 	_confirm_overlay.name = "SimAheadWarning"
 	var v: VBoxContainer = box["body"]
 	v.add_child(UiKit.heading("Your first season is %d" % first, UiKit.H1))
-	for line in [
-			"Canberra join the league in %d. With them in, %d to %d play out without you." % [first, GameDB.START_YEAR, first - 1],
-			"Every club is run by its own staff in those three seasons: they pick the sides, trade, sign free agents and draft. Tasmania join in %d, Canberra build their first list, and three premierships are decided." % GameDB.enter_year("TAS"),
-			"At the %d National Draft you choose any of the 20 clubs, face the press as their new coach and start in %d." % [first - 1, first]]:
+	var lines: Array = WaitWords.lines("TAS", _today_first()) if tas else [
+			"Canberra join the league in %d. With them in, %d to %d play out without you." % [first, _today_first(), first - 1],
+			"Every club is run by its own staff in those three seasons: they pick the sides, trade, sign free agents and draft. Tasmania join in %d, Canberra build their first list, and three premierships are decided." % GameDB.data_enter_year("TAS"),
+			"At the %d National Draft you choose any of the 20 clubs, face the press as their new coach and start in %d." % [first - 1, first]]
+	for line in lines:
 		var l := UiKit.lbl(line, UiKit.BODY, UiKit.TEXT)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(l)
@@ -968,8 +1080,11 @@ func _open_sim_ahead_sheet(from_start: bool) -> void:
 
 
 ## Back on the 2030 warning: Canberra stay out, and the setup is as it was.
+## On a new club's start from the year step, Back only closes the warning.
 func _cancel_sim_ahead() -> void:
 	_close_confirm()
+	if _pick_future > 0:
+		return
 	_pick_canberra = false
 	_repaint_canberra()
 
@@ -990,6 +1105,30 @@ func _play_years_without_you() -> void:
 				break
 			ScreenTransition.show_line(line)
 			await ScreenTransition.drawn()
+		Router.go("draft"))
+
+
+## The Tasmania start from the year step (director 2026-11-09, "Yes, start
+## 2028"): the real 2026 lists, the year before Tasmania join played under the
+## cover, then Tasmania are yours at their first National Draft, as when you
+## take them on Choose your club (DraftScene._wait_for_club).
+func _play_until_club(code: String) -> void:
+	var first := GameDB.enter_year(code)
+	ScreenTransition.run("Playing %s..." % WaitWords.years_without(code), func():
+		await ScreenTransition.drawn()
+		if GameState.begin_from_history(first):
+			GameState.choose_sim_ahead_club(code)
+			Router.go("draft")
+			return
+		GameState.begin_real_lists()
+		GameState.begin_wait_for_club(code)
+		while true:
+			var line := GameState.sim_ahead_step()
+			if line == "":
+				break
+			ScreenTransition.show_line(line)
+			await ScreenTransition.drawn()
+		GameState.choose_sim_ahead_club(code)
 		Router.go("draft"))
 
 
