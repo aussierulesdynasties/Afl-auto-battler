@@ -62,13 +62,13 @@ const _TABLE := {
 	"1990": {
 		"data_season": 1989, "start_year": 1990, "start_date": "1990-03-01",
 		"players": "res://data/legacy/1990/players_1990.csv",
-		"history": "res://data/legacy/1990/history_1990.csv",
-		"list_additions": "res://data/legacy/1990/list_additions_1990.csv",
-		"list_addition_stats": "res://data/legacy/1990/list_addition_stats_1990.csv",
 		# The 1990 senior coaches (yours makes way, TODO row 142 L2) and the
 		# clubs' 1990 captains and vice-captains.
 		"coaches": "res://data/legacy/1990s/coaches_1990.csv",
 		"leadership": "res://data/legacy/1990s/captains_1990.csv",
+		"history": "res://data/legacy/1990/history_1990.csv",
+		"list_additions": "res://data/legacy/1990/list_additions_1990.csv",
+		"list_addition_stats": "res://data/legacy/1990/list_addition_stats_1990.csv",
 	},
 }
 
