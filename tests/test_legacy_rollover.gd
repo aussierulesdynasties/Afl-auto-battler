@@ -22,6 +22,7 @@ func run() -> void:
 	_t("_test_fitzroy_odds")
 	_t("_test_fitzroy_stays")
 	_t("_test_departed_club_picks")
+	_t("_test_fitzroy_draft")
 	_t("_test_seventeen_clubs")
 	_t("_test_brand_choice", [0])
 	_t("_test_brand_choice", [1])
@@ -118,6 +119,45 @@ func _test_departed_club_picks() -> void:
 	var owners := GameState.draft_pick_owners(1997)
 	_check(not owners.has("1:CAR"), "Fitzroy's 1997 pick goes back to Carlton (%s)" % str(owners))
 	_check(str(owners.get("2:GEE", "")) == "ESS", "A pick held by a club still playing stays held (%s)" % str(owners))
+	GameState.pick_owner = {}
+
+
+## Coaching a rival, the merger is settled as the 1996 off-season opens: the
+## Lions take Fitzroy's best eight and the rest go into the 1996 National
+## Draft, as in real life (Legacy lead, 2026-11-13). Fitzroy has no seat and
+## no pick there, and a leftover nobody drafts who would age out of the pool
+## ends his career on the record, never silently.
+func _test_fitzroy_draft() -> void:
+	GameState.reset("1990")
+	GameState.start_season("HAW", GameDB.club_list("HAW"))
+	GameState.season_year = 1996
+	GameState.legacy = {"finals": {"1994": [], "1995": [], "1996": []}}
+	GameState.pick_owner = {"1996:1:CAR": "FIT"}
+	var fit: Array = (GameState.league_lists.get("FIT", []) as Array).duplicate()
+	var lions_before: int = (GameState.league_lists["BRL"] as Array).size()
+	var pool_before := GameState.draftee_pool.size()
+	_check(fit.size() > LegacyRollover.LIONS_TAKE, "(setup) Fitzroy has a list (%d)" % fit.size())
+	LegacyRollover.settle_merger(GameState)
+	_check(str(GameState.legacy.get("fitzroy", "")) == "merged", "Out of the finals, Fitzroy merge (%s)" % str(GameState.legacy.get("fitzroy", "")))
+	_check(not GameState.league_lists.has("FIT") and not GameState.season.lists.has("FIT"), "Fitzroy's list is gone before anyone re-signs")
+	_check((GameState.league_lists["BRL"] as Array).size() == lions_before + LegacyRollover.LIONS_TAKE,
+			"The Lions take Fitzroy's best %d (%d -> %d)" % [LegacyRollover.LIONS_TAKE, lions_before, (GameState.league_lists["BRL"] as Array).size()])
+	var left := GameState.draftee_pool.filter(func(q): return bool(q.get("fitzroy_left", false)))
+	_check(left.size() == fit.size() - LegacyRollover.LIONS_TAKE and GameState.draftee_pool.size() == pool_before + left.size(),
+			"The other %d go into the draft pool (%d)" % [fit.size() - LegacyRollover.LIONS_TAKE, left.size()])
+	_check(left.all(func(q): return int(q.get("draft_year", 0)) == 1996 and str(q.get("club", "x")) == ""),
+			"...in the 1996 National Draft, on no club")
+	_check(not GameState.intake_order().has("FIT") and GameState.intake_order().size() == GameDB.active_clubs(1996).size() - 1,
+			"Fitzroy has no seat at the 1996 draft (%s)" % str(GameState.intake_order()))
+	_check(not GameState.draft_pick_owners(1996).has("1:CAR"), "A pick Fitzroy held goes back to its club (%s)" % str(GameState.draft_pick_owners(1996)))
+	_check(GameState.news.any(func(n): return "go into the 1996 National Draft" in str(n.get("text", ""))), "The news says where the rest go")
+	# Nobody drafted them: the old end their careers, the young stay in the pool.
+	var old := left.filter(func(q): return float(q.get("age", 30.0)) + 1.0 >= 22.0)
+	LegacyRollover._sweep_leftovers(GameState)
+	_check(old.all(func(q): return not GameState.draftee_pool.has(q) and GameState.departed_names.has(str(q["id"]))),
+			"An undrafted leftover who would age out ends his career on the record (%d)" % old.size())
+	_check(GameState.draftee_pool.filter(func(q): return bool(q.get("fitzroy_left", false))).size() == left.size() - old.size(),
+			"A young one stays in the pool for next year")
 	GameState.pick_owner = {}
 
 

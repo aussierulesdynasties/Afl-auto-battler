@@ -342,6 +342,32 @@ static func before_moves(gs, next_year: int) -> void:
 		return
 	if next_year != TALKS_YEAR + 1:
 		return
+	_decide(gs)
+
+
+## When the TALKS_YEAR off-season opens, before any club re-signs: the merger
+## is settled and, as in 1996, Fitzroy's best go to the Brisbane Lions and the
+## rest into that year's National Draft. A coach at Fitzroy keeps the old
+## order (decided at the rollover, the rest to free agency), since his club
+## has a list to run until he moves.
+static func settle_merger(gs) -> void:
+	if not _merger_ahead(gs) or int(gs.season_year) != TALKS_YEAR or str(gs.my_club) == MERGED:
+		return
+	note_finals(gs)
+	_decide(gs)
+	if str(_st(gs).get("fitzroy", "")) == "merged":
+		_merge(gs, true)
+
+
+## True once `code` has merged away (Fitzroy, its list gone): from the 1996
+## off-season on it has no seat at a draft and holds no pick.
+static func merged_away(gs, code: String) -> bool:
+	return code == MERGED and bool(_st(gs).get("merge_done", false))
+
+
+## Merge or play on: finals in two of the last three seasons give a
+## MERGE_ANYWAY_PCT chance of merging; fewer, and they merge.
+static func _decide(gs) -> void:
 	var st := _st(gs)
 	var regular := finals_in(gs, MERGED, [TALKS_YEAR - 2, TALKS_YEAR - 1, TALKS_YEAR]) >= FINALS_NEEDED
 	var merge := true
@@ -367,12 +393,26 @@ static func merge_lists(gs) -> void:
 	if not on():
 		return
 	canon_moves(gs, int(gs.season_year) + 1)
+	_sweep_leftovers(gs)
 	if str(_st(gs).get("fitzroy", "")) != "merged" or bool(_st(gs).get("merge_done", false)):
 		return
+	_merge(gs, false)
+
+
+## Fitzroy's best LIONS_TAKE go to the Brisbane Lions. The rest go into this
+## year's National Draft (`to_draft`, the 1996 order) or to free agency.
+## Anyone retiring at the rollover ends his career here, as his list closes.
+static func _merge(gs, to_draft: bool) -> void:
 	var st := _st(gs)
 	st["merge_done"] = true
 	var fit: Array = gs.league_lists.get(MERGED, [])
-	var ranked := fit.duplicate()
+	var ranked := fit.filter(func(q): return not gs.retiring_now(q))
+	if to_draft:
+		for p in fit:
+			if gs.retiring_now(p):
+				gs._career_over(p, "retired")
+	else:
+		ranked = fit.duplicate()
 	ranked.sort_custom(func(a, b): return int(a.get("overall", 0)) > int(b.get("overall", 0)))
 	var lions: Array = gs.league_lists.get(MERGED_INTO, [])
 	var taken := []
@@ -383,6 +423,13 @@ static func merge_lists(gs) -> void:
 			p["joined"] = TALKS_YEAR + 1
 			lions.append(p)
 			taken.append(GameDB.player_display_name(p))
+		elif to_draft:
+			p["club"] = ""
+			p["draft_year"] = int(gs.season_year)
+			p["fitzroy_left"] = true
+			p["contract_years"] = 0
+			p.erase("rookie_list")
+			gs.draftee_pool.append(p)
 		else:
 			p["released_by"] = MERGED
 			p["contract_years"] = 0
@@ -390,8 +437,11 @@ static func merge_lists(gs) -> void:
 			gs.free_agents.append(p)
 	fit.clear()
 	# Off the league's lists altogether, or free agency would sign players to
-	# a club that no longer exists.
+	# a club that no longer exists; mid off-season, off the season's lists
+	# too, which the league's are rebuilt from.
 	gs.league_lists.erase(MERGED)
+	if to_draft and gs.season != null:
+		gs.season.lists.erase(MERGED)
 	gs.unique_jumpers(lions)
 	for cid in gs.coaches:
 		var c: Dictionary = gs.coaches[cid]
@@ -400,8 +450,23 @@ static func merge_lists(gs) -> void:
 	var head := "Fitzroy and the Brisbane Bears have merged."
 	if bool(st.get("fitzroy_regular", false)):
 		head = "Fitzroy played finals often enough to stand alone, but the board took the merger anyway (the %d%% chance)." % MERGE_ANYWAY_PCT
-	gs.add_news("legacy", "%s The Brisbane Lions play from %d and take Fitzroy's best %d players: %s. The rest of Fitzroy's list are free agents." % [
-			head, TALKS_YEAR + 1, taken.size(), _and(taken)])
+	gs.add_news("legacy", "%s The Brisbane Lions play from %d and take Fitzroy's best %d players: %s. The rest of Fitzroy's list %s." % [
+			head, TALKS_YEAR + 1, taken.size(), _and(taken),
+			("go into the %d National Draft" % int(gs.season_year)) if to_draft else "are free agents"])
+
+
+## Fitzroy's leftovers nobody drafted: one young enough stays in the pool for
+## next year's draft; one who would age out of it (22) ends his career here,
+## on the record, never silently.
+static func _sweep_leftovers(gs) -> void:
+	var keep := []
+	for p in gs.draftee_pool:
+		if bool(p.get("fitzroy_left", false)) and not gs.drafted_draftees.has(str(p["id"])) \
+				and float(p.get("age", 30.0)) + 1.0 >= 22.0:
+			gs._career_over(p, "delisted")
+			continue
+		keep.append(p)
+	gs.draftee_pool = keep
 
 
 ## Fitzroy fought the merger off: they play on, and the Bears stay the Bears.

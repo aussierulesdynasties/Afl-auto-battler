@@ -2109,7 +2109,9 @@ func opening_order(active: Array) -> Array:
 func intake_order() -> Array:
 	var order := []
 	for row in season.ladder_sorted():
-		order.append(str(row["code"]))
+		# A club merged away this off-season (Fitzroy, 1996) has no seat.
+		if not LegacyRollover.merged_away(self, str(row["code"])):
+			order.append(str(row["code"]))
 	order.reverse()
 	var runner := str(season.finals.get("runner_up", ""))
 	var premier_code := premier()
@@ -8282,6 +8284,9 @@ func open_offseason(keep_staff := false) -> void:
 	if not keep_staff:
 		offseason_staff = Coaches.staff(coaches, my_club) if not coaches.is_empty() else {}
 	_decide_retirements()
+	# A Legacy career's Fitzroy merger is settled now, before any club
+	# re-signs: the leftovers go into this year's National Draft, as in 1996.
+	LegacyRollover.settle_merger(self)
 	# A free agent whom no club took in a year (kept in the pool last
 	# off-season, _fa_staying, or let go before the season): his AFL career
 	# ends here, on the record. One whose club is gone (Fitzroy's players after
@@ -9741,7 +9746,8 @@ func draft_pick_owners(year: int) -> Dictionary:
 		var parts := str(key).split(":")
 		# A pick held by a club no longer in the league (Fitzroy after 1996)
 		# goes back to the club it came from.
-		if int(parts[0]) == year and active.has(str(pick_owner[key])):
+		if int(parts[0]) == year and active.has(str(pick_owner[key])) \
+				and not LegacyRollover.merged_away(self, str(pick_owner[key])):
 			out["%s:%s" % [parts[1], parts[2]]] = str(pick_owner[key])
 	return out
 
