@@ -1640,8 +1640,18 @@ func _test_backing_lasts_the_season() -> void:
 	_check(not again.is_empty() and Backing.is_active(again) and int(Backing.current(again)["played"]) == 0
 			and Backing.note(again).ends_with("when available."),
 			"The run is saved with the career, waiting on his injury")
+	# Two more rounds out injured prove the run waits; the rest of the home and
+	# away season is skipped (only the finals are played), which keeps this
+	# test to seconds instead of a full season of matches.
+	for i in range(2):
+		GameState.advance()
+	_check(Backing.is_active(GameState.list_player(id)) and int(Backing.current(GameState.list_player(id))["played"]) == 0,
+			"A long injury keeps the run waiting, round after round")
+	var season: Season = GameState.season
+	season.round_index = season.fixture.size()
+	GameState.ensure_finals()
 	var guard := 0
-	while not GameState.season.is_season_over() and guard < 60:
+	while not season.is_season_over() and guard < 60:
 		guard += 1
 		GameState.advance()
 	_check(Backing.is_active(GameState.list_player(id)), "A long injury keeps the run waiting through the season")

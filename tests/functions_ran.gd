@@ -40,10 +40,26 @@ static func one(suite: Object, test: String, args: Array = [], owner: Object = n
 		_fail(owner, "%s is called but not defined" % test)
 		return null
 	var before := _checks(owner)
+	var started := Time.get_ticks_msec()
 	var result = await suite.callv(test, args)
+	_log_time(test, Time.get_ticks_msec() - started)
 	if _checks(owner) == before:
 		_fail(owner, "%s made no checks" % test)
 	return result
+
+
+## With FN_TIMINGS set (tools/run_tests.sh sets it, and CI keeps the file with
+## the suite timings), each function's time goes there as suite, test, ms: what
+## makes a suite slow is read from one run, not guessed.
+static func _log_time(test: String, ms: int) -> void:
+	var path := OS.get_environment("FN_TIMINGS")
+	if path == "":
+		return
+	var f := FileAccess.open(path, FileAccess.READ_WRITE if FileAccess.file_exists(path) else FileAccess.WRITE)
+	if f == null:
+		return
+	f.seek_end()
+	f.store_line("%s\t%s\t%d" % [OS.get_environment("SUITE_NAME"), test, ms])
 
 
 ## The suite's summary line. Every `_test_*` method the suite defines and never
