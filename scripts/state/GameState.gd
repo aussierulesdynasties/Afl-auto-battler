@@ -2651,6 +2651,11 @@ func _start_next_season(next_year: int, signed: int) -> void:
 				played[str(p["id"])] = p
 		Career.close_season(played, season_tally, season_year, season_stats, season_stats_from)
 	LegacyRollover.merge_lists(self)
+	# A canon move (Dangerfield to Geelong) or the merger lands after the
+	# off-season's trim: the club that took him delists to its era's spots
+	# again, before free agency closes, so the one let go still has a market.
+	if season != null:
+		_era_trim_rivals()
 	Season.beat()
 	# Next year's generated class joins the pool before ageing, so the fresh
 	# 17-year-olds are also a year older in the season they arrive. A Legacy
