@@ -105,6 +105,8 @@ func _run() -> void:
 	for l in ls.find_children("*", "Label", true, false):
 		if (l as Label).text.contains("Paul Roos") and sc != null:
 			(sc as ScrollContainer).ensure_control_visible(l)
+			await _frames(2)
+			(sc as ScrollContainer).scroll_vertical += 300
 			await _shot("2_full_list_%s_roos" % club)
 			break
 	quit(0)
