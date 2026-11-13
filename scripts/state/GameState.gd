@@ -8066,9 +8066,11 @@ func _ensure_department_budget() -> void:
 	for area in ClubBudget.AREA_ORDER:
 		clean[area] = ClubBudget.clamp_level(int(department_budget.get(area, ClubBudget.STANDARD)))
 	# A fine's cut can leave the allocation over the year's budget: the
-	# best-funded area steps down until it fits.
+	# best-funded area steps down until it fits. Without a cut the
+	# allocation is left as it was (set_department_budget already keeps it
+	# legal).
 	var cap := department_budget_annual_m()
-	while ClubBudget.total_m(clean) > cap + 0.001:
+	while cap < ClubBudget.ANNUAL_M and ClubBudget.total_m(clean) > cap + 0.001:
 		var top := ""
 		for area in ClubBudget.AREA_ORDER:
 			if int(clean[area]) > 0 and (top == "" or int(clean[area]) > int(clean[top])):
