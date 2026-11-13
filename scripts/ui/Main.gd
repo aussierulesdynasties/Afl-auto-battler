@@ -9,7 +9,7 @@ var _content: VBoxContainer
 ## The setup's "Choose your club" button lives under the scrolling choices, so it
 ## stays in thumb reach however many choices the setup has.
 var _footer: VBoxContainer
-var _mode := "home"                 # "home" | "setup"
+var _mode := "home"                 # "home" | "year" | "setup"
 var _help_panel: PanelContainer
 var _confirm_overlay: Control
 var _guide_overlay: Control
@@ -45,6 +45,9 @@ var _goal_row: VBoxContainer
 var _start_btn: Button
 var _pick_prospect := false
 var _pick_club := false
+## The season the career starts in (Datasets id; TODO row 142 L2): picked on the
+## year step, which shows only when this build can start more than one.
+var _pick_dataset := Datasets.DEFAULT
 ## The web build's one line when the browser refuses to keep the save (P-71), or "".
 var _storage_line := ""
 
@@ -114,6 +117,8 @@ func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	if GameState.new_career_setup_requested:
 		GameState.new_career_setup_requested = false
+		# Back from Choose your club: the options again, for the season picked.
+		_pick_dataset = GameState.dataset if Datasets.ready(GameState.dataset) else Datasets.DEFAULT
 		_mode = "setup"
 	_pick_board = GameState.new_career_dial(DifficultyDials.BOARD)
 	_pick_rivals = GameState.new_career_dial(DifficultyDials.RIVALS)
@@ -178,7 +183,9 @@ func _on_storage_answer(got: String) -> void:
 
 func _render() -> void:
 	UiKit.clear(_footer)
-	if _mode == "setup":
+	if _mode == "year":
+		_show_year_step()
+	elif _mode == "setup":
 		_show_setup()
 	else:
 		_show_home()
@@ -369,8 +376,132 @@ func _on_new_career() -> void:
 	_pick_goal = ""
 	_pick_prospect = not GameState.forge_player().is_empty()
 	_pick_club = not GameState.forge_club().is_empty()
+	_pick_dataset = Datasets.DEFAULT
+	_mode = "year" if _has_year_step() else "setup"
+	_render()
+
+
+# ---------------------------------------------------------------------------
+# New career: the year step (Legacy mode, TODO row 142 L2; director 2026-11-13,
+# "Year step in setup")
+# ---------------------------------------------------------------------------
+## Each start's words: the heading and the one line under it. The figure is the
+## first season the coach plays.
+const YEAR_WORDS := {
+	"2026": ["Today's league", "18 clubs. The real lists after the 2026 season, or a league redraft."],
+	"1990": ["From the first AFL season", "14 clubs on their real lists. Take over from your club's senior coach and coach on through the years to today."],
+}
+
+
+## The step shows when this build has more than one start (Datasets.ready_ids).
+func _has_year_step() -> bool:
+	return Datasets.ready_ids().size() > 1
+
+
+## A start in a past season (not today's league).
+func _past_start() -> bool:
+	return _pick_dataset != Datasets.DEFAULT
+
+
+func _show_year_step() -> void:
+	_mode = "year"
+	UiKit.clear(_content)
+	_content.alignment = BoxContainer.ALIGNMENT_BEGIN
+	_content.add_child(UiKit.top_bar("", true, null, func():
+		_close_setup()
+		return true))
+	var above := Control.new()
+	above.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_content.add_child(above)
+	var form := UiKit.vbox(UiKit.SECTION)
+	form.name = "StartYear"
+	form.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	# A wide screen sets the starts side by side; a phone stacks them.
+	var wide := ScreenLayout.wide_view(UiKit.view_width(self), UiKit.view_height(self), 520.0)
+	form.custom_minimum_size.x = _column_width(880.0 if wide else 440.0)
+	_content.add_child(form)
+	var head := UiKit.vbox(4)
+	head.add_child(UiKit.lbl("New career", UiKit.H1, UiKit.TEXT, true))
+	head.add_child(UiKit.lbl("Which season do you start in?", UiKit.NAME, UiKit.MUTED))
+	form.add_child(head)
+	var starts := GridContainer.new()
+	starts.name = "Starts"
+	starts.columns = 2 if wide else 1
+	starts.add_theme_constant_override("h_separation", UiKit.SECTION)
+	starts.add_theme_constant_override("v_separation", UiKit.SECTION)
+	form.add_child(starts)
+	# Today's league first, then back through the years.
+	var ids := Datasets.ready_ids()
+	ids.reverse()
+	for id in ids:
+		starts.add_child(_year_button(str(id), wide))
+	var below := Control.new()
+	below.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	below.size_flags_stretch_ratio = SETUP_BELOW
+	_content.add_child(below)
+
+
+## One start, the whole block one tap: the first season as a big figure, what
+## it is, and one line on what you take on. Side by side (`tall`), the figure
+## sits above the words.
+func _year_button(id: String, tall := false) -> Button:
+	var year := int(Datasets.get_set(id).get("start_year", 0))
+	var words: Array = YEAR_WORDS.get(id, ["The %d season" % year, ""])
+	var b := UiKit.btn("", UiKit.NAME)
+	b.name = "StartYear_" + id
+	# A button does not grow with its children: room for the figure above three lines when tall.
+	b.custom_minimum_size = Vector2(0, 136 if tall else 104)
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.tooltip_text = "Start in %d" % year
+	var pad := MarginContainer.new()
+	pad.set_anchors_preset(Control.PRESET_FULL_RECT)
+	for side in ["left", "right", "top", "bottom"]:
+		pad.add_theme_constant_override("margin_" + side, 14 if side in ["left", "right"] else 10)
+	var row: BoxContainer = UiKit.vbox(6) if tall else UiKit.hbox(14)
+	row.alignment = BoxContainer.ALIGNMENT_BEGIN if tall else BoxContainer.ALIGNMENT_CENTER
+	pad.add_child(row)
+	var fig := UiKit.figure(str(year), UiKit.HERO, UiKit.TEXT)
+	fig.name = "Year"
+	fig.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(fig)
+	var text := UiKit.vbox(2)
+	text.alignment = BoxContainer.ALIGNMENT_CENTER
+	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(text)
+	text.add_child(UiKit.lbl(str(words[0]), UiKit.NAME, UiKit.TEXT, true))
+	if str(words[1]) != "":
+		var line := UiKit.lbl(str(words[1]), UiKit.SECONDARY, UiKit.MUTED)
+		line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		text.add_child(line)
+	for n in [pad, row, fig, text] + text.get_children():
+		(n as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(pad)
+	b.pressed.connect(_on_pick_year.bind(id))
+	return b
+
+
+func _on_pick_year(id: String) -> void:
+	_pick_dataset = id
+	_sim_ahead_ok = false
+	if _past_start():
+		# A past season starts on its real lists, or a League redraft of its
+		# clubs (director 2026-11-13); a challenge, Canberra and your Club Forge
+		# club or prospect belong to today's league.
+		_pick_start = "real"
+		_pick_challenge = "none"
+		_pick_goal = ""
+		_pick_canberra = false
 	_mode = "setup"
 	_render()
+
+
+## Back from the setup: to the year step when there is one, else the menu.
+func _back_from_setup() -> void:
+	if _has_year_step():
+		_mode = "year"
+		_render()
+	else:
+		_close_setup()
 
 
 # ---------------------------------------------------------------------------
@@ -388,7 +519,7 @@ func _show_setup() -> void:
 	# title, the two choices, the button right under them - centred on the
 	# screen (a touch above the middle), over the faint oval.
 	_content.add_child(UiKit.top_bar("", true, null, func():
-		_close_setup()
+		_back_from_setup()
 		return true))
 	var above := Control.new()
 	above.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -407,11 +538,21 @@ func _show_setup() -> void:
 	# A little more under the title than between the sections.
 	title.custom_minimum_size.y = (UiKit.H1 * 1.15) if _setup_tight else (UiKit.H1 * 1.4 + 6)
 	form.add_child(title)
-	_start_row = _choice("Start", "StartMode", [["redraft", "League redraft"], ["real", "Real 2026 lists"]],
+	if _has_year_step():
+		var yr := UiKit.lbl("Starting in %d" % int(Datasets.get_set(_pick_dataset).get("start_year", 0)),
+				UiKit.NAME, UiKit.MUTED)
+		yr.name = "SetupYear"
+		form.add_child(yr)
+	var first := int(Datasets.get_set(_pick_dataset).get("start_year", 2027))
+	_start_row = _choice("Start", "StartMode",
+			[["redraft", "League redraft"], ["real", "Real %d lists" % (first if _past_start() else 2026)]],
 			_pick_start,
 			func(k): return (_real_start_line() if k == "real"
-					else "The whole league re-drafts from one player pool before 2027, in a random snake order."),
+					else "The whole league re-drafts from one player pool before %d, in a random snake order.%s" % [
+						first, _past_coach_line()]),
 			_on_pick_start)
+	# A past start says up front that you replace your club's senior coach.
+	(_start_row.get_node("StartModeNote") as Label).visible = _past_start()
 	form.add_child(_start_row)
 	# A challenge start (ruling 115): one rule, said here before you begin.
 	_challenge_row = _choice("Challenge", "Challenge",
@@ -429,8 +570,10 @@ func _show_setup() -> void:
 				_pick_goal = k
 				_refresh_start())
 	(_goal_row.get_node("GoalNote") as Label).visible = true
-	_goal_row.visible = _pick_challenge == "goal"
+	_goal_row.visible = _pick_challenge == "goal" and not _past_start()
 	form.add_child(_goal_row)
+	# A past season: its real lists or a redraft, and no challenge (today's league only).
+	_challenge_row.visible = not _past_start()
 	form.add_child(_dial_choice(DifficultyDials.BOARD, "BoardPatience", _pick_board,
 			func(k): _pick_board = k))
 	form.add_child(_dial_choice(DifficultyDials.RIVALS, "RivalRecruiting", _pick_rivals,
@@ -452,11 +595,12 @@ func _show_setup() -> void:
 				if _pick_canberra and _plays_years_without_you() and not _sim_ahead_ok:
 					_open_sim_ahead_sheet(false))
 	_canberra_row.name = "Canberra"
+	_canberra_row.visible = not _past_start()
 	form.add_child(_canberra_row)
 	# Your Club Forge player, if you made one: he enters this career's first
 	# National Draft like any other prospect.
 	var forged := GameState.forge_player()
-	if not forged.is_empty():
+	if not forged.is_empty() and not _past_start():
 		var who := "%s %s" % [forged.get("first", ""), forged.get("last", "")]
 		form.add_child(_choice("Your prospect", "Prospect", [["in", "Bring " + who], ["out", "Not this time"]],
 				"in" if _pick_prospect else "out",
@@ -469,7 +613,7 @@ func _show_setup() -> void:
 	_forged_row = null
 	_forged_note = null
 	var club := GameState.forge_club()
-	if not club.is_empty():
+	if not club.is_empty() and not _past_start():
 		_forged_row = _choice("Your club", "ForgedClub", [["in", "Bring " + str(club.get("name", ""))], ["out", "Not this time"]],
 				"in" if _pick_club else "out",
 				func(_k): return "It joins the competition as an extra club and drafts its list in the League Draft like everyone else. Choose it as your club next, or coach against it.",
@@ -579,9 +723,19 @@ func _canberra_line(k: String) -> String:
 ## The real-lists start: with Canberra (and no Rebuild) the career starts in
 ## 2030, after three seasons played without you.
 func _real_start_line() -> String:
+	if _past_start():
+		return "Every club keeps its real %d list.%s" % [
+			int(Datasets.get_set(_pick_dataset).get("start_year", 0)), _past_coach_line()]
 	if _pick_canberra and _pick_challenge != "rebuild":
 		return "Every club keeps its real end-of-2026 list. The league plays 2027 to 2029 without you; then you choose your club and start in 2030."
 	return "Every club keeps its real end-of-2026 list. You run your club through the 2026 National Draft, then play 2027; or take Tasmania and start in 2028."
+
+
+## A past start, either way: you take over from your club's senior coach.
+func _past_coach_line() -> String:
+	if not _past_start():
+		return ""
+	return " You take over from your club's senior coach, and he joins the coaches any club can hire."
 
 
 ## The Canberra rule follows the start and the Forge club's pick.
@@ -722,7 +876,19 @@ func _start_new_career() -> void:
 	# The old save stays on disk until the new career has a club and its first
 	# save replaces it: backing out of Choose your club must not cost the player
 	# the career they had (reset() clears memory only).
-	GameState.reset()
+	GameState.reset(_pick_dataset)
+	if _past_start():
+		# A past season: its clubs on their real lists, or a League redraft of
+		# its clubs, straight to Choose your club.
+		GameState.set_canberra(false)
+		GameState.interview_due = true
+		GameState.challenge = {}
+		if _pick_start == "real":
+			GameState.begin_real_lists()
+		else:
+			GameState.begin_draft()
+		Router.go("draft")
+		return
 	GameState.set_canberra(_pick_canberra)
 	# A new career opens with the appointment interview (row 119).
 	GameState.interview_due = true
@@ -750,7 +916,7 @@ func _start_new_career() -> void:
 
 ## This setup starts in 2030: real 2026 lists with Canberra, and no Rebuild.
 func _plays_years_without_you() -> bool:
-	return _pick_start == "real" and _pick_canberra and _pick_challenge != "rebuild"
+	return not _past_start() and _pick_start == "real" and _pick_canberra and _pick_challenge != "rebuild"
 
 
 ## The warning before a 2030 start commits (director, 2026-11-10: "if you click
@@ -984,6 +1150,9 @@ func handle_back() -> bool:
 		overlay.queue_free()
 		return true
 	if _mode == "setup":
+		_back_from_setup()
+		return true
+	if _mode == "year":
 		_close_setup()
 		return true
 	return false

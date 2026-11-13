@@ -27,6 +27,7 @@ func _run() -> void:
 	await _frames(20)
 	_tap("NewCareer")
 	await _frames(20)
+	await _tap_wait("StartYear_2026")  # the year step (row 142 L2)
 	await _tap_wait("StartMode_real")
 	await _tap_wait("Canberra_yes" if canberra else "Canberra_no")
 	var t0 := Time.get_ticks_msec()

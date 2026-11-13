@@ -225,6 +225,11 @@ static func whereabouts(c: Dictionary) -> String:
 ## coach, with that club's real senior coach moved out of the job you now
 ## hold. Deterministic: the same seed file gives the same records and names.
 static func seed(my_club: String) -> Dictionary:
+	# A past start (Legacy mode) reads its own season's staff: the real senior
+	# coaches, yours making way (director 2026-11-13, "You replace him").
+	var file := str(GameDB.COACHES_CSV)
+	if file != "" and file != SEED_CSV:
+		return seed_era(my_club, file, int(GameDB.START_YEAR))
 	var rows := _read_seed()
 	var names := _alias_pool()
 	var out := {}
@@ -266,10 +271,70 @@ static func seed(my_club: String) -> Dictionary:
 	return out
 
 
-static func _read_seed() -> Array:
-	var f := FileAccess.open(SEED_CSV, FileAccess.READ)
+# ---------------------------------------------------------------------------
+# A past season's staff (Legacy mode, TODO row 142 L2)
+# ---------------------------------------------------------------------------
+## A past season's file names each club's senior coach and its reserves and
+## under-19s coaches (data/legacy/1990s/coaches_1990.csv), not the six jobs.
+## Every real senior coach starts at the 2026 senior coaches' average, so no
+## real coach is rated better or worse than another on a guess; a rating from
+## each man's record is the director's call to make later.
+const ERA_SC_SKILLS := {"teach": 72, "tactics": 78, "manage": 79}
+## A reserves or under-19s coach: new to the senior jobs, at the pathway's centre.
+const ERA_SECOND_SKILLS := {"teach": 62, "tactics": 62, "manage": 62}
+const ERA_SECOND_ROLES := {"reserves": "Reserves coach", "under_19s": "Under-19s coach",
+		"reserves_and_under_19s": "Reserves and under-19s coach"}
+
+
+## The coaching world of a past season `year` for a career at `my_club`: each
+## club's real senior coach in his job, except yours: you replace him, and he
+## joins the pool any club may hire from (director 2026-11-13, "You replace
+## him", "Joins the coach pool"). The reserves and under-19s coaches are
+## working outside the senior jobs and can be hired; the five assistant jobs
+## the file does not name are filled by new coaches, as a new club's are.
+static func seed_era(my_club: String, path: String, year: int) -> Dictionary:
+	var names := _alias_pool()
+	var out := {}
+	var i := 0
+	for r in _read_seed(path):
+		var role := str(r.get("role", ""))
+		var club := str(GameDB.CLUB_CODE_ALIASES.get(str(r.get("club", "")), str(r.get("club", ""))))
+		var real := str(r.get("name", "")).strip_edges()
+		if real == "" or (role != "senior" and not ERA_SECOND_ROLES.has(role)):
+			continue
+		var cid := "C_" + real.to_lower().replace(" ", "_").replace("'", "").replace(".", "")
+		if out.has(cid):
+			continue
+		var c := {
+			"cid": cid, "real_name": real,
+			"generic_name": str(names[i % names.size()]),
+			"former_player_id": "",
+			"skills": (ERA_SC_SKILLS if role == "senior" else ERA_SECOND_SKILLS).duplicate(),
+			"spec": "" if role == "senior" else "DEV",
+			"status": "away", "club": "", "job": "", "free_from": 0, "stints": [],
+			"former_sc": role == "senior", "note": "", "origin": "seed", "played": {},
+		}
+		i += 1
+		if role == "senior" and club != my_club:
+			c["status"] = "club"
+			c["club"] = club
+			c["job"] = "SC"
+			(c["stints"] as Array).append([club, "SC", year, 0])
+		elif role == "senior":
+			# Yours: he makes way and is free to be hired.
+			c["status"] = "free"
+		else:
+			c["note"] = "%s, %s" % [ERA_SECOND_ROLES[role], GameDB.club_name(club)]
+		out[cid] = c
+	# The jobs the file does not name, at every club of the season.
+	CoachMarket.fill_with_new(out, GameDB.active_clubs(year), my_club, year - 1, COACH_NAME_SEED)
+	return out
+
+
+static func _read_seed(path := SEED_CSV) -> Array:
+	var f := FileAccess.open(path, FileAccess.READ)
 	if f == null:
-		push_warning("Coaches: cannot read %s" % SEED_CSV)
+		push_warning("Coaches: cannot read %s" % path)
 		return []
 	var header := f.get_csv_line()
 	var out := []

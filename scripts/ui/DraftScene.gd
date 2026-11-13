@@ -103,6 +103,8 @@ func _ready() -> void:
 		InterviewScene.back_to_draft = true
 		Router.replace("interview")
 		return
+	if _season_without_draft():
+		return
 	_club = _draft.user_club
 	_phase = "club" if _club.is_empty() else "board"
 	# The redraft wears the chosen club's colours before my_club is set, a
@@ -239,6 +241,9 @@ func _show_club_select() -> void:
 	var active := GameDB.active_clubs(GameDB.START_YEAR if real else GameState.season_year)
 	# Rebuild: the bottom club of 2026, or a club joining the league (row T5.Q25).
 	var rebuild := real and Challenge.kind(GameState) == "rebuild"
+	# A past season (Legacy mode, TODO row 142 L2): its real lists, its own
+	# season first, no draft before it.
+	var past := real and GameState.dataset != Datasets.DEFAULT
 	if rebuild:
 		active = [str(GameState.challenge.get("club", ""))]
 	if later:
@@ -250,6 +255,12 @@ func _show_club_select() -> void:
 					GameState.season_year, GameState.season_year + 1]))
 		_root.add_child(UiKit.lbl(
 				"Every club's own staff ran it from the real 2026 lists: Tasmania joined in 2028 and Canberra are building their first list for 2030. Take any club from this draft; Canberra keep their new-club picks. Your first season is 2030.",
+				16, UiKit.MUTED))
+	elif past:
+		_root.add_child(_header("Choose your club",
+				"Real %d lists  /  the %d season" % [GameDB.START_YEAR, GameDB.START_YEAR]))
+		_root.add_child(UiKit.lbl(
+				"Every club starts with its real %d list. You take over from your club's senior coach, and he joins the coaches any club can hire." % GameDB.START_YEAR,
 				16, UiKit.MUTED))
 	elif rebuild:
 		_root.add_child(_header("Choose your rebuild",
@@ -265,7 +276,9 @@ func _show_club_select() -> void:
 		_root.add_child(_header("Choose your club",
 				"%d  /  A fresh start for all %d clubs" % [GameState.season_year, active.size()]))
 		_root.add_child(UiKit.lbl(
-				"One player pool. One salary cap. The whole league re-drafts in a random snake order.",
+				"One player pool. One salary cap. The whole league re-drafts in a random snake order."
+				+ (" You take over from your club's senior coach, and he joins the coaches any club can hire."
+					if GameState.dataset != Datasets.DEFAULT else ""),
 				16, UiKit.MUTED))
 	var grid := GridContainer.new()
 	grid.name = "ClubGrid"
@@ -296,6 +309,8 @@ func _show_club_select() -> void:
 		var pick_text := "Pick %d" % int(first[0]) if not first.is_empty() else "No pick"
 		if waits.has(code):
 			pick_text = "From %d" % GameDB.enter_year(code)
+		elif past:
+			pick_text = ""
 		var pick_label := UiKit.lbl(pick_text, UiKit.SMALL, UiKit.EMPH)
 		pick_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		pick_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -310,7 +325,7 @@ func _show_club_select() -> void:
 		grid.add_child(b)
 	if later:
 		_root.add_child(UiKit.subtitle("Your first pick in the %d National Draft is shown on each card." % GameState.season_year))
-	elif rebuild:
+	elif rebuild or past:
 		pass
 	elif real:
 		_root.add_child(UiKit.subtitle("Your first pick in the 2026 National Draft is shown on each card." if waiting == ""
@@ -413,12 +428,28 @@ func _on_club_chosen(code: String) -> void:
 		InterviewScene.back_to_draft = true
 		Router.replace("interview")
 		return
+	if _season_without_draft():
+		return
 	_club_backdrop()
 	_show_board()
 	# A club taken on this screen meets its recruiting panel here, before the
 	# first pick, not only once the draft is opened again.
 	if not _meet_if_due():
 		FirstVisitIntro.show_if_due.call_deferred(self, _intro_key())
+
+
+## A past season (Legacy mode, TODO row 142 L2) has no National Draft before
+## it: its lists already hold that year's draftees. Once your club is taken (and
+## the press met), the season starts; an empty board is never shown. True when
+## it moved on.
+func _season_without_draft() -> bool:
+	if not GameState.opening_draft or GameState.dataset == Datasets.DEFAULT \
+			or _draft.user_club == "" or not GameDB.draftees.is_empty():
+		return false
+	if GameState.finish_intake_draft():
+		Router.replace("hub")
+		return true
+	return false
 
 
 ## The recruiting panel meets once before each National Draft, once the club
