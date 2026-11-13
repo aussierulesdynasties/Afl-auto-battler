@@ -1,8 +1,8 @@
 extends RefCounted
 ## A 2010 career never ends (director 2026-11-13: "campaigns can go for
 ## eternity"). A seeded career begun at St Kilda in 2010 rolls season after
-## season past 2027: Gold Coast enter in 2011 and GWS in 2012 as the sim's own
-## expansion, every club keeps a full list, and the career is still the one
+## season past 2027: Gold Coast enter in 2011, GWS in 2012 and Tasmania in 2028
+## as the sim's own expansion, every club keeps a full list, and the career is still the one
 ## begun in 2010. About 18 seasons (some 7 minutes), so it runs nightly
 ## (tools/ci_long_suites.txt). Run through tests/run_legacy_2010_long_tests.gd.
 
@@ -80,7 +80,13 @@ func _test_rolls_past_2027() -> void:
 			_check(false, "%d rolls into %d" % [from, from + 1])
 			return
 		var y := GameState.season_year
-		var want_clubs := 16 if y < 2011 else (17 if y == 2011 else 18)
+		# Gold Coast enter in 2011, GWS in 2012 and Tasmania in 2028
+		# (data/clubs.csv); the league fields exactly the clubs entered by then.
+		var want_clubs: int = GameDB.active_clubs(y).size()
+		for joined in [["GCS", 2011], ["GWS", 2012], ["TAS", 2028]]:
+			if y == joined[1]:
+				_check(GameState.season.clubs.has(joined[0]) and GameDB.enter_year(joined[0]) == y,
+						"%s enter in %d (entry year %d)" % [joined[0], y, GameDB.enter_year(joined[0])])
 		var short := []
 		for code in GameState.season.clubs:
 			if GameState.season.lists.get(code, []).size() < 30:
@@ -99,5 +105,6 @@ func _test_rolls_past_2027() -> void:
 	print("Legacy 2010 long: reached %d; %d of the 2010 players still listed; board sackings waved off in %s"
 			% [GameState.season_year, left, str(sackings)])
 	_check(GameState.season_year >= PAST, "The 2010 career reaches %d (%d)" % [PAST, GameState.season_year])
-	_check(GameState.season.clubs.has("GCS") and GameState.season.clubs.has("GWS"),
-			"Gold Coast and GWS are in the league by %d" % GameState.season_year)
+	_check(GameState.season.clubs.has("GCS") and GameState.season.clubs.has("GWS")
+			and GameState.season.clubs.has("TAS"),
+			"Gold Coast, GWS and Tasmania are in the league by %d" % GameState.season_year)
