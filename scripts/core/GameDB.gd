@@ -391,16 +391,21 @@ func unregister_custom_clubs() -> void:
 const GUERNSEY_DESIGNS := ["plain", "stripes", "hoops", "sash", "yoke", "band", "chevrons", "panels",
 		"chevron", "sides", "tiers", "shoulders", "map", "suit",   # suit: the coach, not a club
 		# A real club's own design (from its home guernsey), not offered in Club Forge.
-		"lowhoops", "giants", "wings", "twohoops"]
+		"lowhoops", "giants", "wings", "twohoops",
+		# Designs clubs wore in earlier seasons (Legacy mode, data/legacy/clubs_by_year.csv).
+		"anchor", "power97", "eagles00", "swans90", "giants12", "saints97", "lions10",
+		"dogs90", "dogs97", "crows06"]
 
 
 ## A club's home kit, from data/clubs.csv's "guernsey" column:
-## "<design>:<base>/<pattern>/<pattern 2>[/<shorts>]". Each colour is p, s or a
+## "<design>:<base>/<pattern>/<pattern 2>[/<shorts>[/<pattern 3>]]". Each colour is p, s or a
 ## (the club's primary, secondary or accent) or a #RRGGBB colour the club's
 ## three don't cover (Port Adelaide's white chevron). The base colour is the
 ## guernsey's and the socks'; the pattern colour draws the design and the sock
 ## band; the second pattern colour is a design's third colour or trim. Shorts
-## left out are the secondary colour, a shade darker. Richmond is "sash:s/p/a":
+## left out are the secondary colour, a shade darker. The third pattern colour is
+## only the anchor's (Fremantle 1995-2010: white, green and red on purple); left out,
+## it is the second. Richmond is "sash:s/p/a":
 ## a black guernsey with a yellow sash. Unknown or missing: plain.
 func club_guernsey(code: String) -> Dictionary:
 	var cols := club_colours(code)
@@ -417,6 +422,7 @@ func club_guernsey(code: String) -> Dictionary:
 		return cols[at] if at >= 0 and token.length() == 1 else fallback
 	return {"design": design, "base": pick.call(0, cols[0]), "pattern": pick.call(1, cols[1]),
 			"pattern2": pick.call(2, cols[2]), "shorts": pick.call(3, (cols[1] as Color).darkened(0.1)),
+			"pattern3": pick.call(4, pick.call(2, cols[2])),
 			# The third colour is named for this kit (Port's teal, St Kilda's black),
 			# not left to the club's accent.
 			"own_pattern2": slots.size() > 2 and str(slots[2]) != "a"}

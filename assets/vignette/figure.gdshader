@@ -46,6 +46,8 @@ uniform int hair_count = 0;
 uniform vec4 kit_base[4];
 uniform vec4 kit_pattern[4];
 uniform vec4 kit_pattern2[4];
+// A third pattern colour, for the one design that needs four (Fremantle's anchor).
+uniform vec4 kit_pattern3[4];
 uniform vec4 kit_shorts[4];
 uniform float kit_design[4];
 // Kit options: y = sock hoops (0: the single band baked into the sheet; 1-3: hoops up the sock).
@@ -82,7 +84,7 @@ float bands(float x, float count) {
 
 // Pattern weights on the guernsey: x = pattern colour, y = second pattern colour.
 // g = (across 0..1 from the wearer's right, up 0..1 from the hem, front 1 / back 0).
-vec2 design(int d, vec3 g) {
+vec2 design_core(int d, vec3 g) {
 	if (d == 1) {          // stripes
 		return vec2(bands(g.x, 7.0), 0.0);
 	} else if (d == 2) {   // hoops
@@ -154,6 +156,93 @@ vec2 design(int d, vec3 g) {
 		return vec2(over(g.y, 0.38) * over(0.47, g.y), over(g.y, 0.25) * over(0.34, g.y));
 	}
 	return vec2(0.0);
+}
+
+// The designs clubs wore in earlier seasons (Legacy mode, each copied from the club's
+// home guernsey that year; docs/research/era_guernseys). x, y = the pattern colours as
+// design_core's, z = a third pattern colour. g.x runs from the wearer's right, so on
+// the front it is left to right as you look at him, and on the back right to left.
+vec3 design(int d, vec3 g) {
+	if (d < 18) {
+		return vec3(design_core(d, g), 0.0);
+	}
+	float front = g.z;
+	float back = 1.0 - g.z;
+	float ax = abs(g.x - 0.5);
+	if (d == 18) {         // anchor (Fremantle 1995-2010): white anchor arms from the armpits to a point
+		// at the stomach and a shank up to the collar; green above on the wearer's right,
+		// red on his left. The back: green and red across the shoulders.
+		float arm = 0.47 + 0.36 * pow(clamp(ax / 0.46, 0.0, 1.0), 1.4);
+		float upper = over(g.y, arm + 0.075);
+		float arms = over(g.y, arm) * (1.0 - upper);
+		float shank = over(0.022 + 0.05 * clamp((0.66 - g.y) / 0.12, 0.0, 1.0), ax) * upper;
+		float colour = upper * (1.0 - shank) * front + over(g.y, 0.84) * back;
+		float right = over(0.5, g.x);
+		return vec3((arms + shank) * front, colour * right, colour * (1.0 - right));
+	} else if (d == 19) {  // power97 (Port Adelaide 1997-2009): teal top, black below; claw slashes
+		// rising to the wearer's left shoulder, black through the teal and white through the black.
+		// The back: teal across the shoulders, white to mid-back, black below.
+		float v = 1.0 - g.y;
+		float top = over(g.y, 0.63);
+		float f = 1.18 * (g.x - 0.38) - (v - 0.55);
+		float w = clamp(f / 0.35, 0.0, 1.0) * 0.55;
+		float t = abs(fract((v + 1.7 * g.x) * 4.3) - 0.5) * 2.0;
+		float claw = over(w, 1.0 - t) * mix(1.0, over(g.x, 0.45), top);
+		vec2 f_cols = vec2(top * (1.0 - claw), (1.0 - top) * claw);
+		vec2 b_cols = vec2(over(g.y, 0.86), over(g.y, 0.45) * over(0.86, g.y));
+		return vec3(f_cols * front + b_cols * back, 0.0);
+	} else if (d == 20) {  // eagles00 (West Coast 2000-15): navy on the wearer's right, a white strip,
+		// gold on his left; the back navy, its lower third gold, white and navy.
+		vec2 f_cols = vec2(over(g.x, 0.48), over(g.x, 0.38) * over(0.48, g.x));
+		float low = over(0.38, g.y);
+		vec2 b_cols = vec2(over(g.x, 0.60), over(g.x, 0.48) * over(0.60, g.x)) * low;
+		return vec3(f_cols * front + b_cols * back, 0.0);
+	} else if (d == 21) {  // swans90 (Sydney 1990-91): white, a red yoke on the front with the Opera
+		// House sails hanging from it on the wearer's right, red down each side, a red back yoke.
+		float sail = 0.0;
+		for (int i = 0; i < 3; i++) {
+			sail = max(sail, clamp(1.0 - abs(g.x - (0.20 + 0.10 * float(i))) / 0.05, 0.0, 1.0));
+		}
+		float yoke = over(g.y, 0.72 - 0.17 * sail) * front + over(g.y, 0.84) * back;
+		return vec3(max(yoke, over(ax, 0.42)), 0.0, 0.0);
+	} else if (d == 22) {  // giants12 (GWS 2012-20): orange top; charcoal below, cut on the wearer's
+		// right by a white G with its bar. The back orange, charcoal down the sides.
+		float v = 1.0 - g.y;
+		float low = over(v, 0.38);
+		float white = low * over(0.48 - 1.2 * (v - 0.38), g.x);
+		white *= 1.0 - over(v, 0.50) * over(0.57, v) * over(g.x, 0.06);
+		vec2 f_cols = vec2(low - white, white);
+		vec2 b_cols = vec2(over(ax, 0.42) * over(0.65, g.y), 0.0);
+		return vec3(f_cols * front + b_cols * back, 0.0);
+	} else if (d == 23) {  // saints97 (St Kilda 1997-2001): a black cross on the front, a white panel
+		// under its arms to a V; the back black above, red below.
+		float bottom = 0.22 + 0.36 * ax;
+		float bar = over(0.06, ax) * over(g.y, bottom);
+		float black = max(bar, over(g.y, 0.52) * over(0.70, g.y));
+		float white = over(g.y, bottom) * over(0.52, g.y) * (1.0 - bar);
+		return vec3(black * front + over(g.y, 0.42) * back, white * front, 0.0);
+	} else if (d == 24) {  // lions10 (Brisbane Lions 2010-13): the top in the pattern colour to mid-chest;
+		// on the back only across the shoulders.
+		return vec3(over(g.y, 0.42) * front + over(g.y, 0.86) * back, 0.0, 0.0);
+	} else if (d == 25) {  // dogs90 (Footscray 1990-96): a wide pattern hoop round the middle, edged
+		// in the second colour.
+		float hoop = over(g.y, 0.392) * over(0.540, g.y);
+		float edge = over(g.y, 0.349) * over(0.392, g.y) + over(g.y, 0.540) * over(0.578, g.y);
+		return vec3(hoop, edge, 0.0);
+	} else if (d == 26) {  // dogs97 (Western Bulldogs 1997-2011): a pattern hoop across the chest edged
+		// in the second colour; the back in the pattern colour above it.
+		float hoop = over(g.y, 0.590) * over(0.705, g.y) * front + over(g.y, 0.590) * back;
+		float edge = over(g.y, 0.572) * over(0.590, g.y) + over(g.y, 0.705) * over(0.723, g.y) * front;
+		return vec3(hoop, edge, 0.0);
+	} else if (d == 27) {  // crows06 (Adelaide 2006-09): the low hoops, cut on the front by base-colour
+		// panels down each side that sweep in towards the hem.
+		float side = over(ax, 0.36 + 0.14 * clamp((g.y - 0.2) / 0.37, 0.0, 1.0));
+		float k = 0.36 - 0.9 * (0.2 - g.y);
+		float sweep = over(0.035, abs(ax - k));
+		float cut = mix(sweep, side, over(g.y, 0.2)) * front;
+		return vec3(design_core(14, g) * (1.0 - cut), 0.0);
+	}
+	return vec3(0.0);
 }
 
 // The number printed on the back: x = 1 where it's drawn (alpha), rgb its colour.
@@ -254,9 +343,10 @@ void fragment() {
 		} else {
 			int tone = clamp(int(round(looks.g * 8.0)), 0, 7);
 			int hair = clamp(int(round(looks.b * 8.0)), 0, 7);
-			vec2 p = design(int(round(kit_design[kit])), g) * m.a;
+			vec3 p = design(int(round(kit_design[kit])), g) * m.a;
 			vec3 base = kit_base[kit].rgb, pat = kit_pattern[kit].rgb, pat2 = kit_pattern2[kit].rgb;
-			vec3 kit_col = base * m.r + (pat - base) * p.x + (pat2 - base) * p.y;
+			vec3 pat3 = kit_pattern3[kit].rgb;
+			vec3 kit_col = base * m.r + (pat - base) * p.x + (pat2 - base) * p.y + (pat3 - base) * p.z;
 			float rest = clamp(1.0 - (m.r + m.g + m.b + s.g + s.b), 0.0, 1.0);
 			// Off the guernsey the design sheet carries G = height up the sock (0 at the boot,
 			// 1 at its top); its alpha is how much of the pixel a long sleeve covers (the arm, and
@@ -269,8 +359,8 @@ void fragment() {
 			// the design sheet carries the guernsey's own coordinates, so the top of the shoulder
 			// (high up the guernsey) takes the colour the guernsey has there: a yoke runs on over it.
 			// Lower down the armhole the base colour, else stripes swept into a dotted edge.
-			vec2 q = design(int(round(kit_design[kit])), g);
-			vec3 edge_col = base + (pat - base) * q.x + (pat2 - base) * q.y;
+			vec3 q = design(int(round(kit_design[kit])), g);
+			vec3 edge_col = base + (pat - base) * q.x + (pat2 - base) * q.y + (pat3 - base) * q.z;
 			vec3 sleeve_col = mix(base, edge_col, smoothstep(0.78, 0.88, g.g));
 			vec3 skin = mix(skin_tones[tone].rgb, sleeve_col, sleeve);
 			vec3 col = kit_col + pat * m.g + skin * m.b
