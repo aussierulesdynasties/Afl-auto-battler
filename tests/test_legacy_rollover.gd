@@ -307,13 +307,8 @@ func _test_campaign() -> void:
 	_check(ExpansionBuild.building(GameState) == ["ADE"], "Adelaide builds its list by the expansion rules (%s)" % str(ExpansionBuild.building(GameState)))
 	# 1990 -> 1991: the clubs draft the real class.
 	_skip_season()
-	_check(GameState.begin_intake_draft(), "The 1990 intake draft opens")
-	var d: Draft = GameState.draft
-	while d != null and not d.is_finished():
-		var c := d._best_ai_pick(d.current_club())
-		if c.is_empty() or not d._draft_pick(d.current_club(), c):
-			d._skip_current_pick()
-	_check(GameState.finish_intake_draft(), "The 1990 intake draft closes and the season rolls over")
+	var offered := {}
+	_check(_draft_year(offered), "The 1990 intake draft runs and the season rolls over")
 	_check(GameState.season_year == 1991 and GameDB.active_clubs(1991).size() == 15,
 			"1991 has 15 clubs (%d in %d)" % [GameDB.active_clubs(GameState.season_year).size(), GameState.season_year])
 	var drafted := 0
@@ -322,29 +317,28 @@ func _test_campaign() -> void:
 			if str(p.get("id", "")).begins_with("R1990_"):
 				drafted += 1
 	_check(drafted >= 30, "The clubs took the real 1990 class (%d listed)" % drafted)
-	_entered("ADE", 1991)
+	_entered("ADE", 1991, offered)
 	# "there must be 0 missing players" (director, 2026-11-13): every real
-	# player of each class is on a list after its draft.
-	var listed := {}
-	_note_listed(listed)
-	_check(_unlisted(listed, 1990).is_empty(), "Every player of the real 1990 class is on a list (missing: %s)" % str(_unlisted(listed, 1990)))
+	# player of each class reaches the game, in his own year's draft. Who
+	# takes him is the save's (director, 2026-11-13: "its not possible unless
+	# we rig every draft? its an absurd thing").
+	_check(_not_offered(offered, 1990).is_empty(), "Every player of the real 1990 class is in the 1990 draft (missing: %s)" % str(_not_offered(offered, 1990)))
 	# On to 2012.
 	var lions_checked := false
 	while GameState.season_year < 2012:
 		var year := GameState.season_year
 		_skip_season()
-		if not GameState.start_next_season():
-			_check(false, "%d rolls over" % year)
+		if not _draft_year(offered):
+			_check(false, "%d's draft runs and the season rolls over" % year)
 			return
 		var now := GameState.season_year
-		_note_listed(listed)
-		var missing := _unlisted(listed, now - 1)
-		_check(missing.is_empty(), "Every player of the real %d class is on a list (%d missing: %s)" % [now - 1, missing.size(), str(missing.slice(0, 8))])
+		var missing := _not_offered(offered, year)
+		_check(missing.is_empty(), "Every player of the real %d class is in the %d draft (%d missing: %s)" % [year, year, missing.size(), str(missing.slice(0, 8))])
 		if now == 1996:
 			_check(GameState.news.any(func(n): return "merger talks" in str(n.get("text", ""))),
 					"The merger talks open before 1996")
 		if now == 1995 or now == 1997 or now == 2011 or now == 2012:
-			_entered({1995: "FRE", 1997: "PAD", 2011: "GCS", 2012: "GWS"}[now], now)
+			_entered({1995: "FRE", 1997: "PAD", 2011: "GCS", 2012: "GWS"}[now], now, offered)
 		if now == 1997:
 			lions_checked = true
 			_check(str(GameState.legacy.get("fitzroy", "")) == "merged", "Fitzroy, out of the finals, merge (%s)" % str(GameState.legacy))
@@ -379,22 +373,39 @@ func _test_campaign() -> void:
 
 
 ## Notes every real class player (id R<year>_) now on a list.
-func _note_listed(listed: Dictionary) -> void:
+func _draft_year(offered: Dictionary) -> bool:
+	if not GameState.begin_intake_draft():
+		return false
+	var d: Draft = GameState.draft
+	for p in d.pool:
+		offered[str(p.get("id", ""))] = true
+		offered[str(p.get("real_name", ""))] = true
+	var listed := 0
+	while d != null and not d.is_finished():
+		var c := d._best_ai_pick(d.current_club())
+		if c.is_empty() or not d._draft_pick(d.current_club(), c):
+			d._skip_current_pick()
+	var year := GameState.season_year
+	var ok := GameState.finish_intake_draft()
 	for code in GameState.league_lists:
 		for p in GameState.league_lists[code]:
-			if str(p.get("id", "")).begins_with("R"):
-				listed[str(p["id"])] = true
+			if str(p.get("id", "")).begins_with("R%d_" % year):
+				listed += 1
+				# A father-son pick is matched before the open pool is drawn.
+				offered[str(p.get("id", ""))] = true
+	print("  %d class: %d of %d listed by the save's clubs" % [year, listed, LegacyRollover.real_class(year).size()])
+	return ok
 
 
-## The real class of `year` that never reached a list, by name.
-func _unlisted(listed: Dictionary, year: int) -> Array:
-	return LegacyRollover.real_class(year).filter(func(p): return not listed.has(str(p["id"]))) 			.map(func(p): return "%s (%s)" % [str(p["real_name"]), str(p.get("tied_type", ""))])
+## The real class of `year` that was not in its own draft, by name.
+func _not_offered(offered: Dictionary, year: int) -> Array:
+	return LegacyRollover.real_class(year).filter(func(p): return not offered.has(str(p["id"]))) 			.map(func(p): return str(p["real_name"]))
 
 
 ## `code` enters `year` on a list built by the expansion rules, from the
 ## save: no player the save had elsewhere joins it because he really did
 ## (director, 2026-11-13). Its real state-league players are all in the game.
-func _entered(code: String, year: int) -> void:
+func _entered(code: String, year: int, offered: Dictionary) -> void:
 	var list: Array = GameState.league_lists.get(code, [])
 	_check(GameDB.active_clubs(year).has(code), "%s plays in %d" % [code, year])
 	_check(list.size() >= 30 and list.all(func(p): return str(p.get("club", code)) == code),
@@ -407,6 +418,8 @@ func _entered(code: String, year: int) -> void:
 			everywhere[str(p.get("real_name", ""))] = true
 	for p in GameState.draftee_pool:
 		everywhere[str(p.get("real_name", ""))] = true
+	for k in offered:
+		everywhere[k] = true
 	var lost := []
 	for r in GameDB._read_dicts(LegacyRollover.ENTRY_CSV):
 		if str(r["club"]) == code and int(r["year"]) == year:

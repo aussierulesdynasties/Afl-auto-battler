@@ -2463,7 +2463,10 @@ func begin_intake_draft() -> bool:
 
 	# A new club's extra picks, and the pick it must trade: made first, because
 	# that trade moves a player and the lists are measured next.
+	var before_room := draftee_pool.size()
 	var new_club_picks: Array = ExpansionBuild.draft_picks(self, GameDB.active_clubs(season_year).size(), open_pool.size())
+	# A real foundation player a new club makes room by is in this draft.
+	open_pool.append_array(draftee_pool.slice(before_room))
 
 	var sizes := {}
 	var role_counts := {}
