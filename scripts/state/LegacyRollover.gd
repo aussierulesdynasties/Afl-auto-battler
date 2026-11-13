@@ -650,7 +650,7 @@ static func canon_week(gs) -> void:
 
 
 ## The card (also for tests and captures).
-static func canon_card(gs, m: Dictionary, p: Dictionary, to_code: String) -> Dictionary:
+static func canon_card(_gs, m: Dictionary, p: Dictionary, to_code: String) -> Dictionary:
 	var who := GameDB.player_display_name(p)
 	var y := int(m["year"])
 	if str(m["kind"]) == "retire":
