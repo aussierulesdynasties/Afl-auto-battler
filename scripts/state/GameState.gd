@@ -8117,8 +8117,10 @@ func set_department_budget(area: String, level: int) -> Dictionary:
 		return {"ok": false, "reason": "Department funding is set during the off-season."}
 	if not ClubBudget.valid_area(area) or level < 0 or level >= ClubBudget.LEVELS.size():
 		return {"ok": false, "reason": "Unknown funding level."}
+	if department_budget_annual_m() < ClubBudget.ANNUAL_M and not can_set_department_budget(area, level):
+		return {"ok": false, "reason": "That allocation would exceed this year's $%.1fm club budget, after the league's fine." 				% department_budget_annual_m()}
 	if not can_set_department_budget(area, level):
-		return {"ok": false, "reason": "That allocation would exceed the $%.1fm annual club budget." % department_budget_annual_m()}
+		return {"ok": false, "reason": "That allocation would exceed the $%.1fm annual club budget." % ClubBudget.ANNUAL_M}
 	department_budget[area] = level
 	department_budget_year = season_year + 1
 	mark_dirty()

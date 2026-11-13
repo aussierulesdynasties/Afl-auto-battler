@@ -199,13 +199,19 @@ func _budget(body: VBoxContainer) -> void:
 	body.add_child(UiKit.lbl("Club budget · %d" % year, UiKit.NAME, UiKit.EMPH, true))
 	body.add_child(_para(
 			"$%.1fm to allocate for the football year. It resets next off-season; there is no bank balance to hoard." \
-			% GameState.department_budget_annual_m(), 13, UiKit.MUTED))
+			% ClubBudget.ANNUAL_M, 13, UiKit.MUTED))
 	var spent := GameState.department_budget_spent_m()
 	var remaining := GameState.department_budget_remaining_m()
 	var summary := UiKit.lbl("$%.1fm allocated  ·  $%.1fm remaining" % [spent, maxf(0.0, remaining)],
 			14, UiKit.TEXT, true)
 	summary.name = "BudgetSummary"
 	body.add_child(summary)
+	# A league fine (YearEvents) cuts this year's budget: say so beside the total.
+	var fine_cut := ClubBudget.ANNUAL_M - GameState.department_budget_annual_m()
+	if fine_cut > 0.001:
+		var fine := _para("The league's fine takes $%.1fm off this year's budget." % fine_cut, 13, UiKit.BAD)
+		fine.name = "BudgetFine"
+		body.add_child(fine)
 	body.add_child(UiKit.spacer(4))
 
 	for area in ClubBudget.AREA_ORDER:
