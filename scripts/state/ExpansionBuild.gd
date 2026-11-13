@@ -188,7 +188,7 @@ static func _better(a: Dictionary, b: Dictionary) -> bool:
 ## The player a new club would ask `club` about, or {}.
 static func _candidate(gs, club: String, bars: Dictionary) -> Dictionary:
 	var list: Array = gs.season.lists[club]
-	if list.size() <= Contracts.MIN_LIST:
+	if list.size() <= Contracts.min_list():
 		return {}
 	var best := {}
 	for p in Contracts.expiring(list):
@@ -378,7 +378,7 @@ static func _settle(gs, code: String, st: Dictionary, t: Dictionary) -> void:
 	for q in list:
 		if str(q["id"]) == str(t["id"]):
 			p = q
-	if p.is_empty() or not _available(gs, p) or list.size() <= Contracts.MIN_LIST \
+	if p.is_empty() or not _available(gs, p) or list.size() <= Contracts.min_list() \
 			or (st["signings"] as Array).size() >= Expansion.SIGNINGS \
 			or not RookieList.senior_spot_free(list_of(gs, code)):
 		t["status"] = "stayed"
@@ -579,7 +579,7 @@ static func forced_trade(gs, code: String, picks: Array, pick_no: int) -> void:
 		if str(club) == str(gs.my_club) or str(club) == code:
 			continue
 		var list: Array = gs.season.lists[club]
-		if list.size() <= Contracts.MIN_LIST:
+		if list.size() <= Contracts.min_list():
 			continue
 		var phase: String = gs.club_phase(str(club))
 		var most := TradeValue.pick_value([[pick_no, 1.0]], prospects, phase) \
