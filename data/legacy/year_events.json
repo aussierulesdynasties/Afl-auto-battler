@@ -3577,5 +3577,21 @@
   "beats": [
    "The league and the players have agreed in principle to replace the three-strikes drugs policy with match bans for public use and regular hair testing."
   ]
+ },
+ {
+  "id": "swans_stand_downs",
+  "rows": [
+   95
+  ],
+  "season": 2026,
+  "round": 22,
+  "clubs": [
+   "SYD"
+  ],
+  "controversy": true,
+  "headline": "Sydney stand players down",
+  "beats": [
+   "Sydney have stood five players down for the rest of the season, finals included, for breaching the club's standards."
+  ]
  }
 ]
