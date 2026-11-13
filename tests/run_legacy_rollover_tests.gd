@@ -40,15 +40,24 @@ func _tap_brand_card() -> String:
 	gs.start_season("BRL", db.club_list("BRL"))
 	gs.legacy = {"fitzroy": "stays"}
 	LegacyRollover.keep_fitzroy()
+	gs.set_setting("seen_weekly_loop_intro", true)
+	gs.media_conference = {}
 	db.apply_era(1997)
 	gs.week_events = []
 	LegacyRollover.week(gs)
 	router.go("hub")
-	for i in range(6):
+	# The hub loads on the Router's thread: wait for the card's sheet.
+	var sheet: Node = null
+	for i in range(900):
 		await process_frame
-	var sheet: Node = current_scene.find_child("EventSheet", true, false)
+		if current_scene != null:
+			sheet = current_scene.find_child("EventSheet", true, false)
+		if sheet != null:
+			break
+	for i in range(10):
+		await process_frame
 	if sheet == null:
-		return "The Bears-or-Lions card does not open on the hub"
+		return "The Bears-or-Lions card does not open on the hub (scene %s, %d cards)" % [str(current_scene), gs.week_events.size()]
 	var lions: Button = sheet.find_child("Event_0", true, false)
 	var why: String = (await Tap.tap(lions)) if lions != null else "missing"
 	for i in range(4):
