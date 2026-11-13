@@ -177,7 +177,16 @@ func _initial_draft(mode: String, interview := false) -> void:
 		board = board.filter(func(p): return d.can_pick_player(p))
 		if board.is_empty():
 			break
-		ui.call("_on_pick", board[0])
+		if mode == "off":
+			# Tips off has nothing to show between picks: the picks go to the
+			# draft itself, and the board is drawn once at the end.
+			d.pick(board[0])
+		else:
+			ui.call("_on_pick", board[0])
+	if mode == "off":
+		ui.call("_refresh")
+		await _settle()
+		_check(_tips(ui).is_empty(), "Tips off: no tip on the finished draft board")
 	_check(d.is_finished() and d.is_valid(), "The initial draft finishes with a valid list (%s)" % mode)
 	_walk(mode, "Initial draft: %d players taken, then Start season" % d.list().size())
 	_state.start_season(CLUB, d.list())

@@ -1755,10 +1755,22 @@ func _test_fixture_finals() -> void:
 	var fix = load("res://scripts/ui/stats/StatsFixture.gd")
 	_check(fix.pages(season).size() == _rounds() and season.finals.is_empty(),
 			"Before the finals the fixture is the home-and-away rounds only")
+	# Straight to the end of the home and away season: the fixture's finals
+	# pages are under test, not how the rounds before them were played, so the
+	# rounds left are given plain results by hand (home sides by ten points).
+	while season.results.size() < season.fixture.size():
+		var at: int = season.results.size()
+		var rnd := []
+		for m in season.fixture[at]:
+			var g := {"home": str(m["home"]), "away": str(m["away"]), "score": [80, 70],
+					"goals": [12, 10], "behinds": [8, 10], "round": at + 1}
+			season.record_regular(g)
+			rnd.append(g)
+		season.results.append(rnd)
+	season.round_index = season.fixture.size()
+	season.recalc_ladder()
+	_state.ensure_finals()
 	var guard := 0
-	while season.finals.is_empty() and guard < 40:
-		_state.advance()
-		guard += 1
 	var pgs: Array = fix.pages(season)
 	_check(pgs.size() == _rounds() + 1 and bool(pgs.back()["finals"]) and str(pgs.back()["title"]) == "Wildcard finals",
 			"The finals week to play joins the fixture once the finals start")

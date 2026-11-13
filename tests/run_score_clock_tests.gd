@@ -49,6 +49,12 @@ func _test_score_and_clock_stay() -> void:
 	_state.reset()
 	_state.replay_seed = SUITE_SEED
 	_state.start_season("COL", db.club_list("COL"))
+	# Only COL's match is under test: the round's other matches would play on
+	# threads behind it for the whole walk.
+	var rm: Array = _state.season.fixture[_state.season.round_index]
+	for fx in rm.duplicate():
+		if str(fx["home"]) != "COL" and str(fx["away"]) != "COL":
+			rm.erase(fx)
 	root.size = PHONE
 	_state.set_match_way("watch")
 	_check(_state.prepare_interactive_match(), "A live match is prepared")
