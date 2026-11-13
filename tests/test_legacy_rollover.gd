@@ -392,7 +392,7 @@ func _test_campaign() -> void:
 			return
 		var now := GameState.season_year
 		var missing := _not_offered(offered, year)
-		_check(missing.is_empty(), "Every player of the real %d class is in the %d draft (%d missing: %s)" % [year, year, missing.size(), str(missing.slice(0, 8))])
+		_check(missing.is_empty(), "Every player of the real %d class is in the %d draft (%d missing: %s)" % [year, year, missing.size(), str(missing.slice(0, 8).map(func(n): return "%s (%s)" % [n, _where(n)]))])
 		if now == 1996:
 			_check(GameState.news.any(func(n): return "merger talks" in str(n.get("text", ""))),
 					"The merger talks open before 1996")
@@ -466,6 +466,28 @@ func _not_offered(offered: Dictionary, year: int) -> Array:
 	return LegacyRollover.real_class(year).filter(func(p): return not offered.has(str(p["id"]))) 			.map(func(p): return str(p["real_name"]))
 
 
+## Where the save has a real man now, for a failure message: his list, the
+## free agents, the draft pool, or his career's end.
+func _where(real_name: String) -> String:
+	var at := []
+	for code in GameState.league_lists:
+		for p in GameState.league_lists[code]:
+			if str(p.get("real_name", "")) == real_name:
+				at.append("%s list, %s" % [code, str(p.get("id", ""))])
+	for p in GameState.free_agents:
+		if str(p.get("real_name", "")) == real_name:
+			at.append("free agent, %s" % str(p.get("id", "")))
+	for p in GameState.draftee_pool:
+		if str(p.get("real_name", "")) == real_name:
+			at.append("pool, %s, draft_year %s%s" % [str(p.get("id", "")), str(p.get("draft_year", "")),
+					", drafted" if GameState.drafted_draftees.has(str(p.get("id", ""))) else ""])
+	for id in GameState.departed_names:
+		var card: Dictionary = GameState.departed_names[id]
+		if "%s %s" % [str(card.get("first", "")), str(card.get("last", ""))] == real_name or str(card.get("real_name", "")) == real_name:
+			at.append("gone %s in %s from %s" % [str(id), str(card.get("year", "")), str(card.get("club", ""))])
+	return "; ".join(at) if not at.is_empty() else "nowhere"
+
+
 ## `code` enters `year` on a list built by the expansion rules, from the
 ## save: no player the save had elsewhere joins it because he really did
 ## (director, 2026-11-13). Its real state-league players are all in the game.
@@ -490,7 +512,7 @@ func _entered(code: String, year: int, offered: Dictionary) -> void:
 			var nm := "%s %s" % [str(r["first"]), str(r["last"])]
 			if not everywhere.has(nm):
 				lost.append(nm)
-	_check(lost.is_empty(), "%s's real state-league players are all on a list or in the draft (lost: %s)" % [code, ", ".join(lost)])
+	_check(lost.is_empty(), "%s's real state-league players are all on a list or in the draft (lost: %s)" % [code, ", ".join(lost.map(func(n): return "%s (%s)" % [n, _where(n)]))])
 	_check(GameState.news.any(func(n): return "from the state leagues" in str(n.get("text", "")) and GameDB.club_name(code) in str(n.get("text", ""))),
 			"The news tells of %s's entry" % code)
 
