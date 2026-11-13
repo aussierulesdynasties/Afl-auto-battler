@@ -76,4 +76,5 @@ b_label="${arm_b:-base}"; [ -z "$arm_b" ] && [ -n "$a_root" ] && b_label="this b
 [ "$paired" = 1 ] && args+=("--b=$b_label")
 python "$root/tools/balance/balance_report.py" "${args[@]}" | tee "$out/report.md"
 # Paired: the margin of side i%2 (the side --coach, --side-plan and --plan-trait set), arm B against A.
-[ "$paired" = 1 ] && python3 "$root/tools/balance/side_compare.py" "$out" | tee -a "$out/report.md"
+# (an if, not &&: as the last line, a false test made a one-arm run exit 1)
+if [ "$paired" = 1 ]; then python3 "$root/tools/balance/side_compare.py" "$out" | tee -a "$out/report.md"; fi
