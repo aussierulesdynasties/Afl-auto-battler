@@ -1052,7 +1052,7 @@ func _save_meta() -> Dictionary:
 		elif season.is_regular_done():
 			stage = "Finals"
 		else:
-			stage = "Round %d" % (season.round_index + 1)
+			stage = season.round_name(season.round_index)
 	var club := my_club if my_club != "" else (draft.user_club if draft != null else "")
 	return {"club": club, "club_name": GameDB.club_name(club) if club != "" else "",
 			"year": season_year, "stage": stage,
@@ -5505,7 +5505,7 @@ func next_fixture_line() -> String:
 	if nxt.has("event"):
 		return "Next: %s, v %s at %s." % [season.round_label(season.round_index),
 				GameDB.club_name(str(nxt["code"])), GameDB.ground_shown(str(nxt["ground"]))]
-	return "Next: Round %d %s %s." % [season.round_index + 1,
+	return "Next: %s %s %s." % [season.round_name(season.round_index),
 			"v" if str(nxt["venue"]) == "home" else "at", GameDB.club_name(str(nxt["code"]))]
 
 
@@ -5954,7 +5954,7 @@ func banner_context(match: Dictionary) -> Dictionary:
 	var week := str(BANNER_FINALS.get(tag.substr(0, 2), "")) if tag != "" else ""
 	var regular := week == "" and season != null and not season.is_regular_done()
 	var last_round := regular and season.round_index == season.fixture.size() - 1
-	var round_label := str(match.get("label", "Round %d" % (season.round_index + 1) if season != null else ""))
+	var round_label := str(match.get("label", season.round_name(season.round_index) if season != null else ""))
 	var ctx := {
 		"home": home, "away": away, "us": us, "round": round_label,
 		"marquee": MarqueeGames.label(home, away), "final": week,
@@ -6827,7 +6827,7 @@ func _project_week(p: Dictionary, announce := true) -> Dictionary:
 	pr["weeks"] = int(pr.get("weeks", 0)) + 1
 	if int(pr["weeks"]) < PROJECT_WEEKS:
 		return {}
-	return _finish_project(p, announce, "Round %d" % maxi(1, season.round_index))
+	return _finish_project(p, announce, season.round_name(maxi(0, season.round_index - 1)))
 
 
 ## The verdict on his project, at PROJECT_WEEKS or when the season ends first:
@@ -6861,7 +6861,7 @@ func _finish_project(p: Dictionary, announce := true, at := "Season end") -> Dic
 	var a := "an" if word.substr(0, 1) in ["a", "e", "i", "o", "u"] else "a"
 	var talk := _dev_talk_for(p, job)
 	var said := str(talk.get("said", ""))
-	var told := "Round %d" % int(talk.get("round", 0))
+	var told := season.round_name(int(talk.get("round", 1)) - 1) if season != null else "Round %d" % int(talk.get("round", 0))
 	if said != "":
 		_dev_talk_out(p, "learned" if learned else "not taken")
 	if learned and said == "promise" and at != "Season end":
@@ -6965,7 +6965,7 @@ func dev_talk(p: Dictionary, said: String) -> void:
 	var round_no := season.round_index + 1
 	p["dev_talk"] = {"year": season_year, "round": round_no, "job": job, "role": project_role(p),
 			"said": said, "state": "heard"}
-	CareerFacts.add(career_facts, str(p["id"]), CareerFacts.row(season_year, "Round %d" % round_no, "talk",
+	CareerFacts.add(career_facts, str(p["id"]), CareerFacts.row(season_year, season.round_name(round_no - 1), "talk",
 			my_club, "project|" + said, "heard"))
 	mark_dirty()
 
@@ -13008,11 +13008,9 @@ func _ground_rename_news() -> void:
 			homes[g] = []
 		(homes[g] as Array).append(str(code))
 	var used := homes.keys()
-	var gather := season.gather_round()
 	for i in range(season.fixture.size()):
 		for m in season.fixture[i]:
-			var v := GameDB.ground_key(season.round_venue(i, str(m["home"]), str(m["away"])) if i == gather
-					else season.home_ground(str(m["home"])))
+			var v := GameDB.ground_key(season.round_venue(i, str(m["home"]), str(m["away"])))
 			if not used.has(v):
 				used.append(v)
 	var gf := GameDB.ground_key(season.grand_final_venue())
@@ -13025,7 +13023,9 @@ func _ground_rename_news() -> void:
 		var now := GameDB.ground_name(str(g), season_year)
 		var clubs: Array = homes.get(g, [])
 		var names := PackedStringArray(clubs.map(func(c): return GameDB.club_name(str(c))))
-		var text := "%s takes a new name this season: from Round 1 it is %s" % [old, now]
+		var first := season.round_name(0)
+		var text := "%s takes a new name this season: from %s it is %s" % [old,
+				"the " + first if first == "Opening Round" else first, now]
 		if names.size() > 0:
 			text += ", home of %s" % " and ".join(names)
 		add_news("ground", text + ".", "Pre-season", {"club": str(clubs[0]) if clubs.size() > 0 else "",
@@ -13978,7 +13978,7 @@ func _press_opinion(kind: String, his: Dictionary, move: int, round_no: int) -> 
 	var pid := str(his.get("id", ""))
 	var key := Trust.player_key(pid)
 	var from := Trust.value(relations, key)
-	var when := last_label if last_label != "" else "Round %d" % round_no
+	var when := last_label if last_label != "" else (season.round_name(round_no - 1) if season != null else "Round %d" % round_no)
 	var callouts: Dictionary = media_memory.get("callouts", {})
 	var owed: Array = callouts.get(pid, [])
 	if kind == "criticise_named" and move < 0:
@@ -14131,7 +14131,7 @@ func skip_progress() -> String:
 	if season == null:
 		return ""
 	if not season.is_regular_done():
-		return "Playing Round %d of %d..." % [season.round_index + 1, season.fixture.size()]
+		return "Playing %s..." % season.round_progress(season.round_index)
 	return "Playing the finals..."
 
 
@@ -14228,7 +14228,7 @@ func _settle_week_event() -> void:
 			board["confidence"] = clampi(board_confidence() + int(cost["board"]), 0, 100)
 		if int(cost.get("trust", 0)) != 0 and str(card.get("player_id", "")) != "":
 			var facts: Dictionary = card.get("facts", {})
-			var when := "Round %d" % int(facts.get("round", 0)) if int(facts.get("finals_week", 0)) == 0 else "Finals"
+			var when := season.round_name(int(facts.get("round", 1)) - 1) if int(facts.get("finals_week", 0)) == 0 else "Finals"
 			Trust.change(relations, Trust.player_key(str(card["player_id"])), int(cost["trust"]),
 					str(cost.get("why", "You said nothing")), int(season_year), when)
 		card["resolved"] = true
@@ -15277,9 +15277,9 @@ func _back_from(p: Dictionary) -> String:
 	if inj.is_empty():
 		return ""
 	var f: Dictionary = inj[-1]
-	if int(f["y"]) != season_year or not str(f["at"]).begins_with("Round"):
+	var hurt := season.round_of_label(str(f["at"])) if season != null else 0
+	if int(f["y"]) != season_year or hurt == 0:
 		return ""
-	var hurt := str(f["at"]).trim_prefix("Round ").to_int()
 	var lg = p.get("last_game", [])
 	var last := int(lg[1]) if lg is Array and (lg as Array).size() == 2 and int(lg[0]) == season_year else 0
 	if hurt < last:
@@ -15350,7 +15350,7 @@ func _explain_outcome(name: String, e: Dictionary) -> String:
 ## and what you said ("dropped|promise"); out is settled after your next match.
 func _note_talk(p: Dictionary, said: String, case := "mood") -> void:
 	CareerFacts.add(career_facts, str(p["id"]), CareerFacts.row(season_year,
-			"Round %d" % (season.round_index + 1), "talk", my_club,
+			season.round_name(season.round_index), "talk", my_club,
 			"%s|%s" % [case if case != "" else "mood", said], ""))
 
 
