@@ -2011,11 +2011,17 @@ func _test_night_trades_never_name_called_picks() -> void:
 			for pk in GameState.club_picks(str(code)):
 				if int(pk["year"]) == year and int(pk["spot"]) < clock:
 					bad.append("%s holds made pick %d at pick %d" % [code, int(pk["spot"]), clock])
-		# A pick already made cannot be put up, by you or for you.
+		# A pick already made cannot be put up, by you or for you. (A compensation
+		# pick has no id of its own: its round and club name the club's regular
+		# pick, which may still be to come.)
+		var comp := {}
+		for c in d.comp_picks:
+			comp[int(c["index"])] = true
 		for i in range(int(d.pick_index)):
 			var id := GameState.pick_id(year, int(d.pick_rounds[i]), str(d.pick_origin[i]))
-			if not GameState.pick_asset(id).is_empty():
-				bad.append("made pick %d is still an asset at pick %d" % [i + 1, clock])
+			var pk := GameState.pick_asset(id)
+			if not pk.is_empty() and (not comp.has(i) or int(pk["spot"]) < clock):
+				bad.append("made pick %d is still an asset (as pick %d) at pick %d" % [i + 1, int(pk["spot"]), clock])
 		# Offers rivals put to you for this pick: picks still to come, in words too.
 		GameState.make_night_offers()
 		for i in GameState.open_trade_offers():
@@ -2060,7 +2066,7 @@ func _test_night_trades_never_name_called_picks() -> void:
 	d.pick_history = [{"pick": 1, "club": me}, {"pick": 2, "club": me}, {"pick": 4, "club": me}, {"pick": 5, "club": me}]
 	d.night_trades = [{"at": 4, "buyer": me, "seller": me, "text": ""}]
 	var gap: Array = scene.call("_night_events", 4)
-	var gap_ok := gap.size() == 5 and gap[2].has("buyer") and int(gap[3]["pick"]) == 4
+	var gap_ok: bool = gap.size() == 5 and (gap[2] as Dictionary).has("buyer") and int(gap[3]["pick"]) == 4
 	d.pick_history = hist
 	d.night_trades = trades
 	scene.free()
