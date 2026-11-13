@@ -404,7 +404,25 @@ func _test_offseason_flow() -> void:
 	_check(GameState.offseason_open() and GameState.salary_cap > 0,
 			"The off-season, cap and free agents survive a save")
 
-	GameState.start_next_season()
+	# The rollover goes through the National Draft, as the game's does
+	# (Hub, SeasonReview): a list's retirees leave at the rollover whatever
+	# its size, and the draft is where it fills their places.
+	if GameState.begin_intake_draft():
+		var draft: Draft = GameState.draft
+		var guard := 0
+		draft.auto_until_user_turn()
+		while not draft.is_finished() and guard < 4000:
+			guard += 1
+			if draft.is_user_turn() and draft.pass_block_reason() == "":
+				draft.user_pass()
+				continue
+			var cand := draft._best_ai_pick(draft.current_club())
+			if cand.is_empty() or not draft._draft_pick(draft.current_club(), cand):
+				draft._skip_current_pick()
+			draft.auto_until_user_turn()
+		GameState.finish_intake_draft()
+	else:
+		GameState.start_next_season()
 	var ticked := true
 	var sizes_ok := true
 	var off_sizes := []
