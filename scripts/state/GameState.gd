@@ -224,6 +224,13 @@ var _named_this_round := {}
 var board_patience := "fair"     # this career's board dial (DifficultyDials step)
 var rival_recruiting := "shrewd" # this career's rival dial (DifficultyDials step)
 var tutorials := true            # this career's first-visit menu tips (Tutorials.gd)
+## The league's real controversies (YearEvents): chosen at New career, kept
+## with the career. On, a scandal's real penalty lands (fines, lost picks, a
+## finals ban); off, the scandals never happen. Saved.
+var controversies := true
+## The real year events of a legacy career (YearEvents.state): the ones fired,
+## and the penalties still running. Saved.
+var year_events := {}
 var postseason_intro_seen := false  # the first postseason's sheet: this career's, not the device's
 ## The first season you coach from its start (0: none yet). Years played
 ## without you (sim-ahead, waiting for Tasmania, pre-made histories) close
@@ -931,6 +938,8 @@ func _save_state() -> Dictionary:
 		"board_patience": board_patience,
 		"rival_recruiting": rival_recruiting,
 		"tutorials": tutorials,
+		"controversies": controversies,
+		"year_events": year_events,
 		"postseason_intro_seen": postseason_intro_seen,
 		"my_first_season": my_first_season,
 		"board": board,
@@ -1226,6 +1235,8 @@ func _restore_career(state: Dictionary) -> bool:
 	rival_recruiting = DifficultyDials.normalize(DifficultyDials.RIVALS,
 			str(state.get("rival_recruiting", legacy[DifficultyDials.RIVALS])))
 	tutorials = bool(state.get("tutorials", true))
+	controversies = bool(state.get("controversies", true))
+	year_events = state.get("year_events", {}) if state.get("year_events", {}) is Dictionary else {}
 	# A save from before this field is past being a fresh career.
 	postseason_intro_seen = bool(state.get("postseason_intro_seen", true))
 	# A save from before this field: a club you hold outside the years played
@@ -1810,6 +1821,8 @@ func reset(next_dataset := Datasets.DEFAULT) -> void:
 	board_patience = new_career_dial(DifficultyDials.BOARD)
 	rival_recruiting = new_career_dial(DifficultyDials.RIVALS)
 	tutorials = new_career_tutorials()
+	controversies = new_career_controversies()
+	year_events = {}
 	# A seeded run (replay_seed, the tests) needs a seeded career too: this
 	# seed picks every club's conditioning timing, staff and prospects, and a
 	# random one made the same league play out differently each run.
@@ -3444,7 +3457,7 @@ func _clear_pending() -> void:
 ## show your qualifying or elimination final straight away.
 func ensure_finals() -> void:
 	if season != null and season.is_regular_done() and season.finals.is_empty():
-		season.start_finals()
+		season.start_finals(YearEvents.finals_banned(self))
 
 
 ## advance() with the week's matches run on threads while the screen keeps
@@ -8052,6 +8065,17 @@ func _ensure_department_budget() -> void:
 	var clean := ClubBudget.defaults()
 	for area in ClubBudget.AREA_ORDER:
 		clean[area] = ClubBudget.clamp_level(int(department_budget.get(area, ClubBudget.STANDARD)))
+	# A fine's cut can leave the allocation over the year's budget: the
+	# best-funded area steps down until it fits.
+	var cap := department_budget_annual_m()
+	while ClubBudget.total_m(clean) > cap + 0.001:
+		var top := ""
+		for area in ClubBudget.AREA_ORDER:
+			if int(clean[area]) > 0 and (top == "" or int(clean[area]) > int(clean[top])):
+				top = area
+		if top == "":
+			break
+		clean[top] = int(clean[top]) - 1
 	department_budget = clean
 
 
@@ -8066,7 +8090,14 @@ func department_budget_spent_m() -> float:
 
 
 func department_budget_remaining_m() -> float:
-	return ClubBudget.ANNUAL_M - department_budget_spent_m()
+	return department_budget_annual_m() - department_budget_spent_m()
+
+
+## What the board gives for the football year being set: $10.5m, less a
+## league fine's cut (YearEvents) that year.
+func department_budget_annual_m() -> float:
+	var year := season_year + (1 if season_closed() else 0)
+	return ClubBudget.ANNUAL_M - YearEvents.budget_cut_m(self, year)
 
 
 func can_set_department_budget(area: String, level: int) -> bool:
@@ -8075,7 +8106,7 @@ func can_set_department_budget(area: String, level: int) -> bool:
 	_ensure_department_budget()
 	var trial: Dictionary = department_budget.duplicate()
 	trial[area] = level
-	return ClubBudget.total_m(trial) <= ClubBudget.ANNUAL_M + 0.001
+	return ClubBudget.total_m(trial) <= department_budget_annual_m() + 0.001
 
 
 ## Set one department for the coming season. The allocation can only be
@@ -8087,7 +8118,7 @@ func set_department_budget(area: String, level: int) -> Dictionary:
 	if not ClubBudget.valid_area(area) or level < 0 or level >= ClubBudget.LEVELS.size():
 		return {"ok": false, "reason": "Unknown funding level."}
 	if not can_set_department_budget(area, level):
-		return {"ok": false, "reason": "That allocation would exceed the $%.1fm annual club budget." % ClubBudget.ANNUAL_M}
+		return {"ok": false, "reason": "That allocation would exceed the $%.1fm annual club budget." % department_budget_annual_m()}
 	department_budget[area] = level
 	department_budget_year = season_year + 1
 	mark_dirty()
@@ -9637,6 +9668,11 @@ func evaluate_trade(club: String, mine: Array, theirs: Array) -> Dictionary:
 		return {"ok": false, "code": str(bad["code"]), "reason": str(bad["error"])}
 	var give: Array = g["assets"]
 	var take: Array = t["assets"]
+	if _trade_ban_breaks(my_club, club, take, give):
+		var who := my_club if YearEvents.trade_banned(self, my_club) else club
+		return {"ok": false, "code": "trade_banned",
+				"reason": "The league has barred %s from trading players in until after %d." % [
+				GameDB.club_name(who), int((year_events.get("trade_bans", {}) as Dictionary).get(who, season_year))]}
 	var wont := _wont_go(give, my_club)
 	if wont == "":
 		wont = _wont_go(take, club)
@@ -10349,13 +10385,25 @@ func _ai_trades(prospects: Dictionary) -> void:
 				var seller := str(club_of[str(target["id"])])
 				var most := _worth_to(buyer, target, prospects) / (1.0 + Contracts.TRADE_MARGIN)
 				var pkg := _negotiate(buyer, seller, target, _bids(buyer, most, prospects), prospects)
-				if pkg.is_empty():
+				if pkg.is_empty() or _trade_ban_breaks(buyer, seller, pkg, [target]):
 					continue
 				_log_ai_trade(buyer, seller, target, pkg, "")
 				done += 1
 				dealt = true
 				out.erase(buyer)
 				break
+
+
+## Would this deal bring a player into a club the league has barred from
+## trading players in (YearEvents)? `buyer` gets `got`, `seller` gets `pkg`.
+func _trade_ban_breaks(buyer: String, seller: String, pkg: Array, got: Array) -> bool:
+	for side in [[buyer, got], [seller, pkg]]:
+		if not YearEvents.trade_banned(self, str(side[0])):
+			continue
+		for a in side[1]:
+			if not Contracts.is_pick(a):
+				return true
+	return false
 
 
 ## A trade between two rival clubs: done, logged and in the news. `why`: the
@@ -10512,7 +10560,7 @@ func _requested_trades(prospects: Dictionary) -> void:
 				continue
 			var most := _worth_to(str(buyer), target, prospects) / (1.0 + Contracts.TRADE_MARGIN)
 			var pkg := _negotiate(str(buyer), seller, target, _bids(str(buyer), most, prospects), prospects)
-			if pkg.is_empty():
+			if pkg.is_empty() or _trade_ban_breaks(str(buyer), seller, pkg, [target]):
 				continue
 			_log_ai_trade(str(buyer), seller, target, pkg, str(ask["why"]))
 			break
@@ -12772,6 +12820,18 @@ func set_new_career_tutorials(on: bool) -> void:
 		tutorials = on
 
 
+## Controversies (director: "real penalties land", a switch at game
+## creation): chosen at New career, kept with the career.
+func new_career_controversies() -> bool:
+	return bool(get_setting("controversies", true))
+
+
+func set_new_career_controversies(on: bool) -> void:
+	set_setting("controversies", on)
+	if season == null:
+		controversies = on
+
+
 func tutorials_on() -> bool:
 	return tutorials
 
@@ -13840,9 +13900,14 @@ func _next_week_event() -> void:
 	ExpansionBuild.week(self)
 	_dev_promise_week()
 	week_events = []
+	# The league's real year events land whatever your week holds (a sacked
+	# coach's club still pays its fine); your club's cards come first.
+	var year_cards := YearEvents.week(self) if my_club != "" else []
 	if season == null or is_sacked() or not stories_on or my_club == "":
 		return
 	week_events = ClubStories.pick(self)
+	for i in range(year_cards.size() - 1, -1, -1):
+		week_events.push_front(year_cards[i])
 	ClubArcs.week(self)
 
 

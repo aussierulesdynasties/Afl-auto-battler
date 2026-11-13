@@ -199,7 +199,7 @@ func _budget(body: VBoxContainer) -> void:
 	body.add_child(UiKit.lbl("Club budget · %d" % year, UiKit.NAME, UiKit.EMPH, true))
 	body.add_child(_para(
 			"$%.1fm to allocate for the football year. It resets next off-season; there is no bank balance to hoard." \
-			% ClubBudget.ANNUAL_M, 13, UiKit.MUTED))
+			% GameState.department_budget_annual_m(), 13, UiKit.MUTED))
 	var spent := GameState.department_budget_spent_m()
 	var remaining := GameState.department_budget_remaining_m()
 	var summary := UiKit.lbl("$%.1fm allocated  ·  $%.1fm remaining" % [spent, maxf(0.0, remaining)],

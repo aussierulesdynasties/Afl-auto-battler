@@ -2162,6 +2162,8 @@ func _test_menu_and_career() -> void:
 	await _settle()
 	var tut_off = current_scene.find_child("Tutorials_off", true, false)
 	var tut_tap: String = await Tap.tap(tut_off) if tut_off != null else "missing"
+	var con_off = current_scene.find_child("Controversies_off", true, false)
+	var con_tap: String = await Tap.tap(con_off) if con_off != null else "missing"
 	var board_btn = current_scene.find_child("BoardPatience_ruthless", true, false)
 	var rival_btn = current_scene.find_child("RivalRecruiting_cutthroat", true, false)
 	var board_tap: String = await Tap.tap(board_btn) if board_btn != null else "missing"
@@ -2169,12 +2171,16 @@ func _test_menu_and_career() -> void:
 	root.size = win_was
 	await _settle()
 	_check(tut_tap == "", "New career offers Tutorials On/Off, and Off takes a real tap (%s)" % tut_tap)
+	_check(con_tap == "" and not _state.new_career_controversies(),
+			"New career offers Controversies On/Off, and Off takes a real tap (%s)" % con_tap)
 	_check(board_tap == "" and rival_tap == "", "Both difficulty dials take a real tap on a phone (%s %s)" % [board_tap, rival_tap])
 	current_scene.find_child("StartCareer", true, false).emit_signal("pressed")
 	await _settle()
 	_check(_router.current() == "draft", "Starting the career goes on to choosing a club")
 	_check(_state.new_career_dial("board_patience") == "ruthless" and _state.board_patience == "ruthless"
 			and _state.rival_recruiting == "cutthroat", "The career starts with the picks made")
+	_check(not _state.controversies, "The career starts with Controversies off")
+	_state.set_setting("controversies", true)   # the next setup starts on again
 	var brought := false
 	for d in _state.draftee_pool:
 		brought = brought or (str(d["id"]) == _state.custom_prospect_id and str(d.get("last", "")) == "Forge")
