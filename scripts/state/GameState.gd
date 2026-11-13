@@ -104,6 +104,10 @@ var season_awards := {}          # the finished season's awards
 ## {"from": the first round recorded, "rounds": [{round, id, club}]}. A save
 ## from before nominations were recorded starts "from" its next round.
 var rising_star_noms := {"from": 1, "rounds": []}
+## Coach of the Year, one a season, given the week the home-and-away season
+## ends (CoachOfYear.gd): [{year, club, cid ("" for you), you, name, line,
+## when}], oldest first. An older save starts with none: never back-filled.
+var coach_of_year: Array = []
 ## This season's votes round by round, for the awards-night count
 ## (AwardsCount.gd): the Brownlow's match by match and your club's best and
 ## fairest. A save from before they were kept starts "from" its next round,
@@ -916,6 +920,7 @@ func _save_state() -> Dictionary:
 		"season_team": season_team,
 		"season_awards": season_awards,
 		"rising_star_noms": rising_star_noms,
+		"coach_of_year": coach_of_year,
 		"award_counts": award_counts,
 		"honour_roll": honour_roll,
 		"almanac": almanac,
@@ -1177,6 +1182,7 @@ func _restore_career(state: Dictionary) -> bool:
 	# unrecorded (never back-filled), and recording starts with the next one.
 	rising_star_noms = state.get("rising_star_noms",
 			{"from": season.round_index + 1 if season != null else 1, "rounds": []})
+	coach_of_year = state.get("coach_of_year") if state.get("coach_of_year") is Array else []
 	# The same for the count's votes: never back-filled from the totals.
 	award_counts = state.get("award_counts", AwardsCount.fresh(season_year, my_club,
 			season.round_index + 1 if season != null else 1))
@@ -1767,6 +1773,7 @@ func reset(next_dataset := Datasets.DEFAULT) -> void:
 	season_team = {}
 	season_awards = {}
 	rising_star_noms = {"from": 1, "rounds": []}
+	coach_of_year = []
 	award_counts = AwardsCount.fresh(season_year, my_club)
 	honour_roll = []
 	almanac = []
@@ -7251,6 +7258,7 @@ func _after_round(results: Array) -> void:
 	_record_award_counts(counted, results)
 	Milestones.record_round(self, results)
 	_nominate_rising_star(results)
+	_award_coach_of_year()
 	_round_news(results)
 	_record_match_story(results)
 	Almanac.update_club_records(self, results)
@@ -7362,6 +7370,54 @@ func _nominate_rising_star(results: Array) -> void:
 	(rising_star_noms["rounds"] as Array).append(pick)
 
 
+## Coach of the Year (CoachOfYear.gd), the week the home-and-away season
+## ends and before a final is played: finals never count (director,
+## 2026-11-13). Once a season; every senior coach eligible, yours included.
+func _award_coach_of_year() -> void:
+	if season == null or last_phase != "regular" or not season.is_regular_done():
+		return
+	if not coach_of_year.is_empty() and int((coach_of_year[-1] as Dictionary).get("year", 0)) == season_year:
+		return
+	var rows := season.ladder_sorted()
+	var n := rows.size()
+	var fin := season.finalists()
+	var facts := {}
+	for i in range(n):
+		var code := str(rows[i]["code"])
+		var expect := int(club_expect.get(code, ClubLife.default_rank(n)))
+		var goal: Dictionary = club_goals.get(code, ClubLife.board_goal(expect, 0, n, fin))
+		facts[code] = {"ladder": i + 1, "last": last_finish_of(code), "expect": expect,
+				"goal_met": ClubLife.goal_met(goal, i + 1, int(rows[i].get("w", 0)), n),
+				"streak": CoachOfYear.longest_streak(season.results, code)}
+	var club := CoachOfYear.pick(facts, n, fin, hash(["coach_of_year", season_year, career_seed, my_club]))
+	if club == "":
+		return
+	var you := club == my_club and my_club != ""
+	var cid := "" if you else str(Coaches.staff(coaches, club).get("SC", ""))
+	var name := coach_name if you else (GameDB.player_display_name(coaches[cid]) if coaches.has(cid) else "")
+	if name == "":
+		name = "the %s coach" % GameDB.club_name(club)
+	var why := CoachOfYear.line(facts[club], GameDB.club_name(club), n, fin)
+	coach_of_year.append({"year": season_year, "club": club, "cid": cid, "you": you,
+			"name": name, "line": why, "when": last_label})
+	if coaches.has(cid):
+		var c: Dictionary = coaches[cid]
+		if not c.has("coty"):
+			c["coty"] = []
+		(c["coty"] as Array).append(season_year)
+	var head := "You are the Coach of the Year." if you 			else "%s (%s) is the Coach of the Year." % [name, GameDB.club_name(club)]
+	add_news("award", "%s %s" % [head, why])
+
+
+## The seasons you were Coach of the Year in this save, oldest first.
+func my_coach_of_year_years() -> Array:
+	var out := []
+	for e in coach_of_year:
+		if bool((e as Dictionary).get("you", false)):
+			out.append(int(e.get("year", 0)))
+	return out
+
+
 func _close_season_awards() -> void:
 	var players := {}
 	for code in season.lists:
@@ -7399,6 +7455,9 @@ func _close_season_awards() -> void:
 		"coleman": (season_awards["coleman"] as Array).slice(0, 1),
 		"rising_star": (season_awards["rising_star"] as Array).slice(0, 1),
 		"coaches_award": (season_awards["coaches_award"] as Array).slice(0, 1),
+		# Given before the finals (CoachOfYear.gd); absent in a season played
+		# before the award existed: never back-filled.
+		"coach_of_year": _coach_of_year_for(season_year),
 		# Absent in a season played before the medal existed: never back-filled.
 		"norm_smith": [season_awards["norm_smith"]] if season_awards.has("norm_smith") else [],
 		# Absent in a season played before the Golden Fist existed: never back-filled.
@@ -7454,6 +7513,14 @@ func _close_season_awards() -> void:
 	# Its opening moved rival lists: a sacked coach's offers say them as they stand.
 	ClubMoves.restate_offers(self)
 	_season_news()
+
+
+## The season's Coach of the Year as a one-row array, [] when none was given.
+func _coach_of_year_for(year: int) -> Array:
+	for e in coach_of_year:
+		if int((e as Dictionary).get("year", 0)) == year:
+			return [e]
+	return []
 
 
 ## This season's Grand Final result, or {} before it is played.

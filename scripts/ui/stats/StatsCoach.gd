@@ -41,6 +41,13 @@ static func _record(v: Control) -> void:
 	l.name = "CoachRecordLine"
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(l)
+	# Coach of the Year (CoachOfYear.gd): the seasons you won it.
+	var coty := CoachSheet.coty_line({"coty": GameState.my_coach_of_year_years()})
+	if coty != "":
+		var won := UiKit.lbl(coty, UiKit.BODY, UiKit.TEXT, true)
+		won.name = "CoachOfYearLine"
+		won.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(won)
 
 
 static func _draftees(host: Control, v: Control) -> void:

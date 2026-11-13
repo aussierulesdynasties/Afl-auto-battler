@@ -74,6 +74,12 @@ static func open(host: Control, c: Dictionary, on_close: Callable = Callable()) 
 		v.add_child(list)
 		for s in stints:
 			list.add_child(_wrapped(_stint_line(s)))
+		var coty := coty_line(c)
+		if coty != "":
+			var won := _wrapped(coty)
+			won.name = "CoachOfYear"
+			won.add_theme_font_override("font", UiKit.BOLD)
+			list.add_child(won)
 		if str(c.get("origin", "")) == "seed":
 			v.add_child(UiKit.lbl("Records begin at Round 1, 2026.", UiKit.SMALL, UiKit.MUTED))
 
@@ -112,6 +118,15 @@ static func playing_lines(played: Dictionary) -> Array:
 		var n := int(bnf[club])
 		out.append(BestAndFairest.count_line(str(club), GameDB.club_name(str(club)), n))
 	return out
+
+
+## "Coach of the Year 2029, 2031": the seasons he won it in this save
+## (CoachOfYear.gd), "" when none.
+static func coty_line(c: Dictionary) -> String:
+	var years := PackedStringArray()
+	for y in c.get("coty", []):
+		years.append(str(int(y)))
+	return "" if years.is_empty() else "Coach of the Year %s" % ", ".join(years)
 
 
 ## A career line that wraps on a narrow phone instead of widening the sheet.
