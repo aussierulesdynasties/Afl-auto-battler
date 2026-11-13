@@ -401,7 +401,12 @@ static func age_league(lists: Dictionary, year: int) -> Dictionary:
 			var go := should_retire(p, year) or int(p.get("retiring", 0)) == year
 			if int(p.get("play_on", 0)) == year:
 				go = false
-			if go and arr.size() - dropped > MIN_LIST and dropped < MAX_RETIRE_PER_CLUB:
+			# Never held back by the list size: the draft makes every club,
+			# yours included, fill the places its retirees leave
+			# (Draft.leaving), so a list that passes at the minimum still
+			# turns over (2026-11-13: a coach who passed every draft kept
+			# the same 32 for 36 years).
+			if go and dropped < MAX_RETIRE_PER_CLUB:
 				dropped += 1
 				retired.append({"id": str(p["id"]), "name": str(p.get("generic_name", p.get("name", "Player"))),
 						"club": str(code), "age": float(p.get("age", 26.0)),
@@ -416,6 +421,13 @@ static func age_league(lists: Dictionary, year: int) -> Dictionary:
 static func should_retire(p: Dictionary, year: int) -> bool:
 	var age := float(p.get("age", 26.0))
 	var ov := int(p.get("overall", 50))
+	# A real player of a Legacy start retires about when he did (director,
+	# 2026-11-13: "make all historical players retirement start roughly when
+	# it did irl"), a year either side, whatever his age or rating; a coach
+	# can still talk him round (Retirement). Still listed in 2025: the sim's.
+	var last := int(p.get("real_last", 0))
+	if last > 0:
+		return year > last + real_slack(p)
 	if ov <= 32:
 		return true
 	if age >= 37.0:
@@ -425,6 +437,13 @@ static func should_retire(p: Dictionary, year: int) -> bool:
 	if age >= 33.0 and ov < 42:
 		return _rng_for("%s|r%d" % [str(p["id"]), year]).randf() < 0.30
 	return false
+
+
+## How far his retirement falls from his real one: -1, 0 or +1 seasons
+## (one in four early, one in four late), fixed for him by his id.
+static func real_slack(p: Dictionary) -> int:
+	var r := _rng_for("%s|real_last" % str(p.get("id", ""))).randf()
+	return -1 if r < 0.25 else (1 if r >= 0.75 else 0)
 
 
 ## Age one player by a year and apply the development band. Returns the
