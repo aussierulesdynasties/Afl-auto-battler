@@ -124,10 +124,25 @@ def careers(by_year):
     return out
 
 
+def last_seasons(by_year):
+    """{afltables_id: his real final AFL season}, left out while he still
+    played in the last season on file (2025): the real-retirement mechanism
+    (director 2026-11-13: "make all historical players retirement start
+    roughly when it did irl") reads it."""
+    last = {}
+    for y, rows in by_year.items():
+        for r in rows:
+            if (B.num(r["gm"]) or 0) > 0:
+                last[r["afltables_id"]] = max(last.get(r["afltables_id"], 0), y)
+    final = max(by_year)
+    return {k: v for k, v in last.items() if v < final}
+
+
 def build(by_year, rated):
     lists = load_lists()
     match_ids(lists, by_year)
     before = careers(by_year)
+    ended = last_seasons(by_year)
     players, history, additions, add_stats = [], [], [], []
     for L in lists:
         club, pid = L["club"], L["afltables_id"]
@@ -158,11 +173,12 @@ def build(by_year, rated):
                             "slug": pid.rsplit("/", 1)[-1].replace(".html", ""),
                             "draft_year": dyear, "draft_type": dtype, "draft_pick": dpick,
                             "seasons": ";".join(seasons), "career": B.stints(before.get(pid, [])),
-                            "peak": peak or ""})
+                            "peak": peak or "", "last_season": ended.get(pid, "") if pid else ""})
         else:
             additions.append({"first": L["first"], "last": L["last"], "dob": L["dob"], "club": club,
                               "position": "", "height_cm": L["height_cm"], "list": L["list"],
-                              "peak": peak or "", "source_url": L["source_url"], "checked": L["checked"]})
+                              "peak": peak or "", "last_season": ended.get(pid, "") if pid else "",
+                              "source_url": L["source_url"], "checked": L["checked"]})
             latest = None
             for y in (2008, 2007):
                 got = rated.get(y, {}).get(pid) if pid else None
@@ -268,10 +284,11 @@ def main():
     os.makedirs(OUT_DIR, exist_ok=True)
     B.write(os.path.join(OUT_DIR, "players_2010.csv"), B.ENRICHED, players)
     B.write(os.path.join(OUT_DIR, "history_2010.csv"),
-            ["club", "num", "slug", "draft_year", "draft_type", "draft_pick", "seasons", "career", "peak"], history)
+            ["club", "num", "slug", "draft_year", "draft_type", "draft_pick", "seasons", "career", "peak",
+             "last_season"], history)
     B.write(os.path.join(OUT_DIR, "list_additions_2010.csv"),
-            ["first", "last", "dob", "club", "position", "height_cm", "list", "peak", "source_url", "checked"],
-            additions)
+            ["first", "last", "dob", "club", "position", "height_cm", "list", "peak", "last_season", "source_url",
+             "checked"], additions)
     B.write(os.path.join(OUT_DIR, "list_addition_stats_2010.csv"), B.ADD_STATS, add_stats)
     print("players %d, additions %d (%d with an earlier season)" % (len(players), len(additions), len(add_stats)))
     if a.report:

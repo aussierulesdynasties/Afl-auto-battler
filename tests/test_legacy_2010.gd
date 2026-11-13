@@ -5,6 +5,8 @@ extends RefCounted
 ## and rolls into 2011, where Gold Coast enter as the sim's own expansion.
 ## Run through tests/run_legacy_2010_tests.gd.
 
+const Ran := preload("res://tests/functions_ran.gd")
+
 var failures: Array[String] = []
 var checks := 0
 
@@ -19,13 +21,11 @@ func run() -> void:
 	_t("_test_start_2010")
 	_t("_test_rolls_into_2011")
 	GameState.reset()
-	print("legacy_2010: %d checks, %d failures" % [checks, failures.size()])
-	for f in failures:
-		print("  FAIL: " + f)
+	print(Ran.line("Legacy 2010", self))
 
 
-func _t(name: String) -> void:
-	call(name)
+func _t(test: String, args := []) -> Variant:
+	return await Ran.one(self, test, args)
 
 
 func _check(ok: bool, what: String) -> void:
@@ -93,14 +93,14 @@ func _test_start_2010() -> void:
 			"St Kilda start on their real 2010 list (%d of %d on it)" % [want.size() - missing, want.size()])
 	var names := {}
 	for p in GameState.my_list:
-		names[str(p.get("name", ""))] = int(p.get("overall", 0))
+		names[str(p.get("real_name", ""))] = int(p.get("overall", 0))
 	_check(names.has("Nick Riewoldt") and names.has("Lenny Hayes"),
 			"Riewoldt and Hayes are on it")
 	# Rated on 2009: Gary Ablett, the 2009 Brownlow medallist, is among the best.
 	var ablett := 0
 	var better := 0
 	for p in (GameState.season.lists["GEE"] as Array):
-		if str(p.get("name", "")) == "Gary Ablett":
+		if str(p.get("real_name", "")) == "Gary Ablett":
 			ablett = int(p.get("overall", 0))
 	for club in GameState.season.clubs:
 		for p in (GameState.season.lists[club] as Array):
