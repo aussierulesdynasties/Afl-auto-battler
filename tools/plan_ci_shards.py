@@ -39,7 +39,7 @@ def main():
     baseline = json.loads(timings_file.read_text())
     if args.timings_dir:
         times = {}
-        for file in pathlib.Path(args.timings_dir).rglob("*.tsv"):
+        for file in pathlib.Path(args.timings_dir).rglob("shard-*.tsv"):
             for line in file.read_text().splitlines():
                 suite, seconds = line.split("\t")
                 times[suite] = int(seconds)
