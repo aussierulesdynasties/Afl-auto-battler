@@ -431,6 +431,10 @@ static func _merge(gs, to_draft: bool) -> void:
 			p["fitzroy_left"] = true
 			p["contract_years"] = 0
 			p.erase("rookie_list")
+			# A leftover drafted in an earlier season (R1990_245) is in
+			# drafted_draftees from that draft: cleared, he can be drafted
+			# again, and age_pool keeps him instead of dropping him as taken.
+			gs.drafted_draftees.erase(str(p["id"]))
 			gs.draftee_pool.append(p)
 		else:
 			p["released_by"] = MERGED

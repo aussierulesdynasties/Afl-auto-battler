@@ -128,6 +128,11 @@ def main():
     seen = set(r["draftguru_id"] for r in read(os.path.join(LEG, "1990s", "lists_1990_opening.csv"))
                if r["draftguru_id"])
     seen_names = set()
+    # Who a career already has, by name: the 1990 lists, then each class as
+    # it is added. A redraft the source gives no draftguru id or date of
+    # birth (Andrew Peck, 1990 pre-season pick redrafted in 1991) is that
+    # same man, not a second prospect who could never be listed.
+    known_names = set((r["first"], r["last"]) for r in read(os.path.join(LEG, "1990s", "lists_1990_opening.csv")))
 
     drafts = [r for r in all_rows("drafts.csv")
               if r["draft"] in ("national", "rookie", "preseason") and r["pick"] and FIRST_CLASS <= int(r["year"]) <= LAST_DATA]
@@ -163,6 +168,8 @@ def main():
                 continue
             seen.add(key)
             b = bio.get(dg, {})
+            if not b.get("dob", "") and (r["first"], r["last"]) in known_names:
+                continue
             pid = b.get("afltables_id", "")
             # A running index: the class's order, unique and with no gaps
             # (skipped pre-entry picks and redrafts leave none).
@@ -176,6 +183,7 @@ def main():
                 "peak": peak_of(pid, rated, year + 1),
             })
             seen_names.add((r["first"], r["last"], dob))
+            known_names.add((r["first"], r["last"]))
         # Every real player reaches a list (director, 2026-11-13: "there must
         # be 0 missing players"). One the drafts above never bring in (a zone
         # selection, mid-season or supplemental pick, a father-son the source
@@ -196,6 +204,7 @@ def main():
                 "peak": peak_of(pid, rated, year + 1),
             })
             seen_names.add((r["first"], r["last"], r["dob"]))
+            known_names.add((r["first"], r["last"]))
     # The real 2026 class (the 2026 start's draft class) closes a campaign's run.
     n26 = 0
     for r in read(REAL_2026):
