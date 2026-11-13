@@ -214,6 +214,11 @@ func _run() -> void:
 		root.add_child(hub)
 		await _frames(240)
 		await _shot("5_hub_1991")
+		# The wrap covers the hub: lift it (without starting the season) for the news.
+		var wrap: Node = root.find_child("SeasonWrap", true, false)
+		if wrap != null:
+			wrap.queue_free()
+			await _frames(6)
 		if await _reveal("NewsCard"):
 			await _shot("5_hub_1991_news")
 		hub.queue_free()
