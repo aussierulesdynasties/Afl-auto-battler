@@ -12,6 +12,13 @@ extends RefCounted
 ## the first week of its season at or past its round; one with a round past the
 ## home-and-away season fires once that season is done, before the finals.
 ## Personal conduct names the club only, never a person.
+##
+## The supplements saga (2013's penalties and the 2016 season bans) has its own
+## New career switch, Supplements saga (GameState.supplements), apart from
+## Controversies (director, 2026-11-13: "its punishment (full 1 year ban of
+## list) is far more severe"): an event tagged "switch": "supplements" follows
+## that switch only. The banned players are real, named on the public record
+## (docs/research/supplements_bans_2016.md).
 
 const PATH := "res://data/legacy/year_events.json"
 ## A draft pick the league took away: no club holds it, and the draft skips it.
@@ -53,7 +60,7 @@ static func state(gs) -> Dictionary:
 	for k in ["done"]:
 		if not gs.year_events.has(k):
 			gs.year_events[k] = []
-	for k in ["trade_bans", "finals_bans", "budget_cuts"]:
+	for k in ["trade_bans", "finals_bans", "budget_cuts", "recorded", "season_bans"]:
 		if not gs.year_events.has(k):
 			gs.year_events[k] = {}
 	return gs.year_events
@@ -75,7 +82,7 @@ static func involved(e: Dictionary, year: int) -> Array:
 static func is_due(gs, e: Dictionary) -> bool:
 	if int(e.get("season", 0)) != int(gs.season_year):
 		return false
-	if bool(e.get("controversy", false)) and not bool(gs.controversies):
+	if not switched_on(gs, e):
 		return false
 	if (state(gs)["done"] as Array).has(str(e["id"])):
 		return false
@@ -84,12 +91,21 @@ static func is_due(gs, e: Dictionary) -> bool:
 	return gs.season.is_regular_done() or int(gs.season.round_index) >= int(e.get("round", 0))
 
 
+## Is the event's switch on? The supplements saga follows its own switch;
+## every other controversy follows Controversies.
+static func switched_on(gs, e: Dictionary) -> bool:
+	if str(e.get("switch", "")) == "supplements":
+		return bool(gs.supplements)
+	return not bool(e.get("controversy", false)) or bool(gs.controversies)
+
+
 ## This week: fire every event that is due. Returns the cards for your club.
 ## Penalties land whether or not you get the card (a sacked coach, stories off).
 static func week(gs) -> Array:
 	var cards := []
 	if gs.season == null:
 		return cards
+	lift_bans(gs)
 	for e in all():
 		if not is_due(gs, e):
 			continue
@@ -145,6 +161,16 @@ static func _penalty(gs, p: Dictionary) -> void:
 				(bans[key] as Array).append(club)
 		"trade_ban":
 			(state(gs)["trade_bans"] as Dictionary)[club] = int(p.get("until", gs.season_year))
+		"record_list":
+			# Who was at the club when it broke: a later ban reaches only them.
+			var ids := []
+			for q in gs.season.lists.get(club, []):
+				ids.append(str(q["id"]))
+			(state(gs)["recorded"] as Dictionary)[str(p.get("key", club))] = ids
+		"season_ban":
+			season_ban(gs, p)
+		"top_up":
+			top_up(gs, club, int(p.get("max", 0)))
 
 
 ## A fine as a cut to next season's football budget ($m): its share of that
@@ -207,3 +233,119 @@ static func budget_cut_m(gs, year: int) -> float:
 	if not (gs.year_events is Dictionary):
 		return 0.0
 	return float((gs.year_events.get("budget_cuts", {}) as Dictionary).get(str(year), 0.0))
+
+
+## The players a season ban names, found on this season's AFL lists by
+## surname and date of birth (a "Paddy" is a "Patrick" in some lists). Where
+## the career was running when the scandal broke (record_list), only players
+## on that club's list then are named: a save that sent one elsewhere first
+## never had him in the program. Where it broke before the career began,
+## every named player still listed. Returns [[club, player]].
+static func ban_targets(gs, p: Dictionary) -> Array:
+	var want := {}
+	for n in p.get("players", []):
+		want[_who(str(n.get("last", "")), str(n.get("dob", "")))] = true
+	var recorded: Dictionary = state(gs)["recorded"]
+	var key := str(p.get("key", ""))
+	var only: Array = recorded.get(key, []) if recorded.has(key) else []
+	var out := []
+	for code in gs.season.lists:
+		for q in gs.season.lists[code]:
+			if not want.has(_who(str(q.get("last", "")), str(q.get("dob", "")))):
+				continue
+			if recorded.has(key) and not only.has(str(q["id"])):
+				continue
+			out.append([str(code), q])
+	return out
+
+
+static func _who(last: String, dob: String) -> String:
+	return "%s|%s" % [last.to_lower().replace("'", "").strip_edges(), dob.strip_edges()]
+
+
+## Ban the named players for the whole of this season, finals included,
+## wherever they are listed now. They come back next season (lift_bans).
+static func season_ban(gs, p: Dictionary) -> void:
+	var year := int(gs.season_year)
+	var names: PackedStringArray = []
+	var ids := []
+	for hit in ban_targets(gs, p):
+		var q: Dictionary = hit[1]
+		q["season_ban"] = year
+		ids.append(str(q["id"]))
+		names.append("%s (%s)" % [GameDB.player_display_name(q), GameDB.club_short(str(hit[0]))])
+	(state(gs)["season_bans"] as Dictionary)[str(year)] = ids
+	if names.is_empty():
+		gs.add_news("league", "None of the banned players is on an AFL list this season.")
+	else:
+		gs.add_news("league", "Banned for all of %d: %s." % [year, ", ".join(names)])
+
+
+## Is he banned for this season (season_ban)?
+static func is_banned(q: Dictionary) -> bool:
+	return q.has("season_ban")
+
+
+## The first week of a season past a ban: the banned players are free again,
+## wherever they are now.
+static func lift_bans(gs) -> void:
+	var bans: Dictionary = state(gs)["season_bans"]
+	var done: PackedStringArray = []
+	for y in bans.keys():
+		if int(y) < int(gs.season_year):
+			done.append(str(y))
+	if done.is_empty():
+		return
+	var back := 0
+	var groups: Array = gs.season.lists.values()
+	groups.append(gs.free_agents)
+	for list in groups:
+		for q in list:
+			if (q as Dictionary).has("season_ban") and int(q["season_ban"]) < int(gs.season_year):
+				q.erase("season_ban")
+				back += 1
+	for y in done:
+		bans.erase(y)
+	if back > 0:
+		gs.add_news("league", "The players banned for %s are free to play again." % ", ".join(done))
+
+
+## The top-up rule (Essendon, 2016: up to ten players for the year): the
+## club signs one player for each of its own banned this season, at most
+## `most`, the best rated left in the pool the mid-season draft takes from
+## (unsigned free agents, passed-over prospects). Each is on the senior
+## minimum for this season only: out of contract at its end.
+static func top_up(gs, club: String, most: int) -> void:
+	if not gs.season.lists.has(club):
+		return
+	var banned := 0
+	for q in gs.season.lists[club]:
+		if is_banned(q):
+			banned += 1
+	var want := mini(banned, most)
+	var signed: PackedStringArray = []
+	for p in MidseasonDraft.pool(gs):
+		if signed.size() >= want:
+			break
+		if gs.free_agents.has(p):
+			gs.free_agents.erase(p)
+			for k in ["offers", "market_round", "market_log", "talks"]:
+				p.erase(k)
+		else:
+			gs.draftee_pool.erase(p)
+			gs.drafted_draftees[str(p["id"])] = club
+			gs._mark_drafted(p, "top_up", 0, club)
+			TeamFamiliarity.arrive_draftee(p)
+		if not p.has("xp"):
+			p["xp"] = 0
+			p["xp_games"] = 0
+		gs._join(club, p)
+		# This season only: the rollover takes one off, so he is out of contract.
+		p["contract_years"] = 1
+		p["salary"] = RookieList.senior_wage(int(gs.season_year))
+		p["top_up"] = int(gs.season_year)
+		Workload.reset({club: [p]})
+		signed.append(GameDB.player_display_name(p))
+	if not signed.is_empty():
+		gs.add_news("contract", "%s sign %d top-up player%s for %d: %s." % [GameDB.club_name(club), signed.size(),
+				"" if signed.size() == 1 else "s", int(gs.season_year), ", ".join(signed)])
