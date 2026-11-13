@@ -1607,6 +1607,7 @@ func _test_team_rating(sz: Vector2i) -> void:
 		# The numbers, once: every club against the selector and the AI's rule.
 		var rating_ok := true
 		var phase_ok := true
+		var ladder_ok := true
 		for code in _state.season.lists:
 			var list: Array = _state.season.lists[code]
 			var side: Dictionary = RT.select_side(list)
@@ -1625,15 +1626,19 @@ func _test_team_rating(sz: Vector2i) -> void:
 			var want: String = TV.phase(float(standing[0]), float(standing[1]), ages / float(maxi(1, both.size())))
 			var o: Dictionary = _state.team_outlook(code)
 			var words := {"contending": "Contender", "building": "Wildcard", "rebuilding": "Rebuilding"}
-			if str(o.get("phase", "")) != want or str(o.get("category", "")) != str(words[want]) 					or str(o.get("line", "")) != "%s. Team rating %d. On this list, %d in three years." % [words[want], int(o["rating"]), int(o["forecast"])]:
+			if str(o.get("phase", "")) != want or str(o.get("category", "")) != str(words[want]) 					or str(o.get("line", "")) != "%s. Team rating %.1f. On this list, %.1f in three years." % [words[want], float(o["rating"]), float(o["forecast"])]:
 				phase_ok = false
+			# The ladder's number (row 177), and three years on by the list's OVR move.
+			if not is_equal_approx(float(o["rating"]), snappedf(float(_state.club_strength(code)), 0.1)) 					or not is_equal_approx(float(o["forecast"]), snappedf(float(o["rating"]) + float(TR.forecast(list) - TR.rating(list)), 0.1)):
+				ladder_ok = false
 		# The words under a club on the hub (director, 2026-10-13), pinned to fixed values.
-		_check(TR.line("contending", 68, 65) == "Contender. Team rating 68. On this list, 65 in three years."
-				and TR.line("rebuilding", 65, 68) == "Rebuilding. Team rating 65. On this list, 68 in three years."
-				and TR.line("building", 70, 70) == "Wildcard. Team rating 70. On this list, 70 in three years.",
+		_check(TR.line("contending", 68.4, 65.4) == "Contender. Team rating 68.4. On this list, 65.4 in three years."
+				and TR.line("rebuilding", 65.0, 68.0) == "Rebuilding. Team rating 65.0. On this list, 68.0 in three years."
+				and TR.line("building", 70.2, 70.2) == "Wildcard. Team rating 70.2. On this list, 70.2 in three years.",
 				"The line under a club reads: category, team rating, then the rating in three years")
 		_check(rating_ok, "A club's rating is the mean OVR of the 22 the selector picks")
 		_check(phase_ok, "Its category is the phase the AI trades on, in words, for every club")
+		_check(ladder_ok, "Every club's team rating is the ladder's number, and its three-year rating on the same scale")
 		# The forecast only ever uses players on the list.
 		var some: Array = (_state.season.lists[_state.my_club] as Array).slice(0, 10)
 		var vals := []

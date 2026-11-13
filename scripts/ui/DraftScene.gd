@@ -2245,7 +2245,7 @@ func _refresh_order() -> void:
 		# Where the club is in its cycle and its list today (TeamRating).
 		var outlook := GameState.team_outlook(code)
 		if not outlook.is_empty():
-			var tl := UiKit.ellipsis("%s · %d" % [str(outlook["category"]), int(outlook["rating"])], UiKit.SMALL, UiKit.MUTED)
+			var tl := UiKit.ellipsis("%s · %.1f" % [str(outlook["category"]), float(outlook["rating"])], UiKit.SMALL, UiKit.MUTED)
 			tl.name = "OrderOutlook_%d" % index
 			v.add_child(tl)
 		var comp := _draft.comp_at(index)
