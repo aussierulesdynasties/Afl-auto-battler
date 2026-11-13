@@ -1,0 +1,465 @@
+[
+	{
+		"id": "fit_brunswick_street",
+		"club": "FIT",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["Back to Brunswick Street"],
+		"text": ["The old ground in the Edinburgh Gardens still has its grandstand, and the members want one session a year back there. The facilities are poor and the surface is patchy."],
+		"choices": [
+			{"key": "go", "label": "Train at Brunswick Street",
+			 "effects": [{"op": "board", "d": 5, "was": "members"}, {"op": "culture", "strand": "together", "d": 2, "why": "The group trained where the club began"}, {"op": "forgo_xp", "d": 4, "who": "all"}, {"op": "odds", "chance": 10, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "The rough surface left a few players sore."}],
+			 "result": "The old guard line the fence. The players feel the history."},
+			{"key": "stay", "label": "Keep training where the work gets done",
+			 "effects": [{"op": "xp", "d": 6, "who": "all"}, {"op": "board", "d": -3, "was": "members"}],
+			 "result": "A full session at the usual base. Some of the old guard feel forgotten."}
+		]
+	},
+	{
+		"id": "fit_marseillaise",
+		"club": "FIT",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"title": ["The new boys are miming the song"],
+		"text": ["The club song goes to the tune of La Marseillaise, and the new recruits are miming it in the rooms. The leaders want a song night before the next match."],
+		"choices": [
+			{"key": "night", "label": "Hold the song night",
+			 "effects": [{"op": "culture", "strand": "together", "d": 3, "why": "The whole group learnt the song together"}, {"op": "morale", "d": 3, "who": "all"}, {"op": "odds", "chance": 15, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "The song night ran late."}],
+			 "result": "By the end of the night even the new boys know every word."},
+			{"key": "later", "label": "Leave it to the leaders after the next win",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "morale", "d": -1, "who": "all"}],
+			 "result": "A normal week and early nights. The recruits stay outsiders a while longer."}
+		]
+	},
+	{
+		"id": "fit_merger_talk",
+		"club": "FIT",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["Merger talk in the papers"],
+		"text": ["A richer Melbourne club has floated a merger, and the back page has the two jumpers stitched together. The board wants your view before it answers."],
+		"choices": [
+			{"key": "talks", "label": "Back the board opening talks",
+			 "effects": [{"op": "board", "d": 6, "was": "funds"}, {"op": "culture", "strand": "together", "d": -3, "why": "The members will never forgive talk of a merger"}, {"op": "morale", "d": -4, "who": "all"}],
+			 "result": "The bank breathes easier. The players wonder whose list they'll be on."},
+			{"key": "alone", "label": "Say Fitzroy stands alone",
+			 "effects": [{"op": "culture", "strand": "together", "d": 3, "why": "The coach said Fitzroy stands alone"}, {"op": "morale", "d": 2, "who": "all"}, {"op": "board", "d": -5}],
+			 "result": "The members cheer you in the street. The board is left exposed, and the money is still short."},
+			{"key": "coach", "label": "Say nothing and coach",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "You kept the group on its football"}, {"op": "slow_start", "who": "side", "chance": 20, "on": "week"}],
+			 "result": "No comment. The rumour drags on all week."}
+		]
+	},
+	{
+		"id": "fit_lender_wants_money",
+		"club": "FIT",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["The lender wants its money"],
+		"text": ["A creditor who lent the club money in a bad year wants a repayment by month's end. The board says it can find it by selling a player, or by cutting the football department."],
+		"choices": [
+			{"key": "cut", "label": "Cut the football department",
+			 "effects": [{"op": "board", "d": 4, "was": "funds"}, {"op": "forgo_xp", "d": 6, "who": "all"}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "The debt is met and the list stays whole. Fewer coaches, less recovery staff."},
+			{"key": "sell", "label": "Shop a senior player for cash",
+			 "effects": [{"op": "board", "d": 4, "was": "funds"}, {"op": "xp", "d": 4, "who": "all"}, {"op": "culture", "strand": "standards", "d": -3, "why": "The club sold a leader to pay a bill"}, {"op": "morale", "d": -4, "who": "all"}],
+			 "result": "The debt is met with money to spare. A young player gets his chance, and the rooms lose a leader."},
+			{"key": "members", "label": "Ask the members to dig deep",
+			 "effects": [{"op": "odds", "chance": 60, "hit": [{"op": "board", "d": 6, "was": "funds"}, {"op": "culture", "strand": "together", "d": 2, "why": "The members dug deep for their club"}], "miss": [{"op": "board", "d": -6}], "hit_result": "The members raise it, every dollar.", "miss_result": "The appeal falls short, and the board looks desperate."}],
+			 "result": "The appeal goes out to every member."}
+		]
+	},
+	{
+		"id": "fit_best_and_fairest_offer",
+		"club": "FIT",
+		"controversy": false,
+		"category": "contracts",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["A rich club wants our best and fairest"],
+		"text": ["A cashed-up rival has offered your best and fairest a long deal worth twice what Fitzroy can pay. He says he wants to stay, but he has a family to look after."],
+		"choices": [
+			{"key": "match", "label": "Match it, whatever it costs",
+			 "effects": [{"op": "morale", "d": 4, "who": "all"}, {"op": "board", "d": -6, "was": "funds"}, {"op": "slow_start", "who": "side", "chance": 15, "on": "week"}],
+			 "result": "He stays, and the group sees the club fight for its own. The salary bill bites."},
+			{"key": "trade", "label": "Wish him well and take the trade",
+			 "effects": [{"op": "board", "d": 4, "was": "funds"}, {"op": "culture", "strand": "together", "d": -2, "why": "The members hurt to see their best player go"}, {"op": "morale", "d": -3, "who": "all"}],
+			 "result": "He goes, with the club's blessing. The budget has room again."}
+		]
+	},
+	{
+		"id": "fit_homeless_again",
+		"club": "FIT",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["Homeless again"],
+		"text": ["The landlord club has raised the rent on the shared ground and pushed Fitzroy into the worst training slots. A suburban council has offered its oval cheaply, a long way from the heartland."],
+		"choices": [
+			{"key": "move", "label": "Move training to the suburbs",
+			 "effects": [{"op": "xp", "d": 3, "who": "all"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "Cheaper, and the players have the ground to themselves. The inner-north members are cut off."},
+			{"key": "stay", "label": "Pay up and stay",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The club stayed close to its heartland"}, {"op": "board", "d": -3, "was": "funds"}, {"op": "odds", "chance": 15, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "The late training slots caught up with them."}],
+			 "result": "The heartland stays close. The rent hurts."}
+		]
+	},
+	{
+		"id": "fit_interstate_cheque",
+		"club": "FIT",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["The interstate cheque"],
+		"text": ["A government in a city without its own team will pay well for Fitzroy to play two home games there. The money is real. So is the travel, and the members lose two days at home."],
+		"choices": [
+			{"key": "take", "label": "Take the games",
+			 "effects": [{"op": "board", "d": 4, "was": "funds"}, {"op": "culture", "strand": "together", "d": -1, "why": "The home members feel their games were sold"}, {"op": "odds", "chance": 20, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "The long trip shows in the legs."}],
+			 "result": "A big cheque, and a new crowd adopts the club."},
+			{"key": "keep", "label": "Keep every home game in Melbourne",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The members kept every home game"}, {"op": "board", "d": -4}],
+			 "result": "The members are grateful. The board wanted that cheque."}
+		]
+	},
+	{
+		"id": "fit_takeover_from_up_north",
+		"club": "FIT",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["A takeover offer from interstate"],
+		"text": ["An interstate club with deep pockets and few members has offered to take over Fitzroy's licence and players. Its directors say the name would live on, and nobody believes them."],
+		"choices": [
+			{"key": "refuse", "label": "Refuse it outright",
+			 "effects": [{"op": "culture", "strand": "together", "d": 3, "why": "The club refused to be swallowed"}, {"op": "board", "d": -5}],
+			 "result": "The club stays itself. The bank stays nervous."},
+			{"key": "listen", "label": "Let the board listen",
+			 "effects": [{"op": "board", "d": 4}, {"op": "morale", "d": -5, "who": "all"}, {"op": "odds", "chance": 30, "hit": [{"op": "culture", "strand": "together", "d": -2, "why": "The members heard the club was talking to buyers"}], "hit_result": "The talks leak, and the members turn."}],
+			 "result": "A possible lifeline. The players read it as a farewell."}
+		]
+	},
+	{
+		"id": "fit_unbeatables_dinner",
+		"club": "FIT",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["Dinner with the old premiership sides"],
+		"text": ["The club historians want the players at a Thursday night dinner honouring the old premiership sides, the Unbeatables among them. The legends would love to meet the current group."],
+		"choices": [
+			{"key": "all", "label": "Send the whole list",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 3, "why": "The group sat with the club's premiership men"}, {"op": "morale", "d": 3, "who": "all"}, {"op": "board", "d": 2, "was": "members"}, {"op": "slow_start", "who": "side", "chance": 15, "on": "week"}],
+			 "result": "The history lands. It's a late Thursday."},
+			{"key": "leaders", "label": "Send the captain and a few leaders",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "A balanced week before the game"}, {"op": "culture", "strand": "together", "d": -1, "why": "The legends noticed the empty seats"}],
+			 "result": "A smaller night. The legends notice who isn't there."}
+		]
+	},
+	{
+		"id": "fit_last_won_the_flag",
+		"club": "FIT",
+		"controversy": false,
+		"category": "leadership",
+		"when": {"ladder_min": 12},
+		"subject": {"kind": "club"},
+		"title": ["Last on the ladder, still won the flag"],
+		"text": ["The side is near the bottom, and an old club man tells the group about a Fitzroy team that finished last and still won the premiership. The players are listening."],
+		"choices": [
+			{"key": "address", "label": "Let him address the group",
+			 "effects": [{"op": "morale", "d": 5, "who": "all"}, {"op": "culture", "strand": "ambition", "d": 2, "why": "The group heard it had been done before"}, {"op": "loss_sting", "chance": 25, "d": -4, "who": "side"}],
+			 "result": "The room believes. If the next one goes badly, it'll sting."},
+			{"key": "focus", "label": "Thank him, keep the focus on this week",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "The group stayed on this week's job"}, {"op": "morale", "d": -1, "who": "all"}],
+			 "result": "A steady week. The spark he offered goes missing."}
+		]
+	},
+	{
+		"id": "fit_breaking_the_streak",
+		"club": "FIT",
+		"controversy": false,
+		"category": "training",
+		"when": {"losing_run_min": 4},
+		"subject": {"kind": "club"},
+		"title": ["Breaking the streak"],
+		"text": ["The losses have piled up and the press is counting the weeks. The players are flat at training."],
+		"choices": [
+			{"key": "ease", "label": "A light week and a barbecue",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "morale", "d": 4, "who": "all"}, {"op": "forgo_xp", "d": 5, "who": "all"}],
+			 "result": "Sausages and a kick-to-kick. The group smiles again."},
+			{"key": "basics", "label": "Double down on the basics",
+			 "effects": [{"op": "xp", "d": 6, "who": "all"}, {"op": "culture", "strand": "standards", "d": 2, "why": "The group went back to the basics"}, {"op": "morale", "d": -2, "who": "all"}, {"op": "odds", "chance": 20, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "Tired bodies on game day."}],
+			 "result": "Hard, repetitive work. A sullen group."}
+		]
+	},
+	{
+		"id": "fit_across_smith_street",
+		"club": "FIT",
+		"controversy": false,
+		"category": "rivals",
+		"when": {"opp_deck": "COL"},
+		"subject": {"kind": "club"},
+		"title": ["Across Smith Street"],
+		"text": ["The neighbours from Collingwood are next, and the pubs on both sides of Smith Street are full of it. The players can feel the derby."],
+		"choices": [
+			{"key": "talk", "label": "Talk it up all week",
+			 "effects": [{"op": "morale", "d": 5, "who": "side"}, {"op": "slow_start", "who": "side", "chance": 20, "on": "week"}],
+			 "result": "Fire in the group. Some of them might play the occasion, not the game."},
+			{"key": "normal", "label": "Treat it as just another week",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "The group stayed calm in derby week"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "Calm and clear. The members expected more passion."}
+		]
+	},
+	{
+		"id": "fit_landlords_house",
+		"club": "FIT",
+		"controversy": false,
+		"category": "rivals",
+		"when": {"opp_deck": "CAR"},
+		"subject": {"kind": "club"},
+		"title": ["Living in the landlord's house"],
+		"text": ["It's Carlton this week, the club Fitzroy has rented a home ground from. Their staff have handed you the away rooms at a game that's meant to be yours."],
+		"choices": [
+			{"key": "noise", "label": "Make a noise about it",
+			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "board", "d": -4}],
+			 "result": "The group bristles. The landlord is offended, and the next ground deal will cost more."},
+			{"key": "use", "label": "Take the rooms and use it",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The group used the slight as a quiet edge"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "Nobody says a word. The members see it as weakness."}
+		]
+	},
+	{
+		"id": "fit_rattling_the_tins",
+		"club": "FIT",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["Rattling the tins"],
+		"text": ["The supporters' group wants a save-the-club bucket drive at the next home game, with players at the gates. It's good for the bank and a hard look for the club."],
+		"choices": [
+			{"key": "players", "label": "Put the players at the gates",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "The tins fill up. The press call it begging, and it's a long day before a game."},
+			{"key": "alone", "label": "Let the supporters do it alone",
+			 "effects": [{"op": "xp", "d": 2, "who": "side"}, {"op": "culture", "strand": "together", "d": -1, "why": "The supporters noticed who stayed away"}],
+			 "result": "The players stay on football. A third of the money comes in."},
+			{"key": "no", "label": "Turn it down",
+			 "effects": [{"op": "board", "d": 2}, {"op": "culture", "strand": "together", "d": -2, "why": "The supporters feel shut out of saving their club"}],
+			 "result": "The club keeps its pride. The supporters feel shut out."}
+		]
+	},
+	{
+		"id": "fit_wages_late",
+		"club": "FIT",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["Wages a week late"],
+		"text": ["The treasurer says the pays will be a week late this month unless the players agree to defer part of their wages until the season ends."],
+		"choices": [
+			{"key": "defer", "label": "Ask the players to defer",
+			 "effects": [{"op": "board", "d": 3, "was": "funds"}, {"op": "morale", "d": -5, "who": "all"}, {"op": "odds", "chance": 15, "hit": [{"op": "culture", "strand": "together", "d": -2, "why": "A senior player asked to leave over the wages"}], "hit_result": "A senior player asks to be traded."}],
+			 "result": "The club survives the month. The players remember it."},
+			{"key": "pay", "label": "Pay them on time, the board borrows again",
+			 "effects": [{"op": "morale", "d": 3, "who": "all"}, {"op": "board", "d": -6, "was": "funds"}],
+			 "result": "The pays go in. More debt goes on the books."}
+		]
+	},
+	{
+		"id": "fit_coach_wanted_interstate",
+		"club": "FIT",
+		"controversy": false,
+		"category": "leadership",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["Our assistant is wanted interstate"],
+		"text": ["A wealthy interstate club wants your senior assistant as its head coach next year. Your assistant would like to stay loyal, but it's the job of a lifetime."],
+		"choices": [
+			{"key": "promote", "label": "Promote him to a bigger role now",
+			 "effects": [{"op": "morale", "d": 3, "who": "all"}, {"op": "culture", "strand": "standards", "d": 2, "why": "The club kept its best coach"}, {"op": "board", "d": -2, "was": "funds"}],
+			 "result": "He stays, on a wage the club can barely afford."},
+			{"key": "blessing", "label": "Let him go with your blessing",
+			 "effects": [{"op": "board", "d": 2}, {"op": "forgo_xp", "d": 5, "who": "all"}],
+			 "result": "He leaves with the club's name on his CV. The coaching panel is thin."}
+		]
+	},
+	{
+		"id": "fit_cash_under_the_table",
+		"club": "FIT",
+		"controversy": true,
+		"category": "contracts",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["The cash under the table"],
+		"text": ["A rival's star will cross to Fitzroy if a payment is made outside the cap. A board member says it's how the club landed its greatest player once."],
+		"choices": [
+			{"key": "refuse", "label": "Refuse it",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 3, "why": "The club stayed clean"}, {"op": "culture", "strand": "ambition", "d": -1, "why": "The members heard about the star who got away"}],
+			 "result": "The star goes elsewhere. The club stays clean."},
+			{"key": "pay", "label": "Pay it quietly",
+			 "effects": [{"op": "morale", "d": 3, "who": "all"}, {"op": "culture", "strand": "ambition", "d": 2, "why": "A proven star chose Fitzroy"}, {"op": "culture", "strand": "standards", "d": -3, "why": "The board knows how he was paid"}, {"op": "odds", "chance": 35, "hit": [{"op": "board", "d": -8}, {"op": "culture", "strand": "together", "d": -2, "why": "The members learnt the club broke the cap"}], "hit_result": "The league finds out. A big fine and lost picks."}],
+			 "result": "A proven star pulls on the jumper."}
+		]
+	},
+	{
+		"id": "fit_losing_for_the_pick",
+		"club": "FIT",
+		"controversy": true,
+		"category": "board",
+		"when": {"ladder_min": 13, "round_min": 16},
+		"subject": {"kind": "club"},
+		"title": ["Losing for the pick"],
+		"text": ["The season is gone, and a board member suggests resting senior players for the last rounds to secure an early pick. The players would know."],
+		"choices": [
+			{"key": "rest", "label": "Rest the seniors for their bodies",
+			 "effects": [{"op": "board", "d": 3}, {"op": "culture", "strand": "standards", "d": -3, "why": "The group knows the club stopped trying to win"}, {"op": "morale", "d": -4, "who": "all"}, {"op": "odds", "chance": 25, "hit": [{"op": "board", "d": -6}], "hit_result": "The press work it out."}],
+			 "result": "The seniors sit out. The pick looks better. The group knows."},
+			{"key": "best", "label": "Play the best side every week",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 3, "why": "You played to win every week"}, {"op": "morale", "d": 3, "who": "all"}, {"op": "board", "d": -2}],
+			 "result": "The side plays for pride. The pick slides a spot or two."}
+		]
+	},
+	{
+		"id": "fit_kid_from_inner_north",
+		"club": "FIT",
+		"controversy": false,
+		"category": "selection",
+		"subject": {"kind": "player", "pick": "highest:potential", "where": {"age_max": 19, "selected": false}},
+		"title": ["The locals want to see {name}"],
+		"text": ["{name} has been impressive at training, and the inner-north locals have taken him as one of their own. They want to see him play."],
+		"choices": [
+			{"key": "pick", "label": "Pick him this week",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "morale", "d": 4, "who": "subject"}, {"op": "slow_start", "who": "subject", "chance": 25, "on": "week"}],
+			 "result": "The heartland lights up. {first} is raw."},
+			{"key": "wait", "label": "Make him wait a month",
+			 "effects": [{"op": "xp", "d": 5, "who": "subject"}, {"op": "trust", "d": -2, "why": "He wonders if the club believes in him"}],
+			 "result": "{first} builds up first. He wonders if the club rates him."}
+		]
+	},
+	{
+		"id": "fit_back_in_their_colours",
+		"club": "FIT",
+		"controversy": false,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"title": ["He's back, in their colours"],
+		"text": ["A former Fitzroy favourite who left for a richer club is coming back as an opponent this week. The press want to know whether the members should cheer him or boo him."],
+		"choices": [
+			{"key": "applaud", "label": "Ask the members to applaud him",
+			 "effects": [{"op": "board", "d": 2}, {"op": "culture", "strand": "together", "d": 2, "why": "The club thanked one of its own"}, {"op": "culture", "strand": "ambition", "d": -1, "why": "Some members say it's too soon to clap him"}],
+			 "result": "He gets a standing ovation, and a few boos."},
+			{"key": "nothing", "label": "Say nothing about him",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The coach kept it about this week's game"}, {"op": "slow_start", "who": "side", "chance": 20, "on": "week"}],
+			 "result": "No headline from the coach. The press fill the gap."},
+			{"key": "money", "label": "Say he chose money over the club",
+			 "effects": [{"op": "board", "d": 1, "was": "members"}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "The members love it. The group cringes, and the press run with it."}
+		]
+	},
+	{
+		"id": "fit_sell_the_home_game",
+		"club": "FIT",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["Sell the home game to the big ground"],
+		"text": ["The league offers to move a home game against a big Melbourne club to the MCG for a better gate. The other mob's supporters would outnumber yours three to one."],
+		"choices": [
+			{"key": "mcg", "label": "Take the big-ground game",
+			 "effects": [{"op": "board", "d": 2, "was": "funds"}, {"op": "slow_start", "who": "side", "chance": 20, "on": "week"}],
+			 "result": "A big gate. It feels like an away game."},
+			{"key": "home", "label": "Keep it at home",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The members got a true home game"}, {"op": "morale", "d": 2, "who": "side"}, {"op": "board", "d": -1, "was": "funds"}],
+			 "result": "A true home game, and a smaller gate."}
+		]
+	},
+	{
+		"id": "fit_publicans_offer",
+		"club": "FIT",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["The publican's offer"],
+		"text": ["The club was founded in a Brunswick Street hotel. A local publican offers a sponsorship deal and rooms upstairs for the club's offices."],
+		"choices": [
+			{"key": "take", "label": "Take the deal and the rooms",
+			 "effects": [{"op": "board", "d": 2, "was": "funds"}, {"op": "culture", "strand": "together", "d": 1, "why": "The club has a home in the heartland again"}, {"op": "culture", "strand": "ambition", "d": -1, "why": "Running the club from above a pub looks shabby"}],
+			 "result": "Cheap offices and some cash. The club runs from above the bar."},
+			{"key": "hold", "label": "Hold out for a corporate sponsor",
+			 "effects": [{"op": "odds", "chance": 50, "hit": [{"op": "board", "d": 4, "was": "funds"}], "miss": [{"op": "board", "d": -2}], "hit_result": "A corporate sponsor signs.", "miss_result": "Nothing comes, and the board asks why you turned the publican down."}],
+			 "result": "You thank the publican and keep looking."}
+		]
+	},
+	{
+		"id": "fit_maroon_and_blue",
+		"club": "FIT",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["Maroon and blue"],
+		"text": ["The members want a heritage round in the old maroon and blue, with a merchandise run to match. The cost is up front, and the profit depends on how well it sells."],
+		"choices": [
+			{"key": "proper", "label": "Do it properly",
+			 "effects": [{"op": "odds", "chance": 65, "hit": [{"op": "board", "d": 5, "was": "funds"}], "miss": [{"op": "board", "d": -2, "was": "funds"}], "hit_result": "It sells out.", "miss_result": "Boxes of stock are left over."}],
+			 "result": "The heritage gear hits the shelves."},
+			{"key": "small", "label": "A small run for the members only",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "culture", "strand": "ambition", "d": -1, "why": "No buzz beyond the faithful"}],
+			 "result": "A safe little profit. Nobody outside the club notices."}
+		]
+	},
+	{
+		"id": "fit_back_page_quote",
+		"club": "FIT",
+		"controversy": false,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"title": ["\"No home, no money, no future\""],
+		"text": ["A columnist writes that Fitzroy is a club with no home, no money and no future, and asks the coach to respond."],
+		"choices": [
+			{"key": "hit", "label": "Hit back hard",
+			 "effects": [{"op": "morale", "d": 4, "who": "all"}, {"op": "culture", "strand": "together", "d": 2, "why": "The coach stood up for the club"}, {"op": "board", "d": -3}, {"op": "loss_sting", "chance": 15, "d": -4, "who": "side"}],
+			 "result": "The group rallies. The board winces at the headline."},
+			{"key": "honest", "label": "Admit it's tough and point to the players",
+			 "effects": [{"op": "board", "d": 2}, {"op": "morale", "d": 2, "who": "all"}, {"op": "culture", "strand": "together", "d": -1, "why": "The members wanted fight"}],
+			 "result": "Honest and steady. The members wanted more fight."}
+		]
+	},
+	{
+		"id": "fit_old_nicknames",
+		"club": "FIT",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["Maroons, Gorillas, Lions"],
+		"text": ["A supporters' group is pushing for a members' vote on bringing back one of the club's old nicknames, and the board is split."],
+		"choices": [
+			{"key": "vote", "label": "Put it to the members",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The members got their say"}, {"op": "board", "d": -2}],
+			 "result": "A month of debate at every function. The board hates it."},
+			{"key": "keep", "label": "Keep the nickname",
+			 "effects": [{"op": "board", "d": 2}, {"op": "culture", "strand": "together", "d": -1, "why": "The traditionalists grumble"}],
+			 "result": "Nothing changes. The traditionalists grumble."}
+		]
+	},
+	{
+		"id": "fit_last_ones_standing",
+		"club": "FIT",
+		"controversy": false,
+		"category": "leadership",
+		"when": {"losing_run_min": 1},
+		"subject": {"kind": "club"},
+		"title": ["The last ones standing"],
+		"text": ["After a heavy loss, a handful of old supporters still waited at the race to clap the players off. The captain wants to thank them."],
+		"choices": [
+			{"key": "all", "label": "The whole group goes back out",
+			 "effects": [{"op": "culture", "strand": "together", "d": 3, "why": "The club knows who it plays for"}, {"op": "board", "d": 4, "was": "members"}, {"op": "odds", "chance": 15, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "Tired legs on a short break."}],
+			 "result": "The players walk back out in the cold. The old supporters cry."},
+			{"key": "letter", "label": "Have the captain write to them",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "culture", "strand": "together", "d": -1, "why": "The group missed the moment"}],
+			 "result": "A letter from the captain. The group misses the moment."}
+		]
+	}
+]

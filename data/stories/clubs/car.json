@@ -1,0 +1,449 @@
+[
+	{
+		"id": "car_old_enemy_week",
+		"club": "CAR",
+		"controversy": false,
+		"category": "rivals",
+		"when": {"opp_deck": "COL"},
+		"subject": {"kind": "club"},
+		"title": ["Collingwood week"],
+		"text": ["Carlton and Collingwood, the oldest grudge in the game. The whole city has an opinion, the rooms are already wound up and the papers want a quote from you."],
+		"choices": [
+			{"key": "stoke", "label": "Give them something to read",
+			 "effects": [{"op": "morale", "d": 4, "who": "all"}, {"op": "slow_start", "who": "side", "chance": 20, "on": "week"}, {"op": "board", "d": -1}],
+			 "result": "Your line is on every back page. The Magpies have pinned it up too."},
+			{"key": "down", "label": "Call it another four points",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The group stayed on its own game in Collingwood week"}, {"op": "board", "d": 1}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "You play it straight. The supporters wanted more fire than that."},
+			{"key": "history", "label": "Talk up the history",
+			 "effects": [{"op": "board", "d": 2}, {"op": "culture", "strand": "together", "d": 1, "why": "You honoured the rivalry, not the insult"}, {"op": "slow_start", "who": "side", "chance": 10, "on": "week"}],
+			 "result": "You talk about the great games between the clubs. Nobody is wound up by it."}
+		]
+	},
+	{
+		"id": "car_flag_count",
+		"club": "CAR",
+		"controversy": false,
+		"category": "rivals",
+		"when": {"opp_deck": "ESS"},
+		"subject": {"kind": "club"},
+		"title": ["Who's the biggest club in the land?"],
+		"text": ["Carlton and Essendon both claim the most premierships in the game. A Bombers voice on radio says only one of the two has been relevant lately."],
+		"choices": [
+			{"key": "count", "label": "Count the flags for him",
+			 "effects": [{"op": "morale", "d": 3, "who": "all"}, {"op": "slow_start", "who": "side", "chance": 15, "on": "week"}, {"op": "board", "d": -1}],
+			 "result": "You rattle off the premiership years. The supporters love it, and the Bombers have their motivation."},
+			{"key": "saturday", "label": "Say you'll answer on Saturday",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "You let the footy do the talking"}, {"op": "board", "d": 1}, {"op": "morale", "d": -1, "who": "all"}],
+			 "result": "One line and you walk off. The group wanted you to bite."}
+		]
+	},
+	{
+		"id": "car_tigers_next_door",
+		"club": "CAR",
+		"controversy": false,
+		"category": "rivals",
+		"when": {"opp_deck": "RIC"},
+		"subject": {"kind": "club"},
+		"title": ["The Tigers next door"],
+		"text": ["Two big inner-Melbourne crowds, one huge game. The club wants to sell it as the home game of the year, with a players' fan day in the city on Thursday."],
+		"choices": [
+			{"key": "fanday", "label": "Do the fan day",
+			 "effects": [{"op": "board", "d": 2}, {"op": "morale", "d": 2, "who": "all"}, {"op": "forgo_xp", "d": 3, "who": "side"}, {"op": "odds", "chance": 10, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "A long day on their feet shows on Saturday."}],
+			 "result": "The mall is packed with navy and yellow. Thursday's session is cut short."},
+			{"key": "train", "label": "Train as normal",
+			 "effects": [{"op": "xp", "d": 3, "who": "side"}, {"op": "board", "d": -2}],
+			 "result": "A full week on the track. The marketing department is not happy."}
+		]
+	},
+	{
+		"id": "car_back_to_princes_park",
+		"club": "CAR",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["Members want a game at Princes Park"],
+		"text": ["The members want a home game played at the club's own ground instead of the big stadium. It's smaller and colder, the gate would be far smaller, and the players know every blade of grass."],
+		"choices": [
+			{"key": "princes", "label": "Play it at Princes Park",
+			 "effects": [{"op": "morale", "d": 3, "who": "all"}, {"op": "culture", "strand": "together", "d": 2, "why": "The club went home to Princes Park"}, {"op": "board", "d": -3, "was": "funds"}],
+			 "result": "The old stands are full and loud. The gate is a fraction of a big-stadium crowd."},
+			{"key": "stadium", "label": "Stay at the big stadium",
+			 "effects": [{"op": "board", "d": 2, "was": "funds"}, {"op": "morale", "d": -1, "who": "all"}],
+			 "result": "A full gate at the big ground. The old guard feel forgotten."}
+		]
+	},
+	{
+		"id": "car_open_training",
+		"club": "CAR",
+		"controversy": false,
+		"category": "members",
+		"when": {"winning_run_min": 1},
+		"subject": {"kind": "club"},
+		"title": ["Thousands want to watch training"],
+		"text": ["After a good win, thousands want to come to Princes Park to watch the group train. The fitness staff want a closed, sharp session."],
+		"choices": [
+			{"key": "open", "label": "Open the gates",
+			 "effects": [{"op": "morale", "d": 3, "who": "all"}, {"op": "board", "d": 1, "was": "members"}, {"op": "forgo_xp", "d": 3, "who": "side"}],
+			 "result": "The hill is full. The session is looser than the coaches wanted."},
+			{"key": "closed", "label": "Train behind closed doors",
+			 "effects": [{"op": "xp", "d": 3, "who": "side"}, {"op": "culture", "strand": "standards", "d": 1, "why": "Training stayed about the work after a win"}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "A sharp session behind closed doors. The cheer squad posts about it."}
+		]
+	},
+	{
+		"id": "car_lygon_street_night",
+		"club": "CAR",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["A night on Lygon Street"],
+		"text": ["The Lygon Street traders want the whole playing group at a community night in the club's heartland. A five-day break is coming, and the leaders think the group needs a night together."],
+		"choices": [
+			{"key": "all", "label": "Everyone goes",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The whole group had a night out on Lygon Street"}, {"op": "morale", "d": 3, "who": "all"}, {"op": "slow_start", "who": "side", "chance": 20, "on": "week"}],
+			 "result": "Pasta, speeches and a late finish. The street loved having them."},
+			{"key": "leaders", "label": "Send the leaders only",
+			 "effects": [{"op": "board", "d": 1}, {"op": "morale", "d": 1, "who": "all"}, {"op": "culture", "strand": "together", "d": -1, "why": "Most of the group missed the night together"}],
+			 "result": "The leaders do the rounds. The rest of the group hear about it on Monday."},
+			{"key": "no", "label": "Not this week",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -2}],
+			 "result": "The players rest up. The traders and the club's Italian community feel snubbed."}
+		]
+	},
+	{
+		"id": "car_tear_up_memberships",
+		"club": "CAR",
+		"controversy": false,
+		"category": "members",
+		"when": {"losing_run_min": 3},
+		"subject": {"kind": "club"},
+		"title": ["Supporters say they won't renew"],
+		"text": ["After another loss, a group of supporters is filmed outside the club saying they're done. It's a proud, impatient supporter base, and the clip is everywhere."],
+		"choices": [
+			{"key": "front", "label": "Front them yourself",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "slow_start", "who": "side", "chance": 25, "on": "week"}],
+			 "result": "You go out and talk to them. Every word is on the news that night."},
+			{"key": "president", "label": "Let the president handle it",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The players were kept out of the noise"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "The president takes the calls. Talkback says the coach is hiding."}
+		]
+	},
+	{
+		"id": "car_cocky_mascot",
+		"club": "CAR",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["Bring back the cockatoo"],
+		"text": ["A members' petition wants a live cockatoo back at the ground, in honour of the club's old talking-bird mascot. Harmless, and a bit of fun."],
+		"choices": [
+			{"key": "yes", "label": "Why not",
+			 "effects": [{"op": "morale", "d": 1, "who": "all"}, {"op": "board", "d": 1, "was": "members"}, {"op": "odds", "chance": 25, "hit": [{"op": "board", "d": -2}], "hit_result": "The bird steals the broadcast, and the board hates looking like a circus."}],
+			 "result": "The cockatoo is back on the fence. The members love it."},
+			{"key": "no", "label": "Not on a game day",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "Game day stayed about the footy"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "No bird. The members' committee is a little put out."}
+		]
+	},
+	{
+		"id": "car_born_to_rule",
+		"club": "CAR",
+		"controversy": false,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"title": ["\"Carlton still thinks it owns the game\""],
+		"text": ["A columnist writes that Carlton walks around like the club that owns the competition, and that the playing group believes its own press. The players have read it."],
+		"choices": [
+			{"key": "expect", "label": "Say this club should expect to win",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 2, "why": "You said out loud that Carlton plays to win flags"}, {"op": "morale", "d": 2, "who": "all"}, {"op": "board", "d": -1}, {"op": "slow_start", "who": "side", "chance": 15, "on": "week"}],
+			 "result": "The group walks taller. The line will follow you after a loss."},
+			{"key": "nothing", "label": "Say we've won nothing yet",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "You told the group it has won nothing yet"}, {"op": "morale", "d": -1, "who": "all"}],
+			 "result": "A humble answer. A few players think you agreed with the column."}
+		]
+	},
+	{
+		"id": "car_the_drought",
+		"club": "CAR",
+		"controversy": false,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"title": ["Can the Blues be the benchmark again?"],
+		"text": ["A long-form piece asks whether Carlton can ever again be the club everyone measures themselves against. The journalist wants you on camera at Princes Park in front of the premiership photos."],
+		"choices": [
+			{"key": "own", "label": "Do it, and own the question",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 2, "why": "You stood in front of the premiership photos and said you want more"}, {"op": "board", "d": 1}, {"op": "morale", "d": -1, "who": "all"}],
+			 "result": "The piece runs big. Every loss now gets the same headline."},
+			{"key": "decline", "label": "Decline politely",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The group stayed on the next game"}, {"op": "board", "d": -1}],
+			 "result": "No interview. The piece runs anyway, without you."}
+		]
+	},
+	{
+		"id": "car_song_in_the_rooms",
+		"club": "CAR",
+		"controversy": false,
+		"category": "leadership",
+		"when": {"winning_run_min": 1},
+		"subject": {"kind": "club"},
+		"title": ["The cheer squad wants to sing in the rooms"],
+		"text": ["A win at last. The cheer squad asks if they can come into the rooms and sing the song with the players."],
+		"choices": [
+			{"key": "in", "label": "Let them in",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "Players and supporters sang the song together"}, {"op": "morale", "d": 3, "who": "all"}, {"op": "odds", "chance": 10, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "The celebrations ran late and the legs felt it."}],
+			 "result": "The rooms are packed and the song goes round three times."},
+			{"key": "players", "label": "Keep it to the players",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The rooms stayed the players' own"}, {"op": "morale", "d": 2, "who": "all"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "The players sing it alone. The cheer squad are hurt."}
+		]
+	},
+	{
+		"id": "car_legend_address",
+		"club": "CAR",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"title": ["A club great offers to present the jumpers"],
+		"text": ["One of the club's all-time greats offers to present the jumpers before a big game. Some of the young players have only seen him on old tape."],
+		"choices": [
+			{"key": "game", "label": "Yes, before the game",
+			 "effects": [{"op": "morale", "d": 3, "who": "all"}, {"op": "culture", "strand": "ambition", "d": 1, "why": "A club great handed over the jumpers"}, {"op": "slow_start", "who": "side", "chance": 15, "on": "week"}],
+			 "result": "He hands out every jumper. The room is full of emotion before the bounce."},
+			{"key": "midweek", "label": "Ask him to come to training midweek",
+			 "effects": [{"op": "morale", "d": 2, "who": "all"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "He talks to the group on Wednesday. He wanted the big stage, and he tells the members so."}
+		]
+	},
+	{
+		"id": "car_legend_on_radio",
+		"club": "CAR",
+		"controversy": false,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"title": ["A premiership great calls the list soft"],
+		"text": ["A premiership great says on breakfast radio that this Carlton list is soft and wouldn't have got a game in his day. He still has the members' ear."],
+		"choices": [
+			{"key": "hit", "label": "Hit back",
+			 "effects": [{"op": "morale", "d": 4, "who": "all"}, {"op": "board", "d": -2}],
+			 "result": "You stand up for your players. You've taken on a club legend in public."},
+			{"key": "earned", "label": "Say he's earned his say",
+			 "effects": [{"op": "board", "d": 1}, {"op": "culture", "strand": "standards", "d": 1, "why": "You took the criticism on the chin"}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "You let it go. The players wanted their coach in their corner."},
+			{"key": "invite", "label": "Invite him to training",
+			 "effects": [{"op": "odds", "chance": 60, "hit": [{"op": "board", "d": 2}], "miss": [{"op": "morale", "d": -2, "who": "all"}], "hit_result": "He watches a session and comes away impressed. He says so on air.", "miss_result": "He watches a session and doubles down on air."}],
+			 "result": "He turns up on Tuesday with his arms folded."}
+		]
+	},
+	{
+		"id": "car_father_son_bid",
+		"club": "CAR",
+		"controversy": false,
+		"category": "contracts",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["A champion's son is in the draft pool"],
+		"text": ["The son of a Carlton champion can join as a father-son pick. Taking him uses the club's best pick this year, and the recruiters had that pick marked for someone else."],
+		"choices": [
+			{"key": "take", "label": "Take him",
+			 "effects": [{"op": "morale", "d": 2, "who": "all"}, {"op": "board", "d": 2, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The family line in navy blue goes on"}, {"op": "culture", "strand": "ambition", "d": -1, "why": "The recruiters lost the kid they rated higher"}],
+			 "result": "The family is in tears at the draft. The recruiters' first choice goes to another club."},
+			{"key": "pass", "label": "Let him go to the open draft",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The recruiters got the kid they rated highest"}, {"op": "board", "d": -3, "was": "members"}, {"op": "odds", "chance": 30, "hit": [{"op": "morale", "d": -2, "who": "all"}], "hit_result": "He's starring for another club, and it gets thrown at you."}],
+			 "result": "The recruiters get their man. The family and the old guard are wounded."}
+		]
+	},
+	{
+		"id": "car_family_milestone",
+		"club": "CAR",
+		"controversy": false,
+		"category": "family",
+		"subject": {"kind": "player", "pick": "highest:games"},
+		"title": ["{name}'s family want to run through the banner"],
+		"text": ["{name} has a milestone coming up, and his family want to run through the banner with him, the way Carlton's football families always have."],
+		"choices": [
+			{"key": "family", "label": "The whole family runs out",
+			 "effects": [{"op": "morale", "d": 5, "who": "subject"}, {"op": "culture", "strand": "together", "d": 2, "why": "A Carlton family ran through the banner together"}, {"op": "board", "d": 1, "was": "members"}, {"op": "slow_start", "who": "subject", "chance": 20, "on": "week"}],
+			 "result": "His family runs through the banner with him. {first} is in tears in the huddle."},
+			{"key": "after", "label": "Do a presentation after the game",
+			 "effects": [{"op": "morale", "d": 3, "who": "subject"}, {"op": "trust", "d": -1, "why": "His family wanted to run out with him"}],
+			 "result": "A quiet presentation in the rooms. The family is a little disappointed."}
+		]
+	},
+	{
+		"id": "car_number_one_pick",
+		"club": "CAR",
+		"controversy": false,
+		"category": "selection",
+		"phase": ["preseason"],
+		"subject": {"kind": "player", "pick": "highest:potential", "where": {"age_max": 19, "new_here": true}},
+		"title": ["The whole city wants to see {name}"],
+		"text": ["{name} has arrived as the club's prize draftee, and this club has been here before with top picks. The press want him playing in Round 1."],
+		"choices": [
+			{"key": "play", "label": "Play him from the start",
+			 "effects": [{"op": "morale", "d": 4, "who": "subject"}, {"op": "xp", "d": 5, "who": "subject"}, {"op": "board", "d": 2, "was": "members"}, {"op": "odds", "chance": 25, "hit": [{"op": "morale", "d": -4, "who": "subject"}], "hit_result": "He's dropped by mid-season, and it knocks him."}],
+			 "result": "{first} runs out in Round 1 with the whole city watching."},
+			{"key": "reserves", "label": "Bring him through the reserves",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "Even the top pick earns his game"}, {"op": "board", "d": -2, "was": "members"}, {"op": "trust", "d": -1, "why": "He wanted to play straight away"}],
+			 "result": "{first} starts in the reserves, out of the spotlight. The members want to see him."}
+		]
+	},
+	{
+		"id": "car_marquee_recruit",
+		"club": "CAR",
+		"controversy": false,
+		"category": "contracts",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["A star wants to come home to Melbourne"],
+		"text": ["A gun midfielder from interstate wants to come home, and the board wants Carlton to land him. It will take the club's best picks and a big contract."],
+		"choices": [
+			{"key": "all_in", "label": "Go all in",
+			 "effects": [{"op": "board", "d": 3}, {"op": "culture", "strand": "ambition", "d": 2, "why": "The club went after the biggest name on the market"}, {"op": "morale", "d": 3, "who": "all"}, {"op": "culture", "strand": "together", "d": -1, "why": "The young players watched the picks go out the door"}],
+			 "result": "He signs. The picks and a lot of money go with it."},
+			{"key": "build", "label": "Stick to the build",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "The club backed its own young players"}, {"op": "board", "d": -3}],
+			 "result": "He goes elsewhere. The supporters see a club without ambition."}
+		]
+	},
+	{
+		"id": "car_reserves_standout",
+		"club": "CAR",
+		"controversy": false,
+		"category": "selection",
+		"subject": {"kind": "player", "pick": "highest:overall", "where": {"selected": false, "age_min": 23}},
+		"title": ["{name} is tearing up the reserves"],
+		"text": ["{name}, a mature-age player, is tearing up the reserves. The reserves coach says he's ready now."],
+		"choices": [
+			{"key": "pick", "label": "Pick him this week",
+			 "effects": [{"op": "morale", "d": 5, "who": "subject"}, {"op": "trust", "d": 3, "why": "You picked him when he was ready"}, {"op": "morale", "d": -2, "who": "others"}],
+			 "result": "{first} is in. Someone in the side makes way and isn't happy."},
+			{"key": "wait", "label": "Give it another month",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "Games in the seniors are earned over time"}, {"op": "morale", "d": -3, "who": "subject"}, {"op": "odds", "chance": 20, "hit": [{"op": "trust", "d": -5, "why": "He thinks the club doesn't rate him"}], "hit_result": "His manager starts asking about a trade."}],
+			 "result": "{first} stays in the reserves for now."}
+		]
+	},
+	{
+		"id": "car_board_challenge",
+		"club": "CAR",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["A ticket to roll the board"],
+		"text": ["A wealthy group is running a ticket to take over the board, and its spokesman says they'd review the football department. Both sides want to know where you stand."],
+		"choices": [
+			{"key": "back", "label": "Back the current board",
+			 "effects": [{"op": "board", "d": 3}, {"op": "odds", "chance": 40, "hit": [{"op": "board", "d": -5}], "hit_result": "The challengers win, and the new board remembers whose side you were on."}],
+			 "result": "You stand next to the president at the members' night."},
+			{"key": "out", "label": "Stay out of it",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "You kept your mind on the footy"}, {"op": "board", "d": -1}],
+			 "result": "You say it's a matter for the members. Neither camp is impressed."}
+		]
+	},
+	{
+		"id": "car_coach_board_radio",
+		"club": "CAR",
+		"controversy": false,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"title": ["Is the board picking the team?"],
+		"text": ["On live radio you're asked whether the board is meddling in football decisions. It is, a little, and the players know it."],
+		"choices": [
+			{"key": "straight", "label": "Say it straight",
+			 "effects": [{"op": "morale", "d": 4, "who": "all"}, {"op": "board", "d": -5}],
+			 "result": "You say the football department should run the football. The players love it. The board does not."},
+			{"key": "page", "label": "Say we're all on the same page",
+			 "effects": [{"op": "board", "d": 2}, {"op": "morale", "d": -2, "who": "side"}],
+			 "result": "A safe answer. The senior players hear you dodge it."}
+		]
+	},
+	{
+		"id": "car_coach_killers",
+		"club": "CAR",
+		"controversy": false,
+		"category": "media",
+		"when": {"losing_run_min": 3, "round_max": 8},
+		"subject": {"kind": "club"},
+		"title": ["\"Carlton eats its coaches\""],
+		"text": ["A poor start, and the talk is that Carlton eats its coaches. The press ask if you've been given a guarantee."],
+		"choices": [
+			{"key": "president", "label": "Tell them to ask the president",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The group saw a coach who wasn't rattled"}, {"op": "board", "d": -1}],
+			 "result": "\"Coach under siege\" is the headline. The players see you unbothered."},
+			{"key": "support", "label": "Ask the board for a public show of support",
+			 "effects": [{"op": "odds", "chance": 60, "hit": [{"op": "board", "d": 2}, {"op": "morale", "d": 2, "who": "all"}], "miss": [{"op": "board", "d": -3}, {"op": "morale", "d": -2, "who": "all"}], "hit_result": "The president backs you on the steps of the club.", "miss_result": "The board says it doesn't comment on contracts. Everyone reads it the same way."}],
+			 "result": "You ask the question in public. Now the board has to answer it."}
+		]
+	},
+	{
+		"id": "car_community_round",
+		"club": "CAR",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["Players wanted in the schools"],
+		"text": ["The club's community round is built around preventing family violence. The program wants players speaking in schools in the lead-up, and it's a short week."],
+		"choices": [
+			{"key": "leaders", "label": "Send the leaders to the schools",
+			 "effects": [{"op": "board", "d": 2}, {"op": "culture", "strand": "together", "d": 1, "why": "The leaders spoke for the club in the schools"}, {"op": "morale", "d": 1, "who": "all"}, {"op": "forgo_xp", "d": 3, "who": "side"}],
+			 "result": "The captain and the leaders spend two mornings in classrooms."},
+			{"key": "volunteers", "label": "Volunteers only",
+			 "effects": [{"op": "xp", "d": 3, "who": "side"}, {"op": "board", "d": -1}],
+			 "result": "A few volunteers go. The program had hoped for the captain."}
+		]
+	},
+	{
+		"id": "car_side_payment_offer",
+		"club": "CAR",
+		"controversy": true,
+		"category": "contracts",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["A backer offers to help with a contract"],
+		"text": ["A wealthy backer offers to pay a recruit a little extra through one of his businesses, outside the salary cap. Nobody would know, he says."],
+		"choices": [
+			{"key": "take", "label": "Take it",
+			 "effects": [{"op": "board", "d": 2}, {"op": "morale", "d": 2, "who": "all"}, {"op": "odds", "chance": 25, "hit": [{"op": "board", "d": -8}, {"op": "culture", "strand": "standards", "d": -3, "why": "The club was caught paying outside the cap"}], "hit_result": "The payments are uncovered. The club loses picks and pays a heavy fine."}],
+			 "result": "The recruit signs. The paperwork stays in the backer's office."},
+			{"key": "report", "label": "Report it to the CEO",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 3, "why": "You turned down money outside the cap"}, {"op": "board", "d": -2}],
+			 "result": "The recruit goes elsewhere, and the backer is offended."}
+		]
+	},
+	{
+		"id": "car_late_season_list_call",
+		"club": "CAR",
+		"controversy": true,
+		"category": "board",
+		"when": {"ladder_min": 14, "round_min": 18},
+		"subject": {"kind": "club"},
+		"title": ["\"A few more losses wouldn't hurt\""],
+		"text": ["The season is gone and the club is near the bottom. A board member hints that a few more losses would help the draft, and the press are already calling the last game a draft decider."],
+		"choices": [
+			{"key": "kids", "label": "Play the kids and experiment",
+			 "effects": [{"op": "xp", "d": 6, "who": "side"}, {"op": "board", "d": 2}, {"op": "culture", "strand": "standards", "d": -2, "why": "The club looked like it stopped trying to win"}, {"op": "odds", "chance": 30, "hit": [{"op": "board", "d": -4}], "hit_result": "The league opens an investigation into the club's last month."}],
+			 "result": "The kids get their games. The press scream tanking."},
+			{"key": "best", "label": "Pick the best side and win",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 3, "why": "You played to win every week"}, {"op": "morale", "d": 2, "who": "all"}, {"op": "board", "d": -2}],
+			 "result": "The best side plays and wins. The draft pick slides a few places."}
+		]
+	},
+	{
+		"id": "car_spoon_decider",
+		"club": "CAR",
+		"controversy": false,
+		"category": "media",
+		"when": {"ladder_min": 14, "round_min": 20},
+		"subject": {"kind": "club"},
+		"title": ["Wooden spoon week"],
+		"text": ["The loser this week could finish with the wooden spoon. For a club with Carlton's flags, the spoon is a humiliation the members won't forget."],
+		"choices": [
+			{"key": "final", "label": "Treat it like a final",
+			 "effects": [{"op": "morale", "d": 4, "who": "all"}, {"op": "culture", "strand": "ambition", "d": 1, "why": "Carlton refused to accept the spoon"}, {"op": "loss_sting", "chance": 30, "d": -4, "who": "side"}],
+			 "result": "The group goes in like it's September. A loss now would hurt all summer."},
+			{"key": "same", "label": "Change nothing for one game",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The week ran like any other"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "A normal week. The members see a club that has accepted it."}
+		]
+	}
+]

@@ -262,8 +262,9 @@ func _stakes_in(effects: Array) -> Array:
 		# A quiet lever is neither a gain nor a cost on its card (StoryEngine).
 		if bool(e.get("quiet", false)):
 			continue
-		if op == "delegate":
-			for side in ["held", "failed"]:
+		if op == "delegate" or op == "odds":
+			# Left to the captain, or a roll (the club decks): each outcome's own stakes.
+			for side in (["held", "failed"] if op == "delegate" else ["hit", "miss"]):
 				var inner := _stakes_in(e.get(side, []))
 				for k in inner[0]:
 					if not gains.has(k):

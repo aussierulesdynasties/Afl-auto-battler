@@ -1,0 +1,466 @@
+[
+	{
+		"id": "wbd_kennel_open_gates",
+		"club": "WBD",
+		"controversy": false,
+		"category": "community",
+		"phase": ["preseason", "regular"],
+		"subject": {"kind": "club"},
+		"title": ["Open the gates at the Kennel"],
+		"text": ["The locals want an open session at the Kennel on Sunday, kids on shoulders along the fence. The coaches would rather work without a crowd."],
+		"choices": [
+			{"key": "open", "label": "Open the gates",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "morale", "d": 2, "who": "all"}, {"op": "slow_start", "chance": 15, "who": "side", "on": "week"}],
+			 "result": "The fence is three deep. The players feel the suburb behind them, and the session never quite settles."},
+			{"key": "closed", "label": "Train behind closed doors",
+			 "effects": [{"op": "xp", "d": 5, "who": "all"}, {"op": "board", "d": -3, "was": "members"}],
+			 "result": "A clean week of work. The locals feel shut out, and the board hears about it."}
+		]
+	},
+	{
+		"id": "wbd_mens_health_night",
+		"club": "WBD",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "player", "pick": "highest:games", "where": {"games_min": 50, "fit": true}},
+		"title": ["The men's health night in the west"],
+		"text": ["The club's men's health night is on at a community hall out west on Tuesday, and the organisers want {name} to front a session. It's a recovery week."],
+		"choices": [
+			{"key": "send", "label": "Send {first}",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The club turned up for the blokes of the west"}, {"op": "slow_start", "chance": 10, "who": "subject", "on": "week"}],
+			 "result": "{name} has the hall laughing and talking. It's a late one in a recovery week."},
+			{"key": "staff", "label": "Send someone from the staff",
+			 "effects": [{"op": "xp", "d": 3, "who": "subject"}, {"op": "board", "d": -3, "was": "members"}],
+			 "result": "{name} keeps his routine. The organisers are polite about it, but they wanted a player."}
+		]
+	},
+	{
+		"id": "wbd_womens_health_budget",
+		"club": "WBD",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["Who pays for the women's health program?"],
+		"text": ["The club's community arm wants to start a women's health program across the west, and it's short of money. The board asks whether the football department will give up part of its budget."],
+		"choices": [
+			{"key": "fund", "label": "Fund it from the football budget",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The club looked after the families of the west"}, {"op": "forgo_xp", "d": 4, "who": "all"}],
+			 "result": "The program starts on time. The football department runs a few fewer sessions this month."},
+			{"key": "sponsors", "label": "Leave it to the community arm to find sponsors",
+			 "effects": [{"op": "odds", "chance": 50, "hit": [{"op": "board", "d": 2, "was": "members"}], "miss": [{"op": "board", "d": -3, "was": "members"}], "hit_result": "A local business steps in and the program starts on time.", "miss_result": "No sponsor comes, the program waits a year, and the west notices."}],
+			 "result": "The football budget stays whole while the community arm knocks on doors."}
+		]
+	},
+	{
+		"id": "wbd_merger_whispers",
+		"club": "WBD",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"when": {"board_max": 40},
+		"title": ["The word \"merger\" is in the paper"],
+		"text": ["The club is in debt, and the paper says league headquarters is sounding out a merger partner for the Dogs. The supporters are already talking about a rally at the Kennel."],
+		"choices": [
+			{"key": "rally", "label": "Back the supporters' rally in public",
+			 "effects": [{"op": "odds", "chance": 60, "hit": [{"op": "board", "d": 6, "was": "funds"}, {"op": "culture", "strand": "together", "d": 2, "why": "The supporters raised the money to save their club"}], "miss": [{"op": "board", "d": -4}], "hit_result": "The tins come back full. The debt falls and the Kennel has never been louder.", "miss_result": "The rally falls short, and the board wears a public fight with the league."}],
+			 "result": "The coach stands with the supporters, and the whole league hears it."},
+			{"key": "quiet", "label": "Say nothing and let the board negotiate",
+			 "effects": [{"op": "board", "d": 3}, {"op": "morale", "d": -2, "who": "all"}, {"op": "culture", "strand": "together", "d": -2, "why": "The supporters felt their coach left them on their own"}],
+			 "result": "The board keeps control of the talks. The supporters and the players are left wondering."}
+		]
+	},
+	{
+		"id": "wbd_bumper_stickers",
+		"club": "WBD",
+		"controversy": false,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"title": ["The stickers are back on the cars"],
+		"text": ["The league has done the Dogs no favours again, and supporters have printed stickers telling headquarters what they think. A reporter asks you whether you've got one."],
+		"choices": [
+			{"key": "two", "label": "\"I've got two.\"",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The coach stood with the supporters against the league"}, {"op": "morale", "d": 2, "who": "all"}, {"op": "board", "d": -3}],
+			 "result": "The supporters love it and the rooms have a laugh. League headquarters is not amused, and the board hears about it."},
+			{"key": "fixture", "label": "\"We just play the fixture we're given.\"",
+			 "effects": [{"op": "board", "d": 2}, {"op": "culture", "strand": "together", "d": -1, "why": "The supporters think the coach has gone soft on the league"}],
+			 "result": "The board is relieved. Out in Footscray, they reckon the coach has gone soft."}
+		]
+	},
+	{
+		"id": "wbd_regional_home_games",
+		"club": "WBD",
+		"controversy": false,
+		"category": "board",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["A regional city wants home games"],
+		"text": ["A big regional city to the west has offered the club a paid deal to play home games at its ground each season. Footscray is split."],
+		"choices": [
+			{"key": "two", "label": "Take two games a year",
+			 "effects": [{"op": "board", "d": 5, "was": "funds"}, {"op": "odds", "chance": 20, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "The bus trip home takes it out of them."}],
+			 "result": "Steady money and a new heartland. Two home crowds go up the highway."},
+			{"key": "one", "label": "Take one game",
+			 "effects": [{"op": "board", "d": 2, "was": "funds"}, {"op": "odds", "chance": 10, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "The trip still costs them some legs."}],
+			 "result": "Some money and some goodwill. The city wanted two."},
+			{"key": "none", "label": "Keep every home game in Melbourne",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The members kept every home game"}, {"op": "board", "d": -3, "was": "funds"}],
+			 "result": "The members keep their games. The board loses money it had budgeted for."}
+		]
+	},
+	{
+		"id": "wbd_northern_home_game",
+		"club": "WBD",
+		"controversy": false,
+		"category": "board",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["Sell a home game to the Top End?"],
+		"text": ["A government up north has offered strong money for a Dogs home game in the dry heat. The players lose a week of routine and the members lose a home game."],
+		"choices": [
+			{"key": "sell", "label": "Sell it",
+			 "effects": [{"op": "board", "d": 5, "was": "funds"}, {"op": "slow_start", "chance": 25, "who": "side"}, {"op": "culture", "strand": "together", "d": -1, "why": "The members gave up a home game for the money"}],
+			 "result": "A big cheque comes in. The heat and the flights take something out of the side, and the members grumble."},
+			{"key": "keep", "label": "Keep it at home",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The members kept their game at home"}, {"op": "fresh", "who": "side"}, {"op": "board", "d": -4, "was": "funds"}],
+			 "result": "The members are pleased and the side keeps its routine. The board misses the money."}
+		]
+	},
+	{
+		"id": "wbd_local_kid_trial",
+		"club": "WBD",
+		"controversy": false,
+		"category": "selection",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["A kid from the western suburbs wants a go"],
+		"text": ["A raw teenager from a local junior club, son of migrants, has been tearing up the local league. The recruiters say he's two years away, maybe more."],
+		"choices": [
+			{"key": "list", "label": "Give him a spot on the list",
+			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "odds", "chance": 30, "hit": [{"op": "culture", "strand": "ambition", "d": 2, "why": "A kid from the west grew into a senior footballer"}], "miss": [{"op": "board", "d": -3, "was": "funds"}], "hit_result": "He keeps growing, and the west watches every step.", "miss_result": "He doesn't come on, and the spot was a ready-made player's."}],
+			 "result": "The west hears the Dogs have backed one of their own."},
+			{"key": "train", "label": "Let him train with the reserves",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "odds", "chance": 25, "hit": [{"op": "board", "d": -4, "was": "members"}], "hit_result": "Another club lists him before the Dogs make up their mind."}],
+			 "result": "No list spot used, and the club keeps an eye on him."},
+			{"key": "pass", "label": "Pass on him",
+			 "effects": [{"op": "xp", "d": 3, "who": "all"}, {"op": "board", "d": -3, "was": "members"}],
+			 "result": "The list stays as planned. The local juniors hear the club passed on one of their own."}
+		]
+	},
+	{
+		"id": "wbd_market_morning",
+		"club": "WBD",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["The Footscray market wants the Dogs"],
+		"text": ["The traders at the market want players there on Saturday morning, every stall in red, white and blue. It's the morning after a road trip."],
+		"choices": [
+			{"key": "players", "label": "Send a group of players",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The players turned up for their own suburb"}, {"op": "odds", "chance": 15, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "Tired legs from the trip catch up with them."}],
+			 "result": "The market is packed and the stallholders are thrilled."},
+			{"key": "mascot", "label": "Send the mascot and the cheer squad",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "The players rest. The traders wanted players, and the market talks."}
+		]
+	},
+	{
+		"id": "wbd_the_long_wait",
+		"club": "WBD",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["The old bloke in the outer"],
+		"text": ["At the members' function, an old supporter tells you he's waited most of his life for a flag and hasn't got many seasons left. A reporter overhears."],
+		"choices": [
+			{"key": "promise", "label": "\"We'll do it for him.\"",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "morale", "d": 3, "who": "all"}, {"op": "loss_sting", "chance": 20, "d": -5, "who": "side"}],
+			 "result": "It's in the paper by morning. The members and the players are fired up, and every loss now carries a promise."},
+			{"key": "work", "label": "\"Every supporter's waited. We'll keep working.\"",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The coach kept the talk on the work"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "No promise to answer for. Some of the members wanted more fire."}
+		]
+	},
+	{
+		"id": "wbd_nobody_tipping_us",
+		"club": "WBD",
+		"controversy": false,
+		"category": "media",
+		"phase": ["finals"],
+		"subject": {"kind": "club"},
+		"when": {"ladder_min": 5},
+		"title": ["Nobody's tipping us"],
+		"text": ["The Dogs have made the finals from low on the ladder, and every pundit has them out next week. The players want to know how the coach will play it."],
+		"choices": [
+			{"key": "embrace", "label": "\"Let them write us off.\"",
+			 "effects": [{"op": "morale", "d": 5, "who": "side"}, {"op": "slow_start", "chance": 20, "who": "side"}],
+			 "result": "The rooms go in with a chip on the shoulder. Some of the younger ones are wound tight."},
+			{"key": "straight", "label": "\"We respect them, and we back ourselves.\"",
+			 "effects": [{"op": "board", "d": 2}, {"op": "morale", "d": -2, "who": "side"}],
+			 "result": "No extra noise. The players wanted the coach to back them louder."}
+		]
+	},
+	{
+		"id": "wbd_membership_tour",
+		"club": "WBD",
+		"controversy": false,
+		"category": "board",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["The membership drive in the west"],
+		"text": ["The Dogs have always had fewer members than the big Melbourne clubs. Marketing wants the coach and the players on a membership tour of the western suburbs."],
+		"choices": [
+			{"key": "full", "label": "Players at every event",
+			 "effects": [{"op": "board", "d": 5, "was": "members"}, {"op": "slow_start", "chance": 20, "who": "side"}],
+			 "result": "Membership grows. The players are busy, and it shows early in the season."},
+			{"key": "coach", "label": "The coach goes, the players stay home",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "forgo_xp", "d": 2, "who": "side"}],
+			 "result": "Some new members sign up. The coach misses a few sessions on the road, and marketing wanted players."},
+			{"key": "none", "label": "No tour, focus on the football",
+			 "effects": [{"op": "xp", "d": 3, "who": "all"}, {"op": "board", "d": -4, "was": "members"}],
+			 "result": "A clean pre-season. Membership stays flat, and the board is disappointed."}
+		]
+	},
+	{
+		"id": "wbd_gambling_money",
+		"club": "WBD",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["The club wants out of gambling money"],
+		"text": ["A big share of the club's income comes from gambling in its own suburb. The president wants out because it takes money from the very people the club is for; the finance staff warn about the hole it leaves."],
+		"choices": [
+			{"key": "exit", "label": "Back the exit in public",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The members respect the club walking away from gambling money"}, {"op": "culture", "strand": "standards", "d": 1, "why": "The club chose its suburb over easy money"}, {"op": "board", "d": -4, "was": "funds"}],
+			 "result": "The community and the members respect it. The money it leaves behind will take years to replace."},
+			{"key": "keep", "label": "Keep the income and say nothing",
+			 "effects": [{"op": "board", "d": 3, "was": "funds"}, {"op": "culture", "strand": "standards", "d": -2, "why": "The club kept taking gambling money from its own suburb"}],
+			 "result": "The money keeps coming. Community groups criticise the club, and the president is annoyed."}
+		]
+	},
+	{
+		"id": "wbd_old_guernsey",
+		"club": "WBD",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["The members want the old guernsey back"],
+		"text": ["A members' group is pushing for the club to wear its old guernsey for one home game a year. Marketing says the current one is what sells."],
+		"choices": [
+			{"key": "back", "label": "Back the members",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The coach stood with the old faithful"}, {"op": "board", "d": -2}],
+			 "result": "The old faithful are delighted. Marketing is put out."},
+			{"key": "out", "label": "\"That's above my pay grade.\"",
+			 "effects": [{"op": "board", "d": 1}, {"op": "culture", "strand": "together", "d": -1, "why": "The members expected the coach to stand with them"}],
+			 "result": "No fight with the board. Some members expected the coach to stand with them."}
+		]
+	},
+	{
+		"id": "wbd_new_bulldog",
+		"club": "WBD",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["A new bulldog for the boundary"],
+		"text": ["The club's bulldog mascot is retiring to a quiet backyard. The cheer squad wants the players to pick his replacement from three pups at the Kennel."],
+		"choices": [
+			{"key": "event", "label": "Make a day of it, players and pups",
+			 "effects": [{"op": "morale", "d": 2, "who": "all"}, {"op": "board", "d": 2, "was": "members"}, {"op": "forgo_xp", "d": 2, "who": "all"}],
+			 "result": "A lovely morning for the rooms and the fans. Half a session goes to the pups."},
+			{"key": "squad", "label": "Let the cheer squad choose",
+			 "effects": [{"op": "xp", "d": 2, "who": "all"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "No time lost. The fans wanted the players involved."}
+		]
+	},
+	{
+		"id": "wbd_great_at_training",
+		"club": "WBD",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"when": {"losing_run_min": 3},
+		"title": ["One of the greats is at training"],
+		"text": ["One of the club's greats, a name on the honour boards at the Kennel, has turned up and asked to say a few words to the players. He's old school and doesn't do soft."],
+		"choices": [
+			{"key": "huddle", "label": "Hand him the huddle",
+			 "effects": [{"op": "morale", "d": 4, "who": "all"}, {"op": "culture", "strand": "standards", "d": 1, "why": "A club great told the players what the jumper means"}, {"op": "odds", "chance": 15, "hit": [{"op": "morale", "d": -3, "who": "side"}], "hit_result": "Some of it lands badly with the younger ones."}],
+			 "result": "The young ones will remember it."},
+			{"key": "lunch", "label": "Thank him, and save him for the members' lunch",
+			 "effects": [{"op": "xp", "d": 3, "who": "all"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "The week runs to plan. He's a bit hurt, and it gets around."}
+		]
+	},
+	{
+		"id": "wbd_build_or_buy",
+		"club": "WBD",
+		"controversy": false,
+		"category": "contracts",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["Build it or buy it?"],
+		"text": ["A proven star at another club wants to come to the Dogs, but the price is the club's first-round pick. The recruiters have always prided themselves on growing their own."],
+		"choices": [
+			{"key": "buy", "label": "Pay the price for the star",
+			 "effects": [{"op": "board", "d": 3}, {"op": "culture", "strand": "ambition", "d": 1, "why": "The club went after a proven star"}, {"op": "odds", "chance": 30, "hit": [{"op": "morale", "d": -3, "who": "all"}], "hit_result": "He never quite settles, and the rooms feel it."}],
+			 "result": "An instant best-22 player. The first-round pick is gone."},
+			{"key": "build", "label": "Keep the pick and back the draft",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The club backed its recruiters to grow their own"}, {"op": "board", "d": -2}],
+			 "result": "The recruiters get their pick. The star goes to a rival, and the board wanted the ambition."}
+		]
+	},
+	{
+		"id": "wbd_little_midfielder",
+		"club": "WBD",
+		"controversy": false,
+		"category": "selection",
+		"subject": {"kind": "player", "pick": "random", "where": {"selected": false, "fit": true}},
+		"title": ["The hard runner in the twos"],
+		"text": ["{name} has been killing it in the reserves, and the critics say he isn't up to the big league. The Dogs have a long line of blokes who proved the critics wrong."],
+		"choices": [
+			{"key": "tag", "label": "Pick him to tag their best midfielder",
+			 "effects": [{"op": "odds", "chance": 35, "hit": [{"op": "trust", "d": 4, "why": "You gave him a job and he did it"}, {"op": "morale", "d": 3, "who": "subject"}], "miss": [{"op": "morale", "d": -3, "who": "subject"}], "hit_result": "He holds his man, and the job is his.", "miss_result": "He gets beaten and goes back to the twos."}],
+			 "result": "{name} gets his chance with the hardest job on the ground."},
+			{"key": "wait", "label": "Keep him in the twos another month",
+			 "effects": [{"op": "xp", "d": 4, "who": "subject"}, {"op": "trust", "d": -2, "why": "He wonders when his chance comes"}],
+			 "result": "{name} keeps building. He wonders when his chance comes."}
+		]
+	},
+	{
+		"id": "wbd_banner_night",
+		"club": "WBD",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["The cheer squad's banner"],
+		"text": ["The cheer squad paints its banner in a shed near the Kennel the night before every game. This week they've asked if a few players could help with the last letters."],
+		"choices": [
+			{"key": "leaders", "label": "Send the leadership group",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The leaders painted the banner with the cheer squad"}, {"op": "slow_start", "chance": 10, "who": "side", "on": "week"}],
+			 "result": "The squad is over the moon. The leaders get home late."},
+			{"key": "ball", "label": "Send a signed ball and a thank-you",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "culture", "strand": "together", "d": -1, "why": "The cheer squad wanted players, not a signed ball"}],
+			 "result": "No disruption to the week. The squad wanted players."}
+		]
+	},
+	{
+		"id": "wbd_short_of_a_gallop",
+		"club": "WBD",
+		"controversy": false,
+		"category": "selection",
+		"subject": {"kind": "club"},
+		"title": ["Two seniors short of a gallop"],
+		"text": ["Two senior players are back from injury but short of touch. The development coach wants both sent to the reserves this week for a full game."],
+		"choices": [
+			{"key": "both", "label": "Send both down",
+			 "effects": [{"op": "xp", "d": 3, "who": "all"}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "Both get a full game in the twos. Neither is pleased to be dropped, and the group notices."},
+			{"key": "one", "label": "Send one, keep one",
+			 "effects": [{"op": "xp", "d": 2, "who": "all"}, {"op": "slow_start", "chance": 20, "who": "side", "on": "week"}],
+			 "result": "One gets his game in the twos. The other is still short of a gallop."}
+		]
+	},
+	{
+		"id": "wbd_who_owns_the_west",
+		"club": "WBD",
+		"controversy": false,
+		"category": "rivals",
+		"subject": {"kind": "club"},
+		"title": ["Who owns the west?"],
+		"text": ["{opp} have billboards up all over the western suburbs this week, right in the Dogs' backyard. The players have noticed."],
+		"choices": [
+			{"key": "ours", "label": "\"The west is ours.\"",
+			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "board", "d": 2, "was": "members"}, {"op": "loss_sting", "chance": 20, "d": -5, "who": "side"}],
+			 "result": "The group is fired up. Lose this one and the gloating will be everywhere."},
+			{"key": "footy", "label": "Keep it about the football",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The coach kept the week on the football"}, {"op": "culture", "strand": "together", "d": -1, "why": "The supporters wanted the coach to make a statement"}],
+			 "result": "No extra pressure. The supporters wanted a statement."}
+		]
+	},
+	{
+		"id": "wbd_local_sponsor",
+		"club": "WBD",
+		"controversy": false,
+		"category": "board",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["The local business or the big one"],
+		"text": ["A family business in Footscray has sponsored the club through the thin times. A big national company has offered more for the same spot, and the board wants the coach's view."],
+		"choices": [
+			{"key": "local", "label": "Stay loyal to the local",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The club stuck by a family that stuck by it"}, {"op": "board", "d": -4, "was": "funds"}],
+			 "result": "The community and the members love it. The club leaves money on the table."},
+			{"key": "big", "label": "Take the big money",
+			 "effects": [{"op": "board", "d": 4, "was": "funds"}, {"op": "culture", "strand": "together", "d": -2, "why": "Footscray heard the club dropped a local family for money"}],
+			 "result": "More money for the club. The local family is hurt, and Footscray hears about it."}
+		]
+	},
+	{
+		"id": "wbd_nightclub_fight",
+		"club": "WBD",
+		"controversy": true,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"title": ["A late night ends in the paper"],
+		"text": ["Two Dogs players were in a fight outside a city nightclub after a win. Nobody was badly hurt, but it's on the front page."],
+		"choices": [
+			{"key": "suspend", "label": "Suspend both for a week",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "The club made its standards clear"}, {"op": "board", "d": 2}, {"op": "morale", "d": -3, "who": "all"}],
+			 "result": "The standards are clear. Two players sit out, and the group is split on it."},
+			{"key": "inhouse", "label": "Fine them and handle it in-house",
+			 "effects": [{"op": "morale", "d": 2, "who": "all"}, {"op": "board", "d": -3}],
+			 "result": "Both play. The press say the club has gone soft, and the board agrees."}
+		]
+	},
+	{
+		"id": "wbd_positive_test",
+		"club": "WBD",
+		"controversy": true,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"title": ["A positive test leaks"],
+		"text": ["A Dogs player has returned a positive test for an illicit drug, and it has leaked before the club can speak. His family is asking the club to protect him."],
+		"choices": [
+			{"key": "standby", "label": "Stand by him and get him help",
+			 "effects": [{"op": "morale", "d": 2, "who": "all"}, {"op": "culture", "strand": "together", "d": 1, "why": "The club looked after one of its own"}, {"op": "board", "d": -4}],
+			 "result": "The playing group appreciates the loyalty. The press and parts of the board call it soft."},
+			{"key": "standdown", "label": "Stand him down until it's dealt with",
+			 "effects": [{"op": "board", "d": 2}, {"op": "culture", "strand": "standards", "d": 1, "why": "The club held the line on drugs"}, {"op": "morale", "d": -3, "who": "all"}],
+			 "result": "The board is satisfied. The group thinks the club dropped one of its own."}
+		]
+	},
+	{
+		"id": "wbd_board_after_five",
+		"club": "WBD",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"when": {"losing_run_min": 5},
+		"title": ["The board meets after a fifth loss"],
+		"text": ["Five straight losses, and the president has called a board meeting. The old players on the board want to know whether the coach has a plan or an excuse."],
+		"choices": [
+			{"key": "kids", "label": "Blood the kids now",
+			 "effects": [{"op": "board", "d": 4}, {"op": "xp", "d": 5, "who": "all"}, {"op": "slow_start", "chance": 30, "who": "side", "on": "week"}],
+			 "result": "The board gives the coach time. The young ones get games, and the results may get worse first."},
+			{"key": "now", "label": "Promise to win now with the experienced players",
+			 "effects": [{"op": "morale", "d": 3, "who": "side"}, {"op": "odds", "chance": 40, "hit": [{"op": "board", "d": -4}], "hit_result": "The next fortnight goes badly, and the board remembers the promise."}],
+			 "result": "The senior players feel backed. The board will judge the coach on results."}
+		]
+	},
+	{
+		"id": "wbd_juniors_grand_final",
+		"club": "WBD",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"when": {"round_min": 18},
+		"title": ["The juniors want the Kennel"],
+		"text": ["The western suburbs junior league wants its grand finals at the Kennel on the club's main training day. The seniors would have to use the back field."],
+		"choices": [
+			{"key": "give", "label": "Give them the ground",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The west's footy families feel the Kennel is theirs too"}, {"op": "forgo_xp", "d": 3, "who": "all"}],
+			 "result": "The junior clubs have the day of their lives. The seniors make do on the back field."},
+			{"key": "keep", "label": "Keep the main ground for the seniors",
+			 "effects": [{"op": "xp", "d": 3, "who": "all"}, {"op": "board", "d": -4, "was": "members"}],
+			 "result": "Preparation is untouched. The junior clubs feel second best, and it gets around."}
+		]
+	}
+]

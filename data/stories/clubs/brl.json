@@ -1,0 +1,490 @@
+[
+	{
+		"id": "brl_brunswick_street",
+		"club": "BRL",
+		"controversy": false,
+		"category": "members",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["Back to Brunswick Street"],
+		"text": ["The season's done. The old Fitzroy people want the group at Brunswick Street Oval, the club's spiritual home, on the same day the Queensland members have their day in Brisbane."],
+		"choices": [
+			{"key": "roys", "label": "Take them to the Roys first",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The Fitzroy heartland feels the club is still theirs"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "The old Fitzroy people line the fence. Brisbane starts its day without half the side."},
+			{"key": "home", "label": "Straight home to Brisbane",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "culture", "strand": "together", "d": -1, "why": "The Fitzroy faithful feel left behind"}],
+			 "result": "The Queensland crowd gets its day. The Fitzroy faithful feel forgotten."},
+			{"key": "split", "label": "Leaders to Fitzroy, the rest home",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "odds", "chance": 20, "hit": [{"op": "board", "d": -2}], "hit_result": "The papers called it half-hearted."}],
+			 "result": "Both camps get a visit. Neither gets the whole side."}
+		]
+	},
+	{
+		"id": "brl_fitzroy_song",
+		"club": "BRL",
+		"controversy": false,
+		"category": "members",
+		"when": {"winning_run_min": 1},
+		"subject": {"kind": "club"},
+		"title": ["The old Fitzroy song"],
+		"text": ["Fitzroy supporters have asked that the old Fitzroy song, the tune the Lions' own song grew out of, be sung in the rooms after the next win. Some of the young Queenslanders have never heard it."],
+		"choices": [
+			{"key": "rooms", "label": "Sing it in the rooms and tell the kids its story",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "forgo_xp", "d": 3, "who": "side"}],
+			 "result": "The Fitzroy faithful hear the players took it on. Tuesday's meeting goes on history, not vision."},
+			{"key": "ground", "label": "Play it at the ground, keep the rooms as they are",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "odds", "chance": 50, "hit": [{"op": "board", "d": -2, "was": "funds"}], "hit_result": "The sponsors wanted their slot back."}],
+			 "result": "The supporters hear it at the ground. The routine stays."},
+			{"key": "ours", "label": "Our song is enough",
+			 "effects": [{"op": "board", "d": 2}, {"op": "odds", "chance": 60, "hit": [{"op": "board", "d": -3, "was": "members"}], "hit_result": "The Fitzroy faithful took it badly."}],
+			 "result": "One club, one song. The commercial staff are happy."}
+		]
+	},
+	{
+		"id": "brl_two_histories",
+		"club": "BRL",
+		"controversy": false,
+		"category": "leadership",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["Two clubs in one jumper"],
+		"text": ["You're speaking at the season launch. The club carries Fitzroy's century in Melbourne, the Bears' battling years in Queensland and the Lions' own story since. Which one do you tell the group?"],
+		"choices": [
+			{"key": "fitzroy", "label": "Fitzroy: we were nearly lost once",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "The group heard how close Fitzroy came to being lost"}, {"op": "board", "d": 1, "was": "members"}, {"op": "culture", "strand": "together", "d": -1, "why": "The Queensland members feel it isn't their story"}],
+			 "result": "Pride and grit. The Victorian members stand up; the Queenslanders sit on their hands."},
+			{"key": "bears", "label": "The Bears: nobody wanted us up here",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The group took on the Bears' underdog chip"}, {"op": "board", "d": -1}],
+			 "result": "The local crowd loves it. The board hears the club talked down."},
+			{"key": "lions", "label": "The Lions: this club is ours to make",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 2, "why": "The coach told them the club is theirs to make"}, {"op": "loss_sting", "chance": 20, "d": -3, "who": "side"}],
+			 "result": "Ambition from the first week. It's a big claim to live up to."}
+		]
+	},
+	{
+		"id": "brl_bears_old_boys",
+		"club": "BRL",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["The Bears old boys"],
+		"text": ["The Bears' old players say the club celebrates Fitzroy and the flags but forgets the men who built footy in Queensland when nobody came. They'd like a day at training and a lap at a home game."],
+		"choices": [
+			{"key": "host", "label": "Host them at training and at the game",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The group heard what it took to build footy up here"}, {"op": "board", "d": 2, "was": "members"}, {"op": "forgo_xp", "d": 4, "who": "all"}],
+			 "result": "The Queensland roots feel honoured. A session goes to the visitors."},
+			{"key": "lap", "label": "A lap at the game only",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "odds", "chance": 30, "hit": [{"op": "board", "d": -2}], "hit_result": "The old boys said on radio it felt like a token."}],
+			 "result": "A nice moment, and no work lost."},
+			{"key": "later", "label": "Tell them next year",
+			 "effects": [{"op": "xp", "d": 2, "who": "all"}, {"op": "board", "d": -2}, {"op": "culture", "strand": "together", "d": -1, "why": "The Bears old boys felt brushed off"}],
+			 "result": "A full week of work. The old boys won't forget it."}
+		]
+	},
+	{
+		"id": "brl_medal_winners",
+		"club": "BRL",
+		"controversy": false,
+		"category": "leadership",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["The medal winners' morning"],
+		"text": ["Past winners of the club champion medal, named for a Bears great and a Fitzroy great, want to address the squad before the season. They'd take the morning session."],
+		"choices": [
+			{"key": "morning", "label": "Give them the morning",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "Past champions told the group what the medal asks"}, {"op": "morale", "d": 2, "who": "all"}, {"op": "running", "d": -1}],
+			 "result": "The group hears what the medal asks of a player. A running session is gone."},
+			{"key": "ten", "label": "Ten minutes at the end of training",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "Past champions had a word after training"}, {"op": "board", "d": -1}],
+			 "result": "The work gets done. The visitors feel rushed."}
+		]
+	},
+	{
+		"id": "brl_homesick",
+		"club": "BRL",
+		"controversy": false,
+		"category": "family",
+		"private": true,
+		"subject": {"kind": "player", "pick": "random", "where": {"age_max": 21, "games_max": 20}},
+		"title": ["Missing home"],
+		"text": ["{name} came north and he's struggling. He misses his family and his mates, and the welfare staff think he could ask for a trade home at season's end."],
+		"choices": [
+			{"key": "family", "label": "Fly his family up for a fortnight",
+			 "effects": [{"op": "morale", "d": 8, "who": "subject"}, {"op": "board", "d": -2, "was": "funds"}, {"op": "forgo_xp", "d": 4, "who": "subject"}],
+			 "result": "His family arrives. {first} settles, and he's distracted for a week."},
+			{"key": "games", "label": "Give him games",
+			 "effects": [{"op": "morale", "d": 5, "who": "subject"}, {"op": "odds", "chance": 30, "hit": [{"op": "morale", "d": -8, "who": "subject"}], "hit_result": "He wasn't ready, got dropped, and took it hard."}],
+			 "result": "Feeling wanted on the field might be the cure."},
+			{"key": "weekend", "label": "Let him go home for a long weekend",
+			 "effects": [{"op": "morale", "d": 4, "who": "subject"}, {"op": "forgo_xp", "d": 6, "who": "subject"}],
+			 "result": "{first} gets a few days at home and misses a week's work."}
+		]
+	},
+	{
+		"id": "brl_go_home_whispers",
+		"club": "BRL",
+		"controversy": false,
+		"category": "board",
+		"phase": ["season_end"],
+		"when": {"ladder_min": 13},
+		"subject": {"kind": "club"},
+		"title": ["Whispers of going home"],
+		"text": ["A losing year is over and the whispers have started: several young interstate players may ask for trades home together. The board wants to know how you'll hold the list."],
+		"choices": [
+			{"key": "welfare", "label": "Build the welfare team",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "Housing, mentors and a family officer for the young players"}, {"op": "board", "d": -4, "was": "funds"}],
+			 "result": "Fewer kids will walk. It comes out of the football budget."},
+			{"key": "seniors", "label": "Lean on the senior players to mentor them",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The senior players took the kids under their wing"}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "It costs nothing and builds the group. The senior players carry the load."},
+			{"key": "locals", "label": "Let them go and recruit Queenslanders",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "A list that wants to be here"}, {"op": "culture", "strand": "ambition", "d": -2, "why": "Talent walked out for less than it was worth"}],
+			 "result": "The ones who stay want to be here. Talent walks out cheap."}
+		]
+	},
+	{
+		"id": "brl_son_of_the_club",
+		"club": "BRL",
+		"controversy": false,
+		"category": "contracts",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["A son of the club"],
+		"text": ["The son of a former player is a genuine draft prospect, and the Lions hold his father-son rights through Fitzroy, the Bears or the Lions themselves. Claiming him will cost a better pick than the club wanted to spend."],
+		"choices": [
+			{"key": "claim", "label": "Claim him",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "culture", "strand": "ambition", "d": -1, "why": "The pick he cost is gone"}],
+			 "result": "A kid who grew up in the jumper. The old players are thrilled."},
+			{"key": "pass", "label": "Let him go to the draft",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The draft hand stays whole"}, {"op": "board", "d": -2}, {"op": "culture", "strand": "together", "d": -1, "why": "The family and the old players feel let down"}],
+			 "result": "The picks stay whole. The family feels let down."}
+		]
+	},
+	{
+		"id": "brl_local_kid",
+		"club": "BRL",
+		"controversy": false,
+		"category": "selection",
+		"subject": {"kind": "player", "pick": "highest:potential", "where": {"age_max": 20, "selected": false}},
+		"title": ["The papers want him picked"],
+		"text": ["The local papers have taken {name} up as one of their own and want him in the side. He's close, but there's an experienced player in form in his spot."],
+		"choices": [
+			{"key": "pick", "label": "Pick him",
+			 "effects": [{"op": "morale", "d": 3, "who": "subject"}, {"op": "board", "d": 2, "was": "members"}, {"op": "slow_start", "chance": 20, "who": "side"}],
+			 "result": "{first} plays and Queensland takes notice. The side has a rougher edge this week."},
+			{"key": "next", "label": "Tell him he's next",
+			 "effects": [{"op": "xp", "d": 6, "who": "subject"}, {"op": "morale", "d": -3, "who": "subject"}],
+			 "result": "The in-form player keeps his spot. {first} waits, and the papers say so."}
+		]
+	},
+	{
+		"id": "brl_northern_help",
+		"club": "BRL",
+		"controversy": false,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"title": ["Northern help, southern noise"],
+		"text": ["Rival clubs are complaining again that the northern clubs get too much help from the league. A journalist asks whether Brisbane's list was handed to it."],
+		"choices": [
+			{"key": "back", "label": "Tell him to try growing footballers in a league state",
+			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "odds", "chance": 40, "hit": [{"op": "board", "d": -2}], "hit_result": "The southern press kept the fight going all week."}],
+			 "result": "The club backs itself. The members love it."},
+			{"key": "league", "label": "Tell him it's a question for the league",
+			 "effects": [{"op": "board", "d": 1}, {"op": "culture", "strand": "ambition", "d": -1, "why": "It sounded like the coach agreed"}],
+			 "result": "Out of the headlines. Some read it as agreeing."}
+		]
+	},
+	{
+		"id": "brl_qclash",
+		"club": "BRL",
+		"controversy": false,
+		"category": "rivals",
+		"when": {"opp_deck": "GCS"},
+		"subject": {"kind": "club"},
+		"title": ["QClash week"],
+		"text": ["It's the Queensland derby against {opp}. The local media want a fight, and both clubs are chasing the same kids, sponsors and crowds."],
+		"choices": [
+			{"key": "talk", "label": "Talk it up: this is our state",
+			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "board", "d": 3, "was": "members"}, {"op": "loss_sting", "chance": 25, "d": -4, "who": "side"}],
+			 "result": "The group is wound up and the crowd turns out. Lose, and you'll wear it."},
+			{"key": "calm", "label": "Four points, like any other week",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "Calm heads. The supporters wanted fire."}
+		]
+	},
+	{
+		"id": "brl_magpie_grudge",
+		"club": "BRL",
+		"controversy": false,
+		"category": "rivals",
+		"when": {"opp_deck": "COL"},
+		"subject": {"kind": "club"},
+		"title": ["The old grudge with the Magpies"],
+		"text": ["The rivalry with {opp} goes back to Fitzroy's days in Melbourne. The older supporters still feel it, and the radio is replaying the old battles."],
+		"choices": [
+			{"key": "tapes", "label": "Show the group the old tapes",
+			 "effects": [{"op": "morale", "d": 5, "who": "side"}, {"op": "slow_start", "chance": 20, "who": "side"}],
+			 "result": "They feel what the jumper means against this mob. Emotion might beat structure early."},
+			{"key": "plan", "label": "Keep it to the game plan",
+			 "effects": [{"op": "xp", "d": 4, "who": "side"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "Clear heads. The history goes unspoken."}
+		]
+	},
+	{
+		"id": "brl_old_grievance",
+		"club": "BRL",
+		"controversy": false,
+		"category": "members",
+		"when": {"opp_deck": "PAD"},
+		"subject": {"kind": "club"},
+		"title": ["The supporters remember"],
+		"text": ["Some old Fitzroy and Bears supporters still feel {opp} came into the league at their clubs' expense. The cheer squad wants a pointed banner this week."],
+		"choices": [
+			{"key": "banner", "label": "Let the cheer squad have its banner",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The old supporters feel heard"}, {"op": "board", "d": -2}],
+			 "result": "The banner goes up. The league and the press frown."},
+			{"key": "tone", "label": "Ask them to keep it about this side",
+			 "effects": [{"op": "board", "d": 1}, {"op": "culture", "strand": "together", "d": -1, "why": "The cheer squad feels gagged"}],
+			 "result": "No fuss and no fine. The cheer squad grumbles."}
+		]
+	},
+	{
+		"id": "brl_origin_week",
+		"club": "BRL",
+		"controversy": false,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"title": ["Origin week"],
+		"text": ["It's rugby league's biggest week in Queensland and the footy has vanished from the back page. Marketing wants players in maroon at a city stunt to grab some attention."],
+		"choices": [
+			{"key": "stunt", "label": "Send three players to the stunt",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "odds", "chance": 15, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "The afternoon in the mall came out of their recovery."}],
+			 "result": "The Lions get seen in a league town."},
+			{"key": "footy", "label": "Stay out of it",
+			 "effects": [{"op": "xp", "d": 3, "who": "side"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "A normal week. Nobody in Brisbane notices."}
+		]
+	},
+	{
+		"id": "brl_brisbane_heat",
+		"club": "BRL",
+		"controversy": false,
+		"category": "training",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["Brisbane heat"],
+		"text": ["It's stinking hot and humid. The southern sides hate coming up at this time of year, but your own players are cooking at training too."],
+		"choices": [
+			{"key": "heat", "label": "Train in the heat of the day",
+			 "effects": [{"op": "running", "d": 1}, {"op": "odds", "chance": 20, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "A few players wilted and carried it into the weekend."}],
+			 "result": "Harder bodies, and the home edge grows."},
+			{"key": "dawn", "label": "Train at dawn",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "running", "d": -1}],
+			 "result": "Fresh legs, but less used to the worst of it."}
+		]
+	},
+	{
+		"id": "brl_afternoon_storm",
+		"club": "BRL",
+		"controversy": false,
+		"category": "training",
+		"subject": {"kind": "club"},
+		"title": ["The afternoon storm"],
+		"text": ["A Brisbane storm rolls in an hour before training: lightning and a downpour. The main session is in doubt."],
+		"choices": [
+			{"key": "inside", "label": "Move inside for walkthroughs and vision",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "forgo_xp", "d": 3, "who": "side"}],
+			 "result": "Nobody's at risk. Less touch on the ball."},
+			{"key": "wait", "label": "Wait it out and train late",
+			 "effects": [{"op": "xp", "d": 6, "who": "side"}, {"op": "odds", "chance": 15, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "The late finish caught up with them."}],
+			 "result": "The full session goes ahead. Players get home late and tired."}
+		]
+	},
+	{
+		"id": "brl_cricket_on",
+		"club": "BRL",
+		"controversy": false,
+		"category": "training",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["The cricket's on"],
+		"text": ["The Gabba is a cricket ground through summer, so the club can't use it for match simulation. You could hire another big ground, or train at a suburban oval."],
+		"choices": [
+			{"key": "hire", "label": "Hire a full-sized ground",
+			 "effects": [{"op": "xp", "d": 4, "who": "all"}, {"op": "board", "d": -2, "was": "funds"}],
+			 "result": "Proper match practice on a big ground. It costs the football budget."},
+			{"key": "suburban", "label": "Make do at the suburban oval",
+			 "effects": [{"op": "board", "d": 1, "was": "members"}, {"op": "forgo_xp", "d": 2, "who": "all"}],
+			 "result": "The locals turn up to watch. A smaller ground, and less match work."}
+		]
+	},
+	{
+		"id": "brl_another_plane",
+		"club": "BRL",
+		"controversy": false,
+		"category": "health",
+		"subject": {"kind": "club"},
+		"title": ["Another plane"],
+		"text": ["It's another trip south in a run of them. The high-performance staff want to fly on the morning of the game to save a hotel night; the senior players want the night before."],
+		"choices": [
+			{"key": "night", "label": "Fly the night before",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -1, "was": "funds"}],
+			 "result": "A proper sleep before the game, and a night away from family."},
+			{"key": "day", "label": "Fly on the day",
+			 "effects": [{"op": "morale", "d": 2, "who": "all"}, {"op": "slow_start", "chance": 20, "who": "side"}],
+			 "result": "Home with family longer. Stiff legs off the plane."}
+		]
+	},
+	{
+		"id": "brl_melbourne_members",
+		"club": "BRL",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["A night with the Melbourne members"],
+		"text": ["The Victorian members, many of them Fitzroy people, want the players at their function at the old Fitzroy pub the night before the next game in Melbourne."],
+		"choices": [
+			{"key": "all", "label": "Send the whole group for an hour",
+			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The heartland feels the club is still theirs"}, {"op": "slow_start", "chance": 15, "who": "side"}],
+			 "result": "The pub is packed. A late night before a game."},
+			{"key": "leaders", "label": "Send the captain and two leaders",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The leaders gave the Fitzroy people their night"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "The members get a visit. They wanted the whole group."},
+			{"key": "no", "label": "Not on the night before a game",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "Proper preparation. The members feel like an afterthought."}
+		]
+	},
+	{
+		"id": "brl_empty_seats",
+		"club": "BRL",
+		"controversy": false,
+		"category": "board",
+		"when": {"losing_run_min": 3},
+		"subject": {"kind": "club"},
+		"title": ["Empty seats at the Gabba"],
+		"text": ["Queensland crowds follow winners, and the Gabba is half-empty during a losing run. The board asks if the football department will back free kids' clinics across the city."],
+		"choices": [
+			{"key": "clinics", "label": "Players run clinics across the city",
+			 "effects": [{"op": "board", "d": 5, "was": "members"}, {"op": "forgo_xp", "d": 4, "who": "all"}],
+			 "result": "Future fans, and a grateful board. Tired bodies in a hard stretch."},
+			{"key": "wins", "label": "Tell them wins fill grounds",
+			 "effects": [{"op": "xp", "d": 4, "who": "side"}, {"op": "board", "d": -3}],
+			 "result": "The group stays on its footy. The board sees a coach who won't help."}
+		]
+	},
+	{
+		"id": "brl_whole_state_watching",
+		"club": "BRL",
+		"controversy": false,
+		"category": "media",
+		"when": {"winning_run_min": 4},
+		"subject": {"kind": "club"},
+		"title": ["The whole state's watching"],
+		"text": ["The side's flying and suddenly Brisbane's TV news wants to be at training every day. Commercial radio wants the captain every week."],
+		"choices": [
+			{"key": "open", "label": "Open the doors",
+			 "effects": [{"op": "board", "d": 5, "was": "members"}, {"op": "slow_start", "chance": 20, "who": "side"}],
+			 "result": "The club grows while it can. The group has cameras everywhere."},
+			{"key": "closed", "label": "Closed sessions, one press day a week",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -2}],
+			 "result": "Focus holds. The media turn cool."}
+		]
+	},
+	{
+		"id": "brl_up_the_coast",
+		"club": "BRL",
+		"controversy": false,
+		"category": "community",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["Pre-season up the coast"],
+		"text": ["A regional Queensland town wants the Lions for a practice match, to grow the game where league is king. The ground is hard and the facilities are basic."],
+		"choices": [
+			{"key": "best", "label": "Take the best side",
+			 "effects": [{"op": "board", "d": 5, "was": "members"}, {"op": "odds", "chance": 15, "hit": [{"op": "forgo_xp", "d": 4, "who": "side"}], "hit_result": "A player was jarred on the hard ground and missed a block."}],
+			 "result": "The town gets the stars and the region signs up."},
+			{"key": "young", "label": "Take the young players",
+			 "effects": [{"op": "xp", "d": 5, "who": "all"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "The kids get a run. The town feels short-changed."},
+			{"key": "decline", "label": "Decline the invitation",
+			 "effects": [{"op": "xp", "d": 2, "who": "all"}, {"op": "board", "d": -1}],
+			 "result": "Preparation goes as planned. A chance missed in the regions."}
+		]
+	},
+	{
+		"id": "brl_local_league_best",
+		"club": "BRL",
+		"controversy": false,
+		"category": "contracts",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["The local league's best"],
+		"text": ["The best player in Queensland's own competition is 23, works as an electrician and has never been drafted. His local club says he's ready, and he wants a shot at the Lions."],
+		"choices": [
+			{"key": "rookie", "label": "Give him a rookie spot",
+			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "culture", "strand": "ambition", "d": -1, "why": "A list spot went to an older, raw player"}],
+			 "result": "A local made good. Queensland footy takes notice."},
+			{"key": "pass", "label": "Thank him and pass",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The list spot stays for a draftee"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "The list spot stays free. The local clubs feel overlooked."}
+		]
+	},
+	{
+		"id": "brl_hands_off_our_lion",
+		"club": "BRL",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["Hands off our lion"],
+		"text": ["Marketing has floated a modern makeover of the club's lion emblem. The Fitzroy faithful are furious, and the papers want to know where the coach stands."],
+		"choices": [
+			{"key": "old", "label": "Back the old lion",
+			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "odds", "chance": 50, "hit": [{"op": "board", "d": -3}], "hit_result": "The commercial staff took it to the board."}],
+			 "result": "The heartland trusts you."},
+			{"key": "dept", "label": "Say it's not your department",
+			 "effects": [{"op": "board", "d": 1}, {"op": "odds", "chance": 60, "hit": [{"op": "board", "d": -2, "was": "members"}], "hit_result": "The supporters reckon the coach doesn't get the club."}],
+			 "result": "You stay out of the boardroom."}
+		]
+	},
+	{
+		"id": "brl_red_in_the_books",
+		"club": "BRL",
+		"controversy": false,
+		"category": "board",
+		"when": {"ladder_min": 13},
+		"subject": {"kind": "club"},
+		"title": ["The red in the books"],
+		"text": ["The club is losing money and the board wants cuts. It's eyeing the football department: a development coach, a recovery trip and the scouting budget."],
+		"choices": [
+			{"key": "accept", "label": "Accept the cuts",
+			 "effects": [{"op": "board", "d": 4}, {"op": "forgo_xp", "d": 4, "who": "all"}],
+			 "result": "The board trusts you with the books. The list develops slower."},
+			{"key": "fight", "label": "Fight for the football budget",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The coach fought for the football department"}, {"op": "board", "d": -4}],
+			 "result": "The list keeps its support. You've spent your credit with the board."},
+			{"key": "perks", "label": "Cut the coaches' own perks",
+			 "effects": [{"op": "board", "d": 1}, {"op": "culture", "strand": "standards", "d": 1, "why": "The coaches took the cut first"}, {"op": "culture", "strand": "together", "d": -1, "why": "The assistants are grumbling about their perks"}],
+			 "result": "A show of good faith. The club still comes up short."}
+		]
+	},
+	{
+		"id": "brl_mad_monday",
+		"club": "BRL",
+		"controversy": true,
+		"category": "board",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["Mad Monday on the front page"],
+		"text": ["End-of-season celebrations got out of hand and footage of Lions players is all over the news. Nobody was hurt, but the board wants a response before the members' night."],
+		"choices": [
+			{"key": "public", "label": "Public fines and an apology",
+			 "effects": [{"op": "board", "d": 4}, {"op": "culture", "strand": "standards", "d": 2, "why": "The club fined its players and said sorry"}, {"op": "morale", "d": -5, "who": "all"}],
+			 "result": "The board and the sponsors are satisfied. The group feels hung out to dry."},
+			{"key": "inhouse", "label": "Handle it in-house",
+			 "effects": [{"op": "morale", "d": 3, "who": "all"}, {"op": "odds", "chance": 30, "hit": [{"op": "board", "d": -6}], "hit_result": "More footage surfaced."}],
+			 "result": "The players trust you to back them."}
+		]
+	}
+]

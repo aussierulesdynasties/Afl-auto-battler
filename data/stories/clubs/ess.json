@@ -1,0 +1,450 @@
+[
+	{
+		"id": "ess_sash_redesign",
+		"club": "ESS",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["Hands off the sash"],
+		"text": ["The commercial team wants a new away guernsey with the red sash thinned to a stripe. The members have caught wind of it and the phones are running hot."],
+		"choices": [
+			{"key": "keep", "label": "Keep the sash bold",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The members and old players kept their sash"}, {"op": "board", "d": -2, "was": "funds"}],
+			 "result": "The sash stays. The merchandise lift the commercial team promised goes with the plan."},
+			{"key": "modern", "label": "Approve the modern cut",
+			 "effects": [{"op": "board", "d": 2, "was": "funds"}, {"op": "odds", "chance": 60, "hit": [{"op": "culture", "strand": "together", "d": -2, "why": "The members feel the sash was sold off"}], "hit_result": "The members' backlash runs for weeks."}],
+			 "result": "The new jumper sells. The old players are on talkback about it."}
+		]
+	},
+	{
+		"id": "ess_collingwood_mcg",
+		"club": "ESS",
+		"controversy": false,
+		"category": "rivals",
+		"when": {"opp_deck": "COL"},
+		"subject": {"kind": "club"},
+		"title": ["Collingwood at a full MCG"],
+		"text": ["The biggest home-and-away crowd of the year is coming. The group can feel the occasion, and some of the young players have never run out in front of a crowd like it."],
+		"choices": [
+			{"key": "lean", "label": "Lean into the occasion",
+			 "effects": [{"op": "morale", "d": 5, "who": "side"}, {"op": "slow_start", "who": "side", "chance": 20, "on": "week"}],
+			 "result": "You let them soak it in. A few of the kids look wide-eyed in the warm-up."},
+			{"key": "normal", "label": "Treat it as any other week",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The group kept calm heads in a big week"}, {"op": "morale", "d": -1, "who": "all"}],
+			 "result": "A normal week. Training is a bit flat."}
+		]
+	},
+	{
+		"id": "ess_indigenous_week",
+		"club": "ESS",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["The Indigenous players lead the week"],
+		"text": ["The club is holding a week to celebrate its Indigenous players and their culture, one of its proudest traditions. The Indigenous players have been asked to lead the program."],
+		"choices": [
+			{"key": "lead", "label": "Give them the week to lead it",
+			 "effects": [{"op": "morale", "d": 3, "who": "all"}, {"op": "culture", "strand": "together", "d": 2, "why": "The Indigenous players led the club's week"}, {"op": "forgo_xp", "d": 3, "who": "all"}],
+			 "result": "The players run the week their way. Less time on the track."},
+			{"key": "football", "label": "Football first, ceremony on game night",
+			 "effects": [{"op": "xp", "d": 3, "who": "side"}, {"op": "board", "d": -1}, {"op": "odds", "chance": 40, "hit": [{"op": "morale", "d": -2, "who": "all"}], "hit_result": "The Indigenous players feel their week was squeezed."}],
+			 "result": "A full training week. The ceremony happens on the night."}
+		]
+	},
+	{
+		"id": "ess_carlton_week",
+		"club": "ESS",
+		"controversy": false,
+		"category": "rivals",
+		"when": {"opp_deck": "CAR"},
+		"subject": {"kind": "club"},
+		"title": ["Carlton week"],
+		"text": ["Bombers and Blues, one of the oldest grudges in the game. The players want a full-contact session to get the edge back; the physios want a light week."],
+		"choices": [
+			{"key": "contact", "label": "Go full contact",
+			 "effects": [{"op": "morale", "d": 3, "who": "side"}, {"op": "culture", "strand": "together", "d": 1, "why": "The group got its edge back together"}, {"op": "odds", "chance": 20, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "The bash-and-crash week left the legs heavy."}],
+			 "result": "A willing session. A few players come out of it sore."},
+			{"key": "light", "label": "Keep it a light week",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "morale", "d": -1, "who": "side"}],
+			 "result": "A light week. The group wanted to bash into it."}
+		]
+	},
+	{
+		"id": "ess_premiership_tally",
+		"club": "ESS",
+		"controversy": false,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"title": ["Chasing the premiership record"],
+		"text": ["The press want to know if the club is chasing the outright record for premierships. The answer will be on the back page tomorrow."],
+		"choices": [
+			{"key": "want", "label": "Say we want the record",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 2, "why": "You said the club wants the record"}, {"op": "morale", "d": 2, "who": "all"}, {"op": "odds", "chance": 50, "hit": [{"op": "board", "d": -3}], "hit_result": "The board now judges the season against your words, and it falls short."}],
+			 "result": "It's the back page. Expectations go up a notch."},
+			{"key": "one", "label": "Say one flag at a time",
+			 "effects": [{"op": "board", "d": 2}, {"op": "culture", "strand": "together", "d": -1, "why": "The supporters wanted the coach to say it"}],
+			 "result": "A calm answer. The supporters wanted fire."}
+		]
+	},
+	{
+		"id": "ess_finals_hoodoo",
+		"club": "ESS",
+		"controversy": false,
+		"category": "media",
+		"phase": ["finals"],
+		"subject": {"kind": "club"},
+		"title": ["The finals drought"],
+		"text": ["Every September story about the club starts with how long it has been since a finals win. The group has been asked about it all week."],
+		"choices": [
+			{"key": "ban", "label": "Ban talk of it in the rooms",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The group stayed on the task"}, {"op": "board", "d": -2}, {"op": "slow_start", "who": "side", "chance": 15, "on": "week"}],
+			 "result": "Nobody mentions it. The press call it a sore point."},
+			{"key": "own", "label": "Own it publicly",
+			 "effects": [{"op": "morale", "d": 3, "who": "side"}, {"op": "loss_sting", "chance": 30, "d": -5, "who": "side"}],
+			 "result": "You talk about it openly. The group feels freer, and a loss would hurt twice."},
+			{"key": "speaker", "label": "Bring a premiership player in to speak",
+			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "board", "d": -1}],
+			 "result": "He tells them what September felt like. The past becomes the week's story."}
+		]
+	},
+	{
+		"id": "ess_windy_hill_upgrade",
+		"club": "ESS",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["Money for Windy Hill"],
+		"text": ["The council and the local clubs want Essendon to help pay for a new grandstand and change rooms at Windy Hill. The old guard say it's the club's home; the finance team says the money is needed elsewhere."],
+		"choices": [
+			{"key": "pay", "label": "Put the money in",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The club looked after its spiritual home"}, {"op": "board", "d": -3, "was": "funds"}],
+			 "result": "The heartland is proud. The finance team is not."},
+			{"key": "decline", "label": "Decline politely",
+			 "effects": [{"op": "board", "d": 1, "was": "funds"}, {"op": "culture", "strand": "together", "d": -2, "why": "The local footy community feels forgotten"}],
+			 "result": "The money stays in football. The locals notice."}
+		]
+	},
+	{
+		"id": "ess_edfl_clinics",
+		"club": "ESS",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["The local league asks a favour"],
+		"text": ["The local district league wants senior players at junior clinics across the north-west on the Monday after a big game. It's the club's heartland and the next generation of members."],
+		"choices": [
+			{"key": "all", "label": "Send the whole senior list",
+			 "effects": [{"op": "board", "d": 5, "was": "members"}, {"op": "odds", "chance": 30, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "No recovery day, and it showed on the weekend."}],
+			 "result": "Every ground in the north-west has a Bomber on it."},
+			{"key": "rookies", "label": "Send the rookies and one leader",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "morale", "d": 1, "who": "all"}, {"op": "odds", "chance": 40, "hit": [{"op": "culture", "strand": "together", "d": -1, "why": "The local press noticed none of the stars came"}], "hit_result": "The local paper asks where the stars were."}],
+			 "result": "The rookies love it. The kids wanted the stars."},
+			{"key": "no", "label": "Say no this week",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -3, "was": "members"}],
+			 "result": "A full recovery day. The local league is disappointed."}
+		]
+	},
+	{
+		"id": "ess_fitness_program_questions",
+		"club": "ESS",
+		"controversy": true,
+		"category": "health",
+		"subject": {"kind": "club"},
+		"title": ["Questions about the fitness program"],
+		"text": ["A new high-performance consultant wants to run an aggressive recovery and supplements program. The club doctor wants every substance signed off in writing before it starts."],
+		"choices": [
+			{"key": "doctor", "label": "Back the doctor, slower rollout",
+			 "effects": [{"op": "board", "d": 2}, {"op": "culture", "strand": "standards", "d": 2, "why": "Every substance was signed off by the doctor"}, {"op": "forgo_xp", "d": 4, "who": "all"}],
+			 "result": "The doctor signs off on a cut-down program. The consultant walks."},
+			{"key": "consultant", "label": "Let the consultant run it",
+			 "effects": [{"op": "xp", "d": 5, "who": "all"}, {"op": "fresh", "who": "side"}, {"op": "odds", "chance": 15, "hit": [{"op": "board", "d": -8}, {"op": "morale", "d": -5, "who": "all"}], "hit_result": "The league opens an integrity investigation into the program."}],
+			 "result": "The players are fitter than they've ever been."},
+			{"key": "scrap", "label": "Scrap the program",
+			 "effects": [{"op": "board", "d": 1}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "Nothing to answer for. The players wanted it."}
+		]
+	},
+	{
+		"id": "ess_integrity_reputation",
+		"club": "ESS",
+		"controversy": true,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"title": ["\"Ask them what's in the drink bottles\""],
+		"text": ["An opposition coach has hinted on radio that the club cuts corners with its fitness program, and a rival banner ran with it. The group are being asked about it in the press."],
+		"choices": [
+			{"key": "front", "label": "Front it calmly",
+			 "effects": [{"op": "board", "d": 2}, {"op": "morale", "d": -1, "who": "all"}],
+			 "result": "You answer every question. The story runs another day."},
+			{"key": "fuel", "label": "Use it as fuel",
+			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "odds", "chance": 30, "hit": [{"op": "board", "d": -2}], "hit_result": "The league doesn't like the tone of the reply."}],
+			 "result": "The quote is on the wall in the rooms."}
+		]
+	},
+	{
+		"id": "ess_baby_bombers",
+		"club": "ESS",
+		"controversy": false,
+		"category": "selection",
+		"subject": {"kind": "club"},
+		"title": ["The Baby Bombers"],
+		"text": ["The press have started calling your young brigade the Baby Bombers. The senior players are watching where their games go."],
+		"choices": [
+			{"key": "kids", "label": "Play the kids together",
+			 "effects": [{"op": "xp", "d": 5, "who": "side"}, {"op": "morale", "d": 2, "who": "all"}, {"op": "culture", "strand": "together", "d": -1, "why": "The senior players lost games to the kids"}, {"op": "slow_start", "who": "side", "chance": 20, "on": "week"}],
+			 "result": "Five kids in the side. A few old heads sit in the stands."},
+			{"key": "one", "label": "Bring them through one at a time",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "Games are earned, not handed out"}, {"op": "forgo_xp", "d": 3, "who": "all"}],
+			 "result": "A steady side. Two of the kids are getting restless."}
+		]
+	},
+	{
+		"id": "ess_charity_match",
+		"club": "ESS",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["A gala dinner for cancer research"],
+		"text": ["The club is playing a match to raise money for cancer research, and the committee wants the players at a gala dinner midweek. It's a personal cause for several staff."],
+		"choices": [
+			{"key": "all", "label": "Send the whole group",
+			 "effects": [{"op": "board", "d": 4}, {"op": "culture", "strand": "together", "d": 1, "why": "The whole group turned up for the staff's cause"}, {"op": "odds", "chance": 20, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "The late night showed on the weekend."}],
+			 "result": "A full room and a big night for the cause."},
+			{"key": "leaders", "label": "Send the leaders only",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "odds", "chance": 30, "hit": [{"op": "board", "d": -2}], "hit_result": "The committee notices the empty tables."}],
+			 "result": "The leaders go. The rest of the group stays home and rests."}
+		]
+	},
+	{
+		"id": "ess_motto_standards",
+		"club": "ESS",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"title": ["Gently in manner, resolutely in deed"],
+		"text": ["A scuffle broke out at training. The leadership group want to read the club motto at the next meeting and make an example of it, and the player involved is popular."],
+		"choices": [
+			{"key": "example", "label": "Make an example of it",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 3, "why": "The leaders held the group to the motto"}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "The motto is read out and the incident is named. The room goes quiet."},
+			{"key": "private", "label": "Deal with it privately",
+			 "effects": [{"op": "morale", "d": 1, "who": "all"}, {"op": "odds", "chance": 50, "hit": [{"op": "culture", "strand": "standards", "d": -1, "why": "The leaders felt undercut"}], "hit_result": "The leaders feel you went around them."}],
+			 "result": "A quiet word behind closed doors. The meeting moves on."}
+		]
+	},
+	{
+		"id": "ess_membership_drive",
+		"club": "ESS",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["Chasing a members' record"],
+		"text": ["The club is chasing a membership record, and marketing want the coach in a campaign video and a run of member events through the season."],
+		"choices": [
+			{"key": "front", "label": "Front the campaign yourself",
+			 "effects": [{"op": "board", "d": 6, "was": "members"}, {"op": "forgo_xp", "d": 2, "who": "all"}],
+			 "result": "Your face is on every tram. Less time with the list."},
+			{"key": "players", "label": "Let the players front it",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "morale", "d": 1, "who": "all"}, {"op": "slow_start", "who": "side", "chance": 10, "on": "week"}],
+			 "result": "The players do the events. It eats into their week."},
+			{"key": "out", "label": "Keep out of it",
+			 "effects": [{"op": "xp", "d": 2, "who": "side"}, {"op": "board", "d": -2}],
+			 "result": "Football first. Marketing goes to the board."}
+		]
+	},
+	{
+		"id": "ess_board_unrest",
+		"club": "ESS",
+		"controversy": false,
+		"category": "board",
+		"when": {"losing_run_min": 3},
+		"subject": {"kind": "club"},
+		"title": ["Talk of a board spill"],
+		"text": ["A group of former players and big members are agitating for a board spill. The president has asked you to say publicly that you back the current board."],
+		"choices": [
+			{"key": "back", "label": "Back the board publicly",
+			 "effects": [{"op": "board", "d": 4}, {"op": "odds", "chance": 50, "hit": [{"op": "morale", "d": -2, "who": "all"}], "hit_result": "The old players go on radio against you, and the group hears it."}],
+			 "result": "You stand with the president."},
+			{"key": "neutral", "label": "Stay neutral",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "You kept the coach out of club politics"}, {"op": "board", "d": -3}],
+			 "result": "You say it's for the members. The president feels let down."}
+		]
+	},
+	{
+		"id": "ess_trade_big_fish",
+		"club": "ESS",
+		"controversy": false,
+		"category": "contracts",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["A big fish in the trade period"],
+		"text": ["A star from another club wants a big Melbourne club and a big stage. His manager says the price is your first-round pick and a top-dollar contract."],
+		"choices": [
+			{"key": "pay", "label": "Pay it",
+			 "effects": [{"op": "morale", "d": 3, "who": "all"}, {"op": "board", "d": 3, "was": "members"}, {"op": "culture", "strand": "together", "d": -2, "why": "Your out-of-contract players saw the money go to him"}],
+			 "result": "He arrives to a press pack. The pick and the cap room are gone."},
+			{"key": "hold", "label": "Hold the pick",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The club backed a kid it can build around"}, {"op": "board", "d": -3, "was": "members"}],
+			 "result": "You keep the pick. The supporters wanted a splash."}
+		]
+	},
+	{
+		"id": "ess_legend_returns",
+		"club": "ESS",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"title": ["A premiership legend wants a role"],
+		"text": ["A premiership legend has offered to come back as a part-time development coach. The members love the idea; your assistants are wary."],
+		"choices": [
+			{"key": "bring", "label": "Bring him in",
+			 "effects": [{"op": "xp", "d": 3, "who": "all"}, {"op": "board", "d": 2, "was": "members"}, {"op": "odds", "chance": 25, "hit": [{"op": "forgo_xp", "d": 2, "who": "all"}], "hit_result": "He and your assistants clash, and the young players get mixed messages."}],
+			 "result": "The legend is on the track two days a week."},
+			{"key": "decline", "label": "Thank him and decline",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The chain of command stayed clear"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "He takes it well. The press call it a snub."}
+		]
+	},
+	{
+		"id": "ess_coach_in_waiting",
+		"club": "ESS",
+		"controversy": false,
+		"category": "board",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["A coach in waiting"],
+		"text": ["The board want to name your senior assistant as your successor now, with a handover at the end of next season. You'd stay in charge until then."],
+		"choices": [
+			{"key": "accept", "label": "Accept the plan",
+			 "effects": [{"op": "board", "d": 4}, {"op": "odds", "chance": 35, "hit": [{"op": "morale", "d": -2, "who": "all"}], "hit_result": "Some players start looking past you to the next coach."}],
+			 "result": "The handover is announced. The board likes the stability."},
+			{"key": "refuse", "label": "Refuse and back yourself",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "You kept your authority"}, {"op": "board", "d": -3}, {"op": "odds", "chance": 40, "hit": [{"op": "forgo_xp", "d": 2, "who": "side"}], "hit_result": "Your senior assistant takes a job elsewhere."}],
+			 "result": "You say you're the coach, full stop. The board is put out."}
+		]
+	},
+	{
+		"id": "ess_mosquito_fleet",
+		"club": "ESS",
+		"controversy": false,
+		"category": "selection",
+		"subject": {"kind": "club"},
+		"title": ["A new Mosquito Fleet?"],
+		"text": ["The press say your small, quick forwards look like the old Mosquito Fleet. The forwards coach wants a tall target back in the side."],
+		"choices": [
+			{"key": "small", "label": "Back the small brigade",
+			 "effects": [{"op": "morale", "d": 3, "who": "side"}, {"op": "culture", "strand": "together", "d": -1, "why": "The tall forward feels shut out"}],
+			 "result": "Pace and pressure up forward. The big man sits out."},
+			{"key": "tall", "label": "Bring back the tall target",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The forward line kept its shape"}, {"op": "morale", "d": -2, "who": "side"}],
+			 "result": "The tall is back. One of the smalls makes way and isn't happy."}
+		]
+	},
+	{
+		"id": "ess_best_and_fairest_night",
+		"club": "ESS",
+		"controversy": false,
+		"category": "leadership",
+		"phase": ["season_end"],
+		"subject": {"kind": "player", "pick": "highest:overall", "where": {"age_max": 22}},
+		"title": ["{name} has outpolled the captain"],
+		"text": ["It's the club's best and fairest night. {name} has polled more votes than the captain, and the room knows it."],
+		"choices": [
+			{"key": "kid", "label": "Make the speech about him",
+			 "effects": [{"op": "trust", "d": 4, "why": "You made his night about him"}, {"op": "culture", "strand": "ambition", "d": 1, "why": "A young player's rise was celebrated"}, {"op": "odds", "chance": 40, "hit": [{"op": "morale", "d": -2, "who": "others"}], "hit_result": "The captain is hurt, and the senior players notice."}],
+			 "result": "{first} gets the whole speech. The room stands for him."},
+			{"key": "group", "label": "Make it about the group",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The night belonged to the whole group"}, {"op": "trust", "d": -1, "why": "He wanted the moment"}],
+			 "result": "A speech about the group. {first} wanted the moment."}
+		]
+	},
+	{
+		"id": "ess_same_olds",
+		"club": "ESS",
+		"controversy": false,
+		"category": "media",
+		"when": {"losing_run_min": 2},
+		"subject": {"kind": "club"},
+		"title": ["\"Same old Essendon\""],
+		"text": ["Rival supporters have dug up the club's old nickname, \"same old Essendon\", and turned it into a taunt. A talkback host has picked it up."],
+		"choices": [
+			{"key": "wear", "label": "Wear it with pride",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "morale", "d": 2, "who": "all"}, {"op": "loss_sting", "chance": 30, "d": -4, "who": "side"}],
+			 "result": "You remind everyone the name came from the club's own supporters. Lose again and it sticks."},
+			{"key": "ignore", "label": "Ignore it",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The group didn't give the taunt any air"}, {"op": "odds", "chance": 50, "hit": [{"op": "morale", "d": -1, "who": "side"}], "hit_result": "The noise runs another week."}],
+			 "result": "No comment. Talkback moves on, slowly."}
+		]
+	},
+	{
+		"id": "ess_north_grudge",
+		"club": "ESS",
+		"controversy": false,
+		"category": "rivals",
+		"when": {"opp_deck": "NTH"},
+		"subject": {"kind": "club"},
+		"title": ["North want to go after the kids"],
+		"text": ["North Melbourne fans have never forgiven Essendon for the old breakaway that left them out of the first league. Their camp says they'll go after your young midfielders this week."],
+		"choices": [
+			{"key": "veteran", "label": "Bring in a hard veteran",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "An old head came in to stand up for the kids"}, {"op": "morale", "d": 2, "who": "side"}, {"op": "forgo_xp", "d": 3, "who": "all"}],
+			 "result": "The veteran is recalled. A young midfielder makes way."},
+			{"key": "kids", "label": "Back the kids to stand up",
+			 "effects": [{"op": "xp", "d": 3, "who": "all"}, {"op": "morale", "d": 2, "who": "all"}, {"op": "odds", "chance": 20, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "The kids stood up, and came out of it battered."}],
+			 "result": "The kids stay in. They know what's coming."}
+		]
+	},
+	{
+		"id": "ess_hawthorn_physical",
+		"club": "ESS",
+		"controversy": false,
+		"category": "rivals",
+		"when": {"opp_deck": "HAW"},
+		"subject": {"kind": "club"},
+		"title": ["A line in the sand"],
+		"text": ["The last game against Hawthorn turned spiteful, and the league is watching this one. Your leaders want to stand up for each other if it starts again."],
+		"choices": [
+			{"key": "stand", "label": "Tell them to stand up",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The group stood up for each other"}, {"op": "morale", "d": 2, "who": "side"}, {"op": "odds", "chance": 20, "hit": [{"op": "board", "d": -2}], "hit_result": "It boils over, and the league hands out fines."}],
+			 "result": "The group goes in ready for anything."},
+			{"key": "walk", "label": "Tell them to walk away",
+			 "effects": [{"op": "board", "d": 2}, {"op": "culture", "strand": "standards", "d": 1, "why": "The group kept its discipline"}, {"op": "morale", "d": -2, "who": "side"}],
+			 "result": "The group is told to turn the other cheek. Some feel exposed."}
+		]
+	},
+	{
+		"id": "ess_banner_torn",
+		"club": "ESS",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["The banner tore before the run-through"],
+		"text": ["The cheer squad's banner tore before the players ran through it, live on TV. The supporters who made it are gutted, and they've asked for the players to visit."],
+		"choices": [
+			{"key": "visit", "label": "Send players to the banner workshop",
+			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The players thanked the people who make the banner"}, {"op": "odds", "chance": 10, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "One evening less to recover showed."}],
+			 "result": "The players paint with the cheer squad for the night."},
+			{"key": "jumper", "label": "Send a signed jumper and a thank-you",
+			 "effects": [{"op": "xp", "d": 2, "who": "side"}, {"op": "odds", "chance": 50, "hit": [{"op": "board", "d": -1, "was": "members"}], "hit_result": "The cheer squad wanted faces, not a jumper."}],
+			 "result": "A jumper goes in the post. The players stay on the track."}
+		]
+	},
+	{
+		"id": "ess_west_coast_trip",
+		"club": "ESS",
+		"controversy": false,
+		"category": "rivals",
+		"when": {"opp_deck": "WCE"},
+		"subject": {"kind": "club"},
+		"title": ["When to fly to Perth"],
+		"text": ["Another trip across the Nullarbor to face West Coast. The players want to fly on the morning of the game and stay home with their families; sports science wants a Thursday flight."],
+		"choices": [
+			{"key": "thursday", "label": "Fly Thursday",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "Two nights in a Perth hotel. The players with young kids miss home."},
+			{"key": "morning", "label": "Fly on game day",
+			 "effects": [{"op": "morale", "d": 2, "who": "all"}, {"op": "slow_start", "who": "side", "chance": 20, "on": "week"}],
+			 "result": "An early flight and straight to the ground."}
+		]
+	}
+]

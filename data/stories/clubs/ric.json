@@ -1,0 +1,461 @@
+[
+	{
+		"id": "ric_rattle_the_tins",
+		"club": "RIC",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["Rattle the tins"],
+		"text": ["The books are in the red and the bank has sent a hard letter. The old-timers say Richmond has been here before, and the supporters saved it with tins at every train station. The board wants your view before it goes public."],
+		"choices": [
+			{"key": "appeal", "label": "Go public with a members' appeal",
+			 "effects": [{"op": "morale", "d": -2, "who": "all"}, {"op": "odds", "chance": 70, "hit": [{"op": "board", "d": 7, "was": "members"}], "miss": [{"op": "board", "d": -3}, {"op": "culture", "strand": "together", "d": 1, "why": "The members rattled the tins, even if it fell short"}], "hit_result": "The tins fill up. The Tiger Army has saved the club again.", "miss_result": "The appeal falls short of its target, but the members turned out."}],
+			 "result": "The tins go out. The players read about the club's debts every day."},
+			{"key": "refinance", "label": "Keep it quiet and refinance with the bank",
+			 "effects": [{"op": "morale", "d": 2, "who": "all"}, {"op": "forgo_xp", "d": 4, "who": "all"}, {"op": "board", "d": -1}],
+			 "result": "The players hear nothing. The football department's budget shrinks."},
+			{"key": "sell", "label": "Sell a home game interstate",
+			 "effects": [{"op": "board", "d": 3, "was": "funds"}, {"op": "culture", "strand": "together", "d": -2, "why": "The members lost a game at the 'G"}],
+			 "result": "A guaranteed cheque. The members lose a home game."}
+		]
+	},
+	{
+		"id": "ric_ninth_again",
+		"club": "RIC",
+		"controversy": false,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"when": {"ladder_min": 7, "ladder_max": 11},
+		"title": ["Ninth again?"],
+		"text": ["The side is hovering around the edge of the eight, and a commentator has dragged out the old joke: Richmond always finishes ninth. It's on the radio, the back page and in the rooms."],
+		"choices": [
+			{"key": "laugh", "label": "Laugh it off in the press",
+			 "effects": [{"op": "morale", "d": 2, "who": "all"}, {"op": "board", "d": 1}, {"op": "culture", "strand": "together", "d": -1, "why": "Some supporters think the coach doesn't care about the eight"}],
+			 "result": "You laugh along. The pressure drains out of the week."},
+			{"key": "noticeboard", "label": "Pin it on the noticeboard",
+			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "slow_start", "chance": 15, "who": "side"}],
+			 "result": "The group takes it personally. Some of them play tight."},
+			{"key": "ban", "label": "Ban the word at the club",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "Nobody says ninth at Punt Road"}, {"op": "morale", "d": -1, "who": "all"}],
+			 "result": "The word is gone from the building. The players feel watched."}
+		]
+	},
+	{
+		"id": "ric_wait_on_the_banner",
+		"club": "RIC",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["The wait on the banner"],
+		"text": ["Some of the cheer squad want this week's banner to count the years since the last flag. Others think it's a jinx. They've asked the coach."],
+		"choices": [
+			{"key": "up", "label": "Put it up and let them feel it",
+			 "effects": [{"op": "morale", "d": 3, "who": "side"}, {"op": "slow_start", "chance": 20, "who": "side"}],
+			 "result": "The count is on the banner. The group knows what a flag would mean."},
+			{"key": "leave", "label": "Leave the past off it",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "The players run out free. The old supporters feel brushed off."}
+		]
+	},
+	{
+		"id": "ric_punt_road_end",
+		"club": "RIC",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["The Punt Road End"],
+		"text": ["A big crowd at the 'G, and the Tiger Army has taken over the Punt Road End. The captain asks if the side can run out to that end and warm up in front of them."],
+		"choices": [
+			{"key": "run", "label": "Run to the Punt Road End",
+			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "slow_start", "chance": 10, "who": "side"}],
+			 "result": "The noise lifts the side. A few of them are too wound up."},
+			{"key": "plan", "label": "Stick to the warm-up plan",
+			 "effects": [{"op": "morale", "d": 1, "who": "side"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "The coaches keep control of the build-up. The crowd wanted the players closer."}
+		]
+	},
+	{
+		"id": "ric_punt_road_crowd",
+		"club": "RIC",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"when": {"losing_run_min": 3},
+		"title": ["Thousands at Punt Road"],
+		"text": ["After a rough run of losses, thousands of supporters turn up unannounced to watch the main session at Punt Road. The players can see them through the fence."],
+		"choices": [
+			{"key": "fence", "label": "Stop the session and send the players to the fence",
+			 "effects": [{"op": "morale", "d": 4, "who": "all"}, {"op": "board", "d": 3, "was": "members"}, {"op": "forgo_xp", "d": 4, "who": "all"}],
+			 "result": "The players sign and talk for an hour. Half the session is gone."},
+			{"key": "train", "label": "Train on and wave at the end",
+			 "effects": [{"op": "xp", "d": 4, "who": "all"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "The work gets done. The supporters wanted more than a wave."},
+			{"key": "indoors", "label": "Move the session to the indoor centre",
+			 "effects": [{"op": "xp", "d": 6, "who": "all"}, {"op": "board", "d": -4, "was": "members"}],
+			 "result": "Full focus inside. The supporters feel locked out, and it's in the paper."}
+		]
+	},
+	{
+		"id": "ric_revolving_door",
+		"club": "RIC",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"when": {"losing_run_min": 3},
+		"title": ["The coach has our full support"],
+		"text": ["Three losses in a row, and talkback is reminding everyone Richmond has never been shy about moving coaches on. A board member has said the coach has their full support, which everyone at Punt Road knows can mean the opposite."],
+		"choices": [
+			{"key": "writing", "label": "Ask the board to put it in writing",
+			 "effects": [{"op": "board", "d": -2}, {"op": "odds", "chance": 70, "hit": [{"op": "morale", "d": 2, "who": "all"}], "miss": [{"op": "morale", "d": -2, "who": "all"}], "hit_result": "The board puts it in writing. The players breathe out.", "miss_result": "The board declines. The players notice."}],
+			 "result": "You've asked for clarity, and shown you're nervous."},
+			{"key": "quiet", "label": "Say nothing and win your way out",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The coach stayed calm under the noise"}, {"op": "loss_sting", "chance": 30, "d": -3, "who": "side"}],
+			 "result": "You look calm. Lose again and the noise grows."},
+			{"key": "front", "label": "Front the media and own the run",
+			 "effects": [{"op": "board", "d": 3, "was": "press"}, {"op": "morale", "d": -1, "who": "all"}],
+			 "result": "The press respects it. You've drawn the fire onto yourself."}
+		]
+	},
+	{
+		"id": "ric_board_ticket",
+		"club": "RIC",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["A ticket for the board"],
+		"text": ["A group of wealthy members has launched a rival ticket for the board election, promising a winning culture now. They want you to say publicly which side you back."],
+		"choices": [
+			{"key": "sitting", "label": "Back the sitting board",
+			 "effects": [{"op": "board", "d": 2}, {"op": "odds", "chance": 35, "hit": [{"op": "board", "d": -6}], "hit_result": "The challengers win. You start on the outer."}],
+			 "result": "The board remembers your loyalty."},
+			{"key": "out", "label": "Stay out of it",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The coach kept out of club politics"}, {"op": "board", "d": -1}],
+			 "result": "Nobody can hold it against you. Neither side fully trusts you."},
+			{"key": "challengers", "label": "Back the challengers",
+			 "effects": [{"op": "board", "d": -3}, {"op": "odds", "chance": 35, "hit": [{"op": "board", "d": 8}], "hit_result": "The challengers win, and the new board owes you."}],
+			 "result": "The sitting board knows where you stand."}
+		]
+	},
+	{
+		"id": "ric_neighbours_knock",
+		"club": "RIC",
+		"controversy": false,
+		"category": "contracts",
+		"subject": {"kind": "player", "pick": "highest:potential", "where": {"age_max": 23}},
+		"title": ["The neighbours come knocking"],
+		"text": ["Collingwood, just up the road, has made {name} a big offer. The two clubs have raided each other's lists for generations, and the supporters on both sides remember every one."],
+		"choices": [
+			{"key": "match", "label": "Match it",
+			 "effects": [{"op": "trust", "d": 3, "why": "The club matched Collingwood's offer"}, {"op": "board", "d": -4, "was": "funds"}, {"op": "odds", "chance": 15, "hit": [{"op": "morale", "d": -3, "who": "others"}], "hit_result": "He signs with Collingwood anyway."}],
+			 "result": "The club digs deep to keep {first} a Tiger."},
+			{"key": "hold", "label": "Hold your offer",
+			 "effects": [{"op": "trust", "d": -2, "why": "The club wouldn't match the offer"}, {"op": "odds", "chance": 50, "hit": [{"op": "culture", "strand": "standards", "d": 1, "why": "The pay structure held, and he stayed"}], "miss": [{"op": "morale", "d": -3, "who": "others"}], "hit_result": "He stays on the club's terms.", "miss_result": "He takes Collingwood's money. The group feels it."}],
+			 "result": "The club's offer stands as it is."},
+			{"key": "raid", "label": "Go after one of theirs in return",
+			 "effects": [{"op": "board", "d": 1, "was": "members"}, {"op": "culture", "strand": "standards", "d": -1, "why": "It turned into a slanging match with Collingwood"}, {"op": "odds", "chance": 50, "hit": [{"op": "morale", "d": -3, "who": "others"}], "hit_result": "Your own man still goes up the road."}],
+			 "result": "The supporters love it. The papers make it ugly."}
+		]
+	},
+	{
+		"id": "ric_carlton_week",
+		"club": "RIC",
+		"controversy": false,
+		"category": "rivals",
+		"subject": {"kind": "club"},
+		"when": {"opp_deck": "CAR"},
+		"title": ["The old enemy"],
+		"text": ["Carlton at the 'G, and a huge crowd expected. Both clubs' supporters treat it as more than four points, and the players know what a win in front of them means."],
+		"choices": [
+			{"key": "big", "label": "Make it a big week",
+			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "odds", "chance": 30, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "The week runs hot. Legs are heavy by Saturday."}],
+			 "result": "The group lifts for the Blues."},
+			{"key": "normal", "label": "Treat it as just another game",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "Fresh legs and clear heads. The supporters wanted fire."}
+		]
+	},
+	{
+		"id": "ric_war_cry",
+		"club": "RIC",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"when": {"opp_deck": "ESS"},
+		"title": ["The war cry"],
+		"text": ["Before the Essendon game, the club's Indigenous players want to lead a war cry in front of the crowd, and they ask whether the whole side will learn it and stand with them. A few players are nervous about getting it wrong in front of a full 'G."],
+		"choices": [
+			{"key": "all", "label": "The whole side learns it",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The whole side stood with the Indigenous players"}, {"op": "morale", "d": 3, "who": "all"}, {"op": "forgo_xp", "d": 2, "who": "all"}, {"op": "slow_start", "chance": 15, "who": "side"}],
+			 "result": "The whole side learns it. The pre-game is emotional."},
+			{"key": "lead", "label": "The Indigenous players lead; the rest stand with them",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "It was done right, and nobody was put on the spot"}, {"op": "odds", "chance": 30, "hit": [{"op": "morale", "d": -1, "who": "all"}], "hit_result": "Some players wanted to be part of it."}],
+			 "result": "The Indigenous players lead it, and the side stands behind them."}
+		]
+	},
+	{
+		"id": "ric_grow_and_emerge",
+		"club": "RIC",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["Grow and emerge"],
+		"text": ["The club's Indigenous youth leadership program has a camp at Punt Road this week, and it wants senior players as mentors for two nights."],
+		"choices": [
+			{"key": "leaders", "label": "Send the leadership group",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The leaders mentored the next generation"}, {"op": "board", "d": 2}, {"op": "odds", "chance": 15, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "Two late nights, and the leaders are tired by game day."}],
+			 "result": "The leaders spend two nights with the kids."},
+			{"key": "young", "label": "Send some of the younger players",
+			 "effects": [{"op": "morale", "d": 1, "who": "all"}, {"op": "board", "d": -1}],
+			 "result": "The young players learn to lead. The camp wanted senior names."},
+			{"key": "later", "label": "Not this week; later in the season",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -2}, {"op": "culture", "strand": "together", "d": -1, "why": "The program was made to wait"}],
+			 "result": "The match comes first. It looks like the program comes second."}
+		]
+	},
+	{
+		"id": "ric_learn_the_words",
+		"club": "RIC",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "player", "pick": "random", "where": {"games_max": 10}},
+		"title": ["Learn the words"],
+		"text": ["The last time the rooms sang the song after a win, {name} stood there mouthing it. The senior players want him to sing it alone at the next team meeting."],
+		"choices": [
+			{"key": "leaders", "label": "Let the leaders run it",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The new man sang it on his own"}, {"op": "odds", "chance": 70, "hit": [{"op": "morale", "d": 2, "who": "subject"}], "miss": [{"op": "trust", "d": -2, "why": "He was embarrassed in front of the group"}], "hit_result": "{first} belts it out. He's one of them now.", "miss_result": "{first} gets through it red-faced and doesn't forget it."}],
+			 "result": "{first} stands up at the meeting."},
+			{"key": "time", "label": "He'll learn it in his own time",
+			 "effects": [{"op": "trust", "d": 2, "why": "You took the pressure off him"}, {"op": "culture", "strand": "together", "d": -1, "why": "The leaders felt overruled"}],
+			 "result": "No pressure on {first}. The leaders feel overruled."}
+		]
+	},
+	{
+		"id": "ric_legend_visit",
+		"club": "RIC",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"title": ["A legend in the rooms"],
+		"text": ["A premiership great from the club's past drops in at training and asks to speak to the group before the weekend."],
+		"choices": [
+			{"key": "floor", "label": "Give him the floor",
+			 "effects": [{"op": "morale", "d": 3, "who": "all"}, {"op": "odds", "chance": 25, "hit": [{"op": "morale", "d": -1, "who": "all"}], "hit_result": "The old-school message misses the mark with the young players."}],
+			 "result": "The players feel the history."},
+			{"key": "leaders", "label": "Ask him to talk to the leaders only",
+			 "effects": [{"op": "morale", "d": 1, "who": "all"}, {"op": "culture", "strand": "together", "d": -1, "why": "Most of the list missed the great's talk"}],
+			 "result": "A smaller, sharper talk. The rest miss out."},
+			{"key": "plan", "label": "Thank him and keep to the plan",
+			 "effects": [{"op": "xp", "d": 2, "who": "all"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "The week stays on track. He leaves a little put out."}
+		]
+	},
+	{
+		"id": "ric_son_of_a_tiger",
+		"club": "RIC",
+		"controversy": false,
+		"category": "selection",
+		"subject": {"kind": "club"},
+		"title": ["Son of a Tiger"],
+		"text": ["The son of a club great is eligible as a father-son pick. He's a middling prospect. The supporters want him; the recruiters think the list spot is better spent."],
+		"choices": [
+			{"key": "take", "label": "Take him",
+			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "culture", "strand": "ambition", "d": -1, "why": "A list spot went on a long shot"}, {"op": "odds", "chance": 20, "hit": [{"op": "culture", "strand": "together", "d": 1, "why": "The son of a Tiger made it"}], "hit_result": "He becomes a regular senior player."}],
+			 "result": "The family and the members are delighted."},
+			{"key": "pass", "label": "Pass on him",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The spot went to the recruiters' pick"}, {"op": "board", "d": -4, "was": "members"}],
+			 "result": "The recruiters get their pick. The family and the members are hurt."}
+		]
+	},
+	{
+		"id": "ric_banner_threat",
+		"club": "RIC",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["No banner this week?"],
+		"text": ["The cheer squad is angry about its seats at the 'G and says it may not make the banner this week. They want the club to fight for them."],
+		"choices": [
+			{"key": "bat", "label": "Go in to bat for them",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The cheer squad saw the coach fight for them"}, {"op": "board", "d": -2}],
+			 "result": "The banner is up. The board resents the distraction."},
+			{"key": "leave", "label": "Leave it to the club",
+			 "effects": [{"op": "board", "d": 1}, {"op": "odds", "chance": 50, "hit": [{"op": "morale", "d": -2, "who": "side"}], "hit_result": "No banner this week. The players notice."}],
+			 "result": "You stay on the football."}
+		]
+	},
+	{
+		"id": "ric_record_membership",
+		"club": "RIC",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["A record membership"],
+		"text": ["Marketing wants to chase the biggest membership in the competition. It needs players at events every week for a month."],
+		"choices": [
+			{"key": "all", "label": "Go all in",
+			 "effects": [{"op": "board", "d": 6, "was": "members"}, {"op": "heavy_legs", "who": "side"}],
+			 "result": "The numbers climb. The players are tired."},
+			{"key": "leaders", "label": "Send the leaders only",
+			 "effects": [{"op": "board", "d": 2, "was": "funds"}, {"op": "culture", "strand": "together", "d": -1, "why": "The leaders carried the drive on their own"}],
+			 "result": "Some of the boost. The leaders carry it."},
+			{"key": "not", "label": "Not during the season",
+			 "effects": [{"op": "xp", "d": 2, "who": "all"}, {"op": "board", "d": -3}],
+			 "result": "Full focus on footy. Marketing and the board are unhappy."}
+		]
+	},
+	{
+		"id": "ric_swan_street",
+		"club": "RIC",
+		"controversy": true,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"title": ["Swan Street after dark"],
+		"text": ["After a big win, a group of Richmond players were seen in a Swan Street pub until late, and the photos are doing the rounds. Nothing illegal, but it looks bad."],
+		"choices": [
+			{"key": "fines", "label": "Fines and a public apology",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "The club made its standards clear"}, {"op": "morale", "d": -2, "who": "all"}, {"op": "board", "d": 1, "was": "press"}],
+			 "result": "The fines are public. The group feels hung out to dry."},
+			{"key": "inside", "label": "Handle it inside the club",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The club kept it in the family"}, {"op": "board", "d": -2, "was": "press"}, {"op": "odds", "chance": 25, "hit": [{"op": "board", "d": -3}], "hit_result": "More photos come out, and the board is furious."}],
+			 "result": "The players trust you. The press calls it soft."}
+		]
+	},
+	{
+		"id": "ric_tank_whispers",
+		"club": "RIC",
+		"controversy": true,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"when": {"ladder_min": 11, "round_min": 16},
+		"title": ["Out of it in August"],
+		"text": ["Out of finals contention with a month to go, and a journalist asks whether Richmond will look at a few players, meaning a better draft pick."],
+		"choices": [
+			{"key": "kids", "label": "Blood the kids",
+			 "effects": [{"op": "xp", "d": 4, "who": "all"}, {"op": "odds", "chance": 30, "hit": [{"op": "board", "d": -6, "was": "press"}], "hit_result": "The tanking whispers turn into a league investigation story."}],
+			 "result": "The young players get games. The losses pile up."},
+			{"key": "best", "label": "Pick the best side",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The club played to win every week"}, {"op": "morale", "d": -1, "who": "all"}],
+			 "result": "No questions to answer. The kids wait their turn."}
+		]
+	},
+	{
+		"id": "ric_chaos_footy",
+		"club": "RIC",
+		"controversy": false,
+		"category": "training",
+		"subject": {"kind": "club"},
+		"title": ["Chaos footy"],
+		"text": ["Tigerland likes its footy at full pressure: swarm, tackle, kick it long and let the smalls crumb. The match committee asks whether to drill it harder this week."],
+		"choices": [
+			{"key": "drill", "label": "Pressure drills all week",
+			 "effects": [{"op": "xp", "d": 6, "who": "all"}, {"op": "heavy_legs", "who": "side"}],
+			 "result": "The edge is sharper. The legs are tired."},
+			{"key": "freshen", "label": "Back off and freshen up",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "forgo_xp", "d": 3, "who": "all"}],
+			 "result": "Running legs for the weekend. The edge dulls a touch."}
+		]
+	},
+	{
+		"id": "ric_one_more_push",
+		"club": "RIC",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"phase": ["season_end"],
+		"title": ["One more push, or start again?"],
+		"text": ["The senior core is ageing. The board wants to know: trade picks for one more push, or let the old guard go and start the rebuild?"],
+		"choices": [
+			{"key": "push", "label": "Go for one more push",
+			 "effects": [{"op": "morale", "d": 3, "who": "all"}, {"op": "culture", "strand": "ambition", "d": 1, "why": "The club went for one more flag"}, {"op": "forgo_xp", "d": 4, "who": "all"}],
+			 "result": "The veterans stay together. Fewer young players come through."},
+			{"key": "rebuild", "label": "Start the rebuild",
+			 "effects": [{"op": "xp", "d": 4, "who": "all"}, {"op": "morale", "d": -3, "who": "all"}, {"op": "board", "d": -1}],
+			 "result": "A younger list and more picks. The veterans feel pushed out."}
+		]
+	},
+	{
+		"id": "ric_reserves_promotion",
+		"club": "RIC",
+		"controversy": false,
+		"category": "selection",
+		"subject": {"kind": "player", "pick": "highest:potential", "where": {"selected": false, "fit": true, "age_max": 22}},
+		"title": ["Best on ground at Punt Road"],
+		"text": ["{name} has been best on ground for the reserves at Punt Road three weeks running. A trusted veteran is holding the spot ahead of him."],
+		"choices": [
+			{"key": "in", "label": "Bring him in",
+			 "effects": [{"op": "trust", "d": 3, "why": "You rewarded his form"}, {"op": "culture", "strand": "together", "d": -1, "why": "A trusted veteran lost his spot"}, {"op": "odds", "chance": 40, "hit": [{"op": "morale", "d": -3, "who": "subject"}], "hit_result": "He can't hold the spot, and he's back in the reserves within a fortnight."}],
+			 "result": "{first} gets his chance. The veteran is hurt."},
+			{"key": "veteran", "label": "Keep the veteran",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The senior players saw a trusted man backed"}, {"op": "trust", "d": -2, "why": "He was best on ground three weeks running and still missed out"}],
+			 "result": "Experience stays in the side. {first} stews."}
+		]
+	},
+	{
+		"id": "ric_bricks_or_players",
+		"club": "RIC",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["Bricks or players"],
+		"text": ["The board has a plan to rebuild the facilities at Punt Road. It wants the football department to give up some spending this year to help pay for it."],
+		"choices": [
+			{"key": "build", "label": "Back the build",
+			 "effects": [{"op": "board", "d": 3}, {"op": "culture", "strand": "ambition", "d": 1, "why": "Better facilities are on the way"}, {"op": "forgo_xp", "d": 4, "who": "all"}],
+			 "result": "The cranes go up. The football budget is tighter this year."},
+			{"key": "protect", "label": "Protect the football budget",
+			 "effects": [{"op": "xp", "d": 3, "who": "all"}, {"op": "board", "d": -3}],
+			 "result": "The list keeps its budget. The board is frustrated."}
+		]
+	},
+	{
+		"id": "ric_pokies_question",
+		"club": "RIC",
+		"controversy": true,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["The pokies question"],
+		"text": ["The club's gaming venues make good money, but a community group is campaigning against them, and a journalist wants the coach's view."],
+		"choices": [
+			{"key": "board", "label": "Say it's the board's call",
+			 "effects": [{"op": "board", "d": 1}, {"op": "culture", "strand": "together", "d": -1, "why": "Supporters think the coach dodged the question"}],
+			 "result": "You stay out of it. Some think you're dodging."},
+			{"key": "out", "label": "Back getting out of them",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "You said what you thought about the pokies"}, {"op": "board", "d": -2}, {"op": "odds", "chance": 30, "hit": [{"op": "board", "d": -3, "was": "funds"}], "hit_result": "The board sells the venues, and the money goes with them."}],
+			 "result": "The community respects it. The board is angry."}
+		]
+	},
+	{
+		"id": "ric_bnf_count",
+		"club": "RIC",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"title": ["The best and fairest count"],
+		"text": ["The club's best and fairest is close, with two players tied and a few rounds to go. One of them has asked how the coaches' votes are given."],
+		"choices": [
+			{"key": "show", "label": "Show both players how the votes work",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The votes were shown, plain and fair"}, {"op": "odds", "chance": 30, "hit": [{"op": "morale", "d": -1, "who": "all"}], "hit_result": "One of them sulks about what he hears."}],
+			 "result": "Clear and fair. Neither of them loves what he hears."},
+			{"key": "play", "label": "Tell them the votes look after themselves",
+			 "effects": [{"op": "morale", "d": 1, "who": "side"}, {"op": "culture", "strand": "standards", "d": -1, "why": "Two players were left guessing about the count"}],
+			 "result": "No distraction this week. They both wonder."}
+		]
+	},
+	{
+		"id": "ric_tigers_of_old",
+		"club": "RIC",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"title": ["The Tigers of old"],
+		"text": ["A former Tiger with a hard-man name in Tigerland folklore offers to come back part-time and coach the young backmen. The supporters love the idea. Your coaches aren't sure his methods fit."],
+		"choices": [
+			{"key": "take", "label": "Take him on",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "The kids learned the old Tiger hardness"}, {"op": "xp", "d": 3, "who": "all"}, {"op": "board", "d": -1, "was": "funds"}, {"op": "odds", "chance": 25, "hit": [{"op": "morale", "d": -2, "who": "all"}], "hit_result": "His methods clash with yours, and the young players are caught in the middle."}],
+			 "result": "The old Tiger is back at Punt Road."},
+			{"key": "thank", "label": "Thank him and keep the staff as is",
+			 "effects": [{"op": "board", "d": 1, "was": "funds"}, {"op": "culture", "strand": "together", "d": -1, "why": "A supporters' favourite was turned away"}],
+			 "result": "No clash and no cost. The supporters wanted him back."}
+		]
+	}
+]
