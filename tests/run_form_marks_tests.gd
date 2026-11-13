@@ -159,9 +159,11 @@ func _test_recorded_and_saved() -> void:
 	var one: Dictionary = _gs.reserves_log[res_ids[0]] if not res_ids.is_empty() else {}
 	_check(not one.is_empty() and (one["last"] as Array).size() <= _rf.GAMES and int(one["n"]) >= 1,
 			"His record keeps the last three games and the count")
-	# The same career, replayed: the same twos games.
+	# The same career, replayed: the same twos games. This career is saved now
+	# and loaded at the end, so the save is proven without a fourth career.
 	var first := _sig(_gs.reserves_log)
 	var senior := _senior_sig()
+	_check(_gs.save_career(), "The career saves")
 	_fresh("FRE")
 	for i in range(3):
 		_gs.advance()
@@ -173,11 +175,7 @@ func _test_recorded_and_saved() -> void:
 		_gs.reserves_log = {}
 		_gs.advance()
 	_check(_senior_sig() == senior, "The twos record moves no senior game, XP or rating")
-	_fresh("FRE")
-	for i in range(3):
-		_gs.advance()
-	_check(_gs.save_career(), "The career saves")
-	_check(_gs.load_career(), "...and loads")
+	_check(_gs.load_career(), "...and loads, two careers later")
 	_check(_sig(_gs.reserves_log) == first, "The twos record survives a save and load")
 	var state: Dictionary = _gs._save_state()
 	state.erase("reserves_log")
@@ -212,8 +210,14 @@ func _senior_sig() -> String:
 ## the twos their reserves form; a real tap on a marked tile, then on Profile,
 ## opens his numbers. No advice anywhere.
 func _test_selection_marks_taps() -> void:
-	_fresh("FRE")
-	for i in range(6):
+	# Three rounds in is the career _test_recorded_and_saved saved; three more
+	# make six. A fresh career is the fallback when that save is missing.
+	if not _gs.load_career() or int(_gs.season.round_index) != 3:
+		_fresh("FRE")
+		for i in range(3):
+			_gs.advance()
+	_check(int(_gs.season.round_index) == 3, "Three rounds in before three more")
+	for i in range(3):
 		_gs.advance()
 	root.size = Vector2i(390, 844)
 	var side: Dictionary = _gs.current_side()
