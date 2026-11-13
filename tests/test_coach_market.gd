@@ -352,13 +352,30 @@ func _test_long_run() -> void:
 	_check(float(elite) / n < 0.08, "Elite stays rare (%.1f%%)" % (100.0 * elite / n))
 
 
+## The home-and-away rounds skipped (nothing under test is decided in them),
+## the finals played through to the season's real close, where the coaching
+## world moves (GameState._coaching_offseason).
+func _play_finals() -> void:
+	GameState.season.round_index = GameState.season.fixture.size()
+	GameState.ensure_finals()
+	var guard := 0
+	while not GameState.season.is_season_over() and guard < 10:
+		GameState.advance()
+		guard += 1
+
+
+## The season marked over by hand, no match played: what the contract calls
+## read (GameState.can_release_staff). The real close is _test_game_flow's.
+func _mark_season_over() -> void:
+	GameState.season.round_index = GameState.season.fixture.size()
+	GameState.ensure_finals()
+	GameState.season.finals["done"] = true
+
+
 func _test_game_flow() -> void:
 	GameState.reset()
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
-	var guard := 0
-	while not GameState.season.is_season_over() and guard < 60:
-		GameState.advance()
-		guard += 1
+	_play_finals()
 	_check(GameState.season.is_season_over(), "The season plays out")
 	var ran := true
 	for cid in GameState.coaches:
@@ -436,10 +453,7 @@ func _test_your_expiring_staff() -> void:
 	GameState.reset()
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
 	_check(GameState.expiring_staff().is_empty(), "No contract talk during the season")
-	var guard := 0
-	while not GameState.season.is_season_over() and guard < 60:
-		GameState.advance()
-		guard += 1
+	_mark_season_over()
 	var staff := GameState.club_staff("GEE")
 	var jobs := staff.keys().filter(func(j): return str(j) != "SC")
 	var a: Dictionary = staff[jobs[0]]
@@ -523,10 +537,13 @@ func _test_approaches_market() -> void:
 func _test_approaches_flow() -> void:
 	GameState.reset()
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
+	# The home-and-away rounds are skipped (they decide nothing here) and the
+	# first finals week is played: the week's close is where rivals'
+	# approaches are looked for once the home-and-away season is done.
+	GameState.season.round_index = GameState.season.fixture.size()
+	GameState.ensure_finals()
+	GameState.advance()
 	var guard := 0
-	while not GameState.season.is_regular_done() and guard < 40:
-		GameState.advance()
-		guard += 1
 	_check(GameState.coach_approach_year == GameState.season_year,
 			"Rivals' approaches are looked for once the home-and-away season is done")
 	var staff := GameState.club_staff("GEE")

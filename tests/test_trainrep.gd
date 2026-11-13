@@ -46,6 +46,13 @@ func _rounds(n: int) -> void:
 		GameState.advance()
 
 
+## Skips `n` home-and-away rounds without playing them: a report is built
+## after rounds 4, 8, 12... from the rounds its own block played, so a test
+## that only needs a report plays the rounds of one short block, not four.
+func _skip_rounds(n: int) -> void:
+	GameState.season.round_index += n
+
+
 func _boost_potential(n: int) -> void:
 	var made := 0
 	for p in GameState.my_list:
@@ -143,7 +150,8 @@ func _test_snapshot_and_report() -> void:
 	_check(sorted_ok, "most improved first")
 	_rounds(1)
 	_check(int(GameState.training_block.get("from", 0)) == 5, "the next block starts at round 5")
-	_rounds(3)
+	_skip_rounds(2)
+	_rounds(1)
 	_check(str(GameState.training_report.get("label", "")) == "Rounds 5-8", "round 8 brings the next report")
 	_check(not bool(GameState.training_report.get("dismissed", true)), "the new report is not dismissed")
 
@@ -215,7 +223,7 @@ func _test_retrain_list() -> void:
 func _test_old_save() -> void:
 	# A save from before the report has neither key: it loads with safe defaults.
 	_fresh()
-	_rounds(2)
+	_skip_rounds(2)
 	_check(GameState.save_career(), "a save is written")
 	# Strip both keys, as a save written before the report has neither.
 	var state := CareerSave.read(GameState.save_path)
@@ -255,7 +263,8 @@ func _test_taps(size: Vector2i) -> void:
 	var tag := "%dx%d" % [size.x, size.y]
 	_fresh()
 	_boost_potential(2)
-	_rounds(4)
+	_skip_rounds(2)
+	_rounds(2)
 	GameState.skip_media_conference()
 	var hub := await _hub()
 	_check(hub.find_child("TrainingReportCard", true, false) == null, "%s: no report line on the hub" % tag)
