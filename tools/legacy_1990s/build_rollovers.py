@@ -47,7 +47,7 @@ from __future__ import annotations
 import csv
 import os
 import sys
-from collections import defaultdict
+from collections import Counter, defaultdict
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -149,6 +149,34 @@ def main():
     # birth (Andrew Peck, 1990 pre-season pick redrafted in 1991) is that
     # same man, not a second prospect who could never be listed.
     known_names = set((r["first"], r["last"]) for r in read(os.path.join(LEG, "1990s", "lists_1990_opening.csv")))
+    # Every real man the lists date, by name: an undated pick is the one of
+    # that name who was 16 to 36 that year (his club's first), so he is
+    # never a second copy of a man the career already has (director,
+    # 2026-11-14: "duplicate players are absolutely not acceptable").
+    dated = defaultdict(list)
+    for r in lists:
+        if r["dob"]:
+            dated[(r["first"], r["last"])].append(r)
+
+    def the_man(r, year, dg=""):
+        # A different draftguru id is a different man (Brad Miller, 2001).
+        hits = [l for l in dated.get((r["first"], r["last"]), [])
+                if 16 <= year - int(l["dob"][:4]) <= 36 and (not dg or l["draftguru_id"] in ("", dg))]
+        hits.sort(key=lambda l: (B.code(l["club"]) != B.code(r["club"]), abs(int(l["year"]) - year - 1)))
+        return hits[0] if hits else {}
+    # The players of each new club's real first list, as the year it entered.
+    in_entries = defaultdict(set)
+    for r in lists:
+        if entered(r["club"]) == int(r["year"]) and r["dob"]:
+            in_entries[int(r["year"])].add((r["first"], r["last"], r["dob"]))
+
+    def had_by(year):
+        out = set(seen_names)
+        for y, people in in_entries.items():
+            if y <= year + 1:
+                out |= people
+        out |= set((r["first"], r["last"], r["dob"]) for r in read(os.path.join(LEG, "1990s", "lists_1990_opening.csv")))
+        return out
 
     drafts = [r for r in all_rows("drafts.csv")
               if r["draft"] in ("national", "rookie", "preseason") and r["pick"] and FIRST_CLASS <= int(r["year"]) <= LAST_DATA]
@@ -167,6 +195,7 @@ def main():
             # (a 1990 mid-season pick) joins the 1990 class too.
             first_list[max(int(r["year"]), FIRST_CLASS + 1)].append(r)
     classes = []
+    dg_of = {}          # class row index -> its draftguru id
     taken_before = {}   # year -> set of draftguru ids in classes before that year
     for year in range(FIRST_CLASS, LAST_DATA + 1):
         taken_before[year] = set(seen)
@@ -179,13 +208,25 @@ def main():
         pre = sorted((r for r in rows if r["draft"] == "preseason"), key=lambda r: int(r["pick"]))
         for r in nat + rook + pre:
             dg = r["draftguru_id"]
+            b = bio.get(dg, {})
+            if not b.get("dob", ""):
+                # Undated (no draftguru id): the real man of that name and age.
+                man = the_man(r, year, dg)
+                if man:
+                    if (man["first"], man["last"], man["dob"]) in had_by(year):
+                        continue
+                    b = man
+                    dg = dg or man["draftguru_id"]
+                elif not dg and (r["first"], r["last"]) in known_names:
+                    # No id and no dated man: a redraft of one already had.
+                    # A draftguru id never seen is a man of his own.
+                    continue
             key = dg or "%s|%s|%s" % (r["first"], r["last"], year)
             if key in seen:
                 continue
             seen.add(key)
-            b = bio.get(dg, {})
-            if not b.get("dob", "") and (r["first"], r["last"]) in known_names:
-                continue
+            if not dg and b.get("dob", ""):
+                seen.add("%s|%s|%s" % (r["first"], r["last"], b["dob"]))
             pid = b.get("afltables_id", "")
             # A running index: the class's order, unique and with no gaps
             # (skipped pre-entry picks and redrafts leave none).
@@ -199,6 +240,7 @@ def main():
                 "peak": peak_of(pid, rated, year + 1),
                 "last_season": last_of(pid, r["first"], r["last"], dob, year),
             })
+            dg_of[len(classes) - 1] = dg
             seen_names.add((r["first"], r["last"], dob))
             known_names.add((r["first"], r["last"]))
         # Every real player reaches a list (director, 2026-11-13: "there must
@@ -221,6 +263,7 @@ def main():
                 "peak": peak_of(pid, rated, year + 1),
                 "last_season": last_of(pid, r["first"], r["last"], r["dob"], year),
             })
+            dg_of[len(classes) - 1] = r["draftguru_id"]
             seen_names.add((r["first"], r["last"], r["dob"]))
             known_names.add((r["first"], r["last"]))
     # The real 2026 class (the 2026 start's draft class) closes a campaign's run.
@@ -265,6 +308,13 @@ def main():
                 row.update(B.stat_cells(latest[1][2]))
             entries.append(row)
 
+    # No real man twice: not two class rows, and no undated row of a name
+    # the lists date at that age (the build fails rather than ship one).
+    twice = [k for k, n in Counter((c["first"], c["last"], c["dob"]) for c in classes if c["dob"]).items() if n > 1]
+    undated = ["%s %s %s" % (c["year"], c["first"], c["last"]) for i, c in enumerate(classes)
+               if not c["dob"] and int(c["year"]) < 2026 and the_man(c, int(c["year"]), dg_of.get(i, ""))]
+    if twice or undated:
+        raise SystemExit("classes.csv would hold a man twice: %s %s" % (twice, undated))
     B.write(os.path.join(LEG, "classes.csv"), CLASS_COLS, classes)
     B.write(os.path.join(LEG, "entry_lists.csv"), ENTRY_COLS, entries)
     per = defaultdict(int)

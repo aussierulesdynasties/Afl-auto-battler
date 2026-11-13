@@ -392,6 +392,8 @@ func _test_campaign() -> void:
 			return
 		var now := GameState.season_year
 		var missing := _not_offered(offered, year)
+		var twice := _twice()
+		_check(twice.is_empty(), "No real man is in the %d save twice (%s)" % [now, str(twice.slice(0, 6))])
 		_check(missing.is_empty(), "Every player of the real %d class is in the %d draft (%d missing: %s)" % [year, year, missing.size(), str(missing.slice(0, 8).map(func(n): return "%s (%s)" % [n, _where(n)]))])
 		if now == 1996:
 			_check(GameState.news.any(func(n): return "merger talks" in str(n.get("text", ""))),
@@ -464,6 +466,27 @@ func _draft_year(offered: Dictionary) -> bool:
 ## The real class of `year` that was not in its own draft, by name.
 func _not_offered(offered: Dictionary, year: int) -> Array:
 	return LegacyRollover.real_class(year).filter(func(p): return not offered.has(str(p["id"]))) 			.map(func(p): return str(p["real_name"]))
+
+
+## Real men the save holds twice (director, 2026-11-14: "duplicate players
+## are absolutely not acceptable"): same name and date of birth on the lists,
+## among the free agents or in the draft pool.
+func _twice() -> Array:
+	var seen := {}
+	var out := []
+	var arrs: Array = GameState.league_lists.values()
+	arrs.append(GameState.free_agents)
+	arrs.append(GameState.draftee_pool.filter(func(p): return not GameState.drafted_draftees.has(str(p.get("id", "")))))
+	for arr in arrs:
+		for p in arr:
+			var dob := str(p.get("dob", ""))
+			if str(p.get("real_name", "")) == "" or dob.length() < 10:
+				continue
+			var k := "%s|%s" % [str(p["real_name"]), dob]
+			if seen.has(k) and seen[k] != str(p.get("id", "")):
+				out.append("%s (%s, %s)" % [k, seen[k], str(p.get("id", ""))])
+			seen[k] = str(p.get("id", ""))
+	return out
 
 
 ## Where the save has a real man now, for a failure message: his list, the
