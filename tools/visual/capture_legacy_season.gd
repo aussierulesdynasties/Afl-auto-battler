@@ -97,6 +97,10 @@ func _run() -> void:
 
 	# Look 6: the year event in the round 1 feed.
 	if _want("feed"):
+		# Round 1's hub, not the pre-season's: that is where the news card shows.
+		if state.preseason_active():
+			state.preseason_sim_to_round1()
+		print("FEED preseason=%s NEWS %s" % [str(state.preseason_active()), str(state.news.slice(0, 4))])
 		var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
 		root.add_child(hub)
 		await _frames(240)
