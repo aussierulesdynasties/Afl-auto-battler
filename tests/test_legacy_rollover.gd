@@ -21,6 +21,7 @@ func run() -> void:
 	_t("_test_class_rows")
 	_t("_test_fitzroy_odds")
 	_t("_test_fitzroy_stays")
+	_t("_test_departed_club_picks")
 	_t("_test_seventeen_clubs")
 	_t("_test_brand_choice", [0])
 	_t("_test_brand_choice", [1])
@@ -106,6 +107,18 @@ func _test_fitzroy_odds() -> void:
 	GameState.legacy = {"finals": {}}
 	var none := LegacyRollover.talks_line(GameState)
 	_check("no way out" in none and "(100%)" in none, "No finals: the merger goes ahead (%s)" % none)
+
+
+## A pick traded to Fitzroy for a year after its last season goes back to
+## the club it came from: the draft never seats a club that left (a 1990
+## career's 1997 draft threw "Invalid access to key 'FIT'").
+func _test_departed_club_picks() -> void:
+	GameState.reset("1990")
+	GameState.pick_owner = {"1997:1:CAR": "FIT", "1997:2:GEE": "ESS"}
+	var owners := GameState.draft_pick_owners(1997)
+	_check(not owners.has("1:CAR"), "Fitzroy's 1997 pick goes back to Carlton (%s)" % str(owners))
+	_check(str(owners.get("2:GEE", "")) == "ESS", "A pick held by a club still playing stays held (%s)" % str(owners))
+	GameState.pick_owner = {}
 
 
 ## A Fitzroy that played finals regularly and won the 90% plays on in 1997
