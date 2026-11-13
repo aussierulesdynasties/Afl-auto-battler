@@ -235,6 +235,11 @@ var tutorials := true            # this career's first-visit menu tips (Tutorial
 ## with the career. On, a scandal's real penalty lands (fines, lost picks, a
 ## finals ban); off, the scandals never happen. Saved.
 var controversies := true
+## The supplements saga, its own switch at New career (director, 2026-11-13:
+## its "full 1 year ban of list" is far more severe): on, Essendon's 2013
+## penalties and the 2016 season bans land; off, none of it happens. Apart
+## from Controversies either way. Saved.
+var supplements := true
 ## The real year events of a legacy career (YearEvents.state): the ones fired,
 ## and the penalties still running. Saved.
 var year_events := {}
@@ -954,6 +959,7 @@ func _save_state() -> Dictionary:
 		"rival_recruiting": rival_recruiting,
 		"tutorials": tutorials,
 		"controversies": controversies,
+		"supplements": supplements,
 		"year_events": year_events,
 		"postseason_intro_seen": postseason_intro_seen,
 		"my_first_season": my_first_season,
@@ -1255,6 +1261,8 @@ func _restore_career(state: Dictionary) -> bool:
 			str(state.get("rival_recruiting", legacy[DifficultyDials.RIVALS])))
 	tutorials = bool(state.get("tutorials", true))
 	controversies = bool(state.get("controversies", true))
+	# A save from before the switch had the saga under Controversies.
+	supplements = bool(state.get("supplements", controversies))
 	year_events = state.get("year_events", {}) if state.get("year_events", {}) is Dictionary else {}
 	# A save from before this field is past being a fresh career.
 	postseason_intro_seen = bool(state.get("postseason_intro_seen", true))
@@ -1842,6 +1850,7 @@ func reset(next_dataset := Datasets.DEFAULT) -> void:
 	rival_recruiting = new_career_dial(DifficultyDials.RIVALS)
 	tutorials = new_career_tutorials()
 	controversies = new_career_controversies()
+	supplements = new_career_supplements()
 	year_events = {}
 	# A seeded run (replay_seed, the tests) needs a seeded career too: this
 	# seed picks every club's conditioning timing, staff and prospects, and a
@@ -5772,6 +5781,8 @@ func week_changes() -> Dictionary:
 			var wks := int(p.get("injury_weeks", 0))
 			if suspended > 0:
 				why = "suspended, %s" % ("1 wk" if suspended == 1 else "%d wks" % suspended)
+			elif p.has("season_ban"):
+				why = "banned for the season"
 			elif wks > 0:
 				why = "injured, %s" % ("1 wk" if wks == 1 else "%d wks" % wks)
 			elif bool(p.get("rested", false)):
@@ -13057,6 +13068,18 @@ func set_new_career_controversies(on: bool) -> void:
 	set_setting("controversies", on)
 	if season == null:
 		controversies = on
+
+
+## The supplements saga's own switch: chosen at New career, kept with the
+## career. Until it is first chosen it follows Controversies.
+func new_career_supplements() -> bool:
+	return bool(get_setting("supplements", new_career_controversies()))
+
+
+func set_new_career_supplements(on: bool) -> void:
+	set_setting("supplements", on)
+	if season == null:
+		supplements = on
 
 
 func tutorials_on() -> bool:
