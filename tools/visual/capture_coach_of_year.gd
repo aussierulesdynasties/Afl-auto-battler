@@ -27,6 +27,7 @@ func _run() -> void:
 	await process_frame
 	var state = root.get_node("GameState")
 	var db = root.get_node("GameDB")
+	load("res://scripts/ui/UiKit.gd").apply_appearance("dark")
 	state.autosave_enabled = false
 	state.save_path = "user://capture_coty.save"
 	state.settings_path = "user://capture_coty.cfg"
@@ -36,7 +37,7 @@ func _run() -> void:
 	DisplayServer.window_set_size(PHONE)
 
 	# A rival senior coach who won it twice.
-	var cid := str(load("res://scripts/sim/Coaches.gd").staff(state.coaches, "WB").get("SC", ""))
+	var cid := str(load("res://scripts/sim/Coaches.gd").staff(state.coaches, "WBD").get("SC", ""))
 	var c: Dictionary = state.coaches[cid]
 	c["coty"] = [2027, 2030]
 	var host := _host()
@@ -72,7 +73,7 @@ func _run() -> void:
 
 func _host() -> Control:
 	var bg := ColorRect.new()
-	bg.color = UiKit.BG
+	bg.color = load("res://scripts/ui/UiKit.gd").BG
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.add_child(bg)
 	return bg
