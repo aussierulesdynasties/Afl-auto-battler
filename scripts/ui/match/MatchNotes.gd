@@ -9,7 +9,8 @@ extends RefCounted
 ## Quarter-break facts surface what happened, never what to do about it.
 
 ## Event kinds the feed shows. Everything else (marks, kicks, tackles,
-## entries, rebounds, clangers, interchanges) plays on the oval only.
+## entries, rebounds, clangers, interchanges) plays on the oval only; the
+## substitute coming on (a "sub" event flagged "substitute") is called too.
 const FEED_KINDS := ["goal", "behind", "quarter", "final", "moment"]
 
 ## A quarter edge worth saying out loud.
@@ -79,6 +80,8 @@ static func goal_head(who: String, club: String) -> String:
 ## {"text", "tier"}: tier "goal" (its own row), "break" (bold), "play".
 static func feed_line(ev: Dictionary, home: String, away: String) -> Dictionary:
 	var kind := str(ev.get("kind", ""))
+	if kind == "sub" and bool(ev.get("substitute", false)):
+		return {"text": substitute_words(ev, home, away), "tier": "play"}
 	if not FEED_KINDS.has(kind):
 		return {}
 	var side := int(ev.get("side", -1))
@@ -100,6 +103,16 @@ static func feed_line(ev: Dictionary, home: String, away: String) -> Dictionary:
 		"quarter":
 			return {"text": _break_words(ev, home, away), "tier": "break"}
 	return {}
+
+
+## The substitute coming on (Legacy: the 2011-15 substitute, the 2021-25
+## medical sub). An interchange stays on the oval; the substitute is for the
+## rest of the match, so the feed calls it: "Medical sub: Smith on for Jones
+## (Demons)".
+static func substitute_words(ev: Dictionary, home: String, away: String) -> String:
+	var club := home if int(ev.get("side", -1)) == 0 else away
+	return "%s: %s on for %s (%s)" % ["Medical sub" if bool(ev.get("medical", false)) else "Substitute",
+			str(ev.get("name", "")), str(ev.get("off_name", "")), GameDB.club_short(club)]
 
 
 ## The tone of a feed line to the coach: a goal for his club is "good", one against

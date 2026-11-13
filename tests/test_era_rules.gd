@@ -374,6 +374,16 @@ func _test_tactical_sub_2011() -> void:
 					still_on = true
 		_check(not still_on, "Side %d: the man subbed off stays off" % side)
 		_check((sim.rosters()[side] as Array).size() <= 23, "Side %d uses at most 22 players" % side)
+	# The feed calls the substitute; an interchange stays on the oval.
+	for e in _events(sim, "substitute"):
+		var club := "GEE" if int(e["side"]) == 0 else "CAR"
+		var want := "Substitute: %s on for %s (%s)" % [e["name"], e["off_name"], GameDB.club_short(club)]
+		var line := MatchNotes.feed_line(e, "GEE", "CAR")
+		_check(str(line.get("text", "")) == want, "Feed calls the substitute: '%s'" % str(line.get("text", "")))
+	for e in sim.events:
+		if str(e.get("kind", "")) == "sub" and not bool(e.get("substitute", false)):
+			_check(MatchNotes.feed_line(e, "GEE", "CAR").is_empty(), "An interchange stays out of the feed")
+			break
 
 
 ## 2021-2025: the substitute comes on only for an injured player.
@@ -390,6 +400,10 @@ func _test_medical_sub_2021() -> void:
 		if not hurt.is_empty():
 			seen_injury = true
 			_check(not subs.is_empty(), "Seed %d: the injury brings the substitute on" % seed)
+			for e in subs:
+				var line := str(MatchNotes.feed_line(e, "GEE", "CAR").get("text", ""))
+				_check(line.begins_with("Medical sub: %s on for %s (" % [e["name"], e["off_name"]]),
+						"Feed calls the medical sub: '%s'" % line)
 			break
 	_check(seen_injury, "Some 2021 match in 40 seeds has an injury")
 

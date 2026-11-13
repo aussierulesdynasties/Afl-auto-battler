@@ -3720,7 +3720,7 @@ func _clock_text(q: int, minute: int) -> String:
 
 func _feed_add(ev: Dictionary) -> void:
 	var kind := str(ev.get("kind", ""))
-	if QUIET_KINDS.has(kind):
+	if QUIET_KINDS.has(kind) and not bool(ev.get("substitute", false)):
 		return
 	var line := MatchNotes.feed_line(ev, str(_res["home"]), str(_res["away"]))
 	if line.is_empty():
