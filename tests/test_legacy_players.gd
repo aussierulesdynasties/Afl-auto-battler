@@ -288,8 +288,12 @@ func _caps(year: int) -> Array:
 		var seniors := RookieList.senior_count(list)
 		var cat_a := RookieList.cat_a_count(list)
 		if seniors > RookieList.senior_spots() or cat_a > RookieList.cat_a_spots() or list.size() < Contracts.min_list():
-			bad.append("%s %d: %d seniors of %d, %d rookies of %d, %d listed" % [code, year, seniors,
-					RookieList.senior_spots(), cat_a, RookieList.cat_a_spots(), list.size()])
+			# Where an over-full list's players came from, so the message names the step.
+			var fnd := list.filter(func(q): return str(q["id"]).begins_with("FND_")).size()
+			var joined := list.filter(func(q): return int(q.get("joined", 0)) == year) 					.map(func(q): return str(q.get("real_name", q["id"])))
+			bad.append("%s %d: %d seniors of %d, %d rookies of %d, %d listed (state league %d, joined %d: %s)" % [code,
+					year, seniors, RookieList.senior_spots(), cat_a, RookieList.cat_a_spots(), list.size(), fnd,
+					year, ", ".join(joined)])
 	return bad
 
 
