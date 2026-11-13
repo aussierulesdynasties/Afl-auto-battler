@@ -59,6 +59,9 @@ var pick_origin: Array = []       # the club each pick came from (differs from i
 ## Traded picks: "round:origin club" -> owner. A pick not listed is its own
 ## club's. See set_pick_owners.
 var pick_owners := {}
+## An owner no club is: a pick the league took away (YearEvents), which the
+## draft skips.
+const FORFEIT := "-"
 ## Pick trades struck on draft night, in order: {"at": the pick about to be
 ## made when it was struck, "buyer", "seller", "in": [ids the buyer got],
 ## "out": [ids it gave], "text": the line the board reads}. GameState fills
@@ -221,6 +224,8 @@ func _build_sequence(comps: Array) -> void:
 			round_order.reverse()
 		for code in round_order:
 			var owner := str(pick_owners.get("%d:%s" % [r + 1, code], code))
+			if owner == FORFEIT:
+				continue
 			slots.append([owner, r + 1, {}, code])
 			regular += 1
 			for c in by_after.get(regular, []):

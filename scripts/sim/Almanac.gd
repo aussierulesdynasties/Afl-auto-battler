@@ -305,7 +305,7 @@ static func update_club_records(gs, results: Array) -> void:
 		var codes := [str(res.get("home", "")), str(res.get("away", ""))]
 		var label := str(res.get("label", res.get("tag", "")))
 		if label == "" and gs.season != null:
-			label = "Round %d" % int(gs.season.round_index)
+			label = gs.season.round_name(maxi(0, int(gs.season.round_index) - 1))
 		var roster: Array = res.get("roster", [[], []])
 		var stats: Dictionary = res.get("players", {})
 		for s in [0, 1]:

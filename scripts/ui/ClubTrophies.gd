@@ -187,7 +187,7 @@ static func progress(season, club: String) -> String:
 	var weeks: Array = season.finals.get("weeks", []) if not season.finals.is_empty() else []
 	if weeks.is_empty():
 		var total: int = season.fixture.size() if not season.fixture.is_empty() else Season.REGULAR_ROUNDS
-		return "Round %d of %d" % [clampi(int(season.round_index), 1, total), total]
+		return season.round_progress(clampi(int(season.round_index), 1, total) - 1)
 	if bool(season.finals.get("done", false)):
 		if str(season.finals.get("premier", "")) == club:
 			return "Premiers"
