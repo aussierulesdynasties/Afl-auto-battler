@@ -17,14 +17,19 @@ static func start(club: String) -> void:
 	GameState.finish_intake_draft()
 
 
-## The off-season as a coach plays it: any draft left open is finished with
-## the best player on the board, then the next season starts.
+## The off-season as the season review plays it (SeasonReviewScene
+## _start_intake_draft): the intake draft opens, the coach takes the best player
+## on the board at each of his picks, and the draft's end starts the next
+## season; with no draft to run, the next season starts directly. True once
+## the year has moved on.
 static func roll_on() -> bool:
-	for attempt in range(3):
+	var year: int = GameState.season_year
+	if GameState.begin_intake_draft():
 		finish_draft()
-		if GameState.start_next_season():
-			return true
-	return false
+		GameState.finish_intake_draft()
+	else:
+		GameState.start_next_season()
+	return GameState.season_year > year
 
 
 static func finish_draft() -> void:
