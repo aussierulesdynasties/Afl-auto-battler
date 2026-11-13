@@ -705,10 +705,13 @@ func _test_coach_descriptions(sz: Vector2i) -> void:
 	var none: Button = m.find_child("TagPickerGrid_", true, false)
 	# The call's Gain / Cost rows (director 2026-11-10, "Gain / Cost everywhere"):
 	# No tag has its own gain and its own cost, the touches inside the line.
-	var usual := roundi(float(load("res://scripts/sim/Roles.gd").TAG_USUAL_TOUCHES))
+	# Each man's own usual touches (row 178), as the sim has him today.
+	var usual_of := func(id: String) -> int:
+		return roundi(float(load("res://scripts/sim/Roles.gd").usual_touches(m.call("_their_player", _state.pending_sim, id))))
+	var usual_n := RegEx.create_from_string("usual \\d+ touches")
 	var no_tag_ok := func() -> bool:
 		var t := _plain(tn)
-		return t.begins_with("Gain: your midfielders play their own game") and t.contains("\nCost: ") 				and t.contains("usual %d touches" % usual) and tn.find_child("TagGain", true, false) != null 				and tn.find_child("TagCost", true, false) != null
+		return t.begins_with("Gain: your midfielders play their own game") and t.contains("\nCost: ") 				and usual_n.search(t) != null and tn.find_child("TagGain", true, false) != null 				and tn.find_child("TagCost", true, false) != null
 	_check(tn != null and none != null and no_tag_ok.call(), "With no tag, the tag call says its gain and its cost (%s: %s)" % [tag, _plain(tn) if tn else "-"])
 	var named: Button = null
 	for b in m.find_child("TagPicker", true, false).find_children("TagPickerGrid_*", "Button", true, false):
@@ -719,6 +722,7 @@ func _test_coach_descriptions(sz: Vector2i) -> void:
 	if named != null:
 		var tw: String = await _tap_call(m, named)
 		await _settle()
+		var usual: int = usual_of.call(str(named.name).trim_prefix("TagPickerGrid_"))
 		_check(tw == "" and _plain(tn).contains("usually gets %d touches" % usual) and _plain(tn).contains("on him, about ")
 				and _plain(tn).contains("\nCost: ") and _plain(tn).contains(str(load("res://scripts/sim/GateOdds.gd").tag_gives())),
 				"A real tap on a player sizes the tag: his touches, and what the tagger gives up (%s: %s)" % [tag, _plain(tn)])
@@ -2271,7 +2275,7 @@ func _test_hot_tag_tap() -> void:
 	var b0: Button = card.find_child("Moment_0", true, false)
 	_check(b0 != null and b0.text == "Tag him with %s" % who, "The first answer names the man who goes (%s)" % (b0.text if b0 else "-"))
 	var low := _text(card)
-	_check(low.contains("usually gets %d touches" % roundi(float(load("res://scripts/sim/Roles.gd").TAG_USUAL_TOUCHES))) and low.contains(str(load("res://scripts/sim/GateOdds.gd").tag_gives())),
+	_check(low.contains("usually gets %d touches" % roundi(float(load("res://scripts/sim/Roles.gd").usual_touches(hot)))) and low.contains(str(load("res://scripts/sim/GateOdds.gd").tag_gives())),
 			"The card sizes the tag in touches and what he gives up (%s)" % low)
 	var why: String = await Tap.tap(b0)
 	_check(why == "", "A real tap on Tag him reaches it (%s)" % why)

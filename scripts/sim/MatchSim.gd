@@ -5838,14 +5838,17 @@ func _boundary_moment() -> bool:
 		var stopper := GameDB.player_display_name(minder)
 		var hot_name := GameDB.player_display_name(hot)
 		# The size of the call, from what the sim plays (GateOdds; row 120).
+		# Each man's own touches (row 178).
 		var on_him: Dictionary = minder
-		var kept := GateOdds.tag_kept(on_him, float(energy.get(str(on_him.get("id", "")), 100.0)))
+		var legs := float(energy.get(str(on_him.get("id", "")), 100.0))
+		var kept := GateOdds.tag_kept(on_him, legs, hot)
 		# A tag already on another of theirs moves if the coach says tag: the card
 		# says so, and what leaving it where it is keeps (the answer itself is
 		# unchanged: resolve_moment sets the tag on this man either way).
 		var tagged := _on_ground(opp, _tag_id(me))
 		var on_now := "" if tagged.is_empty() else GameDB.player_display_name(tagged)
-		var lines := GateOdds.tag_call_lines(hot_name, stopper, kept, on_now)
+		var lines := GateOdds.tag_call_lines(hot_name, stopper, kept, GateOdds.usual_touches(hot), on_now,
+				GateOdds.usual_touches(tagged), GateOdds.tag_kept(on_him, legs, tagged))
 		_fire({"kind": "hot", "player_id": str(id), "default": 1,
 			"title": "%s has kicked %d" % [hot_name, int(st["goals"])],
 			"text": "Their midfielder is hurting you on the scoreboard.",
