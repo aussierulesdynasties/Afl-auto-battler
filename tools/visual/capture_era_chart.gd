@@ -101,8 +101,16 @@ func _pictures(db) -> Dictionary:
 ## own, then 2026 when the club plays it.
 func _cells(db, code: String, rows: Array) -> Array:
 	var cells := []
+	# A part-season picture in a drawing the club already wears for a season adds nothing.
+	var shown := {}
+	for r in rows:
+		if r["from"] > 0:
+			shown[r["cell"]] = true
 	for r in rows:
 		var part: bool = r["from"] <= 0
+		if part and shown.has(r["cell"]):
+			continue
+		shown[r["cell"]] = true
 		var y0: int = r["year"] if part else r["from"]
 		var y1: int = r["year"] if part else mini(r["to"], LAST - 1)
 		if not part and not cells.is_empty() and not cells[-1]["part"] and cells[-1]["cell"] == r["cell"] \
@@ -127,7 +135,8 @@ func _block(ui_kit, sv: GDScript, db, b: Dictionary, y: float, w: int, cell: flo
 	var code: String = b["code"]
 	var now_name := _now_name(db, code)
 	var name := Label.new()
-	name.text = "%s  (%d guernseys)" % [now_name, (b["cells"] as Array).size()]
+	var count := (b["cells"] as Array).size()
+	name.text = "%s  (%d guernsey%s)" % [now_name, count, "" if count == 1 else "s"]
 	name.position = Vector2(16, y + 4)
 	name.add_theme_font_size_override("font_size", 19)
 	root.add_child(name)

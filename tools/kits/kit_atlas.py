@@ -7,6 +7,7 @@ tools/kits/kits.txt into one atlas the figures and crests wear, and writes data/
 kits.txt, one guernsey per line (blank lines and # comments skipped):
 
     CODE FROM-TO SPEC | front ops ; op ; ... | back ops ; ...
+    CODE FROM-TO PICTURE = EARLIER-PICTURE [SPEC]      (the same drawing; SPEC when it changed)
 
 SPEC is the game's guernsey spec (design:base/pattern/pattern2/shorts, as data/clubs.csv), used
 for the socks, shorts, the oval's discs and the colour bars; its design is the nearest of the
@@ -181,7 +182,9 @@ def parse(path, clubs):
         k = {"code": code, "from": lo, "to": hi, "pic": pic, "line": no, "year": years}
         if len(t) > 3 and t[3] == "=":
             src = by_pic[t[4]]
-            k.update({"spec": src["spec"], "front": src["front"], "back": src["back"], "cols": src["cols"]})
+            # "= PICTURE [SPEC]": the same drawing; a season whose spec changed names its own.
+            k.update({"spec": t[5] if len(t) > 5 else src["spec"], "front": src["front"], "back": src["back"],
+                      "cols": src["cols"]})
         else:
             spec = t[3]
             front, _, back = rest.partition("|")
