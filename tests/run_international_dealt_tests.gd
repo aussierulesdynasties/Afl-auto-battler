@@ -10,6 +10,7 @@ extends SceneTree
 ## Director, 2026-11-14: test the rule itself, not six simulated seasons. Each
 ## check below builds the story's memory by hand and asks the engine directly,
 ## so the suite runs in well under a second.
+## Seeded by design: no dice are rolled; the one RandomNumberGenerator picks among a single fitting player, seeded 1.
 
 var _checks := 0
 var _failures: Array[String] = []
