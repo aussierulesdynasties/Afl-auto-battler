@@ -104,25 +104,26 @@ func _test_acts_and_reconcile() -> void:
 
 
 ## Lifting one line's Pressure lifts the side's pressure: midfield and
-## defence both matter now, not just the defenders.
+## defence both matter now, not just the defenders. Asked of the rule itself:
+## the chance a carrier is pressured comes from MatchSim._zone_pressure of the
+## side pressing him (each zone's role weights times each man's Pressure), so
+## a line lifted 30 must lift it in every zone. _test_rating_formula plays the
+## matches and shows a harder-pressing side's acts follow.
 func _test_role_pressure_matters() -> void:
+	var base_sim := _sim(700)
+	var base := []
+	for zone in range(MatchSim.PRESS_ZONES.size()):
+		base.append(base_sim._zone_pressure(1, zone))
+	_check(base.size() == 3, "Three pressing zones (%d)" % base.size())
 	for role in ["MID", "DEF", "FWD"]:
-		var base := _pressure_per_opp_disposal(Callable())
-		var lifted := _pressure_per_opp_disposal(func(sq: Squad):
+		var sim := _sim(700, func(sq: Squad):
 			for p in sq.ground:
 				if str(p["role"]) == role:
 					p["attr"]["pressure"] = minf(99.0, float(p["attr"]["pressure"]) + 30.0))
-		_check(lifted > base, "%s Pressure raises the side's pressure (%.3f -> %.3f acts per opposition disposal)" % [role, base, lifted])
-
-
-func _pressure_per_opp_disposal(edit: Callable) -> float:
-	var acts := 0.0
-	var opp_disp := 0.0
-	for i in range(MATCHES):
-		var res := _sim(700 + i, edit).run()
-		acts += float(res["team"][1].get("pressure_acts", 0.0))
-		opp_disp += float(res["team"][0].get("disposals", 0.0))
-	return acts / opp_disp
+		for zone in range(base.size()):
+			var lifted := sim._zone_pressure(1, zone)
+			_check(lifted > float(base[zone]),
+					"%s Pressure raises the side's pressure in zone %d (%.2f -> %.2f)" % [role, zone, base[zone], lifted])
 
 
 ## A forward with elite Pressure produces more pressure acts than he did at

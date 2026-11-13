@@ -82,17 +82,62 @@ func _test_shot_log_matches_the_shots() -> void:
 		_check(goals == sim.goals(side), "Side %d: the shot log has every goal (%d against %d)" % [side, goals, sim.goals(side)])
 
 
-## A closer set shot goes in more often than a longer one: the bands by their
-## real rates, and the shots of 30 matches by distance.
+## A closer set shot goes in more often than a longer one: the bands carry the
+## real rates by distance for any kicker, and the mark's split hands the shot
+## exactly its band's chance and distance, so the kick is rolled at the odds for
+## where he marked. Asked of the rule itself (thousands of splits, no matches);
+## the measured conversion by distance is logged by the share test below from
+## the same matches, and tools/balance.sh measures it too.
 func _test_closer_set_shot_converts_more() -> void:
 	var by := {}
+	var metres := {}
 	for b in MatchSim.set_bands(MatchSim.SET_REF):
 		by[str(b["key"])] = float(b["goal"])
+		metres[str(b["key"])] = float(b["metres"])
 	_check(by["close"] > by["front"] and by["front"] > by["angle"] and by["angle"] > by["long"],
 			"From 25, 35, 45 then 55 metres straight in front, the chance falls (%s)" % str(by))
+	var order := ["close", "front", "angle", "long"]
+	for i in range(order.size() - 1):
+		_check(float(metres[order[i]]) < float(metres[order[i + 1]]),
+				"%s (%.0f m) is closer than %s (%.0f m)" % [order[i], metres[order[i]], order[i + 1], metres[order[i + 1]]])
+	# A better or worse kicker scales every band alike, so the order holds for him too.
+	for goal_p in [0.2, 0.3]:
+		var g := {}
+		for b in MatchSim.set_bands(goal_p):
+			g[str(b["key"])] = float(b["goal"])
+		_check(g["close"] > g["front"] and g["front"] > g["angle"] and g["angle"] > g["long"],
+				"At a %.2f shot the chance still falls with distance (%s)" % [goal_p, str(g)])
+	# The mark's split: a set shot is rolled at its own band's chance and distance.
+	var sim := _sim(0)
+	sim.shot_rng.seed = 4242
+	var picked := {}
+	var exact := true
+	for i in range(4000):
+		var split: Dictionary = sim._set_shot_split(MatchSim.SET_REF, 0.2)
+		var band: Dictionary = split["band"]
+		if band.is_empty():
+			continue
+		var key := str(band["key"])
+		picked[key] = int(picked.get(key, 0)) + 1
+		exact = exact and is_equal_approx(float(split["goal"]), float(by[key])) \
+				and is_equal_approx(float(band["metres"]), float(metres[key]))
+	_check(picked.size() == MatchSim.SET_BANDS_ON.size(), "Every band is kicked from (%s)" % str(picked))
+	_check(exact, "A set shot from a band is rolled at that band's chance and distance")
+
+
+## Over 120 seeded matches the set-shot share of shots sits near real AFL, about
+## 55% of shots (row 77; SET_SHOT_EVIDENCE.md). SET_SHARE_ON is a different number,
+## the share of marks inside 50 that go back and kick, so it is not the aim here.
+## A measurement, not a rule: the same matches also measure conversion by
+## distance (both gated by BalanceGate; tools/balance.sh measures both too).
+func _test_set_share_near_real() -> void:
 	var res := _play()
+	var n := 0
+	var set_n := 0
 	var tally := {"near": [0, 0], "mid": [0, 0], "far": [0, 0]}
 	for s in res["shots"]:
+		n += 1
+		set_n += int(s[1])
 		if int(s[1]) != 1:
 			continue
 		var m := float(s[2])
@@ -101,28 +146,16 @@ func _test_closer_set_shot_converts_more() -> void:
 			continue
 		tally[band][0] += 1
 		tally[band][1] += 1 if str(s[3]) == "goal" else 0
+	_check(n > MATCHES * 30, "Shots were played (%d)" % n)
+	var share := float(set_n) / maxf(1.0, float(n))
+	var aim := 0.55
+	_check(BalanceGate.held(absf(share - aim) < 0.04, "set shots: share near real"), "The set-shot share sits near %.2f (%.3f)" % [aim, share])
 	var rate := {}
 	for k in tally:
 		_check(int(tally[k][0]) >= 40, "Enough set shots from %s to compare (%d)" % [k, int(tally[k][0])])
 		rate[k] = float(tally[k][1]) / maxf(1.0, float(tally[k][0]))
 	_check(BalanceGate.held(rate["near"] > rate["mid"] + 0.15 and rate["mid"] > rate["far"] + 0.10, "set shots: conversion falls with distance"),
 			"Set shots from 20-30 m convert more than 40-50 m, and those more than 50+ m (%s)" % str(rate))
-
-
-## Over 30 seeded matches the set-shot share of shots sits near real AFL, about
-## 55% of shots (row 77; SET_SHOT_EVIDENCE.md). SET_SHARE_ON is a different number,
-## the share of marks inside 50 that go back and kick, so it is not the aim here.
-func _test_set_share_near_real() -> void:
-	var res := _play()
-	var n := 0
-	var set_n := 0
-	for s in res["shots"]:
-		n += 1
-		set_n += int(s[1])
-	_check(n > MATCHES * 30, "Shots were played (%d)" % n)
-	var share := float(set_n) / maxf(1.0, float(n))
-	var aim := 0.55
-	_check(BalanceGate.held(absf(share - aim) < 0.04, "set shots: share near real"), "The set-shot share sits near %.2f (%.3f)" % [aim, share])
 
 
 ## T2.24: a mark that goes back for a set shot names its band, and the oval
