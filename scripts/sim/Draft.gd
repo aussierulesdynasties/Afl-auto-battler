@@ -493,10 +493,10 @@ func pass_block_reason() -> String:
 		return "You can only pass on your own pick."
 	var gone := int(leaving.get(user_club, 0))
 	var have := int(existing_sizes.get(user_club, 0)) + count_for(user_club) - gone
-	if have < Prospects.MIN_LIST:
+	if have < Contracts.min_list():
 		if gone > 0:
-			return "With %d retiring, your list has %d players for next season and needs at least %d, so you cannot pass yet." % [gone, have, Prospects.MIN_LIST]
-		return "Your list has %d players and needs at least %d, so you cannot pass yet." % [have, Prospects.MIN_LIST]
+			return "With %d retiring, your list has %d players for next season and needs at least %d, so you cannot pass yet." % [gone, have, Contracts.min_list()]
+		return "Your list has %d players and needs at least %d, so you cannot pass yet." % [have, Contracts.min_list()]
 	return ""
 
 
