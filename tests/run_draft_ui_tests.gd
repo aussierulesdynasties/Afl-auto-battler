@@ -225,33 +225,18 @@ func _test_board() -> void:
 func _test_start_season_footer() -> void:
 	var old_size := root.size
 	root.size = Vector2i(390, 844)
-	# Short at defence: cheapest players first, never a defender.
+	# One finished draft serves the refused list and the short one: cheapest
+	# players first, never a defender.
 	var ui: Control = await _finished_draft(false)
 	var d = _state.draft
-	var footer: Label = ui.find_child("UpcomingPicks", true, false)
-	var fin: Button = ui.find_child("StartSeason", true, false)
-	var short_def := int((d.position_status()["DEF"] as Dictionary)["short"])
-	_check(d.is_finished() and d.is_valid() and short_def > 0,
-			"Setup: a full list within the cap with no defenders (short %d)" % short_def)
-	_check(footer.text.begins_with("Short %d defenders" % short_def),
-			"A list short at defence says so: " + footer.text.replace("\n", " / "))
-	_check(not footer.text.contains("ready"), "...and does not say the list is ready")
-	_check(not fin.disabled, "The rules let a full list start short, so Start season is live")
-	var why: String = await Tap.tap(fin)
-	_check(why == "" and _state.season != null and _state.my_club == "COL",
-			"A finger's tap on Start season starts the season (%s)" % why)
-	ui.queue_free()
-	_state.reset()
-	await _settle()
+	var budget_was: int = d.budget
 
 	# A list the rules refuse: over the cap. Start season is off, the footer says why.
-	ui = await _finished_draft(false)
-	d = _state.draft
 	d.budget = d.spent() - 1000
 	ui.call("_refresh")
 	await _settle()
-	footer = ui.find_child("UpcomingPicks", true, false)
-	fin = ui.find_child("StartSeason", true, false)
+	var footer: Label = ui.find_child("UpcomingPicks", true, false)
+	var fin: Button = ui.find_child("StartSeason", true, false)
 	_check(not d.is_valid() and fin.disabled, "Setup: over the cap, Start season is off")
 	_check(footer.text.contains("over the salary cap") and not footer.text.contains("ready"),
 			"An invalid list says why: " + footer.text.replace("\n", " / "))
@@ -270,6 +255,7 @@ func _test_start_season_footer() -> void:
 		rel = n
 		break
 	_check(rel != null, "A refused list offers Release on My list")
+	var rel_id := str(rel.name).trim_prefix("Release_") if rel != null else ""
 	var count_before: int = d.count()
 	var rel_why: String = await Tap.tap(rel)
 	await _settle()
@@ -280,6 +266,32 @@ func _test_start_season_footer() -> void:
 	d.budget += 1000
 	_check(d.invalid_reason() == "You have %d of %d players." % [d.target_size - 1, d.target_size],
 			"A short list says how many players it has: " + d.invalid_reason())
+
+	# Short at defence: the released player taken back makes the list whole
+	# again, under the cap the draft began with, and still with no defender.
+	d.budget = budget_was
+	var back := {}
+	for p in d.board("", "", "", "overall", true):
+		if str(p["id"]) == rel_id:
+			back = p
+			break
+	_check(not back.is_empty() and d.can_pick_player(back), "The released player is back on the board (%s)" % rel_id)
+	if not back.is_empty():
+		ui.call("_on_pick", back)
+	ui.call("_select_tab", "pool")
+	await _settle()
+	footer = ui.find_child("UpcomingPicks", true, false)
+	fin = ui.find_child("StartSeason", true, false)
+	var short_def := int((d.position_status()["DEF"] as Dictionary)["short"])
+	_check(d.is_finished() and d.is_valid() and short_def > 0,
+			"Setup: a full list within the cap with no defenders (short %d)" % short_def)
+	_check(footer.text.begins_with("Short %d defenders" % short_def),
+			"A list short at defence says so: " + footer.text.replace("\n", " / "))
+	_check(not footer.text.contains("ready"), "...and does not say the list is ready")
+	_check(not fin.disabled, "The rules let a full list start short, so Start season is live")
+	var why: String = await Tap.tap(fin)
+	_check(why == "" and _state.season != null and _state.my_club == "COL",
+			"A finger's tap on Start season starts the season (%s)" % why)
 	ui.queue_free()
 	_state.reset()
 	await _settle()
@@ -455,7 +467,13 @@ func _finished_draft(cover: bool) -> Control:
 		if board.is_empty():
 			break
 		board.sort_custom(func(a, b): return int(a["value"]) < int(b["value"]))
-		ui.call("_on_pick", board[0])
+		# The picks before the last are the model's (the screen is not under
+		# test until the list is whole); the last goes through the screen's
+		# own pick, so it lands as a coach's would.
+		if d.count() + 1 < d.target_size:
+			d.pick(board[0])
+		else:
+			ui.call("_on_pick", board[0])
 	ui.call("_refresh")
 	await _settle()
 	return ui
@@ -1222,10 +1240,19 @@ func _test_take_tasmania() -> void:
 	await _settle()
 	why += await Tap.tap(ui.find_child("WaitGo", true, false))
 	var guard := 0
+	var skipped := false
 	while _state.my_club != "TAS" and guard < 20000:
+		# The year without you plays under the cover a step at a time; its
+		# home and away is skipped once 2027 starts (the cover then plays the
+		# finals and the off-season to the 2027 draft), as tests/test_expansion.gd
+		# plays the whole year step by step already.
+		if not skipped and _state.season != null and _state.season_year == 2027 and _state.sim_ahead:
+			_state.season.round_index = _state.season.fixture.size()
+			skipped = true
 		await process_frame
 		guard += 1
 	await _settle()
+	_check(skipped, "The year was played live under the cover (seeded, so no shipped history)")
 	_check(why == "" and _state.my_club == "TAS" and _state.season_year == 2027 and _state.draft.intake_mode
 			and _state.draft.user_club == "TAS" and not _state.sim_ahead,
 			"A finger on Take Tasmania plays 2027 and Tasmania are yours at the 2027 draft (%s, %s, %d)" % [why, _state.my_club, _state.season_year])
