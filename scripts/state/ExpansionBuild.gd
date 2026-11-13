@@ -461,7 +461,7 @@ static func draft_picks(gs, n_clubs: int, pool_size: int) -> Array:
 
 ## The club's lowest-rated state-league signings make way, so every pick it
 ## still holds fits in the senior spots the draft fills.
-static func _make_room(gs, code: String, picks: Array) -> void:
+static func _make_room(gs, code: String, picks: Array, draft_ahead := true) -> void:
 	var list: Array = list_of(gs, code)
 	var held := 0
 	for e in picks:
@@ -471,8 +471,7 @@ static func _make_room(gs, code: String, picks: Array) -> void:
 	if over <= 0:
 		return
 	var state_league := list.filter(func(p): return str(p["id"]).begins_with("FND_"))
-	# A real player (a Legacy foundation) makes way last, and goes back into
-	# the prospects for next year's draft rather than out of the game.
+	# A real player (a Legacy foundation) makes way last.
 	state_league.sort_custom(func(a, b):
 		var ra := str(a.get("real_name", "")) != ""
 		var rb := str(b.get("real_name", "")) != ""
@@ -481,17 +480,35 @@ static func _make_room(gs, code: String, picks: Array) -> void:
 		return int(a["overall"]) < int(b["overall"]))
 	# A club already playing (its first off-season) delists them as any club
 	# does: free agents any club may sign, an unsigned one's career ending on
-	# the record. Into the pool they would age out unseen (Prospects.age_pool).
+	# the record.
 	var playing: bool = gs.season != null and gs.season.lists.has(code)
 	for p in state_league.slice(0, over):
 		if playing:
 			gs._release(code, p, false, false)
 			continue
 		list.erase(p)
-		if str(p.get("real_name", "")) != "":
+		if str(p.get("real_name", "")) == "":
+			continue
+		# A real one young enough goes into this draft, and next year's if
+		# passed over. One the pool would age out (Prospects.age_pool) before
+		# anyone saw him, or one cut with no draft still to come, is a free
+		# agent instead, so his career goes on or ends on the record.
+		if draft_ahead and float(p.get("age", 30.0)) + 1.0 < 22.0:
 			p["club"] = ""
 			p["draft_year"] = int(gs.season_year)
 			gs.draftee_pool.append(p)
+		else:
+			p["released_by"] = code
+			p["comp_eligible"] = false
+			p["contract_years"] = 0
+			gs.free_agents.append(p)
+
+
+## A club still to play takes a player at the rollover, after its draft (a
+## Legacy canon move, Ablett to Gold Coast): it lets its lowest state-league
+## signing go so the list it enters with fits its senior spots.
+static func fit_spots(gs, code: String) -> void:
+	_make_room(gs, code, [], false)
 
 
 ## How many of the new clubs' extra picks come before the `regular`-th

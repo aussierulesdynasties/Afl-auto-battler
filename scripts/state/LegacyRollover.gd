@@ -755,5 +755,8 @@ static func canon_moves(gs, year: int) -> void:
 		dest.append(p)
 		if gs.league_lists.has(to) or not ExpansionBuild.has_package(gs, to):
 			gs.league_lists[to] = dest
+		else:
+			# Its draft is done: the list it enters with still fits its spots.
+			ExpansionBuild.fit_spots(gs, to)
 		gs.unique_jumpers(dest)
 		gs.add_news("legacy", "%s leaves %s for %s." % [who, GameDB.club_name(from), GameDB.club_name(to)])
