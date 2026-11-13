@@ -75,6 +75,8 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `save` | Saving and loading a career, including old-save migrations and the safe write: a failed or interrupted write never loses the career, and a failed swap leaves the newer save readable |
 | `chronology` | 2026 is history, careers start in 2027, and every system agrees |
 | `dataset` | The career's dataset (Legacy mode): GameDB loads the chosen set, the save keeps it, clubs by year (who plays each season, era names, grounds and codes), and the 2026 load, real-lists opening and seeded season match golden fingerprints from before the choice |
+| `legacy_start_2020` | The 2020 Legacy start: the set loads (18 clubs rated on 2019), a Richmond career replaces Damien Hardwick, every club has its real coach and captain, the hub season's clock, and the 2020 season rolls into 2021 |
+| `legacy_2020_long` | Nightly: the seeded 2020 Richmond career skips and rolls every season from 2020 to 2028, no end year |
 | `career` | Games, goals and club stints across a dynasty |
 | `coaches` | The coaching world: six jobs a club, records, grades, the Staff screen |
 | `coach_market` | Coach moves, hiring, sackings, retirements, assistant contracts |
