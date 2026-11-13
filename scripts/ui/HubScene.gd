@@ -874,7 +874,18 @@ func _league_names() -> Dictionary:
 ## The league's front page in small: the lead story and a few headlines; a
 ## tap opens the whole page.
 func _news_card() -> Control:
-	return NewsFront.mini(GameState.news, GameState.my_club, _show_news, _league_names())
+	return NewsFront.mini(GameState.news, GameState.my_club, _show_news, _league_names(), _news_now())
+
+
+## The news is dated by the week the coach is in, as the hub's title is
+## (director 2026-11-13, "Header should say Round 1": round 1's page read
+## "1990 Pre-season"). Off-season and pre-season keep the stories' own date.
+func _news_now() -> String:
+	var season: Season = GameState.season
+	if season == null or GameState.preseason_active() or season.is_season_over():
+		return ""
+	var week := season.round_name(season.round_index) if not season.is_regular_done() else _finals_label()
+	return "%d  %s" % [GameState.season_year, week]
 
 
 func _show_news() -> void:
@@ -882,7 +893,7 @@ func _show_news() -> void:
 	var box := UiKit.modal_box(self, 1080.0 if wide else 620.0, 0.0 if wide else 560.0)
 	_news_overlay = box["overlay"]
 	_news_overlay.name = "NewsFeed"
-	NewsFront.fill(box["body"], GameState.news, GameState.my_club, wide, _league_names())
+	NewsFront.fill(box["body"], GameState.news, GameState.my_club, wide, _league_names(), _news_now())
 	var ok := UiKit.btn("Close", UiKit.NAME, true)
 	ok.custom_minimum_size = Vector2(0, 44)
 	ok.pressed.connect(func(): _news_overlay.queue_free())
