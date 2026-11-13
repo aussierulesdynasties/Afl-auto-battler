@@ -761,7 +761,10 @@ func _test_private_cards() -> void:
 	(ctx["club"] as Dictionary)["losing_run"] = 5  # so a card that waits on a losing run can be reached
 	var leaks := []
 	var reachable := 0
+	var own_deck := str((ctx["club"] as Dictionary).get("club_deck", ""))
 	for t in private:
+		# A club deck's card (row 157) is dealt only to its own club: fit the deck too.
+		(ctx["club"] as Dictionary)["club_deck"] = str(t.get("club", own_deck))
 		# Fit the club to the card's own timing (a round window), so only the name rule is left.
 		for k in (t.get("when", {}) as Dictionary):
 			var wk := str(k)

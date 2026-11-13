@@ -189,7 +189,7 @@
 		"subject": {"kind": "club"},
 		"when": {"ladder_min": 5},
 		"title": ["Nobody's tipping us"],
-		"text": ["The Dogs have made the finals from low on the ladder, and every pundit has them out next week. The players want to know how the coach will play it."],
+		"text": ["The Dogs have made the finals from low on the ladder, and every pundit has them out next week. The group asks how you will play it."],
 		"choices": [
 			{"key": "embrace", "label": "\"Let them write us off.\"",
 			 "effects": [{"op": "morale", "d": 5, "who": "side"}, {"op": "slow_start", "chance": 20, "who": "side"}],
