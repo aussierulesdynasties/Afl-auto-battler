@@ -12,6 +12,11 @@ var list: Array = []
 var home := false
 var ground: Array = []
 var bench: Array = []
+## The substitute (Legacy seasons that had one, EraRules: 2011-15 and the
+## medical substitute of 2021-25): [] or one player, named beside the bench
+## and outside the rotation until MatchSim brings him on. [] in the game's
+## league, so a 2026 match is as before.
+var sub: Array = []
 ## Team form, -1..1, from recent results (Season.club_form). Set by whoever
 ## builds the match; 0 is neutral.
 var form := 0.0
@@ -80,7 +85,27 @@ func _init(p_name: String, p_list: Array, p_home := false, p_code := "",
 	var sel := Ratings.select_side(p_list, p_selection)
 	ground = sel["ground"]
 	bench = sel["bench"]
+	if Ratings.subs() > 0:
+		sub = pick_sub(p_list, ground + bench)
 	_aggregate()
+
+
+## The substitute: the best available player not already named, rated as
+## selection rates him (overall and his workload), then id; [] when none.
+static func pick_sub(list_players: Array, named: Array) -> Array:
+	var taken := {}
+	for p in named:
+		taken[str(p["id"])] = true
+	var best: Dictionary = {}
+	var best_v := -INF
+	for p in list_players:
+		if taken.has(str(p["id"])) or not Ratings.available(p):
+			continue
+		var v := float(p["overall"]) * Workload.selection_factor(p)
+		if v > best_v or (v == best_v and str(p["id"]) < str(best["id"])):
+			best = p
+			best_v = v
+	return [] if best.is_empty() else [best]
 
 
 func _aggregate() -> void:
