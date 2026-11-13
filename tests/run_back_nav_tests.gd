@@ -765,18 +765,28 @@ func _test_new_career_flow() -> void:
 		await _settle(8)
 		var menu := current_scene
 		_check(_continue_shows_old_career(menu), "the title offers Continue for the old career (%s)" % way)
-		# Step 1: the New career options, left by Back.
+		# Step 1: the year step, then the New career options, each left by Back
+		# (Legacy mode, row 142 L2: the options step back to the year step).
 		await _click_named(menu, "NewCareer")
 		await _settle(8)
-		_check(str(menu.get("_mode")) == "setup", "New career opens its options (%s)" % way)
+		_check(str(menu.get("_mode")) == "year", "New career opens the year step (%s)" % way)
+		await _click_named(menu, "StartYear_2026")
+		await _settle(8)
+		_check(str(menu.get("_mode")) == "setup", "the year step opens the options (%s)" % way)
+		var why0: String = await _leave(way, menu.find_child("TopBarBack", true, false))
+		await _settle(8)
+		_check(why0 == "" and str(menu.get("_mode")) == "year", "the options: Back by %s steps back to the year step (%s)" % [way, why0])
+		_table.append("new career: options | %s | %s" % [way, "ok" if why0 == "" and str(menu.get("_mode")) == "year" else "FAIL %s mode=%s" % [why0, str(menu.get("_mode"))]])
 		var why1: String = await _leave(way, menu.find_child("TopBarBack", true, false))
 		await _settle(8)
-		var ok1: bool = why1 == "" and str(menu.get("_mode")) != "setup" and _saved_club() == "COL" and _continue_shows_old_career(current_scene)
+		var ok1: bool = why1 == "" and str(menu.get("_mode")) == "home" and _saved_club() == "COL" and _continue_shows_old_career(current_scene)
 		_check(ok1, "new career, step 1: Back by %s keeps the old career and Continue (%s; saved %s)" % [way, why1, _saved_club()])
-		_table.append("new career: options | %s | %s" % [way, "ok" if ok1 else "FAIL %s saved=%s" % [why1, _saved_club()]])
+		_table.append("new career: year step | %s | %s" % [way, "ok" if ok1 else "FAIL %s saved=%s" % [why1, _saved_club()]])
 		# Step 2: Choose your club asks to replace the career; Back or Cancel keeps it.
 		menu = current_scene
 		await _click_named(menu, "NewCareer")
+		await _settle(8)
+		await _click_named(menu, "StartYear_2026")
 		await _settle(8)
 		var ids := _control_ids(menu)
 		await _click_named(menu, "StartCareer")
@@ -802,9 +812,12 @@ func _test_new_career_flow() -> void:
 		var ok3: bool = why3 == "" and _router.current() == "main" and str(menu3.get("_mode")) == "setup" and _saved_club() == "COL"
 		_check(ok3, "Choose your club: Back by %s steps back to the New career options (%s; now %s, mode %s)" % [way, why3, _router.current(), str(menu3.get("_mode"))])
 		_table.append("new career: Choose your club | %s | %s" % [way, "ok" if ok3 else "FAIL %s now=%s mode=%s saved=%s" % [why3, _router.current(), str(menu3.get("_mode")), _saved_club()]])
-		# One more step back reaches the title, and Continue still shows the old career.
+		# Two more steps back (the year step, then the title), and Continue still shows the old career.
 		var why4: String = await _leave(way, menu3.find_child("TopBarBack", true, false))
 		await _settle(8)
+		if why4 == "" and str(current_scene.get("_mode")) == "year":
+			why4 = await _leave(way, current_scene.find_child("TopBarBack", true, false))
+			await _settle(8)
 		var ok4: bool = why4 == "" and _continue_shows_old_career(current_scene) and _saved_club() == "COL"
 		_check(ok4, "then the title still offers Continue for the old career (%s: %s)" % [way, why4])
 		_table.append("new career: back to the title | %s | %s" % [way, "ok" if ok4 else "FAIL %s" % why4])

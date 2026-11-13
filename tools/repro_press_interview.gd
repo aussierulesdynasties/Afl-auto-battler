@@ -51,6 +51,7 @@ func _run() -> void:
 		await _wait_route("main")
 		var menu = current_scene
 		menu._on_new_career()
+		menu._on_pick_year("2026")  # past the year step (row 142 L2)
 		menu.set("_pick_start", str(st[1]))
 		menu.set("_pick_challenge", str(st[2]))
 		menu.set("_pick_canberra", bool(st[3]))

@@ -103,6 +103,7 @@ func _run() -> void:
 		quit(1)
 		return
 	current_scene._on_new_career()
+	current_scene._on_pick_year("2026")  # past the year step (row 142 L2)
 	await _press(current_scene, "StartMode_real")
 	await _press(current_scene, "Challenge_goal")
 	await _show(current_scene, "Challenge_none")
