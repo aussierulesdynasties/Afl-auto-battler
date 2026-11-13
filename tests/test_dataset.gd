@@ -63,6 +63,7 @@ func run() -> void:
 	_t("_test_old_and_unknown_saves")
 	_t("_test_club_years_1990")
 	_t("_test_ground_names_1990")
+	_t("_test_guernseys_by_year")
 	Datasets.remove(FIXTURE)
 	GameState.replay_seed = 0
 	GameState.reset()
@@ -119,8 +120,12 @@ func _load_print() -> String:
 	codes.sort()
 	for code in codes:
 		var c: Dictionary = GameDB.clubs[code]
+		# pattern3 (L9's anchor colour) came after this golden; today's kits repeat
+		# pattern2 in it, which _test_guernseys_by_year checks.
+		var g := GameDB.club_guernsey(code)
+		g.erase("pattern3")
 		out.append("%s|%s|%s|%s|%d|%s" % [code, str(c.get("name", "")), str(c.get("short", "")),
-				str(c.get("ground", "")), int(c.get("enter", 0)), str(GameDB.club_guernsey(code))])
+				str(c.get("ground", "")), int(c.get("enter", 0)), str(g)])
 	out.append(str(GameDB.club_order))
 	out.append(str(GameDB.active_clubs(GameDB.START_YEAR)))
 	var dk: Array = GameDB.departures.keys()
@@ -463,6 +468,93 @@ func _test_ground_names_1990() -> void:
 	GameState.season_year = old_year
 	GameState.news = []
 	GameState.milestone_log = {}
+
+
+## Legacy guernseys (TODO row 142, L9): each club wears the guernsey of the
+## season being played, 1990 to 2026, and today's kits are clubs.csv's untouched.
+func _test_guernseys_by_year() -> void:
+	GameDB.reload()
+	var raw := {}
+	for r in GameDB._read_dicts("res://data/clubs.csv"):
+		raw[str(r["code"])] = str(r["guernsey"])
+	var today_ok := true
+	for y in [2026, 2027]:
+		GameDB.apply_era(y)
+		for code in raw:
+			if GameDB.clubs.has(code) and str(GameDB.clubs[code]["guernsey"]) != raw[code]:
+				today_ok = false
+			var g := GameDB.club_guernsey(code)
+			if g["pattern3"] != g["pattern2"]:
+				today_ok = false
+	_check(today_ok and GameDB.club_colours("WCE")[0] == Color("#003087"),
+			"A 2026 career's clubs wear clubs.csv's guernseys and colours, unchanged")
+	GameDB.reload(FIXTURE)
+	# Every design the year rows name is drawn by the figures, the crest and the discs.
+	var named := {}
+	for r in GameDB._read_dicts(GameDB.CLUBS_BY_YEAR_CSV):
+		var g := str(r.get("guernsey", ""))
+		if g != "":
+			named[g.split(":")[0]] = true
+	var drawn := true
+	for d in named:
+		drawn = drawn and GameDB.GUERNSEY_DESIGNS.has(d) and GuernseyCrest.BADGE_DESIGNS.has(d)
+	var sheet := GuernseyCrest.BADGE_DESIGN_SHEET.get_size()
+	_check(drawn and int(sheet.y / 256.0) * 4 >= GuernseyCrest.BADGE_DESIGNS.size(),
+			"Every era design is in the figures' list and on the crest's sheet (%s)" % str(named.keys()))
+	# Season by season, as the rollover applies each new year.
+	var want := {
+		1990: {"WBD": "dogs90", "SYD": "swans90", "WCE": "wings", "BRL": "yoke", "STK": "panels"},
+		1995: {"FRE": "anchor", "WCE": "wings", "BRL": "chevron"},
+		1997: {"PAD": "power97", "STK": "saints97", "WBD": "dogs97", "BRL": "yoke", "SYD": "yoke"},
+		2002: {"STK": "panels", "WCE": "eagles00"},
+		2007: {"ADE": "crows06", "PAD": "power97"},
+		2010: {"FRE": "anchor", "BRL": "lions10", "ADE": "lowhoops", "PAD": "chevron"},
+		2011: {"FRE": "chevrons", "GCS": "sides", "WBD": "dogs97"},
+		2012: {"GWS": "giants12", "WBD": "twohoops"},
+		2014: {"BRL": "yoke"},
+		2016: {"WCE": "wings"},
+		2021: {"GWS": "giants"},
+		2026: {"GCS": "sides", "WCE": "wings", "FRE": "chevrons"},
+	}
+	var wrong := []
+	for y in want:
+		GameDB.apply_era(y)
+		for code in want[y]:
+			var g := GameDB.club_guernsey(code)
+			if str(g["design"]) != str(want[y][code]):
+				wrong.append("%s %d: %s" % [code, y, g["design"]])
+	_check(wrong.is_empty(), "Each season's clubs wear that season's guernsey (%s)" % str(wrong))
+	GameDB.apply_era(1997)
+	var navy97: Color = GameDB.club_colours("WCE")[0]
+	GameDB.apply_era(2005)
+	var navy05: Color = GameDB.club_colours("WCE")[0]
+	GameDB.apply_era(2018)
+	_check(navy97 == Color("#021A31") and navy05 == Color("#05173F") and GameDB.club_colours("WCE")[0] == Color("#003087"),
+			"West Coast are navy 1995-2017 and royal blue again from 2018")
+	GameDB.apply_era(2024)
+	var gold_sides: Color = GameDB.club_guernsey("GCS")["pattern"]
+	GameDB.apply_era(2025)
+	_check(gold_sides == Color("#FFDD00") and GameDB.club_guernsey("GCS")["pattern"] == Color("#9E140C"),
+			"Gold Coast's side panels are gold to 2024 and red from 2025")
+	# Fremantle's anchor: four colours, all the way to the figures and the crest.
+	GameDB.apply_era(2000)
+	var fre := GameDB.club_guernsey("FRE")
+	_check(fre["pattern"] == Color.WHITE and fre["pattern2"] == Color("#065D1E") and fre["pattern3"] == Color("#DC0000"),
+			"The anchor is white, with green on the wearer's right and red on his left")
+	var mat := StoppageVignette.figure_material([fre, GameDB.club_guernsey("WCE")])
+	var p3 = mat.get_shader_parameter("kit_pattern3")
+	var designs = mat.get_shader_parameter("kit_design")
+	_check(p3[0] == Color("#DC0000") and p3[1] == GameDB.club_guernsey("WCE")["pattern2"]
+			and int(designs[0]) == GameDB.GUERNSEY_DESIGNS.find("anchor"),
+			"The figures get the anchor's red; a kit without a third colour repeats its second")
+	var crest := UiKit.club_marker("FRE") as GuernseyCrest
+	_check(crest != null and crest.design == "anchor" and crest.third == Color("#DC0000"),
+			"Fremantle's 2000 marker is the anchor, its red included")
+	if crest:
+		crest.free()
+	_check(PitchView.disc_design(fre) == "yoke" and PitchView.disc_design(GameDB.club_guernsey("WCE")) == "panels",
+			"On the oval the era guernseys draw as the discs' own shapes")
+	GameDB.reload()
 
 
 ## The real 1990 start (TODO row 142, L1): the 14 clubs' lists rated on 1989,

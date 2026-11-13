@@ -628,6 +628,8 @@ func match_sim(home_code: String, away_code: String, match_seed: int,
 	var sim := MatchSim.new(home, away, match_seed)
 	sim.finals_mode = is_final
 	sim.weather = weather
+	# The season's own football (legacy, row 142 L5); today's from 2026 on.
+	sim.season_year = year
 	for side in range(2):
 		# Every club rotates as a competent coach would, on its own plan.
 		sim.season_plans[side] = str(fitness_plans.get([home_code, away_code][side], "steady"))

@@ -326,6 +326,8 @@ func _use_dataset(id: String, row: Dictionary) -> void:
 	OVR_CSV = str(row.get("ovr_overrides", ""))
 	POTENTIAL_CSV = str(row.get("potential_overrides", ""))
 	STATE_LEAGUES_DIR = str(row.get(Datasets.STATE_LEAGUES_KEY, ""))
+	second_tier = SecondTier.load_dir(str(row.get(Datasets.SECOND_TIER_KEY, "")))
+	second_tier_year = 0
 
 
 # ---------------------------------------------------------------------------
@@ -391,16 +393,21 @@ func unregister_custom_clubs() -> void:
 const GUERNSEY_DESIGNS := ["plain", "stripes", "hoops", "sash", "yoke", "band", "chevrons", "panels",
 		"chevron", "sides", "tiers", "shoulders", "map", "suit",   # suit: the coach, not a club
 		# A real club's own design (from its home guernsey), not offered in Club Forge.
-		"lowhoops", "giants", "wings", "twohoops"]
+		"lowhoops", "giants", "wings", "twohoops",
+		# Designs clubs wore in earlier seasons (Legacy mode, data/legacy/clubs_by_year.csv).
+		"anchor", "power97", "eagles00", "swans90", "giants12", "saints97", "lions10",
+		"dogs90", "dogs97", "crows06"]
 
 
 ## A club's home kit, from data/clubs.csv's "guernsey" column:
-## "<design>:<base>/<pattern>/<pattern 2>[/<shorts>]". Each colour is p, s or a
+## "<design>:<base>/<pattern>/<pattern 2>[/<shorts>[/<pattern 3>]]". Each colour is p, s or a
 ## (the club's primary, secondary or accent) or a #RRGGBB colour the club's
 ## three don't cover (Port Adelaide's white chevron). The base colour is the
 ## guernsey's and the socks'; the pattern colour draws the design and the sock
 ## band; the second pattern colour is a design's third colour or trim. Shorts
-## left out are the secondary colour, a shade darker. Richmond is "sash:s/p/a":
+## left out are the secondary colour, a shade darker. The third pattern colour is
+## only the anchor's (Fremantle 1995-2010: white, green and red on purple); left out,
+## it is the second. Richmond is "sash:s/p/a":
 ## a black guernsey with a yellow sash. Unknown or missing: plain.
 func club_guernsey(code: String) -> Dictionary:
 	var cols := club_colours(code)
@@ -417,6 +424,7 @@ func club_guernsey(code: String) -> Dictionary:
 		return cols[at] if at >= 0 and token.length() == 1 else fallback
 	return {"design": design, "base": pick.call(0, cols[0]), "pattern": pick.call(1, cols[1]),
 			"pattern2": pick.call(2, cols[2]), "shorts": pick.call(3, (cols[1] as Color).darkened(0.1)),
+			"pattern3": pick.call(4, pick.call(2, cols[2])),
 			# The third colour is named for this kit (Port's teal, St Kilda's black),
 			# not left to the club's accent.
 			"own_pattern2": slots.size() > 2 and str(slots[2]) != "a"}
@@ -1314,6 +1322,7 @@ func apply_era(year: int) -> void:
 			if d.get(k) != now[k]:
 				d[k] = now[k]
 				pristine = false
+	apply_second_tier(year)
 
 
 ## Read ground_names.csv: each ground's dated names under its key, and every
@@ -1412,6 +1421,7 @@ func _load_state_leagues() -> void:
 	state_players_by_club = {}
 	state_links = []
 	if STATE_LEAGUES_DIR == "":
+		apply_second_tier(START_YEAR)
 		return
 	var season := DATA_SEASON
 	for row in _read_dicts("%s/leagues.csv" % STATE_LEAGUES_DIR):
@@ -1486,11 +1496,89 @@ func is_state_club(code: String) -> bool:
 
 
 ## The state league side an AFL club fields (its reserves or aligned side), or "".
+## An era side aligned with two clubs (Sandringham with St Kilda and Melbourne)
+## lists both in afl_clubs.
 func state_side_of(afl_code: String) -> String:
 	for code in state_clubs:
-		if str(state_clubs[code]["afl_club"]) == afl_code:
+		var row: Dictionary = state_clubs[code]
+		if str(row["afl_club"]) == afl_code or (row.get("afl_clubs", []) as Array).has(afl_code):
 			return str(code)
 	return ""
+
+
+# ---------------------------------------------------------------------------
+# The second tier by season (Legacy mode, TODO row 142, L7)
+# ---------------------------------------------------------------------------
+## A Legacy dataset's real second tier (SecondTier, data/legacy/second_tier/).
+## Each season start (apply_era) lays that season's shape over the state
+## leagues: state_leagues and state_clubs hold the leagues and sides of the
+## season being played, with no rosters (the era has no state lists). A
+## dataset with a state_leagues folder (2026) never reads it, so a 2026
+## career is exactly as before.
+var second_tier := SecondTier.new()
+var second_tier_year := 0     # the season whose shape is laid over the state leagues
+var _today_state_rows := {}   # code -> 2026 state club row (colours for sides that live on)
+
+
+func apply_second_tier(year: int) -> void:
+	if second_tier.is_empty() or STATE_LEAGUES_DIR != "":
+		return
+	second_tier_year = year
+	state_leagues = {}
+	state_clubs = {}
+	state_players = []
+	state_players_by_club = {}
+	state_links = []
+	var shape := second_tier.shape(year)
+	var rows := second_tier.sides_in(year)
+	for id in shape:
+		var codes: Array = shape[id]["clubs"]
+		state_leagues[id] = {"league": id, "name": str(shape[id]["name"]), "clubs": codes.size(),
+				"club_codes": codes.duplicate()}
+		for code in codes:
+			state_clubs[code] = _era_side(rows[code], year)
+			state_players_by_club[code] = []
+
+
+## Where an AFL club's players went below the seniors in `year` (SecondTier.of_club),
+## or {} for a dataset without a second tier.
+func second_tier_of(afl_code: String, year: int) -> Dictionary:
+	return second_tier.of_club(afl_code, year)
+
+
+## A side as a state club row. Colours: an AFL club's own side wears that
+## club's colours of the year; a side still playing in 2026 wears its 2026
+## colours; any other keeps the default (club_colours).
+func _era_side(s: Dictionary, year: int) -> Dictionary:
+	var afl: Array = s["afl_clubs"]
+	var row := {"code": str(s["code"]), "name": str(s["name"]), "short": str(s["name"]),
+			"league": str(s["league"]), "kind": str(s["kind"]),
+			"afl_club": str(afl[0]) if afl.size() == 1 else "", "afl_clubs": afl.duplicate(),
+			"future_afl_club": "", "ground": "", "era": year}
+	var today := _today_state_row(str(s["code"]))
+	if str(s["kind"]) == "reserves" and afl.size() == 1 and clubs.has(club_code(str(afl[0]))):
+		var c := club_era(club_code(str(afl[0])), year)
+		for k in COLOUR_FIELDS:
+			row[k] = c[k]
+	elif not today.is_empty():
+		for k in COLOUR_FIELDS:
+			row[k] = today[k]
+	if not today.is_empty() and str(today["name"]) == row["name"]:
+		row["short"] = str(today["short"])
+	return row
+
+
+func _today_state_row(code: String) -> Dictionary:
+	if _today_state_rows.is_empty():
+		var dir := str(Datasets.file(Datasets.DEFAULT, Datasets.STATE_LEAGUES_KEY))
+		var season := int(Datasets.get_set(Datasets.DEFAULT).get("data_season", 0))
+		for id in STATE_LEAGUE_IDS:
+			for r in _read_dicts("%s/%s_clubs_%d.csv" % [dir, str(id).to_lower(), season]):
+				r["primary"] = _hex(r["primary"])
+				r["secondary"] = _hex(r["secondary"])
+				r["accent"] = _hex(r["accent"]) if str(r["accent"]) != "" else r["secondary"]
+				_today_state_rows[str(r["code"])] = r
+	return _today_state_rows.get(code, {})
 
 
 func state_list(code: String) -> Array:
@@ -1924,3 +2012,10 @@ func _hex(s) -> Color:
 	if s is Color:
 		return s
 	return Color.html(str(s))
+
+
+## A league rule as it stood in `year` (data/legacy/era_rules.csv): the
+## salary cap, list sizes, interchange and the like. `fallback` when the
+## file has no row for that year. See EraRules.
+func era_rule(rule: String, year: int, fallback := 0.0) -> float:
+	return EraRules.value(rule, year, fallback)

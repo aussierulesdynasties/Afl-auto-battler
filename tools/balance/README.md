@@ -134,6 +134,19 @@ GODOT=<godot console exe> tools/balance.sh match 1000 --a "--weather perfect" --
   free-agency gate's "the best other" figure before and after rivals answer). It reads the career and
   changes nothing in it. `python tools/balance/rival_reads_report.py reads_*.json` adds the careers up.
   Six careers of seven seasons (`--policy board --seasons 7 --manage list`) take about ten minutes.
+- **Year mode** (`tools/balance.sh year 1000 --years "1990 2000 2010 2020 2026"`, legacy row 142 L5): one arm
+  per season, each played with `--year Y` (the match takes that season's era row, `EraFootball`); every stat is
+  marked against that season's real rates (`afl_year_rates.json`, built from `data/legacy/*/season_stats.csv` by
+  `build_year_rates.py`; 2026 is copied from `afl_team_rates.json`). `year_report.py` writes
+  `<run>/year_report.md`, with a shift-against-2026 table when 2026 is in the list. Lists stay the real 2026 ones:
+  each season's players are rated against their own season, so the era's level of play is the row alone. A plain
+  `match` run takes `--year Y` too, and its report then reads that season's references. Stats AFL Tables did not
+  keep that season (inside 50s, clearances, rebounds, contested marks before 1998-99) show `-`.
+- **Era fit** (`fit_era.py`): era rows are fitted, not set by hand. One paired step run per rate
+  (`--b "--tune KEY=V"`, V = today's value times F; `free_rate` is a multiplier, so V = F) saved as
+  `<steps>/<KEY>@<F>.txt` gives the matrix of how each rate moves each stat; each season solves for the shift
+  against 2026 (bounded ridge least squares), and `--correct <year run>` takes a Newton step from a year-mode
+  run. `--write` rewrites `data/legacy/era_football.csv`.
 - **Runs** land in `.balance/<timestamp>/` (git-ignored, `.gdignore`d).
 
 ## When to use it
