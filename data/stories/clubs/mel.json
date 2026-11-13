@@ -471,7 +471,7 @@
 		"category": "health",
 		"subject": {"kind": "club"},
 		"title": ["Whispers about drugs"],
-		"text": ["A report claims some of the group use illicit drugs away from the club. No names, no proof, and the papers are calling."],
+		"text": ["A report claims some players use illicit drugs. No names, no proof, and the papers are calling."],
 		"choices": [
 			{"key": "review", "label": "Order an independent review",
 			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "The club opened its doors to a review"}, {"op": "morale", "d": -2, "who": "all"}],
@@ -479,7 +479,7 @@
 			{"key": "deny", "label": "Deny it flatly",
 			 "effects": [{"op": "board", "d": 2}, {"op": "odds", "chance": 40, "hit": [{"op": "board", "d": -8}], "miss": [], "hit_result": "It blows up later, and the denial is replayed."}],
 			 "result": "The story may die."},
-			{"key": "welfare", "label": "Handle it with the players' association and the doctors",
+			{"key": "welfare", "label": "Bring in the players' association",
 			 "effects": [{"op": "morale", "d": 3, "who": "all"}, {"op": "board", "d": -3}],
 			 "result": "Welfare first, and the group trusts the club. The press says it's dodging."}
 		]

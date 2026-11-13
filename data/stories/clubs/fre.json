@@ -113,12 +113,12 @@
 		"category": "community",
 		"subject": {"kind": "club"},
 		"title": ["Walking country at Walyalup"],
-		"text": ["Noongar elders have invited the whole list to walk country with them along the river at Walyalup, the Noongar name for Fremantle, the day before a home game."],
+		"text": ["Noongar elders invite the whole list to walk country along the river at Walyalup, Fremantle's Noongar name, before a home game."],
 		"choices": [
 			{"key": "all", "label": "The whole list walks",
 			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The whole list walked country with the elders"}, {"op": "morale", "d": 5, "who": "all"}, {"op": "forgo_xp", "d": 4, "who": "all"}],
 			 "result": "A morning by the river the players will talk about for years. The session waits."},
-			{"key": "some", "label": "The Indigenous players and the leaders go; the rest train",
+			{"key": "some", "label": "Only the Indigenous players and leaders",
 			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The leaders walked country with the elders"}, {"op": "xp", "d": 4, "who": "side"}, {"op": "board", "d": -2, "was": "members"}],
 			 "result": "A smaller group walks with the elders. They had asked for the whole list."}
 		]

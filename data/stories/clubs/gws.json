@@ -133,12 +133,12 @@
 		"phase": ["season_end"],
 		"subject": {"kind": "club"},
 		"title": ["Too many to pay"],
-		"text": ["The young list has grown up all at once, and every one of them is due a raise. The list manager says the salary cap can't keep them all: someone good has to go."],
+		"text": ["The young list has grown up at once and they are all due a raise. The cap can't keep them all: someone good has to go."],
 		"choices": [
 			{"key": "trade", "label": "Trade a proven midfielder for picks",
 			 "effects": [{"op": "board", "d": 3}, {"op": "morale", "d": -6, "who": "side"}],
 			 "result": "The cap is cleared and the future is stocked. The players lose a mate and a match-winner."},
-			{"key": "keep", "label": "Backload the contracts and keep the group together",
+			{"key": "keep", "label": "Backload contracts to keep the group",
 			 "effects": [{"op": "morale", "d": 6, "who": "side"}, {"op": "board", "d": -5}],
 			 "result": "The group stays together. The board worries about how tight the cap gets next year."}
 		]

@@ -117,12 +117,12 @@
 		"category": "community",
 		"subject": {"kind": "club"},
 		"title": ["The old Magpies feel left out"],
-		"text": ["Some of the club's oldest supporters barracked for the black-and-white Magpies long before there was a Power. A group of old premiership players says the AFL side has forgotten them."],
+		"text": ["Old premiership players from the black-and-white Magpies, there long before the Power, say the AFL side has forgotten them."],
 		"choices": [
 			{"key": "host", "label": "Host them at the next home game",
 			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "You brought the old Magpies inside"}, {"op": "board", "d": 3, "was": "members"}, {"op": "slow_start", "chance": 10, "who": "side"}],
 			 "result": "The old boys are in the rooms for the anthem. Game-day routine goes out the window."},
-			{"key": "letter", "label": "Send a letter and shout them a lunch in the off-season",
+			{"key": "letter", "label": "Send a letter and shout them lunch",
 			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "Game day stayed about the game"}, {"op": "culture", "strand": "together", "d": -1, "why": "The old Magpies got a letter, not a seat"}, {"op": "board", "d": -2, "was": "members"}],
 			 "result": "Game day is untouched. The old Magpies feel kept at arm's length."}
 		]
