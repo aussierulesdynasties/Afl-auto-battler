@@ -16,9 +16,16 @@ extends RefCounted
 var intake_mode := false
 var existing_sizes := {}              # code -> kept list length (intake only)
 ## Intake: code -> players on that list retiring at the coming rollover. They
-## still count toward a full list tonight, but not toward the minimum a club
-## must reach before it may pass: it drafts their replacements first.
+## count toward neither the minimum a club must reach before it may pass nor
+## a full list: their places are next season's, so a club drafts their
+## replacements first and the list still ends inside the year's maximum
+## (2026-11-13: Geelong was capped at 52 with ten retiring, and started 1992
+## at 44 against the 48 minimum).
 var leaving := {}
+## The same retirees as the senior list counts them (RookieList.draft_size)
+## and as the 44 does (RookieList.list_size), for the list caps.
+var leaving_senior := {}
+var leaving_44 := {}
 ## Where the intake calls a list full: 0 is the whole list (Ratings.LIST_SIZE);
 ## a career's intake sets the senior list (RookieList), and existing_sizes
 ## counts senior players only.
@@ -392,9 +399,9 @@ func list_cap() -> int:
 
 ## Intake: the list spots `code` still has open tonight.
 func open_spots(code: String) -> int:
-	var open := list_cap() - int(existing_sizes.get(code, 0)) - count_for(code)
+	var open := list_cap() - (int(existing_sizes.get(code, 0)) - int(leaving_senior.get(code, 0))) - count_for(code)
 	if list_44.has(code):
-		open = mini(open, Contracts.max_list() - list_now(code))
+		open = mini(open, Contracts.max_list() - (list_now(code) - int(leaving_44.get(code, 0))))
 	return maxi(0, open)
 
 

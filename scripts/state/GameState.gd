@@ -2518,8 +2518,15 @@ func begin_intake_draft() -> bool:
 	# The National Draft fills the senior list; the Rookie Draft follows.
 	draft.senior_cap = RookieList.senior_spots()
 	draft.user_max_age = Challenge.max_age(self)
+	# Everyone gone before next season, for every club: the rollover retires
+	# them (Prospects.age_league, at most MAX_RETIRE_PER_CLUB a club), so the
+	# draft fills their places and does not hold them as full ones.
 	for code in sizes:
-		draft.leaving[code] = (league_lists.get(code, []) as Array).filter(func(q): return retiring_now(q)).size()
+		var going: Array = (league_lists.get(code, []) as Array).filter(func(q): return retiring_now(q))
+		going = going.slice(0, Prospects.MAX_RETIRE_PER_CLUB)
+		draft.leaving[code] = going.size()
+		draft.leaving_senior[code] = RookieList.draft_size(going)
+		draft.leaving_44[code] = RookieList.list_size(going)
 	ExpansionBuild.seat_guests(self, draft)
 	_draft_sees_44()
 	var no_spot_line := _ties_without_a_spot_line(my_club) if league_lists.has(my_club) else ""
@@ -2810,6 +2817,7 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	season_year = next_year
 	# The clubs as they were this year (the Bears until 1997); today's years change nothing.
 	GameDB.apply_era(season_year)
+	_fill_short_lists()
 	if my_first_season == 0 and my_club != "" and not sim_ahead:
 		my_first_season = season_year
 	# Dynamic rivalries cool once a season when two clubs stop meeting.
@@ -2844,6 +2852,45 @@ func _start_next_season(next_year: int, signed: int) -> void:
 ## The careers the medical panel ended in `year` (MedicalPanel), any club.
 func _medical_retirees(year: int) -> Array:
 	return medical_retired.filter(func(r): return r is Dictionary and int(r.get("year", 0)) == year)
+
+
+## The backstop for the year's list minimum (director, 2026-11-13: lists by
+## era): the draft counts every retiree, but a list can still start a season
+## short (a club change, a merger, an era's minimum rising). Every club under
+## Contracts.min_list() signs the best free agents left, yours included, and
+## the news says so.
+func _fill_short_lists() -> void:
+	if season == null:
+		return
+	for code in GameDB.active_clubs(season_year):
+		if not season.lists.has(code):
+			continue
+		var list: Array = season.lists[code]
+		var short := Contracts.min_list() - list.size()
+		if short <= 0:
+			continue
+		var pool := free_agents.filter(func(q): return not bool(q.get("retired", false)))
+		pool.sort_custom(func(a, b):
+			if int(a.get("overall", 0)) != int(b.get("overall", 0)):
+				return int(a.get("overall", 0)) > int(b.get("overall", 0))
+			return str(a["id"]) < str(b["id"]))
+		var names: PackedStringArray = []
+		for p in pool.slice(0, short):
+			var want := Contracts.wants(p)
+			_sign_fa(p, str(code), int(want["salary"]), int(want["years"]))
+			p.erase("fa_kept")
+			names.append(GameDB.player_display_name(p))
+		if names.is_empty():
+			continue
+		add_news("contract", "%s were %d short of the %d-player list minimum for %d and signed %s from the free agents." % [
+				GameDB.club_name(str(code)), short, Contracts.min_list(), season_year,
+				_names_words(names)])
+
+
+static func _names_words(names: PackedStringArray) -> String:
+	if names.size() <= 1:
+		return "".join(names)
+	return "%s and %s" % [", ".join(names.slice(0, names.size() - 1)), names[names.size() - 1]]
 
 
 ## The season's retirees who are legends of your club go on its almanac page:
