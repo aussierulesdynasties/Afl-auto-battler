@@ -480,15 +480,16 @@ func _test_fine_wine_real_players() -> void:
 	namesake["generated"] = true
 	_check(not Traits.fine_wine(namesake), "A created player who shares the name does not inherit it")
 	# A Legacy start's veteran, by his real career (still listed at 40).
-	_check(Traits.fine_wine({"real_name": "Dustin Fletcher", "dob": "1975-05-07"}), "Dustin Fletcher (listed at 40) has it")
+	_check(Traits.fine_wine({"real_name": "Dustin Fletcher", "dob": "1975-05-07"}), "Dustin Fletcher (143 games at 32+) has it")
+	_check(Traits.fine_wine({"real_name": "Michael Tuck", "dob": "1953-06-24"}), "Michael Tuck (161 games at 32+) has it")
 	var carriers := 0
 	for p in GameDB.players:
 		if Traits.fine_wine(p):
 			carriers += 1
-			_check(2026 - int(str(p["dob"]).substr(0, 4)) >= Traits.FINE_WINE_AGE,
-					"%s has it only by a career that reached 35" % str(p["real_name"]))
+			_check(int(str(p["dob"]).substr(0, 4)) <= Prospects.FINE_WINE_RECORD_BORN,
+					"%s has it only by a career old enough to show it" % str(p["real_name"]))
 	print("Fine Wine on the 2026 lists: %d" % carriers)
-	_check(carriers >= 10 and carriers <= 20, "About a dozen of the 2026 lists have it (%d)" % carriers)
+	_check(carriers == 10, "The ten approved players on the 2026 lists have it (%d)" % carriers)
 	var earn := str(Traits.EARNED["fine_wine"]["earn"])
 	_check(earn.contains("1 draftee in %d" % int(round(1.0 / Traits.FINE_WINE_DRAFTEE_ODDS))),
 			"The look-up states the draftee odds the game rolls (%s)" % earn)
@@ -563,7 +564,7 @@ func _test_fine_wine_draftee_rate() -> void:
 	_check(absf(rate - Traits.FINE_WINE_DRAFTEE_ODDS) < 0.003,
 			"Draftees roll Fine Wine at about the set odds (%.2f%% of %d, set %.2f%%)" % [
 			100.0 * rate, total, 100.0 * Traits.FINE_WINE_DRAFTEE_ODDS])
-	# A real draftee rolls; a real player whose career could already reach 35 does not.
+	# A real draftee rolls; a real player whose career could already show it does not.
 	var kids := []
 	var veterans := []
 	for i in range(4000):

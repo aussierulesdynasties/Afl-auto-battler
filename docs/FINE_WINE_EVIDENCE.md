@@ -26,16 +26,97 @@ Gawn, Sidebottom, Cox, Blicavs, Melksham, Gunston (35).
 
 ## Who has it
 
-**Real players:** on an AFL list in the season he turned 35 or older. Gawn turns 35 in 2026, the youngest
-of the three named, so 35 is the line that takes in all three. 73 real players 1990-2026
-(`data/fine_wine.csv`, rebuilt by `python tools/build_fine_wine.py`), 13 of them on the 2026 lists.
-A Legacy start reads the same file, so a veteran of any year carries it when his real career ran to 35.
+**Real players: the director's list.** The director, 2026-11-13: "research players who played a lot of games or
+significant numbers games past the age of 32 and bring me a list of players for my approval to gain the trait".
+He approved **60 or more games in seasons he turned 32 or older**: 72 players who played in 1990 or later
+(`data/fine_wine.csv`, rebuilt by `python tools/build_fine_wine.py`; `--table` prints the list). Games by season
+from AFL Tables (`data/legacy/*/season_stats.csv`, and `careers_before_1990.csv` for the earlier seasons of the men
+listed in 1990). A season counts when he turned 32 or more in it; 2026 players are counted to the end of 2025.
+Ten are on the 2026 lists. A Legacy start reads the same file, so a veteran of any year carries it.
 
-**Draftees:** 36 of the 2,789 players who joined a list aged 21 or younger from 1991 on (born 1990 or
-earlier, so each could have reached 35 by 2025) were still listed in the season they turned 35: **1.29%**.
-Set at **1.25%, 1 draftee in 80**, rolled once per generated prospect (and per generated expansion-list
-player), every club alike. A generated class is 46-56 prospects, so about one Fine Wine draftee every
-season and a half.
+Other cut-offs he was shown: 100+ games (15 players), 80+ (36), 70+ (51), 50+ (101).
+
+**Draftees:** he chose odds that match the rate real draftees reached the same mark. Of the 2,789 players who
+joined a list aged 21 or younger from 1991 on (born 1990 or earlier, so each could have reached it by 2025),
+54 are on the list: **1 in 52** (1.94%), rolled once per generated prospect (and per generated expansion-list
+player), every club alike. A generated class is 46-56 prospects, so about one Fine Wine draftee a season.
+(The question showed 1 in 34: that counted only draftees who played a game. A generated draftee rolls whether
+he plays or not, so the rate over every draftee is the match.)
+
+| Player | Games at 32+ | Total games | Age at last game | Club |
+| --- | --- | --- | --- | --- |
+| Craig Bradley | 174 | 375 | 39 | CAR |
+| Shaun Burgoyne | 163 | 407 | 39 | HAW/PAD |
+| Michael Tuck | 161 | 426 | 38 | HAW |
+| Brent Harvey | 153 | 432 | 38 | NTH |
+| Dustin Fletcher | 143 | 400 | 40 | ESS |
+| Robert Harvey | 128 | 383 | 37 | STK |
+| David Mundy | 125 | 376 | 37 | FRE |
+| Scott Pendlebury | 124 | 425 | 37 | COL |
+| Travis Boak | 123 | 387 | 37 | PAD |
+| Dayne Zorko | 119 | 304 | 36 | BRL |
+| Todd Goldstein | 111 | 345 | 37 | NTH/ESS |
+| John Blakey | 110 | 359 | 36 | NTH/FIT |
+| Tom Hawkins | 103 | 359 | 36 | GEE |
+| Alastair Lynch | 102 | 306 | 36 | BRL/FIT/BRB |
+| Kade Simpson | 100 | 342 | 36 | CAR |
+| Paul Salmon | 97 | 324 | 37 | ESS/HAW |
+| Rod Carter | 93 | 293 | 36 | SYD/FIT |
+| Justin Madden | 92 | 332 | 35 | CAR/ESS |
+| Corey Enright | 88 | 332 | 35 | GEE |
+| Drew Petrie | 88 | 332 | 35 | NTH/WCE |
+| Heath Shaw | 88 | 325 | 35 | COL/GWS |
+| Paul Roos | 87 | 356 | 35 | FIT/SYD |
+| Roger Merrett | 86 | 313 | 36 | BRB/ESS |
+| Tony Liberatore | 86 | 283 | 36 | FOO/WBD |
+| Doug Hawkins | 85 | 350 | 35 | FOO/FIT |
+| Jack Riewoldt | 85 | 347 | 35 | RIC |
+| Shannon Hurn | 85 | 333 | 36 | WCE |
+| David Cloke | 84 | 333 | 36 | RIC/COL |
+| Sam Mitchell | 84 | 329 | 35 | HAW/WCE |
+| Gary Ablett | 83 | 357 | 36 | GEE/GCS |
+| Zach Tuohy | 83 | 288 | 35 | GEE/CAR |
+| Dane Rampe | 82 | 272 | 35 | SYD |
+| Taylor Walker | 81 | 301 | 35 | ADE |
+| Gary Ablett | 81 | 248 | 35 | GEE/HAW |
+| Isaac Smith | 80 | 280 | 35 | HAW/GEE |
+| Dale Morris | 80 | 253 | 37 | WBD |
+| Callan Ward | 79 | 327 | 35 | GWS/WBD |
+| Simon Madden | 78 | 378 | 35 | ESS |
+| Aaron Sandilands | 78 | 271 | 37 | FRE |
+| Nick Riewoldt | 77 | 336 | 35 | STK |
+| Jeremy Howe | 76 | 271 | 35 | COL/MEL |
+| Patrick Dangerfield | 75 | 360 | 35 | GEE/ADE |
+| Luke Hodge | 75 | 346 | 35 | HAW/BRL |
+| Matthew Pavlich | 74 | 353 | 35 | FRE |
+| Eddie Betts | 73 | 350 | 35 | CAR/ADE |
+| Nigel Smart | 73 | 278 | 35 | ADE |
+| Andrew Thompson | 73 | 221 | 35 | STK |
+| Adam Goodes | 72 | 372 | 35 | SYD |
+| Josh Kennedy | 72 | 293 | 35 | WCE/CAR |
+| Matthew Boyd | 72 | 292 | 35 | WBD |
+| Brett Kirk | 70 | 241 | 34 | SYD |
+| Luke Breust | 69 | 308 | 35 | HAW |
+| Terry Daniher | 68 | 313 | 35 | ESS/SYD |
+| Mark Blicavs | 68 | 295 | 34 | GEE |
+| Chris Grant | 67 | 341 | 35 | WBD/FOO |
+| Mark Bickley | 67 | 272 | 34 | ADE |
+| Stefan Martin | 67 | 203 | 36 | BRL/MEL/WBD |
+| James McDonald | 66 | 264 | 36 | MEL/GWS |
+| Max Gawn | 66 | 247 | 34 | MEL |
+| Rhys Stanley | 66 | 229 | 35 | GEE/STK |
+| Brad Johnson | 65 | 364 | 34 | WBD/FOO |
+| Steele Sidebottom | 65 | 354 | 34 | COL |
+| Nicky Winmar | 65 | 251 | 34 | STK/WBD |
+| Lance Franklin | 64 | 354 | 36 | HAW/SYD |
+| Stephen Silvagni | 64 | 312 | 34 | CAR |
+| Robert Murphy | 63 | 312 | 35 | WBD |
+| Derek Kickett | 63 | 152 | 34 | ESS/SYD/NTH |
+| Scott Burns | 62 | 264 | 34 | COL |
+| Joel Selwood | 60 | 355 | 34 | GEE |
+| Steve Johnson | 60 | 293 | 34 | GEE/GWS |
+| Simon Goodwin | 60 | 275 | 34 | ADE |
+| Jarrad Waite | 60 | 244 | 35 | CAR/NTH |
 
 ## What it does
 

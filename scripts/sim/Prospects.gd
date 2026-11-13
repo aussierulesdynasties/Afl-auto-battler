@@ -789,10 +789,10 @@ static func _maybe_unicorn(cls: Array, year: int, career_seed: int) -> void:
 ## Every generated draftee rolls once for Fine Wine at Traits.FINE_WINE_DRAFTEE_ODDS
 ## (director, 2026-11-13: "every draftee should have a very slim chance").
 ## Its own dice, so the class itself rolls as it always did. A real draftee
-## rolls too, unless his real career could already have reached 35 by the
-## 2026 data (born FINE_WINE_AGE years before it or earlier): then his record
-## decides (Traits.fine_wine), as for any real player in a Legacy start.
-const FINE_WINE_RECORD_SEASON := 2026
+## rolls too, unless his real career could already show it by the 2026 data
+## (born 1991 or earlier, so 60 games at 32+ were within reach by 2025): then his
+## record decides (Traits.fine_wine), as for any real player in a Legacy start.
+const FINE_WINE_RECORD_BORN := 1991
 
 
 static func roll_fine_wine(cls: Array, salt: String) -> void:
@@ -801,7 +801,7 @@ static func roll_fine_wine(cls: Array, salt: String) -> void:
 		var roll := rng.randf()
 		if not bool(p.get("generated", false)):
 			var born := str(p.get("dob", "")).substr(0, 4)
-			if not born.is_valid_int() or int(born) <= FINE_WINE_RECORD_SEASON - Traits.FINE_WINE_AGE:
+			if not born.is_valid_int() or int(born) <= FINE_WINE_RECORD_BORN:
 				continue
 		if roll < Traits.FINE_WINE_DRAFTEE_ODDS:
 			p["fine_wine"] = true

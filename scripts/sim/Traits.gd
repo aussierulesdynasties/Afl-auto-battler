@@ -91,7 +91,7 @@ const EARNED := {
 	"fine_wine": {"label": "Fine Wine",
 			"text": "Ages three years slower: his decline starts three years later and is 30% gentler, and he retires up to three years later (40 at the latest).",
 			"scout": "Gets better with age.",
-			"earn": "Born with it, not trained: every real player who was still on an AFL list in the season he turned 35, and about 1 draftee in 80."},
+			"earn": "Born with it, not trained: every real player who played 60 or more games in seasons he turned 32 or older, and about 1 draftee in 52."},
 }
 const UNICORN_LINES := ["FWD", "MID", "DEF"]
 
@@ -125,18 +125,22 @@ static func wet_weather(p: Dictionary) -> bool:
 ## Fine Wine (director, 2026-11-13: "when a player has unnatural longevity
 ## like Zorko, Gawn, Pendlebury etc / every draftee should have a very slim
 ## chance of possessing the trait too"). Born, not trained, and on top of the
-## five like Unicorn. A real player has it when he was on an AFL list in the
-## season he turned FINE_WINE_AGE or older (data/fine_wine.csv, built by
-## tools/build_fine_wine.py from the 1990-2026 lists); every draftee whose
-## career is still ahead of him rolls FINE_WINE_DRAFTEE_ODDS once
-## (Prospects.roll_fine_wine) and carries p["fine_wine"]. Every club alike.
+## five like Unicorn. A real player has it when the director approved him
+## (2026-11-13: "research players who played a lot of games or significant
+## numbers games past the age of 32 and bring me a list of players for my
+## approval"): FINE_WINE_GAMES or more games in seasons he turned
+## FINE_WINE_FROM_AGE or older, 72 players 1990-2026 (data/fine_wine.csv, built by
+## tools/build_fine_wine.py). Every draftee whose career is still ahead of him
+## rolls FINE_WINE_DRAFTEE_ODDS once (Prospects.roll_fine_wine) and carries
+## p["fine_wine"]. Every club alike.
 ##
-## The numbers come from real careers (docs/FINE_WINE_EVIDENCE.md): 36 of 2,789
-## players who joined a list at 21 or younger (1991 on, born by 1990) were still
-## listed in the season they turned 35 (1.29%). Ageing and retirement read
+## The odds match the rate real draftees reached the same mark (director's
+## choice): 54 of the 2,789 who joined a list at 21 or younger (1991 on, born by
+## 1990, played or not), 1 in 52 (docs/FINE_WINE_EVIDENCE.md). Ageing and retirement read
 ## FINE_WINE_YEARS and FINE_WINE_SLOPE (Potential.age_step_for, Prospects.should_retire).
-const FINE_WINE_AGE := 35
-const FINE_WINE_DRAFTEE_ODDS := 0.0125
+const FINE_WINE_FROM_AGE := 32
+const FINE_WINE_GAMES := 60
+const FINE_WINE_DRAFTEE_ODDS := 1.0 / 52.0
 ## His decline runs this many years behind his age, and every retirement age.
 const FINE_WINE_YEARS := 3.0
 ## A yearly loss, once it starts, is this share of a normal one.
@@ -147,7 +151,7 @@ static var _fine_wine_loaded := false
 
 
 ## Whether he has Fine Wine: the flag a drafted roll set, or a real player whose
-## real career ran to 35 (keyed by his real name and date of birth, so a created
+## real career is on the approved list (keyed by his real name and date of birth, so a created
 ## player who shares a name never inherits it).
 static func fine_wine(p: Dictionary) -> bool:
 	if bool(p.get("fine_wine", false)):
