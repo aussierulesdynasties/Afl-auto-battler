@@ -160,9 +160,21 @@ func _test_frozen_fixtures() -> void:
 # Restore last good save
 # ---------------------------------------------------------------------------
 ## A Fremantle career saved after round 1 and again after round 2: the save
-## in place is "Round 3", the one before it "Round 2".
+## in place is "Round 3", the one before it "Round 2". Played once: the files
+## it leaves (the save, its backup, earlier saves, their index) are kept and
+## written back for every later test that needs the same two saves.
+var _two_saves_files := {}
+
+
 func _two_saves() -> void:
 	_state.delete_saved_career()
+	if not _two_saves_files.is_empty():
+		for path in _two_saves_files:
+			var w := FileAccess.open(path, FileAccess.WRITE)
+			w.store_buffer(_two_saves_files[path])
+			w.close()
+		_state.reset()
+		return
 	_state.reset()
 	_state.career_seed = SUITE_SEED
 	_state.start_season("FRE", _db.club_list("FRE"))
@@ -171,6 +183,10 @@ func _two_saves() -> void:
 	_state.advance()
 	_state.save_career()
 	_state.reset()
+	var dir: String = _state.save_path.get_base_dir()
+	for name in DirAccess.get_files_at(dir):
+		if name.begins_with(_state.save_path.get_file()):
+			_two_saves_files[dir.path_join(name)] = FileAccess.get_file_as_bytes(dir.path_join(name))
 
 
 func _stage() -> String:

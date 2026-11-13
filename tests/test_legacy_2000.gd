@@ -2,7 +2,7 @@ extends RefCounted
 ## The 2000 start (Legacy mode, TODO row 142: "then the 2000, 2010 and 2020
 ## starts"): the 16 clubs' real 2000 lists rated on 1999, the 2000 senior
 ## coaches rated from their records, the 2000 captains, and a seeded career at
-## a real 2000 club that plays the season and rolls into 2001.
+## a real 2000 club that ends the season and rolls into 2001.
 ## Run through tests/run_legacy_2000_tests.gd.
 
 var failures: Array[String] = []
@@ -93,7 +93,8 @@ func _test_coaches_and_captains() -> void:
 
 
 ## The seeded career: a real 2000 club, Choose your club as the menu starts
-## it, the 2000 season played out, and the roll into 2001 on the same set.
+## it, the 2000 season ended (its finals played), and the roll into 2001 on the
+## same set.
 func _test_career_rolls_into_2001() -> void:
 	GameState.reset("2000")
 	GameState.replay_seed = SEED
@@ -115,11 +116,16 @@ func _test_career_rolls_into_2001() -> void:
 	for p in (GameState.season.lists["ESS"] as Array):
 		names["%s %s" % [str(p.get("first", "")), str(p.get("last", ""))]] = true
 	_check(names.has("James Hird") and names.has("Matthew Lloyd"), "Essendon play on their real 2000 list")
+	# The rollover is under test, not 200 home and away games: skip to the
+	# finals and play those. The Grand Final week closes the season (awards,
+	# the coaching market that fills every senior job), so they stay played.
+	GameState.season.round_index = GameState.season.fixture.size()
+	GameState.ensure_finals()
 	guard = 0
 	while not GameState.season.is_season_over() and guard < 60:
 		guard += 1
 		GameState.advance()
-	_check(GameState.season.is_season_over(), "The 2000 season plays out (%d weeks)" % guard)
+	_check(GameState.season.is_season_over(), "The 2000 season ends with its finals (%d weeks)" % guard)
 	_check(GameState.start_next_season(), "The 2000 career rolls on")
 	_check(GameState.season_year == 2001 and GameState.my_club == "ESS" and GameDB.dataset_id == "2000"
 			and GameState.dataset == "2000",
