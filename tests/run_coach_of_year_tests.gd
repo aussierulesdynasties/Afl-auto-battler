@@ -110,13 +110,13 @@ func _test_never_certain() -> void:
 
 
 func _test_streak_and_line() -> void:
-	var w := func(h: String, a: String, hs: int, as_: int) -> Dictionary:
-		return {"home": h, "away": a, "score": [hs, as_]}
+	var w := func(h: String, a: String, hs: int, away_score: int) -> Dictionary:
+		return {"home": h, "away": a, "score": [hs, away_score]}
 	var rounds := [[w.call("MEL", "WB", 80, 60)], [w.call("WB", "MEL", 50, 70)], [w.call("MEL", "STK", 70, 70)],
 			[w.call("MEL", "WB", 90, 60)], [w.call("STK", "MEL", 60, 61)], [w.call("MEL", "STK", 99, 40)]]
 	_check(COY.longest_streak(rounds, "MEL") == 3, "A draw ends a run; the longest is kept (%d)" % COY.longest_streak(rounds, "MEL"))
-	var final_ := [{"home": "MEL", "away": "WB", "score": [90, 10], "tag": "QF1"}]
-	_check(COY.longest_streak(rounds + [final_], "MEL") == 3, "A final never adds to the run")
+	var qualifying_final := [{"home": "MEL", "away": "WB", "score": [90, 10], "tag": "QF1"}]
+	_check(COY.longest_streak(rounds + [qualifying_final], "MEL") == 3, "A final never adds to the run")
 	var l: String = COY.line(_facts(3, 16), "Western Bulldogs", CLUBS, FINALISTS)
 	_check(l == "Took Western Bulldogs from 16th last year to 3rd.", "The model case's line: " + l)
 	l = COY.line(_facts(6, 8, 8, 10), "St Kilda", CLUBS, FINALISTS)
@@ -141,9 +141,9 @@ func _test_streak_and_line() -> void:
 ## to the stronger side more often, spread as real AFL ladders are (the top
 ## side about 19 wins of 23, the bottom about 4; 10-game runs about once a
 ## season). Returns the award's rates by case.
-func _sample(seasons: int, seed_: int) -> Dictionary:
+func _sample(seasons: int, sample_seed: int) -> Dictionary:
 	var rng := RandomNumberGenerator.new()
-	rng.seed = seed_
+	rng.seed = sample_seed
 	var strength := []
 	for i in range(CLUBS):
 		strength.append(rng.randfn(0.0, 1.0))
@@ -207,7 +207,7 @@ func _sample(seasons: int, seed_: int) -> Dictionary:
 		if not had_last:
 			continue   # the first season has no last year to climb from
 		out["seasons"] = int(out["seasons"]) + 1
-		var won = COY.pick(facts, CLUBS, FINALISTS, hash(["coty-sample", seed_, year]))
+		var won = COY.pick(facts, CLUBS, FINALISTS, hash(["coty-sample", sample_seed, year]))
 		var wf: Dictionary = facts[won]
 		var wl: Dictionary = out["winner_ladder"]
 		wl[int(wf["ladder"])] = int(wl.get(int(wf["ladder"]), 0)) + 1
