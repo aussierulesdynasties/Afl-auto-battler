@@ -356,6 +356,14 @@ def main() -> int:
     for r in coaches:
         if r["role"] == "senior" and "NOT on AFL Tables" in r["note"]:
             fails.append(f"coaches_1990 {r['club']} {r['name']}: {r['note']}")
+    # Every named coach is rated from his record (tools/legacy_1990s/rate_coaches.py).
+    rated = {r["name"]: r for r in load("coach_ratings_1990.csv")}
+    for r in coaches:
+        g = rated.get(r["name"].strip())
+        if r["name"].strip() and g is None:
+            fails.append(f"coach_ratings_1990: {r['name']} has no rating")
+        elif g and not all(55 <= int(g[k]) <= 92 for k in ("teach", "tactics", "manage")):
+            fails.append(f"coach_ratings_1990 {g['name']}: a skill is outside 55-92")
     captains = load("captains_1990.csv")
     caps = Counter(r["club"] for r in captains if r["role"] == "captain")
     if set(caps) != clubs_for(1990):

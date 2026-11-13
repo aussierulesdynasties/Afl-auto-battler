@@ -188,6 +188,9 @@ var offseason_log: Array = []    # what happened in the off-season, for news
 ## New clubs building their lists (ExpansionBuild): {club code: its state}.
 ## Empty, and not saved, while no club is building.
 var expansion := {}
+## A Legacy career's rollovers (LegacyRollover): the clubs that played finals
+## each season and how the Fitzroy merger went. Empty, and not saved, on today's data.
+var legacy := {}
 ## Does Canberra join in 2030? A choice at career start (a new career starts
 ## without it); a career saved before the choice existed keeps Canberra.
 var canberra_on := true
@@ -228,6 +231,13 @@ var _named_this_round := {}
 var board_patience := "fair"     # this career's board dial (DifficultyDials step)
 var rival_recruiting := "shrewd" # this career's rival dial (DifficultyDials step)
 var tutorials := true            # this career's first-visit menu tips (Tutorials.gd)
+## The league's real controversies (YearEvents): chosen at New career, kept
+## with the career. On, a scandal's real penalty lands (fines, lost picks, a
+## finals ban); off, the scandals never happen. Saved.
+var controversies := true
+## The real year events of a legacy career (YearEvents.state): the ones fired,
+## and the penalties still running. Saved.
+var year_events := {}
 var postseason_intro_seen := false  # the first postseason's sheet: this career's, not the device's
 ## The first season you coach from its start (0: none yet). Years played
 ## without you (sim-ahead, waiting for Tasmania, pre-made histories) close
@@ -943,6 +953,8 @@ func _save_state() -> Dictionary:
 		"board_patience": board_patience,
 		"rival_recruiting": rival_recruiting,
 		"tutorials": tutorials,
+		"controversies": controversies,
+		"year_events": year_events,
 		"postseason_intro_seen": postseason_intro_seen,
 		"my_first_season": my_first_season,
 		"board": board,
@@ -1001,6 +1013,8 @@ func _save_state() -> Dictionary:
 		state["canberra_on"] = false
 	if expansion_from != 0:
 		state["expansion_from"] = expansion_from
+	if not legacy.is_empty():
+		state["legacy"] = legacy
 	if not match_stories.is_empty():
 		state["match_stories"] = match_stories
 	if not match_story_digest.is_empty():
@@ -1037,7 +1051,7 @@ func _save_meta() -> Dictionary:
 		elif season.is_regular_done():
 			stage = "Finals"
 		else:
-			stage = "Round %d" % (season.round_index + 1)
+			stage = season.round_name(season.round_index)
 	var club := my_club if my_club != "" else (draft.user_club if draft != null else "")
 	return {"club": club, "club_name": GameDB.club_name(club) if club != "" else "",
 			"year": season_year, "stage": stage,
@@ -1082,6 +1096,8 @@ func _restore_career(state: Dictionary) -> bool:
 	Season.beat()
 	set_canberra(bool(state.get("canberra_on", true)))
 	expansion = state.get("expansion", {}) if state.get("expansion") is Dictionary else {}
+	legacy = state.get("legacy", {}) if state.get("legacy") is Dictionary else {}
+	LegacyRollover.restore(self)
 	best23 = state.get("best23", {})
 	shortlist = state.get("shortlist", []) if state.get("shortlist") is Array else []
 	sim_orders = state.get("sim_orders", {}) if state.get("sim_orders") is Dictionary else {}
@@ -1238,6 +1254,8 @@ func _restore_career(state: Dictionary) -> bool:
 	rival_recruiting = DifficultyDials.normalize(DifficultyDials.RIVALS,
 			str(state.get("rival_recruiting", legacy[DifficultyDials.RIVALS])))
 	tutorials = bool(state.get("tutorials", true))
+	controversies = bool(state.get("controversies", true))
+	year_events = state.get("year_events", {}) if state.get("year_events", {}) is Dictionary else {}
 	# A save from before this field is past being a fresh career.
 	postseason_intro_seen = bool(state.get("postseason_intro_seen", true))
 	# A save from before this field: a club you hold outside the years played
@@ -1800,6 +1818,7 @@ func reset(next_dataset := Datasets.DEFAULT) -> void:
 	news = []
 	board = {}
 	expansion = {}
+	legacy = {}
 	expansion_from = 0  # before set_canberra, which applies it to the entry years
 	set_canberra(false)
 	sim_ahead = false
@@ -1822,6 +1841,8 @@ func reset(next_dataset := Datasets.DEFAULT) -> void:
 	board_patience = new_career_dial(DifficultyDials.BOARD)
 	rival_recruiting = new_career_dial(DifficultyDials.RIVALS)
 	tutorials = new_career_tutorials()
+	controversies = new_career_controversies()
+	year_events = {}
 	# A seeded run (replay_seed, the tests) needs a seeded career too: this
 	# seed picks every club's conditioning timing, staff and prospects, and a
 	# random one made the same league play out differently each run.
@@ -1898,6 +1919,11 @@ func add_custom_prospect(spec: Dictionary) -> String:
 ## generated and aged the way _start_next_season prepares next year's.
 func _first_class(year: int) -> Array:
 	_first_class_seed = career_seed
+	# A Legacy career drafts the real class of its year (row 142, L8).
+	if LegacyRollover.has_class(year):
+		var real := LegacyRollover.real_class(year)
+		GameDB.register_draftees(real)
+		return Prospects.age_pool(real, year, {})
 	var generated := Prospects.generate_class(year, career_seed)
 	class_tiers[str(year)] = Prospects.class_tier(career_seed, year)
 	FamilyTies.assign(generated, year, career_seed, FamilyTies.listed_entries(GameDB.players, 0.0))
@@ -2416,6 +2442,10 @@ func begin_intake_draft() -> bool:
 		draftee_pool = GameDB.draftees.duplicate()
 
 	_ensure_league_lists()
+	# A new club signs its state-league foundation before the draft; a Legacy
+	# club's real ones past its size join this draft's pool (LegacyRollover).
+	for code in ExpansionBuild.building(self):
+		ExpansionBuild.ensure_foundation(self, code)
 	var available := []
 	for p in draftee_pool:
 		if not drafted_draftees.has(str(p["id"])):
@@ -2454,7 +2484,10 @@ func begin_intake_draft() -> bool:
 
 	# A new club's extra picks, and the pick it must trade: made first, because
 	# that trade moves a player and the lists are measured next.
+	var before_room := draftee_pool.size()
 	var new_club_picks: Array = ExpansionBuild.draft_picks(self, GameDB.active_clubs(season_year).size(), open_pool.size())
+	# A real foundation player a new club makes room by is in this draft.
+	open_pool.append_array(draftee_pool.slice(before_room))
 
 	var sizes := {}
 	var role_counts := {}
@@ -2618,6 +2651,10 @@ func _start_next_season(next_year: int, signed: int, min_left := 0) -> void:
 	# free agency) is stamped with the season he left after, before the year
 	# turns over and before a club move changes whose board it is.
 	HonourBoard.sweep(self)
+	# A Legacy career: who played finals, and the Fitzroy merger story
+	# (settled before the coach moves, so a Fitzroy coach goes to Brisbane).
+	LegacyRollover.note_finals(self)
+	LegacyRollover.before_moves(self, next_year)
 	# Coach arcs: a club change decided at the season's close is made now.
 	ClubMoves.apply_move(self)
 	# The season's close normally counted careers already (Career skips a
@@ -2628,12 +2665,18 @@ func _start_next_season(next_year: int, signed: int, min_left := 0) -> void:
 			for p in season.lists[code]:
 				played[str(p["id"])] = p
 		Career.close_season(played, season_tally, season_year, season_stats, season_stats_from)
+	LegacyRollover.merge_lists(self)
 	Season.beat()
 	# Next year's generated class joins the pool before ageing, so the fresh
-	# 17-year-olds are also a year older in the season they arrive.
-	var generated := Prospects.generate_class(next_year, career_seed)
-	class_tiers[str(next_year)] = Prospects.class_tier(career_seed, next_year)
-	_assign_family_ties(generated, next_year)
+	# 17-year-olds are also a year older in the season they arrive. A Legacy
+	# career's is that year's real class.
+	var generated := []
+	if LegacyRollover.has_class(next_year):
+		generated = LegacyRollover.real_class(next_year)
+	else:
+		generated = Prospects.generate_class(next_year, career_seed)
+		class_tiers[str(next_year)] = Prospects.class_tier(career_seed, next_year)
+		_assign_family_ties(generated, next_year)
 	GameDB.register_draftees(generated)
 	for p in generated:
 		draftee_pool.append(p)
@@ -3467,7 +3510,7 @@ func _clear_pending() -> void:
 ## show your qualifying or elimination final straight away.
 func ensure_finals() -> void:
 	if season != null and season.is_regular_done() and season.finals.is_empty():
-		season.start_finals()
+		season.start_finals(YearEvents.finals_banned(self))
 
 
 ## advance() with the week's matches run on threads while the screen keeps
@@ -5486,7 +5529,7 @@ func next_fixture_line() -> String:
 	if nxt.has("event"):
 		return "Next: %s, v %s at %s." % [season.round_label(season.round_index),
 				GameDB.club_name(str(nxt["code"])), GameDB.ground_shown(str(nxt["ground"]))]
-	return "Next: Round %d %s %s." % [season.round_index + 1,
+	return "Next: %s %s %s." % [season.round_name(season.round_index),
 			"v" if str(nxt["venue"]) == "home" else "at", GameDB.club_name(str(nxt["code"]))]
 
 
@@ -5933,7 +5976,7 @@ func banner_context(match: Dictionary) -> Dictionary:
 	var week := str(BANNER_FINALS.get(tag.substr(0, 2), "")) if tag != "" else ""
 	var regular := week == "" and season != null and not season.is_regular_done()
 	var last_round := regular and season.round_index == season.fixture.size() - 1
-	var round_label := str(match.get("label", "Round %d" % (season.round_index + 1) if season != null else ""))
+	var round_label := str(match.get("label", season.round_name(season.round_index) if season != null else ""))
 	var ctx := {
 		"home": home, "away": away, "us": us, "round": round_label,
 		"marquee": MarqueeGames.label(home, away), "final": week,
@@ -6806,7 +6849,7 @@ func _project_week(p: Dictionary, announce := true) -> Dictionary:
 	pr["weeks"] = int(pr.get("weeks", 0)) + 1
 	if int(pr["weeks"]) < PROJECT_WEEKS:
 		return {}
-	return _finish_project(p, announce, "Round %d" % maxi(1, season.round_index))
+	return _finish_project(p, announce, season.round_name(maxi(0, season.round_index - 1)))
 
 
 ## The verdict on his project, at PROJECT_WEEKS or when the season ends first:
@@ -6840,7 +6883,7 @@ func _finish_project(p: Dictionary, announce := true, at := "Season end") -> Dic
 	var a := "an" if word.substr(0, 1) in ["a", "e", "i", "o", "u"] else "a"
 	var talk := _dev_talk_for(p, job)
 	var said := str(talk.get("said", ""))
-	var told := "Round %d" % int(talk.get("round", 0))
+	var told := season.round_name(int(talk.get("round", 1)) - 1) if season != null else "Round %d" % int(talk.get("round", 0))
 	if said != "":
 		_dev_talk_out(p, "learned" if learned else "not taken")
 	if learned and said == "promise" and at != "Season end":
@@ -6944,7 +6987,7 @@ func dev_talk(p: Dictionary, said: String) -> void:
 	var round_no := season.round_index + 1
 	p["dev_talk"] = {"year": season_year, "round": round_no, "job": job, "role": project_role(p),
 			"said": said, "state": "heard"}
-	CareerFacts.add(career_facts, str(p["id"]), CareerFacts.row(season_year, "Round %d" % round_no, "talk",
+	CareerFacts.add(career_facts, str(p["id"]), CareerFacts.row(season_year, season.round_name(round_no - 1), "talk",
 			my_club, "project|" + said, "heard"))
 	mark_dirty()
 
@@ -8076,6 +8119,19 @@ func _ensure_department_budget() -> void:
 	var clean := ClubBudget.defaults()
 	for area in ClubBudget.AREA_ORDER:
 		clean[area] = ClubBudget.clamp_level(int(department_budget.get(area, ClubBudget.STANDARD)))
+	# A fine's cut can leave the allocation over the year's budget: the
+	# best-funded area steps down until it fits. Without a cut the
+	# allocation is left as it was (set_department_budget already keeps it
+	# legal).
+	var cap := department_budget_annual_m()
+	while cap < ClubBudget.ANNUAL_M and ClubBudget.total_m(clean) > cap + 0.001:
+		var top := ""
+		for area in ClubBudget.AREA_ORDER:
+			if int(clean[area]) > 0 and (top == "" or int(clean[area]) > int(clean[top])):
+				top = area
+		if top == "":
+			break
+		clean[top] = int(clean[top]) - 1
 	department_budget = clean
 
 
@@ -8090,7 +8146,14 @@ func department_budget_spent_m() -> float:
 
 
 func department_budget_remaining_m() -> float:
-	return ClubBudget.ANNUAL_M - department_budget_spent_m()
+	return department_budget_annual_m() - department_budget_spent_m()
+
+
+## What the board gives for the football year being set: $10.5m, less a
+## league fine's cut (YearEvents) that year.
+func department_budget_annual_m() -> float:
+	var year := season_year + (1 if season_closed() else 0)
+	return ClubBudget.ANNUAL_M - YearEvents.budget_cut_m(self, year)
 
 
 func can_set_department_budget(area: String, level: int) -> bool:
@@ -8099,7 +8162,7 @@ func can_set_department_budget(area: String, level: int) -> bool:
 	_ensure_department_budget()
 	var trial: Dictionary = department_budget.duplicate()
 	trial[area] = level
-	return ClubBudget.total_m(trial) <= ClubBudget.ANNUAL_M + 0.001
+	return ClubBudget.total_m(trial) <= department_budget_annual_m() + 0.001
 
 
 ## Set one department for the coming season. The allocation can only be
@@ -8110,6 +8173,8 @@ func set_department_budget(area: String, level: int) -> Dictionary:
 		return {"ok": false, "reason": "Department funding is set during the off-season."}
 	if not ClubBudget.valid_area(area) or level < 0 or level >= ClubBudget.LEVELS.size():
 		return {"ok": false, "reason": "Unknown funding level."}
+	if department_budget_annual_m() < ClubBudget.ANNUAL_M and not can_set_department_budget(area, level):
+		return {"ok": false, "reason": "That allocation would exceed this year's $%.1fm club budget, after the league's fine." 				% department_budget_annual_m()}
 	if not can_set_department_budget(area, level):
 		return {"ok": false, "reason": "That allocation would exceed the %s annual club budget." % ClubBudget.money_m(ClubBudget.ANNUAL_M)}
 	department_budget[area] = level
@@ -9612,9 +9677,12 @@ func club_picks(code: String) -> Array:
 ## This draft year's traded picks for the draft: {"round:origin": owner}.
 func draft_pick_owners(year: int) -> Dictionary:
 	var out := {}
+	var active := GameDB.active_clubs(year)
 	for key in pick_owner:
 		var parts := str(key).split(":")
-		if int(parts[0]) == year:
+		# A pick held by a club no longer in the league (Fitzroy after 1996)
+		# goes back to the club it came from.
+		if int(parts[0]) == year and active.has(str(pick_owner[key])):
 			out["%s:%s" % [parts[1], parts[2]]] = str(pick_owner[key])
 	return out
 
@@ -9704,6 +9772,11 @@ func evaluate_trade(club: String, mine: Array, theirs: Array) -> Dictionary:
 		return {"ok": false, "code": str(bad["code"]), "reason": str(bad["error"])}
 	var give: Array = g["assets"]
 	var take: Array = t["assets"]
+	if _trade_ban_breaks(my_club, club, take, give):
+		var who := my_club if YearEvents.trade_banned(self, my_club) else club
+		return {"ok": false, "code": "trade_banned",
+				"reason": "The league has barred %s from trading players in until after %d." % [
+				GameDB.club_name(who), int((year_events.get("trade_bans", {}) as Dictionary).get(who, season_year))]}
 	var wont := _wont_go(give, my_club)
 	if wont == "":
 		wont = _wont_go(take, club)
@@ -10416,13 +10489,25 @@ func _ai_trades(prospects: Dictionary) -> void:
 				var seller := str(club_of[str(target["id"])])
 				var most := _worth_to(buyer, target, prospects) / (1.0 + Contracts.TRADE_MARGIN)
 				var pkg := _negotiate(buyer, seller, target, _bids(buyer, most, prospects), prospects)
-				if pkg.is_empty():
+				if pkg.is_empty() or _trade_ban_breaks(buyer, seller, pkg, [target]):
 					continue
 				_log_ai_trade(buyer, seller, target, pkg, "")
 				done += 1
 				dealt = true
 				out.erase(buyer)
 				break
+
+
+## Would this deal bring a player into a club the league has barred from
+## trading players in (YearEvents)? `buyer` gets `got`, `seller` gets `pkg`.
+func _trade_ban_breaks(buyer: String, seller: String, pkg: Array, got: Array) -> bool:
+	for side in [[buyer, got], [seller, pkg]]:
+		if not YearEvents.trade_banned(self, str(side[0])):
+			continue
+		for a in side[1]:
+			if not Contracts.is_pick(a):
+				return true
+	return false
 
 
 ## A trade between two rival clubs: done, logged and in the news. `why`: the
@@ -10579,7 +10664,7 @@ func _requested_trades(prospects: Dictionary) -> void:
 				continue
 			var most := _worth_to(str(buyer), target, prospects) / (1.0 + Contracts.TRADE_MARGIN)
 			var pkg := _negotiate(str(buyer), seller, target, _bids(str(buyer), most, prospects), prospects)
-			if pkg.is_empty():
+			if pkg.is_empty() or _trade_ban_breaks(str(buyer), seller, pkg, [target]):
 				continue
 			_log_ai_trade(str(buyer), seller, target, pkg, str(ask["why"]))
 			break
@@ -12841,6 +12926,18 @@ func set_new_career_tutorials(on: bool) -> void:
 		tutorials = on
 
 
+## Controversies (director: "real penalties land", a switch at game
+## creation): chosen at New career, kept with the career.
+func new_career_controversies() -> bool:
+	return bool(get_setting("controversies", true))
+
+
+func set_new_career_controversies(on: bool) -> void:
+	set_setting("controversies", on)
+	if season == null:
+		controversies = on
+
+
 func tutorials_on() -> bool:
 	return tutorials
 
@@ -12924,11 +13021,9 @@ func _ground_rename_news() -> void:
 			homes[g] = []
 		(homes[g] as Array).append(str(code))
 	var used := homes.keys()
-	var gather := season.gather_round()
 	for i in range(season.fixture.size()):
 		for m in season.fixture[i]:
-			var v := GameDB.ground_key(season.round_venue(i, str(m["home"]), str(m["away"])) if i == gather
-					else season.home_ground(str(m["home"])))
+			var v := GameDB.ground_key(season.round_venue(i, str(m["home"]), str(m["away"])))
 			if not used.has(v):
 				used.append(v)
 	var gf := GameDB.ground_key(season.grand_final_venue())
@@ -12941,7 +13036,9 @@ func _ground_rename_news() -> void:
 		var now := GameDB.ground_name(str(g), season_year)
 		var clubs: Array = homes.get(g, [])
 		var names := PackedStringArray(clubs.map(func(c): return GameDB.club_name(str(c))))
-		var text := "%s takes a new name this season: from Round 1 it is %s" % [old, now]
+		var first := season.round_name(0)
+		var text := "%s takes a new name this season: from %s it is %s" % [old,
+				"the " + first if first == "Opening Round" else first, now]
 		if names.size() > 0:
 			text += ", home of %s" % " and ".join(names)
 		add_news("ground", text + ".", "Pre-season", {"club": str(clubs[0]) if clubs.size() > 0 else "",
@@ -13894,7 +13991,7 @@ func _press_opinion(kind: String, his: Dictionary, move: int, round_no: int) -> 
 	var pid := str(his.get("id", ""))
 	var key := Trust.player_key(pid)
 	var from := Trust.value(relations, key)
-	var when := last_label if last_label != "" else "Round %d" % round_no
+	var when := last_label if last_label != "" else (season.round_name(round_no - 1) if season != null else "Round %d" % round_no)
 	var callouts: Dictionary = media_memory.get("callouts", {})
 	var owed: Array = callouts.get(pid, [])
 	if kind == "criticise_named" and move < 0:
@@ -13947,10 +14044,16 @@ func _next_week_event() -> void:
 	ExpansionBuild.week(self)
 	_dev_promise_week()
 	week_events = []
+	# The league's real year events land whatever your week holds (a sacked
+	# coach's club still pays its fine); your club's cards come first.
+	var year_cards := YearEvents.week(self) if my_club != "" else []
 	if season == null or is_sacked() or not stories_on or my_club == "":
 		return
 	week_events = ClubStories.pick(self)
+	for i in range(year_cards.size() - 1, -1, -1):
+		week_events.push_front(year_cards[i])
 	ClubArcs.week(self)
+	LegacyRollover.week(self)
 
 
 ## Skip to the end of the season (director, 2026-11-07: "We need to bring back
@@ -14042,7 +14145,7 @@ func skip_progress() -> String:
 	if season == null:
 		return ""
 	if not season.is_regular_done():
-		return "Playing Round %d of %d..." % [season.round_index + 1, season.fixture.size()]
+		return "Playing %s..." % season.round_progress(season.round_index)
 	return "Playing the finals..."
 
 
@@ -14139,7 +14242,7 @@ func _settle_week_event() -> void:
 			board["confidence"] = clampi(board_confidence() + int(cost["board"]), 0, 100)
 		if int(cost.get("trust", 0)) != 0 and str(card.get("player_id", "")) != "":
 			var facts: Dictionary = card.get("facts", {})
-			var when := "Round %d" % int(facts.get("round", 0)) if int(facts.get("finals_week", 0)) == 0 else "Finals"
+			var when := season.round_name(int(facts.get("round", 1)) - 1) if int(facts.get("finals_week", 0)) == 0 else "Finals"
 			Trust.change(relations, Trust.player_key(str(card["player_id"])), int(cost["trust"]),
 					str(cost.get("why", "You said nothing")), int(season_year), when)
 		card["resolved"] = true
@@ -14176,6 +14279,7 @@ func resolve_card(index: int, choice: int) -> String:
 	card["choice"] = choice
 	card["outcome"] = out
 	ClubArcs.answered(self, card, choice)
+	LegacyRollover.answered(self, card, choice)
 	mark_dirty()
 	return out
 
@@ -15188,9 +15292,9 @@ func _back_from(p: Dictionary) -> String:
 	if inj.is_empty():
 		return ""
 	var f: Dictionary = inj[-1]
-	if int(f["y"]) != season_year or not str(f["at"]).begins_with("Round"):
+	var hurt := season.round_of_label(str(f["at"])) if season != null else 0
+	if int(f["y"]) != season_year or hurt == 0:
 		return ""
-	var hurt := str(f["at"]).trim_prefix("Round ").to_int()
 	var lg = p.get("last_game", [])
 	var last := int(lg[1]) if lg is Array and (lg as Array).size() == 2 and int(lg[0]) == season_year else 0
 	if hurt < last:
@@ -15261,7 +15365,7 @@ func _explain_outcome(name: String, e: Dictionary) -> String:
 ## and what you said ("dropped|promise"); out is settled after your next match.
 func _note_talk(p: Dictionary, said: String, case := "mood") -> void:
 	CareerFacts.add(career_facts, str(p["id"]), CareerFacts.row(season_year,
-			"Round %d" % (season.round_index + 1), "talk", my_club,
+			season.round_name(season.round_index), "talk", my_club,
 			"%s|%s" % [case if case != "" else "mood", said], ""))
 
 

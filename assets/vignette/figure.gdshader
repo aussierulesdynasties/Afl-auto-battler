@@ -49,6 +49,11 @@ uniform vec4 kit_pattern2[4];
 // A third pattern colour, for the one design that needs four (Fremantle's anchor).
 uniform vec4 kit_pattern3[4];
 uniform vec4 kit_shorts[4];
+// Legacy mode: a season's real guernsey drawn as a picture (tools/kits/kit_atlas.py). A kit
+// whose design number is 100 or more wears atlas cell (design - 100): the front on the cell's
+// left half, the back (as seen from behind) on its right; kit_grid = cells a row, rows.
+uniform sampler2D kit_atlas : filter_linear, repeat_disable;
+uniform ivec2 kit_grid = ivec2(1, 1);
 uniform float kit_design[4];
 // Kit options: y = sock hoops (0: the single band baked into the sheet; 1-3: hoops up the sock).
 uniform vec4 kit_extra[4];
@@ -245,6 +250,16 @@ vec3 design(int d, vec3 g) {
 	return vec3(0.0);
 }
 
+// A picture kit's colour at guernsey coordinate g (see kit_atlas).
+vec3 kit_image(int cell, vec3 g) {
+	bool front = g.z > 0.5;
+	vec2 at = vec2(front ? g.x : 1.0 - g.x, 1.0 - g.y);
+	vec2 inset = vec2(0.5) / (vec2(textureSize(kit_atlas, 0)) / vec2(float(kit_grid.x) * 2.0, float(kit_grid.y)));
+	at = clamp(at, inset, vec2(1.0) - inset);
+	vec2 c = vec2(float(cell % kit_grid.x) * 2.0 + (front ? 0.0 : 1.0), float(cell / kit_grid.x));
+	return texture(kit_atlas, (c + at) / vec2(float(kit_grid.x) * 2.0, float(kit_grid.y))).rgb;
+}
+
 // The number printed on the back: x = 1 where it's drawn (alpha), rgb its colour.
 vec4 number_on_back(int n, vec3 g, vec3 base, bool mirrored) {
 	float x = (NUMBER_ACROSS.y - g.x) / (NUMBER_ACROSS.y - NUMBER_ACROSS.x);   // from behind, left to right
@@ -338,15 +353,29 @@ void fragment() {
 		bool mirrored = (code % 2) == 1;
 		if (looks.g > 0.95) {
 			int n = clamp(int(round(looks.b * 128.0)) - 1, 0, 99);
-			vec4 num = number_on_back(n, g, kit_base[kit].rgb, mirrored);
+			int nd = int(round(kit_design[kit]));
+			// On a picture kit the number sits on whatever the picture has there.
+			vec3 under = nd >= 100 ? kit_image(nd - 100, g) : kit_base[kit].rgb;
+			vec4 num = number_on_back(n, g, under, mirrored);
 			COLOR = vec4(num.rgb * s.r * gain, num.a * m.a * s.a * looks.a);
 		} else {
 			int tone = clamp(int(round(looks.g * 8.0)), 0, 7);
 			int hair = clamp(int(round(looks.b * 8.0)), 0, 7);
-			vec3 p = design(int(round(kit_design[kit])), g) * m.a;
+			int dn = int(round(kit_design[kit]));
 			vec3 base = kit_base[kit].rgb, pat = kit_pattern[kit].rgb, pat2 = kit_pattern2[kit].rgb;
 			vec3 pat3 = kit_pattern3[kit].rgb;
-			vec3 kit_col = base * m.r + (pat - base) * p.x + (pat2 - base) * p.y + (pat3 - base) * p.z;
+			vec3 kit_col;
+			vec3 edge_col;
+			if (dn >= 100) {
+				vec3 img = kit_image(dn - 100, g);
+				kit_col = base * m.r + (img - base) * m.a;
+				edge_col = img;
+			} else {
+				vec3 p = design(dn, g) * m.a;
+				kit_col = base * m.r + (pat - base) * p.x + (pat2 - base) * p.y + (pat3 - base) * p.z;
+				vec3 q = design(dn, g);
+				edge_col = base + (pat - base) * q.x + (pat2 - base) * q.y + (pat3 - base) * q.z;
+			}
 			float rest = clamp(1.0 - (m.r + m.g + m.b + s.g + s.b), 0.0, 1.0);
 			// Off the guernsey the design sheet carries G = height up the sock (0 at the boot,
 			// 1 at its top); its alpha is how much of the pixel a long sleeve covers (the arm, and
@@ -359,8 +388,6 @@ void fragment() {
 			// the design sheet carries the guernsey's own coordinates, so the top of the shoulder
 			// (high up the guernsey) takes the colour the guernsey has there: a yoke runs on over it.
 			// Lower down the armhole the base colour, else stripes swept into a dotted edge.
-			vec3 q = design(int(round(kit_design[kit])), g);
-			vec3 edge_col = base + (pat - base) * q.x + (pat2 - base) * q.y + (pat3 - base) * q.z;
 			vec3 sleeve_col = mix(base, edge_col, smoothstep(0.78, 0.88, g.g));
 			vec3 skin = mix(skin_tones[tone].rgb, sleeve_col, sleeve);
 			vec3 col = kit_col + pat * m.g + skin * m.b

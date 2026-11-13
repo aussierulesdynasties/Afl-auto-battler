@@ -148,7 +148,7 @@ static func where_text(conf: Dictionary) -> String:
 	if r > (GameState.season.regular_rounds() if GameState.season != null else Season.REGULAR_ROUNDS):
 		bits.append("Finals")
 	elif r > 0:
-		bits.append("Round %d" % r)
+		bits.append(GameState.season.round_name(r - 1) if GameState.season != null else "Round %d" % r)
 	if opp != "":
 		bits.append("v " + opp)
 	return " · ".join(bits)

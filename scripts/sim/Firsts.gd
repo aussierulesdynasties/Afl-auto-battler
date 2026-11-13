@@ -52,6 +52,8 @@ static func when_text(f: Dictionary) -> String:
 		return "in %d" % year
 	if label.begins_with("Round"):
 		return "in %s, %d" % [label, year]
+	if label.begins_with("Opening Round"):
+		return "in the Opening Round, %d" % year
 	var stage := label.rstrip("0123456789 ")
 	if stage == "Grand Final":
 		return "in the Grand Final, %d" % year
