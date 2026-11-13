@@ -14,3 +14,4 @@ from_year,to_year,rounds,games,finalists,finals,gf_venue,gather_round,drawn_fina
 2022,2022,23,22,8,afl8,MCG,0,extra_time
 2023,2023,24,23,8,afl8,MCG,1,extra_time
 2024,2025,25,23,8,afl8,MCG,1,extra_time
+2026,2026,25,23,10,wildcard10,MCG,1,extra_time

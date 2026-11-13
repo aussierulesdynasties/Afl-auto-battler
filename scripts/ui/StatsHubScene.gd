@@ -164,7 +164,7 @@ func _hero() -> Control:
 	var pos := UiKit.figure(GameState.ordinal(GameState.my_position()), UiKit.HERO, UiKit.club_vivid(GameState.my_club))
 	pos.name = "StatsHeroPosition"
 	row.add_child(pos)
-	var when := "Home and away complete" if season.is_regular_done() 			else ("Before round 1" if season.round_index == 0 else "After round %d of %d" % [season.round_index, season.regular_rounds()])
+	var when := "Home and away complete" if season.is_regular_done() 			else ("Before " + season.round_name(0) if season.round_index == 0 else "After " + season.round_progress(season.round_index - 1))
 	var lr := GameState.my_ladder_row()
 	var txt := UiKit.vbox(0)
 	txt.size_flags_vertical = Control.SIZE_SHRINK_CENTER
