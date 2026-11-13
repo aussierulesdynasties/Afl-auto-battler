@@ -479,7 +479,7 @@ static func draft_picks(gs, n_clubs: int, pool_size: int) -> Array:
 
 ## The club's lowest-rated state-league signings make way, so every pick it
 ## still holds fits in the senior spots the draft fills.
-static func _make_room(gs, code: String, picks: Array, draft_ahead := true) -> void:
+static func _make_room(gs, code: String, picks: Array, draft_ahead := true, keep: Dictionary = {}) -> void:
 	var list: Array = list_of(gs, code)
 	var held := 0
 	for e in picks:
@@ -496,6 +496,13 @@ static func _make_room(gs, code: String, picks: Array, draft_ahead := true) -> v
 		if ra != rb:
 			return rb
 		return int(a["overall"]) < int(b["overall"]))
+	# With no state-league signing left (a concession club's list is all
+	# drafted and signed men), its least valuable other player makes way,
+	# never the one it has just taken (Ablett to Gold Coast, 2011).
+	if state_league.size() < over and not draft_ahead:
+		var rest := list.filter(func(p): return not str(p["id"]).begins_with("FND_") 				and not keep.has(str(p["id"])) and str(p.get("rookie_list", "")) == "")
+		rest.sort_custom(func(a, b): return Contracts.worth(a) < Contracts.worth(b) 				or (Contracts.worth(a) == Contracts.worth(b) and str(a["id"]) < str(b["id"])))
+		state_league.append_array(rest)
 	# A club already playing (its first off-season) delists them as any club
 	# does: free agents any club may sign, an unsigned one's career ending on
 	# the record.
@@ -525,8 +532,8 @@ static func _make_room(gs, code: String, picks: Array, draft_ahead := true) -> v
 ## A club still to play takes a player at the rollover, after its draft (a
 ## Legacy canon move, Ablett to Gold Coast): it lets its lowest state-league
 ## signing go so the list it enters with fits its senior spots.
-static func fit_spots(gs, code: String) -> void:
-	_make_room(gs, code, [], false)
+static func fit_spots(gs, code: String, keep: Dictionary = {}) -> void:
+	_make_room(gs, code, [], false, keep)
 
 
 ## How many of the new clubs' extra picks come before the `regular`-th

@@ -446,6 +446,13 @@ func _draft_year(offered: Dictionary) -> bool:
 	for p in d.pool:
 		offered[str(p.get("id", ""))] = true
 		offered[str(p.get("real_name", ""))] = true
+		offered[_person(p)] = true
+	# A man the save already has on a list is that man, not a second
+	# prospect (a new club's state-league signing later drafted in real
+	# life, Maverick Weller): he is in the game, and drafted only if delisted.
+	for code in GameState.league_lists:
+		for p in GameState.league_lists[code]:
+			offered[_person(p)] = true
 	var listed := 0
 	while d != null and not d.is_finished():
 		var c := d._best_ai_pick(d.current_club())
@@ -465,7 +472,12 @@ func _draft_year(offered: Dictionary) -> bool:
 
 ## The real class of `year` that was not in its own draft, by name.
 func _not_offered(offered: Dictionary, year: int) -> Array:
-	return LegacyRollover.real_class(year).filter(func(p): return not offered.has(str(p["id"]))) 			.map(func(p): return str(p["real_name"]))
+	return LegacyRollover.real_class(year).filter(func(p): return not offered.has(str(p["id"])) and not offered.has(_person(p))) 			.map(func(p): return str(p["real_name"]))
+
+
+## A real man by name and date of birth, whatever id the save gives him.
+func _person(p: Dictionary) -> String:
+	return "%s|%s" % [str(p.get("real_name", "")), str(p.get("dob", ""))]
 
 
 ## Real men the save holds twice (director, 2026-11-14: "duplicate players

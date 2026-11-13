@@ -8365,6 +8365,9 @@ func open_offseason(keep_staff := false) -> void:
 		var by := str(p.get("released_by", ""))
 		if not p.has("fa_kept") and by != "" and not playing.has(by):
 			carried.append(p)
+		elif not retiring_now(p) and LegacyRollover.career_ahead(p, season_year):
+			# He really played on: the drafts see him before his career ends.
+			_relist(p)
 		else:
 			_career_over(p, "delisted")
 	free_agents = carried
@@ -11479,6 +11482,15 @@ func _close_free_agency() -> void:
 	# young ones (_fa_staying), who stay in the pool for the Rookie Draft and
 	# the mid-season draft. One of yours who went out of contract left as a
 	# free agent; one you let go keeps his delisting.
+	# One who really played on (a Legacy career's real man, LegacyRollover.
+	# career_ahead) goes into the National Draft and the Rookie Draft first,
+	# from any club; passed over in both, his career ends (relisted_unpicked).
+	var relist := free_agents.filter(func(q): return not retiring_now(q) \
+			and LegacyRollover.career_ahead(q, season_year))
+	for p in relist:
+		free_agents.erase(p)
+		HonourBoard.leave(self, p, "free_agent")
+		_relist(p)
 	var staying := _fa_staying()
 	for p in free_agents:
 		HonourBoard.leave(self, p, "free_agent")
@@ -11490,6 +11502,31 @@ func _close_free_agency() -> void:
 			_career_over(p, "delisted")
 	free_agents = staying
 	mark_dirty()
+
+
+## An unsigned free agent with a real career ahead joins this off-season's
+## draft pool: his last club's claim is gone, any club may draft him.
+func _relist(p: Dictionary) -> void:
+	for key in ["offers", "market_round", "market_log", "talks", "fa_kept"]:
+		p.erase(key)
+	p["club"] = ""
+	p["contract_years"] = 0
+	p["relisted"] = season_year
+	drafted_draftees.erase(str(p["id"]))
+	if not draftee_pool.has(p):
+		draftee_pool.append(p)
+
+
+## After the off-season's last draft (the Rookie Draft, or the National Draft
+## before there was one): a relisted man no club took ends his career.
+func relisted_unpicked() -> void:
+	var keep := []
+	for p in draftee_pool:
+		if p.has("relisted") and not drafted_draftees.has(str(p["id"])):
+			_career_over(p, "delisted")
+			continue
+		keep.append(p)
+	draftee_pool = keep
 
 
 ## Under this age an unsigned free agent stays in the pool one more year (the

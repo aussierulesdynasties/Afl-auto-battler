@@ -29,6 +29,7 @@ const LIONS_TAKE := 8
 
 static var _classes := {}   # year -> Array of class rows
 static var _entries := {}   # "code|year" -> Array of entry rows
+static var _later := {}     # "real name|dob" -> the last off-season a real list took him
 
 
 ## True for a career started on a past season's data.
@@ -49,6 +50,38 @@ static func _load() -> void:
 		if not _entries.has(key):
 			_entries[key] = []
 		(_entries[key] as Array).append(r)
+	# When a real list last took each man: his class's draft, or the
+	# off-season before a new club's first list (career_ahead).
+	for y in _classes:
+		for r in _classes[y]:
+			_note_later(r, int(y))
+	for key in _entries:
+		for r in _entries[key]:
+			_note_later(r, int(str(r.get("year", "0"))) - 1)
+
+
+static func _note_later(r: Dictionary, off: int) -> void:
+	var dob := str(r.get("dob", ""))
+	if dob.length() < 10:
+		return
+	var k := "%s %s|%s" % [str(r.get("first", "")), str(r.get("last", "")), dob]
+	_later[k] = maxi(int(_later.get(k, 0)), off)
+
+
+## Whether a real man delisted in `year`'s off-season really played on: his
+## last real season is later, or a real draft or new club's first list took
+## him in this off-season or after. Such a man goes into the drafts before his
+## career can end (GameState._close_free_agency), at every club alike.
+static func career_ahead(p: Dictionary, year: int) -> bool:
+	if int(p.get("real_last", 0)) > year:
+		return true
+	if not on():
+		return false
+	_load()
+	var dob := str(p.get("dob", ""))
+	if str(p.get("real_name", "")) == "" or dob.length() < 10:
+		return false
+	return int(_later.get("%s|%s" % [str(p["real_name"]), dob], 0)) >= year
 
 
 ## The real class drafted at the end of `year`, if this career has one.
@@ -237,6 +270,10 @@ static func _new_player(code: String, year: int, n: int, r: Dictionary) -> Dicti
 		p["rookie_list"] = true
 	if str(r.get("peak", "")) != "":
 		p["real_peak"] = int(str(r["peak"]))
+	# His last real season (build_rollovers): he retires about then, as a
+	# start list's or a class's real player does (Prospects.should_retire).
+	if str(r.get("last_season", "")) != "":
+		p["real_last"] = int(str(r["last_season"]))
 	var role := str(r.get("role", ""))
 	p["role"] = role if role in ["RUCK", "MID", "DEF", "FWD"] else GameDB.listed_role(p)
 	p["role2"] = ""
@@ -472,9 +509,13 @@ static func _sweep_leftovers(gs) -> void:
 	var keep := []
 	for p in gs.draftee_pool:
 		if bool(p.get("fitzroy_left", false)) and not gs.drafted_draftees.has(str(p["id"])) \
-				and float(p.get("age", 30.0)) + 1.0 >= 22.0:
-			gs._career_over(p, "delisted")
-			continue
+				and float(p.get("age", 30.0)) + 1.0 >= 22.0 and not p.has("relisted"):
+			# One who really played on waits for the Rookie Draft first.
+			if career_ahead(p, int(gs.season_year)):
+				p["relisted"] = int(gs.season_year)
+			else:
+				gs._career_over(p, "delisted")
+				continue
 		keep.append(p)
 	gs.draftee_pool = keep
 
@@ -825,13 +866,16 @@ static func canon_moves(gs, year: int) -> void:
 		(gs.league_lists[from] as Array).erase(p)
 		_join(p, to, {"num": str(p.get("num", 0))})
 		p["joined"] = year
-		# A club yet to play takes him onto the list it is building.
-		var dest: Array = gs.league_lists.get(to, []) if gs.league_lists.has(to) 				else ExpansionBuild.list_of(gs, to)
+		# A club yet to play takes him onto the list it is building. Its draft
+		# has already put that list in league_lists (finish_intake_draft), so
+		# whether it plays is the season's word, not league_lists'.
+		var building: bool = not (gs.season != null and gs.season.lists.has(to)) 				and ExpansionBuild.has_package(gs, to)
+		var dest: Array = ExpansionBuild.list_of(gs, to) if building else gs.league_lists.get(to, [])
 		dest.append(p)
-		if gs.league_lists.has(to) or not ExpansionBuild.has_package(gs, to):
-			gs.league_lists[to] = dest
-		else:
+		if building:
 			# Its draft is done: the list it enters with still fits its spots.
-			ExpansionBuild.fit_spots(gs, to)
+			ExpansionBuild.fit_spots(gs, to, {str(p["id"]): true})
+		else:
+			gs.league_lists[to] = dest
 		gs.unique_jumpers(dest)
 		gs.add_news("legacy", "%s leaves %s for %s." % [who, GameDB.club_name(from), GameDB.club_name(to)])

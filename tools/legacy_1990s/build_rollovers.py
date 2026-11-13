@@ -22,7 +22,7 @@ Outputs (data/legacy/):
                    potential (director 2026-11-11); blank if he never had one.
                    `last_season` is his last year on a real list (blank if
                    still listed in 2025 or never listed): he retires about then.
-  entry_lists.csv  year,club,num,first,last,dob,height_cm,list,role,peak,known,src,ovr + stats
+  entry_lists.csv  year,club,num,first,last,dob,height_cm,list,role,peak,known,src,ovr,last_season + stats
                    A new club's real list in its first season (Adelaide 1991,
                    Fremantle 1995, Port Adelaide 1997, Gold Coast 2011, GWS
                    2012). `src` is the season his stats come from (his latest
@@ -64,7 +64,8 @@ REAL_2026 = os.path.join(ROOT, "data", "draftees_2026.csv")
 ENTRIES = {"ADE": 1991, "FRE": 1995, "PAD": 1997, "GCS": 2011, "GWS": 2012}
 CLASS_COLS = ["year", "rank", "kind", "club", "first", "last", "dob", "height_cm", "role", "origin", "tie", "peak",
               "last_season"]
-ENTRY_COLS = ["year", "club", "num", "first", "last", "dob", "height_cm", "list", "role", "peak", "known", "src", "ovr"] + B.ADD_STATS[4:28]
+ENTRY_COLS = ["year", "club", "num", "first", "last", "dob", "height_cm", "list", "role", "peak", "known", "src", "ovr",
+              "last_season"] + B.ADD_STATS[4:28]
 
 
 def read(path):
@@ -303,7 +304,9 @@ def main():
                    "dob": r["dob"], "height_cm": r["height_cm"], "list": r["list"],
                    "role": latest[1][3] if latest else role_of(pid, rated, r["height_cm"]),
                    "peak": peak_of(pid, rated, year), "known": known, "src": latest[0] if latest and not known else "",
-                   "ovr": latest[1][0] if latest and not known else ""}
+                   "ovr": latest[1][0] if latest and not known else "",
+                   # His last real season: he retires about then (LegacyRollover).
+                   "last_season": last_of(pid, r["first"], r["last"], r["dob"], year - 1)}
             if latest and not known:
                 row.update(B.stat_cells(latest[1][2]))
             entries.append(row)

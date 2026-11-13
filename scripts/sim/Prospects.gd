@@ -683,7 +683,10 @@ static func age_pool(pool: Array, year: int, drafted: Dictionary) -> Array:
 		# A real class's mature-age pick (a Legacy career) is in his own draft
 		# whatever his age; passed over, he ages out like anyone else.
 		var own_real := bool(p.get("real_class", false)) and int(p.get("draft_year", 0)) == year
-		if float(p.get("age", 18.0)) >= 22.0 and not own_real:
+		# A delisted man put back in the drafts (GameState._relist) waits for
+		# the Rookie Draft, then ends his career if nobody takes him.
+		var relisted := int(p.get("relisted", 0)) == year - 1
+		if float(p.get("age", 18.0)) >= 22.0 and not own_real and not relisted:
 			continue  # aged out of draft eligibility
 		out.append(p)
 	return out

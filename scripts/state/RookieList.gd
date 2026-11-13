@@ -334,6 +334,7 @@ static func open_draft(gs, order: Array) -> void:
 	if not in_force():
 		gs.rookie_draft = {"year": gs.season_year, "order": [], "next": 0, "round": 1,
 				"passed": {}, "picks": [], "upgrades": [], "done": true}
+		gs.relisted_unpicked()
 		return
 	var clubs := []
 	for code in order:
@@ -483,6 +484,7 @@ static func _finish(gs) -> void:
 	if bool(rec.get("done", false)):
 		return
 	rec["done"] = true
+	gs.relisted_unpicked()
 	var picks: Array = rec.get("picks", [])
 	var mine := picks.filter(func(k): return str(k["club"]) == gs.my_club)
 	var nobody := bool(rec.get("nobody_left", false))
