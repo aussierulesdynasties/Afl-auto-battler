@@ -459,10 +459,12 @@ func _test_ui() -> void:
 	tree.root.add_child(screen)
 	for i in range(4):
 		await tree.process_frame
-	var readiness := screen.find_child("Readiness_" + str(p["id"]), true, false) as Label
-	_check(readiness != null and readiness.text == "Needs a break", "Selection shows the player's readiness")
-	_check(readiness != null and readiness.size.x <= 360.0 and readiness.autowrap_mode != TextServer.AUTOWRAP_OFF,
-			"Readiness wraps within a narrow portrait viewport")
+	# Selection shows his load as a number (row 183), red at Needs a break; the words are the tooltip.
+	var readiness := screen.find_child("Fatigue_" + str(p["id"]), true, false) as Label
+	_check(readiness != null and readiness.text == "60", "Selection shows the player's fatigue as a number")
+	_check(readiness != null and readiness.get_theme_color("font_color") == UiKit.BAD,
+			"A player who needs a break shows it in the bad colour")
+	_check(readiness != null and readiness.get_global_rect().end.x <= 360.0, "The number fits a narrow portrait viewport")
 	var sheet := PlayerSheet.open(screen, p)
 	for i in range(4):
 		await tree.process_frame
