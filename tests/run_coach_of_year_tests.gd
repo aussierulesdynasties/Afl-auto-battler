@@ -15,7 +15,9 @@ var _db: Node
 var _checks := 0
 var _failures: Array[String] = []
 
-const COY := preload("res://scripts/sim/CoachOfYear.gd")
+## CoachOfYear.gd, loaded once the autoloads exist (it reaches ClubLife and PreSeason).
+var COY
+var CL   # ClubLife.gd, loaded at run time as COY is
 const Ran := preload("res://tests/functions_ran.gd")
 const SUITE_SEED := 2026
 const SAMPLE_SEASONS := 600
@@ -43,6 +45,8 @@ func _run() -> void:
 	await process_frame
 	_state = root.get_node("GameState")
 	_db = root.get_node("GameDB")
+	COY = load("res://scripts/sim/CoachOfYear.gd")
+	CL = load("res://scripts/sim/ClubLife.gd")
 	_state.autosave_enabled = false
 	_state.save_path = "user://test_coach_of_year.save"
 	_state.settings_path = "user://test_coach_of_year.cfg"
@@ -78,14 +82,14 @@ func _test_rule_cases() -> void:
 	_check(not COY.long_streak(_facts(12, 9, 9, 11), FINALISTS), "An eleven-game run that misses the finals does not")
 	_check(not COY.long_streak(_facts(6, 9, 9, COY.STREAK_LONG - 1), FINALISTS), "A run short of the mark does not")
 	# The model case outscores a minor premier who did what was expected.
-	var riser := COY.score(_facts(3, 16, 12), CLUBS, FINALISTS)
-	var top := COY.score(_facts(1, 2, 1), CLUBS, FINALISTS)
+	var riser = COY.score(_facts(3, 16, 12), CLUBS, FINALISTS)
+	var top = COY.score(_facts(1, 2, 1), CLUBS, FINALISTS)
 	_check(riser > top, "Bottom four to top four outscores an expected minor premiership (%.2f vs %.2f)" % [riser, top])
 	_check(COY.score(_facts(11, 15, 15), CLUBS, FINALISTS) < COY.score(_facts(8, 9, 9), CLUBS, FINALISTS),
 			"Missing the finals costs more than an over-achieving climb earns")
 	# Finals results are not an input: the facts hold the home-and-away season only.
 	var facts := {"MEL": _facts(1, 4, 3), "WB": _facts(4, 17, 14), "STK": _facts(6, 8, 8, 10)}
-	var a := COY.pick(facts, CLUBS, FINALISTS, 77)
+	var a = COY.pick(facts, CLUBS, FINALISTS, 77)
 	_check(a == COY.pick(facts.duplicate(true), CLUBS, FINALISTS, 77), "The same season names the same coach")
 
 
@@ -95,7 +99,7 @@ func _test_never_certain() -> void:
 	for i in range(CLUBS):
 		facts["C%02d" % i] = _facts(i + 1, i + 1, i + 1)
 	facts["C02"] = _facts(3, 17, 15)
-	var o := COY.odds(facts, CLUBS, FINALISTS)
+	var o = COY.odds(facts, CLUBS, FINALISTS)
 	_check(float(o["C02"]) > 0.5 and float(o["C02"]) <= 1.0 - COY.JUDGES_SPREAD * 0.9,
 			"The model case is likely but not certain (%.0f%%)" % (100.0 * float(o["C02"])))
 	_check(float(o["C00"]) > 0.0, "The minor premier keeps a chance (%.0f%%)" % (100.0 * float(o["C00"])))
@@ -193,9 +197,9 @@ func _sample(seasons: int, seed_: int) -> Dictionary:
 		var facts := {}
 		for pos in range(CLUBS):
 			var i := int(table[pos])
-			var goal := ClubLife.board_goal(int(expect[i]), int(last.get(i, 0)), CLUBS, FINALISTS)
+			var goal = CL.board_goal(int(expect[i]), int(last.get(i, 0)), CLUBS, FINALISTS)
 			facts["C%02d" % i] = {"ladder": pos + 1, "last": int(last.get(i, 0)), "expect": int(expect[i]),
-					"streak": int(best[i]), "goal_met": ClubLife.goal_met(goal, pos + 1, int(wins[i]), CLUBS)}
+					"streak": int(best[i]), "goal_met": CL.goal_met(goal, pos + 1, int(wins[i]), CLUBS)}
 		var had_last := not last.is_empty()
 		last = {}
 		for pos in range(CLUBS):
@@ -203,7 +207,7 @@ func _sample(seasons: int, seed_: int) -> Dictionary:
 		if not had_last:
 			continue   # the first season has no last year to climb from
 		out["seasons"] = int(out["seasons"]) + 1
-		var won := COY.pick(facts, CLUBS, FINALISTS, hash(["coty-sample", seed_, year]))
+		var won = COY.pick(facts, CLUBS, FINALISTS, hash(["coty-sample", seed_, year]))
 		var wf: Dictionary = facts[won]
 		var wl: Dictionary = out["winner_ladder"]
 		wl[int(wf["ladder"])] = int(wl.get(int(wf["ladder"]), 0)) + 1
@@ -213,7 +217,7 @@ func _sample(seasons: int, seed_: int) -> Dictionary:
 			var f: Dictionary = facts[code]
 			var hit := 1 if code == won else 0
 			var minor := int(f["ladder"]) == 1
-			var streak := COY.long_streak(f, FINALISTS)
+			var streak = COY.long_streak(f, FINALISTS)
 			if minor:
 				_tally(out, "minor", hit)
 				_tally(out, "minor_with_streak" if streak else "minor_plain", hit)
