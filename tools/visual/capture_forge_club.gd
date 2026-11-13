@@ -82,6 +82,7 @@ func _run() -> void:
 	root.add_child(main)
 	await process_frame
 	main._on_new_career()
+	main._on_pick_year("2026")  # past the year step (row 142 L2)
 	shots.append(await _shot())
 	var sheet := Image.create(W * shots.size(), H, false, Image.FORMAT_RGBA8)
 	for i in range(shots.size()):

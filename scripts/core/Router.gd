@@ -271,7 +271,8 @@ func to_main_menu(wipe_save := true) -> void:
 ## save. The normal New career confirmation remains the destructive gate.
 func to_new_career_setup() -> void:
 	GameState.autosave()
-	GameState.reset()
+	# The season picked on the year step stays picked (Legacy mode, row 142 L2).
+	GameState.reset(GameState.dataset)
 	GameState.new_career_setup_requested = true
 	stack = []
 	go("main")

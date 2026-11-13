@@ -19,7 +19,14 @@ extends RefCounted
 ## at the club add up. Captaincy years and the armband arrive with the
 ## appointment work (P2-2), which then feeds this the same way.
 
+## 2026's record; a past start reads its own season's (Datasets key
+## leadership, set by GameDB through use()).
 const PATH := "res://data/leadership_2026.csv"
+static var path := PATH
+## Its roles: 2026's file says captain / vice / group; a past season's
+## (captains_1990.csv) says captain / vice_captain / deputy_vice_captain.
+## A deputy vice-captain is one of the two vice-captains a club names.
+const ROLE_ALIASES := {"vice_captain": "vice", "deputy_vice_captain": "vice"}
 const FLOOR := 22
 const CEILING := 96
 ## Role bonus, best role only (they never stack).
@@ -29,6 +36,11 @@ const SEASON := 2026
 ## The record is shown as his role through the first playable season; after that
 ## the rating alone carries what it built.
 const SHOWN_THROUGH := 2027
+## The record is shown through the set's first playable season (2027, or 1990).
+static var shown_through := SHOWN_THROUGH
+## The historical codes the file may use for a club (GameDB.CLUB_CODE_ALIASES:
+## BRB is BRL, FOO is WBD), handed in by use() so this class never names an autoload.
+static var club_aliases := {}
 ## Experience: one point per this many games (to 28), then age and tenure.
 const GAMES_PER_POINT := 8.0
 const GAMES_MAX := 28.0
@@ -50,31 +62,52 @@ static func reload() -> void:
 	_roles = {}
 
 
+## Read the record from `file`, shown through `first_year` (GameDB, on a load).
+static func use(file: String, first_year: int, aliases := {}) -> void:
+	club_aliases = aliases
+	if file != path or first_year != shown_through:
+		path = file
+		shown_through = first_year
+		reload()
+
+
 static func _load() -> void:
 	if _loaded:
 		return
 	_loaded = true
 	_roles = {}
-	if not FileAccess.file_exists(PATH):
+	if not FileAccess.file_exists(path):
 		return
-	var lines := FileAccess.get_file_as_string(PATH).split("\n", false)
+	var lines := FileAccess.get_file_as_string(path).split("\n", false)
+	# Columns by the header: club, first, last, role, in whatever order.
+	var col := {"club": 0, "first": 1, "last": 2, "role": 3}
 	for i in range(lines.size()):
 		var row := lines[i].strip_edges()
-		if row.begins_with("#") or row.begins_with("club,"):
+		if row.begins_with("#"):
+			continue
+		if row.begins_with("club,"):
+			var head := row.split(",")
+			for k in col.keys():
+				var at := head.find(k)
+				if at >= 0:
+					col[k] = at
 			continue
 		var c := row.split(",")
 		if c.size() < 4:
 			continue
-		var key := ("%s %s" % [c[1], c[2]]).to_lower()
-		var role := str(c[3])
+		var key := ("%s %s" % [c[col["first"]], c[col["last"]]]).to_lower()
+		var role := str(c[col["role"]])
+		role = str(ROLE_ALIASES.get(role, role))
 		if not ROLE_BONUS.has(role):
 			continue
+		var club := str(c[col["club"]])
+		club = str(club_aliases.get(club, club))
 		# Keyed by name, each entry carrying the club that named him: two real
 		# players can share a name (Max King, Bailey Williams).
 		var list: Array = _roles.get(key, [])
-		var entry := [str(c[0]), role]
+		var entry := [club, role]
 		for e in list:
-			if str(e[0]) == str(c[0]):
+			if str(e[0]) == club:
 				entry = []
 				if int(ROLE_BONUS[role]) > int(ROLE_BONUS[e[1]]):
 					e[1] = role
@@ -120,9 +153,11 @@ static func role_club(p: Dictionary) -> String:
 ## the 2026 record, while that record is current (the first season); else "".
 ## A player now at another club reads with the club that named him
 ## ("Adelaide captain"): `club_name` turns a code into a name.
-static func role_line(p: Dictionary, year: int = SEASON + 1, club_name: Callable = Callable()) -> String:
+static func role_line(p: Dictionary, year: int = 0, club_name: Callable = Callable()) -> String:
+	if year == 0:
+		year = shown_through
 	var e := _entry(p)
-	if e.is_empty() or year > SHOWN_THROUGH:
+	if e.is_empty() or year > shown_through:
 		return ""
 	var words := str(ROLE_WORDS[e[1]])
 	if str(e[0]) != str(p.get("club", "")) and club_name.is_valid():

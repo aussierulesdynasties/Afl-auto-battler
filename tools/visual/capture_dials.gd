@@ -51,6 +51,7 @@ func _run() -> void:
 	root.get_node("Router").to_main_menu(false)
 	await process_frame
 	current_scene._on_new_career()
+	current_scene._on_pick_year("2026")  # past the year step (row 142 L2)
 	var board := _arg("--board", "")
 	var rivals := _arg("--rivals", "")
 	await _shot(out + "_pre.png")

@@ -2365,7 +2365,9 @@ func begin_draft() -> void:
 	# Every club drafts as an equal (director, 2026-11-08): Tasmania, and
 	# Canberra when the career has it, are in the 2027 redraft with the
 	# founding eighteen and a created club, with no new-club concessions.
-	expansion_from = GameDB.START_YEAR
+	# A past season's redraft (Legacy mode) is its own clubs only: the clubs
+	# that joined later still join in their real years.
+	expansion_from = GameDB.START_YEAR if dataset == Datasets.DEFAULT else 0
 	_apply_entry_years()
 	var clubs: Array = GameDB.active_clubs(GameDB.START_YEAR)
 	var short: int = Ratings.LIST_SIZE * clubs.size() - pool.size()

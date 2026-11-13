@@ -23,8 +23,13 @@ const DEFAULT := "2026"
 ## departures, club_moves: who left or changed club before the first season
 ## ladder: the data season's final ladder (no "year" column needed)
 ## ovr_overrides, potential_overrides: the director's hand-set numbers
+## coaches: the season's coaching staff (Coaches.seed reads either format:
+##   2026's researched six jobs, or a past season's club,role,name rows)
+## leadership: the season's captains and vice-captains (Leadership)
+## A row without coaches or leadership uses 2026's (a test league).
 const FILE_KEYS := ["players", "draftees", "history", "origin", "list_additions", "list_addition_stats",
-		"list_types", "departures", "club_moves", "ladder", "ovr_overrides", "potential_overrides"]
+		"list_types", "departures", "club_moves", "ladder", "ovr_overrides", "potential_overrides",
+		"coaches", "leadership"]
 
 ## One more key, a folder rather than a file: state_leagues, the VFL, SANFL and
 ## WAFL of the data season (TODO row 128; data/state_leagues/, built by
@@ -54,6 +59,8 @@ const _TABLE := {
 		"ladder": "res://data/ladder_2026.csv",
 		"ovr_overrides": "res://data/ovr_overrides.csv",
 		"potential_overrides": "res://data/potential_overrides.csv",
+		"coaches": "res://data/coaches_2026.csv",
+		"leadership": "res://data/leadership_2026.csv",
 		"state_leagues": "res://data/state_leagues",
 	},
 	# The 1990 start: lists rated on 1989, the season just played, built by
@@ -61,6 +68,10 @@ const _TABLE := {
 	"1990": {
 		"data_season": 1989, "start_year": 1990, "start_date": "1990-03-01",
 		"players": "res://data/legacy/1990/players_1990.csv",
+		# The 1990 senior coaches (yours makes way, TODO row 142 L2) and the
+		# clubs' 1990 captains and vice-captains.
+		"coaches": "res://data/legacy/1990s/coaches_1990.csv",
+		"leadership": "res://data/legacy/1990s/captains_1990.csv",
 		"history": "res://data/legacy/1990/history_1990.csv",
 		"list_additions": "res://data/legacy/1990/list_additions_1990.csv",
 		"list_addition_stats": "res://data/legacy/1990/list_addition_stats_1990.csv",

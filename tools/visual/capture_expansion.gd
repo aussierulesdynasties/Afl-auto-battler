@@ -84,6 +84,7 @@ func _run() -> void:
 	await _frames(8)
 	var main: Node = root.get_tree().current_scene
 	main._on_new_career()
+	main._on_pick_year("2026")  # past the year step (row 142 L2)
 	await _frames(6)
 	await _shot(out + "_setup.png")
 	var info: Node = main.find_child("CanberraInfo", true, false)
