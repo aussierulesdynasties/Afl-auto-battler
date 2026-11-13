@@ -2745,6 +2745,9 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	Season.beat()
 	# The cap moves with the new season before contracts are assigned.
 	salary_cap = Contracts.salary_cap_for_year(next_year)
+	# Money too: contracts assigned below are in the new season's dollars
+	# (season_year, whose setter also does this, moves only further down).
+	Contracts.money_year = next_year
 	# Expansion lists are born here, so their contracts must be assigned
 	# here too (start_season does the same for the first season).
 	ensure_contracts()

@@ -22,6 +22,7 @@ func run() -> void:
 	_t("_test_1990_contracts")
 	_t("_test_1990_talks_and_budget")
 	_t("_test_2027_career_unchanged")
+	_t("_test_campaign_rolls_through_the_eras")
 	GameState.reset()
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
@@ -164,3 +165,65 @@ func _test_2027_career_unchanged() -> void:
 			if Contracts.asking_salary(p) < Ratings.salary_value(int(p["overall"])):
 				bad.append(str(p["id"]))
 	_check(bad.is_empty(), "Every 2027 asking price is today's model: %s" % str(bad.slice(0, 5)))
+
+
+func _to_offseason() -> void:
+	GameState.season.round_index = GameState.season.fixture.size()
+	GameState.ensure_finals()
+	while not GameState.season.is_season_over():
+		GameState.advance()
+
+
+## A 1990 start is the first season of a campaign (director 2026-11-13): the
+## money follows each season played. Roll 1990 to 1993 for real, then the
+## later decades (2004-05, the 2019-21 COVID dip, 2025 into 2026). Each new
+## season brings its own cap, minimum and asking prices; a contract signed
+## earlier keeps the figure it was signed at.
+func _test_campaign_rolls_through_the_eras() -> void:
+	var legs := [[1990, 3], [2004, 1], [2019, 2], [2025, 1]]
+	var rolled := 0
+	for leg in legs:
+		_career(int(leg[0]))
+		for i in int(leg[1]):
+			var from := GameState.season_year
+			# Players signed on beyond this season, and what they are paid.
+			var signed := {}
+			for p in GameState.my_list:
+				if p.has("salary") and int(p.get("contract_years", 0)) >= 2:
+					signed[str(p["id"])] = int(p["salary"])
+			_to_offseason()
+			_check(Contracts.money_year == from, "%d's off-season is in %d dollars" % [from, from])
+			_check(GameState.start_next_season(), "%d rolls into %d" % [from, from + 1])
+			var y := GameState.season_year
+			rolled += 1
+			var cap := Contracts.salary_cap_for_year(y)
+			_check(y == from + 1 and Contracts.money_year == y and GameState.salary_cap == cap,
+					"%d: the cap is %s and money is in %d dollars" % [y, Contracts.money(GameState.salary_cap), Contracts.money_year])
+			if y < 2026:
+				_check(EraRules.has("salary_cap", y) and cap == int(GameDB.era_rule("salary_cap", y)),
+						"%d has its own cap on record" % y)
+				var want_min: int = int(GameDB.era_rule("senior_min", y)) if EraRules.has("senior_min", y) \
+						else _scaled(Contracts.SENIOR_MIN_2027, cap)
+				_check(Contracts.senior_min() == want_min, "%d minimum %s" % [y, Contracts.money(Contracts.senior_min())])
+				var star := {"overall": 99, "age": 25.0}
+				_check(Contracts.asking_salary(star) == _scaled(1250000, cap),
+						"%d: a star asks %s" % [y, Contracts.money(Contracts.asking_salary(star))])
+			else:
+				_check(cap == Contracts.CAP_2027 and Contracts.era_scale(y) == 1.0
+						and Contracts.senior_min() == Contracts.SENIOR_MIN_2027,
+						"%d is today's money: cap %s, minimum unchanged" % [y, Contracts.money(cap)])
+			var kept := 0
+			var moved := []
+			for p in GameState.my_list:
+				var id := str(p["id"])
+				if signed.has(id) and p.has("salary"):
+					kept += 1
+					if int(p["salary"]) != int(signed[id]):
+						moved.append("%s %d->%d" % [id, int(signed[id]), int(p["salary"])])
+			_check(signed.size() > 0 and kept > 0 and moved.is_empty(),
+					"%d: contracts signed in %d run on at their figure (%d of %d still here): %s"
+					% [y, from, kept, signed.size(), str(moved.slice(0, 3))])
+			var payroll := GameState.my_payroll()
+			print("  %d payroll %s of cap %s" % [y, Contracts.money(payroll), Contracts.money(cap)])
+			_check(payroll > 0, "%d: a payroll (%s)" % [y, Contracts.money(payroll)])
+	_check(rolled == 7, "Seven seasons rolled across four decades (%d)" % rolled)
