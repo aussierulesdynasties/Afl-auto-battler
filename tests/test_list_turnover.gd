@@ -59,6 +59,9 @@ func _test_passing_list_turns_over(dataset: String, me: String) -> void:
 	var stayer := {}
 	var seasons := 0
 	var smallest := 999
+	var smallest_min := 0
+	var smallest_year := 0
+	var short_by := 999
 	for _i in range(10):
 		var season: Season = GameState.season
 		season.round_index = season.fixture.size()
@@ -88,7 +91,12 @@ func _test_passing_list_turns_over(dataset: String, me: String) -> void:
 		if not GameState.finish_intake_draft():
 			break
 		seasons += 1
-		smallest = mini(smallest, GameState.my_list.size())
+		# Each season against its own minimum (48 to 1993, 38 from 1994).
+		if GameState.my_list.size() - Contracts.min_list() < short_by:
+			short_by = GameState.my_list.size() - Contracts.min_list()
+			smallest = GameState.my_list.size()
+			smallest_min = Contracts.min_list()
+			smallest_year = GameState.season_year
 		for r in GameState.intake_summary.get("retired", []):
 			retired_at[str(r["id"])] = GameState.season_year
 	var oldest := 0.0
@@ -105,8 +113,9 @@ func _test_passing_list_turns_over(dataset: String, me: String) -> void:
 			"%s: most of %s's list has turned over (%d of %d from the start)" % [dataset, me, stayed, GameState.my_list.size()])
 	# The draft counts every player retiring at the rollover (Draft.leaving),
 	# so a coach who passes at the minimum still starts each season on it.
-	_check(smallest >= Contracts.min_list(),
-			"%s: %s's list never starts a season under the minimum (smallest %d)" % [dataset, me, smallest])
+	_check(short_by >= 0,
+			"%s: %s's list never starts a season under the minimum (closest %d in %d, minimum %d)" % [
+				dataset, me, smallest, smallest_year, smallest_min])
 	if dataset == "1990":
 		_real_retirements(real_last, retired_at, stayer, first + seasons)
 	GameState.reset()
