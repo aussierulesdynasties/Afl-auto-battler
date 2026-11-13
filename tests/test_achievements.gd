@@ -294,6 +294,16 @@ func _test_no_double_unlock() -> void:
 func _test_full_season() -> void:
 	GameState.reset()
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
+	# Straight to the finals: the unlocks are read when the season closes, so
+	# the home-and-away is skipped, not played; the finals are played. The five
+	# clubs with a premiership achievement top the ladder, so the flag goes to
+	# one of them and the premier's unlock is always checked.
+	GameState.season.round_index = GameState.season.fixture.size()
+	var pts := 80
+	for c in ["STK", "ADE", "FRE", "GWS", "PAD"]:
+		GameState.season.ladder[c]["pts"] = pts
+		pts -= 4
+	GameState.ensure_finals()
 	var guard := 0
 	while not GameState.season.is_season_over() and guard < 40:
 		GameState.advance()
@@ -321,11 +331,10 @@ func _test_full_season() -> void:
 		if str(d["club"]) == prem:
 			defn = d
 			break
-	if str(defn.get("type", "")) == "premiership":
-		_check(GameState.achievements.has(str(defn["id"])),
-				"The premier's premiership achievement unlocked")
-	else:
-		print("SKIP: the premier (%s) has no premiership achievement to check" % prem)
+	_check(str(defn.get("type", "")) == "premiership",
+			"The premier (%s) is a club with a premiership achievement" % prem)
+	_check(GameState.achievements.has(str(defn.get("id", ""))),
+			"The premier's premiership achievement unlocked")
 	# The whole state survives a save and load.
 	_check(GameState.save_career(), "The career saves")
 	var before := GameState.achievements.duplicate()
