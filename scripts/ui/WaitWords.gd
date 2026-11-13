@@ -21,10 +21,10 @@ static func years_without(code: String, start := 0) -> String:
 ## What waiting for `code` costs and gives, one sentence a line.
 static func lines(code: String, start := 0) -> Array:
 	var year := GameDB.enter_year(code) if start == 0 else GameDB.data_enter_year(code)
-	var name_ := GameDB.club_name(code)
+	var club := GameDB.club_name(code)
 	var plays := "plays" if year - 1 == _first(start) else "play"
 	return [
-		"%s join the league in %d, so your first season is %d." % [name_, year, year],
+		"%s join the league in %d, so your first season is %d." % [club, year, year],
 		"%s %s out without you. Their staff sign %d state-league players, chase out-of-contract players at rival clubs and trade picks 5, 7, 11 and 13 for senior players." % [
 			years_without(code, start), plays, Expansion.FOUNDATION_SIZE],
 		"You take over at the %d National Draft with picks 1, 3 and 9, the first pick of each later round, and any players from their academy." % (year - 1),
