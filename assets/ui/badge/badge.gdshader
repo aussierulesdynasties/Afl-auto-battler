@@ -8,6 +8,8 @@ shader_type canvas_item;
 //              colour's shapes, G the second colour's (drawn in the trim colour, as the crest),
 //              B a third colour's (only the anchor's).
 // Every colour is a uniform, so created clubs work too.
+//   kit_atlas: Legacy seasons' real guernseys (tools/kits/kit_atlas.py); kit_cell >= 0 colours
+//              the guernsey from that cell's front instead of the design.
 
 uniform sampler2D parts_tex : filter_linear_mipmap;
 uniform sampler2D designs_tex : filter_linear_mipmap;
@@ -17,6 +19,12 @@ uniform vec4 accent : source_color = vec4(1.0, 0.84, 0.0, 1.0);
 uniform vec4 third : source_color = vec4(1.0, 0.84, 0.0, 1.0);
 uniform int design_cell = 0;
 uniform int design_rows = 5;
+uniform sampler2D kit_atlas : filter_linear, repeat_disable;
+uniform ivec2 kit_grid = ivec2(12, 1);
+uniform int kit_cell = -1;
+// The guernsey's left and right edge in the badge (badge_light's coverage, of its width).
+const float KIT_X0 = 0.184;
+const float KIT_X1 = 0.816;
 // Club Forge outlines the part under the pointer: 0 none, 1 body, 2 pattern, 3 trim.
 uniform int highlight = 0;
 
@@ -33,8 +41,19 @@ void fragment() {
 	col = mix(col, secondary.rgb, d.r);
 	col = mix(col, accent.rgb, d.g);
 	col = mix(col, third.rgb, d.b);
-	col = mix(col, accent.rgb, parts.r);
-	col = mix(col, primary.rgb * 0.45, parts.g);
+	if (kit_cell >= 0) {
+		// The picture's front: its own collar and trim, so no trim tint over it.
+		vec2 g = vec2(clamp((UV.x - KIT_X0) / (KIT_X1 - KIT_X0), 0.0, 1.0), clamp(UV.y, 0.0, 1.0));
+		vec2 px = vec2(textureSize(kit_atlas, 0));
+		vec2 cell_px = px / vec2(float(kit_grid.x) * 2.0, float(kit_grid.y));
+		vec2 at = vec2(float(kit_cell % kit_grid.x) * 2.0, float(kit_cell / kit_grid.x)) * cell_px;
+		vec2 uv = (at + clamp(g * cell_px, vec2(0.5), cell_px - 0.5)) / px;
+		col = texture(kit_atlas, uv).rgb;
+		col = mix(col, col * 0.45, parts.g);
+	} else {
+		col = mix(col, accent.rgb, parts.r);
+		col = mix(col, primary.rgb * 0.45, parts.g);
+	}
 	vec3 patch = lum(primary.rgb) > 0.5 ? vec3(0.09, 0.07, 0.05) : vec3(0.95);
 	col = mix(col, patch, parts.b);
 	col *= lit.r * 1.08;

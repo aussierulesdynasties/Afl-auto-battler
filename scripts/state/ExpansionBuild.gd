@@ -33,8 +33,7 @@ static func building(gs) -> Array:
 	if gs.season == null:
 		return out
 	for code in GameDB.club_order:
-		if GameDB.enter_year(str(code)) == int(gs.season_year) + 1 				and not LegacyRollover.has_entry(str(code), int(gs.season_year) + 1):
-			# A Legacy club brings its real list instead (LegacyRollover).
+		if GameDB.enter_year(str(code)) == int(gs.season_year) + 1:
 			out.append(str(code))
 	return out
 
@@ -97,7 +96,15 @@ static func ensure_foundation(gs, code: String) -> void:
 	var st := state(gs, code)
 	if not (st["list"] as Array).is_empty():
 		return
-	st["list"] = Expansion.foundation_list(code, int(gs.season_year), int(gs.career_seed))
+	# A Legacy club's foundation is its real state-league players; those past
+	# FOUNDATION_SIZE go into the draft before it plays (LegacyRollover).
+	var first := GameDB.enter_year(code)
+	if LegacyRollover.has_foundation(code, first):
+		var got := LegacyRollover.foundation(gs, code, first)
+		st["list"] = got["list"]
+		gs.draftee_pool.append_array(got["pool"])
+	else:
+		st["list"] = Expansion.foundation_list(code, int(gs.season_year), int(gs.career_seed))
 	for p in st["list"]:
 		p["club"] = code
 		# State-league signings, no AFL games: a draftee's familiarity (row 125).
@@ -464,9 +471,20 @@ static func _make_room(gs, code: String, picks: Array) -> void:
 	if over <= 0:
 		return
 	var state_league := list.filter(func(p): return str(p["id"]).begins_with("FND_"))
-	state_league.sort_custom(func(a, b): return int(a["overall"]) < int(b["overall"]))
+	# A real player (a Legacy foundation) makes way last, and goes back into
+	# the prospects for next year's draft rather than out of the game.
+	state_league.sort_custom(func(a, b):
+		var ra := str(a.get("real_name", "")) != ""
+		var rb := str(b.get("real_name", "")) != ""
+		if ra != rb:
+			return rb
+		return int(a["overall"]) < int(b["overall"]))
 	for p in state_league.slice(0, over):
 		list.erase(p)
+		if str(p.get("real_name", "")) != "":
+			p["club"] = ""
+			p["draft_year"] = int(gs.season_year)
+			gs.draftee_pool.append(p)
 
 
 ## How many of the new clubs' extra picks come before the `regular`-th

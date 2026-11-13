@@ -1896,6 +1896,7 @@ static func club_marker(code: String, size := 22.0) -> Control:
 	var crest := GuernseyCrest.make(g["base"], g["pattern"], trim, str(g["design"]), code, size - 2.0)
 	if g.has("pattern3"):
 		crest.third = g["pattern3"]
+	crest.kit_cell = int(g.get("kit_cell", -1))
 	return crest
 
 

@@ -5,14 +5,20 @@ extends RefCounted
 ## where the Grand Final is played, whether there is a Gather Round, and what
 ## happens to a drawn final.
 ##
-## The real seasons 1990-2025 are rows of data/season_rules.csv (read from the
+## The real seasons 1990-2026 are rows of data/season_rules.csv (read from the
 ## AFL Tables season pages: games per club, rounds, finalists, the finals
-## pairings and venues). Any other year (2026 on, or a season with no year)
-## gets DEFAULT, the game's own league: 24 rounds, ten finalists with the
-## wildcard round, the Grand Final at the MCG, a Gather Round, extra time.
+## pairings and venues). 2026 is the real season every 2026 career plays (an
+## Opening Round and 24 more; director 2026-11-13: "Real for 2026 too"). Any
+## other year (2027 on, or a season with no year), and a 2026 season that
+## cannot play the real fixture (Season.build_fixture), gets DEFAULT, the
+## game's own league: 24 rounds, ten finalists with the wildcard round, the
+## Grand Final at the MCG, a Gather Round, extra time.
 ## Every decade loads the same way: one table, keyed by year, read by Season.
 
 const PATH := "res://data/season_rules.csv"
+## The game's own league starts here: a real season in the table, drawn in
+## DEFAULT's shape when its clubs differ from history.
+const GAME_LEAGUE_YEAR := 2026
 
 ## The game's league (2026 on). games 0: the fixture's own rule (one bye at an
 ## even club count, two at an odd one).
