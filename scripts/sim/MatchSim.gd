@@ -5732,7 +5732,7 @@ func _playtest_bounce() -> bool:
 func _fire_bounce(margin: int) -> void:
 	var state := "level" if margin == 0 else ("%d up" % margin if margin > 0 else "%d down" % -margin)
 	var left: int = current_quarter * 30 - current_minute
-	var to_go := 120 - current_minute
+	var to_go := EraFootball.clock_minutes(120 - current_minute, season_year)
 	var when := "in the last minute" if to_go <= 1 else "with %d minutes left" % to_go
 	var title := "Centre ball-up - %s %s" % [state, when]
 	# Two distinct calls, each with its own upside and downside and no
