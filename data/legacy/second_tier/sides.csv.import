@@ -1,19 +1,7 @@
 [remap]
 
-importer="csv_translation"
-type="Translation"
-uid="uid://ck83w1lcmhclf"
+importer="keep"
 
 [deps]
 
-files=["res://data/legacy/second_tier/sides.code.translation", "res://data/legacy/second_tier/sides.name.translation", "res://data/legacy/second_tier/sides.kind.translation", "res://data/legacy/second_tier/sides.afl.translation", "res://data/legacy/second_tier/sides.from.translation", "res://data/legacy/second_tier/sides.to.translation", "res://data/legacy/second_tier/sides.source.translation", "res://data/legacy/second_tier/sides.evidence.translation"]
-
 source_file="res://data/legacy/second_tier/sides.csv"
-dest_files=["res://data/legacy/second_tier/sides.code.translation", "res://data/legacy/second_tier/sides.name.translation", "res://data/legacy/second_tier/sides.kind.translation", "res://data/legacy/second_tier/sides.afl.translation", "res://data/legacy/second_tier/sides.from.translation", "res://data/legacy/second_tier/sides.to.translation", "res://data/legacy/second_tier/sides.source.translation", "res://data/legacy/second_tier/sides.evidence.translation"]
-
-[params]
-
-compress=1
-delimiter=0
-unescape_keys=false
-unescape_translations=true
