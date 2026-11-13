@@ -1,6 +1,7 @@
 # Era guernseys 1990-2026 (TODO row 142, Legacy L9)
 
-`era_guernseys.csv` has one row per club per guernsey era, from 1990 (or the club's entry) to 2026, resolved
+What the figures and crests wear is drawn picture by picture (below, "The kit atlas"). `era_guernseys.csv`
+has one row per club per spec era, from 1990 (or the club's entry) to 2026, resolved
 exactly as the game resolves `data/legacy/clubs_by_year.csv` over `data/clubs.csv`. A blank `to` means the era
 runs to 2026: that row is today's guernsey, unchanged. `game_spec` is the spec the game draws
 (`design:base/pattern/pattern2[/shorts[/pattern3]]`).
@@ -36,13 +37,19 @@ Earlier text-only research (2026-11-11, Wikipedia and club sites) left open chec
 | St Kilda | The cross guernsey 1997-2001 (saints97); today's panels otherwise. |
 | Sydney | The Opera House guernsey on white 1990-91 (swans90); today's from 1992. |
 
-Carlton, Collingwood, Essendon, Fitzroy, Geelong, Hawthorn, Melbourne, North Melbourne and Richmond wear
-today's design in every season (sponsor, collar and number changes only).
+## The kit atlas, picture by picture (director 2026-11-13)
 
-## Not drawn
+The director rejected the era-level chart ("at least 90% of guernsey iterations are missing"), so every
+footyjumpers home picture 1990-2025 is drawn: `tools/kits/kits.txt`, one line per picture (553 pictures,
+268 drawings), drawn by `tools/kits/kit_atlas.py` into `assets/vignette/kits_atlas.png` and
+`data/legacy/kits.csv` (which seasons wear which cell). Each drawing copies the picture's stripe and hoop
+counts and widths, back, collar, trim and panels. Pictures that differ only in what is not drawn share a
+drawing. A picture worn for part of a season is drawn and charted but worn by no season. The match figures
+(design 100 + cell) and the crest read the atlas; the spec above still gives socks, shorts and the oval's discs.
+2026 on is `data/clubs.csv`'s own guernsey, unchanged. Chart: `tools/visual/capture_era_chart.gd`.
 
-Logos and emblems (the eagle, the lion, the bulldog head, the Giants' G is drawn only as the cut), sponsors and
-collars. The figures are too small for them, and the director's ruling is to copy the kit's shapes and colours.
+Calls made from the pictures: North's 2016 home is the blue one (the white 2016 picture is the clash);
+Port's 2004-06 and 2013 "Away" pictures are the home design with other sponsors.
 
 ## New designs in the game
 
