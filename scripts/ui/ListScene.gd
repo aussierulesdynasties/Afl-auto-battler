@@ -245,12 +245,12 @@ func _full_list_panel() -> Control:
 	var seniors := RookieList.seniors(GameState.my_list)
 	var rookies := RookieList.rookies(GameState.my_list).filter(func(q): return not RookieList.is_cat_b(q))
 	var cat_b := RookieList.rookies(GameState.my_list).filter(func(q): return RookieList.is_cat_b(q))
-	var sh := UiKit.lbl("Senior list  %d / %d" % [seniors.size(), RookieList.SENIOR_SPOTS], UiKit.BODY, UiKit.EMPH, true)
+	var sh := UiKit.lbl("Senior list  %d / %d" % [seniors.size(), RookieList.senior_spots()], UiKit.BODY, UiKit.EMPH, true)
 	sh.name = "SeniorListHead"
 	lbox.add_child(sh)
 	_role_groups(lbox, seniors, false)
 	lbox.add_child(UiKit.spacer(8))
-	var rh := UiKit.lbl("Rookie list  %d / %d" % [rookies.size(), RookieList.CAT_A_SPOTS], UiKit.BODY, UiKit.EMPH, true)
+	var rh := UiKit.lbl("Rookie list  %d / %d" % [rookies.size(), RookieList.cat_a_spots()], UiKit.BODY, UiKit.EMPH, true)
 	rh.name = "RookieListHead"
 	lbox.add_child(rh)
 	if rookies.is_empty():
@@ -265,15 +265,15 @@ func _full_list_panel() -> Control:
 		lbox.add_child(UiKit.spacer(8))
 		# A club that started with more than two, as its real 2026 list had
 		# (GWS: three), shows the count alone and says why: "3 / 2" is no rule.
-		var over_b: bool = cat_b.size() > RookieList.CAT_B_SPOTS
+		var over_b: bool = cat_b.size() > RookieList.cat_b_spots()
 		var bh := UiKit.lbl("Category B rookies  %d" % cat_b.size() if over_b
-				else "Category B rookies  %d / %d" % [cat_b.size(), RookieList.CAT_B_SPOTS], UiKit.BODY, UiKit.EMPH, true)
+				else "Category B rookies  %d / %d" % [cat_b.size(), RookieList.cat_b_spots()], UiKit.BODY, UiKit.EMPH, true)
 		bh.name = "CatBListHead"
 		lbox.add_child(bh)
 		var why_words := "Their own spots: they take no rookie list spot and don't count in the 44."
 		if over_b:
 			why_words = "The club's real 2026 list had %d; a club usually has %d spots for them. They take no rookie list spot and don't count in the 44." % [
-					cat_b.size(), RookieList.CAT_B_SPOTS]
+					cat_b.size(), RookieList.cat_b_spots()]
 		var why := UiKit.lbl(why_words,
 				UiKit.SMALL, UiKit.MUTED)
 		why.name = "CatBListWhy"
@@ -449,7 +449,7 @@ func _open_profile(id: String) -> void:
 		actions.append({"name": "Upgrade", "label": "Upgrade to the senior list",
 				"disabled": block != "",
 				"detail": block if block != "" else "He takes a senior spot (%d of %d used) and his wage rises to the senior minimum, %s a season." % [
-						used, RookieList.SENIOR_SPOTS, Contracts.money(RookieList.senior_wage(GameState.season_year))],
+						used, RookieList.senior_spots(), Contracts.money(RookieList.senior_wage(GameState.season_year))],
 				"run": func():
 					if RookieList.upgrade(GameState, GameState.my_club, id):
 						GameState.autosave()
