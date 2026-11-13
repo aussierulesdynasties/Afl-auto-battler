@@ -6,6 +6,7 @@ name: Run on GitHub
 #   gh workflow run run_on_github.yml --ref <branch> -f what=suites -f suites="story preseason"
 #   gh workflow run run_on_github.yml --ref <branch> -f what=balance -f base=main          # paired: main v this branch
 #   gh workflow run run_on_github.yml --ref <branch> -f what=balance -f b="--on my_switch" # paired: this branch, switch off v on
+#   gh workflow run run_on_github.yml --ref <branch> -f what=balance -f years="1990 2000 2010 2020 2026" # year screen
 #   gh workflow run run_on_github.yml --ref <branch> -f what=histories
 #   gh workflow run run_on_github.yml --ref main -f what=bench -f refs="<sha> <sha>" -f reps=2 -f bench_args="--plain"
 #
@@ -57,6 +58,11 @@ on:
         type: string
       bench_args:
         description: "bench: arguments for weeks_bench.gd (for example --plain)"
+        required: false
+        default: ""
+        type: string
+      years:
+        description: "balance: seasons for a year screen (for example 1990 2000 2010 2020 2026); a and matches apply"
         required: false
         default: ""
         type: string
@@ -165,13 +171,19 @@ jobs:
           BASE: ${{ inputs.base }}
           ARM_A: ${{ inputs.a }}
           ARM_B: ${{ inputs.b }}
+          YEARS: ${{ inputs.years }}
         run: |
           case "$MATCHES" in ''|*[!0-9]*) echo "::error::matches must be a whole number, got '$MATCHES'"; exit 2 ;; esac
           set +e
+          if [ -n "$YEARS" ]; then   # year screen (legacy L5): each season against its own real rates
+            cmd=(bash tools/balance.sh year "$MATCHES" --years "$YEARS")
+            [ -z "$ARM_A" ] || cmd+=(--a "$ARM_A")
+          else
           cmd=(bash tools/balance.sh match "$MATCHES")   # bash: a branch that lost the +x bit failed with exit 126
           [ -z "$ARM_A" ] || cmd+=(--a "$ARM_A")
           [ -z "$BASE" ] || cmd+=(--a-root ../_base)
           if [ -n "$ARM_B" ] || [ -n "$BASE" ]; then cmd+=(--b "$ARM_B"); fi
+          fi
           GODOT="$HOME/godot/godot" JOBS=4 OUT="$RUNNER_TEMP/balance" "${cmd[@]}" 2>&1 | tee "$RUNNER_TEMP/balance-report.txt"
           code=${PIPESTATUS[0]}
           { echo '```'; cat "$RUNNER_TEMP/balance-report.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
@@ -181,7 +193,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: run-balance
-          path: ${{ runner.temp }}/balance-report.txt
+          # a year screen keeps its match lines too (fit_era.py --correct reads them)
+          path: |
+            ${{ runner.temp }}/balance-report.txt
+            ${{ runner.temp }}/balance/*/a_*.jsonl
           if-no-files-found: ignore
           retention-days: 14
 
