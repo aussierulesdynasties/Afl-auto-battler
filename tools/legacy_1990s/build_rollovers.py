@@ -122,7 +122,7 @@ def main():
     seen_names = set()
 
     drafts = [r for r in all_rows("drafts.csv")
-              if r["draft"] in ("national", "rookie") and r["pick"] and FIRST_CLASS <= int(r["year"]) <= LAST_DATA]
+              if r["draft"] in ("national", "rookie", "preseason") and r["pick"] and FIRST_CLASS <= int(r["year"]) <= LAST_DATA]
     by_class = defaultdict(list)
     for r in drafts:
         by_class[int(r["year"])].append(r)
@@ -134,7 +134,11 @@ def main():
         rows = by_class.get(year, [])
         nat = sorted((r for r in rows if r["draft"] == "national"), key=lambda r: int(r["pick"]))
         rook = sorted((r for r in rows if r["draft"] == "rookie"), key=lambda r: (int(r["round"] or 0), int(r["pick"])))
-        for r in nat + rook:
+        # The pre-season draft (December) after the rookies: its first-time
+        # players only (a redrafted player is already seen), Liam Jurrah's
+        # 2008 among them (the director's Jurrah storyline, 2026-11-13).
+        pre = sorted((r for r in rows if r["draft"] == "preseason"), key=lambda r: int(r["pick"]))
+        for r in nat + rook + pre:
             dg = r["draftguru_id"]
             # A club's picks before its first season come with its first list.
             if entered(r["club"]) > year:

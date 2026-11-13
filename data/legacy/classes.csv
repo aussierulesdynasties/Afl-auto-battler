@@ -90,6 +90,48 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak
 1990,89,national,STK,Jamie,Shanahan,1967-12-06,194,,Hobart FC,,
 1990,90,national,ESS,Adam,Houlihan,,,,Kyabram,,
 1990,91,national,COL,Chris,Ryan,1974-02-02,,,St Vincent's,,
+1990,92,preseason,BRL,Michael,McLean,1965-03-03,180,MID,Nightcliff,,87
+1990,93,preseason,SYD,Paul,Hawke,1964-07-04,182,MID,,,
+1990,94,preseason,FIT,Matthew,Bourke,1968-09-09,187,MID,Xavier College,,
+1990,95,preseason,FIT,Justin,McGrath,1970-12-05,180,DEF,St Patrick's College / Ballarat YCW,,57
+1990,96,preseason,HAW,Dale,Fleming,1971-08-20,180,FWD,Canterbury / Marcellin College,,55
+1990,97,preseason,MEL,Nick,Sebo,1971-01-17,,,,,
+1990,98,preseason,ESS,Matthew,Medew,1970-11-14,,,,,
+1990,99,preseason,COL,Derek,Percival,1971-02-08,,,,,
+1990,100,preseason,GEE,Adrian,Menera,1970-10-01,,,,,
+1990,101,preseason,WBD,Saade,Ghazi,1969-06-13,,,Williamstown / Central District,,
+1990,102,preseason,MEL,Leigh,Capsalis,1971-12-23,180,MID,Keysborough,,
+1990,103,preseason,BRL,Ian,Kidgell,1970-11-21,203,MID,South Belgrave,,
+1990,104,preseason,SYD,Andrew,Peck,1969-03-19,,,,,
+1990,105,preseason,FIT,Wayne,Peters,1969-06-04,193,,Morwell,,
+1990,106,preseason,RIC,John,Mrakov,1968-11-17,189,MID,,,48
+1990,107,preseason,GEE,Russell,Merriman,1968-04-06,175,MID,,,62
+1990,108,preseason,STK,Damian,Pearce,1971-08-19,,,,,
+1990,109,preseason,CAR,Ben,Robertson,,,,,,
+1990,110,preseason,WBD,Scott,McDonald,1970-11-03,,,,,
+1990,111,preseason,MEL,Kevin,Dyson,1967-05-04,180,MID,Blackburn South / Fitzroy Reserves / Carlton Reserves / Mornington / Oakleigh,,72
+1990,112,preseason,WCE,Craig,McNaughton,,,,,,
+1990,113,preseason,ESS,Darren,Williams,1960-10-13,176,,,,
+1990,114,preseason,COL,Stephen,Anderson,,,,,,
+1990,115,preseason,BRL,Jon,Henry,1970-08-29,,,,,
+1990,116,preseason,SYD,Darren,McAsey,,,,,,
+1990,117,preseason,FIT,Jamie,Bond,1971-11-12,190,MID,Beaufort,,
+1990,118,preseason,RIC,David,Cloke,,,,,,
+1990,119,preseason,GEE,Steven,Jankowicz,1971-03-20,,,East Gambier,,
+1990,120,preseason,STK,Dean,Greig,1968-10-31,185,MID,Camberwell,,65
+1990,121,preseason,CAR,Mark,Bouw,1971-12-23,,,,,
+1990,122,preseason,WBD,David,Ross,,,,North Melbourne U19s,,
+1990,123,preseason,NTH,Anthony,Palmer,1971-08-29,,,,,
+1990,124,preseason,HAW,Mark,McLeod,1968-12-27,196,,,,
+1990,125,preseason,MEL,George,Gorozidis,1971-02-01,,,,,
+1990,126,preseason,ESS,Michael,Strickland,1969-02-06,,,Glenorchy,,
+1990,127,preseason,COL,Ross,Duffy,1970-05-04,,,,,
+1990,128,preseason,CAR,Paul,Williams,1970-01-20,,,,,
+1990,129,preseason,WBD,Phil,Krakouer,,,,,,
+1990,130,preseason,NTH,Dean,Barwick,1971-05-23,,,,,
+1990,131,preseason,HAW,Craig,Young,1971-01-25,,,,,
+1990,132,preseason,WCE,Peter,Higgins,1966-10-11,,,Claremont,,
+1990,133,preseason,ESS,Shane,Heard,1958-07-28,177,MID,,,50
 1991,1,national,BRL,John,Hutton,1966-05-26,185,FWD,Claremont,,62
 1991,2,national,FIT,Marcus,Seecamp,1972-07-27,185,DEF,East Perth,,60
 1991,3,national,MEL,Darren,Kowal,1972-06-18,173,DEF,Claremont,,59
@@ -165,6 +207,33 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak
 1991,73,national,STK,Sam,Jones,,,,,,
 1991,74,national,HAW,Aidan,Bussell,1974-03-11,,,Whorouly,,
 1991,75,national,RIC,Paul,Dimattina,1974-11-22,180,MID,Marcellin College,,68
+1991,76,preseason,RIC,Mark,McQueen,,,,,,
+1991,77,preseason,SYD,Damien,Mellow,1973-09-13,,,Campbelltown HS / Norwood,,
+1991,78,preseason,COL,Ross,Napoli,1972-04-13,,,,,
+1991,79,preseason,ESS,Alan,Schwartz,,,,,,
+1991,80,preseason,BRL,Jason,Jones,1969-03-22,,,,,
+1991,81,preseason,RIC,David,Honybun,,,,,,
+1991,82,preseason,SYD,Alan,Thorpe,1968-10-18,185,,Preston RSL,,
+1991,83,preseason,CAR,Paul,McCormack,1970-03-12,183,DEF,Dandenong,,55
+1991,84,preseason,COL,Ross,Johns,1974-09-13,,,,,
+1991,85,preseason,ESS,Paul,McMaster,1971-05-28,193,,,,
+1991,86,preseason,BRL,Darren,Bartsch,1969-04-28,198,,Loxton / West Adelaide,,
+1991,87,preseason,FIT,Simon,Taylor,1970-12-13,183,,,,
+1991,88,preseason,WBD,Paul,Satterley,1974-02-11,170,,Western U18,,
+1991,89,preseason,NTH,Leigh,Tudor,,,,,,
+1991,90,preseason,COL,Paul,Docherty,1974-03-27,,,Western U18,,
+1991,91,preseason,ESS,Glenn,Kilpatrick,1972-08-29,184,MID,Studfield,,86
+1991,92,preseason,GEE,Ben,Graham,1973-11-02,196,DEF,Leopold,,84
+1991,93,preseason,WCE,Jason,Disney,1974-07-28,,,Boronia / Eastern U18,,
+1991,94,preseason,RIC,Simon,Dennis,1973-02-21,190,,Syndal-Tally Ho,,
+1991,95,preseason,SYD,Andrew,Peck,,,,,,
+1991,96,preseason,COL,Derek,Percival,,,,,,
+1991,97,preseason,STK,Justin,Peckett,1972-10-05,182,DEF,Karingal,,74
+1991,98,preseason,MEL,Cristian,O'Brien,1974-01-15,184,MID,Mordialloc-Braeside / Norwood,,
+1991,99,preseason,BRL,Campbell,Black,1973-05-09,,,Southport,,
+1991,100,preseason,RIC,Adam,Jones,1973-09-18,188,,Xavier College,,
+1991,101,preseason,SYD,Phil,Krakouer,1960-01-15,178,,,,
+1991,102,preseason,NTH,Michael,Scoon,,,,,,
 1992,1,national,WCE,Drew,Banfield,1974-02-27,184,MID,Scotch College (WA) / Subiaco,,71
 1992,2,national,BRL,Nathan,Chapman,1975-05-07,189,DEF,Kangaroo Flat,,59
 1992,3,national,ESS,Michael,Prior,1973-09-06,182,DEF,Noranda / East Perth,,72
@@ -286,6 +355,60 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak
 1992,119,national,MEL,Damon,Munt,1975-12-08,190,,Norwood,,
 1992,120,national,NTH,Marty,Christensen,,,,,,
 1992,121,national,WCE,Brayden,Lyle,1973-03-06,178,MID,Port Adelaide (SANFL),,74
+1992,122,preseason,BRL,Martin,Heffernan,1972-08-28,193,MID,St Patrick's College,,
+1992,123,preseason,RIC,Stuart,Steele,1972-03-28,185,MID,Scotch College / Hawthorn U19s,,
+1992,124,preseason,MEL,Glenn,Freeborn,1973-02-06,183,DEF,Woodville-West Torrens,,69
+1992,125,preseason,ADE,Darryl,Wakelin,1974-08-11,192,DEF,Kimba / Port Adelaide (SANFL),,63
+1992,126,preseason,CAR,Andrew,Leoncelli,1974-07-17,186,MID,Xavier College,,77
+1992,127,preseason,WBD,Anthony,Darcy,1972-03-22,184,MID,Cobden,,46
+1992,128,preseason,GEE,Matthew,McCartin,1972-02-23,196,,Colac,,
+1992,129,preseason,ESS,Ben,Doolan,1973-01-10,181,MID,Albury FC,,61
+1992,130,preseason,SYD,Ryan,Humphreys,1974-10-17,179,,Subiaco,,
+1992,131,preseason,BRL,Craig,McRae,1973-09-22,176,MID,O'Sullivan Beach / Hackham / Glenelg,,68
+1992,132,preseason,NTH,Paul,Geister,1972-01-29,191,,Eudunda / Central District,,
+1992,133,preseason,MEL,Ivan,Bartul,1974-03-22,175,,South Fremantle,,
+1992,134,preseason,FIT,Adam,Sheridan,1971-10-04,184,,St Marys,,
+1992,135,preseason,ADE,Joshua,Mail,1974-12-18,172,DEF,North Adelaide,,
+1992,136,preseason,ESS,Lachlan,Ross,1973-08-12,170,MID,Alice Springs Pioneers / West Adelaide,,
+1992,137,preseason,CAR,Damien,Sheehan,1974-07-06,192,,Port Adelaide (SANFL),,
+1992,138,preseason,COL,Brett,James,1972-12-15,176,MID,Kersbrook / Norwood,,70
+1992,139,preseason,STK,Martin,Heppell,1974-11-14,178,DEF,Carey Grammar,,
+1992,140,preseason,WBD,Brad,Nicholson,1974-06-04,186,DEF,East Doncaster / Eastern U18,,59
+1992,141,preseason,BRL,Darren,Mead,1971-03-29,193,DEF,Ceduna / Port Adelaide (SANFL),,67
+1992,142,preseason,MEL,Mathew,McKay,,,,,,
+1992,143,preseason,FIT,Brett,Rowe,1973-10-22,175,,North Brisbane,,
+1992,144,preseason,ADE,Nick,Pesch,1974-06-25,173,MID,Flinders Park / Woodville-West Torrens,,53
+1992,145,preseason,ESS,Brad,Fox,,,,,,
+1992,146,preseason,CAR,Matthew,Penny,1970-11-08,180,,Box Hill,,
+1992,147,preseason,HAW,Austin,McCrabb,,,,,,
+1992,148,preseason,COL,Kent,Butcher,1973-11-05,180,,Grovedale,,
+1992,149,preseason,STK,Chris,Hollow,1971-11-21,190,DEF,Dandenong,,59
+1992,150,preseason,GEE,Mark,Ballan,,,,,,
+1992,151,preseason,WCE,Brendan,Green,1970-12-11,175,,Claremont,,
+1992,152,preseason,NTH,Rodney,McKay,1972-01-15,191,,,,
+1992,153,preseason,MEL,Paul,Prymke,1970-12-08,194,,Mildura FC / Woodville-West Torrens,,
+1992,154,preseason,FIT,James,Saywell,1973-02-21,182,,Elizabeth / Central District,,
+1992,155,preseason,ADE,Simon,Pedler,1974-05-07,189,,Rostrevor College / Port Adelaide (SANFL),,
+1992,156,preseason,ESS,Brendan,Duncan,1974-04-12,198,,Western U18,,
+1992,157,preseason,HAW,Guy,Rigoni,1974-07-27,181,MID,Myrtleford,,69
+1992,158,preseason,COL,Jason,Williams,1970-04-21,187,,Williamstown,,
+1992,159,preseason,STK,Darren,Bourke,1970-03-25,180,MID,Beverley Hills / Melbourne Reserves / Dandenong,,73
+1992,160,preseason,GEE,Daniel,Fletcher,1974-08-16,183,MID,Geelong U18,,
+1992,161,preseason,BRL,John,Klug,1965-09-28,188,,Glenorchy / Woodville,,
+1992,162,preseason,RIC,Tim,Livingstone,,,,,,
+1992,163,preseason,FIT,Nick,Mitchell,1973-02-01,180,,St Bernards,,
+1992,164,preseason,CAR,Kelvin,Holmes,1973-01-11,180,,Claremont,,
+1992,165,preseason,COL,Andrew,Tranquilli,1972-04-21,186,,Marcellin College,,
+1992,166,preseason,GEE,Shayne,Breuer,1972-09-10,184,FWD,Kalkee / Woodville-West Torrens,,76
+1992,167,preseason,BRL,Julian,Burton,1973-08-15,187,,Immanuel College / Port Adelaide (SANFL),,
+1992,168,preseason,RIC,Adam,Jones,,,,,,
+1992,169,preseason,FIT,Simon,Farrer,1974-10-21,179,,Stawell,,
+1992,170,preseason,CAR,Christian,Davidson,1973-09-25,183,,Collegians,,
+1992,171,preseason,STK,Nick,Hanson,1973-09-21,190,MID,Sandringham,,
+1992,172,preseason,GEE,Damon,Lukins,1970-04-02,184,,Claremont,,
+1992,173,preseason,STK,Greg,Wootton,1971-07-13,178,,South Fremantle,,
+1992,174,preseason,STK,David,Niemann,1971-12-15,194,,Seaton / Woodville-West Torrens,,
+1992,175,preseason,STK,Jason,Mifsud,1973-05-08,178,,Mortlake,,
 1993,1,national,SYD,Darren,Gaspar,1976-05-20,192,DEF,South Fremantle,,74
 1993,2,national,BRL,Nigel,Lappin,1976-06-21,188,MID,Chiltern,,89
 1993,3,national,RIC,Justin,Murphy,1976-04-24,185,MID,De La Salle Old Collegians / Sandringham U18,,67
@@ -349,6 +472,23 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak
 1993,61,national,BRL,Shane,Hamilton,,,,,,
 1993,62,national,FIT,Paul,Mullarvey,1974-01-12,188,,Mooroolbark / Eastern U18 / Box Hill Mustangs,,
 1993,63,national,COL,Andrew,Schauble,1976-11-17,193,DEF,Xavier College,,67
+1993,64,preseason,SYD,Peter,Filandia,1970-05-14,168,MID,Doutta Stars,,77
+1993,65,preseason,RIC,Haydn,Robins,1972-08-09,184,DEF,Ringwood,,
+1993,66,preseason,WBD,Jason,Watts,1971-07-29,185,FWD,Werribee,,63
+1993,67,preseason,GEE,Cain,Liddle,1975-06-11,182,,Western U18,,
+1993,68,preseason,HAW,Simon,Lethlean,1975-11-17,181,,Camberwell Grammar,,
+1993,69,preseason,WCE,Scott,Thomson,1975-03-01,183,,Subiaco,,
+1993,70,preseason,ADE,Shane,Tongerie,1971-02-10,184,MID,Central District,,
+1993,71,preseason,SYD,Andrew,Bomford,1974-07-19,184,MID,North Shore (NSW),,57
+1993,72,preseason,RIC,Adam,Slater,,,,,,
+1993,73,preseason,MEL,John,Carroll,1974-08-12,178,,St Bedes Mentone (VAFA),,
+1993,74,preseason,WBD,Daniel,Hargraves,1975-12-06,192,FWD,Powelltown / Eastern U18,,65
+1993,75,preseason,COL,Trent,Hotton,1973-12-01,193,MID,Warragul / Northern U18,,60
+1993,76,preseason,CAR,Brad,Pearce,1971-08-16,185,FWD,South Launceston / St Kilda U19s,,76
+1993,77,preseason,STK,Doug,Bailey,1971-12-06,190,DEF,Xavier College / Old Xavs,,61
+1993,78,preseason,CAR,Peter,Green,1974-05-03,186,MID,,,
+1993,79,preseason,STK,Kristian,Bardsley,1972-09-13,172,DEF,Scoresby / St Joseph's College (Ferntree Gully),,66
+1993,80,preseason,STK,Danny,McCarthy,1972-09-02,187,,Frankston,,
 1994,1,national,SYD,Anthony,Rocca,1977-08-15,195,FWD,Reservoir Lakeside / Northern U18,,85
 1994,2,national,SYD,Shannon,Grant,1977-04-19,180,MID,Flemington / St Joseph's College (North Melbourne) / Western U18,,87
 1994,3,national,ESS,Scott,Lucas,1977-12-30,192,FWD,Camperdown / Mercy Regional College / St Bernard's College / Geelong U18,,86
@@ -429,6 +569,20 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak
 1994,78,national,BRL,Michael,Murphy,,,,,,
 1994,79,national,HAW,Jade,Rawlings,1977-10-09,196,FWD,Devonport,,78
 1994,80,national,NTH,Kym,Eyers,1977-06-16,187,,Central District,,
+1994,81,preseason,FIT,Jason,Ramsey,1975-01-24,189,,Port Adelaide (SANFL),,
+1994,82,preseason,STK,Glen,Coghlan,1974-07-29,190,,Kyabram,,
+1994,83,preseason,ADE,Peter,Vardy,1976-01-26,181,FWD,Elizabeth / Central District,,78
+1994,84,preseason,ESS,Mark,Fraser,1971-02-04,183,MID,Montmorency,,55
+1994,85,preseason,FIT,Anthony,Mellington,1974-07-27,187,FWD,Shepparton FC,,52
+1994,86,preseason,STK,Mark,Kennedy,1972-05-24,185,,Woodville-West Torrens,,
+1994,87,preseason,ADE,Tyson,Edwards,1976-08-06,178,MID,West Adelaide,,81
+1994,88,preseason,RIC,Mark,McQueen,,,,,,
+1994,89,preseason,COL,Nick,Hider,1971-08-31,174,MID,Camperdown / St Patrick's College,,
+1994,90,preseason,GEE,Dean,Talbot,1975-04-14,194,,Doncaster Heights,,
+1994,91,preseason,ESS,Matthew,Banks,1976-07-20,199,RUCK,Ringwood / Eastern U18,,
+1994,92,preseason,COL,Ryan,Aitken,1976-07-31,181,,Dandenong U18,,
+1994,93,preseason,WBD,Michael,Johnston,1971-02-16,182,MID,Leongatha,,
+1994,94,preseason,WBD,Andrew,Nichol,1974-12-01,196,DEF,Northern U18 / Box Hill,,
 1995,1,national,FRE,Clive,Waterhouse,1974-06-23,184,FWD,Port Adelaide (SANFL),,71
 1995,2,national,FIT,Matthew,Primus,1975-01-12,198,RUCK,Grovedale / Geelong U18 / Norwood,,84
 1995,3,national,WCE,Brendon,Fewster,1974-01-04,193,DEF,West Perth,,60
@@ -462,43 +616,52 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak
 1995,31,national,STK,Andrew,Lamb,1978-12-23,190,,Wodonga Raiders / Murray U18,,
 1995,32,national,HAW,Scott,Grainger,1978-12-12,191,,Lalor / Northern U18,,
 1995,33,national,STK,Jason,Cripps,1976-10-14,183,DEF,Ashwood / De La Salle College / Sandringham U18,,60
-1995,34,national,GEE,Glenn,Kilpatrick,1972-08-29,184,MID,Studfield,,86
-1995,35,national,COL,Luke,Godden,1978-09-21,180,DEF,Yarrambat / Northern U18,,68
-1995,36,national,STK,Ryan,Grinter,1978-01-02,198,,Ocean Grove / Geelong U18,,
-1995,37,national,BRL,Troy,Johnson,1977-07-26,180,,South Fremantle,,
-1995,38,national,WBD,Mark,West,1973-04-03,180,,South Adelaide,,
-1995,39,national,WCE,Jonson,Clifton,1978-01-26,182,,Swan Districts,,
-1995,40,national,ADE,Scott,Hodges,1968-04-26,188,,Salisbury West JFC / Port Adelaide (SANFL),,
-1995,41,national,RIC,Ben,Moore,1977-07-04,180,DEF,Reynella / Glenelg,,58
-1995,42,national,NTH,Brent,Harvey,1978-05-14,167,MID,Preston RSL / Northern U18,,84
-1995,43,national,GEE,Darren,Milburn,1977-04-15,189,DEF,Kilmore / Calder U18,,86
-1995,44,national,GEE,Ronnie,Burns,1973-03-13,183,FWD,St Marys / West Perth,,69
-1995,45,national,FIT,Brad,Cassidy,1976-07-25,185,MID,North Ballarat U18 / Horsham United,,48
-1995,46,national,HAW,Kane,Fraser,1977-07-22,185,DEF,Healesville / East Ringwood / Eastern U18,,
-1995,47,national,ADE,Adam,Ugrinic,1973-06-18,180,,Woodville-West Torrens,,
-1995,48,national,HAW,Adam,Ansell,1978-04-14,184,,Flagstaff Hill / West Adelaide,,
-1995,49,national,MEL,Mark,Bradly,1977-01-24,197,,East Fremantle,,
-1995,50,national,BRL,Daniel,Bradshaw,1978-11-21,190,,Wodonga FC,,
-1995,51,national,WCE,Paul,Whitelaw,1978-02-15,200,RUCK,West Perth,,
-1995,52,national,ESS,Peter,Berbakov,1973-08-22,188,,Sunbury FC / Essendon U19s / Glenelg,,
-1995,53,national,RIC,Ewan,Thompson,1977-03-29,179,MID,MHSOB / Northern U18,,
-1995,54,national,MEL,Darren,O'Brien,1969-03-22,180,DEF,West Perth,,56
-1995,55,national,GEE,Daniel,Lowther,1977-04-19,181,DEF,Diamond Creek / Northern U18,,59
-1995,56,national,CAR,Adrian,Burdon,1978-08-04,186,,New Norfolk / Tasmania U18,,
-1995,57,national,CAR,Jacob,Anstey,1978-01-27,176,,Tuggeranong,,
-1995,58,national,COL,Matthew,Carr,1978-12-29,191,DEF,East Fremantle,,66
-1995,59,national,WCE,Neil,Marshall,1977-07-06,182,DEF,Claremont,,
-1995,60,national,RIC,Michael,Raidis,1978-02-18,183,,Glenelg,,
-1995,61,national,GEE,Brady,Anderson,1975-06-12,178,MID,East Perth,,49
-1995,62,national,CAR,Daniel,Marshall,1978-02-15,192,,Frankston YCW / Dandenong U18,,
-1995,63,national,ADE,Ashley,Fernee,1977-06-24,196,,East Keilor / Calder U18,,
-1995,64,national,COL,Jason,Bevan,1978-04-18,180,,South Adelaide,,
-1995,65,national,MEL,Ashley,Gehling,1977-04-16,178,,Springvale / Dandenong U18,,
-1995,66,national,GEE,Stuart,Lamond,1978-07-02,191,,Woodville-West Torrens,,
-1995,67,national,COL,Mark,Bradley,1978-09-18,193,,Wonthaggi Rovers / Gippsland U18,,
-1995,68,national,GEE,Clint,Bizzell,1976-06-28,188,DEF,Brisbane Boys' College / Kedron Grange,,75
-1995,69,national,COL,Ben,Kemp,1977-03-22,178,,Rostrevor College / Norwood,,
-1995,70,national,COL,Steven,Pitt,1973-07-22,188,FWD,Norwood,,47
+1995,34,national,COL,Luke,Godden,1978-09-21,180,DEF,Yarrambat / Northern U18,,68
+1995,35,national,STK,Ryan,Grinter,1978-01-02,198,,Ocean Grove / Geelong U18,,
+1995,36,national,BRL,Troy,Johnson,1977-07-26,180,,South Fremantle,,
+1995,37,national,WBD,Mark,West,1973-04-03,180,,South Adelaide,,
+1995,38,national,WCE,Jonson,Clifton,1978-01-26,182,,Swan Districts,,
+1995,39,national,ADE,Scott,Hodges,1968-04-26,188,,Salisbury West JFC / Port Adelaide (SANFL),,
+1995,40,national,RIC,Ben,Moore,1977-07-04,180,DEF,Reynella / Glenelg,,58
+1995,41,national,NTH,Brent,Harvey,1978-05-14,167,MID,Preston RSL / Northern U18,,84
+1995,42,national,GEE,Darren,Milburn,1977-04-15,189,DEF,Kilmore / Calder U18,,86
+1995,43,national,GEE,Ronnie,Burns,1973-03-13,183,FWD,St Marys / West Perth,,69
+1995,44,national,FIT,Brad,Cassidy,1976-07-25,185,MID,North Ballarat U18 / Horsham United,,48
+1995,45,national,HAW,Kane,Fraser,1977-07-22,185,DEF,Healesville / East Ringwood / Eastern U18,,
+1995,46,national,ADE,Adam,Ugrinic,1973-06-18,180,,Woodville-West Torrens,,
+1995,47,national,HAW,Adam,Ansell,1978-04-14,184,,Flagstaff Hill / West Adelaide,,
+1995,48,national,MEL,Mark,Bradly,1977-01-24,197,,East Fremantle,,
+1995,49,national,BRL,Daniel,Bradshaw,1978-11-21,190,,Wodonga FC,,
+1995,50,national,WCE,Paul,Whitelaw,1978-02-15,200,RUCK,West Perth,,
+1995,51,national,ESS,Peter,Berbakov,1973-08-22,188,,Sunbury FC / Essendon U19s / Glenelg,,
+1995,52,national,RIC,Ewan,Thompson,1977-03-29,179,MID,MHSOB / Northern U18,,
+1995,53,national,MEL,Darren,O'Brien,1969-03-22,180,DEF,West Perth,,56
+1995,54,national,GEE,Daniel,Lowther,1977-04-19,181,DEF,Diamond Creek / Northern U18,,59
+1995,55,national,CAR,Adrian,Burdon,1978-08-04,186,,New Norfolk / Tasmania U18,,
+1995,56,national,CAR,Jacob,Anstey,1978-01-27,176,,Tuggeranong,,
+1995,57,national,COL,Matthew,Carr,1978-12-29,191,DEF,East Fremantle,,66
+1995,58,national,WCE,Neil,Marshall,1977-07-06,182,DEF,Claremont,,
+1995,59,national,RIC,Michael,Raidis,1978-02-18,183,,Glenelg,,
+1995,60,national,GEE,Brady,Anderson,1975-06-12,178,MID,East Perth,,49
+1995,61,national,CAR,Daniel,Marshall,1978-02-15,192,,Frankston YCW / Dandenong U18,,
+1995,62,national,ADE,Ashley,Fernee,1977-06-24,196,,East Keilor / Calder U18,,
+1995,63,national,COL,Jason,Bevan,1978-04-18,180,,South Adelaide,,
+1995,64,national,MEL,Ashley,Gehling,1977-04-16,178,,Springvale / Dandenong U18,,
+1995,65,national,GEE,Stuart,Lamond,1978-07-02,191,,Woodville-West Torrens,,
+1995,66,national,COL,Mark,Bradley,1978-09-18,193,,Wonthaggi Rovers / Gippsland U18,,
+1995,67,national,GEE,Clint,Bizzell,1976-06-28,188,DEF,Brisbane Boys' College / Kedron Grange,,75
+1995,68,national,COL,Ben,Kemp,1977-03-22,178,,Rostrevor College / Norwood,,
+1995,69,national,COL,Steven,Pitt,1973-07-22,188,FWD,Norwood,,47
+1995,70,preseason,FIT,Brent,Frewen,1977-10-20,195,,South Mildura / Bendigo U18,,
+1995,71,preseason,STK,Andrew,McLean,1973-07-18,193,DEF,Brighton Grammar / Old Brighton / North Launceston,,
+1995,72,preseason,COL,Mark,Pitura,1974-06-26,192,,Turvey Park,,
+1995,73,preseason,WBD,Jason,Lappin,1974-01-05,182,,Wodonga Raiders,,
+1995,74,preseason,ESS,Richard,Peck,1975-04-25,177,,Claremont,,
+1995,75,preseason,NTH,Peter,Bell,1976-03-01,175,MID,Kojonup / Aquinas College (WA) / South Fremantle,,88
+1995,76,preseason,STK,Jason,Traianidis,1974-11-07,188,DEF,Shepparton United / North Melbourne Reserves,,61
+1995,77,preseason,ADE,Simon,Goodwin,1976-12-26,185,MID,Unley HS / South Adelaide,,86
+1995,78,preseason,BRL,Matthew,Waters,1973-01-08,182,,North Brisbane,,
+1995,79,preseason,ADE,Brendon,Logan,1975-12-17,185,,West Perth,,
 1996,1,national,WCE,Michael,Gardiner,1979-07-05,199,RUCK,Albany Royals / Wesley College (WA) / Hale School / Claremont,,79
 1996,2,national,ESS,Chris,Heffernan,1979-01-29,187,MID,Terang / Geelong U18,,68
 1996,3,national,BRL,Rory,Hilton,1979-04-15,186,DEF,Wodonga FC / Murray U18,,81
@@ -518,94 +681,100 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak
 1996,17,national,MEL,Alistair,Nicholson,1978-03-04,197,,Scotch College (WA) / Claremont,,
 1996,18,national,NTH,Evan,Hewitt,1978-07-07,193,DEF,Trinity College (WA) / Subiaco,,57
 1996,19,national,WCE,Josh,Wooden,1978-11-14,183,,Lockhart / NSW-ACT U18,,
-1996,20,national,ESS,Andrew,Bomford,1974-07-19,184,MID,North Shore (NSW),,57
-1996,21,national,BRL,Tim,Notting,1978-10-21,188,DEF,Navarre / North Ballarat U18,,64
-1996,22,national,SYD,Troy,Cook,1976-08-12,176,MID,Perth,,81
-1996,23,national,ESS,Jason,Johnson,1978-01-25,180,MID,Kilmore / Assumption College / Calder U18,,87
-1996,24,national,HAW,Nathan,Turvey,1977-10-17,183,DEF,South Fremantle,,
-1996,25,national,MEL,Hayden,Lamaro,1978-10-03,185,DEF,Euroa / Murray U18,,
-1996,26,national,FRE,Jess,Sinclair,1978-08-26,183,DEF,East Ringwood / Eastern U18,,85
-1996,27,national,WBD,Jim,Plunkett,1978-07-26,179,MID,Montmorency / Northern U18,,67
-1996,28,national,SYD,Will,Sangster,1978-10-11,198,RUCK,Bayside JFC / East Malvern / Melbourne Grammar / Sandringham U18,,
-1996,29,national,RIC,Mark,Chaffey,1977-05-06,178,DEF,Caulfield Grammar,,76
-1996,30,national,HAW,Jonathan,Hay,1979-08-13,194,,East Fremantle,,
-1996,31,national,WCE,Nicholas,Stone,1972-09-19,187,DEF,Claremont,,58
-1996,32,national,ESS,Forfeited,due to violation of salary cap regulations,,,,,,
-1996,33,national,GEE,Paul,Corrigan,1977-07-30,185,,Rythdale-Officer-Cardinia / Haileybury College / Dandenong U18 / Melbourne Reserves,,
-1996,34,national,WBD,Jacob,Rhodes,1979-01-08,175,,South Warrnambool / Geelong U18,,
-1996,35,national,MEL,Clayton,Gardiner,1978-04-22,187,,Claremont,,
-1996,36,national,FRE,Matthew,Clucas,1978-03-18,174,,East Fremantle,,
-1996,37,national,WBD,Brett,Montgomery,1973-06-01,180,DEF,South Croydon / Essendon Reserves / Springvale,,73
-1996,38,national,NTH,Luke,McCormick,1978-08-05,173,,Ainslie / NSW-ACT U18,,
-1996,39,national,CAR,Damien,Lock,1978-10-01,179,MID,Eaglehawk / Bendigo U18,,49
-1996,40,national,WCE,Michael,Braun,1978-03-24,175,MID,Silverton / Echuca United / Bendigo U18,,64
-1996,41,national,ESS,Matthew,Watson,1976-12-02,199,RUCK,Warragul / Gippsland U18 / Essendon Reserves,,
-1996,42,national,RIC,Steven,McKee,1978-06-20,199,RUCK,Myrtleford,,59
-1996,43,national,NTH,Cameron,Mooney,1979-09-26,195,FWD,Turvey Park / NSW-ACT U18,,76
-1996,44,national,WBD,Paul,Dooley,1975-10-03,196,DEF,St Peters / Williamstown,,49
-1996,45,national,ADE,Andrew,Eccles,1979-06-01,187,DEF,St Mary's (NFL) / Parade College / Northern U18,,59
-1996,46,national,WBD,Stephen,Powell,1976-09-07,181,MID,St Kevin's College / Sandringham U18,,71
-1996,47,national,STK,Andrew,Thompson,1972-10-21,180,MID,Melbourne Grammar / Old Melburnians,,87
-1996,48,national,HAW,Darren,Collins,,,,Port Adelaide (SANFL),,
-1996,49,national,ESS,Paul,Hills,,,,,,
-1996,50,national,NTH,Byron,Pickett,1977-08-11,179,DEF,Port Adelaide (SANFL),,88
-1996,51,national,MEL,Russell,Robertson,1978-11-24,187,FWD,Burnie / Tasmania U18,,75
-1996,52,national,ADE,Chad,Rintoul,1974-07-31,180,DEF,East Fremantle,,59
-1996,53,national,NTH,Adam,Hay,1978-07-27,198,,East Perth,,
-1996,54,national,STK,Brett,Knowles,1978-05-13,187,DEF,Yinnar / Gippsland U18,,62
-1996,55,national,RIC,Brent,Frewen,1977-10-20,195,,South Mildura / Bendigo U18,,
-1996,56,national,HAW,Brett,Howman,1978-09-10,189,,Tuggeranong / NSW-ACT U18,,
-1996,57,national,CAR,Chris,Jackson,1978-10-07,193,,Hay / NSW-ACT U18,,
-1996,58,national,MEL,Mark,Winterton,1978-02-11,183,,Noble Park / Dandenong U18,,
-1996,59,national,ADE,Greg,Dempsey,1979-02-19,176,,West Adelaide,,
-1996,60,national,COL,Marcus,Barham,1978-10-10,185,,Gisborne / Calder U18,,
-1996,61,national,STK,Lucas,Fleming,1979-02-25,181,,Greensborough / Northern U18,,
-1996,62,national,RIC,Daniel,Donati,1977-09-29,187,,Xavier College / Old Xavs,,
-1996,63,national,HAW,Chris,Holcombe,1978-08-22,189,,Mornington / Dandenong U18,,
-1996,64,national,CAR,Anthony,Franchina,1977-10-11,176,,Newlands-Coburg / St Joseph's College (North Melbourne) / Calder U18 / Northern U18,,
-1996,65,national,MEL,Duncan,O'Toole,1978-12-18,,,Devonport,,
-1996,66,national,MEL,Ashley,Gehling,,,,,,
-1996,67,national,COL,Josh,Mahoney,1977-10-31,180,DEF,St Kevin's College / Western U18 / Williamstown,,64
-1996,68,national,ADE,Ben,Parker,1978-06-05,180,,Murray U18,,
-1996,69,national,COL,Brad,Fuller,1978-08-08,174,,Tuggeranong / Marist College (ACT) / Eastlake / NSW-ACT U18,,
-1996,70,national,HAW,Phillip,Smith,1978-08-07,183,,West Perth,,
-1996,71,national,COL,Dwayne,Griffin,1977-02-28,182,MID,Swan Districts,,
-1996,72,national,COL,Leigh,Singline,1977-08-17,183,,South Launceston,,
-1996,73,rookie,WBD,Adam,Contessa,1976-12-29,176,DEF,Coburg / Northern U18 / North Melbourne Reserves,,67
-1996,74,rookie,MEL,Nathan,Bassett,1976-12-07,190,DEF,Norwood Morialta HS / Norwood,,79
-1996,75,rookie,FRE,Cameron,Venables,1975-10-29,193,DEF,Hale School / Subiaco,,
-1996,76,rookie,ADE,Ben,Marsh,1976-07-09,201,RUCK,Flagstaff Hill / West Adelaide,,51
-1996,77,rookie,COL,Mal,Michael,1977-06-24,190,DEF,St Peters College (Qld) / Morningside,,69
-1996,78,rookie,RIC,Justin,Plapp,1977-06-22,189,DEF,Burnie,,59
-1996,79,rookie,HAW,Bradley,Campbell,1975-12-13,192,,Tongala,,
-1996,80,rookie,GEE,Michael,Brown,1977-07-13,,,Fitzroy Reserves,,
-1996,81,rookie,CAR,Mark,Porter,1976-10-11,199,RUCK,King Valley / Coburg Tigers,,70
-1996,82,rookie,WCE,Paul,Blair,1978-02-27,,,Subiaco,,
-1996,83,rookie,ESS,Mark,Johnson,1978-05-23,179,DEF,Calder U18,,91
-1996,84,rookie,SYD,Nathan,Tresize,1978-11-21,,,Murray U18,,
-1996,85,rookie,,Jason,Lappin,,,,,,
-1996,86,rookie,MEL,Daniel,Ward,1977-07-09,185,DEF,Western U18,,77
-1996,87,rookie,FRE,Matthew,Richter,1976-03-25,,,Claremont,,
-1996,88,rookie,ADE,Steven,Coghill,1975-02-01,,,West Adelaide,,
-1996,89,rookie,COL,Andrew,Pugsley,1978-07-25,186,DEF,Scoresby / Eastern U18,,
-1996,90,rookie,RIC,Jason,Ramsey,1975-01-24,189,,Port Adelaide (SANFL),,
-1996,91,rookie,WCE,Ryan,Webb,1976-05-07,,,West Perth,,
-1996,92,rookie,MEL,Matthew,Bishop,1975-07-11,195,DEF,Box Hill Mustangs,,69
-1996,93,rookie,FRE,Rupert,Betheras,1975-11-23,181,MID,De La Salle College / De La Salle Old Collegians / East Perth,,69
-1996,94,rookie,WCE,Trent,Simpson,1976-08-18,183,,Subiaco,,
-1996,95,rookie,ESS,Andrew,Ramsden,1974-01-27,,,Old Trinity,,
-1996,96,rookie,,Scott,Gooch,,,,,,
-1996,97,rookie,COL,Brett,Warburton,1976-03-27,,,Carlton Reserves,,
-1996,98,rookie,WCE,Todd,Nener,1978-03-06,191,,East Perth,,
-1996,99,rookie,SYD,Steven,Mahar,1976-07-30,,,Belconnen,,
-1996,100,rookie,FRE,Gavin,Milentis,1976-01-12,,,Claremont,,
-1996,101,rookie,COL,Peter,O'Brien,1976-02-05,,,Old Melburnians,,
-1996,102,rookie,ESS,Andrew,Henderson,1976-10-03,,,Uni Blues,,
-1996,103,rookie,,Leigh,Marshall,,,,,,
-1996,104,rookie,MEL,James,McDonald,1976-10-05,181,MID,Damascus College / St Patrick's College / Ballarat YCW / North Ballarat U18 / Old Xavs,,80
-1996,105,rookie,COL,Mark,Oxley,1976-12-21,,,Castlemaine,,
-1996,106,rookie,ESS,Damien,Franken,1974-06-19,192,,Donvale,,
-1996,107,rookie,SYD,Adam,Ryder,1972-09-22,,,Belconnen,,
+1996,20,national,BRL,Tim,Notting,1978-10-21,188,DEF,Navarre / North Ballarat U18,,64
+1996,21,national,SYD,Troy,Cook,1976-08-12,176,MID,Perth,,81
+1996,22,national,ESS,Jason,Johnson,1978-01-25,180,MID,Kilmore / Assumption College / Calder U18,,87
+1996,23,national,HAW,Nathan,Turvey,1977-10-17,183,DEF,South Fremantle,,
+1996,24,national,MEL,Hayden,Lamaro,1978-10-03,185,DEF,Euroa / Murray U18,,
+1996,25,national,FRE,Jess,Sinclair,1978-08-26,183,DEF,East Ringwood / Eastern U18,,85
+1996,26,national,WBD,Jim,Plunkett,1978-07-26,179,MID,Montmorency / Northern U18,,67
+1996,27,national,SYD,Will,Sangster,1978-10-11,198,RUCK,Bayside JFC / East Malvern / Melbourne Grammar / Sandringham U18,,
+1996,28,national,RIC,Mark,Chaffey,1977-05-06,178,DEF,Caulfield Grammar,,76
+1996,29,national,HAW,Jonathan,Hay,1979-08-13,194,,East Fremantle,,
+1996,30,national,WCE,Nicholas,Stone,1972-09-19,187,DEF,Claremont,,58
+1996,31,national,ESS,Forfeited,due to violation of salary cap regulations,,,,,,
+1996,32,national,GEE,Paul,Corrigan,1977-07-30,185,,Rythdale-Officer-Cardinia / Haileybury College / Dandenong U18 / Melbourne Reserves,,
+1996,33,national,WBD,Jacob,Rhodes,1979-01-08,175,,South Warrnambool / Geelong U18,,
+1996,34,national,MEL,Clayton,Gardiner,1978-04-22,187,,Claremont,,
+1996,35,national,FRE,Matthew,Clucas,1978-03-18,174,,East Fremantle,,
+1996,36,national,WBD,Brett,Montgomery,1973-06-01,180,DEF,South Croydon / Essendon Reserves / Springvale,,73
+1996,37,national,NTH,Luke,McCormick,1978-08-05,173,,Ainslie / NSW-ACT U18,,
+1996,38,national,CAR,Damien,Lock,1978-10-01,179,MID,Eaglehawk / Bendigo U18,,49
+1996,39,national,WCE,Michael,Braun,1978-03-24,175,MID,Silverton / Echuca United / Bendigo U18,,64
+1996,40,national,ESS,Matthew,Watson,1976-12-02,199,RUCK,Warragul / Gippsland U18 / Essendon Reserves,,
+1996,41,national,RIC,Steven,McKee,1978-06-20,199,RUCK,Myrtleford,,59
+1996,42,national,NTH,Cameron,Mooney,1979-09-26,195,FWD,Turvey Park / NSW-ACT U18,,76
+1996,43,national,WBD,Paul,Dooley,1975-10-03,196,DEF,St Peters / Williamstown,,49
+1996,44,national,ADE,Andrew,Eccles,1979-06-01,187,DEF,St Mary's (NFL) / Parade College / Northern U18,,59
+1996,45,national,WBD,Stephen,Powell,1976-09-07,181,MID,St Kevin's College / Sandringham U18,,71
+1996,46,national,STK,Andrew,Thompson,1972-10-21,180,MID,Melbourne Grammar / Old Melburnians,,87
+1996,47,national,HAW,Darren,Collins,,,,Port Adelaide (SANFL),,
+1996,48,national,ESS,Paul,Hills,,,,,,
+1996,49,national,NTH,Byron,Pickett,1977-08-11,179,DEF,Port Adelaide (SANFL),,88
+1996,50,national,MEL,Russell,Robertson,1978-11-24,187,FWD,Burnie / Tasmania U18,,75
+1996,51,national,ADE,Chad,Rintoul,1974-07-31,180,DEF,East Fremantle,,59
+1996,52,national,NTH,Adam,Hay,1978-07-27,198,,East Perth,,
+1996,53,national,STK,Brett,Knowles,1978-05-13,187,DEF,Yinnar / Gippsland U18,,62
+1996,54,national,HAW,Brett,Howman,1978-09-10,189,,Tuggeranong / NSW-ACT U18,,
+1996,55,national,CAR,Chris,Jackson,1978-10-07,193,,Hay / NSW-ACT U18,,
+1996,56,national,MEL,Mark,Winterton,1978-02-11,183,,Noble Park / Dandenong U18,,
+1996,57,national,ADE,Greg,Dempsey,1979-02-19,176,,West Adelaide,,
+1996,58,national,COL,Marcus,Barham,1978-10-10,185,,Gisborne / Calder U18,,
+1996,59,national,STK,Lucas,Fleming,1979-02-25,181,,Greensborough / Northern U18,,
+1996,60,national,RIC,Daniel,Donati,1977-09-29,187,,Xavier College / Old Xavs,,
+1996,61,national,HAW,Chris,Holcombe,1978-08-22,189,,Mornington / Dandenong U18,,
+1996,62,national,CAR,Anthony,Franchina,1977-10-11,176,,Newlands-Coburg / St Joseph's College (North Melbourne) / Calder U18 / Northern U18,,
+1996,63,national,MEL,Duncan,O'Toole,1978-12-18,,,Devonport,,
+1996,64,national,MEL,Ashley,Gehling,,,,,,
+1996,65,national,COL,Josh,Mahoney,1977-10-31,180,DEF,St Kevin's College / Western U18 / Williamstown,,64
+1996,66,national,ADE,Ben,Parker,1978-06-05,180,,Murray U18,,
+1996,67,national,COL,Brad,Fuller,1978-08-08,174,,Tuggeranong / Marist College (ACT) / Eastlake / NSW-ACT U18,,
+1996,68,national,HAW,Phillip,Smith,1978-08-07,183,,West Perth,,
+1996,69,national,COL,Dwayne,Griffin,1977-02-28,182,MID,Swan Districts,,
+1996,70,national,COL,Leigh,Singline,1977-08-17,183,,South Launceston,,
+1996,71,rookie,WBD,Adam,Contessa,1976-12-29,176,DEF,Coburg / Northern U18 / North Melbourne Reserves,,67
+1996,72,rookie,MEL,Nathan,Bassett,1976-12-07,190,DEF,Norwood Morialta HS / Norwood,,79
+1996,73,rookie,FRE,Cameron,Venables,1975-10-29,193,DEF,Hale School / Subiaco,,
+1996,74,rookie,ADE,Ben,Marsh,1976-07-09,201,RUCK,Flagstaff Hill / West Adelaide,,51
+1996,75,rookie,COL,Mal,Michael,1977-06-24,190,DEF,St Peters College (Qld) / Morningside,,69
+1996,76,rookie,RIC,Justin,Plapp,1977-06-22,189,DEF,Burnie,,59
+1996,77,rookie,HAW,Bradley,Campbell,1975-12-13,192,,Tongala,,
+1996,78,rookie,GEE,Michael,Brown,1977-07-13,,,Fitzroy Reserves,,
+1996,79,rookie,CAR,Mark,Porter,1976-10-11,199,RUCK,King Valley / Coburg Tigers,,70
+1996,80,rookie,WCE,Paul,Blair,1978-02-27,,,Subiaco,,
+1996,81,rookie,ESS,Mark,Johnson,1978-05-23,179,DEF,Calder U18,,91
+1996,82,rookie,SYD,Nathan,Tresize,1978-11-21,,,Murray U18,,
+1996,83,rookie,,Jason,Lappin,,,,,,
+1996,84,rookie,MEL,Daniel,Ward,1977-07-09,185,DEF,Western U18,,77
+1996,85,rookie,FRE,Matthew,Richter,1976-03-25,,,Claremont,,
+1996,86,rookie,ADE,Steven,Coghill,1975-02-01,,,West Adelaide,,
+1996,87,rookie,COL,Andrew,Pugsley,1978-07-25,186,DEF,Scoresby / Eastern U18,,
+1996,88,rookie,WCE,Ryan,Webb,1976-05-07,,,West Perth,,
+1996,89,rookie,MEL,Matthew,Bishop,1975-07-11,195,DEF,Box Hill Mustangs,,69
+1996,90,rookie,FRE,Rupert,Betheras,1975-11-23,181,MID,De La Salle College / De La Salle Old Collegians / East Perth,,69
+1996,91,rookie,WCE,Trent,Simpson,1976-08-18,183,,Subiaco,,
+1996,92,rookie,ESS,Andrew,Ramsden,1974-01-27,,,Old Trinity,,
+1996,93,rookie,,Scott,Gooch,,,,,,
+1996,94,rookie,COL,Brett,Warburton,1976-03-27,,,Carlton Reserves,,
+1996,95,rookie,WCE,Todd,Nener,1978-03-06,191,,East Perth,,
+1996,96,rookie,SYD,Steven,Mahar,1976-07-30,,,Belconnen,,
+1996,97,rookie,FRE,Gavin,Milentis,1976-01-12,,,Claremont,,
+1996,98,rookie,COL,Peter,O'Brien,1976-02-05,,,Old Melburnians,,
+1996,99,rookie,ESS,Andrew,Henderson,1976-10-03,,,Uni Blues,,
+1996,100,rookie,,Leigh,Marshall,,,,,,
+1996,101,rookie,MEL,James,McDonald,1976-10-05,181,MID,Damascus College / St Patrick's College / Ballarat YCW / North Ballarat U18 / Old Xavs,,80
+1996,102,rookie,COL,Mark,Oxley,1976-12-21,,,Castlemaine,,
+1996,103,rookie,ESS,Damien,Franken,1974-06-19,192,,Donvale,,
+1996,104,rookie,SYD,Adam,Ryder,1972-09-22,,,Belconnen,,
+1996,105,preseason,MEL,Leigh,Newton,1976-03-25,198,,King Valley / Albury FC / Murray U18,,
+1996,106,preseason,RIC,Brett,Evans,1972-05-26,186,FWD,Springvale,,61
+1996,107,preseason,HAW,Jon,Hassall,1973-08-14,174,MID,Warrandyte,,57
+1996,108,preseason,CAR,Darren,Hulme,1977-07-19,175,MID,Frankston Bombers / Dandenong U18,,69
+1996,109,preseason,SYD,John,Stevens,1971-06-15,187,DEF,Ivanhoe Grammar / Old Ivanhoe / Collingwood U19s,,60
+1996,110,preseason,NTH,Brett,Chandler,1975-07-11,173,MID,Doncaster Heights / Eastern U18,,54
+1996,111,preseason,STK,Brad,Campbell,1975-12-21,181,DEF,Corowa-Rutherglen / Murray U18 / Port Melbourne,,59
+1996,112,preseason,MEL,Shane,Woewodin,1976-07-12,185,MID,Bullcreek Leeming JFC / East Fremantle,,86
+1996,113,preseason,COL,Michael,Gardiner,1978-03-22,197,,Subiaco,,
 1997,1,national,MEL,Travis,Johnstone,1980-07-17,184,MID,Chelsea / Dandenong U18,,81
 1997,2,national,RIC,Brad,Ottens,1980-01-25,202,RUCK,Immanuel College / Glenelg,,87
 1997,3,national,HAW,Trent,Croad,1980-03-09,190,,Endeavour Hills / Narre Warren / De La Salle College / Dandenong U18,,
@@ -676,70 +845,74 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak
 1997,68,national,BRL,Beau,McDonald,1979-11-03,203,RUCK,Swan Districts,,
 1997,69,national,WBD,Paul,Digiovine,1979-07-02,195,,Beverley Hills / Oakleigh U18,,
 1997,70,national,STK,Brent,Cowell,1980-02-07,179,,Bairnsdale / Gippsland U18,,
-1997,71,national,MEL,Guy,Rigoni,1974-07-27,181,MID,Myrtleford,,69
-1997,72,national,HAW,Richie,Vandenberg,1977-01-14,178,MID,Wentworth / Uni Blues,,73
-1997,73,national,CAR,John,Hynes,1979-02-23,184,,Sandringham U18,,
-1997,74,national,COL,Troy,Kirwen,1979-12-20,190,,Bundoora / Northern U18,,
-1997,75,national,HAW,Nathan,Thompson,1978-02-14,194,FWD,Kyneton / Bendigo U18,,77
-1997,76,national,CAR,Ben,Thompson,1978-10-04,186,MID,Zillmere,,
-1997,77,national,COL,Frankie,Raso,1979-09-12,176,DEF,Preston RSL / Northern U18,,55
-1997,78,national,HAW,Hayden,Burgiel,1979-03-23,183,,Gippsland U18,,
-1997,79,national,COL,Scott,Whiston,1979-05-17,183,,Central District,,
-1997,80,rookie,MEL,Luke,Williams,1979-12-29,185,DEF,Oakleigh U18,,60
-1997,81,rookie,ESS,Dean,Rioli,1978-05-20,180,FWD,South Fremantle,,71
-1997,82,rookie,RIC,Chris,Bossong,1978-07-12,192,,St Kevin's Old Boys,,
-1997,83,rookie,FRE,Brad,Dodd,1977-03-23,186,,East Fremantle,,
-1997,84,rookie,CAR,Simon,Fletcher,1978-08-17,188,DEF,Grovedale / Geelong U18,,60
-1997,85,rookie,COL,George,Bakoulas,1979-01-20,195,,Calder U18,,
-1997,86,rookie,PAD,Barnaby,French,1975-11-25,200,RUCK,Pembroke School / Ironbank-Cherry Gardens,,68
-1997,87,rookie,SYD,Mark,Brown,1977-07-20,180,,Numurkah,,
-1997,88,rookie,WCE,Conrad,Chambers,1979-10-23,194,,East Fremantle,,
-1997,89,rookie,GEE,Paul,Lindsay,1976-02-28,198,,East Fremantle,,
-1997,90,rookie,NTH,David,Round,1978-06-25,192,,Strathmore / Calder U18,,
-1997,91,rookie,WBD,Lincoln,Reynolds,1977-09-11,190,,Geelong U18,,
-1997,92,rookie,STK,Lachlan,Brown,1976-08-01,180,,St Kilda Reserves,,
-1997,93,rookie,ADE,Ben,Marsh,,,,,,
-1997,94,rookie,MEL,Jamie,Cann,1979-08-23,176,,Craigieburn / Assumption College / Calder U18,,
-1997,95,rookie,HAW,Glen,Bowyer,1979-12-28,181,DEF,Wodonga FC / Murray U18,,69
-1997,96,rookie,ESS,Winis,Imbi,1979-04-26,172,,Papua New Guinea / North Ballarat U18,,
-1997,97,rookie,RIC,Greg,Tivendale,1979-04-19,185,MID,Gippsland U18,,68
-1997,98,rookie,FRE,Paul,Maher,1976-06-11,190,,Trinity College (WA) / Perth,,
-1997,99,rookie,CAR,Damian,Lang,1976-03-03,191,,Leeton,,
-1997,100,rookie,COL,Mark,Matthews,1977-07-14,176,,Box Hill,,
-1997,101,rookie,PAD,Antony,Sheehan,1979-10-13,181,,Port Adelaide (SANFL),,
-1997,102,rookie,SYD,Brad,McMahon,1977-03-13,194,,Southport,,
-1997,103,rookie,WCE,Chad,Fletcher,1979-08-30,179,MID,Subiaco,,83
-1997,104,rookie,NTH,Craig,Folino,1979-08-28,176,,Eastern U18,,
-1997,105,rookie,WBD,Shaun,Tinsley,1977-05-11,189,,Port Melbourne,,
-1997,106,rookie,ADE,Tim,Davis,1977-08-31,193,,North Adelaide,,
-1997,107,rookie,MEL,Ben,Beams,1978-08-17,183,FWD,Glenorchy / Tasmania U18,,51
-1997,108,rookie,RIC,Ben,Hollands,1978-01-12,177,,North Albury,,
-1997,109,rookie,FRE,Cameron,Jackson,1975-08-06,205,RUCK,Basketball,,
-1997,110,rookie,CAR,Scott,Freeborn,1978-05-20,183,,Woodville-West Torrens,,
-1997,111,rookie,COL,Tarkyn,Lockyer,1979-10-30,178,DEF,East Fremantle,,71
-1997,112,rookie,SYD,Jason,McPherson,1975-08-07,180,,Ganmain,,
-1997,113,rookie,WCE,Laurie,Bellotti,1976-02-28,194,DEF,Claremont,,59
-1997,114,rookie,ADE,Sudjai,Cook,1976-06-27,176,MID,Norwood,,
-1997,115,rookie,MEL,Peter,Walsh,1976-07-24,180,DEF,Kyneton / St Patrick's College / North Ballarat U18 / West Adelaide,,85
-1997,116,rookie,ESS,Lachlan,Oakley,1975-05-25,183,,Sandringham,,
-1997,117,rookie,FRE,John,Neesham,1979-01-18,174,,East Fremantle,,
-1997,118,rookie,CAR,Shane,Flynn,1977-05-28,179,,Boronia / Eastern U18,,
-1997,119,rookie,COL,Adam,Collings,1979-03-03,181,,Eastern U18,,
-1997,120,rookie,WCE,Heath,Younie,1979-06-26,176,,Wodonga FC / Murray U18,,
-1997,121,rookie,NTH,Wade,Kingsley,,,,,,
-1997,122,rookie,ADE,Steven,Hall,1975-07-03,193,,West Torrens,,
-1997,123,rookie,MEL,Matthew,Bishop,,,,,,
-1997,124,rookie,ESS,Mark,Johnson,,,,,,
-1997,125,rookie,CAR,Cameron,Blight,1979-09-08,188,,Tasmania U18,,
-1997,126,rookie,COL,Frankie,Dimattina,1979-01-04,175,,Oakleigh U18,,
-1997,127,rookie,SYD,James,Byrne,1978-04-23,183,MID,Assumption College / Calder U18,,44
-1997,128,rookie,WCE,Todd,Nener,,,,,,
-1997,129,rookie,MEL,Daniel,Ward,,,,,,
-1997,130,rookie,CAR,Clint,Evans,1979-07-24,177,,Dandenong U18,,
-1997,131,rookie,COL,Marcus,Barham,,,,,,
-1997,132,rookie,BRL,Tate,Day,1978-09-12,193,,Coolangatta Tweed Heads / Southport,,
-1997,133,rookie,SYD,Mark,Livy,1979-07-25,187,,NSW-ACT U18,,
-1997,134,rookie,WCE,Trent,Simpson,,,,,,
+1997,71,national,HAW,Richie,Vandenberg,1977-01-14,178,MID,Wentworth / Uni Blues,,73
+1997,72,national,CAR,John,Hynes,1979-02-23,184,,Sandringham U18,,
+1997,73,national,COL,Troy,Kirwen,1979-12-20,190,,Bundoora / Northern U18,,
+1997,74,national,HAW,Nathan,Thompson,1978-02-14,194,FWD,Kyneton / Bendigo U18,,77
+1997,75,national,CAR,Ben,Thompson,1978-10-04,186,MID,Zillmere,,
+1997,76,national,COL,Frankie,Raso,1979-09-12,176,DEF,Preston RSL / Northern U18,,55
+1997,77,national,HAW,Hayden,Burgiel,1979-03-23,183,,Gippsland U18,,
+1997,78,national,COL,Scott,Whiston,1979-05-17,183,,Central District,,
+1997,79,rookie,MEL,Luke,Williams,1979-12-29,185,DEF,Oakleigh U18,,60
+1997,80,rookie,ESS,Dean,Rioli,1978-05-20,180,FWD,South Fremantle,,71
+1997,81,rookie,RIC,Chris,Bossong,1978-07-12,192,,St Kevin's Old Boys,,
+1997,82,rookie,FRE,Brad,Dodd,1977-03-23,186,,East Fremantle,,
+1997,83,rookie,CAR,Simon,Fletcher,1978-08-17,188,DEF,Grovedale / Geelong U18,,60
+1997,84,rookie,COL,George,Bakoulas,1979-01-20,195,,Calder U18,,
+1997,85,rookie,PAD,Barnaby,French,1975-11-25,200,RUCK,Pembroke School / Ironbank-Cherry Gardens,,68
+1997,86,rookie,SYD,Mark,Brown,1977-07-20,180,,Numurkah,,
+1997,87,rookie,WCE,Conrad,Chambers,1979-10-23,194,,East Fremantle,,
+1997,88,rookie,GEE,Paul,Lindsay,1976-02-28,198,,East Fremantle,,
+1997,89,rookie,NTH,David,Round,1978-06-25,192,,Strathmore / Calder U18,,
+1997,90,rookie,WBD,Lincoln,Reynolds,1977-09-11,190,,Geelong U18,,
+1997,91,rookie,STK,Lachlan,Brown,1976-08-01,180,,St Kilda Reserves,,
+1997,92,rookie,ADE,Ben,Marsh,,,,,,
+1997,93,rookie,MEL,Jamie,Cann,1979-08-23,176,,Craigieburn / Assumption College / Calder U18,,
+1997,94,rookie,HAW,Glen,Bowyer,1979-12-28,181,DEF,Wodonga FC / Murray U18,,69
+1997,95,rookie,ESS,Winis,Imbi,1979-04-26,172,,Papua New Guinea / North Ballarat U18,,
+1997,96,rookie,RIC,Greg,Tivendale,1979-04-19,185,MID,Gippsland U18,,68
+1997,97,rookie,FRE,Paul,Maher,1976-06-11,190,,Trinity College (WA) / Perth,,
+1997,98,rookie,CAR,Damian,Lang,1976-03-03,191,,Leeton,,
+1997,99,rookie,COL,Mark,Matthews,1977-07-14,176,,Box Hill,,
+1997,100,rookie,PAD,Antony,Sheehan,1979-10-13,181,,Port Adelaide (SANFL),,
+1997,101,rookie,SYD,Brad,McMahon,1977-03-13,194,,Southport,,
+1997,102,rookie,WCE,Chad,Fletcher,1979-08-30,179,MID,Subiaco,,83
+1997,103,rookie,NTH,Craig,Folino,1979-08-28,176,,Eastern U18,,
+1997,104,rookie,WBD,Shaun,Tinsley,1977-05-11,189,,Port Melbourne,,
+1997,105,rookie,ADE,Tim,Davis,1977-08-31,193,,North Adelaide,,
+1997,106,rookie,MEL,Ben,Beams,1978-08-17,183,FWD,Glenorchy / Tasmania U18,,51
+1997,107,rookie,RIC,Ben,Hollands,1978-01-12,177,,North Albury,,
+1997,108,rookie,FRE,Cameron,Jackson,1975-08-06,205,RUCK,Basketball,,
+1997,109,rookie,CAR,Scott,Freeborn,1978-05-20,183,,Woodville-West Torrens,,
+1997,110,rookie,COL,Tarkyn,Lockyer,1979-10-30,178,DEF,East Fremantle,,71
+1997,111,rookie,SYD,Jason,McPherson,1975-08-07,180,,Ganmain,,
+1997,112,rookie,WCE,Laurie,Bellotti,1976-02-28,194,DEF,Claremont,,59
+1997,113,rookie,ADE,Sudjai,Cook,1976-06-27,176,MID,Norwood,,
+1997,114,rookie,MEL,Peter,Walsh,1976-07-24,180,DEF,Kyneton / St Patrick's College / North Ballarat U18 / West Adelaide,,85
+1997,115,rookie,ESS,Lachlan,Oakley,1975-05-25,183,,Sandringham,,
+1997,116,rookie,FRE,John,Neesham,1979-01-18,174,,East Fremantle,,
+1997,117,rookie,CAR,Shane,Flynn,1977-05-28,179,,Boronia / Eastern U18,,
+1997,118,rookie,COL,Adam,Collings,1979-03-03,181,,Eastern U18,,
+1997,119,rookie,WCE,Heath,Younie,1979-06-26,176,,Wodonga FC / Murray U18,,
+1997,120,rookie,NTH,Wade,Kingsley,,,,,,
+1997,121,rookie,ADE,Steven,Hall,1975-07-03,193,,West Torrens,,
+1997,122,rookie,MEL,Matthew,Bishop,,,,,,
+1997,123,rookie,ESS,Mark,Johnson,,,,,,
+1997,124,rookie,CAR,Cameron,Blight,1979-09-08,188,,Tasmania U18,,
+1997,125,rookie,COL,Frankie,Dimattina,1979-01-04,175,,Oakleigh U18,,
+1997,126,rookie,SYD,James,Byrne,1978-04-23,183,MID,Assumption College / Calder U18,,44
+1997,127,rookie,WCE,Todd,Nener,,,,,,
+1997,128,rookie,MEL,Daniel,Ward,,,,,,
+1997,129,rookie,CAR,Clint,Evans,1979-07-24,177,,Dandenong U18,,
+1997,130,rookie,COL,Marcus,Barham,,,,,,
+1997,131,rookie,BRL,Tate,Day,1978-09-12,193,,Coolangatta Tweed Heads / Southport,,
+1997,132,rookie,SYD,Mark,Livy,1979-07-25,187,,NSW-ACT U18,,
+1997,133,rookie,WCE,Trent,Simpson,,,,,,
+1997,134,preseason,PAD,Matthew,Bode,1979-06-29,178,MID,Brighton Districts & Old Scholars / Glenelg,,77
+1997,135,preseason,SYD,Adam,Coghlan,1975-12-27,187,,Shepparton Swans / Murray U18 / Sandringham,,
+1997,136,preseason,WBD,Scott,Taylor,,,,,,
+1997,137,preseason,HAW,Jason,Daniltchenko,1975-09-02,191,,Bayswater,,
+1997,138,preseason,STK,Jamie,Elliott,,,,,,
 1998,1,national,BRL,Des,Headland,1981-01-21,186,MID,Subiaco,,81
 1998,2,national,FRE,Justin,Longmuir,1981-01-21,196,RUCK,West Perth,,71
 1998,3,national,SYD,Nic,Fosdike,1980-02-26,180,,Sacred Heart College / Norwood,,
@@ -862,6 +1035,14 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak
 1998,120,rookie,ADE,Linden,Stevens,,,,,,
 1998,121,rookie,BRL,Scott,Ralph,,,,,,
 1998,122,rookie,ADE,Scott,Mathews,1978-11-04,188,,Woodville-West Torrens,,
+1998,123,preseason,BRL,David,Calthorpe,1973-08-17,179,,East Keilor / St Bernard's College / North Ballarat,,
+1998,124,preseason,FRE,Ashley,Prescott,1972-09-11,186,MID,Mount Waverley / Oakleigh,,62
+1998,125,preseason,PAD,Jared,Poulton,1977-04-21,182,DEF,Port Adelaide (SANFL),,61
+1998,126,preseason,MEL,Troy,Simmonds,1978-07-13,197,RUCK,Wandin / Eastern U18 / Box Hill Mustangs,,84
+1998,127,preseason,WBD,Cameron,McKenzie-McHarg,1980-04-04,195,,Oakleigh U18,,
+1998,128,preseason,NTH,John,Spaull,1977-08-20,184,MID,Rosebud,,
+1998,129,preseason,ADE,Darryl,Wintle,1976-04-07,179,MID,Alice Springs Pioneers,,
+1998,130,preseason,WBD,Daniel,Wulf,1980-05-19,188,,Dandenong U18,,
 1999,1,national,COL,Josh,Fraser,1982-01-05,202,RUCK,Healesville / Seville / Mansfield / Murray U18,,77
 1999,2,national,FRE,Paul,Hasleby,1981-06-12,182,MID,Northampton / Mazenod College (WA) / East Fremantle,,87
 1999,3,national,RIC,Aaron,Fiora,1981-04-19,186,DEF,Naracoorte / Port Adelaide (SANFL),,61
@@ -940,68 +1121,74 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak
 1999,76,national,NTH,Troy,Makepeace,1979-03-06,175,DEF,Churchill / Gippsland U18,,80
 1999,77,national,COL,Nick,Stone,1981-10-01,196,DEF,Sandringham U18,,55
 1999,78,national,ADE,Matthew,Shir,1981-09-12,183,,Benalla / Murray U18,,
-1999,79,national,CAR,Trent,Hotton,1973-12-01,193,MID,Warragul / Northern U18,,60
-1999,80,national,NTH,Christian,Woodley,1979-07-10,180,,Subiaco,,
-1999,81,national,COL,Michael,Clark,1978-03-31,192,,Swan Districts,,
-1999,82,national,CAR,Andrew,Merrington,1978-11-27,192,MID,St Bernards,,53
-1999,83,national,CAR,Adam,Mathews,1982-01-20,197,,Corowa-Rutherglen / Murray U18,,
-1999,84,national,CAR,Joe,Allen,1981-10-10,185,,Gippsland U18,,
-1999,85,rookie,COL,Damien,Lyon,1981-06-24,183,,Prahran,,
-1999,86,rookie,FRE,Nathan,Carroll,1980-10-20,191,DEF,Claremont,,67
-1999,87,rookie,MEL,Mark,Bradly,,,,,,
-1999,88,rookie,ADE,Michael,Doughty,1979-08-05,177,DEF,Reynella / South Adelaide,,69
-1999,89,rookie,RIC,Ben,Haynes,1981-06-27,182,MID,Western U18,,49
-1999,90,rookie,STK,Mark,Wittison,1981-03-30,196,,Northern U18,,
-1999,91,rookie,HAW,Ryan,Ablett,1981-05-02,190,,Beaconsfield,,
-1999,92,rookie,SYD,Tadhg,Kennelly,1981-07-01,189,DEF,County Kerry,,82
-1999,93,rookie,PAD,Darren,Burton,1979-09-05,197,,Port Adelaide (SANFL),,
-1999,94,rookie,WBD,Matthieu,Lucas,1980-08-03,183,,St Kevin's College,,
-1999,95,rookie,WCE,Toby,McGrath,1980-10-11,179,,South Fremantle,,
-1999,96,rookie,BRL,Ben,Doherty,1981-06-01,190,,Morningside,,
-1999,97,rookie,ESS,Cory,McGrath,1979-02-04,181,MID,South Fremantle,,61
-1999,98,rookie,CAR,Adam,Pickering,1981-04-18,187,,Craigieburn / Assumption College / Calder U18,,
-1999,99,rookie,NTH,Nick,Lowther,,,,,,
-1999,100,rookie,COL,Leigh,Sheehan,1981-01-28,178,,Warragul / Gippsland U18,,
-1999,101,rookie,FRE,Robert,Haddrill,1981-01-28,188,DEF,Northam Railways / Aquinas College (WA) / Perth,,75
-1999,102,rookie,MEL,Luke,Taylor,,,,,,
-1999,103,rookie,ADE,Josh,Coulter,1981-04-23,184,,Central District,,
-1999,104,rookie,RIC,Royce,Vardy,1980-05-03,191,DEF,Devon-Welshpool-Won Wron-Woodside / Oakleigh U18,,55
-1999,105,rookie,GEE,Shane,Ryan,1981-01-07,175,,Oakleigh U18,,
-1999,106,rookie,STK,Stephen,Milne,1980-03-08,176,FWD,Dandenong U18,,77
-1999,107,rookie,HAW,Shane,Tuck,1981-12-24,189,MID,West Adelaide,,84
-1999,108,rookie,SYD,Brett,White,1981-03-09,181,,North Adelaide,,
-1999,109,rookie,PAD,Dean,Brogan,1978-12-14,201,RUCK,Christies Beach / Basketball,,77
-1999,110,rookie,WCE,Dean,Cox,1981-08-01,203,RUCK,East Perth,,87
-1999,111,rookie,BRL,Jason,Anthonisz,1981-05-26,185,,Northern Eagles,,
-1999,112,rookie,ESS,David,Johnson,1981-10-28,181,DEF,Calder U18,,57
-1999,113,rookie,CAR,Craig,Clarke,1979-04-06,200,RUCK,Springvale,,
-1999,114,rookie,NTH,Michael,Ablett,1981-03-26,178,,Dandenong U18,,
-1999,115,rookie,COL,Andrew,Dimattina,1977-11-09,183,DEF,Oakleigh U18,,63
-1999,116,rookie,FRE,Luke,Newick,1981-07-08,196,,Subiaco,,
-1999,117,rookie,ADE,Chris,Robertson,1981-01-09,170,,North Adelaide,,
-1999,118,rookie,RIC,Robbie,Taylor,,,,,,
-1999,119,rookie,STK,Olly,Trand,1981-06-01,196,,Prahran,,
-1999,120,rookie,HAW,Timothy,Malseed,1980-06-26,177,,Hawthorn Reserves,,
-1999,121,rookie,PAD,Tom,Carr,,,,,,
-1999,122,rookie,WCE,Kasey,Green,1979-09-10,187,DEF,Hale School / East Fremantle,,60
-1999,123,rookie,ESS,Adam,Switala,1978-04-21,180,,Central District,,
-1999,124,rookie,NTH,Mark,Hilton,1979-12-27,193,DEF,North Albury,,
-1999,125,rookie,FRE,Dale,Walkingshaw,1978-04-30,178,,South Fremantle / Peel,,
-1999,126,rookie,ADE,Jonathan,Yerbury,1977-01-06,192,,Norwood,,
-1999,127,rookie,RIC,Teghan,Henderson,,,,,,
-1999,128,rookie,STK,Brett,Moyle,1980-03-31,180,DEF,Haileybury College / Oakleigh U18,,70
-1999,129,rookie,PAD,Scott,Hahn,1977-10-30,175,,Port Adelaide (SANFL),,
-1999,130,rookie,WBD,Luke,Donaldson,1981-05-12,178,,Dandenong U18,,
-1999,131,rookie,ESS,James,Podsiadly,1981-09-10,193,,Yarraville / Emmanuel College / Western U18 / Werribee / Geelong (VFL),,
-1999,132,rookie,CAR,Mark,Passador,1979-02-02,190,,Old Trinity / Springvale,,
-1999,133,rookie,NTH,Ryan,Pagan,,,,,,
-1999,134,rookie,BRL,Nathan,Clarke,1979-10-27,186,,Maroochydore,,
-1999,135,rookie,SYD,David,Le Pavoux,1981-02-02,187,,NSW-ACT U18,,
-1999,136,rookie,BRL,Jeff,Cooper,,,,,,
-1999,137,rookie,SYD,Peter,McGrath,1981-04-28,182,,NSW-ACT U18,,
-1999,138,rookie,BRL,Stephen,Kenna,1981-10-08,170,MID,Morningside,,
-1999,139,rookie,SYD,Scott,Muller,1979-07-18,183,,NSW-ACT U18,,
-1999,140,rookie,BRL,Hayden,Kluver,1980-03-18,188,,Sherwood,,
+1999,79,national,NTH,Christian,Woodley,1979-07-10,180,,Subiaco,,
+1999,80,national,COL,Michael,Clark,1978-03-31,192,,Swan Districts,,
+1999,81,national,CAR,Andrew,Merrington,1978-11-27,192,MID,St Bernards,,53
+1999,82,national,CAR,Adam,Mathews,1982-01-20,197,,Corowa-Rutherglen / Murray U18,,
+1999,83,national,CAR,Joe,Allen,1981-10-10,185,,Gippsland U18,,
+1999,84,rookie,COL,Damien,Lyon,1981-06-24,183,,Prahran,,
+1999,85,rookie,FRE,Nathan,Carroll,1980-10-20,191,DEF,Claremont,,67
+1999,86,rookie,MEL,Mark,Bradly,,,,,,
+1999,87,rookie,ADE,Michael,Doughty,1979-08-05,177,DEF,Reynella / South Adelaide,,69
+1999,88,rookie,RIC,Ben,Haynes,1981-06-27,182,MID,Western U18,,49
+1999,89,rookie,STK,Mark,Wittison,1981-03-30,196,,Northern U18,,
+1999,90,rookie,HAW,Ryan,Ablett,1981-05-02,190,,Beaconsfield,,
+1999,91,rookie,SYD,Tadhg,Kennelly,1981-07-01,189,DEF,County Kerry,,82
+1999,92,rookie,PAD,Darren,Burton,1979-09-05,197,,Port Adelaide (SANFL),,
+1999,93,rookie,WBD,Matthieu,Lucas,1980-08-03,183,,St Kevin's College,,
+1999,94,rookie,WCE,Toby,McGrath,1980-10-11,179,,South Fremantle,,
+1999,95,rookie,BRL,Ben,Doherty,1981-06-01,190,,Morningside,,
+1999,96,rookie,ESS,Cory,McGrath,1979-02-04,181,MID,South Fremantle,,61
+1999,97,rookie,CAR,Adam,Pickering,1981-04-18,187,,Craigieburn / Assumption College / Calder U18,,
+1999,98,rookie,NTH,Nick,Lowther,,,,,,
+1999,99,rookie,COL,Leigh,Sheehan,1981-01-28,178,,Warragul / Gippsland U18,,
+1999,100,rookie,FRE,Robert,Haddrill,1981-01-28,188,DEF,Northam Railways / Aquinas College (WA) / Perth,,75
+1999,101,rookie,MEL,Luke,Taylor,,,,,,
+1999,102,rookie,ADE,Josh,Coulter,1981-04-23,184,,Central District,,
+1999,103,rookie,RIC,Royce,Vardy,1980-05-03,191,DEF,Devon-Welshpool-Won Wron-Woodside / Oakleigh U18,,55
+1999,104,rookie,GEE,Shane,Ryan,1981-01-07,175,,Oakleigh U18,,
+1999,105,rookie,STK,Stephen,Milne,1980-03-08,176,FWD,Dandenong U18,,77
+1999,106,rookie,HAW,Shane,Tuck,1981-12-24,189,MID,West Adelaide,,84
+1999,107,rookie,SYD,Brett,White,1981-03-09,181,,North Adelaide,,
+1999,108,rookie,PAD,Dean,Brogan,1978-12-14,201,RUCK,Christies Beach / Basketball,,77
+1999,109,rookie,WCE,Dean,Cox,1981-08-01,203,RUCK,East Perth,,87
+1999,110,rookie,BRL,Jason,Anthonisz,1981-05-26,185,,Northern Eagles,,
+1999,111,rookie,ESS,David,Johnson,1981-10-28,181,DEF,Calder U18,,57
+1999,112,rookie,CAR,Craig,Clarke,1979-04-06,200,RUCK,Springvale,,
+1999,113,rookie,NTH,Michael,Ablett,1981-03-26,178,,Dandenong U18,,
+1999,114,rookie,COL,Andrew,Dimattina,1977-11-09,183,DEF,Oakleigh U18,,63
+1999,115,rookie,FRE,Luke,Newick,1981-07-08,196,,Subiaco,,
+1999,116,rookie,ADE,Chris,Robertson,1981-01-09,170,,North Adelaide,,
+1999,117,rookie,RIC,Robbie,Taylor,,,,,,
+1999,118,rookie,STK,Olly,Trand,1981-06-01,196,,Prahran,,
+1999,119,rookie,HAW,Timothy,Malseed,1980-06-26,177,,Hawthorn Reserves,,
+1999,120,rookie,PAD,Tom,Carr,,,,,,
+1999,121,rookie,WCE,Kasey,Green,1979-09-10,187,DEF,Hale School / East Fremantle,,60
+1999,122,rookie,ESS,Adam,Switala,1978-04-21,180,,Central District,,
+1999,123,rookie,NTH,Mark,Hilton,1979-12-27,193,DEF,North Albury,,
+1999,124,rookie,FRE,Dale,Walkingshaw,1978-04-30,178,,South Fremantle / Peel,,
+1999,125,rookie,ADE,Jonathan,Yerbury,1977-01-06,192,,Norwood,,
+1999,126,rookie,RIC,Teghan,Henderson,,,,,,
+1999,127,rookie,STK,Brett,Moyle,1980-03-31,180,DEF,Haileybury College / Oakleigh U18,,70
+1999,128,rookie,PAD,Scott,Hahn,1977-10-30,175,,Port Adelaide (SANFL),,
+1999,129,rookie,WBD,Luke,Donaldson,1981-05-12,178,,Dandenong U18,,
+1999,130,rookie,ESS,James,Podsiadly,1981-09-10,193,,Yarraville / Emmanuel College / Western U18 / Werribee / Geelong (VFL),,
+1999,131,rookie,CAR,Mark,Passador,1979-02-02,190,,Old Trinity / Springvale,,
+1999,132,rookie,NTH,Ryan,Pagan,,,,,,
+1999,133,rookie,BRL,Nathan,Clarke,1979-10-27,186,,Maroochydore,,
+1999,134,rookie,SYD,David,Le Pavoux,1981-02-02,187,,NSW-ACT U18,,
+1999,135,rookie,BRL,Jeff,Cooper,,,,,,
+1999,136,rookie,SYD,Peter,McGrath,1981-04-28,182,,NSW-ACT U18,,
+1999,137,rookie,BRL,Stephen,Kenna,1981-10-08,170,MID,Morningside,,
+1999,138,rookie,SYD,Scott,Muller,1979-07-18,183,,NSW-ACT U18,,
+1999,139,rookie,BRL,Hayden,Kluver,1980-03-18,188,,Sherwood,,
+1999,140,preseason,FRE,Brad,Bootsma,1972-12-30,185,,South Fremantle,,
+1999,141,preseason,SYD,Ben,Fixter,1981-06-23,180,DEF,Wagga / NSW-ACT U18,,61
+1999,142,preseason,WBD,Andrew,Wills,1972-01-03,184,,Barwon,,
+1999,143,preseason,COL,Simon,Hawking,1973-03-05,193,,Ivanhoe Grammar / Bulleen-Templestowe / Fitzroy U19s,,
+1999,144,preseason,ADE,Andrew,Crowell,1977-08-15,189,DEF,Woodville-West Torrens,,61
+1999,145,preseason,MEL,Simon,Godfrey,1980-10-18,184,MID,Mitcham (Vic) / Eastern U18 / Box Hill Mustangs,,62
+1999,146,preseason,STK,Sean,Charles,1975-05-18,175,,Powelltown,,
 2000,1,national,STK,Nick,Riewoldt,1982-10-17,193,FWD,Broadbeach / Southport,,92
 2000,2,national,STK,Justin,Koschitzke,1982-09-20,197,RUCK,Albury FC / Murray U18,,79
 2000,3,national,COL,Alan,Didak,1983-02-15,184,MID,Blackfriars / Port Adelaide (SANFL),,75
@@ -1070,62 +1257,67 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak
 2000,66,national,ESS,Michael,Davis,1982-02-03,179,,Sandringham U18,,
 2000,67,national,,Hamish,Simpson,,,,,,
 2000,68,national,MEL,Mitchell,Craig,1982-05-24,193,,Donvale / Eastern U18,,
-2000,69,national,STK,Daniel,Wulf,1980-05-19,188,,Dandenong U18,,
-2000,70,rookie,STK,Chris,Oliver,1982-07-09,195,DEF,Campbelltown / NSW-ACT U18,,
-2000,71,rookie,COL,Chris,Odell,1982-04-06,189,,Dandenong U18,,
-2000,72,rookie,PAD,Christopher,Hall,1982-03-03,177,,Hackham / South Adelaide,,
-2000,73,rookie,WCE,Dean,Buszan,1980-12-16,193,,Pinjarra JFC / Peel,,
-2000,74,rookie,FRE,Keren,Ugle,1979-07-07,176,MID,South Fremantle,,
-2000,75,rookie,ADE,Kane,McLean,1982-03-24,187,,Norwood,,
-2000,76,rookie,SYD,Michael,Swan,1981-09-18,181,,Beverley Hills / Port Melbourne,,
-2000,77,rookie,WBD,Bernie,Collins,1981-05-18,190,,County Cork,,
-2000,78,rookie,GEE,Paul,Chambers,1982-06-23,196,RUCK,Western U18,,50
-2000,79,rookie,HAW,Michael,Osborne,1982-07-29,178,DEF,Labrador,,62
-2000,80,rookie,BRL,David,Mapleston,1981-08-10,192,,Morningside,,
-2000,81,rookie,NTH,Leigh,Harding,1981-04-26,180,DEF,Geelong U18,,63
-2000,82,rookie,CAR,Ian,Prendergast,,,,,,
-2000,83,rookie,MEL,Kevin,Devine,1982-01-25,188,,County Dublin,,
-2000,84,rookie,ESS,Marcus,Kenny,1982-09-16,,,Eastern U18,,
-2000,85,rookie,STK,Justin,Berry,1981-04-27,178,,Cranbourne,,
-2000,86,rookie,COL,Jason,Heath,1982-07-14,187,,Eastern U18,,
-2000,87,rookie,WCE,Zach,Beeck,1982-06-30,197,,Busselton / East Perth,,
-2000,88,rookie,FRE,Roger,Hayden,1980-12-09,182,DEF,South Fremantle,,69
-2000,89,rookie,ADE,Justin,Cicolella,,,,,,
-2000,90,rookie,RIC,Adrian,Burgiel,1980-04-16,183,,Vermont,,
-2000,91,rookie,WBD,Damien,Skurrie,1980-10-16,193,,Sebastopol,,
-2000,92,rookie,GEE,Sam,Chapman,1982-04-11,180,,Geelong U18,,
-2000,93,rookie,HAW,Robert,Campbell,1982-06-02,199,RUCK,Corowa-Rutherglen / Murray U18,,
-2000,94,rookie,NTH,Rod,Tregenza,1979-01-16,193,,South Mandurah / Peel / East Fremantle,,
-2000,95,rookie,CAR,Tim,Fleming,1978-04-05,184,MID,Broadford / Assumption College / Xavier College / Old Xavs,,58
-2000,96,rookie,MEL,Darren,Jolly,1981-11-06,200,RUCK,Damascus College / North Ballarat,,75
-2000,97,rookie,ESS,Damien,Peverill,1979-07-12,185,MID,Calder U18,,75
-2000,98,rookie,COL,Nathan,Lovett-Murray,1982-11-18,190,DEF,Heywood / North Ballarat U18 / Williamstown,,68
-2000,99,rookie,PAD,Steven,Brosnan,,,,,,
-2000,100,rookie,WCE,Andrew,McCarrey,1982-12-28,189,,East Fremantle,,
-2000,101,rookie,FRE,Daniel,Haines,1981-04-11,181,,Peel,,
-2000,102,rookie,ADE,Matthew,Golding,,,,,,
-2000,103,rookie,RIC,Michael,Barker,1982-07-11,181,,Dandenong U18,,
-2000,104,rookie,WBD,David,Sheahan,1978-03-06,186,,Springvale,,
-2000,105,rookie,GEE,Max,Rooke,1981-12-19,189,DEF,Casterton,,63
-2000,106,rookie,HAW,Matthew,Ball,1982-02-21,183,MID,Ashburton / Xavier College / Sandringham U18,,57
-2000,107,rookie,NTH,Digby,Morrell,1979-10-10,191,DEF,Hale School / West Perth,,60
-2000,108,rookie,MEL,Mark,Berts,1982-12-06,187,,Palmerston,,
-2000,109,rookie,COL,Andrew,Hill,1980-06-11,191,,Tasmania U18 / Northern Bullants,,
-2000,110,rookie,WCE,Kris,Miller,1980-09-29,178,,Kalgoorlie Railways / East Fremantle,,
-2000,111,rookie,FRE,Andrew,Siegert,1982-01-18,187,DEF,Geelong U18,,56
-2000,112,rookie,ADE,James,Gallagher,1979-11-17,176,MID,Sacred Heart College / Norwood,,53
-2000,113,rookie,RIC,Craig,Ednie,1982-02-16,172,MID,Murray U18,,
-2000,114,rookie,WBD,Leigh,Harrison,1982-08-21,190,,Sandringham U18,,
-2000,115,rookie,GEE,Tim,Clark,1981-02-11,,,Geelong Amateur,,
-2000,116,rookie,NTH,David,Teague,1981-05-05,186,,Katandra / Corowa-Rutherglen / Notre Dame College (Shepparton) / Murray U18,,
-2000,117,rookie,SYD,Brent,Piltz,1978-11-13,190,MID,North Albury,,
-2000,118,rookie,WBD,Brad,Fuller,,,,,,
-2000,119,rookie,BRL,Clinton,Alleway,1981-04-24,191,,Box Hill,,
-2000,120,rookie,MEL,Tom,Marshall,1982-08-24,197,,Tasmania U18,,
-2000,121,rookie,SYD,Scott,Muller,,,,,,
-2000,122,rookie,BRL,Robert,Copeland,1981-05-26,187,DEF,Zillmere,,73
-2000,123,rookie,BRL,Tom,Tarrant,1982-11-06,,,Morningside,,
-2000,124,rookie,BRL,Luke,Weller,1982-01-13,190,DEF,Zillmere,,
+2000,69,rookie,STK,Chris,Oliver,1982-07-09,195,DEF,Campbelltown / NSW-ACT U18,,
+2000,70,rookie,COL,Chris,Odell,1982-04-06,189,,Dandenong U18,,
+2000,71,rookie,PAD,Christopher,Hall,1982-03-03,177,,Hackham / South Adelaide,,
+2000,72,rookie,WCE,Dean,Buszan,1980-12-16,193,,Pinjarra JFC / Peel,,
+2000,73,rookie,FRE,Keren,Ugle,1979-07-07,176,MID,South Fremantle,,
+2000,74,rookie,ADE,Kane,McLean,1982-03-24,187,,Norwood,,
+2000,75,rookie,SYD,Michael,Swan,1981-09-18,181,,Beverley Hills / Port Melbourne,,
+2000,76,rookie,WBD,Bernie,Collins,1981-05-18,190,,County Cork,,
+2000,77,rookie,GEE,Paul,Chambers,1982-06-23,196,RUCK,Western U18,,50
+2000,78,rookie,HAW,Michael,Osborne,1982-07-29,178,DEF,Labrador,,62
+2000,79,rookie,BRL,David,Mapleston,1981-08-10,192,,Morningside,,
+2000,80,rookie,NTH,Leigh,Harding,1981-04-26,180,DEF,Geelong U18,,63
+2000,81,rookie,CAR,Ian,Prendergast,,,,,,
+2000,82,rookie,MEL,Kevin,Devine,1982-01-25,188,,County Dublin,,
+2000,83,rookie,ESS,Marcus,Kenny,1982-09-16,,,Eastern U18,,
+2000,84,rookie,STK,Justin,Berry,1981-04-27,178,,Cranbourne,,
+2000,85,rookie,COL,Jason,Heath,1982-07-14,187,,Eastern U18,,
+2000,86,rookie,WCE,Zach,Beeck,1982-06-30,197,,Busselton / East Perth,,
+2000,87,rookie,FRE,Roger,Hayden,1980-12-09,182,DEF,South Fremantle,,69
+2000,88,rookie,ADE,Justin,Cicolella,,,,,,
+2000,89,rookie,RIC,Adrian,Burgiel,1980-04-16,183,,Vermont,,
+2000,90,rookie,WBD,Damien,Skurrie,1980-10-16,193,,Sebastopol,,
+2000,91,rookie,GEE,Sam,Chapman,1982-04-11,180,,Geelong U18,,
+2000,92,rookie,HAW,Robert,Campbell,1982-06-02,199,RUCK,Corowa-Rutherglen / Murray U18,,
+2000,93,rookie,NTH,Rod,Tregenza,1979-01-16,193,,South Mandurah / Peel / East Fremantle,,
+2000,94,rookie,CAR,Tim,Fleming,1978-04-05,184,MID,Broadford / Assumption College / Xavier College / Old Xavs,,58
+2000,95,rookie,MEL,Darren,Jolly,1981-11-06,200,RUCK,Damascus College / North Ballarat,,75
+2000,96,rookie,ESS,Damien,Peverill,1979-07-12,185,MID,Calder U18,,75
+2000,97,rookie,COL,Nathan,Lovett-Murray,1982-11-18,190,DEF,Heywood / North Ballarat U18 / Williamstown,,68
+2000,98,rookie,PAD,Steven,Brosnan,,,,,,
+2000,99,rookie,WCE,Andrew,McCarrey,1982-12-28,189,,East Fremantle,,
+2000,100,rookie,FRE,Daniel,Haines,1981-04-11,181,,Peel,,
+2000,101,rookie,ADE,Matthew,Golding,,,,,,
+2000,102,rookie,RIC,Michael,Barker,1982-07-11,181,,Dandenong U18,,
+2000,103,rookie,WBD,David,Sheahan,1978-03-06,186,,Springvale,,
+2000,104,rookie,GEE,Max,Rooke,1981-12-19,189,DEF,Casterton,,63
+2000,105,rookie,HAW,Matthew,Ball,1982-02-21,183,MID,Ashburton / Xavier College / Sandringham U18,,57
+2000,106,rookie,NTH,Digby,Morrell,1979-10-10,191,DEF,Hale School / West Perth,,60
+2000,107,rookie,MEL,Mark,Berts,1982-12-06,187,,Palmerston,,
+2000,108,rookie,COL,Andrew,Hill,1980-06-11,191,,Tasmania U18 / Northern Bullants,,
+2000,109,rookie,WCE,Kris,Miller,1980-09-29,178,,Kalgoorlie Railways / East Fremantle,,
+2000,110,rookie,FRE,Andrew,Siegert,1982-01-18,187,DEF,Geelong U18,,56
+2000,111,rookie,ADE,James,Gallagher,1979-11-17,176,MID,Sacred Heart College / Norwood,,53
+2000,112,rookie,RIC,Craig,Ednie,1982-02-16,172,MID,Murray U18,,
+2000,113,rookie,WBD,Leigh,Harrison,1982-08-21,190,,Sandringham U18,,
+2000,114,rookie,GEE,Tim,Clark,1981-02-11,,,Geelong Amateur,,
+2000,115,rookie,NTH,David,Teague,1981-05-05,186,,Katandra / Corowa-Rutherglen / Notre Dame College (Shepparton) / Murray U18,,
+2000,116,rookie,SYD,Brent,Piltz,1978-11-13,190,MID,North Albury,,
+2000,117,rookie,WBD,Brad,Fuller,,,,,,
+2000,118,rookie,BRL,Clinton,Alleway,1981-04-24,191,,Box Hill,,
+2000,119,rookie,MEL,Tom,Marshall,1982-08-24,197,,Tasmania U18,,
+2000,120,rookie,SYD,Scott,Muller,,,,,,
+2000,121,rookie,BRL,Robert,Copeland,1981-05-26,187,DEF,Zillmere,,73
+2000,122,rookie,BRL,Tom,Tarrant,1982-11-06,,,Morningside,,
+2000,123,rookie,BRL,Luke,Weller,1982-01-13,190,DEF,Zillmere,,
+2000,124,preseason,STK,Brett,Voss,1978-02-22,181,DEF,Morningside,,65
+2000,125,preseason,WCE,Troy,Wilson,1972-01-19,189,FWD,West Perth / East Perth,,65
+2000,126,preseason,WBD,Nicholas,Bruton,1981-08-17,201,MID,Diggers Rest,,
+2000,127,preseason,BRL,Dylan,McLaren,1982-05-08,196,,Sale / Gippsland U18,,
+2000,128,preseason,MEL,Nick,Gill,1982-08-25,194,FWD,Scotch College / Oakleigh U18,,51
+2000,129,preseason,ADE,Adam,Richardson,1974-08-20,194,DEF,Drysdale,,
 2001,1,national,HAW,Luke,Hodge,1984-06-15,185,MID,Colac / Geelong U18,,89
 2001,2,national,STK,Luke,Ball,1984-05-25,183,MID,Ashburton / Xavier College / Sandringham U18,,86
 2001,3,national,WCE,Chris,Judd,1983-09-08,189,MID,East Sandringham / Caulfield Grammar / Sandringham U18,,97
@@ -1244,6 +1436,7 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak
 2001,116,rookie,COL,Leith,Teakle,1983-07-28,178,,East Fremantle,,
 2001,117,rookie,SYD,Gerrard,Bennett,,,,,,
 2001,118,rookie,CAR,Adam,Matthews,,,,,,
+2001,119,preseason,ADE,Trent,Hentschel,1982-12-25,193,FWD,Palmerston / Woodville-West Torrens,,64
 2002,1,national,STK,Brendon,Goddard,1985-05-20,189,DEF,Traralgon / Caulfield Grammar / Gippsland U18,,87
 2002,2,national,NTH,Daniel,Wells,1985-02-03,181,MID,Kwinana / Peel,,78
 2002,3,national,BRL,Jared,Brennan,1984-07-28,195,MID,Southern Districts,,73
@@ -1340,19 +1533,21 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak
 2002,94,rookie,CAR,Tom,Hedge,1980-11-09,197,,Mitcham (Vic),,
 2002,95,rookie,FRE,Steven,Dodd,1983-06-20,191,DEF,East Fremantle,,73
 2002,96,rookie,HAW,George,Davies,1983-03-03,190,,Sturt,,
-2002,97,rookie,NTH,Nick,Gill,1982-08-25,194,FWD,Scotch College / Oakleigh U18,,51
-2002,98,rookie,ADE,Michael,Bratton,1984-03-15,176,,Norwood,,
-2002,99,rookie,COL,Steven,Eichner,1984-03-05,187,,Port Adelaide (SANFL),,
-2002,100,rookie,CAR,Michael,Stinear,1984-08-08,177,,Dandenong U18,,
-2002,101,rookie,SYD,Paul,Bevan,1984-09-27,184,DEF,Western Suburbs / NSW-ACT U18,,60
-2002,102,rookie,MEL,Michael,Clark,,,,,,
-2002,103,rookie,CAR,Sean,O'Keeffe,,,,,,
-2002,104,rookie,SYD,Ryan,Crawford,1984-05-30,183,,Calder U18,,
-2002,105,rookie,BRL,Joel,Macdonald,1984-10-10,188,DEF,Warrandyte / Ivanhoe Grammar / Aspley / Mount Gravatt,,73
-2002,106,rookie,SYD,James,Meiklejohn,1984-06-28,197,MID,Tuggeranong / NSW-ACT U18,,
-2002,107,rookie,BRL,Paul,Shelton,1984-01-27,177,,Morningside,,
-2002,108,rookie,SYD,Declan,O'Mahoney,1984-03-13,194,,County Dublin,,
-2002,109,rookie,BRL,Luke,Weller,,,,,,
+2002,97,rookie,ADE,Michael,Bratton,1984-03-15,176,,Norwood,,
+2002,98,rookie,COL,Steven,Eichner,1984-03-05,187,,Port Adelaide (SANFL),,
+2002,99,rookie,CAR,Michael,Stinear,1984-08-08,177,,Dandenong U18,,
+2002,100,rookie,SYD,Paul,Bevan,1984-09-27,184,DEF,Western Suburbs / NSW-ACT U18,,60
+2002,101,rookie,MEL,Michael,Clark,,,,,,
+2002,102,rookie,CAR,Sean,O'Keeffe,,,,,,
+2002,103,rookie,SYD,Ryan,Crawford,1984-05-30,183,,Calder U18,,
+2002,104,rookie,BRL,Joel,Macdonald,1984-10-10,188,DEF,Warrandyte / Ivanhoe Grammar / Aspley / Mount Gravatt,,73
+2002,105,rookie,SYD,James,Meiklejohn,1984-06-28,197,MID,Tuggeranong / NSW-ACT U18,,
+2002,106,rookie,BRL,Paul,Shelton,1984-01-27,177,,Morningside,,
+2002,107,rookie,SYD,Declan,O'Mahoney,1984-03-13,194,,County Dublin,,
+2002,108,rookie,BRL,Luke,Weller,,,,,,
+2002,109,preseason,GEE,Brent,Moloney,1984-01-28,182,MID,South Warrnambool / Geelong U18,,87
+2002,110,preseason,MEL,Guy,Rigoni,,,,,,
+2002,111,preseason,COL,Luke,Mullins,1984-12-24,187,,Wangaratta Tigers JFC / Murray U18,,
 2003,1,national,WBD,Adam,Cooney,1985-09-30,185,MID,Flagstaff Hill / West Adelaide,,91
 2003,2,national,CAR,Andrew,Walker,1986-05-18,190,DEF,Echuca / Caulfield Grammar / Bendigo U18,,86
 2003,3,national,MEL,Colin,Sylvia,1985-11-08,186,,Merbein / Bendigo U18,,
@@ -1465,6 +1660,9 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak
 2003,110,rookie,BRL,Leigh,Ryswyk,1985-01-16,180,MID,Southport,,
 2003,111,rookie,,Adrian,Wilson,,,,,,
 2003,112,rookie,BRL,Jeremy,Stiller,1982-11-09,187,,Zillmere,,
+2003,113,preseason,HAW,Doug,Scott,1980-03-08,193,,Donvale,,
+2003,114,preseason,FRE,Michael,Johnson,1984-10-20,195,DEF,Belmont (WA) / Perth,,82
+2003,115,preseason,PAD,Jacob,Surjan,1985-08-15,179,DEF,South Coogee JFC / South Fremantle,,65
 2004,1,national,RIC,Brett,Deledio,1987-04-18,188,DEF,Kyabram / Murray U18,,84
 2004,2,national,HAW,Jarryd,Roughead,1987-01-23,193,FWD,Leongatha / Gippsland U18,,89
 2004,3,national,WBD,Ryan,Griffen,1986-07-27,188,MID,Goolwa-Port Elliot / South Adelaide,,88
@@ -1543,43 +1741,44 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak
 2004,76,rookie,ESS,Ryan,Bain,1986-01-07,184,,Oakleigh U18,,
 2004,77,rookie,SYD,Guy,Campbell,1982-04-10,196,,Bendigo Diggers,,
 2004,78,rookie,GEE,Jarrod,Garth,1986-01-23,190,,Clarence / Tasmania U18,,
-2004,79,rookie,STK,Luke,Mullins,1984-12-24,187,,Wangaratta Tigers JFC / Murray U18,,
-2004,80,rookie,BRL,Travis,Baird,1986-07-25,192,,Bendigo U18,,
-2004,81,rookie,PAD,Danyle,Pearce,1986-04-07,178,MID,Fitzroy (SA) / Sturt,,76
-2004,82,rookie,HAW,Clinton,Young,1986-02-16,189,,Minyip-Murtoa / St Patrick's College / North Ballarat U18,,
-2004,83,rookie,WBD,Dale,Morris,1982-12-29,190,DEF,Doutta Stars / Werribee,,75
-2004,84,rookie,COL,Heritier,Lumumba,1986-11-15,188,,Rossmoyne JFC / Claremont,,
-2004,85,rookie,ADE,Jonathon,Griffin,1986-01-14,201,RUCK,Booragoon / East Fremantle,,58
-2004,86,rookie,CAR,Jesse,Smith,1986-02-20,183,MID,Calder U18,,
-2004,87,rookie,FRE,Jack,Juniper,1986-11-10,190,,Glenelg,,
-2004,88,rookie,WCE,Beau,Maister,1986-03-20,194,FWD,Albany Railways / Claremont,,62
-2004,89,rookie,MEL,Matthew,Warnock,1984-04-03,195,DEF,Brighton Grammar / Sandringham,,63
-2004,90,rookie,ESS,Ben,Jolley,1986-02-12,185,MID,Strathmore / Calder U18,,
-2004,91,rookie,SYD,Luke,Vogels,1983-06-07,194,MID,Terang Mortlake,,43
-2004,92,rookie,GEE,Nick,Batchelor,1986-09-11,184,,Norwood,,
-2004,93,rookie,STK,Ed,McDonnell,1986-12-30,192,,Western Magpies,,
-2004,94,rookie,PAD,Robert,Forster-Knight,,,,,,
-2004,95,rookie,HAW,Thomas,Willday,1986-06-03,196,,Perth,,
-2004,96,rookie,ADE,John,Hinge,1986-06-06,187,MID,Mundulla / Sacred Heart College / Glenelg,,
-2004,97,rookie,CAR,Nick,Becker,1986-07-07,185,,Calder U18,,
-2004,98,rookie,NTH,Scott,McMahon,1986-06-02,184,DEF,Woodville-West Torrens,,80
-2004,99,rookie,FRE,Ryan,Crowley,,,,,,
-2004,100,rookie,WCE,Ashley,Thornton,1986-12-29,189,,Peel,,
-2004,101,rookie,SYD,Heath,Grundy,1986-06-02,192,DEF,Modbury / Norwood,,78
-2004,102,rookie,GEE,Tim,Sheringham,1986-08-26,180,,Geelong U18,,
-2004,103,rookie,HAW,Kristan,Height,1983-06-22,172,,Box Hill,,
-2004,104,rookie,CAR,Aisake,O'hAilpin,1985-08-24,201,RUCK,County Cork,,
-2004,105,rookie,NTH,Justin,Perkins,1983-01-07,188,,Perth,,
-2004,106,rookie,WCE,Aaron,Edwards,,,,,,
-2004,107,rookie,SYD,Stefan,Garrubba,1986-08-30,179,,Caulfield Grammar / Dandenong U18,,
-2004,108,rookie,SYD,Earl,Shaw,1986-12-17,199,RUCK,Campbelltown / NSW-ACT U18,,
-2004,109,rookie,BRL,Josh,Drummond,,,,,,
-2004,110,rookie,SYD,Ed,Clarke,1986-06-11,179,,North Shore (NSW) / NSW-ACT U18,,
-2004,111,rookie,BRL,Marcus,Allan,1986-05-23,181,MID,Aspley / St Joseph's College (Terrace) / Northern Eagles / Xavier College,,
-2004,112,rookie,SYD,Andrew,Hayes,1985-06-20,190,,Balmain,,
-2004,113,rookie,BRL,Will,Hamill,1986-07-26,189,DEF,Mount Gravatt,,
-2004,114,rookie,BRL,Martin,Pask,1985-01-02,191,,Western Magpies,,
-2004,115,rookie,BRL,Scott,Harding,1986-06-19,181,MID,Morningside,,51
+2004,79,rookie,BRL,Travis,Baird,1986-07-25,192,,Bendigo U18,,
+2004,80,rookie,PAD,Danyle,Pearce,1986-04-07,178,MID,Fitzroy (SA) / Sturt,,76
+2004,81,rookie,HAW,Clinton,Young,1986-02-16,189,,Minyip-Murtoa / St Patrick's College / North Ballarat U18,,
+2004,82,rookie,WBD,Dale,Morris,1982-12-29,190,DEF,Doutta Stars / Werribee,,75
+2004,83,rookie,COL,Heritier,Lumumba,1986-11-15,188,,Rossmoyne JFC / Claremont,,
+2004,84,rookie,ADE,Jonathon,Griffin,1986-01-14,201,RUCK,Booragoon / East Fremantle,,58
+2004,85,rookie,CAR,Jesse,Smith,1986-02-20,183,MID,Calder U18,,
+2004,86,rookie,FRE,Jack,Juniper,1986-11-10,190,,Glenelg,,
+2004,87,rookie,WCE,Beau,Maister,1986-03-20,194,FWD,Albany Railways / Claremont,,62
+2004,88,rookie,MEL,Matthew,Warnock,1984-04-03,195,DEF,Brighton Grammar / Sandringham,,63
+2004,89,rookie,ESS,Ben,Jolley,1986-02-12,185,MID,Strathmore / Calder U18,,
+2004,90,rookie,SYD,Luke,Vogels,1983-06-07,194,MID,Terang Mortlake,,43
+2004,91,rookie,GEE,Nick,Batchelor,1986-09-11,184,,Norwood,,
+2004,92,rookie,STK,Ed,McDonnell,1986-12-30,192,,Western Magpies,,
+2004,93,rookie,PAD,Robert,Forster-Knight,,,,,,
+2004,94,rookie,HAW,Thomas,Willday,1986-06-03,196,,Perth,,
+2004,95,rookie,ADE,John,Hinge,1986-06-06,187,MID,Mundulla / Sacred Heart College / Glenelg,,
+2004,96,rookie,CAR,Nick,Becker,1986-07-07,185,,Calder U18,,
+2004,97,rookie,NTH,Scott,McMahon,1986-06-02,184,DEF,Woodville-West Torrens,,80
+2004,98,rookie,FRE,Ryan,Crowley,,,,,,
+2004,99,rookie,WCE,Ashley,Thornton,1986-12-29,189,,Peel,,
+2004,100,rookie,SYD,Heath,Grundy,1986-06-02,192,DEF,Modbury / Norwood,,78
+2004,101,rookie,GEE,Tim,Sheringham,1986-08-26,180,,Geelong U18,,
+2004,102,rookie,HAW,Kristan,Height,1983-06-22,172,,Box Hill,,
+2004,103,rookie,CAR,Aisake,O'hAilpin,1985-08-24,201,RUCK,County Cork,,
+2004,104,rookie,NTH,Justin,Perkins,1983-01-07,188,,Perth,,
+2004,105,rookie,WCE,Aaron,Edwards,,,,,,
+2004,106,rookie,SYD,Stefan,Garrubba,1986-08-30,179,,Caulfield Grammar / Dandenong U18,,
+2004,107,rookie,SYD,Earl,Shaw,1986-12-17,199,RUCK,Campbelltown / NSW-ACT U18,,
+2004,108,rookie,BRL,Josh,Drummond,,,,,,
+2004,109,rookie,SYD,Ed,Clarke,1986-06-11,179,,North Shore (NSW) / NSW-ACT U18,,
+2004,110,rookie,BRL,Marcus,Allan,1986-05-23,181,MID,Aspley / St Joseph's College (Terrace) / Northern Eagles / Xavier College,,
+2004,111,rookie,SYD,Andrew,Hayes,1985-06-20,190,,Balmain,,
+2004,112,rookie,BRL,Will,Hamill,1986-07-26,189,DEF,Mount Gravatt,,
+2004,113,rookie,BRL,Martin,Pask,1985-01-02,191,,Western Magpies,,
+2004,114,rookie,BRL,Scott,Harding,1986-06-19,181,MID,Morningside,,51
+2004,115,preseason,CAR,Eddie,Betts,1986-11-26,173,FWD,Templestowe / Calder U18,,88
+2004,116,preseason,PAD,Elijah,Ware,1983-04-14,180,MID,Central District,,
 2005,1,national,CAR,Marc,Murphy,1987-07-19,180,MID,Beverley Hills / Doncaster / Whitefriars College / Oakleigh U18,,88
 2005,2,national,COL,Dale,Thomas,1987-06-21,185,MID,Drouin / Gippsland U18,,76
 2005,3,national,HAW,Xavier,Ellis,1988-02-28,187,DEF,Lakes Entrance / Melbourne Grammar / Gippsland U18,,61
@@ -1689,6 +1888,9 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak
 2005,107,rookie,SYD,Ed,Barlow,1987-01-27,196,DEF,Tathra / Scotch College / Oakleigh U18,,56
 2005,108,rookie,SYD,Adam,Prior,1987-01-19,188,,Murray U18,,
 2005,109,rookie,SYD,Sam,Rowe,1987-11-19,198,DEF,North Albury / Murray U18,,71
+2005,110,preseason,COL,Sam,Iles,1987-06-19,185,DEF,Clarence / Tasmania U18,,67
+2005,111,preseason,RIC,Matt,White,1987-04-15,180,DEF,Sunbury FC / Calder U18,,58
+2005,112,preseason,PAD,Matt,Thomas,1987-02-27,186,MID,Melbourne Grammar / Sandringham U18,,65
 2006,1,national,CAR,Bryce,Gibbs,1989-03-15,188,,Plympton / Glenelg,,
 2006,2,national,ESS,Scott,Gumbleton,1988-08-03,197,,Halls Head / Peel,,
 2006,3,national,NTH,Lachlan,Hansen,1988-08-17,197,DEF,Nar Nar Goon / Gippsland U18,,67
@@ -1821,6 +2023,10 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak
 2006,130,rookie,WCE,Ashley,Thornton,,,,,,
 2006,131,rookie,BRL,Will,Hamill,,,,,,
 2006,132,rookie,WCE,Beau,Maister,,,,,,
+2006,133,preseason,NTH,Ben,Ross,1988-09-21,179,MID,Bunyip / Gippsland U18,,52
+2006,134,preseason,PAD,Adam,Cockshell,1986-08-19,198,,Norwood,,
+2006,135,preseason,HAW,Josh,Thurgood,,,,,,
+2006,136,preseason,RIC,Kent,Kingsley,1978-09-26,193,FWD,Woodville-West Torrens,,
 2007,1,national,CAR,Matthew,Kreuzer,1989-05-13,200,RUCK,Bundoora / Loyola College / Northern U18,,81
 2007,2,national,RIC,Trent,Cotchin,1990-04-07,185,MID,West Preston / Parade College / PEGS / Northern U18,,89
 2007,3,national,WCE,Chris,Masten,1989-05-02,179,MID,Rossmoyne JFC / East Fremantle,,71
@@ -1947,6 +2153,11 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak
 2007,124,rookie,NTH,James,Wilsen,1989-07-14,190,,St George / NSW-ACT U18,,
 2007,125,rookie,SYD,Dean,Terlich,1989-12-13,186,,Osborne / NSW-ACT U18 / Murray U18,,
 2007,126,rookie,WCE,Ryan,Davis,1989-06-07,189,FWD,Willoughby / North Shore (NSW) / NSW-ACT U18,,51
+2007,127,preseason,RIC,David,Gourdis,1989-03-14,193,DEF,Subiaco,,
+2007,128,preseason,MEL,Stefan,Martin,1986-11-17,198,RUCK,Haileybury College / Old Haileybury / Sandringham,,84
+2007,129,preseason,ESS,John,Williams,1988-10-08,188,,Uni of Queensland / Morningside,,
+2007,130,preseason,WCE,Patrick,McGinnity,1989-02-18,183,MID,Marist JFC / Trinity College (WA) / Claremont,,53
+2007,131,preseason,ESS,Tom,Bellchambers,1989-07-09,202,RUCK,Launceston / North Launceston / Tasmania U18,,69
 2008,1,national,MEL,Jack,Watts,1991-03-26,196,,East Sandringham / Brighton Grammar / Sandringham U18,,
 2008,2,national,WCE,Nic,Naitanui,1990-05-04,201,RUCK,Midvale / Swan Districts,,
 2008,3,national,FRE,Stephen,Hill,1990-05-01,182,,Quinns Districts / West Perth,,
@@ -2088,6 +2299,9 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak
 2008,139,rookie,BRL,Joel,Tippett,,,,,,
 2008,140,rookie,STK,Blake,McGrath,1990-04-24,208,RUCK,Pennant Hills / NSW-ACT U18,,
 2008,141,rookie,HAW,Will,Sierakowski,1990-07-26,187,MID,North Shore (NSW) / NSW-ACT U18,,
+2008,142,preseason,MEL,Liam,Jurrah,1988-09-22,188,FWD,Yuendumu / Nightcliff,,69
+2008,143,preseason,BRL,Tom,Rockliff,1990-02-22,185,MID,Benalla / Murray U18,,85
+2008,144,preseason,RIC,Ben,Cousins,1978-06-30,179,MID,Bullcreek Leeming JFC / Wesley College (WA) / East Fremantle,,68
 2009,1,national,MEL,Tom,Scully,1991-05-15,181,,Narre Warren / Haileybury College / Dandenong U18,,
 2009,2,national,MEL,Jack,Trengove,1991-09-02,185,,Kybybolite / Prince Alfred College / Sturt,,
 2009,3,national,RIC,Dustin,Martin,1991-06-26,187,MID,Castlemaine / Bendigo U18,,96
@@ -2234,6 +2448,9 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak
 2009,144,rookie,SYD,Dylan,McNeil,1991-03-20,175,,Lavington / NSW-ACT U18 / Murray U18,,
 2009,145,rookie,BRL,Claye,Beams,1991-09-01,182,,Mudgeeraba / Labrador,,
 2009,146,rookie,BRL,Broc,McCauley,1986-12-20,202,RUCK,Surfers Paradise / The Southport School / Southport,,
+2009,147,preseason,RIC,Dylan,Grimes,1991-07-16,193,DEF,Hurstbridge / Loyola College / Northern U18,,77
+2009,148,preseason,WCE,Ryan,Neates,1991-06-21,169,MID,Carine JFC / Claremont,,
+2009,149,preseason,ESS,Kyle,Hardingham,1988-09-01,186,DEF,Bullcreek Leeming JFC / East Fremantle,,79
 2010,1,national,WCE,Andrew,Gaff,1992-06-16,181,MID,Kew Comets / Carey Grammar / Oakleigh U18,,76
 2010,2,national,BRL,Jared,Polec,1992-10-12,188,MID,Seaton / Woodville-West Torrens,,66
 2010,3,national,RIC,Reece,Conca,1992-08-12,185,DEF,Victoria Park JFC / Trinity College (WA) / Perth,,62
@@ -2388,6 +2605,8 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak
 2010,152,rookie,HAW,Will,Langford,1992-07-03,187,,UNSW-Eastern Suburbs / NSW-ACT U18,,
 2010,153,rookie,HAW,Jack,Mahony,1992-05-07,178,,Kiama / Wollongong / NSW-ACT U18,,
 2010,154,rookie,SYD,Eugene,Krueger,1991-01-25,183,,East Coast Eagles,,
+2010,155,preseason,WCE,Blayne,Wilson,1992-01-26,188,DEF,Peel,,
+2010,156,preseason,ESS,Michael,Hibberd,1990-01-03,187,DEF,Somerville / Dandenong U18 / Frankston,,82
 2011,1,national,PAD,Chad,Wingard,1993-07-29,181,,Murray Bridge Imperials / Sturt,,
 2011,2,national,BRL,Billy,Longer,1993-05-12,202,RUCK,Macleod / Northern U18,,64
 2011,3,national,BRL,Sam,Docherty,1993-10-17,184,DEF,Phillip Island / Gippsland U18,,88
@@ -2525,6 +2744,9 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak
 2011,135,rookie,GCS,Josh,Hall,1990-04-03,197,MID,Gold Coast (NEAFL),,
 2011,136,rookie,SYD,Jack,Lynch,1993-09-07,190,,St Ignatius (NSW) / NSW-ACT U18 / Sydney (NEAFL),,
 2011,137,rookie,BRL,Sam,Michael,1993-07-05,199,DEF,Manunda / Redland / Queensland U18 / Gold Coast (NEAFL),,
+2011,138,preseason,GCS,Aaron,Hall,1990-11-09,186,DEF,North Hobart / Hobart FC,,80
+2011,139,preseason,RIC,Brett,O'Hanlon,1993-07-17,189,MID,Edithvale-Aspendale / St Bede's College / Dandenong U18,,41
+2011,140,preseason,WBD,Fletcher,Roberts,1993-06-03,196,DEF,Murrumbeena / Melbourne Grammar / Sandringham U18,,59
 2012,1,national,GWS,Lachie,Whitfield,1994-07-18,187,DEF,Mornington / Mount Martha / Peninsula Grammar / Dandenong U18,,88
 2012,2,national,GWS,Jonathan,O'Rourke,1994-04-21,184,MID,Gisborne / Calder U18,,46
 2012,3,national,GWS,Lachie,Plowman,1994-09-11,192,DEF,Macedon / Calder U18,,69
@@ -2656,6 +2878,12 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak
 2012,129,rookie,SYD,Sam,Naismith,1992-07-16,205,RUCK,Gunnedah / North Shore (NSW) / Sydney (NEAFL),,59
 2012,130,rookie,SYD,Sam,Naismith,,,,,,
 2012,131,rookie,BRL,Jordon,Bourke,,,,,,
+2012,132,preseason,PAD,Sam,Colquhoun,1994-12-20,179,,Angaston / Central District,,
+2012,133,preseason,ESS,Will,Hams,1994-07-14,180,MID,Sale / Gippsland U18,,50
+2012,134,preseason,FRE,Jack,Hannath,1991-07-09,201,DEF,Angaston / Central District,,45
+2012,135,preseason,ADE,Nick,Joyce,,,,,,
+2012,136,preseason,GWS,Dean,Brogan,,,,,,
+2012,137,preseason,FRE,Jesse,Crichton,,,,,,
 2013,1,national,GWS,Tom,Boyd,1995-08-22,201,RUCK,Norwood (Vic) / Luther College / Eastern U18,,
 2013,2,national,GWS,Josh,Kelly,1995-02-12,184,MID,East Brighton / Brighton Grammar / Sandringham U18,,85
 2013,3,national,STK,Jack,Billings,1995-08-18,185,FWD,Kew Comets / Scotch College / Oakleigh U18,,71
@@ -2771,26 +2999,24 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak
 2013,113,rookie,WCE,Murray,Newman,,,,,,
 2013,114,rookie,ADE,Jake,Kelly,1995-01-21,189,DEF,Mansfield / Kew Comets / Scotch College / Oakleigh U18 / Collingwood (VFL),,66
 2013,115,rookie,ESS,Johnny,Rayner,1991-03-25,184,,Athletics,,
-2013,116,rookie,RIC,Matt,Thomas,1987-02-27,186,MID,Melbourne Grammar / Sandringham U18,,63
-2013,117,rookie,CAR,Blaine,Johnson,1995-07-28,187,MID,Kwinana / South Fremantle,,
-2013,118,rookie,PAD,Brent,Renouf,,,,,,
-2013,119,rookie,SYD,Patrick,Mitchell,1989-05-25,201,RUCK,USA,,
-2013,120,rookie,GEE,Zac,Bates,1995-04-30,176,,Barmera-Monash / West Adelaide,,
-2013,121,rookie,FRE,Jacob,Ballard,1994-02-26,188,MID,Warrandyte / Northern U18 / Northern Blues,,
-2013,122,rookie,HAW,Zac,Webster,1995-08-11,182,,Glenorchy / Tasmania U18,,
-2013,123,rookie,MEL,Neville,Jetta,,,,,,
-2013,124,rookie,ADE,Alex,Spina,1995-06-27,181,,Gaza / Rostrevor College / North Adelaide,,
-2013,125,rookie,CAR,Heath,Scotland,,,,,,
-2013,126,rookie,PAD,Daniel,Flynn,1994-09-24,190,,County Kildare,,
-2013,127,rookie,SYD,Lloyd,Perris,1995-01-02,179,,St George / NSW-ACT U18 / Sydney (NEAFL),,
-2013,128,rookie,GEE,Michael,Luxford,1995-02-23,186,,Caulfield Grammar / Basketball,,
-2013,129,rookie,HAW,Ben,Ross,1988-09-21,179,MID,Bunyip / Gippsland U18,,
-2013,130,rookie,CAR,Ciarán,Sheehan,1990-11-19,188,DEF,County Cork,,
-2013,131,rookie,HAW,Kurt,Heatherley,1995-01-01,193,,New Zealand / Sandringham U18,,
-2013,132,rookie,GCS,Jarred,Ellis,1995-04-18,189,,Ballina / Broadbeach / Queensland U18 / Sydney (NEAFL) / Gold Coast (NEAFL),,
-2013,133,rookie,CAR,Ciarán,Byrne,1994-12-06,188,DEF,County Louth,,56
-2013,134,rookie,HAW,Shem,Tatupu,1995-11-30,192,,New Zealand / Oakleigh U18 / Box Hill,,
-2013,135,rookie,BRL,Archie,Smith,1995-07-19,201,RUCK,St Laurence's College (Qld) / Queensland U18 / Mount Gravatt (NEAFL) / Brisbane (NEAFL),,
+2013,116,rookie,CAR,Blaine,Johnson,1995-07-28,187,MID,Kwinana / South Fremantle,,
+2013,117,rookie,PAD,Brent,Renouf,,,,,,
+2013,118,rookie,SYD,Patrick,Mitchell,1989-05-25,201,RUCK,USA,,
+2013,119,rookie,GEE,Zac,Bates,1995-04-30,176,,Barmera-Monash / West Adelaide,,
+2013,120,rookie,FRE,Jacob,Ballard,1994-02-26,188,MID,Warrandyte / Northern U18 / Northern Blues,,
+2013,121,rookie,HAW,Zac,Webster,1995-08-11,182,,Glenorchy / Tasmania U18,,
+2013,122,rookie,MEL,Neville,Jetta,,,,,,
+2013,123,rookie,ADE,Alex,Spina,1995-06-27,181,,Gaza / Rostrevor College / North Adelaide,,
+2013,124,rookie,CAR,Heath,Scotland,,,,,,
+2013,125,rookie,PAD,Daniel,Flynn,1994-09-24,190,,County Kildare,,
+2013,126,rookie,SYD,Lloyd,Perris,1995-01-02,179,,St George / NSW-ACT U18 / Sydney (NEAFL),,
+2013,127,rookie,GEE,Michael,Luxford,1995-02-23,186,,Caulfield Grammar / Basketball,,
+2013,128,rookie,CAR,Ciarán,Sheehan,1990-11-19,188,DEF,County Cork,,
+2013,129,rookie,HAW,Kurt,Heatherley,1995-01-01,193,,New Zealand / Sandringham U18,,
+2013,130,rookie,GCS,Jarred,Ellis,1995-04-18,189,,Ballina / Broadbeach / Queensland U18 / Sydney (NEAFL) / Gold Coast (NEAFL),,
+2013,131,rookie,CAR,Ciarán,Byrne,1994-12-06,188,DEF,County Louth,,56
+2013,132,rookie,HAW,Shem,Tatupu,1995-11-30,192,,New Zealand / Oakleigh U18 / Box Hill,,
+2013,133,rookie,BRL,Archie,Smith,1995-07-19,201,RUCK,St Laurence's College (Qld) / Queensland U18 / Mount Gravatt (NEAFL) / Brisbane (NEAFL),,
 2014,1,national,STK,Paddy,McCartin,1996-04-19,194,DEF,St Joseph's / St Joseph's College / Geelong Grammar / Geelong U18,,62
 2014,2,national,MEL,Christian,Petracca,1996-01-04,186,MID,Park Orchards / Warrandyte / Beverley Hills / Whitefriars College / Eastern U18,,90
 2014,3,national,MEL,Angus,Brayshaw,1996-01-09,187,,Hampton Rovers / Haileybury College / Sandringham U18,,
@@ -3492,6 +3718,7 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak
 2019,93,rookie,GCS,Malcolm,Rosas,2001-06-27,175,FWD,Darwin FC / NT Thunder,,49
 2019,94,rookie,PAD,Riley,Grundy,,,,,,
 2019,95,rookie,WCE,Hamish,Brayshaw,,,,,,
+2019,96,preseason,CAR,Jack,Martin,1995-01-29,185,FWD,Geraldton Towns / Claremont,,67
 2020,1,national,WBD,Jamarra,Ugle-Hagan,2002-04-04,194,,South Warrnambool / Scotch College / Oakleigh U18,,
 2020,2,national,ADE,Riley,Thilthorpe,2002-07-07,201,FWD,Goodwood / Adelaide HS / West Adelaide,,93
 2020,3,national,NTH,Will,Phillips,2002-05-22,180,MID,Beverley Hills / Caulfield Grammar / Oakleigh U18,,66
@@ -3663,6 +3890,8 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak
 2021,86,rookie,FRE,Connor,Blakely,,,,,,
 2021,87,rookie,GCS,Sandy,Brock,2002-12-14,198,DEF,Palmerston / Peel / Gold Coast (NEAFL),,64
 2021,88,rookie,GCS,Bodhi,Uwland,2003-07-25,185,DEF,Broadbeach / All Saints Anglican / Gold Coast (NEAFL),,73
+2021,89,preseason,ADE,Luke,Nankervis,2003-05-25,189,DEF,Bentleigh / Sandringham U18,,59
+2021,90,preseason,GCS,Rory,Thompson,,,,,,
 2022,1,national,GWS,Aaron,Cadman,2004-03-03,195,FWD,Darley / St Patrick's College / North Ballarat U18,,82
 2022,2,national,BRL,Will,Ashcroft,2004-05-06,182,MID,Southport / Brighton Grammar / Sandringham U18,FS,81
 2022,3,national,NTH,Harry,Sheezel,2004-10-13,185,DEF,Ajax / Mount Scopus / Sandringham U18,,78
@@ -3827,6 +4056,8 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak
 2023,79,rookie,ADE,James,Borlase,,,,,,
 2023,80,rookie,WBD,Taylor,Duryea,,,,,,
 2023,81,rookie,MEL,Kynan,Brown,2005-01-13,181,,Old Geelong / Oakleigh U18,FS,
+2023,82,preseason,HAW,Chad,Wingard,,,,,,
+2023,83,preseason,GCS,Sam,Day,,,,,,
 2024,1,national,RIC,Sam,Lalor,2006-08-30,188,FWD,Bacchus Marsh / Geelong Grammar / North Ballarat U18,,55
 2024,2,national,NTH,Finn,O'Sullivan,2006-05-30,183,DEF,Koroit / Xavier College / Oakleigh U18,,57
 2024,3,national,CAR,Jagga,Smith,2006-01-28,183,,Richmond JFC / Scotch College / Oakleigh U18,,
@@ -3920,6 +4151,8 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak
 2024,91,rookie,GEE,Joe,Pike,2005-05-17,203,RUCK,Barwon Heads / Geelong Lutheran College / Geelong U18,,
 2024,92,rookie,SYD,Aaron,Francis,,,,,,
 2024,93,rookie,SYD,Joel,Hamling,,,,,,
+2024,94,preseason,HAW,Jack,Gunston,,,,,,
+2024,95,preseason,BRL,Sam,Day,1992-09-06,196,FWD,Mitcham (SA) / Prince Alfred College / Sturt,,22
 2025,1,national,WCE,Willem,Duursma,,,,Foster / Foster SC / Gippsland U18,,
 2025,2,national,GCS,Zeke,Uwland,,,,All Saints Anglican / Burleigh,,
 2025,3,national,CAR,Harry,Dean,,,,Lavington / Scots School (Albury) / Murray U18,FS,
