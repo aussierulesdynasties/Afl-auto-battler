@@ -13,6 +13,8 @@ var accent := Color.GOLD
 var third := Color.GOLD
 var design := "plain"
 var code := ""
+## A Legacy season's real guernsey: its cell in GameDB's kit atlas (-1: the design).
+var kit_cell := -1
 
 static var _shapes := {}
 ## The guernsey itself: the Tripo guernsey render, tinted per club by badge.gdshader
@@ -204,6 +206,10 @@ func _draw() -> void:
 	_mat.set_shader_parameter("accent", accent)
 	_mat.set_shader_parameter("third", third)
 	_mat.set_shader_parameter("design_cell", maxi(0, BADGE_DESIGNS.find(design)))
+	_mat.set_shader_parameter("kit_cell", kit_cell)
+	if kit_cell >= 0:
+		_mat.set_shader_parameter("kit_atlas", GameDB.kit_atlas())
+		_mat.set_shader_parameter("kit_grid", GameDB.kit_grid())
 	_mat.set_shader_parameter("highlight", ["", "body", "pattern", "trim"].find(highlight))
 	draw_texture_rect(BADGE_LIGHT, Rect2(Vector2.ZERO, Vector2(sz, sz)), false)
 	_letters.queue_redraw()

@@ -151,7 +151,7 @@ func _premier_seed(s: Season) -> int:
 func _test_rules_table() -> void:
 	var rows := SeasonRules.rows()
 	_check(rows.size() >= 10, "season_rules.csv has its rows (%d)" % rows.size())
-	for y in range(1990, 2026):
+	for y in range(1990, 2027):
 		var hits := 0
 		for r in rows:
 			if y >= int(r["from_year"]) and y <= int(r["to_year"]):
@@ -176,10 +176,17 @@ func _test_rules_table() -> void:
 	_check(int(SeasonRules.for_year(2020)["rounds"]) == 18, "2020: 18 rounds")
 
 
-## The game's league (2026 on, or no year at all) is the old constants.
+## The game's league (2027 on, or no year at all) is the old constants; so is
+## a 2026 season whose clubs are not 2026's real ones (a created club). The
+## real 2026 (its fixture, 25 rounds) is tests/test_real_fixture.gd's.
 func _test_default_league() -> void:
+	var created := _codes(17)
+	created.append("TAS")
 	for y in [0, 2026, 2027, 2040]:
 		var s := _season(y, 18)
+		if y == 2026:
+			s = Season.new(created, Golden.lists(created), 11, y)
+			_check(not s.is_real_fixture(), "2026 with a club that did not play it: a drawn fixture")
 		_check(s.regular_rounds() == Season.REGULAR_ROUNDS, "%d: %d rounds" % [y, Season.REGULAR_ROUNDS])
 		_check(s.finalists() == Season.FINALISTS, "%d: the top %d play finals" % [y, Season.FINALISTS])
 		_check(s.finals_format() == "wildcard10", "%d: the wildcard finals" % y)
@@ -199,9 +206,19 @@ func _test_fixture_shapes() -> void:
 	for c in cases:
 		var y := int(c[0])
 		var n := int(c[1])
-		for sd in [3, 19]:
-			var s := _season(y, n, sd)
-			var tag := "%d (%d clubs, seed %d)" % [y, n, sd]
+		# 18 clubs are a real year's clubs (its real fixture); with one
+		# changed the season is drawn, so the generator is checked too.
+		var runs := [[0, 3], [0, 19]]
+		if n == 18:
+			runs += [[1, 3], [1, 19]]
+		for run in runs:
+			var variant := int(run[0])
+			var sd := int(run[1])
+			var codes := _codes(n)
+			if variant == 1:
+				codes[n - 1] = "TAS"
+			var s := Season.new(codes, Golden.lists(codes), sd, y)
+			var tag := "%d (%d clubs%s, seed %d)" % [y, n, ", one changed" if variant == 1 else "", sd]
 			_check(s.fixture.size() == int(c[2]), "%s: %d rounds (%d)" % [tag, c[2], s.fixture.size()])
 			var games := {}
 			var home := {}
@@ -233,7 +250,8 @@ func _test_fixture_shapes() -> void:
 				if int(games.get(code, 0)) != int(c[3]):
 					bad.append("%s %d" % [code, games.get(code, 0)])
 				var hg := int(home.get(code, 0))
-				if absi(hg - (int(c[3]) - hg)) > 2:
+				# A real fixture is as the AFL drew it (Hawthorn had 7 home games in 2020).
+				if absi(hg - (int(c[3]) - hg)) > 2 and not s.is_real_fixture():
 					bad.append("%s %d home" % [code, hg])
 			_check(bad.is_empty(), "%s: every club %d games, home and away near even (%s)" % [tag, c[3], ", ".join(bad)])
 			var pairs := n * (n - 1) / 2
