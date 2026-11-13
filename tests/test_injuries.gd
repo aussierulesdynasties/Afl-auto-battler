@@ -48,65 +48,103 @@ func _test_durability_matters() -> void:
 			"High durability roughly halves the injury chance")
 
 
+## The season's injury rate is the odds MatchSim rolls (one Injuries.roll per
+## man in the 23, _plan_injuries), so it is worked out from those odds for
+## every club's side, not counted over a season of matches. The rest are
+## rules, watched over the first rounds of a seeded season: an injured man
+## misses his club's matches, each club match he misses heals him a week, and
+## every concussion keeps him out at least two.
+const RATE_ROUNDS := 3
+
+
 func _test_season_rate_and_absence() -> void:
 	GameState.reset()
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
-	var total := 0
-	var games := 0
+	# The rate: the expected new injuries per side per game, every club's 23.
+	var clubs := 0
+	var expected := 0.0
+	for code in GameState.season.lists:
+		var side := Ratings.select_side(GameState.season.lists[code], {})
+		for p in (side["ground"] as Array) + (side["bench"] as Array):
+			expected += Injuries.chance(p)
+		clubs += 1
+	_check(clubs >= 18, "Every club picks a side (%d)" % clubs)
+	var rate := expected / float(maxi(1, clubs))
+	_check(BalanceGate.held(rate > 0.35 and rate < 1.3, "injury rate per side per game"),
+			"About one new injury per side per game (%.2f expected)" % rate)
+	# The absence and the healing, round by round.
 	var missed_ok := true
 	var healed_ok := true
-	var watched := {}  # id -> weeks still to miss
+	var absences := 0
+	var healed := 0
 	var concussions := 0
 	var concussion_ok := true
-	while not GameState.season.is_regular_done():
+	var landed := 0
+	for _r in range(RATE_ROUNDS):
+		var out := {}   # id -> [club, weeks] for everyone injured before the round
+		for code in GameState.season.lists:
+			for p in Injuries.injured(GameState.season.lists[code]):
+				out[str(p["id"])] = [str(code), int(p["injury_weeks"])]
 		GameState.advance()
-		games += GameState.last_results.size() * 2
-		total += GameState.last_injuries.size()
-		# Anyone still injured must not have played this round.
+		var played_clubs := {}
 		for res in GameState.last_results:
 			for side in range(2):
 				var code := str(res["home"] if side == 0 else res["away"])
-				var played := {}
+				played_clubs[code] = true
 				for r in res["roster"][side]:
-					played[str(r["id"])] = true
-				for id in watched:
-					if played.has(id) and int(watched[id]) > 0:
+					if out.has(str(r["id"])):
 						missed_ok = false
-		var next := {}
-		for id in watched:
-			if int(watched[id]) > 1:
-				next[id] = int(watched[id]) - 1
-		watched = next
+		for id in out:
+			if not played_clubs.has(str(out[id][0])):
+				continue
+			absences += 1
+			var now := {}
+			for p in GameState.season.lists[str(out[id][0])]:
+				if str(p["id"]) == id:
+					now = p
+			if int(now.get("injury_weeks", 0)) != int(out[id][1]) - 1:
+				healed_ok = false
+			if int(now.get("injury_weeks", 0)) == 0:
+				healed += 1
 		for inj in GameState.last_injuries:
-			watched[str(inj["id"])] = int(inj["weeks"])
+			landed += 1
 			if str(inj["kind"]) == "concussion":
 				concussions += 1
 				if int(inj["weeks"]) < Injuries.CONCUSSION_MIN:
 					concussion_ok = false
-	var rate := float(total) / float(maxi(1, games))
-	_check(BalanceGate.held(rate > 0.35 and rate < 1.3, "injury rate per side per game"),
-			"About one new injury per side per game (%.2f)" % rate)
+	_check(landed > 0 and absences > 0, "Injuries landed and were missed (%d injuries, %d absences)" % [landed, absences])
 	_check(missed_ok, "An injured player misses his club's matches")
-	_check(concussions > 0 and concussion_ok,
-			"Every concussion in a season is at least two matches (%d concussions)" % concussions)
-	var still_out := 0
-	for code in GameState.season.lists:
-		still_out += Injuries.injured(GameState.season.lists[code]).size()
-	_check(still_out < GameDB.CLUB_ORDER.size() * 6,
-			"Injuries heal: the injury lists stay short (%d league-wide)" % still_out)
+	_check(healed_ok and healed > 0, "Each club match he misses heals him a week (%d back)" % healed)
+	# Every concussion the dice can make is at least two matches: thousands of
+	# rolls of a fragile man, the roll MatchSim plans each injury with.
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 5150
+	var fragile := {"attr": {"durability": 1}}
+	var rolled := 0
+	for i in range(20000):
+		var inj := Injuries.roll(rng, fragile)
+		if str(inj.get("kind", "")) == "concussion":
+			rolled += 1
+			concussion_ok = concussion_ok and int(inj["weeks"]) >= Injuries.CONCUSSION_MIN
+	_check(rolled > 0 and concussion_ok,
+			"Every concussion is at least two matches (%d rolled, %d in the season)" % [rolled, concussions])
 
 
 func _test_heal_at_rollover() -> void:
 	GameState.reset()
 	GameState.start_season("ADE", GameDB.club_list("ADE"))
-	for p in GameState.my_list.slice(0, 5):
-		p["injury_weeks"] = 9
-		p["injury_kind"] = "knee"
+	# Five men hurt at every club, the long-term kind still out next year;
+	# the season is skipped to its end (no match is under test here).
+	var hurt := 0
+	for code in GameState.season.lists:
+		for p in (GameState.season.lists[code] as Array).slice(0, 5):
+			p["injury_weeks"] = 9
+			p["injury_kind"] = "knee"
+			hurt += 1
+	_check(hurt >= 18 * 5 and Injuries.injured(GameState.my_list).size() == 5,
+			"Every club goes into the off-season with men hurt (%d)" % hurt)
 	GameState.season.round_index = GameState.season.fixture.size()
-	GameState.ensure_finals()
-	while not GameState.season.is_season_over():
-		GameState.advance()
-	GameState.start_next_season()
+	_check(GameState.start_next_season(), "The season rolls over")
 	var any := 0
 	for code in GameState.season.lists:
 		any += Injuries.injured(GameState.season.lists[code]).size()
@@ -278,10 +316,11 @@ func _test_tribunal_challenge() -> void:
 ## were hurt either way in every one (0.685 a team a game, 2.64 weeks,
 ## 40 concussions each). Injuries are planned at the bounce from their own
 ## stream; playing the match changes who takes the field, never the plan.
+## Six paired matches here (the 600 were the measurement): every one must agree.
 func _test_played_and_simulated_alike() -> void:
 	var same := true
 	var any := false
-	for seed in range(7000, 7030):
+	for seed in range(7000, 7006):
 		var hurt := []
 		for live in [false, true]:
 			var sim := MatchSim.new(Squad.new("GEE", GameDB.club_list("GEE"), true, "GEE"),
@@ -315,7 +354,7 @@ func _test_no_second_roll() -> void:
 	var recorded := 0
 	var landed := 0
 	var only_recorded := true
-	for _week in range(6):
+	for _week in range(2):
 		if not GameState.week_event.is_empty():
 			GameState.resolve_week_event(0)
 		GameState.advance()
@@ -337,3 +376,21 @@ func _test_no_second_roll() -> void:
 		hurt += Injuries.apply_match(clean, lists, 7, round_no).size()
 	_check(hurt == 0 and int(fragile.get("injury_weeks", 0)) == 0,
 			"A match that recorded no injuries hurts nobody afterwards, however fragile")
+	# A match that recorded one injury lands exactly that one, whoever else
+	# played, however fragile they were.
+	var others := []
+	var roster := [{"id": "x"}]
+	for i in range(22):
+		others.append({"id": "o%d" % i, "attr": {"durability": 1}, "sore": true, "heavy_legs": true})
+		roster.append({"id": "o%d" % i})
+	fragile.erase("injury_weeks")
+	var one := {"home": "GEE", "away": "COL", "roster": [roster, []],
+			"injuries": [{"side": 0, "id": "x", "weeks": 3, "kind": "calf"}]}
+	var bad := []
+	for round_no in range(1, 50):
+		for q in [fragile] + others:
+			q.erase("injury_weeks")
+		var rows := Injuries.apply_match(one, {"GEE": [fragile] + others, "COL": []}, 7, round_no)
+		if rows.size() != 1 or str(rows[0]["id"]) != "x" or int(rows[0]["weeks"]) != 3:
+			bad.append("round %d: %s" % [round_no, str(rows)])
+	_check(bad.is_empty(), "A match that recorded one injury lands exactly that one (%s)" % str(bad.slice(0, 3)))

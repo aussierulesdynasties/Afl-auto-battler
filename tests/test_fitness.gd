@@ -556,10 +556,22 @@ func _test_ai_revisions() -> void:
 		var want := Conditioning.ai_plan(GameState._club_phase(str(code)))
 		var wrong := "develop" if want != "develop" else "fast"
 		GameState.conditioning[str(code)] = Conditioning.revise(GameState.fitness_record(str(code)), 0, wrong)
-	var guard := 0
-	while GameState.fitness_week() <= Conditioning.ROUND_14 and guard < 30:
-		GameState.advance()
-		guard += 1
+	# Each week's look happens in the week's own step before its matches
+	# (GameState._stamp_conditioning), which reads the week and the club's
+	# phase, not the results: the weeks to round 14 are stepped through it
+	# without their matches, and round 14 itself is a real week's advance.
+	for w in range(1, Conditioning.ROUND_14):
+		GameState.season.round_index = w
+		GameState._stamp_conditioning()
+	GameState.season.round_index = Conditioning.ROUND_14
+	GameState.advance()
+	var at_14 := 0
+	for code in GameState.season.lists:
+		for ch in GameState.fitness_record(str(code)).get("changes", []):
+			if int(ch[0]) == Conditioning.ROUND_14:
+				at_14 += 1
+	_check(at_14 > 0, "A real week's advance at round 14 has rivals look again (%d)" % at_14)
+	GameState._stamp_conditioning()   # the week after: no revision point for anyone without a bye there
 	var only_at_points := true
 	var revised := 0
 	var bad := []
