@@ -1272,6 +1272,34 @@ func _load_club_years() -> void:
 ## A club as it was in `year`: its clubs.csv values with that year's row laid
 ## over them. Colours come back as Colors. A created club is as it was made.
 func club_era(code: String, year: int) -> Dictionary:
+	var out := _era_look(code, year)
+	var kit := season_kit(code, year)
+	# The season's picture is drawn in that season's colours, so it is worn only while the club
+	# looks as it did that season. A career can keep a club's older look or reshade it (Legacy
+	# rollovers); then the spec's own drawing shows in the colours the club has.
+	if not kit.is_empty() and _as_worn(code, year, out) and str(kit["guernsey"]) == str(out["guernsey"]):
+		out["kit"] = kit["cell"]
+	return out
+
+
+## True when `look` has the spec and colours data/legacy/clubs_by_year.csv gives `code` in `year`.
+func _as_worn(code: String, year: int, look: Dictionary) -> bool:
+	var want := {}
+	for k in COLOUR_FIELDS + ["guernsey"]:
+		want[k] = (_club_base.get(code, {}) as Dictionary).get(k)
+	for r in _club_years.get(code, []):
+		if int(r["from"]) <= year and (int(r["to"]) == 0 or year <= int(r["to"])):
+			for k in want:
+				if r.has(k):
+					want[k] = _hex(r[k]) if COLOUR_FIELDS.has(k) else r[k]
+			break
+	for k in want:
+		if look.get(k) != want[k]:
+			return false
+	return true
+
+
+func _era_look(code: String, year: int) -> Dictionary:
 	var out: Dictionary = (_club_base.get(code, {}) as Dictionary).duplicate()
 	if out.is_empty():
 		return out
@@ -1281,10 +1309,6 @@ func club_era(code: String, year: int) -> Dictionary:
 				if r.has(k):
 					out[k] = _hex(r[k]) if COLOUR_FIELDS.has(k) else r[k]
 			break
-	var kit := season_kit(code, year)
-	if not kit.is_empty():
-		out["guernsey"] = kit["guernsey"]
-		out["kit"] = kit["cell"]
 	return out
 
 
