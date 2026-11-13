@@ -929,7 +929,9 @@ func _answers(body: VBoxContainer) -> void:
 	var box := UiKit.vbox(6)
 	box.name = "AskAnswers"
 	body.add_child(box)
-	box.add_child(UiKit.lbl("Asked around about %s" % GameDB.player_display_name(p), UiKit.BODY, UiKit.EMPH, true))
+	var head := NameInk.label("Asked around about %s" % GameDB.player_display_name(p), _names(), UiKit.BODY, UiKit.EMPH, true)
+	head.name = "AskHead"
+	box.add_child(head)
 	for row in _asked:
 		var club := str(row["club"])
 		var keen := str(row["kind"]) != "no"
