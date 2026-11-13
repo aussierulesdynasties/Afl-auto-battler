@@ -2616,6 +2616,29 @@ func finish_intake_draft() -> bool:
 
 ## Roll every list forward one year and rebuild the season. Split out so a
 ## career can continue even when there is no prospect pool to draft.
+## "real name|dob" of every real man the career already holds: on a list, a
+## list a new club is building, the free agents or the draft pool.
+func _real_people() -> Dictionary:
+	var out := {}
+	var add := func(p: Dictionary) -> void:
+		var dob := str(p.get("dob", ""))
+		if str(p.get("real_name", "")) != "" and dob.length() >= 10:
+			out["%s|%s" % [str(p["real_name"]), dob]] = true
+	var lists: Array = []
+	if season != null:
+		lists.append_array(season.lists.values())
+	lists.append_array(league_lists.values())
+	for code in ExpansionBuild.building(self):
+		lists.append(ExpansionBuild.list_of(self, code))
+	lists.append(free_agents)
+	lists.append(draftee_pool)
+	for arr in lists:
+		for p in arr:
+			if p is Dictionary:
+				add.call(p)
+	return out
+
+
 func _start_next_season(next_year: int, signed: int) -> void:
 	# His first postseason is over, seen or not; a season played without
 	# you is not his (bug-bash 6).
@@ -2662,7 +2685,11 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	# career's is that year's real class.
 	var generated := []
 	if LegacyRollover.has_class(next_year):
-		generated = LegacyRollover.real_class(next_year)
+		# A man already in the career (a new club's state-league signing who
+		# was later drafted in real life, Maverick Weller) is not drafted twice.
+		var here := _real_people()
+		generated = LegacyRollover.real_class(next_year).filter(func(q):
+			return not here.has("%s|%s" % [str(q.get("real_name", "")), str(q.get("dob", ""))]))
 	else:
 		generated = Prospects.generate_class(next_year, career_seed)
 		class_tiers[str(next_year)] = Prospects.class_tier(career_seed, next_year)
