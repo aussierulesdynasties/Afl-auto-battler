@@ -4,36 +4,130 @@ extends RefCounted
 ## data/legacy/era_rules.csv (rule,value,from_year,to_year,quote,source_url,
 ## checked). Each row holds one rule for an inclusive span of years, with the
 ## quote and source it was taken from. Legacy mode reads it for the salary
-## cap (Contracts.salary_cap_for_year) and, later, list sizes and the bench.
+## cap (Contracts.salary_cap_for_year) and the season's rules (TODO row 142,
+## L4): list sizes, the rookie list, free agency, the interchange bench and the
+## substitute, each from the year it began (director 2026-11-10: "Each rule
+## ... arrives in the year it began").
+##
+## The season being played sets `year` (GameState.season_year's setter), so
+## the rules switch at every rollover. A season from GAME_FROM on, or year 0
+## (no season), plays the game's own rules (GAME), exactly as before Legacy
+## mode: a 2026 career never reads the file for its rules.
 ##
 ## A static class rather than GameDB code so sim scripts (Contracts) can read
 ## it without depending on an autoload; GameDB.era_rule is the front door.
 
 const PATH := "res://data/legacy/era_rules.csv"
 
+## The game's own league: 2026 on. The counts are its constants
+## (Contracts.MAX_LIST 44 = 38 senior + 6 Category A, RookieList.CAT_B_SPOTS,
+## Ratings.INTERCHANGE); the switches are all on, the substitute off.
+const GAME := {
+	"senior_list_max": 38, "rookie_list_max": 6, "cat_b_rookie": 2,
+	"interchange": 5, "substitutes": 0, "medical_sub": 0,
+	"rookie_list": 1, "free_agency": 1, "midseason_draft": 1,
+}
+## The first season that plays GAME whatever the file says.
+const GAME_FROM := 2026
+## Switches: off in an era season with no row (the rookie list before 1997,
+## free agency before 2012). Counts fall back to GAME's value.
+const SWITCHES := ["rookie_list", "free_agency", "midseason_draft", "medical_sub", "substitutes", "cat_b_rookie"]
+
+## The season being played (GameState sets it with season_year); 0 = none.
+static var year := 0
+## True once the season's off-season is open (GameState.offseason_year): the
+## lists are then being built for the next season, so list limits read the
+## next year's rules (the 1993 off-season cuts to 1994's 42; the 1996 one
+## opens the 1997 rookie list). The bench stays the season's own.
+static var list_ahead := false
+
 static var _rows := {}  # rule -> Array of [from_year, to_year, value]
 static var _loaded := false
 
 
 ## The value of `rule` in `year`, or `fallback` when no row covers that year.
-static func value(rule: String, year: int, fallback := 0.0) -> float:
-	for span in _spans(rule):
-		if year >= int(span[0]) and year <= int(span[1]):
+static func value(rule_name: String, y: int, fallback := 0.0) -> float:
+	for span in _spans(rule_name):
+		if y >= int(span[0]) and y <= int(span[1]):
 			return float(span[2])
 	return fallback
 
 
+## Whether `y` is a season the real record's rules govern (before GAME_FROM).
+static func is_era(y: int) -> bool:
+	return y > 0 and y < GAME_FROM
+
+
+## A season rule in season `y` (-1: the season being played): GAME's value
+## from GAME_FROM on, the file's in an era season. An era season with no row
+## for the rule has a switch off and a count at GAME's value.
+static func rule(name: String, y := -1) -> int:
+	var at := year if y < 0 else y
+	var game := int(GAME.get(name, 0))
+	if not is_era(at):
+		return game
+	return int(value(name, at, 0.0 if SWITCHES.has(name) else float(game)))
+
+
+## Whether a switch rule (rookie_list, free_agency, ...) is on in season `y`.
+static func on(name: String, y := -1) -> bool:
+	return rule(name, y) > 0
+
+
+## The year whose list limits apply (-1: the lists being built now).
+static func list_year(y := -1) -> int:
+	if y >= 0:
+		return y
+	return year + 1 if list_ahead and year > 0 else year
+
+
+## Senior and Category A spots together (the game's "44").
+static func list_max(y := -1) -> int:
+	return senior_spots(y) + cat_a_spots(y)
+
+
+static func senior_spots(y := -1) -> int:
+	return rule("senior_list_max", list_year(y))
+
+
+## Category A rookie spots: none before the rookie list began (1997).
+static func cat_a_spots(y := -1) -> int:
+	var at := list_year(y)
+	return rule("rookie_list_max", at) if on("rookie_list", at) else 0
+
+
+## Category B rookie spots: none before Category B began.
+static func cat_b_spots(y := -1) -> int:
+	return rule("cat_b_rookie", list_year(y))
+
+
+## Interchange players on the bench.
+static func interchange(y := -1) -> int:
+	return rule("interchange", y)
+
+
+## Substitutes named beside the bench (0, or 1 in 2011-15 and 2021-25).
+static func substitutes(y := -1) -> int:
+	return rule("substitutes", y)
+
+
+## Whether the substitute may come on only for an injured player (the
+## medical substitute, 2021-25) rather than at any time (2011-15).
+static func medical_sub(y := -1) -> bool:
+	return on("medical_sub", y)
+
+
 ## Whether a row covers `rule` in `year`.
-static func has(rule: String, year: int) -> bool:
-	for span in _spans(rule):
-		if year >= int(span[0]) and year <= int(span[1]):
+static func has(rule_name: String, y: int) -> bool:
+	for span in _spans(rule_name):
+		if y >= int(span[0]) and y <= int(span[1]):
 			return true
 	return false
 
 
 ## The years the CSV covers for `rule`: [first, last], or [] when it has none.
-static func span(rule: String) -> Array:
-	var spans := _spans(rule)
+static func span(rule_name: String) -> Array:
+	var spans := _spans(rule_name)
 	if spans.is_empty():
 		return []
 	var lo := int(spans[0][0])
@@ -44,10 +138,10 @@ static func span(rule: String) -> Array:
 	return [lo, hi]
 
 
-static func _spans(rule: String) -> Array:
+static func _spans(rule_name: String) -> Array:
 	if not _loaded:
 		_load()
-	return _rows.get(rule, [])
+	return _rows.get(rule_name, [])
 
 
 static func _load() -> void:
@@ -65,11 +159,11 @@ static func _load() -> void:
 		var row := f.get_csv_line()
 		if row.size() < 4 or str(row[0]).strip_edges() == "":
 			continue
-		var rule := str(row[int(col.get("rule", 0))])
-		if not _rows.has(rule):
-			_rows[rule] = []
-		(_rows[rule] as Array).append([int(row[int(col.get("from_year", 2))]),
+		var rname := str(row[int(col.get("rule", 0))])
+		if not _rows.has(rname):
+			_rows[rname] = []
+		(_rows[rname] as Array).append([int(row[int(col.get("from_year", 2))]),
 				int(row[int(col.get("to_year", 3))]), float(row[int(col.get("value", 1))])])
 	# Earliest span first, so a lookup reads the file's years in order.
-	for rule in _rows:
-		(_rows[rule] as Array).sort_custom(func(a, b): return int(a[0]) < int(b[0]))
+	for rname in _rows:
+		(_rows[rname] as Array).sort_custom(func(a, b): return int(a[0]) < int(b[0]))

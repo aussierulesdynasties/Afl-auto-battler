@@ -161,7 +161,11 @@ var milestone_log := Milestones.empty()   # milestone games (Milestones.gd)
 var departed_names := {}
 var salary_cap := 0              # annual-dollar TPP cap every club's payroll counts against
 var free_agents: Array = []      # off-season: players no club kept
-var offseason_year := 0          # the season whose off-season has opened
+var offseason_year := 0:         # the season whose off-season has opened
+	set(value):
+		offseason_year = value
+		# Lists built in the off-season are next season's (EraRules.list_ahead).
+		EraRules.list_ahead = value != 0 and value == season_year
 var fa_closed_year := 0          # the season whose free agency has closed
 ## This off-season's free-agency compensation picks: [{"club", "player",
 ## "name", "to", "salary", "years", "value", "after"}], slotted into the
@@ -293,6 +297,10 @@ var season_year := 2026:
 		season_year = value
 		# Money shows in this season's dollars (Legacy mode, Contracts.dollars).
 		Contracts.money_year = value
+		# The league's rules of this season (list sizes, the bench, free
+		# agency): EraRules switches them at every rollover (L4).
+		EraRules.year = value
+		EraRules.list_ahead = offseason_year != 0 and offseason_year == value
 ## Rolled once per career: decides each generated draft class's quality tier
 ## (Prospects.class_tier), so a reload never re-rolls a class.
 var career_seed := 0
@@ -2032,7 +2040,7 @@ func begin_real_lists() -> void:
 		role_pairs[code] = pairs
 	draft = Draft.build_intake(open_pool, active.duplicate(), opening_order(active),
 			prospect_read_seed(), sizes, role_counts, role_pairs)
-	draft.senior_cap = RookieList.SENIOR_SPOTS
+	draft.senior_cap = RookieList.senior_spots()
 	_draft_sees_44()
 	draft.user_max_age = Challenge.max_age(self)
 	OwnProspect.check(self)
@@ -2475,7 +2483,7 @@ func begin_intake_draft() -> bool:
 	draft = Draft.build_intake(open_pool, active.duplicate(), order,
 			seed, sizes, role_counts, role_pairs)
 	# The National Draft fills the senior list; the Rookie Draft follows.
-	draft.senior_cap = RookieList.SENIOR_SPOTS
+	draft.senior_cap = RookieList.senior_spots()
 	draft.user_max_age = Challenge.max_age(self)
 	for code in sizes:
 		draft.leaving[code] = (league_lists.get(code, []) as Array).filter(func(q): return retiring_now(q)).size()
@@ -8219,6 +8227,7 @@ func open_offseason(keep_staff := false) -> void:
 				# one they delisted cannot.
 				_release(code, p, why == "cap")
 	TradeValue.remember_bars(false)
+	_era_trim_rivals()
 	# Released together, after every club has settled, so one club's tested
 	# player is not another's replacement while it decides.
 	for p in testing:
@@ -8256,7 +8265,46 @@ func open_offseason(keep_staff := false) -> void:
 const TEST_MARKET_AGE := 28.0
 
 
+## Legacy mode (EraRules): when next season's lists are smaller (52 to 42 in
+## 1994, eight rookies to six in 2013), each rival delists its least valuable
+## players (Contracts.worth) down to the new limits, as the real clubs did. Yours makes room by
+## the same rule at the draft (draft_room_short). Today's seasons never shrink.
+func _era_trim_rivals() -> void:
+	if not EraRules.is_era(season_year):
+		return
+	for code in season.lists:
+		if code == my_club:
+			continue
+		var list: Array = season.lists[code]
+		var guard := 0
+		while guard < 60:
+			guard += 1
+			# Who retires at the rollover leaves anyway: he takes no spot.
+			var staying := list.filter(func(q): return not retiring_now(q))
+			var rookies_over := RookieList.cat_a_count(staying) > RookieList.cat_a_spots()
+			var seniors_over := RookieList.senior_count(staying) > RookieList.senior_spots()
+			if not (rookies_over or seniors_over) or list.size() <= Contracts.MIN_LIST:
+				break
+			var worst := {}
+			for p in staying:
+				var kind := str(p.get("rookie_list", ""))
+				if (seniors_over and kind == "") or (not seniors_over and kind == "A"):
+					# Least worth goes first: rating blended with potential and
+					# discounted for age (Contracts.worth), never rating alone, so a
+					# 69 at 20 with 75 to come stays ahead of a 70 at 35
+					# (director, 2026-11-13: "smart delistings, not binary ones").
+					if worst.is_empty() or Contracts.worth(p) < Contracts.worth(worst) 							or (Contracts.worth(p) == Contracts.worth(worst) and str(p["id"]) < str(worst["id"])):
+						worst = p
+			if worst.is_empty():
+				break
+			_release(code, worst, false)
+
+
 func tests_market(p: Dictionary, list: Array) -> bool:
+	# No free agency before 2012 (EraRules, Legacy mode): a wanted player
+	# out of contract re-signs or is traded; he cannot walk to the market.
+	if not EraRules.on("free_agency"):
+		return false
 	return float(p.get("age", 0.0)) >= TEST_MARKET_AGE and comp_tenure_ok(p) and Contracts.needed(p, list)
 
 
@@ -8445,14 +8493,17 @@ func _release(code: String, p: Dictionary, wanted := false, announce := true) ->
 	# A delisted rookie is a free agent: whoever signs him, his old club
 	# included, puts him on its senior list (row 88).
 	p.erase("rookie_list")
-	p["comp_eligible"] = wanted and comp_tenure_ok(p)
+	# Compensation picks came with free agency (2012 on, EraRules).
+	p["comp_eligible"] = wanted and comp_tenure_ok(p) and EraRules.on("free_agency")
 	p["contract_years"] = 0
 	free_agents.append(p)
 	offseason_log.append({"kind": "released", "club": code, "id": str(p["id"]), "wanted": wanted,
 			"eligible": bool(p["comp_eligible"])})
 	if announce and int(p.get("overall", 0)) >= NEWS_MIN_OVR:
-		add_news("contract", "%s let %s (OVR %d) go to free agency." % [
-				GameDB.club_name(code), GameDB.player_display_name(p), int(p["overall"])])
+		# Before free agency (Legacy, to 2011) a released player is delisted:
+		# any club may still sign him, as the pre-season draft allowed.
+		var line := "%s let %s (OVR %d) go to free agency." if EraRules.on("free_agency") 				else "%s delisted %s (OVR %d)."
+		add_news("contract", line % [GameDB.club_name(code), GameDB.player_display_name(p), int(p["overall"])])
 
 
 ## Your expiring player at his asking price for `years` seasons. It is
@@ -10798,9 +10849,9 @@ func draft_spots_line(going: int = -1) -> String:
 ##  draft opens), "maybe" (players testing the market or holding your offer,
 ##  each of whom takes a spot if he signs with you), "ties", "live"}
 func draft_list_spots() -> Dictionary:
-	var out := {"cap": RookieList.SENIOR_SPOTS, "held": 0, "open": 0, "picks": [], "usable": [],
+	var out := {"cap": RookieList.senior_spots(), "held": 0, "open": 0, "picks": [], "usable": [],
 			"passing": [], "retiring": 0, "resign": 0, "maybe": 0, "ties": 0, "live": false,
-			"list": 0, "list_cap": Contracts.MAX_LIST, "by_44": false}
+			"list": 0, "list_cap": Contracts.max_list(), "by_44": false}
 	if season == null or my_club == "":
 		return out
 	out["retiring"] = my_list.filter(func(q): return retiring_now(q)).size()
@@ -10843,7 +10894,7 @@ func draft_list_spots() -> Dictionary:
 	var ties := 0
 	for p in draftee_pool:
 		if not drafted_draftees.has(str(p["id"])) and str(p.get("tied_club", "")) == my_club \
-				and int(p.get("draft_year", 0)) == season_year and in_44 + ties < Contracts.MAX_LIST:
+				and int(p.get("draft_year", 0)) == season_year and in_44 + ties < Contracts.max_list():
 			ties += 1
 	held += ties
 	in_44 += ties
@@ -10852,9 +10903,9 @@ func draft_list_spots() -> Dictionary:
 		if int(pk["year"]) == season_year and int(pk.get("spot", 0)) > 0:
 			picks.append(int(pk["spot"]))
 	picks.sort()
-	var open := maxi(0, mini(int(out["cap"]) - held, Contracts.MAX_LIST - in_44))
+	var open := maxi(0, mini(int(out["cap"]) - held, Contracts.max_list() - in_44))
 	out["list"] = in_44
-	out["by_44"] = Contracts.MAX_LIST - in_44 < int(out["cap"]) - held
+	out["by_44"] = Contracts.max_list() - in_44 < int(out["cap"]) - held
 	out["held"] = held
 	out["open"] = open
 	out["resign"] = resign
@@ -11273,7 +11324,9 @@ func _fa_close_plan() -> Array:
 			continue
 		var rise := Contracts.asking_salary(p) - int(p.get("salary", 0))
 		var fits := rise <= room
-		if not walked and fits and best22.has(str(p["id"])) and size > Contracts.MIN_LIST:
+		# Before free agency (Legacy, to 2011) one of your best 23 re-signs:
+		# there is no market for him to test.
+		if not walked and fits and best22.has(str(p["id"])) and size > Contracts.MIN_LIST 				and EraRules.on("free_agency"):
 			plan.append([p, "test"])
 			size -= 1
 			room -= rise
@@ -11722,7 +11775,7 @@ func _auto_pick(strategy: String) -> Dictionary:
 			# A player you promised a game is not rested out of it.
 			var tired: Array = pool.filter(func(p): return Workload.value(p) >= Workload.NEEDS_BREAK and not _promised_game(p))
 			var fresh: Array = pool.filter(func(p): return Workload.value(p) < Workload.NEEDS_BREAK or _promised_game(p))
-			var sel := Ratings.select_22(fresh if fresh.size() >= (18 + Ratings.INTERCHANGE) else pool, dual)
+			var sel := Ratings.select_22(fresh if fresh.size() >= (18 + Ratings.bench()) else pool, dual)
 			var side := _as_selection(sel["ground"], sel["bench"])
 			var rested: PackedStringArray = []
 			var in_side := _ids_in(side)
@@ -11731,7 +11784,7 @@ func _auto_pick(strategy: String) -> Dictionary:
 					rested.append(GameDB.player_display_name(p))
 			var note := "Rested: %s." % ", ".join(rested) if not rested.is_empty() \
 					else "Nobody needs a break. This is our best side."
-			if not tired.is_empty() and fresh.size() < (18 + Ratings.INTERCHANGE):
+			if not tired.is_empty() and fresh.size() < (18 + Ratings.bench()):
 				note = "Not enough fresh players to rest anyone. This is our best side."
 			return {"side": side, "note": note}
 		"youth":
@@ -14328,7 +14381,7 @@ func _swap_in(sel: Dictionary, p: Dictionary) -> Dictionary:
 			var bq := list_player(str(b))
 			if not bq.is_empty() and Ratings.available(bq):
 				fit_bench += 1
-		if fit_bench >= Ratings.bench_size:
+		if fit_bench >= Ratings.bench():
 			return {"no_room": true}
 		bench.append(id)
 		sel["BENCH"] = bench
