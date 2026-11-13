@@ -7409,6 +7409,17 @@ func _award_coach_of_year() -> void:
 	add_news("award", "%s %s" % [head, why])
 
 
+## Why each Coach of the Year was won, year -> the football line: yours when
+## `cid` is "", else that coach's.
+func coach_of_year_reasons(cid: String) -> Dictionary:
+	var out := {}
+	for e in coach_of_year:
+		var d := e as Dictionary
+		if (cid == "" and bool(d.get("you", false))) or (cid != "" and str(d.get("cid", "")) == cid):
+			out[int(d.get("year", 0))] = str(d.get("line", ""))
+	return out
+
+
 ## The seasons you were Coach of the Year in this save, oldest first.
 func my_coach_of_year_years() -> Array:
 	var out := []

@@ -74,12 +74,7 @@ static func open(host: Control, c: Dictionary, on_close: Callable = Callable()) 
 		v.add_child(list)
 		for s in stints:
 			list.add_child(_wrapped(_stint_line(s)))
-		var coty := coty_line(c)
-		if coty != "":
-			var won := _wrapped(coty)
-			won.name = "CoachOfYear"
-			won.add_theme_font_override("font", UiKit.BOLD)
-			list.add_child(won)
+		add_coty(list, c.get("coty", []), GameState.coach_of_year_reasons(str(c.get("cid", ""))))
 		if str(c.get("origin", "")) == "seed":
 			v.add_child(UiKit.lbl("Records begin at Round 1, 2026.", UiKit.SMALL, UiKit.MUTED))
 
@@ -127,6 +122,22 @@ static func coty_line(c: Dictionary) -> String:
 	for y in c.get("coty", []):
 		years.append(str(int(y)))
 	return "" if years.is_empty() else "Coach of the Year %s" % ", ".join(years)
+
+
+## Each Coach of the Year won, in bold, with why he won it underneath
+## (director, 2026-11-13: "add reasoning why he was the best coach of the
+## year"). `years` are the seasons, `reasons` year -> the football line.
+static func add_coty(box: Control, years: Array, reasons: Dictionary) -> void:
+	for y in years:
+		var won := _wrapped("Coach of the Year %d" % int(y))
+		won.name = "CoachOfYear%d" % int(y)
+		won.add_theme_font_override("font", UiKit.BOLD)
+		box.add_child(won)
+		var why := str(reasons.get(int(y), ""))
+		if why != "":
+			var l := _wrapped(why)
+			l.name = "CoachOfYearWhy%d" % int(y)
+			box.add_child(l)
 
 
 ## A career line that wraps on a narrow phone instead of widening the sheet.

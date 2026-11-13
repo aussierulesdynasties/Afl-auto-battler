@@ -122,6 +122,11 @@ func _test_streak_and_line() -> void:
 	for f in [_facts(5, 6, 11), _facts(5, 9, 4), _facts(5, 5, 5)]:
 		l = COY.line(f, "Fremantle", CLUBS, FINALISTS)
 		_check(not l.contains("score") and not l.contains("%") and l.ends_with("."), "One plain line: " + l)
+	# Every line gives a reason (director, 2026-11-13: "add reasoning why he was the best coach of the year").
+	l = COY.line(_facts(5, 5, 5, 3, true), "Fremantle", CLUBS, FINALISTS)
+	_check(l == "Fremantle finished 5th and met the board's goal.", "The board's goal as the reason: " + l)
+	l = COY.line(_facts(5, 5, 5, 7), "Fremantle", CLUBS, FINALISTS)
+	_check(l == "Fremantle finished 5th, with a run of 7 straight wins.", "A winning run as the reason: " + l)
 
 
 # ---------------------------------------------------------------------------
@@ -285,6 +290,8 @@ func _test_played_season() -> void:
 				"His profile's line names the year")
 	else:
 		_check(_state.my_coach_of_year_years() == [year], "On your record")
+	var reasons: Dictionary = _state.coach_of_year_reasons("" if bool(e["you"]) else str(e["cid"]))
+	_check(str(reasons.get(year, "")) == str(e["line"]), "The profile shows why he won it: " + str(e["line"]))
 	# The finals change nothing.
 	guard = 0
 	while not _state.season.is_season_over() and guard < 10:

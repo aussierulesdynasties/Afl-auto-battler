@@ -172,4 +172,9 @@ static func line(f: Dictionary, club: String, clubs: int, finalists: int) -> Str
 		return "%s finished %s, picked for %s on paper." % [club, PreSeason.ordinal(pos), PreSeason.ordinal(expect)]
 	if last > pos:
 		return "%s climbed from %s to %s." % [club, PreSeason.ordinal(last), PreSeason.ordinal(pos)]
+	if bool(f.get("goal_met", false)):
+		return "%s finished %s and met the board's goal." % [club, PreSeason.ordinal(pos)]
+	var run := int(f.get("streak", 0))
+	if run >= 3:
+		return "%s finished %s, with a run of %d straight wins." % [club, PreSeason.ordinal(pos), run]
 	return "%s finished %s." % [club, PreSeason.ordinal(pos)]

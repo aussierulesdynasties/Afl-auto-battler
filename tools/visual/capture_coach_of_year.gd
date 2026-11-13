@@ -40,6 +40,11 @@ func _run() -> void:
 	var cid := str(load("res://scripts/sim/Coaches.gd").staff(state.coaches, "WBD").get("SC", ""))
 	var c: Dictionary = state.coaches[cid]
 	c["coty"] = [2027, 2030]
+	state.coach_of_year = [
+		{"year": 2027, "club": "WBD", "cid": cid, "you": false, "name": "", "when": "",
+			"line": "Took Western Bulldogs from 16th last year to 3rd."},
+		{"year": 2030, "club": "WBD", "cid": cid, "you": false, "name": "", "when": "",
+			"line": "11 straight wins carried Western Bulldogs into the finals."}]
 	var host := _host()
 	load("res://scripts/ui/CoachSheet.gd").open(host, c)
 	await _settle()
@@ -52,8 +57,8 @@ func _run() -> void:
 		state.honour_roll.append({"year": y, "my_club": "MEL", "my_position": 3,
 				"my_record": "16-7-0", "premier": "", "runner_up": "", "my_finals": "QF1"})
 	state.coach_of_year = [{"year": 2028, "club": "MEL", "cid": "", "you": true, "name": state.coach_name,
-			"line": "", "when": ""}, {"year": 2030, "club": "MEL", "cid": "", "you": true,
-			"name": state.coach_name, "line": "", "when": ""}]
+			"line": "Melbourne finished 4th, picked for 12th on paper.", "when": ""}, {"year": 2030, "club": "MEL", "cid": "", "you": true,
+			"name": state.coach_name, "line": "Melbourne finished on top of the ladder.", "when": ""}]
 	host = _host()
 	var page := ScrollContainer.new()
 	page.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
