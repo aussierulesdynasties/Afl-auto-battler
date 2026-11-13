@@ -20,6 +20,11 @@ func run() -> void:
 	_t("_test_class_rows")
 	_t("_test_fitzroy_odds")
 	_t("_test_fitzroy_stays")
+	_t("_test_seventeen_clubs")
+	_t("_test_brand_choice", [0])
+	_t("_test_brand_choice", [1])
+	_t("_test_brand_sim_bears")
+	_t("_test_colours_apart")
 	_t("_test_campaign")
 	GameState.replay_seed = 0
 	GameDB.reload()
@@ -121,6 +126,161 @@ func _test_fitzroy_stays() -> void:
 			"A loaded career keeps Fitzroy and the Bears")
 
 
+## "bears coaches should be given the choice to rebrand to lions or stay as
+## bears" (director, 2026-11-13). Fitzroy play on and you coach the Bears: one
+## card, asked once, and either answer holds through a save. Only the look
+## changes: the list and every rating stay as they were.
+func _test_brand_choice(choice: int) -> void:
+	GameState.reset("1990")
+	GameState.start_season("BRL", GameDB.club_list("BRL"))
+	GameState.legacy = {"fitzroy": "stays"}
+	LegacyRollover.keep_fitzroy()
+	GameDB.apply_era(1997)
+	GameState.week_events = []
+	LegacyRollover.week(GameState)
+	_check(GameState.week_events.size() == 1 and str(GameState.week_events[0].get("tid", "")) == LegacyRollover.BRAND_TID,
+			"The Bears' coach gets the Bears-or-Lions card (%d cards)" % GameState.week_events.size())
+	if GameState.week_events.is_empty():
+		return
+	var card: Dictionary = GameState.week_events[0]
+	_check((card["options"] as Array).all(func(o): return (o.get("effects", []) as Array).is_empty())
+			and "never how the side plays" in str(card.get("text", "")),
+			"The card says it changes the look only, and carries no effect on play")
+	var before := _list_sum(GameState.my_list)
+	GameState.resolve_card(0, choice)
+	GameDB.apply_era(1997)
+	var want := "Lions" if choice == 0 else "Bears"
+	_check(GameDB.club_short("BRL") == want, "Answer %d: the club is the %s (%s)" % [choice, want, GameDB.club_short("BRL")])
+	if choice == 0:
+		_check(GameDB.club_colours("BRL")[1].b > 0.4, "The Lions wear blue (%s)" % str(GameDB.club_colours("BRL")))
+	_check(_list_sum(GameState.my_list) == before, "The answer changes no player (%s, %s)" % [str(before), str(_list_sum(GameState.my_list))])
+	_check(LegacyRollover.kit_gap() >= PitchView.DISC_CLASH,
+			"Fitzroy and the %s look apart on the ground (gap %.1f)" % [want, LegacyRollover.kit_gap()])
+	GameState.week_events = []
+	LegacyRollover.week(GameState)
+	_check(GameState.week_events.is_empty(), "The card comes once")
+	var saved: Dictionary = GameState.legacy.duplicate(true)
+	GameDB.reload("1990")
+	GameState.legacy = saved
+	LegacyRollover.restore(GameState)
+	GameDB.apply_era(1997)
+	_check(GameDB.club_short("BRL") == want and GameDB.active_clubs(1997).has("FIT"),
+			"A loaded career keeps the %s beside Fitzroy (%s)" % [want, GameDB.club_short("BRL")])
+	GameDB.reload("1990")
+
+
+## A Bears side the sim runs stays the Bears: no card for a coach elsewhere.
+func _test_brand_sim_bears() -> void:
+	GameState.reset("1990")
+	GameState.start_season("HAW", GameDB.club_list("HAW"))
+	GameState.legacy = {"fitzroy": "stays"}
+	LegacyRollover.keep_fitzroy()
+	GameState.week_events = []
+	LegacyRollover.week(GameState)
+	GameDB.apply_era(1997)
+	_check(GameState.week_events.is_empty() and GameDB.club_short("BRL") == "Bears",
+			"Hawthorn's coach gets no card and the sim's Bears stay the Bears")
+	GameDB.reload("1990")
+
+
+## "if the lions/bears and fitzroy guernseys clash you can slightly change the
+## colours of each" (director, 2026-11-13): checked with the match's own clash
+## test, each reshaded a little (hue kept), never past SHADE_MAX.
+func _test_colours_apart() -> void:
+	for lions in [false, true]:
+		GameState.reset("1990")
+		GameDB.apply_era(1997)
+		if lions:
+			GameDB.unpin_era("BRL")
+		GameDB.keep_club("FIT")
+		if not lions:
+			GameDB.pin_era("BRL", 1996)
+		var raw_fit := GameDB.club_colours("FIT")
+		var raw_bri := GameDB.club_colours("BRL")
+		var raw_gap := LegacyRollover.kit_gap()
+		LegacyRollover.separate_colours()
+		var gap := LegacyRollover.kit_gap()
+		var name := "Lions" if lions else "Bears"
+		_check(gap >= PitchView.DISC_CLASH, "Fitzroy v the %s: no clash after (gap %.1f, was %.1f)" % [name, gap, raw_gap])
+		var fit := GameDB.club_colours("FIT")
+		var bri := GameDB.club_colours("BRL")
+		var most := 0.0
+		for i in range(3):
+			most = maxf(most, maxf(absf(fit[i].v - raw_fit[i].v), absf(bri[i].v - raw_bri[i].v)))
+			_check(absf(fit[i].h - raw_fit[i].h) < 0.01 or raw_fit[i].s < 0.05, "Fitzroy colour %d keeps its hue" % i)
+			_check(absf(bri[i].h - raw_bri[i].h) < 0.01 or raw_bri[i].s < 0.05, "The %s colour %d keeps its hue" % [name, i])
+		_check(most <= LegacyRollover.SHADE_MAX + 0.001, "A slight reshade only (%.2f)" % most)
+		if raw_gap >= PitchView.DISC_CLASH:
+			_check(most == 0.0, "No clash, no reshade (%s)" % name)
+		print("Fitzroy v %s: gap %.1f -> %.1f, reshade %.2f" % [name, raw_gap, gap, most])
+	GameDB.reload("1990")
+
+
+func _list_sum(list: Array) -> Array:
+	var ovr := 0
+	for p in list:
+		ovr += int(p.get("overall", 0))
+	return [list.size(), ovr]
+
+
+## A career whose Fitzroy fought off the merger has 17 clubs in 1997 (Port
+## enter, the Bears carry on: director 2026-11-13). 1997's 22 rounds cannot
+## hold 22 games each for 17 (187 matches, 176 places), so each club plays
+## the most they fit, 20; the season runs with byes, every club meets every
+## other, and the final eight plays out to a premier.
+func _test_seventeen_clubs() -> void:
+	GameState.reset("1990")
+	LegacyRollover.keep_fitzroy()
+	var codes: Array = GameDB.active_clubs(1997)
+	_check(codes.size() == 17 and codes.has("FIT") and codes.has("BRL") and codes.has("PAD"),
+			"Fitzroy, the Bears and Port make 17 clubs in 1997 (%d)" % codes.size())
+	# Lists: the 1990 clubs' own, and the new clubs borrow one each (only the
+	# fixture and the finals are under test here).
+	var lists := {}
+	var donors: Array = GameDB.active_clubs(1990)
+	for i in range(codes.size()):
+		var c: String = codes[i]
+		var src: String = c if donors.has(c) else str(donors[i % donors.size()])
+		lists[c] = GameState._career_copies(GameDB.club_list(src))
+	var season := Season.new(codes, lists, 1997, 1997)
+	_check(season.fixture.size() == season.regular_rounds() and season.regular_rounds() == 22,
+			"1997 keeps its 22 rounds with 17 clubs (%d)" % season.fixture.size())
+	_check(season.games_per_club() == 20, "Each of the 17 plays 20 games (%d)" % season.games_per_club())
+	var games := {}
+	var pairs := {}
+	var byes := {}
+	var twice_in_a_round := 0
+	for ri in range(season.fixture.size()):
+		var seen := {}
+		for m in season.fixture[ri]:
+			for c in [str(m["home"]), str(m["away"])]:
+				if seen.has(c):
+					twice_in_a_round += 1
+				seen[c] = true
+				games[c] = int(games.get(c, 0)) + 1
+			var a := str(m["home"])
+			var b := str(m["away"])
+			pairs[a + "|" + b if a < b else b + "|" + a] = true
+		for c in codes:
+			if not seen.has(c):
+				byes[c] = int(byes.get(c, 0)) + 1
+	_check(twice_in_a_round == 0, "No club plays twice in a round (%d)" % twice_in_a_round)
+	_check(codes.all(func(c): return int(games.get(c, 0)) == 20), "Every club plays 20 games (%s)" % str(games))
+	_check(pairs.size() == 17 * 16 / 2, "Every club meets every other (%d of 136 pairs)" % pairs.size())
+	_check(codes.all(func(c): return int(byes.get(c, 0)) == 2), "Every club has two byes (%s)" % str(byes))
+	var guard := 0
+	while not season.is_regular_done() and guard < 40:
+		season.play_round()
+		guard += 1
+	season.start_finals()
+	while not season.is_season_over() and guard < 60:
+		season.play_finals_week()
+		guard += 1
+	_check(season.is_season_over() and (season.finals["top"] as Array).size() == 8 and str(season.finals["premier"]) != "",
+			"The 17-club 1997 season plays its final eight to a premier (%s)" % str(season.finals.get("premier", "")))
+	GameDB.reload("1990")
+
+
 ## The campaign: 1990 to 2012 at Fitzroy, then Brisbane.
 func _test_campaign() -> void:
 	GameState.reset("1990")
@@ -167,7 +327,9 @@ func _test_campaign() -> void:
 			_check(not GameDB.active_clubs(1997).has("FIT") and GameDB.active_clubs(1997).size() == 16,
 					"1997 has 16 clubs and no Fitzroy (%d)" % GameDB.active_clubs(1997).size())
 			_check(GameDB.club_short("BRL") == "Lions", "The Bears are the Brisbane Lions (%s)" % GameDB.club_short("BRL"))
-			_check((GameState.league_lists.get("FIT", []) as Array).is_empty(), "Fitzroy's list is empty")
+			var left: Array = GameState.league_lists.get("FIT", [])
+			_check(left.is_empty(), "Fitzroy's list is empty (%d: %s)" % [left.size(),
+					str(left.slice(0, 3).map(func(p): return [p.get("id"), p.get("joined"), p.get("club"), p.get("released_by")]))])
 			var lions: Array = GameState.league_lists["BRL"]
 			var from_fitzroy := lions.filter(func(p): return int(p.get("joined", 0)) == 1997 and not str(p.get("id", "")).begins_with("E"))
 			_check(from_fitzroy.size() >= 1 and from_fitzroy.size() <= LegacyRollover.LIONS_TAKE,

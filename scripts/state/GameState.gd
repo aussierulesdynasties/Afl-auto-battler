@@ -13873,6 +13873,7 @@ func _next_week_event() -> void:
 		return
 	week_events = ClubStories.pick(self)
 	ClubArcs.week(self)
+	LegacyRollover.week(self)
 
 
 ## Skip to the end of the season (director, 2026-11-07: "We need to bring back
@@ -14098,6 +14099,7 @@ func resolve_card(index: int, choice: int) -> String:
 	card["choice"] = choice
 	card["outcome"] = out
 	ClubArcs.answered(self, card, choice)
+	LegacyRollover.answered(self, card, choice)
 	mark_dirty()
 	return out
 

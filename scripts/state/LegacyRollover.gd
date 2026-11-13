@@ -445,6 +445,9 @@ static func merge_lists(gs) -> void:
 			p.erase("rookie_list")
 			gs.free_agents.append(p)
 	fit.clear()
+	# Off the league's lists altogether, or free agency would sign players to
+	# a club that no longer exists.
+	gs.league_lists.erase(MERGED)
 	gs.unique_jumpers(lions)
 	for cid in gs.coaches:
 		var c: Dictionary = gs.coaches[cid]
@@ -458,20 +461,115 @@ static func merge_lists(gs) -> void:
 
 
 ## Fitzroy fought the merger off: they play on, and the Bears stay the Bears.
-static func keep_fitzroy() -> void:
+static func keep_fitzroy(lions := false) -> void:
 	GameDB.keep_club(MERGED)
-	GameDB.pin_era(MERGED_INTO, TALKS_YEAR)
+	if lions:
+		GameDB.unpin_era(MERGED_INTO)
+	else:
+		GameDB.pin_era(MERGED_INTO, TALKS_YEAR)
+	separate_colours()
 
 
 ## The news when Fitzroy play on (after the coach moves; nothing moves).
 static func stays_line() -> String:
-	return "Fitzroy have fought off the merger and play on in %d. The Brisbane Bears stay the Bears." % (TALKS_YEAR + 1)
+	return "Fitzroy have fought off the merger and play on in %d, beside the Brisbane Bears." % (TALKS_YEAR + 1)
 
 
 ## A loaded career puts back what its rollovers changed in GameDB.
 static func restore(gs) -> void:
 	if on() and str(_st(gs).get("fitzroy", "")) == "stays":
-		keep_fitzroy()
+		keep_fitzroy(str(_st(gs).get("brand", "")) == "lions")
+
+
+# ---------------------------------------------------------------------------
+# Fitzroy play on: the Bears' coach picks the name (director, 2026-11-13)
+# ---------------------------------------------------------------------------
+const BRAND_TID := "legacy_brand"
+
+
+## "bears coaches should be given the choice to rebrand to lions or stay as
+## bears" (director, 2026-11-13): in the first week after Fitzroy fight the
+## merger off, a coach at the Bears gets one card. It is asked once; left
+## unanswered, the club stays the Bears. A Bears side the sim runs stays the
+## Bears. The name and look only: play never changes.
+static func week(gs) -> void:
+	if not on() or str(gs.my_club) != MERGED_INTO or gs.season == null:
+		return
+	var st := _st(gs)
+	if str(st.get("fitzroy", "")) != "stays" or bool(st.get("brand_asked", false)):
+		return
+	st["brand_asked"] = true
+	gs.week_events.append(brand_card())
+
+
+## The card itself (also for tests and captures).
+static func brand_card() -> Dictionary:
+	return {"tid": BRAND_TID, "title": "Bears or Lions?",
+		"text": "Fitzroy have fought off the merger, so the Bears stand alone in %d. The board leaves the club's name to you: become the Brisbane Lions, in maroon, blue and gold, or stay the Brisbane Bears, in maroon and gold. It changes the name, the guernsey and the colours, never how the side plays. You make this call once." % (TALKS_YEAR + 1),
+		"options": [
+			{"label": "Become the Lions", "effects": [], "result": "From %d the club is the Brisbane Lions." % (TALKS_YEAR + 1)},
+			{"label": "Stay the Bears", "effects": [], "result": "The Bears it is: maroon and gold, as ever."}],
+		"unanswered": {"hint": "Leave it and the club stays the Bears."},
+		"facts": {}}
+
+
+## The coach's answer to the card (GameState.resolve_card).
+static func answered(gs, card: Dictionary, choice: int) -> void:
+	if str(card.get("tid", "")) != BRAND_TID:
+		return
+	var lions := choice == 0
+	_st(gs)["brand"] = "lions" if lions else "bears"
+	keep_fitzroy(lions)
+	if lions:
+		gs.add_news("legacy", "The Brisbane Bears are now the Brisbane Lions, in maroon, blue and gold.")
+
+
+# ---------------------------------------------------------------------------
+# Fitzroy beside Brisbane: guernseys apart (director, 2026-11-13)
+# ---------------------------------------------------------------------------
+## The most a colour is reshaded, in value (0-1) each way.
+const SHADE_MAX := 0.2
+const SHADE_STEP := 0.02
+
+
+## "if the lions/bears and fitzroy guernseys clash you can slightly change the
+## colours of each (still same look, just slightly reshaded to emphasise
+## differences)" (director, 2026-11-13). When both play and their guernseys
+## clash by the match's own check (PitchView.DISC_CLASH on the two home
+## kits), Fitzroy's colours go a shade darker and Brisbane's a shade brighter,
+## step by step until they no longer clash, at most SHADE_MAX. Hue, design and
+## which colour goes where never change.
+static func separate_colours() -> void:
+	GameDB.shade_colours(MERGED, {})
+	GameDB.shade_colours(MERGED_INTO, {})
+	if not GameDB.clubs.has(MERGED) or not GameDB.clubs.has(MERGED_INTO):
+		return
+	if kit_gap() >= PitchView.DISC_CLASH:
+		return
+	var fit := GameDB.club_colours(MERGED)
+	var bri := GameDB.club_colours(MERGED_INTO)
+	var step := SHADE_STEP
+	while step <= SHADE_MAX + 0.0001:
+		GameDB.shade_colours(MERGED, _shaded(fit, -step))
+		GameDB.shade_colours(MERGED_INTO, _shaded(bri, step))
+		if kit_gap() >= PitchView.DISC_CLASH:
+			return
+		step += SHADE_STEP
+
+
+## How far apart the two home guernseys look on the ground.
+static func kit_gap() -> float:
+	return PitchView.disc_distance(PitchView.with_trim(MERGED, GameDB.club_guernsey(MERGED)),
+			PitchView.with_trim(MERGED_INTO, GameDB.club_guernsey(MERGED_INTO)))
+
+
+static func _shaded(cols: Array, by: float) -> Dictionary:
+	var out := {}
+	var keys := ["primary", "secondary", "accent"]
+	for i in range(mini(cols.size(), keys.size())):
+		var c: Color = cols[i]
+		out[keys[i]] = Color.from_hsv(c.h, c.s, clampf(c.v + by, 0.0, 1.0), c.a)
+	return out
 
 
 static func _and(names: Array) -> String:

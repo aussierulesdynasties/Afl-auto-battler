@@ -18,7 +18,47 @@ func _run() -> void:
 		return
 	var suite = script.new()
 	suite.run()
-	quit(0 if suite.failures.is_empty() else 1)
+	var tap_fail := await _tap_brand_card()
+	if tap_fail != "":
+		push_error(tap_fail)
+	else:
+		print("Legacy rollover: a real tap on the Bears-or-Lions card makes the Lions")
+	quit(0 if suite.failures.is_empty() and tap_fail == "" else 1)
+
+
+const Tap := preload("res://tests/tap.gd")
+
+
+## The Bears-or-Lions card on the hub, answered with a real tap (CLAUDE.md:
+## a touch flow is proven with a tap at the control's place on screen).
+func _tap_brand_card() -> String:
+	var LegacyRollover = load("res://scripts/state/LegacyRollover.gd")
+	var gs = root.get_node("GameState")
+	var db = root.get_node("GameDB")
+	var router = root.get_node("Router")
+	gs.reset("1990")
+	gs.start_season("BRL", db.club_list("BRL"))
+	gs.legacy = {"fitzroy": "stays"}
+	LegacyRollover.keep_fitzroy()
+	db.apply_era(1997)
+	gs.week_events = []
+	LegacyRollover.week(gs)
+	router.go("hub")
+	for i in range(6):
+		await process_frame
+	var sheet: Node = current_scene.find_child("EventSheet", true, false)
+	if sheet == null:
+		return "The Bears-or-Lions card does not open on the hub"
+	var lions: Button = sheet.find_child("Event_0", true, false)
+	var why: String = (await Tap.tap(lions)) if lions != null else "missing"
+	for i in range(4):
+		await process_frame
+	db.apply_era(1997)
+	var ok: bool = why == "" and bool(gs.week_events[0].get("resolved", false)) 			and str(gs.legacy.get("brand", "")) == "lions" and db.club_short("BRL") == "Lions"
+	var out := "" if ok else "A real tap on Become the Lions did not make the Lions (tap: %s, brand %s, %s)" % [
+			why, str(gs.legacy.get("brand", "")), db.club_short("BRL")]
+	db.reload()
+	return out
 
 
 ## Never touch a real career save or settings file from a test run.
