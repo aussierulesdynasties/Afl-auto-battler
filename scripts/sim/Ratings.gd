@@ -443,12 +443,7 @@ static func pick_role(scores: Dictionary) -> String:
 ## tools/sim_harness.py (the shrink lives in derive_ratings; the stretch is
 ## scale_overall).
 static func rate_overall(a: Dictionary, role: String, games: float) -> int:
-	var w: Dictionary = ROLE_WEIGHTS.get(role, ROLE_WEIGHTS["MID"])
-	var core := 0.0
-	for key in w:
-		core += float(w[key]) * float(a[key])
-	var overall: float = 0.70 * core + 0.22 * float(a["star"]) + 0.08 * float(a["durability"])
-	overall = position_stretch(overall, role)
+	var overall: float = position_stretch(raw_blend(a, role), role)
 	var conf: float = minf(1.0, games / 14.0)
 	overall = 40.0 + (overall - 40.0) * (0.40 + 0.60 * conf)
 	return scale_overall(overall)
@@ -479,10 +474,54 @@ const STRETCH_TARGETS := {                # where they land
 }
 
 
+## A past start's own anchors, measured on its data season (fit_era_anchors):
+## each position's spread against its own season, as 2026's is against 2026
+## (director 2026-11-13, "Scale each position per season", TODO row 142).
+## Empty for today's start, which keeps the fixed 2026 anchors above.
+## GameDB.reload sets it; it holds for the whole career.
+static var era_anchors := {}
+
+
+## Players this many games or more set a season's anchors (as for 2026's).
+const ANCHOR_GAMES := 12.0
+
+
+## The raw blend rate_overall stretches: role core, star power, durability.
+static func raw_blend(a: Dictionary, role: String) -> float:
+	var w: Dictionary = ROLE_WEIGHTS.get(role, ROLE_WEIGHTS["MID"])
+	var core := 0.0
+	for key in w:
+		core += float(w[key]) * float(a[key])
+	return 0.70 * core + 0.22 * float(a["star"]) + 0.08 * float(a["durability"])
+
+
+## Measure each position's [p10, p50, p98] raw blend on these rated players
+## (12+ games), set them as era_anchors and rate every player again on them.
+## Mirrored in tools/sim_harness.py::fit_era_anchors.
+static func fit_era_anchors(players: Array) -> void:
+	var by_role := {}
+	for p in players:
+		if float(p.get("gm", 0.0)) < ANCHOR_GAMES or not p.has("attr"):
+			continue
+		var role := str(p["role"])
+		if not by_role.has(role):
+			by_role[role] = []
+		by_role[role].append(raw_blend(p["attr"], role))
+	era_anchors = {}
+	for role in STRETCH_ANCHORS:
+		var vals: Array = by_role.get(role, [])
+		if vals.size() >= 10:
+			era_anchors[role] = [percentile(vals, 0.10), percentile(vals, 0.50), percentile(vals, 0.98)]
+	for p in players:
+		if p.has("attr"):
+			p["overall"] = rate_overall(p["attr"], str(p["role"]), float(p["gm"]))
+			p["value"] = salary_value(p["overall"])
+
+
 static func position_stretch(raw: float, role: String) -> float:
 	if not STRETCH_ANCHORS.has(role):
 		return raw
-	var g: Array = STRETCH_ANCHORS[role]
+	var g: Array = era_anchors.get(role, STRETCH_ANCHORS[role])
 	var t: Array = STRETCH_TARGETS[role]
 	if raw <= float(g[0]):
 		return raw + (float(t[0]) - float(g[0]))
