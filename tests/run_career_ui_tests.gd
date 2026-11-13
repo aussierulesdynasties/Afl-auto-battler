@@ -1648,6 +1648,7 @@ func _run() -> void:
 	await _t("_test_canberra_2030_warning")
 	await _t("_test_every_start_reaches_interview")
 	await _t("_test_year_step_taps")
+	await _t("_test_year_step_new_clubs")
 	await _t("_test_pc_hub_and_list_layout")
 	for sz in [Vector2i(2560, 1440), Vector2i(1920, 1080), Vector2i(1280, 720)]:
 		await _t("_test_hub_ladder_fills_right", [sz])
@@ -5842,6 +5843,161 @@ func _test_year_step_taps() -> void:
 			and northey == "free",
 			"Continue starts Melbourne's 1990 season with John Northey a free coach (tap %s, at %s, %s)" % [
 				t5, _router.current(), northey])
+	_state.delete_saved_career()
+	_state.reset()
+	_router.stack = []
+
+
+## The new clubs' starts on the year step (TODO row 142; director 2026-11-11:
+## "2028 (tassie), 2030 (canberra)"), by real taps on a phone: each is its own
+## card after today's league; 2028 is the Tasmania start (2027 without you,
+## then Tasmania are yours), 2030 Canberra's (2027 to 2029 without you, then
+## any of the 20 clubs). Each warns before anything plays, Back on the warning
+## keeps the start, and seven starts still fit a phone by scrolling.
+func _test_year_step_new_clubs() -> void:
+	var seed_was: int = _state.replay_seed
+	var size_was := root.size
+	root.size = Vector2i(390, 844)
+	_state.delete_saved_career()
+	_state.reset()
+	_router.stack = []
+	_router.go("main")
+	await _settle()
+	await Tap.tap(current_scene.find_child("NewCareer", true, false))
+	await _settle()
+	var cards := {}
+	for id in ["2026", "2028", "2030", "1990"]:
+		cards[id] = current_scene.find_child("StartYear_" + id, true, false) as Control
+	var shown := true
+	for id in cards:
+		shown = shown and cards[id] != null and (cards[id] as Control).is_visible_in_tree() and (cards[id] as Control).size.y >= 88.0
+	_check(shown and cards["2026"].get_index() < cards["2028"].get_index()
+			and cards["2028"].get_index() < cards["2030"].get_index() and cards["2030"].get_index() < cards["1990"].get_index()
+			and _all_text(cards["2028"]).contains("Tasmania join") and _all_text(cards["2030"]).contains("Canberra join"),
+			"The year step offers 2028 (Tasmania) and 2030 (Canberra) after today's league, each a thumb-sized card")
+	# 2028 by a real tap: Tasmania's start, set up on the real 2026 lists.
+	var t1: String = await _pick_year("2028")
+	var menu := current_scene
+	var said := menu.find_child("SetupYear", true, false) as Label
+	var note := menu.find_child("SetupYearNote", true, false) as Label
+	var go := menu.find_child("StartCareer", true, false) as Button
+	_check(t1 == "" and str(menu.get("_mode")) == "setup" and said != null and said.text == "Starting in 2028"
+			and note != null and note.is_visible_in_tree() and note.text.contains("2027 plays out without you")
+			and note.text.contains("Tasmania") and go != null and go.text == "Take Tasmania"
+			and not (menu.get("_start_row") as Control).is_visible_in_tree()
+			and not (menu.get("_challenge_row") as Control).is_visible_in_tree()
+			and not (menu.get("_canberra_row") as Control).is_visible_in_tree()
+			and str(menu.get("_pick_start")) == "real" and not bool(menu.get("_pick_canberra")),
+			"2028 is the Tasmania start on the real lists, said in one line (tap %s: %s / %s)" % [
+				t1, said.text if said != null else "no year", note.text if note != null else "no note"])
+	var t2: String = await Tap.tap(go)
+	await _settle()
+	var sheet := menu.find_child("SimAheadWarning", true, false)
+	var words := _all_text(sheet) if sheet != null else ""
+	_check(t2 == "" and words.contains("Your first season is 2028") and words.contains("2027 plays out without you")
+			and words.contains("2027 National Draft"),
+			"Take Tasmania warns first that 2027 plays out without you (%s): %s" % [t2, words])
+	var t3: String = await Tap.tap(menu.find_child("SimAheadBack", true, false))
+	await _settle()
+	_check(t3 == "" and menu.find_child("SimAheadWarning", true, false) == null and _state.season == null
+			and int(menu.get("_pick_future")) == 2028 and str(menu.get("_mode")) == "setup",
+			"Back on the warning keeps the 2028 start and plays nothing (%s)" % t3)
+	# Back to the year step; 2030 by a real tap.
+	_router.handle_back(false)
+	await _settle()
+	var t4: String = await _pick_year("2030")
+	menu = current_scene
+	said = menu.find_child("SetupYear", true, false) as Label
+	note = menu.find_child("SetupYearNote", true, false) as Label
+	go = menu.find_child("StartCareer", true, false) as Button
+	_check(t4 == "" and said != null and said.text == "Starting in 2030" and note != null
+			and note.text.contains("2027 to 2029 play out without you") and note.text.contains("Canberra included")
+			and go != null and go.text == "Choose your club" and bool(menu.get("_pick_canberra")),
+			"2030 is Canberra's start: three seasons without you, then any club (tap %s: %s)" % [
+				t4, note.text if note != null else "no note"])
+	# Today's league again: Canberra is asked afresh, not carried over.
+	_router.handle_back(false)
+	await _settle()
+	await _pick_year("2026")
+	_check(not bool(current_scene.get("_pick_canberra")) and int(current_scene.get("_pick_future")) == 0
+			and (current_scene.get("_canberra_row") as Control).is_visible_in_tree()
+			and current_scene.find_child("SetupYearNote", true, false) == null,
+			"Today's league after 2030 starts with Canberra unpicked and its question back")
+	# 2030 for real: warned, confirmed, and the shipped history opens Choose
+	# your club at the 2029 National Draft with all 20 clubs.
+	_state.replay_seed = 0
+	_router.handle_back(false)
+	await _settle()
+	await _pick_year("2030")
+	await Tap.tap(current_scene.find_child("StartCareer", true, false))
+	await _settle()
+	var t5: String = await Tap.tap(current_scene.find_child("SimAheadConfirm", true, false))
+	for i in range(900):
+		if _router.current() == "draft" and not bool(root.get_node("ScreenTransition").busy):
+			break
+		await process_frame
+	await _settle()
+	var tiles := [0]
+	_count_named(current_scene, "Choose_", func(): tiles[0] += 1)
+	_check(t5 == "" and _router.current() == "draft" and _state.choosing_club() and _state.season_year == 2029
+			and int(tiles[0]) == 20 and current_scene.find_child("Choose_CANB", true, false) != null,
+			"Start in 2030 plays to the 2029 National Draft and offers all 20 clubs (tap %s, at %s, %d, %d clubs)" % [
+				t5, _router.current(), _state.season_year, int(tiles[0])])
+	var t6: String = await Tap.tap(current_scene.find_child("Choose_CANB", true, false))
+	await _settle()
+	_check(t6 == "" and _state.my_club == "CANB" and not _state.sim_ahead,
+			"Canberra by a real tap: the 2030 career is yours (tap %s, %s)" % [t6, _state.my_club])
+	# 2028 for real: Take Tasmania, confirmed; Tasmania are yours at the 2027 draft.
+	_state.delete_saved_career()
+	_state.reset()
+	_router.stack = []
+	_router.go("main")
+	await _settle()
+	await Tap.tap(current_scene.find_child("NewCareer", true, false))
+	await _settle()
+	await _pick_year("2028")
+	await Tap.tap(current_scene.find_child("StartCareer", true, false))
+	await _settle()
+	var t7: String = await Tap.tap(current_scene.find_child("SimAheadConfirm", true, false))
+	for i in range(900):
+		if _router.current() != "main" and not bool(root.get_node("ScreenTransition").busy):
+			break
+		await process_frame
+	await _settle()
+	_check(t7 == "" and _state.my_club == "TAS" and _state.season_year == 2027 and _state.club_yet_to_play()
+			and _router.current() in ["draft", "interview"],
+			"Start in 2028 plays 2027 without you and hands you Tasmania at the 2027 draft (tap %s, %s, %d, at %s)" % [
+				t7, _state.my_club, _state.season_year, _router.current()])
+	# Seven starts (2000, 2010 and 2020 added as stand-ins) on a phone: the
+	# starts scroll, and the last is reached and started by a real tap.
+	_state.delete_saved_career()
+	_state.reset()
+	_router.stack = []
+	var stand_ins := ["2000", "2010", "2020"]
+	for id in stand_ins:
+		if not Datasets.ready(id):
+			var row: Dictionary = Datasets.get_set(Datasets.DEFAULT).duplicate()
+			row["data_season"] = int(id) - 1
+			row["start_year"] = int(id)
+			Datasets.add(id, row)
+	_router.go("main")
+	await _settle()
+	await Tap.tap(current_scene.find_child("NewCareer", true, false))
+	await _settle()
+	var sc := current_scene.find_child("StartsScroll", true, false) as ScrollContainer
+	var last := current_scene.find_child("StartYear_1990", true, false) as Control
+	var fits := sc != null and sc.get_global_rect().end.y <= float(root.size.y)
+	if sc != null and last != null:
+		sc.ensure_control_visible(last)
+		await _settle()
+	var t8: String = await _pick_year("1990")
+	_check(fits and t8 == "" and str(current_scene.get("_mode")) == "setup" and str(current_scene.get("_pick_dataset")) == "1990",
+			"Seven starts on a 390 x 844 phone scroll on screen, and 1990 at the bottom takes a real tap (scroll %s, fits %s, tap %s)" % [
+				sc != null, fits, t8])
+	for id in stand_ins:
+		Datasets.remove(id)
+	_state.replay_seed = seed_was
+	root.size = size_was
 	_state.delete_saved_career()
 	_state.reset()
 	_router.stack = []

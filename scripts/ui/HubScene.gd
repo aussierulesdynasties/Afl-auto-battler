@@ -978,7 +978,7 @@ func _week_section(season: Season) -> Control:
 		# page, so the week's decision stays in view). A tribute, not a factor.
 		if not GameState.season.is_regular_done() and SirDougRound.round_for(GameState,
 				GameState.my_club) == GameState.season.round_index:
-			var sd_name := UiKit.lbl(SirDougRound.NAME, UiKit.SMALL, UiKit.EMPH, true)
+			var sd_name := UiKit.lbl(SirDougRound.name_for(GameState.season_year), UiKit.SMALL, UiKit.EMPH, true)
 			sd_name.name = "SirDougContext"
 			nv.add_child(sd_name)
 		var rivalry :=GameState.rivalry_context(GameState.my_club, opp)
