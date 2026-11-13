@@ -62,6 +62,14 @@ static func cost_m(level: int) -> float:
 	return float((LEVELS[clamp_level(level)] as Dictionary)["cost_m"])
 
 
+## A budget figure ($m, 2027 dollars) as the season shows it: "$10.5m" today;
+## in an era season (Legacy mode) that season's dollars (Contracts.dollars).
+static func money_m(m: float, year := -1) -> String:
+	if Contracts.era_scale(Contracts.money_year if year < 0 else year) == 1.0:
+		return "$%.1fm" % m
+	return Contracts.money(Contracts.dollars(int(round(m * 1000000.0)), year))
+
+
 static func total_m(allocation: Dictionary) -> float:
 	var total := 0.0
 	for area in AREA_ORDER:

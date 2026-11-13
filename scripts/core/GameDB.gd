@@ -1958,3 +1958,10 @@ func _hex(s) -> Color:
 	if s is Color:
 		return s
 	return Color.html(str(s))
+
+
+## A league rule as it stood in `year` (data/legacy/era_rules.csv): the
+## salary cap, list sizes, interchange and the like. `fallback` when the
+## file has no row for that year. See EraRules.
+func era_rule(rule: String, year: int, fallback := 0.0) -> float:
+	return EraRules.value(rule, year, fallback)

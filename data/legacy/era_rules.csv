@@ -37,6 +37,11 @@ salary_cap,10370000,2016,2016,increasing from $9.92m to $10.07m in 2015 and $10.
 salary_cap,13540000,2022,2022,"was A$13,540,000 for the 2022 season, with a salary floor of $12,863,000",https://en.wikipedia.org/wiki/AFL_salary_cap,2026-11-11
 salary_floor,12863000,2022,2022,"was A$13,540,000 for the 2022 season, with a salary floor of $12,863,000",https://en.wikipedia.org/wiki/AFL_salary_cap,2026-11-11
 salary_cap,15022778,2023,2023,"the aggregate Total Player Payment (TPP) figure was set in 2023 at $15,022,778",https://en.wikipedia.org/wiki/AFL_salary_cap,2026-11-11
+salary_cap,15788222,2024,2024,"Schedule 2A item 1: TPP Limit (aggregate) 2023 2024 2025 ... $15,022,778 $15,788,222 $17,761,999",https://www.aflplayers.com.au/app/uploads/2024/01/2023-2027-Collective-Bargaining-Agreement-FINAL.pdf,2026-11-13
+salary_cap,17761999,2025,2025,"Schedule 2A item 1: TPP Limit (aggregate) 2023 2024 2025 ... $15,022,778 $15,788,222 $17,761,999",https://www.aflplayers.com.au/app/uploads/2024/01/2023-2027-Collective-Bargaining-Agreement-FINAL.pdf,2026-11-13
+senior_min,125000,2023,2023,"Schedule 2A item 3: Year Base Payment ... 2023 $125,000 2024 $130,000 2025 $145,000",https://www.aflplayers.com.au/app/uploads/2024/01/2023-2027-Collective-Bargaining-Agreement-FINAL.pdf,2026-11-13
+senior_min,130000,2024,2024,"Schedule 2A item 3: Year Base Payment ... 2023 $125,000 2024 $130,000 2025 $145,000",https://www.aflplayers.com.au/app/uploads/2024/01/2023-2027-Collective-Bargaining-Agreement-FINAL.pdf,2026-11-13
+senior_min,145000,2025,2025,"Schedule 2A item 3: Year Base Payment ... 2023 $125,000 2024 $130,000 2025 $145,000",https://www.aflplayers.com.au/app/uploads/2024/01/2023-2027-Collective-Bargaining-Agreement-FINAL.pdf,2026-11-13
 salary_floor_pct,90,1987,2000,salary floor set at 90% of the cap ... increased to 92.5% of the cap in 2001,https://en.wikipedia.org/wiki/AFL_salary_cap,2026-11-11
 salary_floor_pct,92.5,2001,2012,"the salary floor was increased to 92.5% of the cap in 2001, and to 95% of the cap for 2013 onwards",https://en.wikipedia.org/wiki/AFL_salary_cap,2026-11-11
 salary_floor_pct,95,2013,2026,and to 95% of the cap for 2013 onwards,https://en.wikipedia.org/wiki/AFL_salary_cap,2026-11-11
