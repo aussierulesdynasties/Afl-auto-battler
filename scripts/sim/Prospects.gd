@@ -13,7 +13,6 @@ extends RefCounted
 ## The 2026 class ships from data/draftees_2026.csv; every later class is
 ## generated deterministically from its year so careers can loop forever.
 
-const MIN_LIST := 32
 const MAX_RETIRE_PER_CLUB := 8
 ## Generated forwards run from small (172 cm) to key (203 cm), about a third
 ## of each by MatchSim.fwd_size, as in a real draft class: from 184 cm there
@@ -382,7 +381,7 @@ static func _shifted_overall(a: Dictionary, role: String, offset: float,
 ## GameDB.reload()). Returns {"retired": [...], "developed": n, "declined": n}.
 ## `min_left` is the smallest a list may be left at: 0 after a National Draft,
 ## which refills every list; a rollover with no draft (start_next_season)
-## keeps each list at Contracts.MIN_LIST, as nobody drafts in their places.
+## keeps each list at Contracts.min_list(), as nobody drafts in their places.
 static func age_league(lists: Dictionary, year: int, min_left := 0) -> Dictionary:
 	var retired := []
 	var developed := 0

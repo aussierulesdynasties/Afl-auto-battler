@@ -191,6 +191,13 @@ func _test_rule_table() -> void:
 	for y in range(1990, 2026):
 		_check(EraRules.has("senior_list_max", y) and EraRules.has("interchange", y),
 				"%d has a senior list size and a bench in era_rules.csv" % y)
+		# The list minimum is the year's own, never over its maximum (director
+		# 2026-11-13: "by era, obviously").
+		_check(EraRules.has("list_min", y) and EraRules.list_min(y) <= EraRules.list_max(y),
+				"%d has a list minimum of its own, under the maximum (%d, max %d)" % [y, EraRules.list_min(y), EraRules.list_max(y)])
+	var mins := [EraRules.list_min(1990), EraRules.list_min(1994), EraRules.list_min(2004), EraRules.list_min(2010), EraRules.list_min(2021), EraRules.list_min(2026)]
+	_check(str(mins) == str([48, 38, 37, 38, 37, Contracts.MIN_LIST]),
+			"The list minimum by era: 48 to 1993, 38 from 1994, 37 in 2004, 38 to 2020, 37 from 2021 and today (%s)" % str(mins))
 
 
 ## Year 0 and today's seasons read GAME, whatever the record holds.

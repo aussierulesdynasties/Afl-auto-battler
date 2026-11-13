@@ -3013,7 +3013,7 @@ func start_next_season() -> bool:
 		draft = null  # a completed career draft sitting in the slot is spent
 	_ensure_league_lists()
 	# No draft refills the lists, so no retirement takes one under the minimum.
-	_start_next_season(season_year + 1, 0, Contracts.MIN_LIST)
+	_start_next_season(season_year + 1, 0, Contracts.min_list())
 	autosave()
 	return true
 
@@ -8266,7 +8266,7 @@ func open_offseason(keep_staff := false) -> void:
 			# until the next one: the club keeps him, as yours must.
 			if why == "delist" and ListStings.release_held(p, season_year + 1):
 				why = Contracts.ai_release_reason(p, list, cap_for(code))
-			if why == "cap" and list.size() > Contracts.MIN_LIST:
+			if why == "cap" and list.size() > Contracts.min_list():
 				# Before a wanted player walks for want of cap room, the club
 				# delists its least valuable expiring players it does not pick
 				# (ones it could replace or not) - but only when that frees
@@ -8276,7 +8276,7 @@ func open_offseason(keep_staff := false) -> void:
 					_release(code, spare, false)
 				if not spares.is_empty():
 					why = ai_release_reason(code, p)
-			if why == "" or list.size() <= Contracts.MIN_LIST:
+			if why == "" or list.size() <= Contracts.min_list():
 				# Rivals bargain by the same rules: the least he takes for that term
 				# (a club pushing to win now keeps him a little cheaper, as yours does).
 				# Testers leave together later, so count them: the club must still
@@ -8349,7 +8349,7 @@ func _era_trim_rivals() -> void:
 			var staying := list.filter(func(q): return not retiring_now(q))
 			var rookies_over := RookieList.cat_a_count(staying) > RookieList.cat_a_spots()
 			var seniors_over := RookieList.senior_count(staying) > RookieList.senior_spots()
-			if not (rookies_over or seniors_over) or list.size() <= Contracts.MIN_LIST:
+			if not (rookies_over or seniors_over) or list.size() <= Contracts.min_list():
 				break
 			var worst := {}
 			for p in staying:
@@ -8455,7 +8455,7 @@ func _cap_spares(code: String, keep: Dictionary) -> Array:
 	var asking := Contracts.asking_salary(keep)
 	var out := []
 	while asking > cap_for(code) - Contracts.payroll(scratch) + int(keep.get("salary", 0)):
-		if scratch.size() <= Contracts.MIN_LIST:
+		if scratch.size() <= Contracts.min_list():
 			return []
 		var spare := _spare_expiring(code, keep, scratch)
 		if spare.is_empty():
@@ -8691,8 +8691,8 @@ func release_player(player_id: String) -> Dictionary:
 	var p := list_player(player_id)
 	if p.is_empty() or not offseason_open():
 		return {"ok": false, "reason": "Players can only be released in the off-season."}
-	if my_list.size() <= Contracts.MIN_LIST:
-		return {"ok": false, "reason": "Your list cannot go below %d." % Contracts.MIN_LIST}
+	if my_list.size() <= Contracts.min_list():
+		return {"ok": false, "reason": "Your list cannot go below %d." % Contracts.min_list()}
 	if ListStings.release_held(p, season_year + 1):
 		return {"ok": false, "reason": ListCosts.HELD_REASON % GameDB.player_display_name(p)}
 	# A player whose career ends at this rollover leaves the game when he is
@@ -11405,18 +11405,18 @@ func _fa_close_plan() -> Array:
 		if bool(p.get("resigned", false)) or retiring_now(p):
 			continue
 		var walked := bool(p.get("talks", {}).get("walked", false)) or resign_refused(p)
-		if walked and size <= Contracts.MIN_LIST:
+		if walked and size <= Contracts.min_list():
 			plan.append([p, "resign1"])
 			continue
 		var rise := Contracts.asking_salary(p) - int(p.get("salary", 0))
 		var fits := rise <= room
 		# Before free agency (Legacy, to 2011) one of your best 23 re-signs:
 		# there is no market for him to test.
-		if not walked and fits and best22.has(str(p["id"])) and size > Contracts.MIN_LIST 				and EraRules.on("free_agency"):
+		if not walked and fits and best22.has(str(p["id"])) and size > Contracts.min_list() 				and EraRules.on("free_agency"):
 			plan.append([p, "test"])
 			size -= 1
 			room -= rise
-		elif not walked and (fits or size <= Contracts.MIN_LIST):
+		elif not walked and (fits or size <= Contracts.min_list()):
 			plan.append([p, "resign2"])
 			room -= rise
 		else:
