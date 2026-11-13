@@ -51,7 +51,7 @@ func fill(v: VBoxContainer) -> void:
 		# only for a club at its own ground.
 		var where := ("at home" if str(nxt["venue"]) == "home" else "away")
 		if nxt.has("event"):
-			where = "%s at %s" % [str(nxt["event"]), str(nxt["ground"])]
+			where = "%s at %s" % [str(nxt["event"]), GameDB.ground_shown(str(nxt["ground"]))]
 		heading.add_child(UiKit.line("%s, %s" % [GameState.season.round_name(GameState.season.round_index), where],
 				UiKit.TITLE, UiKit.TEXT, true))
 		v.add_child(heading)
