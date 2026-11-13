@@ -159,7 +159,7 @@ static func pages(season: Season) -> Array:
 				byes.append(str(c))
 		# The round picker keeps "Round N" (it fits a phone); Gather Round is named
 		# in the status line under it.
-		out.append({"title": "Round %d" % (i + 1), "matches": matches, "played": i < season.results.size(),
+		out.append({"title": season.round_name(i), "matches": matches, "played": i < season.results.size(),
 				"byes": byes, "finals": false, "event": GatherRound.NAME if i == season.gather_round() else ""})
 	if not season.finals.is_empty():
 		var weeks: Array = season.finals.get("weeks", [])
@@ -230,9 +230,9 @@ static func _status(season: Season, page: Dictionary) -> String:
 	var event := str(page.get("event", ""))
 	var tail := "" if event == "" else " · " + event
 	if bool(page["played"]):
-		return "Played · round %d of %d%s" % [idx, season.regular_rounds(), tail]
+		return "Played · %s%s" % [season.round_progress(idx - 1), tail]
 	var what := "Next round" if idx == season.round_index + 1 else "To play"
-	return "%s · round %d of %d%s" % [what, idx, season.regular_rounds(), tail]
+	return "%s · %s%s" % [what, season.round_progress(idx - 1), tail]
 
 
 ## One match as a tappable row: the two clubs one over the other, their

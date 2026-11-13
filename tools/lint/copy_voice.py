@@ -46,7 +46,7 @@ HUB_NEW = [
     "Pick the side in Team. Set how we play in Coaching.",
     "The week's open jobs sit here. Tap one to go to it; it ticks when done.",
     "The list is a guide, never a gate. Play match or Sim the week, jobs left or not.",
-    "Our %d list is set.", "Start the season", "No game for us in Round %d.",
+    "Our %d list is set.", "Start the season", "No game for us in %s.",
     "We have a week off while the rest of the series plays on.",
     "Our finals campaign is over. Play out the series to see who lifts the cup.",
     "\"Season over\"", "We missed the top %d. Play out the finals to see who lifts the cup.",
