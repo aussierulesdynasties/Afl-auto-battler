@@ -1,8 +1,8 @@
 class_name LegacyRollover
 extends RefCounted
 ## A Legacy career's rollovers, 1990 to 2026 (TODO row 142, phase L8): each
-## year's real draft class, each new club on its real first list, and the
-## Fitzroy merger. The sim makes the picks, the later careers and the
+## year's real draft class in the open draft, each new club's real
+## state-league foundation, and the Fitzroy merger. The sim makes the picks, the later careers and the
 ## retirements: an alternative history from real starting points (director
 ## 2026-11-10). A career on today's data never reaches any of this.
 ##
@@ -59,8 +59,8 @@ static func has_class(year: int) -> bool:
 	return _classes.has(year)
 
 
-## Whether `code` enters in `year` on its real list.
-static func has_entry(code: String, year: int) -> bool:
+## Whether `code`, entering in `year`, has a real state-league foundation.
+static func has_foundation(code: String, year: int) -> bool:
 	if not on():
 		return false
 	_load()
@@ -128,44 +128,27 @@ static func real_class(year: int) -> Array:
 
 
 # ---------------------------------------------------------------------------
-# A new club's real list
+# A new club's state-league foundation
 # ---------------------------------------------------------------------------
-## `code`'s real list for its first season, `year`, after the league has aged
-## into it. A player the career already has (a real player on the 1990 lists
-## or in an earlier class) moves to the new club from wherever the sim has
-## him, as he really did; one the sim has retired stays retired. Everyone else
-## (a real prospect no club in the sim drafted among them) is new to the career: rated on his last AFL season before `year`, fitted to
-## his rating on that season's own scale, or as a prospect if he has none.
-## Returns {"list", "moved": [[player, from]], "missing": [names the sim retired]}.
-static func entry_list(gs, code: String, year: int) -> Dictionary:
+## `code`'s state-league foundation for its first season, `year`: the
+## players of its real first list that no draft class brings in. A new club
+## builds the rest of its list by the game's expansion rules (ExpansionBuild):
+## its concession picks in the open draft and the out-of-contract players it
+## signs, from wherever the save has them. Nobody joins it because he really
+## did (director, 2026-11-13: "the sim will not replicate historical draftee
+## clubs"). Each is rated on his last AFL season before `year`, fitted to his
+## rating on that season's own scale, or as a prospect if he has none. At most
+## Expansion.FOUNDATION_SIZE, the best of them; the rest go into the draft
+## before `year` (returned as "pool"); fewer, and the club tops up with
+## state-league signings as any new club does.
+## Returns {"list": players, "pool": players for the draft}.
+static func foundation(gs, code: String, year: int) -> Dictionary:
 	_load()
 	var list := []
-	var moved := []
-	var missing := []
 	var established := []
 	var n := 0
 	for r in _entries.get("%s|%d" % [code, year], []):
 		n += 1
-		if str(r.get("known", "")) == "1":
-			# Historical trades are not in the sim (director, 2026-11-13): a
-			# player on another club's list stays there, but for a canon move.
-			var found := _take_known(gs, r, _canon_goes(gs, r, code, year))
-			if found.has("held"):
-				continue
-			if found.is_empty() and _retired(gs, r):
-				missing.append("%s %s" % [str(r.get("first", "")), str(r.get("last", ""))])
-				continue
-			if found.is_empty():
-				# The career never had him, or lost him undrafted from a pool:
-				# he comes as a new player, as an unknown one does.
-				list.append(_new_player(code, year, n, r))
-				continue
-			var p: Dictionary = found["p"]
-			if str(found["from"]) != "":
-				moved.append([p, str(found["from"])])
-			_join(p, code, r)
-			list.append(p)
-			continue
 		var p := _new_player(code, year, n, r)
 		if str(r.get("src", "")) != "":
 			established.append([p, r])
@@ -182,8 +165,7 @@ static func entry_list(gs, code: String, year: int) -> Dictionary:
 			if role in ["RUCK", "MID", "DEF", "FWD"] and role != str(p["role"]):
 				p["role"] = role
 				p["role2"] = Ratings.assign_secondary(p)
-			# His rating that season on that season's own scale (as the 1990
-			# lists are rated on 1989's), not on the career's first season's.
+			# His rating that season on that season's own scale.
 			var ovr := str(r.get("ovr", ""))
 			if ovr != "":
 				p["attr"] = Prospects.fit_attributes(p["attr"], str(p["role"]), float(ovr.to_int()), float(p["gm"]))
@@ -192,62 +174,26 @@ static func entry_list(gs, code: String, year: int) -> Dictionary:
 			p["career"] = Career.from_source("?")
 			p["data_club"] = code
 			Potential.assign(p)
-	var fresh := list.filter(func(q): return str(q.get("id", "")).begins_with("E%d_" % year))
-	GameDB.assign_aliases(fresh)
-	GameDB.register_draftees(fresh)
-	# The players who stayed at their clubs leave places: the club fills them
-	# as any new club builds its list, up to its real list's size.
-	if list.size() < n:
-		var built: Array = Prospects.generate_expansion_list(code, year)
-		for q in built.slice(0, n - list.size()):
-			list.append(q)
-	gs.unique_jumpers(list)
-	return {"list": list, "moved": moved, "missing": missing}
+	GameDB.assign_aliases(list)
+	GameDB.register_draftees(list)
+	list.sort_custom(func(a, b): return int(a.get("overall", 0)) > int(b.get("overall", 0)))
+	var pool := []
+	while list.size() > Expansion.FOUNDATION_SIZE:
+		var p: Dictionary = list.pop_back()
+		p["club"] = ""
+		p["draft_year"] = year - 1
+		pool.append(p)
+	if list.size() < Expansion.FOUNDATION_SIZE:
+		var more: Array = Expansion.foundation_list(code, year - 1, int(gs.career_seed))
+		list.append_array(more.slice(0, Expansion.FOUNDATION_SIZE - list.size()))
+	for p in list:
+		p["club"] = code
+		if str(p.get("note", "")) == "":
+			p["note"] = "State-league signing, %d" % (year - 1)
+	return {"list": list, "pool": pool}
 
 
-## A known real player, taken from wherever the sim has him: {"p", "from"}
-## ("from" is the club he leaves, "" from free agency or the draft pool), or
-## {} when the sim has retired him. With `from_lists` false a player on a
-## club's list stays there: {"held": that club}.
-static func _take_known(gs, r: Dictionary, from_lists := true) -> Dictionary:
-	var name := "%s %s" % [str(r.get("first", "")), str(r.get("last", ""))]
-	var dob := str(r.get("dob", ""))
-	var same := func(p: Dictionary) -> bool:
-		if str(p.get("real_name", "")) != name:
-			return false
-		return dob == "" or str(p.get("dob", "")) == "" or str(p.get("dob", "")) == dob
-	for c in gs.league_lists:
-		var arr: Array = gs.league_lists[c]
-		for i in range(arr.size()):
-			if same.call(arr[i]):
-				if not from_lists:
-					return {"held": str(c)}
-				var p: Dictionary = arr[i]
-				arr.remove_at(i)
-				return {"p": p, "from": str(c)}
-	for i in range(gs.free_agents.size()):
-		if same.call(gs.free_agents[i]):
-			var p: Dictionary = gs.free_agents[i]
-			gs.free_agents.remove_at(i)
-			return {"p": p, "from": ""}
-	for i in range(gs.draftee_pool.size()):
-		if same.call(gs.draftee_pool[i]):
-			var p: Dictionary = gs.draftee_pool[i]
-			gs.draftee_pool.remove_at(i)
-			return {"p": p, "from": ""}
-	return {}
-
-
-## Whether the sim has retired (or delisted for good) the real player of `r`.
-static func _retired(gs, r: Dictionary) -> bool:
-	var name := "%s %s" % [str(r.get("first", "")), str(r.get("last", ""))]
-	for id in gs.departed_names:
-		if str((gs.departed_names[id] as Dictionary).get("real_name", "")) == name:
-			return true
-	return false
-
-
-## A known player joins the new club on a fresh deal (ensure_contracts).
+## A canon move joins his new club on a fresh deal (ensure_contracts).
 static func _join(p: Dictionary, code: String, r: Dictionary) -> void:
 	p["club"] = code
 	p["num"] = int(str(r.get("num", "0")).to_int())
@@ -264,7 +210,8 @@ static func _new_player(code: String, year: int, n: int, r: Dictionary) -> Dicti
 	p["real_name"] = "%s %s" % [p["first"], p["last"]]
 	p["generic_name"] = ""
 	p["name"] = ""
-	p["id"] = "E%d_%s_%03d" % [year, code, n]
+	# A state-league signing, as ExpansionBuild names one (FND_).
+	p["id"] = "FND_%s_L%d_%03d" % [code, year, n]
 	p["club"] = code
 	p["num"] = int(str(r.get("num", "0")).to_int())
 	p["src"] = "LIST"
@@ -319,25 +266,6 @@ static func _new_player(code: String, year: int, n: int, r: Dictionary) -> Dicti
 	p["data_src"] = "listed %d, no senior game" % year
 	Prospects.project(p)
 	return p
-
-
-## The news line for a club entering on its real list.
-static func entry_line(gs, code: String, year: int, got: Dictionary) -> String:
-	var list: Array = got["list"]
-	var line := "%s (the %s) join the competition for %d, their first season, on a list of %d built from their real one." % [
-			GameDB.club_name(code), GameDB.club_short(code), year, list.size()]
-	var yours := []
-	var others := 0
-	for m in got["moved"]:
-		if str(m[1]) == str(gs.my_club):
-			yours.append(GameDB.player_display_name(m[0]))
-		else:
-			others += 1
-	if not yours.is_empty():
-		line += " From your list they take %s, as they really did." % _and(yours)
-	if others > 0:
-		line += " %d %s join them from other clubs." % [others, "player" if others == 1 else "players"]
-	return line
 
 
 # ---------------------------------------------------------------------------
@@ -786,7 +714,7 @@ static func canon_answered(gs, card: Dictionary, choice: int) -> void:
 
 
 ## At the rollover into `year`: the news of each story, and each move made. A
-## move to a club entering that year is made by its entry list (_canon_goes).
+## move to a club yet to play joins the list it is building.
 static func canon_moves(gs, year: int) -> void:
 	var cst := _canon_st(gs)
 	for m in CANON:
@@ -819,22 +747,13 @@ static func canon_moves(gs, year: int) -> void:
 			continue
 		e["from"] = from
 		e["to"] = to
-		if GameDB.enter_year(to) == year:
-			continue  # the new club's entry list takes him (_canon_goes)
 		(gs.league_lists[from] as Array).erase(p)
 		_join(p, to, {"num": str(p.get("num", 0))})
 		p["joined"] = year
-		var dest: Array = gs.league_lists.get(to, [])
+		# A club yet to play takes him onto the list it is building.
+		var dest: Array = gs.league_lists.get(to, []) if gs.league_lists.has(to) 				else ExpansionBuild.list_of(gs, to)
 		dest.append(p)
-		gs.league_lists[to] = dest
+		if gs.league_lists.has(to) or not ExpansionBuild.has_package(gs, to):
+			gs.league_lists[to] = dest
 		gs.unique_jumpers(dest)
 		gs.add_news("legacy", "%s leaves %s for %s." % [who, GameDB.club_name(from), GameDB.club_name(to)])
-
-
-## Whether the entry list's row `r` is a canon move that goes ahead.
-static func _canon_goes(gs, r: Dictionary, code: String, year: int) -> bool:
-	for m in CANON:
-		if str(m["kind"]) == "move" and str(m["to"]) == code and int(m["year"]) == year \
-				and str(r.get("first", "")) == str(m["first"]) and str(r.get("last", "")) == str(m["last"]):
-			return not bool((_canon_st(gs).get(m["id"], {}) as Dictionary).get("kept", false))
-	return false

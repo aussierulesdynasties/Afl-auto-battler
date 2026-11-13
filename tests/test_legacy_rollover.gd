@@ -1,7 +1,8 @@
 extends RefCounted
 ## A Legacy career's rollovers (TODO row 142, phase L8; LegacyRollover): a
-## seeded 1990 career, coached at Fitzroy, drafts the real 1990 class, rolls
-## into 1991 with 15 clubs and Adelaide on its real list, and on across 1995
+## seeded 1990 career, coached at Fitzroy, drafts the real 1990 class in the
+## open draft, rolls into 1991 with 15 clubs and Adelaide on a list built by
+## the expansion rules, and on across 1995
 ## (Fremantle), 1996-97 (the merger talks, the Brisbane Lions, Port Adelaide),
 ## 2011 (Gold Coast) and 2012 (GWS). A 2026 career never meets any of it.
 ## Run through tests/run_legacy_rollover_tests.gd.
@@ -25,7 +26,7 @@ func run() -> void:
 	_t("_test_brand_choice", [1])
 	_t("_test_brand_sim_bears")
 	_t("_test_colours_apart")
-	_t("_test_no_historical_trades")
+	_t("_test_new_club_from_the_save")
 	_t("_test_canon_move", ["ablett_gcs", "rival"])
 	_t("_test_canon_move", ["ablett_gcs", "let_go"])
 	_t("_test_canon_move", ["ablett_gcs", "fight"])
@@ -60,8 +61,8 @@ func _test_2026_unchanged() -> void:
 	GameDB.reload()
 	GameState.reset()
 	GameState.start_season("MEL", GameDB.club_list("MEL"))
-	_check(not LegacyRollover.on() and not LegacyRollover.has_class(2026) and not LegacyRollover.has_entry("ADE", 1991),
-			"A 2026 career has no real classes or entry lists")
+	_check(not LegacyRollover.on() and not LegacyRollover.has_class(2026) and not LegacyRollover.has_foundation("ADE", 1991),
+			"A 2026 career has no real classes or foundations")
 	var real := GameState.draftee_pool.filter(func(p): return str(p.get("id", "")).begins_with("R"))
 	_check(real.is_empty() and not GameState.draftee_pool.is_empty(), "A 2026 career's first class is generated")
 	_skip_season()
@@ -303,7 +304,7 @@ func _test_campaign() -> void:
 	var real_1990 := GameState.draftee_pool.filter(func(p): return str(p.get("id", "")).begins_with("R1990_"))
 	_check(real_1990.size() == LegacyRollover.real_class(1990).size(),
 			"The 1990 career's draft pool is the real 1990 class (%d)" % real_1990.size())
-	_check(ExpansionBuild.building(GameState).is_empty(), "Adelaide builds no concession list: it brings its real one")
+	_check(ExpansionBuild.building(GameState) == ["ADE"], "Adelaide builds its list by the expansion rules (%s)" % str(ExpansionBuild.building(GameState)))
 	# 1990 -> 1991: the clubs draft the real class.
 	_skip_season()
 	_check(GameState.begin_intake_draft(), "The 1990 intake draft opens")
@@ -322,6 +323,11 @@ func _test_campaign() -> void:
 				drafted += 1
 	_check(drafted >= 30, "The clubs took the real 1990 class (%d listed)" % drafted)
 	_entered("ADE", 1991)
+	# "there must be 0 missing players" (director, 2026-11-13): every real
+	# player of each class is on a list after its draft.
+	var listed := {}
+	_note_listed(listed)
+	_check(_unlisted(listed, 1990).is_empty(), "Every player of the real 1990 class is on a list (missing: %s)" % str(_unlisted(listed, 1990)))
 	# On to 2012.
 	var lions_checked := false
 	while GameState.season_year < 2012:
@@ -331,6 +337,9 @@ func _test_campaign() -> void:
 			_check(false, "%d rolls over" % year)
 			return
 		var now := GameState.season_year
+		_note_listed(listed)
+		var missing := _unlisted(listed, now - 1)
+		_check(missing.is_empty(), "Every player of the real %d class is on a list (%d missing: %s)" % [now - 1, missing.size(), str(missing.slice(0, 8))])
 		if now == 1996:
 			_check(GameState.news.any(func(n): return "merger talks" in str(n.get("text", ""))),
 					"The merger talks open before 1996")
@@ -369,29 +378,43 @@ func _test_campaign() -> void:
 	_check(loaded.has("legacy") and (loaded["legacy"] as Dictionary).has("finals"), "The save keeps the Legacy record")
 
 
-## `code` enters `year` on a list built from its real one: its real players
-## the career has nowhere else, filled to the real list's size.
+## Notes every real class player (id R<year>_) now on a list.
+func _note_listed(listed: Dictionary) -> void:
+	for code in GameState.league_lists:
+		for p in GameState.league_lists[code]:
+			if str(p.get("id", "")).begins_with("R"):
+				listed[str(p["id"])] = true
+
+
+## The real class of `year` that never reached a list, by name.
+func _unlisted(listed: Dictionary, year: int) -> Array:
+	return LegacyRollover.real_class(year).filter(func(p): return not listed.has(str(p["id"]))) 			.map(func(p): return "%s (%s)" % [str(p["real_name"]), str(p.get("tied_type", ""))])
+
+
+## `code` enters `year` on a list built by the expansion rules, from the
+## save: no player the save had elsewhere joins it because he really did
+## (director, 2026-11-13). Its real state-league players are all in the game.
 func _entered(code: String, year: int) -> void:
 	var list: Array = GameState.league_lists.get(code, [])
-	var rows := 0
-	var names := {}
-	for p in list:
-		names[str(p.get("real_name", ""))] = true
-	var absent := []
-	for r in GameDB._read_dicts(LegacyRollover.ENTRY_CSV):
-		if str(r["club"]) == code and int(r["year"]) == year:
-			rows += 1
-			var nm := "%s %s" % [str(r["first"]), str(r["last"])]
-			if not names.has(nm):
-				absent.append("%s%s" % [nm, " (known)" if str(r["known"]) == "1" else ""])
 	_check(GameDB.active_clubs(year).has(code), "%s plays in %d" % [code, year])
-	_check(list.size() == rows and list.all(func(p): return str(p.get("club", code)) == code),
-			"%s enter %d on a full list (%d of its real %d; not there: %s)" % [code, year, list.size(), rows, ", ".join(absent)])
-	var real := list.filter(func(p): return names.has(str(p.get("real_name", ""))) and str(p.get("real_name", "")) != "")
-	_check(real.size() >= rows / 2, "%s's list is mostly its real players (%d of %d)" % [code, real.size(), rows])
+	_check(list.size() >= 30 and list.all(func(p): return str(p.get("club", code)) == code),
+			"%s enter %d on a full list (%d)" % [code, year, list.size()])
 	var rated := list.filter(func(p): return int(p.get("overall", 0)) > 30)
 	_check(rated.size() == list.size(), "Every %s player is rated" % code)
-	_check(GameState.news.any(func(n): return "built from their real one" in str(n.get("text", "")) and GameDB.club_name(code) in str(n.get("text", ""))),
+	var everywhere := {}
+	for c in GameState.league_lists:
+		for p in GameState.league_lists[c]:
+			everywhere[str(p.get("real_name", ""))] = true
+	for p in GameState.draftee_pool:
+		everywhere[str(p.get("real_name", ""))] = true
+	var lost := []
+	for r in GameDB._read_dicts(LegacyRollover.ENTRY_CSV):
+		if str(r["club"]) == code and int(r["year"]) == year:
+			var nm := "%s %s" % [str(r["first"]), str(r["last"])]
+			if not everywhere.has(nm):
+				lost.append(nm)
+	_check(lost.is_empty(), "%s's real state-league players are all on a list or in the draft (lost: %s)" % [code, ", ".join(lost)])
+	_check(GameState.news.any(func(n): return "from the state leagues" in str(n.get("text", "")) and GameDB.club_name(code) in str(n.get("text", ""))),
 			"The news tells of %s's entry" % code)
 
 
@@ -407,39 +430,36 @@ func _start(code: String) -> void:
 		GameState.league_lists[c] = GameState.season.lists[c]
 
 
-## "historical trades arent in the sim" (director, 2026-11-13): a new club's
-## real player who is on another club's list stays there, and the new club
-## fills his place.
-func _test_no_historical_trades() -> void:
+## "the sim will not replicate historical draftee clubs" (director,
+## 2026-11-13): a new club's foundation is only its real state-league players
+## no class brings in; nobody on a list moves to it, the best
+## Expansion.FOUNDATION_SIZE sign and the rest go into the draft.
+func _test_new_club_from_the_save() -> void:
 	GameState.reset("1990")
 	_start("GEE")
+	var before := 0
+	for c in GameState.league_lists:
+		before += (GameState.league_lists[c] as Array).size()
 	var rows := 0
-	var real := []
 	for r in GameDB._read_dicts(LegacyRollover.ENTRY_CSV):
 		if str(r["club"]) == "ADE" and int(r["year"]) == 1991:
 			rows += 1
-			if str(r.get("known", "")) == "1":
-				real.append(r)
-	# Put three of Adelaide's real 1991 players on 1990 lists, as a career
-	# that drafted them would.
-	var held := {}
-	var clubs := ["GEE", "HAW", "CAR"]
-	for i in 3:
-		var p: Dictionary = (GameState.league_lists[clubs[i]] as Array)[i + 1]
-		p["real_name"] = "%s %s" % [str(real[i]["first"]), str(real[i]["last"])]
-		p["dob"] = str(real[i].get("dob", ""))
-		held[str(p["id"])] = clubs[i]
-	var got: Dictionary = LegacyRollover.entry_list(GameState, "ADE", 1991)
+	var got: Dictionary = LegacyRollover.foundation(GameState, "ADE", 1991)
 	var list: Array = got["list"]
-	var stayed := 0
-	for id in held:
-		var still: Array = GameState.league_lists[held[id]]
-		if still.any(func(p): return str(p["id"]) == id):
-			stayed += 1
-	_check(stayed == held.size(), "Every one of them stays at his club (%d of %d)" % [stayed, held.size()])
-	_check(not list.any(func(p): return held.has(str(p.get("id", "")))), "None of them is on Adelaide's list")
-	_check((got["moved"] as Array).is_empty(), "No player moves to Adelaide from another club")
-	_check(list.size() == rows, "Adelaide's list is full all the same (%d of %d)" % [list.size(), rows])
+	var pool: Array = got["pool"]
+	var after := 0
+	for c in GameState.league_lists:
+		after += (GameState.league_lists[c] as Array).size()
+	_check(after == before, "No player leaves a club for Adelaide (%d listed, then %d)" % [before, after])
+	_check(list.size() == Expansion.FOUNDATION_SIZE, "Adelaide sign %d from the state leagues (%d)" % [Expansion.FOUNDATION_SIZE, list.size()])
+	_check(list.size() + pool.size() == maxi(rows, Expansion.FOUNDATION_SIZE),
+			"Every real one signs or goes into the draft (%d + %d of %d)" % [list.size(), pool.size(), rows])
+	_check(list.all(func(p): return str(p["id"]).begins_with("FND_") and str(p["club"]) == "ADE"), "They are Adelaide's state-league signings")
+	_check(pool.all(func(p): return str(p["club"]) == "" and int(p["draft_year"]) == 1990), "The rest are in the 1990 draft")
+	var low := 99
+	for p in list:
+		low = mini(low, int(p["overall"]))
+	_check(pool.all(func(p): return int(p["overall"]) <= low), "Adelaide sign the best of them")
 	GameDB.reload("1990")
 
 
@@ -497,8 +517,7 @@ func _test_canon_move(id: String, how: String) -> void:
 		LegacyRollover.canon_moves(GameState, int(m["year"]))
 		var moved := false
 		if GameDB.enter_year(to) == int(m["year"]):
-			var got: Dictionary = LegacyRollover.entry_list(GameState, to, int(m["year"]))
-			moved = (got["list"] as Array).has(star)
+			moved = ExpansionBuild.list_of(GameState, to).has(star)
 		else:
 			moved = (GameState.league_lists.get(to, []) as Array).has(star)
 		var at_home := (GameState.league_lists[from] as Array).has(star)
