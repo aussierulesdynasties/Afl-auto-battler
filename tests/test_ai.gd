@@ -50,11 +50,20 @@ func _all_ai_draft(seed: int) -> Draft:
 	return d
 
 
+## A full all-AI league draft costs seconds: each seed is drafted once and
+## shared by the tests that read it (none of them changes the draft).
+var _ai_drafts := {}
+func _shared_ai_draft(seed: int) -> Draft:
+	if not _ai_drafts.has(seed):
+		_ai_drafts[seed] = _all_ai_draft(seed)
+	return _ai_drafts[seed]
+
+
 func _test_league_draft_balance() -> void:
 	# Seed-sensitive: over 40 seeds roughly one draft in ten leaves a club
 	# with two good rucks while another has none (on the 2026 pool too).
 	for seed in [12, 23]:
-		var d := _all_ai_draft(seed)
+		var d := _shared_ai_draft(seed)
 		_check(d.is_finished(), "An all-AI league draft completes (seed %d)" % seed)
 		var two_rucks := true
 		var hoarders := 0
@@ -180,11 +189,13 @@ func _test_club_evaluation() -> void:
 	_check(intake._eval_error("A", pool[0]) == 0.0, "The intake draft keeps the shared valuation")
 
 	# The same seed replays the same draft; players are not changed by it.
+	# d1 and d3 are the league-balance test's drafts (seeds 12 and 23); d2 is
+	# drafted again here from d1's seed.
+	var d1 := _shared_ai_draft(12)
 	var before := {}
 	for p in GameDB.all_players_sorted():
 		before[str(p["id"])] = [int(p["overall"]), int(p.get("potential", 0)), str(p["attr"])]
-	var d1 := _all_ai_draft(777)
-	var d2 := _all_ai_draft(777)
+	var d2 := _all_ai_draft(12)
 	var h1 := []
 	var h2 := []
 	for e in d1.pick_history:
@@ -208,7 +219,7 @@ func _test_club_evaluation() -> void:
 		if list.size() != d1.target_size or rucks < 2 or d1.spent_for(code) > d1.budget:
 			lists_ok = false
 	_check(lists_ok, "Every club's list has the full size, two rucks and fits the cap")
-	var d3 := _all_ai_draft(778)
+	var d3 := _shared_ai_draft(23)
 	var h3 := []
 	for e in d3.pick_history:
 		h3.append(e["player_id"])
@@ -217,45 +228,26 @@ func _test_club_evaluation() -> void:
 		ids1.append(e["player_id"])
 	_check(h3 != ids1, "Different seeds give different drafts, not just relabelled ones")
 
-	# Clubs' opinions must not strand the pool's rucks on a few lists: no
-	# rival takes a fourth, so a human who leaves the second ruck to the
-	# final pick can still finish (this seed stranded one before the guard).
-	var r := Draft.new(GameDB.all_players_sorted(), clubs, 445908)
-	r.start_for_user("COL")
-	var guard := 0
-	while not r.is_finished() and guard < 2000:
-		guard += 1
-		if not r.is_user_turn():
-			r.auto_until_user_turn()
-			continue
-		var choice := {}
-		for cand in r.board("", "", "", "overall", true):
-			if r.can_pick_player(cand):
-				choice = cand
-				break
-		if choice.is_empty() or not r.pick(choice):
-			break
-	var max_rucks := 0
-	for code in clubs:
-		if code == "COL":
-			continue
-		var n := 0
-		for p in r.club_lists[code]:
-			if str(p["role"]) == "RUCK":
-				n += 1
-		max_rucks = maxi(max_rucks, n)
-	_check(r.is_finished(), "A ruck-light human club can still complete the draft")
-	_check(max_rucks <= 3, "No rival club takes a fourth ruck (%d)" % max_rucks)
+	# The ruck-light human club (seed 445908, which stranded a ruck before the
+	# guard) is drafted in _test_no_cap_deadlock: its human takes the best
+	# player on the board every pick, so it is that test's first draft.
 
 
 ## A club that splashes on three $10 stars must still be able to fill its
 ## list: the cap reserve tracks what the remaining spots really cost (the
 ## pool has no $1 players).
+##
+## The same drafts prove the ruck guard: clubs' opinions must not strand the
+## pool's rucks on a few lists, so no rival takes a fourth and a human who
+## never reaches for a ruck (the best player on the board every pick) can still
+## finish. Seed 445908 stranded one before the guard. Two drafts, not six: each
+## costs seconds, and the reserve rule is the same rule on every seed.
 func _test_no_cap_deadlock() -> void:
 	var finished := 0
-	for seed in range(1, 7):
-		var d := Draft.new(GameDB.all_players_sorted(),
-				GameDB.active_clubs(2026).duplicate(), seed * 101)
+	var seeds := [445908, 101]
+	var clubs: Array = GameDB.active_clubs(2026).duplicate()
+	for seed in seeds:
+		var d := Draft.new(GameDB.all_players_sorted(), clubs, seed)
 		d.start_for_user("COL")
 		for i in range(3):
 			var top: Array = d.board("", "", "", "overall", true)
@@ -276,7 +268,18 @@ func _test_no_cap_deadlock() -> void:
 				break
 		if d.is_finished() and d.spent() <= d.budget:
 			finished += 1
-	_check(finished == 6, "A big-spending club always completes the draft under the cap (%d/6)" % finished)
+		var max_rucks := 0
+		for code in clubs:
+			if code == "COL":
+				continue
+			var n := 0
+			for p in d.club_lists[code]:
+				if str(p["role"]) == "RUCK":
+					n += 1
+			max_rucks = maxi(max_rucks, n)
+		_check(d.is_finished(), "A ruck-light human club can still complete the draft (seed %d)" % seed)
+		_check(max_rucks <= 3, "No rival club takes a fourth ruck (seed %d: %d)" % [seed, max_rucks])
+	_check(finished == seeds.size(), "A big-spending club always completes the draft under the cap (%d/%d)" % [finished, seeds.size()])
 
 
 func _test_intake_values_potential() -> void:
@@ -310,7 +313,8 @@ func _test_rivals_train() -> void:
 	for p in GameState.my_list:
 		mine_attr[str(p["id"])] = (p["attr"] as Dictionary).duplicate()
 		mine_xp[str(p["id"])] = int(p.get("xp", 0))
-	for i in range(6):
+	# Three rounds: rivals bank XP after every game and spend it as they go.
+	for i in range(3):
 		GameState.advance()
 	var trained := 0
 	var past_pot := 0

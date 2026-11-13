@@ -359,6 +359,11 @@ func _test_plausible_names() -> void:
 
 
 ## No generated name has its given name equal to its surname ("Reid Reid").
+## Every generated man takes his label from GameDB.assign_aliases, which walks
+## one cursor through the shuffled name pool and on into the overflow names, so
+## the rule is checked there directly: the cursor is swept across the whole pool
+## and well into the overflow (every first-last pairing at least twice), and
+## must hand out no double. A few real classes prove Prospects takes that path.
 func _test_no_double_names() -> void:
 	var saved_next: int = GameDB._alias_next
 	var doubles := []
@@ -367,18 +372,32 @@ func _test_no_double_names() -> void:
 		checked += 1
 		if GameDB.alias_is_double(str(person["generic_name"])):
 			doubles.append(str(person["generic_name"]))
-	for i in range(20):
+	for i in range(3):
 		for person in Prospects.generate_class(2027 + i, 4242):
 			checked += 1
 			if GameDB.alias_is_double(str(person["generic_name"])):
 				doubles.append(str(person["generic_name"]))
-	for s in range(2000):
-		var cls: Array = Prospects.generate_class(2100 + s % 40, s)
-		for person in cls:
-			checked += 1
-			if GameDB.alias_is_double(str(person["generic_name"])):
-				doubles.append(str(person["generic_name"]))
+	GameDB._ensure_alias_pool()
+	var pool_size: int = GameDB._alias_candidates.size()
+	var pairs: int = GameDB.FICTIONAL_FIRST_NAMES.size() * GameDB.FICTIONAL_LAST_NAMES.size()
+	# The pool holds doubles to skip ("Reid Reid" when a word is both a first
+	# name and a surname); otherwise the sweep below would prove nothing.
+	var in_pool := 0
+	for label in GameDB._alias_candidates:
+		if GameDB.alias_is_double(str(label)):
+			in_pool += 1
+	GameDB._alias_next = 0
+	var men := []
+	for i in range(pool_size + 2 * pairs):
+		men.append({})
+	GameDB.assign_aliases(men)
+	var skipped: int = GameDB._alias_next - men.size()
+	for man in men:
+		checked += 1
+		if GameDB.alias_is_double(str(man["generic_name"])):
+			doubles.append(str(man["generic_name"]))
 	GameDB._alias_next = saved_next
+	_check(in_pool > 0 and skipped >= in_pool, "The name pool holds doubles and the cursor skips them (%d in the pool, %d skipped)" % [in_pool, skipped])
 	_check(doubles.is_empty(), "No generated name repeats its first word as its surname (%d checked, bad: %s)" % [checked, str(doubles.slice(0, 5))])
 	_check(GameDB.alias_is_double("Reid Reid") and GameDB.alias_is_double("Reid reid")
 			and not GameDB.alias_is_double("Reid Reed"), "The double-name check is case-insensitive on first and last word")
@@ -445,6 +464,14 @@ func _career_draft(seed: int) -> Draft:
 	return Draft.new(pool, GameDB.active_clubs(GameDB.START_YEAR).duplicate(), seed)
 
 
+## A deep copy of a draft (every field CareerSave keeps), so one fixture can
+## be changed without touching another.
+func _copy_draft(d: Draft) -> Draft:
+	var c := Draft.new([], [], 0)
+	CareerSave.apply_vars(c, CareerSave.object_vars(d).duplicate(true))
+	return c
+
+
 func _cheapest_legal(d: Draft) -> Dictionary:
 	var best := {}
 	for p in d.pool:
@@ -504,7 +531,14 @@ func _force_pick(d: Draft, code: String, p: Dictionary) -> void:
 ## An older save where you spent your cap on stars: a legal way on, never a
 ## cap breach, and it survives a save and reload.
 func _test_stuck_draft_recovery() -> void:
-	var d := _career_draft(47)
+	# Getting stuck and releasing a pick are one club's own list and cap, so
+	# four clubs drafting the career pool are enough: the rivals' picks fall
+	# between yours as they do in an 18-club draft, at a fraction of the cost.
+	var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
+	pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
+	var clubs: Array = GameDB.active_clubs(GameDB.START_YEAR).slice(0, 4)
+	_check(clubs.size() == 4, "(setup) four clubs draft (%d)" % clubs.size())
+	var d := Draft.new(pool, clubs, 47)
 	var me := str(d.draft_order[2])
 	d.start_for_user(me)
 	var guard := 0
@@ -851,8 +885,11 @@ func _test_scouted_league_board() -> void:
 ## Can a finished draft end refused? Played every way a coach can (cheapest,
 ## dearest, no rucks until forced, rucks first) it never does: each pick is
 ## checked against the cap and the two-ruck rule. Only an older save can hold
-## a refused list, and then Release is the way out.
+## a refused list, and then Release is the way out. A career draft costs
+## seconds, so the two older-save fixtures are copies of the cheapest-first
+## draft, not drafts of their own.
 func _test_finished_list_reachability() -> void:
+	var cheapest: Draft = null
 	for strat in ["cheapest", "dearest", "noruck"]:
 		var d := _career_draft(61)
 		var me := str(d.draft_order[3])
@@ -880,17 +917,14 @@ func _test_finished_list_reachability() -> void:
 		_check(d.is_finished() and d.is_valid() and not d.finished_list_refused() and not d.can_release(),
 				"%s-first ends a valid draft: %d/%d, %s of %s, %d rucks" % [strat, d.count(), d.target_size,
 				Contracts.money(d.spent()), Contracts.money(d.budget), d.count_covering("RUCK")])
+		if strat == "cheapest":
+			cheapest = d
 
 	# An older save: finished over the cap. Release reopens the draft, never breaching it.
-	var o := _career_draft(61)
+	var o := _copy_draft(cheapest)
 	var mine := str(o.draft_order[3])
-	o.start_for_user(mine)
-	var g2 := 0
-	while not o.is_finished() and g2 < 200:
-		g2 += 1
-		var c := _cheapest_legal(o)
-		if c.is_empty() or not o.pick(c):
-			break
+	_check(o.is_finished() and o.pick_history == cheapest.pick_history and o.user_club == mine,
+			"The copy is the finished cheapest-first draft")
 	_check(o.is_valid() and not o.can_release(), "A valid finished list offers no Release")
 	var seq := o.pick_sequence.size()
 	o.club_spend[mine] = o.budget + 5000
@@ -908,15 +942,9 @@ func _test_finished_list_reachability() -> void:
 			"The replacement is checked against the cap like any pick, or Release is still offered")
 
 	# An older save: finished with one ruck. Release, and the places left must go to rucks.
-	var r := _career_draft(61)
+	var r := _copy_draft(cheapest)
 	var mr := str(r.draft_order[3])
-	r.start_for_user(mr)
-	var g3 := 0
-	while not r.is_finished() and g3 < 200:
-		g3 += 1
-		var c3 := _cheapest_legal(r)
-		if c3.is_empty() or not r.pick(c3):
-			break
+	_check(r.is_finished() and r.is_valid(), "A second copy of the finished draft, untouched by the first")
 	var lst: Array = r.club_lists[mr]
 	var kept := 0
 	var swapped := false

@@ -77,11 +77,35 @@ func _new_career() -> void:
 	gs.tutorials = false
 
 
+## Opening the off-season (retirements, delistings, trades, free agency for
+## every club) costs most of a draft test, and nothing here tests it. The
+## first test to need it opens it once and saves the career; the others load
+## that save (its own file, apart from the suite's) and change what they test
+## before the National Draft opens.
+const OPEN_SAVE := "user://test_rookie_list_open.save"
+var _open_saved := false
+
+
+## A career at the end of its first home-and-away with the off-season open.
+func _offseason_open() -> void:
+	var keep: String = gs.save_path
+	gs.save_path = OPEN_SAVE
+	var loaded: bool = _open_saved and gs.load_career()
+	if not loaded:
+		_new_career()
+		gs.season.round_index = gs.season.fixture.size()
+		gs.open_offseason()
+		_open_saved = gs.save_career()
+	gs.save_path = keep
+	gs.tutorials = false
+	_check(gs.offseason_year == gs.season_year and gs.season.round_index == gs.season.fixture.size(),
+			"(setup) the off-season is open at the end of the home-and-away (%s)" % ("loaded" if loaded else "opened"))
+
+
 ## A career at the end of its first home-and-away, through the National Draft
 ## (every pick made the way a rival makes it) and the rollover.
 func _rollover() -> Draft:
-	_new_career()
-	gs.season.round_index = gs.season.fixture.size()
+	_offseason_open()
 	if not gs.begin_intake_draft():
 		return null
 	var draft: Draft = gs.draft
@@ -377,7 +401,7 @@ func _test_midseason_fills_rookie_spots() -> void:
 ## an off-season the young unsigned free agents are still in the pool, rivals
 ## leave rookie spots open, and the mid-season draft has players and takers.
 func _test_midseason_pool_after_offseason() -> void:
-	_new_career()
+	_offseason_open()
 	# Who stays when free agency closes: the young, the best of them first.
 	var model: Dictionary = (gs.season.lists["COL"] as Array)[0]
 	var made := []
@@ -646,9 +670,8 @@ func _test_real_lists_rookie_categories() -> void:
 ## refuses a player over 24 and says why; the Rookie Draft and the mid-season
 ## draft refuse him too, and a 24-year-old goes through.
 func _test_youth_only_drafts() -> void:
-	_new_career()
+	_offseason_open()
 	gs.challenge = {"kind": "youth"}
-	gs.season.round_index = gs.season.fixture.size()
 	# Room on the list, so the picks below are made: a full list passes them.
 	gs.my_list.resize(gs.my_list.size() - 3)
 	_check(gs.begin_intake_draft(), "(setup) the National Draft opens")
@@ -735,8 +758,7 @@ func _test_youth_only_midseason() -> void:
 ## you offer one a spot with a real tap, rivals take them by the same rule,
 ## the list limits hold, and a save and load keeps it all.
 func _test_undrafted_chance() -> void:
-	_new_career()
-	gs.season.round_index = gs.season.fixture.size()
+	_offseason_open()
 	var year: int = gs.season_year
 	_check(gs.begin_intake_draft(), "(setup) the National Draft opens")
 	var draft: Draft = gs.draft
@@ -1092,8 +1114,7 @@ func _test_the_44_rule() -> void:
 ## coach is told why, in his own club's case), a club at 43 takes one, and a
 ## father-son or academy player is listed only where the 44 has room.
 func _test_the_44_national_draft() -> void:
-	_new_career()
-	gs.season.round_index = gs.season.fixture.size()
+	_offseason_open()
 	var year: int = gs.season_year
 	_shape(CLUB, 36, 10, 2)
 	_shape("GEE", 36, 10, 0)
