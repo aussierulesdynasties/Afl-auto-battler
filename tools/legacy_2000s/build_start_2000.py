@@ -126,8 +126,31 @@ def draft_of(L, drafts):
     return "", "", ""
 
 
+LAST_LISTED = 2025  # the latest season the lists cover: still listed then = blank
+
+
+def last_seasons():
+    """Each player's last real season on an AFL list (director 2026-11-13: historical players
+    retire "roughly when it did irl"), keyed by AFL Tables id, Draftguru id and name + dob."""
+    out = {}
+    for dec in ("1990s", "2000s", "2010s", "2020s"):
+        for r in read_csv(dec, "lists.csv"):
+            y = int(r["year"])
+            for k in (r["afltables_id"], r["draftguru_id"], "%s|%s|%s" % (r["first"], r["last"], r["dob"])):
+                if k and not k.endswith("||"):
+                    out[k] = max(out.get(k, 0), y)
+    return out
+
+
+def last_of(L, last):
+    y = max((last.get(k, 0) for k in (L["afltables_id"], L["draftguru_id"],
+                                       "%s|%s|%s" % (L["first"], L["last"], L["dob"])) if k), default=0)
+    return "" if y >= LAST_LISTED or y < YEAR else str(y)
+
+
 def build(rated, by_year):
     lists = [r for r in read_csv("2000s", "lists.csv") if int(r["year"]) == YEAR]
+    last = last_seasons()
     careers = careers_before(by_year)
     drafts = {}
     for dec in ("1990s", "2000s"):
@@ -179,14 +202,16 @@ def build(rated, by_year):
             history.append({"club": club, "num": L["num"],
                             "slug": pid.rsplit("/", 1)[-1].replace(".html", ""),
                             "draft_year": dy, "draft_type": dt, "draft_pick": dp,
-                            "seasons": ";".join(seasons), "career": BS.stints(car), "peak": peak or ""})
+                            "seasons": ";".join(seasons), "career": BS.stints(car), "peak": peak or "",
+                            "last_season": last_of(L, last)})
             if L["list"] == "rookie":
                 list_types.append({"club": club, "first": L["first"], "last": L["last"], "dob": L["dob"],
                                    "list": "rookie", "source_url": L["source_url"], "checked": L["checked"]})
         else:
             additions.append({"first": L["first"], "last": L["last"], "dob": L["dob"], "club": club,
                               "position": "", "height_cm": L["height_cm"], "list": L["list"],
-                              "peak": peak or "", "source_url": L["source_url"], "checked": L["checked"]})
+                              "peak": peak or "", "last_season": last_of(L, last),
+                              "source_url": L["source_url"], "checked": L["checked"]})
             for y in (DATA_SEASON - 1, DATA_SEASON - 2):
                 got = rated.get(y, {}).get(pid) if pid else None
                 if got and got[1] > 0:
@@ -298,9 +323,9 @@ def main():
     os.makedirs(OUT_DIR, exist_ok=True)
     BS.write(os.path.join(OUT_DIR, "players_2000.csv"), BS.ENRICHED, players)
     BS.write(os.path.join(OUT_DIR, "history_2000.csv"),
-             ["club", "num", "slug", "draft_year", "draft_type", "draft_pick", "seasons", "career", "peak"], history)
+             ["club", "num", "slug", "draft_year", "draft_type", "draft_pick", "seasons", "career", "peak", "last_season"], history)
     BS.write(os.path.join(OUT_DIR, "list_additions_2000.csv"),
-             ["first", "last", "dob", "club", "position", "height_cm", "list", "peak", "source_url", "checked"],
+             ["first", "last", "dob", "club", "position", "height_cm", "list", "peak", "last_season", "source_url", "checked"],
              additions)
     BS.write(os.path.join(OUT_DIR, "list_addition_stats_2000.csv"), BS.ADD_STATS, add_stats)
     lt = os.path.join(OUT_DIR, "list_types_2000.csv")
