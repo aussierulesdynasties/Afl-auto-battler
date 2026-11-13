@@ -29,6 +29,7 @@ func run() -> void:
 	_t("_test_brand_sim_bears")
 	_t("_test_colours_apart")
 	_t("_test_new_club_from_the_save")
+	_t("_test_concessions_by_entry")
 	_t("_test_canon_move", ["ablett_gcs", "rival"])
 	_t("_test_canon_move", ["ablett_gcs", "let_go"])
 	_t("_test_canon_move", ["ablett_gcs", "fight"])
@@ -357,7 +358,11 @@ func _test_campaign() -> void:
 	var real_1990 := GameState.draftee_pool.filter(func(p): return str(p.get("id", "")).begins_with("R1990_"))
 	_check(real_1990.size() == LegacyRollover.real_class(1990).size(),
 			"The 1990 career's draft pool is the real 1990 class (%d)" % real_1990.size())
-	_check(ExpansionBuild.building(GameState) == ["ADE"], "Adelaide builds its list by the expansion rules (%s)" % str(ExpansionBuild.building(GameState)))
+	# 1991 is before the expansion concessions (from Gold Coast, 2011):
+	# Adelaide enters on a state-league list and approaches nobody.
+	_check(ExpansionBuild.entering(GameState) == ["ADE"] and ExpansionBuild.building(GameState).is_empty(),
+			"Adelaide enters for 1991 without the expansion package (entering %s, building %s)" % [
+			str(ExpansionBuild.entering(GameState)), str(ExpansionBuild.building(GameState))])
 	# 1990 -> 1991: the clubs draft the real class.
 	_skip_season()
 	var offered := {}
@@ -371,6 +376,7 @@ func _test_campaign() -> void:
 				drafted += 1
 	_check(drafted >= 30, "The clubs took the real 1990 class (%d listed)" % drafted)
 	_entered("ADE", 1991, offered)
+	_no_package("ADE", 1991)
 	# "there must be 0 missing players" (director, 2026-11-13): every real
 	# player of each class reaches the game, in his own year's draft. Who
 	# takes him is the save's (director, 2026-11-13: "its not possible unless
@@ -391,7 +397,12 @@ func _test_campaign() -> void:
 			_check(GameState.news.any(func(n): return "merger talks" in str(n.get("text", ""))),
 					"The merger talks open before 1996")
 		if now == 1995 or now == 1997 or now == 2011 or now == 2012:
-			_entered({1995: "FRE", 1997: "PAD", 2011: "GCS", 2012: "GWS"}[now], now, offered)
+			var code: String = {1995: "FRE", 1997: "PAD", 2011: "GCS", 2012: "GWS"}[now]
+			_entered(code, now, offered)
+			if now < 2011:
+				_no_package(code, now)
+			else:
+				_package(code, now)
 		if now == 1997:
 			lions_checked = true
 			_check(str(GameState.legacy.get("fitzroy", "")) == "merged", "Fitzroy, out of the finals, merge (%s)" % str(GameState.legacy))
@@ -484,6 +495,57 @@ func _entered(code: String, year: int, offered: Dictionary) -> void:
 			"The news tells of %s's entry" % code)
 
 
+## Entered before the expansion concessions: nobody approached, no rival lost
+## a player to it, no compensation or traded pick, no sign-on money, and a
+## list inside the season's limits built from the state leagues.
+func _no_package(code: String, year: int) -> void:
+	var st: Dictionary = GameState.expansion.get(code, {})
+	_check(not ExpansionBuild.has_package(GameState, code) and (st.get("targets", []) as Array).is_empty()
+			and (st.get("signings", []) as Array).is_empty() and (st.get("lost", []) as Array).is_empty()
+			and (st.get("traded_picks", []) as Array).is_empty(),
+			"%s approach and sign nobody's players and trade no pick before %d (%s)" % [code, year, str(st.keys())])
+	var list: Array = GameState.league_lists.get(code, [])
+	var from_rivals := list.filter(func(p): return p.has("joined") or str(p.get("released_by", "")) != "")
+	_check(from_rivals.is_empty(), "No rival loses a player to %s for %d (%d)" % [code, year, from_rivals.size()])
+	var comp := GameState.news.filter(func(n): return "compensation" in str(n.get("text", "")).to_lower() 			and GameDB.club_name(code) in str(n.get("text", "")))
+	_check(comp.is_empty(), "No compensation pick for a player lost to %s (%s)" % [code, str(comp.slice(0, 1))])
+	_check(list.size() <= EraRules.list_max(year) and list.size() >= EraRules.list_min(year)
+			and RookieList.senior_count(list) <= EraRules.senior_spots(year),
+			"%s field a legal %d list (%d; %d to %d)" % [code, year, list.size(), EraRules.list_min(year), EraRules.list_max(year)])
+	_check(ExpansionBuild.relief(GameState, code) == 0, "%s have no sign-on money in %d" % [code, year])
+
+
+## Entered with the expansion concessions (2011 on): it approached rivals'
+## out-of-contract players and held its extra picks.
+func _package(code: String, year: int) -> void:
+	var st: Dictionary = GameState.expansion.get(code, {})
+	_check(ExpansionBuild.has_package(GameState, code) and not (st.get("targets", []) as Array).is_empty()
+			and not (st.get("traded_picks", []) as Array).is_empty(),
+			"%s enter %d with the expansion package (%d approaches, picks traded %s)" % [code, year,
+			(st.get("targets", []) as Array).size(), str(st.get("traded_picks", []))])
+
+
+## The expansion concessions follow each club's entry season (era_rules.csv).
+func _test_concessions_by_entry() -> void:
+	GameDB.reload("1990")
+	var want := {"ADE": false, "FRE": false, "PAD": false, "GCS": true, "GWS": true}
+	for code in want:
+		_check(ExpansionBuild.concessions(code) == want[code],
+				"%s (entering %d): concessions %s" % [code, GameDB.enter_year(code), str(want[code])])
+	var y_of := {}
+	for code in ["GCS", "TAS"]:
+		y_of[code] = GameDB.enter_year(code)
+	GameDB.set_enter_year("GCS", 2010)
+	GameDB.set_enter_year("TAS", 2028)
+	_check(not ExpansionBuild.concessions("GCS"), "A club entering in 2010 would have no concessions")
+	_check(ExpansionBuild.concessions("TAS"), "Tasmania, entering in 2028, has them")
+	GameDB.set_enter_year("GCS", int(y_of["GCS"]))
+	GameDB.set_enter_year("TAS", int(y_of["TAS"]))
+	_check(Expansion.foundation_size("ADE") == EraRules.senior_spots(1991) and Expansion.foundation_size("GCS") == Expansion.FOUNDATION_SIZE,
+			"Adelaide sign a whole senior list (%d), Gold Coast %d" % [Expansion.foundation_size("ADE"), Expansion.FOUNDATION_SIZE])
+	GameDB.reload("1990")
+
+
 func _skip_season() -> void:
 	GameState.season.round_index = GameState.season.fixture.size()
 
@@ -498,8 +560,9 @@ func _start(code: String) -> void:
 
 ## "the sim will not replicate historical draftee clubs" (director,
 ## 2026-11-13): a new club's foundation is only its real state-league players
-## no class brings in; nobody on a list moves to it, the best
-## Expansion.FOUNDATION_SIZE sign and the rest go into the draft.
+## no class brings in; nobody on a list moves to it. Adelaide, entering before
+## the expansion concessions, signs a whole 1991 senior list: every real one
+## and state-league signings for the rest.
 func _test_new_club_from_the_save() -> void:
 	GameState.reset("1990")
 	_start("GEE")
@@ -517,9 +580,12 @@ func _test_new_club_from_the_save() -> void:
 	for c in GameState.league_lists:
 		after += (GameState.league_lists[c] as Array).size()
 	_check(after == before, "No player leaves a club for Adelaide (%d listed, then %d)" % [before, after])
-	_check(list.size() == Expansion.FOUNDATION_SIZE, "Adelaide sign %d from the state leagues (%d)" % [Expansion.FOUNDATION_SIZE, list.size()])
-	_check(list.size() + pool.size() == maxi(rows, Expansion.FOUNDATION_SIZE),
+	var size := EraRules.senior_spots(1991)
+	_check(list.size() == size, "Adelaide sign %d from the state leagues (%d)" % [size, list.size()])
+	_check(list.size() + pool.size() == maxi(rows, size),
 			"Every real one signs or goes into the draft (%d + %d of %d)" % [list.size(), pool.size(), rows])
+	var home := list.filter(func(p): return not str(p["id"]).begins_with("FND_ADE_L1991_") and str(p.get("draft_league", "")) != "SANFL")
+	_check(home.is_empty(), "Adelaide's other signings come from the SANFL (%d do not)" % home.size())
 	_check(list.all(func(p): return str(p["id"]).begins_with("FND_") and str(p["club"]) == "ADE"), "They are Adelaide's state-league signings")
 	_check(pool.all(func(p): return str(p["club"]) == "" and int(p["draft_year"]) == 1990), "The rest are in the 1990 draft")
 	var low := 99
