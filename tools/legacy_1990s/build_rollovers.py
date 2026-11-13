@@ -97,6 +97,14 @@ def role_of(pid, rated, height):
     return "RUCK" if h >= 199 else ""
 
 
+# A swept player enters the open draft like any other: the sim's clubs pick
+# him, never the club that really listed him (director, 2026-11-13: "the sim
+# will not replicate historical draftee clubs"). Father-son is the one tie,
+# because it is a rule the save applies, not a historical outcome.
+def tie_of(r):
+    return "FS" if r["joined_how"] == "father_son" else ""
+
+
 def peak_of(pid, rated, from_year):
     peak = 0
     for y in rated:
@@ -127,6 +135,16 @@ def main():
     for r in drafts:
         by_class[int(r["year"])].append(r)
 
+    # year -> the list rows of players first listed that year (after 1990)
+    first_list = defaultdict(list)
+    firsts = {}
+    for r in sorted(lists, key=lambda r: int(r["year"])):
+        k = r["draftguru_id"] or "%s|%s|%s" % (r["first"], r["last"], r["dob"])
+        if k not in firsts:
+            firsts[k] = r
+            # A player first listed during 1990 but not on its opening lists
+            # (a 1990 mid-season pick) joins the 1990 class too.
+            first_list[max(int(r["year"]), FIRST_CLASS + 1)].append(r)
     classes = []
     taken_before = {}   # year -> set of draftguru ids in classes before that year
     for year in range(FIRST_CLASS, LAST_DATA + 1):
@@ -140,9 +158,6 @@ def main():
         pre = sorted((r for r in rows if r["draft"] == "preseason"), key=lambda r: int(r["pick"]))
         for r in nat + rook + pre:
             dg = r["draftguru_id"]
-            # A club's picks before its first season come with its first list.
-            if entered(r["club"]) > year:
-                continue
             key = dg or "%s|%s|%s" % (r["first"], r["last"], year)
             if key in seen:
                 continue
@@ -161,6 +176,26 @@ def main():
                 "peak": peak_of(pid, rated, year + 1),
             })
             seen_names.add((r["first"], r["last"], dob))
+        # Every real player reaches a list (director, 2026-11-13: "there must
+        # be 0 missing players"). One the drafts above never bring in (a zone
+        # selection, mid-season or supplemental pick, a father-son the source
+        # missed, a pre-entry pick traded on) joins this class's open draft.
+        for r in first_list.get(year + 1, []):
+            k = r["draftguru_id"] or "%s|%s|%s" % (r["first"], r["last"], r["dob"])
+            club = B.code(r["club"])
+            if k in seen or (r["draftguru_id"] and r["draftguru_id"] in seen) or entered(club) == year + 1:
+                continue
+            seen.add(k)
+            pid = r["afltables_id"]
+            rank = sum(1 for c in classes if c["year"] == year) + 1
+            classes.append({
+                "year": year, "rank": rank, "kind": "signing", "club": club,
+                "first": r["first"], "last": r["last"], "dob": r["dob"],
+                "height_cm": r["height_cm"], "role": role_of(pid, rated, r["height_cm"]),
+                "origin": r["origin"], "tie": tie_of(r),
+                "peak": peak_of(pid, rated, year + 1),
+            })
+            seen_names.add((r["first"], r["last"], r["dob"]))
     # The real 2026 class (the 2026 start's draft class) closes a campaign's run.
     n26 = 0
     for r in read(REAL_2026):
@@ -178,7 +213,15 @@ def main():
         before = taken_before.get(year, seen)
         rows = [r for r in lists if int(r["year"]) == year and B.code(r["club"]) == club]
         for r in rows:
-            known = "1" if r["draftguru_id"] and r["draftguru_id"] in before else ""
+            # A player the career already has stays wherever the save has
+            # him: the new club gets nobody from history (director,
+            # 2026-11-13). Only the players no class brings in remain, its
+            # state-league foundation.
+            if r["draftguru_id"] and r["draftguru_id"] in before:
+                continue
+            if "%s|%s|%s" % (r["first"], r["last"], r["dob"]) in before:
+                continue
+            known = ""
             pid = r["afltables_id"]
             latest = None
             for y in range(year - 1, 1986, -1):

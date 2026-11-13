@@ -2419,6 +2419,10 @@ func begin_intake_draft() -> bool:
 		draftee_pool = GameDB.draftees.duplicate()
 
 	_ensure_league_lists()
+	# A new club signs its state-league foundation before the draft; a Legacy
+	# club's real ones past its size join this draft's pool (LegacyRollover).
+	for code in ExpansionBuild.building(self):
+		ExpansionBuild.ensure_foundation(self, code)
 	var available := []
 	for p in draftee_pool:
 		if not drafted_draftees.has(str(p["id"])):
@@ -2742,12 +2746,6 @@ func _start_next_season(next_year: int, signed: int) -> void:
 		if GameDB.enter_year(code) != next_year:
 			continue
 		if not (league_lists.get(code, []) as Array).is_empty():
-			continue
-		# A Legacy club enters on its real first list (Adelaide 1991 on).
-		if LegacyRollover.has_entry(str(code), next_year):
-			var got := LegacyRollover.entry_list(self, str(code), next_year)
-			league_lists[code] = got["list"]
-			add_news("expansion", LegacyRollover.entry_line(self, str(code), next_year, got))
 			continue
 		league_lists[code] = Prospects.generate_expansion_list(code, next_year)
 		add_news("expansion", "%s (the %s) join the competition for %d, their first season." % [
