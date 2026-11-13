@@ -2173,9 +2173,22 @@ func _draft_sees_44() -> void:
 ## 44 has room for him (RookieList.add_block: the same rule as every other
 ## way onto a list; he may take the senior list past its spots, as he always
 ## could). With no room he goes into the open draft, where any club may take him.
+## In a Legacy era a rival whose senior spots are full delists its least worth
+## senior to take him, as a list manager would, so its list keeps the era's
+## spots (Brisbane 2000 at 43 of 42); your own list stays yours to cut.
 func _tie_fits(code: String) -> bool:
 	var arr: Array = league_lists[code] if league_lists.has(code) else ExpansionBuild.list_of(self, code)
-	return RookieList.add_block(arr, "senior") != "list"
+	var why := RookieList.add_block(arr, "senior")
+	if why == "list":
+		return false
+	if why == "senior" and code != my_club and EraRules.is_era(season_year) \
+			and season != null and season.lists.has(code):
+		var staying := arr.filter(func(q): return not retiring_now(q))
+		if RookieList.senior_count(staying) >= RookieList.senior_spots():
+			var worst := _least_worth(staying, "")
+			if not worst.is_empty():
+				_release(code, worst, false)
+	return true
 
 
 ## The tied prospects of `code` this year that it had no list spot for, by
@@ -8353,19 +8366,26 @@ func _era_trim_rivals() -> void:
 			var seniors_over := RookieList.senior_count(staying) > RookieList.senior_spots()
 			if not (rookies_over or seniors_over) or list.size() <= Contracts.MIN_LIST:
 				break
-			var worst := {}
-			for p in staying:
-				var kind := str(p.get("rookie_list", ""))
-				if (seniors_over and kind == "") or (not seniors_over and kind == "A"):
-					# Least worth goes first: rating blended with potential and
-					# discounted for age (Contracts.worth), never rating alone, so a
-					# 69 at 20 with 75 to come stays ahead of a 70 at 35
-					# (director, 2026-11-13: "smart delistings, not binary ones").
-					if worst.is_empty() or Contracts.worth(p) < Contracts.worth(worst) 							or (Contracts.worth(p) == Contracts.worth(worst) and str(p["id"]) < str(worst["id"])):
-						worst = p
+			var worst := _least_worth(staying, "" if seniors_over else "A")
 			if worst.is_empty():
 				break
 			_release(code, worst, false)
+
+
+## The player of list kind `kind` ("" senior, "A" Category A rookie) a rival
+## delists first. Least worth goes first: rating blended with potential and
+## discounted for age (Contracts.worth), never rating alone, so a 69 at 20
+## with 75 to come stays ahead of a 70 at 35 (director, 2026-11-13: "smart
+## delistings, not binary ones").
+func _least_worth(list: Array, kind: String) -> Dictionary:
+	var worst := {}
+	for p in list:
+		if str(p.get("rookie_list", "")) != kind:
+			continue
+		if worst.is_empty() or Contracts.worth(p) < Contracts.worth(worst) \
+				or (Contracts.worth(p) == Contracts.worth(worst) and str(p["id"]) < str(worst["id"])):
+			worst = p
+	return worst
 
 
 func tests_market(p: Dictionary, list: Array) -> bool:
