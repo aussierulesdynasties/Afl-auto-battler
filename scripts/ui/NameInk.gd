@@ -89,8 +89,9 @@ static func _add_clubs(out: Dictionary) -> void:
 			out["#" + name] = ClubLink.SCHEME + str(code)
 	for code in GameDB.clubs:
 		var ground := str((GameDB.clubs[code] as Dictionary).get("ground", ""))
-		if ground != "" and not out.has(ground):
-			out[ground] = ""
+		for g in [ground, GameDB.ground_shown(ground)]:
+			if g != "" and not out.has(g):
+				out[g] = ""
 
 
 ## `key` is a name that is his club's; "#<key>" beside it is his id, so a tap on
