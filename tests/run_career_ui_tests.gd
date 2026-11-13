@@ -2151,6 +2151,9 @@ func _test_menu_and_career() -> void:
 	_check(plain, "No step shows a percentage")
 	_router.handle_back(false)
 	await _settle()
+	# Setup -> the year step -> the title screen.
+	_router.handle_back(false)
+	await _settle()
 	_check(_router.current() == "main" and current_scene.find_child("NewCareerSetup", true, false) == null
 			and _state.new_career_dial("board_patience") == "fair", "Back leaves the setup without changing anything")
 	current_scene.find_child("NewCareer", true, false).emit_signal("pressed")
@@ -3422,6 +3425,10 @@ func _test_menu_and_career() -> void:
 			"New career opens setup without deleting the current save")
 	_router.handle_back(false)
 	await _settle()
+	if str(current_scene.get("_mode")) == "year":
+		# Setup -> the year step -> the title screen.
+		_router.handle_back(false)
+		await _settle()
 	var saved_continue: Button = current_scene.find_child("ContinueCareer", true, false)
 	if saved_continue != null:
 		saved_continue.emit_signal("pressed")
@@ -4302,6 +4309,7 @@ func _test_every_start_reaches_interview() -> void:
 		["Youth only", "redraft", "youth", false, false],
 		["Your goal", "real", "goal", false, false],
 		["The 1990 season", "real", "none", false, false, "1990"],
+		["The 1990 League redraft", "redraft", "none", false, false, "1990"],
 	]
 	var picks := [1, 0, 2, 1, 3, 0, 1]
 	for st in starts:
@@ -4403,8 +4411,8 @@ func _test_every_start_reaches_interview() -> void:
 				break
 			await process_frame
 		await _settle()
-		if st.size() > 5:
-			# A past season has no draft before it: Continue starts the season.
+		if st.size() > 5 and str(st[1]) == "real":
+			# A past season on its real lists has no draft before it: Continue starts the season.
 			_check(cont == "" and _router.current() in ["hub", "preseason"] and _state.season != null and _state.season_year == 1990,
 					"%s: Continue starts the 1990 season, no empty draft board (tap %s, at %s)" % [label, cont, _router.current()])
 			continue
@@ -5751,14 +5759,26 @@ func _test_year_step_taps() -> void:
 	var t2: String = await _pick_year("1990")
 	menu = current_scene
 	var said := menu.find_child("SetupYear", true, false) as Label
+	var real_btn := menu.find_child("StartMode_real", true, false) as Button
 	var start_row := menu.get("_start_row") as Control
 	var challenge_row := menu.get("_challenge_row") as Control
 	var canberra_row := menu.get("_canberra_row") as Control
 	_check(t2 == "" and str(menu.get("_mode")) == "setup" and said != null and said.text == "Starting in 1990"
-			and start_row != null and not start_row.is_visible_in_tree()
+			and start_row != null and start_row.is_visible_in_tree() and str(menu.get("_pick_start")) == "real"
+			and real_btn != null and real_btn.text == "Real 1990 lists"
 			and challenge_row != null and not challenge_row.is_visible_in_tree()
 			and canberra_row != null and not canberra_row.is_visible_in_tree(),
-			"1990 is set up without today's start, challenge or Canberra (tap %s, %s)" % [t2, said.text if said != null else "no year line"])
+			"1990 is set up on its real lists by default, without today's challenge or Canberra (tap %s, %s)" % [t2, said.text if said != null else "no year line"])
+	# A League redraft of 1990 by a real tap (director 2026-11-13), and back.
+	var t_rd: String = await Tap.tap(menu.find_child("StartMode_redraft", true, false))
+	await _settle()
+	var start_note := menu.find_child("StartModeNote", true, false) as Label
+	_check(t_rd == "" and str(menu.get("_pick_start")) == "redraft" and start_note != null
+			and start_note.text.contains("before 1990") and start_note.text.contains("senior coach"),
+			"A tap on League redraft re-drafts the 1990 clubs, and you still replace the senior coach (tap %s: %s)" % [
+				t_rd, start_note.text if start_note != null else "no note"])
+	await Tap.tap(menu.find_child("StartMode_real", true, false))
+	await _settle()
 	_router.handle_back(false)
 	await _settle()
 	_check(str(current_scene.get("_mode")) == "year", "Back from the setup is the year step (%s)" % current_scene.get("_mode"))
@@ -5785,6 +5805,11 @@ func _test_year_step_taps() -> void:
 			"Melbourne by a tap: you face the press first (tap %s, at %s)" % [t4, _router.current()])
 	# Seven answers and Continue start the 1990 season; the coaching world is
 	# seeded then, with John Northey out of Melbourne's top job and free.
+	var name_field := current_scene.find_child("CoachName", true, false) as LineEdit
+	name_field.text = "Pat Reid"
+	name_field.text_changed.emit(name_field.text)
+	await Tap.tap(current_scene.find_child("InterviewStart", true, false))
+	await _settle()
 	var answered := ""
 	for i in range(12):
 		if current_scene.find_child("InterviewDone", true, false) != null:

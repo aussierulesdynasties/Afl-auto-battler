@@ -276,7 +276,9 @@ func _show_club_select() -> void:
 		_root.add_child(_header("Choose your club",
 				"%d  /  A fresh start for all %d clubs" % [GameState.season_year, active.size()]))
 		_root.add_child(UiKit.lbl(
-				"One player pool. One salary cap. The whole league re-drafts in a random snake order.",
+				"One player pool. One salary cap. The whole league re-drafts in a random snake order."
+				+ (" You take over from your club's senior coach, and he joins the coaches any club can hire."
+					if GameState.dataset != Datasets.DEFAULT else ""),
 				16, UiKit.MUTED))
 	var grid := GridContainer.new()
 	grid.name = "ClubGrid"

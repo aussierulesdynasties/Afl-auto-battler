@@ -2,7 +2,8 @@ extends SceneTree
 ## The year step (Legacy mode, TODO row 142 L2) and the screens after it, for
 ## the director's look:
 ##   godot --path . --script tools/visual/capture_year_step.gd -- --out DIR [--size 390x844]
-## Writes DIR/<W>x<H>_<screen>.png: year, setup_1990, setup_2026, club_1990,
+## Writes DIR/<W>x<H>_<screen>.png: year, setup_1990, setup_1990_redraft,
+## setup_2026, club_1990, club_1990_redraft,
 ## hub_1990 (Melbourne's first week, no draft before 1990).
 ## Needs a real renderer: run windowed, never --headless.
 
@@ -77,6 +78,8 @@ func _run() -> void:
 	await _shot("year")
 	menu._on_pick_year("1990")
 	await _shot("setup_1990")
+	menu.find_child("StartMode_redraft", true, false).emit_signal("pressed")
+	await _shot("setup_1990_redraft")
 	menu._back_from_setup()
 	menu._on_pick_year("2026")
 	await _shot("setup_2026")
@@ -98,6 +101,24 @@ func _run() -> void:
 	await _shot("club_1990")
 	ds.queue_free()
 	await process_frame
+	# The 1990 League redraft's Choose your club, scrolled to Melbourne.
+	_fresh("1990")
+	state.interview_due = true
+	state.begin_draft()
+	var rd: Control = load("res://scenes/DraftScene.tscn").instantiate()
+	root.add_child(rd)
+	for i in range(6):
+		await process_frame
+	var rmel: Control = rd.find_child("Choose_MEL", true, false)
+	for sc in rd.find_children("*", "ScrollContainer", true, false):
+		if (sc as ScrollContainer).is_ancestor_of(rmel):
+			(sc as ScrollContainer).scroll_vertical = int(rmel.position.y)
+	await _shot("club_1990_redraft")
+	rd.queue_free()
+	await process_frame
+	_fresh("1990")
+	state.interview_due = true
+	state.begin_real_lists()
 	state.choose_real_club("MEL")
 	state.interview_due = false
 	state.finish_intake_draft()

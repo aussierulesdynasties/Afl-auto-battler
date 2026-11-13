@@ -58,6 +58,7 @@ func run() -> void:
 	_t("_test_real_1990")
 	_t("_test_legacy_start_1990")
 	_t("_test_legacy_rolls_into_1991")
+	_t("_test_legacy_redraft_1990")
 	Datasets.add(FIXTURE, FIXTURE_ROW)
 	_t("_test_fixture_load")
 	_t("_test_back_to_2026")
@@ -570,4 +571,57 @@ func _test_legacy_rolls_into_1991() -> void:
 			if Leadership.role_line(p, GameState.season_year) != "":
 				shown += 1
 	_check(shown == 0, "The 1990 captains' record is not shown as current in 1991 (%d)" % shown)
+	GameState.reset()
+
+
+## A 1990 League redraft (director 2026-11-13: "make a 1990 redraft campaign
+## possible too"): the 14 clubs of 1990 re-draft from one pool of their
+## players, no club that joined later is in it, and you still take over from
+## your club's real senior coach, who joins the coach pool. The season is 1990
+## and rolls into 1991 on the same set.
+func _test_legacy_redraft_1990() -> void:
+	GameState.reset("1990")
+	GameState.replay_seed = SUITE_SEED
+	GameState.career_seed = SUITE_SEED
+	GameState.begin_draft()
+	var draft: Draft = GameState.draft
+	var late := []
+	for code in ["ADE", "PA", "PTA", "FRE", "GC", "GCS", "GWS", "TAS", "CANB"]:
+		if draft.clubs.has(code):
+			late.append(code)
+	_check(draft.clubs.size() == 14 and draft.clubs.has("MEL") and late.is_empty() and GameState.expansion_from == 0,
+			"The 1990 League redraft has the 14 clubs of 1990 and no later club (%d clubs, %s)" % [draft.clubs.size(), str(late)])
+	var real_ids := {}
+	for p in GameDB.all_players_sorted():
+		real_ids[str(p["id"])] = true
+	draft.start_for_user("MEL")
+	var guard := 0
+	draft.auto_until_user_turn()
+	while not draft.is_finished() and guard < 8000:
+		guard += 1
+		var cand := draft._best_ai_pick(draft.current_club())
+		if cand.is_empty() or not draft._draft_pick(draft.current_club(), cand):
+			draft._skip_current_pick()
+		draft.auto_until_user_turn()
+	_check(draft.is_finished(), "The 1990 League redraft completes")
+	var mine: Array = draft.list()
+	var from_1990 := 0
+	for p in mine:
+		from_1990 += 1 if real_ids.has(str(p.get("id", ""))) else 0
+	GameState.start_season("MEL", mine)
+	var by_name := {}
+	for cid in GameState.coaches:
+		var c: Dictionary = GameState.coaches[cid]
+		if str(c.get("real_name", "")) != "":
+			by_name[str(c["real_name"])] = c
+	var northey: Dictionary = by_name.get("John Northey", {})
+	_check(GameState.season_year == 1990 and GameState.my_club == "MEL" and GameState.season.ladder.size() == 14,
+			"You coach Melbourne in 1990 on a 14-club ladder (%d, %s, %d clubs)" % [
+				GameState.season_year, GameState.my_club, GameState.season.ladder.size()])
+	_check(str(northey.get("status", "")) == "free" and str(northey.get("club", "")) == ""
+			and not Coaches.staff(GameState.coaches, "MEL").has("SC")
+			and str(GameState.coaches.get(str(Coaches.staff(GameState.coaches, "WCE").get("SC", "")), {}).get("real_name", "")) == "Michael Malthouse",
+			"A redraft still replaces John Northey, who is a free coach; West Coast keep Mick Malthouse (%s)" % str(northey.get("status", "missing")))
+	_check(mine.size() >= 30 and from_1990 > 0,
+			"Your redrafted list is drawn from the 1990 pool (%d players, %d real)" % [mine.size(), from_1990])
 	GameState.reset()

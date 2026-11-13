@@ -484,8 +484,9 @@ func _on_pick_year(id: String) -> void:
 	_pick_dataset = id
 	_sim_ahead_ok = false
 	if _past_start():
-		# A past season starts on its real lists; a challenge, Canberra and your
-		# Club Forge club or prospect belong to today's league.
+		# A past season starts on its real lists, or a League redraft of its
+		# clubs (director 2026-11-13); a challenge, Canberra and your Club Forge
+		# club or prospect belong to today's league.
 		_pick_start = "real"
 		_pick_challenge = "none"
 		_pick_goal = ""
@@ -542,11 +543,16 @@ func _show_setup() -> void:
 				UiKit.NAME, UiKit.MUTED)
 		yr.name = "SetupYear"
 		form.add_child(yr)
-	_start_row = _choice("Start", "StartMode", [["redraft", "League redraft"], ["real", "Real 2026 lists"]],
+	var first := int(Datasets.get_set(_pick_dataset).get("start_year", 2027))
+	_start_row = _choice("Start", "StartMode",
+			[["redraft", "League redraft"], ["real", "Real %d lists" % (first if _past_start() else 2026)]],
 			_pick_start,
 			func(k): return (_real_start_line() if k == "real"
-					else "The whole league re-drafts from one player pool before 2027, in a random snake order."),
+					else "The whole league re-drafts from one player pool before %d, in a random snake order.%s" % [
+						first, _past_coach_line()]),
 			_on_pick_start)
+	# A past start says up front that you replace your club's senior coach.
+	(_start_row.get_node("StartModeNote") as Label).visible = _past_start()
 	form.add_child(_start_row)
 	# A challenge start (ruling 115): one rule, said here before you begin.
 	_challenge_row = _choice("Challenge", "Challenge",
@@ -566,8 +572,7 @@ func _show_setup() -> void:
 	(_goal_row.get_node("GoalNote") as Label).visible = true
 	_goal_row.visible = _pick_challenge == "goal" and not _past_start()
 	form.add_child(_goal_row)
-	# A past season: its real lists, and no challenge (today's league only).
-	_start_row.visible = not _past_start()
+	# A past season: its real lists or a redraft, and no challenge (today's league only).
 	_challenge_row.visible = not _past_start()
 	form.add_child(_dial_choice(DifficultyDials.BOARD, "BoardPatience", _pick_board,
 			func(k): _pick_board = k))
@@ -718,9 +723,19 @@ func _canberra_line(k: String) -> String:
 ## The real-lists start: with Canberra (and no Rebuild) the career starts in
 ## 2030, after three seasons played without you.
 func _real_start_line() -> String:
+	if _past_start():
+		return "Every club keeps its real %d list.%s" % [
+			int(Datasets.get_set(_pick_dataset).get("start_year", 0)), _past_coach_line()]
 	if _pick_canberra and _pick_challenge != "rebuild":
 		return "Every club keeps its real end-of-2026 list. The league plays 2027 to 2029 without you; then you choose your club and start in 2030."
 	return "Every club keeps its real end-of-2026 list. You run your club through the 2026 National Draft, then play 2027; or take Tasmania and start in 2028."
+
+
+## A past start, either way: you take over from your club's senior coach.
+func _past_coach_line() -> String:
+	if not _past_start():
+		return ""
+	return " You take over from your club's senior coach, and he joins the coaches any club can hire."
 
 
 ## The Canberra rule follows the start and the Forge club's pick.
@@ -863,11 +878,15 @@ func _start_new_career() -> void:
 	# the career they had (reset() clears memory only).
 	GameState.reset(_pick_dataset)
 	if _past_start():
-		# A past season: its clubs on their real lists, straight to Choose your club.
+		# A past season: its clubs on their real lists, or a League redraft of
+		# its clubs, straight to Choose your club.
 		GameState.set_canberra(false)
 		GameState.interview_due = true
 		GameState.challenge = {}
-		GameState.begin_real_lists()
+		if _pick_start == "real":
+			GameState.begin_real_lists()
+		else:
+			GameState.begin_draft()
 		Router.go("draft")
 		return
 	GameState.set_canberra(_pick_canberra)
