@@ -33,7 +33,8 @@ static func building(gs) -> Array:
 	if gs.season == null:
 		return out
 	for code in GameDB.club_order:
-		if GameDB.enter_year(str(code)) == int(gs.season_year) + 1:
+		if GameDB.enter_year(str(code)) == int(gs.season_year) + 1 				and not LegacyRollover.has_entry(str(code), int(gs.season_year) + 1):
+			# A Legacy club brings its real list instead (LegacyRollover).
 			out.append(str(code))
 	return out
 

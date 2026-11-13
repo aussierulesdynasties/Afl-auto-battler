@@ -188,6 +188,9 @@ var offseason_log: Array = []    # what happened in the off-season, for news
 ## New clubs building their lists (ExpansionBuild): {club code: its state}.
 ## Empty, and not saved, while no club is building.
 var expansion := {}
+## A Legacy career's rollovers (LegacyRollover): the clubs that played finals
+## each season and how the Fitzroy merger went. Empty, and not saved, on today's data.
+var legacy := {}
 ## Does Canberra join in 2030? A choice at career start (a new career starts
 ## without it); a career saved before the choice existed keeps Canberra.
 var canberra_on := true
@@ -1001,6 +1004,8 @@ func _save_state() -> Dictionary:
 		state["canberra_on"] = false
 	if expansion_from != 0:
 		state["expansion_from"] = expansion_from
+	if not legacy.is_empty():
+		state["legacy"] = legacy
 	if not match_stories.is_empty():
 		state["match_stories"] = match_stories
 	if not match_story_digest.is_empty():
@@ -1082,6 +1087,8 @@ func _restore_career(state: Dictionary) -> bool:
 	Season.beat()
 	set_canberra(bool(state.get("canberra_on", true)))
 	expansion = state.get("expansion", {}) if state.get("expansion") is Dictionary else {}
+	legacy = state.get("legacy", {}) if state.get("legacy") is Dictionary else {}
+	LegacyRollover.restore(self)
 	best23 = state.get("best23", {})
 	shortlist = state.get("shortlist", []) if state.get("shortlist") is Array else []
 	sim_orders = state.get("sim_orders", {}) if state.get("sim_orders") is Dictionary else {}
@@ -1800,6 +1807,7 @@ func reset(next_dataset := Datasets.DEFAULT) -> void:
 	news = []
 	board = {}
 	expansion = {}
+	legacy = {}
 	expansion_from = 0  # before set_canberra, which applies it to the entry years
 	set_canberra(false)
 	sim_ahead = false
@@ -1898,6 +1906,11 @@ func add_custom_prospect(spec: Dictionary) -> String:
 ## generated and aged the way _start_next_season prepares next year's.
 func _first_class(year: int) -> Array:
 	_first_class_seed = career_seed
+	# A Legacy career drafts the real class of its year (row 142, L8).
+	if LegacyRollover.has_class(year):
+		var real := LegacyRollover.real_class(year)
+		GameDB.register_draftees(real)
+		return Prospects.age_pool(real, year, {})
 	var generated := Prospects.generate_class(year, career_seed)
 	class_tiers[str(year)] = Prospects.class_tier(career_seed, year)
 	FamilyTies.assign(generated, year, career_seed, FamilyTies.listed_entries(GameDB.players, 0.0))
@@ -2616,6 +2629,10 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	# free agency) is stamped with the season he left after, before the year
 	# turns over and before a club move changes whose board it is.
 	HonourBoard.sweep(self)
+	# A Legacy career: who played finals, and the Fitzroy merger story
+	# (settled before the coach moves, so a Fitzroy coach goes to Brisbane).
+	LegacyRollover.note_finals(self)
+	LegacyRollover.before_moves(self, next_year)
 	# Coach arcs: a club change decided at the season's close is made now.
 	ClubMoves.apply_move(self)
 	# The season's close normally counted careers already (Career skips a
@@ -2626,12 +2643,18 @@ func _start_next_season(next_year: int, signed: int) -> void:
 			for p in season.lists[code]:
 				played[str(p["id"])] = p
 		Career.close_season(played, season_tally, season_year, season_stats, season_stats_from)
+	LegacyRollover.merge_lists(self)
 	Season.beat()
 	# Next year's generated class joins the pool before ageing, so the fresh
-	# 17-year-olds are also a year older in the season they arrive.
-	var generated := Prospects.generate_class(next_year, career_seed)
-	class_tiers[str(next_year)] = Prospects.class_tier(career_seed, next_year)
-	_assign_family_ties(generated, next_year)
+	# 17-year-olds are also a year older in the season they arrive. A Legacy
+	# career's is that year's real class.
+	var generated := []
+	if LegacyRollover.has_class(next_year):
+		generated = LegacyRollover.real_class(next_year)
+	else:
+		generated = Prospects.generate_class(next_year, career_seed)
+		class_tiers[str(next_year)] = Prospects.class_tier(career_seed, next_year)
+		_assign_family_ties(generated, next_year)
 	GameDB.register_draftees(generated)
 	for p in generated:
 		draftee_pool.append(p)
@@ -2729,6 +2752,12 @@ func _start_next_season(next_year: int, signed: int) -> void:
 		if GameDB.enter_year(code) != next_year:
 			continue
 		if not (league_lists.get(code, []) as Array).is_empty():
+			continue
+		# A Legacy club enters on its real first list (Adelaide 1991 on).
+		if LegacyRollover.has_entry(str(code), next_year):
+			var got := LegacyRollover.entry_list(self, str(code), next_year)
+			league_lists[code] = got["list"]
+			add_news("expansion", LegacyRollover.entry_line(self, str(code), next_year, got))
 			continue
 		league_lists[code] = Prospects.generate_expansion_list(code, next_year)
 		add_news("expansion", "%s (the %s) join the competition for %d, their first season." % [
@@ -13948,6 +13977,7 @@ func _next_week_event() -> void:
 		return
 	week_events = ClubStories.pick(self)
 	ClubArcs.week(self)
+	LegacyRollover.week(self)
 
 
 ## Skip to the end of the season (director, 2026-11-07: "We need to bring back
@@ -14173,6 +14203,7 @@ func resolve_card(index: int, choice: int) -> String:
 	card["choice"] = choice
 	card["outcome"] = out
 	ClubArcs.answered(self, card, choice)
+	LegacyRollover.answered(self, card, choice)
 	mark_dirty()
 	return out
 
