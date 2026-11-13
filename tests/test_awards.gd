@@ -457,11 +457,36 @@ func _test_premiership_ink_cosmetic() -> void:
 	_check(randi() == a, "Recording a flag takes nothing from the game's random stream")
 
 
+## The whole season through the game's own weekly steps, with one round's
+## matches played: every round is given Round 1's fixture, Round 1 is played,
+## and its results are handed back as each later round's (Season._early, the
+## path a week started ahead takes), so the tally, the book, the count and the
+## nominations build round by round as in a played season. The finals are
+## played for real: 9 home-and-away matches instead of 207.
 func _test_full_season() -> void:
 	GameState.reset()
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
+	var season: Season = GameState.season
+	var first: Array = season.fixture[0]
+	var clubs := {}
+	for m in first:
+		clubs[str(m["home"])] = true
+		clubs[str(m["away"])] = true
+	_check(clubs.size() == season.ladder.size(),
+			"Round 1 has every club playing (%d of %d)" % [clubs.size(), season.ladder.size()])
+	for r in range(1, season.fixture.size()):
+		season.fixture[r] = first.duplicate(true)
+	GameState.advance()
+	var played: Array = season.results[0]
 	var guard := 0
-	while not GameState.season.is_season_over() and guard < 40:
+	while not season.is_regular_done() and guard < 40:
+		var out := []
+		for res in played:
+			out.append({"res": (res as Dictionary).duplicate(true)})
+		season._early = {"week": "r%d" % season.round_index, "threads": [], "out": out}
+		GameState.advance()
+		guard += 1
+	while not season.is_season_over() and guard < 60:
 		GameState.advance()
 		guard += 1
 	var aw: Dictionary = GameState.season_awards
@@ -569,21 +594,6 @@ func _test_full_season() -> void:
 	for id in flag_men:
 		same = same and str(_find_player(str(id)).get(PremiershipInk.KEY)) == str(ink_before[id])
 	_check(same, "Processing the same Grand Final again changes no one's ink")
-	# An older save: a season with no Norm Smith on its entry loads and says nothing.
-	var kept_roll: Array = GameState.honour_roll.duplicate(true)
-	var old_roll: Array = GameState.honour_roll.duplicate(true)
-	(old_roll[0] as Dictionary).erase("norm_smith")
-	GameState.honour_roll = old_roll
-	GameState.save_career()
-	GameState.load_career()
-	_check(GameState.honour_roll.size() == 1 and GameState.norm_smith_years(nsm_id).is_empty(),
-			"An old save's season has no Norm Smith recorded and is not back-filled")
-	var kept := true
-	for id in flag_men:
-		kept = kept and str(_find_player(str(id)).get(PremiershipInk.KEY)) == str(ink_before[id])
-	_check(kept and inked == ink_before.values().filter(func(v): return v is Array).size(),
-			"Premiership ink is saved on the players and loads unchanged (%d inked)" % inked)
-	GameState.honour_roll = kept_roll
 	# The Golden Fist (T5.Q11c): a listed defender with the games, the same
 	# answer from the same book, on the honour roll and in the news.
 	var fist: Array = aw.get("golden_fist", [])
@@ -616,29 +626,38 @@ func _test_full_season() -> void:
 	_check((alm.get("golden_fist", []) as Array).size() == 1
 			and str(alm["golden_fist"][0].get("id", "")) == fist_id,
 			"The almanac's season page keeps the Golden Fist")
-	# An older save: no Golden Fist anywhere loads cleanly and is not back-filled.
+	# An older save: a season with no Norm Smith and no Golden Fist on its
+	# entry loads and says nothing (one save and load for both).
+	var kept_roll: Array = GameState.honour_roll.duplicate(true)
 	var kept_awards: Dictionary = GameState.season_awards.duplicate(true)
-	var old2: Array = GameState.honour_roll.duplicate(true)
-	(old2[0] as Dictionary).erase("golden_fist")
-	GameState.honour_roll = old2
+	var old_roll: Array = GameState.honour_roll.duplicate(true)
+	(old_roll[0] as Dictionary).erase("norm_smith")
+	(old_roll[0] as Dictionary).erase("golden_fist")
+	GameState.honour_roll = old_roll
 	GameState.season_awards.erase("golden_fist")
 	GameState.save_career()
 	GameState.load_career()
+	_check(GameState.honour_roll.size() == 1 and GameState.norm_smith_years(nsm_id).is_empty(),
+			"An old save's season has no Norm Smith recorded and is not back-filled")
 	_check(not (GameState.honour_roll[0] as Dictionary).has("golden_fist")
 			and not GameState.season_awards.has("golden_fist")
 			and ClubTrophies.player_honours(GameState.honour_roll).all(func(it): return str(it["key"]) != "golden_fist"),
 			"An old save with no Golden Fist loads and shows none")
+	var kept := true
+	for id in flag_men:
+		kept = kept and str(_find_player(str(id)).get(PremiershipInk.KEY)) == str(ink_before[id])
+	_check(kept and inked == ink_before.values().filter(func(v): return v is Array).size(),
+			"Premiership ink is saved on the players and loads unchanged (%d inked)" % inked)
 	GameState.honour_roll = kept_roll
 	GameState.season_awards = kept_awards
-	GameState.save_career()
-	GameState.load_career()
+	# Awards night's count, from the finished season (T5.Q23b); its save and
+	# load is also the one the awards and the Golden Fist survive.
+	_award_count_season_checks()
 	_check(int(GameState.season_awards.get("year", 0)) == GameDB.START_YEAR and GameState.honour_roll.size() == 1,
 			"Awards, honour roll and records survive a save")
 	_check((GameState.season_awards.get("golden_fist", []) as Array).size() == fist.size()
 			and str(((GameState.honour_roll[0] as Dictionary).get("golden_fist", [{}]) as Array)[0].get("id", "")) == fist_id,
 			"The Golden Fist survives a save")
-	# Awards night's count, from the finished season (T5.Q23b).
-	_award_count_season_checks()
 	GameState.start_next_season()
 	_check(GameState.season_tally.is_empty() and GameState.honour_roll.size() == 1,
 			"A new season starts a fresh tally and keeps the honour roll")
@@ -919,8 +938,8 @@ func _award_count_season_checks() -> void:
 func _test_award_count_late_start() -> void:
 	GameState.reset()
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
-	for i in 3:
-		GameState.advance()
+	# Three rounds in (skipped, not played: nothing here reads them).
+	GameState.season.round_index = 3
 	GameState.award_counts = AwardsCount.fresh(0, "")
 	var next := GameState.season.round_index + 1
 	GameState.advance()
