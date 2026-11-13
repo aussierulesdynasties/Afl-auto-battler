@@ -71,7 +71,10 @@ func _career(year: int, club := "GEE") -> void:
 
 
 ## The season's home-and-away rounds are skipped; the finals are played.
+## The board never sacks the test coach: this suite rolls rules, not careers,
+## and a sacking with no job left would end the campaign mid-roll.
 func _to_offseason() -> void:
+	GameState.board["warned"] = false
 	GameState.season.round_index = GameState.season.fixture.size()
 	GameState.ensure_finals()
 	var guard := 0
