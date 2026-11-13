@@ -59,6 +59,7 @@ func run() -> void:
 	_t("_test_legacy_start_1990")
 	_t("_test_legacy_rolls_into_1991")
 	_t("_test_legacy_redraft_1990")
+	_t("_test_era_coach_ratings")
 	Datasets.add(FIXTURE, FIXTURE_ROW)
 	_t("_test_fixture_load")
 	_t("_test_back_to_2026")
@@ -527,6 +528,23 @@ func _test_guernseys_by_year() -> void:
 			if str(g["design"]) != str(want[y][code]):
 				wrong.append("%s %d: %s" % [code, y, g["design"]])
 	_check(wrong.is_empty(), "Each season's clubs wear that season's guernsey (%s)" % str(wrong))
+	# Every season 1990-2025, every club playing wears its real guernsey, a picture in the kit
+	# atlas (tools/kits/kits.txt); 2026 on, clubs.csv's own.
+	var atlas := GameDB.kit_atlas()
+	var cells := 0
+	if atlas != null:
+		cells = GameDB.KIT_PER_ROW * int(atlas.get_height()) / GameDB.KIT_SIDE
+	var bare := []
+	var outside := false
+	for y in range(1990, 2027):
+		GameDB.apply_era(y)
+		for code in GameDB.active_clubs(y):
+			var c := int(GameDB.club_guernsey(code).get("kit_cell", -1))
+			if (c < 0) != (y >= 2026):
+				bare.append("%s %d" % [code, y])
+			outside = outside or c >= cells
+	_check(atlas != null and bare.is_empty() and not outside,
+			"Every club wears its season's guernsey picture 1990-2025 and clubs.csv's from 2026 (%s)" % str(bare))
 	GameDB.apply_era(1997)
 	var navy97: Color = GameDB.club_colours("WCE")[0]
 	GameDB.apply_era(2005)
@@ -548,11 +566,12 @@ func _test_guernseys_by_year() -> void:
 	var p3 = mat.get_shader_parameter("kit_pattern3")
 	var designs = mat.get_shader_parameter("kit_design")
 	_check(p3[0] == Color("#DC0000") and p3[1] == GameDB.club_guernsey("WCE")["pattern2"]
-			and int(designs[0]) == GameDB.GUERNSEY_DESIGNS.find("anchor"),
-			"The figures get the anchor's red; a kit without a third colour repeats its second")
+			and int(designs[0]) == 100 + int(fre.get("kit_cell", -100)),
+			"The figures wear Fremantle's 2000 picture and get the anchor's red; a kit without a third colour repeats its second")
 	var crest := UiKit.club_marker("FRE") as GuernseyCrest
-	_check(crest != null and crest.design == "anchor" and crest.third == Color("#DC0000"),
-			"Fremantle's 2000 marker is the anchor, its red included")
+	_check(crest != null and crest.design == "anchor" and crest.third == Color("#DC0000")
+			and crest.kit_cell == int(fre.get("kit_cell", -1)),
+			"Fremantle's 2000 marker is the anchor picture, its red included")
 	if crest:
 		crest.free()
 	_check(PitchView.disc_design(fre) == "yoke" and PitchView.disc_design(GameDB.club_guernsey("WCE")) == "panels",
@@ -789,4 +808,26 @@ func _test_legacy_redraft_1990() -> void:
 			"A redraft still replaces John Northey, who is a free coach; West Coast keep Mick Malthouse (%s)" % str(northey.get("status", "missing")))
 	_check(mine.size() >= 30 and from_1990 > 0,
 			"Your redrafted list is drawn from the 1990 pool (%d players, %d real)" % [mine.size(), from_1990])
+	GameState.reset()
+
+
+## Director 2026-11-13, "Rate from records": each 1990 coach is rated from his
+## real senior record before 1990, not a flat era rating.
+func _test_era_coach_ratings() -> void:
+	GameState.reset("1990")
+	var seeded := Coaches.seed("MEL")
+	var by := {}
+	for cid in seeded:
+		by[str(seeded[cid].get("real_name", ""))] = seeded[cid]["skills"]
+	var sk := func(n: String, k: String) -> int: return int((by.get(n, {}) as Dictionary).get(k, -1))
+	_check(sk.call("Kevin Sheedy", "tactics") > sk.call("Ken Sheldon", "tactics")
+			and sk.call("Allan Jeans", "tactics") > sk.call("Kevin Bartlett", "tactics"),
+			"Proven coaches rate above unproven ones (Sheedy %d vs Sheldon %d, Jeans %d vs Bartlett %d)" % [
+				sk.call("Kevin Sheedy", "tactics"), sk.call("Ken Sheldon", "tactics"),
+				sk.call("Allan Jeans", "tactics"), sk.call("Kevin Bartlett", "tactics")])
+	_check(sk.call("John Northey", "tactics") > 0 and sk.call("Ray Jordon", "tactics") == 62,
+			"Your replaced coach is rated too; an under-19s coach with one senior game keeps 62 (%d, %d)" % [
+				sk.call("John Northey", "tactics"), sk.call("Ray Jordon", "tactics")])
+	_check(Coaches._era_ratings("res://data/coaches_2026.csv", 2026).is_empty(),
+			"No ratings file beside the 2026 staff: the 2026 coaches are untouched")
 	GameState.reset()

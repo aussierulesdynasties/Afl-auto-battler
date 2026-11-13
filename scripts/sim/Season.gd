@@ -64,7 +64,11 @@ func _init(club_codes: Array, club_lists: Dictionary, p_seed: int = 0, p_year: i
 # The season's shape
 # ---------------------------------------------------------------------------
 ## Home-and-away rounds this season (24 in the game's league; 22 in 1990).
+## Once the fixture is made it is the count: a season saved before its
+## year's shape changed (a 2026 season drawn in 24 rounds) keeps its own.
 func regular_rounds() -> int:
+	if not fixture.is_empty():
+		return fixture.size()
 	return int(rules.get("rounds", REGULAR_ROUNDS))
 
 
@@ -178,7 +182,18 @@ const RETURN_GAP := 10
 ##    them (within one game).
 ## A saved season keeps the fixture it was saved with (load_career restores
 ## it over this one), so only a new season is drawn this way.
+##
+## A real season (Legacy mode) plays its real fixture instead: real_fixture().
 func build_fixture() -> Array:
+	var real := real_fixture()
+	if not real.is_empty():
+		return real
+	# 2026's real shape (an Opening Round, 23 games) fits only the real 18
+	# clubs; a 2026 season with other clubs (a created club) is drawn in the
+	# game's league shape, as before real fixtures.
+	if year == SeasonRules.GAME_LEAGUE_YEAR:
+		rules = SeasonRules.DEFAULT.duplicate()
+		rules["year"] = year
 	if clubs.size() > FAIR_FIXTURE_MAX or clubs.size() < 2:
 		return _legacy_fixture()
 	var rng := RandomNumberGenerator.new()
@@ -565,6 +580,77 @@ func _assign_venues(rounds: Array, rng: RandomNumberGenerator) -> Array:
 
 ## The builder before the fair fixture: only the fallback above 21 clubs
 ## (FAIR_FIXTURE_MAX); the director chose the 21-club shape (2026-10-06).
+## The year's real fixture (RealFixture, data/legacy/fixtures.csv), or []
+## to draw the season: a year with no real fixture, clubs that differ from the
+## clubs that played it (Fitzroy surviving, a created club), or a round count
+## that differs from the season's shape.
+func real_fixture() -> Array:
+	if year <= 0 or not RealFixture.has_year(year):
+		return []
+	var real := RealFixture.for_season(year, clubs)
+	if real.size() != regular_rounds():
+		return []
+	return real
+
+
+## Whether this season plays a real fixture: its matches carry their real
+## ground. Read from the fixture, so a saved season answers the same.
+## The AFL's Opening Round (2024 on): a real season of those years plays it
+## first, and the rounds after it count from 1, as the AFL numbers them.
+func has_opening_round() -> bool:
+	return year >= 2024 and is_real_fixture()
+
+
+## A home-and-away round's name as the AFL says it: "Opening Round", "Round 7".
+## Every screen names a round through this (or round_label), never round_i + 1.
+func round_name(round_i: int) -> String:
+	if has_opening_round():
+		return "Opening Round" if round_i == 0 else "Round %d" % round_i
+	return "Round %d" % (round_i + 1)
+
+
+## The AFL's number of the season's last round ("Round 3 of 24").
+func last_round_number() -> int:
+	return regular_rounds() - (1 if has_opening_round() else 0)
+
+
+## Where a round sits in the season: "Opening Round", "Round 3 of 24".
+func round_progress(round_i: int) -> String:
+	if has_opening_round() and round_i == 0:
+		return round_name(0)
+	return "%s of %d" % [round_name(round_i), last_round_number()]
+
+
+## The round a match label names, counted as round_index + 1 counts it
+## (the Opening Round is 1), or 0 for a final or no round.
+func round_of_label(label: String) -> int:
+	var l := label.split(" · ")[0].strip_edges()
+	if l == "Opening Round":
+		return 1 if has_opening_round() else 0
+	if not l.begins_with("Round "):
+		return 0
+	var n := l.trim_prefix("Round ").to_int()
+	return n + 1 if has_opening_round() else n
+
+
+func is_real_fixture() -> bool:
+	for r in fixture:
+		for m in r:
+			return str((m as Dictionary).get("ground", "")) != ""
+	return false
+
+
+## The real ground a home-and-away match was fixtured at, or "" (a drawn
+## season, or no such match that round).
+func _real_ground(round_i: int, home_code: String, away_code: String) -> String:
+	if round_i < 0 or round_i >= fixture.size():
+		return ""
+	for m in fixture[round_i]:
+		if str(m["home"]) == home_code and str(m["away"]) == away_code:
+			return str((m as Dictionary).get("ground", ""))
+	return ""
+
+
 func _legacy_fixture() -> Array:
 	var first_half := round_robin(clubs)
 	var out := []
@@ -747,6 +833,8 @@ func GameDB_ref() -> Node:
 func weather_for(home_code: String, away_code: String, round_i: int, finals_m: Dictionary = {}) -> String:
 	var is_final := not finals_m.is_empty()
 	var ground := finals_venue(finals_m) if is_final else home_ground(home_code)
+	if not is_final and _real_ground(round_i, home_code, away_code) != "":
+		ground = _real_ground(round_i, home_code, away_code)
 	var state := str(GameDB_ref().club(home_code).get("state", ""))
 	if not is_final and round_i == gather_round():
 		ground = round_venue(round_i, home_code, away_code)
@@ -934,12 +1022,16 @@ func is_regular_done() -> bool:
 # ---------------------------------------------------------------------------
 ## The finals series of the season's format (SeasonRules.BRACKETS): the
 ## wildcard bracket of the class doc in the game's league, the McIntyre final
-## five, the final six or a final eight in a past year.
-func start_finals() -> void:
+## five, the final six or a final eight in a past year. A club the league has
+## thrown out of the finals (`barred`, YearEvents) is passed over, and the
+## next club on the ladder takes its place.
+func start_finals(barred: Array = []) -> void:
 	var top := []
 	for row in ladder_sorted():
 		if top.size() >= finalists():
 			break
+		if barred.has(str(row["code"])):
+			continue
 		top.append(row["code"])
 	finals = {
 		"week": 1,
@@ -1120,12 +1212,38 @@ func home_ground(code: String) -> String:
 func gather_round() -> int:
 	if not bool(rules.get("gather_round", true)):
 		return -1
+	if is_real_fixture():
+		return _real_gather_round()
 	return GatherRound.round_of(fixture, clubs, seed)
 
 
+## A real season's Gather Round: the round every match of which is at the
+## host's grounds (2023 on), or -1.
+func _real_gather_round() -> int:
+	var hosts := {}
+	for v in GatherRound.VENUES:
+		hosts[str(v["ground"])] = true
+	for ri in range(fixture.size()):
+		var ms: Array = fixture[ri]
+		if ms.size() < GatherRound.VENUES.size():
+			continue
+		var all_hosted := true
+		for m in ms:
+			if not hosts.has(str((m as Dictionary).get("ground", ""))):
+				all_hosted = false
+				break
+		if all_hosted:
+			return ri
+	return -1
+
+
 ## Where a home-and-away match is played: the home club's ground, or in Gather
-## Round the host ground the match is staged at.
+## Round the host ground the match is staged at. A real season's match is at
+## the ground it was really played at.
 func round_venue(round_i: int, home_code: String, away_code: String) -> String:
+	var real := _real_ground(round_i, home_code, away_code)
+	if real != "":
+		return real
 	if round_i >= 0 and round_i < fixture.size() and round_i == gather_round():
 		var ms: Array = fixture[round_i]
 		var vs := GatherRound.venues_for(ms, seed, home_ground)
@@ -1147,7 +1265,7 @@ func round_at_home(round_i: int, home_code: String, away_code: String) -> Array:
 
 ## A home-and-away round's name: "Round 5", or "Round 5 · Gather Round".
 func round_label(round_i: int) -> String:
-	var label := "Round %d" % (round_i + 1)
+	var label := round_name(round_i)
 	if round_i >= 0 and round_i == gather_round():
 		label += " · " + GatherRound.NAME
 	return label

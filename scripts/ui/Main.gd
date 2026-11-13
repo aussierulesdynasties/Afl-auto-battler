@@ -22,6 +22,7 @@ var _logo: TextureRect
 var _pick_board := "fair"
 var _pick_rivals := "shrewd"
 var _pick_tutorials := true
+var _pick_controversies := true
 ## Canberra joins (in the 2027 redraft, or in 2030 on the real lists).
 var _pick_canberra := false
 var _canberra_row: VBoxContainer
@@ -123,6 +124,7 @@ func _ready() -> void:
 	_pick_board = GameState.new_career_dial(DifficultyDials.BOARD)
 	_pick_rivals = GameState.new_career_dial(DifficultyDials.RIVALS)
 	_pick_tutorials = GameState.new_career_tutorials()
+	_pick_controversies = GameState.new_career_controversies()
 	# The oval stays as a faint ground; the logo and buttons carry the screen.
 	_pitch = PitchView.new()
 	_pitch.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -370,6 +372,7 @@ func _on_new_career() -> void:
 	_pick_board = GameState.new_career_dial(DifficultyDials.BOARD)
 	_pick_rivals = GameState.new_career_dial(DifficultyDials.RIVALS)
 	_pick_tutorials = GameState.new_career_tutorials()
+	_pick_controversies = GameState.new_career_controversies()
 	_pick_canberra = false
 	_sim_ahead_ok = false
 	_pick_challenge = "none"
@@ -583,6 +586,13 @@ func _show_setup() -> void:
 			func(k): return ("A short note the first time you open each screen, saying what it shows and how to use it." if k == "on"
 					else "No notes open by themselves. You can change this later in Settings."),
 			func(k): _pick_tutorials = k == "on"))
+	# The league's real scandals in a past-season career (director: real
+	# penalties land, behind a switch at game creation).
+	form.add_child(_choice("Controversies", "Controversies", [["on", "On"], ["off", "Off"]],
+			"on" if _pick_controversies else "off",
+			func(k): return ("Drug scandals, salary cap rorts and the rest happen in their real seasons, and the real penalties land: fines, lost draft picks, a finals ban." if k == "on"
+					else "The league's scandals never happen: no fines, lost picks or bans."),
+			func(k): _pick_controversies = k == "on"))
 	# Canberra, the second new club: a choice made once, here (director,
 	# 2026-10-14), asked as a question (2026-11-08). What Yes and No mean
 	# depends on the start (_canberra_line).
@@ -873,6 +883,7 @@ func _start_new_career() -> void:
 	GameState.set_new_career_dial(DifficultyDials.BOARD, _pick_board)
 	GameState.set_new_career_dial(DifficultyDials.RIVALS, _pick_rivals)
 	GameState.set_new_career_tutorials(_pick_tutorials)
+	GameState.set_new_career_controversies(_pick_controversies)
 	# The old save stays on disk until the new career has a club and its first
 	# save replaces it: backing out of Choose your club must not cost the player
 	# the career they had (reset() clears memory only).
@@ -1173,7 +1184,7 @@ func _show_help() -> void:
 			% GameDB.active_clubs(GameDB.START_YEAR).size())
 			+ "2. Draft from one shared player pool under the same cap. The random order reverses each round. Rivals pick between your turns. Tap a player to see what kind of footballer he is; only the Draft button picks him.\n\n"
 			+ "3. Track every selection in Picks. The position cards in the pool show your list's coverage; tap one to filter the pool. Carry at least two rucks.\n\n"
-			+ "4. Play 24 rounds, with matches driven by your players' rated abilities. Set your tactics in the coach box. After each game every player develops: his development (By position to start) decides the kind of footballer he becomes, and fit players you leave out develop in the reserves at about half the senior rate. Choose each player's development in Training.\n\n"
+			+ "4. Play the home-and-away season, with matches driven by your players' rated abilities. Set your tactics in the coach box. After each game every player develops: his development (By position to start) decides the kind of footballer he becomes, and fit players you leave out develop in the reserves at about half the senior rate. Choose each player's development in Training.\n\n"
 			+ "5. Pick your own side on the Team screen, or let the best 23 be picked around injuries. Two of your five midfielders play the wings: a runner suits it, a ball-winner is wasted there. A tagger makes a tag bite.\n\n"
 			+ ("6. Finish in the top %d to play finals and chase the flag. The top four start in the qualifying finals, 5-10 in the wildcards and eliminations. The season's awards, the honour roll and league records are in the Season Review.\n\n"
 			% Season.FINALISTS)

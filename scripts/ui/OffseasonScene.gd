@@ -206,6 +206,12 @@ func _budget(body: VBoxContainer) -> void:
 			14, UiKit.TEXT, true)
 	summary.name = "BudgetSummary"
 	body.add_child(summary)
+	# A league fine (YearEvents) cuts this year's budget: say so beside the total.
+	var fine_cut := ClubBudget.ANNUAL_M - GameState.department_budget_annual_m()
+	if fine_cut > 0.001:
+		var fine := _para("The league's fine takes $%.1fm off this year's budget." % fine_cut, 13, UiKit.BAD)
+		fine.name = "BudgetFine"
+		body.add_child(fine)
 	body.add_child(UiKit.spacer(4))
 
 	for area in ClubBudget.AREA_ORDER:
@@ -506,7 +512,7 @@ func _show_talks() -> void:
 			v.add_child(odds)
 	var no_spot := RookieList.add_block(GameState.my_list, "senior") if _talk_fa else ""
 	if no_spot == "senior":
-		v.add_child(_para("Your senior list is full (%d): release a player first." % RookieList.SENIOR_SPOTS, 14, UiKit.BAD))
+		v.add_child(_para("Your senior list is full (%d): release a player first." % RookieList.senior_spots(), 14, UiKit.BAD))
 	elif no_spot != "":
 		v.add_child(_para(RookieList.block_words(GameState.my_list, no_spot) + " Release a player first.", 14, UiKit.BAD))
 	for reason in terms.get("reasons", []):

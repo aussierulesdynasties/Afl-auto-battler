@@ -20,7 +20,7 @@ var existing_sizes := {}              # code -> kept list length (intake only)
 ## counts senior players only.
 var senior_cap := 0
 ## code -> the list as the 44 counts it when the draft opened (senior and
-## Category A; RookieList.list_size). A club at or over Contracts.MAX_LIST
+## Category A; RookieList.list_size). A club at or over Contracts.max_list()
 ## passes its picks whatever its senior list holds (RookieList.add_block: the
 ## same rule as every other way onto a list). A club with no entry is bound
 ## by the senior list alone.
@@ -55,6 +55,9 @@ var pick_origin: Array = []       # the club each pick came from (differs from i
 ## Traded picks: "round:origin club" -> owner. A pick not listed is its own
 ## club's. See set_pick_owners.
 var pick_owners := {}
+## An owner no club is: a pick the league took away (YearEvents), which the
+## draft skips.
+const FORFEIT := "-"
 ## Pick trades struck on draft night, in order: {"at": the pick about to be
 ## made when it was struck, "buyer", "seller", "in": [ids the buyer got],
 ## "out": [ids it gave], "text": the line the board reads}. GameState fills
@@ -217,6 +220,8 @@ func _build_sequence(comps: Array) -> void:
 			round_order.reverse()
 		for code in round_order:
 			var owner := str(pick_owners.get("%d:%s" % [r + 1, code], code))
+			if owner == FORFEIT:
+				continue
 			slots.append([owner, r + 1, {}, code])
 			regular += 1
 			for c in by_after.get(regular, []):
@@ -385,7 +390,7 @@ func list_cap() -> int:
 func open_spots(code: String) -> int:
 	var open := list_cap() - int(existing_sizes.get(code, 0)) - count_for(code)
 	if list_44.has(code):
-		open = mini(open, Contracts.MAX_LIST - list_now(code))
+		open = mini(open, Contracts.max_list() - list_now(code))
 	return maxi(0, open)
 
 
@@ -397,7 +402,7 @@ func list_now(code: String) -> int:
 
 ## True when it is the 44, not the senior list, that leaves `code` no spot.
 func full_at_44(code: String) -> bool:
-	return list_44.has(code) and list_now(code) >= Contracts.MAX_LIST \
+	return list_44.has(code) and list_now(code) >= Contracts.max_list() \
 			and int(existing_sizes.get(code, 0)) + count_for(code) < list_cap()
 
 
@@ -405,10 +410,10 @@ func full_at_44(code: String) -> bool:
 func full_words(code: String) -> String:
 	if full_at_44(code):
 		var n := list_now(code)
-		if n > Contracts.MAX_LIST:
+		if n > Contracts.max_list():
 			return "your list holds %d and the limit is %d (senior list and Category A rookies together), so nobody joins until it is back under %d." % [
-					n, Contracts.MAX_LIST, Contracts.MAX_LIST]
-		return "your list is full (%d: senior list and Category A rookies together)." % Contracts.MAX_LIST
+					n, Contracts.max_list(), Contracts.max_list()]
+		return "your list is full (%d: senior list and Category A rookies together)." % Contracts.max_list()
 	return "your %slist is full (%d)." % ["senior " if senior_cap > 0 else "", list_cap()]
 
 
