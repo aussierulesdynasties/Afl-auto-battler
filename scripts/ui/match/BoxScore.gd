@@ -259,7 +259,7 @@ func _say() -> void:
 
 func _minute_words(s: Dictionary) -> String:
 	var into := int(s["min"]) - (int(s["q"]) - 1) * 30
-	into = maxi(1, into)
+	into = maxi(1, EraFootball.clock_minutes(into, GameState.season_year))
 	return "%d minute%s in" % [into, "" if into == 1 else "s"] if int(s["q"]) <= 4 else "extra time"
 
 

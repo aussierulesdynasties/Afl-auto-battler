@@ -44,6 +44,21 @@ const STATE_LEAGUES_KEY := "state_leagues"
 const SECOND_TIER_KEY := "second_tier"
 
 const _TABLE := {
+	# The 2020 start: lists rated on 2019, built by
+	# tools/legacy_1990s/build_start_2020.py (TODO row 142). 2020 plays its
+	# real shortened season (EraFootball, the real fixture); the campaign then
+	# runs on with no end year.
+	"2020": {
+		"data_season": 2019, "start_year": 2020, "start_date": "2020-03-01",
+		"players": "res://data/legacy/2020/players_2020.csv",
+		"coaches": "res://data/legacy/2020s/coaches_2020.csv",
+		"leadership": "res://data/legacy/2020s/captains_2020.csv",
+		"history": "res://data/legacy/2020/history_2020.csv",
+		"list_additions": "res://data/legacy/2020/list_additions_2020.csv",
+		"list_addition_stats": "res://data/legacy/2020/list_addition_stats_2020.csv",
+		"list_types": "res://data/legacy/2020/list_types_2020.csv",
+		"second_tier": "res://data/legacy/second_tier",
+	},
 	# Today's start: the completed 2026 season, careers from 2027.
 	"2026": {
 		"data_season": 2026, "start_year": 2027, "start_date": "2027-03-01",
@@ -62,6 +77,18 @@ const _TABLE := {
 		"coaches": "res://data/coaches_2026.csv",
 		"leadership": "res://data/leadership_2026.csv",
 		"state_leagues": "res://data/state_leagues",
+	},
+	# The 2000 start: lists rated on 1999, built by
+	# tools/legacy_2000s/build_start_2000.py on the 1990 pipeline (row 142).
+	"2000": {
+		"data_season": 1999, "start_year": 2000, "start_date": "2000-03-01",
+		"players": "res://data/legacy/2000/players_2000.csv",
+		"coaches": "res://data/legacy/2000s/coaches_2000.csv",
+		"leadership": "res://data/legacy/2000s/captains_2000.csv",
+		"history": "res://data/legacy/2000/history_2000.csv",
+		"list_additions": "res://data/legacy/2000/list_additions_2000.csv",
+		"list_addition_stats": "res://data/legacy/2000/list_addition_stats_2000.csv",
+		"second_tier": "res://data/legacy/second_tier",
 	},
 	# The 1990 start: lists rated on 1989, the season just played, built by
 	# tools/legacy_1990s/build_start.py (TODO row 142, phase L1).

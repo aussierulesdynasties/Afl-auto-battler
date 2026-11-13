@@ -5,6 +5,7 @@
 # median CI time is over about 240 s is long. Medians from main run 41641362134
 # and PR runs 41636393349 41639727757 41641590475 41641730855 41646965345
 # (suite-timings artifacts, 2026-11-03/04), in seconds:
+legacy_2020_long
 story
 save
 match_game
@@ -14,6 +15,7 @@ coach_arcs
 match_visual
 matchday
 match_motion
+legacy_2000_long
 back_nav
 preseason
 # The balance harness suites ran nightly before this rule and still do.
