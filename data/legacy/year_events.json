@@ -1,0 +1,3597 @@
+[
+ {
+  "id": "bears_owner_collapse",
+  "rows": [
+   0,
+   4
+  ],
+  "season": 1990,
+  "round": 0,
+  "clubs": [
+   "BRL"
+  ],
+  "controversy": false,
+  "headline": "The Bears' owner goes under",
+  "beats": [
+   "The company behind the Brisbane Bears has gone into receivership, and the players have gone unpaid.",
+   "They are threatening to strike before the season starts; the league has stepped in to take the club over."
+  ],
+  "card": {
+   "id": "year_bears_owner_collapse",
+   "category": "board",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "The pay has stopped"
+   ],
+   "text": [
+    "The owner's company has collapsed and the players have not been paid. They want to know if you will stand with them if they strike."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "back",
+     "label": "Back the players",
+     "effects": [
+      {
+       "op": "morale",
+       "d": 6,
+       "who": "all"
+      },
+      {
+       "op": "board",
+       "d": -6
+      }
+     ],
+     "result": "You tell the group you are with them. The league is not impressed."
+    },
+    {
+     "key": "league",
+     "label": "Side with the league",
+     "effects": [
+      {
+       "op": "board",
+       "d": 4
+      },
+      {
+       "op": "morale",
+       "d": -6,
+       "who": "all"
+      }
+     ],
+     "result": "You tell the players to trust the league to sort it out."
+    }
+   ]
+  }
+ },
+ {
+  "id": "vfl_becomes_afl",
+  "rows": [
+   1
+  ],
+  "season": 1990,
+  "round": 0,
+  "clubs": "all",
+  "controversy": false,
+  "headline": "The VFL is now the AFL",
+  "beats": [
+   "The Victorian Football League has renamed itself the Australian Football League for 1990.",
+   "Brisbane and West Coast are already in; the talk is of more interstate clubs to come."
+  ]
+ },
+ {
+  "id": "save_our_skins",
+  "rows": [
+   2
+  ],
+  "season": 1990,
+  "round": 14,
+  "clubs": [
+   "RIC"
+  ],
+  "controversy": false,
+  "headline": "Save Our Skins",
+  "beats": [
+   "Richmond must raise $1 million by the end of October or fold.",
+   "Supporters are rattling tins at the station, and an MCG rally is planned."
+  ],
+  "card": {
+   "id": "year_save_our_skins",
+   "category": "members",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "Rattling the tins"
+   ],
+   "text": [
+    "The club needs $1 million by October or it folds. The fundraisers want you and the players on the tins this week."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "front",
+     "label": "Front the fundraisers",
+     "effects": [
+      {
+       "op": "board",
+       "d": 5
+      },
+      {
+       "op": "culture",
+       "strand": "together",
+       "d": 1,
+       "why": "The players stood with the members"
+      },
+      {
+       "op": "forgo_xp",
+       "d": 3,
+       "who": "side"
+      }
+     ],
+     "result": "You and the players shake tins at the station and miss a session."
+    },
+    {
+     "key": "train",
+     "label": "Keep the players training",
+     "effects": [
+      {
+       "op": "board",
+       "d": -3
+      },
+      {
+       "op": "xp",
+       "d": 2,
+       "who": "side"
+      }
+     ],
+     "result": "You keep the players on the track. The fundraisers carry on without them."
+    }
+   ]
+  }
+ },
+ {
+  "id": "port_secret_deal",
+  "rows": [
+   3
+  ],
+  "season": 1990,
+  "round": 16,
+  "clubs": "all",
+  "controversy": false,
+  "headline": "Port's secret deal",
+  "beats": [
+   "Port Adelaide signed a secret deal to join the AFL; the other SANFL clubs went to court and stopped it.",
+   "The SANFL will field its own club, the Adelaide Crows, from 1991."
+  ]
+ },
+ {
+  "id": "windy_hill_farewell",
+  "rows": [
+   5
+  ],
+  "season": 1991,
+  "round": 20,
+  "clubs": [
+   "ESS"
+  ],
+  "controversy": false,
+  "headline": "Farewell to Windy Hill",
+  "beats": [
+   "Essendon play their last home-and-away games at Windy Hill this season.",
+   "From 1992 the Bombers' home games move to the MCG: bigger crowds, a bigger gate."
+  ],
+  "card": {
+   "id": "year_windy_hill_farewell",
+   "category": "members",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "The last game at Windy Hill"
+   ],
+   "text": [
+    "The old ground's last game is close. The members want the players at the farewell barbecue; the fitness staff want them in recovery."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "farewell",
+     "label": "Send the players to the farewell",
+     "effects": [
+      {
+       "op": "board",
+       "d": 3
+      },
+      {
+       "op": "culture",
+       "strand": "together",
+       "d": 1,
+       "why": "The players farewelled the old ground with the members"
+      },
+      {
+       "op": "forgo_xp",
+       "d": 2,
+       "who": "side"
+      }
+     ],
+     "result": "The players stay late with the members at the old ground."
+    },
+    {
+     "key": "recover",
+     "label": "Keep them in recovery",
+     "effects": [
+      {
+       "op": "board",
+       "d": -2
+      },
+      {
+       "op": "xp",
+       "d": 2,
+       "who": "side"
+      }
+     ],
+     "result": "The players do their recovery and go home."
+    }
+   ]
+  }
+ },
+ {
+  "id": "swans_on_the_brink",
+  "rows": [
+   6
+  ],
+  "season": 1992,
+  "round": 18,
+  "clubs": [
+   "SYD"
+  ],
+  "controversy": false,
+  "headline": "The Swans on the brink",
+  "beats": [
+   "Sydney have told the league they cannot go on under private ownership.",
+   "The other clubs have waived the Swans' licence fees and given them working capital; the club goes back to its members for 1993."
+  ],
+  "card": {
+   "id": "year_swans_on_the_brink",
+   "category": "board",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "The league's lifeline"
+   ],
+   "text": [
+    "The league will rescue the club, but its people will sit in on football decisions. The board wants you to welcome them."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "welcome",
+     "label": "Welcome the league's people",
+     "effects": [
+      {
+       "op": "board",
+       "d": 5
+      },
+      {
+       "op": "culture",
+       "strand": "ambition",
+       "d": -1,
+       "why": "Outsiders now sit in on football decisions"
+      }
+     ],
+     "result": "You give the league's people a seat at the selection table."
+    },
+    {
+     "key": "guard",
+     "label": "Keep football decisions in the club",
+     "effects": [
+      {
+       "op": "board",
+       "d": -4
+      },
+      {
+       "op": "culture",
+       "strand": "together",
+       "d": 1,
+       "why": "You kept football decisions inside the club"
+      }
+     ],
+     "result": "You tell the board football stays with the football department."
+    }
+   ]
+  }
+ },
+ {
+  "id": "moorabbin_farewell",
+  "rows": [
+   7
+  ],
+  "season": 1992,
+  "round": 20,
+  "clubs": [
+   "STK"
+  ],
+  "controversy": false,
+  "headline": "Moorabbin's last game",
+  "beats": [
+   "St Kilda play their last home game at Moorabbin this season.",
+   "From 1993 the Saints' home games move to Waverley Park."
+  ],
+  "card": {
+   "id": "year_moorabbin_farewell",
+   "category": "members",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "Leaving Moorabbin"
+   ],
+   "text": [
+    "The members are angry the club is leaving its home. The board wants you at the members' night to sell the move."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "sell",
+     "label": "Sell the move to the members",
+     "effects": [
+      {
+       "op": "board",
+       "d": 4
+      },
+      {
+       "op": "culture",
+       "strand": "together",
+       "d": -1,
+       "why": "You sold the move the members hate"
+      }
+     ],
+     "result": "You tell the members the move is the club's future."
+    },
+    {
+     "key": "stay_out",
+     "label": "Stay out of it",
+     "effects": [
+      {
+       "op": "board",
+       "d": -3
+      },
+      {
+       "op": "culture",
+       "strand": "together",
+       "d": 1,
+       "why": "You did not take sides against the members"
+      }
+     ],
+     "result": "You leave the move to the board and the members."
+    }
+   ]
+  }
+ },
+ {
+  "id": "victoria_park_abuse",
+  "rows": [
+   8
+  ],
+  "season": 1993,
+  "round": 3,
+  "clubs": [
+   "STK",
+   "COL"
+  ],
+  "controversy": true,
+  "headline": "Racist abuse at Victoria Park",
+  "beats": [
+   "After St Kilda's win at Victoria Park, one of their Indigenous players answered racist abuse from the crowd by lifting his jumper and pointing to his skin.",
+   "The image has the game asking what it will do about crowd abuse."
+  ],
+  "card": {
+   "id": "year_victoria_park_abuse",
+   "category": "media",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "Asked about the abuse"
+   ],
+   "text": [
+    "The papers want the club's word on the racist abuse at Victoria Park. The club's players are watching what you say."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "speak",
+     "label": "Condemn it, plainly",
+     "effects": [
+      {
+       "op": "morale",
+       "d": 6,
+       "who": "all"
+      },
+      {
+       "op": "culture",
+       "strand": "standards",
+       "d": 2,
+       "why": "You called out racist abuse in public"
+      },
+      {
+       "op": "board",
+       "d": -2
+      }
+     ],
+     "result": "You say there is no place for it in the game, and you say it plainly."
+    },
+    {
+     "key": "quiet",
+     "label": "Say it is a matter for the league",
+     "effects": [
+      {
+       "op": "board",
+       "d": 2
+      },
+      {
+       "op": "morale",
+       "d": -6,
+       "who": "all"
+      }
+     ],
+     "result": "You say it is the league's business, not the club's."
+    }
+   ]
+  }
+ },
+ {
+  "id": "final_eight",
+  "rows": [
+   9
+  ],
+  "season": 1994,
+  "round": 0,
+  "clubs": "all",
+  "controversy": false,
+  "headline": "A final eight",
+  "beats": [
+   "The finals grow from six clubs to eight this season: first plays eighth, second plays seventh, and so on in the first week.",
+   "A middling list now has a real shot at September."
+  ]
+ },
+ {
+  "id": "fitzroy_to_western_oval",
+  "rows": [
+   10
+  ],
+  "season": 1994,
+  "round": 0,
+  "clubs": [
+   "FIT",
+   "WBD"
+  ],
+  "controversy": false,
+  "headline": "Fitzroy move to the Western Oval",
+  "beats": [
+   "Broke and without a ground of their own, Fitzroy are leaving Princes Park to share Footscray's Western Oval."
+  ],
+  "card": {
+   "id": "year_fitzroy_to_western_oval",
+   "category": "members",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "A ground of someone else's"
+   ],
+   "text": [
+    "The club is moving to Footscray's ground. The members want the players at the old ground once more; the new ground's staff want a training session."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "old",
+     "label": "One last session at the old ground",
+     "effects": [
+      {
+       "op": "board",
+       "d": 2
+      },
+      {
+       "op": "culture",
+       "strand": "together",
+       "d": 1,
+       "why": "The players trained in front of the members one last time"
+      }
+     ],
+     "result": "The players train at Princes Park one last time in front of the members."
+    },
+    {
+     "key": "new",
+     "label": "Train at the new ground",
+     "effects": [
+      {
+       "op": "xp",
+       "d": 2,
+       "who": "side"
+      },
+      {
+       "op": "board",
+       "d": -2
+      }
+     ],
+     "result": "The players learn their new ground."
+    }
+   ]
+  }
+ },
+ {
+  "id": "melbourne_lions",
+  "rows": [
+   11
+  ],
+  "season": 1994,
+  "round": 18,
+  "clubs": [
+   "MEL",
+   "FIT"
+  ],
+  "controversy": false,
+  "headline": "The Melbourne Lions that never were",
+  "beats": [
+   "Melbourne and Fitzroy agreed in principle to merge as the Melbourne Lions, and the league backed it.",
+   "Fitzroy insisted its name stay. Melbourne's board walked away."
+  ],
+  "card": {
+   "id": "year_melbourne_lions",
+   "category": "board",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "The merger talks"
+   ],
+   "text": [
+    "The board is in merger talks and wants your public word on it before the members hear more."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "back",
+     "label": "Back the merger",
+     "effects": [
+      {
+       "op": "board",
+       "d": 5
+      },
+      {
+       "op": "morale",
+       "d": -5,
+       "who": "all"
+      }
+     ],
+     "result": "You say the merger gives the club its best list in years."
+    },
+    {
+     "key": "against",
+     "label": "Say the club should stand alone",
+     "effects": [
+      {
+       "op": "board",
+       "d": -5
+      },
+      {
+       "op": "morale",
+       "d": 5,
+       "who": "all"
+      },
+      {
+       "op": "culture",
+       "strand": "together",
+       "d": 1,
+       "why": "You stood up for the club's name"
+      }
+     ],
+     "result": "You say the club's name and jumper are not for sale."
+    }
+   ]
+  }
+ },
+ {
+  "id": "rule_30",
+  "rows": [
+   12
+  ],
+  "season": 1995,
+  "round": 5,
+  "clubs": [
+   "ESS",
+   "COL"
+  ],
+  "controversy": true,
+  "headline": "Rule 30: the vilification rule",
+  "beats": [
+   "An Essendon Indigenous player's complaint of racial abuse by an opponent on Anzac Day has ended in a failed mediation.",
+   "The league is bringing in a racial and religious vilification rule: abuse becomes a reportable offence."
+  ],
+  "card": {
+   "id": "year_rule_30",
+   "category": "media",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "The vilification complaint"
+   ],
+   "text": [
+    "One of the club's players is at the centre of the vilification complaint. The press want to know where the club stands."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "stand",
+     "label": "Stand with the player who complained",
+     "effects": [
+      {
+       "op": "morale",
+       "d": 6,
+       "who": "all"
+      },
+      {
+       "op": "culture",
+       "strand": "standards",
+       "d": 2,
+       "why": "You stood with a player who called out abuse"
+      },
+      {
+       "op": "board",
+       "d": -2
+      }
+     ],
+     "result": "You say the club backs its player, and the rule has to change."
+    },
+    {
+     "key": "league",
+     "label": "Leave it to the league",
+     "effects": [
+      {
+       "op": "board",
+       "d": 2
+      },
+      {
+       "op": "morale",
+       "d": -6,
+       "who": "all"
+      }
+     ],
+     "result": "You say it is a matter for the league."
+    }
+   ]
+  }
+ },
+ {
+  "id": "fremantle_join",
+  "rows": [
+   13
+  ],
+  "season": 1995,
+  "round": 0,
+  "clubs": [
+   "FRE"
+  ],
+  "controversy": false,
+  "headline": "Fremantle join the league",
+  "beats": [
+   "Fremantle play their first season as Western Australia's second club."
+  ]
+ },
+ {
+  "id": "essendon_90s_breach",
+  "rows": [
+   14
+  ],
+  "season": 1996,
+  "round": 21,
+  "clubs": [
+   "ESS"
+  ],
+  "controversy": true,
+  "headline": "The Bombers' cap breaches",
+  "beats": [
+   "A league and tax office investigation has found Essendon broke the salary cap and draft rules from 1991 to 1996.",
+   "The club is fined about $600,000 and loses its first two picks in this year's National Draft."
+  ],
+  "penalties": [
+   {
+    "op": "fine",
+    "club": "ESS",
+    "amount": 600000
+   },
+   {
+    "op": "lose_pick",
+    "club": "ESS",
+    "year": 1996,
+    "round": 1
+   },
+   {
+    "op": "lose_pick",
+    "club": "ESS",
+    "year": 1996,
+    "round": 2
+   }
+  ],
+  "card": {
+   "id": "year_essendon_90s_breach",
+   "category": "media",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "The cap breach"
+   ],
+   "text": [
+    "The league has found the club paid players outside the cap for six seasons. The press want the coach's word."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "own",
+     "label": "Front the press and own it",
+     "effects": [
+      {
+       "op": "culture",
+       "strand": "standards",
+       "d": 2,
+       "why": "You owned the breach in public"
+      },
+      {
+       "op": "board",
+       "d": -4
+      }
+     ],
+     "result": "You front the cameras and say the club got it wrong."
+    },
+    {
+     "key": "close",
+     "label": "Back the club's line",
+     "effects": [
+      {
+       "op": "board",
+       "d": 4
+      },
+      {
+       "op": "culture",
+       "strand": "standards",
+       "d": -1,
+       "why": "You defended a breach"
+      }
+     ],
+     "result": "You stand beside the board and say the club will fight it."
+    }
+   ]
+  }
+ },
+ {
+  "id": "melbourne_hawks_vote",
+  "rows": [
+   17,
+   18
+  ],
+  "season": 1996,
+  "round": 21,
+  "clubs": [
+   "MEL",
+   "HAW"
+  ],
+  "controversy": false,
+  "headline": "The Melbourne Hawks vote",
+  "beats": [
+   "The league backed a Melbourne-Hawthorn merger. Melbourne's members narrowly voted yes; Hawthorn's voted no, and the merger is dead.",
+   "Under the merger cloud, the round 22 game between the two clubs was played to 'No Merger' signs all around the ground."
+  ],
+  "card": {
+   "id": "year_melbourne_hawks_vote",
+   "category": "members",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "The members' vote"
+   ],
+   "text": [
+    "The members vote on the merger this week. Both sides want the coach's word."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "for",
+     "label": "Back the merger",
+     "effects": [
+      {
+       "op": "board",
+       "d": 5
+      },
+      {
+       "op": "morale",
+       "d": -5,
+       "who": "all"
+      }
+     ],
+     "result": "You say the merged club would be stronger."
+    },
+    {
+     "key": "against",
+     "label": "Back the members against it",
+     "effects": [
+      {
+       "op": "board",
+       "d": -5
+      },
+      {
+       "op": "morale",
+       "d": 5,
+       "who": "all"
+      },
+      {
+       "op": "culture",
+       "strand": "together",
+       "d": 1,
+       "why": "You backed the members against the merger"
+      }
+     ],
+     "result": "You tell the members to vote with their hearts."
+    }
+   ]
+  }
+ },
+ {
+  "id": "port_and_lions_enter",
+  "rows": [
+   19
+  ],
+  "season": 1997,
+  "round": 0,
+  "clubs": [
+   "PAD",
+   "BRL"
+  ],
+  "controversy": false,
+  "headline": "Port Adelaide and the Lions enter",
+  "beats": [
+   "Port Adelaide play their first AFL season, and the merged Brisbane Lions begin.",
+   "Port are barred from their prison-bars jumper after Collingwood objected."
+  ]
+ },
+ {
+  "id": "western_oval_farewell",
+  "rows": [
+   20
+  ],
+  "season": 1997,
+  "round": 20,
+  "clubs": [
+   "WBD"
+  ],
+  "controversy": false,
+  "headline": "Western Oval farewell",
+  "beats": [
+   "The Western Bulldogs play their last home game at the Western Oval this season."
+  ]
+ },
+ {
+  "id": "cap_sweep_1998",
+  "rows": [
+   21
+  ],
+  "season": 1998,
+  "round": 21,
+  "clubs": [
+   "WCE",
+   "GEE",
+   "COL",
+   "HAW",
+   "RIC",
+   "WBD"
+  ],
+  "controversy": true,
+  "headline": "Six clubs over the cap",
+  "beats": [
+   "A league audit has found six clubs over the salary cap.",
+   "West Coast are fined $100,000 and lose their third-round pick; Geelong are fined $77,000, Collingwood $47,500, Hawthorn $45,000, Richmond $21,000 and the Bulldogs $5,300."
+  ],
+  "penalties": [
+   {
+    "op": "fine",
+    "club": "WCE",
+    "amount": 100000
+   },
+   {
+    "op": "lose_pick",
+    "club": "WCE",
+    "year": 1998,
+    "round": 3
+   },
+   {
+    "op": "fine",
+    "club": "GEE",
+    "amount": 77000
+   },
+   {
+    "op": "fine",
+    "club": "COL",
+    "amount": 47500
+   },
+   {
+    "op": "fine",
+    "club": "HAW",
+    "amount": 45000
+   },
+   {
+    "op": "fine",
+    "club": "RIC",
+    "amount": 21000
+   },
+   {
+    "op": "fine",
+    "club": "WBD",
+    "amount": 5300
+   }
+  ],
+  "card": {
+   "id": "year_cap_sweep_1998",
+   "category": "media",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "Over the cap"
+   ],
+   "text": [
+    "The league's audit has the club over the salary cap. The press want the coach's word."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "own",
+     "label": "Front the press and own it",
+     "effects": [
+      {
+       "op": "culture",
+       "strand": "standards",
+       "d": 2,
+       "why": "You owned the breach in public"
+      },
+      {
+       "op": "board",
+       "d": -4
+      }
+     ],
+     "result": "You front the cameras and say the club got it wrong."
+    },
+    {
+     "key": "close",
+     "label": "Back the club's line",
+     "effects": [
+      {
+       "op": "board",
+       "d": 4
+      },
+      {
+       "op": "culture",
+       "strand": "standards",
+       "d": -1,
+       "why": "You defended a breach"
+      }
+     ],
+     "result": "You stand beside the board and say the club will fight it."
+    }
+   ]
+  }
+ },
+ {
+  "id": "collingwood_new_president",
+  "rows": [
+   23
+  ],
+  "season": 1998,
+  "round": 22,
+  "clubs": [
+   "COL"
+  ],
+  "controversy": false,
+  "headline": "A new president at Collingwood",
+  "beats": [
+   "A high-profile TV personality has taken over as Collingwood president, bringing a new board in with him.",
+   "He promises more money, more attention and higher expectations."
+  ],
+  "card": {
+   "id": "year_collingwood_new_president",
+   "category": "board",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "The new president"
+   ],
+   "text": [
+    "The new president wants to meet the coach this week. He has big plans and wants to hear yours."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "sell",
+     "label": "Sell him a big plan",
+     "effects": [
+      {
+       "op": "board",
+       "d": 6
+      },
+      {
+       "op": "culture",
+       "strand": "ambition",
+       "d": 1,
+       "why": "You promised the new president a big plan"
+      }
+     ],
+     "result": "You tell him the club can win a flag."
+    },
+    {
+     "key": "honest",
+     "label": "Tell him it will take time",
+     "effects": [
+      {
+       "op": "board",
+       "d": -3
+      },
+      {
+       "op": "culture",
+       "strand": "standards",
+       "d": 1,
+       "why": "You were honest with the new president"
+      }
+     ],
+     "result": "You tell him the list needs years, not months."
+    }
+   ]
+  }
+ },
+ {
+  "id": "demons_confess",
+  "rows": [
+   24
+  ],
+  "season": 1999,
+  "round": 20,
+  "clubs": [
+   "MEL"
+  ],
+  "controversy": true,
+  "headline": "The Demons confess",
+  "beats": [
+   "Melbourne's president has told the league the club broke the salary cap by about $810,000 from 1995 to 1998.",
+   "The club is fined about $600,000, and its first-round pick in this year's draft goes to Fremantle."
+  ],
+  "penalties": [
+   {
+    "op": "fine",
+    "club": "MEL",
+    "amount": 600000
+   },
+   {
+    "op": "lose_pick",
+    "club": "MEL",
+    "year": 1999,
+    "round": 1,
+    "to": "FRE"
+   }
+  ],
+  "card": {
+   "id": "year_demons_confess",
+   "category": "media",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "The club owns up"
+   ],
+   "text": [
+    "The president has told the league the club broke the cap. The press want the coach's word."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "own",
+     "label": "Front the press and own it",
+     "effects": [
+      {
+       "op": "culture",
+       "strand": "standards",
+       "d": 2,
+       "why": "You owned the breach in public"
+      },
+      {
+       "op": "board",
+       "d": -4
+      }
+     ],
+     "result": "You front the cameras and say the club got it wrong."
+    },
+    {
+     "key": "close",
+     "label": "Back the club's line",
+     "effects": [
+      {
+       "op": "board",
+       "d": 4
+      },
+      {
+       "op": "culture",
+       "strand": "standards",
+       "d": -1,
+       "why": "You defended a breach"
+      }
+     ],
+     "result": "You stand beside the board and say the club will fight it."
+    }
+   ]
+  }
+ },
+ {
+  "id": "victoria_park_farewell",
+  "rows": [
+   25
+  ],
+  "season": 1999,
+  "round": 21,
+  "clubs": [
+   "COL"
+  ],
+  "controversy": false,
+  "headline": "Victoria Park farewell",
+  "beats": [
+   "Collingwood play their last home game at Victoria Park this season."
+  ],
+  "card": {
+   "id": "year_victoria_park_farewell",
+   "category": "members",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "The last game at Victoria Park"
+   ],
+   "text": [
+    "The last game at the old ground is close. The members want the players at the farewell; the fitness staff want them in recovery."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "farewell",
+     "label": "Send the players to the farewell",
+     "effects": [
+      {
+       "op": "board",
+       "d": 3
+      },
+      {
+       "op": "culture",
+       "strand": "together",
+       "d": 1,
+       "why": "The players farewelled the old ground with the members"
+      },
+      {
+       "op": "forgo_xp",
+       "d": 2,
+       "who": "side"
+      }
+     ],
+     "result": "The players stay late with the members at the old ground."
+    },
+    {
+     "key": "recover",
+     "label": "Keep them in recovery",
+     "effects": [
+      {
+       "op": "board",
+       "d": -2
+      },
+      {
+       "op": "xp",
+       "d": 2,
+       "who": "side"
+      }
+     ],
+     "result": "The players do their recovery and go home."
+    }
+   ]
+  }
+ },
+ {
+  "id": "waverley_closes",
+  "rows": [
+   26
+  ],
+  "season": 1999,
+  "round": 21,
+  "clubs": "all",
+  "controversy": false,
+  "headline": "Waverley Park closes",
+  "beats": [
+   "The league plays its last game at Waverley Park this season and will sell the ground.",
+   "Its tenants move to the new stadium at Docklands."
+  ]
+ },
+ {
+  "id": "north_becomes_kangaroos",
+  "rows": [
+   27
+  ],
+  "season": 1999,
+  "round": 0,
+  "clubs": [
+   "NTH"
+  ],
+  "controversy": false,
+  "headline": "North are the Kangaroos",
+  "beats": [
+   "North Melbourne will play as the Kangaroos and take some home games interstate, to Sydney."
+  ],
+  "card": {
+   "id": "year_north_becomes_kangaroos",
+   "category": "board",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "Home games in Sydney"
+   ],
+   "text": [
+    "The board has sold home games to Sydney. The members are angry; the board wants the coach to back the deal."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "back",
+     "label": "Back the deal",
+     "effects": [
+      {
+       "op": "board",
+       "d": 5
+      },
+      {
+       "op": "culture",
+       "strand": "together",
+       "d": -1,
+       "why": "You backed the board over the members"
+      }
+     ],
+     "result": "You say the club needs the money."
+    },
+    {
+     "key": "members",
+     "label": "Side with the members",
+     "effects": [
+      {
+       "op": "board",
+       "d": -4
+      },
+      {
+       "op": "culture",
+       "strand": "together",
+       "d": 1,
+       "why": "You stood with the members"
+      }
+     ],
+     "result": "You say the club's home is in Melbourne."
+    }
+   ]
+  }
+ },
+ {
+  "id": "hawthorn_to_tasmania",
+  "rows": [
+   29
+  ],
+  "season": 2001,
+  "round": 0,
+  "clubs": [
+   "HAW"
+  ],
+  "controversy": false,
+  "headline": "Hawthorn head to Tasmania",
+  "beats": [
+   "Hawthorn will play home games at York Park in Launceston under a deal with the Tasmanian government."
+  ],
+  "card": {
+   "id": "year_hawthorn_to_tasmania",
+   "category": "board",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "The Tasmanian deal"
+   ],
+   "text": [
+    "The board has a deal to take home games to Launceston. It wants the coach's public support."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "back",
+     "label": "Back the deal",
+     "effects": [
+      {
+       "op": "board",
+       "d": 5
+      },
+      {
+       "op": "culture",
+       "strand": "together",
+       "d": -1,
+       "why": "You backed the board over the members"
+      }
+     ],
+     "result": "You say the deal secures the club."
+    },
+    {
+     "key": "doubt",
+     "label": "Say the travel will cost the side",
+     "effects": [
+      {
+       "op": "board",
+       "d": -4
+      },
+      {
+       "op": "culture",
+       "strand": "together",
+       "d": 1,
+       "why": "You put the players' legs first"
+      }
+     ],
+     "result": "You say the travel will cost the players."
+    }
+   ]
+  }
+ },
+ {
+  "id": "seven_loses_footy",
+  "rows": [
+   30
+  ],
+  "season": 2001,
+  "round": 10,
+  "clubs": "all",
+  "controversy": false,
+  "headline": "Seven loses the footy",
+  "beats": [
+   "A News Limited consortium with Nine, Ten and Foxtel has won the broadcast rights for 2002 to 2006, ending Seven's long run."
+  ]
+ },
+ {
+  "id": "brown_paper_bags",
+  "rows": [
+   31
+  ],
+  "season": 2002,
+  "round": 22,
+  "clubs": [
+   "CAR"
+  ],
+  "controversy": true,
+  "headline": "Brown paper bags",
+  "beats": [
+   "Carlton paid four players outside the salary cap in 2000 and 2001, some of it in cash through a third party.",
+   "The club is fined a record $930,000 and loses its first two picks in this year's draft and next year's."
+  ],
+  "penalties": [
+   {
+    "op": "fine",
+    "club": "CAR",
+    "amount": 930000
+   },
+   {
+    "op": "lose_pick",
+    "club": "CAR",
+    "year": 2002,
+    "round": 1
+   },
+   {
+    "op": "lose_pick",
+    "club": "CAR",
+    "year": 2002,
+    "round": 2
+   },
+   {
+    "op": "lose_pick",
+    "club": "CAR",
+    "year": 2003,
+    "round": 1
+   },
+   {
+    "op": "lose_pick",
+    "club": "CAR",
+    "year": 2003,
+    "round": 2
+   }
+  ],
+  "card": {
+   "id": "year_brown_paper_bags",
+   "category": "media",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "The record fine"
+   ],
+   "text": [
+    "The league has found the club paid players outside the cap. The press want the coach's word."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "own",
+     "label": "Front the press and own it",
+     "effects": [
+      {
+       "op": "culture",
+       "strand": "standards",
+       "d": 2,
+       "why": "You owned the breach in public"
+      },
+      {
+       "op": "board",
+       "d": -4
+      }
+     ],
+     "result": "You front the cameras and say the club got it wrong."
+    },
+    {
+     "key": "close",
+     "label": "Back the club's line",
+     "effects": [
+      {
+       "op": "board",
+       "d": 4
+      },
+      {
+       "op": "culture",
+       "strand": "standards",
+       "d": -1,
+       "why": "You defended a breach"
+      }
+     ],
+     "result": "You stand beside the board and say the club will fight it."
+    }
+   ]
+  }
+ },
+ {
+  "id": "essendon_small_breach",
+  "rows": [
+   33
+  ],
+  "season": 2003,
+  "round": 8,
+  "clubs": [
+   "ESS"
+  ],
+  "controversy": true,
+  "headline": "A small cap breach",
+  "beats": [
+   "Essendon went over the 2002 salary cap by about $106,000. The club is fined $85,000."
+  ],
+  "penalties": [
+   {
+    "op": "fine",
+    "club": "ESS",
+    "amount": 85000
+   }
+  ],
+  "card": {
+   "id": "year_essendon_small_breach",
+   "category": "media",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "Over the cap"
+   ],
+   "text": [
+    "The league has the club over last year's salary cap. The press want the coach's word."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "own",
+     "label": "Front the press and own it",
+     "effects": [
+      {
+       "op": "culture",
+       "strand": "standards",
+       "d": 2,
+       "why": "You owned the breach in public"
+      },
+      {
+       "op": "board",
+       "d": -4
+      }
+     ],
+     "result": "You front the cameras and say the club got it wrong."
+    },
+    {
+     "key": "close",
+     "label": "Back the club's line",
+     "effects": [
+      {
+       "op": "board",
+       "d": 4
+      },
+      {
+       "op": "culture",
+       "strand": "standards",
+       "d": -1,
+       "why": "You defended a breach"
+      }
+     ],
+     "result": "You stand beside the board and say the club will fight it."
+    }
+   ]
+  }
+ },
+ {
+  "id": "bulldogs_to_darwin",
+  "rows": [
+   35
+  ],
+  "season": 2004,
+  "round": 19,
+  "clubs": [
+   "WBD"
+  ],
+  "controversy": false,
+  "headline": "A home game in Darwin",
+  "beats": [
+   "The Western Bulldogs are taking a home game to Darwin's Marrara Oval, the ground's first premiership match."
+  ],
+  "card": {
+   "id": "year_bulldogs_to_darwin",
+   "category": "board",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "A home game in the Top End"
+   ],
+   "text": [
+    "The board has sold a home game to Darwin. It wants the coach's public support."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "back",
+     "label": "Back the deal",
+     "effects": [
+      {
+       "op": "board",
+       "d": 5
+      },
+      {
+       "op": "culture",
+       "strand": "together",
+       "d": -1,
+       "why": "You backed the board over the members"
+      }
+     ],
+     "result": "You say the club needs the money."
+    },
+    {
+     "key": "doubt",
+     "label": "Say the heat and travel will cost the side",
+     "effects": [
+      {
+       "op": "board",
+       "d": -4
+      },
+      {
+       "op": "culture",
+       "strand": "together",
+       "d": 1,
+       "why": "You put the players' legs first"
+      }
+     ],
+     "result": "You say the trip will cost the players."
+    }
+   ]
+  }
+ },
+ {
+  "id": "three_strikes",
+  "rows": [
+   36
+  ],
+  "season": 2005,
+  "round": 0,
+  "clubs": "all",
+  "controversy": true,
+  "headline": "A three-strikes drugs policy",
+  "beats": [
+   "The league and the players have agreed an illicit drugs policy: confidential testing, with a player named only on a third strike."
+  ]
+ },
+ {
+  "id": "princes_park_farewell",
+  "rows": [
+   37
+  ],
+  "season": 2005,
+  "round": 21,
+  "clubs": [
+   "CAR"
+  ],
+  "controversy": false,
+  "headline": "Princes Park farewell",
+  "beats": [
+   "Carlton play their last home game at Princes Park this season."
+  ],
+  "card": {
+   "id": "year_princes_park_farewell",
+   "category": "members",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "The last game at Princes Park"
+   ],
+   "text": [
+    "The last game at the old ground is close. The members want the players at the farewell; the fitness staff want them in recovery."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "farewell",
+     "label": "Send the players to the farewell",
+     "effects": [
+      {
+       "op": "board",
+       "d": 3
+      },
+      {
+       "op": "culture",
+       "strand": "together",
+       "d": 1,
+       "why": "The players farewelled the old ground with the members"
+      },
+      {
+       "op": "forgo_xp",
+       "d": 2,
+       "who": "side"
+      }
+     ],
+     "result": "The players stay late with the members at the old ground."
+    },
+    {
+     "key": "recover",
+     "label": "Keep them in recovery",
+     "effects": [
+      {
+       "op": "board",
+       "d": -2
+      },
+      {
+       "op": "xp",
+       "d": 2,
+       "who": "side"
+      }
+     ],
+     "result": "The players do their recovery and go home."
+    }
+   ]
+  }
+ },
+ {
+  "id": "seven_ten_win_back",
+  "rows": [
+   39
+  ],
+  "season": 2006,
+  "round": 0,
+  "clubs": "all",
+  "controversy": false,
+  "headline": "Seven and Ten win the footy back",
+  "beats": [
+   "Seven and Ten have matched Nine's $780 million offer for the 2007 to 2011 free-to-air rights."
+  ]
+ },
+ {
+  "id": "eagles_drug_culture",
+  "rows": [
+   41
+  ],
+  "season": 2007,
+  "round": 2,
+  "clubs": [
+   "WCE"
+  ],
+  "controversy": true,
+  "headline": "Drug culture at the premiers",
+  "beats": [
+   "West Coast have sacked and delisted a senior player over drug-related conduct.",
+   "A league-ordered report finds the club shut its eyes to a drug culture by 2003."
+  ],
+  "card": {
+   "id": "year_eagles_drug_culture",
+   "category": "leadership",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "A culture purge"
+   ],
+   "text": [
+    "The board wants a hard line on drugs at the club, starting now. Some of the senior players think it goes too far."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "purge",
+     "label": "Back the hard line",
+     "effects": [
+      {
+       "op": "culture",
+       "strand": "standards",
+       "d": 2,
+       "why": "You backed a hard line on drugs"
+      },
+      {
+       "op": "morale",
+       "d": -5,
+       "who": "all"
+      }
+     ],
+     "result": "You tell the group the standards change today."
+    },
+    {
+     "key": "players",
+     "label": "Back the senior players",
+     "effects": [
+      {
+       "op": "morale",
+       "d": 4,
+       "who": "all"
+      },
+      {
+       "op": "board",
+       "d": -5
+      }
+     ],
+     "result": "You tell the board the group will set its own standards."
+    }
+   ]
+  }
+ },
+ {
+  "id": "north_says_no",
+  "rows": [
+   42
+  ],
+  "season": 2007,
+  "round": 22,
+  "clubs": [
+   "NTH"
+  ],
+  "controversy": false,
+  "headline": "North say no to the Gold Coast",
+  "beats": [
+   "The league wanted the Kangaroos on the Gold Coast. North's board has said no, to a standing ovation from the members."
+  ],
+  "card": {
+   "id": "year_north_says_no",
+   "category": "board",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "The Gold Coast offer"
+   ],
+   "text": [
+    "The league is offering money and security to move the club to the Gold Coast. The board wants the coach's word before it votes."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "move",
+     "label": "Say the move makes sense",
+     "effects": [
+      {
+       "op": "board",
+       "d": 4
+      },
+      {
+       "op": "morale",
+       "d": -6,
+       "who": "all"
+      }
+     ],
+     "result": "You say the club's future is secure on the Gold Coast."
+    },
+    {
+     "key": "stay",
+     "label": "Say the club stays in Melbourne",
+     "effects": [
+      {
+       "op": "board",
+       "d": -4
+      },
+      {
+       "op": "morale",
+       "d": 5,
+       "who": "all"
+      },
+      {
+       "op": "culture",
+       "strand": "together",
+       "d": 1,
+       "why": "You stood for the club staying home"
+      }
+     ],
+     "result": "You say North belong in North Melbourne."
+    }
+   ]
+  }
+ },
+ {
+  "id": "debt_demolition",
+  "rows": [
+   43
+  ],
+  "season": 2008,
+  "round": 0,
+  "clubs": [
+   "MEL"
+  ],
+  "controversy": false,
+  "headline": "Debt demolition",
+  "beats": [
+   "Melbourne, heavily in debt, have launched a fundraising drive under a new president."
+  ],
+  "card": {
+   "id": "year_debt_demolition",
+   "category": "members",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "The fundraising drive"
+   ],
+   "text": [
+    "The club is deep in debt. The president wants the coach and players at fundraising nights through the pre-season."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "front",
+     "label": "Front the fundraisers",
+     "effects": [
+      {
+       "op": "board",
+       "d": 5
+      },
+      {
+       "op": "culture",
+       "strand": "together",
+       "d": 1,
+       "why": "The players stood with the members"
+      },
+      {
+       "op": "forgo_xp",
+       "d": 3,
+       "who": "side"
+      }
+     ],
+     "result": "You and the players work the fundraising nights."
+    },
+    {
+     "key": "train",
+     "label": "Keep the players training",
+     "effects": [
+      {
+       "op": "board",
+       "d": -3
+      },
+      {
+       "op": "xp",
+       "d": 2,
+       "who": "side"
+      }
+     ],
+     "result": "You keep the players on the track."
+    }
+   ]
+  }
+ },
+ {
+  "id": "seaford",
+  "rows": [
+   47
+  ],
+  "season": 2010,
+  "round": 0,
+  "clubs": [
+   "STK"
+  ],
+  "controversy": false,
+  "headline": "St Kilda move to Seaford",
+  "beats": [
+   "St Kilda have moved their training base to new facilities at Seaford."
+  ],
+  "card": {
+   "id": "year_seaford",
+   "category": "training",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "The new base"
+   ],
+   "text": [
+    "The new facilities are ready, but the members want the club to stay in its heartland. The board wants the coach's word."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "move",
+     "label": "Back the move",
+     "effects": [
+      {
+       "op": "xp",
+       "d": 3,
+       "who": "side"
+      },
+      {
+       "op": "culture",
+       "strand": "together",
+       "d": -1,
+       "why": "The club left its heartland"
+      }
+     ],
+     "result": "The players settle into the new facilities."
+    },
+    {
+     "key": "heart",
+     "label": "Say the club belongs at home",
+     "effects": [
+      {
+       "op": "board",
+       "d": -3
+      },
+      {
+       "op": "culture",
+       "strand": "together",
+       "d": 1,
+       "why": "You stood for the club's heartland"
+      }
+     ],
+     "result": "You say the facilities matter less than home."
+    }
+   ]
+  }
+ },
+ {
+  "id": "suns_join",
+  "rows": [
+   48
+  ],
+  "season": 2011,
+  "round": 0,
+  "clubs": [
+   "GCS"
+  ],
+  "controversy": false,
+  "headline": "Gold Coast Suns join",
+  "beats": [
+   "The Gold Coast Suns play their first AFL season, with extra list concessions."
+  ]
+ },
+ {
+  "id": "collingwood_betting",
+  "rows": [
+   50
+  ],
+  "season": 2011,
+  "round": 6,
+  "clubs": [
+   "COL"
+  ],
+  "controversy": true,
+  "headline": "Betting on a teammate",
+  "beats": [
+   "A Collingwood player has been banned for betting on a teammate to kick the first goal, after team news leaked to family.",
+   "The league is asking every club how tightly it holds its team news."
+  ],
+  "card": {
+   "id": "year_collingwood_betting",
+   "category": "selection",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "Who knows the team?"
+   ],
+   "text": [
+    "Team news leaked before a game and a player bet on it. The integrity people want the coach to tighten who hears the side."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "tight",
+     "label": "Tell the players only on game day",
+     "effects": [
+      {
+       "op": "culture",
+       "strand": "standards",
+       "d": 2,
+       "why": "You locked down team news"
+      },
+      {
+       "op": "morale",
+       "d": -4,
+       "who": "side"
+      }
+     ],
+     "result": "From now on, the side is named to the players on game day."
+    },
+    {
+     "key": "trust",
+     "label": "Trust the group",
+     "effects": [
+      {
+       "op": "morale",
+       "d": 3,
+       "who": "side"
+      },
+      {
+       "op": "board",
+       "d": -4
+      }
+     ],
+     "result": "You tell the players you trust them with the side."
+    }
+   ]
+  }
+ },
+ {
+  "id": "crows_secret_deal",
+  "rows": [
+   52
+  ],
+  "season": 2012,
+  "round": 18,
+  "clubs": [
+   "ADE"
+  ],
+  "controversy": true,
+  "headline": "Adelaide's secret deal",
+  "beats": [
+   "Adelaide had a secret agreement guaranteeing a player a trade to a club of his choice, plus an extra payment.",
+   "The club is fined $300,000 and loses its first two picks in this year's draft and next year's."
+  ],
+  "penalties": [
+   {
+    "op": "fine",
+    "club": "ADE",
+    "amount": 300000
+   },
+   {
+    "op": "lose_pick",
+    "club": "ADE",
+    "year": 2012,
+    "round": 1
+   },
+   {
+    "op": "lose_pick",
+    "club": "ADE",
+    "year": 2012,
+    "round": 2
+   },
+   {
+    "op": "lose_pick",
+    "club": "ADE",
+    "year": 2013,
+    "round": 1
+   },
+   {
+    "op": "lose_pick",
+    "club": "ADE",
+    "year": 2013,
+    "round": 2
+   }
+  ],
+  "card": {
+   "id": "year_crows_secret_deal",
+   "category": "media",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "The secret deal"
+   ],
+   "text": [
+    "The league has found a secret deal on a player's contract. The press want the coach's word."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "own",
+     "label": "Front the press and own it",
+     "effects": [
+      {
+       "op": "culture",
+       "strand": "standards",
+       "d": 2,
+       "why": "You owned the breach in public"
+      },
+      {
+       "op": "board",
+       "d": -4
+      }
+     ],
+     "result": "You front the cameras and say the club got it wrong."
+    },
+    {
+     "key": "close",
+     "label": "Back the club's line",
+     "effects": [
+      {
+       "op": "board",
+       "d": 4
+      },
+      {
+       "op": "culture",
+       "strand": "standards",
+       "d": -1,
+       "why": "You defended a breach"
+      }
+     ],
+     "result": "You stand beside the board and say the club will fight it."
+    }
+   ]
+  }
+ },
+ {
+  "id": "giants_join",
+  "rows": [
+   53
+  ],
+  "season": 2012,
+  "round": 0,
+  "clubs": [
+   "GWS"
+  ],
+  "controversy": false,
+  "headline": "The Giants join",
+  "beats": [
+   "Greater Western Sydney play their first AFL season, with extra list concessions."
+  ]
+ },
+ {
+  "id": "north_to_hobart",
+  "rows": [
+   54
+  ],
+  "season": 2012,
+  "round": 0,
+  "clubs": [
+   "NTH"
+  ],
+  "controversy": false,
+  "headline": "North go to Hobart",
+  "beats": [
+   "North Melbourne will take home games to Bellerive Oval in Hobart."
+  ],
+  "card": {
+   "id": "year_north_to_hobart",
+   "category": "board",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "Home games in Hobart"
+   ],
+   "text": [
+    "The board has sold home games to Hobart. It wants the coach's public support."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "back",
+     "label": "Back the deal",
+     "effects": [
+      {
+       "op": "board",
+       "d": 5
+      },
+      {
+       "op": "culture",
+       "strand": "together",
+       "d": -1,
+       "why": "You backed the board over the members"
+      }
+     ],
+     "result": "You say the club needs the money."
+    },
+    {
+     "key": "doubt",
+     "label": "Say the travel will cost the side",
+     "effects": [
+      {
+       "op": "board",
+       "d": -4
+      },
+      {
+       "op": "culture",
+       "strand": "together",
+       "d": 1,
+       "why": "You put the players' legs first"
+      }
+     ],
+     "result": "You say the travel will cost the players."
+    }
+   ]
+  }
+ },
+ {
+  "id": "tanking_inquiry",
+  "rows": [
+   56
+  ],
+  "season": 2013,
+  "round": 0,
+  "clubs": [
+   "MEL"
+  ],
+  "controversy": true,
+  "headline": "The tanking inquiry",
+  "beats": [
+   "A league inquiry into Melbourne's 2009 season found the club not guilty of tanking.",
+   "The club is fined $500,000 over its officials' conduct and comments."
+  ],
+  "penalties": [
+   {
+    "op": "fine",
+    "club": "MEL",
+    "amount": 500000
+   }
+  ],
+  "card": {
+   "id": "year_tanking_inquiry",
+   "category": "media",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "The tanking inquiry"
+   ],
+   "text": [
+    "The league has fined the club over the 2009 season. The press want the coach's word."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "own",
+     "label": "Front the press and own it",
+     "effects": [
+      {
+       "op": "culture",
+       "strand": "standards",
+       "d": 2,
+       "why": "You owned the breach in public"
+      },
+      {
+       "op": "board",
+       "d": -4
+      }
+     ],
+     "result": "You front the cameras and say the club got it wrong."
+    },
+    {
+     "key": "close",
+     "label": "Back the club's line",
+     "effects": [
+      {
+       "op": "board",
+       "d": 4
+      },
+      {
+       "op": "culture",
+       "strand": "standards",
+       "d": -1,
+       "why": "You defended a breach"
+      }
+     ],
+     "result": "You stand beside the board and say the club will fight it."
+    }
+   ]
+  }
+ },
+ {
+  "id": "supplements_saga",
+  "rows": [
+   57
+  ],
+  "season": 2013,
+  "round": 21,
+  "clubs": [
+   "ESS"
+  ],
+  "controversy": true,
+  "headline": "The supplements saga",
+  "beats": [
+   "The league has charged Essendon over its 2012 supplements program.",
+   "The club is fined $2 million, thrown out of this year's finals and loses its first two picks in this year's draft and next year's."
+  ],
+  "penalties": [
+   {
+    "op": "fine",
+    "club": "ESS",
+    "amount": 2000000
+   },
+   {
+    "op": "finals_ban",
+    "club": "ESS"
+   },
+   {
+    "op": "lose_pick",
+    "club": "ESS",
+    "year": 2013,
+    "round": 1
+   },
+   {
+    "op": "lose_pick",
+    "club": "ESS",
+    "year": 2013,
+    "round": 2
+   },
+   {
+    "op": "lose_pick",
+    "club": "ESS",
+    "year": 2014,
+    "round": 1
+   },
+   {
+    "op": "lose_pick",
+    "club": "ESS",
+    "year": 2014,
+    "round": 2
+   }
+  ],
+  "card": {
+   "id": "year_supplements_saga",
+   "category": "leadership",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "Thrown out of the finals"
+   ],
+   "text": [
+    "The club is out of the finals whatever the ladder says. The players are shattered and the press are at the gate."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "players",
+     "label": "Put the players first",
+     "effects": [
+      {
+       "op": "morale",
+       "d": 6,
+       "who": "all"
+      },
+      {
+       "op": "board",
+       "d": -5
+      }
+     ],
+     "result": "You close the doors and spend the week with the players."
+    },
+    {
+     "key": "board",
+     "label": "Stand with the board in public",
+     "effects": [
+      {
+       "op": "board",
+       "d": 5
+      },
+      {
+       "op": "morale",
+       "d": -5,
+       "who": "all"
+      }
+     ],
+     "result": "You front the press beside the board."
+    }
+   ]
+  }
+ },
+ {
+  "id": "mcg_abuse",
+  "rows": [
+   58
+  ],
+  "season": 2013,
+  "round": 9,
+  "clubs": [
+   "SYD",
+   "COL"
+  ],
+  "controversy": true,
+  "headline": "Abuse at the MCG",
+  "beats": [
+   "One of Sydney's Indigenous players was racially abused by a young Collingwood supporter at the MCG.",
+   "Days later Collingwood had to apologise again, for a racially charged remark on radio by one of its officials."
+  ],
+  "card": {
+   "id": "year_mcg_abuse",
+   "category": "media",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "Asked about the abuse"
+   ],
+   "text": [
+    "The papers want the club's word on the racist abuse at the MCG. The club's players are watching what you say."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "speak",
+     "label": "Condemn it, plainly",
+     "effects": [
+      {
+       "op": "morale",
+       "d": 6,
+       "who": "all"
+      },
+      {
+       "op": "culture",
+       "strand": "standards",
+       "d": 2,
+       "why": "You called out racist abuse in public"
+      },
+      {
+       "op": "board",
+       "d": -2
+      }
+     ],
+     "result": "You say there is no place for it in the game, and you say it plainly."
+    },
+    {
+     "key": "quiet",
+     "label": "Say it is a matter for the league",
+     "effects": [
+      {
+       "op": "board",
+       "d": 2
+      },
+      {
+       "op": "morale",
+       "d": -6,
+       "who": "all"
+      }
+     ],
+     "result": "You say it is the league's business, not the club's."
+    }
+   ]
+  }
+ },
+ {
+  "id": "adelaide_oval",
+  "rows": [
+   59
+  ],
+  "season": 2014,
+  "round": 0,
+  "clubs": [
+   "ADE",
+   "PAD"
+  ],
+  "controversy": false,
+  "headline": "Back to Adelaide Oval",
+  "beats": [
+   "Both South Australian clubs move their home games from Football Park to the rebuilt Adelaide Oval."
+  ]
+ },
+ {
+  "id": "swans_trade_ban",
+  "rows": [
+   60
+  ],
+  "season": 2014,
+  "round": 22,
+  "clubs": [
+   "SYD"
+  ],
+  "controversy": true,
+  "headline": "The Swans' trade ban",
+  "beats": [
+   "After two marquee signings, the league has ruled Sydney cannot trade players in for two years."
+  ],
+  "penalties": [
+   {
+    "op": "trade_ban",
+    "club": "SYD",
+    "until": 2015
+   }
+  ],
+  "card": {
+   "id": "year_swans_trade_ban",
+   "category": "media",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "Trades frozen"
+   ],
+   "text": [
+    "The league has frozen the club's trades for two years. The press want the coach's word."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "own",
+     "label": "Front the press and own it",
+     "effects": [
+      {
+       "op": "culture",
+       "strand": "standards",
+       "d": 2,
+       "why": "You owned the breach in public"
+      },
+      {
+       "op": "board",
+       "d": -4
+      }
+     ],
+     "result": "You front the cameras and say the club got it wrong."
+    },
+    {
+     "key": "close",
+     "label": "Back the club's line",
+     "effects": [
+      {
+       "op": "board",
+       "d": 4
+      },
+      {
+       "op": "culture",
+       "strand": "standards",
+       "d": -1,
+       "why": "You defended a breach"
+      }
+     ],
+     "result": "You stand beside the board and say the club will fight it."
+    }
+   ]
+  }
+ },
+ {
+  "id": "the_booing",
+  "rows": [
+   62
+  ],
+  "season": 2015,
+  "round": 10,
+  "clubs": [
+   "SYD"
+  ],
+  "controversy": true,
+  "headline": "The booing",
+  "beats": [
+   "Weeks of booing by opposition crowds have led one of Sydney's Indigenous players to take leave from the game."
+  ],
+  "card": {
+   "id": "year_the_booing",
+   "category": "media",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "Speak up or stay quiet"
+   ],
+   "text": [
+    "Opposition crowds have booed one of the club's players for weeks. The press want to know if the club will speak up."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "speak",
+     "label": "Speak up for him",
+     "effects": [
+      {
+       "op": "morale",
+       "d": 6,
+       "who": "all"
+      },
+      {
+       "op": "culture",
+       "strand": "standards",
+       "d": 2,
+       "why": "You spoke up for a player under attack"
+      },
+      {
+       "op": "board",
+       "d": -2
+      }
+     ],
+     "result": "You say what the booing is, and that it has to stop."
+    },
+    {
+     "key": "quiet",
+     "label": "Say the player will speak for himself",
+     "effects": [
+      {
+       "op": "board",
+       "d": 2
+      },
+      {
+       "op": "morale",
+       "d": -6,
+       "who": "all"
+      }
+     ],
+     "result": "You leave it to the player."
+    }
+   ]
+  }
+ },
+ {
+  "id": "pay_standoff",
+  "rows": [
+   66
+  ],
+  "season": 2017,
+  "round": 0,
+  "clubs": "all",
+  "controversy": false,
+  "headline": "The pay standoff",
+  "beats": [
+   "Players have gone eight months without a pay deal, and there is talk of a pre-season strike.",
+   "A six-year deal gives them 28 per cent of the league's agreed revenue."
+  ],
+  "card": {
+   "id": "year_pay_standoff",
+   "category": "board",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "The players' strike threat"
+   ],
+   "text": [
+    "The players may sit out the pre-season games. The board wants the coach to talk them out of it."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "players",
+     "label": "Back the players",
+     "effects": [
+      {
+       "op": "morale",
+       "d": 5,
+       "who": "all"
+      },
+      {
+       "op": "board",
+       "d": -5
+      }
+     ],
+     "result": "You tell the group you understand why they are fighting."
+    },
+    {
+     "key": "board",
+     "label": "Talk them out of it",
+     "effects": [
+      {
+       "op": "board",
+       "d": 4
+      },
+      {
+       "op": "morale",
+       "d": -5,
+       "who": "all"
+      }
+     ],
+     "result": "You tell the group the pre-season matters more."
+    }
+   ]
+  }
+ },
+ {
+  "id": "aflw_begins",
+  "rows": [
+   67
+  ],
+  "season": 2017,
+  "round": 0,
+  "clubs": "all",
+  "controversy": false,
+  "headline": "AFLW begins",
+  "beats": [
+   "The AFL Women's competition plays its first season."
+  ]
+ },
+ {
+  "id": "shanghai",
+  "rows": [
+   68
+  ],
+  "season": 2017,
+  "round": 7,
+  "clubs": [
+   "PAD"
+  ],
+  "controversy": false,
+  "headline": "Footy in Shanghai",
+  "beats": [
+   "Port Adelaide are taking a home game to Shanghai."
+  ],
+  "card": {
+   "id": "year_shanghai",
+   "category": "board",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "A home game in China"
+   ],
+   "text": [
+    "The board has sold a home game to Shanghai. It wants the coach's public support."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "back",
+     "label": "Back the deal",
+     "effects": [
+      {
+       "op": "board",
+       "d": 5
+      },
+      {
+       "op": "culture",
+       "strand": "together",
+       "d": -1,
+       "why": "You backed the board over the members"
+      }
+     ],
+     "result": "You say the club needs the money."
+    },
+    {
+     "key": "doubt",
+     "label": "Say the travel will cost the side",
+     "effects": [
+      {
+       "op": "board",
+       "d": -4
+      },
+      {
+       "op": "culture",
+       "strand": "together",
+       "d": 1,
+       "why": "You put the players' legs first"
+      }
+     ],
+     "result": "You say the trip will cost the players."
+    }
+   ]
+  }
+ },
+ {
+  "id": "perth_stadium",
+  "rows": [
+   69
+  ],
+  "season": 2018,
+  "round": 0,
+  "clubs": [
+   "WCE",
+   "FRE"
+  ],
+  "controversy": false,
+  "headline": "Perth Stadium opens",
+  "beats": [
+   "West Coast and Fremantle move their home games from Subiaco to the new Perth Stadium."
+  ]
+ },
+ {
+  "id": "crows_camp",
+  "rows": [
+   71
+  ],
+  "season": 2018,
+  "round": 0,
+  "clubs": [
+   "ADE"
+  ],
+  "controversy": true,
+  "headline": "The pre-season camp",
+  "beats": [
+   "Adelaide's pre-season camp, run by a mind-training company, has left players distressed."
+  ],
+  "card": {
+   "id": "year_crows_camp",
+   "category": "leadership",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "The camp"
+   ],
+   "text": [
+    "The board wants the players through a hard team-bonding camp run by outsiders. Some of the senior players are worried."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "go",
+     "label": "Send them to the camp",
+     "effects": [
+      {
+       "op": "board",
+       "d": 4
+      },
+      {
+       "op": "morale",
+       "d": -6,
+       "who": "all"
+      }
+     ],
+     "result": "The players go to the camp."
+    },
+    {
+     "key": "no",
+     "label": "Keep the camp off the program",
+     "effects": [
+      {
+       "op": "board",
+       "d": -4
+      },
+      {
+       "op": "morale",
+       "d": 3,
+       "who": "all"
+      }
+     ],
+     "result": "You keep the players' pre-season in the club's hands."
+    }
+   ]
+  }
+ },
+ {
+  "id": "hub_season",
+  "rows": [
+   74
+  ],
+  "season": 2020,
+  "round": 1,
+  "clubs": "all",
+  "controversy": false,
+  "headline": "The hub season",
+  "beats": [
+   "The season stopped after round 1. It is back, with shortened quarters and most clubs in Queensland hubs.",
+   "Seventeen rounds, and the grand final goes to the Gabba at night."
+  ],
+  "card": {
+   "id": "year_hub_season",
+   "category": "family",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "Families in the hub"
+   ],
+   "text": [
+    "The club goes into a Queensland hub for weeks. The players want their families with them; the board says it costs money the club does not have."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "families",
+     "label": "Bring the families",
+     "effects": [
+      {
+       "op": "morale",
+       "d": 6,
+       "who": "all"
+      },
+      {
+       "op": "board",
+       "d": -4
+      }
+     ],
+     "result": "The families come to the hub."
+    },
+    {
+     "key": "alone",
+     "label": "Players only",
+     "effects": [
+      {
+       "op": "board",
+       "d": 4
+      },
+      {
+       "op": "morale",
+       "d": -6,
+       "who": "all"
+      }
+     ],
+     "result": "The players go into the hub on their own."
+    }
+   ]
+  }
+ },
+ {
+  "id": "prison_bars",
+  "rows": [
+   75
+  ],
+  "season": 2020,
+  "round": 9,
+  "clubs": [
+   "PAD",
+   "COL"
+  ],
+  "controversy": false,
+  "headline": "The prison bars",
+  "beats": [
+   "Port Adelaide are allowed one game in the prison-bars jumper for their 150th year, after a long fight with Collingwood."
+  ]
+ },
+ {
+  "id": "do_better",
+  "rows": [
+   76
+  ],
+  "season": 2021,
+  "round": 0,
+  "clubs": [
+   "COL"
+  ],
+  "controversy": true,
+  "headline": "Do Better",
+  "beats": [
+   "An independent review has found systemic racism at Collingwood. The club's first response drew a backlash, and its president has stood down."
+  ],
+  "card": {
+   "id": "year_do_better",
+   "category": "board",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "The review"
+   ],
+   "text": [
+    "The review's findings are out. The board wants the coach's public word on them."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "reform",
+     "label": "Back every recommendation",
+     "effects": [
+      {
+       "op": "culture",
+       "strand": "standards",
+       "d": 2,
+       "why": "You backed the review in full"
+      },
+      {
+       "op": "morale",
+       "d": 5,
+       "who": "all"
+      },
+      {
+       "op": "board",
+       "d": -3
+      }
+     ],
+     "result": "You say the club will do all of it."
+    },
+    {
+     "key": "deflect",
+     "label": "Say the club has moved on",
+     "effects": [
+      {
+       "op": "board",
+       "d": 3
+      },
+      {
+       "op": "morale",
+       "d": -5,
+       "who": "all"
+      }
+     ],
+     "result": "You say the club is already a different place."
+    }
+   ]
+  }
+ },
+ {
+  "id": "gf_in_perth",
+  "rows": [
+   77
+  ],
+  "season": 2021,
+  "round": 23,
+  "clubs": "all",
+  "controversy": false,
+  "headline": "A grand final in Perth",
+  "beats": [
+   "Victoria's lockdown has moved the grand final to Perth Stadium."
+  ]
+ },
+ {
+  "id": "hawthorn_review",
+  "rows": [
+   80
+  ],
+  "season": 2022,
+  "round": 0,
+  "clubs": [
+   "HAW"
+  ],
+  "controversy": true,
+  "headline": "The First Nations review",
+  "beats": [
+   "A cultural safety review has aired allegations of mistreatment of First Nations players and their families at Hawthorn."
+  ],
+  "card": {
+   "id": "year_hawthorn_review",
+   "category": "board",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "The review's allegations"
+   ],
+   "text": [
+    "The review's allegations are in the papers. The board wants the coach's public word."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "open",
+     "label": "Say the club will face it",
+     "effects": [
+      {
+       "op": "culture",
+       "strand": "standards",
+       "d": 2,
+       "why": "You faced the review in public"
+      },
+      {
+       "op": "board",
+       "d": -3
+      }
+     ],
+     "result": "You say the club will face every finding."
+    },
+    {
+     "key": "wait",
+     "label": "Wait for the investigation",
+     "effects": [
+      {
+       "op": "board",
+       "d": 3
+      },
+      {
+       "op": "culture",
+       "strand": "standards",
+       "d": -1,
+       "why": "You waited on the review"
+      }
+     ],
+     "result": "You say the club will wait for the investigation."
+    }
+   ]
+  }
+ },
+ {
+  "id": "white_powder",
+  "rows": [
+   81
+  ],
+  "season": 2022,
+  "round": 4,
+  "clubs": [
+   "WBD"
+  ],
+  "controversy": true,
+  "headline": "A white-powder photo",
+  "beats": [
+   "A Bulldogs player has been suspended for two matches after images showed him with a white powder."
+  ],
+  "card": {
+   "id": "year_white_powder",
+   "category": "media",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "The photo"
+   ],
+   "text": [
+    "A photo of one of the club's players is in every paper. The press want to know if the club backs him."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "back",
+     "label": "Back him in public",
+     "effects": [
+      {
+       "op": "morale",
+       "d": 4,
+       "who": "all"
+      },
+      {
+       "op": "board",
+       "d": -4
+      }
+     ],
+     "result": "You say the club will look after its player."
+    },
+    {
+     "key": "distance",
+     "label": "Say the club's standards are clear",
+     "effects": [
+      {
+       "op": "board",
+       "d": 3
+      },
+      {
+       "op": "culture",
+       "strand": "standards",
+       "d": 1,
+       "why": "You held the club's standards in public"
+      },
+      {
+       "op": "morale",
+       "d": -3,
+       "who": "all"
+      }
+     ],
+     "result": "You say the player let the club down."
+    }
+   ]
+  }
+ },
+ {
+  "id": "ceo_gone",
+  "rows": [
+   83
+  ],
+  "season": 2022,
+  "round": 23,
+  "clubs": [
+   "ESS"
+  ],
+  "controversy": true,
+  "headline": "A CEO gone in a day",
+  "beats": [
+   "Essendon's new chief executive is gone a day after being appointed, after a public backlash."
+  ],
+  "card": {
+   "id": "year_ceo_gone",
+   "category": "board",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "Asked about the CEO"
+   ],
+   "text": [
+    "The club's new CEO is gone after a day. The press want the coach's word."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "comment",
+     "label": "Say the club got it wrong",
+     "effects": [
+      {
+       "op": "culture",
+       "strand": "standards",
+       "d": 1,
+       "why": "You owned the club's mistake"
+      },
+      {
+       "op": "board",
+       "d": -4
+      }
+     ],
+     "result": "You say the club handled it badly."
+    },
+    {
+     "key": "decline",
+     "label": "Say it is a matter for the board",
+     "effects": [
+      {
+       "op": "board",
+       "d": 3
+      },
+      {
+       "op": "culture",
+       "strand": "standards",
+       "d": -1,
+       "why": "You ducked the question"
+      }
+     ],
+     "result": "You say it is the board's business."
+    }
+   ]
+  }
+ },
+ {
+  "id": "joint_pay_deal",
+  "rows": [
+   84
+  ],
+  "season": 2023,
+  "round": 0,
+  "clubs": "all",
+  "controversy": false,
+  "headline": "The first joint pay deal",
+  "beats": [
+   "A five-year pay deal covering AFL and AFLW players together has been signed."
+  ]
+ },
+ {
+  "id": "tasmania_licence",
+  "rows": [
+   85
+  ],
+  "season": 2023,
+  "round": 9,
+  "clubs": "all",
+  "controversy": false,
+  "headline": "Tasmania gets the 19th licence",
+  "beats": [
+   "Tasmania has been granted the league's 19th licence, on the condition of a roofed stadium in Hobart."
+  ]
+ },
+ {
+  "id": "gather_round",
+  "rows": [
+   87
+  ],
+  "season": 2023,
+  "round": 0,
+  "clubs": "all",
+  "controversy": false,
+  "headline": "Gather Round",
+  "beats": [
+   "Every club plays one round in South Australia this season."
+  ]
+ },
+ {
+  "id": "concussion_class_action",
+  "rows": [
+   88
+  ],
+  "season": 2023,
+  "round": 3,
+  "clubs": [
+   "GEE"
+  ],
+  "controversy": true,
+  "headline": "The concussion class action",
+  "beats": [
+   "Former players have launched a class action for everyone concussed since 1985; Geelong is named in it."
+  ],
+  "card": {
+   "id": "year_concussion_class_action",
+   "category": "health",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "Concussion and the club"
+   ],
+   "text": [
+    "The class action has the board worried about the club's past. It wants the coach's word on how the club will treat concussion now."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "strict",
+     "label": "Hold every concussed player out longer",
+     "effects": [
+      {
+       "op": "culture",
+       "strand": "standards",
+       "d": 2,
+       "why": "You put players' heads first"
+      },
+      {
+       "op": "morale",
+       "d": -3,
+       "who": "side"
+      }
+     ],
+     "result": "You tell the medical staff to hold concussed players out longer than the rules ask."
+    },
+    {
+     "key": "rules",
+     "label": "Follow the league's rules, no more",
+     "effects": [
+      {
+       "op": "board",
+       "d": 3
+      },
+      {
+       "op": "culture",
+       "strand": "standards",
+       "d": -1,
+       "why": "You did the minimum on concussion"
+      }
+     ],
+     "result": "You say the club follows the league's rules."
+    }
+   ]
+  }
+ },
+ {
+  "id": "trafficking_ban",
+  "rows": [
+   89
+  ],
+  "season": 2024,
+  "round": 0,
+  "clubs": [
+   "MEL"
+  ],
+  "controversy": true,
+  "headline": "A trafficking ban",
+  "beats": [
+   "A Melbourne player has been banned for four years after testing positive to cocaine and being found to have trafficked it.",
+   "The club denies it has a drug culture."
+  ],
+  "card": {
+   "id": "year_trafficking_ban",
+   "category": "media",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "Asked about the club's culture"
+   ],
+   "text": [
+    "The press ask whether the club has a drug culture."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "review",
+     "label": "Order a review",
+     "effects": [
+      {
+       "op": "culture",
+       "strand": "standards",
+       "d": 2,
+       "why": "You ordered a review of the club's culture"
+      },
+      {
+       "op": "board",
+       "d": -3
+      }
+     ],
+     "result": "You say the club will look at itself."
+    },
+    {
+     "key": "defend",
+     "label": "Defend the club",
+     "effects": [
+      {
+       "op": "board",
+       "d": 3
+      },
+      {
+       "op": "culture",
+       "strand": "standards",
+       "d": -1,
+       "why": "You defended the club without looking"
+      }
+     ],
+     "result": "You say the club does not have a drug culture."
+    }
+   ]
+  }
+ },
+ {
+  "id": "secret_testing",
+  "rows": [
+   90
+  ],
+  "season": 2024,
+  "round": 3,
+  "clubs": "all",
+  "controversy": true,
+  "headline": "Secret testing allegations",
+  "beats": [
+   "An MP has alleged under parliamentary privilege that the league ran off-the-books drug tests and had players fake injuries to hide positives.",
+   "The league denies it."
+  ]
+ },
+ {
+  "id": "slur_bans",
+  "rows": [
+   91
+  ],
+  "season": 2024,
+  "round": 12,
+  "clubs": [
+   "PAD",
+   "GCS",
+   "STK",
+   "NTH",
+   "WCE",
+   "ADE",
+   "SYD",
+   "BRL"
+  ],
+  "controversy": true,
+  "headline": "Homophobic slur bans",
+  "beats": [
+   "The league has banned players at several clubs for homophobic slurs, for three to six matches."
+  ],
+  "card": {
+   "id": "year_slur_bans",
+   "category": "leadership",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "A slur on the field"
+   ],
+   "text": [
+    "One of the club's players has been reported for a homophobic slur. The club can have him own it and take a shorter ban, or fight the charge."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "own",
+     "label": "Have him own it",
+     "effects": [
+      {
+       "op": "culture",
+       "strand": "standards",
+       "d": 2,
+       "why": "The club owned a slur on the field"
+      },
+      {
+       "op": "morale",
+       "d": -3,
+       "who": "side"
+      }
+     ],
+     "result": "The club accepts the charge and the shorter ban."
+    },
+    {
+     "key": "fight",
+     "label": "Fight the charge",
+     "effects": [
+      {
+       "op": "morale",
+       "d": 3,
+       "who": "side"
+      },
+      {
+       "op": "board",
+       "d": -4
+      }
+     ],
+     "result": "The club fights the charge."
+    }
+   ]
+  }
+ },
+ {
+  "id": "costume_party",
+  "rows": [
+   92
+  ],
+  "season": 2024,
+  "round": 0,
+  "clubs": [
+   "GWS"
+  ],
+  "controversy": true,
+  "headline": "The costume party",
+  "beats": [
+   "An anonymous complaint about a GWS end-of-season costume party has ended in suspensions for six players and fines for seven."
+  ],
+  "card": {
+   "id": "year_costume_party",
+   "category": "leadership",
+   "subject": {
+    "kind": "club"
+   },
+   "title": [
+    "End-of-season standards"
+   ],
+   "text": [
+    "After the costume-party bans, the board wants the coach to set rules for the players' end-of-season functions."
+   ],
+   "default": 1,
+   "choices": [
+    {
+     "key": "rules",
+     "label": "Set strict rules",
+     "effects": [
+      {
+       "op": "culture",
+       "strand": "standards",
+       "d": 2,
+       "why": "You set strict rules for the players' functions"
+      },
+      {
+       "op": "morale",
+       "d": -3,
+       "who": "all"
+      }
+     ],
+     "result": "You set the rules and tell the leaders to enforce them."
+    },
+    {
+     "key": "trust",
+     "label": "Trust the leaders to run it",
+     "effects": [
+      {
+       "op": "morale",
+       "d": 3,
+       "who": "all"
+      },
+      {
+       "op": "board",
+       "d": -3
+      }
+     ],
+     "result": "You leave the functions to the leadership group."
+    }
+   ]
+  }
+ },
+ {
+  "id": "three_strikes_scrapped",
+  "rows": [
+   96
+  ],
+  "season": 2026,
+  "round": 0,
+  "clubs": "all",
+  "controversy": true,
+  "headline": "Three strikes scrapped",
+  "beats": [
+   "The league and the players have agreed in principle to replace the three-strikes drugs policy with match bans for public use and regular hair testing."
+  ]
+ },
+ {
+  "id": "swans_stand_downs",
+  "rows": [
+   95
+  ],
+  "season": 2026,
+  "round": 22,
+  "clubs": [
+   "SYD"
+  ],
+  "controversy": true,
+  "headline": "Sydney stand players down",
+  "beats": [
+   "Sydney have stood five players down for the rest of the season, finals included, for breaching the club's standards."
+  ]
+ }
+]
