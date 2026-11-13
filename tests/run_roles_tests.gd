@@ -1206,45 +1206,61 @@ func _check(condition: bool, message: String) -> void:
 const Ran := preload("res://tests/functions_ran.gd")
 func _t(test: String, args := []) -> Variant:
 	return await Ran.one(self, test, args)
+## The ink rule is checked directly, for every pairing the week can show (each
+## club against each other club, both columns), and the week itself is built
+## once, for Fremantle: its bars are that rule's colours and the opponent is
+## named under Them. (A career per club, 18 resets of 3,000 players, only ever
+## met one opponent each.)
 func _test_week_ink_tests() -> void:
 	var db = root.get_node("GameDB")
 	var uk = load("res://scripts/ui/UiKit.gd")
 	var bad := []
 	var codes: Array = db.clubs.keys()
-	for code in codes:
-		_state.reset()
-		_state.start_season(str(code), db.club_list(str(code)))
-		var ui := await _preview()
-		var opp := str(_state.my_next_opponent().get("code", ""))
-		var h: Label = null
-		for l in ui.find_children("*", "Label", true, false):
-			if str(l.text) == db.club_name(opp) and h == null and ui.find_child("ClubSide_theirs", true, false).is_ancestor_of(l):
-				h = l
-		_check(h != null or opp == "", "The opponent is named once, under Them, beside its guernsey (%s)" % str(code))
-		# Both columns carry their club's readable ink as a bar: 4.5:1 on the dark page, for every club.
-		for side in ["ClubSide_mine", "ClubSide_theirs"]:
-			var col: Node = ui.find_child(side, true, false)
-			var bar: ColorRect = col.find_child("ClubBar", true, false) if col != null else null
-			if bar != null:
-				var ratio: float = uk.contrast(bar.color, uk.BG)
-				if ratio < 4.5:
-					bad.append("%s %s %.1f" % [code, side, ratio])
-		if str(code) == "FRE":
-			_check(ui.find_child("LineStandings", true, false) == null and ui.find_child("H2H_midfield", true, false) != null,
-					"The week says line against line once, not twice")
-			var long_tag := false
-			var sel_ui := await _open()
-			for c in sel_ui.find_children("Spot_*", "Button", true, false):
-				for l in c.find_children("*", "Label", true, false):
-					if str(l.text).count("/") >= 2:
-						long_tag = true
-			_check(not long_tag, "No oval tile lists three positions")
-			sel_ui.queue_free()
-			await _settle()
-		ui.queue_free()
-		await _settle()
-	_check(bad.is_empty(), "Every club's week headings read at 4.5:1 or better on the dark page (%s)" % str(bad))
 	_check(codes.size() >= 18, "All the clubs were checked (%d)" % codes.size())
+	var pairs := 0
+	for mine in codes:
+		for theirs in codes:
+			if mine == theirs:
+				continue
+			pairs += 1
+			var inks: Array = uk.club_ink_pair(str(mine), str(theirs))
+			for i in range(2):
+				var ratio: float = uk.contrast(inks[i], uk.BG)
+				if ratio < 4.5:
+					bad.append("%s v %s %s %.1f" % [mine, theirs, ["mine", "theirs"][i], ratio])
+	_check(pairs == codes.size() * (codes.size() - 1), "Every pairing of clubs was checked (%d)" % pairs)
+	_check(bad.is_empty(), "Every club's week headings read at 4.5:1 or better on the dark page (%s)" % str(bad))
+	_state.reset()
+	_state.start_season("FRE", db.club_list("FRE"))
+	var ui := await _preview()
+	var opp := str(_state.my_next_opponent().get("code", ""))
+	_check(opp != "", "Fremantle has an opponent this week")
+	var h: Label = null
+	for l in ui.find_children("*", "Label", true, false):
+		if str(l.text) == db.club_name(opp) and h == null and ui.find_child("ClubSide_theirs", true, false).is_ancestor_of(l):
+			h = l
+	_check(h != null, "The opponent is named once, under Them, beside its guernsey (FRE v %s)" % opp)
+	# Both columns carry the pair's readable ink as a bar: the rule checked above.
+	var want: Array = uk.club_ink_pair("FRE", opp)
+	var i := 0
+	for side in ["ClubSide_mine", "ClubSide_theirs"]:
+		var col: Node = ui.find_child(side, true, false)
+		var bar: ColorRect = col.find_child("ClubBar", true, false) if col != null else null
+		_check(bar != null and bar.color == want[i], "The %s column's bar is the club's readable ink (FRE v %s)" % [side, opp])
+		i += 1
+	_check(ui.find_child("LineStandings", true, false) == null and ui.find_child("H2H_midfield", true, false) != null,
+			"The week says line against line once, not twice")
+	var long_tag := false
+	var sel_ui := await _open()
+	for c in sel_ui.find_children("Spot_*", "Button", true, false):
+		for l in c.find_children("*", "Label", true, false):
+			if str(l.text).count("/") >= 2:
+				long_tag = true
+	_check(not long_tag, "No oval tile lists three positions")
+	sel_ui.queue_free()
+	await _settle()
+	ui.queue_free()
+	await _settle()
 
 
 ## The words a line shows, whether a Label or a tinted RichTextLabel carries them.
