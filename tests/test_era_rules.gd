@@ -81,6 +81,9 @@ func _to_offseason() -> void:
 	while not GameState.season.is_season_over() and guard < 10:
 		guard += 1
 		GameState.advance()
+	# The rules under test, not the board: a seeded season's results move with
+	# any ratings change, and a sacking would stop the career rolling.
+	GameState.board.erase("sacked")
 
 
 ## The off-season, then the rollover into the next season the way a career
