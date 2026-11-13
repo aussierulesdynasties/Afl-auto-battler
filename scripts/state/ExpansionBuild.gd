@@ -21,14 +21,24 @@ extends RefCounted
 ##   "status": "asked" | "kept" | "joining" | "joined" | "stayed", "carded"}],
 ##   "lost": [clubs that have lost a player to it], "signings": [player ids],
 ##   "relief": {year: sign-on money off the payroll}, "traded": bool}
+## The package is the modern one (expansion_concessions in era_rules.csv, from
+## Gold Coast's 2011 entry). A club entering before it (Adelaide 1991,
+## Fremantle 1995, Port Adelaide 1997) approaches nobody, gets no extra or
+## traded picks and no sign-on money: it enters on a full list from its home
+## state league (ensure_foundation), as those clubs were built.
 ## A coach running the new club himself comes later: the choices the club
 ## makes for itself here (who to approach, who to draft, which pick to trade)
 ## are the seams.
 
 
 ## Clubs whose first season is next year and that build their list this way
-## (every such club).
+## (every such club that enters with the expansion concessions).
 static func building(gs) -> Array:
+	return entering(gs).filter(func(code): return concessions(str(code)))
+
+
+## Every club whose first season is next year, however it builds its list.
+static func entering(gs) -> Array:
 	var out := []
 	if gs.season == null:
 		return out
@@ -36,6 +46,14 @@ static func building(gs) -> Array:
 		if GameDB.enter_year(str(code)) == int(gs.season_year) + 1:
 			out.append(str(code))
 	return out
+
+
+## Whether a club entering in its entry year gets the expansion concessions:
+## approaches to rivals' out-of-contract players, the compensation that pays
+## for them, extra and traded picks, sign-on money. The rule of the entry
+## season (EraRules: from Gold Coast, 2011; always in the game's own seasons).
+static func concessions(code: String) -> bool:
+	return Expansion.concessions(code)
 
 
 ## Clubs in their first season that built their list this way.
@@ -72,12 +90,12 @@ static func academy_club(gs, p: Dictionary) -> String:
 
 
 static func has_package(gs, code: String) -> bool:
-	return bool((gs.expansion.get(code, {}) as Dictionary).get("package", false))
+	return bool((gs.expansion.get(code, {}) as Dictionary).get("package", false)) and concessions(code)
 
 
 static func state(gs, code: String) -> Dictionary:
 	if not gs.expansion.has(code):
-		gs.expansion[code] = {"package": true, "list": [], "approached": [], "targets": [],
+		gs.expansion[code] = {"package": concessions(code), "list": [], "approached": [], "targets": [],
 				"lost": [], "signings": [], "relief": {}, "traded": false}
 	return gs.expansion[code]
 
@@ -97,7 +115,7 @@ static func ensure_foundation(gs, code: String) -> void:
 	if not (st["list"] as Array).is_empty():
 		return
 	# A Legacy club's foundation is its real state-league players; those past
-	# FOUNDATION_SIZE go into the draft before it plays (LegacyRollover).
+	# Expansion.foundation_size go into the draft before it plays (LegacyRollover).
 	var first := GameDB.enter_year(code)
 	if LegacyRollover.has_foundation(code, first):
 		var got := LegacyRollover.foundation(gs, code, first)
@@ -620,7 +638,9 @@ static func forced_trade(gs, code: String, picks: Array, pick_no: int) -> void:
 ## list, before the league ages a year. False when it built none (the career
 ## was saved past its build): the caller generates the old list.
 static func enter(gs, code: String) -> bool:
-	if not has_package(gs, code):
+	# A club with the concessions that built nothing was saved past its build;
+	# one entering before them builds its state-league list now.
+	if concessions(code) and not has_package(gs, code):
 		return false
 	var st := state(gs, code)
 	ensure_foundation(gs, code)
@@ -646,6 +666,8 @@ static func entry_line(gs, code: String) -> String:
 			signed += 1
 		else:
 			drafted += 1
+	if signed == 0 and drafted == 0:
+		return "Their list: %d players from the state leagues." % state_league
 	return "Their list: %d from the state leagues, %d from rival clubs and %d from the draft." % [
 			state_league, signed, drafted]
 
