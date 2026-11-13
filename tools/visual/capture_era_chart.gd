@@ -1,16 +1,18 @@
 extends SceneTree
-## Every club's guernsey for every season 1990-2026 on one chart (Legacy mode, TODO row
-## 142): a row per club, a cell per guernsey era with its years, the crest and the
-## match figure from the front and behind, drawn by the game's own shaders. The bar
-## under each row covers 1990-2026, one segment per era. Needs a real renderer:
+## Every club's home guernsey, picture by picture, 1990-2026 (Legacy mode, TODO row 142): a
+## block per club, a cell per guernsey with its seasons, the crest and the match figure from
+## the front and behind, drawn by the game's own shaders. A cell is one drawing in the kit
+## atlas (seasons whose pictures differ only in sponsors share it), then 2026, clubs.csv's own.
+## Needs a real renderer:
 ##   godot --path . --script tools/visual/capture_era_chart.gd -- --out PATH.png
-## Optional: --clubs ADE,WCE (only those rows), --scale 2.0 (bigger figures).
+## Optional: --clubs ADE,WCE (only those clubs), --scale 2.0 (bigger figures).
 
 const FIRST := 1990
 const LAST := 2026
-const LEFT := 150.0
-const CELL := 250.0
-const ROW := 204.0
+const PER_LINE := 12
+const CELL := 168.0
+const LINE := 190.0
+const HEAD := 34.0
 
 
 func _initialize() -> void:
@@ -32,44 +34,29 @@ func _run() -> void:
 				scale = float(cli[i + 1])
 	await process_frame
 	var db = root.get_node("GameDB")
-	var UK = load("res://scripts/ui/UiKit.gd")
-	var SV: GDScript = load("res://scripts/ui/match/StoppageVignette.gd")
+	var ui_kit = load("res://scripts/ui/UiKit.gd")
+	var sv: GDScript = load("res://scripts/ui/match/StoppageVignette.gd")
 	db.reload("1990")  # the 1990 start keeps Fitzroy and the Bears
-	var codes: Array = db.clubs.keys()
-	codes.sort_custom(func(a, b): return str(db.club_era(a, LAST).get("name", a)) < str(db.club_era(b, LAST).get("name", b)))
-	# Clubs that join after 2026 (Tasmania, Canberra) have no season on the chart.
-	var played: Array = db.active_clubs(FIRST) + db.active_clubs(LAST)
-	codes = codes.filter(func(c): return played.has(c))
+	var pics := _pictures(db)
+	var codes: Array = pics.keys()
+	codes.sort_custom(func(a, b): return _now_name(db, a) < _now_name(db, b))
 	if not only.is_empty():
 		codes = codes.filter(func(c): return only.has(c))
-	# Each club's eras: the seasons it played, grouped where the guernsey and colours repeat.
-	var rows := []
-	var widest := 1
+	var blocks := []
 	for code in codes:
-		var span := _span(db, code)
-		var eras := []
-		for y in range(span.x, span.y + 1):
-			db.apply_era(y)
-			var g: Dictionary = db.club_guernsey(code)
-			var key := "%s|%s|%s|%s|%s|%s" % [_label(db.clubs[code]), g["design"], g["base"].to_html(),
-					g["pattern"].to_html(), g["pattern2"].to_html(), g.get("pattern3", g["pattern2"]).to_html()]
-			if not eras.is_empty() and eras[-1]["key"] == key:
-				eras[-1]["to"] = y
-			else:
-				eras.append({"key": key, "from": y, "to": y, "kit": g.duplicate(), "name": _label(db.clubs[code]),
-						"club": (db.clubs[code] as Dictionary).duplicate()})
-		widest = maxi(widest, eras.size())
-		rows.append({"code": code, "eras": eras, "span": span})
+		blocks.append({"code": code, "cells": _cells(db, code, pics[code])})
 	var cell := CELL * scale
-	var row_h := ROW * scale
-	var w := int(LEFT + cell * widest + 20)
-	var h := int(64 + row_h * rows.size() + 10)
+	var line_h := LINE * scale
+	var w := int(16 + cell * PER_LINE + 16)
+	var h := 64.0
+	for b in blocks:
+		h += HEAD + line_h * ceili(float((b["cells"] as Array).size()) / PER_LINE) + 10
 	root.content_scale_mode = Window.CONTENT_SCALE_MODE_DISABLED
 	root.content_scale_factor = 1.0
-	root.size = Vector2i(w, h)
-	DisplayServer.window_set_size(Vector2i(w, h))
+	root.size = Vector2i(w, int(h))
+	DisplayServer.window_set_size(Vector2i(w, int(h)))
 	var bg := ColorRect.new()
-	bg.color = UK.BG
+	bg.color = ui_kit.BG
 	bg.size = Vector2(w, h)
 	root.add_child(bg)
 	var title := Label.new()
@@ -78,11 +65,12 @@ func _run() -> void:
 	title.add_theme_font_size_override("font_size", 24)
 	root.add_child(title)
 	var y := 64.0
-	for r in rows:
-		_row(UK, SV, db, r, y, w, cell, row_h, scale)
-		y += row_h
+	var total := 0
+	for b in blocks:
+		y = _block(ui_kit, sv, db, b, y, w, cell, line_h, scale)
+		total += (b["cells"] as Array).size()
 	db.apply_era(LAST)
-	print("era chart: %d clubs, up to %d eras a club" % [rows.size(), widest])
+	print("era chart: %d clubs, %d guernseys" % [blocks.size(), total])
 	for i in range(6):
 		await process_frame
 	root.get_viewport().get_texture().get_image().save_png(out)
@@ -90,97 +78,106 @@ func _run() -> void:
 	quit()
 
 
-## A club's name as worn that season: "Brisbane Bears", "Footscray".
-func _label(d: Dictionary) -> String:
-	var n := str(d.get("name", ""))
-	var s := str(d.get("short", ""))
-	return n if n == s or n.ends_with(s) or s == "" else "%s %s" % [n, s]
+func _now_name(db, code: String) -> String:
+	return "Fitzroy" if code == "FIT" else str(db.club_era(code, LAST).get("name", code))
 
 
-## The first and last season a club played between FIRST and LAST.
-func _span(db, code: String) -> Vector2i:
-	var rows: Array = db._club_years.get(code, [])
-	var lo := FIRST
-	var hi := LAST
-	if not rows.is_empty():
-		lo = maxi(FIRST, int(rows[0]["from"]))
-		var closed := rows.all(func(r): return int(r["to"]) != 0)
-		if closed:
-			var last := 0
-			for r in rows:
-				last = maxi(last, int(r["to"]))
-			hi = mini(LAST, last)
-	var enter := int(db._club_base.get(code, {}).get("enter", 0))
-	if rows.is_empty() and enter > FIRST:
-		lo = enter
-	return Vector2i(lo, hi)
+## kits.csv's rows by club, in file order: {from, to, cell, picture}. A row with no season
+## (from 0) is a picture worn only part of a season; its year is the picture's.
+func _pictures(db) -> Dictionary:
+	var out := {}
+	var year_re := RegEx.create_from_string("(19|20)\\d\\d")
+	for r in db._read_dicts(db.KITS_CSV):
+		var code := str(r["code"])
+		if not out.has(code):
+			out[code] = []
+		var m := year_re.search(str(r["picture"]))
+		(out[code] as Array).append({"from": int(r["from"]), "to": int(r["to"]), "cell": int(r["cell"]),
+				"year": int(m.get_string()) if m != null else 0})
+	return out
 
 
-func _row(ui_kit, sv: GDScript, db, r: Dictionary, y: float, w: int, cell: float, row_h: float, scale: float) -> void:
-	var code: String = r["code"]
-	var base := db.club_era(code, LAST) as Dictionary
+## A club's cells: one per run of seasons in the same drawing, part-season pictures as their
+## own, then 2026 when the club plays it.
+func _cells(db, code: String, rows: Array) -> Array:
+	var cells := []
+	for r in rows:
+		var part: bool = r["from"] <= 0
+		var y0: int = r["year"] if part else r["from"]
+		var y1: int = r["year"] if part else mini(r["to"], LAST - 1)
+		if not part and not cells.is_empty() and not cells[-1]["part"] and cells[-1]["cell"] == r["cell"] \
+				and cells[-1]["to"] == y0 - 1:
+			cells[-1]["to"] = y1
+			continue
+		cells.append({"from": y0, "to": y1, "cell": r["cell"], "part": part})
+	if db.active_clubs(LAST).has(code):
+		cells.append({"from": LAST, "to": LAST, "cell": -1, "part": false})
+	for c in cells:
+		db.apply_era(c["from"])
+		var g: Dictionary = db.club_guernsey(code)
+		if c["cell"] >= 0:
+			g["kit_cell"] = c["cell"]
+		c["kit"] = g.duplicate()
+		c["club"] = (db.clubs[code] as Dictionary).duplicate()
+	return cells
+
+
+func _block(ui_kit, sv: GDScript, db, b: Dictionary, y: float, w: int, cell: float, line_h: float,
+		scale: float) -> float:
+	var code: String = b["code"]
+	var now_name := _now_name(db, code)
 	var name := Label.new()
-	name.text = str(base.get("name", code)) if code != "FIT" else "Fitzroy"
-	name.position = Vector2(16, y + 8)
-	name.size = Vector2(LEFT - 24, 40)
-	name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	name.add_theme_font_size_override("font_size", 17)
+	name.text = "%s  (%d guernseys)" % [now_name, (b["cells"] as Array).size()]
+	name.position = Vector2(16, y + 4)
+	name.add_theme_font_size_override("font_size", 19)
 	root.add_child(name)
 	var rule := ColorRect.new()
-	rule.color = Color(1, 1, 1, 0.08)
-	rule.position = Vector2(12, y + row_h - 3)
+	rule.color = Color(1, 1, 1, 0.10)
+	rule.position = Vector2(12, y + HEAD - 4)
 	rule.size = Vector2(w - 24, 1)
 	root.add_child(rule)
-	# The 1990-2026 bar: one segment per era, in its guernsey's colours; grey before entry or after leaving.
-	var bar_y := y + row_h - 16.0
-	var bar_w := float(w) - LEFT - 20.0
-	var per := bar_w / float(LAST - FIRST + 1)
-	var x := LEFT
-	for era in r["eras"]:
-		var c := Control.new()
-		c.position = Vector2(LEFT + (era["from"] - FIRST) * per, bar_y)
-		c.size = Vector2((era["to"] - era["from"] + 1) * per - 2.0, 8)
-		var kit: Dictionary = era["kit"]
-		c.draw.connect(func():
-			c.draw_rect(Rect2(0, 0, c.size.x, 8), kit["base"])
-			c.draw_rect(Rect2(0, 5, c.size.x, 3), kit["pattern"]))
-		root.add_child(c)
-		# The era cell: crest, then the figure from the front and from behind.
-		var crest_box := CenterContainer.new()
-		crest_box.position = Vector2(x, y + 4)
-		crest_box.size = Vector2(86 * scale, 86 * scale)
-		var crest = ui_kit.colour_marker([kit["base"], kit["pattern"], kit["pattern2"]], 82.0 * scale, str(kit["design"]), code)
+	var i := 0
+	for c in b["cells"]:
+		var x := 16.0 + (i % PER_LINE) * cell
+		var top := y + HEAD + (i / PER_LINE) * line_h
+		var kit: Dictionary = c["kit"]
+		var crest = ui_kit.colour_marker([kit["base"], kit["pattern"], kit["pattern2"]], 40.0 * scale,
+				str(kit["design"]))
 		crest.third = kit.get("pattern3", kit["pattern2"])
-		crest_box.add_child(crest)
-		root.add_child(crest_box)
+		crest.kit_cell = int(kit.get("kit_cell", -1))
+		crest.position = Vector2(x, top)
+		crest.size = Vector2(40, 40) * scale
+		root.add_child(crest)
 		var fig := Control.new()
-		fig.position = Vector2(x + 86 * scale, y)
-		fig.size = Vector2(cell - 86 * scale, row_h)
+		fig.position = Vector2(x, top)
+		fig.size = Vector2(cell, line_h - 36 * scale)
 		fig.material = sv.figure_material([kit])
 		fig.draw.connect(func():
 			var col: Color = sv.look_colour(0, {"skin": 1, "hair": 2, "hair_style": "short_crop"})
-			var fx := 40.0 * scale
+			var fx := 70.0 * scale
 			for facing in ["front", "back"]:
 				var info := VignetteFigures.strip("average", "idle", facing)
-				sv.draw_frame(fig, Vector2(fx, 176.0 * scale), info, 0, 0.88 * scale, col, false,
+				sv.draw_frame(fig, Vector2(fx, 150.0 * scale), info, 0, 0.78 * scale, col, false,
 						Color(0, 0, 0, 0), Transform2D.IDENTITY, "short_crop")
-				fx += 78.0 * scale)
+				fx += 64.0 * scale)
 		root.add_child(fig)
 		var years := Label.new()
-		var span_text := str(era["from"]) if era["from"] == era["to"] else "%d-%d" % [era["from"], era["to"]]
-		if era["to"] == LAST and era["from"] != LAST:
-			span_text = "%d-now" % era["from"]
-		years.text = span_text
+		var text := str(c["from"]) if c["from"] == c["to"] else "%d-%d" % [c["from"], c["to"]]
+		if c["part"]:
+			text += ", part"
 		# The name worn that season, where it differs: "Footscray", "Bears", "Kangaroos".
-		var then: Dictionary = era["club"]
-		if str(then.get("name", "")) != str(base.get("name", "")):
-			years.text += "\n" + str(then.get("name", ""))
-		elif str(then.get("short", "")) != str(base.get("short", "")):
-			years.text += "\n" + str(then.get("short", ""))
-		years.position = Vector2(x + 2, y + 94 * scale)
-		years.size = Vector2(86 * scale, 60)
-		years.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var then: Dictionary = c["club"]
+		var now := db.club_era(code, LAST) as Dictionary
+		if str(then.get("name", "")) != str(now.get("name", "")):
+			text += "  " + str(then.get("name", ""))
+		elif str(then.get("short", "")) != str(now.get("short", "")):
+			text += "  " + str(then.get("short", ""))
+		years.text = text
+		years.position = Vector2(x, top + line_h - 36 * scale)
+		years.size = Vector2(cell - 6, 30)
+		years.clip_text = true
 		years.add_theme_font_size_override("font_size", 14)
-		years.add_theme_color_override("font_color", Color(1, 1, 1, 0.85))
+		years.add_theme_color_override("font_color", Color(1, 1, 1, 0.88))
 		root.add_child(years)
-		x += cell
+		i += 1
+	return y + HEAD + line_h * ceili(float(i) / PER_LINE) + 10

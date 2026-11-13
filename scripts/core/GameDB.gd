@@ -418,12 +418,17 @@ func club_guernsey(code: String) -> Dictionary:
 			return Color.from_string(token, fallback)
 		var at := "psa".find(token)
 		return cols[at] if at >= 0 and token.length() == 1 else fallback
-	return {"design": design, "base": pick.call(0, cols[0]), "pattern": pick.call(1, cols[1]),
+	var out := {"design": design, "base": pick.call(0, cols[0]), "pattern": pick.call(1, cols[1]),
 			"pattern2": pick.call(2, cols[2]), "shorts": pick.call(3, (cols[1] as Color).darkened(0.1)),
 			"pattern3": pick.call(4, pick.call(2, cols[2])),
 			# The third colour is named for this kit (Port's teal, St Kilda's black),
 			# not left to the club's accent.
 			"own_pattern2": slots.size() > 2 and str(slots[2]) != "a"}
+	# A Legacy season's real guernsey: its picture in the kit atlas (the design above still
+	# gives the oval's discs and the colours).
+	if clubs.get(code, {}).has("kit"):
+		out["kit_cell"] = int(clubs[code]["kit"])
+	return out
 
 
 func club_list(code: String) -> Array:
@@ -1171,6 +1176,16 @@ const PAST_CLUBS := {"FIT": "FRE"}
 const ERA_FIELDS := ["name", "short", "primary", "secondary", "accent", "guernsey", "ground"]
 const COLOUR_FIELDS := ["primary", "secondary", "accent"]
 
+## Every club's real home guernsey season by season to 2025, each a picture in the kit atlas
+## (tools/kits/kit_atlas.py draws both from tools/kits/kits.txt). 2026 on is clubs.csv's own.
+const KITS_CSV := "res://data/legacy/kits.csv"
+const KIT_ATLAS := "res://assets/vignette/kits_atlas.png"
+## The atlas's cells a row, and each side's pixels (as kit_atlas.py draws them).
+const KIT_PER_ROW := 12
+const KIT_SIDE := 80
+var _kits := {}           # code -> Array of {from, to, cell, guernsey}
+var _kit_tex: Texture2D = null
+
 var _club_years := {}     # code -> Array of {from, to, field: value} rows, oldest first
 var _club_base := {}      # code -> the clubs.csv values of ERA_FIELDS
 var _ground_names := {}   # ground key -> Array of {from, to, name}, oldest first
@@ -1197,6 +1212,15 @@ func _load_club_years() -> void:
 	_club_years = {}
 	_club_base = {}
 	_load_ground_names()
+	_kits = {}
+	for r in _read_dicts(KITS_CSV):
+		var kc := club_code(str(r.get("code", "")))
+		if int(r.get("from", "0")) <= 0:
+			continue   # a picture no season wears (a one-off, or a mid-season change)
+		if not _kits.has(kc):
+			_kits[kc] = []
+		(_kits[kc] as Array).append({"from": int(r["from"]), "to": int(r["to"]), "cell": int(r["cell"]),
+				"guernsey": str(r["guernsey"])})
 	for r in _read_dicts(CLUBS_BY_YEAR_CSV):
 		var code := club_code(str(r.get("code", "")))
 		if code == "":
@@ -1255,7 +1279,33 @@ func club_era(code: String, year: int) -> Dictionary:
 				if r.has(k):
 					out[k] = _hex(r[k]) if COLOUR_FIELDS.has(k) else r[k]
 			break
+	var kit := season_kit(code, year)
+	if not kit.is_empty():
+		out["guernsey"] = kit["guernsey"]
+		out["kit"] = kit["cell"]
 	return out
+
+
+## The real guernsey a club wore in `year` ({from, to, cell, guernsey}), or {} (2026 on, a
+## created club, or a season with no picture).
+func season_kit(code: String, year: int) -> Dictionary:
+	for k in _kits.get(code, []):
+		if int(k["from"]) <= year and year <= int(k["to"]):
+			return k
+	return {}
+
+
+## The kit atlas (loaded once; null when the file is missing).
+func kit_atlas() -> Texture2D:
+	if _kit_tex == null and ResourceLoader.exists(KIT_ATLAS):
+		_kit_tex = load(KIT_ATLAS)
+	return _kit_tex
+
+
+## The atlas's cells a row and rows, for figure.gdshader's kit_grid.
+func kit_grid() -> Vector2i:
+	var t := kit_atlas()
+	return Vector2i(KIT_PER_ROW, maxi(1, int(t.get_height()) / KIT_SIDE) if t != null else 1)
 
 
 ## Show every club as it was in `year`: the career calls this when a season
@@ -1272,6 +1322,13 @@ func apply_era(year: int) -> void:
 			if d.get(k) != now[k]:
 				d[k] = now[k]
 				pristine = false
+		# The season's guernsey picture, only while there is one (today's clubs carry no key).
+		if now.has("kit"):
+			if d.get("kit") != now["kit"]:
+				d["kit"] = now["kit"]
+				pristine = false
+		elif d.has("kit"):
+			d.erase("kit")
 
 
 ## Read ground_names.csv: each ground's dated names under its key, and every

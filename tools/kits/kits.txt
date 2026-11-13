@@ -1,0 +1,69 @@
+# Every club's home guernsey, picture by picture, 1990-2025 (TODO row 142). One line per
+# footyjumpers.com home picture (the picture's file name), drawn from that picture: shapes and
+# colours only, never sponsors, maker or league logos, or the club emblem (director 2026-11-13:
+# "Leave them off"). "= picture" copies a drawing where only those changed.
+# Format and ops: tools/kits/kit_atlas.py. 2026 on is data/clubs.csv's own guernsey.
+
+# COL Collingwood: p black, s white
+COL 1990-1993 Collingwood-1990 stripes:p/s/a/p | fill s; stripes p 11; vfill p 0.30 0.20; vfill #555555 0.20 0.08 | fill s; stripes p 9 0 1 0.60 1; round p 0.07 0.22 0.05; arms p 0.05
+COL 1994-1995 Collingwood-1994 stripes:p/s/a/p | fill s; stripes p 11; vfill p 0.30 0.20; vfill #555555 0.20 0.08 | fill s; stripes p 9 0 1 0.74 1; round p 0.07 0.22 0.05; arms p 0.05
+COL 1996-1997 Collingwood-1996 = Collingwood-1994
+COL 1998-1998 Collingwood-1998 stripes:p/s/a/p | fill s; stripes p 11; vfill s 0.24 0.13; vneck p 0.24 0.13 0.05; arms p 0.05 | fill s; stripes p 9 0 1 0.72 1; round p 0.06 0.2 0.05; arms p 0.05
+COL 1999-1999 Collingwood-1999 = Collingwood-1998
+COL 2000-2000 Collingwood-2000 = Collingwood-1998
+COL 2001-2001 Collingwood-2001 stripes:p/s/a/p | fill p; stripes s 11; vfill s 0.26 0.15; vfill p 0.20 0.09; rect s 0.47 0.2 0.53 0.25; arms s 0.03 | fill p; stripes s 7 0.07 0.93 0.62 1; round s 0.06 0.2 0.03; arms s 0.03
+COL 2002-2004 Collingwood-2002 stripes:p/s/a/p | fill p; stripes s 9; vfill s 0.26 0.15; vfill p 0.20 0.09; rect s 0.47 0.2 0.53 0.25; arms s 0.03 | fill p; stripes s 7 0.07 0.93 0.62 1; round s 0.06 0.2 0.03; arms s 0.03
+COL 2005-2005 Collingwood-2005 = Collingwood-2002
+COL 2006-2006 Collingwood-2006 stripes:p/s/a/p | fill s; stripes p 9; band p 0 0.07; vfill p 0.30 0.20; rect s 0.47 0.25 0.53 0.29 | fill p; stripes s 7 0.07 0.93 0.62 1
+COL 2007-2008 Collingwood-2007 stripes:p/s/a/p | fill s; stripes p 9; band p 0 0.07; vfill p 0.30 0.20 | fill p; stripes s 7 0.07 0.93 0.62 1
+COL 2009-2009 Collingwood-2009 stripes:p/s/a/p | fill s; stripes p 9; band p 0 0.05; round p 0.16 0.24 0.06; poly p 0 0.75 0.06 1 0 1; poly p 1 0.75 0.94 1 1 1 | fill p; stripes s 7 0 1 0.60 1; poly p 0 0.56 1 0.56 1 0.62 0.5 0.66 0 0.62
+COL 2010-2010 Collingwood-2010 = Collingwood-2009
+COL 2011-2011 Collingwood-2011 stripes:p/s/a/p | fill s; stripes p 9; band p 0 0.05; vfill p 0.18 0.18; arms p 0.05 | fill p; stripes s 7 0 1 0.50 1
+COL 2012-2012 Collingwood-2012 = Collingwood-2011
+COL 2013-2013 Collingwood-2013 stripes:p/s/a/p | fill s; stripes p 9; vfill p 0.16 0.16; arms p 0.06 | fill p; stripes s 7 0 1 0.56 1
+COL 2014-2014 Collingwood-2014 = Collingwood-2013
+COL 2015-2015 Collingwood-2015 = Collingwood-2013
+COL 2016-2016 Collingwood-2016 stripes:p/s/a/p | fill s; stripes p 9; vfill p 0.16 0.16; rect s 0.46 0.12 0.54 0.16; arms p 0.04 | fill p; stripes s 7 0 1 0.56 1
+COL 2017-2017 Collingwood-2017 stripes:p/s/a/p | fill s; stripes p 9; band p 0 0.06; vfill p 0.22 0.2; arms p 0.05 | fill p; stripes s 7 0 1 0.58 1
+COL 2018-2018 Collingwood-2018 = Collingwood-2017
+COL 2019-2019 Collingwood-2019 = Collingwood-2017
+COL 2020-2020 Collingwood-2020 = Collingwood-2017
+COL 2021-2021 Collingwood-2021 stripes:p/s/a/p | fill s; stripes p 9; vfill p 0.18 0.14; arms p 0.04 | fill p; stripes s 7 0 1 0.64 1
+COL 2022-2022 Collingwood-2022 = Collingwood-2021
+COL 2023-2023 Collingwood-2023 = Collingwood-2021
+COL 2024-2024 Collingwood-2024 = Collingwood-2021
+COL 2025-2025 Collingwood-2025 = Collingwood-2021
+
+# ADE Adelaide: p navy, s red, a gold. Hoops run red, gold, navy from the chest down.
+ADE 1991-1994 Adelaide-1991 lowhoops:p/s/a/p | fill p; cyc 0.39 0.10 7 s a p; vfill a 0.20 0.18; vfill #9A9A9A 0.15 0.13; arms a 0.04 | fill p; cyc 0.69 0.10 4 s a p s; round a 0.05 0.2 0.04; arms a 0.04
+ADE 1995-1995 Adelaide-1995 = Adelaide-1991
+ADE 1996-1996 Adelaide-1996 lowhoops:p/s/a/p | fill p; cyc 0.44 0.10 6 s a p; vfill a 0.20 0.18; vfill #9A9A9A 0.15 0.13; arms a 0.04 | fill p; cyc 0.73 0.10 3 s a p; round a 0.05 0.2 0.04; arms a 0.04
+ADE 1997-1997 Adelaide-1997 = Adelaide-1996
+ADE 1998-1998 Adelaide-1998 = Adelaide-1996
+ADE 1999-1999 Adelaide-1999 lowhoops:p/s/a/p | fill p; cyc 0.40 0.093 7 s a p; hem s 0.05; vneck a 0.18 0.14 0.04; arms a 0.04 | fill p; cyc 0.68 0.093 4 s a p s; round a 0.05 0.2 0.04; arms a 0.04
+ADE 2000-2000 Adelaide-2000 = Adelaide-1999
+ADE 2001-2002 Adelaide-2001 lowhoops:p/s/a/p | fill p; cyc 0.44 0.09 7 s a p; round a 0.10 0.16 0.04; arms a 0.04 | fill p; cyc 0.70 0.09 4 s a p s; round a 0.05 0.2 0.04; arms a 0.04
+ADE 2003-2003 Adelaide-2003 lowhoops:p/s/a/p | fill p; cyc 0.44 0.09 7 s a p; round a 0.10 0.16 0.04; vneck a 0.12 0.06 0.03; arms a 0.04 | fill p; cyc 0.70 0.09 4 s a p s; round a 0.05 0.2 0.04; arms a 0.04
+ADE 2004-2004 Adelaide-2004 lowhoops:p/s/a/p | fill p; cyc 0.44 0.09 7 s a p; vneck a 0.16 0.14 0.05; arms a 0.04 | fill p; cyc 0.70 0.09 4 s a p s; round a 0.05 0.2 0.04; arms a 0.04
+ADE 2005-2005 Adelaide-2005 lowhoops:p/s/a/p | fill p; cyc 0.44 0.09 7 s a p; vneck a 0.17 0.17 0.06; arms a 0.04 | fill p; cyc 0.70 0.09 4 s a p s; round a 0.05 0.2 0.04; arms a 0.04
+ADE 2006-2006 Adelaide-2006 crows06:p/s/a/p | fill p; cyc 0.39 0.075 9 s a p; poly p 0 0.55 0.05 0.55 0.22 1 0.15 1; poly p 1 0.55 0.95 0.55 0.78 1 0.85 1; vfill a 0.20 0.16; vfill p 0.14 0.09; arms a 0.03 | fill p; cyc 0.61 0.075 6 s a p; round a 0.05 0.2 0.04; arms a 0.03
+ADE 2007-2007 Adelaide-2007 crows06:p/s/a/p | fill p; cyc 0.39 0.075 9 s a p; poly p 0 0.55 0.05 0.55 0.22 1 0.15 1; poly p 1 0.55 0.95 0.55 0.78 1 0.85 1; vfill a 0.22 0.16; vfill p 0.17 0.10; arms a 0.03 | fill p; cyc 0.61 0.075 6 s a p; round a 0.05 0.2 0.04; arms a 0.03
+ADE 2008-2008 Adelaide-2008 = Adelaide-2007
+ADE 2009-2009 Adelaide-2009 crows06:p/s/a/p | fill p; cyc 0.42 0.085 7 s a p; rect p 0 0.68 0.07 0.93; rect p 0.93 0.68 1 0.93; round a 0.12 0.17 0.06; arms a 0.04 | fill p; band s 0.76 0.77; cyc 0.80 0.07 3 a p s; round a 0.05 0.2 0.04; arms a 0.04
+ADE 2010-2010 Adelaide-2010 lowhoops:p/s/a/p | fill p; cyc 0.39 0.088 7 s a p; round a 0.09 0.2 0.06; arms a 0.04 | fill p; cyc 0.64 0.088 5 s a p s; round a 0.05 0.2 0.04; arms a 0.04
+ADE 2011-2011 Adelaide-2011 = Adelaide-2010
+ADE 2012-2012 Adelaide-2012 = Adelaide-2010
+ADE 2013-2013 Adelaide-2013 lowhoops:p/s/a/p | fill p; cyc 0.40 0.085 8 s a p; rect p 0 0.4 0.05 1; rect p 0.95 0.4 1 1; round a 0.09 0.17 0.03; vneck a 0.10 0.05 0.03; arms a 0.04 | fill p; cyc 0.66 0.085 5 s a p s; rect p 0 0.6 0.04 1; rect p 0.96 0.6 1 1; arms a 0.04
+ADE 2014-2014 Adelaide-2014 = Adelaide-2013
+ADE alt2015 Adelaide-2015 lowhoops:p/s/a/p | fill p; cyc 0.38 0.088 8 s a p; round a 0.08 0.18 0.06; arms a 0.04 | fill p; cyc 0.60 0.088 5 s a p; round a 0.05 0.2 0.04; arms a 0.04
+ADE 2015-2015 Adelaide-2015-PW = Adelaide-2015
+ADE 2016-2016 Adelaide-2016 lowhoops:p/s/a/p | fill p; cyc 0.36 0.08 8 s a p; round a 0.08 0.18 0.06; arms a 0.04 | fill p; cyc 0.60 0.08 5 s a p; round a 0.05 0.2 0.04; arms a 0.04
+ADE alt2017 Adelaide-2017 lowhoops:p/s/a/p | fill p; cyc 0.38 0.08 8 s a p; vfill a 0.14 0.17; vfill p 0.10 0.10; arms a 0.04 | fill p; cyc 0.60 0.08 5 s a p; round a 0.05 0.2 0.04; arms a 0.04
+ADE 2017-2017 Adelaide-2017-Toyota lowhoops:p/s/a/p | fill p; cyc 0.36 0.08 8 s a p; vfill W 0.14 0.17; arms a 0.04 | fill p; cyc 0.60 0.08 5 s a p; round a 0.05 0.2 0.04; arms a 0.04
+ADE 2018-2018 Adelaide-2018 lowhoops:p/s/a/p | fill p; cyc 0.36 0.08 8 s a p; round a 0.08 0.18 0.06; arms a 0.04 | fill p; cyc 0.62 0.08 5 s a p; round a 0.05 0.2 0.04; arms a 0.04
+ADE 2019-2019 Adelaide-2019 = Adelaide-2018
+ADE 2020-2020 Adelaide-2020 = Adelaide-2018
+ADE 2021-2021 Adelaide-2021 = Adelaide-2018
+ADE 2022-2023 Adelaide-2022 lowhoops:p/s/a/p | fill p; cyc 0.38 0.08 8 s a p; round a 0.06 0.18 0.04; arms a 0.04 | fill p; cyc 0.66 0.08 5 s a p; round a 0.05 0.2 0.04; arms a 0.04
+ADE 2024-2024 Adelaide-2024 = Adelaide-2022
+ADE 2025-2025 Adelaide-2025 lowhoops:p/s/a/p | fill p; cyc 0.40 0.075 8 s #F5A800 p; round s 0.06 0.18 0.04; arms #F5A800 0.04 | fill p; cyc 0.62 0.075 6 s #F5A800 p; round a 0.05 0.2 0.04; arms #F5A800 0.04
