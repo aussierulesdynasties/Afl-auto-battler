@@ -425,8 +425,8 @@ func _test_no_other_dice_move() -> void:
 	# clear is one concussion from it, so it sits (and clears) through the
 	# rounds. Until a sitting retires someone (a different list from then on)
 	# every result must be identical.
-	var a := _rounds(false)
 	var b := _rounds(true)
+	var a := _rounds(false, b["results"].size())
 	var compared := 0
 	var sat_before := false
 	for i in range(mini(a["results"].size(), b["results"].size())):
@@ -443,7 +443,7 @@ func _test_no_other_dice_move() -> void:
 			compared, int(b["sat"]), sat_before])
 
 
-func _rounds(loaded: bool) -> Dictionary:
+func _rounds(loaded: bool, rounds := -1) -> Dictionary:
 	GameState.reset()
 	GameState.career_seed = SUITE_SEED
 	GameState.replay_seed = SUITE_SEED
@@ -456,7 +456,12 @@ func _rounds(loaded: bool) -> Dictionary:
 	var out := {"results": [], "sat_before": [], "retired_before": [], "sat": 0}
 	var sat := 0
 	var retired := 0
-	for i in range(6):
+	# Six rounds, or on until a round after a sitting has been played: when
+	# the first concussion among them comes depends on how the matches go.
+	# `rounds` plays exactly that many (the plain career matches the other).
+	for i in range(14 if rounds < 0 else rounds):
+		if rounds < 0 and i >= 6 and int(out["sat_before"][i - 1]) > 0:
+			break
 		out["sat_before"].append(sat)
 		out["retired_before"].append(retired)
 		GameState.advance()

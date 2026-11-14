@@ -18,8 +18,11 @@ extends SceneTree
 const SUITE_SEED := 2027
 ## Careers played, seeds SUITE_SEED, SUITE_SEED + 1, ...
 const CAREERS := 6
-## Of those, how many must see one of his international cards dealt.
-const NEED := 5
+## Of those, how many must see one of his international cards dealt: most.
+## Measured 2026-11-14 over INTL_CAREERS=18: 13 of 18 (72%) on main and on the
+## D50 chip branch alike, so 5 of 6 only held on these six seeds' luck. The old
+## rule stays red on the open-weeks check below (26 open against 83 held).
+const NEED := 4
 
 var _state: Node
 var _db: Node
