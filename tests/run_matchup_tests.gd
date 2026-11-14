@@ -162,7 +162,9 @@ func _test_hub_tests() -> void:
 
 	# Run the season out: no fixture, no facts, a clear next step every week.
 	# One check per rule however many finals weeks you play, so the check count
-	# does not hang on how the season falls.
+	# does not hang on how the season falls. The rest of the home and away
+	# season is skipped: only its finals weeks are visited.
+	_to_finals()
 	var guard := 0
 	var weeks := 0
 	var facts_bad := []
@@ -329,16 +331,30 @@ func _test_regular_bye() -> void:
 func _test_finals_week_by_week() -> void:
 	var db = root.get_node("GameDB")
 	var out := ""
-	for code in ["GWS", "RIC", "NTH", "WCE", "STK", "ESS", "ADE"]:
-		if not db.active_clubs(2027).has(code):
-			continue
-		_reset()
-		_state.start_season(code, db.club_list(code))
-		_state.season.round_index = _state.season.fixture.size() - 1
-		_state.advance()
-		if not (_state.season.finals["top"] as Array).has(code):
-			out = code
-			break
+	# One career, its club put at the foot of the ladder by hand before the
+	# last round (only its own match played): a club that misses the finals.
+	var code := "GWS"
+	_reset()
+	_state.start_season(code, db.club_list(code))
+	var sea = _state.season
+	var codes: Array = sea.ladder.keys()
+	codes.sort()
+	codes.erase(code)
+	codes.append(code)
+	for i in range(codes.size()):
+		var row: Dictionary = sea.ladder[codes[i]]
+		row["w"] = 20 - i
+		row["l"] = 2 + i
+		row["d"] = 0
+		row["p"] = 22
+		row["pf"] = 2300 - i * 20
+		row["pa"] = 2000
+	sea.round_index = sea.fixture.size() - 1
+	sea.recalc_ladder()
+	_mine_only(code)
+	_state.advance()
+	if not (_state.season.finals["top"] as Array).has(code):
+		out = code
 	_check(out != "", "A club misses the finals to test with")
 	if out == "":
 		return
@@ -1213,6 +1229,25 @@ func _reset() -> void:
 	_state.replay_seed = SUITE_SEED
 
 
+## The coming round with only `code`'s match left in it, where a test reads
+## only that club's week: the other matches are most of a round's time.
+func _mine_only(code: String) -> void:
+	var s = _state.season
+	if s == null or s.round_index >= s.fixture.size():
+		return
+	var rm: Array = s.fixture[s.round_index]
+	for m in rm.duplicate():
+		if str(m["home"]) != code and str(m["away"]) != code:
+			rm.erase(m)
+
+
+## Straight to September: the home and away season is not under test, only
+## the finals weeks after it.
+func _to_finals() -> void:
+	_state.season.round_index = _state.season.fixture.size()
+	_state.ensure_finals()
+
+
 ## The status line over the bracket on every path a side can take through the finals: a
 ## qualifying final's loser is still alive (the double chance), every other loser's season
 ## has ended, the premiers say so (found by uiart: "Your season ended in the Qualifying
@@ -1277,6 +1312,7 @@ func _test_finals_cup() -> void:
 	var kit = load("res://scripts/ui/UiKit.gd")
 	_reset()
 	_state.start_season("FRE", db.club_list("FRE"))
+	_to_finals()
 	var guard := 0
 	while guard < 400 and not _state.season.is_season_over():
 		var f: Dictionary = _state.season.finals
@@ -1404,6 +1440,7 @@ func _test_premiership_streamers() -> void:
 	_reset()
 	_state.start_season("FRE", db.club_list("FRE"))
 	_state.season.round_index = _state.season.fixture.size() - 1
+	_mine_only("FRE")
 	_state.advance()
 	if not _state.training_report.is_empty():
 		_state.training_report["dismissed"] = true
@@ -1638,6 +1675,9 @@ func _test_pre_match_scene() -> void:
 	for skip in [false, true]:
 		_reset()
 		_state.start_season("COL", db.club_list("COL"))
+		# The round's other matches would play on threads behind this one; the
+		# scene is about COL's match alone.
+		_mine_only("COL")
 		root.size = Vector2i(390, 844)
 		var hub: Control = await _open_hub()
 		var play := _button(hub.find_child("WeekActions", true, false), "Play match")
