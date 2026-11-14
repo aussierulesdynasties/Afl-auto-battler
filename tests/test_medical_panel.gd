@@ -425,8 +425,12 @@ func _test_no_other_dice_move() -> void:
 	# clear is one concussion from it, so it sits (and clears) through the
 	# rounds. Until a sitting retires someone (a different list from then on)
 	# every result must be identical.
-	var b := _rounds(true)
-	var a := _rounds(false, b["results"].size())
+	# The loaded career plays until a round has followed a sitting (at most
+	# fourteen: when the first concussion comes depends on how the matches go;
+	# under the D50 chip it is after round six on this seed); the plain one
+	# plays the same number of rounds.
+	var b := _rounds(true, 14)
+	var a := _rounds(false, (b["results"] as Array).size())
 	var compared := 0
 	var sat_before := false
 	for i in range(mini(a["results"].size(), b["results"].size())):
@@ -443,7 +447,7 @@ func _test_no_other_dice_move() -> void:
 			compared, int(b["sat"]), sat_before])
 
 
-func _rounds(loaded: bool, rounds := -1) -> Dictionary:
+func _rounds(loaded: bool, most: int) -> Dictionary:
 	GameState.reset()
 	GameState.career_seed = SUITE_SEED
 	GameState.replay_seed = SUITE_SEED
@@ -456,11 +460,10 @@ func _rounds(loaded: bool, rounds := -1) -> Dictionary:
 	var out := {"results": [], "sat_before": [], "retired_before": [], "sat": 0}
 	var sat := 0
 	var retired := 0
-	# Six rounds, or on until a round after a sitting has been played: when
-	# the first concussion among them comes depends on how the matches go.
-	# `rounds` plays exactly that many (the plain career matches the other).
-	for i in range(14 if rounds < 0 else rounds):
-		if rounds < 0 and i >= 6 and int(out["sat_before"][i - 1]) > 0:
+	for i in range(most):
+		# A round played after a sitting has been seen: the loaded career has
+		# what the comparison needs.
+		if loaded and i > 0 and int(out["sat_before"][i - 1]) > 0:
 			break
 		out["sat_before"].append(sat)
 		out["retired_before"].append(retired)
@@ -760,6 +763,9 @@ func _test_retirement_is_on_the_books() -> void:
 ## and he is never in the free-agent pool after his career has ended.
 func _test_grand_final_week() -> void:
 	_career()
+	# The home-and-away rounds are not under test: straight to the finals.
+	GameState.season.round_index = GameState.season.fixture.size()
+	GameState.ensure_finals()
 	var guard := 0
 	while guard < 60 and not GameState.season.is_season_over() and not (GameState.season.is_regular_done()
 			and not GameState.season.finals.is_empty() and int(GameState.season.finals.get("week", 0)) == 5):

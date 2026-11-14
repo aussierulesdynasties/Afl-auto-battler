@@ -3,7 +3,7 @@ extends RefCounted
 ## at the host's grounds: every match of the round is at a host ground,
 ## a club has its home edge only at its own ground, a club on a bye sits it out,
 ## the round's name reaches the fixture, the hub and the match, and a seeded
-## career plays it live and keeps it across a save and load.
+## career jumps to it, plays it live and keeps it across a save and load.
 ## Run through run_gather_round_tests.gd.
 
 const SUITE_SEED := 2027
@@ -129,11 +129,14 @@ func _test_career_live_round() -> void:
 	gs.set_setting("seen_weekly_loop_intro", true)
 	var g: int = gs.season.gather_round()
 	_check(g >= GatherRound.FIRST, "The career has a Gather Round (%d)" % (g + 1))
-	var guard := 0
-	while gs.season.round_index < g and guard < 30:
-		gs.advance()
-		guard += 1
-	_check(gs.season.round_index == g, "Played to Gather Round (round %d)" % (gs.season.round_index + 1))
+	# The rounds before it are not under test: the season jumps to it (the
+	# played rounds recorded empty), as the career UI suite jumps to its finals.
+	_check(gs.season.round_index < g and gs.season.results.size() == gs.season.round_index,
+			"The season starts before Gather Round (round %d)" % (gs.season.round_index + 1))
+	while gs.season.results.size() < g:
+		gs.season.results.append([])
+	gs.season.round_index = g
+	_check(gs.season.round_index == g, "At Gather Round (round %d)" % (gs.season.round_index + 1))
 	_check(gs.save_career(), "Saved before Gather Round")
 	_check(gs.load_career(), "Loaded")
 	_check(gs.season.gather_round() == g, "After a load it is the same round, from the saved season")
@@ -176,8 +179,8 @@ func _test_career_live_round() -> void:
 	for r in played:
 		_check(_hosts().has(str(r.get("venue", ""))) and str(r.get("label", "")).ends_with("Gather Round"),
 				"%s v %s kept its host ground and name (%s, %s)" % [r["home"], r["away"], r.get("venue", ""), r.get("label", "")])
-	gs.advance()
-	_check(gs.season.round_index == g + 2 or gs.season.round_index == g + 1, "The season goes on after Gather Round")
-	_check(str(gs.season.round_label(gs.season.round_index - 1)) == "Round %d" % gs.season.round_index,
+	# The next round is not played: its match prep is what follows Gather Round.
+	_check(gs.season.round_index == g + 1, "The season goes on after Gather Round")
+	_check(str(gs.season.round_label(gs.season.round_index)) == "Round %d" % (gs.season.round_index + 1),
 			"The round after is a plain round")
 	_check(not gs.my_next_opponent().has("event"), "Match prep after Gather Round is a plain round")

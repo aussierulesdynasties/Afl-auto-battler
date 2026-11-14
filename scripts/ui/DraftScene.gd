@@ -1960,25 +1960,45 @@ func _build_activity() -> PanelContainer:
 	return p
 
 
+## The night in order, oldest first, over the first `upto` picks of the log:
+## each pick trade just before the pick it was struck before, then the trades
+## struck before the next pick still to show. Matched on the pick's number in
+## the order, never the log's index: a skipped pick (a full list, a pass) leaves
+## no row, and counting rows put "before pick 42" after pick 42 (row 175).
+func _night_events(upto: int) -> Array:
+	var hist: Array = _draft.pick_history
+	var trades: Array = _draft.night_trades if _draft.intake_mode else []
+	var out := []
+	var last := 0
+	for i in range(upto):
+		var no := int(hist[i]["pick"])
+		for t in trades:
+			if int(t["at"]) > last and int(t["at"]) <= no:
+				out.append(t)
+		out.append(hist[i])
+		last = no
+	var next := int(hist[upto]["pick"]) if upto < hist.size() else int(_draft.pick_index) + 1
+	for t in trades:
+		if int(t["at"]) > last and int(t["at"]) <= next:
+			out.append(t)
+	return out
+
+
 func _refresh_history() -> void:
 	UiKit.clear(_history_box)
 	var entries := []
 	var picks_n := 0
 	# During draft night's replay the log holds back the picks the board has not shown.
-	var shown := _shown_picks()
-	for i in range(shown, -1, -1):
-		if i < shown:
-			var entry: Dictionary = _draft.pick_history[i]
-			if _history_club.is_empty() or str(entry["club"]) == _history_club:
-				entries.append(entry)
-				picks_n += 1
-		# A pick trade struck before pick i + 1 sits above that pick (newest first).
-		if _draft.intake_mode:
-			for t in _draft.night_trades:
-				if int(t["at"]) == i + 1 and (_history_club.is_empty() or str(t["buyer"]) == _history_club
-						or str(t["seller"]) == _history_club):
-					entries.insert(entries.size() - (1 if i < shown and (_history_club.is_empty()
-							or str(_draft.pick_history[i]["club"]) == _history_club) else 0), t)
+	# Newest first: a pick trade sits under the pick it was struck before, never
+	# above it, where it would read as a deal for a pick already called (row 175).
+	for e in _night_events(_shown_picks()):
+		if e.has("buyer"):
+			if _history_club.is_empty() or str(e["buyer"]) == _history_club or str(e["seller"]) == _history_club:
+				entries.append(e)
+		elif _history_club.is_empty() or str(e["club"]) == _history_club:
+			entries.append(e)
+			picks_n += 1
+	entries.reverse()
 	_history_info.text = "%d %s" % [picks_n, "pick" if picks_n == 1 else "picks"]
 	if entries.is_empty():
 		_history_box.add_child(UiKit.lbl("No picks yet" if _history_club.is_empty() else "No picks for this club yet", UiKit.HEADING, UiKit.TEXT, true))
@@ -2504,14 +2524,7 @@ func _recent_rows(hist: Array, upto: int, settle: bool) -> void:
 		# those picks), so the pool keeps its room.
 		shown = 0
 	# The night in order: a trade struck before pick N sits just before pick N.
-	var events: Array = []
-	var trades: Array = _draft.night_trades if _draft.intake_mode else []
-	for i in range(upto + 1):
-		for t in trades:
-			if int(t["at"]) == i + 1:
-				events.append(t)
-		if i < upto:
-			events.append(hist[i])
+	var events := _night_events(upto)
 	for k in range(events.size() - 1, maxi(-1, events.size() - 1 - shown), -1):
 		var entry: Dictionary = events[k]
 		var i := hist.find(entry)
