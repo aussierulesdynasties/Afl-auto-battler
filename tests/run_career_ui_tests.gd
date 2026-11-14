@@ -1638,6 +1638,7 @@ func _run() -> void:
 	await _t("_test_list_tabs_kept")
 	await _t("_test_remembered")
 	await _t("_test_list_problem_and_ask_around")
+	await _t("_test_ask_around_red_club_ink")
 	await _t("_test_ask_price_tap")
 	await _t("_test_names_fit")
 	_state.delete_saved_career()
@@ -3721,6 +3722,81 @@ func _test_list_problem_and_ask_around() -> void:
 	await _settle()
 
 
+## Ask around names in their club's ink when the club is red (row 174; director
+## 2026-11-12, "sanders uncoloured?"). The state that dropped it: Ryley Sanders
+## at Essendon (his save had traded him there), whose red was turned to plain
+## white for a player's name. Asked about from Essendon's list, his name in the
+## heading is in Essendon's ink, never white, and every player an answer names
+## is in his own club's ink (the red rivals' too).
+func _test_ask_around_red_club_ink() -> void:
+	_state.reset()
+	_state.career_seed = 5508
+	_state.replay_seed = 5508
+	_state.start_season("ESS", _db.club_list("ESS"))
+	var wbd: Array = _state.season.lists["WBD"]
+	var sanders := {}
+	for p in wbd:
+		if _db.player_display_name(p) == "Ryley Sanders":
+			sanders = p
+	_check(not sanders.is_empty(), "Ryley Sanders is on the Bulldogs' list to start")
+	if sanders.is_empty():
+		return
+	wbd.erase(sanders)
+	sanders["club"] = "ESS"
+	_state.season.lists["ESS"].append(sanders)
+	_check(_state.list_player(str(sanders["id"])) == sanders, "He is on your Essendon list now")
+	_state.season.round_index = _state.season.fixture.size()
+	_state.open_offseason()
+	var size_before := root.size
+	root.size = Vector2i(390, 844)
+	var scene: Control = load("res://scenes/OffseasonScene.tscn").instantiate()
+	root.add_child(scene)
+	await _settle()
+	await Tap.tap(scene.find_child("Tab_trade", true, false))
+	await _settle()
+	await Tap.tap(scene.find_child("TradeSide_mine", true, false))
+	await _settle()
+	var why_pick: String = await Tap.tap(scene.find_child("Mine_" + str(sanders["id"]), true, false))
+	await _settle()
+	var why_ask: String = await Tap.tap(scene.find_child("AskAround", true, false))
+	await _settle()
+	var uk = load("res://scripts/ui/UiKit.gd")
+	var ni = load("res://scripts/ui/NameInk.gd")
+	var ink := "[color=#%s]Ryley%sSanders" % [uk.club_ink("ESS").to_html(false), ni.NBSP]
+	var head := scene.find_child("AskHead", true, false)
+	_check(why_pick == "" and why_ask == "" and head is RichTextLabel and (head as RichTextLabel).text.contains(ink),
+			"A finger on Ask around heads the answers with his name in Essendon's red (%s %s %s)" % [why_pick, why_ask,
+			(head as RichTextLabel).text if head is RichTextLabel else str(head)])
+	# Every name in every answer: Sanders in Essendon's ink, each player offered
+	# in his own club's (Gold Coast, Melbourne, St Kilda and Sydney are red too).
+	var named := 0
+	var reds := 0
+	var bad := []
+	var rows := {}
+	for r in scene.get("_asked"):
+		rows[str(r["club"])] = r
+	for a in scene.find_children("Answer_*", "", true, false):
+		var club := str(a.name).trim_prefix("Answer_")
+		var bb := (a as RichTextLabel).text if a is RichTextLabel else ""
+		var r: Dictionary = rows.get(club, {})
+		for id in (r.get("mine", []) as Array) + (r.get("theirs", []) as Array):
+			if str(id).begins_with("pick:"):
+				continue
+			var who: String = _state._ask_name(str(id))
+			if not str(ni.plain(a)).contains(who):
+				continue
+			var owner := "ESS" if str(id) == str(sanders["id"]) else club
+			named += 1
+			reds += 1 if uk.club_name_colour(uk.club_ink(owner)) == uk.TEXT else 0
+			if not bb.contains("[color=#%s]%s" % [uk.club_ink(owner).to_html(false), who.replace(" ", ni.NBSP)]):
+				bad.append("%s: %s" % [club, ni.plain(a)])
+	_check(named > 0 and reds > 0 and bad.is_empty(),
+			"Every player named in the answers (%d, %d at red clubs) is in his club's ink, never white (%s)" % [named, reds, " | ".join(bad)])
+	scene.queue_free()
+	root.size = size_before
+	await _settle()
+
+
 ## Ask their price on a phone (row 67): with one of their players on the sheet
 ## and nothing of yours, a finger on Ask their price fills what you give with
 ## their ask, shows it in a line under the sheet, and the verdict is yes.
@@ -4214,8 +4290,9 @@ func _find_named(n: Node, named: String, out: Array) -> void:
 
 
 ## The Canberra question on New career (director, 2026-11-08): "Canberra
-## joins?" answers No by default, and a real tap on Yes puts Canberra in the
-## League redraft with Tasmania, both as equals.
+## joins?" answers No by default; a real tap on Yes keeps Canberra for 2030.
+## The 2027 League redraft is the founding eighteen either way: Tasmania join
+## in 2028 (director, 2026-11-12: "Join in 2028").
 func _test_new_career_canberra_choice() -> void:
 	_state.delete_saved_career()
 	for pick_it in [false, true]:
@@ -4238,10 +4315,12 @@ func _test_new_career_canberra_choice() -> void:
 		await _settle()
 		var clubs: Array = _state.draft.clubs if _state.draft != null else []
 		_check(both_there and t1 == "" and t2 == "" and _router.current() == "draft"
-				and bool(_state.canberra_on) == pick_it and clubs.has("CANB") == pick_it and clubs.has("TAS")
-				and clubs.size() == (20 if pick_it else 19),
-				("A tap on Yes puts Canberra and Tasmania in the 2027 League redraft (%s %s, %d clubs)" if pick_it
-				else "Left at No, the 2027 League redraft has Tasmania and no Canberra (%s %s, %d clubs)") % [
+				and bool(_state.canberra_on) == pick_it and not clubs.has("CANB") and not clubs.has("TAS")
+				and clubs.size() == 18
+				and _db.enter_year("CANB") == (2030 if pick_it else 9999)
+				and _db.enter_year("TAS") == 2028,
+				("A tap on Yes keeps Canberra for 2030; the 2027 League redraft is 18 clubs (%s %s, %d clubs)" if pick_it
+				else "Left at No, the 2027 League redraft is 18 clubs and Canberra never join (%s %s, %d clubs)") % [
 					t1, t2, clubs.size()])
 	_state.reset()
 	_router.stack = []
