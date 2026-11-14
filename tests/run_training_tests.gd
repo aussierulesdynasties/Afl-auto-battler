@@ -41,11 +41,12 @@ func _test_training_hero() -> void:
 	var db = root.get_node("GameDB")
 	var art = load("res://scripts/ui/UiArt.gd")
 	for club in ["FRE", "MEL"]:
+		# One career per club: both screen sizes only look at the same screen.
+		gs.reset()
+		gs.set_setting("seen_training_intro", true)
+		gs.start_season(club, db.club_list(club))
 		for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
 			var tag := "%s %dx%d" % [club, sz.x, sz.y]
-			gs.reset()
-			gs.set_setting("seen_training_intro", true)
-			gs.start_season(club, db.club_list(club))
 			root.size = sz
 			var scene: Control = load("res://scenes/TrainingScene.tscn").instantiate()
 			root.add_child(scene)
