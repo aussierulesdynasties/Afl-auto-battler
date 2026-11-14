@@ -253,8 +253,6 @@ Source tags: DB = DESIGN_BIBLE; RM26/27/28/29/30/32 = roadmap chapters 26, 27, 2
 
 **2.49** Pace: presentation runs at TEMPO 1.65x the movement clock; a full match takes about 4-5 minutes at 4x and 2-2.5 minutes at 8x. Phone: the full-time card is capped to the viewport; rotating reflows oval and feed without rebuilding the pitch. (undated; MV, DES)
 
-**2.74** The match view goes 3D, proved first. Asked whether to reverse ARD-M8-007 (no 3D player models) and move the match view to 3D players, he chose "Yes, prove it first" (2026-11-14), after "Yes, pursue it" on the 3D oval mock in the 3d view 1 session. The two sessions work on it together ("Work hand in hand with 3d view 1"). The proof is one full-team passage on the 3D oval (centre bounce or throw-up, ruck tap, gather, handball, kick, contested mark), gated on a steady phone frame rate, every contact on MatchSim's spot and time, no sliding feet, hovering ball or clipping, and his own look at game speed; plan in docs/research/AFL2004_ANIMATION_STUDY.md. Motion for the AFL moves (kick, handball, gather on the run, marks, ruck tap) comes from a free mocap service turning our own video into 3D motion: asked where it should come from, he chose "Free mocap service" (2026-11-14); he creates the account, and footage of real matches is for study only. The MATCH_VIEW rule (2.39) and every ball rule (2.41) stand. Supersedes the 3D rejections in rule 6.39 and the pass-2 decline of a 3D match view for the match view only; vignettes are unchanged. (2026-11-14; TODO row 197)
-
 ---
 
 ## 2.D Taking a match: watch, skip, sim the week
@@ -320,6 +318,8 @@ Source tags: DB = DESIGN_BIBLE; RM26/27/28/29/30/32 = roadmap chapters 26, 27, 2
 **2.72** Positions: Unicorn trait awarded automatically for learning a forward, mid and back position; POT gates (second position POT 70+, third POT 90 after "Rarer Unicorns instead"); key-position roles locked by size; AI clubs learn extra positions "sparingly"; once a career, best 22 and at or above the position bar. Synergies must be harder ("synergies should be harder to achieve"); target 15-25% of clubs after a season, "Reachability, not power". (2026-10-05; c01, c02, user_5fef3e70)
 
 **2.73** Season shape at 21 clubs: "24 rounds 2 byes" (22 games each; byes in rounds 9-20; home within one of half). Sir Doug Nicholls Round: a club with a bye wears its special guernsey the next round. Tough leadership trait idea, dominant foot (no hidden accuracy bonus), flags (trade volume), "The unmanaged collapse is about right." (2026-10-06; c03/c04, roadmap 10-02 to 10-06)
+
+**2.74** The match view goes 3D (2026-11-14). Shown a mock of the live oval as a real 3D scene (our own MPFB footballers running where MatchDirector puts them, jog, idle and carry from the sprite pipeline, the ball between the palms), he chose "True 3D oval" and then "Yes, pursue it"; "Work hand in hand with 3d view 2" (the session that wrote docs/research/AFL2004_ANIMATION_STUDY.md, the 3D animation plan). This supersedes the rejection of real-time 3D figures (rule 6.39, 6.S item 17) and ARD-M8-007's "Do not introduce 3D player models" for the match view's oval. Everything in 2.39-2.49 still holds: MatchSim's log is truth, the view never changes an outcome, no hovering or self-propelled ball, motion copied from real footage, clips judge the look. The vignettes are not part of this ruling. First comes the proof passage (study §2.10), measured on an Android phone. Motion for the AFL moves (kick, handball, gather on the run, marks, ruck tap) comes from a free mocap service turning our own video into 3D motion: asked where it should come from, he chose "Free mocap service" (2026-11-14); he creates the account, and footage of real matches is for study only.
 
 ---
 
@@ -1307,7 +1307,7 @@ Where a record carries no date the tag says "undated". Every quoted phrase is th
 14. Pitch-only AA and "MSAA stays off": superseded by whole-game AA and project-wide 2D MSAA 2x (#478) (rule 6.53). His question about icon smoothing is answered by the same ruling.
 15. "No reduced-motion setting for now" (2026-10-06): a Reduced motion setting was later built (rule 6.52); treated as superseded in practice.
 16. Generated menu music and rhyming banner text: removed 2026-10-18 (rule 6.66).
-17. Real-time 3D figures, generative restyling and dropping vignettes: rejected (rule 6.39); the 3D part is superseded for the match view on 2026-11-14 (rule 2.74).
+17. Real-time 3D figures, generative restyling and dropping vignettes: rejected (rule 6.39). Real-time 3D players on the match view's oval: ruled in 2026-11-14 (rule 2.74).
 18. Light-theme score ink, contrast and 8-defect audit findings: inventory only, no work.
 19. Capture practice of 2026-10-06 that showed #383 without the typeface: replaced by the current-main capture rule (rule 6.9).
 20. Style guide questions (all answered 2026-10-10): selection is ink plus outline with no club tint; mini figures on the match view only as a phone prototype; venue plates after media room and stage props (rules 6.27, 42, 44).
