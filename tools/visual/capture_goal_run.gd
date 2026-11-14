@@ -61,6 +61,9 @@ func _stage(club: String, vignettes: bool) -> Control:
 		sim._run[them] = 3
 		(sim.team_stats[them] as Dictionary)["goals"] = float(sim.goals(them) + 3)
 		sim._boundary_moment()
+	# The scoreboard shows the staged moment's quarter, minute and scores.
+	m.call("_update_scoreboard", {"goals": [sim.goals(0), sim.goals(1)], "behinds": [sim.behinds(0), sim.behinds(1)],
+			"q": sim.current_quarter, "min": sim.current_minute})
 	for o in sim.pending_moment.get("options", []):
 		print("CALL ", o.get("label", ""), " | ", o.get("gain", ""), " | ", o.get("cost", ""))
 	m.call("_show_moment")

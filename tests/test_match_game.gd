@@ -5043,7 +5043,7 @@ func _test_standing_plan_knowledge() -> void:
 ## (set shot, their hot midfielder, a run against, the late centre ball-up)
 ## and every break call (plan, pep talk, risk cards).
 func _test_every_call_two_sided() -> void:
-	var sized := RegEx.create_from_string("\d")
+	var sized := RegEx.create_from_string("[0-9]")
 	var verdict := RegEx.create_from_string("(?i)recommend|best (choice|option|call)|the better (choice|option|call)|you should")
 	var seen := {}
 	for seed in range(900, 940):
