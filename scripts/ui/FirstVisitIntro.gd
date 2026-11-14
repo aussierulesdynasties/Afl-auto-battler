@@ -33,28 +33,28 @@ const TEXT := {
 		"Every player on your list: who he is, whether he is fit, and how good he is.",
 		"Tap a player to see his profile, his contract and how he is developing.",
 	]],
-	"staff": ["Your staff", [
+	"staff": ["Our staff", [
 		"You are the senior coach. These are the five people who work for you.",
 		"Tap a coach to see what he is good at.",
 	]],
 	"offseason": ["The off-season", [
-		"Between the Grand Final and the draft you rebuild: contracts, free agents and trades.",
-		"Sort out the players you want to keep first, then fill the gaps.",
+		"Between the Grand Final and the draft, we rebuild the list. Contracts, free agents and trades all happen here.",
+		"Keep the players we want first. Then fill the gaps.",
 	]],
 	"contracts": ["Contract talks", [
 		"He names a salary and a term. Meet his terms and he signs on the spot.",
 		"Offer less and he names his lowest. Three failed offers and he tests free agency.",
-		"Offer under two-thirds of his lowest and he's insulted: it counts as two and costs morale.",
+		"Offer under two-thirds of his lowest and he's insulted. It counts as two failed offers and costs morale.",
 	]],
 	"trade": ["Trading", [
-		"Choose a club and put players or picks on each side. A no comes with their reason.",
-		"Want one of theirs? Add him alone and Ask their price. Selling? Ask around or use the trade table.",
-		"Contenders want help now; rebuilders want youth and picks. Trading closes when the draft starts.",
+		"Choose a club. Put players or picks on each side. A no comes with their reason.",
+		"To buy, add one of theirs alone and Ask their price. To sell, Ask around or Put on the trade table.",
+		"Contenders want help now. Rebuilders want youth and picks. Trading closes when the draft starts.",
 	]],
 	"draft_trade": ["Trading picks", [
-		"Tonight only picks change hands: this draft's and the next two.",
-		"When a club bids for your pick, its offer shows at the top. Accept it, or build your own deal below.",
-		"The draft waits while this sheet is open. Tap Back to the draft when you're done.",
+		"Tonight only picks change hands, from this draft and the next two.",
+		"When a club bids for our pick, its offer shows at the top. Accept it, or build a deal below.",
+		"The draft waits while we deal. Tap Back to the draft when done.",
 	]],
 	"preseason": ["The pre-season", [
 		"The weeks before Round 1. Get our squad fit and try our ideas out.",
