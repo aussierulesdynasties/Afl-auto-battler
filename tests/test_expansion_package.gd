@@ -52,7 +52,15 @@ func _check(condition: bool, message: String) -> void:
 ## A League Draft career, every club drafting as a rival does: lists big
 ## enough to lose a player (a real 2026 list of players with games is at the
 ## list minimum, and nobody can leave one).
+## The League Draft is the slow part (every club drafts the whole league) and
+## no test here is about it: the first career is drafted, saved and kept, and
+## every later one is that save restored, as Continue would load it.
 func _new_career(club := "GEE") -> void:
+	if _drafted.has(club):
+		_check(GameState._restore_career((_drafted[club] as Dictionary).duplicate(true)),
+				"The drafted %s career restores" % club)
+		GameState.replay_seed = SUITE_SEED
+		return
 	GameState.reset()
 	GameState.career_seed = SUITE_SEED
 	GameState.replay_seed = SUITE_SEED
@@ -62,6 +70,12 @@ func _new_career(club := "GEE") -> void:
 	GameState.draft.start_for_user(club)
 	_run_plain(GameState.draft)
 	GameState.start_season(club, GameState.draft.list())
+	_check(GameState.save_career(), "The drafted %s career saves" % club)
+	_drafted[club] = CareerSave.read(GameState.save_path)
+
+
+## club -> the saved state of its freshly drafted career (_new_career).
+var _drafted := {}
 
 
 func _run_draft() -> void:
@@ -99,6 +113,18 @@ func _rollover() -> Array:
 	var history: Array = GameState.draft.pick_history.duplicate()
 	GameState.finish_intake_draft()
 	return history
+
+
+## The season ends and a new club's approaches settle, first thing in the
+## off-season (GameState.open_offseason: the off-season opens, last season's
+## free agents leave the market, then ExpansionBuild.resolve). The rest of the
+## off-season (every club's re-signings, trades and free agency) is not under
+## test and is the slow part, so it is left out.
+func _settle_approaches() -> void:
+	GameState.season.round_index = GameState.season.fixture.size()
+	GameState.offseason_year = GameState.season_year
+	GameState.free_agents = []
+	ExpansionBuild.resolve(GameState)
 
 
 func _ids(list: Array) -> Array:
@@ -416,15 +442,13 @@ func _test_your_player_is_approached() -> void:
 			_check(out.contains("re-signs") and bool(target.get("resigned", false)) and int(target["contract_years"]) > 1,
 					"Re-sign him now: he is signed (%s)" % out)
 			_check(str(asked["status"]) == "kept", "Tasmania's approach is over")
-			GameState.season.round_index = GameState.season.fixture.size()
-			GameState.open_offseason()
+			_settle_approaches()
 			_check(GameState.my_list.has(target), "He is still yours when the season ends")
 		elif answer == "go":
 			var out := GameState.resolve_card(index, 1)
 			_check(out.contains("will join Tasmania"), "Let him go: he will join them (%s)" % out)
 			_check(GameState.my_list.has(target), "He stays until the season ends")
-			GameState.season.round_index = GameState.season.fixture.size()
-			GameState.open_offseason()
+			_settle_approaches()
 			_check(not GameState.my_list.has(target) and (ExpansionBuild.list_of(GameState, "TAS") as Array).has(target),
 					"When the season ends he is on Tasmania's list")
 			_check(str(target["club"]) == "TAS" and int(target["contract_years"]) >= 1 and not target.has("released_by"),
@@ -526,8 +550,7 @@ func _test_who_a_rival_keeps() -> void:
 		(st["approached"] as Array).append(2027)
 		var t := {"id": str(p["id"]), "club": club, "year": 2027, "name": "x", "status": "asked"}
 		(st["targets"] as Array).append(t)
-		GameState.season.round_index = GameState.season.fixture.size()
-		GameState.open_offseason()
+		_settle_approaches()
 		var joined: bool = (ExpansionBuild.list_of(GameState, "TAS") as Array).has(p)
 		var paid := false
 		for c in GameState.compensation:

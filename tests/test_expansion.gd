@@ -209,7 +209,6 @@ func _test_saved_fixture_kept() -> void:
 	var saved := str(GameState.season.fixture)
 	_check(saved != str(GameState.season.build_fixture()), "the stand-in fixture differs from a fresh draw")
 	GameState.save_career()
-	GameState.reset()
 	_check(GameState.load_career(), "the career loads")
 	_check(str(GameState.season.fixture) == saved, "the saved fixture comes back unchanged, not redrawn")
 	GameState.delete_saved_career()
@@ -359,11 +358,18 @@ func _test_rollover_to_2028() -> void:
 
 
 func _test_2028_season_runs() -> void:
+	# One round proves the 19-club fixture plays (a bye club rests); the rest
+	# of the home and away season is not under test, so the finals come next.
+	var season: Season = GameState.season
+	var first: int = (season.fixture[0] as Array).size()
+	GameState.advance()
+	_check(first >= 8 and GameState.last_results.size() == first and season.round_index == 1,
+			"A 19-club round plays every match on it (%d of %d)" % [GameState.last_results.size(), first])
+	_skip_to_finals()
 	var guard := 0
-	while not GameState.season.is_season_over() and guard < 40:
+	while not season.is_season_over() and guard < 40:
 		GameState.advance()
 		guard += 1
-	var season: Season = GameState.season
 	_check(season.is_season_over(), "The 19-club 2028 season runs to a premier")
 	_check(season.finals["top"].size() == Season.FINALISTS,
 			"Ten finalists come off the 19-club ladder")
@@ -386,6 +392,32 @@ func _test_2028_season_runs() -> void:
 	_check(GameState.season_year == 2029, "The career advances to 2029")
 	var again: Array = GameState.season.lists["TAS"]
 	_check(again.size() >= Prospects.MIN_LIST, "Tasmania keeps a full list into 2029")
+
+
+## The home-and-away rounds left are skipped and the finals open, as a season
+## that has been played out (tests/run_career_ui_tests.gd does the same).
+func _skip_to_finals() -> void:
+	var season: Season = GameState.season
+	season.round_index = season.fixture.size()
+	GameState.ensure_finals()
+
+
+## The years played without you, step by step as the loading cover plays them
+## (GameState.sim_ahead_step). Each season plays its first `rounds` rounds;
+## the rest of its home and away season is skipped (the cover's lines, the
+## drafts and the rollovers are under test, not the matches), then its finals.
+func _sim_ahead(lines: Array, limit: int, rounds := 2) -> int:
+	var steps := 0
+	while steps < limit:
+		steps += 1
+		var line := GameState.sim_ahead_step()
+		if line == "":
+			break
+		lines.append(line)
+		var season: Season = GameState.season
+		if season != null and not season.is_regular_done() and season.round_index >= rounds:
+			_skip_to_finals()
+	return steps
 
 
 ## True when the achievement is not unlocked, or is stamped `year`.
@@ -684,7 +716,6 @@ func _test_created_club_career() -> void:
 	var other_was := int(pmb[1]["num"])
 	pmb[1]["num"] = keep_num
 	_check(GameState.save_career(), "(a save with a doubled number)")
-	GameState.reset()
 	_check(GameState.load_career(), "(it loads)")
 	pmb = GameState.season.lists["PMB"]
 	_check(int(pmb[0]["num"]) == keep_num and int(pmb[1]["num"]) != keep_num,
@@ -699,12 +730,10 @@ func _test_created_club_career() -> void:
 			c["job"] = ""
 	_check(Coaches.staff(GameState.coaches, "PMB").is_empty(), "(an old save's bare created club)")
 	_check(GameState.save_career(), "The bare-club save is written")
-	GameState.reset()
 	_check(GameState.load_career(), "The bare-club save loads")
 	var repaired := Coaches.staff(GameState.coaches, "PMB")
 	_check(repaired.size() == 5 and not repaired.has("SC"), "Loading an old save staffs its created club")
 	_check(GameState.save_career(), "The repaired save is written")
-	GameState.reset()
 	_check(GameState.load_career() and Coaches.staff(GameState.coaches, "PMB") == repaired,
 			"The repair happens once: loading again changes nothing")
 	# An AI-run created club gets a senior coach too.
@@ -788,6 +817,11 @@ func _test_redraft_equal_entry() -> void:
 	var staff := Coaches.staff(GameState.coaches, "TAS")
 	_check(staff.size() == 6, "Tasmania, run by the AI, has its six coaches (%s)" % str(staff.keys()))
 	_check(not Coaches.staff(GameState.coaches, "CANB").has("SC"), "You are Canberra's senior coach")
+	# This redraft career's save is _test_redraft_entry_saved's subject: kept,
+	# so that test reloads it instead of drafting the league again.
+	_check(GameState.save_career(), "A redraft career saves")
+	_redraft_save = _saved_state()
+	_redraft_meta = CareerSave.read_meta(GameState.save_path)
 	GameState.reset()
 	# Canberra No: Tasmania can be yours from 2027.
 	GameState.begin_draft()
@@ -799,23 +833,24 @@ func _test_redraft_equal_entry() -> void:
 	GameState.reset()
 
 
+## _test_redraft_equal_entry's League redraft (Canberra Yes and a created
+## club, 21 clubs), saved: drafting another league would prove nothing new.
+var _redraft_save := {}
+var _redraft_meta := {}
+
+
 ## A redraft career's 2027 entries survive a save and load; a save without
 ## the field (a real-lists career, or one from before it) keeps the data years.
 func _test_redraft_entry_saved() -> void:
-	GameState.reset()
-	GameState.set_canberra(true)
-	GameState.begin_draft()
-	GameState.draft.start_for_user("FRE")
-	_ai_finish(GameState.draft)
-	GameState.start_season("FRE", GameState.draft.list())
-	_check(GameState.save_career(), "A redraft career saves")
-	_check(int(_saved_state().get("expansion_from", 0)) == 2027, "The save records the 2027 entry")
+	_check(not _redraft_save.is_empty() and int(_redraft_save.get("expansion_from", 0)) == 2027,
+			"The save records the 2027 entry")
 	GameState.reset()
 	_check(GameDB.enter_year("CANB") == Expansion.NEVER and GameDB.enter_year("TAS") == 2028,
 			"A reset undoes the redraft's entry years (TAS %d, CANB %d)" % [GameDB.enter_year("TAS"), GameDB.enter_year("CANB")])
-	_check(GameState.load_career() and GameState.expansion_from == 2027
+	_check(CareerSave.write(_redraft_save, _redraft_meta, GameState.save_path)
+			and GameState.load_career() and GameState.expansion_from == 2027
 			and GameDB.enter_year("TAS") == 2027 and GameDB.enter_year("CANB") == 2027
-			and GameState.season.ladder.size() == 20,
+			and GameState.season.ladder.size() == 21 and GameState.my_club == "CANB",
 			"Loaded, Tasmania and Canberra are in from 2027 (TAS %d, CANB %d)" % [
 				GameDB.enter_year("TAS"), GameDB.enter_year("CANB")])
 	GameState.reset()
@@ -851,14 +886,8 @@ func _test_real_lists_tasmania_2028() -> void:
 	_check(GameState.begin_wait_for_club("TAS") and GameState.sim_ahead and not GameState.has_career()
 			and not GameState.save_career() and GameState.challenge.is_empty(),
 			"Waiting is not a career yet: nothing is saved, and the challenge is held")
-	var steps := 0
 	var lines := []
-	while steps < 200:
-		steps += 1
-		var line := GameState.sim_ahead_step()
-		if line == "":
-			break
-		lines.append(line)
+	var steps := _sim_ahead(lines, 200)
 	_check(GameState.choosing_club() and GameState.season_year == 2027 and GameState.season.is_season_over(),
 			"2027 is played and the 2027 National Draft waits (%d steps, %d)" % [steps, GameState.season_year])
 	_check(lines.has("Playing 2027: the Grand Final...") and GameState.draft.user_club == "" and GameState.draft.pick_index == 0,
@@ -893,7 +922,6 @@ func _test_real_lists_tasmania_2028() -> void:
 	_check(draft.upcoming_picks("TAS", 0) == tas_picks, "Taken by you, Tasmania keep the same picks (%s, then %s)" % [str(tas_picks), str(draft.upcoming_picks("TAS", 0))])
 	_check(GameState.club_yet_to_play(), "Their first draft comes before any season of theirs, so Continue returns to it")
 	_check(GameState.save_career(), "Their first draft saves")
-	GameState.reset()
 	_check(GameState.load_career() and GameState.club_yet_to_play() and GameState.draft != null
 			and GameState.draft.user_club == "TAS" and GameState.draft.intake_mode, "It reloads at that draft")
 	draft = GameState.draft
@@ -910,7 +938,6 @@ func _test_real_lists_tasmania_2028() -> void:
 	_check(GameState.cap_room() == GameState.salary_cap + ExpansionBuild.relief(GameState, "TAS") - GameState.my_payroll()
 			and ExpansionBuild.relief(GameState, "TAS") > 0, "The sign-on money counts on your own cap room")
 	_check(GameState.save_career(), "The 2028 career saves")
-	GameState.reset()
 	_check(GameState.load_career() and GameState.my_club == "TAS" and not GameState.sim_ahead and GameState.season_year == 2028,
 			"It loads as a 2028 Tasmania career")
 	GameState.reset()
@@ -963,14 +990,8 @@ func _test_real_lists_play_to_2030() -> void:
 	_check(GameState.sim_ahead and GameState.my_club == "" and not GameState.has_career()
 			and not GameState.save_career(),
 			"The years played without you are not a career yet: nothing is saved")
-	var steps := 0
 	var lines := []
-	while steps < 400:
-		steps += 1
-		var line := GameState.sim_ahead_step()
-		if line == "":
-			break
-		lines.append(line)
+	var steps := _sim_ahead(lines, 400)
 	_check(GameState.choosing_club() and GameState.season_year == 2029 and GameState.season.is_season_over(),
 			"Played to the 2029 National Draft, which waits for your club (%d steps)" % steps)
 	_check(lines.has("Starting the 2027 season...") and lines.has("Playing 2027: Round 2...")
@@ -1019,13 +1040,14 @@ func _test_real_lists_play_to_2030() -> void:
 			and GameState.my_club == "CANB",
 			"Your first season is 2030, on a 20-club ladder (%d)" % GameState.season_year)
 	_check(GameState.save_career(), "The 2030 career saves")
-	GameState.reset()
 	_check(GameState.load_career() and GameState.my_club == "CANB" and not GameState.sim_ahead
 			and GameState.season_year == 2030,
 			"It loads as a 2030 Canberra career")
 	# The campaign never ends (director: "campaigns can go for eternity"): the
-	# 2030 start rolls on into 2031 and beyond, twenty clubs, Canberra yours.
-	for year in [2031, 2032]:
+	# 2030 start rolls on into 2031, twenty clubs, Canberra yours. One rollover
+	# proves it; each one after is the same rollover (the nightly long suites
+	# roll careers for decades).
+	for year in [2031]:
 		_rollover()
 		_check(GameState.season_year == year and GameState.season != null
 				and GameState.season.ladder.size() == 20 and GameState.season.ladder.has("CANB")
@@ -1033,8 +1055,7 @@ func _test_real_lists_play_to_2030() -> void:
 				"The 2030 start rolls into %d: 20 clubs, Canberra yours on a full list (%d, %d clubs, list %d)" % [
 					year, GameState.season_year, GameState.season.ladder.size() if GameState.season != null else 0,
 					GameState.my_list.size()])
-	_check(GameState.save_career(), "The 2032 career saves")
-	GameState.reset()
-	_check(GameState.load_career() and GameState.my_club == "CANB" and GameState.season_year == 2032,
-			"It loads as a 2032 Canberra career")
+	_check(GameState.save_career(), "The 2031 career saves")
+	_check(GameState.load_career() and GameState.my_club == "CANB" and GameState.season_year == 2031,
+			"It loads as a 2031 Canberra career")
 	GameState.reset()

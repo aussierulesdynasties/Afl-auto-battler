@@ -69,6 +69,17 @@ func _new_career(club: String) -> void:
 	GameState.start_season(club, GameDB.club_list(club))
 
 
+## A career in its off-season, no match played: the season is marked over by
+## hand, which is all the Staff screen's Re-sign and Release read
+## (GameState.can_release_staff). The real season close is tested in
+## coach_market (_test_game_flow).
+func _offseason_career(club: String) -> void:
+	_new_career(club)
+	GameState.season.round_index = GameState.season.fixture.size()
+	GameState.ensure_finals()
+	GameState.season.finals["done"] = true
+
+
 func _test_seed_structure() -> void:
 	_new_career("CAR")
 	var cs: Dictionary = GameState.coaches
@@ -395,11 +406,7 @@ func _test_movement_is_visible() -> void:
 ## with a Re-sign beside Release; re-signing clears it.
 func _test_ui_expiring() -> void:
 	var tree := Engine.get_main_loop() as SceneTree
-	_new_career("CAR")
-	var guard := 0
-	while not GameState.season.is_season_over() and guard < 60:
-		GameState.advance()
-		guard += 1
+	_offseason_career("CAR")
 	var staff := GameState.club_staff("CAR")
 	var job := ""
 	for j in ["FWD", "MID", "DEF", "DEV", "SA"]:
@@ -434,11 +441,7 @@ func _test_ui_expiring() -> void:
 ## its row, above the next row, at phone size; Re-sign still takes a tap.
 func _test_ui_promise_fits() -> void:
 	var tree := Engine.get_main_loop() as SceneTree
-	_new_career("CAR")
-	var guard := 0
-	while not GameState.season.is_season_over() and guard < 60:
-		GameState.advance()
-		guard += 1
+	_offseason_career("CAR")
 	var staff := GameState.club_staff("CAR")
 	var job := ""
 	for j in ["FWD", "MID", "DEF", "DEV"]:

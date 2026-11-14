@@ -186,7 +186,7 @@ Polish is the gap. There are two big tickets, and one priority above both.
 Each line is a question he has not answered yet. Answered ones are in Rulings or in section A.
 
 - Are the hair, beard and boot ids final, and what happens to the 24-style hair, 10-beard and boot contact sheets he has not looked at? (6.Q4)
-- His calls on the open animation decisions including the gather-on-the-run proof (Cascadeur spend is a yes)? (6.Q20)
+- His calls on the open animation decisions: the sprite proof's order and the §7 defect fixes (Cascadeur spend is a yes; motion source answered 2026-11-14: a free mocap service, rule 2.74)? (6.Q20)
 - Which rows make up 1.1 ("tune and polish"): his looks on pre-season, draft night and the oval ring, and which Tier A items? (T7.O5)
 - Which of P-01 to P-11, P-16, P-19, P-21, P-22 and P-24 does he take? (T9.Q31)
 
