@@ -20,5 +20,16 @@
 		"The training report has a Learn button for every player who can learn a position.",
 		"The hub tells you the week your fitness plan can change.",
 		"Fixed: the press no longer says the board hears excuses after a win."
+	],
+	"1.0.17": [
+		"Legacy: start a career in 1990, 2000, 2010 or 2020 with that year's real lists, coaches, captains, guernseys, grounds, fixtures and rules, or in 2028 with Tasmania or 2030 with Canberra.",
+		"Every season after your start rolls over as the real league did: Fitzroy's merger, the Bears or the Lions, new clubs coming in, the supplements saga (with its own switch), and Tasmania and Canberra joining.",
+		"Real careers go into the drafts, and money is counted in each season's dollars.",
+		"The weather can turn at a break, and the match plays on in the new conditions.",
+		"100 new achievements: a rivalry and a dynasty feat for every club, and 56 for the coach.",
+		"Team selection and the player sheet show fatigue, morale and form as numbers.",
+		"Coach of the Year is decided on the home-and-away season, before the finals, with why he won it.",
+		"Fixed: a draft-night pick trade shows before the pick it bought, not after.",
+		"Fixed: a coach who signs with a new club no longer runs the old club's off-season."
 	]
 }
