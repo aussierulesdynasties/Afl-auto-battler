@@ -474,14 +474,14 @@ func _scoreboard() -> Control:
 const MOMENTUM_EVEN := 0.12
 ## Row 78: a side well ahead can run away with it, so the sheet says what a runaway does.
 const MOMENTUM_INFO_RUNAWAY := [
-	"Momentum is the run of play. A goal swings it toward the side that kicked it, a behind a little; it fades as play goes on and halves at every break.",
-	"The side on top wins a little more of the ball at centre bounces, stoppages and loose balls - never a guarantee. A goal the other way turns it.",
-	"A side more than four goals up with the run of play can run away with it: the further ahead, the more of the ball it wins, the longer the run lasts and the more goals it takes to turn. A call to win the ball back still counts in full.",
+	"Momentum is the run of play. A goal swings it to the side that kicked it, a behind less. It fades, and halves at every break.",
+	"The side on top wins a little more of the ball at centre bounces, stoppages and loose balls. Never a guarantee. A goal the other way turns it.",
+	"A side more than four goals up with the run of play can run away with it. The further ahead, the more of the ball it wins. The run lasts longer and takes more goals to turn. A call to win the ball back still counts in full.",
 ]
 
 
 ## The line the first match you watch shows under the meter.
-const MOMENTUM_NOTE := "Momentum swings with each goal and fades with time; the side on top wins a little more of the ball. %s it for more."
+const MOMENTUM_NOTE := "Momentum swings with each goal and fades with time. The side on top wins a little more of the ball. %s it for more."
 
 
 static func momentum_info() -> Array:
@@ -1150,7 +1150,7 @@ func _show_coach_box() -> void:
 				+ MatchNotes.lasting_moment_lines(_res, q - 1)
 		if not did.is_empty():
 			rep.add_child(UiKit.spacer(UiKit.GAP))
-			var did_head := UiKit.section("What your calls did")
+			var did_head := UiKit.section("What our calls did")
 			did_head.name = "CallsDidHeading"
 			rep.add_child(did_head)
 			var dnote := UiKit.lbl(MatchNotes.CALLS_DID_NOTE, UiKit.SMALL, UiKit.MUTED)
@@ -1165,7 +1165,7 @@ func _show_coach_box() -> void:
 				dv.add_child(dl)
 			rep.add_child(dv)
 	rep.add_child(UiKit.spacer(UiKit.GAP))
-	var calls_head := UiKit.section("Your calls" if q == 1 else "Next quarter")
+	var calls_head := UiKit.section("Our calls" if q == 1 else "Next quarter")
 	col_a.add_child(calls_head)
 
 	# Your calls, as taps: nothing here is a settings form. Short lists sit
@@ -1323,7 +1323,7 @@ func _show_coach_box() -> void:
 		var target := GameDB.player_display_name_by_id(str(calls["tag_id"]), "Their man") if str(calls["tag_id"]) != "" else ""
 		var benched := ""
 		if str(calls["tagger_id"]) != "" and not my_mids.has(str(calls["tagger_id"])):
-			benched = GameDB.player_display_name_by_id(str(calls["tagger_id"]), "your tagger")
+			benched = GameDB.player_display_name_by_id(str(calls["tagger_id"]), "our tagger")
 		var who_name := GameDB.player_display_name(who) if who != null else ""
 		var kept := GateOdds.tag_kept(who, float(sim.energy.get(str(who["id"]), 100.0))) if who != null else 0
 		var gc := GateOdds.tag_break_texts(target, who_name, kept, benched, str(untagged[0]))
@@ -1372,7 +1372,7 @@ func _show_coach_box() -> void:
 				return
 			var pid := str(who.get("id", ""))
 			_dress_tagger_card(b, _short_name(who), MatchNotes.tagger_card(who, float(sim.energy.get(pid, 100.0)), season_rating.call(pid)), id == "")
-		var who_tags := _player_choice("TaggerPicker", _card_text(tagger, tag_detail) + "\nYour assistant's pick", others,
+		var who_tags := _player_choice("TaggerPicker", _card_text(tagger, tag_detail) + "\nAssistant's pick", others,
 				others.slice(0, 2 if _pc_break else 3),
 				calls, "tagger_id", "Who goes to him?", sync_tag, tag_detail, card, "Other tagger…")
 		var wb := _call_block("Who tags", who_tags)
@@ -1402,7 +1402,7 @@ func _show_coach_box() -> void:
 			# when the call waits (he is benched or out of the spot).
 			note.visible = _focus_waits(slot, id)
 			_gain_cost_rows(gc_rows, GateOdds.focus_texts(slot,
-					GameDB.player_display_name_by_id(id, "your player") if id != "" else ""), "Focus")
+					GameDB.player_display_name_by_id(id, "our player") if id != "" else ""), "Focus")
 		var text: Array = MatchNotes.FOCUS_SLOT_TEXT[slot]
 		var pick := _player_choice("FocusPicker_" + slot, "No one", fits, _in_the_game(fits, quick if quick > 0 else 3), calls, slot,
 				"Play through: %s" % str(text[0]).to_lower(), sync)
@@ -1452,7 +1452,7 @@ func _show_coach_box() -> void:
 		calls["interceptor_id"] = loose_pick if loose_on else ""
 		calls["minder_id"] = minder_pick if cover_on else ""
 		def_note.text = MatchNotes.defence_setup_line(key,
-				GameDB.player_display_name_by_id(loose_pick, "your best interceptor"),
+				GameDB.player_display_name_by_id(loose_pick, "our best interceptor"),
 				GameDB.player_display_name_by_id(minder_pick, "a forward"),
 				GameDB.player_display_name(opp_spare) if not opp_spare.is_empty() else "")
 		# Sized for the men in the jobs (M6, director 2026-11-10).
@@ -1476,7 +1476,7 @@ func _show_coach_box() -> void:
 	# From quarter time on: how your loose man and your forward on theirs are going.
 	var loose_now := str(sim.interceptor[_my_side])
 	if q > 1 and loose_now != "":
-		var tally := _say(MatchNotes.loose_tally_line(GameDB.player_display_name_by_id(loose_now, "Your loose man"),
+		var tally := _say(MatchNotes.loose_tally_line(GameDB.player_display_name_by_id(loose_now, "Our loose man"),
 				maxi(0, sim.intercepts_since_call(_my_side))), UiKit.NOTE, UiKit.TEXT)
 		tally.name = "LooseTally"
 		tally.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1570,7 +1570,7 @@ func _show_coach_box() -> void:
 	if q == 1 and GameState.match_day_setup_open():
 		# The side is its own row above the calls (director, 2026-11-12): what it
 		# is, quietly, and what a tap does in bold, as every call's row reads.
-		var side := _call_row("side", "Your side")
+		var side := _call_row("side", "Our side")
 		side.name = "ChangeSide"
 		NameInk.set_line(side.get_meta("answer") as RichTextLabel, "Change the side", {})
 		side.pressed.connect(func():
@@ -1735,7 +1735,7 @@ func _mount_one_line(c: Dictionary) -> void:
 		if who_name != null and is_instance_valid(who_name):
 			var who = (c["my_mids"] as Dictionary).get(str(calls["tagger_id"]), c["tagger"])
 			who_name.text = GameDB.player_display_name(who) if has_tag and who != null else "Nobody"
-			who_sub.text = "There is no tag." if not has_tag else ("Your assistant's pick" if str(calls["tagger_id"]) == "" else "Your pick")
+			who_sub.text = "There is no tag." if not has_tag else ("Assistant's pick" if str(calls["tagger_id"]) == "" else "Your pick")
 			who_change.disabled = not has_tag
 		elif who_wb != null and is_instance_valid(who_wb):
 			who_wb.modulate.a = 1.0 if has_tag else 0.4
@@ -1858,7 +1858,7 @@ func _mount_one_line(c: Dictionary) -> void:
 		page.add_child(head)
 		for n in [facts, legs]:
 			put.call(page, n)
-		# What your calls did can run long (every call, tag and lasting moment):
+		# What our calls did can run long (every call, tag and lasting moment):
 		# it is one row that opens the lot in a sheet.
 		if did != null:
 			if did_head != null and did_head.get_parent() != null:
@@ -1867,11 +1867,11 @@ func _mount_one_line(c: Dictionary) -> void:
 			if did.get_parent() != null:
 				did.get_parent().remove_child(did)
 			store.add_child(did)
-			var open_did := UiKit.text_action("What your calls did", UiKit.BODY)
+			var open_did := UiKit.text_action("What our calls did", UiKit.BODY)
 			open_did.name = "CallsDidOpen"
 			open_did.alignment = HORIZONTAL_ALIGNMENT_LEFT
 			var did_note: Node = store.find_child("CallsDidNote", true, false)
-			open_did.pressed.connect(func(): _open_break_sheet("did", "What your calls did", [did_note, did], store))
+			open_did.pressed.connect(func(): _open_break_sheet("did", "What our calls did", [did_note, did], store))
 			page.add_child(open_did)
 	else:
 		# Before the bounce: the side (its row is added by _show_coach_box while
@@ -1880,7 +1880,7 @@ func _mount_one_line(c: Dictionary) -> void:
 		var side_row := UiKit.vbox(0)
 		side_row.name = "SideRow"
 		page.add_child(side_row)
-	var calls_head := UiKit.section("Your calls" if q == 1 else "Next quarter")
+	var calls_head := UiKit.section("Our calls" if q == 1 else "Next quarter")
 	calls_head.name = "CallsHeading"
 	page.add_child(calls_head)
 	page.add_child(rows)
@@ -2268,7 +2268,7 @@ func _quarter_view(q: int) -> Control:
 	# The few things that stood out, readable in a glance: no more than
 	# three, their plan kept (it is what the next quarter's calls answer).
 	# Moments already played out in the feed are not replayed here; the
-	# ones that carry on are under "What your calls did".
+	# ones that carry on are under "What our calls did".
 	var lines: Array = MatchNotes.quarter_facts(_res, _my_side, q, _break_answers())
 	var opp_last := _opp_last_plan()
 	if opp_last != "":
@@ -2409,7 +2409,7 @@ func _synergy_block() -> Control:
 	var v := UiKit.vbox(3)
 	v.name = "SynergyBlock"
 	v.add_child(UiKit.subhead("Synergies"))
-	v.add_child(_plan_row("Yours:", _synergy_names(syn[_my_side]), "SynYours", true))
+	v.add_child(_plan_row("Ours:", _synergy_names(syn[_my_side]), "SynYours", true))
 	v.add_child(_plan_row("Theirs:", _synergy_names(syn[1 - _my_side]), "SynTheirs", true))
 	return v
 
@@ -2422,7 +2422,7 @@ func _opp_last_plan() -> String:
 	return str(((hist[hist.size() - 1]["plans"] as Array)[1 - _my_side] as Dictionary).get("gameplan", "balanced"))
 
 
-## "Your calls" for quarter `q` (0 = the whole match): what each cause was
+## "What our calls did" for quarter `q` (0 = the whole match): what each cause was
 ## worth in expected points, the moments and how they came off, and the tag.
 func _calls_view(q: int) -> Control:
 	var v := UiKit.vbox(3)
@@ -2434,7 +2434,7 @@ func _calls_view(q: int) -> Control:
 		now = (snaps[q - 1] as Dictionary).get("impact", now)
 		if q >= 2:
 			before = (snaps[q - 2] as Dictionary).get("impact", [{}, {}])
-	v.add_child(UiKit.section("What your calls did" + (" in Q%d" % q if q > 0 else "")))
+	v.add_child(UiKit.section("What our calls did" + (" in Q%d" % q if q > 0 else "")))
 	var lines := CoachReport.impact_lines(now, before, _my_side, 0.3)
 	if not lines.is_empty():
 		var wnote := UiKit.lbl(MatchNotes.CALLS_WORTH_NOTE, UiKit.SMALL, UiKit.MUTED)
@@ -2480,7 +2480,7 @@ func _calls_view(q: int) -> Control:
 	if tag_line != "":
 		v.add_child(_say(tag_line, UiKit.SMALL, UiKit.TEXT))
 	if lines.is_empty() and v.get_child_count() == 1:
-		v.add_child(UiKit.lbl("An even quarter: no call moved the needle much.", UiKit.SMALL, UiKit.MUTED))
+		v.add_child(UiKit.lbl("An even quarter. None of our calls shifted the margin by a point.", UiKit.SMALL, UiKit.MUTED))
 	return v
 
 
@@ -2510,7 +2510,7 @@ func _tag_line(q: int) -> String:
 		var st: Dictionary = (_res.get("players", {}) as Dictionary).get(tag_id, {})
 		d = float(st.get("disposals", 0.0))
 		g = float(st.get("goals", 0.0))
-	return "Your tag on %s: %d disposal%s, %d goal%s." % [
+	return "Our tag on %s: %d disposal%s, %d goal%s." % [
 			GameDB.player_display_name_by_id(tag_id, "their player"), int(d), "" if int(d) == 1 else "s",
 			int(g), "" if int(g) == 1 else "s"]
 
@@ -2884,7 +2884,7 @@ func _dress_tagger_card(b: Button, who_name: String, c: Dictionary, is_pick: boo
 	var plain := "%s\n%s\nPressure %s\nLegs %s\n%s %s" % [who_name, c["where"], press_value, c["legs"],
 			c["gives_label"], gives_value]
 	if is_pick:
-		plain += "\nYour assistant's pick"
+		plain += "\nAssistant's pick"
 	b.set_meta("card_text", plain)
 	b.text = ""
 	var grid := b.get_parent()
@@ -2962,7 +2962,7 @@ func _dress_tagger_card(b: Button, who_name: String, c: Dictionary, is_pick: boo
 		gives.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		col.add_child(gives)
 	if is_pick:
-		var pick := UiKit.line("Your assistant's pick", UiKit.SECONDARY, UiKit.MUTED)
+		var pick := UiKit.line("Assistant's pick", UiKit.SECONDARY, UiKit.MUTED)
 		pick.name = "CardPick"
 		pick.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		head.add_child(pick)
@@ -3114,7 +3114,7 @@ func _show_break_stats(players_first := false) -> void:
 	v.add_child(UiKit.ellipsis("Match stats", UiKit.H1, UiKit.TEXT, true))
 	var box_score := _stats_page(v, true, players_first)
 	box_score.name = "BreakBoxScore"
-	var close := UiKit.btn("Back to your calls", UiKit.NAME, true)
+	var close := UiKit.btn("Back to our calls", UiKit.NAME, true)
 	close.custom_minimum_size = Vector2(0, 44)
 	close.pressed.connect(_close_report)
 	box["footer"].add_child(close)
@@ -3273,7 +3273,7 @@ func _focus_player(id: String) -> Dictionary:
 
 func _focus_text(id: String) -> String:
 	var p := _focus_player(id)
-	return MatchNotes.focus_role_text(GameDB.player_display_name_by_id(id, "your player"), str(p.get("role", "")))
+	return MatchNotes.focus_role_text(GameDB.player_display_name_by_id(id, "our player"), str(p.get("role", "")))
 
 
 ## Under a Play through control: his job and what it does for him; the
@@ -3293,7 +3293,7 @@ func _focus_waits(slot: String, id: String) -> bool:
 func _focus_note_text(slot: String, id: String) -> String:
 	if id == "":
 		return MatchNotes.focus_slot_note(slot, "", false, false)
-	var who := GameDB.player_display_name_by_id(id, "your player")
+	var who := GameDB.player_display_name_by_id(id, "our player")
 	var on := false
 	var working := false
 	var sim: MatchSim = GameState.pending_sim
@@ -3309,21 +3309,21 @@ func _focus_note_text(slot: String, id: String) -> String:
 func _show_setup(t: Dictionary) -> void:
 	if _setup_line == null or not is_instance_valid(_setup_line):
 		return
-	var bits := PackedStringArray(["Your plan: " + CoachReport.plan_label(str(t.get("gameplan", "balanced")))])
+	var bits := PackedStringArray(["Our plan: " + CoachReport.plan_label(str(t.get("gameplan", "balanced")))])
 	var tag_id := str(t.get("tag_id", ""))
 	if tag_id != "":
 		bits.append("tagging " + GameDB.player_display_name_by_id(tag_id, "their player"))
 	for slot in MatchNotes.FOCUS_ORDER:
 		var fid := str(t.get(slot, ""))
 		if fid != "":
-			bits.append("%s %s" % [GameDB.player_display_name_by_id(fid, "your player"),
+			bits.append("%s %s" % [GameDB.player_display_name_by_id(fid, "our player"),
 					str(MatchNotes.FOCUS_SLOT_TEXT[slot][1])])
 	var legacy := str(t.get("focus_id", ""))
 	if legacy != "":
 		bits.append(_focus_text(legacy))
 	var intercept_id := str(t.get("interceptor_id", ""))
 	if intercept_id != "":
-		bits.append(GameDB.player_display_name_by_id(intercept_id, "your defender") + " loose behind the ball")
+		bits.append(GameDB.player_display_name_by_id(intercept_id, "our defender") + " loose behind the ball")
 	if bool(t.get("spare_accountable", false)):
 		# Whoever is on him now: the named forward, or his stand-in if he's off.
 		var sim_now = GameState.pending_sim
@@ -4062,7 +4062,7 @@ func _ft_story(v: VBoxContainer, me: int) -> Dictionary:
 		var mb := MatchStory.my_best(_res, me)
 		if not mb.is_empty():
 			var mb_line := MatchStory.line_less(mb, str(shown.get(str(mb["id"]), "")))
-			var ml := UiKit.lbl("Your best: %s" % str(mb["name"]) + (", " + mb_line.left(1).to_lower() + mb_line.substr(1) if mb_line != "" else ""),
+			var ml := UiKit.lbl("Our best: %s" % str(mb["name"]) + (", " + mb_line.left(1).to_lower() + mb_line.substr(1) if mb_line != "" else ""),
 					UiKit.BODY, UiKit.TEXT)
 			ml.name = "MatchMyBest"
 			ml.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -4075,8 +4075,8 @@ func _ft_story(v: VBoxContainer, me: int) -> Dictionary:
 		box.add_child(tl)
 	var why: Array = st["reasons"]
 	if not why.is_empty():
-		box.add_child(UiKit.section("Why you won" if bool(st["won"])
-				else ("Why it was a draw" if bool(st["drawn"]) else "Why you lost")))
+		box.add_child(UiKit.section("Why we won" if bool(st["won"])
+				else ("Why it was a draw" if bool(st["drawn"]) else "Why we lost")))
 		var rv := UiKit.vbox(4)
 		rv.name = "WhyReasons"
 		for r in why:
@@ -4307,13 +4307,13 @@ func _ft_summary(v: VBoxContainer) -> void:
 
 	if mine:
 		# Your synergies: the stat each one shows up in, from this match.
-		_glance_section(v, "Your synergies", "FullTimeSynergies", MatchNotes.synergy_lines(_res, me).slice(0, 3), true)
+		_glance_section(v, "Our synergies", "FullTimeSynergies", MatchNotes.synergy_lines(_res, me).slice(0, 3), true)
 
 	# Your calls, quarter by quarter: what each was about and how that went.
 	if mine and (_interactive or _review):
 		var did := MatchNotes.full_time_calls(_res, me, told_above, 5)
 		if not did.is_empty():
-			_glance_section(v, "Your calls", "FullTimeCalls", did)
+			_glance_section(v, "Our calls by quarter", "FullTimeCalls", did)
 
 	# A handful of numbers worth a glance; the full table is a tap away.
 	v.add_child(UiKit.spacer(UiKit.GAP))
@@ -4350,7 +4350,7 @@ func _ft_summary(v: VBoxContainer) -> void:
 				week.add_child(gl)
 		if week.get_child_count() > 0:
 			v.add_child(UiKit.spacer(UiKit.GAP))
-			v.add_child(UiKit.section("Your week"))
+			v.add_child(UiKit.section("Our week"))
 			v.add_child(week)
 
 
@@ -4640,7 +4640,7 @@ func handle_back() -> bool:
 		_render_ft()
 		return true
 	if _interactive and not _finished:
-		_feed_hint("Finish the match first - use Skip to full time to jump ahead.")
+		_feed_hint("Finish the match first. Skip to full time jumps ahead.")
 		return true
 	return false
 

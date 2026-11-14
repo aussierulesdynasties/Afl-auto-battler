@@ -140,7 +140,7 @@ static func _break_words(ev: Dictionary, home: String, away: String) -> String:
 	var raw := str(ev.get("text", ""))
 	var score: Array = ev.get("score", [0, 0])
 	var lead := lead_text(home, away, score, func(c): return GameDB.club_name(str(c)))
-	if raw.begins_with("End of quarter"):
+	if raw.begins_with("End of Q"):
 		var q := int(ev.get("q", 1))
 		return "%s: %s" % [str(BREAK_NAMES.get(q, "Break")), lead.to_lower() if lead == "Scores level" else lead]
 	if raw.begins_with("Scores level"):
