@@ -337,6 +337,8 @@ func _setup_3d() -> void:
 		_view3d.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		_view3d.stretch_mode = TextureRect.STRETCH_SCALE
 		_view3d.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		# Under this view's own drawing (the overlays), which a child otherwise covers.
+		_view3d.show_behind_parent = true
 		_view3d.set_anchors_preset(Control.PRESET_FULL_RECT)
 		add_child(_view3d)
 		# Under the bench drawer and anything else the view puts over the oval.
@@ -346,9 +348,11 @@ func _setup_3d() -> void:
 	_oval3d = Oval3D.new()
 	_vp3d.add_child(_oval3d)
 	_oval3d.build(director, home_code, away_code)
+	_make_paint_3d()
 	_oval3d.set_ends(end_sign(period))
 	_fit_3d()
 	_sync_3d(0.0)
+	_paint_ground_3d()
 	queue_redraw()
 
 
@@ -378,6 +382,187 @@ func _sync_3d(dt: float) -> void:
 		_oval3d.aim_end(CAM3D_UP, CAM3D_BACK)
 	else:
 		_oval3d.aim_wing(CAM3D_UP, CAM3D_BACK * 1.3)
+
+
+## The overlays on the 3D view (director, 2026-11-15: "Overlays first"). The flat
+## oval's calls, names and markings are drawn over the 3D picture, each at the
+## point of the ground (or the body) the 3D camera puts it: a footballer counts as
+## a disc round his middle, half his height across, so the captions, names and
+## long-press tips that step clear of discs step clear of the bodies; the marks
+## and press washes are laid on the grass in perspective.
+const BODY3D_H := 1.9          # metres: a footballer's height, feet to crown
+const BODY3D_CLEAR := 1.0      # metres: a ring on the grass clears a player by this
+const RING3D_YOURS := 1.0      # metres: your-people ring, outside the club ring (0.72)
+const RING3D_ACTOR := 1.3      # ...and the man on the ball's, outside that
+var _r3d := PackedFloat32Array()   # each body's drawn half-height, in pixels
+var _tr3d := 0.0                   # a body's half-height where the camera looks
+const PAINT3D_Y := 0.02       # metres: the ground paint, over the turf, under the club rings (0.03)
+var _paint3d: ImmediateMesh = null
+var _paint_mat: StandardMaterial3D = null    # the wash and marks: lit like the turf
+var _paint_glow: StandardMaterial3D = null   # the rings and the flash: bright as on the flat oval
+var _paint_want: Material = null
+var _painting = null                         # the material of the surface being laid, or null
+
+
+## A point of the 3D ground (Oval3D's own frame: metres up the ground, up, across)
+## in this view's pixels; far off the view when it is behind the camera.
+func _project3d(v: Vector3) -> Vector2:
+	var cam := _oval3d.camera
+	var w := _oval3d.global_transform * v
+	if cam.is_position_behind(w):
+		return Vector2(-100000.0, -100000.0)
+	return cam.unproject_position(w) * (size / Vector2(_vp3d.size))
+
+
+## Every body as a disc on the screen, round his middle: _disc, _r3d and the
+## size the names and captions are worked out at.
+func _layout_3d() -> void:
+	var n := director.tokens.size()
+	_disc.resize(n)
+	_r3d.resize(n)
+	_disc_k.resize(n)
+	_disc_k.fill(1.0)
+	for i in range(n):
+		var p: Vector2 = director.tokens[i]["pos"]
+		var feet := _project3d(Vector3(p.x, 0.0, p.y))
+		var head := _project3d(Vector3(p.x, BODY3D_H, p.y))
+		_disc[i] = (feet + head) * 0.5
+		_r3d[i] = maxf(3.0, feet.distance_to(head) * 0.5)
+	var at := _oval3d._look
+	var f := _project3d(Vector3(at.x, 0.0, at.z))
+	var h := _project3d(Vector3(at.x, BODY3D_H, at.z))
+	_tr3d = maxf(6.0, f.distance_to(h) * 0.5)
+
+
+## A shape on the grass (corners in ground metres, a colour each, convex): flat, drawn
+## in the ground's frame; in 3D, laid on the turf as part of the ground paint mesh,
+## so a body or a post in front of it hides it as it would hide the grass.
+func _ground_polygon(pts: Array, cols: PackedColorArray) -> void:
+	if _oval3d == null or _paint3d == null:
+		var flat := PackedVector2Array()
+		for p in pts:
+			flat.append(_w2s_flat(p))
+		draw_polygon(flat, cols)
+		return
+	var want: Material = _paint_want if _paint_want != null else _paint_mat
+	if _painting != want:
+		if _painting != null:
+			_paint3d.surface_end()
+		_paint3d.surface_begin(Mesh.PRIMITIVE_TRIANGLES, want)
+		_painting = want
+	for i in range(1, pts.size() - 1):
+		for k in [0, i, i + 1]:
+			var p: Vector2 = pts[k]
+			_paint3d.surface_set_color(cols[k])
+			_paint3d.surface_add_vertex(Vector3(p.x, PAINT3D_Y, p.y))
+
+
+## A band on the grass round `at`, `r` metres out and `width` metres wide.
+func _ground_ring(at: Vector2, r: float, col: Color, width: float) -> void:
+	var cols := PackedColorArray([col, col, col, col])
+	var n := 40
+	for i in range(n):
+		var a0 := Vector2.from_angle(TAU * float(i) / float(n))
+		var a1 := Vector2.from_angle(TAU * float(i + 1) / float(n))
+		_ground_polygon([at + a0 * (r - width * 0.5), at + a1 * (r - width * 0.5),
+				at + a1 * (r + width * 0.5), at + a0 * (r + width * 0.5)], cols)
+
+
+## The press wash in 3D: the same slices up the ground as the flat oval's, each the
+## oval's width across, laid on the grass.
+func _draw_press_zone_3d() -> void:
+	for side in [0, 1]:
+		var fade := ease_fade(float(_zone_fade[side]))
+		if fade <= 0.003:
+			continue
+		var base := press_zone_colour(home_code if side == 0 else away_code)
+		var dir := MatchDirector._dir(side)
+		var n := 56
+		for i in range(n):
+			var wx0 := lerpf(-MatchMotion.HALF_LEN, MatchMotion.HALF_LEN, float(i) / float(n))
+			var wx1 := lerpf(-MatchMotion.HALF_LEN, MatchMotion.HALF_LEN, float(i + 1) / float(n))
+			var k0 := MatchDirector.press_zone_field(wx0 * dir)
+			var k1 := MatchDirector.press_zone_field(wx1 * dir)
+			if k0 <= 0.002 and k1 <= 0.002:
+				continue
+			var pts := []
+			var cols := PackedColorArray()
+			for e in [-1.0, 1.0]:
+				for q in range(4):
+					var t := float(q) / 3.0 if e < 0.0 else 1.0 - float(q) / 3.0
+					var x := lerpf(wx0, wx1, t)
+					var u := clampf(x / MatchMotion.HALF_LEN, -1.0, 1.0)
+					pts.append(Vector2(x, e * MatchMotion.HALF_WID * sqrt(1.0 - u * u)))
+					cols.append(Color(base.r, base.g, base.b, PRESS_ZONE_ALPHA * fade * lerpf(k0, k1, t)))
+			_ground_polygon(pts, cols)
+
+
+## The ground paint in 3D, laid each frame after the bodies move: the press wash, the
+## coach's marks, your people's rings, the ring round the man on the ball and the
+## goal flash, all on the turf under the bodies, as the flat oval draws them under
+## the discs.
+func _paint_ground_3d() -> void:
+	if _paint3d == null:
+		return
+	_paint3d.clear_surfaces()
+	_painting = null
+	_paint_want = _paint_mat
+	_layout_3d()
+	drawn_layers = ["3d"]
+	_draw_press_zone_3d()
+	drawn_layers.append("press")
+	if _draw_marks(token_radius()) > 0:
+		drawn_layers.append("marks")
+	_paint_want = _paint_glow
+	# Your people: a white band outside his club ring.
+	for t in director.tokens:
+		if float(t["down"]) <= 0.0 and rings.has(str(t.get("pid", ""))):
+			_ground_ring(t["pos"], RING3D_YOURS, Color(RING_COLOUR, 0.9), 0.14)
+	var act := director.actor
+	if act >= 0 and act < director.tokens.size():
+		_ground_ring(director.tokens[act]["pos"], RING3D_ACTOR, Color(1, 1, 0.55, 0.95), 0.18)
+	var fl := director.flash
+	if not fl.is_empty():
+		var t2 := 1.0 - clampf(float(fl["left"]) / 0.9, 0.0, 1.0)
+		var col := Color(1.0, 0.92, 0.35) if fl["goal"] else Color(0.85, 0.9, 1.0)
+		col.a = (1.0 - t2) * 0.85
+		_ground_ring(fl["pos"], lerpf(1.5, 14.0, t2), col, 0.5)
+	if _painting != null:
+		_paint3d.surface_end()
+		_painting = null
+	drawn_layers.append("discs")
+
+
+## The paint's mesh, on the 3D ground (it turns with the ground at a change of ends).
+func _make_paint_3d() -> void:
+	_paint3d = ImmediateMesh.new()
+	_paint_mat = StandardMaterial3D.new()
+	# Lit like the turf, so a player's shadow falls across the paint as across the grass.
+	_paint_mat.roughness = 1.0
+	_paint_mat.metallic_specular = 0.0
+	_paint_mat.vertex_color_use_as_albedo = true
+	_paint_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_paint_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	_paint_glow = _paint_mat.duplicate()
+	_paint_glow.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	var mi := MeshInstance3D.new()
+	mi.name = "GroundPaint"
+	mi.mesh = _paint3d
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_oval3d.add_child(mi)
+
+
+## Over the 3D picture: the names, the caption, the press line and the long-press tip.
+func _draw_3d() -> void:
+	if _vp3d == null or not is_inside_tree():
+		return
+	draw_set_transform(shake_offset() if _shake > 0.0 else Vector2.ZERO)
+	_layout_3d()
+	var tr := token_radius()
+	_draw_role_labels(tr)
+	_draw_caption(tr)
+	_draw_press_banner()
+	_draw_tip()
 
 
 # ---------------------------------------------------------------------------
@@ -484,6 +669,8 @@ func _process(delta: float) -> void:
 	_update_camera(delta)
 	if _oval3d != null:
 		_sync_3d(delta * speed if playing else 0.0)
+		_paint_ground_3d()
+		queue_redraw()
 		return
 	if playing or _cam.distance_to(_drawn_cam) > 0.05 or absf(_zoom - _drawn_zoom) > 0.002 \
 			or not director.flash.is_empty() or not _caption.is_empty() or not _press_banner.is_empty() \
@@ -1084,6 +1271,8 @@ func _scale() -> float:
 
 ## Ground metres to pixels on the screen.
 func _w2s(p: Vector2) -> Vector2:
+	if _oval3d != null and _vp3d != null:
+		return _project3d(Vector3(p.x, 0.0, p.y))
 	return _to_screen(_w2s_flat(p))
 
 
@@ -1125,6 +1314,7 @@ func _stripe(c: Vector2, a: float, b: float, x0: float, x1: float) -> PackedVect
 # ---------------------------------------------------------------------------
 func _draw() -> void:
 	if _oval3d != null:
+		_draw_3d()
 		return
 	if _shake > 0.0:
 		# Fades out as it ends; timed by the shake itself so a recording shows it as played.
@@ -1523,7 +1713,7 @@ func _draw_marks(tr: float) -> int:
 	if s <= 0.0:
 		return 0
 	var drew := 0
-	var disc_m := tr / s
+	var disc_m := BODY3D_CLEAR if _oval3d != null else tr / s
 	for side in [0, 1]:
 		var code := home_code if side == 0 else away_code
 		var base := press_zone_colour(code)
@@ -1561,9 +1751,8 @@ func _draw_corridor(side: int, base: Color, a: float, half: float) -> void:
 		var ka := corridor_end(xa)
 		var kb := corridor_end(xb)
 		for j in range(3):
-			var pts := PackedVector2Array([
-					_w2s_flat(Vector2(xa * dir, ys[j])), _w2s_flat(Vector2(xb * dir, ys[j])),
-					_w2s_flat(Vector2(xb * dir, ys[j + 1])), _w2s_flat(Vector2(xa * dir, ys[j + 1]))])
+			var pts := [Vector2(xa * dir, ys[j]), Vector2(xb * dir, ys[j]),
+					Vector2(xb * dir, ys[j + 1]), Vector2(xa * dir, ys[j + 1])]
 			var ks := [ka * float(yk[j]), kb * float(yk[j]), kb * float(yk[j + 1]), ka * float(yk[j + 1])]
 			var xs := [xa, xb, xb, xa]
 			var cols := PackedColorArray()
@@ -1573,7 +1762,7 @@ func _draw_corridor(side: int, base: Color, a: float, half: float) -> void:
 				any = any or al > 0.001
 				cols.append(Color(base.r, base.g, base.b, al))
 			if any:
-				draw_polygon(pts, cols)
+				_ground_polygon(pts, cols)
 
 
 ## The corridor's strength along the ground (metres up it from the centre, for
@@ -1615,18 +1804,16 @@ func _draw_mark_ring(at: Vector2, edge: float, base: Color, rim: Color, a: float
 				# The middle: a triangle from the centre, not a quad with two corners on it.
 				w.remove_at(1)
 				ks.remove_at(1)
-			var pts := PackedVector2Array()
 			var cols := PackedColorArray()
 			var any := false
 			for q in range(w.size()):
 				var wp: Vector2 = w[q]
-				pts.append(_w2s_flat(wp))
 				var al := mark_over_press(a * float(ks[q]), wp.x)
 				any = any or al > 0.001
 				var c: Color = base if float(ks[q]) <= MARK_PAD + 0.001 else rim
 				cols.append(Color(c.r, c.g, c.b, al))
 			if any:
-				draw_polygon(pts, cols)
+				_ground_polygon(w, cols)
 
 
 ## The turf the wash sits on, for working out what colour to lay over it.
@@ -1857,6 +2044,8 @@ func _draw_caption(tr: float) -> void:
 	var fs := clampi(int(tr * (2.1 if turnover else 1.6)), 15 if turnover else 11, 20 if turnover else 15)
 	var width := UiKit.BOLD.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 	var p := _disc_at(tok)
+	if not _caption_on_view(p):
+		return
 	var origin := caption_origin(p, width, fs, tr)
 	_caption_rect = Rect2(origin - Vector2(4, float(fs)), Vector2(width + 8.0, float(fs) + 10.0))
 	# It fades over its last third of a second.
@@ -1884,10 +2073,12 @@ const CAPTION_GAP := 4.0
 const CAPTION_BOX_BELOW := 10.0
 func caption_origin(p: Vector2, width: float, fs: int, tr: float) -> Vector2:
 	var x := clampf(p.x - width * 0.5, 4.0, maxf(4.0, size.x - width - 4.0))
-	var up := _caption_clear(Vector2(x, p.y - tr * 2.4), width, fs, tr, -1.0)
+	# In 3D a "disc" is half a body round his middle: just over his head is a lift of 1.2.
+	var lift := 1.2 if _oval3d != null else 2.4
+	var up := _caption_clear(Vector2(x, p.y - tr * lift), width, fs, tr, -1.0)
 	if up.y >= float(fs) + 2.0:
 		return up
-	var down := _caption_clear(Vector2(x, p.y + tr * 2.4 + float(fs)), width, fs, tr, 1.0)
+	var down := _caption_clear(Vector2(x, p.y + tr * lift + float(fs)), width, fs, tr, 1.0)
 	if down.y + CAPTION_BOX_BELOW <= size.y - 2.0:
 		return down
 	return Vector2(x, maxf(up.y, float(fs) + 2.0))
@@ -1912,6 +2103,12 @@ func _caption_clear(origin: Vector2, width: float, fs: int, tr: float, dir: floa
 	return origin
 
 
+## In 3D a caption is written only over a body on view: kept inside the view, the
+## name of a man off it would sit over someone else (the feed still names him).
+func _caption_on_view(p: Vector2) -> bool:
+	return _oval3d == null or Rect2(Vector2.ZERO, size).has_point(p)
+
+
 ## The caption's box as it would be drawn now, or an empty rect: for tests.
 func caption_box() -> Rect2:
 	if _caption.is_empty():
@@ -1924,6 +2121,8 @@ func caption_box() -> Rect2:
 	var turnover := bool(_caption.get("turnover", false))
 	var fs := clampi(int(tr * (2.1 if turnover else 1.6)), 15 if turnover else 11, 20 if turnover else 15)
 	var width := UiKit.BOLD.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	if not _caption_on_view(_disc_at(tok)):
+		return Rect2()
 	var origin := caption_origin(_disc_at(tok), width, fs, tr)
 	return Rect2(origin - Vector2(4, float(fs)), Vector2(width + 8.0, float(fs) + CAPTION_BOX_BELOW))
 
@@ -1967,12 +2166,16 @@ func flash_room(at: Vector2, tr: float) -> float:
 ## The radius of a player's disc at its full size, in pixels: what a disc that
 ## overlaps no other is drawn at. disc_radius is what each one is drawn at now.
 func token_radius() -> float:
+	if _oval3d != null and _tr3d > 0.0:
+		return _tr3d
 	var r := pitch_rect()
 	return maxf(TOKEN_MIN, minf(r.size.x, r.size.y) * 0.5 * DISC_SHARE * sqrt(_zoom))
 
 
 ## The smallest radius a disc is drawn at, in a pack: the old size.
 func small_radius() -> float:
+	if _oval3d != null and _tr3d > 0.0:
+		return _tr3d
 	var r := pitch_rect()
 	return maxf(SMALL_MIN, minf(r.size.x, r.size.y) * 0.5 * SMALL_SHARE * sqrt(_zoom))
 
@@ -1988,6 +2191,8 @@ static func pack_radius(gap: float, small: float, full: float) -> float:
 ## the one size the drawing, the tap, the draw-apart, the rings and marks round
 ## a disc and the tests all read.
 func disc_radius(id: int) -> float:
+	if _oval3d != null and id >= 0 and id < _r3d.size():
+		return _r3d[id]
 	if id >= 0 and id < _disc_k.size():
 		return lerpf(small_radius(), token_radius(), _disc_k[id])
 	return token_radius()
