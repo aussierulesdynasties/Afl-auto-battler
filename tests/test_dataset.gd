@@ -33,6 +33,10 @@ const GOLDEN_REAL := "6b9d20ef93eea2ce95f0a6d936f19727"
 ## season's print is the one taken before it was written down, which is the
 ## proof that writing it down changed no result and no draw.
 const BOOKKEEPING_KEYS := ["impact_by", "breeze_side"]
+## Team counts that record where something happened, not what happened: the
+## pressure zones (pressure acts in the defensive half, tackles inside 50,
+## 2026-11-14) are counted without a draw, so leaving them out keeps the print.
+const TEAM_BOOKKEEPING_KEYS := ["pressure_acts_dhalf", "tackles_i50"]
 const GOLDEN_SEASON := {"Windows": "05a96ea659dcfe349e9afec75b01b45a", "Linux": "9c00f9caf199debd6cc6a20325ba8cba"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
@@ -194,6 +198,10 @@ func _season_print() -> String:
 			if c is Dictionary:
 				for k in BOOKKEEPING_KEYS:
 					(c as Dictionary).erase(k)
+				for t in (c as Dictionary).get("team", []):
+					if t is Dictionary:
+						for k in TEAM_BOOKKEEPING_KEYS:
+							(t as Dictionary).erase(k)
 			games.append(c)
 		played.append(games)
 	out.append(JSON.stringify(played, "", true))
