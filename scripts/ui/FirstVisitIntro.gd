@@ -8,18 +8,18 @@ extends RefCounted
 
 const TEXT := {
 	"draft": ["The draft", [
-		"This is where you pick the kids who will carry your club in five years.",
-		"When your pick comes up, choose a player from the pool.",
+		"Here we pick the kids who will carry our club in five years.",
+		"When our pick comes up, choose a player from the pool.",
 	]],
 	"league_draft": ["The League redraft", [
-		"Every club starts from nothing and drafts a whole list of 44 from the league's players.",
-		"Each player you take costs his salary. Your list must fit under the cap and have at least two rucks.",
-		"When your pick comes up, take a player from the pool. The position counts show where you're short.",
+		"Every club starts from nothing. Each drafts a list of 44 from the league's players.",
+		"Each player we take costs his salary. Our list must fit under the cap. It must have at least two rucks.",
+		"When our pick comes up, take a player from the pool. The position counts show where we're short.",
 	]],
 	"combine": ["The Combine", [
-		"Four tests on the day, and every club sees the same results.",
-		"They tell you about the athlete: speed, running, spring, kicking. They don't tell you he can play.",
-		"His junior numbers and your scouts' guess at OVR and POT are on his sheet. Tap a name to weigh it up.",
+		"Four tests on the day. Every club sees the same results.",
+		"They tell us about the athlete: speed, running, spring, kicking. They don't tell us he can play.",
+		"His junior numbers are on his sheet, with our scouts' guess at OVR and POT. Tap a name to weigh him up.",
 	]],
 	"selection": ["Picking the side", [
 		"Our match-day 23 for this week. Auto-pick names it until you move someone.",
@@ -57,7 +57,7 @@ const TEXT := {
 		"The draft waits while we deal. Tap Back to the draft when done.",
 	]],
 	"preseason": ["The pre-season", [
-		"The weeks before Round 1: get the squad fit and try your ideas out.",
+		"The weeks before Round 1. Get our squad fit and try our ideas out.",
 		"Work through each stop in order, then start the season.",
 	]],
 	"season_review": ["Season review", [
