@@ -79,7 +79,7 @@ func _build() -> void:
 	var hv := UiKit.vbox(4)
 	head.add_child(hv)
 	var room := GameState.cap_room()
-	hv.add_child(UiKit.lbl("Payroll %s of %s  ·  %s  ·  list %d" % [Contracts.money(GameState.my_payroll()),
+	hv.add_child(UiKit.lbl("%s of the %s salary cap  ·  %s  ·  %d on our list" % [Contracts.money(GameState.my_payroll()),
 			Contracts.money(GameState.cap_for(GameState.my_club)), cap_room_words(room), GameState.my_list.size()], 15,
 			UiKit.GOOD if room >= 0 else UiKit.BAD, true))
 	# Your challenge's rule, said where it bites: who you may bring in.
@@ -88,7 +88,7 @@ func _build() -> void:
 		rule.name = "ChallengeRule"
 		hv.add_child(rule)
 	if not GameState.offseason_open():
-		hv.add_child(_para("The off-season is closed: trades and contracts open when the season ends, until the national draft starts.", 13, UiKit.MUTED))
+		hv.add_child(_para("The off-season is closed. Trades and contracts open when the season ends. They close when the national draft starts.", 13, UiKit.MUTED))
 	else:
 		# This year's list problem in three lines (P-48): the brief, no advice.
 		var brief := UiKit.vbox(2)
@@ -163,9 +163,9 @@ func _undo_row(hv: VBoxContainer) -> void:
 	var did := ""
 	match str(last["kind"]):
 		"release":
-			did = "You delisted %s." % name
+			did = "We delisted %s." % name
 		"sign":
-			did = "%s signed with you." % name
+			did = "%s signed with us." % name
 		"resign":
 			did = "%s re-signed." % name
 	var row := UiKit.hbox(8)
@@ -173,8 +173,8 @@ func _undo_row(hv: VBoxContainer) -> void:
 	hv.add_child(row)
 	# Right after the action its own notice names him; the row then only says
 	# what Undo does, so the same news is not printed twice.
-	var text := "You can undo this until the national draft starts." if _notice.contains(name) \
-			else did + " You can undo it until the national draft starts."
+	var text := "Undo it any time before the national draft starts." if _notice.contains(name) \
+			else did + " Undo it any time before the national draft starts."
 	var said := _para(text, 13, UiKit.TEXT)
 	said.name = "UndoLastText"
 	said.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -198,18 +198,18 @@ func _budget(body: VBoxContainer) -> void:
 			else GameState.season_year + 1
 	body.add_child(UiKit.lbl("Club budget · %d" % year, UiKit.NAME, UiKit.EMPH, true))
 	body.add_child(_para(
-			"%s to allocate for the football year. It resets next off-season; there is no bank balance to hoard." \
+			"We have %s to spend on the football year. It resets next off-season. Nothing carries over." \
 			% ClubBudget.money_m(ClubBudget.ANNUAL_M, year), 13, UiKit.MUTED))
 	var spent := GameState.department_budget_spent_m()
 	var remaining := GameState.department_budget_remaining_m()
-	var summary := UiKit.lbl("%s allocated  ·  %s remaining" % [ClubBudget.money_m(spent, year), ClubBudget.money_m(maxf(0.0, remaining), year)],
+	var summary := UiKit.lbl("%s spent  ·  %s left" % [ClubBudget.money_m(spent, year), ClubBudget.money_m(maxf(0.0, remaining), year)],
 			14, UiKit.TEXT, true)
 	summary.name = "BudgetSummary"
 	body.add_child(summary)
 	# A league fine (YearEvents) cuts this year's budget: say so beside the total.
 	var fine_cut := ClubBudget.ANNUAL_M - GameState.department_budget_annual_m()
 	if fine_cut > 0.001:
-		var fine := _para("The league's fine takes $%.1fm off this year's budget." % fine_cut, 13, UiKit.BAD)
+		var fine := _para("The league's fine takes $%.1fm off our budget this year." % fine_cut, 13, UiKit.BAD)
 		fine.name = "BudgetFine"
 		body.add_child(fine)
 	body.add_child(UiKit.spacer(4))
@@ -237,11 +237,11 @@ func _budget(body: VBoxContainer) -> void:
 		next_text.name = "BudgetNext_" + area
 		next_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		if level < ClubBudget.LEVELS.size() - 1:
-			next_text.text = "Raise to %s (%s): %s" % [
+			next_text.text = "Raise to %s (%s). %s" % [
 					ClubBudget.level_label(level + 1), ClubBudget.money_m(ClubBudget.cost_m(level + 1), year),
 					ClubBudget.benefit_text(area, level + 1)]
 		else:
-			next_text.text = "Maximum funding."
+			next_text.text = "Fully funded."
 		v.add_child(next_text)
 
 		var controls := UiKit.hbox(6)
@@ -276,13 +276,13 @@ func _contracts(body: VBoxContainer) -> void:
 	var clubs := GameDB.active_clubs(GameState.season_year).size()
 	for c in GameState.compensation:
 		if str(c["club"]) == GameState.my_club:
-			var got := _para("Compensation: a draft pick %s for losing %s to %s." % [
+			var got := _para("We get a draft pick %s for losing %s to %s." % [
 					Contracts.pick_words(int(c["after"]), clubs), str(c["name"]), GameDB.club_name(str(c["to"]))], 13, UiKit.TEXT)
 			got.name = "CompReceived"
 			body.add_child(got)
 	_retiring(body)
 	if GameState.offseason_open():
-		body.add_child(_para("Leave one of your best 23 unsigned and he tests free agency: your offer stands at his asking price, but rivals can beat it. Other players re-sign for two seasons if the cap allows.", 12, UiKit.MUTED))
+		body.add_child(_para("Leave one of our best 23 unsigned and he tests free agency. Our offer stands at his asking price. Rivals can beat it. Other players re-sign for two seasons if the cap allows.", 12, UiKit.MUTED))
 	var head := UiKit.lbl("Out of contract  (%d)" % expiring.size(), UiKit.BODY, UiKit.EMPH, true)
 	head.name = "OutOfContractHead"
 	body.add_child(head)
@@ -290,7 +290,7 @@ func _contracts(body: VBoxContainer) -> void:
 		body.add_child(_para("Nobody is out of contract this year.", 13, UiKit.MUTED))
 	for p in expiring:
 		var want := Contracts.wants(p)
-		var card := _player_card(p, "%d OVR  ·  %d POT  ·  age %d  ·  on %s, wants %s for %d seasons" % [
+		var card := _player_card(p, "%d OVR  ·  %d POT  ·  age %d  ·  on %s  ·  wants %s for %d seasons" % [
 				int(p["overall"]), int(p.get("potential", p["overall"])), int(p.get("age", 0)),
 				Contracts.money(int(p.get("salary", 0))), Contracts.money(int(want["salary"])), int(want["years"])])
 		body.add_child(card)
@@ -298,12 +298,12 @@ func _contracts(body: VBoxContainer) -> void:
 		row.name = "Contract_" + str(p["id"])
 		_action_slot(card).add_child(row)
 		if bool(p.get("resigned", false)):
-			row.add_child(UiKit.line("Re-signed: %d more seasons at %s" % [int(p["contract_years"]) - 1,
+			row.add_child(UiKit.line("Re-signed for %d more seasons at %s" % [int(p["contract_years"]) - 1,
 					Contracts.money(int(p.get("salary", 0)))], 13, UiKit.GOOD, true))
 			continue
 		var talks: Dictionary = p.get("talks", {})
 		if bool(talks.get("walked", false)):
-			var gone := "Talks broke down: he'll test free agency"
+			var gone := "Talks broke down. He'll test free agency"
 			if talks.has("refused"):
 				gone = Contracts.REFUSED_CARD % int(talks["refused"])
 			row.add_child(UiKit.line(gone, UiKit.SECONDARY, UiKit.BAD, true))
@@ -336,7 +336,7 @@ func _contracts(body: VBoxContainer) -> void:
 		rel.custom_minimum_size = Vector2(0, 44)
 		rel.pressed.connect(_confirm_release.bind(p))
 		row.add_child(rel)
-	body.add_child(UiKit.lbl("Whole list", UiKit.BODY, UiKit.EMPH, true))
+	body.add_child(UiKit.lbl("Our whole list", UiKit.BODY, UiKit.EMPH, true))
 	var sorted := GameState.my_list.duplicate()
 	sorted.sort_custom(func(a, b): return int(a.get("salary", 0)) > int(b.get("salary", 0)))
 	for p in sorted:
@@ -385,7 +385,7 @@ func _retiring(body: VBoxContainer) -> void:
 			v.add_child(UiKit.stake_row(str(gc[0]), "AskGain"))
 			v.add_child(UiKit.stake_row(str(gc[1]), "AskCost"))
 		elif p.has("talked_round"):
-			v.add_child(_para("He went around again once already: this time he's going.", 12, UiKit.MUTED))
+			v.add_child(_para("He went around again once already. This time he's going.", 12, UiKit.MUTED))
 
 
 func _confirm_release(p: Dictionary) -> void:
@@ -402,7 +402,7 @@ func _confirm_release(p: Dictionary) -> void:
 		var memory := _para(kept, 14, UiKit.TEXT)
 		memory.name = "ReleaseRemembered"
 		box["body"].add_child(memory)
-	box["body"].add_child(_para("He will leave your list and become a free agent. A delisted player earns no draft pick if he signs elsewhere.", 14, UiKit.TEXT))
+	box["body"].add_child(_para("He leaves our list and becomes a free agent. We get no draft pick if he signs elsewhere.", 14, UiKit.TEXT))
 	var gc := ListCosts.release_lines(p)
 	box["body"].add_child(UiKit.stake_row(str(gc[0]), "ReleaseGain"))
 	box["body"].add_child(UiKit.stake_row(str(gc[1]), "ReleaseCost"))
@@ -512,7 +512,7 @@ func _show_talks() -> void:
 			v.add_child(odds)
 	var no_spot := RookieList.add_block(GameState.my_list, "senior") if _talk_fa else ""
 	if no_spot == "senior":
-		v.add_child(_para("Your senior list is full (%d): release a player first." % RookieList.senior_spots(), 14, UiKit.BAD))
+		v.add_child(_para("Our senior list is full at %d. Release a player first." % RookieList.senior_spots(), 14, UiKit.BAD))
 	elif no_spot != "":
 		v.add_child(_para(RookieList.block_words(GameState.my_list, no_spot) + " Release a player first.", 14, UiKit.BAD))
 	for reason in terms.get("reasons", []):
@@ -621,7 +621,7 @@ func _offers_table(v: VBoxContainer) -> void:
 		for h in ["Club", "Salary", "Years", "His view"]:
 			grid.add_child(UiKit.line(h, 12, UiKit.MUTED))
 		for row in rows:
-			var who := "You" if bool(row["mine"]) else GameDB.club_short(str(row["club"]))
+			var who := "Us" if bool(row["mine"]) else GameDB.club_short(str(row["club"]))
 			var club := UiKit.line(who, UiKit.SECONDARY, UiKit.TEXT, bool(row["leading"]))
 			club.name = "Offer_" + str(row["club"])
 			grid.add_child(club)
@@ -639,12 +639,12 @@ func _offers_table(v: VBoxContainer) -> void:
 	v.add_child(weigh)
 	var log: Array = GameState.free_agent(_talk_id).get("market_log", [])
 	if not log.is_empty():
-		var said := _para("After your offer: " + " ".join(PackedStringArray(log)), 13, UiKit.TEXT)
+		var said := _para("After our offer: " + " ".join(PackedStringArray(log)), 13, UiKit.TEXT)
 		said.name = "RivalResponses"
 		v.add_child(said)
 	var stage := GameState.fa_market_stage(_talk_id)
-	var note := "Rivals see an offer once you make it, and can answer it once. Your second offer is final." if stage == "open" \
-			else ("Your next offer is final: rivals answer, then he decides." if stage == "final" else "")
+	var note := "Rivals see our offer and can answer it once. Our second offer is final." if stage == "open" \
+			else ("Our next offer is final. Rivals answer, then he decides." if stage == "final" else "")
 	if note != "" and not rows.is_empty():
 		v.add_child(_para(note + " Otherwise he decides when free agency closes.", 12, UiKit.MUTED))
 
@@ -672,7 +672,7 @@ func _make_offer(salary: int, years: int) -> void:
 	_build()
 
 
-## "His opinion of you: 44/100. 6% he won't re-sign with you." when his
+## "His opinion of you: 44 out of 100. 6% he won't re-sign with us." when his
 ## opinion of you is under 50, else null.
 func _refuse_odds(p: Dictionary, size: int) -> Control:
 	var chance := GameState.resign_refuse_chance(p)
@@ -743,7 +743,7 @@ func _agents(body: VBoxContainer) -> void:
 		if not offers.is_empty():
 			var bits := PackedStringArray()
 			for o in offers.slice(0, 3):
-				bits.append("%s %s for %d" % ["you" if bool(o["mine"]) else GameDB.club_short(str(o["club"])), Contracts.money(int(o["salary"])), int(o["years"])])
+				bits.append("%s %s for %d" % ["us" if bool(o["mine"]) else GameDB.club_short(str(o["club"])), Contracts.money(int(o["salary"])), int(o["years"])])
 			var line := "Offers: " + ", ".join(bits) + (" and %d more" % (offers.size() - 3) if offers.size() > 3 else "")
 			(card.get_child(0) as VBoxContainer).add_child(_para(line + ".", 12, UiKit.TEXT))
 		var row := UiKit.hbox(4)
@@ -752,7 +752,7 @@ func _agents(body: VBoxContainer) -> void:
 		var talks: Dictionary = p.get("talks", {})
 		var barred := Challenge.block_reason(GameState, p)
 		if bool(talks.get("walked", false)):
-			row.add_child(UiKit.line("Talks broke down: he'll look elsewhere", UiKit.SECONDARY, UiKit.BAD, true))
+			row.add_child(UiKit.line("Talks broke down. He'll look elsewhere", UiKit.SECONDARY, UiKit.BAD, true))
 		elif barred != "":
 			# Your challenge bars him: said before any talks, not after.
 			(card.get_child(0) as VBoxContainer).add_child(_para(barred, 12, UiKit.MUTED))
@@ -810,10 +810,10 @@ func _trade(body: VBoxContainer) -> void:
 	cycle.name = "TradeClubPhase"
 	body.add_child(cycle)
 	body.add_child(UiKit.spacer(4))
-	_package(body, "You give", _mine, GameState.my_club, "GiveRow_",
-			"Nothing yet: add from your list below.")
-	_package(body, "You get", _theirs, _trade_club, "GetRow_",
-			"Nothing yet: add from their list below.")
+	_package(body, "We give", _mine, GameState.my_club, "GiveRow_",
+			"Nothing yet. Add from our list below.")
+	_package(body, "We get", _theirs, _trade_club, "GetRow_",
+			"Nothing yet. Add from their list below.")
 	if not _theirs.is_empty():
 		var fam := _para(TeamFamiliarity.signing_line(), UiKit.SECONDARY, UiKit.TEXT)
 		fam.name = "TradeFamiliarity"
@@ -823,8 +823,8 @@ func _trade(body: VBoxContainer) -> void:
 	var shopping := _mine.size() == 1 and _theirs.is_empty()
 	# One of theirs and nothing of yours yet: you can ask what they'd want (row 67).
 	var buying := _theirs.size() == 1 and _mine.is_empty() and not GameState.draft_night_open()
-	var prompt := "Add what you want back, or put it on the trade table." if shopping else \
-			("Add what you'd give, or ask their price." if buying else "Put something on each side.")
+	var prompt := "Add what we want back. Or put him on the trade table." if shopping else \
+			("Add what we'd give. Or ask their price." if buying else "Put something on each side.")
 	# Their answer in one line, with the reason their decision took (P-18);
 	# the club's name wears its ink, and a refusal reads as text, not grey.
 	var answer := _para(prompt, 14, UiKit.MUTED) if empty else \
@@ -901,7 +901,7 @@ func _trade(body: VBoxContainer) -> void:
 	_answers(body)
 	body.add_child(UiKit.spacer(UiKit.SECTION - 6))
 	var sides := UiKit.hbox(4)
-	for t in [["theirs", "Their list"], ["mine", "Your list"]]:
+	for t in [["theirs", "Their list"], ["mine", "Our list"]]:
 		var tb := UiKit.tab(str(t[1]), _trade_side == str(t[0]))
 		tb.name = "TradeSide_" + str(t[0])
 		tb.pressed.connect(func():
@@ -965,7 +965,7 @@ func _offers(body: VBoxContainer) -> void:
 	var open := GameState.open_trade_offers()
 	if open.is_empty():
 		return
-	body.add_child(UiKit.lbl("Offers for your players", UiKit.BODY, UiKit.EMPH, true))
+	body.add_child(UiKit.lbl("Offers for our players", UiKit.BODY, UiKit.EMPH, true))
 	for i in open:
 		var text := _para(GameState.trade_offer_text(i), 14, UiKit.TEXT)
 		text.name = "Offer_%d" % i

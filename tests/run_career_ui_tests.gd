@@ -3140,7 +3140,7 @@ func _test_menu_and_career() -> void:
 		elif refuse != null:
 			refuse_text = str(refuse.get("text"))
 		_check(tid != "" and at_fifty and refuse != null and refuse.is_visible_in_tree()
-				and refuse_text == "His opinion of you: 44/100. 6% he won't re-sign with you.",
+				and refuse_text == "His opinion of you: 44 out of 100. 6% he won't re-sign with us.",
 				"Talks at 44/100 say the chance he won't re-sign before you offer, and at 50 say nothing (%s)" % refuse_text)
 		_router.handle_back(true)
 		await _settle()
@@ -3657,7 +3657,7 @@ func _test_list_problem_and_ask_around() -> void:
 	_state.open_offseason()
 	var lines: Array = _state.list_problem()
 	_check(lines.size() == 3 and str(lines[0]).contains("out of contract")
-			and str(lines[1]).begins_with("Your best six average") and str(lines[2]).contains("draft"),
+			and str(lines[1]).begins_with("Our best six average") and str(lines[2]).contains("draft"),
 			"The list problem is three lines of fact (%s)" % " | ".join(lines))
 	var size_before := root.size
 	root.size = Vector2i(390, 844)

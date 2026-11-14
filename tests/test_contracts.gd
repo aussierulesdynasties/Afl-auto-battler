@@ -106,8 +106,8 @@ func _to_offseason() -> void:
 func _test_fa_weights() -> void:
 	var p: Dictionary = GameDB.all_players_sorted()[40].duplicate(true)
 	var line := Contracts.weigh_line(p)
-	_check(line.contains("best-23 spot as $180k") and line.contains("bench spot $90k")
-			and line.contains("as $50k") and line.contains("up to $100k"),
+	_check(line.contains("best-23 spot as $180k") and line.contains("bench spot is $90k")
+			and line.contains("is $50k") and line.contains("up to $100k"),
 			"The weights line sizes a starting spot, a bench spot, a season and last year's finish in dollars: " + line)
 	var offers := []
 	for salary in [300000, 500000, 700000]:
@@ -128,10 +128,10 @@ func _test_fa_weights() -> void:
 			"A one-season depth offer from the wooden spooner is worth its salary plus one season's $50k")
 	var two := Contracts.fa_lines(600000, 3, 900000, 850000)
 	_check(str(two[0]).contains("$900k") and str(two[0]).contains("$850k")
-			and str(two[1]) == "$600k a season on your cap for 3 seasons, $1.8m in all",
+			and str(two[1]) == "$600k a season on our cap for 3 seasons. $1.8m in all",
 			"Your offer's Gain names both worths and its Cost the cap hit: %s / %s" % two)
 	_check(str(Contracts.fa_lines(600000, 1, 900000, 0)[0]).begins_with("no other club has offered"),
-			"Alone on the table, the Gain says he signs with you")
+			"Alone on the table, the Gain says he signs with us")
 	# The Gain's odds are the measured ones (tools/balance/rival_reads_measured.json,
 	# row T1.R26 L3): how often the cheapest leading offer still led once
 	# rivals answered, and what leading again cost when it did not.
@@ -140,7 +140,7 @@ func _test_fa_weights() -> void:
 	var held_in_10 := int(round(10.0 * float(fa["held"]) / maxf(1.0, float(fa["talks"]))))
 	var extra := int(round(float(fa["extra_median"]) / 10000.0)) * 10000
 	_check(int(fa["talks"]) >= 500 and held_in_10 == Contracts.FA_HOLDS_IN_10 and extra == Contracts.FA_RELEAD_EXTRA
-			and str(two[0]).contains("still leads about %d times in 10 once they answer" % held_in_10)
+			and str(two[0]).contains("still lead about %d times in 10 once they answer" % held_in_10)
 			and str(two[0]).contains("costs about %s a season more" % Contracts.money(extra))
 			and not str(Contracts.fa_lines(600000, 1, 900000, 0)[0]).contains("times in 10"),
 			"Your offer's Gain states the measured odds: still leads %d times in 10 of %d talks, %s more to lead again"
@@ -590,7 +590,7 @@ func _test_negotiation_rules() -> void:
 			and bend.contains("%d%% under his ask" % roundi(100.0 * float(ask - low) / float(ask)))
 			and bend.contains(Contracts.money(Contracts.lowest(regular, 2)))
 			and bend.contains(Contracts.money(Contracts.insult_line(low)))
-			and bend.contains("%d of your %d offers" % [Contracts.INSULT_STRIKES, Contracts.MAX_OFFERS])
+			and bend.contains("%d of our %d offers" % [Contracts.INSULT_STRIKES, Contracts.MAX_OFFERS])
 			and bend.contains("drops %d%%" % Contracts.INSULT_MORALE),
 			"Talks say how far he comes down, what a shorter deal costs and where an offer insults him (%s)" % bend)
 	_check(not bool(Contracts.respond(regular, Contracts.insult_line(low), 3)["insult"])
@@ -686,7 +686,7 @@ func _refusal_news(p: Dictionary) -> Array:
 	var out := [0, 0]
 	for n in GameState.news:
 		var text := str(n.get("text", ""))
-		if text.begins_with(who + " won't re-sign with you"):
+		if text.begins_with(who + " won't re-sign with us"):
 			out[0] += 1
 		if text.contains("let " + who + " (OVR"):
 			out[1] += 1
@@ -840,7 +840,7 @@ func _test_free_agent_terms() -> void:
 	var o := func(salary: int, years: int, role: String, t: float) -> Dictionary:
 		return {"salary": salary, "years": years, "role": role, "finish_t": t}
 	_check(Contracts.prefers(p, o.call(ask + Contracts.SALARY_STEP, 3, "bench", 0.5), o.call(ask, 3, "bench", 0.5))
-			and Contracts.offer_view(p, o.call(ask + Contracts.SALARY_STEP, 3, "bench", 0.5), o.call(ask, 3, "bench", 0.5), "X") == "Best financial offer.",
+			and Contracts.offer_view(p, o.call(ask + Contracts.SALARY_STEP, 3, "bench", 0.5), o.call(ask, 3, "bench", 0.5), "X") == "The most money.",
 			"Salary matters in a close decision, and he says so")
 	_check(Contracts.prefers(p, o.call(ask, 3, "bench", 0.5), o.call(ask, 1, "bench", 0.5))
 			and Contracts.offer_view(p, o.call(ask, 3, "bench", 0.5), o.call(ask, 1, "bench", 0.5), "X") == "More contract security.",
