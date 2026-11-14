@@ -3408,7 +3408,7 @@ func _build_pending_sim() -> void:
 	pending_sim = MatchSim.new(home, away, int(_pending_build["seed"]))
 	pending_sim.finals_mode = bool(_pending_build["finals"])
 	pending_sim.extra_time_allowed = bool(_pending_build.get("extra_time", true))
-	pending_sim.weather = _pending_build["weather"]
+	pending_sim.set_day(_pending_build["weather"])
 	pending_sim.season_year = season.year
 	pending_sim.moment_side = 0 if h == my_club else 1
 	pending_sim.always_offer_bounce = bounce_scene_every_match()
@@ -3513,7 +3513,7 @@ func prepare_interactive_match() -> bool:
 		else:
 			others.append(season.match_sim(m["home"], m["away"], season.next_seed(i),
 					season.round_at_home(season.round_index, m["home"], m["away"]), false,
-					season.weather_for(m["home"], m["away"], season.round_index)))
+					season.weather_day(m["home"], m["away"], season.round_index)))
 	if pending_match.is_empty():
 		# Your bye: record nothing, the caller's advance() plays the whole round.
 		return false
@@ -3522,7 +3522,7 @@ func prepare_interactive_match() -> bool:
 	_others = Season.start_all(others)
 	_pending_build = {"at_home": season.round_at_home(season.round_index, str(pending_match["home"]),
 			str(pending_match["away"])), "seed": season.next_seed(99), "finals": false,
-			"weather": season.weather_for(str(pending_match["home"]), str(pending_match["away"]), season.round_index)}
+			"weather": season.weather_day(str(pending_match["home"]), str(pending_match["away"]), season.round_index)}
 	_build_pending_sim()
 	pending_phase = "regular"
 	pending_label = str(pending_match["label"])
@@ -3562,7 +3562,7 @@ func _prepare_interactive_final() -> bool:
 			continue
 		others.append(season.match_sim(m["home"], m["away"], season.finals_seed(i),
 				season.finals_at_home(m), true,
-				season.weather_for(m["home"], m["away"], season.finals_round(), m)))
+				season.weather_day(m["home"], m["away"], season.finals_round(), m)))
 		(others[others.size() - 1] as MatchSim).extra_time_allowed = season.finals_extra_time(m)
 		index.append(i)
 	_others = Season.start_all(others)
@@ -3574,7 +3574,7 @@ func _prepare_interactive_final() -> bool:
 			"label": str(fm["label"]), "tag": str(fm["tag"]),
 			"venue": season.finals_venue(fm), "finals_index": mine}
 	_pending_build = {"at_home": at_home, "seed": season.finals_seed(mine), "finals": true,
-			"weather": season.weather_for(str(fm["home"]), str(fm["away"]), season.finals_round(), fm),
+			"weather": season.weather_day(str(fm["home"]), str(fm["away"]), season.finals_round(), fm),
 			"extra_time": season.finals_extra_time(fm)}
 	_build_pending_sim()
 	pending_phase = "finals"
@@ -9523,7 +9523,7 @@ func fa_offers(player_id: String) -> Array:
 		var club_name := GameDB.club_name(str(o["club"]))
 		var view := Contracts.offer_view(p, o, other, club_name)
 		if i > 0 and view != "":
-			view = "Behind, though: " + view.left(1).to_lower() + view.substr(1)
+			view = "Behind, but " + view.left(1).to_lower() + view.substr(1)
 		elif i > 0:
 			view = "Behind."
 		out.append({"club": str(o["club"]), "name": club_name, "salary": int(o["salary"]), "years": int(o["years"]),
@@ -11279,16 +11279,16 @@ func list_problem() -> Array:
 		best22[str(q["id"])] = true
 	var out_of := Contracts.expiring(my_list).filter(func(q): return not retiring_now(q))
 	var key := out_of.filter(func(q): return best22.has(str(q["id"]))).size()
-	var first := "Nobody out of contract." if out_of.is_empty() else "%s out of contract, %s of them in your best 22." % [
-			_count_word(out_of.size(), true), _count_word(key)]
+	var first := "Nobody out of contract." if out_of.is_empty() else "%s out of contract. %s of them in our best 22." % [
+			_count_word(out_of.size(), true), _count_word(key, true)]
 	if not out_of.is_empty() and key == 0:
-		first = "%s out of contract, none of them in your best 22." % _count_word(out_of.size(), true)
+		first = "%s out of contract. None of them in our best 22." % _count_word(out_of.size(), true)
 	var six := side.slice(0, 6)
 	var ages := 0.0
 	for q in six:
 		ages += float(q.get("age", 25))
 	var going := my_list.filter(func(q): return retiring_now(q)).size()
-	var second := "Your best six average %d years old." % roundi(ages / float(maxi(1, six.size())))
+	var second := "Our best six average %d years old." % roundi(ages / float(maxi(1, six.size())))
 	if going > 0:
 		second += " %s retiring." % _count_word(going, true)
 	return [first, second, draft_spots_line(going)]
