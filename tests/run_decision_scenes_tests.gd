@@ -55,9 +55,10 @@ func _run() -> void:
 ## so the scoreboard shows the sim's score; otherwise the oval is paused.
 ## fresh false: the same career's Round 1 match is prepared again, not a new
 ## career (a reset reloads the player data); the screen and the sim are new.
+## A career that is not Collingwood's before its first round starts afresh anyway.
 func _match(released := false, phone := Vector2i(360, 740), fresh := true) -> Dictionary:
 	var db = root.get_node("GameDB")
-	if fresh:
+	if fresh or _state.season == null or str(_state.my_club) != "COL" or not _state.season_log.is_empty():
 		_state.reset()
 		_state.replay_seed = SUITE_SEED
 		_state.start_season("COL", db.club_list("COL"))
@@ -429,8 +430,11 @@ func _call_settled(m: Control, vig) -> bool:
 
 ## Vignettes off: the call is the text card, for every kind.
 func _test_card_without_vignettes() -> void:
+	# One career for every kind: each gets a new prepared match and screen.
+	var fresh := true
 	for kind in KINDS:
-		var ctx := await _match()
+		var ctx := await _match(false, Vector2i(360, 740), fresh)
+		fresh = false
 		var m: Control = ctx["m"]
 		var sim = ctx["sim"]
 		var me: int = ctx["me"]
@@ -449,7 +453,8 @@ func _test_card_without_vignettes() -> void:
 ## A finger on the last choice, after the scene freezes: MatchSim takes the call and the
 ## match view is back. Every scene shares the one call layout; each is tapped.
 func _test_tap(kind: String) -> void:
-	var ctx := await _match()
+	# The Collingwood career already in play, if there is one: a new match and screen.
+	var ctx := await _match(false, Vector2i(360, 740), false)
 	var m: Control = ctx["m"]
 	var sim = ctx["sim"]
 	var me: int = ctx["me"]
@@ -555,11 +560,9 @@ func _test_first_call_warmed() -> void:
 			"warming the call scene changes nothing in the match")
 	m.queue_free()
 	await _settle()
-	# With the Vignettes setting off there is no call scene to warm.
+	# With the Vignettes setting off there is no call scene to warm (the same
+	# career's match, prepared again).
 	_state.set_vignettes_on(false)
-	_state.reset()
-	_state.replay_seed = SUITE_SEED
-	_state.start_season("MEL", db.club_list("MEL"))
 	_check(_state.prepare_interactive_match(), "A live match is prepared")
 	m = load("res://scenes/MatchScene.tscn").instantiate()
 	root.add_child(m)
