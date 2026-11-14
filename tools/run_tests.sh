@@ -132,7 +132,7 @@ for suite in ${SUITES[@]+"${SUITES[@]}"}; do
 	start=$(date +%s)
 	limit="$SUITE_TIMEOUT"
 	grep -qx "$suite" tools/ci_long_suites.txt 2>/dev/null && limit="$LONG_TIMEOUT"
-	XDG_DATA_HOME="$RUN_DATA" timeout "$limit" "$GODOT" --headless --fixed-fps 60 --path . --script "$runner" > "$log" 2>&1
+	SUITE_NAME="$suite" FN_TIMINGS="${FN_TIMINGS:-$LOG_DIR/fn-timings.tsv}" XDG_DATA_HOME="$RUN_DATA" timeout "$limit" "$GODOT" --headless --fixed-fps 60 --path . --script "$runner" > "$log" 2>&1
 	code=$?
 	secs=$(( $(date +%s) - start ))
 	printf '%s\t%s\n' "$suite" "$secs" >> "$LOG_DIR/suite-timings.tsv"
