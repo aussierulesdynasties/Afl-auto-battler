@@ -92,3 +92,8 @@ func _look_at_ball(i: int, carrying: bool, dt: float) -> void:
 		target.global_position = target.global_position.lerp(want, clampf(dt * LOOK_FOLLOW, 0.0, 1.0))
 	for m in _looks[i]:
 		(m as LookAtModifier3D).active = not carrying
+
+
+## A touch of the ball at its moment of contact (Oval3D.anim_event). A stub until the clips land.
+func event(_i: int, _kind: StringName, _at: Vector2, _other := -1) -> void:
+	pass

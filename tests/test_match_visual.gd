@@ -59,6 +59,7 @@ func run() -> void:
 	_t("_test_upright_oval", [res])
 	_t("_test_plan_tint_every_quarter")
 	_t("_test_three_d_view", [res])
+	_t("_test_contacts", [res])
 	GameState.replay_seed = 0
 	print(Ran.line("Match visual", self))
 
@@ -2690,3 +2691,42 @@ func _test_three_d_view(res: Dictionary) -> void:
 	_check(pv._oval3d == null and pv._vp3d == null, "With the setting off the flat oval comes back")
 	pv.free()
 	flat.free()
+
+
+## The 3D figures' clips start at the moment of contact (row 198): the director records
+## each touch of the ball with who, what and where the ball goes, and only when asked.
+func _test_contacts(res: Dictionary) -> void:
+	var off := MatchDirector.new()
+	off.setup(res, res["events"])
+	for i in range(600):
+		off.advance(0.05)
+	_check(off.contacts.is_empty(), "With no 3D oval watching, the director records no touches")
+	var d := MatchDirector.new()
+	d.setup(res, res["events"])
+	d.want_contacts = true
+	var kinds := {}
+	var bad := []
+	var guard := 0
+	while not d.idle() and guard < 120000:
+		guard += 1
+		var mode_before := str(d.ball["mode"])
+		var holder_before := int(d.ball["holder"])
+		d.advance(0.05)
+		for c in d.contacts:
+			kinds[c["kind"]] = int(kinds.get(c["kind"], 0)) + 1
+			var who := int(c["who"])
+			if c["kind"] == &"bounce":
+				if who != -1:
+					bad.append("bounce by %d" % who)
+			elif who < 0 or who >= d.tokens.size():
+				bad.append("%s by %d" % [c["kind"], who])
+			if (c["kind"] == &"tackle" or c["kind"] == &"smother") and int(c["other"]) < 0:
+				bad.append("%s with no man" % c["kind"])
+			if not (c["at"] as Vector2).is_finite():
+				bad.append("%s nowhere" % c["kind"])
+		d.contacts.clear()
+	for k in [&"kick", &"handball", &"mark", &"gather", &"handball_receive", &"tackle", &"bounce", &"ruck_tap"]:
+		_check(int(kinds.get(k, 0)) > 0, "A full match records %s touches (%d)" % [k, int(kinds.get(k, 0))])
+	_check(bad.is_empty(), "Every touch names a real player (or the umpire for a bounce) and a spot: %s" % [bad.slice(0, 5)])
+	_check(int(kinds.get(&"kick", 0)) > int(kinds.get(&"goal_celebrate", 0)) and int(kinds.get(&"goal_celebrate", 0)) > 0,
+			"Goals are celebrated, and fewer times than the ball is kicked (%s)" % [kinds])
