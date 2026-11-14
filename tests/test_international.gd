@@ -51,8 +51,13 @@ func _test_classes(state: Node, db: Node) -> void:
 	var all_intl: Array = []
 	var two := 0
 	var profile_ok := true
+	# Each year's class is made once and read by every check below (a class is
+	# the same for its year and seed, so this is the very same data).
+	var classes := {}
+	for y in range(FIRST_YEAR, FIRST_YEAR + maxi(YEARS, 150)):
+		classes[y] = Prospects.generate_class(y, SEED)
 	for y in range(FIRST_YEAR, FIRST_YEAR + YEARS):
-		var cls: Array = Prospects.generate_class(y, SEED)
+		var cls: Array = classes[y]
 		var n := 0
 		var seen_country := {}
 		for i in range(cls.size()):
@@ -125,7 +130,7 @@ func _test_classes(state: Node, db: Node) -> void:
 	var dom_carry := 0.0
 	var dom_disp := 0.0
 	for y in range(FIRST_YEAR, FIRST_YEAR + 40):
-		for p in Prospects.generate_class(y, SEED):
+		for p in classes[y]:
 			if not p.has("intl"):
 				dom_gap += float(p["potential"]) - float(p["overall"])
 				dom_rank_gap += float(p["overall"]) - Prospects.rank_base_overall(int(p["draft_rank"]))
@@ -189,7 +194,7 @@ func _test_classes(state: Node, db: Node) -> void:
 	_check(not PlayerProfile.production(one)["title"].contains("season"), "No U18 season is claimed for him")
 	_check(RecruitMeeting.reason(one).contains("Raw"), "The panel calls him raw: " + RecruitMeeting.reason(one))
 	var dom: Dictionary = {}
-	for p in Prospects.generate_class(FIRST_YEAR, SEED):
+	for p in classes[FIRST_YEAR]:
 		if not p.has("intl"):
 			dom = p
 			break
@@ -204,7 +209,7 @@ func _test_classes(state: Node, db: Node) -> void:
 	var dup := 0
 	for y in range(FIRST_YEAR, FIRST_YEAR + 150):
 		var seen_last := {}
-		for p in Prospects.generate_class(y, SEED):
+		for p in classes[y]:
 			var nm := str(p["generic_name"])
 			var ln := nm.substr(nm.find(" ") + 1)
 			dup += 1 if seen_last.has(ln) else 0

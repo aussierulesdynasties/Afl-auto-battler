@@ -264,7 +264,10 @@ func _test_drilling() -> void:
 	_check(GameState.plan_level(CLUB, "contest") == 1, "A plan is not known better until the pre-season is done")
 	_check(not GameState.set_preseason_drills(0, ["controlled"]) and GameState.preseason_drills(0) == ["contest"],
 			"...and a block that has started cannot be changed")
-	_press_on()
+	# Straight to the end of week 8, where drills are credited (the weeks between
+	# train bodies, not plans; _test_part_carry presses on through them all).
+	GameState._finish_preseason()
+	_check(not GameState.preseason_active(), "(setup) the pre-season is done")
 	_check(GameState.plan_level(CLUB, "contest") == 2 and GameState.plan_level(CLUB, "defensive") == 2
 			and GameState.plan_level(CLUB, "controlled") == 1 and GameState.plan_level(CLUB, "attacking") == 2,
 			"Drilled plans are known well by Round 1; the rest are as they were")
@@ -500,7 +503,9 @@ func _test_screens() -> void:
 	_check((scene.find_child("Drill0_attacking", true, false) as Button).text == "Attack Corridor\nhigh",
 			"The plan you play has high fluency")
 	_check(_fits(scene, 390.0), "...and nothing runs off a phone's width")
-	GameState.preseason_sim_to_round1()
+	# Straight to Round 1: the weeks between drill nothing these checks read.
+	GameState._finish_preseason()
+	_check(not GameState.preseason_active(), "(setup) the pre-season is done")
 	GameState.plan_known["FRE"]["controlled"] = 0
 	var tiles := PlanTiles.grid(2, [], [])
 	tree.root.add_child(tiles)
@@ -771,7 +776,7 @@ func _test_part_save() -> void:
 			"...its levels are what they were, in the same words")
 	GameState.set_preseason_block(1, "solid", "plan")
 	GameState.set_preseason_drills(1, ["contest", "controlled"])
-	_press_on()
+	GameState._finish_preseason()
 	_check(GameState.plan_fluency(CLUB, "contest") == 1.5, "...and its next split block carries like any other")
 	var bad := CareerSave.read(GameState.save_path)
 	bad["plan_known"] = {CLUB: {"contest": 7.5, "attacking": -0.5}}
@@ -813,7 +818,9 @@ func _test_part_screen() -> void:
 	_check(widest <= room - 16.0, "No line is cut short (widest %.0f of %.0f)" % [widest, room - 16.0])
 	_check(font.get_height(fsize) * 3.0 <= contest.size.y, "...and three lines fit its height (%.0f of %.0f)" % [font.get_height(fsize) * 3.0, contest.size.y])
 	_check(_fits(scene, 390.0), "...and nothing runs off a phone's width")
-	GameState.preseason_sim_to_round1()
+	# Straight to the end of week 8, where the drills are credited.
+	GameState._finish_preseason()
+	_check(not GameState.preseason_active(), "(setup) the pre-season is done")
 	var tiles := PlanTiles.grid(2, [], [])
 	# The two-column grid at the narrowest phone's page width (320 less its gutters).
 	tiles.custom_minimum_size = Vector2(288, 0)
