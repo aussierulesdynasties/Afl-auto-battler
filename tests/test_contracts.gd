@@ -1462,6 +1462,14 @@ func _trade(ai_list: Array, give: Array, take: Array, phase: String, margin := 0
 	return Contracts.evaluate_trade(ai, give, take, 99999999, mine, 99999999, margin, {"phase": phase})
 
 
+## _trade without padding the AI list: a three-for-one needs an AI side
+## below the senior spots (38), which the padded minimum-plus-three is not.
+func _trade_as_is(ai_list: Array, give: Array, take: Array, phase: String, margin := 0.0) -> Dictionary:
+	var mine: Array = _padded(GameDB.club_list("GEE").duplicate())
+	mine.append_array(take)
+	return Contracts.evaluate_trade(ai_list.duplicate(), give, take, 99999999, mine, 99999999, margin, {"phase": phase})
+
+
 ## Drops a list's weakest men (never those in `keep`) until it holds at most
 ## `n`: room for a test's signings now that lists start at the minimum.
 func _trim_to(list: Array, n: int, keep := []) -> void:
@@ -1653,10 +1661,10 @@ func _test_trade_packages_and_needs() -> void:
 	young.sort_custom(func(x, y): return TradeValue.future_rating(x) > TradeValue.future_rating(y))
 	var same := true
 	for ph in TradeValue.PHASES:
-		var a := _trade(base, [young[0]], ordinary.slice(0, 3), ph, 0.0)
+		var a := _trade_as_is(base, [young[0]], ordinary.slice(0, 3), ph, 0.0)
 		var rev := ordinary.slice(0, 3)
 		rev.reverse()
-		var b := _trade(base, [young[0]], rev, ph, 0.0)
+		var b := _trade_as_is(base, [young[0]], rev, ph, 0.0)
 		same = same and bool(a["ok"]) == bool(b["ok"]) and is_equal_approx(float(a["in"]), float(b["in"]))
 	_check(same, "The order you pick players in never changes the valuation")
 	# Two players for one gap don't both fill it: a second ruck adds less
@@ -1664,16 +1672,16 @@ func _test_trade_packages_and_needs() -> void:
 	var bars := TradeValue.selection_bars(base)
 	var r1 := _with(base.filter(func(q): return str(q["role"]) == "RUCK")[0], {"id": "t_r1", "overall": int(bars.get("RUCK", 60)) + 8, "age": 26.0, "role2": ""})
 	var r2 := _with(r1, {"id": "t_r2"})
-	var one := _trade(base, [base[6]], [r1], "building", 0.0)
-	var two := _trade(base, [base[6]], [r1, r2], "building", 0.0)
+	var one := _trade_as_is(base, [base[6]], [r1], "building", 0.0)
+	var two := _trade_as_is(base, [base[6]], [r1, r2], "building", 0.0)
 	_check(float(two["in"]) < float(one["in"]) * 1.45, "A second ruck for the same spot adds little (%.2f v %.2f)" % [float(two["in"]), float(one["in"])])
 	# Two starters filling separate weak spots are worth close to their sum.
 	var roles := ["RUCK", "MID", "DEF", "FWD"]
 	roles.sort_custom(func(x, y): return int(bars.get(x, 99)) < int(bars.get(y, 99)))
 	var s1 := _with(base[7], {"id": "t_s1", "role": roles[0], "role2": "", "overall": int(bars[roles[0]]) + 6, "potential": int(bars[roles[0]]) + 6, "age": 26.0})
 	var s2 := _with(base[8], {"id": "t_s2", "role": roles[1], "role2": "", "overall": int(bars[roles[1]]) + 6, "potential": int(bars[roles[1]]) + 6, "age": 26.0})
-	var solo := float(_trade(base, [base[6]], [s1], "building", 0.0)["in"])
-	var pair := float(_trade(base, [base[6]], [s1, s2], "building", 0.0)["in"])
+	var solo := float(_trade_as_is(base, [base[6]], [s1], "building", 0.0)["in"])
+	var pair := float(_trade_as_is(base, [base[6]], [s1, s2], "building", 0.0)["in"])
 	_check(pair > solo * 1.4, "Two starters at separate weak spots both count (%.2f v %.2f alone)" % [pair, solo])
 	# A promising young forward line that is weak now - and has shown it:
 	# an unseen ceiling is only half banked (TradeValue.proven).
