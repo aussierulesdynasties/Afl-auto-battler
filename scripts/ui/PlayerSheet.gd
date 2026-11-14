@@ -8,7 +8,7 @@ extends RefCounted
 ## selection.
 
 ## What his opinion of you does, under the Why button (REFUSE_BELOW, REFUSE_PER_POINT).
-const OPINION_RULE := "The higher his opinion of you, the more a talk lifts his mood. Under %d, he may refuse to re-sign with you: %d%% for every point under."
+const OPINION_RULE := "His opinion of you sets how much a talk lifts him.\nUnder %d, he may refuse to re-sign with us.\nEach point under adds %d%% to the odds he refuses."
 
 const ATTR_ROWS := [
 	["disposal", "Disposal"], ["contested", "Contested"], ["marking", "Marking"],
@@ -80,8 +80,9 @@ static func open(host: Control, p: Dictionary, on_close: Callable = Callable(),
 	if Injuries.concussion_text(p) != "":
 		state.append(Injuries.concussion_text(p) + ".")
 	elif weeks > 0:
-		state.append("Injured: out %s%s." % ["1 week" if weeks == 1 else "%d weeks" % weeks,
-				" (%s)" % str(p["injury_kind"]) if str(p.get("injury_kind", "")) != "" else ""])
+		var out_for := "1 week" if weeks == 1 else "%d weeks" % weeks
+		state.append("Out for %s with a %s injury." % [out_for, str(p["injury_kind"])]
+				if str(p.get("injury_kind", "")) != "" else "Injured. Out for %s." % out_for)
 	elif bool(p.get("rested", false)) and not rival:
 		state.append("Rested this week.")
 	else:
@@ -90,7 +91,8 @@ static func open(host: Control, p: Dictionary, on_close: Callable = Callable(),
 		state.append("Mood: %s." % ClubLife.mood(ClubLife.morale(p)).to_lower())
 		if ClubLife.mood_effect(ClubLife.morale(p)) != "":
 			state.append(ClubLife.mood_effect(ClubLife.morale(p)))
-	var sl := UiKit.lbl(" ".join(state), UiKit.BODY, UiKit.BAD if weeks > 0 else UiKit.TEXT)
+	# One fact a line (style guide 5.1): his availability, then his mood.
+	var sl := UiKit.lbl("\n".join(state), UiKit.BODY, UiKit.BAD if weeks > 0 else UiKit.TEXT)
 	sl.name = "ProfileState"
 	sl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(sl)
@@ -158,7 +160,7 @@ static func open(host: Control, p: Dictionary, on_close: Callable = Callable(),
 	nums.add_child(dev)
 	var plan := GameState.train_plan_label(GameState.plan_for(p))
 	if plan != "" and not rival:
-		v.add_child(UiKit.lbl("Development: %s" % plan, UiKit.SMALL, UiKit.MUTED))
+		v.add_child(UiKit.lbl("Development focus: %s" % plan, UiKit.SMALL, UiKit.MUTED))
 
 	# What he is picked for.
 	v.add_child(UiKit.spacer(4))
@@ -184,7 +186,7 @@ static func open(host: Control, p: Dictionary, on_close: Callable = Callable(),
 	var season_games := int(season_stats.get("games", 0))
 	var season_distance := float(season_stats.get("distance_run", 0.0))
 	if season_games > 0 and season_distance > 0.0:
-		var gps := UiKit.lbl("This season: %.1f km covered per game" % [
+		var gps := UiKit.lbl("He runs %.1f km a game this season." % [
 				season_distance / 1000.0 / float(season_games)], UiKit.SMALL, UiKit.MUTED)
 		gps.name = "ProfileGPS"
 		v.add_child(gps)
@@ -330,7 +332,7 @@ static func top_attributes_block(v: VBoxContainer, p: Dictionary, hidden: bool, 
 		row.add_child(UiKit.line(shown, size, UiKit.MUTED))
 		v.add_child(row)
 	if top.size() in [1, 2]:
-		var short := UiKit.lbl("Only %d rated on record." % top.size(), note_size, UiKit.MUTED)
+		var short := UiKit.lbl("Only %d of his attributes are rated." % top.size(), note_size, UiKit.MUTED)
 		short.name = "TopAttributesShort"
 		v.add_child(short)
 	var nw := PlayerProfile.needs_work_line(p)
@@ -503,7 +505,10 @@ static func _trust(v: VBoxContainer, p: Dictionary) -> void:
 	var key := Trust.player_key(id)
 	var row := UiKit.hbox(8)
 	row.name = "ProfileTrust"
-	var tl := UiKit.lbl(Trust.opinion_line(Trust.value(GameState.relations, key)) + ".", UiKit.BODY, UiKit.TEXT)
+	# "50 out of 100" wraps as one piece, never "out of" on one line and "100." on the next.
+	var nb := String.chr(0xA0)
+	var tl := UiKit.lbl(Trust.opinion_line(Trust.value(GameState.relations, key)).replace(" out of ",
+			nb + "out" + nb + "of" + nb) + ".", UiKit.BODY, UiKit.TEXT)
 	tl.name = "TrustWords"
 	tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -558,7 +563,7 @@ static func _identity(v: VBoxContainer, p: Dictionary) -> Control:
 			edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			for st in ["normal", "hover", "pressed", "hover_pressed"]:
 				edit.add_theme_stylebox_override(st, UiKit.style(Color.TRANSPARENT, 8, UiKit.RADIUS, UiKit.MUTED))
-		var field := UiKit.search_field(nick, "Nickname (blank for none)")
+		var field := UiKit.search_field(nick, "Nickname, or leave it blank")
 		field.name = "NicknameField"
 		field.max_length = GameState.NICKNAME_MAX
 		field.visible = false
