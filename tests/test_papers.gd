@@ -79,6 +79,20 @@ func _restore(state: Dictionary) -> void:
 			"(setup) the career at the papers is put back")
 
 
+## The suite's own career at the papers (CLUB, seeded), played there once and
+## put back from memory for each test that starts from it.
+var _papers_at: Dictionary = {}
+
+
+func _at_papers() -> void:
+	if _papers_at.is_empty():
+		_career()
+		_check(_to_papers(), "(setup) the career reaches the papers")
+		_papers_at = _snap()
+	else:
+		_restore(_papers_at)
+
+
 ## Put the papers' story on a chosen kind, as if they had run it.
 func _force(kind: String, pred := 13) -> void:
 	var rec: Dictionary = GameState.papers_record()
@@ -123,8 +137,8 @@ func _test_rules() -> void:
 ## practice result, and a club the practice moved keeps the paper's line on it.
 func _test_power_rankings() -> void:
 	PreSeason.reload()
-	_career()
-	_check(_to_papers(), "The papers print")
+	_at_papers()
+	_check(not GameState.papers_record().is_empty(), "The papers print")
 	var order: Array = GameState.papers_record().get("order", [])
 	var blurbs := GameState.papers_blurbs()
 	var facts := GameState.papers_facts()
@@ -545,7 +559,6 @@ func _test_practice_nudge() -> void:
 			and int(rec["pred"]) == (rec["order"] as Array).find("MEL") + 1,
 			"The printed ladder is whole, each named move is the way its result points and no further, and your place is read from it")
 	_check(full and named > 0, "Every club the practice match earned a move gets all of it unless the ladder's end or another club's result stops it (%d named)" % named)
-	_career()
 
 
 func _test_deck() -> void:
@@ -609,17 +622,22 @@ func _lines(card: Dictionary, i: int) -> PackedStringArray:
 
 func _test_answers() -> void:
 	# Reading a story's card answers nothing: one career at the papers reads all three.
-	_career()
-	_to_papers()
-	var at_papers := _snap()
+	_at_papers()
+	var at_papers := _papers_at
 	for kind in ["finish", "pressure", "breakout"]:
 		_force(kind)
 		var card := GameState.papers_card()
-		_check(not card.is_empty() and (card["options"] as Array).size() == 3,
-				"%s: the story has three answers" % kind)
+		# A tipped player already in the side is not promised a run (the third
+		# answer asks "selected": false): which side the seeded career picks can
+		# differ between platforms, so the count follows the rule.
+		var want := 3
+		if kind == "breakout" and GameState.in_current_side(GameState.list_player(str(GameState.papers_record()["pid"]))):
+			want = 2
+		var n := (card.get("options", []) as Array).size()
+		_check(not card.is_empty() and n == want, "%s: the story has %d answers (got %d)" % [kind, want, n])
 		var every := true
 		var sized := true
-		for i in range(3):
+		for i in range(n):
 			var lines := _lines(card, i)
 			var gain := false
 			var cost := false
@@ -634,7 +652,7 @@ func _test_answers() -> void:
 		_check(sized and quiet.begins_with("Say nothing") and _sized(quiet),
 				"%s: every Gain and Cost line and the silence line carry a size (%s)" % [kind, quiet])
 		var text: String = str(card["title"]) + " " + str(card["text"])
-		for i in range(3):
+		for i in range(n):
 			text += " " + str(card["options"][i]["label"]) + " " + " ".join(_lines(card, i))
 		_check(not text.contains("{") and not text.contains("}") and not text.contains("  "),
 				"%s: no token is left unfilled (%s)" % [kind, text])
@@ -751,15 +769,15 @@ func _test_reckoning() -> void:
 
 
 func _test_silence_and_sim() -> void:
-	_career()
-	_to_papers()
+	_at_papers()
 	_force("finish")
 	var b0 := GameState.board_confidence()
 	GameState.preseason_advance()
 	_check(GameState.board_confidence() == b0 - 3 and str(GameState.papers_record()["result"]).begins_with("You say nothing"),
 			"Saying nothing costs the board three, as on any card, and the result says so")
-	# A hands-off run goes through the papers on silence.
-	_career()
+	# A hands-off run goes through the papers on silence (from the papers as
+	# they ran, unforced and unanswered).
+	_at_papers()
 	var board_a := GameState.board_confidence()
 	GameState.preseason_sim_to_round1()
 	_check(not GameState.preseason_active() and bool(GameState.papers_record().get("seen", false))
