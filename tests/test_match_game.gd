@@ -3567,7 +3567,7 @@ func _test_bounce_once() -> void:
 	late.current_minute = 110
 	late._fire_bounce(3)
 	var ten_t := str(late.pending_moment.get("title", ""))
-	_check(last_t == "Centre ball-up - 3 up in the last minute" and ten_t == "Centre ball-up - 3 up with 10 minutes left",
+	_check(last_t == "Centre bounce · 3 up in the last minute" and ten_t == "Centre bounce · 3 up with 10 minutes left",
 			"The late ball-up title reads naturally to the last minute ('%s', '%s')" % [last_t, ten_t])
 
 
@@ -4187,9 +4187,9 @@ func _test_set_shot_bands() -> void:
 		by[str(b["key"])] = b
 	_check(is_equal_approx(float(by["close"]["goal"]), 0.85) and is_equal_approx(float(by["front"]["goal"]), 0.71),
 			"An ordinary kick converts at the AFL rate in front (%.2f, %.2f)" % [float(by["close"]["goal"]), float(by["front"]["goal"])])
-	_check(MatchSim.chance_words(float(by["front"]["goal"])) == "He should kick it"
-			and MatchSim.chance_words(float(by["close"]["goal"])) == "He should kick it",
-			"Straight in front, an ordinary kick should kick it")
+	_check(MatchSim.chance_words(float(by["front"]["goal"])) == "He kicks these most days"
+			and MatchSim.chance_words(float(by["close"]["goal"])) == "He kicks these most days",
+			"Straight in front, an ordinary kick kicks these most days")
 	_check(float(by["pocket"]["goal"]) < float(by["front"]["goal"]) and float(by["long"]["goal"]) < 0.4
 			and float(by["angle"]["goal"]) < float(by["front"]["goal"]),
 			"The pocket, the angle and long shots are harder")

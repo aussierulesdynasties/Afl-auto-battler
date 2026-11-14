@@ -5004,11 +5004,11 @@ const STAR_OVR := 80
 ## Energy below which a player is rotated off: stars are ridden harder.
 const ROTATION_POLICIES := {
 	"hard": {"label": "Protect freshness", "role": 80.0, "star": 68.0,
-			"text": "Anyone tiring comes off early, your stars included: fresh legs all day, less time on the ground for your best."},
+			"text": "Anyone tiring comes off early, our stars included. Fresh legs all day, less time on the ground for our best."},
 	"normal": {"label": "Balanced rotations", "role": 70.0, "star": 50.0,
-			"text": "Rotate the group; your stars stay on a little longer than the rest."},
+			"text": "Rotate the group. Our stars stay on a little longer than the rest."},
 	"stars": {"label": "Prioritise key players", "role": 68.0, "star": 25.0,
-			"text": "Your stars stay on until they are cooked: more of their time on the ground, but they fade late."},
+			"text": "Our stars stay on until they are cooked. More time on the ground for them, but they fade late."},
 }
 ## fit(): effective-attribute multiplier. 0.80 + 0.25 x energy puts an
 ## average match (~80 energy) at 1.0: fresh 1.05, cooked (30) 0.875.
@@ -5648,7 +5648,7 @@ const MOMENT_GAP := 8                # chains between moments
 ## card says "the next ten minutes" - and every call ends at the break.
 ## (They lasted 4-8 chains, about two minutes, and measured as no-ops.)
 const BURSTS := {
-	"stack": {"label": "Stack the stoppage", "chains": 12, "for": "for the next few centre ball-ups"},
+	"stack": {"label": "Stack the centre bounce", "chains": 12, "for": "for the next few centre bounces"},
 	"flood": {"label": "Flood behind the ball", "chains": 45, "for": "for the rest of the quarter"},
 	"push": {"label": "Push numbers forward", "chains": 45, "for": "for the rest of the quarter"},
 	"surge": {"label": "Throw numbers at it", "chains": 15, "for": "for the next ten minutes"},
@@ -5749,7 +5749,7 @@ func _fire_bounce(margin: int) -> void:
 	var left: int = current_quarter * 30 - current_minute
 	var to_go := EraFootball.clock_minutes(120 - current_minute, season_year)
 	var when := "in the last minute" if to_go <= 1 else "with %d minutes left" % to_go
-	var title := "Centre ball-up - %s %s" % [state, when]
+	var title := "Centre bounce · %s %s" % [state, when]
 	# Two distinct calls, each with its own upside and downside and no
 	# "Play it straight" (row 15): Flood behind the ball and Push numbers
 	# forward (row 151, director 2026-11-10). Unanswered (skipped, auto-played)
@@ -5758,9 +5758,9 @@ func _fire_bounce(margin: int) -> void:
 		"text": "Set up for the rest of the game.",
 		"options": _sized([
 			{"key": "flood", "label": "Flood behind the ball",
-				"detail": "Numbers behind the ball: they score less easily, and so do you."},
+				"detail": "Numbers behind the ball. They score less easily, and so do we."},
 			{"key": "push", "label": "Push numbers forward",
-				"detail": "Numbers ahead of the ball: you score more easily, and so do they when they win it back."},
+				"detail": "Numbers ahead of the ball. We score more easily, and so do they when they win it back."},
 		], left, GateOdds.NONE_COST_BOUNCE)})
 
 
@@ -5863,11 +5863,11 @@ func _boundary_moment() -> bool:
 		var lines := GateOdds.tag_call_lines(hot_name, stopper, kept, on_now)
 		_fire({"kind": "hot", "player_id": str(id), "default": 1,
 			"title": "%s has kicked %d" % [hot_name, int(st["goals"])],
-			"text": "Their midfielder is hurting you on the scoreboard.",
+			"text": "Their midfielder is hurting us on the scoreboard.",
 			"options": [
 				{"key": "tag", "label": ("Tag him with %s" if on_now == "" else "Move %s onto him") % stopper,
 					"gain": lines["tag_gain"], "cost": lines["tag_cost"]},
-				{"key": "leave", "label": "Back your defenders" if on_now == "" else "Leave the tag on %s" % on_now,
+				{"key": "leave", "label": "Back our defenders" if on_now == "" else "Leave the tag on %s" % on_now,
 					"gain": lines["leave_gain"], "cost": lines["leave_cost"]},
 			]})
 		return true
@@ -5896,7 +5896,7 @@ func _fire_run_moves(run: int) -> void:
 		"text": "Two ways to answer it from the next centre bounce.",
 		"options": _sized([
 			{"key": "stack", "label": "Stack the centre bounce",
-				"detail": "Extra numbers at the ball-up."},
+				"detail": "Extra numbers at the centre bounce."},
 			{"key": "flood", "label": "Flood behind the ball",
 				"detail": "Everyone back, so they cannot run it in."},
 		], current_quarter * 30 - current_minute, GateOdds.NONE_COST_RUN)})
@@ -5962,7 +5962,7 @@ func _offer_set_shot(side: int, p_fp: float, shooter: Dictionary, defender, band
 	# (bomb_odds) under their own keys.
 	var pack := bomb_odds(side, shooter)
 	options.append({"key": "bomb", "label": "Bomb it to the goal square",
-		"detail": "Into the pack: a forward might mark it or a crumber snap it, but more often the defence clears it.",
+		"detail": "Into the pack. A forward might mark it or a crumber snap it. More often the defence clears it.",
 		"goal": bomb_goal, "behind": 0.30,
 		"show_goal": float(pack["goal"]), "show_behind": float(pack["behind"])})
 	# Each option's gain and cost with the odds it plays at (M7, director 2026-11-10).
@@ -6084,7 +6084,7 @@ func _set_shot_split(goal_p: float, behind_p: float) -> Dictionary:
 ## A shot's chance in a coach's words, never a percentage.
 static func chance_words(p: float) -> String:
 	if p >= 0.65:
-		return "He should kick it"
+		return "He kicks these most days"
 	if p >= 0.5:
 		return "Better than even"
 	if p >= 0.35:
@@ -6108,7 +6108,7 @@ static func kick_words(p: Dictionary) -> String:
 	var a: Dictionary = p.get("attr", {})
 	var k := 0.5 * float(a.get("goalkicking", 50)) + 0.5 * float(a.get("accuracy", 50))
 	if k >= 78:
-		return "one of your best kicks for goal"
+		return "one of our best kicks for goal"
 	if k >= 65:
 		return "a reliable kick"
 	if k >= 50:
@@ -6187,7 +6187,7 @@ func resolve_moment(choice: int) -> Dictionary:
 				var t: Dictionary = (tactics[side] as Dictionary).duplicate()
 				t["tag_id"] = str(m["player_id"])
 				tactics[side] = t
-				outcome = "Tag on. You can call it off at the break."
+				outcome = "Tag on. We can call it off at the break."
 			else:
 				outcome = "Structure unchanged."
 		"momentum", "bounce":

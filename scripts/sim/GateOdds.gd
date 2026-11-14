@@ -14,33 +14,33 @@ const COST := "Cost: %s"
 # The game plans (M1, director 2026-11-10: "Gain for this list today", the
 # written figure beside it). Templates hold no number of their own.
 const PLAN_GAIN := {
-	"attacking": "your shots %s more accurate, %s more ground a kick",
-	"defensive": "%s more pressure where they start, their shots %s less accurate",
-	"contest": "a %s better chance at every stoppage",
-	"controlled": "%s fewer clangers, %s less pressure felt, legs tire %s slower",
+	"attacking": "our shots %s more accurate\nOur kicks gain %s more ground",
+	"defensive": "%s more pressure where they start\nTheir shots %s less accurate",
+	"contest": "we get a %s better chance at every stoppage",
+	"controlled": "%s fewer clangers from us\nTheir pressure bites %s less\nOur legs tire %s slower",
 }
 const PLAN_COST := {
-	"attacking": "%s more clangers, legs tire %s faster, their shots %s more accurate on the rebound",
-	"defensive": "your shots %s less accurate, legs tire %s faster, %s less pressure in your back third, %s less ground a kick",
-	"contest": "%s less ground a kick, their shots %s more accurate on the rebound",
-	"controlled": "%s less ground a kick",
+	"attacking": "%s more clangers from us\nOur legs tire %s faster\nTheir shots %s more accurate on the rebound",
+	"defensive": "our shots %s less accurate\nOur legs tire %s faster\n%s less pressure in our back third\nOur kicks gain %s less ground",
+	"contest": "our kicks gain %s less ground\nTheir shots %s more accurate on the rebound",
+	"controlled": "our kicks gain %s less ground",
 }
-const PLAN_SUITS := " (%s for a list that suits it)"
-const BALANCED_GAIN := "nothing for them to exploit: no plan cost"
-const BALANCED_COST := "no plan edge at either end"
+const PLAN_SUITS := "\n(%s for a list that suits it)"
+const BALANCED_GAIN := "nothing for them to exploit\nNo plan cost"
+const BALANCED_COST := "no edge from the plan at either end"
 
 # The pep talk (M3), for the quarter it is given.
 const PEP_GAIN := {
-	"steady": "no extra wear on the legs and no frayed tempers",
-	"fire_up": "a %s better chance at every contest while you are behind; nothing level or in front",
-	"calm": "%s fewer clangers, %s less pressure felt, legs tire %s slower",
-	"heat": "%s more pressure on their ball carriers (%s on top of a High Press)",
+	"steady": "no extra wear on the legs\nNo frayed tempers",
+	"fire_up": "a %s better chance at every contest while we're behind\nNothing when level or in front",
+	"calm": "%s fewer clangers from us\nTheir pressure bites %s less\nOur legs tire %s slower",
+	"heat": "%s more pressure on their ball carriers\nOn top of a High Press, %s more",
 }
 const PEP_COST := {
-	"steady": "no lift at the contest and no extra pressure",
-	"fire_up": "%s more clangers and legs tire %s faster, behind or not",
-	"calm": "%s less ground a kick",
-	"heat": "legs tire %s faster all quarter",
+	"steady": "no lift at the contest\nNo extra pressure",
+	"fire_up": "%s more clangers from us\nOur legs tire %s faster, behind or not",
+	"calm": "our kicks gain %s less ground",
+	"heat": "our legs tire %s faster all quarter",
 }
 
 # Who tags (the pre-bounce and break sheets).
@@ -49,43 +49,43 @@ const TAG_GIVES := "%s of his own ball and contest work"
 const TAG_TOUCHES := "Usually %d touches. Tagged, about %d."
 # The Tag call at a break (director 2026-11-10, "Gain / Cost everywhere"):
 # labelled rows like every other break call, the size inside the line.
-const TAG_BREAK_GAIN := "%s usually gets %d touches; with %s on him, about %d"
-const TAG_BENCH_COST := "%s goes while %s is on the bench, and gives up %s"
-const TAG_NOBODY_GAIN := "none: you have no midfielder on the ground to go to him"
-const TAG_NONE_GAIN := "your midfielders play their own game: nobody gives up %s"
+const TAG_BREAK_GAIN := "%s usually gets %d touches\nWith %s on him, about %d"
+const TAG_BENCH_COST := "%s goes while %s is on the bench\nHe gives up %s"
+const TAG_NOBODY_GAIN := "none: we have no midfielder on the ground to go to him"
+const TAG_NONE_GAIN := "our midfielders play their own game\nNobody gives up %s"
 const TAG_NONE_COST_ANY := "their midfielders get their usual %d touches"
 # The call when their midfielder is kicking a bag.
-const TAG_HOT_GAIN := "%s usually gets %d touches; with %s on him, about %d, until you call it off"
+const TAG_HOT_GAIN := "%s usually gets %d touches\nWith %s on him, about %d, until we call it off"
 const TAG_HOT_COST := "%s gives up %s"
-const TAG_LEAVE_GAIN := "your midfielders play their own game"
+const TAG_LEAVE_GAIN := "our midfielders play their own game"
 const TAG_LEAVE_COST := "%s gets his usual %d touches"
 ## The same call with a tag already on another of theirs: the man who goes is
 ## already giving up his own game, so moving him costs the hold he has now.
-const TAG_MOVE_COST := "the tag comes off %s, who goes back to his usual %d touches"
+const TAG_MOVE_COST := "the tag comes off %s\nHe goes back to his usual %d touches"
 const TAG_STAY_GAIN := "%s stays on %s, who is held to about %d touches"
 
 # Skip to full time.
-const SKIP_FIRST := "Skip plays the match on the plan you took in, no tag, no talk. Nothing changed here is kept; every call in the match takes 'no change'."
-const SKIP_LATER := "Skip plays the rest on last quarter's calls and talk. Nothing changed here is kept; every call in the match takes 'no change'."
+const SKIP_FIRST := "Skip plays the match on the plan we took in. No tag, no talk. Nothing changed here is kept. Every call in the match takes 'no change'."
+const SKIP_LATER := "Skip plays the rest on last quarter's calls and talk. Nothing changed here is kept. Every call in the match takes 'no change'."
 
 # The in-match risk cards.
 const BURST_GAIN := {
-	"surge": "a %s better chance at every contest, your shots %s more accurate",
-	"hold": "%s fewer clangers, %s less pressure felt, their shots %s less accurate",
-	"stack": "a %s better chance at each centre bounce (never above %s)",
+	"surge": "a %s better chance at every contest\nOur shots %s more accurate",
+	"hold": "%s fewer clangers from us\nTheir pressure bites %s less\nTheir shots %s less accurate",
+	"stack": "a %s better chance at each centre bounce\nNever above %s",
 	"flood": "their shots %s less accurate",
-	"push": "your shots %s more accurate, %s more ground a kick",
+	"push": "our shots %s more accurate\nOur kicks gain %s more ground",
 }
 const BURST_COST := {
-	"surge": "their shots %s more accurate, legs tire %s faster",
-	"hold": "your shots %s less accurate, %s less ground a kick",
+	"surge": "their shots %s more accurate\nOur legs tire %s faster",
+	"hold": "our shots %s less accurate\nOur kicks gain %s less ground",
 	"stack": "their shots %s more accurate meanwhile",
-	"flood": "your shots %s less accurate, %s less ground a kick",
+	"flood": "our shots %s less accurate\nOur kicks gain %s less ground",
 	"push": "their shots %s more accurate",
 }
-const FOR_MINUTES := ", for about %d minutes"
-const TO_SIREN := ", to the final siren"
-const TO_BREAK := ", to the break"
+const FOR_MINUTES := "\nFor about %d minutes"
+const TO_SIREN := "\nTo the final siren"
+const TO_BREAK := "\nTo the break"
 const NONE_GAIN := "no extra risk at either end"
 const NONE_COST_RUN := "their run goes on at the current odds"
 const NONE_COST_BOUNCE := "no extra numbers behind the ball or ahead of it"
@@ -296,14 +296,14 @@ static func pep_texts(key: String, contest := MatchSim.PEP_FIRE_CONTEST) -> Arra
 
 # Play through (M5): the ball shared out differently, not more of it.
 const FOCUS_GAIN := {
-	"focus_mid": "%s gets the ball %s more often through the midfield, and keeps getting it to about %d touches before it spreads again (%d for anyone else)",
-	"focus_fwd": "%s gets the ball %s more often up forward and takes %s more of the shots",
+	"focus_mid": "%s gets the ball %s more often through the midfield\nHe keeps getting it to about %d touches before it spreads\nAnyone else, about %d",
+	"focus_fwd": "%s gets the ball %s more often up forward\nHe takes %s more of the shots",
 	"focus_def": "%s gets %s more of the first use out of the back half",
 }
 const FOCUS_COST := {
-	"focus_mid": "the side's ball doesn't grow: the rest of the midfield gets less of it, and he runs %s further",
-	"focus_fwd": "the shots don't grow: a better-placed forward shoots less often, and he runs %s further",
-	"focus_def": "the ball out doesn't grow: the other backs get less first use, and he runs %s further",
+	"focus_mid": "our share of the ball doesn't grow\nThe rest of the midfield gets less of it\nHe runs %s further",
+	"focus_fwd": "our shots don't grow\nA better-placed forward shoots less often\nHe runs %s further",
+	"focus_def": "the ball out doesn't grow\nThe other backs get less first use\nHe runs %s further",
 }
 const FOCUS_NONE_GAIN := "the ball finds whoever is best placed"
 const FOCUS_NONE_COST := "nobody gets the extra ball"
@@ -325,13 +325,13 @@ static func focus_texts(slot: String, who: String) -> Array:
 
 
 # Defensive set-up (M6), sized for the men in the jobs.
-const LOOSE_GAIN := "%s gets to about %s of their entries and makes the mark harder when he does"
-const LOOSE_COST := "he leaves his man on about %s of entries; when he is late or loses, their shot is up to %s more dangerous"
+const LOOSE_GAIN := "%s gets to about %s of their entries\nHe makes the mark harder when he does"
+const LOOSE_COST := "he leaves his man on about %s of entries\nWhen he is late or loses, their shot is up to %s more dangerous"
 const COVER_GAIN := "%s reaches %s fewer contests with %s on him"
 const COVER_COST := "%s is %s less often a target inside 50"
-const MAN_GAIN := "every defender holds his man: no space opens behind a loose man"
+const MAN_GAIN := "every defender holds his man\nNo space opens behind a loose man"
 const MAN_COST := "nobody spare to cut off their entries%s"
-const MAN_COST_SPARE := ", and %s plays free"
+const MAN_COST_SPARE := "\n%s plays free"
 
 
 ## How often a loose defender gets to an entry's contest, as the sim reaches
@@ -359,7 +359,7 @@ static func defence_texts(key: String, loose: Dictionary, minder: Dictionary, sp
 	if gains.is_empty():
 		var free := MAN_COST_SPARE % GameDB.player_display_name(spare) if not spare.is_empty() else ""
 		return [MAN_GAIN, MAN_COST % free]
-	return ["; ".join(gains), "; ".join(costs)]
+	return ["\n".join(gains), "\n".join(costs)]
 
 
 # The set shot (M7): the odds the card plays. One short line each, so three
