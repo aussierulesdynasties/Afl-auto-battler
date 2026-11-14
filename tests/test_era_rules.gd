@@ -338,6 +338,13 @@ func _test_smart_delisting() -> void:
 		if p != kid and p != vet and str(p.get("rookie_list", "")) == "":
 			base = p
 			break
+	# Exactly one over the 42: drop other seniors first (the list may already be
+	# past it at the end of the season), then pad if it is short.
+	for p in list.duplicate():
+		if RookieList.senior_count(GameState.staying_on(list)) <= 43:
+			break
+		if p != kid and p != vet and p != base and str(p.get("rookie_list", "")) == "":
+			list.erase(p)
 	while RookieList.senior_count(GameState.staying_on(list)) < 43:
 		var extra: Dictionary = base.duplicate(true)
 		extra["id"] = "era_extra_%d" % list.size()

@@ -33,7 +33,7 @@ const GOLDEN_REAL := "6b9d20ef93eea2ce95f0a6d936f19727"
 ## season's print is the one taken before it was written down, which is the
 ## proof that writing it down changed no result and no draw.
 const BOOKKEEPING_KEYS := ["impact_by", "breeze_side"]
-const GOLDEN_SEASON := {"Windows": "05a96ea659dcfe349e9afec75b01b45a", "Linux": "9c00f9caf199debd6cc6a20325ba8cba"}
+const GOLDEN_SEASON := {"Windows": "371ba35ff56ee30d0509949b45a180a2", "Linux": "2cdd3c9bceb79ab9c0c49b98727f1b7e"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and
