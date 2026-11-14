@@ -23,6 +23,7 @@ func run() -> void:
 	_t("_test_concussion")
 	_t("_test_suspension")
 	_t("_test_tribunal_challenge")
+	_t("_test_tribunal_fines")
 	_t("_test_played_and_simulated_alike")
 	_t("_test_no_second_roll")
 	GameState.replay_seed = 0
@@ -278,6 +279,79 @@ func _test_tribunal_challenge() -> void:
 ## were hurt either way in every one (0.685 a team a game, 2.64 weeks,
 ## 40 concussions each). Injuries are planned at the bounce from their own
 ## stream; playing the match changes who takes the field, never the plan.
+## Director, 2026-11-14: "in the stats section we should also track how much
+## fees players have accrued from tribunal fines". Every club's players are
+## fined on the 2025 scale ($1,000, $1,875, then $3,125), a fine cleared at the
+## Tribunal is paid back, the totals survive a save, an old save reads as none,
+## and Season stats > Players ranks by them.
+func _test_tribunal_fines() -> void:
+	GameState.reset()
+	GameState.autosave_enabled = false
+	GameState.save_path = "user://test_tribunal_fines.save"
+	GameState.start_season("GEE", GameDB.club_list("GEE"))
+	var year := GameState.season_year
+	var mine: Dictionary = GameState.my_list[0]
+	var rival: Dictionary = GameState.season.lists["COL"][0]
+	var fine := func(p: Dictionary, side: int, roll: float) -> Dictionary:
+		return {"side": side, "id": str(p["id"]), "name": GameDB.player_display_name(p),
+				"victim_id": "v", "victim_name": "Victim", "reason": "rough conduct",
+				"outcome": "fine", "weeks": 0, "tribunal_roll": roll, "challenged": false}
+	GameState._process_discipline([{"home": "GEE", "away": "COL",
+			"reports": [fine.call(mine, 0, 0.99), fine.call(rival, 1, 0.99)]}])
+	_check(TribunalFines.season_total(mine, year) == 1000 and TribunalFines.season_total(rival, year) == 1000,
+			"A first fine is $1,000, for your player and a rival's alike (%d, %d)"
+			% [TribunalFines.season_total(mine, year), TribunalFines.season_total(rival, year)])
+	_check(str(GameState.my_mro_lines()[0]).contains("fined $1,000 for rough conduct"),
+			"The round review says what the fine cost (%s)" % str(GameState.my_mro_lines()))
+	GameState._process_discipline([{"home": "GEE", "away": "COL",
+			"reports": [fine.call(rival, 1, 0.99)]}])
+	GameState._process_discipline([{"home": "GEE", "away": "COL",
+			"reports": [fine.call(rival, 1, 0.99)]}])
+	GameState._process_discipline([{"home": "GEE", "away": "COL",
+			"reports": [fine.call(rival, 1, 0.99)]}])
+	_check(TribunalFines.season_total(rival, year) == 1000 + 1875 + 3125 + 3125
+			and TribunalFines.count(rival, year) == 4,
+			"Second and later fines step up the scale: $1,875, then $3,125 (%d)" % TribunalFines.season_total(rival, year))
+	# A fine cleared at the Tribunal is paid back.
+	GameState._process_discipline([{"home": "GEE", "away": "COL",
+			"reports": [fine.call(mine, 0, 0.0)]}])
+	_check(TribunalFines.season_total(mine, year) == 2875, "A second fine of your own adds $1,875")
+	var gate: Array = GameState.tribunal_gate(GameState.pending_mro_challenges()[0])
+	_check(str(gate[0]).contains("no $1,875 fine"), "The Tribunal case names the fine at stake (%s)" % str(gate[0]))
+	var win := GameState.challenge_mro(str(mine["id"]))
+	_check(bool(win.get("success", false)) and TribunalFines.season_total(mine, year) == 1000
+			and TribunalFines.count(mine, year) == 1,
+			"A fine overturned at the Tribunal comes off his total (%d)" % TribunalFines.season_total(mine, year))
+	# Career: every season's fines add up.
+	TribunalFines.charge(mine, year - 1)
+	_check(TribunalFines.career_total(mine) == 2000 and TribunalFines.career_count(mine) == 2,
+			"His career total adds every season's fines (%d)" % TribunalFines.career_total(mine))
+	# Save round-trip.
+	_check(GameState.save_career() and GameState.load_career(), "A career with fines saves and reloads")
+	var back := GameState.list_player(str(mine["id"]))
+	var rival_back: Dictionary = {}
+	for q in GameState.season.lists["COL"]:
+		if str(q["id"]) == str(rival["id"]):
+			rival_back = q
+	_check(TribunalFines.season_total(back, year) == 1000 and TribunalFines.career_total(back) == 2000
+			and TribunalFines.season_total(rival_back, year) == 9125,
+			"The fines survive save and load, season and career")
+	_check(TribunalFines.next_amount(back, year) == 1875, "After a reload his next fine is still his second")
+	# A save from before fines were kept reads as none.
+	back.erase(TribunalFines.KEY)
+	_check(TribunalFines.season_total(back, year) == 0 and TribunalFines.career_total(back) == 0
+			and TribunalFines.next_amount(back, year) == 1000, "A player from an old save has no fines")
+	# Season stats > Players: ranked by fines, shown in dollars, never a game.
+	StatsPlayers.reset_view()
+	StatsPlayers.set_filter("games", "0")
+	StatsPlayers.pick_stat("fines")
+	var top: Dictionary = StatsPlayers.sorted_rows()[0]
+	_check(str(top["id"]) == str(rival["id"]) and StatsPlayers.fmt(StatsPlayers.value(top, "fines", true), "fines", true) == "$9,125",
+			"The stats list ranks by fines, in dollars, the same in Per game (%s)" % str(top.get("name", "")))
+	StatsPlayers.reset_view()
+	GameState.delete_saved_career()
+
+
 func _test_played_and_simulated_alike() -> void:
 	var same := true
 	var any := false

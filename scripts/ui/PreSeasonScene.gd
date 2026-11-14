@@ -50,6 +50,9 @@ func _ready() -> void:
 	# The Rookie Draft follows the National Draft: your pick waits here.
 	if RookieList.waiting(GameState):
 		RookieDraftSheet.open.call_deferred(self, _build)
+	# Essendon's 2016 top-up players, when you coach them (Supplements saga).
+	elif YearEvents.top_up_waiting(GameState):
+		TopUpSheet.open.call_deferred(self, _build)
 	FirstVisitIntro.show_if_due.call_deferred(self, "preseason")
 
 
@@ -1306,6 +1309,8 @@ func handle_back() -> bool:
 	if FirstVisitIntro.close_open(self):
 		return true
 	if RookieDraftSheet.close_open(self):
+		return true
+	if TopUpSheet.close_open(self):
 		return true
 	var plan_sheet := get_node_or_null("SeasonPlanSheet")
 	if plan_sheet != null and is_instance_valid(plan_sheet) and not plan_sheet.is_queued_for_deletion():

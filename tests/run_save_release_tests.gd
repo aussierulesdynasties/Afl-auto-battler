@@ -141,7 +141,7 @@ func _test_frozen_fixtures() -> void:
 			for p in _state.season.lists[code]:
 				var good := 0
 				for t in Traits.of(p):
-					if not Traits.is_bad(str(t)) and not ["unicorn", "wet_weather"].has(str(t)):
+					if not Traits.is_bad(str(t)) and not Traits.ON_TOP.has(str(t)):
 						good += 1
 				most = maxi(most, good)
 				over_two += 1 if good > 2 else 0
