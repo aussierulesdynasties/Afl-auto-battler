@@ -144,33 +144,6 @@ TRAINING_OLD = [
     "but two players are already learning", "comes off it", "until you lock", "his projected peak",
 ]
 
-## The gates pass (copy voice pass 1): per file, the rewritten lines and the lines they replaced.
-## One effect a line (style guide 5.1): a gate's second effect starts its own line (a GDScript "\n").
-GATES_PASS = {
-    "scripts/sim/GateOdds.gd": [[
-        "our shots %s more accurate\\nOur kicks gain %s more ground", "Their pressure bites %s less",
-        "we get a %s better chance at every stoppage", "%s less pressure in our back third",
-        "\\n(%s for a list that suits it)", "while we're behind\\nNothing when level or in front",
-        "On top of a High Press, %s more", "With %s on him, about %d, until we call it off",
-        "none: we have no midfielder on the ground to go to him", "our midfielders play their own game",
-        "Skip plays the match on the plan we took in. No tag, no talk.", "\\nFor about %d minutes",
-        "Anyone else, about %d", "our share of the ball doesn't grow",
-    ], ["your shots", "your back third", "while you are behind", "until you call it off", "you have no midfielder",
-        "your midfielders", "plan you took in", ", for about %d minutes", "(%s on top of a High Press)",
-        "(never above %s)", "(%d for anyone else)", "the side's ball"]],
-    "scripts/sim/MatchSim.gd": [[
-        "He kicks these most days", "one of our best kicks for goal", "Stack the centre bounce",
-        "\"Centre bounce · %s %s\"", "Their midfielder is hurting us on the scoreboard.", "Back our defenders",
-        "Tag on. We can call it off at the break.", "Our stars stay on until they are cooked.",
-    ], ["He should kick it", "one of your best kicks", "Stack the stoppage", "Centre ball-up - ",
-        "hurting you on the scoreboard", "Back your defenders", "You can call it off at the break", "your stars"]],
-    "scripts/sim/CoachReport.gd": [[
-        "A lift at the contest while we're chasing the game.", "It leans on our ball-winners and ruck.",
-        "It asks nothing special of our list.", "We gain less ground.", "A plan of our own",
-    ], ["while you are chasing", "does nothing for you", "Leans on your", "of your list", "you are a little exposed",
-        "Your own plan: the strength"]],
-}
-
 ## The contracts and trades pass (copy voice pass 8, with the T3.R56 trade and contract tutorials
 ## and the off-season brief): per file, the rewritten lines and the lines they replaced.
 CONTRACTS_PASS = {
@@ -234,10 +207,39 @@ CONTRACTS_PASS = {
 PASSES = [(HUB, "copy voice pass 2, hub", HUB_NEW, HUB_OLD)] + [
     (path, "copy voice pass 5, team and coaching", v[0], v[1]) for path, v in TEAM_PASS.items()] + [
     (TRAINING, "copy voice pass 6, training", TRAINING_NEW, TRAINING_OLD)] + [
-    (path, "copy voice pass 1, gates", v[0], v[1]) for path, v in GATES_PASS.items()] + [
     (path, "copy voice pass 8, contracts and trades", v[0], v[1]) for path, v in CONTRACTS_PASS.items()]
 
 LITERAL = re.compile(r'"([^"\n]*)"')
+
+## The gates pass (copy voice pass 1): per file, the rewritten lines and the lines they replaced.
+## One effect a line on the call cards (style guide 5.1): a gate's second effect starts its own line
+## (a GDScript "\n"); the break sheet runs them on one line, parted by " · " (MatchScene._break_line).
+GATES_PASS = {
+    "scripts/sim/GateOdds.gd": [[
+        "our shots %s more accurate\\nOur kicks gain %s more ground", "Their pressure bites %s less",
+        "we get a %s better chance at every stoppage", "%s less pressure in our back third",
+        "\\n(%s for a list that suits it)", "while we're behind\\nNothing when level or in front",
+        "On top of a High Press, %s more", "With %s on him, about %d, until we call it off",
+        "none: we have no midfielder on the ground to go to him", "our midfielders play their own game",
+        "Skip plays the match on the plan we took in. No tag, no talk.", "\\nFor about %d minutes",
+        "Anyone else, about %d", "our share of the ball doesn't grow",
+    ], ["your shots", "your back third", "while you are behind", "until you call it off", "you have no midfielder",
+        "your midfielders", "plan you took in", ", for about %d minutes", "(%s on top of a High Press)",
+        "(never above %s)", "(%d for anyone else)", "the side's ball"]],
+    "scripts/sim/MatchSim.gd": [[
+        "He kicks these most days", "one of our best kicks for goal", "Stack the centre bounce",
+        "\"Centre bounce · %s %s\"", "Their midfielder is hurting us on the scoreboard.", "Back our defenders",
+        "Tag on. We can call it off at the break.", "Our stars stay on until they are cooked.",
+    ], ["He should kick it", "one of your best kicks", "Stack the stoppage", "Centre ball-up - ",
+        "hurting you on the scoreboard", "Back your defenders", "You can call it off at the break", "your stars"]],
+    "scripts/sim/CoachReport.gd": [[
+        "A lift at the contest while we're chasing the game.", "It leans on our ball-winners and ruck.",
+        "It asks nothing special of our list.", "We gain less ground.", "A plan of our own",
+    ], ["while you are chasing", "does nothing for you", "Leans on your", "of your list", "you are a little exposed",
+        "Your own plan: the strength"]],
+    "scripts/ui/MatchScene.gd": [["\" · \".join(parts)"], []],
+}
+PASSES += [(path, "copy voice pass 1, gates", v[0], v[1]) for path, v in GATES_PASS.items()]
 
 
 def words_re(words):
