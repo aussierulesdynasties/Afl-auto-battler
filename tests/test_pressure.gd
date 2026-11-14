@@ -7,7 +7,11 @@ extends RefCounted
 
 var failures: Array[String] = []
 var checks := 0
-const MATCHES := 16
+## Seeded matches per measure. The effects are large in every single match
+## (16 seeds measured: a forward's acts 5-15 at 40 Pressure, 25-43 at 95; a
+## side's rating 75-88, 97-100 lifted 25; acts four times tackles), so four
+## paired seeds show each one without the other twelve.
+const MATCHES := 4
 const BalanceGate := preload("res://tests/balance_gate.gd")
 
 
