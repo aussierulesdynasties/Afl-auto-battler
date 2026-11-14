@@ -200,9 +200,10 @@ var legacy := {}
 ## without it); a career saved before the choice existed keeps Canberra.
 var canberra_on := true
 ## The year the new clubs (Tasmania, and Canberra while the career has it)
-## enter instead of their data years; 0 keeps the data years. A League
-## redraft takes them into the 2027 draft as equals (director, 2026-11-08):
-## no list build, no priority picks, no cap relief. Saved only when set.
+## enter instead of their data years; 0 keeps the data years. Only a League
+## redraft saved between 2026-11-08 and 2026-11-12 has it (2027, the new
+## clubs in the redraft as equals); a new redraft keeps the data years
+## (director, 2026-11-12: "Join in 2028"). Saved only when set.
 var expansion_from := 0
 ## Real 2026 lists with Canberra (director, 2026-11-08): 2027-2029 are played
 ## without you, every club run by its own staff, and you choose your club at
@@ -2419,15 +2420,18 @@ func begin_draft() -> void:
 	# drafted before the 2027 season.
 	var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
 	pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
-	# Every club drafts as an equal (director, 2026-11-08): Tasmania, and
-	# Canberra when the career has it, are in the 2027 redraft with the
-	# founding eighteen and a created club, with no new-club concessions.
-	# A past season's redraft (Legacy mode) is its own clubs only: the clubs
-	# that joined later still join in their real years.
-	expansion_from = GameDB.START_YEAR if dataset == Datasets.DEFAULT else 0
+	# The redraft is the first season's clubs only (director, 2026-11-12:
+	# "Join in 2028"): Tasmania join in 2028 and Canberra, when the career
+	# has them, in 2030, each with the debut list and new-club package every
+	# new club gets. The same holds for a past season's redraft (Legacy mode).
+	# A save from before the ruling keeps its 2027 entry (expansion_from).
+	expansion_from = 0
 	_apply_entry_years()
 	var clubs: Array = GameDB.active_clubs(GameDB.START_YEAR)
-	var short: int = Ratings.LIST_SIZE * clubs.size() - pool.size()
+	# Two spare men a club beyond the places to fill: a pool sized exactly to
+	# the places left the last picks whatever was over, and a coach whose last
+	# place had no one he could afford was stuck on the board.
+	var short: int = (Ratings.LIST_SIZE + 2) * clubs.size() - pool.size()
 	if short > 0:
 		pool.append_array(Prospects.generate_depth_pool(short, GameDB.START_YEAR, str(seed)))
 	draft = Draft.new(pool, clubs.duplicate(), seed)

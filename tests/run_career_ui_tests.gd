@@ -4280,8 +4280,9 @@ func _find_named(n: Node, named: String, out: Array) -> void:
 
 
 ## The Canberra question on New career (director, 2026-11-08): "Canberra
-## joins?" answers No by default, and a real tap on Yes puts Canberra in the
-## League redraft with Tasmania, both as equals.
+## joins?" answers No by default; a real tap on Yes keeps Canberra for 2030.
+## The 2027 League redraft is the founding eighteen either way: Tasmania join
+## in 2028 (director, 2026-11-12: "Join in 2028").
 func _test_new_career_canberra_choice() -> void:
 	_state.delete_saved_career()
 	for pick_it in [false, true]:
@@ -4304,10 +4305,12 @@ func _test_new_career_canberra_choice() -> void:
 		await _settle()
 		var clubs: Array = _state.draft.clubs if _state.draft != null else []
 		_check(both_there and t1 == "" and t2 == "" and _router.current() == "draft"
-				and bool(_state.canberra_on) == pick_it and clubs.has("CANB") == pick_it and clubs.has("TAS")
-				and clubs.size() == (20 if pick_it else 19),
-				("A tap on Yes puts Canberra and Tasmania in the 2027 League redraft (%s %s, %d clubs)" if pick_it
-				else "Left at No, the 2027 League redraft has Tasmania and no Canberra (%s %s, %d clubs)") % [
+				and bool(_state.canberra_on) == pick_it and not clubs.has("CANB") and not clubs.has("TAS")
+				and clubs.size() == 18
+				and _db.enter_year("CANB") == (2030 if pick_it else 9999)
+				and _db.enter_year("TAS") == 2028,
+				("A tap on Yes keeps Canberra for 2030; the 2027 League redraft is 18 clubs (%s %s, %d clubs)" if pick_it
+				else "Left at No, the 2027 League redraft is 18 clubs and Canberra never join (%s %s, %d clubs)") % [
 					t1, t2, clubs.size()])
 	_state.reset()
 	_router.stack = []
