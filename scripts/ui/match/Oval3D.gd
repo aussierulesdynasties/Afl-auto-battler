@@ -19,8 +19,10 @@ const FENCE := 6.0
 const STAND_DEPTH := 34.0
 const STAND_RISE := 24.0
 ## The jog's 17 keys at 24 fps are one stride cycle in 0.67 s, matched to about 6 m/s.
-## A Sherrin is about 0.29 m end to end and 0.18 m across.
 const BODY_GAP := 0.6         # m between two players' centres, drawn
+## The digits the vignettes print numbers with (R fill, G outline), shared so both read alike.
+const DIGITS := preload("res://assets/vignette/figures_digits.png")
+## A Sherrin is about 0.29 m end to end and 0.18 m across.
 const BALL_R := 0.09
 const BALL_LONG := 1.6
 
@@ -39,10 +41,13 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 	_posts()
 	_stands(home, away)
 	var scene: PackedScene = load(PLAYER_GLB)
-	var kits := [_kit(GameDB.club_colours(home), 0), _kit(GameDB.club_colours(away), 1)]
+	# Each club in its home guernsey, as the vignettes dress them (StoppageVignette._dress).
+	var kits := [_kit(GameDB.club_guernsey(home)), _kit(GameDB.club_guernsey(away))]
 	for t in director.tokens:
 		var side := int(t.get("side", 0))
-		players.append(_player(scene, kits[side], GameDB.club_colours(home if side == 0 else away)))
+		var p := _player(scene, kits[side], GameDB.club_colours(home if side == 0 else away))
+		_number(p, int(t.get("num", -1)))
+		players.append(p)
 	anim = Oval3DAnim.new(director, players)
 	ball = MeshInstance3D.new()
 	var bm := SphereMesh.new()
@@ -286,15 +291,32 @@ func _stands(home: String, away: String) -> void:
 	add_child(fence)
 
 
-## One kit material per side: the region fields in the mesh pick skin, hair, guernsey,
-## shorts, socks and boots per pixel (oval3d_player.gdshader).
-func _kit(cols: Array, side: int) -> ShaderMaterial:
+## One kit material per club: the region fields in the mesh pick skin, hair, guernsey,
+## shorts, socks and boots per pixel, and the guernsey wears the club's design
+## (oval3d_player.gdshader). kit is GameDB.club_guernsey's {design, base, pattern, pattern2,
+## shorts, pattern3, kit_cell}, set as StoppageVignette.figure_material sets it.
+func _kit(kit: Dictionary) -> ShaderMaterial:
 	var m := ShaderMaterial.new()
 	m.shader = load("res://scripts/ui/match/oval3d_player.gdshader")
-	m.set_shader_parameter("guernsey", cols[0])
-	m.set_shader_parameter("sock", cols[0])
-	m.set_shader_parameter("shorts", Color(0.94, 0.94, 0.92) if side == 0 else Color(0.08, 0.08, 0.1))
+	m.set_shader_parameter("kit_base", [kit["base"]])
+	m.set_shader_parameter("kit_pattern", [kit.get("pattern", kit["base"])])
+	m.set_shader_parameter("kit_pattern2", [kit.get("pattern2", kit["base"])])
+	m.set_shader_parameter("kit_pattern3", [kit.get("pattern3", kit.get("pattern2", kit["base"]))])
+	var cell := int(kit.get("kit_cell", -1))
+	m.set_shader_parameter("kit_design", [float(100 + cell) if cell >= 0
+			else float(maxi(0, GameDB.GUERNSEY_DESIGNS.find(str(kit.get("design", "plain")))))])
+	m.set_shader_parameter("shorts", kit.get("shorts", Color(0.94, 0.94, 0.92)))
+	m.set_shader_parameter("digits_tex", DIGITS)
+	m.set_shader_parameter("kit_atlas", GameDB.kit_atlas())
+	m.set_shader_parameter("kit_grid", GameDB.kit_grid())
 	return m
+
+
+## His number on the back of his guernsey (0-99; -1 for none), per figure.
+func _number(p: Dictionary, n: int) -> void:
+	for mi in (p["node"] as Node3D).find_children("*", "MeshInstance3D", true, false):
+		if (mi as MeshInstance3D).material_override is ShaderMaterial:
+			(mi as GeometryInstance3D).set_instance_shader_parameter("number", clampi(n, -1, 99))
 
 
 func _player(scene: PackedScene, kit: ShaderMaterial, cols: Array) -> Dictionary:

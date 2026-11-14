@@ -103,7 +103,7 @@ func _setup(st: Array) -> void:
 	# Umpires and spares stand-ins: jogging figures near the play, so they cost what they would.
 	while extras.size() < int(st[1]):
 		var scene: PackedScene = load("res://assets/oval3d/player_average.glb")
-		var kit = oval._kit([Color(0.95, 0.85, 0.2)], 1)
+		var kit = oval._kit({"design": "plain", "base": Color(0.95, 0.85, 0.2), "shorts": Color(0.1, 0.1, 0.12)})
 		var p: Dictionary = oval._player(scene, kit, [Color(0.95, 0.85, 0.2)])
 		(p["anim"] as AnimationPlayer).play("jog")
 		extras.append(p)

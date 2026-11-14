@@ -33,12 +33,27 @@ def field(name):
         a.data.foreach_get("value", vals)
     return vals
 g, sh, so, bo, ha = (field("kit_" + r) for r in ("guernsey", "shorts", "sock", "boot", "hair"))
+# Where each vertex sits on the guernsey (ard_body._store_guernsey_coords, the same coordinates
+# the sprites' design pass renders): UV = (across from the wearer's right, up from the hem),
+# UV2.y = front 1 / back 0. The game draws every club's design and the number from these.
+# The body's own texture UVs are unused by the kit shader, so the first layer carries them.
+# On the socks (never next to the guernsey) UV.y is instead where the sock band sits: 0..1
+# from 17 cm to 11 cm below the knee in the rest pose, as build_sprites.py's maskA draws it.
+gu, gv, gf = field("g_u"), field("g_v"), field("g_front")
+rest_z, knee_z = field("rest_z"), float(basemesh["knee_z"])
+for v in range(len(me.vertices)):
+    if so[v] > 0.0:
+        gu[v], gv[v] = 0.0, (rest_z[v] - (knee_z - 0.17)) / 0.06
+assert me.uv_layers, "the MPFB body has no UV layer to carry the guernsey coordinates"
+uv1 = me.uv_layers[0]
 col = me.color_attributes.new("kit", "FLOAT_COLOR", "CORNER")
 uv2 = me.uv_layers.new(name="kit_hair")
 for li, loop in enumerate(me.loops):
     v = loop.vertex_index
     col.data[li].color = (g[v], sh[v], so[v], bo[v])
-    uv2.data[li].uv = (ha[v], 0.0)
+    uv1.data[li].uv = (gu[v], gv[v])
+    uv2.data[li].uv = (ha[v], gf[v])
+print(f"GUERNSEY u {min(gu):.2f}..{max(gu):.2f} v {min(gv):.2f}..{max(gv):.2f} front {min(gf):.2f}..{max(gf):.2f}")
 me.color_attributes.active_color = col
 me.color_attributes.render_color_index = me.color_attributes.find("kit")
 t_build = time.time()
