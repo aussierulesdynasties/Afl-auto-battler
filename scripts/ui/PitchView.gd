@@ -396,6 +396,7 @@ const RING3D_YOURS := 1.0      # metres: your-people ring, outside the club ring
 const RING3D_ACTOR := 1.3      # ...and the man on the ball's, outside that
 var _r3d := PackedFloat32Array()   # each body's drawn half-height, in pixels
 var _tr3d := 0.0                   # a body's half-height where the camera looks
+const PRESS3D_K := 0.5        # the press wash in 3D, against the flat oval's (director 2026-11-15: "Lighten it")
 const PAINT3D_Y := 0.02       # metres: the ground paint, over the turf, under the club rings (0.03)
 var _paint3d: ImmediateMesh = null
 var _paint_mat: StandardMaterial3D = null    # the wash and marks: lit like the turf
@@ -493,7 +494,7 @@ func _draw_press_zone_3d() -> void:
 					var x := lerpf(wx0, wx1, t)
 					var u := clampf(x / MatchMotion.HALF_LEN, -1.0, 1.0)
 					pts.append(Vector2(x, e * MatchMotion.HALF_WID * sqrt(1.0 - u * u)))
-					cols.append(Color(base.r, base.g, base.b, PRESS_ZONE_ALPHA * fade * lerpf(k0, k1, t)))
+					cols.append(Color(base.r, base.g, base.b, PRESS_ZONE_ALPHA * PRESS3D_K * fade * lerpf(k0, k1, t)))
 			_ground_polygon(pts, cols)
 
 
