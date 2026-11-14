@@ -212,13 +212,22 @@ func _mean_legs(sim: MatchSim) -> float:
 	return total / maxf(1.0, float(n))
 
 
+## What a round-1 advance does to the plans, without its matches: the week's
+## stamp before the round (as _advance_prep), then the season moves to round 2.
+func _into_round_2() -> void:
+	GameState._stamp_conditioning()
+	GameState.season.round_index = 1
+
+
 func _test_career() -> void:
 	GameState.reset()
 	GameState.career_seed = SUITE_SEED
 	GameState.replay_seed = SUITE_SEED
 	GameState.fitness_ai_by_phase = false
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
-	GameState.advance()
+	# No match is under test: the week's stamp (_stamp_conditioning, the only
+	# path that stamps a list) is what an advance would run before the round.
+	_into_round_2()
 	_check(FileAccess.get_file_as_string("res://scripts/state/GameState.gd").contains("var fitness_ai_by_phase := true"),
 			"AI clubs run the plan their phase calls for by default, now the plan screen is in")
 	var stamped := false
@@ -244,7 +253,7 @@ func _test_career() -> void:
 		matched = matched and GameState.fitness_plan(str(code)) == Conditioning.ai_plan(phase)
 		contenders += 1 if phase == "contending" else 0
 	_check(matched and contenders > 0, "Every AI club runs the plan its phase calls for")
-	GameState.advance()
+	_into_round_2()
 	_check(not GameState.can_revise_fitness() and not GameState.set_fitness_plan("steady")
 			and GameState.fitness_plan("GEE") == "peak",
 			"Between revision points the plan is locked in")
@@ -478,7 +487,7 @@ func _test_screens() -> void:
 	await _frames(tree, 2)
 
 	# Between revision points: on view, locked, with when the next chance is.
-	GameState.advance()
+	_into_round_2()
 	var week := GameState.fitness_week()
 	var bye := GameState.fitness_bye_week("GEE")
 	_check(not GameState.can_revise_fitness() and week > 0 and week != bye,
@@ -556,10 +565,22 @@ func _test_ai_revisions() -> void:
 		var want := Conditioning.ai_plan(GameState._club_phase(str(code)))
 		var wrong := "develop" if want != "develop" else "fast"
 		GameState.conditioning[str(code)] = Conditioning.revise(GameState.fitness_record(str(code)), 0, wrong)
-	var guard := 0
-	while GameState.fitness_week() <= Conditioning.ROUND_14 and guard < 30:
-		GameState.advance()
-		guard += 1
+	# Each week's look happens in the week's own step before its matches
+	# (GameState._stamp_conditioning), which reads the week and the club's
+	# phase, not the results: the weeks to round 14 are stepped through it
+	# without their matches, and round 14 itself is a real week's advance.
+	for w in range(1, Conditioning.ROUND_14):
+		GameState.season.round_index = w
+		GameState._stamp_conditioning()
+	GameState.season.round_index = Conditioning.ROUND_14
+	GameState.advance()
+	var at_14 := 0
+	for code in GameState.season.lists:
+		for ch in GameState.fitness_record(str(code)).get("changes", []):
+			if int(ch[0]) == Conditioning.ROUND_14:
+				at_14 += 1
+	_check(at_14 > 0, "A real week's advance at round 14 has rivals look again (%d)" % at_14)
+	GameState._stamp_conditioning()   # the week after: no revision point for anyone without a bye there
 	var only_at_points := true
 	var revised := 0
 	var bad := []

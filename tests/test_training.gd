@@ -324,6 +324,16 @@ func _test_reserves_development() -> void:
 			_round()
 			_check(GameState.xp_gain_for(rested) == GameState.XP_SQUAD,
 					"A rested player earns only the squad share")
+		elif i == 2:
+			# Difficulty never changes development: the third reserves game is
+			# played on the hardest dials and pays the same.
+			GameState.board_patience = "ruthless"
+			GameState.rival_recruiting = "cutthroat"
+			_round()
+			_check(GameState.xp_gain_for(depth) == res_xp,
+					"Reserves XP is the same on Ruthless and Cut-throat (%d)" % GameState.xp_gain_for(depth))
+			GameState.board_patience = "fair"
+			GameState.rival_recruiting = "shrewd"
 		else:
 			_round()
 		var dq := GameState.list_player(depth)
@@ -350,17 +360,6 @@ func _test_reserves_development() -> void:
 	_check(bool(_row(depth).get("on_ground", false)) and not bool(_row(depth)["reserves"])
 			and GameState.xp_gain_for(depth) >= GameState.XP_SQUAD + GameState.XP_SELECTED + GameState.XP_NAMED,
 			"Recalled, he earns senior XP again (%d)" % GameState.xp_gain_for(depth))
-
-	# Difficulty never changes development: reserves XP is the same on the hardest dials.
-	GameState.board_patience = "ruthless"
-	GameState.rival_recruiting = "cutthroat"
-	GameState.list_player(depth)["injury_weeks"] = 0  # he may have been hurt in his senior game
-	_pick(depth, false)
-	_round()
-	_check(GameState.xp_gain_for(depth) == res_xp,
-			"Reserves XP is the same on Ruthless and Cut-throat (%d)" % GameState.xp_gain_for(depth))
-	GameState.board_patience = "fair"
-	GameState.rival_recruiting = "shrewd"
 
 
 func _test_department_development() -> void:

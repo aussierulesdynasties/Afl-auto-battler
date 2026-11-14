@@ -72,15 +72,24 @@ func _test_refuses() -> void:
 	_check(not GameState.begin_from_history(2031), "A start with no history plays live")
 
 
-func _start(first: int) -> bool:
+## `choices` are the career's own choices made before the history starts
+## (GameState properties by name).
+func _start(first: int, choices := {}) -> bool:
 	GameState.reset()
 	GameState.set_canberra(first == GameState.SIM_AHEAD_TO)
+	for key in choices:
+		GameState.set(key, choices[key])
 	return GameState.begin_from_history(first)
 
 
 ## A 2030 history, then `code` chosen at its draft.
 func _any_club(code: String) -> void:
 	_check(_start(2030), "A history starts the 2030 career")
+	_choose(code)
+
+
+## In a 2030 history's draft: `code` is chosen and the career is theirs.
+func _choose(code: String) -> void:
 	_check(GameState.choosing_club() and GameState.season_year == 2029 and not GameState.has_career(),
 			"Choose your club opens at the 2029 draft, nothing saved")
 	_check(GameState.draft.user_club == "" and GameState.draft.pick_index == 0, "No pick is made before you")
@@ -95,22 +104,19 @@ func _any_club(code: String) -> void:
 		break
 
 
-## The two new clubs here; a club of today's league (Collingwood) is chosen
-## the same way by _test_plays_on_and_reloads's 2030 start, which plays on
-## from there (each start costs a reset and a history load).
+## Tasmania here; Canberra are chosen the same way by _test_keeps_choices's
+## start, and a club of today's league (Collingwood) by
+## _test_plays_on_and_reloads's 2030 start, which plays on from there (each
+## start costs a reset and a history load).
 func _test_any_club() -> void:
-	for code in ["TAS", "CANB"]:
-		_any_club(code)
+	_any_club("TAS")
 
 
+## A history start keeps the career's own choices; its club (Canberra) goes
+## through the same any-club checks as _test_any_club's.
 func _test_keeps_choices() -> void:
-	GameState.reset()
-	GameState.set_canberra(true)
-	GameState.board_patience = "ruthless"
-	GameState.rival_recruiting = "cutthroat"
-	GameState.tutorials = false
-	GameState.challenge = {"kind": "youth"}
-	_check(GameState.begin_from_history(2030), "History with choices")
+	_check(_start(2030, {"board_patience": "ruthless", "rival_recruiting": "cutthroat", "tutorials": false,
+			"challenge": {"kind": "youth"}}), "History with choices")
 	var history_seeds := []
 	for n in PremadeHistory.COUNT:
 		history_seeds.append(int(CareerSave.read_packed(PremadeHistory.path_for(2030, n)).get("career_seed", 0)))
@@ -118,7 +124,7 @@ func _test_keeps_choices() -> void:
 	_check(GameState.board_patience == "ruthless" and GameState.rival_recruiting == "cutthroat", "The dials stay")
 	_check(not GameState.tutorials, "Tips stay off")
 	_check(GameState.challenge.is_empty(), "The challenge waits for the club")
-	GameState.choose_sim_ahead_club("GEE")
+	_choose("CANB")
 	_check(str(GameState.challenge.get("kind", "")) == "youth", "The challenge starts with the club")
 
 
