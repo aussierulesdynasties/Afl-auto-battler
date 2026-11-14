@@ -86,7 +86,7 @@ def targets(years):
 
 # Today's value of each rate (Ratings.T after Ratings.FLOW), so a multiplier never
 # makes a chance above MAX_P.
-BASE = {"chains_per_game": 275, "handball_share": 0.44, "mark_share_of_kicks": 0.28,
+BASE = {"chains_per_game": 275, "handball_share": 0.44, "mark_share_of_kicks": 0.24,
         "pressure_base": 0.16, "inside50_goal": 0.255, "inside50_behind": 0.175,
         "hitouts_per_stoppage": 0.78, "clanger_is_free": 0.43,
         "free_rate": None}

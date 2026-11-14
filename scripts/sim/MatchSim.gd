@@ -2472,7 +2472,9 @@ const D50_PRESSURE := 0.50
 ## The tackle's own share of that discount (director 2026-11-14, "Try the
 ## tackle-only lever"): equal to D50_PRESSURE it changes nothing; higher lets
 ## forwards tackle in their 50 while rushed kicks keep the D50 discount.
-const D50_TACKLE := 0.50
+## 0.80 with the chip and the retain below (paired screen 2026-11-14): forward-50
+## tackles 9.2 a game (real 10.8, range 7.7-14.1, was 4.3).
+const D50_TACKLE := 0.80
 const D50_TURNOVER := 0.15
 ## Working it around the back (director 2026-11-14, "Yes, build it"): real
 ## teams have 75.5 possessions a game in their defensive 50 (Champion Data
@@ -2484,9 +2486,12 @@ const D50_TURNOVER := 0.15
 ## more often than elsewhere (director 2026-11-14: "do whatever gets rebounds
 ## in range"). Real defences lay off 11 forward-50 tackles a game and still
 ## rebound about 91% of the entries that do not score; the sim's tackled
-## defender stopped the passage too often. 1.0 is no difference.
-const D50_TACKLE_RETAIN := 1.0
-const D50_CHIP := 0.0
+## defender stopped the passage too often. 1.0 is no difference; 4.0 caps
+## at 0.95 (FLOW tackle_retention 0.25), and rebound 50s go 36.8 -> 38.4
+## (real 39.3, range 37.0-41.9).
+const D50_TACKLE_RETAIN := 4.0
+## 0.35: defensive-50 possessions 48 -> 66 a game, disposals 390 (club range to 391).
+const D50_CHIP := 0.35
 const D50_CHIP_MARK := 2.8
 const D50_CHIP_MIN := -3.0
 const D50_CHIP_MAX := 6.0
