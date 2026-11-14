@@ -19,8 +19,10 @@ const FENCE := 6.0
 const STAND_DEPTH := 34.0
 const STAND_RISE := 24.0
 ## The jog's 17 keys at 24 fps are one stride cycle in 0.67 s, matched to about 6 m/s.
-## A Sherrin is about 0.29 m end to end and 0.18 m across.
 const BODY_GAP := 0.6         # m between two players' centres, drawn
+## The digits the vignettes print numbers with (R fill, G outline), shared so both read alike.
+const DIGITS := preload("res://assets/vignette/figures_digits.png")
+## A Sherrin is about 0.29 m end to end and 0.18 m across.
 const BALL_R := 0.09
 const BALL_LONG := 1.6
 
@@ -29,6 +31,7 @@ var players: Array = []        # [{node, anim, ring}] in director.tokens order
 var ball: MeshInstance3D
 var camera: Camera3D
 var anim: Oval3DAnim          # the animation session's controller (row 198)
+var umpires: Array = []        # [{node, anim, ring, role, k}]: the vignettes' umpire set
 var _look := Vector3.ZERO
 
 
@@ -39,11 +42,15 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 	_posts()
 	_stands(home, away)
 	var scene: PackedScene = load(PLAYER_GLB)
-	var kits := [_kit(GameDB.club_colours(home), 0), _kit(GameDB.club_colours(away), 1)]
+	# Each club in its home guernsey, as the vignettes dress them (StoppageVignette._dress).
+	var kits := [_kit(GameDB.club_guernsey(home)), _kit(GameDB.club_guernsey(away))]
 	for t in director.tokens:
 		var side := int(t.get("side", 0))
-		players.append(_player(scene, kits[side], GameDB.club_colours(home if side == 0 else away)))
+		var p := _player(scene, kits[side], GameDB.club_colours(home if side == 0 else away))
+		_number(p, int(t.get("num", -1)))
+		players.append(p)
 	anim = Oval3DAnim.new(director, players)
+	_add_umpires(scene)
 	ball = MeshInstance3D.new()
 	var bm := SphereMesh.new()
 	bm.radius = BALL_R
@@ -83,6 +90,7 @@ func sync(dt: float) -> void:
 		var node: Node3D = p["node"]
 		node.position = Vector3(pos.x, 0.0, pos.y)
 		anim.step(i, p, holder, pos, vel, dt)
+	_move_umpires(dt)
 	var bp: Vector2 = director.ball["pos"]
 	var h := float(director.ball.get("h", 0.0))
 	if holder >= 0 and holder < players.size():
@@ -286,15 +294,32 @@ func _stands(home: String, away: String) -> void:
 	add_child(fence)
 
 
-## One kit material per side: the region fields in the mesh pick skin, hair, guernsey,
-## shorts, socks and boots per pixel (oval3d_player.gdshader).
-func _kit(cols: Array, side: int) -> ShaderMaterial:
+## One kit material per club: the region fields in the mesh pick skin, hair, guernsey,
+## shorts, socks and boots per pixel, and the guernsey wears the club's design
+## (oval3d_player.gdshader). kit is GameDB.club_guernsey's {design, base, pattern, pattern2,
+## shorts, pattern3, kit_cell}, set as StoppageVignette.figure_material sets it.
+func _kit(kit: Dictionary) -> ShaderMaterial:
 	var m := ShaderMaterial.new()
 	m.shader = load("res://scripts/ui/match/oval3d_player.gdshader")
-	m.set_shader_parameter("guernsey", cols[0])
-	m.set_shader_parameter("sock", cols[0])
-	m.set_shader_parameter("shorts", Color(0.94, 0.94, 0.92) if side == 0 else Color(0.08, 0.08, 0.1))
+	m.set_shader_parameter("kit_base", [kit["base"]])
+	m.set_shader_parameter("kit_pattern", [kit.get("pattern", kit["base"])])
+	m.set_shader_parameter("kit_pattern2", [kit.get("pattern2", kit["base"])])
+	m.set_shader_parameter("kit_pattern3", [kit.get("pattern3", kit.get("pattern2", kit["base"]))])
+	var cell := int(kit.get("kit_cell", -1))
+	m.set_shader_parameter("kit_design", [float(100 + cell) if cell >= 0
+			else float(maxi(0, GameDB.GUERNSEY_DESIGNS.find(str(kit.get("design", "plain")))))])
+	m.set_shader_parameter("shorts", kit.get("shorts", Color(0.94, 0.94, 0.92)))
+	m.set_shader_parameter("digits_tex", DIGITS)
+	m.set_shader_parameter("kit_atlas", GameDB.kit_atlas())
+	m.set_shader_parameter("kit_grid", GameDB.kit_grid())
 	return m
+
+
+## His number on the back of his guernsey (0-99; -1 for none), per figure.
+func _number(p: Dictionary, n: int) -> void:
+	for mi in (p["node"] as Node3D).find_children("*", "MeshInstance3D", true, false):
+		if (mi as MeshInstance3D).material_override is ShaderMaterial:
+			(mi as GeometryInstance3D).set_instance_shader_parameter("number", clampi(n, -1, 99))
 
 
 func _player(scene: PackedScene, kit: ShaderMaterial, cols: Array) -> Dictionary:
@@ -334,6 +359,76 @@ func _player(scene: PackedScene, kit: ShaderMaterial, cols: Array) -> Dictionary
 	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	node.add_child(ring)
 	return {"node": node, "anim": ap, "ring": ring, "skel": skel, "hands": hands, "hand_len": hand_len}
+
+
+## The umpires, as the vignettes place them (VignetteExtras.umpires): three field umpires,
+## a boundary umpire on each wing, a goal umpire on each goal line, in the umpires' lime
+## (StoppageVignette.UMPIRE_GEAR). No club ring: they belong to neither side.
+func _add_umpires(scene: PackedScene) -> void:
+	var kit := _kit(StoppageVignette.UMPIRE_GEAR)
+	var spots := _umpire_spots()
+	for k in range(spots.size()):
+		var u := _player(scene, kit, [StoppageVignette.UMPIRE])
+		(u["ring"] as Node3D).visible = false
+		u["role"] = str(spots[k][0])
+		u["k"] = k
+		var at: Vector2 = spots[k][1]
+		(u["node"] as Node3D).position = Vector3(at.x, 0.0, at.y)
+		umpires.append(u)
+
+
+## [role, director metres] for each umpire with the ball at its current spot. VignetteExtras
+## works in the vignette ground (x across, y along, half-lengths A x L); the director's x runs
+## along the ground and y across it, so the axes swap and scale to MatchMotion's half-lengths.
+func _umpire_spots() -> Array:
+	var bp: Vector2 = director.ball["pos"]
+	var sx := HALF_LEN / VignetteGround.L
+	var sy := HALF_WID / VignetteGround.A
+	var out := []
+	for u in VignetteExtras.umpires(Vector2(bp.y / sy, bp.x / sx)):
+		var v: Vector2 = u["oval"]
+		out.append([u["ump"], Vector2(v.y * sx, v.x * sy)])
+	return out
+
+
+## Each umpire runs toward his spot for where the ball is now (at most UMP_SPEED), jogging
+## while he moves and facing the ball when he stands. Goal umpires stay on their lines.
+const UMP_SPEED := 7.0
+const UMP_RUN_FROM := 1.4
+
+
+func _move_umpires(dt: float) -> void:
+	if umpires.is_empty():
+		return
+	var spots := _umpire_spots()
+	var bp: Vector2 = director.ball["pos"]
+	for u in umpires:
+		var node: Node3D = u["node"]
+		var ap: AnimationPlayer = u["anim"]
+		var at := Vector2(node.position.x, node.position.z)
+		var want: Vector2 = spots[int(u["k"])][1]
+		var step := want - at
+		var vel := Vector2.ZERO
+		if dt > 0.0 and step.length() > 0.05:
+			var move := step.limit_length(UMP_SPEED * dt)
+			at += move
+			vel = move / dt
+		node.position = Vector3(at.x, 0.0, at.y)
+		var speed := vel.length()
+		var clip := "idle"
+		var rate := 1.0
+		if speed > UMP_RUN_FROM:
+			node.rotation.y = atan2(vel.x, vel.y)
+			clip = "jog"
+			rate = clampf(speed / 6.0, 0.45, 2.3)
+		else:
+			var to := bp - at
+			if to.length() > 0.5:
+				node.rotation.y = atan2(to.x, to.y)
+		if ap.current_animation != clip:
+			ap.play(clip)
+			ap.seek(fmod(float(u["k"]) * 0.137, ap.current_animation_length), false)
+		ap.advance(maxf(dt * rate, 1e-4))
 
 
 func _mat(c: Color) -> StandardMaterial3D:
