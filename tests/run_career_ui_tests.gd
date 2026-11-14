@@ -1638,6 +1638,7 @@ func _run() -> void:
 	await _t("_test_list_tabs_kept")
 	await _t("_test_remembered")
 	await _t("_test_list_problem_and_ask_around")
+	await _t("_test_ask_price_tap")
 	await _t("_test_names_fit")
 	_state.delete_saved_career()
 	await _t("_test_new_career_keeps_the_save")
@@ -3700,16 +3701,15 @@ func _test_list_problem_and_ask_around() -> void:
 				"With nobody keen there is no way into a trade from the answers")
 	scene.queue_free()
 	root.size = size_before
+	# Ask their price by a finger, in this same off-season (opening one costs
+	# seconds), on a fresh screen: asking around offered, tabled and moved nothing.
+	await _ask_price_tap_in_offseason()
 	await _settle()
-	# Ask their price works in this same off-season (opening one costs seconds),
-	# on a fresh screen: asking around offered, tabled and moved nothing.
-	await _t("_test_ask_price_tap")
 
 
 ## Ask their price on a phone (row 67): with one of their players on the sheet
 ## and nothing of yours, a finger on Ask their price fills what you give with
 ## their ask, shows it in a line under the sheet, and the verdict is yes.
-## Run inside _test_list_problem_and_ask_around, on its off-season.
 func _test_ask_price_tap() -> void:
 	# The search behind the tap: a club that turns down the forty cheapest
 	# packages is still asked about the next ones near its price.
@@ -3737,6 +3737,11 @@ func _test_ask_price_tap() -> void:
 		return false)
 	_check(asked.size() == int(_state.ASK_PRICE_TRIES),
 			"Packages well over the price are weighed only among the first %d (%d weighed)" % [int(_state.ASK_PRICE_TRIES), asked.size()])
+	# The tap runs in _test_list_problem_and_ask_around, on its off-season.
+
+
+## The tap behind Ask their price, on the off-season already open.
+func _ask_price_tap_in_offseason() -> void:
 	_check(_state.offseason_year == _state.season_year and _state.my_club == "MEL", "(setup) Melbourne's off-season is open")
 	var size_before := root.size
 	root.size = Vector2i(390, 844)
@@ -5016,7 +5021,6 @@ func _test_sacked_job_choice_taps() -> void:
 			"A club joining next season offers its job, saying when it joins (%s)" % (tas_why.text if tas_why != null else "missing"))
 	take = current_scene.find_child("TakeJob_TAS", true, false)
 	_check(take != null and take.get_combined_minimum_size().x <= take.size.x + 0.5, "Tasmania's Take button reads whole on a 390 phone")
-	_state.offseason_year = _state.season_year
 	why = await Tap.tap(take) if take != null else "missing"
 	await _settle()
 	_check(why == "" and not _state.is_sacked() and str(_state.coach_arcs["move"].get("to", "")) == "TAS" and _state.my_club == "FRE",
