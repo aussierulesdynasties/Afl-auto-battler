@@ -1,83 +1,169 @@
-# How AFL Live 2004 animated its footballers, and what we take from it
+# A 3D animation plan for the match, learnt from AFL Live 2004
 
-_Study of 2026-11-14. Director: "i dont want to use their anims, i want you to learn how they did
-it though, so we can improve it". None of their motion data is used or shipped. This note records
-how their system is organised and measures its data; our clips still come from owned or licensed
-sources ([pipeline proposal §9](ANIMATION_PIPELINE_PROPOSAL.md))._
+_Proposal of 2026-11-14, not a ruling. Director: "i dont want to use their anims, i want you to learn
+how they did it though, so we can improve it"; then "im thinking of completely overhauling the visual
+elements of the game ... how could we use these learnings to produce great animation for a full 3D
+sim?" None of their motion data is used or shipped. Adopting this plan would reverse ARD-M8-007
+("Do not introduce 3D player models"); that is the director's decision to record._
 
-## What was looked at
+## 1. What AFL Live 2004 did (measured)
 
-- `GRAPHICS/ACTOR/ANIMATIONS/ANIMS_TEN_BIT.FLAT` (4.8 MB): every animation in one binary bank.
-- `GRAPHICS/ACTOR/MESHES/PLAYER_LOD_1.DFF`: the player model (RenderWare), for the skeleton.
-- `AFL2004.exe`: its text strings, which list 310 clip names and the animation class names.
+Sources: `GRAPHICS/ACTOR/ANIMATIONS/ANIMS_TEN_BIT.FLAT` (4.8 MB, every animation in one binary bank),
+the player model `PLAYER_LOD_1.DFF` (RenderWare) and the clip paths in `AFL2004.exe`.
 
-## The data (measured)
-
-| Fact | Value | How measured |
-|---|---|---|
-| Clips | 310 (299 full body, 9 upper body, 2 head) | clip paths in the program |
-| Skeleton | 31 bones | the model's bone table (RenderWare HAnim) |
-| Key rate | 25 a second (keys 0.04 s apart) | key times in the bank |
-| Bone keys | ~363,000, 12 bytes each: link to the previous key, time, rotation | record scan |
-| Rotation | 32 bits: three 10-bit parts, the fourth rebuilt (the "ten bit" in the name) | 99.8% of keys drop the same part; all but 10 of 363k fit a unit rotation |
-| Rotation precision | ~0.16 degrees a step | 10 bits over ±0.71 |
-| Root (hips) | full floats: position, rotation and time each frame | 32-byte records |
-| Key thinning | a bone that holds still gets no key: frames carry 30, 23 or fewer bone keys | keys per time step |
-| Longest clip | 12.3 s | largest key time |
-
-Their size problem was memory on a 2004 console, so they stored rotations only (bone lengths never
-change), packed small, and left out keys for still bones. Our footballers are pre-rendered sprites
-(ARD-M8-007), so none of this packing carries over. What carries over is how the motion was organised.
-
-## How the moves were organised
+| Fact | Value |
+|---|---|
+| Clips | 310: 299 full body, 9 upper-body layers, 2 head layers |
+| Skeleton | one, 31 bones, shared by every player and umpire |
+| Key rate | 25 a second |
+| Rotation | 32 bits: three 10-bit parts with the fourth rebuilt, ~0.16 degrees a step |
+| Hips | position and rotation in full floats every frame |
+| Still bones | no keys at all |
+| Model detail levels | 6 per player |
+| Longest clip | 12.3 s |
 
 | Family | Clips | Pattern |
 |---|---|---|
-| Tackles | 75 | 5 approach directions (front, front-left, left, rear, rear-left) × tackler and tackled player × the outcome |
-| Getting around | 64 | stand, walk, jog, run, sprint, side-step, walk back, run back, each with and without the ball |
-| Marks | 38 | 7 specky takes, each with a dropped version; chest, diving, leading, turning 180 |
-| Ruck and contests | 30 | tap left, tap behind, tap forward, grab, jostle and wrestle with the opponent |
-| Idle, reactions, ceremony | 24 | 8 idle variants, fist pump, head shake, disappointment, coin toss, bench |
+| Tackles | 75 | 5 approach directions × tackler and tackled × outcome (start, caught, shrugged off, spilled, disposed, taken to ground, recovery) |
+| Getting around | 64 | stand, walk, jog, run, sprint, side-step, walk back, run back; with and without the ball |
+| Marks | 38 | 7 speckies and 6 dropped versions; chest, dive, leading, turning 180 |
+| Ruck and contests | 30 | taps three ways, grabs, jostles, wrestles |
+| Idle, reactions, ceremony | 24 | 8 idles, fist pump, head shake, disappointment, coin toss, bench |
 | Umpires | 23 | every signal, bounce, throw-up, ball-up |
-| Kicks | 14 | quick, medium, long, torpedo, snap, banana, soccer, set shot run-up loop |
-| Gathers | 12 | stand and run, with turns of 90 and 180 |
+| Kicks | 14 | quick, medium, long, torpedo, snap, banana, soccer, set-shot run-up |
+| Gathers | 12 | standing and running, turning 90 and 180 |
 | Handballs | 10 | quick, long, fake |
-| Bumps and spoils | 10 | bump, fall front, back, side; punch the ball away |
-| Upper body and head layers | 7 | reach for the ball high or chest-high, square or side-on; twist the trunk; turn the head |
+| Bumps and spoils | 10 | bump, falls front, back and side, punching the ball away |
+| Player layers | 7 | reaching high and chest-high, square and side-on; trunk twist; head turn |
 
-Four ideas run through the whole list:
+Their four ideas:
 
-1. **A move is named by where it starts and where it ends.** 91 clips read `start_move_end`:
-   `stand_k_long_stand`, `run_k_long_run`, `run_gather_run`, `stand_pickup_t90_run`. A kick from
-   a standstill and a kick on the run are different clips, so legs never pop from one gait to another.
-2. **Turns are animated, not snapped.** 32 clips turn the player 30, 90 or 180 degrees (`run_t180_run`,
-   `stand_t90_jog`). The body plants and turns; it never just spins round.
-3. **The tackle is a pair, and it branches on the result.** Both players start together (`_start`),
-   then play the result the match decided: tackled and caught, shrugged off, ball spilled, disposed of
-   in the tackle, taken to ground, then the recovery. The animation shows what the match engine decided.
-4. **Every mark has a miss.** `m_spec_a_01` to `07` and `m_spec_a_miss_01` to `06`; `run_m_chest_run`
-   and `run_m_chest_miss_run`. A dropped mark looks like a drop.
+1. **A move is named by where it starts and ends.** 91 clips read `start_move_end`: a kick from a
+   standstill and a kick on the run are different clips, so legs never pop between gaits.
+2. **Turns plant and turn.** 32 clips turn the body 30, 90 or 180 degrees through a foot plant.
+3. **Contests are pairs that branch on the result.** Both players start together, then play the
+   outcome the match engine decided.
+4. **Every mark has a miss.** A dropped mark looks like a drop.
 
-Smaller ideas: the hands reach for the ball as an upper-body layer while the legs keep running
-(`receive_high90`); the head turns towards the ball as its own layer; 8 idle variants stop a stoppage
-looking like clones; locomotion clips exist both with the ball and without.
+What limited them was 2004 hardware: no warping, no runtime IK, baked layers. Everything they could
+not do at runtime they covered with more clips. A modern engine does much of it live, so the
+same quality needs fewer clips and fits the sim more exactly.
 
-## What we can do better, on our sprite pipeline
+## 2. The plan
 
-Mapped onto the open [animation pipeline proposal](ANIMATION_PIPELINE_PROPOSAL.md) (its §12 decisions
-are still the director's):
+### 2.1 The sim owns where and when
 
-| Their idea | Where we are | Improvement for us |
+MatchSim decides every event; the animation never changes a football outcome. Each event that reaches
+the view carries **who, what, where, when and the result**: "Player 14, drop punt, at (x, y), contact
+at t, ball to (x2, y2), result: goal". The view chooses a clip from the player's current gait. It then
+**warps** the clip in time and space, so the contact marker lands on the sim's spot at the sim's moment.
+
+- Every action clip carries markers: foot plants, ball contact, ball release, mark secured, tackle
+  contact.
+- Warping stretches the run-in, never the contact frames. A clip warped past its limits is the wrong
+  clip, and the view chooses another one.
+- Godot has no built-in motion warping; it is a custom root-motion correction (a `SkeletonModifier3D`
+  plus root-motion scaling) and the first engineering risk in the proof (§2.10).
+
+### 2.2 Getting around: a blend space plus starts, stops and turns
+
+- A speed × direction blend space (`AnimationTree` `BlendSpace2D`). Cycles: walk, jog, run, sprint,
+  backpedal and side-step, each with and without the ball. That is about 12 cycles, against their 64 clips.
+- Start, stop and plant-and-turn clips (90 and 180) at walk, jog and run, entered on the right foot.
+- Playback rate comes from the speed MatchMotion gives the player, so strides match the ground covered.
+- Foot locking: a planted foot is pinned to the turf by IK until it lifts, so nothing slides.
+- **Later, not now:** motion matching (searching a capture library every frame for the best next pose)
+  gives the most natural movement, but it needs a large capture library and more CPU than a phone
+  spares for 45 figures. Revisit after the proof.
+
+### 2.3 Actions state their entry and exit
+
+Every kick, handball, gather, bounce and mark is authored as `entry_move_exit` (stand or run in, stand
+or run out) with its lead foot or hand recorded. The view chooses the version matching the player's gait
+and the phase of his stride, so a run flows into a drop punt and out again. Right- and left-footers
+are separate clips or a mirror that also swaps the kicking leg, never a mirror that gives a right-footer
+his left foot.
+
+### 2.4 Contests are pairs that branch on the result
+
+Tackles, bumps, ruck contests and one-on-one marks are captured with two people in one shared space.
+
+1. **Align:** in the last few frames before contact, both players are warped onto the pair's starting
+   spacing.
+2. **Angle:** 3 approach directions (front, side, behind) are captured. Warping covers the angles
+   between, where they needed 5.
+3. **Branch:** the pair shares its start and splits at contact into the result MatchSim decided:
+   holding the ball, held to a ball-up, fended off, stepped out of it, ball knocked loose.
+
+### 2.5 Every success has its failure
+
+A specky has its spill, a chest mark its fumble, a gather its knock-on, a kick its shank, a handball
+its fumble. The design bible asks that the game shows what each decision led to; a dropped mark has to
+look like a drop.
+
+### 2.6 Live layers and IK replace baked variants
+
+- **Look:** the head and eyes track the ball (a look-at modifier on the neck and head).
+- **Reach:** the upper body reaches for the ball as a masked layer over the running legs (blend with
+  a bone filter).
+- **Hands and boot:** two-bone IK puts the palms on the ball and the boot through it in the final
+  centimetres.
+- **The ball:** attached to the hand bones from gather to release and to the boot at contact, then
+  handed to the sim's flight. It never hovers.
+
+### 2.7 Everyone on the ground is alive
+
+36 players and 9 umpires (3 field, 4 boundary, 2 goal). At least 6 idle variants with different start
+times; reactions after goals, frees and dropped marks; the umpire's full signal set; set-ups at every
+stoppage. Nobody stands identically to the player next to him.
+
+### 2.8 Phone budget and detail levels
+
+An Android phone in portrait is the reference. 45 skinned figures is the main performance risk.
+
+| Distance on screen | Model | Animation |
 |---|---|---|
-| Start and end state in every move | `kick`, `snap`, `gather` are standing moves; `gather_run` is proposed (§8) | Give every one-shot strip a run version: `run_kick_run`, `run_handball_run`, `run_gather_run`. The proposed `gather_run` is the first; the same marker contract (foot plant, contact) covers the rest |
-| Animated turns | facing snaps to the nearest rendered direction plus a mirror | A 90 and a 180 turn strip for stand and run; the scene plays it when a player's direction changes that much |
-| Tackle branches on the result | one tackle pair proposed (§8) | Render the pair's start once, then one ending per tackle result MatchSim already decides (holding the ball, held to a ball-up, a fend-off, stepped out of it: `scripts/sim/MatchSim.gd`). Bible principle 3: the game shows what each decision led to |
-| A miss for every mark | `mark_f`, `mark_s` only | A dropped version of each mark, for the marking contests MatchSim already spills to the ground |
-| Run back and side-step | `jog`, `walk`, `carry` | A backpedal for defenders tracking the ball's flight and a side-step for the tackles MatchSim already marks as stepped out of |
-| Idle variety | `ready`, `ready_b` | 3-4 ready variants with a different start frame per player, for a believable broadcast stoppage (row 6.38) |
-| 25 keys a second | strips of 4-8 frames | More frames only where the eye reads contact (the ball drop, the hands at the gather); markers stay the source of truth, as §3 proposes |
-| Upper-body and head layers | not possible on one sprite | Not worth it on sprites; the run versions above cover the case where it shows most |
+| Near (the ball's contest) | full | full rate, IK, layers, warping |
+| Middle | reduced | every second frame, no IK or layers |
+| Far | lowest | animation baked into a texture and played by the shader, no skeleton |
 
-Where we can beat them: their motion is 2004 motion capture with one skeleton for every player. Ours
-can have three body sizes (§1) and right- and left-footers kept apart when mirroring (§5), neither of
-which their list shows.
+The frame-time budget is set from measurement in the proof, not guessed.
+
+### 2.9 The clip list and where it comes from
+
+| Family | Clips (estimate) | Source |
+|---|---|---|
+| Getting around (cycles, starts, stops, turns) | 40 | a licensed library, retargeted |
+| Kicks (drop punt, snap, torpedo, grubber, set shot, each run and stand) | 20 | our own capture |
+| Handballs and bounce on the run | 12 | our own capture |
+| Gathers and pick-ups | 12 | our own capture |
+| Marks and their drops | 24 | our own capture |
+| Tackle, bump and spoil pairs, with branches | 30 | our own capture, two people |
+| Ruck contests | 12 | our own capture |
+| Idles and reactions | 16 | a library plus capture |
+| Umpires | 20 | our own capture against the umpiring rules |
+| **Total** | **about 186** | |
+
+AFL moves have no library source: text-to-motion fails on them, and generic libraries carry soccer
+kicks. They come from capture of real footballers, cleaned in Cascadeur (its spend is a yes), and every
+clip is checked frame by frame against real footage before the director sees it.
+
+### 2.10 The proof first
+
+One full-team passage on the 3D oval: centre bounce (or throw-up), ruck tap, gather, handball, kick,
+contested mark, with all 36 players and the umpires alive.
+
+It passes when:
+- it holds a steady frame rate on the reference Android phone, measured, with the frame-time split
+  between animation, skinning and drawing;
+- every contact lands on MatchSim's spot and time (logged positions against the sim's event log);
+- no foot slides, no ball hovers, and no limb clips through a body or a jumper, checked frame by frame;
+- the director watches it at game speed and says it reads as footy.
+
+If the phone cannot hold it, the plan changes before any more art is made.
+
+## 3. Decisions for the director
+
+1. Reverse ARD-M8-007 and move the match view to 3D players?
+2. If yes, build the proof in §2.10 before anything else in the overhaul?
+3. Capture: a mocap suit, a markerless video tool, or a capture studio day? All three are spend.
