@@ -2415,7 +2415,10 @@ func begin_draft() -> void:
 	expansion_from = 0
 	_apply_entry_years()
 	var clubs: Array = GameDB.active_clubs(GameDB.START_YEAR)
-	var short: int = Ratings.LIST_SIZE * clubs.size() - pool.size()
+	# Two spare men a club beyond the places to fill: a pool sized exactly to
+	# the places left the last picks whatever was over, and a coach whose last
+	# place had no one he could afford was stuck on the board.
+	var short: int = (Ratings.LIST_SIZE + 2) * clubs.size() - pool.size()
 	if short > 0:
 		pool.append_array(Prospects.generate_depth_pool(short, GameDB.START_YEAR, str(seed)))
 	draft = Draft.new(pool, clubs.duplicate(), seed)
