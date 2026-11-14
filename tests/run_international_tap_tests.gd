@@ -1,7 +1,7 @@
 extends SceneTree
 ## godot --headless --path . --script tests/run_international_tap_tests.gd
 ## An international player's story card on a phone (TODO row T5.r164): the
-## club drafts an international, one of his cards whose moment has come is the
+## club lists an international, one of his cards whose moment has come is the
 ## week's card, the hub opens it at 390x844 portrait, and a finger's tap on an
 ## answer (tests/tap.gd) answers it. The answer's Gain and Cost are on the
 ## card before the tap, and what happened shows after it.
@@ -86,44 +86,27 @@ func _on_screen(c: Control) -> bool:
 	return Rect2(Vector2.ZERO, Vector2(root.size)).grow(0.5).encloses(c.get_global_rect())
 
 
-## Fremantle drafts an international prospect from the first class and the
-## career rolls into the next season with him on the list. Returns his id.
+## An international prospect from the first class joins Fremantle's list as a
+## pre-listed draftee (GameState._assign_draftee, the father-son and academy
+## path), for this season. Drafting one in the national draft and keeping him
+## on the list next season is tests/test_international.gd's _test_career; the
+## off-season and the draft it needs cost this test most of its time and none
+## of what it proves (the card on the phone and the tap). Returns his id.
 func _draft_an_international() -> String:
 	_state.reset()
 	_state.career_seed = SUITE_SEED
 	_state.replay_seed = SUITE_SEED
 	_state.start_season("FRE", _db.club_list("FRE"))
 	_state.tutorials = false
-	_state.season.round_index = _state.season.fixture.size()
-	_state.open_offseason()
-	# A full list passes its picks: the coach makes room, as a coach would.
-	var spare: Dictionary = _state.my_list[0]
-	for p in _state.my_list:
-		if int(p["overall"]) < int(spare["overall"]):
-			spare = p
-	_state.release_player(str(spare["id"]))
-	if not _state.begin_intake_draft():
+	var pick := {}
+	for q in _state.draftee_pool:
+		if q.has("intl"):
+			pick = q
+			break
+	if pick.is_empty():
 		return ""
-	var draft: Object = _state.draft
-	var mine := ""
-	var guard := 0
-	while not draft.is_finished() and guard < 2000:
-		guard += 1
-		var code: String = draft.current_club()
-		var pick := {}
-		if code == "FRE" and mine == "":
-			for q in draft.pool:
-				if q.has("intl") and not draft.picked.has(str(q["id"])):
-					pick = q
-					break
-		if pick.is_empty():
-			pick = draft._best_ai_pick(code)
-		if pick.is_empty() or not draft._draft_pick(code, pick):
-			draft._skip_current_pick()
-		elif code == "FRE" and pick.has("intl"):
-			mine = str(pick["id"])
-	if mine == "" or not _state.finish_intake_draft():
-		return ""
+	var mine := str(pick["id"])
+	_state._assign_draftee("FRE", pick, "national")
 	return mine if not _state.list_player(mine).is_empty() else ""
 
 
@@ -139,7 +122,7 @@ func _waiting_intl(pid: String) -> int:
 
 func _test_his_card_answered_by_a_tap() -> void:
 	var pid := await _draft_an_international()
-	_check(pid != "", "Fremantle drafts an international prospect and he is on the list next season")
+	_check(pid != "", "An international prospect is on Fremantle's list")
 	if pid == "":
 		return
 	var p: Dictionary = _state.list_player(pid)
