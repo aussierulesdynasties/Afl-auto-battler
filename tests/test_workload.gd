@@ -463,7 +463,13 @@ func _test_ui() -> void:
 	_season_start()
 	var tree := Engine.get_main_loop() as SceneTree
 	tree.root.size = Vector2i(360, 800)
+	# The first fit player: the profile explains fatigue only for a man who can play, and the
+	# suite's seeded weeks can leave the list's first man injured or suspended.
 	var p: Dictionary = GameState.my_list[0]
+	for q in GameState.my_list:
+		if Ratings.available(q):
+			p = q
+			break
 	p["workload"] = 60.0
 	var screen := Control.new()
 	screen.set_script(load("res://scripts/ui/SelectionScene.gd"))

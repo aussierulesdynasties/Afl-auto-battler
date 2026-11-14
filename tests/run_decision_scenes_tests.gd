@@ -639,9 +639,14 @@ func _test_live_spots() -> void:
 			var origin: Vector2 = back * Vector2.ZERO
 			var look: Vector2 = (back * Vector2(0.0, 1.0)) - origin
 			var got: int = X.wedge_count(here, look, others)
+			# Of the ways a camera can stand back for its shot (DecisionVignette.LOOK_ROOM): one
+			# with no ground behind it left the stand low under an empty sky (2026-11-14).
+			var room: float = X.look_room(here, float(load("res://scripts/ui/match/DecisionVignette.gd").LOOK_ROOM))
 			var most := 0
 			for i in range(int(X.LOOKS)):
-				most = maxi(most, int(X.wedge_count(here, Vector2.from_angle(TAU * float(i) / float(X.LOOKS)), others)))
+				var dir := Vector2.from_angle(TAU * float(i) / float(X.LOOKS))
+				if X.look_fits(here, dir, room):
+					most = maxi(most, int(X.wedge_count(here, dir, others)))
 			print("LIVE %s at %s look %s: %d behind the men, the most any way %d" % [kind, str(here), str(look), got, most])
 			_check(origin.distance_to(here) < 0.01, "%s: the scene stands where the oval has him (%s, the oval %s)" % [kind, str(origin), str(here)])
 			_check(got >= most, "%s: the camera looks the way with the most players behind (%d, the most %d)" % [kind, got, most])

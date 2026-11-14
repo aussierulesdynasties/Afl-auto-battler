@@ -496,6 +496,7 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	# Its own seed: it once shared lead_rng's, so the mid-kick intercept dice
 	# replayed the key-lead dice. Every stream here needs a seed of its own.
 	mid_ic_rng.seed = seed * 137 + 139
+	chip_rng.seed = seed * 173 + 179
 	injury_rng.seed = seed * 13 + 7
 	breeze_side = posmod(hash("breeze|%d" % seed), 2)
 	arch_rng.seed = seed * 151 + 157
@@ -2457,8 +2458,9 @@ const TACKLE_SPILL := 0.5
 ## further (still within his kick range), he handballs this much less, the
 ## forwards get to him this much less often, and a rushed disposal there
 ## turns over this much as often. Breaking a tackle is not how the ball gets
-## out: about 2 exits in 100 come through one (kicks 77%, handballs 21%), so
-## a tackle inside 50 gets no special treatment (director 2026-11-08). Measured
+## out: about 2 exits in 100 come through one (kicks 77%, handballs 21%).
+## (A note here once credited "no special treatment for a tackle inside 50" to
+## the director; he said 2026-11-14 it was never his: see D50_TACKLE_RETAIN.) Measured
 ## on tools/balance.sh match 1000: team rebound 50s 26.8 -> 37.2 (real 39.3,
 ## clubs 37.0-41.9), with every other team rate inside the clubs' range once
 ## marks per kick, one-percenters and goals per entry were recalibrated
@@ -2467,7 +2469,32 @@ const TACKLE_SPILL := 0.5
 const D50_KICK_GAIN := 3.0
 const D50_HANDBALL := 0.7
 const D50_PRESSURE := 0.50
+## The tackle's own share of that discount (director 2026-11-14, "Try the
+## tackle-only lever"): equal to D50_PRESSURE it changes nothing; higher lets
+## forwards tackle in their 50 while rushed kicks keep the D50 discount.
+## 0.80 with the chip and the retain below (paired screen 2026-11-14): forward-50
+## tackles 9.2 a game (real 10.8, range 7.7-14.1, was 4.3).
+const D50_TACKLE := 0.80
 const D50_TURNOVER := 0.15
+## Working it around the back (director 2026-11-14, "Yes, build it"): real
+## teams have 75.5 possessions a game in their defensive 50 (Champion Data
+## 2026) and about half get it out; the sim had 48, three in four clearing it.
+## A defender in his own 50 chips it short this often (metres gained between
+## MIN and MAX), and his teammate marks it this much more often than an
+## ordinary kick. 0.0 is the old one-kick clearance.
+## A defender tackled in his own 50 still gets it away to a teammate this much
+## more often than elsewhere (director 2026-11-14: "do whatever gets rebounds
+## in range"). Real defences lay off 11 forward-50 tackles a game and still
+## rebound about 91% of the entries that do not score; the sim's tackled
+## defender stopped the passage too often. 1.0 is no difference; 4.0 caps
+## at 0.95 (FLOW tackle_retention 0.25), and rebound 50s go 36.8 -> 38.4
+## (real 39.3, range 37.0-41.9).
+const D50_TACKLE_RETAIN := 4.0
+## 0.35: defensive-50 possessions 48 -> 66 a game, disposals 390 (club range to 391).
+const D50_CHIP := 0.35
+const D50_CHIP_MARK := 2.8
+const D50_CHIP_MIN := -3.0
+const D50_CHIP_MAX := 6.0
 
 
 ## A named constant, or its audit override (tune).
@@ -3392,14 +3419,28 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		var disposal_event := -1
 		# Inside his own defensive 50: he looks to clear it (D50_*).
 		var in_d50 := (fp if side == 0 else -fp) <= -f50
+		# Where possessions happen (Champion Data's D50 and F50 possessions):
+		# bookkeeping only.
+		if counts_disposal:
+			if in_d50:
+				_t(side, "poss_d50")
+			elif (fp if side == 0 else -fp) >= f50:
+				_t(side, "poss_f50")
 		var hb_bias: float = (0.85
 				+ 0.30 * (100.0 - _a(carrier, "marking")) / 100.0)
 		var disposal_kind := "handball"
 		var marked := false
+		# Working it around the back (director 2026-11-14, "Yes, build it"):
+		# inside his own 50 a defender often chips it short to a loose
+		# teammate (a switch, a kick to the pocket) instead of clearing it,
+		# so the ball stays in defence for another possession. Its own dice.
+		var chip := in_d50 and not (from_kick_in and touches == 1) \
+				and chip_rng.randf() < _tv("D50_CHIP", D50_CHIP)
 		# A kick-in is kicked: no handball roll for its first disposal.
-		if not (from_kick_in and touches == 1) \
+		var hb_roll := not (from_kick_in and touches == 1) \
 				and rng.randf() < float(T["handball_share"]) * hb_bias \
-				* (_tv("D50_HANDBALL", D50_HANDBALL) if in_d50 else 1.0):
+				* (_tv("D50_HANDBALL", D50_HANDBALL) if in_d50 else 1.0)
+		if hb_roll and not chip:
 			_t(side, "handballs")
 			_p(carrier, "handballs")
 			_emit("handball", side, fp, carrier, "%s handballs" % GameDB.player_display_name(carrier))
@@ -3413,6 +3454,8 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 				_p(carrier, "kicks")
 			var mark_p: float = (float(T["mark_share_of_kicks"])
 					* (0.75 + 0.50 * _a(carrier, "marking") / 100.0))
+			if chip:
+				mark_p = minf(0.95, mark_p * _tv("D50_CHIP_MARK", D50_CHIP_MARK))
 			marked = false if is_kick_in else rng.randf() < mark_p
 			if marked:
 				_t(side, "marks")
@@ -3470,7 +3513,18 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		var press_roll := rng.randf()
 		var rushed := false
 		var tackled := false
-		if press_roll < pressure * PRESS_TACKLE_SHARE * _wx("tackle_share"):
+		# Inside his own 50 the tackle can carry its own discount (D50_TACKLE):
+		# the rushed band keeps its width, so only tackles move.
+		var tackle_cut: float = pressure * PRESS_TACKLE_SHARE * _wx("tackle_share")
+		var rush_cut: float = pressure * (1.0 + _tv("PRESS_RUSH_RATIO", PRESS_RUSH_RATIO))
+		if in_d50:
+			var t_mult: float = (_tv("D50_TACKLE", D50_TACKLE)
+					/ _tv("D50_PRESSURE", D50_PRESSURE))
+			if t_mult != 1.0:
+				var widened := tackle_cut * t_mult
+				rush_cut += widened - tackle_cut
+				tackle_cut = widened
+		if press_roll < tackle_cut:
 			var tackler = _pick_presser(opp, zone)
 			_maybe_report(opp, tackler, carrier)
 			_t(opp, "tackles")
@@ -3478,6 +3532,8 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			_t(opp, "pressure_acts")
 			_p(tackler, "pressure_acts")
 			_press_where(opp, atk_fp, in_d50, true)
+			if in_d50:
+				_t(side, "d50_tackled")
 			tackled = true
 			# High contact belongs to the tackle itself. The ball carrier keeps
 			# possession via a free; the tackler is credited the infringement.
@@ -3489,6 +3545,8 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 					* (0.75 + 0.50 * _a(carrier, "contested") / 100.0))
 			if _trait(carrier, "bull"):
 				retain *= 1.10
+			if in_d50:
+				retain = minf(0.95, retain * _tv("D50_TACKLE_RETAIN", D50_TACKLE_RETAIN))
 			if rng.randf() < retain:
 				var before_fp := fp
 				fp = clampf(fp + rng.randf_range(4.0, 12.0) * dir, -gline, gline)
@@ -3528,7 +3586,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			_emit("tackle", opp, fp, tackler,
 					"%s tackles %s - ball up" % [GameDB.player_display_name(tackler), GameDB.player_display_name(carrier)])
 			return {"outcome": "stoppage", "fp": fp, "actor": carrier}
-		if press_roll < pressure * (1.0 + _tv("PRESS_RUSH_RATIO", PRESS_RUSH_RATIO)):
+		if press_roll < rush_cut:
 			# Closed down without a tackle: the disposal is rushed. It gains
 			# less ground, and sometimes goes straight to the opposition -
 			# likelier against a strong presser, less likely from a clean
@@ -3537,6 +3595,8 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			_t(opp, "pressure_acts")
 			_p(presser, "pressure_acts")
 			_press_where(opp, atk_fp, in_d50, false)
+			if in_d50:
+				_t(side, "d50_rushed")
 			var turn_p: float = (_tv("PRESS_TURNOVER", PRESS_TURNOVER_FLOW)
 					* (0.80 + 0.40 * _a(presser, "pressure") / 100.0)
 					* (1.20 - 0.40 * _a(carrier, "disposal") / 100.0))
@@ -3605,7 +3665,11 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			gain *= PUSH_GAIN
 		gain *= rng.randf_range(0.45, 1.75)
 		if disposal_kind == "kick":
-			if in_d50:
+			if chip:
+				# Short and square: it stays in defence.
+				gain = chip_rng.randf_range(_tv("D50_CHIP_MIN", D50_CHIP_MIN), _tv("D50_CHIP_MAX", D50_CHIP_MAX))
+				_t(side, "d50_chips")
+			elif in_d50:
 				gain *= _tv("D50_KICK_GAIN", D50_KICK_GAIN)
 			gain = minf(gain, kick_range(carrier) * _gt(side, "reach"))
 		if is_kick_in:
@@ -4700,6 +4764,9 @@ func _play_one_chain(T: Dictionary) -> void:
 		res = play_chain(side, start_fp, stoppage, from_kick_in)
 	var outcome: String = res["outcome"]
 	fp = res["fp"]
+	# How a chain ends when the ball finishes in its own defensive 50: bookkeeping.
+	if (fp if side == 0 else -fp) <= -float(T["forward50_line"]):
+		_t(side, "d50_end_" + outcome)
 	if outcome == "moment":
 		# The chain ends on the coach's call: resolve_moment() finishes it.
 		return
@@ -4818,6 +4885,7 @@ const MID_KICK_INTERCEPT := 0.04
 const MID_GIVE_BACK := 0.5
 var _mid_give_back := 0.0
 var mid_ic_rng := RandomNumberGenerator.new()
+var chip_rng := RandomNumberGenerator.new()
 
 
 ## The midfield kick-intercept: `side`'s kick at `at` is taken

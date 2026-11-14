@@ -36,8 +36,11 @@ const BOOKKEEPING_KEYS := ["impact_by", "breeze_side"]
 ## Team counts that record where something happened, not what happened: the
 ## pressure zones (pressure acts in the defensive half, tackles inside 50,
 ## 2026-11-14) are counted without a draw, so leaving them out keeps the print.
-const TEAM_BOOKKEEPING_KEYS := ["pressure_acts_dhalf", "tackles_i50"]
-const GOLDEN_SEASON := {"Windows": "05a96ea659dcfe349e9afec75b01b45a", "Linux": "9c00f9caf199debd6cc6a20325ba8cba"}
+const TEAM_BOOKKEEPING_KEYS := ["pressure_acts_dhalf", "tackles_i50", "poss_d50", "poss_f50",
+		"d50_tackled", "d50_rushed", "d50_chips"]
+## Team counts named by prefix (one key per way a defensive-50 chain ends).
+const TEAM_BOOKKEEPING_PREFIXES := ["d50_end_"]
+const GOLDEN_SEASON := {"Windows": "1ddd72727711d9852bfe868eed24a24c", "Linux": "00b8f1a8c1274dbc3b0d0a192569bb51"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and
@@ -182,6 +185,10 @@ func _strip_team_bookkeeping(v) -> void:
 	if v is Dictionary:
 		for k in TEAM_BOOKKEEPING_KEYS:
 			(v as Dictionary).erase(k)
+		for k in (v as Dictionary).keys():
+			for pre in TEAM_BOOKKEEPING_PREFIXES:
+				if str(k).begins_with(pre):
+					(v as Dictionary).erase(k)
 		for k in (v as Dictionary).keys():
 			_strip_team_bookkeeping((v as Dictionary)[k])
 	elif v is Array:

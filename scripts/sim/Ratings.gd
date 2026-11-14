@@ -20,7 +20,7 @@ const T := {
 	"pressure_base": 0.160,          # chance a touch is tackled
 	"clanger_per_chain": 0.625,     # chance the chain ends in an error
 	"clanger_is_free": 0.43,         # ...of which are free kicks against
-	"mark_share_of_kicks": 0.280,    # 0.327 before the D50 clearing kick (2026-11-07): marks per kick back to real (0.43)
+	"mark_share_of_kicks": 0.240,    # 0.280 before the D50 chip (2026-11-14): chips are marked 2.8x as often; 0.327 before the D50 clearing kick (2026-11-07): marks per kick back to real (0.43)
 	"handball_share": 0.44,
 	"inside50_goal": 0.262,          # of inside-50 entries (0.279 before frees in 50 became set shots, backlog item 24; 0.269 before forward archetypes, ARD-M3-002)
 	"inside50_behind": 0.180,
