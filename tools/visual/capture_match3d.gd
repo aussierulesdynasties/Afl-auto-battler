@@ -3,6 +3,7 @@ extends SceneTree
 ## game as the coach watches it, saved at a few moments of play. Never touches a real save.
 ##   --out PREFIX  (default match3d)   --size WxH (default 540x1200, a phone's shape)
 ##   --club CODE (default FRE)   --seed N (default 7)   --at a,b,c  seconds of play (default 4,12,24)
+##   --plan KEY  the coach's game plan (e.g. defensive: the press wash shows)
 
 var _w := 540
 var _h := 1200
@@ -23,6 +24,7 @@ func _run() -> void:
 	var club := "FRE"
 	var seed := 7
 	var at := [4.0, 12.0, 24.0]
+	var plan := ""
 	var a := OS.get_cmdline_user_args()
 	for i in range(a.size()):
 		match str(a[i]):
@@ -32,6 +34,8 @@ func _run() -> void:
 				var wh := str(a[i + 1]).split("x")
 				_w = int(wh[0])
 				_h = int(wh[1])
+			"--plan":
+				plan = str(a[i + 1])
 			"--club":
 				club = str(a[i + 1])
 			"--seed":
@@ -53,6 +57,8 @@ func _run() -> void:
 	state.set_vignettes_on(false)
 	state.set_match_3d_on(true)
 	state.start_season(club, db.club_list(club))
+	if plan != "":
+		state.club_plan = plan
 	if not state.prepare_interactive_match():
 		push_error("no match to play")
 		quit(1)
