@@ -193,6 +193,10 @@ func _test_classes(state: Node, db: Node) -> void:
 	_check(INTL.note(one).begins_with("International prospect from"), "His profile explains he is an international prospect")
 	_check(not PlayerProfile.production(one)["title"].contains("season"), "No U18 season is claimed for him")
 	_check(RecruitMeeting.reason(one).contains("Raw"), "The panel calls him raw: " + RecruitMeeting.reason(one))
+	# A prospect with no under-18 numbers is described by build and position, never "0 disposals".
+	var unseen := {"name": "Test Unseen", "role": "RUCK", "height_cm": 201, "draft_league": "WAFL", "u18_gm": 0.0, "u18_ho": 0.0}
+	var said := RecruitMeeting.reason(unseen)
+	_check(said.ends_with("a 201 cm ruckman out of the WAFL.") and not said.contains(" 0 "), "An unseen prospect's line: " + said)
 	var dom: Dictionary = {}
 	for p in classes[FIRST_YEAR]:
 		if not p.has("intl"):
