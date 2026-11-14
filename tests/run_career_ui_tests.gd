@@ -3205,8 +3205,11 @@ func _test_menu_and_career() -> void:
 	# percentage would be a model value leaking out.
 	# The familiarity line states its percentages on purpose (row 125): a gate's numbers.
 	var fam_line: String = load("res://scripts/sim/TeamFamiliarity.gd").signing_line()
-	var no_money := RegEx.create_from_string("\\$[0-9][0-9.,]*[mk]?").sub(_screen_text().replace(fam_line, ""), "", true)
-	_check(decimal.search(no_money) == null, "The trade screen shows no internal values")
+	# So does the team rating: the ladder's number, to one decimal (row 177).
+	var rated := RegEx.create_from_string("Team rating [0-9.]+[.] On this list, [0-9.]+ in three years[.]").sub(_screen_text().replace(fam_line, ""), "", true)
+	var no_money := RegEx.create_from_string("\\$[0-9][0-9.,]*[mk]?").sub(rated, "", true)
+	var leak := decimal.search(no_money)
+	_check(leak == null, "The trade screen shows no internal values (%s)" % (no_money.substr(maxi(0, leak.get_start() - 40), 80) if leak else ""))
 	_check(current_scene.find_child("TradeClubPhase", true, false) != null,
 			"The trade tab says where the other club is in its cycle")
 	var pick_btns := current_scene.find_children("Mine_pick_*", "Button", true, false)
