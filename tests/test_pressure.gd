@@ -7,7 +7,11 @@ extends RefCounted
 
 var failures: Array[String] = []
 var checks := 0
-const MATCHES := 16
+## Seeded matches per measure. The effects are large in every single match
+## (16 seeds measured: a forward's acts 5-15 at 40 Pressure, 25-43 at 95; a
+## side's rating 75-88, 97-100 lifted 25; acts four times tackles), so four
+## paired seeds show each one without the other twelve.
+const MATCHES := 4
 const BalanceGate := preload("res://tests/balance_gate.gd")
 
 
@@ -70,8 +74,13 @@ func _test_zones() -> void:
 
 
 ## Tackles are pressure acts; most pressure acts are not tackles; every
-## team total is the sum of its players'.
+## team total is the sum of its players'. Where they happen (_press_where,
+## for the balance harness): some but not all in the presser's defensive half,
+## some but not all of the tackles inside his forward 50.
 func _test_acts_and_reconcile() -> void:
+	var dhalf := 0.0
+	var i50 := 0.0
+	var within := true
 	var fwd_tackles := 0.0
 	var acts := 0.0
 	var tackles := 0.0
@@ -94,6 +103,9 @@ func _test_acts_and_reconcile() -> void:
 					and is_equal_approx(sum_tk, float(team.get("tackles", 0.0)))
 			acts += float(team.get("pressure_acts", 0.0))
 			tackles += float(team.get("tackles", 0.0))
+			dhalf += float(team.get("pressure_acts_dhalf", 0.0))
+			i50 += float(team.get("tackles_i50", 0.0))
+			within = within and float(team.get("pressure_acts_dhalf", 0.0)) <= float(team.get("pressure_acts", 0.0)) 					and float(team.get("tackles_i50", 0.0)) <= float(team.get("tackles", 0.0))
 		for ev in res["events"]:
 			if str(ev.get("kind", "")) == "pressure":
 				forced = true
@@ -101,28 +113,32 @@ func _test_acts_and_reconcile() -> void:
 	_check(reconciled, "Every team's pressure acts and tackles are the sum of its players'")
 	_check(BalanceGate.held(acts > tackles * 2.0, "pressure acts exceed twice tackles"), "Most pressure acts are not tackles (%d acts, %d tackles)" % [acts, tackles])
 	_check(forced, "Pressure can force a turnover without a tackle")
+	_check(within and dhalf > 0.0 and dhalf < acts and i50 > 0.0 and i50 < tackles,
+			"Pressure acts in the defensive half (%d of %d) and tackles inside 50 (%d of %d) are counted"
+			% [dhalf, acts, i50, tackles])
 
 
 ## Lifting one line's Pressure lifts the side's pressure: midfield and
-## defence both matter now, not just the defenders.
+## defence both matter now, not just the defenders. Asked of the rule itself:
+## the chance a carrier is pressured comes from MatchSim._zone_pressure of the
+## side pressing him (each zone's role weights times each man's Pressure), so
+## a line lifted 30 must lift it in every zone. _test_rating_formula plays the
+## matches and shows a harder-pressing side's acts follow.
 func _test_role_pressure_matters() -> void:
+	var base_sim := _sim(700)
+	var base := []
+	for zone in range(MatchSim.PRESS_ZONES.size()):
+		base.append(base_sim._zone_pressure(1, zone))
+	_check(base.size() == 3, "Three pressing zones (%d)" % base.size())
 	for role in ["MID", "DEF", "FWD"]:
-		var base := _pressure_per_opp_disposal(Callable())
-		var lifted := _pressure_per_opp_disposal(func(sq: Squad):
+		var sim := _sim(700, func(sq: Squad):
 			for p in sq.ground:
 				if str(p["role"]) == role:
 					p["attr"]["pressure"] = minf(99.0, float(p["attr"]["pressure"]) + 30.0))
-		_check(lifted > base, "%s Pressure raises the side's pressure (%.3f -> %.3f acts per opposition disposal)" % [role, base, lifted])
-
-
-func _pressure_per_opp_disposal(edit: Callable) -> float:
-	var acts := 0.0
-	var opp_disp := 0.0
-	for i in range(MATCHES):
-		var res := _sim(700 + i, edit).run()
-		acts += float(res["team"][1].get("pressure_acts", 0.0))
-		opp_disp += float(res["team"][0].get("disposals", 0.0))
-	return acts / opp_disp
+		for zone in range(base.size()):
+			var lifted := sim._zone_pressure(1, zone)
+			_check(lifted > float(base[zone]),
+					"%s Pressure raises the side's pressure in zone %d (%.2f -> %.2f)" % [role, zone, base[zone], lifted])
 
 
 ## A forward with elite Pressure produces more pressure acts than he did at

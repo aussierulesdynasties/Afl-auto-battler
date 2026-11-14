@@ -12,6 +12,8 @@ const SUITE_SEED := 2031
 const Ran := preload("res://tests/functions_ran.gd")
 
 var _played := false
+var _pages_before := 0          # almanac pages before the played season
+var _challenge_before := ""     # the coach card's goal line before it
 
 
 func run() -> void:
@@ -19,20 +21,22 @@ func run() -> void:
 	checks = 0
 	GameState.replay_seed = SUITE_SEED
 	GameDB.reload()
+	# One season is played (_season) and read by every test that needs one, in
+	# this order: the tests after them overwrite or reload the almanac.
 	_t("_test_hub_entry")
 	_t("_test_written_at_season_end")
+	_t("_test_story_with_match_story")
+	_t("_test_screen")
+	_t("_test_challenge_goal_marked")
 	_t("_test_save_round_trip")
 	_t("_test_old_save")
 	_t("_test_legends")
 	_t("_test_rows_and_coach_record")
-	_t("_test_screen")
 	_t("_test_club_records")
 	_t("_test_story_finals_result")
-	_t("_test_story_with_match_story")
 	_t("_test_arc_bank_is_sound")
 	_t("_test_arc_season_shapes")
 	_t("_test_arc_old_page")
-	_t("_test_challenge_goal_marked")
 	_t("_test_homegrown_flag")
 	GameState.reset()
 	GameState.delete_saved_career()
@@ -51,11 +55,23 @@ func _check(condition: bool, message: String) -> void:
 		push_error(message)
 
 
-func _play_season() -> void:
+## The one season this suite plays, to its end, read by every test that needs a
+## played season. It carries the coach-300 goal with 290 games coached before it
+## (one page from an earlier season), so the season it closes is the one that
+## meets the goal (_test_challenge_goal_marked).
+func _season() -> void:
+	if _played:
+		return
+	_played = true
 	GameState.reset()
 	GameState.career_seed = SUITE_SEED
 	GameState.replay_seed = SUITE_SEED
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
+	GameState.challenge = {"kind": "goal", "goal": "coach_300", "met_year": 0}
+	# 290 games already coached: this season takes him past 300.
+	GameState.almanac = [{"year": GameState.season_year - 1, "club": "GEE", "w": 200, "l": 90, "d": 0}]
+	_pages_before = GameState.almanac.size()
+	_challenge_before = Challenge.status_line(GameState)
 	var guard := 0
 	while not GameState.season.is_season_over() and guard < 40:
 		GameState.advance()
@@ -71,15 +87,15 @@ func _hub_has_entry() -> bool:
 
 
 func _test_hub_entry() -> void:
-	_play_season()
+	_season()
 	_check(GameState.honour_roll.size() == 1, "The season is played to its end")
 	_check(_hub_has_entry(), "The Hub shows the way into the almanac")
 
 
 func _test_written_at_season_end() -> void:
-	_play_season()
-	_check(GameState.almanac.size() == 1, "One almanac page is written at the season's end")
-	var e: Dictionary = GameState.almanac[0]
+	_season()
+	_check(GameState.almanac.size() == _pages_before + 1, "One almanac page is written at the season's end")
+	var e: Dictionary = GameState.almanac[-1]
 	var roll: Dictionary = GameState.honour_roll.back()
 	_check(int(e["year"]) == GameState.season_year and str(e["club"]) == "GEE", "The page is this season's, for your club")
 	_check(int(e["ladder"]) == GameState.my_position() and int(e["ladder"]) == int(roll["my_position"]),
@@ -135,12 +151,10 @@ func _test_written_at_season_end() -> void:
 	_check(GameState.news.any(func(x): return str(x["kind"]) == "almanac_story" and story.begins_with(str(x["text"]))),
 			"The wrap's front item carries the story's first sentence")
 	_check(GameState.club_records.size() >= 18, "Club records are kept for every club (%d)" % GameState.club_records.size())
-	_played = true
 
 
 func _test_save_round_trip() -> void:
-	if not _played:
-		_play_season()
+	_season()
 	var before: Array = GameState.almanac.duplicate(true)
 	_check(GameState.save_career(), "The career saves")
 	GameState.reset()
@@ -150,8 +164,7 @@ func _test_save_round_trip() -> void:
 
 
 func _test_old_save() -> void:
-	if not _played:
-		_play_season()
+	_season()
 	GameState.save_career()
 	var state := CareerSave.read(GameState.save_path)
 	state.erase("almanac")
@@ -204,7 +217,7 @@ func _test_rows_and_coach_record() -> void:
 
 
 func _test_screen() -> void:
-	_play_season()
+	_season()
 	var scene: Control = load("res://scenes/AlmanacScene.tscn").instantiate()
 	Engine.get_main_loop().root.add_child(scene)
 	var card := scene.find_child("AlmanacSeason_%d" % GameState.season_year, true, false)
@@ -264,7 +277,7 @@ func _test_club_records() -> void:
 ## The match story: the season hero is a named award on the honour
 ## roll and the almanac, and the story names him; every number traces.
 func _test_story_with_match_story() -> void:
-	_play_season()
+	_season()
 	var roll: Dictionary = GameState.honour_roll.back()
 	var e: Dictionary = GameState.almanac.back()
 	var d: Dictionary = GameState.match_story_digest.get(str(int(e["year"])), {})
@@ -323,20 +336,11 @@ func _test_story_finals_result() -> void:
 ## Row 114: Your goal is marked in the annual, once, on the season it is met;
 ## the coach card says where it stands; a save keeps it; a save from before
 ## challenges loads with none.
+## The suite's one season (_season) is the one that takes him past 300.
 func _test_challenge_goal_marked() -> void:
-	GameState.reset()
-	GameState.career_seed = SUITE_SEED
-	GameState.replay_seed = SUITE_SEED
-	GameState.start_season("GEE", GameDB.club_list("GEE"))
-	GameState.challenge = {"kind": "goal", "goal": "coach_300", "met_year": 0}
-	# 290 games already coached: this season takes him past 300.
-	GameState.almanac = [{"year": GameState.season_year - 1, "club": "GEE", "w": 200, "l": 90, "d": 0}]
-	_check(Challenge.status_line(GameState) == "Coach 300 games. 290 so far.",
-			"Before it is met, the coach card says how far along it is (%s)" % Challenge.status_line(GameState))
-	var guard := 0
-	while not GameState.season.is_season_over() and guard < 40:
-		GameState.advance()
-		guard += 1
+	_season()
+	_check(_challenge_before == "Coach 300 games. 290 so far.",
+			"Before it is met, the coach card says how far along it is (%s)" % _challenge_before)
 	var year := GameState.season_year
 	var page: Dictionary = GameState.almanac[-1]
 	_check(int(page.get("year", 0)) == year and str(page.get("challenge_met", "")) == "Coach 300 games",

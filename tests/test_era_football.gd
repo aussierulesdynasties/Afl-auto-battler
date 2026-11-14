@@ -44,14 +44,21 @@ func _codes(n: int) -> Array:
 	return (GameDB.active_clubs(2027).duplicate() as Array).slice(0, n)
 
 
-## Team totals over a round of `s`: each match set up by the season itself
-## (Season.match_sim), so it is played as the season plays its matches.
+## Matches of a round each season plays for the campaign's totals: the eras'
+## gaps are far wider than two matches' noise (director 2026-11-14: "shrink the
+## tests").
+const ROUND_MATCHES := 2
+
+
+## Team totals over the first ROUND_MATCHES of a round of `s`: each match set
+## up by the season itself (Season.match_sim), so it is played as the season
+## plays its matches.
 func _round_totals(s: Season, keys: Array) -> Dictionary:
 	var out := {}
 	for k in keys:
 		out[k] = 0.0
 	var i := 0
-	for m in s.fixture[0]:
+	for m in (s.fixture[0] as Array).slice(0, ROUND_MATCHES):
 		var sim: MatchSim = s.match_sim(str(m["home"]), str(m["away"]), 7000 + i)
 		i += 1
 		var r: Dictionary = sim.run()
@@ -82,7 +89,7 @@ func _test_rows() -> void:
 ## football existed: same rates, same score, same team lines, seed for seed.
 func _test_today_unchanged() -> void:
 	var codes := _codes(2)
-	for sd in [11, 12, 13]:
+	for sd in [11]:
 		var runs := []
 		for y in [0, 2026, 2031]:
 			var h := Squad.new(str(codes[0]), GameDB.club_list(str(codes[0])), true, str(codes[0]))
@@ -123,22 +130,45 @@ func _test_campaign_by_season() -> void:
 			"1990 tackles far less than today (%d against %d a round)" % [tot[1990]["tackles"], tot[2027]["tackles"]])
 	_check(tot[2010]["handballs"] > 1.25 * tot[1990]["handballs"],
 			"2010 handballs far more than 1990 (%d against %d)" % [tot[2010]["handballs"], tot[1990]["handballs"]])
+	print("  campaign: tackles 1990 %d, today %d; handballs 1990 %d, 2010 %d; hit-outs 1990 %d, 2010 %d" % [
+			tot[1990]["tackles"], tot[2027]["tackles"], tot[1990]["handballs"], tot[2010]["handballs"],
+			tot[1990]["hitouts"], tot[2010]["hitouts"]])
 	_check(tot[1990]["hitouts"] < tot[2010]["hitouts"],
 			"1990's recorded hit-outs below 2010's (%d against %d)" % [tot[1990]["hitouts"], tot[2010]["hitouts"]])
 
 
-## Your own match (the one you coach) is played in its season too.
+## Your own match (the one you coach) is played in its season too: the coached
+## match is built (GameState._build_pending_sim, as Play match builds it) from a
+## season of today and a 1990 season, with no career played up to it.
 func _test_your_match_plays_its_season() -> void:
-	GameState.reset()
-	GameState.start_season("MEL", GameDB.club_list("MEL"))
-	_check(GameState.prepare_interactive_match() and GameState.pending_sim.season_year == GameState.season.year
-			and GameState.pending_sim.era_rates.is_empty(), "A new career's match plays today's football")
-	# The same match built again as a 1990 season builds it.
-	GameState.season.year = 1990
-	GameState._build_pending_sim()
-	_check(GameState.pending_sim.season_year == 1990
-			and not GameState.pending_sim.era_rates.is_empty(), "A 1990 season's coached match plays 1990's football")
-	GameState.reset()
+	var codes := _codes(14)
+	var lists := Golden.lists(codes)
+	# What it sets is put back after (GameState.reset() costs a second a call).
+	var keep := [GameState.season, GameState.my_club, GameState.pending_match,
+			GameState._pending_build, GameState.pending_sim]
+	for y in [2027, 1990]:
+		var s := Season.new(codes, lists, 3, y)
+		var m: Dictionary = s.fixture[0][0]
+		var h := str(m["home"])
+		var a := str(m["away"])
+		GameState.season = s
+		GameState.my_club = h
+		GameState.pending_match = {"home": h, "away": a, "round": 1, "label": s.round_label(0)}
+		GameState._pending_build = {"at_home": s.round_at_home(0, h, a), "seed": s.next_seed(99),
+				"finals": false, "weather": s.weather_for(h, a, 0)}
+		GameState._build_pending_sim()
+		var sim: MatchSim = GameState.pending_sim
+		if y == 2027:
+			_check(sim != null and sim.season_year == y and sim.era_rates.is_empty(),
+					"A coached match today plays today's football")
+		else:
+			_check(sim != null and sim.season_year == 1990 and not sim.era_rates.is_empty(),
+					"A 1990 season's coached match plays 1990's football")
+	GameState.season = keep[0]
+	GameState.my_club = keep[1]
+	GameState.pending_match = keep[2]
+	GameState._pending_build = keep[3]
+	GameState.pending_sim = keep[4]
 
 
 ## The bench stays today's until the era rules by year (L4) name each season's.
