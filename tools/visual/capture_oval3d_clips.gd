@@ -65,11 +65,15 @@ func _run() -> void:
 		var foot_hi := -INF
 		var hips0 := Vector3.ZERO
 		var hips1 := Vector3.ZERO
+		# The lowest foot point at each sample: a clip lifted off the turf shows as a high
+		# median even when one frame touches down (the whole-clip minimum hides it).
+		var lows: Array = []
 		var n := int(length * 60.0) + 1
 		for s in range(n):
 			var t := minf(length, s / 60.0)
 			ap.seek(t, true)
 			var cur: Array = []
+			var low := INF
 			for b in range(sk.get_bone_count()):
 				var w: Vector3 = sk.global_transform * sk.get_bone_global_pose(b).origin
 				cur.append(w)
@@ -79,6 +83,7 @@ func _run() -> void:
 				if bn.begins_with("foot_") or bn.begins_with("ball_"):
 					foot_lo = minf(foot_lo, w.y)
 					foot_hi = maxf(foot_hi, w.y)
+					low = minf(low, w.y)
 				if bn == "pelvis" or bn == "Hips":
 					if s == 0:
 						hips0 = w
@@ -90,10 +95,14 @@ func _run() -> void:
 						jump_bone = bn
 						jump_t = t
 			prev = cur
+			lows.append(low)
+		lows.sort()
+		var lifted := lows.filter(func(v): return v > 0.03).size()
 		var base := str(anim_name)
-		print("CLIP %s anim=%s len=%.2fs hips_travel=%.2fm (%s) foot_y %.3f..%.3f max_jump %.3fm/frame@60Hz %s t=%.2f box %s..%s" % [
+		print("CLIP %s anim=%s len=%.2fs hips_travel=%.2fm (%s) foot_y %.3f..%.3f max_jump %.3fm/frame@60Hz %s t=%.2f box %s..%s ground median %.3f p90 %.3f lifted>3cm %d%%" % [
 			base, anim_name, length, (hips1 - hips0).length(), str((hips1 - hips0).snapped(Vector3(0.01, 0.01, 0.01))),
-			foot_lo, foot_hi, jump, jump_bone, jump_t, str(lo.snapped(Vector3.ONE * 0.01)), str(hi.snapped(Vector3.ONE * 0.01))])
+			foot_lo, foot_hi, jump, jump_bone, jump_t, str(lo.snapped(Vector3.ONE * 0.01)), str(hi.snapped(Vector3.ONE * 0.01)),
+			lows[lows.size() / 2], lows[int(lows.size() * 0.9)], 100 * lifted / lows.size()])
 		var mid := (lo + hi) * 0.5
 		var ext := (hi - lo)
 		for view in [["side", Vector3(1, 0, 0)], ["front", Vector3(0, 0, 1)]]:
