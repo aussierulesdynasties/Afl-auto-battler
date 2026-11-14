@@ -91,6 +91,13 @@ var flash := {}                 # {pos, left, goal}
 ## Every time the ball reaches an event's location: {idx, kind, pos, want_x}.
 ## Kept for the tests and the capture tool; bounded.
 var arrivals: Array = []
+## The moments a player touches the ball (or the man), for the 3D figures' clips (row 198):
+## {who, kind, at, other}, recorded at contact (foot or hand on the ball), only while
+## want_contacts is on; the 3D oval drains it every frame. `who` -1 on a bounce is the
+## field umpire; `at` is where the ball goes (or the spot of the bounce, the tackle).
+var contacts: Array = []
+var want_contacts := false
+var _last_how := &""
 
 var _rng := RandomNumberGenerator.new()
 var _ids := [{}, {}]            # side -> {num: token id}
@@ -512,7 +519,7 @@ func _possession_phases(k: int) -> Array:
 			return _kickin_phases(k, a, loc) + tail
 		"ballup":
 			# The ruck's tap to the player who wins it, out of the ball-up beat.
-			return [{"t": "flight", "to": loc, "dur": 0.3, "apex": 0.8, "h0": 3.0, "recv": a}] + tail
+			return [{"t": "flight", "to": loc, "dur": 0.3, "apex": 0.8, "h0": 3.0, "recv": a, "how": "ruck_tap"}] + tail
 		"throwin":
 			# The boundary umpire has the ball on the line; throw it back into
 			# the pack and let the logged winner collect it.
@@ -538,6 +545,7 @@ func _possession_phases(k: int) -> Array:
 			"adapt": true, "h1": 2.4 if kind == "mark" else 1.0}
 	if hb:
 		flight["hang"] = HANDBALL_HANG_MAX
+		flight["how"] = "handball"
 	if not prev.is_empty() and int(prev.get("side", -1)) != int(ev.get("side", -1)):
 		# Possession changed hands without an event (the chain broke down):
 		# show the ball won in a contest.
@@ -600,7 +608,7 @@ func _centre_phases(k: int, a: int, loc: Vector2) -> Array:
 			"min": 1.1 if after_goal else 0.8, "max": 4.0},
 		{"t": "wait", "dur": 0.3},
 		{"t": "bounce", "at": Vector2.ZERO, "recv": a, "loc": loc},
-		{"t": "flight", "to": loc, "dur": 0.3, "apex": 0.6, "h0": 3.5, "recv": a},
+		{"t": "flight", "to": loc, "dur": 0.3, "apex": 0.6, "h0": 3.5, "recv": a, "how": "ruck_tap"},
 	]
 
 
@@ -771,7 +779,8 @@ func _smother_phases(k: int) -> Array:
 	if who < 0 or victim < 0:
 		return [{"t": "emit", "log": true}, {"t": "fumble", "dur": 0.25}]
 	return [{"t": "chase", "who": who, "victim": victim, "max": 0.8},
-			{"t": "emit", "log": true}, {"t": "fumble", "dur": 0.25}]
+			{"t": "emit", "log": true},
+			{"t": "fumble", "dur": 0.25, "how": "smother", "who": who, "other": victim}]
 
 
 ## A spoil happens at the drop of the ball and leaves it alive on the deck.
@@ -787,7 +796,7 @@ func _spoil_phases(k: int) -> Array:
 				"recv": -1, "mode": "open"})
 	if who >= 0:
 		out.append({"t": "collect", "who": who, "max": 0.18})
-	out += [{"t": "emit", "log": true}, {"t": "fumble", "dur": 0.28}]
+	out += [{"t": "emit", "log": true}, {"t": "fumble", "dur": 0.28, "how": "spoil", "who": who}]
 	return out
 
 
@@ -1437,6 +1446,8 @@ func _contest(at: Vector2, winner: int, urgency: float) -> void:
 # Phases
 # ---------------------------------------------------------------------------
 func _enter(p: Dictionary) -> void:
+	if want_contacts:
+		_touch(p)
 	match str(p["t"]):
 		"setup":
 			mode = str(p.get("mode", "centre"))
@@ -1629,6 +1640,57 @@ func _enter(p: Dictionary) -> void:
 			var ang2 := _rng.randf_range(0.0, TAU)
 			ball["vel"] = Vector2(cos(ang2), sin(ang2)) * _rng.randf_range(6.0, 10.0)
 
+
+## A phase that starts with a touch of the ball records it in `contacts` (see there).
+func _touch(p: Dictionary) -> void:
+	match str(p["t"]):
+		"flight":
+			var how := StringName(str(p.get("how", "kick")))
+			var who := int(ball["holder"]) if str(ball["mode"]) == "held" else -1
+			if how == &"ruck_tap":
+				who = _nearest_ruck(ball["pos"])
+			_last_how = how if who >= 0 else &""
+			if who >= 0:
+				_contact(who, how, p["to"])
+		"possess":
+			var who := int(p.get("who", -1))
+			if who >= 0:
+				var how := &"gather"
+				if str(_beat.get("kind", "")) == "mark":
+					how = &"mark"
+				elif _last_how == &"handball":
+					how = &"handball_receive"
+				_contact(who, how, ball["pos"])
+			_last_how = &""
+		"down":
+			var v := int(p["victim"])
+			_contact(int(p["who"]), &"tackle", tokens[v]["pos"], v)
+		"fumble":
+			if p.has("how") and int(p.get("who", -1)) >= 0:
+				_contact(int(p["who"]), StringName(str(p["how"])), ball["pos"], int(p.get("other", -1)))
+		"bounce":
+			_contact(-1, &"bounce", p["at"])
+		"celebrate":
+			if int(p.get("who", -1)) >= 0 and bool(flash.get("goal", false)):
+				_contact(int(p["who"]), &"goal_celebrate", tokens[int(p["who"])]["pos"])
+
+
+func _contact(who: int, kind: StringName, at: Vector2, other := -1) -> void:
+	contacts.append({"who": who, "kind": kind, "at": at, "other": other})
+	if contacts.size() > 64:
+		contacts.pop_front()
+
+
+func _nearest_ruck(at: Vector2) -> int:
+	var best := -1
+	var bd := INF
+	for t in tokens:
+		if str(t["role"]) == "RUCK" and float(t["down"]) <= 0.0:
+			var d := (t["pos"] as Vector2).distance_to(at)
+			if d < bd:
+				bd = d
+				best = int(t["id"])
+	return best
 
 ## Dead-ball repositioning during set-ups: players move this much faster than
 ## in play (a real reset takes 20-40 s), and play resumes once all but
