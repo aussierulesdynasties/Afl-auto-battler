@@ -1,19 +1,7 @@
 [remap]
 
-importer="csv_translation"
-type="Translation"
-uid="uid://4w4r0hbjuujs"
+importer="keep"
 
 [deps]
 
-files=["res://data/legacy/2010/list_additions_2010.last.translation", "res://data/legacy/2010/list_additions_2010.dob.translation", "res://data/legacy/2010/list_additions_2010.club.translation", "res://data/legacy/2010/list_additions_2010.height.translation", "res://data/legacy/2010/list_additions_2010.list.translation", "res://data/legacy/2010/list_additions_2010.peak.translation", "res://data/legacy/2010/list_additions_2010.source.translation", "res://data/legacy/2010/list_additions_2010.checked.translation"]
-
 source_file="res://data/legacy/2010/list_additions_2010.csv"
-dest_files=["res://data/legacy/2010/list_additions_2010.last.translation", "res://data/legacy/2010/list_additions_2010.dob.translation", "res://data/legacy/2010/list_additions_2010.club.translation", "res://data/legacy/2010/list_additions_2010.height.translation", "res://data/legacy/2010/list_additions_2010.list.translation", "res://data/legacy/2010/list_additions_2010.peak.translation", "res://data/legacy/2010/list_additions_2010.source.translation", "res://data/legacy/2010/list_additions_2010.checked.translation"]
-
-[params]
-
-compress=1
-delimiter=0
-unescape_keys=false
-unescape_translations=true
