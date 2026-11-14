@@ -322,7 +322,7 @@ func _test_undo_by_a_finger() -> void:
 	if b == null:
 		scene.queue_free()
 		return
-	_check(_text(said) == "You can undo this until the national draft starts.",
+	_check(_text(said) == "Undo it any time before the national draft starts.",
 			"Beside the delisting notice it says only what Undo does (%s)" % _text(said))
 	_check(b.size.y >= 44.0 and b.size.x >= 44.0, "Undo is thumb-sized (%s)" % str(b.size))
 	var r := b.get_global_rect()
@@ -344,7 +344,7 @@ func _test_undo_by_a_finger() -> void:
 	await _settle()
 	said = scene.find_child("UndoLastText", true, false)
 	var own := _text(said) if said != null else "none"
-	_check(own.begins_with("You delisted ") and own.contains(_db.player_display_name(p)),
+	_check(own.begins_with("We delisted ") and own.contains(_db.player_display_name(p)),
 			"On its own the row names the delisting it undoes (%s)" % own)
 	# A signing put into the trade you are building, then undone, leaves the trade too.
 	var deal := _signable()
