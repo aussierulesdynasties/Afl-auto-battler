@@ -104,9 +104,10 @@ func _finals_given() -> void:
 
 ## The off-season, then the rollover into the next season the way a career
 ## takes it: the National Draft (your picks made for you), then the Rookie
-## Draft that opens in the new season.
+## Draft that opens in the new season. The finals are given results
+## (_finals_given): the rollover is under test, not the football.
 func _roll() -> bool:
-	_to_offseason()
+	_finals_given()
 	_open_off()
 	GameState._close_free_agency()
 	return _draft_and_start()
@@ -296,7 +297,7 @@ func _test_campaign_1990_to_1998() -> void:
 ## goes.
 func _test_smart_delisting() -> void:
 	_career(1993)
-	_to_offseason()
+	_finals_given()
 	var rival := "CAR"
 	var list: Array = GameState.season.lists[rival]
 	var kid := {}
