@@ -16,6 +16,7 @@ const BalanceGate := preload("res://tests/balance_gate.gd")
 func run() -> void:
 	failures.clear()
 	checks = 0
+	_sample = {}
 	GameDB.reload()
 	_t("_test_won_ball_is_played_on")
 	_t("_test_scores_stay_realistic")
@@ -46,9 +47,20 @@ func _sim(home: String, away: String, seed: int) -> MatchSim:
 			Squad.new(away, GameDB.club_list(away), false, away), seed)
 
 
+## The default sample, played once: the won-ball rules and the score range
+## read the same 20 seeded matches (each test played them again before).
+var _sample: Dictionary = {}
+
+
 ## Plays the sample; returns the chain starts by key
 ## (MatchSim.audit_chains), the games played and the total points.
 func _play() -> Dictionary:
+	if _sample.is_empty():
+		_sample = _play_sample()
+	return _sample
+
+
+func _play_sample() -> Dictionary:
 	MatchSim.audit_chains_on = true
 	MatchSim.audit_chains = {}
 	var games := 0
