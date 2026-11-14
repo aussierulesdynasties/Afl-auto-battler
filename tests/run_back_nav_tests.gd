@@ -292,7 +292,7 @@ func _closer(roots: Array) -> Button:
 			continue
 		for b in r.find_children("*", "Button", true, false):
 			var t := str((b as Button).text).strip_edges()
-			if (b as Button).is_visible_in_tree() and ["Close", "Done", "Back", "Cancel", "Not now", "Back to your calls", "Back to hub", "OK", "Skip", "Got it", "Continue", "Start", "To the draft", "Skip to season review"].has(t):
+			if (b as Button).is_visible_in_tree() and ["Close", "Done", "Back", "Cancel", "Not now", "Back to our calls", "Back to hub", "OK", "Skip", "Got it", "Continue", "Start", "To the draft", "Skip to season review"].has(t):
 				return b
 	return null
 

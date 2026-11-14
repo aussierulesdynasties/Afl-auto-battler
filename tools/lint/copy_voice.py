@@ -145,6 +145,26 @@ TRAINING_OLD = [
     "but two players are already learning", "comes off it", "until you lock", "his projected peak",
 ]
 
+MATCH = "scripts/ui/MatchScene.gd"
+## The match view pass (copy voice pass 3): the rewritten lines of MatchScene.gd, and the lines
+## they replaced. The feed keeps a broadcaster's voice (director, 2026-11-10); these are the coach's.
+MATCH_NEW = [
+    "Momentum is the run of play. A goal swings it to the side that kicked it, a behind less. It fades, and halves at every break.",
+    "The side on top wins a little more of the ball at centre bounces, stoppages and loose balls. Never a guarantee.",
+    "can run away with it. The further ahead, the more of the ball it wins. The run lasts longer and takes more goals to turn.",
+    "Momentum swings with each goal and fades with time. The side on top wins a little more of the ball. %s it for more.",
+    "\"What our calls did\"", "\"Our calls\"", "\"Our side\"", "\"Assistant's pick\"", "\"Ours:\"",
+    "An even quarter. None of our calls shifted the margin by a point.", "Our tag on %s: %d disposal%s, %d goal%s.",
+    "\"Back to our calls\"", "\"Our plan: \"", "\"Our best: %s\"", "\"Why we won\"", "\"Why we lost\"",
+    "\"Our synergies\"", "\"Our calls by quarter\"", "\"Our week\"", "Finish the match first. Skip to full time jumps ahead.",
+]
+MATCH_OLD = [
+    "a behind a little; it fades", "loose balls - never a guarantee", "can run away with it: the further ahead",
+    "fades with time; the side on top", "What your calls did", "\"Your calls\"", "\"Your side\"", "Your assistant's pick",
+    "\"Yours:\"", "moved the needle", "\"your player\"", "\"your tagger\"", "\"your defender\"", "\"Your loose man\"",
+    "your best interceptor", "Your tag on", "Back to your calls", "\"Your plan: \"", "\"Your best: %s\"", "Why you won",
+    "Why you lost", "\"Your synergies\"", "\"Your week\"", "Finish the match first - use",
+]
 ## The contracts and trades pass (copy voice pass 8, with the T3.R56 trade and contract tutorials
 ## and the off-season brief): per file, the rewritten lines and the lines they replaced.
 CONTRACTS_PASS = {
@@ -207,7 +227,8 @@ CONTRACTS_PASS = {
 ## Every pinned pass: (file, the pass, its rewritten lines, the lines they replaced).
 PASSES = [(HUB, "copy voice pass 2, hub", HUB_NEW, HUB_OLD)] + [
     (path, "copy voice pass 5, team and coaching", v[0], v[1]) for path, v in TEAM_PASS.items()] + [
-    (TRAINING, "copy voice pass 6, training", TRAINING_NEW, TRAINING_OLD)] + [
+    (TRAINING, "copy voice pass 6, training", TRAINING_NEW, TRAINING_OLD),
+    (MATCH, "copy voice pass 3, match view", MATCH_NEW, MATCH_OLD)] + [
     (path, "copy voice pass 8, contracts and trades", v[0], v[1]) for path, v in CONTRACTS_PASS.items()]
 
 LITERAL = re.compile(r'"([^"\n]*)"')

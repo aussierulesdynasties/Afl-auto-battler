@@ -1968,7 +1968,7 @@ func _award_context_free(receiving_side: int, mark_fp: float, offender, recipien
 	_p(offender, "frees_against")
 	_t(receiving_side, "free_" + cause)
 	var who := GameDB.player_display_name(recipient) if recipient != null else "the opposition"
-	_emit("free", receiving_side, mark_fp, recipient, "%s — free kick to %s" % [label, who])
+	_emit("free", receiving_side, mark_fp, recipient, "%s · free kick to %s" % [label, who])
 	_free_taker = {"side": receiving_side, "id": "" if recipient == null else str(recipient.get("id", ""))}
 	var ev: Dictionary = events[events.size() - 1]
 	ev["free_cause"] = cause
@@ -3335,7 +3335,7 @@ func _boundary_exit(side: int, cross_fp: float, carrier, disposal_kind: String,
 	var kind := "out_on_full" if out_on_full else "last_disposal"
 	var who := GameDB.player_display_name(recipient) if recipient != null else "the opposition"
 	var why := "Out on the full" if out_on_full else "Last disposal out"
-	_emit(kind, opp, cross_fp, recipient, "%s - free kick to %s" % [why, who])
+	_emit(kind, opp, cross_fp, recipient, "%s · free kick to %s" % [why, who])
 	var fev: Dictionary = events[events.size() - 1]
 	fev["against_id"] = "" if carrier == null else str(carrier.get("id", ""))
 	fev["against_name"] = "" if carrier == null else GameDB.player_display_name(carrier)
@@ -4591,7 +4591,7 @@ func end_quarter() -> Dictionary:
 		"behinds": [behinds(0), behinds(1)],
 		"impact": impact.duplicate(true),
 	})
-	_emit("quarter", -1, fp, null, "End of quarter %d - %s %d.%d (%d) | %s %d.%d (%d)" % [
+	_emit("quarter", -1, fp, null, "End of Q%d · %s %d.%d (%d) · %s %d.%d (%d)" % [
 		quarter, squads[0].name, goals(0), behinds(0), score(0),
 		squads[1].name, goals(1), behinds(1), score(1)])
 	current_quarter += 1
@@ -4605,7 +4605,7 @@ func end_quarter() -> Dictionary:
 		if needs_extra_time():
 			# No siren: the pitch keeps going into extra time.
 			_emit("quarter", -1, 0.0, null,
-					"Scores level at full time - we are going to extra time!")
+					"Scores level at full time · we are going to extra time!")
 		else:
 			_emit_full_time("Full time")
 	return result()
