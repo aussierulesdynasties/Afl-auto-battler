@@ -5046,29 +5046,54 @@ func _test_every_call_two_sided() -> void:
 	var sized := RegEx.create_from_string("[0-9]")
 	var verdict := RegEx.create_from_string("(?i)recommend|best (choice|option|call)|the better (choice|option|call)|you should")
 	var seen := {}
-	for seed in range(900, 940):
+	var check_call := func(m: Dictionary) -> void:
+		var kind := str(m.get("kind", ""))
+		seen[kind] = int(seen.get(kind, 0)) + 1
+		for o in m.get("options", []):
+			var g := str((o as Dictionary).get("gain", ""))
+			var c := str((o as Dictionary).get("cost", ""))
+			var what := "%s call, %s" % [kind, str(o.get("label", o.get("key", "")))]
+			_check(g.begins_with("Gain: ") and c.begins_with("Cost: "), "The %s states a Gain and a Cost (%s / %s)" % [what, g, c])
+			_check(str(o.get("key", "")) == "none" or sized.search(g + c) != null, "The %s gives a size or odds (%s / %s)" % [what, g, c])
+			_check(verdict.search(g + c + str(o.get("detail", ""))) == null, "The %s never says which is better" % what)
+	for seed in range(900, 920):
 		var sim := _sim(seed)
 		sim.always_offer_bounce = true
 		sim.moment_side = 0
 		while sim.current_quarter <= 4:
 			sim.begin_quarter()
 			while not sim.continue_quarter():
-				var m: Dictionary = sim.pending_moment
-				var kind := str(m.get("kind", ""))
-				seen[kind] = int(seen.get(kind, 0)) + 1
-				for o in m.get("options", []):
-					var g := str((o as Dictionary).get("gain", ""))
-					var c := str((o as Dictionary).get("cost", ""))
-					var what := "%s call, %s" % [kind, str(o.get("label", o.get("key", "")))]
-					_check(g.begins_with("Gain: ") and c.begins_with("Cost: "), "The %s states a Gain and a Cost (%s / %s)" % [what, g, c])
-					_check(str(o.get("key", "")) == "none" or sized.search(g + c) != null, "The %s gives a size or odds (%s / %s)" % [what, g, c])
-					_check(verdict.search(g + c + str(o.get("detail", ""))) == null, "The %s never says which is better" % what)
-				sim.resolve_moment(int(m.get("default", 0)))
+				check_call.call(sim.pending_moment)
+				sim.resolve_moment(int(sim.pending_moment.get("default", 0)))
 			sim.end_quarter()
-		if seen.has("set_shot") and seen.has("hot") and seen.has("momentum") and seen.has("bounce"):
+		if seen.has("set_shot") and seen.has("momentum") and seen.has("bounce"):
 			break
-	for kind in ["set_shot", "hot", "momentum", "bounce"]:
+	for kind in ["set_shot", "momentum", "bounce"]:
 		_check(seen.has(kind), "(setup) a %s call came up in the seeded matches (%s)" % [kind, str(seen)])
+	# Their midfielder kicking a bag is rare in a seeded match: staged as the
+	# capture tool stages it (tools/visual/capture_tag_call.gd), once as a new
+	# tag and once with our tag already on another of theirs.
+	for tagged in [false, true]:
+		var sim := _sim(941)
+		sim.moment_side = 0
+		sim.begin_quarter()
+		sim.pending_moment = {}
+		sim._moments_this_q = 0
+		sim._last_moment_chain = sim._chain_no - 100
+		var hot_id := ""
+		for p in (sim.squads[1] as Squad).ground:
+			if str(p["role"]) == "MID" and sim.taggable(p):
+				hot_id = str(p["id"])
+				(sim.player_stats.get_or_add(hot_id, {}) as Dictionary)["goals"] = 3.0
+				break
+		if tagged:
+			for p in (sim.squads[1] as Squad).ground:
+				if str(p["id"]) != hot_id and sim.taggable(p):
+					sim.tactics[0]["tag_id"] = str(p["id"])
+					break
+		sim._boundary_moment()
+		_check(str(sim.pending_moment.get("kind", "")) == "hot", "(setup) the hot call comes up%s" % (" with a tag on" if tagged else ""))
+		check_call.call(sim.pending_moment)
 	# The break calls. Balanced and Stay composed are the no-change options:
 	# they state that nothing is gained and nothing given up, so carry no figure.
 	for plan in MatchSim.PLANS.keys() + ["balanced"]:
