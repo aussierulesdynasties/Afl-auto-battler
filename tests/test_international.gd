@@ -219,10 +219,12 @@ func _test_career(state: Node, db: Node) -> void:
 	state.reset()
 	state.start_season("ADE", db.club_list("ADE"))
 	var mine := ""
+	var name_before := ""
 	for p in state.draftee_pool:
 		if p.has("intl"):
 			mine = str(p["id"])
-	_check(mine != "", "The first class has an international prospect")
+			name_before = str(p.get("generic_name", ""))
+	_check(mine != "" and name_before != "", "The first class has an international prospect")
 	state.season.round_index = state.season.fixture.size()
 	# A full list passes its picks (Draft._list_full), and whether rivals leave a
 	# gap is the market's business: the coach makes room, as a coach would.
@@ -255,7 +257,12 @@ func _test_career(state: Node, db: Node) -> void:
 	_check(state.finish_intake_draft(), "The draft commits and the career rolls on")
 	var found := _find(state, mine)
 	_check(not found.is_empty(), "He is on a list next season")
-	var name_before := str(found.get("generic_name", ""))
+	# The draft's commit is the season rollover (finish_intake_draft runs the
+	# same _start_next_season as start_next_season): a second season played
+	# and rolled over proved nothing this one does not.
+	_check(int(state.season_year) == year + 1 and str(found.get("intl", "")) != ""
+			and str(found.get("generic_name", "")) == name_before,
+			"He keeps his identity across a season rollover (year %d to %d)" % [year, int(state.season_year)])
 	_check(str(found.get("intl", "")) != "" and str(found.get("drafted_type", "")) == "national",
 			"He is an ordinary draftee with his origin kept")
 	var club := str(found.get("club", ""))
@@ -264,14 +271,6 @@ func _test_career(state: Node, db: Node) -> void:
 	found = _find(state, mine)
 	_check(str(found.get("generic_name", "")) == name_before and str(found.get("intl", "")) != "",
 			"He reloads with his name and origin")
-	var guard2 := 0
-	while not state.season.is_season_over() and guard2 < 40:
-		guard2 += 1
-		state.advance()
-	_check(state.start_next_season(), "The season rolls over")
-	found = _find(state, mine)
-	_check(not found.is_empty() and str(found.get("intl", "")) != "" and str(found.get("generic_name", "")) == name_before,
-			"He keeps his identity across a season rollover (year %d to %d)" % [year, int(state.season_year)])
 	_stories(state, found)
 
 
