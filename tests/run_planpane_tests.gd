@@ -79,7 +79,10 @@ func _test_plan_lines() -> void:
 									"%s wears his club's ink on the best-for-it line (%s)" % [nm, pk])
 				var longest := 0
 				for lb in pn.find_children("*", "Label", true, false):
-					longest = maxi(longest, (lb as Label).text.split(" ", false).size())
+					# The break sheet runs a gate's effects on one line, parted by " · " (MatchScene._break_line,
+					# row 131): each effect is still one short line, so each is measured on its own.
+					for part in (lb as Label).text.split(" · ", false):
+						longest = maxi(longest, str(part).split(" ", false).size())
 					_check((lb as Label).get_theme_color("font_color") != UK.MUTED, "Blurb text is not in muted grey (%s)" % pk)
 				_check(longest <= 22, "No blurb line runs over 22 words (%s: %d)" % [pk, longest])
 			var back: Button = box.find_child("PlanPicker_defensive", true, false)
