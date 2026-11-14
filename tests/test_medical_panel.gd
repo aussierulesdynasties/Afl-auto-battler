@@ -831,7 +831,15 @@ func _test_a_player_short_still_trades() -> void:
 	var mine: Array = GameState.my_list
 	_check(mine.size() == Contracts.min_list() - 1 and (GameState.season.lists["FRE"] as Array).size() == Contracts.min_list() - 1,
 			"The retirement leaves it one short (%d)" % mine.size())
-	var theirs: Array = GameState.season.lists["MEL"]
+	# Melbourne needs a man to spare: the test is about Fremantle's short list,
+	# and a Melbourne side on the minimum could not give two for one either.
+	var theirs: Array = (GameState.season.lists["MEL"] as Array).duplicate()
+	while theirs.size() < Contracts.min_list() + 1:
+		var extra: Dictionary = (theirs[theirs.size() - 1] as Dictionary).duplicate(true)
+		extra["id"] = "mel_spare_%d" % theirs.size()
+		# A Category B rookie: one more on the list, none on the senior spots.
+		extra["rookie_list"] = "B"
+		theirs.append(extra)
 	var cap := 999999999
 	var one := Contracts.evaluate_trade(theirs, [theirs[0]], [mine[0]], cap, mine, cap)
 	_check(str(one["code"]) != "trade_list_under", "One for one stays legal while a player short (%s)" % one["code"])
