@@ -38,7 +38,7 @@ const LIFT_SCALE := {"close": 1.4, "trusts": 1.2, "neutral": 1.0, "wary": 0.7, "
 
 ## Trust per point of the opinion the game shows (opinion()).
 const PER_POINT := 2
-const OPINION_LINE := "Opinion of you %d/100"
+const OPINION_LINE := "His opinion of you: %d out of 100"
 ## A reason's move, in the opinion the game shows.
 const OPINION_MOVE := "Opinion of you %+d."
 
@@ -63,7 +63,7 @@ static func opinion_move(t: int, d: int) -> int:
 	return opinion(clampi(t + clampi(d, -STEP_MAX, STEP_MAX), LOWEST, HIGHEST)) - opinion(t)
 
 
-## "Opinion of you 62/100".
+## "His opinion of you: 62 out of 100".
 static func opinion_line(t: int) -> String:
 	return OPINION_LINE % opinion(t)
 

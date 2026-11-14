@@ -505,7 +505,7 @@ func _test_ui() -> void:
 	_check(rstate != null and not rstate.text.contains("Mood"), "A rival's profile never shows his mood")
 	var plan_leak := false
 	for lb in rsheet.find_children("*", "Label", true, false):
-		if (lb as Label).text.begins_with("Development:"):
+		if (lb as Label).text.begins_with("Development focus:"):
 			plan_leak = true
 	_check(not plan_leak, "A rival's profile never shows his training plan")
 	rsheet.queue_free()
