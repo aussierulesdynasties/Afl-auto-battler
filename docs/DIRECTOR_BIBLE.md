@@ -253,6 +253,8 @@ Source tags: DB = DESIGN_BIBLE; RM26/27/28/29/30/32 = roadmap chapters 26, 27, 2
 
 **2.49** Pace: presentation runs at TEMPO 1.65x the movement clock; a full match takes about 4-5 minutes at 4x and 2-2.5 minutes at 8x. Phone: the full-time card is capped to the viewport; rotating reflows oval and feed without rebuilding the pitch. (undated; MV, DES)
 
+**2.74** The match view goes 3D, proved first. Asked whether to reverse ARD-M8-007 (no 3D player models) and move the match view to 3D players, he chose "Yes, prove it first" (2026-11-14), after "Yes, pursue it" on the 3D oval mock in the 3d view 1 session. The two sessions work on it together ("Work hand in hand with 3d view 1"). The proof is one full-team passage on the 3D oval (centre bounce or throw-up, ruck tap, gather, handball, kick, contested mark), gated on a steady phone frame rate, every contact on MatchSim's spot and time, no sliding feet, hovering ball or clipping, and his own look at game speed; plan in docs/research/AFL2004_ANIMATION_STUDY.md. The MATCH_VIEW rule (2.39) and every ball rule (2.41) stand. Supersedes the 3D rejections in rule 6.39 and the pass-2 decline of a 3D match view for the match view only; vignettes are unchanged. (2026-11-14; TODO row 197)
+
 ---
 
 ## 2.D Taking a match: watch, skip, sim the week
@@ -349,6 +351,7 @@ Source tags: DB = DESIGN_BIBLE; RM26/27/28/29/30/32 = roadmap chapters 26, 27, 2
 24. Tired star Rest/Keep prompt (rule 2.63, TIRED_CALL_AUDIT 2026-10-05): replaced by automatic rotations for both sides (2026-11-03).
 25. Half-time assistant report (earlier reading of 2.69): replaced by full stats at every break (5.164; #507).
 26. Key moments, the third way to take a match (2.50, P-14, 2026-10-18): cut 2026-11-08 ("it's just noise and not really good"); Watch and Skip remain, and an old Key moments setting opens as Watch.
+27. No 3D player models in the match view (ARD-M8-007) and the declined 3D match view: reversed 2026-11-14, "Yes, prove it first" (rule 2.74).
 
 ---
 
@@ -1304,7 +1307,7 @@ Where a record carries no date the tag says "undated". Every quoted phrase is th
 14. Pitch-only AA and "MSAA stays off": superseded by whole-game AA and project-wide 2D MSAA 2x (#478) (rule 6.53). His question about icon smoothing is answered by the same ruling.
 15. "No reduced-motion setting for now" (2026-10-06): a Reduced motion setting was later built (rule 6.52); treated as superseded in practice.
 16. Generated menu music and rhyming banner text: removed 2026-10-18 (rule 6.66).
-17. Real-time 3D figures, generative restyling and dropping vignettes: rejected (rule 6.39).
+17. Real-time 3D figures, generative restyling and dropping vignettes: rejected (rule 6.39); the 3D part is superseded for the match view on 2026-11-14 (rule 2.74).
 18. Light-theme score ink, contrast and 8-defect audit findings: inventory only, no work.
 19. Capture practice of 2026-10-06 that showed #383 without the typeface: replaced by the current-main capture rule (rule 6.9).
 20. Style guide questions (all answered 2026-10-10): selection is ink plus outline with no club tint; mini figures on the match view only as a phone prototype; venue plates after media room and stage props (rules 6.27, 42, 44).
@@ -1832,7 +1835,7 @@ Precedence used here: a later director decision wins; the 2026-11-03 story-first
 3. **Balance is never declared done by an agent.** It is settled only when testing shows numbers similar to real AFL and the director's own playtest passes. No balance target has been chosen; the candidates (skill share about 60-75%, stronger side wins about 62-68%, 60+ margins around 12-15%) are proposals only. P-79 and P-80 report; balance stays his. [2026-09-25, docs/LEAGUE_BALANCE.md#Reading the baseline; 2026-10-18, roadmap/29#Rules]
 4. **Excluded outright:** any light theme, monetisation, and a cosmetic that touches the sim. [2026-10-18, GENRE.md#What-this-report-does-not-propose, Claude's note restating director and bible]
 5. **Light mode is parked.** Director, 2026-10-13: "im also happy to abandon 'light mode' for now, i dont want to waste time on it". No new light-theme work, captures or tests until he says otherwise; the code stays. [2026-10-13, project CLAUDE.md]
-6. **Re-declined in pass 2 (in the forms that avoid the decline):** a 3D match view (2D reads shape better; goals covered by the 2.5D vignette), spoken commentary (licensed voices turn "monotonous"), and more story cards before the cadence audit (repetition, not count, is the failure). [2026-10-18, GENRE.md#What-this-report-does-not-propose; PASS2.md#section-2, Claude's note]
+6. **Re-declined in pass 2 (in the forms that avoid the decline):** a 3D match view (superseded 2026-11-14, rule 2.74) (2D reads shape better; goals covered by the 2.5D vignette), spoken commentary (licensed voices turn "monotonous"), and more story cards before the cadence audit (repetition, not count, is the failure). [2026-10-18, GENRE.md#What-this-report-does-not-propose; PASS2.md#section-2, Claude's note]
 7. **Director decision, 2026-10-05: EXCLUDED.** ARD-RC-001, the optional engine-backed tactical practice preview: do not implement or prototype; existing live-match clarity and structural coaching stay under original owners. [2026-10-05, docs/GENRE_ENJOYMENT_RESEARCH.md#7 RC-001; also AUDIT.md#Already-proposed]
 8. **Director decision: EXCLUDED.** ARD-RC-002, a saved match worth remembering (bookmark or archive of a match report). Ordinary reports and history remain accepted. [2026-10-05, GENRE_ENJOYMENT_RESEARCH.md#7 RC-002]
 9. **RC-003 to RC-007 are review candidates, not accepted TODOs.** (RC-003 bounded development commitment with opportunity cost, RC-004 alumni link across generations, RC-005 one football answer recalled later.) They are not in section 0.4.1 and are not Claude execution work; prefer improving the existing experience where it answers the same need. RC-003..007 keep earlier rulings. [2026-10-05, 20-9-2-research-candidates-awaiting-director-selection.md; 01-0-how-to-use-this-roadmap.md#0.4.2; roadmap/28#Not decided here]
