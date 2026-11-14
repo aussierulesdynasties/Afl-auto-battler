@@ -31,6 +31,7 @@ var players: Array = []        # [{node, anim, ring}] in director.tokens order
 var ball: MeshInstance3D
 var camera: Camera3D
 var anim: Oval3DAnim          # the animation session's controller (row 198)
+var umpires: Array = []        # [{node, anim, ring, role, k}]: the vignettes' umpire set
 var _look := Vector3.ZERO
 
 
@@ -49,6 +50,7 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 		_number(p, int(t.get("num", -1)))
 		players.append(p)
 	anim = Oval3DAnim.new(director, players)
+	_add_umpires(scene)
 	ball = MeshInstance3D.new()
 	var bm := SphereMesh.new()
 	bm.radius = BALL_R
@@ -88,6 +90,7 @@ func sync(dt: float) -> void:
 		var node: Node3D = p["node"]
 		node.position = Vector3(pos.x, 0.0, pos.y)
 		anim.step(i, p, holder, pos, vel, dt)
+	_move_umpires(dt)
 	var bp: Vector2 = director.ball["pos"]
 	var h := float(director.ball.get("h", 0.0))
 	if holder >= 0 and holder < players.size():
@@ -356,6 +359,76 @@ func _player(scene: PackedScene, kit: ShaderMaterial, cols: Array) -> Dictionary
 	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	node.add_child(ring)
 	return {"node": node, "anim": ap, "ring": ring, "skel": skel, "hands": hands, "hand_len": hand_len}
+
+
+## The umpires, as the vignettes place them (VignetteExtras.umpires): three field umpires,
+## a boundary umpire on each wing, a goal umpire on each goal line, in the umpires' lime
+## (StoppageVignette.UMPIRE_GEAR). No club ring: they belong to neither side.
+func _add_umpires(scene: PackedScene) -> void:
+	var kit := _kit(StoppageVignette.UMPIRE_GEAR)
+	var spots := _umpire_spots()
+	for k in range(spots.size()):
+		var u := _player(scene, kit, [StoppageVignette.UMPIRE])
+		(u["ring"] as Node3D).visible = false
+		u["role"] = str(spots[k][0])
+		u["k"] = k
+		var at: Vector2 = spots[k][1]
+		(u["node"] as Node3D).position = Vector3(at.x, 0.0, at.y)
+		umpires.append(u)
+
+
+## [role, director metres] for each umpire with the ball at its current spot. VignetteExtras
+## works in the vignette ground (x across, y along, half-lengths A x L); the director's x runs
+## along the ground and y across it, so the axes swap and scale to MatchMotion's half-lengths.
+func _umpire_spots() -> Array:
+	var bp: Vector2 = director.ball["pos"]
+	var sx := HALF_LEN / VignetteGround.L
+	var sy := HALF_WID / VignetteGround.A
+	var out := []
+	for u in VignetteExtras.umpires(Vector2(bp.y / sy, bp.x / sx)):
+		var v: Vector2 = u["oval"]
+		out.append([u["ump"], Vector2(v.y * sx, v.x * sy)])
+	return out
+
+
+## Each umpire runs toward his spot for where the ball is now (at most UMP_SPEED), jogging
+## while he moves and facing the ball when he stands. Goal umpires stay on their lines.
+const UMP_SPEED := 7.0
+const UMP_RUN_FROM := 1.4
+
+
+func _move_umpires(dt: float) -> void:
+	if umpires.is_empty():
+		return
+	var spots := _umpire_spots()
+	var bp: Vector2 = director.ball["pos"]
+	for u in umpires:
+		var node: Node3D = u["node"]
+		var ap: AnimationPlayer = u["anim"]
+		var at := Vector2(node.position.x, node.position.z)
+		var want: Vector2 = spots[int(u["k"])][1]
+		var step := want - at
+		var vel := Vector2.ZERO
+		if dt > 0.0 and step.length() > 0.05:
+			var move := step.limit_length(UMP_SPEED * dt)
+			at += move
+			vel = move / dt
+		node.position = Vector3(at.x, 0.0, at.y)
+		var speed := vel.length()
+		var clip := "idle"
+		var rate := 1.0
+		if speed > UMP_RUN_FROM:
+			node.rotation.y = atan2(vel.x, vel.y)
+			clip = "jog"
+			rate = clampf(speed / 6.0, 0.45, 2.3)
+		else:
+			var to := bp - at
+			if to.length() > 0.5:
+				node.rotation.y = atan2(to.x, to.y)
+		if ap.current_animation != clip:
+			ap.play(clip)
+			ap.seek(fmod(float(u["k"]) * 0.137, ap.current_animation_length), false)
+		ap.advance(maxf(dt * rate, 1e-4))
 
 
 func _mat(c: Color) -> StandardMaterial3D:
