@@ -45,6 +45,7 @@ func run() -> void:
 	_t("_test_supplements_switch_apart")
 	_t("_test_supplements_bans_land_and_lift")
 	_t("_test_supplements_switch_saved")
+	_t("_test_supplements_rival_tops_up")
 	GameDB.reload()
 	print(Ran.line("Year events", self))
 
@@ -326,15 +327,25 @@ func _test_supplements_bans_land_and_lift() -> void:
 				ids.append(str(q["id"]) if q is Dictionary else str(q))
 	_check(not ids.has(str(watson["id"])) and not ids.has(str(hurley["id"])),
 			"Essendon's side is picked without its banned players")
-	# The top-up rule: one for each of Essendon's own banned, up to ten, this season only.
-	var tops := []
-	for p in GameState.season.lists["ESS"]:
-		if int(p.get("top_up", 0)) == 2016:
-			tops.append(p)
-	_check(want > 0 and tops.size() == want and (GameState.season.lists["ESS"] as Array).size() == list_before + want,
-			"Essendon top up one player for each of their two banned (%d of %d)" % [tops.size(), want])
-	_check(tops.all(func(p): return int(p.get("contract_years", 0)) == 1),
-			"A top-up player is signed for this season only")
+	# You coach Essendon: you pick the top-ups yourself (director, 2026-11-13: "You pick them").
+	var t := YearEvents.top_up_pending(GameState)
+	_check(int(t.get("most", 0)) == 2 and int(t.get("left", 0)) == 2 and YearEvents.top_up_waiting(GameState)
+			and (GameState.season.lists["ESS"] as Array).size() == list_before,
+			"Coaching Essendon, the two top-up spots wait for you to pick (%s)" % str(t))
+	var first: Dictionary = MidseasonDraft.pool(GameState)[0]
+	_check(YearEvents.sign_top_up(GameState, str(first["id"])) and str(first["club"]) == "ESS"
+			and int(first.get("top_up", 0)) == 2016 and int(first.get("contract_years", 0)) == 1
+			and (GameState.season.lists["ESS"] as Array).size() == list_before + 1,
+			"You sign a top-up player, for this season only")
+	_check(int(YearEvents.top_up_pending(GameState).get("left", 0)) == 1, "One spot left")
+	# Round 1 is played without the second pick: the spot passes.
+	YearEvents.settle_top_up(GameState)
+	_check(YearEvents.top_up_pending(GameState).is_empty() and not YearEvents.top_up_waiting(GameState)
+			and (GameState.season.lists["ESS"] as Array).size() == list_before + 1,
+			"The spot you left passes when the next round is played")
+	_check(GameState.news.any(func(n): return "sign 1 top-up player for 2016" in str(n.get("text", ""))),
+			"The news names your top-up player")
+	_check(want > 0, "Someone is left to sign (%d)" % want)
 	# 2017: back.
 	GameState.season_year = 2017
 	GameState.season.round_index = 0
@@ -354,3 +365,21 @@ func _test_supplements_switch_saved() -> void:
 	_check(GameState._restore_career(state.duplicate(true)) and not GameState.supplements,
 			"An older save has the saga under Controversies")
 	GameState.set_setting("supplements", true)
+
+
+## A rival Essendon signs its own top-ups, the best left, one for each banned.
+func _test_supplements_rival_tops_up() -> void:
+	_start_1990("MEL", true, true)
+	var ess: Array = GameState.season.lists["ESS"]
+	_as(ess[0], "Jobe", "Watson", "1985-02-08")
+	_as(ess[1], "Michael", "Hurley", "1990-06-01")
+	_jump(2013)
+	var list_before: int = ess.size()
+	GameState.season_year = 2016
+	var want := mini(2, MidseasonDraft.pool(GameState).size())
+	_jump(2016)
+	var tops := (GameState.season.lists["ESS"] as Array).filter(func(p): return int(p.get("top_up", 0)) == 2016)
+	_check(want > 0 and tops.size() == want and (GameState.season.lists["ESS"] as Array).size() == list_before + want
+			and YearEvents.top_up_pending(GameState).is_empty(),
+			"A rival Essendon signs one top-up player for each of its two banned (%d of %d)" % [tops.size(), want])
+	_check(tops.all(func(p): return int(p.get("contract_years", 0)) == 1), "A top-up player is signed for this season only")

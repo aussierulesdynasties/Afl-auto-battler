@@ -30,6 +30,9 @@ func run() -> void:
 	_t("_test_draftee_bands")
 	_t("_test_pick_values_held")
 	_t("_test_save_and_backfill")
+	_t("_test_fine_wine_real_players")
+	_t("_test_fine_wine_careers")
+	_t("_test_fine_wine_draftee_rate")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
 	print(Ran.line("Potential", self))
@@ -463,3 +466,120 @@ func _test_save_and_backfill() -> void:
 	var back := GameState.list_player(str(rozee["id"]))
 	_check(int(back.get("potential", 0)) == pot_before and bool(back.get("rehab", false)),
 			"An old save picks up the dataset's POT and rehab year")
+
+
+## Fine Wine (director, 2026-11-13): the real players named carry it, by their
+## real careers; a created player with the same name does not.
+func _test_fine_wine_real_players() -> void:
+	for name in ["Scott Pendlebury", "Dayne Zorko", "Max Gawn"]:
+		var p := _real(name)
+		_check(not p.is_empty() and Traits.of(p).has("fine_wine"), "%s carries Fine Wine (%s)" % [name, str(Traits.of(p))])
+	var young := _real("Nick Daicos")
+	_check(not young.is_empty() and not Traits.fine_wine(young), "A young player does not have it")
+	var namesake: Dictionary = _real("Scott Pendlebury").duplicate(true)
+	namesake["generated"] = true
+	_check(not Traits.fine_wine(namesake), "A created player who shares the name does not inherit it")
+	# A Legacy start's veteran, by his real career (still listed at 40).
+	_check(Traits.fine_wine({"real_name": "Dustin Fletcher", "dob": "1975-05-07"}), "Dustin Fletcher (143 games at 32+) has it")
+	_check(Traits.fine_wine({"real_name": "Michael Tuck", "dob": "1953-06-24"}), "Michael Tuck (161 games at 32+) has it")
+	var carriers := 0
+	for p in GameDB.players:
+		if Traits.fine_wine(p):
+			carriers += 1
+			_check(int(str(p["dob"]).substr(0, 4)) <= Prospects.FINE_WINE_RECORD_BORN,
+					"%s has it only by a career old enough to show it" % str(p["real_name"]))
+	print("Fine Wine on the 2026 lists: %d" % carriers)
+	_check(carriers == 10, "The ten approved players on the 2026 lists have it (%d)" % carriers)
+	var earn := str(Traits.EARNED["fine_wine"]["earn"])
+	_check(earn.contains("1 draftee in %d" % int(round(1.0 / Traits.FINE_WINE_DRAFTEE_ODDS))),
+			"The look-up states the draftee odds the game rolls (%s)" % earn)
+	_check(Traits.ON_TOP.has("fine_wine") and Traits.label("fine_wine") == "Fine Wine", "Fine Wine comes on top of the five")
+
+
+## Over seeded careers from 28, the same player with Fine Wine holds his rating
+## longer and retires later. Paired: same id, so the same dice, the trait alone differs.
+func _test_fine_wine_careers() -> void:
+	var base: Dictionary = _real("Jordan Dawson").duplicate(true)
+	var n := 300
+	var ov_plain := 0.0
+	var ov_fine := 0.0
+	var at_34 := 0
+	var gone_plain := 0.0
+	var gone_fine := 0.0
+	for i in range(n):
+		var arms := []
+		for fine in [false, true]:
+			var p: Dictionary = base.duplicate(true)
+			p["id"] = "FW_%d" % i
+			p["generated"] = true
+			p["age"] = 28.0
+			p["potential"] = int(p["overall"])
+			p["fine_wine"] = fine
+			arms.append(p)
+		var retired := [0.0, 0.0]
+		var both_34 := true
+		var ov34 := [0, 0]
+		for a in range(2):
+			var p: Dictionary = arms[a]
+			for year in range(2027, 2045):
+				Prospects.age_player(p, year)
+				if float(p["age"]) == 34.0:
+					ov34[a] = int(p["overall"])
+				if Prospects.should_retire(p, year):
+					break
+			retired[a] = float(p["age"])
+			if float(p["age"]) < 34.0:
+				both_34 = false
+		if both_34:
+			at_34 += 1
+			ov_plain += ov34[0]
+			ov_fine += ov34[1]
+		gone_plain += retired[0]
+		gone_fine += retired[1]
+	gone_plain /= n
+	gone_fine /= n
+	print("Fine Wine careers from 28 (%d): OVR at 34 %.1f against %.1f; retires at %.1f against %.1f" % [
+			n, ov_fine / maxi(1, at_34), ov_plain / maxi(1, at_34), gone_fine, gone_plain])
+	_check(at_34 > n / 2 and ov_fine / at_34 >= ov_plain / at_34 + 5.0,
+			"At 34 a Fine Wine player holds his rating (%.1f against %.1f, %d careers)" % [
+			ov_fine / maxi(1, at_34), ov_plain / maxi(1, at_34), at_34])
+	_check(gone_fine >= gone_plain + 2.0 and gone_fine <= 40.0,
+			"He retires later (average age %.1f against %.1f), 40 at the latest" % [gone_fine, gone_plain])
+
+
+## The draftee roll lands near the set odds, and generated classes carry it.
+func _test_fine_wine_draftee_rate() -> void:
+	var total := 0
+	var hits := 0
+	for b in range(400):
+		var cls := []
+		for i in range(50):
+			cls.append({"generated": true})
+		Prospects.roll_fine_wine(cls, "test-%d" % b)
+		for p in cls:
+			total += 1
+			hits += 1 if bool(p.get("fine_wine", false)) else 0
+	var rate := float(hits) / float(total)
+	print("Fine Wine draftee roll: %d of %d (%.2f%%)" % [hits, total, 100.0 * rate])
+	_check(absf(rate - Traits.FINE_WINE_DRAFTEE_ODDS) < 0.003,
+			"Draftees roll Fine Wine at about the set odds (%.2f%% of %d, set %.2f%%)" % [
+			100.0 * rate, total, 100.0 * Traits.FINE_WINE_DRAFTEE_ODDS])
+	# A real draftee rolls; a real player whose career could already show it does not.
+	var kids := []
+	var veterans := []
+	for i in range(4000):
+		kids.append({"dob": "2008-05-01"})
+		veterans.append({"dob": "1985-05-01"})
+	Prospects.roll_fine_wine(kids, "kids")
+	Prospects.roll_fine_wine(veterans, "veterans")
+	_check(kids.any(func(p): return bool(p.get("fine_wine", false))) and not veterans.any(func(p): return bool(p.get("fine_wine", false))),
+			"A real draftee rolls; a real veteran's record decides")
+	var in_classes := 0
+	var prospects := 0
+	for year in range(2027, 2067):
+		for p in Prospects.generate_class(year, 7):
+			prospects += 1
+			in_classes += 1 if Traits.of(p).has("fine_wine") else 0
+	print("Fine Wine in generated classes: %d of %d prospects over 40 drafts" % [in_classes, prospects])
+	_check(in_classes > 0 and in_classes < prospects / 20,
+			"Generated classes carry it, rarely (%d of %d prospects over 40 drafts)" % [in_classes, prospects])
