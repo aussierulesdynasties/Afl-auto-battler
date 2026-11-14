@@ -222,7 +222,7 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
         run: |
           gh api "repos/${{ github.repository }}/pulls/$PR" --jq '.body // ""' > "$RUNNER_TEMP/body.txt"
-          if ! python3 tools/roadmap_close.py --check --body-file "$RUNNER_TEMP/body.txt" --todo docs/TODO.md 2> "$RUNNER_TEMP/err.txt"; then
+          if ! python3 tools/roadmap_close.py --check --body-file "$RUNNER_TEMP/body.txt" --todo docs/TODO.md --todo docs/TODO_RULINGS.md 2> "$RUNNER_TEMP/err.txt"; then
             echo "::error::$(cat "$RUNNER_TEMP/err.txt")"
             exit 1
           fi
