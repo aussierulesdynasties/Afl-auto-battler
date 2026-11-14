@@ -253,7 +253,7 @@ Source tags: DB = DESIGN_BIBLE; RM26/27/28/29/30/32 = roadmap chapters 26, 27, 2
 
 **2.49** Pace: presentation runs at TEMPO 1.65x the movement clock; a full match takes about 4-5 minutes at 4x and 2-2.5 minutes at 8x. Phone: the full-time card is capped to the viewport; rotating reflows oval and feed without rebuilding the pitch. (undated; MV, DES)
 
-**2.74** The match view goes 3D, proved first. Asked whether to reverse ARD-M8-007 (no 3D player models) and move the match view to 3D players, he chose "Yes, prove it first" (2026-11-14), after "Yes, pursue it" on the 3D oval mock in the 3d view 1 session. The two sessions work on it together ("Work hand in hand with 3d view 1"). The proof is one full-team passage on the 3D oval (centre bounce or throw-up, ruck tap, gather, handball, kick, contested mark), gated on a steady phone frame rate, every contact on MatchSim's spot and time, no sliding feet, hovering ball or clipping, and his own look at game speed; plan in docs/research/AFL2004_ANIMATION_STUDY.md. The MATCH_VIEW rule (2.39) and every ball rule (2.41) stand. Supersedes the 3D rejections in rule 6.39 and the pass-2 decline of a 3D match view for the match view only; vignettes are unchanged. (2026-11-14; TODO row 197)
+**2.74** The match view goes 3D, proved first. Asked whether to reverse ARD-M8-007 (no 3D player models) and move the match view to 3D players, he chose "Yes, prove it first" (2026-11-14), after "Yes, pursue it" on the 3D oval mock in the 3d view 1 session. The two sessions work on it together ("Work hand in hand with 3d view 1"). The proof is one full-team passage on the 3D oval (centre bounce or throw-up, ruck tap, gather, handball, kick, contested mark), gated on a steady phone frame rate, every contact on MatchSim's spot and time, no sliding feet, hovering ball or clipping, and his own look at game speed; plan in docs/research/AFL2004_ANIMATION_STUDY.md. Motion for the AFL moves (kick, handball, gather on the run, marks, ruck tap) comes from a free mocap service turning our own video into 3D motion: asked where it should come from, he chose "Free mocap service" (2026-11-14); he creates the account, and footage of real matches is for study only. The MATCH_VIEW rule (2.39) and every ball rule (2.41) stand. Supersedes the 3D rejections in rule 6.39 and the pass-2 decline of a 3D match view for the match view only; vignettes are unchanged. (2026-11-14; TODO row 197)
 
 ---
 
@@ -1333,7 +1333,7 @@ Where a record carries no date the tag says "undated". Every quoted phrase is th
 17. Which of the open styling looks (STYLE-01, 03, 04, 05, 06, the hub poster ball size, #508, #511, #512, #540 awards scene, guernsey seam fix) do you approve?
 18. Which unassigned defects should be assigned: club ink under 4.5:1 on club-tinted surfaces, hub ladder empty right side at 2560, break-pane 13 px notes, ellipsised draft subtitle, the boundary-snap curved white line, snap-for-goal hovering ball?
 19. Do you want any of the long-save wishlist built (away and clash guernseys, honour board, club legends wall, season poster, club museum)?
-20. Do you decide the Cascadeur Indie spend and the open animation-pipeline decisions (section 12 of the proposal), including the gather-on-the-run proof?
+20. Do you decide the Cascadeur Indie spend and the open animation-pipeline decisions (section 12 of the proposal), including the gather-on-the-run proof? (Partly answered 2026-11-14: motion comes from a free mocap service, rule 2.74.)
 
 ---
 
