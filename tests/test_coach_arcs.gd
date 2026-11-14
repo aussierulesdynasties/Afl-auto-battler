@@ -276,19 +276,27 @@ func _test_poached_moves_club() -> void:
 	_check(not GameState.is_sacked() and int(st["coach"]["sackings"]) == 1 and int(st["coach"]["reprieves"]) == 1
 			and (st["offers"] as Array).is_empty(),
 			"poached and sacked: he still goes, the sacking counts, the second chance is kept: %s" % str(st["coach"]))
-	_check(str(st["move"].get("to", "")) == suitor and str(st["move"].get("why", "")) == "poached", "poached: the move waits for the rollover: %s" % str(st["move"]))
+	# Row 189: he moves at the season's close, as a rival board's letter taken
+	# does, so the off-season opens at the club he joins.
+	var moved: Dictionary = st["coach"].get("moved", {})
+	_check((st["move"] as Dictionary).is_empty() and str(moved.get("why", "")) == "poached" and str(moved.get("to", "")) == suitor,
+			"poached: he moves at the season's close: %s" % str(moved))
+	_check(GameState.my_club == suitor and is_same(GameState.my_list, GameState.season.lists[suitor])
+			and GameState.offseason_year == GameState.season_year,
+			"poached: the off-season opens at %s with its list (club %s)" % [suitor, GameState.my_club])
+	_check(GameState.offseason_staff == Coaches.staff(GameState.coaches, suitor),
+			"poached: the staff he sees this off-season are %s's" % suitor)
+	_no_calls_for("poached", "FRE")
 	_check(str(st["done"].get("poached", {}).get("ending", "")) == "left", "poached: it resolves 'left': %s" % str(st["done"].get("poached", {})))
 	_check(st["active"].is_empty(), "poached: every arc ends at the club he leaves: %s" % str(st["active"].keys()))
 	var coached_before := (st["coach"]["coached"] as Dictionary).size()
-	# Save and load with the move pending: it is still made.
-	_check(GameState.save_career() and GameState.load_career(), "poached: saves and loads with the move pending")
-	st = GameState.coach_arcs
-	_check(str(st["move"].get("to", "")) == suitor, "poached: the pending move survives a reload")
-	their_coach = _senior_at(suitor)
+	var their_id := str(their_coach.get("cid", ""))
+	_check(GameState.save_career() and GameState.load_career() and GameState.my_club == suitor, "poached: saves and loads at the new club")
 	_check(GameState.start_next_season(), "poached: the season rolls on")
 	st = GameState.coach_arcs
 	_check(GameState.my_club == suitor, "poached: he coaches %s now, got %s" % [suitor, GameState.my_club])
 	_check(GameState.my_list == GameState.season.lists[suitor], "poached: his list is the new club's")
+	their_coach = GameState.coaches.get(their_id, {})
 	_check(str(their_coach.get("club", "")) == "FRE" and str(their_coach.get("job", "")) == "SC", "poached: %s's coach takes the Fremantle job" % suitor)
 	_check(_senior_at(suitor).is_empty(), "poached: the club he joins has no AI senior coach (he is it)")
 	var clubs: Array = st["coach"]["clubs"]
@@ -768,6 +776,22 @@ func _strong_season(rng: RandomNumberGenerator, tas_joins := true) -> void:
 
 ## A club's expiring players nobody has decided on yet: still on the list,
 ## not re-signed, not retiring.
+## Row 189: once he has signed elsewhere, the club he leaves offers him no
+## off-season call: its contracts are decided, no trade offer or request is
+## about its players, and no staff job or approach of its waits for him.
+func _no_calls_for(tag: String, old: String) -> void:
+	_check(_undecided(old) == 0, "%s: %s's contracts are decided by its own staff (%d waiting)" % [tag, old, _undecided(old)])
+	var ids := {}
+	for p in GameState.season.lists.get(old, []):
+		ids[str(p["id"])] = true
+	var offers_old := GameState.trade_offers.filter(func(o): return (o.get("take", []) as Array).any(func(id): return ids.has(str(id))))
+	var asks_old := GameState.my_trade_requests().filter(func(id): return ids.has(str(id)))
+	_check(offers_old.is_empty() and asks_old.is_empty(),
+			"%s: no trade call about %s's players (offers %s, requests %s)" % [tag, old, str(offers_old), str(asks_old)])
+	_check(GameState.staff_vacancies.is_empty() and GameState.coach_approaches.is_empty(),
+			"%s: no staff call from %s (vacancies %s, approaches %s)" % [tag, old, str(GameState.staff_vacancies), str(GameState.coach_approaches)])
+
+
 func _undecided(code: String) -> int:
 	var n := 0
 	for p in Contracts.expiring(GameState.season.lists.get(code, [])):
@@ -1002,15 +1026,19 @@ func _test_joining_club_after_sack() -> void:
 			"joining, sacked: the offer says the year they join, why the job is open, their list and picks, and the goal: %s" % str(tas))
 	var their_id := str(_senior_at("TAS").get("cid", ""))
 	_check(their_id != "", "joining, sacked: Tasmania have signed a first coach who would make way")
-	_check(ClubMoves.take_job(GameState, "TAS") and str(st["move"].get("to", "")) == "TAS" and GameState.my_club == "FRE",
-			"joining, sacked: he takes the job; until their draft he is still at Fremantle")
-	_check(GameState.begin_intake_draft(), "joining, sacked: the National Draft opens")
+	# Row 189: he signs and goes straight to Tasmania's first National Draft;
+	# Fremantle play out the off-season under their own staff.
+	_check(ClubMoves.take_job(GameState, "TAS") and GameState.draft != null and GameState.draft.intake_mode
+			and GameState.fa_closed_year == year,
+			"joining, sacked: he takes the job and the National Draft opens, Fremantle's off-season played out")
+	_no_calls_for("joining, sacked", "FRE")
+	_check(GameState.begin_intake_draft(), "joining, sacked: the National Draft stays open")
 	_check_joined("joining, sacked", "FRE", year, their_id)
 
 
 ## A strong season before Tasmania join: their board writes first. Taken, he
-## signs now, runs Fremantle's contracts and trades, then takes over at
-## Tasmania's first National Draft.
+## signs now and takes over at Tasmania's first National Draft, which opens at
+## once; Fremantle's contracts and trades are their own staff's (row 189).
 func _test_joining_club_letter() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = SUITE_SEED + 22
@@ -1029,13 +1057,15 @@ func _test_joining_club_letter() -> void:
 			and int(l.get("finish", -1)) == 0 and str(l.get("why_open", "")).begins_with("Tasmania join the league"),
 			"joining, letter: Tasmania's board writes, saying the year they join: %s" % str(l))
 	var their_id := str(_senior_at("TAS").get("cid", ""))
-	_check(ClubMoves.accept_letter(GameState) and GameState.my_club == "FRE"
-			and str(GameState.coach_arcs["move"].get("to", "")) == "TAS" and GameState.offseason_open(),
-			"joining, letter: taken, he signs now and the off-season opens at Fremantle")
-	_check(_undecided("FRE") > 0, "joining, letter: Fremantle's contracts wait for him (%d)" % _undecided("FRE"))
+	# Row 189: taken, he goes straight to Tasmania's first National Draft and
+	# Fremantle play out the off-season under their own staff.
+	_check(ClubMoves.accept_letter(GameState) and GameState.draft != null and GameState.draft.intake_mode
+			and GameState.fa_closed_year == year,
+			"joining, letter: taken, the National Draft opens with Fremantle's off-season played out")
+	_no_calls_for("joining, letter", "FRE")
 	_check(_news_has("You have taken the senior job at Tasmania. You take over at the %d National Draft." % year),
 			"joining, letter: the news says when he takes over")
-	_check(GameState.begin_intake_draft(), "joining, letter: the National Draft opens")
+	_check(GameState.begin_intake_draft(), "joining, letter: the National Draft stays open")
 	_check_joined("joining, letter", "FRE", year, their_id)
 
 
