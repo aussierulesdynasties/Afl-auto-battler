@@ -372,13 +372,13 @@ func _test_2028_season_runs() -> void:
 			"Ten finalists come off the 19-club ladder")
 	_check(GameState.premier() != "", "A 2028 premier is crowned")
 
-	# The debut achievement only fires when it applies.
-	var tas_made_finals := (season.finals["top"] as Array).has("TAS")
-	_check(not tas_made_finals or GameState.achievements.has("tas_debut_finals"),
-			"Tasmania's debut-finals achievement matches its result")
-	var stored: Dictionary = GameState.achievements.get("tas_debut_finals", {})
-	_check(_stamped(stored, 2028), "The debut achievement, when unlocked, is stamped 2028")
-	# The stamp is an int: whether Tasmania makes the 2028 finals depends on
+	# Tasmania's early-flag achievement only fires when it applies.
+	var tas_flag := GameState.premier() == "TAS"
+	_check(tas_flag == GameState.achievements.has("tas_early_flag"),
+			"Tasmania's early-flag achievement matches its result")
+	var stored: Dictionary = GameState.achievements.get("tas_early_flag", {})
+	_check(_stamped(stored, 2028), "The achievement, when unlocked, is stamped 2028")
+	# The stamp is an int: whether Tasmania wins the 2028 flag depends on
 	# the sim, so the unlocked path is checked on a stamp of its own too (an
 	# int compared with "" is a script error that skipped the 2029 rollover).
 	_check(_stamped({"year": 2028}, 2028) and not _stamped({"year": 2029}, 2028)
