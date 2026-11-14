@@ -19,8 +19,6 @@ const FENCE := 6.0
 const STAND_DEPTH := 34.0
 const STAND_RISE := 24.0
 ## The jog's 17 keys at 24 fps are one stride cycle in 0.67 s, matched to about 6 m/s.
-const JOG_SPEED := 6.0
-const RUN_FROM := 1.4          # m/s: slower than this he stands
 ## A Sherrin is about 0.29 m end to end and 0.18 m across.
 const BALL_R := 0.09
 const BALL_LONG := 1.6
@@ -29,6 +27,7 @@ var director: MatchDirector
 var players: Array = []        # [{node, anim, ring}] in director.tokens order
 var ball: MeshInstance3D
 var camera: Camera3D
+var anim: Oval3DAnim          # the animation session's controller (row 198)
 var _look := Vector3.ZERO
 
 
@@ -43,6 +42,7 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 	for t in director.tokens:
 		var side := int(t.get("side", 0))
 		players.append(_player(scene, kits[side], GameDB.club_colours(home if side == 0 else away)))
+	anim = Oval3DAnim.new(director, players)
 	ball = MeshInstance3D.new()
 	var bm := SphereMesh.new()
 	bm.radius = BALL_R
@@ -80,32 +80,7 @@ func sync(dt: float) -> void:
 		var vel: Vector2 = t["vel"]
 		var node: Node3D = p["node"]
 		node.position = Vector3(pos.x, 0.0, pos.y)
-		var speed := vel.length()
-		var ap: AnimationPlayer = p["anim"]
-		var want := "carry" if i == holder else "idle"
-		var rate := 0.0 if i == holder else 1.0
-		if speed > RUN_FROM:
-			node.rotation.y = atan2(vel.x, vel.y)
-			want = "carry" if i == holder else "jog"
-			rate = clampf(speed / JOG_SPEED, 0.45, 2.3)
-		elif i != holder:
-			# Standing: face the ball (the carrier keeps his heading).
-			var to: Vector2 = (director.ball["pos"] as Vector2) - pos
-			if to.length() > 0.5:
-				node.rotation.y = atan2(to.x, to.y)
-		if ap.current_animation != want:
-			var at := fmod(float(i) * 0.137, 0.66)
-			if ap.current_animation != "idle" and ap.current_animation != "":
-				at = ap.current_animation_position
-			ap.play(want)
-			ap.seek(fmod(at, ap.current_animation_length), false)
-		if want == "carry" and rate == 0.0:
-			# Standing with the ball: the carry's first key, both legs under him (poses.carry
-			# at p = 0), not frozen mid-stride.
-			ap.seek(0.0, false)
-		# A zero step leaves a freshly played pose unapplied (a standing holder kept the idle
-		# arms), so a still pose still advances by a sliver.
-		ap.advance(maxf(dt * rate, 1e-4))
+		anim.step(i, p, holder, pos, vel, dt)
 	var bp: Vector2 = director.ball["pos"]
 	var h := float(director.ball.get("h", 0.0))
 	if holder >= 0 and holder < players.size():
