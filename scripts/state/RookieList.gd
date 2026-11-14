@@ -335,6 +335,8 @@ static func open_draft(gs, order: Array) -> void:
 		gs.rookie_draft = {"year": gs.season_year, "order": [], "next": 0, "round": 1,
 				"passed": {}, "picks": [], "upgrades": [], "done": true}
 		gs.relisted_unpicked()
+		# Lists are lodged now: a club short of the minimum fills it.
+		gs._fill_short_lists()
 		return
 	var clubs := []
 	for code in order:
@@ -485,6 +487,8 @@ static func _finish(gs) -> void:
 		return
 	rec["done"] = true
 	gs.relisted_unpicked()
+	# Lists are lodged after the Rookie Draft: a club short of the minimum fills it.
+	gs._fill_short_lists()
 	var picks: Array = rec.get("picks", [])
 	var mine := picks.filter(func(k): return str(k["club"]) == gs.my_club)
 	var nobody := bool(rec.get("nobody_left", false))

@@ -6,10 +6,10 @@ uid="uid://baosf0nqa0dyn"
 
 [deps]
 
-files=["res://data/legacy/2010/history_2010.num.translation", "res://data/legacy/2010/history_2010.slug.translation", "res://data/legacy/2010/history_2010.draft.translation", "res://data/legacy/2010/history_2010.draft.translation", "res://data/legacy/2010/history_2010.draft.translation", "res://data/legacy/2010/history_2010.seasons.translation", "res://data/legacy/2010/history_2010.career.translation", "res://data/legacy/2010/history_2010.peak.translation"]
+files=["res://data/legacy/2010/history_2010.num.translation", "res://data/legacy/2010/history_2010.slug.translation", "res://data/legacy/2010/history_2010.draft.translation", "res://data/legacy/2010/history_2010.draft.translation", "res://data/legacy/2010/history_2010.draft.translation", "res://data/legacy/2010/history_2010.seasons.translation", "res://data/legacy/2010/history_2010.career.translation", "res://data/legacy/2010/history_2010.peak.translation", "res://data/legacy/2010/history_2010.last.translation"]
 
 source_file="res://data/legacy/2010/history_2010.csv"
-dest_files=["res://data/legacy/2010/history_2010.num.translation", "res://data/legacy/2010/history_2010.slug.translation", "res://data/legacy/2010/history_2010.draft.translation", "res://data/legacy/2010/history_2010.draft.translation", "res://data/legacy/2010/history_2010.draft.translation", "res://data/legacy/2010/history_2010.seasons.translation", "res://data/legacy/2010/history_2010.career.translation", "res://data/legacy/2010/history_2010.peak.translation"]
+dest_files=["res://data/legacy/2010/history_2010.num.translation", "res://data/legacy/2010/history_2010.slug.translation", "res://data/legacy/2010/history_2010.draft.translation", "res://data/legacy/2010/history_2010.draft.translation", "res://data/legacy/2010/history_2010.draft.translation", "res://data/legacy/2010/history_2010.seasons.translation", "res://data/legacy/2010/history_2010.career.translation", "res://data/legacy/2010/history_2010.peak.translation", "res://data/legacy/2010/history_2010.last.translation"]
 
 [params]
 

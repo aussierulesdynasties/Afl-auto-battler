@@ -109,7 +109,7 @@ func _test_passing_list_turns_over(dataset: String, me: String) -> void:
 	_check(seasons == 10, "%s: ten seasons pass (%d)" % [dataset, seasons])
 	_check(oldest <= 38.0, "%s: nobody on %s's list is older than 38 after ten seasons of passing (oldest %.0f)" % [dataset, me, oldest])
 	_check(drafted >= 8, "%s: %s's list holds the draftees it was made to take (%d)" % [dataset, me, drafted])
-	_check(stayed < GameState.my_list.size() / 2,
+	_check(stayed * 2 < GameState.my_list.size(),
 			"%s: most of %s's list has turned over (%d of %d from the start)" % [dataset, me, stayed, GameState.my_list.size()])
 	# The draft counts every player retiring at the rollover (Draft.leaving),
 	# so a coach who passes at the minimum still starts each season on it.
