@@ -616,11 +616,11 @@ func _test_created_club_career() -> void:
 		var cand := draft._best_ai_pick(draft.current_club())
 		if cand.is_empty() or not draft._draft_pick(draft.current_club(), cand):
 			draft._skip_current_pick()
-	_check(draft.is_finished(), "The twenty-club League Draft completes")
+	_check(draft.is_finished(), "The 19-club League Draft completes")
 	GameState.start_season("PMB", draft.list())
 	var season: Season = GameState.season
-	_check(GameState.my_club == "PMB" and season.ladder.size() == 20 and season.ladder.has("PMB"),
-			"You coach the created club on a twenty-club ladder")
+	_check(GameState.my_club == "PMB" and season.ladder.size() == 19 and season.ladder.has("PMB"),
+			"You coach the created club on a 19-club ladder in 2027 (Tasmania join in 2028)")
 	# The director's PC playtest (2026-10-07): a created club started with
 	# every coaching job vacant. It hires before its first season, from
 	# coaches out of work; you are its senior coach.
