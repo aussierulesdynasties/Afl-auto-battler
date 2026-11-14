@@ -14,7 +14,6 @@ The director's visual rulings V-R1 to V-R9 are in Rulings (director, 2026-11-04)
 | V6 | Match chrome: scorebug 56 to 72 px, bottom decision sheet about a third of the height, one-button transport, goal and siren poster card After: 132. | captures at 390x844, the oval gets the freed height, every decision reachable with a real tap |
 | V7 | Navigation icon set (AI-assisted candidates) | one icon per hub destination, director approves or rejects |
 | V8 | Refresh captures of every screen on current main (the newest are 2026-10-07 to 10-11) After: T3.R9 and copy passes 131 to 140. | one capture per screen at 390x844, dated, in the audit folder |
-| V9 | Housekeeping: placeholder logo name, stale worktrees (`The MCG.glb` is already out of the repo) | logo name is final or marked placeholder in one place, `git worktree list` shows only live ones |
 
 ## Rulings (director, 2026-11-04)
 
