@@ -1227,14 +1227,19 @@ def pressure_section(A, B):
     """Where and how a side applies pressure, against Champion Data 2025-26: pressure acts and
     tackles a team a game, the share of pressure acts in the presser's defensive half, tackles
     per pressure act and tackles inside his forward 50 (MatchSim._press_where)."""
-    if not any("pressure_acts_dhalf" in t for r in A.values() for t in r["teams"]):
-        return
+    def has(R):
+        return any("pressure_acts_dhalf" in t for r in R.values() for t in r["teams"])
+    only_b = False
+    if not has(A):
+        if not (B and has(B)):
+            return
+        # Main against the branch that adds the counts: only B has them.
+        A, B, only_b = B, {}, True
     ref = json.load(open(os.path.join(HERE, "afl_pressure_rates.json")))
     real = ref["per_team_match"]
-    print("
-
-## Pressure a team a game (presser's end; real: Champion Data 2025-26 club-seasons)
-")
+    print("\n\n## Pressure a team a game (presser's end; real: Champion Data 2025-26 club-seasons)\n")
+    if only_b:
+        print("Arm A does not count where pressure happens; the A column below is arm B.\n")
     head = "| stat | AFL mean | AFL range | A | A/real | mark |" + (" B | mark | B-A | se | sig |" if B else "")
     print(head)
     print("|" + "---|" * (head.count("|") - 1))
@@ -1251,8 +1256,7 @@ def pressure_section(A, B):
             sig = "yes" if se and abs(dm) > 2 * se else ""
             line += f" {k * mb:.1f}{u} | {_mark(mb, rr)} | {k * dm:+.2f} | {k * se:.2f} | {sig} |"
         print(line)
-    print(f"
-Real: {ref['source']} The sim counts a tackle, a rushed disposal and a smother as a"
+    print(f"\nReal: {ref['source']} The sim counts a tackle, a rushed disposal and a smother as a"
           " pressure act; Champion Data also counts chases and corrals that do not touch the disposal.")
 
 
