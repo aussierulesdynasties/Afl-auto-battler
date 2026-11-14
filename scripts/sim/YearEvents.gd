@@ -323,29 +323,103 @@ static func top_up(gs, club: String, most: int) -> void:
 		if is_banned(q):
 			banned += 1
 	var want := mini(banned, most)
+	if want <= 0:
+		return
+	# Your club: you pick them yourself (director, 2026-11-13: "You pick
+	# them"). The pick screen waits for you until the next round is played.
+	if club == str(gs.my_club):
+		state(gs)["top_up"] = {"year": int(gs.season_year), "club": club, "left": want, "most": want, "signed": []}
+		return
 	var signed: PackedStringArray = []
 	for p in MidseasonDraft.pool(gs):
 		if signed.size() >= want:
 			break
-		if gs.free_agents.has(p):
-			gs.free_agents.erase(p)
-			for k in ["offers", "market_round", "market_log", "talks"]:
-				p.erase(k)
-		else:
-			gs.draftee_pool.erase(p)
-			gs.drafted_draftees[str(p["id"])] = club
-			gs._mark_drafted(p, "top_up", 0, club)
-			TeamFamiliarity.arrive_draftee(p)
-		if not p.has("xp"):
-			p["xp"] = 0
-			p["xp_games"] = 0
-		gs._join(club, p)
-		# This season only: the rollover takes one off, so he is out of contract.
-		p["contract_years"] = 1
-		p["salary"] = RookieList.senior_wage(int(gs.season_year))
-		p["top_up"] = int(gs.season_year)
-		Workload.reset({club: [p]})
-		signed.append(GameDB.player_display_name(p))
-	if not signed.is_empty():
-		gs.add_news("contract", "%s sign %d top-up player%s for %d: %s." % [GameDB.club_name(club), signed.size(),
-				"" if signed.size() == 1 else "s", int(gs.season_year), ", ".join(signed)])
+		signed.append(_sign_top_up(gs, club, p))
+	_top_up_news(gs, club, signed)
+
+
+## Sign one top-up player for `club`: off the free agents or the passed-over
+## prospects, onto the list for this season only, on the senior minimum.
+static func _sign_top_up(gs, club: String, p: Dictionary) -> String:
+	if gs.free_agents.has(p):
+		gs.free_agents.erase(p)
+		for k in ["offers", "market_round", "market_log", "talks"]:
+			p.erase(k)
+	else:
+		gs.draftee_pool.erase(p)
+		gs.drafted_draftees[str(p["id"])] = club
+		gs._mark_drafted(p, "top_up", 0, club)
+		TeamFamiliarity.arrive_draftee(p)
+	if not p.has("xp"):
+		p["xp"] = 0
+		p["xp_games"] = 0
+	gs._join(club, p)
+	# This season only: the rollover takes one off, so he is out of contract.
+	p["contract_years"] = 1
+	p["salary"] = RookieList.senior_wage(int(gs.season_year))
+	p["top_up"] = int(gs.season_year)
+	Workload.reset({club: [p]})
+	return GameDB.player_display_name(p)
+
+
+static func _top_up_news(gs, club: String, signed: Array) -> void:
+	if signed.is_empty():
+		gs.add_news("contract", "%s sign no top-up players for %d." % [GameDB.club_name(club), int(gs.season_year)])
+		return
+	gs.add_news("contract", "%s sign %d top-up player%s for %d: %s." % [GameDB.club_name(club), signed.size(),
+			"" if signed.size() == 1 else "s", int(gs.season_year), ", ".join(signed)])
+
+
+## Your top-up picks, while they wait on you: {"year","club","left","most",
+## "signed"}, or {}.
+static func top_up_pending(gs) -> Dictionary:
+	var t: Dictionary = state(gs).get("top_up", {})
+	if t.is_empty() or int(t.get("year", 0)) != int(gs.season_year) or int(t.get("left", 0)) <= 0:
+		return {}
+	return t
+
+
+## The pick screen waits on you: your club, this season, spots left, someone to sign.
+static func top_up_waiting(gs) -> bool:
+	var t := top_up_pending(gs)
+	return not t.is_empty() and str(t["club"]) == str(gs.my_club) and not MidseasonDraft.pool(gs).is_empty()
+
+
+## You sign one top-up player by id. False if he is not in the pool or no spot is left.
+static func sign_top_up(gs, player_id: String) -> bool:
+	var t := top_up_pending(gs)
+	if t.is_empty():
+		return false
+	for p in MidseasonDraft.pool(gs):
+		if str(p["id"]) == player_id:
+			(t["signed"] as Array).append(_sign_top_up(gs, str(t["club"]), p))
+			t["left"] = int(t["left"]) - 1
+			if int(t["left"]) <= 0:
+				finish_top_up(gs)
+			return true
+	return false
+
+
+## You are done signing: the spots left pass, and the news names who signed.
+static func finish_top_up(gs) -> void:
+	var t: Dictionary = state(gs).get("top_up", {})
+	if t.is_empty():
+		return
+	state(gs).erase("top_up")
+	_top_up_news(gs, str(t["club"]), t.get("signed", []))
+
+
+## Before the next round is played: your unmade top-up picks pass. A club you
+## no longer coach (sacked since) signs its own, as every rival does.
+static func settle_top_up(gs) -> void:
+	var t := top_up_pending(gs)
+	if t.is_empty():
+		state(gs).erase("top_up")
+		return
+	if str(t["club"]) != str(gs.my_club):
+		for p in MidseasonDraft.pool(gs):
+			if int(t["left"]) <= 0:
+				break
+			(t["signed"] as Array).append(_sign_top_up(gs, str(t["club"]), p))
+			t["left"] = int(t["left"]) - 1
+	finish_top_up(gs)

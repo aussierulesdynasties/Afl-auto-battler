@@ -4414,10 +4414,13 @@ func _votes_side(code: String, ink: Color, players: Array, votes: Dictionary, pc
 
 
 ## What the votes are, said once over both clubs: who voted, how the list runs.
+## Hidden in a season before the coaches voted (2003, EraRules coaches_votes;
+## director 2026-11-13: "Hide before 2003"): the best players still show.
 func _votes_header() -> Control:
 	var l := UiKit.lbl("Coaches' votes: each coach gives his best five 5, 4, 3, 2, 1", UiKit.BODY, UiKit.TEXT)
 	l.name = "VotesHeading"
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.visible = EraRules.on("coaches_votes")
 	return l
 
 
@@ -4429,7 +4432,7 @@ func _votes_figure(votes: Dictionary, id: String) -> Label:
 	var n := int(votes.get(id, 0))
 	var l := UiKit.line("%d vote%s" % [n, "" if n == 1 else "s"] if n > 0 else "", UiKit.BODY, UiKit.TEXT, true)
 	l.name = "StandoutVotes"
-	l.visible = n > 0
+	l.visible = n > 0 and EraRules.on("coaches_votes")
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	return l
 
