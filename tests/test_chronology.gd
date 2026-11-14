@@ -77,9 +77,9 @@ func _test_league_draft_pool() -> void:
 	_check(players_in and not dup, "Every 2026 player is in the League Draft pool once")
 	_check(class_in == GameDB.draftees.size() and class_in > 40,
 			"The 2026 draft class is in the 2027 League Draft (%d prospects)" % class_in)
-	# Tasmania drafts with the founding eighteen (director, 2026-11-08).
-	_check(d.clubs.size() == 19 and d.clubs.has("TAS") and d.target_size == mini(Ratings.LIST_SIZE, d.pool.size() / 19),
-			"Nineteen clubs, Tasmania with them, draft %d-player lists" % d.target_size)
+	# The founding eighteen draft; Tasmania join in 2028 (director, 2026-11-12).
+	_check(d.clubs.size() == 18 and not d.clubs.has("TAS") and d.target_size == mini(Ratings.LIST_SIZE, d.pool.size() / 18),
+			"The founding eighteen, without Tasmania, draft %d-player lists" % d.target_size)
 	_check(d.target_size == Ratings.LIST_SIZE, "State-leaguers fill the pool so every club drafts a full list (%d)" % d.target_size)
 	var later := false
 	for p in d.pool:
