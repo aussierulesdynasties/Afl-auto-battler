@@ -16,6 +16,8 @@ var _checks := 0
 var _failures: Array[String] = []
 
 const SUITE_SEED := 2027
+## Home-and-away rounds _test_async_weeks_change_nothing plays before the finals.
+const HOME_AWAY_WEEKS := 1
 const Tap := preload("res://tests/tap.gd")
 
 
@@ -350,14 +352,21 @@ func _season_scores(threaded_frames: bool) -> String:
 	var frames := [0]
 	var count := func(): frames[0] += 1
 	process_frame.connect(count)
+	var weeks := 0
 	while not _state.season.is_season_over():
+		# One home-and-away round, then straight to the finals: both kinds of
+		# week are played both ways, without a whole season of matches.
+		if weeks == HOME_AWAY_WEEKS and not _state.season.is_regular_done():
+			_state.season.round_index = _state.season.fixture.size()
 		if threaded_frames:
 			await _state.advance_async()
 		else:
 			_state.advance()
+		weeks += 1
 	process_frame.disconnect(count)
 	if threaded_frames:
-		_check(frames[0] >= 24, "frames drew while the weeks played (%d)" % frames[0])
+		# At least one frame for each week played (the full season's 24 for 27 weeks).
+		_check(weeks > HOME_AWAY_WEEKS and frames[0] >= weeks, "frames drew while the weeks played (%d frames, %d weeks)" % [frames[0], weeks])
 	var bits := PackedStringArray()
 	for week in _state.season_log:
 		bits.append("%s %s %s %s" % [week.get("tag", week.get("round", "")), week["home"], week["away"], str(week["score"])])
@@ -404,12 +413,15 @@ func _preseason_print(threaded_frames: bool) -> String:
 	return "\n".join(bits)
 
 
+## The rollover is what is under test, not the matches before it: the season is
+## taken straight to the end of its rounds (start_next_season rolls over a
+## season whose rounds are done), so the hook's calls are the rollover's own.
 func _rollover() -> String:
 	_fresh()
 	seed(SUITE_SEED)
-	while not _state.season.is_season_over():
-		_state.advance()
-	_state.start_next_season()
+	_state.season.round_index = _state.season.fixture.size()
+	var year: int = _state.season_year
+	_check(_state.start_next_season() and _state.season_year == year + 1, "the season rolls over (%d)" % _state.season_year)
 	var bits := PackedStringArray()
 	for code in _state.league_lists:
 		var sum := 0
@@ -421,28 +433,30 @@ func _rollover() -> String:
 
 
 ## The flair takes no touch, and a finger reaches the screen after the cover.
+## The screen under it is a plain button where the hub's Sim the week sits:
+## the cover and the flair are what a touch has to pass, on any screen, and
+## opening a real screen first costs seconds.
 func _test_tap_after_cover() -> void:
 	root.size = Vector2i(390, 844)
-	await process_frame
-	_fresh()
-	_router.stack = []
-	_router.go("hub")
-	await process_frame
 	await process_frame
 	var flair := _flair()
 	_check(flair.mouse_filter == Control.MOUSE_FILTER_IGNORE, "the flair lets touches through")
 	for c in flair.get_children():
 		_check((c as Control).mouse_filter == Control.MOUSE_FILTER_IGNORE, "%s lets touches through" % c.name)
+	var sim := Button.new()
+	sim.text = "Sim the week"
+	sim.position = Vector2(220, 760)
+	sim.size = Vector2(150, 56)
+	var pressed := [0]
+	sim.pressed.connect(func(): pressed[0] += 1)
+	root.add_child(sim)
 	_wipe.set("test_cover", true)
 	await _wipe.call("run", "Loading your list...", func(): await process_frame)
 	await _down()
 	_wipe.set("test_cover", false)
-	var sim: Control = current_scene.find_child("SimRound", true, false)
-	_check(sim != null, "the hub shows Sim the week")
-	if sim == null:
-		return
 	var why: String = await Tap.tap(sim)
-	_check(why == "", "a finger's tap reaches Sim the week after the cover (%s)" % why)
+	_check(why == "" and pressed[0] == 1, "a finger's tap reaches the button under the cover after it lifts (%s, %d)" % [why, pressed[0]])
+	sim.queue_free()
 
 
 ## A browser build has no threads, so loading the next screen blocks: it must
@@ -450,7 +464,7 @@ func _test_tap_after_cover() -> void:
 ## the cover and a line are on screen.
 func _test_browser_loads_under_the_line() -> void:
 	var path := "res://scenes/StatsHubScene.tscn"
-	await _down()   # the tap test before this one leaves Sim the week's cover up
+	await _down()   # no cover left over from the tests before
 	# Headless runs have no motion, so the cover would skip its sweep and go
 	# straight to held: turn motion on so there is a sweep to load during.
 	var feel = load("res://scripts/ui/Feel.gd")

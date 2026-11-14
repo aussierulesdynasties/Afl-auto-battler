@@ -55,6 +55,16 @@ func _to_last_round() -> Season:
 	return season
 
 
+## Straight to the finals: the home-and-away is skipped, not played (the
+## bracket then seeds from a level ladder). For tests of the finals themselves;
+## the bracket opening after a played Round 24 is tested above.
+func _to_finals() -> Season:
+	var season := _to_last_round()
+	season.round_index = season.fixture.size()
+	GameState.ensure_finals()
+	return season
+
+
 ## Play the prepared match the way MatchScene does: quarter by quarter, with
 ## the home/away/label stamped on the result, then hand it back.
 func _play_pending() -> Dictionary:
@@ -71,6 +81,22 @@ func _play_pending() -> Dictionary:
 
 func _test_finals_open_after_last_round() -> void:
 	var season := _to_last_round()
+	_check(GameState.prepare_interactive_match(), "Round 24 can be played live")
+	_play_pending()
+	_check(not season.finals.is_empty(),
+			"The bracket also opens after a live round 24")
+
+	# Round 24 again, through advance(): the live round's results are handed
+	# back in (no second simulation, no second career); the bracket is closed
+	# and the round unplayed first.
+	var played: Array = season.results.pop_back()
+	season.round_index -= 1
+	season.finals = {}
+	_check(not season.is_regular_done() and season.finals.is_empty(), "Round 24 is unplayed again")
+	var out := []
+	for res in played:
+		out.append({"res": (res as Dictionary).duplicate(true)})
+	season._early = {"week": "r%d" % season.round_index, "threads": [], "out": out}
 	GameState.advance()
 	_check(season.is_regular_done(), "Round 24 completes the home-and-away")
 	_check(not season.finals.is_empty(),
@@ -81,19 +107,14 @@ func _test_finals_open_after_last_round() -> void:
 	_check(season.finals_week_matches().size() == 2,
 			"Week one lists the two wildcard finals")
 
-	season = _to_last_round()
-	_check(GameState.prepare_interactive_match(), "Round 24 can be played live")
-	_play_pending()
-	_check(not season.finals.is_empty(),
-			"The bracket also opens after a live round 24")
-
 
 ## Week one is 7v10 and 8v9; the winners reseed by their original ladder
 ## position into the 7th and 8th seeds for week two.
 func _test_wildcard_week_and_reseed() -> void:
-	var season := _to_last_round()
-	GameState.advance()
+	# The seeding is under test, not Round 24: straight to the finals.
+	var season := _to_finals()
 	var top: Array = season.finals["top"]
+	_check(top.size() == Season.FINALISTS, "Ten finalists to seed (%d)" % top.size())
 
 	# The top six wait out the wildcard round: none of them plays in week one.
 	for m in season.finals_week_matches():
@@ -137,8 +158,7 @@ func _test_wildcard_week_and_reseed() -> void:
 
 
 func _test_interactive_finals_series() -> void:
-	var season := _to_last_round()
-	GameState.advance()
+	var season := _to_finals()
 	var top: Array = season.finals["top"]
 	GameState.my_club = str(top[0])
 	GameState.my_list = season.lists[GameState.my_club]
@@ -191,8 +211,7 @@ func _test_interactive_finals_series() -> void:
 
 
 func _test_simulated_finals_series() -> void:
-	var season := _to_last_round()
-	GameState.advance()
+	var season := _to_finals()
 	var guard := 0
 	while not season.is_season_over() and guard < 8:
 		GameState.advance()
@@ -216,21 +235,31 @@ func _new_sim(seed: int) -> MatchSim:
 	return MatchSim.new(home, away, seed)
 
 
-## Find a real level final and check extra time settles it.
+## A match played to the end of its last quarter's play, then levelled before
+## the siren with rushed behinds to the side behind, so the draw rule is tested
+## on one match instead of searching hundreds of seeds for a natural draw.
+## (Rushed behinds have no scorer: the players' own tallies stay as played.)
+func _level_sim(seed: int, finals: bool) -> MatchSim:
+	var sim := _new_sim(seed)
+	sim.finals_mode = finals
+	while sim.current_quarter < 4:
+		sim.run_quarter()
+	sim.begin_quarter()
+	while not sim.continue_quarter():
+		sim.resolve_moment(int(sim.pending_moment.get("default", 0)))
+	var gap := sim.score(0) - sim.score(1)
+	var side := 1 if gap > 0 else 0
+	for i in range(absi(gap)):
+		sim._t(side, "behinds")
+		sim.q_behinds[3][side] += 1
+	sim.end_quarter()
+	return sim
+
+
+## A level final goes to extra time and extra time settles it.
 func _test_extra_time() -> void:
-	var found := {}
-	# Finals play a little differently (big-game players lift), so look for
-	# a final that was level at the end of the fourth quarter.
-	for seed in range(1, 1500):
-		var sim := _new_sim(seed)
-		sim.finals_mode = true
-		var res := sim.run()
-		if bool(res["extra_time"]):
-			found = res
-			break
-	_check(not found.is_empty(), "A level final turns up within 1,500 seeds")
-	if found.is_empty():
-		return
+	var sim := _level_sim(11, true)
+	var found := sim.run()
 	var q4: Array = ((found["quarter_teams"] as Array)[3] as Dictionary)["score"]
 	_check(int(q4[0]) == int(q4[1]) and bool(found["extra_time"]),
 			"A level final goes to extra time")
@@ -255,25 +284,20 @@ func _test_extra_time() -> void:
 ## Golden point past its cap still settles a final, and the periods
 ## (four quarters plus extra time) add up to the final score.
 func _test_extra_time_always_has_winner() -> void:
-	for seed in range(1, 1500):
-		var sim := _new_sim(seed)
-		sim.finals_mode = true
-		sim.golden_point_chains = 0
-		var res := sim.run()
-		if not bool(res["extra_time"]):
-			continue
-		_check(int(res["winner"]) != -1, "A final never ends in a draw")
-		var qs: Array = res["quarters"]
-		_check(qs.size() == 5, "Extra time is its own period in quarters")
-		var tot := [0, 0]
-		for q in qs:
-			tot[0] += int(q[0])
-			tot[1] += int(q[1])
-		_check(tot[0] == int(res["score"][0]) and tot[1] == int(res["score"][1]),
-				"Quarters add up to the final score after extra time")
-		_check(Headlines._break_leads(res, 0).size() == 3, "Break leads survive extra time")
-		return
-	_check(false, "A level final turns up within 1,500 seeds")
+	var sim := _level_sim(12, true)
+	sim.golden_point_chains = 0
+	var res := sim.run()
+	_check(bool(res["extra_time"]), "A final level at the siren goes to extra time")
+	_check(int(res["winner"]) != -1, "A final never ends in a draw")
+	var qs: Array = res["quarters"]
+	_check(qs.size() == 5, "Extra time is its own period in quarters")
+	var tot := [0, 0]
+	for q in qs:
+		tot[0] += int(q[0])
+		tot[1] += int(q[1])
+	_check(tot[0] == int(res["score"][0]) and tot[1] == int(res["score"][1]),
+			"Quarters add up to the final score after extra time")
+	_check(Headlines._break_leads(res, 0).size() == 3, "Break leads survive extra time")
 
 
 ## Every set-shot score is flagged as a set shot in the scoring log.
@@ -292,13 +316,10 @@ func _test_set_shots_in_scoring_log() -> void:
 
 ## Regular matches never go to extra time and keep four periods.
 func _test_home_and_away_never_extra_time() -> void:
-	for seed in range(1, 1500):
-		var sim := _new_sim(seed)
-		var res := sim.run()
-		if int(res["score"][0]) == int(res["score"][1]):
-			_check(not bool(res["extra_time"]), "A home-and-away draw stays a draw")
-			_check((res["q_goals"] as Array).size() == 4, "Draws keep four quarters")
-			return
+	var res := _level_sim(13, false).run()
+	_check(int(res["score"][0]) == int(res["score"][1]) and not bool(res["extra_time"]),
+			"A home-and-away draw stays a draw")
+	_check((res["q_goals"] as Array).size() == 4, "Draws keep four quarters")
 
 
 ## The Grand Final is always at the MCG, and its only venue edge is the
@@ -310,7 +331,7 @@ func _test_grand_final_at_the_mcg() -> void:
 	var bonus := float(Ratings.T["home_ground_bonus"])
 	_check(bonus > 0.0 and is_equal_approx(_new_sim(3).home_edge(), bonus),
 			"An ordinary home side has the home-ground edge")
-	var season := _to_last_round()
+	var season := _to_finals()
 	# 1. The venue is the MCG, whichever clubs make it.
 	var mcg := true
 	for pair in [["WCE", "ADE"], ["COL", "RIC"], ["SYD", "HAW"], ["BRL", "GEE"]]:
@@ -348,7 +369,6 @@ func _test_grand_final_at_the_mcg() -> void:
 			"Stoppage odds follow the venue edge, not the slot (%d / %d / %d of 400)" % won)
 	# The live path: coach one final a week (the same prepare path MatchScene
 	# uses) and read the venue and the engine's edge for each.
-	GameState.advance()
 	var seen := {}
 	var guard := 0
 	while not season.is_season_over() and guard < 8:
@@ -384,11 +404,14 @@ func _test_grand_final_at_the_mcg() -> void:
 ## in the background while you coach yours and are recorded at full time,
 ## exactly as they come out played one after another.
 func _test_rest_of_week_in_background() -> void:
+	# One career for both: the live Round 24 of the first pass opens the finals
+	# the second pass coaches.
+	var season := _to_last_round()
+	season.seed = 424242
 	for finals_week in [false, true]:
-		var season := _to_last_round()
-		season.seed = 424242
 		if finals_week:
-			GameState.advance()
+			_check(not season.finals.is_empty() and int(season.finals["week"]) == 1,
+					"The live Round 24 opened the finals")
 			var first: Dictionary = season.finals_week_matches()[0]
 			GameState.my_club = str(first["home"])
 			GameState.my_list = season.lists[GameState.my_club]

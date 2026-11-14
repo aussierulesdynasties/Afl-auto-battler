@@ -193,8 +193,12 @@ func _test_contract_and_trade_tutorials() -> void:
 	_check(s.find_child("TradeIntro", true, false) == null, "Trade tab a second time: no tutorial")
 	s.queue_free()
 	await _settle()
-	# Tips off: neither opens, and neither is used up.
-	_fresh_offseason()
+	# Tips off: neither opens, and neither is used up. The same off-season,
+	# its tips unseen again (talks opened and cancelled leave no state).
+	_reset_seen()
+	var p: Dictionary = _state.my_list[0]
+	for k in ["resigned", "talks", "retiring"]:
+		p.erase(k)
 	_state.tutorials = false
 	s = load("res://scenes/OffseasonScene.tscn").instantiate()
 	root.add_child(s)
@@ -210,13 +214,23 @@ func _test_contract_and_trade_tutorials() -> void:
 			"Tips off leaves both unseen")
 	s.queue_free()
 	_state.tutorials = true
+	_offseason_warm = true
 	await _settle()
+
+
+## Set by the contract tutorials' test: its off-season (FRE, no talks, no
+## trade made) is the one draft night opens from; nothing it did reaches the draft.
+var _offseason_warm := false
 
 
 ## Draft night's pick trading: the first Trade picks opens its tutorial over
 ## the sheet; Got it takes a tap and the sheet stays; the next time, none.
 func _test_draft_trade_tutorial() -> void:
-	_fresh_offseason()
+	if _offseason_warm and _state.draft == null and str(_state.my_club) == "FRE":
+		_reset_seen()
+	else:
+		_fresh_offseason()
+	_offseason_warm = false
 	_state.set_setting("seen_draft_intro", true)
 	_state.set_setting("seen_combine_intro", true)
 	root.size = Vector2i(390, 844)

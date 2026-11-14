@@ -80,11 +80,21 @@ func _run() -> void:
 
 ## A season started and round one played, so there is a real last match, then
 ## its score forced: your side wins or loses by a known margin.
+## The simmed week every result sheet shows: one seeded career plays round 1
+## once, and each sheet starts from a fresh copy of that round's results (a
+## career and a round per sheet only replayed the same seeded week).
+var _week: Dictionary = {}
+
+
 func _prime(win: bool, hurt := true) -> void:
-	_state.reset()
-	_state.replay_seed = SUITE_SEED
-	_state.start_season("COL", load("res://scripts/core/GameDB.gd") if false else root.get_node("GameDB").club_list("COL"))
-	_state.advance()
+	if _week.is_empty():
+		_state.reset()
+		_state.replay_seed = SUITE_SEED
+		_state.start_season("COL", root.get_node("GameDB").club_list("COL"))
+		_state.advance()
+		_week = {"match": _state.last_match.duplicate(true), "results": _state.last_results.duplicate(true)}
+	_state.last_match = (_week["match"] as Dictionary).duplicate(true)
+	_state.last_results = (_week["results"] as Array).duplicate(true)
 	var res: Dictionary = _state.last_match
 	var me := 0 if str(res["home"]) == _state.my_club else 1
 	var goals := [10, 10]

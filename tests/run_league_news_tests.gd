@@ -138,12 +138,16 @@ func _play() -> Dictionary:
 	_state.replay_seed = SUITE_SEED
 	_state.start_season("MEL", _db.club_list("MEL"))
 	_state.tutorials = false
+	# Straight to the finals: the premiership item is written when the flag is
+	# won, so the home-and-away is skipped, not played; the finals are played.
+	_state.season.round_index = _state.season.fixture.size()
+	_state.ensure_finals()
 	var guard := 0
 	while not _state.season.is_season_over() and guard < 40:
 		_state.advance()
 		guard += 1
 	var scores := []
-	for rnd in _state.season.results:
+	for rnd in _state.season.finals.get("weeks", []):
 		for res in rnd:
 			scores.append("%s %s %s" % [res["home"], res["away"], res["score"]])
 	var prem := ""

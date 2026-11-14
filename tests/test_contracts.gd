@@ -36,6 +36,7 @@ func run() -> void:
 	_t("_test_trade_picks")
 	_t("_test_future_picks")
 	_t("_test_draft_night_trades")
+	_t("_test_night_trades_never_name_called_picks")
 	_t("_test_mixed_packages")
 	_t("_test_trade_market")
 	_t("_test_ask_price")
@@ -1977,6 +1978,121 @@ func _test_draft_night_trades() -> void:
 	print("contracts: rival draft-night deals = %d" % rival_deals)
 	_check(rival_deals > 0, "Rivals trade picks with each other on draft night (%d deals)" % rival_deals)
 	_check(gated, "Every rival's night bid is for a pick worth more to it than the seller's worth plus the margin (%d deals)" % rival_deals)
+
+
+## Row 175 (director 2026-11-12: "why are adelaide trading for pick 42 if the
+## pick already called"): a whole draft night, and no trade - rival with rival,
+## a rival's offer to you, a deal you put up - names a pick already made, and
+## the pick log shows every deal before the pick it was struck before.
+func _test_night_trades_never_name_called_picks() -> void:
+	GameState.reset()
+	GameState.career_seed = 5
+	GameState.replay_seed = 5
+	GameState.start_season("GEE", GameDB.club_list("GEE"))
+	_to_offseason()
+	var me := GameState.my_club
+	var year := GameState.season_year
+	_check(GameState.begin_intake_draft(), "Row 175: the national draft opens")
+	var d: Draft = GameState.draft
+	var tonight := RegEx.create_from_string("pick (\\d+) tonight")
+	var bad := []   # what named a called pick, in words
+	var user_turns := 0
+	var offers_seen := 0
+	var guard := 0
+	while not d.is_finished() and guard < 2000:
+		guard += 1
+		if not d.is_user_turn():
+			d.auto_until_user_turn()
+			continue
+		user_turns += 1
+		var clock := int(d.pick_index) + 1   # the pick on the clock: every pick before it is made
+		# Every club's picks on the table: none already made.
+		for code in GameDB.active_clubs(year):
+			for pk in GameState.club_picks(str(code)):
+				if int(pk["year"]) == year and int(pk["spot"]) < clock:
+					bad.append("%s holds made pick %d at pick %d" % [code, int(pk["spot"]), clock])
+		# A pick already made cannot be put up, by you or for you. (A compensation
+		# pick has no id of its own: its round and club name the club's regular
+		# pick, which may still be to come.)
+		var comp := {}
+		for c in d.comp_picks:
+			comp[int(c["index"])] = true
+		for i in range(int(d.pick_index)):
+			var id := GameState.pick_id(year, int(d.pick_rounds[i]), str(d.pick_origin[i]))
+			var pk := GameState.pick_asset(id)
+			if not pk.is_empty() and (not comp.has(i) or int(pk["spot"]) < clock):
+				bad.append("made pick %d is still an asset (as pick %d) at pick %d" % [i + 1, int(pk["spot"]), clock])
+		# Offers rivals put to you for this pick: picks still to come, in words too.
+		GameState.make_night_offers()
+		for i in GameState.open_trade_offers():
+			offers_seen += 1
+			var o: Dictionary = GameState.trade_offers[i]
+			for id in (o["give"] as Array) + (o["take"] as Array):
+				var pk := GameState.pick_asset(str(id))
+				if pk.is_empty() or (int(pk["year"]) == year and int(pk["spot"]) < clock):
+					bad.append("offer %d names %s at pick %d" % [i, str(id), clock])
+			for m in tonight.search_all(GameState.trade_offer_text(i)):
+				if int(m.get_string(1)) < clock:
+					bad.append("offer text names pick %s at pick %d" % [m.get_string(1), clock])
+		var made_id := GameState.pick_id(year, int(d.pick_rounds[d.pick_index]), str(d.pick_origin[d.pick_index]))
+		if not d.pick_for_me():
+			d.user_pass()
+		# Once your pick is made, no offer for it is left standing.
+		for i in GameState.open_trade_offers():
+			if (GameState.trade_offers[i]["take"] as Array).has(made_id):
+				bad.append("an offer for %s outlived the pick" % made_id)
+	_check(d.is_finished(), "Row 175: the draft runs to the end (%d steps)" % guard)
+	# Every deal of the night, in its own words: the picks it names this year are
+	# the one on the clock or later.
+	var named := 0
+	for tr in d.night_trades:
+		for m in tonight.search_all(str(tr["text"])):
+			named += 1
+			if int(m.get_string(1)) < int(tr["at"]):
+				bad.append("deal before pick %d names pick %s: %s" % [int(tr["at"]), m.get_string(1), str(tr["text"])])
+	print("contracts: row 175 night deals = %d, your turns = %d, offers = %d" % [d.night_trades.size(), user_turns, offers_seen])
+	_check(d.night_trades.size() > 0 and named > 0, "Row 175: the night has deals naming tonight's picks (%d)" % d.night_trades.size())
+	_check(bad.is_empty(), "Row 175: no trade names a pick already called (%s)" % str(bad.slice(0, 4)))
+	# The pick log: each deal sits before the pick it was struck before, by the
+	# pick's number in the order, so a skipped pick (a full list, a pass) cannot
+	# push it after a pick already called.
+	var scene: Control = load("res://scripts/ui/DraftScene.gd").new()
+	scene.set("_draft", d)
+	var order_ok := _night_order_ok(scene.call("_night_events", d.pick_history.size()), d)
+	# The case the director saw: a pick skipped before the deal, so the log's
+	# rows run one behind the order. Pick 3 is skipped; a deal before pick 4.
+	var hist: Array = d.pick_history
+	var trades: Array = d.night_trades
+	d.pick_history = [{"pick": 1, "club": me}, {"pick": 2, "club": me}, {"pick": 4, "club": me}, {"pick": 5, "club": me}]
+	d.night_trades = [{"at": 4, "buyer": me, "seller": me, "text": ""}]
+	var gap: Array = scene.call("_night_events", 4)
+	var gap_ok: bool = gap.size() == 5 and (gap[2] as Dictionary).has("buyer") and int(gap[3]["pick"]) == 4
+	d.pick_history = hist
+	d.night_trades = trades
+	scene.free()
+	_check(order_ok, "Row 175: the pick log puts every deal before the pick it bought")
+	_check(gap_ok, "Row 175: past a skipped pick, a deal before pick 4 still shows before pick 4 (%s)" % str(gap))
+
+
+## Each deal in `events` comes after every pick numbered below its `at` and
+## before every pick numbered at or after it.
+func _night_order_ok(events: Array, d: Draft) -> bool:
+	if events.size() != d.pick_history.size() + d.night_trades.size():
+		return false
+	var last := 0
+	var pending := []
+	for e in events:
+		if e.has("buyer"):
+			if int(e["at"]) <= last:
+				return false
+			pending.append(int(e["at"]))
+		else:
+			last = int(e["pick"])
+			for at in pending:
+				if at > last:
+					return false
+			pending = []
+	return true
 
 
 ## Next year's picks: valued with honest uncertainty about where a club will

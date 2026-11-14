@@ -1,19 +1,7 @@
 [remap]
 
-importer="csv_translation"
-type="Translation"
-uid="uid://baosf0nqa0dyn"
+importer="keep"
 
 [deps]
 
-files=["res://data/legacy/2010/history_2010.num.translation", "res://data/legacy/2010/history_2010.slug.translation", "res://data/legacy/2010/history_2010.draft.translation", "res://data/legacy/2010/history_2010.draft.translation", "res://data/legacy/2010/history_2010.draft.translation", "res://data/legacy/2010/history_2010.seasons.translation", "res://data/legacy/2010/history_2010.career.translation", "res://data/legacy/2010/history_2010.peak.translation"]
-
 source_file="res://data/legacy/2010/history_2010.csv"
-dest_files=["res://data/legacy/2010/history_2010.num.translation", "res://data/legacy/2010/history_2010.slug.translation", "res://data/legacy/2010/history_2010.draft.translation", "res://data/legacy/2010/history_2010.draft.translation", "res://data/legacy/2010/history_2010.draft.translation", "res://data/legacy/2010/history_2010.seasons.translation", "res://data/legacy/2010/history_2010.career.translation", "res://data/legacy/2010/history_2010.peak.translation"]
-
-[params]
-
-compress=1
-delimiter=0
-unescape_keys=false
-unescape_translations=true
