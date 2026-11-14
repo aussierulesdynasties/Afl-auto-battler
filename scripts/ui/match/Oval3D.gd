@@ -20,6 +20,7 @@ const STAND_DEPTH := 34.0
 const STAND_RISE := 24.0
 ## The jog's 17 keys at 24 fps are one stride cycle in 0.67 s, matched to about 6 m/s.
 ## A Sherrin is about 0.29 m end to end and 0.18 m across.
+const BODY_GAP := 0.6         # m between two players' centres, drawn
 const BALL_R := 0.09
 const BALL_LONG := 1.6
 
@@ -73,10 +74,11 @@ func sync(dt: float) -> void:
 		# a player it is in his hands; otherwise it lies on the turf.
 		holder = _nearest(director.ball["pos"], 1.0)
 		resting = holder < 0
+	var at := _spaced()
 	for i in range(players.size()):
 		var t: Dictionary = director.tokens[i]
 		var p: Dictionary = players[i]
-		var pos: Vector2 = t["pos"]
+		var pos: Vector2 = at[i]
 		var vel: Vector2 = t["vel"]
 		var node: Node3D = p["node"]
 		node.position = Vector3(pos.x, 0.0, pos.y)
@@ -90,6 +92,26 @@ func sync(dt: float) -> void:
 		ball.rotation = Vector3.ZERO
 	var target := Vector3(clampf(bp.x, -60.0, 60.0), 0.0, clampf(bp.y, -25.0, 25.0))
 	_look = target if dt <= 0.0 else _look.lerp(target, clampf(dt * 1.5, 0.0, 1.0))
+
+
+## Where each body is drawn: the director's spot, except that two bodies closer than BODY_GAP
+## are eased apart along the line between them (drawn only; the tokens are not touched).
+## A disc can sit on a disc; a body can't stand inside a body. About 2% of frames have such a
+## pair (seed 31, 10 minutes: under 0.6 m in 0.7% same side, 1.2% opponents), most under 0.3 m apart.
+func _spaced() -> Array:
+	var at := []
+	for t in director.tokens:
+		at.append(t["pos"])
+	for i in range(at.size()):
+		for j in range(i + 1, at.size()):
+			var gap: Vector2 = at[j] - at[i]
+			var dist := gap.length()
+			if dist < BODY_GAP:
+				var dir := gap / dist if dist > 0.001 else Vector2.RIGHT.rotated(float(i))
+				var push := dir * (BODY_GAP - dist) * 0.5
+				at[i] -= push
+				at[j] += push
+	return at
 
 
 func _nearest(at: Vector2, within: float) -> int:

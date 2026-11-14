@@ -8,14 +8,15 @@ extends Node
 
 const WARM := 2.0
 const MEASURE := 8.0
-# [name, extra figures, shadow mode (0 off, 1 as shown, 2 low), mesh LOD threshold]
+# [name, extra figures, shadow mode (0 off, 1 as shown, 2 low), mesh LOD threshold, head look-at on]
 const STAGES := [
-	["As shown", 0, 1, 1.0],
-	["Low shadows", 0, 2, 1.0],
-	["No shadows", 0, 0, 1.0],
-	["Coarser LOD", 0, 1, 4.0],
-	["45 figures", 9, 1, 1.0],
-	["As shown, again", 0, 1, 1.0],
+	["As shown", 0, 1, 1.0, true],
+	["Low shadows", 0, 2, 1.0, true],
+	["No shadows", 0, 0, 1.0, true],
+	["Coarser LOD", 0, 1, 4.0, true],
+	["45 figures", 9, 1, 1.0, true],
+	["Look-at off", 0, 1, 1.0, false],
+	["As shown, again", 0, 1, 1.0, true],
 ]
 
 var oval
@@ -96,6 +97,9 @@ func _setup(st: Array) -> void:
 		RenderingServer.directional_shadow_atlas_set_size(4096, true)
 		RenderingServer.directional_soft_shadow_filter_set_quality(RenderingServer.SHADOW_QUALITY_SOFT_HIGH)
 	get_viewport().mesh_lod_threshold = float(st[3])
+	# Row 198's head look-at (LookAtModifier3D under each skeleton), when the build has it.
+	for m in oval.find_children("*", "LookAtModifier3D", true, false):
+		m.active = bool(st[4])
 	# Umpires and spares stand-ins: jogging figures near the play, so they cost what they would.
 	while extras.size() < int(st[1]):
 		var scene: PackedScene = load("res://assets/oval3d/player_average.glb")
