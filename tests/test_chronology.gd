@@ -89,6 +89,14 @@ func _test_league_draft_pool() -> void:
 	GameState.reset()
 
 
+## The season's end without the off-season's own work (retirements, re-signings,
+## free agency: GameState.open_offseason, 18 s of a 27 s test here). The draft
+## opens straight after, on the pool these tests read; the off-season itself is
+## other suites' (director 2026-11-14: "shrink the tests").
+func _skip_offseason() -> void:
+	GameState.offseason_year = GameState.season_year
+
+
 ## The first class a career drafts is 2027's, drafted after the 2027 season.
 func _test_first_class() -> void:
 	GameState.reset()
@@ -114,6 +122,7 @@ func _test_first_class() -> void:
 	GameState.reset()
 	GameState.start_season("ADE", GameDB.club_list("ADE"))
 	GameState.season.round_index = GameState.season.fixture.size()
+	_skip_offseason()
 	_check(GameState.begin_intake_draft(), "The first national draft opens after 2027")
 	var d: Draft = GameState.draft
 	var open_2027 := true
@@ -214,6 +223,7 @@ func _test_old_2026_career() -> void:
 			through_ok = false
 	_check(through_ok, "A 2026 career's records stop at 2025: it plays 2026 itself")
 	GameState.season.round_index = GameState.season.fixture.size()
+	_skip_offseason()
 	_check(GameState.begin_intake_draft(), "Its first national draft opens")
 	var real_class := true
 	for p in GameState.draft.pool:

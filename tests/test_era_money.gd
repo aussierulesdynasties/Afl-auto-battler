@@ -170,11 +170,26 @@ func _test_2027_career_unchanged() -> void:
 	_check(bad.is_empty(), "Every 2027 asking price is today's model: %s" % str(bad.slice(0, 5)))
 
 
+## The season is treated as played: its home-and-away rounds are skipped and
+## each final is given a result (the higher seed wins), since the money, not
+## the football, is under test here. Simulating the finals cost about 9 s a
+## season on CI.
 func _to_offseason() -> void:
-	GameState.season.round_index = GameState.season.fixture.size()
+	var s: Season = GameState.season
+	s.round_index = s.fixture.size()
 	GameState.ensure_finals()
-	while not GameState.season.is_season_over():
-		GameState.advance()
+	var guard := 0
+	while not s.is_season_over() and guard < 10:
+		guard += 1
+		var played := []
+		for m in s.finals_week_matches():
+			var top: Array = s.finals["top"]
+			var home_higher := top.find(str(m["home"])) < top.find(str(m["away"]))
+			var res := {"home": str(m["home"]), "away": str(m["away"]), "score": [80, 60] if home_higher else [60, 80]}
+			s.record_final(m, res)
+			played.append(res)
+		s.complete_finals_week(played)
+	_check(s.is_season_over() and str(s.finals.get("premier", "")) != "", "%d is played to a premier" % GameState.season_year)
 
 
 ## A 1990 start is the first season of a campaign (director 2026-11-13: "its

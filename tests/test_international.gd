@@ -51,8 +51,13 @@ func _test_classes(state: Node, db: Node) -> void:
 	var all_intl: Array = []
 	var two := 0
 	var profile_ok := true
+	# Each year's class is made once and read by every check below (a class is
+	# the same for its year and seed, so this is the very same data).
+	var classes := {}
+	for y in range(FIRST_YEAR, FIRST_YEAR + maxi(YEARS, 150)):
+		classes[y] = Prospects.generate_class(y, SEED)
 	for y in range(FIRST_YEAR, FIRST_YEAR + YEARS):
-		var cls: Array = Prospects.generate_class(y, SEED)
+		var cls: Array = classes[y]
 		var n := 0
 		var seen_country := {}
 		for i in range(cls.size()):
@@ -125,7 +130,7 @@ func _test_classes(state: Node, db: Node) -> void:
 	var dom_carry := 0.0
 	var dom_disp := 0.0
 	for y in range(FIRST_YEAR, FIRST_YEAR + 40):
-		for p in Prospects.generate_class(y, SEED):
+		for p in classes[y]:
 			if not p.has("intl"):
 				dom_gap += float(p["potential"]) - float(p["overall"])
 				dom_rank_gap += float(p["overall"]) - Prospects.rank_base_overall(int(p["draft_rank"]))
@@ -189,7 +194,7 @@ func _test_classes(state: Node, db: Node) -> void:
 	_check(not PlayerProfile.production(one)["title"].contains("season"), "No U18 season is claimed for him")
 	_check(RecruitMeeting.reason(one).contains("Raw"), "The panel calls him raw: " + RecruitMeeting.reason(one))
 	var dom: Dictionary = {}
-	for p in Prospects.generate_class(FIRST_YEAR, SEED):
+	for p in classes[FIRST_YEAR]:
 		if not p.has("intl"):
 			dom = p
 			break
@@ -204,7 +209,7 @@ func _test_classes(state: Node, db: Node) -> void:
 	var dup := 0
 	for y in range(FIRST_YEAR, FIRST_YEAR + 150):
 		var seen_last := {}
-		for p in Prospects.generate_class(y, SEED):
+		for p in classes[y]:
 			var nm := str(p["generic_name"])
 			var ln := nm.substr(nm.find(" ") + 1)
 			dup += 1 if seen_last.has(ln) else 0
@@ -219,10 +224,12 @@ func _test_career(state: Node, db: Node) -> void:
 	state.reset()
 	state.start_season("ADE", db.club_list("ADE"))
 	var mine := ""
+	var name_before := ""
 	for p in state.draftee_pool:
 		if p.has("intl"):
 			mine = str(p["id"])
-	_check(mine != "", "The first class has an international prospect")
+			name_before = str(p.get("generic_name", ""))
+	_check(mine != "" and name_before != "", "The first class has an international prospect")
 	state.season.round_index = state.season.fixture.size()
 	# A full list passes its picks (Draft._list_full), and whether rivals leave a
 	# gap is the market's business: the coach makes room, as a coach would.
@@ -255,7 +262,12 @@ func _test_career(state: Node, db: Node) -> void:
 	_check(state.finish_intake_draft(), "The draft commits and the career rolls on")
 	var found := _find(state, mine)
 	_check(not found.is_empty(), "He is on a list next season")
-	var name_before := str(found.get("generic_name", ""))
+	# The draft's commit is the season rollover (finish_intake_draft runs the
+	# same _start_next_season as start_next_season): a second season played
+	# and rolled over proved nothing this one does not.
+	_check(int(state.season_year) == year + 1 and str(found.get("intl", "")) != ""
+			and str(found.get("generic_name", "")) == name_before,
+			"He keeps his identity across a season rollover (year %d to %d)" % [year, int(state.season_year)])
 	_check(str(found.get("intl", "")) != "" and str(found.get("drafted_type", "")) == "national",
 			"He is an ordinary draftee with his origin kept")
 	var club := str(found.get("club", ""))
@@ -264,14 +276,6 @@ func _test_career(state: Node, db: Node) -> void:
 	found = _find(state, mine)
 	_check(str(found.get("generic_name", "")) == name_before and str(found.get("intl", "")) != "",
 			"He reloads with his name and origin")
-	var guard2 := 0
-	while not state.season.is_season_over() and guard2 < 40:
-		guard2 += 1
-		state.advance()
-	_check(state.start_next_season(), "The season rolls over")
-	found = _find(state, mine)
-	_check(not found.is_empty() and str(found.get("intl", "")) != "" and str(found.get("generic_name", "")) == name_before,
-			"He keeps his identity across a season rollover (year %d to %d)" % [year, int(state.season_year)])
 	_stories(state, found)
 
 

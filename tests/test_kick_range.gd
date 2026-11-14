@@ -9,7 +9,10 @@ var failures: Array[String] = []
 var checks := 0
 
 const CLUBS := [["FRE", "MEL"], ["GEE", "COL"], ["SYD", "CAR"], ["BRL", "ESS"]]
-const SEEDS := 6
+## One seeded match per fixture: the score check is a smoke check that kick
+## range leaves scoring in a real range (a broken reach scores nothing or
+## floods); the real rates are measured by tools/balance.sh over 1,000 matches.
+const SEEDS := 1
 const BalanceGate := preload("res://tests/balance_gate.gd")
 
 

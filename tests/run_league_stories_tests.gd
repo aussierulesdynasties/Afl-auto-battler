@@ -10,6 +10,7 @@ extends SceneTree
 
 const Tap := preload("res://tests/tap.gd")
 const SUITE_SEED := 2027
+const CAREER_ROUNDS := 3
 
 var _state: Node
 var _router: Node
@@ -380,12 +381,13 @@ func _test_front_page_item() -> void:
 
 ## A seeded career: stories appear in the news, every one from that round, and
 ## two plays of the same seed give the same stories and the same results.
+## Three rounds a play: one more round proves no more about the same seed.
 func _test_career() -> void:
-	var a := _play_rounds(6)
-	var b := _play_rounds(6)
+	var a := _play_rounds(CAREER_ROUNDS)
+	var b := _play_rounds(CAREER_ROUNDS)
 	_check(a["results"] == b["results"], "the same seed gives the same results")
 	_check(a["stories"] == b["stories"], "the same seed gives the same stories")
-	_check((a["stories"] as Array).size() > 0, "six rounds produce at least one league story (%d)" % (a["stories"] as Array).size())
+	_check((a["stories"] as Array).size() > 0, "%d rounds produce at least one league story (%d)" % [CAREER_ROUNDS, (a["stories"] as Array).size()])
 	var per_round := {}
 	for s in a["stories"]:
 		per_round[str(s["when"])] = int(per_round.get(str(s["when"]), 0)) + 1

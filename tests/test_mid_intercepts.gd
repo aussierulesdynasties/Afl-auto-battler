@@ -9,7 +9,10 @@ var failures: Array[String] = []
 var checks := 0
 
 const CLUBS := [["FRE", "MEL"], ["GEE", "COL"], ["SYD", "CAR"], ["BRL", "ESS"]]
-const SEEDS := 8
+## One seeded match per fixture (4 matches, 60-odd midfielder games): the
+## rate check is a smoke check that the midfield intercept fires at a real
+## rate; the real rate is measured by tools/balance.sh over 1,000 matches.
+const SEEDS := 1
 const BalanceGate := preload("res://tests/balance_gate.gd")
 
 
@@ -94,6 +97,17 @@ func _test_on_lifts_midfield_intercepts() -> void:
 			pts += float(res["score"][0] + res["score"][1]) / 2.0
 			n += 1
 	var on_rate: float = tot.x / maxf(1.0, tot.y)
+	print("Mid intercepts: %.2f a midfielder game over %d games, %d matches" % [on_rate, int(tot.y), n])
+	# The lift is the feature's own: one seeded match with the lever at 0 and
+	# at 1. At the default rate 4 matches split only 78 to 57 (about 1.8
+	# standard deviations, 2026-11-14); at the lever's ends one match is clear.
+	var ends := []
+	for at in [0.0, 1.0]:
+		MatchSim.tune = {"MID_KICK_INTERCEPT": at}
+		ends.append(_role_ic(_sim(str(CLUBS[0][0]), str(CLUBS[0][1]), 8900).run(), "MID").x)
+	MatchSim.tune = {}
+	print("Mid intercepts: %d by midfielders at MID_KICK_INTERCEPT 0, %d at 1 (one match)" % [int(ends[0]), int(ends[1])])
+	_check(ends[1] > ends[0] * 2.0, "the midfield intercept lifts midfield intercepts (%d at 1, %d at 0)" % [int(ends[1]), int(ends[0])])
 	# 3.05 measured with every feature on (2026-11-06): over the real 2.5, a
 	# balance gap for the director's playtest, so the ceiling is 3.2.
 	_check(BalanceGate.held(on_rate > 2.0 and on_rate < 3.2, "midfield intercepts a game in 2.0-3.2"), "midfield intercepts %.2f a game (real 2.5)" % on_rate)
