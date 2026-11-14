@@ -375,11 +375,7 @@ func _lists_after(games: float) -> Dictionary:
 
 
 func _test_ai_clubs() -> void:
-	_career()
-	var before := {}
-	for code in GameState.season.clubs:
-		before[str(code)] = GameState.season.lists[code].map(func(p): return int(p.get("xp", 0)))
-	_to_practice()
+	_stop()
 	var seen_by := {}
 	for q in GameState.draftee_pool:
 		for club in (q.get("seen", {}) as Dictionary):
