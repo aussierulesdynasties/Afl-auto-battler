@@ -8353,6 +8353,43 @@ func season_closed() -> bool:
 	return season == null or offseason_year == season_year or int(season_awards.get("year", 0)) == season_year
 
 
+## True only inside offseason_without_you: the off-season runs with no club of
+## his, and the rivals' trade market still opens (_open_trade_market).
+var _leaving_offseason := false
+
+
+## He has signed with a club yet to play (ClubMoves.take_job / accept_letter)
+## and takes over at its first National Draft, which opens now. The club he
+## leaves runs this off-season as any rival does: its re-signings, delistings,
+## trades and free agency are its own staff's, its open staff jobs are filled as
+## Auto-fill would, and no call of the old club's (a contract, a trade, a staff
+## job) is his (row 189, director 2026-11-12). Run as the years played without
+## you are (my_club ""), so every rule is the one rival clubs live by.
+func offseason_without_you() -> bool:
+	if season == null or not (season.is_season_over() or season.is_regular_done()):
+		return false
+	var club := my_club
+	var list := my_list
+	my_club = ""
+	my_list = []
+	_leaving_offseason = true
+	open_offseason(true)
+	_close_free_agency()
+	_leaving_offseason = false
+	my_club = club
+	my_list = list
+	# His old office: staff jobs filled as the club's own staff would, every
+	# undecided assistant kept, and nothing left on the Hub for him to answer.
+	_settle_staff_contracts()
+	_fill_open_staff()
+	staff_vacancies = []
+	coach_approaches = []
+	trade_requests = {}
+	trade_offers = []
+	week_events = []
+	return begin_intake_draft()
+
+
 ## Season over: rivals decide on their expiring players at once - keep who
 ## is worth his new price, let the rest go to free agency. Yours wait for you.
 ## `keep_staff`: the season's close already took your staff for the wrap.
@@ -9975,18 +10012,36 @@ func trade_context(club: String) -> Dictionary:
 var _phase_cache := {}
 
 
-## A club's list as the game sees it (TeamRating): its match-day side today on the
-## OVR scale, the same list in three seasons, and its phase, with the line a
-## screen shows ("Contender. Team rating 78. On this list, 81 in three years.").
+## A club's list as the game sees it: its best side today as the ladder and the
+## match preview rate it (club_strength, row 177: the hub, the club page and
+## every letter say the ladder's number), the same list in three seasons on that
+## scale (today's rating moved by how far TeamRating expects the side's OVR to
+## move), and its phase, with the line a screen shows ("Contender. Team rating
+## 72.4. On this list, 75.4 in three years.").
 func team_outlook(club: String) -> Dictionary:
 	if season == null or not season.lists.has(club):
 		return {}
 	var list: Array = season.lists[club]
 	var phase := club_phase(club)
-	var now := TeamRating.rating(list)
-	var later := TeamRating.forecast(list)
+	var now := snappedf(maxf(club_strength(club), 0.0), 0.1)
+	var later := snappedf(now + float(TeamRating.forecast(list) - TeamRating.rating(list)), 0.1)
 	return {"rating": now, "forecast": later, "phase": phase, "category": TeamRating.category(phase),
 			"line": TeamRating.line(phase, now, later)}
+
+
+## A club's best side as the match preview ranks it (Squad.strength, the This
+## week sheet's Overall): its side as picked (yours as you picked it), the best
+## 18 on the ground from the era's match-day squad (18 and the interchange: 23
+## today, 22 in the seasons of a four-man bench), injured players out. The
+## ladder's Rating column shows this, so the ladder and the preview always rank
+## the clubs alike (row 177, director 2026-11-12: "ladder should always show your
+## best 23 rating"). Every club the same rule. -1 without a list.
+func club_strength(club: String) -> float:
+	if season == null or not season.lists.has(club) or (season.lists[club] as Array).is_empty():
+		return -1.0
+	if club == my_club:
+		return my_squad().strength()
+	return Squad.new(club, season.lists[club], false, club, season.selections.get(club, {})).strength()
 
 
 func club_phase(club: String) -> String:
@@ -10477,17 +10532,21 @@ func _club_order(tag: String) -> Array:
 ## The off-season's trade market: rival clubs trade with each other where
 ## both come out ahead, then a few put offers to you.
 func _open_trade_market() -> void:
-	if my_club == "" or not season.lists.has(my_club):
+	# The club he is leaving for one yet to play trades as any rival does
+	# (offseason_without_you): the rivals' trades run, with no offers to him.
+	var you := my_club != "" and season.lists.has(my_club)
+	if not you and not _leaving_offseason:
 		return
 	# A mark on a player who has since left (retired, delisted, traded) goes.
 	for id in untouchable.keys():
-		if not my_list.any(func(q): return str(q["id"]) == str(id)):
+		if you and not my_list.any(func(q): return str(q["id"]) == str(id)):
 			untouchable.erase(id)
 	var prospects := trade_prospects()
 	_freeze_league(true)
 	_requested_trades(prospects)
 	_ai_trades(prospects)
-	_make_trade_offers(prospects)
+	if you:
+		_make_trade_offers(prospects)
 	_freeze_league(false)
 
 

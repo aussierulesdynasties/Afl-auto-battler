@@ -50,6 +50,11 @@ COLOUR_CUES = {
         ["\"On your list\"", "On your list, pick N", 1],
         ["int(st[\"short\"]) > 0", "the need word (short of ...)", 1],
         ["_draft.is_valid()", "the status line in words", 1]],
+    "PlayerCondition.gd": [
+        ["fat_c := UiKit.BAD", "the fatigue word beside the number (Workload.label)", 1],
+        ["mor_c := UiKit.BAD", "the morale word beside the number (ClubLife.mood)", 1],
+        ["form_c = UiKit.GOOD", "the form number beside the season's number", 1],
+        ["form_c = UiKit.BAD", "the form number beside the season's number", 1]],
     "DraftSpotsSheet.gd": [["str(line[2]) == \"bad\"", "the line says who will pass", 1]],
     "DraftTradeSheet.gd": [["bool(verdict[\"ok\"])", "the club's reason in words", 1]],
     "HubScene.gd": [
