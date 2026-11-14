@@ -33,7 +33,11 @@ const GOLDEN_REAL := "6b9d20ef93eea2ce95f0a6d936f19727"
 ## season's print is the one taken before it was written down, which is the
 ## proof that writing it down changed no result and no draw.
 const BOOKKEEPING_KEYS := ["impact_by", "breeze_side"]
-const GOLDEN_SEASON := {"Windows": "05a96ea659dcfe349e9afec75b01b45a", "Linux": "9c00f9caf199debd6cc6a20325ba8cba"}
+## The weather turning at a break (row 160) redraws the season: a turned day
+## plays on in the new condition, and every result records where the day
+## started and the break it turned at. Linux from Tests run 43549080943, Windows
+## from a local run on the same commit.
+const GOLDEN_SEASON := {"Windows": "c2534e45d6baaf8a062e6c98feeb8946", "Linux": "06ecacba4a4d7293fc1ec4ddf32413ca"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and

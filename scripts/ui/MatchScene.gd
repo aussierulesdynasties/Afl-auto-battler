@@ -2301,9 +2301,16 @@ func _quarter_view(q: int) -> Control:
 	# Moments already played out in the feed are not replayed here; the
 	# ones that carry on are under "What your calls did".
 	var lines: Array = MatchNotes.quarter_facts(_res, _my_side, q, _break_answers())
+	# A break the weather turns at leads with the turn (row 160): it takes one of
+	# the facts' places, so the break keeps its height on a phone.
+	var room := MatchNotes.MAX_FACTS
+	var sim: MatchSim = GameState.pending_sim
+	if sim != null and not sim.weather_turn_now().is_empty():
+		room -= 1
+	lines = lines.slice(0, room)
 	var opp_last := _opp_last_plan()
 	if opp_last != "":
-		lines = lines.slice(0, MatchNotes.MAX_FACTS - 1)
+		lines = lines.slice(0, room - 1)
 		# What they played, their answer to yours, their mood (RivalRead).
 		lines.append(RivalRead.break_line(GameState.pending_sim, _my_side))
 	if lines.is_empty():
