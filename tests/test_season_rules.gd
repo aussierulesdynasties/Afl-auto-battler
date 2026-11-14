@@ -413,13 +413,27 @@ func _test_week_titles() -> void:
 
 
 ## A past season simulated through: the engine plays 1990's league (14 clubs,
-## no extra time) and 1991's (15 clubs, byes) to a premier.
+## no extra time) and 1991's (15 clubs, byes) to a premier. Two rounds are
+## simulated (1991's with a bye club resting); the rest of the home and away
+## rounds take a fixed result each, since the finals are what is played through.
 func _test_past_season_played_through() -> void:
 	for y in [1990, 1991]:
 		var s := _season(y, 14 if y == 1990 else 15, 5)
-		while not s.is_regular_done():
+		var simmed := 0
+		for r in range(2):
+			simmed += (s.fixture[r] as Array).size()
 			s.play_round()
 		var p := 0
+		for row in s.ladder_sorted():
+			p += int(row["p"])
+		_check(simmed == (s.clubs.size() / 2) * 2 and p == simmed * 2,
+				"%d: the two simulated rounds' %d games are on the ladder (%d)" % [y, simmed, p])
+		while not s.is_regular_done():
+			for m in s.fixture[s.round_index]:
+				s.record_regular({"home": str(m["home"]), "away": str(m["away"]), "score": [80 + s.round_index, 60]})
+			s.round_index += 1
+			s.recalc_ladder()
+		p = 0
 		for row in s.ladder_sorted():
 			p += int(row["p"])
 		_check(p == s.clubs.size() * s.games_per_club(), "%d: every home-and-away game on the ladder (%d)" % [y, p])

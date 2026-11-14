@@ -2552,6 +2552,18 @@ const GENERAL_SPOIL_MAX := 0.95
 const GENERAL_MARK_ROLES := {"FWD": 1.0, "MID": 0.85, "DEF": 0.65, "RUCK": 0.70}
 
 
+## Where a pressure act happened, from the presser's end, for the balance
+## harness (Champion Data's PressureActsDefensiveHalf and TacklesInside50):
+## in his defensive half (the carrier going forward, atk_fp > 0) and a tackle
+## inside his forward 50 (the carrier in his own defensive 50). Bookkeeping
+## only: no dice.
+func _press_where(presser_side: int, atk_fp: float, in_d50: bool, tackle: bool) -> void:
+	if atk_fp > 0.0:
+		_t(presser_side, "pressure_acts_dhalf")
+	if tackle and in_d50:
+		_t(presser_side, "tackles_i50")
+
+
 static func _press_zone(atk_fp: float) -> int:
 	if atk_fp < -PRESS_ZONE_EDGE:
 		return 0
@@ -3522,6 +3534,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			_p(tackler, "tackles")
 			_t(opp, "pressure_acts")
 			_p(tackler, "pressure_acts")
+			_press_where(opp, atk_fp, in_d50, true)
 			tackled = true
 			# High contact belongs to the tackle itself. The ball carrier keeps
 			# possession via a free; the tackler is credited the infringement.
@@ -3580,6 +3593,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			var presser = _pick_presser(opp, zone)
 			_t(opp, "pressure_acts")
 			_p(presser, "pressure_acts")
+			_press_where(opp, atk_fp, in_d50, false)
 			var turn_p: float = (_tv("PRESS_TURNOVER", PRESS_TURNOVER_FLOW)
 					* (0.80 + 0.40 * _a(presser, "pressure") / 100.0)
 					* (1.20 - 0.40 * _a(carrier, "disposal") / 100.0))
@@ -3631,6 +3645,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 				_p(smotherer, "one_percenters")
 				_t(opp, "pressure_acts")
 				_p(smotherer, "pressure_acts")
+				_press_where(opp, atk_fp, in_d50, false)
 				_emit("smother", opp, fp, smotherer,
 						"%s smothers the kick" % GameDB.player_display_name(smotherer))
 				return {"outcome": "loose", "fp": fp, "actor": smotherer}

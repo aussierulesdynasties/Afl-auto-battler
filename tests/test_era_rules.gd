@@ -87,11 +87,34 @@ func _to_offseason() -> void:
 	GameState.board.erase("sacked")
 
 
+## The season is treated as played, finals and all: each final is given a
+## result (the higher seed wins), for a test whose subject is the rules each
+## new season brings, not the football. Simulating the finals cost about 6 s
+## a season on CI.
+func _finals_given() -> void:
+	var s: Season = GameState.season
+	s.round_index = s.fixture.size()
+	GameState.ensure_finals()
+	var guard := 0
+	while not s.is_season_over() and guard < 10:
+		guard += 1
+		var played := []
+		for m in s.finals_week_matches():
+			var top: Array = s.finals["top"]
+			var home_higher := top.find(str(m["home"])) < top.find(str(m["away"]))
+			var res := {"home": str(m["home"]), "away": str(m["away"]), "score": [80, 60] if home_higher else [60, 80]}
+			s.record_final(m, res)
+			played.append(res)
+		s.complete_finals_week(played)
+	_check(s.is_season_over() and str(s.finals.get("premier", "")) != "", "%d is played to a premier" % GameState.season_year)
+
+
 ## The off-season, then the rollover into the next season the way a career
 ## takes it: the National Draft (your picks made for you), then the Rookie
-## Draft that opens in the new season.
+## Draft that opens in the new season. The finals are given results
+## (_finals_given): the rollover is under test, not the football.
 func _roll() -> bool:
-	_to_offseason()
+	_finals_given()
 	_open_off()
 	GameState._close_free_agency()
 	return _draft_and_start()
@@ -195,6 +218,13 @@ func _test_rule_table() -> void:
 	for y in range(1990, 2026):
 		_check(EraRules.has("senior_list_max", y) and EraRules.has("interchange", y),
 				"%d has a senior list size and a bench in era_rules.csv" % y)
+		# The list minimum is the year's own, never over its maximum (director
+		# 2026-11-13: "by era, obviously").
+		_check(EraRules.has("list_min", y) and EraRules.list_min(y) <= EraRules.list_max(y),
+				"%d has a list minimum of its own, under the maximum (%d, max %d)" % [y, EraRules.list_min(y), EraRules.list_max(y)])
+	var mins := [EraRules.list_min(1990), EraRules.list_min(1994), EraRules.list_min(2004), EraRules.list_min(2010), EraRules.list_min(2021), EraRules.list_min(2026)]
+	_check(str(mins) == str([48, 38, 37, 38, 37, Contracts.MIN_LIST]),
+			"The list minimum by era: 48 to 1993, 38 from 1994, 37 in 2004, 38 to 2020, 37 from 2021 and today (%s)" % str(mins))
 
 
 ## Year 0 and today's seasons read GAME, whatever the record holds.
@@ -261,7 +291,7 @@ func _test_campaign_1990_to_1998() -> void:
 		_check((rookies > 0) == bool(want[y][2]), "%d: rookie-listed players %d" % [y, rookies])
 		if y == 1998:
 			break
-		_to_offseason()
+		_finals_given()
 		_open_off()
 		_check(EraRules.list_ahead and Contracts.max_list() == int(want[y + 1][1]),
 				"The %d off-season plans %d's lists of %d (ahead %s, off-season year %d, sacked %s)" % [y, y + 1,
@@ -281,7 +311,7 @@ func _test_campaign_1990_to_1998() -> void:
 ## goes.
 func _test_smart_delisting() -> void:
 	_career(1993)
-	_to_offseason()
+	_finals_given()
 	var rival := "CAR"
 	var list: Array = GameState.season.lists[rival]
 	var kid := {}
@@ -308,7 +338,14 @@ func _test_smart_delisting() -> void:
 		if p != kid and p != vet and str(p.get("rookie_list", "")) == "":
 			base = p
 			break
-	while RookieList.senior_count(list.filter(func(q): return not GameState.retiring_now(q))) < 43:
+	# Exactly one over the 42: drop other seniors first (the list may already be
+	# past it at the end of the season), then pad if it is short.
+	for p in list.duplicate():
+		if RookieList.senior_count(GameState.staying_on(list)) <= 43:
+			break
+		if p != kid and p != vet and p != base and str(p.get("rookie_list", "")) == "":
+			list.erase(p)
+	while RookieList.senior_count(GameState.staying_on(list)) < 43:
 		var extra: Dictionary = base.duplicate(true)
 		extra["id"] = "era_extra_%d" % list.size()
 		extra["rookie_list"] = ""
@@ -319,7 +356,7 @@ func _test_smart_delisting() -> void:
 	GameState._era_trim_rivals()
 	_check(list.has(kid), "The 69-rated 20-year-old with 75 to come is kept")
 	_check(not list.has(vet), "The 70-rated 35-year-old is delisted first")
-	_check(RookieList.senior_count(list.filter(func(q): return not GameState.retiring_now(q))) <= 42,
+	_check(RookieList.senior_count(GameState.staying_on(list)) <= 42,
 			"The list is down to 42")
 	EraRules.list_ahead = false
 

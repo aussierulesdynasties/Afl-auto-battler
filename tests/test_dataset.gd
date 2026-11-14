@@ -33,11 +33,11 @@ const GOLDEN_REAL := "6b9d20ef93eea2ce95f0a6d936f19727"
 ## season's print is the one taken before it was written down, which is the
 ## proof that writing it down changed no result and no draw.
 const BOOKKEEPING_KEYS := ["impact_by", "breeze_side"]
-## The weather turning at a break (row 160) redraws the season: a turned day
-## plays on in the new condition, and every result records where the day
-## started and the break it turned at. Linux from Tests run 43549080943, Windows
-## from a local run on the same commit.
-const GOLDEN_SEASON := {"Windows": "c2534e45d6baaf8a062e6c98feeb8946", "Linux": "06ecacba4a4d7293fc1ec4ddf32413ca"}
+## Team counts that record where something happened, not what happened: the
+## pressure zones (pressure acts in the defensive half, tackles inside 50,
+## 2026-11-14) are counted without a draw, so leaving them out keeps the print.
+const TEAM_BOOKKEEPING_KEYS := ["pressure_acts_dhalf", "tackles_i50"]
+const GOLDEN_SEASON := {"Windows": "947958fd809280ac302bee2c3dddb58d", "Linux": "2cdd3c9bceb79ab9c0c49b98727f1b7e"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and
@@ -176,13 +176,33 @@ func _real_print() -> String:
 	return "\n".join(out)
 
 
-func _season_print() -> String:
+## Team counts are copied into snapshots too (half-time, quarter breaks), so
+## leave them out at any depth.
+func _strip_team_bookkeeping(v) -> void:
+	if v is Dictionary:
+		for k in TEAM_BOOKKEEPING_KEYS:
+			(v as Dictionary).erase(k)
+		for k in (v as Dictionary).keys():
+			_strip_team_bookkeeping((v as Dictionary)[k])
+	elif v is Array:
+		for x in v:
+			_strip_team_bookkeeping(x)
+
+
+## The seeded season's print after each of its first `rounds` rounds.
+func _season_prints(rounds: int) -> Array:
 	GameState.reset()
 	GameState.career_seed = SUITE_SEED
 	GameState.replay_seed = SUITE_SEED
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
-	for i in range(3):
+	var out := []
+	for i in range(rounds):
 		GameState.advance()
+		out.append(_season_print())
+	return out
+
+
+func _season_print() -> String:
 	var out := PackedStringArray()
 	out.append("%d|%d" % [GameState.season_year, GameState.season.round_index])
 	for row in GameState.season.ladder_sorted():
@@ -198,6 +218,7 @@ func _season_print() -> String:
 			if c is Dictionary:
 				for k in BOOKKEEPING_KEYS:
 					(c as Dictionary).erase(k)
+				_strip_team_bookkeeping(c)
 			games.append(c)
 		played.append(games)
 	out.append(JSON.stringify(played, "", true))
@@ -228,11 +249,15 @@ func _test_golden_real_lists() -> void:
 	_golden("real lists opening", a, GOLDEN_REAL)
 
 
+## The golden is the first three rounds. The second career plays one round:
+## a reset that leaked anything into play shows from the first round on, and
+## the golden itself proves the three rounds play the same from run to run.
 func _test_golden_season() -> void:
-	var a := _season_print()
-	var b := _season_print()
-	_check(a == b, "A seeded season's first three rounds play the same twice")
-	_golden("seeded season", a, str(GOLDEN_SEASON.get(OS.get_name(), "")))
+	var a := _season_prints(3)
+	var b := _season_prints(1)
+	_check(a.size() == 3 and b.size() == 1 and a[0] == b[0],
+			"A seeded season's first round plays the same twice")
+	_golden("seeded season", a[2], str(GOLDEN_SEASON.get(OS.get_name(), "")))
 
 
 # ---------------------------------------------------------------------------
@@ -622,6 +647,13 @@ func _test_real_1990() -> void:
 		if int(listed[c]) < 42:
 			thin += 1
 	_check(thin == 0 and listed.size() == 14, "Every 1990 club has a full list (%s)" % str(listed))
+	# A height no source records is his position's average (director 2026-11-13), so none is blank.
+	var no_height := []
+	for q in GameDB.list_additions:
+		if float(q.get("height_cm", 0.0)) < 150.0:
+			no_height.append(str(q.get("real_name", "")))
+	_check(no_height.is_empty() and not GameDB.list_additions.is_empty(),
+			"Every 1990 list addition has a height (missing: %s)" % str(no_height))
 	ovr.sort()
 	var median := int(ovr[ovr.size() / 2])
 	_check(median >= 57 and median <= 65, "The 1990 median sits where 2026's does (%d)" % median)
@@ -753,11 +785,16 @@ func _test_legacy_rolls_into_1991() -> void:
 	for cid in GameState.coaches:
 		if str(GameState.coaches[cid].get("real_name", "")) == "John Northey":
 			northey_id = str(cid)
+	# The rollover is under test, not 200 home and away games: skip to the
+	# finals and play those. The Grand Final week closes the season (awards,
+	# the coaching market that fills every senior job), so they stay played.
+	GameState.season.round_index = GameState.season.fixture.size()
+	GameState.ensure_finals()
 	var guard := 0
 	while not GameState.season.is_season_over() and guard < 60:
 		guard += 1
 		GameState.advance()
-	_check(GameState.season.is_season_over(), "The 1990 season plays out (%d weeks)" % guard)
+	_check(GameState.season.is_season_over(), "The 1990 season ends with its finals (%d weeks)" % guard)
 	_check(GameState.start_next_season(), "The 1990 career rolls on")
 	_check(GameState.season_year == 1991 and GameState.my_club == "MEL" and GameDB.dataset_id == "1990"
 			and GameState.dataset == "1990",

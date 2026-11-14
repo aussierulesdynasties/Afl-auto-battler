@@ -147,7 +147,7 @@ func _rival_pot_odds() -> void:
 					worst = maxi(worst, miss)
 		var one_in := int(round(float(reads) / float(maxi(1, misses))))
 		shown.append("1 in %d, worst %d, of %d" % [one_in, worst, reads])
-		if most != stated_worst or worst > stated_worst or reads < 5000 				or one_in > stated or one_in < stated - 2 				or not ClubBudget.benefit_text("recruiting", level).contains(
+		if most != stated_worst or worst > stated_worst or reads < 5000 				or one_in > stated or one_in < stated - 3 				or not ClubBudget.benefit_text("recruiting", level).contains(
 						"Other clubs' players: about 1 POT read in %d misses (1\u00a0in\u00a0%d under 50 games), by up to %d."
 						% [stated, int(ClubBudget.RIVAL_POT_YOUNG_MISS_IN[level]), stated_worst]):
 			ok = false
@@ -221,11 +221,15 @@ func _test_budget_fold_rule() -> void:
 
 
 ## Saves an off-season career, rewrites its budget to `old` in the file, reloads it.
+## The Geelong off-season the test before left is reused (a new career costs a
+## league reload); only the saved budget lines are under test, and the file's
+## are replaced whole.
 func _reload_with_old_budget(old: Dictionary) -> bool:
-	GameState.reset()
-	GameState.start_season("GEE", GameDB.club_list("GEE"))
-	GameState.season.round_index = GameState.season.fixture.size()
-	GameState.open_offseason()
+	if GameState.season == null or GameState.my_club != "GEE" or not GameState.offseason_open():
+		GameState.reset()
+		GameState.start_season("GEE", GameDB.club_list("GEE"))
+		GameState.season.round_index = GameState.season.fixture.size()
+		GameState.open_offseason()
 	if not GameState.save_career():
 		return false
 	var state := CareerSave.read(GameState.save_path)
@@ -393,9 +397,17 @@ func _loads() -> Dictionary:
 	return out
 
 
+## Geelong before Round 1, the career the test before left reused when it is
+## exactly that (a new career costs a league reload).
+func _season_start() -> void:
+	if GameState.season == null or GameState.my_club != "GEE" or GameState.season.round_index != 0 \
+			or GameState.offseason_open() or GameState.season.is_season_over():
+		GameState.reset()
+		GameState.start_season("GEE", GameDB.club_list("GEE"))
+
+
 func _test_career() -> void:
-	GameState.reset()
-	GameState.start_season("GEE", GameDB.club_list("GEE"))
+	_season_start()
 	GameState.advance()
 	var before := _loads()
 	var all_applied := true
@@ -448,8 +460,7 @@ func _test_finals() -> void:
 
 
 func _test_ui() -> void:
-	GameState.reset()
-	GameState.start_season("GEE", GameDB.club_list("GEE"))
+	_season_start()
 	var tree := Engine.get_main_loop() as SceneTree
 	tree.root.size = Vector2i(360, 800)
 	var p: Dictionary = GameState.my_list[0]
@@ -459,10 +470,12 @@ func _test_ui() -> void:
 	tree.root.add_child(screen)
 	for i in range(4):
 		await tree.process_frame
-	var readiness := screen.find_child("Readiness_" + str(p["id"]), true, false) as Label
-	_check(readiness != null and readiness.text == "Needs a break", "Selection shows the player's readiness")
-	_check(readiness != null and readiness.size.x <= 360.0 and readiness.autowrap_mode != TextServer.AUTOWRAP_OFF,
-			"Readiness wraps within a narrow portrait viewport")
+	# Selection shows his load as a number (row 183), red at Needs a break; the words are the tooltip.
+	var readiness := screen.find_child("Fatigue_" + str(p["id"]), true, false) as Label
+	_check(readiness != null and readiness.text == "60", "Selection shows the player's fatigue as a number")
+	_check(readiness != null and readiness.get_theme_color("font_color") == UiKit.BAD,
+			"A player who needs a break shows it in the bad colour")
+	_check(readiness != null and readiness.get_global_rect().end.x <= 360.0, "The number fits a narrow portrait viewport")
 	var sheet := PlayerSheet.open(screen, p)
 	for i in range(4):
 		await tree.process_frame

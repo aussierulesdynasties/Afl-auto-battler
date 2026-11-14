@@ -55,6 +55,34 @@ func _t(test: String, args := []) -> Variant:
 	return await Ran.one(self, test, args)
 
 
+## Opening the off-season (retirements, delistings, trades and free agency for
+## every club) is most of what a draft test costs. The tests that only need it
+## open share one: the first opens it and saves the career to its own file,
+## the rest load that save and set up what they test before the draft opens
+## (ties, list sizes and the draft itself are all decided after the opening).
+const OPEN_SAVE := "user://test_intake_open.save"
+var _open_saved := false
+
+
+## A new career at the first club (GameDB.CLUB_ORDER[0]), its first
+## home-and-away done and the off-season open.
+func _offseason_open() -> void:
+	var keep: String = GameState.save_path
+	GameState.save_path = OPEN_SAVE
+	var loaded: bool = _open_saved and GameState.load_career()
+	if not loaded:
+		GameState.reset()
+		var me := str(GameDB.CLUB_ORDER[0])
+		GameState.start_season(me, GameDB.club_list(me))
+		GameState.season.round_index = GameState.season.fixture.size()
+		GameState.open_offseason()
+		_open_saved = GameState.save_career()
+	GameState.save_path = keep
+	_check(GameState.season_year == 2027 and GameState.offseason_year == GameState.season_year
+			and GameState.season.round_index == GameState.season.fixture.size(),
+			"(setup) 2027's off-season is open at the end of the home-and-away (%s)" % ("loaded" if loaded else "opened"))
+
+
 func _test_draft_class_data() -> void:
 	var pool: Array = GameDB.draftees
 	_check(pool.size() >= 50, "The shipped draft class carries at least 50 prospects")
@@ -276,13 +304,8 @@ func _test_spots_sheet_before_offseason_opens() -> void:
 ## delist (one/two/three, singular or plural as it reads), and delisting one
 ## or trading a pick away brings the count down until the gate is gone.
 func _test_draft_room_gate() -> void:
-	GameState.reset()
-	var me := str(GameDB.CLUB_ORDER[0])
-	GameState.start_season(me, GameDB.club_list(me))
-	var season: Season = GameState.season
-	season.round_index = season.fixture.size()
-	season.finals = {"done": true, "premier": "CAR", "runner_up": "ESS"}
-	GameState.open_offseason()
+	_offseason_open()
+	var me: String = GameState.my_club
 	# No tied (father-son, academy) draftees: they would hold spots of their own.
 	for p in GameState.draftee_pool:
 		if str(p.get("tied_club", "")) == me:
@@ -317,7 +340,7 @@ func _test_draft_room_gate() -> void:
 	_check(GameState.draft_room_short() == 0 and GameState.draft_room_line() == "", "The rule is met")
 	# Trading picks away: a club holding fewer than three needs a spot for each.
 	var mine: Array = GameState.club_picks(me).filter(func(pk): return int(pk["year"]) == GameState.season_year)
-	var other := str(GameDB.CLUB_ORDER[1])
+	var other := str(GameDB.CLUB_ORDER[1]) if str(GameDB.CLUB_ORDER[1]) != me else str(GameDB.CLUB_ORDER[0])
 	for pk in mine.slice(1):
 		GameState.pick_owner["%d:%d:%s" % [int(pk["year"]), int(pk["round"]), str(pk.get("origin", me))]] = other
 	var left: Array = GameState.draft_list_spots()["picks"]
@@ -328,12 +351,8 @@ func _test_draft_room_gate() -> void:
 ## In a career, the count the brief and the pre-draft sheet show matches the
 ## picks the coach actually gets to use, and a pass reaches the news.
 func _test_career_spots_match_draft() -> void:
-	GameState.reset()
-	var me := str(GameDB.CLUB_ORDER[0])
-	GameState.start_season(me, GameDB.club_list(me))
-	var season: Season = GameState.season
-	season.round_index = season.fixture.size()
-	GameState.open_offseason()
+	_offseason_open()
+	var me: String = GameState.my_club
 	# Fill the senior list to two short of the cap with re-signed players.
 	var cap := RookieList.SENIOR_SPOTS
 	var n := 0
@@ -349,8 +368,10 @@ func _test_career_spots_match_draft() -> void:
 	var s := GameState.draft_list_spots()
 	var picks: Array = s["picks"]
 	_check(picks.size() >= 3, "The coach holds at least three picks (%s)" % str(picks))
-	_check(int(s["open"]) == cap - RookieList.senior_count(GameState.my_list),
-			"Open spots are the senior cap less the senior list (%s)" % str(s))
+	# Retirees hold no place next season, as the draft counts them.
+	var going := GameState.my_list.filter(func(q): return GameState.retiring_now(q))
+	_check(int(s["open"]) == cap - RookieList.senior_count(GameState.my_list) + RookieList.draft_size(going),
+			"Open spots are the senior cap less the senior list that stays (%s)" % str(s))
 	var line := GameState.draft_spots_line()
 	_check(line.contains("will pass"), "The brief names the picks that will pass (%s)" % line)
 	_check(DraftSpotsSheet.needed(), "The pre-draft sheet is shown when picks will pass")
@@ -420,9 +441,9 @@ func _test_draft_rules() -> void:
 	_check(g.user_pass(), "The coach passes")
 	_check(g.is_finished() and g.count_for("A") == 0 and g.remaining_pool() == 0,
 			"A passed coach is skipped for the rest of the draft; the others take the class")
-	var low := _blank(["A", "B"], {"A": Prospects.MIN_LIST - 2, "B": 40}, 4)
+	var low := _blank(["A", "B"], {"A": Contracts.min_list() - 2, "B": 40}, 4)
 	low.start_for_user("A")
-	_check(low.pass_block_reason().contains("needs at least %d" % Prospects.MIN_LIST), "Passing under the minimum list says why: %s" % low.pass_block_reason())
+	_check(low.pass_block_reason().contains("needs at least %d" % Contracts.min_list()), "Passing under the minimum list says why: %s" % low.pass_block_reason())
 	_check(not low.user_pass() and low.is_user_turn(), "Passing is refused under the minimum list")
 	# Pick for me: one pick, the assistant's choice.
 	var h := _blank(["A", "B", "C"], {"A": 40, "B": 40, "C": 40}, 9)
@@ -504,14 +525,12 @@ func _tiny_pool(n: int) -> Array:
 ## open neither loses him nor ticks him twice, and a Tasmania academy rookie,
 ## on a list the rollover does not tick, starts his first season with two too.
 func _test_tied_rookies_every_club() -> void:
-	GameState.reset()
-	var active := []
+	_offseason_open()
+	var me: String = GameState.my_club
+	var active := [me]
 	for code in GameDB.CLUB_ORDER:
-		if GameDB.enter_year(code) <= GameState.season_year:
+		if GameDB.enter_year(code) <= GameState.season_year and str(code) != me:
 			active.append(code)
-	var me := str(active[0])
-	GameState.start_season(me, GameDB.club_list(me))
-	GameState.season.round_index = GameState.season.fixture.size()
 	var pool: Array = GameState.draftee_pool
 	var planted := [
 		{"id": str(pool[0]["id"]), "club": me, "kind": "father-son"},
@@ -607,6 +626,15 @@ func _test_career_rollover() -> void:
 	_check(fo.size() == ladder_rev.size() and str(fo[-1]) == prem and str(fo[-2]) == runner
 			and str(fo[0]) == str(ladder_rev[0]),
 			"The premiers pick last and the runners-up second last (%s)" % str(fo))
+	# Lists start at the minimum (37), so make room on yours for national
+	# picks beside the two ties: drop its weakest men to two under the minimum.
+	var mine_low: Array = GameState.my_list.duplicate()
+	mine_low.sort_custom(func(x, y): return int(x["overall"]) < int(y["overall"]))
+	while GameState.my_list.size() > Contracts.min_list() - 2 and not mine_low.is_empty():
+		var gone: Dictionary = mine_low.pop_front()
+		GameState.my_list.erase(gone)
+		if GameState.season.lists.get(me) != GameState.my_list and GameState.season.lists.has(me):
+			(GameState.season.lists[me] as Array).erase(gone)
 	_check(GameState.begin_intake_draft(), "The intake draft opens after the home-and-away")
 	var draft: Draft = GameState.draft
 	_check(draft != null and draft.intake_mode, "GameState built an intake draft")
@@ -625,8 +653,10 @@ func _test_career_rollover() -> void:
 			"Father-son/NGA prospects land before the draft starts")
 	# A club that comes to the draft with a full senior list takes no national draftee.
 	var full_before := PackedStringArray()
+	# Retirees' places are next season's (Draft.leaving_senior): a club full
+	# only with them drafts their replacements.
 	for code in draft.existing_sizes:
-		if int(draft.existing_sizes[code]) >= draft.senior_cap:
+		if int(draft.existing_sizes[code]) - int(draft.leaving_senior.get(code, 0)) >= draft.senior_cap:
 			full_before.append(str(code))
 	while not draft.is_finished():
 		var candidate := draft._best_ai_pick(draft.current_club())
@@ -642,6 +672,9 @@ func _test_career_rollover() -> void:
 	_check(GameState.finish_intake_draft(), "The rollover commits")
 
 	_check(GameState.season_year == 2028, "The career advances a year")
+	_check(GameState.class_tiers.has("2028")
+			and str(GameState.class_tiers["2028"]) == Prospects.class_tier(GameState.career_seed, 2028),
+			"The rollover records the new class's tier")
 	var rookie_years := []
 	for p in GameState.my_list:
 		if str(p.get("drafted_type", "")) == "national" and int(p.get("drafted_year", 0)) == 2027:
@@ -686,6 +719,9 @@ func _test_career_rollover() -> void:
 	_check(GameState.season != null and GameState.season.round_index == 0,
 			"A fresh 24-round fixture is built")
 	_check(GameState.draft == null, "The intake draft releases the shared draft slot")
+	# Lists are lodged after the Rookie Draft: pass any pick of yours so it ends
+	# and short lists fill (GameState._fill_short_lists).
+	RookieList.settle(GameState)
 	var total_signed := 0
 	var seen_ids := {}
 	for code in GameDB.CLUB_ORDER:
@@ -696,7 +732,7 @@ func _test_career_rollover() -> void:
 			continue
 		# Retirements leave at the same rollover, so count the draftees themselves.
 		total_signed += arr.filter(func(q): return int(q.get("drafted_year", 0)) == 2027).size()
-		_check(arr.size() >= Prospects.MIN_LIST, "No club drops below the minimum list")
+		_check(arr.size() >= Contracts.min_list(), "No club drops below the minimum list (%s %d of %d)" % [code, arr.size(), Contracts.min_list()])
 		_check(arr.size() <= Ratings.LIST_SIZE, "No club exceeds the 44-man list cap")
 		for p in arr:
 			var pid := str(p["id"])
@@ -852,11 +888,12 @@ func _test_class_tiers() -> void:
 	GameState.start_season("ADE", GameDB.club_list("ADE"))
 	var seed_before: int = GameState.career_seed
 	_check(seed_before > 0, "A new career rolls its seed")
-	GameState.season.round_index = GameState.season.fixture.size()
-	GameState.start_next_season()
+	# Its first class (2027) is tiered when the career starts; the rollover's
+	# record of the next class is checked in _test_career_rollover, which rolls
+	# a career over anyway.
 	_check(GameState.class_tiers.has("2027")
 			and str(GameState.class_tiers["2027"]) == Prospects.class_tier(seed_before, 2027),
-			"The rollover records the new class's tier")
+			"A new career records its first class's tier")
 	_check(GameState.save_career() and GameState.load_career(), "The career saves and loads")
 	_check(GameState.career_seed == seed_before and GameState.class_tiers.has("2027"),
 			"The seed and the tier record survive a reload, so nothing re-rolls")
@@ -1154,12 +1191,11 @@ func _test_panel_fit() -> void:
 			"One fit line at most: the hole before the style")
 	# Real meetings, two seeded drafts: every fit line matches the list it was
 	# said about, and nothing reads as an order.
+	# Both from the shared opened off-season: the draft night (its reads and
+	# splits) is seeded by replay_seed when it opens.
 	for seed in [SUITE_SEED, 4242]:
-		GameState.reset()
+		_offseason_open()
 		GameState.replay_seed = seed
-		GameState.start_season("COL", GameDB.club_list("COL"))
-		GameState.season.round_index = GameState.season.fixture.size()
-		GameState.open_offseason()
 		_check(GameState.begin_intake_draft(), "(setup) the intake opens, seed %d" % seed)
 		var draft: Draft = GameState.draft
 		var status := draft.position_status()

@@ -121,8 +121,11 @@ static func week(gs) -> void:
 			_end(gs, st, def, rec, ending if ending != "" else "faded", _label(gs))
 	ClubMoves.record_reunion(gs, st)
 	# A move decided at the season's close (ClubMoves.season_close) has just
-	# ended every arc at the club he is leaving: none starts there after it.
-	if (st.get("move", {}) as Dictionary).is_empty():
+	# ended every arc at the club he is leaving: none starts there after it,
+	# nor at the club he joins on this season's facts (he moves at the close,
+	# row 189); arcs start again with next season.
+	var moved_now := int((st["coach"].get("moved", {}) as Dictionary).get("year", 0)) == int(gs.season_year)
+	if (st.get("move", {}) as Dictionary).is_empty() and not moved_now:
 		_try_starts(gs, st, defs, ctx, false)
 	var card := _due_card(gs, st, defs, ctx)
 	if card.is_empty():

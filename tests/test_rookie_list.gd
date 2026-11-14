@@ -77,11 +77,35 @@ func _new_career() -> void:
 	gs.tutorials = false
 
 
+## Opening the off-season (retirements, delistings, trades, free agency for
+## every club) costs most of a draft test, and nothing here tests it. The
+## first test to need it opens it once and saves the career; the others load
+## that save (its own file, apart from the suite's) and change what they test
+## before the National Draft opens.
+const OPEN_SAVE := "user://test_rookie_list_open.save"
+var _open_saved := false
+
+
+## A career at the end of its first home-and-away with the off-season open.
+func _offseason_open() -> void:
+	var keep: String = gs.save_path
+	gs.save_path = OPEN_SAVE
+	var loaded: bool = _open_saved and gs.load_career()
+	if not loaded:
+		_new_career()
+		gs.season.round_index = gs.season.fixture.size()
+		gs.open_offseason()
+		_open_saved = gs.save_career()
+	gs.save_path = keep
+	gs.tutorials = false
+	_check(gs.offseason_year == gs.season_year and gs.season.round_index == gs.season.fixture.size(),
+			"(setup) the off-season is open at the end of the home-and-away (%s)" % ("loaded" if loaded else "opened"))
+
+
 ## A career at the end of its first home-and-away, through the National Draft
 ## (every pick made the way a rival makes it) and the rollover.
 func _rollover() -> Draft:
-	_new_career()
-	gs.season.round_index = gs.season.fixture.size()
+	_offseason_open()
 	if not gs.begin_intake_draft():
 		return null
 	var draft: Draft = gs.draft
@@ -100,14 +124,16 @@ func _test_rollover_on() -> void:
 	if draft == null:
 		return
 	_check(draft.senior_cap == RookieList.SENIOR_SPOTS, "The National Draft fills the senior list (38)")
-	# No club's National Draft took it past 38 seniors.
+	# No club's National Draft took it past 38 seniors. Retirees' places are
+	# next season's (Draft.leaving_senior), so they do not count as kept.
 	var clubs := 0
 	for code in draft.existing_sizes:
 		clubs += 1
-		var before := int(draft.existing_sizes[code])
+		var gone := int(draft.leaving_senior.get(code, 0))
+		var before := int(draft.existing_sizes[code]) - gone
 		var took := draft.count_for(str(code))
 		_check(took == 0 or before + took <= RookieList.SENIOR_SPOTS,
-				"%s: the National Draft stops at a full senior list (%d kept + %d picks)" % [code, before, took])
+				"%s: the National Draft stops at a full senior list (%d kept, %d retiring, + %d picks)" % [code, before, gone, took])
 	_check(clubs >= 18, "Every club was in the National Draft (%d)" % clubs)
 	var rec: Dictionary = gs.rookie_draft
 	_check(int(rec.get("year", 0)) == gs.season_year and gs.season_year == 2028,
@@ -377,7 +403,7 @@ func _test_midseason_fills_rookie_spots() -> void:
 ## an off-season the young unsigned free agents are still in the pool, rivals
 ## leave rookie spots open, and the mid-season draft has players and takers.
 func _test_midseason_pool_after_offseason() -> void:
-	_new_career()
+	_offseason_open()
 	# Who stays when free agency closes: the young, the best of them first.
 	var model: Dictionary = (gs.season.lists["COL"] as Array)[0]
 	var made := []
@@ -646,9 +672,8 @@ func _test_real_lists_rookie_categories() -> void:
 ## refuses a player over 24 and says why; the Rookie Draft and the mid-season
 ## draft refuse him too, and a 24-year-old goes through.
 func _test_youth_only_drafts() -> void:
-	_new_career()
+	_offseason_open()
 	gs.challenge = {"kind": "youth"}
-	gs.season.round_index = gs.season.fixture.size()
 	# Room on the list, so the picks below are made: a full list passes them.
 	gs.my_list.resize(gs.my_list.size() - 3)
 	_check(gs.begin_intake_draft(), "(setup) the National Draft opens")
@@ -735,8 +760,7 @@ func _test_youth_only_midseason() -> void:
 ## you offer one a spot with a real tap, rivals take them by the same rule,
 ## the list limits hold, and a save and load keeps it all.
 func _test_undrafted_chance() -> void:
-	_new_career()
-	gs.season.round_index = gs.season.fixture.size()
+	_offseason_open()
 	var year: int = gs.season_year
 	_check(gs.begin_intake_draft(), "(setup) the National Draft opens")
 	var draft: Draft = gs.draft
@@ -1092,8 +1116,7 @@ func _test_the_44_rule() -> void:
 ## coach is told why, in his own club's case), a club at 43 takes one, and a
 ## father-son or academy player is listed only where the 44 has room.
 func _test_the_44_national_draft() -> void:
-	_new_career()
-	gs.season.round_index = gs.season.fixture.size()
+	_offseason_open()
 	var year: int = gs.season_year
 	_shape(CLUB, 36, 10, 2)
 	_shape("GEE", 36, 10, 0)
@@ -1141,16 +1164,20 @@ func _test_the_44_national_draft() -> void:
 		var candidate := draft._best_ai_pick(draft.current_club())
 		if candidate.is_empty() or not draft._draft_pick(draft.current_club(), candidate):
 			draft._skip_current_pick()
-	_check(draft.count_for("GEE") == 0 and draft.count_for(CLUB) == 0 and draft.count_for("COL") == 0,
-			"No club at or over the 44 made a pick (%d, %d, %d)" % [draft.count_for("GEE"), draft.count_for(CLUB), draft.count_for("COL")])
+	# A club at or over the 44 drafts only into its retirees' places, which are
+	# next season's (Draft.leaving_44, 2026-11-13).
+	var past := func(code: String) -> int: return draft.count_for(code) - int(draft.leaving_44.get(code, 0))
+	_check(past.call("GEE") <= 0 and past.call(CLUB) <= 0 and past.call("COL") <= 0,
+			"No club at or over the 44 made a pick beyond its retirees (%d, %d, %d)" % [past.call("GEE"), past.call(CLUB), past.call("COL")])
 	var took := 0
 	for code in draft.draft_order:
 		took += draft.count_for(str(code))
 	_check(took > 0, "The clubs with room made their picks (%d)" % took)
 	var bad := PackedStringArray()
 	for code in draft.list_44:
-		if draft.count_for(str(code)) > 0 and draft.list_now(str(code)) > Contracts.MAX_LIST:
-			bad.append("%s %d" % [code, draft.list_now(str(code))])
+		var after := draft.list_now(str(code)) - int(draft.leaving_44.get(str(code), 0))
+		if draft.count_for(str(code)) > 0 and after > Contracts.MAX_LIST:
+			bad.append("%s %d" % [code, after])
 	_check(bad.is_empty(), "No club drafted past the 44 (%s)" % ", ".join(bad))
 	if not draft.user_passed.is_empty():
 		_check(draft.user_passed_line().contains("limit is 44"), "Your passed picks say why (%s)" % draft.user_passed_line())
@@ -1201,7 +1228,7 @@ func _test_the_44_real_lists() -> void:
 		for p in list:
 			if roles.has(str(p["role"])):
 				roles[str(p["role"])] = int(roles[str(p["role"])]) + 1
-		if list.size() < Contracts.MIN_LIST or int(roles["RUCK"]) < 1 or int(roles["MID"]) < 6 \
+		if list.size() < Contracts.min_list() or int(roles["RUCK"]) < 1 or int(roles["MID"]) < 6 \
 				or int(roles["DEF"]) < 6 or int(roles["FWD"]) < 6:
 			short.append("%s %d %s" % [code, list.size(), str(roles)])
 	_check(bad.is_empty(), "No club grew past the 44 through the opening drafts (%s)" % ", ".join(bad))
