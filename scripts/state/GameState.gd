@@ -8758,13 +8758,7 @@ func ai_release_reason(code: String, p: Dictionary) -> String:
 func _fill_repl_class(code: String) -> void:
 	if str(_repl_class.get("key", "")) == "%d:%d" % [season_year, draftee_pool.size()]:
 		return
-	var spot := 0
-	for pk in club_picks(code):
-		if int(pk["year"]) == season_year:
-			var at := int((pk["positions"] as Array)[0][0])
-			if spot == 0 or at < spot:
-				spot = at
-	if spot > 0:
+	if _earliest_spot(code) > 0:
 		_repl_class = {"key": "%d:%d" % [season_year, draftee_pool.size()],
 				"ranked": TradeValue.rank_prospects(_open_class(season_year))}
 
@@ -8778,12 +8772,7 @@ func replacement_worth(code: String, p: Dictionary) -> float:
 	for q in free_agents:
 		if str(q.get("role", "")) == role or str(q.get("role2", "")) == role:
 			best = maxf(best, Contracts.worth(q))
-	var spot := 0
-	for pk in club_picks(code):
-		if int(pk["year"]) == season_year:
-			var at := int((pk["positions"] as Array)[0][0])
-			if spot == 0 or at < spot:
-				spot = at
+	var spot := _earliest_spot(code)
 	if spot > 0:
 		var key := "%d:%d" % [season_year, draftee_pool.size()]
 		if str(_repl_class.get("key", "")) != key:
@@ -8798,6 +8787,36 @@ func replacement_worth(code: String, p: Dictionary) -> float:
 
 
 var _repl_class := {}
+
+
+## Where `code`'s earliest pick in this year's draft falls (0 = none): the
+## first this-year pick of club_picks(code), worked out without building every
+## pick asset of the next two drafts too (T8.Q20). The same picks in the same
+## order, with the same positions pick_asset gives them.
+func _earliest_spot(code: String) -> int:
+	if not trade_pick_years().has(season_year):
+		return 0
+	var night := draft_night_open()
+	var ats := []
+	for rnd in range(1, trade_pick_rounds(season_year) + 1):
+		for origin in GameDB.active_clubs(season_year):
+			if pick_owner_of(season_year, rnd, str(origin)) != code:
+				continue
+			if night:
+				var slot: int = draft.pick_slot(rnd, str(origin))
+				if slot >= 0:   # a pick already made tonight is spent
+					ats.append([rnd, slot - int(draft.pick_index) + 1])
+			else:
+				ats.append([rnd, draft_spot(season_year, rnd, str(origin))])
+	ats.sort_custom(func(a, b):
+		if int(a[0]) != int(b[0]):
+			return int(a[0]) < int(b[0])
+		return int(a[1]) < int(b[1]))
+	var spot := 0
+	for a in ats:
+		if spot == 0 or int(a[1]) < spot:
+			spot = int(a[1])
+	return spot
 
 
 ## The expiring player `code` would delist first to make cap room for `keep`:
@@ -9946,6 +9965,12 @@ func pick_asset(id: String) -> Dictionary:
 	if not trade_pick_years().has(year) or rnd < 1 or rnd > trade_pick_rounds(year) \
 			or not GameDB.active_clubs(season_year).has(origin) or not GameDB.active_clubs(year).has(origin):
 		return {}
+	return _pick_asset_at(id, year, rnd, origin)
+
+
+## pick_asset once its pick is known to be tradeable (club_picks checks the
+## same things once a year rather than once a pick).
+func _pick_asset_at(id: String, year: int, rnd: int, origin: String) -> Dictionary:
 	var owner := pick_owner_of(year, rnd, origin)
 	var positions: Array
 	var spot := 0
@@ -9996,6 +10021,21 @@ func draft_spot(year: int, rnd: int, origin: String) -> int:
 func future_spots(rnd: int, origin: String) -> Array:
 	var n := GameDB.active_clubs(season_year).size()
 	var standing := _standing(origin)
+	# The spread depends on nothing else: the same round, league size and
+	# standing give the same spots (asked for every future pick of every club,
+	# again and again through a trade market).
+	var key := [rnd, n, float(standing[0]), float(standing[1])]
+	if not _spots_memo.has(key):
+		if _spots_memo.size() > 4096:
+			_spots_memo.clear()
+		_spots_memo[key] = _future_spots(rnd, n, standing)
+	return (_spots_memo[key] as Array).duplicate(true)
+
+
+var _spots_memo := {}
+
+
+func _future_spots(rnd: int, n: int, standing: Array) -> Array:
 	var t := float(standing[1]) if float(standing[0]) < 0.0 else 0.5 * float(standing[0]) + 0.5 * float(standing[1])
 	# Ladder place 0 (top) .. n-1; the draft runs the ladder in reverse.
 	var expect := t * float(n - 1)
@@ -10035,10 +10075,13 @@ func _pick_name(year: int, rnd: int, origin: String, at: int) -> String:
 func club_picks(code: String) -> Array:
 	var out := []
 	for year in trade_pick_years():
+		# pick_asset's own checks, once a year rather than once a pick: the year
+		# and round are in range by this loop; the origin must play that year.
+		var plays: Array = GameDB.active_clubs(int(year))
 		for rnd in range(1, trade_pick_rounds(int(year)) + 1):
 			for origin in GameDB.active_clubs(season_year):
-				if pick_owner_of(int(year), rnd, str(origin)) == code:
-					var pk := pick_asset(pick_id(int(year), rnd, str(origin)))
+				if pick_owner_of(int(year), rnd, str(origin)) == code and plays.has(origin):
+					var pk := _pick_asset_at(pick_id(int(year), rnd, str(origin)), int(year), rnd, str(origin))
 					if not pk.is_empty():   # a pick already made tonight is spent
 						out.append(pk)
 	out.sort_custom(func(a, b):
