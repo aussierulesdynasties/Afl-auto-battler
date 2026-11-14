@@ -427,7 +427,7 @@ static func apply_move_at_draft(gs) -> bool:
 static func _list_line(outlook: Dictionary) -> String:
 	if outlook.is_empty():
 		return ""
-	return TeamRating.rating_line(int(outlook["rating"]), int(outlook["forecast"]))
+	return TeamRating.rating_line(float(outlook["rating"]), float(outlook["forecast"]))
 
 
 ## The off-season's opening moves rival lists (their re-signings, trades),
