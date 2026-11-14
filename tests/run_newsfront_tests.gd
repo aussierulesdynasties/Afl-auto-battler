@@ -243,6 +243,10 @@ func _test_hub(size: Vector2i, wide: bool) -> void:
 	_state.tutorials = false
 	_state.replay_seed = SUITE_SEED
 	_state.news = _round_one()
+	# Stories dated before the week the coach is in: the page still says the week
+	# (director 2026-11-13, "Header should say Round 1").
+	for it in _state.news:
+		it["when"] = "Pre-season"
 	root.size = size
 	_router.stack = []
 	_router.go("main")
@@ -274,6 +278,12 @@ func _test_hub(size: Vector2i, wide: bool) -> void:
 	if feed != null:
 		var top := feed.find_child("LeadStory", true, false)
 		_check(top != null and Rect2(Vector2.ZERO, Vector2(size)).encloses(top.get_global_rect()), "%s: the lead story is on screen" % tag)
+		var date: Label = feed.find_child("Dateline", true, false)
+		var want := "%d  %s" % [int(_state.season_year), _state.season.round_name(_state.season.round_index)]
+		_check(date != null and date.text == want, "%s: the page is dated by the hub's week, '%s' (got '%s', pre-season %s)"
+				% [tag, want, date.text if date != null else "missing", str(_state.preseason_active())])
+		var card_date: Label = card.find_child("Dateline", true, false)
+		_check(card_date != null and card_date.text == want, "%s: the card is dated by the hub's week too" % tag)
 		var close: Button = null
 		for b in feed.find_children("*", "Button", true, false):
 			if (b as Button).text == "Close":

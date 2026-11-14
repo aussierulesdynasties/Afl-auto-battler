@@ -8,7 +8,7 @@ extends SceneTree
 ## Training page with a durability focus picked: the near-trait line).
 ## Illustrative only; it never touches a real save.
 
-const OTHER := ["unicorn", "wet_weather", "hothead"]
+const OTHER := ["unicorn", "wet_weather", "fine_wine", "hothead"]
 
 
 func _initialize() -> void:
