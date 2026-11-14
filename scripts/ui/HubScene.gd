@@ -92,7 +92,9 @@ func _show_week_ask() -> void:
 	# opens when the hub comes back.
 	if not GameState.media_conference_pending() and _show_new_event():
 		return
-	if not MidseasonDraft.carnival_lines(GameState).is_empty():
+	if YearEvents.top_up_waiting(GameState):
+		TopUpSheet.open(self, _after_ask)
+	elif not MidseasonDraft.carnival_lines(GameState).is_empty():
 		_show_carnival()
 	elif MidseasonDraft.waiting(GameState):
 		_show_midseason_pick()
@@ -871,7 +873,18 @@ func _league_names() -> Dictionary:
 ## The league's front page in small: the lead story and a few headlines; a
 ## tap opens the whole page.
 func _news_card() -> Control:
-	return NewsFront.mini(GameState.news, GameState.my_club, _show_news, _league_names())
+	return NewsFront.mini(GameState.news, GameState.my_club, _show_news, _league_names(), _news_now())
+
+
+## The news is dated by the week the coach is in, as the hub's title is
+## (director 2026-11-13, "Header should say Round 1": round 1's page read
+## "1990 Pre-season"). Off-season and pre-season keep the stories' own date.
+func _news_now() -> String:
+	var season: Season = GameState.season
+	if season == null or GameState.preseason_active() or season.is_season_over():
+		return ""
+	var week := season.round_name(season.round_index) if not season.is_regular_done() else _finals_label()
+	return "%d  %s" % [GameState.season_year, week]
 
 
 func _show_news() -> void:
@@ -879,7 +892,7 @@ func _show_news() -> void:
 	var box := UiKit.modal_box(self, 1080.0 if wide else 620.0, 0.0 if wide else 560.0)
 	_news_overlay = box["overlay"]
 	_news_overlay.name = "NewsFeed"
-	NewsFront.fill(box["body"], GameState.news, GameState.my_club, wide, _league_names())
+	NewsFront.fill(box["body"], GameState.news, GameState.my_club, wide, _league_names(), _news_now())
 	var ok := UiKit.btn("Close", UiKit.NAME, true)
 	ok.custom_minimum_size = Vector2(0, 44)
 	ok.pressed.connect(func(): _news_overlay.queue_free())
@@ -1215,6 +1228,8 @@ static func skip_lines(season: Season, year: int, answers: Dictionary, to := "se
 	# A pick left unmade passes when the next round is played (MidseasonDraft, RookieList).
 	if season.round_index < MidseasonDraft.DRAFT_AFTER or MidseasonDraft.waiting(GameState) or RookieList.waiting(GameState):
 		stop += " Any rookie pick that comes up along the way is passed."
+	if YearEvents.top_up_waiting(GameState):
+		stop += " The top-up spots you have not filled stay empty."
 	out.append(["SkipStop", stop, false])
 	return out
 
@@ -2422,6 +2437,8 @@ func handle_back() -> bool:
 		_close_midseason(true)
 		return true
 	if RookieDraftSheet.close_open(self):
+		return true
+	if TopUpSheet.close_open(self):
 		return true
 	if DraftSpotsSheet.close_open(self):
 		return true
