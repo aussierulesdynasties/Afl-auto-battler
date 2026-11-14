@@ -402,6 +402,7 @@ const YEAR_WORDS := {
 	"2026": ["Today's league", "18 clubs. The real lists after the 2026 season, or a league redraft."],
 	"2000": ["From the turn of the century", "16 clubs on their real lists. Take over from your club's senior coach and coach on through the years to today."],
 	"1990": ["From the first AFL season", "14 clubs on their real lists. Take over from your club's senior coach and coach on through the years to today."],
+	"2010": ["Before the Suns and Giants", "16 clubs on their real lists. Gold Coast join in 2011 and GWS in 2012. Take over from your club's senior coach."],
 }
 
 
