@@ -9,7 +9,8 @@ extends SceneTree
 ## pressed and moved by real mouse events (the name preview under the pointer).
 ## --strategy KEY: that auto-pick applied, scrolled to its note (BuilderHint).
 ## --list: the first-visit card already seen, so the players not picked show.
-## --club CODE. --window WxH: the W x H canvas drawn into a window this big
+## --profile: the centre's profile open. --loads: three players given set
+## loads and moods (row 183's states). --club CODE. --window WxH: the W x H canvas drawn into a window this big
 ## (960x540 at 1920x1080, as a PC at 200%). (The phone's week is the match preview now:
 ## tools/visual/capture_match_preview.gd.)
 ## Writes <out>_sheet.png.
@@ -98,6 +99,17 @@ func _run() -> void:
 		guard += 1
 	if drag or list_view:
 		state.set_setting("seen_selection_intro", true)  # the first-visit card would sit over the oval
+	if "--loads" in a:
+		# Row 183's look: a week's recovery leaves most legs at 0, so a few
+		# players carry set loads and moods to show every state of the numbers.
+		var side: Dictionary = state.current_side()
+		var set_to := [["C", 0, 58.0, 36], ["FWD", 1, 27.0, 55], ["DEF", 2, 12.0, 74]]
+		for s in set_to:
+			var ids: Array = side.get("MID" if s[0] == "C" else s[0], [])
+			if ids.size() > int(s[1]):
+				var man = state.list_player(str(ids[int(s[1])]))
+				man["workload"] = s[2]
+				man["morale"] = s[3]
 	var ui: Control = load("res://scenes/SelectionScene.tscn").instantiate()
 	if page != "":
 		ui.set("_page", page)
@@ -118,6 +130,11 @@ func _run() -> void:
 		var c: Button = ui.find_child("Spot_C", true, false)
 		if c != null:
 			c.emit_signal("pressed")
+	if "--profile" in a:
+		# The centre's profile, with his fatigue, morale and form (row 183).
+		var cp: Control = ui.find_child("Spot_C", true, false)
+		if cp != null:
+			ui.call("_open_profile", str(cp.get_meta("id")))
 	match mode:
 		"opp":
 			ui.set("_view", "opp")
