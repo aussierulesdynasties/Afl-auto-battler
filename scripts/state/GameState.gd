@@ -10479,6 +10479,8 @@ func _night_prospects(club: String) -> Dictionary:
 func _rival_on_clock(code: String, index: int) -> void:
 	if not draft_night_open() or code == my_club or index >= draft.pick_rounds.size():
 		return
+	if not season.lists.has(code):
+		return   # a club gone from the league (Fitzroy after the merger) trades nothing
 	var rnd := int(draft.pick_rounds[index])
 	if rnd > TRADE_PICK_ROUNDS or index >= draft.pick_origin.size():
 		return
@@ -10497,7 +10499,7 @@ func _rival_on_clock(code: String, index: int) -> void:
 	for buyer in _club_order("night:%d" % index):
 		if tried >= NIGHT_BUYERS:
 			break
-		if buyer == code or _deals(buyer, true) >= DEALS_PER_CLUB:
+		if buyer == code or not season.lists.has(buyer) or _deals(buyer, true) >= DEALS_PER_CLUB:
 			continue
 		# A buyer with a later pick in this round wants to move up.
 		var later := draft.upcoming_picks(buyer, 1)
