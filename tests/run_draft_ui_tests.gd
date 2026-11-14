@@ -780,7 +780,7 @@ func _test_inspect(ui: Control) -> void:
 	ui.call("_open_player", str(p["id"]))
 	await _settle()
 	var status: Label = ui.find_child("DetailStatus", true, false)
-	_check(status != null and status.text.begins_with("On your list"), "A player you drafted says so")
+	_check(status != null and status.text.begins_with("On our list"), "A player you drafted says so")
 	_check(ui.find_child("DetailDraft", true, false) == null, "A drafted player has no Draft button")
 	ui.call("_close_player")
 	var rival := {}

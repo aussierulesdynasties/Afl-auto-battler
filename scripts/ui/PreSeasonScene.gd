@@ -239,16 +239,16 @@ func _hero(stop: String) -> String:
 func _hero_sub(stop: String) -> String:
 	match stop:
 		"plan":
-			return "Set the training for each block. Training runs until the time trial, after week 3."
+			return "Set our training for each block. It runs to the time trial, after week 3."
 		"trial":
-			return "Two kilometres at the end of week 3. This is the order they finished. No rating or fitness changes because of it."
+			return "Two kilometres at the end of week 3. This is the order they finished. No rating or fitness moved because of it."
 		"practice":
 			var opp := GameDB.club_name(GameState.practice_opponent())
 			if GameState.practice_played():
-				return "End of week 7, against %s. It counts for nothing on the ladder; what it showed is below. Week 8 is a quiet week: no training, and the papers come out." % opp
+				return "End of week 7, against %s. It counts for nothing on the ladder. What it showed is below. Week 8 is quiet: no training, and the papers come out." % opp
 			return "End of week 7: one match against %s. It counts for nothing on the ladder." % opp
 		"papers":
-			return "Week 8. Training is done. This is the ladder the papers have printed, and what they want to know."
+			return "Week 8. Training is done. The papers have printed their ladder. This is what they want to know."
 		"story":
 			return "Something has come up. Answer it, or press on and nothing changes."
 	return "Training is under way."
@@ -557,7 +557,7 @@ func _practice_setup() -> Control:
 		where.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		teams.add_child(where)
 		fixture.add_child(teams)
-	var at_home := UiKit.lbl("Both clubs trial prospects of their own. Your listed players carry %d%% of a normal match's injury risk; a trialled prospect cannot be hurt." % roundi(float(PreSeason.tune("practice_injury_rate")) * 100.0),
+	var at_home := UiKit.lbl("Both clubs trial prospects of their own. Our listed players carry %d%% of a normal match's injury risk. A trialled prospect cannot be hurt." % roundi(float(PreSeason.tune("practice_injury_rate")) * 100.0),
 			UiKit.SECONDARY, UiKit.TEXT)
 	at_home.name = "PracticeRisk"
 	at_home.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -565,8 +565,8 @@ func _practice_setup() -> Control:
 	v.add_child(fixture)
 
 	var mine := UiKit.vbox(6)
-	mine.add_child(_section_head("Your side and plan"))
-	var side := UiKit.lbl("The side you have named on Selection, or the best available if you have not. Injured players sit out.",
+	mine.add_child(_section_head("Our side and plan"))
+	var side := UiKit.lbl("Our side as named in Selection, or our best available. Injured players sit out.",
 			UiKit.BODY, UiKit.TEXT)
 	side.name = "PracticeSide"
 	side.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -590,7 +590,7 @@ func _practice_setup() -> Control:
 	guests.name = "PracticeInvites"
 	guests.add_child(_section_head("Prospects to trial"))
 	var gain := _stake(guests, "Gain:", "PracticeGain")
-	gain.text = "His draft card gets a line on what he did against a senior side, and your recruiters' read of his rating is %d%% tighter. He cannot be hurt." % roundi((1.0 - float(PreSeason.tune("seen_uncertainty"))) * 100.0)
+	gain.text = "His draft card gets a line on how he went against a senior side. Our recruiters' read of his rating gets %d%% tighter. He cannot be hurt." % roundi((1.0 - float(PreSeason.tune("seen_uncertainty"))) * 100.0)
 	_trial_cost = _stake(guests, "Cost:", "PracticeCost")
 	_trial_count = UiKit.lbl("", UiKit.BODY, UiKit.TEXT, true)
 	_trial_count.name = "PracticeCount"
@@ -646,22 +646,22 @@ func _refresh_trial() -> void:
 		_trial_cost.text = _trial_cost_text(invites)
 
 
-## The trial's cost, sized: how far below the starters they replace the chosen
+## The trial's cost, sized: how far below the players they replace the chosen
 ## prospects rate (every prospect on offer, before any is chosen).
 func _trial_cost_text(invites: Array) -> String:
 	var gap := GameState.practice_trial_gap_pct(invites)
 	match invites.size():
 		0:
 			if gap <= 0:
-				return "A prospect plays in place of the weakest starter in his line; the prospects here rate no lower than the starters they would replace."
-			return "A prospect plays in place of the weakest starter in his line; on average the prospects here rate about %d%% below the starter they would replace, so your side is weaker on the day." % gap
+				return "A prospect takes the place of our weakest player in his line. The prospects here rate no lower than the players they would replace."
+			return "A prospect takes the place of our weakest player in his line. On average the prospects here rate about %d%% below the player they would replace. Our side is weaker on the day." % gap
 		1:
 			if gap <= 0:
-				return "He plays in place of the weakest starter in his line and rates no lower than him."
-			return "He plays in place of the weakest starter in his line and rates about %d%% below him, so your side is weaker on the day." % gap
+				return "He takes the place of our weakest player in his line. He rates no lower than that player."
+			return "He takes the place of our weakest player in his line. He rates about %d%% below that player. Our side is weaker on the day." % gap
 	if gap <= 0:
-		return "Each plays in place of the weakest starter in his line; they rate no lower than the starters they replace."
-	return "Each plays in place of the weakest starter in his line; on average they rate about %d%% below the starters they replace, so your side is weaker on the day." % gap
+		return "Each takes the place of our weakest player in his line. They rate no lower than the players they replace."
+	return "Each takes the place of our weakest player in his line. On average they rate about %d%% below the players they replace. Our side is weaker on the day." % gap
 
 
 ## A 2 px rule in the club's colour: the section belongs to your club.
@@ -747,7 +747,7 @@ func _blocks_section(first: int, across: bool) -> Control:
 		# Side by side, each block (and its club bar) is as tall as its own words.
 		b.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		holder.add_child(b)
-	var quiet := UiKit.lbl("Week 8 is a quiet week: no training to choose, and the papers print their ladder. Heavy or fresh legs from weeks 6 to 7 last into Round 1.",
+	var quiet := UiKit.lbl("Week 8 is quiet: no training to choose. The papers print their ladder. Heavy or fresh legs from weeks 6 and 7 carry into Round 1.",
 			UiKit.SECONDARY, UiKit.TEXT)
 	quiet.name = "PreSeasonQuietWeek"
 	quiet.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -801,7 +801,7 @@ func _drill_row(i: int) -> Control:
 	h.add_child(l)
 	# Says what the second line of each button is (director, 2026-10-19:
 	# "medium, then high" read as nothing).
-	var key_line := UiKit.lbl("Under each plan: how well the side knows it now, and by Round 1 with this drilling. Weeks short of a step still count: the plan plays part of the way up.", UiKit.SECONDARY, UiKit.TEXT)
+	var key_line := UiKit.lbl("Under each plan: how well we know it now, and by Round 1 with this drilling. Weeks short of a step still count. We play the plan part of the way up.", UiKit.SECONDARY, UiKit.TEXT)
 	key_line.name = "DrillKey%d" % i
 	key_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	h.add_child(key_line)
@@ -906,7 +906,7 @@ func _split_words(i: int) -> String:
 			if PreSeason.group_of(p) == group:
 				n += 1
 		var share := 0 if GameState.my_list.is_empty() else roundi(100.0 * n / GameState.my_list.size())
-		return "The %s: %d of the list, %d%% of the side's drilling." % [
+		return "The %s: %d of our list, %d%% of our drilling." % [
 				str(PreSeason.GROUP_LABEL[group]).to_lower(), n, share]
 	if not GameState.preseason_drills_split(i):
 		return "Every group drills the same. Pick a group to give it its own."
@@ -1264,7 +1264,7 @@ func _on_sim_pressed() -> void:
 	sheet.name = "PreSeasonSimConfirm"
 	var v: VBoxContainer = box["body"]
 	v.add_child(UiKit.heading("Sim to Round 1?", UiKit.H1))
-	var why := UiKit.lbl("The time trial, the practice match and the papers are played out without you. The practice match result goes in the news.", UiKit.BODY, UiKit.TEXT)
+	var why := UiKit.lbl("The time trial, the practice match and the papers play out without you. The practice match result goes in the news.", UiKit.BODY, UiKit.TEXT)
 	why.name = "PreSeasonSimWhy"
 	why.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(why)
