@@ -319,6 +319,8 @@ Source tags: DB = DESIGN_BIBLE; RM26/27/28/29/30/32 = roadmap chapters 26, 27, 2
 
 **2.73** Season shape at 21 clubs: "24 rounds 2 byes" (22 games each; byes in rounds 9-20; home within one of half). Sir Doug Nicholls Round: a club with a bye wears its special guernsey the next round. Tough leadership trait idea, dominant foot (no hidden accuracy bonus), flags (trade volume), "The unmanaged collapse is about right." (2026-10-06; c03/c04, roadmap 10-02 to 10-06)
 
+**2.74** The match view goes 3D (2026-11-14). Shown a mock of the live oval as a real 3D scene (our own MPFB footballers running where MatchDirector puts them, jog, idle and carry from the sprite pipeline, the ball between the palms), he chose "True 3D oval" and then "Yes, pursue it"; "Work hand in hand with 3d view 2" (the session that wrote docs/research/AFL2004_ANIMATION_STUDY.md, the 3D animation plan). This supersedes the rejection of real-time 3D figures (rule 6.39, 6.S item 17) and ARD-M8-007's "Do not introduce 3D player models" for the match view's oval. Everything in 2.39-2.49 still holds: MatchSim's log is truth, the view never changes an outcome, no hovering or self-propelled ball, motion copied from real footage, clips judge the look. The vignettes are not part of this ruling. First comes the proof passage (study §2.10), measured on an Android phone.
+
 ---
 
 ## 2.S Superseded and cut
@@ -1304,7 +1306,7 @@ Where a record carries no date the tag says "undated". Every quoted phrase is th
 14. Pitch-only AA and "MSAA stays off": superseded by whole-game AA and project-wide 2D MSAA 2x (#478) (rule 6.53). His question about icon smoothing is answered by the same ruling.
 15. "No reduced-motion setting for now" (2026-10-06): a Reduced motion setting was later built (rule 6.52); treated as superseded in practice.
 16. Generated menu music and rhyming banner text: removed 2026-10-18 (rule 6.66).
-17. Real-time 3D figures, generative restyling and dropping vignettes: rejected (rule 6.39).
+17. Real-time 3D figures, generative restyling and dropping vignettes: rejected (rule 6.39). Real-time 3D players on the match view's oval: ruled in 2026-11-14 (rule 2.74).
 18. Light-theme score ink, contrast and 8-defect audit findings: inventory only, no work.
 19. Capture practice of 2026-10-06 that showed #383 without the typeface: replaced by the current-main capture rule (rule 6.9).
 20. Style guide questions (all answered 2026-10-10): selection is ink plus outline with no club tint; mini figures on the match view only as a phone prototype; venue plates after media room and stage props (rules 6.27, 42, 44).
