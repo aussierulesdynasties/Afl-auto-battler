@@ -40,7 +40,7 @@ const TEAM_BOOKKEEPING_KEYS := ["pressure_acts_dhalf", "tackles_i50", "poss_d50"
 		"d50_tackled", "d50_rushed", "d50_chips"]
 ## Team counts named by prefix (one key per way a defensive-50 chain ends).
 const TEAM_BOOKKEEPING_PREFIXES := ["d50_end_"]
-const GOLDEN_SEASON := {"Windows": "1ddd72727711d9852bfe868eed24a24c", "Linux": "9c00f9caf199debd6cc6a20325ba8cba"}
+const GOLDEN_SEASON := {"Windows": "1ddd72727711d9852bfe868eed24a24c", "Linux": "00b8f1a8c1274dbc3b0d0a192569bb51"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and
