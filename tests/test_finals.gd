@@ -81,6 +81,22 @@ func _play_pending() -> Dictionary:
 
 func _test_finals_open_after_last_round() -> void:
 	var season := _to_last_round()
+	_check(GameState.prepare_interactive_match(), "Round 24 can be played live")
+	_play_pending()
+	_check(not season.finals.is_empty(),
+			"The bracket also opens after a live round 24")
+
+	# Round 24 again, through advance(): the live round's results are handed
+	# back in (no second simulation, no second career); the bracket is closed
+	# and the round unplayed first.
+	var played: Array = season.results.pop_back()
+	season.round_index -= 1
+	season.finals = {}
+	_check(not season.is_regular_done() and season.finals.is_empty(), "Round 24 is unplayed again")
+	var out := []
+	for res in played:
+		out.append({"res": (res as Dictionary).duplicate(true)})
+	season._early = {"week": "r%d" % season.round_index, "threads": [], "out": out}
 	GameState.advance()
 	_check(season.is_regular_done(), "Round 24 completes the home-and-away")
 	_check(not season.finals.is_empty(),
@@ -91,19 +107,14 @@ func _test_finals_open_after_last_round() -> void:
 	_check(season.finals_week_matches().size() == 2,
 			"Week one lists the two wildcard finals")
 
-	season = _to_last_round()
-	_check(GameState.prepare_interactive_match(), "Round 24 can be played live")
-	_play_pending()
-	_check(not season.finals.is_empty(),
-			"The bracket also opens after a live round 24")
-
 
 ## Week one is 7v10 and 8v9; the winners reseed by their original ladder
 ## position into the 7th and 8th seeds for week two.
 func _test_wildcard_week_and_reseed() -> void:
-	var season := _to_last_round()
-	GameState.advance()
+	# The seeding is under test, not Round 24: straight to the finals.
+	var season := _to_finals()
 	var top: Array = season.finals["top"]
+	_check(top.size() == Season.FINALISTS, "Ten finalists to seed (%d)" % top.size())
 
 	# The top six wait out the wildcard round: none of them plays in week one.
 	for m in season.finals_week_matches():
