@@ -310,6 +310,16 @@ func _test_pass_and_pick_for_me(size: Vector2i) -> void:
 	_state.start_season("COL", _db.club_list("COL"))
 	_state.season.round_index = _state.season.fixture.size()
 	_state.open_offseason()
+	# Spare men put the list above the minimum after retirements, so Pass is
+	# allowed on the coach's turn (Draft.pass_block_reason).
+	var min_list := int(load("res://scripts/sim/Contracts.gd").min_list())
+	var staying: int = _state.my_list.filter(func(q): return not _state.retiring_now(q)).size()
+	var base: Dictionary = _state.my_list[_state.my_list.size() - 1]
+	for i in range(maxi(0, min_list + 1 - staying)):
+		var extra: Dictionary = base.duplicate(true)
+		extra["id"] = "pass_extra_%d" % i
+		extra.erase("retiring")
+		_state.my_list.append(extra)
 	if not _state.begin_intake_draft():
 		_check(false, "The draft opens for the pick buttons test (%s)" % tag)
 		return
@@ -337,7 +347,10 @@ func _test_pass_and_pick_for_me(size: Vector2i) -> void:
 		ui.queue_free()
 		return
 	_check(pick_me.text == "Pick for me" and pass_b.text == "Pass", "The buttons read Pick for me and Pass (%s)" % tag)
-	_check(not pick_me.disabled and not pass_b.disabled, "Both buttons are live on your turn (%s)" % tag)
+	_check(not pick_me.disabled, "Pick for me is live on your turn (%s)" % tag)
+	# Pass is live only once the list reaches the minimum (Draft.pass_block_reason).
+	_check(pass_b.disabled == (draft.pass_block_reason() != ""),
+			"Pass is live exactly when the list allows it (%s: %s)" % [tag, draft.pass_block_reason()])
 	var expect: String = str(draft._best_ai_pick(draft.user_club)["id"])
 	var before: int = draft.count()
 	await _press(pick_me, "Pick for me (%s)" % tag)
@@ -348,9 +361,16 @@ func _test_pass_and_pick_for_me(size: Vector2i) -> void:
 	while not draft.is_user_turn() and not draft.is_finished() and guard < 200:
 		guard += 1
 		draft.auto_until_user_turn()
+	# Fill the list to the minimum so passing is allowed.
+	guard = 0
+	while draft.is_user_turn() and draft.pass_block_reason() != "" and guard < 60:
+		guard += 1
+		draft.pick_for_me()
+		draft.auto_until_user_turn()
 	ui.call("_refresh")
 	await _settle()
 	if draft.is_user_turn():
+		_check(not pass_b.disabled, "Pass is live once the list reaches the minimum (%s)" % tag)
 		var taken: int = draft.count()
 		_state.set("_dirty", false)
 		await _press(pass_b, "Pass (%s)" % tag)

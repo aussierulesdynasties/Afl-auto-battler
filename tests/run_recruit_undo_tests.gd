@@ -71,7 +71,8 @@ func _to_offseason() -> void:
 		_state.advance()
 	_state.open_offseason()
 	var base: Dictionary = _state.my_list[_state.my_list.size() - 1]
-	for i in range(3):
+	# Spare men keep three releases above the list minimum (Contracts.min_list()).
+	for i in range(maxi(3, int(load("res://scripts/sim/Contracts.gd").min_list()) + 3 - _state.my_list.size())):
 		var extra: Dictionary = base.duplicate(true)
 		extra["id"] = "undo_extra_%d" % i
 		extra["contract_years"] = 2
