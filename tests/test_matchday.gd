@@ -427,6 +427,69 @@ func _test_lift_skips_short_games() -> void:
 				named_hurt = str(p["name"])
 	_check(hurt_seen > 0 and named_hurt == "",
 			"No player hurt before the last quarter is in Needs a lift (%d matches with one; named %s)" % [hurt_seen, named_hurt])
+	_lift_skips_cameos()
+
+
+## Row 188 (director playtest, 2026-11-12): Needs a lift named a player with
+## 0 disposals. The lowest rating is a man who barely played: the substitute
+## on late, or a bench player not yet used by half-time. Both are out; a
+## poor full game is still named. The same rule for every club.
+func _lift_skips_cameos() -> void:
+	var poor := {"kicks": 4, "handballs": 3, "tackles": 1}  # rating 13
+	var entry := func(id: String, st: Dictionary) -> Dictionary:
+		return {"id": id, "name": id, "stats": st}
+	var report := {"quarters": 4, "my_ranked": [entry.call("Late sub", {}),
+			entry.call("Poor full game", poor), entry.call("Sub on early", poor)]}
+	report["my_ranked"][0]["on_min"] = 100
+	report["my_ranked"][2]["on_min"] = 10
+	var names := (CoachReport.glance(report, true)["lift"] as Array).map(func(x): return str(x["name"]))
+	_check(not names.has("Late sub"), "A substitute on late with 0 disposals is not in Needs a lift (%s)" % str(names))
+	_check(names.has("Poor full game") and names.has("Sub on early"),
+			"A poor game by a man who played it is still named (%s)" % str(names))
+	var bench := {"quarters": 2, "my_ranked": [entry.call("Not on yet", {}), entry.call("Poor half", poor)]}
+	names = (CoachReport.glance(bench)["lift"] as Array).map(func(x): return str(x["name"]))
+	_check(names == ["Poor half"], "A man with no disposal at half-time is not in Needs a lift (%s)" % str(names))
+	var ev := {"events": [{"kind": "sub", "side": 1, "player_id": "p9", "q": 4, "min": 97, "substitute": true},
+			{"kind": "sub", "side": 1, "player_id": "p3", "q": 2, "min": 40}]}
+	_check(CoachReport.subs_on(ev) == [{"side": 1, "id": "p9", "q": 4, "min": 97}],
+			"The substitute's minute on is read from the match; interchanges are not substitutes")
+	# Real matches with a substitute (2013: on at three-quarter time; 2023:
+	# the medical sub for a hurt man): the sub, who rates low after a quarter
+	# and would have led Needs a lift, is never named, and nobody named has
+	# 0 disposals at half-time or full time.
+	var old_year := EraRules.year
+	var subs_seen := 0
+	var would_name := 0
+	var bad := ""
+	for year in [2013, 2023]:
+		EraRules.year = year
+		for seed in range(12):
+			var sim := MatchSim.new(Squad.new("HAW", GameDB.club_list("HAW"), true, "HAW"),
+					Squad.new("BRL", GameDB.club_list("BRL"), false, "BRL"), 9300 + seed)
+			var res := sim.run()
+			res["home"] = "HAW"
+			res["away"] = "BRL"
+			for side in [0, 1]:
+				var late := {}
+				for s in CoachReport.subs_on(res):
+					if int(s["side"]) == side and int(s["min"]) > 30:
+						late[str(s["id"])] = true
+				subs_seen += late.size()
+				for rep in [CoachReport.match_report(res, side), CoachReport.half_time_report(res, side)]:
+					var by_name := {}
+					for e in rep["my_ranked"]:
+						by_name[str(e["name"])] = e
+						if late.has(str(e["id"])) and int(rep.get("quarters", 4)) == 4 \
+								and MatchNotes.rating(e.get("stats", {})) < CoachReport.LIFT_BELOW:
+							would_name += 1
+					for p in CoachReport.glance(rep, int(rep.get("quarters", 4)) == 4)["lift"]:
+						var e: Dictionary = by_name.get(str(p["name"]), {})
+						var st: Dictionary = e.get("stats", {})
+						if late.has(str(e.get("id", ""))) or float(st.get("disposals", 0.0)) <= 0.0:
+							bad += "%d seed %d: %s; " % [year, seed, str(p["name"])]
+	EraRules.year = old_year
+	_check(subs_seen > 0 and would_name > 0 and bad == "",
+			"No late substitute and no 0-disposal man in Needs a lift (%d subs, %d rated low enough to be named; named %s)" % [subs_seen, would_name, bad])
 
 
 ## The half-time report at a glance: a few lines and a few players, in words.

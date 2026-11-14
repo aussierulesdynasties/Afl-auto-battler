@@ -381,6 +381,10 @@ jobs:
           if [ -f "$RUNNER_TEMP/test-logs/suite-timings.tsv" ]; then
             cp "$RUNNER_TEMP/test-logs/suite-timings.tsv" "$RUNNER_TEMP/timings/shard-${{ matrix.shard }}.tsv"
           fi
+          # Per test function (tests/functions_ran.gd): what makes a suite slow.
+          if [ -f "$RUNNER_TEMP/test-logs/fn-timings.tsv" ]; then
+            cp "$RUNNER_TEMP/test-logs/fn-timings.tsv" "$RUNNER_TEMP/timings/fn-shard-${{ matrix.shard }}.tsv"
+          fi
 
       - uses: actions/upload-artifact@v4
         continue-on-error: true  # a GitHub storage outage must not fail tested code

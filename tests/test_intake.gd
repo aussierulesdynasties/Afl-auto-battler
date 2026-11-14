@@ -457,7 +457,15 @@ func _test_draft_rules() -> void:
 	if not gawn.is_empty():
 		var dd := Draft.new([gawn, heeney], ["A", "B"], 1)
 		_check(dd.horizon_worth(gawn, "now") > 85.0, "A win-now club values a 35-year-old star near his rating (%.1f)" % dd.horizon_worth(gawn, "now"))
-		_check(dd.horizon_worth(gawn, "build") < 70.0, "A building club still discounts him (%.1f)" % dd.horizon_worth(gawn, "build"))
+		# Gawn carries Fine Wine (the director's list), so the discount is
+		# measured on the same rating without it; the trait must lift it.
+		var plain := gawn.duplicate(true)
+		plain.erase("fine_wine")
+		plain["real_name"] = "Not On The List"
+		var dp := Draft.new([plain, heeney], ["A", "B"], 1)
+		_check(dp.horizon_worth(plain, "build") < 70.0, "A building club still discounts a 35-year-old star without Fine Wine (%.1f)" % dp.horizon_worth(plain, "build"))
+		if Traits.fine_wine(gawn):
+			_check(dd.horizon_worth(gawn, "build") > dp.horizon_worth(plain, "build"), "Fine Wine lifts what a building club sees in him (%.1f against %.1f)" % [dd.horizon_worth(gawn, "build"), dp.horizon_worth(plain, "build")])
 		_check(absf(dd.horizon_worth(heeney, "now") - 88.8) < 1.0, "A 30-year-old's win-now worth is unchanged (%.1f)" % dd.horizon_worth(heeney, "now"))
 
 
