@@ -78,6 +78,8 @@ func _run() -> void:
 		await _t("_test_ladder", [sz])
 	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
 		await _t("_test_team_rating", [sz])
+	_t("_test_ladder_rating_is_preview")
+	_t("_test_ladder_rating_by_era")
 	for w in [366.0, 680.0]:
 		await _t("_test_hub_ladder_heads", [w])
 	await _t("_test_trophies_early")
@@ -1605,6 +1607,7 @@ func _test_team_rating(sz: Vector2i) -> void:
 		# The numbers, once: every club against the selector and the AI's rule.
 		var rating_ok := true
 		var phase_ok := true
+		var ladder_ok := true
 		for code in _state.season.lists:
 			var list: Array = _state.season.lists[code]
 			var side: Dictionary = RT.select_side(list)
@@ -1623,15 +1626,19 @@ func _test_team_rating(sz: Vector2i) -> void:
 			var want: String = TV.phase(float(standing[0]), float(standing[1]), ages / float(maxi(1, both.size())))
 			var o: Dictionary = _state.team_outlook(code)
 			var words := {"contending": "Contender", "building": "Wildcard", "rebuilding": "Rebuilding"}
-			if str(o.get("phase", "")) != want or str(o.get("category", "")) != str(words[want]) 					or str(o.get("line", "")) != "%s. Team rating %d. On this list, %d in three years." % [words[want], int(o["rating"]), int(o["forecast"])]:
+			if str(o.get("phase", "")) != want or str(o.get("category", "")) != str(words[want]) 					or str(o.get("line", "")) != "%s. Team rating %.1f. On this list, %.1f in three years." % [words[want], float(o["rating"]), float(o["forecast"])]:
 				phase_ok = false
+			# The ladder's number (row 177), and three years on by the list's OVR move.
+			if not is_equal_approx(float(o["rating"]), snappedf(float(_state.club_strength(code)), 0.1)) 					or not is_equal_approx(float(o["forecast"]), snappedf(float(o["rating"]) + float(TR.forecast(list) - TR.rating(list)), 0.1)):
+				ladder_ok = false
 		# The words under a club on the hub (director, 2026-10-13), pinned to fixed values.
-		_check(TR.line("contending", 68, 65) == "Contender. Team rating 68. On this list, 65 in three years."
-				and TR.line("rebuilding", 65, 68) == "Rebuilding. Team rating 65. On this list, 68 in three years."
-				and TR.line("building", 70, 70) == "Wildcard. Team rating 70. On this list, 70 in three years.",
+		_check(TR.line("contending", 68.4, 65.4) == "Contender. Team rating 68.4. On this list, 65.4 in three years."
+				and TR.line("rebuilding", 65.0, 68.0) == "Rebuilding. Team rating 65.0. On this list, 68.0 in three years."
+				and TR.line("building", 70.2, 70.2) == "Wildcard. Team rating 70.2. On this list, 70.2 in three years.",
 				"The line under a club reads: category, team rating, then the rating in three years")
 		_check(rating_ok, "A club's rating is the mean OVR of the 22 the selector picks")
 		_check(phase_ok, "Its category is the phase the AI trades on, in words, for every club")
+		_check(ladder_ok, "Every club's team rating is the ladder's number, and its three-year rating on the same scale")
 		# The forecast only ever uses players on the list.
 		var some: Array = (_state.season.lists[_state.my_club] as Array).slice(0, 10)
 		var vals := []
@@ -1660,8 +1667,8 @@ func _test_team_rating(sz: Vector2i) -> void:
 		await _settle()
 		var vals := []
 		for c in _row_codes(s):
-			vals.append(int(_state.team_outlook(c)["rating"]))
-		_check(_non_increasing(vals), "...and ranks the clubs by their lists, best first (%s)" % tag)
+			vals.append(float(_state.club_strength(c)))
+		_check(_non_increasing(vals), "...and ranks the clubs by their best side, best first (%s)" % tag)
 		await Tap.tap(s.find_child("Sort_pos", true, false))
 		await _settle()
 	_check(s.find_child("Sort_window", true, false) == null and _text(s.find_child("LadderTable", true, false)).find("Contender") < 0,
@@ -1719,6 +1726,88 @@ func _by(s: Node, season, key: String) -> Array:
 	return out
 
 
+## Row 177 (director 2026-11-12: "ladder should always show your best 23
+## rating"): a club whose whole list rates high on OVR but whose best side is
+## weak ranks first by the old OVR average and last by the preview's measure;
+## the ladder's Rating column must rank it, and every other club, exactly as
+## the match preview's Overall does.
+func _test_ladder_rating_is_preview() -> void:
+	var TR = load("res://scripts/sim/TeamRating.gd")
+	var ladder = load("res://scripts/ui/stats/StatsLadder.gd")
+	var season = _state.season
+	var mine := str(_state.my_club)
+	var odd := ""
+	for c in season.lists:
+		if str(c) != mine and season.ladder.has(c):
+			odd = str(c)
+			break
+	var saved: Array = (season.lists[odd] as Array).duplicate(true)
+	# High OVR on paper, poor at everything the match engine reads.
+	for p in season.lists[odd]:
+		p["overall"] = 99
+		for k in (p["attr"] as Dictionary):
+			p["attr"][k] = 30
+	var ovr_better := 0
+	for c in season.lists:
+		if str(c) != odd and TR.rating(season.lists[c]) > TR.rating(season.lists[odd]):
+			ovr_better += 1
+	var rows: Array = ladder.rows(season)
+	var by := {}
+	for r in rows:
+		by[str(r["code"])] = float(r["rating"])
+	var ladder_rank := func(code: String) -> int:
+		var better := 0
+		for c in by:
+			if str(c) != code and float(by[c]) > float(by[code]):
+				better += 1
+		return better + 1
+	var h2h: Array = _state.my_head_to_head(odd)
+	var preview_rank := int(h2h[0]["theirs_rank"]) if not h2h.is_empty() else -1
+	_check(ovr_better == 0 and preview_rank == by.size(),
+			"The test club rates first on whole-list OVR (%d better) and last in the preview (%d of %d)"
+			% [ovr_better, preview_rank, by.size()])
+	_check(int(ladder_rank.call(odd)) == preview_rank,
+			"The ladder ranks it where the preview does (%d, preview %d)" % [int(ladder_rank.call(odd)), preview_rank])
+	var off := []
+	for c in by:
+		if str(c) == mine:
+			continue
+		var rows_h2h: Array = _state.my_head_to_head(str(c))
+		if rows_h2h.is_empty():
+			continue
+		if int(ladder_rank.call(str(c))) != int(rows_h2h[0]["theirs_rank"]) 				or int(ladder_rank.call(mine)) != int(rows_h2h[0]["mine_rank"]):
+			off.append(str(c))
+	_check(off.is_empty(), "Every club sits on the ladder's Rating where the preview ranks it: %s" % str(off))
+	var cell: String = ladder.cell_text({"rating": by[odd]}, "rating")
+	_check(cell == "%.1f" % by[odd], "The Rating cell reads the preview's number to one decimal (%s)" % cell)
+	season.lists[odd] = saved
+
+
+## In a season of a four-man bench the best side is 22 (18 and four on the
+## interchange), and the ladder's Rating is that side's, the same for every club.
+func _test_ladder_rating_by_era() -> void:
+	var ER = load("res://scripts/core/EraRules.gd")
+	var RT = load("res://scripts/sim/Ratings.gd")
+	var SQ = load("res://scripts/sim/Squad.gd")
+	var season = _state.season
+	var was: int = ER.year
+	for y in [2005, 2026]:
+		ER.year = y
+		var want := 18 + int(ER.interchange(y))
+		var bad := []
+		for c in season.lists:
+			var code := str(c)
+			if code == str(_state.my_club):
+				continue
+			var side: Dictionary = RT.select_side(season.lists[c], season.selections.get(c, {}))
+			var picked := (side["ground"] as Array).size() + (side["bench"] as Array).size()
+			var sq = SQ.new(code, season.lists[c], false, code, season.selections.get(c, {}))
+			if picked != want or not is_equal_approx(float(_state.club_strength(code)), float(sq.strength())):
+				bad.append("%s %d" % [code, picked])
+		_check(bad.is_empty(), "%d: the ladder's Rating is each club's best %d (%s)" % [y, want, str(bad.slice(0, 4))])
+	ER.year = was
+
+
 func _non_increasing(a: Array) -> bool:
 	for i in range(1, a.size()):
 		if a[i] > a[i - 1]:
@@ -1755,10 +1844,22 @@ func _test_fixture_finals() -> void:
 	var fix = load("res://scripts/ui/stats/StatsFixture.gd")
 	_check(fix.pages(season).size() == _rounds() and season.finals.is_empty(),
 			"Before the finals the fixture is the home-and-away rounds only")
+	# Straight to the end of the home and away season: the fixture's finals
+	# pages are under test, not how the rounds before them were played, so the
+	# rounds left are given plain results by hand (home sides by ten points).
+	while season.results.size() < season.fixture.size():
+		var at: int = season.results.size()
+		var rnd := []
+		for m in season.fixture[at]:
+			var g := {"home": str(m["home"]), "away": str(m["away"]), "score": [80, 70],
+					"goals": [12, 10], "behinds": [8, 10], "round": at + 1}
+			season.record_regular(g)
+			rnd.append(g)
+		season.results.append(rnd)
+	season.round_index = season.fixture.size()
+	season.recalc_ladder()
+	_state.ensure_finals()
 	var guard := 0
-	while season.finals.is_empty() and guard < 40:
-		_state.advance()
-		guard += 1
 	var pgs: Array = fix.pages(season)
 	_check(pgs.size() == _rounds() + 1 and bool(pgs.back()["finals"]) and str(pgs.back()["title"]) == "Wildcard finals",
 			"The finals week to play joins the fixture once the finals start")
@@ -2432,11 +2533,7 @@ func _test_trophies() -> void:
 		_check(yours != null and s.find_children("Club_premiership_*", "Button", true, false).size() == 1
 				and s.find_child("ClubHistory", true, false).find_child("Club_premiership_%d" % year, true, false) == null,
 				"Your flag is on the shelf, not among the history years (%s)" % tag)
-		s.queue_free()
-		await _settle()
-	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
-		s = await _open_trophies(sz)
-		var tag := "%dx%d" % [sz.x, sz.y]
+		# The same room at this size: your seasons, the shelves and the sheets.
 		intro = s.find_child("TrophiesTenure", true, false)
 		_check(intro != null and intro.text.ends_with("2 seasons, from %d." % (year - 1)),
 				"Only seasons at your club count (%s: %s)" % [tag, intro.text if intro else "none"])

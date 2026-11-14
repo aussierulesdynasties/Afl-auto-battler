@@ -1588,8 +1588,7 @@ func _test_club_ink_all() -> void:
 		if reds.has(c) != (nm == uk.TEXT) and c != "COL":
 			red_bad.append("%s name %s" % [c, nm.to_html(false)])
 	_check(red_bad.is_empty(), "A red-ink club's name is plain TEXT, every other club's name is its ink (Adelaide's is gold since 2026-10-14) (%s)" % str(red_bad))
-	# No name is painted in a raw red ink anywhere (found 2026-10-18: a Melbourne name read as the
-	# primary-action red). Part 1: name markup, every club in turn.
+	# Part 1: name markup, every club in turn.
 	var ni = load("res://scripts/ui/NameInk.gd")
 	var markup_bad := []
 	var reds_seen := 0
@@ -1601,11 +1600,14 @@ func _test_club_ink_all() -> void:
 		reds_seen += 1 if reds.has(c2) else 0
 		var who: String = db.player_display_name(squad[0])
 		var bb: String = ni.markup(who, ni.from_clubs([c2]))
-		var raw := "[color=#%s]" % uk.club_ink(c2).to_html(false)
-		var shown := "[color=#%s]" % uk.club_name_colour(uk.club_ink(c2)).to_html(false)
-		if not bb.contains(shown) or (reds.has(c2) and bb.contains(raw)):
+		# A player's name in running text is in his club's ink, red clubs included
+		# (rulings: "Every name in running text is in club ink (UiKit.club_ink, never
+		# club_name_colour)"; row 174, "sanders uncoloured?"). Headings stay white.
+		var shown := "[color=#%s]" % uk.club_ink(c2).to_html(false)
+		var white := "[color=#%s]" % uk.TEXT.to_html(false)
+		if not bb.contains(shown) or (reds.has(c2) and bb.contains(white)):
 			markup_bad.append("%s %s" % [c2, bb])
-	_check(markup_bad.is_empty() and reds_seen == reds.size(), "Every club's player name markup uses the name colour, never a red club's raw ink (%s, %d red clubs checked)" % [str(markup_bad), reds_seen])
+	_check(markup_bad.is_empty() and reds_seen == reds.size(), "Every club's player name markup is in its club's ink, a red club's red, never white (%s, %d red clubs checked)" % [str(markup_bad), reds_seen])
 	# Part 2 (no screen script paints a name label in a raw club ink) is a static lint now:
 	# tools/lint/screens.py check_raw_club_ink.
 

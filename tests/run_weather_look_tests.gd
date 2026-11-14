@@ -329,14 +329,16 @@ func _sim(seed_n: int) -> Object:
 
 ## Looks never reach the match: the same seed plays the same match whatever sky and
 ## weather the scenes are drawing, and a windy match's breeze is only ever read.
+## A first quarter is compared under each: the dice part ways from the first
+## bounce if anything the scenes draw is read, so a whole match adds nothing.
 func _test_same_match_under_every_sky() -> void:
 	Kickoff.forced_slot = ""
 	Grade.forced_weather = ""
 	var first = _sim(8128)
 	first.weather = "windy"
 	var breeze: int = first.breeze_side
-	var want: Dictionary = first.run()
-	_check((want["events"] as Array).size() > 100, "A whole match is played to compare (%d events)" % (want["events"] as Array).size())
+	var want: Dictionary = first.run_quarter()
+	_check((first.events as Array).size() > 25, "A whole quarter is played to compare (%d events)" % (first.events as Array).size())
 	var stage := Stage.new()
 	stage.ground = Ground
 	stage.cam = _cam()
@@ -363,8 +365,8 @@ func _test_same_match_under_every_sky() -> void:
 				drawn += 1
 			if sim.breeze_side != breeze:
 				same = -100
-			var got: Dictionary = sim.run()
-			if got["events"] == want["events"] and got["score"] == want["score"]:
+			var got: Dictionary = sim.run_quarter()
+			if sim.events == first.events and got == want:
 				same += 1
 	_check(combos == 12 and drawn == combos, "The ground is drawn in every weather at every time of day (%d of %d)" % [drawn, combos])
 	_check(same == combos, "The same seed plays the same match under every sky and weather (%d of %d)" % [same, combos])

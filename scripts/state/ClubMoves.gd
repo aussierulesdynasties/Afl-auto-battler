@@ -12,8 +12,10 @@ extends RefCounted
 ##                 his coaching career is over (TODO T5.r22, Director Bible
 ##                 5.2.19-5.2.22). Every running arc ends at the old club, and
 ##                 the move waits in coach_arcs.move.
-##   apply_move    (at the rollover, before the new lists are built; at once
-##                 when he takes a rival board's letter): he is the
+##   apply_move    (at once: at the season's close for a poached coach, when a
+##                 sacked coach takes a job, when he takes a rival board's
+##                 letter; at a club yet to play's first National Draft; the
+##                 rollover makes any move still waiting): he is the
 ##                 new club's coach. That club's AI senior coach takes the job
 ##                 he left (or, when his assistant was after it, the assistant
 ##                 does and the AI coach is let go). His career record (seasons,
@@ -68,6 +70,14 @@ static func season_close(gs) -> void:
 		gs.board["sacked"] = false
 		gs.board["verdict"] = "Sacked. You were already leaving for %s." % GameDB.club_name(to)
 	gs.add_news(ClubArcs.NEWS_KIND, "You leave %s for %s at season's end." % [GameDB.club_name(gs.my_club), GameDB.club_name(to)])
+	# He moves now, as a rival board's letter taken does (accept_letter): the
+	# off-season opens at the club he joins, so its staff, contracts, trades and
+	# draft are his and none of the club he leaves (row 189).
+	if is_joining(gs, to):
+		return
+	apply_move(gs)
+	gs.my_list = gs.season.lists.get(str(gs.my_club), [])
+	gs.open_offseason()
 
 
 ## Sacked at the season's close. His time at the club is over either way, so
@@ -126,9 +136,10 @@ static func career_over(gs) -> bool:
 ## accept_letter does): the off-season was held while he chose (GameState.
 ## open_offseason) and opens at the new club, so its staff, contracts, trades
 ## and draft are his and the club that sacked him gets no more calls from him
-## (row 179, director 2026-11-12). A club yet to play has no list to run: he
-## takes over at its first National Draft and has this off-season where he was.
-## The reprieve is spent.
+## (row 179, director 2026-11-12). A club yet to play has no list to run: the
+## club that sacked him plays out its off-season under its own staff and he
+## takes over at the new club's first National Draft, which opens now
+## (GameState.offseason_without_you, row 189). The reprieve is spent.
 static func take_job(gs, code: String) -> bool:
 	var st := ClubArcs._st(gs)
 	var pick := {}
@@ -149,7 +160,7 @@ static func take_job(gs, code: String) -> bool:
 	gs.add_news(ClubArcs.NEWS_KIND, "Sacked by %s, you have taken the senior job at %s for %d." % [
 			GameDB.club_name(from), GameDB.club_name(code), year + 1])
 	if is_joining(gs, code):
-		gs.open_offseason(true)
+		gs.offseason_without_you()
 		return true
 	apply_move(gs)
 	if gs.season != null:
@@ -394,8 +405,9 @@ static func new_club_list_line(gs, code: String, year: int) -> String:
 
 ## A move to a joining club is made when its first National Draft opens, so he
 ## makes its picks, as a career that starts with the club does
-## (GameState.choose_sim_ahead_club). Until then the off-season (contracts,
-## trades) is at the club he leaves. Called from GameState.begin_intake_draft
+## (GameState.choose_sim_ahead_club). The club he leaves has already played out
+## its off-season under its own staff (GameState.offseason_without_you), so
+## nothing of it was his. Called from GameState.begin_intake_draft
 ## once the draft has seated the new club; a club with no seat (a save past its
 ## build) is joined at the rollover instead (apply_move).
 static func apply_move_at_draft(gs) -> bool:
@@ -415,7 +427,7 @@ static func apply_move_at_draft(gs) -> bool:
 static func _list_line(outlook: Dictionary) -> String:
 	if outlook.is_empty():
 		return ""
-	return TeamRating.rating_line(int(outlook["rating"]), int(outlook["forecast"]))
+	return TeamRating.rating_line(float(outlook["rating"]), float(outlook["forecast"]))
 
 
 ## The off-season's opening moves rival lists (their re-signings, trades),
@@ -916,11 +928,11 @@ static func accept_letter(gs) -> bool:
 	var from := str(gs.my_club)
 	if is_joining(gs, str(l["code"])):
 		# A club yet to play: he takes over at its first National Draft
-		# (apply_move_at_draft). This off-season's contracts and trades stay
-		# his at the club he is leaving.
+		# (apply_move_at_draft), which opens now. The club he leaves plays out
+		# this off-season under its own staff (row 189).
 		gs.add_news(ClubArcs.NEWS_KIND, "You have taken the senior job at %s. You take over at the %d National Draft." % [
 				str(l["name"]), year])
-		gs.open_offseason(true)
+		gs.offseason_without_you()
 		return true
 	apply_move(gs)
 	# Your list is the new club's from now (a rollover rebuilds it anyway).

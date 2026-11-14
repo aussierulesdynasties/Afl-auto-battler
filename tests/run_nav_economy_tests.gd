@@ -141,10 +141,17 @@ func _test_paths_are_short() -> void:
 		_check((f[1] as Array).size() <= MAX_TAPS, "%s is %d taps from the hub (at most %d)" % [f[0], (f[1] as Array).size(), MAX_TAPS])
 
 
+## Frames a screen gets to lay out before it is read: containers sort
+## themselves within two, so four is room to spare (director 2026-11-14:
+## "shrink the tests less than 10 seconds too").
+const HUB_FRAMES := 6
+const SCREEN_FRAMES := 4
+
+
 func _hub() -> void:
 	_router.stack = []
 	_router.go("hub")
-	await _settle(12)
+	await _settle(HUB_FRAMES)
 	# Nothing may sit over the hub when a walk starts.
 	for c in current_scene.get_children():
 		if c is Control and (c as Control).visible and str(c.name) in ["CarnivalWeek", "MidseasonDraft", "BackingTalk", "EventSheet", "TrainingReport"]:
@@ -192,7 +199,7 @@ func _test_two_taps() -> void:
 			if why != "":
 				ok = false
 				break
-			await _settle(10)
+			await _settle(SCREEN_FRAMES)
 		if not ok:
 			continue
 		var seen := false
@@ -320,14 +327,15 @@ func _test_overflow() -> void:
 	root.size = PHONE
 	var win := Vector2(PHONE)
 	_check(UK.TEXT_SIZES.size() == 3, "three text sizes (%d)" % UK.TEXT_SIZES.size())
-	for row in UK.TEXT_SIZES:
-		var size_key := str(row[0])
+	# The smallest and the largest: words and buttons only grow with the text,
+	# so the middle size sits between the two (TEXT_SCALE).
+	for size_key in [str(UK.TEXT_SIZES[0][0]), str(UK.TEXT_SIZES[-1][0])]:
 		_gs.set_text_size(size_key)
 		for s in SCREENS:
 			var key := str(s[0])
 			_router.stack = []
 			_router.go(key)
-			await _settle(10)
+			await _settle(SCREEN_FRAMES)
 			var tag := "%s%s at %s" % [key, "" if str(s[1]) == "" else " " + str(s[1]), size_key]
 			_check(current_scene != null and _router.current() == key, "%s opens (on %s)" % [tag, _router.current()])
 			if current_scene == null:
@@ -339,7 +347,7 @@ func _test_overflow() -> void:
 					continue
 				var why: String = await Tap.tap(tab)
 				_check(why == "", "%s: a tap on the tab lands (%s)" % [tag, why])
-				await _settle(10)
+				await _settle(SCREEN_FRAMES)
 			var over := _overflows(current_scene, win)
 			_check(over.is_empty(), "%s: words past the screen's edge: %s" % [tag, "; ".join(over.slice(0, 8))])
 			var small := _small_targets(current_scene)

@@ -38,6 +38,7 @@ RULES = {
     "boundaries": boundaries.check,
     "export-presets": boundaries.check_presets,
     "no-import-sidecars": boundaries.check_no_import_sidecars,
+    "csv-kept": boundaries.check_csv_kept,
     "story-flags": story_flags.check,
 }
 
