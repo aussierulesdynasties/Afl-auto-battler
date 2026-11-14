@@ -205,7 +205,7 @@ func _shape_panel() -> Control:
 	lv.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	left.add_child(lv)
 	lv.add_child(UiKit.lbl("Best 23", UiKit.H2, UiKit.EMPH, true))
-	var shape_note := UiKit.lbl("Six defenders, six midfielders (ruck included), six forwards and five on the bench. Tap a guernsey.",
+	var shape_note := UiKit.lbl("Six defenders, six midfielders with the ruck, six forwards and five on the bench. Tap a guernsey.",
 			UiKit.SMALL, UiKit.MUTED)
 	shape_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	lv.add_child(shape_note)
@@ -254,7 +254,7 @@ func _full_list_panel() -> Control:
 	rh.name = "RookieListHead"
 	lbox.add_child(rh)
 	if rookies.is_empty():
-		var none := UiKit.lbl("No rookies. The Rookie Draft after the National Draft and the mid-season rookie draft fill these spots.",
+		var none := UiKit.lbl("No rookies yet. The Rookie Draft and the mid-season rookie draft fill these spots.",
 				UiKit.SMALL, UiKit.MUTED)
 		none.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		lbox.add_child(none)
@@ -270,9 +270,9 @@ func _full_list_panel() -> Control:
 				else "Category B rookies  %d / %d" % [cat_b.size(), RookieList.cat_b_spots()], UiKit.BODY, UiKit.EMPH, true)
 		bh.name = "CatBListHead"
 		lbox.add_child(bh)
-		var why_words := "Their own spots: they take no rookie list spot and don't count in the 44."
+		var why_words := "They have their own spots. They take no rookie list spot and don't count in the 44."
 		if over_b:
-			why_words = "The club's real 2026 list had %d; a club usually has %d spots for them. They take no rookie list spot and don't count in the 44." % [
+			why_words = "The club's real 2026 list had %d. A club usually has %d spots for them. They take no rookie list spot and don't count in the 44." % [
 					cat_b.size(), RookieList.cat_b_spots()]
 		var why := UiKit.lbl(why_words,
 				UiKit.SMALL, UiKit.MUTED)
@@ -448,7 +448,7 @@ func _open_profile(id: String) -> void:
 		var used := RookieList.senior_count(GameState.my_list)
 		actions.append({"name": "Upgrade", "label": "Upgrade to the senior list",
 				"disabled": block != "",
-				"detail": block if block != "" else "He takes a senior spot (%d of %d used) and his wage rises to the senior minimum, %s a season." % [
+				"detail": block if block != "" else "He takes a senior spot: %d of %d used. His wage rises to the senior minimum, %s a season." % [
 						used, RookieList.senior_spots(), Contracts.money(RookieList.senior_wage(GameState.season_year))],
 				"run": func():
 					if RookieList.upgrade(GameState, GameState.my_club, id):
