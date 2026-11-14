@@ -3205,8 +3205,11 @@ func _test_menu_and_career() -> void:
 	# percentage would be a model value leaking out.
 	# The familiarity line states its percentages on purpose (row 125): a gate's numbers.
 	var fam_line: String = load("res://scripts/sim/TeamFamiliarity.gd").signing_line()
-	var no_money := RegEx.create_from_string("\\$[0-9][0-9.,]*[mk]?").sub(_screen_text().replace(fam_line, ""), "", true)
-	_check(decimal.search(no_money) == null, "The trade screen shows no internal values")
+	# So does the team rating: the ladder's number, to one decimal (row 177).
+	var rated := RegEx.create_from_string("Team rating [0-9.]+[.] On this list, [0-9.]+ in three years[.]").sub(_screen_text().replace(fam_line, ""), "", true)
+	var no_money := RegEx.create_from_string("\\$[0-9][0-9.,]*[mk]?").sub(rated, "", true)
+	var leak := decimal.search(no_money)
+	_check(leak == null, "The trade screen shows no internal values (%s)" % (no_money.substr(maxi(0, leak.get_start() - 40), 80) if leak else ""))
 	_check(current_scene.find_child("TradeClubPhase", true, false) != null,
 			"The trade tab says where the other club is in its cycle")
 	var pick_btns := current_scene.find_children("Mine_pick_*", "Button", true, false)
@@ -3360,7 +3363,7 @@ func _test_menu_and_career() -> void:
 	var opp_line: Label = current_scene.find_child("OppTeamOutlook", true, false)
 	var own_o: Dictionary = _state.team_outlook(_state.my_club)
 	var opp_o: Dictionary = _state.team_outlook(str(_state.my_next_opponent().get("code", "")))
-	var rating_tail := "%s. Team rating %d. On this list, %d in three years."
+	var rating_tail := "%s. Team rating %.1f. On this list, %.1f in three years."
 	_check(own_line != null and opp_line != null
 			and own_line.text == rating_tail % [own_o["category"], own_o["rating"], own_o["forecast"]]
 			and opp_line.text.ends_with(rating_tail % [opp_o["category"], opp_o["rating"], opp_o["forecast"]])
