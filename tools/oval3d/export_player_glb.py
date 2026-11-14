@@ -102,6 +102,64 @@ def bake(name, fn, frames, fist):
 bake("jog", jog, 16, 70)
 bake("idle", idle, 1, 35)
 bake("carry", carry, 16, 10)
+
+# The mocap moves (row 198, "3d view 2" retargets the director's Rokoko takes onto this rig):
+# ARD_CLIPS names a .blend whose actions are keyed on this same rig at CLIP_FPS. Each becomes
+# its own track; key times are rescaled to this scene's rate so the move keeps its real speed.
+# The check poses their rig and ours at the same moment and compares where the hands, feet and
+# head land: a rig whose bones were re-oriented on import would bend the limbs differently.
+CLIPS = os.environ.get("ARD_CLIPS", "")
+CLIP_FPS = 30.0
+if CLIPS:
+    fps = bpy.context.scene.render.fps / bpy.context.scene.render.fps_base
+    with bpy.data.libraries.load(CLIPS) as (src, dst):
+        dst.actions = list(src.actions)
+        dst.objects = [n for n in src.objects]
+    theirs = next(o for o in dst.objects if o and o.type == "ARMATURE")
+    bpy.context.scene.collection.objects.link(theirs)
+    theirs.animation_data_create()
+    probe = ("hand_l", "hand_r", "foot_l", "foot_r", "head")
+
+    def keys(act):
+        if getattr(act, "layers", None):
+            return [fc for l in act.layers for s in l.strips for cb in s.channelbags for fc in cb.fcurves]
+        return list(act.fcurves)
+
+    def slot(holder, act):
+        if hasattr(holder, "action_slot") and act.slots:
+            holder.action_slot = act.slots[0]
+
+    for act in sorted(dst.actions, key=lambda a: a.name):
+        lo, hi = act.frame_range
+        worst = 0.0
+        for k in range(5):
+            f = lo + (hi - lo) * k / 4
+            theirs.animation_data.action = act
+            slot(theirs.animation_data, act)
+            bpy.context.scene.frame_set(int(f))
+            a = {b: theirs.matrix_world @ theirs.pose.bones[b].head for b in probe}
+            rig.animation_data.action = act
+            slot(rig.animation_data, act)
+            bpy.context.scene.frame_set(int(f))
+            for b in probe:
+                worst = max(worst, ((rig.matrix_world @ rig.pose.bones[b].head) - a[b]).length)
+        rig.animation_data.action = None
+        theirs.animation_data.action = None
+        if worst > 0.01:
+            raise SystemExit(f"CLIP {act.name}: our rig lands {worst:.3f} m from theirs; bone rests differ")
+        s = fps / CLIP_FPS
+        for fc in keys(act):
+            for kp in fc.keyframe_points:
+                kp.co.x = 1 + (kp.co.x - lo) * s
+                kp.handle_left.x = 1 + (kp.handle_left.x - lo) * s
+                kp.handle_right.x = 1 + (kp.handle_right.x - lo) * s
+            fc.update()
+        track = rig.animation_data.nla_tracks.new()
+        track.name = act.name
+        strip = track.strips.new(act.name, 1, act)
+        slot(strip, act)
+        print(f"CLIP {act.name}: {(hi - lo) / CLIP_FPS:.2f} s, rig match {worst * 1000:.1f} mm")
+    bpy.data.objects.remove(theirs)
 rig.animation_data.use_nla = True
 t_anim = time.time()
 
