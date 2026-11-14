@@ -12,17 +12,17 @@
 # balance, league_balance and calibration are planned last because most pull
 # requests skip them.
 # --- plan ---
-# From main run 41608122529 (2026-11-03), 68 suites, by tools/plan_ci_shards.py --shards 12.
-# Pull-request suite seconds per shard: 612 587 585 586 586 585 585 587 583 586 586 583
-1: save
-2: match_visual ratings
-3: match_game intake fitness coach_pathway calibration
-4: story pressure chronology planpane first_visit_intro
-5: career draft_ui scroll family
-6: coach_arcs match_motion coaches training milestones potential player_looks
-7: contracts ai league match_story workload traitlink
-8: back_nav preseason international rowgap roles namelink
-9: almanac matchday injuries trainrep intake_ui kick_range selection league_balance
-10: club draft finals achievements career_ui weekly_checklist big_call nameink
-11: plan_know expansion_package papers expansion match_marks keyboard coach_effects newsfront
-12: coach_market matchup stats practice awards assets calls balance
+# From main run 43577153380 (2026-11-15), 131 suites, by tools/plan_ci_shards.py --shards 12.
+# Pull-request suite seconds per shard: 466 466 465 462 466 462 462 462 462 462 465 465
+1: career_ui namelink coach_effects coach_pathway state_leagues_data
+2: expansion medical_panel era_rules roles predraft_card midseason_draft traitlink archetypes set_shots
+3: expansion_package first_visit_intro career match_visual stats premade_history selection goal_run_moves year_events combine_screen mid_intercepts contrast
+4: club draft_ui own_prospect legacy_rollover rookie_list awards league fitness planpane key_duels kick_range calibration
+5: intake intake_ui legacy_2000_long save load_flair era_money rival_read legacy_2000 milestones second_tier international_tap weather_look
+6: matchup recruit_undo back_nav match_game trainrep coach_market clublink coaches chronology league_news nameink league_balance
+7: practice season_rules coach_arcs matchday achievements finals big_call text_size real_fixture state_leagues_gamedb newsfront balance
+8: almanac draft contracts preseason dataset injuries weekly_checklist match_marks career_highs career_tale ratings
+9: rowgap legacy_2010 picture_truth player_condition nav_economy workload keyboard awards_count potential era_football remembered
+10: onboarding_walk training crowd legacy_2020_long plan_know save_release assets league_stories pressure ui_motion scouting_list
+11: decision_scenes coach_of_year legacy_2010_long story ai form_marks international custom_plan sir_doug_round back_carries family international_dealt
+12: match_story papers score_clock match_motion scroll plays_like legacy_start_2020 match_flow team_familiarity calls gather_round player_looks
