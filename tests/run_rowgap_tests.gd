@@ -222,16 +222,24 @@ func _one_page(node: Node, tag: String) -> void:
 		_check(held <= room + 1.0, "%s: score and team numbers fit without scrolling (%d of %d px)" % [tag, int(held), int(room)])
 
 
-## Full time on the Stats tab at 1280x720 over several matches (different clubs, seeds and
+## Full time on the Stats tab at 1280x720 over several matches (different seeds and
 ## numbers of calls): the calls block is inside the page every time, not one lucky game.
+## One career: Adelaide's round 1 is made again on each match seed (GameState's own
+## _build_pending_sim, as a changed side remakes it), so the calls differ (the blocks
+## print, 229 to 414 px of the 487 px page on 2026-11-14) without a new career a game.
 func _test_calls_seeds(size: Vector2i) -> void:
-	for pair in [["ADE", 2026], ["MEL", 2031], ["GWS", 2040], ["WCE", 2052], ["RIC", 2067], ["FRE", 2075]]:
-		_state.reset()
-		_state.career_seed = int(pair[1])
-		_state.replay_seed = int(pair[1])
-		_state.set_setting("seen_training_intro", true)
-		_state.start_season(str(pair[0]), _db.club_list(str(pair[0])))
-		_state.prepare_interactive_match()
+	_state.reset()
+	_state.career_seed = 2026
+	_state.replay_seed = 2026
+	_state.set_setting("seen_training_intro", true)
+	_state.start_season("ADE", _db.club_list("ADE"))
+	_check(_state.prepare_interactive_match(), "Adelaide's round 1 is ready to play")
+	var seeds := [2026, 2031, 2040, 2052, 2067, 2075]
+	var heights := {}
+	for match_seed in seeds:
+		var pair := ["ADE", match_seed]
+		_state._pending_build["seed"] = match_seed
+		_state._build_pending_sim()
 		var sim = _state.pending_sim
 		for q in range(4):
 			sim.run_quarter()
@@ -249,8 +257,12 @@ func _test_calls_seeds(size: Vector2i) -> void:
 		_check(ft != null, "%s %d: full time opens" % [str(pair[0]), int(pair[1])])
 		if ft != null:
 			_calls_in_view(ft, "%s %d full time stats %dx%d" % [str(pair[0]), int(pair[1]), size.x, size.y])
+			var calls := ft.find_child("CallsReadout", true, false) as Control
+			if calls != null:
+				heights[int(calls.size.y)] = true
 		scene.queue_free()
 		await _settle(4)
+	_check(heights.size() >= 3, "The seeds make calls blocks of different sizes, not one game six times (%s)" % str(heights.keys()))
 
 
 ## The whole Stats tab shows at once: the scroll holds no more than it shows, and the

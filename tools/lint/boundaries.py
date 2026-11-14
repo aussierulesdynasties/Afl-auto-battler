@@ -100,4 +100,29 @@ def check_no_import_sidecars(root):
     return out
 
 
+def _gdignored(root, path):
+    d = os.path.dirname(path)
+    while d:
+        if os.path.isfile(os.path.join(root, d, ".gdignore")):
+            return True
+        d = os.path.dirname(d)
+    return False
+
+
+def check_csv_kept(root):
+    """Every game CSV is kept as a plain file. Without importer="keep" Godot imports a CSV as a
+    translation: the export then leaves the CSV out (the game reads it with FileAccess), and the
+    threaded translation import crashed the CI editor import (signal 11, 2026-11-14)."""
+    out = []
+    for f in sorted(_tracked(root, ".")):
+        if not f.endswith(".csv") or _gdignored(root, f):
+            continue
+        side = os.path.join(root, f + ".import")
+        if not os.path.isfile(side):
+            out.append(Finding(f, 0, "csv-kept", "no .import sidecar: add one with importer=\"keep\" (copy any data/legacy one)"))
+        elif 'importer="keep"' not in read(root, f + ".import"):
+            out.append(Finding(f + ".import", 0, "csv-kept", "a CSV sidecar must say importer=\"keep\", not a translation"))
+    return out
+
+
 CHECKS = [check, check_presets, check_no_import_sidecars]

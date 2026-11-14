@@ -30,6 +30,8 @@ func run() -> void:
 	await _t("_test_created_club")
 	PreSeason.reload()
 	GameState.delete_saved_career()
+	for path in _snaps.values():
+		CareerSave.delete(path)
 	GameState.replay_seed = 0
 	print(Ran.line("Practice", self))
 
@@ -54,6 +56,43 @@ func _career(club := CLUB, seed := SUITE_SEED) -> void:
 	GameState.start_season(club, GameDB.club_list(club))
 	GameState.stories_on = false  # the pre-season cards have their own suites (preseason, story)
 	GameState.open_preseason()
+
+
+## Careers saved once and loaded again (load_career, the game's own path):
+## a career and its pre-season to the practice stop cost several seconds to
+## build, a load about half that. _test_saves proves a save at the stop loads
+## at the stop with the trial as it was.
+var _snaps := {}
+
+
+func _snap(key: String) -> void:
+	var path := "user://test_practice_%s.save" % key
+	var was := GameState.save_path
+	GameState.save_path = path
+	GameState.save_career()
+	GameState.save_path = was
+	_snaps[key] = path
+
+
+func _from_snap(key: String) -> bool:
+	var was := GameState.save_path
+	GameState.save_path = str(_snaps[key])
+	var ok := GameState.load_career()
+	GameState.save_path = was
+	GameState.replay_seed = SUITE_SEED
+	return ok
+
+
+## Fremantle's first pre-season, waiting at the practice match: built and
+## saved the first time, loaded every time after.
+func _stop() -> void:
+	if _snaps.has("stop"):
+		_check(_from_snap("stop") and GameState.preseason_stop() == "practice" and not GameState.practice_played(),
+				"(setup) the saved career loads at the practice stop")
+		return
+	_career()
+	_check(_to_practice(), "(setup) the pre-season reaches the practice stop")
+	_snap("stop")
 
 
 ## Press on until the practice match is waiting for the coach.
@@ -166,8 +205,8 @@ func _test_pairs() -> void:
 
 
 func _test_flow() -> void:
-	_career()
-	_check(_to_practice() and GameState.preseason_week() == 7 and GameState.practice_opponent() == "WCE",
+	_stop()
+	_check(GameState.preseason_week() == 7 and GameState.practice_opponent() == "WCE",
 			"The pre-season stops after week 7 for the practice match, against West Coast")
 	var pr := GameState.preseason_practice()
 	_check(not GameState.practice_played() and (pr["invites"] as Array).is_empty() and not bool(pr["seen"]),
@@ -185,25 +224,21 @@ func _test_flow() -> void:
 	_check(not GameState.sim_practice_match(), "It cannot be played twice")
 	_check(_past_papers(GameState.preseason_advance()) == "done" and not GameState.preseason_active() and GameState.preseason_week() == 8,
 			"Pressing on from the report finishes the last week and opens Round 1")
-	_career()
-	_to_practice()
-	_check(GameState.preseason_advance() == "practice" and GameState.practice_played() and GameState.preseason_stop() == "practice",
-			"Pressing on without playing it sims it and shows the report")
-	var before: Array = []
-	_career()
-	_to_practice()
-	before = GameState.my_list.map(func(p): return str(p["id"]) + str(p.get("xp", 0)))
+	# Set up and put down again, then pressed on: one career for both.
+	_stop()
+	var before: Array = GameState.my_list.map(func(p): return str(p["id"]) + str(p.get("xp", 0)))
 	_check(GameState.prepare_practice_match() and GameState.pending_phase == "practice"
 			and str(GameState.pending_match["home"]) == "FRE" and str(GameState.pending_match["away"]) == "WCE"
 			and GameState.pending_sim != null,
 			"Coached from the box, it is Fremantle at home to West Coast")
 	GameState._clear_pending()
-	_check(before.size() == GameState.my_list.size(), "...and setting it up changes nobody")
+	_check(before.size() == GameState.my_list.size() and not GameState.practice_played(), "...and setting it up changes nobody")
+	_check(GameState.preseason_advance() == "practice" and GameState.practice_played() and GameState.preseason_stop() == "practice",
+			"Pressing on without playing it sims it and shows the report")
 
 
 func _test_trial() -> void:
-	_career()
-	_to_practice()
+	_stop()
 	var prospects: Array = GameState.preseason_prospects()
 	var ids := prospects.slice(0, 8).map(func(p): return str(p["id"]))
 	var all_in := true
@@ -253,8 +288,7 @@ func _test_trial() -> void:
 			untouched = false
 	_check(untouched, "Only the prospects trialled are noted")
 	# An opponent never trials the same prospect.
-	_career()
-	_to_practice()
+	_stop()
 	var mine: Array = GameState._guest_picks(CLUB, 6, [], 1.0)
 	for id in mine:
 		GameState.toggle_practice_invite(id)
@@ -268,8 +302,7 @@ func _test_trial() -> void:
 	GameState._clear_pending()
 	# Spots left empty are filled by your recruiters, as every club's are: the
 	# match always gives its full look at the class (director, 2026-11-03).
-	_career()
-	_to_practice()
+	_stop()
 	var own := str(GameState.preseason_prospects()[GameState.preseason_prospects().size() - 1]["id"])
 	GameState.toggle_practice_invite(own)
 	var picks: Array = GameState._guest_picks(CLUB, 6, [own], GameState.recruiting_uncertainty_mult())
@@ -288,8 +321,7 @@ func _pool(id: String) -> Dictionary:
 
 
 func _test_leaves_nothing() -> void:
-	_career()
-	_to_practice()
+	_stop()
 	var ladder := _ladder_sig()
 	var board := GameState.board_confidence()
 	var tally := str(GameState.season_tally)
@@ -330,8 +362,7 @@ func _lists_after(games: float) -> Dictionary:
 	PreSeason.reload()
 	PreSeason.data()["practice_xp_games"] = games
 	PreSeason.data()["practice_injury_rate"] = 0.0
-	_career()
-	_to_practice()
+	_stop()
 	GameState.sim_practice_match()
 	var out := {}
 	for code in ["FRE", "WCE"]:
@@ -344,11 +375,7 @@ func _lists_after(games: float) -> Dictionary:
 
 
 func _test_ai_clubs() -> void:
-	_career()
-	var before := {}
-	for code in GameState.season.clubs:
-		before[str(code)] = GameState.season.lists[code].map(func(p): return int(p.get("xp", 0)))
-	_to_practice()
+	_stop()
 	var seen_by := {}
 	for q in GameState.draftee_pool:
 		for club in (q.get("seen", {}) as Dictionary):
@@ -380,51 +407,47 @@ func _test_determinism() -> void:
 
 
 func _test_saves() -> void:
-	_career()
-	_to_practice()
+	_stop()
 	GameState.toggle_practice_invite(str(GameState.preseason_prospects()[1]["id"]))
 	GameState.save_career()
 	var kept: Dictionary = GameState.preseason_practice().duplicate(true)
-	GameState.reset()
+	# No reset() first: load_career resets the career itself (_restore_career).
 	_check(GameState.load_career() and GameState.preseason_stop() == "practice"
 			and str(GameState.preseason_practice()) == str(kept),
 			"A save made at the practice stop loads at the practice stop, the trial as it was")
 	GameState.sim_practice_match()
 	GameState.save_career()
-	GameState.reset()
 	_check(GameState.load_career() and GameState.practice_played() and GameState.preseason_stop() == "practice"
 			and not (GameState.preseason_practice()["report"] as Dictionary).is_empty(),
 			"A save made after the match keeps its report")
 	# Old saves: made before there was a practice match.
-	_career()
-	_to_practice()
+	_stop()
 	GameState.preseason.erase("practice")
 	_check(GameState.preseason_stop() == "" and _past_papers(GameState.preseason_advance()) == "done" and not GameState.preseason_active(),
 			"A save from week 7 with no practice match runs on to Round 1")
 	_career()
 	GameState.preseason_advance()  # to the time trial, week 3
-	var guard := 0
 	GameState.save_career()
 	var raw := CareerSave.read(GameState.save_path)
 	_check(not (raw.get("preseason", {}) as Dictionary).has("practice"), "(a save from before week 7 holds no practice match yet)")
-	GameState.reset()
-	_check(GameState.load_career() and _to_practice() and GameState.practice_opponent() == "WCE",
-			"A save from before week 7 loads and meets the practice match when it gets there")
-	# A save standing at the old intra-club stop (end of week 5, before the one
-	# pre-season match, director 2026-11-03): it loads, the old match is gone,
-	# and pressing on meets the practice match.
-	_career()
-	guard = 0
+	_check(GameState.load_career() and GameState.preseason_week() < 5, "(setup) the save loads at the time trial")
+	# Pressed on from the time trial until past week 5 (where the old
+	# intra-club stop stood): it runs on to week 7 and the practice match.
+	var guard := 0
 	while GameState.preseason_week() < 5 and guard < 8:
 		guard += 1
 		GameState.preseason_advance()
 	_check(GameState.preseason_week() == 7 and GameState.preseason_stop() == "practice",
 			"With no intra-club match, pressing on from the time trial runs to the practice match at the end of week 7")
+	_check(GameState.practice_opponent() == "WCE",
+			"A save from before week 7 loads and meets the practice match when it gets there")
+	# A save standing at the old intra-club stop (end of week 5, before the one
+	# pre-season match, director 2026-11-03): it loads, the old match is gone,
+	# and pressing on meets the practice match. Made from the same career.
 	GameState.preseason["week"] = 5
 	GameState.preseason.erase("practice")
 	GameState.preseason["intra"] = {"mode": "best", "invites": [], "played": false, "seen": false}
 	GameState.save_career()
-	GameState.reset()
 	_check(GameState.load_career() and not GameState.preseason.has("intra") and GameState.preseason_stop() == "",
 			"A save from the old intra-club stop loads with the old match gone and the pre-season not waiting")
 	_check(GameState.preseason_advance() == "practice" and GameState.preseason_week() == 7 and GameState.practice_opponent() == "WCE",
@@ -465,17 +488,13 @@ func _test_sim_to_round_one() -> void:
 			"Round 1 set up mid pre-season sims the practice match and puts its result in the news")
 	GameState._clear_pending()
 	# Already played and its report shown at the stop: no news line on top.
-	_career()
-	_to_practice()
+	_stop()
 	GameState.sim_practice_match()
 	GameState.preseason_sim_to_round1()
 	_check(not GameState.preseason_active() and _practice_news().is_empty(),
 			"A practice match already played and shown adds no news line on the way to Round 1")
-	_career("MEL")
-	_to_practice()
-	var opp := GameState.practice_opponent()
-	_check(PreSeason.PRACTICE_REGION.get(opp, "") == "VIC" and opp != "MEL",
-			"Melbourne's practice match is against another Victorian club (%s)" % opp)
+	# Melbourne's opponent: checked in _test_screens_pc, on the Melbourne career
+	# it takes to the same stop.
 
 
 func _tap_to_practice(tree: SceneTree) -> Control:
@@ -493,10 +512,12 @@ func _tap_to_practice(tree: SceneTree) -> Control:
 func _test_screens_phone() -> void:
 	var tree := Engine.get_main_loop() as SceneTree
 	tree.root.size = Vector2i(390, 844)
-	_career()
+	# The stop itself is under test here: the taps through the weeks to it are
+	# proved by _test_created_club (coached) and _test_screens_pc.
+	_stop()
 	GameState.set_setting("seen_weekly_loop_intro", true)
 	GameState.set_setting("seen_training_intro", true)
-	var scene: Control = await _tap_to_practice(tree)
+	var scene: Control = await _open(tree)
 	_check(scene != null and scene.name == "PreSeasonScene" and GameState.preseason_stop() == "practice"
 			and _label(scene, "PreSeasonHero") == "The practice match"
 			and _label(scene, "PracticeHome") == "Fremantle" and _label(scene, "PracticeAway") == "West Coast",
@@ -573,8 +594,8 @@ func _test_screens_phone() -> void:
 	_check(scene != null and scene.name == "HubScene" and not GameState.preseason_active() and GameState.preseason_week() == 8,
 			"Phone: the quiet week passes and the hub opens at Round 1")
 	# Simmed from the screen.
-	_career()
-	scene = await _tap_to_practice(tree)
+	_stop()
+	scene = await _open(tree)
 	_check(await _tap(scene.find_child("PracticeSim", true, false), "Sim the match"), "Phone: a finger's tap sims the match")
 	await _frames(tree, 6)
 	scene = tree.current_scene as Control
@@ -639,19 +660,18 @@ func _test_match_way() -> void:
 	tree.root.size = Vector2i(390, 844)
 	var was := GameState.match_way()
 	for way in ["skip", "watch", "key"]:
-		_career()
+		_stop()
 		# Written raw: "key" is what an install from before the cut still holds.
 		GameState.set_setting("match_way", way)
-		_to_practice()
 		GameState.match_way_live = "skip"   # a leftover from another match
 		_check(GameState.prepare_practice_match() and GameState.match_way_live == "watch",
 				"With %s set, the practice match is watched (%s)" % [way, GameState.match_way_live])
 		GameState._clear_pending()
-	_career()
+	_stop()
 	GameState.set_match_way("skip")
 	GameState.set_setting("seen_weekly_loop_intro", true)
 	GameState.set_setting("seen_training_intro", true)
-	var scene: Control = await _tap_to_practice(tree)
+	var scene: Control = await _open(tree)
 	_check(await _tap(scene.find_child("PreSeasonGo", true, false), "Coach the match"), "Phone: a finger's tap goes to coach the match")
 	var m: Control = null
 	for i in range(120):
@@ -687,6 +707,8 @@ func _test_screens_pc() -> void:
 	GameState.set_setting("seen_training_intro", true)
 	var scene: Control = await _tap_to_practice(tree)
 	var opp := GameState.practice_opponent()
+	_check(PreSeason.PRACTICE_REGION.get(opp, "") == "VIC" and opp != "MEL",
+			"Melbourne's practice match is against another Victorian club (%s)" % opp)
 	_check(scene != null and scene.name == "PreSeasonScene" and _label(scene, "PracticeHome") == "Melbourne" and _label(scene, "PracticeAway") == GameDB.club_name(opp)
 			and _fits(scene, 960.0),
 			"PC: the practice stop fits the screen and names the match")
@@ -762,9 +784,12 @@ func _test_created_club() -> void:
 			"A club outside every region, left alone once the regions pair off, still has a match")
 	var tree := Engine.get_main_loop() as SceneTree
 	tree.root.size = Vector2i(390, 844)
-	# Coached.
+	# Coached. The created career is built once and saved twice, at the plan
+	# and at the practice stop; the other three ways load it.
 	_created_career()
+	_snap("created_plan")
 	var scene: Control = await _tap_to_practice(tree)
+	_snap("created_stop")
 	var opp := GameState.practice_opponent()
 	_check(GameState.preseason_stop() == "practice" and PreSeason.PRACTICE_REGION.get(opp, "") == "VIC"
 			and _label(scene, "PracticeHome") == "Port Melbourne",
@@ -785,8 +810,9 @@ func _test_created_club() -> void:
 			and _label(scene, "PracticeSide_0") == "Port Melbourne",
 			"Created club, coached: the match is played and its report shown")
 	# Simmed from the stop.
-	_created_career()
-	scene = await _tap_to_practice(tree)
+	_check(_from_snap("created_stop") and str(GameState.custom_club.get("code", "")) == "PMB" and GameState.preseason_stop() == "practice",
+			"(setup) the created club's career loads at the practice stop")
+	scene = await _open(tree)
 	_check(await _tap(scene.find_child("PracticeSim", true, false), "Sim the match"),
 			"Created club: a finger's tap sims the match")
 	await _frames(tree, 6)
@@ -794,13 +820,13 @@ func _test_created_club() -> void:
 	_check(GameState.practice_played() and _label(scene, "PracticeSide_0") == "Port Melbourne",
 			"Created club, simmed: the match is played and its report shown")
 	# Pressed on without playing.
-	_created_career()
-	_to_practice()
+	_from_snap("created_stop")
 	_check(GameState.preseason_advance() == "practice" and GameState.practice_played()
 			and GameState.preseason_stop() == "practice",
 			"Created club, pressed on: the match is simmed and the report waits")
 	# Sim to Round 1 from the plan.
-	_created_career()
+	_check(_from_snap("created_plan") and GameState.preseason_stop() == "plan" and GameState.my_club == "PMB",
+			"(setup) the created club's career loads at the pre-season plan")
 	scene = await _open(tree)
 	_check(await _tap(scene.find_child("PreSeasonSim", true, false), "Sim to Round 1"),
 			"Created club: a finger's tap sims to Round 1")
