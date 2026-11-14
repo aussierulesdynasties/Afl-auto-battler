@@ -23,6 +23,7 @@ var oval
 var director
 var sun: DirectionalLight3D
 var extras: Array = []
+var looks: Array = []         # [LookAtModifier3D, its skeleton]
 var label: Label
 var rows: Array = []
 
@@ -79,6 +80,7 @@ func _run() -> void:
 	var head := "%s | %s | %dx%d\n" % [OS.get_model_name(), RenderingServer.get_video_adapter_name(),
 			get_viewport().get_visible_rect().size.x, get_viewport().get_visible_rect().size.y]
 	var table := "set-up        frame  p95  sync   cpu   gpu  (ms)\n" + "\n".join(rows)
+	head += "look-at modifiers: %d\n" % looks.size()
 	label.text = head + table + "\nDone: screenshot this."
 	var f := FileAccess.open("user://oval3d_phone.txt", FileAccess.WRITE)
 	if f:
@@ -98,8 +100,18 @@ func _setup(st: Array) -> void:
 		RenderingServer.directional_soft_shadow_filter_set_quality(RenderingServer.SHADOW_QUALITY_SOFT_HIGH)
 	get_viewport().mesh_lod_threshold = float(st[3])
 	# Row 198's head look-at (LookAtModifier3D under each skeleton), when the build has it.
-	for m in oval.find_children("*", "LookAtModifier3D", true, false):
-		m.active = bool(st[4])
+	# Oval3DAnim sets each modifier's active flag every frame, so "off" takes the modifiers
+	# out of their skeletons (the skeleton then never runs them) and "on" puts them back.
+	if looks.is_empty():
+		for m in oval.find_children("*", "LookAtModifier3D", true, false):
+			looks.append([m, m.get_parent()])
+	for pair in looks:
+		var m: Node = pair[0]
+		var skel: Node = pair[1]
+		if bool(st[4]) and m.get_parent() == null:
+			skel.add_child(m)
+		elif not bool(st[4]) and m.get_parent() != null:
+			skel.remove_child(m)
 	# Umpires and spares stand-ins: jogging figures near the play, so they cost what they would.
 	while extras.size() < int(st[1]):
 		var scene: PackedScene = load("res://assets/oval3d/player_average.glb")
