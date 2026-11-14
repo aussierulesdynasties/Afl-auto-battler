@@ -1,8 +1,9 @@
 # PRs never edit docs/TODO.md (parallel PRs conflicted there). A PR body names the
 # rows it finishes with "Closes row 54" / "Closes rows 22, 27" / "Closes row T5.Q24",
 # and the rows it advances with "Part of row 142"; after the merge this deletes the
-# finished rows from main and adds "Merged #N: title." to the advanced ones, so the
-# list never falls behind what has landed (director 2026-11-14).
+# finished rows from main (docs/TODO.md, and section V of docs/TODO_RULINGS.md) and
+# adds "Merged #N: title." to the advanced ones, so the list never falls behind what
+# has landed (director 2026-11-14).
 #
 # main requires the "test" check with enforce_admins, so a bot push to main is rejected
 # even after the check passed. Instead: commit on roadmap-close/pr-N, open a PR labelled
@@ -52,16 +53,16 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           branch="roadmap-close/pr-$PR"
-          ids=$(python3 tools/roadmap_close.py --body-file "$RUNNER_TEMP/body.txt" --todo docs/TODO.md --pr "$PR" --title "$TITLE")
+          ids=$(python3 tools/roadmap_close.py --body-file "$RUNNER_TEMP/body.txt" --todo docs/TODO.md --todo docs/TODO_RULINGS.md --pr "$PR" --title "$TITLE")
           if [ -z "$ids" ]; then echo "::warning::No TODO row closed or advanced for #$PR"; exit 0; fi
           case "$ids" in *,*) word="rows" ;; *) word="row" ;; esac
           git checkout -q -b "$branch"
-          git add docs/TODO.md
+          git add docs/TODO.md docs/TODO_RULINGS.md
           git commit -q -m "Roadmap: update $word $ids (#$PR)"
           git push -q -f origin "HEAD:refs/heads/$branch"
-          url=$(gh pr create --base main --head "$branch" --label roadmap --title "Roadmap: update $word $ids (#$PR)" --body "Closes or notes the TODO.md $word named by #$PR. Opened by the Roadmap close action.")
+          url=$(gh pr create --base main --head "$branch" --label roadmap --title "Roadmap: update $word $ids (#$PR)" --body "Closes or notes the TODO.md or TODO_RULINGS.md $word named by #$PR. Opened by the Roadmap close action.")
           gh pr merge "$url" --auto --squash --delete-branch
-          gh workflow run tests.yml --ref "$branch" -f changed_files=docs/TODO.md
+          gh workflow run tests.yml --ref "$branch" -f changed_files='docs/TODO.md docs/TODO_RULINGS.md'
           echo "Opened $url"
           # Approve the PR's held Tests run (see the note at the top). Best effort.
           for _ in 1 2 3 4 5 6 7 8 9 10 11 12; do

@@ -65,6 +65,22 @@ class CloseTests(unittest.TestCase):
             main(["--body-file", str(body), "--todo", str(todo)])
             self.assertEqual(todo.read_bytes(), DOC.replace("| 54 | a |\n", "").encode("utf-8"))
 
+    def test_main_closes_across_files(self):
+        # Section V rows (V2, V3, V5 to V9) live in TODO_RULINGS.md, not TODO.md.
+        with tempfile.TemporaryDirectory() as d:
+            todo, rul = pathlib.Path(d, "TODO.md"), pathlib.Path(d, "TODO_RULINGS.md")
+            body = pathlib.Path(d, "body.txt")
+            rules = "# Rulings\n\n| Id | What |\n|---|---|\n| V2 | streamers |\n| V3 | sparkles |\n"
+            todo.write_bytes(DOC.encode("utf-8"))
+            rul.write_bytes(rules.encode("utf-8"))
+            body.write_text("Closes row V2", encoding="utf-8")
+            both = ["--todo", str(todo), "--todo", str(rul)]
+            self.assertEqual(main(["--check", "--body-file", str(body), "--todo", str(todo)]), 1)
+            self.assertEqual(main(["--check", "--body-file", str(body)] + both), 0)
+            main(["--body-file", str(body)] + both)
+            self.assertEqual(todo.read_bytes(), DOC.encode("utf-8"))
+            self.assertEqual(rul.read_bytes(), rules.replace("| V2 | streamers |\n", "").encode("utf-8"))
+
 
 class PartTests(unittest.TestCase):
     def test_part_forms(self):
