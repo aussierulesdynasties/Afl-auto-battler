@@ -3,7 +3,7 @@ extends SceneTree
 ## portrait 390x844, a fresh Fremantle career that never touches a real save. One launch writes every
 ## state whose copy the pass changed, so the same script gives the before (on main) and the after:
 ##   godot --path . --script tools/visual/capture_copy_voice_stats.gd -- --out <prefix> [--only a,b]
-## Writes <prefix>_<state>.png for: guide, guide_ball, guide_scoring, guide_body, guide_ovr, guide_pot,
+## Writes <prefix>_<state>.png for: guide, guide_ball, guide_use, guide_scoring, guide_defence, guide_body, guide_ovr, guide_pot,
 ## guide_strengths, guide_traits, guide_injuries, guide_dev, options, options_sim, options_view,
 ## options_saves, list_shape, list_full, list_rookie, stats_intro, stats_ladder, stats_coach.
 
@@ -41,7 +41,8 @@ func _run() -> void:
 	_fresh()
 
 	# The stat guide: the tiles, then every page whose words changed.
-	var guide_pages := {"guide_ball": "group0", "guide_scoring": "group2", "guide_body": "group3",
+	var guide_pages := {"guide_ball": "group0", "guide_use": "group1", "guide_scoring": "group2",
+			"guide_defence": "group3", "guide_body": "group4",
 			"guide_ovr": "topic0", "guide_pot": "topic1", "guide_strengths": "topic2", "guide_traits": "topic3",
 			"guide_injuries": "topic4", "guide_dev": "topic5"}
 	if _want("guide") or guide_pages.keys().any(func(k): return _want(k)):
@@ -90,11 +91,16 @@ func _run() -> void:
 					else _label_holding(scene, "Rookie list"))
 			await _shot("list_full")
 		if _want("list_rookie"):
+			# A fresh Fremantle list has no rookies: put its youngest on the rookie list for the frame.
 			var rook := ""
+			var young := 99.0
 			for p in _state.my_list:
-				if load("res://scripts/state/RookieList.gd").is_rookie(p):
+				if float(p.get("age", 99.0)) < young:
+					young = float(p.get("age", 99.0))
 					rook = str(p["id"])
-					break
+			for p in _state.my_list:
+				if str(p["id"]) == rook:
+					p["rookie_list"] = "A"
 			if rook != "":
 				scene.call("_open_profile", rook)
 				await _frames(12)
