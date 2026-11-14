@@ -1643,7 +1643,8 @@ func _test_trade_value() -> void:
 ## projected cover stay separate.
 func _test_trade_packages_and_needs() -> void:
 	GameDB.reload()
-	var base: Array = GameDB.club_list("COL").duplicate()
+	# Trimmed so taking three for one never meets the list limits.
+	var base: Array = GameDB.club_list("COL").duplicate().slice(0, 35)
 	var gee: Array = GameDB.club_list("GEE")
 	# (Not a star in his rehab year: his rating is about to jump.)
 	var ordinary := gee.filter(func(q): return int(q["overall"]) >= 58 and int(q["overall"]) <= 68 and float(q["age"]) >= 26.0 \
@@ -3034,7 +3035,7 @@ func _test_trade_reasons() -> void:
 	# Lists trimmed to 39 so the list limits never decide.
 	var base: Array = _padded(GameDB.club_list("COL").duplicate()).slice(0, 39)
 	var ctx := {"phase": "building", "name": "Collingwood", "names": {"t_weak": "Weak Link"}}
-	var mine: Array = _padded(GameDB.club_list("GEE").duplicate()).slice(0, 38)
+	var mine: Array = _padded(GameDB.club_list("GEE").duplicate()).slice(0, 37)
 	# A value gap: a starter for a pick that buys nothing.
 	var starter := _with(base[3], {"id": "t_starter", "overall": 80, "potential": 80, "age": 27.0})
 	var club: Array = base.duplicate()
