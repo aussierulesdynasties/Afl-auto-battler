@@ -132,6 +132,10 @@ TRAINING_NEW = [
     "Each point on one stat costs more as it climbs. So his OVR grows more slowly than with no stat focus.",
     "As a %s he rates %d. In his own position, %d. ", "That is up to the standard. He can be picked there after week %d.",
     "Get within %d by week %d and he can be picked there.",
+    # Row 135, second pass (2026-11-15): the Learn picker added after pass 6, the carry-on line and the potential notes.
+    "He can learn %s.\\nTwo of our players are learning a position already: %s.\\nHe can start when one of them finishes or stops.",
+    "carries on until we lock one in for %d.", "Past his potential: every point costs far more.",
+    "Close to his potential: training costs more.",
 ]
 TRAINING_OLD = [
     "should become", "safe default", "whenever you like", "Fit players you leave out", "improve quickest",
@@ -139,6 +143,7 @@ TRAINING_OLD = [
     "Development changed", "lifted him from", "applied to %d", "spent under the new focus",
     "(a senior game", "learns a position:", "You can change it when", "get dearer", "on his plan alone",
     "further past its line", "his own game %d", "\"up to the standard", "\"within %d by week",
+    "but two players are already learning", "comes off it", "until you lock", "his projected peak",
 ]
 
 ## Every pinned pass: (file, the pass, its rewritten lines, the lines they replaced).
