@@ -135,7 +135,9 @@ func _test_training(club: String, sz: Vector2i) -> void:
 	var news: Node = null
 	var rises_box := scene.find_child("TrainingRises", true, false)
 	if rises_box != null and rises_box.get_child_count() > 0:
-		news = rises_box.get_child(0)
+		# Each riser is a row (row V5): his name leads it.
+		news = rises_box.get_child(0).find_children("*", "RichTextLabel", true, false).front() \
+				if not rises_box.get_child(0).find_children("*", "RichTextLabel", true, false).is_empty() else null
 	_check(rises_box != null and rises_box.get_child_count() == 2, "%s: both risers are listed by name" % tag)
 	_check(news is RichTextLabel and (news as RichTextLabel).get_theme_font("normal_font") == load("res://assets/fonts/ARDSignwriter-Regular.ttf")
 			and (news as RichTextLabel).get_theme_font("bold_font") == load("res://assets/fonts/ARDSignwriter-Bold.ttf"),
