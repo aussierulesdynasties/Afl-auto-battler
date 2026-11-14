@@ -23,6 +23,10 @@ true. This repo copy is the only one; the general rules it builds on are in the
    re-run the failed jobs (`gh run rerun <id> --failed`). Keep a `roadmap` PR to list
    edits only, never mixed with code: that part is convention, CI does not check it.
    Ids stop at the first word that isn't one ("Closes row 54 for the ruck" closes 54).
+   Every PR body must name its row (director 2026-11-14, after 25 merges left the list
+   behind): `Closes row N` (finished), `Part of row N` (progress: after the merge the row
+   gains "Merged #PR: title.") or `No row: <why>`. The plan job fails a body with none, or
+   with an id no row has; edit the body and re-run the failed jobs.
 2. **After `git merge origin/main`, run the suites main just brought in**, not
    only yours. A merge of two green branches can be red: set-share (#484) + the
    Stats patch (#509) were each green, the merge failed `stats`

@@ -3,7 +3,7 @@ import pathlib
 import tempfile
 import unittest
 
-from roadmap_close import close_rows, main, parse_ids, resolve
+from roadmap_close import PART, check, close_rows, main, note_rows, parse_ids, resolve
 
 DOC = ("\ufeff# TODO\n\n| Row | Item |\n|---|---|\n| 54 | a |\n| 541 | b |\n"
        "| T5.Q24 | c |\n| 6.44 | d |\n| 35, 36 | e |\ntext 54 stays\r\n")
@@ -64,6 +64,47 @@ class CloseTests(unittest.TestCase):
             self.assertEqual(todo.read_bytes(), DOC.encode("utf-8"))
             main(["--body-file", str(body), "--todo", str(todo)])
             self.assertEqual(todo.read_bytes(), DOC.replace("| 54 | a |\n", "").encode("utf-8"))
+
+
+class PartTests(unittest.TestCase):
+    def test_part_forms(self):
+        self.assertEqual(parse_ids("Part of row 142\n", PART), [["142"]])
+        self.assertEqual(parse_ids("- part of rows 131, 132", PART), [["131", "132"]])
+        self.assertEqual(parse_ids("Closes row 54", PART), [])
+
+    def test_note_appends_to_what_cell(self):
+        new, noted = note_rows(DOC, ["54"], "1600", "Legacy: the 2010 start.")
+        self.assertEqual(noted, ["54"])
+        self.assertIn("| 54 | a Merged #1600: Legacy: the 2010 start. |\n", new)
+        self.assertIn("| 541 | b |", new)
+        self.assertEqual(new.replace(" Merged #1600: Legacy: the 2010 start.", ""), DOC)
+
+    def test_note_keeps_crlf(self):
+        doc = "| 7 | x | y |\r\n"
+        self.assertEqual(note_rows(doc, ["7"], "1", "T")[0], "| 7 | x Merged #1: T. | y |\r\n")
+
+    def test_main_closes_and_notes(self):
+        with tempfile.TemporaryDirectory() as d:
+            todo, body = pathlib.Path(d, "TODO.md"), pathlib.Path(d, "body.txt")
+            todo.write_bytes(DOC.encode("utf-8"))
+            body.write_text("Closes row 54\nPart of row 6.44", encoding="utf-8")
+            main(["--body-file", str(body), "--todo", str(todo), "--pr", "9", "--title", "Grounds"])
+            out = todo.read_bytes().decode("utf-8")
+            self.assertNotIn("| 54 | a |", out)
+            self.assertIn("| 6.44 | d Merged #9: Grounds. |", out)
+
+
+class CheckTests(unittest.TestCase):
+    def test_needs_a_row(self):
+        self.assertIsNotNone(check("Fixes the ruck.", DOC))
+        self.assertIsNone(check("Closes row 54", DOC))
+        self.assertIsNone(check("Part of row T5.Q24", DOC))
+        self.assertIsNone(check("No row: CI retry for a flaky mirror", DOC))
+        self.assertIsNotNone(check("No row:", DOC))
+
+    def test_unknown_row_fails(self):
+        self.assertIn("999", check("Part of row 999", DOC))
+        self.assertIn("999", check("Closes rows 54, 999", DOC))
 
 
 if __name__ == "__main__":
