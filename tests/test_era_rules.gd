@@ -315,7 +315,7 @@ func _test_smart_delisting() -> void:
 		if p != kid and p != vet and str(p.get("rookie_list", "")) == "":
 			base = p
 			break
-	while RookieList.senior_count(list.filter(func(q): return not GameState.retiring_now(q))) < 43:
+	while RookieList.senior_count(GameState.staying_on(list)) < 43:
 		var extra: Dictionary = base.duplicate(true)
 		extra["id"] = "era_extra_%d" % list.size()
 		extra["rookie_list"] = ""
@@ -326,7 +326,7 @@ func _test_smart_delisting() -> void:
 	GameState._era_trim_rivals()
 	_check(list.has(kid), "The 69-rated 20-year-old with 75 to come is kept")
 	_check(not list.has(vet), "The 70-rated 35-year-old is delisted first")
-	_check(RookieList.senior_count(list.filter(func(q): return not GameState.retiring_now(q))) <= 42,
+	_check(RookieList.senior_count(GameState.staying_on(list)) <= 42,
 			"The list is down to 42")
 	EraRules.list_ahead = false
 
