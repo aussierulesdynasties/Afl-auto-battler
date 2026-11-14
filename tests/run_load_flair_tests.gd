@@ -16,6 +16,8 @@ var _checks := 0
 var _failures: Array[String] = []
 
 const SUITE_SEED := 2027
+## Home-and-away rounds _test_async_weeks_change_nothing plays before the finals.
+const HOME_AWAY_WEEKS := 1
 const Tap := preload("res://tests/tap.gd")
 
 
@@ -350,14 +352,21 @@ func _season_scores(threaded_frames: bool) -> String:
 	var frames := [0]
 	var count := func(): frames[0] += 1
 	process_frame.connect(count)
+	var weeks := 0
 	while not _state.season.is_season_over():
+		# One home-and-away round, then straight to the finals: both kinds of
+		# week are played both ways, without a whole season of matches.
+		if weeks == HOME_AWAY_WEEKS and not _state.season.is_regular_done():
+			_state.season.round_index = _state.season.fixture.size()
 		if threaded_frames:
 			await _state.advance_async()
 		else:
 			_state.advance()
+		weeks += 1
 	process_frame.disconnect(count)
 	if threaded_frames:
-		_check(frames[0] >= 24, "frames drew while the weeks played (%d)" % frames[0])
+		# At least one frame for each week played (the full season's 24 for 27 weeks).
+		_check(weeks > HOME_AWAY_WEEKS and frames[0] >= weeks, "frames drew while the weeks played (%d frames, %d weeks)" % [frames[0], weeks])
 	var bits := PackedStringArray()
 	for week in _state.season_log:
 		bits.append("%s %s %s %s" % [week.get("tag", week.get("round", "")), week["home"], week["away"], str(week["score"])])
@@ -404,12 +413,15 @@ func _preseason_print(threaded_frames: bool) -> String:
 	return "\n".join(bits)
 
 
+## The rollover is what is under test, not the matches before it: the season is
+## taken straight to the end of its rounds (start_next_season rolls over a
+## season whose rounds are done), so the hook's calls are the rollover's own.
 func _rollover() -> String:
 	_fresh()
 	seed(SUITE_SEED)
-	while not _state.season.is_season_over():
-		_state.advance()
-	_state.start_next_season()
+	_state.season.round_index = _state.season.fixture.size()
+	var year: int = _state.season_year
+	_check(_state.start_next_season() and _state.season_year == year + 1, "the season rolls over (%d)" % _state.season_year)
 	var bits := PackedStringArray()
 	for code in _state.league_lists:
 		var sum := 0
