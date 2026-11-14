@@ -330,7 +330,7 @@ func _learn_picker(p: Dictionary, on_pick: Callable) -> Control:
 		var words := []
 		for j in open:
 			words.append(str(GameState.LEARN_JOBS[j]["word"]))
-		var full := UiKit.lbl("He can learn %s, but two players are already learning a position (%s). He can start when one of them finishes or comes off it." % [
+		var full := UiKit.lbl("He can learn %s.\nTwo of our players are learning a position already: %s.\nHe can start when one of them finishes or stops." % [
 				" or ".join(words), " and ".join(names)], 13, UiKit.TEXT)
 		full.name = "LearnFull"
 		full.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1158,7 +1158,7 @@ func _stat_focus_panel(p: Dictionary) -> Control:
 	var intro := "Extra work on one stat. About a third of his training goes into it. The rest goes into his development drills. Each point on one stat costs more as it climbs. So his OVR grows more slowly than with no stat focus. Locked in until the %d season." % [
 			year + 1]
 	if current != "":
-		intro = "Last season's focus, %s, carries on until you lock one in for %d. " % [
+		intro = "Last season's focus, %s, carries on until we lock one in for %d. " % [
 				GameState.train_stat_label(current).to_lower(), year] + intro
 	var il := UiKit.lbl(intro, 13, UiKit.TEXT)
 	il.name = "StatFocusIntro"
@@ -1301,9 +1301,9 @@ func _potential_note(p: Dictionary) -> String:
 		return "Room to grow: training is cheaper while he is below his potential."
 	var gap := int(p.get("potential", p["overall"])) - int(p["overall"])
 	if gap < 0:
-		return "Past his projected peak: every point costs far more."
+		return "Past his potential: every point costs far more."
 	if mult > 1.0:
-		return "Close to his projected peak: training costs more."
+		return "Close to his potential: training costs more."
 	return ""
 
 

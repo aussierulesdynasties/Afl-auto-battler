@@ -1064,7 +1064,7 @@ func _test_screens() -> void:
 	_check(all_blocks and cost0 != null and not cost0.is_visible_in_tree(),
 			"All three blocks are on the plan, each saying what its training gains; a Solid block shows no Cost line")
 	_check(_fits(scene, 390.0), "Nothing on the plan runs off a phone's screen")
-	_check(_label(scene, "PreSeasonQuietWeek").contains("weeks 6 to 7")
+	_check(_label(scene, "PreSeasonQuietWeek").contains("weeks 6 and 7")
 			and not _label(scene, "PreSeasonBaseEffect").contains("level")
 			and _label(scene, "PreSeasonBaseEffect").contains("normal fitness"),
 			"Week 8's line names the weeks whose legs last into Round 1, and a sound base says what the side starts with")

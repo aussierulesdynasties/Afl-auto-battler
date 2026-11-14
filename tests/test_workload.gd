@@ -535,8 +535,8 @@ func _test_ui() -> void:
 	var next_benefit := offseason.find_child("BudgetNext_recruiting", true, false) as Label
 	var lower := offseason.find_child("BudgetLower_recruiting", true, false) as Button
 	var raise := offseason.find_child("BudgetRaise_recruiting", true, false) as Button
-	_check(budget_summary != null and budget_summary.text.contains("$9.0m allocated")
-			and budget_summary.text.contains("$1.5m remaining"),
+	_check(budget_summary != null and budget_summary.text.contains("$9.0m spent")
+			and budget_summary.text.contains("$1.5m left"),
 			"The Budget tab states exactly how much is allocated and what is left of the $10.5m")
 	_check(benefit != null and benefit.text.contains("standard")
 			and next_benefit != null and next_benefit.text.contains("20% narrower"),
@@ -576,8 +576,8 @@ func _test_ui() -> void:
 	hp_raise = offseason.find_child("BudgetRaise_high_performance", true, false) as Button
 	_check(GameState.department_budget_level("development") == 2
 			and GameState.department_budget_level("recruiting") == 0
-			and budget_summary != null and budget_summary.text.contains("$10.5m allocated")
-			and budget_summary.text.contains("$0.0m remaining")
+			and budget_summary != null and budget_summary.text.contains("$10.5m spent")
+			and budget_summary.text.contains("$0.0m left")
 			and hp_raise != null and hp_raise.disabled,
 			"Two lines Strong and Recruiting Minimal fill the $10.5m; nothing more can be raised")
 	offseason.queue_free()
