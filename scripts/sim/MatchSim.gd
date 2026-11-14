@@ -3396,6 +3396,13 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		var disposal_event := -1
 		# Inside his own defensive 50: he looks to clear it (D50_*).
 		var in_d50 := (fp if side == 0 else -fp) <= -f50
+		# Where possessions happen (Champion Data's D50 and F50 possessions):
+		# bookkeeping only.
+		if counts_disposal:
+			if in_d50:
+				_t(side, "poss_d50")
+			elif (fp if side == 0 else -fp) >= f50:
+				_t(side, "poss_f50")
 		var hb_bias: float = (0.85
 				+ 0.30 * (100.0 - _a(carrier, "marking")) / 100.0)
 		var disposal_kind := "handball"
@@ -3493,6 +3500,8 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			_t(opp, "pressure_acts")
 			_p(tackler, "pressure_acts")
 			_press_where(opp, atk_fp, in_d50, true)
+			if in_d50:
+				_t(side, "d50_tackled")
 			tackled = true
 			# High contact belongs to the tackle itself. The ball carrier keeps
 			# possession via a free; the tackler is credited the infringement.
@@ -3552,6 +3561,8 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			_t(opp, "pressure_acts")
 			_p(presser, "pressure_acts")
 			_press_where(opp, atk_fp, in_d50, false)
+			if in_d50:
+				_t(side, "d50_rushed")
 			var turn_p: float = (_tv("PRESS_TURNOVER", PRESS_TURNOVER_FLOW)
 					* (0.80 + 0.40 * _a(presser, "pressure") / 100.0)
 					* (1.20 - 0.40 * _a(carrier, "disposal") / 100.0))
@@ -4715,6 +4726,9 @@ func _play_one_chain(T: Dictionary) -> void:
 		res = play_chain(side, start_fp, stoppage, from_kick_in)
 	var outcome: String = res["outcome"]
 	fp = res["fp"]
+	# How a chain ends when the ball finishes in its own defensive 50: bookkeeping.
+	if (fp if side == 0 else -fp) <= -float(T["forward50_line"]):
+		_t(side, "d50_end_" + outcome)
 	if outcome == "moment":
 		# The chain ends on the coach's call: resolve_moment() finishes it.
 		return
