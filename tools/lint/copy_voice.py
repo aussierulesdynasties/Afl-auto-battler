@@ -37,6 +37,94 @@ ALLOW = {
     "scripts/ui/SelectionScene.gd": [5, "auto-pick", "kept: the Auto-pick button and the lines that name it (director, 2026-11-12)"],
 }
 
+## The stats and menus pass (copy voice pass 10, row 139): per file, the rewritten lines and the
+## lines they replaced.
+STATS_PASS = {
+    "scripts/ui/StatGuide.gd": [[
+        "Wins the clearance and holds the ball in a tackle. Our inside mids win or lose the stoppages.",
+        "Wins the hit-outs at the bounce and stoppages. Our first ruck matters.",
+        "Runs the ball forward. Good carriers through the middle feed our attack.",
+        "Gets the shots inside 50 and kicks the goals. Most of our scoring comes from it.",
+        "Tackles and hurries the opposition. Most of our defence comes from it.",
+        "Match-winning class. Lifts our side at the stoppages. It weighs heavily in his overall.",
+        "Where we expect him to peak. It is not a limit. His growth slows as he nears it.",
+        "Contest is our stoppage work. Attack is our forwards and carry. Defence is our pressure and intercept.",
+        "A standout stat earns a trait. The right mix in a line switches on a synergy. The Team screen shows ours, and when one is a player short",
+        "Every player risks injury each game. Durability lowers the risk. Tired players win less ball. Rotate them from the coach's box.",
+        "Players earn development every game. What each one is developing as decides where it goes. A stat costs more the higher it already is. Past POT it costs much more.",
+    ], [
+        "Wins the clearance and holds the ball in a tackle. Your inside mids win or lose the stoppages.",
+        "Wins the hit-outs at the bounce and stoppages. Your starting ruck matters.",
+        "Runs the ball forward. Good carriers through the middle feed your attack.",
+        "Gets the shots inside 50 and kicks the goals. The biggest part of your scoring.",
+        "Tackles and hurries the opposition. The biggest part of your defence.",
+        "Match-winning class. Lifts your side at the stoppages and drives a player's overall.",
+        "Where he is projected to peak. A projection, not a limit; growth slows as he nears it.",
+        "Contest is your stoppages, attack your forwards and carry, defence your pressure and intercept.",
+        "A standout stat earns a trait. The right mix in a line switches on a synergy; the Team screen shows yours, and says when one is a single player short",
+        "Every player risks injury each game, less with durability. Tired players win less ball, so rotate in the coach box.",
+        "Players earn development every game, and what each one is developing as decides where it goes. A stat costs more the higher it already is, and much more past POT.",
+    ]],
+    "scripts/ui/OptionsSheet.gd": [[
+        "Copies the build, the round, this screen and the last 20 lines of the match feed. Paste it into a message. Nothing is sent from the game.",
+        "Changes the screens only. Club colours and the ground stay as they are.",
+        "A light buzz when you press a button. A firmer one when a result lands.",
+        "Sim the week and Sim to Round 1 play our match without you. With this on, they ask first.",
+        "Fullscreen fills the screen with no border. Window opens maximised. Alt+Enter switches.",
+        "A short note the first time you open each screen. Off stops them opening by themselves. Notes you have read don't come back.",
+        "Draws 30 frames a second instead of 60. Uses less battery. Matches and scenes play the same, a little less smoothly.",
+        "Off skips the scenes. Every call and result stays the same.",
+        "Prototypes for judging on a phone. The match plays the same either way.",
+        "For playtesting. The centre ball-up call comes at the first centre ball-up of every last quarter you coach, whatever the score.",
+        "Back up writes your career to a file you keep. Use it to move devices or keep the career safe. Loading a backup or an earlier save keeps the career it replaces in the list below. You can go back to it.",
+    ], [
+        "Copies the build, your round, this screen and the last twenty lines of the match feed, ready to paste into a message. Nothing is sent from the game.",
+        "Changes the interface only; club colours and the football ground stay as they are.",
+        "A light buzz when you press a button, and a firmer one when a result lands.",
+        "Sim the week and the pre-season's Sim to Round 1 play out your own match without you. With this on, they ask first.",
+        "Fullscreen fills the screen with no border; Window opens maximised. Alt+Enter switches.",
+        "A short note the first time you open each screen. Off stops them opening by themselves; notes you've already read don't come back.",
+        "Draws 30 frames a second instead of 60. Uses less battery; matches and scenes play the same, a little less smoothly.",
+        "Off skips the scenes; every call and result stays the same.",
+        "Prototypes for judging on a phone; the match plays the same either way.",
+        "For playtesting: the centre ball-up call comes at the first centre ball-up of every last quarter you coach, whatever the score.",
+        "Back up writes your career to a file you keep, to move it to another device or keep it safe. Loading a backup or an earlier save keeps the career it replaces in the list below, so you can go back.",
+    ]],
+    "scripts/ui/ListScene.gd": [[
+        "Six defenders, six midfielders with the ruck, six forwards and five on the bench. Tap a guernsey.",
+        "No rookies yet. The Rookie Draft and the mid-season rookie draft fill these spots.",
+        "They have their own spots. They take no rookie list spot and don't count in the 44.",
+        "The club's real 2026 list had %d. A club usually has %d spots for them.",
+        "He takes a senior spot: %d of %d used. His wage rises to the senior minimum, %s a season.",
+    ], [
+        "Six defenders, six midfielders (ruck included), six forwards and five on the bench. Tap a guernsey.",
+        "No rookies. The Rookie Draft after the National Draft and the mid-season rookie draft fill these spots.",
+        "Their own spots: they take no rookie list spot and don't count in the 44.",
+        "The club's real 2026 list had %d; a club usually has %d spots for them.",
+        "He takes a senior spot (%d of %d used) and his wage rises to the senior minimum, %s a season.",
+    ]],
+    "scripts/ui/StatsHubScene.gd": [[
+        "Our season in one place. The ladder, every player's numbers, the award races and every match.",
+    ], [
+        "The whole season in one place: the ladder, every player's numbers, the awards races, and every match.",
+    ]],
+    "scripts/ui/stats/StatsCoach.gd": [[
+        "No one yet. A player you draft shows here once he wins our best and fairest. Making the All-Australian team counts too.",
+    ], [
+        "No one yet. A player you draft is listed here once he wins your best and fairest or makes the All-Australian team.",
+    ]],
+    "scripts/ui/stats/StatsLadder.gd": [[
+        "[\"near\", \"Near us\"]",
+    ], [
+        "[\"near\", \"Near you\"]",
+    ]],
+    "scripts/ui/stats/StatsPlayers.gd": [[
+        "Counted from round %d. This career's earlier rounds came before season records were kept.",
+    ], [
+        "Counted from round %d: this career's earlier rounds were played before season records were kept.",
+    ]],
+}
+
 HUB = "scripts/ui/HubScene.gd"
 ## The hub pass (copy voice pass 2): every rewritten line, and the line it replaced.
 HUB_NEW = [
@@ -144,94 +232,6 @@ TRAINING_OLD = [
     "but two players are already learning", "comes off it", "until you lock", "his projected peak",
 ]
 
-## The stats and menus pass (copy voice pass 10, row 139): per file, the rewritten lines and the
-## lines they replaced.
-STATS_PASS = {
-    "scripts/ui/StatGuide.gd": [[
-        "Wins the clearance and holds the ball in a tackle. Our inside mids win or lose the stoppages.",
-        "Wins the hit-outs at the bounce and stoppages. Our first ruck matters.",
-        "Runs the ball forward. Good carriers through the middle feed our attack.",
-        "Gets the shots inside 50 and kicks the goals. Most of our scoring comes from it.",
-        "Tackles and hurries the opposition. Most of our defence comes from it.",
-        "Match-winning class. Lifts our side at the stoppages. It weighs heavily in his overall.",
-        "Where we expect him to peak. It is not a limit. His growth slows as he nears it.",
-        "Contest is our stoppage work. Attack is our forwards and carry. Defence is our pressure and intercept.",
-        "A standout stat earns a trait. The right mix in a line switches on a synergy. The Team screen shows ours, and when one is a player short",
-        "Every player risks injury each game. Durability lowers the risk. Tired players win less ball. Rotate them from the coach's box.",
-        "Players earn development every game. What each one is developing as decides where it goes. A stat costs more the higher it already is. Past POT it costs much more.",
-    ], [
-        "Wins the clearance and holds the ball in a tackle. Your inside mids win or lose the stoppages.",
-        "Wins the hit-outs at the bounce and stoppages. Your starting ruck matters.",
-        "Runs the ball forward. Good carriers through the middle feed your attack.",
-        "Gets the shots inside 50 and kicks the goals. The biggest part of your scoring.",
-        "Tackles and hurries the opposition. The biggest part of your defence.",
-        "Match-winning class. Lifts your side at the stoppages and drives a player's overall.",
-        "Where he is projected to peak. A projection, not a limit; growth slows as he nears it.",
-        "Contest is your stoppages, attack your forwards and carry, defence your pressure and intercept.",
-        "A standout stat earns a trait. The right mix in a line switches on a synergy; the Team screen shows yours, and says when one is a single player short",
-        "Every player risks injury each game, less with durability. Tired players win less ball, so rotate in the coach box.",
-        "Players earn development every game, and what each one is developing as decides where it goes. A stat costs more the higher it already is, and much more past POT.",
-    ]],
-    "scripts/ui/OptionsSheet.gd": [[
-        "Copies the build, the round, this screen and the last 20 lines of the match feed. Paste it into a message. Nothing is sent from the game.",
-        "Changes the screens only. Club colours and the ground stay as they are.",
-        "A light buzz when you press a button. A firmer one when a result lands.",
-        "Sim the week and Sim to Round 1 play our match without you. With this on, they ask first.",
-        "Fullscreen fills the screen with no border. Window opens maximised. Alt+Enter switches.",
-        "A short note the first time you open each screen. Off stops them opening by themselves. Notes you have read don't come back.",
-        "Draws 30 frames a second instead of 60. Uses less battery. Matches and scenes play the same, a little less smoothly.",
-        "Off skips the scenes. Every call and result stays the same.",
-        "Prototypes for judging on a phone. The match plays the same either way.",
-        "For playtesting. The centre ball-up call comes at the first centre ball-up of every last quarter you coach, whatever the score.",
-        "Back up writes your career to a file you keep. Use it to move devices or keep the career safe. Loading a backup or an earlier save keeps the career it replaces in the list below. You can go back to it.",
-    ], [
-        "Copies the build, your round, this screen and the last twenty lines of the match feed, ready to paste into a message. Nothing is sent from the game.",
-        "Changes the interface only; club colours and the football ground stay as they are.",
-        "A light buzz when you press a button, and a firmer one when a result lands.",
-        "Sim the week and the pre-season's Sim to Round 1 play out your own match without you. With this on, they ask first.",
-        "Fullscreen fills the screen with no border; Window opens maximised. Alt+Enter switches.",
-        "A short note the first time you open each screen. Off stops them opening by themselves; notes you've already read don't come back.",
-        "Draws 30 frames a second instead of 60. Uses less battery; matches and scenes play the same, a little less smoothly.",
-        "Off skips the scenes; every call and result stays the same.",
-        "Prototypes for judging on a phone; the match plays the same either way.",
-        "For playtesting: the centre ball-up call comes at the first centre ball-up of every last quarter you coach, whatever the score.",
-        "Back up writes your career to a file you keep, to move it to another device or keep it safe. Loading a backup or an earlier save keeps the career it replaces in the list below, so you can go back.",
-    ]],
-    "scripts/ui/ListScene.gd": [[
-        "Six defenders, six midfielders with the ruck, six forwards and five on the bench. Tap a guernsey.",
-        "No rookies yet. The Rookie Draft and the mid-season rookie draft fill these spots.",
-        "They have their own spots. They take no rookie list spot and don't count in the 44.",
-        "The club's real 2026 list had %d. A club usually has %d spots for them.",
-        "He takes a senior spot: %d of %d used. His wage rises to the senior minimum, %s a season.",
-    ], [
-        "Six defenders, six midfielders (ruck included), six forwards and five on the bench. Tap a guernsey.",
-        "No rookies. The Rookie Draft after the National Draft and the mid-season rookie draft fill these spots.",
-        "Their own spots: they take no rookie list spot and don't count in the 44.",
-        "The club's real 2026 list had %d; a club usually has %d spots for them.",
-        "He takes a senior spot (%d of %d used) and his wage rises to the senior minimum, %s a season.",
-    ]],
-    "scripts/ui/StatsHubScene.gd": [[
-        "Our season in one place. The ladder, every player's numbers, the award races and every match.",
-    ], [
-        "The whole season in one place: the ladder, every player's numbers, the awards races, and every match.",
-    ]],
-    "scripts/ui/stats/StatsCoach.gd": [[
-        "No one yet. A player you draft shows here once he wins our best and fairest. Making the All-Australian team counts too.",
-    ], [
-        "No one yet. A player you draft is listed here once he wins your best and fairest or makes the All-Australian team.",
-    ]],
-    "scripts/ui/stats/StatsLadder.gd": [[
-        "[\"near\", \"Near us\"]",
-    ], [
-        "[\"near\", \"Near you\"]",
-    ]],
-    "scripts/ui/stats/StatsPlayers.gd": [[
-        "Counted from round %d. This career's earlier rounds came before season records were kept.",
-    ], [
-        "Counted from round %d: this career's earlier rounds were played before season records were kept.",
-    ]],
-}
-
 ## The contracts and trades pass (copy voice pass 8, with the T3.R56 trade and contract tutorials
 ## and the off-season brief): per file, the rewritten lines and the lines they replaced.
 CONTRACTS_PASS = {
@@ -295,10 +295,11 @@ CONTRACTS_PASS = {
 PASSES = [(HUB, "copy voice pass 2, hub", HUB_NEW, HUB_OLD)] + [
     (path, "copy voice pass 5, team and coaching", v[0], v[1]) for path, v in TEAM_PASS.items()] + [
     (TRAINING, "copy voice pass 6, training", TRAINING_NEW, TRAINING_OLD)] + [
-    (path, "copy voice pass 10, stats and menus", v[0], v[1]) for path, v in STATS_PASS.items()] + [
     (path, "copy voice pass 8, contracts and trades", v[0], v[1]) for path, v in CONTRACTS_PASS.items()]
 
 LITERAL = re.compile(r'"([^"\n]*)"')
+## Copy voice pass 10 (stats and menus) joins the pinned passes on its own line.
+PASSES += [(path, "copy voice pass 10, stats and menus", v[0], v[1]) for path, v in STATS_PASS.items()]
 
 
 def words_re(words):
