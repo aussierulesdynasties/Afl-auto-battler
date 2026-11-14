@@ -131,7 +131,7 @@ Every switch went on for good in #1072 and #1074 (director 2026-11-06: "i dont w
 - Player personality types and captaincy meaning (composure, late-game stability): both wanted, later (T5.Q12, T5.Q13).
 - Presentation wishlist: away/clash and heritage guernseys, coach appearance, premiership guernsey history, player card
   evolution, record-breaker marks, legends wall, draft class identity, archive gallery, retirement variants, dynamic
-  crowd, season poster, stadium identity, user guernseys and logos, Coach of the Year.
+  crowd, season poster, stadium identity, user guernseys and logos. (Coach of the Year: built 2026-11-13.)
 - Deferred by ruling: announce the cap step, league rule changes. (Weather at a break is row 160, director 2026-11-12.)
 
 ## Working rules

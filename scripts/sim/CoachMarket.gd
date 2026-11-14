@@ -904,7 +904,7 @@ static func _prune(coaches: Dictionary, archive: Dictionary, year: int, my_club:
 					"generic_name": c.get("generic_name", ""), "stints": c.get("stints", []),
 					"former_sc": c.get("former_sc", false), "left": year + 1,
 					"former_player_id": c.get("former_player_id", ""), "spec": c.get("spec", ""),
-					"played": c.get("played", {})}
+					"played": c.get("played", {}), "coty": c.get("coty", [])}
 			log["archived"] += 1
 		else:
 			log["pruned"] += 1

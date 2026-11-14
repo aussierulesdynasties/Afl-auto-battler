@@ -195,10 +195,14 @@ func _show_season_wrap() -> void:
 	if not trades.is_empty():
 		v.add_child(UiKit.spacer(4))
 		v.add_child(UiKit.lbl("Trade period", 14, UiKit.MUTED, true))
+		# Every club and every player in the club's colours, red clubs too
+		# (director 2026-11-12, row 176). The lists are read after the trade
+		# period, so a traded player wears the club he moved to.
 		for i in range(trades.size()):
-			var l := UiKit.lbl(str(trades[i]), 14, UiKit.TEXT)
+			var l := NameInk.label(str(trades[i]), _league_names(), 14, UiKit.TEXT, false, true)
 			l.name = "WrapTrade_%d" % i
-			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			if l is Label:
+				(l as Label).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			v.add_child(l)
 	# Free agents you were after who chose a rival, and why (P-18): the
 	# rival's name in its ink. This session's market only (not saved).
