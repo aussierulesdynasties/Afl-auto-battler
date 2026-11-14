@@ -162,6 +162,11 @@ func _test_stoppage_clock_and_covered_controls(sz: Vector2i) -> void:
 	_state.reset()
 	_state.replay_seed = SUITE_SEED
 	_state.start_season("FRE", db.club_list("FRE"))
+	# Only FRE's match is under test, as above.
+	var rm: Array = _state.season.fixture[_state.season.round_index]
+	for fx in rm.duplicate():
+		if str(fx["home"]) != "FRE" and str(fx["away"]) != "FRE":
+			rm.erase(fx)
 	root.size = sz
 	_state.set_match_way("watch")
 	_state.set_vignettes_on(false)
