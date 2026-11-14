@@ -23,6 +23,7 @@ var _pick_board := "fair"
 var _pick_rivals := "shrewd"
 var _pick_tutorials := true
 var _pick_controversies := true
+var _pick_supplements := true
 ## Canberra joins (in the 2027 redraft, or in 2030 on the real lists).
 var _pick_canberra := false
 var _canberra_row: VBoxContainer
@@ -128,6 +129,7 @@ func _ready() -> void:
 	_pick_rivals = GameState.new_career_dial(DifficultyDials.RIVALS)
 	_pick_tutorials = GameState.new_career_tutorials()
 	_pick_controversies = GameState.new_career_controversies()
+	_pick_supplements = GameState.new_career_supplements()
 	# The oval stays as a faint ground; the logo and buttons carry the screen.
 	_pitch = PitchView.new()
 	_pitch.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -376,6 +378,7 @@ func _on_new_career() -> void:
 	_pick_rivals = GameState.new_career_dial(DifficultyDials.RIVALS)
 	_pick_tutorials = GameState.new_career_tutorials()
 	_pick_controversies = GameState.new_career_controversies()
+	_pick_supplements = GameState.new_career_supplements()
 	_pick_canberra = false
 	_sim_ahead_ok = false
 	_pick_challenge = "none"
@@ -399,6 +402,7 @@ const YEAR_WORDS := {
 	"2026": ["Today's league", "18 clubs. The real lists after the 2026 season, or a league redraft."],
 	"2000": ["From the turn of the century", "16 clubs on their real lists. Take over from your club's senior coach and coach on through the years to today."],
 	"1990": ["From the first AFL season", "14 clubs on their real lists. Take over from your club's senior coach and coach on through the years to today."],
+	"2010": ["Before the Suns and Giants", "16 clubs on their real lists. Gold Coast join in 2011 and GWS in 2012. Take over from your club's senior coach."],
 }
 
 
@@ -682,6 +686,13 @@ func _show_setup() -> void:
 			func(k): return ("Drug scandals, salary cap rorts and the rest happen in their real seasons, and the real penalties land: fines, lost draft picks, a finals ban." if k == "on"
 					else "The league's scandals never happen: no fines, lost picks or bans."),
 			func(k): _pick_controversies = k == "on"))
+	# The supplements saga, its own switch (director, 2026-11-13: its "full 1
+	# year ban of list" is far more severe than the other controversies).
+	form.add_child(_choice("Supplements saga", "Supplements", [["on", "On"], ["off", "Off"]],
+			"on" if _pick_supplements else "off",
+			func(k): return ("Essendon are fined $2 million, thrown out of the 2013 finals and lose four draft picks. In 2016 a dozen of their best players miss the whole season, and five more at other clubs; Essendon can sign up to ten top-up players. Controversies does not switch this on or off." if k == "on"
+					else "The saga never happens: no 2013 penalties and no 2016 bans, whatever Controversies is set to."),
+			func(k): _pick_supplements = k == "on"))
 	# Canberra, the second new club: a choice made once, here (director,
 	# 2026-10-14), asked as a question (2026-11-08). What Yes and No mean
 	# depends on the start (_canberra_line).
@@ -988,6 +999,7 @@ func _start_new_career() -> void:
 	GameState.set_new_career_dial(DifficultyDials.RIVALS, _pick_rivals)
 	GameState.set_new_career_tutorials(_pick_tutorials)
 	GameState.set_new_career_controversies(_pick_controversies)
+	GameState.set_new_career_supplements(_pick_supplements)
 	# The old save stays on disk until the new career has a club and its first
 	# save replaces it: backing out of Choose your club must not cost the player
 	# the career they had (reset() clears memory only).

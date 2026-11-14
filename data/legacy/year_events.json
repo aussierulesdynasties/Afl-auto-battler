@@ -2361,6 +2361,11 @@
     "club": "ESS",
     "year": 2014,
     "round": 2
+   },
+   {
+    "op": "record_list",
+    "club": "ESS",
+    "key": "supplements"
    }
   ],
   "card": {
@@ -2410,7 +2415,8 @@
      "result": "You front the press beside the board."
     }
    ]
-  }
+  },
+  "switch": "supplements"
  },
  {
   "id": "mcg_abuse",
@@ -2643,6 +2649,141 @@
     }
    ]
   }
+ },
+ {
+  "id": "supplements_bans",
+  "rows": [
+   57
+  ],
+  "season": 2016,
+  "round": 0,
+  "clubs": [
+   "ESS"
+  ],
+  "controversy": true,
+  "switch": "supplements",
+  "headline": "Essendon's players banned for 2016",
+  "beats": [
+   "The Court of Arbitration for Sport has upheld the anti-doping appeal over Essendon's 2012 supplements program.",
+   "The players still on AFL lists miss all of 2016, finals included, and come back in 2017.",
+   "Essendon may sign up to ten top-up players for the season."
+  ],
+  "penalties": [
+   {
+    "op": "season_ban",
+    "club": "ESS",
+    "key": "supplements",
+    "players": [
+     {
+      "first": "Jobe",
+      "last": "Watson",
+      "dob": "1985-02-08",
+      "club": "ESS"
+     },
+     {
+      "first": "Brent",
+      "last": "Stanton",
+      "dob": "1986-05-01",
+      "club": "ESS"
+     },
+     {
+      "first": "Cale",
+      "last": "Hooker",
+      "dob": "1988-10-13",
+      "club": "ESS"
+     },
+     {
+      "first": "David",
+      "last": "Myers",
+      "dob": "1989-06-30",
+      "club": "ESS"
+     },
+     {
+      "first": "Michael",
+      "last": "Hurley",
+      "dob": "1990-06-01",
+      "club": "ESS"
+     },
+     {
+      "first": "Michael",
+      "last": "Hibberd",
+      "dob": "1990-01-03",
+      "club": "ESS"
+     },
+     {
+      "first": "Tayte",
+      "last": "Pears",
+      "dob": "1990-03-24",
+      "club": "ESS"
+     },
+     {
+      "first": "Tom",
+      "last": "Bellchambers",
+      "dob": "1989-07-09",
+      "club": "ESS"
+     },
+     {
+      "first": "Travis",
+      "last": "Colyer",
+      "dob": "1991-08-24",
+      "club": "ESS"
+     },
+     {
+      "first": "Dyson",
+      "last": "Heppell",
+      "dob": "1992-05-14",
+      "club": "ESS"
+     },
+     {
+      "first": "Ben",
+      "last": "Howlett",
+      "dob": "1988-10-21",
+      "club": "ESS"
+     },
+     {
+      "first": "Heath",
+      "last": "Hocking",
+      "dob": "1987-12-27",
+      "club": "ESS"
+     },
+     {
+      "first": "Jake",
+      "last": "Carlisle",
+      "dob": "1991-10-01",
+      "club": "STK"
+     },
+     {
+      "first": "Angus",
+      "last": "Monfries",
+      "dob": "1987-01-19",
+      "club": "PAD"
+     },
+     {
+      "first": "Paddy",
+      "last": "Ryder",
+      "dob": "1988-03-14",
+      "club": "PAD"
+     },
+     {
+      "first": "Stewart",
+      "last": "Crameri",
+      "dob": "1988-08-10",
+      "club": "WBD"
+     },
+     {
+      "first": "Jake",
+      "last": "Melksham",
+      "dob": "1991-08-29",
+      "club": "MEL"
+     }
+    ]
+   },
+   {
+    "op": "top_up",
+    "club": "ESS",
+    "max": 10
+   }
+  ]
  },
  {
   "id": "pay_standoff",

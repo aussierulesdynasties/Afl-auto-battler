@@ -1656,6 +1656,7 @@ func _run() -> void:
 	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
 		await _t("_test_list_words_fit", [sz])
 	await _t("_test_restore_earlier_save_tap")
+	await _t("_test_top_up_sheet_taps")
 	print(Ran.line("Career UI", self))
 	_state.replay_seed = 0
 	quit(0 if _failures.is_empty() else 1)
@@ -2171,6 +2172,9 @@ func _test_menu_and_career() -> void:
 	var tut_tap: String = await Tap.tap(tut_off) if tut_off != null else "missing"
 	var con_off = current_scene.find_child("Controversies_off", true, false)
 	var con_tap: String = await Tap.tap(con_off) if con_off != null else "missing"
+	# The supplements saga is its own switch: on, with Controversies off.
+	var sup_on = current_scene.find_child("Supplements_on", true, false)
+	var sup_tap: String = await Tap.tap(sup_on) if sup_on != null else "missing"
 	var board_btn = current_scene.find_child("BoardPatience_ruthless", true, false)
 	var rival_btn = current_scene.find_child("RivalRecruiting_cutthroat", true, false)
 	var board_tap: String = await Tap.tap(board_btn) if board_btn != null else "missing"
@@ -2179,6 +2183,7 @@ func _test_menu_and_career() -> void:
 	await _settle()
 	_check(tut_tap == "", "New career offers Tutorials On/Off, and Off takes a real tap (%s)" % tut_tap)
 	_check(con_tap == "", "New career offers Controversies On/Off, and Off takes a real tap (%s)" % con_tap)
+	_check(sup_tap == "", "New career offers Supplements saga On/Off, and On takes a real tap (%s)" % sup_tap)
 	_check(board_tap == "" and rival_tap == "", "Both difficulty dials take a real tap on a phone (%s %s)" % [board_tap, rival_tap])
 	current_scene.find_child("StartCareer", true, false).emit_signal("pressed")
 	await _settle()
@@ -2186,7 +2191,9 @@ func _test_menu_and_career() -> void:
 	_check(_state.new_career_dial("board_patience") == "ruthless" and _state.board_patience == "ruthless"
 			and _state.rival_recruiting == "cutthroat", "The career starts with the picks made")
 	_check(not _state.controversies, "The career starts with Controversies off")
+	_check(_state.supplements, "The supplements saga stays on with Controversies off")
 	_state.set_setting("controversies", true)   # the next setup starts on again
+	_state.set_setting("supplements", true)
 	var brought := false
 	for d in _state.draftee_pool:
 		brought = brought or (str(d["id"]) == _state.custom_prospect_id and str(d.get("last", "")) == "Forge")
@@ -6001,3 +6008,61 @@ func _count_named(n: Node, prefix: String, hit: Callable) -> void:
 		hit.call()
 	for c in n.get_children():
 		_count_named(c, prefix, hit)
+
+
+## Essendon's 2016 top-ups, when you coach them (director, 2026-11-13: "You
+## pick them"): the sheet opens over the hub, a real tap on Sign signs the
+## player and the sheet comes back for the next spot; Back leaves the spot
+## open; Done leaves the rest empty.
+func _test_top_up_sheet_taps() -> void:
+	var ye = load("res://scripts/sim/YearEvents.gd")
+	var md = load("res://scripts/state/MidseasonDraft.gd")
+	_state.reset()
+	_state.career_seed = 4402
+	_state.replay_seed = 4402
+	_state.start_season("ESS", _db.club_list("ESS"))
+	var size_before := root.size
+	root.size = Vector2i(390, 844)
+	_router.stack = ["main"]
+	_state.week_events = []
+	# A fresh career has nobody unsigned yet: pass over a few of this year's class.
+	for p in (_state.draftee_pool as Array).slice(0, 4):
+		p["draft_year"] = _state.season_year - 1
+	ye.state(_state)["top_up"] = {"year": _state.season_year, "club": "ESS", "left": 2, "most": 2, "signed": []}
+	var pool: Array = md.pool(_state)
+	_check(not pool.is_empty(), "Someone is left to sign (%d)" % pool.size())
+	if pool.is_empty():
+		root.size = size_before
+		return
+	var list_before: int = (_state.my_list as Array).size()
+	_router.go("hub")
+	await _settle()
+	var sheet: Control = current_scene.find_child("TopUpSheet", true, false)
+	var count: Label = sheet.find_child("TopUpCount", true, false) if sheet != null else null
+	_check(count != null and count.text == "Signed 0 of 2", "The top-up sheet opens over the hub (%s)" % (count.text if count != null else "none"))
+	var pid := str(pool[0]["id"])
+	var sign: Button = sheet.find_child("TopUpSign_" + pid, true, false) if sheet != null else null
+	var why: String = (await Tap.tap(sign)) if sign != null else "missing"
+	await _settle()
+	var signed := (_state.my_list as Array).filter(func(q): return str(q["id"]) == pid)
+	_check(why == "" and signed.size() == 1 and int(signed[0].get("top_up", 0)) == _state.season_year,
+			"A real tap on Sign signs the best player left (%s)" % why)
+	var again: Control = current_scene.find_child("TopUpSheet", true, false)
+	var count2: Label = again.find_child("TopUpCount", true, false) if again != null else null
+	_check(count2 != null and count2.text == "Signed 1 of 2" and again.find_child("TopUpSign_" + pid, true, false) == null,
+			"The sheet comes back for the second spot, without him")
+	_router.handle_back(true)
+	await _settle()
+	_check(_router.current() == "hub" and current_scene.find_child("TopUpSheet", true, false) == null
+			and int(ye.top_up_pending(_state).get("left", 0)) == 1, "Back closes the sheet; the spot stays open")
+	_router.go("hub")
+	await _settle()
+	var last: Control = current_scene.find_child("TopUpSheet", true, false)
+	var done: Button = last.find_child("TopUpDone", true, false) if last != null else null
+	var done_tap: String = (await Tap.tap(done)) if done != null else "missing"
+	await _settle()
+	_check(done_tap == "" and ye.top_up_pending(_state).is_empty()
+			and current_scene.find_child("TopUpSheet", true, false) == null
+			and (_state.my_list as Array).size() == list_before + 1,
+			"A real tap on Done leaves the last spot empty (%s)" % done_tap)
+	root.size = size_before

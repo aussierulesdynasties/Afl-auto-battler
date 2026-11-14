@@ -414,7 +414,7 @@ static func age_league(lists: Dictionary, year: int) -> Dictionary:
 
 
 static func should_retire(p: Dictionary, year: int) -> bool:
-	var age := float(p.get("age", 26.0))
+	var age := Potential.retire_age(p)   # Fine Wine: three years later
 	var ov := int(p.get("overall", 50))
 	if ov <= 32:
 		return true
@@ -439,7 +439,7 @@ static func age_player(p: Dictionary, year: int) -> float:
 	else:
 		p["sample"] = maxf(18.0, float(p.get("gm", 0.0)))
 
-	var d := Potential.age_step(age, rng.randf())
+	var d := Potential.age_step_for(age, rng.randf(), Traits.fine_wine(p))
 	var ov := int(p.get("overall", 50))
 	if age <= 25.0 and ov < 55:
 		d += 1.0  # late bloomers keep climbing
@@ -760,6 +760,7 @@ static func generate_class(year: int, career_seed := 0) -> Array:
 				project(p)
 				rucks += 1
 	_maybe_unicorn(out, year, career_seed)
+	roll_fine_wine(out, "class-%d-%d" % [year, career_seed])
 	GameDB.assign_aliases(out)
 	InternationalProspects.apply(out, year)
 	return out
@@ -786,6 +787,27 @@ static func _maybe_unicorn(cls: Array, year: int, career_seed: int) -> void:
 	if not best.is_empty():
 		best["unicorn"] = true
 		best["note"] = "%d cm and moves like a much smaller player" % int(best["height_cm"])
+
+
+## Every generated draftee rolls once for Fine Wine at Traits.FINE_WINE_DRAFTEE_ODDS
+## (director, 2026-11-13: "every draftee should have a very slim chance").
+## Its own dice, so the class itself rolls as it always did. A real draftee
+## rolls too, unless his real career could already show it by the 2026 data
+## (born 1991 or earlier, so 60 games at 32+ were within reach by 2025): then his
+## record decides (Traits.fine_wine), as for any real player in a Legacy start.
+const FINE_WINE_RECORD_BORN := 1991
+
+
+static func roll_fine_wine(cls: Array, salt: String) -> void:
+	var rng := _rng_for("fine-wine-" + salt)
+	for p in cls:
+		var roll := rng.randf()
+		if not bool(p.get("generated", false)):
+			var born := str(p.get("dob", "")).substr(0, 4)
+			if not born.is_valid_int() or int(born) <= FINE_WINE_RECORD_BORN:
+				continue
+		if roll < Traits.FINE_WINE_DRAFTEE_ODDS:
+			p["fine_wine"] = true
 
 
 # ---------------------------------------------------------------------------
@@ -1077,6 +1099,7 @@ static func generate_expansion_list(code: String, year: int, size := 36, salt :=
 		project(p)
 		_mature_entry(p)
 		out.append(p)
+	roll_fine_wine(out, "expansion-%s-%d%s-%d" % [code, year, salt, first_rank])
 	GameDB.assign_aliases(out)
 	return out
 
