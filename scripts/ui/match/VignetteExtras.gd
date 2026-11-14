@@ -127,12 +127,18 @@ static func wedge_count(at: Vector2, look: Vector2, spots: Array) -> int:
 
 ## Which way a call scene's camera looks from `at`: the direction with the most of the
 ## other players behind the men (wedge_count); between equals, the one nearest `prefer`.
-static func best_look(at: Vector2, spots: Array, prefer: Vector2) -> Vector2:
+## room: how far behind the men the camera stands for its shot. A way whose camera would
+## be off the ground is left out (its lens stops at the boundary and the stand no longer
+## fills the top, 2026-11-14), unless every way is.
+static func best_look(at: Vector2, spots: Array, prefer: Vector2, room := 0.0) -> Vector2:
+	room = look_room(at, room)
 	var best := prefer.normalized()
-	var most := wedge_count(at, best, spots)
+	var most := wedge_count(at, best, spots) if look_fits(at, best, room) else -1
 	var close := 1.0
 	for i in range(LOOKS):
 		var dir := Vector2.from_angle(TAU * float(i) / float(LOOKS))
+		if not look_fits(at, dir, room):
+			continue
 		var n := wedge_count(at, dir, spots)
 		var c := dir.dot(prefer.normalized())
 		if n > most or (n == most and c > close):
@@ -140,6 +146,21 @@ static func best_look(at: Vector2, spots: Array, prefer: Vector2) -> Vector2:
 			most = n
 			close = c
 	return best
+
+
+## Whether a camera room metres behind `at`, looking along `look`, stands on the ground
+## (up to a metre inside the boundary line).
+static func look_fits(at: Vector2, look: Vector2, room: float) -> bool:
+	var cam := at - look.normalized() * room
+	return room <= 0.0 or pow(cam.x / (VignetteGround.A - 1.0), 2.0) + pow(cam.y / (VignetteGround.L - 1.0), 2.0) < 1.0
+
+
+## The room best_look holds a camera to at `at`: none when no way has it.
+static func look_room(at: Vector2, room: float) -> float:
+	for i in range(LOOKS):
+		if look_fits(at, Vector2.from_angle(TAU * float(i) / float(LOOKS)), room):
+			return room
+	return 0.0
 
 
 ## That spot, held a couple of metres inside the boundary line.
