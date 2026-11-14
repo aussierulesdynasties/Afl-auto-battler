@@ -342,7 +342,11 @@ func _test_career_rolls_into_real_years() -> void:
 
 
 ## A career whose clubs part from history (it left Adelaide out) draws its own
-## season the year they part, and every club plays its games.
+## season the year they part, and every club plays its games. The rollover
+## builds next year's season from GameDB.active_clubs(next year)
+## (GameState._start_next_season), and _test_career_rolls_into_real_years
+## proves that path with a real off-season; here that same season is built
+## directly, with the career's own club years, without a second off-season.
 func _test_career_with_other_clubs_draws() -> void:
 	GameState.reset("1990")
 	GameState.replay_seed = SUITE_SEED
@@ -350,19 +354,18 @@ func _test_career_with_other_clubs_draws() -> void:
 	GameDB.set_enter_year("ADE", 9999)
 	GameState.start_season("CAR", GameDB.club_list("CAR"))
 	_check(GameState.season.is_real_fixture(), "1990 is still the real 1990 (Adelaide had not joined)")
-	if _roll(1990):
-		var s: Season = GameState.season
-		_check(s.clubs.size() == 14 and not s.clubs.has("ADE") and not s.is_real_fixture()
-				and RealFixture.for_season(1991, s.clubs).is_empty(),
-				"1991 without Adelaide: the clubs differ from history, so the season is drawn")
-		var games := {}
-		for r in s.fixture:
-			for m in r:
-				for c in [m["home"], m["away"]]:
-					games[c] = int(games.get(c, 0)) + 1
-		var even := games.size() == 14
-		for c in games:
-			even = even and abs(int(games[c]) - int(games[s.clubs[0]])) <= 0
-		_check(even and s.fixture.size() > 0,
-				"The drawn 1991 gives all 14 clubs the same number of games (%s)" % str(games.values()))
+	var s := Season.new(GameDB.active_clubs(1991).duplicate(), GameState.season.lists, SUITE_SEED + 1991, 1991)
+	_check(s.clubs.size() == 14 and not s.clubs.has("ADE") and not s.is_real_fixture()
+			and RealFixture.for_season(1991, s.clubs).is_empty(),
+			"1991 without Adelaide: the clubs differ from history, so the season is drawn")
+	var games := {}
+	for r in s.fixture:
+		for m in r:
+			for c in [m["home"], m["away"]]:
+				games[c] = int(games.get(c, 0)) + 1
+	var even := games.size() == 14
+	for c in games:
+		even = even and abs(int(games[c]) - int(games[s.clubs[0]])) <= 0
+	_check(even and s.fixture.size() > 0,
+			"The drawn 1991 gives all 14 clubs the same number of games (%s)" % str(games.values()))
 	GameState.reset()
