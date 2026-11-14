@@ -418,11 +418,12 @@ func _test_rotation() -> void:
 func _test_phone_browser_never_wide() -> void:
 	var old_size := root.size
 	var layout = load("res://scripts/core/ScreenLayout.gd")
+	# One fresh league for all four: an unpicked draft leaves the players as they were.
+	_state.reset()
 	for sz in [Vector2i(900, 700), Vector2i(1280, 720)]:
 		for phone in [true, false]:
 			layout.force_web_phone = phone
 			root.size = sz
-			_state.reset()
 			_state.draft = load("res://scripts/sim/Draft.gd").new(_db.all_players_sorted(),
 					_db.active_clubs(2026).duplicate(), 12345)
 			var ui: Control = load("res://scenes/DraftScene.tscn").instantiate()
@@ -1099,11 +1100,12 @@ func _mouse_move(at: Vector2) -> void:
 ## away. It needs no picture file.
 func _test_stage() -> void:
 	var art = load("res://scripts/ui/UiArt.gd")
+	# One fresh league for every board: an unpicked draft leaves the players as they were.
+	_state.reset()
 	for club in ["FRE", "MEL"]:
 		for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
 			var tag := "%s %dx%d" % [club, sz.x, sz.y]
 			root.size = sz
-			_state.reset()
 			_state.draft = load("res://scripts/sim/Draft.gd").new(_db.all_players_sorted(),
 					_db.active_clubs(2026).duplicate(), 12345)
 			var ui: Control = load("res://scenes/DraftScene.tscn").instantiate()
@@ -1166,7 +1168,6 @@ func _test_stage() -> void:
 	# No picture file is needed: with the art folder pointed nowhere the guernsey is still there.
 	art.dir = "res://assets/ui/no_such_folder"
 	root.size = Vector2i(390, 844)
-	_state.reset()
 	_state.draft = load("res://scripts/sim/Draft.gd").new(_db.all_players_sorted(), _db.active_clubs(2026).duplicate(), 12345)
 	var plain: Control = load("res://scenes/DraftScene.tscn").instantiate()
 	root.add_child(plain)
