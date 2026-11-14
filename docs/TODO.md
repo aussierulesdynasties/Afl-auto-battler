@@ -10,7 +10,7 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
 
 A row starts when everything in its "After:" note is done. Rows in the same step run side by side, except rows that edit the same file, which merge one at a time: `tools/lint/copy_voice.py` (its ALLOW counts are exact), `GameState.gd`, `UiKit.gd`, `StoppageVignette.gd`, and the figure shader and sheets.
 
-0. Now (director 2026-11-13: "ok get all legacy stuff merged THEN an itch patch"): Legacy (row 142) is merged on main, the last of it in #1548 and #1558; build 1.0.17 goes to itch as #1558 lands. Copy voice passes 131, 132, 135, 136 and 137 are being built (director 2026-11-15: "start the copy passes now"); 138 and 139 start when a slot frees.
+0. Now (director 2026-11-13: "ok get all legacy stuff merged THEN an itch patch"): Legacy (row 142) is merged on main, the last of it in #1548 and #1558; build 1.0.17 (c8afc17) is live on itch (2026-11-15). Copy voice passes 131, 132, 135, 136 and 137 are being built (director 2026-11-15: "start the copy passes now"); 138 and 139 start when a slot frees.
 1. Put the waiting looks and questions to the director (sections C and H, the 6.34 captures, the hair contact sheets). Start the rows with nothing to wait for: 6.40, 6.42, 6.53, V2, V9, and the 3D oval proof, 197 with 198. The director's playtests in section B can happen at any time.
 2. The rest of T1.R26; V4; 135 (after 150); the row 34 re-check; 164 (its PR is in flight).
 3. 131 (after T1.R26 and 151); 136, 137 and 138; 139; V5; the P-43 press slice of T7.R87; T8.Q20; 6.38.
