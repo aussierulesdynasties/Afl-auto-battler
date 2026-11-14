@@ -78,10 +78,10 @@ func step(i: int, p: Dictionary, holder: int, pos: Vector2, vel: Vector2, dt: fl
 	# A zero step leaves a freshly played pose unapplied (a standing holder kept the idle
 	# arms), so a still pose still advances by a sliver.
 	ap.advance(maxf(dt * rate, 1e-4))
-	_look_at_ball(i, node, i == holder, dt)
+	_look_at_ball(i, i == holder, dt)
 
 
-func _look_at_ball(i: int, node: Node3D, carrying: bool, dt: float) -> void:
+func _look_at_ball(i: int, carrying: bool, dt: float) -> void:
 	var bp: Vector2 = director.ball["pos"]
 	var h := float(director.ball.get("h", 0.0))
 	var want := Vector3(bp.x, maxf(h, BALL_R), bp.y)
