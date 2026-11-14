@@ -267,12 +267,23 @@ func _test_real_season_played_and_saved() -> void:
 	CareerSave.apply_vars(back, sv)
 	_check(back.is_real_fixture() and back.round_index == 1 and back.round_venue(0, "CAR", "RIC") == "MCG",
 			"A saved 2015 season reloads on its real fixture")
+	# The rest of the season goes through play_round too, with stand-in
+	# results handed over as if the week's matches had run early (start_week):
+	# the fixture and the ladder are under test here, not the match sim.
 	while not s.is_regular_done():
+		var out := []
+		for m in s.fixture[s.round_index]:
+			out.append({"res": {"home": m["home"], "away": m["away"], "score": [60, 50]}})
+		s._early = {"week": "r%d" % s.round_index, "threads": [], "out": out}
 		s.play_round()
 	var p := 0
+	var short := []
 	for row in s.ladder_sorted():
 		p += int(row["p"])
-	_check(p == 18 * 22, "2015: all 198 real games on the ladder (%d club-games)" % p)
+		if int(row["p"]) != 22:
+			short.append("%s %d" % [row["code"], int(row["p"])])
+	_check(p == 18 * 22 and short.is_empty() and s.results.size() == 23,
+			"2015: all 198 real games on the ladder, 22 a club (%d club-games, %s)" % [p, str(short)])
 
 
 ## The first round's pairs, "HOME-AWAY", in order.
@@ -296,7 +307,11 @@ func _roll(year: int) -> bool:
 
 
 ## A 1990 start is the first season of a campaign (director 2026-11-13): each
-## rollover picks up the next year's real fixture as clubs join and leave.
+## rollover picks up the next year's real fixture as clubs join and leave. One
+## real rollover (1990 to 1991, Adelaide join) proves the career's own path;
+## the rollover builds next year's season from GameDB.active_clubs(next year)
+## (GameState._start_next_season), so the years after it are that same season
+## built directly, without six more off-seasons.
 func _test_career_rolls_into_real_years() -> void:
 	GameState.reset("1990")
 	GameState.replay_seed = SUITE_SEED
@@ -304,7 +319,10 @@ func _test_career_rolls_into_real_years() -> void:
 	GameState.start_season("CAR", GameDB.club_list("CAR"))
 	var counts := {1990: 14, 1991: 15, 1994: 15, 1995: 16, 1996: 16, 1997: 16}
 	for y in range(1990, 1998):
-		var s: Season = GameState.season
+		if y == 1991 and not _roll(1990):
+			break
+		var s: Season = GameState.season if y <= 1991 else Season.new(
+				GameDB.active_clubs(y).duplicate(), GameState.season.lists, SUITE_SEED + y, y)
 		var clubs: Array = s.clubs.duplicate()
 		var real := RealFixture.for_season(y, clubs)
 		_check(int(s.year) == y and not real.is_empty() and s.is_real_fixture()
@@ -320,8 +338,6 @@ func _test_career_rolls_into_real_years() -> void:
 			_check(clubs.has("FRE"), "1995: Fremantle join the league")
 		if y == 1997:
 			_check(not clubs.has("FIT") and clubs.has("PAD"), "1997: Fitzroy are gone after 1996; Port Adelaide join")
-		if y < 1997 and not _roll(y):
-			break
 	GameState.reset()
 
 
