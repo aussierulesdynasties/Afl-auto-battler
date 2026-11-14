@@ -355,9 +355,12 @@ func _test_second_year_and_end() -> void:
 	_check(tas_pay <= GameState.cap_for("TAS"),
 			"Tasmania is not over its cap in 2030 (%d against %d, league cap %d)" % [tas_pay, GameState.cap_for("TAS"), GameState.salary_cap])
 	var fourth := ExpansionBuild._relief_in(GameState, "TAS", 2031)
-	_check(fourth == Expansion.tapered_relief(second, 4, ExpansionBuild._signing_salaries(GameState, "TAS"))
-			and (second == 0 or (fourth > 0 and fourth < third)),
-			"Its fourth season keeps one third (%d)" % fourth)
+	# Each season's money stops at what the signings are still paid, so when
+	# that limit holds both seasons the fourth equals the third.
+	var paid := ExpansionBuild._signing_salaries(GameState, "TAS")
+	_check(fourth == Expansion.tapered_relief(second, 4, paid)
+			and (second == 0 or (fourth > 0 and (fourth < third or fourth == paid))),
+			"Its fourth season keeps one third (%d; third %d, second %d, signings paid %d)" % [fourth, third, second, paid])
 	_check(ExpansionBuild._relief_in(GameState, "TAS", 2032) == 0, "From its fifth season Tasmania's cap is everyone's cap")
 	_check(GameState.cap_for("GEE") == GameState.salary_cap, "No other club's cap moves in 2030")
 	# A save from before the money stepped down has no 2030 figure: same answer.
