@@ -301,6 +301,9 @@ func _rollover() -> void:
 			draft._skip_current_pick()
 	_check(draft.is_finished(), "The intake draft completes")
 	_check(GameState.finish_intake_draft(), "The rollover commits")
+	# The Rookie Draft settles before the first round, as it does in play: a
+	# list short of the minimum fills after it (GameState._fill_short_lists).
+	RookieList.settle(GameState)
 
 
 func _test_rollover_to_2028() -> void:
