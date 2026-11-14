@@ -2039,6 +2039,7 @@ func begin_real_lists() -> void:
 	intake_assignments = []
 	# The real 2026 class, and the career's own prospect if it has one.
 	var cls: Array = _career_copies(GameDB.draftees)
+	Prospects.roll_fine_wine(cls, "real-class-%d" % career_seed)   # 1 in 52, as a generated class
 	for q in draftee_pool:
 		if str(q.get("id", "")) == custom_prospect_id and custom_prospect_id != "":
 			cls.append(q)
@@ -3417,6 +3418,7 @@ func prepare_interactive_match() -> bool:
 	match_way_live = match_way()
 	preseason_sim_to_round1()
 	_settle_week_event()
+	YearEvents.settle_top_up(self)
 	MidseasonDraft.settle(self)
 	RookieList.settle(self)
 	last_pos_before = my_position()
@@ -3678,6 +3680,7 @@ func _advance_prep() -> void:
 	Season.beat()
 	_settle_week_event()
 	Season.beat()
+	YearEvents.settle_top_up(self)
 	MidseasonDraft.settle(self)
 	Season.beat()
 	RookieList.settle(self)
@@ -7948,6 +7951,8 @@ func _process_discipline(results: Array) -> void:
 				if str(item.get("outcome", "")) == "suspension":
 					p["suspension_weeks"] = maxi(int(p.get("suspension_weeks", 0)),
 							int(item.get("weeks", 0)))
+				elif str(item.get("outcome", "")) == "fine":
+					item["fine"] = TribunalFines.charge(p, season_year)
 				break
 
 
@@ -7975,7 +7980,10 @@ func my_mro_lines() -> Array:
 					suffix = " — Tribunal upheld"
 				out.append("%s suspended for %d match%s%s" % [name, w, "" if w == 1 else "es", suffix])
 			"fine":
-				out.append("%s fined for %s%s" % [name, str(row.get("reason", "rough conduct")),
+				var amount := int(row.get("fine", 0))
+				out.append("%s fined %sfor %s%s" % [name,
+						(TribunalFines.money(amount) + " ") if amount > 0 else "",
+						str(row.get("reason", "rough conduct")),
 						" — challenge failed" if str(row.get("challenge_result", "")) == "upheld" else ""])
 	return out
 
@@ -8011,7 +8019,9 @@ const TRIBUNAL_BOARD_COST := 5
 static func tribunal_gate(row: Dictionary) -> Array:
 	var appeal := str(row.get("stage", "tribunal")) == "appeal"
 	var pct := int(round(100.0 * (appeal_chance(row) if appeal else tribunal_chance(row))))
-	var cleared := "no fine" if str(row.get("outcome", "")) == "fine" else "no suspension"
+	var cleared := "no suspension"
+	if str(row.get("outcome", "")) == "fine":
+		cleared = ("no %s fine" % TribunalFines.money(int(row["fine"]))) if int(row.get("fine", 0)) > 0 else "no fine"
 	return [
 		"Gain: %d%% chance he's cleared: %s, and Brownlow-eligible again" % [pct, cleared],
 		"Cost: if it fails (%d%%), the board's confidence drops %d%%" % [100 - pct, TRIBUNAL_BOARD_COST],
@@ -8111,6 +8121,8 @@ func challenge_mro(player_id: String) -> Dictionary:
 	var name := str(target.get("name", player_id)) if p.is_empty() else GameDB.player_display_name(p)
 	if success:
 		_recompute_mro_player(player_id, str(target.get("case_id", "")))
+		if int(target.get("fine", 0)) > 0 and not p.is_empty():
+			TribunalFines.refund(p, season_year, int(target["fine"]))
 		add_news("tribunal", "%s has successfully challenged the MRO sanction at the Tribunal and is Brownlow-eligible again." % name)
 		mark_dirty()
 		return _mro_verdict(target, "tribunal", true, name,
@@ -13455,8 +13467,11 @@ func _round_news(results: Array) -> void:
 					name, GameDB.club_name(club), w, "" if w == 1 else "es",
 					str(row.get("reason", "rough conduct"))])
 		elif outcome == "fine":
-			add_news("mro", "%s (%s) was fined by the MRO for %s." % [
-					name, GameDB.club_name(club), str(row.get("reason", "rough conduct"))])
+			var amount := int(row.get("fine", 0))
+			add_news("mro", "%s (%s) was fined %sby the MRO for %s." % [
+					name, GameDB.club_name(club),
+					(TribunalFines.money(amount) + " ") if amount > 0 else "",
+					str(row.get("reason", "rough conduct"))])
 
 
 ## A rival who has trained as far as he can this season is a news candidate

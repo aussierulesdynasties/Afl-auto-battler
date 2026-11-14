@@ -1455,7 +1455,7 @@ func _fake(id: String, role: String, attr: Dictionary) -> Dictionary:
 func _good_count(traits: Array) -> int:
 	var n := 0
 	for k in traits:
-		if not Traits.is_bad(k) and not ["unicorn", "wet_weather"].has(k):
+		if not Traits.is_bad(k) and not Traits.ON_TOP.has(k):
 			n += 1
 	return n
 
@@ -1468,7 +1468,7 @@ func _test_traits() -> void:
 	var mt := Traits.of(many)
 	var good := 0
 	for k in mt:
-		if not Traits.is_bad(k) and not ["unicorn", "wet_weather"].has(k):
+		if not Traits.is_bad(k) and not Traits.ON_TOP.has(k):
 			good += 1
 	_check(good == 4 and mt.has("hothead"), "Every trait whose line he clears, plus Hothead for poor discipline (%s)" % str(mt))
 	# Up to five (director, 2026-11-12): clearing four lines earns four; clearing
