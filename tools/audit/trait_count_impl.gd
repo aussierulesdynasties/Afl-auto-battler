@@ -10,7 +10,7 @@ extends RefCounted
 ## career seed is AUDIT_SEED (default 301), so a main-vs-branch pair matches.
 ##   godot --headless --path . --script tools/audit/run_audit.gd -- trait_count_impl 3
 var dyn = load("res://tools/balance/dynasty.gd").new()
-const OTHER := ["unicorn", "wet_weather", "hothead"]
+const OTHER := ["unicorn", "wet_weather", "fine_wine", "hothead"]
 
 
 func _snapshot(gs) -> void:

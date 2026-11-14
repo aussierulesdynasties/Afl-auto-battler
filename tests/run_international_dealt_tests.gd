@@ -201,6 +201,10 @@ func _test_the_dealer_draws_his_cards() -> void:
 				if held.values().has(k):
 					word = k
 					break
+			# Held only because his own last card keeps its twelve weeks (the
+			# spacing checked below), not by another card's wait.
+			if word == "wait" and last_his != engine.NEVER and int(before["subj"].get(pid, engine.NEVER)) == last_his:
+				word = "spaced"
 			if dealt_his:
 				word = "dealt"
 			weeks[word] = int(weeks.get(word, 0)) + 1
@@ -219,6 +223,9 @@ func _test_the_dealer_draws_his_cards() -> void:
 	_check(with_card * CAREERS >= NEED * drafted,
 			"The game deals an international his own card in his first season in most careers (%d of %d)" % [with_card, drafted])
 	# Director, 2026-11-12: "Allow a small margin": six seeded careers move a week or two with any change to play.
+	# "wait" counts weeks another card about him held his cards; weeks held by his own card's twelve-week
+	# spacing count as "spaced" (2026-11-13: they grew with every card he was dealt, so a career that dealt
+	# him more cards read worse).
 	_check(int(tally.get("free", 0)) * 10 >= int(tally.get("wait", 0)) * 9,
 			"His cards are open about as many weeks as another card's wait holds them, within 10%% (%d open, %d held)" % [int(tally.get("free", 0)), int(tally.get("wait", 0))])
 	_check(crowded == 0, "His international cards come a month or more after any card about him, and twelve weeks apart (%d did not)" % crowded)
