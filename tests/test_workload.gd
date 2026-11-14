@@ -221,11 +221,15 @@ func _test_budget_fold_rule() -> void:
 
 
 ## Saves an off-season career, rewrites its budget to `old` in the file, reloads it.
+## The Geelong off-season the test before left is reused (a new career costs a
+## league reload); only the saved budget lines are under test, and the file's
+## are replaced whole.
 func _reload_with_old_budget(old: Dictionary) -> bool:
-	GameState.reset()
-	GameState.start_season("GEE", GameDB.club_list("GEE"))
-	GameState.season.round_index = GameState.season.fixture.size()
-	GameState.open_offseason()
+	if GameState.season == null or GameState.my_club != "GEE" or not GameState.offseason_open():
+		GameState.reset()
+		GameState.start_season("GEE", GameDB.club_list("GEE"))
+		GameState.season.round_index = GameState.season.fixture.size()
+		GameState.open_offseason()
 	if not GameState.save_career():
 		return false
 	var state := CareerSave.read(GameState.save_path)
@@ -393,9 +397,17 @@ func _loads() -> Dictionary:
 	return out
 
 
+## Geelong before Round 1, the career the test before left reused when it is
+## exactly that (a new career costs a league reload).
+func _season_start() -> void:
+	if GameState.season == null or GameState.my_club != "GEE" or GameState.season.round_index != 0 \
+			or GameState.offseason_open() or GameState.season.is_season_over():
+		GameState.reset()
+		GameState.start_season("GEE", GameDB.club_list("GEE"))
+
+
 func _test_career() -> void:
-	GameState.reset()
-	GameState.start_season("GEE", GameDB.club_list("GEE"))
+	_season_start()
 	GameState.advance()
 	var before := _loads()
 	var all_applied := true
@@ -448,8 +460,7 @@ func _test_finals() -> void:
 
 
 func _test_ui() -> void:
-	GameState.reset()
-	GameState.start_season("GEE", GameDB.club_list("GEE"))
+	_season_start()
 	var tree := Engine.get_main_loop() as SceneTree
 	tree.root.size = Vector2i(360, 800)
 	var p: Dictionary = GameState.my_list[0]

@@ -3712,6 +3712,9 @@ func _test_list_problem_and_ask_around() -> void:
 				"With nobody keen there is no way into a trade from the answers")
 	scene.queue_free()
 	root.size = size_before
+	# Ask their price by a finger, in this same off-season (opening one costs
+	# seconds), on a fresh screen: asking around offered, tabled and moved nothing.
+	await _ask_price_tap_in_offseason()
 	await _settle()
 
 
@@ -3745,12 +3748,12 @@ func _test_ask_price_tap() -> void:
 		return false)
 	_check(asked.size() == int(_state.ASK_PRICE_TRIES),
 			"Packages well over the price are weighed only among the first %d (%d weighed)" % [int(_state.ASK_PRICE_TRIES), asked.size()])
-	_state.reset()
-	_state.career_seed = 5508
-	_state.replay_seed = 5508
-	_state.start_season("MEL", _db.club_list("MEL"))
-	_state.season.round_index = _state.season.fixture.size()
-	_state.open_offseason()
+	# The tap runs in _test_list_problem_and_ask_around, on its off-season.
+
+
+## The tap behind Ask their price, on the off-season already open.
+func _ask_price_tap_in_offseason() -> void:
+	_check(_state.offseason_year == _state.season_year and _state.my_club == "MEL", "(setup) Melbourne's off-season is open")
 	var size_before := root.size
 	root.size = Vector2i(390, 844)
 	var scene: Control = load("res://scenes/OffseasonScene.tscn").instantiate()
@@ -3892,11 +3895,9 @@ func _test_finals_card_taps() -> void:
 ## the coach could play (your round, your final). A bye, a finals week off, a
 ## finals week you are out of and the off-season go straight ahead. Real taps
 ## on a 390 phone.
+## The season already on is reused (a new career costs a second): every ladder
+## row is written again and the finals start afresh.
 func _fre_in_finals_at(rank: int) -> void:
-	_state.reset()
-	_state.career_seed = 4402
-	_state.replay_seed = 4402
-	_state.start_season("FRE", _db.club_list("FRE"))
 	var sea = _state.season
 	var codes: Array = sea.ladder.keys()
 	codes.sort()
@@ -3914,6 +3915,8 @@ func _fre_in_finals_at(rank: int) -> void:
 	sea.recalc_ladder()
 	sea.start_finals()
 	_state.week_events = []
+	# The bye round played earlier named a carnival squad: its sheet was seen then.
+	_state.midseason["carnival_seen"] = true
 
 
 func _hub_tap(button_name: String) -> Array:
@@ -3971,6 +3974,7 @@ func _test_sim_asks_only_before_your_match() -> void:
 			"A finger on Play Round %d during the bye sims it with no question (%s)" % [bye_round + 1, got[0]])
 
 	# Finals: his own final asks; a week off and a week he is out of do not.
+	# This season again, each time with the ladder written for the case.
 	_fre_in_finals_at(8)
 	got = await _hub_tap("SimRound")
 	_check(got[0] == "" and got[1] and int(_state.season.finals["week"]) == 1,
@@ -4442,7 +4446,12 @@ func _test_every_start_reaches_interview() -> void:
 		_check(cont == "" and _router.current() == "draft" and str(current_scene.get("_phase")) == "board",
 				"%s: Continue goes back to the draft board (tap %s, at %s, phase %s)" % [
 					label, cont, _router.current(), current_scene.get("_phase")])
-		# The draft to its end; the hub never asks again.
+		# The draft to its end; the hub never asks again. The interview is due
+		# only from New career (Main), so one League redraft carries the proof
+		# for the redraft starts: every club drafts its whole list there, the
+		# cost of this test, and the 1990 one (14 clubs) is the shortest.
+		if str(st[1]) == "redraft" and label != "The 1990 League redraft":
+			continue
 		var ds := current_scene
 		var guard := 0
 		while d != null and not d.is_finished() and guard < 200:
@@ -4917,7 +4926,8 @@ func _test_restore_earlier_save_tap() -> void:
 	_state.reset()
 	_state.start_season("STK", _db.club_list("STK"))
 	_check(_state.save_career(), "Round 1 is saved")
-	_state.advance()
+	# On to round 2 without playing round 1's matches (seconds the restore does not read).
+	_state.season.round_index = 1
 	_check(_state.save_career(), "Round 2 is saved")
 	_router.stack = ["main"]
 	_router.go("hub")
@@ -5000,6 +5010,10 @@ func _test_sacked_job_choice_taps() -> void:
 	var take: Button = current_scene.find_child("TakeJob_%s" % code, true, false)
 	_check(take != null and take.get_combined_minimum_size().x <= take.size.x + 0.5,
 			"Each club with a job open has a Take button that reads whole on a 390 phone")
+	# Taking a job opens the new club's off-season market (seconds of rival
+	# trading this test does not read): marked open already, so the tap
+	# proves the move alone.
+	_state.offseason_year = _state.season_year
 	var why: String = await Tap.tap(take) if take != null else "missing"
 	await _settle()
 	# Row 179: he is that club's coach from the tap, so every off-season call is theirs.
@@ -5099,6 +5113,10 @@ func _test_rival_letter_taps() -> void:
 	_season_with_letter(false)
 	_check(moves.letter_open(_state) and not _state.offseason_open(),
 			"A strong season ends with a rival board's letter, and the off-season waits for the answer")
+	# The same letter is answered twice (Stay, then Take): the career is saved
+	# here and loaded for the second answer instead of playing its finals again.
+	var letter_was: Dictionary = moves.letter(_state).duplicate(true)
+	_check(_state.save_career(), "The career with the letter saves")
 	_router.stack = ["main"]
 	_router.go("hub")
 	await _settle()
@@ -5121,7 +5139,13 @@ func _test_rival_letter_taps() -> void:
 			and _screen_text().contains("Trades & Contracts"),
 			"After the answer the hub says so, and trades, contracts and the draft are back")
 	# A ladder club's letter, taken.
-	_season_with_letter(false)
+	_check(_state.load_career() and moves.letter(_state) == letter_was and moves.letter_open(_state)
+			and _state.my_club == "FRE" and not _state.offseason_open(),
+			"The saved career loads with its letter still unanswered (%s)" % str(moves.letter(_state)))
+	_db.set_enter_year("TAS", 9999)
+	_state.week_events = []
+	_state.media_conference = {}
+	_state.postseason_intro_seen = true
 	var code := str(moves.letter(_state).get("code", ""))
 	_router.go("hub")
 	await _settle()
@@ -5441,7 +5465,9 @@ func _test_skip_season() -> void:
 
 	# Played out the long way: Sim the week until the season is over. Both
 	# runs start in the finals, where the long press skips to the end of them.
+	# The start is saved and loaded for the second run rather than played again.
 	_skip_start_finals(5511)
+	_check(_state.save_career(), "The finals start saves")
 	var year: int = _state.season_year
 	var guard := 0
 	while not _state.season.is_season_over() and guard < 80:
@@ -5450,7 +5476,10 @@ func _test_skip_season() -> void:
 	var played := _skip_shape()
 
 	# Skipped: a long press of the week's button asks first.
-	_skip_start_finals(5511)
+	_check(_state.load_career() and _state.season_year == year and not _state.season.is_season_over(),
+			"The finals start loads, the season not over")
+	_state.week_events = []
+	_state.media_conference = {}
 	_router.stack = ["main"]
 	_router.go("hub")
 	await _settle()
@@ -5704,7 +5733,9 @@ func _skip_orders_run(orders: Dictionary) -> Dictionary:
 	_state.replay_seed = 7301
 	_state.start_season("HAW", _db.club_list("HAW"))
 	_state.week_events = []
-	_state.season.round_index = _state.season.fixture.size() - 8
+	# One home-and-away round is enough for the kids' answer to promise runs;
+	# the finals after it are played out as ever.
+	_state.season.round_index = _state.season.fixture.size() - 1
 	var year: int = _state.season_year
 	var res: Dictionary = _state.skip_season(orders)
 	var runs := 0

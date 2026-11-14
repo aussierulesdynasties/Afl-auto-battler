@@ -1,19 +1,7 @@
 [remap]
 
-importer="csv_translation"
-type="Translation"
-uid="uid://ikrfi6y10f"
+importer="keep"
 
 [deps]
 
-files=["res://data/legacy/era_football.chains.translation", "res://data/legacy/era_football.handball.translation", "res://data/legacy/era_football.mark.translation", "res://data/legacy/era_football.pressure.translation", "res://data/legacy/era_football.inside50.translation", "res://data/legacy/era_football.inside50.translation", "res://data/legacy/era_football.hitouts.translation", "res://data/legacy/era_football.clanger.translation", "res://data/legacy/era_football.free.translation"]
-
 source_file="res://data/legacy/era_football.csv"
-dest_files=["res://data/legacy/era_football.chains.translation", "res://data/legacy/era_football.handball.translation", "res://data/legacy/era_football.mark.translation", "res://data/legacy/era_football.pressure.translation", "res://data/legacy/era_football.inside50.translation", "res://data/legacy/era_football.inside50.translation", "res://data/legacy/era_football.hitouts.translation", "res://data/legacy/era_football.clanger.translation", "res://data/legacy/era_football.free.translation"]
-
-[params]
-
-compress=1
-delimiter=0
-unescape_keys=false
-unescape_translations=true

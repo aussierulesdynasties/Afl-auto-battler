@@ -60,15 +60,16 @@ func _check(ok: bool, what: String) -> void:
 
 
 ## A fresh Geelong career at its first off-season, with spare players only
-## when needed, so the list can lose three and stay at its minimum.
+## when needed, so the list can lose three and stay at its minimum. No match is
+## played: the season is marked over by hand and the off-season opened, which
+## is what builds the lists, contracts and free-agent pool an undo puts back.
 func _to_offseason() -> void:
 	_state.replay_seed = SUITE_SEED
 	_state.reset()
 	_state.start_season("GEE", _db.club_list("GEE"))
 	_state.season.round_index = _state.season.fixture.size()
 	_state.ensure_finals()
-	while not _state.season.is_season_over():
-		_state.advance()
+	_state.season.finals["done"] = true
 	_state.open_offseason()
 	var base: Dictionary = _state.my_list[_state.my_list.size() - 1]
 	# Three releases must leave the list at its minimum (Contracts.min_list()),

@@ -170,7 +170,22 @@ func _made_tokens() -> Array:
 # ---------------------------------------------------------------------------
 # One match, every tick
 # ---------------------------------------------------------------------------
+## The game caps itself at 60 frames a second and sleeps between frames
+## (project.godot), so every awaited frame here cost a sixtieth of a second
+## of waiting. The ticks drive the picture themselves (FRAME each, the pitch's
+## own processing off), so the cap only slowed the watching: it is lifted for
+## this match and put back after.
 func _test_a_full_match_at_8x() -> void:
+	var fps := Engine.max_fps
+	var low := OS.low_processor_usage_mode
+	Engine.max_fps = 0
+	OS.low_processor_usage_mode = false
+	await _watch_a_full_match()
+	Engine.max_fps = fps
+	OS.low_processor_usage_mode = low
+
+
+func _watch_a_full_match() -> void:
 	_state.set_vignettes_on(true)
 	_state.set_bounce_scene_every_match(true)
 	_state.reset()

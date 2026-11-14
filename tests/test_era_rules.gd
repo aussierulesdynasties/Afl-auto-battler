@@ -87,11 +87,34 @@ func _to_offseason() -> void:
 	GameState.board.erase("sacked")
 
 
+## The season is treated as played, finals and all: each final is given a
+## result (the higher seed wins), for a test whose subject is the rules each
+## new season brings, not the football. Simulating the finals cost about 6 s
+## a season on CI.
+func _finals_given() -> void:
+	var s: Season = GameState.season
+	s.round_index = s.fixture.size()
+	GameState.ensure_finals()
+	var guard := 0
+	while not s.is_season_over() and guard < 10:
+		guard += 1
+		var played := []
+		for m in s.finals_week_matches():
+			var top: Array = s.finals["top"]
+			var home_higher := top.find(str(m["home"])) < top.find(str(m["away"]))
+			var res := {"home": str(m["home"]), "away": str(m["away"]), "score": [80, 60] if home_higher else [60, 80]}
+			s.record_final(m, res)
+			played.append(res)
+		s.complete_finals_week(played)
+	_check(s.is_season_over() and str(s.finals.get("premier", "")) != "", "%d is played to a premier" % GameState.season_year)
+
+
 ## The off-season, then the rollover into the next season the way a career
 ## takes it: the National Draft (your picks made for you), then the Rookie
-## Draft that opens in the new season.
+## Draft that opens in the new season. The finals are given results
+## (_finals_given): the rollover is under test, not the football.
 func _roll() -> bool:
-	_to_offseason()
+	_finals_given()
 	_open_off()
 	GameState._close_free_agency()
 	return _draft_and_start()
@@ -268,7 +291,7 @@ func _test_campaign_1990_to_1998() -> void:
 		_check((rookies > 0) == bool(want[y][2]), "%d: rookie-listed players %d" % [y, rookies])
 		if y == 1998:
 			break
-		_to_offseason()
+		_finals_given()
 		_open_off()
 		_check(EraRules.list_ahead and Contracts.max_list() == int(want[y + 1][1]),
 				"The %d off-season plans %d's lists of %d (ahead %s, off-season year %d, sacked %s)" % [y, y + 1,
@@ -288,7 +311,7 @@ func _test_campaign_1990_to_1998() -> void:
 ## goes.
 func _test_smart_delisting() -> void:
 	_career(1993)
-	_to_offseason()
+	_finals_given()
 	var rival := "CAR"
 	var list: Array = GameState.season.lists[rival]
 	var kid := {}
