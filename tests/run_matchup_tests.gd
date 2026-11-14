@@ -1776,7 +1776,7 @@ func _gate_odds() -> void:
 			and str(GO.tag_break_texts("", "A", 20, "", "C")[1]).contains("C gets his usual %d touches" % GO.usual_touches())
 			and str(GO.tag_break_texts("B", "", 0)[0]).begins_with("none"),
 			"Tag: the share of his own game given up, from the tagger's constants (%s)" % GO.tag_gives())
-	_check(GO.skip_line(1).contains("plan you took in") and GO.skip_line(3).contains("last quarter's calls")
+	_check(GO.skip_line(1).contains("plan we took in") and GO.skip_line(3).contains("last quarter's calls")
 			and GO.skip_line(3).contains("no change") and GO.skip_line(1).contains("Nothing changed here is kept"),
 			"Skip says what it plays with and that the sheet's other changes are not kept")
 	var mins := func(k: String) -> String: return str(roundi(float(Ms.BURSTS[k]["chains"]) * float(Ms.GAME_MINUTES) / float(RT.T["chains_per_game"])))
@@ -1790,7 +1790,7 @@ func _gate_odds() -> void:
 			"Slow it down: up and down from its constants (%s / %s)" % hold)
 	var stack: Array = GO.burst_lines("stack", 15)
 	_check(str(stack[0]).contains(pct.call(Ms.STACK_CONTEST)) and str(stack[0]).contains(pct.call(float(RT.T["contest_clamp"])))
-			and str(stack[1]).contains(pct.call(Ms.STACK_OPP_GOAL - 1.0)), "Stack the stoppage: the edge, its cap and its cost (%s / %s)" % stack)
+			and str(stack[1]).contains(pct.call(Ms.STACK_OPP_GOAL - 1.0)), "Stack the centre bounce: the edge, its cap and its cost (%s / %s)" % stack)
 	_check(str(GO.burst_lines("flood", 20, false)[0]).ends_with(GO.TO_BREAK), "Before the last quarter a call that outlasts it runs to the break")
 	var flood: Array = GO.burst_lines("flood", 15)
 	_check(str(flood[0]).contains(pct.call(1.0 - Ms.FLOOD_OPP_GOAL)) and str(flood[0]).ends_with(GO.TO_SIREN)
