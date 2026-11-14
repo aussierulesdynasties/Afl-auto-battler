@@ -2624,12 +2624,62 @@ func _test_three_d_view(res: Dictionary) -> void:
 			"The 3D oval puts a footballer on every token (%d)" % (oval.players.size() if oval else -1))
 	_check(pv._view3d != null and pv._view3d.texture == pv._vp3d.get_texture() and pv._vp3d.size.x >= 360,
 			"The 3D picture is shown in the view, at least at the canvas's size")
+	_check(pv._view3d.show_behind_parent,
+			"The 3D picture lies under the view's own drawing, so the overlays show over it")
 	pv.set_speed(8.0)
 	pv.play()
 	for i in range(300):
 		pv._process(1.0 / 60.0)
 	_check(seen.size() == flat_seen.size() and seen.size() > 0,
 			"The 3D oval releases the feed as the flat oval does (%d vs %d)" % [seen.size(), flat_seen.size()])
+	# The ground paint lies on the 3D turf, under the bodies: the ring round the man on the ball.
+	pv.director.actor = 0
+	pv._paint_ground_3d()
+	var paint: MeshInstance3D = oval.find_child("GroundPaint", true, false)
+	_check(paint != null and pv._paint3d.get_surface_count() == 1 and paint.mesh == pv._paint3d,
+			"In 3D the ground paint (rings, marks, press wash) is a mesh on the turf, under the bodies")
+	# The overlays: each body is a disc round his middle where the 3D camera shows him.
+	pv._layout_3d()
+	var tr := pv.token_radius()
+	_check(tr > pv.size.y * 0.01 and tr < pv.size.y * 0.15,
+			"In 3D a body's size is what the camera shows (%.1f px half-height)" % tr)
+	var on_view := 0
+	var upright := 0
+	for i in range(pv.director.tokens.size()):
+		var p: Vector2 = pv.director.tokens[i]["pos"]
+		var feet: Vector2 = pv._project3d(Vector3(p.x, 0.0, p.y))
+		if Rect2(Vector2.ZERO, pv.size).has_point(pv._disc_at(i)):
+			on_view += 1
+			if feet.y > pv._disc_at(i).y and absf(feet.y - pv._disc_at(i).y - pv.disc_radius(i)) < 1.0:
+				upright += 1
+	_check(on_view > 0 and upright == on_view,
+			"Every body on view has its disc round his middle, his feet below it (%d of %d)" % [upright, on_view])
+	var near := -1
+	for i in range(pv.director.tokens.size()):
+		if Rect2(Vector2.ZERO, pv.size).has_point(pv._disc_at(i)):
+			near = i
+			break
+	if near >= 0:
+		var hit := pv.disc_at_point(pv._disc_at(near))
+		_check(hit >= 0 and pv._disc_at(hit).distance_to(pv._disc_at(near)) <= pv.disc_radius(hit),
+				"A press on a body in 3D finds the player drawn there")
+		pv._caption = {"tok": near, "text": "Walters", "left": 1.0}
+		var box := pv.caption_box()
+		var body_top := pv._disc_at(near).y - pv.disc_radius(near)
+		var body_bottom := pv._disc_at(near).y + pv.disc_radius(near)
+		_check(box.size.x > 0.0 and (box.end.y <= body_top or box.position.y >= body_bottom),
+				"A caption in 3D sits clear of the player's body, above or below it")
+		pv._caption = {}
+	var off := -1
+	for i in range(pv.director.tokens.size()):
+		if not Rect2(Vector2.ZERO, pv.size).has_point(pv._disc_at(i)):
+			off = i
+			break
+	if off >= 0:
+		pv._caption = {"tok": off, "text": "Walters", "left": 1.0}
+		_check(pv.caption_box().size.x == 0.0,
+				"In 3D a caption for a player off the view is not written over someone else")
+		pv._caption = {}
 	pv.period = 1
 	pv._change_ends()
 	_check(is_equal_approx(oval.rotation.y, PI), "At a change of ends the 3D ground turns half a turn")

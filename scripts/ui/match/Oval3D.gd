@@ -20,6 +20,7 @@ const STAND_DEPTH := 34.0
 const STAND_RISE := 24.0
 ## The jog's 17 keys at 24 fps are one stride cycle in 0.67 s, matched to about 6 m/s.
 const LOOK_X := 78.0           # m: the camera follows the ball this far towards each goal
+const LOOK_Z := 55.0           # ...and this far out to each wing (the man on the ball stays in view)
 const BODY_GAP := 0.6         # m between two players' centres, drawn
 ## The digits the vignettes print numbers with (R fill, G outline), shared so both read alike.
 const DIGITS := preload("res://assets/vignette/figures_digits.png")
@@ -104,7 +105,7 @@ func sync(dt: float) -> void:
 		ball.rotation = Vector3.ZERO
 	# Followed to within a few metres of each goal line: a kick-in or a shot at the camera's own
 	# end stays in view (aim_end stops looking ahead there).
-	var target := Vector3(clampf(bp.x, -LOOK_X, LOOK_X), 0.0, clampf(bp.y, -25.0, 25.0))
+	var target := Vector3(clampf(bp.x, -LOOK_X, LOOK_X), 0.0, clampf(bp.y, -LOOK_Z, LOOK_Z))
 	_look = target if dt <= 0.0 else _look.lerp(target, clampf(dt * 1.5, 0.0, 1.0))
 
 
