@@ -160,6 +160,19 @@ class Boundaries(Repo):
         self.assertEqual(boundaries.check_no_import_sidecars(self.root), [])
 
 
+    def test_csv_kept(self):
+        self.write("data/a.csv", "x\n")
+        self.write("data/b.csv", "x\n")
+        self.write("data/b.csv.import", '[remap]\n\nimporter="csv_translation"\n')
+        self.write("docs/c.csv", "x\n")
+        self.write("docs/.gdignore", "")
+        got = boundaries.check_csv_kept(self.root)
+        self.assertEqual(sorted(f.path for f in got), ["data/a.csv", "data/b.csv.import"])
+        self.write("data/a.csv.import", '[remap]\n\nimporter="keep"\n')
+        self.write("data/b.csv.import", '[remap]\n\nimporter="keep"\n')
+        self.assertEqual(boundaries.check_csv_kept(self.root), [])
+
+
 class StoryFlags(Repo):
     def test_the_check_bites(self):
         self.assertEqual(story_flags.code_flag_names('if gs.story_flag_set(id, "t_code"):'), ["t_code"])

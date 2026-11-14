@@ -37,7 +37,7 @@ const GROUPS := [
 			["one_percenters", "1%", "one percenters"], ["spoils", "SP", "spoils"],
 			["pressure_acts", "PA", "pressure acts"]]],
 	["discipline", "Discipline", [["frees_for", "FF", "frees for"], ["frees_against", "FA", "frees against"],
-			["clangers", "CG", "clangers"]]],
+			["clangers", "CG", "clangers"], ["fines", "$", "tribunal fines"]]],
 ]
 ## A rate ranks only players with enough under it, scaled to the rounds
 ## played: so many a round (shots, ruck contests...), at least one.
@@ -318,6 +318,9 @@ static func _board_row(host: Control, row: Dictionary, rank: int) -> Control:
 static func _under(row: Dictionary, key: String) -> String:
 	if key == "kh" or key == "games":
 		return ""
+	if key == "fines":
+		var n := int((row["s"] as Dictionary).get("fine_count", 0.0))
+		return "%d %s" % [n, "fine" if n == 1 else "fines"] if n > 0 else ""
 	if StatBook.RATES.has(key):
 		if not QUALIFY.has(key):
 			return ""
@@ -504,9 +507,16 @@ static func _rows() -> Array:
 		s["possessions"] = float(s.get("contested_possessions", 0.0)) + float(s.get("uncontested_possessions", 0.0))
 		s["open_shots"] = float(s.get("shots", 0.0)) - float(s.get("set_shots", 0.0))
 		s["rating"] = season_rating(s)
+		_add_fines(s, p)
 		out.append({"id": str(id), "p": p, "name": name, "club": club, "games": games, "s": s,
 				"moved": (row.get("clubs", {}) as Dictionary).size() > 1})
 	return out
+
+
+## His MRO fines this season (TribunalFines): dollars, and how many.
+static func _add_fines(s: Dictionary, p: Dictionary) -> void:
+	s["fines"] = float(TribunalFines.season_total(p, GameState.season_year))
+	s["fine_count"] = float(TribunalFines.count(p, GameState.season_year))
 
 
 static func _age_ok(age: float, band: String) -> bool:
@@ -544,7 +554,8 @@ static func value(row: Dictionary, key: String, per_game: bool) -> float:
 	if key == "kh":
 		return StatBook.kick_ratio(s)
 	var t := float(s.get(key, 0.0))
-	if per_game:
+	# Fines are dollars paid, never a figure a game.
+	if per_game and key != "fines":
 		var g := int(row["games"])
 		return t / float(g) if g > 0 else -1.0
 	return t
@@ -891,6 +902,8 @@ static func _row(host: Control, row: Dictionary, rank: int, cols: Array, wide: b
 static func fmt(v: float, key: String, per_game: bool) -> String:
 	if v < 0.0:
 		return "–"
+	if key == "fines":
+		return TribunalFines.money(int(v))
 	if StatBook.RATES.has(key):
 		return "%d" % int(round(v * 100.0))
 	if key == "kh" or (per_game and key != "games"):
@@ -948,7 +961,7 @@ static func open_player(host: Control, id: String) -> void:
 				parts.append("%d for %s" % [int(clubs[c]), GameDB.club_short(str(c))])
 			head += " (" + ", ".join(parts) + ")"
 		v.add_child(UiKit.lbl(head, UiKit.BODY, UiKit.TEXT, true))
-		v.add_child(_season_grid(row, host.call("wide")))
+		v.add_child(_season_grid(row, host.call("wide"), p))
 	# His career, season by season.
 	v.add_child(UiKit.spacer(6))
 	v.add_child(UiKit.section("Career"))
@@ -970,11 +983,12 @@ static func open_player(host: Control, id: String) -> void:
 
 
 ## Every recorded number he has this season, by group: total, per game.
-static func _season_grid(row: Dictionary, wide: bool) -> Control:
+static func _season_grid(row: Dictionary, wide: bool, p := {}) -> Control:
 	var s: Dictionary = (row.get("s", {}) as Dictionary).duplicate()
 	s["possessions"] = float(s.get("contested_possessions", 0.0)) + float(s.get("uncontested_possessions", 0.0))
 	s["open_shots"] = float(s.get("shots", 0.0)) - float(s.get("set_shots", 0.0))
 	s["rating"] = season_rating(s)
+	_add_fines(s, p)
 	var r := {"id": "", "games": int(row.get("games", 0)), "s": s}
 	var grid := GridContainer.new()
 	grid.name = "PlayerSeasonGrid"
@@ -999,7 +1013,7 @@ static func _season_grid(row: Dictionary, wide: bool) -> Control:
 			lab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			h.add_child(lab)
 			h.add_child(_cell(fmt(t, key, false) + ("%" if StatBook.RATES.has(key) else ""), 56.0, UiKit.TEXT, UiKit.SMALL, true))
-			var per := "" if (StatBook.RATES.has(key) or key == "kh") else fmt(value(r, key, true), key, true) + " a game"
+			var per := "" if (StatBook.RATES.has(key) or key == "kh" or key == "fines") else fmt(value(r, key, true), key, true) + " a game"
 			h.add_child(_cell(per, 84.0, UiKit.MUTED, UiKit.SMALL))
 			box.add_child(h)
 		if any:
@@ -1047,6 +1061,13 @@ static func _career(p: Dictionary) -> Control:
 		v.add_child(t)
 	if lines.is_empty() and by_club.is_empty():
 		v.add_child(UiKit.lbl("No senior games before this season.", UiKit.SMALL, UiKit.MUTED))
+	var paid := TribunalFines.career_total(p)
+	if paid > 0:
+		var n := TribunalFines.career_count(p)
+		var f := UiKit.lbl("Tribunal fines: %s (%d %s)" % [TribunalFines.money(paid), n,
+				"fine" if n == 1 else "fines"], UiKit.SMALL, UiKit.TEXT)
+		f.name = "CareerFines"
+		v.add_child(f)
 	if not Career.complete(p):
 		v.add_child(UiKit.lbl("Part of his career was played before records were kept.", UiKit.SMALL, UiKit.MUTED))
 	return v

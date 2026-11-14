@@ -33,6 +33,10 @@ const GOLDEN_REAL := "6b9d20ef93eea2ce95f0a6d936f19727"
 ## season's print is the one taken before it was written down, which is the
 ## proof that writing it down changed no result and no draw.
 const BOOKKEEPING_KEYS := ["impact_by", "breeze_side"]
+## Team counts that record where something happened, not what happened: the
+## pressure zones (pressure acts in the defensive half, tackles inside 50,
+## 2026-11-14) are counted without a draw, so leaving them out keeps the print.
+const TEAM_BOOKKEEPING_KEYS := ["pressure_acts_dhalf", "tackles_i50"]
 const GOLDEN_SEASON := {"Windows": "05a96ea659dcfe349e9afec75b01b45a", "Linux": "9c00f9caf199debd6cc6a20325ba8cba"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
@@ -172,13 +176,33 @@ func _real_print() -> String:
 	return "\n".join(out)
 
 
-func _season_print() -> String:
+## Team counts are copied into snapshots too (half-time, quarter breaks), so
+## leave them out at any depth.
+func _strip_team_bookkeeping(v) -> void:
+	if v is Dictionary:
+		for k in TEAM_BOOKKEEPING_KEYS:
+			(v as Dictionary).erase(k)
+		for k in (v as Dictionary).keys():
+			_strip_team_bookkeeping((v as Dictionary)[k])
+	elif v is Array:
+		for x in v:
+			_strip_team_bookkeeping(x)
+
+
+## The seeded season's print after each of its first `rounds` rounds.
+func _season_prints(rounds: int) -> Array:
 	GameState.reset()
 	GameState.career_seed = SUITE_SEED
 	GameState.replay_seed = SUITE_SEED
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
-	for i in range(3):
+	var out := []
+	for i in range(rounds):
 		GameState.advance()
+		out.append(_season_print())
+	return out
+
+
+func _season_print() -> String:
 	var out := PackedStringArray()
 	out.append("%d|%d" % [GameState.season_year, GameState.season.round_index])
 	for row in GameState.season.ladder_sorted():
@@ -194,6 +218,7 @@ func _season_print() -> String:
 			if c is Dictionary:
 				for k in BOOKKEEPING_KEYS:
 					(c as Dictionary).erase(k)
+				_strip_team_bookkeeping(c)
 			games.append(c)
 		played.append(games)
 	out.append(JSON.stringify(played, "", true))
@@ -224,11 +249,15 @@ func _test_golden_real_lists() -> void:
 	_golden("real lists opening", a, GOLDEN_REAL)
 
 
+## The golden is the first three rounds. The second career plays one round:
+## a reset that leaked anything into play shows from the first round on, and
+## the golden itself proves the three rounds play the same from run to run.
 func _test_golden_season() -> void:
-	var a := _season_print()
-	var b := _season_print()
-	_check(a == b, "A seeded season's first three rounds play the same twice")
-	_golden("seeded season", a, str(GOLDEN_SEASON.get(OS.get_name(), "")))
+	var a := _season_prints(3)
+	var b := _season_prints(1)
+	_check(a.size() == 3 and b.size() == 1 and a[0] == b[0],
+			"A seeded season's first round plays the same twice")
+	_golden("seeded season", a[2], str(GOLDEN_SEASON.get(OS.get_name(), "")))
 
 
 # ---------------------------------------------------------------------------
@@ -626,7 +655,29 @@ func _test_real_1990() -> void:
 			"About 7%% of the 1990 lists rate 80 or more and nobody tops out (%d of %d, best %d)" % [stars, ovr.size(), top])
 	_check(peaked > 200 and peak_ok, "A real peak sets each ceiling, give or take luck (%d players)" % peaked)
 	_check(Potential.peak_from_year == 1986, "Recent seasons count from the 1990 set's own data season")
+	# Honours lift the decorated to a floor (director 2026-11-13, "Add honours").
+	var by_id := {}
+	var honoured := 0
+	var floor_ok := true
+	for p in GameDB.players:
+		by_id[str(p.get("id", ""))] = p
+		if float(p.get("honours", 0.0)) > 0.0:
+			honoured += 1
+			if int(p["overall"]) < Ratings.honours_floor(float(p["honours"])):
+				floor_ok = false
+	_check(honoured >= 60 and floor_ok, "Every honoured 1990 player rates at least his honours floor (%d honoured)" % honoured)
+	var roos: Dictionary = by_id.get("FIT_1", {})   # Paul Roos
+	_check(not roos.is_empty() and int(roos["overall"]) >= 78 and bool(roos.get("rated_on_honours", false)),
+			"Paul Roos, twice All-Australian, rates on his honours (%d)" % int(roos.get("overall", 0)))
+	var platten: Dictionary = by_id.get("HAW_44", {})   # John Platten
+	_check(not platten.is_empty() and not bool(platten.get("rated_on_honours", false)),
+			"A star already above his floor keeps his own rating (Platten %d)" % int(platten.get("overall", 0)))
 	GameDB.reload()
+	var none := true
+	for p in GameDB.players:
+		if p.has("honours") or bool(p.get("rated_on_honours", false)):
+			none = false
+	_check(none, "Today's set carries no honours: a 2026 start is untouched")
 	_check(Ratings.era_anchors.is_empty() and Potential.peak_from_year == 2023,
 			"Back on 2026, positions scale on 2026's anchors again")
 	_golden("load after the 1990 set", _load_print(), GOLDEN_LOAD)
@@ -651,12 +702,12 @@ func _test_legacy_start_1990() -> void:
 	_check(not want.is_empty() and missing <= 3,
 			"Melbourne start on their real 1990 list (%d of %d on it)" % [want.size() - missing, want.size()])
 	_check(GameState.season.clubs.size() == 14, "Fourteen clubs play 1990 (%d)" % GameState.season.clubs.size())
-	var by_name := {}
+	var by_id := {}
 	for cid in GameState.coaches:
 		var c: Dictionary = GameState.coaches[cid]
 		if str(c.get("real_name", "")) != "":
-			by_name[str(c["real_name"])] = c
-	var northey: Dictionary = by_name.get("John Northey", {})
+			by_id[str(c["real_name"])] = c
+	var northey: Dictionary = by_id.get("John Northey", {})
 	_check(not northey.is_empty() and str(northey.get("status", "")) == "free" and str(northey.get("club", "")) == ""
 			and bool(northey.get("former_sc", false)),
 			"You replace John Northey, and he is in the coach pool (%s)" % str(northey.get("status", "missing")))
@@ -727,11 +778,16 @@ func _test_legacy_rolls_into_1991() -> void:
 	for cid in GameState.coaches:
 		if str(GameState.coaches[cid].get("real_name", "")) == "John Northey":
 			northey_id = str(cid)
+	# The rollover is under test, not 200 home and away games: skip to the
+	# finals and play those. The Grand Final week closes the season (awards,
+	# the coaching market that fills every senior job), so they stay played.
+	GameState.season.round_index = GameState.season.fixture.size()
+	GameState.ensure_finals()
 	var guard := 0
 	while not GameState.season.is_season_over() and guard < 60:
 		guard += 1
 		GameState.advance()
-	_check(GameState.season.is_season_over(), "The 1990 season plays out (%d weeks)" % guard)
+	_check(GameState.season.is_season_over(), "The 1990 season ends with its finals (%d weeks)" % guard)
 	_check(GameState.start_next_season(), "The 1990 career rolls on")
 	_check(GameState.season_year == 1991 and GameState.my_club == "MEL" and GameDB.dataset_id == "1990"
 			and GameState.dataset == "1990",
@@ -793,12 +849,12 @@ func _test_legacy_redraft_1990() -> void:
 	for p in mine:
 		from_1990 += 1 if real_ids.has(str(p.get("id", ""))) else 0
 	GameState.start_season("MEL", mine)
-	var by_name := {}
+	var by_id := {}
 	for cid in GameState.coaches:
 		var c: Dictionary = GameState.coaches[cid]
 		if str(c.get("real_name", "")) != "":
-			by_name[str(c["real_name"])] = c
-	var northey: Dictionary = by_name.get("John Northey", {})
+			by_id[str(c["real_name"])] = c
+	var northey: Dictionary = by_id.get("John Northey", {})
 	_check(GameState.season_year == 1990 and GameState.my_club == "MEL" and GameState.season.ladder.size() == 14,
 			"You coach Melbourne in 1990 on a 14-club ladder (%d, %s, %d clubs)" % [
 				GameState.season_year, GameState.my_club, GameState.season.ladder.size()])

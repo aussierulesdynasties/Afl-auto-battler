@@ -1,7 +1,6 @@
 # gdlint problems known on the day the gate started (tools/lint/gdlint_gate.py): count rule path.
 # Shrinks as they are fixed; never grows by hand. Rewrite: python3 -I tools/lint/lint.py --only gdlint --write-baseline
 1 unused-argument scripts/core/ScreenTransition.gd
-1 unused-argument scripts/sim/Achievements.gd
 1 unused-argument scripts/sim/ClubLife.gd
 3 unused-argument scripts/sim/CoachMarket.gd
 2 function-argument-name scripts/sim/MatchSim.gd

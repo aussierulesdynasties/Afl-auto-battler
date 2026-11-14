@@ -356,6 +356,10 @@ func _test_game_flow() -> void:
 	var pid := str(pick["id"])
 	var name := GameDB.player_display_name(pick)
 	var games := int(Career.of(pick)["games"])
+	# The off-season's market and staff are not under test: marked as opened,
+	# the rollover goes straight to ageing, where he retires (director
+	# 2026-11-14: "shrink the tests less than 10 seconds too").
+	GameState.offseason_year = GameState.season_year
 	_check(GameState.start_next_season(), "The season rolls over")
 	var still_listed := false
 	for code in GameState.season.lists:

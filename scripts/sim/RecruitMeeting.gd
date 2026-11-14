@@ -244,6 +244,12 @@ static func reason(p: Dictionary) -> String:
 	if InternationalProspects.is_international(p):
 		var c := InternationalProspects.country(str(p["intl"]))
 		return "%s: %d cm, %s. Raw, but the ceiling is high." % [name, h, str(c.get("reason", "new to the game"))]
+	# No under-18 numbers on him (a real class from before the stats were
+	# kept): the panel speaks to his build and position, never a zero.
+	if int(p.get("u18_gm", 0)) <= 0:
+		var pos: String = {"FWD": "forward", "DEF": "defender", "RUCK": "ruckman"}.get(str(p.get("role", "MID")), "midfielder")
+		var from := " out of the %s" % where if where != "" else ""
+		return "%s: a %d cm %s%s." % [name, h, pos, from]
 	match str(p.get("role", "MID")):
 		"FWD":
 			if float(p.get("u18_gl", 0.0)) >= 1.5:

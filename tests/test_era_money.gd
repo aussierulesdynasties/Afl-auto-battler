@@ -170,11 +170,26 @@ func _test_2027_career_unchanged() -> void:
 	_check(bad.is_empty(), "Every 2027 asking price is today's model: %s" % str(bad.slice(0, 5)))
 
 
+## The season is treated as played: its home-and-away rounds are skipped and
+## each final is given a result (the higher seed wins), since the money, not
+## the football, is under test here. Simulating the finals cost about 9 s a
+## season on CI.
 func _to_offseason() -> void:
-	GameState.season.round_index = GameState.season.fixture.size()
+	var s: Season = GameState.season
+	s.round_index = s.fixture.size()
 	GameState.ensure_finals()
-	while not GameState.season.is_season_over():
-		GameState.advance()
+	var guard := 0
+	while not s.is_season_over() and guard < 10:
+		guard += 1
+		var played := []
+		for m in s.finals_week_matches():
+			var top: Array = s.finals["top"]
+			var home_higher := top.find(str(m["home"])) < top.find(str(m["away"]))
+			var res := {"home": str(m["home"]), "away": str(m["away"]), "score": [80, 60] if home_higher else [60, 80]}
+			s.record_final(m, res)
+			played.append(res)
+		s.complete_finals_week(played)
+	_check(s.is_season_over() and str(s.finals.get("premier", "")) != "", "%d is played to a premier" % GameState.season_year)
 
 
 ## A 1990 start is the first season of a campaign (director 2026-11-13: "its
@@ -197,12 +212,17 @@ func _test_campaign_rolls_through_the_eras() -> void:
 	var sackings := []
 	while GameState.season_year < last:
 		var from := GameState.season_year
-		# Everyone on a list signed beyond this season, and what he is paid.
+		# Everyone on a list signed beyond this season, what he is paid and by
+		# whom. A contract runs on at the club that signed it; a player a
+		# merger releases, a story moves or a club delists and signs again starts a
+		# new one (Legacy L8): same club and same join year, or it is a new deal.
 		var signed := {}
+		var signed_by := {}
 		for code in GameState.season.lists:
 			for p in GameState.season.lists[code]:
 				if p.has("salary") and int(p.get("contract_years", 0)) >= 2:
 					signed[str(p["id"])] = int(p["salary"])
+					signed_by[str(p["id"])] = "%s|%s" % [code, p.get("joined", "")]
 		_to_offseason()
 		# Nobody coaches this side, and a board may sack him with no job to go
 		# to (that ends a career). The money is under test, not the coach: keep
@@ -237,7 +257,7 @@ func _test_campaign_rolls_through_the_eras() -> void:
 		for code in GameState.season.lists:
 			for p in GameState.season.lists[code]:
 				var id := str(p["id"])
-				if signed.has(id) and p.has("salary"):
+				if signed.has(id) and p.has("salary") and str(signed_by[id]) == "%s|%s" % [code, p.get("joined", "")]:
 					kept += 1
 					if int(p["salary"]) != int(signed[id]):
 						moved.append("%s %d->%d" % [id, int(signed[id]), int(p["salary"])])

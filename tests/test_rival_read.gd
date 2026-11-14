@@ -74,7 +74,14 @@ func _test_reads_match_calls() -> void:
 	var seen := {"protect": 0, "chase": 0, "lost_q": 0, "counter": 0, "usual": 0, "tag_on_time": 0,
 			"fire": 0, "pulled": 0}
 	var bad := []
+	var played := 0
 	for i in range(Identity.MATCHES):
+		# Every quarter is checked against its read; once the matches have
+		# shown every reason and habit at least once, more of them repeat
+		# what is already proven, so the seeded run stops there.
+		if _covered(seen):
+			break
+		played += 1
 		var sim := Identity.stage(i)
 		var picks := ["", ""]
 		for side in range(2):
@@ -177,6 +184,7 @@ func _test_reads_match_calls() -> void:
 							RivalRead.in_quarter(int(prev["quarter"]))]
 					if not line.contains(tail) or _plan(last, opp) != str(MatchSim.COUNTER.get(_plan(prev, me), "")):
 						bad.append("match %d Q%d: \"%s\" should end \"%s\"" % [i, q, line, tail])
+	print("  reads_match_calls: %d seeded matches until every reason was seen: %s" % [played, seen])
 	_check(bad.is_empty(), "Every read says what the coach then does (%d disagree: %s)" % [bad.size(), bad.slice(0, 4)])
 	_check(int(seen["protect"]) > 0 and int(seen["chase"]) + int(seen["lost_q"]) > 0 and int(seen["counter"]) > 0
 			and int(seen["usual"]) > 0, "The seeded matches show every reason he plays a plan: %s" % seen)
@@ -184,6 +192,15 @@ func _test_reads_match_calls() -> void:
 			"Lost the quarter: said when well behind, quiet when close: %s" % seen)
 	_check(int(seen["tag_on_time"]) > 0 and int(seen["fire"]) > 0 and int(seen["pulled"]) > 0,
 			"...and a tag on time, a fire-up and a loose man put back on a man: %s" % seen)
+
+
+## Whether the matches so far have shown every reason and habit the checks
+## above ask for.
+func _covered(seen: Dictionary) -> bool:
+	for k in ["protect", "counter", "usual", "lost_said", "lost_quiet", "tag_on_time", "fire", "pulled"]:
+		if int(seen.get(k, 0)) <= 0:
+			return false
+	return int(seen.get("chase", 0)) + int(seen.get("lost_q", 0)) > 0
 
 
 # ---------------------------------------------------------------------------
@@ -368,6 +385,9 @@ func _test_in_career() -> void:
 	GameState.advance()
 	var settled := JSON.stringify(GameState.rival_plans.get("usual", {}))
 	GameState.advance()
+	# This round's matches as the week hands them on, to be recorded again
+	# below in a later season without playing another round.
+	var played: Array = GameState.last_results.duplicate(true)
 	var usual: Dictionary = GameState.rival_plans.get("usual", {})
 	_check(usual.size() >= 17 and not usual.has("GEE"), "Each rival coach settles his usual game (%d clubs)" % usual.size())
 	_check(JSON.stringify(usual) == settled, "...at the first round, and keeps it the next week")
@@ -452,9 +472,14 @@ func _test_in_career() -> void:
 	# Last year's record is never read as this year's.
 	GameState.rival_plans = {"year": GameState.season_year - 1, "clubs": clubs}
 	_check(GameState.rival_rows(r1).is_empty(), "Last season's record is not this season's")
-	GameState.advance()
+	# The week's own step that records a round's calls (GameState._note_rival_plans,
+	# called from the week's results), fed a round already played: a new
+	# season's record starts from it, last year's dropped.
+	GameState._note_rival_plans(played)
 	_check(int(GameState.rival_plans.get("year", 0)) == GameState.season_year
-			and (GameState.rival_rows(r1) as Array).size() <= 1, "A new season's record starts afresh")
+			and (GameState.rival_rows(r1) as Array).size() <= 1
+			and not (GameState.rival_plans.get("clubs", {}) as Dictionary).is_empty(),
+			"A new season's record starts afresh (%d clubs)" % (GameState.rival_plans.get("clubs", {}) as Dictionary).size())
 	# The tagger, loose man and minder it names are the men the match plays.
 	opp = str(GameState.my_next_opponent().get("code", ""))
 	_check(opp != "", "There is a next opponent")
