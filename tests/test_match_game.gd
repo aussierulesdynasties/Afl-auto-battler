@@ -103,6 +103,7 @@ func run() -> void:
 	_t("_test_set_shot_calls")
 	_t("_test_bomb_card_shows_the_dice")
 	_t("_test_forward_archetypes")
+	_t("_test_every_call_two_sided")
 	GameDB.skip_ovr_overrides = false
 	GameDB.reload()
 	print(Ran.line("Match game", self))
@@ -5033,3 +5034,53 @@ func _test_standing_plan_knowledge() -> void:
 		var want := "controlled" if PlanFit.edge(gg, "controlled") > PlanFit.STANDING_EDGE else "balanced"
 		ok = ok and PlanFit.standing_plan(gg, only_controlled) == want
 	_check(ok, "Controlled Tempo is a club's usual game when it is its best")
+
+
+## Row T1.R26 (bible principle 4; director 2026-11-10 "Gain / Cost
+## everywhere"): every match-day gate states, for each option, a Gain and a
+## Cost, sized, and never which option is better, so no option is left with
+## an upside and no stated downside. Every in-match call that can come up
+## (set shot, their hot midfielder, a run against, the late centre ball-up)
+## and every break call (plan, pep talk, risk cards).
+func _test_every_call_two_sided() -> void:
+	var sized := RegEx.create_from_string("\d")
+	var verdict := RegEx.create_from_string("(?i)recommend|best (choice|option|call)|the better (choice|option|call)|you should")
+	var seen := {}
+	for seed in range(900, 940):
+		var sim := _sim(seed)
+		sim.always_offer_bounce = true
+		sim.moment_side = 0
+		while sim.current_quarter <= 4:
+			sim.begin_quarter()
+			while not sim.continue_quarter():
+				var m: Dictionary = sim.pending_moment
+				var kind := str(m.get("kind", ""))
+				seen[kind] = int(seen.get(kind, 0)) + 1
+				for o in m.get("options", []):
+					var g := str((o as Dictionary).get("gain", ""))
+					var c := str((o as Dictionary).get("cost", ""))
+					var what := "%s call, %s" % [kind, str(o.get("label", o.get("key", "")))]
+					_check(g.begins_with("Gain: ") and c.begins_with("Cost: "), "The %s states a Gain and a Cost (%s / %s)" % [what, g, c])
+					_check(str(o.get("key", "")) == "none" or sized.search(g + c) != null, "The %s gives a size or odds (%s / %s)" % [what, g, c])
+					_check(verdict.search(g + c + str(o.get("detail", ""))) == null, "The %s never says which is better" % what)
+				sim.resolve_moment(int(m.get("default", 0)))
+			sim.end_quarter()
+		if seen.has("set_shot") and seen.has("hot") and seen.has("momentum") and seen.has("bounce"):
+			break
+	for kind in ["set_shot", "hot", "momentum", "bounce"]:
+		_check(seen.has(kind), "(setup) a %s call came up in the seeded matches (%s)" % [kind, str(seen)])
+	# The break calls. Balanced and Stay composed are the no-change options:
+	# they state that nothing is gained and nothing given up, so carry no figure.
+	for plan in MatchSim.PLANS.keys() + ["balanced"]:
+		var t := GateOdds.plan_texts(str(plan))
+		_check(str(t[0]) != "" and str(t[1]) != "", "The %s plan states a gain and a cost" % plan)
+		_check(not GateOdds.PLAN_GAIN.has(MatchSim.plan_key(str(plan))) or sized.search(str(t[0]) + str(t[1])) != null,
+				"The %s plan sizes its gain and cost (%s / %s)" % [plan, t[0], t[1]])
+	for pep in GateOdds.PEP_GAIN.keys():
+		var t := GateOdds.pep_texts(str(pep))
+		_check(str(t[0]) != "" and str(t[1]) != "", "The %s pep talk states a gain and a cost" % pep)
+		_check(pep == "steady" or sized.search(str(t[0]) + str(t[1])) != null, "The %s pep talk is sized (%s / %s)" % [pep, t[0], t[1]])
+	for kind in GateOdds.BURST_GAIN.keys():
+		var t := GateOdds.burst_lines(str(kind), 20)
+		_check(sized.search(str(t[0])) != null and sized.search(str(t[1])) != null,
+				"The %s card sizes both its gain and its cost (%s / %s)" % [kind, t[0], t[1]])
