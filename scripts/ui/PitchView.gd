@@ -207,6 +207,15 @@ const FIGURES_NEAR_BALL := 6
 const FIGURE_HEIGHT := 1.8        # figure height in token radii (tr 13.5 = 24 px)
 var _figs: MiniFigures
 var _looks := {}
+## The 3D oval (row 197; director 2026-11-14, "True 3D oval"): the same director's players on
+## a real 3D ground (Oval3D), rendered at the screen's own pixels and shown in place of the
+## flat drawing. Settings > Match view; the match screen sets it before setup().
+var three_d := false
+var _oval3d: Oval3D = null
+var _vp3d: SubViewport = null
+var _view3d: TextureRect = null
+const CAM3D_UP := 18.0
+const CAM3D_BACK := 28.0
 
 
 ## The figures' own layer: the figure shader is a material on a CanvasItem,
@@ -261,6 +270,7 @@ func setup(p_result: Dictionary) -> void:
 	playing = false
 	director = MatchDirector.new()
 	director.setup(p_result, events)
+	_setup_3d()
 	if _bench != null:
 		# A new match: the drawer shut, its tab there when this match names a bench.
 		_bench.close()
@@ -295,6 +305,79 @@ func append_events(new_events: Array, timeline: Array = []) -> void:
 	if not timeline.is_empty() and director != null:
 		director.set_timeline(timeline)
 	queue_redraw()
+
+
+# ---------------------------------------------------------------------------
+# The 3D oval
+# ---------------------------------------------------------------------------
+## A new match on the 3D oval: a fresh scene for this director (its players, kits and
+## stands), or the flat oval again when three_d is off.
+func _setup_3d() -> void:
+	if _oval3d != null:
+		_oval3d.queue_free()
+		_oval3d = null
+	if not three_d:
+		if _vp3d != null:
+			_vp3d.queue_free()
+			_view3d.queue_free()
+			_vp3d = null
+			_view3d = null
+		if _figs != null:
+			_figs.visible = true
+		return
+	if _vp3d == null:
+		_vp3d = SubViewport.new()
+		_vp3d.name = "Oval3DViewport"
+		_vp3d.own_world_3d = true
+		_vp3d.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+		add_child(_vp3d)
+		_view3d = TextureRect.new()
+		_view3d.name = "Oval3DView"
+		_view3d.texture = _vp3d.get_texture()
+		_view3d.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		_view3d.stretch_mode = TextureRect.STRETCH_SCALE
+		_view3d.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_view3d.set_anchors_preset(Control.PRESET_FULL_RECT)
+		add_child(_view3d)
+		# Under the bench drawer and anything else the view puts over the oval.
+		move_child(_view3d, 0)
+	if _figs != null:
+		_figs.visible = false
+	_oval3d = Oval3D.new()
+	_vp3d.add_child(_oval3d)
+	_oval3d.build(director, home_code, away_code)
+	_oval3d.set_ends(end_sign(period))
+	_fit_3d()
+	_sync_3d(0.0)
+	queue_redraw()
+
+
+## The 3D picture is drawn at the screen's own pixels, not the stretched 2D canvas's
+## (on a phone the canvas is about 485 px wide; the screen 1080).
+func _fit_3d() -> void:
+	var vis := get_viewport().get_visible_rect().size if is_inside_tree() else Vector2.ZERO
+	var k := 1.0
+	if vis.x > 0.0:
+		k = clampf(float(DisplayServer.window_get_size().x) / vis.x, 1.0, 3.0)
+	var want := Vector2i(maxi(8, int(size.x * k)), maxi(8, int(size.y * k)))
+	if _vp3d.size != want:
+		_vp3d.size = want
+
+
+## `dt` is match time (the play speed applied), so the bodies run at the director's pace.
+func _sync_3d(dt: float) -> void:
+	_fit_3d()
+	_oval3d.sync(dt)
+	if not is_inside_tree():
+		return
+	# Portrait: from behind the play, the ground running up the screen; wide: from the wing.
+	# The match screen gives the oval about a third of a phone, so the camera sits closer
+	# than the full-screen prototype's (34 m up, 52 m back): a player stands about a tenth
+	# of the view tall.
+	if size.y > size.x:
+		_oval3d.aim_end(CAM3D_UP, CAM3D_BACK)
+	else:
+		_oval3d.aim_wing(CAM3D_UP, CAM3D_BACK * 1.3)
 
 
 # ---------------------------------------------------------------------------
@@ -399,6 +482,9 @@ func _process(delta: float) -> void:
 		_shake = maxf(0.0, _shake - delta)
 		queue_redraw()
 	_update_camera(delta)
+	if _oval3d != null:
+		_sync_3d(delta * speed if playing else 0.0)
+		return
 	if playing or _cam.distance_to(_drawn_cam) > 0.05 or absf(_zoom - _drawn_zoom) > 0.002 \
 			or not director.flash.is_empty() or not _caption.is_empty() or not _press_banner.is_empty() \
 			or float(_zone_fade[0]) > 0.0 or float(_zone_fade[1]) > 0.0 \
@@ -638,6 +724,8 @@ func _track_quarter(ev: Dictionary) -> void:
 func _change_ends() -> void:
 	_flip_pending = false
 	period += 1
+	if _oval3d != null:
+		_oval3d.set_ends(end_sign(period))
 	# The picture mirrors along the ground's length, and so does each disc's nudge.
 	for i in range(_nudge.size()):
 		_nudge[i] = Vector2(_nudge[i].x, -_nudge[i].y) if upright else Vector2(-_nudge[i].x, _nudge[i].y)
@@ -1036,6 +1124,8 @@ func _stripe(c: Vector2, a: float, b: float, x0: float, x1: float) -> PackedVect
 # Drawing
 # ---------------------------------------------------------------------------
 func _draw() -> void:
+	if _oval3d != null:
+		return
 	if _shake > 0.0:
 		# Fades out as it ends; timed by the shake itself so a recording shows it as played.
 		draw_set_transform(shake_offset())

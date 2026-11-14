@@ -58,6 +58,7 @@ func run() -> void:
 	_t("_test_ends_change_at_restart", [res])
 	_t("_test_upright_oval", [res])
 	_t("_test_plan_tint_every_quarter")
+	_t("_test_three_d_view", [res])
 	GameState.replay_seed = 0
 	print(Ran.line("Match visual", self))
 
@@ -2596,3 +2597,46 @@ func _test_plan_tint_every_quarter() -> void:
 		_check(float(shown[0]) > 0.97 and float(shown[1]) > 0.97 and float(shown[3]) > 0.97,
 				"Side %d: the press tint shows through the quarters of its plan (%s)" % [my_side, str(shown)])
 		_check(float(shown[2]) < 0.03, "Side %d: the tint is gone in the quarter the plan was changed (%s)" % [my_side, str(shown)])
+
+
+## Settings > Match view "3D oval" (row 197): the same director's match on a 3D ground. It plays
+## and releases the feed exactly as the flat oval does, a footballer for every token, the
+## ground turning at each change of ends, and the flat oval back when the setting is off.
+func _test_three_d_view(res: Dictionary) -> void:
+	var flat := PitchView.new()
+	flat.size = Vector2(360, 480)
+	var flat_seen := []
+	flat.event_played.connect(func(ev): flat_seen.append(ev))
+	flat.setup(res)
+	flat.set_speed(8.0)
+	flat.play()
+	for i in range(300):
+		flat._process(1.0 / 60.0)
+	var pv := PitchView.new()
+	pv.size = Vector2(360, 480)
+	pv.three_d = true
+	(Engine.get_main_loop() as SceneTree).root.add_child(pv)
+	var seen := []
+	pv.event_played.connect(func(ev): seen.append(ev))
+	pv.setup(res)
+	var oval: Oval3D = pv._oval3d
+	_check(oval != null and oval.players.size() == pv.director.tokens.size(),
+			"The 3D oval puts a footballer on every token (%d)" % (oval.players.size() if oval else -1))
+	_check(pv._view3d != null and pv._view3d.texture == pv._vp3d.get_texture() and pv._vp3d.size.x >= 360,
+			"The 3D picture is shown in the view, at least at the canvas's size")
+	pv.set_speed(8.0)
+	pv.play()
+	for i in range(300):
+		pv._process(1.0 / 60.0)
+	_check(seen.size() == flat_seen.size() and seen.size() > 0,
+			"The 3D oval releases the feed as the flat oval does (%d vs %d)" % [seen.size(), flat_seen.size()])
+	pv.period = 1
+	pv._change_ends()
+	_check(is_equal_approx(oval.rotation.y, PI), "At a change of ends the 3D ground turns half a turn")
+	pv._change_ends()
+	_check(is_equal_approx(oval.rotation.y, 0.0), "And back at the next")
+	pv.three_d = false
+	pv.setup(res)
+	_check(pv._oval3d == null and pv._vp3d == null, "With the setting off the flat oval comes back")
+	pv.free()
+	flat.free()
