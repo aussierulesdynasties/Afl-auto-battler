@@ -11,8 +11,11 @@ var checks := 0
 var failures: Array[String] = []
 ## The seeds and lists the matches are played on.
 const SEEDS := [9401, 9402, 9403, 9404, 9405, 9406, 9407, 9408]
-## Matches for the contests-per-duel comparison (seeds 9401 on).
-const MORE := 24
+## Matches for the every-match checks (seeds 9401 on): the same eight
+## matches every check reads, played once (director 2026-11-14: "shrink the
+## tests"). "No key forward contests his own kick" is also tested on the rule
+## itself (_key_lead), not only by scanning matches for it.
+const MORE := 8
 const PAIRS := [["COL", "CAR"], ["GEE", "SYD"], ["BRL", "MEL"], ["HAW", "WCE"],
 		["FRE", "ADE"], ["STK", "ESS"], ["GWS", "NTH"], ["RIC", "WBD"]]
 
@@ -52,8 +55,16 @@ func run(tree: SceneTree) -> void:
 		print("  FAIL: " + f)
 
 
-## One match per seed: [sim, result].
+## One match per seed: [sim, result], played once and shared (the checks
+## only read it).
+var _played := {}
 func _play(i: int) -> Array:
+	if not _played.has(i):
+		_played[i] = _play_new(i)
+	return _played[i]
+
+
+func _play_new(i: int) -> Array:
 	var p: Array = PAIRS[i % PAIRS.size()]
 	var h := str(p[0])
 	var a := str(p[1])
@@ -163,6 +174,28 @@ func _test_no_lead_at_own_kick() -> void:
 	print("Key duels: %d of %d tagged general-play contests on his own kick" % [own, gp])
 	_check(gp > 0 and own == 0,
 			"No key forward contests his own kick: %d of %d tagged general-play contests" % [own, gp])
+	# The rule itself: with a key forward kicking in his front half, the lead
+	# never falls to him, though with someone else kicking it falls to him.
+	var sim: MatchSim = _play(0)[0]
+	var tries := 0
+	var to_kicker := 0
+	var led := 0
+	for side in range(2):
+		var fp := 30.0 if side == 0 else -30.0
+		for fid in (sim.duels[1 - side] as Dictionary):
+			var kicker := sim._on_ground(side, str(fid))
+			if kicker.is_empty():
+				continue
+			for n in range(200):
+				tries += 1
+				var lead := sim._key_lead(side, fp, kicker)
+				if not lead.is_empty() and str(lead["id"]) == str(fid):
+					to_kicker += 1
+				var other := sim._key_lead(side, fp, null)
+				if not other.is_empty() and str(other["id"]) == str(fid):
+					led += 1
+	_check(tries > 0 and led > 0 and to_kicker == 0,
+			"A key forward never leads up at his own kick (%d of %d tries), though he leads at others' (%d)" % [to_kicker, tries, led])
 
 
 ## The full-time line's numbers are the log's, and its verdict is the rule's.
