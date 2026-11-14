@@ -34,9 +34,10 @@ const STAGE := {
 ## over 60. The distance is the spot's own metres.
 const SET_SPOTS := {"close": 0.0, "front": 0.0, "long": 0.0, "angle": 20.0, "pocket": 65.0}
 
-## How far behind the men a duel or hot-hand camera stands, in oval metres (measured
-## 2026-11-14: the duel's lens 35 m back on a phone and a PC, the hot hand's 25 m).
-const LOOK_ROOM := 36.0
+## How far behind the men a duel or hot-hand camera needs the ground to stand back, in
+## oval metres. Measured 2026-11-14 on a phone: a duel lens stopped by the boundary at
+## 24.5 m left 267 px of sky over the stand; at 31 m the stand filled the top.
+const LOOK_ROOM := 30.0
 ## Where the hot hand's field umpire stands, in scene metres: 5 m behind the chaser's
 ## start, inside a phone's picture.
 const UMP_HOT := Vector2(-1.5, 26.0)
@@ -121,8 +122,7 @@ func setup_decision(sim: MatchSim, my_side: int, moment: Dictionary, shown := {}
 		for id in live_spots:
 			if str(id) != about:
 				others.append(live_spots[id])
-		# The camera stands up to 35 m behind them (the duel's lens on a phone and a PC):
-		# a way with no ground for it is not taken.
+		# A way with no ground behind for the camera to stand back on is not taken.
 		_stage = {"at": here, "look": VignetteExtras.best_look(here, others, _stage["look"], LOOK_ROOM)}
 	_to_scene = _frame_from(_stage["at"], _stage["look"])
 	var focus: Vector2 = _stage["at"]

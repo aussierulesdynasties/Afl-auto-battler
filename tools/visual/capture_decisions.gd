@@ -9,7 +9,9 @@ extends SceneTree
 ## --kinds tired,duel,...,bounce: only those. --weather wet (or windy, hot). --clubs FRE,MEL.
 ## --live SECONDS: the scenes open over a real match screen's oval, SECONDS into the first
 ## quarter (the club is --clubs' first, the opponent whoever the fixture gives), so every
-## man stands where the live oval has him, as in a game. Prints LIVE lines.
+## man stands where the live oval has him, as in a game. Prints LIVE lines. --live release:
+## the oval's play released at once instead, as tests/run_decision_scenes_tests.gd stages it
+## (with --clubs COL,<any>: the suite's own spots).
 ## Prints FRAMING lines (the scene's own projection: horizon, heads, boots, how much of the
 ## frame is turf) and ART lines: every figure move drawn (strip and frames asked for), proof
 ## the sheet's moves were used and not a fallback.
@@ -33,13 +35,16 @@ func _run() -> void:
 	var weather := ""
 	var clubs := ["FRE", "MEL"]
 	var live_after := -1.0
+	var release := false
 	for i in range(a.size() - 1):
 		match str(a[i]):
 			"--out": out = str(a[i + 1])
 			"--weather": weather = str(a[i + 1])
 			"--kinds": kinds = Array(str(a[i + 1]).split(","))
 			"--clubs": clubs = Array(str(a[i + 1]).split(","))
-			"--live": live_after = float(a[i + 1])
+			"--live":
+				release = str(a[i + 1]) == "release"
+				live_after = 0.0 if release else float(a[i + 1])
 			"--size":
 				var wh := str(a[i + 1]).split("x")
 				W = int(wh[0])
@@ -74,6 +79,10 @@ func _run() -> void:
 		for i in range(8):
 			await process_frame
 		var pitch = m.get("_pitch")
+		if release:
+			m.set("_skipping", true)
+			pitch.release_all()
+			m.set("_skipping", false)
 		var left := live_after
 		while left > 0.0:
 			pitch.director.advance(0.1)
