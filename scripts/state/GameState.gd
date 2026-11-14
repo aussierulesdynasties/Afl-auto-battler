@@ -9523,7 +9523,7 @@ func fa_offers(player_id: String) -> Array:
 		var club_name := GameDB.club_name(str(o["club"]))
 		var view := Contracts.offer_view(p, o, other, club_name)
 		if i > 0 and view != "":
-			view = "Behind, though: " + view.left(1).to_lower() + view.substr(1)
+			view = "Behind, but " + view.left(1).to_lower() + view.substr(1)
 		elif i > 0:
 			view = "Behind."
 		out.append({"club": str(o["club"]), "name": club_name, "salary": int(o["salary"]), "years": int(o["years"]),
@@ -11279,16 +11279,16 @@ func list_problem() -> Array:
 		best22[str(q["id"])] = true
 	var out_of := Contracts.expiring(my_list).filter(func(q): return not retiring_now(q))
 	var key := out_of.filter(func(q): return best22.has(str(q["id"]))).size()
-	var first := "Nobody out of contract." if out_of.is_empty() else "%s out of contract, %s of them in your best 22." % [
-			_count_word(out_of.size(), true), _count_word(key)]
+	var first := "Nobody out of contract." if out_of.is_empty() else "%s out of contract. %s of them in our best 22." % [
+			_count_word(out_of.size(), true), _count_word(key, true)]
 	if not out_of.is_empty() and key == 0:
-		first = "%s out of contract, none of them in your best 22." % _count_word(out_of.size(), true)
+		first = "%s out of contract. None of them in our best 22." % _count_word(out_of.size(), true)
 	var six := side.slice(0, 6)
 	var ages := 0.0
 	for q in six:
 		ages += float(q.get("age", 25))
 	var going := my_list.filter(func(q): return retiring_now(q)).size()
-	var second := "Your best six average %d years old." % roundi(ages / float(maxi(1, six.size())))
+	var second := "Our best six average %d years old." % roundi(ages / float(maxi(1, six.size())))
 	if going > 0:
 		second += " %s retiring." % _count_word(going, true)
 	return [first, second, draft_spots_line(going)]
