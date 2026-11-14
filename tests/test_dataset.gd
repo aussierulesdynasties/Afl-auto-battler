@@ -176,6 +176,19 @@ func _real_print() -> String:
 	return "\n".join(out)
 
 
+## Team counts are copied into snapshots too (half-time, quarter breaks), so
+## leave them out at any depth.
+func _strip_team_bookkeeping(v) -> void:
+	if v is Dictionary:
+		for k in TEAM_BOOKKEEPING_KEYS:
+			(v as Dictionary).erase(k)
+		for k in (v as Dictionary).keys():
+			_strip_team_bookkeeping((v as Dictionary)[k])
+	elif v is Array:
+		for x in v:
+			_strip_team_bookkeeping(x)
+
+
 func _season_print() -> String:
 	GameState.reset()
 	GameState.career_seed = SUITE_SEED
@@ -198,10 +211,7 @@ func _season_print() -> String:
 			if c is Dictionary:
 				for k in BOOKKEEPING_KEYS:
 					(c as Dictionary).erase(k)
-				for t in (c as Dictionary).get("team", []):
-					if t is Dictionary:
-						for k in TEAM_BOOKKEEPING_KEYS:
-							(t as Dictionary).erase(k)
+				_strip_team_bookkeeping(c)
 			games.append(c)
 		played.append(games)
 	out.append(JSON.stringify(played, "", true))
