@@ -21,29 +21,29 @@
 390x844 RisingStar_3 | Round 3 | Jack Whitlock | Power | 
 390x844 RisingStar_2 | Round 2 | Willem Duursma | Eagles | 
 390x844 RisingStar_1 | Round 1 | Finn O'Sullivan | Kangaroos | 
-390x844 Spot_RUCK | Gawn | Demons | id MEL_11 at 103.00,225.90 size 70.00,44.00
-390x844 Spot_C | Smith | Cats | id GEE_3 at 103.00,332.79 size 70.00,44.00
-390x844 Spot_IL | Richards | Bulldogs | id WBD_20 at 40.60,279.58 size 70.00,44.00
-390x844 Spot_IR | Hall | Saints | id STK_40 at 165.40,279.58 size 70.00,44.00
-390x844 Spot_WL | Bontempelli | Bulldogs | id WBD_4 at 11.97,225.90 size 70.00,44.00
-390x844 Spot_WR | Serong | Dockers | id FRE_3 at 194.03,225.90 size 70.00,44.00
-390x844 Spot_FB | Battle | Hawks | id HAW_24 at 103.00,511.60 size 70.00,44.00
-390x844 Spot_HBFL | Williams | Blues | id CAR_6 at 24.94,402.67 size 70.00,44.00
-390x844 Spot_HBFR | McCarthy | Eagles | id WCE_18 at 181.06,402.67 size 70.00,44.00
-390x844 Spot_BPL | Farrell | Power | id PAD_6 at 53.60,459.04 size 70.00,44.00
-390x844 Spot_BPR | Clark | Dockers | id FRE_6 at 152.40,459.04 size 70.00,44.00
-390x844 Spot_CB | Sicily | Hawks | id HAW_6 at 103.00,407.04 size 70.00,44.00
-390x844 Spot_FF | Chandler | Demons | id MEL_37 at 103.00,44.40 size 70.00,44.00
-390x844 Spot_HFFL | Mannagh | Cats | id GEE_7 at 24.99,152.90 size 70.00,44.00
-390x844 Spot_HFFR | Treacy | Dockers | id FRE_35 at 181.01,152.90 size 70.00,44.00
-390x844 Spot_FPL | Hayward | Blues | id CAR_19 at 56.20,96.96 size 70.00,44.00
-390x844 Spot_FPR | Watson | Hawks | id HAW_5 at 149.80,96.96 size 70.00,44.00
-390x844 Spot_HFF | Reid | Dockers | id FRE_16 at 103.00,148.96 size 70.00,44.00
-390x844 BenchSpot_0 | Xerri | Kangaroos | id NTH_38 at 0.00,0.00 size 88.00,44.00
-390x844 BenchSpot_1 | Cameron | Magpies | id COL_14 at 94.00,0.00 size 88.00,44.00
-390x844 BenchSpot_2 | Nankervis | Tigers | id RIC_25 at 188.00,0.00 size 88.00,44.00
-390x844 BenchSpot_3 | Neale | Lions | id BRL_9 at 0.00,50.00 size 88.00,44.00
-390x844 BenchSpot_4 | Taranto | Tigers | id RIC_14 at 94.00,50.00 size 88.00,44.00
+390x844 Spot_RUCK | Gawn | Demons | id MEL_11 at 138.00,231.28 size 70.00,44.00
+390x844 Spot_C | Smith | Cats | id GEE_3 at 138.00,330.56 size 70.00,44.00
+390x844 Spot_IL | Richards | Bulldogs | id WBD_20 at 58.80,278.13 size 70.00,44.00
+390x844 Spot_IR | Hall | Saints | id STK_40 at 217.20,278.13 size 70.00,44.00
+390x844 Spot_WL | Bontempelli | Bulldogs | id WBD_4 at 12.95,226.03 size 70.00,44.00
+390x844 Spot_WR | Serong | Dockers | id FRE_3 at 263.05,226.03 size 70.00,44.00
+390x844 Spot_FB | Battle | Hawks | id HAW_24 at 138.00,511.60 size 70.00,44.00
+390x844 Spot_HBFL | Williams | Blues | id CAR_6 at 29.67,403.12 size 70.00,44.00
+390x844 Spot_HBFR | McCarthy | Eagles | id WCE_18 at 246.33,403.12 size 70.00,44.00
+390x844 Spot_BPL | Farrell | Power | id PAD_6 at 75.30,459.04 size 70.00,44.00
+390x844 Spot_BPR | Clark | Dockers | id FRE_6 at 200.70,459.04 size 70.00,44.00
+390x844 Spot_CB | Sicily | Hawks | id HAW_6 at 138.00,407.04 size 70.00,44.00
+390x844 Spot_FF | Chandler | Demons | id MEL_37 at 138.00,44.40 size 70.00,44.00
+390x844 Spot_HFFL | Mannagh | Cats | id GEE_7 at 30.11,152.00 size 70.00,44.00
+390x844 Spot_HFFR | Treacy | Dockers | id FRE_35 at 245.89,152.00 size 70.00,44.00
+390x844 Spot_FPL | Hayward | Blues | id CAR_19 at 78.60,96.96 size 70.00,44.00
+390x844 Spot_FPR | Watson | Hawks | id HAW_5 at 197.40,96.96 size 70.00,44.00
+390x844 Spot_HFF | Reid | Dockers | id FRE_16 at 138.00,148.96 size 70.00,44.00
+390x844 BenchSpot_0 | Xerri | Kangaroos | id NTH_38 at 0.00,0.00 size 112.00,44.00
+390x844 BenchSpot_1 | Cameron | Magpies | id COL_14 at 118.00,0.00 size 111.00,44.00
+390x844 BenchSpot_2 | Nankervis | Tigers | id RIC_25 at 235.00,0.00 size 111.00,44.00
+390x844 BenchSpot_3 | Neale | Lions | id BRL_9 at 0.00,50.00 size 112.00,44.00
+390x844 BenchSpot_4 | Taranto | Tigers | id RIC_14 at 118.00,50.00 size 111.00,44.00
 360x800 Coleman_1 | 1 | Logan Morris | Lions | 12
 360x800 Coleman_2 | 1 | Josh Treacy | Dockers | 12
 360x800 Coleman_3 | 1 | Charlie Curnow | Swans | 12
@@ -67,29 +67,29 @@
 360x800 RisingStar_3 | Round 3 | Jack Whitlock | Power | 
 360x800 RisingStar_2 | Round 2 | Willem Duursma | Eagles | 
 360x800 RisingStar_1 | Round 1 | Finn O'Sullivan | Kangaroos | 
-360x800 Spot_RUCK | Gawn | Demons | id MEL_11 at 103.00,225.90 size 70.00,44.00
-360x800 Spot_C | Smith | Cats | id GEE_3 at 103.00,332.79 size 70.00,44.00
-360x800 Spot_IL | Richards | Bulldogs | id WBD_20 at 40.60,279.58 size 70.00,44.00
-360x800 Spot_IR | Hall | Saints | id STK_40 at 165.40,279.58 size 70.00,44.00
-360x800 Spot_WL | Bontempelli | Bulldogs | id WBD_4 at 11.97,225.90 size 70.00,44.00
-360x800 Spot_WR | Serong | Dockers | id FRE_3 at 194.03,225.90 size 70.00,44.00
-360x800 Spot_FB | Battle | Hawks | id HAW_24 at 103.00,511.60 size 70.00,44.00
-360x800 Spot_HBFL | Williams | Blues | id CAR_6 at 24.94,402.67 size 70.00,44.00
-360x800 Spot_HBFR | McCarthy | Eagles | id WCE_18 at 181.06,402.67 size 70.00,44.00
-360x800 Spot_BPL | Farrell | Power | id PAD_6 at 53.60,459.04 size 70.00,44.00
-360x800 Spot_BPR | Clark | Dockers | id FRE_6 at 152.40,459.04 size 70.00,44.00
-360x800 Spot_CB | Sicily | Hawks | id HAW_6 at 103.00,407.04 size 70.00,44.00
-360x800 Spot_FF | Chandler | Demons | id MEL_37 at 103.00,44.40 size 70.00,44.00
-360x800 Spot_HFFL | Mannagh | Cats | id GEE_7 at 24.99,152.90 size 70.00,44.00
-360x800 Spot_HFFR | Treacy | Dockers | id FRE_35 at 181.01,152.90 size 70.00,44.00
-360x800 Spot_FPL | Hayward | Blues | id CAR_19 at 56.20,96.96 size 70.00,44.00
-360x800 Spot_FPR | Watson | Hawks | id HAW_5 at 149.80,96.96 size 70.00,44.00
-360x800 Spot_HFF | Reid | Dockers | id FRE_16 at 103.00,148.96 size 70.00,44.00
-360x800 BenchSpot_0 | Xerri | Kangaroos | id NTH_38 at 0.00,0.00 size 88.00,44.00
-360x800 BenchSpot_1 | Cameron | Magpies | id COL_14 at 94.00,0.00 size 88.00,44.00
-360x800 BenchSpot_2 | Nankervis | Tigers | id RIC_25 at 188.00,0.00 size 88.00,44.00
-360x800 BenchSpot_3 | Neale | Lions | id BRL_9 at 0.00,50.00 size 88.00,44.00
-360x800 BenchSpot_4 | Taranto | Tigers | id RIC_14 at 94.00,50.00 size 88.00,44.00
+360x800 Spot_RUCK | Gawn | Demons | id MEL_11 at 123.00,225.90 size 70.00,44.00
+360x800 Spot_C | Smith | Cats | id GEE_3 at 123.00,332.79 size 70.00,44.00
+360x800 Spot_IL | Richards | Bulldogs | id WBD_20 at 51.00,279.58 size 70.00,44.00
+360x800 Spot_IR | Hall | Saints | id STK_40 at 195.00,279.58 size 70.00,44.00
+360x800 Spot_WL | Bontempelli | Bulldogs | id WBD_4 at 11.97,225.97 size 70.00,44.00
+360x800 Spot_WR | Serong | Dockers | id FRE_3 at 234.03,225.97 size 70.00,44.00
+360x800 Spot_FB | Battle | Hawks | id HAW_24 at 123.00,511.60 size 70.00,44.00
+360x800 Spot_HBFL | Williams | Blues | id CAR_6 at 27.49,402.88 size 70.00,44.00
+360x800 Spot_HBFR | McCarthy | Eagles | id WCE_18 at 218.51,402.88 size 70.00,44.00
+360x800 Spot_BPL | Farrell | Power | id PAD_6 at 66.00,459.04 size 70.00,44.00
+360x800 Spot_BPR | Clark | Dockers | id FRE_6 at 180.00,459.04 size 70.00,44.00
+360x800 Spot_CB | Sicily | Hawks | id HAW_6 at 123.00,407.04 size 70.00,44.00
+360x800 Spot_FF | Chandler | Demons | id MEL_37 at 123.00,44.40 size 70.00,44.00
+360x800 Spot_HFFL | Mannagh | Cats | id GEE_7 at 27.60,152.32 size 70.00,44.00
+360x800 Spot_HFFR | Treacy | Dockers | id FRE_35 at 218.40,152.32 size 70.00,44.00
+360x800 Spot_FPL | Hayward | Blues | id CAR_19 at 69.00,96.96 size 70.00,44.00
+360x800 Spot_FPR | Watson | Hawks | id HAW_5 at 177.00,96.96 size 70.00,44.00
+360x800 Spot_HFF | Reid | Dockers | id FRE_16 at 123.00,148.96 size 70.00,44.00
+360x800 BenchSpot_0 | Xerri | Kangaroos | id NTH_38 at 0.00,0.00 size 102.00,44.00
+360x800 BenchSpot_1 | Cameron | Magpies | id COL_14 at 108.00,0.00 size 101.00,44.00
+360x800 BenchSpot_2 | Nankervis | Tigers | id RIC_25 at 215.00,0.00 size 101.00,44.00
+360x800 BenchSpot_3 | Neale | Lions | id BRL_9 at 0.00,50.00 size 102.00,44.00
+360x800 BenchSpot_4 | Taranto | Tigers | id RIC_14 at 108.00,50.00 size 101.00,44.00
 1280x720 Coleman_1 | 1 | Logan Morris | Lions | 12
 1280x720 Coleman_2 | 1 | Josh Treacy | Dockers | 12
 1280x720 Coleman_3 | 1 | Charlie Curnow | Swans | 12
