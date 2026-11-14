@@ -284,7 +284,11 @@ func _test_real_paths() -> void:
 	gs._execute_trade(gs.my_club, "CAR", [p], [])
 	_gather(gs, told)
 	_check(_has(told, "has moved from Adelaide to Carlton") == 1, "A trade tells his move (%s)" % str(told))
-	# The season to its end: one line with his year at Carlton.
+	# The season to its end: one line with his year at Carlton. The rest of the
+	# home-and-away rounds only add to his tally (the debut is told already), so
+	# they are skipped; the finals are played, and the week that ends the season
+	# is the one that tells his year.
+	gs.season.round_index = gs.season.fixture.size()
 	var guard := 0
 	while not gs.season.is_season_over() and guard < 60:
 		guard += 1

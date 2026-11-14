@@ -1,19 +1,7 @@
 [remap]
 
-importer="csv_translation"
-type="Translation"
-uid="uid://cjtlpokr8qxu"
+importer="keep"
 
 [deps]
 
-files=["res://data/legacy/2010/coach_ratings_2010.role.translation", "res://data/legacy/2010/coach_ratings_2010.seasons.translation", "res://data/legacy/2010/coach_ratings_2010.games.translation", "res://data/legacy/2010/coach_ratings_2010.wins.translation", "res://data/legacy/2010/coach_ratings_2010.draws.translation", "res://data/legacy/2010/coach_ratings_2010.flags.translation", "res://data/legacy/2010/coach_ratings_2010.grand.translation", "res://data/legacy/2010/coach_ratings_2010.finals.translation", "res://data/legacy/2010/coach_ratings_2010.teach.translation", "res://data/legacy/2010/coach_ratings_2010.tactics.translation", "res://data/legacy/2010/coach_ratings_2010.manage.translation", "res://data/legacy/2010/coach_ratings_2010.source.translation"]
-
 source_file="res://data/legacy/2010/coach_ratings_2010.csv"
-dest_files=["res://data/legacy/2010/coach_ratings_2010.role.translation", "res://data/legacy/2010/coach_ratings_2010.seasons.translation", "res://data/legacy/2010/coach_ratings_2010.games.translation", "res://data/legacy/2010/coach_ratings_2010.wins.translation", "res://data/legacy/2010/coach_ratings_2010.draws.translation", "res://data/legacy/2010/coach_ratings_2010.flags.translation", "res://data/legacy/2010/coach_ratings_2010.grand.translation", "res://data/legacy/2010/coach_ratings_2010.finals.translation", "res://data/legacy/2010/coach_ratings_2010.teach.translation", "res://data/legacy/2010/coach_ratings_2010.tactics.translation", "res://data/legacy/2010/coach_ratings_2010.manage.translation", "res://data/legacy/2010/coach_ratings_2010.source.translation"]
-
-[params]
-
-compress=1
-delimiter=0
-unescape_keys=false
-unescape_translations=true

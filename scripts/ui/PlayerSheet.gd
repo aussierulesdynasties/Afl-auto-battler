@@ -102,6 +102,10 @@ static func open(host: Control, p: Dictionary, on_close: Callable = Callable(),
 		hl.name = "ProfileConcussions"
 		hl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(hl)
+	# His fatigue, morale and form as numbers (row 183; director, 2026-11-14),
+	# each with its bar and what it means. Your own players only.
+	if not rival and not GameState.list_player(str(p.get("id", ""))).is_empty():
+		v.add_child(PlayerCondition.sheet_block(p, GameState.form_log, GameState.reserves_log))
 	if Ratings.available(p) and not rival:
 		var readiness := UiKit.lbl(Workload.description(p), UiKit.SMALL, UiKit.MUTED)
 		readiness.name = "ProfileReadiness"

@@ -11,7 +11,7 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
 A row starts when everything in its "After:" note is done. Rows in the same step run side by side, except rows that edit the same file, which merge one at a time: `tools/lint/copy_voice.py` (its ALLOW counts are exact), `GameState.gd`, `UiKit.gd`, `StoppageVignette.gd`, and the figure shader and sheets.
 
 0. Now (director 2026-11-13: "ok get all legacy stuff merged THEN an itch patch"): every open Legacy PR on row 142 lands, then build 1.0.17 goes to itch. Row 142, status 2026-11-14. Merged: L1 (#1506), L2 (#1511, #1521), L3 (#1519), L4 (#1520), L5 (#1514), L6 (#1513), L7 (#1515), L9 (#1508, #1516, #1524), L10 (#1522), the 2000 start (#1526), the 2020 start (#1528), the 2028 and 2030 starts (#1527), the Sir Doug Nicholls Round from 2007 (#1531), the supplements switch (#1532). Open, auto-merge on: L8 rollovers #1523; club decks #1525 (row 157); Fine Wine #1529; every list turns over, era list minimums, real retirements #1530; no coaches' votes before 2003 #1533; the 2010 start #1534; league news dated #1535; honours lift a past start's ratings #1536; Coach of the Year before the finals #1537; Essendon 2016, you pick the top-ups #1538; the player tracer #1539; Fitzroy's leftovers in the 1996 draft #1540; draft panel, no '0 disposals' for a prospect #1541; no expansion package before 2011 #1542; 1990 heights, position average when unsourced #1543; tracer fixes #1544. Still to build: GCS 2011 and GWS 2012 at 41 seniors of 40, real class players missing from their draft (1991-2002), delisted players never redrafted (a session is on these); the Adelaide 1991 re-film after #1541 and #1542. Then build 1.0.17 for itch.
-1. Put the waiting looks and questions to the director (sections C and H, the 6.34 captures, the hair contact sheets). Start the rows with nothing to wait for: 6.40, 6.42, 6.53, V2, V9. The director's playtests in section B can happen at any time.
+1. Put the waiting looks and questions to the director (sections C and H, the 6.34 captures, the hair contact sheets). Start the rows with nothing to wait for: 6.40, 6.42, 6.53, V2, V9, and the 3D oval proof, 197 with 198. The director's playtests in section B can happen at any time.
 2. The rest of T1.R26; V4; 134 and 135 (after 150); the row 34 re-check; 164 (its PR is in flight).
 3. 131 (after T1.R26 and 151); 136, 137 and 138; 139; V5; the P-43 press slice of T7.R87; T8.Q20; 6.38.
 4. 132, then 161 (row 9's feed colours); T2.25; 140; 6.63; 32, then 128 (both change the save, so one at a time); T8.78 after 128. The director looks at 5 and 16 and playtests 13, 14 and 15.
@@ -72,6 +72,8 @@ The longest chain, which sets the finish: T1.R26, then 131, then the director's 
 | 194 | Economy 3, a cap that pinches (2026-11-13: "Pinch plus real tools"): good lists cost more; front- or back-loading, the 95% floor, carry-over room and breach risk at the contract gate, for every club. After: Legacy L3 era money. | payroll no longer 91-93% of the cap for every club (balance table in the PR); each tool states its gain, cost and odds; his playtest |
 | 195 | Economy 4, the board and the AFL (2026-11-13: "Pitch to the board", "Both", "Press and board talk", AFL help "Yes, picks and money"): an off-season pitch for more football money (refused costs board confidence, granted raises the goal); money in press and board talk; a club in need gets money and priority picks by a stated rule, rivals alike. After: 193. | the pitch states its odds and both costs; AFL help fires for rivals in a seeded run (test); his playtest |
 | 196 | Stats: each player's tribunal fines (director 2026-11-14: "in the stats section we should also track how much fees players have accrued from tribunal fines"): a running total per season and per career, for every club's players, kept in the save. A session is building it. | test of the accrual and the save round-trip; stats capture shown to the director |
+| 197 | The 3D oval, proof passage (director 2026-11-14: "True 3D oval", "Yes, pursue it"; rule 2.74). The runtime: Oval3D.gd scene, kit shader with guernsey designs and numbers, level-of-detail bodies, cameras, wired into the match view; the prototype is on branch claude/game-visuals-feasibility-a3eeac. Hand in hand with row 198 ("Work hand in hand with 3d view 2"). | One full-team passage on the 3D oval (centre bounce, ruck tap, gather, handball, kick, contested mark, 36 players and the umpires alive) holds a steady frame rate on an Android phone, measured with the split between animation, skinning and drawing; every contact lands on MatchSim's spot and time; no foot slides, no ball hovers, no limb clips; the director watches it at game speed and says it reads as footy |
+| 198 | The 3D oval's animation (rule 2.74; plan in docs/research/AFL2004_ANIMATION_STUDY.md): clip pipeline on our MPFB game rig, locomotion blend space, action clips with contact markers warped to MatchSim's spot and time, IK for palms and boots, first the proof passage's clips (row 197). Session "3d view 2". | The proof passage's clips play in row 197's capture, each copied from a proven source (real footage or capture), checked frame by frame before the director sees them |
 
 ## B. Built and ON: his playtest judges
 
@@ -131,7 +133,7 @@ Every switch went on for good in #1072 and #1074 (director 2026-11-06: "i dont w
 - Player personality types and captaincy meaning (composure, late-game stability): both wanted, later (T5.Q12, T5.Q13).
 - Presentation wishlist: away/clash and heritage guernseys, coach appearance, premiership guernsey history, player card
   evolution, record-breaker marks, legends wall, draft class identity, archive gallery, retirement variants, dynamic
-  crowd, season poster, stadium identity, user guernseys and logos, Coach of the Year.
+  crowd, season poster, stadium identity, user guernseys and logos. (Coach of the Year: built 2026-11-13.)
 - Deferred by ruling: announce the cap step, league rule changes. (Weather at a break is row 160, director 2026-11-12.)
 
 ## Working rules
@@ -184,7 +186,7 @@ Polish is the gap. There are two big tickets, and one priority above both.
 Each line is a question he has not answered yet. Answered ones are in Rulings or in section A.
 
 - Are the hair, beard and boot ids final, and what happens to the 24-style hair, 10-beard and boot contact sheets he has not looked at? (6.Q4)
-- His calls on the open animation decisions including the gather-on-the-run proof (Cascadeur spend is a yes)? (6.Q20)
+- His calls on the open animation decisions: the sprite proof's order and the §7 defect fixes (Cascadeur spend is a yes; motion source answered 2026-11-14: a free mocap service, rule 2.74)? (6.Q20)
 - Which rows make up 1.1 ("tune and polish"): his looks on pre-season, draft night and the oval ring, and which Tier A items? (T7.O5)
 - Which of P-01 to P-11, P-16, P-19, P-21, P-22 and P-24 does he take? (T9.Q31)
 

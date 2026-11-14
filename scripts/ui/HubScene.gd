@@ -195,10 +195,14 @@ func _show_season_wrap() -> void:
 	if not trades.is_empty():
 		v.add_child(UiKit.spacer(4))
 		v.add_child(UiKit.lbl("Trade period", 14, UiKit.MUTED, true))
+		# Every club and every player in the club's colours, red clubs too
+		# (director 2026-11-12, row 176). The lists are read after the trade
+		# period, so a traded player wears the club he moved to.
 		for i in range(trades.size()):
-			var l := UiKit.lbl(str(trades[i]), 14, UiKit.TEXT)
+			var l := NameInk.label(str(trades[i]), _league_names(), 14, UiKit.TEXT, false, true)
 			l.name = "WrapTrade_%d" % i
-			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			if l is Label:
+				(l as Label).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			v.add_child(l)
 	# Free agents you were after who chose a rival, and why (P-18): the
 	# rival's name in its ink. This session's market only (not saved).
@@ -801,8 +805,7 @@ func _job_offers(v: VBoxContainer, jobs: Array) -> void:
 			row.add_child(_offer_line("The list: " + str(o["list"]), UiKit.TEXT))
 		row.add_child(_offer_line("The board's goal: " + str(o["goal"]), UiKit.TEXT))
 		var take := _nav_button("Take the job", func():
-			if ClubMoves.take_job(GameState, code):
-				_build())
+			_move_clubs(code, func(): return ClubMoves.take_job(GameState, code)))
 		take.name = "TakeJob_%s" % code
 		row.add_child(take)
 	v.add_child(UiKit.rule())
@@ -2102,14 +2105,29 @@ func _letter_card() -> Control:
 			_build())
 	stay.name = "RivalLetterStay"
 	var take := _nav_button("Take the job", func():
-		if ClubMoves.accept_letter(GameState):
-			_build())
+		_move_clubs(code, func(): return ClubMoves.accept_letter(GameState)))
 	take.name = "RivalLetterTake"
 	row.add_child(stay)
 	row.add_child(take)
 	v.add_child(row)
 	v.add_child(UiKit.rule())
 	return v
+
+
+## He takes a job (`sign` makes the move). A club yet to play is his from its
+## first National Draft, which opens at once: the club he leaves plays out its
+## off-season under its own staff (GameState.offseason_without_you, row 189),
+## so the cover goes up first and the draft screen follows.
+func _move_clubs(code: String, sign: Callable) -> void:
+	if not ClubMoves.is_joining(GameState, code):
+		if bool(sign.call()):
+			_build()
+		return
+	ScreenTransition.run("Playing out the %d off-season..." % int(GameState.season_year), func():
+		if bool(sign.call()) and GameState.club_yet_to_play():
+			Router.go("draft")
+			return
+		_build())
 
 
 ## Where an offering club stands: its ladder finish and why the job is open,
