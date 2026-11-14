@@ -53,6 +53,19 @@ func _skip_rounds(n: int) -> void:
 	GameState.season.round_index += n
 
 
+## A career with this month's report just landed, built by the game's own
+## report steps around round 4 without playing the match: the screens and
+## lists under test only need a report to be due, not a month of football.
+## (_test_snapshot_and_report and _test_taps build theirs from real rounds.)
+func _report_landed() -> void:
+	_skip_rounds(3)
+	TrainingReport.before_game(GameState)
+	_skip_rounds(1)
+	GameState.last_phase = "regular"
+	TrainingReport.after_game(GameState)
+	_check(TrainingReport.hub_due(GameState), "(setup) the round-4 report is due")
+
+
 func _boost_potential(n: int) -> void:
 	var made := 0
 	for p in GameState.my_list:
@@ -159,7 +172,7 @@ func _test_snapshot_and_report() -> void:
 func _test_retrain_list() -> void:
 	_fresh()
 	_boost_potential(3)
-	_rounds(4)
+	_report_landed()
 	var r: Dictionary = GameState.training_report
 	var rt := TrainingReport.retrain_list(GameState, r)
 	var menu_ids := []
@@ -263,8 +276,8 @@ func _test_taps(size: Vector2i) -> void:
 	var tag := "%dx%d" % [size.x, size.y]
 	_fresh()
 	_boost_potential(2)
-	_skip_rounds(2)
-	_rounds(2)
+	_skip_rounds(3)
+	_rounds(1)
 	GameState.skip_media_conference()
 	var hub := await _hub()
 	_check(hub.find_child("TrainingReportCard", true, false) == null, "%s: no report line on the hub" % tag)
@@ -382,7 +395,7 @@ func _test_retrain_full(size: Vector2i) -> void:
 	var tag := "%dx%d full" % [size.x, size.y]
 	_fresh()
 	_boost_potential(4)
-	_rounds(4)
+	_report_landed()
 	GameState.skip_media_conference()
 	var rt := TrainingReport.retrain_list(GameState, GameState.training_report)
 	var entries: Array = rt["entries"]
@@ -433,7 +446,7 @@ func _test_retrain_full(size: Vector2i) -> void:
 func _test_after_results(size: Vector2i) -> void:
 	var tag := "%dx%d results" % [size.x, size.y]
 	_fresh()
-	_rounds(3)
+	_skip_rounds(3)
 	GameState.skip_media_conference()
 	var hub := await _hub()
 	_check(hub.find_child("TrainingReportSheet", true, false) == null, "%s: no report before round 4" % tag)
@@ -466,7 +479,7 @@ func _test_after_results(size: Vector2i) -> void:
 func _test_after_event_card(size: Vector2i) -> void:
 	var tag := "%dx%d card" % [size.x, size.y]
 	_fresh()
-	_rounds(4)
+	_report_landed()
 	GameState.skip_media_conference()
 	GameState.event_sheets = true
 	GameState.week_events = [GameState.story_card("members_open_training")]
@@ -488,7 +501,7 @@ func _test_after_event_card(size: Vector2i) -> void:
 func _test_after_results_back(size: Vector2i) -> void:
 	var tag := "%dx%d results, Back" % [size.x, size.y]
 	_fresh()
-	_rounds(3)
+	_skip_rounds(3)
 	GameState.skip_media_conference()
 	var hub := await _hub()
 	var sim: Control = hub.find_child("SimRound", true, false)
@@ -520,7 +533,7 @@ func _test_after_results_back(size: Vector2i) -> void:
 func _test_after_press(size: Vector2i) -> void:
 	var tag := "%dx%d press" % [size.x, size.y]
 	_fresh()
-	_rounds(4)
+	_report_landed()
 	var MC = load("res://scripts/sim/MediaConference.gd")
 	GameState.media_conference = MC.pick({"club": "FRE", "opponent_name": "Melbourne", "round": 4,
 			"result": {"home": "FRE", "away": "MEL", "score": [55, 101]}}, {})
@@ -552,7 +565,7 @@ func _test_after_press(size: Vector2i) -> void:
 func _test_after_sit_down(size: Vector2i) -> void:
 	var tag := "%dx%d sit-down" % [size.x, size.y]
 	_fresh()
-	_rounds(4)
+	_report_landed()
 	GameState.skip_media_conference()
 	GameState.backing_talk = {"player_id": str(GameState.my_list[0]["id"]), "title": "Sit-down", "lines": ["He took it well."]}
 	var hub := await _hub()
@@ -571,7 +584,7 @@ func _test_after_sit_down(size: Vector2i) -> void:
 func _test_after_carnival(size: Vector2i) -> void:
 	var tag := "%dx%d carnival" % [size.x, size.y]
 	_fresh()
-	_rounds(4)
+	_report_landed()
 	GameState.skip_media_conference()
 	GameState.midseason = {"year": GameState.season_year, "carnival_seen": false,
 			"carnival": [{"name": "Riley Bowman", "pos": "midfielder", "state": "Vic Metro"}]}
