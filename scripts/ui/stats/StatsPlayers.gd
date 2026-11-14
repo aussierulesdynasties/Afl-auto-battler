@@ -68,7 +68,7 @@ static func build(host: Control) -> Control:
 	v.name = "StatsPlayers"
 	var wide: bool = host.call("wide")
 	if not GameState.season_stats.is_empty() and int(GameState.season_stats_from) > 0:
-		var note := UiKit.lbl("Counted from round %d: this career's earlier rounds were played before season records were kept."
+		var note := UiKit.lbl("Counted from round %d. This career's earlier rounds came before season records were kept."
 				% (int(GameState.season_stats_from) + 1), UiKit.SECONDARY, UiKit.MUTED)
 		note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(note)
