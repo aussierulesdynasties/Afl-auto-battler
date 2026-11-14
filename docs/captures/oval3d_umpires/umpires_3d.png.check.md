@@ -10,6 +10,6 @@
 - players: PASS - unchanged; guernseys and rings as in the approved build
 - ball: PASS - held in the carrier's hands in the close shot, not hovering
 ## Seams
-- top to shorts at the waist: PASS - /c/Users/DANTE/Documents/GitHub/Afl-auto-battler/.claude/worktrees/game-visuals-feasibility-a3eeac/docs/captures/oval3d_umpires/crop_z4.png
-- sock band to boot: PASS - /c/Users/DANTE/Documents/GitHub/Afl-auto-battler/.claude/worktrees/game-visuals-feasibility-a3eeac/docs/captures/oval3d_umpires/crop_z2.png
-- umpire to turf contact (shadow): PASS - /c/Users/DANTE/Documents/GitHub/Afl-auto-battler/.claude/worktrees/game-visuals-feasibility-a3eeac/docs/captures/oval3d_umpires/crop_z3.png
+- top to shorts at the waist: PASS - C:/Users/DANTE/Documents/GitHub/Afl-auto-battler/.claude/worktrees/game-visuals-feasibility-a3eeac/docs/captures/oval3d_umpires/crop_z4.png
+- sock band to boot: PASS - C:/Users/DANTE/Documents/GitHub/Afl-auto-battler/.claude/worktrees/game-visuals-feasibility-a3eeac/docs/captures/oval3d_umpires/crop_z2.png
+- umpire to turf contact (shadow): PASS - C:/Users/DANTE/Documents/GitHub/Afl-auto-battler/.claude/worktrees/game-visuals-feasibility-a3eeac/docs/captures/oval3d_umpires/crop_z3.png
