@@ -88,6 +88,10 @@ const SYNERGIES := {
 const EARNED := {
 	"unicorn": {"label": "Unicorn", "text": "Plays forward, midfield and back. On the ground he can fill one missing place in one synergy.",
 			"scout": "Can play anywhere on the ground."},
+	"fine_wine": {"label": "Fine Wine",
+			"text": "Ages three years slower: his decline starts three years later and is 30% gentler, and he retires up to three years later (40 at the latest).",
+			"scout": "Gets better with age.",
+			"earn": "Born with it, not trained: every real player who played 60 or more games in seasons he turned 32 or older, and about 1 draftee in 52."},
 }
 const UNICORN_LINES := ["FWD", "MID", "DEF"]
 
@@ -118,6 +122,69 @@ static func wet_weather(p: Dictionary) -> bool:
 	return int(attr.get("contested", 0)) >= int(WET_WEATHER["contested"]) 			and int(attr.get("disposal", 0)) >= int(WET_WEATHER["disposal"])
 
 
+## Fine Wine (director, 2026-11-13: "when a player has unnatural longevity
+## like Zorko, Gawn, Pendlebury etc / every draftee should have a very slim
+## chance of possessing the trait too"). Born, not trained, and on top of the
+## five like Unicorn. A real player has it when the director approved him
+## (2026-11-13: "research players who played a lot of games or significant
+## numbers games past the age of 32 and bring me a list of players for my
+## approval"): FINE_WINE_GAMES or more games in seasons he turned
+## FINE_WINE_FROM_AGE or older, 72 players 1990-2026 (data/fine_wine.csv, built by
+## tools/build_fine_wine.py). Every draftee whose career is still ahead of him
+## rolls FINE_WINE_DRAFTEE_ODDS once (Prospects.roll_fine_wine) and carries
+## p["fine_wine"]. Every club alike.
+##
+## The odds match the rate real draftees reached the same mark (director's
+## choice): 54 of the 2,789 who joined a list at 21 or younger (1991 on, born by
+## 1990, played or not), 1 in 52 (docs/FINE_WINE_EVIDENCE.md). Ageing and retirement read
+## FINE_WINE_YEARS and FINE_WINE_SLOPE (Potential.age_step_for, Prospects.should_retire).
+const FINE_WINE_FROM_AGE := 32
+const FINE_WINE_GAMES := 60
+const FINE_WINE_DRAFTEE_ODDS := 1.0 / 52.0
+## His decline runs this many years behind his age, and every retirement age.
+const FINE_WINE_YEARS := 3.0
+## A yearly loss, once it starts, is this share of a normal one.
+const FINE_WINE_SLOPE := 0.7
+const FINE_WINE_CSV := "res://data/fine_wine.csv"
+static var _fine_wine_real := {}
+static var _fine_wine_loaded := false
+
+
+## Whether he has Fine Wine: the flag a drafted roll set, or a real player whose
+## real career is on the approved list (keyed by his real name and date of birth, so a created
+## player who shares a name never inherits it).
+static func fine_wine(p: Dictionary) -> bool:
+	if bool(p.get("fine_wine", false)):
+		return true
+	if bool(p.get("generated", false)):
+		return false
+	var dob := str(p.get("dob", ""))
+	if dob == "":
+		return false
+	if not _fine_wine_loaded:
+		_load_fine_wine()
+	var real := str(p.get("real_name", "%s %s" % [str(p.get("first", "")), str(p.get("last", ""))]))
+	return _fine_wine_real.has("%s|%s" % [real, dob])
+
+
+static func _load_fine_wine() -> void:
+	_fine_wine_loaded = true
+	_fine_wine_real = {}
+	var f := FileAccess.open(FINE_WINE_CSV, FileAccess.READ)
+	if f == null:
+		push_error("Traits: %s is missing; no real player has Fine Wine." % FINE_WINE_CSV)
+		return
+	var header := f.get_csv_line()
+	var at := {}
+	for i in range(header.size()):
+		at[header[i]] = i
+	while not f.eof_reached():
+		var row := f.get_csv_line()
+		if row.size() < header.size():
+			continue
+		_fine_wine_real["%s %s|%s" % [row[at["first"]], row[at["last"]], row[at["dob"]]]] = true
+
+
 ## A synergy's match effect, as MatchSim applies it ("power" in SYNERGIES):
 ## an added stoppage-win share for the Engine room, a multiplier for the rest.
 static func power(key: String) -> float:
@@ -125,9 +192,11 @@ static func power(key: String) -> float:
 
 
 ## Good traits a player can carry (director, 2026-11-12: "at maximum 5 traits
-## + unicorn"). Unicorn, Wet-weather player and Hothead come on top. Past five,
-## he keeps the five he clears by the most.
+## + unicorn"). Unicorn, Wet-weather player, Fine Wine and Hothead come on top.
+## Past five, he keeps the five he clears by the most.
 const MAX_GOOD := 5
+## Good traits that come on top of the five.
+const ON_TOP := ["unicorn", "wet_weather", "fine_wine"]
 const LINE_NAMES := {"RUCK": "ruck", "MID": "midfield", "DEF": "defence", "FWD": "forward line"}
 
 
@@ -188,7 +257,7 @@ static func is_bad(key: String) -> bool:
 
 ## A player's traits: Unicorn, then every good trait whose line he clears, up
 ## to MAX_GOOD (the furthest past their line first), then the wet-weather
-## player and Hothead if they apply.
+## player, Fine Wine and Hothead if they apply.
 static func of(p: Dictionary) -> Array:
 	var attr: Dictionary = p.get("attr", {})
 	var roles := [str(p.get("role", "")), str(p.get("list_tag", ""))] + _positions(p)
@@ -224,6 +293,8 @@ static func of(p: Dictionary) -> Array:
 		out.append(g[0])
 	if wet_weather(p):
 		out.append("wet_weather")
+	if fine_wine(p):
+		out.append("fine_wine")
 	out.append_array(bad)
 	return out
 

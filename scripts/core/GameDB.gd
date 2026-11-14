@@ -259,6 +259,7 @@ func reload(dataset := Datasets.DEFAULT) -> void:
 	_apply_history(players)
 	for p in players:
 		Ratings.rate_on_record(p, DATA_SEASON)
+		Ratings.rate_on_honours(p)
 	override_hits = {}
 	for p in players:
 		Potential.assign(p)
@@ -1895,6 +1896,9 @@ func _apply_history_rows(list: Array) -> void:
 		var p = by_id.get(key)
 		if p == null:
 			continue
+		# A past start's honours score (Ratings.rate_on_honours).
+		if idx.has("honours") and str(cells[idx["honours"]]) != "":
+			p["honours"] = float(str(cells[idx["honours"]]))
 		var pick := str(cells[idx["draft_pick"]])
 		if pick != "":
 			p["drafted_year"] = int(str(cells[idx["draft_year"]]))

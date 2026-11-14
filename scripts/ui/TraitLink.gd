@@ -41,7 +41,9 @@ static func tip(key: String) -> String:
 
 ## What earns a trait, in football words and exact thresholds; "" for a synergy.
 static func earn_text(key: String) -> String:
-	if Traits.SYNERGIES.has(key) or key == "unicorn":
+	if Traits.EARNED.has(key):
+		return str((Traits.EARNED[key] as Dictionary).get("earn", ""))
+	if Traits.SYNERGIES.has(key):
 		return ""
 	if key == "wet_weather":
 		return "Earned with Contested %d and Disposal %d or better." % [
