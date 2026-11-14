@@ -1,0 +1,487 @@
+[
+	{
+		"id": "mel_keepers_of_the_laws",
+		"club": "MEL",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["Keepers of the laws"],
+		"text": ["Melbourne is the oldest club in the game, and its founders wrote the first laws of football. The club historian wants a heritage week: the old white guernseys at training, the founding laws read to the group, a members' night at the 'G."],
+		"choices": [
+			{"key": "full", "label": "Run the full heritage week",
+			 "effects": [{"op": "board", "d": 6, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The group felt part of the oldest club in the game"}, {"op": "forgo_xp", "d": 4, "who": "all"}],
+			 "result": "The members love it, and the group feels part of something old. Training is lighter for it."},
+			{"key": "night", "label": "A members' night only",
+			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "forgo_xp", "d": 2, "who": "all"}],
+			 "result": "The supporters get their night. The players barely notice, bar a late one."},
+			{"key": "not", "label": "Not this week",
+			 "effects": [{"op": "xp", "d": 4, "who": "all"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "Training stays sharp. The historians grumble to the board."}
+		]
+	},
+	{
+		"id": "mel_talk_of_the_curse",
+		"club": "MEL",
+		"controversy": false,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"title": ["Talk of the curse"],
+		"text": ["Before a big game the papers drag out the old curse: that a sacked premiership coach doomed the club to a long wait. Every reporter asks about it."],
+		"choices": [
+			{"key": "front", "label": "Say curses are for people who don't train",
+			 "effects": [{"op": "morale", "d": 3, "who": "side"}, {"op": "board", "d": -1}, {"op": "slow_start", "chance": 20, "who": "side"}],
+			 "result": "The group sees the coach take the heat. It becomes the story of the week."},
+			{"key": "laugh", "label": "Laugh it off",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "The pressure drains away. Long-suffering supporters think it's flippant."},
+			{"key": "ban", "label": "Ban the word at the club",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "Nobody at the club talks about the curse"}, {"op": "slow_start", "chance": 15, "who": "side"}],
+			 "result": "Nobody says it at the club. The players feel the weight anyway."}
+		]
+	},
+	{
+		"id": "mel_old_wound",
+		"club": "MEL",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"title": ["Healing an old wound"],
+		"text": ["A great of the club left on bitter terms years ago and has never been back. His family say he would present the jumpers before a big game, if the club asked properly."],
+		"choices": [
+			{"key": "public", "label": "Ask him back, publicly",
+			 "effects": [{"op": "odds", "chance": 65, "hit": [{"op": "morale", "d": 4, "who": "side"}, {"op": "board", "d": 3, "was": "members"}], "miss": [{"op": "board", "d": -4}], "hit_result": "He comes back and presents the jumpers. The room feels the history.", "miss_result": "He says no, and it's on every back page."}],
+			 "result": "The invitation goes out in the papers."},
+			{"key": "private", "label": "Ask him privately",
+			 "effects": [{"op": "odds", "chance": 60, "hit": [{"op": "morale", "d": 3, "who": "side"}], "miss": [{"op": "culture", "strand": "together", "d": -1, "why": "He said no, and the old hurt stayed"}], "hit_result": "He comes quietly and hands out the jumpers.", "miss_result": "He politely declines."}],
+			 "result": "A phone call, away from the cameras."},
+			{"key": "lie", "label": "Let it lie",
+			 "effects": [{"op": "xp", "d": 3, "who": "side"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "No distraction this week. Old supporters see a missed chance."}
+		]
+	},
+	{
+		"id": "mel_gaelic_trial",
+		"club": "MEL",
+		"controversy": false,
+		"category": "contracts",
+		"subject": {"kind": "club"},
+		"title": ["A Gaelic star on trial"],
+		"text": ["The recruiters have found a county Gaelic footballer, tall and quick, who has never kicked an oval ball in a game. Melbourne has gone to Ireland for talent before. He'd take a list spot and two years to learn."],
+		"choices": [
+			{"key": "sign", "label": "Sign him now",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The club backed a rare athlete from Ireland"}, {"op": "odds", "chance": 40, "hit": [{"op": "board", "d": -2, "was": "funds"}], "miss": [], "hit_result": "He goes home inside two years, and the list spot is wasted."}],
+			 "result": "He signs and starts learning the game."},
+			{"key": "trial", "label": "Bring him out for a summer trial first",
+			 "effects": [{"op": "board", "d": -1, "was": "funds"}, {"op": "odds", "chance": 50, "hit": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The club found a rare athlete and kept him"}], "miss": [], "hit_result": "He stays, and the club knows what it's getting.", "miss_result": "Another club saw him too and signs him."}],
+			 "result": "He spends the summer with the club. Rival recruiters are watching."},
+			{"key": "pass", "label": "Pass on him",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The list spot went to a local kid"}, {"op": "culture", "strand": "ambition", "d": -1, "why": "The club passed on a rare athlete"}],
+			 "result": "The list spot stays with a local kid. Nothing ventured."}
+		]
+	},
+	{
+		"id": "mel_home_for_the_big_one",
+		"club": "MEL",
+		"controversy": false,
+		"category": "family",
+		"subject": {"kind": "player", "pick": "random", "where": {"age_max": 24}},
+		"title": ["He wants to go home for a week"],
+		"text": ["{name} is homesick. There's a big family occasion back home in the middle of the season, and he wants a week off to be there. He's under contract."],
+		"choices": [
+			{"key": "go", "label": "Let him go",
+			 "effects": [{"op": "trust", "d": 6, "why": "The club let him go home when it mattered"}, {"op": "morale", "d": 4, "who": "subject"}, {"op": "rest"}],
+			 "result": "{first} flies home and misses a game."},
+			{"key": "hold", "label": "Hold him to his contract",
+			 "effects": [{"op": "xp", "d": 4, "who": "subject"}, {"op": "morale", "d": -5, "who": "subject"}, {"op": "trust", "d": -4, "why": "The club kept him from home"}],
+			 "result": "{first} is here, training and available. He's unsettled."},
+			{"key": "family", "label": "Fly his family out instead",
+			 "effects": [{"op": "morale", "d": 2, "who": "subject"}, {"op": "board", "d": -2, "was": "funds"}],
+			 "result": "His family come to him. It costs the club, and he still misses home."}
+		]
+	},
+	{
+		"id": "mel_green_for_a_night",
+		"club": "MEL",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["Green for a night"],
+		"text": ["Melbourne's Irish community asks the club to mark St Patrick's Day: a function with the players and a training session for Gaelic juniors."],
+		"choices": [
+			{"key": "all", "label": "Do the lot",
+			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The club turned green for its Irish supporters"}, {"op": "forgo_xp", "d": 3, "who": "all"}],
+			 "result": "A new crowd of supporters in green. A training session is lost."},
+			{"key": "few", "label": "Send a few players",
+			 "effects": [{"op": "board", "d": 1, "was": "members"}, {"op": "forgo_xp", "d": 1, "who": "all"}],
+			 "result": "A handful of players go. Little disruption, little noise."},
+			{"key": "decline", "label": "Decline politely",
+			 "effects": [{"op": "xp", "d": 3, "who": "all"}, {"op": "board", "d": -1}],
+			 "result": "Training goes ahead. The community feels brushed off."}
+		]
+	},
+	{
+		"id": "mel_second_class",
+		"club": "MEL",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["Guests at our own ground"],
+		"text": ["Melbourne plays at the MCG, but the cricket club's members get the best seats. Demons members say they're guests at their own home, and they want the coach to back them in the press."],
+		"choices": [
+			{"key": "back", "label": "Back the members publicly",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The coach stood up for the members at the 'G"}, {"op": "board", "d": -3}],
+			 "result": "The supporters feel heard. The board's partners at the 'G are unhappy."},
+			{"key": "quiet", "label": "Say nothing and raise it quietly",
+			 "effects": [{"op": "board", "d": 1}, {"op": "culture", "strand": "together", "d": -1, "why": "The members think the club won't fight for them"}],
+			 "result": "The partnership stays smooth. The members think nobody's fighting for them."},
+			{"key": "fill", "label": "Tell them to fill the ground",
+			 "effects": [{"op": "odds", "chance": 50, "hit": [{"op": "board", "d": 2, "was": "members"}], "miss": [{"op": "board", "d": -2, "was": "members"}], "hit_result": "The members take up the challenge.", "miss_result": "The members hear it as blame."}],
+			 "result": "A call to the supporters to turn up."}
+		]
+	},
+	{
+		"id": "mel_home_of_our_own",
+		"club": "MEL",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["A home of our own"],
+		"text": ["Melbourne has never had a proper base: offices in one place, training on a paddock by the 'G, preseason out in the suburbs. The board wants the coach to back a purpose-built home, years away and expensive."],
+		"choices": [
+			{"key": "back", "label": "Back the new base",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 2, "why": "The club is building a home of its own"}, {"op": "board", "d": 2}, {"op": "forgo_xp", "d": 4, "who": "side"}],
+			 "result": "The plan is announced. Money comes out of the football department for years."},
+			{"key": "football", "label": "Make do and spend on football",
+			 "effects": [{"op": "xp", "d": 4, "who": "side"}, {"op": "morale", "d": -1, "who": "all"}],
+			 "result": "More coaching and recovery now. The players keep driving across town."},
+			{"key": "shared", "label": "Push for a shared deal with the state",
+			 "effects": [{"op": "board", "d": -1, "was": "funds"}, {"op": "odds", "chance": 40, "hit": [{"op": "culture", "strand": "ambition", "d": 1, "why": "A shared base is on its way"}, {"op": "morale", "d": 2, "who": "all"}], "miss": [], "hit_result": "The state signs on, and a base is coming.", "miss_result": "The plan stalls in a government office."}],
+			 "result": "Cheaper, slower, and out of the club's hands."}
+		]
+	},
+	{
+		"id": "mel_council_offer",
+		"club": "MEL",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["The council's offer"],
+		"text": ["Melbourne has no suburb of its own. A council in the outer south-east offers money and a ground if the club moves its main training out there. The board likes it; senior players in the inner city dread two hours a day in the car."],
+		"choices": [
+			{"key": "take", "label": "Take the deal and train out there",
+			 "effects": [{"op": "board", "d": 5, "was": "funds"}, {"op": "heavy_legs", "who": "side"}],
+			 "result": "Money and a new heartland. The players are tired from the drive."},
+			{"key": "stay", "label": "Stay in town",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -2, "was": "funds"}],
+			 "result": "The players stay fresh. The council takes its offer elsewhere."},
+			{"key": "split", "label": "Preseason out there, the season in town",
+			 "effects": [{"op": "board", "d": 2, "was": "funds"}, {"op": "morale", "d": -1, "who": "all"}],
+			 "result": "Some of both. Nobody is fully happy."}
+		]
+	},
+	{
+		"id": "mel_back_to_reserves",
+		"club": "MEL",
+		"controversy": false,
+		"category": "selection",
+		"subject": {"kind": "player", "pick": "highest:potential", "where": {"age_max": 21}},
+		"title": ["Back to the reserves"],
+		"text": ["{name} is struggling for touches. The development coaches want him back in the reserves for a month to play every week and find his feet. He sees it as being dropped."],
+		"choices": [
+			{"key": "down", "label": "Send him down",
+			 "effects": [{"op": "xp", "d": 8, "who": "subject"}, {"op": "morale", "d": -4, "who": "subject"}, {"op": "board", "d": -1}],
+			 "result": "{first} plays every week in the twos. The papers call him a bust."},
+			{"key": "keep", "label": "Keep him in the side",
+			 "effects": [{"op": "trust", "d": 4, "why": "You kept him in the side when he was struggling"}, {"op": "xp", "d": 2, "who": "subject"}, {"op": "odds", "chance": 30, "hit": [{"op": "morale", "d": -4, "who": "subject"}], "miss": [], "hit_result": "He's dropped within the month anyway."}],
+			 "result": "{first} feels backed. Another month of learning on the job."},
+			{"key": "promise", "label": "Send him down with a promise",
+			 "effects": [{"op": "xp", "d": 8, "who": "subject"}, {"op": "morale", "d": -1, "who": "subject"}, {"op": "odds", "chance": 40, "hit": [{"op": "trust", "d": -4, "why": "The promised game didn't come"}], "miss": [], "hit_result": "The month is up, he's still in the twos, and he remembers the promise."}],
+			 "result": "{first} goes down knowing there's a game waiting if he plays well."}
+		]
+	},
+	{
+		"id": "mel_game_in_the_centre",
+		"club": "MEL",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["A game in the Centre"],
+		"text": ["The Territory wants to buy one of Melbourne's home games for Alice Springs. The money is good and the club's Territory supporters would love it. The players face heat and a long trip."],
+		"choices": [
+			{"key": "take", "label": "Take the game",
+			 "effects": [{"op": "board", "d": 4, "was": "funds"}, {"op": "odds", "chance": 30, "hit": [{"op": "heavy_legs", "who": "side"}], "miss": [], "hit_result": "The trip to the Centre is still in the legs."}],
+			 "result": "A guaranteed cheque. Melbourne members lose a home game."},
+			{"key": "keep", "label": "Keep it at the 'G",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The members kept their home game at the 'G"}, {"op": "board", "d": -2, "was": "funds"}],
+			 "result": "Home crowd and routine. The board misses the cheque."},
+			{"key": "camp", "label": "Take it, with a preseason camp up there",
+			 "effects": [{"op": "board", "d": 4, "was": "funds"}, {"op": "forgo_xp", "d": 4, "who": "all"}, {"op": "odds", "chance": 10, "hit": [{"op": "heavy_legs", "who": "side"}], "miss": [], "hit_result": "Even after the camp, the heat took it out of them."}],
+			 "result": "The players get used to the heat. Preseason time is lost to it."}
+		]
+	},
+	{
+		"id": "mel_territory_program",
+		"club": "MEL",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["The Territory program"],
+		"text": ["The community staff want to fund a footy and school program for kids in Central Australia. It costs money every year and a recruiter's time."],
+		"choices": [
+			{"key": "fund", "label": "Fund it fully",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The club made a real commitment to the Centre"}, {"op": "board", "d": -2, "was": "funds"}],
+			 "result": "A real bond with the communities up there. It costs every year."},
+			{"key": "clinic", "label": "A clinic once a year",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The club kept its word with a yearly clinic"}, {"op": "board", "d": -1, "was": "funds"}],
+			 "result": "Goodwill for less. Little that lasts."},
+			{"key": "not", "label": "Not now",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "Every dollar stays in the football department"}, {"op": "board", "d": -1}],
+			 "result": "The money stays at the club. The Territory partners notice."}
+		]
+	},
+	{
+		"id": "mel_honour_board",
+		"club": "MEL",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["Names on the honour board"],
+		"text": ["The oldest club's honour board carries the names of players who went to war. In Anzac week a veterans' group has invited the players to visit; the coaches wanted that session for opposition work."],
+		"choices": [
+			{"key": "visit", "label": "Visit the veterans",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The players met the men who served"}, {"op": "morale", "d": 3, "who": "all"}, {"op": "slow_start", "chance": 15, "who": "side"}],
+			 "result": "The players come back quiet and moved. The opposition work is lighter."},
+			{"key": "leaders", "label": "Send the leaders only",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The leaders went on the group's behalf"}, {"op": "forgo_xp", "d": 2, "who": "side"}],
+			 "result": "Respect shown, and most of the work done. The rest miss it."},
+			{"key": "track", "label": "Stay on the track",
+			 "effects": [{"op": "xp", "d": 4, "who": "all"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "Fully prepared. Supporters and the veterans' group notice."}
+		]
+	},
+	{
+		"id": "mel_magpies_charity_week",
+		"club": "MEL",
+		"controversy": false,
+		"category": "rivals",
+		"subject": {"kind": "club"},
+		"when": {"opp_deck": "COL"},
+		"title": ["Big week with the Magpies"],
+		"text": ["Collingwood at the 'G, and a huge crowd expected. A charity wants the players front and centre all week: hospital visits, media, a fundraising drive with supporters of both clubs."],
+		"choices": [
+			{"key": "all", "label": "Go all in for the charity",
+			 "effects": [{"op": "board", "d": 5, "was": "members"}, {"op": "forgo_xp", "d": 4, "who": "all"}, {"op": "slow_start", "chance": 20, "who": "side"}],
+			 "result": "Huge goodwill, and the club looks great. It's a busy, distracted week."},
+			{"key": "stars", "label": "Stars only, one day",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "odds", "chance": 25, "hit": [{"op": "heavy_legs", "who": "side"}], "miss": [], "hit_result": "The stars are stretched by game day."}],
+			 "result": "Most of the goodwill for a day's work."},
+			{"key": "lock", "label": "Lock the doors and prepare",
+			 "effects": [{"op": "xp", "d": 4, "who": "all"}, {"op": "board", "d": -2}],
+			 "result": "A clean week for the biggest crowd of the year. The press calls it stand-offish."}
+		]
+	},
+	{
+		"id": "mel_merger_whispers",
+		"club": "MEL",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["Merger whispers"],
+		"text": ["The club is in debt again, and a cross-town club has quietly suggested the two ought to merge. The board wants to explore it. The members don't know yet."],
+		"choices": [
+			{"key": "explore", "label": "Explore it quietly",
+			 "effects": [{"op": "board", "d": 3}, {"op": "odds", "chance": 40, "hit": [{"op": "board", "d": -5, "was": "members"}, {"op": "morale", "d": -3, "who": "all"}], "miss": [], "hit_result": "It leaks, and the members revolt."}],
+			 "result": "The board is grateful. Talks begin behind closed doors."},
+			{"key": "never", "label": "Say never, publicly",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The coach told the members the club stays Melbourne"}, {"op": "board", "d": -4}],
+			 "result": "The members rally behind the coach. The board feels undercut."},
+			{"key": "vote", "label": "Put it to the members",
+			 "effects": [{"op": "odds", "chance": 60, "hit": [{"op": "culture", "strand": "together", "d": 1, "why": "The members had their say and voted it down"}], "miss": [{"op": "morale", "d": -2, "who": "all"}, {"op": "board", "d": -2, "was": "members"}], "hit_result": "The members vote it down, and the club moves on.", "miss_result": "The vote is close and bitter."}],
+			 "result": "Their decision, not ours."}
+		]
+	},
+	{
+		"id": "mel_demolish_the_debt",
+		"club": "MEL",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["Demolish the debt"],
+		"text": ["The president is launching a drive to clear the club's debt: dinners, auctions, members' pledges. He wants players at every event for months."],
+		"choices": [
+			{"key": "every", "label": "Players at every event",
+			 "effects": [{"op": "board", "d": 4, "was": "funds"}, {"op": "culture", "strand": "together", "d": 1, "why": "The whole club pitched in to clear the debt"}, {"op": "heavy_legs", "who": "side"}],
+			 "result": "The debt shrinks fast. The players are tired."},
+			{"key": "leaders", "label": "Senior leaders only",
+			 "effects": [{"op": "board", "d": 3, "was": "funds"}, {"op": "morale", "d": -2, "who": "side"}],
+			 "result": "Most of the money comes in. The leaders carry the load."},
+			{"key": "offseason", "label": "Off-season only",
+			 "effects": [{"op": "xp", "d": 3, "who": "side"}, {"op": "board", "d": -1}],
+			 "result": "The season is protected. The drive is slower, and the president is disappointed."}
+		]
+	},
+	{
+		"id": "mel_back_room_meeting",
+		"club": "MEL",
+		"controversy": true,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"when": {"round_min": 15, "ladder_min": 10},
+		"title": ["The meeting in the back room"],
+		"text": ["The season is gone. A senior figure in the football department calls a meeting and hints that a few more losses would mean a better draft pick. The room goes quiet, and everyone looks at the coach."],
+		"choices": [
+			{"key": "win", "label": "Say we play to win, every week",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "The coach said we play to win, every week"}, {"op": "morale", "d": 2, "who": "all"}, {"op": "board", "d": -1}],
+			 "result": "The group respects it. The football department is put out."},
+			{"key": "kids", "label": "Play the kids and rest the senior players, openly",
+			 "effects": [{"op": "xp", "d": 6, "who": "side"}, {"op": "morale", "d": -3, "who": "all"}, {"op": "odds", "chance": 20, "hit": [{"op": "board", "d": -6}], "miss": [], "hit_result": "The league opens an inquiry."}],
+			 "result": "The young players get experience. The senior men aren't happy."},
+			{"key": "silent", "label": "Say nothing",
+			 "effects": [{"op": "morale", "d": 1, "who": "all"}, {"op": "odds", "chance": 35, "hit": [{"op": "board", "d": -8}, {"op": "culture", "strand": "standards", "d": -2, "why": "The coach stayed silent in that meeting"}], "miss": [], "hit_result": "The meeting leaks, and the coach's silence is the story."}],
+			 "result": "No confrontation. Someone remembers the silence."}
+		]
+	},
+	{
+		"id": "mel_rival_ticket",
+		"club": "MEL",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["A rival ticket for the board"],
+		"text": ["A group of wealthy members is running a ticket to unseat the board, promising money and a fresh start. Both sides want the coach's public support."],
+		"choices": [
+			{"key": "board", "label": "Back the current board",
+			 "effects": [{"op": "board", "d": 3}, {"op": "odds", "chance": 40, "hit": [{"op": "board", "d": -6}], "miss": [], "hit_result": "The challengers win, and the new board remembers."}],
+			 "result": "The board owes you one."},
+			{"key": "neutral", "label": "Stay neutral",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The coach kept the footy out of club politics"}, {"op": "board", "d": -1}],
+			 "result": "Safe with whoever wins. Neither side fully trusts you."},
+			{"key": "meet", "label": "Meet the challengers",
+			 "effects": [{"op": "odds", "chance": 40, "hit": [{"op": "board", "d": 5}], "miss": [{"op": "board", "d": -3}], "hit_result": "The challengers win, and you have an ally.", "miss_result": "The challengers lose, and the board knows who you met."}],
+			 "result": "A coffee with the challengers. The current board finds out."}
+		]
+	},
+	{
+		"id": "mel_silvertail_tag",
+		"club": "MEL",
+		"controversy": false,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"title": ["The silvertail tag"],
+		"text": ["A rival club's president has called Melbourne the old money club: the establishment, the cricket club's team, no heartland. The supporters are fuming."],
+		"choices": [
+			{"key": "pride", "label": "Wear it with pride",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The oldest club, and proud of it"}, {"op": "board", "d": -1}],
+			 "result": "The club leans into it. The stereotype sticks."},
+			{"key": "tour", "label": "Answer with a suburban tour",
+			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "forgo_xp", "d": 3, "who": "all"}],
+			 "result": "Clinics and school visits across the outer suburbs. Time off the track."},
+			{"key": "fire", "label": "Fire back in the press",
+			 "effects": [{"op": "morale", "d": 3, "who": "side"}, {"op": "odds", "chance": 25, "hit": [{"op": "board", "d": -3}], "miss": [], "hit_result": "It turns into a feud all week."}],
+			 "result": "The supporters love it."}
+		]
+	},
+	{
+		"id": "mel_spearhead_search",
+		"club": "MEL",
+		"controversy": false,
+		"category": "contracts",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["Still looking for a spearhead"],
+		"text": ["Melbourne has struggled for a reliable key forward, and the supporters let everyone know it. A rival club will trade a proven tall forward for the club's first-round pick."],
+		"choices": [
+			{"key": "trade", "label": "Do the trade",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The club traded for a target now"}, {"op": "odds", "chance": 60, "hit": [{"op": "morale", "d": 3, "who": "side"}], "miss": [{"op": "board", "d": -3, "was": "members"}], "hit_result": "He kicks a bag in his first few games.", "miss_result": "He doesn't fire, and the pick is gone."}],
+			 "result": "A target arrives. A young future leaves with the pick."},
+			{"key": "draft", "label": "Keep the pick and draft a tall",
+			 "effects": [{"op": "board", "d": -2, "was": "members"}, {"op": "odds", "chance": 25, "hit": [{"op": "culture", "strand": "ambition", "d": 2, "why": "A home-grown key forward is coming"}], "miss": [], "hit_result": "The young tall looks the real thing."}],
+			 "result": "Cheap and long-term. Three years before he's ready."},
+			{"key": "plan", "label": "Change the game plan",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "Everyone shares the goals"}, {"op": "board", "d": -2}, {"op": "culture", "strand": "ambition", "d": -1, "why": "The club stopped looking for a spearhead"}],
+			 "result": "The goals are spread around the forward line. The press keeps asking."}
+		]
+	},
+	{
+		"id": "mel_two_rucks",
+		"club": "MEL",
+		"controversy": false,
+		"category": "selection",
+		"subject": {"kind": "club"},
+		"title": ["Two rucks, one spot"],
+		"text": ["Melbourne has a proud line of ruckmen, and right now it has two worth a game: a trusted veteran and a young big man who has dominated the reserves. Only one fits the side, unless the coach plays both."],
+		"choices": [
+			{"key": "veteran", "label": "Back the veteran",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "Experience earned the spot"}, {"op": "culture", "strand": "ambition", "d": -1, "why": "The young ruck was made to wait"}],
+			 "result": "Experience in the middle. The kid stews."},
+			{"key": "kid", "label": "Hand it to the kid",
+			 "effects": [{"op": "xp", "d": 6, "who": "side"}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "The kid learns at the top level. The veteran is hurt."},
+			{"key": "both", "label": "Play both",
+			 "effects": [{"op": "morale", "d": 2, "who": "side"}, {"op": "slow_start", "chance": 20, "who": "side"}],
+			 "result": "Both are happy. The side is tall and slower."}
+		]
+	},
+	{
+		"id": "mel_famous_name_son",
+		"club": "MEL",
+		"controversy": false,
+		"category": "contracts",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["A famous name's son"],
+		"text": ["The son of a club great is eligible as a father-son pick. He's a long way off being a senior player, and the supporters want the name back on the list."],
+		"choices": [
+			{"key": "take", "label": "Take him",
+			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "culture", "strand": "ambition", "d": -1, "why": "A list spot went on a long shot"}],
+			 "result": "The family and the supporters are thrilled. The recruiters wanted someone readier."},
+			{"key": "wait", "label": "A year in the reserves first",
+			 "effects": [{"op": "board", "d": 1, "was": "members"}, {"op": "odds", "chance": 40, "hit": [{"op": "board", "d": -2, "was": "members"}], "miss": [], "hit_result": "Another club moves first and takes him."}],
+			 "result": "A softer commitment. The family feel it's a lesser offer."},
+			{"key": "let", "label": "Let him go elsewhere",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The list spot went on the best player available"}, {"op": "board", "d": -3, "was": "members"}],
+			 "result": "The list spot is kept. The supporters are angry."}
+		]
+	},
+	{
+		"id": "mel_mad_monday",
+		"club": "MEL",
+		"controversy": true,
+		"category": "media",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["Mad Monday in the papers"],
+		"text": ["The players' end-of-season celebrations have made the front page: photos, a complaint from a pub, a reporter calling. The club is named; the facts are thin."],
+		"choices": [
+			{"key": "fine", "label": "Fine the group and apologise",
+			 "effects": [{"op": "board", "d": 2}, {"op": "culture", "strand": "standards", "d": 2, "why": "The club fined the group and fronted it"}, {"op": "morale", "d": -4, "who": "all"}],
+			 "result": "The board and the press are satisfied. The players feel hung out to dry."},
+			{"key": "internal", "label": "Handle it internally",
+			 "effects": [{"op": "morale", "d": 3, "who": "all"}, {"op": "odds", "chance": 40, "hit": [{"op": "board", "d": -4}], "miss": [], "hit_result": "The press decides the club is hiding something."}],
+			 "result": "The group feels protected."},
+			{"key": "ban", "label": "Ban the celebration in future",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "No more Mad Monday at this club"}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "No repeat. The players think it's heavy-handed."}
+		]
+	},
+	{
+		"id": "mel_drug_whispers",
+		"club": "MEL",
+		"controversy": true,
+		"category": "health",
+		"subject": {"kind": "club"},
+		"title": ["Whispers about drugs"],
+		"text": ["A report claims some players use illicit drugs. No names, no proof, and the papers are calling."],
+		"choices": [
+			{"key": "review", "label": "Order an independent review",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "The club opened its doors to a review"}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "Seen as responsible. Months of headlines follow."},
+			{"key": "deny", "label": "Deny it flatly",
+			 "effects": [{"op": "board", "d": 2}, {"op": "odds", "chance": 40, "hit": [{"op": "board", "d": -8}], "miss": [], "hit_result": "It blows up later, and the denial is replayed."}],
+			 "result": "The story may die."},
+			{"key": "welfare", "label": "Bring in the players' association",
+			 "effects": [{"op": "morale", "d": 3, "who": "all"}, {"op": "board", "d": -3}],
+			 "result": "Welfare first, and the group trusts the club. The press says it's dodging."}
+		]
+	}
+]

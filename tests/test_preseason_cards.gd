@@ -64,7 +64,8 @@ func _test_deck() -> void:
 	_check(found == IDS.size() and only, "All %d pre-season cards are in the deck, and they are written for the pre-season alone" % IDS.size())
 	var gates := true
 	for t in deck:
-		if not IDS.has(str(t["id"])) and (t["phase"] as Array).has("preseason"):
+		# A club deck (row 157) writes its own pre-season cards: camps, trips, the leaders' vote.
+		if not IDS.has(str(t["id"])) and not t.has("club") and (t["phase"] as Array).has("preseason"):
 			gates = false
 	_check(gates, "No older card was opened to the pre-season by accident")
 	# Not drawn in the season: the phase gate.
@@ -125,7 +126,9 @@ func _test_flow() -> void:
 	_check(comes_back, "Round 1's own cards wait aside through the pre-season and come back as they were")
 	_check(seen.size() >= 4, "A spread of the cards comes up across careers (%d different)" % seen.size())
 	for id in seen:
-		_check(IDS.has(id), "Only pre-season cards come up at a stop (%s)" % id)
+		var card := StoryDeck.by_id(StoryDeck.all(), str(id))
+		var club_pre := str(card.get("club", "")) == CLUB and (card.get("phase", []) as Array).has("preseason")
+		_check(IDS.has(id) or club_pre, "Only pre-season cards, the game's or your club's own, come up at a stop (%s)" % id)
 	# Unanswered: the stop settles and nothing breaks.
 	_career(SEED + 1)
 	var met_silent := _walk(-1)

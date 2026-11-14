@@ -1,0 +1,483 @@
+[
+	{
+		"id": "gee_home_final_venue",
+		"club": "GEE",
+		"controversy": false,
+		"category": "board",
+		"phase": ["finals"],
+		"subject": {"kind": "club"},
+		"title": ["A home final, but where?"],
+		"text": ["The Cats have earned a home final, and the league says Kardinia Park is too small: it wants the game at the MCG. The coach's word will be quoted either way."],
+		"choices": [
+			{"key": "fight", "label": "Fight for Kardinia Park in the press",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "odds", "chance": 25, "hit": [{"op": "morale", "d": 4, "who": "side"}], "miss": [{"op": "board", "d": -2}], "hit_result": "The league gives way. The final is at Kardinia Park.", "miss_result": "The final stays at the 'G, and the league remembers the fight."}],
+			 "result": "The town is right behind the coach."},
+			{"key": "anywhere", "label": "\"We'll play anywhere.\"",
+			 "effects": [{"op": "board", "d": 2}, {"op": "culture", "strand": "together", "d": -1, "why": "Members who can't get a seat at the 'G felt let down"}],
+			 "result": "The league and the neutral press like it. Members who can't get a seat at the 'G feel let down."},
+			{"key": "tickets", "label": "Ask the club to buy members' tickets at the 'G",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The club got its members into the final"}, {"op": "morale", "d": 2, "who": "side"}, {"op": "board", "d": -4, "was": "funds"}],
+			 "result": "The Geelong faithful fill one end. It costs real money."}
+		]
+	},
+	{
+		"id": "gee_only_good_at_home",
+		"club": "GEE",
+		"controversy": false,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"title": ["Only good at home?"],
+		"text": ["The Cats won well at Kardinia Park and lost on the road again. A Melbourne commentator calls them flat-track bullies who need their narrow home ground to win. Next week is away."],
+		"choices": [
+			{"key": "wide", "label": "Train on a full-width ground all week",
+			 "effects": [{"op": "xp", "d": 4, "who": "all"}, {"op": "heavy_legs", "who": "side"}],
+			 "result": "The players get used to the space. The bus trip every day takes it out of them."},
+			{"key": "pin", "label": "Pin the quote up",
+			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "slow_start", "chance": 15, "who": "side", "on": "week"}],
+			 "result": "The group wants to prove him wrong. They might press too hard early."},
+			{"key": "shrug", "label": "\"Our ground, our advantage.\"",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -1}],
+			 "result": "The group stays relaxed. The tag sticks in the press."}
+		]
+	},
+	{
+		"id": "gee_bridesmaids",
+		"club": "GEE",
+		"controversy": false,
+		"category": "media",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"when": {"ladder_max": 4},
+		"title": ["The bridesmaids"],
+		"text": ["Close again, and no flag again. Every paper has the same word for Geelong on Monday: bridesmaids. The board wants to know how the coach will answer it over summer."],
+		"choices": [
+			{"key": "wear", "label": "Wear it yourself at the press conference",
+			 "effects": [{"op": "morale", "d": 3, "who": "side"}, {"op": "board", "d": -2}],
+			 "result": "The players are shielded from the tag. The coach becomes the face of it."},
+			{"key": "together", "label": "\"This group will win one.\"",
+			 "effects": [{"op": "morale", "d": 3, "who": "all"}, {"op": "culture", "strand": "together", "d": 1, "why": "The coach backed the group to win one"}, {"op": "odds", "chance": 35, "hit": [{"op": "board", "d": -3}], "hit_result": "The board starts asking whether the group has another one in it."}],
+			 "result": "The players feel backed. If they fall short again, it's on the coach."},
+			{"key": "freshen", "label": "Freshen the list: move on two senior players",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The club moved on senior players to find new hunger"}, {"op": "xp", "d": 3, "who": "all"}, {"op": "morale", "d": -2, "who": "all"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "New blood and more games for the kids. The senior group is shaken and the members lose two favourites."}
+		]
+	},
+	{
+		"id": "gee_banner_count",
+		"club": "GEE",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["The number on the banner"],
+		"text": ["The cheer squad wants this week's banner to carry the number of years since the last premiership. Half the members think it's a rallying cry; the other half think it's a jinx."],
+		"choices": [
+			{"key": "up", "label": "\"Put it up.\"",
+			 "effects": [{"op": "morale", "d": 3, "who": "side"}, {"op": "slow_start", "chance": 20, "who": "side", "on": "week"}],
+			 "result": "The players run through the number. They feel what a flag would mean, and the weight of it."},
+			{"key": "off", "label": "\"Leave the number off.\"",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "The group plays light. Some supporters reckon the club is ducking its history."}
+		]
+	},
+	{
+		"id": "gee_coming_home",
+		"club": "GEE",
+		"controversy": false,
+		"category": "contracts",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["Coming home to the Barwon"],
+		"text": ["A Geelong-born star at another club wants to come home. His manager says he'll take less to wear the hoops, but his club wants a high pick for him."],
+		"choices": [
+			{"key": "pay", "label": "Pay the price: our first pick",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "culture", "strand": "ambition", "d": 1, "why": "The club paid to bring a local star home"}, {"op": "forgo_xp", "d": 4, "who": "all"}],
+			 "result": "A proven player who wants to be here. No top young talent arrives this year."},
+			{"key": "lesser", "label": "Offer a lesser deal and wait",
+			 "effects": [{"op": "odds", "chance": 45, "hit": [{"op": "board", "d": 4, "was": "members"}], "miss": [{"op": "board", "d": -2, "was": "members"}], "hit_result": "His club blinks, and he comes home.", "miss_result": "His club calls the bluff, and he stays put."}],
+			 "result": "The pick stays, and the phone calls go back and forth."},
+			{"key": "wait", "label": "Wait until his contract runs out",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The club held its nerve on the price"}, {"op": "odds", "chance": 40, "hit": [{"op": "board", "d": -3, "was": "members"}], "hit_result": "Another club gets in first, and the town wonders why the Cats waited."}],
+			 "result": "It costs nothing now. Another club could outbid the Cats in the meantime."}
+		]
+	},
+	{
+		"id": "gee_local_boy_or_best",
+		"club": "GEE",
+		"controversy": false,
+		"category": "selection",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["The local boy or the interstater"],
+		"text": ["With the first pick, the recruiters rate an interstate teenager slightly higher. The local favourite is a Geelong boy whose family have been members for decades."],
+		"choices": [
+			{"key": "local", "label": "Take the local boy",
+			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "culture", "strand": "ambition", "d": -1, "why": "The club took the lower-rated local boy"}],
+			 "result": "He's settled and won't want to leave. The recruiters rated the other kid higher."},
+			{"key": "interstate", "label": "Take the interstater",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The recruiters got the player they rated highest"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "The higher-rated talent arrives. The town wanted its own boy, and he may want to go home one day."}
+		]
+	},
+	{
+		"id": "gee_state_league_find",
+		"club": "GEE",
+		"controversy": false,
+		"category": "selection",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["The state league find"],
+		"text": ["The recruiters love a 24-year-old who has been best on ground every week in the state league. He's ready now. The other option with the same pick is a teenager who might be better in five years."],
+		"choices": [
+			{"key": "mature", "label": "Take the mature-age player",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The club picked a player ready for senior footy now"}, {"op": "forgo_xp", "d": 3, "who": "all"}],
+			 "result": "He's ready for senior footy now. His ceiling is lower and his career shorter."},
+			{"key": "teen", "label": "Take the teenager",
+			 "effects": [{"op": "xp", "d": 4, "who": "all"}, {"op": "board", "d": -2}],
+			 "result": "Long-term upside. The board wanted help now."}
+		]
+	},
+	{
+		"id": "gee_rest_the_old_boys",
+		"club": "GEE",
+		"controversy": false,
+		"category": "selection",
+		"subject": {"kind": "club"},
+		"title": ["Rest the old boys?"],
+		"text": ["Three of the most experienced players are sore after a hard month. It's a short trip and a winnable game. The veterans want to play; the fitness staff want them in the stands."],
+		"choices": [
+			{"key": "rest", "label": "Rest all three",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "morale", "d": -2, "who": "side"}],
+			 "result": "The legs will be fresh for the run home. The veterans hate watching."},
+			{"key": "play", "label": "Play them",
+			 "effects": [{"op": "morale", "d": 3, "who": "side"}, {"op": "heavy_legs", "who": "side"}],
+			 "result": "The best side takes the field. The old legs are grinding down."},
+			{"key": "one", "label": "Rest one, play two",
+			 "effects": [{"op": "morale", "d": 1, "who": "side"}, {"op": "odds", "chance": 50, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "The two who played are feeling it."}],
+			 "result": "A middle path. No one is fully happy."}
+		]
+	},
+	{
+		"id": "gee_one_more_crack",
+		"club": "GEE",
+		"controversy": false,
+		"category": "board",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"when": {"ladder_max": 4},
+		"title": ["One more crack"],
+		"text": ["The side is a contender. The list manager can trade next year's first-round pick for an established player ready to slot straight in. The board asks the coach: win now, or protect the future?"],
+		"choices": [
+			{"key": "trade", "label": "Trade the pick",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 2, "why": "The club went all in for another flag"}, {"op": "morale", "d": 2, "who": "side"}, {"op": "forgo_xp", "d": 4, "who": "all"}],
+			 "result": "A stronger side right now. Fewer kids are coming through."},
+			{"key": "keep", "label": "Keep the pick",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The club kept its pipeline full"}, {"op": "morale", "d": -2, "who": "side"}],
+			 "result": "The pipeline stays full. The senior players think the coach blinked."}
+		]
+	},
+	{
+		"id": "gee_hawks_week",
+		"club": "GEE",
+		"controversy": false,
+		"category": "rivals",
+		"subject": {"kind": "club"},
+		"when": {"opp_deck": "HAW"},
+		"title": ["Hawks week"],
+		"text": ["Hawthorn next. Neither club's supporters have to be told why it matters, and the players want a big week."],
+		"choices": [
+			{"key": "big", "label": "Make it a big week",
+			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "heavy_legs", "who": "side"}],
+			 "result": "The group lifts. Training runs hot all week."},
+			{"key": "four", "label": "\"Just another four points.\"",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "Fresh legs and clear heads. The supporters wanted fire."}
+		]
+	},
+	{
+		"id": "gee_the_pact",
+		"club": "GEE",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"when": {"opp_deck": "HAW"},
+		"title": ["The pact"],
+		"text": ["{opp}'s president has told the press the Cats lack the mental toughness to bounce back. The leadership group wants to make a private vow in the rooms: never lose to this club again."],
+		"choices": [
+			{"key": "pact", "label": "Let them make the pact",
+			 "effects": [{"op": "morale", "d": 5, "who": "side"}, {"op": "loss_sting", "chance": 25, "d": -4, "who": "side"}],
+			 "result": "The vow is made behind closed doors. Lose to them now and it will hurt."},
+			{"key": "own", "label": "Keep it on our own game",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The coach kept the group on its own game"}, {"op": "morale", "d": -2, "who": "side"}],
+			 "result": "No extra weight. The leaders feel held back."},
+			{"key": "press", "label": "Answer him in the press",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "slow_start", "chance": 15, "who": "side", "on": "week"}],
+			 "result": "The supporters love it. {opp}'s players read it too, and they come out firing."}
+		]
+	},
+	{
+		"id": "gee_one_paper_town",
+		"club": "GEE",
+		"controversy": false,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"title": ["A one-paper town"],
+		"text": ["The local paper covers the Cats every day, front and back, and its chief football writer wants a sit-down on the list's future. The Melbourne papers want the same interview first."],
+		"choices": [
+			{"key": "local", "label": "Give it to the local paper",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "morale", "d": -2, "who": "side"}],
+			 "result": "The town hears it first. The Melbourne press goes after the side all week."},
+			{"key": "melbourne", "label": "Give it to the Melbourne papers",
+			 "effects": [{"op": "board", "d": 2}, {"op": "odds", "chance": 40, "hit": [{"op": "culture", "strand": "together", "d": -1, "why": "The local paper turned on the club after a snub"}], "hit_result": "The local paper feels snubbed, and Saturday's story is a hard one."}],
+			 "result": "Bigger reach, and recruits read it."},
+			{"key": "none", "label": "No interviews this week",
+			 "effects": [{"op": "xp", "d": 3, "who": "side"}, {"op": "board", "d": -2}],
+			 "result": "The coach's week stays on the footy. Both papers are annoyed."}
+		]
+	},
+	{
+		"id": "gee_live_in_geelong",
+		"club": "GEE",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"title": ["Live in Geelong"],
+		"text": ["A handful of players commute from Melbourne every day, over an hour each way. The leaders want a club rule: if you play for Geelong, you live in Geelong."],
+		"choices": [
+			{"key": "rule", "label": "Make it a rule",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The whole group lives in the town it plays for"}, {"op": "fresh", "who": "side"}, {"op": "odds", "chance": 30, "hit": [{"op": "morale", "d": -3, "who": "all"}], "hit_result": "A player with a partner in Melbourne starts talking about a trade."}],
+			 "result": "The group lives and trains as one, with more time to recover."},
+			{"key": "encourage", "label": "Encourage it, don't force it",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "Most of the group moved down the highway"}, {"op": "heavy_legs", "who": "side"}],
+			 "result": "No one is upset. The commuters stay tired."},
+			{"key": "leave", "label": "Leave it to the players",
+			 "effects": [{"op": "morale", "d": 2, "who": "all"}, {"op": "culture", "strand": "standards", "d": -1, "why": "The leaders felt overruled"}],
+			 "result": "The players' private lives stay theirs. The leaders feel overruled."}
+		]
+	},
+	{
+		"id": "gee_factory_closes",
+		"club": "GEE",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["A big employer closes"],
+		"text": ["One of the region's biggest factories is shutting, and hundreds of families in the club's heartland are losing work. The town wants the club to do something."],
+		"choices": [
+			{"key": "free", "label": "Free memberships for the families",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The club stood with the town when the factory shut"}, {"op": "board", "d": -4, "was": "funds"}],
+			 "result": "The town knows the club stands with it. It costs real money."},
+			{"key": "visit", "label": "The players visit the workers",
+			 "effects": [{"op": "morale", "d": 2, "who": "all"}, {"op": "culture", "strand": "together", "d": 1, "why": "The players met the town they play for"}, {"op": "forgo_xp", "d": 3, "who": "all"}],
+			 "result": "The players see the town they play for. It comes out of the training week."},
+			{"key": "statement", "label": "A statement and a match-day collection",
+			 "effects": [{"op": "board", "d": 1, "was": "members"}, {"op": "odds", "chance": 30, "hit": [{"op": "culture", "strand": "together", "d": -1, "why": "Some in town said the club did too little"}], "hit_result": "Some in town say it wasn't enough."}],
+			 "result": "Something done, at little cost."}
+		]
+	},
+	{
+		"id": "gee_surf_coast_sandhills",
+		"club": "GEE",
+		"controversy": false,
+		"category": "training",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["Sandhills on the Surf Coast"],
+		"text": ["The fitness staff want a week on the dunes and beaches down the Surf Coast. The skills coaches want the time on the track."],
+		"choices": [
+			{"key": "sand", "label": "A week on the sand",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The group suffered through the sandhills together"}, {"op": "xp", "d": 3, "who": "all"}, {"op": "odds", "chance": 15, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "Sore calves are still there for the first game."}],
+			 "result": "The group bonds on the dunes. Fewer skill sessions get done."},
+			{"key": "club", "label": "Stay at the club",
+			 "effects": [{"op": "xp", "d": 5, "who": "all"}, {"op": "morale", "d": -1, "who": "all"}],
+			 "result": "The skills sharpen. The group misses the getaway."}
+		]
+	},
+	{
+		"id": "gee_new_stand",
+		"club": "GEE",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["A new stand at Kardinia Park"],
+		"text": ["The board wants to borrow to help build a new stand: more seats, better rooms. The football department's budget would be squeezed for three seasons."],
+		"choices": [
+			{"key": "back", "label": "Back the stand",
+			 "effects": [{"op": "board", "d": 3}, {"op": "forgo_xp", "d": 4, "who": "all"}],
+			 "result": "Bigger crowds and better rooms are coming. The football department tightens its belt."},
+			{"key": "protect", "label": "Protect the football budget",
+			 "effects": [{"op": "xp", "d": 3, "who": "all"}, {"op": "board", "d": -3}],
+			 "result": "The list and the staff stay strong. The board is frustrated and the project slips."}
+		]
+	},
+	{
+		"id": "gee_the_banks_letter",
+		"club": "GEE",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"when": {"board_max": 40},
+		"title": ["The bank's letter"],
+		"text": ["The club is deep in debt and the bank wants a plan. The board can sell a home game to a Melbourne ground, run a members' appeal, or cut the football department."],
+		"choices": [
+			{"key": "sell", "label": "Sell a home game to Melbourne",
+			 "effects": [{"op": "board", "d": 5, "was": "funds"}, {"op": "culture", "strand": "together", "d": -2, "why": "The town lost a game at Kardinia Park"}, {"op": "morale", "d": -1, "who": "side"}],
+			 "result": "A guaranteed cheque. The town loses a game at Kardinia Park."},
+			{"key": "appeal", "label": "Run a members' appeal",
+			 "effects": [{"op": "odds", "chance": 65, "hit": [{"op": "board", "d": 5, "was": "funds"}, {"op": "culture", "strand": "together", "d": 1, "why": "The town rallied to pay down the debt"}], "miss": [{"op": "board", "d": -3}], "hit_result": "The appeal hits its target, and the town is proud of it.", "miss_result": "The appeal falls short, and the debt is in the paper every day."}],
+			 "result": "The town is asked to dig deep."},
+			{"key": "cut", "label": "Cut the football department",
+			 "effects": [{"op": "board", "d": 3, "was": "funds"}, {"op": "forgo_xp", "d": 6, "who": "all"}],
+			 "result": "The debt shrinks. Fewer staff means less development."}
+		]
+	},
+	{
+		"id": "gee_son_of_a_cat",
+		"club": "GEE",
+		"controversy": false,
+		"category": "selection",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["Son of a Cat"],
+		"text": ["The son of a club great is old enough for the draft and can join his dad's old club. The recruiters think he's a middling prospect. The members, and his father, want him in the hoops."],
+		"choices": [
+			{"key": "take", "label": "Take him",
+			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "culture", "strand": "ambition", "d": -1, "why": "A list spot went to a long shot"}],
+			 "result": "The family and the members are delighted. The recruiters think it's a long shot."},
+			{"key": "pass", "label": "Pass on him",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The list spot went to the recruiters' pick"}, {"op": "board", "d": -4, "was": "members"}],
+			 "result": "The spot goes to the recruiters' pick. The family and the members are hurt."}
+		]
+	},
+	{
+		"id": "gee_the_reserves",
+		"club": "GEE",
+		"controversy": false,
+		"category": "selection",
+		"subject": {"kind": "club"},
+		"title": ["The reserves want to win it"],
+		"text": ["The reserves are pushing for the finals, and their coach wants the fringe senior players every week. The senior coaches want them rested and ready to come in."],
+		"choices": [
+			{"key": "play", "label": "Play them in the reserves every week",
+			 "effects": [{"op": "xp", "d": 4, "who": "all"}, {"op": "odds", "chance": 30, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "The ones called up are tired by the time they're needed."}],
+			 "result": "Match fitness and a winning culture underneath the seniors."},
+			{"key": "locals", "label": "Give the spots to local league players",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "Local players got their shot in the hoops"}, {"op": "forgo_xp", "d": 3, "who": "all"}],
+			 "result": "The locals get a shot and the recruiters see more. The fringe players go cold."}
+		]
+	},
+	{
+		"id": "gee_waterfront_night",
+		"club": "GEE",
+		"controversy": true,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"title": ["A night on the waterfront"],
+		"text": ["After a win, a group of Geelong players stayed out late at a waterfront bar, and a phone video is everywhere by morning. Nothing illegal, but in a town this size everybody saw it."],
+		"choices": [
+			{"key": "fine", "label": "Fines and a public apology",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "The club made its standards public"}, {"op": "board", "d": 1}, {"op": "morale", "d": -3, "who": "all"}],
+			 "result": "The standards are clear. The group feels hung out to dry."},
+			{"key": "inside", "label": "Handle it inside the club",
+			 "effects": [{"op": "morale", "d": 2, "who": "all"}, {"op": "board", "d": -2}, {"op": "odds", "chance": 25, "hit": [{"op": "board", "d": -3}], "hit_result": "More video comes out, and the board is not happy."}],
+			 "result": "The players trust the coach. The local paper calls it soft."}
+		]
+	},
+	{
+		"id": "gee_taking_unders",
+		"club": "GEE",
+		"controversy": true,
+		"category": "contracts",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["Taking unders"],
+		"text": ["A star wants to join Geelong, and his manager says he'll take far less than his market value. Rival clubs are already whispering that there must be something else in it."],
+		"choices": [
+			{"key": "sign", "label": "Sign him on the cut-price deal",
+			 "effects": [{"op": "board", "d": 3}, {"op": "odds", "chance": 15, "hit": [{"op": "board", "d": -6}], "hit_result": "The league opens an investigation into the deal."}],
+			 "result": "A star at a bargain. The league may take a close look."},
+			{"key": "value", "label": "Pay him what he's worth",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The club kept its books clean"}, {"op": "board", "d": -4, "was": "funds"}],
+			 "result": "Clean books and nothing to hide. The cap is squeezed for everyone else."},
+			{"key": "walk", "label": "Walk away",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The list's pay stays fair for everyone"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "No risk taken. The supporters wonder why."}
+		]
+	},
+	{
+		"id": "gee_never_bottom_out",
+		"club": "GEE",
+		"controversy": false,
+		"category": "board",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"when": {"ladder_min": 9},
+		"title": ["Never bottom out"],
+		"text": ["The side has fallen out of the eight with an ageing list. The board's line has always been that Geelong doesn't bottom out. Some members want a full rebuild; the board wants to reset on the run."],
+		"choices": [
+			{"key": "reset", "label": "Reset on the run",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The club refused to bottom out"}, {"op": "morale", "d": 2, "who": "side"}, {"op": "odds", "chance": 30, "hit": [{"op": "board", "d": -2}], "hit_result": "The board wonders whether the old list has anything left."}],
+			 "result": "The side stays competitive. The ceiling may be lower."},
+			{"key": "rebuild", "label": "Rebuild properly",
+			 "effects": [{"op": "xp", "d": 5, "who": "all"}, {"op": "morale", "d": -3, "who": "side"}, {"op": "board", "d": -2}],
+			 "result": "A younger list and more games for the kids. Two or three hard seasons lie ahead."}
+		]
+	},
+	{
+		"id": "gee_long_way_from_home",
+		"club": "GEE",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "player", "pick": "random", "where": {"age_max": 21}},
+		"title": ["A long way from home"],
+		"text": ["{name} is struggling: no family nearby, few mates, and a quiet regional town. His manager says he's thinking about asking to go home."],
+		"choices": [
+			{"key": "family", "label": "Move him in with a senior player's family",
+			 "effects": [{"op": "trust", "d": 3, "why": "The club found him a home and a mentor"}, {"op": "odds", "chance": 75, "hit": [{"op": "morale", "d": 4, "who": "subject"}], "hit_result": "{first} settles in."}, {"op": "morale", "d": -1, "who": "others"}],
+			 "result": "{name} has a home and a mentor. The senior player gives up his own time."},
+			{"key": "fly", "label": "Fly his family over for a week",
+			 "effects": [{"op": "board", "d": -2, "was": "funds"}, {"op": "odds", "chance": 50, "hit": [{"op": "morale", "d": 5, "who": "subject"}], "hit_result": "The visit does the trick."}],
+			 "result": "{name} feels looked after. It may not last."},
+			{"key": "time", "label": "Give him time; he'll adjust",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "No player got special treatment"}, {"op": "morale", "d": -4, "who": "subject"}],
+			 "result": "No favourites for anyone. {name} is still thinking about home."}
+		]
+	},
+	{
+		"id": "gee_town_in_hoops",
+		"club": "GEE",
+		"controversy": false,
+		"category": "members",
+		"phase": ["finals"],
+		"subject": {"kind": "club"},
+		"title": ["A town in hoops"],
+		"text": ["Every shop window in Geelong is blue and white, the schools have dress-up days, and the club has a hundred requests for player visits. The players love it, but it's the biggest week of their lives."],
+		"choices": [
+			{"key": "town", "label": "Send the players into town",
+			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "board", "d": 3, "was": "members"}, {"op": "slow_start", "chance": 20, "who": "side"}],
+			 "result": "The group feels the whole region behind it. Tired and a bit distracted."},
+			{"key": "lock", "label": "Lock the doors",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "Total focus. The town feels shut out."},
+			{"key": "one", "label": "One open session, then lock down",
+			 "effects": [{"op": "morale", "d": 2, "who": "side"}, {"op": "board", "d": 1, "was": "members"}, {"op": "slow_start", "chance": 10, "who": "side"}],
+			 "result": "A middle path. Neither full energy nor full rest."}
+		]
+	},
+	{
+		"id": "gee_sold_out",
+		"club": "GEE",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["Sold out"],
+		"text": ["Kardinia Park sells out every week, and thousands are on the membership waitlist. Marketing wants to sell more memberships than there are seats, betting not everyone turns up."],
+		"choices": [
+			{"key": "sell", "label": "Sell past capacity",
+			 "effects": [{"op": "board", "d": 5, "was": "funds"}, {"op": "odds", "chance": 30, "hit": [{"op": "culture", "strand": "together", "d": -2, "why": "Members were turned away on a big day"}], "hit_result": "On the next big day, members are turned away at the gate."}],
+			 "result": "More money and more members."},
+			{"key": "hold", "label": "Hold the cap",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "Every member gets a seat"}, {"op": "board", "d": -2, "was": "funds"}],
+			 "result": "Every member gets a seat. The waitlist grows and the board misses the income."}
+		]
+	}
+]

@@ -1,0 +1,459 @@
+[
+	{
+		"id": "fre_derby_week",
+		"club": "FRE",
+		"controversy": false,
+		"category": "rivals",
+		"subject": {"kind": "club"},
+		"when": {"opp_deck": "WCE"},
+		"title": ["Derby week"],
+		"text": ["Perth splits down the middle this week: purple on one side of the office, blue and gold on the other. Talkback has run nothing else since Monday, and the players feel it."],
+		"choices": [
+			{"key": "feed", "label": "Feed the noise",
+			 "effects": [{"op": "morale", "d": 6, "who": "side"}, {"op": "slow_start", "chance": 20, "who": "side", "on": "week"}],
+			 "result": "The players are buzzing all week. Some of them might be too wound up for the first bounce."},
+			{"key": "four", "label": "\"It's just another four points.\"",
+			 "effects": [{"op": "xp", "d": 6, "who": "side"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "A normal week's work. The members wanted some fire."}
+		]
+	},
+	{
+		"id": "fre_derby_biff",
+		"club": "FRE",
+		"controversy": true,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"when": {"opp_deck": "WCE"},
+		"title": ["The last Derby boiled over"],
+		"text": ["The last Derby started with a melee at the first bounce, and with the return game this week the vision is on every bulletin again. The press ask whether the club is proud of how its players stood up."],
+		"choices": [
+			{"key": "backward", "label": "\"We don't take a backward step.\"",
+			 "effects": [{"op": "morale", "d": 8, "who": "side"}, {"op": "board", "d": -5}],
+			 "result": "The players feel backed. The league and the sponsors don't like the tone."},
+			{"key": "notus", "label": "\"That's not who we are.\"",
+			 "effects": [{"op": "board", "d": 4}, {"op": "morale", "d": -4, "who": "side"}],
+			 "result": "The board is relieved. Some in the rooms feel hung out to dry."}
+		]
+	},
+	{
+		"id": "fre_is_this_the_year",
+		"club": "FRE",
+		"controversy": false,
+		"category": "media",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["Is this the year?"],
+		"text": ["Every season launch somebody asks the same question: is this the year Fremantle wins the flag? The members want to hear the coach say it."],
+		"choices": [
+			{"key": "flag", "label": "\"We're here to win the flag.\"",
+			 "effects": [{"op": "board", "d": 5, "was": "members"}, {"op": "loss_sting", "chance": 20, "d": -5, "who": "side"}],
+			 "result": "The members love it. Every loss this season will be measured against those words."},
+			{"key": "week", "label": "\"One week at a time.\"",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The coach kept the talk on the next game"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "No promise on the record. The faithful wanted belief."}
+		]
+	},
+	{
+		"id": "fre_finals_nerves",
+		"club": "FRE",
+		"controversy": false,
+		"category": "leadership",
+		"phase": ["finals"],
+		"subject": {"kind": "club"},
+		"title": ["The papers bring up the wait"],
+		"text": ["Finals week, and the papers lead with how long Fremantle has waited for a premiership. Some of the younger players have started reading it."],
+		"choices": [
+			{"key": "talk", "label": "Talk about it openly",
+			 "effects": [{"op": "morale", "d": 5, "who": "side"}, {"op": "loss_sting", "chance": 15, "d": -8, "who": "side"}],
+			 "result": "A team meeting on the weight of history. The players walk out lighter, and a loss would hurt more."},
+			{"key": "lock", "label": "Lock out the noise",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The club shut out the noise in finals week"}, {"op": "slow_start", "chance": 15, "who": "side"}],
+			 "result": "No papers, no phones at the club. Some of the players are tight all week."}
+		]
+	},
+	{
+		"id": "fre_purple_round",
+		"club": "FRE",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["The all-purple round"],
+		"text": ["It's the club's charity round for sick kids, the one where the whole ground turns purple. The children's hospital has asked whether the players can visit the wards this week."],
+		"choices": [
+			{"key": "all", "label": "The whole list goes",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "morale", "d": 4, "who": "all"}, {"op": "forgo_xp", "d": 6, "who": "all"}],
+			 "result": "Every player on the list spends an afternoon in the wards. Training is light this week."},
+			{"key": "leaders", "label": "Send the leadership group",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "xp", "d": 6, "who": "side"}, {"op": "culture", "strand": "together", "d": -1, "why": "Most of the list missed the hospital visit"}],
+			 "result": "The leaders make the visit and the side trains as normal. The rest of the list missed out."}
+		]
+	},
+	{
+		"id": "fre_goldfields_trip",
+		"club": "FRE",
+		"controversy": false,
+		"category": "community",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["The Goldfields trip"],
+		"text": ["The club's fundraising trip to Kalgoorlie is on again: a dinner, and a clinic for the local juniors. It's a long way from the base in the middle of the pre-season."],
+		"choices": [
+			{"key": "bus", "label": "Take a full bus",
+			 "effects": [{"op": "board", "d": 5, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The whole group made the trip to the Goldfields"}, {"op": "running", "d": -1}],
+			 "result": "The Goldfields turn out in purple. The fitness base loses a week."},
+			{"key": "few", "label": "Fly a few senior players up for the night",
+			 "effects": [{"op": "xp", "d": 3, "who": "all"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "Training stays on schedule. The Goldfields wanted a full bus."}
+		]
+	},
+	{
+		"id": "fre_walyalup_walk",
+		"club": "FRE",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["Walking country at Walyalup"],
+		"text": ["Noongar elders invite the whole list to walk country along the river at Walyalup, Fremantle's Noongar name, before a home game."],
+		"choices": [
+			{"key": "all", "label": "The whole list walks",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The whole list walked country with the elders"}, {"op": "morale", "d": 5, "who": "all"}, {"op": "forgo_xp", "d": 4, "who": "all"}],
+			 "result": "A morning by the river the players will talk about for years. The session waits."},
+			{"key": "some", "label": "Only the Indigenous players and leaders",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The leaders walked country with the elders"}, {"op": "xp", "d": 4, "who": "side"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "A smaller group walks with the elders. They had asked for the whole list."}
+		]
+	},
+	{
+		"id": "fre_the_doctor",
+		"club": "FRE",
+		"controversy": false,
+		"category": "training",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["The Doctor's in"],
+		"text": ["The Fremantle Doctor has come in hard off the ocean for the third afternoon running. Kicking drills into it look ugly; the alternative is to take the session indoors."],
+		"choices": [
+			{"key": "kick", "label": "Kick into it",
+			 "effects": [{"op": "xp", "d": 12, "who": "all"}, {"op": "heavy_legs", "who": "side"}],
+			 "result": "The ball use into the breeze gets better by the day. The legs are heavy for the first game."},
+			{"key": "inside", "label": "Take it inside",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "forgo_xp", "d": 6, "who": "all"}],
+			 "result": "Fresh legs, and less work done on the ball use."}
+		]
+	},
+	{
+		"id": "fre_wharfie_time",
+		"club": "FRE",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"when": {"losing_run_min": 3},
+		"title": ["Wharfie time"],
+		"text": ["The side has gone soft at the contest for three weeks. The older heads want the club's port-town roots back on the wall: hard work, no excuses."],
+		"choices": [
+			{"key": "docks", "label": "Back to the docks",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "The group went back to the club's hard-work roots"}, {"op": "xp", "d": 8, "who": "side"}, {"op": "heavy_legs", "who": "side"}],
+			 "result": "A week of contested drills and a hard-edged talk. The legs are heavy on game day."},
+			{"key": "course", "label": "Stay the course",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "morale", "d": -3, "who": "side"}],
+			 "result": "Fresh legs on game day. The frustration lingers."}
+		]
+	},
+	{
+		"id": "fre_wafl_needs_bodies",
+		"club": "FRE",
+		"controversy": false,
+		"category": "selection",
+		"subject": {"kind": "player", "pick": "random", "where": {"selected": false, "fit": true}},
+		"title": ["The WAFL side needs bodies"],
+		"text": ["The club's WAFL side is short this week and wants {name} for its game. He'd rather sit on the extended bench in case someone pulls out."],
+		"choices": [
+			{"key": "wafl", "label": "He plays in the WAFL",
+			 "effects": [{"op": "xp", "d": 12, "who": "subject"}, {"op": "trust", "d": -2, "why": "He wanted to stay in the AFL frame"}],
+			 "result": "{name} gets a full game. He wanted to stay in the frame."},
+			{"key": "standby", "label": "Keep him on standby",
+			 "effects": [{"op": "trust", "d": 2, "why": "You kept him in the AFL frame"}, {"op": "forgo_xp", "d": 12, "who": "subject"}, {"op": "board", "d": -1}],
+			 "result": "{name} waits by the phone and misses a game. The WAFL side notices."}
+		]
+	},
+	{
+		"id": "fre_wafl_final",
+		"club": "FRE",
+		"controversy": false,
+		"category": "selection",
+		"phase": ["finals"],
+		"subject": {"kind": "player", "pick": "random", "where": {"selected": false, "fit": true}},
+		"title": ["A WAFL final or the AFL bench"],
+		"text": ["The club's WAFL side is into its finals and wants {name} to chase a flag. The fitness staff want him fresh on standby in case your own final needs a late change."],
+		"choices": [
+			{"key": "wafl", "label": "He plays the WAFL final",
+			 "effects": [{"op": "xp", "d": 10, "who": "subject"}, {"op": "morale", "d": 6, "who": "subject"}, {"op": "board", "d": 2}, {"op": "slow_start", "chance": 15, "who": "subject"}],
+			 "result": "{name} plays a final and loves it. If he's called up, it'll be on tired legs."},
+			{"key": "standby", "label": "He stays on standby",
+			 "effects": [{"op": "fresh", "who": "subject"}, {"op": "forgo_xp", "d": 10, "who": "subject"}, {"op": "morale", "d": -4, "who": "subject"}],
+			 "result": "{name} stays fresh in case he's needed. He watches the WAFL final from the stands."}
+		]
+	},
+	{
+		"id": "fre_long_way_home",
+		"club": "FRE",
+		"controversy": false,
+		"category": "family",
+		"subject": {"kind": "player", "pick": "random", "where": {"age_max": 21}},
+		"title": ["The long way home"],
+		"text": ["{name} has been quiet all month, a long way from his family on the other side of the country. His manager says he's homesick, and the Melbourne clubs will come knocking when his contract is up."],
+		"choices": [
+			{"key": "fly", "label": "Fly his family over for a fortnight",
+			 "effects": [{"op": "morale", "d": 10, "who": "subject"}, {"op": "trust", "d": 3, "why": "The club flew his family over"}, {"op": "board", "d": -2, "was": "funds"}],
+			 "result": "{name}'s family spends a fortnight in Fremantle. It isn't cheap."},
+			{"key": "talk", "label": "Talk him through it",
+			 "effects": [{"op": "morale", "d": 3, "who": "subject"}, {"op": "trust", "d": -2, "why": "He wanted more than a talk"}],
+			 "result": "{name} appreciates the chat. He still misses home."}
+		]
+	},
+	{
+		"id": "fre_longest_flights",
+		"club": "FRE",
+		"controversy": false,
+		"category": "health",
+		"subject": {"kind": "club"},
+		"title": ["The longest flights in the league"],
+		"text": ["Another four-hour flight east. The physios want the side to fly over two nights early; the budget says go the day before like everyone else."],
+		"choices": [
+			{"key": "early", "label": "Fly two nights early",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -3, "was": "funds"}],
+			 "result": "The side arrives fresh. Two nights of hotels for the whole squad."},
+			{"key": "usual", "label": "The day before, as usual",
+			 "effects": [{"op": "board", "d": 1, "was": "funds"}, {"op": "heavy_legs", "who": "side"}],
+			 "result": "The budget holds. The legs feel the flight."}
+		]
+	},
+	{
+		"id": "fre_eastern_papers",
+		"club": "FRE",
+		"controversy": false,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"title": ["The Melbourne papers don't rate us"],
+		"text": ["The eastern press has the club as easybeats again. A reporter asks whether being ignored from the other side of the country gets under the players' skin."],
+		"choices": [
+			{"key": "wall", "label": "Pin it on the wall",
+			 "effects": [{"op": "morale", "d": 7, "who": "side"}, {"op": "loss_sting", "chance": 20, "d": -6, "who": "side"}],
+			 "result": "It's on the wall by Tuesday. A loss would hurt twice."},
+			{"key": "read", "label": "\"We don't read it.\"",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The club didn't let the eastern press set its week"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "No sting either way. The members wanted a bit of mongrel."}
+		]
+	},
+	{
+		"id": "fre_fortress_or_fun",
+		"club": "FRE",
+		"controversy": false,
+		"category": "board",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["Fortress defence or fun footy"],
+		"text": ["The club has won plenty of games with a suffocating, numbers-behind-the-ball defence, and over summer the members have grumbled that it's boring to watch. The board would like to see the side open up."],
+		"choices": [
+			{"key": "win", "label": "\"We play to win, not to entertain.\"",
+			 "effects": [{"op": "xp", "d": 6, "who": "all"}, {"op": "board", "d": -4, "was": "members"}],
+			 "result": "Two more weeks drilling the defensive plan. The board is unhappy."},
+			{"key": "open", "label": "\"We'll take the game on more.\"",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "morale", "d": 3, "who": "all"}, {"op": "slow_start", "chance": 20, "who": "side"}],
+			 "result": "The players like the new freedom. The new style is still raw."}
+		]
+	},
+	{
+		"id": "fre_kid_or_the_incumbent",
+		"club": "FRE",
+		"controversy": false,
+		"category": "training",
+		"subject": {"kind": "player", "pick": "highest:potential", "where": {"age_max": 20, "selected": false, "fit": true}},
+		"title": ["The kid or the man in form"],
+		"text": ["{name} is raw but ready for senior footy. The senior man in his spot is fit and in form."],
+		"choices": [
+			{"key": "play", "label": "Play {first} alongside him",
+			 "effects": [{"op": "xp", "d": 14, "who": "subject"}, {"op": "morale", "d": 8, "who": "subject"}, {"op": "morale", "d": -2, "who": "others"}],
+			 "result": "{name} gets his game. The seniors notice a kid taking a spot."},
+			{"key": "wait", "label": "He waits his turn in the WAFL",
+			 "effects": [{"op": "xp", "d": 8, "who": "subject"}, {"op": "trust", "d": -2, "why": "He thought he'd earned his chance"}],
+			 "result": "{name} plays another month in the WAFL. He thought he'd earned his chance."}
+		]
+	},
+	{
+		"id": "fre_one_vote_short",
+		"club": "FRE",
+		"controversy": false,
+		"category": "leadership",
+		"phase": ["season_end"],
+		"subject": {"kind": "player", "pick": "highest:overall"},
+		"title": ["One vote short"],
+		"text": ["The best and fairest count went to the last round, and {name} finished one vote short. He's gutted, and he asks you privately whether the coaches' votes were fair."],
+		"choices": [
+			{"key": "straight", "label": "Show him the votes and tell him straight",
+			 "effects": [{"op": "trust", "d": 3, "why": "You showed him the votes and told him straight"}, {"op": "morale", "d": -5, "who": "subject"}],
+			 "result": "{name} sees every vote. It stings, but he knows where he stands."},
+			{"key": "heart", "label": "Tell him he's the heart of the club",
+			 "effects": [{"op": "morale", "d": 6, "who": "subject"}, {"op": "odds", "chance": 15, "hit": [{"op": "trust", "d": -4, "why": "He found out the margin later"}], "hit_result": "He hears the margin from someone else, and it bites."}],
+			 "result": "{name} walks out a bit taller."}
+		]
+	},
+	{
+		"id": "fre_legend_with_forwards",
+		"club": "FRE",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"title": ["A club great comes back"],
+		"text": ["One of the club's greats, a former best and fairest, offers to spend a week with the forwards. Some of the coaching staff feel their toes being trodden on."],
+		"choices": [
+			{"key": "forwards", "label": "Give him the forwards for a week",
+			 "effects": [{"op": "xp", "d": 10, "who": "side"}, {"op": "morale", "d": 4, "who": "all"}, {"op": "board", "d": -1}],
+			 "result": "The forwards hang on every word. The assistants are put out."},
+			{"key": "function", "label": "Make him a guest at the club function",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "culture", "strand": "together", "d": -1, "why": "A club great felt he wasn't wanted at training"}],
+			 "result": "The members love seeing him. He'd hoped to be at training."}
+		]
+	},
+	{
+		"id": "fre_the_ports_own_kid",
+		"club": "FRE",
+		"controversy": false,
+		"category": "board",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["The port's own kid"],
+		"text": ["A teenager from one of the old port clubs, East or South Fremantle, is in draft range. The town wants him in purple; the recruiters rate another player slightly higher."],
+		"choices": [
+			{"key": "local", "label": "Back the local kid",
+			 "effects": [{"op": "board", "d": 5, "was": "members"}, {"op": "culture", "strand": "ambition", "d": -1, "why": "The club took the local kid over the recruiters' first choice"}],
+			 "result": "The port is thrilled. The recruiters' first choice goes elsewhere."},
+			{"key": "best", "label": "Best available, wherever he's from",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The recruiters got the player they rated highest"}, {"op": "board", "d": -3, "was": "members"}],
+			 "result": "The recruiters get their man. The port wanted one of its own."}
+		]
+	},
+	{
+		"id": "fre_session_in_the_port",
+		"club": "FRE",
+		"controversy": false,
+		"category": "members",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["A session for the port"],
+		"text": ["The members want an open session in the heart of the port, on a public oval by the harbour. The ground is cramped and the surface is tired, but the cappuccino strip would empty to watch."],
+		"choices": [
+			{"key": "open", "label": "Open session in the port",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "morale", "d": 3, "who": "all"}, {"op": "running", "d": -1}],
+			 "result": "The whole port turns out. It's a lighter session for the crowd."},
+			{"key": "fences", "label": "Stay behind the fences",
+			 "effects": [{"op": "xp", "d": 4, "who": "all"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "The full program gets done. The members are disappointed."}
+		]
+	},
+	{
+		"id": "fre_southern_suburbs",
+		"club": "FRE",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["The southern suburbs want players"],
+		"text": ["The fast-growing southern suburbs are the club's heartland, and their junior league wants players at its clinic every week this month."],
+		"choices": [
+			{"key": "rota", "label": "A rota of players every week",
+			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The players turned up for the southern suburbs every week"}, {"op": "forgo_xp", "d": 4, "who": "all"}],
+			 "result": "The juniors get players every week. Training is a little lighter for it."},
+			{"key": "once", "label": "Once, with the captain",
+			 "effects": [{"op": "xp", "d": 4, "who": "all"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "Training stays whole. The junior league hoped for more than one visit."}
+		]
+	},
+	{
+		"id": "fre_the_other_port",
+		"club": "FRE",
+		"controversy": false,
+		"category": "rivals",
+		"subject": {"kind": "club"},
+		"when": {"opp_deck": "PAD"},
+		"title": ["The other port"],
+		"text": ["Two port clubs, two sets of wharfie roots, and plenty of spite between them over the years. Their coach has had a dig about who the real dockers are."],
+		"choices": [
+			{"key": "bite", "label": "Bite back in the press",
+			 "effects": [{"op": "morale", "d": 5, "who": "side"}, {"op": "board", "d": -2}, {"op": "slow_start", "chance": 15, "who": "side", "on": "week"}],
+			 "result": "The players love it. The board would rather the coach kept quiet."},
+			{"key": "footy", "label": "Let the footy answer",
+			 "effects": [{"op": "xp", "d": 6, "who": "side"}, {"op": "morale", "d": -2, "who": "side"}],
+			 "result": "A calm week's work. The players wanted their coach to bite."}
+		]
+	},
+	{
+		"id": "fre_purple_army",
+		"club": "FRE",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["The purple army travels"],
+		"text": ["Thousands of supporters have booked flights to follow the side east. The supporter group asks for players at a function at their hotel the night before."],
+		"choices": [
+			{"key": "players", "label": "Send a group of players",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "morale", "d": 4, "who": "side"}, {"op": "slow_start", "chance": 15, "who": "side", "on": "week"}],
+			 "result": "The hotel bar is a sea of purple. It's a late night before a game."},
+			{"key": "video", "label": "A video message from the captain",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "The preparation stays untouched. The travellers wanted players in the room."}
+		]
+	},
+	{
+		"id": "fre_booed_off",
+		"club": "FRE",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"when": {"losing_run_min": 2},
+		"title": ["Booed off the home deck"],
+		"text": ["The side was booed off after a heavy home loss, and a members' forum has been called for Thursday. The board wants the coach there in person."],
+		"choices": [
+			{"key": "front", "label": "Front the members",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "morale", "d": -3, "who": "side"}],
+			 "result": "The coach takes it on the chin. The players hear every word of it."},
+			{"key": "manager", "label": "Send the football manager; the coach coaches",
+			 "effects": [{"op": "morale", "d": 3, "who": "side"}, {"op": "board", "d": -4}],
+			 "result": "You stay with the group. The board wanted you at the forum."}
+		]
+	},
+	{
+		"id": "fre_cap_breach",
+		"club": "FRE",
+		"controversy": true,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["The salary cap auditors call"],
+		"text": ["The league's integrity unit has found a paperwork mistake in the club's player payments, a breach of the salary cap. The club can own it, or fight the finding."],
+		"choices": [
+			{"key": "report", "label": "Own it and cooperate fully",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The club owned its mistake"}, {"op": "board", "d": -6}],
+			 "result": "The matter ends quietly. The board wears the embarrassment."},
+			{"key": "fight", "label": "Contest the finding",
+			 "effects": [{"op": "odds", "chance": 70, "hit": [{"op": "board", "d": 2}], "miss": [{"op": "board", "d": -8}, {"op": "morale", "d": -5, "who": "side"}], "hit_result": "The finding is dismissed.", "miss_result": "The finding is upheld with a heavier penalty, and the players feel it."}],
+			 "result": "The club takes the league on."}
+		]
+	},
+	{
+		"id": "fre_coming_home",
+		"club": "FRE",
+		"controversy": false,
+		"category": "board",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["Coming home to Freo"],
+		"text": ["A West Australian midfielder at a Victorian club wants to come home, and he has named Fremantle. His club wants a first-round pick for him."],
+		"choices": [
+			{"key": "pay", "label": "Pay the price and bring him home",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "morale", "d": -3, "who": "all"}],
+			 "result": "The members love a local coming home. The club's own midfielders see their minutes going."},
+			{"key": "pass", "label": "Not at that price",
+			 "effects": [{"op": "morale", "d": 2, "who": "all"}, {"op": "board", "d": -3, "was": "members"}],
+			 "result": "The pick stays and the midfielders keep their minutes. The members wanted him home."}
+		]
+	}
+]

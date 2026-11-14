@@ -1,0 +1,455 @@
+[
+	{
+		"id": "nth_shinboner_lunch",
+		"club": "NTH",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["Shinboner lunch at Arden Street"],
+		"text": ["The past players are holding their annual lunch in the Arden Street rooms, and they want the whole senior list there. They want this group to hear what the jumper meant when the club had nothing."],
+		"choices": [
+			{"key": "all", "label": "Send the whole list",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The old Shinboners told them what the jumper meant"}, {"op": "morale", "d": 4, "who": "all"}, {"op": "heavy_legs", "who": "side"}],
+			 "result": "The stories go long into the afternoon. A long day on their feet midweek."},
+			{"key": "leaders", "label": "Send the leaders only",
+			 "effects": [{"op": "xp", "d": 3, "who": "side"}, {"op": "board", "d": -2, "was": "members"}, {"op": "morale", "d": -1, "who": "all"}],
+			 "result": "Training runs as planned. The old boys notice the empty chairs."}
+		]
+	},
+	{
+		"id": "nth_open_gates",
+		"club": "NTH",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["Open the gates at Arden Street"],
+		"text": ["The locals are lined up along the Arden Street fence to watch the main session, as they always have. The fitness staff want it closed so they can run the hard stuff without an audience."],
+		"choices": [
+			{"key": "open", "label": "Keep it open",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "morale", "d": 2, "who": "all"}, {"op": "forgo_xp", "d": 4, "who": "side"}],
+			 "result": "The neighbourhood still feels it's their club. The session loses its edge."},
+			{"key": "close", "label": "Close it",
+			 "effects": [{"op": "xp", "d": 4, "who": "side"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "A sharp, full-on session. The regulars at the fence are offended."}
+		]
+	},
+	{
+		"id": "nth_relocation_talk",
+		"club": "NTH",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["The relocation talk is back"],
+		"text": ["A league official has told radio that a small Melbourne club would be better off interstate, and everyone knows which club he means. Your phone is ringing before breakfast."],
+		"choices": [
+			{"key": "rule", "label": "Rule it out on camera",
+			 "effects": [{"op": "morale", "d": 5, "who": "all"}, {"op": "culture", "strand": "together", "d": 1, "why": "The coach said North stays in North"}, {"op": "board", "d": -4}],
+			 "result": "The players and members rally. The board wanted room to negotiate."},
+			{"key": "table", "label": "Say everything's on the table",
+			 "effects": [{"op": "board", "d": 4}, {"op": "morale", "d": -4, "who": "all"}, {"op": "slow_start", "chance": 15, "who": "side"}],
+			 "result": "The board keeps its leverage. The players wonder where they'll be living next year."},
+			{"key": "coach", "label": "Say it's not a coach's question",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "You kept your mind on the footy"}, {"op": "slow_start", "chance": 10, "who": "side"}],
+			 "result": "No damage either way. The story runs all week."}
+		]
+	},
+	{
+		"id": "nth_sell_a_home_game",
+		"club": "NTH",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["Sell a home game interstate"],
+		"text": ["A state government offers good money to host one of your home games a long flight away. The board likes the cheque; members who bought tickets to the Melbourne games don't like losing one."],
+		"choices": [
+			{"key": "take", "label": "Take the deal",
+			 "effects": [{"op": "board", "d": 5, "was": "funds"}, {"op": "heavy_legs", "who": "side"}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "The finances improve. The players lose a game in front of their own and carry the flight."},
+			{"key": "keep", "label": "Keep the game at home",
+			 "effects": [{"op": "morale", "d": 3, "who": "all"}, {"op": "board", "d": -4, "was": "funds"}],
+			 "result": "The side plays in front of its own people. The board loses the revenue."}
+		]
+	},
+	{
+		"id": "nth_merger_proposal",
+		"club": "NTH",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["A merger on the table"],
+		"text": ["Another struggling club has quietly put a merger on paper: one jumper, two histories, a bigger supporter base. The board wants the coach's view before it goes near the members."],
+		"choices": [
+			{"key": "alone", "label": "Back North alone",
+			 "effects": [{"op": "morale", "d": 5, "who": "all"}, {"op": "culture", "strand": "together", "d": 1, "why": "The coach backed North to stand alone"}, {"op": "board", "d": -5}],
+			 "result": "The rooms love the defiance. The board sees money walking out the door."},
+			{"key": "explore", "label": "Tell them to explore it",
+			 "effects": [{"op": "board", "d": 5}, {"op": "morale", "d": -5, "who": "all"}, {"op": "culture", "strand": "together", "d": -1, "why": "The players fear for the club's name"}],
+			 "result": "The board feels backed. The players fear for the club's name."}
+		]
+	},
+	{
+		"id": "nth_smallest_club",
+		"club": "NTH",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["The smallest club in town"],
+		"text": ["The membership team says North sits near the bottom of the Melbourne clubs again. They want players ringing lapsed members this week for the personal touch."],
+		"choices": [
+			{"key": "phones", "label": "Hand the players the phone list",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The players rang the members who'd drifted away"}, {"op": "forgo_xp", "d": 4, "who": "side"}],
+			 "result": "Members come back. Two nights of recovery are lost to the phones."},
+			{"key": "staff", "label": "Leave it to the staff",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "The players keep their routine. The drive falls flat."}
+		]
+	},
+	{
+		"id": "nth_join_in_the_chorus",
+		"club": "NTH",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"title": ["Learning the song"],
+		"text": ["After the last win, half the new players mumbled through Join in the Chorus. The leadership group wants every recruit standing up and singing it, word perfect, in front of the group."],
+		"choices": [
+			{"key": "rite", "label": "Make it a rite of passage",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "Every new player sang the song in front of the group"}, {"op": "morale", "d": 2, "who": "all"}, {"op": "slow_start", "chance": 10, "who": "side"}],
+			 "result": "The new players feel part of it. A few of the shy ones hated every second."},
+			{"key": "time", "label": "Let them pick it up in time",
+			 "effects": [{"op": "morale", "d": 1, "who": "all"}, {"op": "culture", "strand": "standards", "d": -1, "why": "The leaders were overruled on the song"}],
+			 "result": "Nobody is embarrassed. The leaders feel overruled."}
+		]
+	},
+	{
+		"id": "nth_community_classroom",
+		"club": "NTH",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["Kids in the community classroom"],
+		"text": ["The club's community program runs homework help for kids from the estates and migrant families around Arden Street. It wants two senior players in the classroom every week this month."],
+		"choices": [
+			{"key": "commit", "label": "Commit two players every week",
+			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The players showed up for the kids around Arden Street"}, {"op": "forgo_xp", "d": 4, "who": "side"}],
+			 "result": "The club looks like itself again. Two players miss extra sessions."},
+			{"key": "once", "label": "One visit, then back to footy",
+			 "effects": [{"op": "xp", "d": 2, "who": "side"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "Training is untouched. The program staff are let down."}
+		]
+	},
+	{
+		"id": "nth_big_roo_jumper",
+		"club": "NTH",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["A big roo across the front"],
+		"text": ["Merchandise wants a one-off jumper with a big kangaroo across the front instead of the stripes, and says it would sell. The players would lose a morning to the photo shoots and the launch."],
+		"choices": [
+			{"key": "wear", "label": "Wear it once this season",
+			 "effects": [{"op": "board", "d": 3, "was": "funds"}, {"op": "forgo_xp", "d": 2, "who": "all"}],
+			 "result": "Merchandise flies off the shelf. The players give up a morning to the cameras."},
+			{"key": "stripes", "label": "The stripes, always",
+			 "effects": [{"op": "xp", "d": 2, "who": "all"}, {"op": "board", "d": -2, "was": "funds"}],
+			 "result": "No launch, no photo shoots. A revenue chance is missed."}
+		]
+	},
+	{
+		"id": "nth_name_on_the_jumper",
+		"club": "NTH",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["North Melbourne or Kangaroos?"],
+		"text": ["A marketing firm has told the board that North Melbourne sounds like a suburb and the Kangaroos sound like a national brand. They want to drop the suburb from the jumper."],
+		"choices": [
+			{"key": "brand", "label": "Back the national brand",
+			 "effects": [{"op": "board", "d": 4, "was": "funds"}, {"op": "morale", "d": -3, "who": "all"}, {"op": "culture", "strand": "together", "d": -1, "why": "The locals feel their club is being erased"}],
+			 "result": "The sponsors are keen. The locals in the rooms feel their club is being erased."},
+			{"key": "suburb", "label": "Keep the suburb in the name",
+			 "effects": [{"op": "morale", "d": 3, "who": "all"}, {"op": "board", "d": -3, "was": "funds"}],
+			 "result": "The heartland is proud. The sponsors walk."}
+		]
+	},
+	{
+		"id": "nth_essendon_neighbours",
+		"club": "NTH",
+		"controversy": false,
+		"category": "rivals",
+		"subject": {"kind": "club"},
+		"when": {"opp_deck": "ESS"},
+		"title": ["Neighbours"],
+		"text": ["Essendon are just up the road, and the two sets of supporters share pubs, schools and workplaces. The players have been copping it from Bombers fans all week."],
+		"choices": [
+			{"key": "street", "label": "Make it about the neighbourhood",
+			 "effects": [{"op": "morale", "d": 5, "who": "side"}, {"op": "slow_start", "chance": 15, "who": "side"}],
+			 "result": "The side is fired up. Some may play the occasion, not the game."},
+			{"key": "four", "label": "Treat it as another four points",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The group stayed calm and on the plan"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "The group stays calm and on the plan. The members wanted fire."}
+		]
+	},
+	{
+		"id": "nth_hawthorn_scores",
+		"club": "NTH",
+		"controversy": false,
+		"category": "rivals",
+		"subject": {"kind": "club"},
+		"when": {"opp_deck": "HAW"},
+		"title": ["Old scores with Hawthorn"],
+		"text": ["The old-timers still talk about the grand finals against Hawthorn as if they were last week. A past player has gone on radio to say this generation doesn't know what Hawthorn means."],
+		"choices": [
+			{"key": "stories", "label": "Bring the old boys in to tell the stories",
+			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "heavy_legs", "who": "side"}],
+			 "result": "The side plays with history behind it. It's an emotional, draining week."},
+			{"key": "past", "label": "Keep the past in the past",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "A normal, fresh preparation. The past players feel brushed off."}
+		]
+	},
+	{
+		"id": "nth_richer_club_circling",
+		"club": "NTH",
+		"controversy": false,
+		"category": "contracts",
+		"subject": {"kind": "player", "pick": "highest:potential", "where": {"age_max": 23}},
+		"title": ["A richer club is circling"],
+		"text": ["A big-spending Melbourne club is whispering to {name}'s management about more money and a better shot at a flag. It's an old North story: develop them, then lose them."],
+		"choices": [
+			{"key": "extend", "label": "Sit him down and extend early",
+			 "effects": [{"op": "morale", "d": 4, "who": "subject"}, {"op": "trust", "d": 3, "why": "The club moved first to keep him"}, {"op": "board", "d": -3, "was": "funds"}],
+			 "result": "{first} commits his future. The board has to find the money now."},
+			{"key": "wait", "label": "Trust his loyalty and wait",
+			 "effects": [{"op": "board", "d": 1, "was": "funds"}, {"op": "trust", "d": -2, "why": "The club didn't move first"}, {"op": "slow_start", "chance": 20, "who": "subject"}],
+			 "result": "No money spent yet. {first} feels undervalued, and it shows."}
+		]
+	},
+	{
+		"id": "nth_country_connection",
+		"club": "NTH",
+		"controversy": false,
+		"category": "training",
+		"subject": {"kind": "player", "pick": "lowest:overall", "where": {"age_max": 24}},
+		"title": ["The country connection"],
+		"text": ["The club's regional partner wants {name} to play and train with them for a fortnight. It would build the club's name in the bush."],
+		"choices": [
+			{"key": "send", "label": "Send him",
+			 "effects": [{"op": "xp", "d": 6, "who": "subject"}, {"op": "board", "d": 2, "was": "members"}, {"op": "morale", "d": -2, "who": "subject"}],
+			 "result": "{first} gets senior minutes in the country, and the region warms to North. He misses the senior coaches."},
+			{"key": "keep", "label": "Keep him in Melbourne",
+			 "effects": [{"op": "morale", "d": 2, "who": "subject"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "{first} stays in the main program. The partnership cools."}
+		]
+	},
+	{
+		"id": "nth_interstate_supporters",
+		"club": "NTH",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["The interstate supporters"],
+		"text": ["North supporters living interstate have formed their own group and asked for players at a members' night. It means a flight in the middle of the week."],
+		"choices": [
+			{"key": "fly", "label": "Fly three players over",
+			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "heavy_legs", "who": "side"}],
+			 "result": "The far-flung members feel looked after. The travellers come back tired."},
+			{"key": "video", "label": "Send a video message",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "No disruption. It lands as a brush-off."}
+		]
+	},
+	{
+		"id": "nth_facilities_money",
+		"club": "NTH",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["Where to spend the grant"],
+		"text": ["A government grant has come through for Arden Street. The board can put it into the high-performance gym, or into the community and education wing the council and local families care about."],
+		"choices": [
+			{"key": "gym", "label": "Put it into the gym",
+			 "effects": [{"op": "xp", "d": 6, "who": "side"}, {"op": "board", "d": -3, "was": "members"}],
+			 "result": "Better facilities for the list. The community partners are disappointed."},
+			{"key": "wing", "label": "Put it into the community wing",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The club built something for its neighbourhood"}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "The club's local standing grows. The players feel the footy came second."}
+		]
+	},
+	{
+		"id": "nth_fighting_spirit",
+		"club": "NTH",
+		"controversy": false,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"when": {"losing_run_min": 1},
+		"title": ["Where's the fighting spirit?"],
+		"text": ["After a heavy loss, a club great has written in the paper that the Shinboner spirit has gone out of the place. The players have read it."],
+		"choices": [
+			{"key": "hit", "label": "Hit back: this group fights",
+			 "effects": [{"op": "morale", "d": 5, "who": "all"}, {"op": "board", "d": -3}],
+			 "result": "The rooms love it. It's a public stoush with a club great."},
+			{"key": "agree", "label": "Agree, and lift the standards",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The coach agreed the standard had slipped"}, {"op": "xp", "d": 4, "who": "side"}, {"op": "morale", "d": -3, "who": "all"}],
+			 "result": "A harder week on the track. The players feel hung out."}
+		]
+	},
+	{
+		"id": "nth_in_the_red",
+		"club": "NTH",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["The club is in the red"],
+		"text": ["The finance report is grim: the club is losing money and the bank wants a plan. The CEO asks the coach to give up one football department job."],
+		"choices": [
+			{"key": "cut", "label": "Cut the role",
+			 "effects": [{"op": "board", "d": 5}, {"op": "forgo_xp", "d": 6, "who": "side"}],
+			 "result": "The board sees a team player. There's less coaching for the young players."},
+			{"key": "refuse", "label": "Refuse and protect the department",
+			 "effects": [{"op": "morale", "d": 2, "who": "all"}, {"op": "board", "d": -5}],
+			 "result": "The program stays intact. The board marks you as difficult."}
+		]
+	},
+	{
+		"id": "nth_benefactors_offer",
+		"club": "NTH",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["The benefactor's offer"],
+		"text": ["A wealthy long-time supporter offers a large donation if he can sit in on the match committee, just to listen. He has saved the club before."],
+		"choices": [
+			{"key": "take", "label": "Take the money and give him a seat",
+			 "effects": [{"op": "board", "d": 6, "was": "funds"}, {"op": "culture", "strand": "standards", "d": -1, "why": "An outsider sat in on selection"}, {"op": "morale", "d": -3, "who": "all"}],
+			 "result": "The finances get a real boost. The players see an outsider at selection."},
+			{"key": "closed", "label": "Thank him, but keep selection closed",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "Selection stayed with the coaches"}, {"op": "board", "d": -3, "was": "funds"}],
+			 "result": "The football department respects the line. The donation shrinks, and he's offended."}
+		]
+	},
+	{
+		"id": "nth_bottom_four",
+		"club": "NTH",
+		"controversy": false,
+		"category": "board",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"when": {"ladder_min": 13},
+		"title": ["Get us out of the bottom four"],
+		"text": ["The members' forum turned ugly this week: years of high picks and still no finals. The board wants to hear a timeline."],
+		"choices": [
+			{"key": "promise", "label": "Promise finals next year",
+			 "effects": [{"op": "board", "d": 5}, {"op": "loss_sting", "chance": 25, "d": -5, "who": "side"}],
+			 "result": "The room calms down. Every loss next year will be held up against the promise."},
+			{"key": "defend", "label": "Defend the rebuild",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The coach backed the young list in public"}, {"op": "morale", "d": 3, "who": "all"}, {"op": "board", "d": -4}],
+			 "result": "The young players feel backed. The board's patience runs thin."}
+		]
+	},
+	{
+		"id": "nth_tanking_whispers",
+		"club": "NTH",
+		"controversy": true,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"when": {"ladder_min": 16, "round_min": 15},
+		"title": ["Tanking whispers"],
+		"text": ["A journalist asks whether the club is managing games for a better draft pick. A rival coach has hinted at it too."],
+		"choices": [
+			{"key": "strongest", "label": "Pick the strongest side every week",
+			 "effects": [{"op": "board", "d": 3}, {"op": "culture", "strand": "standards", "d": 1, "why": "The club picked its strongest side every week"}, {"op": "heavy_legs", "who": "side"}],
+			 "result": "Integrity on the record. Tired senior bodies in a lost season."},
+			{"key": "kids", "label": "Keep playing the kids",
+			 "effects": [{"op": "xp", "d": 8, "who": "side"}, {"op": "board", "d": -4}],
+			 "result": "The young players get senior minutes. The whispers grow."}
+		]
+	},
+	{
+		"id": "nth_famous_number",
+		"club": "NTH",
+		"controversy": false,
+		"category": "selection",
+		"phase": ["preseason"],
+		"subject": {"kind": "player", "pick": "highest:potential", "where": {"games_max": 0}},
+		"title": ["A great's number"],
+		"text": ["The list manager wants to give a famous premiership number to {name}. It would put a target on his back from his first game."],
+		"choices": [
+			{"key": "give", "label": "Give him the number",
+			 "effects": [{"op": "morale", "d": 6, "who": "subject"}, {"op": "slow_start", "chance": 20, "who": "subject"}],
+			 "result": "{first} walks taller. The number weighs on him early."},
+			{"key": "cabinet", "label": "Keep it in the cabinet for now",
+			 "effects": [{"op": "morale", "d": 1, "who": "subject"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "No extra pressure on {first}. The members wanted the moment."}
+		]
+	},
+	{
+		"id": "nth_legends_son",
+		"club": "NTH",
+		"controversy": false,
+		"category": "selection",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["A great's son at the draft"],
+		"text": ["The son of a club great has nominated for North as a father-son pick. He's rated mid-range, and taking him costs a pick the recruiters wanted for someone better."],
+		"choices": [
+			{"key": "take", "label": "Take him",
+			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "morale", "d": 2, "who": "all"}, {"op": "culture", "strand": "ambition", "d": -1, "why": "A pick went on family, not the best available"}],
+			 "result": "The family and the club are thrilled. The recruiters bite their tongues."},
+			{"key": "draft", "label": "Let him go to the open draft",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The pick stayed for the best talent available"}, {"op": "board", "d": -3, "was": "members"}],
+			 "result": "The pick stays for the best talent. The past players feel slighted."}
+		]
+	},
+	{
+		"id": "nth_off_field_incident",
+		"club": "NTH",
+		"controversy": true,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"title": ["Off-field incident"],
+		"text": ["The papers report that a North player was involved in a late-night incident in the city. The club has to respond before training."],
+		"choices": [
+			{"key": "stand", "label": "Stand him down for a week",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The club stood a player down"}, {"op": "board", "d": 3}, {"op": "morale", "d": -3, "who": "all"}],
+			 "result": "The club looks firm. A player misses a game, and the group is split."},
+			{"key": "internal", "label": "Handle it internally",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The club looked after its own"}, {"op": "board", "d": -4}, {"op": "slow_start", "chance": 10, "who": "side"}],
+			 "result": "The players feel protected. The press won't let it go."}
+		]
+	},
+	{
+		"id": "nth_small_crowd",
+		"club": "NTH",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["Small crowd in the big stadium"],
+		"text": ["North's home game drew a near-empty crowd in the city's biggest stadium. Supporters say they'd rather see their team at a suburban ground."],
+		"choices": [
+			{"key": "suburban", "label": "Push the league for a suburban game",
+			 "effects": [{"op": "morale", "d": 3, "who": "all"}, {"op": "board", "d": -2}],
+			 "result": "The heartland feels heard. The board doesn't want a fight with head office."},
+			{"key": "sell", "label": "Sell the big-stadium deal harder",
+			 "effects": [{"op": "board", "d": 3, "was": "funds"}, {"op": "slow_start", "chance": 10, "who": "side"}],
+			 "result": "The stadium deal pays. The players hate the echoing grandstands."}
+		]
+	},
+	{
+		"id": "nth_errol_street_night",
+		"club": "NTH",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["Errol Street members' night"],
+		"text": ["The local traders and supporters want the coach and a few players at a members' night in a North Melbourne pub, the night before a light session."],
+		"choices": [
+			{"key": "go", "label": "Go, and bring the captain",
+			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "morale", "d": 2, "who": "all"}, {"op": "heavy_legs", "who": "side"}],
+			 "result": "The locals love it. It's a late night before training."},
+			{"key": "message", "label": "Send a recorded message",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "The group stays fresh. The locals feel ignored."}
+		]
+	}
+]

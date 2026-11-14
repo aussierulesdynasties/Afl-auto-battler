@@ -1,0 +1,436 @@
+[
+	{
+		"id": "col_old_ground",
+		"club": "COL",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["Open the gates at Victoria Park"],
+		"text": ["The members want a session thrown open at Victoria Park, where the old-timers say the club's soul lives. Thousands would come, the deck is rock hard and the fitness staff want a closed, sharp session."],
+		"choices": [
+			{"key": "open", "label": "Open the gates",
+			 "effects": [{"op": "board", "d": 5, "was": "members"}, {"op": "morale", "d": 3, "who": "all"}, {"op": "forgo_xp", "d": 4, "who": "all"}, {"op": "odds", "chance": 20, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "The hard deck takes it out of the legs."}],
+			 "result": "Victoria Park is packed. The session is looser than the coaches wanted."},
+			{"key": "closed", "label": "Train behind closed doors",
+			 "effects": [{"op": "xp", "d": 6, "who": "all"}, {"op": "board", "d": -3, "was": "members"}, {"op": "culture", "strand": "together", "d": -1, "why": "You shut the faithful out"}],
+			 "result": "A full, sharp session. The faithful are left outside the fence."}
+		]
+	},
+	{
+		"id": "col_most_hated",
+		"club": "COL",
+		"controversy": false,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"title": ["Voted the most hated club, again"],
+		"text": ["A radio poll has voted Collingwood the most hated club in the land again. The players heard it on the drive in."],
+		"choices": [
+			{"key": "wear", "label": "Let them hate us",
+			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "slow_start", "who": "side", "chance": 30, "on": "week"}, {"op": "board", "d": -2}],
+			 "result": "The line goes round the league. This week's opponent has heard it too."},
+			{"key": "rise", "label": "Say the club is for everyone",
+			 "effects": [{"op": "board", "d": 3}, {"op": "morale", "d": -2, "who": "side"}, {"op": "culture", "strand": "ambition", "d": -1, "why": "The group wanted a coach who'd wear it"}],
+			 "result": "A gracious answer. The rooms wanted a bit more mongrel."}
+		]
+	},
+	{
+		"id": "col_colliwobbles",
+		"club": "COL",
+		"controversy": false,
+		"category": "media",
+		"phase": ["finals"],
+		"subject": {"kind": "club"},
+		"title": ["The Colliwobbles question"],
+		"text": ["Finals week, and the papers have dug up the old word. Every question at the press conference is whether this side will choke when it matters."],
+		"choices": [
+			{"key": "front", "label": "Name the word and laugh at it",
+			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "loss_sting", "chance": 30, "d": -6, "who": "side"}],
+			 "result": "You laugh it off on camera. If this one goes wrong, the word is back on every front page."},
+			{"key": "shut", "label": "Shut the questions down",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The group stayed on the job in finals week"}, {"op": "board", "d": -3}, {"op": "slow_start", "who": "side", "chance": 25, "on": "week"}],
+			 "result": "You won't take the question. The press say it's a sore point."}
+		]
+	},
+	{
+		"id": "col_bury_the_ghost",
+		"club": "COL",
+		"controversy": false,
+		"category": "community",
+		"phase": ["finals"],
+		"subject": {"kind": "club"},
+		"title": ["A legend wants to bury the curse"],
+		"text": ["Before September starts, a club legend wants to hold a mock funeral at the old ground to bury the finals curse for good, with the cameras rolling."],
+		"choices": [
+			{"key": "funeral", "label": "Hold the funeral",
+			 "effects": [{"op": "board", "d": 6, "was": "members"}, {"op": "morale", "d": 3, "who": "all"}, {"op": "loss_sting", "chance": 30, "d": -5, "who": "side"}],
+			 "result": "A coffin, a brass band and a lot of laughs. If the side bombs out now, the curse is back."},
+			{"key": "work", "label": "Get back to work",
+			 "effects": [{"op": "xp", "d": 6, "who": "all"}, {"op": "culture", "strand": "standards", "d": 1, "why": "Finals week stayed about the football"}, {"op": "board", "d": -3, "was": "members"}],
+			 "result": "No funeral. The members wanted the show."}
+		]
+	},
+	{
+		"id": "col_drought_pressure",
+		"club": "COL",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["Building for a flag, or treading water?"],
+		"text": ["The biggest supporter base in the game is restless for a premiership. The board wants to know if you're building for a flag or treading water."],
+		"choices": [
+			{"key": "now", "label": "Promise a crack at it now",
+			 "effects": [{"op": "board", "d": 5}, {"op": "culture", "strand": "ambition", "d": 1, "why": "You promised a crack at the flag"}, {"op": "loss_sting", "chance": 30, "d": -5, "who": "side"}],
+			 "result": "The board loves it. Every loss now gets measured against your promise."},
+			{"key": "time", "label": "Ask for time to rebuild",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The club is building something together"}, {"op": "board", "d": -6, "was": "members"}, {"op": "odds", "chance": 33, "hit": [{"op": "morale", "d": -3, "who": "all"}], "hit_result": "A senior player asks where he fits in a rebuild."}],
+			 "result": "The board gives you time. The members are not patient people."}
+		]
+	},
+	{
+		"id": "col_floreat_pica",
+		"club": "COL",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"title": ["Floreat Pica above the race"],
+		"text": ["The leadership group wants the club motto, \"may the magpie flourish\", above the race and the season's standards built around it."],
+		"choices": [
+			{"key": "back", "label": "Back it and make it a standard",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "The motto went up over the race"}, {"op": "odds", "chance": 25, "hit": [{"op": "morale", "d": -2, "who": "all"}], "hit_result": "Some of the group find it heavy-handed."}],
+			 "result": "The motto goes up. Every player touches it on the way out."},
+			{"key": "players", "label": "Leave it to the players",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The players were trusted to set their own standards"}, {"op": "culture", "strand": "standards", "d": -1, "why": "Nobody owned the standards"}],
+			 "result": "The leaders run with it their own way. It drifts a bit."}
+		]
+	},
+	{
+		"id": "col_song_after_win",
+		"club": "COL",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "player", "pick": "lowest:games", "where": {"games_max": 3}},
+		"title": ["{name} is meant to lead the song"],
+		"text": ["{name} is new to the side, and when he gets his first win, tradition says he leads Good Old Collingwood Forever in the rooms. He's terrified."],
+		"choices": [
+			{"key": "lead", "label": "Make him lead it",
+			 "effects": [{"op": "odds", "chance": 80, "hit": [{"op": "morale", "d": 6, "who": "subject"}, {"op": "culture", "strand": "together", "d": 1, "why": "The new boy led the song"}], "miss": [{"op": "morale", "d": -3, "who": "subject"}], "hit_result": "He belts it out and the room goes wild.", "miss_result": "He freezes halfway through and the senior players have to carry it."}],
+			 "result": "{first} stands on the bench in the middle of the rooms."},
+			{"key": "senior", "label": "Let a senior player lead it",
+			 "effects": [{"op": "morale", "d": 2, "who": "others"}, {"op": "morale", "d": -1, "who": "subject"}],
+			 "result": "A senior player leads it. {first} feels he missed the ritual."}
+		]
+	},
+	{
+		"id": "col_carlton_week",
+		"club": "COL",
+		"controversy": false,
+		"category": "rivals",
+		"when": {"opp_deck": "CAR"},
+		"subject": {"kind": "club"},
+		"title": ["Carlton week"],
+		"text": ["It's Carlton, the oldest grudge in the game. Supporters stop you in the street to tell you what this one means."],
+		"choices": [
+			{"key": "season", "label": "Make it the game of the season",
+			 "effects": [{"op": "morale", "d": 5, "who": "side"}, {"op": "heavy_legs", "who": "side"}, {"op": "loss_sting", "chance": 30, "d": -5, "who": "side"}],
+			 "result": "Training is a war all week. Lose this and it will hurt."},
+			{"key": "another", "label": "Treat it as just another game",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The week ran to the plan, Carlton or not"}, {"op": "board", "d": -3, "was": "members"}, {"op": "slow_start", "who": "side", "chance": 20, "on": "week"}],
+			 "result": "A normal week. The supporters can't believe it."}
+		]
+	},
+	{
+		"id": "col_mcg_blockbuster",
+		"club": "COL",
+		"controversy": false,
+		"category": "rivals",
+		"when": {"opp_deck": "ESS"},
+		"subject": {"kind": "club"},
+		"title": ["Essendon at a packed MCG"],
+		"text": ["A packed MCG, the Bombers, the whole city watching. The players want a hard week to get up for it; the doctors want them rested."],
+		"choices": [
+			{"key": "hard", "label": "Train hard into it",
+			 "effects": [{"op": "xp", "d": 5, "who": "side"}, {"op": "odds", "chance": 30, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "The hard week shows in the last quarter."}],
+			 "result": "A hard, physical week on the track."},
+			{"key": "fresh", "label": "Freshen them up",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "forgo_xp", "d": 5, "who": "side"}],
+			 "result": "A light week. The legs are fresh for the big day."}
+		]
+	},
+	{
+		"id": "col_country_clinic",
+		"club": "COL",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["A country town wants the Pies"],
+		"text": ["A country league begs for a visit. Half the town barracks for the Pies, and the other half wants to boo them in person."],
+		"choices": [
+			{"key": "squad", "label": "Send a squad",
+			 "effects": [{"op": "board", "d": 6, "was": "members"}, {"op": "forgo_xp", "d": 4, "who": "all"}, {"op": "odds", "chance": 20, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "Two days on the road catch up with them."}],
+			 "result": "The town turns out in black and white, and a few in other colours."},
+			{"key": "legend", "label": "Send a club legend instead",
+			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "culture", "strand": "together", "d": -1, "why": "The players wanted to go"}],
+			 "result": "The legend charms the town. The players wanted the trip."}
+		]
+	},
+	{
+		"id": "col_membership_push",
+		"club": "COL",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["Chasing the membership record"],
+		"text": ["The club is chasing a new membership record. Marketing wants three players at every launch for a month."],
+		"choices": [
+			{"key": "throw", "label": "Put the players on the launches",
+			 "effects": [{"op": "board", "d": 8, "was": "members"}, {"op": "forgo_xp", "d": 6, "who": "side"}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "The record falls. The players are sick of shopping centres."},
+			{"key": "out", "label": "Keep the players out of it",
+			 "effects": [{"op": "xp", "d": 6, "who": "side"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "The players train. The record push stalls short of the mark."}
+		]
+	},
+	{
+		"id": "col_big_offer",
+		"club": "COL",
+		"controversy": false,
+		"category": "board",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["One big offer"],
+		"text": ["The board will back one big offer to another club's out-of-contract star, but it means trimming the offers to your own out-of-contract players."],
+		"choices": [
+			{"key": "big", "label": "Go big on the star",
+			 "effects": [{"op": "odds", "chance": 70, "hit": [{"op": "culture", "strand": "ambition", "d": 2, "why": "The club landed the big name"}], "miss": [{"op": "board", "d": -3}], "hit_result": "He signs.", "miss_result": "He goes elsewhere anyway, and the board wants to know why."}, {"op": "culture", "strand": "together", "d": -2, "why": "Your own players took less to fit him in"}],
+			 "result": "Your own out-of-contract players get trimmed offers."},
+			{"key": "own", "label": "Pay your own first",
+			 "effects": [{"op": "morale", "d": 2, "who": "all"}, {"op": "culture", "strand": "together", "d": 1, "why": "The club looked after its own"}, {"op": "board", "d": -3}],
+			 "result": "Your own players re-sign. The board says you left a star on the table."}
+		]
+	},
+	{
+		"id": "col_pokies_revenue",
+		"club": "COL",
+		"controversy": true,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["The pokies and the suburb"],
+		"text": ["The club's poker machine venues pay a lot of the bills. A local welfare group says they drain the very suburb the club came from, and the press want your view."],
+		"choices": [
+			{"key": "back", "label": "Back the board's position",
+			 "effects": [{"op": "board", "d": 4}, {"op": "culture", "strand": "together", "d": -2, "why": "The suburb feels the club chose the machines over it"}],
+			 "result": "The board is grateful. The welfare group goes to the papers."},
+			{"key": "out", "label": "Say the club ought to get out of them",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "You put the suburb ahead of the takings"}, {"op": "board", "d": -6, "was": "funds"}],
+			 "result": "Your answer leads the news. The board is furious about the money."}
+		]
+	},
+	{
+		"id": "col_racism_review",
+		"club": "COL",
+		"controversy": true,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"title": ["A hard look in the mirror"],
+		"text": ["A former player has said publicly that he was racially abused inside the club during his career. The board wants the coach's voice in the response."],
+		"choices": [
+			{"key": "front", "label": "Front it and apologise in full",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The club owned its past in public"}, {"op": "morale", "d": 2, "who": "all"}, {"op": "board", "d": -3}],
+			 "result": "You stand up and apologise without conditions. Some on the board wanted it softer."},
+			{"key": "president", "label": "Leave it to the president",
+			 "effects": [{"op": "board", "d": 2}, {"op": "odds", "chance": 50, "hit": [{"op": "culture", "strand": "together", "d": -2, "why": "The club's response landed badly with its own players"}], "hit_result": "The statement reads like lawyers wrote it. The players notice."}],
+			 "result": "The president speaks for the club."}
+		]
+	},
+	{
+		"id": "col_illicit_drugs",
+		"club": "COL",
+		"controversy": true,
+		"category": "health",
+		"subject": {"kind": "club"},
+		"title": ["Two players test positive"],
+		"text": ["Two of your players have returned positive tests to a banned substance and will miss games whatever the club says. The club has to decide what it says publicly."],
+		"choices": [
+			{"key": "support", "label": "Stand by them, support first",
+			 "effects": [{"op": "morale", "d": 4, "who": "all"}, {"op": "culture", "strand": "together", "d": 1, "why": "The club stood by its players at their worst"}, {"op": "board", "d": -6}],
+			 "result": "The club puts its arm around them. The press and the board want a harder line."},
+			{"key": "hard", "label": "Take a hard line, no excuses",
+			 "effects": [{"op": "board", "d": 2}, {"op": "culture", "strand": "standards", "d": 2, "why": "The club drew a hard line on drugs"}, {"op": "morale", "d": -4, "who": "all"}],
+			 "result": "A blunt statement. The group feels its mates were hung out."}
+		]
+	},
+	{
+		"id": "col_father_son",
+		"club": "COL",
+		"controversy": false,
+		"category": "selection",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["A premiership hero's son"],
+		"text": ["A premiership hero's son is coming through the draft and can join the club his father played for. The supporters want him; the recruiters rate a different kid higher."],
+		"choices": [
+			{"key": "take", "label": "Take him",
+			 "effects": [{"op": "board", "d": 5, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The family line in black and white goes on"}, {"op": "culture", "strand": "ambition", "d": -1, "why": "The recruiters lost the kid they rated higher"}],
+			 "result": "He pulls on his father's colours. The recruiters' pick goes elsewhere."},
+			{"key": "pass", "label": "Let him go",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The recruiters got the kid they rated highest"}, {"op": "board", "d": -6, "was": "members"}, {"op": "odds", "chance": 33, "hit": [{"op": "morale", "d": -2, "who": "all"}], "hit_result": "He's starring for a rival, and the supporters never let you forget it."}],
+			 "result": "The recruiters get their man. The supporters are filthy."}
+		]
+	},
+	{
+		"id": "col_irish_rookie",
+		"club": "COL",
+		"controversy": false,
+		"category": "contracts",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["A Gaelic footballer wants a go"],
+		"text": ["A Gaelic footballer from Ireland has trained with the club, and the recruiters want to sign him as a project. He's never played a game of Australian football."],
+		"choices": [
+			{"key": "sign", "label": "Sign him",
+			 "effects": [{"op": "odds", "chance": 33, "hit": [{"op": "culture", "strand": "ambition", "d": 2, "why": "The Irish project came good"}], "hit_result": "He's pushing for a senior game within a couple of seasons."}, {"op": "forgo_xp", "d": 2, "who": "side"}, {"op": "odds", "chance": 33, "hit": [{"op": "morale", "d": -1, "who": "all"}], "hit_result": "He gets homesick and goes back to Ireland."}],
+			 "result": "He signs. A list spot goes to a man who's never bounced the ball."},
+			{"key": "pass", "label": "Pass, keep the spot for a local",
+			 "effects": [{"op": "xp", "d": 2, "who": "side"}, {"op": "odds", "chance": 20, "hit": [{"op": "board", "d": -2}], "hit_result": "He signs with a rival and kicks a bag against you."}],
+			 "result": "A local kid gets the spot."}
+		]
+	},
+	{
+		"id": "col_copeland_night",
+		"club": "COL",
+		"controversy": false,
+		"category": "leadership",
+		"phase": ["season_end"],
+		"subject": {"kind": "player", "pick": "highest:overall"},
+		"title": ["{name} wants a long speech"],
+		"text": ["{name} has won the club champion award and wants to dedicate it to a teammate who missed the season injured. That means a long speech the board planned to keep short."],
+		"choices": [
+			{"key": "speak", "label": "Let him speak",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The champion gave his night to an injured mate"}, {"op": "morale", "d": 4, "who": "subject"}, {"op": "board", "d": -2}],
+			 "result": "{first} speaks for ten minutes. There isn't a dry eye in the room."},
+			{"key": "script", "label": "Keep to the script",
+			 "effects": [{"op": "board", "d": 2}, {"op": "trust", "d": -3, "why": "He was cut short on his own night"}],
+			 "result": "A short thank-you. {first} wanted to say more."}
+		]
+	},
+	{
+		"id": "col_cheer_squad",
+		"club": "COL",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["The cheer squad's banner has a crack at a rival"],
+		"text": ["The cheer squad has painted a banner having a go at another club's player. It's funny, and it's going to be all over the papers."],
+		"choices": [
+			{"key": "run", "label": "Let it run",
+			 "effects": [{"op": "morale", "d": 3, "who": "side"}, {"op": "culture", "strand": "together", "d": 1, "why": "The club backed its cheer squad"}, {"op": "odds", "chance": 25, "hit": [{"op": "board", "d": -3}], "hit_result": "The league fines the club, and the papers have a field day."}],
+			 "result": "The players run through it laughing."},
+			{"key": "repaint", "label": "Ask them to repaint it",
+			 "effects": [{"op": "board", "d": 2}, {"op": "culture", "strand": "together", "d": -2, "why": "The cheer squad feel the club hung them out"}],
+			 "result": "A safer banner goes up. The cheer squad are cool on the club for a month."}
+		]
+	},
+	{
+		"id": "col_superfan",
+		"club": "COL",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["The cheer squad leader's request"],
+		"text": ["The cheer squad's leader wants the players to come out and see the supporters before a big game. The match committee wants them in the rooms."],
+		"choices": [
+			{"key": "out", "label": "Send them out",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "morale", "d": 2, "who": "side"}, {"op": "slow_start", "who": "side", "chance": 20, "on": "week"}],
+			 "result": "The players go out to the fence. The Magpie Army roars."},
+			{"key": "in", "label": "Keep them in the rooms",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -3, "was": "members"}],
+			 "result": "The players stay in. The cheer squad feel snubbed."}
+		]
+	},
+	{
+		"id": "col_president_radio",
+		"club": "COL",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["The president promises the top four"],
+		"text": ["The club president has just told a radio station that the side will make the top four. Nobody asked you first."],
+		"choices": [
+			{"key": "back", "label": "Back him publicly",
+			 "effects": [{"op": "board", "d": 4}, {"op": "odds", "chance": 50, "hit": [{"op": "board", "d": -6}], "hit_result": "The side drifts outside the four, and the president's words come back on you."}],
+			 "result": "You say the president's right. Now it's your target too."},
+			{"key": "correct", "label": "Correct him, gently",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "Expectations stayed where the coach set them"}, {"op": "board", "d": -2}],
+			 "result": "You say the side is building. The president is not pleased."}
+		]
+	},
+	{
+		"id": "col_heartland",
+		"club": "COL",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["Clinics in the towers"],
+		"text": ["Locals say the club has become a corporate machine and forgotten the suburb that made it. A community group asks the players to run a footy clinic at the public housing towers."],
+		"choices": [
+			{"key": "clinic", "label": "Run the clinic",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "culture", "strand": "together", "d": 2, "why": "The players went back to where the club began"}, {"op": "forgo_xp", "d": 4, "who": "all"}],
+			 "result": "Two hundred kids and a lot of black and white. Training is cut short."},
+			{"key": "donate", "label": "Send a donation instead",
+			 "effects": [{"op": "xp", "d": 4, "who": "all"}, {"op": "culture", "strand": "together", "d": -1, "why": "The suburb wanted the players, not a cheque"}],
+			 "result": "A cheque goes to the community group. The press call it a cop-out."}
+		]
+	},
+	{
+		"id": "col_legend_assistant",
+		"club": "COL",
+		"controversy": false,
+		"category": "leadership",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["A legend wants back in"],
+		"text": ["A premiership legend wants a job as an assistant coach. The supporters love it, and your current assistant has done nothing wrong."],
+		"choices": [
+			{"key": "hire", "label": "Hire the legend",
+			 "effects": [{"op": "board", "d": 5, "was": "members"}, {"op": "culture", "strand": "ambition", "d": 1, "why": "A premiership man is back at the club"}, {"op": "odds", "chance": 50, "hit": [{"op": "forgo_xp", "d": 3, "who": "side"}], "hit_result": "He was a great player. He's a poor teacher."}],
+			 "result": "The legend is back. Your old assistant clears his desk."},
+			{"key": "keep", "label": "Keep your assistant",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "You backed the staff who'd done the work"}, {"op": "board", "d": -4, "was": "members"}],
+			 "result": "Your assistant stays. The supporters and the press call it a snub."}
+		]
+	},
+	{
+		"id": "col_guernsey_clash",
+		"club": "COL",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["A heritage guernsey for one round"],
+		"text": ["Marketing wants a heritage guernsey for one round, with a merchandise run behind it. The traditionalists say the stripes must never change; younger fans want it."],
+		"choices": [
+			{"key": "wear", "label": "Wear the heritage guernsey",
+			 "effects": [{"op": "board", "d": 4, "was": "funds"}, {"op": "culture", "strand": "together", "d": -1, "why": "The traditionalists say the stripes are not for sale"}],
+			 "result": "The merchandise sells. The traditionalists write letters."},
+			{"key": "stripes", "label": "Stay in the stripes",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The stripes stay as they always were"}, {"op": "board", "d": -2, "was": "funds"}],
+			 "result": "Black and white, as always. Marketing loses its round."}
+		]
+	},
+	{
+		"id": "col_vfl_magpies",
+		"club": "COL",
+		"controversy": false,
+		"category": "selection",
+		"subject": {"kind": "player", "pick": "highest:overall", "where": {"selected": false}},
+		"title": ["{name} has torn up the reserves"],
+		"text": ["{name} has torn up the reserves for a month. The captain thinks he's ready; the match committee wants one more week."],
+		"choices": [
+			{"key": "pick", "label": "Pick him",
+			 "effects": [{"op": "morale", "d": 6, "who": "subject"}, {"op": "morale", "d": -2, "who": "others"}],
+			 "result": "{first} is in. A senior player is dropped and lets you know about it."},
+			{"key": "wait", "label": "One more week",
+			 "effects": [{"op": "morale", "d": 1, "who": "others"}, {"op": "morale", "d": -3, "who": "subject"}, {"op": "odds", "chance": 25, "hit": [{"op": "trust", "d": -5, "why": "He thinks the club doesn't rate him"}], "hit_result": "He asks his manager about a trade."}],
+			 "result": "The side stays the same. {first} goes back to the reserves."}
+		]
+	}
+]
