@@ -923,8 +923,11 @@ func _test_captaincy_ui_tests() -> void:
 	await _settle()
 	_check(why == "" and Captaincy.ids(_state.captaincy_record("COL"), "captain").has(picked),
 			"Confirm names him captain (%s)" % why)
-	# A second mid-season change is refused, and the page says why.
-	_state.advance()
+	# A second mid-season change is refused, and the page says why. Mid-season
+	# is a round played (GameState.captaincy_mid_season), not a simmed week.
+	_state.season.results.append([])
+	_state.season.round_index = 1
+	_check(_state.captaincy_mid_season(), "Round 2: the season has begun")
 	_state.captaincy[ "COL" ]["changes"][str(_state.season_year)] = Captaincy.MID_SEASON_CHANGES
 	ls.queue_free()
 	await _settle()
@@ -1378,9 +1381,22 @@ func _test_top_three_on_compact_cards() -> void:
 			"Training: a real tap on the top three opens that player (%s)" % why)
 	tr.queue_free()
 	await _settle()
-	# Off-season: the player rows, as wide as the page.
+	# Off-season: the player rows, as wide as the page. The page opens as the
+	# off-season does (season over, contracts in place, offseason_year set), and
+	# each rival lets one out-of-contract man go to free agency through the
+	# game's own release (GameState._release). open_offseason's league-wide
+	# re-signing cost this test most of its time and builds the same rows.
+	var contracts = load("res://scripts/sim/Contracts.gd")
 	_state.season.round_index = _state.season.fixture.size()
-	_state.open_offseason()
+	_state.ensure_contracts()
+	_state.offseason_year = _state.season_year
+	for code in _state.season.lists.keys():
+		var gone: Array = contracts.expiring(_state.season.lists[code])
+		if str(code) != _state.my_club and not gone.is_empty():
+			_state._release(str(code), gone[0], true, false)
+	_check(_state.offseason_open() and _state.free_agents.size() >= 10
+			and not contracts.expiring(_state.my_list).is_empty(),
+			"Off-season: the page is open, with free agents and men out of contract (%d)" % _state.free_agents.size())
 	for tab in ["contracts", "agents"]:
 		var off: Control = load("res://scenes/OffseasonScene.tscn").instantiate()
 		root.add_child(off)
