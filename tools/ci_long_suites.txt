@@ -11,6 +11,8 @@ save
 match_game
 career
 contracts
+# A Legacy campaign rolled 1990 -> 2026 (row 142): timed out at 900 s on PR shards.
+legacy_rollover
 coach_arcs
 match_visual
 matchday
@@ -18,6 +20,7 @@ match_motion
 legacy_2000_long
 back_nav
 preseason
+legacy_2010_long
 # The balance harness suites ran nightly before this rule and still do.
 balance
 league_balance
