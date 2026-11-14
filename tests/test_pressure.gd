@@ -70,8 +70,13 @@ func _test_zones() -> void:
 
 
 ## Tackles are pressure acts; most pressure acts are not tackles; every
-## team total is the sum of its players'.
+## team total is the sum of its players'. Where they happen (_press_where,
+## for the balance harness): some but not all in the presser's defensive half,
+## some but not all of the tackles inside his forward 50.
 func _test_acts_and_reconcile() -> void:
+	var dhalf := 0.0
+	var i50 := 0.0
+	var within := true
 	var fwd_tackles := 0.0
 	var acts := 0.0
 	var tackles := 0.0
@@ -94,6 +99,9 @@ func _test_acts_and_reconcile() -> void:
 					and is_equal_approx(sum_tk, float(team.get("tackles", 0.0)))
 			acts += float(team.get("pressure_acts", 0.0))
 			tackles += float(team.get("tackles", 0.0))
+			dhalf += float(team.get("pressure_acts_dhalf", 0.0))
+			i50 += float(team.get("tackles_i50", 0.0))
+			within = within and float(team.get("pressure_acts_dhalf", 0.0)) <= float(team.get("pressure_acts", 0.0)) 					and float(team.get("tackles_i50", 0.0)) <= float(team.get("tackles", 0.0))
 		for ev in res["events"]:
 			if str(ev.get("kind", "")) == "pressure":
 				forced = true
@@ -101,6 +109,9 @@ func _test_acts_and_reconcile() -> void:
 	_check(reconciled, "Every team's pressure acts and tackles are the sum of its players'")
 	_check(BalanceGate.held(acts > tackles * 2.0, "pressure acts exceed twice tackles"), "Most pressure acts are not tackles (%d acts, %d tackles)" % [acts, tackles])
 	_check(forced, "Pressure can force a turnover without a tackle")
+	_check(within and dhalf > 0.0 and dhalf < acts and i50 > 0.0 and i50 < tackles,
+			"Pressure acts in the defensive half (%d of %d) and tackles inside 50 (%d of %d) are counted"
+			% [dhalf, acts, i50, tackles])
 
 
 ## Lifting one line's Pressure lifts the side's pressure: midfield and

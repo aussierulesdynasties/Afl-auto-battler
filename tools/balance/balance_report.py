@@ -1201,6 +1201,61 @@ def year_ref(o):
             "real 2026 (afl_team_rates.json)")
 
 
+# Pressure a team a game, from the presser's end (afl_pressure_rates.json, Champion Data
+# 2025-26 via build_pressure_rates.py). (label, real key, team-match fn, ratio?)
+PRESSURE_ROWS = [
+    ("pressure acts", "pressure_acts", lambda t: float(t.get("pressure_acts", 0)), None),
+    ("  in his defensive half", "pressure_acts_dhalf", lambda t: float(t.get("pressure_acts_dhalf", 0)), None),
+    ("tackles", "tackles", lambda t: float(t.get("tackles", 0)), None),
+    ("  inside his forward 50", "tackles_i50", lambda t: float(t.get("tackles_i50", 0)), None),
+    ("defensive-half share of pressure acts", "dhalf_share", "pressure_acts_dhalf", "pressure_acts"),
+    ("tackles per pressure act", "tackles_per_act", "tackles", "pressure_acts"),
+    ("forward-50 share of tackles", "i50_share", "tackles_i50", "tackles"),
+]
+
+
+def _press_fn(fn, num, den):
+    if den is None:
+        return lambda r: sum(fn(t) for t in r["teams"]) / 2
+    def f(r):
+        d = sum(float(t.get(den, 0)) for t in r["teams"])
+        return None if d == 0 else sum(float(t.get(num, 0)) for t in r["teams"]) / d
+    return f
+
+
+def pressure_section(A, B):
+    """Where and how a side applies pressure, against Champion Data 2025-26: pressure acts and
+    tackles a team a game, the share of pressure acts in the presser's defensive half, tackles
+    per pressure act and tackles inside his forward 50 (MatchSim._press_where)."""
+    if not any("pressure_acts_dhalf" in t for r in A.values() for t in r["teams"]):
+        return
+    ref = json.load(open(os.path.join(HERE, "afl_pressure_rates.json")))
+    real = ref["per_team_match"]
+    print("
+
+## Pressure a team a game (presser's end; real: Champion Data 2025-26 club-seasons)
+")
+    head = "| stat | AFL mean | AFL range | A | A/real | mark |" + (" B | mark | B-A | se | sig |" if B else "")
+    print(head)
+    print("|" + "---|" * (head.count("|") - 1))
+    for label, key, fn, den in PRESSURE_ROWS:
+        rr = real[key]
+        pct = den is not None
+        f = _press_fn(fn, fn, den)
+        ma, mb, dm, se = paired(A, B, f)
+        k = 100 if pct else 1
+        u = "%" if pct else ""
+        line = (f"| {label} | {k * rr['mean']:.1f}{u} | {k * rr['min']:.1f}-{k * rr['max']:.1f}{u} |"
+                f" {k * ma:.1f}{u} | {ma / rr['mean']:.2f} | {_mark(ma, rr)} |")
+        if B:
+            sig = "yes" if se and abs(dm) > 2 * se else ""
+            line += f" {k * mb:.1f}{u} | {_mark(mb, rr)} | {k * dm:+.2f} | {k * se:.2f} | {sig} |"
+        print(line)
+    print(f"
+Real: {ref['source']} The sim counts a tackle, a rushed disposal and a smother as a"
+          " pressure act; Champion Data also counts chases and corrals that do not touch the disposal.")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--run", required=True)
@@ -1278,6 +1333,7 @@ def main():
     type_report(A, B)
     reb_route_section(A, B)
     tackle_section(A, B)
+    pressure_section(A, B)
     legs_section(A, B)
     tag_section(A, B)
     print(f"\nOUT of real range (A): {', '.join(outs) if outs else 'none'}")
