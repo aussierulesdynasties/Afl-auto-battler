@@ -929,7 +929,9 @@ func _answers(body: VBoxContainer) -> void:
 	var box := UiKit.vbox(6)
 	box.name = "AskAnswers"
 	body.add_child(box)
-	box.add_child(UiKit.lbl("Asked around about %s" % GameDB.player_display_name(p), UiKit.BODY, UiKit.EMPH, true))
+	var head := NameInk.label("Asked around about %s" % GameDB.player_display_name(p), _names(), UiKit.BODY, UiKit.EMPH, true)
+	head.name = "AskHead"
+	box.add_child(head)
 	for row in _asked:
 		var club := str(row["club"])
 		var keen := str(row["kind"]) != "no"
@@ -1036,7 +1038,10 @@ func _package(body: VBoxContainer, title: String, ids: Array, club: String, pref
 	for id in ids.duplicate():
 		var row := UiKit.hbox(8)
 		row.name = prefix + str(id).replace(":", "_")
-		var what := UiKit.ellipsis(_asset_line(str(id), club), 14, UiKit.TEXT)
+		# A player wears his club's ink, as in the Ask around answers (row 174:
+		# "sanders uncoloured?"); a pick stays plain.
+		var ink := UiKit.TEXT if str(id).begins_with("pick:") else NameInk.player_ink(club)
+		var what := UiKit.ellipsis(_asset_line(str(id), club), 14, ink)
 		what.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(what)
 		var rm := UiKit.btn("Remove", UiKit.SECONDARY)
