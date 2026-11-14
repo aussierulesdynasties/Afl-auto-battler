@@ -480,11 +480,61 @@ func _cheapest_legal(d: Draft) -> Dictionary:
 	return best
 
 
+## One 18-club career draft (seed 61, you fourth) where you always take the
+## cheapest player you are allowed: copies at your first pick ("start") and at
+## your last ("last"), and the finished draft ("done"). The reserve is priced
+## from the whole league's open spots, so it takes the full league; built once
+## and shared by _test_cap_guard and _test_finished_list_reachability, in
+## either order.
+var _cheapest_first := {}
+
+
+func _cheapest_first_draft() -> Dictionary:
+	if _cheapest_first.is_empty():
+		var d := _career_draft(61)
+		d.start_for_user(str(d.draft_order[3]))
+		_cheapest_first["start"] = _copy_draft(d)
+		var guard := 0
+		while not d.is_finished() and guard < 200:
+			guard += 1
+			if d.count() == d.target_size - 1 and not _cheapest_first.has("last"):
+				_cheapest_first["last"] = _copy_draft(d)
+			var best := _strategy_pick(d, "cheapest")
+			if best.is_empty() or not d.pick(best):
+				break
+		_cheapest_first["done"] = d
+	return _cheapest_first
+
+
+## The legal player `strat` takes next: the cheapest, the dearest, or the
+## cheapest non-ruck.
+func _strategy_pick(d: Draft, strat: String) -> Dictionary:
+	var best := {}
+	for p in d.pool:
+		if not d.can_pick_player(p):
+			continue
+		var rp := Ratings.plays_role(p, "RUCK")
+		var better := best.is_empty()
+		if not better:
+			match strat:
+				"cheapest": better = int(p["value"]) < int(best["value"])
+				"dearest": better = int(p["value"]) > int(best["value"])
+				"noruck":
+					var rb := Ratings.plays_role(best, "RUCK")
+					better = (rb and not rp) or (rb == rp and int(p["value"]) < int(best["value"]))
+		if better:
+			best = p
+	return best
+
+
 ## ARD-M1-009: a pick must leave enough cap to fill the rest of the list.
 func _test_cap_guard() -> void:
-	var d := _career_draft(31)
-	var me := str(d.draft_order[4])
-	d.start_for_user(me)
+	var shared := _cheapest_first_draft()
+	_check(shared.has("start") and shared.has("last"), "(setup) the cheapest-first draft reached your first and last picks")
+	if not shared.has("last"):
+		return
+	var d: Draft = _copy_draft(shared["start"])
+	var me := d.user_club
 	var p := _cheapest_legal(d)
 	var real_spend := int(d.club_spend[me])
 	# Exactly at the boundary: this pick leaves precisely the reserve.
@@ -497,19 +547,17 @@ func _test_cap_guard() -> void:
 	_check(d.pick_block_reason(p).contains(Contracts.money(d.remaining()) + " left"), "The refusal shows the cap actually left")
 	d.club_spend[me] = real_spend
 	# The final place: nothing to keep back, every dollar left can be spent.
-	var guard := 0
-	while d.count() < d.target_size - 1 and not d.is_finished() and guard < 200:
-		guard += 1
-		d.pick(_cheapest_legal(d))
+	d = _copy_draft(shared["last"])
+	_check(d.user_club == me and d.is_user_turn(), "(setup) your last pick is on the clock")
 	_check(d.count() == d.target_size - 1 and d.reserve_for(me) == 0 and d.usable_cap_for(me) == d.remaining(),
 			"On the last pick the whole remaining cap is usable")
 	d.pick(_cheapest_legal(d))
 	_check(d.is_finished() and d.is_valid(), "The list completes legally")
-	var legal := true
+	var not_legal := []
 	for club in d.clubs:
 		if d.count_for(club) != d.target_size or d.spent_for(club) > d.budget:
-			legal = false
-	_check(legal, "Every rival finishes a full list within the cap")
+			not_legal.append("%s %d/%d $%d of $%d" % [club, d.count_for(club), d.target_size, d.spent_for(club), d.budget])
+	_check(not_legal.is_empty(), "Every rival finishes a full list within the cap %s" % str(not_legal))
 
 
 ## A pick that ignores the cap guard: how an older save could have spent.
@@ -891,27 +939,15 @@ func _test_scouted_league_board() -> void:
 func _test_finished_list_reachability() -> void:
 	var cheapest: Draft = null
 	for strat in ["cheapest", "dearest", "noruck"]:
-		var d := _career_draft(61)
-		var me := str(d.draft_order[3])
-		d.start_for_user(me)
+		# Cheapest-first is the shared draft (_cheapest_first_draft); the
+		# others are drafted here the same way.
+		var d: Draft = _cheapest_first_draft()["done"] if strat == "cheapest" else _career_draft(61)
+		if strat != "cheapest":
+			d.start_for_user(str(d.draft_order[3]))
 		var guard := 0
 		while not d.is_finished() and guard < 200:
 			guard += 1
-			var best := {}
-			for p in d.pool:
-				if not d.can_pick_player(p):
-					continue
-				var rp := Ratings.plays_role(p, "RUCK")
-				var better := best.is_empty()
-				if not better:
-					match strat:
-						"cheapest": better = int(p["value"]) < int(best["value"])
-						"dearest": better = int(p["value"]) > int(best["value"])
-						"noruck":
-							var rb := Ratings.plays_role(best, "RUCK")
-							better = (rb and not rp) or (rb == rp and int(p["value"]) < int(best["value"]))
-				if better:
-					best = p
+			var best := _strategy_pick(d, strat)
 			if best.is_empty() or not d.pick(best):
 				break
 		_check(d.is_finished() and d.is_valid() and not d.finished_list_refused() and not d.can_release(),
