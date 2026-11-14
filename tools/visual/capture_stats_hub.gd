@@ -16,7 +16,9 @@ extends SceneTree
 ##   --size WxH      window size (default 390x844)    --light   light appearance
 ##   --rounds N      rounds played before the capture (default 6)
 ##   --club CODE     the career's club (default COL)
-## A fresh career (Collingwood unless --club), seeded. Never touches a real save.
+##   --stat KEY      players: rank by this stat, then also write
+##                   <out>_players_<KEY>_player.png (the leader's sheet, scrolled to its foot)
+## A fresh career, seeded. Never touches a real save.
 
 var _w := 390
 var _h := 844
@@ -32,6 +34,7 @@ func _run() -> void:
 	var mode := "dark"
 	var rounds := 6
 	var club := "COL"
+	var stat := ""
 	var a := OS.get_cmdline_user_args()
 	for i in range(a.size()):
 		match str(a[i]):
@@ -45,10 +48,12 @@ func _run() -> void:
 				_h = int(wh[1])
 			"--rounds":
 				rounds = int(str(a[i + 1]))
-			"--light":
-				mode = "light"
 			"--club":
 				club = str(a[i + 1])
+			"--stat":
+				stat = str(a[i + 1])
+			"--light":
+				mode = "light"
 	await process_frame
 	var state = root.get_node("GameState")
 	var db = root.get_node("GameDB")
@@ -73,10 +78,25 @@ func _run() -> void:
 	sl.ui_scale = 96.0 / maxf(96.0, float(DisplayServer.screen_get_dpi()))
 	sl.call("_update_scale")
 	load("res://scripts/ui/StatsHubScene.gd").current = section
+	if stat != "":
+		load("res://scripts/ui/stats/StatsPlayers.gd").pick_stat(stat)
 	var scene: Control = load("res://scenes/StatsHubScene.tscn").instantiate()
 	root.add_child(scene)
 	await _frames(10)
-	_save(out + "_" + section + ".png")
+	_save(out + "_" + section + (("_" + stat) if stat != "" else "") + ".png")
+	if section == "players" and stat != "":
+		var top: Button = null
+		for n in scene.find_children("PlayerRow_*", "Button", true, false):
+			top = n
+			break
+		if top != null:
+			top.emit_signal("pressed")
+			await _frames(10)
+			var sheet: Node = scene.find_child("PlayerStatsSheet", true, false)
+			for sc in (sheet.find_children("*", "ScrollContainer", true, false) if sheet != null else []):
+				sc.scroll_vertical = 100000
+			await _frames(6)
+			_save(out + "_players_" + stat + "_player.png")
 	if section == "fixture":
 		await _tap(scene, "PrevRound")
 		_save(out + "_fixture_played.png")
