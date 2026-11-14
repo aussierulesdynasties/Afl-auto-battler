@@ -2888,7 +2888,7 @@ func _test_press_scene_taps() -> void:
 				"A real tap on answer %d lands it in the press screen, with its odds and only what it moves (%s; %s)" % [i, tapped, label])
 		if i == 3:
 			var op: Label = press.find_child("MediaOutcomeOpinion", true, false)
-			var want := "%s's opinion of you: 50 → %d/100" % [str(root.get_node("GameDB").player_display_name(named)),
+			var want := "%s's opinion of you: 50 → %d out of 100" % [str(root.get_node("GameDB").player_display_name(named)),
 					50 - int(MC.CALLOUT_OPINION_DROP)]
 			_check(op != null and op.is_visible_in_tree() and op.text == want,
 					"After a real tap on the call-out he took personally, the result shows his opinion of you (%s)" % (op.text if op != null else "missing"))

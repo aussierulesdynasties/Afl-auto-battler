@@ -17,7 +17,7 @@
 			"pick": "highest:games"
 		},
 		"title": [
-			"{name} wants a word"
+			"{name} has been left out and wants a word"
 		],
 		"text": [
 			"{talk_text}"
@@ -52,7 +52,7 @@
 			},
 			{
 				"key": "talk",
-				"label": "Promise {first} a game this week",
+				"label": "Promise {first} a game",
 				"effects": [
 					{
 						"op": "morale",
@@ -120,7 +120,7 @@
 			"pick": "highest:games"
 		},
 		"title": [
-			"{name} wants a word"
+			"{name} is back from injury and wants a word"
 		],
 		"text": [
 			"{talk_text}"
@@ -155,7 +155,7 @@
 			},
 			{
 				"key": "talk",
-				"label": "Promise {first} a game this week",
+				"label": "Promise {first} a game",
 				"effects": [
 					{
 						"op": "morale",
@@ -223,7 +223,7 @@
 			"pick": "highest:games"
 		},
 		"title": [
-			"{name} wants a word"
+			"{name} is waiting on a game"
 		],
 		"text": [
 			"{talk_text}"
@@ -258,7 +258,7 @@
 			},
 			{
 				"key": "talk",
-				"label": "Promise {first} a game this week",
+				"label": "Promise {first} a game",
 				"effects": [
 					{
 						"op": "morale",
@@ -327,7 +327,7 @@
 			"{name} is unhappy"
 		],
 		"text": [
-			"He feels he's being overlooked. Leave it and his form and his next contract will both cost you."
+			"He feels he's being overlooked. Leave it and his form suffers. So will his next contract talks."
 		],
 		"choices": [
 			{
@@ -356,7 +356,7 @@
 			},
 			{
 				"key": "earn",
-				"label": "Tell {first} to earn it",
+				"label": "Make {first} earn it",
 				"effects": [
 					{
 						"op": "morale",
@@ -475,7 +475,7 @@
 		"choices": [
 			{
 				"key": "run",
-				"label": "Give {name} the run home",
+				"label": "Give {name} the games",
 				"effects": [
 					{
 						"op": "start_backing"
@@ -490,7 +490,7 @@
 			},
 			{
 				"key": "best",
-				"label": "Play the best side to the end",
+				"label": "Play our best side",
 				"effects": [
 					{
 						"op": "morale",
@@ -540,7 +540,7 @@
 		"choices": [
 			{
 				"key": "minder",
-				"label": "Put a senior player with {first} all week",
+				"label": "Give {first} a mentor",
 				"effects": [
 					{
 						"op": "xp",
@@ -562,7 +562,7 @@
 			},
 			{
 				"key": "alone",
-				"label": "Let {first} find his own way",
+				"label": "Leave {first} be",
 				"effects": [
 					{
 						"op": "morale",
@@ -610,7 +610,7 @@
 		"choices": [
 			{
 				"key": "away",
-				"label": "Keep {first} away from the cameras",
+				"label": "Shield {first} from cameras",
 				"effects": [
 					{
 						"op": "morale",
@@ -631,7 +631,7 @@
 			},
 			{
 				"key": "enjoy",
-				"label": "Let {first} enjoy the week",
+				"label": "Let {first} enjoy it",
 				"effects": [
 					{
 						"op": "morale",
@@ -684,7 +684,7 @@
 			},
 			{
 				"key": "show",
-				"label": "Tell {first} what he has to show",
+				"label": "Set {first} a target",
 				"effects": [
 					{
 						"op": "trust",

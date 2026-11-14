@@ -23,8 +23,6 @@ TALES = ["data/tales/career.json", "data/tales/league.json", "data/tales/season.
 ## Known hits, per file: [count, words, the pass that rewrites them]. Each reason names its copy
 ## voice row in docs/TODO.md (131-140, the screen passes).
 ALLOW = {
-    "data/stories/leadership.json": [1, "should", "row 140: a player's own question, reported"],
-    "data/stories/media.json": [2, "should", "row 140: a pundit's view, reported"],
     "scripts/sim/MatchSim.gd": [1, "should", "row 131: a shot's likelihood at the gate"],
     # Auto-pick is the Team selection button's name (director, 2026-11-12: "Auto pick. I already answered
     # this question"); these lines name the button, so the word stays.
@@ -141,10 +139,32 @@ TRAINING_OLD = [
     "further past its line", "his own game %d", "\"up to the standard", "\"within %d by week",
 ]
 
+## The event cards and press pass (copy voice pass 11, row 140): per file, rewritten lines and the
+## lines they replaced. The full old -> new sheet is in the row 140 PR.
+STORY_PASS = {
+    "data/stories/media.json": [[
+        "He wants him dropped after a poor few weeks.",
+        "A former player on the radio wants {name} playing as a {trial_word}.",
+    ], []],
+    "data/stories/leadership.json": [[
+        "He's told you first. Do the players hear it now, or after the finals?",
+    ], []],
+    "scripts/sim/StoryEngine.gd": [[
+        "Board confidence stays where it is. The other choice costs it %s.",
+        "{keep_price} a season against our cap.", "If we lose that final, about a %s chance our morale also falls %s.",
+        "His opinion of you stays %d out of 100.", "development points. A senior game gives %d.",
+    ], ["(the other choice costs it", "against your cap", "(a senior game gives", "(any injury, not only this one;",
+        "If you lose that final", "%d/100", "(high fluency)", "(low, medium, high)"]],
+    "scripts/sim/MediaConference.gd": [[
+        "Our record: %s.", "%s's opinion of you: %d → %d out of 100.", "%s warms to you: +%d%% next time",
+    ], ["Your record: %s.", "%d/100", "next time)", "%% confidence)"]],
+}
+
 ## Every pinned pass: (file, the pass, its rewritten lines, the lines they replaced).
 PASSES = [(HUB, "copy voice pass 2, hub", HUB_NEW, HUB_OLD)] + [
     (path, "copy voice pass 5, team and coaching", v[0], v[1]) for path, v in TEAM_PASS.items()] + [
-    (TRAINING, "copy voice pass 6, training", TRAINING_NEW, TRAINING_OLD)]
+    (TRAINING, "copy voice pass 6, training", TRAINING_NEW, TRAINING_OLD)] + [
+    (path, "copy voice pass 11, event cards and press", v[0], v[1]) for path, v in STORY_PASS.items()]
 
 LITERAL = re.compile(r'"([^"\n]*)"')
 

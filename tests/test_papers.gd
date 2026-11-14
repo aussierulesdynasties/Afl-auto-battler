@@ -635,9 +635,9 @@ func _test_flow() -> void:
 
 
 ## A stake with its size: a percentage, or his opinion of you in points out of
-## 100 ("down 1, to 49/100", director 2026-11-08).
+## 100 ("down 1, to 49 out of 100", director 2026-11-08).
 func _sized(line: String) -> bool:
-	return line.contains("%") or line.contains("/100")
+	return line.contains("%") or line.contains(" out of 100")
 
 
 func _lines(card: Dictionary, i: int) -> PackedStringArray:
