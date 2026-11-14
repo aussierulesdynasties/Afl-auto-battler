@@ -2444,11 +2444,7 @@ func _test_trophies() -> void:
 		_check(yours != null and s.find_children("Club_premiership_*", "Button", true, false).size() == 1
 				and s.find_child("ClubHistory", true, false).find_child("Club_premiership_%d" % year, true, false) == null,
 				"Your flag is on the shelf, not among the history years (%s)" % tag)
-		s.queue_free()
-		await _settle()
-	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
-		s = await _open_trophies(sz)
-		var tag := "%dx%d" % [sz.x, sz.y]
+		# The same room at this size: your seasons, the shelves and the sheets.
 		intro = s.find_child("TrophiesTenure", true, false)
 		_check(intro != null and intro.text.ends_with("2 seasons, from %d." % (year - 1)),
 				"Only seasons at your club count (%s: %s)" % [tag, intro.text if intro else "none"])

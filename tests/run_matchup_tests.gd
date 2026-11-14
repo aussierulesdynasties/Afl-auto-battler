@@ -241,13 +241,12 @@ func _test_wide_hub_footer() -> void:
 ## staff and with one open ("Coaching · 1", the longest label the row carries).
 func _test_phone_footer_fits() -> void:
 	var db = root.get_node("GameDB")
+	_reset()
+	_state.start_season("MEL", db.club_list("MEL"))
+	_state.set_setting("seen_weekly_loop_intro", true)
 	for vacancies in [0, 1]:
 		for w in [320, 360, 390, 412]:
-			_reset()
-			_state.start_season("MEL", db.club_list("MEL"))
-			_state.set_setting("seen_weekly_loop_intro", true)
-			if vacancies > 0:
-				_state.staff_vacancies = [{"reason": "A coach has retired."}]
+			_state.staff_vacancies = [{"reason": "A coach has retired."}] if vacancies > 0 else []
 			root.size = Vector2i(w, 844)
 			var hub: Control = await _open_hub()
 			var footer: Control = hub.find_child("HubFooter", true, false)
@@ -840,6 +839,7 @@ func _test_former_player() -> void:
 			"His captaincy at his new club is in the line")
 	# The match: the report line is there exactly when he played most of it or kicked one.
 	root.size = Vector2i(390, 844)
+	_mine_only("FRE")
 	_check(_state.prepare_interactive_match(), "A live match against your former player is prepared")
 	var m: Control = load("res://scenes/MatchScene.tscn").instantiate()
 	root.add_child(m)
@@ -1089,10 +1089,13 @@ func _play_tap_routes() -> void:
 	var db = root.get_node("GameDB")
 	var router = root.get_node("Router")
 	var vignettes_were: bool = _state.vignettes_on()
+	# One career for both: Watch only opens the preview, so Skip meets the same
+	# unplayed Round 1, with only your match in it.
+	_reset()
+	_state.set_vignettes_on(false)
+	_state.start_season("FRE", db.club_list("FRE"))
+	_mine_only("FRE")
 	for way in ["watch", "skip"]:
-		_reset()
-		_state.set_vignettes_on(false)
-		_state.start_season("FRE", db.club_list("FRE"))
 		_state.set_match_way(way)
 		router.stack = []
 		router.go("hub")
