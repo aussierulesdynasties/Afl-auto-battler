@@ -9,18 +9,18 @@ extends RefCounted
 ## key -> [one line]
 const STATS := {
 	"disposal": ["Gets the ball in open play. A midfield of good users wins more of the contest."],
-	"contested": ["Wins the clearance and holds the ball in a tackle. Your inside mids win or lose the stoppages."],
-	"ruck": ["Wins the hit-outs at the bounce and stoppages. Your starting ruck matters."],
-	"carry": ["Runs the ball forward. Good carriers through the middle feed your attack."],
+	"contested": ["Wins the clearance and holds the ball in a tackle. Our inside mids win or lose the stoppages."],
+	"ruck": ["Wins the hit-outs at the bounce and stoppages. Our first ruck matters."],
+	"carry": ["Runs the ball forward. Good carriers through the middle feed our attack."],
 	"marking": ["Takes the marks, most of all in contests inside 50. Forwards and key defenders need it."],
 	"creating": ["Sets up goals for team-mates and makes better shots for the whole forward line."],
-	"goalkicking": ["Gets the shots inside 50 and kicks the goals. The biggest part of your scoring."],
+	"goalkicking": ["Gets the shots inside 50 and kicks the goals. Most of our scoring comes from it."],
 	"accuracy": ["Turns shots into goals instead of behinds."],
-	"pressure": ["Tackles and hurries the opposition. The biggest part of your defence."],
+	"pressure": ["Tackles and hurries the opposition. Most of our defence comes from it."],
 	"intercept": ["Reads the play, takes marks in defence and spoils forward entries."],
 	"discipline": ["Fewer clangers and free kicks against. Higher is cleaner."],
 	"durability": ["Stays on the park. Durable players get hurt less often."],
-	"star": ["Match-winning class. Lifts your side at the stoppages and drives a player's overall."],
+	"star": ["Match-winning class. Lifts our side at the stoppages. It weighs heavily in his overall."],
 }
 
 ## [heading, [stat keys]] in the order they read.
@@ -34,11 +34,11 @@ const GROUPS := [
 
 const TOPICS := [
 	["Overall (OVR)", "A player's rating, mostly from the stats his position relies on. Clubs value players by it at the draft and the trade table."],
-	["Potential (POT)", "Where he is projected to peak. A projection, not a limit; growth slows as he nears it."],
-	["Team strengths", "Contest is your stoppages, attack your forwards and carry, defence your pressure and intercept."],
-	["Traits and synergies", "A standout stat earns a trait. The right mix in a line switches on a synergy; the Team screen shows yours, and says when one is a single player short (\"Lockdown unit: 1 lockdown player short\")."],
-	["Injuries and legs", "Every player risks injury each game, less with durability. Tired players win less ball, so rotate in the coach box."],
-	["Development and training", "Players earn development every game, and what each one is developing as decides where it goes. A stat costs more the higher it already is, and much more past POT."],
+	["Potential (POT)", "Where we expect him to peak. It is not a limit. His growth slows as he nears it."],
+	["Team strengths", "Contest is our stoppage work. Attack is our forwards and carry. Defence is our pressure and intercept."],
+	["Traits and synergies", "A standout stat earns a trait. The right mix in a line switches on a synergy. The Team screen shows ours, and when one is a player short (\"Lockdown unit: 1 lockdown player short\")."],
+	["Injuries and legs", "Every player risks injury each game. Durability lowers the risk. Tired players win less ball. Rotate them from the coach's box."],
+	["Development and training", "Players earn development every game. What each one is developing as decides where it goes. A stat costs more the higher it already is. Past POT it costs much more."],
 	["Contracts", "After the Grand Final, re-sign or release players, sign free agents and trade."],
 ]
 
