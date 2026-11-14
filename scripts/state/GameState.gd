@@ -723,6 +723,15 @@ func set_match_figures_on(on: bool) -> void:
 	set_setting("match_figures", on)
 
 
+## The 3D oval (row 197): the match played on a real 3D ground. Off by default while it is built.
+func match_3d_on() -> bool:
+	return bool(get_setting("match_3d", false))
+
+
+func set_match_3d_on(on: bool) -> void:
+	set_setting("match_3d", on)
+
+
 ## How fast a watched match starts (1x, 2x, 4x or 8x). 4x by default.
 func match_speed() -> float:
 	var s := float(get_setting("match_speed", 4.0))
