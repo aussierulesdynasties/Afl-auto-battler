@@ -56,6 +56,7 @@ func _run() -> void:
 	await _t("_test_premiership_streamers")
 	await _t("_test_coach_approach_card")
 	await _t("_test_season_wrap")
+	await _t("_test_season_wrap_trades")
 	await _t("_test_season_review_scrolls")
 	await _t("_test_pre_match_scene")
 	_t("_test_pre_match_captions")
@@ -469,6 +470,65 @@ func _test_season_review_scrolls() -> void:
 		await _settle()
 		_check(viewport.encloses(draft.get_global_rect()), "Scrolled down, the National Draft button is on screen")
 	review.queue_free()
+	await _settle()
+
+
+## The wrap's Trade period (row 176; director 2026-11-12: "no colour coding on
+## names"): every club in its colours and every player in the ink of the club
+## he moved to. A fixture: deals forced through the trade log (no valuation),
+## chosen so red clubs (St Kilda, Melbourne) are in it; not believable trades.
+func _test_season_wrap_trades() -> void:
+	var db = root.get_node("GameDB")
+	var CL = load("res://scripts/ui/ClubLink.gd")
+	var NI = load("res://scripts/ui/NameInk.gd")
+	_reset()
+	_state.start_season("MEL", db.club_list("MEL"))
+	_state.season.round_index = _state.season.fixture.size()
+	_state.open_offseason()
+	_state.offseason_log = []
+	var lists: Dictionary = _state.season.lists
+	var best := func(code: String, n: int) -> Dictionary:
+		var l: Array = (lists[code] as Array).duplicate()
+		l.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+		return l[n]
+	# [buyer, seller, the player the buyer gets, what it gives]
+	var pick: Dictionary = _state.pick_asset(_state.pick_id(_state.season_year + 1, 1, "STK"))
+	_check(not pick.is_empty(), "St Kilda's first-round pick can be traded")
+	var deals := [
+		["FRE", "WBD", best.call("WBD", 2), [best.call("FRE", 3)]],
+		["STK", "ADE", best.call("ADE", 1), [best.call("STK", 4)] + ([pick] if not pick.is_empty() else [])],
+		["WBD", "FRE", best.call("FRE", 5), [best.call("WBD", 6)]],
+	]
+	var moved := []   # [display name, club he moved to]
+	for d in deals:
+		_state._log_ai_trade(d[0], d[1], d[2], d[3], "")
+		moved.append([db.player_display_name(d[2]), d[0]])
+		for g in d[3]:
+			if not str(g.get("id", "")).begins_with("pick:"):
+				moved.append([db.player_display_name(g), d[1]])
+	var lines: Array = _state.offseason_log.map(func(e): return str(e["text"]))
+	var ours: Dictionary = best.call("MEL", 0)
+	lines.append("You turned down St Kilda's offer for %s." % db.player_display_name(ours))
+	moved.append([db.player_display_name(ours), "MEL"])
+	_state.season_wrap = {"year": _state.season_year, "seen": false, "ins": [], "outs": [],
+			"staff": [], "trades": lines, "goal": "", "reason": ""}
+	root.size = Vector2i(390, 844)
+	var hub: Control = await _open_hub()
+	var marked := ""
+	for i in range(lines.size()):
+		var row: Node = hub.find_child("WrapTrade_%d" % i, true, false)
+		_check(row is RichTextLabel, "Trade line %d is inked: %s" % [i, lines[i]])
+		if row is RichTextLabel:
+			marked += (row as RichTextLabel).text + "\n"
+	var ink := func(name: String, col: Color) -> String:
+		return "[color=#%s]%s[/color]" % [col.to_html(false), name.replace(" ", NI.NBSP)]
+	for m in moved:
+		# Exactly his club's name colour: a red club's players are not left white.
+		_check(marked.contains(ink.call(str(m[0]), CL.colour(str(m[1])))), "%s wears %s's colours" % [m[0], m[1]])
+	for code in ["FRE", "WBD", "STK", "ADE"]:
+		var name := str(db.club_name(code))
+		_check(marked.contains(ink.call(name, CL.colour(code))), "%s is in its colours" % name)
+	hub.queue_free()
 	await _settle()
 
 
