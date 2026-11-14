@@ -94,7 +94,7 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `roles` | Roles, wings, taggers and rucks as real jobs |
 | `injuries` | Injury rates, durability, healing, and played v simulated parity |
 | `awards` | Brownlow, Coleman, best and fairest, All-Australian |
-| `achievements` | Club achievements |
+| `achievements` | The 100 achievements (club and coach) |
 | `contracts` | Contracts, free agency and trades (seeded: a clock seed once made the pick-limit check flaky) |
 | `era_money` | Legacy money (row 142, L3): GameDB.era_rule reads data/legacy/era_rules.csv; a 1990 career shows the $1.5m cap and 1990-dollar contracts, minimums, offer steps and club budget; 2026 on scale by exactly 1 |
 | `recruit_undo` | Undo for a delisting, a free-agent signing and a re-signing (row 119): exact restore of list, cap, contracts, pool and news, newest first, gone once the national draft starts or after a reload, a real tap on Undo at 390 x 844 |
@@ -219,8 +219,9 @@ about a third of his training, the next season unlocks it, an old
 pick and lock one on a phone. The career UI suite also checks the one-time
 training intro, the stat guide (and Back closing it) and the plan picker.
 
-The achievements suite checks every club's achievement is detectable from
-stats the game already tracks (`tests/run_achievements_tests.gd`, part of
+The achievements suite checks all 100 achievements (two per club, Fitzroy and
+the Club Forge club included, and 56 for the coach) unlock exactly on what the
+season recorded (`tests/run_achievements_tests.gd`, part of
 `tools/run_tests.sh`).
 
 The league-balance suite smoke-tests the competitive-balance harness in

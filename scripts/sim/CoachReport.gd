@@ -287,6 +287,19 @@ static func rank_side(roster_side: Array, player_stats: Dictionary, quarters := 
 	return out
 
 
+## Every substitute who came on, from the match's own events (MatchSim
+## _bring_sub): [{"side", "id", "q", "min"}], minutes of the whole game.
+## Ordinary interchanges are not here: those players rotate all game.
+static func subs_on(res: Dictionary) -> Array:
+	var out := []
+	for ev in res.get("events", []):
+		var d: Dictionary = ev
+		if str(d.get("kind", "")) == "sub" and bool(d.get("substitute", false)):
+			out.append({"side": int(d.get("side", -1)), "id": str(d.get("player_id", "")),
+					"q": int(d.get("q", 0)), "min": int(d.get("min", 0))})
+	return out
+
+
 static func _by_delta(ranked: Array) -> Array:
 	var out := ranked.duplicate()
 	out.sort_custom(func(a, b): return float(a["delta"]) < float(b["delta"]))
@@ -368,6 +381,9 @@ static func half_time_report(res: Dictionary, my_side: int) -> Dictionary:
 			# Only who was hurt by half-time.
 			"injuries": (res.get("injuries", []) as Array).filter(
 					func(i): return int((i as Dictionary).get("q", 5)) <= 2),
+			# Only the substitutes on by half-time.
+			"subs_on": subs_on(res).filter(
+					func(s): return int((s as Dictionary).get("q", 5)) <= 2),
 		}
 		return _build_report(ht_res, my_side, 2)
 	return _build_report(res, my_side, _quarters_played(res))
@@ -403,6 +419,15 @@ static func _build_report(res: Dictionary, my_side: int, quarters: int) -> Dicti
 		for e in my_ranked:
 			if str(e["id"]) == str(rec.get("id", "")):
 				e["hurt_min"] = int(rec.get("min", 0))
+	# When a substitute came on (medical sub, or the 2011-15 sub), so Needs
+	# a lift can tell a late cameo from a poor game.
+	for s in res.get("subs_on", subs_on(res)):
+		var rec: Dictionary = s
+		if int(rec.get("side", -1)) != my_side:
+			continue
+		for e in my_ranked:
+			if str(e["id"]) == str(rec.get("id", "")):
+				e["on_min"] = int(rec.get("min", 0))
 	var my_by_delta := _by_delta(my_ranked)
 	var opp_by_delta := _by_delta(opp_ranked)
 
@@ -780,8 +805,18 @@ static func glance(report: Dictionary, full_time := false) -> Dictionary:
 	lift_pool.sort_custom(func(a, b):
 		return MatchNotes.rating(a.get("stats", {})) < MatchNotes.rating(b.get("stats", {})))
 	var quarters := int(report.get("quarters", 4))
+	var game := 30.0 * float(quarters)
 	var quiet := func(d: Dictionary) -> bool:
-		if d.has("hurt_min") and float(d["hurt_min"]) < LIFT_MIN_SHARE * 30.0 * float(quarters):
+		if d.has("hurt_min") and float(d["hurt_min"]) < LIFT_MIN_SHARE * game:
+			return false
+		# A substitute on for the last part of it had a cameo, not a game.
+		if d.has("on_min") and game - float(d["on_min"]) < LIFT_MIN_SHARE * game:
+			return false
+		# Not a disposal yet: he has not been in the game to judge it (a
+		# man not yet off the bench at half-time, a late cameo).
+		var st: Dictionary = d.get("stats", {})
+		if maxf(float(st.get("disposals", 0.0)),
+				float(st.get("kicks", 0.0)) + float(st.get("handballs", 0.0))) <= 0.0:
 			return false
 		return MatchNotes.rating(d.get("stats", {})) < LIFT_BELOW * float(quarters) / 4.0
 	return {
