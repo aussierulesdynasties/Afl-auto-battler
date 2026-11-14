@@ -19,6 +19,7 @@ const FENCE := 6.0
 const STAND_DEPTH := 34.0
 const STAND_RISE := 24.0
 ## The jog's 17 keys at 24 fps are one stride cycle in 0.67 s, matched to about 6 m/s.
+const LOOK_X := 78.0           # m: the camera follows the ball this far towards each goal
 const BODY_GAP := 0.6         # m between two players' centres, drawn
 ## The digits the vignettes print numbers with (R fill, G outline), shared so both read alike.
 const DIGITS := preload("res://assets/vignette/figures_digits.png")
@@ -65,6 +66,9 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 	camera = Camera3D.new()
 	camera.fov = 30.0
 	camera.far = 900.0
+	# Placed in world space, so turning the ground for a change of ends (set_ends) leaves
+	# the camera where the broadcast puts it.
+	camera.top_level = true
 	add_child(camera)
 	sync(0.0)
 
@@ -98,7 +102,9 @@ func sync(dt: float) -> void:
 	else:
 		ball.position = Vector3(bp.x, BALL_R if resting else maxf(BALL_R, h), bp.y)
 		ball.rotation = Vector3.ZERO
-	var target := Vector3(clampf(bp.x, -60.0, 60.0), 0.0, clampf(bp.y, -25.0, 25.0))
+	# Followed to within a few metres of each goal line: a kick-in or a shot at the camera's own
+	# end stays in view (aim_end stops looking ahead there).
+	var target := Vector3(clampf(bp.x, -LOOK_X, LOOK_X), 0.0, clampf(bp.y, -25.0, 25.0))
 	_look = target if dt <= 0.0 else _look.lerp(target, clampf(dt * 1.5, 0.0, 1.0))
 
 
@@ -152,23 +158,44 @@ func _hold_ball(p: Dictionary) -> void:
 		ball.look_at(ball.position + across, Vector3.UP)
 
 
+## The sides change ends: +1 when the home side kicks to the far end of the camera's ground
+## (periods 1 and 3), -1 the other way. The ground and everyone on it turn half a turn; the
+## camera stays put, so the home side then attacks the other way up the screen.
+func set_ends(sign: float) -> void:
+	rotation.y = 0.0 if sign > 0.0 else PI
+
+
+func _world(v: Vector3) -> Vector3:
+	return global_transform * v
+
+
 ## The broadcast camera: up in the stand on the wing, following the ball along the ground.
 func aim_wing(height: float, back: float) -> void:
-	camera.position = Vector3(_look.x * 0.9, height, _look.z * 0.4 + back)
-	camera.look_at(Vector3(_look.x, 0.0, _look.z), Vector3.UP)
+	var at := _world(_look)
+	camera.global_position = Vector3(at.x * 0.9, height, at.z * 0.4 + back)
+	camera.look_at(at, Vector3.UP)
 
 
 ## Behind the play, high: the length of the ground runs up a portrait screen.
 func aim_end(height: float, back: float) -> void:
-	camera.position = Vector3(_look.x - back, height, _look.z * 0.6)
-	camera.look_at(Vector3(_look.x + 12.0, 0.0, _look.z), Vector3.UP)
+	var at := _world(_look)
+	# In the last 20 m before the camera's own goal the camera climbs to the high
+	# behind-the-goals angle: from the usual height the goal posts stand in front of the play;
+	# from above they are short uprights at its edge. (A wing camera loses the ball off a
+	# portrait screen's narrow width.)
+	var near := clampf((-at.x - (LOOK_X - 20.0)) / 20.0, 0.0, 1.0)
+	camera.global_position = Vector3(at.x - back * lerpf(1.0, 0.55, near),
+			height * lerpf(1.0, 2.4, near), at.z * 0.6)
+	# 12 m ahead of the ball up the ground; none from the high angle.
+	camera.look_at(at + Vector3(12.0 * (1.0 - near), 0.0, 0.0), Vector3.UP)
 
 
 ## Close on the ball, from the wing side and a little behind: the body check.
 func aim_close() -> void:
 	var bp: Vector2 = director.ball["pos"]
-	camera.position = Vector3(bp.x - 9.0, 4.5, bp.y + 11.0)
-	camera.look_at(Vector3(bp.x, 1.0, bp.y), Vector3.UP)
+	var at := _world(Vector3(bp.x, 0.0, bp.y))
+	camera.global_position = at + Vector3(-9.0, 4.5, 11.0)
+	camera.look_at(at + Vector3(0.0, 1.0, 0.0), Vector3.UP)
 
 
 # ---------------------------------------------------------------------------
