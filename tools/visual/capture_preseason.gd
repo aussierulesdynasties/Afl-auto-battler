@@ -87,7 +87,7 @@ func _run() -> void:
 		if str(m["home"]) == club or str(m["away"]) == club:
 			print("round 1: ", m["home"], " v ", m["away"])
 	root.get_node("Router").go("hub")
-	await _frames(10)
+	await _settle("PreSeason")
 	print("scene ", current_scene.name, " stop ", state.preseason_stop())
 	await _shot(out + "_plan.png")
 	await _scroll(true)
@@ -117,6 +117,12 @@ func _run() -> void:
 	# the report.
 	await _press("PreSeasonGo")
 	await _frames(10)
+	# A pre-season event can come up on the way: press on past it (nothing changes).
+	var hops := 0
+	while state.preseason_stop() == "story" and hops < 4:
+		hops += 1
+		await _press("PreSeasonGo")
+		await _frames(10)
 	print("scene ", current_scene.name, " stop ", state.preseason_stop(), " opponent ", state.practice_opponent())
 	await _shot(out + "_practice_setup.png")
 	await _press("PracticeFill")
@@ -162,7 +168,7 @@ func _run() -> void:
 	state.season.round_index = state.season.fixture.size()
 	if seen_id != "" and state.begin_intake_draft():
 		root.get_node("Router").go("draft")
-		await _frames(12)
+		await _settle("Draft")
 		current_scene.call("_open_player", seen_id)
 		await _frames(6)
 		var seen_lbl: Node = current_scene.find_child("SeenPreSeason", true, false)
@@ -175,6 +181,15 @@ func _run() -> void:
 				(lp as ScrollContainer).ensure_control_visible(seen_lbl as Control)
 		await _shot(out + "_draft_card.png")
 	quit(0)
+
+
+## The router loads a screen over a few frames: wait until it is the current scene.
+func _settle(scene: String) -> void:
+	var guard := 0
+	while (current_scene == null or not current_scene.scene_file_path.contains(scene)) and guard < 600:
+		await process_frame
+		guard += 1
+	await _frames(10)
 
 
 func _frames(n: int) -> void:

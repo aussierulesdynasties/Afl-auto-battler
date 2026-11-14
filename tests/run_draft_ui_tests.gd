@@ -285,7 +285,7 @@ func _test_start_season_footer() -> void:
 	var short_def := int((d.position_status()["DEF"] as Dictionary)["short"])
 	_check(d.is_finished() and d.is_valid() and short_def > 0,
 			"Setup: a full list within the cap with no defenders (short %d)" % short_def)
-	_check(footer.text.begins_with("Short %d defenders" % short_def),
+	_check(footer.text.begins_with("We're short of %d defenders" % short_def),
 			"A list short at defence says so: " + footer.text.replace("\n", " / "))
 	_check(not footer.text.contains("ready"), "...and does not say the list is ready")
 	_check(not fin.disabled, "The rules let a full list start short, so Start season is live")
@@ -302,7 +302,7 @@ func _test_start_season_footer() -> void:
 	footer = ui.find_child("UpcomingPicks", true, false)
 	fin = ui.find_child("StartSeason", true, false)
 	_check(d.short_positions() == "" and d.is_valid(), "Setup: a list with every position covered")
-	_check(footer.text.begins_with("Your list is ready."), "A covered list says it is ready: " + footer.text.replace("\n", " / "))
+	_check(footer.text.begins_with("Our list is ready."), "A covered list says it is ready: " + footer.text.replace("\n", " / "))
 	why = await Tap.tap(fin)
 	_check(why == "" and _state.season != null, "A finger's tap on Start season starts the season (%s)" % why)
 	ui.queue_free()
@@ -529,8 +529,8 @@ func _test_intake_combine() -> void:
 	var prod: Label = ui.find_child("DetailProduction", true, false)
 	_check(prod != null and prod.text != "", "Junior production remains beside Combine evidence")
 	var note: Label = ui.find_child("CombineNote", true, false)
-	_check(note != null and note.text.contains("junior football"),
-			"The screen says testing is evidence, not the whole projection")
+	_check(note != null and note.text.contains("Junior football still counts"),
+			"The screen says testing is one part of the scouts' read, and junior football still counts")
 	var act: Button = ui.find_child("DetailDraft", true, false)
 	var close: Button = ui.find_child("DetailClose", true, false)
 	var view := Rect2(Vector2.ZERO, root.get_visible_rect().size).grow(1)
@@ -780,7 +780,7 @@ func _test_inspect(ui: Control) -> void:
 	ui.call("_open_player", str(p["id"]))
 	await _settle()
 	var status: Label = ui.find_child("DetailStatus", true, false)
-	_check(status != null and status.text.begins_with("On your list"), "A player you drafted says so")
+	_check(status != null and status.text.begins_with("On our list"), "A player you drafted says so")
 	_check(ui.find_child("DetailDraft", true, false) == null, "A drafted player has no Draft button")
 	ui.call("_close_player")
 	var rival := {}
