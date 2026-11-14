@@ -218,7 +218,7 @@ func _show_intro() -> void:
 	var v: VBoxContainer = box["body"]
 	v.add_child(UiKit.heading("Season stats", UiKit.TITLE))
 	for line in [
-		"The whole season in one place: the ladder, every player's numbers, the awards races, and every match.",
+		"Our season in one place. The ladder, every player's numbers, the award races and every match.",
 		"Pick a stat to rank the players or the clubs by it. Tap a player, a club or a match to open it.",
 	]:
 		var l := UiKit.lbl(line, 14, UiKit.TEXT)
