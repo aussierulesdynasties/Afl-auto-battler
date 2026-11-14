@@ -10016,18 +10016,36 @@ func trade_context(club: String) -> Dictionary:
 var _phase_cache := {}
 
 
-## A club's list as the game sees it (TeamRating): its match-day side today on the
-## OVR scale, the same list in three seasons, and its phase, with the line a
-## screen shows ("Contender. Team rating 78. On this list, 81 in three years.").
+## A club's list as the game sees it: its best side today as the ladder and the
+## match preview rate it (club_strength, row 177: the hub, the club page and
+## every letter say the ladder's number), the same list in three seasons on that
+## scale (today's rating moved by how far TeamRating expects the side's OVR to
+## move), and its phase, with the line a screen shows ("Contender. Team rating
+## 72.4. On this list, 75.4 in three years.").
 func team_outlook(club: String) -> Dictionary:
 	if season == null or not season.lists.has(club):
 		return {}
 	var list: Array = season.lists[club]
 	var phase := club_phase(club)
-	var now := TeamRating.rating(list)
-	var later := TeamRating.forecast(list)
+	var now := snappedf(maxf(club_strength(club), 0.0), 0.1)
+	var later := snappedf(now + float(TeamRating.forecast(list) - TeamRating.rating(list)), 0.1)
 	return {"rating": now, "forecast": later, "phase": phase, "category": TeamRating.category(phase),
 			"line": TeamRating.line(phase, now, later)}
+
+
+## A club's best side as the match preview ranks it (Squad.strength, the This
+## week sheet's Overall): its side as picked (yours as you picked it), the best
+## 18 on the ground from the era's match-day squad (18 and the interchange: 23
+## today, 22 in the seasons of a four-man bench), injured players out. The
+## ladder's Rating column shows this, so the ladder and the preview always rank
+## the clubs alike (row 177, director 2026-11-12: "ladder should always show your
+## best 23 rating"). Every club the same rule. -1 without a list.
+func club_strength(club: String) -> float:
+	if season == null or not season.lists.has(club) or (season.lists[club] as Array).is_empty():
+		return -1.0
+	if club == my_club:
+		return my_squad().strength()
+	return Squad.new(club, season.lists[club], false, club, season.selections.get(club, {})).strength()
 
 
 func club_phase(club: String) -> String:
