@@ -114,6 +114,12 @@ GODOT=<godot console exe> tools/balance.sh match 1000 --a "--weather perfect" --
   match line. Each team line carries `tp` (per player id [tackles, pressure acts, line]) for
   this. The harness plays without the set ratings (data/ovr_overrides.csv), so a set-rating effect
   (a Blicavs) shows only in `tools/audit/brownlow_impl.gd`.
+- **Pressure.** A "Pressure a team a game" section sets pressure acts and tackles a team a game, the share of
+  pressure acts in the presser's defensive half, tackles per pressure act and the share of tackles inside his
+  forward 50 against Champion Data 2025-26 (36 club-seasons; `afl_pressure_rates.json`, built by
+  `build_pressure_rates.py` from docs/research/wheelo). The sim counts where each act happened in
+  `MatchSim._press_where` (bookkeeping, no dice: team keys `pressure_acts_dhalf`, `tackles_i50`). The sim's
+  pressure acts are tackles, rushed disposals and smothers; Champion Data's also hold chases and corrals.
 - **Brownlow and tackle reference.** `afl_brownlow.json`, built by `build_brownlow_rates.py`
   (`--offline` to use only the cached pages in data/cache): every season 2015-26 from AFL Tables
   (winner, 2nd, 5th, 10th, men polled, polled 10+ and 20+, the ruck share, 7+ hit-outs a game being a
