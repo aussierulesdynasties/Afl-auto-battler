@@ -1,19 +1,7 @@
 [remap]
 
-importer="csv_translation"
-type="Translation"
-uid="uid://honytytw1jsy"
+importer="keep"
 
 [deps]
 
-files=["res://data/legacy/2010/players_2010.num.translation", "res://data/legacy/2010/players_2010.last.translation", "res://data/legacy/2010/players_2010.first.translation", "res://data/legacy/2010/players_2010.gm.translation", "res://data/legacy/2010/players_2010.ki.translation", "res://data/legacy/2010/players_2010.mk.translation", "res://data/legacy/2010/players_2010.hb.translation", "res://data/legacy/2010/players_2010.di.translation", "res://data/legacy/2010/players_2010.gl.translation", "res://data/legacy/2010/players_2010.bh.translation", "res://data/legacy/2010/players_2010.ho.translation", "res://data/legacy/2010/players_2010.tk.translation", "res://data/legacy/2010/players_2010.rb.translation", "res://data/legacy/2010/players_2010.if50.translation", "res://data/legacy/2010/players_2010.cl.translation", "res://data/legacy/2010/players_2010.cg.translation", "res://data/legacy/2010/players_2010.ff.translation", "res://data/legacy/2010/players_2010.fa.translation", "res://data/legacy/2010/players_2010.br.translation", "res://data/legacy/2010/players_2010.cp.translation", "res://data/legacy/2010/players_2010.up.translation", "res://data/legacy/2010/players_2010.cm.translation", "res://data/legacy/2010/players_2010.mi.translation", "res://data/legacy/2010/players_2010.onepct.translation", "res://data/legacy/2010/players_2010.bo.translation", "res://data/legacy/2010/players_2010.ga.translation", "res://data/legacy/2010/players_2010.pctp.translation", "res://data/legacy/2010/players_2010.src.translation", "res://data/legacy/2010/players_2010.dob.translation", "res://data/legacy/2010/players_2010.age.translation", "res://data/legacy/2010/players_2010.height.translation", "res://data/legacy/2010/players_2010.weight.translation", "res://data/legacy/2010/players_2010.debut.translation", "res://data/legacy/2010/players_2010.height.translation"]
-
 source_file="res://data/legacy/2010/players_2010.csv"
-dest_files=["res://data/legacy/2010/players_2010.num.translation", "res://data/legacy/2010/players_2010.last.translation", "res://data/legacy/2010/players_2010.first.translation", "res://data/legacy/2010/players_2010.gm.translation", "res://data/legacy/2010/players_2010.ki.translation", "res://data/legacy/2010/players_2010.mk.translation", "res://data/legacy/2010/players_2010.hb.translation", "res://data/legacy/2010/players_2010.di.translation", "res://data/legacy/2010/players_2010.gl.translation", "res://data/legacy/2010/players_2010.bh.translation", "res://data/legacy/2010/players_2010.ho.translation", "res://data/legacy/2010/players_2010.tk.translation", "res://data/legacy/2010/players_2010.rb.translation", "res://data/legacy/2010/players_2010.if50.translation", "res://data/legacy/2010/players_2010.cl.translation", "res://data/legacy/2010/players_2010.cg.translation", "res://data/legacy/2010/players_2010.ff.translation", "res://data/legacy/2010/players_2010.fa.translation", "res://data/legacy/2010/players_2010.br.translation", "res://data/legacy/2010/players_2010.cp.translation", "res://data/legacy/2010/players_2010.up.translation", "res://data/legacy/2010/players_2010.cm.translation", "res://data/legacy/2010/players_2010.mi.translation", "res://data/legacy/2010/players_2010.onepct.translation", "res://data/legacy/2010/players_2010.bo.translation", "res://data/legacy/2010/players_2010.ga.translation", "res://data/legacy/2010/players_2010.pctp.translation", "res://data/legacy/2010/players_2010.src.translation", "res://data/legacy/2010/players_2010.dob.translation", "res://data/legacy/2010/players_2010.age.translation", "res://data/legacy/2010/players_2010.height.translation", "res://data/legacy/2010/players_2010.weight.translation", "res://data/legacy/2010/players_2010.debut.translation", "res://data/legacy/2010/players_2010.height.translation"]
-
-[params]
-
-compress=1
-delimiter=0
-unescape_keys=false
-unescape_translations=true
