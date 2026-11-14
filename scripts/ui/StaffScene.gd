@@ -87,7 +87,7 @@ func _build() -> void:
 			body.add_child(UiKit.rule())
 
 	body.add_child(UiKit.spacer(14))
-	var others := UiKit.btn("Your club" if not mine else "Another club's staff", UiKit.BODY)
+	var others := UiKit.btn("Our club" if not mine else "Another club's staff", UiKit.BODY)
 	others.name = "OtherClubs"
 	# On a PC it reads as a button (an outline), not a stray line of text.
 	others.flat = not _others_open and not wide
@@ -206,7 +206,7 @@ func _word_line(c: Dictionary) -> Label:
 		return l
 	var n := CoachMarket.broken_by(c, mine)
 	if n > 0:
-		var l := UiKit.lbl("You broke %s to him: your offers weigh %d less" % [
+		var l := UiKit.lbl("You broke %s to him. Our offers are %d%% less likely to land" % [
 				"a promise" if n == 1 else "%d promises" % n, int(round(CoachMarket.BROKEN_TRUST * 100.0 * n))],
 				UiKit.SMALL, UiKit.BAD, true)
 		l.name = "Broken_" + str(c.get("job", ""))
