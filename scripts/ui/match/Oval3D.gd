@@ -52,6 +52,7 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 		_number(p, int(t.get("num", -1)))
 		players.append(p)
 	anim = Oval3DAnim.new(director, players)
+	director.want_contacts = true
 	_add_umpires(scene)
 	ball = MeshInstance3D.new()
 	var bm := SphereMesh.new()
@@ -76,7 +77,18 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 
 ## Copy the director's state onto the scene. The animations advance here, by dt, so the
 ## carrier's hands are where this frame puts them when the ball goes between them.
+## A player touches the ball (or the man) this frame: kick, handball, ruck_tap, mark,
+## gather, handball_receive, tackle, smother, spoil, bounce (i -1: the field umpire),
+## goal_celebrate. `at` is where the ball goes, metres on the ground; `other` the man
+## tackled or smothered. Called at the moment of contact (3d view 2, 2026-11-15).
+func anim_event(i: int, kind: StringName, at: Vector2, other := -1) -> void:
+	anim.event(i, kind, at, other)
+
+
 func sync(dt: float) -> void:
+	for c in director.contacts:
+		anim_event(int(c["who"]), c["kind"], c["at"], int(c["other"]))
+	director.contacts.clear()
 	var mode := str(director.ball.get("mode", ""))
 	var holder := int(director.ball.get("holder", -1)) if mode == "held" else -1
 	var resting := false
