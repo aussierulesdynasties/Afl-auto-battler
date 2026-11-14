@@ -2467,6 +2467,10 @@ const TACKLE_SPILL := 0.5
 const D50_KICK_GAIN := 3.0
 const D50_HANDBALL := 0.7
 const D50_PRESSURE := 0.50
+## The tackle's own share of that discount (director 2026-11-14, "Try the
+## tackle-only lever"): equal to D50_PRESSURE it changes nothing; higher lets
+## forwards tackle in their 50 while rushed kicks keep the D50 discount.
+const D50_TACKLE := 0.50
 const D50_TURNOVER := 0.15
 
 
@@ -3470,7 +3474,18 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		var press_roll := rng.randf()
 		var rushed := false
 		var tackled := false
-		if press_roll < pressure * PRESS_TACKLE_SHARE * _wx("tackle_share"):
+		# Inside his own 50 the tackle can carry its own discount (D50_TACKLE):
+		# the rushed band keeps its width, so only tackles move.
+		var tackle_cut: float = pressure * PRESS_TACKLE_SHARE * _wx("tackle_share")
+		var rush_cut: float = pressure * (1.0 + _tv("PRESS_RUSH_RATIO", PRESS_RUSH_RATIO))
+		if in_d50:
+			var t_mult: float = (_tv("D50_TACKLE", D50_TACKLE)
+					/ _tv("D50_PRESSURE", D50_PRESSURE))
+			if t_mult != 1.0:
+				var widened := tackle_cut * t_mult
+				rush_cut += widened - tackle_cut
+				tackle_cut = widened
+		if press_roll < tackle_cut:
 			var tackler = _pick_presser(opp, zone)
 			_maybe_report(opp, tackler, carrier)
 			_t(opp, "tackles")
@@ -3528,7 +3543,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			_emit("tackle", opp, fp, tackler,
 					"%s tackles %s - ball up" % [GameDB.player_display_name(tackler), GameDB.player_display_name(carrier)])
 			return {"outcome": "stoppage", "fp": fp, "actor": carrier}
-		if press_roll < pressure * (1.0 + _tv("PRESS_RUSH_RATIO", PRESS_RUSH_RATIO)):
+		if press_roll < rush_cut:
 			# Closed down without a tackle: the disposal is rushed. It gains
 			# less ground, and sometimes goes straight to the opposition -
 			# likelier against a strong presser, less likely from a clean
