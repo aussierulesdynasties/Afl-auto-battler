@@ -61,8 +61,8 @@ func _test_plan_lines() -> void:
 				# Balanced too (M2, director 2026-11-10): every plan states a gain and a cost.
 				_check(pn.find_child("PlanGain", true, false) != null and pn.find_child("PlanCost", true, false) != null,
 						"Every plan has Gain and Cost rows (%s)" % pk)
-				_check((pk in ["attacking", "defensive", "controlled"]) == (pn.find_child("PlanBeats", true, false) != null),
-						"The beats line shows for the plans with a counter (%s)" % pk)
+				_check((pk != "balanced") == (pn.find_child("PlanBeats", true, false) != null),
+						"The beats line shows for every plan, Win Contest saying it is neutral (bug bash 5, G16) (%s)" % pk)
 				_check((pk == "balanced") == (pn.find_child("PlanBest", true, false) == null),
 						"The best-for-it line names players (%s)" % pk)
 				# Every name on that line is in his club's ink (director A1, 2026-10-14), not plain white.

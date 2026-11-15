@@ -882,7 +882,7 @@ func _test_impact_and_ai() -> void:
 	_check(credited_ok, "A gameplan's effect is measured in expected points (every match)")
 	_check(owner_ok, "Gameplan points go to the side that runs the plan")
 	var lines := CoachReport.impact_lines(imp, [{}, {}], 0)
-	_check(not lines.is_empty() and str(lines[0]["label"]).begins_with("Your")
+	_check(not lines.is_empty() and str(lines[0]["label"]).begins_with("Our")
 			or str(lines[0]["label"]).begins_with("Their"), "The readout names what the points came from")
 	# The rival coach plays its usual game, reacts to the scoreboard, and
 	# counters the plan you ran when the counter costs it little.
@@ -2680,7 +2680,7 @@ func _test_bring_the_heat() -> void:
 	# It burns legs, not extra kilometres: a side covers about the ground it always does.
 	_check(absf(dist[1] / maxf(1.0, dist[0]) - 1.0) < 0.04,
 			"...but they cover about the same ground (%.0f km against %.0f km a side)" % [dist[1] / 36000.0, dist[0] / 36000.0])
-	_check(CoachReport.pep_summary("heat").contains("legs") and CoachReport.pep_summary("heat") != CoachReport.pep_summary("fire_up"),
+	_check(CoachReport.pep_summary("heat").to_lower().contains("legs") and CoachReport.pep_summary("heat") != CoachReport.pep_summary("fire_up"),
 			"Its words name the cost and are its own")
 	# "Much faster" only while it costs more legs than Fire them up does.
 	var heat_pace := float(MatchSim.PEP_HEAT.get("pace", 1.0))
@@ -2820,7 +2820,7 @@ func _test_hot_player_moment() -> void:
 	_check(str(mv.get("kind", "")) == "hot" and str(mv["options"][0]["label"]) == "Move %s onto him" % who
 			and str(mv["options"][1]["label"]) == "Leave the tag on %s" % other_name,
 			"With a tag already on, the call is to move it or leave it (%s / %s)" % [mv["options"][0]["label"], mv["options"][1]["label"]])
-	_check(str(mv["options"][0]["cost"]) == "Cost: the tag comes off %s, who goes back to his usual %d touches" % [other_name, other_usual]
+	_check(str(mv["options"][0]["cost"]) == "Cost: " + GateOdds.TAG_MOVE_COST % [other_name, other_usual]
 			and not str(mv["options"][0]["cost"]).contains(GateOdds.tag_gives()),
 			"Moving the tag costs the hold on the other man, not a second share of the tagger's game (%s)" % mv["options"][0]["cost"])
 	_check(str(mv["options"][1]["gain"]) == "Gain: %s stays on %s, who is held to about %d touches" % [who, other_name, held]
@@ -4227,8 +4227,8 @@ func _test_ai_chases_and_controlled_needs_ball_users() -> void:
 	sim.q_goals[0] = [4, 1]
 	_check(str(sim.ai_tactics(1)["gameplan"]) == "defensive",
 			"Before half time a close deficit is no reason to abandon it")
-	# Controlled Tempo against a press: good ball users hold it off, poor ones
-	# only partly.
+	# Controlled Tempo against a press: good ball users take out
+	# CONTROLLED_HOLD of its extra bite (bug bash 5, G3), poor ones less.
 	var press := _sim(4801)
 	press.set_tactics(1, {"gameplan": "defensive"})
 	press.set_tactics(0, {"gameplan": "controlled"})
@@ -4238,7 +4238,8 @@ func _test_ai_chases_and_controlled_needs_ball_users() -> void:
 	var poor := press._press_on(0)
 	press.set_tactics(0, {"gameplan": "balanced"})
 	var none := press._press_on(0)
-	_check(is_equal_approx(good, 1.0) and poor > 1.0 and poor < none,
+	_check(is_equal_approx(good, 1.0 + (none - 1.0) * (1.0 - MatchSim.CONTROLLED_HOLD))
+			and poor > good and poor < none,
 			"Controlled Tempo holds a press off as far as its ball users can (%.3f, %.3f, %.3f)" % [good, poor, none])
 	_check(PlanFit.standing_plan([]) == "balanced", "An empty list plays Balanced")
 
@@ -4706,7 +4707,7 @@ func _test_press_by_zone() -> void:
 	var theirs := sim.shot_chance(0, shooter, true, false)
 	sim._broke_press = -1
 	_check(is_equal_approx(theirs, held), "A break by the other side gives this side's shot nothing (%.3f vs %.3f)" % [theirs, held])
-	_check(broke > held * 1.5, "A chain that breaks the press shoots at an outnumbered defence (%.3f vs %.3f)" % [broke, held])
+	_check(is_equal_approx(broke, held * MatchSim.PRESS_BROKEN_EXPOSED), "A chain that breaks the press shoots at an outnumbered defence (%.3f vs %.3f)" % [broke, held])
 
 
 ## Assign defensive forward (register item 5, director 2026-10-07): the words
@@ -4856,7 +4857,7 @@ func _test_decision_credits() -> void:
 			"The decision lines and the rest add up to the margin (%+.1f)" % margin)
 	# An old save's last match booked the bursts as "calls": still shown.
 	var old_lines := CoachReport.impact_lines([{"calls": 2.0}, {}], [{}, {}], 0)
-	_check(old_lines.size() == 1 and str(old_lines[0]["label"]) == "Your in-game calls"
+	_check(old_lines.size() == 1 and str(old_lines[0]["label"]) == "Our in-game calls"
 			and is_equal_approx(float(old_lines[0]["pts"]), 2.0),
 			"An old save's \"calls\" still reads as in-game calls (%s)" % str(old_lines))
 	# A moment: the call is worth its expected points against the default.
@@ -5171,6 +5172,37 @@ func _test_every_call_two_sided() -> void:
 		_check(str(t[0]) != "" and str(t[1]) != "", "The %s plan states a gain and a cost" % plan)
 		_check(not GateOdds.PLAN_GAIN.has(MatchSim.plan_key(str(plan))) or sized.search(str(t[0]) + str(t[1])) != null,
 				"The %s plan sizes its gain and cost (%s / %s)" % [plan, t[0], t[1]])
+	# Bug bash 5 (G7-G12): every effect each plan has is on its gate, at its
+	# size: one figure per effect the match applies.
+	var gate_miss := []
+	for plan in GateOdds.PLAN_GAIN.keys():
+		var sh: Array = GateOdds.plan_shares(str(plan))
+		if str(GateOdds.PLAN_GAIN[plan]).count("%s") != (sh[0] as Array).size() 				or str(GateOdds.PLAN_COST[plan]).count("%s") != (sh[1] as Array).size():
+			gate_miss.append(plan)
+	_check(gate_miss.is_empty(), "Each plan's gate has one figure for every effect it states (%s)" % str(gate_miss))
+	var pc := func(x: float) -> String: return GateOdds.pct(x)
+	var ac := GateOdds.plan_texts("attacking")
+	var hp := GateOdds.plan_texts("defensive")
+	var wc := GateOdds.plan_texts("contest")
+	var ct := GateOdds.plan_texts("controlled")
+	_check(not str(ac[1]).contains("rebound") and not str(wc[1]).contains("rebound"),
+			"The corridor's and the contest's cost is every shot of theirs, as the match applies it, not only the rebound")
+	_check(str(wc[0]).contains("every contest") and not str(wc[0]).contains("stoppage"),
+			"Win Contest's edge is at every contest, as the match applies it (%s)" % wc[0])
+	_check(not str(CoachReport.PLAN_PARTS["controlled"]["does"]).contains("nothing special")
+			and str(CoachReport.PLAN_PARTS["controlled"]["does"]).contains("ball users"),
+			"Controlled Tempo says it leans on the ball users, whose fit sizes it")
+	_check(str(ct[0]).contains(pc.call(MatchSim.CONTROLLED_HOLD) + " of its extra pressure")
+			and str(ct[0]).contains(pc.call(float(MatchSim.PLANS["controlled"]["goal"]) - 1.0) + " more accurate"),
+			"Controlled Tempo's gate states its shots and how much of a press it takes out (%s)" % ct[0])
+	_check(str(hp[0]).contains(pc.call(MatchSim.PRESS_ZONE_TURNOVER - 1.0) + " more often")
+			and str(hp[1]).contains(pc.call(MatchSim.PRESS_BROKEN_EXPOSED - 1.0) + " more accurate"),
+			"The High Press gate states its turnovers and what a broken press costs (%s / %s)" % hp)
+	_check(str(ac[1]).contains("Into a High Press, " + pc.call(MatchSim.CORRIDOR_PRESSED - 1.0)),
+			"Attack Corridor's gate states what a press costs it (%s)" % ac[1])
+	_check(str(CoachReport.PLAN_PARTS["contest"].get("beats", "")).contains("no plan beats it")
+			and not MatchSim.COUNTER.has("contest") and not MatchSim.COUNTER.values().has("contest"),
+			"Win Contest says it is neutral, and no rival coach counters it or counters with it")
 	for pep in GateOdds.PEP_GAIN.keys():
 		var t := GateOdds.pep_texts(str(pep))
 		_check(str(t[0]) != "" and str(t[1]) != "", "The %s pep talk states a gain and a cost" % pep)

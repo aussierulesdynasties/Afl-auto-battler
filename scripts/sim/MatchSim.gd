@@ -1024,11 +1024,16 @@ const PLAN_UPSIDE := {
 	"controlled": ["taken", "clangers", "goal", "pace"],
 }
 const PLANS := {
-	"attacking": {"goal": 1.05, "gain": 1.06, "clangers": 1.12, "pace": 1.12, "exposed": 1.07},
+	# Bug bash 5 (G1): the corridor won nearly every match-up, so its upside is
+	# smaller and its turnovers cost more (exposed: every shot of theirs).
+	"attacking": {"goal": 1.04, "gain": 1.05, "clangers": 1.12, "pace": 1.12, "exposed": 1.12},
 	# The press's own shots: legs spent chasing, shots taken rushed (0.88;
-	# director 2026-10-11, the real cost of winning it high, was 0.96).
-	"defensive": {"press": 1.09, "opp_goal": 0.965, "goal": 0.88, "gain": 0.95, "pace": 1.12},
-	"contest": {"contest": 0.025, "gain": 0.95, "exposed": 1.04},
+	# director 2026-10-11, the real cost of winning it high, was 0.96). Bug bash
+	# 5 (G2): it lost nearly every match-up, so their shots miss more often and
+	# its own ball movement and legs pay less for the press.
+	"defensive": {"press": 1.09, "opp_goal": 0.95, "goal": 0.88, "gain": 0.97, "pace": 1.08},
+	# G4: more of the ball for less given up, so winning it shows on the scoreboard.
+	"contest": {"contest": 0.035, "gain": 0.96, "exposed": 1.02},
 	"controlled": {"taken": 0.96, "gain": 0.94, "goal": 1.01, "clangers": 0.93, "pace": 0.95},
 }
 
@@ -1096,11 +1101,21 @@ static func cost_scale(sq: Squad, plan: String) -> float:
 
 ## Pressure multiplier `side` faces from the opposition's plan, counters in.
 ## Controlled Tempo takes the sting out of a press as far as its ball users
-## can: a side of ordinary ones or better holds it off, poor ones only
-## partly (PlanFit, "controlled"). The press is where the ball is
+## can: a side of ordinary ones or better takes out CONTROLLED_HOLD of it,
+## poor ones less (PlanFit, "controlled"). The press is where the ball is
 ## (PRESS_PLAN_ZONE): numbers pushed up into his back third and taken out
 ## of our own defensive third. What it pushes up grows with how well the
 ## list suits the plan; what it leaves at the back does not.
+## The share of a press's extra bite Controlled Tempo takes out with ordinary
+## ball users or better (bug bash 5, G3: all of it made the counter three
+## times any other).
+const CONTROLLED_HOLD := 0.4
+## Attack Corridor into a press: the extra pressure its runners meet.
+const CORRIDOR_PRESSED := 1.10
+## ... and the share of its shots' edge it keeps.
+const CORRIDOR_PRESS_GOAL := 0.5
+
+
 func _press_on(side: int, zone := 1) -> float:
 	var m := _pv(1 - side, "press")
 	if m > 1.0:
@@ -1108,10 +1123,10 @@ func _press_on(side: int, zone := 1) -> float:
 		var z := float(PRESS_PLAN_ZONE[zone])
 		m = 1.0 + (z - 1.0) * suit if z > 1.0 else z
 	if m > 1.0 and _plan(side) == "controlled":
-		var hold := clampf(float((plan_fit[side] as Dictionary).get("controlled", 1.0)), 0.0, 1.0)
+		var hold := CONTROLLED_HOLD * clampf(float((plan_fit[side] as Dictionary).get("controlled", 1.0)), 0.0, 1.0)
 		m = 1.0 + (m - 1.0) * (1.0 - hold)
 	elif m > 1.0 and _plan(side) == "attacking":
-		m *= 1.10
+		m *= CORRIDOR_PRESSED
 	return m
 
 
@@ -1907,7 +1922,7 @@ func _award_context_free(receiving_side: int, mark_fp: float, offender, recipien
 	_p(offender, "frees_against")
 	_t(receiving_side, "free_" + cause)
 	var who := GameDB.player_display_name(recipient) if recipient != null else "the opposition"
-	_emit("free", receiving_side, mark_fp, recipient, "%s — free kick to %s" % [label, who])
+	_emit("free", receiving_side, mark_fp, recipient, "%s · free kick to %s" % [label, who])
 	_free_taker = {"side": receiving_side, "id": "" if recipient == null else str(recipient.get("id", ""))}
 	var ev: Dictionary = events[events.size() - 1]
 	ev["free_cause"] = cause
@@ -2430,8 +2445,9 @@ const PRESS_PLAN_ZONE := [1.40, 1.10, 0.60]
 const PRESS_ZONE_TURNOVER := 1.5
 ## Out of the back third with nobody on him, a side has broken the press:
 ## the rest of that chain runs at a defence that is outnumbered, and its
-## shot is this much likelier to be a goal. The cost of the plan.
-const PRESS_BROKEN_EXPOSED := 1.7
+## shot is this much likelier to be a goal. The cost of the plan (bug bash 5,
+## G2: 1.25 with the plan's other costs eased; it lost nearly everywhere).
+const PRESS_BROKEN_EXPOSED := 1.25
 ## Non-tackle pressure acts per tackle chance, the share of those that turn
 ## the ball over outright, and the ground a rushed disposal still gains.
 ## 2026-11-09: a player's pressure acts ran at 60% of real (median 6.5 a game,
@@ -3281,7 +3297,7 @@ func _boundary_exit(side: int, cross_fp: float, carrier, disposal_kind: String,
 	var kind := "out_on_full" if out_on_full else "last_disposal"
 	var who := GameDB.player_display_name(recipient) if recipient != null else "the opposition"
 	var why := "Out on the full" if out_on_full else "Last disposal out"
-	_emit(kind, opp, cross_fp, recipient, "%s - free kick to %s" % [why, who])
+	_emit(kind, opp, cross_fp, recipient, "%s · free kick to %s" % [why, who])
 	var fev: Dictionary = events[events.size() - 1]
 	fev["against_id"] = "" if carrier == null else str(carrier.get("id", ""))
 	fev["against_name"] = "" if carrier == null else GameDB.player_display_name(carrier)
@@ -4323,7 +4339,7 @@ func shot_chance(side: int, shooter: Dictionary, marked: bool, spoilt: bool, cre
 	var own := _pv(side, "goal")
 	# The press closes the corridor: half the attacking plan's edge.
 	if own > 1.0 and _pv(opp, "press") > 1.0:
-		own = 1.0 + (own - 1.0) * 0.5
+		own = 1.0 + (own - 1.0) * CORRIDOR_PRESS_GOAL
 	goal_p *= own * _ar(side, "goal")
 	if credit:
 		_credit(side, "gameplan", 6.0 * (goal_p - before))
@@ -4504,7 +4520,7 @@ func end_quarter() -> Dictionary:
 		"behinds": [behinds(0), behinds(1)],
 		"impact": impact.duplicate(true),
 	})
-	_emit("quarter", -1, fp, null, "End of quarter %d - %s %d.%d (%d) | %s %d.%d (%d)" % [
+	_emit("quarter", -1, fp, null, "End of Q%d · %s %d.%d (%d) · %s %d.%d (%d)" % [
 		quarter, squads[0].name, goals(0), behinds(0), score(0),
 		squads[1].name, goals(1), behinds(1), score(1)])
 	current_quarter += 1
@@ -4518,7 +4534,7 @@ func end_quarter() -> Dictionary:
 		if needs_extra_time():
 			# No siren: the pitch keeps going into extra time.
 			_emit("quarter", -1, 0.0, null,
-					"Scores level at full time - we are going to extra time!")
+					"Scores level at full time · we are going to extra time!")
 		else:
 			_emit_full_time("Full time")
 	return result()
@@ -6108,6 +6124,9 @@ func resolve_moment(choice: int) -> Dictionary:
 		"tired":
 			# Both answers hold to the break (the siren in the last quarter).
 			var star_id := str(m["player_id"])
+			var star_name := GameDB.player_display_name(_on_ground(side, star_id))
+			if star_name == "":
+				star_name = "The player"
 			m["disp_at"] = {star_id: float((player_stats.get(star_id, {}) as Dictionary).get("disposals", 0.0))}
 			if key == "rest":
 				var gi := -1
@@ -6127,13 +6146,13 @@ func resolve_moment(choice: int) -> Dictionary:
 					_held[star_id] = "rest"
 					m["on_id"] = on_id
 					m["disp_at"][on_id] = float((player_stats.get(on_id, {}) as Dictionary).get("disposals", 0.0))
-					outcome = "%s comes on; he sits out %s." % [GameDB.player_display_name(_on_ground(side, on_id)),
+					outcome = "%s comes on; %s sits out %s." % [GameDB.player_display_name(_on_ground(side, on_id)), star_name,
 							"the rest of the match" if current_quarter >= 4 else "the rest of the quarter"]
 				else:
 					outcome = "No one on the bench to bring on."
 			else:
 				_held[star_id] = "keep"
-				outcome = "He stays out there to the %s." % ("final siren" if current_quarter >= 4 else "break")
+				outcome = "%s stays out there to the %s." % [star_name, "final siren" if current_quarter >= 4 else "break"]
 		"hot":
 			if key == "tag":
 				var t: Dictionary = (tactics[side] as Dictionary).duplicate()
@@ -6141,7 +6160,7 @@ func resolve_moment(choice: int) -> Dictionary:
 				tactics[side] = t
 				outcome = "Tag on. We can call it off at the break."
 			else:
-				outcome = "Structure unchanged."
+				outcome = "We leave the set-up as it is."
 		"momentum", "bounce":
 			if BURSTS.has(key):
 				_set_burst(side, key)

@@ -248,6 +248,9 @@ var supplements := true
 ## and the penalties still running. Saved.
 var year_events := {}
 var postseason_intro_seen := false  # the first postseason's sheet: this career's, not the device's
+## The Fitzroy merger left your list over the era's spots: you pick who goes on
+## the merger screen (MergerCutScene; director 2026-11-15: "I pick, delist screen").
+var merger_cut_due := false
 ## The first season you coach from its start (0: none yet). Years played
 ## without you (sim-ahead, waiting for Tasmania, pre-made histories) close
 ## before it and must not use up the first postseason's sheet.
@@ -809,6 +812,9 @@ var _batching := false
 ## The coach's answers to the survey before the season skip (SkipOrders),
 ## held only while the skip runs; {} the rest of the time.
 var _skip_orders := {}
+## Your own selection ({} = Auto-pick) held while "Best side on form" names
+## the side for simmed weeks; null when nothing is held (_form_week).
+var _form_held = null
 
 
 func autosave() -> bool:
@@ -979,6 +985,7 @@ func _save_state() -> Dictionary:
 		"supplements": supplements,
 		"year_events": year_events,
 		"postseason_intro_seen": postseason_intro_seen,
+		"merger_cut_due": merger_cut_due,
 		"my_first_season": my_first_season,
 		"board": board,
 		"week_events": week_events,
@@ -1292,6 +1299,7 @@ func _restore_career(state: Dictionary) -> bool:
 	year_events = state.get("year_events", {}) if state.get("year_events", {}) is Dictionary else {}
 	# A save from before this field is past being a fresh career.
 	postseason_intro_seen = bool(state.get("postseason_intro_seen", true))
+	merger_cut_due = bool(state.get("merger_cut_due", false))
 	# A save from before this field: a club you hold outside the years played
 	# without you is one you coach this season.
 	my_first_season = int(state.get("my_first_season",
@@ -1829,6 +1837,7 @@ func reset(next_dataset := Datasets.DEFAULT) -> void:
 	_last_finish = {}
 	draft_meeting_year = 0
 	postseason_intro_seen = false
+	merger_cut_due = false
 	my_first_season = 0
 	salary_cap = 0
 	free_agents = []
@@ -2823,12 +2832,12 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	# again, before free agency closes, so the one let go still has a market.
 	if season != null:
 		_era_trim_rivals()
-		# Your Fitzroy side merged into the Lions at this rollover, after your
-		# list decisions: the Lions delist down to the era's spots by the same
-		# rule (bug bash 4, L2).
+		# Your side took Fitzroy's players at this rollover, after your list
+		# decisions: you pick who goes on the merger screen (director
+		# 2026-11-15: "I pick, delist screen"); rivals cut by their own rule.
 		if not merged_before and LegacyRollover.merged_away(self, LegacyRollover.MERGED) \
 				and my_club == LegacyRollover.MERGED_INTO:
-			_era_trim(my_club)
+			merger_cut_due = true
 	Season.beat()
 	# Next year's generated class joins the pool before ageing, so the fresh
 	# 17-year-olds are also a year older in the season they arrive. A Legacy
@@ -3586,6 +3595,7 @@ func prepare_interactive_match() -> bool:
 		return false
 	match_way_live = match_way()
 	preseason_sim_to_round1()
+	_merger_cut_by_club()
 	_staff_before_round_one()
 	_settle_week_event()
 	YearEvents.settle_top_up(self)
@@ -3847,6 +3857,7 @@ func _advance_prep() -> void:
 	recruit_undo.clear()
 	Season.beat()
 	preseason_sim_to_round1()
+	_merger_cut_by_club()
 	_staff_before_round_one()
 	Season.beat()
 	_settle_week_event()
@@ -8887,6 +8898,89 @@ func _least_worth(list: Array, kind: String) -> Dictionary:
 	return worst
 
 
+## How many your list must lose after the merger: {"": seniors over the
+## era's spots, "A": Category A rookies over theirs}. Empty when none.
+func merger_cut_needs() -> Dictionary:
+	if not merger_cut_due or season == null:
+		return {}
+	var list: Array = season.lists.get(my_club, my_list)
+	var out := {}
+	var sen := RookieList.senior_count(list) - RookieList.senior_spots()
+	if sen > 0:
+		out[""] = sen
+	var cat_a := RookieList.cat_a_count(list) - RookieList.cat_a_spots()
+	if cat_a > 0:
+		out["A"] = cat_a
+	return out
+
+
+## Players still to go after the merger (0 when the list fits).
+func merger_cut_left() -> int:
+	var n := 0
+	var needs := merger_cut_needs()
+	for k in needs:
+		n += int(needs[k])
+	return n
+
+
+## You delist `ids` after the merger: exactly the number each list kind is
+## over, none of them talked round to play on. Returns {"ok", "reason"}.
+func merger_delist(ids: Array) -> Dictionary:
+	var needs := merger_cut_needs()
+	if needs.is_empty():
+		return {"ok": false, "reason": "Our list already fits."}
+	var list: Array = season.lists.get(my_club, my_list)
+	var picked := {}
+	var going := []
+	for id in ids:
+		var p := {}
+		for q in list:
+			if str(q["id"]) == str(id):
+				p = q
+		if p.is_empty() or going.has(p):
+			return {"ok": false, "reason": "That player is not on our list."}
+		if ListStings.release_held(p, season_year):
+			return {"ok": false, "reason": ListCosts.HELD_REASON % GameDB.player_display_name(p)}
+		var kind := str(p.get("rookie_list", ""))
+		picked[kind] = int(picked.get(kind, 0)) + 1
+		going.append(p)
+	for kind in needs:
+		if int(picked.get(kind, 0)) != int(needs[kind]):
+			return {"ok": false, "reason": "Pick %d to go." % merger_cut_left()}
+	for kind in picked:
+		if not needs.has(kind):
+			return {"ok": false, "reason": "Pick %d to go." % merger_cut_left()}
+	for p in going:
+		_release(my_club, p, false)
+		HonourBoard.leave(self, p, "delisted")
+	merger_cut_due = false
+	mark_dirty()
+	return {"ok": true, "reason": "%d delisted." % going.size()}
+
+
+## Round 1 with the merger screen never finished: the club delists the rest
+## by the rule every rival uses (_least_worth), and the news says so.
+func _merger_cut_by_club() -> void:
+	if not merger_cut_due:
+		return
+	var list: Array = season.lists.get(my_club, my_list)
+	var n := 0
+	var needs := merger_cut_needs()
+	for kind in needs:
+		for _i in range(int(needs[kind])):
+			# Talked round to play on this season: he stays.
+			var worst := _least_worth(list.filter(func(q): return not ListStings.release_held(q, season_year)), kind)
+			if worst.is_empty():
+				break
+			_release(my_club, worst, false, false)
+			HonourBoard.leave(self, worst, "delisted")
+			n += 1
+	merger_cut_due = false
+	if n > 0:
+		add_news("contract", "The club delisted %s after the merger, before Round 1." % (
+				"one player" if n == 1 else "%d players" % n))
+
+
 func tests_market(p: Dictionary, list: Array) -> bool:
 	# No free agency before 2012 (EraRules, Legacy mode): a wanted player
 	# out of contract re-signs or is traded; he cannot walk to the market.
@@ -12876,14 +12970,53 @@ func _sim_week_orders() -> Dictionary:
 		if not my_selection().is_empty():
 			set_selection({})
 		_skip_back_kids("season")
+	elif str(orders["youth"]) == "form":
+		_form_week()
 	return orders
 
 
 func _sim_week_after(orders: Dictionary, phase: String) -> String:
 	_skip_orders = {}
+	if _form_restore():
+		autosave()
 	if str(orders["press"]) == "assistant":
 		skip_media_conference()
 	return phase
+
+
+## "Best side on form" for one simmed week (SkipOrders, SimOrders; director,
+## 2026-11-15: selection "determined only by form", and your own side back
+## when you coach again): your selection is held the first week, then the
+## side is named on form (Ratings.select_on_form) from each player's Form, the
+## number Team selection shows (PlayerCondition.form). Written straight into
+## the season, not through set_selection: it is the week's side, not a pick
+## of yours, so no trial or run card reads it as one.
+func _form_week() -> void:
+	if season == null:
+		return
+	if _form_held == null:
+		_form_held = (season.selections.get(my_club, {}) as Dictionary).duplicate(true)
+	var fm := {}
+	for p in my_list:
+		var id := str(p["id"])
+		fm[id] = int(PlayerCondition.form(id, form_log, reserves_log)["value"])
+	var sel := Ratings.select_on_form(my_list, fm)
+	sel["DUAL_RUCK"] = user_dual_ruck
+	season.selections[my_club] = sel
+
+
+## Your own selection back after simmed weeks on form. True when one was held.
+func _form_restore() -> bool:
+	if _form_held == null:
+		return false
+	if season != null:
+		if (_form_held as Dictionary).is_empty():
+			season.selections.erase(my_club)
+		else:
+			season.selections[my_club] = _form_held
+	_form_held = null
+	mark_dirty()
+	return true
 
 
 ## Put a player (id) or a club ("club:CODE") on the shortlist, or take it
@@ -14770,6 +14903,8 @@ func skip_step(job: Dictionary) -> bool:
 		return false
 	if str(_skip_orders["youth"]) == "kids":
 		_skip_back_kids(to)
+	elif str(_skip_orders["youth"]) == "form":
+		_form_week()
 	advance()
 	job["weeks"] = int(job["weeks"]) + 1
 	return not is_sacked()
@@ -14784,6 +14919,8 @@ func skip_step_async(job: Dictionary) -> bool:
 		return false
 	if str(_skip_orders["youth"]) == "kids":
 		_skip_back_kids(to)
+	elif str(_skip_orders["youth"]) == "form":
+		_form_week()
 	await advance_async()
 	job["weeks"] = int(job["weeks"]) + 1
 	return not is_sacked()
@@ -14795,6 +14932,7 @@ func skip_finish(job: Dictionary) -> Dictionary:
 		return {"ok": false, "year": job["year"], "weeks": 0, "reason": "none"}
 	var year := int(job["year"])
 	var weeks := int(job["weeks"])
+	_form_restore()
 	if is_sacked() or season == null or not _skip_reached(str(job["to"])):
 		_batching = false
 		_skip_orders = {}

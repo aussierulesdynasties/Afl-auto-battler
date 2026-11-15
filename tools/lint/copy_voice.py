@@ -225,6 +225,27 @@ TRAINING_OLD = [
     "but two players are already learning", "comes off it", "until you lock", "his projected peak",
 ]
 
+MATCH = "scripts/ui/MatchScene.gd"
+## The match view pass (copy voice pass 3): the rewritten lines of MatchScene.gd, and the lines
+## they replaced. The feed keeps a broadcaster's voice (director, 2026-11-10); these are the coach's.
+MATCH_NEW = [
+    "Momentum is the run of play. A goal swings it to the side that kicked it, a behind less. It fades, and halves at every break.",
+    "The side on top wins a little more of the ball at centre bounces, stoppages and loose balls. Never a guarantee.",
+    "can run away with it. The further ahead, the more of the ball it wins. The run lasts longer and takes more goals to turn.",
+    "Momentum swings with each goal and fades with time. The side on top wins a little more of the ball. %s it for more.",
+    "\"What our calls did\"", "\"Our calls\"", "\"Our side\"", "\"Assistant's pick\"", "\"Ours:\"",
+    "An even quarter. None of our calls shifted the margin by a point.", "Our tag on %s: %d disposal%s, %d goal%s.",
+    "\"Back to our calls\"", "\"Our plan: \"", "\"Our best: %s\"", "\"Why we won\"", "\"Why we lost\"",
+    "\"Our synergies\"", "\"Our calls by quarter\"", "\"Our week\"", "Finish the match first. Skip to full time jumps ahead.",
+]
+MATCH_OLD = [
+    "a behind a little; it fades", "loose balls - never a guarantee", "can run away with it: the further ahead",
+    "fades with time; the side on top", "What your calls did", "\"Your calls\"", "\"Your side\"", "\"Your assistant's pick\"", "+= \"\\nYour assistant's pick\"",
+    "\"Yours:\"", "moved the needle", "\"your player\"", "\"your tagger\"", "\"your defender\"", "\"Your loose man\"",
+    "your best interceptor", "Your tag on", "Back to your calls", "\"Your plan: \"", "\"Your best: %s\"", "Why you won",
+    "Why you lost", "\"Your synergies\"", "\"Your week\"", "Finish the match first - use",
+]
+
 ## The event cards and press pass (copy voice pass 11, row 140): per file, rewritten lines and the
 ## lines they replaced. The full old -> new sheet is in the row 140 PR.
 STORY_PASS = {
@@ -346,7 +367,8 @@ CONTRACTS_PASS = {
 ## Every pinned pass: (file, the pass, its rewritten lines, the lines they replaced).
 PASSES = [(HUB, "copy voice pass 2, hub", HUB_NEW, HUB_OLD)] + [
     (path, "copy voice pass 5, team and coaching", v[0], v[1]) for path, v in TEAM_PASS.items()] + [
-    (TRAINING, "copy voice pass 6, training", TRAINING_NEW, TRAINING_OLD)] + [
+    (TRAINING, "copy voice pass 6, training", TRAINING_NEW, TRAINING_OLD),
+    (MATCH, "copy voice pass 3, match view", MATCH_NEW, MATCH_OLD)] + [
     (path, "copy voice pass 11, event cards and press", v[0], v[1]) for path, v in STORY_PASS.items()] + [
     (path, "copy voice pass 7, draft and pre-season", v[0], v[1]) for path, v in DRAFT_PASS.items()] + [
     (path, "copy voice pass 8, contracts and trades", v[0], v[1]) for path, v in CONTRACTS_PASS.items()]
@@ -382,7 +404,7 @@ PASSES += [(path, "copy voice pass 9, profile", v[0], v[1]) for path, v in PROFI
 GATES_PASS = {
     "scripts/sim/GateOdds.gd": [[
         "our shots %s more accurate\\nOur kicks gain %s more ground", "Their pressure bites %s less",
-        "we get a %s better chance at every stoppage", "%s less pressure in our back third",
+        "we get a %s better chance at every contest", "%s less pressure in our back third",
         "\\n(%s for a list that suits it)", "while we're behind\\nNothing when level or in front",
         "On top of a High Press, %s more", "With %s on him, about %d, until we call it off",
         "none: we have no midfielder on the ground to go to him", "our midfielders play their own game",
@@ -399,7 +421,7 @@ GATES_PASS = {
         "hurting you on the scoreboard", "Back your defenders", "You can call it off at the break", "your stars"]],
     "scripts/sim/CoachReport.gd": [[
         "A lift at the contest while we're chasing the game.", "It leans on our ball-winners and ruck.",
-        "It asks nothing special of our list.", "We gain less ground.",
+        "It leans on our ball users.", "We gain less ground.",
     ], ["while you are chasing", "does nothing for you", "Leans on your", "of your list", "you are a little exposed"]],
     "scripts/ui/MatchScene.gd": [["\" · \".join(parts)"], []],
 }
