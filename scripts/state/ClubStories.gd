@@ -602,7 +602,7 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
 			"pot_gap": pot - ovr, "contract_years": int(p.get("contract_years", 2)), "morale": ClubLife.morale(p),
 			"trust": t, "trust_band": Trust.band(t), "opinion": Trust.opinion(t),
 			# Under 50 he may refuse to re-sign (director 2026-11-08); "" at 50 or over.
-			"refuse_line": Contracts.REFUSE_ODDS % [Trust.opinion(t), gs.resign_refuse_chance(p)]
+			"refuse_line": Contracts.REFUSE_ODDS % [Trust.opinion(t), gs.resign_refuse_chance(p), name]
 					if gs.resign_refuse_chance(p) > 0 else "",
 			"discipline": int((p.get("attr", {}) as Dictionary).get("discipline", 50)),
 			# Recent form: his last games' Player Rating, averaged (the form the
