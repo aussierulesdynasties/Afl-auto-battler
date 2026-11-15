@@ -150,7 +150,9 @@ func _test_fitzroy_draft() -> void:
 			"The other %d go into the draft pool (%d)" % [fit.size() - LegacyRollover.LIONS_TAKE, left.size()])
 	_check(left.all(func(q): return int(q.get("draft_year", 0)) == 1996 and str(q.get("club", "x")) == ""),
 			"...in the 1996 National Draft, on no club")
-	_check(not GameState.intake_order().has("FIT") and GameState.intake_order().size() == GameDB.active_clubs(1996).size() - 1,
+	# The fixture season is 1990's league (14 clubs), so every club on its
+	# ladder but Fitzroy has a seat.
+	_check(not GameState.intake_order().has("FIT") and GameState.intake_order().size() == GameState.season.ladder_sorted().size() - 1,
 			"Fitzroy has no seat at the 1996 draft (%s)" % str(GameState.intake_order()))
 	_check(not GameState.draft_pick_owners(1996).has("1:CAR"), "A pick Fitzroy held goes back to its club (%s)" % str(GameState.draft_pick_owners(1996)))
 	_check(GameState.news.any(func(n): return "go into the 1996 National Draft" in str(n.get("text", ""))), "The news says where the rest go")
@@ -716,11 +718,11 @@ func _test_canon_move(id: String, how: String) -> void:
 			LegacyRollover.week(GameState)
 			_check(GameState.week_events.size() == 1, "%s: the card comes once" % id)
 		LegacyRollover.canon_moves(GameState, int(m["year"]))
-		var moved := false
+		# A club entering that year takes him onto the list it is building
+		# when it has the expansion package, else onto league_lists (canon_moves).
+		var moved := (GameState.league_lists.get(to, []) as Array).has(star)
 		if GameDB.enter_year(to) == int(m["year"]):
-			moved = ExpansionBuild.list_of(GameState, to).has(star)
-		else:
-			moved = (GameState.league_lists.get(to, []) as Array).has(star)
+			moved = moved or ExpansionBuild.list_of(GameState, to).has(star)
 		var at_home := (GameState.league_lists[from] as Array).has(star)
 		_check(moved != at_home, "%s: he is at exactly one club (moved %s, home %s)" % [id, moved, at_home])
 		if how != "fight":
