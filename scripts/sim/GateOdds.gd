@@ -44,7 +44,7 @@ const PEP_COST := {
 }
 
 # Who tags (the pre-bounce and break sheets).
-const TAG_GIVES := "%s of his own ball and contest work"
+const TAG_GIVES := "%s of the tagger's own ball and contest work"
 # What the tag does to their man, in his touches a match (director, 2026-11-10).
 const TAG_TOUCHES := "Usually %d touches. Tagged, about %d."
 # The Tag call at a break (director 2026-11-10, "Gain / Cost everywhere"):
@@ -113,7 +113,7 @@ static func cost(s: String) -> String:
 static func tag_gives_pct() -> String:
 	var contest := pct(MatchSim.TAGGER_COST)
 	var ball := pct(1.0 - MatchSim.TAGGER_BALL)
-	return contest if contest == ball else "%s of his ball and %s" % [ball, contest]
+	return contest if contest == ball else "%s of the tagger's ball and %s" % [ball, contest]
 
 
 static func tag_gives() -> String:
@@ -326,7 +326,7 @@ static func focus_texts(slot: String, who: String) -> Array:
 
 # Defensive set-up (M6), sized for the men in the jobs.
 const LOOSE_GAIN := "%s gets to about %s of their entries\nHe makes the mark harder when he does"
-const LOOSE_COST := "he leaves his man on about %s of entries\nWhen he is late or loses, their shot is up to %s more dangerous"
+const LOOSE_COST := "%s leaves his man on about %s of entries\nWhen he is late or loses, their shot is up to %s more dangerous"
 const COVER_GAIN := "%s reaches %s fewer contests with %s on him"
 const COVER_COST := "%s is %s less often a target inside 50"
 const MAN_GAIN := "every defender holds his man\nNo space opens behind a loose man"
@@ -351,7 +351,7 @@ static func defence_texts(key: String, loose: Dictionary, minder: Dictionary, sp
 	if (key == "loose" or key == "both") and not loose.is_empty():
 		gains.append(LOOSE_GAIN % [GameDB.player_display_name(loose), about_pct(loose_reach(loose))])
 		var go := MatchSim.LOOSE_GO * (MatchSim.ROAM_REACH if MatchSim.zone_intercepts else 1.0)
-		costs.append(LOOSE_COST % [about_pct(go), pct(float(MatchSim.LOOSE_LATE_SPACE["marked"]))])
+		costs.append(LOOSE_COST % [GameDB.player_display_name(loose), about_pct(go), pct(float(MatchSim.LOOSE_LATE_SPACE["marked"]))])
 	if (key == "cover" or key == "both") and not minder.is_empty() and not spare.is_empty():
 		var roam := float(MatchSim.MINDER_ROAM["specialist" if Traits.has(minder, "def_forward") else "other"])
 		gains.append(COVER_GAIN % [GameDB.player_display_name(spare), pct(1.0 - roam), GameDB.player_display_name(minder)])
