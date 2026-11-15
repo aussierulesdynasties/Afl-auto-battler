@@ -3286,7 +3286,7 @@ func _ruck_tap() -> void:
 
 
 ## Side 0's share of the taps between the two rucks at the bounce. A Ruck
-## king wins RUCK_KING times the hit-outs he would (two cancel out).
+## king wins RUCK_KING times the hit-outs the ruck would (two cancel out).
 func _tap_share(ruck: Array) -> float:
 	var king0 := not (ruck[0] as Array).is_empty() and _trait(ruck[0][0], "ruck_king")
 	var king1 := not (ruck[1] as Array).is_empty() and _trait(ruck[1][0], "ruck_king")
