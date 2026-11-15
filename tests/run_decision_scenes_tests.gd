@@ -659,7 +659,7 @@ func _test_live_spots() -> void:
 	_check((X.best_look(Vector2.ZERO, pack, Vector2(0, 1)) as Vector2).dot(Vector2(0, -1)) > 0.9, "a camera turns to where the players are")
 	# Near a goal, the look with its back to the fence is passed over for one with room, even
 	# with the pack up the ground that way.
-	var by_goal := Vector2(0, VignetteGround.GOAL_Y - 8.0)
+	var by_goal := Vector2(0, float(load("res://scripts/ui/match/VignetteGround.gd").GOAL_Y) - 8.0)
 	var up_ground := [Vector2(0, by_goal.y - 20.0), Vector2(2, by_goal.y - 30.0), Vector2(-3, by_goal.y - 40.0)]
 	var turned: Vector2 = X.best_look(by_goal, up_ground, Vector2(0, -1), 35.0)
 	_check(not X.has_room(by_goal, Vector2(0, -1), 35.0) and X.has_room(by_goal, turned, 35.0),
