@@ -15,6 +15,10 @@ const SUITE_SEED := 2027
 const PHONE := Vector2i(390, 844)
 ## A sound later than this after its event reads as late (about three frames at 60 a second).
 const GAP_LIMIT_MS := 50.0
+## Seconds of play the test moves the pitch on each frame, besides the frame's own.
+## The director steps in sixtieths whatever it is given (MatchDirector.SUBSTEP),
+## so a long step plays the same events in fewer drawn frames.
+const WATCH_STEP := 2.0
 
 var _state: Node
 var _checks := 0
@@ -250,7 +254,7 @@ func _watch(no_crowd: bool) -> Control:
 			continue
 		var pitch = m.get("_pitch")
 		if pitch != null and pitch.playing:
-			pitch._process(0.25)
+			pitch._process(WATCH_STEP)
 		await process_frame
 	return m
 

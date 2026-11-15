@@ -252,6 +252,15 @@ func _test_unavailable_not_left_out() -> void:
 			q[str(k[0])] = 1
 			q["morale"] = base
 			rivals.append([str(code), q])
+	# Geelong's match and two others: four rival clubs (eight of their men) are
+	# enough to read, and the round's other matches are most of its time.
+	var rm: Array = GameState.season.fixture[GameState.season.round_index]
+	var others := 0
+	for m in rm.duplicate():
+		if str(m["home"]) != "GEE" and str(m["away"]) != "GEE":
+			others += 1
+			if others > 2:
+				rm.erase(m)
 	GameState.advance()
 	var res := GameState.last_match
 	var side := 0 if str(res["home"]) == "GEE" else 1
@@ -310,9 +319,8 @@ func _test_events() -> void:
 	_check(quiet > 5 and quiet < 35, "Some weeks are quiet (%d of 59)" % quiet)
 	_check(seen.has("board_wants_answers") and seen.has("training_extra_session"),
 			"Losing streaks bring the board to your door (%s)" % str(seen.keys()))
-	# Resolving: rest a sore star and he sits out.
-	GameState.reset()
-	GameState.start_season("GEE", GameDB.club_list("GEE"))
+	# Resolving: rest a sore star and he sits out. The deck walk above read a
+	# context copy and its own story state, so the same fresh career serves.
 	var star: Dictionary = GameState.my_list[0]
 	GameState.week_event = GameState.story_card("health_pulled_up_sore", star)
 	GameState.resolve_week_event(0)
@@ -322,7 +330,7 @@ func _test_events() -> void:
 		if (side[k] as Array).has(str(star["id"])):
 			picked = true
 	_check(bool(star.get("rested", false)) and not picked, "Resting a sore star keeps him out of the side")
-	GameState.advance()
+	_advance_mine()
 	_check(not star.has("rested"), "He is back for the next week")
 	# An unanswered card gives nothing for free: a training card left alone
 	# is a normal week (no XP, no morale, no fresh legs) ...
@@ -340,7 +348,7 @@ func _test_events() -> void:
 				and ClubLife.morale(q) == int(morale_before[str(q["id"])]) and not q.has("fresh") and not q.has("heavy_legs")
 	_check(bool(ev.get("resolved", false)) and int(ev["choice"]) == -1 and untouched,
 			"An unanswered training card changes nothing")
-	GameState.advance()
+	_advance_mine()
 	# ... but not acting has its consequences: a sore star nobody rested
 	# plays sore, and silence over an incident costs the board's confidence.
 	var sore_star: Dictionary = {}
@@ -364,7 +372,7 @@ func _test_events() -> void:
 	_check(GameState.board_confidence() == conf_before and ClubLife.morale(paper_man) == paper_morale
 			and Trust.value(GameState.relations, Trust.player_key(str(paper_man["id"]))) < paper_trust,
 			"Saying nothing about the papers costs his trust, not the board, and lifts nobody")
-	GameState.advance()
+	_advance_mine()
 	var heavy := GameState.story_card("training_extra_session")
 	GameState.week_event = heavy
 	GameState.resolve_week_event(0)
@@ -437,7 +445,7 @@ func _test_event_tradeoffs() -> void:
 	side["OUT"] = [str(sulk["id"])]
 	GameState.set_selection(side)
 	var before := ClubLife.morale(sulk)
-	GameState.advance()
+	_advance_mine()
 	GameState.set_selection({})
 	if int(sulk.get("injury_weeks", 0)) <= 0:
 		_check(ClubLife.morale(sulk) <= before - 12 + 2, "Left out after the talk, it sours (%d -> %d)" % [before, ClubLife.morale(sulk)])
@@ -540,7 +548,7 @@ func _test_event_decisions() -> void:
 	GameState.resolve_week_event(0)
 	_check(Injuries.chance(q) > r0 and float(MatchSim._start_energy(q)) < 100.0,
 			"A heavy week: heavier legs and more soft-tissue risk")
-	GameState.advance()
+	_advance_mine()
 	var q2: Dictionary = GameState.my_list[6]
 	var m0 := ClubLife.morale(q2)
 	var r1 := Injuries.chance(q2)
@@ -579,12 +587,12 @@ func _test_event_decisions() -> void:
 	sad["morale"] = 30
 	GameState.week_event = GameState.story_card("selection_unhappy", sad)
 	GameState.resolve_week_event(0)
-	GameState.advance()
+	_advance_mine()
 	var after_one := ClubLife.morale(sad)
 	# Only the promise is measured: next week's card (settled with its
 	# default when left unanswered) can move the whole group's morale.
 	GameState.week_event = {}
-	GameState.advance()
+	_advance_mine()
 	_check(not sad.has("expects_game") and absi(ClubLife.morale(sad) - after_one) <= 6,
 			"A promised game is judged once, not every week after")
 	# --- Repetition: never the same card two weeks running with others about
@@ -612,21 +620,32 @@ func _test_sacking() -> void:
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
 	GameState.board["goal"] = {"key": "top4", "text": "Finish in the top four", "pos": 0}
 	GameState.board["confidence"] = 10
+	# The board's season-end judgement on a home and away season that left GEE
+	# last, built by hand: the real season's close (finals, verdict) is
+	# _test_season_flow's; this is the warning-then-sack rule.
 	var season = GameState.season
+	var codes: Array = season.ladder.keys()
+	codes.sort()
+	codes.erase("GEE")
+	codes.append("GEE")
+	for i in range(codes.size()):
+		var row: Dictionary = season.ladder[codes[i]]
+		row["w"] = 20 - i
+		row["l"] = 3 + i
+		row["d"] = 0
+		row["p"] = 23
+		row["pf"] = 2400 - i * 20
+		row["pa"] = 2000
 	season.round_index = season.fixture.size()
-	GameState.ensure_finals()
-	while not season.is_season_over():
-		GameState.advance()
-	var met_flag: bool = GameState.premier() == "GEE"
-	if not met_flag:
-		_check(bool(GameState.board.get("warned", false)) and not GameState.is_sacked(),
-				"A first bad season brings a final warning")
-		GameState.board["confidence"] = 10
-		GameState._board_season_end()
-		_check(GameState.is_sacked(), "A second one and you are sacked")
-	else:
-		print("SKIP: GEE won the flag, so the warning never comes")
-		print("SKIP: GEE won the flag, so the sacking never comes")
+	season.recalc_ladder()
+	_check(GameState.my_position() == codes.size() and GameState.premier() != "GEE",
+			"GEE finish last and win no flag (%d)" % GameState.my_position())
+	GameState._board_season_end()
+	_check(bool(GameState.board.get("warned", false)) and not GameState.is_sacked(),
+			"A first bad season brings a final warning")
+	GameState.board["confidence"] = 10
+	GameState._board_season_end()
+	_check(GameState.is_sacked(), "A second one and you are sacked")
 
 
 ## Board patience: how many poor seasons the board puts up with before it
@@ -658,10 +677,10 @@ func _test_board_patience() -> void:
 	# The same poor career through the real season end, seeded.
 	var warned_in := {}
 	var sacked_in := {}
+	GameState.reset()
+	GameState.start_season("GEE", GameDB.club_list("GEE"))
 	for step in ["patient", "fair", "ruthless"]:
-		GameState.set_new_career_dial("board_patience", step)
-		GameState.reset()
-		GameState.start_season("GEE", GameDB.club_list("GEE"))
+		_board_dial(step)
 		warned_in[step] = 0
 		sacked_in[step] = 0
 		for n in range(1, 5):
@@ -678,9 +697,7 @@ func _test_board_patience() -> void:
 			and int(warned_in["fair"]) == 1 and int(sacked_in["fair"]) == 2,
 			"The same poor career is warned in season 2 on Patient and season 1 on Ruthless (warned %s, sacked %s)" % [str(warned_in), str(sacked_in)])
 	# Patient said so in the board's words, and the count survives a save.
-	GameState.set_new_career_dial("board_patience", "patient")
-	GameState.reset()
-	GameState.start_season("GEE", GameDB.club_list("GEE"))
+	_board_dial("patient")
 	GameState.board["goal"] = {"key": "top4", "text": "Finish in the top four", "pos": 0}
 	GameState.board["confidence"] = 10
 	GameState._board_season_end()
@@ -699,10 +716,10 @@ func _test_board_patience() -> void:
 func _test_board_warning_line() -> void:
 	var line := ClubLife.POOR_LINE
 	_check(line == 40, "The warning line is 40")
+	GameState.reset()
+	GameState.start_season("GEE", GameDB.club_list("GEE"))
 	for step in ["patient", "fair", "ruthless"]:
-		GameState.set_new_career_dial("board_patience", step)
-		GameState.reset()
-		GameState.start_season("GEE", GameDB.club_list("GEE"))
+		_board_dial(step)
 		var rules := GameState.difficulty_rules()
 		# The board's words keep the dial's own season line: at 35 Patient and Fair are
 		# "Under pressure", Ruthless (line 40) is "In trouble"; all three warn.
@@ -736,9 +753,7 @@ func _test_board_warning_line() -> void:
 		_check(GameState.board_warning().ends_with("and you are sacked."),
 				"%s: on a final warning the copy says the next poor season is the sack" % step)
 	# Patient: the first poor season is forgiven, so the copy does not promise a warning yet.
-	GameState.set_new_career_dial("board_patience", "patient")
-	GameState.reset()
-	GameState.start_season("GEE", GameDB.club_list("GEE"))
+	_board_dial("patient")
 	GameState.board["confidence"] = 38
 	GameState.board["poor_seasons"] = 0
 	var forgiving := GameState.board_warning()
@@ -747,6 +762,15 @@ func _test_board_warning_line() -> void:
 			"Patient: the first poor season is marked against you, the second brings the warning")
 	GameState.set_new_career_dial("board_patience", "fair")
 	GameState.delete_saved_career()
+
+
+## This career's board on dial `step`, as a new career on it starts: no
+## warning, no poor seasons counted, not sacked.
+func _board_dial(step: String) -> void:
+	GameState.set_new_career_dial("board_patience", step)
+	GameState.board_patience = step
+	for k in ["warned", "poor_seasons", "sacked"]:
+		GameState.board.erase(k)
 
 
 ## Team form: bounded, saturating, quick to turn, neutral by default, and
@@ -811,10 +835,18 @@ func _test_team_form() -> void:
 	GameState.reset()
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
 	_check(is_zero_approx(GameState.season.club_form("GEE")), "Every club starts the season steady")
-	for i in range(6):
-		GameState.week_event = {}
-		GameState.advance()
+	# Six results of GEE's own, built by hand: form reads the club's results,
+	# not how the matches were played.
+	var sea = GameState.season
+	var made := [[90, 60], [50, 80], [70, 70], [100, 40], [66, 99], [88, 77]]
+	for i in range(made.size()):
+		var g := {"home": "GEE", "away": "SYD", "score": made[i], "round": i + 1}
+		sea.record_regular(g)
+		sea.results.append([g])
+		sea.round_index += 1
+	sea.recalc_ladder()
 	var res: Array = GameState.season.club_results("GEE")
+	_check(res == ["W", "L", "D", "W", "L", "W"], "GEE's own results, in order (%s)" % str(res))
 	_check(res.size() == 6, "Six rounds give six results (%d)" % res.size())
 	var info := GameState.club_form_info("GEE")
 	_check(is_equal_approx(float(info["value"]), ClubLife.team_form(res))
@@ -889,6 +921,8 @@ func _test_how_we_play_unlocks_on_the_third_game() -> void:
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
 	var counts := []
 	for i in range(3):
+		# Only GEE's game is under test: the round's other matches are left out.
+		_mine_only()
 		if i == 1:
 			GameState.advance()
 		elif GameState.prepare_interactive_match():
@@ -934,8 +968,11 @@ func _test_coaching_hub() -> void:
 	# Three rounds: no style read yet before three games, then one appears.
 	_check(int(GameState.how_we_play()["games"]) == 0 and (GameState.how_we_play()["win"] as Array).is_empty(),
 			"Nothing is said about how you play before a game")
-	for i in range(6):
+	# Full rounds (the read compares you with the league), as few as reach the third game.
+	var rounds := 0
+	while int(GameState.how_we_play()["games"]) < 3 and rounds < 6:
 		GameState.advance()
+		rounds += 1
 	var style := GameState.how_we_play()
 	_check(int(style["games"]) >= 3 and (style["win"] as Array).size() <= 2 and (style["beaten"] as Array).size() <= 2,
 			"After a few games, at most two lines each on how you win and get beaten (%s)" % str(style))
@@ -1002,7 +1039,7 @@ func _test_board_confidence() -> void:
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
 	GameState._settle_week_event()
 	GameState.week_event = {}
-	GameState.advance()
+	_advance_mine()
 	_check(GameState.board_why() != "" and GameState.board_state() != "", "After a match the board has a mood and a reason")
 	GameState.delete_saved_career()
 
@@ -1038,6 +1075,24 @@ func _in_side(side: Dictionary, p: Dictionary) -> bool:
 		if (side[k] as Array).has(str(p["id"])):
 			return true
 	return false
+
+
+## Plays the coming round with only `code`'s match in it: the other matches
+## are not under test where a check reads only your own club's week, and they
+## are most of a round's time.
+func _advance_mine(code := "GEE") -> void:
+	_mine_only(code)
+	GameState.advance()
+
+
+func _mine_only(code := "GEE") -> void:
+	var s = GameState.season
+	if s == null or s.round_index >= s.fixture.size():
+		return
+	var rm: Array = s.fixture[s.round_index]
+	for m in rm.duplicate():
+		if str(m["home"]) != code and str(m["away"]) != code:
+			rm.erase(m)
 
 
 func _fresh_season() -> void:
@@ -1222,7 +1277,7 @@ func _test_backing_flow() -> void:
 	# Three games: both play every week (healed between rounds so the run is
 	# not at the mercy of a random injury) and the runs are done.
 	for i in range(Backing.RUN_GAMES):
-		GameState.advance()
+		_advance_mine()
 		for q in [kid, low]:
 			for key in ["injury_weeks", "injury_kind", "suspension_weeks"]:
 				q.erase(key)
@@ -1246,14 +1301,14 @@ func _test_backing_flow() -> void:
 	GameState.set_selection(side)
 	var m0 := ClubLife.morale(k2)
 	var c0 := ClubLife.morale(control)
-	GameState.advance()
+	_advance_mine()
 	var m1 := ClubLife.morale(k2)
 	var c1 := ClubLife.morale(control)
 	_check(str(Backing.ledger(k2)[0]["state"]) == "broken" and not Backing.is_active(k2) and not k2.has("expects_game"),
 			"Left out while fit, the run is broken")
 	_check((m0 - m1) - (c0 - c1) >= 5,
 			"Breaking the promise costs more than being left out (%d v %d)" % [m0 - m1, c0 - c1])
-	GameState.advance()
+	_advance_mine()
 	var m2 := ClubLife.morale(k2)
 	var c2 := ClubLife.morale(control)
 	_check((m1 - m2) - (c1 - c2) <= 2, "It stings once: a second week costs no more than for anyone else left out")
@@ -1266,13 +1321,13 @@ func _test_backing_flow() -> void:
 	k3["injury_weeks"] = 1
 	var run3: Dictionary = Backing.ledger(k3)[0]
 	var mm0 := ClubLife.morale(k3)
-	GameState.advance()
+	_advance_mine()
 	# The ordinary drift for a player not on the field is allowed; the sting is not.
 	_check(str(run3["state"]) == "active" and int(run3["played"]) == 0 and ClubLife.morale(k3) >= mm0 - 5,
 			"An injury that ends with the round does not break the run (%d -> %d)" % [mm0, ClubLife.morale(k3)])
 	_check(Backing.note(k3) != "" and not Backing.note(k3).contains("when available"),
 			"Fit again, the reminder is back to the plain line")
-	GameState.advance()
+	_advance_mine()
 	_check(int(run3["played"]) == 1, "Named again when he is fit, he plays game one")
 	GameState.delete_saved_career()
 
@@ -1356,7 +1411,7 @@ func _test_backing_named_side() -> void:
 		kid.erase("suspension_weeks")
 		_check(_in_side(GameState.current_side(), kid), "Round %d of the run: he is in the side" % (i + 1))
 		GameState.week_events = []
-		GameState.advance()
+		_advance_mine()
 	var run: Dictionary = Backing.ledger(kid).back() if not Backing.ledger(kid).is_empty() else {}
 	_check(str(run.get("state", "")) == "done" and int(run.get("played", 0)) == Backing.RUN_GAMES,
 			"The run is played out in full (%s)" % str(run))
@@ -1444,7 +1499,7 @@ func _test_backing_suspended_named_side() -> void:
 	_check(_named_ids(GameState.my_selection()).has(str(kid["id"])), "Suspended: he is still named for his run")
 	_check(not _in_side(GameState.current_side(), kid), "Suspended: he does not take the field this week")
 	GameState.week_events = []
-	GameState.advance()
+	_advance_mine()
 	_check(Backing.is_active(kid) and int(Backing.current(kid).get("played", -1)) == 0,
 			"The run waits out the suspension, unbroken")
 	kid.erase("suspension_weeks")
@@ -1478,7 +1533,7 @@ func _test_promise_no_room() -> void:
 			"...he is not a sixth bench name")
 	var trust := Trust.value(GameState.relations, Trust.player_key(str(kid["id"])))
 	GameState.week_events = []
-	GameState.advance()
+	_advance_mine()
 	_check(Backing.is_active(kid) and int(Backing.current(kid).get("played", -1)) == 0,
 			"Left out of a match he could not be named in: the run waits, unbroken (%s)" % str(Backing.current(kid)))
 	_check(Trust.value(GameState.relations, Trust.player_key(str(kid["id"]))) >= trust,
@@ -1633,29 +1688,32 @@ func _test_backing_lasts_the_season() -> void:
 	var id := str(kid["id"])
 	_check(GameState.back_player(id) != "", "A mid-list young player can be backed")
 	kid["injury_weeks"] = 60
-	GameState.advance()
+	_advance_mine()
 	GameState.save_career()
 	_check(GameState.load_career(), "The career loads")
 	var again: Dictionary = GameState.list_player(id)
 	_check(not again.is_empty() and Backing.is_active(again) and int(Backing.current(again)["played"]) == 0
 			and Backing.note(again).ends_with("when available."),
 			"The run is saved with the career, waiting on his injury")
+	# Two more rounds out injured prove the run waits; the rest of the home and
+	# away season is skipped (only the finals are played), which keeps this
+	# test to seconds instead of a full season of matches.
+	for i in range(2):
+		_advance_mine()
+	_check(Backing.is_active(GameState.list_player(id)) and int(Backing.current(GameState.list_player(id))["played"]) == 0,
+			"A long injury keeps the run waiting, round after round")
+	var season: Season = GameState.season
+	season.round_index = season.fixture.size()
+	GameState.ensure_finals()
 	var guard := 0
-	while not GameState.season.is_season_over() and guard < 60:
+	while not season.is_season_over() and guard < 60:
 		guard += 1
 		GameState.advance()
 	_check(Backing.is_active(GameState.list_player(id)), "A long injury keeps the run waiting through the season")
-	if GameState.begin_intake_draft():
-		var d: Draft = GameState.draft
-		var g2 := 0
-		while not d.is_finished() and g2 < 3000:
-			g2 += 1
-			var c := d._best_ai_pick(d.current_club())
-			if c.is_empty() or not d._draft_pick(d.current_club(), c):
-				d._skip_current_pick()
-		GameState.finish_intake_draft()
-	else:
-		GameState.start_next_season()
+	# The roll-over itself (GameState._start_next_season, which the intake
+	# draft's finish also runs) is what lapses the run: the draft's picks are
+	# not under test here.
+	_check(GameState.start_next_season(), "The season rolls over")
 	var next: Dictionary = GameState.list_player(id)
 	if next.is_empty():
 		print("SKIP: he left the list in the roll-over, so there is no run to lapse")
@@ -1772,7 +1830,7 @@ func _test_firsts_flow() -> void:
 	Backing.start(unknown, year, 0, 0)
 	var who := GameDB.player_display_name(kid)
 	var kid_id := str(kid["id"])
-	GameState.advance()
+	_advance_mine()
 	var d := Firsts.get_one(kid, "debut")
 	_check(not d.is_empty() and int(d["year"]) == year and str(d["label"]) == "Round 1",
 			"His first game is kept when he plays it (%s)" % str(d))
@@ -1789,7 +1847,7 @@ func _test_firsts_flow() -> void:
 	for i in range(Backing.RUN_GAMES - 1):
 		for key in ["injury_weeks", "injury_kind", "suspension_weeks"]:
 			kid.erase(key)
-		GameState.advance()
+		_advance_mine()
 	# Named as the season names it ("Round 3 · Gather Round" when it is one).
 	var last_round: String = GameState.season.round_label(Backing.RUN_GAMES - 1)
 	_check(not Backing.finished_in(kid, year, last_round).is_empty(),
@@ -1896,6 +1954,7 @@ func _test_first_goal_candidates() -> void:
 ## next live match does not offer it again.
 func _test_first_goal_any_player_once() -> void:
 	_fresh_season()
+	_mine_only()
 	_check(GameState.prepare_interactive_match(), "A live match is set up (row 106)")
 	var me := 0 if str(GameState.pending_match["home"]) == GameState.my_club else 1
 	var ground: Array = GameState.pending_sim.squads[me].ground
@@ -1928,6 +1987,7 @@ func _test_first_goal_any_player_once() -> void:
 			"The first goal survives a save and reload")
 	_check(GameState.career_goals_before(back) == 1, "...and so does the goal itself")
 	# The next live match: he is no longer a candidate, so the line is never said twice.
+	_mine_only()
 	_check(GameState.prepare_interactive_match(), "The next live match is set up")
 	var me2 := 0 if str(GameState.pending_match["home"]) == GameState.my_club else 1
 	var named := []
@@ -2028,8 +2088,8 @@ func _test_fact_talks() -> void:
 	_check(opened_on == "dropped", "When something happened, the card opens on it (%s)" % opened_on)
 	_check(fallback == "mood", "With nothing behind it, a low mood still brings the old card")
 	# Real matches: the round he last played, weeks without a game, his numbers.
-	GameState.advance()
-	GameState.advance()
+	_advance_mine()
+	_advance_mine()
 	var played_id := str(GameState.last_side[0]) if not GameState.last_side.is_empty() else ""
 	var pl := GameState.list_player(played_id)
 	var lg: Array = pl.get("last_game", []) if not pl.is_empty() else []
@@ -2061,7 +2121,7 @@ func _test_fact_talks() -> void:
 	_check(not f.is_empty() and str(f[-1]["d"]) == "dropped|promise" and str(f[-1]["out"]) == "",
 			"Your answer is kept as a career fact (%s)" % str(f))
 	GameState.set_selection({})
-	GameState.advance()
+	_advance_mine()
 	f = CareerFacts.of(GameState.career_facts, vid, "talk")
 	var news_said := ""
 	for n in GameState.news.slice(0, 12):
@@ -2094,7 +2154,7 @@ func _test_fact_talks() -> void:
 		(side[k] as Array).erase(oid)
 	side["OUT"] = [oid]
 	GameState.set_selection(side)
-	GameState.advance()
+	_advance_mine()
 	GameState.set_selection({})
 	var of := CareerFacts.of(GameState.career_facts, oid, "talk")
 	if int(other.get("injury_weeks", 0)) <= 0:
@@ -2321,5 +2381,5 @@ func _test_promised_game_named_side() -> void:
 	kid.erase("injury_weeks")
 	kid.erase("suspension_weeks")
 	GameState.week_events = []
-	GameState.advance()
+	_advance_mine()
 	_check(GameState.last_side.has(str(kid["id"])), "...and he plays that game")

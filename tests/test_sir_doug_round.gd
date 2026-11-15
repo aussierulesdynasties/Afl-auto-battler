@@ -45,6 +45,7 @@ func run(tree: SceneTree) -> void:
 	_t("_test_round_and_slots")
 	_t("_test_bye_next_round")
 	_t("_test_back_to_back_byes")
+	_t("_test_era_gate")
 	_t("_test_save_reload_keeps_record")
 	_t("_test_old_save")
 	_t("_test_new_season")
@@ -136,6 +137,24 @@ func _test_back_to_back_byes() -> void:
 
 
 ## "Store the selected season design in the save so reloading cannot change it."
+## Legacy: the round keeps its real years. None before 2007, Indigenous Round
+## from 2007, Sir Doug Nicholls Round from 2016.
+func _test_era_gate() -> void:
+	_new_career()
+	var now := int(gs.season_year)
+	gs.season_year = 1990
+	gs.sir_doug = {}
+	_check(SirDougRound.round_of(gs) == -1, "A 1990 season has no Indigenous Round (%d)" % SirDougRound.round_of(gs))
+	_check(SirDougRound.round_for(gs, CLUB) == -1, "...and no club marks one")
+	gs.season_year = 2010
+	gs.sir_doug = {}
+	_check(SirDougRound.round_of(gs) == 10, "A 2010 season has the round (%d)" % SirDougRound.round_of(gs))
+	_check(SirDougRound.name_for(2010) == "Indigenous Round", "In 2010 it is Indigenous Round")
+	_check(SirDougRound.name_for(2016) == SirDougRound.NAME, "From 2016 it is Sir Doug Nicholls Round")
+	gs.season_year = now
+	gs.sir_doug = {}
+
+
 func _test_save_reload_keeps_record() -> void:
 	_new_career()
 	# A record written by another build (another round, a stored design id).
@@ -158,7 +177,8 @@ func _test_old_save() -> void:
 	_check(gs.load_career(), "An old save loads")
 	_check(gs.sir_doug.is_empty(), "It starts with no record")
 	_check(SirDougRound.round_of(gs) == SirDougRound.ROUND, "The round is set for its season on first use")
-	_check(gs.save_career() and gs.load_career() and int(gs.sir_doug.get("round", -1)) == SirDougRound.ROUND,
+	# What a save writes, read without the disk's round trip (the test above has one).
+	_check(int((gs._save_state().get("sir_doug", {}) as Dictionary).get("round", -1)) == SirDougRound.ROUND,
 			"...and saved from then on")
 
 
@@ -256,17 +276,20 @@ func _test_hub_card() -> void:
 	_check(name_l != null and _inside(name_l, 390), "It fits a 390-wide phone")
 	hub.queue_free()
 	await _settle()
-	gs.season.round_index = 3
-	hub = load("res://scenes/HubScene.tscn").instantiate()
-	root.add_child(hub)
-	await _settle()
-	_check(hub.find_child("SirDougContext", true, false) == null, "Round 4's card says nothing about it")
-	hub.queue_free()
-	await _settle()
 	# Your Round 12 opponent marks it after its bye: your card does not repeat
-	# the round (only the club off the bye marks it, 2.73).
+	# the round (only the club off the bye marks it, 2.73). That card is also
+	# the week after your round, so another week's card (Round 4) is not built
+	# as well, a hub each (director 2026-11-14: "shrink the tests less than 10
+	# seconds too").
 	var r := SirDougRound.round_of(gs)
 	if SirDougRound.round_for(gs, CLUB) != r:
+		gs.season.round_index = 3
+		hub = load("res://scenes/HubScene.tscn").instantiate()
+		root.add_child(hub)
+		await _settle()
+		_check(hub.find_child("SirDougContext", true, false) == null, "Round 4's card says nothing about it")
+		hub.queue_free()
+		await _settle()
 		return
 	var opp := ""
 	for x in gs.season.fixture[r + 1]:

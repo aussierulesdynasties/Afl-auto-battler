@@ -92,7 +92,9 @@ func _show_week_ask() -> void:
 	# opens when the hub comes back.
 	if not GameState.media_conference_pending() and _show_new_event():
 		return
-	if not MidseasonDraft.carnival_lines(GameState).is_empty():
+	if YearEvents.top_up_waiting(GameState):
+		TopUpSheet.open(self, _after_ask)
+	elif not MidseasonDraft.carnival_lines(GameState).is_empty():
 		_show_carnival()
 	elif MidseasonDraft.waiting(GameState):
 		_show_midseason_pick()
@@ -193,10 +195,14 @@ func _show_season_wrap() -> void:
 	if not trades.is_empty():
 		v.add_child(UiKit.spacer(4))
 		v.add_child(UiKit.lbl("Trade period", 14, UiKit.MUTED, true))
+		# Every club and every player in the club's colours, red clubs too
+		# (director 2026-11-12, row 176). The lists are read after the trade
+		# period, so a traded player wears the club he moved to.
 		for i in range(trades.size()):
-			var l := UiKit.lbl(str(trades[i]), 14, UiKit.TEXT)
+			var l := NameInk.label(str(trades[i]), _league_names(), 14, UiKit.TEXT, false, true)
 			l.name = "WrapTrade_%d" % i
-			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			if l is Label:
+				(l as Label).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			v.add_child(l)
 	# Free agents you were after who chose a rival, and why (P-18): the
 	# rival's name in its ink. This session's market only (not saved).
@@ -462,7 +468,7 @@ func _week_title(season: Season) -> String:
 	if season.is_season_over():
 		return "%d season" % GameState.season_year
 	if not season.is_regular_done():
-		return "Round %d of %d" % [season.round_index + 1, season.regular_rounds()]
+		return season.round_progress(season.round_index)
 	return _finals_label()
 
 
@@ -799,8 +805,7 @@ func _job_offers(v: VBoxContainer, jobs: Array) -> void:
 			row.add_child(_offer_line("The list: " + str(o["list"]), UiKit.TEXT))
 		row.add_child(_offer_line("The board's goal: " + str(o["goal"]), UiKit.TEXT))
 		var take := _nav_button("Take the job", func():
-			if ClubMoves.take_job(GameState, code):
-				_build())
+			_move_clubs(code, func(): return ClubMoves.take_job(GameState, code)))
 		take.name = "TakeJob_%s" % code
 		row.add_child(take)
 	v.add_child(UiKit.rule())
@@ -872,7 +877,18 @@ func _league_names() -> Dictionary:
 ## The league's front page in small: the lead story and a few headlines; a
 ## tap opens the whole page.
 func _news_card() -> Control:
-	return NewsFront.mini(GameState.news, GameState.my_club, _show_news, _league_names())
+	return NewsFront.mini(GameState.news, GameState.my_club, _show_news, _league_names(), _news_now())
+
+
+## The news is dated by the week the coach is in, as the hub's title is
+## (director 2026-11-13, "Header should say Round 1": round 1's page read
+## "1990 Pre-season"). Off-season and pre-season keep the stories' own date.
+func _news_now() -> String:
+	var season: Season = GameState.season
+	if season == null or GameState.preseason_active() or season.is_season_over():
+		return ""
+	var week := season.round_name(season.round_index) if not season.is_regular_done() else _finals_label()
+	return "%d  %s" % [GameState.season_year, week]
 
 
 func _show_news() -> void:
@@ -880,7 +896,7 @@ func _show_news() -> void:
 	var box := UiKit.modal_box(self, 1080.0 if wide else 620.0, 0.0 if wide else 560.0)
 	_news_overlay = box["overlay"]
 	_news_overlay.name = "NewsFeed"
-	NewsFront.fill(box["body"], GameState.news, GameState.my_club, wide, _league_names())
+	NewsFront.fill(box["body"], GameState.news, GameState.my_club, wide, _league_names(), _news_now())
 	var ok := UiKit.btn("Close", UiKit.NAME, true)
 	ok.custom_minimum_size = Vector2(0, 44)
 	ok.pressed.connect(func(): _news_overlay.queue_free())
@@ -920,7 +936,7 @@ func _week_section(season: Season) -> Control:
 	elif _regular_bye(season):
 		nv.add_child(UiKit.lbl("Bye", UiKit.H1, UiKit.TEXT, true))
 		nv.add_child(UiKit.lbl(
-				"No game for us in Round %d. The rest of the league plays on." % (season.round_index + 1),
+				"No game for us in %s. The rest of the league plays on." % season.round_name(season.round_index),
 				UiKit.BODY, UiKit.MUTED))
 	elif _upcoming_match().is_empty():
 		match GameState.my_finals_status():
@@ -976,7 +992,7 @@ func _week_section(season: Season) -> Control:
 		# page, so the week's decision stays in view). A tribute, not a factor.
 		if not GameState.season.is_regular_done() and SirDougRound.round_for(GameState,
 				GameState.my_club) == GameState.season.round_index:
-			var sd_name := UiKit.lbl(SirDougRound.NAME, UiKit.SMALL, UiKit.EMPH, true)
+			var sd_name := UiKit.lbl(SirDougRound.name_for(GameState.season_year), UiKit.SMALL, UiKit.EMPH, true)
 			sd_name.name = "SirDougContext"
 			nv.add_child(sd_name)
 		var rivalry :=GameState.rivalry_context(GameState.my_club, opp)
@@ -1216,6 +1232,8 @@ static func skip_lines(season: Season, year: int, answers: Dictionary, to := "se
 	# A pick left unmade passes when the next round is played (MidseasonDraft, RookieList).
 	if season.round_index < MidseasonDraft.DRAFT_AFTER or MidseasonDraft.waiting(GameState) or RookieList.waiting(GameState):
 		stop += " Any rookie pick that comes up along the way is passed."
+	if YearEvents.top_up_waiting(GameState):
+		stop += " The top-up spots you have not filled stay empty."
 	out.append(["SkipStop", stop, false])
 	return out
 
@@ -1728,7 +1746,7 @@ func _week_actions(season: Season) -> Control:
 	elif _regular_bye(season):
 		# A home-and-away bye: the season goes on, one round at a time.
 		buttons.append(_nav_button("Team", func(): Router.go("selection")))
-		var bye := _nav_button("Play Round %d" % (season.round_index + 1), _on_sim_round_pressed, true)
+		var bye := _nav_button("Play " + season.round_name(season.round_index), _on_sim_round_pressed, true)
 		bye.name = "SimByeRound"
 		buttons.append(_with_bulk_skip(bye, season))
 	elif _upcoming_match().is_empty() and GameState.my_finals_status() == "bye":
@@ -2087,14 +2105,29 @@ func _letter_card() -> Control:
 			_build())
 	stay.name = "RivalLetterStay"
 	var take := _nav_button("Take the job", func():
-		if ClubMoves.accept_letter(GameState):
-			_build())
+		_move_clubs(code, func(): return ClubMoves.accept_letter(GameState)))
 	take.name = "RivalLetterTake"
 	row.add_child(stay)
 	row.add_child(take)
 	v.add_child(row)
 	v.add_child(UiKit.rule())
 	return v
+
+
+## He takes a job (`sign` makes the move). A club yet to play is his from its
+## first National Draft, which opens at once: the club he leaves plays out its
+## off-season under its own staff (GameState.offseason_without_you, row 189),
+## so the cover goes up first and the draft screen follows.
+func _move_clubs(code: String, sign: Callable) -> void:
+	if not ClubMoves.is_joining(GameState, code):
+		if bool(sign.call()):
+			_build()
+		return
+	ScreenTransition.run("Playing out the %d off-season..." % int(GameState.season_year), func():
+		if bool(sign.call()) and GameState.club_yet_to_play():
+			Router.go("draft")
+			return
+		_build())
 
 
 ## Where an offering club stands: its ladder finish and why the job is open,
@@ -2408,6 +2441,8 @@ func handle_back() -> bool:
 		_close_midseason(true)
 		return true
 	if RookieDraftSheet.close_open(self):
+		return true
+	if TopUpSheet.close_open(self):
 		return true
 	if DraftSpotsSheet.close_open(self):
 		return true

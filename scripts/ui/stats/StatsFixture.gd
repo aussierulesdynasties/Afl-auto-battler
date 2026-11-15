@@ -73,10 +73,10 @@ static func build(host: Control) -> Control:
 	if not bool(page["finals"]):
 		var sd_round := SirDougRound.round_of(GameState)
 		if sd_round >= 0 and _page == sd_round:
-			var sd_name := UiKit.lbl(SirDougRound.NAME, UiKit.BODY, UiKit.EMPH, true)
+			var sd_name := UiKit.lbl(SirDougRound.name_for(GameState.season_year), UiKit.BODY, UiKit.EMPH, true)
 			sd_name.name = "SirDougRoundName"
 			v.add_child(sd_name)
-			var sd_blurb := UiKit.lbl(SirDougRound.BLURB, UiKit.SMALL, UiKit.MUTED)
+			var sd_blurb := UiKit.lbl(SirDougRound.blurb_for(GameState.season_year), UiKit.SMALL, UiKit.MUTED)
 			sd_blurb.name = "SirDougRoundBlurb"
 			v.add_child(sd_blurb)
 		var late := SirDougRound.after_bye(GameState, _page)
@@ -85,7 +85,7 @@ static func build(host: Control) -> Control:
 			for c in late:
 				names.append(GameDB.club_short(str(c)))
 			var who := names[0] if names.size() == 1 else "%s and %s" % [", ".join(names.slice(0, names.size() - 1)), names[names.size() - 1]]
-			var sd_late := UiKit.lbl("%s after the bye: %s" % [SirDougRound.NAME, who],
+			var sd_late := UiKit.lbl("%s after the bye: %s" % [SirDougRound.name_for(GameState.season_year), who],
 					UiKit.SMALL, UiKit.EMPH)
 			sd_late.name = "SirDougAfterBye"
 			v.add_child(sd_late)
@@ -159,7 +159,7 @@ static func pages(season: Season) -> Array:
 				byes.append(str(c))
 		# The round picker keeps "Round N" (it fits a phone); Gather Round is named
 		# in the status line under it.
-		out.append({"title": "Round %d" % (i + 1), "matches": matches, "played": i < season.results.size(),
+		out.append({"title": season.round_name(i), "matches": matches, "played": i < season.results.size(),
 				"byes": byes, "finals": false, "event": GatherRound.NAME if i == season.gather_round() else ""})
 	if not season.finals.is_empty():
 		var weeks: Array = season.finals.get("weeks", [])
@@ -230,9 +230,9 @@ static func _status(season: Season, page: Dictionary) -> String:
 	var event := str(page.get("event", ""))
 	var tail := "" if event == "" else " · " + event
 	if bool(page["played"]):
-		return "Played · round %d of %d%s" % [idx, season.regular_rounds(), tail]
+		return "Played · %s%s" % [season.round_progress(idx - 1), tail]
 	var what := "Next round" if idx == season.round_index + 1 else "To play"
-	return "%s · round %d of %d%s" % [what, idx, season.regular_rounds(), tail]
+	return "%s · %s%s" % [what, season.round_progress(idx - 1), tail]
 
 
 ## One match as a tappable row: the two clubs one over the other, their

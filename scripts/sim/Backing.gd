@@ -73,10 +73,11 @@ static func is_active(p: Dictionary) -> bool:
 	return not current(p).is_empty()
 
 
-## Fit to play: not injured or suspended. (Being rested is the coach's call, so
-## it does not count as being unfit.)
+## Fit to play: not injured, suspended or banned for the season (YearEvents).
+## (Being rested is the coach's call, so it does not count as being unfit.)
 static func fit(p: Dictionary) -> bool:
-	return int(p.get("injury_weeks", 0)) <= 0 and int(p.get("suspension_weeks", 0)) <= 0
+	return int(p.get("injury_weeks", 0)) <= 0 and int(p.get("suspension_weeks", 0)) <= 0 \
+			and not p.has("season_ban")
 
 
 ## Can he be backed from selection: few senior games on a career on record in

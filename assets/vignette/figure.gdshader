@@ -49,6 +49,11 @@ uniform vec4 kit_pattern2[4];
 // A third pattern colour, for the one design that needs four (Fremantle's anchor).
 uniform vec4 kit_pattern3[4];
 uniform vec4 kit_shorts[4];
+// Legacy mode: a season's real guernsey drawn as a picture (tools/kits/kit_atlas.py). A kit
+// whose design number is 100 or more wears atlas cell (design - 100): the front on the cell's
+// left half, the back (as seen from behind) on its right; kit_grid = cells a row, rows.
+uniform sampler2D kit_atlas : filter_linear, repeat_disable;
+uniform ivec2 kit_grid = ivec2(1, 1);
 uniform float kit_design[4];
 // Kit options: y = sock hoops (0: the single band baked into the sheet; 1-3: hoops up the sock).
 uniform vec4 kit_extra[4];
@@ -57,6 +62,13 @@ uniform vec4 hair_tones[8];
 uniform vec4 boots = vec4(0.06, 0.06, 0.07, 1.0);
 // The sheet's lighting is rendered a shade dark so highlights don't clip.
 uniform float gain = 1.3;
+// Row 6.53 (rule 53: restrained shadow and highlight, baked lighting first): the sheet's
+// baked light is shaped, never relit. After gain it runs about 0.6 (the shade side) to
+// 1.16 (the lit side), median 0.95: a flat read on a phone. The shade side sinks a touch
+// (at most shadow_depth, fading out by 0.92) and the brightest faces of the body take a
+// soft sheen toward a warm white (at most highlight, from 1.02). No bloom, no runtime light.
+uniform float shadow_depth = 0.14;
+uniform float highlight = 0.10;
 
 // Where the number sits on the back, in guernsey coordinates (across from the
 // wearer's right, up from the hem): two digits share the width; one is centred.
@@ -245,6 +257,16 @@ vec3 design(int d, vec3 g) {
 	return vec3(0.0);
 }
 
+// A picture kit's colour at guernsey coordinate g (see kit_atlas).
+vec3 kit_image(int cell, vec3 g) {
+	bool front = g.z > 0.5;
+	vec2 at = vec2(front ? g.x : 1.0 - g.x, 1.0 - g.y);
+	vec2 inset = vec2(0.5) / (vec2(textureSize(kit_atlas, 0)) / vec2(float(kit_grid.x) * 2.0, float(kit_grid.y)));
+	at = clamp(at, inset, vec2(1.0) - inset);
+	vec2 c = vec2(float(cell % kit_grid.x) * 2.0 + (front ? 0.0 : 1.0), float(cell / kit_grid.x));
+	return texture(kit_atlas, (c + at) / vec2(float(kit_grid.x) * 2.0, float(kit_grid.y))).rgb;
+}
+
 // The number printed on the back: x = 1 where it's drawn (alpha), rgb its colour.
 vec4 number_on_back(int n, vec3 g, vec3 base, bool mirrored) {
 	float x = (NUMBER_ACROSS.y - g.x) / (NUMBER_ACROSS.y - NUMBER_ACROSS.x);   // from behind, left to right
@@ -306,6 +328,15 @@ vec2 flag_at(vec2 uv) {
 	return vec2(back, mix(mix(a, b, f.x), mix(c, d, f.x), f.y));
 }
 
+// A colour under the sheet's baked light (l = the shade sheet's R, before gain), shaped as
+// above. Every figure layer goes through it, so hair, faces and numbers sit in one light.
+vec3 lit(vec3 col, float l) {
+	float L = l * gain;
+	L *= 1.0 - shadow_depth * (1.0 - smoothstep(0.62, 0.92, L));
+	vec3 c = col * L;
+	return mix(c, vec3(1.0, 0.97, 0.92), smoothstep(1.02, 1.15, L) * highlight);
+}
+
 bool is_hair(ivec2 size) {
 	for (int i = 0; i < 32; i++) {
 		if (i < hair_count && size == hair_sizes[i]) {
@@ -322,7 +353,7 @@ void fragment() {
 		int tone = clamp(int(round(looks.g * 8.0)), 0, 7);
 		int hair = clamp(int(round(looks.b * 8.0)), 0, 7);
 		vec3 col = looks.r > 0.5 ? skin_tones[tone].rgb : hair_tones[hair].rgb;
-		COLOR = vec4(col * s.r * gain, s.a * looks.a);
+		COLOR = vec4(lit(col, s.r), s.a * looks.a);
 	} else if (tex_size == sheet_size) {
 		vec4 s = texture(TEXTURE, UV);     // lighting, hair, shorts, coverage
 		vec4 m = texture(mask_tex, UV);    // base colour, sock band, skin, guernsey alone
@@ -338,15 +369,29 @@ void fragment() {
 		bool mirrored = (code % 2) == 1;
 		if (looks.g > 0.95) {
 			int n = clamp(int(round(looks.b * 128.0)) - 1, 0, 99);
-			vec4 num = number_on_back(n, g, kit_base[kit].rgb, mirrored);
-			COLOR = vec4(num.rgb * s.r * gain, num.a * m.a * s.a * looks.a);
+			int nd = int(round(kit_design[kit]));
+			// On a picture kit the number sits on whatever the picture has there.
+			vec3 under = nd >= 100 ? kit_image(nd - 100, g) : kit_base[kit].rgb;
+			vec4 num = number_on_back(n, g, under, mirrored);
+			COLOR = vec4(lit(num.rgb, s.r), num.a * m.a * s.a * looks.a);
 		} else {
 			int tone = clamp(int(round(looks.g * 8.0)), 0, 7);
 			int hair = clamp(int(round(looks.b * 8.0)), 0, 7);
-			vec3 p = design(int(round(kit_design[kit])), g) * m.a;
+			int dn = int(round(kit_design[kit]));
 			vec3 base = kit_base[kit].rgb, pat = kit_pattern[kit].rgb, pat2 = kit_pattern2[kit].rgb;
 			vec3 pat3 = kit_pattern3[kit].rgb;
-			vec3 kit_col = base * m.r + (pat - base) * p.x + (pat2 - base) * p.y + (pat3 - base) * p.z;
+			vec3 kit_col;
+			vec3 edge_col;
+			if (dn >= 100) {
+				vec3 img = kit_image(dn - 100, g);
+				kit_col = base * m.r + (img - base) * m.a;
+				edge_col = img;
+			} else {
+				vec3 p = design(dn, g) * m.a;
+				kit_col = base * m.r + (pat - base) * p.x + (pat2 - base) * p.y + (pat3 - base) * p.z;
+				vec3 q = design(dn, g);
+				edge_col = base + (pat - base) * q.x + (pat2 - base) * q.y + (pat3 - base) * q.z;
+			}
 			float rest = clamp(1.0 - (m.r + m.g + m.b + s.g + s.b), 0.0, 1.0);
 			// Off the guernsey the design sheet carries G = height up the sock (0 at the boot,
 			// 1 at its top); its alpha is how much of the pixel a long sleeve covers (the arm, and
@@ -359,8 +404,6 @@ void fragment() {
 			// the design sheet carries the guernsey's own coordinates, so the top of the shoulder
 			// (high up the guernsey) takes the colour the guernsey has there: a yoke runs on over it.
 			// Lower down the armhole the base colour, else stripes swept into a dotted edge.
-			vec3 q = design(int(round(kit_design[kit])), g);
-			vec3 edge_col = base + (pat - base) * q.x + (pat2 - base) * q.y + (pat3 - base) * q.z;
 			vec3 sleeve_col = mix(base, edge_col, smoothstep(0.78, 0.88, g.g));
 			vec3 skin = mix(skin_tones[tone].rgb, sleeve_col, sleeve);
 			vec3 col = kit_col + pat * m.g + skin * m.b
@@ -375,7 +418,7 @@ void fragment() {
 				float on = (1.0 - mod(floor(seg), 2.0)) * step(0.0, t) * step(t, 1.0) * off;
 				col += sock_w * mix(base, pat, on) - (base * sock_out + pat * m.g);
 			}
-			COLOR = vec4(col * s.r * gain, s.a * looks.a);
+			COLOR = vec4(lit(col, s.r), s.a * looks.a);
 		}
 	}
 }

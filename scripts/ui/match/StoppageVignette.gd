@@ -223,6 +223,8 @@ static func figure_material(kits: Array, mat: ShaderMaterial = null) -> ShaderMa
 		mat.set_shader_parameter("mask_tex", FIGURE_MASK)
 		mat.set_shader_parameter("design_tex", FIGURE_DESIGN)
 		mat.set_shader_parameter("digits_tex", FIGURE_DIGITS)
+		mat.set_shader_parameter("kit_atlas", GameDB.kit_atlas())
+		mat.set_shader_parameter("kit_grid", GameDB.kit_grid())
 		mat.set_shader_parameter("sheet_size", VignetteFigures.SHEET_SIZE)
 		mat.set_shader_parameter("skin_tones", _eight(Appearance.SKIN))
 		mat.set_shader_parameter("hair_tones", _eight(Appearance.HAIR))
@@ -241,7 +243,10 @@ static func figure_material(kits: Array, mat: ShaderMaterial = null) -> ShaderMa
 			fields[f].append(kit[f])
 		# Only the anchor uses a third pattern colour; kits without one repeat the second.
 		fields["pattern3"].append(kit.get("pattern3", kit["pattern2"]))
-		fields["design"].append(float(maxi(0, GameDB.GUERNSEY_DESIGNS.find(str(kit["design"])))))
+		# A Legacy season's real guernsey is a picture in the kit atlas: design 100 + its cell.
+		var cell := int(kit.get("kit_cell", -1))
+		fields["design"].append(float(100 + cell) if cell >= 0
+				else float(maxi(0, GameDB.GUERNSEY_DESIGNS.find(str(kit["design"])))))
 		# Hoops on the socks, a kit option (0: the usual band).
 		fields["extra"].append(Vector4(0.0, float(clampi(int(kit.get("sock_hoops", 0)), 0, 3)), 0.0, 0.0))
 	for f in fields:
@@ -697,6 +702,30 @@ func _project(p: Vector2, h := 0.0) -> Vector3:
 	return Vector3(size.x * 0.5 - _pan + _focal * (p.x - _cam_x) / z, _horizon + _focal * (_cam_h - h) / z, _focal / z)
 
 
+## A footballer's contact shadow on the turf (row 6.53, rule 53: soft contact shadows):
+## darkest under his boots and fading out past radius, where the old flat disc stopped
+## dead. Drawn at the origin of the current transform, which the caller squashes flat
+## onto the turf. One textured quad, so it costs what the disc did.
+static var _contact_tex: ImageTexture
+## How far the fade reaches, against the old disc's radius.
+const SHADOW_REACH := 1.35
+
+
+static func contact_shadow(ci: CanvasItem, radius: float, alpha: float) -> void:
+	if _contact_tex == null:
+		# 66 px: no figure, hair or face sheet is that size (figure.gdshader tells them by size).
+		var n := 66
+		var img := Image.create(n, n, false, Image.FORMAT_RGBA8)
+		for y in range(n):
+			for x in range(n):
+				var d := Vector2(x + 0.5 - n * 0.5, y + 0.5 - n * 0.5).length() / (n * 0.5)
+				img.set_pixel(x, y, Color(1, 1, 1, 1.0 - smoothstep(0.25, 1.0, d)))
+		_contact_tex = ImageTexture.create_from_image(img)
+	var r := radius * SHADOW_REACH
+	ci.draw_texture_rect(_contact_tex, Rect2(-r, -r, 2.0 * r, 2.0 * r), false,
+			Color(0, 0, 0, minf(alpha * 1.1, 1.0)))
+
+
 static func _ease(k: float) -> float:
 	return 1.0 - pow(1.0 - k, 3.0)
 
@@ -870,7 +899,7 @@ func _draw_figure(at: Vector2, t: Dictionary) -> void:
 		under.x = -under.x
 	var sh := 0.38 * m * (1.0 - lift * 0.35) * VignetteWeather.shadow_tight(weather)
 	draw_set_transform(Vector2(ground.x, ground.y) + under, 0.0, Vector2(1.0, 0.32))
-	draw_circle(Vector2.ZERO, sh, Color(0, 0, 0, VignetteWeather.shadow_alpha(weather) + 0.03))
+	contact_shadow(self, sh, VignetteWeather.shadow_alpha(weather) + 0.03)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	var kit := UMPIRE_KIT if ump else int(t["side"])
 	var look: Dictionary = t.get("look", UMPIRE_LOOK)

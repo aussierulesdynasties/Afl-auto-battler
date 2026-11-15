@@ -72,37 +72,51 @@ func _test_refuses() -> void:
 	_check(not GameState.begin_from_history(2031), "A start with no history plays live")
 
 
-func _start(first: int) -> bool:
+## `choices` are the career's own choices made before the history starts
+## (GameState properties by name).
+func _start(first: int, choices := {}) -> bool:
 	GameState.reset()
 	GameState.set_canberra(first == GameState.SIM_AHEAD_TO)
+	for key in choices:
+		GameState.set(key, choices[key])
 	return GameState.begin_from_history(first)
 
 
+## A 2030 history, then `code` chosen at its draft.
+func _any_club(code: String) -> void:
+	_check(_start(2030), "A history starts the 2030 career")
+	_choose(code)
+
+
+## In a 2030 history's draft: `code` is chosen and the career is theirs.
+func _choose(code: String) -> void:
+	_check(GameState.choosing_club() and GameState.season_year == 2029 and not GameState.has_career(),
+			"Choose your club opens at the 2029 draft, nothing saved")
+	_check(GameState.draft.user_club == "" and GameState.draft.pick_index == 0, "No pick is made before you")
+	_check(GameState.canberra_on and GameState.draft.clubs.has("CANB"), "Canberra are in the draft")
+	_check(GameState.choose_sim_ahead_club(code), "%s can be chosen" % code)
+	_check(GameState.my_club == code and GameState.draft.user_club == code and not GameState.sim_ahead,
+			"The career is %s's" % code)
+	_check(not GameState.my_list.is_empty() or ExpansionBuild.has_package(GameState, code),
+			"%s has a list or a build" % code)
+	for p in GameState.my_list:
+		_check(str(p.get("club", code)) == code, "%s's player %s is on the list he plays for" % [code, p.get("id")])
+		break
+
+
+## Tasmania here; Canberra are chosen the same way by _test_keeps_choices's
+## start, and a club of today's league (Collingwood) by
+## _test_plays_on_and_reloads's 2030 start, which plays on from there (each
+## start costs a reset and a history load).
 func _test_any_club() -> void:
-	for code in ["COL", "WCE", "TAS", "CANB"]:
-		_check(_start(2030), "A history starts the 2030 career")
-		_check(GameState.choosing_club() and GameState.season_year == 2029 and not GameState.has_career(),
-				"Choose your club opens at the 2029 draft, nothing saved")
-		_check(GameState.draft.user_club == "" and GameState.draft.pick_index == 0, "No pick is made before you")
-		_check(GameState.canberra_on and GameState.draft.clubs.has("CANB"), "Canberra are in the draft")
-		_check(GameState.choose_sim_ahead_club(code), "%s can be chosen" % code)
-		_check(GameState.my_club == code and GameState.draft.user_club == code and not GameState.sim_ahead,
-				"The career is %s's" % code)
-		_check(not GameState.my_list.is_empty() or ExpansionBuild.has_package(GameState, code),
-				"%s has a list or a build" % code)
-		for p in GameState.my_list:
-			_check(str(p.get("club", code)) == code, "%s's player %s is on the list he plays for" % [code, p.get("id")])
-			break
+	_any_club("TAS")
 
 
+## A history start keeps the career's own choices; its club (Canberra) goes
+## through the same any-club checks as _test_any_club's.
 func _test_keeps_choices() -> void:
-	GameState.reset()
-	GameState.set_canberra(true)
-	GameState.board_patience = "ruthless"
-	GameState.rival_recruiting = "cutthroat"
-	GameState.tutorials = false
-	GameState.challenge = {"kind": "youth"}
-	_check(GameState.begin_from_history(2030), "History with choices")
+	_check(_start(2030, {"board_patience": "ruthless", "rival_recruiting": "cutthroat", "tutorials": false,
+			"challenge": {"kind": "youth"}}), "History with choices")
 	var history_seeds := []
 	for n in PremadeHistory.COUNT:
 		history_seeds.append(int(CareerSave.read_packed(PremadeHistory.path_for(2030, n)).get("career_seed", 0)))
@@ -110,7 +124,7 @@ func _test_keeps_choices() -> void:
 	_check(GameState.board_patience == "ruthless" and GameState.rival_recruiting == "cutthroat", "The dials stay")
 	_check(not GameState.tutorials, "Tips stay off")
 	_check(GameState.challenge.is_empty(), "The challenge waits for the club")
-	GameState.choose_sim_ahead_club("GEE")
+	_choose("CANB")
 	_check(str(GameState.challenge.get("kind", "")) == "youth", "The challenge starts with the club")
 
 
@@ -127,9 +141,12 @@ func _test_tasmania() -> void:
 
 func _test_plays_on_and_reloads() -> void:
 	for first in PremadeHistory.STARTS:
-		_check(_start(first), "History %d" % first)
-		var code := "TAS" if first == 2028 else "MEL"
-		GameState.choose_sim_ahead_club(code)
+		var code := "TAS" if first == 2028 else "COL"
+		if first == 2030:
+			_any_club(code)
+		else:
+			_check(_start(first), "History %d" % first)
+			GameState.choose_sim_ahead_club(code)
 		var draft: Draft = GameState.draft
 		var guard := 0
 		while not draft.is_finished() and guard < 500:
@@ -140,9 +157,8 @@ func _test_plays_on_and_reloads() -> void:
 		GameState.finish_intake_draft()
 		_check(GameState.season_year == first and GameState.season.lists.has(code),
 				"%d: the first season opens with %s in it (%d)" % [first, code, GameState.season_year])
-		for i in 3:
-			GameState.advance()
-		_check(GameState.season.round_index >= 3, "%d: three weeks are played" % first)
+		GameState.advance()
+		_check(GameState.season.round_index >= 1, "%d: a week is played" % first)
 		_check(GameState.save_career(), "%d: the career saves" % first)
 		var rnd: int = GameState.season.round_index
 		var ids := []

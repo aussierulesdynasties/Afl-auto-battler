@@ -548,7 +548,7 @@ const BOARD_FADE_ROUNDS := 1
 ## The gate's templates: no digits here, every number comes from the tables.
 ## One answer's line (director 2026-11-07, "Trim odds lines"): "40% resolve
 ## tightens, morale +1% · 60% hung out to dry, morale -2% · Board +1% either
-## way · His headline: 10% less likely · Gary warms to you (+5% next time)".
+## way · His headline: 10% less likely · Gary warms to you: +5% next time".
 const ODDS_TEMPLATE := "%d%% %s, %s · %d%% %s, %s"
 const SEP := " · "
 const EITHER_WAY := "%s either way"
@@ -561,14 +561,14 @@ const AFTER_MORALE := "morale %+d%% across the list"
 const AFTER_HIS := "%s's morale %+d%%"
 const AFTER_BOARD := "board confidence %+d%%"
 ## A named player's opinion of you after the answer, out of 100.
-const AFTER_OPINION := "%s's opinion of you: %d → %d/100."
+const AFTER_OPINION := "%s's opinion of you: %d → %d out of 100."
 ## One odds twist on the gate: "Heavy loss: 15% less likely".
 const REASON := "%s: %d%% %s likely"
 ## Said once on the screen, not under every answer: how long the moves last.
 const FADE_NOTE := "Morale moves wear off a point every second round, board moves a point a round."
 ## Your standing with him moves: what that does to his later questions.
-const LIKES := "%s warms to you (+%d%% next time)"
-const DISLIKES := "%s cools on you (-%d%% next time)"
+const LIKES := "%s warms to you: +%d%% next time"
+const DISLIKES := "%s cools on you: -%d%% next time"
 
 
 ## The answer an option is. A save from before the roll kept fixed effects on
@@ -823,7 +823,7 @@ static func record_verdict(kind: String, rec: Dictionary) -> String:
 	return "neutral"
 
 
-## "Your record: 7-3, 4th, 118%, form WWLWW."
+## "Our record: 7-3, 4th, 118%, form WWLWW."
 static func record_line(rec: Dictionary) -> String:
 	var w := int(rec.get("w", 0))
 	var l := int(rec.get("l", 0))
@@ -836,7 +836,7 @@ static func record_line(rec: Dictionary) -> String:
 	var last := str(rec.get("last", ""))
 	if last != "":
 		bits.append("form " + last)
-	return "Your record: %s." % ", ".join(bits)
+	return "Our record: %s." % ", ".join(bits)
 
 
 ## What an answer can do, under its button: both outcomes with their odds and
@@ -897,7 +897,7 @@ static func after_line(kind: String, landed: String, fx: Dictionary = {}, name :
 	return "%s: %s." % [str(o["after"]), tail] if tail != "" else str(o["after"]) + "."
 
 
-## "Jack Smith's opinion of you: 50 → 49/100." from GameState's {"name",
+## "Jack Smith's opinion of you: 50 → 49 out of 100." from GameState's {"name",
 ## "from", "to"}; "" when it did not move.
 static func opinion_after(moved: Dictionary) -> String:
 	if moved.is_empty() or int(moved.get("from", 0)) == int(moved.get("to", 0)):
@@ -911,8 +911,8 @@ static func board_sentence(journalist: String, board: int) -> String:
 	if board == 0:
 		return ""
 	var who := str(JOURNALISTS.get(journalist, {}).get("name", "the press"))
-	return ("The board liked what you told %s (%+d%% confidence)." if board > 0
-			else "The board didn't like what you told %s (%+d%% confidence).") % [who, board]
+	return ("The board liked what you told %s: confidence %+d%%." if board > 0
+			else "The board didn't like what you told %s: confidence %+d%%.") % [who, board]
 
 
 ## Moves one player's press lift by `delta` within `cap`, through his morale:

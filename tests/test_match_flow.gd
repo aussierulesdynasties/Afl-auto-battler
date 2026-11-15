@@ -16,6 +16,7 @@ const BalanceGate := preload("res://tests/balance_gate.gd")
 func run() -> void:
 	failures.clear()
 	checks = 0
+	_sample = {}
 	GameDB.reload()
 	_t("_test_won_ball_is_played_on")
 	_t("_test_scores_stay_realistic")
@@ -46,9 +47,20 @@ func _sim(home: String, away: String, seed: int) -> MatchSim:
 			Squad.new(away, GameDB.club_list(away), false, away), seed)
 
 
+## The default sample, played once: the won-ball rules and the score range
+## read the same 20 seeded matches (each test played them again before).
+var _sample: Dictionary = {}
+
+
 ## Plays the sample; returns the chain starts by key
 ## (MatchSim.audit_chains), the games played and the total points.
 func _play() -> Dictionary:
+	if _sample.is_empty():
+		_sample = _play_sample()
+	return _sample
+
+
+func _play_sample() -> Dictionary:
 	MatchSim.audit_chains_on = true
 	MatchSim.audit_chains = {}
 	var games := 0
@@ -94,16 +106,17 @@ func _test_scores_stay_realistic() -> void:
 	_check(BalanceGate.held(per > 130.0 and per < 230.0, "match points per game in 130-230"), "match points %.0f out of a plausible range" % per)
 
 
-## Plays the sample with `tuning` applied; returns the chain starts, the
-## "spills free" tackle lines and the games played.
-func _play_tuned(tuning: Dictionary) -> Dictionary:
+## Plays `pairs` x `seeds` matches with `tuning` applied (the whole sample by
+## default); returns the chain starts, the "spills free" tackle lines and the
+## games played.
+func _play_tuned(tuning: Dictionary, pairs: Array = CLUBS, seeds := SEEDS) -> Dictionary:
 	MatchSim.tune = tuning
 	MatchSim.audit_chains_on = true
 	MatchSim.audit_chains = {}
 	var spills := 0
 	var games := 0
-	for pair in CLUBS:
-		for s in range(SEEDS):
+	for pair in pairs:
+		for s in range(seeds):
 			var sim := _sim(pair[0], pair[1], 700 + s)
 			sim.run()
 			games += 1
@@ -128,9 +141,15 @@ func _test_flow_keys_exist_in_calibration() -> void:
 				"a match did not apply Ratings.FLOW[%s]" % k)
 
 
+## The lever is a probability, so its ends are rules, not rates: at 0 no held
+## tackle spills, at 1 they all do. One seeded match per end holds dozens of
+## held tackles, so a sample of matches proves nothing more.
 func _test_tackle_spill_is_a_tuned_lever() -> void:
-	var never := _play_tuned({"TACKLE_SPILL": 0.0})
-	var always := _play_tuned({"TACKLE_SPILL": 1.0})
+	var one := [CLUBS[0]]
+	var never := _play_tuned({"TACKLE_SPILL": 0.0}, one, 1)
+	var always := _play_tuned({"TACKLE_SPILL": 1.0}, one, 1)
+	print("Match flow: spilled tackles %d at TACKLE_SPILL 0, %d at 1 (one match each)" % [never["spills"], always["spills"]])
+	_check(int(never["games"]) == 1 and int(always["games"]) == 1, "one match at each end of the lever")
 	_check(int(never["spills"]) == 0, "a tackle spilled with TACKLE_SPILL at 0")
 	_check(int(always["spills"]) > 0, "no tackle spilled with TACKLE_SPILL at 1")
 
@@ -170,11 +189,16 @@ func _test_spilled_tackle_is_not_an_intercept() -> void:
 	_check(counted == spills, "%d spilled tackles counted for %d spill events" % [counted, spills])
 
 
+## Each lockup lever at 1 against both at 0, on one seeded match per fixture
+## (4 per arm, not 20): the counts print, and on 2026-11-14 read 142 with no
+## lockups, 323 with every press and 223 with every spoil, the spoil arm about
+## four standard deviations clear (one match per arm left it at 1.4).
 func _test_lockups_make_ball_ups_in_play() -> void:
 	var base := {"LOCKUP_PRESS": 0.0, "LOCKUP_SPOIL": 0.0}
-	var none := _count(_play_tuned(base)["chains"], "stoppage <- stoppage")
-	var press := _count(_play_tuned({"LOCKUP_PRESS": 1.0, "LOCKUP_SPOIL": 0.0})["chains"], "stoppage <- stoppage")
-	var pocket := _count(_play_tuned({"LOCKUP_PRESS": 0.0, "LOCKUP_SPOIL": 1.0})["chains"], "stoppage <- stoppage")
+	var none := _count(_play_tuned(base, CLUBS, 1)["chains"], "stoppage <- stoppage")
+	var press := _count(_play_tuned({"LOCKUP_PRESS": 1.0, "LOCKUP_SPOIL": 0.0}, CLUBS, 1)["chains"], "stoppage <- stoppage")
+	var pocket := _count(_play_tuned({"LOCKUP_PRESS": 0.0, "LOCKUP_SPOIL": 1.0}, CLUBS, 1)["chains"], "stoppage <- stoppage")
+	print("Match flow: ball-ups in play %d with no lockups, %d with every press, %d with every spoil" % [none, press, pocket])
 	_check(press > none, "the press lockup added no ball-ups in play (%d vs %d)" % [press, none])
 	_check(pocket > none, "the pocket lockup added no ball-ups in play (%d vs %d)" % [pocket, none])
 

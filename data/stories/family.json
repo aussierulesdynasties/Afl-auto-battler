@@ -15,12 +15,12 @@
 			"{first} could become a dad on game day"
 		],
 		"text": [
-			"The baby's due on game day and we play away. He'll do whatever you ask, but you can see where his head is."
+			"The baby's due on game day. He'll do whatever you ask. His head is with his partner."
 		],
 		"choices": [
 			{
 				"key": "go",
-				"label": "Tell {first} to be there",
+				"label": "Tell {first} to go",
 				"effects": [
 					{
 						"op": "rest"
@@ -39,7 +39,7 @@
 			},
 			{
 				"key": "play",
-				"label": "Ask {first} to play, then fly home",
+				"label": "Ask {first} to play",
 				"effects": [
 					{
 						"op": "trust",
@@ -53,7 +53,7 @@
 						"why": "The game came first the week his child was born"
 					}
 				],
-				"result": "{first} plays. He's on the first flight home after the siren."
+				"result": "{first} plays. He's out of the rooms the moment the siren goes."
 			}
 		],
 		"default": 1,
@@ -73,12 +73,12 @@
 			"{name}'s dad is in hospital"
 		],
 		"text": [
-			"He's from interstate and wants to fly home this week."
+			"He wants to be with his family this week."
 		],
 		"choices": [
 			{
 				"key": "go",
-				"label": "Put {first} on the plane",
+				"label": "Send {first} home",
 				"effects": [
 					{
 						"op": "rest"
@@ -93,11 +93,11 @@
 						"d": 4
 					}
 				],
-				"result": "{first} flies home. The club looks after the flights."
+				"result": "{first} heads home to his family. The club looks after the travel."
 			},
 			{
 				"key": "stay",
-				"label": "Ask {first} to play first",
+				"label": "Ask {first} to play",
 				"effects": [
 					{
 						"op": "trust",
@@ -205,7 +205,7 @@
 		"choices": [
 			{
 				"key": "help",
-				"label": "Tell {first} the club will help",
+				"label": "Promise the club's help",
 				"effects": [
 					{
 						"op": "morale",
@@ -225,7 +225,7 @@
 			},
 			{
 				"key": "footy",
-				"label": "Tell {first} footy comes first",
+				"label": "Put footy first",
 				"effects": [
 					{
 						"op": "trust",
@@ -264,7 +264,7 @@
 		"choices": [
 			{
 				"key": "light",
-				"label": "Give {first} a lighter week",
+				"label": "Lighten {first}'s week",
 				"effects": [
 					{
 						"op": "fresh"
@@ -444,7 +444,7 @@
 			"Four tickets doesn't go far"
 		],
 		"text": [
-			"Every player gets four for the final. Parents, partners, the junior coach who drove him to training: the list is longer than that."
+			"Every player gets four for the final. Parents, partners, the junior coach who drove him. The list is longer than four."
 		],
 		"choices": [
 			{

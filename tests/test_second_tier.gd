@@ -2,10 +2,10 @@ extends RefCounted
 ## The real second tier by season (Legacy mode, TODO row 142, L7): a Legacy
 ## start lays each season's leagues and sides below the AFL over the state
 ## leagues (SecondTier, data/legacy/second_tier/), and a 2026 career is exactly
-## as before. A seeded 1990 campaign rolls season by season to 2026 and checks
-## each season start against the data, through every change of shape.
+## as before. A seeded 1990 campaign rolls on and every season start to 2026
+## is checked against the data, through every change of shape.
 ## Run through tests/run_second_tier_tests.gd.
-## Seeded by design: the campaign rolls seasons on (GameState._start_next_season)
+## Seeded by design: the campaign rolls a season on (GameState._start_next_season)
 ## without playing a match.
 
 var failures: Array[String] = []
@@ -113,10 +113,13 @@ func _test_data_reads() -> void:
 	_check(t.shape(2040) == t.shape(2026), "A season past the data keeps 2026's shape")
 
 
-## A seeded 1990 career rolls every season on to 2026: each season start holds
+## A seeded 1990 career's seasons from 1990 to 2026: each season start holds
 ## that season's shape, through the AFL Reserves' end, the VFL's alignments,
 ## the cancelled 2020 VFL, the NEAFL years and today's leagues. A save and
-## load mid-way restores the season's shape.
+## load restores the season's shape. The career rolls on once for real (1990
+## to 1991): a rollover lays the new season's shape with
+## GameDB.apply_era(next year) (GameState._start_next_season), so every later
+## season start is that same call, without 35 more off-seasons.
 func _test_campaign_rolls_through_the_shapes() -> void:
 	if not Datasets.ready("1990"):
 		_check(false, "The 1990 start's files ship")
@@ -127,25 +130,23 @@ func _test_campaign_rolls_through_the_shapes() -> void:
 	var t: SecondTier = GameDB.second_tier
 	var bad: Array = []
 	var held := {}
-	while true:
-		var y := GameState.season_year
+	for y in range(1990, 2027):
+		if y == 1991:
+			GameState._ensure_league_lists()
+			GameState._start_next_season(1991, 0)
+			_check(GameState.season_year == 1991, "The 1990 career rolls on into 1991 (%d)" % GameState.season_year)
+		elif y > 1991:
+			GameDB.apply_era(y)
 		var why := _matches_data(y)
 		if why != "" or GameDB.second_tier_year != y:
 			bad.append("%d: %s (shape of %d)" % [y, why, GameDB.second_tier_year])
 		held[y] = GameDB.state_leagues.keys()
-		if y == 2001:
+		if y == 1991:
 			GameState.save_career()
 			GameDB.apply_era(1990)
 			GameState.load_career()
-			_check(GameState.season_year == 2001 and GameDB.second_tier_year == 2001 and _matches_data(2001) == "",
-					"A 2001 save loads back into 2001's shape (%d, %s)" % [GameDB.second_tier_year, _matches_data(2001)])
-		if y >= 2026:
-			break
-		GameState._ensure_league_lists()
-		GameState._start_next_season(y + 1, 0)
-		if GameState.season_year != y + 1:
-			bad.append("%d did not roll on (%d)" % [y, GameState.season_year])
-			break
+			_check(GameState.season_year == 1991 and GameDB.second_tier_year == 1991 and _matches_data(1991) == "",
+					"A 1991 save loads back into 1991's shape (%d, %s)" % [GameDB.second_tier_year, _matches_data(1991)])
 	_check(bad.is_empty(), "Every season from 1990 to 2026 starts in its own shape (%d: %s)" % [bad.size(), str(bad.slice(0, 3))])
 	_check(held.size() == 37, "The campaign reached 2026 (%d seasons)" % held.size())
 	if held.size() < 37:

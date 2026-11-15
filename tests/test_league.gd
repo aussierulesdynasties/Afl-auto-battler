@@ -208,8 +208,11 @@ func _test_difficulty() -> void:
 
 	GameState.board_patience = "fair"
 	GameState.rival_recruiting = "shrewd"
-	GameState.advance()
-	var res: Dictionary = GameState.last_match
+	# One Geelong match to pay XP on (the rest of a round proves nothing here).
+	var opp := "ADE"
+	var res: Dictionary = MatchSim.new(Squad.new("GEE", GameState.my_list, true, "GEE"),
+			Squad.new(opp, GameState.season.lists[opp], false, opp), SUITE_SEED).run()
+	_check(not (res.get("players", {}) as Dictionary).is_empty(), "The match pays on real player stats")
 	var normal_xp := int(GameState.grant_match_xp(res)["total"])
 	GameState.board_patience = "patient"
 	GameState.rival_recruiting = "easygoing"
@@ -318,6 +321,12 @@ func _test_news() -> void:
 	# A coach arc may open the career (row 108: coach_arcs ships on; a veteran's
 	# last year at Geelong); the league itself has said nothing yet.
 	_check(GameState.news.filter(func(n): return str(n.get("kind", "")) != ClubArcs.NEWS_KIND).is_empty(), "A new career has no league news yet")
+	# One round played (games, injuries and development make the news week to
+	# week), the rest of the home-and-away skipped, the finals played: the
+	# awards and the premiers make the news when the season closes.
+	GameState.advance()
+	GameState.season.round_index = GameState.season.fixture.size()
+	GameState.ensure_finals()
 	var guard := 0
 	while not GameState.season.is_season_over() and guard < 40:
 		GameState.advance()

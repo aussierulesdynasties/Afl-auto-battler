@@ -54,7 +54,12 @@ func _new_career() -> void:
 	gs.set_setting("seen_weekly_loop_intro", true)
 
 
+## Plays the round that ends on round_no. The rounds before it are not under
+## test (the carnival and the draft fire after rounds 10 and 11), so the
+## season jumps to the last one: nine whole rounds cost most of this suite.
 func _play_to(round_no: int) -> void:
+	if gs.season.round_index < round_no - 1:
+		gs.season.round_index = round_no - 1
 	var guard := 0
 	while gs.season.round_index < round_no and guard < 40:
 		gs.advance()

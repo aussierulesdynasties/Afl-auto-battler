@@ -211,6 +211,22 @@ jobs:
             exit 1
           fi
 
+      # Every PR names its place in the list (director 2026-11-14, after 25 merges left
+      # docs/TODO.md behind): "Closes row N", "Part of row N" (roadmap_close.yml notes the
+      # merge on the row) or "No row: <why>". The body is read live, so editing it and
+      # re-running the failed jobs passes.
+      - name: Check the PR names its TODO row
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          gh api "repos/${{ github.repository }}/pulls/$PR" --jq '.body // ""' > "$RUNNER_TEMP/body.txt"
+          if ! python3 tools/roadmap_close.py --check --body-file "$RUNNER_TEMP/body.txt" --todo docs/TODO.md --todo docs/TODO_RULINGS.md 2> "$RUNNER_TEMP/err.txt"; then
+            echo "::error::$(cat "$RUNNER_TEMP/err.txt")"
+            exit 1
+          fi
+
       # The shard layout's own tests, and the estimated shard seconds. Imbalance
       # is reported after the run, never a failure. Never reduce assertions to speed CI up.
       - name: Check the shard layout
@@ -380,6 +396,10 @@ jobs:
           mkdir -p "$RUNNER_TEMP/timings"
           if [ -f "$RUNNER_TEMP/test-logs/suite-timings.tsv" ]; then
             cp "$RUNNER_TEMP/test-logs/suite-timings.tsv" "$RUNNER_TEMP/timings/shard-${{ matrix.shard }}.tsv"
+          fi
+          # Per test function (tests/functions_ran.gd): what makes a suite slow.
+          if [ -f "$RUNNER_TEMP/test-logs/fn-timings.tsv" ]; then
+            cp "$RUNNER_TEMP/test-logs/fn-timings.tsv" "$RUNNER_TEMP/timings/fn-shard-${{ matrix.shard }}.tsv"
           fi
 
       - uses: actions/upload-artifact@v4

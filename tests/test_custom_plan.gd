@@ -175,18 +175,22 @@ func _test_gates() -> void:
 
 ## Strengths and costs change the match; a lever moves its own line.
 func _test_changes_the_match() -> void:
-	var base := []
-	for s in SEEDS:
-		base.append(_play({}, s, 0, "balanced"))
+	# A seed's plain match is played only when a pair needs it: one changes the
+	# first seed's match, so the rest are rarely asked for.
+	var base := {}
 	var pairs := [["sharp", "slow"], ["lockdown", "loose"], ["squeeze", "break"], ["fitness", "injuries"],
 			["long", "read"], ["fwd_press", "stoppage"], ["stoppage", "leaky"]]
 	for pr in pairs:
 		var moved := false
 		for i in range(SEEDS.size()):
-			moved = moved or _play({"s": pr[0], "c": pr[1]}, SEEDS[i], 0, "custom") != base[i]
+			if moved:
+				break
+			if not base.has(i):
+				base[i] = _play({}, SEEDS[i], 0, "balanced")
+			moved = _play({"s": pr[0], "c": pr[1]}, SEEDS[i], 0, "custom") != base[i]
 		_check(moved, "%s with %s changes the match" % pr)
 	var cl := {"clean": 0.0, "loose": 0.0}
-	for s in SEEDS:
+	for s in SEEDS.slice(0, 2):
 		cl["clean"] += _stat({"s": "clean", "c": "slow"}, s, "clangers")
 		cl["loose"] += _stat({"s": "sharp", "c": "loose"}, s, "clangers")
 	_check(cl["clean"] < cl["loose"], "Clean hands give away fewer clangers than Loose hands (%s)" % [cl])

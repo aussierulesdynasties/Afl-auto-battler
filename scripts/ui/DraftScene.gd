@@ -254,13 +254,13 @@ func _show_club_select() -> void:
 				"2027 to 2029 played  /  the %d National Draft, then %d" % [
 					GameState.season_year, GameState.season_year + 1]))
 		_root.add_child(UiKit.lbl(
-				"Every club's own staff ran it from the real 2026 lists: Tasmania joined in 2028 and Canberra are building their first list for 2030. Take any club from this draft; Canberra keep their new-club picks. Your first season is 2030.",
+				"Every club's own staff ran it from the real 2026 lists. Tasmania joined in 2028. Canberra are building their first list for 2030. Take any club from this draft. Canberra keep their new-club picks. Your first season is 2030.",
 				16, UiKit.MUTED))
 	elif past:
 		_root.add_child(_header("Choose your club",
 				"Real %d lists  /  the %d season" % [GameDB.START_YEAR, GameDB.START_YEAR]))
 		_root.add_child(UiKit.lbl(
-				"Every club starts with its real %d list. You take over from your club's senior coach, and he joins the coaches any club can hire." % GameDB.START_YEAR,
+				"Every club starts with its real %d list. You take over from the club's senior coach. He joins the coaches any club can hire." % GameDB.START_YEAR,
 				16, UiKit.MUTED))
 	elif rebuild:
 		_root.add_child(_header("Choose your rebuild",
@@ -270,14 +270,14 @@ func _show_club_select() -> void:
 		_root.add_child(_header("Choose your club",
 				"Real 2026 lists  /  the 2026 National Draft, then 2027"))
 		_root.add_child(UiKit.lbl(
-				"Every club starts with its real list, less the players who retired or were delisted after 2026; the delisted are free agents. The 2026 National Draft comes first, worst club on the ladder picking first; then the 2027 season.",
+				"Every club starts with its real list, less those who retired or were delisted after 2026. The delisted are free agents. The 2026 National Draft comes first, the bottom club picking first. Then the 2027 season starts.",
 				16, UiKit.MUTED))
 	else:
 		_root.add_child(_header("Choose your club",
 				"%d  /  A fresh start for all %d clubs" % [GameState.season_year, active.size()]))
 		_root.add_child(UiKit.lbl(
 				"One player pool. One salary cap. The whole league re-drafts in a random snake order."
-				+ (" You take over from your club's senior coach, and he joins the coaches any club can hire."
+				+ (" You take over from the club's senior coach. He joins the coaches any club can hire."
 					if GameState.dataset != Datasets.DEFAULT else ""),
 				16, UiKit.MUTED))
 	var grid := GridContainer.new()
@@ -324,15 +324,15 @@ func _show_club_select() -> void:
 			b.pressed.connect(_on_club_chosen.bind(code))
 		grid.add_child(b)
 	if later:
-		_root.add_child(UiKit.subtitle("Your first pick in the %d National Draft is shown on each card." % GameState.season_year))
+		_root.add_child(UiKit.subtitle("Each card shows the club's first pick in the %d National Draft." % GameState.season_year))
 	elif rebuild or past:
 		pass
 	elif real:
-		_root.add_child(UiKit.subtitle("Your first pick in the 2026 National Draft is shown on each card." if waiting == ""
-				else "Your first pick in the 2026 National Draft is shown on each card. %s join in %d." % [
+		_root.add_child(UiKit.subtitle("Each card shows the club's first pick in the 2026 National Draft." if waiting == ""
+				else "Each card shows the club's first pick in the 2026 National Draft. %s join in %d." % [
 					GameDB.club_name(waiting), GameDB.enter_year(waiting)]))
 	else:
-		_root.add_child(UiKit.subtitle("Every club drafts %d players. Your first pick is shown on each card." % _draft.target_size))
+		_root.add_child(UiKit.subtitle("Every club drafts %d players. Each card shows the club's first pick." % _draft.target_size))
 
 
 
@@ -346,12 +346,7 @@ func _open_wait_sheet(code: String) -> void:
 	overlay.name = "WaitForClub"
 	var v: VBoxContainer = box["body"]
 	v.add_child(UiKit.heading("Start with %s in %d?" % [name_, year], UiKit.H1))
-	var without := "%d plays" % (year - 1) if year - 1 == GameDB.START_YEAR else "%d to %d play" % [GameDB.START_YEAR, year - 1]
-	var lines := [
-			"%s join the league in %d, so your first season is %d." % [name_, year, year],
-			"%s out without you. Their staff sign %d state-league players, chase out-of-contract players at rival clubs and trade picks 5, 7, 11 and 13 for senior players." % [
-				without, Expansion.FOUNDATION_SIZE],
-			"You take over at the %d National Draft with picks 1, 3 and 9, the first pick of each later round, and any players from their academy." % (year - 1)]
+	var lines := WaitWords.lines(code)
 	if Challenge.kind(GameState) == "rebuild":
 		lines.append("Your Rebuild is %s, built from nothing. %s keep their three best." % [
 				name_, GameDB.club_name(str(GameState.challenge.get("club", "")))])
@@ -381,8 +376,7 @@ func _wait_for_club(code: String) -> void:
 	if not GameState.waiting_clubs().has(code):
 		return
 	var first_season := GameDB.enter_year(code)
-	var playing := "%d" % (first_season - 1) if first_season - 1 == GameDB.START_YEAR else "%d to %d" % [GameDB.START_YEAR, first_season - 1]
-	ScreenTransition.run("Playing %s..." % playing, func():
+	ScreenTransition.run("Playing %s..." % WaitWords.years_without(code), func():
 		await ScreenTransition.drawn()
 		if GameState.begin_from_history(first_season):
 			GameState.choose_sim_ahead_club(code)
@@ -481,7 +475,7 @@ func _header(title_text: String, sub: String) -> Control:
 	var back := UiKit.btn("‹", UiKit.GLYPH)
 	back.name = "BackToMenu"
 	back.custom_minimum_size = Vector2(44, 44)
-	back.tooltip_text = "Back to menu. Your draft stays available to resume."
+	back.tooltip_text = "Back to the menu. The draft waits for you to come back."
 	back.pressed.connect(back_to_menu)
 	h.add_child(back)
 	var v := UiKit.vbox(0)
@@ -1211,7 +1205,7 @@ func _player_row(p: Dictionary) -> Control:
 				int(_draft.pick_details(str(p["id"])).get("pick", 0))]
 	elif not _draft.is_user_turn():
 		text = "Closed" if _draft.is_finished() else "Wait"
-		reason = "The draft is complete." if _draft.is_finished() else "Waiting for your next turn."
+		reason = "The draft is complete." if _draft.is_finished() else "Waiting for our next pick."
 	elif not can_pick:
 		reason = _draft.pick_block_reason(p)
 		text = "Rucks" if reason.contains("rucks") else ("Full" if reason.contains("full") else ("Cap" if reason.contains("cap") else "No"))
@@ -1774,7 +1768,7 @@ func _open_player(id: String) -> void:
 			cr.add_child(cl)
 			cr.add_child(UiKit.line(str(result["grade"]), 14, UiKit.MUTED))
 			v.add_child(cr)
-		var combine_note := UiKit.lbl("Testing is one part of the projection; junior football still matters.", UiKit.SMALL, UiKit.MUTED)
+		var combine_note := UiKit.lbl("Testing is one part of our scouts' read. Junior football still counts.", UiKit.SMALL, UiKit.MUTED)
 		combine_note.name = "CombineNote"
 		combine_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(combine_note)
@@ -1813,7 +1807,7 @@ func _open_player(id: String) -> void:
 		v.add_child(all)
 		if _detail_all:
 			if read:
-				var rl := UiKit.lbl("Your scouts' read: each rating can be out as far as his OVR range.",
+				var rl := UiKit.lbl("Our scouts' read. Each rating can be out as far as his OVR range.",
 						UiKit.SECONDARY, UiKit.MUTED)
 				rl.name = "DetailAttributesRead"
 				rl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1870,7 +1864,7 @@ func _draft_status(p: Dictionary) -> Array:
 		var club := _draft.drafted_by(id)
 		var pick := int(_draft.pick_details(id).get("pick", 0))
 		if club == _club or club == "":
-			return ["On your list" + (", pick %d" % pick if pick > 0 else ""), UiKit.GOOD]
+			return ["On our list" + (", pick %d" % pick if pick > 0 else ""), UiKit.GOOD]
 		return ["Pick %d, %s" % [pick, GameDB.club_name(club)], UiKit.MUTED]
 	if _draft.is_finished():
 		return ["Not drafted", UiKit.MUTED]
@@ -1922,7 +1916,7 @@ func _build_activity() -> PanelContainer:
 	clubs.name = "PickLogClubFilter"
 	clubs.add_item("All clubs · newest first")
 	for code in _draft.clubs:
-		clubs.add_item(GameDB.club_name(code) + (" (you)" if code == _club else ""))
+		clubs.add_item(GameDB.club_name(code) + (" (us)" if code == _club else ""))
 	clubs.select(0 if _history_club.is_empty() else _draft.clubs.find(_history_club) + 1)
 	clubs.item_selected.connect(func(idx: int):
 		_history_club = "" if idx == 0 else str(_draft.clubs[idx - 1])
@@ -1950,7 +1944,7 @@ func _build_activity() -> PanelContainer:
 	_squad_view.name = "MySquad"
 	_squad_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	v.add_child(_squad_view)
-	_squad_view.add_child(UiKit.heading("Your list", UiKit.H1))
+	_squad_view.add_child(UiKit.heading("Our list", UiKit.H1))
 	_mine_box = UiKit.vbox(5)
 	_mine_scroll = UiKit.scroll(_mine_box)
 	_squad_view.add_child(_mine_scroll)
@@ -1966,30 +1960,50 @@ func _build_activity() -> PanelContainer:
 	return p
 
 
+## The night in order, oldest first, over the first `upto` picks of the log:
+## each pick trade just before the pick it was struck before, then the trades
+## struck before the next pick still to show. Matched on the pick's number in
+## the order, never the log's index: a skipped pick (a full list, a pass) leaves
+## no row, and counting rows put "before pick 42" after pick 42 (row 175).
+func _night_events(upto: int) -> Array:
+	var hist: Array = _draft.pick_history
+	var trades: Array = _draft.night_trades if _draft.intake_mode else []
+	var out := []
+	var last := 0
+	for i in range(upto):
+		var no := int(hist[i]["pick"])
+		for t in trades:
+			if int(t["at"]) > last and int(t["at"]) <= no:
+				out.append(t)
+		out.append(hist[i])
+		last = no
+	var next := int(hist[upto]["pick"]) if upto < hist.size() else int(_draft.pick_index) + 1
+	for t in trades:
+		if int(t["at"]) > last and int(t["at"]) <= next:
+			out.append(t)
+	return out
+
+
 func _refresh_history() -> void:
 	UiKit.clear(_history_box)
 	var entries := []
 	var picks_n := 0
 	# During draft night's replay the log holds back the picks the board has not shown.
-	var shown := _shown_picks()
-	for i in range(shown, -1, -1):
-		if i < shown:
-			var entry: Dictionary = _draft.pick_history[i]
-			if _history_club.is_empty() or str(entry["club"]) == _history_club:
-				entries.append(entry)
-				picks_n += 1
-		# A pick trade struck before pick i + 1 sits above that pick (newest first).
-		if _draft.intake_mode:
-			for t in _draft.night_trades:
-				if int(t["at"]) == i + 1 and (_history_club.is_empty() or str(t["buyer"]) == _history_club
-						or str(t["seller"]) == _history_club):
-					entries.insert(entries.size() - (1 if i < shown and (_history_club.is_empty()
-							or str(_draft.pick_history[i]["club"]) == _history_club) else 0), t)
+	# Newest first: a pick trade sits under the pick it was struck before, never
+	# above it, where it would read as a deal for a pick already called (row 175).
+	for e in _night_events(_shown_picks()):
+		if e.has("buyer"):
+			if _history_club.is_empty() or str(e["buyer"]) == _history_club or str(e["seller"]) == _history_club:
+				entries.append(e)
+		elif _history_club.is_empty() or str(e["club"]) == _history_club:
+			entries.append(e)
+			picks_n += 1
+	entries.reverse()
 	_history_info.text = "%d %s" % [picks_n, "pick" if picks_n == 1 else "picks"]
 	if entries.is_empty():
 		_history_box.add_child(UiKit.lbl("No picks yet" if _history_club.is_empty() else "No picks for this club yet", UiKit.HEADING, UiKit.TEXT, true))
 		_history_box.add_child(UiKit.lbl(
-				"Every selection appears here, including all %d rival clubs. The most recent picks are first." % maxi(1, _draft.clubs.size() - 1), 15, UiKit.MUTED))
+				"Every pick shows here, from all %d rival clubs too. The newest come first." % maxi(1, _draft.clubs.size() - 1), 15, UiKit.MUTED))
 	for i in range(mini(_history_shown, entries.size())):
 		var e: Dictionary = entries[i]
 		_history_box.add_child(_history_trade_row(e) if e.has("buyer") else _history_row(e))
@@ -2037,7 +2051,7 @@ func _history_row(entry: Dictionary) -> Control:
 	info.add_child(club_row)
 	club_row.add_child(UiKit.club_badge(str(entry["club"]), UiKit.SMALL, true))
 	# The club code says who picked him; only your own pick and a release say more.
-	var tag := "Your pick" if mine else ""
+	var tag := "Our pick" if mine else ""
 	if bool(entry.get("released", false)):
 		tag = "released"
 	if tag != "":
@@ -2087,7 +2101,7 @@ func _refresh_mine() -> void:
 				pl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 				_mine_box.add_child(pl)
 			var rule := UiKit.lbl(
-				"Draftees join the senior list you kept. A club with a full senior list, or with %d on its senior and Category A rookie lists together, passes its picks, and players you kept cannot be delisted during the draft. The Rookie Draft follows." % Contracts.max_list(),
+				"Draftees join the senior list we kept. A club with a full senior list passes its picks. So does a club with %d on its senior and Category A rookie lists. Players we kept cannot be delisted during the draft. The Rookie Draft follows." % Contracts.max_list(),
 				13, UiKit.MUTED)
 			rule.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			_mine_box.add_child(rule)
@@ -2097,17 +2111,17 @@ func _refresh_mine() -> void:
 				int(GameState.league_lists.get(_club, []).size()), Ratings.LIST_SIZE],
 				15, UiKit.EMPH, true))
 			_mine_box.add_child(UiKit.lbl(
-				"Draftees join the list you kept. There is no cap here; the draft runs until every list is full or the prospects run out.",
+				"Draftees join the list we kept. There is no cap here. The draft runs until every list is full or the prospects run out.",
 				13, UiKit.MUTED))
 	else:
 		_mine_box.add_child(UiKit.lbl("%d / %d signed · %s of %s spent" % [
 			_draft.count(), _draft.target_size, Contracts.money(_draft.spent()), Contracts.money(_draft.budget)], 15, UiKit.EMPH, true))
 		_mine_box.add_child(UiKit.lbl(
-			"Cover 6 DEF, 6 MID and 6 FWD for the ground. Carry at least 2 RUCK. The bench is flexible; other needs are guidance, not limits.",
+			"Cover 6 DEF, 6 MID and 6 FWD for the ground. Carry at least 2 RUCK. The bench is open. The rest is a guide, not a limit.",
 			13, UiKit.MUTED))
 	var stuck := _draft.can_release()
 	if _draft.finished_list_refused():
-		var fix := UiKit.lbl("%s Release a player: he goes back into the pool and you pick another." % _draft.invalid_reason(),
+		var fix := UiKit.lbl("%s Release a player. He goes back into the pool and we pick again." % _draft.invalid_reason(),
 				14, UiKit.BAD)
 		fix.name = "DraftFix"
 		fix.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -2116,7 +2130,7 @@ func _refresh_mine() -> void:
 	elif _draft.user_stuck():
 		# Only an older save can get here: say so plainly and offer the one
 		# legal way on - never a cap breach.
-		var why := UiKit.lbl("No player left fits your cap and your list's needs. Release one of your picks to make room: he goes back into the pool and you get an extra pick at the end of the draft.",
+		var why := UiKit.lbl("No player left fits our cap and our list. Release one of our picks to make room. He goes back into the pool. We get an extra pick at the end of the draft.",
 				14, UiKit.BAD)
 		why.name = "DraftStuck"
 		why.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -2125,8 +2139,8 @@ func _refresh_mine() -> void:
 	_my_picks()
 	if _draft.count() == 0:
 		_mine_box.add_child(UiKit.spacer(8))
-		_mine_box.add_child(UiKit.lbl("Your list starts here.", 20, UiKit.TEXT, true))
-		_mine_box.add_child(UiKit.lbl("Select a player from the pool. Tap a position in the pool to find the cover you need.", UiKit.BODY, UiKit.MUTED))
+		_mine_box.add_child(UiKit.lbl("Our list starts here.", 20, UiKit.TEXT, true))
+		_mine_box.add_child(UiKit.lbl("Take a player from the pool. Tap a position to find the cover we lack.", UiKit.BODY, UiKit.MUTED))
 		var pool := UiKit.btn("Explore the player pool", UiKit.BODY, true)
 		pool.pressed.connect(func(): _select_tab("pool"))
 		_mine_box.add_child(pool)
@@ -2186,7 +2200,7 @@ func _side_shape() -> void:
 	var box := UiKit.vbox(2)
 	box.name = "SideShape"
 	_mine_box.add_child(UiKit.spacer(8))
-	box.add_child(UiKit.lbl("Your side so far, against the league", UiKit.BODY, UiKit.TEXT, true))
+	box.add_child(UiKit.lbl("Our side so far, against the league", UiKit.BODY, UiKit.TEXT, true))
 	for row in Matchup.standing(_club, _draft.club_lists, {}, own):
 		box.add_child(UiKit.lbl("%s: %s." % [str(row[0]), str(row[1])], UiKit.BODY, UiKit.TEXT))
 	_mine_box.add_child(box)
@@ -2210,8 +2224,8 @@ func _refresh_order() -> void:
 	direction.add_theme_color_override("font_color", UiKit.EMPH)
 	_order_box.add_child(direction)
 	_order_box.add_child(UiKit.lbl(
-			("Every round runs in the same order, worst club first. Highlighted club = you." if _draft.intake_mode
-			else "The arrow is the way this round's order runs. It flips every round. Highlighted club = you."),
+			("Every round runs in the same order, worst club first. Our club is highlighted." if _draft.intake_mode
+			else "The arrow shows which way this round runs. It flips every round. Our club is highlighted."),
 			13, UiKit.MUTED))
 	var start := (round_no - 1) * _draft.clubs.size()
 	var end := mini(start + _draft.clubs.size(), _draft.pick_sequence.size())
@@ -2251,7 +2265,7 @@ func _refresh_order() -> void:
 		# Where the club is in its cycle and its list today (TeamRating).
 		var outlook := GameState.team_outlook(code)
 		if not outlook.is_empty():
-			var tl := UiKit.ellipsis("%s · %d" % [str(outlook["category"]), int(outlook["rating"])], UiKit.SMALL, UiKit.MUTED)
+			var tl := UiKit.ellipsis("%s · %.1f" % [str(outlook["category"]), float(outlook["rating"])], UiKit.SMALL, UiKit.MUTED)
 			tl.name = "OrderOutlook_%d" % index
 			v.add_child(tl)
 		var comp := _draft.comp_at(index)
@@ -2323,9 +2337,9 @@ func _refresh_status() -> void:
 		var later := pick_labels.slice(1)
 		_next_picks.text = "%d signed" % _draft.count()
 		if not later.is_empty():
-			_next_picks.text += "\n%s: %s" % ["Your next pick" if later.size() == 1 else "Your next picks", ", ".join(later)]
+			_next_picks.text += "\n%s: %s" % ["Our next pick" if later.size() == 1 else "Our next picks", ", ".join(later)]
 	else:
-		_next_picks.text = "%d left to sign\nYour picks: %s" % [_draft.target_size - _draft.count(), ", ".join(pick_labels)]
+		_next_picks.text = "%d left to sign\nOur picks: %s" % [_draft.target_size - _draft.count(), ", ".join(pick_labels)]
 	var my_turn := _draft.is_user_turn()
 	if my_turn and _draft.intake_mode:
 		GameState.make_night_offers()
@@ -2333,24 +2347,24 @@ func _refresh_status() -> void:
 		var offers := GameState.open_trade_offers().size()
 		_trade_btn.text = "Trade picks" if offers == 0 else ("Trade picks (%d offer%s)" % [offers, "" if offers == 1 else "s"])
 		_trade_btn.disabled = done or _draft.passed_clubs.has(_club)
-		_trade_btn.tooltip_text = "Offer or accept pick trades; the night waits while you deal." if not _trade_btn.disabled \
-				else "No picks of yours left to trade tonight."
+		_trade_btn.tooltip_text = "Offer or accept pick trades. The night waits while we deal." if not _trade_btn.disabled \
+				else "No picks of ours left to trade tonight."
 	_pick_me_btn.disabled = not my_turn
-	_pick_me_btn.tooltip_text = "The assistant takes the best available player for this one pick." if my_turn else "Waiting for your turn."
+	_pick_me_btn.tooltip_text = "Takes the best available player with this one pick." if my_turn else "Waiting for our pick."
 	if _pass_btn != null:
 		var pass_why := _draft.pass_block_reason()
 		_pass_btn.disabled = pass_why != ""
-		_pass_btn.tooltip_text = "You take no more players in this draft." if pass_why == "" else pass_why
+		_pass_btn.tooltip_text = "We take no more players in this draft." if pass_why == "" else pass_why
 		if my_turn and pass_why != "":
 			_next_picks.text += "\n" + pass_why
 	_finish_btn.disabled = not (done and _draft.is_valid())
 	if _draft.intake_mode:
 		_finish_btn.tooltip_text = \
-				"The draft concludes when every pick is made or the pool runs dry."
+				"The draft ends when every pick is made or the pool runs dry."
 	else:
-		_finish_btn.tooltip_text = "Complete your list within the cap, including at least 2 rucks."
+		_finish_btn.tooltip_text = "Fill our list under the cap, with at least 2 rucks."
 	if _draft.user_stuck():
-		_next_picks.text = "No player fits your cap and list.\nRelease a pick on My list."
+		_next_picks.text = "No player fits our cap and list.\nRelease a pick on My list."
 	if done:
 		# The footer says what is true of this list. The rules let a full list
 		# within the cap start even when a position is short, so the button is
@@ -2361,9 +2375,9 @@ func _refresh_status() -> void:
 			_next_picks.text = invalid + ("\nRelease a player on My list to fix it."
 					if _draft.finished_list_refused() else "\nStart season waits until that is fixed.")
 		elif short != "":
-			_next_picks.text = "Short %s.\nOthers will have to fill in." % short
+			_next_picks.text = "We're short of %s.\nOthers will fill in." % short
 		else:
-			_next_picks.text = "Your list is ready.\nTime for round one."
+			_next_picks.text = "Our list is ready.\nTime for Round 1."
 
 	_refresh_live()
 	_refresh_why()
@@ -2431,12 +2445,12 @@ func _your_pick_words(clock_pick: int, done: bool) -> String:
 	if not _draft.user_passed.is_empty() and _draft.passed_clubs.has(_club):
 		return ""   # the pass line on the board says it (_refresh_passed)
 	if _draft.passed_clubs.has(_club):
-		return "You have passed: no more picks"
+		return "We have passed: no more picks"
 	if _draft._list_full(_club):
 		var left := _draft.upcoming_picks(_club, 0)
 		if left.is_empty():
-			return "Your list is full"
-		return "Your list is full: %s %s will pass" % ["pick" if left.size() == 1 else "picks",
+			return "Our list is full"
+		return "Our list is full: %s %s will pass" % ["pick" if left.size() == 1 else "picks",
 				Draft.picks_words(left)]
 	var upcoming := _draft.upcoming_picks(_club, 1)
 	if upcoming.is_empty():
@@ -2510,14 +2524,7 @@ func _recent_rows(hist: Array, upto: int, settle: bool) -> void:
 		# those picks), so the pool keeps its room.
 		shown = 0
 	# The night in order: a trade struck before pick N sits just before pick N.
-	var events: Array = []
-	var trades: Array = _draft.night_trades if _draft.intake_mode else []
-	for i in range(upto + 1):
-		for t in trades:
-			if int(t["at"]) == i + 1:
-				events.append(t)
-		if i < upto:
-			events.append(hist[i])
+	var events := _night_events(upto)
 	for k in range(events.size() - 1, maxi(-1, events.size() - 1 - shown), -1):
 		var entry: Dictionary = events[k]
 		var i := hist.find(entry)
@@ -2718,7 +2725,7 @@ func _my_picks() -> void:
 		by_pick[int(e["pick"])] = e
 	var box := UiKit.vbox(3)
 	box.name = "MyPicks"
-	box.add_child(UiKit.lbl("Your picks", 13, UiKit.EMPH, true))
+	box.add_child(UiKit.lbl("Our picks", 13, UiKit.EMPH, true))
 	var shown := 0
 	for index in range(_draft.pick_sequence.size()):
 		if str(_draft.pick_sequence[index]) != _club:

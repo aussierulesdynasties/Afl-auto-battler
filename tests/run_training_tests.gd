@@ -28,6 +28,7 @@ func _run() -> void:
 	await _t("_test_training_hero")
 	await _t("_test_training_grid")
 	await _t("_test_stat_focus_tap")
+	await _t("_test_training_results")
 	print(Ran.line("Training", self, [suite]))
 	quit(0 if _failures.is_empty() else 1)
 
@@ -41,11 +42,12 @@ func _test_training_hero() -> void:
 	var db = root.get_node("GameDB")
 	var art = load("res://scripts/ui/UiArt.gd")
 	for club in ["FRE", "MEL"]:
+		# One career per club: both screen sizes only look at the same screen.
+		gs.reset()
+		gs.set_setting("seen_training_intro", true)
+		gs.start_season(club, db.club_list(club))
 		for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
 			var tag := "%s %dx%d" % [club, sz.x, sz.y]
-			gs.reset()
-			gs.set_setting("seen_training_intro", true)
-			gs.start_season(club, db.club_list(club))
 			root.size = sz
 			var scene: Control = load("res://scenes/TrainingScene.tscn").instantiate()
 			root.add_child(scene)
@@ -442,6 +444,72 @@ func _test_stat_focus_tap() -> void:
 			"Stat focus tap: once locked the picker is gone and the page says when it opens again")
 	scene.queue_free()
 	await _settle()
+
+## Training results in the new look (row V5): the risers counted as the one big
+## figure in the club's ink over a club rule, every riser named on his own row
+## biggest rise first, the lead row larger, each new rating a GOOD figure, and a
+## real tap on a riser's name opens his profile. Phone and PC.
+func _test_training_results() -> void:
+	var gs = root.get_node("GameState")
+	var db = root.get_node("GameDB")
+	gs.reset()
+	gs.set_setting("seen_training_intro", true)
+	gs.start_season("FRE", db.club_list("FRE"))
+	var a: Dictionary = gs.my_list[0]
+	var b: Dictionary = gs.my_list[1]
+	var c: Dictionary = gs.my_list[2]
+	gs.last_training_report = {"count": 22, "label": "Round 4", "auto": {"rises": [
+			[str(a["id"]), 60, 61], [str(b["id"]), 74, 76], [str(c["id"]), 50, 51]], "traits": [], "at_pot": []}}
+	var ui = load("res://scripts/ui/UiKit.gd")
+	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
+		var tag := "Results %dx%d" % [sz.x, sz.y]
+		root.size = sz
+		var scene: Control = load("res://scenes/TrainingScene.tscn").instantiate()
+		root.add_child(scene)
+		await _settle()
+		var fig: Label = scene.find_child("TrainingRiseCount", true, false)
+		_check(fig != null and fig.text == "3" and fig.get_theme_font_size("font_size") >= ui.px(ui.HERO)
+				and fig.get_theme_font("font") == ui.DISPLAY and fig.get_theme_color("font_color") == ui.label_ink(),
+				"%s: three risers lead as the hero figure, Display, in the club's ink" % tag)
+		var words: Label = scene.find_child("TrainingRiseWords", true, false)
+		_check(words != null and words.text == "players rose in OVR", "%s: the figure says what it counts" % tag)
+		var rule: ColorRect = scene.find_child("TrainingClubRule", true, false)
+		_check(rule != null and rule.color == ui.team_wash() and rule.size.y == 2.0, "%s: a 2 px club rule under the head" % tag)
+		var grid: GridContainer = scene.find_child("TrainingRises", true, false)
+		var order := []
+		for row in (grid.get_children() if grid != null else []):
+			order.append(str(row.name).trim_prefix("Rise_"))
+		_check(order == [str(b["id"]), str(a["id"]), str(c["id"])], "%s: every riser has a row, biggest rise first (%s)" % [tag, order])
+		_check(grid != null and grid.columns == (1 if sz.x < 600 else 3), "%s: one column on a phone, three on a PC" % tag)
+		if grid == null or grid.get_child_count() < 2:
+			scene.queue_free()
+			await _settle()
+			continue
+		var lead: Control = grid.get_child(0)
+		var lead_to: Label = lead.find_child("RiseTo", true, false)
+		var next_to: Label = grid.get_child(1).find_child("RiseTo", true, false)
+		_check(lead_to.text == "76" and lead_to.get_theme_color("font_color") == ui.GOOD
+				and lead_to.get_theme_font_size("font_size") > next_to.get_theme_font_size("font_size"),
+				"%s: the lead riser's new rating is the larger GOOD figure" % tag)
+		var on_screen := true
+		var one_line := true
+		for row in grid.get_children():
+			var rr: Rect2 = (row as Control).get_global_rect()
+			on_screen = on_screen and rr.position.x >= 0.0 and rr.end.x <= float(sz.x)
+			# "74 to" never wraps into a column of letters: a row is one line tall.
+			one_line = one_line and rr.size.y <= (48.0 if row == lead or sz.x >= 600 else 34.0)
+		_check(on_screen, "%s: no row runs off the screen" % tag)
+		_check(one_line, "%s: every riser's row is one line tall" % tag)
+		var name_box: RichTextLabel = lead.find_children("*", "RichTextLabel", true, false).front()
+		var why: String = await Tap.tap_at(name_box, Vector2(12, name_box.size.y * 0.5), false)
+		await _settle()
+		var sheet := root.find_child("PlayerProfile", true, false)
+		_check(why == "" and sheet != null, "%s: a real tap on the lead riser's name opens his profile (%s)" % [tag, why])
+		if sheet != null:
+			sheet.queue_free()
+		scene.queue_free()
+		await _settle()
+
 
 func _settle() -> void:
 	for i in range(6):

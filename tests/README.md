@@ -70,10 +70,13 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `expansion_package` | How a new club builds its list: state-league signings, early picks, the traded pick, out-of-contract signings, sign-on money, the Canberra choice, the approach card, premiers picking last |
 | `finals` | The wildcard finals bracket, extra time, draws |
 | `season_rules` | Season rules by year (legacy mode): the 1990-2025 table, each past year's fixture (14, 15, 16 and 18 clubs, a bye every round at 15), the final five, six and McIntyre eight played to a premier with the real years' pairings, a drawn final replayed, the Grand Final's venue, no Gather Round before 2023, and the 2026 league's fixture and finals byte-identical to before (golden digest) |
+| `real_fixture` | Real fixtures (Legacy mode L6): every season 1990-2026 loads from data/legacy/fixtures.csv, a season of the year's real clubs plays its real rounds at their real grounds (2015's unplayed Adelaide v Geelong included), the real Gather Round, a season whose clubs differ (Fitzroy surviving) draws its own, the real 2026 with its Opening Round and round names, a 2027 season's fixture unchanged (golden digest), a real season played and saved, a 1990 career rolled to 1997 picking up each year's real fixture, and a career whose clubs differ drawing its own |
 | `gather_round` | Gather Round: one of rounds 3 to 7 at the host grounds, the home edge only at a club's own ground, the odd-count bye, its name in the fixture, hub and match, a live round across a save and load |
 | `save` | Saving and loading a career, including old-save migrations and the safe write: a failed or interrupted write never loses the career, and a failed swap leaves the newer save readable |
 | `chronology` | 2026 is history, careers start in 2027, and every system agrees |
 | `dataset` | The career's dataset (Legacy mode): GameDB loads the chosen set, the save keeps it, clubs by year (who plays each season, era names, grounds and codes), and the 2026 load, real-lists opening and seeded season match golden fingerprints from before the choice |
+| `legacy_start_2020` | The 2020 Legacy start: the set loads (18 clubs rated on 2019), a Richmond career replaces Damien Hardwick, every club has its real coach and captain, the hub season's clock, and the 2020 season rolls into 2021 |
+| `legacy_2020_long` | Nightly: the seeded 2020 Richmond career skips and rolls every season from 2020 to 2028, no end year |
 | `career` | Games, goals and club stints across a dynasty |
 | `coaches` | The coaching world: six jobs a club, records, grades, the Staff screen |
 | `coach_market` | Coach moves, hiring, sackings, retirements, assistant contracts |
@@ -91,7 +94,7 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `roles` | Roles, wings, taggers and rucks as real jobs |
 | `injuries` | Injury rates, durability, healing, and played v simulated parity |
 | `awards` | Brownlow, Coleman, best and fairest, All-Australian |
-| `achievements` | Club achievements |
+| `achievements` | The 100 achievements (club and coach) |
 | `contracts` | Contracts, free agency and trades (seeded: a clock seed once made the pick-limit check flaky) |
 | `era_money` | Legacy money (row 142, L3): GameDB.era_rule reads data/legacy/era_rules.csv; a 1990 career shows the $1.5m cap and 1990-dollar contracts, minimums, offer steps and club budget; 2026 on scale by exactly 1 |
 | `recruit_undo` | Undo for a delisting, a free-agent signing and a re-signing (row 119): exact restore of list, cap, contracts, pool and news, newest first, gone once the national draft starts or after a reload, a real tap on Undo at 390 x 844 |
@@ -216,8 +219,9 @@ about a third of his training, the next season unlocks it, an old
 pick and lock one on a phone. The career UI suite also checks the one-time
 training intro, the stat guide (and Back closing it) and the plan picker.
 
-The achievements suite checks every club's achievement is detectable from
-stats the game already tracks (`tests/run_achievements_tests.gd`, part of
+The achievements suite checks all 100 achievements (two per club, Fitzroy and
+the Club Forge club included, and 56 for the coach) unlock exactly on what the
+season recorded (`tests/run_achievements_tests.gd`, part of
 `tools/run_tests.sh`).
 
 The league-balance suite smoke-tests the competitive-balance harness in

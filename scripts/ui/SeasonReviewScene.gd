@@ -576,35 +576,39 @@ func _award_line(title: String, row: Dictionary, detail: String, big: bool) -> C
 # ---------------------------------------------------------------------------
 # Club achievements
 # ---------------------------------------------------------------------------
-## Every club's achievement is written into its history; the ones that came
-## true are celebrated here, and yours (while still locked) is teased.
+## The achievements this season unlocked (yours and every club's), then your
+## club's two that are still to come.
 func _achievements_panel() -> Control:
 	var unlocked: Dictionary = GameState.achievements
 	var panel := UiKit.panel(UiKit.PANEL, 14)
 	panel.name = "AchievementsPanel"
 	var v := UiKit.vbox(5)
 	panel.add_child(v)
-	var ach_head := UiKit.heading("Club achievements", 22)
+	var ach_head := UiKit.heading("Achievements", 22)
 	ach_head.add_theme_color_override("font_color", StatsSide.mine_ink())
 	v.add_child(ach_head)
-	if unlocked.is_empty():
-		v.add_child(_small("Nothing unlocked yet - every club's achievement is a piece of its history."))
+	var shown := 0
 	for d in Achievements.DEFINITIONS:
 		var id := str(d["id"])
-		if not unlocked.has(id):
+		var got: Dictionary = unlocked.get(id, {})
+		if got.is_empty() or int(got.get("year", 0)) != GameState.season_year:
 			continue
-		var club := str(d["club"])
+		shown += 1
+		var club := str(got.get("club", GameState.my_club))
 		var mine := club == GameState.my_club
-		var l := UiKit.lbl("%s - %s, %d" % [GameDB.club_name(club), str(d["name"]),
-				int(unlocked[id].get("year", 0))], 15,
-				StatsSide.ink(club), mine)
+		var who := "You" if Achievements.is_coach(d) else GameDB.club_name(club)
+		var l := UiKit.lbl("%s - %s" % [who, str(d["name"])], 15, StatsSide.ink(club), mine)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(l)
-		var note := _small(str(d["desc"]))
-		v.add_child(note)
-	var mine_def := Achievements.definition_by_club(GameState.my_club)
-	if mine_def != {} and not unlocked.has(str(mine_def["id"])):
-		v.add_child(_small("Still chasing - %s: %s" % [str(mine_def["name"]), str(mine_def["desc"])]))
+		v.add_child(_small(str(d["desc"])))
+	if shown == 0:
+		v.add_child(_small("None unlocked this season."))
+	var forge: Array = []
+	if bool((GameDB.clubs.get(GameState.my_club, {}) as Dictionary).get("custom", false)):
+		forge = [GameState.my_club]
+	for d in Achievements.for_code(GameState.my_club, forge):
+		if not unlocked.has(str(d["id"])):
+			v.add_child(_small("Still to come - %s: %s" % [str(d["name"]), str(d["desc"])]))
 	return panel
 
 
