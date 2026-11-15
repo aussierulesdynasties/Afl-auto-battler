@@ -59,7 +59,7 @@ func _build() -> void:
 	var body := UiKit.vbox(6)
 	body.name = "MergerRows"
 	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	body.add_child(_hero(needs))
+	body.add_child(_hero())
 	body.add_child(_lead(needs))
 	if _notice != "":
 		var n := _para(_notice, UiKit.SECONDARY, UiKit.BAD)
@@ -84,7 +84,7 @@ func _build() -> void:
 
 
 ## The one figure the screen is about: how many are still to go.
-func _hero(needs: Dictionary) -> Control:
+func _hero() -> Control:
 	var left := maxi(0, GameState.merger_cut_left() - _going.size())
 	var h := UiKit.hbox(12)
 	h.name = "MergerLeft"

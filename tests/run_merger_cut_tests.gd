@@ -18,6 +18,8 @@ var _failures: Array[String] = []
 
 const Tap := preload("res://tests/tap.gd")
 const PHONE := Vector2i(390, 844)
+## The 1997 rollover is seeded, so each run is the same.
+const SUITE_SEED := 1997
 
 
 func _initialize() -> void:
@@ -49,6 +51,7 @@ func _run() -> void:
 	_gs.autosave_enabled = false
 	_gs.save_path = "user://test_merger_cut.save"
 	_gs.settings_path = "user://test_merger_cut.cfg"
+	_gs.replay_seed = SUITE_SEED
 	root.size = PHONE
 	_t("_test_needs")
 	_t("_test_refusals")
