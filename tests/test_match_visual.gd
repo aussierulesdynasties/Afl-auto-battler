@@ -2601,6 +2601,41 @@ func _test_plan_tint_every_quarter() -> void:
 		_check(float(shown[2]) < 0.03, "Side %d: the tint is gone in the quarter the plan was changed (%s)" % [my_side, str(shown)])
 
 
+## The 3D turf (Oval3DTurf): every weather and time of day lights it green, the wet one with a
+## sheen, the play wears it where the players run, and the standing blades follow the ball.
+func _check_turf3d(oval: Oval3D) -> void:
+	var turf: Oval3DTurf = oval.turf
+	_check(turf != null and turf.mat.get_shader_parameter("blades_tex") != null
+			and turf.mat.get_shader_parameter("wear_map") != null,
+			"The 3D turf has its blade texture and its wear map")
+	for look in [["", VignetteKickoff.DAY], ["", VignetteKickoff.TWILIGHT], ["", VignetteKickoff.NIGHT],
+			[VignetteWeather.WET, VignetteKickoff.DAY], [VignetteWeather.WET, VignetteKickoff.NIGHT],
+			[VignetteWeather.HOT, VignetteKickoff.DAY]]:
+		turf.apply(look[0], look[1])
+		var g: Color = turf.mat.get_shader_parameter("grass_a")
+		var wet: float = turf.mat.get_shader_parameter("wet")
+		_check(g.g > g.r and g.g > g.b and wet == (1.0 if look[0] == VignetteWeather.WET else 0.0)
+				and turf.env.tonemap_exposure >= 1.0,
+				"%s %s: the turf is green and the weather's sheen is set (%s, wet %.0f)" % [look[1], look[0], str(g), wet])
+	turf.apply("", VignetteKickoff.DAY)
+	var before := _wear_total(turf)
+	for i in range(60):
+		turf._process(1.0 / 30.0)
+	_check(_wear_total(turf) > before, "The players' running wears the 3D turf (%.2f to %.2f)" % [before, _wear_total(turf)])
+	var ball: Node3D = oval.ball
+	var centre = turf._bmat.get_shader_parameter("centre")
+	_check(not turf.blades.visible or Vector2(centre).distance_to(Vector2(ball.position.x, ball.position.z)) < 0.01,
+			"The standing blades are round the ball")
+
+
+func _wear_total(turf: Oval3DTurf) -> float:
+	var t := 0.0
+	for y in range(Oval3DTurf.WEAR_H):
+		for x in range(Oval3DTurf.WEAR_W):
+			t += turf._thin[y * Oval3DTurf.WEAR_W + x]
+	return t
+
+
 ## Settings > Match view "3D oval" (row 197): the same director's match on a 3D ground. It plays
 ## and releases the feed exactly as the flat oval does, a footballer for every token, the
 ## ground turning at each change of ends, and the flat oval back when the setting is off.
@@ -2634,6 +2669,7 @@ func _test_three_d_view(res: Dictionary) -> void:
 		pv._process(1.0 / 60.0)
 	_check(seen.size() == flat_seen.size() and seen.size() > 0,
 			"The 3D oval releases the feed as the flat oval does (%d vs %d)" % [seen.size(), flat_seen.size()])
+	_check_turf3d(oval)
 	# The ground paint lies on the 3D turf, under the bodies: the ring round the man on the ball.
 	pv.director.actor = 0
 	pv._paint_ground_3d()
