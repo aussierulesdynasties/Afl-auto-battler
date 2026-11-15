@@ -169,8 +169,10 @@ var free_agents: Array = []      # off-season: players no club kept
 var offseason_year := 0:         # the season whose off-season has opened
 	set(value):
 		offseason_year = value
-		# Lists built in the off-season are next season's (EraRules.list_ahead).
+		# Lists built in the off-season are next season's (EraRules.list_ahead),
+		# and so is the money they are built with (_sync_money_year).
 		EraRules.list_ahead = value != 0 and value == season_year
+		_sync_money_year()
 var fa_closed_year := 0          # the season whose free agency has closed
 ## This off-season's free-agency compensation picks: [{"club", "player",
 ## "name", "to", "salary", "years", "value", "after"}], slotted into the
@@ -318,6 +320,7 @@ var season_year := 2026:
 		season_year = value
 		# Money shows in this season's dollars (Legacy mode, Contracts.dollars).
 		Contracts.money_year = value
+		_sync_money_year()
 		# The league's rules of this season (list sizes, the bench, free
 		# agency): EraRules switches them at every rollover (L4).
 		EraRules.year = value
@@ -1230,6 +1233,10 @@ func _restore_career(state: Dictionary) -> bool:
 	salary_cap = int(state.get("salary_cap", 0))
 	free_agents = state.get("free_agents", [])
 	offseason_year = int(state.get("offseason_year", 0))
+	# A save from an open off-season before its cap was next season's: its cap
+	# is still this season's own (any other cap was set on purpose and stays).
+	if offseason_year > 0 and offseason_year == season_year and salary_cap == Contracts.salary_cap_for_year(season_year):
+		salary_cap = Contracts.salary_cap_for_year(season_year + 1)
 	fa_closed_year = int(state.get("fa_closed_year", 0))
 	compensation = state.get("compensation", [])
 	pick_owner = state.get("pick_owner", {})
@@ -8689,6 +8696,10 @@ func open_offseason(keep_staff := false) -> void:
 				_finish_project(p, str(code) == my_club)
 	_dev_promises_lapse()
 	offseason_year = season_year
+	# Every deal from here is for next season, so the cap is next season's
+	# (1990's off-season signs under 1991's $1.6m, 2020's under 2021's
+	# $12.07m), as the money is (_sync_money_year).
+	salary_cap = Contracts.salary_cap_for_year(season_year + 1)
 	for code in season.lists:
 		ListCosts.season_over(season.lists[code], season_year)
 	ListCosts.season_over(free_agents, season_year)
@@ -9328,6 +9339,15 @@ func _cap_room_of(code: String) -> int:
 ## (ExpansionBuild.relief; nothing for anyone else).
 func cap_for(code: String) -> int:
 	return salary_cap + ExpansionBuild.relief(self, code)
+
+
+## Money is in this season's dollars, and in next season's once the
+## off-season is open: the asks, the minimum and every offer there are for
+## next season's contracts, and Contracts.payroll leaves the season's retirees
+## off the books it adds up.
+func _sync_money_year() -> void:
+	var ahead := season_year > 0 and offseason_year == season_year
+	Contracts.money_year = season_year + 1 if ahead else season_year
 
 
 ## Whether Canberra joins this career in 2030. Set before the career's first
