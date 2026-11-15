@@ -33,7 +33,7 @@ const GAP_MAX := 9.0           # m/s: and at most this fast
 const APART := 0.8             # m: on that run his hips stay this far from the man he tackled (or who tackled him)
 const REACH := 1.6             # m: MatchDirector's chase ends this close (its "chase" phase)
 const STEP := 1.0 / 30.0       # s: the takes' frame
-const SCOOP_END := 0.70        # clip s: ground_ball_run_01 ends in the GLB, ball at his chest, hips back at run height; the jog eases in over BLEND
+const SCOOP_END := MatchDirector.SCOOP_END   # clip s: ground_ball_run_01 ends; the jog eases in over BLEND
 
 var director: MatchDirector
 var players: Array
