@@ -166,6 +166,8 @@ func _test_ten_seasons() -> void:
 	var n := 3 if OS.get_environment("CI") != "" else 10
 	if OS.get_environment("COACH_ARCS_SEASONS").is_valid_int():
 		n = maxi(2, OS.get_environment("COACH_ARCS_SEASONS").to_int())
+	# Seasons closed by a rollover: n - 1, or fewer when the career ends.
+	var closed := n - 1
 	for s in range(n):
 		var guard := 0
 		while not GameState.season.is_season_over() and guard < 40:
@@ -177,6 +179,7 @@ func _test_ten_seasons() -> void:
 					"a sacked coach with a reprieve has clubs to go to")
 		if ClubMoves.career_over(GameState):
 			_check(not GameState.start_next_season(), "a career that is over does not roll on")
+			closed = s
 			break
 		if s < n - 1:
 			_check(GameState.start_next_season(), "season %d rolls on" % (s + 1))
@@ -198,7 +201,7 @@ func _test_ten_seasons() -> void:
 		f.close()
 	_check(f != null, "the story log is written to %s" % DUMP)
 	_check(started.size() >= (4 if n >= 10 else 1), "several arcs start over ten seasons: %s" % str(started.keys()))
-	_check(int(st["coach"]["seasons"]) == n - 1, "every closed season is counted: %s" % str(st["coach"]))
+	_check(int(st["coach"]["seasons"]) == closed, "every closed season is counted (%d): %s" % [closed, str(st["coach"])])
 
 
 ## Plays the rest of this season, keeping the board where `conf` puts it (-1: leave it).
