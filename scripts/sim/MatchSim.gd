@@ -1780,12 +1780,9 @@ func _contest_bonus(side: int, stoppage := false) -> float:
 			+ _contest_traits(side, stoppage)
 
 
-## Engine room at stoppages only (bug bash 5), as its copy says; Running
-## machine's spare runner in the contests in general play (the loose ball).
+## Engine room: at stoppages only (bug bash 5), as its copy says.
 func _contest_traits(side: int, stoppage: bool) -> float:
-	if stoppage:
-		return Traits.power("engine_room") if synergies[side].has("engine_room") else 0.0
-	return Traits.power2("running_machine") if synergies[side].has("running_machine") else 0.0
+	return Traits.power("engine_room") if stoppage and synergies[side].has("engine_room") else 0.0
 
 
 func _contest_plan(side: int) -> float:
@@ -3383,10 +3380,12 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		# kick-in, not a player disposal. Once the taker plays on it is his
 		# disposal like ordinary play.
 		var counts_disposal := not is_kick_in or kick_in_play_on
+		var got := ""
 		if counts_disposal:
 			_t(side, "disposals")
 			_p(carrier, "disposals")
-			_gain(side, carrier, next_gain if touches > 1 else _first_gain(carrier, cleared, is_kick_in))
+			got = next_gain if touches > 1 else _first_gain(carrier, cleared, is_kick_in)
+			_gain(side, carrier, got)
 		if is_kick_in:
 			_t(side, "kick_ins")
 			_p(carrier, "kick_ins")
@@ -3466,6 +3465,12 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		if _burst(side, "hold"):
 			_credit(side, "bursts", pressure * (1.0 - HOLD_TAKEN) * TURNOVER_VALUE)
 			pressure *= HOLD_TAKEN
+		# Running machine's second effect: the spare runner takes it in space,
+		# so a receive nobody contested is pressured less.
+		if got == "up" and synergies[side].has("running_machine"):
+			var space := Traits.power2("running_machine")
+			_credit(side, "traits", pressure * (1.0 - space) * TURNOVER_VALUE)
+			pressure *= space
 
 		# One roll, three outcomes: a tackle, a pressured (rushed) disposal,
 		# or no pressure at all. Both of the first two are pressure acts.
