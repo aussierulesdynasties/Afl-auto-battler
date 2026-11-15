@@ -30,6 +30,8 @@ func run() -> void:
 	_t("_test_complete_synergy_reentry")
 	_t("_test_gaps_and_overflow")
 	_t("_test_left_out_player_sits_out")
+	_t("_test_gap_goes_to_best_suited")
+	_t("_test_best_side_on_form")
 	_t("_test_selection_saved")
 	_t("_test_with_us_and_milestones")
 	_t("_test_fifth_interchange")
@@ -350,6 +352,112 @@ func _test_gaps_and_overflow() -> void:
 	_check(counts == {"RUCK": 1, "MID": 5, "DEF": 6, "FWD": 6},
 			"Every slot is filled exactly, gap filled and overflow capped (%s)" % str(counts))
 	GameState.list_player(gone)["injury_weeks"] = 0
+
+
+## Director, 2026-11-15: "best player suited gets the spot, idc whether they
+## came from the bench or reserves". A named forward is hurt; the best spare
+## forward sits on the named bench and a weaker one is not named at all: the
+## bench man gets the spot (the old order gave it to the unnamed one first).
+func _test_gap_goes_to_best_suited() -> void:
+	_new_season()
+	var side := GameState.current_side()
+	var gone := str(side["FWD"][0])
+	var named := {}
+	for line in ["RUCK", "MID", "WING", "DEF", "FWD"]:
+		for id in side.get(line, []):
+			named[str(id)] = true
+	var spare: Array = []
+	for p in GameState.my_list:
+		var id := str(p["id"])
+		if not named.has(id) and str(p.get("role", "")) == "FWD" and Ratings.available(p):
+			spare.append(p)
+	spare.sort_custom(func(a, b):
+		return float(a["overall"]) * Workload.selection_factor(a) > float(b["overall"]) * Workload.selection_factor(b))
+	_check(spare.size() >= 2, "Two spare forwards to choose from (%d)" % spare.size())
+	if spare.size() < 2:
+		return
+	var best := str(spare[0]["id"])
+	var weaker := str(spare[1]["id"])
+	var bench: Array = []
+	for id in side.get("BENCH", []):
+		if str(id) != best and str(id) != weaker:
+			bench.append(str(id))
+	bench = [best] + bench.slice(0, 4)
+	side["BENCH"] = bench
+	GameState.list_player(gone)["injury_weeks"] = 3
+	GameState.set_selection(side)
+	var squad := GameState.my_squad()
+	var ground := _ids(squad.ground)
+	_check(not bench.has(weaker), "The weaker forward is not named")
+	_check(ground.has(best) and not ground.has(weaker),
+			"The best-suited forward takes the hurt man's spot from the bench, ahead of an unnamed forward")
+	GameState.list_player(gone)["injury_weeks"] = 0
+
+
+## Director, 2026-11-15: "Best side on form" means "100% of the selection
+## should be determined only by form"; your own side is back when you coach
+## again. A named forward in a slump sits out the simmed week, an unnamed
+## forward on fire in the twos plays, and the named side returns after.
+func _test_best_side_on_form() -> void:
+	_new_season()
+	var side := GameState.current_side()
+	GameState.set_selection(side)
+	var named := {}
+	for line in ["RUCK", "MID", "WING", "DEF", "FWD", "BENCH"]:
+		for id in side.get(line, []):
+			named[str(id)] = true
+	var slump := ""
+	for id in side["FWD"]:
+		var p: Dictionary = GameState.list_player(str(id))
+		if not p.has("expects_game") and not Backing.is_active(p):
+			slump = str(id)
+			break
+	var hot := ""
+	for p in GameState.my_list:
+		if not named.has(str(p["id"])) and str(p.get("role", "")) == "FWD" and Ratings.available(p) 				and not p.has("expects_game") and not Backing.is_active(p):
+			hot = str(p["id"])
+			break
+	_check(slump != "" and hot != "", "A named forward and an unnamed one to test with (%s, %s)" % [slump, hot])
+	if slump == "" or hot == "":
+		return
+	# Everyone at 50 a game this season; the slumping star at 10, the reserve at 120 in the twos.
+	GameState.form_log = {}
+	GameState.reserves_log = {}
+	for p in GameState.my_list:
+		var id := str(p["id"])
+		if id == hot:
+			continue
+		var r := 10 if id == slump else 50
+		GameState.form_log[id] = {"last": [r, r, r], "sum": r * 5, "n": 5}
+	GameState.reserves_log[hot] = {"last": [{"pts": 120}, {"pts": 120}, {"pts": 120}], "sum": 360, "n": 3, "key": ""}
+	var before: Dictionary = GameState.my_selection()
+	GameState.sim_orders = {"youth": "form"}
+	var orders: Dictionary = GameState._sim_week_orders()
+	var week := GameState.my_squad()
+	var in23 := _ids(week.ground) + _ids(week.bench)
+	_check(in23.has(hot) and not in23.has(slump),
+			"On form, the forward on fire in the twos plays and the named forward in a slump sits out")
+	_check(_ids(week.ground).has(hot), "...and the man in form is on the ground, not the bench")
+	GameState._sim_week_after(orders, "")
+	_check(GameState.my_selection() == before, "Your own named side is back after the simmed week")
+	# Auto-pick stays Auto-pick.
+	GameState.set_selection({})
+	orders = GameState._sim_week_orders()
+	_check(not GameState.my_selection().is_empty(), "The simmed week names a side on form under Auto-pick too")
+	GameState._sim_week_after(orders, "")
+	_check(GameState.my_selection().is_empty(), "...and Auto-pick is back after it")
+	# A season skip: one week played on form, then your side back at the end.
+	GameState.set_selection(side)
+	before = GameState.my_selection()
+	var job: Dictionary = GameState.skip_begin({"youth": "form"})
+	var played := GameState.skip_step(job)
+	var during: Dictionary = GameState.my_selection()
+	GameState.skip_finish(job)
+	_check(played and during != before, "A skipped week is picked on form")
+	_check(GameState.my_selection() == before, "...and your named side is back when the skip ends")
+	GameState.sim_orders = {}
+	GameState.form_log = {}
+	GameState.reserves_log = {}
 
 
 func _test_left_out_player_sits_out() -> void:

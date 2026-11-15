@@ -6,7 +6,7 @@ extends RefCounted
 ## matches, so the survey asks only about them. The coach answers a short run
 ## of questions and the skip follows each answer (GameState.skip_season):
 ##   game_plan  the standing plan every match is played with (set_club_plan)
-##   youth      selection: best side, or promised runs for players with few
+##   youth      selection: the side in the best form, or promised runs for players with few
 ##              senior games (Backing, through auto-pick)
 ##   questions  how the week's cards are answered while he is away
 ## Each option says what it does for him and what it costs, never which is
@@ -45,8 +45,8 @@ static func questions(to := "season") -> Array:
 		{"key": "youth", "title": "Who gets picked?",
 			"lead": "Selection, every week you are away.", "options": [
 				{"key": "form", "label": "Best side on form",
-					"gain": "Our best available 23 every week.",
-					"cost": "Young players only play when they force their way in."},
+					"gain": "Every week the 23 in the best form play: their match rating a game over their last three, in the seniors or the twos.",
+					"cost": "A good player in a slump sits out, and young players only play when they force their way in. Your own side is back when you coach again."},
 				{"key": "kids", "label": "Give the kids a run",
 					"gain": "%s players with fewer than %d senior games are promised a run of %d games at a time, and get the match experience." % [
 						"Two", Backing.FEW_GAMES, Backing.RUN_GAMES],

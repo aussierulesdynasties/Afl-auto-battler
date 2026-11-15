@@ -256,6 +256,7 @@ func reload(dataset := Datasets.DEFAULT) -> void:
 	_apply_origin(players)
 	var past_start := DATA_SEASON != int(Datasets.get_set(Datasets.DEFAULT).get("data_season", DATA_SEASON))
 	Ratings.listed_lines = Ratings.PAST_LISTED_LINES if past_start else Ratings.TODAY_LISTED_LINES
+	Ratings.set_unrecorded(Ratings.find_unrecorded(players))
 	Ratings.derive_all(players)
 	_rating_stats = _load_rating_stats()
 	_apply_rating_stats(players)
@@ -751,8 +752,12 @@ func _load_list_additions() -> Array:
 		var rec = record.get("%s|%s|%s" % [club, p["first"], p["last"]])
 		if rec != null:
 			# Played AFL before: rated on that season, as any listed player is.
+			var blank := []
 			for k in STAT_KEYS:
 				p[k] = float(rec.get(k, 0.0))
+				if str(rec.get(k, "0")) == "":
+					blank.append(k)
+			p["blank"] = blank
 			p["real_pos"] = pos if pos != "" else ""
 			p["role_estimated"] = false
 			p["stats_year"] = int(rec.get("src", 0))
@@ -1111,6 +1116,14 @@ func _apply_rating_stats(list: Array, adjust := true) -> void:
 		var role := str(p.get("role", "MID"))
 		p["apos"] = str(row.get("apos", ""))
 		a = Prospects.fit_attributes(a, role, ovr, games)
+		# A skill his era never recorded stays at his position's average and
+		# shows as a dash (director 2026-11-15, "I never okayed invented stats").
+		for k in Ratings.unknown_attrs:
+			a[k] = 50
+		if Ratings.unknown_attrs.is_empty():
+			p.erase("attr_unrecorded")
+		else:
+			p["attr_unrecorded"] = Ratings.unknown_attrs.keys()
 		var adj := float(Ratings.ATTR_ADJUSTMENTS.get("%s|%s %s" % [p.get("club", ""), p.get("first", ""), p.get("last", "")], 1.0))
 		if adjust and adj != 1.0:
 			for k in a:
@@ -1880,8 +1893,13 @@ func _load_players() -> Array:
 		seen_ids[id] = true
 		p["id"] = id
 		p["src"] = int(str(cells[idx["src"]])) if idx.has("src") else DATA_SEASON
+		var blank := []
 		for k in STAT_KEYS:
-			p[k] = float(str(cells[idx[k]])) if idx.has(k) else 0.0
+			var cell := str(cells[idx[k]]).strip_edges() if idx.has(k) else "0"
+			p[k] = float(cell)
+			if cell == "":
+				blank.append(k)   # not recorded that season (Ratings.unrecorded)
+		p["blank"] = blank
 		# Optional enriched fields — defaults keep Ratings.gd backward-compatible
 		p["real_pos"] = str(cells[idx["real_pos"]]) if idx.has("real_pos") else ""
 		p["dob"] = str(cells[idx["dob"]]) if idx.has("dob") else ""

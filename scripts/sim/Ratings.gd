@@ -103,6 +103,102 @@ const BENCH_COVER := ["FWD", "DEF", "MID"]
 const DUAL_RUCK_MARGIN := 5.0
 const LIST_SIZE := 44
 
+## Stats a past season never recorded (director 2026-11-15, "No invented
+## stats": "an unrecorded stat stays blank and counts for nothing"). AFL
+## Tables kept no rebound 50s, contested possessions, clearances and the rest
+## before 1998 (tools/legacy_1990s/build_start.py). GameDB.reload sets it
+## from the dataset's blank columns; it holds for the whole career. Every
+## blend below drops an unrecorded stat and shares its weight among the
+## recorded ones. Empty for today's data. Mirrored in tools/sim_harness.py.
+static var unrecorded := {}
+## A skill built only from unrecorded stats (contested and creating before
+## 1998) has no record: it is left at his position's average (50, ruling 18),
+## shown as a dash on his card (attr_unrecorded) and counts for nothing in his
+## overall (unknown_attrs).
+static var unknown_attrs := {}
+## Each skill's blend of rates normalised within his line: [weight, metric].
+## Intercept, speed and star power are not kept by AFL Tables (ruling 18):
+## 50 unless the rating file gives them.
+const ATTR_BLENDS := {
+	"kicking": [[1.0, "kicks_pg"]],
+	"handballing": [[1.0, "handballs_pg"]],
+	"contested_marking": [[1.0, "contested_marks_pg"]],
+	"uncontested_marking": [[1.0, "uncontested_marks_pg"]],
+	"contested": [[0.375, "contested_pg"], [0.4375, "clearances_pg"], [0.1875, "contested_share"]],
+	"pressure": [[1.0, "tackles_pg"]],
+	"carry": [[1.0, "bounces_pg"]],
+	"goalkicking": [[1.0, "goals_pg"]],
+	"accuracy": [[1.0, "accuracy"]],
+	"creating": [[2.0 / 3.0, "goal_assists_pg"], [1.0 / 3.0, "inside50s_pg"]],
+	"ruck": [[1.0, "hitouts_pg"]],
+	"discipline": [[0.70, "frees_against_pg"], [0.30, "clangers_pg"]],
+	"durability": [[0.55, "games"], [0.45, "time_on_ground"]],
+}
+## The position reading's blends (FWD, MID, DEF in pick_role's order).
+const ROLE_BLENDS := {
+	"FWD": [[0.50, "goals_pg"], [0.26, "marks_inside50_pg"], [0.14, "goal_assists_pg"], [0.10, "behinds_pg"]],
+	"MID": [[0.42, "disposals_pg"], [0.30, "contested_pg"], [0.28, "clearances_pg"]],
+	"DEF": [[0.42, "rebounds_pg"], [0.30, "one_percenters_pg"], [0.20, "marks_pg"], [0.08, "goals_pg", true]],
+}
+## Metrics read from a stat other than their own column.
+const METRIC_STAT := {"contested_share": "cp", "time_on_ground": "pctp", "uncontested_marks_pg": "cm"}
+
+
+static func metric_recorded(metric: String) -> bool:
+	if unrecorded.is_empty():
+		return true
+	if METRIC_STAT.has(metric):
+		return not unrecorded.has(METRIC_STAT[metric])
+	for spec in METRIC_SPECS:
+		if spec[0] == metric:
+			return not unrecorded.has(spec[1])
+	return true
+
+
+## A blend over the recorded metrics only, their weights rescaled to sum as
+## before; -1.0 when none of them was recorded.
+static func blend(q: Dictionary, terms: Array) -> float:
+	var total := 0.0
+	var kept := 0.0
+	var v := 0.0
+	for t in terms:
+		total += float(t[0])
+		if not metric_recorded(str(t[1])):
+			continue
+		kept += float(t[0])
+		var x := float(q[t[1]])
+		v += float(t[0]) * ((1.0 - x) if t.size() > 2 else x)
+	if kept <= 0.0:
+		return -1.0
+	return v * total / kept
+
+
+## Which stats a pool never recorded: a column blank on most of its rows
+## (GameDB marks each player's blank cells in "blank").
+static func find_unrecorded(players: Array) -> Dictionary:
+	var count := {}
+	for p in players:
+		for k in p.get("blank", []):
+			count[k] = int(count.get(k, 0)) + 1
+	var out := {}
+	for k in count:
+		if int(count[k]) * 2 > players.size():
+			out[k] = true
+	return out
+
+
+## Set the career's unrecorded stats and the attributes left with no record.
+static func set_unrecorded(stats: Dictionary) -> void:
+	unrecorded = stats
+	unknown_attrs = {}
+	for attr in ATTR_BLENDS:
+		var any := false
+		for t in ATTR_BLENDS[attr]:
+			any = any or metric_recorded(str(t[1]))
+		if not any:
+			unknown_attrs[attr] = true
+
+
 ## Raw season columns every player dict carries. GameDB.STAT_KEYS must match;
 ## prospects (no AFL stats) get these zero-filled for the display rows.
 const STATS_ZERO_KEYS := ["gm", "ki", "mk", "hb", "di", "gl", "bh", "ho", "tk", "rb",
@@ -385,14 +481,9 @@ static func derive_all(players: Array, reference: Array = []) -> Array:
 
 		# ---- role classification ------------------------------------------
 		var hitouts_pg: float = p["ho"] / maxf(1.0, p["gm"])
-		var scores := {
-			"FWD": 0.50 * q["goals_pg"] + 0.26 * q["marks_inside50_pg"]
-					+ 0.14 * q["goal_assists_pg"] + 0.10 * q["behinds_pg"],
-			"MID": 0.42 * q["disposals_pg"] + 0.30 * q["contested_pg"]
-					+ 0.28 * q["clearances_pg"],
-			"DEF": 0.42 * q["rebounds_pg"] + 0.30 * q["one_percenters_pg"]
-					+ 0.20 * q["marks_pg"] + 0.08 * (1.0 - q["goals_pg"]),
-		}
+		var scores := {}
+		for role in ROLE_BLENDS:
+			scores[role] = maxf(0.0, blend(q, ROLE_BLENDS[role]))
 		# Ruck is gated on actual hit-out volume, not on a normalised score:
 		# without the gate every tall forward gets classified as a ruckman.
 		scores["RUCK"] = (0.25 + 0.85 * q["hitouts_pg"]) if hitouts_pg >= 7.0 else -1.0
@@ -421,23 +512,21 @@ static func derive_all(players: Array, reference: Array = []) -> Array:
 		for k in keys:
 			lq[k] = norm(lp, k, p["rates"][k])
 		var a := {}
-		a["kicking"] = scale_attr(lq["kicks_pg"])
-		a["handballing"] = scale_attr(lq["handballs_pg"])
-		a["contested_marking"] = scale_attr(lq["contested_marks_pg"])
-		a["uncontested_marking"] = scale_attr(lq["uncontested_marks_pg"])
-		a["contested"] = scale_attr((30.0 * lq["contested_pg"] + 35.0 * lq["clearances_pg"]
-				+ 15.0 * lq["contested_share"]) / 80.0)
-		a["pressure"] = scale_attr(lq["tackles_pg"])
+		var unknown := []
+		for key in ATTR_BLENDS:
+			var v := blend(lq, ATTR_BLENDS[key])
+			a[key] = scale_attr(v) if v >= 0.0 else 50
+			if v < 0.0:
+				unknown.append(key)
 		a["intercept"] = 50
 		a["speed"] = 50
-		a["carry"] = scale_attr(lq["bounces_pg"])
-		a["goalkicking"] = scale_attr(lq["goals_pg"])
-		a["accuracy"] = scale_attr(lq["accuracy"])
-		a["creating"] = scale_attr((40.0 * lq["goal_assists_pg"] + 20.0 * lq["inside50s_pg"]) / 60.0)
-		a["ruck"] = scale_attr(lq["hitouts_pg"])
-		a["discipline"] = scale_attr(0.70 * lq["frees_against_pg"] + 0.30 * lq["clangers_pg"])
-		a["durability"] = scale_attr(0.55 * lq["games"] + 0.45 * lq["time_on_ground"])
 		a["star"] = 50
+		# Shown blank on his card, never as the stand-in value (director
+		# 2026-11-15, "I never okayed invented stats").
+		if unknown.is_empty():
+			p.erase("attr_unrecorded")
+		else:
+			p["attr_unrecorded"] = unknown
 		var adj := float(ATTR_ADJUSTMENTS.get("%s|%s %s" % [p.get("club", ""), p.get("first", ""), p.get("last", "")], 1.0))
 		if adj != 1.0:
 			for k in a:
@@ -520,8 +609,16 @@ static func rate_overall(a: Dictionary, role: String, games: float) -> int:
 	var w: Dictionary = ROLE_WEIGHTS.get(role, ROLE_WEIGHTS["MID"])
 	var f: Dictionary = LINE_FIT.get(role, LINE_FIT["MID"])
 	var b := 0.0
+	var total := 0.0
+	var kept := 0.0
 	for key in w:
+		total += float(w[key])
+		if unknown_attrs.has(key):
+			continue   # no record in his era: counts for nothing
+		kept += float(w[key])
 		b += float(w[key]) * (float(a.get(key, 50)) - 1.0) / 98.0
+	if kept > 0.0:
+		b *= total / kept
 	var mid := float(f["mid"])
 	var overall := mid + float(f["slope"]) * (b - float(f["mean"]))
 	var conf: float = minf(1.0, games / 14.0)
@@ -820,9 +917,12 @@ static func available(p: Dictionary) -> bool:
 ## "BENCH": [...], "OUT": [ids]} - WING names two of the five midfielders
 ## (Roles), MID the centre square: named players take their slots (any player can be named in
 ## any position), and a gap - an injured or departed player, or a slot left
-## short - is filled the automatic way from the unnamed players, then the
-## named bench, and only as a last resort from those you left OUT. Injured
-## players never play.
+## short - goes to the best-suited fit player, from the named bench and the
+## players not named alike (director, 2026-11-15: "best player suited gets
+## the spot, idc whether they came from the bench or reserves"), and only as a
+## last resort to one marked OUT (a promise's swap). Best suited is the
+## automatic way: his own position first, then his second, then anyone, each
+## by rating and freshness. Injured players never play.
 static func select_side(list_players: Array, selection: Dictionary = {}) -> Dictionary:
 	var pool: Array = []
 	for p in list_players:
@@ -869,15 +969,13 @@ static func select_side(list_players: Array, selection: Dictionary = {}) -> Dict
 			ground.append(_for_slot(p, role))
 			used[str(id)] = true
 			added += 1
-	# Fill order for gaps: 0 unnamed, 1 the named bench, 2 players left out.
+	# Fill order for gaps: 0 the bench and the unnamed alike (best suited
+	# wins), 1 players marked OUT.
 	var tier := {}
-	for id in selection.get("BENCH", []):
-		if by_id.has(str(id)) and not used.has(str(id)):
-			tier[str(id)] = 1
 	for id in selection.get("OUT", []):
 		if by_id.has(str(id)) and not used.has(str(id)):
-			tier[str(id)] = 2
-	for pass_tier in [0, 1, 2]:
+			tier[str(id)] = 1
+	for pass_tier in [0, 1]:
 		for slot in GROUND_SLOTS:
 			var role: String = slot[0]
 			var have := 0
@@ -927,7 +1025,7 @@ static func select_side(list_players: Array, selection: Dictionary = {}) -> Dict
 		if by_id.has(str(id)) and not used.has(str(id)):
 			bench.append(by_id[str(id)])
 			used[str(id)] = true
-	for pass_tier in [0, 2]:
+	for pass_tier in [0, 1]:
 		for p in pool:
 			if bench.size() >= bench():
 				break
@@ -937,6 +1035,60 @@ static func select_side(list_players: Array, selection: Dictionary = {}) -> Dict
 				used[id] = true
 	Roles.mark_wings(ground, selection.get("WING", []))
 	return {"ground": ground, "bench": bench}
+
+
+## The side "Best side on form" names for a simmed week (director, 2026-11-15:
+## "100% of the selection should be determined only by form, thats what the
+## copy says it does"). `form`: player id -> his form, the match rating a game
+## over his last games (PlayerCondition.form: seniors, else the twos; -1 when
+## he has played neither this season). Each line takes the players in the best
+## form who play it (his own position, then his second, then anyone); the
+## bench the next best. Rating plays no part, except to order the players
+## with no game yet, who come after everyone with form. A promised player
+## (a run, a talk) is still first in line, as in select_22: a promise made
+## stands. Returns a selection: {"RUCK", "MID", "DEF", "FWD", "BENCH": [ids]}.
+static func select_on_form(list_players: Array, form: Dictionary) -> Dictionary:
+	var pool: Array = []
+	var promised := {}
+	for p in list_players:
+		if available(p):
+			pool.append(p)
+			if p.has("expects_game") or Backing.is_active(p):
+				promised[str(p["id"])] = true
+	var score := func(p: Dictionary) -> float:
+		var v := float(form.get(str(p["id"]), -1))
+		return v if v >= 0.0 else -1000.0 + float(p.get("overall", 0))
+	pool.sort_custom(func(a, b):
+		var pa := promised.has(str(a["id"]))
+		if pa != promised.has(str(b["id"])):
+			return pa
+		var sa: float = score.call(a)
+		var sb: float = score.call(b)
+		if sa != sb:
+			return sa > sb
+		return str(a["id"]) < str(b["id"]))
+	var sel := {"RUCK": [], "MID": [], "DEF": [], "FWD": [], "BENCH": []}
+	var used := {}
+	for pass_kind in ["own", "second", "any"]:
+		for slot in GROUND_SLOTS:
+			var role: String = slot[0]
+			for p in pool:
+				if (sel[role] as Array).size() >= int(slot[1]):
+					break
+				var id := str(p["id"])
+				if used.has(id):
+					continue
+				var fits: bool = (str(p.get("role", "")) == role or (role == "RUCK" and plays_role(p, "RUCK"))) if pass_kind == "own" 						else (second_positions(p).has(role) if pass_kind == "second" else true)
+				if fits:
+					(sel[role] as Array).append(id)
+					used[id] = true
+	for p in pool:
+		if (sel["BENCH"] as Array).size() >= bench():
+			break
+		if not used.has(str(p["id"])):
+			(sel["BENCH"] as Array).append(str(p["id"]))
+			used[str(p["id"])] = true
+	return sel
 
 
 ## His rating playing `line`: his own rating in his own line, else what his

@@ -26,7 +26,7 @@ the position each player is known for, in this order:
      matches 84% of the time where it names one; the one-season read it
      replaces matched 60% (1990) to 76% (2020).
 
-Output data/legacy/positions.csv, one row per player (first, last, dob, and his
+Output data/legacy/known_lines.csv, one row per player (first, last, dob, and his
 AFL Tables ids, afltables_ids):
   pos, pos2   FWD / MID / DEF / RUC, and a second line ("" when none)
   source      wiki_infobox / wiki_lead / career / nearest
@@ -54,7 +54,7 @@ from collections import Counter, defaultdict
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 LEG = os.path.join(ROOT, "data", "legacy")
-OUT = os.path.join(LEG, "positions.csv")
+OUT = os.path.join(LEG, "known_lines.csv")
 API = "https://en.wikipedia.org/w/api.php"
 UA = "afl-legacy-positions/1.0 (stdlib research script)"
 STARTS = (1990, 2000, 2010, 2020)

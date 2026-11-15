@@ -406,7 +406,7 @@ def overall_from(fit_pos: dict, s01: dict) -> float:
 
 # ------------------------------------------- positions before 2012 --
 # A season before 2012 has no AFL position. It is read from the player's
-# line (data/legacy/positions.csv: the line he is known for) and that
+# line (data/legacy/known_lines.csv: the line he is known for) and that
 # season's numbers, by the nearest players of 2012-2025 with the same
 # numbers kept: the AFL position most of his 25 nearest neighbours had.
 POS_FEATURES = ["ki", "mk", "hb", "gl", "bh", "ho", "tk", "ff", "fa", "rb", "if50", "cl", "cg", "cp", "cm", "mi",

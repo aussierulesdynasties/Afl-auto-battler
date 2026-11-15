@@ -269,16 +269,12 @@ def derive_ratings(players):
         p["norm"] = q
 
         # ---- role classification -----------------------------------------
-        role_scores = {
-            "FWD": (0.50 * q["goals_pg"] + 0.26 * q["marks_inside50_pg"]
-                    + 0.14 * q["goal_assists_pg"] + 0.10 * q["behinds_pg"]),
-            "MID": (0.42 * q["disposals_pg"] + 0.30 * q["contested_pg"]
-                    + 0.28 * q["clearances_pg"]),
-            "DEF": (0.42 * q["rebounds_pg"] + 0.30 * q["one_percenters_pg"]
-                    + 0.20 * q["marks_pg"] + 0.08 * (1.0 - q["goals_pg"])),
-        }
         hitouts_pg = p["ho"] / max(1.0, p["gm"])
-        role_scores["RUCK"] = (0.25 + 0.85 * q["hitouts_pg"]) if hitouts_pg >= 7.0 else -1.0
+        role_scores = {role: max(0.0, blend(q, terms)) for role, terms in ROLE_BLENDS.items()}
+        if hitouts_pg >= 7.0:
+            role_scores["RUCK"] = 0.25 + 0.85 * q["hitouts_pg"]
+        else:
+            role_scores["RUCK"] = -1.0
         p["role"] = max(role_scores, key=role_scores.get)
         # Ratings.listed_primary: a listed forward or defender is his
         # listed line unless the numbers read a ruck (row 91, T8.Q11); a
@@ -286,6 +282,11 @@ def derive_ratings(players):
         listed = p.get("real_pos", "")
         if listed in LISTED_LINES and p["role"] != "RUCK":
             p["role"] = listed
+        # A record naming several roles ("a wingman or half forward"): his
+        # recorded stats choose among the roles it names (director 2026-11-15).
+        named = [r for r in listed.split("|") if role_scores.get(r, -1.0) >= 0.0] if "|" in listed else []
+        if named:
+            p["role"] = max(named, key=role_scores.get)
         # Ratings.ROLE_CORRECTIONS: clearly misread forwards.
         p["role"] = ROLE_CORRECTIONS.get("%s|%s" % (p.get("club", ""), p.get("name", "")), p["role"])
         p["role_scores"] = role_scores
@@ -302,22 +303,11 @@ def derive_ratings(players):
         n = line_norms[p["role"]]
         lq = {k: n[k](p["rates"][k]) for k in keys}
         a = {}
-        a["kicking"] = scale(lq["kicks_pg"])
-        a["handballing"] = scale(lq["handballs_pg"])
-        a["contested_marking"] = scale(lq["contested_marks_pg"])
-        a["uncontested_marking"] = scale(lq["uncontested_marks_pg"])
-        a["contested"] = scale((30.0 * lq["contested_pg"] + 35.0 * lq["clearances_pg"]
-                                + 15.0 * lq["contested_share"]) / 80.0)
-        a["pressure"] = scale(lq["tackles_pg"])
+        for key, terms in ATTR_BLENDS.items():
+            v = blend(lq, terms)
+            a[key] = scale(v) if v >= 0.0 else 50
         a["intercept"] = 50
         a["speed"] = 50
-        a["carry"] = scale(lq["bounces_pg"])
-        a["goalkicking"] = scale(lq["goals_pg"])
-        a["accuracy"] = scale(lq["accuracy"])
-        a["creating"] = scale((40.0 * lq["goal_assists_pg"] + 20.0 * lq["inside50s_pg"]) / 60.0)
-        a["ruck"] = scale(lq["hitouts_pg"])
-        a["discipline"] = scale(0.70 * lq["frees_against_pg"] + 0.30 * lq["clangers_pg"])
-        a["durability"] = scale(0.55 * lq["games"] + 0.45 * lq["time_on_ground"])
         a["star"] = 50
         adj = ATTR_ADJUSTMENTS.get("%s|%s" % (p.get("club", ""), p.get("name", "")), 1.0)
         if adj != 1.0:
@@ -329,6 +319,62 @@ def derive_ratings(players):
         p["value"] = salary_value(p["overall"])
 
     return players
+
+
+# Stats a past season never recorded (Ratings.unrecorded, director 2026-11-15,
+# "No invented stats"): every blend drops them and shares their weight among
+# the recorded ones; a skill with none recorded stays at 50 (ruling 18) and
+# counts for nothing in the overall (UNKNOWN_ATTRS). set_unrecorded() sets both.
+UNRECORDED = set()
+UNKNOWN_ATTRS = set()
+ATTR_BLENDS = {  # Ratings.gd::ATTR_BLENDS: each skill against his line
+    "kicking": [(1.0, "kicks_pg")],
+    "handballing": [(1.0, "handballs_pg")],
+    "contested_marking": [(1.0, "contested_marks_pg")],
+    "uncontested_marking": [(1.0, "uncontested_marks_pg")],
+    "contested": [(0.375, "contested_pg"), (0.4375, "clearances_pg"), (0.1875, "contested_share")],
+    "pressure": [(1.0, "tackles_pg")],
+    "carry": [(1.0, "bounces_pg")],
+    "goalkicking": [(1.0, "goals_pg")],
+    "accuracy": [(1.0, "accuracy")],
+    "creating": [(2.0 / 3.0, "goal_assists_pg"), (1.0 / 3.0, "inside50s_pg")],
+    "ruck": [(1.0, "hitouts_pg")],
+    "discipline": [(0.70, "frees_against_pg"), (0.30, "clangers_pg")],
+    "durability": [(0.55, "games"), (0.45, "time_on_ground")],
+}
+ROLE_BLENDS = {
+    "FWD": [(0.50, "goals_pg"), (0.26, "marks_inside50_pg"), (0.14, "goal_assists_pg"), (0.10, "behinds_pg")],
+    "MID": [(0.42, "disposals_pg"), (0.30, "contested_pg"), (0.28, "clearances_pg")],
+    "DEF": [(0.42, "rebounds_pg"), (0.30, "one_percenters_pg"), (0.20, "marks_pg"), (0.08, "goals_pg", True)],
+}
+METRIC_STAT = dict(METRIC_SPECS)
+METRIC_STAT.update({"contested_share": "cp", "time_on_ground": "pctp", "uncontested_marks_pg": "cm"})
+
+
+def metric_recorded(metric):
+    return METRIC_STAT.get(metric) not in UNRECORDED
+
+
+def blend(q, terms):
+    total = kept = v = 0.0
+    for t in terms:
+        total += t[0]
+        if not metric_recorded(t[1]):
+            continue
+        kept += t[0]
+        x = q[t[1]]
+        v += t[0] * ((1.0 - x) if len(t) > 2 else x)
+    return v * total / kept if kept > 0 else -1.0
+
+
+def set_unrecorded(stats):
+    """Ratings.set_unrecorded: stats use the game's keys (onepct, pctp)."""
+    UNRECORDED.clear()
+    UNRECORDED.update(stats)
+    UNKNOWN_ATTRS.clear()
+    for attr, terms in ATTR_BLENDS.items():
+        if not any(metric_recorded(t[1]) for t in terms):
+            UNKNOWN_ATTRS.add(attr)
 
 
 ROLE_WEIGHTS = {  # each line's skill shares (Ratings.gd::ROLE_WEIGHTS, the APR fit)
@@ -356,7 +402,10 @@ def rate_overall(a, role, games):
     then the low-games confidence shrink."""
     w = ROLE_WEIGHTS.get(role, ROLE_WEIGHTS["MID"])
     f = LINE_FIT.get(role, LINE_FIT["MID"])
-    b = sum(wt * (float(a.get(k, 50)) - 1.0) / 98.0 for k, wt in w.items())
+    kept = sum(wt for k, wt in w.items() if k not in UNKNOWN_ATTRS)
+    b = sum(wt * (float(a.get(k, 50)) - 1.0) / 98.0 for k, wt in w.items() if k not in UNKNOWN_ATTRS)
+    if kept > 0:
+        b *= sum(w.values()) / kept
     mid = f["mid"]
     overall = mid + f["slope"] * (b - f["mean"])
     conf = min(1.0, games / 14.0)
