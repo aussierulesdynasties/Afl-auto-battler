@@ -2548,6 +2548,7 @@ func _test_momentum_meter() -> void:
 	var bar: Button = m.find_child("MomentumBar", true, false)
 	var word: Label = m.find_child("MomentumWord", true, false)
 	_check(bar != null and _text(bar).contains("Momentum") and word != null, "The meter is labelled Momentum")
+	_check(bar != null and bar.size.y >= 44.0, "The momentum bar is a thumb's target on a phone, 44 px high (%.0f)" % (bar.size.y if bar != null else 0.0))
 	m.call("_track_momentum", {"mom": 0.0})
 	_check(word != null and word.text == "Even", "Level, it says Even (%s)" % (word.text if word else "-"))
 	await _settle()

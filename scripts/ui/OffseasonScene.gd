@@ -1111,7 +1111,7 @@ func _draft_picks(body: VBoxContainer, code: String, chosen: Array, prefix: Stri
 		body.add_child(story)
 
 
-## A list to add players from, best first: name, position, OVR, POT and age.
+## A list to add players from, best first: name, position, age, OVR and POT.
 func _pick_grid(body: VBoxContainer, list: Array, chosen: Array, prefix: String) -> void:
 	body.add_child(UiKit.lbl("Players", 14, UiKit.MUTED, true))
 	var sorted := list.duplicate()
@@ -1124,10 +1124,14 @@ func _pick_grid(body: VBoxContainer, list: Array, chosen: Array, prefix: String)
 		# Their players your challenge bars from coming to you: the tag sits
 		# by his name, where a trimmed row still shows it, and he can't be added.
 		var tag := Challenge.short_tag(GameState, p) if prefix == "Their_" else ""
-		var b := _asset_button("%s%s  ·  %s  ·  %d OVR  ·  %s POT  ·  %d%s" % [GameDB.player_display_name(p),
-				"  ·  " + tag if tag != "" else "",
-				Ratings.role_tag(p), int(p["overall"]), str(GameState.pot_view(p)["text"]),
-				int(p.get("age", 0)), "  ·  Untouchable" if GameState.is_untouchable(id) else ""], chosen.has(id))
+		# Who he is on the first line (Untouchable by his name, then his position);
+		# on a phone his age and ratings go on a second line, so a long position
+		# never cuts them off.
+		var head := "%s%s%s  ·  %s" % [GameDB.player_display_name(p), "  ·  " + tag if tag != "" else "",
+				"  ·  Untouchable" if GameState.is_untouchable(id) else "", Ratings.role_tag(p)]
+		var facts := "Age %d  ·  %d OVR  ·  %s POT" % [int(p.get("age", 0)), int(p["overall"]),
+				str(GameState.pot_view(p)["text"])]
+		var b := _asset_button(head + ("  ·  " if _wide() else "\n") + facts, chosen.has(id))
 		b.name = prefix + id
 		b.disabled = tag != "" and not chosen.has(id)
 		b.pressed.connect(func():

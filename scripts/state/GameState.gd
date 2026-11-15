@@ -6497,7 +6497,7 @@ func finals_outcome_line(res: Dictionary) -> String:
 		return _past_finals_outcome_line(res, tag, won)
 	match tag.substr(0, 2):
 		"WC":
-			return "Through! You reseed by ladder position for a qualifying or elimination final." \
+			return "Through. We go into a qualifying or elimination final, placed by ladder position." \
 					if won else "Knocked out in the wildcard round. Your season is over."
 		"QF":
 			return "Straight through to a home preliminary final, with a week off." if won \
@@ -6509,7 +6509,7 @@ func finals_outcome_line(res: Dictionary) -> String:
 			return "Through to the preliminary finals." if won \
 					else "Knocked out in the semi finals. Your season is over."
 		"PF":
-			return "Into the Grand Final!" if won \
+			return "Into the Grand Final." if won \
 					else "One game short: out in the preliminary final."
 		"GF":
 			return ("%d PREMIERS" % season_year) if won \
@@ -6544,7 +6544,7 @@ func _past_finals_outcome_line(res: Dictionary, tag: String, won: bool) -> Strin
 				next_week = w
 				next_label = str(e[1])
 	if next_label == "Grand Final":
-		return "Into the Grand Final!" + (" A week off first." if next_week > at + 1 else "")
+		return "Into the Grand Final." + (" A week off first." if next_week > at + 1 else "")
 	if next_week > at + 1:
 		return "Through, with a week off before the %s." % SeasonRules.week_name(
 				season.finals_format(), next_week + 1).to_lower()
@@ -7864,9 +7864,11 @@ func _close_season_achievements() -> void:
 		if Achievements.is_coach(defn):
 			add_news("achievement", "Achievement unlocked: %s - %s" % [
 					str(defn["name"]), str(defn["desc"])])
+		elif club == my_club:
+			add_news("achievement", "Achievement unlocked: %s." % str(defn["name"]))
 		else:
-			add_news("achievement", "Achievement unlocked: %s - %s (%s)" % [
-					str(defn["name"]), GameDB.club_name(club), GameDB.club_short(club)])
+			# Another club's feat: theirs, not one you unlocked, and named once.
+			add_news("achievement", "%s earn an achievement: %s." % [GameDB.club_name(club), str(defn["name"])])
 
 
 ## This season's honoured players and premiership side that you drafted,

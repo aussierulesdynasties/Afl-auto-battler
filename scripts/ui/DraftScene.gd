@@ -750,7 +750,7 @@ func _position_filters() -> Control:
 	var height := 52 if _short else 58
 	_all_button = UiKit.btn("All", 14)
 	_all_button.name = "Filter_ALL"
-	_all_button.custom_minimum_size = Vector2(40 if narrow else 48, height)
+	_all_button.custom_minimum_size = Vector2(44 if narrow else 48, height)
 	_all_button.tooltip_text = "Show every position."
 	_all_button.pressed.connect(_set_role.bind(""))
 	h.add_child(_all_button)

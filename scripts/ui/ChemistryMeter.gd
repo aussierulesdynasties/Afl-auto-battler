@@ -147,7 +147,7 @@ static func open(host: Control, on_close := Callable()) -> Control:
 
 	var men := TeamFamiliarity.new_club_men(side)
 	v.add_child(UiKit.spacer(6))
-	v.add_child(_head("Men from other clubs", ink))
+	v.add_child(_head("Players from other clubs", ink))
 	v.add_child(_count_row(men.size(), ink))
 
 	v.add_child(UiKit.spacer(6))

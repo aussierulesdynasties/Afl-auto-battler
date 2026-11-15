@@ -3186,6 +3186,15 @@ func _test_menu_and_career() -> void:
 	_check(theirs_btn != null and current_scene.find_child("TradeSide_mine", true, false) != null
 			and current_scene.find_children("Mine_*", "Button", true, false).is_empty(),
 			"The trade builder shows one list at a time: theirs, with yours a tap away")
+	# On a phone a player row is two lines: name and position, then age and
+	# ratings, so a long position never trims his age off the end.
+	var row_lines: PackedStringArray = str((theirs_btn as Button).text).split("\n") if theirs_btn != null else PackedStringArray()
+	for n in current_scene.find_children("Their_*", "Button", true, false):
+		if not str(n.name).begins_with("Their_pick_"):
+			row_lines = str((n as Button).text).split("\n")
+			break
+	_check(row_lines.size() == 2 and row_lines[1].begins_with("Age ") and row_lines[1].contains(" OVR") and row_lines[1].ends_with(" POT"),
+			"A player row on a phone puts his age and ratings on a line of their own (%s)" % str(row_lines))
 	var phone_rect := Rect2(Vector2.ZERO, root.get_visible_rect().size).grow(1)
 	var builder_fits := true
 	for nm in ["TradeClub", "MakeTrade", "TradeSide_theirs", "TradeSide_mine"]:

@@ -377,14 +377,14 @@ static func quarter_facts(res: Dictionary, my_side: int, q: int, answers := {}) 
 	if clr_t - clr_m >= CLEARANCE_EDGE:
 		out.append("Their midfield is on top at the stoppages: clearances %d to %d." % [clr_t, clr_m])
 	elif clr_m - clr_t >= CLEARANCE_EDGE:
-		out.append("Your midfield is winning the stoppages: clearances %d to %d." % [clr_m, clr_t])
+		out.append("Our midfield is winning the stoppages: clearances %d to %d." % [clr_m, clr_t])
 
 	var i50_m := int(mine.get("inside50", 0.0))
 	var i50_t := int(theirs.get("inside50", 0.0))
 	if i50_t - i50_m >= INSIDE50_EDGE:
 		out.append("They have had most of the ball going forward: %d inside 50s to %d." % [i50_t, i50_m])
 	elif i50_m - i50_t >= INSIDE50_EDGE:
-		out.append("You have had most of the ball going forward: %d inside 50s to %d." % [i50_m, i50_t])
+		out.append("We have had most of the ball going forward: %d inside 50s to %d." % [i50_m, i50_t])
 
 	var spare := _roamer_quarter_fact(res, now, was, opp)
 	if spare != "":

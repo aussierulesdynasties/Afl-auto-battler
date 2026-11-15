@@ -29,8 +29,8 @@ const TEXT := {
 		"Our game plan: how we play every week, set against what our list is good at.",
 		"Each plan suits some lists more than others. We can change it before any match.",
 	]],
-	"list": ["Your list", [
-		"Every player on your list: who he is, whether he is fit, and how good he is.",
+	"list": ["Our list", [
+		"Every player on our list: who he is, whether he is fit, and how good he is.",
 		"Tap a player to see his profile, his contract and how he is developing.",
 	]],
 	"staff": ["Our staff", [
@@ -61,7 +61,7 @@ const TEXT := {
 		"Work through each stop in order, then start the season.",
 	]],
 	"season_review": ["Season review", [
-		"How your season went: who won the flag, how your list went, and the final ladder.",
+		"How our season went: who won the flag, how our list went, and the final ladder.",
 		"Read it, then move on to the off-season and start building for next year.",
 	]],
 	"postseason": ["After the finals", [
