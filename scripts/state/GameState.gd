@@ -9034,9 +9034,9 @@ func _decide_retirements() -> void:
 
 ## Legacy: a real player whose AFL career ended before Prospects.REAL_RETIRE_AGE
 ## was delisted then (Prospects.real_delisting_due), so his contract ends this
-## off-season at every club. A rival lets him go; yours decides, as for any
-## player out of contract. Once a career: a club that keeps him keeps him as
-## the sim's. Counted as a delisting, not a retirement (#1631 kept those at
+## off-season at every club. A rival lets him go and his career ends when the
+## market opens (_open_market): no club signs him. Yours decides, as for any
+## player out of contract; re-signed, he is the sim's from then on. Counted as a delisting, not a retirement (#1631 kept those at
 ## two or three a club).
 func _real_delistings() -> void:
 	var year := season_year + 1
@@ -9436,11 +9436,15 @@ static func clear_market_marks(p: Dictionary) -> void:
 
 func _open_market(players: Array) -> void:
 	# A player retiring at this rollover is not on the market: his career ends.
+	# So does a real man whose real club delisted him now (_real_delistings):
+	# his AFL career ended then, so no club signs him; only a coach who keeps
+	# him off his own list keeps him playing (director, 2026-11-13).
 	for p in players.duplicate():
-		if retiring_now(p):
+		var delisted := not retiring_now(p) and int(p.get("real_end", 0)) == season_year + 1
+		if retiring_now(p) or delisted:
 			players.erase(p)
 			free_agents.erase(p)
-			_career_over(p)
+			_career_over(p, "delisted" if delisted else "retired")
 	_bars = {}
 	_fa_phase = {}
 	var depth_held := {}

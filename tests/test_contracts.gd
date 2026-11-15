@@ -404,9 +404,10 @@ func _test_real_delistings() -> void:
 	_to_offseason()
 	ClubMoves.settle_letter(GameState)
 	GameState.open_offseason()
-	_check(not (GameState.season.lists[rival] as Array).has(theirs) and GameState.free_agents.has(theirs)
-			and str(theirs.get("released_by", "")) == rival,
-			"%s let their best player go when his real club delisted him (%s; off-season of %d in %d, real_end %s, %d years, retiring %s, released_by '%s')" % [
+	# Released, he is not on the market: no club signs him, his career ends.
+	_check(not (GameState.season.lists[rival] as Array).has(theirs) and not GameState.free_agents.has(theirs)
+			and str(theirs.get("released_by", "")) == rival and GameState.departed_names.has(str(theirs["id"])),
+			"%s let their best player go when his real club delisted him, and his career ends (%s; off-season of %d in %d, real_end %s, %d years, retiring %s, released_by '%s')" % [
 			rival, GameDB.player_display_name(theirs), GameState.offseason_year, GameState.season_year,
 			str(theirs.get("real_end", "-")), int(theirs.get("contract_years", -1)), str(GameState.retiring_now(theirs)),
 			str(theirs.get("released_by", ""))])
