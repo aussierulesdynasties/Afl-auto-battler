@@ -1044,6 +1044,39 @@ func _test_coaching_hub() -> void:
 			and GameState.form_log.has("X1") and not GameState.season_team.is_empty(),
 			"The plan, form and season numbers survive a save")
 	_check(GameState.season.plans.get("GEE", "") == "defensive", "A loaded career plays on its plan")
+	# The own plan is gone (director 2026-11-15: "remove custom gameplans from
+	# the game ... for now"): no picker offers it, and a save that played one,
+	# yours or a rival's, loads on Balanced with nothing of it left.
+	var pickers := {"How we play": GameState.CLUB_PLANS, "the rival read": RivalRead.ORDER,
+			"a break": load("res://scripts/ui/MatchScene.gd").GAMEPLANS.map(func(g): return g[0]),
+			"Sim orders": (SkipOrders.questions()[0]["options"] as Array).map(func(o): return o["key"])}
+	var offers := []
+	for where in pickers:
+		if (pickers[where] as Array).has("custom") or (pickers[where] as Array).size() != 5:
+			offers.append("%s: %s" % [where, str(pickers[where])])
+	_check(offers.is_empty() and not CoachReport.PLAN_NAMES.has("custom") and not CoachReport.PLAN_PARTS.has("custom"),
+			"No plan picker offers an own plan: the five plans only (%s)" % str(offers))
+	GameState.set_club_plan("custom")
+	_check(GameState.club_plan == "defensive", "An own plan cannot be chosen")
+	var old := GameState._save_state()
+	old["club_plan"] = "custom"
+	old["custom_plan"] = {"name": "The Squeeze", "s": "clean", "c": "slow"}
+	var rp: Dictionary = (old.get("rival_plans", {}) as Dictionary).duplicate(true)
+	var rival := "COL"
+	rp["custom"] = {rival: {"name": "", "s": "sharp", "c": "slow"}}
+	if rp.get("usual") is Dictionary:
+		(rp["usual"] as Dictionary)[rival] = "custom"
+	old["rival_plans"] = rp
+	_check(GameState._restore_career(old) and GameState.club_plan == "balanced"
+			and str(GameState.season.plans.get("GEE", "balanced")) == "balanced",
+			"A save on your own plan loads on Balanced (%s)" % GameState.club_plan)
+	_check(not GameState.rival_plans.has("custom") and str(CoachEffects.usual.get(rival, "")) != "custom",
+			"A rival's own plan in a save is dropped: the coach settles on one of the five (%s)"
+			% str(CoachEffects.usual.get(rival, "")))
+	var sq := GameState.my_coached_squad()
+	_check(MatchSim.plan_key("custom") == "balanced" and not MatchSim.PLANS.has("custom")
+			and not ("custom_plan" in sq),
+			"A plan named own plays Balanced; a squad holds no own plan")
 	GameState.set_club_plan("balanced")
 	GameState.delete_saved_career()
 

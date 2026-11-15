@@ -166,7 +166,6 @@ TEAM_PASS = {
         "Each plan buys an edge and gives something up. The note below says which.",
         "Each plan runs on one of our list's strengths. That is our side as picked, against every list in the league.",
         "\"Also on our list\"", "After three games, how we win and get beaten shows here.",
-        "One strength and one cost, as a plan of its own. It beats no plan and no plan beats it.",
         "No part of our game is costing us regularly.", "No one part of our game stands above the league.",
         "%s of the %s salary cap",
     ], ["gives something up;", "one of your list's", "Also on your list", "how your side wins", "on top of your plan",
@@ -380,9 +379,8 @@ GATES_PASS = {
         "hurting you on the scoreboard", "Back your defenders", "You can call it off at the break", "your stars"]],
     "scripts/sim/CoachReport.gd": [[
         "A lift at the contest while we're chasing the game.", "It leans on our ball-winners and ruck.",
-        "It asks nothing special of our list.", "We gain less ground.", "A plan of our own",
-    ], ["while you are chasing", "does nothing for you", "Leans on your", "of your list", "you are a little exposed",
-        "Your own plan: the strength"]],
+        "It asks nothing special of our list.", "We gain less ground.",
+    ], ["while you are chasing", "does nothing for you", "Leans on your", "of your list", "you are a little exposed"]],
     "scripts/ui/MatchScene.gd": [["\" · \".join(parts)"], []],
 }
 PASSES += [(path, "copy voice pass 1, gates", v[0], v[1]) for path, v in GATES_PASS.items()]

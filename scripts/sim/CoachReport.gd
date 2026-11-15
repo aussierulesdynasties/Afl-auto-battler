@@ -13,10 +13,7 @@ const PLAN_NAMES := {
 	"defensive": "High Press",
 	"contest": "Win Contest",
 	"controlled": "Controlled Tempo",
-	"custom": "Own plan",
 }
-## A rival's own plan, as your screens name it (yours goes by its name).
-const THEIR_OWN := "Their own plan"
 
 const PEP_NAMES := {
 	"steady": "Stay composed",
@@ -54,8 +51,6 @@ const PLAN_PARTS := {
 			"gain": "Fewer errors and fresher legs. Pressure rattles us less.",
 			"cost": "We gain less ground.",
 			"beats": "Plays through a High Press. Attack Corridor runs past it."},
-	# Your own plan (CustomPlan, director 2026-11-12): neutral, like Win Contest.
-	"custom": {"does": "A plan of our own: the strength and the cost you picked. It beats no plan and no plan beats it."},
 }
 
 const PEP_SUMMARY := {
@@ -133,13 +128,10 @@ static func _imp(arr: Array, side: int, cause: String) -> float:
 	return float(d.get(cause, 0.0))
 
 
-## A plan's name. Your own plan goes by the name you gave it; with `mine`
-## false (a rival's), it is THEIR_OWN.
-static func plan_label(key: String, mine := true) -> String:
-	var k := MatchSim.plan_key(key)
-	if k == CustomPlan.KEY:
-		return CustomPlan.name_of(CoachEffects.my_custom) if mine else THEIR_OWN
-	return str(PLAN_NAMES.get(k, "Balanced"))
+## A plan's name, the same for your club and a rival's (`_mine` is kept for
+## callers from when your own plan had a name of your choosing).
+static func plan_label(key: String, _mine := true) -> String:
+	return str(PLAN_NAMES.get(MatchSim.plan_key(key), "Balanced"))
 
 
 static func plan_effect(key: String) -> String:
@@ -163,12 +155,6 @@ static func plan_summary(key: String, sq: Squad = null, weather_key := "perfect"
 		var sized := GateOdds.plan_texts_for(sq, key, weather_key)
 		out.append(GateOdds.gain(str(sized[0])) + ".")
 		out.append(GateOdds.cost(str(sized[1])) + ".")
-	elif MatchSim.plan_key(key) == CustomPlan.KEY:
-		var own := CustomPlan.texts(CoachEffects.my_custom)
-		if not own.is_empty():
-			sep = "\n"
-			out.append(GateOdds.gain(str(own[0])) + ".")
-			out.append(GateOdds.cost(str(own[1])) + ".")
 	else:
 		if d.has("gain"):
 			out.append("Gain: " + str(d["gain"]))

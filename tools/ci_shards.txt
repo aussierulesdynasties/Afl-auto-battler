@@ -24,5 +24,5 @@
 8: almanac draft contracts preseason dataset injuries weekly_checklist match_marks career_highs career_tale ratings
 9: rowgap legacy_2010 picture_truth player_condition nav_economy workload keyboard awards_count potential era_football remembered
 10: onboarding_walk training crowd legacy_2020_long plan_know save_release assets league_stories pressure ui_motion scouting_list
-11: decision_scenes coach_of_year legacy_2010_long story ai form_marks international custom_plan sir_doug_round back_carries family international_dealt
+11: decision_scenes coach_of_year legacy_2010_long story ai form_marks international sir_doug_round back_carries family international_dealt
 12: match_story papers score_clock match_motion scroll plays_like legacy_start_2020 match_flow team_familiarity calls gather_round player_looks

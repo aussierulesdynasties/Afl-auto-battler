@@ -53,7 +53,7 @@ const TAG_BREAK_GAIN := "%s usually gets %d touches\nWith %s on him, about %d"
 const TAG_BENCH_COST := "%s goes while %s is on the bench\nHe gives up %s"
 const TAG_NOBODY_GAIN := "none: we have no midfielder on the ground to go to him"
 const TAG_NONE_GAIN := "our midfielders play their own game\nNobody gives up %s"
-const TAG_NONE_COST_ANY := "their midfielders get their usual %d touches"
+const TAG_NONE_COST_ANY := "their midfielders get their usual touches"
 # The call when their midfielder is kicking a bag.
 const TAG_HOT_GAIN := "%s usually gets %d touches\nWith %s on him, about %d, until we call it off"
 const TAG_HOT_COST := "%s gives up %s"
@@ -121,44 +121,47 @@ static func tag_gives() -> String:
 
 
 ## Their man's touches a match untagged, and with `tagger` on him at `legs`:
-## the sim's multiplier (MatchSim._tag_share) as measured in matches.
-static func usual_touches() -> int:
-	return roundi(Roles.TAG_USUAL_TOUCHES)
+## the sim's multiplier (MatchSim._tag_share) as measured in matches, on `target`'s
+## own usual touches (Roles.usual_touches; row 178). No `target`: the measured man.
+static func usual_touches(target: Dictionary = {}) -> int:
+	return roundi(Roles.usual_touches(target))
 
 
-static func tag_kept(tagger: Dictionary, legs: float) -> int:
-	return roundi(Roles.tag_touches(tagger, legs))
+static func tag_kept(tagger: Dictionary, legs: float, target: Dictionary = {}) -> int:
+	return roundi(Roles.tag_touches(tagger, legs, target))
 
 
-static func tag_touches(tagger: Dictionary, legs: float) -> String:
-	return TAG_TOUCHES % [usual_touches(), tag_kept(tagger, legs)]
+static func tag_touches(tagger: Dictionary, legs: float, target: Dictionary = {}) -> String:
+	return TAG_TOUCHES % [usual_touches(target), tag_kept(tagger, legs, target)]
 
 
 ## The four lines of the in-match tag call (MatchSim "hot"): their midfielder
-## `hot_name` has kicked a bag, `stopper` would go to him and hold him to `kept`
-## touches. `on_now` is the man `stopper` is already tagging, "" for none: then
-## moving the tag costs that hold, and leaving it keeps it.
-static func tag_call_lines(hot_name: String, stopper: String, kept: int, on_now: String = "") -> Dictionary:
-	var usual := usual_touches()
+## `hot_name` (usually `usual` touches) has kicked a bag, `stopper` would go to him
+## and hold him to `kept`. `on_now` is the man `stopper` is already tagging, "" for
+## none: then moving the tag costs that hold (`now_kept` of his `now_usual`), and
+## leaving it keeps it.
+static func tag_call_lines(hot_name: String, stopper: String, kept: int, usual: int,
+		on_now: String = "", now_usual: int = 0, now_kept: int = 0) -> Dictionary:
 	var moving := on_now != ""
 	return {
 		"tag_gain": gain(TAG_HOT_GAIN % [hot_name, usual, stopper, kept]),
-		"tag_cost": cost(TAG_MOVE_COST % [on_now, usual] if moving else TAG_HOT_COST % [stopper, tag_gives()]),
-		"leave_gain": gain(TAG_STAY_GAIN % [stopper, on_now, kept] if moving else TAG_LEAVE_GAIN),
+		"tag_cost": cost(TAG_MOVE_COST % [on_now, now_usual] if moving else TAG_HOT_COST % [stopper, tag_gives()]),
+		"leave_gain": gain(TAG_STAY_GAIN % [stopper, on_now, now_kept] if moving else TAG_LEAVE_GAIN),
 		"leave_cost": cost(TAG_LEAVE_COST % [hot_name, usual]),
 	}
 
 
 ## The break Tag call's Gain / Cost, unlabelled: [gain, cost]. `target` is the
-## man tagged ("" for no tag); `who` the midfielder who goes ("" when you have
-## none on the ground) and `kept` the touches he holds him to; `benched` your
-## named tagger when he is on the bench and `who` goes in his place. With no
-## tag, `their_best` is the midfielder of theirs who goes untagged ("" for any).
-static func tag_break_texts(target: String, who: String, kept: int, benched := "", their_best := "") -> Array:
-	var usual := usual_touches()
+## man tagged ("" for no tag) and `usual` his touches untagged; `who` the
+## midfielder who goes ("" when you have none on the ground) and `kept` the
+## touches he holds him to; `benched` your named tagger when he is on the bench
+## and `who` goes in his place. With no tag, `their_best` is the midfielder of
+## theirs who goes untagged ("" for any) and `best_usual` his touches.
+static func tag_break_texts(target: String, who: String, kept: int, usual: int, benched := "",
+		their_best := "", best_usual := 0) -> Array:
 	if target == "":
 		return [TAG_NONE_GAIN % tag_gives(),
-				TAG_LEAVE_COST % [their_best, usual] if their_best != "" else TAG_NONE_COST_ANY % usual]
+				TAG_LEAVE_COST % [their_best, best_usual] if their_best != "" else TAG_NONE_COST_ANY]
 	if who == "":
 		return [TAG_NOBODY_GAIN, TAG_LEAVE_COST % [target, usual]]
 	var gave := TAG_BENCH_COST % [who, benched, tag_gives()] if benched != "" else TAG_HOT_COST % [who, tag_gives()]
@@ -264,11 +267,6 @@ static func plan_lines(plan: String, up := 1.0, down := 1.0) -> Array:
 ## A plan's texts for a squad as it would take the field (CoachEffects applied).
 static func plan_texts_for(sq: Squad, plan: String, weather_key := "perfect") -> Array:
 	var up := MatchSim.upside_scale(sq, plan, weather_key)
-	# Your own plan (CustomPlan): its strength sized for this list today, its
-	# cost as written. Not built yet: no edge and no cost.
-	if MatchSim.plan_key(plan) == CustomPlan.KEY:
-		var own := CustomPlan.texts(sq.custom_plan, up)
-		return own if not own.is_empty() else [BALANCED_GAIN, BALANCED_COST]
 	var fit := PlanFit.fit(sq.ground, MatchSim.plan_key(plan))
 	var best := up / fit * PlanFit.FIT_MAX if fit > 0.0 else -1.0
 	return plan_texts(plan, up, MatchSim.cost_scale(sq, plan), best)
@@ -276,8 +274,8 @@ static func plan_texts_for(sq: Squad, plan: String, weather_key := "perfect") ->
 
 ## A pep talk's gain and cost for the quarter, unlabelled: [gain, cost], from
 ## the multipliers MatchSim._pep_mult, _contest_pep and _pep_heat use.
-## `contest` is Fire them up's lift at the contest (MatchSim.fire_up_contest,
-## which carries an own plan's Fire them up lever); the base lift when no sim is at hand.
+## `contest` is Fire them up's lift at the contest (MatchSim.fire_up_contest);
+## the base lift when no sim is at hand.
 static func pep_texts(key: String, contest := MatchSim.PEP_FIRE_CONTEST) -> Array:
 	var c: Dictionary = MatchSim.PEP_CALM
 	var f: Dictionary = MatchSim.PEP_FIRE
