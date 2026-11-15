@@ -3194,8 +3194,11 @@ const RUCK_WEIGHT := 0.24          # Squad.contest's ruck share
 const TAP_ADV_EDGE := 0.22
 const TAP_ADV_BASE := 0.40         # a league-average ruck's first taps to advantage
 const TAP_ADV_SLOPE := 0.004       # per ruck point above the league's 70
-## Ruck king: his share of the hit-outs, as a relative change (5% more).
+## Ruck king: the ruck's share of the hit-outs, as a relative change (5% more),
+## and the share of them that go to advantage (25% more), so the side wins
+## more of the clearances that follow (bug bash 5).
 const RUCK_KING := 1.05
+const RUCK_KING_ADV := 1.25
 ## Contested bull: his pick for the clearance, and the stoppage edge each bull
 ## in the side's midfield or ruck gives it, so the side wins the extra
 ## clearances from the opposition (bug bash 5: the pick alone only moved the
@@ -3221,7 +3224,11 @@ func _ruck_tap() -> void:
 	var edge := 0.0
 	if first >= 0:
 		var r := _ruck_of(ruck[first])
-		adv = rng.randf() < clampf(TAP_ADV_BASE + TAP_ADV_SLOPE * (r - 70.0), 0.12, 0.6)
+		var adv_p := clampf(TAP_ADV_BASE + TAP_ADV_SLOPE * (r - 70.0), 0.12, 0.6)
+		# A Ruck king finds a team-mate's advantage more often.
+		if not (ruck[first] as Array).is_empty() and _trait(ruck[first][0], "ruck_king"):
+			adv_p *= RUCK_KING_ADV
+		adv = rng.randf() < adv_p
 		if adv:
 			edge = TAP_ADV_EDGE if first == 0 else -TAP_ADV_EDGE
 	# The bulls at the stoppage win the ball out of it for their side.
@@ -4426,10 +4433,8 @@ func shot_chance(side: int, shooter: Dictionary, marked: bool, spoilt: bool, cre
 		_credit(side, "traits", 6.0 * (goal_p - before))
 	before = goal_p
 	var dtr := 1.0
-	if defender != null and _trait(defender, "lockdown"):
-		dtr *= 0.96
-	elif not _midfield_minder(side, shooter).is_empty():
-		dtr *= 0.96
+	if (defender != null and _trait(defender, "lockdown")) or _lockdown_on(side, shooter):
+		dtr *= LOCKDOWN
 	if synergies[opp].has("intercept_wall"):
 		dtr *= Traits.power("intercept_wall")
 	goal_p *= dtr
@@ -5927,11 +5932,30 @@ func _fire_run_moves(run: int) -> void:
 		], current_quarter * 30 - current_minute, GateOdds.NONE_COST_RUN)})
 
 
-## Lockdown's opponent. A defender's is the forward he stands on the shot
-## (the forward-50 defender draw); a midfielder's is one of their
-## midfielders: each Lockdown midfielder on the ground picks up their best
-## midfielder not already covered (most pressure first, best by rating
-## first). Returns the Lockdown midfielder on `shooter` (of `side`), or {}.
+## Lockdown: every shot by the player's direct opponent, from anywhere on the
+## ground, is this much likelier to miss (bug bash 5: only the shots from the
+## forward-50 contest it stood in counted, too few to show in a match).
+const LOCKDOWN := 0.96
+
+
+## Whether `shooter` (of `side`) has a Lockdown on the ground as direct
+## opponent: a defender's is the forward it is matched on (duels), a
+## midfielder's the one `_midfield_minder` gives it.
+func _lockdown_on(side: int, shooter: Dictionary) -> bool:
+	var sid := str(shooter.get("id", ""))
+	var def_id := str((duels[1 - side] as Dictionary).get(sid, ""))
+	if def_id != "":
+		var d := _on_ground(1 - side, def_id)
+		if not d.is_empty() and _trait(d, "lockdown"):
+			return true
+	return not _midfield_minder(side, shooter).is_empty()
+
+
+## Lockdown's opponent. A defender's is the forward it is matched on; a
+## midfielder's is one of their midfielders: each Lockdown midfielder on the
+## ground picks up their best midfielder not already covered (most pressure
+## first, best by rating first). Returns the Lockdown midfielder on `shooter`
+## (of `side`), or {}.
 func _midfield_minder(side: int, shooter: Dictionary) -> Dictionary:
 	if str(shooter.get("role", "")) != "MID":
 		return {}

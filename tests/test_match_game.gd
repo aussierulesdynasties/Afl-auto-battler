@@ -1135,6 +1135,20 @@ func _test_bash5_traits() -> void:
 	_check(is_equal_approx(sim._tap_share([r0, r1]), even), "Two Ruck kings cancel out")
 	sim._traits[str(r0[0]["id"])] = []
 	sim._traits[str(r1[0]["id"])] = []
+	_check(MatchSim.RUCK_KING_ADV > 1.0, "A Ruck king's hit-outs go to advantage more often")
+	# Lockdown: every shot by the direct opponent, wherever it comes from.
+	var duel: Dictionary = sim.duels[1]
+	_check(not duel.is_empty(), "The defenders have direct opponents to lock down")
+	if not duel.is_empty():
+		var fid := str(duel.keys()[0])
+		var fwd := sim._on_ground(0, fid)
+		var dfd := sim._on_ground(1, str(duel[fid]))
+		if not fwd.is_empty() and not dfd.is_empty():
+			var before := sim._lockdown_on(0, fwd)
+			sim._traits[str(dfd["id"])] = ["lockdown"]
+			_check(sim._lockdown_on(0, fwd) and not before,
+					"A Lockdown defender covers its forward's shots from anywhere, not only the contest it stands in")
+			sim._traits[str(dfd["id"])] = []
 	# Contested bull: each bull in the midfield or ruck swings the stoppage
 	# to the bull's side, so the side wins more clearances, not only the bull.
 	var mid := {}
