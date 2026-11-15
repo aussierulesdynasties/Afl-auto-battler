@@ -22,7 +22,7 @@ const DEFS := {
 	"ruck_king": {"label": "Ruck king", "stat": "ruck", "min": 84, "roles": ["RUCK"],
 			"text": "Takes 5% more of the hit-outs.",
 			"scout": "Dominates the hit-outs."},
-	"aerial": {"label": "Aerial threat", "stat": "marking", "min": 76, "roles": ["FWD"],
+	"aerial": {"label": "Aerial threat", "stat": "contested_marking", "min": 76, "roles": ["FWD"],
 			"text": "Marks 6% more of the forward-50 contests he leads to.",
 			"scout": "A strong contested mark inside 50."},
 	"crumber": {"label": "Crumber", "stat": "goalkicking", "min": 55, "roles": ["FWD"], "small": true,
@@ -119,7 +119,7 @@ static func wet_weather(p: Dictionary) -> bool:
 	if str(WET_NAMED.get(str(p.get("id", "")), "-")) == str(p.get("real_name", "")):
 		return true
 	var attr: Dictionary = p.get("attr", {})
-	return int(attr.get("contested", 0)) >= int(WET_WEATHER["contested"]) 			and int(attr.get("disposal", 0)) >= int(WET_WEATHER["disposal"])
+	return int(attr.get("contested", 0)) >= int(WET_WEATHER["contested"]) 			and int(Skills.disposal_of(attr, 0.0)) >= int(WET_WEATHER["disposal"])
 
 
 ## Fine Wine (director, 2026-11-13: "when a player has unnatural longevity
@@ -275,14 +275,14 @@ static func of(p: Dictionary) -> Array:
 					ok = true
 			if not ok:
 				continue
-		var v := int(attr.get(str(d["stat"]), 0))
+		var v := int(Skills.value(attr, str(d["stat"]), 0.0))
 		if d.has("max"):
 			if v <= int(d["max"]):
 				bad.append(key)
 			continue
 		if v < int(d["min"]):
 			continue
-		if bool(d.get("small", false)) and int(attr.get("marking", 0)) >= 52:
+		if bool(d.get("small", false)) and int(attr.get("contested_marking", 0)) >= 52:
 			continue
 		good.append([key, v - int(d["min"])])
 	good.sort_custom(func(a, b): return int(a[1]) > int(b[1]))
@@ -514,9 +514,9 @@ static func near(p: Dictionary) -> Array:
 		var need_roles: Array = d["roles"]
 		if not need_roles.is_empty() and not (need_roles.has(roles[0]) or need_roles.has(roles[1])):
 			continue
-		if bool(d.get("small", false)) and int(attr.get("marking", 0)) >= 52:
+		if bool(d.get("small", false)) and int(attr.get("contested_marking", 0)) >= 52:
 			continue
-		var gap := int(d["min"]) - int(attr.get(str(d["stat"]), 0))
+		var gap := int(d["min"]) - int(Skills.value(attr, str(d["stat"]), 0.0))
 		if gap >= 1 and gap <= 6:
 			out.append({"key": key, "gap": gap, "stat": str(d["stat"])})
 	out.sort_custom(func(a, b): return int(a["gap"]) < int(b["gap"]))

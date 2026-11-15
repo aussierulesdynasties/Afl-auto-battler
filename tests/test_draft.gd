@@ -133,8 +133,8 @@ func _test_position_guidance() -> void:
 func _dual(id: String, role: String, role2 := "") -> Dictionary:
 	return {"id": id, "name": id, "last": id, "club": "ORIGINAL", "role": role, "role2": role2,
 			"overall": 60, "value": 1, "gl": 0, "di": 0,
-			"attr": {"ruck": 10, "contested": 50, "disposal": 50, "carry": 50, "intercept": 40,
-				"pressure": 40, "goalkicking": 40, "marking": 40, "accuracy": 50, "creating": 40,
+			"attr": {"ruck": 10, "contested": 50, "kicking": 50, "handballing": 50, "carry": 50, "intercept": 40,
+				"pressure": 40, "goalkicking": 40, "contested_marking": 40, "uncontested_marking": 40, "speed": 50, "accuracy": 50, "creating": 40,
 				"discipline": 50, "durability": 60, "star": 20}}
 
 

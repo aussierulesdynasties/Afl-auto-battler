@@ -215,9 +215,7 @@ def harness_from_enriched(rows):
         e = {("one_pct" if k == "onepct" else "pct_played" if k == "pctp" else k): float(r[k] or 0)
              for k in B.ENRICHED[4:28]}
         hp.append(B.harness_player({**e, "first": r["first"], "last": r["last"]}, r["club"], r["num"]))
-    H.ERA_ANCHORS.clear()
     H.derive_ratings(hp)
-    H.fit_era_anchors(hp)
     return hp
 
 

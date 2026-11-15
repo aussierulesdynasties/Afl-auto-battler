@@ -270,10 +270,7 @@ def era_report(players, by_year, rated):
             for k in BS.ENRICHED[4:28]:
                 e["one_pct" if k == "onepct" else "pct_played" if k == "pctp" else k] = float(r[k] or 0)
             hp.append(BS.harness_player({**e, "first": r["first"], "last": r["last"]}, r["club"], r.get("num", i)))
-        H.ERA_ANCHORS.clear()
         H.derive_ratings(hp)
-        if era:
-            H.fit_era_anchors(hp)
         return hp
 
     with open(os.path.join(ROOT, "data", "players_enriched_2026.csv"), newline="", encoding="utf-8") as fh:

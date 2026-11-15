@@ -105,7 +105,7 @@ func _test_back_carrier_follows_ball_use() -> void:
 		return
 	var user: Dictionary = (defs[0] as Dictionary).duplicate(true)
 	var spoiler: Dictionary = (defs[1] as Dictionary).duplicate(true)
-	for k in ["carry", "disposal"]:
+	for k in ["carry", "kicking", "handballing"]:
 		user["attr"][k] = 90.0
 		spoiler["attr"][k] = 30.0
 	user["attr"]["intercept"] = 30.0
@@ -116,8 +116,8 @@ func _test_back_carrier_follows_ball_use() -> void:
 			to_user += 1
 	var share := float(to_user) / DRAWS
 	_check(share > 0.8, "the back-zone ball goes to the ball user, not the spoiler (%.1f%%)" % (100 * share))
-	_check(is_equal_approx(sim._ball_use(user), 0.58 * sim._a(user, "carry") + 0.42 * sim._a(user, "disposal")),
-			"ball use is kick_in_taker's carry/disposal blend")
+	_check(is_equal_approx(sim._ball_use(user), 0.58 * sim._a(user, "carry") + 0.42 * sim._a(user, "kicking")),
+			"ball use is kick_in_taker's carry/kicking blend")
 
 
 ## A failed entry: the defence has it, but no rebound 50 is credited at the

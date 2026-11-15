@@ -32,8 +32,8 @@ class_name PlaysLike
 
 ## The attributes compared: those in the overall rating that say how he plays
 ## (not durability, and not temperament, which is not in the rating).
-const KEYS := ["disposal", "contested", "marking", "pressure", "intercept", "carry",
-		"goalkicking", "accuracy", "creating", "ruck", "star"]
+const KEYS := ["kicking", "handballing", "contested", "contested_marking", "uncontested_marking",
+		"pressure", "intercept", "speed", "carry", "goalkicking", "accuracy", "creating", "ruck", "star"]
 ## "Similar height": real players this close are preferred over all others.
 const NEAR_CM := 4.0
 ## "About his level": real players whose peak overall is this close to the

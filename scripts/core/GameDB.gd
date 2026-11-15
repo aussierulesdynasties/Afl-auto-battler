@@ -148,6 +148,11 @@ var LIST_ADDITIONS_CSV := "res://data/list_additions_2026.csv"
 ## they are rated from that record through Ratings.derive_all, like any listed
 ## player, not as draft prospects.
 var LIST_ADDITION_STATS_CSV := "res://data/list_additions_stats.csv"
+## Each rated player's season the director's way (interview 2026-11-15,
+## tools/wheelo/build.py): his AFL position, his overall (2012 on, his AFL
+## Player Rating against his position) and his 16 skills, each against his
+## position. Read over Ratings.derive_all by _apply_rating_stats.
+var RATING_STATS_CSV := "res://data/rating_stats_2026.csv"
 ## Which players who played a 2026 game were on a rookie list, not the senior
 ## list (data/list_types_2026.csv, from DraftGuru's 2026 lists, club by club):
 ## "rookie" (Category A) or "cat_b" (Category B). Everyone else in
@@ -249,15 +254,11 @@ func reload(dataset := Datasets.DEFAULT) -> void:
 	_apply_list_types(players)
 	_load_appearance()
 	_apply_origin(players)
-	Ratings.era_anchors = {}
 	var past_start := DATA_SEASON != int(Datasets.get_set(Datasets.DEFAULT).get("data_season", DATA_SEASON))
 	Ratings.listed_lines = Ratings.PAST_LISTED_LINES if past_start else Ratings.TODAY_LISTED_LINES
 	Ratings.derive_all(players)
-	# A past start scales each position on its own data season (director
-	# 2026-11-13, "Scale each position per season"); a set on today's season
-	# (2026's, or a test copy of it) keeps 2026's.
-	if past_start:
-		Ratings.fit_era_anchors(players)
+	_rating_stats = _load_rating_stats()
+	_apply_rating_stats(players)
 	_apply_history(players)
 	for p in players:
 		Ratings.rate_on_record(p, DATA_SEASON)
@@ -325,6 +326,7 @@ func _use_dataset(id: String, row: Dictionary) -> void:
 	ORIGIN_CSV = str(row.get("origin", ""))
 	LIST_ADDITIONS_CSV = str(row.get("list_additions", ""))
 	LIST_ADDITION_STATS_CSV = str(row.get("list_addition_stats", ""))
+	RATING_STATS_CSV = str(row.get("rating_stats", ""))
 	LIST_TYPES_CSV = str(row.get("list_types", ""))
 	DEPARTURES_CSV = str(row.get("departures", ""))
 	CLUB_MOVES_CSV = str(row.get("club_moves", ""))
@@ -791,6 +793,7 @@ func _load_list_additions() -> Array:
 		out.append(p)
 	if not established.is_empty():
 		Ratings.derive_all(established, players)
+		_apply_rating_stats(established)
 		for p in established:
 			# A position the list gives him is his first position, whatever
 			# one season's numbers read (Powell-Pepper is a midfielder).
@@ -798,6 +801,8 @@ func _load_list_additions() -> Array:
 			if listed in ["RUCK", "MID", "DEF", "FWD"] and listed != str(p["role"]):
 				p["role"] = listed
 				p["role2"] = Ratings.assign_secondary(p)
+				if p.has("apos"):
+					p["attr"] = Prospects.fit_attributes(p["attr"], listed, float(p["overall"]), float(p["gm"]))
 				p["overall"] = Ratings.rate_overall(p["attr"], listed, float(p["gm"]))
 				p["value"] = Ratings.salary_value(int(p["overall"]))
 			p["career"] = Career.from_source("?")
@@ -1072,6 +1077,47 @@ func _load_appearance() -> void:
 		counts[skin] += 1.0
 	if appearance.size() >= MIX_FROM:
 		skin_mix = counts
+
+
+## RATING_STATS_CSV keyed "club|first|last" (see there).
+var _rating_stats := {}
+
+
+func _load_rating_stats() -> Dictionary:
+	var out := {}
+	if RATING_STATS_CSV == "" or not FileAccess.file_exists(RATING_STATS_CSV):
+		return out
+	for row in _read_dicts(RATING_STATS_CSV):
+		out["%s|%s|%s" % [row.get("club", ""), row.get("first", ""), row.get("last", "")]] = row
+	return out
+
+
+## Each player the rating file names takes its skills, his AFL position (apos)
+## and its overall; his skills are then nudged together so the game's overall
+## formula (Ratings.rate_overall) gives that overall on his games, so he plays
+## to it. A player it does not name keeps what Ratings.derive_all gave him.
+## Then the director's named corrections (Ratings.ATTR_ADJUSTMENTS), unless
+## `adjust` is false (the ratings suite's uncorrected copy).
+func _apply_rating_stats(list: Array, adjust := true) -> void:
+	for p in list:
+		var row: Dictionary = _rating_stats.get("%s|%s|%s" % [p.get("club", ""), p.get("first", ""), p.get("last", "")], {})
+		if row.is_empty():
+			continue
+		var a := {}
+		for k in Skills.KEYS:
+			a[k] = clampi(int(row.get(k, 50)), 1, 99)
+		var ovr := float(row.get("ovr", p.get("overall", 60)))
+		var games := float(p.get("gm", 14))
+		var role := str(p.get("role", "MID"))
+		p["apos"] = str(row.get("apos", ""))
+		a = Prospects.fit_attributes(a, role, ovr, games)
+		var adj := float(Ratings.ATTR_ADJUSTMENTS.get("%s|%s %s" % [p.get("club", ""), p.get("first", ""), p.get("last", "")], 1.0))
+		if adjust and adj != 1.0:
+			for k in a:
+				a[k] = clampi(int(round(float(a[k]) * adj)), 1, 99)
+		p["attr"] = a
+		p["overall"] = Ratings.rate_overall(a, role, games)
+		p["value"] = Ratings.salary_value(int(p["overall"]))
 
 
 func _read_rows(path: String) -> Array:
@@ -2101,11 +2147,17 @@ static func set_player_ovr(p: Dictionary, target: int) -> bool:
 	return true
 
 
-## Hand-set potentials, matched on club + first + last name. An unmatched row
-## is reported rather than silently ignored, so a typo is easy to spot.
+## Hand-set potentials, matched on club + first + last name: a number, or a
+## relative row (+5% or -5%) that scales the POT he would otherwise have. An
+## unmatched row is reported rather than silently ignored, so a typo is easy to spot.
 func _apply_potential_overrides(list: Array) -> void:
 	_each_override_row(POTENTIAL_CSV, "potential", list, func(p, cell):
-		Potential.set_override(p, int(cell)))
+		var text: String = str(cell).strip_edges()
+		if (text.begins_with("+") or text.begins_with("-")) and text.ends_with("%"):
+			var mult := 1.0 + text.trim_suffix("%").to_float() / 100.0
+			Potential.set_override(p, int(round(float(p.get("potential", p["overall"])) * mult)))
+		else:
+			Potential.set_override(p, int(text)))
 
 
 func _hex(s) -> Color:

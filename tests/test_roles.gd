@@ -52,7 +52,8 @@ func _mid(id: String, carry: int, disposal: int, contested: int, pressure := 50)
 	for k in PlayerProfile.ATTR_LABELS:
 		attr[k] = 50
 	attr["carry"] = carry
-	attr["disposal"] = disposal
+	attr["kicking"] = disposal
+	attr["handballing"] = disposal
 	attr["contested"] = contested
 	attr["pressure"] = pressure
 	return {"id": id, "role": "MID", "role2": "", "overall": 70, "attr": attr,
@@ -421,7 +422,7 @@ func _test_forward_types() -> void:
 		var p := _mid("F", 50, 50, 40)
 		p["role"] = "FWD"
 		p["height_cm"] = h
-		p["attr"]["marking"] = marking
+		p["attr"]["contested_marking"] = marking
 		p["attr"]["goalkicking"] = goals
 		return p
 	_check(PlayerProfile.forward_type(fwd.call(198.0, 95, 70)) == "Key forward", "A tall aerial target is a key forward")
@@ -689,19 +690,19 @@ func _test_list_profile() -> void:
 	var before := _rank(prof, "aerial")
 	var g3 := {}
 	for code in grounds:
-		g3[code] = grounds[code] if code == mine else _boosted(grounds[code], ["marking"], 12)
+		g3[code] = grounds[code] if code == mine else _boosted(grounds[code], ["contested_marking"], 12)
 	var after := _rank(ListProfile.profile(g3, mine), "aerial")
 	_check(after > before and _word(ListProfile.profile(g3, mine), "aerial") == "Weak",
 			"The same list reads weaker in the air when the league marks better (%d to %d)" % [before, after])
 	# Aerial power is not Control: better marks move one and not the other.
-	var markers: Array = _boosted(grounds[mine], ["marking"], 30)
+	var markers: Array = _boosted(grounds[mine], ["contested_marking"], 30)
 	_check(is_equal_approx(ListProfile.score(markers, "control"), ListProfile.score(grounds[mine], "control"))
 			and ListProfile.score(markers, "aerial") > ListProfile.score(grounds[mine], "aerial"),
 			"Aerial power and Control are different things")
 	# Finishing: the best five forwards' goalkicking, accuracy and marking.
 	var fwds: Array = grounds[mine].filter(func(p): return str(p["role"]) == "FWD")
 	var vals: Array = fwds.map(func(p):
-		return 0.5 * float(p["attr"]["goalkicking"]) + 0.3 * float(p["attr"]["accuracy"]) + 0.2 * float(p["attr"]["marking"]))
+		return 0.5 * float(p["attr"]["goalkicking"]) + 0.3 * float(p["attr"]["accuracy"]) + 0.2 * float(p["attr"]["contested_marking"]))
 	vals.sort()
 	vals.reverse()
 	var top: Array = vals.slice(0, 5)
@@ -719,7 +720,7 @@ func _test_list_profile() -> void:
 	var backs: Array = grounds[mine].map(func(p):
 		var q: Dictionary = p.duplicate(true)
 		if str(q["role"]) == "DEF":
-			q["attr"]["marking"] = float(q["attr"]["marking"]) + 30
+			q["attr"]["contested_marking"] = float(q["attr"]["contested_marking"]) + 30
 			q["attr"]["goalkicking"] = float(q["attr"]["goalkicking"]) + 30
 		return q)
 	_check(is_equal_approx(ListProfile.score(backs, "finishing"), ListProfile.score(grounds[mine], "finishing")),
@@ -789,15 +790,15 @@ func _test_top_attributes() -> void:
 	var order := []
 	for t in PlayerProfile.top_attributes(tied):
 		order.append(str(t["key"]))
-	_check(order == ["disposal", "contested", "marking"], "Level ratings keep a fixed order (%s)" % str(order))
+	_check(order == ["kicking", "handballing", "contested_marking"], "Level ratings keep a fixed order (%s)" % str(order))
 	tied["attr"]["star"] = 99
 	tied["attr"]["durability"] = 99
 	var sd := []
 	for t in PlayerProfile.top_attributes(tied):
 		sd.append(str(t["key"]))
-	_check(sd == ["durability", "star", "disposal"], "Durability and Star power are ranked with the rest (%s)" % str(sd))
-	_check(PlayerProfile.TOP_KEYS.size() == 13, "All 13 attributes are ranked")
-	_check(PlayerProfile.top_attributes({"attr": {"marking": 61, "carry": 70}}).size() == 2
+	_check(sd == ["durability", "star", "kicking"], "Durability and Star power are ranked with the rest (%s)" % str(sd))
+	_check(PlayerProfile.TOP_KEYS.size() == 16, "All 16 skills are ranked")
+	_check(PlayerProfile.top_attributes({"attr": {"contested_marking": 61, "carry": 70}}).size() == 2
 			and PlayerProfile.top_attributes({}).is_empty(), "Missing ratings are never made up")
 
 

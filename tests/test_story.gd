@@ -1530,10 +1530,10 @@ func _test_leadership() -> void:
 
 	var twin := {"real_name": "Pat Example", "id": "x1", "age": 27.0, "club": "GEE", "gm": 20,
 			"career": {"games": 150, "stints": [["GEE", 2019, 2025, 150, 10]]}, "overall": 70,
-			"attr": {"disposal": 80}}
+			"attr": {"kicking": 80}}
 	var higher := twin.duplicate(true)
 	higher["overall"] = 95
-	higher["attr"] = {"disposal": 99, "star": 99}
+	higher["attr"] = {"kicking": 99, "star": 99}
 	_check(Leadership.of(twin) == Leadership.of(higher),
 			"Leadership ignores his playing quality (OVR and attributes)")
 	var veteran := twin.duplicate(true)

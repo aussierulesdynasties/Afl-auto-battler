@@ -8,11 +8,14 @@ extends RefCounted
 
 ## key -> [one line]
 const STATS := {
-	"disposal": ["Gets the ball in open play. A midfield of good users wins more of the contest."],
+	"kicking": ["Kicks the ball long and to a team-mate. Good kicks move it forward and find targets inside 50."],
+	"handballing": ["Gets the handball away cleanly, most of all in a tackle. Fewer holding-the-ball frees."],
 	"contested": ["Wins the clearance and holds the ball in a tackle. Our inside mids win or lose the stoppages."],
 	"ruck": ["Wins the hit-outs at the bounce and stoppages. Our first ruck matters."],
 	"carry": ["Runs the ball forward. Good carriers through the middle feed our attack."],
-	"marking": ["Takes the marks, most of all in contests inside 50. Forwards and key defenders need it."],
+	"contested_marking": ["Marks in a pack or one-on-one, most of all inside 50. Key forwards and key defenders need it."],
+	"uncontested_marking": ["Marks on the lead and on the switch, so the ball is kept."],
+	"speed": ["Pace. Runs down the ball carrier and gets to the contest first."],
 	"creating": ["Sets up goals for team-mates and makes better shots for the whole forward line."],
 	"goalkicking": ["Gets the shots inside 50 and kicks the goals. Most of our scoring comes from it."],
 	"accuracy": ["Turns shots into goals instead of behinds."],
@@ -25,10 +28,10 @@ const STATS := {
 
 ## [heading, [stat keys]] in the order they read.
 const GROUPS := [
-	["Ball winning", ["disposal", "contested", "ruck"]],
-	["Ball use", ["carry", "marking", "creating"]],
+	["Ball winning", ["contested", "contested_marking", "uncontested_marking", "ruck"]],
+	["Ball use", ["kicking", "handballing", "carry", "creating"]],
 	["Scoring", ["goalkicking", "accuracy"]],
-	["Defence", ["pressure", "intercept"]],
+	["Defence", ["pressure", "intercept", "speed"]],
 	["Body and class", ["discipline", "durability", "star"]],
 ]
 

@@ -401,8 +401,9 @@ var last_training_report: Dictionary = {}
 var _xp_grant_key := ""
 
 const TRAIN_STATS := [
-	["disposal", "Disposal"], ["contested", "Contested"], ["marking", "Marking"],
-	["pressure", "Pressure"], ["intercept", "Intercept"], ["carry", "Carry"],
+	["kicking", "Kicking"], ["handballing", "Handballing"], ["contested", "Contested ball"],
+	["contested_marking", "Contested marking"], ["uncontested_marking", "Uncontested marking"],
+	["pressure", "Pressure"], ["intercept", "Intercept"], ["speed", "Speed"], ["carry", "Carry"],
 	["goalkicking", "Goalkicking"], ["accuracy", "Accuracy"],
 	["creating", "Creating"], ["ruck", "Ruck"], ["discipline", "Discipline"],
 	["durability", "Durability"], ["star", "Star power"],
@@ -6645,6 +6646,8 @@ func train_stat_label(key: String) -> String:
 	for row in TRAIN_STATS:
 		if str(row[0]) == key:
 			return str(row[1])
+	if key == "disposal":
+		return "Kicking and handballing"   # the derived ball use (Skills.value)
 	return key
 
 
@@ -6831,10 +6834,10 @@ const TRAIN_PLANS := [
 	{"key": "position", "label": "By position", "roles": []},
 	{"key": "inside_mid", "label": "Inside midfielder", "roles": ["MID"],
 			"text": "Wins the ball at stoppages and keeps it in the tackle.",
-			"weights": {"contested": 3.0, "disposal": 1.0}},
+			"weights": {"contested": 3.0, "handballing": 1.0}},
 	{"key": "outside_mid", "label": "Wing", "roles": ["MID"],
 			"text": "Runs the wing: carries it from defence to attack and hits targets inside 50.",
-			"weights": {"carry": 3.0, "disposal": 2.0, "creating": 1.0}},
+			"weights": {"carry": 3.0, "kicking": 2.0, "creating": 1.0}},
 	{"key": "key_def", "label": "Key defender", "roles": ["DEF"],
 			"text": "Stops the opposition: spoils and marks inside 50, tackles hard.",
 			"weights": {"intercept": 3.0, "pressure": 2.0}},
@@ -6843,7 +6846,7 @@ const TRAIN_PLANS := [
 			"weights": {"carry": 3.0, "intercept": 2.0}},
 	{"key": "key_fwd", "label": "Key forward", "roles": ["FWD"],
 			"text": "The target: marks inside 50 and kicks the goals.",
-			"weights": {"marking": 3.0, "goalkicking": 3.0, "accuracy": 1.0}},
+			"weights": {"contested_marking": 3.0, "goalkicking": 3.0, "accuracy": 1.0}},
 	{"key": "small_fwd", "label": "Small forward", "roles": ["FWD"],
 			"text": "Goals from the ground: kicks straight and creates, and stays small enough to crumb.",
 			"weights": {"goalkicking": 3.0, "accuracy": 2.0, "carry": 1.0, "creating": 1.0}},
@@ -6896,9 +6899,9 @@ const KEY_DEF_CM := PlayerProfile.KEY_DEF_CM
 const RUCK_CM := 196.0
 ## The jobs a player can learn, by line, with what each trains.
 const LEARN_JOBS := {
-	"mid": {"role": "MID", "word": "midfielder", "weights": {"contested": 3.0, "disposal": 1.0, "carry": 1.0}},
-	"key_fwd": {"role": "FWD", "word": "key forward", "weights": {"marking": 3.0, "goalkicking": 3.0, "accuracy": 1.0}},
-	"fwd": {"role": "FWD", "word": "forward", "weights": {"goalkicking": 3.0, "marking": 2.0, "accuracy": 1.0, "pressure": 1.0}},
+	"mid": {"role": "MID", "word": "midfielder", "weights": {"contested": 3.0, "kicking": 0.5, "handballing": 0.5, "carry": 1.0}},
+	"key_fwd": {"role": "FWD", "word": "key forward", "weights": {"contested_marking": 3.0, "goalkicking": 3.0, "accuracy": 1.0}},
+	"fwd": {"role": "FWD", "word": "forward", "weights": {"goalkicking": 3.0, "contested_marking": 2.0, "accuracy": 1.0, "pressure": 1.0}},
 	"small_fwd": {"role": "FWD", "word": "small forward", "weights": {"goalkicking": 3.0, "accuracy": 2.0, "carry": 1.0, "creating": 1.0}},
 	"key_def": {"role": "DEF", "word": "key defender", "weights": {"intercept": 3.0, "pressure": 2.0}},
 	"small_def": {"role": "DEF", "word": "small defender", "weights": {"pressure": 3.0, "carry": 2.0, "intercept": 1.0}},
@@ -12914,11 +12917,22 @@ func _migrate_train_plans() -> void:
 ## ("focus_marking", cut 2026-11-03) becomes his stat focus, open to change
 ## this season, and his plan falls back as before. A save holding several
 ## focuses keeps the first his role can use; one he cannot use is dropped.
+## A focus on a skill the 16 skills split (save version 3) is renamed first:
+## Marking to Contested marking, Disposal to Kicking.
+const OLD_FOCUS := {"marking": "contested_marking", "disposal": "kicking"}
 func _migrate_focus(p: Dictionary, own: String) -> void:
 	if not p.has("train_focus") and own.begins_with("focus_"):
 		p["train_focus"] = own.trim_prefix("focus_")
 	if not p.has("train_focus"):
 		return
+	var f = p["train_focus"]
+	if f is Array:
+		var renamed := []
+		for x in f:
+			renamed.append(OLD_FOCUS.get(str(x), str(x)))
+		p["train_focus"] = renamed
+	else:
+		p["train_focus"] = OLD_FOCUS.get(str(f), str(f))
 	var keep := stat_focus(p)
 	if keep == "":
 		p.erase("train_focus")
@@ -12938,7 +12952,7 @@ func _closest_plan(p: Dictionary) -> String:
 		var sum := 0.0
 		for k in w:
 			tot += float(w[k])
-			sum += float(w[k]) * float(attr.get(k, 0))
+			sum += float(w[k]) * Skills.value(attr, k, 0.0)
 		return sum / tot if tot > 0.0 else 0.0
 	var best := "position"
 	var best_score: float = score.call(plan_weights(p, "position")) + 3.0
@@ -13072,7 +13086,7 @@ func focus_trait(p: Dictionary, stat: String) -> Dictionary:
 		var need_roles: Array = d["roles"]
 		if not need_roles.is_empty() and not (need_roles.has(roles[0]) or need_roles.has(roles[1])):
 			continue
-		if bool(d.get("small", false)) and int(attr.get("marking", 0)) >= 52:
+		if bool(d.get("small", false)) and int(attr.get("contested_marking", 0)) >= 52:
 			continue
 		return {"key": key, "min": int(d["min"]), "gap": maxi(0, int(d["min"]) - int(attr.get(stat, 0))),
 				"crowded": good >= Traits.MAX_GOOD}

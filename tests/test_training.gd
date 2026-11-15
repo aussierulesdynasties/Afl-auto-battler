@@ -475,14 +475,14 @@ func _test_archetypes_differ() -> void:
 	var small: Dictionary = fwd.duplicate(true)
 	small["xp"] = 4000
 	var sg := GameState._spend_with_weights(small, GameState.plan_weights(small, "small_fwd"), false)
-	_check(not sg.has("marking"), "A small forward never trains marking (it would stop him crumbing)")
+	_check(not sg.has("contested_marking"), "A small forward never trains contested marking (it would stop him crumbing)")
 
 
 ## Traits are still reached through the plan that suits them.
 func _test_traits_through_training() -> void:
 	_new_season()
 	var fwd: Dictionary = _first_of("FWD").duplicate(true)
-	fwd["attr"]["marking"] = 40
+	fwd["attr"]["contested_marking"] = 40
 	fwd["attr"]["goalkicking"] = 50
 	fwd["role2"] = ""
 	fwd["xp"] = 2500
@@ -519,7 +519,7 @@ func _test_old_plans_migrate() -> void:
 		if str(q["role"]) == "FWD" and str(q.get("role2", "")) == "" and q != a and q != b and q != c:
 			f = q
 			break
-	for k in ["marking", "goalkicking", "accuracy"]:
+	for k in ["contested_marking", "goalkicking", "accuracy"]:
 		f["attr"][k] = 95
 	f["train_plan"] = "manual"
 	f["xp"] = 2000
@@ -877,9 +877,9 @@ func _test_unicorn() -> void:
 	var ts: Dictionary = Traits.SYNERGIES["tall_small"]["needs"]
 	var fwds := []
 	for i in range(int(ts["aerial"])):
-		fwds.append({"id": "A%d" % i, "role": "FWD", "attr": {"marking": 99}})
+		fwds.append({"id": "A%d" % i, "role": "FWD", "attr": {"contested_marking": 99}})
 	for i in range(int(ts["crumber"]) - 1):
-		fwds.append({"id": "C%d" % i, "role": "FWD", "attr": {"goalkicking": 99, "marking": 30}})
+		fwds.append({"id": "C%d" % i, "role": "FWD", "attr": {"goalkicking": 99, "contested_marking": 30}})
 	var u_mid := u.duplicate(true)
 	u_mid["id"] = "U2"
 	_check(not Traits.active(fwds + [u_mid]).has("tall_small"), "A Unicorn in the midfield cannot fill a forward-line synergy")
@@ -1232,7 +1232,7 @@ func _test_stat_focus_old_saves() -> void:
 	for q in GameState.my_list:
 		if str(q.get("role2", "")) != "":
 			continue
-		if a.is_empty() and GameState.focus_options(q).has("marking"):
+		if a.is_empty() and GameState.focus_options(q).has("contested_marking"):
 			a = q
 		elif b.is_empty() and GameState.focus_options(q).size() >= 2:
 			b = q
@@ -1255,8 +1255,8 @@ func _test_stat_focus_old_saves() -> void:
 	var a2 := GameState.list_player(str(a["id"]))
 	var b2 := GameState.list_player(str(b["id"]))
 	_check(GameState.plan_for(a2) == "position", "The old focus plan still falls back to Position plan")
-	_check(GameState.stat_focus(a2) == "marking" and str(a2.get("train_focus", "")) == "marking",
-			"His old marking plan becomes his stat focus")
+	_check(GameState.stat_focus(a2) == "contested_marking" and str(a2.get("train_focus", "")) == "contested_marking",
+			"His old marking plan becomes his stat focus, Contested marking")
 	_check(not GameState.focus_locked(a2), "A migrated focus is open to change this season")
 	_check(b2.get("train_focus") is String and str(b2["train_focus"]) == str(opts[1]),
 			"Several focuses keep the first he can use (%s)" % [b2.get("train_focus")])
@@ -1303,7 +1303,7 @@ func _test_training_lift_unwound() -> void:
 	# Seven seasons of rival training on a copy of the league, re-anchored the
 	# old way (evenly) and the new way (each gives back out of his own gains).
 	var start := _mean_attr(mids, "contested")
-	var start_marking := _mean_attr(mids, "marking")
+	var start_marking := _mean_attr(mids, "contested_marking")
 	var arms := {}
 	for arm in ["even", "unwound"]:
 		var lists := {}
@@ -1327,7 +1327,7 @@ func _test_training_lift_unwound() -> void:
 					ms.append(p)
 					if Traits.has(p, "bull"):
 						bulls += 1
-		arms[arm] = {"contested": _mean_attr(ms, "contested"), "marking": _mean_attr(ms, "marking"), "bulls": bulls}
+		arms[arm] = {"contested": _mean_attr(ms, "contested"), "marking": _mean_attr(ms, "contested_marking"), "bulls": bulls}
 	var bulls_start := mids.filter(func(p): return Traits.has(p, "bull")).size()
 	var gap_start := start - start_marking
 	var gap_even := float(arms["even"]["contested"]) - float(arms["even"]["marking"])
@@ -1347,7 +1347,7 @@ func _test_training_lift_unwound() -> void:
 	# trained something else keeps the attribute he did not train.
 	var trio := {"A": [], "B": [], "C": []}
 	var codes := ["A", "B", "C"]
-	var gains := [{"contested": 12}, {"contested": 2}, {"disposal": 4}]
+	var gains := [{"contested": 12}, {"contested": 2}, {"kicking": 4}]
 	for i in range(3):
 		var p: Dictionary = (mids[i] as Dictionary).duplicate(true)
 		p["id"] = "row90_%d" % i
@@ -1359,15 +1359,15 @@ func _test_training_lift_unwound() -> void:
 	var hi_c := int(hi["attr"]["contested"])
 	var lo_c := int(lo["attr"]["contested"])
 	var other_c := int(other["attr"]["contested"])
-	var other_d := int(other["attr"]["disposal"])
+	var other_d := int(other["attr"]["kicking"])
 	var gap := int(hi.get("potential", 0)) - int(hi["overall"])
 	Prospects.apply_training_unwind(trio, Prospects.training_unwind(trio, 2027))
 	var hi_kept := int(hi["attr"]["contested"]) - (hi_c - 12)
 	var lo_kept := int(lo["attr"]["contested"]) - (lo_c - 2)
 	_check(hi_kept > 0 and hi_kept > lo_kept,
 			"The harder trainer keeps part of his gain, more than a light one (%d of 12 kept, %d of 2)" % [hi_kept, lo_kept])
-	_check(int(other["attr"]["disposal"]) < other_d and int(other["attr"]["contested"]) >= other_c - 1,
-			"A player who trained disposal gives back disposal, not contested (contested %d->%d, disposal %d->%d)" % [other_c, int(other["attr"]["contested"]), other_d, int(other["attr"]["disposal"])])
+	_check(int(other["attr"]["kicking"]) < other_d and int(other["attr"]["contested"]) >= other_c - 1,
+			"A player who trained kicking gives back kicking, not contested (contested %d->%d, kicking %d->%d)" % [other_c, int(other["attr"]["contested"]), other_d, int(other["attr"]["kicking"])])
 	_check(int(hi.get("potential", 0)) - int(hi["overall"]) == gap,
 			"His distance to his projection is kept (%d)" % gap)
 	# The real rollover: every listed player's season record is spent, and the
@@ -1377,7 +1377,7 @@ func _test_training_lift_unwound() -> void:
 	for code in GameState.season.lists:
 		for p in GameState.season.lists[code]:
 			if str(p["role"]) == "MID":
-				before_gap[str(p["id"])] = int(p["attr"]["contested"]) - int(p["attr"]["marking"])
+				before_gap[str(p["id"])] = int(p["attr"]["contested"]) - int(p["attr"]["contested_marking"])
 			p["xp"] = 600
 			GameState.ai_spend_xp(p)
 	var trained_gap := 0.0
@@ -1385,7 +1385,7 @@ func _test_training_lift_unwound() -> void:
 	for code in GameState.season.lists:
 		for p in GameState.season.lists[code]:
 			if before_gap.has(str(p["id"])):
-				trained_gap += float(int(p["attr"]["contested"]) - int(p["attr"]["marking"]) - int(before_gap[str(p["id"])]))
+				trained_gap += float(int(p["attr"]["contested"]) - int(p["attr"]["contested_marking"]) - int(before_gap[str(p["id"])]))
 				n_trained += 1
 	trained_gap /= maxf(1.0, float(n_trained))
 	# A delisted player who trained this season: he is on no list at the
@@ -1409,7 +1409,7 @@ func _test_training_lift_unwound() -> void:
 			if str(p.get("id", "")) == "row90_fa":
 				fa_now = p
 			if before_gap.has(str(p["id"])) and str(p["role"]) == "MID":
-				rolled_gap += float(int(p["attr"]["contested"]) - int(p["attr"]["marking"]) - int(before_gap[str(p["id"])]))
+				rolled_gap += float(int(p["attr"]["contested"]) - int(p["attr"]["contested_marking"]) - int(before_gap[str(p["id"])]))
 				n_rolled += 1
 	rolled_gap /= maxf(1.0, float(n_rolled))
 	_check(stale == 0 and (fa_now.is_empty() or not fa_now.has("season_gains")),

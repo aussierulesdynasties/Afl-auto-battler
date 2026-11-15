@@ -64,13 +64,13 @@ const TAGGER_MARGIN := 0.20
 ## What the wing rewards: carry and disposal. Raw attribute blend.
 static func wing_fit(p: Dictionary) -> float:
 	var a: Dictionary = p.get("attr", {})
-	return 0.55 * float(a.get("carry", 0)) + 0.45 * float(a.get("disposal", 0))
+	return 0.55 * float(a.get("carry", 0)) + 0.45 * Skills.disposal_of(a, 0.0)
 
 
 ## What the centre square rewards: contested ball first.
 static func centre_fit(p: Dictionary) -> float:
 	var a: Dictionary = p.get("attr", {})
-	return 0.75 * float(a.get("contested", 0)) + 0.25 * float(a.get("disposal", 0))
+	return 0.75 * float(a.get("contested", 0)) + 0.25 * Skills.disposal_of(a, 0.0)
 
 
 static func is_mid(p: Dictionary) -> bool:

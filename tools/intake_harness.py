@@ -27,60 +27,44 @@ DATA = os.path.join(ROOT, "data")
 # Mirror of Ratings.gd constants
 # ---------------------------------------------------------------------------
 SHRINK_GAMES = 5.0  # unused here, kept for constant parity notes
-ROLE_WEIGHTS = {  # role core: attribute -> weight (Ratings.gd::ROLE_WEIGHTS)
-    "RUCK": {"ruck": 0.90, "contested": 0.10},
-    "FWD": {"goalkicking": 0.30, "pressure": 0.20, "marking": 0.15, "accuracy": 0.15, "creating": 0.12, "carry": 0.08},
-    "MID": {"contested": 0.55, "disposal": 0.13, "carry": 0.14, "pressure": 0.10, "goalkicking": 0.04, "accuracy": 0.04},
-    "DEF": {"intercept": 0.40, "pressure": 0.35, "carry": 0.15, "contested": 0.10},
+ROLE_WEIGHTS = {  # each line's skill shares (Ratings.gd::ROLE_WEIGHTS, the APR fit)
+    "RUCK": {"kicking": 0.097, "handballing": 0.018, "contested_marking": 0.081, "contested": 0.225, "pressure": 0.049, "intercept": 0.054, "carry": 0.024, "goalkicking": 0.023, "accuracy": 0.059, "creating": 0.07, "ruck": 0.187, "discipline": 0.043, "durability": 0.022, "star": 0.048},
+    "FWD": {"kicking": 0.083, "handballing": 0.03, "contested_marking": 0.032, "contested": 0.177, "pressure": 0.058, "intercept": 0.056, "carry": 0.067, "goalkicking": 0.112, "accuracy": 0.072, "creating": 0.147, "discipline": 0.049, "durability": 0.05, "star": 0.067},
+    "MID": {"kicking": 0.066, "handballing": 0.019, "contested_marking": 0.027, "contested": 0.236, "pressure": 0.082, "intercept": 0.072, "carry": 0.07, "goalkicking": 0.058, "accuracy": 0.057, "creating": 0.155, "discipline": 0.072, "durability": 0.018, "star": 0.068},
+    "DEF": {"kicking": 0.124, "handballing": 0.055, "contested_marking": 0.041, "contested": 0.161, "pressure": 0.014, "intercept": 0.174, "carry": 0.074, "goalkicking": 0.05, "accuracy": 0.002, "creating": 0.128, "ruck": 0.004, "discipline": 0.053, "durability": 0.052, "star": 0.068},
 }
-ATTRS = ["disposal", "contested", "marking", "pressure", "intercept", "carry",
-         "goalkicking", "accuracy", "creating", "ruck", "discipline",
-         "durability", "star"]
+LINE_FIT = {  # each line's scale (Ratings.gd::LINE_FIT)
+    "RUCK": {"mid": 63.22, "mean": 0.5518, "slope": 145.62},
+    "FWD": {"mid": 63.2, "mean": 0.5077, "slope": 162.96},
+    "MID": {"mid": 63.19, "mean": 0.5142, "slope": 142.95},
+    "DEF": {"mid": 63.18, "mean": 0.4952, "slope": 166.95},
+}
+OVR_MIN, OVR_MAX = 30, 99
+ATTRS = ["kicking", "handballing", "contested_marking", "uncontested_marking", "contested",
+         "pressure", "intercept", "speed", "carry", "goalkicking", "accuracy", "creating",
+         "ruck", "discipline", "durability", "star"]
+UNRATED_KEYS = ["discipline"]  # Prospects.UNRATED_KEYS: the fit never moves temperament
 LIST_SIZE = 44
 MIN_LIST = 37  # Contracts.MIN_LIST (the game's league, 2026 on)
 MAX_RETIRE_PER_CLUB = 8
 
 
-def scale_overall(raw):
-    if raw < 32.0:
-        return int(round(30.0 + (raw - 20.0) * (14.0 / 12.0)))
-    t = max(0.0, min(1.2, (raw - 32.0) / 49.0))
-    return int(round(44.0 + t ** 0.92 * 48.0))
+def _round(v):
+    """GDScript round(): halves away from zero."""
+    return int(math.floor(v + 0.5)) if v >= 0 else -int(math.floor(-v + 0.5))
 
 
-# Position scale - see Ratings.gd::position_stretch. [p10, p50, p98] of each
-# position's raw blend -> where it lands; one for one outside that band.
-STRETCH_ANCHORS = {"MID": (41.22, 53.99, 82.62), "DEF": (40.07, 47.75, 58.86),
-                   "FWD": (36.86, 48.25, 61.42), "RUCK": (39.13, 66.27, 86.90)}
-STRETCH_TARGETS = {"MID": (37.74, 49.36, 78.04), "DEF": (43.07, 49.41, 73.72),
-                   "FWD": (38.38, 49.48, 78.04), "RUCK": (37.50, 49.36, 73.56)}
-
-
-def position_stretch(raw, role):
-    if role not in STRETCH_ANCHORS:
-        return raw
-    g10, g50, g98 = STRETCH_ANCHORS[role]
-    t10, t50, t98 = STRETCH_TARGETS[role]
-    if raw <= g10:
-        return raw + (t10 - g10)
-    if raw <= g50:
-        return t10 + (raw - g10) * (t50 - t10) / (g50 - g10)
-    if raw <= g98:
-        return t50 + (raw - g50) * (t98 - t50) / (g98 - g50)
-    return t98 + (raw - g98)
-
-
-def role_core(attr, role):
-    return sum(w * attr[k] for k, w in ROLE_WEIGHTS[role].items())
-
-
-def rate_overall(attr, role, games):
-    core = role_core(attr, role)
-    overall = 0.70 * core + 0.22 * attr["star"] + 0.08 * attr["durability"]
-    overall = position_stretch(overall, role)
+def rate_overall(a, role, games):
+    """Match Ratings.gd::rate_overall: the line's skill shares on its APR scale,
+    then the low-games confidence shrink."""
+    w = ROLE_WEIGHTS.get(role, ROLE_WEIGHTS["MID"])
+    f = LINE_FIT.get(role, LINE_FIT["MID"])
+    b = sum(wt * (float(a.get(k, 50)) - 1.0) / 98.0 for k, wt in w.items())
+    mid = f["mid"]
+    overall = mid + f["slope"] * (b - f["mean"])
     conf = min(1.0, games / 14.0)
-    overall = 40.0 + (overall - 40.0) * (0.40 + 0.60 * conf)
-    return max(1, min(99, scale_overall(overall)))
+    overall = mid + (overall - mid) * (0.40 + 0.60 * conf)
+    return max(OVR_MIN, min(OVR_MAX, _round(overall)))
 
 
 def salary_value(overall):
@@ -95,19 +79,11 @@ def salary_value(overall):
 # Mirror of Prospects.gd
 # ---------------------------------------------------------------------------
 RANK_BANDS = [(1, 70.0), (10, 64.0), (20, 61.0), (30, 58.0), (40, 55.0), (50, 52.0), (64, 47.0)]
-ROLE_DELTAS = {
-    "MID": {"disposal": 6, "contested": 5, "pressure": 3, "carry": 4, "creating": 2,
-            "marking": -1, "goalkicking": -3, "intercept": 0, "accuracy": -4,
-            "discipline": -1, "star": 0, "durability": 0, "ruck": -30},
-    "DEF": {"intercept": 8, "pressure": 6, "marking": 4, "disposal": 1, "accuracy": -5,
-            "goalkicking": -8, "creating": -4, "carry": -3, "contested": 1,
-            "discipline": 0, "star": 0, "durability": 0, "ruck": -30},
-    "FWD": {"goalkicking": 8, "marking": 5, "accuracy": 3, "creating": 4, "disposal": -1,
-            "intercept": -4, "pressure": 2, "carry": 1, "contested": 0, "discipline": 0,
-            "star": 0, "durability": 0, "ruck": -24},
-    "RUCK": {"ruck": 26, "contested": 8, "marking": 3, "disposal": -5, "goalkicking": -1,
-             "intercept": -3, "pressure": 0, "carry": -5, "accuracy": -5, "creating": -2,
-             "discipline": -2, "star": 0, "durability": 1, "ruck": 0},
+ROLE_DELTAS = {  # Prospects.gd::ROLE_DELTAS
+    "MID": {"kicking": 6.0, "handballing": 6.0, "contested": 5.0, "pressure": 3.0, "carry": 4.0, "creating": 2.0, "contested_marking": -1.0, "uncontested_marking": -1.0, "goalkicking": -3.0, "intercept": 0.0, "accuracy": -4.0, "discipline": -1.0, "star": 0.0, "speed": 0.0, "durability": 0.0, "ruck": -30.0},
+    "DEF": {"intercept": 8.0, "pressure": 6.0, "contested_marking": 4.0, "uncontested_marking": 4.0, "kicking": 1.0, "handballing": 1.0, "accuracy": -5.0, "goalkicking": -8.0, "creating": -4.0, "carry": -3.0, "contested": 1.0, "discipline": 0.0, "star": 0.0, "speed": 0.0, "durability": 0.0, "ruck": -30.0},
+    "FWD": {"goalkicking": 8.0, "contested_marking": 5.0, "uncontested_marking": 5.0, "accuracy": 3.0, "creating": 4.0, "kicking": -1.0, "handballing": -1.0, "intercept": -4.0, "pressure": 2.0, "carry": 1.0, "contested": 0.0, "discipline": 0.0, "star": 0.0, "speed": 0.0, "durability": 0.0, "ruck": -24.0},
+    "RUCK": {"ruck": 26.0, "contested": 8.0, "contested_marking": 3.0, "uncontested_marking": 3.0, "kicking": -5.0, "handballing": -5.0, "goalkicking": -1.0, "intercept": -3.0, "pressure": 0.0, "carry": -5.0, "accuracy": -5.0, "creating": -2.0, "discipline": -2.0, "star": 0.0, "speed": 0.0, "durability": 1.0},
 }
 
 
@@ -165,15 +141,17 @@ def project(p):
     for k, d in ROLE_DELTAS[role].items():
         a[k] += d
     if di > 0:
-        a["disposal"] += max(-4.0, min(10.0, (di - 16) * 0.8))
+        use = max(-2.0, min(5.0, (di - 16) * 0.4))
+        a["kicking"] += use
+        a["handballing"] += use
     if gl > 0:
-        a["goalkicking"] += max(-3.0, min(12.0, (gl - 1.2) * 2.2))
+        a["goalkicking"] += max(-1.5, min(6.0, (gl - 1.2) * 1.1))
     if mk > 0:
-        a["marking"] += max(-2.0, min(8.0, (mk - 3) * 1.5))
+        a["uncontested_marking"] += max(-1.0, min(4.0, (mk - 3) * 0.75))
     if ho > 0 and role == "RUCK":
-        a["ruck"] += max(0.0, min(14.0, (ho - 10) * 0.8))
+        a["ruck"] += max(0.0, min(7.0, (ho - 10) * 0.4))
     if tk > 0:
-        a["pressure"] += max(0.0, min(8.0, (tk - 3) * 1.0))
+        a["pressure"] += max(0.0, min(4.0, (tk - 3) * 0.5))
     a["star"] = max(20.0, min(74.0, target - 10 + rnd.uniform(-4, 4)))
     a["durability"] = max(24.0, min(62.0, 24.0 + gm * 1.8))
     a = fit(a, role, target, 14.0)
@@ -193,11 +171,12 @@ def fit(a, role, target, games):
         else:
             hi = mid
     off = (lo + hi) / 2
-    return {k: max(1.0, min(99.0, round(v + off))) for k, v in a.items()}
+    return {k: max(1.0, min(99.0, _round(v + (0.0 if k in UNRATED_KEYS else off)))) for k, v in a.items()}
 
 
 def _shifted(a, role, off, games):
-    return rate_overall({k: max(1.0, min(99.0, v + off)) for k, v in a.items()}, role, games)
+    return rate_overall({k: (v if k in UNRATED_KEYS else max(1.0, min(99.0, v + off))) for k, v in a.items()},
+                        role, games)
 
 
 def days_between(a, b):

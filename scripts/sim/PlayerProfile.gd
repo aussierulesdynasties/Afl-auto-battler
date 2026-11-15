@@ -18,8 +18,9 @@ const WEAK_SHARE := 0.25          # bottom quarter of his role: a weakness
 const MIN_WEIGHT := 0.10
 
 const ATTR_LABELS := {
-	"disposal": "Disposal", "contested": "Contested ball", "marking": "Marking",
-	"pressure": "Pressure", "intercept": "Intercepting", "carry": "Carry",
+	"kicking": "Kicking", "handballing": "Handballing", "contested": "Contested ball",
+	"contested_marking": "Contested marking", "uncontested_marking": "Uncontested marking",
+	"pressure": "Pressure", "intercept": "Intercepting", "speed": "Speed", "carry": "Carry",
 	"goalkicking": "Goalkicking", "accuracy": "Accuracy", "creating": "Creating",
 	"ruck": "Ruck work", "discipline": "Discipline", "durability": "Durability",
 	"star": "Star power",
@@ -36,7 +37,7 @@ static func _values(role: String, key: String) -> Array:
 		var vals := []
 		for p in _game_db().players:
 			if str(p.get("role", "")) == role:
-				vals.append(float((p["attr"] as Dictionary).get(key, 0)))
+				vals.append(Skills.value(p["attr"], key, 0.0))
 		vals.sort()
 		# Off the main thread (a match on a worker) it is only read: warm()
 		# fills it first, and anything missed is worked out, not stored.
@@ -72,7 +73,7 @@ static func percentile(p: Dictionary, key: String, strict := false) -> float:
 	var vals := _values(str(p.get("role", "MID")), key)
 	if vals.is_empty():
 		return 0.5
-	var v := float((p.get("attr", {}) as Dictionary).get(key, 0))
+	var v := Skills.value(p.get("attr", {}), key, 0.0)
 	var below := vals.bsearch(v, strict)
 	return float(below) / float(vals.size())
 
@@ -122,10 +123,9 @@ static func weakness(p: Dictionary) -> Dictionary:
 
 ## The football attributes a card ranks for his top three (director,
 ## 2026-10-07: "EVERY player card must display that player's top THREE rated
-## attributes"): all 13, in this order, which also breaks a tie. Durability
-## and Star power are ranked too (director ruling 2026-11-03).
-const TOP_KEYS := ["disposal", "contested", "marking", "pressure", "intercept", "carry",
-		"goalkicking", "accuracy", "creating", "ruck", "discipline", "durability", "star"]
+## attributes"): all 16 (Skills.KEYS), in this order, which also breaks
+## a tie. Durability and Star power are ranked too (director ruling 2026-11-03).
+const TOP_KEYS := Skills.KEYS
 
 
 ## His three highest-rated attributes, whatever their level:
@@ -194,7 +194,7 @@ static func player_type(p: Dictionary) -> String:
 			total += float(w[key])
 		score /= maxf(0.001, total)
 		# A small forward stays small: a strong mark reads as a key forward.
-		if str(row["key"]) == "small_fwd" and int((p["attr"] as Dictionary).get("marking", 0)) >= 52:
+		if str(row["key"]) == "small_fwd" and int((p["attr"] as Dictionary).get("contested_marking", 0)) >= 52:
 			score -= 0.15
 		if score > best_score:
 			best_score = score
@@ -238,7 +238,7 @@ static func forward_type(p: Dictionary) -> String:
 		return "Forward"
 	var view := p.duplicate()
 	view["role"] = "FWD"
-	var aerial := percentile(view, "marking", true)
+	var aerial := percentile(view, "contested_marking", true)
 	var tall := clampf((h - KEY_FWD_CM[0]) / (KEY_FWD_CM[1] - KEY_FWD_CM[0]), 0.0, 1.0)
 	var short := clampf((SMALL_FWD_CM[0] - h) / (SMALL_FWD_CM[0] - SMALL_FWD_CM[1]), 0.0, 1.0)
 	if 0.6 * tall + 0.4 * aerial >= FWD_TYPE_LINE:

@@ -109,8 +109,8 @@ func _named(p: Dictionary, men: Array) -> String:
 	return str(e.get("id", ""))
 
 
-const BULL := {"contested": 18, "pressure": 8, "carry": -10, "disposal": -8}
-const RUNNER := {"carry": 18, "disposal": 10, "contested": -12, "pressure": -8}
+const BULL := {"contested": 18, "pressure": 8, "carry": -10, "kicking": -8, "handballing": -8}
+const RUNNER := {"carry": 18, "kicking": 10, "handballing": 10, "contested": -12, "pressure": -8}
 
 
 func _test_position_decides() -> void:
@@ -132,7 +132,7 @@ func _test_height_decides() -> void:
 	me["real_name"] = ""
 	# Similar height first: the exact ratings 10 cm away lose to near ratings 2 cm away.
 	var twin_tall := _man("twin_tall", "DEF", 200.0, 80, BULL)
-	var close := _man("close", "DEF", 192.0, 82, {"contested": 14, "pressure": 8, "carry": -8, "disposal": -8})
+	var close := _man("close", "DEF", 192.0, 82, {"contested": 14, "pressure": 8, "carry": -8, "kicking": -8, "handballing": -8})
 	_check(_named(me, [twin_tall, close]) == "close", "A real player within 4 cm is preferred to one 10 cm taller with the exact ratings")
 	# Inside the band, height is still part of the distance.
 	var plus1 := _man("plus1", "DEF", 191.0, 80, BULL)
@@ -150,7 +150,7 @@ func _test_height_decides() -> void:
 	var small := _man("me", "FWD", 176.0, 91, RUNNER)
 	small["real_name"] = ""
 	var key_fwd := _man("key_fwd", "FWD", 196.0, 91, RUNNER)
-	var small_fwd := _man("small_fwd", "FWD", 170.0, 89, {"carry": 14, "disposal": 8, "contested": -8, "pressure": -4})
+	var small_fwd := _man("small_fwd", "FWD", 170.0, 89, {"carry": 14, "kicking": 8, "handballing": 8, "contested": -8, "pressure": -4})
 	_check(_named(small, [key_fwd, small_fwd]) == "small_fwd",
 			"A 176 cm forward with 91 POT is likened to the 170 cm forward of 89, not the 196 cm forward with his exact ratings")
 	var tall_small: float = PL.distance(PL.profile(small), PL.profile(key_fwd, true))
@@ -260,7 +260,7 @@ func _test_strengths_count_for_more() -> void:
 	var me := _man("me", "MID", 186.0, 80, {"carry": 25})
 	me["real_name"] = ""
 	var no_run := _man("no_run", "MID", 186.0, 80, {"carry": 5})
-	var no_mark := _man("no_mark", "MID", 186.0, 80, {"carry": 25, "marking": -20})
+	var no_mark := _man("no_mark", "MID", 186.0, 80, {"carry": 25, "contested_marking": -20})
 	for q in [me, no_run, no_mark]:
 		q["overall"] = 80   # compared as rated: nobody is lifted
 	var a: Dictionary = PL.profile(me)

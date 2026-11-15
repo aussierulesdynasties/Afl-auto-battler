@@ -11,8 +11,9 @@ extends RefCounted
 const OPINION_RULE := "The higher his opinion of you, the more a talk lifts his mood. Under %d, he may refuse to re-sign with you: %d%% for every point under."
 
 const ATTR_ROWS := [
-	["disposal", "Disposal"], ["contested", "Contested"], ["marking", "Marking"],
-	["pressure", "Pressure"], ["intercept", "Intercept"], ["carry", "Carry"],
+	["kicking", "Kicking"], ["handballing", "Handballing"], ["contested", "Contested ball"],
+	["contested_marking", "Contested marking"], ["uncontested_marking", "Uncontested marking"],
+	["pressure", "Pressure"], ["intercept", "Intercept"], ["speed", "Speed"], ["carry", "Carry"],
 	["goalkicking", "Goalkicking"], ["accuracy", "Accuracy"],
 	["creating", "Creating"], ["ruck", "Ruck"], ["discipline", "Discipline"],
 	["durability", "Durability"], ["star", "Star power"],

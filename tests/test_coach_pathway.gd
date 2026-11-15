@@ -51,7 +51,7 @@ func _player(id: String, games: int, goals: int, role := "MID", ovr := 70) -> Di
 	return {
 		"id": id, "real_name": "", "generic_name": "Lachlan Mercer", "name": "Lachlan Mercer",
 		"role": role, "own_role": role, "role2": "", "age": 34.0, "overall": ovr, "potential": ovr + 2,
-		"attr": {"kicking": 70, "marking": 60}, "xp": 400, "morale": 0.4, "salary": 900,
+		"attr": {"kicking": 70, "contested_marking": 60}, "xp": 400, "morale": 0.4, "salary": 900,
 		"contract_years": 1, "plan": "balanced", "injury": {"weeks": 2}, "history": [[2039, ovr]],
 		"drafted_year": 2024, "drafted_type": "national", "drafted_pick": 31,
 		"career": {"games": games, "goals": goals, "unknown": [], "through": Y,

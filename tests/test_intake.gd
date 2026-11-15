@@ -1101,7 +1101,7 @@ func _test_custom_prospect() -> void:
 	g["weaknesses"] = []
 	var pm := Prospects.make_custom(m, GameState.season_year, seed)
 	var pg := Prospects.make_custom(g, GameState.season_year, seed)
-	_check(int(pm["attr"]["marking"]) > int(pg["attr"]["marking"]) and int(pg["attr"]["goalkicking"]) > int(pm["attr"]["goalkicking"])
+	_check(int(pm["attr"]["contested_marking"]) > int(pg["attr"]["contested_marking"]) and int(pg["attr"]["goalkicking"]) > int(pm["attr"]["goalkicking"])
 			and absi(int(pm["overall"]) - int(pg["overall"])) <= 1,
 			"Strengths reshape the footballer without lifting his overall")
 

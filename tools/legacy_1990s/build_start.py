@@ -322,12 +322,27 @@ def rate_seasons(by_year, model):
         est = {pid: estimate(r, model, missing) for pid, r in merged.items()}
         spread_like_real(est, missing, model)
         players = [harness_player(e, code(e["club"]), i) for i, e in enumerate(est.values())]
-        H.ERA_ANCHORS.clear()
         H.derive_ratings(players)
-        H.fit_era_anchors(players)
         rated[y] = {pid: (p["overall"], int(e["gm"]), e, p["role"])
                     for (pid, e), p in zip(est.items(), players)}
+        # The season's overall is the director's (interview 2026-11-15): the
+        # AFL Player Rating against his position from 2012, before it his
+        # skills weighted as the AFL Player Rating weights them
+        # (tools/wheelo/seasons_rated.py). The estimated row above still
+        # feeds the stats, heights and the era report.
+        new = wheelo_rated(y)
+        for pid, (ovr, g, e, role) in list(rated[y].items()):
+            got = new.get(pid)
+            if got is not None:
+                rated[y][pid] = (int(round(got["ovr"])), g, e, role)
     return rated
+
+
+def wheelo_rated(year):
+    if os.path.join(ROOT, "tools", "wheelo") not in sys.path:
+        sys.path.insert(0, os.path.join(ROOT, "tools", "wheelo"))
+    import seasons_rated  # noqa: E402  (imports this module: loaded late)
+    return seasons_rated.rated(year)
 
 
 # ---------------------------------------------------------------- honours --
@@ -580,9 +595,7 @@ def era_report(by_year, rated, players):
                                for k, v in e.items()}, "first": r["first"], "last": r["last"]},
                            r["club"], r["num"])
         hp.append(p)
-    H.ERA_ANCHORS.clear()
     H.derive_ratings(hp)
-    H.fit_era_anchors(hp)
     by_club = defaultdict(list)
     for p in hp:
         by_club[p["club"]].append(p["overall"])

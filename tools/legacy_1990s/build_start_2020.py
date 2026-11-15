@@ -275,10 +275,7 @@ def rate_file(path):
 
 
 def shape(hp, fit):
-    H.ERA_ANCHORS.clear()
     H.derive_ratings(hp)
-    if fit:
-        H.fit_era_anchors(hp)
     by_club = defaultdict(list)
     for p in hp:
         by_club[p["club"]].append(p["overall"])

@@ -135,7 +135,7 @@ func _test_classes(state: Node, db: Node) -> void:
 				dom_gap += float(p["potential"]) - float(p["overall"])
 				dom_rank_gap += float(p["overall"]) - Prospects.rank_base_overall(int(p["draft_rank"]))
 				dom_carry += float(p["attr"]["carry"]) - float(p["overall"])
-				dom_disp += float(p["attr"]["disposal"]) - float(p["overall"])
+				dom_disp += Skills.disposal_of(p["attr"]) - float(p["overall"])
 				dom_n += 1
 	var raw_gap := 0.0
 	var raw_rank_gap := 0.0
@@ -146,10 +146,10 @@ func _test_classes(state: Node, db: Node) -> void:
 		s["n"] += 1
 		var a: Dictionary = p["attr"]
 		var ovr := float(p["overall"])
-		s["disp"] += float(a["disposal"]) - ovr
+		s["disp"] += Skills.disposal_of(a) - ovr
 		s["acc"] += float(a["accuracy"]) - ovr
 		s["cont"] += float(a["contested"]) - ovr
-		s["mark"] += float(a["marking"]) - ovr
+		s["mark"] += float(a["contested_marking"]) - ovr
 		s["pres"] += float(a["pressure"]) - ovr
 		s["tackle"] += float(a["pressure"])
 		s["carry"] += float(a["carry"]) - ovr

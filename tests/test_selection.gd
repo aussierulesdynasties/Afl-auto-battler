@@ -253,7 +253,7 @@ func _test_complete_synergy_reentry() -> void:
 		p["injury_weeks"] = 0
 		p["overall"] = 70 if in23.has(str(p["id"])) else 40
 		var attr: Dictionary = p.get("attr", {})
-		attr["marking"] = 40
+		attr["contested_marking"] = 40
 		attr["goalkicking"] = 40
 		p["attr"] = attr
 	var crumber: Dictionary = GameState.list_player(str(side["FWD"][0]))
@@ -268,8 +268,8 @@ func _test_complete_synergy_reentry() -> void:
 	_check(spare.size() == 3, "(three players outside the 23)")
 	if spare.size() < 3:
 		return
-	spare[0]["attr"]["marking"] = 80
-	spare[1]["attr"]["marking"] = 80
+	spare[0]["attr"]["contested_marking"] = 80
+	spare[1]["attr"]["contested_marking"] = 80
 	spare[2]["attr"]["goalkicking"] = 60
 	_check(Traits.of(crumber).has("crumber") and Traits.of(spare[0]).has("aerial") and Traits.of(spare[2]).has("crumber"),
 			"(one crumber in the side, two aerials and a crumber outside it)")
