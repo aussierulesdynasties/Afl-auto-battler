@@ -242,7 +242,7 @@ MATCH_NEW = [
 ]
 MATCH_OLD = [
     "a behind a little; it fades", "loose balls - never a guarantee", "can run away with it: the further ahead",
-    "fades with time; the side on top", "What your calls did", "\"Your calls\"", "\"Your side\"", "Your assistant's pick",
+    "fades with time; the side on top", "What your calls did", "\"Your calls\"", "\"Your side\"", "\"Your assistant's pick\"", "+= \"\\nYour assistant's pick\"",
     "\"Yours:\"", "moved the needle", "\"your player\"", "\"your tagger\"", "\"your defender\"", "\"Your loose man\"",
     "your best interceptor", "Your tag on", "Back to your calls", "\"Your plan: \"", "\"Your best: %s\"", "Why you won",
     "Why you lost", "\"Your synergies\"", "\"Your week\"", "Finish the match first - use",

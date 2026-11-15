@@ -1400,7 +1400,7 @@ func _show_coach_box() -> void:
 				return
 			var pid := str(who.get("id", ""))
 			_dress_tagger_card(b, _short_name(who), MatchNotes.tagger_card(who, float(sim.energy.get(pid, 100.0)), season_rating.call(pid)), id == "")
-		var who_tags := _player_choice("TaggerPicker", _card_text(tagger, tag_detail) + "\nAssistant's pick", others,
+		var who_tags := _player_choice("TaggerPicker", _card_text(tagger, tag_detail) + "\nYour assistant's pick", others,
 				others.slice(0, 2 if _pc_break else 3),
 				calls, "tagger_id", "Who goes to him?", sync_tag, tag_detail, card, "Other tagger…")
 		var wb := _call_block("Who tags", who_tags)
