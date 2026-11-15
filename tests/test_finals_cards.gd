@@ -759,9 +759,20 @@ func _test_determinism_and_no_finals() -> void:
 		var tid := str(line).split(" ")[1]
 		fresh_ids[tid] = true
 	_check(fresh_ids.size() >= 2, "A September shows different finals cards in different weeks (%s)" % str(fresh_ids.keys()))
-	# A season with no finals for you: none of the finals-week cards, in any week of them.
+	# A season with no finals for you: none of the finals-week cards, in any week of them. The one
+	# card it may see is its season's-end card in the first finals week (ClubStories.season_end_due:
+	# a side that missed the finals gets it then, or its losing-year cards could never be dealt).
 	var none := _september(3052, 12, 2)
-	_check(none.is_empty(), "A club that missed the finals sees no card in September (%s)" % str(none.slice(0, 2)))
+	var finals_seen := []
+	var ends := 0
+	for line in none:
+		var t := StoryDeck.by_id(StoryDeck.all(), str(line).split(" ")[1])
+		if (t.get("phase", []) as Array).has("season_end") and not (t.get("phase", []) as Array).has("finals"):
+			ends += 1
+		else:
+			finals_seen.append(line)
+	_check(finals_seen.is_empty() and ends <= 1,
+			"A club that missed the finals sees no finals card in September, only at most its one season's-end card (%d end cards; %s)" % [ends, str(finals_seen.slice(0, 2))])
 	# Two Grand Finals in a row, the same club and opponent, a win then a loss: the words differ.
 	_finals_game(3053, 0)
 	var sea: Season = GameState.season

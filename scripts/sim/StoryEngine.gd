@@ -239,6 +239,7 @@ static func _pick_one(deck: Array, ctx: Dictionary, story: Dictionary, rng: Rand
 				pool.append(c)
 		var c: Array = pool[rng.randi_range(0, pool.size() - 1)]
 		return build(deck, c[0], c[1], ctx.get("club", {}), rng, w)
+	_middle_before_end(deck, tiers, story, w)
 	# A priority card (the Grand Final week's, a week off's) comes before the older ones.
 	for name in TIERS:
 		var first: Array = (tiers[name] as Array).filter(func(c): return bool(c[0].get("priority", false)))
@@ -259,6 +260,49 @@ static func _pick_one(deck: Array, ctx: Dictionary, story: Dictionary, rng: Rand
 			if roll <= 0:
 				return build(deck, c[0], c[1], ctx.get("club", {}), rng, w)
 	return {}
+
+
+## An arc is told in order: while its middle beat can still come for him (its
+## flag set, its window open, not yet dealt), the arc's end waits, and once an
+## end is due the middle comes first among the beats. Behind a busy run of
+## other beats the captain's contract was signed before the talk about it was
+## ever had (story suite, Linux, 2026-11-15).
+static func _middle_before_end(deck: Array, tiers: Dictionary, story: Dictionary, w: int) -> void:
+	var held := {}
+	var rushed := {}
+	for c in tiers["beat"]:
+		var t: Dictionary = c[0]
+		if str(t.get("beat", "")) != "end" or str(t.get("arc", "")) == "":
+			continue
+		var who := str((c[1] as Dictionary).get("id", "club")) if str((c[1] as Dictionary).get("kind", "")) != "club" else "club"
+		for m in _middles_waiting(deck, str(t["arc"]), who, story, w):
+			held[str(t["id"])] = true
+			rushed[m] = true
+	if held.is_empty():
+		return
+	var beats: Array = (tiers["beat"] as Array).filter(func(c): return not held.has(str(c[0]["id"])))
+	var first: Array = beats.filter(func(c): return rushed.has(str(c[0]["id"])))
+	tiers["beat"] = first if not first.is_empty() else beats
+
+
+## The middle beats of an arc that can still come for this subject: flag set,
+## window not shut, none of the arc's middles dealt since it began.
+static func _middles_waiting(deck: Array, arc: String, who: String, story: Dictionary, w: int) -> Array:
+	var rec: Dictionary = story["arcs"].get(arc + "|" + who, {})
+	if str(rec.get("state", "")) != "open" or rec.has("middle"):
+		return []
+	var out := []
+	for m in deck:
+		if str(m.get("arc", "")) != arc or str(m.get("beat", "")) != "middle":
+			continue
+		var needs: Dictionary = m.get("needs", {})
+		var set_at := int((story["flags"].get(who, {}) as Dictionary).get(str(needs.get("flag", "")), NEVER))
+		if set_at == NEVER or w - set_at > int(needs.get("within", 30)):
+			continue
+		if int(story["last"].get(str(m["id"]), NEVER)) >= int(rec.get("start", w)):
+			return []   # dealt already (a save made before the middle was marked)
+		out.append(str(m["id"]))
+	return out
 
 
 static func tier(t: Dictionary) -> String:
@@ -554,6 +598,8 @@ static func record_choice(story: Dictionary, card: Dictionary, choice: int, w: i
 		return   # a start whose choice sets nothing never began
 	var rec: Dictionary = story["arcs"].get(key, {"start": w, "state": "open"})
 	rec["until"] = w + int(card.get("window", 1))
+	if beat == "middle":
+		rec["middle"] = w
 	story["arcs"][key] = rec
 
 
