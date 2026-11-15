@@ -73,8 +73,12 @@ static func _note_later(r: Dictionary, off: int) -> void:
 ## him in this off-season or after. Such a man goes into the drafts before his
 ## career can end (GameState._close_free_agency), at every club alike.
 static func career_ahead(p: Dictionary, year: int) -> bool:
-	if int(p.get("real_last", 0)) > year:
-		return true
+	return int(p.get("real_last", 0)) > year or taken_later(p, year)
+
+
+## Whether a real draft or new club's first list took him in `year`'s
+## off-season or after (not just a later last season).
+static func taken_later(p: Dictionary, year: int) -> bool:
 	if not on():
 		return false
 	_load()
