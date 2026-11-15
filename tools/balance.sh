@@ -7,7 +7,6 @@
 #   tools/balance.sh match 1000 --a-root <checkout of origin/main> --b "" # paired: main vs this branch
 #   tools/balance.sh match 1000 --a "--weather wet" --b "--weather perfect"
 #   tools/balance.sh match 1000 --a "--side-plan attacking" --b "--side-plan attacking --coach TA,GAMB"
-#   tools/balance.sh match 1000 --a "--side-plan balanced" --b "--custom-plan sharp,slow"   # side i%2 plays its own plan
 #   tools/balance.sh year 1000 --years "1990 2000 2010 2020 2026"   # each season's football against that season's real rates
 # Env: GODOT (binary), JOBS (workers, default cores-2), OUT (run dir).
 set -euo pipefail

@@ -21,9 +21,10 @@ const GOLDEN_LOAD := "9baf6f36b146d2bfafd65e07b3235c55"
 const GOLDEN_REAL := "6b9d20ef93eea2ce95f0a6d936f19727"
 ## A played match's floating point differs between Windows and Linux builds of
 ## Godot, so the season has one fingerprint per platform; each was taken on
-## main before the change (Linux: run_on_github run 43024085570). The own
-## plan (CustomPlan) redrew the season: Linux from Tests run 43083470206; the
-## Windows print still predates it and is refreshed on the next local run.
+## main before the change (Linux: run_on_github run 43024085570). The
+## Windows print was stale and was refreshed by a local run on the bug bash 5
+## branch that removed the own plan; the Linux print was unchanged there (its
+## Tests run 43704910242 passed this check).
 ## Result keys added after the golden was taken that record who earned a
 ## call's credit, not what happened (row 144). "impact" and "plan_traits" were
 ## already in main's results, so they stay in the hash. "breeze_side" (the
