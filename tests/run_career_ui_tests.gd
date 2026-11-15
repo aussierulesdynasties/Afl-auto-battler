@@ -4634,7 +4634,11 @@ func _test_forge_on_every_start() -> void:
 	else:
 		var first: int = _db.enter_year("PMB")
 		var held: Array = fst["list"]
-		fst["list"] = [{"id": "T_RIVAL", "salary": 9000000}, {"id": "T_FA", "salary": 900000}]
+		# The money is indexed to the year: an early Legacy year's cap is small.
+		var most: int = load("res://scripts/sim/Contracts.gd").indexed_money_2027(
+				load("res://scripts/sim/Expansion.gd").SIGN_ON_SEASON_MAX, first)
+		var fa_pay: int = most / 3
+		fst["list"] = [{"id": "T_RIVAL", "salary": most * 3}, {"id": "T_FA", "salary": fa_pay}]
 		fst["signings"] = ["T_RIVAL"]
 		fst["fa_signings"] = ["T_FA"]
 		var xb = load("res://scripts/state/ExpansionBuild.gd")
@@ -4643,9 +4647,7 @@ func _test_forge_on_every_start() -> void:
 		fst["list"] = held
 		fst["signings"] = []
 		fst["fa_signings"] = []
-		var most: int = load("res://scripts/sim/Contracts.gd").indexed_money_2027(
-				load("res://scripts/sim/Expansion.gd").SIGN_ON_SEASON_MAX, first)
-		_check(rivals == most and fas == 900000,
+		_check(rivals == most and fas == fa_pay and fa_pay > 0,
 				"A Forge club's free agents have their own pool on top of its sign-on money (rivals %d, free agents %d)" % [rivals, fas])
 	_state.set_forge_club({})
 	_state.set_forge_player({})
