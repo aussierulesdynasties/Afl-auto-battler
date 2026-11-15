@@ -33,7 +33,7 @@ const DEFS := {
 			"scout": "Reliable set shot."},
 	"playmaker": {"label": "Playmaker", "stat": "creating", "min": 75, "roles": [],
 			"text": "Shots from this player's inside-50 deliveries are 5% more likely to be goals.",
-			"scout": "Sets up goals with his ball use going inside 50."},
+			"scout": "Sets up goals with clever ball use going inside 50."},
 	"interceptor": {"label": "Interceptor", "stat": "intercept", "min": 80, "roles": ["DEF"],
 			"text": "Spoils INTSPOIL% more often and takes INTMARK% more intercept marks, in contests inside defensive 50 and on the opposition's leads. Drawn to the loose man's job.",
 			"scout": "Reads the play and cuts off forward entries."},

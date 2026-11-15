@@ -89,6 +89,9 @@ func _test_words() -> void:
 	_check(_tl.markup("Lockdowns").find("[url") < 0, "a name inside a longer word is left alone")
 	_check(_tl.earn_text("hothead").contains("20"), "Hothead says its line")
 	_check(_tl.earn_text("wet_weather").contains("78"), "Wet-weather says its line")
+	# Bug bash 5: an earned trait's sheet says a player carries up to five.
+	_check(_tl.earn_text("bull").contains("up to five") and not _tl.earn_text("hothead").contains("up to five"),
+			"An earned trait's sheet names the five-trait cap; a weakness's does not")
 
 
 func _overlay(host: Node, name: String) -> Control:

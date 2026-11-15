@@ -2008,11 +2008,11 @@ func _holding_ball_free(carrier, touches: int) -> bool:
 	var p := HTB_PRIOR if touches > 1 else HTB_NO_PRIOR
 	p *= 1.18 - 0.30 * _a(carrier, "contested") / 100.0
 	p *= 1.12 - 0.24 * _a(carrier, "disposal") / 100.0
-	# A Hothead fights the tackle instead of getting rid of it.
-	if _trait(carrier, "hothead"):
-		p *= HOTHEAD_ERRORS
+	# A Hothead fights the tackle instead of getting rid of it (the cap too).
+	var hot := HOTHEAD_ERRORS if _trait(carrier, "hothead") else 1.0
+	p *= hot
 	var era := _era("free_rate")
-	return free_rng.randf() < clampf(p * era, 0.05, 0.28 * era)
+	return free_rng.randf() < clampf(p * era, 0.05, 0.28 * era * hot)
 
 
 ## A genuine aerial contest can be infringed by either side. Poor discipline
@@ -3264,14 +3264,7 @@ var _tap := {}
 func _ruck_tap() -> void:
 	var T := _rates()
 	var ruck := [_contestant(squads[0]), _contestant(squads[1])]
-	var king0 := not (ruck[0] as Array).is_empty() and _trait(ruck[0][0], "ruck_king")
-	var king1 := not (ruck[1] as Array).is_empty() and _trait(ruck[1][0], "ruck_king")
-	var share := clampf(0.5 + (_ruck_of(ruck[0]) - _ruck_of(ruck[1])) / 260.0, 0.15, 0.85)
-	# A Ruck king wins RUCK_KING times the hit-outs he would (two cancel out).
-	if king0 and not king1:
-		share = minf(share * RUCK_KING, 0.9)
-	elif king1 and not king0:
-		share = maxf(1.0 - (1.0 - share) * RUCK_KING, 0.1)
+	var share := _tap_share(ruck)
 	var hits := [0, 0]
 	var first := -1
 	for i in range(3):
@@ -3290,6 +3283,19 @@ func _ruck_tap() -> void:
 	# The bulls at the stoppage win the ball out of it for their side.
 	edge += BULL_STOPPAGE * float(_bulls(0) - _bulls(1))
 	_tap = {"side": first, "hits": hits, "adv": adv, "edge": edge}
+
+
+## Side 0's share of the taps between the two rucks at the bounce. A Ruck
+## king wins RUCK_KING times the hit-outs he would (two cancel out).
+func _tap_share(ruck: Array) -> float:
+	var king0 := not (ruck[0] as Array).is_empty() and _trait(ruck[0][0], "ruck_king")
+	var king1 := not (ruck[1] as Array).is_empty() and _trait(ruck[1][0], "ruck_king")
+	var share := clampf(0.5 + (_ruck_of(ruck[0]) - _ruck_of(ruck[1])) / 260.0, 0.15, 0.85)
+	if king0 and not king1:
+		share = minf(share * RUCK_KING, 0.9)
+	elif king1 and not king0:
+		share = maxf(1.0 - (1.0 - share) * RUCK_KING, 0.1)
+	return share
 
 
 ## Contested bulls on the ground in a side's midfield or ruck.
