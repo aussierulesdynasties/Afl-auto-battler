@@ -56,6 +56,15 @@ const RISING_STAR_AGE := 21.0
 const GOLDEN_FIST := "Danny Frawley Golden Fist"
 ## The same award where a label column is narrow (the almanac, the honours table).
 const GOLDEN_FIST_SHORT := "Golden Fist"
+## The first season the award carried Danny Frawley's name: it was the Golden
+## Fist until his death in September 2019 (bug bash 4, L10).
+const FRAWLEY_FROM := 2020
+
+
+## The award's name in season `year`: plain "Golden Fist" in a Legacy season
+## before FRAWLEY_FROM, the full name otherwise.
+static func golden_fist_name(year: int) -> String:
+	return GOLDEN_FIST_SHORT if EraRules.is_era(year) and year < FRAWLEY_FROM else GOLDEN_FIST
 ## The two ways a defender earns it, from StatBook season counts only (every
 ## one a MatchSim event): a lockdown defender's spoils, smothers and tackles,
 ## and an intercept defender's intercept marks, intercepts and rebound 50s. An
@@ -366,7 +375,8 @@ static func season_awards(tally: Dictionary, players: Dictionary, year: int,
 		"coleman": by_goals.slice(0, 10),
 		# No Coaches Award before the coaches voted (2003, EraRules coaches_votes).
 		"coaches_award": by_coaches.slice(0, 10) if EraRules.on("coaches_votes", year) else [],
-		"rising_star": rising.slice(0, 3),
+		# No Rising Star before it was first presented (1993, EraRules rising_star).
+		"rising_star": rising.slice(0, 3) if EraRules.on("rising_star", year) else [],
 		"best_and_fairest": bf,
 		"all_australian": _all_australian(rows),
 	}

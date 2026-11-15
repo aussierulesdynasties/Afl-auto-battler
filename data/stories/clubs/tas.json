@@ -1,0 +1,462 @@
+[
+	{
+		"id": "tas_north_or_south",
+		"club": "TAS",
+		"controversy": false,
+		"category": "community",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["North or south?"],
+		"text": ["The season launch has to go somewhere, and the island has argued about north and south for well over a century. Hobart wants it on the waterfront; Launceston says it always gets the scraps."],
+		"choices": [
+			{"key": "north", "label": "Launceston gets it",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "odds", "chance": 20, "hit": [{"op": "board", "d": -3, "was": "members"}], "miss": [], "hit_result": "The southern papers ran a week of forgotten-Hobart stories."}],
+			 "result": "The season launches in Launceston. The north feels heard."},
+			{"key": "south", "label": "Hobart, where the members are",
+			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "odds", "chance": 25, "hit": [{"op": "board", "d": -4, "was": "members"}], "miss": [], "hit_result": "The north turned on the club for a week."}],
+			 "result": "The launch is on the Hobart waterfront. Launceston notices."},
+			{"key": "split", "label": "Split it: a day in each city",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "Both ends of the island got their day"}, {"op": "forgo_xp", "d": 5, "who": "all"}],
+			 "result": "Two launches, two days on the road. Nobody is snubbed."}
+		]
+	},
+	{
+		"id": "tas_launceston_faithful",
+		"club": "TAS",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["The Launceston faithful"],
+		"text": ["The Launceston members have written to the club: for home games up north, the team flies in the night before and leaves straight after. They want the players to stay a night and be seen in town."],
+		"choices": [
+			{"key": "stay", "label": "Stay the night, open training in the morning",
+			 "effects": [{"op": "board", "d": 5, "was": "members"}, {"op": "morale", "d": 3, "who": "all"}, {"op": "odds", "chance": 15, "hit": [{"op": "heavy_legs", "who": "side"}], "miss": []}],
+			 "result": "The town turns out for training. The recovery routine takes a hit."},
+			{"key": "inout", "label": "In and out, like a business trip",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -3, "was": "members"}],
+			 "result": "The legs are right for next week. The north feels like a stopover."}
+		]
+	},
+	{
+		"id": "tas_whole_state",
+		"club": "TAS",
+		"controversy": false,
+		"category": "media",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["A whole state of members"],
+		"text": ["The club signs up members in every town on the island, more per head than anywhere in the league. Every one of them wants to know when the cup comes across Bass Strait."],
+		"choices": [
+			{"key": "finals", "label": "We'll play finals this year",
+			 "effects": [{"op": "board", "d": 6, "was": "members"}, {"op": "loss_sting", "chance": 30, "d": -4, "who": "side"}],
+			 "result": "The members are thrilled. Every loss now gets measured against the promise."},
+			{"key": "build", "label": "We're building something that lasts",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The coach promised work, not results"}, {"op": "board", "d": -3, "was": "members"}],
+			 "result": "No promise on the record. Some members hear excuses."}
+		]
+	},
+	{
+		"id": "tas_academy_kid",
+		"club": "TAS",
+		"controversy": false,
+		"category": "selection",
+		"phase": ["preseason"],
+		"subject": {"kind": "player", "pick": "lowest:age", "where": {"real_named": false}},
+		"title": ["The island's kid"],
+		"text": ["{name}, a Tasmanian out of the club's own academy, has made the senior list. The whole state knows his name, and the local paper has him on the front page before he's played a game."],
+		"choices": [
+			{"key": "pick", "label": "Pick him for the first game",
+			 "effects": [{"op": "morale", "d": 8, "who": "subject"}, {"op": "board", "d": 4, "was": "members"}, {"op": "loss_sting", "chance": 25, "d": -6, "who": "subject"}],
+			 "result": "{first} runs out in front of the island. The pressure on him is huge."},
+			{"key": "earn", "label": "He earns it in the reserves first",
+			 "effects": [{"op": "xp", "d": 8, "who": "subject"}, {"op": "board", "d": -3, "was": "members"}],
+			 "result": "{first} goes to the twos, out of the spotlight. The papers ask why."}
+		]
+	},
+	{
+		"id": "tas_coming_home",
+		"club": "TAS",
+		"controversy": false,
+		"category": "selection",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["Coming home"],
+		"text": ["A Tasmanian at a mainland club has told his manager he wants to come home. His club won't let him go cheaply, and the trade would cost a good pick."],
+		"choices": [
+			{"key": "bring", "label": "Bring him home",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "A Tasmanian came home to play for the island"}, {"op": "morale", "d": 3, "who": "all"}, {"op": "board", "d": -2, "was": "list"}],
+			 "result": "A local hero pulls on the jumper. A good pick goes the other way."},
+			{"key": "price", "label": "Not at that price",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The club stuck to building young"}, {"op": "board", "d": -4, "was": "members"}, {"op": "odds", "chance": 30, "hit": [{"op": "board", "d": -2, "was": "members"}], "miss": [], "hit_result": "He re-signed on the mainland and said so in the press."}],
+			 "result": "The picks stay. The island wanted him home."}
+		]
+	},
+	{
+		"id": "tas_homesick",
+		"club": "TAS",
+		"controversy": false,
+		"category": "health",
+		"subject": {"kind": "player", "pick": "random", "where": {"age_max": 20, "new_here": true, "real_named": false}},
+		"title": ["Homesick across the Strait"],
+		"text": ["{name} came over from the mainland and is struggling. He's never lived away from home, his family are a flight away and his form has dropped off."],
+		"choices": [
+			{"key": "fly", "label": "Fly him home for a weekend",
+			 "effects": [{"op": "morale", "d": 8, "who": "subject"}, {"op": "forgo_xp", "d": 6, "who": "subject"}],
+			 "result": "{first} sees his family and comes back lighter. He missed a week's work."},
+			{"key": "family", "label": "Move him in with a local family",
+			 "effects": [{"op": "morale", "d": 4, "who": "subject"}, {"op": "culture", "strand": "together", "d": 1, "why": "A local family took in one of the boys"}, {"op": "odds", "chance": 20, "hit": [{"op": "trust", "d": -4, "why": "He still talked about a trade home"}], "miss": [], "hit_result": "It didn't take, and he's talking about a trade home."}],
+			 "result": "{first} has a home-cooked tea and a spare room in town."},
+			{"key": "busy", "label": "Keep him busy with more footy",
+			 "effects": [{"op": "xp", "d": 6, "who": "subject"}, {"op": "morale", "d": -4, "who": "subject"}],
+			 "result": "Extra sessions fill the days. {first} still goes home to an empty flat."}
+		]
+	},
+	{
+		"id": "tas_away_flight",
+		"club": "TAS",
+		"controversy": false,
+		"category": "training",
+		"subject": {"kind": "club"},
+		"title": ["Every away game is a flight"],
+		"text": ["Back-to-back away trips, and every one starts at the airport. The high-performance staff want to fly out a day early to settle the legs."],
+		"choices": [
+			{"key": "early", "label": "Fly a day early",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "forgo_xp", "d": 5, "who": "side"}, {"op": "board", "d": -2, "was": "funds"}],
+			 "result": "The side lands fresh. A training day is lost and the hotel bill grows."},
+			{"key": "home", "label": "Train at home, fly the day before",
+			 "effects": [{"op": "xp", "d": 5, "who": "side"}, {"op": "odds", "chance": 20, "hit": [{"op": "heavy_legs", "who": "side"}], "miss": []}],
+			 "result": "A full week at home, then the airport."}
+		]
+	},
+	{
+		"id": "tas_southerly",
+		"club": "TAS",
+		"controversy": false,
+		"category": "training",
+		"subject": {"kind": "club"},
+		"title": ["A southerly off the mountain"],
+		"text": ["It's sleeting at training, the wind straight off the mountain. The fitness staff want the main session indoors; the senior players reckon this is what makes Tasmanians hard."],
+		"choices": [
+			{"key": "out", "label": "Out in it",
+			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "culture", "strand": "standards", "d": 1, "why": "The group trained through the sleet"}, {"op": "odds", "chance": 20, "hit": [{"op": "heavy_legs", "who": "side"}], "miss": []}],
+			 "result": "Frozen hands, red faces, and a group that's proud of it."},
+			{"key": "in", "label": "Inside, controlled session",
+			 "effects": [{"op": "xp", "d": 5, "who": "side"}, {"op": "morale", "d": -2, "who": "side"}],
+			 "result": "Good work in the warm. The old hands grumble."}
+		]
+	},
+	{
+		"id": "tas_devils_round",
+		"club": "TAS",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["Save the devils"],
+		"text": ["The club is named for an animal fighting to survive a contagious cancer. The wildlife sanctuary has asked for players at a fundraiser and a visit to the breeding program."],
+		"choices": [
+			{"key": "all", "label": "The whole list goes",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "morale", "d": 4, "who": "all"}, {"op": "forgo_xp", "d": 6, "who": "all"}],
+			 "result": "Every player meets a devil. A lighter week on the track."},
+			{"key": "leaders", "label": "Send the leadership group",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "xp", "d": 6, "who": "side"}, {"op": "culture", "strand": "together", "d": -1, "why": "Most of the group missed the day"}],
+			 "result": "The leaders go; the rest train as normal and miss the lift."}
+		]
+	},
+	{
+		"id": "tas_stadium_question",
+		"club": "TAS",
+		"controversy": false,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"title": ["Was the stadium worth it?"],
+		"text": ["The cost of the Hobart ground comes up at every state election, and talkback is split. A journalist asks the coach straight out whether it was worth it."],
+		"choices": [
+			{"key": "home", "label": "It's our home. Come and fill it",
+			 "effects": [{"op": "board", "d": 5}, {"op": "odds", "chance": 25, "hit": [{"op": "board", "d": -4}, {"op": "morale", "d": -3, "who": "side"}], "miss": [], "hit_result": "The stadium's opponents made the club the story for a week."}],
+			 "result": "The club loves the answer. Not everyone on talkback does."},
+			{"key": "footy", "label": "I coach footy; I'll leave that to others",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The coach kept the group on football"}, {"op": "board", "d": -2}],
+			 "result": "No story. The board wanted its coach on message."}
+		]
+	},
+	{
+		"id": "tas_hawks_launceston",
+		"club": "TAS",
+		"controversy": false,
+		"category": "rivals",
+		"subject": {"kind": "club"},
+		"when": {"opp_deck": "HAW"},
+		"title": ["The Hawks come back to Launceston"],
+		"text": ["Hawthorn built a following in Launceston over many years. Plenty of locals still have a brown-and-gold scarf in the cupboard, and the Hawks' fans are making the trip."],
+		"choices": [
+			{"key": "ours", "label": "This is our ground now",
+			 "effects": [{"op": "morale", "d": 6, "who": "side"}, {"op": "board", "d": 3, "was": "members"}, {"op": "slow_start", "chance": 20, "who": "side"}],
+			 "result": "The group is wound up tight for this one."},
+			{"key": "respect", "label": "Respect the history, play the game",
+			 "effects": [{"op": "xp", "d": 5, "who": "side"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "A normal week. The north wanted fire."}
+		]
+	},
+	{
+		"id": "tas_north_hobart",
+		"club": "TAS",
+		"controversy": false,
+		"category": "rivals",
+		"subject": {"kind": "club"},
+		"when": {"opp_deck": "NTH"},
+		"title": ["Old scores in Hobart"],
+		"text": ["{opp} used to call Hobart a second home, and once tied the island's old Devils side to their own list, a deal the locals never warmed to. The southern members want this one won."],
+		"choices": [
+			{"key": "settle", "label": "Old scores to settle",
+			 "effects": [{"op": "morale", "d": 6, "who": "side"}, {"op": "odds", "chance": 15, "hit": [{"op": "board", "d": -3}], "miss": [], "hit_result": "A dust-up on the day made the back page."}],
+			 "result": "The group has heard the history. They're up for it."},
+			{"key": "another", "label": "They're just another side",
+			 "effects": [{"op": "xp", "d": 5, "who": "side"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "A normal week's work. The southern members wanted more."}
+		]
+	},
+	{
+		"id": "tas_one_team_state",
+		"club": "TAS",
+		"controversy": false,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"when": {"losing_run_min": 1},
+		"title": ["A one-team state"],
+		"text": ["There's no other team to follow on the island. After a loss the whole state feels it, and morning radio is taking calls from Burnie to Bruny."],
+		"choices": [
+			{"key": "front", "label": "Front up: we let the state down",
+			 "effects": [{"op": "board", "d": 3}, {"op": "morale", "d": -4, "who": "side"}],
+			 "result": "The callers respect it. The players hear their coach say they let the state down."},
+			{"key": "back", "label": "Back the players publicly",
+			 "effects": [{"op": "morale", "d": 5, "who": "side"}, {"op": "board", "d": -3}],
+			 "result": "The players feel backed. Callers say the club's gone soft."}
+		]
+	},
+	{
+		"id": "tas_state_jumper",
+		"club": "TAS",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"title": ["The state jumper"],
+		"text": ["A club elder wants to speak to the group about the old Tasmanian state side: the days it beat the Big V, and the years the best islanders had to leave to play."],
+		"choices": [
+			{"key": "speak", "label": "Let him speak",
+			 "effects": [{"op": "morale", "d": 7, "who": "side"}, {"op": "culture", "strand": "together", "d": 1, "why": "The group heard what the jumper means to the island"}, {"op": "loss_sting", "chance": 15, "d": -6, "who": "side"}],
+			 "result": "The room is silent, then fired up. A loss now would hurt."},
+			{"key": "save", "label": "Save it for the end of the season",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The group kept its mind on this week's job"}, {"op": "board", "d": -1}],
+			 "result": "The elder agrees to wait. He's a little disappointed."}
+		]
+	},
+	{
+		"id": "tas_hall_of_famer",
+		"club": "TAS",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"title": ["A Hall of Famer drops in"],
+		"text": ["One of the island's Hall of Fame legends, who had to cross the Strait to become a great, has offered to run a forwards session and stay for lunch."],
+		"choices": [
+			{"key": "forwards", "label": "Give him the forwards for the morning",
+			 "effects": [{"op": "morale", "d": 5, "who": "side"}, {"op": "culture", "strand": "standards", "d": 1, "why": "A great showed the forwards how it's done"}, {"op": "forgo_xp", "d": 4, "who": "side"}],
+			 "result": "The forwards hang off every word. The normal plan waits."},
+			{"key": "lunch", "label": "Lunch and a chat with the leaders",
+			 "effects": [{"op": "morale", "d": 2, "who": "side"}, {"op": "xp", "d": 4, "who": "side"}, {"op": "board", "d": -1}],
+			 "result": "Training runs to plan. The legend hoped to do more."}
+		]
+	},
+	{
+		"id": "tas_local_league_best",
+		"club": "TAS",
+		"controversy": false,
+		"category": "selection",
+		"subject": {"kind": "player", "pick": "lowest:games", "where": {"age_max": 21}},
+		"title": ["The local league's best"],
+		"text": ["The best player in the state league is a 24-year-old plumber who kicks a bag every week. The locals want him given a go; the recruiters aren't sure his pace will hold up. It would cost {name} his spot."],
+		"choices": [
+			{"key": "give", "label": "Give the plumber a senior game",
+			 "effects": [{"op": "board", "d": 5, "was": "members"}, {"op": "morale", "d": 3, "who": "all"}, {"op": "morale", "d": -6, "who": "subject"}],
+			 "result": "The island loves it. {first} watches from the stand."},
+			{"key": "reserves", "label": "Train with us, play in the reserves",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "odds", "chance": 20, "hit": [{"op": "board", "d": -3, "was": "members"}], "miss": [], "hit_result": "The local press called it a token gesture."}],
+			 "result": "The plumber trains with the seniors. {first} keeps his spot."}
+		]
+	},
+	{
+		"id": "tas_academy_mentors",
+		"club": "TAS",
+		"controversy": false,
+		"category": "training",
+		"subject": {"kind": "club"},
+		"title": ["Mentors for the academy"],
+		"text": ["The academy coaches want senior players at under-18 training once a week. The kids will be on the list in a few years."],
+		"choices": [
+			{"key": "weekly", "label": "Senior players go every week",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "The seniors set the standard for the next lot"}, {"op": "board", "d": 2}, {"op": "forgo_xp", "d": 5, "who": "all"}],
+			 "result": "The kids train next to their heroes. The seniors lose a session a week."},
+			{"key": "monthly", "label": "Once a month",
+			 "effects": [{"op": "board", "d": 1}, {"op": "culture", "strand": "together", "d": -1, "why": "The academy coaches felt like an afterthought"}],
+			 "result": "Training runs to plan. The academy staff feel second priority."}
+		]
+	},
+	{
+		"id": "tas_mainland_press",
+		"club": "TAS",
+		"controversy": false,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"title": ["The charity case"],
+		"text": ["A Melbourne columnist has called the club the league's charity case, a market grab propped up by concessions. The players have read it."],
+		"choices": [
+			{"key": "wall", "label": "Pin it on the wall",
+			 "effects": [{"op": "morale", "d": 6, "who": "side"}, {"op": "slow_start", "chance": 20, "who": "side"}],
+			 "result": "It's on the wall in the rooms. The group might be too wound up."},
+			{"key": "answer", "label": "Answer it publicly",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "odds", "chance": 25, "hit": [{"op": "morale", "d": -3, "who": "side"}], "miss": [], "hit_result": "The columnist doubled down and it ran all week."}],
+			 "result": "The members love the reply."}
+		]
+	},
+	{
+		"id": "tas_island_premium",
+		"club": "TAS",
+		"controversy": false,
+		"category": "selection",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["The island premium"],
+		"text": ["A good mainland free agent likes the club, but his manager says he'll want more to move his family across the Strait. The club already pays more than it wants to."],
+		"choices": [
+			{"key": "pay", "label": "Pay the premium",
+			 "effects": [{"op": "morale", "d": 3, "who": "all"}, {"op": "board", "d": -5, "was": "funds"}],
+			 "result": "A proven player signs. The budget feels it."},
+			{"key": "sell", "label": "Sell the lifestyle, not the cheque",
+			 "effects": [{"op": "board", "d": 2, "was": "funds"}, {"op": "odds", "chance": 50, "hit": [{"op": "culture", "strand": "ambition", "d": -1, "why": "The player the club courted signed elsewhere"}], "miss": [], "hit_result": "He signed elsewhere.", "miss_result": "He liked what he saw and signed."}],
+			 "result": "You sell him the island, not the money."}
+		]
+	},
+	{
+		"id": "tas_small_city",
+		"club": "TAS",
+		"controversy": true,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"title": ["Small city, big eyes"],
+		"text": ["A group of players were out late at a pub in town, and by morning half the city had seen the photos. Nothing illegal, but in a small city everyone knows whose son was there."],
+		"choices": [
+			{"key": "fine", "label": "Club fines and a public apology",
+			 "effects": [{"op": "board", "d": 4}, {"op": "morale", "d": -5, "who": "side"}],
+			 "result": "The club fronts it. The players feel hung out to dry."},
+			{"key": "inside", "label": "Deal with it inside the four walls",
+			 "effects": [{"op": "morale", "d": 2, "who": "side"}, {"op": "odds", "chance": 30, "hit": [{"op": "board", "d": -5}], "miss": [], "hit_result": "The story grew, and the board wanted to know why the club stayed quiet."}],
+			 "result": "The players feel backed. The town is still talking."}
+		]
+	},
+	{
+		"id": "tas_bushfire",
+		"club": "TAS",
+		"controversy": false,
+		"category": "community",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["Bushfire appeal"],
+		"text": ["Fires have been through farming country in the state's east, and towns that sent kids to the club's academy have lost sheds and stock. The appeal wants the club on the ground."],
+		"choices": [
+			{"key": "help", "label": "The list goes to help clean up",
+			 "effects": [{"op": "board", "d": 6, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The players worked side by side in the burnt country"}, {"op": "forgo_xp", "d": 8, "who": "all"}],
+			 "result": "Three days of fencing and clearing. The towns won't forget it."},
+			{"key": "donate", "label": "Donate the match-day takings",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "morale", "d": -1, "who": "all"}],
+			 "result": "The money goes east. The players wanted to be there."}
+		]
+	},
+	{
+		"id": "tas_supporters_ferry",
+		"club": "TAS",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["The supporters' ferry"],
+		"text": ["A few hundred members are taking the overnight ferry across for a game in Melbourne. The cheer squad asks whether the players can meet them at the dock on game-day morning."],
+		"choices": [
+			{"key": "dock", "label": "Meet them at the dock",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "morale", "d": 3, "who": "all"}, {"op": "odds", "chance": 15, "hit": [{"op": "heavy_legs", "who": "side"}], "miss": []}],
+			 "result": "Scarves, a banner and a dawn start at the dock."},
+			{"key": "video", "label": "A video message from the hotel",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "The routine stays untouched. The cheer squad wanted faces, not a phone screen."}
+		]
+	},
+	{
+		"id": "tas_country_footy",
+		"club": "TAS",
+		"controversy": false,
+		"category": "community",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["Country footy is dying"],
+		"text": ["Another country club on the North-West coast is about to fold for lack of players. The state body asks whether the club will put money and players into a rescue program."],
+		"choices": [
+			{"key": "fund", "label": "Fund the program",
+			 "effects": [{"op": "board", "d": 5, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The club backed the country game"}, {"op": "odds", "chance": 30, "hit": [{"op": "board", "d": -4, "was": "funds"}], "miss": [], "hit_result": "The board questioned the spend."}],
+			 "result": "The money goes to the coast. The country clubs are grateful."},
+			{"key": "clinics", "label": "Players run clinics, the money stays",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "forgo_xp", "d": 4, "who": "all"}],
+			 "result": "Players spend weekends on country ovals over the break."}
+		]
+	},
+	{
+		"id": "tas_fortress",
+		"club": "TAS",
+		"controversy": false,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"title": ["Fortress island"],
+		"text": ["{opp}'s coach has been on radio all week complaining about the flight, the wind and the cold of a Tasmanian winter, as if the island were an unfair draw. The press want a reply."],
+		"choices": [
+			{"key": "whinge", "label": "Let them whinge. Come down and try it",
+			 "effects": [{"op": "morale", "d": 5, "who": "side"}, {"op": "loss_sting", "chance": 15, "d": -5, "who": "side"}],
+			 "result": "The line is on everyone's lips. Now the group has to back it up."},
+			{"key": "same", "label": "Every ground's the same size",
+			 "effects": [{"op": "board", "d": 2}, {"op": "morale", "d": -2, "who": "side"}],
+			 "result": "The league likes the tone. The players wanted their coach to back their home."}
+		]
+	},
+	{
+		"id": "tas_list_spots",
+		"club": "TAS",
+		"controversy": false,
+		"category": "selection",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["Room on the list"],
+		"text": ["The club has spots to fill on the list. The recruiters want mature mainland players who can win now; the academy wants them for island kids."],
+		"choices": [
+			{"key": "mature", "label": "Mature bodies",
+			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "board", "d": -3, "was": "members"}],
+			 "result": "Experience on the track. The island wanted its own."},
+			{"key": "kids", "label": "Island kids",
+			 "effects": [{"op": "board", "d": 5, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The club filled its list with island kids"}, {"op": "forgo_xp", "d": 5, "who": "side"}],
+			 "result": "Local kids get their chance. The senior players spend weeks teaching."}
+		]
+	},
+	{
+		"id": "tas_finals_tickets",
+		"club": "TAS",
+		"controversy": false,
+		"category": "members",
+		"phase": ["finals"],
+		"subject": {"kind": "club"},
+		"title": ["A finals ticket rush"],
+		"text": ["The whole island wants a ticket to the final. There aren't seats for a fraction of the members, and the ticket office is melting."],
+		"choices": [
+			{"key": "mainland", "label": "Lobby to play it at the bigger mainland ground",
+			 "effects": [{"op": "board", "d": 3, "was": "funds"}, {"op": "morale", "d": -5, "who": "side"}, {"op": "odds", "chance": 20, "hit": [{"op": "board", "d": -5, "was": "members"}], "miss": [], "hit_result": "The members never forgave it."}],
+			 "result": "A bigger gate, and no home crowd behind the side."},
+			{"key": "island", "label": "Our final stays on the island",
+			 "effects": [{"op": "morale", "d": 6, "who": "side"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "The ground will be bursting. Thousands of members miss out."}
+		]
+	}
+]

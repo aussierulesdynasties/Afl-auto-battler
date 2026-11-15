@@ -38,7 +38,7 @@ static func open(host: Control) -> Control:
 	if counted:
 		stages = [
 			["Brownlow Medal", "Home-and-away votes", aw.get("brownlow", []), "votes", "votes"],
-			[Awards.GOLDEN_FIST, "Best defender, finals included", aw.get("golden_fist", []), "fist", ""],
+			[Awards.golden_fist_name(int(aw.get("year", GameState.season_year))), "Best defender, finals included", aw.get("golden_fist", []), "fist", ""],
 			["All-Australian", "The season's team", aw.get("all_australian", []), "", ""],
 			[club_award, GameDB.club_name(GameState.my_club), club_rows, "bf", "bf"],
 		]
@@ -48,7 +48,7 @@ static func open(host: Control) -> Control:
 			["Coleman Medal", "Home-and-away goals", aw.get("coleman", []), "goals", ""],
 			# The best defender, lockdown or intercept, each judged against his own kind;
 			# the winner's line shows which. Absent in a season played before it existed.
-			[Awards.GOLDEN_FIST, "Best defender, finals included", aw.get("golden_fist", []), "fist", ""],
+			[Awards.golden_fist_name(int(aw.get("year", GameState.season_year))), "Best defender, finals included", aw.get("golden_fist", []), "fist", ""],
 			["All-Australian", "The season's team", aw.get("all_australian", []), "", ""],
 			[club_award, GameDB.club_name(GameState.my_club), club_rows, "bf", ""],
 		]
