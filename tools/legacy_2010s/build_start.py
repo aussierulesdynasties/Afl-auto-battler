@@ -153,6 +153,7 @@ def last_seasons():
 
 
 def build(by_year, rated):
+    hon = B.honours(by_year, rated, DATA_SEASON)
     lists = load_lists()
     match_ids(lists, by_year)
     before = careers(by_year)
@@ -180,17 +181,18 @@ def build(by_year, rated):
         if data and data[1] > 0:
             cells = B.stat_cells(data[2])
             players.append(dict(cells, club=club, num=L["num"], last=L["last"], first=L["first"],
-                                src=str(DATA_SEASON), real_pos="", dob=L["dob"], age=age_at(L["dob"]),
+                                src=str(DATA_SEASON), real_pos=B.listed_pos(L, data[2]), dob=L["dob"], age=age_at(L["dob"]),
                                 height_cm=L["height_cm"], weight_kg=L["weight_kg"], debut=debut,
                                 height_source="draftguru" if L["height_cm"] else ""))
             history.append({"club": club, "num": L["num"],
                             "slug": pid.rsplit("/", 1)[-1].replace(".html", ""),
                             "draft_year": dyear, "draft_type": dtype, "draft_pick": dpick,
                             "seasons": ";".join(seasons), "career": B.stints(before.get(pid, [])),
-                            "peak": peak or "", "last_season": ended(pid, L["last"], L["dob"])})
+                            "peak": peak or "", "honours": "%.3g" % hon[pid] if hon.get(pid) else "",
+                            "last_season": ended(pid, L["last"], L["dob"])})
         else:
             additions.append({"first": L["first"], "last": L["last"], "dob": L["dob"], "club": club,
-                              "position": "", "height_cm": L["height_cm"], "list": L["list"],
+                              "position": B.listed_position(L), "height_cm": L["height_cm"], "list": L["list"],
                               "peak": peak or "", "last_season": ended(pid, L["last"], L["dob"]),
                               "source_url": L["source_url"], "checked": L["checked"]})
             latest = None
@@ -299,7 +301,7 @@ def main():
     B.write(os.path.join(OUT_DIR, "players_2010.csv"), B.ENRICHED, players)
     B.write(os.path.join(OUT_DIR, "history_2010.csv"),
             ["club", "num", "slug", "draft_year", "draft_type", "draft_pick", "seasons", "career", "peak",
-             "last_season"], history)
+             "honours", "last_season"], history)
     B.write(os.path.join(OUT_DIR, "list_additions_2010.csv"),
             ["first", "last", "dob", "club", "position", "height_cm", "list", "peak", "last_season", "source_url",
              "checked"], additions)

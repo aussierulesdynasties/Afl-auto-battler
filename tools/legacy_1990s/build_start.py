@@ -79,6 +79,63 @@ ENRICHED = ["club", "num", "last", "first", "gm", "ki", "mk", "hb", "di", "gl", 
 ADD_STATS = ENRICHED[:29]
 
 
+# --------------------------------------------------------------- positions --
+def load_positions():
+    """data/legacy/positions.csv (tools/legacy_1990s/positions.py): the line
+    each player is known for. {(first, last, dob): (pos, pos2)} and
+    {afltables_id: (pos, pos2)}, each FWD / MID / DEF / RUC (pos2 "" when he
+    is known for one line)."""
+    by_key, by_id = {}, {}
+    path = os.path.join(LEG, "positions.csv")
+    if not os.path.exists(path):
+        return by_key, by_id
+    with open(path, newline="", encoding="utf-8") as fh:
+        for r in csv.DictReader(fh):
+            if not r["pos"]:
+                continue
+            by_key[(r["first"], r["last"], r["dob"])] = (r["pos"], r["pos2"])
+            for aid in r["afltables_ids"].split(";"):
+                if aid:
+                    by_id[aid] = (r["pos"], r["pos2"])
+    return by_key, by_id
+
+
+POS_BY_KEY, POS_BY_ID = load_positions()
+
+
+def season_line(known, season=None):
+    """The line he played in this season: the line he is known for, unless he
+    is known for two and this season's goals say the other (Cale Hooker, a
+    known forward and defender, kicked 4 in 18 games of 2019: a defender that
+    year). A forward kicking under 0.3 a game, or a defender or midfielder
+    kicking 1.2 or more, played his other line."""
+    pos, pos2 = known or ("", "")
+    if not (season and pos2) or float(season.get("gm") or 0) < 5:
+        return pos
+    goals = float(season.get("gl") or 0) / float(season["gm"])
+    if pos == "FWD" and goals < 0.3:
+        return pos2
+    if pos2 == "FWD" and pos != "FWD" and goals >= 1.2:
+        return "FWD"
+    return pos
+
+
+def known_lines(L):
+    return POS_BY_KEY.get((L["first"], L["last"], L["dob"])) or POS_BY_ID.get(L.get("afltables_id", ""))
+
+
+def listed_pos(L, season=None):
+    """A list row's real_pos (players file) for its season's numbers:
+    FWD / MID / DEF / RUC, or ""."""
+    return season_line(known_lines(L), season)
+
+
+def listed_position(L):
+    """A list addition's position (GameDB._load_list_additions reads RUCK, not RUC)."""
+    pos = listed_pos(L)  # no season to read: the line he is known for
+    return "RUCK" if pos == "RUC" else pos
+
+
 def code(c):
     return CODE.get(c, c)
 
@@ -233,7 +290,8 @@ def spread_like_real(est, missing, model):
 
 def harness_player(r, club, num_):
     p = {"club": club, "num": num_, "name": "%s %s" % (r["first"], r["last"]),
-         "surname": r["last"], "real_pos": "", "id": "%s_%s" % (club, num_)}
+         "surname": r["last"], "real_pos": season_line(POS_BY_ID.get(r.get("afltables_id", "")), r),
+         "id": "%s_%s" % (club, num_)}
     for k in H.STAT_KEYS:
         src = {"onepct": "one_pct", "pctp": "pct_played"}.get(k, k)
         p[k] = float(r.get(src) or 0.0)
@@ -243,6 +301,8 @@ def harness_player(r, club, num_):
 def rate_seasons(by_year, model):
     """{year: {afltables_id: (overall, games, estimated row, role)}}."""
     rated = {}
+    # Every past season is rated as a past start's players are (Ratings.listed_lines).
+    H.LISTED_LINES = H.PAST_LISTED_LINES
     for y in sorted(by_year):
         missing = unrecorded(by_year[y])
         # A player traded mid-season has a row per club: one season, summed.
@@ -271,15 +331,16 @@ def rate_seasons(by_year, model):
 
 
 # ---------------------------------------------------------------- honours --
-def honours(by_year, rated):
-    """{afltables_id: score} over HONOURS_W's seasons. A named honour finds its
+def honours(by_year, rated, data_season=DATA_SEASON):
+    """{afltables_id: score} over the three seasons to data_season (the last
+    in full, then 0.75 and 0.5: HONOURS_W for 1990). Every start uses it. A named honour finds its
     player by the season's own rows: name and club, else a name unique that
     season, else a surname unique at that club (Steve / Stephen Malaxos). An
     honour with no match is printed."""
     def plain(last):
         return "".join(ch for ch in last.lower().replace(" sr.", "").replace(" jr.", "") if ch.isalpha())
     score = defaultdict(float)
-    for y, w in HONOURS_W.items():
+    for y, w in {data_season: 1.0, data_season - 1: 0.75, data_season - 2: 0.5}.items():
         by_name = defaultdict(set)
         by_name_club = {}
         by_last_club = defaultdict(set)
@@ -403,7 +464,7 @@ def build(by_year, model, rated):
         if row89 and row89[1] > 0:
             cells = stat_cells(row89[2])
             players.append(dict(cells, club=club, num=L["num"], last=L["last"], first=L["first"],
-                                src=str(DATA_SEASON), real_pos="", dob=L["dob"], age=age_at(L["dob"]),
+                                src=str(DATA_SEASON), real_pos=listed_pos(L, row89[2]), dob=L["dob"], age=age_at(L["dob"]),
                                 height_cm=L["height_cm"], weight_kg=L["weight_kg"], debut=debut,
                                 height_source="draftguru" if L["height_cm"] else ""))
             history.append({"club": club, "num": L["num"], "slug": pid.rsplit("/", 1)[-1].replace(".html", ""),
@@ -413,7 +474,7 @@ def build(by_year, model, rated):
                             "honours": "%.3g" % hon[pid] if hon.get(pid) else ""})
         else:
             additions.append({"first": L["first"], "last": L["last"], "dob": L["dob"], "club": club,
-                              "position": "", "height_cm": L["height_cm"], "list": L["list"],
+                              "position": listed_position(L), "height_cm": L["height_cm"], "list": L["list"],
                               "peak": peak or "", "source_url": L["source_url"], "checked": L["checked"]})
             latest = None
             for y in (1988, 1987):
@@ -455,7 +516,8 @@ def fill_heights_by_position(additions, lists, rated):
     never played a senior game) takes the average height of the 1990 lists'
     players at the position the game gives him (director 2026-11-13: "if you
     cant find the height for a player anywhere just pick the average for a
-    player of his position"). Positions are the 1989 season's rated roles."""
+    player of his position"). Positions are the 1989 season's rated roles; his
+    own is his listed one (positions.csv), else the one the game rolls."""
     by_role = defaultdict(list)
     for L in lists:
         got = rated.get(DATA_SEASON, {}).get(L["afltables_id"]) if L["afltables_id"] else None
@@ -466,11 +528,11 @@ def fill_heights_by_position(additions, lists, rated):
         A["height_from"] = "club list" if A["height_cm"] else ""
         if A["height_cm"]:
             continue
-        role = game_role(A["club"], n, 0)
+        role = A["position"] or game_role(A["club"], n, 0)
         h = avg[role]
-        # The game re-derives his position from the filled height: it must land
-        # on the same one.
-        assert game_role(A["club"], n, h) == role, (A["first"], A["last"], role, h)
+        # The game re-derives his position from the filled height when he has
+        # no listed one: it must land on the same one.
+        assert A["position"] or game_role(A["club"], n, h) == role, (A["first"], A["last"], role, h)
         A["height_cm"] = str(h)
         A["height_from"] = "average %s" % role
 

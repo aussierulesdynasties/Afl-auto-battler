@@ -83,6 +83,11 @@ STAT_KEYS = [
 # On-ground structure: 18 players = 6 DEF, 6 MID, 6 FWD, where the ruck is
 # counted with midfield (1 RUCK + 5 MID). Keep in lockstep with
 # Ratings.GROUND_SLOTS.
+# Ratings.listed_lines: the listed lines that set a first position. The
+# Legacy start builds (tools/legacy_1990s/build_start.py) use PAST_LISTED_LINES.
+TODAY_LISTED_LINES = ("FWD", "DEF")
+PAST_LISTED_LINES = ("FWD", "DEF", "MID")
+LISTED_LINES = TODAY_LISTED_LINES
 ROLE_CORRECTIONS = {"RIC|Maurice Rioli": "FWD", "WBD|Cody Weightman": "FWD"}
 # Ratings.ATTR_ADJUSTMENTS: director's named-player balance corrections.
 ATTR_ADJUSTMENTS = {"MEL|Harvey Langford": 1.15, "MEL|Jake Bowey": 1.022, "PAD|Connor Rozee": 1.10}
@@ -296,9 +301,10 @@ def derive_ratings(players):
             role_scores["RUCK"] = -1.0
         p["role"] = max(role_scores, key=role_scores.get)
         # Ratings.listed_primary: a listed forward or defender is his
-        # listed line unless the numbers read a ruck (row 91, T8.Q11).
+        # listed line unless the numbers read a ruck (row 91, T8.Q11); a
+        # past start keeps a listed midfielder there too (LISTED_LINES).
         listed = p.get("real_pos", "")
-        if listed in ("FWD", "DEF") and p["role"] != "RUCK":
+        if listed in LISTED_LINES and p["role"] != "RUCK":
             p["role"] = listed
         # Ratings.ROLE_CORRECTIONS: clearly misread forwards.
         p["role"] = ROLE_CORRECTIONS.get("%s|%s" % (p.get("club", ""), p.get("name", "")), p["role"])

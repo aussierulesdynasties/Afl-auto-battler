@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://be62bdilqsm0r"
+
+[deps]
+
+files=["res://data/legacy/positions.last.translation", "res://data/legacy/positions.dob.translation", "res://data/legacy/positions.afltables.translation", "res://data/legacy/positions.pos.translation", "res://data/legacy/positions.pos2.translation", "res://data/legacy/positions.source.translation", "res://data/legacy/positions.wiki.translation", "res://data/legacy/positions.wiki.translation"]
+
+source_file="res://data/legacy/positions.csv"
+dest_files=["res://data/legacy/positions.last.translation", "res://data/legacy/positions.dob.translation", "res://data/legacy/positions.afltables.translation", "res://data/legacy/positions.pos.translation", "res://data/legacy/positions.pos2.translation", "res://data/legacy/positions.source.translation", "res://data/legacy/positions.wiki.translation", "res://data/legacy/positions.wiki.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

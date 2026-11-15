@@ -250,11 +250,13 @@ func reload(dataset := Datasets.DEFAULT) -> void:
 	_load_appearance()
 	_apply_origin(players)
 	Ratings.era_anchors = {}
+	var past_start := DATA_SEASON != int(Datasets.get_set(Datasets.DEFAULT).get("data_season", DATA_SEASON))
+	Ratings.listed_lines = Ratings.PAST_LISTED_LINES if past_start else Ratings.TODAY_LISTED_LINES
 	Ratings.derive_all(players)
 	# A past start scales each position on its own data season (director
 	# 2026-11-13, "Scale each position per season"); a set on today's season
 	# (2026's, or a test copy of it) keeps 2026's.
-	if DATA_SEASON != int(Datasets.get_set(Datasets.DEFAULT).get("data_season", DATA_SEASON)):
+	if past_start:
 		Ratings.fit_era_anchors(players)
 	_apply_history(players)
 	for p in players:
