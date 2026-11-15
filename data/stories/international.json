@@ -20,12 +20,12 @@
 			"{first} is homesick"
 		],
 		"text": [
-			"It's his first winter away from {from}: short days, cold mornings, and no one here who knew him a year ago. He's quiet at training."
+			"It's his first winter away from {from}. Short days, cold mornings, nobody who knew him a year ago. He's quiet at training."
 		],
 		"choices": [
 			{
 				"key": "host",
-				"label": "Move {first} in with a host family",
+				"label": "Find a host family",
 				"effects": [
 					{
 						"op": "morale",
@@ -64,7 +64,7 @@
 			},
 			{
 				"key": "home",
-				"label": "Let {first} go home for a week",
+				"label": "Let {first} go home",
 				"effects": [
 					{
 						"op": "morale",
@@ -110,8 +110,8 @@
 			"{first} is still learning the game"
 		],
 		"text": [
-			"He wins plenty of the ball, then gives it away: the umpire pings him for holding the ball, and the bounce off the turf keeps beating him. His old game never asked him to read an oval ball.",
-			"He keeps getting pinged for holding the ball, and the way the oval ball sits up still catches him out. The talent is there; the habits are another game's."
+			"He wins plenty of the ball, then gives it away. The umpire keeps pinging him for holding the ball. The bounce off the turf keeps beating him. His old game never asked him to read an oval ball.",
+			"He keeps getting pinged for holding the ball. The way the oval ball sits up still catches him out. The talent is there. The habits are another game's."
 		],
 		"choices": [
 			{
@@ -130,7 +130,7 @@
 			},
 			{
 				"key": "twos",
-				"label": "Play {first} in the reserves for a week",
+				"label": "Play {first} in reserves",
 				"effects": [
 					{
 						"op": "xp",
@@ -144,7 +144,7 @@
 			},
 			{
 				"key": "back",
-				"label": "Back {first} and show him vision",
+				"label": "Show {first} the vision",
 				"when": {
 					"selected": false,
 					"out_of_side": true
@@ -157,7 +157,7 @@
 					{
 						"op": "trust",
 						"d": 5,
-						"why": "You backed him through his first mistakes and sat down with vision of them"
+						"why": "You backed him and went through the vision with him"
 					},
 					{
 						"op": "start_backing"
@@ -191,12 +191,12 @@
 			"{first} has played his first game"
 		],
 		"text": [
-			"The papers back home in {from} have picked it up, and a broadcaster wants a word with him this week."
+			"The papers back home in {from} have picked it up. A broadcaster wants a word with him this week."
 		],
 		"choices": [
 			{
 				"key": "talk",
-				"label": "Let {first} do the interviews",
+				"label": "Let {first} do interviews",
 				"effects": [
 					{
 						"op": "morale",
@@ -210,11 +210,11 @@
 						"op": "heavy_legs"
 					}
 				],
-				"result": "{first} does the calls late at night to suit the time back home. He's flat at training."
+				"result": "{first} does the calls late at night, on home time. He's flat at training."
 			},
 			{
 				"key": "quiet",
-				"label": "Keep it quiet for now",
+				"label": "Keep it quiet",
 				"effects": [
 					{
 						"op": "fresh"
@@ -252,12 +252,12 @@
 			"{first} has kicked his first goal"
 		],
 		"text": [
-			"The clip is all over the news back in {from}, and his family have been sending photos from the lounge room."
+			"The clip is all over the news back in {from}. His family keep sending photos from the lounge room."
 		],
 		"choices": [
 			{
 				"key": "night",
-				"label": "Make a night of it with the group",
+				"label": "Celebrate with the group",
 				"effects": [
 					{
 						"op": "morale",
@@ -279,7 +279,7 @@
 			},
 			{
 				"key": "work",
-				"label": "Back to work on Monday",
+				"label": "Back to work Monday",
 				"effects": [
 					{
 						"op": "xp",
@@ -321,7 +321,7 @@
 		"choices": [
 			{
 				"key": "stay",
-				"label": "Ask {first} to stay for the summer program",
+				"label": "Ask {first} to stay",
 				"effects": [
 					{
 						"op": "xp",
@@ -384,12 +384,12 @@
 			"{home_club} want {first} back"
 		],
 		"text": [
-			"It's championship time, and {home_club} have asked if he'll come home and play. It's the game he grew up playing."
+			"It's championship time. {home_club} have asked him to come home and play. It's the game he grew up playing."
 		],
 		"choices": [
 			{
 				"key": "go",
-				"label": "Let {first} go home for the championship",
+				"label": "Let {first} go home",
 				"effects": [
 					{
 						"op": "morale",
@@ -408,7 +408,7 @@
 			},
 			{
 				"key": "final",
-				"label": "Release {first} for the final only",
+				"label": "Allow the final only",
 				"effects": [
 					{
 						"op": "morale",
@@ -423,11 +423,11 @@
 						"op": "heavy_legs"
 					}
 				],
-				"result": "{first} makes a quick trip home for the final and comes straight back. He has heavy legs on Saturday."
+				"result": "{first} flies home for the final and comes straight back. He has heavy legs on game day."
 			},
 			{
 				"key": "no",
-				"label": "Tell {first} his contract is with us",
+				"label": "Enforce his contract",
 				"effects": [
 					{
 						"op": "board",
@@ -482,7 +482,7 @@
 		"choices": [
 			{
 				"key": "extend",
-				"label": "Offer {first} an early extension",
+				"label": "Offer an early extension",
 				"effects": [
 					{
 						"op": "extend_early"
@@ -491,7 +491,7 @@
 			},
 			{
 				"key": "time",
-				"label": "Tell {first} to take the off-season to decide",
+				"label": "Give {first} the off-season",
 				"effects": [
 					{
 						"op": "trust",
@@ -539,7 +539,7 @@
 			"{first}'s college coach is in town"
 		],
 		"text": [
-			"His old college coach and his parents have flown in for the weekend, and a podcast back home wants to film a session."
+			"His college coach and parents have flown in for the weekend. A podcast back home wants to film a session."
 		],
 		"choices": [
 			{
@@ -566,7 +566,7 @@
 			},
 			{
 				"key": "weekend",
-				"label": "Keep it to the weekend, off the training track",
+				"label": "Keep training closed",
 				"effects": [
 					{
 						"op": "morale",
@@ -609,12 +609,12 @@
 			"A rugby club has rung about {first}"
 		],
 		"text": [
-			"A club back in {from} has offered him more money to come home and play rugby. His manager has told you."
+			"A rugby club in {from} has offered him more money. His manager has told us."
 		],
 		"choices": [
 			{
 				"key": "extend",
-				"label": "Offer {first} an early extension",
+				"label": "Offer an early extension",
 				"effects": [
 					{
 						"op": "extend_early"
@@ -623,7 +623,7 @@
 			},
 			{
 				"key": "meet",
-				"label": "Let {first} take the meeting",
+				"label": "Let {first} meet them",
 				"effects": [
 					{
 						"op": "trust",
@@ -643,7 +643,7 @@
 			},
 			{
 				"key": "no",
-				"label": "Tell {first} he's a footballer now",
+				"label": "Say he's a footballer",
 				"effects": [
 					{
 						"op": "board",
@@ -688,7 +688,7 @@
 			"A program back home wants {first}"
 		],
 		"text": [
-			"The football program he came through in {from} wants him as its face: a video for the kids, and a clinic when he can get back."
+			"His old football program in {from} wants him as its face. A video for the kids, and a clinic when he gets back."
 		],
 		"choices": [
 			{
@@ -712,7 +712,7 @@
 			},
 			{
 				"key": "later",
-				"label": "Ask them to wait until {first} is established",
+				"label": "Ask them to wait",
 				"effects": [
 					{
 						"op": "xp",
@@ -763,7 +763,7 @@
 		"choices": [
 			{
 				"key": "push",
-				"label": "Have the club push the visas through",
+				"label": "Push the visas through",
 				"effects": [
 					{
 						"op": "morale",
@@ -785,7 +785,7 @@
 			},
 			{
 				"key": "wait",
-				"label": "Hold {first}'s debut back a week",
+				"label": "Delay his debut",
 				"effects": [
 					{
 						"op": "morale",
@@ -804,7 +804,7 @@
 			},
 			{
 				"key": "stream",
-				"label": "Set up a live stream and a call after the game",
+				"label": "Stream it for them",
 				"effects": [
 					{
 						"op": "morale",

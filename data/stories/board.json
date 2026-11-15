@@ -22,7 +22,7 @@
 		"choices": [
 			{
 				"key": "promise",
-				"label": "Promise a win this week",
+				"label": "Promise a win",
 				"effects": [
 					{
 						"op": "promise_win"
@@ -56,15 +56,15 @@
 			"kind": "club"
 		},
 		"title": [
-			"The president wants a lunch"
+			"The president has asked you to lunch"
 		],
 		"text": [
-			"He wants to hear your plan for the rest of the season, face to face."
+			"He wants our plan for the run home, face to face."
 		],
 		"choices": [
 			{
 				"key": "go",
-				"label": "Go and sell the plan",
+				"label": "Sell the plan",
 				"effects": [
 					{
 						"op": "board",
@@ -111,7 +111,7 @@
 			"pick": "random"
 		},
 		"title": [
-			"A sponsor wants {name} for an ad shoot"
+			"{name} has been asked to do a sponsor shoot"
 		],
 		"text": [
 			"Half a day in a studio on Wednesday."
@@ -221,7 +221,7 @@
 		"choices": [
 			{
 				"key": "cut",
-				"label": "Cut back the recovery staff this week",
+				"label": "Cut the recovery staff",
 				"effects": [
 					{
 						"op": "board",
@@ -232,11 +232,11 @@
 						"who": "all"
 					}
 				],
-				"result": "The board likes the saving."
+				"result": "The saving goes through."
 			},
 			{
 				"key": "fight",
-				"label": "Fight for your staff",
+				"label": "Fight for our staff",
 				"effects": [
 					{
 						"op": "board",
@@ -249,7 +249,7 @@
 						"why": "You fought for the staff"
 					}
 				],
-				"result": "You fight for your people. The board notes it."
+				"result": "You fight for our people."
 			}
 		],
 		"when": {
@@ -266,12 +266,12 @@
 			"The board's asking about the injury list"
 		],
 		"text": [
-			"Too many players in the rehab group, and they want to know why."
+			"Too many players in the rehab group. They want to know why."
 		],
 		"choices": [
 			{
 				"key": "back",
-				"label": "Back your medical staff",
+				"label": "Back our medical staff",
 				"effects": [
 					{
 						"op": "board",

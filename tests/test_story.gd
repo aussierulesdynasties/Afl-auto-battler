@@ -246,7 +246,7 @@ const COST_WORDS := {
 	"start_backing": "expects to be picked", "back_kid": "is promised", "promise_win": "Lose or draw and", "extend_early": "Locked in", "captaincy_swap": "mid-season",
 	"rush_back": "hurt again", "slow_start": "slowly", "loss_sting": "also falls", "role_trial": "away from his usual spot", "on_record": "on the record",
 	"culture": "(Standards|Togetherness|Ambition) down [0-9]+%", "running": "less running", "forgo_xp": "Slower growth",
-	"new_club_keep": "against your cap", "new_club_go": "when this season ends", "dev_promise": "expects his next three games",
+	"new_club_keep": "against our cap", "new_club_go": "when this season ends", "dev_promise": "expects his next three games",
 }
 const SAMPLE_FACTS := {"sore_odds": "about 1 in 6", "take_odds": "about 6 in 10", "proj_word": "key forward", "proj_line": "up forward", "run_games": 3, "early_price": "$1m", "more_seasons": "two more seasons",
 		"new_club": "Tasmania", "keep_seasons": "three more seasons", "keep_price": "$600k", "comp_after": 20,
@@ -637,12 +637,12 @@ func _test_bug_bash_4_story() -> void:
 	# The result names whose opinion moved, out of 100.
 	var after := StoryEngine.aftermath({"opinion": [50, 53], "opinion_name": "Bailey"})
 	_check(after == "Bailey's opinion of you: 50 → 53 out of 100.", "The result names whose opinion moved (%s)" % after)
-	# A trust move too small to move his opinion of you is not listed as a cost.
+	# A trust move too small to show on the 100 still says which way it went.
 	var t0 := 1
 	var dd := -1
 	_check(Trust.opinion_move(t0, dd) == 0, "A one-point trust move can round to no move in opinion")
-	var tiny := StoryEngine._effect_parts({"op": "trust", "d": dd}, {"trust": t0})
-	_check(tiny.is_empty(), "A move that leaves his opinion where it is lists nothing (%s)" % str(tiny))
+	var tiny := str(StoryEngine._trust_words(dd, t0))
+	_check(tiny == "His opinion of you slips a little, still 50 out of 100.", "A move too small to show still names the cost (%s)" % tiny)
 	var refuse := StoryEngine._refuse_words(-40, 0)
 	_check(refuse.contains("re-sign with us") and not refuse.contains("/100"), "The contract line says 'with us' and 'out of 100' (%s)" % refuse)
 
@@ -3394,15 +3394,15 @@ func _test_line_numbers_match_effects() -> void:
 						# His opinion of you out of 100, moved from where it is today.
 						var t0 := int(card["facts"].get("trust", 0))
 						var mv := Trust.opinion_move(t0, StoryEngine.effect_d(e, card["facts"]))
-						# A move too small to shift it is no gain and no cost: no line at all.
-						want = "" if mv == 0 else \
+						# A move too small to show on the 100 says which way it went.
+						want = ("opinion of you %s, still %d out of 100" % ["warms a little" if StoryEngine.effect_d(e, card["facts"]) > 0 else "slips a little", Trust.opinion(t0)]) if mv == 0 else \
 								"opinion of you %s %d, to %d out of 100" % ["up" if mv > 0 else "down", absi(mv), Trust.opinion(t0) + mv]
 					"xp":
-						want = "%d development points (a senior game gives %d)" % [int(e["d"]), GameState.XP_SENIOR_GAME]
+						want = "%d development points. A senior game gives %d" % [int(e["d"]), GameState.XP_SENIOR_GAME]
 					"slow_start":
 						want = "About a %d%% chance" % int(e["chance"])
 					"loss_sting":
-						want = "about a %d%% chance the side's morale also falls %d%%" % [int(e["chance"]), absi(int(e["d"]))]
+						want = "about a %d%% chance our morale also falls %d%%" % [int(e["chance"]), absi(int(e["d"]))]
 					"expects_game":
 						want = "morale falls up to %d%%, his opinion of you falls %d" % [int(e.get("sting", 12)),
 								-Trust.opinion_move(int(card["facts"].get("trust", 0)), ClubStories.BROKEN_PROMISE_TRUST)]
