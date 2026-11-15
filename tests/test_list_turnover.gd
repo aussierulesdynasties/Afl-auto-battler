@@ -51,10 +51,13 @@ func _test_passing_list_turns_over(dataset: String, me: String) -> void:
 		start_ids[str(p["id"])] = true
 	# Each real player's last real season (data/legacy/<year>/history and
 	# list_additions, last_season), and the season each one retires before.
+	# Only a real retirement counts: he was Prospects.REAL_RETIRE_AGE or older
+	# in his last real season (younger, his club delisted him).
 	var real_last := {}
 	for p in GameDB.all_players_sorted():
-		if int(p.get("real_last", 0)) > 0:
-			real_last[str(p["id"])] = int(p["real_last"])
+		var last := int(p.get("real_last", 0))
+		if last > 0 and float(p.get("age", 0.0)) + float(last - GameState.season_year) >= Prospects.REAL_RETIRE_AGE:
+			real_last[str(p["id"])] = last
 	var retired_at := {}
 	var stayer := {}
 	var seasons := 0
@@ -126,7 +129,7 @@ func _test_passing_list_turns_over(dataset: String, me: String) -> void:
 ## the usual mechanics)". Real players due well inside the run retire within
 ## a couple of seasons of their real time, and the one talked round played on.
 func _real_retirements(real_last: Dictionary, retired_at: Dictionary, stayer: Dictionary, end: int) -> void:
-	_check(real_last.size() > 400, "1990: the real players carry their last real season (%d)" % real_last.size())
+	_check(real_last.size() > 150, "1990: the real players who retired carry their last real season (%d)" % real_last.size())
 	var due := 0
 	var gone := 0
 	var on_time := 0
@@ -139,7 +142,7 @@ func _real_retirements(real_last: Dictionary, retired_at: Dictionary, stayer: Di
 			continue
 		gone += 1
 		on_time += 1 if absi(int(retired_at[id]) - real_go) <= 2 else 0
-	_check(due > 300 and gone >= due * 0.6,
+	_check(due > 100 and gone >= due * 0.6,
 			"1990: most real players due by %d retired in the career (%d of %d; the rest were delisted)" % [end - 3, gone, due])
 	_check(on_time >= gone * 0.9,
 			"1990: they retired within two seasons of their real time (%d of %d)" % [on_time, gone])
