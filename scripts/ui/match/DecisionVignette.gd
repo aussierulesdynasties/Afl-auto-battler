@@ -124,11 +124,12 @@ func setup_decision(sim: MatchSim, my_side: int, moment: Dictionary, shown := {}
 	_to_scene = _frame_from(_stage["at"], _stage["look"])
 	var focus: Vector2 = _stage["at"]
 	# The field umpire stands behind the men, in the camera's picture: two metres off its middle,
-	# so a phone's narrow long lens (37.5 m back, about 2.2 m either side at the men) still
-	# holds him (decision_scenes, 2026-11-16: at 2.9 m he fell just outside it).
+	# so a phone's narrow long lens (37.5 m back) still holds him, and 22 m up, past where the
+	# man kicking a bag starts his run (1, 18): the cast keeps 3 m clear of every run, and at
+	# 14 m up he stood 2.6 m from it and was left off the ground (decision_scenes, 2026-11-16).
 	var near_umpire := Vector2(7.0, 6.0)
 	if kind != "tired":
-		near_umpire = _to_scene.affine_inverse() * Vector2(-2.0, 14.0) - focus
+		near_umpire = _to_scene.affine_inverse() * Vector2(-2.0, 22.0) - focus
 	match kind:
 		"tired":
 			# He walks in off the wing, out on his feet; his replacement is up off the bench,
