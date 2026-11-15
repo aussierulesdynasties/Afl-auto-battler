@@ -91,6 +91,13 @@ var flash := {}                 # {pos, left, goal}
 ## Every time the ball reaches an event's location: {idx, kind, pos, want_x}.
 ## Kept for the tests and the capture tool; bounded.
 var arrivals: Array = []
+## The moments a player touches the ball (or the man), for the 3D figures' clips (row 198):
+## {who, kind, at, other}, recorded at contact (foot or hand on the ball), only while
+## want_contacts is on; the 3D oval drains it every frame. `who` -1 on a bounce is the
+## field umpire; `at` is where the ball goes (or the spot of the bounce, the tackle).
+var contacts: Array = []
+var want_contacts := false
+var _last_how := &""
 
 var _rng := RandomNumberGenerator.new()
 var _ids := [{}, {}]            # side -> {num: token id}
@@ -325,6 +332,18 @@ func idle() -> bool:
 	return _beat.is_empty() and cursor >= events.size()
 
 
+## A tackle being run down right now (the chase before the contact), for the 3D figures to
+## start the tackle clip a moment early: {who, victim, left} with `left` the director seconds
+## before the chase gives up and the tackle lands anyway; {} otherwise. Read-only.
+func tackle_ahead() -> Dictionary:
+	if str(_beat.get("kind", "")) != "tackle" or _pi >= _phases.size():
+		return {}
+	var p: Dictionary = _phases[_pi]
+	if str(p.get("t", "")) != "chase" or not p.get("_entered", false):
+		return {}
+	return {"who": int(p["who"]), "victim": int(p["victim"]), "left": maxf(0.0, float(p["max"]) - _pt)}
+
+
 func _tick(h: float) -> void:
 	time += h
 	var guard := 0
@@ -512,7 +531,7 @@ func _possession_phases(k: int) -> Array:
 			return _kickin_phases(k, a, loc) + tail
 		"ballup":
 			# The ruck's tap to the player who wins it, out of the ball-up beat.
-			return [{"t": "flight", "to": loc, "dur": 0.3, "apex": 0.8, "h0": 3.0, "recv": a}] + tail
+			return [{"t": "flight", "to": loc, "dur": 0.3, "apex": 0.8, "h0": 3.0, "recv": a, "how": "ruck_tap"}] + tail
 		"throwin":
 			# The boundary umpire has the ball on the line; throw it back into
 			# the pack and let the logged winner collect it.
@@ -538,6 +557,7 @@ func _possession_phases(k: int) -> Array:
 			"adapt": true, "h1": 2.4 if kind == "mark" else 1.0}
 	if hb:
 		flight["hang"] = HANDBALL_HANG_MAX
+		flight["how"] = "handball"
 	if not prev.is_empty() and int(prev.get("side", -1)) != int(ev.get("side", -1)):
 		# Possession changed hands without an event (the chain broke down):
 		# show the ball won in a contest.
@@ -600,7 +620,7 @@ func _centre_phases(k: int, a: int, loc: Vector2) -> Array:
 			"min": 1.1 if after_goal else 0.8, "max": 4.0},
 		{"t": "wait", "dur": 0.3},
 		{"t": "bounce", "at": Vector2.ZERO, "recv": a, "loc": loc},
-		{"t": "flight", "to": loc, "dur": 0.3, "apex": 0.6, "h0": 3.5, "recv": a},
+		{"t": "flight", "to": loc, "dur": 0.3, "apex": 0.6, "h0": 3.5, "recv": a, "how": "ruck_tap"},
 	]
 
 
@@ -771,7 +791,8 @@ func _smother_phases(k: int) -> Array:
 	if who < 0 or victim < 0:
 		return [{"t": "emit", "log": true}, {"t": "fumble", "dur": 0.25}]
 	return [{"t": "chase", "who": who, "victim": victim, "max": 0.8},
-			{"t": "emit", "log": true}, {"t": "fumble", "dur": 0.25}]
+			{"t": "emit", "log": true},
+			{"t": "fumble", "dur": 0.25, "how": "smother", "who": who, "other": victim}]
 
 
 ## A spoil happens at the drop of the ball and leaves it alive on the deck.
@@ -787,7 +808,7 @@ func _spoil_phases(k: int) -> Array:
 				"recv": -1, "mode": "open"})
 	if who >= 0:
 		out.append({"t": "collect", "who": who, "max": 0.18})
-	out += [{"t": "emit", "log": true}, {"t": "fumble", "dur": 0.28}]
+	out += [{"t": "emit", "log": true}, {"t": "fumble", "dur": 0.28, "how": "spoil", "who": who}]
 	return out
 
 
@@ -1038,6 +1059,13 @@ func _clanger_phases(k: int) -> Array:
 			# An error logged before the kick-in: shown at the goal square.
 			return _kickin_phases(k, -1, loc) + [{"t": "emit", "log": true}]
 	var d := (ball["pos"] as Vector2).distance_to(loc)
+	if out.is_empty() and d > 1.0 and str(ball["mode"]) in ["dead", "loose"] and e >= 0:
+		# Nobody has it (the tackled man is on the deck with it): nobody kicks
+		# it either. It spills out of the pack toward him and he runs onto it
+		# where it lies (3d view 2, 2026-11-15: the ball flew 9 m up off a
+		# falling pair with no kicker).
+		return [{"t": "spill", "toward": e, "dur": 0.4}, {"t": "collect", "who": e},
+				{"t": "emit", "log": true}, {"t": "fumble", "dur": 0.35}]
 	if out.is_empty() and d > 1.0:
 		var pk := _prev_real(k)
 		var hb := pk >= 0 and str((events[pk] as Dictionary).get("kind", "")) == "handball"
@@ -1260,6 +1288,8 @@ func _scrap(p: Dictionary, who: int) -> void:
 
 ## The longest a player is left collecting before the ball is his.
 const COLLECT_LIMIT := 6.0
+## How far a ball nobody holds spills out of a tackle toward the man who gathers it.
+const SPILL_METRES := 3.0
 ## How far behind the kicker an entry may land to stand a set-shot mark on its
 ## band's spot (T2.24); further back, it lands where the log has it.
 const SET_SPOT_BACK := 20.0
@@ -1437,6 +1467,8 @@ func _contest(at: Vector2, winner: int, urgency: float) -> void:
 # Phases
 # ---------------------------------------------------------------------------
 func _enter(p: Dictionary) -> void:
+	if want_contacts:
+		_touch(p)
 	match str(p["t"]):
 		"setup":
 			mode = str(p.get("mode", "centre"))
@@ -1623,12 +1655,74 @@ func _enter(p: Dictionary) -> void:
 				if not _busy.has(int(t["id"])):
 					MatchMotion.set_goal(t, (t["pos"] as Vector2) + (t["vel"] as Vector2) * 0.3, 0.1)
 					_busy[int(t["id"])] = true
+		"spill":
+			# Out of the tackle, along the turf: at most SPILL_METRES, never past
+			# half the gap to the man who gathers it.
+			var to2: Vector2 = (tokens[int(p["toward"])]["pos"] as Vector2) - (ball["pos"] as Vector2)
+			var step2 := minf(SPILL_METRES, to2.length() * 0.5)
+			ball["mode"] = "loose"
+			ball["holder"] = -1
+			# A loose ball decays at exp(-3t): a push of 3v travels about v metres.
+			ball["vel"] = to2.normalized() * step2 * 3.0 if to2.length() > 0.01 else Vector2.ZERO
+			MatchMotion.set_goal(tokens[int(p["toward"])], ball["pos"] + (ball["vel"] as Vector2) / 3.0, 1.0, true)
+			_busy[int(p["toward"])] = true
 		"fumble":
 			ball["mode"] = "loose"
 			ball["holder"] = -1
 			var ang2 := _rng.randf_range(0.0, TAU)
 			ball["vel"] = Vector2(cos(ang2), sin(ang2)) * _rng.randf_range(6.0, 10.0)
 
+
+## A phase that starts with a touch of the ball records it in `contacts` (see there).
+func _touch(p: Dictionary) -> void:
+	match str(p["t"]):
+		"flight":
+			var how := StringName(str(p.get("how", "kick")))
+			var who := int(ball["holder"]) if str(ball["mode"]) == "held" else -1
+			if how == &"ruck_tap":
+				who = _nearest_ruck(ball["pos"])
+			_last_how = how if who >= 0 else &""
+			if who >= 0:
+				_contact(who, how, p["to"])
+		"possess":
+			var who := int(p.get("who", -1))
+			if who >= 0:
+				var how := &"gather"
+				if str(_beat.get("kind", "")) == "mark":
+					how = &"mark"
+				elif _last_how == &"handball":
+					how = &"handball_receive"
+				_contact(who, how, ball["pos"])
+			_last_how = &""
+		"down":
+			var v := int(p["victim"])
+			_contact(int(p["who"]), &"tackle", tokens[v]["pos"], v)
+		"fumble":
+			if p.has("how") and int(p.get("who", -1)) >= 0:
+				_contact(int(p["who"]), StringName(str(p["how"])), ball["pos"], int(p.get("other", -1)))
+		"bounce":
+			_contact(-1, &"bounce", p["at"])
+		"celebrate":
+			if int(p.get("who", -1)) >= 0 and bool(flash.get("goal", false)):
+				_contact(int(p["who"]), &"goal_celebrate", tokens[int(p["who"])]["pos"])
+
+
+func _contact(who: int, kind: StringName, at: Vector2, other := -1) -> void:
+	contacts.append({"who": who, "kind": kind, "at": at, "other": other})
+	if contacts.size() > 64:
+		contacts.pop_front()
+
+
+func _nearest_ruck(at: Vector2) -> int:
+	var best := -1
+	var bd := INF
+	for t in tokens:
+		if str(t["role"]) == "RUCK" and float(t["down"]) <= 0.0:
+			var d := (t["pos"] as Vector2).distance_to(at)
+			if d < bd:
+				bd = d
+				best = int(t["id"])
+	return best
 
 ## Dead-ball repositioning during set-ups: players move this much faster than
 ## in play (a real reset takes 20-40 s), and play resumes once all but

@@ -101,7 +101,31 @@ func _force(kind: String, pred := 13) -> void:
 	rec["claim"] = 0
 	rec["answered"] = false
 	rec["result"] = ""
-	rec["pid"] = GameState._papers_breakout() if kind == "breakout" else ""
+	rec["pid"] = _breakout_kid() if kind == "breakout" else ""
+
+
+## The kid the breakout story is set up on: the papers' own pick
+## (GameState._papers_breakout: young, fit, few games, best potential), taken
+## from those outside this week's side, so the card offers all three answers
+## (promising a run is for a player not already picked). Chosen here, not left
+## to which kids the seeded side happens to leave out.
+func _breakout_kid() -> String:
+	var side := {}
+	var sel: Dictionary = GameState.current_side()
+	for k in sel:
+		for id in sel[k]:
+			side[str(id)] = true
+	var best := {}
+	for p in GameState.my_list:
+		if side.has(str(p["id"])) or float(p.get("age", 30.0)) > float(PreSeason.tune("papers_breakout_age")):
+			continue
+		if int(p.get("injury_weeks", 0)) > 0 or not Backing.can_back(p, GameState.games_played(p)):
+			continue
+		var pot := int(p.get("potential", p.get("overall", 0)))
+		var best_pot := int(best.get("potential", best.get("overall", 0)))
+		if best.is_empty() or pot > best_pot or (pot == best_pot and str(p["id"]) < str(best["id"])):
+			best = p
+	return str(best.get("id", ""))
 
 
 # ---------------------------------------------------------------------------
@@ -611,9 +635,9 @@ func _test_flow() -> void:
 
 
 ## A stake with its size: a percentage, or his opinion of you in points out of
-## 100 ("down 1, to 49/100", director 2026-11-08).
+## 100 ("down 1, to 49 out of 100", director 2026-11-08).
 func _sized(line: String) -> bool:
-	return line.contains("%") or line.contains("/100")
+	return line.contains("%") or line.contains(" out of 100")
 
 
 func _lines(card: Dictionary, i: int) -> PackedStringArray:

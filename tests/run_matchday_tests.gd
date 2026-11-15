@@ -329,7 +329,7 @@ func _test_phone_match(sz: Vector2i) -> void:
 			"The break says what your calls did, your tag among them (%s)" % tag)
 	var dn: Node = box.find_child("CallsDidNote", true, false)
 	_check(dn != null and _plain(dn) == load("res://scripts/ui/match/MatchNotes.gd").CALLS_DID_NOTE,
-			"What your calls did says what its numbers are (%s)" % tag)
+			"What our calls did says what its numbers are (%s)" % tag)
 	var qh: Label = box.find_child("QuarterHeading", true, false)
 	_check(qh != null and qh.text == "First quarter" and not bt.contains("What's happening"),
 			"Quarter time leads with the quarter just played, by name (%s)" % tag)
@@ -705,10 +705,13 @@ func _test_coach_descriptions(sz: Vector2i) -> void:
 	var none: Button = m.find_child("TagPickerGrid_", true, false)
 	# The call's Gain / Cost rows (director 2026-11-10, "Gain / Cost everywhere"):
 	# No tag has its own gain and its own cost, the touches inside the line.
-	var usual := roundi(float(load("res://scripts/sim/Roles.gd").TAG_USUAL_TOUCHES))
+	# Each man's own usual touches (row 178), as the sim has him today.
+	var usual_of := func(id: String) -> int:
+		return roundi(float(load("res://scripts/sim/Roles.gd").usual_touches(m.call("_their_player", _state.pending_sim, id))))
+	var usual_n := RegEx.create_from_string("usual \\d+ touches")
 	var no_tag_ok := func() -> bool:
 		var t := _plain(tn)
-		return t.begins_with("Gain: your midfielders play their own game") and t.contains("\nCost: ") 				and t.contains("usual %d touches" % usual) and tn.find_child("TagGain", true, false) != null 				and tn.find_child("TagCost", true, false) != null
+		return t.begins_with("Gain: our midfielders play their own game") and t.contains("\nCost: ") 				and usual_n.search(t) != null and tn.find_child("TagGain", true, false) != null 				and tn.find_child("TagCost", true, false) != null
 	_check(tn != null and none != null and no_tag_ok.call(), "With no tag, the tag call says its gain and its cost (%s: %s)" % [tag, _plain(tn) if tn else "-"])
 	var named: Button = null
 	for b in m.find_child("TagPicker", true, false).find_children("TagPickerGrid_*", "Button", true, false):
@@ -719,6 +722,7 @@ func _test_coach_descriptions(sz: Vector2i) -> void:
 	if named != null:
 		var tw: String = await _tap_call(m, named)
 		await _settle()
+		var usual: int = usual_of.call(str(named.name).trim_prefix("TagPickerGrid_"))
 		_check(tw == "" and _plain(tn).contains("usually gets %d touches" % usual) and _plain(tn).contains("on him, about ")
 				and _plain(tn).contains("\nCost: ") and _plain(tn).contains(str(load("res://scripts/sim/GateOdds.gd").tag_gives())),
 				"A real tap on a player sizes the tag: his touches, and what the tagger gives up (%s: %s)" % [tag, _plain(tn)])
@@ -750,7 +754,7 @@ func _test_coach_descriptions(sz: Vector2i) -> void:
 		var gives := func(t: String) -> bool:
 			var gv: String = load("res://scripts/sim/GateOdds.gd").tag_gives()
 			return t.contains("Gives up " + gv.left(1).to_upper() + gv.substr(1) + " (") and t.contains("their man: Usually ") and t.contains(" touches. Tagged, about ") and not t.get_slice("Gives up", 1).contains("disposals") 					and (t.contains("season rating ") or t.contains("yet to play this season"))
-		_check(dflt != null and gives.call(words.call(dflt)) and words.call(dflt).contains("Your assistant's pick")
+		_check(dflt != null and gives.call(words.call(dflt)) and words.call(dflt).contains("Assistant's pick")
 				and mine_btn != null and gives.call(words.call(mine_btn)),
 				"Your assistant's tagger shows what he gives up, like the others, marked as the pick (%s: %s)" % [tag, words.call(dflt).replace("\n", " / ") if dflt else "-"])
 		# Name bold on top, two labelled facts, their man's touches on a line of
@@ -793,10 +797,10 @@ func _test_coach_descriptions(sz: Vector2i) -> void:
 			var mine_name: String = words.call(mine_btn).split("\n")[0].strip_edges()
 			var ww: String = await _tap_call(m, mine_btn)
 			await _settle()
-			_check(ww == "" and _plain(tn).contains("with %s on him" % mine_name), "The midfielder you tap is the one who goes (%s: %s; tapped %s)" % [tag, _plain(tn), mine_name])
+			_check(ww == "" and _plain(tn).containsn("with %s on him" % mine_name), "The midfielder you tap is the one who goes (%s: %s; tapped %s)" % [tag, _plain(tn), mine_name])
 			var wd: String = await _tap_call(m, who_box.find_child("TaggerPickerGrid_", true, false))
 			await _settle()
-			_check(wd == "" and not _plain(tn).contains("with %s on him" % mine_name), "Back to your assistant's man (%s: %s; was %s)" % [tag, _plain(tn), mine_name])
+			_check(wd == "" and not _plain(tn).containsn("with %s on him" % mine_name), "Back to your assistant's man (%s: %s; was %s)" % [tag, _plain(tn), mine_name])
 
 	# Start with a tag: the plan line names every call, in full, and nothing
 	# it sits above is pushed off the screen.
@@ -820,7 +824,7 @@ func _test_coach_descriptions(sz: Vector2i) -> void:
 	m.call("_show_setup", calls)
 	await _settle()
 	var line: Control = m.find_child("SetupLine", true, false)
-	var full := "Your plan: High Press  ·  tagging %s  ·  %s loose behind the ball" % [
+	var full := "Our plan: High Press  ·  tagging %s  ·  %s loose behind the ball" % [
 			db.player_display_name_by_id(str(calls["tag_id"]), ""), db.player_display_name_by_id(str(calls["interceptor_id"]), "")]
 	_check(line != null and line.visible and _plain(line) == full, "The plan line names every call (%s)" % tag)
 	_check(line.autowrap_mode != TextServer.AUTOWRAP_OFF and (line is RichTextLabel or line.text_overrun_behavior == TextServer.OVERRUN_NO_TRIMMING),
@@ -1429,7 +1433,7 @@ func _test_every_break_fits(club: String, vs: String, sz: Vector2i) -> void:
 			var did_sheet: Node = m.find_child("CallSheet_did", true, false)
 			var did_list: Node = did_sheet.find_child("CallsDid", true, false) if did_sheet != null else null
 			_check(w_did == "" and did_list != null and (did_list as Control).is_visible_in_tree() and did_list.get_child_count() > 0,
-					"What your calls did opens in a sheet on a real tap (%s%s)" % [tag, (", " + w_did) if w_did != "" else ""])
+					"What our calls did opens in a sheet on a real tap (%s%s)" % [tag, (", " + w_did) if w_did != "" else ""])
 			m.call("handle_back")
 			await _settle()
 		m.queue_free()
@@ -1588,8 +1592,7 @@ func _test_club_ink_all() -> void:
 		if reds.has(c) != (nm == uk.TEXT) and c != "COL":
 			red_bad.append("%s name %s" % [c, nm.to_html(false)])
 	_check(red_bad.is_empty(), "A red-ink club's name is plain TEXT, every other club's name is its ink (Adelaide's is gold since 2026-10-14) (%s)" % str(red_bad))
-	# No name is painted in a raw red ink anywhere (found 2026-10-18: a Melbourne name read as the
-	# primary-action red). Part 1: name markup, every club in turn.
+	# Part 1: name markup, every club in turn.
 	var ni = load("res://scripts/ui/NameInk.gd")
 	var markup_bad := []
 	var reds_seen := 0
@@ -1601,11 +1604,14 @@ func _test_club_ink_all() -> void:
 		reds_seen += 1 if reds.has(c2) else 0
 		var who: String = db.player_display_name(squad[0])
 		var bb: String = ni.markup(who, ni.from_clubs([c2]))
-		var raw := "[color=#%s]" % uk.club_ink(c2).to_html(false)
-		var shown := "[color=#%s]" % uk.club_name_colour(uk.club_ink(c2)).to_html(false)
-		if not bb.contains(shown) or (reds.has(c2) and bb.contains(raw)):
+		# A player's name in running text is in his club's ink, red clubs included
+		# (rulings: "Every name in running text is in club ink (UiKit.club_ink, never
+		# club_name_colour)"; row 174, "sanders uncoloured?"). Headings stay white.
+		var shown := "[color=#%s]" % uk.club_ink(c2).to_html(false)
+		var white := "[color=#%s]" % uk.TEXT.to_html(false)
+		if not bb.contains(shown) or (reds.has(c2) and bb.contains(white)):
 			markup_bad.append("%s %s" % [c2, bb])
-	_check(markup_bad.is_empty() and reds_seen == reds.size(), "Every club's player name markup uses the name colour, never a red club's raw ink (%s, %d red clubs checked)" % [str(markup_bad), reds_seen])
+	_check(markup_bad.is_empty() and reds_seen == reds.size(), "Every club's player name markup is in its club's ink, a red club's red, never white (%s, %d red clubs checked)" % [str(markup_bad), reds_seen])
 	# Part 2 (no screen script paints a name label in a raw club ink) is a static lint now:
 	# tools/lint/screens.py check_raw_club_ink.
 
@@ -2271,7 +2277,7 @@ func _test_hot_tag_tap() -> void:
 	var b0: Button = card.find_child("Moment_0", true, false)
 	_check(b0 != null and b0.text == "Tag him with %s" % who, "The first answer names the man who goes (%s)" % (b0.text if b0 else "-"))
 	var low := _text(card)
-	_check(low.contains("usually gets %d touches" % roundi(float(load("res://scripts/sim/Roles.gd").TAG_USUAL_TOUCHES))) and low.contains(str(load("res://scripts/sim/GateOdds.gd").tag_gives())),
+	_check(low.contains("usually gets %d touches" % roundi(float(load("res://scripts/sim/Roles.gd").usual_touches(hot)))) and low.contains(str(load("res://scripts/sim/GateOdds.gd").tag_gives())),
 			"The card sizes the tag in touches and what he gives up (%s)" % low)
 	var why: String = await Tap.tap(b0)
 	_check(why == "", "A real tap on Tag him reaches it (%s)" % why)
@@ -2546,6 +2552,7 @@ func _test_momentum_meter() -> void:
 	var bar: Button = m.find_child("MomentumBar", true, false)
 	var word: Label = m.find_child("MomentumWord", true, false)
 	_check(bar != null and _text(bar).contains("Momentum") and word != null, "The meter is labelled Momentum")
+	_check(bar != null and bar.size.y >= 44.0, "The momentum bar is a thumb's target on a phone, 44 px high (%.0f)" % (bar.size.y if bar != null else 0.0))
 	m.call("_track_momentum", {"mom": 0.0})
 	_check(word != null and word.text == "Even", "Level, it says Even (%s)" % (word.text if word else "-"))
 	await _settle()
@@ -2766,7 +2773,7 @@ func _test_press_effects_shown(db) -> void:
 		shown = shown and line != null and line.is_visible_in_tree() and text == _state.press_odds_line(i) 				and text.contains("%d%% " % c) and text.contains("%d%% " % (100 - c))
 		# The Muckraker's twist is on the gate (director 2026-11-06).
 		if kind == "criticise":
-			shown = shown and text.contains("His headline: 10% less likely") 					and not text.contains("The Siren gets read upstairs") and not text.contains(MC.FADE_NOTE)
+			shown = shown and text.contains("Gary's headline: 10% less likely") 					and not text.contains("The Siren gets read upstairs") and not text.contains(MC.FADE_NOTE)
 	_check(shown, "Every press answer shows both ways it can land, with the odds and the sizes")
 	var rules: Label = hub.find_child("MediaRules", true, false)
 	_check(rules != null and rules.is_visible_in_tree() and rules.text == MC.rules_line(str(_state.media_conference.get("journalist", ""))),
@@ -2886,7 +2893,7 @@ func _test_press_scene_taps() -> void:
 				"A real tap on answer %d lands it in the press screen, with its odds and only what it moves (%s; %s)" % [i, tapped, label])
 		if i == 3:
 			var op: Label = press.find_child("MediaOutcomeOpinion", true, false)
-			var want := "%s's opinion of you: 50 → %d/100" % [str(root.get_node("GameDB").player_display_name(named)),
+			var want := "%s's opinion of you: 50 → %d out of 100" % [str(root.get_node("GameDB").player_display_name(named)),
 					50 - int(MC.CALLOUT_OPINION_DROP)]
 			_check(op != null and op.is_visible_in_tree() and op.text == want,
 					"After a real tap on the call-out he took personally, the result shows his opinion of you (%s)" % (op.text if op != null else "missing"))
@@ -4446,9 +4453,9 @@ func _test_pre_match_one_screen(sz: Vector2i) -> void:
 			"Every call is a thumb-sized row that says its pick, none marked changed (%s: missing %s, wrong %s)" % [tag, str(lost), str(blank)])
 	var head: Label = box.find_child("CallsHeading", true, false)
 	var words := _text(box)
-	_check(head != null and head.text == "Your calls" and head.is_visible_in_tree()
+	_check(head != null and head.text == "Our calls" and head.is_visible_in_tree()
 			and not words.contains("this break") and not words.contains("Next quarter"),
-			"The rows stand under Your calls, with no word of a break (%s: %s)" % [tag, head.text if head != null else "-"])
+			"The rows stand under Our calls, with no word of a break (%s: %s)" % [tag, head.text if head != null else "-"])
 	_check(box.find_child("QuarterHeading", true, false) == null and box.find_child("BestSoFarOpen", true, false) == null
 			and box.find_child("CallsDidOpen", true, false) == null and box.find_child("BreakStats", true, false) == null,
 			"Nobody has played: no quarter, no Best so far, no Match stats (%s)" % tag)

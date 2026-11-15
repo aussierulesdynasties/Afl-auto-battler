@@ -50,7 +50,7 @@ static func _draftees(host: Control, v: Control) -> void:
 	var rows := CoachLedger.draftees(GameState.honour_roll, StatsAwards._find, GameState.my_club,
 			GameState.season_year, GameState.my_first_season, GameState.start_mode)
 	if rows.is_empty():
-		v.add_child(_para("No one yet. A player you draft is listed here once he wins your best and fairest or makes the All-Australian team.",
+		v.add_child(_para("No one yet. A player you draft shows here once he wins our best and fairest. Making the All-Australian team counts too.",
 				"DrafteesEmpty"))
 		return
 	var list := UiKit.vbox(2)

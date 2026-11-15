@@ -8,6 +8,8 @@ var _root: VBoxContainer
 var _club := ""
 var _sheet: Control
 var _others_open := false
+## The open job whose shortlist is showing: one at a time, senior first.
+var _open_job := ""
 
 
 func _ready() -> void:
@@ -55,6 +57,16 @@ func _build() -> void:
 	if mine:
 		for v in GameState.staff_vacancies:
 			open[str(v["job"])] = v
+	if not open.has(_open_job):
+		_open_job = ""
+		for job in Coaches.JOBS:
+			if open.has(job):
+				_open_job = job
+				break
+	# A created club's first staff (director 2026-11-15): we hire all five.
+	if mine and GameState.first_staff_open():
+		body.add_child(_first_staff_intro(open.size()))
+		body.add_child(UiKit.spacer(6))
 	# A PC lays the staff out as cards across the screen, not one stretched
 	# column (director, 2026-10-10: no phone UI on a PC).
 	var w := UiKit.view_width(self)
@@ -71,8 +83,10 @@ func _build() -> void:
 		var row: Control
 		if job == "SC" and mine:
 			row = _you_row()
-		elif open.has(job):
+		elif open.has(job) and job == _open_job:
 			row = _vacancy_card(job, open[job])
+		elif open.has(job):
+			row = _vacancy_row(job)
 		elif staff.has(job):
 			row = _coach_row(job, staff[job], mine and GameState.can_release_staff())
 		else:
@@ -87,7 +101,7 @@ func _build() -> void:
 			body.add_child(UiKit.rule())
 
 	body.add_child(UiKit.spacer(14))
-	var others := UiKit.btn("Your club" if not mine else "Another club's staff", UiKit.BODY)
+	var others := UiKit.btn("Our club" if not mine else "Another club's staff", UiKit.BODY)
 	others.name = "OtherClubs"
 	# On a PC it reads as a button (an outline), not a stray line of text.
 	others.flat = not _others_open and not wide
@@ -206,7 +220,7 @@ func _word_line(c: Dictionary) -> Label:
 		return l
 	var n := CoachMarket.broken_by(c, mine)
 	if n > 0:
-		var l := UiKit.lbl("You broke %s to him: your offers weigh %d less" % [
+		var l := UiKit.lbl("You broke %s to him. Our offers are %d%% less likely to land" % [
 				"a promise" if n == 1 else "%d promises" % n, int(round(CoachMarket.BROKEN_TRUST * 100.0 * n))],
 				UiKit.SMALL, UiKit.BAD, true)
 		l.name = "Broken_" + str(c.get("job", ""))
@@ -224,8 +238,15 @@ func _vacancy_card(job: String, vac: Dictionary) -> Control:
 		var why := UiKit.lbl(str(vac["reason"]), UiKit.SMALL, UiKit.MUTED)
 		why.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(why)
+	var cap := UiKit.lbl("Each figure compares him with an average coach.", UiKit.SMALL, UiKit.MUTED)
+	cap.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(cap)
+	# By name, not by the club's ranking: the order says nothing about which
+	# of them to take.
 	var list := GameState.staff_shortlist(job)
+	list.sort_custom(func(a, b): return GameDB.player_display_name(a) < GameDB.player_display_name(b))
 	for i in range(list.size()):
+		v.add_child(UiKit.rule())
 		v.add_child(_candidate_row(job, list[i], i))
 	var auto := UiKit.btn("Auto-fill", UiKit.BODY)
 	auto.name = "AutoFill_" + job
@@ -252,17 +273,19 @@ func _candidate_row(job: String, c: Dictionary, i: int) -> Control:
 	who.custom_minimum_size.y = 32
 	who.pressed.connect(func(): _sheet = CoachSheet.open(self, c))
 	info.add_child(who)
-	info.add_child(UiKit.ellipsis(Coaches.whereabouts(c), UiKit.SMALL, UiKit.MUTED))
-	var facts := UiKit.lbl("%s · %s · %s" % [Coaches.fit_word(c, job), Coaches.rep_word(c),
-			Coaches.experience_word(c, job)], UiKit.SMALL, UiKit.TEXT)
+	var facts := UiKit.lbl("%s · %s · %s" % [Coaches.whereabouts(c), Coaches.rep_word(c),
+			Coaches.experience_word(c, job)], UiKit.SMALL, UiKit.MUTED)
 	facts.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	info.add_child(facts)
-	var grades := UiKit.lbl("Teaching %s · Tactics %s · Man-management %s" % [
-			Coaches.grade(Coaches.skill(c, "teach")), Coaches.grade(Coaches.skill(c, "tactics")),
-			Coaches.grade(Coaches.skill(c, "manage"))], UiKit.SMALL, UiKit.MUTED)
-	grades.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	info.add_child(grades)
-	var pick := UiKit.btn("Appoint", 14, i == 0)
+	# The gate: what he does in this job, and what he costs, with the size.
+	var lines := CoachEffects.hire_lines(c, job, GameState.season_year)
+	var k := 0
+	for side in ["gain", "cost"]:
+		for line in lines[side]:
+			info.add_child(UiKit.stake_row("%s: %s" % ["Gain" if side == "gain" else "Cost", str(line)],
+					"Stake_%s_%d_%d" % [job, i, k]))
+			k += 1
+	var pick := UiKit.btn("Appoint", 14)
 	pick.name = "Appoint_%s_%d" % [job, i]
 	pick.custom_minimum_size = Vector2(92, 44)
 	pick.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -271,6 +294,40 @@ func _candidate_row(job: String, c: Dictionary, i: int) -> Control:
 		_build())
 	h.add_child(pick)
 	return h
+
+
+## The first-staff step's heading: what is open and what happens if we wait.
+func _first_staff_intro(n: int) -> Control:
+	var v := UiKit.vbox(2)
+	v.name = "FirstStaff"
+	v.add_child(UiKit.lbl("Hire our first staff", UiKit.HEADING, _ink(GameState.my_club), true))
+	for t in ["A new club: nobody on our staff yet.",
+			"%s to fill before Round 1." % ("One job" if n == 1 else "%d jobs" % n),
+			"Any job still open at the first bounce gets the club's pick."]:
+		var l := UiKit.lbl(t, UiKit.SMALL, UiKit.TEXT)
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(l)
+	return v
+
+
+## An open job whose shortlist is closed: one tap opens it.
+func _vacancy_row(job: String) -> Control:
+	var h := UiKit.hbox(8)
+	h.name = "Vacancy_" + job
+	var v := UiKit.vbox(1)
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	v.add_child(UiKit.lbl(str(Coaches.JOB_LABEL[job]), UiKit.SMALL, UiKit.TEXT, true))
+	v.add_child(UiKit.lbl("Vacant", UiKit.BODY, UiKit.EMPH, true))
+	h.add_child(v)
+	var see := UiKit.btn("See the shortlist", 14)
+	see.name = "Shortlist_" + job
+	see.custom_minimum_size = Vector2(0, 44)
+	see.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	see.pressed.connect(func():
+		_open_job = job
+		_build())
+	h.add_child(see)
+	return _padded(h)
 
 
 func _job_title(job: String) -> String:

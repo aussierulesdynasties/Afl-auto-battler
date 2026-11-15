@@ -107,6 +107,16 @@ static func _add(out: Dictionary, clash: Dictionary, key: String, club: String, 
 	out[key] = club
 
 
+## The colour of a player's name in running text: his club's ink, red clubs
+## included (rulings: "Every name in running text is in club ink (UiKit.club_ink,
+## never club_name_colour)"; director 2026-11-12, "sanders uncoloured?" of an
+## Essendon player drawn white). Only a club heading's name turns white
+## (UiKit.club_name_colour), so a player at Essendon, Melbourne, St Kilda,
+## Sydney or Gold Coast still shows whose he is.
+static func player_ink(club: String) -> Color:
+	return UiKit.club_ink(club)
+
+
 ## `text` as BBCode: each name in `index` wrapped in its club's ink, the rest
 ## escaped. Empty when the text names no one in the index. `clubs` false leaves
 ## club names as plain words (a button, whose own tap is the point).
@@ -126,8 +136,9 @@ static func markup(text: String, index: Dictionary, clubs := true, as_club := fa
 		named = true
 		out += _escape(text.substr(at, int(s[0]) - at))
 		# A club's own name: its strongest real colour (ClubLink.colour); a
-		# player's name: his club's ink.
-		var col := ClubLink.colour(str(s[2])) if id.begins_with(ClubLink.SCHEME) or as_club 				else UiKit.club_name_colour(UiKit.club_ink(str(s[2])))
+		# player's name: his club's ink (player_ink), or with `as_club` exactly his
+		# club's name colour.
+		var col := ClubLink.colour(str(s[2])) if id.begins_with(ClubLink.SCHEME) or as_club else player_ink(str(s[2]))
 		var ink := "[color=#%s]%s[/color]" % [col.to_html(false), _escape(shown).replace(" ", NBSP)]
 		out += NameLink.url(ink, id) if id != "" else ink
 		at = int(s[1])

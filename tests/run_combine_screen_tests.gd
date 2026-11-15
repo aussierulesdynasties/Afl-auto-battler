@@ -122,7 +122,7 @@ func _test_entry_and_first_visit() -> void:
 	var said := ""
 	for l in (_find("CombineIntro") as Node).find_children("*", "Label", true, false):
 		said += (l as Label).text + " "
-	_check(said.contains("every club") and said.contains("tell you he can play") and said.contains("scouts"),
+	_check(said.contains("Every club") and said.contains("tell us he can play") and said.contains("scouts"),
 			"It separates what's measured from what's scouted: %s" % said)
 	await _tap("CombineIntroOk", "Got it")
 	_check(_find("CombineIntro") == null, "Got it closes it, the Combine stays")
@@ -282,7 +282,7 @@ func _test_pick_from_sheet() -> void:
 	if row != null:
 		for l in row.find_children("*", "Label", true, false):
 			said += (l as Label).text + " "
-	_check(said.contains("on your list"), "...and it says he's yours: %s" % said)
+	_check(said.contains("on our list"), "...and it says he's yours: %s" % said)
 	# He stays in the draft's pool and joins its picks: still one man, one row.
 	await _tap("CombineTab_day", "The day after the pick")
 	var class_size: int = _state.draft.pool.filter(func(p): return bool(p.get("projected", false))).size()

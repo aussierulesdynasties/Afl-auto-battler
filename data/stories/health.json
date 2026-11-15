@@ -68,10 +68,10 @@
 			"pick": "highest:games"
 		},
 		"title": [
-			"The fitness staff want to manage {name}'s load"
+			"{name} has {games} games in his legs"
 		],
 		"text": [
-			"{games} games in his legs and a six-day break. They want him out of this one."
+			"The fitness staff want him out of this one."
 		],
 		"choices": [
 			{
@@ -101,7 +101,7 @@
 						"op": "heavy_legs"
 					}
 				],
-				"result": "{name} plays. He's grateful; his legs might not be."
+				"result": "{name} plays. He's grateful. His legs might not be."
 			}
 		]
 	},
@@ -120,7 +120,7 @@
 			"{name} copped a knock at training"
 		],
 		"text": [
-			"A cork in the thigh. He says it's nothing; the physio isn't so sure."
+			"A cork in the thigh. He says it's nothing. The physio isn't so sure."
 		],
 		"choices": [
 			{
@@ -163,10 +163,10 @@
 			"kind": "club"
 		},
 		"title": [
-			"The physios want a light week"
+			"A light week before the final?"
 		],
 		"text": [
-			"Finals footy. The bodies are sore and the physios want the main session cut back."
+			"Finals footy, and the bodies are sore. The physios want the main session cut back."
 		],
 		"choices": [
 			{
@@ -221,10 +221,10 @@
 			"pick": "random"
 		},
 		"title": [
-			"{name} wants to help a young player through rehab"
+			"{name} has offered to help in the rehab group"
 		],
 		"text": [
-			"One of the kids is facing months out, and {first} has been through the same injury."
+			"One of the kids is facing months out. {first} has been through the same injury."
 		],
 		"choices": [
 			{
@@ -251,7 +251,7 @@
 			},
 			{
 				"key": "own",
-				"label": "Keep {first} on his own program",
+				"label": "Keep his own program",
 				"effects": [
 					{
 						"op": "morale",
@@ -291,7 +291,7 @@
 			"{name} faces a fitness test"
 		],
 		"text": [
-			"Tight hamstring. He runs for the physios on Thursday, and the cameras will be there. {first} says he's right to go."
+			"Tight hamstring. He runs for the physios on Thursday. The cameras will be there. {first} says he's right to go."
 		],
 		"choices": [
 			{
@@ -378,7 +378,7 @@
 			},
 			{
 				"key": "stay",
-				"label": "Stay with the side you have",
+				"label": "Stay with our side",
 				"effects": [
 					{
 						"op": "morale",
@@ -415,12 +415,12 @@
 			"{name} is running again"
 		],
 		"text": [
-			"{first} is running again after {injury_word}. The physio hasn't cleared him yet, but he wants to join full training and reckons he's right to go."
+			"{first} is running again after {injury_word}. The physio hasn't cleared him yet. He wants full training and reckons he's right to go."
 		],
 		"choices": [
 			{
 				"key": "rush",
-				"label": "Clear {first} for full training",
+				"label": "Clear {first} to train",
 				"effects": [
 					{
 						"op": "rush_back"

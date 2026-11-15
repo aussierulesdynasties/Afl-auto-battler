@@ -280,7 +280,7 @@ func _test_build_and_entry() -> void:
 	_check(_count_prefix(tas, "EXP_") == 0, "On: none of the old generated players")
 	var from_state := _count_prefix(tas, "FND_")
 	_check(from_state >= 10 and from_state <= Expansion.FOUNDATION_SIZE, "On: the list is built on state-league signings (%d)" % from_state)
-	_check(tas.size() >= Prospects.MIN_LIST and tas.size() <= Contracts.MAX_LIST, "On: a full list (%d)" % tas.size())
+	_check(tas.size() >= Contracts.min_list() and tas.size() <= Contracts.MAX_LIST, "On: a full list (%d)" % tas.size())
 	var mine := _picks_of(history, "TAS")
 	_check(mine.has(1) and mine.has(3) and mine.has(9), "On: Tasmania drafted at picks 1, 3 and 9 (%s)" % str(mine))
 	_check((st.get("traded_picks", []) as Array).size() == 4 and not (mine.has(5) or mine.has(7) or mine.has(11) or mine.has(13)),
@@ -433,7 +433,7 @@ func _test_your_player_is_approached() -> void:
 			_check(str(card.get("title", "")).contains("Tasmania") and not str(card.get("text", "")).contains("{"),
 					"The card names the club and leaves no blank (%s)" % str(card.get("title", "")))
 			var lines := StoryEngine.stakes_lines(card["options"][0]["effects"], card["facts"])
-			_check(lines.size() == 2 and lines[0].begins_with("Gain: ") and lines[0].contains(" stays") and not lines[0].contains("He ") and lines[1].contains("against your cap"),
+			_check(lines.size() == 2 and lines[0].begins_with("Gain: ") and lines[0].contains(" stays") and not lines[0].contains("He ") and lines[1].contains("against our cap"),
 					"Re-signing says what it gains and what it costs (%s)" % " | ".join(lines))
 			var go_lines := StoryEngine.stakes_lines(card["options"][1]["effects"], card["facts"])
 			_check(" ".join(go_lines).contains("joins Tasmania when this season ends") and not " ".join(go_lines).contains("{"),

@@ -126,9 +126,7 @@ func play(from: int, count: int, out: String, weather: String,
 		if together != "":
 			(sq_h if i % 2 == 0 else sq_a).together = Culture.effect_of("match_contest", "together", together)
 		# --coach S,P (row 119): side i%2 is coached by archetypes S and P
-		# (Archetypes ids, "-" for none); --side-plan X makes it play plan X;
-		# --custom-plan S,C makes it play its own plan of strength S and cost C
-		# (CustomPlan ids).
+		# (Archetypes ids, "-" for none); --side-plan X makes it play plan X.
 		var cside: Squad = sq_h if i % 2 == 0 else sq_a
 		var side_plan := ""
 		for ci in range(args.size() - 1):
@@ -138,19 +136,20 @@ func play(from: int, count: int, out: String, weather: String,
 				cside.tactics_exec *= float(cside.arch.get("exec", 1.0))
 			elif str(args[ci]) == "--side-plan":
 				side_plan = str(args[ci + 1])
-			elif str(args[ci]) == "--custom-plan":
-				var sc := str(args[ci + 1]).split(",")
-				var plan := {"name": "", "s": sc[0], "c": sc[1] if sc.size() > 1 else ""}
-				if not CustomPlan.ready(plan):
-					push_error("balance: --custom-plan S,C: a strength (%s) and a cost (%s) on different levers"
-							% [", ".join(CustomPlan.STRENGTH_IDS), ", ".join(CustomPlan.COST_IDS)])
-					return 2
-				cside.custom_plan = CustomPlan.clean(plan)
-				side_plan = CustomPlan.KEY
 		if side_plan != "":
 			cside.ai_plans = false
 		var sim := MatchSim.new(sq_h, sq_a, 500000 + i)
-		sim.weather = weather
+		# --weather league (row 160): each match's weather as a season gives it,
+		# from the ground it is staged at and a regular-season month (i % 6), with
+		# the day's turn at a break; --no-turn keeps the start all match, for
+		# pairing the turn's own effect. Any other --weather holds all match.
+		if weather == "league":
+			var wkey := hash([500000 + i, "weather"])
+			var wstart := Weather.condition(v, i % 6, wkey, str(GameDB.club(h).get("state", "")))
+			sim.set_day({"weather": wstart, "chance": Weather.turn_chance(wstart, v),
+					"turn": {} if args.has("--no-turn") else Weather.turn(wstart, v, wkey)})
+		else:
+			sim.weather = weather
 		sim.season_year = year
 		if side_plan != "":
 			(sim.tactics[i % 2] as Dictionary)["gameplan"] = side_plan
@@ -283,6 +282,9 @@ func play(from: int, count: int, out: String, weather: String,
 		for pl in fam["men"]:
 			TeamFamiliarity.clear(pl)   # GameDB's lists are shared by every match
 		var row := {"i": i, "home": h, "away": a, "teams": teams, "duels": duels(sim, r)}
+		if weather == "league":
+			row["wx"] = {"start": sim.weather_start if sim.weather_turned_after > 0 else sim.weather,
+					"end": sim.weather, "after": sim.weather_turned_after, "chance": sim.weather_odds}
 		if tag != "":
 			row["tag"] = _tag_record(tag_rec, r)
 		if not through_rec.is_empty():

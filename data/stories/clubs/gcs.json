@@ -1,0 +1,466 @@
+[
+	{
+		"id": "gcs_qclash_week",
+		"club": "GCS",
+		"controversy": false,
+		"category": "rivals",
+		"subject": {"kind": "club"},
+		"when": {"opp_deck": "BRL"},
+		"title": ["QClash week"],
+		"text": ["It's the Queensland derby, the one week the whole state picks a side. The Lions have more members, more flags and more history, and their supporters never let you forget it."],
+		"choices": [
+			{"key": "final", "label": "Make it our grand final",
+			 "effects": [{"op": "morale", "d": 6, "who": "side"}, {"op": "slow_start", "chance": 20, "who": "side"}],
+			 "result": "The derby is all anyone talks about at the club this week. The players are wound tight."},
+			{"key": "four", "label": "Treat it as four points, same as any week",
+			 "effects": [{"op": "xp", "d": 6, "who": "side"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "A normal week on the track. The members wanted to hear some fire."}
+		]
+	},
+	{
+		"id": "gcs_little_brother",
+		"club": "GCS",
+		"controversy": false,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"when": {"opp_deck": "BRL"},
+		"title": ["Little brother"],
+		"text": ["Lions talkback is calling the Suns the little brother of Queensland footy again. A reporter asks whether the gap is real."],
+		"choices": [
+			{"key": "dig", "label": "Tell them to ask again in a few years",
+			 "effects": [{"op": "morale", "d": 5, "who": "side"}, {"op": "loss_sting", "chance": 20, "d": -5, "who": "side"}],
+			 "result": "The dig makes the back page. The players loved it, and Brisbane will have seen it too."},
+			{"key": "build", "label": "Say they've earned it and we're building",
+			 "effects": [{"op": "board", "d": 3}, {"op": "morale", "d": -3, "who": "side"}],
+			 "result": "A sober answer the board likes. A few players wanted their coach to bite back."}
+		]
+	},
+	{
+		"id": "gcs_go_home",
+		"club": "GCS",
+		"controversy": false,
+		"category": "contracts",
+		"phase": ["season_end"],
+		"subject": {"kind": "player", "pick": "highest:potential", "where": {"age_max": 24, "contract_years_max": 1}},
+		"title": ["The go-home question"],
+		"text": ["{name} is out of contract, and every week the southern papers write that he wants to go home. His manager says nothing has been decided."],
+		"choices": [
+			{"key": "family", "label": "Bring his family up for a week",
+			 "effects": [{"op": "morale", "d": 8, "who": "subject"}, {"op": "trust", "d": 3, "why": "The club flew his family up to show him the life here"}, {"op": "board", "d": -2, "was": "funds"}],
+			 "result": "His family spend a week on the Coast. The board winces at the bill."},
+			{"key": "space", "label": "Give him space",
+			 "effects": [{"op": "board", "d": 2}, {"op": "morale", "d": -4, "who": "subject"}],
+			 "result": "No drama in the press. {first} wonders why nobody is fighting for him."},
+			{"key": "nowhere", "label": "Tell the press he's going nowhere",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "morale", "d": -6, "who": "subject"}],
+			 "result": "The members cheer the headline. {first} didn't want it made public."}
+		]
+	},
+	{
+		"id": "gcs_grown_on_the_coast",
+		"club": "GCS",
+		"controversy": false,
+		"category": "selection",
+		"subject": {"kind": "player", "pick": "highest:potential", "where": {"age_max": 20}},
+		"title": ["Grown on the Coast"],
+		"text": ["{name} is pushing hard for a senior game. The local paper wants a home-grown story, and he'd be it."],
+		"choices": [
+			{"key": "pick", "label": "Pick him and back him",
+			 "effects": [{"op": "morale", "d": 8, "who": "subject"}, {"op": "board", "d": 2, "was": "members"}, {"op": "slow_start", "chance": 20, "who": "subject"}],
+			 "result": "{first} gets the call. The local fans love it, and he knows how much is riding on it."},
+			{"key": "twos", "label": "Give him another month in the twos",
+			 "effects": [{"op": "xp", "d": 8, "who": "subject"}, {"op": "morale", "d": -3, "who": "subject"}],
+			 "result": "{first} stays in the reserves to keep building. He wanted the call."}
+		]
+	},
+	{
+		"id": "gcs_top_end_trip",
+		"club": "GCS",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["Top End trip"],
+		"text": ["The club is taking a home game to Darwin, and the Territory is turning out for it. The heat is brutal, and the local kids want the players at their clinics all week."],
+		"choices": [
+			{"key": "early", "label": "Fly up early and do the clinics",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "morale", "d": 3, "who": "side"}, {"op": "odds", "chance": 20, "hit": [{"op": "heavy_legs", "who": "side"}], "miss": [], "hit_result": "The heat and the travel caught up with the legs."}],
+			 "result": "The clinics are packed and the Territory loves it."},
+			{"key": "late", "label": "Fly up the day before",
+			 "effects": [{"op": "xp", "d": 6, "who": "side"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "A normal week at home, then in and out. The Territory notices."}
+		]
+	},
+	{
+		"id": "gcs_long_way_home",
+		"club": "GCS",
+		"controversy": false,
+		"category": "family",
+		"subject": {"kind": "player", "pick": "random", "where": {"age_max": 21}},
+		"title": ["A long way from home"],
+		"text": ["{name} has the quickest hands at the club but he's a long way from his family. His old junior coach has rung to say the kid's gone quiet."],
+		"choices": [
+			{"key": "home", "label": "Send him home for a weekend",
+			 "effects": [{"op": "morale", "d": 10, "who": "subject"}, {"op": "forgo_xp", "d": 4, "who": "subject"}],
+			 "result": "{first} gets a weekend with his family and misses a session."},
+			{"key": "house", "label": "Move him in with a senior player",
+			 "effects": [{"op": "morale", "d": 5, "who": "subject"}, {"op": "loss_sting", "chance": 15, "d": -4, "who": "subject"}],
+			 "result": "{first} has a senior housemate and keeps training every day. A bad loss could still knock him around."}
+		]
+	},
+	{
+		"id": "gcs_league_town",
+		"club": "GCS",
+		"controversy": false,
+		"category": "community",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["Rugby league town"],
+		"text": ["The Coast grew up on league and surf, and the local schools still play league first. The club can push a schools program hard this summer, but it costs the players' time."],
+		"choices": [
+			{"key": "schools", "label": "Put players in every school",
+			 "effects": [{"op": "board", "d": 5, "was": "members"}, {"op": "forgo_xp", "d": 6, "who": "all"}],
+			 "result": "Suns jumpers in every schoolyard. The players miss time on the track."},
+			{"key": "staff", "label": "Let the development staff run it",
+			 "effects": [{"op": "xp", "d": 6, "who": "all"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "The list trains as normal. The schools would rather have met the players."}
+		]
+	},
+	{
+		"id": "gcs_empty_seats",
+		"club": "GCS",
+		"controversy": false,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"when": {"losing_run_min": 3},
+		"title": ["Half-empty stand"],
+		"text": ["After a few losses the cameras pan across empty seats at Carrara, and the southern panel shows say the Coast doesn't care about footy. The board wants a response."],
+		"choices": [
+			{"key": "juniors", "label": "Give free tickets to every junior club",
+			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "board", "d": -2, "was": "funds"}],
+			 "result": "The ground is fuller and noisier. The paying members grumble about the giveaway."},
+			{"key": "win", "label": "Say win and they'll come",
+			 "effects": [{"op": "morale", "d": 2, "who": "side"}, {"op": "board", "d": -3, "was": "members"}],
+			 "result": "The players like the faith. The empty seats stay on television."}
+		]
+	},
+	{
+		"id": "gcs_holiday_crowd",
+		"club": "GCS",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["The holiday crowd"],
+		"text": ["The Coast is full of holiday-makers from down south, and plenty of them barrack for this week's opponent. Marketing wants cheap tourist tickets; the members say it hands their home game to the away side."],
+		"choices": [
+			{"key": "tourists", "label": "Sell to the tourists",
+			 "effects": [{"op": "board", "d": 4, "was": "funds"}, {"op": "morale", "d": -3, "who": "side"}],
+			 "result": "A full ground and a good gate. The away cheer drowns out the home end."},
+			{"key": "members", "label": "Keep the home end for members",
+			 "effects": [{"op": "morale", "d": 3, "who": "side"}, {"op": "board", "d": -3, "was": "funds"}],
+			 "result": "It feels like a home game. There are empty seats and a smaller gate."}
+		]
+	},
+	{
+		"id": "gcs_the_flag",
+		"club": "GCS",
+		"controversy": false,
+		"category": "media",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["When's the flag coming?"],
+		"text": ["The season launch on the Broadwater turns to one question: when does the flag come to the Coast? The members want to hear the coach say it."],
+		"choices": [
+			{"key": "flag", "label": "Say we're here to win the flag",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "culture", "strand": "ambition", "d": 1, "why": "The coach said the flag out loud"}, {"op": "loss_sting", "chance": 20, "d": -5, "who": "side"}],
+			 "result": "The members roar. Every loss this year will be measured against those words."},
+			{"key": "week", "label": "Say one week at a time",
+			 "effects": [{"op": "board", "d": -2, "was": "members"}, {"op": "culture", "strand": "standards", "d": 1, "why": "No promises, just the work"}],
+			 "result": "No promise on the record. The launch crowd wanted more."}
+		]
+	},
+	{
+		"id": "gcs_finals_nerves",
+		"club": "GCS",
+		"controversy": false,
+		"category": "leadership",
+		"phase": ["finals"],
+		"subject": {"kind": "club"},
+		"title": ["Finals nerves"],
+		"text": ["The papers point out how few of this list have played a final. The young players are buzzing, maybe too much."],
+		"choices": [
+			{"key": "legend", "label": "Bring a club great in to talk finals",
+			 "effects": [{"op": "morale", "d": 5, "who": "side"}, {"op": "loss_sting", "chance": 15, "d": -8, "who": "side"}],
+			 "result": "The room hangs on every word. Now they know how much it matters."},
+			{"key": "normal", "label": "Train like any other week",
+			 "effects": [{"op": "xp", "d": 6, "who": "side"}, {"op": "slow_start", "chance": 15, "who": "side"}],
+			 "result": "A normal week on the track. Nobody has told them what a final feels like."}
+		]
+	},
+	{
+		"id": "gcs_summer_heat",
+		"club": "GCS",
+		"controversy": false,
+		"category": "training",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["Summer heat"],
+		"text": ["It's 33 degrees and humid by mid-morning. The fitness staff want to train in the middle of the day to harden the side for the early rounds; the medical staff want dawn sessions."],
+		"choices": [
+			{"key": "heat", "label": "Train in the heat",
+			 "effects": [{"op": "running", "d": 2}, {"op": "odds", "chance": 20, "hit": [{"op": "heavy_legs", "who": "side"}], "miss": [], "hit_result": "The heat took more out of the legs than planned."}],
+			 "result": "The midday sessions are brutal. The side is fitter for them."},
+			{"key": "dawn", "label": "Train at dawn",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "running", "d": -1}],
+			 "result": "Cool mornings and short sessions. The side starts fresh with less running in the legs."}
+		]
+	},
+	{
+		"id": "gcs_easy_living",
+		"club": "GCS",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"title": ["Too easy up here"],
+		"text": ["The beach, the nightlife, the holiday crowd: a rival coach says on radio that the Coast is too easy a place to be a footballer."],
+		"choices": [
+			{"key": "curfew", "label": "Set a curfew and say why",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The coach drew a line on nights out"}, {"op": "board", "d": 2}, {"op": "morale", "d": -4, "who": "side"}],
+			 "result": "The curfew goes up on the noticeboard. The players feel treated like kids."},
+			{"key": "back", "label": "Back the players publicly",
+			 "effects": [{"op": "morale", "d": 5, "who": "side"}, {"op": "loss_sting", "chance": 15, "d": -4, "who": "side"}],
+			 "result": "The players love it. Lose this week and the radio will say it again."}
+		]
+	},
+	{
+		"id": "gcs_night_out",
+		"club": "GCS",
+		"controversy": true,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"title": ["Night out gone wrong"],
+		"text": ["A group of Suns players were out in Surfers Paradise past curfew, and the vision is on the news. The club has to answer for it."],
+		"choices": [
+			{"key": "fine", "label": "Fine them and say so",
+			 "effects": [{"op": "board", "d": 4}, {"op": "culture", "strand": "standards", "d": 1, "why": "The club fined the group and said so"}, {"op": "morale", "d": -5, "who": "side"}],
+			 "result": "The fines are public. The rooms are quiet this week."},
+			{"key": "house", "label": "Handle it in-house",
+			 "effects": [{"op": "morale", "d": 2, "who": "side"}, {"op": "board", "d": -5}],
+			 "result": "The players feel backed. The press run the story for a second week."}
+		]
+	},
+	{
+		"id": "gcs_concessions",
+		"club": "GCS",
+		"controversy": false,
+		"category": "media",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["Concessions talk"],
+		"text": ["Rival clubs are on radio saying the Suns get too much help from the league with picks and the academy. The board wants to know if the coach will defend it."],
+		"choices": [
+			{"key": "defend", "label": "Say we need it, and here's why",
+			 "effects": [{"op": "board", "d": 3}, {"op": "morale", "d": -3, "who": "side"}],
+			 "result": "The board is pleased. The players hate being called a charity case."},
+			{"key": "earn", "label": "Say we'll earn it on the field",
+			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "board", "d": -2}],
+			 "result": "The players stand a little taller. The club's lobbying is undercut."}
+		]
+	},
+	{
+		"id": "gcs_young_list",
+		"club": "GCS",
+		"controversy": false,
+		"category": "selection",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["Always a young list"],
+		"text": ["The list is full of young talent with a handful of older heads. Is this season about the kids playing through their mistakes, or the senior men winning now?"],
+		"choices": [
+			{"key": "kids", "label": "Play the kids",
+			 "effects": [{"op": "xp", "d": 10, "who": "side"}, {"op": "board", "d": -3}],
+			 "result": "The kids get their games. The board wanted wins now."},
+			{"key": "spine", "label": "Play the senior spine",
+			 "effects": [{"op": "board", "d": 3}, {"op": "morale", "d": 3, "who": "side"}, {"op": "forgo_xp", "d": 6, "who": "all"}],
+			 "result": "The senior men play. The kids wait in the twos."}
+		]
+	},
+	{
+		"id": "gcs_old_bears",
+		"club": "GCS",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["The old Bears crowd"],
+		"text": ["Supporters who followed the Bears when they played at Carrara are holding a reunion at the ground. They'd love the current players to come by."],
+		"choices": [
+			{"key": "rooms", "label": "Invite them into the rooms",
+			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The club welcomed the first footy crowd on the Coast"}, {"op": "odds", "chance": 15, "hit": [{"op": "heavy_legs", "who": "side"}], "miss": [], "hit_result": "The late night cost the players their recovery."}],
+			 "result": "Old Bears scarves in the rooms and stories from the early days."},
+			{"key": "jumper", "label": "Send a signed jumper and a thank-you",
+			 "effects": [{"op": "board", "d": 1, "was": "members"}, {"op": "culture", "strand": "together", "d": -1, "why": "The old Bears crowd wanted more than a jumper"}],
+			 "result": "The week goes on as planned. The reunion wanted faces, not a jumper."}
+		]
+	},
+	{
+		"id": "gcs_local_club_debt",
+		"club": "GCS",
+		"controversy": false,
+		"category": "community",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["The local club that backed us"],
+		"text": ["The old local club that backed the Suns' bid is celebrating a milestone and has asked the senior coach to speak. Local footy still feels it built this club."],
+		"choices": [
+			{"key": "go", "label": "Go yourself",
+			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "forgo_xp", "d": 3, "who": "all"}],
+			 "result": "The old club feels remembered. The coach misses a session."},
+			{"key": "assistant", "label": "Send an assistant",
+			 "effects": [{"op": "xp", "d": 3, "who": "all"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "Training goes ahead with the coach on the track. The old club noticed who came."}
+		]
+	},
+	{
+		"id": "gcs_schoolies",
+		"club": "GCS",
+		"controversy": false,
+		"category": "community",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["Schoolies"],
+		"text": ["The end of the school year floods Surfers Paradise with school-leavers, and the council asks for players to front a safety campaign."],
+		"choices": [
+			{"key": "front", "label": "Have our young players front it",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "forgo_xp", "d": 4, "who": "all"}],
+			 "result": "The young players are on every poster. They lose time in the gym."},
+			{"key": "video", "label": "Send a video message",
+			 "effects": [{"op": "xp", "d": 4, "who": "all"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "No time lost. The council expected faces."}
+		]
+	},
+	{
+		"id": "gcs_up_north",
+		"club": "GCS",
+		"controversy": false,
+		"category": "community",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["Take a game north"],
+		"text": ["North Queensland's footy clubs want the Suns to bring a practice match up the coast. It's a long, hot trip, but the region feels forgotten."],
+		"choices": [
+			{"key": "north", "label": "Take the game north",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "odds", "chance": 20, "hit": [{"op": "heavy_legs", "who": "side"}], "miss": [], "hit_result": "The trip north is still in the legs come round one."}],
+			 "result": "A big crowd up north and kids in Suns colours."},
+			{"key": "home", "label": "Stay home and train",
+			 "effects": [{"op": "xp", "d": 6, "who": "side"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "A full block at home. The north waits another year."}
+		]
+	},
+	{
+		"id": "gcs_song_ritual",
+		"club": "GCS",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"when": {"winning_run_min": 1},
+		"title": ["A tradition of our own"],
+		"text": ["After a big win, a few senior players want to start a new rooms tradition around the club song. The club is still building its rituals."],
+		"choices": [
+			{"key": "theirs", "label": "Let the players make it theirs",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The players made the song their own"}, {"op": "morale", "d": 4, "who": "side"}, {"op": "odds", "chance": 15, "hit": [{"op": "heavy_legs", "who": "side"}], "miss": [], "hit_result": "The long night in the rooms cost some recovery."}],
+			 "result": "A long, loud night in the rooms."},
+			{"key": "simple", "label": "Sing it and go home",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "culture", "strand": "together", "d": -1, "why": "The players wanted a ritual of their own"}],
+			 "result": "One song and out the door. The players recover well."}
+		]
+	},
+	{
+		"id": "gcs_twos_flag",
+		"club": "GCS",
+		"controversy": false,
+		"category": "selection",
+		"phase": ["finals"],
+		"subject": {"kind": "player", "pick": "lowest:overall", "where": {"games_min": 20}},
+		"title": ["Twos premiership chase"],
+		"text": ["The reserves are in their finals with a real shot at the flag, and their coach wants to keep {name} down to win it. The seniors have a hole to fill."],
+		"choices": [
+			{"key": "twos", "label": "Let the twos chase the flag",
+			 "effects": [{"op": "morale", "d": 6, "who": "subject"}, {"op": "culture", "strand": "together", "d": 1, "why": "The whole club backed the reserves' finals run"}, {"op": "slow_start", "chance": 15, "who": "side"}],
+			 "result": "{first} stays with the twos. The seniors make do this week."},
+			{"key": "seniors", "label": "Seniors come first",
+			 "effects": [{"op": "board", "d": 2}, {"op": "morale", "d": -4, "who": "subject"}],
+			 "result": "{first} comes up to the seniors. The reserves lose a key man."}
+		]
+	},
+	{
+		"id": "gcs_heritage_night",
+		"club": "GCS",
+		"controversy": false,
+		"category": "members",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["Red, gold and blue"],
+		"text": ["The members' panel wants a heritage guernsey night for the red, gold and blue. Merchandise says it'll sell."],
+		"choices": [
+			{"key": "back", "label": "Back the members' night",
+			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "forgo_xp", "d": 2, "who": "all"}],
+			 "result": "The members love it. The players give up a morning to the photographers."},
+			{"key": "later", "label": "Push it to after the season",
+			 "effects": [{"op": "xp", "d": 2, "who": "all"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "No disruption to the preseason. The members' panel is disappointed."}
+		]
+	},
+	{
+		"id": "gcs_tanking_whispers",
+		"club": "GCS",
+		"controversy": true,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"when": {"ladder_min": 16, "round_min": 15},
+		"title": ["Tanking whispers"],
+		"text": ["The Suns sit last late in the season, and a southern columnist suggests the club is happy to lose for a top pick. The board wants a clear answer."],
+		"choices": [
+			{"key": "best", "label": "Play the best side every week",
+			 "effects": [{"op": "board", "d": 4}, {"op": "morale", "d": 3, "who": "side"}, {"op": "forgo_xp", "d": 6, "who": "all"}],
+			 "result": "The senior men play every week. The kids miss games."},
+			{"key": "develop", "label": "Say we're developing, no apology",
+			 "effects": [{"op": "xp", "d": 8, "who": "side"}, {"op": "board", "d": -4}],
+			 "result": "The young players get their games. The story runs another week."}
+		]
+	},
+	{
+		"id": "gcs_captains_call",
+		"club": "GCS",
+		"controversy": false,
+		"category": "leadership",
+		"phase": ["preseason"],
+		"subject": {"kind": "player", "pick": "highest:overall", "where": {"age_max": 23}},
+		"title": ["Captain's call"],
+		"text": ["The vice-captain is a Coast lifer and next in line for the armband, but {name} is now the best player at the club. The leadership vote is close."],
+		"choices": [
+			{"key": "lifer", "label": "Give it to the lifer",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "Loyalty to the club was rewarded"}, {"op": "morale", "d": 2, "who": "others"}, {"op": "morale", "d": -4, "who": "subject"}],
+			 "result": "The long-serving man gets the armband. {first} wanted it."},
+			{"key": "young", "label": "Hand it to {first}",
+			 "effects": [{"op": "morale", "d": 8, "who": "subject"}, {"op": "board", "d": 2}, {"op": "morale", "d": -2, "who": "others"}],
+			 "result": "{first} is captain. The vice-captain takes it hard, and some of the senior group with him."}
+		]
+	},
+	{
+		"id": "gcs_wants_their_best",
+		"club": "GCS",
+		"controversy": false,
+		"category": "selection",
+		"subject": {"kind": "player", "pick": "random", "where": {"games_min": 20}},
+		"when": {"opp_deck": "BRL"},
+		"title": ["He wants their best"],
+		"text": ["{name} has told a reporter he wants Brisbane's best defender for the QClash."],
+		"choices": [
+			{"key": "give", "label": "Give him the match-up",
+			 "effects": [{"op": "morale", "d": 8, "who": "subject"}, {"op": "slow_start", "chance": 20, "who": "subject"}],
+			 "result": "{first} gets his wish. He's fired up, maybe too much."},
+			{"key": "plan", "label": "Stick to the plan",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The plan comes before any one player"}, {"op": "morale", "d": -4, "who": "subject"}],
+			 "result": "The structure holds. {first} sulks at training."}
+		]
+	}
+]

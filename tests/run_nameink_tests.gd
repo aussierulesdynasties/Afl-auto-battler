@@ -52,13 +52,14 @@ func _run() -> void:
 	_t("_test_helper")
 	_t("_test_tinted_ink")
 	_t("_test_club_names")
+	_t("_test_red_club_players")
 	await _t("_test_match_screen")
 	print(Ran.line("Name colour", self))
 	quit(0 if _failures.is_empty() else 1)
 
 
 func _html(club: String) -> String:
-	return UK.club_name_colour(UK.club_ink(club)).to_html(false)
+	return NI.player_ink(club).to_html(false)
 
 
 func _test_helper() -> void:
@@ -152,6 +153,30 @@ func _test_club_names() -> void:
 	_check(whites.is_empty(), "Every club's name is in its strongest real colour, never white (%s)" % ", ".join(whites))
 	var ess: Color = load("res://scripts/ui/ClubLink.gd").colour("ESS")
 	_check(ess.s > 0.4 and (ess.h < 0.06 or ess.h > 0.92), "Essendon's name is red, not white (#%s)" % ess.to_html(false))
+
+
+## A player at a red club wears its red, as its name does (row 174, director
+## 2026-11-12, "sanders uncoloured?": an Essendon player drawn white beside a
+## red "Essendon"). Every club in turn: his name is in the club's ink, never the
+## plain text white (a black-and-white club, Collingwood, reads white as its ink is).
+func _test_red_club_players() -> void:
+	var bad := []
+	var reds := 0
+	for code in _db.clubs:
+		var c := str(code)
+		var squad: Array = _db.club_list(c)
+		if squad.is_empty():
+			continue
+		var who: String = _db.player_display_name(squad[0])
+		var m: String = NI.markup("%s kicked two." % who, NI.from_clubs([c]))
+		var want: Color = UK.club_ink(c)
+		if not m.contains("[color=#%s]%s" % [want.to_html(false), who.replace(" ", NB)]):
+			bad.append("%s %s" % [c, m])
+		if UK.club_name_colour(want) == UK.TEXT and not UK.club_is_black(c):
+			reds += 1
+			if m.contains("[color=#%s]" % UK.TEXT.to_html(false)):
+				bad.append("%s drawn white" % c)
+	_check(bad.is_empty() and reds >= 5, "Every club's player is in its ink, the %d red clubs' players red, never white (%s)" % [reds, ", ".join(bad)])
 
 
 func _test_tinted_ink() -> void:

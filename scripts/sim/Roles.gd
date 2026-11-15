@@ -53,8 +53,26 @@ const TAG_TIRED := 0.13
 ## 42686748555: his legs and all) came within 0.1 of a disposal of it). The card says it in counts (director, 2026-11-10).
 ## His disposals untagged, a match:
 const TAG_USUAL_TOUCHES := 26.83
-## [multiplier, his disposals tagged]; read between the rows (tag_touches).
+## [multiplier, his disposals tagged]; read between the rows (touches_at).
 const TAG_TOUCHES := [[0.42, 19.48], [0.50, 21.03], [0.58, 22.37], [0.66, 23.53], [0.79, 25.07], [1.0, 26.83]]
+## That was one man, their busiest. The card names the man tagged, so it says his
+## own touches (row 178, director 2026-11-12: "says 27 touches 100% of the time").
+## Measured on main 5b3ba1b5 with tools/audit/tag_usual_impl.gd (balance_body's
+## seeds): his touches untagged, from the ratings the carry pick reads
+## (MatchSim.pick_carrier: Disposal, Carry, and a wing's share of the running ball),
+## fitted over 1,032 midfielder-matches (89 men);
+## [constant, per Disposal, per Carry, on a wing]:
+const USUAL_TOUCHES_FIT := [1.84, 0.168, 0.116, 1.29]
+const USUAL_TOUCHES_MIN := 8.0
+## and what a tag takes off him: about the same count of touches whoever he is,
+## not the same share (400 paired matches an arm, a different midfielder tagged
+## each match, the multiplier held at 0.42 and at 0.66: a midfielder lost 1.09
+## times what the busiest man lost at that hold, a wing 1.26 times, his running
+## ball being the ball the tag takes).
+const TAG_LOSS_INSIDE := 1.09
+const TAG_LOSS_WING := 1.26
+## A tag never takes more than this share of a quiet man's touches.
+const TAG_KEEP_FLOOR := 0.4
 ## A tagger's pressure, as a share of 2026 midfielders, and how far it must
 ## outrun his contested ball.
 const TAGGER_PRESSURE := 0.70
@@ -130,10 +148,29 @@ static func tag_keep(p: Dictionary, legs: float) -> float:
 	return fresh + TAG_TIRED * (1.0 - clampf(legs / 100.0, 0.0, 1.0))
 
 
-## His disposals in a match with `p` tagging him at `legs`: what tag_keep's
-## multiplier comes to (TAG_TOUCHES; row 120).
-static func tag_touches(p: Dictionary, legs: float) -> float:
-	return touches_at(tag_keep(p, legs))
+## `target`'s disposals a match with nobody on him (USUAL_TOUCHES_FIT); the
+## measured man's (TAG_USUAL_TOUCHES) when there is no one named.
+static func usual_touches(target: Dictionary) -> float:
+	if target.is_empty() or not target.has("attr"):
+		return TAG_USUAL_TOUCHES
+	var a: Dictionary = target["attr"]
+	var f: Array = USUAL_TOUCHES_FIT
+	var n := float(f[0]) + float(f[1]) * float(a.get("disposal", 0)) + float(f[2]) * float(a.get("carry", 0))
+	if on_wing(target):
+		n += float(f[3])
+	return maxf(USUAL_TOUCHES_MIN, n)
+
+
+## `target`'s disposals in a match with `p` tagging him at `legs` (rows 120, 178):
+## his usual touches less what tag_keep's multiplier took off the measured man
+## (TAG_TOUCHES), sized for a wing or an inside man. No `target`: the measured man.
+static func tag_touches(p: Dictionary, legs: float, target: Dictionary = {}) -> float:
+	var measured := touches_at(tag_keep(p, legs))
+	if target.is_empty() or not target.has("attr"):
+		return measured
+	var usual := usual_touches(target)
+	var loss := (TAG_USUAL_TOUCHES - measured) * (TAG_LOSS_WING if on_wing(target) else TAG_LOSS_INSIDE)
+	return maxf(usual * TAG_KEEP_FLOOR, usual - loss)
 
 
 static func touches_at(multiplier: float) -> float:

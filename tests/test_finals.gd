@@ -187,6 +187,9 @@ func _test_interactive_finals_series() -> void:
 			_check(GameState.pending_match.is_empty(), "The pending match clears")
 			_check(GameState.finals_outcome_line(res) != "",
 					"Every final gets an outcome line (%s)" % str(res["tag"]))
+			var said := GameState.finals_outcome_line(res)
+			_check(not said.contains("!") and not said.to_lower().contains("reseed"),
+					"An outcome line is said plainly, no '!' and no 'reseed' (%s)" % said)
 			if str(res["tag"]).begins_with("QF"):
 				var next := GameState.my_finals_status()
 				_check(next == "bye" or next == "alive",
@@ -426,9 +429,9 @@ func _test_rest_of_week_in_background() -> void:
 				continue
 			# Played in turn means in the day's weather, as play_round and the finals week do.
 			var r := season.match_sim(m["home"], m["away"], season.finals_seed(i), season.finals_at_home(m), true,
-					season.weather_for(m["home"], m["away"], Season.REGULAR_ROUNDS + int(season.finals["week"]), m)).run() \
+					season.weather_day(m["home"], m["away"], Season.REGULAR_ROUNDS + int(season.finals["week"]), m)).run() \
 					if finals_week else season.match_sim(m["home"], m["away"], season.next_seed(i), [true, false], false,
-					season.weather_for(m["home"], m["away"], season.round_index)).run()
+					season.weather_day(m["home"], m["away"], season.round_index)).run()
 			expect[str(m["home"])] = _fingerprint(r)
 		var played_before := _games_played(season)
 		var tag := "finals week" if finals_week else "round"

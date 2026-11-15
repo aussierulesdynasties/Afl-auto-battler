@@ -872,7 +872,7 @@ func _test_former_player() -> void:
 				"%s: one line for the player you let go, not for one who never played for you (%s)" % [tag, " | ".join(got.map(func(c): return _plain(c)))])
 		var line: Control = got[0] if not got.is_empty() else null
 		var ink := (line as RichTextLabel).text if line is RichTextLabel else ""
-		_check(ink.contains("[color=#%s]" % kit.club_name_colour(kit.club_ink(opp)).to_html(false)) and not ink.contains(kit.club_ink("FRE").to_html(false)),
+		_check(ink.contains("[color=#%s]" % kit.club_ink(opp).to_html(false)) and not ink.contains(kit.club_ink("FRE").to_html(false)),
 				"%s: his name wears %s's ink, not yours" % [tag, opp])
 		if line is RichTextLabel:
 			var sc: Node = line.get_parent()
@@ -1092,7 +1092,7 @@ func _test_facts_without_options() -> void:
 			var opp := str(_state.my_next_opponent()["code"])
 			var facts: Array = _state.opponent_facts(opp)
 			var index: Dictionary = NI.from_lists(_state.season.lists)
-			var opp_ink := "[color=#%s]" % kit.club_name_colour(kit.club_ink(opp)).to_html(false)
+			var opp_ink := "[color=#%s]" % kit.club_ink(opp).to_html(false)
 			var said := true
 			var close := true
 			var inked := true
@@ -1442,6 +1442,11 @@ func _test_premiership_streamers() -> void:
 	var kit = load("res://scripts/ui/UiKit.gd")
 	_reset()
 	_state.start_season("FRE", db.club_list("FRE"))
+	# The first postseason's intro (FirstVisitIntro, once per career) is its own
+	# test: seen already here, so it never lies over Finals. Whether it comes up
+	# on these hubs otherwise turns on whether the seeded season leaves a press
+	# conference waiting after the Grand Final, which it is held back behind.
+	_state.mark_intro_seen("postseason")
 	_state.season.round_index = _state.season.fixture.size() - 1
 	_mine_only("FRE")
 	_state.advance()
@@ -1766,12 +1771,12 @@ func _gate_odds() -> void:
 	_check(literal.is_empty(), "No match-day gate template carries a number of its own (%s)" % str(literal))
 	var pct := func(x: float) -> String: return GO.pct(x)
 	_check(GO.tag_gives().contains(pct.call(Ms.TAGGER_COST)) and GO.tag_gives().contains(pct.call(1.0 - Ms.TAGGER_BALL))
-			and str(GO.tag_break_texts("B", "A", 20)[1]).contains(GO.tag_gives())
-			and str(GO.tag_break_texts("", "A", 20)[0]).contains(GO.tag_gives())
-			and str(GO.tag_break_texts("", "A", 20, "", "C")[1]).contains("C gets his usual %d touches" % GO.usual_touches())
-			and str(GO.tag_break_texts("B", "", 0)[0]).begins_with("none"),
+			and str(GO.tag_break_texts("B", "A", 20, 26)[1]).contains(GO.tag_gives())
+			and str(GO.tag_break_texts("", "A", 20, 26)[0]).contains(GO.tag_gives())
+			and str(GO.tag_break_texts("", "A", 20, 26, "", "C", 23)[1]).contains("C gets his usual 23 touches")
+			and str(GO.tag_break_texts("B", "", 0, 26)[0]).begins_with("none"),
 			"Tag: the share of his own game given up, from the tagger's constants (%s)" % GO.tag_gives())
-	_check(GO.skip_line(1).contains("plan you took in") and GO.skip_line(3).contains("last quarter's calls")
+	_check(GO.skip_line(1).contains("plan we took in") and GO.skip_line(3).contains("last quarter's calls")
 			and GO.skip_line(3).contains("no change") and GO.skip_line(1).contains("Nothing changed here is kept"),
 			"Skip says what it plays with and that the sheet's other changes are not kept")
 	var mins := func(k: String) -> String: return str(roundi(float(Ms.BURSTS[k]["chains"]) * float(Ms.GAME_MINUTES) / float(RT.T["chains_per_game"])))
@@ -1785,7 +1790,7 @@ func _gate_odds() -> void:
 			"Slow it down: up and down from its constants (%s / %s)" % hold)
 	var stack: Array = GO.burst_lines("stack", 15)
 	_check(str(stack[0]).contains(pct.call(Ms.STACK_CONTEST)) and str(stack[0]).contains(pct.call(float(RT.T["contest_clamp"])))
-			and str(stack[1]).contains(pct.call(Ms.STACK_OPP_GOAL - 1.0)), "Stack the stoppage: the edge, its cap and its cost (%s / %s)" % stack)
+			and str(stack[1]).contains(pct.call(Ms.STACK_OPP_GOAL - 1.0)), "Stack the centre bounce: the edge, its cap and its cost (%s / %s)" % stack)
 	_check(str(GO.burst_lines("flood", 20, false)[0]).ends_with(GO.TO_BREAK), "Before the last quarter a call that outlasts it runs to the break")
 	var flood: Array = GO.burst_lines("flood", 15)
 	_check(str(flood[0]).contains(pct.call(1.0 - Ms.FLOOD_OPP_GOAL)) and str(flood[0]).ends_with(GO.TO_SIREN)

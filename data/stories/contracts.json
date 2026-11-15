@@ -14,7 +14,7 @@
 			"pick": "highest:overall"
 		},
 		"title": [
-			"{name} wants to talk contract"
+			"{name} is after a new deal"
 		],
 		"text": [
 			"He's out of contract at season's end and wants security now. On today's form he's worth {ask} a season."
@@ -24,7 +24,7 @@
 			{
 				"key": "extend",
 				"label": "Re-sign {first} now",
-				"note": "You pay over the odds to lock {name} in now.",
+				"note": "We pay over the odds to lock {name} in now.",
 				"effects": [
 					{
 						"op": "extend_early"
@@ -109,7 +109,7 @@
 						"why": "You didn't bite when his manager went on radio"
 					}
 				],
-				"result": "You leave it. {first} sees the club didn't bite. The board doesn't like reading it."
+				"result": "You leave it. {first} sees we didn't bite."
 			}
 		]
 	},
@@ -126,15 +126,15 @@
 			"pick": "random"
 		},
 		"title": [
-			"{name} wants to know about next year"
+			"{name} is asking about next year"
 		],
 		"text": [
-			"He wants an answer before the season's out: is there one more year for him?"
+			"He wants an answer before the season's out. Is there one more year?"
 		],
 		"choices": [
 			{
 				"key": "honest",
-				"label": "Tell {name} there's no promise",
+				"label": "Promise him nothing",
 				"effects": [
 					{
 						"op": "morale",
@@ -146,11 +146,11 @@
 						"why": "You were straight with him about his future"
 					}
 				],
-				"result": "You give {name} a straight answer."
+				"result": "You tell {name} there's no promise of another year."
 			},
 			{
 				"key": "later",
-				"label": "Tell {first} it'll be sorted after the season",
+				"label": "Talk after the season",
 				"effects": [
 					{
 						"op": "trust",
@@ -180,7 +180,7 @@
 			"pick": "random"
 		},
 		"title": [
-			"{name} wants to know where he stands"
+			"{name} is asking where he stands"
 		],
 		"text": [
 			"He's on a rookie deal and can't get a senior game. His family are asking questions."
@@ -188,7 +188,7 @@
 		"choices": [
 			{
 				"key": "plans",
-				"label": "Tell {first} he's part of the plans",
+				"label": "Tell {first} he's wanted",
 				"effects": [
 					{
 						"op": "morale",
@@ -208,7 +208,7 @@
 			},
 			{
 				"key": "earn",
-				"label": "Tell {first} he has to earn it",
+				"label": "Make {first} earn it",
 				"effects": [
 					{
 						"op": "morale",
@@ -243,12 +243,12 @@
 			"{name}'s manager has called"
 		],
 		"text": [
-			"Other clubs are asking about him, and he hasn't forgotten you made him wait."
+			"Other clubs are asking about him. He hasn't forgotten you made him wait."
 		],
 		"choices": [
 			{
 				"key": "coming",
-				"label": "Tell {first} a deal is coming at season's end",
+				"label": "Promise a deal later",
 				"effects": [
 					{
 						"op": "morale",
@@ -268,7 +268,7 @@
 			},
 			{
 				"key": "market",
-				"label": "Let {first} test the market",
+				"label": "Let {first} shop around",
 				"effects": [
 					{
 						"op": "morale",
@@ -313,7 +313,7 @@
 			"{new_club} have approached {name}"
 		],
 		"text": [
-			"{name} is out of contract at season's end and {new_club} are building their first list. They can sign any out-of-contract player his club hasn't re-signed. Re-sign him now and he stays."
+			"{name} is out of contract at season's end. {new_club} are building their first list. They can sign anyone out of contract we haven't re-signed. Re-sign him now and he stays."
 		],
 		"default": 1,
 		"choices": [
@@ -353,7 +353,7 @@
 			"{name}: the paper has him headed interstate"
 		],
 		"text": [
-			"A paper has {first} on another club's shopping list, and his manager has rung. He's out of contract at season's end and wants it sorted before Round 1."
+			"A paper has {first} on another club's shopping list. His manager has rung. He's out of contract at season's end. He wants it sorted before Round 1."
 		],
 		"choices": [
 			{
@@ -367,8 +367,8 @@
 			},
 			{
 				"key": "wait",
-				"label": "Tell {first} it can wait until the season starts",
-				"note": "No commitment yet. {first} will ask for what he's worth then: less if his form drops, more if he improves.",
+				"label": "Wait until Round 1",
+				"note": "No commitment yet. {first} will ask for what he's worth then. Less if his form drops, more if he improves.",
 				"effects": [
 					{
 						"op": "open_price"
@@ -383,7 +383,7 @@
 						"why": "You put off his contract talk with another club interested"
 					}
 				],
-				"result": "{first} isn't happy to be put off, with the paper still running the story."
+				"result": "{first} isn't happy to be put off. The paper is still running the story."
 			}
 		],
 		"category": "contracts",

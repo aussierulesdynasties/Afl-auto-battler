@@ -64,7 +64,7 @@ func _build() -> void:
 		return
 	UiKit.clear(_body)
 	_body.add_child(UiKit.lbl("Trade picks", 20, UiKit.TEXT, true))
-	var rule := _para("Only picks change hands tonight, from this draft and the next two. The night waits while you deal.",
+	var rule := _para("Only picks change hands tonight, from this draft and the next two. The draft waits while we deal.",
 			13, UiKit.MUTED)
 	rule.name = "TradeSheetRule"
 	_body.add_child(rule)
@@ -98,8 +98,8 @@ func _build() -> void:
 	cycle.name = "TradeClubPhase"
 	_body.add_child(cycle)
 	_body.add_child(UiKit.spacer(4))
-	_package("You give", _mine, "GiveRow_", "Nothing yet: add one of your picks below.")
-	_package("You get", _theirs, "GetRow_", "Nothing yet: add one of their picks below.")
+	_package("We give", _mine, "GiveRow_", "Nothing yet. Add one of our picks below.")
+	_package("We get", _theirs, "GetRow_", "Nothing yet. Add one of their picks below.")
 	var verdict := GameState.evaluate_trade(_club, _mine, _theirs)
 	var empty := _mine.is_empty() or _theirs.is_empty()
 	var answer := _para("Put a pick on each side.", 14, UiKit.MUTED) if empty else \
@@ -137,7 +137,7 @@ func _build() -> void:
 	_body.add_child(go)
 	_body.add_child(UiKit.spacer(UiKit.SECTION - 6))
 	var sides := UiKit.hbox(4)
-	for t in [["theirs", "Their picks"], ["mine", "Your picks"]]:
+	for t in [["theirs", "Their picks"], ["mine", "Our picks"]]:
 		var tb := UiKit.tab(str(t[1]), _side == str(t[0]))
 		tb.name = "TradeSide_" + str(t[0])
 		tb.pressed.connect(func():
@@ -156,7 +156,7 @@ func _offers() -> void:
 	var open := GameState.open_trade_offers()
 	if open.is_empty():
 		return
-	_body.add_child(UiKit.lbl("Offers for your pick", UiKit.BODY, UiKit.EMPH, true))
+	_body.add_child(UiKit.lbl("Offers for our pick", UiKit.BODY, UiKit.EMPH, true))
 	for i in open:
 		var text := _para(GameState.trade_offer_text(i), 14, UiKit.TEXT)
 		text.name = "Offer_%d" % i

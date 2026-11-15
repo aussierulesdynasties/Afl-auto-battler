@@ -278,6 +278,63 @@ var weather := "perfect":
 	set(v):
 		weather = v if WEATHER_RATES.has(v) or v == "perfect" else "perfect"
 		_rates_cache = {}
+## The day may turn once, at a break (row 160, director 2026-11-12: "Yes, at a
+## break"): {"after": the quarter whose break it turns at (1-3), "to": the
+## condition from there}, or {} for a day that holds (Weather.turn, from the
+## same key as the forecast, so the forecast's odds are the ones played). It is
+## announced at that break (weather_turn_now) and played from the next
+## quarter's first bounce: begin_quarter switches `weather`, so every rate,
+## plan and trait reads the new condition for the quarters left, as the
+## starting weather does for the first. The quarter already played keeps its
+## own (the oval replays it after the siren). Draws nothing from the RNG.
+var weather_turn := {}
+## The forecast's odds that the day turns at a break (Weather.turn_chance),
+## shown before the first bounce; 0 for a day that can't.
+var weather_odds := 0.0
+
+
+## The day as Season.weather_day gives it ({weather, chance, turn}), or a bare
+## condition that holds all match.
+func set_day(day: Variant) -> void:
+	if day is Dictionary:
+		weather = str((day as Dictionary).get("weather", "perfect"))
+		weather_odds = float((day as Dictionary).get("chance", 0.0))
+		weather_turn = ((day as Dictionary).get("turn", {}) as Dictionary).duplicate()
+	else:
+		weather = str(day)
+
+
+## The weather at the first bounce, once a turn has changed `weather`.
+var weather_start := ""
+## The quarter whose break the weather turned at, once it has (0: not yet).
+var weather_turned_after := 0
+
+
+## The turn announced at the break just reached, or {} (none due here).
+func weather_turn_now() -> Dictionary:
+	if weather_turn.is_empty() or weather_turned_after > 0 or _q_active:
+		return {}
+	if int(weather_turn.get("after", 0)) != current_quarter - 1:
+		return {}
+	return {"after": int(weather_turn["after"]), "from": weather, "to": str(weather_turn.get("to", weather))}
+
+
+## The weather the next quarter is played in: the turn's at the break it is
+## announced, else the day's. A break's gate sizes the plans for it.
+func weather_ahead() -> String:
+	var t := weather_turn_now()
+	return str(t["to"]) if not t.is_empty() else weather
+
+
+func _apply_weather_turn() -> void:
+	var t := weather_turn_now()
+	if t.is_empty():
+		return
+	weather_start = weather
+	weather = str(t["to"])
+	weather_turned_after = int(t["after"])
+
+
 ## Ratings.T multipliers, applied in _rates() after the match-flow overrides.
 ## chains_per_game scales the quarter's chains, the bursts and the rotation
 ## cadence together, so legs per game are unchanged: the wet's shorter chains
@@ -500,10 +557,8 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	injury_rng.seed = seed * 13 + 7
 	breeze_side = posmod(hash("breeze|%d" % seed), 2)
 	arch_rng.seed = seed * 151 + 157
-	custom_rng.seed = seed * 163 + 167
 	for side in range(2):
 		arch[side] = (squads[side] as Squad).arch.duplicate()
-		custom[side] = CustomPlan.clean((squads[side] as Squad).custom_plan) 				if CustomPlan.ready((squads[side] as Squad).custom_plan) else {}
 		var morale := _ar(side, "morale", 0.0)
 		if morale != 0.0:
 			for q in (squads[side] as Squad).ground + (squads[side] as Squad).bench:
@@ -1064,10 +1119,6 @@ func _press_on(side: int, zone := 1) -> float:
 ## The side whose chain got out of its back third unpressured against a
 ## press (PRESS_BROKEN_EXPOSED), or -1. Reset at each chain's start.
 var _broke_press := -1
-## The side whose chain got out of its back third unpressured against The
-## "Open on the break" cost of a side's own plan (CustomPlan "broken"), or -1.
-## Reset with _broke_press.
-var _broke_cluster := -1
 
 
 ## Morale from the coach's Philosophical archetype, as match form by player id
@@ -1082,59 +1133,6 @@ func _ar(side: int, key: String, d := 1.0) -> float:
 	return float((arch[side] as Dictionary).get(key, d))
 
 
-## Each side's own plan (CustomPlan, Squad.custom_plan; director 2026-11-12),
-## cleaned: {"name", "s", "c"}; {} when the club has built none.
-var custom := [{}, {}]
-## The dice for an own plan's extra injuries ("Injury toll"): their own stream,
-## so a match without one plays out exactly as before.
-var custom_rng := RandomNumberGenerator.new()
-
-
-## A side's own-plan lever `key` (CustomPlan entries), or `d` while it is not
-## on its own plan, its plan pulls another lever, or the lever's gate is shut
-## (quarter or scoreboard). The strength grows with the side's execution, list
-## fit, knowledge and the weather like any plan's upside (_custom_up); the cost
-## is as written. Off its own plan every lever is 1.0 (or 0.0 when added), so
-## the match is the same to the bit.
-func _gt(side: int, key: String, d := 1.0) -> float:
-	var p: Dictionary = custom[side]
-	if p.is_empty() or _plan(side) != CustomPlan.KEY:
-		return d
-	var s := CustomPlan.entry(str(p["s"]), true)
-	if str(s.get("lever", "")) == key:
-		return CustomPlan.lever(s, key, d, _custom_up(side)) if _gate_open(side, str(s["gate"])) else d
-	var c := CustomPlan.entry(str(p["c"]), false)
-	if str(c.get("lever", "")) == key:
-		return CustomPlan.lever(c, key, d) if _gate_open(side, str(c["gate"])) else d
-	return d
-
-
-## How much of an own plan's written strength `side` carries out: the same
-## factors as any plan's upside (_pv). An own plan asks nothing special of a
-## list (fit 1.0, like Balanced) and no Strategic coach's plan is one.
-func _custom_up(side: int) -> float:
-	var k := CustomPlan.KEY
-	var scale := float((squads[side] as Squad).tactics_exec) 			* float((plan_fit[side] as Dictionary).get(k, 1.0)) 			* float((WEATHER_PLAN.get(weather, {}) as Dictionary).get(k, 1.0))
-	var know: Dictionary = (squads[side] as Squad).plan_know
-	if not know.is_empty():
-		scale *= float(know.get(k, 1.0))
-	return scale
-
-
-## Whether an own-plan entry's gate is open for `side` now.
-func _gate_open(side: int, gate: String) -> bool:
-	match gate:
-		"q1":
-			return current_quarter == 1
-		"q4":
-			return current_quarter >= 4
-		"lead":
-			return score(side) > score(1 - side)
-		"lead_big":
-			return float(score(side) - score(1 - side)) > runaway_lead
-	return true
-
-
 func _plan(side: int) -> String:
 	return plan_key(str((tactics[side] as Dictionary).get("gameplan", "balanced")))
 
@@ -1145,7 +1143,11 @@ func _plan(side: int) -> String:
 ## "Rename High Press"). Old saves and replays map across.
 ## Through stars (#874) is cut (director, 2026-11-07: the three play-through
 ## calls are back instead): an old save or replay on it plays Balanced.
-const PLAN_ALIAS := {"fast": "attacking", "press": "defensive", "through_stars": "balanced"}
+## "custom": the own game plan, removed (director 2026-11-15: "remove custom
+## gameplans from the game ... for now"); a save or call that still names it
+## plays Balanced.
+const PLAN_ALIAS := {"fast": "attacking", "press": "defensive", "through_stars": "balanced",
+		"custom": "balanced"}
 
 
 static func plan_key(key: String) -> String:
@@ -1741,7 +1743,7 @@ func contest_winner(use_fp: bool, fp: float) -> int:
 			+ home_edge() + form_edge + tog0 - tog1)
 	# The side with the run of play wins a little more of the ball.
 	var run := runaway()
-	p_home += momentum_edge * momentum * (1.0 + runaway_gain * run) * _front_run()
+	p_home += momentum_edge * momentum * (1.0 + runaway_gain * run)
 	if run > 0.0:
 		# A runaway can carry the leader to the contest cap on its own; cap it
 		# here so the coaches' contest calls below still move the odds (the
@@ -1776,13 +1778,7 @@ func home_edge() -> float:
 
 func _contest_bonus(side: int, stoppage := false) -> float:
 	return _contest_plan(side) + _contest_pep(side) + _contest_calls(side, stoppage) \
-			+ _contest_traits(side) + _contest_own_plan(side, stoppage)
-
-
-## An own plan's edge at a stoppage ("Stoppage numbers", or its cost "Light
-## at stoppages"; CustomPlan).
-func _contest_own_plan(side: int, stoppage: bool) -> float:
-	return _gt(side, "stoppage", 0.0) if stoppage else 0.0
+			+ _contest_traits(side)
 
 
 func _contest_traits(side: int) -> float:
@@ -1807,9 +1803,9 @@ func _contest_pep_on(side: int) -> bool:
 
 
 ## What Fire them up adds at the contest for this side while it chases the
-## game: the base lift scaled by its own plan's pep lever (CustomPlan), as the gate shows it.
-func fire_up_contest(side: int) -> float:
-	return PEP_FIRE_CONTEST * _gt(side, "pep")
+## game, as the gate shows it.
+func fire_up_contest(_side: int) -> float:
+	return PEP_FIRE_CONTEST
 
 
 ## Calm the group: a quarter-long, milder Slow it down (the "hold" call),
@@ -1912,7 +1908,7 @@ func _award_context_free(receiving_side: int, mark_fp: float, offender, recipien
 	_p(offender, "frees_against")
 	_t(receiving_side, "free_" + cause)
 	var who := GameDB.player_display_name(recipient) if recipient != null else "the opposition"
-	_emit("free", receiving_side, mark_fp, recipient, "%s — free kick to %s" % [label, who])
+	_emit("free", receiving_side, mark_fp, recipient, "%s · free kick to %s" % [label, who])
 	_free_taker = {"side": receiving_side, "id": "" if recipient == null else str(recipient.get("id", ""))}
 	var ev: Dictionary = events[events.size() - 1]
 	ev["free_cause"] = cause
@@ -2066,6 +2062,17 @@ func _maybe_fifty(receiving_side: int, mark_fp: float, offender, recipient) -> f
 	return new_fp
 
 
+## The charge a reported tackle is written up as. Copy only: it reads the
+## incident the sim already rolled (who, when, how bad) and never draws a match
+## random number. The worst tackles (two weeks or more) are dangerous tackles.
+const REPORT_CHARGES := ["rough conduct", "high contact", "a dangerous tackle"]
+static func report_charge(offender_id: String, quarter: int, minute: int, severity: float) -> String:
+	if severity >= 0.94:
+		return "a dangerous tackle"
+	var pick := absi(hash("%s|%d|%d" % [offender_id, quarter, minute])) % REPORT_CHARGES.size()
+	return str(REPORT_CHARGES[pick])
+
+
 ## A tackle can become a reportable rough-conduct incident. It is attached to
 ## the real tackler/victim and current quarter/minute; no post-match re-roll.
 func _maybe_report(side: int, offender, victim) -> void:
@@ -2102,7 +2109,7 @@ func _maybe_report(side: int, offender, victim) -> void:
 		"victim_name": GameDB.player_display_name(victim),
 		"q": current_quarter,
 		"min": current_minute,
-		"reason": "rough conduct",
+		"reason": report_charge(str(offender.get("id", "")), current_quarter, current_minute, severity),
 		"outcome": outcome,
 		"weeks": weeks,
 		"tribunal_roll": tribunal_roll,
@@ -2160,7 +2167,7 @@ func _credit_aerial_loose(def_side: int, fp: float, receiver: Dictionary) -> voi
 				+ (0.05 if _trait(receiver, "aerial") else 0.0), 0.16, 0.55) * _wx("aerial")
 		var sp := clampf(0.36 + (stop - receive) / 220.0
 				+ (0.07 if _trait(p, "interceptor") else 0.0), 0.20, 0.65)
-		var ip := sp * INTERCEPT_MARK * (0.6 + 0.8 * _a(p, "intercept") / 100.0) * _wx("aerial") * _gt(1 - def_side, "icept")
+		var ip := sp * INTERCEPT_MARK * (0.6 + 0.8 * _a(p, "intercept") / 100.0) * _wx("aerial")
 		var ours := ip + 0.5 * (1.0 - mp - ip)
 		w_sum += w
 		wl_sum += wl
@@ -2387,14 +2394,10 @@ const CLANGER_VALUE := 0.6
 
 func _credit_contest(side: int, stoppage: bool) -> void:
 	_credit(side, "gameplan", _contest_plan(side) * POSSESSION_VALUE)
-	# The call itself gets its base lift and its own plan's pep lever (booked to the game plan) gets what it
-	# added to (or took from) that lift, so the two add up to what the contest got.
 	var pep_base := PEP_FIRE_CONTEST if _contest_pep_on(side) else 0.0
 	_credit(side, "pep", pep_base * POSSESSION_VALUE)
 	_credit(side, "bursts", _contest_calls(side, stoppage) * POSSESSION_VALUE)
 	_credit(side, "traits", _contest_traits(side) * POSSESSION_VALUE)
-	_credit(side, "gameplan", (_contest_own_plan(side, stoppage)
-			+ pep_base * (_gt(side, "pep") - 1.0)) * POSSESSION_VALUE)
 
 
 func _credit(side: int, cause: String, pts: float, who := "") -> void:
@@ -2780,7 +2783,7 @@ func _general_aerial(side: int, mark_fp: float, carrier, gain: float, rushed: bo
 	var spoil_p := clampf(0.36 + (stop - receive) / 220.0
 			+ (0.07 if _trait(defender, "interceptor") else 0.0), 0.20, 0.65)
 	if roll < mark_p + spoil_p:
-		var take_p := _tv("INTERCEPT_MARK", INTERCEPT_MARK) * (0.6 + 0.8 * _a(defender, "intercept") / 100.0) * _wx("aerial") * _gt(side, "icept")
+		var take_p := _tv("INTERCEPT_MARK", INTERCEPT_MARK) * (0.6 + 0.8 * _a(defender, "intercept") / 100.0) * _wx("aerial")
 		if zone_intercepts and aerial_rng.randf() < take_p:
 			_intercept(opp, defender, false)
 			_won_back["marked"] = true
@@ -2920,7 +2923,7 @@ static func kick_range(kicker: Dictionary) -> float:
 ## in range: the nearest teammate (the short option). Pure: no dice.
 func kick_targets(side: int, from_fp: float, kicker: Dictionary) -> Array:
 	var from_atk := from_fp if side == 0 else -from_fp
-	var reach := kick_range(kicker) * _gt(side, "reach")
+	var reach := kick_range(kicker)
 	var kid := str(kicker.get("id", ""))
 	var pool := []
 	var nearest = null
@@ -3305,7 +3308,7 @@ func _boundary_exit(side: int, cross_fp: float, carrier, disposal_kind: String,
 	var kind := "out_on_full" if out_on_full else "last_disposal"
 	var who := GameDB.player_display_name(recipient) if recipient != null else "the opposition"
 	var why := "Out on the full" if out_on_full else "Last disposal out"
-	_emit(kind, opp, cross_fp, recipient, "%s - free kick to %s" % [why, who])
+	_emit(kind, opp, cross_fp, recipient, "%s · free kick to %s" % [why, who])
 	var fev: Dictionary = events[events.size() - 1]
 	fev["against_id"] = "" if carrier == null else str(carrier.get("id", ""))
 	fev["against_name"] = "" if carrier == null else GameDB.player_display_name(carrier)
@@ -3328,7 +3331,6 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 
 	_t(side, "chains")
 	_broke_press = -1
-	_broke_cluster = -1
 	_exit_open = false
 	_post_exit = false
 	var atk_fp := fp if side == 0 else -fp
@@ -3487,10 +3489,6 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		var p_base := pressure
 		pressure *= _press_on(side, zone)
 		_credit(opp, "gameplan", (pressure - p_base) * TURNOVER_VALUE)
-		if zone == 1:
-			p_base = pressure
-			pressure *= _gt(opp, "mid_press")
-			_credit(opp, "gameplan", (pressure - p_base) * TURNOVER_VALUE)
 		if synergies[opp].has("lockdown_unit"):
 			var lock := Traits.power("lockdown_unit")
 			_credit(opp, "traits", pressure * (lock - 1.0) * TURNOVER_VALUE)
@@ -3604,10 +3602,6 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 				turn_p *= PRESS_ZONE_TURNOVER
 			if in_d50:
 				turn_p *= _tv("D50_TURNOVER", D50_TURNOVER)
-			if zone == 0:
-				var tp0 := turn_p
-				turn_p *= _gt(opp, "fwd_turnover")
-				_credit(opp, "gameplan", (turn_p - tp0) * TURNOVER_VALUE)
 			if rng.randf() < turn_p:
 				# Rushed into a pack: sometimes nobody gets it clean and the
 				# umpire calls a ball-up where it locked up.
@@ -3630,7 +3624,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 				_last_disp["kind"] = disposal_kind
 				if disposal_kind == "kick":
 					_kick_marked(opp, taker, fp, mark_rng.randf() < _tv("PRESS_KICK_MARKED", PRESS_KICK_MARKED)
-							* (0.6 + 0.8 * _a(taker, "intercept") / 100.0) * _gt(side, "icept"))
+							* (0.6 + 0.8 * _a(taker, "intercept") / 100.0))
 				return {"outcome": "turnover", "fp": fp, "actor": taker}
 			rushed = true
 
@@ -3656,7 +3650,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		var prev_atk_fp := atk_fp
 		var gain: float = (float(T["metres_gain_mean"])
 				* (0.55 + 0.90 * _a(carrier, "carry") / 100.0))
-		gain *= _pv(side, "gain") * _pep_mult(side, "gain") * _ar(side, "gain") * _gt(side, "gain")
+		gain *= _pv(side, "gain") * _pep_mult(side, "gain") * _ar(side, "gain")
 		if synergies[side].has("supply_line"):
 			gain *= Traits.power("supply_line")
 		if _burst(side, "flood") or _burst(side, "hold"):
@@ -3671,11 +3665,9 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 				_t(side, "d50_chips")
 			elif in_d50:
 				gain *= _tv("D50_KICK_GAIN", D50_KICK_GAIN)
-			gain = minf(gain, kick_range(carrier) * _gt(side, "reach"))
+			gain = minf(gain, kick_range(carrier))
 		if is_kick_in:
 			gain *= 0.82 if not kick_in_play_on else 1.12
-		if not rushed and zone == 0 and _broke_cluster != side and _gt(opp, "broken") > 1.0:
-			_broke_cluster = side
 		if rushed:
 			gain *= _tv("PRESS_RUSH_GAIN", PRESS_RUSH_GAIN)
 		elif zone == 0 and _pv(opp, "press") > 1.0 and _broke_press != side:
@@ -4164,9 +4156,8 @@ func _intercept(side: int, who, could_mark: bool, contested := false) -> void:
 	# Whether he marked it or gathered it off the spill: a better reader of
 	# the ball marks more of them. A mark is a mark: he takes the next kick
 	# (the next chain starts from him, _chain_from["marked"]).
-	# could_mark: it came off the other side's kick inside 50, so their plan's
-	# intercept cost counts (CustomPlan "icept"), as on every intercept mark.
-	if could_mark and mark_rng.randf() < 0.35 * (0.5 + _a(who, "intercept") / 100.0) * _wx("aerial") * _gt(1 - side, "icept"):
+	# could_mark: it came off the other side's kick inside 50.
+	if could_mark and mark_rng.randf() < 0.35 * (0.5 + _a(who, "intercept") / 100.0) * _wx("aerial"):
 		_t(side, "marks")
 		_p(who, "marks")
 		_won_back["marked"] = true
@@ -4291,14 +4282,6 @@ func _swing_momentum(side: int, amount: float) -> void:
 	momentum = clampf(momentum + s * amount * (1.0 - s * momentum), -1.0, 1.0)
 
 
-## Front-runners (an own plan's strength, CustomPlan): the run of play counts
-## more for a side well in front. 1.0 for everyone else.
-func _front_run() -> float:
-	if momentum == 0.0:
-		return 1.0
-	return _gt(0 if momentum > 0.0 else 1, "momentum")
-
-
 ## How far the side with the run of play has run away with it, 0..1: 0 unless
 ## that side leads by more than runaway_lead, 1 at runaway_lead + RUNAWAY_SPAN
 ## or more.
@@ -4420,18 +4403,6 @@ func shot_chance(side: int, shooter: Dictionary, marked: bool, spoilt: bool, cre
 	if credit:
 		_credit(opp, "gameplan", 6.0 * (before - goal_p))
 	before = goal_p
-	# Own plans (CustomPlan): the shooter's, then the defence's. Booked to the
-	# game plan, as any plan's work is.
-	goal_p *= _gt(side, "goal")
-	if credit:
-		_credit(side, "gameplan", 6.0 * (goal_p - before))
-	before = goal_p
-	goal_p *= _gt(opp, "opp_goal")
-	if _broke_cluster == side:
-		goal_p *= _gt(opp, "broken")
-	if credit:
-		_credit(opp, "gameplan", 6.0 * (before - goal_p))
-	before = goal_p
 	var tr := 1.0
 	if _trait(shooter, "sharpshooter"):
 		tr *= 1.06
@@ -4523,6 +4494,8 @@ func quarter_in_progress() -> bool:
 
 
 func begin_quarter() -> void:
+	# A turn announced at this break plays from this bounce (row 160).
+	_apply_weather_turn()
 	var T := _rates()
 	_fit_cache.clear()
 	# A tired-star call lasts to the break.
@@ -4543,7 +4516,6 @@ func begin_quarter() -> void:
 				_ai_rematch(side)
 		if str(season_plans[side]) != "":
 			set_rotation_policy(side, auto_rotation(side, str(season_plans[side])))
-	_own_plan_injuries()
 	# Snapshot the plans in force this quarter - after the AI has picked its
 	# own, so the break says what they actually ran, not last quarter's plan.
 	# Before any rolls; duplicates only, no RNG draws.
@@ -4596,7 +4568,7 @@ func end_quarter() -> Dictionary:
 		"behinds": [behinds(0), behinds(1)],
 		"impact": impact.duplicate(true),
 	})
-	_emit("quarter", -1, fp, null, "End of quarter %d - %s %d.%d (%d) | %s %d.%d (%d)" % [
+	_emit("quarter", -1, fp, null, "End of Q%d · %s %d.%d (%d) · %s %d.%d (%d)" % [
 		quarter, squads[0].name, goals(0), behinds(0), score(0),
 		squads[1].name, goals(1), behinds(1), score(1)])
 	current_quarter += 1
@@ -4610,7 +4582,7 @@ func end_quarter() -> Dictionary:
 		if needs_extra_time():
 			# No siren: the pitch keeps going into extra time.
 			_emit("quarter", -1, 0.0, null,
-					"Scores level at full time - we are going to extra time!")
+					"Scores level at full time · we are going to extra time!")
 		else:
 			_emit_full_time("Full time")
 	return result()
@@ -4700,7 +4672,6 @@ func _play_one_chain(T: Dictionary) -> void:
 	# Every restart is a new chain: a free kick's set shot never inherits a
 	# broken press from the chain before (qa, W7 of #647).
 	_broke_press = -1
-	_broke_cluster = -1
 	# A kick-in after a behind is not a stoppage: no ruck contest, no clearance.
 	# A boundary throw-in is: it always starts with a contested stoppage.
 	var from_kick_in := kick_in
@@ -4803,9 +4774,6 @@ func _play_one_chain(T: Dictionary) -> void:
 	var cl_mult := _pv(side, "clangers") * _ar(side, "clangers")
 	_credit(side, "gameplan", clanger_p * (1.0 - cl_mult) * CLANGER_VALUE)
 	clanger_p *= cl_mult
-	var gt_cl := _gt(side, "clangers")
-	_credit(side, "gameplan", clanger_p * (1.0 - gt_cl) * CLANGER_VALUE)
-	clanger_p *= gt_cl
 	var pep_cl := _pep_mult(side, "clangers")
 	_credit(side, "pep", clanger_p * (1.0 - pep_cl) * CLANGER_VALUE)
 	clanger_p *= pep_cl
@@ -4869,7 +4837,7 @@ func _clanger_taken(side: int, at: float) -> void:
 	next_side = opp
 	_prev_end = "turnover"
 	_kick_marked(opp, taker, at, rng.randf() < _tv("CLANGER_MARKED", CLANGER_MARKED)
-			* (0.6 + 0.8 * _a(taker, "intercept") / 100.0) * _gt(side, "icept"))
+			* (0.6 + 0.8 * _a(taker, "intercept") / 100.0))
 
 
 ## Row 89 (director, 2026-11-06, T8.Q8: midfield intercepts 1.4 a game against
@@ -4909,7 +4877,7 @@ func _mid_kick_intercept(side: int, at: float) -> Dictionary:
 			break
 	_intercept(opp, taker, false)
 	_kick_marked(opp, taker, at, mid_ic_rng.randf() < _tv("CLANGER_MARKED", CLANGER_MARKED)
-			* (0.6 + 0.8 * _a(taker, "intercept") / 100.0) * _gt(side, "icept"))
+			* (0.6 + 0.8 * _a(taker, "intercept") / 100.0))
 	# The passage it cut short did not use all its share of the quarter: that
 	# time is played (MID_GIVE_BACK of a chain each), so the match keeps its
 	# length of play.
@@ -5018,6 +4986,10 @@ func result() -> Dictionary:
 		"away": squads[1].code,
 		"tactics_history": tactics_history.duplicate(true),
 		"weather": weather,
+		# The day's turn at a break, once played (row 160): where it started and
+		# which break it turned at; "" and 0 for a day that held.
+		"weather_start": weather_start,
+		"weather_turned_after": weather_turned_after,
 		# Which side kicks with the breeze in the first quarter, for the ground's flags and
 		# the big screen's arrow after the match (looks only: set from the seed at the start).
 		"breeze_side": breeze_side,
@@ -5072,11 +5044,11 @@ const STAR_OVR := 80
 ## Energy below which a player is rotated off: stars are ridden harder.
 const ROTATION_POLICIES := {
 	"hard": {"label": "Protect freshness", "role": 80.0, "star": 68.0,
-			"text": "Anyone tiring comes off early, your stars included: fresh legs all day, less time on the ground for your best."},
+			"text": "Anyone tiring comes off early, our stars included. Fresh legs all day, less time on the ground for our best."},
 	"normal": {"label": "Balanced rotations", "role": 70.0, "star": 50.0,
-			"text": "Rotate the group; your stars stay on a little longer than the rest."},
+			"text": "Rotate the group. Our stars stay on a little longer than the rest."},
 	"stars": {"label": "Prioritise key players", "role": 68.0, "star": 25.0,
-			"text": "Your stars stay on until they are cooked: more of their time on the ground, but they fade late."},
+			"text": "Our stars stay on until they are cooked. More time on the ground for them, but they fade late."},
 }
 ## fit(): effective-attribute multiplier. 0.80 + 0.25 x energy puts an
 ## average match (~80 energy) at 1.0: fresh 1.05, cooked (30) 0.875.
@@ -5219,7 +5191,7 @@ func _after_chain() -> void:
 		var movement_pace := _pv(side, "pace") * (1.0 if _pep(side) == "heat" else _pep_mult(side, "pace"))
 		if _burst(side, "surge"):
 			movement_pace *= SURGE_PACE
-		var fatigue_pace := movement_pace * heat_legs * _ar(side, "legs") * _gt(side, "legs")
+		var fatigue_pace := movement_pace * heat_legs * _ar(side, "legs")
 		if weather == "hot":
 			fatigue_pace *= HOT_DRAIN
 		if synergies[side].has("running_machine"):
@@ -5304,29 +5276,6 @@ func _plan_injuries() -> void:
 			inj["side"] = side
 			inj["id"] = str(p["id"])
 			inj["at"] = injury_rng.randi_range(2, 118)
-			_injury_plan.append(inj)
-
-
-## An own plan's "Injury toll" (CustomPlan "inj"): a side on it this quarter
-## takes extra injuries, a quarter's share of the match's, on their own dice
-## (custom_rng), so a match without one plays out exactly as before.
-func _own_plan_injuries() -> void:
-	if current_quarter > 4:
-		return
-	for side in range(2):
-		var extra := _gt(side, "inj") - 1.0
-		if extra <= 0.0:
-			continue
-		var sq: Squad = squads[side]
-		for p in sq.ground + sq.bench:
-			if custom_rng.randf() >= extra / 4.0:
-				continue
-			var inj := Injuries.roll(custom_rng, p)
-			if inj.is_empty():
-				continue
-			inj["side"] = side
-			inj["id"] = str(p["id"])
-			inj["at"] = (current_quarter - 1) * 30 + custom_rng.randi_range(2, 28)
 			_injury_plan.append(inj)
 
 
@@ -5716,7 +5665,7 @@ const MOMENT_GAP := 8                # chains between moments
 ## card says "the next ten minutes" - and every call ends at the break.
 ## (They lasted 4-8 chains, about two minutes, and measured as no-ops.)
 const BURSTS := {
-	"stack": {"label": "Stack the stoppage", "chains": 12, "for": "for the next few centre ball-ups"},
+	"stack": {"label": "Stack the centre bounce", "chains": 12, "for": "for the next few centre bounces"},
 	"flood": {"label": "Flood behind the ball", "chains": 45, "for": "for the rest of the quarter"},
 	"push": {"label": "Push numbers forward", "chains": 45, "for": "for the rest of the quarter"},
 	"surge": {"label": "Throw numbers at it", "chains": 15, "for": "for the next ten minutes"},
@@ -5817,7 +5766,7 @@ func _fire_bounce(margin: int) -> void:
 	var left: int = current_quarter * 30 - current_minute
 	var to_go := EraFootball.clock_minutes(120 - current_minute, season_year)
 	var when := "in the last minute" if to_go <= 1 else "with %d minutes left" % to_go
-	var title := "Centre ball-up - %s %s" % [state, when]
+	var title := "Centre bounce · %s %s" % [state, when]
 	# Two distinct calls, each with its own upside and downside and no
 	# "Play it straight" (row 15): Flood behind the ball and Push numbers
 	# forward (row 151, director 2026-11-10). Unanswered (skipped, auto-played)
@@ -5826,9 +5775,9 @@ func _fire_bounce(margin: int) -> void:
 		"text": "Set up for the rest of the game.",
 		"options": _sized([
 			{"key": "flood", "label": "Flood behind the ball",
-				"detail": "Numbers behind the ball: they score less easily, and so do you."},
+				"detail": "Numbers behind the ball. They score less easily, and so do we."},
 			{"key": "push", "label": "Push numbers forward",
-				"detail": "Numbers ahead of the ball: you score more easily, and so do they when they win it back."},
+				"detail": "Numbers ahead of the ball. We score more easily, and so do they when they win it back."},
 		], left, GateOdds.NONE_COST_BOUNCE)})
 
 
@@ -5921,21 +5870,24 @@ func _boundary_moment() -> bool:
 		var stopper := GameDB.player_display_name(minder)
 		var hot_name := GameDB.player_display_name(hot)
 		# The size of the call, from what the sim plays (GateOdds; row 120).
+		# Each man's own touches (row 178).
 		var on_him: Dictionary = minder
-		var kept := GateOdds.tag_kept(on_him, float(energy.get(str(on_him.get("id", "")), 100.0)))
+		var legs := float(energy.get(str(on_him.get("id", "")), 100.0))
+		var kept := GateOdds.tag_kept(on_him, legs, hot)
 		# A tag already on another of theirs moves if the coach says tag: the card
 		# says so, and what leaving it where it is keeps (the answer itself is
 		# unchanged: resolve_moment sets the tag on this man either way).
 		var tagged := _on_ground(opp, _tag_id(me))
 		var on_now := "" if tagged.is_empty() else GameDB.player_display_name(tagged)
-		var lines := GateOdds.tag_call_lines(hot_name, stopper, kept, on_now)
+		var lines := GateOdds.tag_call_lines(hot_name, stopper, kept, GateOdds.usual_touches(hot), on_now,
+				GateOdds.usual_touches(tagged), GateOdds.tag_kept(on_him, legs, tagged))
 		_fire({"kind": "hot", "player_id": str(id), "default": 1,
 			"title": "%s has kicked %d" % [hot_name, int(st["goals"])],
-			"text": "Their midfielder is hurting you on the scoreboard.",
+			"text": "Their midfielder is hurting us on the scoreboard.",
 			"options": [
 				{"key": "tag", "label": ("Tag him with %s" if on_now == "" else "Move %s onto him") % stopper,
 					"gain": lines["tag_gain"], "cost": lines["tag_cost"]},
-				{"key": "leave", "label": "Back your defenders" if on_now == "" else "Leave the tag on %s" % on_now,
+				{"key": "leave", "label": "Back our defenders" if on_now == "" else "Leave the tag on %s" % on_now,
 					"gain": lines["leave_gain"], "cost": lines["leave_cost"]},
 			]})
 		return true
@@ -5964,7 +5916,7 @@ func _fire_run_moves(run: int) -> void:
 		"text": "Two ways to answer it from the next centre bounce.",
 		"options": _sized([
 			{"key": "stack", "label": "Stack the centre bounce",
-				"detail": "Extra numbers at the ball-up."},
+				"detail": "Extra numbers at the centre bounce."},
 			{"key": "flood", "label": "Flood behind the ball",
 				"detail": "Everyone back, so they cannot run it in."},
 		], current_quarter * 30 - current_minute, GateOdds.NONE_COST_RUN)})
@@ -6030,7 +5982,7 @@ func _offer_set_shot(side: int, p_fp: float, shooter: Dictionary, defender, band
 	# (bomb_odds) under their own keys.
 	var pack := bomb_odds(side, shooter)
 	options.append({"key": "bomb", "label": "Bomb it to the goal square",
-		"detail": "Into the pack: a forward might mark it or a crumber snap it, but more often the defence clears it.",
+		"detail": "Into the pack. A forward might mark it or a crumber snap it. More often the defence clears it.",
 		"goal": bomb_goal, "behind": 0.30,
 		"show_goal": float(pack["goal"]), "show_behind": float(pack["behind"])})
 	# Each option's gain and cost with the odds it plays at (M7, director 2026-11-10).
@@ -6152,7 +6104,7 @@ func _set_shot_split(goal_p: float, behind_p: float) -> Dictionary:
 ## A shot's chance in a coach's words, never a percentage.
 static func chance_words(p: float) -> String:
 	if p >= 0.65:
-		return "He should kick it"
+		return "He kicks these most days"
 	if p >= 0.5:
 		return "Better than even"
 	if p >= 0.35:
@@ -6176,7 +6128,7 @@ static func kick_words(p: Dictionary) -> String:
 	var a: Dictionary = p.get("attr", {})
 	var k := 0.5 * float(a.get("goalkicking", 50)) + 0.5 * float(a.get("accuracy", 50))
 	if k >= 78:
-		return "one of your best kicks for goal"
+		return "one of our best kicks for goal"
 	if k >= 65:
 		return "a reliable kick"
 	if k >= 50:
@@ -6224,6 +6176,9 @@ func resolve_moment(choice: int) -> Dictionary:
 		"tired":
 			# Both answers hold to the break (the siren in the last quarter).
 			var star_id := str(m["player_id"])
+			var star_name := GameDB.player_display_name(_on_ground(side, star_id))
+			if star_name == "":
+				star_name = "The player"
 			m["disp_at"] = {star_id: float((player_stats.get(star_id, {}) as Dictionary).get("disposals", 0.0))}
 			if key == "rest":
 				var gi := -1
@@ -6243,21 +6198,21 @@ func resolve_moment(choice: int) -> Dictionary:
 					_held[star_id] = "rest"
 					m["on_id"] = on_id
 					m["disp_at"][on_id] = float((player_stats.get(on_id, {}) as Dictionary).get("disposals", 0.0))
-					outcome = "%s comes on; he sits out %s." % [GameDB.player_display_name(_on_ground(side, on_id)),
+					outcome = "%s comes on; %s sits out %s." % [GameDB.player_display_name(_on_ground(side, on_id)), star_name,
 							"the rest of the match" if current_quarter >= 4 else "the rest of the quarter"]
 				else:
 					outcome = "No one on the bench to bring on."
 			else:
 				_held[star_id] = "keep"
-				outcome = "He stays out there to the %s." % ("final siren" if current_quarter >= 4 else "break")
+				outcome = "%s stays out there to the %s." % [star_name, "final siren" if current_quarter >= 4 else "break"]
 		"hot":
 			if key == "tag":
 				var t: Dictionary = (tactics[side] as Dictionary).duplicate()
 				t["tag_id"] = str(m["player_id"])
 				tactics[side] = t
-				outcome = "Tag on. You can call it off at the break."
+				outcome = "Tag on. We can call it off at the break."
 			else:
-				outcome = "Structure unchanged."
+				outcome = "We leave the set-up as it is."
 		"momentum", "bounce":
 			if BURSTS.has(key):
 				_set_burst(side, key)

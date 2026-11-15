@@ -314,6 +314,15 @@ func _test_marquee_games() -> void:
 			"Hawthorn-Geelong carries Easter Monday")
 	_check(MarqueeGames.label("ADE", "GEE").is_empty(),
 			"An ordinary fixture is not labelled marquee")
+	# Bug bash 4 (L8): a tradition only from its first season, by that season's name.
+	_check(MarqueeGames.label("ESS", "COL", 1994).is_empty() and MarqueeGames.label("ESS", "COL", 1995) == "ANZAC Day"
+			and MarqueeGames.label("RIC", "MEL", 2015).is_empty() and MarqueeGames.label("HAW", "GEE", 2009).is_empty()
+			and MarqueeGames.label("ESS", "CAR", 2024).is_empty() and MarqueeGames.label("RIC", "ESS", 2004).is_empty(),
+			"No marquee game before its tradition began")
+	_check(str(MarqueeGames.tradition("MEL", "COL", 2010)["title"]) == "Queen's Birthday"
+			and str(MarqueeGames.tradition("MEL", "COL", 2023)["title"]) == "King's Birthday"
+			and MarqueeGames.label("MEL", "COL", 2000).is_empty(),
+			"Queen's Birthday from 2001, King's Birthday from 2023")
 
 func _test_news() -> void:
 	GameState.reset()

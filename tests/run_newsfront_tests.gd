@@ -53,7 +53,7 @@ func _round_one() -> Array:
 		_item("media", "Post-match: 'It clearly hurt us...'"),
 		_item("mro", "Kane Farrell (%s) was fined by the MRO for rough conduct." % d),
 		_item("injury", "Josh Battle (%s) is out for 8 weeks with a hand." % c),
-		_item("game", "Shannon Neale kicked 6 goals for %s against %s." % [a, b]),
+		_item("game", "Shannon Neale kicked 9 goals for %s against %s." % [a, b]),
 	]
 	for i in range(15):
 		items.append(_item("milestone", "Debutant%d Kicker kicked his first AFL goal for %s." % [i, [a, b, c, d][i % 4]]))
@@ -108,8 +108,8 @@ func _test_pure(me: String) -> void:
 		if int(texts.get(str(it["text"]), 0)) != 1:
 			each_once = false
 	_check(each_once, "No item is lost or repeated")
-	_check(str(page["lead"]["name"]) == "Shannon Neale" and str(page["lead"]["headline"]).contains("six"),
-			"A six-goal haul leads the round (%s)" % str(page["lead"]["headline"]))
+	_check(str(page["lead"]["name"]) == "Shannon Neale" and str(page["lead"]["headline"]).contains("nine against"),
+			"A nine-goal haul leads the round, against its opponent (%s)" % str(page["lead"]["headline"]))
 	_check(str(page["lead"]["club"]) == "GEE", "The lead story belongs to the club involved")
 	var firsts: Dictionary = {}
 	for b in page["briefs"]:
@@ -145,6 +145,28 @@ func _test_pure(me: String) -> void:
 	_check(_nf.build([], me)["count"] == 0, "An empty feed makes an empty page")
 	var press: Dictionary = _nf.story(_item("media", "Post-match: 'Our method stood up.' The board bought it: board +2."), me)
 	_check(str(press["headline"]) == "“Our method stood up.”", "A real press item's headline is the answer alone (%s)" % press["headline"])
+	# Bug bash 4: an answer that says "him" is quoted with the player it is about.
+	var on: Dictionary = _nf.story(_item("media", "Post-match, on Isaiah Dudley: 'Credit to him and the whole group.' The players lifted."), me)
+	_check(str(on["headline"]) == "“Credit to him and the whole group.”" and str(on["standfirst"]).contains("Isaiah Dudley"),
+			"A press quote about one player names him under the quote (%s / %s)" % [on["headline"], on["standfirst"]])
+	# Bug bash 4: a goal haul led the page in half of all weeks, the same
+	# headline two weeks running. A six sits under the club's own news; a haul
+	# never follows a haul as the lead while another story can lead.
+	var gee: String = _db.club_name("GEE")
+	var syd: String = _db.club_name("SYD")
+	var six := _item("game", "Six Goals kicked 6 goals for %s against %s." % [gee, syd], "Round 2")
+	var close_one := _item("media", "Post-match: 'We held on.'", "Round 2")
+	_check(str(_nf.build([six, close_one], me)["lead"]["kind"]) == "media", "A six-goal haul no longer outranks the club's own story")
+	var wk1 := [_item("game", "Big Haul kicked 9 goals for %s against %s." % [gee, syd], "Round 1"),
+			_item("injury", "Hurt Man (%s) is out for 3 weeks with a hand." % syd, "Round 1")]
+	var wk2 := [_item("game", "Other Haul kicked 9 goals for %s against %s." % [syd, gee], "Round 2"),
+			_item("injury", "Sore Man (%s) is out for 4 weeks with a knee." % gee, "Round 2")]
+	var lead2: Dictionary = _nf.front(wk2 + wk1, me)["lead"]
+	var lead1: Dictionary = _nf.front(wk1, me)["lead"]
+	_check(str(lead1["headline"]) == "Big Haul bags nine against %s" % syd and str(lead2["name"]) == "Sore Man",
+			"A haul doesn't lead the week after a haul led (%s, then %s)" % [lead1["headline"], lead2["headline"]])
+	var only_hauls: Dictionary = _nf.front([wk2[0]] + wk1, me)["lead"]
+	_check(str(only_hauls["name"]) == "Other Haul", "With nothing else big enough, the haul still leads (%s)" % only_hauls["headline"])
 
 
 func _test_page() -> void:
@@ -269,7 +291,7 @@ func _test_hub(size: Vector2i, wide: bool) -> void:
 	var texts: Array = []
 	_texts(card, texts)
 	var blob := "\n".join(texts)
-	_check(blob.contains("Shannon Neale") and blob.contains("bags six"), "%s: the card leads with the round's big story" % tag)
+	_check(blob.contains("Shannon Neale") and blob.contains("bags nine"), "%s: the card leads with the round's big story" % tag)
 	var more: Button = hub.find_child("NewsMore", true, false)
 	var why: String = await Tap.tap(more) if more != null else "missing"
 	await _settle(8)

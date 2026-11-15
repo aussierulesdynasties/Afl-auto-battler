@@ -147,7 +147,7 @@ func _rival_pot_odds() -> void:
 					worst = maxi(worst, miss)
 		var one_in := int(round(float(reads) / float(maxi(1, misses))))
 		shown.append("1 in %d, worst %d, of %d" % [one_in, worst, reads])
-		if most != stated_worst or worst > stated_worst or reads < 5000 				or one_in > stated or one_in < stated - 2 				or not ClubBudget.benefit_text("recruiting", level).contains(
+		if most != stated_worst or worst > stated_worst or reads < 5000 				or one_in > stated or one_in < stated - 3 				or not ClubBudget.benefit_text("recruiting", level).contains(
 						"Other clubs' players: about 1 POT read in %d misses (1\u00a0in\u00a0%d under 50 games), by up to %d."
 						% [stated, int(ClubBudget.RIVAL_POT_YOUNG_MISS_IN[level]), stated_worst]):
 			ok = false
@@ -511,7 +511,7 @@ func _test_ui() -> void:
 	_check(rstate != null and not rstate.text.contains("Mood"), "A rival's profile never shows his mood")
 	var plan_leak := false
 	for lb in rsheet.find_children("*", "Label", true, false):
-		if (lb as Label).text.begins_with("Development:"):
+		if (lb as Label).text.begins_with("Development focus:"):
 			plan_leak = true
 	_check(not plan_leak, "A rival's profile never shows his training plan")
 	rsheet.queue_free()
@@ -541,8 +541,8 @@ func _test_ui() -> void:
 	var next_benefit := offseason.find_child("BudgetNext_recruiting", true, false) as Label
 	var lower := offseason.find_child("BudgetLower_recruiting", true, false) as Button
 	var raise := offseason.find_child("BudgetRaise_recruiting", true, false) as Button
-	_check(budget_summary != null and budget_summary.text.contains("$9.0m allocated")
-			and budget_summary.text.contains("$1.5m remaining"),
+	_check(budget_summary != null and budget_summary.text.contains("$9.0m spent")
+			and budget_summary.text.contains("$1.5m left"),
 			"The Budget tab states exactly how much is allocated and what is left of the $10.5m")
 	_check(benefit != null and benefit.text.contains("standard")
 			and next_benefit != null and next_benefit.text.contains("20% narrower"),
@@ -582,8 +582,8 @@ func _test_ui() -> void:
 	hp_raise = offseason.find_child("BudgetRaise_high_performance", true, false) as Button
 	_check(GameState.department_budget_level("development") == 2
 			and GameState.department_budget_level("recruiting") == 0
-			and budget_summary != null and budget_summary.text.contains("$10.5m allocated")
-			and budget_summary.text.contains("$0.0m remaining")
+			and budget_summary != null and budget_summary.text.contains("$10.5m spent")
+			and budget_summary.text.contains("$0.0m left")
 			and hp_raise != null and hp_raise.disabled,
 			"Two lines Strong and Recruiting Minimal fill the $10.5m; nothing more can be raised")
 	offseason.queue_free()

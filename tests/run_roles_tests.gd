@@ -173,7 +173,7 @@ func _test_selection_tests() -> void:
 	for t in load("res://scripts/ui/StatGuide.gd").TOPICS:
 		if str(t[0]) == "Traits and synergies":
 			guide_copy = str(t[1])
-	_check(guide_copy.contains("a single player short") and guide_copy.contains(Traits.short_text(lock.call(2)).trim_suffix(".")),
+	_check(guide_copy.contains("when one is a player short") and guide_copy.contains(Traits.short_text(lock.call(2)).trim_suffix(".")),
 			"The Stat Guide says what Selection shows, in the same words")
 	if rules_btn != null:
 		rules_btn.emit_signal("pressed")
@@ -1257,7 +1257,12 @@ func _test_week_ink_tests() -> void:
 	var sel_ui := await _open()
 	for c in sel_ui.find_children("Spot_*", "Button", true, false):
 		for l in c.find_children("*", "Label", true, false):
-			if str(l.text).count("/") >= 2:
+			# The position tag only: "RUCK/MID 89/94" ends in his OVR/POT, not a third position.
+			var tag := str(l.text)
+			var last := tag.get_slice(" ", tag.get_slice_count(" ") - 1)
+			if last.replace("/", "").is_valid_int():
+				tag = tag.trim_suffix(last)
+			if tag.count("/") >= 2:
 				long_tag = true
 	_check(not long_tag, "No oval tile lists three positions")
 	sel_ui.queue_free()

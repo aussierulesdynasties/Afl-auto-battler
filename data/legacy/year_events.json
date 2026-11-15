@@ -32,7 +32,7 @@
    "choices": [
     {
      "key": "back",
-     "label": "Back the players",
+     "label": "Stand with the unpaid players",
      "effects": [
       {
        "op": "morale",
@@ -112,7 +112,7 @@
    "choices": [
     {
      "key": "front",
-     "label": "Front the fundraisers",
+     "label": "Put the players on the tins",
      "effects": [
       {
        "op": "board",
@@ -122,7 +122,7 @@
        "op": "culture",
        "strand": "together",
        "d": 1,
-       "why": "The players stood with the members"
+       "why": "The players rattled the tins with the members"
       },
       {
        "op": "forgo_xp",
@@ -134,7 +134,7 @@
     },
     {
      "key": "train",
-     "label": "Keep the players training",
+     "label": "Keep the players on the track",
      "effects": [
       {
        "op": "board",
@@ -198,7 +198,7 @@
    "choices": [
     {
      "key": "farewell",
-     "label": "Send the players to the farewell",
+     "label": "Send the players to the Windy Hill farewell",
      "effects": [
       {
        "op": "board",
@@ -208,7 +208,7 @@
        "op": "culture",
        "strand": "together",
        "d": 1,
-       "why": "The players farewelled the old ground with the members"
+       "why": "The players said goodbye to Windy Hill with the members"
       },
       {
        "op": "forgo_xp",
@@ -216,11 +216,11 @@
        "who": "side"
       }
      ],
-     "result": "The players stay late with the members at the old ground."
+     "result": "The players stay late with the members at Windy Hill."
     },
     {
      "key": "recover",
-     "label": "Keep them in recovery",
+     "label": "Put recovery before the Windy Hill farewell",
      "effects": [
       {
        "op": "board",
@@ -232,7 +232,7 @@
        "who": "side"
       }
      ],
-     "result": "The players do their recovery and go home."
+     "result": "The players do their recovery and miss the Windy Hill send-off."
     }
    ]
   }
@@ -404,7 +404,7 @@
    "choices": [
     {
      "key": "speak",
-     "label": "Condemn it, plainly",
+     "label": "Condemn the abuse, plainly",
      "effects": [
       {
        "op": "morale",
@@ -415,18 +415,18 @@
        "op": "culture",
        "strand": "standards",
        "d": 2,
-       "why": "You called out racist abuse in public"
+       "why": "You called out the Victoria Park abuse in public"
       },
       {
        "op": "board",
        "d": -2
       }
      ],
-     "result": "You say there is no place for it in the game, and you say it plainly."
+     "result": "You say the abuse at Victoria Park was racist and the game has to stamp it out."
     },
     {
      "key": "quiet",
-     "label": "Say it is a matter for the league",
+     "label": "Say the crowd is the league's problem",
      "effects": [
       {
        "op": "board",
@@ -438,7 +438,7 @@
        "who": "all"
       }
      ],
-     "result": "You say it is the league's business, not the club's."
+     "result": "You say crowd behaviour is the league's business, not the club's."
     }
    ]
   }
@@ -557,7 +557,7 @@
    "choices": [
     {
      "key": "back",
-     "label": "Back the merger",
+     "label": "Back the Melbourne Lions",
      "effects": [
       {
        "op": "board",
@@ -735,24 +735,24 @@
    "choices": [
     {
      "key": "own",
-     "label": "Front the press and own it",
+     "label": "Admit the club cheated the cap",
      "effects": [
       {
        "op": "culture",
        "strand": "standards",
        "d": 2,
-       "why": "You owned the breach in public"
+       "why": "You admitted the Bombers' cap breach"
       },
       {
        "op": "board",
        "d": -4
       }
      ],
-     "result": "You front the cameras and say the club got it wrong."
+     "result": "You tell the press the club paid players outside the cap and has to wear the penalty."
     },
     {
      "key": "close",
-     "label": "Back the club's line",
+     "label": "Say losing the picks is too harsh",
      "effects": [
       {
        "op": "board",
@@ -762,10 +762,10 @@
        "op": "culture",
        "strand": "standards",
        "d": -1,
-       "why": "You defended a breach"
+       "why": "You argued with the league's penalty, not the breach"
       }
      ],
-     "result": "You stand beside the board and say the club will fight it."
+     "result": "You say losing the first two picks punishes young players who did nothing wrong."
     }
    ]
   }
@@ -804,7 +804,7 @@
    "choices": [
     {
      "key": "for",
-     "label": "Back the merger",
+     "label": "Back the Melbourne Hawks",
      "effects": [
       {
        "op": "board",
@@ -859,7 +859,17 @@
   "beats": [
    "Port Adelaide play their first AFL season, and the merged Brisbane Lions begin.",
    "Port are barred from their prison-bars jumper after Collingwood objected."
-  ]
+  ],
+  "fitzroy_stays": {
+   "clubs": [
+    "PAD"
+   ],
+   "headline": "Port Adelaide enter the AFL",
+   "beats": [
+    "Port Adelaide play their first AFL season.",
+    "Port are barred from their prison-bars jumper after Collingwood objected."
+   ]
+  }
  },
  {
   "id": "western_oval_farewell",
@@ -952,24 +962,24 @@
    "choices": [
     {
      "key": "own",
-     "label": "Front the press and own it",
+     "label": "Call it the club's mistake",
      "effects": [
       {
        "op": "culture",
        "strand": "standards",
        "d": 2,
-       "why": "You owned the breach in public"
+       "why": "You took the blame for the club's sums"
       },
       {
        "op": "board",
        "d": -4
       }
      ],
-     "result": "You front the cameras and say the club got it wrong."
+     "result": "You say the club got its sums wrong and will pay the fine."
     },
     {
      "key": "close",
-     "label": "Back the club's line",
+     "label": "Say six clubs were caught",
      "effects": [
       {
        "op": "board",
@@ -979,10 +989,10 @@
        "op": "culture",
        "strand": "standards",
        "d": -1,
-       "why": "You defended a breach"
+       "why": "You shrugged off going over the cap"
       }
      ],
-     "result": "You stand beside the board and say the club will fight it."
+     "result": "You point out that six clubs were over and call it a matter for the accountants."
     }
    ]
   }
@@ -1100,24 +1110,24 @@
    "choices": [
     {
      "key": "own",
-     "label": "Front the press and own it",
+     "label": "Say the club deserves the penalty",
      "effects": [
       {
        "op": "culture",
        "strand": "standards",
        "d": 2,
-       "why": "You owned the breach in public"
+       "why": "You said the club earned its penalty"
       },
       {
        "op": "board",
        "d": -4
       }
      ],
-     "result": "You front the cameras and say the club got it wrong."
+     "result": "You say the club broke the cap for four seasons and should lose the pick."
     },
     {
      "key": "close",
-     "label": "Back the club's line",
+     "label": "Ask for credit for owning up",
      "effects": [
       {
        "op": "board",
@@ -1127,10 +1137,10 @@
        "op": "culture",
        "strand": "standards",
        "d": -1,
-       "why": "You defended a breach"
+       "why": "You asked for credit for a breach"
       }
      ],
-     "result": "You stand beside the board and say the club will fight it."
+     "result": "You say the club came forward on its own and the league should remember that."
     }
    ]
   }
@@ -1160,13 +1170,13 @@
     "The last game at Victoria Park"
    ],
    "text": [
-    "The last game at the old ground is close. The members want the players at the farewell; the fitness staff want them in recovery."
+    "The last game at Victoria Park is close. The members want the players at the farewell; the fitness staff want them in recovery."
    ],
    "default": 1,
    "choices": [
     {
      "key": "farewell",
-     "label": "Send the players to the farewell",
+     "label": "Send the players to the Victoria Park farewell",
      "effects": [
       {
        "op": "board",
@@ -1176,7 +1186,7 @@
        "op": "culture",
        "strand": "together",
        "d": 1,
-       "why": "The players farewelled the old ground with the members"
+       "why": "The players farewelled Victoria Park with the members"
       },
       {
        "op": "forgo_xp",
@@ -1184,11 +1194,11 @@
        "who": "side"
       }
      ],
-     "result": "The players stay late with the members at the old ground."
+     "result": "The players stay late with the members at Victoria Park."
     },
     {
      "key": "recover",
-     "label": "Keep them in recovery",
+     "label": "Put recovery before Victoria Park's farewell",
      "effects": [
       {
        "op": "board",
@@ -1200,7 +1210,7 @@
        "who": "side"
       }
      ],
-     "result": "The players do their recovery and go home."
+     "result": "The players do their recovery and miss the last night at Victoria Park."
     }
    ]
   }
@@ -1251,7 +1261,7 @@
    "choices": [
     {
      "key": "back",
-     "label": "Back the deal",
+     "label": "Back the Sydney games",
      "effects": [
       {
        "op": "board",
@@ -1261,10 +1271,10 @@
        "op": "culture",
        "strand": "together",
        "d": -1,
-       "why": "You backed the board over the members"
+       "why": "You backed the Sydney games over the members"
       }
      ],
-     "result": "You say the club needs the money."
+     "result": "You say the Sydney games keep the club alive."
     },
     {
      "key": "members",
@@ -1317,7 +1327,7 @@
    "choices": [
     {
      "key": "back",
-     "label": "Back the deal",
+     "label": "Back the Launceston deal",
      "effects": [
       {
        "op": "board",
@@ -1327,14 +1337,14 @@
        "op": "culture",
        "strand": "together",
        "d": -1,
-       "why": "You backed the board over the members"
+       "why": "You put the Tasmanian money ahead of the members"
       }
      ],
-     "result": "You say the deal secures the club."
+     "result": "You say the Tasmanian money secures the club's future."
     },
     {
      "key": "doubt",
-     "label": "Say the travel will cost the side",
+     "label": "Say the flights to Launceston will cost the side",
      "effects": [
       {
        "op": "board",
@@ -1344,10 +1354,10 @@
        "op": "culture",
        "strand": "together",
        "d": 1,
-       "why": "You put the players' legs first"
+       "why": "You put the players' legs ahead of the Tasmanian deal"
       }
      ],
-     "result": "You say the travel will cost the players."
+     "result": "You say flying to Launceston for home games will wear the players down."
     }
    ]
   }
@@ -1429,24 +1439,24 @@
    "choices": [
     {
      "key": "own",
-     "label": "Front the press and own it",
+     "label": "Call the cash payments cheating",
      "effects": [
       {
        "op": "culture",
        "strand": "standards",
        "d": 2,
-       "why": "You owned the breach in public"
+       "why": "You called the club's cash payments what they were"
       },
       {
        "op": "board",
        "d": -4
       }
      ],
-     "result": "You front the cameras and say the club got it wrong."
+     "result": "You say the cash payments were cheating and the club has to cop the record fine."
     },
     {
      "key": "close",
-     "label": "Back the club's line",
+     "label": "Say the penalty will cripple the club",
      "effects": [
       {
        "op": "board",
@@ -1456,10 +1466,10 @@
        "op": "culture",
        "strand": "standards",
        "d": -1,
-       "why": "You defended a breach"
+       "why": "You fought the penalty instead of facing the breach"
       }
      ],
-     "result": "You stand beside the board and say the club will fight it."
+     "result": "You say four lost early picks will set the club back years, and back the board to fight it."
     }
    ]
   }
@@ -1502,24 +1512,24 @@
    "choices": [
     {
      "key": "own",
-     "label": "Front the press and own it",
+     "label": "Say a breach is a breach",
      "effects": [
       {
        "op": "culture",
        "strand": "standards",
        "d": 2,
-       "why": "You owned the breach in public"
+       "why": "You held the club to the cap, however small the breach"
       },
       {
        "op": "board",
        "d": -4
       }
      ],
-     "result": "You front the cameras and say the club got it wrong."
+     "result": "You say the amount does not matter: the club broke the cap and pays the fine."
     },
     {
      "key": "close",
-     "label": "Back the club's line",
+     "label": "Call it an honest slip",
      "effects": [
       {
        "op": "board",
@@ -1529,10 +1539,10 @@
        "op": "culture",
        "strand": "standards",
        "d": -1,
-       "why": "You defended a breach"
+       "why": "You played down going over the cap"
       }
      ],
-     "result": "You stand beside the board and say the club will fight it."
+     "result": "You say going $106,000 over is an honest slip, not cheating."
     }
    ]
   }
@@ -1568,7 +1578,7 @@
    "choices": [
     {
      "key": "back",
-     "label": "Back the deal",
+     "label": "Back the Darwin game",
      "effects": [
       {
        "op": "board",
@@ -1578,10 +1588,10 @@
        "op": "culture",
        "strand": "together",
        "d": -1,
-       "why": "You backed the board over the members"
+       "why": "You sold a home game over the members' heads"
       }
      ],
-     "result": "You say the club needs the money."
+     "result": "You say a game in Darwin brings in money the club badly needs."
     },
     {
      "key": "doubt",
@@ -1595,10 +1605,10 @@
        "op": "culture",
        "strand": "together",
        "d": 1,
-       "why": "You put the players' legs first"
+       "why": "You put the players ahead of the Darwin money"
       }
      ],
-     "result": "You say the trip will cost the players."
+     "result": "You say the Top End heat will sap the players."
     }
    ]
   }
@@ -1642,13 +1652,13 @@
     "The last game at Princes Park"
    ],
    "text": [
-    "The last game at the old ground is close. The members want the players at the farewell; the fitness staff want them in recovery."
+    "The last game at Princes Park is close. The members want the players at the farewell; the fitness staff want them in recovery."
    ],
    "default": 1,
    "choices": [
     {
      "key": "farewell",
-     "label": "Send the players to the farewell",
+     "label": "Send the players to the Princes Park farewell",
      "effects": [
       {
        "op": "board",
@@ -1658,7 +1668,7 @@
        "op": "culture",
        "strand": "together",
        "d": 1,
-       "why": "The players farewelled the old ground with the members"
+       "why": "The players saw Princes Park off with the members"
       },
       {
        "op": "forgo_xp",
@@ -1666,11 +1676,11 @@
        "who": "side"
       }
      ],
-     "result": "The players stay late with the members at the old ground."
+     "result": "The players stay late with the members at Princes Park."
     },
     {
      "key": "recover",
-     "label": "Keep them in recovery",
+     "label": "Put recovery before the Princes Park farewell",
      "effects": [
       {
        "op": "board",
@@ -1682,7 +1692,7 @@
        "who": "side"
       }
      ],
-     "result": "The players do their recovery and go home."
+     "result": "The players do their recovery and miss the Princes Park send-off."
     }
    ]
   }
@@ -1869,7 +1879,7 @@
    "choices": [
     {
      "key": "front",
-     "label": "Front the fundraisers",
+     "label": "Work the fundraising nights",
      "effects": [
       {
        "op": "board",
@@ -1879,7 +1889,7 @@
        "op": "culture",
        "strand": "together",
        "d": 1,
-       "why": "The players stood with the members"
+       "why": "The players helped fight the club's debt"
       },
       {
        "op": "forgo_xp",
@@ -1903,7 +1913,7 @@
        "who": "side"
       }
      ],
-     "result": "You keep the players on the track."
+     "result": "You keep the pre-season about football; the president runs the nights without the players."
     }
    ]
   }
@@ -2121,24 +2131,24 @@
    "choices": [
     {
      "key": "own",
-     "label": "Front the press and own it",
+     "label": "Say the side deal broke the rules",
      "effects": [
       {
        "op": "culture",
        "strand": "standards",
        "d": 2,
-       "why": "You owned the breach in public"
+       "why": "You condemned the secret deal"
       },
       {
        "op": "board",
        "d": -4
       }
      ],
-     "result": "You front the cameras and say the club got it wrong."
+     "result": "You say the secret deal should never have been signed and the club accepts its penalty."
     },
     {
      "key": "close",
-     "label": "Back the club's line",
+     "label": "Say the club was keeping a good player",
      "effects": [
       {
        "op": "board",
@@ -2148,10 +2158,10 @@
        "op": "culture",
        "strand": "standards",
        "d": -1,
-       "why": "You defended a breach"
+       "why": "You defended a secret contract"
       }
      ],
-     "result": "You stand beside the board and say the club will fight it."
+     "result": "You say the club wanted to keep a good player and went about it the wrong way, and the penalty is too heavy."
     }
    ]
   }
@@ -2203,7 +2213,7 @@
    "choices": [
     {
      "key": "back",
-     "label": "Back the deal",
+     "label": "Back the Hobart deal",
      "effects": [
       {
        "op": "board",
@@ -2213,14 +2223,14 @@
        "op": "culture",
        "strand": "together",
        "d": -1,
-       "why": "You backed the board over the members"
+       "why": "You backed Hobart over the Melbourne members"
       }
      ],
-     "result": "You say the club needs the money."
+     "result": "You say the Hobart games give the club a second home and a steady income."
     },
     {
      "key": "doubt",
-     "label": "Say the travel will cost the side",
+     "label": "Say Bellerive will cost the side",
      "effects": [
       {
        "op": "board",
@@ -2230,10 +2240,10 @@
        "op": "culture",
        "strand": "together",
        "d": 1,
-       "why": "You put the players' legs first"
+       "why": "You put the players before the Hobart money"
       }
      ],
-     "result": "You say the travel will cost the players."
+     "result": "You say crossing Bass Strait for home games will cost the side wins."
     }
    ]
   }
@@ -2271,30 +2281,30 @@
     "The tanking inquiry"
    ],
    "text": [
-    "The league has fined the club over the 2009 season. The press want the coach's word."
+    "The inquiry has cleared the club of tanking in 2009 but fined it $500,000 over what its officials said and did. The press want the coach's word."
    ],
    "default": 1,
    "choices": [
     {
      "key": "own",
-     "label": "Front the press and own it",
+     "label": "Say the officials let the club down",
      "effects": [
       {
        "op": "culture",
        "strand": "standards",
        "d": 2,
-       "why": "You owned the breach in public"
+       "why": "You held the club's officials to account"
       },
       {
        "op": "board",
        "d": -4
       }
      ],
-     "result": "You front the cameras and say the club got it wrong."
+     "result": "You say the club was cleared of tanking, but what its officials said and did cost it $500,000, and that has to change."
     },
     {
      "key": "close",
-     "label": "Back the club's line",
+     "label": "Stress that the club was cleared",
      "effects": [
       {
        "op": "board",
@@ -2304,10 +2314,10 @@
        "op": "culture",
        "strand": "standards",
        "d": -1,
-       "why": "You defended a breach"
+       "why": "You brushed off the officials' conduct"
       }
      ],
-     "result": "You stand beside the board and say the club will fight it."
+     "result": "You say the inquiry found no tanking and the club can put 2009 behind it."
     }
    ]
   }
@@ -2451,7 +2461,7 @@
    "choices": [
     {
      "key": "speak",
-     "label": "Condemn it, plainly",
+     "label": "Call out the abuse by name",
      "effects": [
       {
        "op": "morale",
@@ -2462,18 +2472,18 @@
        "op": "culture",
        "strand": "standards",
        "d": 2,
-       "why": "You called out racist abuse in public"
+       "why": "You called out the abuse at the MCG"
       },
       {
        "op": "board",
        "d": -2
       }
      ],
-     "result": "You say there is no place for it in the game, and you say it plainly."
+     "result": "You say racist abuse from the stands has no place at the MCG or anywhere, and every player who cops it has the club behind them."
     },
     {
      "key": "quiet",
-     "label": "Say it is a matter for the league",
+     "label": "Say the clubs have dealt with it",
      "effects": [
       {
        "op": "board",
@@ -2485,7 +2495,7 @@
        "who": "all"
       }
      ],
-     "result": "You say it is the league's business, not the club's."
+     "result": "You say the clubs and the league have dealt with it and it is time to move on."
     }
    ]
   }
@@ -2545,24 +2555,24 @@
    "choices": [
     {
      "key": "own",
-     "label": "Front the press and own it",
+     "label": "Accept the ban and build from within",
      "effects": [
       {
        "op": "culture",
        "strand": "standards",
        "d": 2,
-       "why": "You owned the breach in public"
+       "why": "You accepted the league's ruling"
       },
       {
        "op": "board",
        "d": -4
       }
      ],
-     "result": "You front the cameras and say the club got it wrong."
+     "result": "You say the club will live with the ruling and bring its young players through."
     },
     {
      "key": "close",
-     "label": "Back the club's line",
+     "label": "Back the board's fight against the ban",
      "effects": [
       {
        "op": "board",
@@ -2572,10 +2582,10 @@
        "op": "culture",
        "strand": "standards",
        "d": -1,
-       "why": "You defended a breach"
+       "why": "You took on the league over its ruling"
       }
      ],
-     "result": "You stand beside the board and say the club will fight it."
+     "result": "You back the board's push to have the ban lifted and say the club broke no rule."
     }
    ]
   }
@@ -2893,7 +2903,7 @@
    "choices": [
     {
      "key": "back",
-     "label": "Back the deal",
+     "label": "Back the Shanghai game",
      "effects": [
       {
        "op": "board",
@@ -2903,14 +2913,14 @@
        "op": "culture",
        "strand": "together",
        "d": -1,
-       "why": "You backed the board over the members"
+       "why": "You gave a home game away to Shanghai"
       }
      ],
-     "result": "You say the club needs the money."
+     "result": "You say the China game opens the club to new money and new fans."
     },
     {
      "key": "doubt",
-     "label": "Say the travel will cost the side",
+     "label": "Say the trip to China will cost the side",
      "effects": [
       {
        "op": "board",
@@ -2920,10 +2930,10 @@
        "op": "culture",
        "strand": "together",
        "d": 1,
-       "why": "You put the players' legs first"
+       "why": "You put the players ahead of the China trip"
       }
      ],
-     "result": "You say the trip will cost the players."
+     "result": "You say a mid-season trip to Shanghai will cost the players a week."
     }
    ]
   }
