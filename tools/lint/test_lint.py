@@ -91,6 +91,15 @@ class CopyVoice(Repo):
         self.write("scripts/ui/Screen.gd", 'var a = "Tap the part to colour it"\n# "click here" in a comment\nvar b = "Click the part to colour it"\n')
         self.assertEqual(self.at(copy_voice.check_no_click(self.root, ["scripts/ui"])), ["scripts/ui/Screen.gd:3"])
 
+    def test_marks_fail_exactly(self):
+        self.write("scripts/ui/Meter.gd", 'var a = "Opinion of you %d/100"\nvar b = "What a goal from %s!"\nvar c = "Opinion of you: %d out of 100"\n')
+        got = copy_voice.check_marks(self.root, allow={}, sources=["scripts/ui"])
+        self.assertEqual(self.at(got), ["scripts/ui/Meter.gd:1", "scripts/ui/Meter.gd:2"])
+        self.assertEqual(copy_voice.check_marks(self.root, allow={"scripts/ui/Meter.gd": [2, "", ""]}, sources=["scripts/ui"]), [])
+        self.assertEqual([f.path for f in copy_voice.check_marks(self.root, allow={"scripts/ui/Gone.gd": [1, "", ""]},
+                                                                 sources=["scripts/ui"]) if f.line == 0],
+                         ["scripts/ui/Meter.gd", "scripts/ui/Gone.gd"])
+
     def test_hub_pins(self):
         self.write("scripts/ui/HubScene.gd", 'var a = "Our week"\nvar b = "Begin season"\n')
         found = copy_voice.check_passes(self.root, [(copy_voice.HUB, "copy voice pass 2, hub", ["Our week", "Start the season"], ["Begin season"])])
