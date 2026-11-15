@@ -131,6 +131,13 @@ func _test_hiring() -> void:
 	sacked["last_sacked"] = Y
 	_check(not CoachMarket.would_take(sacked, "CAR", "SC", Y) and CoachMarket.would_take(sacked, "COL", "SC", Y),
 			"A sacked coach does not go straight back to that club, but is hireable elsewhere")
+	# Bug bash 4 (L5): a coach a club did not renew is not hired straight back.
+	var let_go := _coach("K2", "club", "GEE", "SA")
+	CoachMarket._not_renewed(let_go, "GEE", Y)
+	CoachMarket._leave_job(let_go, Y)
+	_check(not CoachMarket.would_take(let_go, "GEE", "SA", Y) and CoachMarket.would_take(let_go, "COL", "SA", Y)
+			and CoachMarket.would_take(let_go, "GEE", "SA", Y + CoachMarket.SACKED_CLUB_COOLDOWN),
+			"A coach not renewed does not go straight back to that club, but is hireable elsewhere and later")
 
 
 func _league(my := "") -> Dictionary:

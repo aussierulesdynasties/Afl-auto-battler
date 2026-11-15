@@ -203,4 +203,4 @@ static func signing_line() -> String:
 
 ## The one line where a coach drafts a man.
 static func draft_line() -> String:
-	return "A draftee: 1%% off his footy in Round 1, up 5%% a game. Draftees don't count towards the %d men from other clubs that hurt team chemistry." % TEAM_ARRIVALS
+	return "A draftee: 1%% off his footy in Round 1, up 5%% a game. Draftees don't count towards the %d players from other clubs that hurt team chemistry." % TEAM_ARRIVALS

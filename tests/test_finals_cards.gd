@@ -430,7 +430,7 @@ func _test_text_cases() -> void:
 		var c := base.duplicate()
 		c.merge(over, true)
 		return str(_built("gf_the_opponent", c)["text"])
-	_check(one.call({"gf_run": 3, "gf_run_word": "third", "gf_again": "won", "rival": true}) == "Essendon again, for the third year running. Nobody knows you better.",
+	_check(one.call({"gf_run": 3, "gf_run_word": "third", "gf_again": "won", "rival": true}) == "Essendon again, for the third year running. Nobody knows us better.",
 			"Three running with them beats every other line")
 	_check(one.call({"gf_run": 2, "gf_again": "won", "rival": true}).contains("twelve months to think about last year's Grand Final"), "A rematch of one you won")
 	_check(one.call({"gf_run": 2, "gf_again": "lost", "rival": true}).contains("a second go at them"), "A rematch of one you lost")
@@ -438,7 +438,7 @@ func _test_text_cases() -> void:
 	_check(one.call({}).contains("counts for nothing now"), "Anyone else")
 	# The farewell reads what the coach did on the earlier card.
 	var cap := {"kind": "player", "id": "c", "name": "Sam Test", "first": "Sam", "told_players": true}
-	_check(str(_built("gf_last_game", base, cap)["text"]).contains("everyone knows it"), "Told the players: the card says everyone knows")
+	_check(str(_built("gf_last_game", base, cap)["text"]).contains("Everyone knows it"), "Told the players: the card says everyone knows")
 	cap["told_players"] = false
 	_check(str(_built("gf_last_game", base, cap)["text"]).contains("Only you and Sam Test know"), "Not told: only the two of them know")
 	# The week off: the wildcard week's words, then the semi's with its third choice.

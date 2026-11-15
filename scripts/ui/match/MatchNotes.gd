@@ -104,6 +104,10 @@ static func feed_line(ev: Dictionary, home: String, away: String) -> Dictionary:
 			var res := _result_words(home, away, score)
 			return {"text": ("Full time after extra time: " if extra else "Full time: ") + res, "tier": "break"}
 		"quarter":
+			# The last quarter's siren: the "final" line says full time with the
+			# result, so it is not called twice (bug bash 4).
+			if str(ev.get("text", "")).begins_with("End of quarter") and int(ev.get("q", 1)) == 4:
+				return {}
 			return {"text": _break_words(ev, home, away), "tier": "break"}
 	return {}
 
@@ -276,12 +280,8 @@ static func call_lines(timeline: Array, event_index: int, ev: Dictionary, state:
 	var at_break := []  # plans dropped at the break just gone
 	state["break_lines"] = 0
 	var clubs := [GameDB.club_name(home), GameDB.club_name(away)]
-	# Your own plan goes by its name; a rival's by what it is.
-	var codes := [home, away]
-	var named := func(side: int, plan: String) -> String:
-		var mine := str(codes[side]) == GameState.my_club
-		var l := CoachReport.plan_label(plan, mine)
-		return l if mine or MatchSim.plan_key(plan) != CustomPlan.KEY else l.to_lower()
+	var named := func(_side: int, plan: String) -> String:
+		return CoachReport.plan_label(plan)
 	var kind := str(ev.get("kind", ""))
 	var q := int(ev.get("q", 1))
 	var bursts: Array = state["bursts"]
@@ -377,14 +377,14 @@ static func quarter_facts(res: Dictionary, my_side: int, q: int, answers := {}) 
 	if clr_t - clr_m >= CLEARANCE_EDGE:
 		out.append("Their midfield is on top at the stoppages: clearances %d to %d." % [clr_t, clr_m])
 	elif clr_m - clr_t >= CLEARANCE_EDGE:
-		out.append("Your midfield is winning the stoppages: clearances %d to %d." % [clr_m, clr_t])
+		out.append("Our midfield is winning the stoppages: clearances %d to %d." % [clr_m, clr_t])
 
 	var i50_m := int(mine.get("inside50", 0.0))
 	var i50_t := int(theirs.get("inside50", 0.0))
 	if i50_t - i50_m >= INSIDE50_EDGE:
 		out.append("They have had most of the ball going forward: %d inside 50s to %d." % [i50_t, i50_m])
 	elif i50_m - i50_t >= INSIDE50_EDGE:
-		out.append("You have had most of the ball going forward: %d inside 50s to %d." % [i50_m, i50_t])
+		out.append("We have had most of the ball going forward: %d inside 50s to %d." % [i50_m, i50_t])
 
 	var spare := _roamer_quarter_fact(res, now, was, opp)
 	if spare != "":
@@ -1036,7 +1036,8 @@ static func card_detail(p: Dictionary, trait_name: String, ratings: PackedString
 ## running on empty), what going to the tag gives up of his own game and what
 ## their man's touches with him on (GateOdds), with his Player rating for the
 ## season so far beside the cost (`rating` is -1 before he has played).
-static func tagger_card(p: Dictionary, legs: float, rating := -1.0) -> Dictionary:
+## `target` is their man, whose own touches the hold is sized on (row 178).
+static func tagger_card(p: Dictionary, legs: float, rating := -1.0, target: Dictionary = {}) -> Dictionary:
 	var places := PackedStringArray()
 	for r in Ratings.positions(p):
 		places.append(str(UiKit.ROLE_LABEL.get(str(r), str(r))))
@@ -1047,7 +1048,7 @@ static func tagger_card(p: Dictionary, legs: float, rating := -1.0) -> Dictionar
 	var lw := legs_word(legs)
 	# What the job costs him and what it holds their man to, sized from the
 	# sim's constants (GateOdds; bible §4). The cost is the same whoever goes;
-	# the hold is his Pressure and his legs, in their man's touches
+	# the hold is his Pressure and his legs, in their man's own touches
 	# (Roles.tag_touches).
 	# His season Player rating stays beside it (director, 2026-10-13).
 	var season := " (yet to play this season)"
@@ -1056,13 +1057,13 @@ static func tagger_card(p: Dictionary, legs: float, rating := -1.0) -> Dictionar
 	return {"where": where, "pressure": str(roundi(float(a.get("pressure", 0)))),
 			"legs": lw.left(1).to_upper() + lw.substr(1), "legs_bad": legs < TIRING,
 			"gives_label": "Gives up", "gives": GateOdds.tag_gives() + season,
-			"holds_label": "Their man", "holds": GateOdds.tag_touches(p, legs)}
+			"holds_label": "Their man", "holds": GateOdds.tag_touches(p, legs, target)}
 
 
 ## The same card in one run of words, for the long list ("Other player...")
 ## where each man is one tap row: wide puts it on one line.
-static func tagger_card_detail(p: Dictionary, legs: float, wide: bool, rating := -1.0) -> String:
-	var c := tagger_card(p, legs, rating)
+static func tagger_card_detail(p: Dictionary, legs: float, wide: bool, rating := -1.0, target: Dictionary = {}) -> String:
+	var c := tagger_card(p, legs, rating, target)
 	# No-break spaces hold each "·" to the words either side, so a line
 	# never ends on one.
 	var dot := " · "

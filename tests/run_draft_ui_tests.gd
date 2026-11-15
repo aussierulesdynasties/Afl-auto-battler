@@ -1007,6 +1007,21 @@ func _test_position_filters(ui: Control) -> void:
 	await _settle()
 	_check(ui.get("_role") == "" and (all.get_theme_stylebox("normal") as StyleBoxFlat).border_color == kit.TEXT,
 			"All shows everyone and is outlined")
+	# On a 390 x 844 phone All stays a thumb's target (44 px wide; it was 40),
+	# and a real finger on it clears a position filter.
+	root.size = Vector2i(390, 844)
+	await _settle()
+	ui.call("_select_tab", "pool")
+	ui.call("_set_role", "MID")
+	await _settle()
+	var all_phone: Button = ui.find_child("Filter_ALL", true, false)
+	_check(all_phone != null and all_phone.size.x >= 44.0 and all_phone.size.y >= 44.0,
+			"All is at least 44 x 44 px on a phone (%s)" % (str(all_phone.size) if all_phone != null else "missing"))
+	var all_why: String = await Tap.tap(all_phone)
+	await _settle()
+	_check(all_why == "" and ui.get("_role") == "", "A real tap on All shows everyone (%s)" % all_why)
+	root.size = Vector2i(420, 860)
+	await _settle()
 
 
 func _check_layout(ui: Control, label: String) -> void:

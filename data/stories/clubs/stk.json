@@ -1,0 +1,465 @@
+[
+	{
+		"id": "stk_wait_on_the_banner",
+		"club": "STK",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["Count the years?"],
+		"text": ["The cheer squad wants this week's banner to count the years since the club's last premiership. Half the members love it; the other half think the Saints have been reminded enough. They've asked the coach."],
+		"choices": [
+			{"key": "up", "label": "Put it up: we're the ones who'll end it",
+			 "effects": [{"op": "morale", "d": 3, "who": "side"}, {"op": "culture", "strand": "ambition", "d": 1, "why": "The group knows what a flag would mean down here"}, {"op": "slow_start", "chance": 20, "who": "side"}],
+			 "result": "The count is on the banner. It adds weight to a tight game."},
+			{"key": "leave", "label": "Leave the count off and paint the club, not the wait",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "The players run out free. The old hands feel the history is being hidden."}
+		]
+	},
+	{
+		"id": "stk_spoon_talk",
+		"club": "STK",
+		"controversy": false,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"when": {"ladder_min": 15},
+		"title": ["Spoon talk"],
+		"text": ["The side is down at the bottom, and the papers have run a graphic of every wooden spoon in the club's history. It's a long list, and the players have seen it pinned up in the café across the road."],
+		"choices": [
+			{"key": "front", "label": "Front it: that's our history, not our future",
+			 "effects": [{"op": "morale", "d": 2, "who": "all"}, {"op": "board", "d": -1}],
+			 "result": "The group feels protected. The story lives another week."},
+			{"key": "ban", "label": "Ban the papers from the rooms",
+			 "effects": [{"op": "morale", "d": 1, "who": "side"}, {"op": "culture", "strand": "standards", "d": 1, "why": "The group's focus stayed inside the club"}, {"op": "odds", "chance": 25, "hit": [{"op": "culture", "strand": "together", "d": -1, "why": "The leaders felt treated like kids"}], "hit_result": "The leaders feel treated like kids."}],
+			 "result": "No papers in the rooms this week."},
+			{"key": "use", "label": "Put the graphic on the whiteboard",
+			 "effects": [{"op": "odds", "chance": 55, "hit": [{"op": "morale", "d": 4, "who": "side"}], "miss": [{"op": "morale", "d": -3, "who": "side"}], "hit_result": "The group bites. They want to wipe it off.", "miss_result": "Some of them sink. It's too much to carry."}],
+			 "result": "The list of spoons is up on the board."}
+		]
+	},
+	{
+		"id": "stk_strength_through_loyalty",
+		"club": "STK",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "player", "pick": "highest:games", "where": {"age_min": 30, "contract_years_max": 1}},
+		"title": ["Strength Through Loyalty"],
+		"text": ["{name} is out of contract and wants one more year. He's a club man to his bootstraps and the room adores him, but his legs are going and the list needs the spot for a kid. The members are already quoting the motto on the crest at you."],
+		"choices": [
+			{"key": "one_more", "label": "Give him one more year",
+			 "effects": [{"op": "morale", "d": 3, "who": "all"}, {"op": "culture", "strand": "together", "d": 1, "why": "The room saw loyalty repaid"}, {"op": "board", "d": -2, "was": "funds"}, {"op": "forgo_xp", "d": 3, "who": "others"}],
+			 "result": "{first} goes around again. A kid waits another year for the spot."},
+			{"key": "send_off", "label": "Thank him and let him go with a send-off",
+			 "effects": [{"op": "xp", "d": 3, "who": "others"}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "{first} leaves on his own terms. Some of the senior group wonder if they're next."},
+			{"key": "coach", "label": "Offer him a coaching role instead",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "A club man stayed in the building"}, {"op": "trust", "d": -3, "why": "He wanted to keep playing"}, {"op": "odds", "chance": 30, "hit": [{"op": "morale", "d": -2, "who": "all"}], "hit_result": "He wanted to play. He signs elsewhere as a player."}],
+			 "result": "The offer is on the table for {first}."}
+		]
+	},
+	{
+		"id": "stk_moorabbin_or_highway",
+		"club": "STK",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["Moorabbin or the highway"],
+		"text": ["The rooms at Moorabbin are tired, and the board has two offers: spend big to rebuild the old ground, or take a council deal for a new base further down the peninsula. The members see Moorabbin as home."],
+		"choices": [
+			{"key": "rebuild", "label": "Rebuild Moorabbin",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "Moorabbin stays home for the members"}, {"op": "board", "d": -4, "was": "funds"}, {"op": "forgo_xp", "d": 3, "who": "all"}],
+			 "result": "The heartland is thrilled. The works get in the way of training."},
+			{"key": "move", "label": "Move down the highway",
+			 "effects": [{"op": "xp", "d": 4, "who": "all"}, {"op": "board", "d": -2, "was": "members"}, {"op": "odds", "chance": 35, "hit": [{"op": "board", "d": -4}], "hit_result": "The new base turns sour, and the board regrets the move."}],
+			 "result": "Modern facilities, sooner. The supporters feel the club has left them."},
+			{"key": "patch", "label": "Patch it up and wait",
+			 "effects": [{"op": "board", "d": 1, "was": "funds"}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "No money spent. The players notice the cold showers."}
+		]
+	},
+	{
+		"id": "stk_back_to_the_junction",
+		"club": "STK",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["Back to the Junction"],
+		"text": ["The heritage committee wants the players to train one morning at the Junction Oval, the club's old home, with the old-timers lining the fence. It falls in a short week."],
+		"choices": [
+			{"key": "go", "label": "Go: a light session at the Junction",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The group learned where the club came from"}, {"op": "morale", "d": 2, "who": "all"}, {"op": "forgo_xp", "d": 2, "who": "side"}],
+			 "result": "The old-timers line the fence. The session is lighter in a short week."},
+			{"key": "lunch", "label": "Not this week; send the leaders to a lunch",
+			 "effects": [{"op": "xp", "d": 3, "who": "side"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "Main training goes ahead. The heritage committee feels brushed off."}
+		]
+	},
+	{
+		"id": "stk_beside_the_seaside",
+		"club": "STK",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["Beside the seaside"],
+		"text": ["The history group wants the club's old run-out song, I Do Like To Be Beside The Seaside, played as the side runs out at a home game. Some of the players have never heard it."],
+		"choices": [
+			{"key": "play", "label": "Play it, and teach the players the story",
+			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The group learned the old run-out song"}, {"op": "slow_start", "chance": 10, "who": "side"}],
+			 "result": "The old members are moved. It's a distraction in game week."},
+			{"key": "keep", "label": "Keep the run-out as it is",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "Game day routine stayed the same"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "No change to the routine. The history group goes to the papers."}
+		]
+	},
+	{
+		"id": "stk_sand_at_sandringham",
+		"club": "STK",
+		"controversy": false,
+		"category": "training",
+		"subject": {"kind": "club"},
+		"title": ["Sand at Sandringham"],
+		"text": ["The fitness staff want a session on the beach at Sandringham, then a hit-out on the beach oval next door. The sand builds legs, but it's a hard week to do it."],
+		"choices": [
+			{"key": "full", "label": "Beach session, full tilt",
+			 "effects": [{"op": "xp", "d": 6, "who": "all"}, {"op": "heavy_legs", "who": "side"}],
+			 "result": "A tougher, fitter side for the back half of the year. Tired legs this weekend."},
+			{"key": "walk", "label": "A light walk in the water",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "morale", "d": 1, "who": "all"}, {"op": "forgo_xp", "d": 2, "who": "all"}],
+			 "result": "The players recover and have a laugh. Little fitness gained."},
+			{"key": "stay", "label": "Stay at Moorabbin",
+			 "effects": [{"op": "xp", "d": 3, "who": "all"}, {"op": "morale", "d": -1, "who": "all"}],
+			 "result": "Normal routine. The same track every day, and the group goes a bit flat."}
+		]
+	},
+	{
+		"id": "stk_bayside_heartland",
+		"club": "STK",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["The bayside heartland"],
+		"text": ["The membership team has money for one big campaign. Saints supporters are packed into the bayside suburbs tighter than any other Melbourne club's. Dig deeper there, or chase new fans elsewhere?"],
+		"choices": [
+			{"key": "dig", "label": "Dig in: bayside and the peninsula",
+			 "effects": [{"op": "odds", "chance": 80, "hit": [{"op": "board", "d": 4, "was": "members"}], "miss": [{"op": "board", "d": -1, "was": "members"}], "hit_result": "Safe, loyal growth. The heartland signs up.", "miss_result": "The heartland is already signed up. There was nowhere left to grow."}],
+			 "result": "The campaign stays close to home."},
+			{"key": "chase", "label": "Chase the growth corridors in the south-east",
+			 "effects": [{"op": "odds", "chance": 45, "hit": [{"op": "board", "d": 6, "was": "members"}], "miss": [{"op": "board", "d": -1}], "hit_result": "It works. A new generation of Saints signs up.", "miss_result": "New fans are fickle in a lean year. The money is gone."}],
+			 "result": "The campaign heads out to the new suburbs."}
+		]
+	},
+	{
+		"id": "stk_home_game_away",
+		"club": "STK",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["A home game across the water"],
+		"text": ["A city interstate or across the Tasman has offered serious money to host one of the Saints' home games every year. The board likes the cheque; the members hate losing a game."],
+		"choices": [
+			{"key": "take", "label": "Take the deal",
+			 "effects": [{"op": "board", "d": 4, "was": "funds"}, {"op": "culture", "strand": "together", "d": -2, "why": "The members lost a home game"}, {"op": "heavy_legs", "who": "side"}],
+			 "result": "A big boost to the books. The side travels for a home game."},
+			{"key": "decline", "label": "Turn it down",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The members kept every home game"}, {"op": "board", "d": -3}],
+			 "result": "The members keep every home game. The board loses its cheque."},
+			{"key": "trial", "label": "Take it for one year only",
+			 "effects": [{"op": "board", "d": 2, "was": "funds"}, {"op": "culture", "strand": "together", "d": -1, "why": "The members still grumble about the trip"}],
+			 "result": "Cash now, and a trial. The members still grumble."}
+		]
+	},
+	{
+		"id": "stk_stadium_deal",
+		"club": "STK",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["The stadium deal"],
+		"text": ["The crowds at home are healthy, but the ground deal leaves the club little at the gate. The board wants to shift a home game to the 'G, where the Saints take home more."],
+		"choices": [
+			{"key": "move", "label": "Move one game to the 'G",
+			 "effects": [{"op": "board", "d": 5, "was": "funds"}, {"op": "slow_start", "chance": 15, "who": "side"}],
+			 "result": "Better gate takings. A bigger, less familiar ground for that game."},
+			{"key": "stay", "label": "Stay where we are",
+			 "effects": [{"op": "morale", "d": 1, "who": "side"}, {"op": "board", "d": -2}],
+			 "result": "The players know every blade of grass. The books stay tight."}
+		]
+	},
+	{
+		"id": "stk_local_kid",
+		"club": "STK",
+		"controversy": false,
+		"category": "selection",
+		"subject": {"kind": "club"},
+		"phase": ["season_end"],
+		"title": ["The local kid"],
+		"text": ["A kid from the local under-18 side, who has trained at Moorabbin since he was fifteen, grew up in a Saints scarf. The recruiters rate him, but not as highly as another player who'll be there at your pick."],
+		"choices": [
+			{"key": "local", "label": "Take the local kid",
+			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "morale", "d": 1, "who": "all"}, {"op": "culture", "strand": "ambition", "d": -1, "why": "The pick went to the local kid, not the higher ceiling"}],
+			 "result": "The members love it. He'd run through a wall for the club."},
+			{"key": "best", "label": "Take the best available",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The club took the higher ceiling"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "The higher ceiling. The heartland grumbles about another one that got away."}
+		]
+	},
+	{
+		"id": "stk_reserves_partner",
+		"club": "STK",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["Our own reserves, or a partner?"],
+		"text": ["The club's partnership with a local state-league club is up for renewal. Going alone costs more but gives your coaches full control of the reserves; staying aligned keeps a proud local club alive and the bills down."],
+		"choices": [
+			{"key": "aligned", "label": "Stay aligned",
+			 "effects": [{"op": "board", "d": 3, "was": "funds"}, {"op": "forgo_xp", "d": 2, "who": "all"}],
+			 "result": "Cheaper, and good local ties. The fringe players get fewer minutes in your system."},
+			{"key": "own", "label": "Run our own reserves side",
+			 "effects": [{"op": "xp", "d": 4, "who": "all"}, {"op": "board", "d": -4, "was": "funds"}],
+			 "result": "Full control of development. It's dearer, and the local club is hurt."}
+		]
+	},
+	{
+		"id": "stk_so_close_again",
+		"club": "STK",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"phase": ["season_end"],
+		"when": {"ladder_max": 8},
+		"title": ["So close, again"],
+		"text": ["The season is over, and the rooms are silent. The club's history is full of years like this one. The coach has to set the tone for the summer."],
+		"choices": [
+			{"key": "remember", "label": "Remember this feeling and bring it back next year",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 2, "why": "The group carried the hurt into the summer"}, {"op": "odds", "chance": 25, "hit": [{"op": "morale", "d": -3, "who": "all"}], "hit_result": "Some of them can't let it go."}],
+			 "result": "The hunger carries into the pre-season."},
+			{"key": "close", "label": "Close the book: rest, then start fresh",
+			 "effects": [{"op": "morale", "d": 2, "who": "all"}, {"op": "culture", "strand": "ambition", "d": -1, "why": "The hurt was put away, not used"}],
+			 "result": "The players recover in body and mind. The edge may dull."},
+			{"key": "review", "label": "Front a full review with the board",
+			 "effects": [{"op": "board", "d": 3}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "The board sees accountability. The players feel picked over."}
+		]
+	},
+	{
+		"id": "stk_saved_from_creditors",
+		"club": "STK",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["Saved from the creditors"],
+		"text": ["The debt has crept up, and a wealthy Saints man has offered to lead a rescue if he can take the chair. He gets things done, but he'll want a say in the football department too."],
+		"choices": [
+			{"key": "takeover", "label": "Back his takeover",
+			 "effects": [{"op": "board", "d": 6, "was": "funds"}, {"op": "odds", "chance": 40, "hit": [{"op": "board", "d": -4}], "hit_result": "The new president loses patience and starts leaning on the coach."}],
+			 "result": "The debts are sorted fast. A new president has your number."},
+			{"key": "appeal", "label": "Run a members' appeal instead",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The club stayed the members' own"}, {"op": "odds", "chance": 60, "hit": [{"op": "board", "d": 4, "was": "funds"}], "miss": [{"op": "board", "d": -2}], "hit_result": "The members dig deep. The debt comes down.", "miss_result": "The appeal falls short, and the board wanted it done faster."}],
+			 "result": "The club asks its own people for help."},
+			{"key": "cut", "label": "Cut the football budget",
+			 "effects": [{"op": "board", "d": 3, "was": "funds"}, {"op": "forgo_xp", "d": 3, "who": "all"}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "No outside hands on the club. The players feel the cuts."}
+		]
+	},
+	{
+		"id": "stk_rebel_ticket",
+		"club": "STK",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"when": {"board_max": 45},
+		"title": ["The rebel ticket"],
+		"text": ["After a lean stretch, a group of former players and big members has launched a ticket to spill the board. They want the coach's public backing."],
+		"choices": [
+			{"key": "current", "label": "Back the current board",
+			 "effects": [{"op": "board", "d": 3}, {"op": "odds", "chance": 35, "hit": [{"op": "board", "d": -6}], "hit_result": "The rebels win. You start on the outer."}],
+			 "result": "The people paying you remember your loyalty."},
+			{"key": "rebels", "label": "Back the rebels",
+			 "effects": [{"op": "odds", "chance": 35, "hit": [{"op": "board", "d": 5}], "miss": [{"op": "board", "d": -5}], "hit_result": "The rebels win, and the new board owes you.", "miss_result": "The rebels lose, and the old board remembers."}],
+			 "result": "You've picked a side in public."},
+			{"key": "coach", "label": "Say you coach and the members vote",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The coach stayed above the boardroom fight"}, {"op": "board", "d": -1}],
+			 "result": "Above the fight. Neither side owes you anything."}
+		]
+	},
+	{
+		"id": "stk_fitzroy_street",
+		"club": "STK",
+		"controversy": true,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"title": ["Nights on Fitzroy Street"],
+		"text": ["Photos have surfaced of a group of Saints players out late on Fitzroy Street in a game week. Nothing illegal, but the papers love it, and the club's name is in every headline."],
+		"choices": [
+			{"key": "fine", "label": "Fine them and drop the worst offender",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "The club made its standards clear"}, {"op": "morale", "d": -3, "who": "side"}, {"op": "board", "d": 2}],
+			 "result": "One fewer good player this weekend. The group is split."},
+			{"key": "inside", "label": "Deal with it in-house",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The group closed ranks"}, {"op": "board", "d": -3, "was": "press"}, {"op": "odds", "chance": 30, "hit": [{"op": "board", "d": -2}], "hit_result": "The papers keep digging, and the board loses patience."}],
+			 "result": "The group closes ranks. The press says the club's soft."},
+			{"key": "ban", "label": "Ban the strip in game weeks for everyone",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "One rule for the whole list"}, {"op": "morale", "d": -2, "who": "all"}, {"op": "board", "d": 1, "was": "press"}],
+			 "result": "One rule for all. The players who did nothing feel punished."}
+		]
+	},
+	{
+		"id": "stk_culture_review",
+		"club": "STK",
+		"controversy": true,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["The culture review"],
+		"text": ["A string of off-field incidents has the club in the news for the wrong reasons. The board has ordered an outside review of the club's culture and wants the coach to lead it from inside."],
+		"choices": [
+			{"key": "open", "label": "Open the doors to the reviewers",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "The club faced its review in the open"}, {"op": "board", "d": 1}, {"op": "forgo_xp", "d": 2, "who": "all"}],
+			 "result": "A clean slate, and the public sees it. Weeks of interviews and leaks."},
+			{"key": "quiet", "label": "Keep it small and quiet",
+			 "effects": [{"op": "morale", "d": 1, "who": "all"}, {"op": "odds", "chance": 40, "hit": [{"op": "board", "d": -6}], "hit_result": "It leaks, and it looks like a cover-up."}],
+			 "result": "Less noise around the players."}
+		]
+	},
+	{
+		"id": "stk_marching_in",
+		"club": "STK",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"when": {"winning_run_min": 1},
+		"title": ["Marching in after the siren"],
+		"text": ["After a big win, the players want to stay out and sing the song with the cheer squad in the forward pocket. The recovery staff want them in the ice baths."],
+		"choices": [
+			{"key": "sing", "label": "Sing with the fans",
+			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "morale", "d": 2, "who": "all"}, {"op": "odds", "chance": 20, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "Recovery runs late, and the legs are heavy next week."}],
+			 "result": "A night the supporters won't forget."},
+			{"key": "rooms", "label": "Song in the rooms, then recovery",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "The routine holds. The fans see the backs of the players."}
+		]
+	},
+	{
+		"id": "stk_star_goes_north",
+		"club": "STK",
+		"controversy": false,
+		"category": "selection",
+		"subject": {"kind": "player", "pick": "highest:overall"},
+		"title": ["The star wants to go north"],
+		"text": ["{name} has told the club he wants a fresh start interstate, and a rival has offered a decent deal. The members are already furious."],
+		"choices": [
+			{"key": "hold", "label": "Hold him to his contract",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "trust", "d": -4, "why": "You held him to his contract"}, {"op": "morale", "d": -2, "who": "others"}, {"op": "odds", "chance": 35, "hit": [{"op": "morale", "d": -4, "who": "subject"}], "hit_result": "His heart isn't in it, and his form drops."}],
+			 "result": "{first} stays at Moorabbin, unhappy."},
+			{"key": "trade", "label": "Trade him for the best deal",
+			 "effects": [{"op": "xp", "d": 2, "who": "others"}, {"op": "board", "d": -5, "was": "members"}],
+			 "result": "Something comes back and the room moves on. The side loses its focal point."},
+			{"key": "legends", "label": "Ask the club greats to talk him round",
+			 "effects": [{"op": "odds", "chance": 30, "hit": [{"op": "trust", "d": 4, "why": "The club greats talked him round"}, {"op": "morale", "d": 2, "who": "subject"}], "miss": [{"op": "board", "d": -2, "was": "press"}], "hit_result": "The old boys get through to him. He stays happy.", "miss_result": "It fails in public, and he still wants to go."}],
+			 "result": "The club greats sit down with {first}."}
+		]
+	},
+	{
+		"id": "stk_prized_teenager",
+		"club": "STK",
+		"controversy": false,
+		"category": "selection",
+		"subject": {"kind": "player", "pick": "highest:potential", "where": {"age_max": 19, "games_max": 5}},
+		"title": ["The prized teenager"],
+		"text": ["{name} is the best young talent at the club, the kind of player a bottom finish brings. The supporters want him playing now; the fitness staff say his body needs years."],
+		"choices": [
+			{"key": "now", "label": "Throw him in from the start",
+			 "effects": [{"op": "xp", "d": 8, "who": "subject"}, {"op": "board", "d": 3, "was": "members"}, {"op": "odds", "chance": 25, "hit": [{"op": "sore"}], "hit_result": "His body isn't ready, and he breaks down."}],
+			 "result": "{first} learns fast. The fans buy memberships."},
+			{"key": "build", "label": "Build his body in the reserves first",
+			 "effects": [{"op": "xp", "d": 4, "who": "subject"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "A stronger player in a few years. The fans and the press grow restless."}
+		]
+	},
+	{
+		"id": "stk_collingwood_week",
+		"club": "STK",
+		"controversy": false,
+		"category": "rivals",
+		"subject": {"kind": "club"},
+		"when": {"opp_deck": "COL"},
+		"title": ["One point in it"],
+		"text": ["It's Collingwood this week, and the old Saints love nothing more. A club great who played in some of the big Saints and Pies games offers to speak to the group on Thursday night."],
+		"choices": [
+			{"key": "speak", "label": "Have him speak on Thursday night",
+			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "slow_start", "chance": 15, "who": "side"}],
+			 "result": "The group feels the rivalry in their bones. Some of them play too hot."},
+			{"key": "normal", "label": "Keep it a normal week",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "A calm build-up. The old players feel shut out."}
+		]
+	},
+	{
+		"id": "stk_inclusion_match",
+		"club": "STK",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["Everyone's welcome"],
+		"text": ["The club wants to host a match telling every supporter they're welcome at the footy, whoever they are. Most of the group is on board, a sponsor is nervous, and the press is watching closely."],
+		"choices": [
+			{"key": "lead", "label": "Lead it, with the players front and centre",
+			 "effects": [{"op": "board", "d": 5, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The club stood for something"}, {"op": "odds", "chance": 25, "hit": [{"op": "board", "d": -2, "was": "funds"}], "hit_result": "The nervous sponsor walks."}],
+			 "result": "A week of media, and new fans through the gate."},
+			{"key": "quiet", "label": "Support it quietly",
+			 "effects": [{"op": "morale", "d": 1, "who": "side"}, {"op": "culture", "strand": "together", "d": -1, "why": "Critics say the club went quiet on its own word"}],
+			 "result": "Less noise for the players. Critics say the club has gone soft on its word."}
+		]
+	},
+	{
+		"id": "stk_match_for_the_mind",
+		"club": "STK",
+		"controversy": false,
+		"category": "health",
+		"subject": {"kind": "club"},
+		"title": ["A match for the mind"],
+		"text": ["The club is staging a match to raise money and talk openly about mental health, in honour of a much-loved club great. The players have been asked to share their own stories with the press during the week."],
+		"choices": [
+			{"key": "speak", "label": "Let players speak if they choose to",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The players told their own stories"}, {"op": "board", "d": 3, "was": "members"}, {"op": "slow_start", "chance": 15, "who": "side"}],
+			 "result": "The group grows closer and the community responds. An emotional week before a game."},
+			{"key": "club", "label": "Leave the talking to the club",
+			 "effects": [{"op": "morale", "d": 1, "who": "side"}, {"op": "culture", "strand": "together", "d": -1, "why": "The players' own stories went untold"}],
+			 "result": "The players focus on the game. A columnist asks why they stayed quiet."}
+		]
+	},
+	{
+		"id": "stk_famous_barracker",
+		"club": "STK",
+		"controversy": false,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"title": ["The famous barracker"],
+		"text": ["A famous actor who has barracked for the Saints since he was a kid wants to film a membership ad at training, with the players in shot. He'll do it for nothing."],
+		"choices": [
+			{"key": "carpet", "label": "Roll out the red carpet",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "forgo_xp", "d": 3, "who": "all"}],
+			 "result": "Memberships spike. A film crew is in the way at training for a day."},
+			{"key": "after", "label": "Film it after training, players optional",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "culture", "strand": "together", "d": -1, "why": "The supporters saw half the list skip the ad"}],
+			 "result": "No training lost. A smaller ad, with half the list missing."}
+		]
+	},
+	{
+		"id": "stk_best_and_fairest",
+		"club": "STK",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"phase": ["season_end"],
+		"title": ["The best and fairest count"],
+		"text": ["The best and fairest is close between a young midfielder and a veteran defender. The count is public, but the coaches' votes will decide it, and both men know."],
+		"choices": [
+			{"key": "vote", "label": "Vote as you saw it, whoever it favours",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The count was called straight"}, {"op": "morale", "d": -1, "who": "all"}],
+			 "result": "The process is clean. The one who missed out takes it hard."},
+			{"key": "panel", "label": "Hand your votes to a panel of past players",
+			 "effects": [{"op": "board", "d": 1}, {"op": "odds", "chance": 40, "hit": [{"op": "culture", "strand": "standards", "d": -1, "why": "You handed off a call that was yours"}], "hit_result": "The papers say the coach ducked the call."}],
+			 "result": "The coach stays out of it."}
+		]
+	}
+]

@@ -194,16 +194,17 @@ static func upcoming(gs) -> Array:
 			if next == 1 and str(k) != "BENCH":
 				out.append({"key": "debut", "who": "player", "id": str(id), "text": "%s is set to make his debut." % name})
 			elif next != 1 and PLAYER_GAMES.has(next):
-				out.append({"key": "games", "who": "player", "id": str(id), "text": "%s plays his %s game." % [name, gs.ordinal(next)]})
+				out.append({"key": "games", "who": "player", "id": str(id), "mark": next,
+						"text": "%s plays his %s game." % [name, gs.ordinal(next)]})
 			var goals: int = gs.career_goals_before(p, 0)
 			for mark in PLAYER_GOALS:
 				if goals < mark and mark - goals <= GOALS_NEAR:
-					out.append({"key": "goals", "who": "player", "id": str(id),
+					out.append({"key": "goals", "who": "player", "id": str(id), "mark": mark,
 							"text": "%s is %d %s from %d career goals." % [name, mark - goals, "goal" if mark - goals == 1 else "goals", mark]})
 	var c: Dictionary = gs.milestone_log.get("coach", {})
 	var games := int(c.get("games", 0)) + 1
 	if COACH_GAMES.has(games):
-		out.append({"key": "coached", "who": "coach", "id": "", "text": "Your %s game as coach." % gs.ordinal(games)})
+		out.append({"key": "coached", "who": "coach", "id": "", "mark": games, "text": "Your %s game as coach." % gs.ordinal(games)})
 	if gs.season.is_regular_done() and int(c.get("finals", 0)) == 0 and gs.my_finals_status() == "alive":
 		out.append({"key": "first_final", "who": "coach", "id": "", "text": "Your first final as coach."})
 	return out
@@ -242,8 +243,20 @@ static func summary_items(gs, res: Dictionary) -> Array:
 ## The coming week's milestones in the news, one item each.
 static func preview_news(gs) -> void:
 	for u in upcoming(gs):
-		if tell_once(gs, "%s|%s" % [str(u["id"]), str(u["text"])]):
+		# Keyed on the mark, not the words: "3 goals from 100", then "2", then
+		# "1" is one milestone, previewed once (bug bash 4).
+		if not tell_once(gs, preview_key(u)):
+			continue
+		if str(u["who"]) == "coach":
+			# The coach's own mark is your club's news, not a league headline.
+			gs.add_news("coaching", str(u["text"]).trim_suffix(".") + " is this week.")
+		else:
 			gs.add_news("milestone", "This week: " + str(u["text"]))
+
+
+## What a preview is remembered by: the player (or coach), the kind and the mark.
+static func preview_key(u: Dictionary) -> String:
+	return "%s|%s|%s" % [str(u["id"]), str(u["key"]), str(u.get("mark", ""))]
 
 
 ## True the first time a line is filed, false ever after. The news feed is

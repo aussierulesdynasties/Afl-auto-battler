@@ -503,7 +503,7 @@ func _awards_panel() -> Control:
 		v.add_child(_award_line("Rising Star", rising[0], "age %d" % int(rising[0]["age"]), false))
 	var fist: Array = aw.get("golden_fist", [])
 	if not fist.is_empty():
-		var gf := _award_line(Awards.GOLDEN_FIST, fist[0], Awards.golden_fist_line(fist[0]), true)
+		var gf := _award_line(Awards.golden_fist_name(int(aw.get("year", GameState.season_year))), fist[0], Awards.golden_fist_line(fist[0]), true)
 		gf.name = "GoldenFist"
 		v.add_child(gf)
 		var frest := []
@@ -647,7 +647,7 @@ func _open_awards_program() -> void:
 		body.add_child(_award_line("Winner", rising[0], "age %d" % int(rising[0]["age"]), true))
 	var fist: Array = aw.get("golden_fist", [])
 	if not fist.is_empty():
-		body.add_child(StatsSide.heading(Awards.GOLDEN_FIST))
+		body.add_child(StatsSide.heading(Awards.golden_fist_name(int(aw.get("year", GameState.season_year)))))
 		for i in range(mini(3, fist.size())):
 			var r: Dictionary = fist[i]
 			body.add_child(_small("%d. %s (%s) — %s" % [i + 1, GameState.award_name(r),

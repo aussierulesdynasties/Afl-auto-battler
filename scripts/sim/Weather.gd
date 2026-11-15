@@ -164,8 +164,19 @@ const TURN_NEWS := {
 }
 
 
-static func turn_news(after: int, to: String) -> String:
-	return str(TURN_NEWS.get(to, "")) % str(BREAKS.get(after, "the break"))
+## A day that turns perfect, by what it was: "fined up" is said of rain clearing,
+## not of heat or wind dropping (bug bash 4).
+const PERFECT_NEWS := {
+	"windy": "The wind has dropped by %s. A perfect day from here: the ball is easier to hold.",
+	"hot": "It has cooled down by %s. A perfect day from here: fresher legs.",
+}
+
+
+static func turn_news(after: int, to: String, start := "") -> String:
+	var line := str(TURN_NEWS.get(to, ""))
+	if to == "perfect" and PERFECT_NEWS.has(start):
+		line = str(PERFECT_NEWS[start])
+	return line % str(BREAKS.get(after, "the break"))
 
 
 ## The match report's line for a day that turned: how it started and when it turned.
@@ -175,12 +186,23 @@ const TURN_REPORT := {
 	"hot": "It heated up by %s",
 	"perfect": "It fined up by %s",
 }
+## A day that turned perfect, by what it started as: [when, what it meant].
+const PERFECT_REPORT := {
+	"wet": ["It fined up by %s", "a dry ball from there, easier to mark."],
+	"windy": ["The wind dropped by %s", "the ball easier to hold from there."],
+	"hot": ["It cooled down by %s", "fresher legs from there."],
+}
 
 
 static func turn_report_line(start: String, after: int, to: String) -> String:
-	var what := "a dry ball from there, easier to mark." if to == "perfect" 			else report_line(to).trim_prefix(str(REPORT_LEAD.get(to, "")))
+	var when := str(TURN_REPORT.get(to, "The weather turned at %s"))
+	var what := "a dry ball from there, easier to mark." if to == "perfect" \
+			else report_line(to).trim_prefix(str(REPORT_LEAD.get(to, "")))
+	if to == "perfect" and PERFECT_REPORT.has(start):
+		when = str(PERFECT_REPORT[start][0])
+		what = str(PERFECT_REPORT[start][1])
 	return "It started %s. %s: %s" % [str(STARTED.get(start, "fine")),
-			str(TURN_REPORT.get(to, "The weather turned at %s")) % str(BREAKS.get(after, "a break")), what]
+			when % str(BREAKS.get(after, "a break")), what]
 
 
 const STARTED := {"perfect": "fine", "wet": "wet", "windy": "windy", "hot": "hot"}

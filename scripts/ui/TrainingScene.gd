@@ -248,19 +248,32 @@ func _summary() -> Control:
 		panel.add_child(h)
 	var report: Dictionary = GameState.last_training_report
 	if int(report.get("count", 0)) > 0:
-		v.add_child(UiKit.lbl(str(report.get("label", "Last game")), 15, UiKit.EMPH, true))
-		var line := GameState.training_summary_line()
-		var what: Control
-		if line != "":
-			what = _news_line(line)
+		var rows := GameState.training_rise_rows()
+		if rows.is_empty():
+			v.add_child(UiKit.lbl(str(report.get("label", "Last game")), 15, UiKit.EMPH, true))
+			var line := GameState.training_summary_line()
+			var what: Control
+			if line != "":
+				what = _news_line(line)
+			else:
+				what = UiKit.lbl("No rating moved after the last game.", UiKit.SECONDARY, UiKit.MUTED)
+				what.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			what.name = "TrainingNews"
+			v.add_child(what)
 		else:
-			what = UiKit.lbl("No rating moved after the last game.", UiKit.SECONDARY, UiKit.MUTED)
-			what.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		what.name = "TrainingNews"
-		v.add_child(what)
-		var rises := GameState.training_rise_lines()
-		if not rises.is_empty():
-			v.add_child(_rise_list(rises))
+			# Row V5, the proof screen for the new look: the risers lead as one
+			# figure, then every one of them by name (director, 2026-10-19).
+			var key := _report_key(report, rows)
+			var fresh := _counted_report != key
+			_counted_report = key
+			_wash_head(panel)
+			v.add_child(_results_head(report, rows.size(), fresh))
+			var more := GameState.training_unlock_line()
+			if more != "":
+				var what := _news_line(more)
+				what.name = "TrainingNews"
+				v.add_child(what)
+			v.add_child(_rise_list(rows, fresh))
 		var month := TrainingReportSheet.link(self, _open_to_learn)
 		if month != null:
 			v.add_child(month)
@@ -930,23 +943,108 @@ func _news_line(line: String) -> Control:
 	return TraitLink.line(line, UiKit.SECONDARY, UiKit.GOOD, ids)
 
 
-## Everyone who rose, one "Name 76 to 77" each, as many to a row as fit, so
-## a long list stays short; each name a tap to his profile.
-func _rise_list(lines: PackedStringArray) -> Control:
-	var ids := {}
-	for q in GameState.my_list:
-		ids[GameDB.player_display_name(q)] = str(q["id"])
-	# A flow of equal cells: as many to a row as the width holds (one on a
-	# phone, so "74 to 76" never breaks; three on a PC), the columns aligned.
-	var grid := HFlowContainer.new()
+## The report the figures last counted up for: a figure counts once, when the
+## news is new, not again on every tab or rebuild.
+static var _counted_report := ""
+
+
+func _report_key(report: Dictionary, rows: Array) -> String:
+	return "%s|%s" % [str(report.get("label", "")), str(rows)]
+
+
+## Your club's colour washed down from the top of the news (style guide 2.2,
+## atmosphere), fading out before the rows need the contrast.
+func _wash_head(panel: Control) -> void:
+	var lead := UiKit.team_wash()
+	panel.draw.connect(func() -> void:
+		var w := panel.size.x
+		var h := minf(panel.size.y * 0.6, 150.0)
+		var top := Color(lead, float(UiKit.TINT_SHARE["story"]))
+		var none := Color(lead, 0.0)
+		panel.draw_polygon(PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, h), Vector2(0, h)]),
+				PackedColorArray([top, top, none, none])))
+
+
+## The headline: how many rose, as the screen's one big figure in your club's
+## ink, the words beside it, the game under them and a club rule beneath.
+func _results_head(report: Dictionary, n: int, fresh: bool) -> Control:
+	var box := UiKit.vbox(6)
+	box.name = "TrainingResultsHead"
+	var h := UiKit.hbox(12)
+	box.add_child(h)
+	var fig := UiKit.figure(str(n), UiKit.HERO, UiKit.label_ink())
+	fig.name = "TrainingRiseCount"
+	fig.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(fig)
+	if fresh:
+		UiKit.count_up(fig, n, func(x: int) -> String: return str(x))
+	var words := UiKit.vbox(0)
+	words.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	h.add_child(words)
+	var says := UiKit.lbl("%s in OVR" % ("player rose" if n == 1 else "players rose"), UiKit.HEADING, UiKit.TEXT, true)
+	says.name = "TrainingRiseWords"
+	words.add_child(says)
+	words.add_child(UiKit.lbl("After %s" % _game_words(str(report.get("label", ""))), UiKit.SECONDARY, UiKit.TEXT))
+	var rule := ColorRect.new()
+	rule.name = "TrainingClubRule"
+	rule.color = UiKit.team_wash()
+	rule.custom_minimum_size = Vector2(0, 2)
+	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(rule)
+	return box
+
+
+## "Round 4" -> "round 4", "Last game" -> "the last game", "Elimination final"
+## -> "the elimination final"; the Grand Final keeps its capitals.
+func _game_words(label: String) -> String:
+	if label == "" or label == "Last game":
+		return "the last game"
+	if label.begins_with("Round "):
+		return "round " + label.substr(6)
+	if label.contains("Grand Final"):
+		return "the " + label
+	return "the " + label.left(1).to_lower() + label.substr(1)
+
+
+## Every player who rose, one row each, biggest rise first: his name (a tap to
+## his profile) and "74 to 76" with the new rating as a figure in GOOD. The
+## first row leads, larger, its figure counting up. One column on a phone, so a
+## name never breaks; three on a PC.
+func _rise_list(rows: Array, fresh: bool) -> Control:
+	var grid := GridContainer.new()
 	grid.name = "TrainingRises"
-	grid.add_theme_constant_override("h_separation", 12)
+	grid.columns = 3 if _wide else 1
+	grid.add_theme_constant_override("h_separation", 24)
 	grid.add_theme_constant_override("v_separation", 2)
-	for l in lines:
-		var r := NameLink.line(l, ids, UiKit.SECONDARY, UiKit.GOOD)
-		r.custom_minimum_size = Vector2(220, 0)
-		grid.add_child(r)
+	for i in range(rows.size()):
+		grid.add_child(_rise_row(rows[i], i == 0, fresh))
 	return grid
+
+
+func _rise_row(r: Dictionary, lead: bool, fresh: bool) -> Control:
+	var row := UiKit.hbox(8)
+	row.name = "Rise_" + str(r["id"])
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.custom_minimum_size = Vector2(240 if _wide else 0, 44 if lead else 30)
+	var nm := NameLink.line(str(r["name"]), {str(r["name"]): str(r["id"])},
+			UiKit.HEADING if lead else UiKit.BODY, UiKit.TEXT)
+	nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	nm.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(nm)
+	var was := UiKit.line("%d to" % int(r["from"]), UiKit.SECONDARY, UiKit.TEXT)
+	was.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(was)
+	var now := UiKit.figure(str(r["to"]), UiKit.RATING if lead else UiKit.NUMBER, UiKit.GOOD)
+	now.name = "RiseTo"
+	now.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	# One figure column for every row, so each "to" and each figure line up.
+	now.custom_minimum_size.x = 44
+	now.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(now)
+	if lead and fresh:
+		UiKit.count_up(now, int(r["to"]), func(x: int) -> String: return str(x), UiKit.Motion.DUR_COUNT, int(r["from"]))
+	return row
 
 
 ## [from, to] if training lifted his OVR after the last game, else [].

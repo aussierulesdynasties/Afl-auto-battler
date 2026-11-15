@@ -13,6 +13,10 @@ extends RefCounted
 const SECONDARY_MAX := 3
 ## A story needs this much weight to be a secondary headline; the rest are briefs.
 const SECONDARY_MIN := 40
+## A six-goal haul's weight; each goal more adds 7 (to 94 at twelve).
+const HAUL_WEIGHT := 52
+## How many rounds back front() looks to know last round's lead.
+const LEAD_MEMORY := 6
 
 const _FIRST_GOAL := "first_goals"
 const _MILESTONE := "milestones"
@@ -73,9 +77,13 @@ static func story(item: Dictionary, my_club := "") -> Dictionary:
 		m = _re("goals", "^(.+) kicked (\\d+) goals for (.+) against (.+)\\.$").search(text)
 		if m != null:
 			var n := int(m.get_string(2))
-			s.merge({"name": m.get_string(1), "club": code_of(m.get_string(3)), "weight": 60 + 5 * mini(n - 6, 6) + 10,
-					"headline": "%s bags %s" % [m.get_string(1), _word(n)],
-					"standfirst": "%s goals for %s against %s." % [_cap(_word(n)), m.get_string(3), m.get_string(4)]}, true)
+			# Bug bash 4: a six-goal haul led the page in half of all weeks. A
+			# six or seven now sits under your match's story and the big
+			# comebacks; nine and up lead over your own match.
+			s.merge({"name": m.get_string(1), "club": code_of(m.get_string(3)), "weight": HAUL_WEIGHT + 7 * mini(n - 6, 6),
+					"family": "haul",
+					"headline": "%s bags %s against %s" % [m.get_string(1), _word(n), m.get_string(4)],
+					"standfirst": "%s goals for %s." % [_cap(_word(n)), m.get_string(3)]}, true)
 			return _mine(s, my_club)
 		m = _re("disp", "^(.+) had (\\d+) disposals for (.+) against (.+)\\.$").search(text)
 		if m != null:
@@ -109,11 +117,12 @@ static func story(item: Dictionary, my_club := "") -> Dictionary:
 					"headline": "%s suspended for %s" % [m.get_string(1), "a match" if w == 1 else "%s matches" % _word(w)],
 					"standfirst": "%s lose him for %s." % [m.get_string(2), m.get_string(4)]}, true)
 			return _mine(s, my_club)
-		m = _re("fine", "^(.+) \\((.+)\\) was fined by the MRO for (.+)\\.$").search(text)
+		# "fined $1,000 by the MRO", or "by the Tribunal" before 2005 (TribunalFines.body).
+		m = _re("fine", "^(.+) \\((.+)\\) was fined (?:\\$[\\d,]+ )?by (the MRO|the Tribunal) for (.+)\\.$").search(text)
 		if m != null:
 			s.merge({"name": m.get_string(1), "club": code_of(m.get_string(2)), "weight": 30,
 					"headline": "%s fined" % m.get_string(1),
-					"standfirst": "%s: cited by the MRO for %s." % [m.get_string(2), m.get_string(3)]}, true)
+					"standfirst": "%s: cited by %s for %s." % [m.get_string(2), m.get_string(3), m.get_string(4)]}, true)
 			return _mine(s, my_club)
 	elif kind == "tribunal":
 		s["group"] = _MRO
@@ -155,17 +164,19 @@ static func story(item: Dictionary, my_club := "") -> Dictionary:
 		# Your match's hero: "<headline>. <hero>: <his game>."
 		m = _re("hero", "^((.+) stars as (.+?) (?:beat|and) .+?)\\. (.+)$").search(text)
 		if m != null:
-			s.merge({"name": m.get_string(2), "club": code_of(m.get_string(3)), "weight": 62,
+			s.merge({"name": m.get_string(2), "club": code_of(m.get_string(3)), "weight": 62, "family": "hero",
 					"headline": m.get_string(1), "standfirst": m.get_string(4)}, true)
 			s = _mine(s, my_club)
 			s["mine"] = true
 			return s
 	elif kind == "media":
-		# GameState writes "Post-match: '<answer>' <after-line>": the answer is the headline.
-		m = _re("media", "^Post-match: '(.*?)'(?: .*)?$").search(text)
-		s.merge({"club": my_club, "weight": 66, "mine": true,
-				"headline": "“%s”" % (m.get_string(1) if m != null else text),
-				"standfirst": "Your word after the match."}, true)
+		# GameState writes "Post-match: '<answer>' <after-line>", or "Post-match,
+		# on <player>: ..." when the answer says "him": the answer is the headline.
+		m = _re("media", "^Post-match(?:, on (.+?))?: '(.*?)'(?: .*)?$").search(text)
+		var on := m.get_string(1) if m != null else ""
+		s.merge({"club": my_club, "weight": 66, "mine": true, "name": on,
+				"headline": "“%s”" % (m.get_string(2) if m != null else text),
+				"standfirst": ("Your word on %s after the match." % on) if on != "" else "Your word after the match."}, true)
 		return s
 	elif kind == "board":
 		s.merge({"club": my_club, "weight": 75, "mine": true, "standfirst": "From your board."}, true)
@@ -250,7 +261,11 @@ static func rounds(items: Array) -> Array:
 
 
 ## {dateline, lead, secondary: [story], briefs: [{key, title, entries: [story]}], count}.
-static func build(items: Array, my_club := "") -> Dictionary:
+## `prev_lead` is last round's lead story ({} for none): the same headline never
+## leads twice running, and a goal haul doesn't follow a goal haul (nor your
+## match's hero your match's hero) as the lead while another story is big
+## enough to lead instead (bug bash 4).
+static func build(items: Array, my_club := "", prev_lead := {}) -> Dictionary:
 	var page := {"dateline": "", "lead": {}, "secondary": [], "briefs": [], "count": items.size()}
 	if items.is_empty():
 		return page
@@ -260,6 +275,16 @@ static func build(items: Array, my_club := "") -> Dictionary:
 	for it in items:
 		stories.append(story(it, my_club))
 	var ranked := rank(stories)
+	if not prev_lead.is_empty():
+		for i in range(ranked.size()):
+			var st: Dictionary = ranked[i]
+			if int(st["weight"]) < SECONDARY_MIN:
+				break
+			if not _repeats_lead(st, prev_lead):
+				if i > 0:
+					ranked.remove_at(i)
+					ranked.insert(0, st)
+				break
 	page["lead"] = ranked[0]
 	var taken := {0: true}
 	var side := []
@@ -285,6 +310,25 @@ static func build(items: Array, my_club := "") -> Dictionary:
 			briefs.append({"key": key, "title": BRIEF_TITLE[key], "entries": groups[key]})
 	page["briefs"] = briefs
 	return page
+
+
+static func _repeats_lead(st: Dictionary, prev: Dictionary) -> bool:
+	if str(st["headline"]) == str(prev.get("headline", "")):
+		return true
+	var fam := str(st.get("family", ""))
+	return fam != "" and fam == str(prev.get("family", ""))
+
+
+## The newest round's page, knowing the leads of the rounds before it, so a
+## lead is not repeated from one week to the next.
+static func front(items: Array, my_club := "") -> Dictionary:
+	var rs := rounds(items).slice(0, LEAD_MEMORY)
+	var prev := {}
+	var page := {}
+	for i in range(rs.size() - 1, -1, -1):
+		page = build(rs[i], my_club, prev)
+		prev = page["lead"]
+	return page if not rs.is_empty() else build([], my_club)
 
 
 ## Every story on a page, lead first (the count test and the hub card use it).
@@ -396,7 +440,7 @@ static func _brief_row(st: Dictionary, key: String) -> Control:
 static func fill(body: Container, items: Array, my_club: String, wide: bool, names := {}, now := "") -> void:
 	_names = names
 	# The front page is the newest round; older rounds go under "Earlier" below.
-	var page := build(latest_round(items), my_club)
+	var page := front(items, my_club)
 	if now != "":
 		page["dateline"] = now
 	var head := UiKit.hbox(8)
@@ -497,7 +541,7 @@ static func _wash(club: String) -> Color:
 ## whole card one tap (the button named NewsMore sits behind the words).
 static func mini(items: Array, my_club: String, on_open: Callable, names := {}, now := "") -> Control:
 	_names = names
-	var page := build(latest_round(items), my_club)
+	var page := front(items, my_club)
 	if now != "":
 		page["dateline"] = now
 	var card := MarginContainer.new()

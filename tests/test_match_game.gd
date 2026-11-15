@@ -85,6 +85,7 @@ func run() -> void:
 	_t("_test_play_through_mid_stands_in_midfield")
 	_t("_test_view_slots_stand_in_their_zone")
 	_t("_test_tag_hold")
+	_t("_test_tag_own_touches")
 	_t("_test_match_story")
 	_t("_test_first_goal_feed")
 	_t("_test_traits_surfaced")
@@ -103,6 +104,7 @@ func run() -> void:
 	_t("_test_set_shot_calls")
 	_t("_test_bomb_card_shows_the_dice")
 	_t("_test_forward_archetypes")
+	_t("_test_every_call_two_sided")
 	GameDB.skip_ovr_overrides = false
 	GameDB.reload()
 	print(Ran.line("Match game", self))
@@ -383,6 +385,18 @@ func _test_authenticity_events() -> void:
 			suspended += 1
 	_check(valid_mro and suspended > 0,
 			"Reportable tackles resolve once to no action, fine or 1-3 match suspension (%d reports)" % mro.reports.size())
+	# Bug bash 4: every charge was "rough conduct". The charge comes from the
+	# incident (who, when, how bad), with no match random number drawn.
+	var charges := {}
+	var bad_charge := ""
+	for row in mro.reports:
+		if not MatchSim.REPORT_CHARGES.has(str(row.get("reason", ""))):
+			bad_charge = str(row.get("reason", ""))
+	_check(bad_charge == "", "Every report carries a real charge (%s)" % bad_charge)
+	for m in range(40):
+		charges[MatchSim.report_charge(str(offender["id"]), 2, m, 0.6)] = true
+	_check(charges.size() == MatchSim.REPORT_CHARGES.size() and MatchSim.report_charge("x", 1, 3, 0.99) == "a dangerous tackle",
+			"Charges vary across incidents, and the worst tackles are dangerous tackles (%s)" % str(charges.keys()))
 
 
 ## ARD-M3-007: the free at the end of a chain follows where the chain was. A
@@ -1258,6 +1272,12 @@ func _test_weather_turns_at_a_break() -> void:
 	var line := Weather.turn_report_line("perfect", 2, "wet")
 	_check(line.begins_with("It started fine. The rain came in at half time:"),
 			"The match report says when it turned: " + line)
+	# Bug bash 4: a hot day that turns perfect cooled down; it never "fined up".
+	var cooled := Weather.turn_report_line("hot", 2, "perfect")
+	var fined := Weather.turn_report_line("wet", 2, "perfect")
+	_check(cooled == "It started hot. It cooled down by half time: fresher legs from there."
+			and fined.contains("It fined up by half time") and not Weather.turn_news(2, "perfect", "hot").contains("fined up"),
+			"A day turning perfect is worded by what it was (%s / %s)" % [cooled, fined])
 	# A day that holds plays as it always has: a bare condition is the old game.
 	var bare := _sim(91)
 	bare.weather = "perfect"
@@ -2687,6 +2707,55 @@ func _test_bring_the_heat() -> void:
 			"It says it shows next week only while its effort carries into the week's load (%.0f against %.0f)" % [week_load[1], week_load[0]])
 
 
+## Row 178 (director 2026-11-12: "says 27 touches 100% of the time"): the tag card
+## says the man's own touches. Two of their midfielders with different ratings get
+## two different counts, untagged and tagged; each is what the sim's carry pick
+## reads (Disposal, Carry, a wing), and the hold is the multiplier the sim plays
+## (MatchSim._tag_share) taking its measured count of touches off him.
+func _test_tag_own_touches() -> void:
+	var sim := _sim(8420, "GEE", "SYD")
+	var theirs: Array = (sim.squads[1] as Squad).ground.filter(func(p): return MatchSim.taggable(p))
+	theirs.sort_custom(func(a, b): return Roles.usual_touches(a) > Roles.usual_touches(b))
+	var busy: Dictionary = theirs[0]
+	var quiet: Dictionary = theirs[theirs.size() - 1]
+	var tagger: Dictionary = MatchSim.tagger_for((sim.squads[0] as Squad).ground)
+	var legs := float(sim.energy.get(str(tagger["id"]), 100.0))
+	_check(GateOdds.usual_touches(busy) != GateOdds.usual_touches(quiet)
+			and GateOdds.tag_kept(tagger, legs, busy) != GateOdds.tag_kept(tagger, legs, quiet)
+			and GateOdds.tag_touches(tagger, legs, busy) != GateOdds.tag_touches(tagger, legs, quiet),
+			"Two of their midfielders, two counts on the card (%s / %s)" % [GateOdds.tag_touches(tagger, legs, busy), GateOdds.tag_touches(tagger, legs, quiet)])
+	# His usual count is the fit on the ratings the sim picks its carrier on.
+	var f: Array = Roles.USUAL_TOUCHES_FIT
+	for p in [busy, quiet]:
+		var a: Dictionary = p["attr"]
+		var want := float(f[0]) + float(f[1]) * float(a["disposal"]) + float(f[2]) * float(a["carry"]) + (float(f[3]) if Roles.on_wing(p) else 0.0)
+		_check(is_equal_approx(Roles.usual_touches(p), maxf(Roles.USUAL_TOUCHES_MIN, want)),
+				"%s usually gets what the sim gives his ratings (%.1f)" % [str(p["id"]), want])
+	# Tagged: the hold the sim plays with this man on him, as touches off his own count.
+	sim.set_tactics(0, {"gameplan": "balanced", "tag_id": str(quiet["id"]), "tagger_id": str(tagger["id"]), "tag_set": true})
+	var share := sim._tag_share(0)
+	var lost := (Roles.TAG_USUAL_TOUCHES - Roles.touches_at(share)) * (Roles.TAG_LOSS_WING if Roles.on_wing(quiet) else Roles.TAG_LOSS_INSIDE)
+	_check(is_equal_approx(share, Roles.tag_keep(tagger, legs))
+			and is_equal_approx(Roles.tag_touches(tagger, legs, quiet), maxf(Roles.usual_touches(quiet) * Roles.TAG_KEEP_FLOOR, Roles.usual_touches(quiet) - lost)),
+			"Tagged, the card takes the sim's own hold off his own count (%.2f, %.1f lost)" % [share, lost])
+	# A wing loses more to the same hold than an inside man of the same count:
+	# his running ball is the ball a tag takes.
+	var inside := quiet.duplicate(true)
+	inside["line"] = "C"
+	var wing := quiet.duplicate(true)
+	wing["line"] = "WING"
+	(wing["attr"] as Dictionary)["disposal"] = float((wing["attr"] as Dictionary)["disposal"]) - float(f[3]) / float(f[1])
+	_check(is_equal_approx(Roles.usual_touches(inside), Roles.usual_touches(wing))
+			and Roles.tag_touches(tagger, legs, wing) < Roles.tag_touches(tagger, legs, inside),
+			"Held the same, a wing keeps less than an inside man who usually gets as much")
+	# The hot-player call and the break call say the same man's counts.
+	var lines := GateOdds.tag_call_lines("Q", "T", GateOdds.tag_kept(tagger, legs, quiet), GateOdds.usual_touches(quiet))
+	var brk: Array = GateOdds.tag_break_texts("Q", "T", GateOdds.tag_kept(tagger, legs, quiet), GateOdds.usual_touches(quiet))
+	var said := "usually gets %d touches\nWith T on him, about %d" % [GateOdds.usual_touches(quiet), GateOdds.tag_kept(tagger, legs, quiet)]
+	_check(str(lines["tag_gain"]).contains(said) and str(brk[0]).contains(said),
+			"The in-play call and the break call size the same man the same (%s)" % said)
+
+
 ## A tag is a midfield job: a forward kicking a bag never gets a tag card
 ## (that would be a choice with no effect); a midfielder does, and the card
 ## names the midfielder who would go to him.
@@ -2716,10 +2785,11 @@ func _test_hot_player_moment() -> void:
 			and str(m["options"][0]["label"]).contains(GameDB.player_display_name(tagger)),
 			"A midfielder kicking a bag can be tagged, by the midfielder who would go to him")
 	# The call says what each answer does and costs, sized from what the sim plays
-	# (row 120): what he keeps with this man on him, and what this man gives up.
+	# (row 120): what he keeps with this man on him, and what this man gives up,
+	# in his own touches (row 178).
 	var legs := float(sim.energy.get(str(tagger["id"]), 100.0))
-	var want := roundi(Roles.tag_touches(tagger, legs))
-	var usual := roundi(Roles.TAG_USUAL_TOUCHES)
+	var want := roundi(Roles.tag_touches(tagger, legs, mid))
+	var usual := roundi(Roles.usual_touches(mid))
 	var tag_o: Dictionary = m["options"][0]
 	var leave_o: Dictionary = m["options"][1]
 	_check(str(tag_o["gain"]).begins_with("Gain: ") and str(tag_o["gain"]).contains("usually gets %d touches" % usual)
@@ -2746,11 +2816,12 @@ func _test_hot_player_moment() -> void:
 	var mv: Dictionary = again.pending_moment
 	var other_name := GameDB.player_display_name(other)
 	var who := GameDB.player_display_name(again.tagger_of(0))
-	var held := roundi(Roles.tag_touches(again.tagger_of(0), float(again.energy.get(str(again.tagger_of(0)["id"]), 100.0))))
+	var held := roundi(Roles.tag_touches(again.tagger_of(0), float(again.energy.get(str(again.tagger_of(0)["id"]), 100.0)), other))
+	var other_usual := roundi(Roles.usual_touches(other))
 	_check(str(mv.get("kind", "")) == "hot" and str(mv["options"][0]["label"]) == "Move %s onto him" % who
 			and str(mv["options"][1]["label"]) == "Leave the tag on %s" % other_name,
 			"With a tag already on, the call is to move it or leave it (%s / %s)" % [mv["options"][0]["label"], mv["options"][1]["label"]])
-	_check(str(mv["options"][0]["cost"]) == "Cost: the tag comes off %s, who goes back to his usual %d touches" % [other_name, usual]
+	_check(str(mv["options"][0]["cost"]) == "Cost: the tag comes off %s, who goes back to his usual %d touches" % [other_name, other_usual]
 			and not str(mv["options"][0]["cost"]).contains(GateOdds.tag_gives()),
 			"Moving the tag costs the hold on the other man, not a second share of the tagger's game (%s)" % mv["options"][0]["cost"])
 	_check(str(mv["options"][1]["gain"]) == "Gain: %s stays on %s, who is held to about %d touches" % [who, other_name, held]
@@ -5034,3 +5105,78 @@ func _test_standing_plan_knowledge() -> void:
 		var want := "controlled" if PlanFit.edge(gg, "controlled") > PlanFit.STANDING_EDGE else "balanced"
 		ok = ok and PlanFit.standing_plan(gg, only_controlled) == want
 	_check(ok, "Controlled Tempo is a club's usual game when it is its best")
+
+
+## Row T1.R26 (bible principle 4; director 2026-11-10 "Gain / Cost
+## everywhere"): every match-day gate states, for each option, a Gain and a
+## Cost, sized, and never which option is better, so no option is left with
+## an upside and no stated downside. Every in-match call that can come up
+## (set shot, their hot midfielder, a run against, the late centre ball-up)
+## and every break call (plan, pep talk, risk cards).
+func _test_every_call_two_sided() -> void:
+	var sized := RegEx.create_from_string("[0-9]")
+	var verdict := RegEx.create_from_string("(?i)recommend|best (choice|option|call)|the better (choice|option|call)|you should")
+	var seen := {}
+	var check_call := func(m: Dictionary) -> void:
+		var kind := str(m.get("kind", ""))
+		seen[kind] = int(seen.get(kind, 0)) + 1
+		for o in m.get("options", []):
+			var g := str((o as Dictionary).get("gain", ""))
+			var c := str((o as Dictionary).get("cost", ""))
+			var what := "%s call, %s" % [kind, str(o.get("label", o.get("key", "")))]
+			_check(g.begins_with("Gain: ") and c.begins_with("Cost: "), "The %s states a Gain and a Cost (%s / %s)" % [what, g, c])
+			_check(str(o.get("key", "")) == "none" or sized.search(g + c) != null, "The %s gives a size or odds (%s / %s)" % [what, g, c])
+			_check(verdict.search(g + c + str(o.get("detail", ""))) == null, "The %s never says which is better" % what)
+	for seed in range(900, 920):
+		var sim := _sim(seed)
+		sim.always_offer_bounce = true
+		sim.moment_side = 0
+		while sim.current_quarter <= 4:
+			sim.begin_quarter()
+			while not sim.continue_quarter():
+				check_call.call(sim.pending_moment)
+				sim.resolve_moment(int(sim.pending_moment.get("default", 0)))
+			sim.end_quarter()
+		if seen.has("set_shot") and seen.has("momentum") and seen.has("bounce"):
+			break
+	for kind in ["set_shot", "momentum", "bounce"]:
+		_check(seen.has(kind), "(setup) a %s call came up in the seeded matches (%s)" % [kind, str(seen)])
+	# Their midfielder kicking a bag is rare in a seeded match: staged as the
+	# capture tool stages it (tools/visual/capture_tag_call.gd), once as a new
+	# tag and once with our tag already on another of theirs.
+	for tagged in [false, true]:
+		var sim := _sim(941)
+		sim.moment_side = 0
+		sim.begin_quarter()
+		sim.pending_moment = {}
+		sim._moments_this_q = 0
+		sim._last_moment_chain = sim._chain_no - 100
+		var hot_id := ""
+		for p in (sim.squads[1] as Squad).ground:
+			if str(p["role"]) == "MID" and sim.taggable(p):
+				hot_id = str(p["id"])
+				(sim.player_stats.get_or_add(hot_id, {}) as Dictionary)["goals"] = 3.0
+				break
+		if tagged:
+			for p in (sim.squads[1] as Squad).ground:
+				if str(p["id"]) != hot_id and sim.taggable(p):
+					sim.tactics[0]["tag_id"] = str(p["id"])
+					break
+		sim._boundary_moment()
+		_check(str(sim.pending_moment.get("kind", "")) == "hot", "(setup) the hot call comes up%s" % (" with a tag on" if tagged else ""))
+		check_call.call(sim.pending_moment)
+	# The break calls. Balanced and Stay composed are the no-change options:
+	# they state that nothing is gained and nothing given up, so carry no figure.
+	for plan in MatchSim.PLANS.keys() + ["balanced"]:
+		var t := GateOdds.plan_texts(str(plan))
+		_check(str(t[0]) != "" and str(t[1]) != "", "The %s plan states a gain and a cost" % plan)
+		_check(not GateOdds.PLAN_GAIN.has(MatchSim.plan_key(str(plan))) or sized.search(str(t[0]) + str(t[1])) != null,
+				"The %s plan sizes its gain and cost (%s / %s)" % [plan, t[0], t[1]])
+	for pep in GateOdds.PEP_GAIN.keys():
+		var t := GateOdds.pep_texts(str(pep))
+		_check(str(t[0]) != "" and str(t[1]) != "", "The %s pep talk states a gain and a cost" % pep)
+		_check(pep == "steady" or sized.search(str(t[0]) + str(t[1])) != null, "The %s pep talk is sized (%s / %s)" % [pep, t[0], t[1]])
+	for kind in GateOdds.BURST_GAIN.keys():
+		var t := GateOdds.burst_lines(str(kind), 20)
+		_check(sized.search(str(t[0])) != null and sized.search(str(t[1])) != null,
+				"The %s card sizes both its gain and its cost (%s / %s)" % [kind, t[0], t[1]])

@@ -40,7 +40,9 @@ static func texts_for(ctx: Dictionary) -> Array:
 	var away := str(ctx.get("away", ""))
 	var us := str(ctx.get("us", home))
 	var them := away if us == home else home
-	var marquee := MarqueeGames.label(home, away)
+	# The match's own marquee (GameState.marquee_for: the season and the
+	# pair's first meeting), else the pair's tradition.
+	var marquee := str(ctx["marquee"]) if ctx.has("marquee") else MarqueeGames.label(home, away, int(ctx.get("year", 0)))
 	if RESPECTFUL.has(marquee):
 		var own := _marquee(d, marquee)
 		if not own.is_empty():

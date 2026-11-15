@@ -23,13 +23,10 @@ TALES = ["data/tales/career.json", "data/tales/league.json", "data/tales/season.
 ## Known hits, per file: [count, words, the pass that rewrites them]. Each reason names its copy
 ## voice row in docs/TODO.md (131-140, the screen passes).
 ALLOW = {
-    "data/stories/leadership.json": [1, "should", "row 140: a player's own question, reported"],
-    "data/stories/media.json": [2, "should", "row 140: a pundit's view, reported"],
     # Auto-pick is the Team selection button's name (director, 2026-11-12: "Auto pick. I already answered
     # this question"); these lines name the button, so the word stays.
     "scripts/sim/SkipOrders.gd": [2, "auto-pick", "kept: names the Auto-pick button (director, 2026-11-12)"],
 
-    "scripts/state/GameState.gd": [1, "projection", "row 138"],
     "scripts/ui/FirstVisitIntro.gd": [1, "auto-pick", "kept: names the Auto-pick button (director, 2026-11-12)"],
     "scripts/ui/SelectionScene.gd": [5, "auto-pick", "kept: the Auto-pick button and the lines that name it (director, 2026-11-12)"],
 }
@@ -168,7 +165,6 @@ TEAM_PASS = {
         "Each plan buys an edge and gives something up. The note below says which.",
         "Each plan runs on one of our list's strengths. That is our side as picked, against every list in the league.",
         "\"Also on our list\"", "After three games, how we win and get beaten shows here.",
-        "One strength and one cost, as a plan of its own. It beats no plan and no plan beats it.",
         "No part of our game is costing us regularly.", "No one part of our game stands above the league.",
         "%s of the %s salary cap",
     ], ["gives something up;", "one of your list's", "Also on your list", "how your side wins", "on top of your plan",
@@ -228,6 +224,27 @@ TRAINING_OLD = [
     "further past its line", "his own game %d", "\"up to the standard", "\"within %d by week",
     "but two players are already learning", "comes off it", "until you lock", "his projected peak",
 ]
+
+## The event cards and press pass (copy voice pass 11, row 140): per file, rewritten lines and the
+## lines they replaced. The full old -> new sheet is in the row 140 PR.
+STORY_PASS = {
+    "data/stories/media.json": [[
+        "He wants him dropped after a poor few weeks.",
+        "A former player on the radio wants {name} playing as a {trial_word}.",
+    ], []],
+    "data/stories/leadership.json": [[
+        "He's told you first. Do the players hear it now, or after the finals?",
+    ], []],
+    "scripts/sim/StoryEngine.gd": [[
+        "Board confidence stays where it is. The other choice costs it %s.",
+        "{keep_price} a season against our cap.", "If we lose that final, about a %s chance our morale also falls %s.",
+        "His opinion of you %s, still %d out of 100.", "development points. A senior game gives %d.",
+    ], ["(the other choice costs it", "against your cap", "(a senior game gives", "(any injury, not only this one;",
+        "If you lose that final", "%d/100", "(high fluency)", "(low, medium, high)"]],
+    "scripts/sim/MediaConference.gd": [[
+        "Our record: %s.", "%s's opinion of you: %d → %d out of 100.", "%s warms to you: +%d%% next time",
+    ], ["Your record: %s.", "%d/100", "next time)", "%% confidence)"]],
+}
 
 ## The draft and pre-season pass (copy voice pass 7, with the draft, League draft, Combine and
 ## pre-season intros): per file, the rewritten lines and the lines they replaced. A trialled
@@ -330,12 +347,34 @@ CONTRACTS_PASS = {
 PASSES = [(HUB, "copy voice pass 2, hub", HUB_NEW, HUB_OLD)] + [
     (path, "copy voice pass 5, team and coaching", v[0], v[1]) for path, v in TEAM_PASS.items()] + [
     (TRAINING, "copy voice pass 6, training", TRAINING_NEW, TRAINING_OLD)] + [
+    (path, "copy voice pass 11, event cards and press", v[0], v[1]) for path, v in STORY_PASS.items()] + [
     (path, "copy voice pass 7, draft and pre-season", v[0], v[1]) for path, v in DRAFT_PASS.items()] + [
     (path, "copy voice pass 8, contracts and trades", v[0], v[1]) for path, v in CONTRACTS_PASS.items()]
 
 LITERAL = re.compile(r'"([^"\n]*)"')
 ## Copy voice pass 10 (stats and menus) joins the pinned passes on its own line.
 PASSES += [(path, "copy voice pass 10, stats and menus", v[0], v[1]) for path, v in STATS_PASS.items()]
+
+## The profile pass (copy voice pass 9): per file, the rewritten lines of the player profile and the
+## lines they replaced. Where he stands against his POT says "potential", never "projection".
+PROFILE_PASS = {
+    "scripts/ui/PlayerSheet.gd": [[
+        "'s opinion of you sets how much a talk lifts him.\\nUnder %d, he may refuse to re-sign with us.",
+        "Each point under adds %d%% to the odds he refuses.",
+        "Out for %s with a %s injury.", "Injured. Out for %s.", "\"\\n\".join(state)",
+        "Development focus: %s", "He runs %.1f km a game this season.",
+        "Only %d of his attributes are rated.", "Nickname, or leave it blank",
+    ], ["The higher his opinion of you", "re-sign with you", "Injured: out", "\"Development: %s",
+        "This season: %.1f km", "rated on record", "blank for none"]],
+    "scripts/state/GameState.gd": [[
+        "\"Near his potential\"", "\"At his potential\"", "\"Beyond his potential\"",
+    ], ["\"Near his projected peak\"", "\"At his projected peak\"", "\"Past his projection\""]],
+    "scripts/sim/Trust.gd": [[
+        "%s's opinion of you: %d out of 100", "The player's opinion of you: %d out of 100",
+    ], ["Opinion of you %d/100", "Opinion of you %d out of 100", "His opinion of you: %d"]],
+}
+## Copy voice pass 9 (the profile) joins the pinned passes on its own line.
+PASSES += [(path, "copy voice pass 9, profile", v[0], v[1]) for path, v in PROFILE_PASS.items()]
 
 ## The gates pass (copy voice pass 1): per file, the rewritten lines and the lines they replaced.
 ## One effect a line on the call cards (style guide 5.1): a gate's second effect starts its own line
@@ -360,9 +399,8 @@ GATES_PASS = {
         "hurting you on the scoreboard", "Back your defenders", "You can call it off at the break", "your stars"]],
     "scripts/sim/CoachReport.gd": [[
         "A lift at the contest while we're chasing the game.", "It leans on our ball-winners and ruck.",
-        "It asks nothing special of our list.", "We gain less ground.", "A plan of our own",
-    ], ["while you are chasing", "does nothing for you", "Leans on your", "of your list", "you are a little exposed",
-        "Your own plan: the strength"]],
+        "It asks nothing special of our list.", "We gain less ground.",
+    ], ["while you are chasing", "does nothing for you", "Leans on your", "of your list", "you are a little exposed"]],
     "scripts/ui/MatchScene.gd": [["\" · \".join(parts)"], []],
 }
 PASSES += [(path, "copy voice pass 1, gates", v[0], v[1]) for path, v in GATES_PASS.items()]

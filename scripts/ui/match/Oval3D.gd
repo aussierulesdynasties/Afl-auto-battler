@@ -9,6 +9,8 @@ extends Node3D
 ## own jog and idle), exported as assets/oval3d/player_average.glb, recoloured per club.
 
 const PLAYER_GLB := "res://assets/oval3d/player_average.glb"
+## The boots' own material in the GLB (export_player_glb.py, the Tripo boot): drawn as modelled.
+const BOOT_MATERIAL := "ARD_boot_real"
 const HALF_LEN := MatchMotion.HALF_LEN
 const HALF_WID := MatchMotion.HALF_WID
 const GOAL_X := MatchMotion.GOAL_X
@@ -27,6 +29,8 @@ const DIGITS := preload("res://assets/vignette/figures_digits.png")
 ## A Sherrin is about 0.29 m end to end and 0.18 m across.
 const BALL_R := 0.09
 const BALL_LONG := 1.6
+const DROP_T := 0.35          # s: a ball out of a man's hands takes this to reach where it lies
+const DROP_SNAP := 0.25       # m: a smaller gap than this is drawn straight away
 
 var director: MatchDirector
 var players: Array = []        # [{node, anim, ring}] in director.tokens order
@@ -35,6 +39,9 @@ var camera: Camera3D
 var anim: Oval3DAnim          # the animation session's controller (row 198)
 var umpires: Array = []        # [{node, anim, ring, role, k}]: the vignettes' umpire set
 var _look := Vector3.ZERO
+var _in_hands := false         # the ball was drawn in a man's hands last frame
+var _drop_from := Vector3.ZERO # where it left his hands
+var _drop_t := -1.0            # s into its fall to the turf; -1 when not falling
 
 
 func build(p_director: MatchDirector, home: String, away: String) -> void:
@@ -86,6 +93,8 @@ func anim_event(i: int, kind: StringName, at: Vector2, other := -1) -> void:
 
 
 func sync(dt: float) -> void:
+	# The animation clock first: a tackle about to land starts its two-man clip here.
+	anim.frame(dt)
 	for c in director.contacts:
 		anim_event(int(c["who"]), c["kind"], c["at"], int(c["other"]))
 	director.contacts.clear()
@@ -112,8 +121,25 @@ func sync(dt: float) -> void:
 	var h := float(director.ball.get("h", 0.0))
 	if holder >= 0 and holder < players.size():
 		_hold_ball(players[holder])
+		_in_hands = true
+		_drop_t = -1.0
 	else:
-		ball.position = Vector3(bp.x, BALL_R if resting else maxf(BALL_R, h), bp.y)
+		var to := Vector3(bp.x, BALL_R if resting else maxf(BALL_R, h), bp.y)
+		if mode == "flight":
+			_drop_t = -1.0
+		elif _in_hands and dt > 0.0 and ball.position.distance_to(to) > DROP_SNAP:
+			# Out of his hands onto the turf (a spill from a tackle, a fumble, a man walking off a
+			# dead ball): it falls from where his hands had it, never jumps there in one frame.
+			_drop_from = ball.position
+			_drop_t = 0.0
+		_in_hands = false
+		if _drop_t >= 0.0 and dt > 0.0:
+			_drop_t += dt
+			var u := clampf(_drop_t / DROP_T, 0.0, 1.0)
+			to = Vector3(lerpf(_drop_from.x, to.x, u), lerpf(_drop_from.y, to.y, u * u), lerpf(_drop_from.z, to.z, u))
+			if u >= 1.0:
+				_drop_t = -1.0
+		ball.position = to
 		ball.rotation = Vector3.ZERO
 	# Followed to within a few metres of each goal line: a kick-in or a shot at the camera's own
 	# end stays in view (aim_end stops looking ahead there).
@@ -358,15 +384,21 @@ func _kit(kit: Dictionary) -> ShaderMaterial:
 ## His number on the back of his guernsey (0-99; -1 for none), per figure.
 func _number(p: Dictionary, n: int) -> void:
 	for mi in (p["node"] as Node3D).find_children("*", "MeshInstance3D", true, false):
-		if (mi as MeshInstance3D).material_override is ShaderMaterial:
+		if (mi as MeshInstance3D).has_meta("kit"):
 			(mi as GeometryInstance3D).set_instance_shader_parameter("number", clampi(n, -1, 99))
 
 
 func _player(scene: PackedScene, kit: ShaderMaterial, cols: Array) -> Dictionary:
 	var node: Node3D = scene.instantiate()
 	add_child(node)
+	# Every surface wears the kit except the boots, which keep their own textured material.
 	for mi in node.find_children("*", "MeshInstance3D", true, false):
-		(mi as MeshInstance3D).material_override = kit
+		var m := mi as MeshInstance3D
+		for s in range(m.mesh.get_surface_count()):
+			var own := m.mesh.surface_get_material(s)
+			if own == null or own.resource_name != BOOT_MATERIAL:
+				m.set_surface_override_material(s, kit)
+		m.set_meta("kit", true)
 	var skel: Skeleton3D = node.find_children("*", "Skeleton3D", true, false)[0]
 	var hands := [skel.find_bone("hand_l"), skel.find_bone("hand_r")]
 	# A hand bone's length: its head to its fingers' roots (the children's rest offsets).

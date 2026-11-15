@@ -326,6 +326,10 @@ func _test_record_words() -> void:
 			"One plan all half")
 	_check(_say(RivalRead.plan_story("they", ["balanced", "attacking", "defensive", "controlled"])).contains(", then "),
 			"Three switches read in order")
+	var back := _say(RivalRead.plan_story("they", ["balanced", "balanced", "attacking", "balanced"]))
+	_check(back.contains(", then went back to ") and _say(RivalRead.plan_story("they",
+			["balanced", "attacking", "defensive", "defensive"])).contains(", then switched to "),
+			"The last switch has a verb of its own (%s)" % back)
 	_check(RivalRead.where("Round 6 · Gather Round") == "in Round 6" and RivalRead.where("Qualifying Final 2") == "in the Qualifying Final"
 			and RivalRead.where("Grand Final") == "in the Grand Final", "Where they met")
 	var rows := [

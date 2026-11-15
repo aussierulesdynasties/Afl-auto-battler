@@ -1441,8 +1441,8 @@ func _figure(pos: Vector2, scale: float, side: int, anim: String, facing: String
 	var air := 0.0 if ground == Vector2.INF else maxf(0.0, (ground.y - pos.y) / pm)
 	if not _no_shadow:
 		draw_set_transform_matrix(_view * Transform2D(0.0, Vector2(1.0, 0.3), 0.0, shadow_at))
-		draw_circle(Vector2.ZERO, 0.4 * pm * (1.0 - 0.35 * minf(air, 1.5)) * VignetteWeather.shadow_tight(weather),
-				Color(0, 0, 0, VignetteWeather.shadow_alpha(weather) * (1.0 - 0.4 * minf(air, 1.5))))
+		StoppageVignette.contact_shadow(self, 0.4 * pm * (1.0 - 0.35 * minf(air, 1.5)) * VignetteWeather.shadow_tight(weather),
+				VignetteWeather.shadow_alpha(weather) * (1.0 - 0.4 * minf(air, 1.5)))
 		draw_set_transform_matrix(_view)
 	# The number, printed on the back of the guernsey by the shader.
 	var num := StoppageVignette.number_colour(side, number, 1.0, mirror) 			if number > 0 and facing.begins_with("back") and pm >= 30.0 else Color(0, 0, 0, 0)

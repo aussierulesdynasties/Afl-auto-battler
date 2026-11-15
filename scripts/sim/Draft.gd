@@ -422,9 +422,9 @@ func full_words(code: String) -> String:
 	if full_at_44(code):
 		var n := list_now(code)
 		if n > Contracts.max_list():
-			return "your list holds %d and the limit is %d (senior list and Category A rookies together), so nobody joins until it is back under %d." % [
-					n, Contracts.max_list(), Contracts.max_list()]
-		return "your list is full (%d: senior list and Category A rookies together)." % Contracts.max_list()
+			return "your list holds %d and the limit is %d%s, so nobody joins until it is back under %d." % [
+					n, Contracts.max_list(), RookieList.together_words(" (", ")"), Contracts.max_list()]
+		return "your list is full (%d%s)." % [Contracts.max_list(), RookieList.together_words(": ", "")]
 	return "your %slist is full (%d)." % ["senior " if senior_cap > 0 else "", list_cap()]
 
 
@@ -1246,7 +1246,7 @@ func price_for(_code: String, p: Dictionary) -> int:
 ## His salary in the opening season's dollars (the budget's year,
 ## compute_budget): Legacy mode prices a 1990 draft in 1990 dollars.
 static func cost_of(p: Dictionary) -> int:
-	return Contracts.dollars(int(p["value"]), GameDB.START_YEAR)
+	return Contracts.pay(int(p["value"]), GameDB.START_YEAR)
 
 
 ## Your price for him (price_for your club).

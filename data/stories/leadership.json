@@ -14,7 +14,7 @@
 		"choices": [
 			{
 				"key": "hear",
-				"label": "Bring them in each week",
+				"label": "Bring them in",
 				"effects": [
 					{
 						"op": "morale",
@@ -32,7 +32,7 @@
 			},
 			{
 				"key": "no",
-				"label": "Selection is the coaches' call",
+				"label": "Keep selection with coaches",
 				"effects": [
 					{
 						"op": "morale",
@@ -62,7 +62,7 @@
 			"pick": "random"
 		},
 		"title": [
-			"{name} wants to take the young players for a session"
+			"{name} has offered to run a session for the young players"
 		],
 		"text": [
 			"Skills, standards, how to go about it. {first}'s way."
@@ -93,11 +93,11 @@
 						"on": "week"
 					}
 				],
-				"result": "{name} takes the young players on Wednesday, on top of his own week."
+				"result": "{name} takes the young players on Wednesday. It's on top of his own week."
 			},
 			{
 				"key": "no",
-				"label": "Keep it with the coaches",
+				"label": "Keep it with coaches",
 				"effects": [
 					{
 						"op": "morale",
@@ -129,7 +129,7 @@
 		"choices": [
 			{
 				"key": "example",
-				"label": "Make an example of them",
+				"label": "Make an example",
 				"effects": [
 					{
 						"op": "culture",
@@ -179,12 +179,12 @@
 			"The players have called their own meeting"
 		],
 		"text": [
-			"After the losing run, the senior players want the coaches out of the room."
+			"After the losing run, the senior players want the room to themselves."
 		],
 		"choices": [
 			{
 				"key": "room",
-				"label": "Let them have the room",
+				"label": "Give them the room",
 				"effects": [
 					{
 						"op": "morale",
@@ -242,7 +242,7 @@
 		"choices": [
 			{
 				"key": "back",
-				"label": "Back {first} for speaking up",
+				"label": "Back {first} publicly",
 				"effects": [
 					{
 						"op": "trust",
@@ -388,6 +388,7 @@
 	},
 	{
 		"id": "captain_group_flat",
+		"topical": true,
 		"category": "leadership",
 		"subject": {
 			"kind": "player",
@@ -406,7 +407,7 @@
 		"choices": [
 			{
 				"key": "dayoff",
-				"label": "Give them a day off",
+				"label": "Give a day off",
 				"effects": [
 					{
 						"op": "morale",
@@ -466,7 +467,7 @@
 				"rule": "The players follow a captain whose Leadership rating is {holds_at} or better. If {name} rates you {holds_opinion_at} out of 100 or better, {holds_trust_at} is enough. {name}: Leadership {leadership}, rates you {opinion} out of 100."
 			}
 		],
-		"cooldown": 25,
+		"cooldown": 50,
 		"when": {
 			"losing_run_min": 3
 		},
@@ -492,7 +493,7 @@
 		"choices": [
 			{
 				"key": "back",
-				"label": "Back {first}: a hard week",
+				"label": "Back the hard week",
 				"effects": [
 					{
 						"op": "morale",
@@ -576,7 +577,7 @@
 			"{name} thinks {kid_name} is ready"
 		],
 		"text": [
-			"{name} says {kid_name} has been the best of the young group at training."
+			"{name} says {kid_name} is the best young player at training."
 		],
 		"choices": [
 			{
@@ -782,6 +783,7 @@
 	},
 	{
 		"id": "captain_holding_group",
+		"topical": true,
 		"category": "leadership",
 		"subject": {
 			"kind": "player",
@@ -921,7 +923,7 @@
 			"{name}'s form has dropped"
 		],
 		"text": [
-			"{name}'s numbers have been down for a few weeks, and the side's been losing."
+			"{name}'s numbers have been down for a few weeks. We've been losing."
 		],
 		"choices": [
 			{
@@ -957,7 +959,7 @@
 			},
 			{
 				"key": "back",
-				"label": "Tell {first} his spot is safe",
+				"label": "Say his spot's safe",
 				"effects": [
 					{
 						"op": "start_backing"
@@ -1303,7 +1305,7 @@
 		"choices": [
 			{
 				"key": "offer",
-				"label": "Offer {first} a new deal",
+				"label": "Offer a new deal",
 				"effects": [
 					{
 						"op": "extend_early"
@@ -1313,7 +1315,7 @@
 			},
 			{
 				"key": "hand",
-				"label": "Tell the group it's in hand",
+				"label": "Say it's in hand",
 				"effects": [
 					{
 						"op": "morale",
@@ -1396,7 +1398,7 @@
 						"who": "others"
 					}
 				],
-				"result": "{name} is happy to stay, and you make sure the group hears it. The players still waiting on a deal hear it too."
+				"result": "{name} is happy to stay, and the group hears it. So do the players still waiting on a deal."
 			},
 			{
 				"key": "letbe",
@@ -1443,7 +1445,7 @@
 			"{name}'s contract is still open"
 		],
 		"text": [
-			"The club will sort {name}'s contract at the end of the season."
+			"We'll sort {name}'s contract at the end of the season."
 		],
 		"choices": [
 			{
@@ -1523,7 +1525,7 @@
 			},
 			{
 				"key": "asks",
-				"label": "{first} leads as long as he wants",
+				"label": "Let {first} lead on",
 				"effects": [
 					{
 						"op": "trust",
@@ -1588,7 +1590,7 @@
 			"Who's next?"
 		],
 		"text": [
-			"{vice_name} has been {name}'s deputy all year. The call on the captaincy is yours. The call on the armband is yours."
+			"{vice_name} has been {name}'s deputy all year. The call on the armband is yours."
 		],
 		"choices": [
 			{
@@ -1658,7 +1660,7 @@
 			"{name} has said this could be his last season"
 		],
 		"text": [
-			"{games} games, and {first} has told you he's leaning towards retirement. He's asked whether the players should hear it now or after the finals."
+			"{games} games, and {first} is leaning towards retirement. He's told you first. Do the players hear it now, or after the finals?"
 		],
 		"choices": [
 			{
@@ -1825,12 +1827,12 @@
 			"{name} wants the last word before the final"
 		],
 		"text": [
-			"The captain wants the last few words with the players before they run out. That's usually your moment."
+			"The captain wants the last words before they run out. That's usually your moment."
 		],
 		"choices": [
 			{
 				"key": "him",
-				"label": "Give {first} the last word",
+				"label": "Let {first} speak last",
 				"effects": [
 					{
 						"op": "trust",
@@ -1854,7 +1856,7 @@
 							}
 						],
 						"held_result": "You say your piece early. {name} sends them out, and the group hangs on every word.",
-						"failed_result": "You say your piece early. {name} sends them out, but the group has its mind on the game."
+						"failed_result": "You say your piece early. {name} sends them out. The group's mind is on the game."
 					}
 				],
 				"result": "",
@@ -1910,9 +1912,9 @@
 				"when": {
 					"told_players": true
 				},
-				"text": "{name} has told the club Saturday may be his final game, and everyone knows it."
+				"text": "{name} has told the club this may be his final game. Everyone knows it."
 			},
-			"Only you and {name} know Saturday may be his final game."
+			"Only you and {name} know this may be his final game."
 		],
 		"choices": [
 			{
@@ -1940,7 +1942,7 @@
 			},
 			{
 				"key": "calm",
-				"label": "Keep the weight off {first}",
+				"label": "Shield {first}",
 				"effects": [
 					{
 						"op": "morale",
@@ -1975,7 +1977,7 @@
 			"The leaders have voted"
 		],
 		"text": [
-			"The leadership group met last night and voted for an extra morning session each week until Round 1. They want to know you'll back it."
+			"The leadership group met last night. They voted for an extra morning session each week until Round 1. They want to know you'll back it."
 		],
 		"choices": [
 			{
@@ -2041,18 +2043,18 @@
 			"{name} finished near the back"
 		],
 		"text": [
-			"{first} is one of your best and came in among the last three in the time trial. The group saw it."
+			"{first} is one of our best. He came in among the last three in the time trial. The group saw it."
 		],
 		"choices": [
 			{
 				"key": "call",
-				"label": "Call it out in front of the group",
+				"label": "Call it out",
 				"effects": [
 					{
 						"op": "culture",
 						"strand": "standards",
 						"d": 1,
-						"why": "You called out a star's slow time trial in front of the group"
+						"why": "You called out his slow time trial in front of the group"
 					},
 					{
 						"op": "morale",
@@ -2126,13 +2128,13 @@
 		"choices": [
 			{
 				"key": "demands",
-				"label": "Tell them what next year demands",
+				"label": "Set next year's bar",
 				"effects": [
 					{
 						"op": "culture",
 						"strand": "standards",
 						"d": 2,
-						"why": "You set the bar for next year in the rooms after the finals exit"
+						"why": "You set next year's bar in the rooms after the finals exit"
 					},
 					{
 						"op": "morale",
@@ -2144,7 +2146,7 @@
 			},
 			{
 				"key": "thanks",
-				"label": "Thank them for the year",
+				"label": "Thank them",
 				"effects": [
 					{
 						"op": "culture",
@@ -2187,7 +2189,7 @@
 		"choices": [
 			{
 				"key": "photo",
-				"label": "Put the photo up in the gym",
+				"label": "Put the photo up",
 				"effects": [
 					{
 						"op": "culture",
@@ -2201,11 +2203,11 @@
 						"who": "all"
 					}
 				],
-				"result": "A photo of the other side's lap of honour goes up in the gym. Nobody can miss it."
+				"result": "A photo of their lap of honour goes up in the gym. Nobody can miss it."
 			},
 			{
 				"key": "let_go",
-				"label": "Let it go: it was a big year",
+				"label": "Let it go",
 				"effects": [
 					{
 						"op": "culture",

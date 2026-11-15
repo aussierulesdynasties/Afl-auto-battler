@@ -20,6 +20,7 @@ func run() -> void:
 	GameDB.reload()
 	_t("_test_rules")
 	_t("_test_season_flow")
+	_t("_test_season_end_card_for_non_finalist")
 	_t("_test_unavailable_not_left_out")
 	_t("_test_events")
 	_t("_test_backing_rules")
@@ -219,6 +220,39 @@ func _test_season_flow() -> void:
 	_check(after_cards.is_empty(), "No event cards once the season is over, bar the season-end one (%s, %s)" % [str(after_cards), GameState.my_finals_status()])
 
 
+## A side that misses the finals gets its season-end card in the first
+## finals week, so the club decks' losing-year cards (ladder_min) can be
+## dealt: Brisbane last on the ladder may hear the whispers of going home.
+func _test_season_end_card_for_non_finalist() -> void:
+	GameState.reset()
+	GameState.start_season("BRL", GameDB.club_list("BRL"))
+	GameState._settle_week_event()
+	var season = GameState.season
+	for code in season.ladder:
+		var row: Dictionary = season.ladder[code]
+		row["w"] = 0 if str(code) == "BRL" else 10
+		row["pts"] = int(row["w"]) * 4
+	season.round_index = season.fixture.size()
+	GameState.ensure_finals()
+	_check(GameState.my_finals_status() == "", "Brisbane, last, are not in the finals")
+	_check(ClubStories.season_end_due(GameState), "A side out of the finals is due its season-end card")
+	var whispers := StoryDeck.by_id(StoryDeck.all(), "brl_go_home_whispers")
+	var ctx: Dictionary = ClubStories.context(GameState, "season_end")
+	var w := StoryEngine.week_abs(int(ctx.get("year", 2000)), int(ctx.get("week", 0)))
+	_check(not whispers.is_empty() and not StoryEngine.eligible_subject(whispers, ctx, GameState.story, w, RandomNumberGenerator.new()).is_empty(),
+			"Brisbane's losing-year card can be dealt from last place")
+	var cards: Array = ClubStories.pick(GameState)
+	var ids := []
+	for c in cards:
+		ids.append(str(c.get("tid", "")))
+	var all_end := not ids.is_empty()
+	for id in ids:
+		if not (StoryDeck.by_id(StoryDeck.all(), id).get("phase", []) as Array).has("season_end"):
+			all_end = false
+	_check(all_end, "The card dealt is a season-end card (%s)" % str(ids))
+	_check(not ClubStories.season_end_due(GameState), "Once a season: no second season-end card")
+
+
 ## Through a real round (GameState._after_round): a player whose injury or
 ## suspension runs out at this very round's tick could not play, so he is not
 ## "left out while fit", at your club or a rival's, and a game you promised
@@ -317,8 +351,13 @@ func _test_events() -> void:
 		if not (opts.size() >= 2 and int(e["default"]) < opts.size()):
 			_check(false, "Event %s offers a real choice" % e["key"])
 	_check(quiet > 5 and quiet < 35, "Some weeks are quiet (%d of 59)" % quiet)
-	_check(seen.has("board_wants_answers") and seen.has("training_extra_session"),
-			"Losing streaks bring the board to your door (%s)" % str(seen.keys()))
+	_check(seen.has("board_wants_answers"), "Losing streaks bring the board to your door (%s)" % str(seen.keys()))
+	# The extra session is one card of a big deck: it must be dealable on a
+	# losing run, not drawn inside these 59 weeks (more cards, fewer draws each).
+	var extra := StoryDeck.by_id(StoryDeck.all(), "training_extra_session")
+	_check(not extra.is_empty() and not StoryEngine.eligible_subject(extra, ctx, StoryEngine.new_state(),
+			StoryEngine.week_abs(int(ctx.get("year", 2000)), 5), RandomNumberGenerator.new()).is_empty(),
+			"A losing run can bring the extra training session")
 	# Resolving: rest a sore star and he sits out. The deck walk above read a
 	# context copy and its own story state, so the same fresh career serves.
 	var star: Dictionary = GameState.my_list[0]
@@ -402,7 +441,7 @@ func _test_event_tradeoffs() -> void:
 	kid["xp"] = 0
 	var kid_card := GameState.story_card("training_kid_pushing", kid)
 	var dev_lines := str(kid_card["options"][1]["detail"])
-	_check(dev_lines.contains("His opinion of you down") and dev_lines.contains("re-sign with you")
+	_check(dev_lines.contains("His opinion of you down") and dev_lines.contains("re-sign with us")
 			and not dev_lines.contains("misses this week's game"),
 			"A development week costs his opinion of you and says what it does to his re-signing (%s)" % dev_lines)
 	var opinion_was := GameState.opinion_of_you(str(kid["id"]))
@@ -1005,6 +1044,39 @@ func _test_coaching_hub() -> void:
 			and GameState.form_log.has("X1") and not GameState.season_team.is_empty(),
 			"The plan, form and season numbers survive a save")
 	_check(GameState.season.plans.get("GEE", "") == "defensive", "A loaded career plays on its plan")
+	# The own plan is gone (director 2026-11-15: "remove custom gameplans from
+	# the game ... for now"): no picker offers it, and a save that played one,
+	# yours or a rival's, loads on Balanced with nothing of it left.
+	var pickers := {"How we play": GameState.CLUB_PLANS, "the rival read": RivalRead.ORDER,
+			"a break": load("res://scripts/ui/MatchScene.gd").GAMEPLANS.map(func(g): return g[0]),
+			"Sim orders": (SkipOrders.questions()[0]["options"] as Array).map(func(o): return o["key"])}
+	var offers := []
+	for where in pickers:
+		if (pickers[where] as Array).has("custom") or (pickers[where] as Array).size() != 5:
+			offers.append("%s: %s" % [where, str(pickers[where])])
+	_check(offers.is_empty() and not CoachReport.PLAN_NAMES.has("custom") and not CoachReport.PLAN_PARTS.has("custom"),
+			"No plan picker offers an own plan: the five plans only (%s)" % str(offers))
+	GameState.set_club_plan("custom")
+	_check(GameState.club_plan == "defensive", "An own plan cannot be chosen")
+	var old := GameState._save_state()
+	old["club_plan"] = "custom"
+	old["custom_plan"] = {"name": "The Squeeze", "s": "clean", "c": "slow"}
+	var rp: Dictionary = (old.get("rival_plans", {}) as Dictionary).duplicate(true)
+	var rival := "COL"
+	rp["custom"] = {rival: {"name": "", "s": "sharp", "c": "slow"}}
+	if rp.get("usual") is Dictionary:
+		(rp["usual"] as Dictionary)[rival] = "custom"
+	old["rival_plans"] = rp
+	_check(GameState._restore_career(old) and GameState.club_plan == "balanced"
+			and str(GameState.season.plans.get("GEE", "balanced")) == "balanced",
+			"A save on your own plan loads on Balanced (%s)" % GameState.club_plan)
+	_check(not GameState.rival_plans.has("custom") and str(CoachEffects.usual.get(rival, "")) != "custom",
+			"A rival's own plan in a save is dropped: the coach settles on one of the five (%s)"
+			% str(CoachEffects.usual.get(rival, "")))
+	var sq := GameState.my_coached_squad()
+	_check(MatchSim.plan_key("custom") == "balanced" and not MatchSim.PLANS.has("custom")
+			and not ("custom_plan" in sq),
+			"A plan named own plays Balanced; a squad holds no own plan")
 	GameState.set_club_plan("balanced")
 	GameState.delete_saved_career()
 

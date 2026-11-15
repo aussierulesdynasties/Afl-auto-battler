@@ -91,6 +91,18 @@ static func is_due(gs, e: Dictionary) -> bool:
 	return gs.season.is_regular_done() or int(gs.season.round_index) >= int(e.get("round", 0))
 
 
+## The event as this career's history has it: when Fitzroy fought off the
+## merger (LegacyRollover), an event's "fitzroy_stays" telling replaces its
+## clubs, headline and beats (bug bash 4, L7: no merged Lions in 1997).
+static func as_played(gs, e: Dictionary) -> Dictionary:
+	if not e.has("fitzroy_stays") or not (gs.legacy is Dictionary) \
+			or str((gs.legacy as Dictionary).get("fitzroy", "")) != "stays":
+		return e
+	var out := e.duplicate()
+	out.merge(e["fitzroy_stays"], true)
+	return out
+
+
 ## Is the event's switch on? The supplements saga follows its own switch;
 ## every other controversy follows Controversies.
 static func switched_on(gs, e: Dictionary) -> bool:
@@ -106,7 +118,8 @@ static func week(gs) -> Array:
 	if gs.season == null:
 		return cards
 	lift_bans(gs)
-	for e in all():
+	for raw in all():
+		var e := as_played(gs, raw)
 		if not is_due(gs, e):
 			continue
 		var c := fire(gs, e)
@@ -148,8 +161,9 @@ static func _penalty(gs, p: Dictionary) -> void:
 				var into := str(int(gs.season_year) + 1)
 				var cuts: Dictionary = state(gs)["budget_cuts"]
 				cuts[into] = snappedf(float(cuts.get(into, 0.0)) + cut, 0.1)
-				gs.add_news("board", "The fine comes out of next season's football budget: the board has $%.1fm to spend, not $%.1fm." % [
-						ClubBudget.ANNUAL_M - float(cuts[into]), ClubBudget.ANNUAL_M])
+				# In that season's dollars (bug bash 4, L6), like every other budget line.
+				gs.add_news("board", "The fine comes out of next season's football budget: the board has %s to spend, not %s." % [
+						ClubBudget.money_m(ClubBudget.ANNUAL_M - float(cuts[into]), int(into)), ClubBudget.money_m(ClubBudget.ANNUAL_M, int(into))])
 		"lose_pick":
 			lose_pick(gs, club, int(p.get("year", gs.season_year)), int(p.get("round", 1)), str(p.get("to", "")))
 		"finals_ban":

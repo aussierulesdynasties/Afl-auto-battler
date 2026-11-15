@@ -53,6 +53,7 @@ func _run() -> void:
 	await _t("_test_trophies_unplayed")
 	_t("_test_club_code_colours")
 	_t("_test_finals_cell")
+	_t("_test_level_ladder_order")
 	for i in range(4):
 		_state.advance()
 	await _t("_test_sections")
@@ -89,6 +90,24 @@ func _run() -> void:
 	await _t("_test_whole_text_checks_bite")
 	print(Ran.line("Stats", self, [ev]))
 	quit(0 if _failures.is_empty() else 1)
+
+
+## Before round 1 every club is level on points, percentage and points for:
+## the ladder reads A to Z by club name, the same every time, never in the
+## order an unstable sort happens to leave it.
+func _test_level_ladder_order() -> void:
+	var db = root.get_node("GameDB")
+	var season = _state.season
+	var names := []
+	for r in season.ladder_sorted():
+		names.append(str(db.club_name(str(r["code"]))))
+	var az := names.duplicate()
+	az.sort()
+	_check(names == az, "A level ladder reads A to Z by club name (%s)" % str(names.slice(0, 4)))
+	var again := []
+	for r in season.ladder_sorted():
+		again.append(str(db.club_name(str(r["code"]))))
+	_check(again == names, "...and the same order every time")
 
 
 ## The first visit explains the hub in two lines, once; "Got it" closes it.
@@ -1065,7 +1084,9 @@ func _test_ladder(sz: Vector2i) -> void:
 	var heads := []
 	for b in s.find_child("LadderHeader", true, false).get_children():
 		heads.append(str(b.name))
-	var phone: Array = ["Sort_pos", "Sort_club", "Sort_p", "Sort_w", "Sort_l", "Sort_d", "Sort_pct", "Sort_pts", "Sort_rating"]
+	# On a phone every head is a title: the "Sort by" row above the table sorts
+	# (director 2026-11-15, "Sort-by row").
+	var phone: Array = ["Head_pos", "Head_club", "Head_p", "Head_w", "Head_l", "Head_d", "Head_pct", "Head_pts", "Head_rating"]
 	if sz.x < 900:
 		_check(heads == phone, "Phone columns are # Club P W L D %% Pts Rating (%s: %s)" % [tag, str(heads)])
 	else:
@@ -1093,10 +1114,26 @@ func _test_ladder(sz: Vector2i) -> void:
 	_check(short_rows.is_empty() and not _row_codes(s).is_empty(), "Ladder rows are %s px tall (%s: short %s)" % ["at least 44" if sz.x < 900 else "at least 32", tag, str(short_rows.slice(0, 3))])
 	if sz.x < 900:
 		_check(header_w <= sz.x, "...and the header row still fits the screen (%s: %.0f px)" % [tag, header_w])
-		# A finger on the narrowest header, the "#" column, takes the tap and
-		# puts the ladder back in its true order.
-		var pos_why: String = await Tap.tap(s.find_child("Sort_pos", true, false))
-		_check(pos_why == "", "A finger on the # header (24 px wide, 44 tall) reaches it (%s: %s)" % [tag, pos_why])
+		# The phone's sort is a "Sort by" row of every column's word, two lines,
+		# each word a thumb's target (44 px each way) inside the screen; the
+		# header's titles are not buttons.
+		var row: Control = s.find_child("SortBy", true, false)
+		var words := []
+		var narrow := []
+		if row != null:
+			for b in row.find_children("Sort_*", "Button", true, false):
+				words.append(str(b.name).trim_prefix("Sort_"))
+				var r := (b as Control).get_global_rect()
+				if r.size.x < 44.0 or r.size.y < 44.0 or r.end.x > sz.x or not _button_text_fits(b as Button):
+					narrow.append("%s %.0fx%.0f" % [b.name, r.size.x, r.size.y])
+		var head_buttons := s.find_child("LadderHeader", true, false).find_children("*", "Button", true, false)
+		_check(row != null and words == ["pos", "p", "w", "l", "d", "pct", "pts", "club", "rating"]
+				and row.get_child_count() == 2 and head_buttons.is_empty(),
+				"A phone sorts by a two-line \"Sort by\" row of # P W L D %% Pts Club Rating (%s: %s)" % [tag, str(words)])
+		_check(narrow.is_empty(), "Every sort word on a phone is whole and at least 44 x 44 px (%s: %s)" % [tag, str(narrow)])
+		_check(row != null and _bold_button(s.find_child("Sort_pos", true, false), bold_font)
+				and not _bold_button(s.find_child("Sort_w", true, false), bold_font),
+				"The true order shows as \"#\" in bold (%s)" % tag)
 	else:
 		# On a PC the "#" header, the way back to the true order, is at least thumb-wide too.
 		var pos_btn: Control = s.find_child("Sort_pos", true, false)
@@ -1124,31 +1161,42 @@ func _test_ladder(sz: Vector2i) -> void:
 			and not _label_bold(s.find_child("Club_" + other, true, false), other_name, bold_font),
 			"Your club is in bold, another is not (%s)" % tag)
 
-	# Sort by wins, by finger; again to reverse; Ladder order to restore.
-	var why: String = await Tap.tap(s.find_child("Sort_w", true, false))
+	# Sort by wins, by finger (a phone's "Sort by" word, a PC's column head);
+	# again to reverse; Ladder order to restore.
+	var sk := "w"
+	var sname := "W"
+	var why: String = await Tap.tap(s.find_child("Sort_" + sk, true, false))
 	await _settle()
-	_check(why == "", "A finger on W sorts (%s: %s)" % [tag, why])
-	var wins := _by(s, season, "w")
-	_check(_non_increasing(wins), "W sorts most first (%s: %s)" % [tag, str(wins)])
-	_check(_text(s.find_child("ActiveState", true, false)).contains("sorted by W, most first"), "The sort is named (%s)" % tag)
-	await Tap.tap(s.find_child("Sort_w", true, false))
+	_check(why == "", "A finger on %s sorts (%s: %s)" % [sname, tag, why])
+	var wins := _by(s, season, sk)
+	_check(_non_increasing(wins), "%s sorts most first (%s: %s)" % [sname, tag, str(wins)])
+	var said := _text(s.find_child("ActiveState", true, false))
+	_check(said.begins_with("Sorted by %s, highest first" % sname), "The sort is named, as a sentence (%s: %s)" % [tag, said])
+	_check(s.find_child("LadderOrder", true, false) == null, "One way back, Reset: no second Ladder order button (%s)" % tag)
+	if sz.x < 900:
+		var hw: Label = s.find_child("Head_w", true, false)
+		_check(_bold_button(s.find_child("Sort_w", true, false), bold_font) and not _bold_button(s.find_child("Sort_pos", true, false), bold_font)
+				and hw != null and hw.get_theme_font("font") == bold_font,
+				"The sorted word and its column's title turn bold (%s)" % tag)
+	await Tap.tap(s.find_child("Sort_" + sk, true, false))
 	await _settle()
-	wins = _by(s, season, "w")
+	wins = _by(s, season, sk)
 	_check(_non_decreasing(wins), "A second tap reverses it (%s: %s)" % [tag, str(wins)])
 	_header_aligns(s, tag + " sorted")
-	await Tap.tap(s.find_child("LadderOrder", true, false))
+	await Tap.tap(s.find_child("Sort_pos", true, false))
 	await _settle()
-	_check(_row_codes(s) == true_order and s.find_child("LadderOrder", true, false) == null,
-			"Ladder order restores the true order (%s)" % tag)
-	await Tap.tap(s.find_child("Sort_club", true, false))
-	await _settle()
-	var names := []
-	for c in _row_codes(s):
-		names.append(str(db.club_short(c)))
-	var az := names.duplicate()
-	az.sort()
-	_check(names == az, "The club column sorts A to Z first (%s)" % tag)
-	_check(_text(s.find_child("ActiveState", true, false)).contains("Club, A–Z first"), "The club sort reads A–Z, not fewest first (%s)" % tag)
+	_check(_row_codes(s) == true_order and s.find_child("ActiveState", true, false) == null,
+			"The # word restores the true order (%s)" % tag)
+	if true:
+		_check((await Tap.tap(s.find_child("Sort_club", true, false))) == "", "A finger on Club sorts (%s)" % tag)
+		await _settle()
+		var names := []
+		for c in _row_codes(s):
+			names.append(str(db.club_short(c)))
+		var az := names.duplicate()
+		az.sort()
+		_check(names == az, "The club column sorts A to Z first (%s)" % tag)
+		_check(_text(s.find_child("ActiveState", true, false)).contains("Club, A–Z first"), "The club sort reads A–Z, not fewest first (%s)" % tag)
 
 	# Filters, by finger: Top 10, Near us, and Reset.
 	await Tap.tap(s.find_child("Filter_top10", true, false))
@@ -1309,7 +1357,7 @@ func _test_ladder(sz: Vector2i) -> void:
 	_check(s.call("handle_back") == true, "Back closes the club's page (%s)" % tag)
 	await _settle()
 	_check(s.find_child("ClubPage", true, false) == null and _row_codes(s) == before
-			and _text(s.find_child("ActiveState", true, false)).contains("sorted by Pts"),
+			and _text(s.find_child("ActiveState", true, false)).contains("orted by Pts"),
 			"Back returns to the ladder as it was, sort and filter kept (%s)" % tag)
 	s.queue_free()
 	await _settle()
@@ -1333,7 +1381,7 @@ func _header_aligns(s: Node, tag: String) -> void:
 		for i in heads.size():
 			var h: Control = heads[i]
 			var c: Control = cells[i]
-			var club := str(h.name) == "Sort_club"
+			var club := str(h.name) == "Sort_club" or str(h.name) == "Head_club"
 			var hx: float = h.get_global_rect().position.x if club else h.get_global_rect().end.x
 			var cx: float = c.get_global_rect().position.x if club else c.get_global_rect().end.x
 			if absf(hx - cx) > 2.0:
@@ -1375,7 +1423,7 @@ func _table_text_whole(s: Node, what: String, tag: String, guernsey_only := fals
 	if header != null:
 		cut.append_array(_cut_text(header))
 		for h in header.get_children():
-			if guernsey_only and str(h.name) == "Sort_club":
+			if guernsey_only and str(h.name) in ["Sort_club", "Head_club"]:
 				continue   # no room for the word over a guernsey-wide column
 			if h is Button and (h as Button).is_visible_in_tree() and not _button_text_fits(h as Button):
 				cut.append("%s \"%s\"" % [h.name, (h as Button).text])
@@ -1580,7 +1628,11 @@ func _table_recipe(s: Node, tag: String, with_pos: bool) -> void:
 	_check(zero_muted, "A zero is muted (%s)" % tag)
 	var head_right := true
 	for h in s.find_child("LadderHeader", true, false).get_children():
-		if h is Button and str(h.name) != "Sort_club" and (h as Button).alignment != HORIZONTAL_ALIGNMENT_RIGHT:
+		if str(h.name) in ["Sort_club", "Head_club"]:
+			continue
+		if h is Button and (h as Button).alignment != HORIZONTAL_ALIGNMENT_RIGHT:
+			head_right = false
+		if h is Label and (h as Label).horizontal_alignment != HORIZONTAL_ALIGNMENT_RIGHT:
 			head_right = false
 	_check(head_right, "Their headers are right-aligned to match (%s)" % tag)
 	if with_pos:
@@ -1836,6 +1888,10 @@ func _label_bold(row: Node, text: String, bold_font) -> bool:
 		if str(l.text) == text:
 			return l.get_theme_font("font") == bold_font
 	return false
+
+
+func _bold_button(b: Node, bold_font) -> bool:
+	return b is Button and (b as Button).get_theme_font("font") == bold_font
 
 
 ## The finals weeks are in the fixture once the finals start, and not before.
