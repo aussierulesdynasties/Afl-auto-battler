@@ -1063,8 +1063,9 @@ func _clanger_phases(k: int) -> Array:
 		# Nobody has it (the tackled man is on the deck with it): nobody kicks
 		# it either. It spills out of the pack toward him and he runs onto it
 		# where it lies (3d view 2, 2026-11-15: the ball flew 9 m up off a
-		# falling pair with no kicker).
-		return [{"t": "spill", "toward": e, "dur": 0.4}, {"t": "collect", "who": e},
+		# falling pair with no kicker). He fumbles it once he is on it, not
+		# from 3 m away ("reach": no early close-enough).
+		return [{"t": "spill", "toward": e, "dur": 0.4}, {"t": "collect", "who": e, "reach": true},
 				{"t": "emit", "log": true}, {"t": "fumble", "dur": 0.35}]
 	if out.is_empty() and d > 1.0:
 		var pk := _prev_real(k)
@@ -1807,7 +1808,7 @@ func _done(p: Dictionary) -> bool:
 			# Never a freeze: a ball against the fence or a crowd round it can
 			# keep him just short of it. Close enough after a moment is his,
 			# and no collect lasts longer than COLLECT_LIMIT.
-			if (_pt >= 1.5 and d <= 3.0) or _pt >= COLLECT_LIMIT:
+			if (_pt >= 1.5 and d <= 3.0 and not p.get("reach", false)) or _pt >= COLLECT_LIMIT:
 				return true
 			if p.get("roll", false) and _pt > 0.1 and str(ball["mode"]) != "flight" and d <= ROLL_REACH:
 				# Still short of it: one bobble his way, aimed now and straight

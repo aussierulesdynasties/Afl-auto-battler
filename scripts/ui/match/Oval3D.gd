@@ -31,6 +31,9 @@ const BALL_R := 0.09
 const BALL_LONG := 1.6
 const DROP_T := 0.35          # s: a ball out of a man's hands takes this to reach where it lies
 const DROP_SNAP := 0.25       # m: a smaller gap than this is drawn straight away
+const ROLL_TURN := 8.0         # rad/s: a rolling ball's long axis turns across its way at most this fast
+const ROLL_SETTLE := 0.2       # s: from his hands or a landing it eases into its roll over this
+const ROLL_JUMP := 3.0         # m: a bigger move in one frame is the ball put somewhere, not rolled
 
 var director: MatchDirector
 var players: Array = []        # [{node, anim, ring}] in director.tokens order
@@ -42,6 +45,10 @@ var _look := Vector3.ZERO
 var _in_hands := false         # the ball was drawn in a man's hands last frame
 var _drop_from := Vector3.ZERO # where it left his hands
 var _drop_t := -1.0            # s into its fall to the turf; -1 when not falling
+var _roll_yaw := 0.0           # the rolling ball's long axis, as a turn about UP
+var _roll := 0.0               # how far it has turned over about that axis
+var _on_turf := false          # it was rolling (or lying) last frame
+var _settle_t := 0.0           # s since it came out of his hands or the air
 
 
 func build(p_director: MatchDirector, home: String, away: String) -> void:
@@ -122,6 +129,7 @@ func sync(dt: float) -> void:
 	if holder >= 0 and holder < players.size():
 		_hold_ball(players[holder])
 		_in_hands = true
+		_on_turf = false
 		_drop_t = -1.0
 	else:
 		var to := Vector3(bp.x, BALL_R if resting else maxf(BALL_R, h), bp.y)
@@ -139,8 +147,15 @@ func sync(dt: float) -> void:
 			to = Vector3(lerpf(_drop_from.x, to.x, u), lerpf(_drop_from.y, to.y, u * u), lerpf(_drop_from.z, to.z, u))
 			if u >= 1.0:
 				_drop_t = -1.0
+		var moved := Vector2(to.x - ball.position.x, to.z - ball.position.z)
 		ball.position = to
-		ball.rotation = Vector3.ZERO
+		if mode == "flight":
+			ball.rotation = Vector3.ZERO
+			_roll_yaw = 0.0
+			_roll = 0.0
+			_on_turf = false
+		else:
+			_roll_ball(moved, dt)
 	# Followed to within a few metres of each goal line: a kick-in or a shot at the camera's own
 	# end stays in view (aim_end stops looking ahead there).
 	var target := Vector3(clampf(bp.x, -LOOK_X, LOOK_X), 0.0, clampf(bp.y, -LOOK_Z, LOOK_Z))
@@ -181,6 +196,30 @@ func _nearest(at: Vector2, within: float) -> int:
 ## The ball sits between the carrier's palms, its long axis across his body as the carry pose
 ## holds it. A palm is 60% along the hand bone, the point the sprite pipeline uses
 ## (build_sprites.hands_px), so the 3D ball and the sprite ball sit in the same place.
+## A ball off the hands and out of the air rolls: its long axis turns across the way it goes and
+## it turns over on its round side, distance / BALL_R, so it never slides along the turf (and its
+## point never digs in). From his hands or a landing it eases into that roll over ROLL_SETTLE.
+func _roll_ball(moved: Vector2, dt: float) -> void:
+	var settle := 1.0
+	if not _on_turf:
+		_on_turf = true
+		_settle_t = 0.0
+	if _settle_t < ROLL_SETTLE and dt > 0.0:
+		_settle_t += dt
+		settle = clampf(_settle_t / ROLL_SETTLE, 0.0, 1.0)
+	var d := moved.length()
+	if d > 0.002 and d < ROLL_JUMP:
+		var want := atan2(moved.x, moved.y) + PI * 0.5
+		# The ball is the same both ways along its axis: turn the shorter way.
+		var dy := wrapf(want - _roll_yaw, -PI * 0.5, PI * 0.5)
+		_roll_yaw += clampf(dy, -ROLL_TURN * dt, ROLL_TURN * dt)
+		var axis := Vector3(sin(_roll_yaw), 0.0, cos(_roll_yaw))
+		var spin := Vector3.UP.cross(Vector3(moved.x, 0.0, moved.y) / d)
+		_roll = fmod(_roll + signf(spin.dot(axis)) * absf(spin.dot(axis)) * d / BALL_R, TAU)
+	var target := Quaternion(Basis(Vector3.UP, _roll_yaw) * Basis(Vector3.BACK, _roll))
+	ball.quaternion = target if settle >= 1.0 else ball.quaternion.slerp(target, settle)
+
+
 func _hold_ball(p: Dictionary) -> void:
 	var skel: Skeleton3D = p["skel"]
 	var hands: Array = p["hands"]
