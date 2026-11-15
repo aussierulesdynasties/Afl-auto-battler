@@ -5232,6 +5232,13 @@ func _test_synergies_follow_the_ground() -> void:
 	_check((forced.synergies[0] as Array).has("engine_room"), "An audit can hold a synergy on")
 	_check(forced._contest_traits(0, true) > 0.0 and forced._contest_traits(0, false) == 0.0,
 			"The Engine room wins more of the stoppages and nothing in general play")
+	var er_text := str(Traits.SYNERGIES["engine_room"]["text"])
+	_check(er_text.contains("%d%% more ground" % roundi((Traits.power2("engine_room") - 1.0) * 100.0)),
+			"The Engine room card says the clearance's extra ground at its real size: %s" % er_text)
+	var rm_text := str(Traits.SYNERGIES["running_machine"]["text"])
+	_check(Traits.power2("running_machine") < 1.0
+			and rm_text.contains("%d%% less often" % roundi((1.0 - Traits.power2("running_machine")) * 100.0)),
+			"The Running machine card says the free runner's lighter pressure at its real size: %s" % rm_text)
 	var res := {"synergies": [["running_machine", "supply_line"], []], "goals": [12, 9], "q4_legs": [81.4, 66.0],
 			"synergy_share": [{"running_machine": 1.0, "supply_line": 0.5}, {}],
 			"team": [{"clearances": 40, "inside50": 55}, {"clearances": 33, "inside50": 48}]}

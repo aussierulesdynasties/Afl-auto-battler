@@ -72,9 +72,9 @@ const SYNERGIES := {
 	"supply_line": {"label": "Supply line", "line": "", "needs": {"ball_magnet": 3, "playmaker": 1}, "power": 1.22,
 			"text": "+20% metres gained per disposal.",
 			"about": "Ball-users feeding a playmaker going forward.", "does": "Gains more ground with every disposal."},
-	"running_machine": {"label": "Running machine", "line": "", "needs": {"engine": 3}, "power": 0.50, "power2": 0.80,
-			"text": "The whole side tires 50% slower.",
-			"about": "A side of endurance runners.", "does": "The whole side tires more slowly."},
+	"running_machine": {"label": "Running machine", "line": "", "needs": {"engine": 3}, "power": 0.50, "power2": 0.87,
+			"text": "The whole side tires 50% slower, and a runner who takes it unopposed is tackled or hurried 13% less often.",
+			"about": "A side of endurance runners.", "does": "Tires more slowly and finds the spare runner."},
 }
 ## The five-trait cap, said wherever a synergy's needs are (bug bash 5): a
 ## player past five keeps the five he clears by the most (Traits.of).
