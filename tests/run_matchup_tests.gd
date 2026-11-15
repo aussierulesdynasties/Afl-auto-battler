@@ -917,11 +917,15 @@ func _test_former_player() -> void:
 	var expect: Array = FP.report_lines(res, me, _state.former_players(opp))
 	var lines := m.find_children("FormerAgainst_*", "Control", true, false)
 	var mins: int = FP.minutes_on(res, 1 - me, str(gone["id"]))
-	_check(not expect.is_empty() and lines.size() == expect.size() and _plain(lines[0]) == str(expect[0]["text"])
-			and _plain(lines[0]).begins_with(gname + " against his old side: "),
-			"The report says what he did against you (%d minutes: %s)" % [mins, " | ".join(lines.map(func(c): return _plain(c)))])
+	# The screen draws exactly what the rule gives (the rule's own cases are
+	# checked above); whether this seeded match clears 60 minutes or a goal
+	# moves with every match-engine change.
+	var same := lines.size() == expect.size()
+	if same and not expect.is_empty():
+		same = _plain(lines[0]) == str(expect[0]["text"]) and _plain(lines[0]).begins_with(gname + " against his old side: ")
+	_check(same, "The report says what he did against you, exactly when the rule does (%d minutes, %d expected: %s)" % [mins, expect.size(), " | ".join(lines.map(func(c): return _plain(c)))])
 	var st: Dictionary = (res.get("players", {}) as Dictionary).get(str(gone["id"]), {})
-	_check(not lines.is_empty() and _plain(lines[0]).contains(": %d touch" % int(float(st.get("disposals", 0.0)))),
+	_check(lines.is_empty() or _plain(lines[0]).contains(": %d touch" % int(float(st.get("disposals", 0.0)))),
 			"The report's touches are his from this match")
 	m.queue_free()
 	await _settle()
