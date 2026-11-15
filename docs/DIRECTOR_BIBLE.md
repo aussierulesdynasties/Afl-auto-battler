@@ -325,6 +325,8 @@ Source tags: DB = DESIGN_BIBLE; RM26/27/28/29/30/32 = roadmap chapters 26, 27, 2
 
 **2.76** The vignettes go; 3D scenes replace them (2026-11-15). Told the 15 new Club Forge hair styles had no 2D vignette art, he answered "Not yet" to making it, then: "vignettes as they exist currently are going to be removed from the game in favour of our new 3d scenes". No new art or features for the current 2D vignettes (figure sheets, hair overlays, vignette scenes); looks are proven on the 3D footballer.
 
+**2.77** 3D oval hair passes (2026-11-15). Rejecting the procedural hair ("they look like shit find a few free asset hair packs online and show me"), he took both free sets offered ("idc, both") and all their cuts ("all"): 7 MakeHuman (CC0) and 22 Sketchfab VincentFreelance (CC BY 4.0, credited in assets/oval3d/HAIR-LICENSE.txt). They fill the Club Forge styles and add 15 new ones. Shown all 31 on the 3D footballer from the front, side and back, he answered "Pass".
+
 ---
 
 ## 2.S Superseded and cut
