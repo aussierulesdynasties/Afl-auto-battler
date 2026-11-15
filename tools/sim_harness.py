@@ -276,6 +276,11 @@ def derive_ratings(players):
         listed = p.get("real_pos", "")
         if listed in ("FWD", "DEF") and p["role"] != "RUCK":
             p["role"] = listed
+        # A record naming several roles ("a wingman or half forward"): his
+        # recorded stats choose among the roles it names (director 2026-11-15).
+        named = [r for r in listed.split("|") if role_scores.get(r, -1.0) >= 0.0] if "|" in listed else []
+        if named:
+            p["role"] = max(named, key=role_scores.get)
         # Ratings.ROLE_CORRECTIONS: clearly misread forwards.
         p["role"] = ROLE_CORRECTIONS.get("%s|%s" % (p.get("club", ""), p.get("name", "")), p["role"])
         p["role_scores"] = role_scores

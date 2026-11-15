@@ -17,6 +17,10 @@ stats place him.
 1. Wikidata: AFL Tables id (P3547) -> English Wikipedia article.
 2. Wikipedia: each article's infobox position (section 0 wikitext).
 3. positions_read.csv: the hand-read articles (article,position,quote).
+4. positions_afc.csv: australianfootball.com biographies read by hand for the
+   players none of the above places (afltables_id,position,quote,source_url).
+   A position naming several roles ("DEF|MID") lets his recorded stats choose
+   among them (director 2026-11-15).
 
 Writes data/legacy/positions.csv: afltables_id,position,record,from,source_url.
 A player with no record is left out; the builders then read his recorded stats.
@@ -114,6 +118,7 @@ INFO = [("ruck-rover", "MID"), ("ruck rover", "MID"), ("ruck", "RUCK"), ("follow
         ("tagger", "MID"), ("on-ball", "MID"), ("onball", "MID")]
 
 READ = os.path.join(HERE, "positions_read.csv")
+AFC = os.path.join(HERE, "positions_afc.csv")
 
 
 def info_role(s):
@@ -150,6 +155,14 @@ def main():
         if role:
             rows.append({"afltables_id": "players/%s.html" % pid, "position": role, "record": raw,
                          "from": how, "source_url": art[pid]})
+    placed = {r["afltables_id"] for r in rows}
+    n["australianfootball.com (read by hand)"] = 0
+    for r in csv.DictReader(open(AFC, encoding="utf-8")):
+        if r["afltables_id"] in placed:
+            sys.exit("positions_afc.csv places a player already placed: %s" % r["afltables_id"])
+        n["australianfootball.com (read by hand)"] += 1
+        rows.append({"afltables_id": r["afltables_id"], "position": r["position"], "record": r["quote"],
+                     "from": "australianfootball.com (read by hand)", "source_url": r["source_url"]})
     with open(OUT, "w", newline="", encoding="utf-8") as fh:
         w = csv.DictWriter(fh, fieldnames=["afltables_id", "position", "record", "from", "source_url"],
                            lineterminator="\n")

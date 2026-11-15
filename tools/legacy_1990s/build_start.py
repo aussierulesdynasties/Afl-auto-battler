@@ -115,6 +115,24 @@ def unrecorded(year_rows):
 GAME_KEY = {"one_pct": "onepct", "pct_played": "pctp"}
 HEIGHTS = os.path.join(LEG, "heights.csv")
 _heights = None
+# Heights read off australianfootball.com player pages, each matched to the
+# man by his date of birth (director 2026-11-15, "find sources").
+HEIGHTS_AFC = os.path.join(LEG, "heights_afc.csv")
+_heights_afc = None
+
+
+def sourced_height(first, last, dob):
+    """His height from data/legacy/heights_afc.csv by name and date of birth,
+    '' with none."""
+    global _heights_afc
+    if _heights_afc is None:
+        _heights_afc = {}
+        if os.path.exists(HEIGHTS_AFC):
+            with open(HEIGHTS_AFC, newline="", encoding="utf-8") as fh:
+                _heights_afc = {(r["name"].lower(), r["dob"]): r["height_cm"] for r in csv.DictReader(fh)}
+    if not dob:
+        return ""
+    return _heights_afc.get((("%s %s" % (first, last)).strip().lower(), dob), "")
 
 
 def with_heights(rows):
@@ -131,11 +149,17 @@ def with_heights(rows):
         if not str(r.get("height_cm", "")).strip() and r.get("draftguru_id", "") in _heights:
             r["height_cm"] = _heights[r["draftguru_id"]]
             r["_height_from"] = "draftguru page"
+        if not str(r.get("height_cm", "")).strip():
+            h = sourced_height(r.get("first", ""), r.get("last", ""), r.get("dob", ""))
+            if h:
+                r["height_cm"] = h
+                r["_height_from"] = "australianfootball.com"
     return rows
 
 
-def page_height(dg):
-    return with_heights([{"draftguru_id": dg, "height_cm": ""}])[0]["height_cm"]
+def page_height(dg, first="", last="", dob=""):
+    return with_heights([{"draftguru_id": dg, "height_cm": "", "first": first, "last": last,
+                          "dob": dob}])[0]["height_cm"]
 
 POSITIONS = os.path.join(LEG, "positions.csv")
 _positions = None
@@ -146,9 +170,12 @@ _positions = None
 FULL_STATS_FROM = 2003
 
 
-def real_position(pid, season):
+def real_position(pid, season, role=""):
     """His real position (RUCK, MID, DEF or FWD) from data/legacy/positions.csv
-    for a season before FULL_STATS_FROM, '' with no record."""
+    for a season before FULL_STATS_FROM, '' with no record. A record naming
+    several roles ("DEF|MID") is passed whole when role is '' (the harness
+    picks by his role scores); given role (his stats' reading), it is that
+    role when the record names it, else the record's first role."""
     global _positions
     if season >= FULL_STATS_FROM:
         return ""
@@ -157,12 +184,25 @@ def real_position(pid, season):
         if os.path.exists(POSITIONS):
             with open(POSITIONS, newline="", encoding="utf-8") as fh:
                 _positions = {r["afltables_id"]: r["position"] for r in csv.DictReader(fh)}
-    return _positions.get(pid, "") if pid else ""
+    pos = _positions.get(pid, "") if pid else ""
+    if role and "|" in pos:
+        named = pos.split("|")
+        return role if role in named else named[0]
+    return pos
 
 
-def pos_cell(pid, season):
+def stats_role(rated, pid, upto):
+    """His role in his latest rated season up to upto with a game, '' with none."""
+    for y in sorted((y for y in rated if y <= upto), reverse=True):
+        got = rated[y].get(pid) if pid else None
+        if got and got[1] > 0:
+            return got[3]
+    return ""
+
+
+def pos_cell(pid, season, role=""):
     """real_pos as the game's CSVs carry it (RUC for a ruck)."""
-    pos = real_position(pid, season)
+    pos = real_position(pid, season, role)
     return {"RUCK": "RUC"}.get(pos, pos)
 
 
@@ -358,7 +398,7 @@ def build(by_year, rated):
         if row89 and row89[1] > 0:
             cells = stat_cells(row89[2])
             players.append(dict(cells, club=club, num=L["num"], last=L["last"], first=L["first"],
-                                src=str(DATA_SEASON), real_pos=pos_cell(pid, DATA_SEASON), dob=L["dob"], age=age_at(L["dob"]),
+                                src=str(DATA_SEASON), real_pos=pos_cell(pid, DATA_SEASON, row89[3]), dob=L["dob"], age=age_at(L["dob"]),
                                 height_cm=L["height_cm"], weight_kg=L["weight_kg"], debut=debut,
                                 height_source="draftguru" if L["height_cm"] else ""))
             history.append({"club": club, "num": L["num"], "slug": pid.rsplit("/", 1)[-1].replace(".html", ""),
@@ -368,7 +408,7 @@ def build(by_year, rated):
                             "honours": "%.3g" % hon[pid] if hon.get(pid) else ""})
         else:
             additions.append({"first": L["first"], "last": L["last"], "dob": L["dob"], "club": club,
-                              "position": real_position(pid, DATA_SEASON), "height_cm": L["height_cm"], "list": L["list"],
+                              "position": real_position(pid, DATA_SEASON, stats_role(rated, pid, DATA_SEASON)), "height_cm": L["height_cm"], "list": L["list"],
                               "peak": peak or "", "source_url": L["source_url"], "checked": L["checked"],
                               "_height_from": L.get("_height_from", "club list")})
             latest = None

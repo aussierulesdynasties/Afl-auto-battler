@@ -180,7 +180,7 @@ def build(by_year, rated):
         if data and data[1] > 0:
             cells = B.stat_cells(data[2])
             players.append(dict(cells, club=club, num=L["num"], last=L["last"], first=L["first"],
-                                src=str(DATA_SEASON), real_pos=B.pos_cell(pid, DATA_SEASON), dob=L["dob"], age=age_at(L["dob"]),
+                                src=str(DATA_SEASON), real_pos=B.pos_cell(pid, DATA_SEASON, data[3]), dob=L["dob"], age=age_at(L["dob"]),
                                 height_cm=L["height_cm"], weight_kg=L["weight_kg"], debut=debut,
                                 height_source="draftguru" if L["height_cm"] else ""))
             history.append({"club": club, "num": L["num"],
@@ -190,7 +190,7 @@ def build(by_year, rated):
                             "peak": peak or "", "last_season": ended(pid, L["last"], L["dob"])})
         else:
             additions.append({"first": L["first"], "last": L["last"], "dob": L["dob"], "club": club,
-                              "position": B.real_position(pid, DATA_SEASON), "height_cm": L["height_cm"], "list": L["list"],
+                              "position": B.real_position(pid, DATA_SEASON, B.stats_role(rated, pid, DATA_SEASON)), "height_cm": L["height_cm"], "list": L["list"],
                               "peak": peak or "", "last_season": ended(pid, L["last"], L["dob"]),
                               "source_url": L["source_url"], "checked": L["checked"]})
             latest = None

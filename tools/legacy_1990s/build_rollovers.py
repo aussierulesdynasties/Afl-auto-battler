@@ -98,7 +98,7 @@ def role_of(pid, rated, height):
             if best is None or k > best[0]:
                 best = (k, got[3], y)
     if best:
-        return B.real_position(pid, best[2]) or best[1]
+        return B.real_position(pid, best[2], best[1]) or best[1]
     h = B.num(height) or 0
     return "RUCK" if h >= 199 else ""
 
@@ -236,8 +236,8 @@ def main():
             classes.append({
                 "year": year, "rank": rank, "kind": r["draft"], "club": B.code(r["club"]),
                 "first": r["first"], "last": r["last"], "dob": dob,
-                "height_cm": b.get("height_cm", "") or B.page_height(dg),
-                "role": role_of(pid, rated, b.get("height_cm", "") or B.page_height(dg)),
+                "height_cm": b.get("height_cm", "") or B.page_height(dg, r["first"], r["last"], dob),
+                "role": role_of(pid, rated, b.get("height_cm", "") or B.page_height(dg, r["first"], r["last"], dob)),
                 "origin": r["origin"], "tie": "FS" if r["flag"] == "father_son" else "",
                 "peak": peak_of(pid, rated, year + 1),
                 "last_season": last_of(pid, r["first"], r["last"], dob, year),
