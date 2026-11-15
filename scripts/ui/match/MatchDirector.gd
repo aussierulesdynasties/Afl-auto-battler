@@ -332,6 +332,18 @@ func idle() -> bool:
 	return _beat.is_empty() and cursor >= events.size()
 
 
+## A tackle being run down right now (the chase before the contact), for the 3D figures to
+## start the tackle clip a moment early: {who, victim, left} with `left` the director seconds
+## before the chase gives up and the tackle lands anyway; {} otherwise. Read-only.
+func tackle_ahead() -> Dictionary:
+	if str(_beat.get("kind", "")) != "tackle" or _pi >= _phases.size():
+		return {}
+	var p: Dictionary = _phases[_pi]
+	if str(p.get("t", "")) != "chase" or not p.get("_entered", false):
+		return {}
+	return {"who": int(p["who"]), "victim": int(p["victim"]), "left": maxf(0.0, float(p["max"]) - _pt)}
+
+
 func _tick(h: float) -> void:
 	time += h
 	var guard := 0

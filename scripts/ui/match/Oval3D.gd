@@ -88,6 +88,8 @@ func anim_event(i: int, kind: StringName, at: Vector2, other := -1) -> void:
 
 
 func sync(dt: float) -> void:
+	# The animation clock first: a tackle about to land starts its two-man clip here.
+	anim.frame(dt)
 	for c in director.contacts:
 		anim_event(int(c["who"]), c["kind"], c["at"], int(c["other"]))
 	director.contacts.clear()
