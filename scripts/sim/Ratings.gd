@@ -281,6 +281,28 @@ static func build_norm_params(players: Array, keys: Array) -> Dictionary:
 	return params
 
 
+## Players a line needs before it gets its own scale; fewer keeps the pool's.
+const POSITION_NORM_MIN := 12
+
+
+## Normalisation params per line (FWD, MID, DEF, RUCK), from the players rated
+## in that line. Falls back to the pool's params for a thin line.
+static func position_norm_params(pool: Array, keys: Array, fallback: Dictionary) -> Dictionary:
+	var by_line := {}
+	for p in pool:
+		if not p.has("rates"):
+			continue
+		var line := str(p.get("role", ""))
+		if not by_line.has(line):
+			by_line[line] = []
+		by_line[line].append(p)
+	var out := {}
+	for line in by_line:
+		var members: Array = by_line[line]
+		out[line] = build_norm_params(members, keys) if members.size() >= POSITION_NORM_MIN else fallback
+	return out
+
+
 static func norm(params: Dictionary, metric: String, v: float) -> float:
 	var e: Dictionary = params[metric]
 	var x := 0.0
@@ -361,7 +383,39 @@ static func derive_all(players: Array, reference: Array = []) -> Array:
 			q[k] = norm(params, k, p["rates"][k])
 		p["norm"] = q
 
-		# ---- 1-99 attributes ----------------------------------------------
+		# ---- role classification ------------------------------------------
+		var hitouts_pg: float = p["ho"] / maxf(1.0, p["gm"])
+		var scores := {
+			"FWD": 0.50 * q["goals_pg"] + 0.26 * q["marks_inside50_pg"]
+					+ 0.14 * q["goal_assists_pg"] + 0.10 * q["behinds_pg"],
+			"MID": 0.42 * q["disposals_pg"] + 0.30 * q["contested_pg"]
+					+ 0.28 * q["clearances_pg"],
+			"DEF": 0.42 * q["rebounds_pg"] + 0.30 * q["one_percenters_pg"]
+					+ 0.20 * q["marks_pg"] + 0.08 * (1.0 - q["goals_pg"]),
+		}
+		# Ruck is gated on actual hit-out volume, not on a normalised score:
+		# without the gate every tall forward gets classified as a ruckman.
+		scores["RUCK"] = (0.25 + 0.85 * q["hitouts_pg"]) if hitouts_pg >= 7.0 else -1.0
+		p["role_scores"] = scores
+		p["role"] = listed_primary(p, pick_role(scores))
+		var fix := "%s|%s %s" % [p.get("club", ""), p.get("first", ""), p.get("last", "")]
+		if ROLE_CORRECTIONS.has(fix):
+			p["role"] = ROLE_CORRECTIONS[fix]
+		p["role2"] = assign_secondary(p)
+
+
+	# ---- 1-99 attributes, each against his own line ------------------------
+	# Director 2026-11-15 ("Yes, all of them"): every rating compares a player
+	# with players in his own position, so a defender's Marking is not judged
+	# on the forward-50 marks only forwards take. Each line's 98th percentile
+	# is its own top of the scale (POSITION_NORM_MIN players, else the pool's).
+	var line_params := position_norm_params(reference + players, keys, params)
+	for p in players:
+		var lp: Dictionary = line_params.get(str(p["role"]), params)
+		var q := {}
+		for k in keys:
+			q[k] = norm(lp, k, p["rates"][k])
+		p["norm_line"] = q
 		var a := {}
 		a["disposal"] = scale_attr(0.60 * q["disposals_pg"]
 				+ 0.25 * q["contested_pg"] + 0.15 * q["clearances_pg"])
@@ -394,25 +448,6 @@ static func derive_all(players: Array, reference: Array = []) -> Array:
 				a[k] = clampi(int(round(float(a[k]) * adj)), 1, 99)
 		p["attr"] = a
 
-		# ---- role classification ------------------------------------------
-		var hitouts_pg: float = p["ho"] / maxf(1.0, p["gm"])
-		var scores := {
-			"FWD": 0.50 * q["goals_pg"] + 0.26 * q["marks_inside50_pg"]
-					+ 0.14 * q["goal_assists_pg"] + 0.10 * q["behinds_pg"],
-			"MID": 0.42 * q["disposals_pg"] + 0.30 * q["contested_pg"]
-					+ 0.28 * q["clearances_pg"],
-			"DEF": 0.42 * q["rebounds_pg"] + 0.30 * q["one_percenters_pg"]
-					+ 0.20 * q["marks_pg"] + 0.08 * (1.0 - q["goals_pg"]),
-		}
-		# Ruck is gated on actual hit-out volume, not on a normalised score:
-		# without the gate every tall forward gets classified as a ruckman.
-		scores["RUCK"] = (0.25 + 0.85 * q["hitouts_pg"]) if hitouts_pg >= 7.0 else -1.0
-		p["role_scores"] = scores
-		p["role"] = listed_primary(p, pick_role(scores))
-		var fix := "%s|%s %s" % [p.get("club", ""), p.get("first", ""), p.get("last", "")]
-		if ROLE_CORRECTIONS.has(fix):
-			p["role"] = ROLE_CORRECTIONS[fix]
-		p["role2"] = assign_secondary(p)
 
 		# ---- overall + draft value ----------------------------------------
 		p["overall"] = rate_overall(a, str(p["role"]), float(p["gm"]))
