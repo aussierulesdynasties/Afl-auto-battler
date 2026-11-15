@@ -17,6 +17,8 @@ func run() -> void:
 	_t("_test_initial_contracts")
 	_t("_test_real_money_scale")
 	_t("_test_offseason_flow")
+	_t("_test_offseason_books_are_next_seasons")
+	_t("_test_real_retirements_are_retirements")
 	_t("_test_list_costs")
 	_t("_test_fa_weights")
 	_t("_test_market_test")
@@ -312,6 +314,57 @@ func _test_initial_contracts() -> void:
 	_check(not GameState.offseason_open(), "Trades are closed during the season")
 	_check(not bool(GameState.release_player(str(GameState.my_list[0]["id"]))["ok"]),
 			"Nobody can be released mid-season")
+
+
+## Found 2026-11-15 (director: "my salary cap was also extremely tight
+## somehow so i could only resign 1 or two"): the off-season's books carried
+## every retiree's salary and this season's cap. Every deal there is for next
+## season, so the cap, the money and the payroll are next season's, for every
+## club alike (Contracts.payroll, GameState._sync_money_year).
+func _test_offseason_books_are_next_seasons() -> void:
+	_new_season()
+	var year := GameState.season_year
+	_check(Contracts.money_year == year and GameState.salary_cap == Contracts.salary_cap_for_year(year),
+			"In the season the cap and money are its own (%d, %d)" % [Contracts.money_year, GameState.salary_cap])
+	_to_offseason()
+	_check(Contracts.money_year == year + 1, "Off-season money is next season's (%d)" % Contracts.money_year)
+	_check(GameState.salary_cap == Contracts.salary_cap_for_year(year + 1),
+			"Off-season deals are made under next season's cap (%d, want %d)" % [
+				GameState.salary_cap, Contracts.salary_cap_for_year(year + 1)])
+	var p: Dictionary = {}
+	for q in GameState.my_list:
+		if not GameState.retiring_now(q):
+			p = q
+			break
+	var before := GameState.my_payroll()
+	p["retiring"] = year + 1
+	_check(GameState.my_payroll() == before - int(p["salary"]),
+			"A retiree's salary is off next season's books (%d -> %d)" % [before, GameState.my_payroll()])
+	p["play_on"] = year + 1
+	_check(GameState.my_payroll() == before, "Talked round to play on, he is back on them")
+	p.erase("retiring")
+	p.erase("play_on")
+	# The rival clubs read the same books: none is left over its cap by them.
+	var over := []
+	for code in GameState.season.lists:
+		if Contracts.payroll(GameState.season.lists[code]) + GameState.dead_for(code) > GameState.cap_for(code):
+			over.append(code)
+	_check(over.is_empty(), "No club's next-season books run over next season's cap (%s)" % str(over))
+
+
+## A real player of a Legacy start retires at his real time only when his last
+## real season was a retirement: REAL_RETIRE_AGE or older. Younger, his club
+## delisted him, and the sim's clubs make that call (found 2026-11-15: a 1990
+## start retired 12 a club, nine of them 26 or younger).
+func _test_real_retirements_are_retirements() -> void:
+	var vet := {"id": "rr_vet", "age": 31.0, "overall": 70, "real_last": 1990}
+	var kid := {"id": "rr_kid", "age": 22.0, "overall": 50, "real_last": 1990}
+	# Due in 1992 at the latest (his real last season, one late at most).
+	_check(Prospects.should_retire(vet, 1992), "A 31-year-old whose real career ended in 1990 retires by 1992")
+	_check(not Prospects.should_retire(kid, 1992),
+			"A 22-year-old whose real career ended in 1990 (delisted) is not retired by the record")
+	var edge := {"id": "rr_edge", "age": Prospects.REAL_RETIRE_AGE + 2.0, "overall": 60, "real_last": 1990}
+	_check(Prospects.should_retire(edge, 1992), "Aged %d in his last real season, it was his retirement" % int(Prospects.REAL_RETIRE_AGE))
 
 
 func _test_offseason_flow() -> void:

@@ -14,6 +14,10 @@ extends RefCounted
 ## generated deterministically from its year so careers can loop forever.
 
 const MAX_RETIRE_PER_CLUB := 8
+## The youngest a real player of a Legacy start can be in his last real
+## season for that season to count as his retirement (should_retire). Younger,
+## he was delisted, and the sim's list decisions take his place.
+const REAL_RETIRE_AGE := 27.0
 ## Generated forwards run from small (172 cm) to key (203 cm), about a third
 ## of each by MatchSim.fwd_size, as in a real draft class: from 184 cm there
 ## were no small forwards, and over a career the league's forward lines
@@ -415,6 +419,11 @@ static func age_league(lists: Dictionary, year: int, min_left := 0) -> Dictionar
 						"overall": int(p.get("overall", 40))})
 				p["retired"] = true
 			else:
+				# Held back by the cap on retirements or the list size: he
+				# plays the season, so nothing reads him as retiring in it
+				# (Contracts.payroll would leave his salary off the books).
+				if int(p.get("retiring", 0)) == year:
+					p.erase("retiring")
 				keep.append(p)
 		lists[code] = keep
 	return {"retired": retired, "developed": developed, "declined": declined}
@@ -427,8 +436,12 @@ static func should_retire(p: Dictionary, year: int) -> bool:
 	# 2026-11-13: "make all historical players retirement start roughly when
 	# it did irl"), a year either side, whatever his age or rating; a coach
 	# can still talk him round (Retirement). Still listed in 2025: the sim's.
+	# His last real season is a retirement only when he was REAL_RETIRE_AGE or
+	# older in it: a younger man's career ended because his club delisted him,
+	# which is a list decision, so the sim's clubs make it. (Read as every last
+	# season, a 1990 start retired 12 a club, nine of them 26 or younger.)
 	var last := int(p.get("real_last", 0))
-	if last > 0:
+	if last > 0 and float(p.get("age", 26.0)) - float(year - last) >= REAL_RETIRE_AGE:
 		return year > last + real_slack(p)
 	if ov <= 32:
 		return true
