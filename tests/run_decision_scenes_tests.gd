@@ -200,6 +200,28 @@ func _test_kind(kind: String) -> void:
 		var pb: Vector2 = vig.palm_of(b, 1)
 		_check(pa != Vector2.INF and pb != Vector2.INF and viewport.has_point(pa) and viewport.has_point(pb),
 				"%s: the ball has hands to be in, on screen" % kind)
+	if kind == "hot":
+		# The man kicking a bag carries it: his right hand is on screen to hold it.
+		var pc: Vector2 = vig.palm_of(vig.token_of("carrier"), 1)
+		_check(pc != Vector2.INF and viewport.has_point(pc), "hot: the ball is in the carrier's right hand, on screen")
+	if kind == "duel":
+		# Kicked in over the camera, the ball only comes down until both men meet it: it never
+		# dips to their hips on the way up and rises again.
+		var ys := []
+		for step in range(9):
+			vig.set("_frozen", false)
+			vig.set("_t", float(vig.get("_end")) * step / 8.0)
+			vig.queue_redraw()
+			await process_frame
+			var box: Rect2 = vig.get("_ball_box")
+			if box.has_area():
+				ys.append(box.get_center().y)
+		var down := ys.size() >= 6
+		for i in range(1, ys.size()):
+			down = down and float(ys[i]) >= float(ys[i - 1]) - 1.0
+		_check(down, "duel: the ball only comes down to the men's hands (%s)" % str(ys))
+		vig.finish_now()
+		await _settle()
 	for i in range(40):
 		await process_frame
 	var off := []

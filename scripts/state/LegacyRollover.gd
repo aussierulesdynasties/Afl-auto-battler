@@ -310,7 +310,7 @@ static func _new_player(code: String, year: int, n: int, r: Dictionary) -> Dicti
 		p["blank"] = blank
 		p["stats_year"] = int(src)
 		p["draft_rank"] = 0
-		p["data_src"] = "listed %d, rated on his %s season" % [year, src]
+		p["data_src"] = "listed %d, rated on the %s season" % [year, src]
 		return p
 	# Rated as the prospect he still is, as GameDB rates a list addition with
 	# no senior game: a young one about a mid-first-round pick, older lower.

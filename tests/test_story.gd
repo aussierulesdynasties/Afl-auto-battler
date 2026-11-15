@@ -644,7 +644,9 @@ func _test_bug_bash_4_story() -> void:
 	var dd := -1
 	_check(Trust.opinion_move(t0, dd) == 0, "A one-point trust move can round to no move in opinion")
 	var tiny := str(StoryEngine._trust_words(dd, t0))
-	_check(tiny == "His opinion of you slips a little, still 50 out of 100.", "A move too small to show still names the cost (%s)" % tiny)
+	_check(tiny == "{name_s} opinion of you slips a little, still 50 out of 100.", "A move too small to show still names the cost (%s)" % tiny)
+	var named := StoryEngine.fill(tiny, {"name": "Smith"})
+	_check(named == "Smith's opinion of you slips a little, still 50 out of 100.", "The card fills in whose opinion it is (%s)" % named)
 	var refuse := StoryEngine._refuse_words(-40, 0)
 	_check(refuse.contains("re-sign with us") and not refuse.contains("/100"), "The contract line says 'with us' and 'out of 100' (%s)" % refuse)
 
@@ -971,7 +973,8 @@ func _test_trust_in_play() -> void:
 	GameState.week_event = GameState.story_card("media_in_the_papers", p)
 	var hint := str(GameState.week_event["options"][1]["detail"])
 	var out := GameState.resolve_week_event(1)
-	_check(hint.contains("His opinion of you up 5, to 55 out of 100"), "The choice says what it does to his opinion of you (%s)" % hint)
+	_check(hint.contains(" opinion of you up 5, to 55 out of 100") and not hint.contains("His opinion")
+			and not hint.contains("{name_s}"), "The choice says what it does to his opinion of you (%s)" % hint)
 	_check(Trust.value(GameState.relations, key) == 10 and out.contains("'s opinion of you: 50 → 55 out of 100.") and not out.contains("His opinion"),
 			"Backing him in the papers: his opinion of you rises, and the result says so (%s)" % out)
 	_check(str(Trust.reasons(GameState.relations, key)[0]["why"]) == "You kept him in when the papers wanted him out",

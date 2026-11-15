@@ -573,7 +573,7 @@
     },
     {
      "key": "against",
-     "label": "Say the club should stand alone",
+     "label": "Say the club stands alone",
      "effects": [
       {
        "op": "board",
@@ -1123,7 +1123,7 @@
        "d": -4
       }
      ],
-     "result": "You say the club broke the cap for four seasons and should lose the pick."
+     "result": "You say the club broke the cap for four seasons and deserves to lose the pick."
     },
     {
      "key": "close",
@@ -1140,7 +1140,7 @@
        "why": "You asked for credit for a breach"
       }
      ],
-     "result": "You say the club came forward on its own and the league should remember that."
+     "result": "You say the club came forward on its own and asks the league to remember that."
     }
    ]
   }
@@ -2144,7 +2144,7 @@
        "d": -4
       }
      ],
-     "result": "You say the secret deal should never have been signed and the club accepts its penalty."
+     "result": "You say the secret deal was wrong from the start and the club accepts its penalty."
     },
     {
      "key": "close",

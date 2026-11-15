@@ -16,9 +16,28 @@ from common import Finding, gd_const_strings, gd_files, is_comment, line_of, rea
 COPY_RULES = "scripts/core/CopyRules.gd"
 ## data/tales holds the phrase banks of the story layer (a career, the league news, a season's
 ## shape): every phrase there reaches the screen, so the banks are walked like the story cards.
-SOURCES = ["data/stories", "data/tales", "scripts/ui", "scripts/sim", "scripts/state"]
+## scripts/core, the club arcs and the Legacy year events reach it too, and so do the data files
+## at the top of data/ (patch notes, banners, culture effects): TOP_DATA.
+SOURCES = ["data/stories", "data/tales", "data/arcs", "data/legacy", "scripts/core", "scripts/ui", "scripts/sim",
+           "scripts/state"]
+## The data files at the top of data/ (not its folders: histories, raw): JSON, read like the banks.
+TOP_DATA = "data"
+## The banned list itself is not copy.
+NOT_COPY = [COPY_RULES]
 ## The phrase banks that must be among the files read (a moved or renamed bank fails by name).
 TALES = ["data/tales/career.json", "data/tales/league.json", "data/tales/season.json"]
+
+## The marks that never reach visible text (CopyRules.MARKS and SHOUT): a raw meter ("/100": write
+## "%d out of 100") and "!" outside the broadcaster's feed. ("|" and "_" are CopyRules marks too, but
+## a literal with a space and either is nearly always code; the Godot check covers what is shown.)
+MARKS = ["/100", "!"]
+## Known marks, per file: [count, marks, why they stay]. Exact, like ALLOW.
+MARKS_ALLOW = {
+    "scripts/sim/MatchSim.gd": [3, "!", "the broadcaster's feed: a goal, extra time, next score wins"],
+    "data/stories/clubs/haw.json": [1, "!", "the card's title is the speech it is about: \"Do something!\""],
+    "scripts/ui/SaveFiles.gd": [1, "!", "JavaScript (the web file picker), never shown"],
+    "scripts/core/ScreenLayout.gd": [1, "!", "JavaScript (the touch probe), never shown"],
+}
 
 ## Known hits, per file: [count, words, the pass that rewrites them]. Each reason names its copy
 ## voice row in docs/TODO.md (131-140, the screen passes).
@@ -259,9 +278,9 @@ STORY_PASS = {
     "scripts/sim/StoryEngine.gd": [[
         "Board confidence stays where it is. The other choice costs it %s.",
         "{keep_price} a season against our cap.", "If we lose that final, about a %s chance our morale also falls %s.",
-        "His opinion of you %s, still %d out of 100.", "development points. A senior game gives %d.",
+        "{name_s} opinion of you %s, still %d out of 100.", "development points. A senior game gives %d.",
     ], ["(the other choice costs it", "against your cap", "(a senior game gives", "(any injury, not only this one;",
-        "If you lose that final", "%d/100", "(high fluency)", "(low, medium, high)"]],
+        "If you lose that final", "%d/100", "(high fluency)", "(low, medium, high)", "His opinion of you %s"]],
     "scripts/sim/MediaConference.gd": [[
         "Our record: %s.", "%s's opinion of you: %d → %d out of 100.", "%s warms to you: +%d%% next time",
     ], ["Your record: %s.", "%d/100", "next time)", "%% confidence)"]],
@@ -328,10 +347,10 @@ CONTRACTS_PASS = {
         "\"Your next offer", "\"You give\"", "\"You get\"", "from your list below", "what you want back", "what you'd give",
         "\"Your list\"", "Offers for your players"]],
     "scripts/sim/Contracts.gd": [[
-        "His opinion of you: %d out of 100. %d%% he won't re-sign with us.",
-        "%s won't re-sign with us. His opinion of you: %d out of 100.",
-        "He won't re-sign with us. His opinion of you: %d out of 100.",
-        "Won't re-sign with us. His opinion of you: %d out of 100",
+        "Opinion of you: %d out of 100. %d%% that %s won't re-sign with us.",
+        "%s won't re-sign with us. Opinion of you: %d out of 100.",
+        "Won't re-sign with us. Opinion of you: %d out of 100.",
+        "Won't re-sign with us. Opinion of you: %d out of 100",
         "He's fighting for a list spot. He'll take less.", "He knows his worth. He won't take less.",
         "For %s or more, he'd sign for %s a season. That is %s under his ask.",
         "Offer under %s and he's insulted. It uses up %d of our %d offers. His morale drops %d%%.",
@@ -387,7 +406,7 @@ PROFILE_PASS = {
         "Development focus: %s", "He runs %.1f km a game this season.",
         "Only %d of his attributes are rated.", "Nickname, or leave it blank",
     ], ["The higher his opinion of you", "re-sign with you", "Injured: out", "\"Development: %s",
-        "This season: %.1f km", "rated on record", "blank for none"]],
+        "This season: %.1f km", "rated on record", "blank for none", "His opinion of you: %d out of 100", "%d%% he won't", "He won't re-sign with us"]],
     "scripts/state/GameState.gd": [[
         "\"Near his potential\"", "\"At his potential\"", "\"Beyond his potential\"",
     ], ["\"Near his projected peak\"", "\"At his projected peak\"", "\"Past his projection\""]],
@@ -445,7 +464,8 @@ def json_strings(v, out):
         out.append(v)
     elif isinstance(v, dict):
         for k in v:
-            json_strings(v[k], out)
+            if not str(k).startswith("_"):  # "_about", "_why": the file's notes, never shown
+                json_strings(v[k], out)
     elif isinstance(v, list):
         for e in v:
             json_strings(e, out)
@@ -478,26 +498,35 @@ def source_strings(path, text):
     return out
 
 
+def copy_paths(root, sources=None):
+    """Every copy source file: the SOURCES folders, then the JSON at the top of data/ (only with
+    the default sources), less the banned list itself."""
+    paths = []
+    for d in (SOURCES if sources is None else sources):
+        paths += gd_files(root, d, ext=(".gd", ".json"))
+    if sources is None:
+        paths += gd_files(root, TOP_DATA, recursive=False, ext=(".json",))
+    return [p for p in paths if p not in NOT_COPY]
+
+
 def check(root, allow=None, sources=None, tales=None):
     allow = ALLOW if allow is None else allow
-    sources = SOURCES if sources is None else sources
     tales = TALES if tales is None else tales
     out = []
     rx = words_re(gd_const_strings(read(root, COPY_RULES), "WORDS"))
     found, hits_of, read_n = {}, {}, {}
-    for d in sources:
-        for path in gd_files(root, d, ext=(".gd", ".json")):
-            try:
-                strings = source_strings(path, read(root, path))
-            except ValueError as e:
-                out.append(Finding(path, 0, "copy-voice", "does not parse as JSON: %s" % e))
-                continue
-            read_n[path] = len(strings)
-            for n, s in strings:
-                hits = words_in(rx, s)
-                if hits:
-                    found[path] = found.get(path, 0) + len(hits)
-                    hits_of.setdefault(path, []).append((n, hits, s))
+    for path in copy_paths(root, sources):
+        try:
+            strings = source_strings(path, read(root, path))
+        except ValueError as e:
+            out.append(Finding(path, 0, "copy-voice", "does not parse as JSON: %s" % e))
+            continue
+        read_n[path] = len(strings)
+        for n, s in strings:
+            hits = words_in(rx, s)
+            if hits:
+                found[path] = found.get(path, 0) + len(hits)
+                hits_of.setdefault(path, []).append((n, hits, s))
     for path in sorted(found):
         allowed = allow.get(path, [0])[0]
         if found[path] != allowed:
@@ -523,15 +552,41 @@ CLICK = re.compile(r"(?i)(?<![A-Za-z])click(s|ed|ing)?(?![A-Za-z])")
 def check_no_click(root, sources=None):
     """No copy source has a line with "click" in it (moved from copy_rules _test_no_click)."""
     out = []
-    for d in (SOURCES if sources is None else sources):
-        for path in gd_files(root, d, ext=(".gd", ".json")):
-            try:
-                strings = source_strings(path, read(root, path))
-            except ValueError:
-                continue  # copy-voice reports the broken JSON
-            for n, s in strings:
-                if CLICK.search(s):
-                    out.append(Finding(path, n, "no-click", "copy says 'tap', not 'click': \"%s\"" % s[:90]))
+    for path in copy_paths(root, sources):
+        try:
+            strings = source_strings(path, read(root, path))
+        except ValueError:
+            continue  # copy-voice reports the broken JSON
+        for n, s in strings:
+            if CLICK.search(s):
+                out.append(Finding(path, n, "no-click", "copy says 'tap', not 'click': \"%s\"" % s[:90]))
+    return out
+
+
+def check_marks(root, allow=None, sources=None):
+    """No copy line shows a raw meter ("/100") or a "!" (CopyRules.check), past MARKS_ALLOW."""
+    allow = MARKS_ALLOW if allow is None else allow
+    out, found, hits_of = [], {}, {}
+    for path in copy_paths(root, sources):
+        try:
+            strings = source_strings(path, read(root, path))
+        except ValueError:
+            continue  # copy-voice reports the broken JSON
+        for n, s in strings:
+            hits = [m for m in MARKS if m in s]
+            if hits:
+                found[path] = found.get(path, 0) + len(hits)
+                hits_of.setdefault(path, []).append((n, hits, s))
+    for path in sorted(found):
+        allowed = allow.get(path, [0])[0]
+        if found[path] != allowed:
+            out.append(Finding(path, 0, "copy-marks", "%d marks (allowed %d in tools/lint/copy_voice.py MARKS_ALLOW). A meter "
+                               "reads \"%%d out of 100\"; only the broadcaster's feed shouts." % (found[path], allowed)))
+            for n, hits, s in hits_of[path]:
+                out.append(Finding(path, n, "copy-marks", "%s: \"%s\"" % (", ".join(hits), s[:90])))
+    for path in sorted(allow):
+        if path not in found:
+            out.append(Finding(path, 0, "copy-marks", "is clean now: drop it from MARKS_ALLOW in tools/lint/copy_voice.py"))
     return out
 
 
