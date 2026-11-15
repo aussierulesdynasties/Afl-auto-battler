@@ -1166,7 +1166,7 @@ func _show_coach_box() -> void:
 		# it changes how the rest is played.
 		var wt := sim.weather_turn_now()
 		if not wt.is_empty():
-			var news := UiKit.lbl(Weather.turn_news(int(wt["after"]), str(wt["to"])), UiKit.BODY, UiKit.TEXT, true)
+			var news := UiKit.lbl(Weather.turn_news(int(wt["after"]), str(wt["to"]), str(wt.get("from", ""))), UiKit.BODY, UiKit.TEXT, true)
 			news.name = "BreakWeatherTurn"
 			news.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			rep.add_child(news)

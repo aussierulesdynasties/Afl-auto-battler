@@ -2769,7 +2769,7 @@ func _test_press_effects_shown(db) -> void:
 		shown = shown and line != null and line.is_visible_in_tree() and text == _state.press_odds_line(i) 				and text.contains("%d%% " % c) and text.contains("%d%% " % (100 - c))
 		# The Muckraker's twist is on the gate (director 2026-11-06).
 		if kind == "criticise":
-			shown = shown and text.contains("His headline: 10% less likely") 					and not text.contains("The Siren gets read upstairs") and not text.contains(MC.FADE_NOTE)
+			shown = shown and text.contains("Gary's headline: 10% less likely") 					and not text.contains("The Siren gets read upstairs") and not text.contains(MC.FADE_NOTE)
 	_check(shown, "Every press answer shows both ways it can land, with the odds and the sizes")
 	var rules: Label = hub.find_child("MediaRules", true, false)
 	_check(rules != null and rules.is_visible_in_tree() and rules.text == MC.rules_line(str(_state.media_conference.get("journalist", ""))),
