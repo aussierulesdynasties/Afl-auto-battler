@@ -16,7 +16,7 @@ extends RefCounted
 const MAX_RETIRE_PER_CLUB := 8
 ## The youngest a real player of a Legacy start can be in his last real
 ## season for that season to count as his retirement (should_retire). Younger,
-## he was delisted, and the sim's list decisions take his place.
+## he was delisted: his contract ends then (real_delisting_due).
 const REAL_RETIRE_AGE := 27.0
 ## Generated forwards run from small (172 cm) to key (203 cm), about a third
 ## of each by MatchSim.fwd_size, as in a real draft class: from 184 cm there
@@ -438,8 +438,8 @@ static func should_retire(p: Dictionary, year: int) -> bool:
 	# can still talk him round (Retirement). Still listed in 2025: the sim's.
 	# His last real season is a retirement only when he was REAL_RETIRE_AGE or
 	# older in it: a younger man's career ended because his club delisted him,
-	# which is a list decision, so the sim's clubs make it. (Read as every last
-	# season, a 1990 start retired 12 a club, nine of them 26 or younger.)
+	# so it ends as a delisting (real_delisting_due), not a retirement. (Read as
+	# every last season, a 1990 start retired 12 a club, nine of them 26 or younger.)
 	var last := int(p.get("real_last", 0))
 	# A year early never ends a career before a season he really played for
 	# the club that signed him (a new club's foundation man, real_first).
@@ -454,6 +454,18 @@ static func should_retire(p: Dictionary, year: int) -> bool:
 	if age >= 33.0 and ov < 42:
 		return _rng_for("%s|r%d" % [str(p["id"]), year]).randf() < 0.30
 	return false
+
+
+## A real player of a Legacy start whose real AFL career ended before he was
+## REAL_RETIRE_AGE: his club delisted him then (director, 2026-11-13: careers
+## end "about when he really did ... whatever the sim makes of his age or
+## rating"). Due in the same season his retirement would be (should_retire,
+## real_slack), for the off-season before season `year`.
+static func real_delisting_due(p: Dictionary, year: int) -> bool:
+	var last := int(p.get("real_last", 0))
+	if last <= 0 or float(p.get("age", 26.0)) - float(year - last) >= REAL_RETIRE_AGE:
+		return false
+	return year > last + real_slack(p)
 
 
 ## How far his retirement falls from his real one: -1, 0 or +1 seasons
