@@ -23,9 +23,9 @@ const GOLDEN_LOAD := "9baf6f36b146d2bfafd65e07b3235c55"
 const GOLDEN_REAL := "744a28a11b3d0539ea53297e932616fc"
 ## A played match's floating point differs between Windows and Linux builds of
 ## Godot, so the season has one fingerprint per platform; each was taken on
-## main before the change (Linux: run_on_github run 43024085570). The own
-## plan (CustomPlan) redrew the season: Linux from Tests run 43083470206; the
-## Windows print still predates it and is refreshed on the next local run.
+## main before the change (Linux: run_on_github run 43024085570). Removing
+## the own plan (bug bash 5: rivals no longer build one) redrew the season:
+## Windows from a local run on that branch, Linux from its CI (shard 6).
 ## Result keys added after the golden was taken that record who earned a
 ## call's credit, not what happened (row 144). "impact" and "plan_traits" were
 ## already in main's results, so they stay in the hash. "breeze_side" (the
@@ -39,7 +39,7 @@ const BOOKKEEPING_KEYS := ["impact_by", "breeze_side"]
 ## pressure zones (pressure acts in the defensive half, tackles inside 50,
 ## 2026-11-14) are counted without a draw, so leaving them out keeps the print.
 const TEAM_BOOKKEEPING_KEYS := ["pressure_acts_dhalf", "tackles_i50"]
-const GOLDEN_SEASON := {"Windows": "947958fd809280ac302bee2c3dddb58d", "Linux": "ea13ed4ecd87d7ae2e74d7e873779b46"}
+const GOLDEN_SEASON := {"Windows": "078c20284e793838806f0428ea43de8c", "Linux": "17c58069d584c738edee71900119a031"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and

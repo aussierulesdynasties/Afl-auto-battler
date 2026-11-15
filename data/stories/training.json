@@ -57,6 +57,7 @@
 		"id": "training_kid_pushing",
 		"category": "training",
 		"cooldown": 10,
+		"subject_per_season": 1,
 		"subject": {
 			"kind": "player",
 			"where": {
@@ -869,10 +870,10 @@
 			"kind": "club"
 		},
 		"title": [
-			"Match sim got heated"
+			"The summer's first match sim boiled over"
 		],
 		"text": [
-			"Two of the boys had to be pulled apart at match sim. The assistants reckon it's the edge you've been after."
+			"Two of the boys squared up in the first hard match sim of the summer and had to be separated. The assistants reckon the group has found its bite early."
 		],
 		"choices": [
 			{

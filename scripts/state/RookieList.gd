@@ -487,6 +487,9 @@ static func _take(gs, code: String, p: Dictionary) -> void:
 	Workload.reset({code: [p]})
 	(rec["picks"] as Array).append({"club": code, "id": id, "round": int(rec["round"]),
 			"name": GameDB.player_display_name(p), "from": from})
+	# Your Club Forge prospect taken here is news the day it happens.
+	if id == str(gs.custom_prospect_id):
+		OwnProspect.check(gs)
 
 
 static func _finish(gs) -> void:

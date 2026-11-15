@@ -112,7 +112,7 @@
    "clipped": 0,
    "min_font": 12.0,
    "offscreen": 0,
-   "small": 1
+   "small": 0
   },
   "forge": {
    "built": true,
@@ -147,7 +147,7 @@
    "clipped": 0,
    "min_font": 13.0,
    "offscreen": 0,
-   "small": 7
+   "small": 6
   },
   "offseason": {
    "built": true,
@@ -189,7 +189,7 @@
    "clipped": 0,
    "min_font": 12.0,
    "offscreen": 0,
-   "small": 7
+   "small": 0
   },
   "training": {
    "built": true,
@@ -214,7 +214,7 @@
    "min_font": 15.0,
    "offscreen": 0,
    "overlap": 0,
-   "small": 1
+   "small": 0
   },
   "forge": {
    "built": true,
@@ -254,7 +254,7 @@
    "min_font": 15.0,
    "offscreen": 0,
    "overlap": 0,
-   "small": 1
+   "small": 0
   },
   "offseason": {
    "built": true,
@@ -302,7 +302,7 @@
    "min_font": 15.0,
    "offscreen": 0,
    "overlap": 0,
-   "small": 7
+   "small": 0
   },
   "training": {
    "built": true,
@@ -328,7 +328,7 @@
    "min_font": 17.0,
    "offscreen": 0,
    "overlap": 0,
-   "small": 1
+   "small": 0
   },
   "forge": {
    "built": true,
@@ -368,7 +368,7 @@
    "min_font": 17.0,
    "offscreen": 0,
    "overlap": 0,
-   "small": 1
+   "small": 0
   },
   "offseason": {
    "built": true,
@@ -416,7 +416,7 @@
    "min_font": 17.0,
    "offscreen": 0,
    "overlap": 0,
-   "small": 7
+   "small": 0
   },
   "training": {
    "built": true,

@@ -9,6 +9,9 @@ extends RefCounted
 ## Trust lost when a promise made on a card is broken after the match.
 const BROKEN_PROMISE_TRUST := StoryEngine.BROKEN_PROMISE_TRUST
 const BROKEN_RUN_TRUST := StoryEngine.BROKEN_RUN_TRUST
+## The opponent's name in a week with none (a bye); the cards about this week's
+## opponent wait it out (StoryEngine.names_opp).
+const NO_OPP := "the opposition"
 
 
 ## Your week of the season: the round, then the finals weeks after it.
@@ -117,7 +120,8 @@ static func club_facts(gs, week: int, ph: String) -> Dictionary:
 	for p in gs.my_list:
 		if int(p.get("injury_weeks", 0)) <= 0:
 			fit += 1
-	var facts := {"club": GameDB.club_name(gs.my_club), "opp": _opponent_name(gs), "round": maxi(week, 0),
+	var opp_name := _opponent_name(gs)
+	var facts := {"club": GameDB.club_name(gs.my_club), "opp": opp_name, "has_opp": opp_name != NO_OPP, "round": maxi(week, 0),
 			"year": int(gs.season_year), "losing_run": int(gs.losing_streak), "winning_run": _winning_run(gs),
 			"ladder": gs.my_position(), "board": gs.board_confidence(), "fit_count": fit,
 			"run_games": MatchNotes.count_word(Backing.RUN_GAMES),
@@ -494,7 +498,7 @@ static func _opponent_name(gs) -> String:
 				return GameDB.club_name(str(m["away"]))
 			if str(m["away"]) == gs.my_club:
 				return GameDB.club_name(str(m["home"]))
-	return "the opposition"
+	return NO_OPP
 
 
 ## Your wins in a row this season, from the season's results.
@@ -964,6 +968,7 @@ static func _apply(gs, e: Dictionary, p: Dictionary, facts: Dictionary, applied:
 			# His opinion of you before the first move and after the last.
 			applied["opinion"] = [int((applied.get("opinion", [before]) as Array)[0]),
 					Trust.opinion(Trust.value(gs.relations, key))]
+			applied["opinion_name"] = str(facts.get("first", "")) if str(facts.get("first", "")) != "" else GameDB.player_display_name(p)
 		"rest":
 			p["rested"] = true
 		"slow_start":

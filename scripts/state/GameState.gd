@@ -79,10 +79,6 @@ var season_tally := {}           # player id -> running season numbers (Awards)
 var season_stats := {}
 var season_stats_from := 0
 var club_plan := "balanced"      # your standing game plan, from the first bounce
-## Your own plan (CustomPlan: {"name", "s", "c"}, director 2026-11-12), the
-## sixth plan in How we play; {} = none built. Saved only when begun, so an
-## older save loads with none (and drops a game-plan trait it held).
-var custom_plan := {}
 var form_log := {}               # your player id -> his last three Player Ratings
 ## Your players' games in the reserves this season (ReservesForm): id ->
 ## {"last", "sum", "n", "key"}. Display only. Optional in a save: an older
@@ -169,8 +165,10 @@ var free_agents: Array = []      # off-season: players no club kept
 var offseason_year := 0:         # the season whose off-season has opened
 	set(value):
 		offseason_year = value
-		# Lists built in the off-season are next season's (EraRules.list_ahead).
+		# Lists built in the off-season are next season's (EraRules.list_ahead),
+		# and so is the money they are built with (_sync_money_year).
 		EraRules.list_ahead = value != 0 and value == season_year
+		_sync_money_year()
 var fa_closed_year := 0          # the season whose free agency has closed
 ## A real-lists career's own off-season before the opening National Draft
 ## (row 199): 0 not yet, 1 open, 2 over (or a career without one).
@@ -321,6 +319,7 @@ var season_year := 2026:
 		season_year = value
 		# Money shows in this season's dollars (Legacy mode, Contracts.dollars).
 		Contracts.money_year = value
+		_sync_money_year()
 		# The league's rules of this season (list sizes, the bench, free
 		# agency): EraRules switches them at every rollover (L4).
 		EraRules.year = value
@@ -1064,8 +1063,6 @@ func _save_state() -> Dictionary:
 		state["coach_name"] = coach_name
 	if not coach_arch.is_empty():
 		state["coach_arch"] = coach_arch
-	if not custom_plan.is_empty():
-		state["custom_plan"] = custom_plan
 	if interview_due:
 		state["interview_due"] = true
 	return state
@@ -1190,10 +1187,11 @@ func _restore_career(state: Dictionary) -> bool:
 	if not state.has("season_stats") and season != null:
 		# An older save, part way through a season: the book counts from here.
 		season_stats_from = season.round_index
-	# An older save's game-plan trait ("plan_trait", cut 2026-11-12) is dropped.
-	custom_plan = CustomPlan.clean(state.get("custom_plan", {}))
+	# An older save's game-plan trait ("plan_trait", cut 2026-11-12) and own
+	# plan ("custom_plan", removed 2026-11-15) are dropped: an own plan loads
+	# as Balanced (MatchSim.PLAN_ALIAS).
 	club_plan = MatchSim.plan_key(str(state.get("club_plan", "balanced")))
-	if not CLUB_PLANS.has(club_plan) or (club_plan == CustomPlan.KEY and not CustomPlan.ready(custom_plan)):
+	if not CLUB_PLANS.has(club_plan):
 		club_plan = "balanced"
 	form_log = state.get("form_log", {})
 	reserves_log = state.get("reserves_log", {}) if state.get("reserves_log") is Dictionary else {}
@@ -1236,6 +1234,10 @@ func _restore_career(state: Dictionary) -> bool:
 	salary_cap = int(state.get("salary_cap", 0))
 	free_agents = state.get("free_agents", [])
 	offseason_year = int(state.get("offseason_year", 0))
+	# A save from an open off-season before its cap was next season's: its cap
+	# is still this season's own (any other cap was set on purpose and stays).
+	if offseason_year > 0 and offseason_year == season_year and salary_cap == Contracts.salary_cap_for_year(season_year):
+		salary_cap = Contracts.salary_cap_for_year(season_year + 1)
 	fa_closed_year = int(state.get("fa_closed_year", 0))
 	first_offseason = int(state.get("first_offseason", 2))
 	compensation = state.get("compensation", [])
@@ -1316,8 +1318,8 @@ func _restore_career(state: Dictionary) -> bool:
 	plan_idle = state.get("plan_idle", {}) if state.get("plan_idle") is Dictionary else {}
 	_clean_plan_known()
 	rival_plans = state.get("rival_plans", {}) if state.get("rival_plans") is Dictionary else {}
+	_drop_rival_own_plans()
 	CoachEffects.usual = _season_usuals()
-	CoachEffects.customs = _season_customs()
 	coach_name = str(state.get("coach_name", ""))
 	coach_arch = state.get("coach_arch", {}) if state.get("coach_arch") is Dictionary else {}
 	interview_due = bool(state.get("interview_due", false))
@@ -1799,8 +1801,6 @@ func reset(next_dataset := Datasets.DEFAULT) -> void:
 	season_stats = {}
 	season_stats_from = 0
 	club_plan = "balanced"
-	custom_plan = {}
-	CoachEffects.my_custom = {}
 	form_log = {}
 	reserves_log = {}
 	role_trial = {}
@@ -1895,7 +1895,6 @@ func reset(next_dataset := Datasets.DEFAULT) -> void:
 	rival_plans = {}
 	CoachEffects.known = {}
 	CoachEffects.usual = {}
-	CoachEffects.customs = {}
 	coach_name = ""
 	coach_arch = {}
 	interview_due = false
@@ -2984,7 +2983,6 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	season_team = {}
 	rival_plans = {}
 	CoachEffects.usual = {}
-	CoachEffects.customs = {}
 	season_awards = {}
 	rising_star_noms = {"from": 1, "rounds": []}
 	award_counts = AwardsCount.fresh(season_year, my_club)
@@ -5046,12 +5044,17 @@ func _season_usuals() -> Dictionary:
 	return rival_plans["usual"]
 
 
-## Each rival coach's own plan this season, for one who built one
-## (rival_plans "custom"): club -> CustomPlan; {} as _season_usuals.
-func _season_customs() -> Dictionary:
-	if int(rival_plans.get("year", 0)) != season_year or not (rival_plans.get("custom") is Dictionary):
-		return {}
-	return rival_plans["custom"]
+## An older save's rival own plans (removed 2026-11-15): the record goes, and
+## a coach whose usual game it was settles on a plan again before the next
+## round (_settle_usual_plans).
+func _drop_rival_own_plans() -> void:
+	rival_plans.erase("custom")
+	var usual = rival_plans.get("usual")
+	if not (usual is Dictionary):
+		return
+	for code in (usual as Dictionary).keys():
+		if str(usual[code]) == "custom":
+			(usual as Dictionary).erase(code)
 
 
 ## Before a round is played: a rival coach with no usual game yet this season
@@ -5080,17 +5083,8 @@ func _settle_usual_plans() -> void:
 		if not (rival_plans.get("usual") is Dictionary):
 			rival_plans["usual"] = {}
 		usual = rival_plans["usual"]
-		# Every club gets it (director, 2026-11-09): some coaches build a plan
-		# of their own for the season, on seeded dice (CustomPlan.ai_builds).
-		if CustomPlan.ai_builds(code, season_year):
-			if not (rival_plans.get("custom") is Dictionary):
-				rival_plans["custom"] = {}
-			(rival_plans["custom"] as Dictionary)[code] = CustomPlan.ai_pick(code, season_year)
-			usual[code] = CustomPlan.KEY
-		else:
-			usual[code] = PlanFit.standing_plan(sq.ground, sq.plan_know)
+		usual[code] = PlanFit.standing_plan(sq.ground, sq.plan_know)
 	CoachEffects.usual = usual
-	CoachEffects.customs = _season_customs()
 
 
 ## Press on from where the pre-season is waiting, to the next stop or to
@@ -5954,10 +5948,6 @@ func opponent_report(code: String) -> Array:
 		var what := str(THEIR_PLAN[usual])
 		play.append("Their usual game plan is %s. %s%s%s" % [RivalRead.called(usual),
 				what.left(1).to_upper(), what.substr(1), " " + legs if legs != "" else ""])
-	if usual == CustomPlan.KEY:
-		var own := CustomPlan.rival_line(_season_customs().get(code, {}))
-		if own != "":
-			play.append(own)
 	var levels := {}
 	for plan in PreSeason.DRILL_PLANS:
 		levels[plan] = plan_level(code, str(plan))
@@ -6701,7 +6691,7 @@ func finals_outcome_line(res: Dictionary) -> String:
 		return _past_finals_outcome_line(res, tag, won)
 	match tag.substr(0, 2):
 		"WC":
-			return "Through! You reseed by ladder position for a qualifying or elimination final." \
+			return "Through. We go into a qualifying or elimination final, placed by ladder position." \
 					if won else "Knocked out in the wildcard round. Your season is over."
 		"QF":
 			return "Straight through to a home preliminary final, with a week off." if won \
@@ -6713,7 +6703,7 @@ func finals_outcome_line(res: Dictionary) -> String:
 			return "Through to the preliminary finals." if won \
 					else "Knocked out in the semi finals. Your season is over."
 		"PF":
-			return "Into the Grand Final!" if won \
+			return "Into the Grand Final." if won \
 					else "One game short: out in the preliminary final."
 		"GF":
 			return ("%d PREMIERS" % season_year) if won \
@@ -6748,7 +6738,7 @@ func _past_finals_outcome_line(res: Dictionary, tag: String, won: bool) -> Strin
 				next_week = w
 				next_label = str(e[1])
 	if next_label == "Grand Final":
-		return "Into the Grand Final!" + (" A week off first." if next_week > at + 1 else "")
+		return "Into the Grand Final." + (" A week off first." if next_week > at + 1 else "")
 	if next_week > at + 1:
 		return "Through, with a week off before the %s." % SeasonRules.week_name(
 				season.finals_format(), next_week + 1).to_lower()
@@ -8068,9 +8058,11 @@ func _close_season_achievements() -> void:
 		if Achievements.is_coach(defn):
 			add_news("achievement", "Achievement unlocked: %s - %s" % [
 					str(defn["name"]), str(defn["desc"])])
+		elif club == my_club:
+			add_news("achievement", "Achievement unlocked: %s." % str(defn["name"]))
 		else:
-			add_news("achievement", "Achievement unlocked: %s - %s (%s)" % [
-					str(defn["name"]), GameDB.club_name(club), GameDB.club_short(club)])
+			# Another club's feat: theirs, not one you unlocked, and named once.
+			add_news("achievement", "%s earn an achievement: %s." % [GameDB.club_name(club), str(defn["name"])])
 
 
 ## This season's honoured players and premiership side that you drafted,
@@ -8786,6 +8778,10 @@ func open_offseason(keep_staff := false) -> void:
 				_finish_project(p, str(code) == my_club)
 	_dev_promises_lapse()
 	offseason_year = season_year
+	# Every deal from here is for next season, so the cap is next season's
+	# (1990's off-season signs under 1991's $1.6m, 2020's under 2021's
+	# $12.07m), as the money is (_sync_money_year).
+	salary_cap = Contracts.salary_cap_for_year(season_year + 1)
 	for code in season.lists:
 		ListCosts.season_over(season.lists[code], season_year)
 	ListCosts.season_over(free_agents, season_year)
@@ -9425,6 +9421,15 @@ func _cap_room_of(code: String) -> int:
 ## (ExpansionBuild.relief; nothing for anyone else).
 func cap_for(code: String) -> int:
 	return salary_cap + ExpansionBuild.relief(self, code)
+
+
+## Money is in this season's dollars, and in next season's once the
+## off-season is open: the asks, the minimum and every offer there are for
+## next season's contracts, and Contracts.payroll leaves the season's retirees
+## off the books it adds up.
+func _sync_money_year() -> void:
+	var ahead := season_year > 0 and offseason_year == season_year
+	Contracts.money_year = season_year + 1 if ahead else season_year
 
 
 ## Whether Canberra joins this career in 2030. Set before the career's first
@@ -13380,9 +13385,8 @@ static func stat_useful_for_role(role: String, key: String) -> bool:
 	return false
 
 
-## Where he stands against his projection, in words: "Developing", "Near his
-## projected peak", "At his projected peak", "Past his projection" (or
-## "Rehab year").
+## Where he stands against his potential (POT), in words: "Developing", "Near his
+## potential", "At his potential", "Beyond his potential" (or "Rehab year").
 func development_state(p: Dictionary) -> String:
 	if bool(p.get("rehab", false)):
 		return "Rehab year"
@@ -13390,10 +13394,10 @@ func development_state(p: Dictionary) -> String:
 	if gap >= 3:
 		return "Developing"
 	if gap >= 1:
-		return "Near his projected peak"
+		return "Near his potential"
 	if gap == 0:
-		return "At his projected peak"
-	return "Past his projection"
+		return "At his potential"
+	return "Beyond his potential"
 
 
 ## Buy stat points while XP lasts, each one going to the best weight per XP.
@@ -14317,7 +14321,7 @@ func _record_match_story(results: Array) -> void:
 	if str(rec["hero_name"]) != "":
 		var line := "%s. %s: %s." % [str(rec["headline"]), str(rec["hero_name"]), str(rec["hero_line"])]
 		if str(rec.get("my_best_name", "")) != "":
-			line += " Your best: %s, %s." % [str(rec["my_best_name"]), str(rec["my_best_line"])]
+			line += " Our best: %s, %s." % [str(rec["my_best_name"]), str(rec["my_best_line"])]
 		add_news("match_story", line)
 
 
@@ -14709,8 +14713,8 @@ func resolve_media_conference(option: int) -> Dictionary:
 	media_memory["said|" + key] = {"year": season_year, "option": option,
 			"opp": str(media_conference.get("opp", "")), "round": round_no}
 	var line := MediaConference.after_line(kind, landed, fx, str(ctx.get("name", "")))
-	add_news("media", ("Post-match: '%s' %s %s" % [str(picked.get("label", "")), line,
-			MediaConference.opinion_after(opinion)]).strip_edges())
+	add_news("media", ("%s: '%s' %s %s" % [MediaConference.news_lead(media_conference, str(picked.get("label", ""))),
+			str(picked.get("label", "")), line, MediaConference.opinion_after(opinion)]).strip_edges())
 	media_conference = {}
 	mark_dirty()
 	autosave()
@@ -15696,54 +15700,21 @@ func _fill_open_staff() -> void:
 # ---------------------------------------------------------------------------
 # Coaching hub: the standing game plan, player form, how the side plays
 # ---------------------------------------------------------------------------
-## The plans a club can stand on; the same six as the quarter-break calls.
-const CLUB_PLANS := ["balanced", "attacking", "defensive", "contest", "controlled", "custom"]
+## The plans a club can stand on; the same five as the quarter-break calls.
+const CLUB_PLANS := ["balanced", "attacking", "defensive", "contest", "controlled"]
 
 
 ## Your standing game plan: every match starts with it, played or simmed,
 ## and the quarter-break calls change it from there.
 func set_club_plan(key: String) -> void:
-	if not CLUB_PLANS.has(key) or (key == CustomPlan.KEY and not CustomPlan.ready(custom_plan)):
+	if not CLUB_PLANS.has(key):
 		return
 	club_plan = key
 	_sync_club_plan()
 	mark_dirty()
 
 
-## Your own plan's pick (CustomPlan): `part` "s" (the strength) or "c" (the
-## cost), `id` from that list. A pick that clashes with the other part is
-## refused (false). Every match on your own plan from the next bounce.
-func set_custom_pick(part: String, id: String) -> bool:
-	if part != "s" and part != "c":
-		return false
-	var p := custom_plan.duplicate()
-	if p.is_empty():
-		p = {"name": "", "s": "", "c": ""}
-	p[part] = id
-	if CustomPlan.clash(str(p.get("s", "")), str(p.get("c", ""))):
-		return false
-	var cleaned := CustomPlan.clean(p)
-	if str(cleaned.get(part, "")) != id:
-		return false
-	custom_plan = cleaned
-	_sync_club_plan()
-	mark_dirty()
-	return true
-
-
-## Your own plan's name ("" for the default, CustomPlan.DEFAULT_NAME).
-func set_custom_name(nm: String) -> void:
-	var p := custom_plan.duplicate()
-	if p.is_empty():
-		p = {"name": "", "s": "", "c": ""}
-	p["name"] = CustomPlan.name_clean(nm)
-	custom_plan = CustomPlan.clean(p)
-	_sync_club_plan()
-	mark_dirty()
-
-
 func _sync_club_plan() -> void:
-	CoachEffects.my_custom = custom_plan.duplicate()
 	if season != null:
 		season.plans = {my_club: club_plan} if club_plan != "balanced" else {}
 

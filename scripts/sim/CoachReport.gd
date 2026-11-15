@@ -13,10 +13,7 @@ const PLAN_NAMES := {
 	"defensive": "High Press",
 	"contest": "Win Contest",
 	"controlled": "Controlled Tempo",
-	"custom": "Own plan",
 }
-## A rival's own plan, as your screens name it (yours goes by its name).
-const THEIR_OWN := "Their own plan"
 
 const PEP_NAMES := {
 	"steady": "Stay composed",
@@ -54,8 +51,6 @@ const PLAN_PARTS := {
 			"gain": "Fewer errors and fresher legs. Pressure rattles us less.",
 			"cost": "We gain less ground.",
 			"beats": "Plays through a High Press. Attack Corridor runs past it."},
-	# Your own plan (CustomPlan, director 2026-11-12): neutral, like Win Contest.
-	"custom": {"does": "A plan of our own: the strength and the cost you picked. It beats no plan and no plan beats it."},
 }
 
 const PEP_SUMMARY := {
@@ -81,7 +76,7 @@ const TEAM_COMPARE := [
 
 
 const IMPACT_LABELS := {
-	"gameplan": "gameplan", "pep": "pep talk",
+	"gameplan": "game plan", "pep": "pep talk",
 	"legs": "legs (fatigue and rotations)", "bursts": "in-game calls",
 	"moments": "calls at the moments", "loose": "loose defender",
 	"tag": "tag", "minder": "defensive forward",
@@ -91,7 +86,7 @@ const IMPACT_LABELS := {
 
 ## Where the points came from between two impact snapshots (MatchSim.impact),
 ## from `side`'s point of view: [{"label", "pts"}], biggest first, anything
-## under `min_pts` dropped. "Their gameplan -2.1" cost you 2.1 points.
+## under `min_pts` dropped. "Their game plan -2.1" cost us 2.1 points.
 static func impact_lines(now: Array, before: Array, side: int, min_pts := 0.3) -> Array:
 	var out := []
 	for cause in IMPACT_LABELS:
@@ -99,7 +94,7 @@ static func impact_lines(now: Array, before: Array, side: int, min_pts := 0.3) -
 		var theirs := _imp(now, 1 - side, cause) - _imp(before, 1 - side, cause)
 		var label := str(IMPACT_LABELS[cause])
 		if absf(mine) >= min_pts:
-			out.append({"label": "Your " + label, "pts": mine})
+			out.append({"label": "Our " + label, "pts": mine})
 		if absf(theirs) >= min_pts:
 			out.append({"label": "Their " + label, "pts": -theirs})
 	out.sort_custom(func(a, b): return absf(float(a["pts"])) > absf(float(b["pts"])))
@@ -133,13 +128,10 @@ static func _imp(arr: Array, side: int, cause: String) -> float:
 	return float(d.get(cause, 0.0))
 
 
-## A plan's name. Your own plan goes by the name you gave it; with `mine`
-## false (a rival's), it is THEIR_OWN.
-static func plan_label(key: String, mine := true) -> String:
-	var k := MatchSim.plan_key(key)
-	if k == CustomPlan.KEY:
-		return CustomPlan.name_of(CoachEffects.my_custom) if mine else THEIR_OWN
-	return str(PLAN_NAMES.get(k, "Balanced"))
+## A plan's name, the same for your club and a rival's (`_mine` is kept for
+## callers from when your own plan had a name of your choosing).
+static func plan_label(key: String, _mine := true) -> String:
+	return str(PLAN_NAMES.get(MatchSim.plan_key(key), "Balanced"))
 
 
 static func plan_effect(key: String) -> String:
@@ -163,12 +155,6 @@ static func plan_summary(key: String, sq: Squad = null, weather_key := "perfect"
 		var sized := GateOdds.plan_texts_for(sq, key, weather_key)
 		out.append(GateOdds.gain(str(sized[0])) + ".")
 		out.append(GateOdds.cost(str(sized[1])) + ".")
-	elif MatchSim.plan_key(key) == CustomPlan.KEY:
-		var own := CustomPlan.texts(CoachEffects.my_custom)
-		if not own.is_empty():
-			sep = "\n"
-			out.append(GateOdds.gain(str(own[0])) + ".")
-			out.append(GateOdds.cost(str(own[1])) + ".")
 	else:
 		if d.has("gain"):
 			out.append("Gain: " + str(d["gain"]))
@@ -776,7 +762,7 @@ static func glance(report: Dictionary, full_time := false) -> Dictionary:
 		read_keys[str(d["key"])] = true
 		var word := str(READ_WORDS.get(str(d["key"]), str(d["label"]).to_lower()))
 		if str(d["leader"]) == "my":
-			read.append("You lead the %s, %d to %d." % [word, int(d["my"]), int(d["opp"])])
+			read.append("We lead the %s, %d to %d." % [word, int(d["my"]), int(d["opp"])])
 		else:
 			read.append("%s lead the %s, %d to %d." % [them, word, int(d["opp"]), int(d["my"])])
 	# Their approach, quarter by quarter, only when it is not a plain game

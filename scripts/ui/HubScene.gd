@@ -2282,7 +2282,7 @@ func _on_sim_round_pressed() -> void:
 	_sim_confirm.name = "SimConfirm"
 	var v: VBoxContainer = box["body"]
 	v.add_child(UiKit.heading("Sim %s?" % str(m["label"]), UiKit.H1))
-	var why := UiKit.lbl("Your match will be played out without you.", UiKit.BODY, UiKit.TEXT)
+	var why := UiKit.lbl("Our match is played out without you.", UiKit.BODY, UiKit.TEXT)
 	why.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(why)
 	# What the assistant does while you are away, and the way to change it (P-66).

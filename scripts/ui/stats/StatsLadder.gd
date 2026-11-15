@@ -27,8 +27,14 @@ const WIDE_CLUB := 190
 ## one decimal so the order reads as the preview's (row 177). A tap on a club
 ## says the rest: where it is in its cycle and the list in three years.
 const CLUB_NAME_INSET := 26
+## On a phone the columns are too narrow for a thumb (44 px), so their heads
+## are plain titles and the sort is a "Sort by" row of words above the table
+## (SORT_LINES; director 2026-11-15, "Sort-by row"). The club names keep the
+## width the columns leave them.
 const LADDER_PHONE := [["pos", "#", 24], ["club", "Club", 0], ["p", "P", 26], ["w", "W", 26],
 		["l", "L", 26], ["d", "D", 24], ["pct", "%", 42], ["pts", "Pts", 34], ["rating", "Rating", 46]]
+## The phone's "Sort by" words, two lines of them: "#" is the true order.
+const SORT_LINES := [["pos", "p", "w", "l", "d"], ["pct", "pts", "club", "rating"]]
 const LADDER_WIDE := [["pos", "#", 44], ["club", "Club", WIDE_CLUB], ["p", "P", 32], ["w", "W", 32],
 		["l", "L", 32], ["d", "D", 30], ["pf", "PF", 50], ["pa", "PA", 50], ["pct", "%", 50],
 		["pts", "Pts", 40], ["home", "Home", 68], ["away", "Away", 68], ["form", "Form", 76],
@@ -159,6 +165,8 @@ static func build(host: Control) -> Control:
 			status.custom_minimum_size.x = table_width(specs)
 		v.add_child(status)
 
+	if not wide:
+		v.add_child(_sort_row(host, specs))
 	# No panel around it: the bands do the work.
 	var t := UiKit.vbox(0)
 	t.name = "LadderTable"
@@ -227,25 +235,27 @@ static func table_width(specs: Array) -> float:
 static func _status(host: Control, count: int) -> Control:
 	var h := UiKit.hbox(8)
 	h.name = "LadderStatus"
-	var bits := PackedStringArray()
+	var shown := ""
 	for o in FILTERS:
 		if str(o[0]) == _filter and _filter != "all":
-			bits.append(str(o[1]))
+			shown = "Showing " + str(o[1])
+	var sorted := ""
 	if _sort != "":
-		var ends := ["Z–A", "A–Z"] if _sort == "club" else ["most", "fewest"]
-		bits.append("sorted by %s, %s first" % [_title_of(_sort), ends[0] if _desc else ends[1]])
-	var text := "Showing " + (", ".join(bits) if not bits.is_empty() else "all %d clubs" % count)
+		var ends := ["Z–A", "A–Z"] if _sort == "club" else ["highest", "lowest"]
+		sorted = "sorted by %s, %s first" % [_title_of(_sort), ends[0] if _desc else ends[1]]
+	# "Showing Top 10, sorted by Pts, highest first"; a sort alone reads
+	# "Sorted by Pts, highest first", never "Showing sorted by".
+	var text := shown
+	if sorted != "":
+		text = shown + ", " + sorted if shown != "" else sorted.left(1).to_upper() + sorted.substr(1)
+	if text == "":
+		text = "Showing all %d clubs" % count
 	var l := UiKit.lbl(text, UiKit.SMALL, UiKit.MUTED)
 	l.name = "ActiveState"
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(l)
-	if _sort != "":
-		var order := UiKit.btn("Ladder order", UiKit.SMALL)
-		order.name = "LadderOrder"
-		order.pressed.connect(func():
-			_sort = ""
-			host.call("refresh"))
-		h.add_child(order)
+	# One way back: Reset. The "#" sort word (or a wide screen's "#" head) also
+	# restores the true order, so no separate "Ladder order" button.
 	if _sort != "" or _filter != "all":
 		var rs := UiKit.btn("Reset", UiKit.SMALL)
 		rs.name = "ResetLadder"
@@ -273,6 +283,32 @@ static func _header(host: Control, specs: Array, width: float, wide := false) ->
 		var key := str(c[0])
 		if key == "form":
 			h.add_child(_plain(str(c[1]), int(c[2]), UiKit.MUTED))
+			continue
+		if not wide:
+			# A phone's heads are titles: the "Sort by" row above sorts. The
+			# sorted column's title is bold and bright, as its word is.
+			var on := _is_sorted(key)
+			var title := str(c[1])
+			if key == "club" and width < PHONE_TIGHT:
+				# A guernsey-wide column (CLUB_MIN_NARROW) has no room for the word.
+				title = ""
+			var t := UiKit.line(title, UiKit.FINE, UiKit.TEXT if on else UiKit.MUTED, on)
+			t.name = "Head_" + key
+			t.custom_minimum_size = Vector2(maxi(int(c[2]), CLUB_MIN_NARROW if key == "club" else 0), 32)
+			t.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			t.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+			if key == "club":
+				t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				t.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+				# Over the names, not the crests (as the wide head's inset).
+				var inset := StyleBoxEmpty.new()
+				inset.content_margin_left = CLUB_NAME_INSET
+				t.add_theme_stylebox_override("normal", inset)
+			elif c == specs[-1] and not _all_fixed(specs):
+				var pad := StyleBoxEmpty.new()
+				pad.content_margin_right = END_PAD
+				t.add_theme_stylebox_override("normal", pad)
+			h.add_child(t)
 			continue
 		var b := Button.new()
 		b.name = "Sort_" + key
@@ -308,6 +344,47 @@ static func _header(host: Control, specs: Array, width: float, wide := false) ->
 		b.pressed.connect(func(): _sort_by(host, key))
 		h.add_child(b)
 	return h
+
+
+## Whether the ladder is sorted by this column: "#" when it is in its true order.
+static func _is_sorted(key: String) -> bool:
+	return key == _sort or (key == "pos" and _sort == "")
+
+
+## A phone's sort: "Sort by" and the columns' titles as thumb-high words, two
+## lines of them, the current one bold and underlined (UiKit.paint_tab). A tap
+## sorts as a wide screen's column head does (_sort_by); again reverses it.
+static func _sort_row(host: Control, specs: Array) -> Control:
+	var titles := {}
+	for c in specs:
+		titles[str(c[0])] = str(c[1])
+	var v := UiKit.vbox(0)
+	v.name = "SortBy"
+	var first := true
+	for keys in SORT_LINES:
+		var h := UiKit.hbox(4)
+		h.name = "SortLine"
+		var lead := UiKit.line("Sort by" if first else "", UiKit.SMALL, UiKit.MUTED)
+		lead.name = "SortByTitle" if first else "SortByIndent"
+		lead.custom_minimum_size = Vector2(64, 44)
+		lead.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		h.add_child(lead)
+		first = false
+		for key in keys:
+			var b := UiKit.btn(str(titles.get(key, key)), UiKit.SMALL)
+			b.name = "Sort_" + key
+			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			b.custom_minimum_size = Vector2(44, 44)
+			var on := _is_sorted(key)
+			UiKit.paint_tab(b, on)
+			b.add_theme_font_override("font", UiKit.BOLD if on else UiKit.FONT)
+			# Every word full strength so none reads as switched off; the current
+			# one is bold and underlined.
+			b.add_theme_color_override("font_color", UiKit.TEXT)
+			b.pressed.connect(func(): _sort_by(host, key))
+			h.add_child(b)
+		v.add_child(h)
+	return v
 
 
 static func _all_fixed(specs: Array) -> bool:

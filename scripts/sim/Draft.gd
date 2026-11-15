@@ -1246,7 +1246,7 @@ func price_for(_code: String, p: Dictionary) -> int:
 ## His salary in the opening season's dollars (the budget's year,
 ## compute_budget): Legacy mode prices a 1990 draft in 1990 dollars.
 static func cost_of(p: Dictionary) -> int:
-	return Contracts.dollars(int(p["value"]), GameDB.START_YEAR)
+	return Contracts.pay(int(p["value"]), GameDB.START_YEAR)
 
 
 ## Your price for him (price_for your club).
