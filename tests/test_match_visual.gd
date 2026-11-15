@@ -35,8 +35,8 @@ func run() -> void:
 	_t("_test_smother_at_the_kick", [res])
 	_t("_test_tactical_timeline")
 	var truth_hb: Array = await _t("_test_truth", [res])
-	_t("_test_tail_seeds", [truth_hb])
-	_t("_test_collection_pauses", [res])
+	var tail_pauses: Array = await _t("_test_tail_seeds", [truth_hb])
+	_t("_test_collection_pauses", [res, tail_pauses])
 	_t("_test_play_when_idle", [res])
 	_t("_test_numbers_readable")
 	_t("_test_oval_people", [res])
@@ -791,12 +791,38 @@ func _test_truth(res: Dictionary) -> Array:
 ## weather merge redraws the match again: seed 42 has 15 (main 8; it swung 18
 ## to 8 on main from weather alone), over trace_collect's 12 matches 183 long
 ## collects (main 196). No worse than main, so main's cap stands: 18.
+## Pooled over the tail seeds (2026-11-16): one match is a coin flip here too.
+## Seed 42 alone swings 8 to 31 on changes that never touch the view, and on
+## main c9f2b0cd7 it read 27 (Linux and Windows alike) while every PR's own run
+## had passed 18: main was red on a redraw. Seeds 42 and 1-3 on that main:
+## 27 + 26 + 28 + 29 = 110 (seeds 42 and 1-5: 142, up from 95 on 2026-11-07).
+## The cap is main plus about one match's spread: 120; pressure at most 1 a match.
+## A team-mate's hands on it are not a wait (row 197, 2026-11-16): while a man is
+## down for a loose ball in the scrap (from going down to his hands reaching it),
+## the ball is being played, so that time is not counted against the collect.
+## Main has no such man (its scrap moved the ball with nobody on it): its 110 is
+## unchanged. The spilled-ball scrap: 97 over the four seeds, 1 after pressure.
 const PAUSE_S := 1.5
-const PAUSE_MAX := 18
-const PAUSE_PRESSURE_MAX := 1
+const PAUSE_MAX := 120
+const PAUSE_PRESSURE_MAX := 4
 
 
-func _test_collection_pauses(res: Dictionary) -> void:
+## Seed 42's pauses with the tail seeds' (from _test_tail_seeds), checked pooled.
+func _test_collection_pauses(res: Dictionary, tail: Array) -> void:
+	var own := _pauses(res)
+	print("PAUSES %d of %.1f s or more (%d after pressure), named player %.0f m off on average" % [
+			own[0], PAUSE_S, own[1], own[2]])
+	var pauses := int(own[0]) + int(tail[0])
+	var after_pressure := int(own[1]) + int(tail[1])
+	print("PAUSES over seeds 42 and 1-3: %d (%d after pressure)" % [pauses, after_pressure])
+	_check(pauses <= PAUSE_MAX,
+			"Play rarely waits on a far collector (%d pauses of %.1f s or more over four seeds, at most %d)" % [pauses, PAUSE_S, PAUSE_MAX])
+	_check(after_pressure <= PAUSE_PRESSURE_MAX,
+			"A presser is already closing when he wins it (%d pauses after pressure over four seeds, at most %d)" % [after_pressure, PAUSE_PRESSURE_MAX])
+
+
+## A match's collects of PAUSE_S or more: [pauses, after a pressure act, mean metres off].
+func _pauses(res: Dictionary) -> Array:
 	var d := MatchDirector.new()
 	d.setup(res, res["events"])
 	var h := 1.0 / 30.0
@@ -807,31 +833,29 @@ func _test_collection_pauses(res: Dictionary) -> void:
 	var pauses := 0
 	var after_pressure := 0
 	var far_sum := 0.0
+	var hands := 0.0
 	var guard := 0
 	while not d.idle() and guard < 400000:
 		guard += 1
 		d.advance(h)
 		var p = d._phases[d._pi] if d._pi < d._phases.size() else null
 		if p == cur:
+			if p != null and p.has("_by"):
+				hands += h * MatchDirector.TEMPO
 			continue
-		if cur != null and str(cur.get("t", "")) == "collect" and kind != "" and d.time - start >= PAUSE_S:
+		if cur != null and str(cur.get("t", "")) == "collect" and kind != "" and d.time - start - hands >= PAUSE_S:
 			pauses += 1
 			far_sum += dist
 			if kind == "pressure":
 				after_pressure += 1
 		cur = p
 		kind = ""
+		hands = 0.0
 		if p != null and str(p.get("t", "")) == "collect" and int(p.get("who", -1)) >= 0:
 			start = d.time
 			dist = (d.tokens[int(p["who"])]["pos"] as Vector2).distance_to(d.ball["pos"])
 			kind = str((d.events[d.cursor - 1] as Dictionary).get("kind", "")) if d.cursor > 0 else "?"
-	var mean := far_sum / maxf(1.0, float(pauses))
-	print("PAUSES %d of %.1f s or more (%d after pressure), named player %.0f m off on average" % [
-			pauses, PAUSE_S, after_pressure, mean])
-	_check(pauses <= PAUSE_MAX,
-			"Play rarely waits on a far collector (%d pauses of %.1f s or more, at most %d)" % [pauses, PAUSE_S, PAUSE_MAX])
-	_check(after_pressure <= PAUSE_PRESSURE_MAX,
-			"A presser is already closing when he wins it (%d pauses after pressure, at most %d)" % [after_pressure, PAUSE_PRESSURE_MAX])
+	return [pauses, after_pressure, far_sum / maxf(1.0, float(pauses))]
 
 
 ## The two tail checks, over four fixed seeds (42 and 1-3) rather than one:
@@ -846,14 +870,20 @@ func _test_collection_pauses(res: Dictionary) -> void:
 ## Eight or more (3%) is about 0.04%, so a real fault still trips the cap, and
 ## pooled over about 1000 handballs the 2% bar is much stricter than the old
 ## single-match one. Do not tighten the per-seed cap back to 2%.
-func _test_tail_seeds(truth_hb: Array) -> void:
+## Returns the seeds' collection pauses pooled, [pauses, after pressure], for
+## _test_collection_pauses.
+func _test_tail_seeds(truth_hb: Array) -> Array:
 	var hb_total := int(truth_hb[0])
 	var hb_kick := int(truth_hb[1])
 	var worst_all := 0.0
 	var worst_share := float(hb_kick) / maxf(1.0, float(hb_total))
 	var all_over_100 := hb_total > 100
+	var pooled := [0, 0]
 	for seed in [1, 2, 3]:
 		var res := _result(seed)
+		var pa := _pauses(res)
+		pooled[0] += int(pa[0])
+		pooled[1] += int(pa[1])
 		worst_all = maxf(worst_all, _worst_release(res))
 		var hb := _handball_counts(res)
 		hb_total += hb[0]
@@ -864,6 +894,7 @@ func _test_tail_seeds(truth_hb: Array) -> void:
 	_check(all_over_100 and hb_kick <= hb_total / 50,
 			"A handball is drawn as a handball over four seeds (%d of %d drawn as kicks)" % [hb_kick, hb_total])
 	_check(worst_share <= 0.03, "No seed draws over 3%% of its handballs as kicks (worst %.1f%%)" % (worst_share * 100.0))
+	return pooled
 
 
 func _worst_release(res: Dictionary) -> float:
