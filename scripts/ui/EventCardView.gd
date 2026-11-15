@@ -52,10 +52,10 @@ static func build(index: int, narrow: bool, rebuild: Callable, show_rule: Callab
 			b.name = "Event_%d" % i
 			b.custom_minimum_size = Vector2(0, 48)
 			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			if not narrow:
-				# Side by side, every choice gets an equal share and wraps its own words.
-				b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-				b.custom_minimum_size = Vector2(0, 48)
+			# Every choice wraps its own words: side by side each gets an equal
+			# share, and stacked on a phone a long answer at the largest text
+			# size would otherwise push the whole hub past the screen's edge.
+			b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			b.pressed.connect(func():
 				GameState.resolve_card(index, i)
 				rebuild.call())
