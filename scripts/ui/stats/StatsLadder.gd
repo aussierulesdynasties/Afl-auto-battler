@@ -235,25 +235,27 @@ static func table_width(specs: Array) -> float:
 static func _status(host: Control, count: int) -> Control:
 	var h := UiKit.hbox(8)
 	h.name = "LadderStatus"
-	var bits := PackedStringArray()
+	var shown := ""
 	for o in FILTERS:
 		if str(o[0]) == _filter and _filter != "all":
-			bits.append(str(o[1]))
+			shown = "Showing " + str(o[1])
+	var sorted := ""
 	if _sort != "":
 		var ends := ["Z–A", "A–Z"] if _sort == "club" else ["highest", "lowest"]
-		bits.append("sorted by %s, %s first" % [_title_of(_sort), ends[0] if _desc else ends[1]])
-	var text := "Showing " + (", ".join(bits) if not bits.is_empty() else "all %d clubs" % count)
+		sorted = "sorted by %s, %s first" % [_title_of(_sort), ends[0] if _desc else ends[1]]
+	# "Showing Top 10, sorted by Pts, highest first"; a sort alone reads
+	# "Sorted by Pts, highest first", never "Showing sorted by".
+	var text := shown
+	if sorted != "":
+		text = shown + ", " + sorted if shown != "" else sorted.left(1).to_upper() + sorted.substr(1)
+	if text == "":
+		text = "Showing all %d clubs" % count
 	var l := UiKit.lbl(text, UiKit.SMALL, UiKit.MUTED)
 	l.name = "ActiveState"
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(l)
-	if _sort != "":
-		var order := UiKit.btn("Ladder order", UiKit.SMALL)
-		order.name = "LadderOrder"
-		order.pressed.connect(func():
-			_sort = ""
-			host.call("refresh"))
-		h.add_child(order)
+	# One way back: Reset. The "#" sort word (or a wide screen's "#" head) also
+	# restores the true order, so no separate "Ladder order" button.
 	if _sort != "" or _filter != "all":
 		var rs := UiKit.btn("Reset", UiKit.SMALL)
 		rs.name = "ResetLadder"

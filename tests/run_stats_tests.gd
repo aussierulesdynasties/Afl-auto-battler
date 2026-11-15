@@ -1170,7 +1170,9 @@ func _test_ladder(sz: Vector2i) -> void:
 	_check(why == "", "A finger on %s sorts (%s: %s)" % [sname, tag, why])
 	var wins := _by(s, season, sk)
 	_check(_non_increasing(wins), "%s sorts most first (%s: %s)" % [sname, tag, str(wins)])
-	_check(_text(s.find_child("ActiveState", true, false)).contains("sorted by %s, highest first" % sname), "The sort is named (%s)" % tag)
+	var said := _text(s.find_child("ActiveState", true, false))
+	_check(said.begins_with("Sorted by %s, highest first" % sname), "The sort is named, as a sentence (%s: %s)" % [tag, said])
+	_check(s.find_child("LadderOrder", true, false) == null, "One way back, Reset: no second Ladder order button (%s)" % tag)
 	if sz.x < 900:
 		var hw: Label = s.find_child("Head_w", true, false)
 		_check(_bold_button(s.find_child("Sort_w", true, false), bold_font) and not _bold_button(s.find_child("Sort_pos", true, false), bold_font)
@@ -1181,10 +1183,10 @@ func _test_ladder(sz: Vector2i) -> void:
 	wins = _by(s, season, sk)
 	_check(_non_decreasing(wins), "A second tap reverses it (%s: %s)" % [tag, str(wins)])
 	_header_aligns(s, tag + " sorted")
-	await Tap.tap(s.find_child("LadderOrder", true, false))
+	await Tap.tap(s.find_child("Sort_pos", true, false))
 	await _settle()
-	_check(_row_codes(s) == true_order and s.find_child("LadderOrder", true, false) == null,
-			"Ladder order restores the true order (%s)" % tag)
+	_check(_row_codes(s) == true_order and s.find_child("ActiveState", true, false) == null,
+			"The # word restores the true order (%s)" % tag)
 	if true:
 		_check((await Tap.tap(s.find_child("Sort_club", true, false))) == "", "A finger on Club sorts (%s)" % tag)
 		await _settle()
@@ -1355,7 +1357,7 @@ func _test_ladder(sz: Vector2i) -> void:
 	_check(s.call("handle_back") == true, "Back closes the club's page (%s)" % tag)
 	await _settle()
 	_check(s.find_child("ClubPage", true, false) == null and _row_codes(s) == before
-			and _text(s.find_child("ActiveState", true, false)).contains("sorted by Pts"),
+			and _text(s.find_child("ActiveState", true, false)).contains("orted by Pts"),
 			"Back returns to the ladder as it was, sort and filter kept (%s)" % tag)
 	s.queue_free()
 	await _settle()
@@ -1719,7 +1721,7 @@ func _test_team_rating(sz: Vector2i) -> void:
 		for c in _row_codes(s):
 			vals.append(float(_state.club_strength(c)))
 		_check(_non_increasing(vals), "...and ranks the clubs by their best side, best first (%s)" % tag)
-		await Tap.tap(s.find_child("LadderOrder", true, false))
+		await Tap.tap(s.find_child("Sort_pos", true, false))
 		await _settle()
 	_check(s.find_child("Sort_window", true, false) == null and _text(s.find_child("LadderTable", true, false)).find("Contender") < 0,
 			"The ladder keeps one compact column; the category is a tap away (%s)" % tag)
