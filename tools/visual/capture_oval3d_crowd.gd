@@ -50,8 +50,8 @@ func _run() -> void:
 	d.setup(res, res["events"])
 	d.want_contacts = true
 	var log := []
-	var best_setup := [-1, 0, Vector2.ZERO]     # frame, pairs, centre
-	var packs := {}                              # beat k -> [first frame, last frame, members, at]
+	var best_setup := [-1, 0, []]               # frame, pairs, the men in them
+	var best_pack := [-1, 0, []]                # frame, men within 3 m of the ball-up, them
 	var n := 0
 	while n < int(MINUTES * 60.0 * 60.0) and not d.idle():
 		d.advance(DT)
@@ -67,6 +67,7 @@ func _run() -> void:
 			# Where the most such pairs crowd together (a set-up spans the ground).
 			var meant: Dictionary = d._meant_now()
 			var mids := []
+			var men := []
 			for i in range(row.size()):
 				for j in range(i + 1, row.size()):
 					var w: Vector2 = row[j] - row[i]
@@ -75,19 +76,25 @@ func _run() -> void:
 					var cl: float = -((d.tokens[j]["vel"] as Vector2) - (d.tokens[i]["vel"] as Vector2)).dot(w.normalized())
 					if cl > 2.0:
 						mids.append((row[i] + row[j]) * 0.5)
-			for m in mids:
+						men.append([i, j])
+			for a in range(mids.size()):
 				var cnt := 0
-				var c := Vector2.ZERO
-				for o in mids:
-					if (o as Vector2).distance_to(m) <= 10.0:
+				var ids := {}
+				for b in range(mids.size()):
+					if (mids[b] as Vector2).distance_to(mids[a]) <= 6.0:
 						cnt += 1
-						c += o
+						ids[men[b][0]] = true
+						ids[men[b][1]] = true
 				if cnt > int(best_setup[1]):
-					best_setup = [n, cnt, c / float(cnt)]
+					best_setup = [n, cnt, ids.keys()]
 		elif str(d._beat.get("kind", "")) == "ballup" and kind in ["pack", "throwup"]:
-			if not packs.has(k):
-				packs[k] = [n, n, (p.get("members", []) as Array).size(), p.get("at", Vector2.ZERO)]
-			packs[k][1] = n
+			var at: Vector2 = p.get("at", Vector2.ZERO)
+			var near := []
+			for i in range(row.size()):
+				if row[i].distance_to(at) <= 3.0:
+					near.append(i)
+			if near.size() > int(best_pack[1]):
+				best_pack = [n, near.size(), near]
 		n += 1
 	var frames := log.size()
 	print("PASS1 %d frames" % frames)
@@ -95,21 +102,15 @@ func _run() -> void:
 	if int(best_setup[0]) >= 0:
 		var f0: int = maxi(0, int(best_setup[0]) - 120)
 		var f1: int = mini(frames - 1, int(best_setup[0]) + 120)
-		shots.append(_shot("A_setup", log, f0, f1, best_setup[2], 6.0, int(best_setup[0])))
-		print("SETUP peak frame %d with %d closing pairs within 10 m of %s" % [best_setup[0], best_setup[1], best_setup[2]])
-	var pk := -1
-	for k in packs:
-		if pk < 0 or int(packs[k][2]) > int(packs[pk][2]):
-			pk = k
-	if pk >= 0:
-		var pr: Array = packs[pk]
-		var f0b: int = maxi(0, int(pr[0]) - 60)
-		var f1b: int = mini(frames - 1, int(pr[1]) + 150)
-		shots.append(_shot("B_pack", log, f0b, f1b, pr[3], 5.0, int(pr[1])))
-		print("PACK beat %d, %d in it, frames %d-%d at %s" % [pk, pr[2], pr[0], pr[1], pr[3]])
+		shots.append(_shot("A_setup", log, f0, f1, best_setup[2], int(best_setup[0]) - 15, int(best_setup[0]) + 15))
+		print("SETUP peak frame %d with %d closing pairs within 6 m, men %s" % [best_setup[0], best_setup[1], best_setup[2]])
+	if int(best_pack[0]) >= 0:
+		var pf := int(best_pack[0])
+		shots.append(_shot("B_pack", log, maxi(0, pf - 90), mini(frames - 1, pf + 150), best_pack[2], pf - 5, pf + 5))
+		print("PACK frame %d, %d men within 3 m of the ball-up: %s" % [pf, best_pack[1], best_pack[2]])
 	for s in shots:
-		print("SHOT %s frames %d-%d | %d men | offset %s (%.1f m back) | all in frame %s | hidden %d of %d frames" % [
-				s["name"], s["f0"], s["f1"], (s["ids"] as Array).size(), s["off"], (s["off"] as Vector3).length(), s["in"], s["hid"], s["f1"] - s["f0"] + 1])
+		print("SHOT %s frames %d-%d | %d men | offset %s (%.1f m back) | all in frame %s | hidden %d of core %s" % [
+				s["name"], s["f0"], s["f1"], (s["ids"] as Array).size(), s["off"], (s["off"] as Vector3).length(), s["in"], s["hid"], s["core"]])
 
 	# Pass 2: the director and the oval, each window filmed.
 	d = load("res://scripts/ui/match/MatchDirector.gd").new()
@@ -148,14 +149,12 @@ func _run() -> void:
 	quit()
 
 
-## A camera following the men within `r` of `at` at frame `key`, over frames f0..f1 of `log`:
-## each frame's aim is the group's centre smoothed over SMOOTH frames each side.
-func _shot(name: String, log: Array, f0: int, f1: int, at: Vector2, r: float, key: int) -> Dictionary:
-	var ids := []
-	var row: PackedVector2Array = log[key]
-	for i in range(row.size()):
-		if row[i].distance_to(at) <= r:
-			ids.append(i)
+## A camera following men `ids` over frames f0..f1 of `log`: each frame's aim is their centre
+## smoothed over SMOOTH frames each side, framed so all of them stay in shot over the core
+## frames c0..c1 (the moment itself; before and after it they may run out of shot).
+func _shot(name: String, log: Array, f0: int, f1: int, ids: Array, c0: int, c1: int) -> Dictionary:
+	c0 = clampi(c0, f0, f1)
+	c1 = clampi(c1, f0, f1)
 	var mids := []
 	for f in range(f0, f1 + 1):
 		var m := Vector2.ZERO
@@ -172,17 +171,18 @@ func _shot(name: String, log: Array, f0: int, f1: int, at: Vector2, r: float, ke
 			c += 1
 		a /= float(c)
 		aims.append(Vector3(a.x, 0.9, a.y))
-		for i in ids:
-			rad = maxf(rad, ((log[f] as PackedVector2Array)[i]).distance_to(a))
+		if f >= c0 and f <= c1:
+			for i in ids:
+				rad = maxf(rad, ((log[f] as PackedVector2Array)[i]).distance_to(a))
 	var best := {}
 	for height_k in [0.55, 0.8]:
 		for a in range(12):
 			var dir := Vector2.from_angle(TAU * float(a) / 12.0)
-			var back := (rad + 1.5) / tan(deg_to_rad(FOV) * 0.5)
+			var back := (rad + 1.0) / tan(deg_to_rad(FOV) * 0.5)
 			var off := Vector3(dir.x * back, back * height_k, dir.y * back)
 			var inside := true
 			var hid := 0
-			for f in range(f0, f1 + 1, 2):
+			for f in range(c0, c1 + 1, 2):
 				var rw: PackedVector2Array = log[f]
 				var aim: Vector3 = aims[f - f0]
 				for i in ids:
@@ -195,7 +195,7 @@ func _shot(name: String, log: Array, f0: int, f1: int, at: Vector2, r: float, ke
 			var score := (0 if inside else 100000) + hid
 			if best.is_empty() or score < int(best["score"]):
 				best = {"name": name, "f0": f0, "f1": f1, "ids": ids, "off": off, "aims": aims, "in": inside,
-						"hid": hid, "score": score}
+						"hid": hid, "score": score, "core": [c0, c1]}
 	return best
 
 
