@@ -1644,7 +1644,7 @@ func _run() -> void:
 	_state.delete_saved_career()
 	await _t("_test_new_career_keeps_the_save")
 	await _t("_test_new_career_canberra_choice")
-	await _t("_test_new_career_forged_row_redraft_only")
+	await _t("_test_new_career_forged_row_every_start")
 	await _t("_test_forge_on_every_start")
 	await _t("_test_new_career_challenge_taps")
 	await _t("_test_canberra_2030_warning")
@@ -4597,10 +4597,9 @@ func _test_forge_on_every_start() -> void:
 			continue
 		var prospect := current_scene.find_child("Prospect_in", true, false) as Control
 		var row := current_scene.find_child("ForgedClub", true, false) as Control
-		var note := current_scene.find_child("ForgedClubOnly", true, false) as Control
 		if prospect == null:
 			missing.append("%s: prospect" % id)
-		if row == null or note == null or row.visible == note.visible:
+		if row == null or not row.is_visible_in_tree():
 			missing.append("%s: club" % id)
 		# A new club's start plays years without you: its rows are checked
 		# above. Every other start: its League redraft and its real lists.
@@ -4620,6 +4619,11 @@ func _test_forge_on_every_start() -> void:
 				missing.append("%s %s: prospect not in the career" % [id, mode])
 			if mode == "redraft" and (d == null or not d.clubs.has("PMB")):
 				missing.append("%s redraft: club not in the draft" % id)
+			# Real lists: a new club, its state-league list in hand and a
+			# guest's seat holding the extra picks (row 172).
+			if mode == "real" and (d == null or not d.guests.has("PMB")
+					or (_state.league_lists.get("PMB", []) as Array).size() < 20):
+				missing.append("%s real: club not in as a new club" % id)
 	_check(ids.size() >= 2 and missing.is_empty(),
 			"Every start hosts your Forge prospect and club (%d starts; missing: %s)" % [ids.size(), str(missing)])
 	_state.set_forge_club({})
@@ -4650,10 +4654,11 @@ func _open_start(id: String) -> String:
 	return await _pick_year(id)
 
 
-## The Forge club joins League redraft careers only (director, 2026-11-08):
-## Real 2026 lists or Rebuild hide its row and say why; a League redraft
-## brings it back with the pick as it was.
-func _test_new_career_forged_row_redraft_only() -> void:
+## The Forge club comes into every start (director, 2026-11-15: "EVERY mode
+## needs to be able to host our forge creations"): a League redraft drafts its
+## list; Real 2026 lists and Rebuild bring it in as a new club on the new-club
+## package (TODO row 172), and the line says so.
+func _test_new_career_forged_row_every_start() -> void:
 	_state.delete_saved_career()
 	_state.reset()
 	_state.set_forge_club({"name": "Port Melbourne", "short": "Borough", "code": "PMB",
@@ -4666,25 +4671,22 @@ func _test_new_career_forged_row_redraft_only() -> void:
 	await _settle()
 	await _pick_year()
 	var row := current_scene.find_child("ForgedClub", true, false) as Control
-	var note := current_scene.find_child("ForgedClubOnlyNote", true, false) as Label
-	_check(row != null and note != null and row.is_visible_in_tree() and not note.is_visible_in_tree(),
-			"A League redraft shows the Your club row")
+	var note := current_scene.find_child("ForgedClubNote", true, false) as Label
+	_check(row != null and note != null and row.is_visible_in_tree() and note.text.contains("League Draft"),
+			"A League redraft shows the Your club row: it drafts in the League Draft")
 	if row == null or note == null:
 		return
 	await Tap.tap(current_scene.find_child("ForgedClub_in", true, false))
 	await _settle()
 	await Tap.tap(current_scene.find_child("StartMode_real", true, false))
 	await _settle()
-	_check(not row.is_visible_in_tree() and note.is_visible_in_tree()
-			and note.text == "Your club joins League redraft careers only.",
-			"Real 2026 lists hide the Your club row and show the note")
-	await Tap.tap(current_scene.find_child("StartMode_redraft", true, false))
-	await _settle()
-	_check(row.is_visible_in_tree() and not note.is_visible_in_tree() and bool(current_scene.get("_pick_club")),
-			"Back on a League redraft, the row returns with your club still brought")
+	_check(row.is_visible_in_tree() and note.text.begins_with("It joins as a new club")
+			and note.text.contains("outside the salary cap") and bool(current_scene.get("_pick_club")),
+			"Real 2026 lists keep the Your club row: a new club on the new-club package (%s)" % note.text)
 	await Tap.tap(current_scene.find_child("Challenge_rebuild", true, false))
 	await _settle()
-	_check(not row.is_visible_in_tree() and note.is_visible_in_tree(), "Rebuild hides the Your club row too")
+	_check(row.is_visible_in_tree() and note.text.ends_with("You coach against it."),
+			"Rebuild keeps the row; you coach against your club (%s)" % note.text)
 	_state.set_forge_club({})
 	_state.reset()
 	_router.stack = []

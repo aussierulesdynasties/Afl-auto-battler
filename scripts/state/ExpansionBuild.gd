@@ -72,13 +72,28 @@ static func first_season(gs) -> Array:
 static func later_draft_clubs(gs, year: int) -> Array:
 	var out := []
 	for code in gs.expansion:
-		var first := GameDB.enter_year(str(code))
+		# A club whose first picks waited a year has its two later drafts after.
+		var first := GameDB.enter_year(str(code)) + (1 if _picks_waited(gs, str(code)) else 0)
 		if (year == first or year == first + 1) and has_package(gs, str(code)):
 			out.append(str(code))
 	return out
 
 
 ## The club with first call on this prospect in this year's draft, or "".
+## Forge clubs whose new-club picks wait for the National Draft after `year`'s
+## season: a Legacy start has no opening draft to hold them (forged_entry).
+static func waiting_picks_clubs(gs, year: int) -> Array:
+	var out := []
+	for code in gs.expansion:
+		if has_package(gs, str(code)) and int((gs.expansion[code] as Dictionary).get("first_picks_in", 0)) == year:
+			out.append(str(code))
+	return out
+
+
+static func _picks_waited(gs, code: String) -> bool:
+	return int((gs.expansion.get(code, {}) as Dictionary).get("first_picks_in", 0)) > 0
+
+
 static func academy_club(gs, p: Dictionary) -> String:
 	if str(p.get("state", "")) != "TAS":
 		return ""
@@ -468,6 +483,12 @@ static func draft_picks(gs, n_clubs: int, pool_size: int) -> Array:
 			forced_trade(gs, code, picks, int(pick))
 		_make_room(gs, code, picks)
 		comps.append_array(picks)
+	# As a building club's first picks: its lowest state-league signings make
+	# way so every pick fits, yours included, or a full list passes them all.
+	for code in waiting_picks_clubs(gs, int(gs.season_year)):
+		var picks: Array = Expansion.first_draft_picks(code, n_clubs, rounds)
+		_make_room(gs, code, picks)
+		comps.append_array(picks)
 	for code in later_draft_clubs(gs, int(gs.season_year)):
 		var picks: Array = Expansion.later_draft_picks(code)
 		forced_trade(gs, code, picks, Expansion.LATER_MUST_TRADE_PICK)
@@ -550,6 +571,10 @@ static func picks_ahead(gs, year: int, regular: int, n: int) -> int:
 					ahead += 1
 		for code in later_draft_clubs(gs, year):
 			for e in Expansion.later_draft_picks(code):
+				if int(e["after"]) < regular:
+					ahead += 1
+		for code in waiting_picks_clubs(gs, year):
+			for e in Expansion.first_draft_picks(code, n, 4):
 				if int(e["after"]) < regular:
 					ahead += 1
 	elif year == int(gs.season_year) + 1:
@@ -713,9 +738,53 @@ static func _signing_salaries(gs, code: String) -> int:
 	var st: Dictionary = gs.expansion.get(code, {})
 	var total := 0
 	for p in list_of(gs, code):
-		if (st.get("signings", []) as Array).has(str(p["id"])):
+		var id := str(p["id"])
+		if (st.get("signings", []) as Array).has(id) or (st.get("fa_signings", []) as Array).has(id):
 			total += int(p.get("salary", 0))
 	return total
+
+
+## A free agent a Club Forge club signs counts toward its sign-on money
+## (director, 2026-11-15: "a stimulus package of increased salary to sign more
+## free agents"). Only a Forge club: it has no approach year, so free agents
+## stand in for the rivals' players Tasmania and Canberra sign (their sign-on
+## money is unchanged). Kept apart from "signings".
+static func note_free_agent(gs, code: String, p: Dictionary) -> void:
+	if not has_package(gs, code) or not bool((GameDB.clubs.get(code, {}) as Dictionary).get("custom", false)):
+		return
+	var st: Dictionary = gs.expansion[code]
+	if int(gs.season_year) + 1 > GameDB.enter_year(code) + 1 + Expansion.SIGN_ON_TAPER.size():
+		return
+	if not st.has("fa_signings"):
+		st["fa_signings"] = []
+	if not (st["fa_signings"] as Array).has(str(p["id"])):
+		(st["fa_signings"] as Array).append(str(p["id"]))
+
+
+## A Club Forge club on a real-lists start (TODO row 172; director, 2026-11-15:
+## "option 2 with a stimulus package of increased salary to sign more free
+## agents"). It plays the first season with every other club, so there is no
+## approach year: its list is its state-league signings, and it sits at the
+## opening National Draft as a guest holding the new club's extra picks (none
+## traded: it has no season of rivals' lists to trade into). The sign-on money
+## then covers the free agents it signs. Returns those picks for
+## Draft.add_compensation. `n_clubs` clubs pick in the ordinary order.
+static func forged_entry(gs, code: String, n_clubs: int, pool_size: int) -> Array:
+	var st := state(gs, code)
+	st["package"] = true
+	ensure_foundation(gs, code)
+	# A Legacy start has no opening draft (no class to pick from): the picks
+	# wait for the National Draft after its first season.
+	var picks: Array = []
+	if pool_size > 0:
+		var rounds := clampi(ceili(float(pool_size) / float(maxi(1, n_clubs))), 1, 4)
+		picks = Expansion.first_draft_picks(code, n_clubs, rounds)
+		_make_room(gs, code, picks)
+	else:
+		st["first_picks_in"] = GameDB.enter_year(code)
+	gs.league_lists[code] = st["list"]
+	st["list"] = []
+	return picks
 
 
 ## Sign-on money off `code`'s payroll: this season's, or, once the season is

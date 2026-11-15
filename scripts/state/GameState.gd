@@ -858,7 +858,9 @@ func write_history(path: String, meta: Dictionary) -> bool:
 ## the caller then plays the years live. A forged prospect enters in 2026, so
 ## his career has to be played; a seeded run stays reproducible.
 func begin_from_history(first_season: int) -> bool:
-	if replay_seed != 0 or custom_prospect_id != "":
+	# A history made without your Forge creations cannot host them: the years
+	# play out with them instead (director, 2026-11-15).
+	if replay_seed != 0 or custom_prospect_id != "" or not custom_club.is_empty():
 		return false
 	var path := PremadeHistory.pick(first_season)
 	if path == "":
@@ -2079,6 +2081,14 @@ func begin_real_lists() -> void:
 		else:
 			open_pool.append(p)
 	draftee_pool = draftee_pool.filter(func(q): return str(q.get("id", "")) != custom_prospect_id)
+	# Your Club Forge club plays the first season as a new club, on the
+	# new-club package: state-league signings, a guest's seat at this draft
+	# holding the extra picks, and sign-on money (TODO row 172).
+	var forged := forged_real_club(active)
+	var playing: Array = active.filter(func(c): return str(c) != forged)
+	var forged_picks: Array = []
+	if forged != "":
+		forged_picks = ExpansionBuild.forged_entry(self, forged, playing.size(), open_pool.size())
 	# The starting lists split into senior and rookie lists, and the opening
 	# National Draft fills the senior list.
 	RookieList.seed_lists(league_lists)
@@ -2097,13 +2107,22 @@ func begin_real_lists() -> void:
 			pairs.append([r, str(p.get("role2", ""))])
 		role_counts[code] = c
 		role_pairs[code] = pairs
-	draft = Draft.build_intake(open_pool, active.duplicate(), opening_order(active),
+	draft = Draft.build_intake(open_pool, playing.duplicate(), opening_order(playing),
 			prospect_read_seed(), sizes, role_counts, role_pairs)
+	if forged != "":
+		draft.add_guest(forged, int(sizes[forged]), role_counts[forged], role_pairs[forged])
+		draft.add_compensation(forged_picks)
 	draft.senior_cap = RookieList.senior_spots()
 	_draft_sees_44()
 	draft.user_max_age = Challenge.max_age(self)
 	OwnProspect.check(self)
 	mark_dirty()
+
+
+## Your Club Forge club, when this real-lists career has it in the league; "".
+func forged_real_club(active: Array) -> String:
+	var code := str(custom_club.get("code", "")).strip_edges()
+	return code if code != "" and active.has(code) else ""
 
 
 ## The 2026 National Draft order: the real 2026 ladder reversed, the premiers
@@ -9770,6 +9789,7 @@ func _sign_fa(p: Dictionary, code: String, salary: int, years: int) -> void:
 	clear_market_marks(p)
 	free_agents.erase(p)
 	_bars.erase(code)
+	ExpansionBuild.note_free_agent(self, code, p)
 	offseason_log.append({"kind": "signed", "club": code, "id": str(p["id"]), "salary": salary, "years": years})
 	if bool(p.get("tested", false)):
 		p.erase("tested")
