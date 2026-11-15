@@ -167,6 +167,9 @@ func _test_bank() -> void:
 					"nothing between them", "a kick the difference", "neighbours heard"]:
 				_check(not low.contains(banned), "%s: \"%s\" repeats a result headline" % [a, ph])
 			_check(not low.contains("!"), "%s: no exclamation in the news desk's voice" % a)
+			# Bug bash 4: "a Eagles charge". A nickname takes no "a" in front of it.
+			_check(not low.contains(" a {lose}") and not low.contains(" a {win}"), "%s: \"%s\" puts a/an before a nickname" % [a, ph])
+			_check(not low.contains("the ten"), "%s: \"%s\" says the ten in every era" % [a, ph])
 
 
 # ---------------------------------------------------------------------------
@@ -356,6 +359,13 @@ func _test_ladder() -> void:
 	var txt := _all_text(_one(res, {"ladder": ladder}))
 	_check(txt.contains("Melbourne") and txt.contains("ninth") and txt.contains("the ten"),
 			"from 11th to ninth is told as into the ten: %s" % txt)
+	# Bug bash 4: a season's own number of finalists (a final eight here).
+	var eight := _all_text(_one(res, {"ladder": ladder, "finalists": 8}))
+	_check(not eight.contains("the ten") and not eight.contains("the eight"), "ninth is not into a final eight: %s" % eight)
+	var to8 := ladder.duplicate(true)
+	to8["MEL"]["pts"] = 26
+	var into8 := _all_text(_one(res, {"ladder": to8, "finalists": 8}))
+	_check(into8.contains("into the eight") and into8.contains("eighth"), "11th to eighth is into the eight: %s" % into8)
 	# In a final there is no ladder line.
 	res["tag"] = "QF1"
 	var fin := _all_text(_one(res, {"ladder": ladder}))

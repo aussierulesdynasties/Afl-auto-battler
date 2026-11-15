@@ -248,6 +248,17 @@ func _test_live() -> void:
 	var p := _complete_player()
 	_state.milestone_log["coach"]["games"] = 49
 	_check(_M.upcoming(_state).any(func(u): return str(u["key"]) == "coached"), "The coach's 50th is this week's")
+	# Bug bash 4: the coach's mark is your club's news, never "This week: Your
+	# ..." as a league headline; and a goals countdown is previewed once.
+	_state.news = []
+	_M.preview_news(_state)
+	var coach_news: Array = (_state.news as Array).filter(func(n): return str(n.get("text", "")).contains("as coach"))
+	_check(coach_news.size() == 1 and str(coach_news[0]["kind"]) == "coaching"
+			and str(coach_news[0]["text"]) == "Your 50th game as coach is this week.",
+			"The coach's milestone is the club's news (%s)" % str(coach_news))
+	_check(_M.preview_key({"id": "p1", "key": "goals", "mark": 100, "text": "X is 3 goals from 100 career goals."})
+			== _M.preview_key({"id": "p1", "key": "goals", "mark": 100, "text": "X is 2 goals from 100 career goals."}),
+			"3, then 2, then 1 goal from 100 is one preview")
 	# The Hub: the note lines keep "plays his 100th"; the card leaves it out.
 	var side: Dictionary = _state.current_side()
 	var sid := ""
