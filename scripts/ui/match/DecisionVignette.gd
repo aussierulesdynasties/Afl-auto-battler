@@ -627,7 +627,9 @@ func _draw_ball_scene() -> void:
 		centre = palm_of(t, 1)
 		if centre == Vector2.INF:
 			return
-		r = maxf(3.0, 0.2 * _project(_pos(t)).z * FIGURE)
+		# Held at his side, close to the camera, the ball shows its true size: a footy is
+		# 0.29 m long (the duel's and the set shot's are met overhead or in front of him).
+		r = maxf(3.0, 0.145 * _project(_pos(t)).z * FIGURE)
 	elif kind == "duel":
 		var d := token_of("duel_d")
 		var f := token_of("duel_f")
