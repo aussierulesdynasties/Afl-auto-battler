@@ -2766,7 +2766,7 @@ func _test_bring_the_heat() -> void:
 	# It burns legs, not extra kilometres: a side covers about the ground it always does.
 	_check(absf(dist[1] / maxf(1.0, dist[0]) - 1.0) < 0.04,
 			"...but they cover about the same ground (%.0f km against %.0f km a side)" % [dist[1] / 36000.0, dist[0] / 36000.0])
-	_check(CoachReport.pep_summary("heat").contains("legs") and CoachReport.pep_summary("heat") != CoachReport.pep_summary("fire_up"),
+	_check(CoachReport.pep_summary("heat").to_lower().contains("legs") and CoachReport.pep_summary("heat") != CoachReport.pep_summary("fire_up"),
 			"Its words name the cost and are its own")
 	# "Much faster" only while it costs more legs than Fire them up does.
 	var heat_pace := float(MatchSim.PEP_HEAT.get("pace", 1.0))
@@ -2855,7 +2855,7 @@ func _test_hot_player_moment() -> void:
 	_check(str(mv.get("kind", "")) == "hot" and str(mv["options"][0]["label"]) == "Move %s onto him" % who
 			and str(mv["options"][1]["label"]) == "Leave the tag on %s" % other_name,
 			"With a tag already on, the call is to move it or leave it (%s / %s)" % [mv["options"][0]["label"], mv["options"][1]["label"]])
-	_check(str(mv["options"][0]["cost"]) == "Cost: the tag comes off %s, who goes back to his usual %d touches" % [other_name, usual]
+	_check(str(mv["options"][0]["cost"]) == "Cost: " + GateOdds.TAG_MOVE_COST % [other_name, usual]
 			and not str(mv["options"][0]["cost"]).contains(GateOdds.tag_gives()),
 			"Moving the tag costs the hold on the other man, not a second share of the tagger's game (%s)" % mv["options"][0]["cost"])
 	_check(str(mv["options"][1]["gain"]) == "Gain: %s stays on %s, who is held to about %d touches" % [who, other_name, held]

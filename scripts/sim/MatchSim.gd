@@ -1737,8 +1737,9 @@ const USAGE_WIDTH := 6.4
 const USAGE_WIDTH_FOCUSED := 5.4
 ## Ball magnet's share of the ball (Traits "ball_magnet"), on the pick and the curve.
 ## Measured to land the copy's 10% more disposals (bug bash 5 audit: a reach
-## of 1.10 gave +8.7%, since part of the ball comes off the pick).
-const BALL_MAGNET := 1.115
+## of 1.10 gave +8.7% and 1.115 gave +8.6%, since part of the ball comes off
+## the pick).
+const BALL_MAGNET := 1.135
 
 
 ## Soft possession cap. Team disposal volume is unchanged — this only stops one
