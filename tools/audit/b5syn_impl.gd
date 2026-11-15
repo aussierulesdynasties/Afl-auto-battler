@@ -281,6 +281,8 @@ static func _metrics(r: Dictionary) -> Dictionary:
 		"pressure_rating_us": float(MatchSim.pressure_rating(t0, t1)),
 		"pressure_acts_us": _f(t0, "pressure_acts"),
 		"tackles_us": _f(t0, "tackles"),
+		"pressure_acts_them": _f(t1, "pressure_acts"),
+		"turnovers_us": _f(t0, "clangers") + _f(t1, "intercepts"),
 		"intercepts_us": _f(t0, "intercepts"),
 		"clangers_them": _f(t1, "clangers"),
 		"eff_disp_them": _ratio(_f(t1, "effective_disposals"), _f(t1, "disposals")),
