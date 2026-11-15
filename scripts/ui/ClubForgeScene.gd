@@ -241,7 +241,7 @@ func _refresh_player_preview() -> void:
 	var bits := PackedStringArray([STYLE_LABELS.get(str(_spec.get("style", "")), _role_label(str(_spec.get("role", "MID")))),
 			"%d cm" % int(_spec.get("height_cm", 184))])
 	if int(_spec.get("number_pref", 0)) > 0:
-		bits.append("No. %d" % int(_spec["number_pref"]))
+		bits.append("No.\u00a0%d" % int(_spec["number_pref"]))   # never "No." alone at a line's end
 	(_ppv["line"] as Label).text = " · ".join(bits)
 
 
