@@ -86,6 +86,10 @@ func _run() -> void:
 	sim.run_quarter()
 	scene = load("res://scenes/MatchScene.tscn").instantiate()
 	root.add_child(scene)
+	# In the game the screen opens before the bounce and its header follows the
+	# ball; opened at the break, it is given the score the quarter ended on.
+	scene.call("_update_scoreboard", {"q": 1, "min": 30, "kind": "info",
+		"goals": [sim.goals(0), sim.goals(1)], "behinds": [sim.behinds(0), sim.behinds(1)]})
 	await _frames(16)
 	await _shot("q2_break")
 	_press(scene, "CallsDidOpen")
