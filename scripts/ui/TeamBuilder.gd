@@ -687,9 +687,15 @@ func _card(id: String, on_field: bool, place: String) -> Button:
 	else:
 		var row := UiKit.hbox(6)
 		face.add_child(row)
-		var n := UiKit.ellipsis(GameDB.player_display_name(p), 14, UiKit.TEXT, true)
+		var full_name := GameDB.player_display_name(p)
+		var n := UiKit.ellipsis(full_name, 14, UiKit.TEXT, true)
+		n.name = "Name_" + id
 		n.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(n)
+		# A long name beside OVR/POT on a phone card: initial and surname, then
+		# the surname, never a name cut short (the full name stays the tooltip).
+		n.resized.connect(func():
+			n.text = BenchDrawer._fit_name(full_name, n.size.x, n.get_theme_font_size("font_size")))
 		var ovr := UiKit.lbl("%d" % int(p["overall"]), 14, UiKit.TEXT, true)
 		ovr.autowrap_mode = TextServer.AUTOWRAP_OFF
 		ovr.custom_minimum_size.x = 26

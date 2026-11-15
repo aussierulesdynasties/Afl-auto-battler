@@ -226,6 +226,21 @@ func _test_pot_on_tiles() -> void:
 			"The card's POT is his potential (%s)" % (pot.text if pot else "-"))
 	_check(pot != null and card.get_global_rect().grow(0.5).encloses(pot.get_global_rect()), "...inside his card")
 	_check(pot != null and pot.get_global_rect().end.x <= 390.5, "...and on the screen")
+	# Every card's name fits beside OVR/POT, never cut short (CI sweep, 2026-11-15:
+	# "Andy Moniz-Wakefield" lost his tail at 109 px); a long one takes his initial.
+	var cut: PackedStringArray = []
+	for nl in grid.find_children("Name_*", "Label", true, false):
+		var l := nl as Label
+		if l.is_visible_in_tree() and l.get_theme_font("font").get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1,
+				l.get_theme_font_size("font_size")).x > l.size.x + 0.5:
+			cut.append(l.text)
+	_check(cut.is_empty(), "Every name on the list fits its card (%s)" % ", ".join(cut))
+	var kit: Script = load("res://scripts/ui/UiKit.gd")
+	var fs: int = kit.call("px", 14)
+	var short: String = load("res://scripts/ui/match/BenchDrawer.gd").call("_fit_name", "Andy Moniz-Wakefield", 109.0, fs)
+	var bold: Font = load("res://assets/fonts/ARDSignwriter-Bold.ttf")
+	_check(short == "A. Moniz-Wakefield" and bold.get_string_size(short, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x <= 109.0,
+			"A long name in 109 px reads \"%s\"" % short)
 	# A real tap on that card still picks him (the POT takes no taps), with the
 	# list pulled up over the oval as a phone has it.
 	var tb: Node = scene.find_child("TeamBuilder", true, false)
