@@ -2122,6 +2122,17 @@ func _maybe_fifty(receiving_side: int, mark_fp: float, offender, recipient) -> f
 	return new_fp
 
 
+## The charge a reported tackle is written up as. Copy only: it reads the
+## incident the sim already rolled (who, when, how bad) and never draws a match
+## random number. The worst tackles (two weeks or more) are dangerous tackles.
+const REPORT_CHARGES := ["rough conduct", "high contact", "a dangerous tackle"]
+static func report_charge(offender_id: String, quarter: int, minute: int, severity: float) -> String:
+	if severity >= 0.94:
+		return "a dangerous tackle"
+	var pick := absi(hash("%s|%d|%d" % [offender_id, quarter, minute])) % REPORT_CHARGES.size()
+	return str(REPORT_CHARGES[pick])
+
+
 ## A tackle can become a reportable rough-conduct incident. It is attached to
 ## the real tackler/victim and current quarter/minute; no post-match re-roll.
 func _maybe_report(side: int, offender, victim) -> void:
@@ -2158,7 +2169,7 @@ func _maybe_report(side: int, offender, victim) -> void:
 		"victim_name": GameDB.player_display_name(victim),
 		"q": current_quarter,
 		"min": current_minute,
-		"reason": "rough conduct",
+		"reason": report_charge(str(offender.get("id", "")), current_quarter, current_minute, severity),
 		"outcome": outcome,
 		"weeks": weeks,
 		"tribunal_roll": tribunal_roll,
@@ -5916,14 +5927,17 @@ func _boundary_moment() -> bool:
 		var stopper := GameDB.player_display_name(minder)
 		var hot_name := GameDB.player_display_name(hot)
 		# The size of the call, from what the sim plays (GateOdds; row 120).
+		# Each man's own touches (row 178).
 		var on_him: Dictionary = minder
-		var kept := GateOdds.tag_kept(on_him, float(energy.get(str(on_him.get("id", "")), 100.0)))
+		var legs := float(energy.get(str(on_him.get("id", "")), 100.0))
+		var kept := GateOdds.tag_kept(on_him, legs, hot)
 		# A tag already on another of theirs moves if the coach says tag: the card
 		# says so, and what leaving it where it is keeps (the answer itself is
 		# unchanged: resolve_moment sets the tag on this man either way).
 		var tagged := _on_ground(opp, _tag_id(me))
 		var on_now := "" if tagged.is_empty() else GameDB.player_display_name(tagged)
-		var lines := GateOdds.tag_call_lines(hot_name, stopper, kept, on_now)
+		var lines := GateOdds.tag_call_lines(hot_name, stopper, kept, GateOdds.usual_touches(hot), on_now,
+				GateOdds.usual_touches(tagged), GateOdds.tag_kept(on_him, legs, tagged))
 		_fire({"kind": "hot", "player_id": str(id), "default": 1,
 			"title": "%s has kicked %d" % [hot_name, int(st["goals"])],
 			"text": "Their midfielder is hurting us on the scoreboard.",

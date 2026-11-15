@@ -776,7 +776,7 @@ static func glance(report: Dictionary, full_time := false) -> Dictionary:
 		read_keys[str(d["key"])] = true
 		var word := str(READ_WORDS.get(str(d["key"]), str(d["label"]).to_lower()))
 		if str(d["leader"]) == "my":
-			read.append("You lead the %s, %d to %d." % [word, int(d["my"]), int(d["opp"])])
+			read.append("We lead the %s, %d to %d." % [word, int(d["my"]), int(d["opp"])])
 		else:
 			read.append("%s lead the %s, %d to %d." % [them, word, int(d["opp"]), int(d["my"])])
 	# Their approach, quarter by quarter, only when it is not a plain game

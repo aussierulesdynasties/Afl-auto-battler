@@ -20,6 +20,9 @@ match_motion
 legacy_2000_long
 # A Legacy career traced 1990 -> 2026 (row 142): about 30-55 s per off-season.
 legacy_players
+# Two ten-season careers passing every draft (2026 and the 1990 lists, row 142):
+# 800-890 s on a queue runner, so it timed out at 900 s (merge-queue run 43687499436).
+list_turnover
 back_nav
 preseason
 legacy_2010_long

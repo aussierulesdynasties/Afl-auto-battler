@@ -111,10 +111,12 @@ func _test_feed(res: Dictionary) -> void:
 	_check(leak == "", "No engine words or live result words in the feed (%s)" % leak)
 	var quarter_lines := []
 	var final_line := ""
+	var full_times := 0
 	for l in lines:
 		if str(l["tier"]) == "break":
 			if str(l["text"]).begins_with("Full time"):
 				final_line = str(l["text"])
+				full_times += 1
 			else:
 				quarter_lines.append(str(l["text"]))
 	_check(quarter_lines.size() == 3 and str(quarter_lines[0]).begins_with("Quarter time: ")
@@ -125,6 +127,7 @@ func _test_feed(res: Dictionary) -> void:
 	var want := "Full time: a draw" if int(s[0]) == int(s[1]) else "Full time: %s win by %d" % [
 			GameDB.club_name(str(res["home"] if int(s[0]) > int(s[1]) else res["away"])), absi(int(s[0]) - int(s[1]))]
 	_check(final_line == want, "Full time names the winner and the margin (%s)" % final_line)
+	_check(full_times == 1, "Full time is called once, not at the siren and again with the result (%d)" % full_times)
 	# Quiet kinds stay on the oval.
 	for kind in ["kick", "handball", "mark", "tackle", "inside50", "rebound", "clanger", "free", "ballup", "sub"]:
 		if not MatchNotes.feed_line({"kind": kind, "side": 0, "name": "X"}, "COL", "CAR").is_empty():
