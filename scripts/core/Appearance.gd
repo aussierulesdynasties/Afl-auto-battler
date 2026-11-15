@@ -76,7 +76,10 @@ static func _pick(roll: float, weights: Array) -> int:
 # ---------------------------------------------------------------------------
 const HAIR_STYLES := ["bald", "buzz", "short_crop", "crew", "side_part", "textured_short",
 		"messy_medium", "swept_back", "mullet", "mullet_long", "curly_short", "curly_medium",
-		"afro", "long", "tied_back", "dreadlocks"]
+		"afro", "long", "tied_back", "dreadlocks",
+		# The 3D oval's downloaded cuts (director 2026-11-15, "all"): added at the end, ids are saves.
+		"fringe", "spiked", "short_spikes", "twists", "quiff", "slicked_side", "short_quiff", "wavy",
+		"tight_curls", "shaggy", "surfer", "high_top", "faux_hawk", "undercut", "shoulder_length"]
 const BEARDS := ["clean", "stubble_light", "stubble_heavy", "moustache", "short_beard",
 		"full_beard", "goatee", "beard_moustache"]
 const BOOTS := ["classic", "modern"]

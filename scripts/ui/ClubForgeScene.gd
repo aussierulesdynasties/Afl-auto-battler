@@ -26,7 +26,11 @@ const HAIR_LABELS := {
 	"bald": "Bald", "buzz": "Buzz cut", "short_crop": "Short crop", "crew": "Crew cut", "side_part": "Side part",
 	"textured_short": "Textured", "messy_medium": "Messy", "swept_back": "Swept back", "mullet": "Mullet",
 	"mullet_long": "Long mullet", "curly_short": "Short curls", "curly_medium": "Curls", "afro": "Afro",
-	"long": "Long", "tied_back": "Tied back", "dreadlocks": "Dreadlocks",
+	"long": "Long", "tied_back": "Tied back", "dreadlocks": "Dreadlocks", "fringe": "Fringe", "spiked": "Spiked",
+	"short_spikes": "Short spikes", "twists": "Twists", "quiff": "Quiff", "slicked_side": "Slicked side part",
+	"short_quiff": "Short quiff", "wavy": "Wavy", "tight_curls": "Tight curls", "shaggy": "Shaggy",
+	"surfer": "Surfer", "high_top": "High top", "faux_hawk": "Faux hawk", "undercut": "Undercut",
+	"shoulder_length": "Shoulder length",
 }
 const BEARD_LABELS := {
 	"clean": "Clean shaven", "stubble_light": "Light stubble", "stubble_heavy": "Heavy stubble",
