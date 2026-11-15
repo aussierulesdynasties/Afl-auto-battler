@@ -258,7 +258,7 @@ func _club_sides(opp: String) -> Control:
 	return cols
 
 
-## The line synergies your 18 switch on - what the side is good at - any
+## The synergies your 18 switch on - what the side is good at - any
 ## one it is a single player short of (a fact, never a suggested swap: the
 ## choice is yours). The full rules are one tap away on the block's own
 ## heading, a link like the assistant's report, so it reads as a lookup.
@@ -277,7 +277,7 @@ func _synergy_view() -> Control:
 			lit[Traits.label(str(r["key"]))] = UiKit.GOOD
 	# One pattern for both lines, one colour: the lead-in, the name, what it does or needs.
 	var l := TraitLink.line("Your side has: " + ", ".join(on) + "." if not on.is_empty()
-			else "No line synergies in this side.", UiKit.BODY, UiKit.TEXT, {}, lit)
+			else "No synergies in this side.", UiKit.BODY, UiKit.TEXT, {}, lit)
 	l.name = "SynergyLine"
 	h.add_child(l)
 	var short := Traits.short_words(GameState.my_squad().ground)
@@ -296,8 +296,8 @@ func show_synergies() -> void:
 	_overlay = box["overlay"]
 	_overlay.name = "SynergyGuide"
 	var v: VBoxContainer = box["body"]
-	v.add_child(UiKit.lbl("Line synergies", UiKit.H1, UiKit.TEXT, true))
-	v.add_child(para("Players' traits combine when the right mix takes the field together.", 13, UiKit.MUTED))
+	v.add_child(UiKit.lbl("Synergies", UiKit.H1, UiKit.TEXT, true))
+	v.add_child(para("Players' traits combine when the right mix is on the ground together. A synergy is on while its players are out there: one going to the bench, or off hurt, switches it off until that player is back. " + Traits.SYNERGY_CAP_NOTE, 13, UiKit.MUTED))
 	var active := {}
 	for r in Traits.progress(GameState.my_squad().ground):
 		active[str(r["key"])] = bool(r["active"])

@@ -562,7 +562,7 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 		if morale != 0.0:
 			for q in (squads[side] as Squad).ground + (squads[side] as Squad).bench:
 				_arch_form[str(q["id"])] = morale / 1000.0
-		synergies[side] = Traits.active((squads[side] as Squad).ground)
+		_refresh_synergies(side, false)
 		standing[side] = (squads[side] as Squad).usual_plan if (squads[side] as Squad).usual_plan != "" \
 				else PlanFit.standing_plan((squads[side] as Squad).ground, (squads[side] as Squad).plan_know)
 		duels[side] = Matchups.defaults((squads[1 - side] as Squad).ground, (squads[side] as Squad).ground)
@@ -1803,11 +1803,12 @@ func home_edge() -> float:
 
 func _contest_bonus(side: int, stoppage := false) -> float:
 	return _contest_plan(side) + _contest_pep(side) + _contest_calls(side, stoppage) \
-			+ _contest_traits(side)
+			+ _contest_traits(side, stoppage)
 
 
-func _contest_traits(side: int) -> float:
-	return Traits.power("engine_room") if synergies[side].has("engine_room") else 0.0
+## Engine room: at stoppages only (bug bash 5), as its copy says.
+func _contest_traits(side: int, stoppage: bool) -> float:
+	return Traits.power("engine_room") if stoppage and synergies[side].has("engine_room") else 0.0
 
 
 func _contest_plan(side: int) -> float:
@@ -2434,7 +2435,7 @@ func _credit_contest(side: int, stoppage: bool) -> void:
 	var pep_base := PEP_FIRE_CONTEST if _contest_pep_on(side) else 0.0
 	_credit(side, "pep", pep_base * POSSESSION_VALUE)
 	_credit(side, "bursts", _contest_calls(side, stoppage) * POSSESSION_VALUE)
-	_credit(side, "traits", _contest_traits(side) * POSSESSION_VALUE)
+	_credit(side, "traits", _contest_traits(side, stoppage) * POSSESSION_VALUE)
 
 
 func _credit(side: int, cause: String, pts: float, who := "") -> void:
@@ -3472,10 +3473,12 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		# kick-in, not a player disposal. Once the taker plays on it is his
 		# disposal like ordinary play.
 		var counts_disposal := not is_kick_in or kick_in_play_on
+		var got := ""
 		if counts_disposal:
 			_t(side, "disposals")
 			_p(carrier, "disposals")
-			_gain(side, carrier, next_gain if touches > 1 else _first_gain(carrier, cleared, is_kick_in))
+			got = next_gain if touches > 1 else _first_gain(carrier, cleared, is_kick_in)
+			_gain(side, carrier, got)
 		if is_kick_in:
 			_t(side, "kick_ins")
 			_p(carrier, "kick_ins")
@@ -3555,6 +3558,12 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		if _burst(side, "hold"):
 			_credit(side, "bursts", pressure * (1.0 - HOLD_TAKEN) * TURNOVER_VALUE)
 			pressure *= HOLD_TAKEN
+		# Running machine's second effect: the spare runner takes it in space,
+		# so a receive nobody contested is pressured less.
+		if got == "up" and synergies[side].has("running_machine"):
+			var space := Traits.power2("running_machine")
+			_credit(side, "traits", pressure * (1.0 - space) * TURNOVER_VALUE)
+			pressure *= space
 
 		# One roll, three outcomes: a tackle, a pressured (rushed) disposal,
 		# or no pressure at all. Both of the first two are pressure acts.
@@ -3686,6 +3695,9 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		gain *= _pv(side, "gain") * _pep_mult(side, "gain") * _ar(side, "gain")
 		if synergies[side].has("supply_line"):
 			gain *= Traits.power("supply_line")
+		# Engine room's second effect: the clearance itself goes further.
+		if touches == 1 and cleared != null and synergies[side].has("engine_room"):
+			gain *= Traits.power2("engine_room")
 		if _burst(side, "flood") or _burst(side, "hold"):
 			gain *= BACK_GAIN
 		if _burst(side, "push"):
@@ -5036,7 +5048,10 @@ func result() -> Dictionary:
 		"interceptor_changes": interceptor_changes.duplicate(true),
 		"injuries": injuries.duplicate(true),
 		"reports": reports.duplicate(true),
-		"synergies": synergies.duplicate(true),
+		"synergies": _synergies_played(),
+		"synergy_share": _synergy_share(),
+		"q4_legs": [snappedf(float(_q4_legs[0][0]) / maxf(1.0, float(_q4_legs[0][1])), 0.1),
+				snappedf(float(_q4_legs[1][0]) / maxf(1.0, float(_q4_legs[1][1])), 0.1)],
 		"tag_drops": tag_drops.duplicate(true),
 	}
 
@@ -5281,6 +5296,7 @@ func _after_chain() -> void:
 			if int(b[k]) <= 0:
 				b.erase(k)
 	_chain_no += 1
+	_synergy_tally()
 	_check_injuries()
 	if _chain_no % _chains_for(ROTATE_EVERY) == 0:
 		for side in range(2):
@@ -5642,6 +5658,7 @@ func _bring_sub(side: int, gi: int, injury := false) -> void:
 		"behinds": [behinds(0), behinds(1)],
 	})
 	_recheck_tags()
+	_refresh_synergies(side)
 
 
 func _swap(side: int, gi: int, bi: int) -> void:
@@ -5658,6 +5675,7 @@ func _swap(side: int, gi: int, bi: int) -> void:
 		"q": current_quarter, "min": current_minute, "kind": "sub", "side": side, "fp": fp,
 		"name": GameDB.player_display_name(on_slot), "player_id": str(on["id"]),
 		"num": int(on["num"]), "off_num": int(off["num"]), "club": _side_club(side, on),
+		"off_name": GameDB.player_display_name(off),
 		"text": "Interchange: %s on for %s" % [GameDB.player_display_name(on_slot),
 				GameDB.player_display_name(off)],
 		"score": [score(0), score(1)], "goals": [goals(0), goals(1)],
@@ -5665,6 +5683,80 @@ func _swap(side: int, gi: int, bi: int) -> void:
 	})
 	# The man who came on may be filling a slot that is not the midfield.
 	_recheck_tags()
+	_refresh_synergies(side)
+
+
+## Synergies follow the 18 on the ground (bug bash 5): a carrier going to the
+## bench, off hurt or subbed out takes his part with him, and a player coming
+## on can complete one. Asked at the first bounce and after every change of
+## the 18 (_swap, _bring_sub), nowhere else. Pure: no dice. `feed`: the
+## change of the 18 that switched one on or off says so on its own event
+## ("synergy_on"/"synergy_off", labels), for the match feed.
+## Audits and tests only: `synergy_forced[side][key]` holds a synergy on
+## (true) or off (false) whatever the 18. Empty in play.
+var synergy_forced := [{}, {}]
+## Chains each synergy was on, per side, and the side's average on-ground legs
+## (energy) over the last quarter: the after-match facts (MatchNotes).
+var synergy_chains := [{}, {}]
+var _q4_legs := [[0.0, 0], [0.0, 0]]
+
+
+func _refresh_synergies(side: int, feed := true) -> void:
+	var now := Traits.active((squads[side] as Squad).ground)
+	var forced: Dictionary = synergy_forced[side]
+	for key in forced:
+		now.erase(key)
+		if bool(forced[key]):
+			now.append(key)
+	var was: Array = synergies[side]
+	if feed and not events.is_empty():
+		var on := []
+		var off := []
+		for key in now:
+			if not was.has(key):
+				on.append(Traits.label(key))
+		for key in was:
+			if not now.has(key):
+				off.append(Traits.label(key))
+		if not on.is_empty():
+			events[events.size() - 1]["synergy_on"] = on
+		if not off.is_empty():
+			events[events.size() - 1]["synergy_off"] = off
+	synergies[side] = now
+
+
+## Per chain: which synergies were on, and the last quarter's legs.
+func _synergy_tally() -> void:
+	for side in range(2):
+		var d: Dictionary = synergy_chains[side]
+		for key in synergies[side]:
+			d[key] = int(d.get(key, 0)) + 1
+		if current_quarter == 4:
+			var sq: Squad = squads[side]
+			var e := 0.0
+			for p in sq.ground:
+				e += float(energy.get(str(p["id"]), 100.0))
+			_q4_legs[side][0] += e / maxf(1.0, sq.ground.size())
+			_q4_legs[side][1] += 1
+
+
+## The synergies each side had on at any time in the match, in SYNERGIES
+## order, and the share of the match's chains each was on.
+func _synergies_played() -> Array:
+	var out := [[], []]
+	for side in range(2):
+		for key in Traits.SYNERGIES:
+			if (synergy_chains[side] as Dictionary).has(key) or (synergies[side] as Array).has(key):
+				out[side].append(key)
+	return out
+
+
+func _synergy_share() -> Array:
+	var out := [{}, {}]
+	for side in range(2):
+		for key in synergy_chains[side]:
+			out[side][key] = snappedf(float(synergy_chains[side][key]) / maxf(1.0, float(_chain_no)), 0.001)
+	return out
 
 
 ## Energy for one side, most tired first: [{id, name, num, role, overall,

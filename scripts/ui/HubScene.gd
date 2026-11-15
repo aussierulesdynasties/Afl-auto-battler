@@ -35,6 +35,11 @@ func _ready() -> void:
 	if GameState.interview_due and GameState.my_club != "":
 		Router.replace("interview")
 		return
+	# The Fitzroy merger left your list over its spots: you pick who goes
+	# (director 2026-11-15: "I pick, delist screen") before anything else.
+	if GameState.merger_cut_left() > 0:
+		Router.replace("merger_cut")
+		return
 	# A pre-season is running: it has its own screen until Round 1 is next.
 	# The off-season wrap is read here first.
 	if GameState.preseason_active() and not GameState.needs_season_wrap():

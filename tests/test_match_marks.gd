@@ -611,7 +611,9 @@ func _test_ball_in_the_ring(res: Dictionary, speed: float) -> void:
 		prev = oa
 	print("  ball in the ring at %.0fx: %d frames shown, %d on the ball (at least %.2f m of pad to spare), %d easing out with the ball gone (%d eases)" % [
 			speed, shown, on_ball, -worst_on, outside, leavings])
-	_check(on_ball > 150 and worst_on <= 0.0,
+	# The floor only proves the check saw enough carried ball: Engine room's longer
+	# clearances (bug bash 5) left 149 such frames at 4x, the ball 4.68 m inside.
+	_check(on_ball > 120 and worst_on <= 0.0,
 			"%.0fx: in open play the ball is inside the ring's pad in every frame the ring is on it (%d frames, worst %.2f m past the pad)" % [speed, on_ball, worst_on])
 	_check(outside_bad == 0 and leavings >= 5,
 			"%.0fx: ...and outside it only while the ring eases out after a ball faster than a sprint, never growing (%d bad frames, %d eases)" % [speed, outside_bad, leavings])

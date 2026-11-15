@@ -57,25 +57,28 @@ const DEFS := {
 ## key -> label, the line it needs ("" = the whole 18), the traits needed,
 ## the match effect, and the same in football words ("about", "does").
 const SYNERGIES := {
-	"engine_room": {"label": "Engine room", "line": "", "needs": {"bull": 4}, "power": 0.05,
-			"text": "+5% stoppage wins.",
-			"about": "Contested bulls who win the stoppages together.", "does": "Wins more of the stoppages."},
-	"tall_small": {"label": "Tall-small forward line", "line": "FWD", "needs": {"aerial": 2, "crumber": 2}, "power": 1.15,
-			"text": "+15% goal chance on every forward-50 shot.",
-			"about": "Aerial threats up forward with crumbers at their feet.", "does": "More goals from forward-50 entries."},
+	"engine_room": {"label": "Engine room", "line": "", "needs": {"bull": 4}, "power": 0.145, "power2": 1.80,
+			"text": "+13% stoppage wins, and each clearance gains 80% more ground.",
+			"about": "Contested bulls who win the stoppages together.", "does": "Wins more of the stoppages and clears them further."},
+	"tall_small": {"label": "Tall-small forward line", "line": "FWD", "needs": {"aerial": 2, "crumber": 2}, "power": 1.32,
+			"text": "+30% goal chance on every shot at goal.",
+			"about": "Aerial threats up forward with crumbers at their feet.", "does": "Turns more of its shots into goals."},
 	"intercept_wall": {"label": "Intercept wall", "line": "DEF", "needs": {"interceptor": 2, "lockdown": 1}, "power": 0.84,
 			"text": "-16% on the opposition's goal chance.",
 			"about": "Interceptors who read the ball in the air down back, with a stopper on the lead.", "does": "The opposition kick fewer goals."},
-	"lockdown_unit": {"label": "Lockdown unit", "line": "", "needs": {"lockdown": 3}, "power": 1.15,
-			"text": "+15% pressure on the opposition.",
-			"about": "A side full of stoppers who squeeze the opposition.", "does": "Puts more pressure on the ball."},
+	"lockdown_unit": {"label": "Lockdown unit", "line": "", "needs": {"lockdown": 3}, "power": 1.16,
+			"text": "+16% pressure on the opposition.",
+			"about": "Three stoppers who squeeze the opposition all over the ground.", "does": "Puts more pressure on the ball."},
 	"supply_line": {"label": "Supply line", "line": "", "needs": {"ball_magnet": 3, "playmaker": 1}, "power": 1.22,
-			"text": "+22% metres gained per disposal.",
+			"text": "+20% metres gained per disposal.",
 			"about": "Ball-users feeding a playmaker going forward.", "does": "Gains more ground with every disposal."},
-	"running_machine": {"label": "Running machine", "line": "", "needs": {"engine": 3}, "power": 0.50,
-			"text": "The whole side tires 50% slower.",
-			"about": "A side of endurance runners.", "does": "The whole side tires more slowly."},
+	"running_machine": {"label": "Running machine", "line": "", "needs": {"engine": 3}, "power": 0.50, "power2": 0.87,
+			"text": "The whole side tires 50% slower, and a runner who takes it unopposed is tackled or hurried 13% less often.",
+			"about": "A side of endurance runners.", "does": "Tires more slowly and finds the spare runner."},
 }
+## The five-trait cap, said wherever a synergy's needs are (bug bash 5): a
+## player past five keeps the five he clears by the most (Traits.of).
+const SYNERGY_CAP_NOTE := "A player keeps five traits at most, the five furthest past their line: one who clears a sixth line doesn't carry that trait for a synergy."
 
 ## Born, not trained (director, 2026-10-08): a player whose game defies his
 ## size - a key-position body with a small player's game, or one who plays
@@ -190,7 +193,17 @@ static func _load_fine_wine() -> void:
 ## A synergy's match effect, as MatchSim applies it ("power" in SYNERGIES):
 ## an added stoppage-win share for the Engine room, a multiplier for the rest.
 static func power(key: String) -> float:
-	return float((SYNERGIES.get(key, {}) as Dictionary).get("power", 1.0))
+	return float(power_tune.get(key, (SYNERGIES.get(key, {}) as Dictionary).get("power", 1.0)))
+
+
+## A synergy's second effect, where it has one ("power2"; tuned as key + "2").
+static func power2(key: String) -> float:
+	return float(power_tune.get(key + "2", (SYNERGIES.get(key, {}) as Dictionary).get("power2", 1.0)))
+
+
+## Audits only: a synergy's power to try without a commit ({key: power}).
+## Empty in play and in every test.
+static var power_tune := {}
 
 
 ## Good traits a player can carry (director, 2026-11-12: "at maximum 5 traits

@@ -282,8 +282,10 @@ static func _new_player(code: String, year: int, n: int, r: Dictionary) -> Dicti
 		p["real_peak"] = int(str(r["peak"]))
 	# His last real season (build_rollovers): he retires about then, as a
 	# start list's or a class's real player does (Prospects.should_retire).
+	# He really played the club's first season, so his career runs to it.
 	if str(r.get("last_season", "")) != "":
 		p["real_last"] = int(str(r["last_season"]))
+		p["real_first"] = year
 	var role := str(r.get("role", ""))
 	p["role"] = role if role in ["RUCK", "MID", "DEF", "FWD"] else GameDB.listed_role(p)
 	p["role2"] = ""
@@ -479,6 +481,8 @@ static func _merge(gs, to_draft: bool) -> void:
 		if i < LIONS_TAKE:
 			p["club"] = MERGED_INTO
 			p["joined"] = TALKS_YEAR + 1
+			# The merger screen says which side he came from (MergerCutScene).
+			p["merged_from"] = MERGED
 			lions.append(p)
 			taken.append(GameDB.player_display_name(p))
 		elif to_draft:
@@ -696,7 +700,7 @@ const CANON := [
 	{"id": "jurrah_home", "kind": "retire", "first": "Liam", "last": "Jurrah", "dob": "1988-09-22", "year": 2014,
 		"pitch": "walking away from the game to go home to the Territory"},
 	{"id": "rioli_home", "kind": "retire", "first": "Cyril", "last": "Rioli", "dob": "1989-07-14", "year": 2019,
-		"pitch": "retiring early to go home to Darwin with his family"},
+		"pitch": "retiring early to go home to Darwin, to family"},
 ]
 const CANON_ROUND := 18
 const CANON_TID := "legacy_canon"
@@ -786,30 +790,30 @@ static func canon_card(_gs, m: Dictionary, p: Dictionary, to_code: String) -> Di
 	var y := int(m["year"])
 	if str(m["kind"]) == "retire":
 		return {"tid": CANON_TID, "canon": str(m["id"]), "title": "%s thinks of going home" % who,
-			"text": "%s is thinking about %s at the end of the season. The club can try to talk him into playing on in %d." % [who, str(m["pitch"]), y],
+			"text": "%s is thinking about %s at the end of the season. The club can try to talk %s into playing on in %d." % [who, str(m["pitch"]), who, y],
 			"options": [
-				{"label": "Talk him into playing on", "effects": [],
-					"rule": "%d%% he plays on in %d. %d%% he retires anyway." % [KEEP_PCT, y, 100 - KEEP_PCT],
-					"result": "The club has made its case. He gives his answer at season's end."},
-				{"label": "Let him go home", "effects": [],
-					"rule": "He retires at season's end.",
-					"result": "The club backs his call. He retires at season's end."}],
-			"unanswered": {"hint": "Leave it and he retires."},
+				{"label": "Ask for one more season", "effects": [],
+					"rule": "%d%% %s plays on in %d. %d%% %s retires anyway." % [KEEP_PCT, who, y, 100 - KEEP_PCT, who],
+					"result": "The club has made its case. %s answers at season's end." % who},
+				{"label": "Back the call to go home", "effects": [],
+					"rule": "%s retires at season's end." % who,
+					"result": "The club backs the call. %s retires at season's end." % who}],
+			"unanswered": {"hint": "Leave it and %s retires." % who},
 			"facts": {}}
 	var to := GameDB.club_name(to_code)
 	var asks := Contracts.asking_salary(p)
 	return {"tid": CANON_TID, "canon": str(m["id"]), "title": "%s want %s" % [to, who],
-		"text": "%s have offered %s %s, from %d. He is leaning their way, and he goes at season's end unless the club fights to keep him." % [
-			to, who, str(m["pitch"]), y],
+		"text": "%s have offered %s %s, from %d. %s is leaning their way and goes at season's end unless the club fights to keep the player." % [
+			to, who, str(m["pitch"]), y, who],
 		"options": [
-			{"label": "Fight to keep him", "effects": [],
-				"rule": "%d%% he stays, on %d more seasons at %s a season (he asks %s). %d%% he goes anyway." % [
-					KEEP_PCT, KEEP_YEARS, Contracts.money(keep_salary(p)), Contracts.money(asks), 100 - KEEP_PCT],
-				"result": "The club has made its offer. He gives his answer at season's end."},
-			{"label": "Let him go", "effects": [],
-				"rule": "He joins %s for %d, and his pay comes off your cap." % [to, y],
-				"result": "The club wishes him well. He plays for %s from %d." % [to, y]}],
-		"unanswered": {"hint": "Leave it and he goes."},
+			{"label": "Fight to keep %s" % who, "effects": [],
+				"rule": "%d%% %s stays, on %d more seasons at %s a season (asking %s). %d%% %s goes anyway." % [
+					KEEP_PCT, who, KEEP_YEARS, Contracts.money(keep_salary(p)), Contracts.money(asks), 100 - KEEP_PCT, who],
+				"result": "The club has made its offer. %s answers at season's end." % who},
+			{"label": "Let %s go" % who, "effects": [],
+				"rule": "%s joins %s for %d, and that pay comes off our cap." % [who, to, y],
+				"result": "The club wishes %s well at %s from %d." % [who, to, y]}],
+		"unanswered": {"hint": "Leave it and %s goes." % who},
 		"facts": {}}
 
 
