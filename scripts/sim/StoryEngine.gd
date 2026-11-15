@@ -528,7 +528,7 @@ static func build(deck: Array, t: Dictionary, subj: Dictionary, club: Dictionary
 	if trust_cost != 0 and player:
 		card["unanswered"] = {"trust": trust_cost, "why": fill(str(un.get("why", "")), facts),
 				"text": fill(str(un.get("text", "")), facts),
-				"hint": "Say nothing: %s" % _lower_first(_trust_words(trust_cost, int(facts.get("trust", 0))))}
+				"hint": "Say nothing: %s" % fill(_trust_words(trust_cost, int(facts.get("trust", 0))), facts)}
 	return card
 
 
@@ -622,7 +622,13 @@ static func effect_d(e: Dictionary, facts: Dictionary) -> int:
 
 
 static func fill(s: String, facts: Dictionary) -> String:
-	return s.format(facts) if s.contains("{") else s
+	if not s.contains("{"):
+		return s
+	# {name_s}: the player's possessive ("Smith's", "Daniels'"), for any card that has his name.
+	if s.contains("{name_s}") and facts.has("name") and not facts.has("name_s"):
+		facts = facts.duplicate()
+		facts["name_s"] = CopyRules.possessive(str(facts["name"]))
+	return s.format(facts)
 
 
 ## Names from a ranked list of players, in a card's result line: {best3} is
@@ -1266,14 +1272,14 @@ static func _board_words(d: int) -> String:
 
 
 ## A trust move as the opinion the game shows, from his trust `t` today:
-## "His opinion of you down 2, to 48 out of 100."
+## "{name_s} opinion of you down 2, to 48 out of 100." ({name_s}: "Smith's", filled with the card)
 static func _trust_words(d: int, t: int) -> String:
 	var o := Trust.opinion_move(t, d)
 	# A move too small to show on the 100 still moves him (bug bash 4: "stays 47"
 	# under Cost named no cost): say which way, and where it stands.
 	if o == 0:
-		return "His opinion of you %s, still %d out of 100." % ["warms a little" if d > 0 else "slips a little", Trust.opinion(t)]
-	return "His opinion of you %s %d, to %d out of 100." % ["up" if o > 0 else "down", absi(o), Trust.opinion(t) + o]
+		return "{name_s} opinion of you %s, still %d out of 100." % ["warms a little" if d > 0 else "slips a little", Trust.opinion(t)]
+	return "{name_s} opinion of you %s %d, to %d out of 100." % ["up" if o > 0 else "down", absi(o), Trust.opinion(t) + o]
 
 
 ## What a fall in his opinion of you does to his next contract talks, from the
@@ -1283,8 +1289,8 @@ static func _refuse_words(d: int, t: int) -> String:
 	var after := Trust.opinion(t) + Trust.opinion_move(t, d)
 	var chance := Contracts.refuse_chance(after)
 	if chance > 0:
-		return "At contract time that is %s %d%% chance he won't re-sign with us." % [LeagueStories.an(chance), chance]
-	return "Under %d out of 100 he may refuse to re-sign with us, %d%% for each point under." % [
+		return "At contract time that is %s %d%% chance {name} won't re-sign with us." % [LeagueStories.an(chance), chance]
+	return "Under %d out of 100 {name} may refuse to re-sign with us, %d%% for each point under." % [
 			Contracts.REFUSE_BELOW, Contracts.REFUSE_PER_POINT]
 
 

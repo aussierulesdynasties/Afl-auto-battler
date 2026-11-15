@@ -32,6 +32,7 @@ func run() -> void:
 	_t("_test_no_wrong_way_kicks", [res])
 	_t("_test_match_flow", [res])
 	_t("_test_boundary_collect", [res])
+	_t("_test_bodies_apart", [res])
 	_t("_test_smother_at_the_kick", [res])
 	_t("_test_tactical_timeline")
 	var truth_hb: Array = await _t("_test_truth", [res])
@@ -614,6 +615,59 @@ func _test_tactical_timeline() -> void:
 			named += 1
 			_check(str(t["pid"]) == loose, "The loose man on the oval is the one the match named")
 	_check(named == (1 if loose != "" else 0), "At most one loose man a side")
+
+
+## Bodies go round each other, not through (2026-11-16: bodies eased apart only
+## at a walk while running at a sprint, so a running man passed straight through
+## another: 1,361 times in three matches, 261 pairs hip to hip inside 0.4 m).
+## Over a first quarter, no two players come within 0.7 m unless the play
+## means them to touch (a tackle, a smother, a pack, a ruck or marking contest:
+## MatchDirector._meant), no two ever get one inside the other (0.4 m), and the
+## meant contact still happens.
+func _test_bodies_apart(res: Dictionary) -> void:
+	var r := res.duplicate()
+	var all: Array = res["events"]
+	var cut := all.size()
+	for k in range(all.size()):
+		if str(all[k].get("kind", "")) == "quarter":
+			cut = k + 1
+			break
+	r["events"] = all.slice(0, cut)
+	var d := MatchDirector.new()
+	d.setup(r, r["events"])
+	var through := {}
+	var merged := {}
+	var meant_close := 0
+	var worst := INF
+	var guard := 0
+	while not d.idle() and guard < 40000:
+		guard += 1
+		d.advance(1.0 / 30.0)
+		var meant: Dictionary = d._meant_now()
+		var toks: Array = d.tokens
+		for i in range(toks.size()):
+			var a: Vector2 = toks[i]["pos"]
+			for j in range(i + 1, toks.size()):
+				var b: Vector2 = toks[j]["pos"]
+				if absf(a.x - b.x) >= 0.7 or absf(a.y - b.y) >= 0.7:
+					continue
+				var g := a.distance_to(b)
+				if g >= 0.7:
+					continue
+				var ph := str((d._phases[d._pi] as Dictionary).get("t", "-")) if d._pi < d._phases.size() else "-"
+				if meant.has(i) and meant.has(j):
+					meant_close += 1
+					if g < 0.4:
+						merged["%d-%d" % [i, j]] = "%.2f m in %s" % [g, ph]
+					continue
+				worst = minf(worst, g)
+				through["%d-%d" % [i, j]] = "%.2f m in %s" % [g, ph]
+	_check(d.idle() and through.is_empty(),
+			"No two players run into each other unless the play means them to touch (%d pairs inside 0.7 m: %s; closest %.2f m)" % [
+			through.size(), through.values().slice(0, 4), worst])
+	_check(merged.is_empty(), "Players meant to touch meet chest to chest, never one inside the other (%d pairs inside 0.4 m: %s)" % [
+			merged.size(), merged.values().slice(0, 4)])
+	_check(meant_close > 0, "Meant contact still happens: a tackle's pair, a pack, a contest (%d close frames)" % meant_close)
 
 
 ## Playtest freeze (near the boundary): a ball resting against the fence sat

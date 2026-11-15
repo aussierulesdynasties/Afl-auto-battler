@@ -18,20 +18,18 @@ const SUITE_SEED := 2027
 ## 2026 fixture or finals. The played seasons depend on the ratings data:
 ## GOLDEN as tools/run_tests.sh and CI run it (AFL_SKIP_OVR_ROWS=1, the
 ## ratings overrides off), PLAYED_WITH_OVR when the suite runs on its own.
-## The played seasons were redrawn when the weather could turn at a break
-## (row 160): a turned day plays on in the new condition.
 const GOLDEN := {
 	"fixture:1": "88379d64dfcfdf22f88fcc1bbcc1bab4",
 	"fixture:2": "15aab1f43b8c605b37bc9eef32c73406",
 	"fixture:3": "928bc55d620e04e745cf7adb88b56ae8",
 	"fixture:2027": "57bffb38d600d4036767ef691d623a80",
 	"fixture:90210": "1734a8fcc9068e3e444e293a25f944b4",
-	"played:2027": "64a3cda8c08addad5463c2543736376d",
-	"played:7": "5e9b5d64dda3832ff4a877ff67d2b89f",
+	"played:2027": "9d88be5088ac31dee6176972f5f1df37",
+	"played:7": "1451efc79ff7b3cd18666d9007fcf5ed",
 }
 const PLAYED_WITH_OVR := {
-	"played:2027": "f717eb64566f9b222cb5125e5b4f238c",
-	"played:7": "e2a5c195f8348fd1b759cd24ee8c7896",
+	"played:2027": "18609aa0a48aaed3a2d743b92e408732",
+	"played:7": "09c0fd8bfbf7f5d384e52ac8e3122c25",
 }
 
 const Golden := preload("res://tests/season_golden.gd")
