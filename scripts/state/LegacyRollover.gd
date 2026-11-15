@@ -282,8 +282,10 @@ static func _new_player(code: String, year: int, n: int, r: Dictionary) -> Dicti
 		p["real_peak"] = int(str(r["peak"]))
 	# His last real season (build_rollovers): he retires about then, as a
 	# start list's or a class's real player does (Prospects.should_retire).
+	# He really played the club's first season, so his career runs to it.
 	if str(r.get("last_season", "")) != "":
 		p["real_last"] = int(str(r["last_season"]))
+		p["real_first"] = year
 	var role := str(r.get("role", ""))
 	p["role"] = role if role in ["RUCK", "MID", "DEF", "FWD"] else GameDB.listed_role(p)
 	p["role2"] = ""
