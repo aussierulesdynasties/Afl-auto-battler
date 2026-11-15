@@ -9,8 +9,14 @@
 // On the socks UV.y is where the sock band sits (0..1, 17 to 11 cm below the knee).
 shader_type spatial;
 
-uniform vec4 skin : source_color = vec4(0.76, 0.57, 0.45, 1.0);
-uniform vec4 hair : source_color = vec4(0.15, 0.10, 0.07, 1.0);
+// His own skin and hair (Appearance.SKIN, HAIR), per figure (Oval3D._dress).
+instance uniform vec4 skin : source_color = vec4(0.76, 0.57, 0.45, 1.0);
+instance uniform vec4 hair : source_color = vec4(0.15, 0.10, 0.07, 1.0);
+// The scalp under his style (Oval3D.SCALP): 0 hair colour (the body's own painted crop, no
+// look), 1 bare skin (bald, and under a style's shell: the shell has its own hairline),
+// 2 clippered (buzz: the skin through the hair).
+instance uniform int scalp = 0;
+const float BUZZ_COVER = 0.55;
 uniform vec4 shorts : source_color;
 uniform vec4 boot : source_color = vec4(0.06, 0.06, 0.07, 1.0);
 // The club's kit (GameDB.club_guernsey) as the vignettes' figure material takes it, one kit.
@@ -264,7 +270,8 @@ void fragment() {
 	float band = over(g.y, 0.0) * over(1.0, g.y);
 	vec3 sock = mix(base, pat, band);
 	vec3 c = skin.rgb;
-	c = mix(c, hair.rgb, region(UV2.x));
+	vec3 scalp_col = scalp == 1 ? skin.rgb : (scalp == 2 ? mix(skin.rgb, hair.rgb, BUZZ_COVER) : hair.rgb);
+	c = mix(c, scalp_col, region(UV2.x));
 	// Where two kit regions meet, each field is about 0.5 and neither might pass it, which
 	// leaves a hairline of skin between guernsey and shorts. So the lower garment is drawn
 	// wherever the two together cover the body, and the upper one over it at its own edge.
