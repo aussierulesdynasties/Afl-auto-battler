@@ -422,7 +422,7 @@
 			{"key": "sing", "label": "Do it, and enjoy the joke",
 			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "morale", "d": 3, "who": "all"}, {"op": "slow_start", "chance": 15, "who": "side"}],
 			 "result": "The whole country is singing along. Some think the Giants are getting ahead of themselves."},
-			{"key": "no", "label": "\"Not in finals week.\"",
+			{"key": "no", "label": "\"No. We've got a final to play.\"",
 			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The coach kept finals week about the football"}, {"op": "board", "d": -1, "was": "members"}],
 			 "result": "No distraction. The fans wanted the fun."}
 		]

@@ -9,6 +9,20 @@ extends Node3D
 ## own jog and idle), exported as assets/oval3d/player_average.glb, recoloured per club.
 
 const PLAYER_GLB := "res://assets/oval3d/player_average.glb"
+## Club Forge's hair styles on the same rig, one mesh per style on the head bone
+## (tools/oval3d/export_hair_glb.py: the pipeline's own procedural shells, hair_lib.py).
+const HAIR_GLB := "res://assets/oval3d/hair_styles.glb"
+## The hair file in use (HAIR_GLB; a capture may point it at a candidate set). A style drawn
+## from a downloaded asset (tools/oval3d/export_mh_hair_glb.py) has its strand texture, greyed
+## to be tinted (grey_hair_tex.py), at hair_tex/<style>.png beside it.
+static var hair_glb := HAIR_GLB
+## The scalp under each style (oval3d_player.gdshader, scalp): 0 the body's own painted crop
+## (no look), 1 bare skin (bald, and under every style's shell, which has its own hairline),
+## 2 clippered (buzz, and under the cuts with clippered sides). Under the dreadlocks it is his
+## hair colour (0): skin showed down the back between the locks.
+const SCALP := {"bald": 1, "buzz": 2, "dreadlocks": 0, "undercut": 2, "curly_short": 2, "faux_hawk": 2,
+		"tied_back": 2}
+const SCALP_UNDER_SHELL := 1
 ## The boots' own material in the GLB (export_player_glb.py, the Tripo boot): drawn as modelled.
 const BOOT_MATERIAL := "ARD_boot_real"
 const HALF_LEN := MatchMotion.HALF_LEN
@@ -56,7 +70,7 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 	for t in director.tokens:
 		var side := int(t.get("side", 0))
 		var p := _player(scene, kits[side], GameDB.club_colours(home if side == 0 else away))
-		_number(p, int(t.get("num", -1)))
+		_dress(p, t)
 		players.append(p)
 	anim = Oval3DAnim.new(director, players)
 	director.want_contacts = true
@@ -111,6 +125,9 @@ func sync(dt: float) -> void:
 	for i in range(players.size()):
 		var t: Dictionary = director.tokens[i]
 		var p: Dictionary = players[i]
+		# An interchange puts another man in the slot: his own look and number.
+		if str(t.get("pid", "")) != str(p.get("pid", "")):
+			_dress(p, t)
 		var pos: Vector2 = at[i]
 		var vel: Vector2 = t["vel"]
 		var node: Node3D = p["node"]
@@ -238,8 +255,15 @@ func aim_close() -> void:
 
 
 # ---------------------------------------------------------------------------
+## The turf and light for the day's weather and time of day: turf.apply(weather, slot).
+var turf: Oval3DTurf
+var _env: Environment
+var _sun: DirectionalLight3D
+
+
 func _environment() -> void:
 	var env := Environment.new()
+	_env = env
 	env.background_mode = Environment.BG_COLOR
 	env.background_color = Color(0.55, 0.7, 0.86)
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
@@ -262,6 +286,7 @@ func _environment() -> void:
 	RenderingServer.directional_shadow_atlas_set_size(4096, true)
 	RenderingServer.directional_soft_shadow_filter_set_quality(RenderingServer.SHADOW_QUALITY_SOFT_HIGH)
 	add_child(sun)
+	_sun = sun
 
 
 func _ground() -> void:
@@ -275,6 +300,9 @@ func _ground() -> void:
 	sm.set_shader_parameter("goal_x", GOAL_X)
 	mi.material_override = sm
 	add_child(mi)
+	turf = Oval3DTurf.new(self, sm, _env, _sun, pm.size * 0.5)
+	add_child(turf)
+	turf.apply("", VignetteKickoff.DAY)
 
 
 func _posts() -> void:
@@ -388,12 +416,208 @@ func _number(p: Dictionary, n: int) -> void:
 			(mi as GeometryInstance3D).set_instance_shader_parameter("number", clampi(n, -1, 99))
 
 
+## The man in token t's slot as he looks: his number, skin, hair colour and hair style
+## (GameDB.figure_look: what he chose in Club Forge, a generated player's own variety, a real
+## player's curated look). Looks only, as the vignettes draw him.
+func _dress(p: Dictionary, t: Dictionary) -> void:
+	var pid := str(t.get("pid", ""))
+	p["pid"] = pid
+	_number(p, int(t.get("num", -1)))
+	var who = GameDB.player_by_id(pid) if pid != "" else null
+	look(p, GameDB.figure_look(who) if who != null else StoppageVignette.UMPIRE_LOOK)
+
+
+## Skin, hair colour and hair style on one figure. l: {"skin", "hair"} palette indices
+## (Appearance.SKIN, HAIR) and "hair_style" (Appearance.HAIR_STYLES; none: the base crop).
+## any_shell: also a shell id of a candidate set (hair_glb) that is no Club Forge style yet (captures).
+func look(p: Dictionary, l: Dictionary, any_shell := false) -> void:
+	var skin: Color = Appearance.SKIN[clampi(int(l.get("skin", 1)), 0, Appearance.SKIN.size() - 1)]
+	var hair_i := clampi(int(l.get("hair", 1)), 0, Appearance.HAIR.size() - 1)
+	var style := str(l.get("hair_style", VignetteFigures.HAIR_BASE))
+	if not Appearance.HAIR_STYLES.has(style) and not (any_shell and hair_shells().has(style)):
+		style = VignetteFigures.HAIR_BASE
+	for mi in (p["node"] as Node3D).find_children("*", "MeshInstance3D", true, false):
+		if (mi as MeshInstance3D).has_meta("kit"):
+			var g := mi as GeometryInstance3D
+			g.set_instance_shader_parameter("skin", skin)
+			g.set_instance_shader_parameter("hair", Appearance.HAIR[hair_i])
+			g.set_instance_shader_parameter("scalp", scalp_for(style))
+	p["hair_style"] = style
+	if p.get("hair_node") is Node:
+		(p["hair_node"] as Node).free()
+	p.erase("hair_node")
+	var shell: Dictionary = hair_shells().get(style, {})
+	if shell.is_empty():
+		return
+	var skel: Skeleton3D = p["skel"]
+	var on := BoneAttachment3D.new()
+	on.name = "Hair"
+	on.bone_name = str(shell["bone"])
+	skel.add_child(on)
+	var mi := MeshInstance3D.new()
+	mi.name = "hair_" + style
+	mi.mesh = shell["mesh"]
+	mi.transform = shell["at"]
+	mi.material_override = _hair_material(hair_i, shell.get("tex"))
+	on.add_child(mi)
+	p["hair_node"] = on
+
+
+static var _shells := {}
+static var _hair_mats := {}
+
+
+## Each style's shell from HAIR_GLB, read once: {style: {"mesh", "bone", "at"}}, "at" being
+## the mesh's place relative to its bone, so it sits the same on every player's head.
+static func hair_shells() -> Dictionary:
+	if not _shells.is_empty() or not ResourceLoader.exists(hair_glb):
+		return _shells
+	var root: Node = (load(hair_glb) as PackedScene).instantiate()
+	for n in root.find_children("hair_*", "MeshInstance3D", true, false):
+		var mi := n as MeshInstance3D
+		var parent := mi.get_parent()
+		if not parent is BoneAttachment3D:
+			push_error("Oval3D: %s is not on a bone in %s" % [mi.name, hair_glb])
+			continue
+		var style := str(mi.name).trim_prefix("hair_")
+		_shells[style] = {"mesh": mi.mesh, "bone": (parent as BoneAttachment3D).bone_name, "at": mi.transform}
+		var tex := hair_glb.get_base_dir().path_join("hair_tex/%s.png" % style)
+		if ResourceLoader.exists(tex):
+			_shells[style]["tex"] = load(tex)
+	root.free()
+	return _shells
+
+
+## How far the pipeline pushed the scalp out for the old painted crop (ard_body.OFFSET["hair"],
+## metres). Every style now sits on his skull as hair_lib fitted it, so the lift comes off.
+const SCALP_LIFT := 0.010
+## The body's hair region, a surface of its own in the GLB (ard_body.REGIONS).
+const HAIR_SURFACE := "ARD_hair"
+static var _skulls := {}
+
+
+## The body mesh with the scalp back on his skull: every vertex at a hair-region corner (the
+## pipeline lifted exactly those, in every surface they share) drawn in by SCALP_LIFT, and the
+## normals round it recomputed, welded across surfaces, so the old ledge's light goes with it.
+## Once per mesh; every player shares the copy.
+static func _skull(m: Mesh) -> Mesh:
+	if _skulls.has(m):
+		return _skulls[m]
+	var am := m as ArrayMesh
+	var hair := -1
+	if am != null:
+		for s in range(am.get_surface_count()):
+			var mat := am.surface_get_material(s)
+			if mat != null and mat.resource_name == HAIR_SURFACE:
+				hair = s
+	if hair < 0:
+		_skulls[m] = m
+		return m
+	var surfs := []
+	for s in range(am.get_surface_count()):
+		surfs.append(am.surface_get_arrays(s))
+	var key := func(v: Vector3) -> Vector3i:
+		return Vector3i((v * 1e5).round())
+	# The lift's direction per corner: the normal of the hair region's own faces round it. They
+	# all moved out together, so they lie parallel to the skull; the stored normals were baked
+	# after the lift and tip up along the old ledge.
+	var lift := {}
+	var hv: PackedVector3Array = surfs[hair][Mesh.ARRAY_VERTEX]
+	var hi: PackedInt32Array = surfs[hair][Mesh.ARRAY_INDEX]
+	for f in range(0, hi.size(), 3):
+		var fn := _face_normal(hv[hi[f]], hv[hi[f + 1]], hv[hi[f + 2]])
+		for c in range(3):
+			var k: Vector3i = key.call(hv[hi[f + c]])
+			lift[k] = lift.get(k, Vector3.ZERO) + fn
+	for k in lift:
+		lift[k] = (lift[k] as Vector3).normalized()
+	# Draw them in, and note every corner of a face that touches one: its normal changes.
+	var keys := []
+	var near := {}
+	for a in surfs:
+		var vs: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
+		var k := []
+		k.resize(vs.size())
+		for i in range(vs.size()):
+			k[i] = key.call(vs[i])
+			if lift.has(k[i]):
+				vs[i] -= lift[k[i]] * SCALP_LIFT
+		a[Mesh.ARRAY_VERTEX] = vs
+		var idx: PackedInt32Array = a[Mesh.ARRAY_INDEX]
+		for f in range(0, idx.size(), 3):
+			if lift.has(k[idx[f]]) or lift.has(k[idx[f + 1]]) or lift.has(k[idx[f + 2]]):
+				for c in range(3):
+					near[k[idx[f + c]]] = Vector3.ZERO
+		keys.append(k)
+	# Area-weighted face normals, summed per corner across all surfaces.
+	for s in range(surfs.size()):
+		var vs: PackedVector3Array = surfs[s][Mesh.ARRAY_VERTEX]
+		var idx: PackedInt32Array = surfs[s][Mesh.ARRAY_INDEX]
+		var k: Array = keys[s]
+		for f in range(0, idx.size(), 3):
+			var c0: Vector3i = k[idx[f]]
+			var c1: Vector3i = k[idx[f + 1]]
+			var c2: Vector3i = k[idx[f + 2]]
+			if not (near.has(c0) or near.has(c1) or near.has(c2)):
+				continue
+			var fn := _face_normal(vs[idx[f]], vs[idx[f + 1]], vs[idx[f + 2]])
+			for c in [c0, c1, c2]:
+				if near.has(c):
+					near[c] += fn
+	var out := ArrayMesh.new()
+	for s in range(surfs.size()):
+		var a: Array = surfs[s]
+		var ns: PackedVector3Array = a[Mesh.ARRAY_NORMAL]
+		var k: Array = keys[s]
+		for i in range(ns.size()):
+			var n: Vector3 = near.get(k[i], Vector3.ZERO)
+			if n.length_squared() > 0.0:
+				ns[i] = n.normalized()
+		a[Mesh.ARRAY_NORMAL] = ns
+		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, a)
+		out.surface_set_material(s, am.surface_get_material(s))
+		out.surface_set_name(s, am.surface_get_name(s))
+	_skulls[m] = out
+	return out
+
+
+## A triangle's outward normal, scaled by its area (Godot winds front faces clockwise).
+static func _face_normal(a: Vector3, b: Vector3, c: Vector3) -> Vector3:
+	return (c - a).cross(b - a)
+
+
+## Hair colour i on a shell; tex: a downloaded style's greyed strands (alpha cut), tinted i.
+static func _hair_material(i: int, tex: Texture2D = null) -> StandardMaterial3D:
+	var key := [i, tex]
+	if not _hair_mats.has(key):
+		var m := StandardMaterial3D.new()
+		m.albedo_color = Appearance.HAIR[i]
+		m.roughness = 0.9
+		# Strand cards are one face thick: draw both sides, or the long styles show slits.
+		m.cull_mode = BaseMaterial3D.CULL_DISABLED
+		if tex != null:
+			m.albedo_texture = tex
+			m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+			m.alpha_scissor_threshold = 0.5
+			m.alpha_antialiasing_mode = BaseMaterial3D.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE
+		_hair_mats[key] = m
+	return _hair_mats[key]
+
+
+## The scalp under style (oval3d_player.gdshader, scalp): bald and buzz their own; under any
+## style's hair bare skin, as the hair has its own hairline (the body's painted crop would show
+## as a band under it); no hair, the painted crop.
+static func scalp_for(style: String) -> int:
+	return int(SCALP.get(style, SCALP_UNDER_SHELL if hair_shells().has(style) else 0))
+
+
 func _player(scene: PackedScene, kit: ShaderMaterial, cols: Array) -> Dictionary:
 	var node: Node3D = scene.instantiate()
 	add_child(node)
 	# Every surface wears the kit except the boots, which keep their own textured material.
 	for mi in node.find_children("*", "MeshInstance3D", true, false):
 		var m := mi as MeshInstance3D
+		m.mesh = _skull(m.mesh)
 		for s in range(m.mesh.get_surface_count()):
 			var own := m.mesh.surface_get_material(s)
 			if own == null or own.resource_name != BOOT_MATERIAL:
@@ -441,6 +665,7 @@ func _add_umpires(scene: PackedScene) -> void:
 	var spots := _umpire_spots()
 	for k in range(spots.size()):
 		var u := _player(scene, kit, [StoppageVignette.UMPIRE])
+		look(u, StoppageVignette.UMPIRE_LOOK)
 		(u["ring"] as Node3D).visible = false
 		u["role"] = str(spots[k][0])
 		u["k"] = k

@@ -673,7 +673,7 @@ func _test_said_once_and_said_right() -> void:
 	_check(Injuries.wording("elbow") == "an elbow injury" and Injuries.wording("back") == "a back injury",
 			"An injury is said as football says it (%s, %s)" % [Injuries.wording("elbow"), Injuries.wording("back")])
 	var shares: Array = GateOdds.plan_shares("defensive")
-	_check((shares[1] as Array).size() == 4 and str(GateOdds.PLAN_COST["defensive"]).count("%s") == 4
+	_check((shares[1] as Array).size() == 5 and str(GateOdds.PLAN_COST["defensive"]).count("%s") == 5
 			and str(GateOdds.PLAN_COST["defensive"]).contains("less ground"),
 			"The High Press gate states every cost the match applies, the ground lost a kick included")
 
@@ -1270,7 +1270,12 @@ func _test_role_trial() -> void:
 			"The trial runs exactly three games, then it is over (%s)" % str(left))
 	_check(not (GameState.season.selections[GameState.my_club] as Dictionary).has("TRIAL"),
 			"...and nothing is left on the selection")
-	_check(_line_in(GameState.current_side(), id) == home_line, "...and the auto-pick has him back in %s" % home_line)
+	var back_in := _line_in(GameState.current_side(), id)
+	# A midfielder's home is the midfield: the auto-pick puts him in the centre or on a wing by the
+	# week's form (GameState._in_trial_line: the wing counts as midfield), so either is home.
+	var mids := ["MID", "WING"]
+	_check(back_in == home_line or (mids.has(back_in) and mids.has(home_line)),
+			"...and the auto-pick has him back in %s (in %s; injury weeks %d)" % [home_line, back_in, int(p.get("injury_weeks", 0))])
 	# Moving HIM by hand ends it, auto case: he stays where your side puts him.
 	_start()
 	p = _trial_candidate()
@@ -3292,10 +3297,12 @@ func _test_captain_contract_talk_dealt() -> void:
 	_check(GameState.story_flag_set(str(cap["id"]), "cc_start"), "The contract story has begun for the captain this week")
 	var first := ""
 	var at := -1
+	var dealt := []
 	for r in range(10):
 		if GameState.week_event_pending():
 			GameState.resolve_week_event(0)
 		GameState.advance()
+		dealt.append("%d:%s" % [GameState.story_week() - w0, ",".join(PackedStringArray(GameState.week_events.map(func(c): return str(c.get("tid", "")))))])
 		for c in GameState.week_events:
 			if first == "" and str(c.get("tid", "")).begins_with("captain_contract"):
 				first = str(c["tid"])
@@ -3303,7 +3310,7 @@ func _test_captain_contract_talk_dealt() -> void:
 		if first != "":
 			break
 	_check(first == "captain_contract_wait" and at >= 3,
-			"The engine deals the contract talk %d weeks on, before either ending (first dealt: %s)" % [at, first])
+			"The engine deals the contract talk %d weeks on, before either ending (first dealt: %s; weeks: %s)" % [at, first, " ".join(PackedStringArray(dealt))])
 
 
 func _has_mark(lines: PackedStringArray, mark: String) -> bool:
