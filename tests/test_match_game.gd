@@ -5227,10 +5227,15 @@ func _test_synergies_follow_the_ground() -> void:
 	_check(sim.rng.state == state, "Following the 18 draws no random numbers")
 	var forced := _sim(77)
 	forced.synergy_forced[0]["engine_room"] = true
+	forced.synergy_forced[0]["running_machine"] = false
 	forced._refresh_synergies(0, false)
 	_check((forced.synergies[0] as Array).has("engine_room"), "An audit can hold a synergy on")
 	_check(forced._contest_traits(0, true) > 0.0 and forced._contest_traits(0, false) == 0.0,
 			"The Engine room wins more of the stoppages and nothing in general play")
+	forced.synergy_forced[0] = {"engine_room": false, "running_machine": true}
+	forced._refresh_synergies(0, false)
+	_check(forced._contest_traits(0, false) == Traits.power2("running_machine") and forced._contest_traits(0, true) == 0.0,
+			"The Running machine's spare runner wins more of the loose ball, not the stoppages")
 	var res := {"synergies": [["running_machine", "supply_line"], []], "goals": [12, 9], "q4_legs": [81.4, 66.0],
 			"synergy_share": [{"running_machine": 1.0, "supply_line": 0.5}, {}],
 			"team": [{"clearances": 40, "inside50": 55}, {"clearances": 33, "inside50": 48}]}

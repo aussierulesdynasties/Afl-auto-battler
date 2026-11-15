@@ -1780,9 +1780,12 @@ func _contest_bonus(side: int, stoppage := false) -> float:
 			+ _contest_traits(side, stoppage)
 
 
-## Engine room: at stoppages only (bug bash 5), as its copy says.
+## Engine room at stoppages only (bug bash 5), as its copy says; Running
+## machine's spare runner in the contests in general play (the loose ball).
 func _contest_traits(side: int, stoppage: bool) -> float:
-	return Traits.power("engine_room") if stoppage and synergies[side].has("engine_room") else 0.0
+	if stoppage:
+		return Traits.power("engine_room") if synergies[side].has("engine_room") else 0.0
+	return Traits.power2("running_machine") if synergies[side].has("running_machine") else 0.0
 
 
 func _contest_plan(side: int) -> float:
