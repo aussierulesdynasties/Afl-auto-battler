@@ -11,7 +11,8 @@ extends SceneTree
 
 const DT := 1.0 / 60.0
 const LEAD_IN := 0.3           # s filmed before the take starts
-const TAIL := 0.9              # s filmed after the arms meet
+const WARM := 6                # frames drawn from the eye before the first one saved
+const TAIL := 2.4              # s filmed after the arms meet (the ball spilling out and gathered)
 const SIZE := Vector2i(1280, 720)
 const BODY_R := 0.35           # m: a man's body, for the line of sight
 const BODY_H := 1.9            # m: and how tall it stands
@@ -134,7 +135,7 @@ func _run() -> void:
 					(r["root"] as Vector2).distance_to(at) if at != Vector2.INF else NAN,
 					(r["contact"] as Vector2).distance_to(at) if at != Vector2.INF else NAN,
 					float(r["warp_m"]), float(r["turn_deg"])])
-		if n < first:
+		if n < first - WARM:
 			continue
 		if n == hit_n:
 			oval.aim_wing(30.0, 70.0)
@@ -142,6 +143,11 @@ func _run() -> void:
 		oval.camera.global_position = eye
 		oval.camera.fov = 40.0
 		oval.camera.look_at(look, Vector3.UP)
+		if n < first or n == hit_n + 1:
+			# Drawn, not saved: the shadow maps of the frame the camera jumps to are stale (a dark
+			# block over the turf on the first frame after a cut), so the eye settles first.
+			await process_frame
+			continue
 		if (n - first) % 2 == 0:
 			await _save(out, "f%03d" % ((n - first) / 2))
 		else:

@@ -51,6 +51,7 @@ var _hips := {}                # animation name -> [pelvis position track, rotat
 var _in: Array = []            # per player: the pair he is in, {} for none
 var _blend: Array = []         # per player: the pose he is easing out of, {} for none
 var _back: Array = []          # per player: where a finished pair left him (INF: nowhere)
+var _face: Array = []          # per player: the way his hips faced when that pair finished
 var _gap: Array = []           # per player: his drawn spot minus his token's, closing
 var _rate: Array = []          # per player: the rate his running clip played at last
 var _takes := {}               # take name -> {dist: hips apart, foot: planted foot} per STEP
@@ -65,6 +66,7 @@ func _init(p_director: MatchDirector, p_players: Array) -> void:
 		_in.append({})
 		_blend.append({})
 		_back.append(Vector2.INF)
+		_face.append(0.0)
 		_gap.append(Vector2.ZERO)
 		_rate.append(1.0)
 	var res = load(PAIRS)
@@ -324,6 +326,9 @@ func step(i: int, p: Dictionary, holder: int, pos: Vector2, vel: Vector2, dt: fl
 		return
 	var node: Node3D = p["node"]
 	if _back[i] != Vector2.INF:
+		# Off the take's ground (the frame after it ends): he stands where his hips were.
+		node.transform = Transform3D(Basis(Vector3.UP, float(_face[i])), node.position)
+		(p["ring"] as Node3D).position = Vector3(0.0, 0.03, 0.0)
 		_gap[i] = (_back[i] as Vector2) - pos
 		_back[i] = Vector2.INF
 	var gap: Vector2 = _gap[i]
@@ -391,14 +396,14 @@ func _step_pair(i: int, p: Dictionary, dt: float) -> void:
 
 
 ## Out of the pair: he stands where the take left him, facing as his hips do, and eases into
-## running or standing from there.
+## running or standing from there. The node moves there on his next step, once the clip that
+## follows has his hips back over his feet: moved now, this frame's pose (the take's hips,
+## metres off the take's origin) was drawn that far off, beside the camera for one frame.
 func _leave(i: int) -> void:
 	var p: Dictionary = players[i]
-	var node: Node3D = p["node"]
 	var hips := _hips_world(p)
 	_snap(i, p)
-	node.transform = Transform3D(Basis(Vector3.UP, _yaw_of(hips.basis)), Vector3(hips.origin.x, 0.0, hips.origin.z))
-	(p["ring"] as Node3D).position = Vector3(0.0, 0.03, 0.0)
+	_face[i] = _yaw_of(hips.basis)
 	_back[i] = Vector2(hips.origin.x, hips.origin.z)
 	_in[i] = {}
 

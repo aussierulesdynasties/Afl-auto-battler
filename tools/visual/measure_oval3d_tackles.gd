@@ -13,6 +13,7 @@ const DT := 1.0 / 60.0
 const PLANTED := 0.02          # m: a foot this low is on the ground (the jog swings through under 0.05)
 const FEET := ["ball_l", "ball_r"]
 const TORSO := ["pelvis", "spine_01", "spine_02", "spine_03", "neck_01", "head"]
+const TAKE_WATCH := 6.0        # s from a take's start its men's drawn hips are watched (the longest take is about 4.5)
 
 
 func _initialize() -> void:
@@ -49,6 +50,8 @@ func _run() -> void:
 	var last := {}              # player -> last foot positions
 	var jog := []               # planted-foot speeds of men jogging clear of tackles
 	var jog_last := {}
+	var hips_last := {}         # "take:player" -> his drawn hips last frame, while the take runs
+	var pelvis := skel0.find_bone("pelvis")
 	var t := 0.0
 	while t < secs:
 		d.advance(DT)
@@ -58,8 +61,25 @@ func _run() -> void:
 			var r: Dictionary = anim.tackles[k]
 			var age := float(anim._clock) - float(r["start_t"])
 			if not m.has(k):
-				m[k] = {"slide": 0.0, "slide_k": 0.0, "slide_v": 0.0, "near": 9.0}
+				m[k] = {"slide": 0.0, "slide_k": 0.0, "slide_v": 0.0, "near": 9.0, "jump": 0.0}
 			var mk: Dictionary = m[k]
+			if age > 0.0 and age <= TAKE_WATCH:
+				# The drawn hips, every frame from the take's start until well after it ends: a
+				# body drawn metres off for a frame (the hand-back at the end) shows as a jump.
+				for who2 in [int(r["who"]), int(r["victim"])]:
+					var sk: Skeleton3D = oval.players[who2]["skel"]
+					var hp := sk.global_transform * sk.get_bone_global_pose(pelvis).origin
+					var key2 := "%d:%d" % [k, who2]
+					if hips_last.has(key2):
+						var was: Vector3 = hips_last[key2]
+						var step := Vector2(hp.x - was.x, hp.z - was.z).length()
+						mk["jump"] = maxf(float(mk["jump"]), step)
+						if OS.get_environment("DEBUG_JUMP") != "" and step > float(OS.get_environment("DEBUG_JUMP")):
+							var inp: Dictionary = anim._in[who2]
+							print("  JUMP k%d man %d %s age %.3f step %.2f m | in pair %s c %.3f len %.3f" % [k, who2,
+									"tackler" if who2 == int(r["who"]) else "tacklee", age, step, not inp.is_empty(),
+									float(inp.get("c", -1.0)), float(inp.get("len", -1.0))])
+					hips_last[key2] = hp
 			if age > 0.0 and age <= float(r["lead"]) / 0.6 + 0.05 and float(r["hit_t"]) < 0.0:
 				for who in [int(r["who"]), int(r["victim"])]:
 					var now := _feet(oval.players[who], feet)
@@ -103,6 +123,7 @@ func _run() -> void:
 	var slides := []
 	var turns := []
 	var warps := []
+	var jumps := []
 	for k in range(anim.tackles.size()):
 		var r: Dictionary = anim.tackles[k]
 		var late := float(r["hit_t"]) - float(r["event_t"]) if float(r["hit_t"]) >= 0.0 and float(r["event_t"]) >= 0.0 else NAN
@@ -110,10 +131,11 @@ func _run() -> void:
 		var sr := (r["root"] as Vector2).distance_to(at) if at != Vector2.INF and r["root"] != Vector2.INF else NAN
 		var sc := (r["contact"] as Vector2).distance_to(at) if at != Vector2.INF and r["contact"] != Vector2.INF else NAN
 		var o: Dictionary = own[r["pair"]]
-		print("TACKLE %2d t=%6.2f %s lead %.2f late %+.3f s | hips %.2f arms %.2f m from spot | turn %+5.0f deg, tackler warp %.2f m %+4.0f deg | slide tackler %.2f tacklee %.2f (take %.2f) m/s | bodies %.2f (take %.2f) m | from %s stand %s%s" % [
+		print("TACKLE %2d t=%6.2f %s lead %.2f late %+.3f s | hips %.2f arms %.2f m from spot | turn %+5.0f deg, tackler warp %.2f m %+4.0f deg | slide tackler %.2f tacklee %.2f (take %.2f) m/s | bodies %.2f (take %.2f) m | from %s stand %s%s | hips jump %.2f m" % [
 				k, float(r["start_t"]), r["pair"], float(r["lead"]), late, sr, sc, float(r["turn_deg"]),
 				float(r["warp_m"]), float(r["warp_deg"]), float(m[k]["slide_k"]), float(m[k]["slide_v"]), float(o["slide"]),
-				float(m[k]["near"]), float(o["near"]), r["from"], r["stand"], " | joined from his token" if r["far"] else ""])
+				float(m[k]["near"]), float(o["near"]), r["from"], r["stand"], " | joined from his token" if r["far"] else "",
+				float(m[k]["jump"])])
 		if not is_nan(late):
 			lates.append(late)
 		if not is_nan(sr):
@@ -122,9 +144,10 @@ func _run() -> void:
 		slides.append(float(m[k]["slide"]))
 		turns.append(absf(float(r["turn_deg"])))
 		warps.append(float(r["warp_m"]))
-	print("SUMMARY %d tackles in %.0f s | late %s | hips-to-spot %s | arms-to-spot %s | |turn| %s | warp m %s | slide m/s %s | jogging feet m/s %s" % [
+		jumps.append(float(m[k]["jump"]))
+	print("SUMMARY %d tackles in %.0f s | late %s | hips-to-spot %s | arms-to-spot %s | |turn| %s | warp m %s | slide m/s %s | jogging feet m/s %s | drawn hips' longest step in a frame m %s" % [
 			anim.tackles.size(), secs, _stats(lates), _stats(roots), _stats(arms), _stats(turns),
-			_stats(warps), _stats(slides), _stats(jog)])
+			_stats(warps), _stats(slides), _stats(jog), _stats(jumps)])
 	quit()
 
 
