@@ -1135,6 +1135,9 @@ func _show_coach_box() -> void:
 			fcl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			ClubDuel.on_colour(fcl)
 			if wide:
+				# Beside the venue in a row: a wrapping label needs its share of
+				# the width, or it wraps a letter a line (717 tall at 1280x720).
+				fcl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 				fcl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			bv.add_child(fcl)
 	else:
