@@ -119,9 +119,24 @@ func _take_club_and_sit_interview(label: String) -> void:
 	_check(taps == "" and not _state.interview_due, "%s: the interview is answered by taps (%s)" % [label, taps])
 
 
+## A real-lists start opens its off-season before the draft (row 199): no card
+## over it, and its Start the draft (a tap) brings the board and the card.
+func _start_draft(label: String) -> void:
+	var start: Control = current_scene.find_child("FirstOffseasonStart", true, false)
+	_check(start != null, "%s: the off-season comes before the draft" % label)
+	if start == null:
+		return
+	_check(_card() == null, "%s: no card over the off-season" % label)
+	await _settle()
+	var why: String = await Tap.tap(start)
+	_check(why == "", "%s: Start the draft takes a tap (%s)" % [label, why])
+	await _settle()
+
+
 ## On the board with the card up: it is the first thing, before any pick; its
 ## To the draft closes it, the draft's tip after it, then Back to the menu.
 func _card_first_then_back(label: String) -> void:
+	await _start_draft(label)
 	var card := _card()
 	_check(_router.current() == "draft" and str(current_scene.get("_phase")) == "board" and card != null
 			and _my_picks() == 0,
@@ -187,6 +202,7 @@ func _test_rebuild_card_first_time() -> void:
 	_state.finish_interview([1, 0, 2, 1, 3, 0, 1])   # the answers are tapped above
 	_router.replace("draft")
 	await _at("draft")
+	await _start_draft("Rebuild")
 	_check(_card() != null and _my_picks() == 0, "Rebuild: the card meets the coach before his first pick")
 
 

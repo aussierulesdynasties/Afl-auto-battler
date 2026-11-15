@@ -135,7 +135,9 @@ func _ready() -> void:
 	add_child(_beat_timer)
 	get_viewport().size_changed.connect(_on_resize)
 	_build_layout()
-	if _phase == "board" and not _meet_if_due():
+	# The draft's tip waits for the first off-season to close (row 199): it
+	# would cover the off-season's own buttons, and Start the draft shows it.
+	if _phase == "board" and GameState.first_offseason != 1 and not _meet_if_due():
 		FirstVisitIntro.show_if_due.call_deferred(self, _intro_key())
 
 
@@ -428,7 +430,7 @@ func _on_club_chosen(code: String) -> void:
 	_show_board()
 	# A club taken on this screen meets its recruiting panel here, before the
 	# first pick, not only once the draft is opened again.
-	if not _meet_if_due():
+	if GameState.first_offseason != 1 and not _meet_if_due():
 		FirstVisitIntro.show_if_due.call_deferred(self, _intro_key())
 
 
