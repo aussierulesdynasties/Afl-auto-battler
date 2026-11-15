@@ -15,7 +15,7 @@ func _env(k: String, d: String) -> String:
 	return v if v != "" else d
 
 
-func _play(mode: String, arm: String, opp_plan: String, h: String, a: String, seed_: int) -> String:
+func _play(mode: String, arm: String, opp_plan: String, h: String, a: String, match_seed: int) -> String:
 	var home := Squad.new(h, GameDB.club_list(h), true, h)
 	var away := Squad.new(a, GameDB.club_list(a), false, a)
 	if mode == "ai":
@@ -32,7 +32,7 @@ func _play(mode: String, arm: String, opp_plan: String, h: String, a: String, se
 		t["gameplan"] = plan
 	elif plan != "base":
 		t["gameplan"] = plan
-	var sim := MatchSim.new(home, away, seed_)
+	var sim := MatchSim.new(home, away, match_seed)
 	if mode == "wet":
 		sim.weather = "wet"
 	if fit_over > 0.0:
@@ -57,7 +57,7 @@ func _play(mode: String, arm: String, opp_plan: String, h: String, a: String, se
 		q4 = int(q[3][0]) - int(q[3][1])
 	var win := 1.0 if m > 0 else (0.5 if m == 0 else 0.0)
 	return "R|%s|%s|%s|%s|%d|%d|%.1f|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d" % [mode, arm, opp_plan,
-			h, seed_, m, win, int(g[0]), int(b[0]), int(g[1]), int(b[1]),
+			h, match_seed, m, win, int(g[0]), int(b[0]), int(g[1]), int(b[1]),
 			int(t0.get("clangers", 0)), int(t1.get("clangers", 0)),
 			int(t0.get("pressure_acts", 0)), int(t1.get("pressure_acts", 0)),
 			int(t0.get("clearances", 0)), int(t1.get("clearances", 0)),
