@@ -17,6 +17,7 @@ const CLUB := "FRE"
 func run() -> void:
 	GameState.replay_seed = SUITE_SEED
 	_t("_test_rules")
+	_t("_test_fit_anchors")
 	_t("_test_words")
 	_t("_test_match_effect")
 	_t("_test_drilling")
@@ -127,6 +128,29 @@ func _sim(known0: Dictionary, known1: Dictionary, plan0: String, plan1: String, 
 
 
 # ---------------------------------------------------------------------------
+## Bug bash 5 (G15): the league anchors describe today's lists, so the
+## average club's fit for each plan is about 1.0 and few sit at a limit.
+func _test_fit_anchors() -> void:
+	var off := []
+	var capped := 0
+	for plan in PlanFit.NEEDS:
+		var sum := 0.0
+		var n := 0
+		for c in GameDB.club_order:
+			# A club yet to enter the league has no list to fit.
+			if GameDB.club_list(c).is_empty():
+				continue
+			var f := PlanFit.fit(Squad.new(c, GameDB.club_list(c), true, c).ground, str(plan))
+			sum += f
+			n += 1
+			if f >= PlanFit.FIT_MAX - 0.001:
+				capped += 1
+		if n == 0 or absf(sum / n - 1.0) > 0.08:
+			off.append("%s %.2f" % [plan, sum / maxi(n, 1)])
+	_check(off.is_empty(), "Each plan's average fit across the league is about 1.0 (%s)" % str(off))
+	_check(capped <= GameDB.club_order.size(), "Few club-plan fits sit at the top limit (%d)" % capped)
+
+
 func _test_rules() -> void:
 	PreSeason.reload()
 	_check(PreSeason.LEVELS == ["barely", "partly", "well"] and PreSeason.WELL == 2, "Three levels, well on top")

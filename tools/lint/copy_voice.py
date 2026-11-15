@@ -362,7 +362,7 @@ PASSES += [(path, "copy voice pass 10, stats and menus", v[0], v[1]) for path, v
 GATES_PASS = {
     "scripts/sim/GateOdds.gd": [[
         "our shots %s more accurate\\nOur kicks gain %s more ground", "Their pressure bites %s less",
-        "we get a %s better chance at every stoppage", "%s less pressure in our back third",
+        "we get a %s better chance at every contest", "%s less pressure in our back third",
         "\\n(%s for a list that suits it)", "while we're behind\\nNothing when level or in front",
         "On top of a High Press, %s more", "With %s on him, about %d, until we call it off",
         "none: we have no midfielder on the ground to go to him", "our midfielders play their own game",
@@ -379,7 +379,7 @@ GATES_PASS = {
         "hurting you on the scoreboard", "Back your defenders", "You can call it off at the break", "your stars"]],
     "scripts/sim/CoachReport.gd": [[
         "A lift at the contest while we're chasing the game.", "It leans on our ball-winners and ruck.",
-        "It asks nothing special of our list.", "We gain less ground.",
+        "It leans on our ball users.", "We gain less ground.",
     ], ["while you are chasing", "does nothing for you", "Leans on your", "of your list", "you are a little exposed"]],
     "scripts/ui/MatchScene.gd": [["\" · \".join(parts)"], []],
 }

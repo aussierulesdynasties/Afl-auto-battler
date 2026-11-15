@@ -672,7 +672,7 @@ func _test_said_once_and_said_right() -> void:
 	_check(Injuries.wording("elbow") == "an elbow injury" and Injuries.wording("back") == "a back injury",
 			"An injury is said as football says it (%s, %s)" % [Injuries.wording("elbow"), Injuries.wording("back")])
 	var shares: Array = GateOdds.plan_shares("defensive")
-	_check((shares[1] as Array).size() == 4 and str(GateOdds.PLAN_COST["defensive"]).count("%s") == 4
+	_check((shares[1] as Array).size() == 5 and str(GateOdds.PLAN_COST["defensive"]).count("%s") == 5
 			and str(GateOdds.PLAN_COST["defensive"]).contains("less ground"),
 			"The High Press gate states every cost the match applies, the ground lost a kick included")
 

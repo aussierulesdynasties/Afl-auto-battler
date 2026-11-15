@@ -13,17 +13,20 @@ const COST := "Cost: %s"
 
 # The game plans (M1, director 2026-11-10: "Gain for this list today", the
 # written figure beside it). Templates hold no number of their own.
+## Every effect a plan has, at its size (bug bash 5, G7-G12: the gates left
+## out the press's turnovers, a broken press, the corridor into a press and
+## Controlled Tempo's shots, and "on the rebound" was every shot).
 const PLAN_GAIN := {
 	"attacking": "our shots %s more accurate\nOur kicks gain %s more ground",
-	"defensive": "%s more pressure where they start\nTheir shots %s less accurate",
-	"contest": "we get a %s better chance at every stoppage",
-	"controlled": "%s fewer clangers from us\nTheir pressure bites %s less\nOur legs tire %s slower",
+	"defensive": "%s more pressure where they start, %s more through the middle\nTheir rushed kicks there turn over %s more often\nTheir shots %s less accurate",
+	"contest": "we get a %s better chance at every contest",
+	"controlled": "%s fewer clangers from us\nTheir pressure bites %s less\nOur legs tire %s slower\nOur shots %s more accurate\nInto a High Press, %s of its extra pressure is gone, and their shots get no help from it",
 }
 const PLAN_COST := {
-	"attacking": "%s more clangers from us\nOur legs tire %s faster\nTheir shots %s more accurate on the rebound",
-	"defensive": "our shots %s less accurate\nOur legs tire %s faster\n%s less pressure in our back third\nOur kicks gain %s less ground",
-	"contest": "our kicks gain %s less ground\nTheir shots %s more accurate on the rebound",
-	"controlled": "our kicks gain %s less ground",
+	"attacking": "%s more clangers from us\nOur legs tire %s faster\nTheir shots %s more accurate\nInto a High Press, %s more pressure on us, and our shots only %s more accurate",
+	"defensive": "our shots %s less accurate\nOur legs tire %s faster\n%s less pressure in our back third\nOur kicks gain %s less ground\nEach time they break it, that shot is %s more accurate",
+	"contest": "our kicks gain %s less ground\nTheir shots %s more accurate",
+	"controlled": "our kicks gain %s less ground\nToo slow to punish an Attack Corridor or Win Contest on the rebound",
 }
 const PLAN_SUITS := "\n(%s for a list that suits it)"
 const BALANCED_GAIN := "nothing for them to exploit\nNo plan cost"
@@ -212,15 +215,19 @@ static func plan_shares(plan: String, up := 1.0, down := 1.0) -> Array:
 	match plan:
 		"attacking":
 			return [[v.call("goal") * up, v.call("gain") * up],
-					[v.call("clangers") * down, v.call("pace") * down, v.call("exposed") * down]]
+					[v.call("clangers") * down, v.call("pace") * down, v.call("exposed") * down,
+					MatchSim.CORRIDOR_PRESSED - 1.0, v.call("goal") * up * MatchSim.CORRIDOR_PRESS_GOAL]]
 		"defensive":
 			var zone: Array = MatchSim.PRESS_PLAN_ZONE
-			return [[(float(zone[0]) - 1.0) * up, v.call("opp_goal") * up],
-					[v.call("goal") * down, v.call("pace") * down, (1.0 - float(zone[2])), v.call("gain") * down]]
+			return [[(float(zone[0]) - 1.0) * up, (float(zone[1]) - 1.0) * up,
+					MatchSim.PRESS_ZONE_TURNOVER - 1.0, v.call("opp_goal") * up],
+					[v.call("goal") * down, v.call("pace") * down, (1.0 - float(zone[2])), v.call("gain") * down,
+					MatchSim.PRESS_BROKEN_EXPOSED - 1.0]]
 		"contest":
 			return [[_plan_v(plan, "contest", 0.0) * up], [v.call("gain") * down, v.call("exposed") * down]]
 		"controlled":
-			return [[v.call("clangers") * up, v.call("taken") * up, v.call("pace") * up], [v.call("gain") * down]]
+			return [[v.call("clangers") * up, v.call("taken") * up, v.call("pace") * up, v.call("goal") * up,
+					MatchSim.CONTROLLED_HOLD], [v.call("gain") * down]]
 	return [[], []]
 
 

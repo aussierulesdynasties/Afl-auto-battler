@@ -5119,6 +5119,37 @@ func _test_every_call_two_sided() -> void:
 		_check(str(t[0]) != "" and str(t[1]) != "", "The %s plan states a gain and a cost" % plan)
 		_check(not GateOdds.PLAN_GAIN.has(MatchSim.plan_key(str(plan))) or sized.search(str(t[0]) + str(t[1])) != null,
 				"The %s plan sizes its gain and cost (%s / %s)" % [plan, t[0], t[1]])
+	# Bug bash 5 (G7-G12): every effect each plan has is on its gate, at its
+	# size: one figure per effect the match applies.
+	var gate_miss := []
+	for plan in GateOdds.PLAN_GAIN.keys():
+		var sh: Array = GateOdds.plan_shares(str(plan))
+		if str(GateOdds.PLAN_GAIN[plan]).count("%s") != (sh[0] as Array).size() 				or str(GateOdds.PLAN_COST[plan]).count("%s") != (sh[1] as Array).size():
+			gate_miss.append(plan)
+	_check(gate_miss.is_empty(), "Each plan's gate has one figure for every effect it states (%s)" % str(gate_miss))
+	var pc := func(x: float) -> String: return GateOdds.pct(x)
+	var ac := GateOdds.plan_texts("attacking")
+	var hp := GateOdds.plan_texts("defensive")
+	var wc := GateOdds.plan_texts("contest")
+	var ct := GateOdds.plan_texts("controlled")
+	_check(not str(ac[1]).contains("rebound") and not str(wc[1]).contains("rebound"),
+			"The corridor's and the contest's cost is every shot of theirs, as the match applies it, not only the rebound")
+	_check(str(wc[0]).contains("every contest") and not str(wc[0]).contains("stoppage"),
+			"Win Contest's edge is at every contest, as the match applies it (%s)" % wc[0])
+	_check(not str(CoachReport.PLAN_PARTS["controlled"]["does"]).contains("nothing special")
+			and str(CoachReport.PLAN_PARTS["controlled"]["does"]).contains("ball users"),
+			"Controlled Tempo says it leans on the ball users, whose fit sizes it")
+	_check(str(ct[0]).contains(pc.call(MatchSim.CONTROLLED_HOLD) + " of its extra pressure")
+			and str(ct[0]).contains(pc.call(float(MatchSim.PLANS["controlled"]["goal"]) - 1.0) + " more accurate"),
+			"Controlled Tempo's gate states its shots and how much of a press it takes out (%s)" % ct[0])
+	_check(str(hp[0]).contains(pc.call(MatchSim.PRESS_ZONE_TURNOVER - 1.0) + " more often")
+			and str(hp[1]).contains(pc.call(MatchSim.PRESS_BROKEN_EXPOSED - 1.0) + " more accurate"),
+			"The High Press gate states its turnovers and what a broken press costs (%s / %s)" % hp)
+	_check(str(ac[1]).contains("Into a High Press, " + pc.call(MatchSim.CORRIDOR_PRESSED - 1.0)),
+			"Attack Corridor's gate states what a press costs it (%s)" % ac[1])
+	_check(str(CoachReport.PLAN_PARTS["contest"].get("beats", "")).contains("no plan beats it")
+			and not MatchSim.COUNTER.has("contest") and not MatchSim.COUNTER.values().has("contest"),
+			"Win Contest says it is neutral, and no rival coach counters it or counters with it")
 	for pep in GateOdds.PEP_GAIN.keys():
 		var t := GateOdds.pep_texts(str(pep))
 		_check(str(t[0]) != "" and str(t[1]) != "", "The %s pep talk states a gain and a cost" % pep)

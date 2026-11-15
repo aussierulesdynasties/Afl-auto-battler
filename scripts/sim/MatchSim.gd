@@ -1024,11 +1024,16 @@ const PLAN_UPSIDE := {
 	"controlled": ["taken", "clangers", "goal", "pace"],
 }
 const PLANS := {
-	"attacking": {"goal": 1.05, "gain": 1.06, "clangers": 1.12, "pace": 1.12, "exposed": 1.07},
+	# Bug bash 5 (G1): the corridor won nearly every match-up, so its upside is
+	# smaller and its turnovers cost more (exposed: every shot of theirs).
+	"attacking": {"goal": 1.04, "gain": 1.05, "clangers": 1.12, "pace": 1.12, "exposed": 1.12},
 	# The press's own shots: legs spent chasing, shots taken rushed (0.88;
-	# director 2026-10-11, the real cost of winning it high, was 0.96).
-	"defensive": {"press": 1.09, "opp_goal": 0.965, "goal": 0.88, "gain": 0.95, "pace": 1.12},
-	"contest": {"contest": 0.025, "gain": 0.95, "exposed": 1.04},
+	# director 2026-10-11, the real cost of winning it high, was 0.96). Bug bash
+	# 5 (G2): it lost nearly every match-up, so their shots miss more often and
+	# its own ball movement and legs pay less for the press.
+	"defensive": {"press": 1.09, "opp_goal": 0.95, "goal": 0.88, "gain": 0.97, "pace": 1.08},
+	# G4: more of the ball for less given up, so winning it shows on the scoreboard.
+	"contest": {"contest": 0.035, "gain": 0.96, "exposed": 1.02},
 	"controlled": {"taken": 0.96, "gain": 0.94, "goal": 1.01, "clangers": 0.93, "pace": 0.95},
 }
 
@@ -1096,11 +1101,21 @@ static func cost_scale(sq: Squad, plan: String) -> float:
 
 ## Pressure multiplier `side` faces from the opposition's plan, counters in.
 ## Controlled Tempo takes the sting out of a press as far as its ball users
-## can: a side of ordinary ones or better holds it off, poor ones only
-## partly (PlanFit, "controlled"). The press is where the ball is
+## can: a side of ordinary ones or better takes out CONTROLLED_HOLD of it,
+## poor ones less (PlanFit, "controlled"). The press is where the ball is
 ## (PRESS_PLAN_ZONE): numbers pushed up into his back third and taken out
 ## of our own defensive third. What it pushes up grows with how well the
 ## list suits the plan; what it leaves at the back does not.
+## The share of a press's extra bite Controlled Tempo takes out with ordinary
+## ball users or better (bug bash 5, G3: all of it made the counter three
+## times any other).
+const CONTROLLED_HOLD := 0.5
+## Attack Corridor into a press: the extra pressure its runners meet.
+const CORRIDOR_PRESSED := 1.10
+## ... and the share of its shots' edge it keeps.
+const CORRIDOR_PRESS_GOAL := 0.5
+
+
 func _press_on(side: int, zone := 1) -> float:
 	var m := _pv(1 - side, "press")
 	if m > 1.0:
@@ -1108,10 +1123,10 @@ func _press_on(side: int, zone := 1) -> float:
 		var z := float(PRESS_PLAN_ZONE[zone])
 		m = 1.0 + (z - 1.0) * suit if z > 1.0 else z
 	if m > 1.0 and _plan(side) == "controlled":
-		var hold := clampf(float((plan_fit[side] as Dictionary).get("controlled", 1.0)), 0.0, 1.0)
+		var hold := CONTROLLED_HOLD * clampf(float((plan_fit[side] as Dictionary).get("controlled", 1.0)), 0.0, 1.0)
 		m = 1.0 + (m - 1.0) * (1.0 - hold)
 	elif m > 1.0 and _plan(side) == "attacking":
-		m *= 1.10
+		m *= CORRIDOR_PRESSED
 	return m
 
 
@@ -2430,8 +2445,9 @@ const PRESS_PLAN_ZONE := [1.40, 1.10, 0.60]
 const PRESS_ZONE_TURNOVER := 1.5
 ## Out of the back third with nobody on him, a side has broken the press:
 ## the rest of that chain runs at a defence that is outnumbered, and its
-## shot is this much likelier to be a goal. The cost of the plan.
-const PRESS_BROKEN_EXPOSED := 1.7
+## shot is this much likelier to be a goal. The cost of the plan (bug bash 5,
+## G2: 1.25 with the plan's other costs eased; it lost nearly everywhere).
+const PRESS_BROKEN_EXPOSED := 1.25
 ## Non-tackle pressure acts per tackle chance, the share of those that turn
 ## the ball over outright, and the ground a rushed disposal still gains.
 ## 2026-11-09: a player's pressure acts ran at 60% of real (median 6.5 a game,
@@ -4323,7 +4339,7 @@ func shot_chance(side: int, shooter: Dictionary, marked: bool, spoilt: bool, cre
 	var own := _pv(side, "goal")
 	# The press closes the corridor: half the attacking plan's edge.
 	if own > 1.0 and _pv(opp, "press") > 1.0:
-		own = 1.0 + (own - 1.0) * 0.5
+		own = 1.0 + (own - 1.0) * CORRIDOR_PRESS_GOAL
 	goal_p *= own * _ar(side, "goal")
 	if credit:
 		_credit(side, "gameplan", 6.0 * (goal_p - before))
