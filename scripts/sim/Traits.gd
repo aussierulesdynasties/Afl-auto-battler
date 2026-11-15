@@ -57,9 +57,9 @@ const DEFS := {
 ## key -> label, the line it needs ("" = the whole 18), the traits needed,
 ## the match effect, and the same in football words ("about", "does").
 const SYNERGIES := {
-	"engine_room": {"label": "Engine room", "line": "", "needs": {"bull": 4}, "power": 0.145, "power2": 1.30,
-			"text": "+13% stoppage wins.",
-			"about": "Contested bulls who win the stoppages together.", "does": "Wins more of the stoppages."},
+	"engine_room": {"label": "Engine room", "line": "", "needs": {"bull": 4}, "power": 0.145, "power2": 1.80,
+			"text": "+13% stoppage wins, and each clearance gains 80% more ground.",
+			"about": "Contested bulls who win the stoppages together.", "does": "Wins more of the stoppages and clears them further."},
 	"tall_small": {"label": "Tall-small forward line", "line": "FWD", "needs": {"aerial": 2, "crumber": 2}, "power": 1.32,
 			"text": "+30% goal chance on every shot at goal.",
 			"about": "Aerial threats up forward with crumbers at their feet.", "does": "Turns more of its shots into goals."},
@@ -72,7 +72,7 @@ const SYNERGIES := {
 	"supply_line": {"label": "Supply line", "line": "", "needs": {"ball_magnet": 3, "playmaker": 1}, "power": 1.22,
 			"text": "+20% metres gained per disposal.",
 			"about": "Ball-users feeding a playmaker going forward.", "does": "Gains more ground with every disposal."},
-	"running_machine": {"label": "Running machine", "line": "", "needs": {"engine": 3}, "power": 0.50, "power2": 1.50,
+	"running_machine": {"label": "Running machine", "line": "", "needs": {"engine": 3}, "power": 0.50,
 			"text": "The whole side tires 50% slower.",
 			"about": "A side of endurance runners.", "does": "The whole side tires more slowly."},
 }
