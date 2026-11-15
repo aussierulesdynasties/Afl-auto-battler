@@ -167,7 +167,7 @@ func frame(dt: float) -> void:
 			for name in _pairs:
 				need = maxf(need, _lead(name, d))
 			if due <= need:
-				_start(who, v, due, false)
+				_start(who, v, false)
 	var seen := {}
 	for pr in _in:
 		if pr.is_empty() or seen.has(pr["id"]):
@@ -229,9 +229,9 @@ func _hit(pr: Dictionary) -> void:
 
 
 ## Start a pair: the take whose tackler comes from nearest where ours is, turned about the
-## tacklee. `due` is the animation seconds before the director's contact; `arrived` when it
-## has already come.
-func _start(who: int, v: int, due: float, arrived: bool, at := Vector2.INF) -> void:
+## tacklee. `arrived` when the director's contact has already come (the run-in's pace is set
+## each frame in _advance from the time left).
+func _start(who: int, v: int, arrived: bool, at := Vector2.INF) -> void:
 	for i in [who, v]:
 		if not (_in[i] as Dictionary).is_empty():
 			_leave(i)
@@ -535,7 +535,7 @@ func event(i: int, kind: StringName, at: Vector2, other := -1) -> void:
 	if kind == &"tackle" and other >= 0 and other < _in.size() and not _pairs.is_empty():
 		var pr: Dictionary = _in[i]
 		if pr.is_empty() or int(pr["who"]) != i or int(pr["victim"]) != other:
-			_start(i, other, 0.0, true, at)
+			_start(i, other, true, at)
 			return
 		pr["arrived"] = true
 		(pr["rec"] as Dictionary)["event_t"] = _clock
