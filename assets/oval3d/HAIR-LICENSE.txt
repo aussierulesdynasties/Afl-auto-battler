@@ -1,0 +1,19 @@
+Hair on the 3D oval (hair_styles.glb, hair_tex/)
+
+Fitted to our footballer, retopologised (decimated), recoloured and renamed by Club Forge style
+with tools/oval3d/export_sf_hair_glb.py, export_mh_hair_glb.py and merge_hair_glbs.py.
+
+1. crew, curly_short, dreadlocks, tied_back, long, mullet, mullet_long, fringe, spiked,
+   short_spikes, twists, quiff, slicked_side, short_quiff, wavy, tight_curls, shaggy, surfer,
+   high_top, faux_hawk, undercut, shoulder_length
+
+   "Free Male Fashion Hair Collection 02 (LowPoly)" by VincentFreelance
+   https://sketchfab.com/3d-models/free-male-fashion-hair-collection-02-lowpoly-bd74c3f6166c41778474cbe0485dda1d
+   "Realtime Male Fashion Hair Collection 07" by VincentFreelance
+   https://sketchfab.com/3d-models/realtime-male-fashion-hair-collection-07-bf63cecf02aa4af7a5768529299c9cca
+   Licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Changes: fitted to a
+   new head, decimated, material replaced.
+
+2. afro, curly_medium, messy_medium, short_crop, side_part, swept_back, textured_short
+
+   MakeHuman system assets (via MPFB), CC0 1.0. No attribution required.

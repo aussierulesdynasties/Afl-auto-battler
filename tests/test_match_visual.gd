@@ -2795,7 +2795,7 @@ func _wears(p: Dictionary, l: Dictionary) -> bool:
 		return false
 	var mi := on.get_child(0) as MeshInstance3D
 	return mi.mesh == shell["mesh"] and (mi.material_override as StandardMaterial3D).albedo_color == hair \
-			and _scalp(p) == Oval3D.SCALP_UNDER_SHELL
+			and _scalp(p) == Oval3D.scalp_for(style)
 
 
 func _scalp(p: Dictionary) -> int:

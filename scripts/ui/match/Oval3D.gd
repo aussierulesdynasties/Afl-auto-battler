@@ -18,8 +18,10 @@ const HAIR_GLB := "res://assets/oval3d/hair_styles.glb"
 static var hair_glb := HAIR_GLB
 ## The scalp under each style (oval3d_player.gdshader, scalp): 0 the body's own painted crop
 ## (no look), 1 bare skin (bald, and under every style's shell, which has its own hairline),
-## 2 clippered (buzz).
-const SCALP := {"bald": 1, "buzz": 2}
+## 2 clippered (buzz, and under the cuts with clippered sides). Under the dreadlocks it is his
+## hair colour (0): skin showed down the back between the locks.
+const SCALP := {"bald": 1, "buzz": 2, "dreadlocks": 0, "undercut": 2, "curly_short": 2, "faux_hawk": 2,
+		"tied_back": 2}
 const SCALP_UNDER_SHELL := 1
 ## The boots' own material in the GLB (export_player_glb.py, the Tripo boot): drawn as modelled.
 const BOOT_MATERIAL := "ARD_boot_real"
