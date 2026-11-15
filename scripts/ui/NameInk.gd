@@ -153,7 +153,17 @@ static func spans_in(text: String, index: Dictionary) -> Array:
 	var spans := []
 	if index.is_empty() or text.is_empty():
 		return spans
-	var keys: Array = index.keys()
+	# Only the names whose first word is a word of the text can be in it: look
+	# those up instead of trying every name in the league (2,400 of them; sorting
+	# and searching them all took 6 ms a line, most of a card sheet's opening).
+	var keys: Array = []
+	var by_word := _by_first_word(index)
+	var seen := {}
+	for word in _words(text):
+		if not seen.has(word):
+			seen[word] = true
+			keys.append_array(by_word.get(word, []))
+	keys.append_array(by_word.get("", []))
 	keys.sort_custom(func(a, b): return str(a).length() > str(b).length())
 	for k in keys:
 		var key := str(k)
@@ -182,10 +192,58 @@ static func spans_in(text: String, index: Dictionary) -> Array:
 static func _edge(text: String, at: int, before: bool) -> bool:
 	if at < 0 or at >= text.length():
 		return true
-	var ch := text.unicode_at(at)
-	var letter := (ch >= 65 and ch <= 90) or (ch >= 97 and ch <= 122) or ch >= 192 or (ch >= 48 and ch <= 57)
 	# An apostrophe after a name ("Worrell's") still ends it.
-	return not letter
+	return not _letter(text.unicode_at(at))
+
+
+static func _letter(ch: int) -> bool:
+	return (ch >= 65 and ch <= 90) or (ch >= 97 and ch <= 122) or ch >= 192 or (ch >= 48 and ch <= 57)
+
+
+## The text's words: each run of letters (as `_edge` counts them).
+static func _words(text: String) -> PackedStringArray:
+	var out := PackedStringArray()
+	var start := -1
+	for i in range(text.length() + 1):
+		var letter := i < text.length() and _letter(text.unicode_at(i))
+		if letter and start < 0:
+			start = i
+		elif not letter and start >= 0:
+			out.append(text.substr(start, i - start))
+			start = -1
+	return out
+
+
+## The last index looked up, its size then, and its names by first word.
+static var _cached_index: Dictionary = {}
+static var _cached_size := -1
+static var _cached_by_word: Dictionary = {}
+
+
+## The index's names (not its "#" ids) grouped by their first word: a name found
+## in a text starts at a word edge, so its first word is a whole word of the
+## text ("O'Brien" under "O"). A name that starts with no letter goes under "".
+## Kept for the index last asked about, as a screen asks about one index for
+## every line it draws; rebuilt when another index comes, or this one grows.
+static func _by_first_word(index: Dictionary) -> Dictionary:
+	if is_same(index, _cached_index) and index.size() == _cached_size:
+		return _cached_by_word
+	var by_word := {}
+	for k in index:
+		var key := str(k)
+		if key.begins_with("#"):
+			continue
+		var n := 0
+		while n < key.length() and _letter(key.unicode_at(n)):
+			n += 1
+		var first := key.substr(0, n)
+		if not by_word.has(first):
+			by_word[first] = []
+		(by_word[first] as Array).append(k)
+	_cached_index = index
+	_cached_size = index.size()
+	_cached_by_word = by_word
+	return by_word
 
 
 static func _escape(t: String) -> String:
