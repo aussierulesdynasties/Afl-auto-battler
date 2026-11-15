@@ -2707,12 +2707,23 @@ func _test_contacts(res: Dictionary) -> void:
 	var kinds := {}
 	var bad := []
 	var guard := 0
+	var stoop_ball := Vector2.INF
+	var stoop_moved := 0
 	while not d.idle() and guard < 120000:
 		guard += 1
 		var mode_before := str(d.ball["mode"])
 		var holder_before := int(d.ball["holder"])
 		d.advance(0.05)
+		if stoop_ball.is_finite():
+			# A spilled ball lies still under the man stooping for it until he fumbles it.
+			if d._pi < d._phases.size() and (d._phases[d._pi] as Dictionary).has("stoop"):
+				if (d.ball["pos"] as Vector2).distance_to(stoop_ball) > 0.01:
+					stoop_moved += 1
+			else:
+				stoop_ball = Vector2.INF
 		for c in d.contacts:
+			if c["kind"] == &"ground_ball":
+				stoop_ball = d.ball["pos"]
 			kinds[c["kind"]] = int(kinds.get(c["kind"], 0)) + 1
 			var who := int(c["who"])
 			if c["kind"] == &"bounce":
@@ -2725,7 +2736,9 @@ func _test_contacts(res: Dictionary) -> void:
 			if not (c["at"] as Vector2).is_finite():
 				bad.append("%s nowhere" % c["kind"])
 		d.contacts.clear()
-	for k in [&"kick", &"handball", &"mark", &"gather", &"handball_receive", &"tackle", &"bounce", &"ruck_tap"]:
+	_check(stoop_moved == 0, "A spilled ball lies still while its man stoops over it (%d frames moved)" % stoop_moved)
+	for k in [&"kick", &"handball", &"mark", &"gather", &"handball_receive", &"tackle", &"bounce", &"ruck_tap",
+			&"ground_ball"]:
 		_check(int(kinds.get(k, 0)) > 0, "A full match records %s touches (%d)" % [k, int(kinds.get(k, 0))])
 	_check(bad.is_empty(), "Every touch names a real player (or the umpire for a bounce) and a spot: %s" % [bad.slice(0, 5)])
 	_check(int(kinds.get(&"kick", 0)) > int(kinds.get(&"goal_celebrate", 0)) and int(kinds.get(&"goal_celebrate", 0)) > 0,
