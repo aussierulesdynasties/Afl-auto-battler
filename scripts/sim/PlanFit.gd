@@ -4,9 +4,9 @@ extends RefCounted
 ## of player: a press on its pressure players, corridor footy on its runners,
 ## winning the contest on its ball-winners and ruck. A plan's upside grows
 ## with them; its costs do not (MatchSim._pv), so a plan the list does not suit
-## is a real risk. Controlled Tempo asks nothing special of a list (fewer
-## errors, fresher legs, less ground for any side): measured, its value does
-## not move with the side's kicks and marks, so it has no fit (always 1.0).
+## is a real risk. Controlled Tempo leans on ball users right across the
+## ground: its upside, and how much of a press it holds off
+## (MatchSim._press_on), grow with them like any plan's.
 ##
 ## The same rules pick an AI club's usual plan (standing_plan) and name, for
 ## the player, who in the side makes each plan work (carriers). Pure rules on
@@ -28,13 +28,15 @@ const NEEDS := {
 			"n": 10, "word": "ball users"},
 }
 
-## Where the league sits on each plan's score (mean, spread), from the 2027
-## match-day sides: 1.0 fit is an average list for that plan.
+## Where the league sits on each plan's score (mean, spread), from the 18
+## clubs' match-day sides on today's lists (bug bash 5, G15: the 2027 anchors
+## had every plan's average fit at 1.13-1.22): 1.0 fit is an average list for
+## that plan. tests/run_matchup_tests.gd holds the league's mean fit near 1.0.
 const LEAGUE := {
-	"attacking": [71.3, 3.5],
-	"defensive": [49.8, 2.4],
-	"contest": [80.3, 3.8],
-	"controlled": [57.9, 1.6],
+	"attacking": [73.1, 4.3],
+	"defensive": [51.9, 2.6],
+	"contest": [82.1, 4.1],
+	"controlled": [59.5, 2.7],
 }
 ## How far one spread from the league moves a plan's upside, and its limits:
 ## the best-suited list gets about half as much again, the worst about half.
