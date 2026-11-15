@@ -9213,6 +9213,10 @@ func _real_delistings() -> void:
 		for p in season.lists[code]:
 			if p.has("real_end") or retiring_now(p) or not Prospects.real_delisting_due(p, year):
 				continue
+			# Delisted here but really played on at another club (a foundation
+			# list's man drafted elsewhere): his career is not over, the drafts see him.
+			if LegacyRollover.career_ahead(p, year):
+				continue
 			p["real_end"] = year
 			p["contract_years"] = mini(int(p.get("contract_years", 1)), 1)
 
