@@ -57,7 +57,7 @@ const DEFS := {
 ## key -> label, the line it needs ("" = the whole 18), the traits needed,
 ## the match effect, and the same in football words ("about", "does").
 const SYNERGIES := {
-	"engine_room": {"label": "Engine room", "line": "", "needs": {"bull": 4}, "power": 0.145,
+	"engine_room": {"label": "Engine room", "line": "", "needs": {"bull": 4}, "power": 0.145, "power2": 1.30,
 			"text": "+13% stoppage wins.",
 			"about": "Contested bulls who win the stoppages together.", "does": "Wins more of the stoppages."},
 	"tall_small": {"label": "Tall-small forward line", "line": "FWD", "needs": {"aerial": 2, "crumber": 2}, "power": 1.32,
@@ -72,7 +72,7 @@ const SYNERGIES := {
 	"supply_line": {"label": "Supply line", "line": "", "needs": {"ball_magnet": 3, "playmaker": 1}, "power": 1.22,
 			"text": "+20% metres gained per disposal.",
 			"about": "Ball-users feeding a playmaker going forward.", "does": "Gains more ground with every disposal."},
-	"running_machine": {"label": "Running machine", "line": "", "needs": {"engine": 3}, "power": 0.50,
+	"running_machine": {"label": "Running machine", "line": "", "needs": {"engine": 3}, "power": 0.50, "power2": 1.50,
 			"text": "The whole side tires 50% slower.",
 			"about": "A side of endurance runners.", "does": "The whole side tires more slowly."},
 }
@@ -192,6 +192,11 @@ static func _load_fine_wine() -> void:
 ## an added stoppage-win share for the Engine room, a multiplier for the rest.
 static func power(key: String) -> float:
 	return float(power_tune.get(key, (SYNERGIES.get(key, {}) as Dictionary).get("power", 1.0)))
+
+
+## A synergy's second effect, where it has one ("power2"; tuned as key + "2").
+static func power2(key: String) -> float:
+	return float(power_tune.get(key + "2", (SYNERGIES.get(key, {}) as Dictionary).get("power2", 1.0)))
 
 
 ## Audits only: a synergy's power to try without a commit ({key: power}).
