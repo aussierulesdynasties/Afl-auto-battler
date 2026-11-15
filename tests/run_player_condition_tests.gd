@@ -54,6 +54,7 @@ func _run() -> void:
 	_gs.settings_path = "user://test_player_condition.cfg"
 	_gs.replay_seed = SUITE_SEED
 	await _t("_test_numbers_match_the_sim")
+	await _t("_test_pot_on_tiles")
 	await _t("_test_rival_shows_none")
 	await _t("_test_pc_cards_name_them")
 	print(Ran.line("PlayerCondition", self))
@@ -177,6 +178,68 @@ func _test_numbers_match_the_sim() -> void:
 	_check(fat2 != null and fat2.text == "22", "The card follows his load (%s)" % (fat2.text if fat2 else "-"))
 
 
+## His potential on every tile of Pick the side (director, 2026-11-15: "the
+## player tiles should also show their POT"): on the oval as OVR/POT under his
+## name, whole on a 390 px phone (the line clips, it never grows); on a card of
+## the players not picked after his rating. The number is the one the game keeps.
+func _test_pot_on_tiles() -> void:
+	var scene: Node = current_scene
+	scene.call("_close_profile")   # the last test left a profile open
+	scene.call("_build")
+	await _settle()
+	_check(root.size.x == 390, "On the phone")
+	var key: Node = scene.find_child("ConditionKey", true, false)
+	var key_words: Array = []
+	if key != null:
+		for l in key.find_children("*", "Label", true, false):
+			key_words.append((l as Label).text)
+	_check(" ".join(key_words).contains("OVR/POT"), "The key names OVR/POT (%s)" % str(key_words))
+	var side: Dictionary = _gs.current_side()
+	var seen := 0
+	for line in ["RUCK", "MID", "WING", "DEF", "FWD"]:
+		for id in side.get(line, []):
+			var p: Dictionary = _gs.list_player(str(id))
+			var want := "%d/%d" % [int(p["overall"]), maxi(int(p["overall"]), int(p.get("potential", p["overall"])))]
+			var sub := scene.find_child("Sub_" + str(id), true, false) as Label
+			if sub == null:
+				_check(scene.find_child("Trial_" + str(id), true, false) != null, "%s's tile has its OVR/POT line" % id)
+				continue
+			seen += 1
+			_check(sub.text.ends_with(" " + want), "%s's tile reads %s (%s)" % [id, want, sub.text])
+			var font: Font = sub.get_theme_font("font")
+			var w := font.get_string_size(sub.text, HORIZONTAL_ALIGNMENT_LEFT, -1, sub.get_theme_font_size("font_size")).x
+			_check(w <= sub.size.x + 0.5, "%s's line is whole, not cut short (%.0f of %.0f px)" % [id, w, sub.size.x])
+			var tile := sub.get_parent().get_parent() as Control
+			_check(tile is Button and tile.get_global_rect().grow(0.5).encloses(sub.get_global_rect()), "%s's line sits inside his tile" % id)
+			_check(sub.get_global_rect().end.x <= 390.5, "...and on the screen")
+	_check(seen >= 18, "Every tile on the oval shows OVR/POT (%d)" % seen)
+	# The players not picked: the first card's POT after his rating, inside the card.
+	var grid: Node = scene.find_child("NotSelected", true, false)
+	_check(grid != null and grid.get_child_count() > 0, "The players not picked are listed")
+	if grid == null or grid.get_child_count() == 0:
+		return
+	var card: Control = grid.get_child(0)
+	var cid := str(card.name).trim_prefix("Card_")
+	var q: Dictionary = _gs.list_player(cid)
+	var pot := scene.find_child("Pot_" + cid, true, false) as Label
+	_check(pot != null and pot.text == "/%d" % maxi(int(q["overall"]), int(q.get("potential", q["overall"]))),
+			"The card's POT is his potential (%s)" % (pot.text if pot else "-"))
+	_check(pot != null and card.get_global_rect().grow(0.5).encloses(pot.get_global_rect()), "...inside his card")
+	_check(pot != null and pot.get_global_rect().end.x <= 390.5, "...and on the screen")
+	# A real tap on that card still picks him (the POT takes no taps), with the
+	# list pulled up over the oval as a phone has it.
+	var tb: Node = scene.find_child("TeamBuilder", true, false)
+	tb.call("set_raised", true, false)
+	await _settle()
+	var at: Vector2 = card.get_global_transform().affine_inverse() * pot.get_global_rect().get_center() if pot != null else card.size * 0.5
+	var why: String = await Tap.tap_at(card, at)
+	await _settle()
+	_check(why == "", "A real tap on his POT reaches the card (%s)" % why)
+	_check(str(tb.call("picked")) == cid, "...and picks him")
+	current_scene.call("_build")
+	await _settle()
+
+
 ## Their side, read-only: his load and mood are his club's business.
 func _test_rival_shows_none() -> void:
 	var scene: Node = current_scene
@@ -184,6 +247,10 @@ func _test_rival_shows_none() -> void:
 	scene.call("_build")
 	await _settle()
 	_check(scene.find_children("Condition_*", "", true, false).is_empty(), "A rival's cards show no fatigue, morale or form")
+	_check(scene.find_children("Pot_*", "", true, false).is_empty(), "...and no POT on a card (his is only scouted)")
+	for sub in scene.find_children("Sub_*", "", true, false):
+		var last: String = (sub as Label).text.split(" ")[-1]
+		_check(not last.contains("/"), "A rival's tile has no OVR/POT (%s)" % (sub as Label).text)
 	_check(scene.find_child("ConditionKey", true, false) == null, "...and no key")
 	scene.set("_view", "mine")
 	scene.call("_build")
