@@ -1676,9 +1676,9 @@ func _tactic_player_mult(side: int, p: Dictionary, purpose: String, ctx: Diction
 	if focused:
 		out *= _focus_mult(slot, purpose, str(ctx.get("zone", "")))
 	# Ball magnet (and the wet-weather player in the wet) wins more of the
-	# ball: a bigger share, and the usage curve fades him that much later,
-	# so the gain survives a big game (bug bash 5: a pick weight alone was
-	# cancelled by the curve).
+	# ball: a bigger share, and the usage curve fades the player that much
+	# later, so the gain survives a big game (bug bash 5: a pick weight alone
+	# was cancelled by the curve).
 	var reach := 1.0
 	if carrying and _trait(p, "ball_magnet"):
 		reach *= BALL_MAGNET
@@ -1736,7 +1736,9 @@ const USAGE_START_FOCUSED := 21.0
 const USAGE_WIDTH := 6.4
 const USAGE_WIDTH_FOCUSED := 5.4
 ## Ball magnet's share of the ball (Traits "ball_magnet"), on the pick and the curve.
-const BALL_MAGNET := 1.10
+## Measured to land the copy's 10% more disposals (bug bash 5 audit: a reach
+## of 1.10 gave +8.7%, since part of the ball comes off the pick).
+const BALL_MAGNET := 1.115
 
 
 ## Soft possession cap. Team disposal volume is unchanged — this only stops one

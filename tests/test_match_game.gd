@@ -1115,7 +1115,7 @@ func _test_bash5_traits() -> void:
 	for side in [0, 1]:
 		for q in (sim.squads[side] as Squad).ground:
 			sim._traits[str(q["id"])] = []
-	# Ball magnet: the usage curve fades him BALL_MAGNET later, so the extra
+	# Ball magnet: the usage curve fades the player BALL_MAGNET later, so the extra
 	# share is not cancelled in a big game.
 	var p: Dictionary = (sim.squads[0] as Squad).ground[0]
 	sim.player_stats[str(p["id"])] = {"disposals": 23.0}

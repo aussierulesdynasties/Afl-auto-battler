@@ -17,13 +17,13 @@ const DEFS := {
 			"text": "Wins 10% more of the ball in general play.",
 			"scout": "Finds the footy all day."},
 	"bull": {"label": "Contested bull", "stat": "contested", "min": 84, "roles": ["MID", "RUCK"],
-			"text": "Wins 15% more clearances, and the side wins more of the stoppages: about BULLSIDE more clearances each. Keeps the ball when tackled 10% more often.",
+			"text": "Wins 15% more clearances, and the side wins about one more clearance a game. Keeps the ball when tackled 10% more often.",
 			"scout": "Wins it at the coalface and gets it out."},
 	"ruck_king": {"label": "Ruck king", "stat": "ruck", "min": 84, "roles": ["RUCK"],
 			"text": "Wins 5% more of the hit-outs, and a hit-out to advantage helps the side win the clearance.",
 			"scout": "Dominates the hit-outs."},
 	"aerial": {"label": "Aerial threat", "stat": "marking", "min": 76, "roles": ["FWD"],
-			"text": "Marks AERIAL% more often in marking contests all over the ground, on the lead and in a pack, and takes more spectacular marks.",
+			"text": "Marks 9% more often in marking contests all over the ground, on the lead and in a pack, and takes more spectacular marks.",
 			"scout": "A strong contested mark inside 50."},
 	"crumber": {"label": "Crumber", "stat": "goalkicking", "min": 55, "roles": ["FWD"], "small": true,
 			"text": "A small forward: twice as often the one at the fall of the ball, and 12% more likely to kick a goal from any shot that is not from a mark.",
@@ -102,7 +102,9 @@ const UNICORN_LINES := ["FWD", "MID", "DEF"]
 const WET_WEATHER := {"label": "Wet-weather player", "contested": 78, "disposal": 72,
 		"text": "In the wet: wins 10% more of the ball and makes 20% fewer clangers.",
 		"scout": "Thrives when it's greasy."}
-const WET_BALL := 1.10
+## Measured to land the copy's 10% more of the ball in the wet (bug bash 5
+## audit: 1.10 gave +7.4% disposals).
+const WET_BALL := 1.135
 const WET_CLANGERS := 0.80
 
 

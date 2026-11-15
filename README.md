@@ -327,17 +327,17 @@ A standout stat earns a trait. Each player has up to two good traits, plus Hothe
 | Trait | Effect |
 |---|---|
 | Ball magnet | 10% more of the ball in general play |
-| Contested bull | 15% more clearances; keeps the ball when tackled more often |
-| Ruck king | 5% more hit-outs |
-| Aerial threat | 6% more forward-50 marks |
-| Crumber | 12% more goals from ground balls |
-| Sharpshooter | +6% goal chance |
-| Playmaker | shots from his deliveries +5% |
+| Contested bull | 15% more clearances, and about one more for the side a game; keeps the ball when tackled more often |
+| Ruck king | 5% more hit-outs; a hit-out to advantage helps the side win the clearance |
+| Aerial threat | 9% more marks in marking contests all over the ground |
+| Crumber | 12% more likely to kick a goal from any shot not from a mark |
+| Sharpshooter | every shot 6% more likely to be a goal |
+| Playmaker | shots from the player's inside-50 deliveries 5% more likely to be goals |
 | Interceptor | 5% more spoils |
-| Lockdown | his opponent's shots −4% |
+| Lockdown | the opponent's shots 4% less likely to be goals |
 | Engine | tires 25% slower |
-| Big-game player | +5% on every stat in the last quarter and in finals |
-| Hothead | 50% more clangers |
+| Big-game player | every rating 5% higher in the player's own contests in the last quarter and in finals |
+| Hothead | 50% more clangers and free kicks against; more 50-metre penalties and reports |
 
 Traits follow the stats, so training can unlock one; the Training screen shows how close a player is. The right mix of traits across the selected 18 switches on a **synergy**:
 - Engine room: 2 bulls
