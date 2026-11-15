@@ -498,11 +498,14 @@ func _momentum_bar() -> Control:
 	var b := Button.new()
 	b.name = "MomentumBar"
 	b.flat = true
-	b.custom_minimum_size = Vector2(0, 30)
+	# A thumb's target (44 px, the phone's floor); the bar's words and meter
+	# keep their size, centred in it.
+	b.custom_minimum_size = Vector2(0, 44)
 	b.pressed.connect(_show_momentum_info)
 	_mom_bar = b
 	var v := UiKit.vbox(2)
 	v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	v.alignment = BoxContainer.ALIGNMENT_CENTER
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(v)
 	var h := UiKit.hbox(6)

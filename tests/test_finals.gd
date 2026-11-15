@@ -187,6 +187,9 @@ func _test_interactive_finals_series() -> void:
 			_check(GameState.pending_match.is_empty(), "The pending match clears")
 			_check(GameState.finals_outcome_line(res) != "",
 					"Every final gets an outcome line (%s)" % str(res["tag"]))
+			var said := GameState.finals_outcome_line(res)
+			_check(not said.contains("!") and not said.to_lower().contains("reseed"),
+					"An outcome line is said plainly, no '!' and no 'reseed' (%s)" % said)
 			if str(res["tag"]).begins_with("QF"):
 				var next := GameState.my_finals_status()
 				_check(next == "bye" or next == "alive",

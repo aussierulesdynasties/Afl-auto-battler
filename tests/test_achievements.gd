@@ -442,6 +442,24 @@ func _test_full_season() -> void:
 			unstamped.append(str(id))
 	_check(unknown.is_empty(), "Only catalogued achievements unlock (%d unlocked; unknown: %s)" % [GameState.achievements.size(), str(unknown)])
 	_check(unstamped.is_empty(), "Each unlock is stamped with its season and club (%s)" % str(unstamped))
+	# Another club's feat is theirs: never "Achievement unlocked" in our news,
+	# and the club is named once.
+	var others := 0
+	var wrong := []
+	for id in GameState.achievements:
+		var club := str(GameState.achievements[id].get("club", ""))
+		var defn := Achievements.definition(str(id))
+		if Achievements.is_coach(defn) or club == GameState.my_club:
+			continue
+		others += 1
+		var want := "%s earn an achievement: %s." % [GameDB.club_name(club), str(defn["name"])]
+		var found := false
+		for n in GameState.news:
+			if str(n.get("kind", "")) == "achievement" and str(n.get("text", "")) == want:
+				found = true
+		if not found:
+			wrong.append(want)
+	_check(wrong.is_empty(), "Another club's achievement reads as theirs, named once (%d of theirs; wrong: %s)" % [others, str(wrong)])
 	var entry: Dictionary = GameState.honour_roll[-1]
 	_check((entry.get("ladder_order", []) as Array).size() == GameState.season.ladder.size()
 			and not (entry.get("finalists", []) as Array).is_empty(),

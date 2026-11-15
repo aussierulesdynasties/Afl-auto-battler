@@ -27,8 +27,12 @@ const WIDE_CLUB := 190
 ## one decimal so the order reads as the preview's (row 177). A tap on a club
 ## says the rest: where it is in its cycle and the list in three years.
 const CLUB_NAME_INSET := 26
-const LADDER_PHONE := [["pos", "#", 24], ["club", "Club", 0], ["p", "P", 26], ["w", "W", 26],
-		["l", "L", 26], ["d", "D", 24], ["pct", "%", 42], ["pts", "Pts", 34], ["rating", "Rating", 46]]
+## On a phone the one-letter columns are too narrow for a thumb (44 px), so
+## their heads are plain titles (PHONE_PLAIN); the club, %, Pts and Rating sort,
+## each at least 44 px wide. "Ladder order" is the way back to the true order.
+const LADDER_PHONE := [["pos", "#", 20], ["club", "Club", 0], ["p", "P", 22], ["w", "W", 22],
+		["l", "L", 22], ["d", "D", 20], ["pct", "%", 44], ["pts", "Pts", 44], ["rating", "Rating", 46]]
+const PHONE_PLAIN := ["pos", "p", "w", "l", "d"]
 const LADDER_WIDE := [["pos", "#", 44], ["club", "Club", WIDE_CLUB], ["p", "P", 32], ["w", "W", 32],
 		["l", "L", 32], ["d", "D", 30], ["pf", "PF", 50], ["pa", "PA", 50], ["pct", "%", 50],
 		["pts", "Pts", 40], ["home", "Home", 68], ["away", "Away", 68], ["form", "Form", 76],
@@ -39,8 +43,8 @@ const LADDER_WIDE := [["pos", "#", 44], ["club", "Club", WIDE_CLUB], ["p", "P", 
 ## (row 84: at 296 units the club column fell to 0 in the header and to the
 ## guernsey's width in the rows, one column off).
 const PHONE_TIGHT := 340.0
-const LADDER_TIGHT := [["pos", "#", 20], ["club", "Club", 0], ["p", "P", 22], ["w", "W", 22],
-		["l", "L", 22], ["d", "D", 20], ["pct", "%", 36], ["pts", "Pts", 30], ["rating", "Rating", 44]]
+const LADDER_TIGHT := [["pos", "#", 18], ["club", "Club", 0], ["p", "P", 18], ["w", "W", 18],
+		["l", "L", 18], ["d", "D", 18], ["pct", "%", 44], ["pts", "Pts", 44], ["rating", "Rating", 44]]
 ## The least a phone's club column takes, header and rows alike: a guernsey.
 const CLUB_MIN_NARROW := 28
 ## What the hub's always-kept scroll bar takes from content_width on a phone
@@ -273,6 +277,23 @@ static func _header(host: Control, specs: Array, width: float, wide := false) ->
 		var key := str(c[0])
 		if key == "form":
 			h.add_child(_plain(str(c[1]), int(c[2]), UiKit.MUTED))
+			continue
+		if not wide and key in PHONE_PLAIN:
+			var t := _plain(str(c[1]), int(c[2]), UiKit.MUTED)
+			t.name = "Head_" + key
+			t.custom_minimum_size.y = 44
+			t.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			h.add_child(t)
+			continue
+		if not wide and key == "club" and int(c[2]) == 0 and width < PHONE_TIGHT:
+			# A small phone's club column is a guernsey wide (CLUB_MIN_NARROW),
+			# too narrow for the word or a thumb: an empty title keeps the rows'
+			# column, and the club sort waits for a wider screen.
+			var e := _plain("", CLUB_MIN_NARROW, UiKit.MUTED)
+			e.name = "Head_club"
+			e.custom_minimum_size.y = 44
+			e.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			h.add_child(e)
 			continue
 		var b := Button.new()
 		b.name = "Sort_" + key

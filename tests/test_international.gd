@@ -245,41 +245,46 @@ func _test_career(state: Node, db: Node) -> void:
 	_check(bool(state.release_player(str(spare["id"])).get("ok", false)), "Adelaide delists a player to make room")
 	_check(state.begin_intake_draft(), "The intake opens")
 	var draft: Draft = state.draft
+	# The first club in the draft order with room takes him: the club is read
+	# from the order, never assumed (a level ladder before round 1 reads A-Z).
+	# The draft runs the rivals' picks up to yours as it opens: one of them may
+	# have taken him already.
+	var taker: String = draft.drafted_by(mine)
 	var guard := 0
 	while not draft.is_finished() and guard < 2000:
 		guard += 1
 		var code: String = draft.current_club()
-		var pick := {}
-		if code == "ADE" and mine != "" and not draft.picked.has(mine):
+		if taker == "" and mine != "" and not draft.picked.has(mine):
 			for q in draft.pool:
-				if str(q["id"]) == mine:
-					pick = q
-		if pick.is_empty():
-			pick = draft._best_ai_pick(code)
+				if str(q["id"]) == mine and draft._draft_pick(code, q):
+					taker = code
+			if taker != "":
+				continue
+		var pick: Dictionary = draft._best_ai_pick(code)
 		if pick.is_empty() or not draft._draft_pick(code, pick):
 			draft._skip_current_pick()
-	var drafted_by_us := false
-	for p in draft.club_lists.get("ADE", []):
-		drafted_by_us = drafted_by_us or str(p["id"]) == mine
-	_check(drafted_by_us, "Adelaide drafted the international prospect")
+	var drafted := false
+	for p in draft.club_lists.get(taker, []):
+		drafted = drafted or str(p["id"]) == mine
+	_check(taker != "" and drafted, "%s is drafted by the first club in the order with room (%s)" % [name_before, taker])
 	var year := int(state.season_year)
 	_check(state.finish_intake_draft(), "The draft commits and the career rolls on")
 	var found := _find(state, mine)
-	_check(not found.is_empty(), "He is on a list next season")
+	_check(not found.is_empty(), "%s is on a list next season" % name_before)
 	# The draft's commit is the season rollover (finish_intake_draft runs the
 	# same _start_next_season as start_next_season): a second season played
 	# and rolled over proved nothing this one does not.
 	_check(int(state.season_year) == year + 1 and str(found.get("intl", "")) != ""
 			and str(found.get("generic_name", "")) == name_before,
-			"He keeps his identity across a season rollover (year %d to %d)" % [year, int(state.season_year)])
+			"%s keeps his identity across a season rollover (year %d to %d)" % [name_before, year, int(state.season_year)])
 	_check(str(found.get("intl", "")) != "" and str(found.get("drafted_type", "")) == "national",
-			"He is an ordinary draftee with his origin kept")
+			"%s is an ordinary draftee with his origin kept" % name_before)
 	var club := str(found.get("club", ""))
-	_check(club == "ADE", "He is at Adelaide")
+	_check(club == taker, "%s is at %s, the club that drafted him (%s)" % [name_before, db.club_name(taker), club])
 	_check(state.save_career() and state.load_career(), "Save and reload")
 	found = _find(state, mine)
 	_check(str(found.get("generic_name", "")) == name_before and str(found.get("intl", "")) != "",
-			"He reloads with his name and origin")
+			"%s reloads with his name and origin" % name_before)
 	_stories(state, found)
 
 

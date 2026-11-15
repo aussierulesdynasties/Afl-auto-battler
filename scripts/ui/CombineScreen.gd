@@ -161,7 +161,7 @@ func _day() -> void:
 		_headline(t)
 	_turned_heads()
 	_body.add_child(UiKit.rule())
-	var note := _words("A quick time doesn't make a footballer. His junior football and your scouts' read are on his sheet: tap a name.",
+	var note := _words("A quick time doesn't make a footballer. His junior football and our scouts' read are on his sheet: tap a name.",
 			UiKit.TEXT, UiKit.SECONDARY)
 	note.name = "CombineCaveat"
 	_body.add_child(note)
@@ -313,7 +313,7 @@ func _kind(p: Dictionary) -> String:
 		var went := draft.drafted_by(id)
 		var pick := int(draft.pick_details(id).get("pick", 0))
 		if went == club:
-			return "Pick %d, on your list" % pick
+			return "Pick %d, on our list" % pick
 		return "Pick %d, %s" % [pick, GameDB.club_name(went)]
 	return PlayerProfile.player_type(p)
 

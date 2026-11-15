@@ -132,6 +132,8 @@ static func signed_line(p: Dictionary, club: String, was: String) -> String:
 	var kind := str(p.get("drafted_type", ""))
 	if was == "pool" and kind == "national" and pick > 0:
 		return "%s have taken %s with pick %d in the %d National Draft." % [cname, name, pick, int(p.get("drafted_year", 0))]
+	if was == "pool" and kind == RookieList.KIND:
+		return "%s have taken %s in the Rookie Draft." % [cname, name]
 	if was == "pool" and kind == MidseasonDraft.KIND:
 		return "%s have taken %s in the mid-season rookie draft." % [cname, name]
 	return "%s have signed %s." % [cname, name]
