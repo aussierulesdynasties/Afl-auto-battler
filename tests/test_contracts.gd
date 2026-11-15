@@ -19,6 +19,7 @@ func run() -> void:
 	_t("_test_offseason_flow")
 	_t("_test_offseason_books_are_next_seasons")
 	_t("_test_real_retirements_are_retirements")
+	_t("_test_real_delistings")
 	_t("_test_list_costs")
 	_t("_test_fa_weights")
 	_t("_test_market_test")
@@ -97,6 +98,10 @@ func _to_offseason() -> void:
 	GameState.ensure_finals()
 	while not GameState.season.is_season_over():
 		GameState.advance()
+	# A strong season can bring a rival board's letter, and the off-season waits for his
+	# answer (ClubMoves._rival_letter). These tests are about his own club's off-season:
+	# he stays put, so the letter is a no and the off-season opens.
+	ClubMoves.settle_letter(GameState)
 
 
 ## L4 (row T1.R26, director 2026-11-10): the list's one-sided options cost
@@ -354,8 +359,8 @@ func _test_offseason_books_are_next_seasons() -> void:
 
 ## A real player of a Legacy start retires at his real time only when his last
 ## real season was a retirement: REAL_RETIRE_AGE or older. Younger, his club
-## delisted him, and the sim's clubs make that call (found 2026-11-15: a 1990
-## start retired 12 a club, nine of them 26 or younger).
+## delisted him, and his contract ends then (_test_real_delistings; found
+## 2026-11-15: a 1990 start retired 12 a club, nine of them 26 or younger).
 func _test_real_retirements_are_retirements() -> void:
 	var vet := {"id": "rr_vet", "age": 31.0, "overall": 70, "real_last": 1990}
 	var kid := {"id": "rr_kid", "age": 22.0, "overall": 50, "real_last": 1990}
@@ -365,6 +370,54 @@ func _test_real_retirements_are_retirements() -> void:
 			"A 22-year-old whose real career ended in 1990 (delisted) is not retired by the record")
 	var edge := {"id": "rr_edge", "age": Prospects.REAL_RETIRE_AGE + 2.0, "overall": 60, "real_last": 1990}
 	_check(Prospects.should_retire(edge, 1992), "Aged %d in his last real season, it was his retirement" % int(Prospects.REAL_RETIRE_AGE))
+
+
+
+## A real player whose AFL career ended before REAL_RETIRE_AGE was delisted
+## then (director, 2026-11-13: careers end "about when he really did ...
+## whatever the sim makes of his age or rating"): his contract ends that
+## off-season at every club. A rival lets him go, even one of its best; on
+## your list he is out of contract and you decide.
+func _test_real_delistings() -> void:
+	var kid := {"id": "rd_kid", "age": 22.0, "overall": 50, "real_last": 1990}
+	var vet := {"id": "rd_vet", "age": 31.0, "overall": 70, "real_last": 1990}
+	_check(Prospects.real_delisting_due(kid, 1992) and not Prospects.real_delisting_due(kid, 1990),
+			"A 22-year-old whose real career ended in 1990 is delisted by 1992, not before his last season")
+	_check(not Prospects.real_delisting_due(vet, 1992), "A 31-year-old's last real season is his retirement, not a delisting")
+	_check(not Prospects.real_delisting_due({"id": "rd_none", "age": 22.0, "overall": 50}, 1992),
+			"A player with no real record is the sim's")
+	_new_season()
+	var rival := ""
+	for code in GameState.season.lists:
+		if code != GameState.my_club:
+			rival = str(code)
+			break
+	var theirs: Dictionary = {}
+	for p in GameState.season.lists[rival]:
+		if theirs.is_empty() or int(p.get("overall", 0)) > int(theirs.get("overall", 0)):
+			theirs = p
+	var mine: Dictionary = {}
+	for p in GameState.my_list:
+		if mine.is_empty() or int(p.get("overall", 0)) > int(mine.get("overall", 0)):
+			mine = p
+	# His real career ended last season, at 22.
+	for p in [theirs, mine]:
+		p["age"] = 24.0
+		p["real_last"] = GameState.season_year - 1
+		p["contract_years"] = 3
+	_to_offseason()
+	ClubMoves.settle_letter(GameState)
+	GameState.open_offseason()
+	# Released, he is not on the market: no club signs him, his career ends.
+	_check(not (GameState.season.lists[rival] as Array).has(theirs) and not GameState.free_agents.has(theirs)
+			and str(theirs.get("released_by", "")) == rival and GameState.departed_names.has(str(theirs["id"])),
+			"%s let their best player go when his real club delisted him, and his career ends (%s; off-season of %d in %d, real_end %s, %d years, retiring %s, released_by '%s')" % [
+			rival, GameDB.player_display_name(theirs), GameState.offseason_year, GameState.season_year,
+			str(theirs.get("real_end", "-")), int(theirs.get("contract_years", -1)), str(GameState.retiring_now(theirs)),
+			str(theirs.get("released_by", ""))])
+	_check(GameState.my_list.has(mine) and Contracts.expiring(GameState.my_list).has(mine),
+			"Yours is out of contract, and the decision is yours (%s)" % GameDB.player_display_name(mine))
+	_check(not GameState.retiring_now(mine) and not GameState.retiring_now(theirs), "It is a delisting, not a retirement")
 
 
 func _test_offseason_flow() -> void:
@@ -2562,7 +2615,6 @@ func _test_ask_price() -> void:
 		GameState.replay_seed = 6701
 		GameState.start_season(club, GameDB.club_list(club))
 		_to_offseason()
-		ClubMoves.settle_letter(GameState)   # a coach staying put says no to a rival board's letter; the off-season waits for his answer
 		seasons += 1
 		var dealt := 0
 		for rival in GameDB.active_clubs(GameState.season_year):
