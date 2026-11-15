@@ -55,15 +55,20 @@ static func pick(gs) -> Array:
 	return cards
 
 
-## The week your season ends: knocked out, or the Grand Final
-## played. One card, once a season (the story's season counts hold the mark).
+## The week your season ends: out of the finals once the ladder is
+## settled, knocked out, or the Grand Final played. One card, once a season
+## (the story's season counts hold the mark). A side that missed the finals
+## gets its card in the first finals week, or its losing-year cards
+## (ladder_min) could never be dealt.
 const SEASON_END_MARK := "_season_end"
 
 
 static func season_end_due(gs) -> bool:
 	if gs.season == null or not gs.season.is_regular_done():
 		return false
-	if not ["eliminated", "premier", "runner_up"].has(gs.my_finals_status()):
+	var status: String = gs.my_finals_status()
+	var missed: bool = status == "" and not gs.season.finals.is_empty()
+	if not missed and not ["eliminated", "premier", "runner_up"].has(status):
 		return false
 	StoryEngine.ensure(gs.story)
 	return not (gs.story["season"] as Dictionary).has(SEASON_END_MARK)
@@ -118,7 +123,9 @@ static func club_facts(gs, week: int, ph: String) -> Dictionary:
 			"ladder": gs.my_position(), "board": gs.board_confidence(), "fit_count": fit,
 			"run_games": MatchNotes.count_word(Backing.RUN_GAMES),
 			"finals_week": finals_stage(gs, week) if ph == "finals" or ph == "season_end" else 0,
-			"pre_week": gs.preseason_week() if ph == "preseason" else 0, "premiers": _premiers_last_year(gs)}
+			"pre_week": gs.preseason_week() if ph == "preseason" else 0, "premiers": _premiers_last_year(gs),
+			"club_deck": deck_code(str(gs.my_club)), "opp_deck": _opponent_deck(gs),
+			"controversies": 0 if gs.get("controversies") != null and not bool(gs.get("controversies")) else 1}
 	facts.merge(_leader_facts(gs), true)
 	facts.merge(_finals_facts(gs, ph), true)
 	facts.merge(papers_facts(gs), true)
@@ -458,6 +465,29 @@ static func _leader_facts(gs) -> Dictionary:
 ## The opponent's name in a week with none (a bye); the cards about this week's
 ## opponent wait it out (StoryEngine.names_opp).
 const NO_OPP := "the opposition"
+
+
+## The club deck a club draws from (StoryDeck.CLUB_DECKS): its code, except that
+## the Brisbane club draws the Bears' deck while it plays as the Bears.
+static func deck_code(code: String) -> String:
+	var c := GameDB.club_code(code)
+	if c == "BRL" and GameDB.club_short(c) == "Bears":
+		return "BRB"
+	return c
+
+
+## This week's opponent's deck code ("" with no opponent).
+static func _opponent_deck(gs) -> String:
+	var opp: Dictionary = gs.my_next_opponent()
+	if not opp.is_empty():
+		return deck_code(str(opp["code"]))
+	if gs.season.is_regular_done() and not gs.season.is_season_over():
+		for m in gs.season.finals_week_matches():
+			if str(m["home"]) == gs.my_club:
+				return deck_code(str(m["away"]))
+			if str(m["away"]) == gs.my_club:
+				return deck_code(str(m["home"]))
+	return ""
 
 
 static func _opponent_name(gs) -> String:
@@ -1039,6 +1069,18 @@ static func _apply(gs, e: Dictionary, p: Dictionary, facts: Dictionary, applied:
 			gs.dev_talk(p, "promise")
 		"no_promise":
 			gs.dev_talk(p, "depth")
+		"odds":
+			# A roll with its odds on the card, from the save's seed: the same save
+			# answers the same way.
+			var won := StoryEngine.risk_hit(int(gs.season.seed), int(facts.get("year", 0)), int(facts.get("round", 0)),
+					"%s|odds|%s" % [facts.get("_tid", ""), str(e.get("chance", 0))], int(e.get("chance", 0)))
+			var said: PackedStringArray = []
+			for ne in (e.get("hit" if won else "miss", []) as Array):
+				var l := _apply(gs, ne, p, facts, applied)
+				if l != "":
+					said.append(l)
+			var rr := StoryEngine.fill(str(e.get("hit_result" if won else "miss_result", "")), facts)
+			return (rr + " " + " ".join(said)).strip_edges()
 		"delegate":
 			# Left to the captain: his Leadership and his trust in you decide, by the
 			# rule the choice printed. No dice.

@@ -20,6 +20,7 @@ func run() -> void:
 	GameDB.reload()
 	_t("_test_rules")
 	_t("_test_season_flow")
+	_t("_test_season_end_card_for_non_finalist")
 	_t("_test_unavailable_not_left_out")
 	_t("_test_events")
 	_t("_test_backing_rules")
@@ -219,6 +220,39 @@ func _test_season_flow() -> void:
 	_check(after_cards.is_empty(), "No event cards once the season is over, bar the season-end one (%s, %s)" % [str(after_cards), GameState.my_finals_status()])
 
 
+## A side that misses the finals gets its season-end card in the first
+## finals week, so the club decks' losing-year cards (ladder_min) can be
+## dealt: Brisbane last on the ladder may hear the whispers of going home.
+func _test_season_end_card_for_non_finalist() -> void:
+	GameState.reset()
+	GameState.start_season("BRL", GameDB.club_list("BRL"))
+	GameState._settle_week_event()
+	var season = GameState.season
+	for code in season.ladder:
+		var row: Dictionary = season.ladder[code]
+		row["w"] = 0 if str(code) == "BRL" else 10
+		row["pts"] = int(row["w"]) * 4
+	season.round_index = season.fixture.size()
+	GameState.ensure_finals()
+	_check(GameState.my_finals_status() == "", "Brisbane, last, are not in the finals")
+	_check(ClubStories.season_end_due(GameState), "A side out of the finals is due its season-end card")
+	var whispers := StoryDeck.by_id(StoryDeck.all(), "brl_go_home_whispers")
+	var ctx: Dictionary = ClubStories.context(GameState, "season_end")
+	var w := StoryEngine.week_abs(int(ctx.get("year", 2000)), int(ctx.get("week", 0)))
+	_check(not whispers.is_empty() and not StoryEngine.eligible_subject(whispers, ctx, GameState.story, w, RandomNumberGenerator.new()).is_empty(),
+			"Brisbane's losing-year card can be dealt from last place")
+	var cards: Array = ClubStories.pick(GameState)
+	var ids := []
+	for c in cards:
+		ids.append(str(c.get("tid", "")))
+	var all_end := not ids.is_empty()
+	for id in ids:
+		if not (StoryDeck.by_id(StoryDeck.all(), id).get("phase", []) as Array).has("season_end"):
+			all_end = false
+	_check(all_end, "The card dealt is a season-end card (%s)" % str(ids))
+	_check(not ClubStories.season_end_due(GameState), "Once a season: no second season-end card")
+
+
 ## Through a real round (GameState._after_round): a player whose injury or
 ## suspension runs out at this very round's tick could not play, so he is not
 ## "left out while fit", at your club or a rival's, and a game you promised
@@ -317,8 +351,13 @@ func _test_events() -> void:
 		if not (opts.size() >= 2 and int(e["default"]) < opts.size()):
 			_check(false, "Event %s offers a real choice" % e["key"])
 	_check(quiet > 5 and quiet < 35, "Some weeks are quiet (%d of 59)" % quiet)
-	_check(seen.has("board_wants_answers") and seen.has("training_extra_session"),
-			"Losing streaks bring the board to your door (%s)" % str(seen.keys()))
+	_check(seen.has("board_wants_answers"), "Losing streaks bring the board to your door (%s)" % str(seen.keys()))
+	# The extra session is one card of a big deck: it must be dealable on a
+	# losing run, not drawn inside these 59 weeks (more cards, fewer draws each).
+	var extra := StoryDeck.by_id(StoryDeck.all(), "training_extra_session")
+	_check(not extra.is_empty() and not StoryEngine.eligible_subject(extra, ctx, StoryEngine.new_state(),
+			StoryEngine.week_abs(int(ctx.get("year", 2000)), 5), RandomNumberGenerator.new()).is_empty(),
+			"A losing run can bring the extra training session")
 	# Resolving: rest a sore star and he sits out. The deck walk above read a
 	# context copy and its own story state, so the same fresh career serves.
 	var star: Dictionary = GameState.my_list[0]

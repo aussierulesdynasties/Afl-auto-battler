@@ -1,0 +1,486 @@
+[
+	{
+		"id": "pad_prison_bars",
+		"club": "PAD",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"when": {"opp_deck": "ADE"},
+		"title": ["Prison bars for the Showdown"],
+		"text": ["The members want the old black-and-white prison bars back for the home derby. The league has knocked that guernsey back before, and the board will only ask if you back it in public."],
+		"choices": [
+			{"key": "push", "label": "Back the members and push the league",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The coach fought for the old jumper"}, {"op": "odds", "chance": 70, "hit": [{"op": "board", "d": 2, "was": "members"}], "miss": [{"op": "board", "d": -2, "was": "league goodwill"}], "hit_result": "The league gives ground. The bars are back for the derby.", "miss_result": "The league says no. The club spent its goodwill for nothing."}],
+			 "result": "You put your name to it. The members love that you asked."},
+			{"key": "leave", "label": "Leave it to the administrators",
+			 "effects": [{"op": "board", "d": 2}, {"op": "culture", "strand": "together", "d": -1, "why": "The members saw the coach shrug at the old jumper"}],
+			 "result": "The board is glad you picked no fight. The members noticed the shrug."}
+		]
+	},
+	{
+		"id": "pad_showdown_week",
+		"club": "PAD",
+		"controversy": false,
+		"category": "rivals",
+		"subject": {"kind": "club"},
+		"when": {"opp_deck": "ADE"},
+		"title": ["Showdown week"],
+		"text": ["The whole city splits down the middle. The players feel it from Monday: talkback, school-gate banter, the sweeps at work. Do you lean into it or shut it out?"],
+		"choices": [
+			{"key": "crank", "label": "Crank it up: this is the one that matters",
+			 "effects": [{"op": "morale", "d": 5, "who": "all"}, {"op": "slow_start", "chance": 15, "who": "side"}],
+			 "result": "The group is buzzing all week. Some of them are wound tight."},
+			{"key": "normal", "label": "Tell them it's four points like any other",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "You kept derby week normal"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "A normal week at Alberton. The supporters wanted more fire."}
+		]
+	},
+	{
+		"id": "pad_showdown_presser",
+		"club": "PAD",
+		"controversy": false,
+		"category": "rivals",
+		"subject": {"kind": "club"},
+		"when": {"opp_deck": "ADE", "losing_run_min": 1},
+		"title": ["The other half is crowing"],
+		"text": ["You lost last week, and the Crows' fans are owning the city before Saturday's Showdown. The press conference is in ten minutes, and the room wants to know if it hurts."],
+		"choices": [
+			{"key": "own", "label": "Own it: we were beaten and it stings",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The coach owned the loss in front of the cameras"}, {"op": "board", "d": 2}, {"op": "morale", "d": -3, "who": "all"}],
+			 "result": "A straight answer. The loss stays front and centre all week."},
+			{"key": "swipe", "label": "Have a crack at the umpiring and the other mob",
+			 "effects": [{"op": "morale", "d": 4, "who": "all"}, {"op": "odds", "chance": 20, "hit": [{"op": "board", "d": -5}], "miss": [{"op": "board", "d": -3}], "hit_result": "The league fines the club. The board is filthy.", "miss_result": "No fine, but the board did not enjoy the headlines."}],
+			 "result": "The players loved you standing up for them."},
+			{"key": "quiet", "label": "Say little and get out",
+			 "effects": [{"op": "board", "d": 1}, {"op": "culture", "strand": "together", "d": -1, "why": "The supporters wanted their coach to say something"}],
+			 "result": "Nothing anyone can quote back at you. The supporters wanted more."}
+		]
+	},
+	{
+		"id": "pad_exist_to_win",
+		"club": "PAD",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"phase": ["preseason"],
+		"title": ["We exist to win premierships"],
+		"text": ["The motto is painted above the rooms. At the season launch the board wants you to say it into the cameras: premiership or bust."],
+		"choices": [
+			{"key": "say", "label": "Say it, and mean it",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 2, "why": "The coach said the motto out loud"}, {"op": "board", "d": 3}, {"op": "loss_sting", "chance": 20, "d": -4, "who": "side"}],
+			 "result": "Premiership or bust. Every loss this year will be measured against it."},
+			{"key": "target", "label": "Back the motto, but set your own target: play finals",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The coach set a target the group can measure"}, {"op": "board", "d": -4}],
+			 "result": "A measured line. Some on the board and in the stands hear it as soft."}
+		]
+	},
+	{
+		"id": "pad_chokers",
+		"club": "PAD",
+		"controversy": false,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"phase": ["regular", "finals"],
+		"when": {"ladder_max": 4},
+		"title": ["They say Port chokes"],
+		"text": ["The tag has followed the club for years: a good side goes into September and comes out with nothing. A columnist has written it again this week."],
+		"choices": [
+			{"key": "confront", "label": "Show the players the column",
+			 "effects": [{"op": "morale", "d": 4, "who": "all"}, {"op": "culture", "strand": "ambition", "d": 1, "why": "The group took the chokers tag personally"}, {"op": "slow_start", "chance": 15, "who": "side"}],
+			 "result": "It's on the wall in the rooms. It's in their heads now too."},
+			{"key": "bin", "label": "Bin it and never mention it",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "You did not let the papers set the agenda"}, {"op": "odds", "chance": 10, "hit": [{"op": "board", "d": -2}], "hit_result": "The tag gets louder, and the board starts asking about it."}],
+			 "result": "Not a word about it at the club."}
+		]
+	},
+	{
+		"id": "pad_alberton_open",
+		"club": "PAD",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["Open the gates at Alberton"],
+		"text": ["The old Magpie faithful still come down to lean on the fence at Alberton. They want a public session on Sunday morning."],
+		"choices": [
+			{"key": "open", "label": "Open the gates",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The Port came down to watch"}, {"op": "forgo_xp", "d": 3, "who": "side"}],
+			 "result": "The fence is lined three deep. The session is lighter for it."},
+			{"key": "closed", "label": "Keep it closed; the work comes first",
+			 "effects": [{"op": "xp", "d": 6, "who": "side"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "A full session behind closed gates. The faithful went home."}
+		]
+	},
+	{
+		"id": "pad_old_magpies",
+		"club": "PAD",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["The old Magpies feel left out"],
+		"text": ["Old premiership players from the black-and-white Magpies, there long before the Power, say the AFL side has forgotten them."],
+		"choices": [
+			{"key": "host", "label": "Host them at the next home game",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "You brought the old Magpies inside"}, {"op": "board", "d": 3, "was": "members"}, {"op": "slow_start", "chance": 10, "who": "side"}],
+			 "result": "The old boys are in the rooms for the anthem. Game-day routine goes out the window."},
+			{"key": "letter", "label": "Send a letter and shout them lunch",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "Game day stayed about the game"}, {"op": "culture", "strand": "together", "d": -1, "why": "The old Magpies got a letter, not a seat"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "Game day is untouched. The old Magpies feel kept at arm's length."}
+		]
+	},
+	{
+		"id": "pad_number_one",
+		"club": "PAD",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "player", "pick": "random", "where": {"captain": true}},
+		"title": ["The No. 1 guernsey"],
+		"text": ["At Port the No. 1 goes to the captain, and it has for generations. {name} has worn his own number since he was drafted and would like to keep it."],
+		"choices": [
+			{"key": "tradition", "label": "He wears the No. 1",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The No. 1 still belongs to the captain"}, {"op": "board", "d": 2, "was": "members"}, {"op": "trust", "d": -3, "why": "You made him give up his number"}],
+			 "result": "{first} pulls on the No. 1. He does it for the club, not for himself."},
+			{"key": "keep", "label": "Let him keep his number",
+			 "effects": [{"op": "trust", "d": 4, "why": "You let him keep his own number"}, {"op": "morale", "d": 4, "who": "subject"}, {"op": "culture", "strand": "standards", "d": -1, "why": "The captain's number went unworn"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "{first} is grateful. Some of the old supporters grumble."}
+		]
+	},
+	{
+		"id": "pad_state_league_run",
+		"club": "PAD",
+		"controversy": false,
+		"category": "selection",
+		"subject": {"kind": "player", "pick": "random", "where": {"selected": false, "fit": true, "games_max": 20, "age_max": 22}},
+		"title": ["A weekend with the state-league side"],
+		"text": ["{name} missed selection. The club's state-league side plays Saturday at Alberton and its coach wants him. Or he could stay with the seniors and do extra craft work."],
+		"choices": [
+			{"key": "down", "label": "Send him down to play",
+			 "effects": [{"op": "xp", "d": 6, "who": "subject"}, {"op": "morale", "d": -4, "who": "subject"}, {"op": "odds", "chance": 10, "hit": [{"op": "sore"}], "hit_result": "He comes off with a knock."}],
+			 "result": "{first} plays a real game with real contact. He sees it as a demotion."},
+			{"key": "stay", "label": "Keep him with the seniors",
+			 "effects": [{"op": "morale", "d": 2, "who": "subject"}, {"op": "trust", "d": 2, "why": "You kept him close to the seniors"}, {"op": "forgo_xp", "d": 4, "who": "subject"}],
+			 "result": "{first} does his craft work. There's no game in it."}
+		]
+	},
+	{
+		"id": "pad_family_name",
+		"club": "PAD",
+		"controversy": false,
+		"category": "contracts",
+		"subject": {"kind": "club"},
+		"title": ["A family name returns"],
+		"text": ["The son of a Port great is coming through the junior grades, and the supporters already have his father's number picked out. The recruiters rate him a maybe."],
+		"choices": [
+			{"key": "commit", "label": "Commit to him early and say so",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "Port looks after its families"}, {"op": "odds", "chance": 40, "hit": [{"op": "board", "d": -3}], "hit_result": "He never makes it. The recruiters' doubts were right."}],
+			 "result": "The family name is on the list. The supporters are thrilled."},
+			{"key": "wait", "label": "Keep your options open until the draft",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The list was built on the recruiters' rating, not the surname"}, {"op": "board", "d": -2, "was": "members"}, {"op": "odds", "chance": 25, "hit": [{"op": "morale", "d": -2, "who": "all"}], "hit_result": "A rival takes him, and you hear about it every time he plays."}],
+			 "result": "No promises. The family hears about it from the supporters."}
+		]
+	},
+	{
+		"id": "pad_scarves_up",
+		"club": "PAD",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["Scarves up"],
+		"text": ["The home crowd's pre-game ritual is a club favourite: scarves held high, the whole ground singing. The strength coach wants the players warming up instead of standing through it."],
+		"choices": [
+			{"key": "line_up", "label": "Everyone lines up for the ritual",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The players stood with the crowd"}, {"op": "board", "d": 2, "was": "members"}, {"op": "slow_start", "chance": 10, "who": "side"}],
+			 "result": "The ground sings, and the players stand cold through all of it."},
+			{"key": "warm", "label": "Finish the warm-ups; the crowd sings without them",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -3, "was": "members"}, {"op": "culture", "strand": "together", "d": -1, "why": "The crowd sang to an empty ground"}],
+			 "result": "The side is warm at the bounce. The crowd noticed who was missing."}
+		]
+	},
+	{
+		"id": "pad_power_cup",
+		"club": "PAD",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["The Aboriginal Power Cup"],
+		"text": ["The club's carnival for First Nations high-school students reaches its finals, and the kids want the senior players there. It falls on a main training day."],
+		"choices": [
+			{"key": "all", "label": "Send the whole list",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The list turned up for the kids"}, {"op": "board", "d": 2}, {"op": "forgo_xp", "d": 4, "who": "side"}],
+			 "result": "The whole list is on the boundary. Training is cut short."},
+			{"key": "some", "label": "Send the Indigenous players and the captain",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The club sent its own to the carnival"}, {"op": "board", "d": 1}, {"op": "forgo_xp", "d": 1, "who": "side"}],
+			 "result": "A small group goes. The kids get their heroes for the afternoon."},
+			{"key": "train", "label": "Train as planned and send a video message",
+			 "effects": [{"op": "xp", "d": 6, "who": "side"}, {"op": "board", "d": -3}, {"op": "culture", "strand": "together", "d": -1, "why": "The kids got a video instead of the players"}],
+			 "result": "A full session. The kids get a video on the big screen."}
+		]
+	},
+	{
+		"id": "pad_trip_north",
+		"club": "PAD",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "player", "pick": "highest:games", "where": {"games_min": 30, "fit": true}},
+		"title": ["A trip to the communities"],
+		"text": ["{name} wants to lead a three-day club trip to remote communities in the state's far north between games: clinics, school visits and a long drive each way."],
+		"choices": [
+			{"key": "back", "label": "Back the trip",
+			 "effects": [{"op": "trust", "d": 5, "why": "You backed his trip to the communities"}, {"op": "culture", "strand": "together", "d": 1, "why": "He took the club to the communities"}, {"op": "heavy_legs", "who": "subject"}, {"op": "odds", "chance": 10, "hit": [{"op": "sore"}], "hit_result": "The long drive home leaves him sore."}],
+			 "result": "{first} comes back with stories and tired legs."},
+			{"key": "shorten", "label": "Ask him to keep it to one day",
+			 "effects": [{"op": "fresh", "who": "subject"}, {"op": "trust", "d": -3, "why": "You cut his trip short"}],
+			 "result": "One day up north and back. He's fresh, and a little let down."}
+		]
+	},
+	{
+		"id": "pad_kaurna_country",
+		"club": "PAD",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["A session on Kaurna country"],
+		"text": ["The Indigenous players want the whole list to spend a session with a Kaurna elder, learning the language and history of the land the club stands on, starting with Yartapuulti, the Kaurna name for Port Adelaide."],
+		"choices": [
+			{"key": "full", "label": "Give it the full session",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The list learned whose country the club stands on"}, {"op": "morale", "d": 2, "who": "all"}, {"op": "forgo_xp", "d": 4, "who": "side"}],
+			 "result": "The whole list sits with the elder. Nobody looks at the clock."},
+			{"key": "lunch", "label": "Fit it into a lunch break",
+			 "effects": [{"op": "xp", "d": 3, "who": "side"}, {"op": "culture", "strand": "together", "d": -1, "why": "The elder got a lunch break, not a session"}, {"op": "morale", "d": -1, "who": "all"}],
+			 "result": "Training runs as planned. The Indigenous players wanted more."}
+		]
+	},
+	{
+		"id": "pad_bank_wants_money",
+		"club": "PAD",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"when": {"losing_run_min": 4},
+		"title": ["The bank wants its money"],
+		"text": ["Crowds are down, the debt is up, and the board says the club can't pay its bills without cuts. They want the football department to take the first hit: fewer assistants, cheaper travel."],
+		"choices": [
+			{"key": "cut", "label": "Take the cut for the club",
+			 "effects": [{"op": "board", "d": 5}, {"op": "forgo_xp", "d": 6, "who": "side"}],
+			 "result": "The football department shrinks. The club steadies."},
+			{"key": "fight", "label": "Fight it: cut somewhere other than football",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The football staff saw you fight for them"}, {"op": "board", "d": -5}, {"op": "odds", "chance": 25, "hit": [{"op": "forgo_xp", "d": 4, "who": "side"}], "hit_result": "The board goes over your head. The cuts happen anyway."}],
+			 "result": "You go to war for the football department."},
+			{"key": "public", "label": "Go public and ask the members to help",
+			 "effects": [{"op": "odds", "chance": 50, "hit": [{"op": "board", "d": 6, "was": "members"}], "miss": [{"op": "board", "d": -3}, {"op": "morale", "d": -2, "who": "all"}], "hit_result": "The members' drive covers the gap.", "miss_result": "The drive falls flat, and the players read about the money every day."}],
+			 "result": "The appeal goes out to every Port household."}
+		]
+	},
+	{
+		"id": "pad_heartland_drive",
+		"club": "PAD",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["Membership drive in the heartland"],
+		"text": ["Marketing wants players at shopping centres and local footy clubs from Semaphore to the northern suburbs on Thursday afternoons for a month."],
+		"choices": [
+			{"key": "every", "label": "Send them out every week",
+			 "effects": [{"op": "board", "d": 7, "was": "members"}, {"op": "heavy_legs", "who": "side"}],
+			 "result": "The heartland signs up in numbers. The players lose their recovery afternoons."},
+			{"key": "once", "label": "Once, with the leadership group only",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The leaders went out to the Port's own suburbs"}, {"op": "board", "d": -1}],
+			 "result": "The leaders do one afternoon. Marketing wanted more."}
+		]
+	},
+	{
+		"id": "pad_hard_times_wharf",
+		"club": "PAD",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["Hard times on the wharf"],
+		"text": ["A big employer down at the Port is closing. Hundreds of jobs are going in the club's own streets, plenty of members among them, and the community asks the club to stand up."],
+		"choices": [
+			{"key": "fundraiser", "label": "Players host a fundraiser and hand out free tickets",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The club stood with the Port"}, {"op": "board", "d": 1, "was": "members"}, {"op": "forgo_xp", "d": 2, "who": "side"}],
+			 "result": "The players are out in the streets. The gate takes a hit."},
+			{"key": "donate", "label": "The club donates; the football carries on",
+			 "effects": [{"op": "board", "d": 1}, {"op": "culture", "strand": "together", "d": -2, "why": "The Port wanted the players, not a cheque"}],
+			 "result": "A cheque goes to the families. The players stay on the track."}
+		]
+	},
+	{
+		"id": "pad_other_magpies",
+		"club": "PAD",
+		"controversy": false,
+		"category": "rivals",
+		"subject": {"kind": "club"},
+		"when": {"opp_deck": "COL"},
+		"title": ["The other Magpies have a dig"],
+		"text": ["Collingwood's people have told the paper there's only one set of black-and-white Magpies in this competition. Your supporters are filling talkback."],
+		"choices": [
+			{"key": "bite", "label": "Bite: Port were Magpies first",
+			 "effects": [{"op": "morale", "d": 4, "who": "all"}, {"op": "board", "d": 1, "was": "members"}, {"op": "slow_start", "chance": 15, "who": "side"}],
+			 "result": "The supporters love it. The players are wound right up."},
+			{"key": "laugh", "label": "Laugh it off",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "You let the footy do the talking"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "You laugh it off. Talkback wanted a scrap."}
+		]
+	},
+	{
+		"id": "pad_norwood_boy",
+		"club": "PAD",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["A Norwood boy in the prison bars"],
+		"text": ["One of the new recruits grew up barracking for Norwood, the club's oldest enemy from the local league. A supporters' page has dug up a photo of him as a kid in the red and blue."],
+		"choices": [
+			{"key": "joke", "label": "Make a joke of it at the press conference",
+			 "effects": [{"op": "morale", "d": 1, "who": "all"}, {"op": "odds", "chance": 80, "hit": [{"op": "board", "d": 2, "was": "members"}], "miss": [{"op": "board", "d": -3, "was": "members"}], "hit_result": "The joke lands. The supporters take him in.", "miss_result": "The joke falls flat, and the old Port supporters take it badly."}],
+			 "result": "The room laughs, and so does the new boy."},
+			{"key": "quiet", "label": "Say nothing; let his football win them over",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "You let his football do the talking"}, {"op": "morale", "d": -1, "who": "all"}],
+			 "result": "The club says nothing. The ribbing rolls on for a fortnight."}
+		]
+	},
+	{
+		"id": "pad_summer_hills",
+		"club": "PAD",
+		"controversy": false,
+		"category": "training",
+		"subject": {"kind": "club"},
+		"phase": ["preseason"],
+		"title": ["The Port way: summer hills"],
+		"text": ["The senior players want to bring back the brutal summer sandhill and hill runs the old Port sides were built on. The fitness staff think it is old-fashioned."],
+		"choices": [
+			{"key": "hills", "label": "Back the senior players: hills",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "Port trains hard"}, {"op": "running", "d": 1}, {"op": "odds", "chance": 15, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "The hills take their toll. Legs are still heavy by round one."}],
+			 "result": "Up and down the sandhills until they can't stand."},
+			{"key": "program", "label": "Back the fitness staff's program",
+			 "effects": [{"op": "xp", "d": 4, "who": "side"}, {"op": "culture", "strand": "together", "d": -1, "why": "The senior players were overruled on how Port trains"}],
+			 "result": "The modern program it is. The senior players grumble."}
+		]
+	},
+	{
+		"id": "pad_homesick",
+		"club": "PAD",
+		"controversy": false,
+		"category": "family",
+		"private": true,
+		"subject": {"kind": "player", "pick": "lowest:age", "where": {"age_max": 21}},
+		"title": ["Homesick in Adelaide"],
+		"text": ["{name} has moved out of home for the first time and is struggling to settle. His manager says he might ask to go home when his contract is up."],
+		"choices": [
+			{"key": "family", "label": "Fly his family over for a fortnight, on the club",
+			 "effects": [{"op": "morale", "d": 6, "who": "subject"}, {"op": "trust", "d": 4, "why": "The club flew his family over"}, {"op": "board", "d": -2, "was": "funds"}, {"op": "odds", "chance": 30, "hit": [{"op": "morale", "d": -4, "who": "subject"}], "hit_result": "It only helps for a while. He is homesick again within the month."}],
+			 "result": "{first}'s family is in town. He is smiling at training again."},
+			{"key": "housemate", "label": "Pair him with a senior housemate and keep him busy",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The senior players took in a homesick kid"}, {"op": "odds", "chance": 50, "hit": [{"op": "morale", "d": 3, "who": "subject"}], "miss": [{"op": "trust", "d": -3, "why": "He still feels on his own"}], "hit_result": "He settles in. Home talk stops.", "miss_result": "He still feels on his own, and the home talk goes on."}],
+			 "result": "{first} moves in with one of the senior players."}
+		]
+	},
+	{
+		"id": "pad_overseas_game",
+		"club": "PAD",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"phase": ["preseason"],
+		"title": ["An overseas partner wants a game"],
+		"text": ["A big overseas business partner wants the club to fly a pre-season match and clinics to their market. It means money, and a long flight. The coaches hate the timing."],
+		"choices": [
+			{"key": "go", "label": "Go",
+			 "effects": [{"op": "board", "d": 6, "was": "funds"}, {"op": "heavy_legs", "who": "side"}, {"op": "slow_start", "chance": 15, "who": "side"}],
+			 "result": "The club takes the trip. The players come home jet-lagged."},
+			{"key": "delegation", "label": "Send a delegation, not the team",
+			 "effects": [{"op": "xp", "d": 2, "who": "side"}, {"op": "board", "d": -1, "was": "funds"}],
+			 "result": "A few officials fly out. The pre-season stays intact, and some of the money goes elsewhere."},
+			{"key": "no", "label": "Say no",
+			 "effects": [{"op": "xp", "d": 4, "who": "side"}, {"op": "board", "d": -4}],
+			 "result": "The side stays home and trains. The board is not impressed."}
+		]
+	},
+	{
+		"id": "pad_local_league_best",
+		"club": "PAD",
+		"controversy": false,
+		"category": "contracts",
+		"subject": {"kind": "club"},
+		"phase": ["season_end"],
+		"title": ["The local league's best"],
+		"text": ["A mature-age midfielder has just won the best and fairest in the state league. The Port faithful know him and want him on the list. The recruiters say he's ready-made, with a low ceiling."],
+		"choices": [
+			{"key": "sign", "label": "Give him a list spot",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "culture", "strand": "ambition", "d": -1, "why": "A list spot went to a ready-made player, not a kid"}, {"op": "odds", "chance": 30, "hit": [{"op": "morale", "d": 2, "who": "all"}], "hit_result": "He walks straight into the side and stays there."}],
+			 "result": "The local favourite gets his chance."},
+			{"key": "pass", "label": "Pass and keep the spot for a kid",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The spot went to a kid with a higher ceiling"}, {"op": "board", "d": -1, "was": "members"}, {"op": "odds", "chance": 20, "hit": [{"op": "morale", "d": -2, "who": "all"}], "hit_result": "Another club takes him, and he plays well against you."}],
+			 "result": "The spot stays open for the draft. The faithful shake their heads."}
+		]
+	},
+	{
+		"id": "pad_club_great_training",
+		"club": "PAD",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"title": ["A club great at training"],
+		"text": ["A premiership coach from the club's local-league years offers to come down to Alberton once a week and talk to the young players."],
+		"choices": [
+			{"key": "welcome", "label": "Welcome him",
+			 "effects": [{"op": "xp", "d": 3, "who": "all"}, {"op": "culture", "strand": "standards", "d": 1, "why": "A club great passed on how Port plays"}, {"op": "odds", "chance": 20, "hit": [{"op": "board", "d": -3}], "hit_result": "He tells the papers what he thinks of your coaching."}],
+			 "result": "The young players hang off every word."},
+			{"key": "thank", "label": "Thank him and keep the coaching with your staff",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "One voice on how the young players are coached"}, {"op": "culture", "strand": "together", "d": -1, "why": "You shut the door on a club great"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "No mixed messages. The old guard won't forget it."}
+		]
+	},
+	{
+		"id": "pad_old_flags",
+		"club": "PAD",
+		"controversy": false,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"title": ["All those flags, or one?"],
+		"text": ["A Melbourne journalist says Port's local-league premierships don't count. The supporters count every one of them, and they want the coach to say so."],
+		"choices": [
+			{"key": "defend", "label": "Defend the old flags",
+			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The coach stood up for the old flags"}, {"op": "odds", "chance": 10, "hit": [{"op": "morale", "d": -2, "who": "all"}], "hit_result": "It becomes a national story for a week, and the players are sick of it."}],
+			 "result": "Every one of them counts, you say. Alberton roars."},
+			{"key": "next", "label": "Say the only flag that matters is the next one",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The coach looked ahead, not back"}, {"op": "board", "d": -1, "was": "members"}, {"op": "culture", "strand": "together", "d": -1, "why": "The supporters think the coach doesn't get Port"}],
+			 "result": "Eyes forward. Some of the faithful think you don't get Port."}
+		]
+	},
+	{
+		"id": "pad_showdown_standoff",
+		"club": "PAD",
+		"controversy": true,
+		"category": "rivals",
+		"subject": {"kind": "club"},
+		"when": {"opp_deck": "ADE"},
+		"title": ["A Showdown stand-off"],
+		"text": ["Both sides plan to stay out after the anthem and stare each other down. The league has warned both clubs it will fine anything that delays the bounce."],
+		"choices": [
+			{"key": "stand", "label": "Let the players stand their ground",
+			 "effects": [{"op": "morale", "d": 5, "who": "all"}, {"op": "odds", "chance": 60, "hit": [{"op": "board", "d": -3}], "miss": [{"op": "board", "d": 3, "was": "members"}], "hit_result": "The league fines the club.", "miss_result": "No fine, and the members loved every second."}],
+			 "result": "Nobody moves until the umpire bounces it."},
+			{"key": "rooms", "label": "Order them to the rooms on time",
+			 "effects": [{"op": "board", "d": 2}, {"op": "morale", "d": -3, "who": "all"}, {"op": "culture", "strand": "together", "d": -1, "why": "The coach backed down in a Showdown"}],
+			 "result": "The side walks off on time. The players wanted to stay."}
+		]
+	},
+	{
+		"id": "pad_early_approach",
+		"club": "PAD",
+		"controversy": true,
+		"category": "contracts",
+		"subject": {"kind": "club"},
+		"title": ["An approach the league won't like"],
+		"text": ["The recruiters want to sound out a contracted player at another club through his manager before the trade period opens. Everyone does it, and it's against the rules."],
+		"choices": [
+			{"key": "call", "label": "Make the call",
+			 "effects": [{"op": "culture", "strand": "standards", "d": -1, "why": "The club bent the rules to get its man"}, {"op": "odds", "chance": 50, "hit": [{"op": "board", "d": 3}], "hit_result": "Word comes back: he wants to come to Port."}, {"op": "odds", "chance": 25, "hit": [{"op": "board", "d": -5}], "hit_result": "The league finds out. The club cops a fine."}],
+			 "result": "The call is made, quietly."},
+			{"key": "book", "label": "Do it by the book",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The club did it by the book"}, {"op": "odds", "chance": 40, "hit": [{"op": "board", "d": -2}], "hit_result": "A rival gets to him first."}],
+			 "result": "The club waits for the trade period."}
+		]
+	}
+]

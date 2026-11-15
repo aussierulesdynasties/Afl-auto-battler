@@ -1,0 +1,470 @@
+[
+	{
+		"id": "brb_two_homes",
+		"club": "BRB",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["Two homes, one club"],
+		"text": ["The Bears' supporters are split between the Gold Coast and Brisbane. Whichever end of the highway is home, the other end wants a game, and its council will pay for one. The home members say the club keeps forgetting who it plays for."],
+		"choices": [
+			{"key": "move", "label": "Take a home game up the highway",
+			 "effects": [{"op": "board", "d": 3, "was": "funds"}, {"op": "culture", "strand": "together", "d": -1, "why": "The home members feel second best"}, {"op": "slow_start", "chance": 25, "who": "side"}],
+			 "result": "The fee is in the bank. The home members feel second best, and the trip felt flat."},
+			{"key": "home", "label": "Keep every home game at home",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The club played where its supporters live"}, {"op": "board", "d": -2, "was": "funds"}],
+			 "result": "The home members notice. The fee goes elsewhere."}
+		]
+	},
+	{
+		"id": "brb_local_hundred",
+		"club": "BRB",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "player", "pick": "highest:games", "where": {"games_min": 97, "games_max": 99}},
+		"title": ["A hundred games for {first}"],
+		"text": ["{name} is about to bring up 100 games. His junior club wants to form a guard of honour at the home game, and the papers want the story."],
+		"choices": [
+			{"key": "day", "label": "Make a day of it",
+			 "effects": [{"op": "morale", "d": 6, "who": "subject"}, {"op": "board", "d": 2, "was": "members"}, {"op": "slow_start", "chance": 20, "who": "side"}],
+			 "result": "His junior club lines the race. {first} might be a bit tight with all the attention."},
+			{"key": "rooms", "label": "Keep it in the rooms",
+			 "effects": [{"op": "morale", "d": 2, "who": "subject"}, {"op": "culture", "strand": "together", "d": 1, "why": "The group marked it together"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "The group marks it quietly. His junior club feels snubbed."}
+		]
+	},
+	{
+		"id": "brb_bad_news_tag",
+		"club": "BRB",
+		"controversy": false,
+		"category": "media",
+		"when": {"losing_run_min": 1},
+		"subject": {"kind": "club"},
+		"title": ["The Bad News Bears"],
+		"text": ["After another loss the southern papers have dusted off the old nickname: the Bad News Bears. The group has seen the headline pinned up in the canteen."],
+		"choices": [
+			{"key": "pin", "label": "Pin it on the noticeboard",
+			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "heavy_legs", "who": "side"}],
+			 "result": "The group trains angry all week."},
+			{"key": "ignore", "label": "Tell them to ignore it",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "You kept the group on its own game"}, {"op": "slow_start", "chance": 15, "who": "side"}],
+			 "result": "Nobody mentions it at training. The sting might still be there on Saturday."},
+			{"key": "fire", "label": "Fire back in the press",
+			 "effects": [{"op": "board", "d": 2}, {"op": "odds", "chance": 35, "hit": [{"op": "morale", "d": -2, "who": "side"}], "hit_result": "The papers ran it all week and the players felt the spotlight."}],
+			 "result": "The coach has a crack back. The board likes the fight."}
+		]
+	},
+	{
+		"id": "brb_league_town",
+		"club": "BRB",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["A league town"],
+		"text": ["The big rugby league derby is on the same Sunday as your home game and the city's attention is elsewhere. Marketing wants the game moved to Saturday night; the coaches want the normal week."],
+		"choices": [
+			{"key": "move", "label": "Move the game to Saturday night",
+			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "heavy_legs", "who": "side"}, {"op": "slow_start", "chance": 20, "who": "side"}],
+			 "result": "A bigger crowd, and one less day to recover."},
+			{"key": "hold", "label": "Hold your ground on Sunday",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -3, "was": "members"}],
+			 "result": "The normal week. A thin crowd while the city watches the league."}
+		]
+	},
+	{
+		"id": "brb_schools_run",
+		"club": "BRB",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["The schools run"],
+		"text": ["Most Queensland schoolyards play rugby league. The development officer wants players in schools every week of the season, teaching kids to kick a footy."],
+		"choices": [
+			{"key": "weekly", "label": "Send players out every week",
+			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The club went to the kids"}, {"op": "forgo_xp", "d": 3, "who": "all"}],
+			 "result": "A new crop of kids with a Bears footy. The players lose time on the track."},
+			{"key": "holidays", "label": "School holidays only",
+			 "effects": [{"op": "xp", "d": 2, "who": "side"}, {"op": "board", "d": -1}],
+			 "result": "Training stays whole. The development officer is disappointed."}
+		]
+	},
+	{
+		"id": "brb_young_target",
+		"club": "BRB",
+		"controversy": false,
+		"category": "contracts",
+		"subject": {"kind": "player", "pick": "highest:potential", "where": {"age_max": 21}},
+		"title": ["A southern club in his ear"],
+		"text": ["{name} is one of the kids the Bears have grown. A southern club is in his ear with more money and the promise of a bigger stage."],
+		"choices": [
+			{"key": "match", "label": "Match the money",
+			 "effects": [{"op": "trust", "d": 3, "why": "The club matched the southern offer"}, {"op": "board", "d": -2, "was": "funds"}, {"op": "morale", "d": -1, "who": "others"}],
+			 "result": "{first} stays. The senior players notice what he's on."},
+			{"key": "sell", "label": "Sell him the home story",
+			 "effects": [{"op": "odds", "chance": 60, "hit": [{"op": "culture", "strand": "together", "d": 1, "why": "A kid chose the Bears over the money"}], "miss": [{"op": "morale", "d": -3, "who": "subject"}, {"op": "trust", "d": -2, "why": "He wanted the club to back him with money"}], "hit_result": "{first} bought the story. He's staying.", "miss_result": "{first} wasn't sold. He's talking about a trade."}],
+			 "result": "No extra money, just the pitch."},
+			{"key": "trade", "label": "Let him go and take the trade",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The trade brings back a pick to build with"}, {"op": "board", "d": -2, "was": "members"}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "The deal is done. The locals wanted one of their own kept."}
+		]
+	},
+	{
+		"id": "brb_homesick",
+		"club": "BRB",
+		"controversy": false,
+		"category": "family",
+		"private": true,
+		"subject": {"kind": "player", "pick": "random"},
+		"title": ["Homesick"],
+		"text": ["{name}'s family is a two-hour flight south. He has asked for a week at home in the middle of the season."],
+		"choices": [
+			{"key": "send", "label": "Send him home for the week",
+			 "effects": [{"op": "trust", "d": 4, "why": "You let him go home when he needed it"}, {"op": "morale", "d": 2, "who": "subject"}, {"op": "rest"}, {"op": "slow_start", "chance": 25, "who": "side"}],
+			 "result": "{first} flies home and misses a game."},
+			{"key": "fly", "label": "Fly his family up instead",
+			 "effects": [{"op": "trust", "d": 2, "why": "The club brought his family to him"}, {"op": "board", "d": -1, "was": "funds"}],
+			 "result": "His family arrives on Thursday. {first} plays."},
+			{"key": "wait", "label": "Ask him to wait until season's end",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The season comes first"}, {"op": "morale", "d": -3, "who": "subject"}, {"op": "odds", "chance": 30, "hit": [{"op": "trust", "d": -3, "why": "He was told to wait"}], "hit_result": "{first} has started talking about a trade home."}],
+			 "result": "{first} plays. He isn't happy about it."}
+		]
+	},
+	{
+		"id": "brb_owner_wants_a_say",
+		"club": "BRB",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["The owner wants a say"],
+		"text": ["The club's money comes from one wealthy backer, and he has started turning up at selection meetings. He wants a big-name signing from the south, announced this week."],
+		"choices": [
+			{"key": "give", "label": "Give him the headline",
+			 "effects": [{"op": "board", "d": 5, "was": "funds"}, {"op": "culture", "strand": "standards", "d": -1, "why": "The coaches were bypassed"}, {"op": "odds", "chance": 30, "hit": [{"op": "morale", "d": -2, "who": "all"}], "hit_result": "The big name kept his spot out of form, and the group noticed."}],
+			 "result": "The signing is announced. The owner is delighted."},
+			{"key": "out", "label": "Keep him out of the room",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "Football decisions stay with football people"}, {"op": "board", "d": -3}, {"op": "odds", "chance": 25, "hit": [{"op": "board", "d": -3, "was": "funds"}], "hit_result": "The backer cut his support."}],
+			 "result": "Selection stays with the coaches. The owner is not used to hearing no."}
+		]
+	},
+	{
+		"id": "brb_backer_collapse",
+		"club": "BRB",
+		"controversy": true,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["The backer has gone broke"],
+		"text": ["The businessman behind the club has seen his empire collapse, and the league has had to step in. The board asks what the football department can give up to keep the doors open."],
+		"choices": [
+			{"key": "reserves", "label": "Cut the reserves' travel",
+			 "effects": [{"op": "board", "d": 5, "was": "funds"}, {"op": "forgo_xp", "d": 4, "who": "all"}],
+			 "result": "The reserves stop travelling. The kids lose their games."},
+			{"key": "staff", "label": "Cut the coaching staff",
+			 "effects": [{"op": "board", "d": 3, "was": "funds"}, {"op": "forgo_xp", "d": 2, "who": "all"}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "Good people lose their jobs. The players feel it."},
+			{"key": "members", "label": "Refuse cuts and go to the members",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The club asked its people for help"}, {"op": "board", "d": -2}, {"op": "odds", "chance": 35, "hit": [{"op": "board", "d": -2, "was": "funds"}], "hit_result": "The appeal fell short."}],
+			 "result": "The coach asks the members to dig deep."}
+		]
+	},
+	{
+		"id": "brb_closure_threat",
+		"club": "BRB",
+		"controversy": false,
+		"category": "board",
+		"when": {"losing_run_min": 3},
+		"subject": {"kind": "club"},
+		"title": ["\"I'm closing it down\""],
+		"text": ["After another run of heavy losses the owner tells you privately he is ready to close the club. You can keep it from the players or tell them what's at stake."],
+		"choices": [
+			{"key": "tell", "label": "Tell the players",
+			 "effects": [{"op": "odds", "chance": 50, "hit": [{"op": "morale", "d": 4, "who": "all"}, {"op": "culture", "strand": "together", "d": 2, "why": "The group rallied to save the club"}], "miss": [{"op": "morale", "d": -3, "who": "all"}, {"op": "board", "d": -2}], "hit_result": "The group rallied. They're playing for the club's life.", "miss_result": "It frightened the group, and it leaked."}],
+			 "result": "The coach lays it out in the rooms."},
+			{"key": "keep", "label": "Keep it in the room",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -1}, {"op": "odds", "chance": 20, "hit": [{"op": "morale", "d": -3, "who": "all"}], "hit_result": "It leaked anyway, and the players resent the silence."}],
+			 "result": "Training stays calm. The owner wanted more urgency."}
+		]
+	},
+	{
+		"id": "brb_reserves_flying",
+		"club": "BRB",
+		"controversy": false,
+		"category": "selection",
+		"subject": {"kind": "player", "pick": "highest:potential", "where": {"age_max": 22, "selected": false}},
+		"title": ["The reserves are flying"],
+		"text": ["The seniors are struggling, but the reserves are top of the ladder and chasing a flag. {name}, one of their best, is pushing for a senior game."],
+		"choices": [
+			{"key": "promote", "label": "Promote him now",
+			 "effects": [{"op": "xp", "d": 4, "who": "subject"}, {"op": "morale", "d": 3, "who": "subject"}, {"op": "culture", "strand": "ambition", "d": -1, "why": "The reserves lost part of their spine in the run to a flag"}],
+			 "result": "{first} gets his senior game. The reserves are a man down."},
+			{"key": "flag", "label": "Let him chase the reserves flag",
+			 "effects": [{"op": "odds", "chance": 55, "hit": [{"op": "culture", "strand": "ambition", "d": 2, "why": "The club learnt to win somewhere"}, {"op": "morale", "d": 2, "who": "all"}], "hit_result": "The reserves won the flag."}, {"op": "trust", "d": -2, "why": "He was made to wait"}],
+			 "result": "{first} stays with the reserves for the run home."}
+		]
+	},
+	{
+		"id": "brb_travel_grind",
+		"club": "BRB",
+		"controversy": false,
+		"category": "training",
+		"subject": {"kind": "club"},
+		"title": ["Every second week on a plane"],
+		"text": ["Most of the away games are in Melbourne and the players are flying every second week. The fitness staff want to fly down the day before; the money people want same-day flights."],
+		"choices": [
+			{"key": "before", "label": "Fly the day before",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -3, "was": "funds"}],
+			 "result": "Bodies settle in Melbourne. The hotel bill goes to the board."},
+			{"key": "day", "label": "Fly on the day",
+			 "effects": [{"op": "board", "d": 1, "was": "funds"}, {"op": "heavy_legs", "who": "side"}, {"op": "slow_start", "chance": 25, "who": "side"}],
+			 "result": "A dawn flight and straight to the ground. The money people are happy."}
+		]
+	},
+	{
+		"id": "brb_summer_heat",
+		"club": "BRB",
+		"controversy": false,
+		"category": "training",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["The Queensland summer"],
+		"text": ["The pre-season is in the Queensland heat and humidity. The fitness staff say the players are getting fitter than any southern club; the medical staff say two of them are cooked."],
+		"choices": [
+			{"key": "heat", "label": "Keep the heat on",
+			 "effects": [{"op": "xp", "d": 4, "who": "all"}, {"op": "odds", "chance": 30, "hit": [{"op": "forgo_xp", "d": 4, "who": "side"}], "hit_result": "A strained hamstring cost a player a block of training."}],
+			 "result": "They train in the full heat."},
+			{"key": "dawn", "label": "Move sessions to dawn",
+			 "effects": [{"op": "xp", "d": 1, "who": "all"}, {"op": "fresh", "who": "side"}, {"op": "morale", "d": -1, "who": "all"}],
+			 "result": "The bodies hold up. The early starts wear thin."}
+		]
+	},
+	{
+		"id": "brb_game_day_show",
+		"club": "BRB",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["Show business"],
+		"text": ["Marketing wants fireworks, cheerleaders and a halftime band at every home game to win over the undecided crowd. The football people want the ground quiet and the focus on the game."],
+		"choices": [
+			{"key": "show", "label": "Put on the show",
+			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "odds", "chance": 50, "hit": [{"op": "board", "d": -2, "was": "funds"}], "hit_result": "The show ran over budget."}],
+			 "result": "Fireworks before the bounce. The undecided crowd comes back."},
+			{"key": "footy", "label": "Keep it about the football",
+			 "effects": [{"op": "board", "d": 1}, {"op": "odds", "chance": 50, "hit": [{"op": "board", "d": -2, "was": "members"}], "hit_result": "The casual crowd drifted back to the league."}],
+			 "result": "No spend, and the traditionalists on the board are pleased."}
+		]
+	},
+	{
+		"id": "brb_coast_nights",
+		"club": "BRB",
+		"controversy": true,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"title": ["Gold Coast nights"],
+		"text": ["A group of Bears players was seen out late on the coast two nights before a game, and the photos are in the Sunday paper. Nobody broke a law, but the coach has to answer to the board."],
+		"choices": [
+			{"key": "fine", "label": "Fine them and say so",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "The club fined its players in public"}, {"op": "board", "d": 2}, {"op": "morale", "d": -2, "who": "side"}],
+			 "result": "The fines are public. The group closes ranks."},
+			{"key": "private", "label": "Deal with it behind closed doors",
+			 "effects": [{"op": "morale", "d": 2, "who": "side"}, {"op": "odds", "chance": 40, "hit": [{"op": "board", "d": -3}], "hit_result": "The press kept digging, and the board heard about it from the papers."}],
+			 "result": "The players feel backed."},
+			{"key": "curfew", "label": "Set a club curfew for everyone",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The whole list is home by ten"}, {"op": "fresh", "who": "side"}, {"op": "morale", "d": -3, "who": "all"}],
+			 "result": "Everyone's in bed early. The senior players resent being treated like kids."}
+		]
+	},
+	{
+		"id": "brb_toughen_up",
+		"club": "BRB",
+		"controversy": false,
+		"category": "training",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["Toughen them up"],
+		"text": ["The group has been called soft for too long. The coach can run a hard-edged camp in the bush, or keep building the side week by week."],
+		"choices": [
+			{"key": "camp", "label": "Run the camp",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "The group came out of the bush harder"}, {"op": "culture", "strand": "together", "d": 1, "why": "They got through the camp together"}, {"op": "forgo_xp", "d": 4, "who": "all"}],
+			 "result": "A week of mud and hills. No footy skills, a harder group."},
+			{"key": "normal", "label": "Keep the normal program",
+			 "effects": [{"op": "xp", "d": 3, "who": "all"}, {"op": "odds", "chance": 30, "hit": [{"op": "morale", "d": -1, "who": "all"}], "hit_result": "The soft talk kept coming."}],
+			 "result": "The side keeps building, week by week."}
+		]
+	},
+	{
+		"id": "brb_away_crowd",
+		"club": "BRB",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["Home game, away crowd"],
+		"text": ["The next home game falls in the school holidays, and holidaying southerners have bought half the tickets. Marketing wants to hand free tickets to local schools to fill the rest."],
+		"choices": [
+			{"key": "schools", "label": "Give the schools the tickets",
+			 "effects": [{"op": "morale", "d": 2, "who": "side"}, {"op": "culture", "strand": "together", "d": 1, "why": "Local kids filled the ground"}, {"op": "board", "d": -2, "was": "funds"}],
+			 "result": "A home crowd that sounds like one. The gate takes the hit."},
+			{"key": "sell", "label": "Sell to whoever comes",
+			 "effects": [{"op": "board", "d": 2, "was": "funds"}, {"op": "slow_start", "chance": 20, "who": "side"}],
+			 "result": "A full gate, and more of the visitors' colours than your own."}
+		]
+	},
+	{
+		"id": "brb_summer_sport",
+		"club": "BRB",
+		"controversy": false,
+		"category": "board",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["Summer sport has the ground"],
+		"text": ["The home ground is still booked for summer sport, and the oval is off limits for the last weeks of the pre-season. A suburban ground is free, but its surface is hard."],
+		"choices": [
+			{"key": "suburban", "label": "Train at the suburban ground",
+			 "effects": [{"op": "xp", "d": 3, "who": "all"}, {"op": "odds", "chance": 25, "hit": [{"op": "forgo_xp", "d": 3, "who": "side"}], "hit_result": "A player was jarred on the hard deck and missed a block."}],
+			 "result": "Full ball work on a rock-hard oval."},
+			{"key": "beach", "label": "Train on the beach and in the pool",
+			 "effects": [{"op": "morale", "d": 1, "who": "all"}, {"op": "forgo_xp", "d": 3, "who": "all"}],
+			 "result": "Sand and water, and no ball work on grass."}
+		]
+	},
+	{
+		"id": "brb_never_seen_september",
+		"club": "BRB",
+		"controversy": false,
+		"category": "members",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["September feels a long way off"],
+		"text": ["Finals have been a long way off for the Bears. At the season launch the members want to hear a promise."],
+		"choices": [
+			{"key": "promise", "label": "Promise them finals",
+			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "morale", "d": 2, "who": "all"}, {"op": "loss_sting", "chance": 20, "d": -3, "who": "side"}],
+			 "result": "The room erupts. Every loss will hurt more now."},
+			{"key": "plan", "label": "Promise a plan, not a result",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The club has a plan to get there"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "The board nods along. The members wanted more."}
+		]
+	},
+	{
+		"id": "brb_basket_case",
+		"club": "BRB",
+		"controversy": false,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"title": ["\"Basket case\""],
+		"text": ["A Melbourne columnist says the Bears are a basket case the league ought to cut loose. You can invite him up for a week inside the club or let him write from a distance."],
+		"choices": [
+			{"key": "invite", "label": "Invite him up",
+			 "effects": [{"op": "odds", "chance": 55, "hit": [{"op": "board", "d": 3}], "miss": [{"op": "board", "d": -2}, {"op": "morale", "d": -1, "who": "all"}], "hit_result": "He wrote a fair piece. Melbourne read a different story.", "miss_result": "He found what he came looking for."}],
+			 "result": "He spends a week inside the club."},
+			{"key": "ignore", "label": "Ignore him",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The club shut the door and got on with it"}, {"op": "board", "d": -1}],
+			 "result": "The story runs unanswered."}
+		]
+	},
+	{
+		"id": "brb_membership_price",
+		"club": "BRB",
+		"controversy": false,
+		"category": "members",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["What a membership costs"],
+		"text": ["Membership sales are slow again. The membership manager wants to halve the price of a family membership to fill the ground; the money people say the club can't afford to give seats away."],
+		"choices": [
+			{"key": "halve", "label": "Halve the price",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "More families came through the gate"}, {"op": "board", "d": -3, "was": "funds"}],
+			 "result": "More families through the gate, and less money in the till."},
+			{"key": "hold", "label": "Hold the price",
+			 "effects": [{"op": "board", "d": 2, "was": "funds"}, {"op": "culture", "strand": "together", "d": -1, "why": "Families say the Bears priced them out"}, {"op": "odds", "chance": 30, "hit": [{"op": "board", "d": -2}], "hit_result": "Another season of empty seats had the papers asking questions."}],
+			 "result": "The money people are pleased. The seats stay empty."}
+		]
+	},
+	{
+		"id": "brb_helping_hand",
+		"club": "BRB",
+		"controversy": false,
+		"category": "board",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["The league's helping hand"],
+		"text": ["The league offers the Bears an extra early draft pick to help them compete. Southern clubs are already calling it a handout."],
+		"choices": [
+			{"key": "take", "label": "Take it",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 2, "why": "An extra early pick to build with"}, {"op": "board", "d": -2}, {"op": "odds", "chance": 30, "hit": [{"op": "morale", "d": -1, "who": "all"}], "hit_result": "Some players feel the club is a charity case."}],
+			 "result": "The pick is yours. The southern papers have their headline."},
+			{"key": "decline", "label": "Turn it down",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "We'll earn it"}, {"op": "board", "d": -1}],
+			 "result": "No handout. The board wanted the pick."}
+		]
+	},
+	{
+		"id": "brb_code_hopper",
+		"club": "BRB",
+		"controversy": false,
+		"category": "contracts",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["The code-hopper"],
+		"text": ["A young rugby league player from a local club has trialled with you and can kick a long way. He has never played a senior game of Aussie rules."],
+		"choices": [
+			{"key": "sign", "label": "Sign him as a rookie",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "forgo_xp", "d": 2, "who": "all"}],
+			 "result": "The league papers cover it. The coaches spend sessions on the basics with him."},
+			{"key": "pass", "label": "Pass on him",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The list spot stays free for a ready footballer"}, {"op": "odds", "chance": 20, "hit": [{"op": "board", "d": -1}], "hit_result": "He signed with a southern club, and the papers asked why you let him go."}],
+			 "result": "The list spot stays free."}
+		]
+	},
+	{
+		"id": "brb_origin_week",
+		"club": "BRB",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["Origin week"],
+		"text": ["It's State of Origin week and the whole city is talking rugby league. Marketing wants six players at the Origin fan day in the mall, kicking footies to kids in the league crowd."],
+		"choices": [
+			{"key": "send", "label": "Send six players",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "forgo_xp", "d": 3, "who": "side"}],
+			 "result": "The Bears get seen in a league town. An afternoon of recovery is gone."},
+			{"key": "stay", "label": "Stay out of it",
+			 "effects": [{"op": "xp", "d": 3, "who": "side"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "A normal week. A chance missed."}
+		]
+	},
+	{
+		"id": "brb_other_new_club",
+		"club": "BRB",
+		"controversy": false,
+		"category": "rivals",
+		"when": {"opp_deck": "WCE"},
+		"subject": {"kind": "club"},
+		"title": ["The other new club"],
+		"text": ["{opp} came into the competition the same year as the Bears, and the press is billing this week as the expansion derby: which of the two new clubs is the real thing?"],
+		"choices": [
+			{"key": "personal", "label": "Make it personal",
+			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "heavy_legs", "who": "side"}],
+			 "result": "The group is wound up all week."},
+			{"key": "normal", "label": "Treat it like any other week",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The group kept to its own game"}, {"op": "slow_start", "chance": 15, "who": "side"}],
+			 "result": "Just another week, as far as the coach is concerned."}
+		]
+	},
+	{
+		"id": "brb_legend_visit",
+		"club": "BRB",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"title": ["A legend comes home"],
+		"text": ["A legend from the early years offers to speak to the players before a big game. He talks about the poverty days, the empty grounds and why the club had to survive."],
+		"choices": [
+			{"key": "speak", "label": "Let him speak",
+			 "effects": [{"op": "odds", "chance": 60, "hit": [{"op": "morale", "d": 3, "who": "all"}, {"op": "culture", "strand": "together", "d": 1, "why": "A legend told them why the club survived"}], "miss": [{"op": "slow_start", "chance": 30, "who": "side"}], "hit_result": "The room hung off every word.", "miss_result": "It fell flat with the young players."}],
+			 "result": "He takes the floor before the game."},
+			{"key": "routine", "label": "Thank him, keep the routine",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "morale", "d": -1, "who": "all"}],
+			 "result": "The usual prep. The senior players wanted him in the room."}
+		]
+	}
+]
