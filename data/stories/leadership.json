@@ -388,6 +388,7 @@
 	},
 	{
 		"id": "captain_group_flat",
+		"topical": true,
 		"category": "leadership",
 		"subject": {
 			"kind": "player",
@@ -782,6 +783,7 @@
 	},
 	{
 		"id": "captain_holding_group",
+		"topical": true,
 		"category": "leadership",
 		"subject": {
 			"kind": "player",
@@ -1588,7 +1590,7 @@
 			"Who's next?"
 		],
 		"text": [
-			"{vice_name} has been {name}'s deputy all year. The call on the captaincy is yours. The call on the armband is yours."
+			"{vice_name} has been {name}'s deputy all year. The call on the armband is yours."
 		],
 		"choices": [
 			{

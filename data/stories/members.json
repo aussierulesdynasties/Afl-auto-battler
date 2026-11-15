@@ -101,6 +101,7 @@
 	},
 	{
 		"id": "members_forum",
+		"topical": true,
 		"category": "members",
 		"subject": {
 			"kind": "club"
@@ -326,7 +327,7 @@
 			"We're in"
 		],
 		"text": [
-			"It's mathematical now: we can't drop out of the ten. The club's been buzzing all weekend."
+			"It's mathematical now: we're playing finals. The club's been buzzing all weekend."
 		],
 		"choices": [
 			{

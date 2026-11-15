@@ -119,7 +119,7 @@ const PLAYER_FACTS := ["name", "first", "age", "games", "fit", "selected", "over
 		"dev_talk_due", "proj_word", "proj_week", "proj_weeks", "proj_there", "proj_own", "proj_pass",
 		"take_odds", "proj_line"]
 ## Facts about the club and the week (GameState._story_club_facts).
-const CLUB_FACTS := ["club", "opp", "round", "year", "losing_run", "winning_run", "ladder",
+const CLUB_FACTS := ["club", "opp", "has_opp", "round", "year", "losing_run", "winning_run", "ladder",
 		"board", "fit_count", "run_games", "finals_week", "captain_name", "vice_name", "vice_id",
 		"has_vice", "kid_name", "kid_id", "has_kid",
 		# The papers: who wrote it, the finish they tipped, the finish you named
@@ -142,7 +142,7 @@ const CLUB_FACTS := ["club", "opp", "round", "year", "losing_run", "winning_run"
 		"underdog", "years_since_final", "last_final_year", "forecast_line",
 		"result", "lost_final", "lost_prelim", "margin", "margin_line", "history_line", "best_line"]
 
-const DEFAULTS := {"weight": 1, "cooldown": 40, "subject_cooldown": 8, "per_season": 0,
+const DEFAULTS := {"weight": 1, "cooldown": 40, "subject_cooldown": 8, "per_season": 0, "subject_per_season": 0,
 		"phase": ["regular"], "default": -1, "bye": false, "priority": false, "always": false, "topical": false}
 
 ## The international prospects' cards (data/stories/international.json).

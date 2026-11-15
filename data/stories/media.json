@@ -293,6 +293,7 @@
 	},
 	{
 		"id": "media_cameras_in_rooms",
+		"topical": true,
 		"category": "media",
 		"subject": {
 			"kind": "club"
@@ -497,7 +498,7 @@
 		},
 		"id": "media_trial_worked",
 		"title": [
-			"{name} did well as a {trial_word} as a {trial_word}"
+			"{name} did well as a {trial_word}"
 		],
 		"text": [
 			"{first} rated {trial_avg} as a {trial_word} over the three games. The average {trial_word} rates {trial_par}. {trial_tail}"
