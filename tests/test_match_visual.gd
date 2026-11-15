@@ -2729,7 +2729,9 @@ func _test_three_d_hair(res: Dictionary) -> void:
 		styles[p["hair_style"]] = true
 		if _wears(p, GameDB.figure_look(who)):
 			right += 1
-	_check(right == oval.players.size() and styles.size() > 1,
+	# Real players without a curated look all wear the neutral one, so no count of styles here:
+	# the Forge look below proves a chosen style shows.
+	_check(right == oval.players.size() and right > 0,
 			"Every 3D footballer wears his own skin, hair colour and style (%d of %d, %d styles)" % [right, oval.players.size(), styles.size()])
 	# A look chosen in Club Forge: the afro, the darkest skin, black hair.
 	var t: Dictionary = pv.director.tokens[0]
