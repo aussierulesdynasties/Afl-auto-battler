@@ -61,7 +61,7 @@ const TAG_LEAVE_GAIN := "our midfielders play their own game"
 const TAG_LEAVE_COST := "%s gets his usual %d touches"
 ## The same call with a tag already on another of theirs: the man who goes is
 ## already giving up his own game, so moving him costs the hold he has now.
-const TAG_MOVE_COST := "the tag comes off %s\nHe goes back to his usual %d touches"
+const TAG_MOVE_COST := "the tag comes off %s, who goes back to the usual %d touches"
 const TAG_STAY_GAIN := "%s stays on %s, who is held to about %d touches"
 
 # Skip to full time.
