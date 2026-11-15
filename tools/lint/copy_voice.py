@@ -240,7 +240,7 @@ STORY_PASS = {
     "scripts/sim/StoryEngine.gd": [[
         "Board confidence stays where it is. The other choice costs it %s.",
         "{keep_price} a season against our cap.", "If we lose that final, about a %s chance our morale also falls %s.",
-        "His opinion of you stays %d out of 100.", "development points. A senior game gives %d.",
+        "His opinion of you %s, still %d out of 100.", "development points. A senior game gives %d.",
     ], ["(the other choice costs it", "against your cap", "(a senior game gives", "(any injury, not only this one;",
         "If you lose that final", "%d/100", "(high fluency)", "(low, medium, high)"]],
     "scripts/sim/MediaConference.gd": [[
