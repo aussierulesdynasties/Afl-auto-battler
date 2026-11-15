@@ -323,6 +323,8 @@ Source tags: DB = DESIGN_BIBLE; RM26/27/28/29/30/32 = roadmap chapters 26, 27, 2
 
 **2.75** 3D oval kits and umpires pass (2026-11-15). Shown six clubs front and back on the 3D footballer (Fremantle, Bulldogs, St Kilda, Geelong, Richmond, Hawthorn) and the Dockers v GWS pack in a real match, he answered "Pass" for the guernseys (designs on the front, numbers on the back only). Shown the field umpire (lime top, black shorts, lime socks) close up and in that match, he answered "Pass". Clip checks are settled with 3d view 2, not brought back to him: asked for his verdict on drop punt 2 and don't argue, he said "i toild you to talk to 3d view 2 about this".
 
+**2.76** The vignettes go; 3D scenes replace them (2026-11-15). Told the 15 new Club Forge hair styles had no 2D vignette art, he answered "Not yet" to making it, then: "vignettes as they exist currently are going to be removed from the game in favour of our new 3d scenes". No new art or features for the current 2D vignettes (figure sheets, hair overlays, vignette scenes); looks are proven on the 3D footballer.
+
 ---
 
 ## 2.S Superseded and cut
