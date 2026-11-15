@@ -1429,7 +1429,7 @@ func _show_coach_box() -> void:
 			var hv := b.get_parent().find_child("CardHoldsValue", true, false)
 			if hv != null:
 				holds_lines.append([hv, b, pid])
-		var who_tags := _player_choice("TaggerPicker", _card_text(tagger, tag_detail) + "\nYour assistant's pick", others,
+		var who_tags := _player_choice("TaggerPicker", _card_text(tagger, tag_detail) + "\nAssistant's pick", others,
 				others.slice(0, 2 if _pc_break else 3),
 				calls, "tagger_id", "Who goes to him?", sync_tag, tag_detail, card, "Other tagger…")
 		var wb := _call_block("Who tags", who_tags)
