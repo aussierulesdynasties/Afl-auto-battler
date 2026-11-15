@@ -135,6 +135,12 @@ var _ring_at := Vector2.INF
 ## Win Contest: ball-ups pinned to where the ball was when the umpire called them
 ## (event k -> the shift from the logged spot), _pin_ballup.
 var _ballup_pin := {}
+## Bodies meant to touch in the beat now running (token id -> true): each
+## phase's own players (a tackle's pair, a smother, a gather), a pack, the rucks
+## at a bounce, a marking contest. MatchMotion lets these meet; everyone else
+## steers round everyone (MatchMotion.avoid, hold_apart). _meant_now.
+var _meant := {}
+var _meant_beat := -1
 
 
 # ---------------------------------------------------------------------------
@@ -332,6 +338,42 @@ func idle() -> bool:
 	return _beat.is_empty() and cursor >= events.size()
 
 
+## The bodies meant to touch this beat (_meant). A new beat starts a new set,
+## keeping only the last beat's bodies still in touch with each other (a pack
+## breaking up as the ball comes out), so they part on their own runs.
+func _meant_now() -> Dictionary:
+	var k := int(_beat.get("k", -1))
+	if k != _meant_beat and not _beat.is_empty():
+		_meant_beat = k
+		var still := {}
+		var ids := _meant.keys()
+		for a in range(ids.size()):
+			for b in range(a + 1, ids.size()):
+				var pa: Vector2 = tokens[int(ids[a])]["pos"]
+				if pa.distance_to(tokens[int(ids[b])]["pos"]) < MatchMotion.BODY:
+					still[int(ids[a])] = true
+					still[int(ids[b])] = true
+		_meant = still
+	return _meant
+
+
+## Note phase `p`'s own players as meant to touch (_meant): whoever it names,
+## its pack, and the rucks at a bounce or throw-up.
+func _mark_meant(p: Dictionary) -> void:
+	var m := _meant_now()
+	for key in ["who", "victim", "other", "by", "toward", "recv", "scoop", "along"]:
+		if typeof(p.get(key)) == TYPE_INT and int(p[key]) >= 0:
+			m[int(p[key])] = true
+	for id in p.get("members", []):
+		m[int(id)] = true
+	for id in (p.get("spots", {}) as Dictionary):
+		m[int(id)] = true
+	if str(p.get("t", "")) in ["bounce", "throwup"]:
+		for t in tokens:
+			if str(t["role"]) == "RUCK" and (t["pos"] as Vector2).distance_to(p["at"]) < 40.0:
+				m[int(t["id"])] = true
+
+
 ## A tackle being run down right now (the chase before the contact), for the 3D figures to
 ## start the tackle clip a moment early: {who, victim, left} with `left` the director seconds
 ## before the chase gives up and the tackle lands anyway; {} otherwise. Read-only.
@@ -364,10 +406,12 @@ func _tick(h: float) -> void:
 	# Motion limits (MatchMotion.SPRINT, WALK): whatever moved a token this
 	# step, it moved no faster than a sprint.
 	var from := []
+	MatchMotion.avoid(tokens, _meant_now())
 	for t in tokens:
 		from.append(t["pos"])
 		MatchMotion.step(t, h)
 	MatchMotion.separate(tokens, h)
+	MatchMotion.hold_apart(tokens, from, _meant_now())
 	for i in range(tokens.size()):
 		MatchMotion.limit_step(tokens[i], from[i], h)
 	_update_ball(h)
@@ -388,6 +432,7 @@ func _run_phases(h: float) -> bool:
 			p["_entered"] = true
 			_pt = 0.0
 			_enter(p)
+			_mark_meant(p)
 		else:
 			_pt += h
 			h = 0.0
@@ -1461,6 +1506,7 @@ func _contest(at: Vector2, winner: int, urgency: float) -> void:
 		var off := Vector2.ZERO if id == winner else Vector2(cos(ang), sin(ang)) * 2.0
 		MatchMotion.set_goal(tokens[id], at + off, urgency)
 		_busy[id] = true
+		_meant_now()[id] = true
 
 
 # ---------------------------------------------------------------------------

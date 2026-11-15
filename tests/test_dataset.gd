@@ -23,11 +23,13 @@ const GOLDEN_REAL := "6b9d20ef93eea2ce95f0a6d936f19727"
 ## Godot, so the season has one fingerprint per platform; each was taken on
 ## main before the change (Linux: run_on_github run 43024085570). Removing
 ## the own plan (bug bash 5: rivals no longer build one) redrew the season:
-## Windows from a local run on that branch, Linux from its CI (Tests run 43755400948, shard 12).
+## Windows from a local run on that branch, Linux from its CI (shard 6).
 ## The game plan retune after it (bug bash 5) redrew it again: Windows from
 ## a local run, Linux from run_on_github run 43725691444 (with the 40% Controlled Tempo hold and #1613).
 ## The inside-50 pass that credits goal assists (#1638) redrew it again: Windows from
-## a local run, Linux from its CI (shard 6).
+## a local run, Linux from its CI (the dataset suite's shard).
+## The defensive-50 play (#1598) redrew it again: Windows from a local run,
+## Linux from that PR's CI (with the synergies change, #1645).
 ## Result keys added after the golden was taken that record who earned a
 ## call's credit, not what happened (row 144). "impact" and "plan_traits" were
 ## already in main's results, so they stay in the hash. "breeze_side" (the
@@ -40,8 +42,11 @@ const BOOKKEEPING_KEYS := ["impact_by", "breeze_side"]
 ## Team counts that record where something happened, not what happened: the
 ## pressure zones (pressure acts in the defensive half, tackles inside 50,
 ## 2026-11-14) are counted without a draw, so leaving them out keeps the print.
-const TEAM_BOOKKEEPING_KEYS := ["pressure_acts_dhalf", "tackles_i50"]
-const GOLDEN_SEASON := {"Windows": "5494a32b9b8ef33687a1afe633eec837", "Linux": "5f6065662575afcefd4196d42ad02d88"}
+const TEAM_BOOKKEEPING_KEYS := ["pressure_acts_dhalf", "tackles_i50", "poss_d50", "poss_f50",
+		"d50_tackled", "d50_rushed", "d50_chips"]
+## Team counts named by prefix (one key per way a defensive-50 chain ends).
+const TEAM_BOOKKEEPING_PREFIXES := ["d50_end_"]
+const GOLDEN_SEASON := {"Windows": "f4e0b5148ef909180ce6877aed5693a7", "Linux": "08b8a228396ec09ceb880c655b0c57d0"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and
@@ -186,6 +191,10 @@ func _strip_team_bookkeeping(v) -> void:
 	if v is Dictionary:
 		for k in TEAM_BOOKKEEPING_KEYS:
 			(v as Dictionary).erase(k)
+		for k in (v as Dictionary).keys():
+			for pre in TEAM_BOOKKEEPING_PREFIXES:
+				if str(k).begins_with(pre):
+					(v as Dictionary).erase(k)
 		for k in (v as Dictionary).keys():
 			_strip_team_bookkeeping((v as Dictionary)[k])
 	elif v is Array:
