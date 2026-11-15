@@ -9,6 +9,8 @@ extends Node3D
 ## own jog and idle), exported as assets/oval3d/player_average.glb, recoloured per club.
 
 const PLAYER_GLB := "res://assets/oval3d/player_average.glb"
+## The boots' own material in the GLB (export_player_glb.py, the Tripo boot): drawn as modelled.
+const BOOT_MATERIAL := "ARD_boot_real"
 const HALF_LEN := MatchMotion.HALF_LEN
 const HALF_WID := MatchMotion.HALF_WID
 const GOAL_X := MatchMotion.GOAL_X
@@ -358,15 +360,21 @@ func _kit(kit: Dictionary) -> ShaderMaterial:
 ## His number on the back of his guernsey (0-99; -1 for none), per figure.
 func _number(p: Dictionary, n: int) -> void:
 	for mi in (p["node"] as Node3D).find_children("*", "MeshInstance3D", true, false):
-		if (mi as MeshInstance3D).material_override is ShaderMaterial:
+		if (mi as MeshInstance3D).has_meta("kit"):
 			(mi as GeometryInstance3D).set_instance_shader_parameter("number", clampi(n, -1, 99))
 
 
 func _player(scene: PackedScene, kit: ShaderMaterial, cols: Array) -> Dictionary:
 	var node: Node3D = scene.instantiate()
 	add_child(node)
+	# Every surface wears the kit except the boots, which keep their own textured material.
 	for mi in node.find_children("*", "MeshInstance3D", true, false):
-		(mi as MeshInstance3D).material_override = kit
+		var m := mi as MeshInstance3D
+		for s in range(m.mesh.get_surface_count()):
+			var own := m.mesh.surface_get_material(s)
+			if own == null or own.resource_name != BOOT_MATERIAL:
+				m.set_surface_override_material(s, kit)
+		m.set_meta("kit", true)
 	var skel: Skeleton3D = node.find_children("*", "Skeleton3D", true, false)[0]
 	var hands := [skel.find_bone("hand_l"), skel.find_bone("hand_r")]
 	# A hand bone's length: its head to its fingers' roots (the children's rest offsets).
