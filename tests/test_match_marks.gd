@@ -516,7 +516,9 @@ func _test_contest_playback(res: Dictionary) -> void:
 	_check(spans >= 5 and planted_moves == 0, "...planted there from the call to the clearance: it never follows the ball in (%d moves in %d showings)" % [planted_moves, spans])
 	_check(called >= 1 and called_on == called, "...and on from the umpire's call, before the ball-up itself (%d of %d)" % [called_on, called])
 	_check(gone_late == 0, "...and goes out at the clearance, gone half a second after it (%d late frames)" % gone_late)
-	_check(open_full > 200, "In open play the ring round the ball shows (%d frames at full)" % open_full)
+	# (A possession won where the ball already lies has no flight, so no ring: a
+	# zero-length flight only hovered the ball. 198 frames since; was over 200.)
+	_check(open_full > 180, "In open play the ring round the ball shows (%d frames at full)" % open_full)
 	_check(open_wrong == 0, "...and only in live open play (%d frames off it)" % open_wrong)
 	_check(glide_most <= MatchMotion.SPRINT * FRAME * MatchDirector.TEMPO + 0.01,
 			"...moving with the ball no faster than a sprint (%.2f m in a frame)" % glide_most)
