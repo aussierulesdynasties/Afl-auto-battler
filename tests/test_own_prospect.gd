@@ -421,6 +421,12 @@ func _test_marks_on_screen() -> void:
 	var ui: Control = load("res://scenes/DraftScene.tscn").instantiate()
 	tree.root.add_child(ui)
 	await _settle(tree)
+	# A real-lists start opens its off-season before the draft (row 199).
+	var start = ui.find_child("FirstOffseasonStart", true, false)
+	_check(start != null, "The off-season comes before the draft")
+	if start != null:
+		await Tap.tap(start)
+		await _settle(tree)
 	var done = ui.find_child("MeetingDone", true, false)
 	if done != null:
 		await Tap.tap(done)
