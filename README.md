@@ -328,13 +328,13 @@ A standout stat earns a trait. Each player has up to two good traits, plus Hothe
 |---|---|
 | Ball magnet | 10% more of the ball in general play |
 | Contested bull | 15% more clearances, and about one more for the side a game; keeps the ball when tackled more often |
-| Ruck king | 5% more hit-outs; a hit-out to advantage helps the side win the clearance |
+| Ruck king | 5% more hit-outs, 25% more of them to advantage, so the side wins more clearances |
 | Aerial threat | 9% more marks in marking contests all over the ground |
 | Crumber | 12% more likely to kick a goal from any shot not from a mark |
 | Sharpshooter | every shot 6% more likely to be a goal |
 | Playmaker | shots from the player's inside-50 deliveries 5% more likely to be goals |
 | Interceptor | 30% more intercept marks, marking balls another defender would only spoil |
-| Lockdown | the opponent's shots 4% less likely to be goals |
+| Lockdown | every shot by the direct opponent less likely to be a goal: a forward's 4%, a midfielder's 20% |
 | Engine | tires 25% slower |
 | Big-game player | every rating 5% higher in the player's own contests in the last quarter and in finals |
 | Hothead | 50% more clangers and free kicks against; more 50-metre penalties and reports |

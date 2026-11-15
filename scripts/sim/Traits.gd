@@ -38,7 +38,7 @@ const DEFS := {
 			"text": "Takes 30% more intercept marks, in contests inside defensive 50, on the opposition's leads and in general play: marks many of the balls another defender would only spoil. Drawn to the loose man's job.",
 			"scout": "Reads the play and cuts off forward entries."},
 	"lockdown": {"label": "Lockdown", "stat": "pressure", "min": 64, "roles": ["DEF", "MID"],
-			"text": "Every shot by the player's direct opponent, from anywhere on the ground, is 4% less likely to be a goal: a defender's is the forward it is matched on, a midfielder's is their best midfielder not already picked up.",
+			"text": "Every shot by the player's direct opponent, from anywhere on the ground, is less likely to be a goal. A defender's opponent is the forward it is matched on: 4% less. A midfielder's is their best midfielder not already picked up, who shoots far less often: 20% less.",
 			"scout": "Can shut down a dangerous opponent."},
 	"def_forward": {"label": "Defensive forward", "stat": "pressure", "min": 44, "roles": ["FWD"], "own_role": true,
 			"text": "Sent to their loose defender, keeps that player out of most contests (another forward sent does it less well).",

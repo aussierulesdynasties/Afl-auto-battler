@@ -1146,7 +1146,7 @@ func _test_bash5_traits() -> void:
 		if not fwd.is_empty() and not dfd.is_empty():
 			var before := sim._lockdown_on(0, fwd)
 			sim._traits[str(dfd["id"])] = ["lockdown"]
-			_check(sim._lockdown_on(0, fwd) and not before,
+			_check(is_equal_approx(sim._lockdown_on(0, fwd), MatchSim.LOCKDOWN) and before == 1.0,
 					"A Lockdown defender covers its forward's shots from anywhere, not only the contest it stands in")
 			sim._traits[str(dfd["id"])] = []
 	# Contested bull: each bull in the midfield or ruck swings the stoppage
@@ -1240,8 +1240,8 @@ func _ranked(sim: MatchSim, role: String) -> Array:
 	return out
 
 
-## Lockdown on a midfielder: he picks up their best midfielder, whose shots
-## are 4% less likely to be goals. Before, only the forward-50 defender (a
+## Lockdown on a midfielder: it picks up their best midfielder, whose shots
+## are LOCKDOWN_MID times as likely to be goals. Before, only the forward-50 defender (a
 ## defender) could ever be the Lockdown on a shot.
 func _test_lockdown_midfielder() -> void:
 	var lock := _lockdown_sim(80)
@@ -1258,8 +1258,8 @@ func _test_lockdown_midfielder() -> void:
 			"The Lockdown midfielder picks up their best midfielder")
 	var p_lock := lock.shot_chance(0, best_lock, true, false)
 	var p_none := none.shot_chance(0, best_none, true, false)
-	_check(is_equal_approx(p_lock, p_none * 0.96),
-			"His opponent's shots are 4%% less likely to be goals (%.4f v %.4f)" % [p_lock, p_none])
+	_check(is_equal_approx(p_lock, p_none * MatchSim.LOCKDOWN_MID),
+			"The minded midfielder's shots are 20%% less likely to be goals (%.4f v %.4f)" % [p_lock, p_none])
 	# Only his opponent: their other midfielders and their forwards shoot as before.
 	var second_lock: Dictionary = _ranked(lock, "MID")[1]
 	var second_none: Dictionary = _ranked(none, "MID")[1]

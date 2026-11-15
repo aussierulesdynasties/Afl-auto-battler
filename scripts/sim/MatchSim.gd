@@ -4433,8 +4433,10 @@ func shot_chance(side: int, shooter: Dictionary, marked: bool, spoilt: bool, cre
 		_credit(side, "traits", 6.0 * (goal_p - before))
 	before = goal_p
 	var dtr := 1.0
-	if (defender != null and _trait(defender, "lockdown")) or _lockdown_on(side, shooter):
+	if defender != null and _trait(defender, "lockdown"):
 		dtr *= LOCKDOWN
+	else:
+		dtr *= _lockdown_on(side, shooter)
 	if synergies[opp].has("intercept_wall"):
 		dtr *= Traits.power("intercept_wall")
 	goal_p *= dtr
@@ -5936,19 +5938,23 @@ func _fire_run_moves(run: int) -> void:
 ## ground, is this much likelier to miss (bug bash 5: only the shots from the
 ## forward-50 contest it stood in counted, too few to show in a match).
 const LOCKDOWN := 0.96
+## ...and a midfielder's opponent's. A midfielder shoots far less often than a
+## forward, so at 4% a Lockdown midfielder took 0.00 +/- 0.02 goals a match off
+## the opposition (bug bash 5 audit): this is sized to show in a match.
+const LOCKDOWN_MID := 0.80
 
 
-## Whether `shooter` (of `side`) has a Lockdown on the ground as direct
-## opponent: a defender's is the forward it is matched on (duels), a
-## midfielder's the one `_midfield_minder` gives it.
-func _lockdown_on(side: int, shooter: Dictionary) -> bool:
+## The goal-chance factor on `shooter` (of `side`) from a Lockdown on the
+## ground as direct opponent: a defender's is the forward it is matched on
+## (duels), a midfielder's the one `_midfield_minder` gives it. 1.0 for none.
+func _lockdown_on(side: int, shooter: Dictionary) -> float:
 	var sid := str(shooter.get("id", ""))
 	var def_id := str((duels[1 - side] as Dictionary).get(sid, ""))
 	if def_id != "":
 		var d := _on_ground(1 - side, def_id)
 		if not d.is_empty() and _trait(d, "lockdown"):
-			return true
-	return not _midfield_minder(side, shooter).is_empty()
+			return LOCKDOWN
+	return LOCKDOWN_MID if not _midfield_minder(side, shooter).is_empty() else 1.0
 
 
 ## Lockdown's opponent. A defender's is the forward it is matched on; a
