@@ -178,8 +178,9 @@ func _home(body: VBoxContainer) -> void:
 	body.add_child(drop)
 
 
-## Create a player: the prospect himself above the form (PlayerPreview), front on
-## and from behind, with his name and what he plays, changing as you build him.
+## Create a player: the prospect himself above the form (PlayerPreview: the 3D footballer
+## the oval draws), front on and from behind, with his name and what he plays, changing
+## as you build him.
 ## Beside the form on a wide screen.
 func _player_workspace(form: ScrollContainer) -> Control:
 	var wide := ScreenLayout.wide_view(UiKit.view_width(self), UiKit.view_height(self), 760.0)
@@ -188,7 +189,8 @@ func _player_workspace(form: ScrollContainer) -> Control:
 	preview.spec = _spec
 	# The player you are making is the page's hero on a big screen.
 	var big := wide and UiKit.view_width(self) >= 1100.0
-	preview.custom_minimum_size = Vector2(420, 530) if big else (Vector2(260, 330) if wide else Vector2(170, 190))
+	# On a phone tall enough that his hair reads at a glance (the 3D footballer, ruling 2.76).
+	preview.custom_minimum_size = Vector2(420, 530) if big else (Vector2(260, 330) if wide else Vector2(190, 240))
 	var name_l := UiKit.lbl("", UiKit.H1 if wide else UiKit.H2, UiKit.TEXT, true)
 	name_l.name = "ForgePlayerPreviewName"
 	name_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -239,7 +241,7 @@ func _refresh_player_preview() -> void:
 	var bits := PackedStringArray([STYLE_LABELS.get(str(_spec.get("style", "")), _role_label(str(_spec.get("role", "MID")))),
 			"%d cm" % int(_spec.get("height_cm", 184))])
 	if int(_spec.get("number_pref", 0)) > 0:
-		bits.append("No. %d" % int(_spec["number_pref"]))
+		bits.append("No.\u00a0%d" % int(_spec["number_pref"]))   # never "No." alone at a line's end
 	(_ppv["line"] as Label).text = " · ".join(bits)
 
 
