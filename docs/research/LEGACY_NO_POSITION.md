@@ -1,10 +1,10 @@
 # Legacy starts: players with no position on record
 
-Director 2026-11-15, "Source real positions": a player whose Wikipedia article gives no position (the infobox, or the whole article read by hand) is placed by his recorded stats alone. These are those players, with the line his recorded stats put him on. Stats AFL Tables did not keep in that season count for nothing.
+Director 2026-11-15, "Source real positions": a player whose Wikipedia article (the infobox, or the whole article read by hand) and australianfootball.com biography (read by hand) give no position is placed by his recorded stats alone. These are those players, with the line his recorded stats put him on. Stats AFL Tables did not keep in that season count for nothing.
 
 ## 1990 start (rated on 1989)
 
-361 of 431 players with a 1989 game have a position on record; 70 do not.
+365 of 431 players with a 1989 game have a position on record; 66 do not.
 
 | Club | Player | 1989 games | Goals | Stats read |
 | --- | --- | --- | --- | --- |
@@ -17,7 +17,6 @@ Director 2026-11-15, "Source real positions": a player whose Wikipedia article g
 | COL | Brendan Tranter | 5 | 0 | Midfield |
 | COL | Paul Tuddenham | 10 | 5 | Midfield |
 | ESS | Darren Bewick | 13 | 30 | Forward |
-| ESS | Chris Daniher | 3 | 1 | Defence |
 | ESS | Derek Kickett | 12 | 12 | Midfield |
 | ESS | Kieran Sporn | 20 | 24 | Midfield |
 | ESS | Andrew Underwood | 11 | 4 | Midfield |
@@ -60,12 +59,10 @@ Director 2026-11-15, "Source real positions": a player whose Wikipedia article g
 | STK | Jim Krakouer | 11 | 9 | Midfield |
 | STK | Jamie Lamb | 10 | 0 | Defence |
 | STK | Tim Pekin | 14 | 0 | Midfield |
-| STK | Peter Russo | 20 | 14 | Midfield |
 | SYD | Matthew Lloyd | 4 | 1 | Defence |
 | SYD | Darren McAsey | 10 | 11 | Defence |
 | SYD | Glenn Page | 1 | 0 | Midfield |
 | SYD | Michael Phyland | 9 | 3 | Midfield |
-| SYD | Terry Thripp | 22 | 22 | Midfield |
 | SYD | Sanford Wheeler | 2 | 1 | Midfield |
 | SYD | Stephen Wright | 17 | 11 | Midfield |
 | WBD | Adrian Campbell | 14 | 21 | Forward |
@@ -77,11 +74,10 @@ Director 2026-11-15, "Source real positions": a player whose Wikipedia article g
 | WCE | Todd Breman | 15 | 10 | Midfield |
 | WCE | Murray Rance | 17 | 1 | Defence |
 | WCE | Chris Waterman | 10 | 10 | Midfield |
-| WCE | Peter Wilson | 19 | 8 | Midfield |
 
 ## 2000 start (rated on 1999)
 
-391 of 473 players with a 1999 game have a position on record; 82 do not.
+395 of 473 players with a 1999 game have a position on record; 78 do not.
 
 | Club | Player | 1999 games | Goals | Stats read |
 | --- | --- | --- | --- | --- |
@@ -110,13 +106,11 @@ Director 2026-11-15, "Source real positions": a player whose Wikipedia article g
 | ESS | Mark McVeigh | 9 | 2 | Midfield |
 | ESS | Adam Ramanauskas | 2 | 0 | Defence |
 | FRE | Craig Callaghan | 14 | 10 | Defence |
-| FRE | Brad Dodd | 6 | 0 | Midfield |
 | FRE | Troy Longmuir | 13 | 2 | Midfield |
 | FRE | Shaun McManus | 15 | 7 | Midfield |
 | FRE | Clem Michael | 13 | 8 | Ruck |
 | GEE | Paul Corrigan | 15 | 2 | Defence |
 | GEE | Glenn Kilpatrick | 14 | 5 | Midfield |
-| HAW | Nick Holland | 21 | 35 | Forward |
 | HAW | Brendan Krummel | 11 | 9 | Defence |
 | HAW | Richie Vandenberg | 11 | 2 | Defence |
 | HAW | Barry Young | 20 | 9 | Defence |
@@ -131,7 +125,6 @@ Director 2026-11-15, "Source real positions": a player whose Wikipedia article g
 | NTH | Shannon Motlop | 7 | 5 | Defence |
 | NTH | Byron Pickett | 25 | 0 | Defence |
 | PAD | Scott Bassett | 1 | 0 | Midfield |
-| PAD | Fabian Francis | 18 | 5 | Defence |
 | PAD | Derek Murray | 3 | 3 | Midfield |
 | PAD | Jared Poulton | 6 | 3 | Defence |
 | RIC | David Bourke | 10 | 1 | Defence |
@@ -141,7 +134,6 @@ Director 2026-11-15, "Source real positions": a player whose Wikipedia article g
 | RIC | Clinton King | 14 | 5 | Midfield |
 | RIC | Mark Merenda | 3 | 2 | Defence |
 | RIC | Lionel Proctor | 13 | 1 | Defence |
-| RIC | Matthew Rogers | 22 | 9 | Defence |
 | RIC | John Rombotis | 6 | 0 | Midfield |
 | RIC | Clay Sampson | 17 | 14 | Midfield |
 | RIC | Jason Torney | 3 | 0 | Defence |
