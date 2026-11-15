@@ -4111,9 +4111,9 @@ func _i50_give(side: int, at_fp: float, holder: Dictionary, defender, marked: bo
 			break
 	var opp := 1 - side
 	var kick := not crumbed or i50_rng.randf() >= _tv("I50_HAND_SHARE", I50_HAND_SHARE)
-	# A crumber already won his ground ball; a marker's mark is his possession.
-	if not crumbed:
-		_gain(side, holder, "up" if marked else "gb")
+	# His possession before he gives it: a mark is uncontested; the ball won
+	# off the deck (a crumb) or run onto on the lead is a ground ball.
+	_gain(side, holder, "up" if marked else "gb")
 	_t(side, "disposals")
 	_p(holder, "disposals")
 	_t(side, "kicks" if kick else "handballs")
