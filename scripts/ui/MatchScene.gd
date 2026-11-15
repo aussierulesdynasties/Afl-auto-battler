@@ -1241,8 +1241,8 @@ func _show_coach_box() -> void:
 		# day's weather (M1, director 2026-11-10).
 		# At a break the weather turns at, the plans are sized for the new one (row 160).
 		var sized := GateOdds.plan_texts_for(sim.squads[_my_side], key, sim.weather_ahead())
-		plan_note.add_child(_plan_row("Gain:", str(sized[0]), "PlanGain"))
-		plan_note.add_child(_plan_row("Cost:", str(sized[1]), "PlanCost"))
+		plan_note.add_child(_plan_row("Gain:", _break_line(str(sized[0])), "PlanGain"))
+		plan_note.add_child(_plan_row("Cost:", _break_line(str(sized[1])), "PlanCost"))
 		if d.has("beats"):
 			var beats := UiKit.lbl(str(d["beats"]), UiKit.SECONDARY, UiKit.TEXT)
 			beats.name = "PlanBeats"
@@ -1355,8 +1355,8 @@ func _show_coach_box() -> void:
 		var who_name := GameDB.player_display_name(who) if who != null else ""
 		var kept := GateOdds.tag_kept(who, float(sim.energy.get(str(who["id"]), 100.0))) if who != null else 0
 		var gc := GateOdds.tag_break_texts(target, who_name, kept, benched, str(untagged[0]))
-		NameInk.set_line(tag_rows[0], str(gc[0]), _names())
-		NameInk.set_line(tag_rows[1], str(gc[1]), _names())
+		NameInk.set_line(tag_rows[0], _break_line(str(gc[0])), _names())
+		NameInk.set_line(tag_rows[1], _break_line(str(gc[1])), _names())
 		tag_note.set_meta("plain", GateOdds.gain(str(gc[0])) + "\n" + GateOdds.cost(str(gc[1])))
 	# The tag is offered on their listed midfielders only (director, 2026-10-14:
 	# "Only listed midfielders"): the names, and "Other midfielder..." for the
@@ -1537,8 +1537,8 @@ func _show_coach_box() -> void:
 			c.queue_free()
 		var psim: MatchSim = GameState.pending_sim
 		var sized := GateOdds.pep_texts(key, psim.fire_up_contest(_my_side) if psim != null else MatchSim.PEP_FIRE_CONTEST)
-		pep_note.add_child(_plan_row("Gain:", str(sized[0]), "PepGain"))
-		pep_note.add_child(_plan_row("Cost:", str(sized[1]), "PepCost"))
+		pep_note.add_child(_plan_row("Gain:", _break_line(str(sized[0])), "PepGain"))
+		pep_note.add_child(_plan_row("Cost:", _break_line(str(sized[1])), "PepCost"))
 	# Four talks: a two-column grid of their full names, which fits a 360 phone
 	# and the PC column alike (one row of four ran off a phone).
 	var pep := _choice_grid("PepPicker", PEP_TALKS, calls, "pep", 2, sync_pep)
@@ -2342,14 +2342,31 @@ func _break_answers() -> Dictionary:
 	return out
 
 
+## The break sheet holds every call at once and must fit without scrolling
+## (director's no-scroll ruling), so a gate's effects, one a line on the call
+## cards (style guide 5.1), run on one line here, parted by " · ". A bracketed
+## line ("(X% for a list that suits it)") rides on the line before it.
+const _BREAK_LOWER := ["Our", "Their", "He", "With", "No", "Nobody", "Nothing", "Never", "For", "To", "On",
+		"Anyone", "The", "When"]
+
+
+static func _break_line(text: String) -> String:
+	var parts := text.replace("\n(", " (").split("\n", false)
+	for i in range(1, parts.size()):
+		var first := str(parts[i]).get_slice(" ", 0)
+		if first in _BREAK_LOWER:
+			parts[i] = str(parts[i]).substr(0, 1).to_lower() + str(parts[i]).substr(1)
+	return " · ".join(parts)
+
+
 ## A "Gain:" / "Cost:" style row: the marker bold, the sentence beside it, both
 ## in full ink (the card-stakes pattern).
 ## Fill `box` with a call's "Gain:" and "Cost:" rows ([gain, cost], unlabelled),
 ## the plan's look: the label in the label ink, the line in body text.
 func _gain_cost_rows(box: Control, gc: Array, prefix: String) -> void:
 	UiKit.clear(box)
-	box.add_child(_plan_row("Gain:", str(gc[0]), prefix + "Gain"))
-	box.add_child(_plan_row("Cost:", str(gc[1]), prefix + "Cost"))
+	box.add_child(_plan_row("Gain:", _break_line(str(gc[0])), prefix + "Gain"))
+	box.add_child(_plan_row("Cost:", _break_line(str(gc[1])), prefix + "Cost"))
 
 
 func _plan_row(mark: String, text: String, node_name: String, traits := false, size := UiKit.SECONDARY) -> Control:

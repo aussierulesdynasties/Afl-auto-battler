@@ -28,5 +28,11 @@
 		"100 new achievements: a rivalry and a dynasty feat for every club, and 56 for the coach.",
 		"Team selection and the player sheet show fatigue, morale and form as numbers.",
 		"Fixed: a pick trade shows before its pick, and a coach who changes clubs leaves the old club's off-season alone."
+	],
+	"1.0.18": [
+		"After each round, Training leads with how many players rose and names every one with his new rating.",
+		"The footballers in match-day scenes have softer light and shade, with a soft shadow at their feet.",
+		"Draft night, the pre-season, contracts, trades, event cards, the press and the menus now speak like a senior coach.",
+		"Simming through the off-season is quicker."
 	]
 }

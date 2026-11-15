@@ -37,6 +37,8 @@ func run() -> void:
 	_t("_test_data_whole")
 	_t("_test_cards_valid")
 	_t("_test_fine_cut")
+	_t("_test_fitzroy_stays_telling")
+	_t("_test_era_copy")
 	_t("_test_campaign_fires_across_decades")
 	_t("_test_week_fires_in_its_season")
 	_t("_test_switch_off_fires_no_controversy")
@@ -93,6 +95,80 @@ func _test_cards_valid() -> void:
 			if (o.get("effects", []) as Array).is_empty():
 				bare.append(str(t["id"]))
 	_check(bare.is_empty(), "Every option of every year card does something (%s)" % str(bare))
+	# Bug bash 4 (R6-R8): each event's choices follow its own story, so no
+	# two events share a choice, a result or a reason line.
+	var owner := {}
+	var shared := []
+	for e in YearEvents.all():
+		var card = e.get("card", {})
+		if not (card is Dictionary):
+			continue
+		for c in card.get("choices", []):
+			var lines := [str(c.get("label", "")), str(c.get("result", ""))]
+			for x in c.get("effects", []):
+				lines.append(str(x.get("why", "")))
+			for t in lines:
+				if t == "":
+					continue
+				if owner.has(t) and owner[t] != e["id"]:
+					shared.append("%s / %s: %s" % [owner[t], e["id"], t])
+				owner[t] = e["id"]
+	_check(shared.is_empty(), "No two year events share a choice line (%s)" % str(shared.slice(0, 5)))
+	var tank := _card_choice("tanking_inquiry", "close")
+	_check(str(tank.get("result", "")).contains("no tanking") and not str(_card_choice("tanking_inquiry", "own").get("label", "")).to_lower().contains("tank"),
+			"The tanking card follows the finding: the club was cleared, its officials were fined")
+	_check(str(_card_choice("swans_trade_ban", "own").get("label", "")).contains("ban"), "The Swans' card is about the league's ban")
+
+
+## Bug bash 4: era copy follows the season (L6, L9-L12).
+func _test_era_copy() -> void:
+	_check(Awards.golden_fist_name(2015) == "Golden Fist" and Awards.golden_fist_name(2020) == Awards.GOLDEN_FIST
+			and Awards.golden_fist_name(2030) == Awards.GOLDEN_FIST, "The Golden Fist takes Danny Frawley's name from 2020")
+	_check(not EraRules.on("rising_star", 1992) and EraRules.on("rising_star", 1993) and EraRules.on("rising_star", 2030),
+			"The Rising Star is first presented in 1993")
+	_check(TribunalFines.body(2004) == "the Tribunal" and TribunalFines.body(2005) == "the MRO" and TribunalFines.body(2030) == "the MRO",
+			"Fines come from the Tribunal before 2005 and the MRO from 2005")
+	var f1995 := TribunalFines.next_amount({}, 1995)
+	_check(f1995 > 0 and f1995 < 1000 and TribunalFines.next_amount({}, 2026) == 1000,
+			"A 1995 fine is in 1995 money ($%d), today's is $1,000" % f1995)
+	_check(ClubBudget.money_m(10.0, 1995) != "$10.0m" and ClubBudget.money_m(10.0, 2030) == "$10.0m",
+			"Budget lines read in the season's money (%s)" % ClubBudget.money_m(10.0, 1995))
+	var y := EraRules.year
+	var ahead := EraRules.list_ahead
+	EraRules.list_ahead = false
+	EraRules.year = 1995
+	var before := RookieList.together_words(" (", ")")
+	EraRules.year = 2000
+	var after := RookieList.together_words(" (", ")")
+	EraRules.year = y
+	EraRules.list_ahead = ahead
+	_check(before == "" and after.contains("Category A"), "No rookies in the list limit's words before 1997")
+
+
+## Bug bash 4 (L7): with Fitzroy playing on there are no merged Lions in 1997.
+func _test_fitzroy_stays_telling() -> void:
+	var e := {}
+	for x in YearEvents.all():
+		if str(x.get("id", "")) == "port_and_lions_enter":
+			e = x
+	var was = GameState.legacy
+	GameState.legacy = {"fitzroy": "merged"}
+	var merged := YearEvents.as_played(GameState, e)
+	GameState.legacy = {"fitzroy": "stays"}
+	var stays := YearEvents.as_played(GameState, e)
+	GameState.legacy = was
+	_check(str(merged["beats"]).contains("Lions") and (merged["clubs"] as Array).has("BRL"), "Merged: the Lions begin in 1997")
+	_check(not str(stays["beats"]).contains("Lions") and not str(stays["headline"]).contains("Lions")
+			and stays["clubs"] == ["PAD"], "Fitzroy play on: 1997's news is Port Adelaide's alone (%s)" % str(stays["headline"]))
+
+
+func _card_choice(id: String, key: String) -> Dictionary:
+	for e in YearEvents.all():
+		if str(e.get("id", "")) == id:
+			for c in (e.get("card", {}) as Dictionary).get("choices", []):
+				if str(c.get("key", "")) == key:
+					return c
+	return {}
 
 
 func _test_fine_cut() -> void:

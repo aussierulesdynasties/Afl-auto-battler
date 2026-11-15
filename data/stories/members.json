@@ -7,7 +7,7 @@
 			"kind": "club"
 		},
 		"title": [
-			"Members want an open training day"
+			"The members have asked for an open training day"
 		],
 		"text": [
 			"The supporters would love it. The coaches would rather work."
@@ -62,7 +62,7 @@
 			"Members want a signing session after training"
 		],
 		"text": [
-			"An hour on their feet in the car park with the members, straight after a long session, when they'd be in recovery."
+			"An hour on their feet in the car park with the members. It comes straight after a long session, in recovery time."
 		],
 		"choices": [
 			{
@@ -84,7 +84,7 @@
 			},
 			{
 				"key": "no",
-				"label": "Not this week",
+				"label": "Put it off",
 				"effects": [
 					{
 						"op": "board",
@@ -101,7 +101,9 @@
 	},
 	{
 		"id": "members_forum",
+		"topical": true,
 		"category": "members",
+		"cooldown": 50,
 		"subject": {
 			"kind": "club"
 		},
@@ -171,7 +173,7 @@
 			"The cheer squad have asked for {name}"
 		],
 		"text": [
-			"They want him to help paint the banner on the afternoon he does his extra work."
+			"They want him to help paint the banner. It's the afternoon he does his extra work."
 		],
 		"choices": [
 			{
@@ -195,7 +197,7 @@
 			},
 			{
 				"key": "no",
-				"label": "Not this week",
+				"label": "Keep his extra work",
 				"effects": [
 					{
 						"op": "xp",
@@ -206,7 +208,7 @@
 						"d": -1
 					}
 				],
-				"result": "The banner gets painted without {name}. He does his extra work, and the cheer squad tell the club they're disappointed."
+				"result": "The banner gets painted without {name}. He does his extra work. The cheer squad tell the club they're disappointed."
 			}
 		]
 	},
@@ -220,12 +222,12 @@
 			"Members can't get finals tickets"
 		],
 		"text": [
-			"The ticketing has been a mess, and the members are blaming the club."
+			"The ticketing has been a mess. The members are blaming the club."
 		],
 		"choices": [
 			{
 				"key": "front",
-				"label": "Front the media for the club",
+				"label": "Front the media",
 				"effects": [
 					{
 						"op": "board",
@@ -241,7 +243,7 @@
 			},
 			{
 				"key": "ceo",
-				"label": "Leave it to the CEO",
+				"label": "Let the CEO front",
 				"effects": [
 					{
 						"op": "xp",
@@ -268,15 +270,15 @@
 			"kind": "club"
 		},
 		"title": [
-			"Members are travelling to see you play"
+			"Members are travelling to see us play"
 		],
 		"text": [
-			"Two hundred of them on the trip, and they'd love to meet the players."
+			"Two hundred of them on the trip. They'd love to meet the players."
 		],
 		"choices": [
 			{
 				"key": "meet",
-				"label": "Players meet them at the hotel",
+				"label": "Meet the members",
 				"effects": [
 					{
 						"op": "board",
@@ -293,7 +295,7 @@
 			},
 			{
 				"key": "bubble",
-				"label": "Keep the players in their bubble",
+				"label": "Keep the players focused",
 				"effects": [
 					{
 						"op": "board",
@@ -326,7 +328,7 @@
 			"We're in"
 		],
 		"text": [
-			"It's mathematical now: we can't drop out of the ten. The club's been buzzing all weekend."
+			"It's mathematical now: we're playing finals. The club's been buzzing all weekend."
 		],
 		"choices": [
 			{
@@ -397,7 +399,7 @@
 		"choices": [
 			{
 				"key": "banner",
-				"label": "{first}'s name goes on the banner",
+				"label": "Put {first} on it",
 				"effects": [
 					{
 						"op": "morale",
@@ -420,7 +422,7 @@
 			},
 			{
 				"key": "club",
-				"label": "The banner is for the club",
+				"label": "Keep it the club's",
 				"effects": [
 					{
 						"op": "culture",
@@ -446,7 +448,7 @@
 			"Open training for the members"
 		],
 		"text": [
-			"The club wants to open a session to the members before Round 1."
+			"We want to open a session to the members before Round 1."
 		],
 		"choices": [
 			{
@@ -469,7 +471,7 @@
 						"why": "A pre-season session played to the crowd"
 					}
 				],
-				"result": "A few thousand members line the fence, and the session is a light one."
+				"result": "A few thousand members line the fence. The session is a light one."
 			},
 			{
 				"key": "closed",
@@ -521,7 +523,7 @@
 		"choices": [
 			{
 				"key": "feel",
-				"label": "Let the players feel it",
+				"label": "Let them savour it",
 				"effects": [
 					{
 						"op": "morale",
@@ -613,7 +615,7 @@
 			},
 			{
 				"key": "again",
-				"label": "One week, then go again",
+				"label": "One week, then work",
 				"effects": [
 					{
 						"op": "morale",

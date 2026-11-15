@@ -209,7 +209,7 @@ func _budget(body: VBoxContainer) -> void:
 	# A league fine (YearEvents) cuts this year's budget: say so beside the total.
 	var fine_cut := ClubBudget.ANNUAL_M - GameState.department_budget_annual_m()
 	if fine_cut > 0.001:
-		var fine := _para("The league's fine takes $%.1fm off our budget this year." % fine_cut, 13, UiKit.BAD)
+		var fine := _para("The league's fine takes %s off our budget this year." % ClubBudget.money_m(fine_cut, year), 13, UiKit.BAD)
 		fine.name = "BudgetFine"
 		body.add_child(fine)
 	body.add_child(UiKit.spacer(4))
@@ -282,7 +282,14 @@ func _contracts(body: VBoxContainer) -> void:
 			body.add_child(got)
 	_retiring(body)
 	if GameState.offseason_open():
-		body.add_child(_para("Leave one of our best 23 unsigned and he tests free agency. Our offer stands at his asking price. Rivals can beat it. Other players re-sign for two seasons if the cap allows.", 12, UiKit.MUTED))
+		# No free agency before 2012 (EraRules free_agency): an unsigned player
+		# re-signs or is delisted (bug bash 4, L13).
+		var how := "Leave one of our best 23 unsigned and he tests free agency. Our offer stands at his asking price. Rivals can beat it. Other players re-sign for two seasons if the cap allows." \
+				if EraRules.on("free_agency", GameState.season_year) \
+				else "Leave a player unsigned and he re-signs for two seasons if the cap allows; if it doesn't, he is delisted. Free agency starts in 2012."
+		var how_para := _para(how, 12, UiKit.MUTED)
+		how_para.name = "UnsignedRule"
+		body.add_child(how_para)
 	var head := UiKit.lbl("Out of contract  (%d)" % expiring.size(), UiKit.BODY, UiKit.EMPH, true)
 	head.name = "OutOfContractHead"
 	body.add_child(head)

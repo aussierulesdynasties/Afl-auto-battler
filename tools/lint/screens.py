@@ -47,7 +47,7 @@ COLOUR_CUES = {
         ["UiKit.TEXT if state == \"Stable\"", "the job security word", 1]],
     "DraftScene.gd": [
         ["Traits.is_bad(str(t))", "the weakness mark", 1],
-        ["\"On your list\"", "On your list, pick N", 1],
+        ["\"On our list\"", "On our list, pick N", 1],
         ["int(st[\"short\"]) > 0", "the need word (short of ...)", 1],
         ["_draft.is_valid()", "the status line in words", 1]],
     "PlayerCondition.gd": [

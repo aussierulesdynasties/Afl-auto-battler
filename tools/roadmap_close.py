@@ -126,7 +126,7 @@ def check(body, text):
     cells = {first_cell(l) for l in text.splitlines()}
     missing = [i for i in named if i not in cells]
     if missing:
-        return (f"No docs/TODO.md row has the id {', '.join(missing)}. "
+        return (f"No docs/TODO.md or TODO_RULINGS.md row has the id {', '.join(missing)}. "
                 "Name an existing row, or write 'No row: <why>'.")
     return None
 
@@ -134,17 +134,18 @@ def check(body, text):
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--body-file", required=True)
-    ap.add_argument("--todo", default="docs/TODO.md")
+    ap.add_argument("--todo", action="append",
+                    help="a list file to read; repeat it for several (default docs/TODO.md)")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--check", action="store_true", help="fail when the body names no row")
     ap.add_argument("--pr", default="")
     ap.add_argument("--title", default="")
     a = ap.parse_args(argv)
     body = pathlib.Path(a.body_file).read_text(encoding="utf-8", errors="replace")
-    path = pathlib.Path(a.todo)
-    text = path.read_bytes().decode("utf-8")  # keeps a leading BOM as U+FEFF
+    paths = [pathlib.Path(t) for t in (a.todo or ["docs/TODO.md"])]
+    texts = [p.read_bytes().decode("utf-8") for p in paths]  # keeps a leading BOM as U+FEFF
     if a.check:
-        err = check(body, text)
+        err = check(body, "\n".join(texts))
         if err:
             print(err, file=sys.stderr)
             return 1
@@ -153,11 +154,18 @@ def main(argv=None):
     if not ids and not parts:
         print("warning: PR body names no 'Closes row N' or 'Part of row N'; nothing to do", file=sys.stderr)
         return 0
-    new, closed = close_rows(text, resolve(text, ids))
-    noted = []
-    if parts and a.pr:
-        keep = [i for i in resolve(new, parts) if i not in closed]
-        new, noted = note_rows(new, keep, a.pr, a.title)
+    closed, noted = [], []
+    for path, text in zip(paths, texts):
+        new, shut = close_rows(text, resolve(text, ids))
+        marked = []
+        if parts and a.pr:
+            keep = [i for i in resolve(new, parts) if i not in shut]
+            new, marked = note_rows(new, keep, a.pr, a.title)
+        closed += [i for i in shut if i not in closed]
+        noted += [i for i in marked if i not in noted]
+        if new != text and not a.dry_run:
+            with open(path, "w", encoding="utf-8", newline="") as f:
+                f.write(new)
     changed = closed + noted
     if not changed:
         print(f"warning: no TODO row matches {'; '.join(', '.join(g) for g in ids + parts)}", file=sys.stderr)
@@ -166,9 +174,6 @@ def main(argv=None):
         print(f"closing: {', '.join(closed)}", file=sys.stderr)
     if noted:
         print(f"noting the merge on: {', '.join(noted)}", file=sys.stderr)
-    if not a.dry_run:
-        with open(path, "w", encoding="utf-8", newline="") as f:
-            f.write(new)
     print(", ".join(changed))
     return 0
 

@@ -5,7 +5,7 @@ Same body, kit and poses the sprite sheets use (build_sprites.py), so the 3D ova
 director-passed motion rather than inventing one. One material per kit region (ARD_<region>),
 so Godot recolours each club's guernsey, shorts and socks.
 """
-import json, math, os, sys, time
+import json, math, os, re, sys, time
 import bpy
 
 PIPE = os.environ.get("ARD_PIPELINE_BLENDER", os.path.join(os.path.dirname(__file__), "..", "..", "..", "ard-asset-pipeline", "tools", "blender"))
@@ -18,7 +18,45 @@ argv = sys.argv[sys.argv.index("--") + 1:]
 presets, body_type, out = json.load(open(argv[0])), argv[1], argv[2]
 
 bpy.ops.wm.read_homefile(use_empty=True)
-basemesh, rig = ard_body.build_body(body_type, presets[body_type]["macros"], targets=presets[body_type].get("targets"))
+# Real boots (director, 2026-11-15: "Real boots"): MakeHuman's low-cut sports shoe (shoes06),
+# fitted and rigged with the body; its delete group takes the bare foot away under it. Joined
+# into the body below as the boot region, so the club's boot colour draws it.
+SHOE = os.environ.get("ARD_SHOE", "shoes06")
+shoe_dir = os.path.join(ard_body.ASSETS_DIR, "clothes", SHOE)
+# The shoe deletes the body to mid-shin and brings its own sock tube, whose top fights the
+# body's sock in a jagged line. A copy of the asset deletes only the foot (base-mesh verts below
+# ARD_SHOE_KEEP decimetres over the sole, inside the boot); the tube above the boot is cut off
+# after the build, so the body's own sock runs down into the boot.
+KEEP = float(os.environ.get("ARD_SHOE_KEEP", "0.9"))
+if SHOE and KEEP > 0.0:
+    import glob, shutil, tempfile
+    base_obj = glob.glob(os.path.join(os.environ.get("APPDATA", ""), "Blender Foundation", "Blender", "5.2",
+                                      "extensions", "**", "3dobjs", "base.obj"), recursive=True)[0]
+    by = [float(l.split()[2]) for l in open(base_obj) if l.startswith("v ")]
+    sole = min(by[:13380])
+    tmp = os.path.join(tempfile.mkdtemp(), SHOE)
+    shutil.copytree(shoe_dir, tmp)
+    lines = open(os.path.join(tmp, SHOE + ".mhclo")).read().split(chr(10))
+    i = lines.index("delete_verts")
+    j = i + 1
+    while j < len(lines) and re.match(r"^[0-9 -]+$", lines[j] or "x"):
+        j += 1
+    toks = " ".join(lines[i + 1:j]).split()
+    ids, k = [], 0
+    while k < len(toks):
+        if k + 2 < len(toks) and toks[k + 1] == "-":
+            ids += range(int(toks[k]), int(toks[k + 2]) + 1)
+            k += 3
+        else:
+            ids.append(int(toks[k]))
+            k += 1
+    kept = [v for v in ids if by[v] - sole < KEEP]
+    lines[i + 1:j] = [" ".join(str(v) for v in kept[n:n + 40]) for n in range(0, len(kept), 40)]
+    open(os.path.join(tmp, SHOE + ".mhclo"), "w").write(chr(10).join(lines))
+    print(f"SHOE DELETE {len(kept)} of {len(ids)} body verts (below {KEEP} dm)")
+    shoe_dir = tmp
+basemesh, rig = ard_body.build_body(body_type, presets[body_type]["macros"], targets=presets[body_type].get("targets"),
+                                    extras=[shoe_dir] if SHOE else None)
 ard_body.assign_kit(basemesh, rig, outfit=presets[body_type].get("outfit", "footballer"))
 ard_body.fix_shoulders(basemesh, rig)
 
@@ -56,6 +94,205 @@ for li, loop in enumerate(me.loops):
 print(f"GUERNSEY u {min(gu):.2f}..{max(gu):.2f} v {min(gv):.2f}..{max(gv):.2f} front {min(gf):.2f}..{max(gf):.2f}")
 me.color_attributes.active_color = col
 me.color_attributes.render_color_index = me.color_attributes.find("kit")
+
+# The boot itself (director, 2026-11-15: "boot is good"): a Tripo model made from his boot
+# photos, kept in its own textured material (ARD_boot_real; the game leaves that surface out of
+# the kit shader). MakeHuman's shoe stays only as the guide: each Tripo boot is scaled to the
+# guide's length on that foot, turned to its toe line, stood on its sole, mirrored for the other
+# foot, and takes the guide's rig weights (nearest face), so it moves exactly as the shoe did.
+BOOT = os.environ.get("ARD_BOOT_GLB", os.path.join(os.environ.get("USERPROFILE", os.path.expanduser("~")),
+                                                     "Desktop", "footy assets", "boots", "tripo_boot.glb"))
+BOOT_TRIS = int(os.environ.get("ARD_BOOT_TRIS", "1500"))   # per boot
+BOOT_TEX = int(os.environ.get("ARD_BOOT_TEX", "512"))      # colour map size, pixels
+
+
+def tripo_boots(guide, path, uv_name):
+    from mathutils import Matrix, Vector
+    before = set(bpy.data.objects)
+    # Merged: glTF splits a vertex at every UV seam, and the decimate never collapses across them.
+    bpy.ops.import_scene.gltf(filepath=path, merge_vertices=True)
+    new = [o for o in bpy.data.objects if o not in before]
+    src = next(o for o in new if o.type == "MESH")
+    mw = src.matrix_world.copy()
+    src.parent = None
+    src.data.transform(mw)
+    src.matrix_world = Matrix()
+    for o in new:
+        if o is not src:
+            bpy.data.objects.remove(o)
+    import bmesh
+    bm = bmesh.new()
+    bm.from_mesh(src.data)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts[:], dist=1e-6)   # the import leaves ~7k split
+    bm.to_mesh(src.data)
+    bm.free()
+    n = sum(len(p.vertices) - 2 for p in src.data.polygons)
+    dec = src.modifiers.new("decimate", "DECIMATE")
+    dec.ratio = min(1.0, BOOT_TRIS / n)
+    low = bpy.data.meshes.new_from_object(src.evaluated_get(bpy.context.evaluated_depsgraph_get()))
+    src.modifiers.clear()
+    src.data = low
+    # Colour map only: the metal-rough and normal maps add megabytes a 2 cm boot on a phone can't show.
+    mat = low.materials[0]
+    mat.name = "ARD_boot_real"
+    nt = mat.node_tree
+    bsdf = next(nd for nd in nt.nodes if nd.type == "BSDF_PRINCIPLED")
+    base = bsdf.inputs["Base Color"].links[0].from_node
+    for nd in list(nt.nodes):
+        if nd not in (bsdf, base) and nd.type != "OUTPUT_MATERIAL":
+            nt.nodes.remove(nd)
+    bsdf.inputs["Metallic"].default_value = 0.0
+    bsdf.inputs["Roughness"].default_value = 0.6
+    if base.image.size[0] > BOOT_TEX:
+        base.image.scale(BOOT_TEX, BOOT_TEX)
+    low.uv_layers[0].name = uv_name
+
+    def box(vs):
+        return (Vector((min(v.x for v in vs), min(v.y for v in vs), min(v.z for v in vs))),
+                Vector((max(v.x for v in vs), max(v.y for v in vs), max(v.z for v in vs))))
+
+    sv = [v.co.copy() for v in low.vertices]
+    lo, hi = box(sv)
+    length0 = hi.y - lo.y
+    mid0 = Vector(((lo.x + hi.x) / 2, (lo.y + hi.y) / 2, lo.z))
+    # The toe is at -Y (the body faces -Y). Its tip leans toward the big toe: + means toward +X.
+    tip = [v for v in sv if v.y < lo.y + 0.05 * length0]
+    lean = sum(v.x for v in tip) / len(tip) - mid0.x
+    gw = [guide.matrix_world @ v.co for v in guide.data.vertices]
+    made = []
+    for side in (-1, 1):        # -1 = his right foot (facing -Y, his right is -X)
+        g = [w for w in gw if w.x * side > 0.0]
+        cx, cy = sum(w.x for w in g) / len(g), sum(w.y for w in g) / len(g)
+        sxx = sum((w.x - cx) ** 2 for w in g)
+        syy = sum((w.y - cy) ** 2 for w in g)
+        sxy = sum((w.x - cx) * (w.y - cy) for w in g)
+        ang = 0.5 * math.atan2(2 * sxy, sxx - syy)          # the guide's long axis, from +X
+        ax = Vector((math.cos(ang), math.sin(ang), 0.0))
+        if ax.y > 0:
+            ax = -ax                                           # point it at the toe (-Y)
+        yaw = math.atan2(ax.y, ax.x) + math.pi / 2             # turn from the boot's -Y to the axis
+        proj = [(w.x - cx) * ax.x + (w.y - cy) * ax.y for w in g]
+        length = max(proj) - min(proj)
+        c = Vector((cx, cy, 0.0)) + ax * ((max(proj) + min(proj)) / 2)
+        c.z = min(w.z for w in g)
+        s = length / length0
+        # Big toe toward the body's middle: +X on his right foot, -X on his left.
+        mx = 1.0 if lean * -side > 0 else -1.0
+        m = (Matrix.Translation(c) @ Matrix.Rotation(yaw, 4, "Z")
+             @ Matrix.Diagonal((mx * s, s, s, 1.0)) @ Matrix.Translation(-mid0))
+        me2 = low.copy()
+        me2.transform(m)
+        if mx < 0:
+            me2.flip_normals()
+        ob2 = bpy.data.objects.new(f"boot_{'r' if side < 0 else 'l'}", me2)
+        bpy.context.scene.collection.objects.link(ob2)
+        for vg in guide.vertex_groups:
+            ob2.vertex_groups.new(name=vg.name)
+        dt = ob2.modifiers.new("weights", "DATA_TRANSFER")
+        dt.object = guide
+        dt.use_vert_data = True
+        dt.data_types_verts = {"VGROUP_WEIGHTS"}
+        dt.vert_mapping = "POLYINTERP_NEAREST"
+        dt.layers_vgroup_select_src = "ALL"
+        dt.layers_vgroup_select_dst = "NAME"
+        with bpy.context.temp_override(object=ob2, active_object=ob2, selected_objects=[ob2]):
+            bpy.ops.object.modifier_apply(modifier=dt.name)
+        # White: Godot's glTF import multiplies every material in this mesh by its vertex colour,
+        # and the boot keeps its own material (never the kit shader), so the colour must not tint it.
+        kc = me2.color_attributes.new("kit", "FLOAT_COLOR", "CORNER")
+        for li in range(len(me2.loops)):
+            kc.data[li].color = (1.0, 1.0, 1.0, 1.0)
+        me2.uv_layers.new(name="kit_hair")
+        for d in me2.uv_layers["kit_hair"].data:
+            d.uv = (0.0, 0.0)
+        print(f"BOOT {ob2.name}: length {length:.3f} m, scale {s:.3f}, yaw {math.degrees(yaw):.1f} deg, "
+              f"mirror {mx < 0}, sole z {c.z:.3f}, tris {sum(len(p.vertices) - 2 for p in me2.polygons)}")
+        made.append(ob2)
+    print(f"BOOT source {n} tris, toe lean {lean:+.4f}, texture {tuple(base.image.size)}")
+    bpy.data.objects.remove(src)
+    bpy.data.objects.remove(guide)
+    bpy.ops.object.select_all(action="DESELECT")
+    for o in made:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = made[0]
+    bpy.ops.object.join()
+    return made[0]
+
+
+# The shoe: boot weight (colour alpha) below the ankle, no guernsey coordinates, no hair; same
+# layer names as the body so the join merges them; then joined into the body mesh.
+shoe_tris = 0
+for name in json.loads(basemesh.get("extras", "[]")):
+    ob = bpy.data.objects[name]
+    sm = ob.data
+    while sm.uv_layers:
+        sm.uv_layers.remove(sm.uv_layers[0])
+    su1 = sm.uv_layers.new(name=uv1.name)
+    su2 = sm.uv_layers.new(name="kit_hair")
+    scol = sm.color_attributes.new("kit", "FLOAT_COLOR", "CORNER")
+    # The shoe asset carries its own sock up the shin: above the ankle it is the sock (the kit's
+    # own rule, ard_body: sock above ankle + 3 cm), with the sock band's coordinates; a 1 cm
+    # ramp puts the boot's top edge on a level line rather than along the faces.
+    collar = sum(ard_body._head(rig, f"foot_{x}").z for x in "lr") / 2 + 0.03
+    zs = [(ob.matrix_world @ v.co).z for v in sm.vertices]
+    for li, loop in enumerate(sm.loops):
+        z = zs[loop.vertex_index]
+        k = min(1.0, max(0.0, (z - collar) / 0.01 + 0.5))
+        scol.data[li].color = (0.0, 0.0, k, 1.0 - k)
+        su1.data[li].uv = (0.0, (z - (knee_z - 0.17)) / 0.06 if k > 0.0 else 0.0)
+        su2.data[li].uv = (0.0, 0.0)
+    # The shoe's own sock tube above the boot is cut off on a level line: the body's sock
+    # (kept down into the boot, see KEEP) is the sock there.
+    TRIM = float(os.environ.get("ARD_SHOE_TRIM", "-0.008"))   # under the colour line: the cut edge is all boot
+    if KEEP > 0.0:
+        import bmesh
+        from mathutils import Vector
+        bm = bmesh.new()
+        bm.from_mesh(sm)
+        inv = ob.matrix_world.inverted()
+        co = inv @ Vector((0.0, 0.0, collar + TRIM))
+        no = (inv.to_3x3() @ Vector((0.0, 0.0, 1.0))).normalized()
+        bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:], plane_co=co, plane_no=no,
+                               clear_outer=True)
+        bm.to_mesh(sm)
+        bm.free()
+    # The body's ankle under the collar is tucked in toward the leg's middle (TUCK metres), so the
+    # sock never shows outside the boot's rim at the heel.
+    TUCK = float(os.environ.get("ARD_SHOE_TUCK", "0.006"))
+    if KEEP > 0.0 and TUCK > 0.0:
+        bw = basemesh.matrix_world
+        biw = bw.inverted()
+        low = [v for v in basemesh.data.vertices if (bw @ v.co).z < collar + 0.01]
+        for side in (-1, 1):
+            vs = [v for v in low if (bw @ v.co).x * side > 0.0]
+            if not vs:
+                continue
+            for v in vs:
+                w = bw @ v.co
+                ring = [bw @ u.co for u in vs if abs((bw @ u.co).z - w.z) < 0.005]
+                mid = sum(ring, Vector()) / len(ring)
+                d = Vector((w.x - mid.x, w.y - mid.y, 0.0))
+                if d.length > TUCK * 2:
+                    v.co = biw @ (w - d.normalized() * TUCK * min(1.0, (collar + 0.01 - w.z) / 0.01))
+    body_z = [(basemesh.matrix_world @ v.co).z for v in basemesh.data.vertices]
+    print(f"SHOE CUT at {collar + TRIM:.3f}; lowest body z {min(body_z):.3f}, collar {collar:.3f}")
+    if BOOT and os.path.exists(BOOT):
+        ob = tripo_boots(ob, BOOT, uv1.name)
+        sm = ob.data
+    else:
+        sm.materials.clear()
+        sm.materials.append(bpy.data.materials.get("ARD_boot"))
+    shoe_tris += sum(len(p.vertices) - 2 for p in sm.polygons)
+    bpy.ops.object.select_all(action="DESELECT")
+    ob.select_set(True)
+    basemesh.select_set(True)
+    bpy.context.view_layer.objects.active = basemesh
+    bpy.ops.object.join()
+    me = basemesh.data
+if shoe_tris:
+    bpy.ops.object.vertex_group_limit_total(group_select_mode="BONE_DEFORM", limit=4)
+    bpy.ops.object.vertex_group_normalize_all(group_select_mode="BONE_DEFORM", lock_active=False)
+    print(f"BOOTS {SHOE}: {shoe_tris} tris joined")
 t_build = time.time()
 
 # Plain colours per region so the GLB reads sensibly before Godot recolours it.

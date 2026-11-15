@@ -5,7 +5,7 @@ extends RefCounted
 ## an explicit confirmation.
 
 const APPEARANCE_OPTIONS := [["dark", "Dark"], ["light", "Light"]]
-const REPORT_INFO := "Copies the build, your round, this screen and the last twenty lines of the match feed, ready to paste into a message. Nothing is sent from the game."
+const REPORT_INFO := "Copies the build, the round, this screen and the last 20 lines of the match feed. Paste it into a message. Nothing is sent from the game."
 const TEXT_SIZE_INFO := "Makes the game's words bigger."
 const SPEED_OPTIONS :=[["1", "1x"], ["2", "2x"], ["4", "4x"], ["8", "8x"]]
 
@@ -22,7 +22,7 @@ static func open(host: Control, in_career: bool, quit := false) -> Control:
 	v.add_child(UiKit.heading("Settings", UiKit.H1))
 
 	_row(v, "Appearance", "SettingsAppearance", APPEARANCE_OPTIONS,
-			GameState.appearance(), "Changes the interface only; club colours and the football ground stay as they are.",
+			GameState.appearance(), "Changes the screens only. Club colours and the ground stay as they are.",
 			func(k):
 				if GameState.set_appearance(k):
 					overlay.queue_free()
@@ -40,11 +40,11 @@ static func open(host: Control, in_career: bool, quit := false) -> Control:
 	if Feel.phone():
 		_row(v, "Vibration", "SettingsVibration", [["on", "On"], ["off", "Off"]],
 				"on" if GameState.haptics_on() else "off",
-				"A light buzz when you press a button, and a firmer one when a result lands.",
+				"A light buzz when you press a button. A firmer one when a result lands.",
 				func(k): GameState.set_haptics_on(k == "on"))
 	_row(v, "Ask before Sim the week", "SettingsSimConfirm", [["on", "On"], ["off", "Off"]],
 			"on" if GameState.confirm_sim_round() else "off",
-			"Sim the week and the pre-season's Sim to Round 1 play out your own match without you. With this on, they ask first.",
+			"Sim the week and Sim to Round 1 play our match without you. With this on, they ask first.",
 			func(k): GameState.set_confirm_sim_round(k == "on"))
 	_row(v, "Match speed", "SettingsSpeed", SPEED_OPTIONS,
 			str(int(GameState.match_speed())), "How fast a match you watch starts. You can change it during the game.",
@@ -58,15 +58,15 @@ static func open(host: Control, in_career: bool, quit := false) -> Control:
 				func(k): GameState.set_screen_size(k))
 		_row(v, "Display", "SettingsFullscreen", [["on", "Fullscreen"], ["off", "Window"]],
 				"on" if GameState.fullscreen() else "off",
-				"Fullscreen fills the screen with no border; Window opens maximised. Alt+Enter switches.",
+				"Fullscreen fills the screen with no border. Window opens maximised. Alt+Enter switches.",
 				func(k): GameState.set_fullscreen(k == "on"))
 	_row(v, "Tutorials", "SettingsTutorials", [["on", "On"], ["off", "Off"]],
 			"on" if GameState.tutorials_on() else "off",
-			"A short note the first time you open each screen. Off stops them opening by themselves; notes you've already read don't come back.",
+			"A short note the first time you open each screen. Off stops them opening by themselves. Notes you have read don't come back.",
 			func(k): GameState.set_tutorials_on(k == "on"))
 	_row(v, "Battery saver", "SettingsBatterySaver", [["off", "Off"], ["on", "On"]],
 			"on" if GameState.battery_saver() else "off",
-			"Draws 30 frames a second instead of 60. Uses less battery; matches and scenes play the same, a little less smoothly.",
+			"Draws 30 frames a second instead of 60. Uses less battery. Matches and scenes play the same, a little less smoothly.",
 			func(k): GameState.set_battery_saver(k == "on"))
 	_row(v, "Screen shake", "SettingsScreenShake", [["on", "On"], ["off", "Off"]],
 			"on" if GameState.screen_shake_on() else "off",
@@ -78,18 +78,18 @@ static func open(host: Control, in_career: bool, quit := false) -> Control:
 			func(k): GameState.set_reduced_motion(k == "on"))
 	_row(v, "Vignettes", "SettingsVignettes", [["on", "On"], ["off", "Off"]],
 			"on" if GameState.vignettes_on() else "off",
-			"The match-day scenes: the banner, the centre ball-up, replays, the press conference and the awards. Off skips the scenes; every call and result stays the same.",
+			"The match-day scenes: the banner, the centre ball-up, replays, the press conference and the awards. Off skips the scenes. Every call and result stays the same.",
 			func(k): GameState.set_vignettes_on(k == "on"))
 	_row(v, "Match view", "SettingsMatchFigures",
 			[["tokens", "Tokens"], ["figures", "Figures"], ["3d", "3D oval"]],
 			"3d" if GameState.match_3d_on() else ("figures" if GameState.match_figures_on() else "tokens"),
-			"Figures draws the six players nearest the ball as small footballers on the oval. 3D oval plays the match on a 3D ground, every player a footballer. Prototypes for judging on a phone; the match plays the same either way.",
+			"Figures draws the six players nearest the ball as small footballers on the oval. 3D oval plays the match on a 3D ground, every player a footballer. Prototypes for judging on a phone. The match plays the same either way.",
 			func(k):
 				GameState.set_match_figures_on(k == "figures")
 				GameState.set_match_3d_on(k == "3d"))
 	_row(v, "Centre ball-up scene every match", "SettingsBounceScene", [["off", "Off"], ["on", "On"]],
 			"on" if GameState.bounce_scene_every_match() else "off",
-			"For playtesting: the centre ball-up call comes at the first centre ball-up of every last quarter you coach, whatever the score.",
+			"For playtesting. The centre ball-up call comes at the first centre ball-up of every last quarter you coach, whatever the score.",
 			func(k): GameState.set_bounce_scene_every_match(k == "on"))
 
 	_saves(v, overlay, host)
@@ -297,7 +297,7 @@ static func _dot(d: int, c: Color) -> ImageTexture:
 ## keeps, load one back, or go back to one of the last few saves. Loading or
 ## restoring keeps the career it replaces as an earlier save, so each can be
 ## undone from the same list.
-const SAVES_INFO := "Back up writes your career to a file you keep, to move it to another device or keep it safe. Loading a backup or an earlier save keeps the career it replaces in the list below, so you can go back."
+const SAVES_INFO := "Back up writes your career to a file you keep. Use it to move devices or keep the career safe. Loading a backup or an earlier save keeps the career it replaces in the list below. You can go back to it."
 
 
 static func _saves(v: VBoxContainer, overlay: Control, host: Control) -> void:
