@@ -10,7 +10,6 @@ The director's visual rulings V-R1 to V-R9 are in Rulings (director, 2026-11-04)
 |---|---|---|
 | V2 | Premiership streamers in club colours | plays once on the premiership screen only, a capture frame shows both club colours |
 | V3 | Brownlow winner reveal: 24 gold sparkles After: V2. | plays once on the winner reveal only, 24 sparkles, a capture frame |
-| V5 | Training results is the proof screen for the new look, then the hub, then the other screens After: V4, 135 and 6.34. | director approves Training results on his phone before the hub starts, then the hub before the rest |
 | V6 | Match chrome: scorebug 56 to 72 px, bottom decision sheet about a third of the height, one-button transport, goal and siren poster card After: 132. | captures at 390x844, the oval gets the freed height, every decision reachable with a real tap |
 | V7 | Navigation icon set (AI-assisted candidates) | one icon per hub destination, director approves or rejects |
 | V8 | Refresh captures of every screen on current main (the newest are 2026-10-07 to 10-11) After: T3.R9 and copy passes 131 to 140. | one capture per screen at 390x844, dated, in the audit folder |
