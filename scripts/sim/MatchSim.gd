@@ -5182,11 +5182,9 @@ func _after_chain() -> void:
 				d *= 0.75
 			exertion[id] = float(exertion.get(id, 0.0)) + d
 			energy[id] = maxf(5.0, float(energy.get(id, 100.0)) - d)
-		# Running machine's second effect: the bench gets its legs back faster.
-		var recover := ENERGY_BENCH_RECOVER * per_chain 				* (Traits.power2("running_machine") if synergies[side].has("running_machine") else 1.0)
 		for p in sq.bench:
 			var id := str(p["id"])
-			energy[id] = minf(float(energy_caps.get(id, 100.0)), float(energy.get(id, 100.0)) + recover)
+			energy[id] = minf(float(energy_caps.get(id, 100.0)), float(energy.get(id, 100.0)) + ENERGY_BENCH_RECOVER * per_chain)
 		_fit_cache.clear()
 		var b: Dictionary = bursts[side]
 		for k in b.keys():
