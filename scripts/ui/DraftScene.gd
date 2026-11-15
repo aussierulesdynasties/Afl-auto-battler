@@ -2686,14 +2686,23 @@ func _why_entry() -> Dictionary:
 func _on_finish() -> void:
 	if _draft.intake_mode:
 		if GameState.finish_intake_draft():
-			Router.replace("hub")
+			if GameState.first_staff_open():
+				Router.stack.pop_back()
+				Router.go_over("hub", "staff")
+			else:
+				Router.replace("hub")
 		return
 	if not _draft.is_finished() or not _draft.is_valid():
 		return
 	GameState.start_season(_club, _draft.list())
 	# A new career's first season starts with a pre-season, like every other.
 	GameState.open_preseason()
-	Router.go("hub")
+	# A created club hires its first staff next (director 2026-11-15); Back
+	# from it is the Hub.
+	if GameState.first_staff_open():
+		Router.go_over("hub", "staff")
+	else:
+		Router.go("hub")
 
 
 ## How a pick was got, in a line that wraps; the players it names wear their
