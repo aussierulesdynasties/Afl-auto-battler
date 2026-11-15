@@ -21,6 +21,16 @@ stats place him.
    players none of the above places (afltables_id,position,quote,source_url).
    A position naming several roles ("DEF|MID") lets his recorded stats choose
    among them (director 2026-11-15).
+5. positions_sites.csv: club history sites (Blueseum, Demonwiki) read by hand.
+6. positions_fandom.csv: the Australian Rules Football Wiki (Fandom) infobox,
+   matched by date of birth; "Utility" alone places no one, and a sentence
+   naming his line in the season itself is used where one exists.
+7. positions_footywire.csv: the "Position" line of his footywire.com profile,
+   matched by date of birth. It labels his whole career, so one that the
+   season's record contradicts (Goodes, 186 hit-outs in 1999) is left out.
+Before all of these, positions_director.csv: players the director places
+himself (2026-11-15: "I'll place them"; "going based on stats wont work";
+"Yze was a forward").
 
 Writes data/legacy/positions.csv: afltables_id,position,record,from,source_url.
 A player with no record is left out; the builders then read his recorded stats.
@@ -119,6 +129,13 @@ INFO = [("ruck-rover", "MID"), ("ruck rover", "MID"), ("ruck", "RUCK"), ("follow
 
 READ = os.path.join(HERE, "positions_read.csv")
 AFC = os.path.join(HERE, "positions_afc.csv")
+# Each file: afltables_id,position,quote,source_url. Read in this order; a
+# player any earlier source places may not appear again.
+HAND = [(os.path.join(HERE, "positions_director.csv"), "the director"),
+        (AFC, "australianfootball.com (read by hand)"),
+        (os.path.join(HERE, "positions_sites.csv"), "club history site (read by hand)"),
+        (os.path.join(HERE, "positions_fandom.csv"), "Australian Rules Football Wiki"),
+        (os.path.join(HERE, "positions_footywire.csv"), "footywire.com profile")]
 
 
 def info_role(s):
@@ -156,13 +173,17 @@ def main():
             rows.append({"afltables_id": "players/%s.html" % pid, "position": role, "record": raw,
                          "from": how, "source_url": art[pid]})
     placed = {r["afltables_id"] for r in rows}
-    n["australianfootball.com (read by hand)"] = 0
-    for r in csv.DictReader(open(AFC, encoding="utf-8")):
-        if r["afltables_id"] in placed:
-            sys.exit("positions_afc.csv places a player already placed: %s" % r["afltables_id"])
-        n["australianfootball.com (read by hand)"] += 1
-        rows.append({"afltables_id": r["afltables_id"], "position": r["position"], "record": r["quote"],
-                     "from": "australianfootball.com (read by hand)", "source_url": r["source_url"]})
+    for path, how in HAND:
+        n[how] = 0
+        if not os.path.exists(path):
+            continue
+        for r in csv.DictReader(open(path, encoding="utf-8")):
+            if r["afltables_id"] in placed:
+                sys.exit("%s places a player already placed: %s" % (os.path.basename(path), r["afltables_id"]))
+            placed.add(r["afltables_id"])
+            n[how] += 1
+            rows.append({"afltables_id": r["afltables_id"], "position": r["position"], "record": r["quote"],
+                         "from": how, "source_url": r["source_url"]})
     with open(OUT, "w", newline="", encoding="utf-8") as fh:
         w = csv.DictWriter(fh, fieldnames=["afltables_id", "position", "record", "from", "source_url"],
                            lineterminator="\n")

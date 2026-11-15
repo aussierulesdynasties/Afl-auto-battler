@@ -56,6 +56,7 @@ import argparse
 import csv
 import os
 import sys
+import urllib.parse
 from collections import defaultdict
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -115,24 +116,25 @@ def unrecorded(year_rows):
 GAME_KEY = {"one_pct": "onepct", "pct_played": "pctp"}
 HEIGHTS = os.path.join(LEG, "heights.csv")
 _heights = None
-# Heights read off australianfootball.com player pages, each matched to the
-# man by his date of birth (director 2026-11-15, "find sources").
-HEIGHTS_AFC = os.path.join(LEG, "heights_afc.csv")
-_heights_afc = None
+# Heights read off australianfootball.com and footywire.com player pages, each
+# matched to the man by his date of birth (director 2026-11-15, "find sources").
+HEIGHTS_SOURCED = os.path.join(LEG, "heights_sourced.csv")
+_heights_sourced = None
 
 
 def sourced_height(first, last, dob):
-    """His height from data/legacy/heights_afc.csv by name and date of birth,
-    '' with none."""
-    global _heights_afc
-    if _heights_afc is None:
-        _heights_afc = {}
-        if os.path.exists(HEIGHTS_AFC):
-            with open(HEIGHTS_AFC, newline="", encoding="utf-8") as fh:
-                _heights_afc = {(r["name"].lower(), r["dob"]): r["height_cm"] for r in csv.DictReader(fh)}
+    """(height, site) from data/legacy/heights_sourced.csv by name and date of
+    birth, ("", "") with none."""
+    global _heights_sourced
+    if _heights_sourced is None:
+        _heights_sourced = {}
+        if os.path.exists(HEIGHTS_SOURCED):
+            with open(HEIGHTS_SOURCED, newline="", encoding="utf-8") as fh:
+                _heights_sourced = {(r["name"].lower(), r["dob"]): (r["height_cm"], urllib.parse.urlsplit(
+                    r["source_url"]).netloc.replace("www.", "")) for r in csv.DictReader(fh)}
     if not dob:
-        return ""
-    return _heights_afc.get((("%s %s" % (first, last)).strip().lower(), dob), "")
+        return ("", "")
+    return _heights_sourced.get((("%s %s" % (first, last)).strip().lower(), dob), ("", ""))
 
 
 def with_heights(rows):
@@ -150,10 +152,10 @@ def with_heights(rows):
             r["height_cm"] = _heights[r["draftguru_id"]]
             r["_height_from"] = "draftguru page"
         if not str(r.get("height_cm", "")).strip():
-            h = sourced_height(r.get("first", ""), r.get("last", ""), r.get("dob", ""))
+            h, site = sourced_height(r.get("first", ""), r.get("last", ""), r.get("dob", ""))
             if h:
                 r["height_cm"] = h
-                r["_height_from"] = "australianfootball.com"
+                r["_height_from"] = site
     return rows
 
 
