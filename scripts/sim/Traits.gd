@@ -188,7 +188,12 @@ static func _load_fine_wine() -> void:
 ## A synergy's match effect, as MatchSim applies it ("power" in SYNERGIES):
 ## an added stoppage-win share for the Engine room, a multiplier for the rest.
 static func power(key: String) -> float:
-	return float((SYNERGIES.get(key, {}) as Dictionary).get("power", 1.0))
+	return float(power_tune.get(key, (SYNERGIES.get(key, {}) as Dictionary).get("power", 1.0)))
+
+
+## Audits only: a synergy's power to try without a commit ({key: power}).
+## Empty in play and in every test.
+static var power_tune := {}
 
 
 ## Good traits a player can carry (director, 2026-11-12: "at maximum 5 traits
