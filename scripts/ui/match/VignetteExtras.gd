@@ -131,9 +131,7 @@ static func wedge_count(at: Vector2, look: Vector2, spots: Array) -> int:
 ## or a boundary a look with the camera's back to the fence leaves it no room to back off, and
 ## the stand sinks down the picture: those looks are left out while any other has the room.
 static func best_look(at: Vector2, spots: Array, prefer: Vector2, room := 0.0) -> Vector2:
-	var fits := func(dir: Vector2) -> bool:
-		var cam := at - dir.normalized() * room
-		return pow(cam.x / (VignetteGround.A - 1.0), 2.0) + pow(cam.y / (VignetteGround.L - 1.0), 2.0) < 1.0
+	var fits := func(dir: Vector2) -> bool: return has_room(at, dir, room)
 	var any := false
 	for i in range(LOOKS):
 		any = any or fits.call(Vector2.from_angle(TAU * float(i) / float(LOOKS)))
@@ -153,6 +151,12 @@ static func best_look(at: Vector2, spots: Array, prefer: Vector2, room := 0.0) -
 			most = n
 			close = c
 	return best
+
+
+## Whether a camera at `at` looking along `look` has `room` metres of ground behind it.
+static func has_room(at: Vector2, look: Vector2, room: float) -> bool:
+	var cam := at - look.normalized() * room
+	return pow(cam.x / (VignetteGround.A - 1.0), 2.0) + pow(cam.y / (VignetteGround.L - 1.0), 2.0) < 1.0
 
 
 ## That spot, held a couple of metres inside the boundary line.
