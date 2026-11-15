@@ -55,15 +55,20 @@ static func pick(gs) -> Array:
 	return cards
 
 
-## The week your season ends: knocked out, or the Grand Final
-## played. One card, once a season (the story's season counts hold the mark).
+## The week your season ends: out of the finals once the ladder is
+## settled, knocked out, or the Grand Final played. One card, once a season
+## (the story's season counts hold the mark). A side that missed the finals
+## gets its card in the first finals week, or its losing-year cards
+## (ladder_min) could never be dealt.
 const SEASON_END_MARK := "_season_end"
 
 
 static func season_end_due(gs) -> bool:
 	if gs.season == null or not gs.season.is_regular_done():
 		return false
-	if not ["eliminated", "premier", "runner_up"].has(gs.my_finals_status()):
+	var status: String = gs.my_finals_status()
+	var missed: bool = status == "" and not gs.season.finals.is_empty()
+	if not missed and not ["eliminated", "premier", "runner_up"].has(status):
 		return false
 	StoryEngine.ensure(gs.story)
 	return not (gs.story["season"] as Dictionary).has(SEASON_END_MARK)
