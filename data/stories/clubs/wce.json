@@ -1,0 +1,457 @@
+[
+	{
+		"id": "wce_long_flight",
+		"club": "WCE",
+		"controversy": false,
+		"category": "training",
+		"subject": {"kind": "club"},
+		"title": ["The long way east"],
+		"text": ["Three road trips in five weeks and the group is flat. The high-performance staff want to cut Tuesday's main session to rest the legs before another four-hour flight."],
+		"choices": [
+			{"key": "cut", "label": "Cut the session",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "forgo_xp", "d": 4, "who": "side"}],
+			 "result": "The legs get a break. The week's main session goes."},
+			{"key": "train", "label": "Train as planned",
+			 "effects": [{"op": "xp", "d": 4, "who": "side"}, {"op": "slow_start", "chance": 20, "who": "side"}],
+			 "result": "The work is banked. The group boards the plane tired."}
+		]
+	},
+	{
+		"id": "wce_stay_east",
+		"club": "WCE",
+		"controversy": false,
+		"category": "training",
+		"subject": {"kind": "club"},
+		"title": ["Stay east or fly home?"],
+		"text": ["Back-to-back games in Melbourne. The club can base the squad in a Melbourne hotel for the week, or fly everyone home to their families and back again."],
+		"choices": [
+			{"key": "base", "label": "Base the squad in Melbourne",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "culture", "strand": "together", "d": 1, "why": "The squad spent a week on the road together"}, {"op": "morale", "d": -2, "who": "all"}, {"op": "board", "d": -2, "was": "funds"}],
+			 "result": "A week of hotel rooms and team dinners. The families miss them."},
+			{"key": "home", "label": "Fly home midweek",
+			 "effects": [{"op": "morale", "d": 2, "who": "all"}, {"op": "odds", "chance": 25, "hit": [{"op": "heavy_legs", "who": "side"}], "miss": []}],
+			 "result": "A few nights at home, and two more flights."}
+		]
+	},
+	{
+		"id": "wce_homesick_kid",
+		"club": "WCE",
+		"controversy": false,
+		"category": "family",
+		"subject": {"kind": "player", "pick": "random", "where": {"age_max": 20, "new_here": true, "real_named": false}},
+		"title": ["Homesick in Perth"],
+		"text": ["{name}, drafted from interstate, has gone quiet. His host family says he's ringing home every night and talking about the other side of the Nullarbor."],
+		"choices": [
+			{"key": "send", "label": "Send him home for a week",
+			 "effects": [{"op": "trust", "d": 3, "why": "You let him go home when he needed it"}, {"op": "morale", "d": 4, "who": "subject"}, {"op": "forgo_xp", "d": 4, "who": "subject"}, {"op": "culture", "strand": "standards", "d": -1, "why": "The senior players noticed the special treatment"}],
+			 "result": "{first} goes home for a week. The senior group notices."},
+			{"key": "busy", "label": "Keep him busy here",
+			 "effects": [{"op": "xp", "d": 4, "who": "subject"}, {"op": "culture", "strand": "standards", "d": 1, "why": "The club held the line with a homesick kid"}, {"op": "morale", "d": -3, "who": "subject"}, {"op": "odds", "chance": 15, "hit": [{"op": "trust", "d": -4, "why": "He asked about a trade home"}], "miss": [], "hit_result": "He's asking about a trade home at season's end."}],
+			 "result": "Training, more training, and dinner with the host family."},
+			{"key": "family", "label": "Fly his family over",
+			 "effects": [{"op": "morale", "d": 3, "who": "subject"}, {"op": "trust", "d": 2, "why": "The club brought his family to him"}, {"op": "board", "d": -2, "was": "funds"}],
+			 "result": "His mum and dad land on Friday. The club pays the fares."}
+		]
+	},
+	{
+		"id": "wce_bring_him_home",
+		"club": "WCE",
+		"controversy": false,
+		"category": "contracts",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["Bring him home"],
+		"text": ["A West Australian at a Victorian club has told his manager he wants to come home. His club is asking for a first-round pick."],
+		"choices": [
+			{"key": "pay", "label": "Pay the price",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "A West Australian came home to play"}, {"op": "morale", "d": 2, "who": "all"}, {"op": "board", "d": -2, "was": "list"}],
+			 "result": "A proven player who wants to be here. The first-round pick goes east."},
+			{"key": "wait", "label": "Wait until his contract runs out",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The club held to its draft plan"}, {"op": "odds", "chance": 40, "hit": [{"op": "board", "d": -2}], "miss": [], "hit_result": "Another club got him first, and the press called you timid."}],
+			 "result": "You keep the pick and wait."}
+		]
+	},
+	{
+		"id": "wce_local_pick",
+		"club": "WCE",
+		"controversy": false,
+		"category": "selection",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["Local or the best on the board?"],
+		"text": ["At your pick, the best player left is a Victorian. Two spots lower is a West Australian the recruiters rate nearly as highly, and he'll never ask to go home."],
+		"choices": [
+			{"key": "best", "label": "Take the best available",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The club took the best player on the board"}, {"op": "odds", "chance": 15, "hit": [{"op": "board", "d": -2, "was": "list"}], "miss": [], "hit_result": "Within a few seasons he asked to go home."}],
+			 "result": "The higher-rated kid pulls on the jumper."},
+			{"key": "local", "label": "Take the local",
+			 "effects": [{"op": "board", "d": 1, "was": "members"}, {"op": "culture", "strand": "ambition", "d": -1, "why": "The club passed on the best player left"}],
+			 "result": "The WA football community approves. The rated kid goes elsewhere."}
+		]
+	},
+	{
+		"id": "wce_derby_week",
+		"club": "WCE",
+		"controversy": false,
+		"category": "rivals",
+		"subject": {"kind": "club"},
+		"when": {"opp_deck": "FRE"},
+		"title": ["Derby week"],
+		"text": ["Western Derby week. The whole state has an opinion, and every workplace in Perth is split between blue and gold and purple."],
+		"choices": [
+			{"key": "lean", "label": "Lean into it",
+			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "heavy_legs", "who": "side"}, {"op": "odds", "chance": 10, "hit": [{"op": "board", "d": -2}], "miss": [], "hit_result": "A player's comment ended up on the back page."}],
+			 "result": "Training is ferocious all week."},
+			{"key": "normal", "label": "Treat it like any other week",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The group kept to its own routine in derby week"}, {"op": "board", "d": -1, "was": "members"}, {"op": "slow_start", "chance": 10, "who": "side"}],
+			 "result": "Business as usual. The supporters think you've gone soft."}
+		]
+	},
+	{
+		"id": "wce_derby_talkback",
+		"club": "WCE",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"when": {"opp_deck": "FRE", "losing_run_min": 1},
+		"title": ["Derby week after a loss"],
+		"text": ["You're coming off a loss into derby week and talkback is brutal. The club's biggest members' group wants the coach at their function on Thursday night."],
+		"choices": [
+			{"key": "front", "label": "Front the members",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "morale", "d": -1, "who": "all"}],
+			 "result": "The members feel heard. The players hear their coach spent the night out."},
+			{"key": "send", "label": "Send the football manager",
+			 "effects": [{"op": "xp", "d": 2, "who": "side"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "The review stays on track. The members wanted the coach."}
+		]
+	},
+	{
+		"id": "wce_waiting_list",
+		"club": "WCE",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["The waiting list"],
+		"text": ["Thousands are waiting for a reserved seat. Marketing wants to sell more memberships without seats; the long-time members say it cheapens the badge."],
+		"choices": [
+			{"key": "open", "label": "Open more memberships",
+			 "effects": [{"op": "board", "d": 2, "was": "funds"}, {"op": "culture", "strand": "together", "d": -1, "why": "Long-time members feel the badge was cheapened"}],
+			 "result": "Money comes in. The old guard grumble."},
+			{"key": "keep", "label": "Keep the list",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "Long-time members kept their exclusive badge"}, {"op": "board", "d": -2, "was": "funds"}],
+			 "result": "The badge stays exclusive. Revenue is left on the table."}
+		]
+	},
+	{
+		"id": "wce_owner_dividend",
+		"club": "WCE",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["The owners want their share"],
+		"text": ["The club is owned by the state's football commission, and a good year means a surplus. The commission wants more of it sent to grassroots footy; the football department wants it spent on staff."],
+		"choices": [
+			{"key": "grass", "label": "Send it to the grassroots",
+			 "effects": [{"op": "board", "d": 2}, {"op": "forgo_xp", "d": 3, "who": "all"}],
+			 "result": "Country clubs get the money. No new development coach this year."},
+			{"key": "dept", "label": "Spend it on the football department",
+			 "effects": [{"op": "xp", "d": 3, "who": "all"}, {"op": "board", "d": -3}],
+			 "result": "A new development coach starts Monday. The commission remembers."}
+		]
+	},
+	{
+		"id": "wce_community_camp",
+		"club": "WCE",
+		"controversy": false,
+		"category": "community",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["Community camp"],
+		"text": ["The preseason community camp heads to a country town: the Goldfields, the Pilbara or the South West. The whole list could go, or just the leadership group."],
+		"choices": [
+			{"key": "all", "label": "Take the whole list",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The whole list spent three days in the country together"}, {"op": "board", "d": 1, "was": "members"}, {"op": "forgo_xp", "d": 4, "who": "all"}],
+			 "result": "Three days of school visits and country hospitality. Three days off the track."},
+			{"key": "leaders", "label": "Send the leaders only",
+			 "effects": [{"op": "xp", "d": 4, "who": "all"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "The training is banked. The town feels short-changed."}
+		]
+	},
+	{
+		"id": "wce_regional_game",
+		"club": "WCE",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["A home game in the country"],
+		"text": ["The state government offers money to move a home game to a ground in the South West. It would sell out, but the ground is small and the players don't know it."],
+		"choices": [
+			{"key": "south", "label": "Take the game south",
+			 "effects": [{"op": "board", "d": 2, "was": "funds"}, {"op": "slow_start", "chance": 20, "who": "side"}],
+			 "result": "A sell-out in the South West. The city members lose a game."},
+			{"key": "home", "label": "Keep it at home",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The city members kept their home game"}, {"op": "board", "d": -1}],
+			 "result": "The home ground stays home. The government and the regions are unimpressed."}
+		]
+	},
+	{
+		"id": "wce_perth_heat",
+		"club": "WCE",
+		"controversy": false,
+		"category": "training",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["Perth heat"],
+		"text": ["It's forecast to pass 38 degrees all week. The sports scientists want sessions moved to 6am; the senior players say the heat is part of being a Perth side."],
+		"choices": [
+			{"key": "dawn", "label": "Train at dawn",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "morale", "d": -1, "who": "all"}],
+			 "result": "Alarms at 4:30. The legs stay good."},
+			{"key": "heat", "label": "Train in the heat",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The group trained through a Perth scorcher"}, {"op": "xp", "d": 3, "who": "all"}, {"op": "odds", "chance": 15, "hit": [{"op": "heavy_legs", "who": "side"}], "miss": []}],
+			 "result": "Hard work in the heat. The physios are busy."}
+		]
+	},
+	{
+		"id": "wce_early_start",
+		"club": "WCE",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["The early start"],
+		"text": ["The broadcaster wants your home games to start earlier so they land in east-coast prime time. In Perth that means a rush from work for families and more footy in the afternoon heat."],
+		"choices": [
+			{"key": "agree", "label": "Agree",
+			 "effects": [{"op": "board", "d": 2, "was": "funds"}, {"op": "culture", "strand": "together", "d": -1, "why": "Working families miss the start"}, {"op": "odds", "chance": 10, "hit": [{"op": "heavy_legs", "who": "side"}], "miss": []}],
+			 "result": "The broadcaster is happy. Half the crowd arrives at quarter time."},
+			{"key": "push", "label": "Push back",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "Members saw the club stand up for them"}, {"op": "board", "d": -2}],
+			 "result": "The members back you. The league and the broadcaster remember."}
+		]
+	},
+	{
+		"id": "wce_flat_track",
+		"club": "WCE",
+		"controversy": false,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"title": ["Flat-track bullies"],
+		"text": ["An eastern-states panel show calls your side flat-track bullies: unbeatable at home, soft on the road. The players have seen it."],
+		"choices": [
+			{"key": "bite", "label": "Bite back on air",
+			 "effects": [{"op": "morale", "d": 3, "who": "side"}, {"op": "board", "d": -1}, {"op": "loss_sting", "chance": 20, "d": -3, "who": "side"}],
+			 "result": "The clip goes around. Lose on the road and they'll play it again."},
+			{"key": "pin", "label": "Say nothing; pin it up",
+			 "effects": [{"op": "morale", "d": 2, "who": "side"}, {"op": "culture", "strand": "standards", "d": 1, "why": "The group let its footy do the answering"}, {"op": "odds", "chance": 10, "hit": [{"op": "heavy_legs", "who": "side"}], "miss": []}],
+			 "result": "It's on the wall in the rooms. Training is fired up."}
+		]
+	},
+	{
+		"id": "wce_finals_or_failure",
+		"club": "WCE",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["Finals or failure"],
+		"text": ["A big, rich club with a full stadium expects September. The chairman says privately that missing finals this year won't be acceptable."],
+		"choices": [
+			{"key": "accept", "label": "Accept the target",
+			 "effects": [{"op": "board", "d": 2}, {"op": "loss_sting", "chance": 25, "d": -4, "who": "side"}],
+			 "result": "The board is happy for now. Every loss counts against the target."},
+			{"key": "down", "label": "Talk the board down",
+			 "effects": [{"op": "morale", "d": 2, "who": "side"}, {"op": "board", "d": -1}],
+			 "result": "No hard target for the players to carry. The press reads it as excuses."}
+		]
+	},
+	{
+		"id": "wce_rebuild",
+		"club": "WCE",
+		"controversy": false,
+		"category": "board",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["Rebuild or reload?"],
+		"text": ["The members are restless, the senior players are ageing, and the club must decide: rebuild through the draft, or trade for experienced players now."],
+		"choices": [
+			{"key": "rebuild", "label": "Rebuild",
+			 "effects": [{"op": "xp", "d": 4, "who": "all"}, {"op": "culture", "strand": "ambition", "d": 1, "why": "The club backed its kids to win the next flag"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "The young players will get games. The members brace for pain."},
+			{"key": "reload", "label": "Reload",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "Experienced players come in. The young blokes see their games disappear."}
+		]
+	},
+	{
+		"id": "wce_party_culture",
+		"club": "WCE",
+		"controversy": true,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"title": ["A whisper from the nightclubs"],
+		"text": ["Security staff have heard the club's name mentioned around a nightclub crowd with a drug problem. Nothing is proven, and the leaders say the group is fine."],
+		"choices": [
+			{"key": "crack", "label": "Crack down now",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "The club acted before anything was proven"}, {"op": "board", "d": 1}, {"op": "morale", "d": -3, "who": "all"}],
+			 "result": "Testing, curfews and hard talks. The leaders feel mistrusted."},
+			{"key": "trust", "label": "Trust the leaders",
+			 "effects": [{"op": "morale", "d": 1, "who": "all"}, {"op": "culture", "strand": "together", "d": 1, "why": "The leaders were trusted to look after the group"}, {"op": "odds", "chance": 20, "hit": [{"op": "board", "d": -4}, {"op": "culture", "strand": "standards", "d": -2, "why": "It became a scandal the club had been warned about"}], "miss": [], "hit_result": "Later in the season it became a scandal."}],
+			 "result": "The leaders own it. The club waits and hopes."}
+		]
+	},
+	{
+		"id": "wce_night_out",
+		"club": "WCE",
+		"controversy": true,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"title": ["Trouble on a night out"],
+		"text": ["One of the players was in a scuffle outside a Northbridge venue after the weekend's game. Police took no action, but the footage is all over social media."],
+		"choices": [
+			{"key": "suspend", "label": "Suspend him for a week",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "The club stood a player down over his conduct"}, {"op": "board", "d": 1}, {"op": "morale", "d": -2, "who": "side"}],
+			 "result": "He sits out a game. The side is a man short of its best."},
+			{"key": "internal", "label": "Deal with it internally",
+			 "effects": [{"op": "morale", "d": 1, "who": "side"}, {"op": "board", "d": -2}, {"op": "odds", "chance": 15, "hit": [{"op": "board", "d": -3}], "miss": [], "hit_result": "More footage surfaced."}],
+			 "result": "He plays. The press says the club hasn't learnt."}
+		]
+	},
+	{
+		"id": "wce_swans_again",
+		"club": "WCE",
+		"controversy": false,
+		"category": "rivals",
+		"subject": {"kind": "club"},
+		"when": {"opp_deck": "SYD"},
+		"title": ["The Swans again"],
+		"text": ["Sydney this week. These two clubs have a habit of finishing within a kick of each other, and the senior players talk about it."],
+		"choices": [
+			{"key": "drill", "label": "Drill the last five minutes",
+			 "effects": [{"op": "xp", "d": 3, "who": "side"}, {"op": "heavy_legs", "who": "side"}],
+			 "result": "A week of close-game work. The legs feel it."},
+			{"key": "light", "label": "Keep it light",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "slow_start", "chance": 10, "who": "side"}],
+			 "result": "An easy week. The group runs out fresh."}
+		]
+	},
+	{
+		"id": "wce_magpie_army",
+		"club": "WCE",
+		"controversy": false,
+		"category": "rivals",
+		"subject": {"kind": "club"},
+		"when": {"opp_deck": "COL"},
+		"title": ["The Magpie army"],
+		"text": ["Collingwood this week, in front of a huge, one-eyed crowd. The young players have never heard noise like it."],
+		"choices": [
+			{"key": "noise", "label": "Pump crowd noise into training",
+			 "effects": [{"op": "xp", "d": 2, "who": "side"}, {"op": "morale", "d": -1, "who": "all"}],
+			 "result": "Speakers blare at training. The senior players roll their eyes."},
+			{"key": "enjoy", "label": "Tell them to enjoy it",
+			 "effects": [{"op": "morale", "d": 2, "who": "side"}, {"op": "slow_start", "chance": 15, "who": "side"}],
+			 "result": "The kids are told to soak it up. The first ten minutes will tell."}
+		]
+	},
+	{
+		"id": "wce_ruck_tradition",
+		"club": "WCE",
+		"controversy": false,
+		"category": "selection",
+		"subject": {"kind": "club"},
+		"title": ["The next big ruck"],
+		"text": ["This club has a proud line of big, athletic ruckmen. The young ruck is raw, but the members are already calling him the next one."],
+		"choices": [
+			{"key": "play", "label": "Play him now",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "odds", "chance": 25, "hit": [{"op": "morale", "d": -2, "who": "side"}], "miss": [], "hit_result": "He was beaten badly in the ruck, and the side felt it."}],
+			 "result": "The members cheer his first hit-out."},
+			{"key": "reserves", "label": "Another month in the reserves",
+			 "effects": [{"op": "xp", "d": 2, "who": "all"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "He learns his craft in the twos. The members grumble."}
+		]
+	},
+	{
+		"id": "wce_backline_wall",
+		"club": "WCE",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"title": ["The backline wall"],
+		"text": ["The defenders take pride in reading the play and taking intercept marks. The forwards say the backs are too slow to push up and start the attack."],
+		"choices": [
+			{"key": "backs", "label": "Back the defenders",
+			 "effects": [{"op": "morale", "d": 2, "who": "side"}, {"op": "culture", "strand": "together", "d": 1, "why": "The backline was backed for what it does best"}, {"op": "culture", "strand": "ambition", "d": -1, "why": "The forwards want more drive from behind"}],
+			 "result": "The backs walk taller. The forwards keep grumbling."},
+			{"key": "push", "label": "Ask them to push up",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The defence was asked to attack too"}, {"op": "morale", "d": -2, "who": "side"}],
+			 "result": "The backs push up. They feel their strength is being taken away."}
+		]
+	},
+	{
+		"id": "wce_kimberley_scouting",
+		"club": "WCE",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["North to the Kimberley"],
+		"text": ["The recruiters want a week in the Kimberley and the Pilbara watching junior and country footy, and the club's Indigenous players want to go with them."],
+		"choices": [
+			{"key": "fund", "label": "Fund the trip",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The club went north with its Indigenous players"}, {"op": "board", "d": -2, "was": "funds"}, {"op": "odds", "chance": 25, "hit": [{"op": "board", "d": 3, "was": "list"}], "miss": [], "hit_result": "The trip turned up a prospect for next year's draft."}],
+			 "result": "A week of red dirt and country footy."},
+			{"key": "vision", "label": "Watch the vision from Perth",
+			 "effects": [{"op": "board", "d": 1, "was": "funds"}, {"op": "culture", "strand": "together", "d": -1, "why": "The communities noticed the club didn't come"}],
+			 "result": "The money stays in Perth. The communities up north notice."}
+		]
+	},
+	{
+		"id": "wce_father_son",
+		"club": "WCE",
+		"controversy": false,
+		"category": "selection",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["A son of the club"],
+		"text": ["The son of a former Eagle is old enough for the draft and wants to play for his dad's club. Other recruiters rate him, so he won't come cheap."],
+		"choices": [
+			{"key": "take", "label": "Take him",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "culture", "strand": "ambition", "d": -1, "why": "A pick went on a name, not the best player left"}],
+			 "result": "The family is in tears. A pick goes that could have gone elsewhere."},
+			{"key": "let", "label": "Let him go",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The club took the best player on its board"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "A club family is left disappointed. The pick stays."}
+		]
+	},
+	{
+		"id": "wce_reunion",
+		"club": "WCE",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"title": ["Reunion week"],
+		"text": ["An old Eagles side is holding its reunion at the club, and one of its greats offers to speak to the players on Thursday night."],
+		"choices": [
+			{"key": "speak", "label": "Have him speak",
+			 "effects": [{"op": "morale", "d": 3, "who": "all"}, {"op": "culture", "strand": "ambition", "d": 1, "why": "A great told the group what winning feels like"}, {"op": "odds", "chance": 10, "hit": [{"op": "heavy_legs", "who": "side"}], "miss": []}],
+			 "result": "The room hangs on every word. It's a late night before the game."},
+			{"key": "normal", "label": "Keep the week normal",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The week stayed about this game"}, {"op": "board", "d": -1}],
+			 "result": "Preparation stays untouched. The old boys feel snubbed."}
+		]
+	},
+	{
+		"id": "wce_open_training",
+		"club": "WCE",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["Open training"],
+		"text": ["Thousands of kids are on school holidays, and marketing wants an open session with signing time afterwards."],
+		"choices": [
+			{"key": "open", "label": "Open the gates",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "forgo_xp", "d": 2, "who": "all"}],
+			 "result": "The kids flood in. The session is lighter than planned."},
+			{"key": "closed", "label": "Keep it closed",
+			 "effects": [{"op": "xp", "d": 3, "who": "all"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "A full session. The club looks distant."}
+		]
+	}
+]

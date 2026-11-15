@@ -245,3 +245,88 @@ static func soften(staff: Dictionary, p: Dictionary) -> float:
 ## A morale loss after the man-management softening (never below 0 lost).
 static func softened(loss: int, s: float) -> int:
 	return int(round(float(loss) * (1.0 - s)))
+
+
+# ---------------------------------------------------------------------------
+# A hire's gate: what he would do in the job, against an average coach
+# ---------------------------------------------------------------------------
+## The skill an average coach has: Good, adding nothing (level 0).
+const AVERAGE := 70.0
+const LINE_GROUP := {"MID": "midfielders and rucks", "FWD": "forwards", "DEF": "defenders"}
+
+
+## What `c` would do as your `job` coach, against an average coach in the same
+## job with an average staff around both, in the coach's words:
+## {"gain": [line, ...], "cost": [line, ...]}, each line one effect and one
+## number. Costs include what the market rules hold for him: a well-regarded
+## assistant can be offered a step up, and coaches retire from 64. Never empty:
+## a side with nothing on it says so.
+static func hire_lines(c: Dictionary, job: String, year: int) -> Dictionary:
+	var gain := []
+	var cost := []
+	var add := func(pct: int, up: String, down: String):
+		if pct > 0:
+			gain.append(up % pct)
+		elif pct < 0:
+			cost.append(down % -pct)
+	match job:
+		"MID", "FWD", "DEF":
+			var who := str(LINE_GROUP[job])
+			add.call(_pct(TEACH_LINE * teach_level(Coaches.role_fit(c, job))),
+					"Our %s develop %%d%%%% more each game." % who,
+					"Our %s develop %%d%%%% less each game." % who)
+			add.call(_pct(_soften_delta(0.4, Coaches.skill(c, "manage"))),
+					"Dropped %s lose %%d%%%% less morale." % who,
+					"Dropped %s lose %%d%%%% more morale." % who)
+		"DEV":
+			var l := teach_level(Coaches.role_fit(c, "DEV"))
+			add.call(_pct(TEACH_DEV * l), "Our kids and reserves develop %d%% more each game.",
+					"Our kids and reserves develop %d%% less each game.")
+			add.call(_pct(TEACH_DEV_OTHER * l), "Our older players develop %d%% more each game.",
+					"Our older players develop %d%% less each game.")
+		"SA":
+			add.call(_pct(EXEC_RANGE * level(Coaches.skill(c, "tactics"))),
+					"Our game plan's upside is %d%% bigger.", "Our game plan's upside is %d%% smaller.")
+			add.call(_pct(_soften_delta(0.6, Coaches.skill(c, "manage"))),
+					"Dropped players lose %d%% less morale.", "Dropped players lose %d%% more morale.")
+			add.call(_pct(TEACH_SA * teach_level(Coaches.skill(c, "teach"))),
+					"The whole list develops %d%% more each game.", "The whole list develops %d%% less each game.")
+	# The market's rules about him.
+	var bar := poach_rep(job)
+	if bar > 0 and int(c.get("rep", 0)) >= bar:
+		cost.append("Well regarded: rivals may offer him a step up after %d seasons." % CoachMarket.MIN_TENURE)
+	var age := CoachMarket.age(c, year + 1)
+	if age >= CoachMarket.RETIRE_FROM - 2:
+		cost.append("He is %d: coaches retire from %d." % [age, CoachMarket.RETIRE_FROM])
+	if gain.is_empty():
+		gain.append("Nothing beyond an average coach.")
+	if cost.is_empty():
+		cost.append("Nothing against him.")
+	return {"gain": gain, "cost": cost}
+
+
+## The reputation at which a rival's step up appeals to a coach in your `job`
+## (CoachMarket.would_take): a line coach to senior assistant, a development
+## coach to a line job, a senior assistant to senior coach (sc_eligible).
+static func poach_rep(job: String) -> int:
+	match job:
+		"SA":
+			return 55
+		"MID", "FWD", "DEF":
+			return CoachMarket.keen_bar("SA")
+		"DEV":
+			return CoachMarket.keen_bar("MID")
+	return 0
+
+
+## How much more of a dropped player's morale loss he spares than an average
+## coach, with `share` his weight in the blend (soften: 0.6 the senior
+## assistant, 0.4 the line coach) and an average coach in the other part.
+static func _soften_delta(share: float, manage: int) -> float:
+	var mine := share * float(manage) + (1.0 - share) * AVERAGE
+	var avg := AVERAGE
+	return SOFTEN_MAX * (clampf((mine - 65.0) / 25.0, 0.0, 1.0) - clampf((avg - 65.0) / 25.0, 0.0, 1.0))
+
+
+static func _pct(v: float) -> int:
+	return int(round(v * 100.0))
