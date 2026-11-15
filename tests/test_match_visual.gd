@@ -2707,37 +2707,46 @@ func _test_contacts(res: Dictionary) -> void:
 	var kinds := {}
 	var bad := []
 	var guard := 0
-	var scoop_ball := Vector2.INF
-	var scoop_moved := 0
+	var scoop_ball := Vector2.INF   # where his hands go down (the ground_ball touch's spot)
+	var off_hands := 0.0            # worst gap between that spot and the ball as it comes off them
 	var scoop_who := -1
 	var scoops := 0
 	var slow := []        # scoops he came into short of the scoop's pace
 	var off_line := []    # fumbles off a scoop knocked back or across him, not on along his line
 	var knock_who := -1   # the man whose scoop just ended, until the ball comes off him
 	var knocks := 0
+	var scrap_knocks := 0
+	var scrap_bare := 0   # scrap knocks with no man's scoop before them
+	var knocked_before := 0.0
 	while not d.idle() and guard < 120000:
 		guard += 1
-		var mode_before := str(d.ball["mode"])
-		var holder_before := int(d.ball["holder"])
+		var ball_before: Vector2 = d.ball["pos"]
+		var speed_before: float = (d.ball.get("vel", Vector2.ZERO) as Vector2).length()
 		d.advance(0.05)
-		if scoop_ball.is_finite():
-			# A spilled ball lies still in front of the man running onto it until he fumbles it.
-			if d._pi < d._phases.size() and (d._phases[d._pi] as Dictionary).has("scoop"):
-				if (d.ball["pos"] as Vector2).distance_to(scoop_ball) > 0.01:
-					scoop_moved += 1
-			else:
-				scoop_ball = Vector2.INF
-				knock_who = scoop_who
-		if knock_who >= 0 and str(d.ball["mode"]) == "loose" and (d.ball.get("vel", Vector2.ZERO) as Vector2).length() > 1.0:
+		var ph: Dictionary = d._phases[d._pi] if d._pi < d._phases.size() else {}
+		var knocked := float(ph.get("_knocked", 0.0))
+		if knocked > knocked_before:
+			scrap_knocks += 1
+			if knock_who < 0 and not scoop_ball.is_finite():
+				scrap_bare += 1
+		knocked_before = knocked
+		if scoop_ball.is_finite() and not (d._pi < d._phases.size() and (d._phases[d._pi] as Dictionary).has("scoop")):
+			knock_who = scoop_who
+		# The knock: the ball jumps off his hands (it may still be rolling the last of the way in).
+		if knock_who >= 0 and str(d.ball["mode"]) == "loose" \
+				and (d.ball.get("vel", Vector2.ZERO) as Vector2).length() > speed_before + 1.0:
 			var bv: Vector2 = d.ball["vel"]
 			var line: Vector2 = d.tokens[knock_who]["vel"]
 			knocks += 1
+			# A loose ball rolls the last of the way into his hands, and comes off them there.
+			off_hands = maxf(off_hands, ball_before.distance_to(scoop_ball))
+			scoop_ball = Vector2.INF
 			if line.length() <= 0.5 or absf(line.angle_to(bv)) > MatchDirector.KNOCK_ON + 0.05:
 				off_line.append("%d deg at %.1f m/s" % [roundi(rad_to_deg(absf(line.angle_to(bv)))), line.length()])
 			knock_who = -1
 		for c in d.contacts:
 			if c["kind"] == &"ground_ball":
-				scoop_ball = d.ball["pos"]
+				scoop_ball = c["at"]
 				scoop_who = int(c["who"])
 				scoops += 1
 				var v := (d.tokens[scoop_who]["vel"] as Vector2).length()
@@ -2755,8 +2764,9 @@ func _test_contacts(res: Dictionary) -> void:
 			if not (c["at"] as Vector2).is_finite():
 				bad.append("%s nowhere" % c["kind"])
 		d.contacts.clear()
-	_check(scoop_moved == 0, "A spilled ball lies still until its man's hands reach it (%d frames moved)" % scoop_moved)
+	_check(off_hands <= 0.25, "A loose ball comes off a man's hands where they go down for it (worst %.2f m off)" % off_hands)
 	_check(scoops > 0 and slow.is_empty(), "A spilled ball's man goes down for it at pace, not from a stop (%d scoops, slow: %s)" % [scoops, slow.slice(0, 5)])
+	_check(scrap_bare == 0, "A loose ball in a scrap moves only off a man's hands, never on its own (%d knocks, %d with no man)" % [scrap_knocks, scrap_bare])
 	_check(scoops > 0 and knocks == scoops and off_line.is_empty(), "A fumble on the run knocks the ball on along his line (%d scoops, %d knocks, off it: %s)" % [scoops, knocks, off_line.slice(0, 5)])
 	for k in [&"kick", &"handball", &"mark", &"gather", &"handball_receive", &"tackle", &"bounce", &"ruck_tap",
 			&"ground_ball"]:
