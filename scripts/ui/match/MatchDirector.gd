@@ -1268,13 +1268,15 @@ const KNOCK_CLEAR := 6.0
 const KNOCK_SHORT := 3.0
 ## The men nearest a loose ball (at most SCRAP_MEN, within SCRAP_REACH metres) go at it.
 ## While none of them may go down for it (one already has, or the winner is about to), they
-## hold SCRAP_HOLD metres off it: a run at it the moment it is theirs to have.
+## hold SCRAP_HOLD metres off it: a scoop's length plus the run-up from a stand to the scoop's
+## pace, so the moment it is theirs to have they come at it flat out, with no backing off first.
 const SCRAP_MEN := 3
 const SCRAP_REACH := 15.0
-const SCRAP_HOLD := 2.7
+const SCRAP_HOLD := SCOOP_LEAD + SCOOP_SPEED * SCOOP_SPEED / (2.0 * MatchMotion.ACCEL) + 0.15 + 0.6
 ## The two men of a tackle are drawn in its take (Oval3DAnim: down, then back up) until it
 ## ends: the longest of tackle_pairs.json's length_s - contact_s, 3.74 clip s, on this clock.
-## Until then neither goes down for a loose ball or gathers it (the take would not show it).
+## Until then neither joins the scrap for a loose ball (the take would not show him going down
+## for it: Oval3DAnim plays a ground_ball touch only out of a take).
 const TAKE_UP := 3.74 * TEMPO
 
 
@@ -1293,6 +1295,8 @@ func _scrap(p: Dictionary, who: int) -> void:
 		tokens[out].erase("cap")
 		p.erase("_out")
 		out = -1
+	if out >= 0:
+		_busy[out] = true
 	var by := int(p.get("_by", -1))
 	if by >= 0:
 		# Down for it on the run; it rolls the last of the way into his hands.
@@ -1302,6 +1306,10 @@ func _scrap(p: Dictionary, who: int) -> void:
 			var line: Vector2 = bt.get("line", _line(bt))
 			var step := clampf(minf(KNOCK_CAP - knocked, to.length() - KNOCK_SHORT), FUMBLE_METRES.x, KNOCK_METRES)
 			_knock_on(by, line.rotated(clampf(line.angle_to(to), -KNOCK_ON, KNOCK_ON)), step)
+			# He follows his own knock: on after it at the scoop's pace, never pulling up behind it.
+			var after: Vector2 = _ball_rest() - (bt["pos"] as Vector2)
+			if after.length() > 0.01:
+				MatchMotion.set_goal(bt, (bt["pos"] as Vector2) + after + after.normalized() * RUN_THROUGH, 0.0, true)
 			knocked += step
 			p["_knocked"] = knocked
 			p["_knock_t"] = _pt
@@ -2113,15 +2121,6 @@ func _done(p: Dictionary) -> bool:
 				var aim := _scoop_aim(who)
 				var dr := (t["pos"] as Vector2).distance_to(aim)
 				var to := aim - (t["pos"] as Vector2)
-				if not _on_feet(who):
-					# Still getting up from a tackle: he comes no nearer than a scoop's run-up
-					# meanwhile, and the men near it contest it.
-					t.erase("cap")
-					MatchMotion.set_goal(t, aim - to.normalized() * KNOCK_CLEAR if dr > KNOCK_CLEAR \
-							else t["pos"], 1.0, true)
-					if _pt > 0.1 and str(ball["mode"]) in ["dead", "loose"]:
-						_scrap(p, who)
-					return false
 				MatchMotion.set_goal(t, aim + to.normalized() * RUN_THROUGH if dr > 0.01 else aim, 1.0, true)
 				t["cap"] = sqrt(SCOOP_SPEED * SCOOP_SPEED + 2.0 * MatchMotion.BRAKE * 0.55 * maxf(dr - SCOOP_LEAD, 0.0))
 				# (where his hands will meet it, rolling no faster than SCOOP_ROLL by then).
@@ -2134,7 +2133,7 @@ func _done(p: Dictionary) -> bool:
 			else:
 				MatchMotion.set_goal(t, ball["pos"], 1.0, true)
 				# A ball just knocked to him off a team-mate's hands rolls to him before he has it.
-				if d <= 1.4 and _pt - float(p.get("_knock_t", -KNOCK_EVERY)) >= KNOCK_GATHER and _on_feet(who):
+				if d <= 1.4 and _pt - float(p.get("_knock_t", -KNOCK_EVERY)) >= KNOCK_GATHER:
 					return true
 			if p.has("max") and _pt >= float(p["max"]):
 				return true
@@ -2142,7 +2141,7 @@ func _done(p: Dictionary) -> bool:
 			# keep him just short of it. Close enough after a moment is his,
 			# and no collect lasts longer than COLLECT_LIMIT. A ball just knocked his way
 			# in a scrap rolls to him first.
-			if (_pt >= 1.5 and d <= 3.0 and not p.get("pace", false) and _on_feet(who) \
+			if (_pt >= 1.5 and d <= 3.0 and not p.get("pace", false) \
 					and _pt - float(p.get("_knock_t", -KNOCK_EVERY)) >= KNOCK_EVERY) or _pt >= COLLECT_LIMIT:
 				return true
 			if p.get("roll", false) and _pt > 0.1 and str(ball["mode"]) != "flight" and d <= ROLL_REACH \
