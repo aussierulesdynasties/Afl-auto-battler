@@ -30,6 +30,7 @@ const FAR := 5.0               # m: his token this far from him = the play has m
 const BLEND := 0.2             # s: the pose he was in eases into the clip (and the clip out)
 const GAP_CLOSE := 4.0         # m/s: after a tackle he runs back to his spot, at least this fast
 const GAP_MAX := 9.0           # m/s: and at most this fast
+const APART := 0.8             # m: on that run his hips stay this far from the man he tackled (or who tackled him)
 const REACH := 1.6             # m: MatchDirector's chase ends this close (its "chase" phase)
 const STEP := 1.0 / 30.0       # s: the takes' frame
 
@@ -53,6 +54,7 @@ var _blend: Array = []         # per player: the pose he is easing out of, {} fo
 var _back: Array = []          # per player: where a finished pair left him (INF: nowhere)
 var _face: Array = []          # per player: the way his hips faced when that pair finished
 var _gap: Array = []           # per player: his drawn spot minus his token's, closing
+var _mate: Array = []          # per player: the other man of the take he is running back from, -1 for none
 var _rate: Array = []          # per player: the rate his running clip played at last
 var _takes := {}               # take name -> {dist: hips apart, foot: planted foot} per STEP
 var _tracks := {}              # animation name -> {bone: rotation track}, "hips": position track
@@ -68,6 +70,7 @@ func _init(p_director: MatchDirector, p_players: Array) -> void:
 		_back.append(Vector2.INF)
 		_face.append(0.0)
 		_gap.append(Vector2.ZERO)
+		_mate.append(-1)
 		_rate.append(1.0)
 	var res = load(PAIRS)
 	if res is JSON:
@@ -336,6 +339,7 @@ func step(i: int, p: Dictionary, holder: int, pos: Vector2, vel: Vector2, dt: fl
 		# Back from a tackle: he runs to his spot.
 		var back := clampf(2.0 * gap.length(), GAP_CLOSE, GAP_MAX)
 		_gap[i] = gap - gap.limit_length(back * dt)
+		_round(i, pos, gap, back * dt)
 		if gap.length() > 0.05:
 			vel = vel - gap.normalized() * back
 		node.position = Vector3(pos.x + (_gap[i] as Vector2).x, 0.0, pos.y + (_gap[i] as Vector2).y)
@@ -405,7 +409,44 @@ func _leave(i: int) -> void:
 	_snap(i, p)
 	_face[i] = _yaw_of(hips.basis)
 	_back[i] = Vector2(hips.origin.x, hips.origin.z)
+	var pr: Dictionary = _in[i]
+	_mate[i] = -1
+	if not pr.is_empty():
+		_mate[i] = int(pr["victim"]) if int(pr["who"]) == i else int(pr["who"])
 	_in[i] = {}
+
+
+## On the run back from a take he goes round the other man of it, never through him: the
+## straight line to his spot can cross the man still getting up beside him (3d view 2,
+## 2026-11-15: their hips came 0.18 m apart). `step_len` is how far he runs this frame.
+func _round(i: int, pos: Vector2, pull: Vector2, step_len: float) -> void:
+	var m := int(_mate[i])
+	if m < 0:
+		return
+	if (_gap[i] as Vector2) == Vector2.ZERO:
+		_mate[i] = -1
+		return
+	var them: Vector2
+	if _back[m] != Vector2.INF:
+		them = _back[m]
+	elif not (_in[m] as Dictionary).is_empty():
+		_mate[i] = -1  # he is in a new take: that one keeps the two apart
+		return
+	else:
+		them = (director.tokens[m]["pos"] as Vector2) + (_gap[m] as Vector2)
+	if pos.distance_to(them) < APART:
+		_mate[i] = -1  # his own spot is beside him: the director keeps those apart
+		return
+	var me: Vector2 = pos + (_gap[i] as Vector2)
+	var off := me - them
+	if off.length() >= APART:
+		return
+	var out := off.normalized() if off.length() > 0.01 else Vector2.RIGHT.rotated(float(i))
+	# Round the side he is already heading, so a run straight at him still gets past.
+	var side := Vector2(-out.y, out.x)
+	if side.dot(-pull) < 0.0:
+		side = -side
+	_gap[i] = them + out * APART + side * step_len * 0.5 - pos
 
 
 ## Hold the pose he is in now, to ease out of over BLEND (_ease).
