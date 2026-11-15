@@ -240,7 +240,7 @@ static func _status(host: Control, count: int) -> Control:
 		if str(o[0]) == _filter and _filter != "all":
 			bits.append(str(o[1]))
 	if _sort != "":
-		var ends := ["Z–A", "A–Z"] if _sort == "club" else ["most", "fewest"]
+		var ends := ["Z–A", "A–Z"] if _sort == "club" else ["highest", "lowest"]
 		bits.append("sorted by %s, %s first" % [_title_of(_sort), ends[0] if _desc else ends[1]])
 	var text := "Showing " + (", ".join(bits) if not bits.is_empty() else "all %d clubs" % count)
 	var l := UiKit.lbl(text, UiKit.SMALL, UiKit.MUTED)
@@ -376,6 +376,9 @@ static func _sort_row(host: Control, specs: Array) -> Control:
 			var on := _is_sorted(key)
 			UiKit.paint_tab(b, on)
 			b.add_theme_font_override("font", UiKit.BOLD if on else UiKit.FONT)
+			# Every word full strength so none reads as switched off; the current
+			# one is bold and underlined.
+			b.add_theme_color_override("font_color", UiKit.TEXT)
 			b.pressed.connect(func(): _sort_by(host, key))
 			h.add_child(b)
 		v.add_child(h)

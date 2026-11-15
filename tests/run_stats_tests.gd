@@ -1170,7 +1170,7 @@ func _test_ladder(sz: Vector2i) -> void:
 	_check(why == "", "A finger on %s sorts (%s: %s)" % [sname, tag, why])
 	var wins := _by(s, season, sk)
 	_check(_non_increasing(wins), "%s sorts most first (%s: %s)" % [sname, tag, str(wins)])
-	_check(_text(s.find_child("ActiveState", true, false)).contains("sorted by %s, most first" % sname), "The sort is named (%s)" % tag)
+	_check(_text(s.find_child("ActiveState", true, false)).contains("sorted by %s, highest first" % sname), "The sort is named (%s)" % tag)
 	if sz.x < 900:
 		var hw: Label = s.find_child("Head_w", true, false)
 		_check(_bold_button(s.find_child("Sort_w", true, false), bold_font) and not _bold_button(s.find_child("Sort_pos", true, false), bold_font)
