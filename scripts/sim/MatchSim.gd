@@ -3100,7 +3100,7 @@ func _general_aerial_contest(side: int, mark_fp: float, carrier) -> Dictionary:
 		spoilt = true
 		defender = roamer
 	# An Interceptor who gets to it can hold it, as on a lead
-	# (_general_aerial): without this his extra spoils killed kicks he would
+	# (_general_aerial): without this the extra spoils killed kicks the player would
 	# have intercepted later (bug bash 5). Drawn only for an Interceptor.
 	if spoilt and zone_intercepts and _trait(defender, "interceptor") 			and aerial_rng.randf() < _tv("INTERCEPT_MARK", INTERCEPT_MARK) * (0.6 + 0.8 * _a(defender, "intercept") / 100.0) * _wx("aerial"):
 		_intercept(opp, defender, false)
