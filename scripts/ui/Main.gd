@@ -237,7 +237,7 @@ func _show_home() -> void:
 
 	# A career in memory (back from the hub or the draft) or one on disk.
 	var resume_draft := GameState.draft != null and not GameState.draft.user_club.is_empty() \
-			and (GameState.season == null or GameState.club_yet_to_play())
+			and (GameState.season == null or GameState.club_yet_to_play() or GameState.first_offseason == 1)
 	var live := resume_draft or GameState.season != null
 	if live or saved:
 		var cont := UiKit.btn("Continue", UiKit.H2, true)
@@ -361,7 +361,9 @@ func _on_continue() -> void:
 	# after that errors ("class instance is gone").
 	ScreenTransition.run("Loading your career...", func():
 		if GameState.load_career():
-			Router.go("hub" if GameState.season != null and not GameState.club_yet_to_play() else "draft")
+			# The off-season before the opening draft (row 199) is reached from the draft.
+			Router.go("hub" if GameState.season != null and not GameState.club_yet_to_play()
+					and GameState.first_offseason != 1 else "draft")
 		else:
 			_show_load_error())
 

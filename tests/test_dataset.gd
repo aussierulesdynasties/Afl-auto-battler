@@ -18,7 +18,9 @@ const SUITE_SEED := 1990
 ## 44 rule (RookieList.add_block): West Coast, at 43 of the 44, lists one of
 ## its three tied prospects and passes its picks, so the opening draft differs.
 const GOLDEN_LOAD := "9baf6f36b146d2bfafd65e07b3235c55"
-const GOLDEN_REAL := "6b9d20ef93eea2ce95f0a6d936f19727"
+## It moved again with row 199 (2026-11-15): the off-season before the
+## opening draft closes with the rivals signing free agents, so the lists differ.
+const GOLDEN_REAL := "744a28a11b3d0539ea53297e932616fc"
 ## A played match's floating point differs between Windows and Linux builds of
 ## Godot, so the season has one fingerprint per platform; each was taken on
 ## main before the change (Linux: run_on_github run 43024085570). The own
