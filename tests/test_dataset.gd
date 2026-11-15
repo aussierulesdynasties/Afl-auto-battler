@@ -30,7 +30,6 @@ const GOLDEN_REAL := "d4fd9cfddd165faddd875f60720392cc"
 ## Windows from a local run on that branch, Linux from its CI (shard 6).
 ## The game plan retune after it (bug bash 5) redrew it again: Windows from
 ## a local run, Linux from run_on_github run 43725691444 (with the 40% Controlled Tempo hold and #1613).
-## Row 199's first off-season leaves it as it is (measured on both).
 ## Result keys added after the golden was taken that record who earned a
 ## call's credit, not what happened (row 144). "impact" and "plan_traits" were
 ## already in main's results, so they stay in the hash. "breeze_side" (the
