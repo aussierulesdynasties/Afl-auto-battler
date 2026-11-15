@@ -293,6 +293,7 @@
 	},
 	{
 		"id": "media_cameras_in_rooms",
+		"topical": true,
 		"category": "media",
 		"subject": {
 			"kind": "club"
