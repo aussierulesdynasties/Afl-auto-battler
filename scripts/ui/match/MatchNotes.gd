@@ -298,12 +298,8 @@ static func call_lines(timeline: Array, event_index: int, ev: Dictionary, state:
 	var at_break := []  # plans dropped at the break just gone
 	state["break_lines"] = 0
 	var clubs := [GameDB.club_name(home), GameDB.club_name(away)]
-	# Your own plan goes by its name; a rival's by what it is.
-	var codes := [home, away]
-	var named := func(side: int, plan: String) -> String:
-		var mine := str(codes[side]) == GameState.my_club
-		var l := CoachReport.plan_label(plan, mine)
-		return l if mine or MatchSim.plan_key(plan) != CustomPlan.KEY else l.to_lower()
+	var named := func(_side: int, plan: String) -> String:
+		return CoachReport.plan_label(plan)
 	var kind := str(ev.get("kind", ""))
 	var q := int(ev.get("q", 1))
 	var bursts: Array = state["bursts"]
