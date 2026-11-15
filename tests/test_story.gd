@@ -1270,8 +1270,11 @@ func _test_role_trial() -> void:
 	_check(not (GameState.season.selections[GameState.my_club] as Dictionary).has("TRIAL"),
 			"...and nothing is left on the selection")
 	var back_in := _line_in(GameState.current_side(), id)
-	_check(back_in == home_line, "...and the auto-pick has him back in %s (in %s; injury weeks %d; side %s)"
-			% [home_line, back_in, int(p.get("injury_weeks", 0)), str(GameState.current_side())])
+	# A midfielder's home is the midfield: the auto-pick puts him in the centre or on a wing by the
+	# week's form (GameState._in_trial_line: the wing counts as midfield), so either is home.
+	var mids := ["MID", "WING"]
+	_check(back_in == home_line or (mids.has(back_in) and mids.has(home_line)),
+			"...and the auto-pick has him back in %s (in %s; injury weeks %d)" % [home_line, back_in, int(p.get("injury_weeks", 0))])
 	# Moving HIM by hand ends it, auto case: he stays where your side puts him.
 	_start()
 	p = _trial_candidate()
