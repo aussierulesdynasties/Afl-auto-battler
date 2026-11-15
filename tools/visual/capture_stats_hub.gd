@@ -137,7 +137,7 @@ func _run() -> void:
 			await _frames(4)
 		_save(out + "_awards_awarded.png")
 	if section == "ladder":
-		await _tap(scene, "Sort_w")
+		await _tap(scene, "Sort_pts")
 		_save(out + "_ladder_sorted.png")
 		await _tap(scene, "Filter_top10")
 		_save(out + "_ladder_top10.png")

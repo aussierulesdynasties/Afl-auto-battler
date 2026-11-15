@@ -132,8 +132,11 @@ func _test_redraft_first_draft() -> void:
 	var before: int = _mine(gs).size()
 	_run_draft(gs)
 	_check(gs.draft.is_finished() and gs.finish_intake_draft(), "(setup) the draft finishes")
-	_check(_mine(gs).size() == before + 1,
-			"Draft day tells one line about him, and no season he never had (%s)" % str(_mine(gs).map(func(n): return n["text"])))
+	# One line for the National Draft; a second only when the Rookie Draft
+	# that opens straight after it has already taken him.
+	var rookie := str(OwnProspect.locate(gs)["p"].get("drafted_type", "")) == RookieList.KIND
+	_check(_mine(gs).size() == before + (2 if rookie else 1),
+			"Draft day tells one line about him per draft, and no season he never had (%s)" % str(_mine(gs).map(func(n): return n["text"])))
 	_draft_beat(gs, year, "redraft")
 
 
@@ -159,7 +162,12 @@ func _draft_beat(gs, year: int, label: String) -> void:
 	var lines: Array = _mine(gs).map(func(n): return str(n["text"]))
 	var taken := lines.filter(func(t): return t.contains("National Draft") and t.contains("with pick"))
 	var missed := lines.filter(func(t): return t.contains("overlooked in the %d National Draft" % year))
-	if str(now["at"]) == "club":
+	if str(now["at"]) == "club" and str(p.get("drafted_type", "")) == RookieList.KIND:
+		# Overlooked in the National Draft, then taken in the Rookie Draft.
+		var rookie_line := "%s have taken Alastair McNeil in the Rookie Draft." % GameDB.club_name(str(now["club"]))
+		_check(missed.size() == 1 and taken.is_empty() and lines.has(rookie_line),
+				"%s: the news says he was overlooked, then names his Rookie Draft club (%s / %s)" % [label, rookie_line, str(lines)])
+	elif str(now["at"]) == "club":
 		var want := "%s have taken Alastair McNeil with pick %d in the %d National Draft." % [
 				GameDB.club_name(str(now["club"])), int(p.get("drafted_pick", 0)), year]
 		_check(taken.size() == 1 and str(taken[0]) == want and missed.is_empty(),

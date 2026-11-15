@@ -46,12 +46,12 @@ static func questions(to := "season") -> Array:
 				"gain": up.call(str(own[0])), "cost": up.call(str(own[1]))})
 	return [
 		{"key": "game_plan", "title": "How do we play?",
-			"lead": "Your game plan for every home and away match left. It stays your plan for the finals until you change it." if to == "home_away"
-					else "Your game plan for every match left this season.", "options": plans},
+			"lead": "Our game plan for every home and away match left. It stays our plan for the finals until you change it." if to == "home_away"
+					else "Our game plan for every match left this season.", "options": plans},
 		{"key": "youth", "title": "Who gets picked?",
 			"lead": "Selection, every week you are away.", "options": [
 				{"key": "form", "label": "Best side on form",
-					"gain": "Your best available 23 every week.",
+					"gain": "Our best available 23 every week.",
 					"cost": "Young players only play when they force their way in."},
 				{"key": "kids", "label": "Give the kids a run",
 					"gain": "%s players with fewer than %d senior games are promised a run of %d games at a time, and get the match experience." % [
