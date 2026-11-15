@@ -43,6 +43,9 @@ SKIN = 0.002        # m: hair is kept at least this far off his skin
 SOLID_OFF = 0.004   # m: a solid piece's outer face (hair painted on a mannequin) sits this far off his skull
 WELD = 5e-5         # m: vertices this close are one (seam splits)
 LOOSE = 40          # faces: a loose island smaller than this is a crumb
+STRAY = float(os.environ.get("ARD_HAIR_STRAY", "0.0"))   # an island under this share of the biggest is a stray
+UNDER = 0.001       # m: the under-layer (his scalp in hair colour) sits this far off his skin
+UNDER_REACH = 0.045 # m: his scalp gets the under-layer where hair lies within this of it
 PALE = float(os.environ.get("ARD_HAIR_PALE", "0.5"))    # brighter than this and colourless: plastic or lace
 
 t0 = time.time()
@@ -309,6 +312,15 @@ for style, path, opts in cuts:
     bm.from_mesh(ob.data)
     bm.normal_update()
     uvl = bm.loops.layers.uv.active
+    brow_z = our_top - BROW
+    front = [f for f in bm.faces if f.calc_center_median().y < HEAD.y - 0.02
+             and min(v.co.z for v in f.verts) < brow_z < max(v.co.z for v in f.verts)]
+    if front:
+        es = list({e for f in front for e in f.edges})
+        vs = list({v for f in front for v in f.verts})
+        bmesh.ops.bisect_plane(bm, geom=front + es + vs, plane_co=Vector((0, 0, brow_z)), plane_no=Vector((0, 0, 1)))
+        bmesh.ops.triangulate(bm, faces=[f for f in bm.faces if len(f.verts) > 3])
+        bm.normal_update()
     kill, n_pole, n_cap, n_pale, n_face = [], 0, 0, 0, 0
     bm.faces.ensure_lookup_table()
     hair = BVHTree.FromBMesh(bm)
@@ -321,7 +333,7 @@ for style, path, opts in cuts:
         if f.normal.dot(c - HEAD) < 0 and ((c - q).dot(nrm) < 0 or (dist < NEAR and looks_at_him(hair, c, f.normal))):
             kill.append(f); n_cap += 1          # the cap's inside, looking at him
             continue
-        if c.z < our_top - BROW and c.y < HEAD.y - 0.02 and ((c - q).dot(nrm) < SKIN or abs(c.x - OX) < FACE):
+        if c.z < brow_z and c.y < HEAD.y - 0.02 and ((c - q).dot(nrm) < SKIN or abs(c.x - OX) < FACE):
             kill.append(f); n_face += 1         # a fringe over his face below the brows: it would mask his eyes
             continue
         if plastic is not None:
@@ -336,8 +348,10 @@ for style, path, opts in cuts:
     # Loose islands: keep those reaching above his ears and big enough to be hair.
     ear = our_top - 0.13
     drop = []
-    for isl in islands(bm):
-        if max(v.co.z for g in isl for v in g.verts) < ear or len(isl) < LOOSE:
+    isls = islands(bm)
+    big = max(len(i) for i in isls) if isls else 0
+    for isl in isls:
+        if max(v.co.z for g in isl for v in g.verts) < ear or len(isl) < max(LOOSE, opts.get("stray", STRAY) * big):
             drop.extend(isl)
     bmesh.ops.delete(bm, geom=drop, context="FACES")
     bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
@@ -397,6 +411,56 @@ for style, path, opts in cuts:
     me.update()
     while len(ob.data.uv_layers) > 1:
         ob.data.uv_layers.remove(ob.data.uv_layers[1])
+    n_under = 0
+    if not opts.get("nounder"):
+        hb = BVHTree.FromPolygons([v.co for v in me.vertices], [p.vertices[:] for p in me.polygons])
+        bme = basemesh.evaluated_get(dg).to_mesh()
+        keep = {}
+        for v in bme.vertices:
+            if v.co.z < our_top - 0.2 or (v.co.y < HEAD.y - 0.02 and v.co.z < our_top - BROW + 0.025):
+                continue                        # below his crown's dome, or his forehead under a fringe
+            o = v.co + v.normal * 1e-4
+            if hb.ray_cast(o, v.normal, UNDER_REACH)[0] is not None:
+                keep[v.index] = v.co + v.normal * UNDER
+        # A gap between clumps lets a ray through: fill a point most of whose neighbours are
+        # covered (a hole), never one on the edge of the hair (about half are).
+        ring = {}
+        for e in bme.edges:
+            a_, b_ = e.vertices
+            ring.setdefault(a_, []).append(b_)
+            ring.setdefault(b_, []).append(a_)
+        for _ in range(4):
+            add = [i for i, nb in ring.items() if i not in keep and bme.vertices[i].co.z > our_top - 0.2
+                   and sum(j in keep for j in nb) >= 0.7 * len(nb)]
+            for i in add:
+                v = bme.vertices[i]
+                keep[i] = v.co + v.normal * UNDER
+        bm = bmesh.new()
+        bm.from_mesh(me)
+        uvl = bm.loops.layers.uv.active
+        bm.faces.ensure_lookup_table()
+        nv = {}
+        for poly in bme.polygons:
+            if not all(i in keep for i in poly.vertices):
+                continue
+            for i in poly.vertices:
+                if i not in nv:
+                    nv[i] = bm.verts.new(keep[i])
+            try:
+                f = bm.faces.new([nv[i] for i in poly.vertices])
+            except ValueError:
+                continue
+            c = sum((keep[i] for i in poly.vertices), Vector()) / len(poly.vertices)
+            hf = hb.find_nearest(c)[2]
+            u = me.uv_layers.active.data[me.polygons[hf].loop_start].uv.copy()
+            for lp in f.loops:
+                lp[uvl].uv = u
+            n_under += 1
+        bmesh.ops.triangulate(bm, faces=[f for f in bm.faces if len(f.verts) > 3])
+        bm.to_mesh(me)
+        bm.free()
+        basemesh.evaluated_get(dg).to_mesh_clear()
+        me.update()
     gimg, mean = grey(img, ob) if img else (None, 0)
     if gimg:
         gimg.filepath_raw = os.path.join(tex_dir, style + ".png")
@@ -418,7 +482,7 @@ for style, path, opts in cuts:
     ob.matrix_world = Matrix.Identity(4)
     ob.name = ob.data.name = f"hair_{style}"
     print(f"HAIR {ob.name}: {n_all} faces, cut stand {n_pole} cap {n_cap} face {n_face} pale {n_pale} loose {len(drop)} "
-          f"-> {n0} -> {len(ob.data.polygons)}; pushed {pushed}, split {split}, scale {tuple(round(x, 4) for x in s)}, tex mean {mean:.2f}")
+          f"-> {n0} -> {len(ob.data.polygons)}; pushed {pushed}, split {split}, under {n_under}, islands {sorted((len(i) for i in isls), reverse=True)[:6]}, scale {tuple(round(x, 4) for x in s)}, tex mean {mean:.2f}")
     made.append(ob)
     if os.environ.get("ARD_HAIR_RAYS"):
         hb = BVHTree.FromPolygons([v.co for v in ob.data.vertices], [p.vertices[:] for p in ob.data.polygons])
