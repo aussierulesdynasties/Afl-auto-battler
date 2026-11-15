@@ -59,6 +59,7 @@ func run() -> void:
 	_t("_test_upright_oval", [res])
 	_t("_test_plan_tint_every_quarter")
 	_t("_test_three_d_view", [res])
+	_t("_test_three_d_hair", [res])
 	_t("_test_contacts", [res])
 	GameState.replay_seed = 0
 	print(Ran.line("Match visual", self))
@@ -2691,6 +2692,115 @@ func _test_three_d_view(res: Dictionary) -> void:
 	_check(pv._oval3d == null and pv._vp3d == null, "With the setting off the flat oval comes back")
 	pv.free()
 	flat.free()
+
+
+## Club Forge hair on the 3D oval (director, 2026-11-15: "make the forge haircuts actually
+## work"): every man wears his own skin, hair colour and style, each style its own shell from
+## hair_styles.glb on his head bone, and a look chosen in Club Forge is the one he wears.
+func _test_three_d_hair(res: Dictionary) -> void:
+	var shells := Oval3D.hair_shells()
+	var meshes := {}
+	var real := 0
+	for st in shells:
+		var m: Mesh = shells[st]["mesh"]
+		meshes[m] = true
+		if m.resource_path.begins_with(Oval3D.HAIR_GLB) and str(shells[st]["bone"]) == "head":
+			real += 1
+	_check(shells.size() == real and real == meshes.size() and real > 0,
+			"Each 3D hair style is its own mesh from %s, on the head bone (%d of %d)" % [Oval3D.HAIR_GLB, real, shells.size()])
+	var none := []
+	for st in Appearance.HAIR_STYLES:
+		if not shells.has(st) and not Oval3D.SCALP.has(st):
+			none.append(st)
+	_check(none.is_empty(), "Every Club Forge hair style draws on the 3D footballer (missing: %s)" % [none])
+	var pv := PitchView.new()
+	pv.size = Vector2(360, 480)
+	pv.three_d = true
+	(Engine.get_main_loop() as SceneTree).root.add_child(pv)
+	pv.setup(res)
+	var oval: Oval3D = pv._oval3d
+	var right := 0
+	var styles := {}
+	for i in range(oval.players.size()):
+		var p: Dictionary = oval.players[i]
+		var who = GameDB.player_by_id(str(pv.director.tokens[i].get("pid", "")))
+		if who == null:
+			continue
+		styles[p["hair_style"]] = true
+		if _wears(p, GameDB.figure_look(who)):
+			right += 1
+	_check(right == oval.players.size() and styles.size() > 1,
+			"Every 3D footballer wears his own skin, hair colour and style (%d of %d, %d styles)" % [right, oval.players.size(), styles.size()])
+	# A look chosen in Club Forge: the afro, the darkest skin, black hair.
+	var t: Dictionary = pv.director.tokens[0]
+	var who = GameDB.player_by_id(str(t.get("pid", "")))
+	var had = who.get("look")
+	who["look"] = {"skin": 4, "hair": 0, "hair_style": "afro"}
+	oval._dress(oval.players[0], t)
+	var p0: Dictionary = oval.players[0]
+	_check(p0["hair_style"] == "afro" and _wears(p0, GameDB.figure_look(who)),
+			"A look chosen in Club Forge is the one he wears on the 3D oval (the afro, skin 4, black hair)")
+	# Bald and buzz have no shell: the scalp is his skin, or clippered.
+	oval.look(p0, {"skin": 2, "hair": 1, "hair_style": "bald"})
+	_check(not p0.has("hair_node") and _scalp(p0) == 1, "Bald on the 3D oval: no hair, bare scalp")
+	oval.look(p0, {"skin": 2, "hair": 1, "hair_style": "buzz"})
+	_check(not p0.has("hair_node") and _scalp(p0) == 2, "A buzz cut on the 3D oval: clippered scalp")
+	if had == null:
+		who.erase("look")
+	else:
+		who["look"] = had
+	# The body's scalp sits on his skull, not 1 cm out as the old painted crop had it.
+	var body: MeshInstance3D = null
+	for mi in (p0["node"] as Node3D).find_children("*", "MeshInstance3D", true, false):
+		if mi.has_meta("kit"):
+			body = mi
+	var glb: Node = (load(Oval3D.PLAYER_GLB) as PackedScene).instantiate()
+	var src: ArrayMesh = (glb.find_children("*", "MeshInstance3D", true, false)[0] as MeshInstance3D).mesh
+	glb.free()
+	var hair := -1
+	for s in range(src.get_surface_count()):
+		if src.surface_get_material(s) != null and src.surface_get_material(s).resource_name == Oval3D.HAIR_SURFACE:
+			hair = s
+	var a: PackedVector3Array = src.surface_get_arrays(hair)[Mesh.ARRAY_VERTEX] if hair >= 0 else PackedVector3Array()
+	var b: PackedVector3Array = (body.mesh as ArrayMesh).surface_get_arrays(hair)[Mesh.ARRAY_VERTEX] if hair >= 0 else PackedVector3Array()
+	var drawn_in := 0
+	for k in range(a.size()):
+		if absf(a[k].distance_to(b[k]) - Oval3D.SCALP_LIFT) < 0.001:
+			drawn_in += 1
+	_check(hair >= 0 and drawn_in == a.size() and a.size() > 0,
+			"The 3D body's scalp is drawn back onto his skull under the hair (%d of %d)" % [drawn_in, a.size()])
+	pv.free()
+
+
+## p (an Oval3D figure) wears look l: skin and hair colour on the body, his style's own shell
+## on his head bone tinted his hair colour, or the scalp bald and buzz have.
+func _wears(p: Dictionary, l: Dictionary) -> bool:
+	var style := str(l.get("hair_style", ""))
+	var skin: Color = Appearance.SKIN[int(l["skin"])]
+	var hair: Color = Appearance.HAIR[int(l["hair"])]
+	if p.get("hair_style") != style:
+		return false
+	for mi in (p["node"] as Node3D).find_children("*", "MeshInstance3D", true, false):
+		if mi.has_meta("kit"):
+			var g := mi as GeometryInstance3D
+			if g.get_instance_shader_parameter("skin") != skin or g.get_instance_shader_parameter("hair") != hair:
+				return false
+	var shell: Dictionary = Oval3D.hair_shells().get(style, {})
+	if shell.is_empty():
+		return not p.has("hair_node") and _scalp(p) == int(Oval3D.SCALP.get(style, -1))
+	var on: BoneAttachment3D = p.get("hair_node")
+	if on == null or on.get_parent() != p["skel"] or on.bone_name != str(shell["bone"]) or on.get_child_count() != 1:
+		return false
+	var mi := on.get_child(0) as MeshInstance3D
+	return mi.mesh == shell["mesh"] and (mi.material_override as StandardMaterial3D).albedo_color == hair \
+			and _scalp(p) == Oval3D.SCALP_UNDER_SHELL
+
+
+func _scalp(p: Dictionary) -> int:
+	for mi in (p["node"] as Node3D).find_children("*", "MeshInstance3D", true, false):
+		if mi.has_meta("kit"):
+			return int((mi as GeometryInstance3D).get_instance_shader_parameter("scalp"))
+	return -1
 
 
 ## The 3D figures' clips start at the moment of contact (row 198): the director records
