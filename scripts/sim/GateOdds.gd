@@ -20,7 +20,7 @@ const PLAN_GAIN := {
 	"attacking": "our shots %s more accurate\nOur kicks gain %s more ground",
 	"defensive": "%s more pressure where they start, %s more through the middle\nTheir rushed kicks there turn over %s more often\nTheir shots %s less accurate",
 	"contest": "we get a %s better chance at every contest",
-	"controlled": "%s fewer clangers from us\nTheir pressure bites %s less\nOur legs tire %s slower\nOur shots %s more accurate\nInto a High Press, %s of its extra pressure is gone, and their shots get no help from it",
+	"controlled": "%s fewer clangers from us\nTheir pressure bites %s less\nOur legs tire %s slower\nOur shots %s more accurate\nInto a High Press, %s of its extra pressure is gone\nA press gives their shots no help",
 }
 const PLAN_COST := {
 	"attacking": "%s more clangers from us\nOur legs tire %s faster\nTheir shots %s more accurate\nInto a High Press, %s more pressure on us, and our shots only %s more accurate",
