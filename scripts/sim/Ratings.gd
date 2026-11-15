@@ -870,9 +870,12 @@ static func available(p: Dictionary) -> bool:
 ## "BENCH": [...], "OUT": [ids]} - WING names two of the five midfielders
 ## (Roles), MID the centre square: named players take their slots (any player can be named in
 ## any position), and a gap - an injured or departed player, or a slot left
-## short - is filled the automatic way from the unnamed players, then the
-## named bench, and only as a last resort from those you left OUT. Injured
-## players never play.
+## short - goes to the best-suited fit player, from the named bench and the
+## players not named alike (director, 2026-11-15: "best player suited gets
+## the spot, idc whether they came from the bench or reserves"), and only as a
+## last resort to one marked OUT (a promise's swap). Best suited is the
+## automatic way: his own position first, then his second, then anyone, each
+## by rating and freshness. Injured players never play.
 static func select_side(list_players: Array, selection: Dictionary = {}) -> Dictionary:
 	var pool: Array = []
 	for p in list_players:
@@ -919,15 +922,13 @@ static func select_side(list_players: Array, selection: Dictionary = {}) -> Dict
 			ground.append(_for_slot(p, role))
 			used[str(id)] = true
 			added += 1
-	# Fill order for gaps: 0 unnamed, 1 the named bench, 2 players left out.
+	# Fill order for gaps: 0 the bench and the unnamed alike (best suited
+	# wins), 1 players marked OUT.
 	var tier := {}
-	for id in selection.get("BENCH", []):
-		if by_id.has(str(id)) and not used.has(str(id)):
-			tier[str(id)] = 1
 	for id in selection.get("OUT", []):
 		if by_id.has(str(id)) and not used.has(str(id)):
-			tier[str(id)] = 2
-	for pass_tier in [0, 1, 2]:
+			tier[str(id)] = 1
+	for pass_tier in [0, 1]:
 		for slot in GROUND_SLOTS:
 			var role: String = slot[0]
 			var have := 0
@@ -977,7 +978,7 @@ static func select_side(list_players: Array, selection: Dictionary = {}) -> Dict
 		if by_id.has(str(id)) and not used.has(str(id)):
 			bench.append(by_id[str(id)])
 			used[str(id)] = true
-	for pass_tier in [0, 2]:
+	for pass_tier in [0, 1]:
 		for p in pool:
 			if bench.size() >= bench():
 				break
@@ -987,6 +988,60 @@ static func select_side(list_players: Array, selection: Dictionary = {}) -> Dict
 				used[id] = true
 	Roles.mark_wings(ground, selection.get("WING", []))
 	return {"ground": ground, "bench": bench}
+
+
+## The side "Best side on form" names for a simmed week (director, 2026-11-15:
+## "100% of the selection should be determined only by form, thats what the
+## copy says it does"). `form`: player id -> his form, the match rating a game
+## over his last games (PlayerCondition.form: seniors, else the twos; -1 when
+## he has played neither this season). Each line takes the players in the best
+## form who play it (his own position, then his second, then anyone); the
+## bench the next best. Rating plays no part, except to order the players
+## with no game yet, who come after everyone with form. A promised player
+## (a run, a talk) is still first in line, as in select_22: a promise made
+## stands. Returns a selection: {"RUCK", "MID", "DEF", "FWD", "BENCH": [ids]}.
+static func select_on_form(list_players: Array, form: Dictionary) -> Dictionary:
+	var pool: Array = []
+	var promised := {}
+	for p in list_players:
+		if available(p):
+			pool.append(p)
+			if p.has("expects_game") or Backing.is_active(p):
+				promised[str(p["id"])] = true
+	var score := func(p: Dictionary) -> float:
+		var v := float(form.get(str(p["id"]), -1))
+		return v if v >= 0.0 else -1000.0 + float(p.get("overall", 0))
+	pool.sort_custom(func(a, b):
+		var pa := promised.has(str(a["id"]))
+		if pa != promised.has(str(b["id"])):
+			return pa
+		var sa: float = score.call(a)
+		var sb: float = score.call(b)
+		if sa != sb:
+			return sa > sb
+		return str(a["id"]) < str(b["id"]))
+	var sel := {"RUCK": [], "MID": [], "DEF": [], "FWD": [], "BENCH": []}
+	var used := {}
+	for pass_kind in ["own", "second", "any"]:
+		for slot in GROUND_SLOTS:
+			var role: String = slot[0]
+			for p in pool:
+				if (sel[role] as Array).size() >= int(slot[1]):
+					break
+				var id := str(p["id"])
+				if used.has(id):
+					continue
+				var fits: bool = (str(p.get("role", "")) == role or (role == "RUCK" and plays_role(p, "RUCK"))) if pass_kind == "own" 						else (second_positions(p).has(role) if pass_kind == "second" else true)
+				if fits:
+					(sel[role] as Array).append(id)
+					used[id] = true
+	for p in pool:
+		if (sel["BENCH"] as Array).size() >= bench():
+			break
+		if not used.has(str(p["id"])):
+			(sel["BENCH"] as Array).append(str(p["id"]))
+			used[str(p["id"])] = true
+	return sel
 
 
 ## His rating playing `line`: his own rating in his own line, else what his
