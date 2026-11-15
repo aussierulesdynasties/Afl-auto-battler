@@ -1169,6 +1169,24 @@ func _test_tribunal_verdict() -> void:
 	root.size = size_before
 
 
+## A real-lists start's first off-season (row 199), on the draft screen: its
+## Start (a tap) closes it; on a Legacy start that starts the season. Returns
+## the tap's fault, "" when it took or there was no off-season.
+func _past_first_offseason() -> String:
+	if _router.current() != "draft":
+		return ""
+	var start: Control = current_scene.find_child("FirstOffseasonStart", true, false)
+	if start == null:
+		return ""
+	var why: String = await Tap.tap(start)
+	for i in range(600):
+		if _router.current() != "draft" and not bool(root.get_node("ScreenTransition").busy):
+			break
+		await process_frame
+	await _settle()
+	return why
+
+
 func _settle() -> void:
 	for i in range(4):
 		await process_frame
@@ -1694,6 +1712,25 @@ func _run() -> void:
 
 
 ## The menu, a new career and the screens a coach meets, in order (the checks written in _run).
+## An answer's line on an event card: a Label, or a RichTextLabel when it names a player (NameInk).
+func _line_text(c: Control) -> String:
+	if c is RichTextLabel:
+		return (c as RichTextLabel).get_parsed_text()
+	return (c as Label).text if c is Label else "none"
+
+
+func _line_size(c: Control) -> int:
+	return c.get_theme_font_size("normal_font_size" if c is RichTextLabel else "font_size")
+
+
+func _line_ink(c: Control) -> Color:
+	return c.get_theme_color("default_color" if c is RichTextLabel else "font_color")
+
+
+func _line_font(c: Control) -> Font:
+	return c.get_theme_font("normal_font" if c is RichTextLabel else "font")
+
+
 func _test_menu_and_career() -> void:
 	_check(not bool(ProjectSettings.get_setting("application/config/quit_on_go_back", true)),
 			"Android back does not quit the app by default")
@@ -2465,25 +2502,26 @@ func _test_menu_and_career() -> void:
 	_router.go("hub")
 	await _settle()
 	var kid_card: Control = current_scene.find_child("WeekEvent", true, false)
-	var back_gain: Label = kid_card.find_child("EventGain_0_0", true, false) if kid_card != null else null
-	var back_cost: Label = kid_card.find_child("EventCost_0_0", true, false) if kid_card != null else null
-	var rest_gain: Label = kid_card.find_child("EventGain_0_1", true, false) if kid_card != null else null
-	var rest_cost: Label = kid_card.find_child("EventCost_0_1", true, false) if kid_card != null else null
+	var back_gain: Control = kid_card.find_child("EventGain_0_0", true, false) if kid_card != null else null
+	var back_cost: Control = kid_card.find_child("EventCost_0_0", true, false) if kid_card != null else null
+	var rest_gain: Control = kid_card.find_child("EventGain_0_1", true, false) if kid_card != null else null
+	var rest_cost: Control = kid_card.find_child("EventCost_0_1", true, false) if kid_card != null else null
 	var back_mark: Label = kid_card.find_child("EventGainMark_0_0", true, false) if kid_card != null else null
 	var cost_mark: Label = kid_card.find_child("EventCostMark_0_1", true, false) if kid_card != null else null
 	var rest_btn: Button = kid_card.find_child("Event_1", true, false) if kid_card != null else null
 	var same_style := true
 	for l in [back_gain, back_cost, rest_gain, rest_cost]:
-		if l == null or (l as Label).get_theme_font_size("font_size") < 14 or (l as Label).get_theme_color("font_color") != (back_gain as Label).get_theme_color("font_color") 				or (l as Label).get_theme_color("font_color").a < 0.99:
+		if l == null or _line_size(l) < 14 or _line_ink(l) != _line_ink(back_gain) or _line_ink(l).a < 0.99:
 			same_style = false
 	_check(kid_card != null and kid_card.find_child("EventStakes_0", true, false) == null
 			and back_mark != null and back_mark.text == "Gain:" and cost_mark != null and cost_mark.text == "Cost:"
-			and cost_mark.get_theme_font("font") != rest_cost.get_theme_font("font") and cost_mark.get_theme_color("font_color") == load("res://scripts/ui/UiKit.gd").label_ink()
-			and back_gain != null and back_cost != null and back_cost.text.contains("promise breaks")
-			and rest_gain != null and rest_cost != null and rest_cost.text.contains("'s opinion of you down") and not rest_cost.text.begins_with("His ") and rest_cost.text.contains("re-sign with us")
+			and cost_mark.get_theme_font("font") != _line_font(rest_cost) and cost_mark.get_theme_color("font_color") == load("res://scripts/ui/UiKit.gd").label_ink()
+			and back_gain != null and back_cost != null and _line_text(back_cost).contains("promise breaks")
+			and rest_gain != null and rest_cost != null and _line_text(rest_cost).contains(" opinion of you down") and not _line_text(rest_cost).begins_with("His ")
+			and _line_text(rest_cost).contains("re-sign with us") and not _line_text(rest_cost).contains("{name_s}")
 			and same_style and rest_btn != null and rest_cost.get_global_rect().position.y >= rest_gain.get_global_rect().end.y - 1.0
 			and rest_gain.get_global_rect().position.y >= rest_btn.get_global_rect().end.y - 1.0,
-			"Each answer says its gains then its costs under its own button, in the same full-strength text (%s / %s)" % [back_cost.text if back_cost != null else "none", rest_cost.text if rest_cost != null else "none"])
+			"Each answer says its gains then its costs under its own button, in the same full-strength text (%s / %s)" % [_line_text(back_cost), _line_text(rest_cost)])
 	var first_btn: Button = kid_card.find_child("Event_0", true, false) if kid_card != null else null
 	_check(first_btn != null and rest_btn != null and back_gain != null and back_cost != null
 			and rest_btn.get_global_rect().position.y - back_cost.get_global_rect().end.y
@@ -3140,7 +3178,8 @@ func _test_menu_and_career() -> void:
 		elif refuse != null:
 			refuse_text = str(refuse.get("text"))
 		_check(tid != "" and at_fifty and refuse != null and refuse.is_visible_in_tree()
-				and refuse_text == "His opinion of you: 44 out of 100. 6% he won't re-sign with us.",
+				and refuse_text.begins_with("Opinion of you: 44 out of 100. 6% that ")
+				and refuse_text.ends_with(" won't re-sign with us.") and not refuse_text.contains(" he "),
 				"Talks at 44/100 say the chance he won't re-sign before you offer, and at 50 say nothing (%s)" % refuse_text)
 		_router.handle_back(true)
 		await _settle()
@@ -4592,7 +4631,9 @@ func _test_every_start_reaches_interview() -> void:
 			await process_frame
 		await _settle()
 		if st.size() > 5 and str(st[1]) == "real":
-			# A past season on its real lists has no draft before it: Continue starts the season.
+			# A past season on its real lists has no draft before it: its
+			# off-season (row 199) comes first, and its Start starts the season.
+			cont += await _past_first_offseason()
 			_check(cont == "" and _router.current() in ["hub", "preseason"] and _state.season != null and _state.season_year == 1990,
 					"%s: Continue starts the 1990 season, no empty draft board (tap %s, at %s)" % [label, cont, _router.current()])
 			continue
@@ -4606,6 +4647,12 @@ func _test_every_start_reaches_interview() -> void:
 		if str(st[1]) == "redraft" and label != "The 1990 League redraft":
 			continue
 		var ds := current_scene
+		# A real-lists start opens its off-season before the draft (row 199):
+		# its Start the draft, a tap, brings the board.
+		var opener: Control = ds.find_child("FirstOffseasonStart", true, false)
+		if opener != null:
+			_check((await Tap.tap(opener)) == "", "%s: Start the draft takes a tap" % label)
+			await _settle()
 		var guard := 0
 		while d != null and not d.is_finished() and guard < 200:
 			guard += 1
@@ -6150,6 +6197,7 @@ func _test_year_step_taps() -> void:
 			break
 		await process_frame
 	await _settle()
+	t5 += await _past_first_offseason()
 	var northey := ""
 	for cid in _state.coaches:
 		if str(_state.coaches[cid].get("real_name", "")) == "John Northey":

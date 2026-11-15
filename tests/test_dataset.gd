@@ -18,7 +18,11 @@ const SUITE_SEED := 1990
 ## 44 rule (RookieList.add_block): West Coast, at 43 of the 44, lists one of
 ## its three tied prospects and passes its picks, so the opening draft differs.
 const GOLDEN_LOAD := "9baf6f36b146d2bfafd65e07b3235c55"
-const GOLDEN_REAL := "6b9d20ef93eea2ce95f0a6d936f19727"
+## It moved again with row 199 (2026-11-15): the off-season before the
+## opening draft closes with the rivals signing free agents, so the lists differ;
+## the level ladder going A-Z by club (#1633) then changed the order the clubs
+## trade and sign in during it.
+const GOLDEN_REAL := "d4fd9cfddd165faddd875f60720392cc"
 ## A played match's floating point differs between Windows and Linux builds of
 ## Godot, so the season has one fingerprint per platform; each was taken on
 ## main before the change (Linux: run_on_github run 43024085570). Removing
@@ -46,7 +50,7 @@ const TEAM_BOOKKEEPING_KEYS := ["pressure_acts_dhalf", "tackles_i50", "poss_d50"
 		"d50_tackled", "d50_rushed", "d50_chips"]
 ## Team counts named by prefix (one key per way a defensive-50 chain ends).
 const TEAM_BOOKKEEPING_PREFIXES := ["d50_end_"]
-const GOLDEN_SEASON := {"Windows": "f4e0b5148ef909180ce6877aed5693a7", "Linux": "b87a463ba10af69eae5870acbd0a9759"}
+const GOLDEN_SEASON := {"Windows": "7eda041c71174d08c2f53f56f720d33b", "Linux": "0f24a2970ef3e4ab421d5259c0c28116"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and

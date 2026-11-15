@@ -685,7 +685,7 @@ func _refuse_odds(p: Dictionary, size: int) -> Control:
 	var chance := GameState.resign_refuse_chance(p)
 	if chance <= 0:
 		return null
-	return _para(Contracts.REFUSE_ODDS % [GameState.opinion_of_you(str(p.get("id", ""))), chance], size, UiKit.BAD)
+	return _para(Contracts.REFUSE_ODDS % [GameState.opinion_of_you(str(p.get("id", ""))), chance, GameDB.player_display_name(p)], size, UiKit.BAD)
 
 
 func _close_talks() -> void:
