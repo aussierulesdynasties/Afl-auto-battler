@@ -133,6 +133,13 @@ func _ease_in() -> void:
 			.set_trans(UiKit.Motion.TRANS_IN).set_ease(UiKit.Motion.EASE_IN)
 
 
+## Open `key` with `under` beneath it, unloaded: Back from `key` lands on
+## `under` (a created club's first staff step opens over the Hub).
+func go_over(under: String, key: String) -> void:
+	stack.append(under)
+	go(key)
+
+
 ## Replace the current entry instead of pushing - used for boot -> menu.
 func replace(key: String) -> void:
 	if not stack.is_empty():

@@ -9,7 +9,7 @@
 			"{opp}'s assistant has had a crack"
 		],
 		"text": [
-			"One of their assistants has told the press your side \"won't handle the heat\" this week."
+			"Their assistant told the press we \"won't handle the heat\" this week."
 		],
 		"choices": [
 			{
@@ -26,7 +26,7 @@
 						"d": -2
 					}
 				],
-				"result": "You fire back. It's on for Saturday."
+				"result": "You fire back. It's on this week."
 			},
 			{
 				"key": "smile",
@@ -53,7 +53,7 @@
 			"kind": "club"
 		},
 		"title": [
-			"Someone from {opp} was spotted at your training"
+			"Someone from {opp} was spotted at our training"
 		],
 		"text": [
 			"One of their analysts, in a hoodie, by the fence."
@@ -109,7 +109,7 @@
 		"choices": [
 			{
 				"key": "pin",
-				"label": "Pin it to the noticeboard",
+				"label": "Pin it up",
 				"effects": [
 					{
 						"op": "morale",
@@ -167,7 +167,7 @@
 				"when": {
 					"gf_run_min": 3
 				},
-				"text": "{opp} again, for the {gf_run_word} year running. Nobody knows you better."
+				"text": "{opp} again, for the {gf_run_word} year running. Nobody knows us better."
 			},
 			{
 				"when": {
@@ -179,13 +179,13 @@
 				"when": {
 					"gf_again": "lost"
 				},
-				"text": "{opp} again. A year of watching that replay, and now a second go at them."
+				"text": "{opp} again. A year of watching that replay. Now a second go at them."
 			},
 			{
 				"when": {
 					"rival": true
 				},
-				"text": "{opp}. Of all the clubs, it had to be them. Your supporters won't sleep this week."
+				"text": "{opp}. Of all the clubs, it had to be them. Our supporters won't sleep this week."
 			},
 			"{opp}. Whatever happened in the home-and-away counts for nothing now."
 		],

@@ -8,7 +8,7 @@ extends RefCounted
 ## selection.
 
 ## What his opinion of you does, under the Why button (REFUSE_BELOW, REFUSE_PER_POINT).
-const OPINION_RULE := "His opinion of you sets how much a talk lifts him.\nUnder %d, he may refuse to re-sign with us.\nEach point under adds %d%% to the odds he refuses."
+const OPINION_RULE := "%s's opinion of you sets how much a talk lifts him.\nUnder %d, he may refuse to re-sign with us.\nEach point under adds %d%% to the odds he refuses."
 
 const ATTR_ROWS := [
 	["disposal", "Disposal"], ["contested", "Contested"], ["marking", "Marking"],
@@ -507,7 +507,7 @@ static func _trust(v: VBoxContainer, p: Dictionary) -> void:
 	row.name = "ProfileTrust"
 	# "50 out of 100" wraps as one piece, never "out of" on one line and "100." on the next.
 	var nb := String.chr(0xA0)
-	var tl := UiKit.lbl(Trust.opinion_line(Trust.value(GameState.relations, key)).replace(" out of ",
+	var tl := UiKit.lbl(Trust.opinion_line(Trust.value(GameState.relations, key), GameDB.player_display_name(p)).replace(" out of ",
 			nb + "out" + nb + "of" + nb) + ".", UiKit.BODY, UiKit.TEXT)
 	tl.name = "TrustWords"
 	tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -522,7 +522,7 @@ static func _trust(v: VBoxContainer, p: Dictionary) -> void:
 	var list := UiKit.vbox(4)
 	list.name = "TrustReasons"
 	list.visible = false
-	var rule := UiKit.lbl(OPINION_RULE % [Contracts.REFUSE_BELOW, Contracts.REFUSE_PER_POINT], UiKit.SMALL, UiKit.MUTED)
+	var rule := UiKit.lbl(OPINION_RULE % [GameDB.player_display_name(p), Contracts.REFUSE_BELOW, Contracts.REFUSE_PER_POINT], UiKit.SMALL, UiKit.MUTED)
 	rule.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	list.add_child(rule)
 	for r in Trust.reasons(GameState.relations, key):

@@ -293,6 +293,16 @@ func _in_finals(rank: int) -> void:
 	_state.week_events = []
 
 
+## Out of the finals, the season-end card opens once the week's results close:
+## he puts it off with a real tap on Later, as a player could.
+func _put_off_card(hub: Control) -> void:
+	var card: Control = hub.find_child("EventSheet", true, false)
+	var later: Button = card.find_child("EventLater", true, false) if card != null else null
+	if later != null:
+		_check((await Tap.tap(later)) == "", "Later takes a finger's tap on the season-end card")
+		await _settle()
+
+
 func _hub() -> Control:
 	var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
 	root.add_child(hub)
@@ -357,12 +367,14 @@ func _test_postseason_when_knocked_out() -> void:
 		if not _state.season.is_season_over() and go != null:
 			go.pressed.emit()
 			await _settle()
+			await _put_off_card(hub)
 	_check(_state.season.is_season_over(), "The finals play out with him watching")
 	var last: Button = hub.find_child("ResultsContinue", true, false)
 	_check(last != null, "The Grand Final's results come up")
 	if last != null:
 		_check((await Tap.tap(last)) == "", "Continue takes a finger's tap")
 		await _settle()
+		await _put_off_card(hub)
 	_check(hub.find_child("PostseasonIntro", true, false) != null, "The results closed, the intro opens")
 	await _gone(hub)
 

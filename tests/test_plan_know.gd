@@ -697,10 +697,10 @@ func _test_part_rules() -> void:
 			"In the match itself a half step is more of the plan than low, less than medium")
 	var se = load("res://scripts/sim/StoryEngine.gd")
 	var one: String = se._drill_words(1, {"drill_plan": "Win Contest", "drill_level": 1.0, "drill_credit": 0.0})
-	_check("from medium to 50% of the way to high" in one and "works at 98% of its strength instead of 95%" in one,
+	_check("from medium to 50% of the way to high" in one and "works at 98% of its strength, not 95%" in one,
 			"A card's extra week is worth part of a step, and says so: " + one)
 	var top: String = se._drill_words(1, {"drill_plan": "Win Contest", "drill_level": 2.0, "drill_credit": 0.0})
-	_check("nothing more" in top, "...and at the top it says there is nothing to gain")
+	_check("Nothing more to gain" in top, "...and at the top it says there is nothing to gain")
 
 
 func _test_part_carry() -> void:

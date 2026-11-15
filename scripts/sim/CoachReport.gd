@@ -26,10 +26,10 @@ const PEP_NAMES := {
 }
 
 const PEP_EFFECTS := {
-	"steady": "No change.",
-	"fire_up": "A lift at the contest while you are chasing the game; level or in front it does nothing for you. Either way legs go quicker and tempers fray.",
-	"calm": "Settle them down: fewer errors, less rattled by pressure and legs last longer, but less ground gained.",
-	"heat": "Get on top of their ball carriers: more turnovers forced and more tackles laid, but legs burn out much faster, and it shows next week.",
+	"steady": "They stay as they are. No lift and no settling.",
+	"fire_up": "A lift at the contest while we're chasing the game. Level or in front, it does nothing for us. Either way, legs go quicker and tempers fray.",
+	"calm": "Settle them down. Fewer errors, and pressure rattles us less. Legs last longer, but we gain less ground.",
+	"heat": "Get on top of their ball carriers. We force more turnovers and lay more tackles. Legs burn out much faster, and it shows next week.",
 }
 
 ## What each plan does and gives up, in football words, from MatchSim.PLANS.
@@ -38,31 +38,31 @@ const PEP_EFFECTS := {
 ## squad is known; with one, plan_summary sizes the gain for that list today
 ## and the cost it pays (GateOdds.plan_texts_for, director 2026-11-10).
 const PLAN_PARTS := {
-	"balanced": {"does": "Play it straight: no extra edge, and nothing for them to exploit."},
+	"balanced": {"does": "Play it straight. No extra edge, and nothing for them to exploit."},
 	"attacking": {"does": "Go through the corridor.",
 			"gain": "More ground and better shots.",
-			"cost": "More turnovers, heavier legs, and they score more on the rebound.",
+			"cost": "More turnovers and heavier legs. They score more on the rebound.",
 			"beats": "Beats Controlled Tempo. A High Press squeezes it."},
 	"defensive": {"does": "Hunt the ball high and lock it in their half.",
-			"gain": "Win it back in their half.",
-			"cost": "Heavier legs, rushed shots, and space behind if they break it.",
+			"gain": "We win it back in their half.",
+			"cost": "Heavier legs and rushed shots. Space behind us if they break it.",
 			"beats": "Beats Attack Corridor. Controlled Tempo plays through it."},
-	"contest": {"does": "Numbers at the stoppage. Leans on your ball-winners and ruck.",
-			"gain": "More clearances won.",
-			"cost": "The ball moves a little slower and you are a little exposed on the rebound."},
-	"controlled": {"does": "Keep the ball. Asks nothing special of your list.",
-			"gain": "Fewer errors, less rattled by pressure, fresher legs.",
-			"cost": "Less ground gained.",
+	"contest": {"does": "Numbers at the stoppage. It leans on our ball-winners and ruck.",
+			"gain": "We win more clearances.",
+			"cost": "The ball moves a little slower. We are a little exposed on the rebound."},
+	"controlled": {"does": "Keep the ball. It asks nothing special of our list.",
+			"gain": "Fewer errors and fresher legs. Pressure rattles us less.",
+			"cost": "We gain less ground.",
 			"beats": "Plays through a High Press. Attack Corridor runs past it."},
 	# Your own plan (CustomPlan, director 2026-11-12): neutral, like Win Contest.
-	"custom": {"does": "Your own plan: the strength and the cost you picked. It beats no plan and no plan beats it."},
+	"custom": {"does": "A plan of our own: the strength and the cost you picked. It beats no plan and no plan beats it."},
 }
 
 const PEP_SUMMARY := {
-	"steady": "Keep them as they are: no lift at the contest, and no settling either.",
-	"fire_up": "A lift at the contest when you are chasing the game; legs go quicker and tempers fray.",
-	"calm": "Fewer errors and less rattled by pressure, legs last longer; less ground gained.",
-	"heat": "Harder pressure on their ball carriers forces more turnovers; legs burn out much faster, and it shows next week.",
+	"steady": "We keep them as they are. No lift at the contest, and no settling either.",
+	"fire_up": "A lift at the contest when we're chasing the game. Legs go quicker and tempers fray.",
+	"calm": "Fewer errors, and pressure rattles us less. Legs last longer. We gain less ground.",
+	"heat": "Harder pressure on their ball carriers forces more turnovers. Legs burn out much faster, and it shows next week.",
 }
 
 const TEAM_COMPARE := [
@@ -152,17 +152,21 @@ static func plan_parts(key: String) -> Dictionary:
 
 ## The parts joined into one paragraph, for screens that show a plan in a
 ## line. With `sq` the Gain and Cost are sized for that squad today
-## (GateOdds.plan_texts_for, M1); without it, in words.
+## (GateOdds.plan_texts_for, M1), one effect a line (style guide 5.1), so
+## each part takes its own line; without it, in words.
 static func plan_summary(key: String, sq: Squad = null, weather_key := "perfect") -> String:
 	var d := plan_parts(key)
 	var out := PackedStringArray([str(d["does"])])
+	var sep := " "
 	if sq != null:
+		sep = "\n"
 		var sized := GateOdds.plan_texts_for(sq, key, weather_key)
 		out.append(GateOdds.gain(str(sized[0])) + ".")
 		out.append(GateOdds.cost(str(sized[1])) + ".")
 	elif MatchSim.plan_key(key) == CustomPlan.KEY:
 		var own := CustomPlan.texts(CoachEffects.my_custom)
 		if not own.is_empty():
+			sep = "\n"
 			out.append(GateOdds.gain(str(own[0])) + ".")
 			out.append(GateOdds.cost(str(own[1])) + ".")
 	else:
@@ -172,7 +176,7 @@ static func plan_summary(key: String, sq: Squad = null, weather_key := "perfect"
 			out.append("Cost: " + str(d["cost"]))
 	if d.has("beats"):
 		out.append(str(d["beats"]))
-	return " ".join(out)
+	return sep.join(out)
 
 
 static func pep_summary(key: String) -> String:

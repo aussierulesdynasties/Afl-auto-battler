@@ -103,6 +103,7 @@ func run() -> void:
 	_t("_test_set_shot_calls")
 	_t("_test_bomb_card_shows_the_dice")
 	_t("_test_forward_archetypes")
+	_t("_test_every_call_two_sided")
 	GameDB.skip_ovr_overrides = false
 	GameDB.reload()
 	print(Ran.line("Match game", self))
@@ -3652,7 +3653,7 @@ func _test_bounce_once() -> void:
 	late.current_minute = 110
 	late._fire_bounce(3)
 	var ten_t := str(late.pending_moment.get("title", ""))
-	_check(last_t == "Centre ball-up - 3 up in the last minute" and ten_t == "Centre ball-up - 3 up with 10 minutes left",
+	_check(last_t == "Centre bounce · 3 up in the last minute" and ten_t == "Centre bounce · 3 up with 10 minutes left",
 			"The late ball-up title reads naturally to the last minute ('%s', '%s')" % [last_t, ten_t])
 
 
@@ -4272,9 +4273,9 @@ func _test_set_shot_bands() -> void:
 		by[str(b["key"])] = b
 	_check(is_equal_approx(float(by["close"]["goal"]), 0.85) and is_equal_approx(float(by["front"]["goal"]), 0.71),
 			"An ordinary kick converts at the AFL rate in front (%.2f, %.2f)" % [float(by["close"]["goal"]), float(by["front"]["goal"])])
-	_check(MatchSim.chance_words(float(by["front"]["goal"])) == "He should kick it"
-			and MatchSim.chance_words(float(by["close"]["goal"])) == "He should kick it",
-			"Straight in front, an ordinary kick should kick it")
+	_check(MatchSim.chance_words(float(by["front"]["goal"])) == "He kicks these most days"
+			and MatchSim.chance_words(float(by["close"]["goal"])) == "He kicks these most days",
+			"Straight in front, an ordinary kick kicks these most days")
 	_check(float(by["pocket"]["goal"]) < float(by["front"]["goal"]) and float(by["long"]["goal"]) < 0.4
 			and float(by["angle"]["goal"]) < float(by["front"]["goal"]),
 			"The pocket, the angle and long shots are harder")
@@ -5033,3 +5034,78 @@ func _test_standing_plan_knowledge() -> void:
 		var want := "controlled" if PlanFit.edge(gg, "controlled") > PlanFit.STANDING_EDGE else "balanced"
 		ok = ok and PlanFit.standing_plan(gg, only_controlled) == want
 	_check(ok, "Controlled Tempo is a club's usual game when it is its best")
+
+
+## Row T1.R26 (bible principle 4; director 2026-11-10 "Gain / Cost
+## everywhere"): every match-day gate states, for each option, a Gain and a
+## Cost, sized, and never which option is better, so no option is left with
+## an upside and no stated downside. Every in-match call that can come up
+## (set shot, their hot midfielder, a run against, the late centre ball-up)
+## and every break call (plan, pep talk, risk cards).
+func _test_every_call_two_sided() -> void:
+	var sized := RegEx.create_from_string("[0-9]")
+	var verdict := RegEx.create_from_string("(?i)recommend|best (choice|option|call)|the better (choice|option|call)|you should")
+	var seen := {}
+	var check_call := func(m: Dictionary) -> void:
+		var kind := str(m.get("kind", ""))
+		seen[kind] = int(seen.get(kind, 0)) + 1
+		for o in m.get("options", []):
+			var g := str((o as Dictionary).get("gain", ""))
+			var c := str((o as Dictionary).get("cost", ""))
+			var what := "%s call, %s" % [kind, str(o.get("label", o.get("key", "")))]
+			_check(g.begins_with("Gain: ") and c.begins_with("Cost: "), "The %s states a Gain and a Cost (%s / %s)" % [what, g, c])
+			_check(str(o.get("key", "")) == "none" or sized.search(g + c) != null, "The %s gives a size or odds (%s / %s)" % [what, g, c])
+			_check(verdict.search(g + c + str(o.get("detail", ""))) == null, "The %s never says which is better" % what)
+	for seed in range(900, 920):
+		var sim := _sim(seed)
+		sim.always_offer_bounce = true
+		sim.moment_side = 0
+		while sim.current_quarter <= 4:
+			sim.begin_quarter()
+			while not sim.continue_quarter():
+				check_call.call(sim.pending_moment)
+				sim.resolve_moment(int(sim.pending_moment.get("default", 0)))
+			sim.end_quarter()
+		if seen.has("set_shot") and seen.has("momentum") and seen.has("bounce"):
+			break
+	for kind in ["set_shot", "momentum", "bounce"]:
+		_check(seen.has(kind), "(setup) a %s call came up in the seeded matches (%s)" % [kind, str(seen)])
+	# Their midfielder kicking a bag is rare in a seeded match: staged as the
+	# capture tool stages it (tools/visual/capture_tag_call.gd), once as a new
+	# tag and once with our tag already on another of theirs.
+	for tagged in [false, true]:
+		var sim := _sim(941)
+		sim.moment_side = 0
+		sim.begin_quarter()
+		sim.pending_moment = {}
+		sim._moments_this_q = 0
+		sim._last_moment_chain = sim._chain_no - 100
+		var hot_id := ""
+		for p in (sim.squads[1] as Squad).ground:
+			if str(p["role"]) == "MID" and sim.taggable(p):
+				hot_id = str(p["id"])
+				(sim.player_stats.get_or_add(hot_id, {}) as Dictionary)["goals"] = 3.0
+				break
+		if tagged:
+			for p in (sim.squads[1] as Squad).ground:
+				if str(p["id"]) != hot_id and sim.taggable(p):
+					sim.tactics[0]["tag_id"] = str(p["id"])
+					break
+		sim._boundary_moment()
+		_check(str(sim.pending_moment.get("kind", "")) == "hot", "(setup) the hot call comes up%s" % (" with a tag on" if tagged else ""))
+		check_call.call(sim.pending_moment)
+	# The break calls. Balanced and Stay composed are the no-change options:
+	# they state that nothing is gained and nothing given up, so carry no figure.
+	for plan in MatchSim.PLANS.keys() + ["balanced"]:
+		var t := GateOdds.plan_texts(str(plan))
+		_check(str(t[0]) != "" and str(t[1]) != "", "The %s plan states a gain and a cost" % plan)
+		_check(not GateOdds.PLAN_GAIN.has(MatchSim.plan_key(str(plan))) or sized.search(str(t[0]) + str(t[1])) != null,
+				"The %s plan sizes its gain and cost (%s / %s)" % [plan, t[0], t[1]])
+	for pep in GateOdds.PEP_GAIN.keys():
+		var t := GateOdds.pep_texts(str(pep))
+		_check(str(t[0]) != "" and str(t[1]) != "", "The %s pep talk states a gain and a cost" % pep)
+		_check(pep == "steady" or sized.search(str(t[0]) + str(t[1])) != null, "The %s pep talk is sized (%s / %s)" % [pep, t[0], t[1]])
+	for kind in GateOdds.BURST_GAIN.keys():
+		var t := GateOdds.burst_lines(str(kind), 20)
+		_check(sized.search(str(t[0])) != null and sized.search(str(t[1])) != null,
+				"The %s card sizes both its gain and its cost (%s / %s)" % [kind, t[0], t[1]])

@@ -85,17 +85,38 @@ static func dollars(amount: int, year := -1) -> int:
 	return int(round(float(amount) * s / 1000.0)) * 1000
 
 
+## A player's pay per 2027 model dollar in `year`: the cap's scale spread over
+## that year's list (EraRules.list_max). Today's model pays a 44-man list; a
+## 1990 club carried 52 under its $1.5m cap, so each man drew less of it
+## (audit 2026-11-15: era starts opened over the cap). Players only: club
+## departments stay at dollars().
+static func pay_scale(year: int) -> float:
+	var s := era_scale(year)
+	if s == 1.0:
+		return 1.0
+	return s * float(MAX_LIST) / float(maxi(1, EraRules.list_max(year)))
+
+
+## `amount` 2027 model dollars of player pay in `year`'s dollars (default:
+## the season being played), to the nearest $1k. Unchanged outside the era.
+static func pay(amount: int, year := -1) -> int:
+	var s := pay_scale(money_year if year < 0 else year)
+	if s == 1.0:
+		return amount
+	return int(round(float(amount) * s / 1000.0)) * 1000
+
+
 ## The senior minimum wage and one offer step, in this season's dollars. The
 ## minimum is the CBA's own base payment where the record has it (senior_min).
 static func senior_min(year := -1) -> int:
 	var y := money_year if year < 0 else year
 	if era_cap(y) > 0 and EraRules.has("senior_min", y):
 		return int(EraRules.value("senior_min", y))
-	return dollars(SENIOR_MIN_2027, year)
+	return pay(SENIOR_MIN_2027, year)
 
 
 static func salary_step(year := -1) -> int:
-	return maxi(1000, dollars(SALARY_STEP, year))
+	return maxi(1000, pay(SALARY_STEP, year))
 
 
 static func salary_cap_for_year(year: int) -> int:
@@ -112,7 +133,7 @@ static func salary_cap_for_year(year: int) -> int:
 
 static func indexed_money_2027(amount: int, year: int) -> int:
 	if era_cap(year) > 0:
-		return dollars(amount, year)
+		return pay(amount, year)
 	var value := float(amount)
 	for y in range(2028, year + 1):
 		value *= FUTURE_GROWTH
@@ -146,7 +167,7 @@ static func old_points_to_salary(points: int) -> int:
 ## does not make money overwhelm role, security, rating or age.
 static func salary_score(salary: int) -> float:
 	# Read in 2027 dollars, so an era season's offers weigh the same.
-	var s := float(salary) / era_scale(money_year)
+	var s := float(salary) / pay_scale(money_year)
 	return clampf(1.0 + 9.0 * (s - 155000.0) / (1250000.0 - 155000.0), 1.0, 12.0)
 
 
@@ -167,7 +188,7 @@ static func assign_initial(list: Array) -> void:
 		else:
 			years = rng.randi_range(1, 2)
 		p["contract_years"] = years
-		p["salary"] = dollars(int(p.get("value", 3)))
+		p["salary"] = pay(int(p.get("value", 3)))
 
 
 ## A first-year National Draft deal (a draftee's, on the senior list; the
@@ -190,7 +211,7 @@ static func draftee_deal(p: Dictionary, year := 2027) -> void:
 
 ## What re-signing (or signing) this player costs now.
 static func asking_salary(p: Dictionary) -> int:
-	var price := dollars(Ratings.salary_value(int(p.get("overall", 50))))
+	var price := pay(Ratings.salary_value(int(p.get("overall", 50))))
 	# An unhappy player wants paying to stay.
 	if ClubLife.morale(p) < 40:
 		price = ceili(price * 1.25)
@@ -526,7 +547,7 @@ const POINT_DOLLARS := (1250000.0 - 155000.0) / 9.0
 
 ## Dollars a season that `points` of his score are worth, to the nearest $10k.
 static func points_money(points: float) -> int:
-	var s := era_scale(money_year)
+	var s := pay_scale(money_year)
 	var unit := 10000.0 if s == 1.0 else 1000.0
 	return int(round(points * POINT_DOLLARS * s / unit)) * int(unit)
 
@@ -536,7 +557,7 @@ static func points_money(points: float) -> int:
 ## and its push to win, each at its offer_score weight. A higher worth is the
 ## offer he prefers (`prefers`), ties aside.
 static func worth_to_him(p: Dictionary, o: Dictionary) -> int:
-	var s := era_scale(money_year)
+	var s := pay_scale(money_year)
 	var unit := 10000.0 if s == 1.0 else 1000.0
 	return int(round(((offer_score(p, o) - 1.0) * POINT_DOLLARS * s + float(senior_min())) / unit)) * int(unit)
 
@@ -667,11 +688,22 @@ static func pick_words(after: int, clubs: int) -> String:
 	return "after pick %d, %s" % [after, where]
 
 
+## What `list` costs against the cap. In the off-season (money_year is then
+## next season, GameState._sync_money_year) a player retiring at the rollover
+## is off the books: his salary was this season's, and counting it left a
+## Legacy club with ten retirees no room to re-sign anyone.
 static func payroll(list: Array) -> int:
 	var total := 0
 	for p in list:
-		total += int(p["salary"]) if p.has("salary") else dollars(int(p.get("value", SENIOR_MIN_2027)))
+		if retired_by(p, money_year):
+			continue
+		total += int(p["salary"]) if p.has("salary") else pay(int(p.get("value", SENIOR_MIN_2027)))
 	return total
+
+
+## Retiring at the start of season `year`, and not talked round to play it.
+static func retired_by(p: Dictionary, year: int) -> bool:
+	return year > 0 and int(p.get("retiring", 0)) == year and int(p.get("play_on", 0)) != year
 
 
 static func expiring(list: Array) -> Array:

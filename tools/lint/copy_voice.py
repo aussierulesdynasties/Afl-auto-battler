@@ -23,18 +23,100 @@ TALES = ["data/tales/career.json", "data/tales/league.json", "data/tales/season.
 ## Known hits, per file: [count, words, the pass that rewrites them]. Each reason names its copy
 ## voice row in docs/TODO.md (131-140, the screen passes).
 ALLOW = {
-    "data/stories/leadership.json": [1, "should", "row 140: a player's own question, reported"],
-    "data/stories/media.json": [2, "should", "row 140: a pundit's view, reported"],
-    "scripts/sim/MatchSim.gd": [1, "should", "row 131: a shot's likelihood at the gate"],
     # Auto-pick is the Team selection button's name (director, 2026-11-12: "Auto pick. I already answered
     # this question"); these lines name the button, so the word stays.
     "scripts/sim/SkipOrders.gd": [2, "auto-pick", "kept: names the Auto-pick button (director, 2026-11-12)"],
 
-    "scripts/ui/DraftScene.gd": [1, "projection", "row 136: draft"],
     "scripts/ui/FirstVisitIntro.gd": [1, "auto-pick", "kept: names the Auto-pick button (director, 2026-11-12)"],
-    "scripts/ui/PreSeasonScene.gd": [10, "starter", "row 136: pre-season"],
     "scripts/ui/SelectionScene.gd": [5, "auto-pick", "kept: the Auto-pick button and the lines that name it (director, 2026-11-12)"],
-    "scripts/ui/StatGuide.gd": [1, "projection", "row 139: stats and menus"],
+}
+
+## The stats and menus pass (copy voice pass 10, row 139): per file, the rewritten lines and the
+## lines they replaced.
+STATS_PASS = {
+    "scripts/ui/StatGuide.gd": [[
+        "Wins the clearance and holds the ball in a tackle. Our inside mids win or lose the stoppages.",
+        "Wins the hit-outs at the bounce and stoppages. Our first ruck matters.",
+        "Runs the ball forward. Good carriers through the middle feed our attack.",
+        "Gets the shots inside 50 and kicks the goals. Most of our scoring comes from it.",
+        "Tackles and hurries the opposition. Most of our defence comes from it.",
+        "Match-winning class. Lifts our side at the stoppages. It weighs heavily in his overall.",
+        "Where we expect him to peak. It is not a limit. His growth slows as he nears it.",
+        "Contest is our stoppage work. Attack is our forwards and carry. Defence is our pressure and intercept.",
+        "A standout stat earns a trait. The right mix in a line switches on a synergy. The Team screen shows ours, and when one is a player short",
+        "Every player risks injury each game. Durability lowers the risk. Tired players win less ball. Rotate them from the coach's box.",
+        "Players earn development every game. What each one is developing as decides where it goes. A stat costs more the higher it already is. Past POT it costs much more.",
+    ], [
+        "Wins the clearance and holds the ball in a tackle. Your inside mids win or lose the stoppages.",
+        "Wins the hit-outs at the bounce and stoppages. Your starting ruck matters.",
+        "Runs the ball forward. Good carriers through the middle feed your attack.",
+        "Gets the shots inside 50 and kicks the goals. The biggest part of your scoring.",
+        "Tackles and hurries the opposition. The biggest part of your defence.",
+        "Match-winning class. Lifts your side at the stoppages and drives a player's overall.",
+        "Where he is projected to peak. A projection, not a limit; growth slows as he nears it.",
+        "Contest is your stoppages, attack your forwards and carry, defence your pressure and intercept.",
+        "A standout stat earns a trait. The right mix in a line switches on a synergy; the Team screen shows yours, and says when one is a single player short",
+        "Every player risks injury each game, less with durability. Tired players win less ball, so rotate in the coach box.",
+        "Players earn development every game, and what each one is developing as decides where it goes. A stat costs more the higher it already is, and much more past POT.",
+    ]],
+    "scripts/ui/OptionsSheet.gd": [[
+        "Copies the build, the round, this screen and the last 20 lines of the match feed. Paste it into a message. Nothing is sent from the game.",
+        "Changes the screens only. Club colours and the ground stay as they are.",
+        "A light buzz when you press a button. A firmer one when a result lands.",
+        "Sim the week and Sim to Round 1 play our match without you. With this on, they ask first.",
+        "Fullscreen fills the screen with no border. Window opens maximised. Alt+Enter switches.",
+        "A short note the first time you open each screen. Off stops them opening by themselves. Notes you have read don't come back.",
+        "Draws 30 frames a second instead of 60. Uses less battery. Matches and scenes play the same, a little less smoothly.",
+        "Off skips the scenes. Every call and result stays the same.",
+        "Prototypes for judging on a phone. The match plays the same either way.",
+        "For playtesting. The centre ball-up call comes at the first centre ball-up of every last quarter you coach, whatever the score.",
+        "Back up writes your career to a file you keep. Use it to move devices or keep the career safe. Loading a backup or an earlier save keeps the career it replaces in the list below. You can go back to it.",
+    ], [
+        "Copies the build, your round, this screen and the last twenty lines of the match feed, ready to paste into a message. Nothing is sent from the game.",
+        "Changes the interface only; club colours and the football ground stay as they are.",
+        "A light buzz when you press a button, and a firmer one when a result lands.",
+        "Sim the week and the pre-season's Sim to Round 1 play out your own match without you. With this on, they ask first.",
+        "Fullscreen fills the screen with no border; Window opens maximised. Alt+Enter switches.",
+        "A short note the first time you open each screen. Off stops them opening by themselves; notes you've already read don't come back.",
+        "Draws 30 frames a second instead of 60. Uses less battery; matches and scenes play the same, a little less smoothly.",
+        "Off skips the scenes; every call and result stays the same.",
+        "Prototypes for judging on a phone; the match plays the same either way.",
+        "For playtesting: the centre ball-up call comes at the first centre ball-up of every last quarter you coach, whatever the score.",
+        "Back up writes your career to a file you keep, to move it to another device or keep it safe. Loading a backup or an earlier save keeps the career it replaces in the list below, so you can go back.",
+    ]],
+    "scripts/ui/ListScene.gd": [[
+        "Six defenders, six midfielders with the ruck, six forwards and five on the bench. Tap a guernsey.",
+        "No rookies yet. The Rookie Draft and the mid-season rookie draft fill these spots.",
+        "They have their own spots. They take no rookie list spot and don't count in the 44.",
+        "The club's real 2026 list had %d. A club usually has %d spots for them.",
+        "He takes a senior spot: %d of %d used. His wage rises to the senior minimum, %s a season.",
+    ], [
+        "Six defenders, six midfielders (ruck included), six forwards and five on the bench. Tap a guernsey.",
+        "No rookies. The Rookie Draft after the National Draft and the mid-season rookie draft fill these spots.",
+        "Their own spots: they take no rookie list spot and don't count in the 44.",
+        "The club's real 2026 list had %d; a club usually has %d spots for them.",
+        "He takes a senior spot (%d of %d used) and his wage rises to the senior minimum, %s a season.",
+    ]],
+    "scripts/ui/StatsHubScene.gd": [[
+        "Our season in one place. The ladder, every player's numbers, the award races and every match.",
+    ], [
+        "The whole season in one place: the ladder, every player's numbers, the awards races, and every match.",
+    ]],
+    "scripts/ui/stats/StatsCoach.gd": [[
+        "No one yet. A player you draft shows here once he wins our best and fairest. Making the All-Australian team counts too.",
+    ], [
+        "No one yet. A player you draft is listed here once he wins your best and fairest or makes the All-Australian team.",
+    ]],
+    "scripts/ui/stats/StatsLadder.gd": [[
+        "[\"near\", \"Near us\"]",
+    ], [
+        "[\"near\", \"Near you\"]",
+    ]],
+    "scripts/ui/stats/StatsPlayers.gd": [[
+        "Counted from round %d. This career's earlier rounds came before season records were kept.",
+    ], [
+        "Counted from round %d: this career's earlier rounds were played before season records were kept.",
+    ]],
 }
 
 HUB = "scripts/ui/HubScene.gd"
@@ -144,23 +226,63 @@ TRAINING_OLD = [
     "but two players are already learning", "comes off it", "until you lock", "his projected peak",
 ]
 
-## The profile pass (copy voice pass 9): per file, the rewritten lines of the player profile and the
-## lines they replaced. Where he stands against his POT says "potential", never "projection".
-PROFILE_PASS = {
-    "scripts/ui/PlayerSheet.gd": [[
-        "His opinion of you sets how much a talk lifts him.\\nUnder %d, he may refuse to re-sign with us.",
-        "Each point under adds %d%% to the odds he refuses.",
-        "Out for %s with a %s injury.", "Injured. Out for %s.", "\"\\n\".join(state)",
-        "Development focus: %s", "He runs %.1f km a game this season.",
-        "Only %d of his attributes are rated.", "Nickname, or leave it blank",
-    ], ["The higher his opinion of you", "re-sign with you", "Injured: out", "\"Development: %s",
-        "This season: %.1f km", "rated on record", "blank for none"]],
-    "scripts/state/GameState.gd": [[
-        "\"Near his potential\"", "\"At his potential\"", "\"Beyond his potential\"",
-    ], ["\"Near his projected peak\"", "\"At his projected peak\"", "\"Past his projection\""]],
-    "scripts/sim/Trust.gd": [[
-        "His opinion of you: %d out of 100",
-    ], ["Opinion of you %d/100"]],
+## The event cards and press pass (copy voice pass 11, row 140): per file, rewritten lines and the
+## lines they replaced. The full old -> new sheet is in the row 140 PR.
+STORY_PASS = {
+    "data/stories/media.json": [[
+        "He wants him dropped after a poor few weeks.",
+        "A former player on the radio wants {name} playing as a {trial_word}.",
+    ], []],
+    "data/stories/leadership.json": [[
+        "He's told you first. Do the players hear it now, or after the finals?",
+    ], []],
+    "scripts/sim/StoryEngine.gd": [[
+        "Board confidence stays where it is. The other choice costs it %s.",
+        "{keep_price} a season against our cap.", "If we lose that final, about a %s chance our morale also falls %s.",
+        "His opinion of you %s, still %d out of 100.", "development points. A senior game gives %d.",
+    ], ["(the other choice costs it", "against your cap", "(a senior game gives", "(any injury, not only this one;",
+        "If you lose that final", "%d/100", "(high fluency)", "(low, medium, high)"]],
+    "scripts/sim/MediaConference.gd": [[
+        "Our record: %s.", "%s's opinion of you: %d → %d out of 100.", "%s warms to you: +%d%% next time",
+    ], ["Your record: %s.", "%d/100", "next time)", "%% confidence)"]],
+}
+
+## The draft and pre-season pass (copy voice pass 7, with the draft, League draft, Combine and
+## pre-season intros): per file, the rewritten lines and the lines they replaced. A trialled
+## prospect takes the place of "our weakest player in his line", never a "starter".
+DRAFT_PASS = {
+    "scripts/ui/DraftScene.gd": [[
+        "Testing is one part of our scouts' read. Junior football still counts.",
+        "Our scouts' read. Each rating can be out as far as his OVR range.", "\"On our list\"", "\"Our list\"",
+        "Every pick shows here, from all %d rival clubs too. The newest come first.", "\"Our pick\"",
+        "Our list starts here.", "Take a player from the pool. Tap a position to find the cover we lack.",
+        "Our side so far, against the league", "Our club is highlighted.", "Waiting for our next pick.",
+        "We're short of %s.\\nOthers will fill in.", "Our list is ready.\\nTime for Round 1.",
+        "We have passed: no more picks", "Our list is full: %s %s will pass", "We take no more players in this draft.",
+        "Each card shows the club's first pick in the %d National Draft.",
+    ], ["part of the projection", "Your scouts' read", "\"On your list\"", "UiKit.heading(\"Your list\"",
+        "Every selection appears here", "\"Your pick\"", "Your list starts here", "the cover you need",
+        "\"Your side so far", "Highlighted club = you", "Waiting for your", "Others will have to fill in",
+        "Time for round one", "You have passed", "\"Your list is full", "You take no more players",
+        "Your first pick in the", "fits your cap", "The assistant takes", "list you kept"]],
+    "scripts/ui/PreSeasonScene.gd": [[
+        "\"Our side and plan\"", "Our side as named in Selection, or our best available. Injured players sit out.",
+        "Our recruiters' read of his rating gets %d%% tighter. He cannot be hurt.",
+        "He takes the place of our weakest player in his line. He rates no lower than that player.",
+        "Each takes the place of our weakest player in his line.", "Our side is weaker on the day.",
+        "Our listed players carry %d%% of a normal match's injury risk. A trialled prospect cannot be hurt.",
+        "The %s: %d of our list, %d%% of our drilling.",
+    ], ["weakest starter", "below the starter","your side is weaker", "\"Your side and plan\"", "The side you have named",
+        "your recruiters' read", "Your listed players", "of the side's drilling", "the plan plays part of the way up"]],
+    "scripts/ui/FirstVisitIntro.gd": [[
+        "Here we pick the kids who will carry our club in five years.", "When our pick comes up, choose a player from the pool.",
+        "Each player we take costs his salary. Our list must fit under the cap. It must have at least two rucks.",
+        "The position counts show where we're short.", "Four tests on the day. Every club sees the same results.",
+        "They tell us about the athlete: speed, running, spring, kicking. They don't tell us he can play.",
+        "His junior numbers are on his sheet, with our scouts' guess at OVR and POT. Tap a name to weigh him up.",
+        "The weeks before Round 1. Get our squad fit and try our ideas out.",
+    ], ["carry your club", "When your pick comes up", "Each player you take", "where you're short",
+        "They tell you about", "your scouts' guess", "try your ideas out"]],
 }
 
 ## The contracts and trades pass (copy voice pass 8, with the T3.R56 trade and contract tutorials
@@ -226,10 +348,64 @@ CONTRACTS_PASS = {
 PASSES = [(HUB, "copy voice pass 2, hub", HUB_NEW, HUB_OLD)] + [
     (path, "copy voice pass 5, team and coaching", v[0], v[1]) for path, v in TEAM_PASS.items()] + [
     (TRAINING, "copy voice pass 6, training", TRAINING_NEW, TRAINING_OLD)] + [
-    (path, "copy voice pass 8, contracts and trades", v[0], v[1]) for path, v in CONTRACTS_PASS.items()] + [
-    (path, "copy voice pass 9, profile", v[0], v[1]) for path, v in PROFILE_PASS.items()]
+    (path, "copy voice pass 11, event cards and press", v[0], v[1]) for path, v in STORY_PASS.items()] + [
+    (path, "copy voice pass 7, draft and pre-season", v[0], v[1]) for path, v in DRAFT_PASS.items()] + [
+    (path, "copy voice pass 8, contracts and trades", v[0], v[1]) for path, v in CONTRACTS_PASS.items()]
 
 LITERAL = re.compile(r'"([^"\n]*)"')
+## Copy voice pass 10 (stats and menus) joins the pinned passes on its own line.
+PASSES += [(path, "copy voice pass 10, stats and menus", v[0], v[1]) for path, v in STATS_PASS.items()]
+
+## The profile pass (copy voice pass 9): per file, the rewritten lines of the player profile and the
+## lines they replaced. Where he stands against his POT says "potential", never "projection".
+PROFILE_PASS = {
+    "scripts/ui/PlayerSheet.gd": [[
+        "'s opinion of you sets how much a talk lifts him.\\nUnder %d, he may refuse to re-sign with us.",
+        "Each point under adds %d%% to the odds he refuses.",
+        "Out for %s with a %s injury.", "Injured. Out for %s.", "\"\\n\".join(state)",
+        "Development focus: %s", "He runs %.1f km a game this season.",
+        "Only %d of his attributes are rated.", "Nickname, or leave it blank",
+    ], ["The higher his opinion of you", "re-sign with you", "Injured: out", "\"Development: %s",
+        "This season: %.1f km", "rated on record", "blank for none"]],
+    "scripts/state/GameState.gd": [[
+        "\"Near his potential\"", "\"At his potential\"", "\"Beyond his potential\"",
+    ], ["\"Near his projected peak\"", "\"At his projected peak\"", "\"Past his projection\""]],
+    "scripts/sim/Trust.gd": [[
+        "%s's opinion of you: %d out of 100", "The player's opinion of you: %d out of 100",
+    ], ["Opinion of you %d/100", "Opinion of you %d out of 100", "His opinion of you: %d"]],
+}
+## Copy voice pass 9 (the profile) joins the pinned passes on its own line.
+PASSES += [(path, "copy voice pass 9, profile", v[0], v[1]) for path, v in PROFILE_PASS.items()]
+
+## The gates pass (copy voice pass 1): per file, the rewritten lines and the lines they replaced.
+## One effect a line on the call cards (style guide 5.1): a gate's second effect starts its own line
+## (a GDScript "\n"); the break sheet runs them on one line, parted by " · " (MatchScene._break_line).
+GATES_PASS = {
+    "scripts/sim/GateOdds.gd": [[
+        "our shots %s more accurate\\nOur kicks gain %s more ground", "Their pressure bites %s less",
+        "we get a %s better chance at every stoppage", "%s less pressure in our back third",
+        "\\n(%s for a list that suits it)", "while we're behind\\nNothing when level or in front",
+        "On top of a High Press, %s more", "With %s on him, about %d, until we call it off",
+        "none: we have no midfielder on the ground to go to him", "our midfielders play their own game",
+        "Skip plays the match on the plan we took in. No tag, no talk.", "\\nFor about %d minutes",
+        "Anyone else, about %d", "our share of the ball doesn't grow",
+    ], ["your shots", "your back third", "while you are behind", "until you call it off", "you have no midfielder",
+        "your midfielders", "plan you took in", ", for about %d minutes", "(%s on top of a High Press)",
+        "(never above %s)", "(%d for anyone else)", "the side's ball"]],
+    "scripts/sim/MatchSim.gd": [[
+        "He kicks these most days", "one of our best kicks for goal", "Stack the centre bounce",
+        "\"Centre bounce · %s %s\"", "Their midfielder is hurting us on the scoreboard.", "Back our defenders",
+        "Tag on. We can call it off at the break.", "Our stars stay on until they are cooked.",
+    ], ["He should kick it", "one of your best kicks", "Stack the stoppage", "Centre ball-up - ",
+        "hurting you on the scoreboard", "Back your defenders", "You can call it off at the break", "your stars"]],
+    "scripts/sim/CoachReport.gd": [[
+        "A lift at the contest while we're chasing the game.", "It leans on our ball-winners and ruck.",
+        "It asks nothing special of our list.", "We gain less ground.", "A plan of our own",
+    ], ["while you are chasing", "does nothing for you", "Leans on your", "of your list", "you are a little exposed",
+        "Your own plan: the strength"]],
+    "scripts/ui/MatchScene.gd": [["\" · \".join(parts)"], []],
+}
+PASSES += [(path, "copy voice pass 1, gates", v[0], v[1]) for path, v in GATES_PASS.items()]
 
 
 def words_re(words):

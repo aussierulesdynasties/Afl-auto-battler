@@ -38,7 +38,9 @@ const LIFT_SCALE := {"close": 1.4, "trusts": 1.2, "neutral": 1.0, "wary": 0.7, "
 
 ## Trust per point of the opinion the game shows (opinion()).
 const PER_POINT := 2
-const OPINION_LINE := "His opinion of you: %d out of 100"
+const OPINION_LINE := "%s's opinion of you: %d out of 100"
+## The same line where no name is to hand: never a bare "His" (director, bug bash rule).
+const OPINION_LINE_ANY := "The player's opinion of you: %d out of 100"
 ## A reason's move, in the opinion the game shows.
 const OPINION_MOVE := "Opinion of you %+d."
 
@@ -63,9 +65,9 @@ static func opinion_move(t: int, d: int) -> int:
 	return opinion(clampi(t + clampi(d, -STEP_MAX, STEP_MAX), LOWEST, HIGHEST)) - opinion(t)
 
 
-## "His opinion of you: 62 out of 100".
-static func opinion_line(t: int) -> String:
-	return OPINION_LINE % opinion(t)
+## "<name>'s opinion of you: 62 out of 100", or "The player's opinion of you: 62 out of 100".
+static func opinion_line(t: int, who := "") -> String:
+	return OPINION_LINE % [who, opinion(t)] if who != "" else OPINION_LINE_ANY % opinion(t)
 
 
 ## The lowest opinion a band starts at ("trusts" is 60).
