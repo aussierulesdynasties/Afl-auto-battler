@@ -255,8 +255,15 @@ func aim_close() -> void:
 
 
 # ---------------------------------------------------------------------------
+## The turf and light for the day's weather and time of day: turf.apply(weather, slot).
+var turf: Oval3DTurf
+var _env: Environment
+var _sun: DirectionalLight3D
+
+
 func _environment() -> void:
 	var env := Environment.new()
+	_env = env
 	env.background_mode = Environment.BG_COLOR
 	env.background_color = Color(0.55, 0.7, 0.86)
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
@@ -279,6 +286,7 @@ func _environment() -> void:
 	RenderingServer.directional_shadow_atlas_set_size(4096, true)
 	RenderingServer.directional_soft_shadow_filter_set_quality(RenderingServer.SHADOW_QUALITY_SOFT_HIGH)
 	add_child(sun)
+	_sun = sun
 
 
 func _ground() -> void:
@@ -292,6 +300,9 @@ func _ground() -> void:
 	sm.set_shader_parameter("goal_x", GOAL_X)
 	mi.material_override = sm
 	add_child(mi)
+	turf = Oval3DTurf.new(self, sm, _env, _sun, pm.size * 0.5)
+	add_child(turf)
+	turf.apply("", VignetteKickoff.DAY)
 
 
 func _posts() -> void:

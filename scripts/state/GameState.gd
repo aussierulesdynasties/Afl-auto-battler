@@ -812,6 +812,9 @@ var _batching := false
 ## The coach's answers to the survey before the season skip (SkipOrders),
 ## held only while the skip runs; {} the rest of the time.
 var _skip_orders := {}
+## Your own selection ({} = Auto-pick) held while "Best side on form" names
+## the side for simmed weeks; null when nothing is held (_form_week).
+var _form_held = null
 
 
 func autosave() -> bool:
@@ -12954,14 +12957,53 @@ func _sim_week_orders() -> Dictionary:
 		if not my_selection().is_empty():
 			set_selection({})
 		_skip_back_kids("season")
+	elif str(orders["youth"]) == "form":
+		_form_week()
 	return orders
 
 
 func _sim_week_after(orders: Dictionary, phase: String) -> String:
 	_skip_orders = {}
+	if _form_restore():
+		autosave()
 	if str(orders["press"]) == "assistant":
 		skip_media_conference()
 	return phase
+
+
+## "Best side on form" for one simmed week (SkipOrders, SimOrders; director,
+## 2026-11-15: selection "determined only by form", and your own side back
+## when you coach again): your selection is held the first week, then the
+## side is named on form (Ratings.select_on_form) from each player's Form, the
+## number Team selection shows (PlayerCondition.form). Written straight into
+## the season, not through set_selection: it is the week's side, not a pick
+## of yours, so no trial or run card reads it as one.
+func _form_week() -> void:
+	if season == null:
+		return
+	if _form_held == null:
+		_form_held = (season.selections.get(my_club, {}) as Dictionary).duplicate(true)
+	var fm := {}
+	for p in my_list:
+		var id := str(p["id"])
+		fm[id] = int(PlayerCondition.form(id, form_log, reserves_log)["value"])
+	var sel := Ratings.select_on_form(my_list, fm)
+	sel["DUAL_RUCK"] = user_dual_ruck
+	season.selections[my_club] = sel
+
+
+## Your own selection back after simmed weeks on form. True when one was held.
+func _form_restore() -> bool:
+	if _form_held == null:
+		return false
+	if season != null:
+		if (_form_held as Dictionary).is_empty():
+			season.selections.erase(my_club)
+		else:
+			season.selections[my_club] = _form_held
+	_form_held = null
+	mark_dirty()
+	return true
 
 
 ## Put a player (id) or a club ("club:CODE") on the shortlist, or take it
@@ -14848,6 +14890,8 @@ func skip_step(job: Dictionary) -> bool:
 		return false
 	if str(_skip_orders["youth"]) == "kids":
 		_skip_back_kids(to)
+	elif str(_skip_orders["youth"]) == "form":
+		_form_week()
 	advance()
 	job["weeks"] = int(job["weeks"]) + 1
 	return not is_sacked()
@@ -14862,6 +14906,8 @@ func skip_step_async(job: Dictionary) -> bool:
 		return false
 	if str(_skip_orders["youth"]) == "kids":
 		_skip_back_kids(to)
+	elif str(_skip_orders["youth"]) == "form":
+		_form_week()
 	await advance_async()
 	job["weeks"] = int(job["weeks"]) + 1
 	return not is_sacked()
@@ -14873,6 +14919,7 @@ func skip_finish(job: Dictionary) -> Dictionary:
 		return {"ok": false, "year": job["year"], "weeks": 0, "reason": "none"}
 	var year := int(job["year"])
 	var weeks := int(job["weeks"])
+	_form_restore()
 	if is_sacked() or season == null or not _skip_reached(str(job["to"])):
 		_batching = false
 		_skip_orders = {}
