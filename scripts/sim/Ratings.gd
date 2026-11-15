@@ -103,6 +103,106 @@ const BENCH_COVER := ["FWD", "DEF", "MID"]
 const DUAL_RUCK_MARGIN := 5.0
 const LIST_SIZE := 44
 
+## Stats a past season never recorded (director 2026-11-15, "No invented
+## stats": "an unrecorded stat stays blank and counts for nothing"). AFL
+## Tables kept no rebound 50s, contested possessions, clearances and the rest
+## before 1998 (tools/legacy_1990s/build_start.py). GameDB.reload sets it
+## from the dataset's blank columns; it holds for the whole career. Every
+## blend below drops an unrecorded stat and shares its weight among the
+## recorded ones. Empty for today's data. Mirrored in tools/sim_harness.py.
+static var unrecorded := {}
+## An attribute built only from unrecorded stats (contested and creating
+## before 1998) has no record: every player gets the same value, so it sets
+## no player above another, and it counts for nothing in his overall
+## (unknown_attrs). The values are the 2026 medians (players with 12+ games).
+const UNRECORDED_ATTR := {
+	"disposal": 53, "contested": 44, "marking": 46, "pressure": 42, "intercept": 40,
+	"carry": 45, "goalkicking": 20, "accuracy": 52, "creating": 44, "ruck": 10,
+	"discipline": 44, "durability": 77, "star": 23,
+}
+static var unknown_attrs := {}
+## Each attribute's blend of normalised rates: [weight, metric] or
+## [weight, metric, true] for one minus the rate.
+const ATTR_BLENDS := {
+	"disposal": [[0.60, "disposals_pg"], [0.25, "contested_pg"], [0.15, "clearances_pg"]],
+	"contested": [[0.45, "contested_pg"], [0.30, "clearances_pg"], [0.25, "contested_share"]],
+	"marking": [[0.50, "marks_pg"], [0.28, "contested_marks_pg"], [0.22, "marks_inside50_pg"]],
+	"pressure": [[0.62, "tackles_pg"], [0.38, "one_percenters_pg"]],
+	"intercept": [[0.45, "rebounds_pg"], [0.28, "marks_pg"], [0.27, "one_percenters_pg"]],
+	"carry": [[0.45, "inside50s_pg"], [0.28, "bounces_pg"], [0.27, "disposals_pg"]],
+	"goalkicking": [[0.66, "goals_pg"], [0.34, "marks_inside50_pg"]],
+	"accuracy": [[1.0, "accuracy"]],
+	"creating": [[0.45, "goal_assists_pg"], [0.30, "inside50s_pg"], [0.25, "marks_inside50_pg"]],
+	"ruck": [[0.70, "hitouts_pg"], [0.18, "clearances_pg"], [0.12, "contested_marks_pg"]],
+	"discipline": [[0.62, "clangers_pg"], [0.38, "frees_against_pg"]],
+	"durability": [[0.55, "games"], [0.45, "time_on_ground"]],
+	"star": [[0.68, "brownlow_pg"], [0.32, "disposals_pg"]],
+}
+## The position reading's blends (FWD, MID, DEF in pick_role's order).
+const ROLE_BLENDS := {
+	"FWD": [[0.50, "goals_pg"], [0.26, "marks_inside50_pg"], [0.14, "goal_assists_pg"], [0.10, "behinds_pg"]],
+	"MID": [[0.42, "disposals_pg"], [0.30, "contested_pg"], [0.28, "clearances_pg"]],
+	"DEF": [[0.42, "rebounds_pg"], [0.30, "one_percenters_pg"], [0.20, "marks_pg"], [0.08, "goals_pg", true]],
+}
+## Metrics read from a stat other than their own column.
+const METRIC_STAT := {"contested_share": "cp", "time_on_ground": "pctp"}
+
+
+static func metric_recorded(metric: String) -> bool:
+	if unrecorded.is_empty():
+		return true
+	if METRIC_STAT.has(metric):
+		return not unrecorded.has(METRIC_STAT[metric])
+	for spec in METRIC_SPECS:
+		if spec[0] == metric:
+			return not unrecorded.has(spec[1])
+	return true
+
+
+## A blend over the recorded metrics only, their weights rescaled to sum as
+## before; -1.0 when none of them was recorded.
+static func blend(q: Dictionary, terms: Array) -> float:
+	var total := 0.0
+	var kept := 0.0
+	var v := 0.0
+	for t in terms:
+		total += float(t[0])
+		if not metric_recorded(str(t[1])):
+			continue
+		kept += float(t[0])
+		var x := float(q[t[1]])
+		v += float(t[0]) * ((1.0 - x) if t.size() > 2 else x)
+	if kept <= 0.0:
+		return -1.0
+	return v * total / kept
+
+
+## Which stats a pool never recorded: a column blank on most of its rows
+## (GameDB marks each player's blank cells in "blank").
+static func find_unrecorded(players: Array) -> Dictionary:
+	var count := {}
+	for p in players:
+		for k in p.get("blank", []):
+			count[k] = int(count.get(k, 0)) + 1
+	var out := {}
+	for k in count:
+		if int(count[k]) * 2 > players.size():
+			out[k] = true
+	return out
+
+
+## Set the career's unrecorded stats and the attributes left with no record.
+static func set_unrecorded(stats: Dictionary) -> void:
+	unrecorded = stats
+	unknown_attrs = {}
+	for attr in ATTR_BLENDS:
+		var any := false
+		for t in ATTR_BLENDS[attr]:
+			any = any or metric_recorded(str(t[1]))
+		if not any:
+			unknown_attrs[attr] = true
+
+
 ## Raw season columns every player dict carries. GameDB.STAT_KEYS must match;
 ## prospects (no AFL stats) get these zero-filled for the display rows.
 const STATS_ZERO_KEYS := ["gm", "ki", "mk", "hb", "di", "gl", "bh", "ho", "tk", "rb",
@@ -368,31 +468,18 @@ static func derive_all(players: Array, reference: Array = []) -> Array:
 
 		# ---- 1-99 attributes ----------------------------------------------
 		var a := {}
-		a["disposal"] = scale_attr(0.60 * q["disposals_pg"]
-				+ 0.25 * q["contested_pg"] + 0.15 * q["clearances_pg"])
-		a["contested"] = scale_attr(0.45 * q["contested_pg"]
-				+ 0.30 * q["clearances_pg"] + 0.25 * q["contested_share"])
-		a["marking"] = scale_attr(0.50 * q["marks_pg"]
-				+ 0.28 * q["contested_marks_pg"] + 0.22 * q["marks_inside50_pg"])
-		a["pressure"] = scale_attr(0.62 * q["tackles_pg"]
-				+ 0.38 * q["one_percenters_pg"])
-		a["intercept"] = scale_attr(0.45 * q["rebounds_pg"]
-				+ 0.28 * q["marks_pg"] + 0.27 * q["one_percenters_pg"])
-		a["carry"] = scale_attr(0.45 * q["inside50s_pg"]
-				+ 0.28 * q["bounces_pg"] + 0.27 * q["disposals_pg"])
-		a["goalkicking"] = scale_attr(0.66 * q["goals_pg"]
-				+ 0.34 * q["marks_inside50_pg"])
-		a["accuracy"] = scale_attr(q["accuracy"])
-		a["creating"] = scale_attr(0.45 * q["goal_assists_pg"]
-				+ 0.30 * q["inside50s_pg"] + 0.25 * q["marks_inside50_pg"])
-		a["ruck"] = scale_attr(0.70 * q["hitouts_pg"]
-				+ 0.18 * q["clearances_pg"] + 0.12 * q["contested_marks_pg"])
-		a["discipline"] = scale_attr(0.62 * q["clangers_pg"]
-				+ 0.38 * q["frees_against_pg"])
-		a["durability"] = scale_attr(0.55 * q["games"]
-				+ 0.45 * q["time_on_ground"])
-		a["star"] = scale_attr(0.68 * q["brownlow_pg"]
-				+ 0.32 * q["disposals_pg"])
+		var unknown := []
+		for attr in ATTR_BLENDS:
+			var v := blend(q, ATTR_BLENDS[attr])
+			a[attr] = scale_attr(v) if v >= 0.0 else int(UNRECORDED_ATTR[attr])
+			if v < 0.0:
+				unknown.append(attr)
+		# Shown blank on his card, never as the stand-in value (director
+		# 2026-11-15, "I never okayed invented stats").
+		if unknown.is_empty():
+			p.erase("attr_unrecorded")
+		else:
+			p["attr_unrecorded"] = unknown
 		var adj := float(ATTR_ADJUSTMENTS.get("%s|%s %s" % [p.get("club", ""), p.get("first", ""), p.get("last", "")], 1.0))
 		if adj != 1.0:
 			for k in a:
@@ -401,14 +488,9 @@ static func derive_all(players: Array, reference: Array = []) -> Array:
 
 		# ---- role classification ------------------------------------------
 		var hitouts_pg: float = p["ho"] / maxf(1.0, p["gm"])
-		var scores := {
-			"FWD": 0.50 * q["goals_pg"] + 0.26 * q["marks_inside50_pg"]
-					+ 0.14 * q["goal_assists_pg"] + 0.10 * q["behinds_pg"],
-			"MID": 0.42 * q["disposals_pg"] + 0.30 * q["contested_pg"]
-					+ 0.28 * q["clearances_pg"],
-			"DEF": 0.42 * q["rebounds_pg"] + 0.30 * q["one_percenters_pg"]
-					+ 0.20 * q["marks_pg"] + 0.08 * (1.0 - q["goals_pg"]),
-		}
+		var scores := {}
+		for role in ROLE_BLENDS:
+			scores[role] = maxf(0.0, blend(q, ROLE_BLENDS[role]))
 		# Ruck is gated on actual hit-out volume, not on a normalised score:
 		# without the gate every tall forward gets classified as a ruckman.
 		scores["RUCK"] = (0.25 + 0.85 * q["hitouts_pg"]) if hitouts_pg >= 7.0 else -1.0
@@ -529,8 +611,16 @@ const ANCHOR_GAMES := 12.0
 static func raw_blend(a: Dictionary, role: String) -> float:
 	var w: Dictionary = ROLE_WEIGHTS.get(role, ROLE_WEIGHTS["MID"])
 	var core := 0.0
+	var total := 0.0
+	var kept := 0.0
 	for key in w:
+		total += float(w[key])
+		if unknown_attrs.has(key):
+			continue   # no record: counts for nothing
+		kept += float(w[key])
 		core += float(w[key]) * float(a[key])
+	if kept > 0.0:
+		core *= total / kept
 	return 0.70 * core + 0.22 * float(a["star"]) + 0.08 * float(a["durability"])
 
 

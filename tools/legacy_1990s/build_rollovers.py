@@ -88,16 +88,17 @@ def entered(club):
 
 def role_of(pid, rated, height):
     """His position at his best rated season (most games if none had 8), or
-    a ruck by height; '' leaves it to the game."""
+    a ruck by height; '' leaves it to the game. His real position, when that
+    season is before 2003, comes first (director 2026-11-15)."""
     best = None
     for y in rated:
         got = rated[y].get(pid) if pid else None
         if got and got[1] > 0:
             k = (got[1] >= B.PEAK_GAMES, got[0], got[1])
             if best is None or k > best[0]:
-                best = (k, got[3])
+                best = (k, got[3], y)
     if best:
-        return best[1]
+        return B.real_position(pid, best[2]) or best[1]
     h = B.num(height) or 0
     return "RUCK" if h >= 199 else ""
 
@@ -122,9 +123,8 @@ def peak_of(pid, rated, from_year):
 
 def main():
     by_year = B.load_seasons()
-    model = B.fit_model(by_year)
-    rated = B.rate_seasons(by_year, model)
-    lists = all_rows("lists.csv")
+    rated = B.rate_seasons(by_year)
+    lists = B.with_heights(all_rows("lists.csv"))
     # draftguru id -> the latest list row we know (dob, height, AFL Tables id)
     bio = {}
     for r in sorted(lists, key=lambda r: int(r["year"])):
@@ -236,7 +236,8 @@ def main():
             classes.append({
                 "year": year, "rank": rank, "kind": r["draft"], "club": B.code(r["club"]),
                 "first": r["first"], "last": r["last"], "dob": dob,
-                "height_cm": b.get("height_cm", ""), "role": role_of(pid, rated, b.get("height_cm", "")),
+                "height_cm": b.get("height_cm", "") or B.page_height(dg),
+                "role": role_of(pid, rated, b.get("height_cm", "") or B.page_height(dg)),
                 "origin": r["origin"], "tie": "FS" if r["flag"] == "father_son" else "",
                 "peak": peak_of(pid, rated, year + 1),
                 "last_season": last_of(pid, r["first"], r["last"], dob, year),

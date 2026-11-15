@@ -1238,9 +1238,8 @@ func _stat_focus_panel(p: Dictionary) -> Control:
 		hold.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(hold)
 		return box
-	var attr: Dictionary = p.get("attr", {})
 	if GameState.focus_locked(p) and current != "":
-		var name_l := UiKit.lbl("%s  %d" % [GameState.train_stat_label(current), int(attr.get(current, 0))],
+		var name_l := UiKit.lbl("%s  %s" % [GameState.train_stat_label(current), PlayerProfile.attr_text(p, current)],
 				UiKit.HEADING, UiKit.EMPH, true)
 		name_l.name = "StatFocusName"
 		v.add_child(name_l)
@@ -1264,7 +1263,7 @@ func _stat_focus_panel(p: Dictionary) -> Control:
 	v.add_child(il)
 	var options := []
 	for key in GameState.focus_options(p):
-		options.append([key, "%s %d" % [GameState.train_stat_label(key), int(attr.get(key, 0))]])
+		options.append([key, "%s %s" % [GameState.train_stat_label(key), PlayerProfile.attr_text(p, key)]])
 	var chosen := _focus_choice if _focus_choice != "" else current
 	v.add_child(UiKit.choice_grid("StatFocusPick", options, chosen, 2, func(key: String):
 		_focus_choice = key
@@ -1327,7 +1326,7 @@ func _working_on(p: Dictionary) -> String:
 	keys.sort_custom(func(a, b): return float(w[a]) > float(w[b]))
 	var bits: PackedStringArray = []
 	for k in keys.slice(0, 3):
-		bits.append("%s %d" % [GameState.train_stat_label(str(k)), int((p["attr"] as Dictionary).get(k, 0))])
+		bits.append("%s %s" % [GameState.train_stat_label(str(k)), PlayerProfile.attr_text(p, str(k))])
 	return "  ·  ".join(bits)
 
 
@@ -1341,7 +1340,9 @@ func _stat_row(p: Dictionary, key: String, label: String, useful := true) -> Con
 	var name := UiKit.ellipsis(label, UiKit.BODY, UiKit.TEXT, true)
 	name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(name)
-	var value := UiKit.line(str(cur), UiKit.HEADING, _attr_colour(float(cur)), true)
+	var unrecorded := (p.get("attr_unrecorded", []) as Array).has(key)
+	var value := UiKit.line(PlayerProfile.attr_text(p, key), UiKit.HEADING,
+			UiKit.MUTED if unrecorded else _attr_colour(float(cur)), true)
 	value.custom_minimum_size.x = 32
 	value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	h.add_child(value)
@@ -1350,7 +1351,7 @@ func _stat_row(p: Dictionary, key: String, label: String, useful := true) -> Con
 			12, UiKit.MUTED if useful else UiKit.BAD)
 	what.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(what)
-	v.add_child(_bar(cur))
+	v.add_child(_bar(0 if unrecorded else cur))
 	return card
 
 

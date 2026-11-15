@@ -23,13 +23,16 @@ Outputs (data/legacy/1990/):
   list_additions_1990.csv,  listed players with no 1989 game: their latest
   list_addition_stats_1990.csv  season, or none for a new player
 
-Stats the game rates on but that were not recorded before the 2000s (rb,
-if50, cl, cg, cp, up, cm, mi, one_pct, bo, ga, pct_played) are estimated
-from the recorded ones (director 2026-11-13, "Estimate the gaps"): a least-
-squares fit, per game, on 2003-07 (the first full seasons), of each missing
-stat on kicks, marks, handballs, goals, behinds, hitouts, tackles and frees.
-A season's stat counts as unrecorded when most of its rows are blank; a
-blank in a recorded season is zero.
+Stats the game rates on but that AFL Tables did not record (before 1998: rb,
+if50, cl, cg, cp, up, cm, mi, one_pct, bo, ga, pct_played; 1998: cp to
+pct_played; 1999-2002: ga, pct_played) stay blank: never estimated (director
+2026-11-15, "I never okayed invented stats"; an unrecorded stat counts for
+nothing, Ratings.unrecorded). A season's stat counts as unrecorded when most
+of its rows are blank; a blank in a recorded season is zero.
+
+A player's position is his real one where a record gives it
+(data/legacy/positions.csv, from his Wikipedia article: director 2026-11-15,
+"Source real positions"); with none, the recorded stats read it.
 
 Honours (director 2026-11-13, "Add honours"): the stats miss what made some
 players great (Roos, Fitzroy's captain, rated 71), so each honour in the three
@@ -53,7 +56,6 @@ import argparse
 import csv
 import os
 import sys
-import zlib
 from collections import defaultdict
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -67,9 +69,7 @@ START_DATE = "1990-03-01"
 # The historical data's codes for clubs that are one club across eras
 # (GameDB.CLUB_CODE_ALIASES).
 CODE = {"BRB": "BRL", "FOO": "WBD"}
-FEATURES = ["ki", "mk", "hb", "gl", "bh", "ho", "tk", "ff", "fa"]
 TARGETS = ["rb", "if50", "cl", "cg", "cp", "up", "cm", "mi", "one_pct", "bo", "ga"]
-FIT_YEARS = range(2003, 2008)
 PEAK_GAMES = 8
 HONOURS_W = {DATA_SEASON: 1.0, DATA_SEASON - 1: 0.75, DATA_SEASON - 2: 0.5}
 HONOURS_FILES = ["club_bf.csv", "all_australian.csv", "team_of_the_year.csv"]
@@ -112,136 +112,91 @@ def unrecorded(year_rows):
     return out
 
 
-# ---------------------------------------------------------- least squares --
-def solve(a, b):
-    n = len(b)
-    m = [row[:] + [b[i]] for i, row in enumerate(a)]
-    for c in range(n):
-        piv = max(range(c, n), key=lambda r: abs(m[r][c]))
-        m[c], m[piv] = m[piv], m[c]
-        if abs(m[c][c]) < 1e-12:
-            continue
-        for r in range(n):
-            if r != c:
-                f = m[r][c] / m[c][c]
-                for k in range(c, n + 1):
-                    m[r][k] -= f * m[c][k]
-    return [m[i][n] / m[i][i] if abs(m[i][i]) > 1e-12 else 0.0 for i in range(n)]
+GAME_KEY = {"one_pct": "onepct", "pct_played": "pctp"}
+HEIGHTS = os.path.join(LEG, "heights.csv")
+_heights = None
 
 
-def per_game_x(r):
-    g = max(1.0, num(r["gm"]) or 0.0)
-    return [1.0] + [(num(r[k]) or 0.0) / g for k in FEATURES]
+def with_heights(rows):
+    """Fill a list row's blank height from its Draftguru page
+    (data/legacy/heights.csv, tools/legacy_1990s/fetch_heights.py: director
+    2026-11-15, "Search other sources"). One no source gives stays blank."""
+    global _heights
+    if _heights is None:
+        _heights = {}
+        if os.path.exists(HEIGHTS):
+            with open(HEIGHTS, newline="", encoding="utf-8") as fh:
+                _heights = {r["draftguru_id"]: r["height_cm"] for r in csv.DictReader(fh) if r["height_cm"]}
+    for r in rows:
+        if not str(r.get("height_cm", "")).strip() and r.get("draftguru_id", "") in _heights:
+            r["height_cm"] = _heights[r["draftguru_id"]]
+            r["_height_from"] = "draftguru page"
+    return rows
 
 
-def fit_model(by_year):
-    """Coefficients per target (per game), and pct_played (a share)."""
-    train = [r for y in FIT_YEARS for r in by_year[y] if (num(r["gm"]) or 0) >= 5]
-    model = {}
-    for t in TARGETS + ["pct_played"]:
-        xs, ys = [], []
-        for r in train:
-            v = num(r[t])
-            if v is None:
-                continue
-            xs.append(per_game_x(r))
-            ys.append(v if t == "pct_played" else v / max(1.0, num(r["gm"])))
-        k = len(xs[0])
-        ata = [[sum(x[i] * x[j] for x in xs) for j in range(k)] for i in range(k)]
-        aty = [sum(x[i] * y for x, y in zip(xs, ys)) for i in range(k)]
-        # A light ridge keeps rare features (hitouts) from swinging the fit.
-        for i in range(1, k):
-            ata[i][i] += 1.0
-        model[t] = solve(ata, aty)
-    # What the fit leaves unexplained, per stat (estimate adds a seeded draw of
-    # it, so estimated stats follow the recorded ones only as loosely as real
-    # ones do), and the real spread of each stat (spread_like_real).
-    model["_resid"] = {}
-    for t in TARGETS + ["pct_played"]:
-        res = []
-        for r in train:
-            v = num(r[t])
-            if v is None:
-                continue
-            y = v if t == "pct_played" else v / max(1.0, num(r["gm"]))
-            res.append(y - sum(c * xi for c, xi in zip(model[t], per_game_x(r))))
-        model["_resid"][t] = sorted(res)
-    model["_dist"] = {}
-    for t in TARGETS + ["pct_played"]:
-        vals = [num(r[t]) if t == "pct_played" else num(r[t]) / max(1.0, num(r["gm"]))
-                for r in train if num(r[t]) is not None]
-        model["_dist"][t] = sorted(vals)
-    return model
+def page_height(dg):
+    return with_heights([{"draftguru_id": dg, "height_cm": ""}])[0]["height_cm"]
+
+POSITIONS = os.path.join(LEG, "positions.csv")
+_positions = None
 
 
-def draw(sorted_vals, r, key):
-    """One value from a list, the same for a player's season on every build."""
-    h = zlib.crc32(("%s|%s|%s" % (r.get("afltables_id", ""), r.get("year", ""), key)).encode())
-    return sorted_vals[h % len(sorted_vals)]
+# From 2003 AFL Tables records every stat the game rates on, and the stats
+# read the position; before, a real record does (director 2026-11-15).
+FULL_STATS_FROM = 2003
 
 
-def estimate(r, model, missing):
-    """The row with every unrecorded stat estimated, blanks elsewhere 0."""
+def real_position(pid, season):
+    """His real position (RUCK, MID, DEF or FWD) from data/legacy/positions.csv
+    for a season before FULL_STATS_FROM, '' with no record."""
+    global _positions
+    if season >= FULL_STATS_FROM:
+        return ""
+    if _positions is None:
+        _positions = {}
+        if os.path.exists(POSITIONS):
+            with open(POSITIONS, newline="", encoding="utf-8") as fh:
+                _positions = {r["afltables_id"]: r["position"] for r in csv.DictReader(fh)}
+    return _positions.get(pid, "") if pid else ""
+
+
+def pos_cell(pid, season):
+    """real_pos as the game's CSVs carry it (RUC for a ruck)."""
+    pos = real_position(pid, season)
+    return {"RUCK": "RUC"}.get(pos, pos)
+
+
+def recorded(r, missing):
+    """The row's numbers: an unrecorded stat None (written blank), any other
+    blank 0."""
     out = dict(r)
-    g = max(1.0, num(r["gm"]) or 0.0)
-    x = per_game_x(r)
-    for k in TARGETS + ["pct_played"]:
-        if k in missing:
-            v = sum(c * xi for c, xi in zip(model[k], x)) + draw(model["_resid"][k], r, k)
-            v = max(0.0, v)
-            out[k] = min(100.0, v) if k == "pct_played" else v * g
-        else:
-            out[k] = num(r[k]) or 0.0
-    for k in FEATURES + ["gm", "di", "br"]:
-        out[k] = num(r[k]) or 0.0
-    # Contested and uncontested possessions share the disposals.
-    if "cp" in missing or "up" in missing:
-        s = out["cp"] + out["up"]
-        if s > 0:
-            out["cp"], out["up"] = out["cp"] * out["di"] / s, out["up"] * out["di"] / s
-    if "pct_played" in missing:
-        out["pct_played"] = max(30.0, min(95.0, out["pct_played"]))
-    out["_estimated"] = sorted(missing)
+    for k in ["gm", "ki", "mk", "hb", "di", "gl", "bh", "ho", "tk", "ff", "fa", "br"] + TARGETS + ["pct_played"]:
+        out[k] = None if k in missing else (num(r[k]) or 0.0)
+    out["_unrecorded"] = sorted(missing)
     return out
-
-
-def spread_like_real(est, missing, model):
-    """A fit pulls every player toward the average, and ratings scale each
-    stat against the season's 98th percentile, so a bunched estimate lifts
-    nearly everyone. Keep the fit's order of players, but give each estimated
-    stat the spread it really had in the fit years, at the season's own level
-    (the fit's mean)."""
-    rows = [e for e in est.values() if e["gm"] > 0]
-    for k in missing:
-        real = model["_dist"][k]
-        if not real or not rows:
-            continue
-        rate = (lambda e: e[k]) if k == "pct_played" else (lambda e: e[k] / e["gm"])
-        level = sum(rate(e) for e in rows) / len(rows)
-        real_mean = sum(real) / len(real)
-        scale = level / real_mean if real_mean else 1.0
-        order = sorted(rows, key=rate)
-        for i, e in enumerate(order):
-            q = real[int(round(i / max(1, len(order) - 1) * (len(real) - 1)))] * scale
-            e[k] = min(100.0, q) if k == "pct_played" else q * e["gm"]
-    for e in rows:
-        if "cp" in missing or "up" in missing:
-            s = e["cp"] + e["up"]
-            if s > 0:
-                e["cp"], e["up"] = e["cp"] * e["di"] / s, e["up"] * e["di"] / s
 
 
 def harness_player(r, club, num_):
     p = {"club": club, "num": num_, "name": "%s %s" % (r["first"], r["last"]),
-         "surname": r["last"], "real_pos": "", "id": "%s_%s" % (club, num_)}
+         "surname": r["last"], "real_pos": real_position(r.get("afltables_id", ""), int(r.get("year") or 9999)),
+         "id": "%s_%s" % (club, num_)}
+    p["blank"] = []
     for k in H.STAT_KEYS:
         src = {"onepct": "one_pct", "pctp": "pct_played"}.get(k, k)
-        p[k] = float(r.get(src) or 0.0)
+        v = r.get(src, r.get(k))
+        p[k] = float(v or 0.0)
+        if v is None or v == "":
+            p["blank"].append(k)
     return p
 
 
-def rate_seasons(by_year, model):
-    """{year: {afltables_id: (overall, games, estimated row, role)}}."""
+def unrecorded_in(hp):
+    """Ratings.find_unrecorded: stats blank on most of these players."""
+    return {k for k in H.STAT_KEYS if sum(k in p["blank"] for p in hp) * 2 > len(hp)}
+
+
+def rate_seasons(by_year):
+    """{year: {afltables_id: (overall, games, recorded row, role)}}."""
     rated = {}
     for y in sorted(by_year):
         missing = unrecorded(by_year[y])
@@ -259,8 +214,8 @@ def rate_seasons(by_year, model):
                 m["club"] = r["club"]
             else:
                 merged[pid] = dict(r)
-        est = {pid: estimate(r, model, missing) for pid, r in merged.items()}
-        spread_like_real(est, missing, model)
+        est = {pid: recorded(r, missing) for pid, r in merged.items()}
+        H.set_unrecorded({GAME_KEY.get(k, k) for k in missing})
         players = [harness_player(e, code(e["club"]), i) for i, e in enumerate(est.values())]
         H.ERA_ANCHORS.clear()
         H.derive_ratings(players)
@@ -340,9 +295,9 @@ def stat_cells(e):
     vals = {}
     for k in ["gm", "ki", "mk", "hb", "di", "gl", "bh", "ho", "tk", "rb", "if50", "cl", "cg", "ff", "fa",
               "br", "cp", "up", "cm", "mi", "bo", "ga"]:
-        vals[k] = fmt(e[k])
-    vals["onepct"] = fmt(e["one_pct"])
-    vals["pctp"] = "%.1f" % float(e["pct_played"])
+        vals[k] = "" if e[k] is None else fmt(e[k])
+    vals["onepct"] = "" if e["one_pct"] is None else fmt(e["one_pct"])
+    vals["pctp"] = "" if e["pct_played"] is None else "%.1f" % float(e["pct_played"])
     return vals
 
 
@@ -354,10 +309,10 @@ def age_at(dob):
     return str(sy - y - ((sm, sd) < (m, d)))
 
 
-def build(by_year, model, rated):
+def build(by_year, rated):
     hon = honours(by_year, rated)
     with open(os.path.join(LEG, "1990s", "lists_1990_opening.csv"), newline="", encoding="utf-8") as fh:
-        lists = list(csv.DictReader(fh))
+        lists = with_heights(list(csv.DictReader(fh)))
     with open(os.path.join(LEG, "1990s", "careers_before_1990.csv"), newline="", encoding="utf-8") as fh:
         careers = defaultdict(list)
         for r in csv.DictReader(fh):
@@ -403,7 +358,7 @@ def build(by_year, model, rated):
         if row89 and row89[1] > 0:
             cells = stat_cells(row89[2])
             players.append(dict(cells, club=club, num=L["num"], last=L["last"], first=L["first"],
-                                src=str(DATA_SEASON), real_pos="", dob=L["dob"], age=age_at(L["dob"]),
+                                src=str(DATA_SEASON), real_pos=pos_cell(pid, DATA_SEASON), dob=L["dob"], age=age_at(L["dob"]),
                                 height_cm=L["height_cm"], weight_kg=L["weight_kg"], debut=debut,
                                 height_source="draftguru" if L["height_cm"] else ""))
             history.append({"club": club, "num": L["num"], "slug": pid.rsplit("/", 1)[-1].replace(".html", ""),
@@ -413,8 +368,9 @@ def build(by_year, model, rated):
                             "honours": "%.3g" % hon[pid] if hon.get(pid) else ""})
         else:
             additions.append({"first": L["first"], "last": L["last"], "dob": L["dob"], "club": club,
-                              "position": "", "height_cm": L["height_cm"], "list": L["list"],
-                              "peak": peak or "", "source_url": L["source_url"], "checked": L["checked"]})
+                              "position": real_position(pid, DATA_SEASON), "height_cm": L["height_cm"], "list": L["list"],
+                              "peak": peak or "", "source_url": L["source_url"], "checked": L["checked"],
+                              "_height_from": L.get("_height_from", "club list")})
             latest = None
             for y in (1988, 1987):
                 got = rated.get(y, {}).get(pid) if pid else None
@@ -425,54 +381,12 @@ def build(by_year, model, rated):
                 cells = stat_cells(latest[1][2])
                 add_stats.append(dict(cells, club=club, num="0", last=L["last"], first=L["first"],
                                       src=str(latest[0])))
-    fill_heights_by_position(additions, lists, rated)
+    for A in additions:
+        # A height no source gives stays blank (director 2026-11-15, "Search
+        # other sources"; it replaces 2026-11-13's position average).
+        A["height_from"] = A.pop("_height_from", "club list") if A["height_cm"] else ""
+        A.pop("_height_from", None)
     return players, history, additions, add_stats
-
-
-def godot_hash(s):
-    """GDScript hash() of a String (Godot's String::hash, djb2 over code points)."""
-    v = 5381
-    for ch in s:
-        v = ((v << 5) + v + ord(ch)) & 0xFFFFFFFF
-    return v
-
-
-def game_role(club, n, height):
-    """The position the game gives list addition n (1-based, file order) of a
-    club: GameDB._load_list_additions's id and GameDB.listed_role."""
-    if height >= 200:
-        return "RUCK"
-    roll = godot_hash("role|L%d_%s_%03d" % (DATA_SEASON, club, n)) % 100
-    if height >= 192:
-        return "DEF" if roll < 50 else "FWD"
-    if roll < 45:
-        return "MID"
-    return "DEF" if roll < 72 else "FWD"
-
-
-def fill_heights_by_position(additions, lists, rated):
-    """A listed player whose height neither Draftguru nor AFL Tables records (he
-    never played a senior game) takes the average height of the 1990 lists'
-    players at the position the game gives him (director 2026-11-13: "if you
-    cant find the height for a player anywhere just pick the average for a
-    player of his position"). Positions are the 1989 season's rated roles."""
-    by_role = defaultdict(list)
-    for L in lists:
-        got = rated.get(DATA_SEASON, {}).get(L["afltables_id"]) if L["afltables_id"] else None
-        if got and got[1] > 0 and L["height_cm"]:
-            by_role[got[3]].append(int(L["height_cm"]))
-    avg = {r: round(sum(v) / len(v)) for r, v in by_role.items()}
-    for n, A in enumerate(additions, 1):
-        A["height_from"] = "club list" if A["height_cm"] else ""
-        if A["height_cm"]:
-            continue
-        role = game_role(A["club"], n, 0)
-        h = avg[role]
-        # The game re-derives his position from the filled height: it must land
-        # on the same one.
-        assert game_role(A["club"], n, h) == role, (A["first"], A["last"], role, h)
-        A["height_cm"] = str(h)
-        A["height_from"] = "average %s" % role
 
 
 def write(path, cols, rows):
@@ -488,7 +402,7 @@ def era_report(by_year, rated, players):
     stats = ["di", "ki", "hb", "mk", "tk", "gl", "cl", "cp", "if50", "rb"]
     lines = ["# Era averages against today (Legacy mode, row 142)", "",
              "Built by `tools/legacy_1990s/build_start.py --report`. Per player per game, every player "
-             "with a game; * marks a stat estimated from the recorded ones for most of that era. "
+             "with a game; - marks a stat not recorded for most of that era (never estimated). "
              "Ratings are each season against its own players, each position scaled on its own season (director 2026-11-13, 'Scale each position per season').", "",
              "| Seasons | " + " | ".join(stats) + " | rated 80+ per season | median OVR |",
              "|" + "---|" * (len(stats) + 3)]
@@ -501,24 +415,25 @@ def era_report(by_year, rated, players):
             for pid, (ovr, g, e, _role) in rated[y].items():
                 gm += g
                 for k in stats:
-                    tot[k] += e[k]
+                    tot[k] += e[k] or 0.0
                 if g >= PEAK_GAMES:
                     ovrs.append(ovr)
                     n80 += ovr >= 80
         ovrs.sort()
-        cells = ["%.1f%s" % (tot[k] / gm, "*" if k in est else "") for k in stats]
+        cells = ["-" if k in est else "%.1f" % (tot[k] / gm) for k in stats]
         lines.append("| %s | %s | %.1f | %d |" % (label, " | ".join(cells), n80 / len(list(years)),
                                                   ovrs[len(ovrs) // 2]))
     lines += ["", "## The 1990 lists as the game loads them", "",
               "Rated on 1989 by `tools/sim_harness.py` (the game rates again at load, the same model).", ""]
     hp = []
     for r in players:
-        e = {k: float(r[k]) for k in ENRICHED[4:28]}
+        e = dict((k, r[k]) for k in ENRICHED[4:28])
         p = harness_player({**{("one_pct" if k == "onepct" else "pct_played" if k == "pctp" else k): v
                                for k, v in e.items()}, "first": r["first"], "last": r["last"]},
                            r["club"], r["num"])
         hp.append(p)
     H.ERA_ANCHORS.clear()
+    H.set_unrecorded(unrecorded_in(hp))
     H.derive_ratings(hp)
     H.fit_era_anchors(hp)
     by_club = defaultdict(list)
@@ -539,9 +454,8 @@ def main():
     ap.add_argument("--report", action="store_true")
     a = ap.parse_args()
     by_year = load_seasons()
-    model = fit_model(by_year)
-    rated = rate_seasons(by_year, model)
-    players, history, additions, add_stats = build(by_year, model, rated)
+    rated = rate_seasons(by_year)
+    players, history, additions, add_stats = build(by_year, rated)
     os.makedirs(OUT_DIR, exist_ok=True)
     write(os.path.join(OUT_DIR, "players_1990.csv"), ENRICHED, players)
     write(os.path.join(OUT_DIR, "history_1990.csv"),

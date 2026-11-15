@@ -89,8 +89,9 @@ static func grade(pct: float) -> String:
 static func strengths(p: Dictionary, limit := 3) -> Array:
 	var core: Dictionary = Ratings.ROLE_WEIGHTS.get(str(p.get("role", "MID")), {})
 	var rows := []
+	var unknown: Array = p.get("attr_unrecorded", [])
 	for key in core:
-		if float(core[key]) < MIN_WEIGHT:
+		if float(core[key]) < MIN_WEIGHT or unknown.has(key):
 			continue
 		var pct := percentile(p, key)
 		var g := grade(pct)
@@ -111,8 +112,9 @@ static func strengths(p: Dictionary, limit := 3) -> Array:
 static func weakness(p: Dictionary) -> Dictionary:
 	var core: Dictionary = Ratings.ROLE_WEIGHTS.get(str(p.get("role", "MID")), {})
 	var worst := {}
+	var unknown: Array = p.get("attr_unrecorded", [])
 	for key in core:
-		if float(core[key]) < 0.2:
+		if float(core[key]) < 0.2 or unknown.has(key):
 			continue
 		var pct := percentile(p, key)
 		if pct < WEAK_SHARE and (worst.is_empty() or pct < float(worst["pct"])):
@@ -128,15 +130,24 @@ const TOP_KEYS := ["disposal", "contested", "marking", "pressure", "intercept", 
 		"goalkicking", "accuracy", "creating", "ruck", "discipline", "durability", "star"]
 
 
+## His attribute as a card prints it: a dash when his era never recorded it
+## (Ratings.unknown_attrs; director 2026-11-15, "I never okayed invented stats").
+static func attr_text(p: Dictionary, key: String) -> String:
+	if (p.get("attr_unrecorded", []) as Array).has(key):
+		return "—"
+	return str(int(round(float((p.get("attr", {}) as Dictionary).get(key, 0)))))
+
+
 ## His three highest-rated attributes, whatever their level:
 ## [{"key", "label", "value"}], best first; level ratings keep TOP_KEYS order.
 ## Fewer than three only when his sheet lacks them (never made up).
 static func top_attributes(p: Dictionary, limit := 3) -> Array:
 	var attr: Dictionary = p.get("attr", {}) if p.get("attr") is Dictionary else {}
 	var rows := []
+	var unknown: Array = p.get("attr_unrecorded", [])
 	for i in TOP_KEYS.size():
 		var key: String = TOP_KEYS[i]
-		if attr.has(key):
+		if attr.has(key) and not unknown.has(key):
 			rows.append({"key": key, "label": str(ATTR_LABELS[key]), "value": int(attr[key]), "i": i})
 	rows.sort_custom(func(a, b):
 		if int(a["value"]) != int(b["value"]):

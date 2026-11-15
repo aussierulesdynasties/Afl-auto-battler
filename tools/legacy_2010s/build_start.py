@@ -74,7 +74,7 @@ def first_drafted(cell):
 
 def load_lists():
     with open(os.path.join(LEG, "2010s", "lists.csv"), newline="", encoding="utf-8") as fh:
-        rows = [r for r in csv.DictReader(fh) if int(r["year"]) == START]
+        rows = B.with_heights([r for r in csv.DictReader(fh) if int(r["year"]) == START])
     # A player with no 2010 number takes a free one from 60 up: the game keys a
     # player on club + number.
     used = defaultdict(set)
@@ -180,7 +180,7 @@ def build(by_year, rated):
         if data and data[1] > 0:
             cells = B.stat_cells(data[2])
             players.append(dict(cells, club=club, num=L["num"], last=L["last"], first=L["first"],
-                                src=str(DATA_SEASON), real_pos="", dob=L["dob"], age=age_at(L["dob"]),
+                                src=str(DATA_SEASON), real_pos=B.pos_cell(pid, DATA_SEASON), dob=L["dob"], age=age_at(L["dob"]),
                                 height_cm=L["height_cm"], weight_kg=L["weight_kg"], debut=debut,
                                 height_source="draftguru" if L["height_cm"] else ""))
             history.append({"club": club, "num": L["num"],
@@ -190,7 +190,7 @@ def build(by_year, rated):
                             "peak": peak or "", "last_season": ended(pid, L["last"], L["dob"])})
         else:
             additions.append({"first": L["first"], "last": L["last"], "dob": L["dob"], "club": club,
-                              "position": "", "height_cm": L["height_cm"], "list": L["list"],
+                              "position": B.real_position(pid, DATA_SEASON), "height_cm": L["height_cm"], "list": L["list"],
                               "peak": peak or "", "last_season": ended(pid, L["last"], L["dob"]),
                               "source_url": L["source_url"], "checked": L["checked"]})
             latest = None
@@ -210,10 +210,11 @@ def build(by_year, rated):
 def harness_from_enriched(rows):
     hp = []
     for r in rows:
-        e = {("one_pct" if k == "onepct" else "pct_played" if k == "pctp" else k): float(r[k] or 0)
+        e = {("one_pct" if k == "onepct" else "pct_played" if k == "pctp" else k): (r[k] if r[k] == "" else float(r[k]))
              for k in B.ENRICHED[4:28]}
         hp.append(B.harness_player({**e, "first": r["first"], "last": r["last"]}, r["club"], r["num"]))
     H.ERA_ANCHORS.clear()
+    H.set_unrecorded(B.unrecorded_in(hp))
     H.derive_ratings(hp)
     H.fit_era_anchors(hp)
     return hp
@@ -292,8 +293,7 @@ def main():
     ap.add_argument("--report", action="store_true")
     a = ap.parse_args()
     by_year = B.load_seasons()
-    model = B.fit_model(by_year)
-    rated = B.rate_seasons(by_year, model)
+    rated = B.rate_seasons(by_year)
     players, history, additions, add_stats = build(by_year, rated)
     os.makedirs(OUT_DIR, exist_ok=True)
     B.write(os.path.join(OUT_DIR, "players_2010.csv"), B.ENRICHED, players)

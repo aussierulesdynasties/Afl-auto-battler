@@ -204,10 +204,9 @@ func _show_callout(index: int) -> void:
 			int(p.get("xp", 0))], 12, UiKit.EMPH, true))
 	var role := str(slot.get("role", p.get("role", "MID")))
 	var rows: Array = CALLOUT_ATTRS.get(role, CALLOUT_ATTRS["MID"])
-	var attr: Dictionary = p.get("attr", {})
 	var bits: PackedStringArray = []
 	for row in rows:
-		bits.append("%s %d" % [str(row[1]), int(attr.get(row[0], 0))])
+		bits.append("%s %s" % [str(row[1]), PlayerProfile.attr_text(p, str(row[0]))])
 	_callout_box.add_child(UiKit.lbl("  ·  ".join(bits), UiKit.FINE, UiKit.MUTED))
 	_callout.visible = true
 	_place_callout()

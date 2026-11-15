@@ -262,8 +262,11 @@ static func open(host: Control, p: Dictionary, on_close: Callable = Callable(),
 		grid.add_theme_constant_override("v_separation", 3)
 		v.add_child(grid)
 		var attr: Dictionary = p["attr"]
+		var unknown: Array = p.get("attr_unrecorded", [])
 		for r in ATTR_ROWS:
-			grid.add_child(attr_bar(str(r[0]), str(r[1]), float(attr.get(r[0], 0.0))))
+			# Not recorded in his era: blank, never a stand-in number.
+			var val := -1.0 if unknown.has(r[0]) else float(attr.get(r[0], 0.0))
+			grid.add_child(attr_bar(str(r[0]), str(r[1]), val))
 		var lead := attr_bar("leadership", "Leadership", float(Leadership.of(p)))
 		lead.name = "ProfileLeadership"
 		grid.add_child(lead)
@@ -272,6 +275,11 @@ static func open(host: Control, p: Dictionary, on_close: Callable = Callable(),
 		lead_note.name = "ProfileLeadershipNote"
 		lead_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(lead_note)
+		if not unknown.is_empty():
+			var blank_note := UiKit.lbl("A dash: not recorded in his era.", UiKit.SMALL, UiKit.MUTED)
+			blank_note.name = "ProfileUnrecordedNote"
+			blank_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			v.add_child(blank_note)
 	if nickname_row != null:
 		v.add_child(UiKit.spacer(10))
 		v.add_child(nickname_row)
@@ -464,13 +472,14 @@ static func attr_bar(key: String, label: String, value: float) -> Control:
 	holder.add_child(bar)
 	var fill := ColorRect.new()
 	fill.position = Vector2.ZERO
-	fill.size = Vector2(70.0 * clampf(value / 99.0, 0.0, 1.0), 7)
+	fill.size = Vector2(70.0 * clampf(value / 99.0, 0.0, 1.0), 7)   # 0 when unrecorded (-1)
 	fill.color = attr_colour(value)
 	holder.add_child(fill)
 	for bar_part in [bar, fill]:
 		bar_part.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	h.add_child(holder)
-	var n := UiKit.lbl(str(int(round(value))), UiKit.SMALL, UiKit.TEXT)
+	var n := UiKit.lbl("—" if value < 0.0 else str(int(round(value))), UiKit.SMALL,
+			UiKit.MUTED if value < 0.0 else UiKit.TEXT)
 	n.custom_minimum_size = Vector2(26, 0)
 	n.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	h.add_child(n)

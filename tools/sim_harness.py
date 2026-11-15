@@ -255,26 +255,9 @@ def derive_ratings(players):
         p["norm"] = q
 
         a = {}
-        a["disposal"] = scale(0.60 * q["disposals_pg"] + 0.25 * q["contested_pg"]
-                              + 0.15 * q["clearances_pg"])
-        a["contested"] = scale(0.45 * q["contested_pg"] + 0.30 * q["clearances_pg"]
-                               + 0.25 * q["contested_share"])
-        a["marking"] = scale(0.50 * q["marks_pg"] + 0.28 * q["contested_marks_pg"]
-                             + 0.22 * q["marks_inside50_pg"])
-        a["pressure"] = scale(0.62 * q["tackles_pg"] + 0.38 * q["one_percenters_pg"])
-        a["intercept"] = scale(0.45 * q["rebounds_pg"] + 0.28 * q["marks_pg"]
-                               + 0.27 * q["one_percenters_pg"])
-        a["carry"] = scale(0.45 * q["inside50s_pg"] + 0.28 * q["bounces_pg"]
-                           + 0.27 * q["disposals_pg"])
-        a["goalkicking"] = scale(0.66 * q["goals_pg"] + 0.34 * q["marks_inside50_pg"])
-        a["accuracy"] = scale(q["accuracy"])
-        a["creating"] = scale(0.45 * q["goal_assists_pg"] + 0.30 * q["inside50s_pg"]
-                              + 0.25 * q["marks_inside50_pg"])
-        a["ruck"] = scale(0.70 * q["hitouts_pg"] + 0.18 * q["clearances_pg"]
-                          + 0.12 * q["contested_marks_pg"])
-        a["discipline"] = scale(0.62 * q["clangers_pg"] + 0.38 * q["frees_against_pg"])
-        a["durability"] = scale(0.55 * q["games"] + 0.45 * q["time_on_ground"])
-        a["star"] = scale(0.68 * q["brownlow_pg"] + 0.32 * q["disposals_pg"])
+        for attr, terms in ATTR_BLENDS.items():
+            v = blend(q, terms)
+            a[attr] = scale(v) if v >= 0.0 else UNRECORDED_ATTR[attr]
         adj = ATTR_ADJUSTMENTS.get("%s|%s" % (p.get("club", ""), p.get("name", "")), 1.0)
         if adj != 1.0:
             a = {k: max(1, min(99, int(v * adj + 0.5))) for k, v in a.items()}  # GDScript rounds half up
@@ -282,14 +265,7 @@ def derive_ratings(players):
 
         # ---- role classification -----------------------------------------
         hitouts_pg = p["ho"] / max(1.0, p["gm"])
-        role_scores = {
-            "FWD": (0.50 * q["goals_pg"] + 0.26 * q["marks_inside50_pg"]
-                    + 0.14 * q["goal_assists_pg"] + 0.10 * q["behinds_pg"]),
-            "MID": (0.42 * q["disposals_pg"] + 0.30 * q["contested_pg"]
-                    + 0.28 * q["clearances_pg"]),
-            "DEF": (0.42 * q["rebounds_pg"] + 0.30 * q["one_percenters_pg"]
-                    + 0.20 * q["marks_pg"] + 0.08 * (1.0 - q["goals_pg"])),
-        }
+        role_scores = {role: max(0.0, blend(q, terms)) for role, terms in ROLE_BLENDS.items()}
         if hitouts_pg >= 7.0:
             role_scores["RUCK"] = 0.25 + 0.85 * q["hitouts_pg"]
         else:
@@ -315,6 +291,67 @@ def derive_ratings(players):
         p["value"] = salary_value(p["overall"])
 
     return players
+
+
+# Stats a past season never recorded (Ratings.unrecorded, director 2026-11-15,
+# "No invented stats"): every blend drops them and shares their weight among
+# the recorded ones; an attribute with none recorded takes UNRECORDED_ATTR and
+# counts for nothing in the overall (UNKNOWN_ATTRS). set_unrecorded() sets both.
+UNRECORDED = set()
+UNKNOWN_ATTRS = set()
+UNRECORDED_ATTR = {
+    "disposal": 53, "contested": 44, "marking": 46, "pressure": 42, "intercept": 40,
+    "carry": 45, "goalkicking": 20, "accuracy": 52, "creating": 44, "ruck": 10,
+    "discipline": 44, "durability": 77, "star": 23,
+}
+ATTR_BLENDS = {
+    "disposal": [(0.60, "disposals_pg"), (0.25, "contested_pg"), (0.15, "clearances_pg")],
+    "contested": [(0.45, "contested_pg"), (0.30, "clearances_pg"), (0.25, "contested_share")],
+    "marking": [(0.50, "marks_pg"), (0.28, "contested_marks_pg"), (0.22, "marks_inside50_pg")],
+    "pressure": [(0.62, "tackles_pg"), (0.38, "one_percenters_pg")],
+    "intercept": [(0.45, "rebounds_pg"), (0.28, "marks_pg"), (0.27, "one_percenters_pg")],
+    "carry": [(0.45, "inside50s_pg"), (0.28, "bounces_pg"), (0.27, "disposals_pg")],
+    "goalkicking": [(0.66, "goals_pg"), (0.34, "marks_inside50_pg")],
+    "accuracy": [(1.0, "accuracy")],
+    "creating": [(0.45, "goal_assists_pg"), (0.30, "inside50s_pg"), (0.25, "marks_inside50_pg")],
+    "ruck": [(0.70, "hitouts_pg"), (0.18, "clearances_pg"), (0.12, "contested_marks_pg")],
+    "discipline": [(0.62, "clangers_pg"), (0.38, "frees_against_pg")],
+    "durability": [(0.55, "games"), (0.45, "time_on_ground")],
+    "star": [(0.68, "brownlow_pg"), (0.32, "disposals_pg")],
+}
+ROLE_BLENDS = {
+    "FWD": [(0.50, "goals_pg"), (0.26, "marks_inside50_pg"), (0.14, "goal_assists_pg"), (0.10, "behinds_pg")],
+    "MID": [(0.42, "disposals_pg"), (0.30, "contested_pg"), (0.28, "clearances_pg")],
+    "DEF": [(0.42, "rebounds_pg"), (0.30, "one_percenters_pg"), (0.20, "marks_pg"), (0.08, "goals_pg", True)],
+}
+METRIC_STAT = dict(METRIC_SPECS)
+METRIC_STAT.update({"contested_share": "cp", "time_on_ground": "pctp"})
+
+
+def metric_recorded(metric):
+    return METRIC_STAT.get(metric) not in UNRECORDED
+
+
+def blend(q, terms):
+    total = kept = v = 0.0
+    for t in terms:
+        total += t[0]
+        if not metric_recorded(t[1]):
+            continue
+        kept += t[0]
+        x = q[t[1]]
+        v += t[0] * ((1.0 - x) if len(t) > 2 else x)
+    return v * total / kept if kept > 0 else -1.0
+
+
+def set_unrecorded(stats):
+    """Ratings.set_unrecorded: stats use the game's keys (onepct, pctp)."""
+    UNRECORDED.clear()
+    UNRECORDED.update(stats)
+    UNKNOWN_ATTRS.clear()
+    for attr, terms in ATTR_BLENDS.items():
+        if not any(metric_recorded(t[1]) for t in terms):
+            UNKNOWN_ATTRS.add(attr)
 
 
 ROLE_WEIGHTS = {  # role core: attribute -> weight (Ratings.gd::ROLE_WEIGHTS)
@@ -376,7 +413,10 @@ def position_stretch(raw, role):
 
 
 def role_core(attr, role):
-    return sum(w * attr[k] for k, w in ROLE_WEIGHTS[role].items())
+    w = ROLE_WEIGHTS[role]
+    kept = sum(v for k, v in w.items() if k not in UNKNOWN_ATTRS)
+    core = sum(v * attr[k] for k, v in w.items() if k not in UNKNOWN_ATTRS)
+    return core * sum(w.values()) / kept if kept > 0 else 0.0
 
 
 def scale_overall(raw):

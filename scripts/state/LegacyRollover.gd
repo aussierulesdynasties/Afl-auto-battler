@@ -192,10 +192,20 @@ static func foundation(gs, code: String, year: int) -> Dictionary:
 			established.append([p, r])
 		list.append(p)
 	if not established.is_empty():
-		var rows := []
+		# Each data season is rated on what it recorded (director 2026-11-15,
+		# "I never okayed invented stats"): a 1997 line lacks rebound 50s, a
+		# 2005 one has them. The career's own set comes back afterwards.
+		var by_src := {}
 		for e in established:
-			rows.append(e[0])
-		Ratings.derive_all(rows, GameDB.players)
+			var y := int((e[0] as Dictionary).get("stats_year", 0))
+			if not by_src.has(y):
+				by_src[y] = []
+			by_src[y].append(e[0])
+		var keep: Dictionary = Ratings.unrecorded.duplicate()
+		for y in by_src:
+			Ratings.set_unrecorded(Ratings.find_unrecorded(by_src[y]))
+			Ratings.derive_all(by_src[y], GameDB.players)
+		Ratings.set_unrecorded(keep)
 		for e in established:
 			var p: Dictionary = e[0]
 			var r: Dictionary = e[1]
@@ -263,7 +273,7 @@ static func _new_player(code: String, year: int, n: int, r: Dictionary) -> Dicti
 	# Aged at his first season's start, as the league has just been aged.
 	p["age"] = float(Prospects.days_between(dob, "%d-03-01" % year)) / 365.25 if dob.length() >= 10 else 22.0
 	p["debut"] = ""
-	p["height_source"] = "club list"
+	p["height_source"] = "club list" if p["height_cm"] > 0.0 else ""
 	var list_type := str(r.get("list", ""))
 	p["list_type"] = list_type
 	if list_type == "rookie":
@@ -289,9 +299,13 @@ static func _new_player(code: String, year: int, n: int, r: Dictionary) -> Dicti
 	p["note"] = ""
 	var src := str(r.get("src", ""))
 	if src != "":
+		var blank := []
 		for k in GameDB.STAT_KEYS:
 			if r.has(k) and str(r[k]) != "":
 				p[k] = float(str(r[k]))
+			else:
+				blank.append(k)   # not recorded that season (Ratings.unrecorded)
+		p["blank"] = blank
 		p["stats_year"] = int(src)
 		p["draft_rank"] = 0
 		p["data_src"] = "listed %d, rated on his %s season" % [year, src]
