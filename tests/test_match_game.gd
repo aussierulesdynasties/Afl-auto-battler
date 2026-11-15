@@ -4227,8 +4227,8 @@ func _test_ai_chases_and_controlled_needs_ball_users() -> void:
 	sim.q_goals[0] = [4, 1]
 	_check(str(sim.ai_tactics(1)["gameplan"]) == "defensive",
 			"Before half time a close deficit is no reason to abandon it")
-	# Controlled Tempo against a press: good ball users hold it off, poor ones
-	# only partly.
+	# Controlled Tempo against a press: good ball users take out
+	# CONTROLLED_HOLD of its extra bite (bug bash 5, G3), poor ones less.
 	var press := _sim(4801)
 	press.set_tactics(1, {"gameplan": "defensive"})
 	press.set_tactics(0, {"gameplan": "controlled"})
@@ -4238,7 +4238,8 @@ func _test_ai_chases_and_controlled_needs_ball_users() -> void:
 	var poor := press._press_on(0)
 	press.set_tactics(0, {"gameplan": "balanced"})
 	var none := press._press_on(0)
-	_check(is_equal_approx(good, 1.0) and poor > 1.0 and poor < none,
+	_check(is_equal_approx(good, 1.0 + (none - 1.0) * (1.0 - MatchSim.CONTROLLED_HOLD))
+			and poor > good and poor < none,
 			"Controlled Tempo holds a press off as far as its ball users can (%.3f, %.3f, %.3f)" % [good, poor, none])
 	_check(PlanFit.standing_plan([]) == "balanced", "An empty list plays Balanced")
 
@@ -4706,7 +4707,7 @@ func _test_press_by_zone() -> void:
 	var theirs := sim.shot_chance(0, shooter, true, false)
 	sim._broke_press = -1
 	_check(is_equal_approx(theirs, held), "A break by the other side gives this side's shot nothing (%.3f vs %.3f)" % [theirs, held])
-	_check(broke > held * 1.5, "A chain that breaks the press shoots at an outnumbered defence (%.3f vs %.3f)" % [broke, held])
+	_check(is_equal_approx(broke, held * MatchSim.PRESS_BROKEN_EXPOSED), "A chain that breaks the press shoots at an outnumbered defence (%.3f vs %.3f)" % [broke, held])
 
 
 ## Assign defensive forward (register item 5, director 2026-10-07): the words
