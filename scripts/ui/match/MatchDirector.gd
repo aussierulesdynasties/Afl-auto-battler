@@ -896,7 +896,7 @@ func _pass_phases(k: int) -> Array:
 		return out
 	var to: Vector2 = _loc(nk) if str(nev.get("kind", "")) == "receive" else (tokens[r]["pos"] as Vector2)
 	var d := (ball["pos"] as Vector2).distance_to(to)
-	var shape := _flight_shape("kick", d)
+	var shape := _flight_shape("handball" if bool(events[k].get("hand", false)) else "kick", d)
 	out.append({"t": "flight", "to": to, "dur": shape.x, "apex": shape.y, "recv": r,
 			"adapt": true, "h1": 2.4, "mode": "open"})
 	return out

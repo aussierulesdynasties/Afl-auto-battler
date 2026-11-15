@@ -553,6 +553,8 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	# Its own seed: it once shared lead_rng's, so the mid-kick intercept dice
 	# replayed the key-lead dice. Every stream here needs a seed of its own.
 	mid_ic_rng.seed = seed * 137 + 139
+	# Its own seed: the passes inside 50 (_i50_give).
+	i50_rng.seed = seed * 173 + 179
 	injury_rng.seed = seed * 13 + 7
 	breeze_side = posmod(hash("breeze|%d" % seed), 2)
 	arch_rng.seed = seed * 151 + 157
@@ -3928,14 +3930,40 @@ func resolve_forward50(side: int, fp: float, feeder) -> Dictionary:
 	# gets to it first (more often off a tall target) and snaps instead.
 	var crumbed := false
 	var ground_lost := false
+	var brought_down = null
 	if not marked and not spoilt and matched.is_empty() 			and rng.randf() < float(SPILL_P.get(fwd_size(shooter) if str(shooter.get("role", "")) == "FWD" else "general", 0.30)):
 		var ground_fwd = _ground_forward(side, str(shooter["id"]))
 		if ground_fwd != null:
+			brought_down = shooter
 			shooter = ground_fwd
 			crumbed = true
 			var size: String = fwd_size(ground_fwd) if str(ground_fwd.get("role", "")) == "FWD" else "general"
 			ground_lost = rng.randf() >= float(GROUND_WIN[size]) * (0.85 + 0.30 * _a(ground_fwd, "pressure") / 100.0)
-	var goal_p := shot_chance(side, shooter, marked, spoilt, true, feeder, defender)
+	# Who set the shot up (the goal assist, and whose Creating counts): the
+	# entry kicker, unless the ball hit the deck. A crumb is the crumber's own
+	# goal (director 2026-11-15: "a crumb goal is self made, it has no
+	# assist"); the forward who brought it down is in the chain, so he has
+	# the score involvement.
+	var setter = feeder
+	if crumbed:
+		setter = null
+		_chain_touch[str(brought_down["id"])] = brought_down
+	# General play inside 50 (director 2026-11-15: "assists need to be
+	# possible from general play in the forward line"): the man with it can
+	# give it off to a teammate in a better spot, a kick to a lead or a
+	# handball to a runner. The giver's Creating decides how often he looks
+	# for it; his ball use and their reading decide whether it gets there.
+	if not ground_lost and (marked or not spoilt):
+		var give := _i50_give(side, fp, shooter, defender, marked, crumbed)
+		if give.has("turnover"):
+			return give["turnover"]
+		if not give.is_empty():
+			setter = shooter
+			shooter = give["to"]
+			marked = bool(give["marked"])
+			crumbed = false
+			matched = {}
+	var goal_p := shot_chance(side, shooter, marked, spoilt, true, setter, defender)
 	var behind_p: float = (float(T["inside50_behind"])
 			* (0.80 + 0.40 * _a(shooter, "goalkicking") / 100.0))
 	if ground_lost:
@@ -3987,7 +4015,7 @@ func resolve_forward50(side: int, fp: float, feeder) -> Dictionary:
 		# and a game has more chains than the 180 this was set for.
 		if moment_rng.randf() < (1.0 if close else 0.49 * 180.0 / float(T["chains_per_game"])
 				* (SET_SHOT_SHARE / set_share())):
-			_offer_set_shot(side, shot_fp, shooter, defender, set_shot, feeder)
+			_offer_set_shot(side, shot_fp, shooter, defender, set_shot, setter)
 			return {"outcome": "moment", "fp": shot_fp, "actor": shooter}
 
 	var roll := rng.randf()
@@ -3997,7 +4025,7 @@ func resolve_forward50(side: int, fp: float, feeder) -> Dictionary:
 	if roll < goal_p:
 		_t(side, "goals")
 		_p(shooter, "goals")
-		_assist(side, feeder, shooter)
+		_assist(side, setter, shooter)
 		_scored(side, 6, shooter)
 		q_goals[current_quarter - 1][side] += 1
 		_score_run(side)
@@ -4099,6 +4127,90 @@ func _crumb(side: int, fp: float) -> Dictionary:
 		_tag_shot(false)
 		return {"outcome": "behind", "fp": kick_in_fp(side), "actor": crumber}
 	return {}
+
+
+## General play inside 50: how often the man with it looks to give it off,
+## by how he has it (a mark, the ball off the deck, a lead), before his
+## Creating (x0.6 at 0 to x1.4 at 100). Tuned so goal assists come to real
+## AFL 2026: 9.49 a team a game, 74% of goals (afl_team_rates.json).
+const I50_GIVE := {"mark": 0.10, "ground": 0.45, "lead": 0.30}
+## A ball given off off the deck goes by hand this often; from a mark, by foot.
+const I50_HAND_SHARE := 0.70
+## How often the pass reaches him, at a 50 kick against a 50 defence.
+const I50_GIVE_REACH := 0.86
+## A kick to a lead is marked this often (a set shot); otherwise he runs onto it.
+const I50_LEAD_MARK := 0.55
+var i50_rng := RandomNumberGenerator.new()
+
+
+## Whether the man with the ball inside 50 gives it off to a teammate: {} when
+## he takes it on himself; {"to", "marked"} when it reaches a teammate (a
+## disposal for the giver, a possession and maybe a mark for the receiver);
+## {"turnover": <entry result>} when the defence reads it. Its own dice, so
+## every other draw falls where it did.
+func _i50_give(side: int, at_fp: float, holder: Dictionary, defender, marked: bool, crumbed: bool) -> Dictionary:
+	var how := "mark" if marked else ("ground" if crumbed else "lead")
+	var look := _tv("I50_GIVE_" + how.to_upper(), float(I50_GIVE[how])) * (0.6 + 0.8 * _a(holder, "creating") / 100.0)
+	if i50_rng.randf() >= look:
+		return {}
+	# Who he finds: the forwards and mids on the ground, the better finishers
+	# more often (as the entry's own target is picked).
+	var mates := []
+	var weights := []
+	var total := 0.0
+	for p in (squads[side] as Squad).ground:
+		if str(p["id"]) == str(holder["id"]):
+			continue
+		var w: float = float(SHOT_ROLES.get(str(p["role"]), 0.0)) * pow(maxf(1.0, _a(p, "goalkicking")), 2.0)
+		mates.append(p)
+		weights.append(w)
+		total += w
+	if total <= 0.0:
+		return {}
+	var r := i50_rng.randf() * total
+	var mate: Dictionary = mates[mates.size() - 1]
+	for i in range(mates.size()):
+		r -= float(weights[i])
+		if r <= 0.0:
+			mate = mates[i]
+			break
+	var opp := 1 - side
+	var kick := not crumbed or i50_rng.randf() >= _tv("I50_HAND_SHARE", I50_HAND_SHARE)
+	# A crumber already won his ground ball; a marker's mark is his possession.
+	if not crumbed:
+		_gain(side, holder, "up" if marked else "gb")
+	_t(side, "disposals")
+	_p(holder, "disposals")
+	_t(side, "kicks" if kick else "handballs")
+	_p(holder, "kicks" if kick else "handballs")
+	_chain_touch[str(holder["id"])] = holder
+	var hn := GameDB.player_display_name(holder)
+	var mn := GameDB.player_display_name(mate)
+	var reach := clampf(_tv("I50_GIVE_REACH", I50_GIVE_REACH) + 0.20 * (_a(holder, "disposal") - 50.0) / 100.0
+			- 0.20 * ((squads[opp] as Squad).def_intercept - 50.0) / 100.0, 0.60, 0.97)
+	if i50_rng.randf() >= reach:
+		var taker = defender
+		if taker == null or (taker as Dictionary).is_empty():
+			var backs := _by_roles((squads[opp] as Squad).ground, ["DEF"])
+			taker = backs[0] if not backs.is_empty() else (squads[opp] as Squad).ground[0]
+		_t(side, "clangers")
+		_p(holder, "clangers")
+		_intercept(opp, taker, kick, false)
+		_emit("rebound", opp, at_fp, taker, "%s cuts off %s's %s to %s" % [GameDB.player_display_name(taker), hn,
+				"kick" if kick else "handball", mn])
+		return {"turnover": {"outcome": "turnover", "fp": at_fp, "actor": taker}}
+	_effective(side, holder)
+	_chain_touch[str(mate["id"])] = mate
+	var takes := kick and i50_rng.randf() < _tv("I50_LEAD_MARK", I50_LEAD_MARK)
+	_gain(side, mate, "up")
+	if takes:
+		_t(side, "marks")
+		_p(mate, "marks")
+	_emit("pass", side, at_fp, holder, ("%s kicks to %s on the lead" if kick else "%s handballs to %s") % [hn, mn])
+	events[events.size() - 1]["hand"] = not kick
+	if takes:
+		_emit("receive", side, at_fp, mate, "%s marks on the lead" % mn)
+	return {"to": mate, "marked": takes}
 
 
 ## Who is first to a ball on the deck inside 50: forwards first (small ones

@@ -216,14 +216,25 @@ func play(from: int, count: int, out: String, weather: String,
 		# (or a lead mark played on to) taken inside that side's forward 50, and
 		# a forward's mark in the goal-square pack.
 		var mi50 := [0, 0]
+		# Goals off a pass inside 50 in general play (MatchSim._i50_give: its
+		# pass events carry "hand"), each side's: the goal's previous events
+		# are that pass, or the pass and the lead mark it found.
+		var i50_pass_goals := [0, 0]
+		var last_give := -10
 		var f50 := float(Ratings.T["forward50_line"])
-		for ev in r["events"]:
-			var kind := str((ev as Dictionary).get("kind", ""))
+		var evs: Array = r["events"]
+		for ei in range(evs.size()):
+			var ev: Dictionary = evs[ei]
+			var kind := str(ev.get("kind", ""))
 			if kind == "ballup":
 				ball_ups += 1
 			elif kind == "throwin":
 				throw_ins += 1
-			elif kind == "mark" or kind == "receive" or (kind == "pack" and str(ev.get("outcome", "")) == "marked"):
+			if kind == "pass" and ev.has("hand"):
+				last_give = ei
+			elif kind == "goal" and last_give >= 0 and ei - last_give <= 2 and int(evs[last_give].get("side", -1)) == int(ev.get("side", -2)):
+				i50_pass_goals[int(ev.get("side", 0))] += 1
+			if kind == "mark" or kind == "receive" or (kind == "pack" and str(ev.get("outcome", "")) == "marked"):
 				var s := int(ev.get("side", 0))
 				if float(ev.get("fp", 0.0)) * (1.0 if s == 0 else -1.0) >= f50:
 					mi50[s] += 1
@@ -238,6 +249,7 @@ func play(from: int, count: int, out: String, weather: String,
 			t["throw_ins"] = throw_ins
 			t["stoppages"] = ball_ups + throw_ins
 			t["marks_inside_50"] = mi50[side]
+			t["i50_pass_goals"] = i50_pass_goals[side]
 			_shot_counts(t, sim.shot_log, side)
 			t["strength"] = snappedf((sq_h if side == 0 else sq_a).strength(), 0.01)
 			q_score[side][3] = int(r["score"][side])

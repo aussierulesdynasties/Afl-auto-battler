@@ -16,7 +16,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 STATS = {"disposals": "di", "kicks": "ki", "handballs": "hb", "marks": "mk",
          "contested_marks": "cm", "tackles": "tk", "inside_50s": "if50",
          "clearances": "cl", "hitouts": "ho", "frees_for": "ff", "goals": "gl",
-         "behinds": "bh", "rebound_50s": "rb"}
+         "behinds": "bh", "rebound_50s": "rb", "goal_assists": "ga",
+         "marks_inside_50": "mi"}
 
 
 def main() -> None:
