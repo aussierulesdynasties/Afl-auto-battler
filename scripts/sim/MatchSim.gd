@@ -1909,7 +1909,7 @@ func _award_context_free(receiving_side: int, mark_fp: float, offender, recipien
 	_p(offender, "frees_against")
 	_t(receiving_side, "free_" + cause)
 	var who := GameDB.player_display_name(recipient) if recipient != null else "the opposition"
-	_emit("free", receiving_side, mark_fp, recipient, "%s — free kick to %s" % [label, who])
+	_emit("free", receiving_side, mark_fp, recipient, "%s · free kick to %s" % [label, who])
 	_free_taker = {"side": receiving_side, "id": "" if recipient == null else str(recipient.get("id", ""))}
 	var ev: Dictionary = events[events.size() - 1]
 	ev["free_cause"] = cause
@@ -3283,7 +3283,7 @@ func _boundary_exit(side: int, cross_fp: float, carrier, disposal_kind: String,
 	var kind := "out_on_full" if out_on_full else "last_disposal"
 	var who := GameDB.player_display_name(recipient) if recipient != null else "the opposition"
 	var why := "Out on the full" if out_on_full else "Last disposal out"
-	_emit(kind, opp, cross_fp, recipient, "%s - free kick to %s" % [why, who])
+	_emit(kind, opp, cross_fp, recipient, "%s · free kick to %s" % [why, who])
 	var fev: Dictionary = events[events.size() - 1]
 	fev["against_id"] = "" if carrier == null else str(carrier.get("id", ""))
 	fev["against_name"] = "" if carrier == null else GameDB.player_display_name(carrier)
@@ -4616,7 +4616,7 @@ func end_quarter() -> Dictionary:
 		"behinds": [behinds(0), behinds(1)],
 		"impact": impact.duplicate(true),
 	})
-	_emit("quarter", -1, fp, null, "End of quarter %d - %s %d.%d (%d) | %s %d.%d (%d)" % [
+	_emit("quarter", -1, fp, null, "End of Q%d · %s %d.%d (%d) · %s %d.%d (%d)" % [
 		quarter, squads[0].name, goals(0), behinds(0), score(0),
 		squads[1].name, goals(1), behinds(1), score(1)])
 	current_quarter += 1
@@ -4630,7 +4630,7 @@ func end_quarter() -> Dictionary:
 		if needs_extra_time():
 			# No siren: the pitch keeps going into extra time.
 			_emit("quarter", -1, 0.0, null,
-					"Scores level at full time - we are going to extra time!")
+					"Scores level at full time · we are going to extra time!")
 		else:
 			_emit_full_time("Full time")
 	return result()
@@ -6220,6 +6220,9 @@ func resolve_moment(choice: int) -> Dictionary:
 		"tired":
 			# Both answers hold to the break (the siren in the last quarter).
 			var star_id := str(m["player_id"])
+			var star_name := GameDB.player_display_name(_on_ground(side, star_id))
+			if star_name == "":
+				star_name = "The player"
 			m["disp_at"] = {star_id: float((player_stats.get(star_id, {}) as Dictionary).get("disposals", 0.0))}
 			if key == "rest":
 				var gi := -1
@@ -6239,13 +6242,13 @@ func resolve_moment(choice: int) -> Dictionary:
 					_held[star_id] = "rest"
 					m["on_id"] = on_id
 					m["disp_at"][on_id] = float((player_stats.get(on_id, {}) as Dictionary).get("disposals", 0.0))
-					outcome = "%s comes on; he sits out %s." % [GameDB.player_display_name(_on_ground(side, on_id)),
+					outcome = "%s comes on; %s sits out %s." % [GameDB.player_display_name(_on_ground(side, on_id)), star_name,
 							"the rest of the match" if current_quarter >= 4 else "the rest of the quarter"]
 				else:
 					outcome = "No one on the bench to bring on."
 			else:
 				_held[star_id] = "keep"
-				outcome = "He stays out there to the %s." % ("final siren" if current_quarter >= 4 else "break")
+				outcome = "%s stays out there to the %s." % [star_name, "final siren" if current_quarter >= 4 else "break"]
 		"hot":
 			if key == "tag":
 				var t: Dictionary = (tactics[side] as Dictionary).duplicate()
@@ -6253,7 +6256,7 @@ func resolve_moment(choice: int) -> Dictionary:
 				tactics[side] = t
 				outcome = "Tag on. We can call it off at the break."
 			else:
-				outcome = "Structure unchanged."
+				outcome = "We leave the set-up as it is."
 		"momentum", "bounce":
 			if BURSTS.has(key):
 				_set_burst(side, key)
