@@ -66,7 +66,7 @@ def norm(s):
 
 def load_list():
     with open(os.path.join(LEG, "2020s", "lists.csv"), newline="", encoding="utf-8") as fh:
-        rows = [r for r in csv.DictReader(fh) if int(r["year"]) == YEAR]
+        rows = B.with_heights([r for r in csv.DictReader(fh) if int(r["year"]) == YEAR])
     # A player with no number takes a free one from 60 up: the game keys a
     # player on club + number.
     used = defaultdict(set)
@@ -178,7 +178,7 @@ def build(by_year, rated, lists):
         if row_ds and row_ds[1] > 0:
             cells = B.stat_cells(row_ds[2])
             players.append(dict(cells, club=club, num=L["num"], last=L["last"], first=L["first"],
-                                src=str(DATA_SEASON), real_pos=L.get("position", ""), dob=L["dob"],
+                                src=str(DATA_SEASON), real_pos=L.get("position", "") or B.pos_cell(pid, DATA_SEASON), dob=L["dob"],
                                 age=age_at(L["dob"]), height_cm=L["height_cm"], weight_kg=L["weight_kg"],
                                 debut=debut, height_source="draftguru" if L["height_cm"] else ""))
             history.append({"club": club, "num": L["num"],
@@ -267,7 +267,7 @@ def rate_file(path):
     hp = []
     with open(path, newline="", encoding="utf-8") as fh:
         for r in csv.DictReader(fh):
-            e = {("one_pct" if k == "onepct" else "pct_played" if k == "pctp" else k): float(r[k] or 0)
+            e = {("one_pct" if k == "onepct" else "pct_played" if k == "pctp" else k): (r[k] if r[k] == "" else float(r[k]))
                  for k in B.ENRICHED[4:28]}
             hp.append(B.harness_player({**e, "first": r["first"], "last": r["last"]}, r["club"], r["num"]))
     return hp
@@ -275,6 +275,7 @@ def rate_file(path):
 
 def shape(hp, fit):
     H.ERA_ANCHORS.clear()
+    H.set_unrecorded(B.unrecorded_in(hp))
     H.derive_ratings(hp)
     if fit:
         H.fit_era_anchors(hp)
@@ -366,11 +367,11 @@ def last_listed():
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--cache", default=CACHE, help="tools/legacy_2020s/fetch.py's cache (Wikipedia's 2020 season page)")
+    ap.add_argument("--no-staff", action="store_true", help="keep the staff files (no cache needed)")
     ap.add_argument("--report", action="store_true")
     a = ap.parse_args()
     by_year = B.load_seasons()
-    model = B.fit_model(by_year)
-    rated = B.rate_seasons(by_year, model)
+    rated = B.rate_seasons(by_year)
     lists = load_list()
     print("AFL Tables ids matched by name: %d" % fill_ids(lists, by_year))
     players, history, additions, add_stats, list_types = build(by_year, rated, lists)
@@ -390,12 +391,13 @@ def main():
           % (gone.count(""), len(gone) - gone.count("")))
     print("players %d, additions %d (%d with an earlier season), rookie/cat B who played %d"
           % (len(players), len(additions), len(add_stats), len(list_types)))
-    coaches, captains = build_staff(a.cache, lists)
-    B.write(os.path.join(STAFF_DIR, "coaches_2020.csv"), ["club", "role", "name", "note", "source_url", "checked"],
-            coaches)
-    B.write(os.path.join(STAFF_DIR, "captains_2020.csv"),
-            ["club", "role", "first", "last", "draftguru_id", "source_url", "checked"], captains)
-    print("coaches %d, leaders %d" % (len(coaches), len(captains)))
+    if not a.no_staff:
+        coaches, captains = build_staff(a.cache, lists)
+        B.write(os.path.join(STAFF_DIR, "coaches_2020.csv"), ["club", "role", "name", "note", "source_url", "checked"],
+                coaches)
+        B.write(os.path.join(STAFF_DIR, "captains_2020.csv"),
+                ["club", "role", "first", "last", "draftguru_id", "source_url", "checked"], captains)
+        print("coaches %d, leaders %d" % (len(coaches), len(captains)))
     if a.report:
         path = os.path.join(ROOT, "docs", "research", "LEGACY_ERA_REPORT_2020.md")
         with open(path, "w", newline="\n", encoding="utf-8") as fh:
