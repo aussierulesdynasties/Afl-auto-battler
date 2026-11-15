@@ -17,3 +17,10 @@ with tools/oval3d/export_sf_hair_glb.py, export_mh_hair_glb.py and merge_hair_gl
 2. afro, curly_medium, messy_medium, short_crop, side_part, swept_back, textured_short
 
    MakeHuman system assets (via MPFB), CC0 1.0. No attribution required.
+
+3. short_back_sides, skin_fade, middle_part, surfer_waves, crew_classic, curly_taper, cornrows,
+   short_afro, side_part_classic, french_crop
+
+   Made for this game in Tripo Studio on the project's own account (2026-11-16). Changes: fitted
+   to our head (tools/oval3d/export_tripo_hair_glb.py), stands and mannequins cut away,
+   decimated, texture greyed for tinting.

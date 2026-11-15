@@ -79,7 +79,10 @@ const HAIR_STYLES := ["bald", "buzz", "short_crop", "crew", "side_part", "textur
 		"afro", "long", "tied_back", "dreadlocks",
 		# The 3D oval's downloaded cuts (director 2026-11-15, "all"): added at the end, ids are saves.
 		"fringe", "spiked", "short_spikes", "twists", "quiff", "slicked_side", "short_quiff", "wavy",
-		"tight_curls", "shaggy", "surfer", "high_top", "faux_hawk", "undercut", "shoulder_length"]
+		"tight_curls", "shaggy", "surfer", "high_top", "faux_hawk", "undercut", "shoulder_length",
+		# Everyday Aussie cuts made in Tripo Studio (director 2026-11-16, "All 14").
+		"short_back_sides", "skin_fade", "middle_part", "surfer_waves",
+		"crew_classic", "curly_taper", "cornrows", "short_afro", "side_part_classic", "french_crop"]
 const BEARDS := ["clean", "stubble_light", "stubble_heavy", "moustache", "short_beard",
 		"full_beard", "goatee", "beard_moustache"]
 const BOOTS := ["classic", "modern"]
@@ -97,7 +100,12 @@ const BASE_LOOK := {"hair_style": "short_crop", "beard": "clean", "beard_colour"
 ## How often generated players have each, so a league doesn't look uniform.
 const HAIR_STYLE_MIX := {"bald": 4.0, "buzz": 12.0, "short_crop": 22.0, "crew": 10.0, "side_part": 6.0,
 		"textured_short": 12.0, "messy_medium": 8.0, "swept_back": 5.0, "mullet": 6.0, "mullet_long": 2.0,
-		"curly_short": 5.0, "curly_medium": 3.0, "afro": 1.5, "long": 2.0, "tied_back": 1.5}
+		"curly_short": 5.0, "curly_medium": 3.0, "afro": 1.5, "long": 2.0, "tied_back": 1.5,
+		# The everyday Tripo cuts (director 2026-11-16, "Yes, add them"): fades and short back and
+		# sides are what most AFL players wear; buns, braids and longer cuts are the few.
+		"short_back_sides": 8.0, "skin_fade": 8.0, "crew_classic": 5.0, "french_crop": 5.0,
+		"middle_part": 3.0, "side_part_classic": 3.0, "surfer_waves": 3.0,
+		"curly_taper": 3.0, "short_afro": 1.5, "cornrows": 1.0}
 const BEARD_MIX := {"clean": 46.0, "stubble_light": 18.0, "stubble_heavy": 12.0, "moustache": 4.0,
 		"short_beard": 9.0, "full_beard": 5.0, "goatee": 2.0, "beard_moustache": 4.0}
 
