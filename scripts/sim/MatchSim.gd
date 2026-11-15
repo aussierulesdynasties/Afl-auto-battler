@@ -1109,7 +1109,7 @@ static func cost_scale(sq: Squad, plan: String) -> float:
 ## The share of a press's extra bite Controlled Tempo takes out with ordinary
 ## ball users or better (bug bash 5, G3: all of it made the counter three
 ## times any other).
-const CONTROLLED_HOLD := 0.5
+const CONTROLLED_HOLD := 0.4
 ## Attack Corridor into a press: the extra pressure its runners meet.
 const CORRIDOR_PRESSED := 1.10
 ## ... and the share of its shots' edge it keeps.
