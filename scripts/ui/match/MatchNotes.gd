@@ -106,7 +106,8 @@ static func feed_line(ev: Dictionary, home: String, away: String) -> Dictionary:
 		"quarter":
 			# The last quarter's siren: the "final" line says full time with the
 			# result, so it is not called twice (bug bash 4).
-			if str(ev.get("text", "")).begins_with("End of quarter") and int(ev.get("q", 1)) == 4:
+			# The sim writes "End of Q4 · ..." (copy voice pass 3, #1613).
+			if str(ev.get("text", "")).begins_with("End of Q") and int(ev.get("q", 1)) == 4:
 				return {}
 			return {"text": _break_words(ev, home, away), "tier": "break"}
 	return {}

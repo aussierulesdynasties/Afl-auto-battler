@@ -686,11 +686,13 @@ func _test_coach_descriptions(sz: Vector2i) -> void:
 		_check(w == "", "A finger picks the %s pep talk (%s: %s)" % [k, tag, w])
 		await _settle()
 		var note: Control = m.find_child("PepNote", true, false)
-		# Gain and Cost, sized (M3, director 2026-11-10), replaced the old words.
+		# Gain and Cost, sized (M3, director 2026-11-10), replaced the old words;
+		# each reads as one line, its parts joined with " · " (copy voice, #1614).
+		var MS = load("res://scripts/ui/MatchScene.gd")
 		var gc: Array = load("res://scripts/sim/GateOdds.gd").pep_texts(k, _state.pending_sim.fire_up_contest(int(m.get("_my_side"))))
 		_check(note != null and note.is_visible_in_tree() and note.find_child("PepGain", true, false) != null
 				and note.find_child("PepCost", true, false) != null
-				and _flat(_text(note)) == _flat("Gain: %s\nCost: %s" % [gc[0], gc[1]]),
+				and _flat(_text(note)) == _flat("Gain: %s\nCost: %s" % [MS._break_line(str(gc[0])), MS._break_line(str(gc[1]))]),
 				"The %s pep talk shows its own gain and cost (%s: %s)" % [k, tag, _text(note) if note else "-"])
 		pep_seen[_flat(_text(note)) if note != null else ""] = true
 	_check(pep_seen.size() == 4, "Each pep talk has its own words (%s)" % tag)
