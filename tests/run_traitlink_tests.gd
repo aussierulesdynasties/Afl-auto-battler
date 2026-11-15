@@ -195,7 +195,7 @@ func _test_line_flow(sz: Vector2i) -> void:
 		var all := ""
 		for c in sheet.find_children("*", "Label", true, false):
 			all += (c as Label).text + "\n"
-		_check(all.contains("Engine room") and all.contains("+5% stoppage wins."), "%s: it says what it does" % tag)
+		_check(all.contains("Engine room") and all.contains("+13% stoppage wins."), "%s: it says what it does" % tag)
 		_check(all.contains(Traits.requirement_text("engine_room")), "%s: it says what it needs" % tag)
 		_router.handle_back()
 		await _settle()
