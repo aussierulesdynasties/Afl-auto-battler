@@ -4133,7 +4133,7 @@ func _crumb(side: int, fp: float) -> Dictionary:
 ## by how he has it (a mark, the ball off the deck, a lead), before his
 ## Creating (x0.6 at 0 to x1.4 at 100). Tuned so goal assists come to real
 ## AFL 2026: 9.49 a team a game, 74% of goals (afl_team_rates.json).
-const I50_GIVE := {"mark": 0.10, "ground": 0.45, "lead": 0.30}
+const I50_GIVE := {"mark": 0.13, "ground": 0.585, "lead": 0.39}
 ## A ball given off off the deck goes by hand this often; from a mark, by foot.
 const I50_HAND_SHARE := 0.70
 ## How often the pass reaches him, at a 50 kick against a 50 defence.
