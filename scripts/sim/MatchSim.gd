@@ -1675,12 +1675,18 @@ func _tactic_player_mult(side: int, p: Dictionary, purpose: String, ctx: Diction
 	# curve fades him back toward a low-30s disposal game.
 	if focused:
 		out *= _focus_mult(slot, purpose, str(ctx.get("zone", "")))
+	# Ball magnet (and the wet-weather player in the wet) wins more of the
+	# ball: a bigger share, and the usage curve fades him that much later,
+	# so the gain survives a big game (bug bash 5: a pick weight alone was
+	# cancelled by the curve).
+	var reach := 1.0
 	if carrying and _trait(p, "ball_magnet"):
-		out *= 1.10
+		reach *= BALL_MAGNET
 	if carrying and weather == "wet" and _trait(p, "wet_weather"):
-		out *= Traits.WET_BALL
+		reach *= Traits.WET_BALL
+	out *= reach
 	if purpose == "clearance" and _trait(p, "bull"):
-		out *= 1.15
+		out *= BULL_CLEARANCE
 	# A Crumber lives at the feet of the pack: he is there when it spills.
 	if purpose == "crumb" and _trait(p, "crumber"):
 		out *= CRUMBER_AT_FEET
@@ -1693,7 +1699,7 @@ func _tactic_player_mult(side: int, p: Dictionary, purpose: String, ctx: Diction
 	if id == str(ctx.get("minder", "")) and purpose in ["shooter", "aerial_target", "crumb", "carrier"]:
 		out *= MINDER_INVOLVE
 	if carrying:
-		out *= _usage_mult(p, focused)
+		out *= _usage_mult(p, focused, reach)
 	return out
 
 
@@ -1729,21 +1735,23 @@ const USAGE_START := 18.0
 const USAGE_START_FOCUSED := 21.0
 const USAGE_WIDTH := 6.4
 const USAGE_WIDTH_FOCUSED := 5.4
+## Ball magnet's share of the ball (Traits "ball_magnet"), on the pick and the curve.
+const BALL_MAGNET := 1.10
 
 
 ## Soft possession cap. Team disposal volume is unchanged — this only stops one
 ## player absorbing every chain once they have already had a huge game.
 ## Must match tools/sim_harness.py::usage_multiplier (the unfocused curve).
-func _usage_mult(p: Dictionary, focused: bool) -> float:
+func _usage_mult(p: Dictionary, focused: bool, reach := 1.0) -> float:
 	var d := 0.0
 	var id := str(p["id"])
 	if player_stats.has(id):
 		d = float((player_stats[id] as Dictionary).get("disposals", 0.0))
-	var start := USAGE_START_FOCUSED if focused else USAGE_START
+	var start := (USAGE_START_FOCUSED if focused else USAGE_START) * reach
 	if d <= start:
 		return 1.0
 	var over := d - start
-	var width := USAGE_WIDTH_FOCUSED if focused else USAGE_WIDTH
+	var width := (USAGE_WIDTH_FOCUSED if focused else USAGE_WIDTH) * reach
 	return maxf(0.02, exp(-(over * over) / (width * width)))
 
 
@@ -1986,7 +1994,7 @@ func _high_contact_free(tackler) -> bool:
 	var discipline := _a(tackler, "discipline")
 	var p := HIGH_CONTACT_BASE * (1.35 - 0.70 * discipline / 100.0)
 	if _trait(tackler, "hothead"):
-		p *= 1.45
+		p *= HOTHEAD_ERRORS
 	var era := _era("free_rate")
 	return free_rng.randf() < clampf(p * era, 0.006, 0.045 * era)
 
@@ -2000,6 +2008,9 @@ func _holding_ball_free(carrier, touches: int) -> bool:
 	var p := HTB_PRIOR if touches > 1 else HTB_NO_PRIOR
 	p *= 1.18 - 0.30 * _a(carrier, "contested") / 100.0
 	p *= 1.12 - 0.24 * _a(carrier, "disposal") / 100.0
+	# A Hothead fights the tackle instead of getting rid of it.
+	if _trait(carrier, "hothead"):
+		p *= HOTHEAD_ERRORS
 	var era := _era("free_rate")
 	return free_rng.randf() < clampf(p * era, 0.05, 0.28 * era)
 
@@ -2012,9 +2023,9 @@ func _marking_free(side: int, attacker, defender) -> Dictionary:
 	var def_p := MARK_FREE_BASE * (1.35 - 0.65 * _a(defender, "discipline") / 100.0)
 	var att_p := MARK_FREE_BASE * 0.70 * (1.35 - 0.65 * _a(attacker, "discipline") / 100.0)
 	if _trait(defender, "hothead"):
-		def_p *= 1.35
+		def_p *= HOTHEAD_ERRORS
 	if _trait(attacker, "hothead"):
-		att_p *= 1.35
+		att_p *= HOTHEAD_ERRORS
 	var era := _era("free_rate")
 	def_p *= era
 	att_p *= era
@@ -2059,7 +2070,7 @@ func _chain_free_cause(side: int, err, recipient, start_fp: float, end_fp: float
 	var f50 := float(Ratings.T["forward50_line"])
 	var in_their_f50 := end_fp > f50 if opp == 0 else end_fp < -f50
 	if in_their_f50 and free_rng.randf() < F50_MARK_FREE_SHARE:
-		var dfd = _free_pick(squads[side].ground, "DEF", "discipline", true)
+		var dfd = _free_pick(squads[side].ground, "DEF", "discipline", true, true)
 		var fwd = _free_pick(squads[opp].ground, "FWD", "marking", false)
 		if dfd != null and fwd != null:
 			return {"cause": "marking", "label": "Holding in the marking contest",
@@ -2069,8 +2080,9 @@ func _chain_free_cause(side: int, err, recipient, start_fp: float, end_fp: float
 
 
 ## One of a side's on-ground players in `role`, weighted on `key` (low values
-## weigh more when `low`), drawn from free_rng. null with nobody in the role.
-func _free_pick(ground: Array, role: String, key: String, low: bool):
+## weigh more when `low`; the `offender` of a free weighs a Hothead
+## HOTHEAD_ERRORS times), drawn from free_rng. null with nobody in the role.
+func _free_pick(ground: Array, role: String, key: String, low: bool, offender := false):
 	var group := []
 	var weights := []
 	var total := 0.0
@@ -2079,6 +2091,8 @@ func _free_pick(ground: Array, role: String, key: String, low: bool):
 			continue
 		var v := _a(p, key)
 		var w := maxf(1.0, (101.0 - v) if low else v)
+		if offender and _trait(p, "hothead"):
+			w *= HOTHEAD_ERRORS
 		group.append(p)
 		weights.append(w)
 		total += w
@@ -3141,6 +3155,26 @@ func _general_aerial_contest(side: int, mark_fp: float, carrier) -> Dictionary:
 	if not spoilt and roaming and _roam_spoil(roamer):
 		spoilt = true
 		defender = roamer
+	# An Interceptor who gets to it can hold it, as on a lead
+	# (_general_aerial): without this his extra spoils killed kicks he would
+	# have intercepted later (bug bash 5). Drawn only for an Interceptor.
+	if spoilt and zone_intercepts and _trait(defender, "interceptor") 			and aerial_rng.randf() < _tv("INTERCEPT_MARK", INTERCEPT_MARK) * (0.6 + 0.8 * _a(defender, "intercept") / 100.0) * _wx("aerial") * _gt(side, "icept"):
+		_intercept(opp, defender, false)
+		_won_back["marked"] = true
+		_t(opp, "marks")
+		_p(defender, "marks")
+		_t(opp, "intercept_marks")
+		_p(defender, "intercept_marks")
+		_emit("mark", opp, mark_fp, defender,
+				"%s intercepts it on the mark" % GameDB.player_display_name(defender))
+		var iev: Dictionary = events[events.size() - 1]
+		iev["general_play"] = true
+		iev["intercept"] = true
+		if roaming and defender == roamer:
+			_roam_note(roamer, target, true)
+		elif not roaming and not man.is_empty():
+			_log_duel(side, target, man, false, iev)
+		return {"outcome": "turnover", "fp": mark_fp, "actor": defender}
 	if spoilt:
 		_t(opp, "spoils")
 		_p(defender, "spoils")
@@ -3216,18 +3250,28 @@ const RUCK_WEIGHT := 0.24          # Squad.contest's ruck share
 const TAP_ADV_EDGE := 0.22
 const TAP_ADV_BASE := 0.40         # a league-average ruck's first taps to advantage
 const TAP_ADV_SLOPE := 0.004       # per ruck point above the league's 70
+## Ruck king: his share of the hit-outs, as a relative change (5% more).
+const RUCK_KING := 1.05
+## Contested bull: his pick for the clearance, and the stoppage edge each bull
+## in the side's midfield or ruck gives it, so the side wins the extra
+## clearances from the opposition (bug bash 5: the pick alone only moved the
+## credit between team-mates).
+const BULL_CLEARANCE := 1.15
+const BULL_STOPPAGE := 0.015
 var _tap := {}
 
 
 func _ruck_tap() -> void:
 	var T := _rates()
 	var ruck := [_contestant(squads[0]), _contestant(squads[1])]
-	var king := 0.0
-	if not (ruck[0] as Array).is_empty() and _trait(ruck[0][0], "ruck_king"):
-		king += 0.05
-	if not (ruck[1] as Array).is_empty() and _trait(ruck[1][0], "ruck_king"):
-		king -= 0.05
-	var share := clampf(0.5 + (_ruck_of(ruck[0]) - _ruck_of(ruck[1])) / 260.0 + king, 0.15, 0.85)
+	var king0 := not (ruck[0] as Array).is_empty() and _trait(ruck[0][0], "ruck_king")
+	var king1 := not (ruck[1] as Array).is_empty() and _trait(ruck[1][0], "ruck_king")
+	var share := clampf(0.5 + (_ruck_of(ruck[0]) - _ruck_of(ruck[1])) / 260.0, 0.15, 0.85)
+	# A Ruck king wins RUCK_KING times the hit-outs he would (two cancel out).
+	if king0 and not king1:
+		share = minf(share * RUCK_KING, 0.9)
+	elif king1 and not king0:
+		share = maxf(1.0 - (1.0 - share) * RUCK_KING, 0.1)
 	var hits := [0, 0]
 	var first := -1
 	for i in range(3):
@@ -3243,7 +3287,18 @@ func _ruck_tap() -> void:
 		adv = rng.randf() < clampf(TAP_ADV_BASE + TAP_ADV_SLOPE * (r - 70.0), 0.12, 0.6)
 		if adv:
 			edge = TAP_ADV_EDGE if first == 0 else -TAP_ADV_EDGE
+	# The bulls at the stoppage win the ball out of it for their side.
+	edge += BULL_STOPPAGE * float(_bulls(0) - _bulls(1))
 	_tap = {"side": first, "hits": hits, "adv": adv, "edge": edge}
+
+
+## Contested bulls on the ground in a side's midfield or ruck.
+func _bulls(side: int) -> int:
+	var n := 0
+	for p in (squads[side] as Squad).ground:
+		if str(p["role"]) in ["MID", "RUCK"] and _trait(p, "bull"):
+			n += 1
+	return n
 
 ## Returns the player credited with the clearance, or null.
 func _stoppage(side: int, opp: int, from_bounce: bool, in_f50 := false):
@@ -3716,6 +3771,9 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 						next_gain = "cp"  # a contested mark
 						continue
 					"free", "loose":
+						return aerial
+					"turnover":
+						_last_disp["end"] = "aerial"
 						return aerial
 
 		var boundary := _boundary_exit(side, fp, carrier, disposal_kind, rushed, marked)

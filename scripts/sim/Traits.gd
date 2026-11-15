@@ -17,40 +17,40 @@ const DEFS := {
 			"text": "Wins 10% more of the ball in general play.",
 			"scout": "Finds the footy all day."},
 	"bull": {"label": "Contested bull", "stat": "contested", "min": 84, "roles": ["MID", "RUCK"],
-			"text": "Wins 15% more clearances and keeps the ball when tackled more often.",
+			"text": "Wins 15% more clearances, and the side wins more of the stoppages: about BULLSIDE more clearances each. Keeps the ball when tackled 10% more often.",
 			"scout": "Wins it at the coalface and gets it out."},
 	"ruck_king": {"label": "Ruck king", "stat": "ruck", "min": 84, "roles": ["RUCK"],
-			"text": "Takes 5% more of the hit-outs.",
+			"text": "Wins 5% more of the hit-outs, and a hit-out to advantage helps the side win the clearance.",
 			"scout": "Dominates the hit-outs."},
 	"aerial": {"label": "Aerial threat", "stat": "marking", "min": 76, "roles": ["FWD"],
-			"text": "Marks 6% more of the forward-50 contests he leads to.",
+			"text": "Marks AERIAL% more often in marking contests all over the ground, on the lead and in a pack, and takes more spectacular marks.",
 			"scout": "A strong contested mark inside 50."},
 	"crumber": {"label": "Crumber", "stat": "goalkicking", "min": 55, "roles": ["FWD"], "small": true,
-			"text": "A small forward: twice as often the one at the fall of the ball, and kicks 12% more goals from ground balls.",
+			"text": "A small forward: twice as often the one at the fall of the ball, and 12% more likely to kick a goal from any shot that is not from a mark.",
 			"scout": "Lives at the feet of the pack."},
 	"sharpshooter": {"label": "Sharpshooter", "stat": "accuracy", "min": 71, "roles": [],
-			"text": "+6% goal chance on every shot.",
+			"text": "Every shot is 6% more likely to be a goal.",
 			"scout": "Reliable set shot."},
 	"playmaker": {"label": "Playmaker", "stat": "creating", "min": 75, "roles": [],
-			"text": "Shots from his inside-50 deliveries are 5% more likely to be goals.",
+			"text": "Shots from this player's inside-50 deliveries are 5% more likely to be goals.",
 			"scout": "Sets up goals with his ball use going inside 50."},
 	"interceptor": {"label": "Interceptor", "stat": "intercept", "min": 80, "roles": ["DEF"],
-			"text": "Spoils 5% more of the forward-50 contests he is in.",
+			"text": "Spoils INTSPOIL% more often and takes INTMARK% more intercept marks, in contests inside defensive 50 and on the opposition's leads. Drawn to the loose man's job.",
 			"scout": "Reads the play and cuts off forward entries."},
 	"lockdown": {"label": "Lockdown", "stat": "pressure", "min": 64, "roles": ["DEF", "MID"],
-			"text": "His opponent's shots are 4% less likely to be goals (a midfielder picks up their best midfielder).",
+			"text": "Shots by the player's opponent are 4% less likely to be goals: a defender's is the forward in the contest inside 50, a midfielder's is their best midfielder not already picked up.",
 			"scout": "Can shut down a dangerous opponent."},
 	"def_forward": {"label": "Defensive forward", "stat": "pressure", "min": 44, "roles": ["FWD"], "own_role": true,
-			"text": "Sent to their loose defender, he keeps him out of most contests (another forward follows him less well).",
+			"text": "Sent to their loose defender, keeps that player out of most contests (another forward sent does it less well).",
 			"scout": "Works up the ground and keeps a loose defender honest."},
 	"engine": {"label": "Engine", "stat": "durability", "min": 91, "roles": [],
 			"text": "Tires 25% slower.",
-			"scout": "Runs all day."},
+			"scout": "Plays big minutes and keeps going late."},
 	"big_game": {"label": "Big-game player", "stat": "star", "min": 60, "roles": [],
-			"text": "Lifts in the last quarter and in finals (+5% on every stat).",
+			"text": "In the last quarter and in finals, every rating plays 5% higher in the player's own contests (not the side's team ratings).",
 			"scout": "Lifts when it matters: last quarters and finals."},
 	"hothead": {"label": "Hothead", "stat": "discipline", "max": 20, "roles": [],
-			"text": "Gives away 50% more clangers and free kicks.",
+			"text": "Gives away 50% more clangers and free kicks, 65% more 50-metre penalties, and is 75% more likely to be reported, on heavier charges.",
 			"scout": "Gives away too many free kicks."},
 }
 
@@ -86,12 +86,12 @@ const SYNERGIES := {
 ## SYNERGIES order, that it completes, in his line for a line synergy. He never
 ## switches on two, and never one that needs more than the one slot.
 const EARNED := {
-	"unicorn": {"label": "Unicorn", "text": "Plays forward, midfield and back. On the ground he can fill one missing place in one synergy.",
+	"unicorn": {"label": "Unicorn", "text": "Plays forward, midfield and back. On the ground, fills one missing place in one synergy.",
 			"scout": "Can play anywhere on the ground."},
 	"fine_wine": {"label": "Fine Wine",
-			"text": "Ages three years slower: his decline starts three years later and is 30% gentler, and he retires up to three years later (40 at the latest).",
+			"text": "Ages three years slower: the decline starts three years later and is 30% gentler, and retirement comes up to three years later (40 at the latest).",
 			"scout": "Gets better with age.",
-			"earn": "Born with it, not trained: every real player who played 60 or more games in seasons he turned 32 or older, and about 1 draftee in 52."},
+			"earn": "Born with it, not trained: every real player with 60 or more games in seasons aged 32 or older, and about 1 draftee in 52."},
 }
 const UNICORN_LINES := ["FWD", "MID", "DEF"]
 
@@ -269,8 +269,9 @@ static func of(p: Dictionary) -> Array:
 		if not need_roles.is_empty():
 			var ok := false
 			# A forward's own job, not one he can also cover: a midfielder who
-			# also plays forward isn't a Defensive forward.
-			for r in ([str(p.get("role", ""))] if bool(d.get("own_role", false)) else roles):
+			# also plays forward isn't a Defensive forward, and nor is one
+			# picked in a forward slot on match day (the slot is "role" there).
+			for r in ([own_role(p)] if bool(d.get("own_role", false)) else roles):
 				if need_roles.has(r):
 					ok = true
 			if not ok:
@@ -297,6 +298,26 @@ static func of(p: Dictionary) -> Array:
 		out.append("fine_wine")
 	out.append_array(bad)
 	return out
+
+
+## His own position: the list's, kept through a match-day slot or a trial
+## (Ratings._for_slot, _with_trial set "own_role").
+static func own_role(p: Dictionary) -> String:
+	return str(p.get("own_role", p.get("role", "")))
+
+
+## Whether his positions let him earn trait `key` (Traits.of's rule; Training's
+## near list and stat focus use it): an "own_role" trait needs his own position.
+static func role_can_earn(p: Dictionary, key: String, roles: Array) -> bool:
+	var need_roles: Array = (DEFS[key] as Dictionary)["roles"]
+	if need_roles.is_empty():
+		return true
+	if bool((DEFS[key] as Dictionary).get("own_role", false)):
+		return need_roles.has(own_role(p))
+	for r in roles:
+		if need_roles.has(r):
+			return true
+	return false
 
 
 static func has(p: Dictionary, key: String) -> bool:
@@ -511,8 +532,7 @@ static func near(p: Dictionary) -> Array:
 		var d: Dictionary = DEFS[key]
 		if d.has("max") or have.has(key):
 			continue
-		var need_roles: Array = d["roles"]
-		if not need_roles.is_empty() and not (need_roles.has(roles[0]) or need_roles.has(roles[1])):
+		if not role_can_earn(p, key, roles):
 			continue
 		if bool(d.get("small", false)) and int(attr.get("marking", 0)) >= 52:
 			continue

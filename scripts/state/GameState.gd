@@ -7498,7 +7498,7 @@ func reserves_summary_line() -> String:
 func training_summary_line() -> String:
 	var auto: Dictionary = last_training_report.get("auto", {})
 	var rises: Array = auto.get("rises", [])
-	var traits: Array = auto.get("traits", [])
+	var traits: Array = auto.get("traits", []) + auto.get("lost", [])
 	if rises.is_empty() and traits.is_empty():
 		return ""
 	var bits: PackedStringArray = []
@@ -7518,6 +7518,9 @@ func training_unlock_line() -> String:
 	var bits: PackedStringArray = []
 	for t in auto.get("traits", []):
 		bits.append("%s unlocked %s." % [_short_name(str(t[0])), Traits.label(str(t[1]))])
+	for t in auto.get("lost", []):
+		bits.append("%s lost %s: five traits is the most a player carries." % [
+				_short_name(str(t[0])), Traits.label(str(t[1]))])
 	var at_pot: Array = auto.get("at_pot", [])
 	if at_pot.size() == 1:
 		bits.append("%s reached his potential." % _short_name(str(at_pot[0])))
@@ -13116,10 +13119,11 @@ func _closest_plan(p: Dictionary) -> String:
 
 ## Spend every list player's XP under his plan. Returns
 ## {"points", "players", "by_player": {id: {stat: points}}, and what it
-## changed: "rises": [[id, from, to]], "traits": [[id, trait]],
+## changed: "rises": [[id, from, to]], "traits": [[id, trait]], "lost":
+## [[id, trait]] (pushed out by the five-trait cap),
 ## "at_pot": [id]}.
 func apply_train_plans() -> Dictionary:
-	var out := {"points": 0, "players": 0, "by_player": {}, "rises": [], "traits": [], "at_pot": []}
+	var out := {"points": 0, "players": 0, "by_player": {}, "rises": [], "traits": [], "lost": [], "at_pot": []}
 	for p in my_list:
 		var ov := int(p.get("overall", 0))
 		var had: Array = Traits.of(p)
@@ -13138,9 +13142,14 @@ func apply_train_plans() -> Dictionary:
 			var pot := int(p.get("potential", 0))
 			if ov < pot and now >= pot:
 				(out["at_pot"] as Array).append(str(p["id"]))
-		for t in Traits.of(p):
+		var now_traits: Array = Traits.of(p)
+		for t in now_traits:
 			if not had.has(t) and not Traits.is_bad(t):
 				(out["traits"] as Array).append([str(p["id"]), t])
+		# A sixth good trait pushes out the one he clears by the least.
+		for t in had:
+			if not now_traits.has(t) and not Traits.is_bad(str(t)):
+				(out["lost"] as Array).append([str(p["id"]), t])
 	return out
 
 
@@ -13215,7 +13224,7 @@ func set_stat_focus(player_id: String, key: String) -> bool:
 ## role can earn from that stat that he does not have yet, {key, min, gap,
 ## crowded} ({} when none). "crowded" when he already carries MAX_GOOD (five)
 ## good traits, so a rival club's player aims at nothing more (Traits.of keeps
-## the five furthest past their lines). The screen never explains it.
+## the five furthest past their lines); Training says so when he is past the line.
 func focus_trait(p: Dictionary, stat: String) -> Dictionary:
 	if stat == "":
 		return {}
@@ -13230,8 +13239,7 @@ func focus_trait(p: Dictionary, stat: String) -> Dictionary:
 		var d: Dictionary = Traits.DEFS[key]
 		if d.has("max") or str(d["stat"]) != stat or have.has(key):
 			continue
-		var need_roles: Array = d["roles"]
-		if not need_roles.is_empty() and not (need_roles.has(roles[0]) or need_roles.has(roles[1])):
+		if not Traits.role_can_earn(p, str(key), roles):
 			continue
 		if bool(d.get("small", false)) and int(attr.get("marking", 0)) >= 52:
 			continue

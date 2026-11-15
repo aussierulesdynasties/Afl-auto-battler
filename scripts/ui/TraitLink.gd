@@ -53,7 +53,7 @@ static func earn_text(key: String) -> String:
 		return ""
 	var stat := GameState.train_stat_label(str(d["stat"]))
 	if d.has("max"):
-		return "He has it when %s is %d or lower." % [stat, int(d["max"])]
+		return "A player has it when %s is %d or lower." % [stat, int(d["max"])]
 	var who := ""
 	var roles: Array = d.get("roles", [])
 	if not roles.is_empty():
@@ -64,7 +64,11 @@ static func earn_text(key: String) -> String:
 		if bool(d.get("own_role", false)):
 			who += " by trade"
 	var small := " Only for a small player (Marking under 52)." if bool(d.get("small", false)) else ""
-	return "Earned at %s %d or better%s.%s" % [stat, int(d["min"]), who, small]
+	return "Earned at %s %d or better%s.%s %s" % [stat, int(d["min"]), who, small, CAP_TEXT]
+
+
+## The five-trait cap, on every earned trait's sheet (director, 2026-11-12).
+const CAP_TEXT := "A player carries up to five traits, the five cleared by the most: this one is lost when the stat drops below the line, or when a sixth trait clears its line by more."
 
 
 ## The sheet's words, top to bottom: [title, kind, effect, rule lines...].
