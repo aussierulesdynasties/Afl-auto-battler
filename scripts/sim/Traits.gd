@@ -35,7 +35,7 @@ const DEFS := {
 			"text": "Shots from this player's inside-50 deliveries are 5% more likely to be goals.",
 			"scout": "Sets up goals with clever ball use going inside 50."},
 	"interceptor": {"label": "Interceptor", "stat": "intercept", "min": 80, "roles": ["DEF"],
-			"text": "Spoils INTSPOIL% more often and takes INTMARK% more intercept marks, in contests inside defensive 50 and on the opposition's leads. Drawn to the loose man's job.",
+			"text": "Takes 30% more intercept marks, in contests inside defensive 50, on the opposition's leads and in general play: marks many of the balls another defender would only spoil. Drawn to the loose man's job.",
 			"scout": "Reads the play and cuts off forward entries."},
 	"lockdown": {"label": "Lockdown", "stat": "pressure", "min": 64, "roles": ["DEF", "MID"],
 			"text": "Shots by the player's opponent are 4% less likely to be goals: a defender's is the forward in the contest inside 50, a midfielder's is their best midfielder not already picked up.",

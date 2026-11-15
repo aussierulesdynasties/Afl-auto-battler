@@ -1135,7 +1135,7 @@ func _test_bash5_traits() -> void:
 	sim._traits[str(r0[0]["id"])] = []
 	sim._traits[str(r1[0]["id"])] = []
 	# Contested bull: each bull in the midfield or ruck swings the stoppage
-	# to his side, so the side wins more clearances, not only him.
+	# to the bull's side, so the side wins more clearances, not only the bull.
 	var mid := {}
 	for q in (sim.squads[0] as Squad).ground:
 		if str(q["role"]) == "MID":
@@ -1148,10 +1148,10 @@ func _test_bash5_traits() -> void:
 	if bool(sim._tap["adv"]):
 		adv = MatchSim.TAP_ADV_EDGE if int(sim._tap["side"]) == 0 else -MatchSim.TAP_ADV_EDGE
 	_check(is_equal_approx(float(sim._tap["edge"]) - adv, MatchSim.BULL_STOPPAGE),
-			"The bull's stoppage edge goes to his side (%.3f)" % (float(sim._tap["edge"]) - adv))
+			"The bull's stoppage edge goes to the bull's side (%.3f)" % (float(sim._tap["edge"]) - adv))
 	sim._tap = {}
 	sim._traits[str(mid["id"])] = []
-	# Hothead: holding the ball counts too, 50% more often.
+	# Hothead: holding the ball counts too, HOTHEAD_FREES times as often.
 	var carrier: Dictionary = (sim.squads[0] as Squad).ground[2]
 	var counts := [0, 0]
 	for hot in [0, 1]:
@@ -1161,7 +1161,7 @@ func _test_bash5_traits() -> void:
 			if sim._holding_ball_free(carrier, 1):
 				counts[hot] += 1
 	var ratio := float(counts[1]) / maxf(1.0, float(counts[0]))
-	_check(ratio > 1.35 and ratio < 1.65, "A Hothead is pinged for holding the ball about 50%% more (x%.2f)" % ratio)
+	_check(ratio > 1.55 and ratio < 1.95, "A Hothead is pinged for holding the ball HOTHEAD_FREES times as often (x%.2f)" % ratio)
 	sim._traits[str(carrier["id"])] = []
 	# Interceptor: a spoil in a general-play marking contest can be his
 	# intercept mark, so his extra spoils no longer cost him the ball.

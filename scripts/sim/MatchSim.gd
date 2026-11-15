@@ -1926,10 +1926,16 @@ func _contest_calls(side: int, stoppage: bool) -> float:
 	return b
 
 
-## Hothead (Traits): he gives away this many times his share of clangers,
-## on top of his teammates' (so the side gives away more clangers and free
-## kicks, not just him).
+## Hothead (Traits): the player gives away this many times their share of
+## clangers, on top of their teammates' (so the side gives away more clangers
+## and free kicks, not just the player).
 const HOTHEAD_ERRORS := 1.5
+## ...and this many times their chance of each free kick a temper gives away
+## (high contact, holding the ball, marking contests). Larger than
+## HOTHEAD_ERRORS because some frees against have nothing to do with temper
+## (out on the full, a ruck free paid to the side): measured to land the
+## copy's 50% more frees against (bug bash 5 audit: 1.5 gave +33%).
+const HOTHEAD_FREES := 1.75
 ## The benchmark clanger rate is real 2026 play, which already has its
 ## hotheads in it: the average 2026 side fields about two, which lifts its
 ## clangers by this much. The base rate is divided by it, so a disciplined
@@ -1996,7 +2002,7 @@ func _high_contact_free(tackler) -> bool:
 	var discipline := _a(tackler, "discipline")
 	var p := HIGH_CONTACT_BASE * (1.35 - 0.70 * discipline / 100.0)
 	if _trait(tackler, "hothead"):
-		p *= HOTHEAD_ERRORS
+		p *= HOTHEAD_FREES
 	var era := _era("free_rate")
 	return free_rng.randf() < clampf(p * era, 0.006, 0.045 * era)
 
@@ -2011,7 +2017,7 @@ func _holding_ball_free(carrier, touches: int) -> bool:
 	p *= 1.18 - 0.30 * _a(carrier, "contested") / 100.0
 	p *= 1.12 - 0.24 * _a(carrier, "disposal") / 100.0
 	# A Hothead fights the tackle instead of getting rid of it (the cap too).
-	var hot := HOTHEAD_ERRORS if _trait(carrier, "hothead") else 1.0
+	var hot := HOTHEAD_FREES if _trait(carrier, "hothead") else 1.0
 	p *= hot
 	var era := _era("free_rate")
 	return free_rng.randf() < clampf(p * era, 0.05, 0.28 * era * hot)
@@ -2025,9 +2031,9 @@ func _marking_free(side: int, attacker, defender) -> Dictionary:
 	var def_p := MARK_FREE_BASE * (1.35 - 0.65 * _a(defender, "discipline") / 100.0)
 	var att_p := MARK_FREE_BASE * 0.70 * (1.35 - 0.65 * _a(attacker, "discipline") / 100.0)
 	if _trait(defender, "hothead"):
-		def_p *= HOTHEAD_ERRORS
+		def_p *= HOTHEAD_FREES
 	if _trait(attacker, "hothead"):
-		att_p *= HOTHEAD_ERRORS
+		att_p *= HOTHEAD_FREES
 	var era := _era("free_rate")
 	def_p *= era
 	att_p *= era
@@ -2083,7 +2089,7 @@ func _chain_free_cause(side: int, err, recipient, start_fp: float, end_fp: float
 
 ## One of a side's on-ground players in `role`, weighted on `key` (low values
 ## weigh more when `low`; the `offender` of a free weighs a Hothead
-## HOTHEAD_ERRORS times), drawn from free_rng. null with nobody in the role.
+## HOTHEAD_FREES times), drawn from free_rng. null with nobody in the role.
 func _free_pick(ground: Array, role: String, key: String, low: bool, offender := false):
 	var group := []
 	var weights := []
@@ -2094,7 +2100,7 @@ func _free_pick(ground: Array, role: String, key: String, low: bool, offender :=
 		var v := _a(p, key)
 		var w := maxf(1.0, (101.0 - v) if low else v)
 		if offender and _trait(p, "hothead"):
-			w *= HOTHEAD_ERRORS
+			w *= HOTHEAD_FREES
 		group.append(p)
 		weights.append(w)
 		total += w

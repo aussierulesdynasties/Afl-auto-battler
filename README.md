@@ -333,7 +333,7 @@ A standout stat earns a trait. Each player has up to two good traits, plus Hothe
 | Crumber | 12% more likely to kick a goal from any shot not from a mark |
 | Sharpshooter | every shot 6% more likely to be a goal |
 | Playmaker | shots from the player's inside-50 deliveries 5% more likely to be goals |
-| Interceptor | 5% more spoils |
+| Interceptor | 30% more intercept marks, marking balls another defender would only spoil |
 | Lockdown | the opponent's shots 4% less likely to be goals |
 | Engine | tires 25% slower |
 | Big-game player | every rating 5% higher in the player's own contests in the last quarter and in finals |
