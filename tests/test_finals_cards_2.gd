@@ -319,7 +319,7 @@ func _test_fitness_debt() -> void:
 	_grand_final(4800, true, 10)
 	var card := GameState.story_card("gf_premiers")
 	var lines := " ".join(StoryEngine.stakes_lines(card["options"][0]["effects"], card["facts"]))
-	_check(lines.contains("starts next pre-season one week of running behind"), "B8 'Celebrate' says its cost: %s" % lines)
+	_check(lines.contains("Next pre-season, the list starts a week of running behind. A strong fitness base"), "B8 'Celebrate' says its cost: %s" % lines)
 	_play("gf_premiers", 0)
 	_check(GameState.preseason_run_debt == -1.0, "B8 'Celebrate': one week of running owed (%s)" % GameState.preseason_run_debt)
 	_check(GameState.save_career() and GameState.load_career() and GameState.preseason_run_debt == -1.0, "The debt survives a reload")

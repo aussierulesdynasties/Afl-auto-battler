@@ -441,7 +441,7 @@ func _test_event_tradeoffs() -> void:
 	kid["xp"] = 0
 	var kid_card := GameState.story_card("training_kid_pushing", kid)
 	var dev_lines := str(kid_card["options"][1]["detail"])
-	_check(dev_lines.contains("His opinion of you down") and dev_lines.contains("re-sign with you")
+	_check(dev_lines.contains("His opinion of you down") and dev_lines.contains("re-sign with us")
 			and not dev_lines.contains("misses this week's game"),
 			"A development week costs his opinion of you and says what it does to his re-signing (%s)" % dev_lines)
 	var opinion_was := GameState.opinion_of_you(str(kid["id"]))
