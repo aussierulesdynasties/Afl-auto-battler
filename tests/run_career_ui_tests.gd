@@ -1694,6 +1694,25 @@ func _run() -> void:
 
 
 ## The menu, a new career and the screens a coach meets, in order (the checks written in _run).
+## An answer's line on an event card: a Label, or a RichTextLabel when it names a player (NameInk).
+func _line_text(c: Control) -> String:
+	if c is RichTextLabel:
+		return (c as RichTextLabel).get_parsed_text()
+	return (c as Label).text if c is Label else "none"
+
+
+func _line_size(c: Control) -> int:
+	return c.get_theme_font_size("normal_font_size" if c is RichTextLabel else "font_size")
+
+
+func _line_ink(c: Control) -> Color:
+	return c.get_theme_color("default_color" if c is RichTextLabel else "font_color")
+
+
+func _line_font(c: Control) -> Font:
+	return c.get_theme_font("normal_font" if c is RichTextLabel else "font")
+
+
 func _test_menu_and_career() -> void:
 	_check(not bool(ProjectSettings.get_setting("application/config/quit_on_go_back", true)),
 			"Android back does not quit the app by default")
@@ -2465,25 +2484,26 @@ func _test_menu_and_career() -> void:
 	_router.go("hub")
 	await _settle()
 	var kid_card: Control = current_scene.find_child("WeekEvent", true, false)
-	var back_gain: Label = kid_card.find_child("EventGain_0_0", true, false) if kid_card != null else null
-	var back_cost: Label = kid_card.find_child("EventCost_0_0", true, false) if kid_card != null else null
-	var rest_gain: Label = kid_card.find_child("EventGain_0_1", true, false) if kid_card != null else null
-	var rest_cost: Label = kid_card.find_child("EventCost_0_1", true, false) if kid_card != null else null
+	var back_gain: Control = kid_card.find_child("EventGain_0_0", true, false) if kid_card != null else null
+	var back_cost: Control = kid_card.find_child("EventCost_0_0", true, false) if kid_card != null else null
+	var rest_gain: Control = kid_card.find_child("EventGain_0_1", true, false) if kid_card != null else null
+	var rest_cost: Control = kid_card.find_child("EventCost_0_1", true, false) if kid_card != null else null
 	var back_mark: Label = kid_card.find_child("EventGainMark_0_0", true, false) if kid_card != null else null
 	var cost_mark: Label = kid_card.find_child("EventCostMark_0_1", true, false) if kid_card != null else null
 	var rest_btn: Button = kid_card.find_child("Event_1", true, false) if kid_card != null else null
 	var same_style := true
 	for l in [back_gain, back_cost, rest_gain, rest_cost]:
-		if l == null or (l as Label).get_theme_font_size("font_size") < 14 or (l as Label).get_theme_color("font_color") != (back_gain as Label).get_theme_color("font_color") 				or (l as Label).get_theme_color("font_color").a < 0.99:
+		if l == null or _line_size(l) < 14 or _line_ink(l) != _line_ink(back_gain) or _line_ink(l).a < 0.99:
 			same_style = false
 	_check(kid_card != null and kid_card.find_child("EventStakes_0", true, false) == null
 			and back_mark != null and back_mark.text == "Gain:" and cost_mark != null and cost_mark.text == "Cost:"
-			and cost_mark.get_theme_font("font") != rest_cost.get_theme_font("font") and cost_mark.get_theme_color("font_color") == load("res://scripts/ui/UiKit.gd").label_ink()
-			and back_gain != null and back_cost != null and back_cost.text.contains("promise breaks")
-			and rest_gain != null and rest_cost != null and rest_cost.text.contains("'s opinion of you down") and not rest_cost.text.begins_with("His ") and rest_cost.text.contains("re-sign with us")
+			and cost_mark.get_theme_font("font") != _line_font(rest_cost) and cost_mark.get_theme_color("font_color") == load("res://scripts/ui/UiKit.gd").label_ink()
+			and back_gain != null and back_cost != null and _line_text(back_cost).contains("promise breaks")
+			and rest_gain != null and rest_cost != null and _line_text(rest_cost).contains(" opinion of you down") and not _line_text(rest_cost).begins_with("His ")
+			and _line_text(rest_cost).contains("re-sign with us") and not _line_text(rest_cost).contains("{name_s}")
 			and same_style and rest_btn != null and rest_cost.get_global_rect().position.y >= rest_gain.get_global_rect().end.y - 1.0
 			and rest_gain.get_global_rect().position.y >= rest_btn.get_global_rect().end.y - 1.0,
-			"Each answer says its gains then its costs under its own button, in the same full-strength text (%s / %s)" % [back_cost.text if back_cost != null else "none", rest_cost.text if rest_cost != null else "none"])
+			"Each answer says its gains then its costs under its own button, in the same full-strength text (%s / %s)" % [_line_text(back_cost), _line_text(rest_cost)])
 	var first_btn: Button = kid_card.find_child("Event_0", true, false) if kid_card != null else null
 	_check(first_btn != null and rest_btn != null and back_gain != null and back_cost != null
 			and rest_btn.get_global_rect().position.y - back_cost.get_global_rect().end.y
