@@ -27,7 +27,6 @@ ALLOW = {
     # this question"); these lines name the button, so the word stays.
     "scripts/sim/SkipOrders.gd": [2, "auto-pick", "kept: names the Auto-pick button (director, 2026-11-12)"],
 
-    "scripts/state/GameState.gd": [1, "projection", "row 138"],
     "scripts/ui/FirstVisitIntro.gd": [1, "auto-pick", "kept: names the Auto-pick button (director, 2026-11-12)"],
     "scripts/ui/SelectionScene.gd": [5, "auto-pick", "kept: the Auto-pick button and the lines that name it (director, 2026-11-12)"],
 }
@@ -355,6 +354,27 @@ PASSES = [(HUB, "copy voice pass 2, hub", HUB_NEW, HUB_OLD)] + [
 LITERAL = re.compile(r'"([^"\n]*)"')
 ## Copy voice pass 10 (stats and menus) joins the pinned passes on its own line.
 PASSES += [(path, "copy voice pass 10, stats and menus", v[0], v[1]) for path, v in STATS_PASS.items()]
+
+## The profile pass (copy voice pass 9): per file, the rewritten lines of the player profile and the
+## lines they replaced. Where he stands against his POT says "potential", never "projection".
+PROFILE_PASS = {
+    "scripts/ui/PlayerSheet.gd": [[
+        "'s opinion of you sets how much a talk lifts him.\\nUnder %d, he may refuse to re-sign with us.",
+        "Each point under adds %d%% to the odds he refuses.",
+        "Out for %s with a %s injury.", "Injured. Out for %s.", "\"\\n\".join(state)",
+        "Development focus: %s", "He runs %.1f km a game this season.",
+        "Only %d of his attributes are rated.", "Nickname, or leave it blank",
+    ], ["The higher his opinion of you", "re-sign with you", "Injured: out", "\"Development: %s",
+        "This season: %.1f km", "rated on record", "blank for none"]],
+    "scripts/state/GameState.gd": [[
+        "\"Near his potential\"", "\"At his potential\"", "\"Beyond his potential\"",
+    ], ["\"Near his projected peak\"", "\"At his projected peak\"", "\"Past his projection\""]],
+    "scripts/sim/Trust.gd": [[
+        "%s's opinion of you: %d out of 100", "The player's opinion of you: %d out of 100",
+    ], ["Opinion of you %d/100", "Opinion of you %d out of 100", "His opinion of you: %d"]],
+}
+## Copy voice pass 9 (the profile) joins the pinned passes on its own line.
+PASSES += [(path, "copy voice pass 9, profile", v[0], v[1]) for path, v in PROFILE_PASS.items()]
 
 ## The gates pass (copy voice pass 1): per file, the rewritten lines and the lines they replaced.
 ## One effect a line on the call cards (style guide 5.1): a gate's second effect starts its own line

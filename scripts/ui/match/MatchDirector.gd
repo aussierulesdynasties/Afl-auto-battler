@@ -332,6 +332,18 @@ func idle() -> bool:
 	return _beat.is_empty() and cursor >= events.size()
 
 
+## A tackle being run down right now (the chase before the contact), for the 3D figures to
+## start the tackle clip a moment early: {who, victim, left} with `left` the director seconds
+## before the chase gives up and the tackle lands anyway; {} otherwise. Read-only.
+func tackle_ahead() -> Dictionary:
+	if str(_beat.get("kind", "")) != "tackle" or _pi >= _phases.size():
+		return {}
+	var p: Dictionary = _phases[_pi]
+	if str(p.get("t", "")) != "chase" or not p.get("_entered", false):
+		return {}
+	return {"who": int(p["who"]), "victim": int(p["victim"]), "left": maxf(0.0, float(p["max"]) - _pt)}
+
+
 func _tick(h: float) -> void:
 	time += h
 	var guard := 0
@@ -1047,6 +1059,13 @@ func _clanger_phases(k: int) -> Array:
 			# An error logged before the kick-in: shown at the goal square.
 			return _kickin_phases(k, -1, loc) + [{"t": "emit", "log": true}]
 	var d := (ball["pos"] as Vector2).distance_to(loc)
+	if out.is_empty() and d > 1.0 and str(ball["mode"]) in ["dead", "loose"] and e >= 0:
+		# Nobody has it (the tackled man is on the deck with it): nobody kicks
+		# it either. It spills out of the pack toward him and he runs onto it
+		# where it lies (3d view 2, 2026-11-15: the ball flew 9 m up off a
+		# falling pair with no kicker).
+		return [{"t": "spill", "toward": e, "dur": 0.4}, {"t": "collect", "who": e},
+				{"t": "emit", "log": true}, {"t": "fumble", "dur": 0.35}]
 	if out.is_empty() and d > 1.0:
 		var pk := _prev_real(k)
 		var hb := pk >= 0 and str((events[pk] as Dictionary).get("kind", "")) == "handball"
@@ -1269,6 +1288,8 @@ func _scrap(p: Dictionary, who: int) -> void:
 
 ## The longest a player is left collecting before the ball is his.
 const COLLECT_LIMIT := 6.0
+## How far a ball nobody holds spills out of a tackle toward the man who gathers it.
+const SPILL_METRES := 3.0
 ## How far behind the kicker an entry may land to stand a set-shot mark on its
 ## band's spot (T2.24); further back, it lands where the log has it.
 const SET_SPOT_BACK := 20.0
@@ -1634,6 +1655,17 @@ func _enter(p: Dictionary) -> void:
 				if not _busy.has(int(t["id"])):
 					MatchMotion.set_goal(t, (t["pos"] as Vector2) + (t["vel"] as Vector2) * 0.3, 0.1)
 					_busy[int(t["id"])] = true
+		"spill":
+			# Out of the tackle, along the turf: at most SPILL_METRES, never past
+			# half the gap to the man who gathers it.
+			var to2: Vector2 = (tokens[int(p["toward"])]["pos"] as Vector2) - (ball["pos"] as Vector2)
+			var step2 := minf(SPILL_METRES, to2.length() * 0.5)
+			ball["mode"] = "loose"
+			ball["holder"] = -1
+			# A loose ball decays at exp(-3t): a push of 3v travels about v metres.
+			ball["vel"] = to2.normalized() * step2 * 3.0 if to2.length() > 0.01 else Vector2.ZERO
+			MatchMotion.set_goal(tokens[int(p["toward"])], ball["pos"] + (ball["vel"] as Vector2) / 3.0, 1.0, true)
+			_busy[int(p["toward"])] = true
 		"fumble":
 			ball["mode"] = "loose"
 			ball["holder"] = -1
