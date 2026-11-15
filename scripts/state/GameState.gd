@@ -1233,8 +1233,9 @@ func _restore_career(state: Dictionary) -> bool:
 	salary_cap = int(state.get("salary_cap", 0))
 	free_agents = state.get("free_agents", [])
 	offseason_year = int(state.get("offseason_year", 0))
-	# A save from an open off-season before its cap was next season's.
-	if salary_cap > 0 and offseason_year > 0 and offseason_year == season_year:
+	# A save from an open off-season before its cap was next season's: its cap
+	# is still this season's own (any other cap was set on purpose and stays).
+	if offseason_year > 0 and offseason_year == season_year and salary_cap == Contracts.salary_cap_for_year(season_year):
 		salary_cap = Contracts.salary_cap_for_year(season_year + 1)
 	fa_closed_year = int(state.get("fa_closed_year", 0))
 	compensation = state.get("compensation", [])
