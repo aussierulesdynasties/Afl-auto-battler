@@ -5693,6 +5693,7 @@ func _swap(side: int, gi: int, bi: int) -> void:
 		"q": current_quarter, "min": current_minute, "kind": "sub", "side": side, "fp": fp,
 		"name": GameDB.player_display_name(on_slot), "player_id": str(on["id"]),
 		"num": int(on["num"]), "off_num": int(off["num"]), "club": _side_club(side, on),
+		"off_name": GameDB.player_display_name(off),
 		"text": "Interchange: %s on for %s" % [GameDB.player_display_name(on_slot),
 				GameDB.player_display_name(off)],
 		"score": [score(0), score(1)], "goals": [goals(0), goals(1)],

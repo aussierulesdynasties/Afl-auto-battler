@@ -84,6 +84,8 @@ func _test_words() -> void:
 			_check(_tl.earn_text(key) != "", "%s: says what earns it" % key)
 		if Traits.SYNERGIES.has(key):
 			_check(rows.has(Traits.requirement_text(key)), "%s: says exactly what it needs" % key)
+			_check(rows.has(Traits.SYNERGY_CAP_NOTE) and str(rows[1]) == "Synergy",
+					"%s: a synergy, and says the five-trait cap can keep a carrier out" % key)
 	# The longer name wins ("Lockdown unit" is the synergy, not the trait inside it).
 	_check(_tl.markup("Lockdown unit").contains("trait:lockdown_unit"), "Lockdown unit is not read as Lockdown")
 	_check(_tl.markup("Lockdowns").find("[url") < 0, "a name inside a longer word is left alone")

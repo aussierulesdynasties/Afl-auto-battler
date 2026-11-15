@@ -57,18 +57,18 @@ const DEFS := {
 ## key -> label, the line it needs ("" = the whole 18), the traits needed,
 ## the match effect, and the same in football words ("about", "does").
 const SYNERGIES := {
-	"engine_room": {"label": "Engine room", "line": "", "needs": {"bull": 4}, "power": 0.05,
+	"engine_room": {"label": "Engine room", "line": "", "needs": {"bull": 4}, "power": 0.145,
 			"text": "+5% stoppage wins.",
 			"about": "Contested bulls who win the stoppages together.", "does": "Wins more of the stoppages."},
-	"tall_small": {"label": "Tall-small forward line", "line": "FWD", "needs": {"aerial": 2, "crumber": 2}, "power": 1.15,
-			"text": "+15% goal chance on every forward-50 shot.",
-			"about": "Aerial threats up forward with crumbers at their feet.", "does": "More goals from forward-50 entries."},
+	"tall_small": {"label": "Tall-small forward line", "line": "FWD", "needs": {"aerial": 2, "crumber": 2}, "power": 1.32,
+			"text": "+15% goal chance on every shot at goal.",
+			"about": "Aerial threats up forward with crumbers at their feet.", "does": "Turns more of its shots into goals."},
 	"intercept_wall": {"label": "Intercept wall", "line": "DEF", "needs": {"interceptor": 2, "lockdown": 1}, "power": 0.84,
 			"text": "-16% on the opposition's goal chance.",
 			"about": "Interceptors who read the ball in the air down back, with a stopper on the lead.", "does": "The opposition kick fewer goals."},
-	"lockdown_unit": {"label": "Lockdown unit", "line": "", "needs": {"lockdown": 3}, "power": 1.15,
+	"lockdown_unit": {"label": "Lockdown unit", "line": "", "needs": {"lockdown": 3}, "power": 1.17,
 			"text": "+15% pressure on the opposition.",
-			"about": "A side full of stoppers who squeeze the opposition.", "does": "Puts more pressure on the ball."},
+			"about": "Three stoppers who squeeze the opposition all over the ground.", "does": "Puts more pressure on the ball."},
 	"supply_line": {"label": "Supply line", "line": "", "needs": {"ball_magnet": 3, "playmaker": 1}, "power": 1.22,
 			"text": "+22% metres gained per disposal.",
 			"about": "Ball-users feeding a playmaker going forward.", "does": "Gains more ground with every disposal."},
@@ -76,6 +76,9 @@ const SYNERGIES := {
 			"text": "The whole side tires 50% slower.",
 			"about": "A side of endurance runners.", "does": "The whole side tires more slowly."},
 }
+## The five-trait cap, said wherever a synergy's needs are (bug bash 5): a
+## player past five keeps the five he clears by the most (Traits.of).
+const SYNERGY_CAP_NOTE := "A player keeps five traits at most, the five furthest past their line: one who clears a sixth line doesn't carry that trait for a synergy."
 
 ## Born, not trained (director, 2026-10-08): a player whose game defies his
 ## size - a key-position body with a small player's game, or one who plays

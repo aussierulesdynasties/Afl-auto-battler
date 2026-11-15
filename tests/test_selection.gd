@@ -449,8 +449,8 @@ func _test_fifth_interchange() -> void:
 		var sim := MatchSim.new(Squad.new("GEE", GameDB.club_list("GEE"), true, "GEE"),
 				Squad.new("COL", GameDB.club_list("COL"), false, "COL"), seed)
 		for side in 2:
-			if not (sim.synergies[side] as Array).has("running_machine"):
-				(sim.synergies[side] as Array).append("running_machine")
+			sim.synergy_forced[side]["running_machine"] = true
+			sim._refresh_synergies(side, false)
 		var bench_ids := [[], []]
 		for side in 2:
 			for p in (sim.squads[side] as Squad).bench:
