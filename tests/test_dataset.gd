@@ -28,7 +28,7 @@ const GOLDEN_REAL := "2950acdb7bd870d9b83a517c043ecc94"
 ## a local run, Linux from run_on_github run 43725691444 (with the 40% Controlled Tempo hold and #1613).
 ## The defensive-50 play (#1598) redrew it again: Windows from a local run,
 ## Linux from that PR's CI (with the synergies change, #1645).
-## The director's ratings (row 200, 2026-11-16) redrew it after that.
+## The director's ratings (row 200, 2026-11-16) redrew it after that (Linux from run_on_github run 43765141166).
 ## Result keys added after the golden was taken that record who earned a
 ## call's credit, not what happened (row 144). "impact" and "plan_traits" were
 ## already in main's results, so they stay in the hash. "breeze_side" (the
@@ -45,7 +45,7 @@ const TEAM_BOOKKEEPING_KEYS := ["pressure_acts_dhalf", "tackles_i50", "poss_d50"
 		"d50_tackled", "d50_rushed", "d50_chips"]
 ## Team counts named by prefix (one key per way a defensive-50 chain ends).
 const TEAM_BOOKKEEPING_PREFIXES := ["d50_end_"]
-const GOLDEN_SEASON := {"Windows": "e108e094d6da817b327f9e284d53639d", "Linux": "08b8a228396ec09ceb880c655b0c57d0"}
+const GOLDEN_SEASON := {"Windows": "e108e094d6da817b327f9e284d53639d", "Linux": "6e964e1da92f545bfcc065a971a2cec3"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and
