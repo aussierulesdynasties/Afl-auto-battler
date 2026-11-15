@@ -406,7 +406,10 @@ func _test_real_delistings() -> void:
 	GameState.open_offseason()
 	_check(not (GameState.season.lists[rival] as Array).has(theirs) and GameState.free_agents.has(theirs)
 			and str(theirs.get("released_by", "")) == rival,
-			"%s let their best player go when his real club delisted him (%s)" % [rival, GameDB.player_display_name(theirs)])
+			"%s let their best player go when his real club delisted him (%s; off-season of %d in %d, real_end %s, %d years, retiring %s, released_by '%s')" % [
+			rival, GameDB.player_display_name(theirs), GameState.offseason_year, GameState.season_year,
+			str(theirs.get("real_end", "-")), int(theirs.get("contract_years", -1)), str(GameState.retiring_now(theirs)),
+			str(theirs.get("released_by", ""))])
 	_check(GameState.my_list.has(mine) and Contracts.expiring(GameState.my_list).has(mine),
 			"Yours is out of contract, and the decision is yours (%s)" % GameDB.player_display_name(mine))
 	_check(not GameState.retiring_now(mine) and not GameState.retiring_now(theirs), "It is a delisting, not a retirement")
