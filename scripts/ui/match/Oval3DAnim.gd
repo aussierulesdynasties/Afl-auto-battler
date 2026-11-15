@@ -33,6 +33,9 @@ const GAP_MAX := 9.0           # m/s: and at most this fast
 const APART := 0.8             # m: on that run his hips stay this far from the man he tackled (or who tackled him)
 const REACH := 1.6             # m: MatchDirector's chase ends this close (its "chase" phase)
 const STEP := 1.0 / 30.0       # s: the takes' frame
+const STOOP := "ground_ball_01"  # the stoop over a loose ball he fumbles (MatchDirector "stoop")
+const STOOP_TOUCH := 0.87      # clip s: its hands reach the turf (0.15 m), 0.89 m ahead of his feet
+const STOOP_END := 1.2         # clip s: hands back at his knees; he eases out of it from here
 
 var director: MatchDirector
 var players: Array
@@ -58,6 +61,7 @@ var _mate: Array = []          # per player: the other man of the take he is run
 var _rate: Array = []          # per player: the rate his running clip played at last
 var _takes := {}               # take name -> {dist: hips apart, foot: planted foot} per STEP
 var _tracks := {}              # animation name -> {bone: rotation track}, "hips": position track
+var _once: Array = []          # per player: the stoop he is in, {anim, t, yaw, at}, {} for none
 
 
 func _init(p_director: MatchDirector, p_players: Array) -> void:
@@ -72,6 +76,7 @@ func _init(p_director: MatchDirector, p_players: Array) -> void:
 		_gap.append(Vector2.ZERO)
 		_mate.append(-1)
 		_rate.append(1.0)
+		_once.append({})
 	var res = load(PAIRS)
 	if res is JSON:
 		_pairs = (res as JSON).data
@@ -314,6 +319,7 @@ func _start(who: int, v: int, arrived: bool, at := Vector2.INF) -> void:
 				v: {"anim": name + "_tacklee", "pivot": Vector3(V.x, 0.0, V.y), "w": Vector3.ZERO,
 						"dy": float(best["turn"])}}}
 	for i in [who, v]:
+		_once[i] = {}
 		_snap(i, players[i])
 		_in[i] = pr
 		_back[i] = Vector2.INF
@@ -328,6 +334,10 @@ func step(i: int, p: Dictionary, holder: int, pos: Vector2, vel: Vector2, dt: fl
 		_step_pair(i, p, dt)
 		return
 	var node: Node3D = p["node"]
+	var o: Dictionary = _once[i]
+	if not o.is_empty() and (float(o["t"]) >= STOOP_END or (float(o["t"]) > STOOP_TOUCH and vel.length() > 0.3)):
+		_end_once(i)
+		o = {}
 	if _back[i] != Vector2.INF:
 		# Off the take's ground (the frame after it ends): he stands where his hips were.
 		node.transform = Transform3D(Basis(Vector3.UP, float(_face[i])), node.position)
@@ -343,6 +353,14 @@ func step(i: int, p: Dictionary, holder: int, pos: Vector2, vel: Vector2, dt: fl
 		if gap.length() > 0.05:
 			vel = vel - gap.normalized() * back
 		node.position = Vector3(pos.x + (_gap[i] as Vector2).x, 0.0, pos.y + (_gap[i] as Vector2).y)
+	if not o.is_empty():
+		# His feet stay where he stooped: a push from the pack moves his token, not him (he
+		# runs back to it, as from a take, once the stoop ends).
+		var spot: Vector2 = o["at"]
+		_gap[i] = spot - pos
+		node.position = Vector3(spot.x, 0.0, spot.y)
+		_step_once(i, p, o, dt)
+		return
 	var speed := vel.length()
 	var ap: AnimationPlayer = p["anim"]
 	var want := "carry" if i == holder else "idle"
@@ -372,6 +390,32 @@ func step(i: int, p: Dictionary, holder: int, pos: Vector2, vel: Vector2, dt: fl
 	_rate[i] = rate
 	_ease(i, p, dt)
 	_look_at_ball(i, i == holder, dt)
+
+
+## A stoop over the ball: the clip at its time, facing where the ball lay when it began.
+func _step_once(i: int, p: Dictionary, o: Dictionary, dt: float) -> void:
+	o["t"] = float(o["t"]) + dt
+	var ap: AnimationPlayer = p["anim"]
+	(p["node"] as Node3D).rotation.y = float(o["yaw"])
+	if ap.current_animation != str(o["anim"]):
+		ap.play(str(o["anim"]))
+	ap.seek(minf(float(o["t"]), ap.current_animation_length), true)
+	_rate[i] = 1.0
+	_ease(i, p, dt)
+	_look_at_ball(i, false, dt)
+
+
+## Out of the stoop: like the end of a take, he stands where its hips left him (the clip
+## leans him 0.3 m forward) and eases into running or standing, never a slide back.
+func _end_once(i: int) -> void:
+	var p: Dictionary = players[i]
+	var spot: Vector2 = (_once[i] as Dictionary)["at"]
+	(p["node"] as Node3D).position = Vector3(spot.x, 0.0, spot.y)  # where his last pose was drawn
+	var hips := _hips_world(p)
+	_snap(i, p)
+	_face[i] = float((_once[i] as Dictionary)["yaw"])
+	_back[i] = Vector2(hips.origin.x, hips.origin.z)
+	_once[i] = {}
 
 
 ## A man in a pair: the take at the pair's clip time, placed by the pair (and, over the run-in,
@@ -578,6 +622,16 @@ func _look_at_ball(i: int, carrying: bool, dt: float) -> void:
 func event(i: int, kind: StringName, at: Vector2, other := -1) -> void:
 	if i < 0 or i >= _in.size():
 		return
+	if kind == &"ground_ball" and (_in[i] as Dictionary).is_empty():
+		# He stoops over the loose ball and it squirts off his hands (MatchDirector "stoop").
+		var node: Node3D = players[i]["node"]
+		var to := at - Vector2(node.position.x, node.position.z)
+		_snap(i, players[i])
+		_once[i] = {"anim": STOOP, "t": 0.0, "yaw": atan2(to.x, to.y) if to.length() > 0.05 else node.rotation.y,
+				"at": Vector2(node.position.x, node.position.z)}
+		return
+	if not (_once[i] as Dictionary).is_empty():
+		_end_once(i)
 	if kind == &"tackle" and other >= 0 and other < _in.size() and not _pairs.is_empty():
 		var pr: Dictionary = _in[i]
 		if pr.is_empty() or int(pr["who"]) != i or int(pr["victim"]) != other:
