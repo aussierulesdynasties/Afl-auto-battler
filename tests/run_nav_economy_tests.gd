@@ -366,7 +366,7 @@ func _test_word_source() -> void:
 	var SG = load("res://scripts/ui/StatGuide.gd")
 	var CR = load("res://scripts/sim/CoachReport.gd")
 	var TL = load("res://scripts/ui/TraitLink.gd")
-	_check(_gs.TRAIN_STATS.size() == 13, "13 rated stats (%d)" % _gs.TRAIN_STATS.size())
+	_check(_gs.TRAIN_STATS.size() == 16, "16 rated stats, the director's 16 skills (%d)" % _gs.TRAIN_STATS.size())
 	for row in _gs.TRAIN_STATS:
 		var e: Dictionary = all.get(str(row[1]), {})
 		_check(not e.is_empty() and str(e["lines"][0]) == SG.short(str(row[0])), "%s reads the stat guide's line" % row[1])
