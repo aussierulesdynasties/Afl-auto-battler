@@ -1014,12 +1014,9 @@ const GAMEPLANS := [
 	["defensive", "High Press"], ["contest", "Win Contest"],
 	["controlled", "Controlled Tempo"],
 ]
-## The plans at a break: the five, then your own when it is built (CustomPlan).
+## The plans at a break: the five.
 func _gameplans() -> Array:
-	var out := GAMEPLANS.duplicate()
-	if CustomPlan.ready(CoachEffects.my_custom):
-		out.append([CustomPlan.KEY, CoachReport.plan_label(CustomPlan.KEY)])
-	return out
+	return GAMEPLANS.duplicate()
 
 
 ## A PC break's choice buttons: a mouse, not a thumb (phones keep 44).

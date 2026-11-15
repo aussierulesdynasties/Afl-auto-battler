@@ -126,9 +126,7 @@ func play(from: int, count: int, out: String, weather: String,
 		if together != "":
 			(sq_h if i % 2 == 0 else sq_a).together = Culture.effect_of("match_contest", "together", together)
 		# --coach S,P (row 119): side i%2 is coached by archetypes S and P
-		# (Archetypes ids, "-" for none); --side-plan X makes it play plan X;
-		# --custom-plan S,C makes it play its own plan of strength S and cost C
-		# (CustomPlan ids).
+		# (Archetypes ids, "-" for none); --side-plan X makes it play plan X.
 		var cside: Squad = sq_h if i % 2 == 0 else sq_a
 		var side_plan := ""
 		for ci in range(args.size() - 1):
@@ -138,15 +136,6 @@ func play(from: int, count: int, out: String, weather: String,
 				cside.tactics_exec *= float(cside.arch.get("exec", 1.0))
 			elif str(args[ci]) == "--side-plan":
 				side_plan = str(args[ci + 1])
-			elif str(args[ci]) == "--custom-plan":
-				var sc := str(args[ci + 1]).split(",")
-				var plan := {"name": "", "s": sc[0], "c": sc[1] if sc.size() > 1 else ""}
-				if not CustomPlan.ready(plan):
-					push_error("balance: --custom-plan S,C: a strength (%s) and a cost (%s) on different levers"
-							% [", ".join(CustomPlan.STRENGTH_IDS), ", ".join(CustomPlan.COST_IDS)])
-					return 2
-				cside.custom_plan = CustomPlan.clean(plan)
-				side_plan = CustomPlan.KEY
 		if side_plan != "":
 			cside.ai_plans = false
 		var sim := MatchSim.new(sq_h, sq_a, 500000 + i)
