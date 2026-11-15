@@ -28,6 +28,22 @@ class SelectionTests(unittest.TestCase):
             "tests/run_smoke_tests.gd": "# nothing\n",
             "tests/functions_ran.gd": "",
             "data/players.csv": "",
+            "tests/fixtures/snap.txt": "",
+            "tests/test_snap.gd": 'var f = "res://tests/fixtures/snap.txt"\n',
+            "tests/run_snap_tests.gd": 'var s = load("res://tests/test_snap.gd")\n',
+            "tools/run_tests.sh": "python3 tools/helper.py\n",
+            "tools/helper.py": "import os  # reads tools/deeper.py\n",
+            "tools/deeper.py": "",
+            "tools/notes.md": "tools/one_off.py is a one-off\n",
+            "tests/test_c.gd": 'var r = "res://tools/ref.json"\n',
+            "tools/ref.json": "",
+            "tools/one_off.py": "",
+            "tools/select_suites.py": "",
+            ".github/workflows/tests.yml": "python3 tools/select_suites.py\n",
+            ".github/workflows/other.yml": "",
+            ".gitignore": "",
+            "icon.svg": "",
+            "scripts/sim/Gamma.gd": 'var i = "res://icon.svg"\n',
         }
         for name, text in files.items():
             (root / name).parent.mkdir(parents=True, exist_ok=True)
@@ -57,21 +73,41 @@ class SelectionTests(unittest.TestCase):
         self.assertEqual(self.pick("tests/run_a_tests.gd.uid")[0], ["a", "smoke"])
 
     def test_data_and_untraceable_files_select_everything(self):
-        everything = ["a", "b", "smoke"]
+        everything = ["a", "b", "smoke", "snap"]
         for path in ("data/players.csv", "project.godot", "tools/run_tests.sh", "tests/functions_ran.gd",
                      "tests/tap.gd", ".github/workflows/tests.yml", "tools/select_suites.py", "export_presets.cfg",
                      "scripts/state/State.gd"):  # the last is an autoload
             self.assertEqual(self.pick(path)[0], everything, path)
             self.assertTrue(self.pick(path)[1], path)
 
-    def test_a_deleted_file_selects_everything(self):
-        self.assertEqual(self.pick("scripts/sim/Gone.gd")[0], ["a", "b", "smoke"])
+    def test_a_deleted_file_still_named_selects_everything(self):
+        # Alpha.gd's own text is gone from disk here, but test_a.gd still names it.
+        root = self.repo()
+        (root / "scripts/sim/Alpha.gd").unlink()
+        self.assertEqual(select(["scripts/sim/Alpha.gd"], root=root, smoke=("smoke",))[0], ["a", "b", "smoke", "snap"])
+
+    def test_a_deleted_file_nothing_names_selects_the_smoke_set(self):
+        self.assertEqual(self.pick("scripts/sim/Gone.gd"), (["smoke"], ""))
+        self.assertEqual(self.pick("assets/oval3d/OLD-LICENSE.txt"), (["smoke"], ""))
+
+    def test_a_fixture_selects_the_suite_that_reads_it(self):
+        self.assertEqual(self.pick("tests/fixtures/snap.txt"), (["smoke", "snap"], ""))
+
+    def test_files_the_test_run_never_reads_select_the_smoke_set(self):
+        # one_off.py is named only by a note, and notes are never followed.
+        for path in (".gitignore", ".github/workflows/other.yml", "tools/one_off.py", "tools/notes.md"):
+            self.assertEqual(self.pick(path), (["smoke"], ""), path)
+
+    def test_tools_the_test_run_reads_select_everything(self):
+        # deeper: through helper; ref.json: a suite reads it by res://; icon: the game names it by res://
+        for path in ("tools/helper.py", "tools/deeper.py", "tools/ref.json", "icon.svg"):
+            self.assertEqual(self.pick(path)[0], ["a", "b", "smoke", "snap"], path)
 
     def test_docs_only_selects_the_smoke_set(self):
         self.assertEqual(self.pick("docs/ROADMAP.md", "README.md"), (["smoke"], ""))
 
     def test_one_full_wall_change_among_scripts_wins(self):
-        self.assertEqual(self.pick("scripts/sim/Beta.gd", "data/players.csv")[0], ["a", "b", "smoke"])
+        self.assertEqual(self.pick("scripts/sim/Beta.gd", "data/players.csv")[0], ["a", "b", "smoke", "snap"])
 
 
 class RealRepoTests(unittest.TestCase):

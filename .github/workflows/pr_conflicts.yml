@@ -1,0 +1,40 @@
+# Landing-order check (director 2026-11-13: test landing orders with git merge-tree before
+# arming PRs that share a file). After every push to main, and hourly for pushes to PR
+# branches, tools/pr_conflicts.py merges every open ready PR onto main, and each pair in both
+# orders, without a checkout. A PR whose conflicts changed gets one comment naming the files and
+# the other PR; when they clear, that comment is edited to say so. No test runs, no push:
+# a conflict is a report to the branch owner, never a failure.
+name: PR conflicts
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: pr-conflicts
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write   # the comments
+  issues: write          # PR comments use the issues API
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0     # merge-tree needs each PR's merge base with main
+
+      - name: Merge every open PR onto main, and each pair both ways
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "pr-conflicts"
+          git config user.email "pr-conflicts@users.noreply.github.com"
+          python3 tools/pr_conflicts.py --repo "${{ github.repository }}" --comment | tee "$RUNNER_TEMP/report.txt"
+          { echo '```'; cat "$RUNNER_TEMP/report.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"

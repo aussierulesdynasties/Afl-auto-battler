@@ -10,9 +10,14 @@ A changed file selects every suite whose closure contains it, plus the smoke set
   python3 tools/select_suites.py --closures           # every suite's size, for a look
 
 Anything that cannot be traced goes to the full wall: data/, project.godot, export presets,
-the test harness (tests/functions_ran.gd, tests/tap.gd, tests/fixtures, tools/run_tests.sh), the
-workflow, the CI planner itself, a deleted or renamed file, and any file type the walker does
-not follow. Pushes to main never call this: they run the full wall.
+the test harness (tests/functions_ran.gd, tests/tap.gd, the fixture runners, tools/run_tests.sh),
+the files that plan the run (RUN_PLAN), every tool the suites or the run script name by path (and
+the tools those name in turn, following code only, never notes), a deleted file something still
+names, and any game file type the walker does not follow. A fixture the suites read by its res://
+path is traced like an asset. A file outside the game that no suite reads (another workflow,
+.gitignore, a one-off tool) and a deleted file nothing names select the smoke set only: the lint
+and data checks run in full on every pull request anyway.
+Pushes to main and the merge queue never call this: they run the full wall.
 """
 import argparse
 import json
@@ -124,21 +129,99 @@ def suite_distances(root=ROOT):
     return {s: distances(f"tests/run_{s}_tests.gd", edges, auto) for s in discover(root)}, files, auto
 
 
+# Where the game and its test run live. A changed file outside these that nothing the test run
+# reads names (.gitignore, another workflow, a licence note, a one-off tool) cannot change a
+# suite's result, so it selects only the smoke set (director 2026-11-16: pull requests run the
+# tests related to their change; the merge queue runs the full wall before anything lands).
+GAME = ("scripts/", "scenes/", "assets/", "data/", "tests/", "addons/", "project.godot", "export_presets.cfg")
+# What decides which suites run and how: a change here runs every suite.
+RUN_PLAN = (".github/workflows/tests.yml", "tools/run_tests.sh", "tools/list_suites.sh", "tools/ci_shards.py",
+            "tools/ci_shards.txt", "tools/ci_long_suites.txt", "tools/select_suites.py", ".gitattributes")
+# Never read by a suite: git's ignore list and the other workflows. The lint, data and planner checks
+# (the lint and preflight jobs) run in full on every pull request whatever is selected here.
+NEVER_READ = (".gitignore", ".github/", ".claude/")
+# Code the suites run can name further tools; only code is followed, never notes or data.
+CODE = (".sh", ".py", ".gd")
+# Fixtures that are data, read by the suites through res:// paths: traced like assets.
+FIXTURE_DATA = (".txt", ".gz", ".csv", ".json", ".save")
+
+
+PATHS = re.compile(r"[\w./-]+")
+WORD = re.compile(r"[\w.-]+")
+
+
+def paths_in(text):
+    """Every path-like word in text (res:// and a leading ./ or / dropped, trailing dots dropped)."""
+    return {w.removeprefix("./").lstrip("/").rstrip(".") for w in PATHS.findall(text.replace("res://", " "))}
+
+
+def words(text):
+    """Every file-name-like word in text (a path splits at its slashes), trailing dots dropped."""
+    return {w.rstrip(".") for w in WORD.findall(text)}
+
+
+def run_reach(root, files):
+    """(The tools outside GAME that the suites or the run script name by path, directly or through
+    one another; the paths those files name, to look a deleted tool up in; the res:// paths the
+    game names, for a root file such as the project icon). Naming too much only runs more suites."""
+    text_of = lambda p: (root / p).read_text(errors="replace") if (root / p).is_file() else ""
+    sources = ["tools/run_tests.sh"] + [f for f in files if f.startswith("tests/") and f.endswith(".gd")]
+    candidates = {f for f in files if not f.startswith(GAME) and not f.startswith(NEVER_READ)}
+    reached, frontier, seen = set(sources), list(sources), set()
+    while frontier:
+        new_paths = set().union(*(paths_in(text_of(f)) for f in frontier if f.endswith(CODE))) - seen
+        seen |= new_paths
+        frontier = [c for c in new_paths & candidates if c not in reached]
+        reached.update(frontier)
+    res_paths = set()
+    for f in files:
+        if f.startswith(GAME) and f.endswith((".gd", ".tscn", ".tres", ".godot", ".cfg")):
+            res_paths.update(m[len("res://"):] for m in RES.findall(text_of(f)))
+    return reached, seen, res_paths
+
+
+def mentioned(path, root, files):
+    """Does any game file still name a deleted file (its file name or class name, as a word)?"""
+    name = pathlib.PurePosixPath(path).name
+    wanted = {name, name.split(".")[0]}
+    for f in files:
+        if f.startswith(GAME) and f.endswith((".gd", ".tscn", ".tres", ".gdshader", ".godot", ".cfg")):
+            if wanted & words((root / f).read_text(errors="replace")):
+                return True
+    return False
+
+
 def select(changed, root=ROOT, smoke=SMOKE):
     """Returns (suites, why). why is non-empty when the whole wall must run."""
     dists, files, auto = suite_distances(root)
     suites = set(dists)
     wanted = {s for s in smoke if s in suites}
+    reach = None
     for path in changed:
         base = path[:-len(".uid")] if path.endswith(".uid") else path
         if path.startswith(("docs/", "tools/audit/", "tools/visual/", "tools/lint/")) or path.endswith(".md"):
             continue
-        harness = base.startswith(("tests/fixtures/", "tests/functions_ran", "tests/tap", "tests/export_data"))
-        traced = (base.startswith("tests/") and base.endswith(".gd") and not harness)             or (base.startswith(("scripts/", "scenes/")) and base.endswith(FOLLOWED)) or base.startswith(LEAF_DIRS)
+        if not base.startswith(GAME):
+            if base in RUN_PLAN:
+                return sorted(suites), f"{path} decides which suites run"
+            if base.startswith(NEVER_READ):
+                continue  # no suite reads it: the smoke set covers it
+            reach = reach if reach is not None else run_reach(root, files)
+            reached, run_paths, res_paths = reach
+            if base in reached or base in run_paths or base in res_paths:
+                return sorted(suites), f"{path} is read by the suites"
+            continue  # nothing the suites read: the smoke set covers it
+        fixture = base.startswith("tests/fixtures/") and base.endswith(FIXTURE_DATA)
+        harness = base.startswith(("tests/fixtures/", "tests/functions_ran", "tests/tap", "tests/export_data")) and not fixture
+        traced = (base.startswith("tests/") and base.endswith(".gd") and not harness) or fixture \
+            or (base.startswith(("scripts/", "scenes/")) and base.endswith(FOLLOWED)) or base.startswith(LEAF_DIRS)
+        if base not in files:
+            if base.startswith(("scripts/", "scenes/", "assets/", "tests/")) and not harness \
+                    and not mentioned(base, root, files):
+                continue  # deleted, and nothing left names it
+            return sorted(suites), f"{path} was deleted or renamed and is still named"
         if not traced:
             return sorted(suites), f"{path} cannot be traced to suites"
-        if base not in files:
-            return sorted(suites), f"{path} was deleted or renamed"
         if base in auto:
             return sorted(suites), f"{path} is an autoload every suite loads"
         wanted |= {s for s, d in dists.items() if d.get(base, 99) <= REACH}

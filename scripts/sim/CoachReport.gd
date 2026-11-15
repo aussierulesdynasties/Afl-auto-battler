@@ -38,16 +38,18 @@ const PLAN_PARTS := {
 	"balanced": {"does": "Play it straight. No extra edge, and nothing for them to exploit."},
 	"attacking": {"does": "Go through the corridor.",
 			"gain": "More ground and better shots.",
-			"cost": "More turnovers and heavier legs. They score more on the rebound.",
+			"cost": "More turnovers and heavier legs. Their shots go in more often.",
 			"beats": "Beats Controlled Tempo. A High Press squeezes it."},
 	"defensive": {"does": "Hunt the ball high and lock it in their half.",
 			"gain": "We win it back in their half.",
-			"cost": "Heavier legs and rushed shots. Space behind us if they break it.",
+			"cost": "Heavier legs and rushed shots. They score more easily when they break it.",
 			"beats": "Beats Attack Corridor. Controlled Tempo plays through it."},
-	"contest": {"does": "Numbers at the stoppage. It leans on our ball-winners and ruck.",
-			"gain": "We win more clearances.",
-			"cost": "The ball moves a little slower. We are a little exposed on the rebound."},
-	"controlled": {"does": "Keep the ball. It asks nothing special of our list.",
+	# Win Contest is neutral (bug bash 5, G16): no rival coach counters it.
+	"contest": {"does": "Numbers at every contest. It leans on our ball-winners and ruck.",
+			"gain": "We win more of the contested ball.",
+			"cost": "The ball moves a little slower. Their shots go in a little more often.",
+			"beats": "Beats no plan, and no plan beats it."},
+	"controlled": {"does": "Keep the ball. It leans on our ball users.",
 			"gain": "Fewer errors and fresher legs. Pressure rattles us less.",
 			"cost": "We gain less ground.",
 			"beats": "Plays through a High Press. Attack Corridor runs past it."},
@@ -76,7 +78,7 @@ const TEAM_COMPARE := [
 
 
 const IMPACT_LABELS := {
-	"gameplan": "gameplan", "pep": "pep talk",
+	"gameplan": "game plan", "pep": "pep talk",
 	"legs": "legs (fatigue and rotations)", "bursts": "in-game calls",
 	"moments": "calls at the moments", "loose": "loose defender",
 	"tag": "tag", "minder": "defensive forward",
@@ -86,7 +88,7 @@ const IMPACT_LABELS := {
 
 ## Where the points came from between two impact snapshots (MatchSim.impact),
 ## from `side`'s point of view: [{"label", "pts"}], biggest first, anything
-## under `min_pts` dropped. "Their gameplan -2.1" cost you 2.1 points.
+## under `min_pts` dropped. "Their game plan -2.1" cost us 2.1 points.
 static func impact_lines(now: Array, before: Array, side: int, min_pts := 0.3) -> Array:
 	var out := []
 	for cause in IMPACT_LABELS:
@@ -94,7 +96,7 @@ static func impact_lines(now: Array, before: Array, side: int, min_pts := 0.3) -
 		var theirs := _imp(now, 1 - side, cause) - _imp(before, 1 - side, cause)
 		var label := str(IMPACT_LABELS[cause])
 		if absf(mine) >= min_pts:
-			out.append({"label": "Your " + label, "pts": mine})
+			out.append({"label": "Our " + label, "pts": mine})
 		if absf(theirs) >= min_pts:
 			out.append({"label": "Their " + label, "pts": -theirs})
 	out.sort_custom(func(a, b): return absf(float(a["pts"])) > absf(float(b["pts"])))

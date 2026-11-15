@@ -1330,18 +1330,23 @@ func _test_event_sheet_fits_every_card() -> void:
 	_router.stack = ["main"]
 	_state.week_events = []
 	_state.media_conference = {}
+	# A card's words do not depend on the window: write each once (a card reads the
+	# whole club, 40 ms), then lay it out at every size.
+	var cards := []
+	for t in _rules("StoryDeck").all():
+		var player: bool = str((t["subject"] as Dictionary).get("kind", "club")) != "club"
+		var card: Dictionary = _state.story_card(str(t["id"]), him if player else {})
+		if not card.is_empty():
+			cards.append([str(t["id"]), card])
 	for dims in [Vector2i(360, 640), Vector2i(390, 844), Vector2i(1280, 720)]:
 		root.size = dims
 		_router.go("hub")
 		await _settle()
 		var hub: Node = current_scene
 		var win := Rect2(Vector2.ZERO, Vector2(dims))
-		for t in _rules("StoryDeck").all():
-			var player: bool = str((t["subject"] as Dictionary).get("kind", "club")) != "club"
-			var card: Dictionary = _state.story_card(str(t["id"]), him if player else {})
-			if card.is_empty():
-				continue
-			_state.week_events = [card]
+		for pair in cards:
+			var t := {"id": pair[0]}
+			_state.week_events = [(pair[1] as Dictionary).duplicate(true)]
 			hub.call("_open_event_sheet", 0)
 			await process_frame
 			await process_frame
@@ -1890,6 +1895,7 @@ func _test_menu_and_career() -> void:
 	await _settle()
 	_press("ForgeCreatePlayer")
 	await _settle()
+	await _check_forge_preview_look()
 	# T8.Q12: one weakness is compulsory, a second optional, never a third.
 	var save_b: Button = current_scene.find_child("ForgeSavePlayer", true, false)
 	_check(save_b != null and save_b.disabled and current_scene.find_child("ForgeNeedWeakness", true, false) != null,
@@ -4225,6 +4231,68 @@ func _test_season_awards() -> void:
 
 ## Press a named button in the current scene, or fail the check if it is missing.
 ## How many weaknesses the open Forge form holds.
+## Create a player's preview is the 3D footballer (ruling 2.76), and he wears the look as the
+## coach picks it: a real tap on a hair style, a skin tone and a hair colour, then every style
+## in Appearance.HAIR_STYLES on both men (front and back), and his favourite club's guernsey.
+func _check_forge_preview_look() -> void:
+	# By path, not class name: this suite starts before the autoloads (tools/lint/autoload_reach.py).
+	var preview_gd: Script = load("res://scripts/ui/PlayerPreview.gd")
+	var shells: Dictionary = load("res://scripts/ui/match/Oval3D.gd").hair_shells()
+	var pv = current_scene.find_child("ForgePlayerPreview", true, false)
+	_check(pv != null and pv.get_script() == preview_gd and (pv.get("figures") as Array).size() == 2,
+			"Create a player shows the 3D footballer, front and back")
+	if pv == null or pv.get_script() != preview_gd:
+		return
+	var sc: ScrollContainer = current_scene.get("_scroll")
+	var taps := []
+	for n in ["ForgeHair_quiff", "ForgeSkin_3", "ForgeHairColour_2"]:
+		var b: Control = current_scene.find_child(n, true, false)
+		if b != null and sc != null:
+			sc.ensure_control_visible(b)
+			await _settle()
+		taps.append(await Tap.tap(b) if b != null else "missing")
+		await _settle()
+		# A colour swatch rebuilds the form: find the preview again.
+		pv = current_scene.find_child("ForgePlayerPreview", true, false)
+	var shown: Dictionary = pv.call("shown")
+	var worn := true
+	for p in (pv.get("figures") as Array):
+		var hair: Node = p.get("hair_node")
+		worn = worn and str(p.get("hair_style", "")) == "quiff" and hair != null and hair.find_child("hair_quiff", true, false) != null
+		for mi in (p["node"] as Node3D).find_children("*", "MeshInstance3D", true, false):
+			if (mi as MeshInstance3D).has_meta("kit"):
+				worn = worn and (mi as GeometryInstance3D).get_instance_shader_parameter("skin") == Appearance.SKIN[3] \
+						and (mi as GeometryInstance3D).get_instance_shader_parameter("hair") == Appearance.HAIR[2]
+	_check(taps == ["", "", ""] and str(shown.get("hair_style")) == "quiff" and int(shown.get("skin", -1)) == 3
+			and int(shown.get("hair", -1)) == 2 and worn,
+			"A real tap on Quiff, a skin tone and a hair colour puts them on the 3D preview (%s, %s)" % [str(taps), str(shown)])
+	# Every style live, on both men, no rebuild of the form needed.
+	var look: Dictionary = current_scene.get("_spec")["look"]
+	var missed := []
+	for style in Appearance.HAIR_STYLES:
+		look["hair_style"] = style
+		await process_frame
+		await process_frame
+		for p in (pv.get("figures") as Array):
+			var on: Node = p.get("hair_node")
+			var has_shell := shells.has(style)
+			if str(p.get("hair_style", "")) != style or (has_shell and (on == null or on.find_child("hair_" + style, true, false) == null)):
+				missed.append(style)
+				break
+	_check(missed.is_empty(), "The 3D preview wears every one of the %d hair styles (missed %s)" % [Appearance.HAIR_STYLES.size(), str(missed)])
+	# His favourite club's guernsey; none picked, the prospect's own.
+	current_scene.get("_spec")["fav_club"] = "FRE"
+	await _settle()
+	var club_on := str(pv.call("shown").get("club", "")) == "FRE"
+	current_scene.get("_spec")["fav_club"] = ""
+	await _settle()
+	_check(club_on and str(pv.call("shown").get("club", "x")) == "",
+			"The 3D preview wears his favourite club's guernsey, or the prospect's own")
+	look["hair_style"] = "short_crop"
+	look["skin"] = 1
+	look["hair"] = 1
+
+
 func _forge_weaknesses() -> int:
 	return (current_scene.get("_spec")["weaknesses"] as Array).size()
 
@@ -5670,12 +5738,13 @@ func _test_skip_season() -> void:
 	# Played out the long way: Sim the week until the season is over. Both
 	# runs start in the finals, where the long press skips to the end of them.
 	# The start is saved and loaded for the second run rather than played again.
+	# Sim the week runs on its own orders (SimOrders.defaults: the side picked on form, as the skip's).
 	_skip_start_finals(5511)
 	_check(_state.save_career(), "The finals start saves")
 	var year: int = _state.season_year
 	var guard := 0
 	while not _state.season.is_season_over() and guard < 80:
-		_state.advance()
+		_state.sim_week()
 		guard += 1
 	var played := _skip_shape()
 
@@ -5804,13 +5873,14 @@ func _test_skip_home_away() -> void:
 	var ask_before: bool = _state.confirm_sim_round()
 	_state.set_confirm_sim_round(false)
 
-	# Played out the long way: Sim the week to the last home-and-away round.
+	# Played out the long way: Sim the week to the last home-and-away round,
+	# on its own orders (SimOrders.defaults: the side picked on form, as the skip's).
 	_skip_start(5512)
 	_state.season.round_index = _state.season.fixture.size() - 3
 	var year: int = _state.season_year
 	var guard := 0
 	while not _state.season.is_regular_done() and guard < 80:
-		_state.advance()
+		_state.sim_week()
 		guard += 1
 	var played := _skip_shape()
 

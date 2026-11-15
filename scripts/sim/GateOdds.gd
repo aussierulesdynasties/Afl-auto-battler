@@ -13,17 +13,20 @@ const COST := "Cost: %s"
 
 # The game plans (M1, director 2026-11-10: "Gain for this list today", the
 # written figure beside it). Templates hold no number of their own.
+## Every effect a plan has, at its size (bug bash 5, G7-G12: the gates left
+## out the press's turnovers, a broken press, the corridor into a press and
+## Controlled Tempo's shots, and "on the rebound" was every shot).
 const PLAN_GAIN := {
 	"attacking": "our shots %s more accurate\nOur kicks gain %s more ground",
-	"defensive": "%s more pressure where they start\nTheir shots %s less accurate",
-	"contest": "we get a %s better chance at every stoppage",
-	"controlled": "%s fewer clangers from us\nTheir pressure bites %s less\nOur legs tire %s slower",
+	"defensive": "%s more pressure where they start, %s more through the middle\nTheir rushed kicks there turn over %s more often\nTheir shots %s less accurate",
+	"contest": "we get a %s better chance at every contest",
+	"controlled": "%s fewer clangers from us\nTheir pressure bites %s less\nOur legs tire %s slower\nOur shots %s more accurate\nInto a High Press, %s of its extra pressure is gone\nA press gives their shots no help",
 }
 const PLAN_COST := {
-	"attacking": "%s more clangers from us\nOur legs tire %s faster\nTheir shots %s more accurate on the rebound",
-	"defensive": "our shots %s less accurate\nOur legs tire %s faster\n%s less pressure in our back third\nOur kicks gain %s less ground",
-	"contest": "our kicks gain %s less ground\nTheir shots %s more accurate on the rebound",
-	"controlled": "our kicks gain %s less ground",
+	"attacking": "%s more clangers from us\nOur legs tire %s faster\nTheir shots %s more accurate\nInto a High Press, %s more pressure on us, and our shots only %s more accurate",
+	"defensive": "our shots %s less accurate\nOur legs tire %s faster\n%s less pressure in our back third\nOur kicks gain %s less ground\nEach time they break it, that shot is %s more accurate",
+	"contest": "our kicks gain %s less ground\nTheir shots %s more accurate",
+	"controlled": "our kicks gain %s less ground\nToo slow to punish an Attack Corridor or Win Contest on the rebound",
 }
 const PLAN_SUITS := "\n(%s for a list that suits it)"
 const BALANCED_GAIN := "nothing for them to exploit\nNo plan cost"
@@ -44,7 +47,7 @@ const PEP_COST := {
 }
 
 # Who tags (the pre-bounce and break sheets).
-const TAG_GIVES := "%s of his own ball and contest work"
+const TAG_GIVES := "%s of the tagger's own ball and contest work"
 # What the tag does to their man, in his touches a match (director, 2026-11-10).
 const TAG_TOUCHES := "Usually %d touches. Tagged, about %d."
 # The Tag call at a break (director 2026-11-10, "Gain / Cost everywhere"):
@@ -61,7 +64,7 @@ const TAG_LEAVE_GAIN := "our midfielders play their own game"
 const TAG_LEAVE_COST := "%s gets his usual %d touches"
 ## The same call with a tag already on another of theirs: the man who goes is
 ## already giving up his own game, so moving him costs the hold he has now.
-const TAG_MOVE_COST := "the tag comes off %s\nHe goes back to his usual %d touches"
+const TAG_MOVE_COST := "the tag comes off %s, who goes back to the usual %d touches"
 const TAG_STAY_GAIN := "%s stays on %s, who is held to about %d touches"
 
 # Skip to full time.
@@ -113,7 +116,7 @@ static func cost(s: String) -> String:
 static func tag_gives_pct() -> String:
 	var contest := pct(MatchSim.TAGGER_COST)
 	var ball := pct(1.0 - MatchSim.TAGGER_BALL)
-	return contest if contest == ball else "%s of his ball and %s" % [ball, contest]
+	return contest if contest == ball else "%s of the tagger's ball and %s" % [ball, contest]
 
 
 static func tag_gives() -> String:
@@ -215,15 +218,19 @@ static func plan_shares(plan: String, up := 1.0, down := 1.0) -> Array:
 	match plan:
 		"attacking":
 			return [[v.call("goal") * up, v.call("gain") * up],
-					[v.call("clangers") * down, v.call("pace") * down, v.call("exposed") * down]]
+					[v.call("clangers") * down, v.call("pace") * down, v.call("exposed") * down,
+					MatchSim.CORRIDOR_PRESSED - 1.0, v.call("goal") * up * MatchSim.CORRIDOR_PRESS_GOAL]]
 		"defensive":
 			var zone: Array = MatchSim.PRESS_PLAN_ZONE
-			return [[(float(zone[0]) - 1.0) * up, v.call("opp_goal") * up],
-					[v.call("goal") * down, v.call("pace") * down, (1.0 - float(zone[2])), v.call("gain") * down]]
+			return [[(float(zone[0]) - 1.0) * up, (float(zone[1]) - 1.0) * up,
+					MatchSim.PRESS_ZONE_TURNOVER - 1.0, v.call("opp_goal") * up],
+					[v.call("goal") * down, v.call("pace") * down, (1.0 - float(zone[2])), v.call("gain") * down,
+					MatchSim.PRESS_BROKEN_EXPOSED - 1.0]]
 		"contest":
 			return [[_plan_v(plan, "contest", 0.0) * up], [v.call("gain") * down, v.call("exposed") * down]]
 		"controlled":
-			return [[v.call("clangers") * up, v.call("taken") * up, v.call("pace") * up], [v.call("gain") * down]]
+			return [[v.call("clangers") * up, v.call("taken") * up, v.call("pace") * up, v.call("goal") * up,
+					MatchSim.CONTROLLED_HOLD], [v.call("gain") * down]]
 	return [[], []]
 
 
@@ -324,7 +331,7 @@ static func focus_texts(slot: String, who: String) -> Array:
 
 # Defensive set-up (M6), sized for the men in the jobs.
 const LOOSE_GAIN := "%s gets to about %s of their entries\nHe makes the mark harder when he does"
-const LOOSE_COST := "he leaves his man on about %s of entries\nWhen he is late or loses, their shot is up to %s more dangerous"
+const LOOSE_COST := "%s leaves his man on about %s of entries\nWhen he is late or loses, their shot is up to %s more dangerous"
 const COVER_GAIN := "%s reaches %s fewer contests with %s on him"
 const COVER_COST := "%s is %s less often a target inside 50"
 const MAN_GAIN := "every defender holds his man\nNo space opens behind a loose man"
@@ -349,7 +356,7 @@ static func defence_texts(key: String, loose: Dictionary, minder: Dictionary, sp
 	if (key == "loose" or key == "both") and not loose.is_empty():
 		gains.append(LOOSE_GAIN % [GameDB.player_display_name(loose), about_pct(loose_reach(loose))])
 		var go := MatchSim.LOOSE_GO * (MatchSim.ROAM_REACH if MatchSim.zone_intercepts else 1.0)
-		costs.append(LOOSE_COST % [about_pct(go), pct(float(MatchSim.LOOSE_LATE_SPACE["marked"]))])
+		costs.append(LOOSE_COST % [GameDB.player_display_name(loose), about_pct(go), pct(float(MatchSim.LOOSE_LATE_SPACE["marked"]))])
 	if (key == "cover" or key == "both") and not minder.is_empty() and not spare.is_empty():
 		var roam := float(MatchSim.MINDER_ROAM["specialist" if Traits.has(minder, "def_forward") else "other"])
 		gains.append(COVER_GAIN % [GameDB.player_display_name(spare), pct(1.0 - roam), GameDB.player_display_name(minder)])
