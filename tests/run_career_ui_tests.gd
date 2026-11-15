@@ -4637,12 +4637,15 @@ func _test_forge_on_every_start() -> void:
 		fst["list"] = [{"id": "T_RIVAL", "salary": 9000000}, {"id": "T_FA", "salary": 900000}]
 		fst["signings"] = ["T_RIVAL"]
 		fst["fa_signings"] = ["T_FA"]
-		var rivals := ExpansionBuild._relief_in(_state, "PMB", first)
-		var fas := ExpansionBuild._relief_in(_state, "PMB", first, true)
+		var xb = load("res://scripts/state/ExpansionBuild.gd")
+		var rivals: int = xb._relief_in(_state, "PMB", first)
+		var fas: int = xb._relief_in(_state, "PMB", first, true)
 		fst["list"] = held
 		fst["signings"] = []
 		fst["fa_signings"] = []
-		_check(rivals == Contracts.indexed_money_2027(Expansion.SIGN_ON_SEASON_MAX, first) and fas == 900000,
+		var most: int = load("res://scripts/sim/Contracts.gd").indexed_money_2027(
+				load("res://scripts/sim/Expansion.gd").SIGN_ON_SEASON_MAX, first)
+		_check(rivals == most and fas == 900000,
 				"A Forge club's free agents have their own pool on top of its sign-on money (rivals %d, free agents %d)" % [rivals, fas])
 	_state.set_forge_club({})
 	_state.set_forge_player({})
