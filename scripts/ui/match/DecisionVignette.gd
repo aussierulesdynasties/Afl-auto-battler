@@ -153,6 +153,10 @@ func setup_decision(sim: MatchSim, my_side: int, moment: Dictionary, shown := {}
 				stopper = (mids[0] as Dictionary) if not mids.is_empty() else {}
 			_add(stopper, my_side, true, wet, {"role": "chaser", "from": Vector2(2.6, 21.0), "to": Vector2(1.4, 3.4),
 					"delay": 0.0, "dur": 2.8, "face": "front"})
+			# The umpire trails the chase, beyond where both runs start: a man within 3 m of a
+			# run is not placed, and 12 m back a phone's picture has no room clear of both
+			# (measured 2026-11-15: at 2.9 m off the line he stood 22 px off the left edge).
+			near_umpire = _to_scene.affine_inverse() * Vector2(-1.6, 24.0) - focus
 		"momentum":
 			# Their goal, and the walk back: your mids wait on the centre, theirs jog back
 			# past them having just kicked it.
