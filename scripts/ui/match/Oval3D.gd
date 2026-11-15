@@ -12,6 +12,10 @@ const PLAYER_GLB := "res://assets/oval3d/player_average.glb"
 ## Club Forge's hair styles on the same rig, one mesh per style on the head bone
 ## (tools/oval3d/export_hair_glb.py: the pipeline's own procedural shells, hair_lib.py).
 const HAIR_GLB := "res://assets/oval3d/hair_styles.glb"
+## The hair file in use (HAIR_GLB; a capture may point it at a candidate set). A style drawn
+## from a downloaded asset (tools/oval3d/export_mh_hair_glb.py) has its strand texture, greyed
+## to be tinted (grey_hair_tex.py), at hair_tex/<style>.png beside it.
+static var hair_glb := HAIR_GLB
 ## The scalp under each style (oval3d_player.gdshader, scalp): 0 the body's own painted crop
 ## (no look), 1 bare skin (bald, and under every style's shell, which has its own hairline),
 ## 2 clippered (buzz).
@@ -388,18 +392,19 @@ func _dress(p: Dictionary, t: Dictionary) -> void:
 
 ## Skin, hair colour and hair style on one figure. l: {"skin", "hair"} palette indices
 ## (Appearance.SKIN, HAIR) and "hair_style" (Appearance.HAIR_STYLES; none: the base crop).
-func look(p: Dictionary, l: Dictionary) -> void:
+## any_shell: also a shell id of a candidate set (hair_glb) that is no Club Forge style yet (captures).
+func look(p: Dictionary, l: Dictionary, any_shell := false) -> void:
 	var skin: Color = Appearance.SKIN[clampi(int(l.get("skin", 1)), 0, Appearance.SKIN.size() - 1)]
 	var hair_i := clampi(int(l.get("hair", 1)), 0, Appearance.HAIR.size() - 1)
 	var style := str(l.get("hair_style", VignetteFigures.HAIR_BASE))
-	if not Appearance.HAIR_STYLES.has(style):
+	if not Appearance.HAIR_STYLES.has(style) and not (any_shell and hair_shells().has(style)):
 		style = VignetteFigures.HAIR_BASE
 	for mi in (p["node"] as Node3D).find_children("*", "MeshInstance3D", true, false):
 		if (mi as MeshInstance3D).has_meta("kit"):
 			var g := mi as GeometryInstance3D
 			g.set_instance_shader_parameter("skin", skin)
 			g.set_instance_shader_parameter("hair", Appearance.HAIR[hair_i])
-			g.set_instance_shader_parameter("scalp", int(SCALP.get(style, SCALP_UNDER_SHELL if hair_shells().has(style) else 0)))
+			g.set_instance_shader_parameter("scalp", scalp_for(style))
 	p["hair_style"] = style
 	if p.get("hair_node") is Node:
 		(p["hair_node"] as Node).free()
@@ -416,7 +421,7 @@ func look(p: Dictionary, l: Dictionary) -> void:
 	mi.name = "hair_" + style
 	mi.mesh = shell["mesh"]
 	mi.transform = shell["at"]
-	mi.material_override = _hair_material(hair_i)
+	mi.material_override = _hair_material(hair_i, shell.get("tex"))
 	on.add_child(mi)
 	p["hair_node"] = on
 
@@ -428,17 +433,20 @@ static var _hair_mats := {}
 ## Each style's shell from HAIR_GLB, read once: {style: {"mesh", "bone", "at"}}, "at" being
 ## the mesh's place relative to its bone, so it sits the same on every player's head.
 static func hair_shells() -> Dictionary:
-	if not _shells.is_empty() or not ResourceLoader.exists(HAIR_GLB):
+	if not _shells.is_empty() or not ResourceLoader.exists(hair_glb):
 		return _shells
-	var root: Node = (load(HAIR_GLB) as PackedScene).instantiate()
+	var root: Node = (load(hair_glb) as PackedScene).instantiate()
 	for n in root.find_children("hair_*", "MeshInstance3D", true, false):
 		var mi := n as MeshInstance3D
 		var parent := mi.get_parent()
 		if not parent is BoneAttachment3D:
-			push_error("Oval3D: %s is not on a bone in %s" % [mi.name, HAIR_GLB])
+			push_error("Oval3D: %s is not on a bone in %s" % [mi.name, hair_glb])
 			continue
 		var style := str(mi.name).trim_prefix("hair_")
 		_shells[style] = {"mesh": mi.mesh, "bone": (parent as BoneAttachment3D).bone_name, "at": mi.transform}
+		var tex := hair_glb.get_base_dir().path_join("hair_tex/%s.png" % style)
+		if ResourceLoader.exists(tex):
+			_shells[style]["tex"] = load(tex)
 	root.free()
 	return _shells
 
@@ -541,15 +549,29 @@ static func _face_normal(a: Vector3, b: Vector3, c: Vector3) -> Vector3:
 	return (c - a).cross(b - a)
 
 
-static func _hair_material(i: int) -> StandardMaterial3D:
-	if not _hair_mats.has(i):
+## Hair colour i on a shell; tex: a downloaded style's greyed strands (alpha cut), tinted i.
+static func _hair_material(i: int, tex: Texture2D = null) -> StandardMaterial3D:
+	var key := [i, tex]
+	if not _hair_mats.has(key):
 		var m := StandardMaterial3D.new()
 		m.albedo_color = Appearance.HAIR[i]
 		m.roughness = 0.9
 		# Strand cards are one face thick: draw both sides, or the long styles show slits.
 		m.cull_mode = BaseMaterial3D.CULL_DISABLED
-		_hair_mats[i] = m
-	return _hair_mats[i]
+		if tex != null:
+			m.albedo_texture = tex
+			m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+			m.alpha_scissor_threshold = 0.5
+			m.alpha_antialiasing_mode = BaseMaterial3D.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE
+		_hair_mats[key] = m
+	return _hair_mats[key]
+
+
+## The scalp under style (oval3d_player.gdshader, scalp): bald and buzz their own; under any
+## style's hair bare skin, as the hair has its own hairline (the body's painted crop would show
+## as a band under it); no hair, the painted crop.
+static func scalp_for(style: String) -> int:
+	return int(SCALP.get(style, SCALP_UNDER_SHELL if hair_shells().has(style) else 0))
 
 
 func _player(scene: PackedScene, kit: ShaderMaterial, cols: Array) -> Dictionary:
