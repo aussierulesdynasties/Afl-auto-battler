@@ -9,7 +9,7 @@ The merger screen as it opens: Brisbane at the 1997 rollover, 50 seniors for 42 
 - Section heading: PASS - "Senior list (8 to go)" bold, set apart from the rows.
 - Player names: PASS - full names on their own line (Scott McIvor, Gary Pert, Mark Withers, Brenton Phillips), none cut short.
 - Side label: PASS - "From Fitzroy" in Fitzroy's colour on Gary Pert, "Brisbane" in Brisbane's gold on the others, on one line.
-- Detail line: PASS - OVR, POT, age, contract and salary, wrapping at a separator, muted grey.
+- Detail lines: PASS - "OVR · POT · age" on one line, "contract · salary" on the next; no line starts or ends with "·".
 - Top stats: PASS - each row's three best stats with values, readable over the backdrop.
 - Delist buttons: PASS - 96x44 or larger, vertically centred on each row, all enabled with nothing picked.
 - Confirm footer: PASS - "Pick 8 more", disabled, full width, pinned under the scroll.

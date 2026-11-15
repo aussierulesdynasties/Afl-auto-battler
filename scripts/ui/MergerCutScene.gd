@@ -151,8 +151,11 @@ func _row(p: Dictionary, full: bool) -> Control:
 	from.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	h.add_child(from)
 	var left := int(p.get("contract_years", 1))
-	info.add_child(_para("%d OVR  ·  %d POT  ·  age %d  ·  %s  ·  %s" % [
-			int(p.get("overall", 0)), int(p.get("potential", p.get("overall", 0))), int(p.get("age", 0)),
+	# Two lines, broken at a fixed place, so no line ends or starts with a "·".
+	info.add_child(UiKit.lbl("%d OVR  ·  %d POT  ·  age %d" % [
+			int(p.get("overall", 0)), int(p.get("potential", p.get("overall", 0))), int(p.get("age", 0))],
+			UiKit.SECONDARY, UiKit.MUTED))
+	info.add_child(UiKit.lbl("%s  ·  %s" % [
 			"%d season%s left" % [left, "" if left == 1 else "s"] if left > 0 else "out of contract",
 			Contracts.money(int(p.get("salary", 0)))], UiKit.SECONDARY, UiKit.MUTED))
 	info.add_child(PlayerSheet.top_three(p, UiKit.FINE, true))
@@ -176,8 +179,9 @@ func _row(p: Dictionary, full: bool) -> Control:
 	top.add_child(act)
 	if marked:
 		# The gate's two sides, as every delisting states them.
-		v.add_child(UiKit.stake_row(GateOdds.gain(ListCosts.RELEASE_GAIN % Contracts.money(int(p.get("salary", 0)))), "DelistGain"))
-		v.add_child(UiKit.stake_row(GateOdds.cost("%s leaves us for nothing, and any club can sign him" % GameDB.player_display_name(p)), "DelistCost"))
+		# The club's voice: we and our (ruling 38); "you" is only the coach.
+		v.add_child(UiKit.stake_row(GateOdds.gain("a list spot, and %s a season off our books" % Contracts.money(int(p.get("salary", 0)))), "DelistGain"))
+		v.add_child(UiKit.stake_row(GateOdds.cost("%s leaves us for nothing, free for any club to sign" % GameDB.player_display_name(p)), "DelistCost"))
 	return card
 
 
