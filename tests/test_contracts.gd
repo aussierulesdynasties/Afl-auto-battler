@@ -97,6 +97,10 @@ func _to_offseason() -> void:
 	GameState.ensure_finals()
 	while not GameState.season.is_season_over():
 		GameState.advance()
+	# A strong season can bring a rival board's letter, and the off-season waits for his
+	# answer (ClubMoves._rival_letter). These tests are about his own club's off-season:
+	# he stays put, so the letter is a no and the off-season opens.
+	ClubMoves.settle_letter(GameState)
 
 
 ## L4 (row T1.R26, director 2026-11-10): the list's one-sided options cost
@@ -2562,7 +2566,6 @@ func _test_ask_price() -> void:
 		GameState.replay_seed = 6701
 		GameState.start_season(club, GameDB.club_list(club))
 		_to_offseason()
-		ClubMoves.settle_letter(GameState)   # a coach staying put says no to a rival board's letter; the off-season waits for his answer
 		seasons += 1
 		var dealt := 0
 		for rival in GameDB.active_clubs(GameState.season_year):

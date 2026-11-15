@@ -709,7 +709,8 @@ func _test_canon_move(id: String, how: String) -> void:
 			if cards.is_empty():
 				return
 			var rule := str(cards[0]["options"][0]["rule"])
-			_check(("%d%% he stays" % LegacyRollover.KEEP_PCT) in rule and ("%d%% he goes anyway" % (100 - LegacyRollover.KEEP_PCT)) in rule,
+			var who := GameDB.player_display_name(star)
+			_check(("%d%% %s stays" % [LegacyRollover.KEEP_PCT, who]) in rule and ("%d%% %s goes anyway" % [100 - LegacyRollover.KEEP_PCT, who]) in rule,
 					"%s: the gate states the odds (%s)" % [id, rule])
 			LegacyRollover.answered(GameState, cards[0], 0 if how == "fight" else 1)
 			LegacyRollover.week(GameState)
