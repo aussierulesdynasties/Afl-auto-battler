@@ -3421,8 +3421,8 @@ func _assign_draftee(code: String, p: Dictionary, kind: String) -> void:
 ## drafted_pick), so a career draftee's story reads like anyone's: "Pick 31,
 ## 2028 national draft". A pre-listed (father-son, academy) player has no
 ## pick. His potential was set when he was projected and is not re-derived.
-func _mark_drafted(p: Dictionary, kind: String, pick: int, club := "") -> void:
-	p["drafted_year"] = season_year
+func _mark_drafted(p: Dictionary, kind: String, pick: int, club := "", year := 0) -> void:
+	p["drafted_year"] = year if year > 0 else season_year
 	p["drafted_type"] = kind
 	# The club that first drafted him: a home-grown player (Challenge goals).
 	# Older saves lack it, and a player is only ever marked once.
