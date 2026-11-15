@@ -24,7 +24,8 @@ const GOLDEN_REAL := "6b9d20ef93eea2ce95f0a6d936f19727"
 ## main before the change (Linux: run_on_github run 43024085570). Removing
 ## the own plan (bug bash 5: rivals no longer build one) redrew the season:
 ## Windows from a local run on that branch, Linux from its CI (shard 6).
-## The bug bash 5 trait fixes redrew it again (Linux from that branch's CI).
+## The game plan retune after it (bug bash 5) redrew it again: Windows from
+## a local run, Linux from run_on_github run 43725691444 (with the 40% Controlled Tempo hold and #1613).
 ## Result keys added after the golden was taken that record who earned a
 ## call's credit, not what happened (row 144). "impact" and "plan_traits" were
 ## already in main's results, so they stay in the hash. "breeze_side" (the
@@ -38,7 +39,7 @@ const BOOKKEEPING_KEYS := ["impact_by", "breeze_side"]
 ## pressure zones (pressure acts in the defensive half, tackles inside 50,
 ## 2026-11-14) are counted without a draw, so leaving them out keeps the print.
 const TEAM_BOOKKEEPING_KEYS := ["pressure_acts_dhalf", "tackles_i50"]
-const GOLDEN_SEASON := {"Windows": "bedbc44c9f1b62a154ad5df536c2f445", "Linux": "5dacbbcce89bcfab593b1af8d63f7dd1"}
+const GOLDEN_SEASON := {"Windows": "67626b6a2c540468b34686fe4a954b33", "Linux": "5dacbbcce89bcfab593b1af8d63f7dd1"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and
@@ -648,13 +649,22 @@ func _test_real_1990() -> void:
 		if int(listed[c]) < 42:
 			thin += 1
 	_check(thin == 0 and listed.size() == 14, "Every 1990 club has a full list (%s)" % str(listed))
-	# A height no source records is his position's average (director 2026-11-13), so none is blank.
-	var no_height := []
+	# A height no source records stays blank, never a position average (director 2026-11-15,
+	# "Search other sources"): the game shows exactly the heights the data file gives.
+	var no_height := {}
 	for q in GameDB.list_additions:
 		if float(q.get("height_cm", 0.0)) < 150.0:
-			no_height.append(str(q.get("real_name", "")))
-	_check(no_height.is_empty() and not GameDB.list_additions.is_empty(),
-			"Every 1990 list addition has a height (missing: %s)" % str(no_height))
+			no_height[str(q.get("real_name", ""))] = true
+	var blank_in_file := {}
+	var f := FileAccess.open(Datasets.file("1990", "list_additions"), FileAccess.READ)
+	var head := f.get_csv_line()
+	while not f.eof_reached():
+		var row := f.get_csv_line()
+		if row.size() == head.size() and str(row[head.find("height_cm")]).strip_edges() == "":
+			blank_in_file["%s %s" % [row[head.find("first")], row[head.find("last")]]] = true
+	_check(not GameDB.list_additions.is_empty() and no_height.size() == blank_in_file.size(),
+			"A 1990 list addition's height is the one its source gives, blank when none does (%d blank in game, %d in the file)"
+			% [no_height.size(), blank_in_file.size()])
 	ovr.sort()
 	var median := int(ovr[ovr.size() / 2])
 	_check(median >= 57 and median <= 65, "The 1990 median sits where 2026's does (%d)" % median)
@@ -675,8 +685,11 @@ func _test_real_1990() -> void:
 				floor_ok = false
 	_check(honoured >= 60 and floor_ok, "Every honoured 1990 player rates at least his honours floor (%d honoured)" % honoured)
 	var roos: Dictionary = by_id.get("FIT_1", {})   # Paul Roos
-	_check(not roos.is_empty() and int(roos["overall"]) >= 78 and bool(roos.get("rated_on_honours", false)),
-			"Paul Roos, twice All-Australian, rates on his honours (%d)" % int(roos.get("overall", 0)))
+	# His recorded stats alone may clear the floor (unrecorded stats count for nothing, director
+	# 2026-11-15); either way he rates at least what his honours say.
+	_check(not roos.is_empty() and int(roos["overall"]) >= 78
+			and int(roos["overall"]) >= Ratings.honours_floor(float(roos.get("honours", 0.0))),
+			"Paul Roos, twice All-Australian, rates at least his honours floor (%d)" % int(roos.get("overall", 0)))
 	var platten: Dictionary = by_id.get("HAW_44", {})   # John Platten
 	_check(not platten.is_empty() and not bool(platten.get("rated_on_honours", false)),
 			"A star already above his floor keeps his own rating (Platten %d)" % int(platten.get("overall", 0)))
