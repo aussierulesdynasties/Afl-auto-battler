@@ -1064,11 +1064,14 @@ func _clanger_phases(k: int) -> Array:
 		# it either. It spills out of the pack toward him and he runs onto it
 		# where it lies (3d view 2, 2026-11-15: the ball flew 9 m up off a
 		# falling pair with no kicker). He fumbles it once he is on it, not
-		# from 3 m away ("reach": no early close-enough): he stops over it,
-		# stoops, and it squirts off his hands as they reach it ("stoop").
-		return [{"t": "spill", "toward": e, "dur": 0.4}, {"t": "collect", "who": e, "reach": true},
-				{"t": "wait", "dur": STOOP_S, "stoop": e},
-				{"t": "emit", "log": true}, {"t": "fumble", "dur": 0.35}]
+		# from 3 m away: he runs at it at pace ("pace": aimed through the
+		# ball, no easing to a stop), goes down for it on the run ("scoop")
+		# and knocks it on along his line as his hands reach it ("along";
+		# director 2026-11-16: the standing stoop read as "his hands are
+		# covered in butter").
+		return [{"t": "spill", "toward": e, "dur": 0.4}, {"t": "collect", "who": e, "pace": true},
+				{"t": "wait", "dur": SCOOP_S, "scoop": e},
+				{"t": "emit", "log": true}, {"t": "fumble", "dur": 0.35, "along": e}]
 	if out.is_empty() and d > 1.0:
 		var pk := _prev_real(k)
 		var hb := pk >= 0 and str((events[pk] as Dictionary).get("kind", "")) == "handball"
@@ -1293,12 +1296,22 @@ func _scrap(p: Dictionary, who: int) -> void:
 const COLLECT_LIMIT := 6.0
 ## How far a ball nobody holds spills out of a tackle toward the man who gathers it.
 const SPILL_METRES := 3.0
-## A spilled ball's gatherer stops this far short of it: the stoop he plays over it
-## (Oval3DAnim, ground_ball_01) puts his hands on the turf 0.85-0.89 m ahead of his feet.
-const STOOP_REACH := 0.9
-## How long that stoop takes to get his hands to the ball (ground_ball_01: 0.87 s of the
-## drawn clock, which runs TEMPO times slower than this one).
-const STOOP_S := 0.87 * TEMPO
+## A spilled ball's gatherer takes it on the run with the scoop Oval3DAnim plays (SCOOP_CLIP,
+## measured from the clip): his hands reach the ball SCOOP_TOUCH clip seconds in, while the
+## clip runs him on at SCOOP_RUN metres a clip second; it starts SCOOP_LEAD metres short of
+## the ball (that run plus his reach ahead of his feet at the touch).
+const SCOOP_CLIP := "ground_ball_run_01"
+const SCOOP_TOUCH := 0.4
+const SCOOP_RUN := 4.0
+const SCOOP_LEAD := 2.2
+## The scoop on this clock, which runs TEMPO times faster than the drawn one.
+const SCOOP_S := SCOOP_TOUCH * TEMPO
+const SCOOP_SPEED := SCOOP_RUN / TEMPO
+## How far past a loose ball he aims his run at it, so he reaches it at pace instead of
+## easing to a stop over it.
+const RUN_THROUGH := 8.0
+## A fumble on the run knocks the ball on along his line, at most this far off it (radians, 35 deg).
+const KNOCK_ON := 0.61
 ## How far behind the kicker an entry may land to stand a set-shot mark on its
 ## band's spot (T2.24); further back, it lands where the log has it.
 const SET_SPOT_BACK := 20.0
@@ -1499,12 +1512,16 @@ func _enter(p: Dictionary) -> void:
 		"wait":
 			if p.has("drop"):
 				_drop_held(p["drop"])
-			if p.has("stoop"):
-				# He stops where he is, over the ball, and it lies still under his hands.
-				var st: Dictionary = tokens[int(p["stoop"])]
-				st["vel"] = Vector2.ZERO
-				MatchMotion.set_goal(st, st["pos"], 0.1, true)
-				_busy[int(p["stoop"])] = true
+			if p.has("scoop"):
+				# He runs on through the ball at the scoop's own pace; it lies still
+				# until his hands reach it.
+				var st: Dictionary = tokens[int(p["scoop"])]
+				var line := _line(st)
+				var top := float(st["top"])
+				var u := clampf((SCOOP_SPEED / maxf(top, 0.1) - MatchMotion.JOG_SHARE) / (1.0 - MatchMotion.JOG_SHARE), 0.0, 1.0)
+				st["vel"] = line * SCOOP_SPEED
+				MatchMotion.set_goal(st, (st["pos"] as Vector2) + line * RUN_THROUGH, u, true)
+				_busy[int(p["scoop"])] = true
 				ball["vel"] = Vector2.ZERO
 			if p.get("ease", false):
 				for t in tokens:
@@ -1686,6 +1703,9 @@ func _enter(p: Dictionary) -> void:
 			ball["mode"] = "loose"
 			ball["holder"] = -1
 			var ang2 := _rng.randf_range(0.0, TAU)
+			if p.has("along"):
+				# Off his hands on the run: knocked on, ahead of him along his line.
+				ang2 = _line(tokens[int(p["along"])]).angle() + _rng.randf_range(-KNOCK_ON, KNOCK_ON)
 			ball["vel"] = Vector2(cos(ang2), sin(ang2)) * _rng.randf_range(6.0, 10.0)
 
 
@@ -1711,8 +1731,8 @@ func _touch(p: Dictionary) -> void:
 				_contact(who, how, ball["pos"])
 			_last_how = &""
 		"wait":
-			if p.has("stoop"):
-				_contact(int(p["stoop"]), &"ground_ball", ball["pos"])
+			if p.has("scoop"):
+				_contact(int(p["scoop"]), &"ground_ball", ball["pos"])
 		"down":
 			var v := int(p["victim"])
 			_contact(int(p["who"]), &"tackle", tokens[v]["pos"], v)
@@ -1724,6 +1744,15 @@ func _touch(p: Dictionary) -> void:
 		"celebrate":
 			if int(p.get("who", -1)) >= 0 and bool(flash.get("goal", false)):
 				_contact(int(p["who"]), &"goal_celebrate", tokens[int(p["who"])]["pos"])
+
+
+## The line a man is running on: his heading, or toward the ball when he is near still.
+func _line(t: Dictionary) -> Vector2:
+	var v: Vector2 = t["vel"]
+	if v.length() > 0.5:
+		return v.normalized()
+	var to: Vector2 = (ball["pos"] as Vector2) - (t["pos"] as Vector2)
+	return to.normalized() if to.length() > 0.01 else Vector2.RIGHT
 
 
 func _contact(who: int, kind: StringName, at: Vector2, other := -1) -> void:
@@ -1817,10 +1846,17 @@ func _done(p: Dictionary) -> bool:
 				# rather than carrying it up the ground for the receiver.
 				ball["mode"] = "dead"
 				ball["holder"] = -1
-			MatchMotion.set_goal(t, ball["pos"], 1.0, true)
 			var d := (t["pos"] as Vector2).distance_to(ball["pos"])
-			if d <= (STOOP_REACH if p.get("reach", false) else 1.4):
-				return true
+			if p.get("pace", false):
+				# At it flat out, aimed through it: he never eases up short of it.
+				var to := (ball["pos"] as Vector2) - (t["pos"] as Vector2)
+				MatchMotion.set_goal(t, (ball["pos"] as Vector2) + to.normalized() * RUN_THROUGH if d > 0.01 else ball["pos"], 1.0, true)
+				if d <= SCOOP_LEAD:
+					return true
+			else:
+				MatchMotion.set_goal(t, ball["pos"], 1.0, true)
+				if d <= 1.4:
+					return true
 			if p.has("max") and _pt >= float(p["max"]):
 				return true
 			# Never a freeze: a ball against the fence or a crowd round it can

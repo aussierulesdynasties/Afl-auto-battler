@@ -33,9 +33,7 @@ const GAP_MAX := 9.0           # m/s: and at most this fast
 const APART := 0.8             # m: on that run his hips stay this far from the man he tackled (or who tackled him)
 const REACH := 1.6             # m: MatchDirector's chase ends this close (its "chase" phase)
 const STEP := 1.0 / 30.0       # s: the takes' frame
-const STOOP := "ground_ball_01"  # the stoop over a loose ball he fumbles (MatchDirector "stoop")
-const STOOP_TOUCH := 0.87      # clip s: its hands reach the turf (0.15 m), 0.89 m ahead of his feet
-const STOOP_END := 1.2         # clip s: hands back at his knees; he eases out of it from here
+const SCOOP_END := 0.8         # clip s: up out of the scoop and running; he eases into the jog from here
 
 var director: MatchDirector
 var players: Array
@@ -61,7 +59,7 @@ var _mate: Array = []          # per player: the other man of the take he is run
 var _rate: Array = []          # per player: the rate his running clip played at last
 var _takes := {}               # take name -> {dist: hips apart, foot: planted foot} per STEP
 var _tracks := {}              # animation name -> {bone: rotation track}, "hips": position track
-var _once: Array = []          # per player: the stoop he is in, {anim, t, yaw, at}, {} for none
+var _once: Array = []          # per player: the scoop he is in, {anim, t, yaw, at}, {} for none
 
 
 func _init(p_director: MatchDirector, p_players: Array) -> void:
@@ -335,7 +333,7 @@ func step(i: int, p: Dictionary, holder: int, pos: Vector2, vel: Vector2, dt: fl
 		return
 	var node: Node3D = p["node"]
 	var o: Dictionary = _once[i]
-	if not o.is_empty() and (float(o["t"]) >= STOOP_END or (float(o["t"]) > STOOP_TOUCH and vel.length() > 0.3)):
+	if not o.is_empty() and float(o["t"]) >= SCOOP_END:
 		_end_once(i)
 		o = {}
 	if _back[i] != Vector2.INF:
@@ -354,8 +352,8 @@ func step(i: int, p: Dictionary, holder: int, pos: Vector2, vel: Vector2, dt: fl
 			vel = vel - gap.normalized() * back
 		node.position = Vector3(pos.x + (_gap[i] as Vector2).x, 0.0, pos.y + (_gap[i] as Vector2).y)
 	if not o.is_empty():
-		# His feet stay where he stooped: a push from the pack moves his token, not him (he
-		# runs back to it, as from a take, once the stoop ends).
+		# The clip carries him from where the scoop began (its own run): his token runs the
+		# same line at the same pace, and any gap left closes as from a take once it ends.
 		var spot: Vector2 = o["at"]
 		_gap[i] = spot - pos
 		node.position = Vector3(spot.x, 0.0, spot.y)
@@ -392,7 +390,7 @@ func step(i: int, p: Dictionary, holder: int, pos: Vector2, vel: Vector2, dt: fl
 	_look_at_ball(i, i == holder, dt)
 
 
-## A stoop over the ball: the clip at its time, facing where the ball lay when it began.
+## A scoop at the ball: the clip at its time, facing where the ball lay when it began.
 func _step_once(i: int, p: Dictionary, o: Dictionary, dt: float) -> void:
 	o["t"] = float(o["t"]) + dt
 	var ap: AnimationPlayer = p["anim"]
@@ -405,8 +403,8 @@ func _step_once(i: int, p: Dictionary, o: Dictionary, dt: float) -> void:
 	_look_at_ball(i, false, dt)
 
 
-## Out of the stoop: like the end of a take, he stands where its hips left him (the clip
-## leans him 0.3 m forward) and eases into running or standing, never a slide back.
+## Out of the scoop: like the end of a take, he is where its hips left him and eases into
+## running or standing, never a slide back.
 func _end_once(i: int) -> void:
 	var p: Dictionary = players[i]
 	var spot: Vector2 = (_once[i] as Dictionary)["at"]
@@ -623,11 +621,13 @@ func event(i: int, kind: StringName, at: Vector2, other := -1) -> void:
 	if i < 0 or i >= _in.size():
 		return
 	if kind == &"ground_ball" and (_in[i] as Dictionary).is_empty():
-		# He stoops over the loose ball and it squirts off his hands (MatchDirector "stoop").
+		# He goes down for the loose ball on the run and knocks it on (MatchDirector "scoop").
 		var node: Node3D = players[i]["node"]
+		if not (players[i]["anim"] as AnimationPlayer).has_animation(MatchDirector.SCOOP_CLIP):
+			return
 		var to := at - Vector2(node.position.x, node.position.z)
 		_snap(i, players[i])
-		_once[i] = {"anim": STOOP, "t": 0.0, "yaw": atan2(to.x, to.y) if to.length() > 0.05 else node.rotation.y,
+		_once[i] = {"anim": MatchDirector.SCOOP_CLIP, "t": 0.0, "yaw": atan2(to.x, to.y) if to.length() > 0.05 else node.rotation.y,
 				"at": Vector2(node.position.x, node.position.z)}
 		return
 	if not (_once[i] as Dictionary).is_empty():
