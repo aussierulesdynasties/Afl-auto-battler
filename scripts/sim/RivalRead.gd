@@ -18,7 +18,7 @@ const SINCE := {1: "all game", 2: "since quarter time", 3: "since half time",
 		4: "since three-quarter time"}
 const QUARTER_WORDS := ["first", "second", "third", "last"]
 ## Plans in the order the copy breaks ties.
-const ORDER := ["balanced", "attacking", "defensive", "contest", "controlled", "custom"]
+const ORDER := ["balanced", "attacking", "defensive", "contest", "controlled"]
 ## A box this sharp or better reacts at the usual pace: the Good coaching cut.
 const BOX_USUAL_READ := -0.1
 ## Matches a club must have played before its season record is read.
@@ -300,11 +300,9 @@ static func legs_reason(theirs: Array, mine: Array) -> String:
 # ---------------------------------------------------------------------------
 # Their record
 # ---------------------------------------------------------------------------
-## A plan in a sentence: its name, "a balanced game" or "a plan of their own".
+## A plan in a sentence: its name or "a balanced game".
 static func phrase(plan: String) -> String:
 	var k := MatchSim.plan_key(plan)
-	if k == CustomPlan.KEY:
-		return "a plan of their own"
 	return "a balanced game" if k == "balanced" else CoachReport.plan_label(k)
 
 
