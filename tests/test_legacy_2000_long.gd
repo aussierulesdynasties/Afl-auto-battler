@@ -76,7 +76,13 @@ func _roll_through_draft() -> bool:
 		if cand.is_empty() or not draft._draft_pick(draft.current_club(), cand):
 			draft._skip_current_pick()
 		draft.auto_until_user_turn()
-	return GameState.finish_intake_draft()
+	if not GameState.finish_intake_draft():
+		return false
+	# Lists are lodged after the Rookie Draft, which follows and can wait on
+	# his pick (1997 on): he passes, and a list still short is filled then
+	# (RookieList._finish), so the sizes below are the season's own.
+	RookieList.settle(GameState)
+	return true
 
 
 func _test_rolls_past_2027() -> void:

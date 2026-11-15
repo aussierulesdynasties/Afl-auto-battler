@@ -441,8 +441,10 @@ static func should_retire(p: Dictionary, year: int) -> bool:
 	# which is a list decision, so the sim's clubs make it. (Read as every last
 	# season, a 1990 start retired 12 a club, nine of them 26 or younger.)
 	var last := int(p.get("real_last", 0))
+	# A year early never ends a career before a season he really played for
+	# the club that signed him (a new club's foundation man, real_first).
 	if last > 0 and float(p.get("age", 26.0)) - float(year - last) >= REAL_RETIRE_AGE:
-		return year > last + real_slack(p)
+		return year > maxi(last + real_slack(p), int(p.get("real_first", 0)))
 	if ov <= 32:
 		return true
 	if age >= 37.0:
