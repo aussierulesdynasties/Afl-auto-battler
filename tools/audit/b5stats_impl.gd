@@ -31,11 +31,19 @@ func _copy(list: Array) -> Array:
 	return out
 
 
+## An arm is "attr", "all", or "ROLE:attr" (only players whose role is ROLE).
 func _boost(list: Array, arm: String, delta: int) -> void:
+	var role := ""
+	var key := arm
+	if arm.contains(":"):
+		role = arm.get_slice(":", 0)
+		key = arm.get_slice(":", 1)
 	for p in list:
+		if role != "" and str(p.get("role", "")) != role:
+			continue
 		var a: Dictionary = p["attr"]
 		for k in ATTRS:
-			if arm == "all" or arm == k:
+			if key == "all" or key == k:
 				a[k] = clampi(int(a.get(k, 50)) + delta, 1, 99)
 
 
