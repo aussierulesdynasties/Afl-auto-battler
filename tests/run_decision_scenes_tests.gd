@@ -639,14 +639,17 @@ func _test_live_spots() -> void:
 			var origin: Vector2 = back * Vector2.ZERO
 			var look: Vector2 = (back * Vector2(0.0, 1.0)) - origin
 			var got: int = X.wedge_count(here, look, others)
-			# Of the ways a camera can stand back for its shot (DecisionVignette.LOOK_ROOM): one
-			# with no ground behind it left the stand low under an empty sky (2026-11-14).
-			var room: float = X.look_room(here, float(load("res://scripts/ui/match/DecisionVignette.gd").LOOK_ROOM))
 			var most := 0
+			# (Among the looks that leave the camera room to back off: near a goal the look with
+			# its back to the fence can't fill the top with the stand.)
+			var room_any := false
+			for i in range(int(X.LOOKS)):
+				room_any = room_any or X.has_room(here, Vector2.from_angle(TAU * float(i) / float(X.LOOKS)), vig.LOOK_ROOM)
 			for i in range(int(X.LOOKS)):
 				var dir := Vector2.from_angle(TAU * float(i) / float(X.LOOKS))
-				if X.look_fits(here, dir, room):
-					most = maxi(most, int(X.wedge_count(here, dir, others)))
+				if room_any and not X.has_room(here, dir, vig.LOOK_ROOM):
+					continue
+				most = maxi(most, int(X.wedge_count(here, dir, others)))
 			print("LIVE %s at %s look %s: %d behind the men, the most any way %d" % [kind, str(here), str(look), got, most])
 			_check(origin.distance_to(here) < 0.01, "%s: the scene stands where the oval has him (%s, the oval %s)" % [kind, str(origin), str(here)])
 			_check(got >= most, "%s: the camera looks the way with the most players behind (%d, the most %d)" % [kind, got, most])
@@ -654,6 +657,13 @@ func _test_live_spots() -> void:
 	# A lens with nobody one way and a pack the other turns to the pack.
 	var pack := [Vector2(0, -20), Vector2(2, -30), Vector2(-3, -40)]
 	_check((X.best_look(Vector2.ZERO, pack, Vector2(0, 1)) as Vector2).dot(Vector2(0, -1)) > 0.9, "a camera turns to where the players are")
+	# Near a goal, the look with its back to the fence is passed over for one with room, even
+	# with the pack up the ground that way.
+	var by_goal := Vector2(0, float(load("res://scripts/ui/match/VignetteGround.gd").GOAL_Y) - 8.0)
+	var up_ground := [Vector2(0, by_goal.y - 20.0), Vector2(2, by_goal.y - 30.0), Vector2(-3, by_goal.y - 40.0)]
+	var turned: Vector2 = X.best_look(by_goal, up_ground, Vector2(0, -1), 35.0)
+	_check(not X.has_room(by_goal, Vector2(0, -1), 35.0) and X.has_room(by_goal, turned, 35.0),
+			"a camera by the goals turns where it has ground to back off into (%s)" % str(turned))
 	_check(int(X.wedge_count(Vector2.ZERO, Vector2(0, 1), pack)) == 0 and int(X.wedge_count(Vector2.ZERO, Vector2(0, -1), pack)) == 3,
 			"the wedge counts the men behind, not the men behind the camera")
 	m.queue_free()

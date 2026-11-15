@@ -33,14 +33,6 @@ const STAGE := {
 ## middle of the goals. Champion Data's cells: straight in front is under 30, a tight angle
 ## over 60. The distance is the spot's own metres.
 const SET_SPOTS := {"close": 0.0, "front": 0.0, "long": 0.0, "angle": 20.0, "pocket": 65.0}
-
-## How far behind the men a duel or hot-hand camera needs the ground to stand back, in
-## oval metres. Measured 2026-11-14 on a phone: a duel lens stopped by the boundary at
-## 24.5 m left 267 px of sky over the stand; at 31 m the stand filled the top.
-const LOOK_ROOM := 30.0
-## Where the hot hand's field umpire stands, in scene metres: 5 m behind the chaser's
-## start, inside a phone's picture.
-const UMP_HOT := Vector2(-1.5, 26.0)
 ## The man on the mark stands on the mark; the kicker walks back this far from it (the same
 ## five metres the after-the-siren shot gives him: BroadcastVignette.KICK_BEHIND), on the
 ## line from the middle of the goals through the mark, so his kick goes over the mark.
@@ -68,6 +60,12 @@ var _to_scene := Transform2D.IDENTITY
 var _screen_off := -1
 var _screen_off_size := Vector2.ZERO
 var _ball_box := Rect2()
+
+
+## How far behind the men a duel's or a hot player's camera must have ground to back off into,
+## metres: the shot backs off until the stand fills the top (StoppageVignette._solve), which a
+## phone's picture needed up to about 38 m for (decision_scenes, 2026-11-16).
+const LOOK_ROOM := 35.0
 
 
 static func has_scene(k: String) -> bool:
@@ -122,14 +120,16 @@ func setup_decision(sim: MatchSim, my_side: int, moment: Dictionary, shown := {}
 		for id in live_spots:
 			if str(id) != about:
 				others.append(live_spots[id])
-		# A way with no ground behind for the camera to stand back on is not taken.
 		_stage = {"at": here, "look": VignetteExtras.best_look(here, others, _stage["look"], LOOK_ROOM)}
 	_to_scene = _frame_from(_stage["at"], _stage["look"])
 	var focus: Vector2 = _stage["at"]
-	# The field umpire stands behind the men, in the camera's picture.
+	# The field umpire stands behind the men, in the camera's picture: two metres off its middle,
+	# so a phone's narrow long lens (37.5 m back) still holds him, and 22 m up, past where the
+	# man kicking a bag starts his run (1, 18): the cast keeps 3 m clear of every run, and at
+	# 14 m up he stood 2.6 m from it and was left off the ground (decision_scenes, 2026-11-16).
 	var near_umpire := Vector2(7.0, 6.0)
 	if kind != "tired":
-		near_umpire = _to_scene.affine_inverse() * Vector2(-2.9, 12.0) - focus
+		near_umpire = _to_scene.affine_inverse() * Vector2(-2.0, 22.0) - focus
 	match kind:
 		"tired":
 			# He walks in off the wing, out on his feet; his replacement is up off the bench,
@@ -162,10 +162,6 @@ func setup_decision(sim: MatchSim, my_side: int, moment: Dictionary, shown := {}
 				stopper = (mids[0] as Dictionary) if not mids.is_empty() else {}
 			_add(stopper, my_side, true, wet, {"role": "chaser", "from": Vector2(2.6, 21.0), "to": Vector2(1.4, 3.4),
 					"delay": 0.0, "dur": 2.8, "face": "front"})
-			# The field umpire trails the chase, behind where both men set off: at (-2.9, 12)
-			# he stood 18 px past a phone's left edge (measured 2026-11-14), and at that depth
-			# all of a phone's picture is within 3 m of one of the two runs.
-			near_umpire = _to_scene.affine_inverse() * UMP_HOT - focus
 		"momentum":
 			# Their goal, and the walk back: your mids wait on the centre, theirs jog back
 			# past them having just kicked it.
