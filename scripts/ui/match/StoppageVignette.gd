@@ -360,7 +360,7 @@ static func call_facts(sim: MatchSim, me: int) -> Array:
 	if gap <= -4:
 		out.append("They have been winning it out of the middle all day.")
 	elif gap >= 4:
-		out.append("You have had the better of them out of the middle all day.")
+		out.append("We have had the better of them out of the middle all day.")
 	elif absi(taps) >= 5 and rucks.has(taps > 0):
 		out.append("%s is on top in the ruck." % str(rucks[taps > 0]))
 	else:

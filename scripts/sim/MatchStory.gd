@@ -282,7 +282,7 @@ static func call_reason(res: Dictionary, side: int, dir: int) -> Dictionary:
 			var a := int(qg[i][side]) * 6 + int(qb[i][side])
 			var b := int(qg[i][1 - side]) * 6 + int(qb[i][1 - side])
 			return {"stat": "q%d_points" % (i + 1), "mine": a, "theirs": b, "quarter": i + 1, "call": line,
-					"cause": cause, "text": "Your call in the %s quarter (%s to %d): %s" % [MatchNotes.QUARTER_NAMES[i],
+					"cause": cause, "text": "Our call in the %s quarter (%s to %d): %s" % [MatchNotes.QUARTER_NAMES[i],
 					("won it %d" if a > b else "lost it %d") % a, b, line]}
 	return {}
 
