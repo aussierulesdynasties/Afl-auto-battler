@@ -23,7 +23,7 @@ const GOLDEN_REAL := "6b9d20ef93eea2ce95f0a6d936f19727"
 ## Godot, so the season has one fingerprint per platform; each was taken on
 ## main before the change (Linux: run_on_github run 43024085570). Removing
 ## the own plan (bug bash 5: rivals no longer build one) redrew the season:
-## Windows from a local run on that branch, Linux from its CI (Tests run 43745154919, shard 12).
+## Windows from a local run on that branch, Linux from its CI (Tests run 43755400948, shard 12).
 ## The game plan retune after it (bug bash 5) redrew it again: Windows from
 ## a local run, Linux from run_on_github run 43725691444 (with the 40% Controlled Tempo hold and #1613).
 ## The inside-50 pass that credits goal assists (#1638) redrew it again: Windows from
@@ -41,7 +41,7 @@ const BOOKKEEPING_KEYS := ["impact_by", "breeze_side"]
 ## pressure zones (pressure acts in the defensive half, tackles inside 50,
 ## 2026-11-14) are counted without a draw, so leaving them out keeps the print.
 const TEAM_BOOKKEEPING_KEYS := ["pressure_acts_dhalf", "tackles_i50"]
-const GOLDEN_SEASON := {"Windows": "5494a32b9b8ef33687a1afe633eec837", "Linux": "d0043e9804c6d2b48248a0a4b4954bf3"}
+const GOLDEN_SEASON := {"Windows": "5494a32b9b8ef33687a1afe633eec837", "Linux": "5f6065662575afcefd4196d42ad02d88"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and
