@@ -173,10 +173,18 @@ func _test_named_players() -> void:
 	_check(not uwland.is_empty() and PlayerProfile.player_type(uwland) != "Key defender", "Bodhi Uwland is not a key defender")
 	var langford := _find("MEL", "Harvey Langford")
 	_check(not langford.is_empty() and Roles.label(langford) == "Wing", "Harvey Langford is a wing")
+	# Read on the director's own OVR rows, as the game plays them (the suites
+	# turn them off): his row (Dawson 90) is part of who he is. On his 2026
+	# stats alone Dawson's pressure outruns his handballs and bounces.
+	var skip: bool = GameDB.skip_ovr_overrides
+	GameDB.skip_ovr_overrides = false
+	GameDB.reload()
 	for n in [["SYD", "Errol Gulden"], ["GWS", "Finn Callaghan"], ["GEE", "Max Holmes"], ["ADE", "Jordan Dawson"]]:
 		var star := _find(n[0], n[1])
 		_check(not star.is_empty() and Roles.label(star) == "Inside midfielder",
 				"%s, a top ball-winner, is an inside midfielder (%s)" % [n[1], Roles.label(star)])
+	GameDB.skip_ovr_overrides = skip
+	GameDB.reload()
 	_check(str(_find("GWS", "Josh Kelly").get("role", "")) == "MID" and str(_find("MEL", "Steven May").get("role", "")) == "DEF",
 			"Listed veterans take their real position, not a height roll")
 	var green_rated := _find("GWS", "Tom Green")
@@ -211,7 +219,7 @@ func _test_engine_rewards_wings() -> void:
 	var centre := []
 	for p in good.ground:
 		if str(p["role"]) == "MID" and not Roles.on_wing(p):
-			centre.append(float(p["attr"]["contested"]))
+			centre.append(Skills.engine(p, "contested"))
 	var mean := 0.0
 	for v in centre:
 		mean += v

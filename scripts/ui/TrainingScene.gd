@@ -859,15 +859,9 @@ func _card_text_width(across := -1) -> float:
 	return card - CARD_BAR - 2.0 * CARD_PAD
 
 
-## Whether every skill's name and a two-figure rating fit on one line of a
-## card `width` wide (PlayerSheet.top_three's row: name, 8 px, rating).
+## Whether every skill's name and a two-figure rating fit on a card `width` wide.
 static func _top_three_fits(width: float) -> bool:
-	var fs := UiKit.px(CARD_FS_LOW)
-	var num := UiKit.FONT.get_string_size("99", HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-	for label in PlayerProfile.ATTR_LABELS.values():
-		if UiKit.FONT.get_string_size(str(label), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 8.0 + num > width:
-			return false
-	return true
+	return PlayerSheet.top_three_fits(width, CARD_FS_LOW)
 
 
 ## "Mid +1": his own position, then how many more he can play. The full list

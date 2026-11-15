@@ -383,6 +383,19 @@ static func top_three(p: Dictionary, size: int, one_line := false) -> Control:
 	return box
 
 
+## Whether every skill's name and a two-figure rating fit on one line `width`
+## wide at text `size` (a top_three row: name, 8 px, rating). The director's
+## skill names run to "Uncontested marking" (row 200): a half-width card on a
+## small phone can't hold it, and a card that can't goes one across.
+static func top_three_fits(width: float, size: int) -> bool:
+	var fs := UiKit.px(size)
+	var num := UiKit.FONT.get_string_size("99", HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	for label in PlayerProfile.ATTR_LABELS.values():
+		if UiKit.FONT.get_string_size(str(label), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 8.0 + num > width:
+			return false
+	return true
+
+
 ## The height top_three's three rows take on a card, at the text size.
 static func top_three_height(size: int) -> float:
 	return 3.0 * ceilf(UiKit.FONT.get_height(UiKit.px(size)))

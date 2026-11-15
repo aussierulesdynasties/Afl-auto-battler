@@ -714,7 +714,10 @@ func _test_inspect(ui: Control) -> void:
 	var top := ui.find_children("TopAttr_*", "", true, false)
 	_check(ui.find_child("TopAttributesHead", true, false) != null and not top.is_empty() and top.size() <= 3,
 			"His top attributes are listed, three at most (%d)" % top.size())
-	_check(ui.find_children("*", "Label", true, false).filter(func(l): return l.is_visible_in_tree() and l.text.begins_with("Durability")).is_empty(),
+	# Durability is one of the director's 16 skills (row 200), so it may be one
+	# of his top three; the full sheet is what stays folded.
+	_check(ui.find_children("*", "Label", true, false).filter(func(l): return l.is_visible_in_tree() and l.text.begins_with("Durability")
+			and not top.any(func(t): return t == l or t.is_ancestor_of(l))).is_empty(),
 			"The raw rating sheet stays folded away")
 	# Android Back closes the details first.
 	_check(bool(ui.call("handle_back")) and not is_instance_valid(ui.get("_detail")),

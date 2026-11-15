@@ -253,7 +253,7 @@ func _test_complete_synergy_reentry() -> void:
 		p["injury_weeks"] = 0
 		p["overall"] = 70 if in23.has(str(p["id"])) else 40
 		var attr: Dictionary = p.get("attr", {})
-		attr["contested_marking"] = 40
+		attr["contested_marking"] = Traits.SMALL_MAX_CM - 5
 		attr["goalkicking"] = 40
 		p["attr"] = attr
 	var crumber: Dictionary = GameState.list_player(str(side["FWD"][0]))
@@ -488,7 +488,7 @@ func _test_fifth_interchange() -> void:
 		elif str(r["id"]) == out:
 			row_out = r
 	_check(bool(row5.get("on_bench", false)) and not bool(row5.get("reserves", true))
-			and int(row5.get("xp", 0)) == GameState._xp_amount({"disposals": 8}, false, true),
+			and int(row5.get("xp", 0)) == _club_paid(mine.get(fifth, {}), GameState._xp_amount({"disposals": 8}, false, true)),
 			"The fifth interchange is credited as selected and paid for his own game (%s)" % str(row5))
 
 	# An older save named four on the bench: the fifth is filled on match day.
@@ -837,6 +837,14 @@ func _test_youth_no_cycle() -> void:
 		p["injury_weeks"] = 0
 		p["age"] = 28.0 if in23.has(str(p["id"])) else 19.0
 		p["overall"] = 72 if in23.has(str(p["id"])) else 70
+	# The youth pick starts from the best side on these ratings: on the
+	# director's position-relative skills (row 200) that can differ from the
+	# side picked before the ages and ratings above were set.
+	best = GameState.auto_pick("best")["side"]
+	in23 = {}
+	for k in best:
+		for id in best[k]:
+			in23[str(id)] = true
 	var r: Dictionary = GameState.auto_pick("youth")
 	var after := {}
 	for k in r["side"]:
@@ -858,3 +866,12 @@ func _test_youth_no_cycle() -> void:
 		if note.count(nm) != 1:
 			once = false
 	_check(once and note.count(" for ") == came.size(), "Each youngster and each man out is named once, no swap back: %s" % note)
+
+
+## A selected player's own-game XP as his club turns it into development: a
+## young fifth interchange (on the director's ratings, row 200) gets the
+## development department's and the plan's share too, as every player does.
+func _club_paid(p: Dictionary, base: int) -> int:
+	var staffs = CoachEffects.staffs(GameState.coaches) if not GameState.coaches.is_empty() else {}
+	var staff: Dictionary = staffs.get("GEE", {}) if not GameState.coaches.is_empty() else {}
+	return GameState._club_xp("GEE", p, base, staff, false, GameState.fitness_plan("GEE"))

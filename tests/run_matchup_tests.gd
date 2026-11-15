@@ -1080,7 +1080,10 @@ func _test_facts_without_options() -> void:
 	var db = root.get_node("GameDB")
 	var NI = load("res://scripts/ui/NameInk.gd")
 	var kit = load("res://scripts/ui/UiKit.gd")
-	for club in ["FRE", "BRL"]:
+	# Two clubs whose first opponent (seed 2031) has two or more facts, one
+	# naming a player: on the director's ratings (row 200) Brisbane's, Gold
+	# Coast, sits mid-table in every line, so the Bulldogs (v Adelaide) stand in.
+	for club in ["FRE", "WBD"]:
 		_reset()
 		_state.set_setting("seen_weekly_loop_intro", true)
 		_state.start_season(club, db.club_list(club))

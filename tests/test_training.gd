@@ -482,8 +482,8 @@ func _test_archetypes_differ() -> void:
 func _test_traits_through_training() -> void:
 	_new_season()
 	var fwd: Dictionary = _first_of("FWD").duplicate(true)
-	fwd["attr"]["contested_marking"] = 40
-	fwd["attr"]["goalkicking"] = 50
+	fwd["attr"]["contested_marking"] = Traits.SMALL_MAX_CM - 5
+	fwd["attr"]["goalkicking"] = int(Traits.DEFS["crumber"]["min"]) - 4
 	fwd["role2"] = ""
 	fwd["xp"] = 2500
 	_check(not Traits.has(fwd, "crumber"), "(setup) no Crumber yet")
@@ -1431,15 +1431,16 @@ func _mean_attr(players: Array, key: String) -> float:
 func _test_focus_grows_a_trait() -> void:
 	_new_season()
 	var p := {}
+	var bull_min := int(Traits.DEFS["bull"]["min"])
 	for q in GameState.my_list:
-		if str(q["role"]) == "MID" and int(q["attr"]["contested"]) < 84 and not Traits.of(q).has("bull"):
+		if str(q["role"]) == "MID" and int(q["attr"]["contested"]) < bull_min and not Traits.of(q).has("bull"):
 			p = q
 			break
 	_check(not p.is_empty(), "A midfielder short of Contested bull")
 	if p.is_empty():
 		return
 	var ft := GameState.focus_trait(p, "contested")
-	_check(str(ft.get("key", "")) == "bull" and int(ft["gap"]) == 84 - int(p["attr"]["contested"]),
+	_check(str(ft.get("key", "")) == "bull" and int(ft["gap"]) == bull_min - int(p["attr"]["contested"]),
 			"A contested focus grows him toward Contested bull, and says how far")
 	_check(GameState.focus_trait(p, "ruck").is_empty(), "A midfielder's ruck focus names no trait")
 	p["attr"]["contested"] = 99
