@@ -250,6 +250,7 @@ func reload(dataset := Datasets.DEFAULT) -> void:
 	_load_appearance()
 	_apply_origin(players)
 	Ratings.era_anchors = {}
+	Ratings.set_unrecorded(Ratings.find_unrecorded(players))
 	Ratings.derive_all(players)
 	# A past start scales each position on its own data season (director
 	# 2026-11-13, "Scale each position per season"); a set on today's season
@@ -747,8 +748,12 @@ func _load_list_additions() -> Array:
 		var rec = record.get("%s|%s|%s" % [club, p["first"], p["last"]])
 		if rec != null:
 			# Played AFL before: rated on that season, as any listed player is.
+			var blank := []
 			for k in STAT_KEYS:
 				p[k] = float(rec.get(k, 0.0))
+				if str(rec.get(k, "0")) == "":
+					blank.append(k)
+			p["blank"] = blank
 			p["real_pos"] = pos if pos != "" else ""
 			p["role_estimated"] = false
 			p["stats_year"] = int(rec.get("src", 0))
@@ -1832,8 +1837,13 @@ func _load_players() -> Array:
 		seen_ids[id] = true
 		p["id"] = id
 		p["src"] = int(str(cells[idx["src"]])) if idx.has("src") else DATA_SEASON
+		var blank := []
 		for k in STAT_KEYS:
-			p[k] = float(str(cells[idx[k]])) if idx.has(k) else 0.0
+			var cell := str(cells[idx[k]]).strip_edges() if idx.has(k) else "0"
+			p[k] = float(cell)
+			if cell == "":
+				blank.append(k)   # not recorded that season (Ratings.unrecorded)
+		p["blank"] = blank
 		# Optional enriched fields — defaults keep Ratings.gd backward-compatible
 		p["real_pos"] = str(cells[idx["real_pos"]]) if idx.has("real_pos") else ""
 		p["dob"] = str(cells[idx["dob"]]) if idx.has("dob") else ""
