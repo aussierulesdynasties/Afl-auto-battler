@@ -46,6 +46,14 @@ true. This repo copy is the only one; the general rules it builds on are in the
 
 ## Merge conflicts
 
+- **Landing orders, all at once:** `python3 tools/pr_conflicts.py` merges every open ready PR
+  onto main, and each pair both ways, with `git merge-tree` (no checkout; about 50 s for 15
+  PRs). The `PR conflicts` workflow runs it after every push to main and hourly, and comments on
+  a PR when its conflict list changes. Run it before arming PRs that share a file.
+- **Seeded-snapshot files conflict between any two sim PRs** (2026-11-16: 5 of 13 conflicting
+  pairs): `tests/test_dataset.gd`, `tests/test_season_rules.gd` and
+  `tests/fixtures/awards_round4_snapshot.txt` hold hashes every sim change rewrites. The PR that
+  lands second re-runs those suites on the merged tree and takes the new hashes; never pick a side.
 - **The shared check-floor file was in almost every conflict** (stats-hub, stats-book,
   set-share, kick-fix). The check floors are gone (2026-10-18, test suite audit
   section 4): a suite now counts its own test functions in its own file, so two PRs

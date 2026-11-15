@@ -23,9 +23,11 @@ const GOLDEN_REAL := "6b9d20ef93eea2ce95f0a6d936f19727"
 ## Godot, so the season has one fingerprint per platform; each was taken on
 ## main before the change (Linux: run_on_github run 43024085570). Removing
 ## the own plan (bug bash 5: rivals no longer build one) redrew the season:
-## Windows from a local run on that branch, Linux from its CI (shard 6). The
-## defensive-50 play (#1598) redrew it again: Windows from a local run, Linux
-## from that PR's CI.
+## Windows from a local run on that branch, Linux from its CI (shard 6).
+## The game plan retune after it (bug bash 5) redrew it again: Windows from
+## a local run, Linux from run_on_github run 43725691444 (with the 40% Controlled Tempo hold and #1613).
+## The defensive-50 play (#1598) redrew it again: Windows from a local run,
+## Linux from that PR's CI.
 ## Result keys added after the golden was taken that record who earned a
 ## call's credit, not what happened (row 144). "impact" and "plan_traits" were
 ## already in main's results, so they stay in the hash. "breeze_side" (the
@@ -42,7 +44,7 @@ const TEAM_BOOKKEEPING_KEYS := ["pressure_acts_dhalf", "tackles_i50", "poss_d50"
 		"d50_tackled", "d50_rushed", "d50_chips"]
 ## Team counts named by prefix (one key per way a defensive-50 chain ends).
 const TEAM_BOOKKEEPING_PREFIXES := ["d50_end_"]
-const GOLDEN_SEASON := {"Windows": "921369760b758320d8556bf13fba9b9c", "Linux": "72322ca0dbc2a6c890003aa6baa84909"}
+const GOLDEN_SEASON := {"Windows": "67cf626f8da0f260220a11e146954d5f", "Linux": "72322ca0dbc2a6c890003aa6baa84909"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and

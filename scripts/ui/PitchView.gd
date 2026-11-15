@@ -348,6 +348,9 @@ func _setup_3d() -> void:
 	_oval3d = Oval3D.new()
 	_vp3d.add_child(_oval3d)
 	_oval3d.build(director, home_code, away_code)
+	# The turf and light for the day, as the flat oval and the vignettes draw it.
+	var weather := str(result.get("weather", ""))
+	_oval3d.turf.apply(weather, time_of_day(weather))
 	_make_paint_3d()
 	_oval3d.set_ends(end_sign(period))
 	_fit_3d()

@@ -848,8 +848,34 @@ func _play_quarters(sim: MatchSim) -> Array:
 ## Skip to full time before the first bounce: the assistant's loose man plays
 ## the whole match and is named, not "Our loose men" (he was never in the
 ## plans the quarters kept).
+## Seed-bound: the assistant rightly pulls the loose man to chase when the side
+## trails at half or three-quarter time (_ai_interceptor), so the match must be
+## one the side never trails at those breaks. The first such seed from 4411 is
+## used (4411 itself trailed at three-quarter time after the bug bash 5 trait
+## fixes moved its dice).
 func _test_calls_name_skip_loose() -> void:
-	var played := _play_quarters(_assisted_sim(4411))
+	var played := []
+	for seed in range(4411, 4441):
+		var sim := _assisted_sim(seed)
+		var behind := false
+		var who := []
+		var pts := []
+		while sim.current_quarter <= 4:
+			if sim.current_quarter >= 3 and sim.score(0) < sim.score(1):
+				behind = true
+			who.append(str(sim.interceptor[0]))
+			var before := float((sim.impact[0] as Dictionary).get("loose", 0.0))
+			sim.run_quarter()
+			pts.append(float((sim.impact[0] as Dictionary).get("loose", 0.0)) - before)
+		if behind:
+			continue
+		if sim.needs_extra_time():
+			sim.run_extra_time()
+		played = [sim.result(), who, pts]
+		break
+	_check(not played.is_empty(), "a seed where the side never trails at a late break")
+	if played.is_empty():
+		return
 	var res: Dictionary = played[0]
 	var who: Array = played[1]
 	_check(who[0] != "" and who.count(who[0]) == who.size(), "one man plays loose all match (%s)" % str(who))
