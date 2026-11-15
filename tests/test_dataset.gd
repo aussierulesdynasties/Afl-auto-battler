@@ -19,13 +19,18 @@ const SUITE_SEED := 1990
 ## its three tied prospects and passes its picks, so the opening draft differs.
 const GOLDEN_LOAD := "9baf6f36b146d2bfafd65e07b3235c55"
 ## It moved again with row 199 (2026-11-15): the off-season before the
-## opening draft closes with the rivals signing free agents, so the lists differ.
-const GOLDEN_REAL := "744a28a11b3d0539ea53297e932616fc"
+## opening draft closes with the rivals signing free agents, so the lists differ;
+## the level ladder going A-Z by club (#1633) then changed the order the clubs
+## trade and sign in during it.
+const GOLDEN_REAL := "d4fd9cfddd165faddd875f60720392cc"
 ## A played match's floating point differs between Windows and Linux builds of
 ## Godot, so the season has one fingerprint per platform; each was taken on
 ## main before the change (Linux: run_on_github run 43024085570). Removing
 ## the own plan (bug bash 5: rivals no longer build one) redrew the season:
 ## Windows from a local run on that branch, Linux from its CI (shard 6).
+## Row 199's first off-season changes the lists the season is played on, and
+## with them the feed lines the copy pass (#1613) reworded reach the print:
+## Windows from a local run, Linux from its CI.
 ## Result keys added after the golden was taken that record who earned a
 ## call's credit, not what happened (row 144). "impact" and "plan_traits" were
 ## already in main's results, so they stay in the hash. "breeze_side" (the
@@ -39,7 +44,7 @@ const BOOKKEEPING_KEYS := ["impact_by", "breeze_side"]
 ## pressure zones (pressure acts in the defensive half, tackles inside 50,
 ## 2026-11-14) are counted without a draw, so leaving them out keeps the print.
 const TEAM_BOOKKEEPING_KEYS := ["pressure_acts_dhalf", "tackles_i50"]
-const GOLDEN_SEASON := {"Windows": "078c20284e793838806f0428ea43de8c", "Linux": "17c58069d584c738edee71900119a031"}
+const GOLDEN_SEASON := {"Windows": "1b1b706081f6f9c95e6ebe2e790eb742", "Linux": "17c58069d584c738edee71900119a031"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and
