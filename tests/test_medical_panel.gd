@@ -426,8 +426,10 @@ func _test_no_other_dice_move() -> void:
 	# rounds. Until a sitting retires someone (a different list from then on)
 	# every result must be identical.
 	# The loaded career plays until a round has followed a sitting (at most
-	# six); the plain one plays the same number of rounds.
-	var b := _rounds(true, 6)
+	# fourteen: when the first concussion comes depends on how the matches go;
+	# under the D50 chip it is after round six on this seed); the plain one
+	# plays the same number of rounds.
+	var b := _rounds(true, 14)
 	var a := _rounds(false, (b["results"] as Array).size())
 	var compared := 0
 	var sat_before := false
