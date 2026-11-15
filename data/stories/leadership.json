@@ -390,7 +390,6 @@
 		"id": "captain_group_flat",
 		"topical": true,
 		"category": "leadership",
-		"cooldown": 50,
 		"subject": {
 			"kind": "player",
 			"where": {
@@ -468,7 +467,7 @@
 				"rule": "The players follow a captain whose Leadership rating is {holds_at} or better. If {name} rates you {holds_opinion_at} out of 100 or better, {holds_trust_at} is enough. {name}: Leadership {leadership}, rates you {opinion} out of 100."
 			}
 		],
-		"cooldown": 25,
+		"cooldown": 50,
 		"when": {
 			"losing_run_min": 3
 		},
