@@ -1169,6 +1169,24 @@ func _test_tribunal_verdict() -> void:
 	root.size = size_before
 
 
+## A real-lists start's first off-season (row 199), on the draft screen: its
+## Start (a tap) closes it; on a Legacy start that starts the season. Returns
+## the tap's fault, "" when it took or there was no off-season.
+func _past_first_offseason() -> String:
+	if _router.current() != "draft":
+		return ""
+	var start: Control = current_scene.find_child("FirstOffseasonStart", true, false)
+	if start == null:
+		return ""
+	var why: String = await Tap.tap(start)
+	for i in range(600):
+		if _router.current() != "draft" and not bool(root.get_node("ScreenTransition").busy):
+			break
+		await process_frame
+	await _settle()
+	return why
+
+
 func _settle() -> void:
 	for i in range(4):
 		await process_frame
@@ -4587,7 +4605,9 @@ func _test_every_start_reaches_interview() -> void:
 			await process_frame
 		await _settle()
 		if st.size() > 5 and str(st[1]) == "real":
-			# A past season on its real lists has no draft before it: Continue starts the season.
+			# A past season on its real lists has no draft before it: its
+			# off-season (row 199) comes first, and its Start starts the season.
+			cont += await _past_first_offseason()
 			_check(cont == "" and _router.current() in ["hub", "preseason"] and _state.season != null and _state.season_year == 1990,
 					"%s: Continue starts the 1990 season, no empty draft board (tap %s, at %s)" % [label, cont, _router.current()])
 			continue
@@ -6151,6 +6171,7 @@ func _test_year_step_taps() -> void:
 			break
 		await process_frame
 	await _settle()
+	t5 += await _past_first_offseason()
 	var northey := ""
 	for cid in _state.coaches:
 		if str(_state.coaches[cid].get("real_name", "")) == "John Northey":
