@@ -103,6 +103,7 @@
 		"id": "members_forum",
 		"topical": true,
 		"category": "members",
+		"cooldown": 50,
 		"subject": {
 			"kind": "club"
 		},
