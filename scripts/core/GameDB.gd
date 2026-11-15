@@ -757,7 +757,7 @@ func _load_list_additions() -> Array:
 			p["real_pos"] = pos if pos != "" else ""
 			p["role_estimated"] = false
 			p["stats_year"] = int(rec.get("src", 0))
-			p["data_src"] = "listed %d, rated on his %d season" % [DATA_SEASON, int(rec.get("src", 0))]
+			p["data_src"] = "listed %d, rated on the %d season" % [DATA_SEASON, int(rec.get("src", 0))]
 			p["draft_year"] = DATA_SEASON
 			p["draft_rank"] = 0
 			p["draft_team"] = ""

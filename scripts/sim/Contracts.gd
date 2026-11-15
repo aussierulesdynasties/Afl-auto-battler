@@ -238,16 +238,16 @@ const INSULT_MORALE := 5
 const REFUSE_BELOW := 50
 const REFUSE_PER_POINT := 1
 ## What the talks say before you decide, and what happens when he refuses.
-const REFUSE_ODDS := "His opinion of you: %d out of 100. %d%% he won't re-sign with us."
+const REFUSE_ODDS := "Opinion of you: %d out of 100. %d%% that %s won't re-sign with us."
 ## The news line (name, opinion), then where he goes.
-const REFUSED := "%s won't re-sign with us. His opinion of you: %d out of 100."
+const REFUSED := "%s won't re-sign with us. Opinion of you: %d out of 100."
 const REFUSED_GOES := "He goes to free agency."
 const REFUSED_SEASON_END := "He goes to free agency when the season ends."
 const REFUSED_STAYS := "He stays on the market."
 ## What talks with him say once he has refused.
-const REFUSED_TALKS := "He won't re-sign with us. His opinion of you: %d out of 100."
+const REFUSED_TALKS := "Won't re-sign with us. Opinion of you: %d out of 100."
 ## On his contract card once he has refused.
-const REFUSED_CARD := "Won't re-sign with us. His opinion of you: %d out of 100"
+const REFUSED_CARD := "Won't re-sign with us. Opinion of you: %d out of 100"
 
 
 ## The chance (percent) he refuses to re-sign with us, from his opinion of you.

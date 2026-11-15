@@ -180,7 +180,7 @@ func _row(p: Dictionary, full: bool) -> Control:
 	if marked:
 		# The gate's two sides, as every delisting states them.
 		# The club's voice: we and our (ruling 38); "you" is only the coach.
-		v.add_child(UiKit.stake_row(GateOdds.gain("a list spot, and %s a season off our books" % Contracts.money(int(p.get("salary", 0)))), "DelistGain"))
+		v.add_child(UiKit.stake_row(GateOdds.gain(ListCosts.RELEASE_GAIN % Contracts.money(int(p.get("salary", 0)))), "DelistGain"))
 		v.add_child(UiKit.stake_row(GateOdds.cost("%s leaves us for nothing, free for any club to sign" % GameDB.player_display_name(p)), "DelistCost"))
 	return card
 
