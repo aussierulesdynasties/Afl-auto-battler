@@ -652,6 +652,8 @@ func _test_bodies_apart(res: Dictionary) -> void:
 				if absf(a.x - b.x) >= 0.7 or absf(a.y - b.y) >= 0.7:
 					continue
 				var g := a.distance_to(b)
+				if g >= 0.7:
+					continue
 				var ph := str((d._phases[d._pi] as Dictionary).get("t", "-")) if d._pi < d._phases.size() else "-"
 				if meant.has(i) and meant.has(j):
 					meant_close += 1

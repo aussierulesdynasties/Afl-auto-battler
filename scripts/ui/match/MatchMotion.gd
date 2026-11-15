@@ -171,6 +171,14 @@ static func _meant(meant: Dictionary, i: int, j: int) -> bool:
 	return meant.has(i) and meant.has(j)
 
 
+## How much a token gives way to another (Weiss et al. 2017 weight each body's
+## share of a constraint by its inverse mass): 1 for a man free to check or turn,
+## 0 for a man the play holds to a set pace ("cap", a scoop's run), who keeps
+## his line while the man in his way gives way for both of them.
+static func _give(t: Dictionary) -> float:
+	return 0.0 if t.has("cap") else 1.0
+
+
 ## Set each token's "avoid" (an acceleration, read by step) from the
 ## time-to-collision power law (Karamouzas, Skinner and Guy 2014; their
 ## reference force, with m = 2): the sooner two bodies on their present
@@ -186,9 +194,12 @@ static func avoid(tokens: Array, meant: Dictionary = {}) -> void:
 	vel.resize(n)
 	var force := PackedVector2Array()
 	force.resize(n)
+	var give := PackedFloat32Array()
+	give.resize(n)
 	for i in range(n):
 		pos[i] = tokens[i]["pos"]
 		vel[i] = tokens[i]["vel"]
+		give[i] = _give(tokens[i])
 	var rr := BODY * BODY
 	for i in range(n):
 		var pa := pos[i]
@@ -196,7 +207,7 @@ static func avoid(tokens: Array, meant: Dictionary = {}) -> void:
 			var w := pos[j] - pa
 			if absf(w.x) >= AVOID_SEE or absf(w.y) >= AVOID_SEE:
 				continue
-			if _meant(meant, i, j):
+			if _meant(meant, i, j) or give[i] + give[j] <= 0.0:
 				continue
 			var v := vel[i] - vel[j]
 			var a := v.dot(v)
@@ -216,8 +227,10 @@ static func avoid(tokens: Array, meant: Dictionary = {}) -> void:
 			# -dE/dx for i (and the opposite for j), as in the reference code.
 			var f := -AVOID_K * exp(-tau / AVOID_TAU0) * (v - (v * b - w * a) / disc) \
 					/ (a * tau * tau) * (2.0 / tau + 1.0 / AVOID_TAU0)
-			force[i] += f
-			force[j] -= f
+			# Shared as the reference code shares it (each gets f), unless one keeps his line.
+			var share := 2.0 / (give[i] + give[j])
+			force[i] += f * give[i] * share
+			force[j] -= f * give[j] * share
 	for i in range(n):
 		var t: Dictionary = tokens[i]
 		t["avoid"] = Vector2.ZERO if float(t["down"]) > 0.0 else force[i].limit_length(AVOID_MAX)
@@ -234,8 +247,11 @@ static func hold_apart(tokens: Array, from: Array, meant: Dictionary = {}) -> vo
 	var n := tokens.size()
 	var pos := PackedVector2Array()
 	pos.resize(n)
+	var give := PackedFloat32Array()
+	give.resize(n)
 	for i in range(n):
 		pos[i] = tokens[i]["pos"]
+		give[i] = _give(tokens[i])
 	for pass_i in range(3):
 		var any := false
 		for i in range(n):
@@ -260,9 +276,18 @@ static func hold_apart(tokens: Array, from: Array, meant: Dictionary = {}) -> vo
 				if tot < 0.00001:
 					continue
 				var back := minf(minf(lim, lw) - l, tot)
-				p1 -= u * back * in_i / tot
+				# Each gives back his own closing, weighted by how much he gives way; a man
+				# who keeps his line gives back only what the other cannot.
+				var gi := in_i * give[i]
+				var gj := in_j * give[j]
+				var take_j := minf(back * gj / maxf(gi + gj, 0.00001), in_j)
+				var take_i := minf(back - take_j, in_i)
+				take_j = minf(back - take_i, in_j)
+				in_i = take_i
+				in_j = take_j
+				p1 -= u * take_i
 				pos[i] = p1
-				pos[j] = p2 + u * back * in_j / tot
+				pos[j] = p2 + u * take_j
 				tokens[i]["pos"] = p1
 				tokens[j]["pos"] = pos[j]
 				# Their closing speed goes too (only the closing part).
