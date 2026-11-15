@@ -77,9 +77,6 @@ const TAG_KEEP_FLOOR := 0.4
 ## outrun his contested ball.
 const TAGGER_PRESSURE := 0.70
 const TAGGER_MARGIN := 0.20
-## A midfielder who wins this much of the ball a game (a season of at least
-## WING_STAT_GAMES) is a ball-winner, however hard he presses: never a Tagger.
-const TAGGER_NEVER_DISPOSALS := 20.0
 
 
 ## What the wing rewards: carry and disposal. Raw attribute blend.
@@ -127,9 +124,6 @@ static func is_wing(p: Dictionary) -> bool:
 ## ball-winner who can also tackle is an inside midfielder, not a tagger.
 static func is_tagger(p: Dictionary) -> bool:
 	if str(p.get("role", "")) != "MID" or not p.has("attr"):
-		return false
-	var gm := float(p.get("gm", 0.0))
-	if gm >= WING_STAT_GAMES and float(p.get("di", 0.0)) / gm >= TAGGER_NEVER_DISPOSALS:
 		return false
 	var mid_view := p.duplicate()
 	mid_view["role"] = "MID"
