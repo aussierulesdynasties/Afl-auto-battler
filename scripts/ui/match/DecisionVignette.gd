@@ -349,7 +349,8 @@ func _frame(t: Dictionary, lift: float, at := Vector2.ZERO, back := false) -> Ar
 				return ["jog", int(_t * 13.0 / TAU * 8.0 + float(t["num"])) % 8, false, "front"]
 			return ["ready", cycle, role == "duel_f", "front"]
 		"carrier":
-			return ["carrier", int(_t * 10.0) % 8, false, "front"] if _moving(t) else ["ready", cycle, false, "front"]
+			# The ball in his right hand: the jog's palms carry it (the broadcast crumber's run).
+			return ["jog", int(_t * 13.0 / TAU * 8.0 + float(t["num"])) % 8, false, "front"] if _moving(t) 					else ["ready", cycle, false, "front"]
 		"chaser":
 			return ["jog", int(_t * 13.0 / TAU * 8.0 + float(t["num"])) % 8, false, "front"] if _moving(t) \
 					else ["ready_turn", cycle, true, "front"]
@@ -603,8 +604,9 @@ func palm_of(t: Dictionary, hand := 0) -> Vector2:
 	return Vector2(base.x, base.y) + rel
 
 
-## The ball: in the kicker's hands at the mark (set shot), or kicked in to the duel and
-## met at the top by both men. Never loose of the player using it.
+## The ball: in the kicker's hands at the mark (set shot), in the right hand of the man
+## kicking a bag, or kicked in to the duel and met at the top by both men. Never loose of
+## the player using it.
 func _draw_ball_scene() -> void:
 	var centre := Vector2.INF
 	var r := 0.0
@@ -618,13 +620,26 @@ func _draw_ball_scene() -> void:
 			return
 		centre = (a + b) * 0.5
 		r = maxf(3.0, 0.2 * _project(_pos(t)).z * FIGURE)
+	elif kind == "hot":
+		var t := token_of("carrier")
+		if t.is_empty():
+			return
+		centre = palm_of(t, 1)
+		if centre == Vector2.INF:
+			return
+		r = maxf(3.0, 0.2 * _project(_pos(t)).z * FIGURE)
 	elif kind == "duel":
 		var d := token_of("duel_d")
 		var f := token_of("duel_f")
 		if d.is_empty() or f.is_empty():
 			return
+		# Aimed at their hands at the top of the leap, not where their hands are now: on the
+		# way up they hang at the hip, and a ball chasing them dipped to the hip and rose again.
+		var now := _t
+		_t = _end
 		var pd := palm_of(d, 1)
 		var pf := palm_of(f, 0)
+		_t = now
 		var s := _project(_pos(d))
 		r = maxf(3.0, 0.2 * s.z * FIGURE)
 		if pd == Vector2.INF or pf == Vector2.INF:
