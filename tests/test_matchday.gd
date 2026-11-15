@@ -175,9 +175,16 @@ func _test_lead_and_breaks() -> void:
 	var qt := MatchNotes.feed_line({"kind": "quarter", "q": 2, "text": "End of Q2 · ...",
 			"score": [30, 30]}, "COL", "CAR")
 	_check(str(qt["text"]) == "Half time: scores level", "A level half time (%s)" % str(qt["text"]))
-	var et := MatchNotes.feed_line({"kind": "quarter", "q": 5, "text": "Scores level at full time · we are going to extra time!",
+	var et := MatchNotes.feed_line({"kind": "quarter", "q": 5, "text": "Scores level at full time · we go to extra time.",
 			"score": [60, 60]}, "COL", "CAR")
 	_check(str(et["text"]) == "Scores level at full time: extra time", "Extra time is called plainly")
+	# Row 132: the calls readout is in the coach's voice, "Our game plan", never "Your gameplan".
+	var now := [{"gameplan": 3.0, "traits": 0.0}, {"gameplan": -2.0, "traits": 0.0}]
+	var zero := [{"gameplan": 0.0, "traits": 0.0}, {"gameplan": 0.0, "traits": 0.0}]
+	var labels := CoachReport.impact_lines(now, zero, 0).map(func(l): return str(l["label"]))
+	_check(labels.has("Our game plan") and labels.has("Their game plan")
+			and not labels.any(func(l): return l.begins_with("Your") or l.contains("gameplan")),
+			"The calls readout says Our/Their game plan (%s)" % str(labels))
 
 
 func _test_quarter_facts(res: Dictionary) -> void:
