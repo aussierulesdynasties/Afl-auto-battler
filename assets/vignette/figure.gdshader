@@ -62,6 +62,13 @@ uniform vec4 hair_tones[8];
 uniform vec4 boots = vec4(0.06, 0.06, 0.07, 1.0);
 // The sheet's lighting is rendered a shade dark so highlights don't clip.
 uniform float gain = 1.3;
+// Row 6.53 (rule 53: restrained shadow and highlight, baked lighting first): the sheet's
+// baked light is shaped, never relit. After gain it runs about 0.6 (the shade side) to
+// 1.16 (the lit side), median 0.95: a flat read on a phone. The shade side sinks a touch
+// (at most shadow_depth, fading out by 0.92) and the brightest faces of the body take a
+// soft sheen toward a warm white (at most highlight, from 1.02). No bloom, no runtime light.
+uniform float shadow_depth = 0.14;
+uniform float highlight = 0.10;
 
 // Where the number sits on the back, in guernsey coordinates (across from the
 // wearer's right, up from the hem): two digits share the width; one is centred.
@@ -321,6 +328,15 @@ vec2 flag_at(vec2 uv) {
 	return vec2(back, mix(mix(a, b, f.x), mix(c, d, f.x), f.y));
 }
 
+// A colour under the sheet's baked light (l = the shade sheet's R, before gain), shaped as
+// above. Every figure layer goes through it, so hair, faces and numbers sit in one light.
+vec3 lit(vec3 col, float l) {
+	float L = l * gain;
+	L *= 1.0 - shadow_depth * (1.0 - smoothstep(0.62, 0.92, L));
+	vec3 c = col * L;
+	return mix(c, vec3(1.0, 0.97, 0.92), smoothstep(1.02, 1.15, L) * highlight);
+}
+
 bool is_hair(ivec2 size) {
 	for (int i = 0; i < 32; i++) {
 		if (i < hair_count && size == hair_sizes[i]) {
@@ -337,7 +353,7 @@ void fragment() {
 		int tone = clamp(int(round(looks.g * 8.0)), 0, 7);
 		int hair = clamp(int(round(looks.b * 8.0)), 0, 7);
 		vec3 col = looks.r > 0.5 ? skin_tones[tone].rgb : hair_tones[hair].rgb;
-		COLOR = vec4(col * s.r * gain, s.a * looks.a);
+		COLOR = vec4(lit(col, s.r), s.a * looks.a);
 	} else if (tex_size == sheet_size) {
 		vec4 s = texture(TEXTURE, UV);     // lighting, hair, shorts, coverage
 		vec4 m = texture(mask_tex, UV);    // base colour, sock band, skin, guernsey alone
@@ -357,7 +373,7 @@ void fragment() {
 			// On a picture kit the number sits on whatever the picture has there.
 			vec3 under = nd >= 100 ? kit_image(nd - 100, g) : kit_base[kit].rgb;
 			vec4 num = number_on_back(n, g, under, mirrored);
-			COLOR = vec4(num.rgb * s.r * gain, num.a * m.a * s.a * looks.a);
+			COLOR = vec4(lit(num.rgb, s.r), num.a * m.a * s.a * looks.a);
 		} else {
 			int tone = clamp(int(round(looks.g * 8.0)), 0, 7);
 			int hair = clamp(int(round(looks.b * 8.0)), 0, 7);
@@ -402,7 +418,7 @@ void fragment() {
 				float on = (1.0 - mod(floor(seg), 2.0)) * step(0.0, t) * step(t, 1.0) * off;
 				col += sock_w * mix(base, pat, on) - (base * sock_out + pat * m.g);
 			}
-			COLOR = vec4(col * s.r * gain, s.a * looks.a);
+			COLOR = vec4(lit(col, s.r), s.a * looks.a);
 		}
 	}
 }

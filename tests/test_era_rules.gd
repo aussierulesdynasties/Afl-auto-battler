@@ -31,6 +31,7 @@ func run() -> void:
 	_t("_test_tactical_sub_2011")
 	_t("_test_medical_sub_2021")
 	_t("_test_no_sub_2016")
+	_t("_test_coaches_votes_from_2003")
 	GameState.reset()
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
@@ -71,20 +72,49 @@ func _career(year: int, club := "GEE") -> void:
 
 
 ## The season's home-and-away rounds are skipped; the finals are played.
+## The board never sacks the test coach: this suite rolls rules, not careers,
+## and a sacking with no job left would end the campaign mid-roll.
 func _to_offseason() -> void:
+	GameState.board["warned"] = false
 	GameState.season.round_index = GameState.season.fixture.size()
 	GameState.ensure_finals()
 	var guard := 0
 	while not GameState.season.is_season_over() and guard < 10:
 		guard += 1
 		GameState.advance()
+	# The rules under test, not the board: a seeded season's results move with
+	# any ratings change, and a sacking would stop the career rolling.
+	GameState.board.erase("sacked")
+
+
+## The season is treated as played, finals and all: each final is given a
+## result (the higher seed wins), for a test whose subject is the rules each
+## new season brings, not the football. Simulating the finals cost about 6 s
+## a season on CI.
+func _finals_given() -> void:
+	var s: Season = GameState.season
+	s.round_index = s.fixture.size()
+	GameState.ensure_finals()
+	var guard := 0
+	while not s.is_season_over() and guard < 10:
+		guard += 1
+		var played := []
+		for m in s.finals_week_matches():
+			var top: Array = s.finals["top"]
+			var home_higher := top.find(str(m["home"])) < top.find(str(m["away"]))
+			var res := {"home": str(m["home"]), "away": str(m["away"]), "score": [80, 60] if home_higher else [60, 80]}
+			s.record_final(m, res)
+			played.append(res)
+		s.complete_finals_week(played)
+	_check(s.is_season_over() and str(s.finals.get("premier", "")) != "", "%d is played to a premier" % GameState.season_year)
 
 
 ## The off-season, then the rollover into the next season the way a career
 ## takes it: the National Draft (your picks made for you), then the Rookie
-## Draft that opens in the new season.
+## Draft that opens in the new season. The finals are given results
+## (_finals_given): the rollover is under test, not the football.
 func _roll() -> bool:
-	_to_offseason()
+	_finals_given()
 	_open_off()
 	GameState._close_free_agency()
 	return _draft_and_start()
@@ -188,6 +218,13 @@ func _test_rule_table() -> void:
 	for y in range(1990, 2026):
 		_check(EraRules.has("senior_list_max", y) and EraRules.has("interchange", y),
 				"%d has a senior list size and a bench in era_rules.csv" % y)
+		# The list minimum is the year's own, never over its maximum (director
+		# 2026-11-13: "by era, obviously").
+		_check(EraRules.has("list_min", y) and EraRules.list_min(y) <= EraRules.list_max(y),
+				"%d has a list minimum of its own, under the maximum (%d, max %d)" % [y, EraRules.list_min(y), EraRules.list_max(y)])
+	var mins := [EraRules.list_min(1990), EraRules.list_min(1994), EraRules.list_min(2004), EraRules.list_min(2010), EraRules.list_min(2021), EraRules.list_min(2026)]
+	_check(str(mins) == str([48, 38, 37, 38, 37, Contracts.MIN_LIST]),
+			"The list minimum by era: 48 to 1993, 38 from 1994, 37 in 2004, 38 to 2020, 37 from 2021 and today (%s)" % str(mins))
 
 
 ## Year 0 and today's seasons read GAME, whatever the record holds.
@@ -254,7 +291,7 @@ func _test_campaign_1990_to_1998() -> void:
 		_check((rookies > 0) == bool(want[y][2]), "%d: rookie-listed players %d" % [y, rookies])
 		if y == 1998:
 			break
-		_to_offseason()
+		_finals_given()
 		_open_off()
 		_check(EraRules.list_ahead and Contracts.max_list() == int(want[y + 1][1]),
 				"The %d off-season plans %d's lists of %d (ahead %s, off-season year %d, sacked %s)" % [y, y + 1,
@@ -274,7 +311,7 @@ func _test_campaign_1990_to_1998() -> void:
 ## goes.
 func _test_smart_delisting() -> void:
 	_career(1993)
-	_to_offseason()
+	_finals_given()
 	var rival := "CAR"
 	var list: Array = GameState.season.lists[rival]
 	var kid := {}
@@ -301,7 +338,14 @@ func _test_smart_delisting() -> void:
 		if p != kid and p != vet and str(p.get("rookie_list", "")) == "":
 			base = p
 			break
-	while RookieList.senior_count(list.filter(func(q): return not GameState.retiring_now(q))) < 43:
+	# Exactly one over the 42: drop other seniors first (the list may already be
+	# past it at the end of the season), then pad if it is short.
+	for p in list.duplicate():
+		if RookieList.senior_count(GameState.staying_on(list)) <= 43:
+			break
+		if p != kid and p != vet and p != base and str(p.get("rookie_list", "")) == "":
+			list.erase(p)
+	while RookieList.senior_count(GameState.staying_on(list)) < 43:
 		var extra: Dictionary = base.duplicate(true)
 		extra["id"] = "era_extra_%d" % list.size()
 		extra["rookie_list"] = ""
@@ -312,7 +356,7 @@ func _test_smart_delisting() -> void:
 	GameState._era_trim_rivals()
 	_check(list.has(kid), "The 69-rated 20-year-old with 75 to come is kept")
 	_check(not list.has(vet), "The 70-rated 35-year-old is delisted first")
-	_check(RookieList.senior_count(list.filter(func(q): return not GameState.retiring_now(q))) <= 42,
+	_check(RookieList.senior_count(GameState.staying_on(list)) <= 42,
 			"The list is down to 42")
 	EraRules.list_ahead = false
 
@@ -426,3 +470,30 @@ func _test_no_sub_2016() -> void:
 	_check(_events(sim, "substitute").is_empty() and (sim.squads[0] as Squad).sub.is_empty(),
 			"No substitute in 2016")
 	_check((sim.squads[0] as Squad).bench.size() == 4, "Four on a 2016 bench")
+
+
+## The coaches' votes began in 2003 (director 2026-11-13, "Hide before 2003"):
+## before it, no Coaches Award and no votes heading or counts at full time.
+func _test_coaches_votes_from_2003() -> void:
+	var want := {1990: false, 2002: false, 2003: true, 2025: true, 2026: true, 2027: true}
+	for y in want:
+		_check(EraRules.on("coaches_votes", y) == bool(want[y]), "%d coaches' votes %s" % [y, str(want[y])])
+	var tally := {"p1": {"club": "FIT", "votes": 3, "polled": 1, "coaches": 10, "games": 1, "goals_ha": 2,
+			"bf": 5, "influence": 9.0}}
+	var players := {"p1": {"id": "p1", "club": "FIT", "first": "Paul", "last": "Roos", "age": 26}}
+	_check((Awards.season_awards(tally, players, 1990)["coaches_award"] as Array).is_empty(),
+			"1990: no Coaches Award")
+	_check(not (Awards.season_awards(tally, players, 2003)["coaches_award"] as Array).is_empty(),
+			"2003: a Coaches Award")
+	var ms = load("res://scenes/MatchScene.tscn").instantiate()
+	EraRules.year = 1990
+	var h1: Control = ms.call("_votes_header")
+	var f1: Control = ms.call("_votes_figure", {"p1": 10}, "p1")
+	EraRules.year = 2026
+	var h2: Control = ms.call("_votes_header")
+	var f2: Control = ms.call("_votes_figure", {"p1": 10}, "p1")
+	_check(not h1.visible and not f1.visible, "1990 full time: no votes heading, no vote counts")
+	_check(h2.visible and f2.visible, "2026 full time: the votes heading and counts show")
+	EraRules.year = 0
+	for n in [h1, f1, h2, f2, ms]:
+		n.free()

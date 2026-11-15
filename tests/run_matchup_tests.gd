@@ -56,6 +56,7 @@ func _run() -> void:
 	await _t("_test_premiership_streamers")
 	await _t("_test_coach_approach_card")
 	await _t("_test_season_wrap")
+	await _t("_test_season_wrap_trades")
 	await _t("_test_season_review_scrolls")
 	await _t("_test_pre_match_scene")
 	_t("_test_pre_match_captions")
@@ -161,7 +162,9 @@ func _test_hub_tests() -> void:
 
 	# Run the season out: no fixture, no facts, a clear next step every week.
 	# One check per rule however many finals weeks you play, so the check count
-	# does not hang on how the season falls.
+	# does not hang on how the season falls. The rest of the home and away
+	# season is skipped: only its finals weeks are visited.
+	_to_finals()
 	var guard := 0
 	var weeks := 0
 	var facts_bad := []
@@ -239,13 +242,12 @@ func _test_wide_hub_footer() -> void:
 ## staff and with one open ("Coaching · 1", the longest label the row carries).
 func _test_phone_footer_fits() -> void:
 	var db = root.get_node("GameDB")
+	_reset()
+	_state.start_season("MEL", db.club_list("MEL"))
+	_state.set_setting("seen_weekly_loop_intro", true)
 	for vacancies in [0, 1]:
 		for w in [320, 360, 390, 412]:
-			_reset()
-			_state.start_season("MEL", db.club_list("MEL"))
-			_state.set_setting("seen_weekly_loop_intro", true)
-			if vacancies > 0:
-				_state.staff_vacancies = [{"reason": "A coach has retired."}]
+			_state.staff_vacancies = [{"reason": "A coach has retired."}] if vacancies > 0 else []
 			root.size = Vector2i(w, 844)
 			var hub: Control = await _open_hub()
 			var footer: Control = hub.find_child("HubFooter", true, false)
@@ -328,16 +330,30 @@ func _test_regular_bye() -> void:
 func _test_finals_week_by_week() -> void:
 	var db = root.get_node("GameDB")
 	var out := ""
-	for code in ["GWS", "RIC", "NTH", "WCE", "STK", "ESS", "ADE"]:
-		if not db.active_clubs(2027).has(code):
-			continue
-		_reset()
-		_state.start_season(code, db.club_list(code))
-		_state.season.round_index = _state.season.fixture.size() - 1
-		_state.advance()
-		if not (_state.season.finals["top"] as Array).has(code):
-			out = code
-			break
+	# One career, its club put at the foot of the ladder by hand before the
+	# last round (only its own match played): a club that misses the finals.
+	var code := "GWS"
+	_reset()
+	_state.start_season(code, db.club_list(code))
+	var sea = _state.season
+	var codes: Array = sea.ladder.keys()
+	codes.sort()
+	codes.erase(code)
+	codes.append(code)
+	for i in range(codes.size()):
+		var row: Dictionary = sea.ladder[codes[i]]
+		row["w"] = 20 - i
+		row["l"] = 2 + i
+		row["d"] = 0
+		row["p"] = 22
+		row["pf"] = 2300 - i * 20
+		row["pa"] = 2000
+	sea.round_index = sea.fixture.size() - 1
+	sea.recalc_ladder()
+	_mine_only(code)
+	_state.advance()
+	if not (_state.season.finals["top"] as Array).has(code):
+		out = code
 	_check(out != "", "A club misses the finals to test with")
 	if out == "":
 		return
@@ -454,6 +470,65 @@ func _test_season_review_scrolls() -> void:
 		await _settle()
 		_check(viewport.encloses(draft.get_global_rect()), "Scrolled down, the National Draft button is on screen")
 	review.queue_free()
+	await _settle()
+
+
+## The wrap's Trade period (row 176; director 2026-11-12: "no colour coding on
+## names"): every club in its colours and every player in the ink of the club
+## he moved to. A fixture: deals forced through the trade log (no valuation),
+## chosen so red clubs (St Kilda, Melbourne) are in it; not believable trades.
+func _test_season_wrap_trades() -> void:
+	var db = root.get_node("GameDB")
+	var CL = load("res://scripts/ui/ClubLink.gd")
+	var NI = load("res://scripts/ui/NameInk.gd")
+	_reset()
+	_state.start_season("MEL", db.club_list("MEL"))
+	_state.season.round_index = _state.season.fixture.size()
+	_state.open_offseason()
+	_state.offseason_log = []
+	var lists: Dictionary = _state.season.lists
+	var best := func(code: String, n: int) -> Dictionary:
+		var l: Array = (lists[code] as Array).duplicate()
+		l.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+		return l[n]
+	# [buyer, seller, the player the buyer gets, what it gives]
+	var pick: Dictionary = _state.pick_asset(_state.pick_id(_state.season_year + 1, 1, "STK"))
+	_check(not pick.is_empty(), "St Kilda's first-round pick can be traded")
+	var deals := [
+		["FRE", "WBD", best.call("WBD", 2), [best.call("FRE", 3)]],
+		["STK", "ADE", best.call("ADE", 1), [best.call("STK", 4)] + ([pick] if not pick.is_empty() else [])],
+		["WBD", "FRE", best.call("FRE", 5), [best.call("WBD", 6)]],
+	]
+	var moved := []   # [display name, club he moved to]
+	for d in deals:
+		_state._log_ai_trade(d[0], d[1], d[2], d[3], "")
+		moved.append([db.player_display_name(d[2]), d[0]])
+		for g in d[3]:
+			if not str(g.get("id", "")).begins_with("pick:"):
+				moved.append([db.player_display_name(g), d[1]])
+	var lines: Array = _state.offseason_log.map(func(e): return str(e["text"]))
+	var ours: Dictionary = best.call("MEL", 0)
+	lines.append("You turned down St Kilda's offer for %s." % db.player_display_name(ours))
+	moved.append([db.player_display_name(ours), "MEL"])
+	_state.season_wrap = {"year": _state.season_year, "seen": false, "ins": [], "outs": [],
+			"staff": [], "trades": lines, "goal": "", "reason": ""}
+	root.size = Vector2i(390, 844)
+	var hub: Control = await _open_hub()
+	var marked := ""
+	for i in range(lines.size()):
+		var row: Node = hub.find_child("WrapTrade_%d" % i, true, false)
+		_check(row is RichTextLabel, "Trade line %d is inked: %s" % [i, lines[i]])
+		if row is RichTextLabel:
+			marked += (row as RichTextLabel).text + "\n"
+	var ink := func(name: String, col: Color) -> String:
+		return "[color=#%s]%s[/color]" % [col.to_html(false), name.replace(" ", NI.NBSP)]
+	for m in moved:
+		# Exactly his club's name colour: a red club's players are not left white.
+		_check(marked.contains(ink.call(str(m[0]), CL.colour(str(m[1])))), "%s wears %s's colours" % [m[0], m[1]])
+	for code in ["FRE", "WBD", "STK", "ADE"]:
+		var name := str(db.club_name(code))
+		_check(marked.contains(ink.call(name, CL.colour(code))), "%s is in its colours" % name)
+	hub.queue_free()
 	await _settle()
 
 
@@ -797,7 +872,7 @@ func _test_former_player() -> void:
 				"%s: one line for the player you let go, not for one who never played for you (%s)" % [tag, " | ".join(got.map(func(c): return _plain(c)))])
 		var line: Control = got[0] if not got.is_empty() else null
 		var ink := (line as RichTextLabel).text if line is RichTextLabel else ""
-		_check(ink.contains("[color=#%s]" % kit.club_name_colour(kit.club_ink(opp)).to_html(false)) and not ink.contains(kit.club_ink("FRE").to_html(false)),
+		_check(ink.contains("[color=#%s]" % kit.club_ink(opp).to_html(false)) and not ink.contains(kit.club_ink("FRE").to_html(false)),
 				"%s: his name wears %s's ink, not yours" % [tag, opp])
 		if line is RichTextLabel:
 			var sc: Node = line.get_parent()
@@ -824,6 +899,7 @@ func _test_former_player() -> void:
 			"His captaincy at his new club is in the line")
 	# The match: the report line is there exactly when he played most of it or kicked one.
 	root.size = Vector2i(390, 844)
+	_mine_only("FRE")
 	_check(_state.prepare_interactive_match(), "A live match against your former player is prepared")
 	var m: Control = load("res://scenes/MatchScene.tscn").instantiate()
 	root.add_child(m)
@@ -1016,7 +1092,7 @@ func _test_facts_without_options() -> void:
 			var opp := str(_state.my_next_opponent()["code"])
 			var facts: Array = _state.opponent_facts(opp)
 			var index: Dictionary = NI.from_lists(_state.season.lists)
-			var opp_ink := "[color=#%s]" % kit.club_name_colour(kit.club_ink(opp)).to_html(false)
+			var opp_ink := "[color=#%s]" % kit.club_ink(opp).to_html(false)
 			var said := true
 			var close := true
 			var inked := true
@@ -1073,10 +1149,13 @@ func _play_tap_routes() -> void:
 	var db = root.get_node("GameDB")
 	var router = root.get_node("Router")
 	var vignettes_were: bool = _state.vignettes_on()
+	# One career for both: Watch only opens the preview, so Skip meets the same
+	# unplayed Round 1, with only your match in it.
+	_reset()
+	_state.set_vignettes_on(false)
+	_state.start_season("FRE", db.club_list("FRE"))
+	_mine_only("FRE")
 	for way in ["watch", "skip"]:
-		_reset()
-		_state.set_vignettes_on(false)
-		_state.start_season("FRE", db.club_list("FRE"))
 		_state.set_match_way(way)
 		router.stack = []
 		router.go("hub")
@@ -1153,6 +1232,25 @@ func _reset() -> void:
 	_state.replay_seed = SUITE_SEED
 
 
+## The coming round with only `code`'s match left in it, where a test reads
+## only that club's week: the other matches are most of a round's time.
+func _mine_only(code: String) -> void:
+	var s = _state.season
+	if s == null or s.round_index >= s.fixture.size():
+		return
+	var rm: Array = s.fixture[s.round_index]
+	for m in rm.duplicate():
+		if str(m["home"]) != code and str(m["away"]) != code:
+			rm.erase(m)
+
+
+## Straight to September: the home and away season is not under test, only
+## the finals weeks after it.
+func _to_finals() -> void:
+	_state.season.round_index = _state.season.fixture.size()
+	_state.ensure_finals()
+
+
 ## The status line over the bracket on every path a side can take through the finals: a
 ## qualifying final's loser is still alive (the double chance), every other loser's season
 ## has ended, the premiers say so (found by uiart: "Your season ended in the Qualifying
@@ -1217,6 +1315,7 @@ func _test_finals_cup() -> void:
 	var kit = load("res://scripts/ui/UiKit.gd")
 	_reset()
 	_state.start_season("FRE", db.club_list("FRE"))
+	_to_finals()
 	var guard := 0
 	while guard < 400 and not _state.season.is_season_over():
 		var f: Dictionary = _state.season.finals
@@ -1343,7 +1442,13 @@ func _test_premiership_streamers() -> void:
 	var kit = load("res://scripts/ui/UiKit.gd")
 	_reset()
 	_state.start_season("FRE", db.club_list("FRE"))
+	# The first postseason's intro (FirstVisitIntro, once per career) is its own
+	# test: seen already here, so it never lies over Finals. Whether it comes up
+	# on these hubs otherwise turns on whether the seeded season leaves a press
+	# conference waiting after the Grand Final, which it is held back behind.
+	_state.mark_intro_seen("postseason")
 	_state.season.round_index = _state.season.fixture.size() - 1
+	_mine_only("FRE")
 	_state.advance()
 	if not _state.training_report.is_empty():
 		_state.training_report["dismissed"] = true
@@ -1578,6 +1683,9 @@ func _test_pre_match_scene() -> void:
 	for skip in [false, true]:
 		_reset()
 		_state.start_season("COL", db.club_list("COL"))
+		# The round's other matches would play on threads behind this one; the
+		# scene is about COL's match alone.
+		_mine_only("COL")
 		root.size = Vector2i(390, 844)
 		var hub: Control = await _open_hub()
 		var play := _button(hub.find_child("WeekActions", true, false), "Play match")
@@ -1668,7 +1776,7 @@ func _gate_odds() -> void:
 			and str(GO.tag_break_texts("", "A", 20, 26, "", "C", 23)[1]).contains("C gets his usual 23 touches")
 			and str(GO.tag_break_texts("B", "", 0, 26)[0]).begins_with("none"),
 			"Tag: the share of his own game given up, from the tagger's constants (%s)" % GO.tag_gives())
-	_check(GO.skip_line(1).contains("plan you took in") and GO.skip_line(3).contains("last quarter's calls")
+	_check(GO.skip_line(1).contains("plan we took in") and GO.skip_line(3).contains("last quarter's calls")
 			and GO.skip_line(3).contains("no change") and GO.skip_line(1).contains("Nothing changed here is kept"),
 			"Skip says what it plays with and that the sheet's other changes are not kept")
 	var mins := func(k: String) -> String: return str(roundi(float(Ms.BURSTS[k]["chains"]) * float(Ms.GAME_MINUTES) / float(RT.T["chains_per_game"])))
@@ -1682,7 +1790,7 @@ func _gate_odds() -> void:
 			"Slow it down: up and down from its constants (%s / %s)" % hold)
 	var stack: Array = GO.burst_lines("stack", 15)
 	_check(str(stack[0]).contains(pct.call(Ms.STACK_CONTEST)) and str(stack[0]).contains(pct.call(float(RT.T["contest_clamp"])))
-			and str(stack[1]).contains(pct.call(Ms.STACK_OPP_GOAL - 1.0)), "Stack the stoppage: the edge, its cap and its cost (%s / %s)" % stack)
+			and str(stack[1]).contains(pct.call(Ms.STACK_OPP_GOAL - 1.0)), "Stack the centre bounce: the edge, its cap and its cost (%s / %s)" % stack)
 	_check(str(GO.burst_lines("flood", 20, false)[0]).ends_with(GO.TO_BREAK), "Before the last quarter a call that outlasts it runs to the break")
 	var flood: Array = GO.burst_lines("flood", 15)
 	_check(str(flood[0]).contains(pct.call(1.0 - Ms.FLOOD_OPP_GOAL)) and str(flood[0]).ends_with(GO.TO_SIREN)

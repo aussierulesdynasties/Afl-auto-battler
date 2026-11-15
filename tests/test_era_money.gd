@@ -52,8 +52,11 @@ func _career(year: int, club := "GEE") -> void:
 	GameState.start_season(club, GameDB.club_list(club))
 
 
-func _scaled(amount: int, cap: int) -> int:
-	return int(round(float(amount) * float(cap) / float(Contracts.CAP_2027) / 1000.0)) * 1000
+## Player pay: today's model scaled by the cap and spread over the era's list
+## (`list` men against the model's 44).
+func _scaled(amount: int, cap: int, list := Contracts.MAX_LIST) -> int:
+	return int(round(float(amount) * float(cap) / float(Contracts.CAP_2027)
+			* float(Contracts.MAX_LIST) / float(list) / 1000.0)) * 1000
 
 
 ## GameDB.era_rule reads any rule by year; a year the file lacks is the fallback.
@@ -107,7 +110,8 @@ func _test_1990_cap_shows() -> void:
 			"It shows as $1.5m: %s" % Contracts.money(GameState.salary_cap))
 
 
-## A 1990 contract is in 1990 dollars: today's model scaled by $1.5m / $18.44m.
+## A 1990 contract is in 1990 dollars: today's model scaled by $1.5m / $18.44m and spread
+## over a 52-man list (44 / 52).
 func _test_1990_contracts() -> void:
 	_career(1990)
 	var list: Array = GameState.my_list
@@ -118,22 +122,22 @@ func _test_1990_contracts() -> void:
 		# A player on a real contract carries only its term; payroll counts his
 		# worth in the season's dollars (Contracts.payroll).
 		var salary := int(p["salary"]) if p.has("salary") else Contracts.payroll([p])
-		if int(p["value"]) == model and salary != _scaled(model, 1500000):
+		if int(p["value"]) == model and salary != _scaled(model, 1500000, 52):
 			bad.append("%s salary %d" % [str(p["id"]), salary])
-		if Contracts.asking_salary(p) < _scaled(model, 1500000):
+		if Contracts.asking_salary(p) < _scaled(model, 1500000, 52):
 			bad.append("%s ask %d" % [str(p["id"]), Contracts.asking_salary(p)])
 	_check(bad.is_empty(), "Every 1990 contract and asking price is in 1990 dollars: %s" % str(bad.slice(0, 5)))
 	var payroll := GameState.my_payroll()
 	_check(payroll > 0 and payroll <= int(GameState.salary_cap * 1.2),
 			"A 1990 payroll sits near a 1990 cap: %s of %s" % [Contracts.money(payroll), Contracts.money(GameState.salary_cap)])
 	var star := {"overall": 99, "age": 25.0}
-	_check(Contracts.asking_salary(star) == _scaled(1250000, 1500000),
+	_check(Contracts.asking_salary(star) == _scaled(1250000, 1500000, 52),
 			"A 1990 star asks %s, not $1.25m" % Contracts.money(Contracts.asking_salary(star)))
-	_check(Contracts.senior_min() == 13000 and Contracts.salary_step() == 8000,
+	_check(Contracts.senior_min() == 11000 and Contracts.salary_step() == 7000,
 			"1990 minimum %s and offer step %s" % [Contracts.money(Contracts.senior_min()), Contracts.money(Contracts.salary_step())])
 	var d := {"draft_pick": 1}
 	Contracts.draftee_deal(d, 1990)
-	_check(int(d["salary"]) == 12000, "A 1990 pick 1 earns %s" % Contracts.money(int(d["salary"])))
+	_check(int(d["salary"]) == 10000, "A 1990 pick 1 earns %s" % Contracts.money(int(d["salary"])))
 	# The CBA's own minimum where the record has one, not a scaled guess.
 	_check(Contracts.senior_min(2024) == 130000 and Contracts.senior_min(2025) == 145000,
 			"2024 and 2025 minimums are the CBA base payments")
@@ -170,11 +174,26 @@ func _test_2027_career_unchanged() -> void:
 	_check(bad.is_empty(), "Every 2027 asking price is today's model: %s" % str(bad.slice(0, 5)))
 
 
+## The season is treated as played: its home-and-away rounds are skipped and
+## each final is given a result (the higher seed wins), since the money, not
+## the football, is under test here. Simulating the finals cost about 9 s a
+## season on CI.
 func _to_offseason() -> void:
-	GameState.season.round_index = GameState.season.fixture.size()
+	var s: Season = GameState.season
+	s.round_index = s.fixture.size()
 	GameState.ensure_finals()
-	while not GameState.season.is_season_over():
-		GameState.advance()
+	var guard := 0
+	while not s.is_season_over() and guard < 10:
+		guard += 1
+		var played := []
+		for m in s.finals_week_matches():
+			var top: Array = s.finals["top"]
+			var home_higher := top.find(str(m["home"])) < top.find(str(m["away"]))
+			var res := {"home": str(m["home"]), "away": str(m["away"]), "score": [80, 60] if home_higher else [60, 80]}
+			s.record_final(m, res)
+			played.append(res)
+		s.complete_finals_week(played)
+	_check(s.is_season_over() and str(s.finals.get("premier", "")) != "", "%d is played to a premier" % GameState.season_year)
 
 
 ## A 1990 start is the first season of a campaign (director 2026-11-13: "its
@@ -197,12 +216,17 @@ func _test_campaign_rolls_through_the_eras() -> void:
 	var sackings := []
 	while GameState.season_year < last:
 		var from := GameState.season_year
-		# Everyone on a list signed beyond this season, and what he is paid.
+		# Everyone on a list signed beyond this season, what he is paid and by
+		# whom. A contract runs on at the club that signed it; a player a
+		# merger releases, a story moves or a club delists and signs again starts a
+		# new one (Legacy L8): same club and same join year, or it is a new deal.
 		var signed := {}
+		var signed_by := {}
 		for code in GameState.season.lists:
 			for p in GameState.season.lists[code]:
 				if p.has("salary") and int(p.get("contract_years", 0)) >= 2:
 					signed[str(p["id"])] = int(p["salary"])
+					signed_by[str(p["id"])] = "%s|%s" % [code, p.get("joined", "")]
 		_to_offseason()
 		# Nobody coaches this side, and a board may sack him with no job to go
 		# to (that ends a career). The money is under test, not the coach: keep
@@ -223,10 +247,10 @@ func _test_campaign_rolls_through_the_eras() -> void:
 		if y < 2026:
 			_check(EraRules.has("salary_cap", y) and cap == int(GameDB.era_rule("salary_cap", y)),
 					"%d has its own cap on record" % y)
-			var want_min: int = int(GameDB.era_rule("senior_min", y)) if EraRules.has("senior_min", y) 					else _scaled(Contracts.SENIOR_MIN_2027, cap)
+			var want_min: int = int(GameDB.era_rule("senior_min", y)) if EraRules.has("senior_min", y) 					else _scaled(Contracts.SENIOR_MIN_2027, cap, EraRules.list_max(y))
 			_check(Contracts.senior_min() == want_min, "%d minimum %s" % [y, Contracts.money(Contracts.senior_min())])
 			var star := {"overall": 99, "age": 25.0}
-			_check(Contracts.asking_salary(star) == _scaled(1250000, cap),
+			_check(Contracts.asking_salary(star) == _scaled(1250000, cap, EraRules.list_max(y)),
 					"%d: a star asks %s" % [y, Contracts.money(Contracts.asking_salary(star))])
 		else:
 			_check(cap == Contracts.CAP_2027 and Contracts.era_scale(y) == 1.0
@@ -237,7 +261,7 @@ func _test_campaign_rolls_through_the_eras() -> void:
 		for code in GameState.season.lists:
 			for p in GameState.season.lists[code]:
 				var id := str(p["id"])
-				if signed.has(id) and p.has("salary"):
+				if signed.has(id) and p.has("salary") and str(signed_by[id]) == "%s|%s" % [code, p.get("joined", "")]:
 					kept += 1
 					if int(p["salary"]) != int(signed[id]):
 						moved.append("%s %d->%d" % [id, int(signed[id]), int(p["salary"])])

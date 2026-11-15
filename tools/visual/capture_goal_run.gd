@@ -1,13 +1,15 @@
 extends SceneTree
 ## Row 14: the run-of-goals call over the centre ball-up
 ## scene, and without the scene. Needs a real renderer:
-##   godot --path . --script tools/visual/capture_goal_run.gd -- --out /tmp/gr [--size 390x844] [--club FRE]
+##   godot --path . --script tools/visual/capture_goal_run.gd -- --out /tmp/gr [--size 390x844] [--club FRE] [--bounce 1]
 ## Writes <out>_scene_<n>.png (the scene playing in, then frozen with the call up)
-## and <out>_card.png (vignettes off).
+## and <out>_card.png (vignettes off). --bounce 1 stages the late centre ball-up call
+## instead (last quarter, 8 minutes left, the scores as the match has them).
 
 var W := 390
 var H := 844
 var _out := "/tmp/gr"
+var _bounce := false
 
 
 func _initialize() -> void:
@@ -50,10 +52,20 @@ func _stage(club: String, vignettes: bool) -> Control:
 	sim.current_minute = 40
 	sim._moments_this_q = 0
 	sim._last_moment_chain = sim._chain_no - 100
-	sim._run = [0, 0]
-	sim._run[them] = 3
-	(sim.team_stats[them] as Dictionary)["goals"] = float(sim.goals(them) + 3)
-	sim._boundary_moment()
+	if _bounce:
+		sim.current_quarter = 4
+		sim.current_minute = 112
+		sim._fire_bounce(sim.score(me) - sim.score(them))
+	else:
+		sim._run = [0, 0]
+		sim._run[them] = 3
+		(sim.team_stats[them] as Dictionary)["goals"] = float(sim.goals(them) + 3)
+		sim._boundary_moment()
+	# The scoreboard shows the staged moment's quarter, minute and scores.
+	m.call("_update_scoreboard", {"goals": [sim.goals(0), sim.goals(1)], "behinds": [sim.behinds(0), sim.behinds(1)],
+			"q": sim.current_quarter, "min": sim.current_minute})
+	for o in sim.pending_moment.get("options", []):
+		print("CALL ", o.get("label", ""), " | ", o.get("gain", ""), " | ", o.get("cost", ""))
 	m.call("_show_moment")
 	return m
 
@@ -67,6 +79,8 @@ func _run() -> void:
 				_out = str(a[i + 1])
 			"--club":
 				club = str(a[i + 1])
+			"--bounce":
+				_bounce = str(a[i + 1]) == "1"
 			"--size":
 				var wh := str(a[i + 1]).split("x")
 				W = int(wh[0])

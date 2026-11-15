@@ -45,6 +45,7 @@ func run() -> void:
 	_t("_test_traits")
 	_t("_test_weather")
 	_t("_test_wet_weather_play")
+	_t("_test_weather_turns_at_a_break")
 	_t("_test_wind_and_heat")
 	_t("_test_weather_follows_the_real_games")
 	_t("_test_metres_and_efficiency")
@@ -103,6 +104,7 @@ func run() -> void:
 	_t("_test_set_shot_calls")
 	_t("_test_bomb_card_shows_the_dice")
 	_t("_test_forward_archetypes")
+	_t("_test_every_call_two_sided")
 	GameDB.skip_ovr_overrides = false
 	GameDB.reload()
 	print(Ran.line("Match game", self))
@@ -1182,6 +1184,90 @@ func _test_weather() -> void:
 	_check(marks[1] < marks[0] * 0.95, "Fewer marks stick in the wet (%.0f against %.0f)" % [marks[1], marks[0]])
 
 
+## Row 160 (director 2026-11-12: "Yes, at a break"): the weather turns at most
+## once a match, at a break, as often as the forecast says; the quarters before
+## it play the day's weather and the quarters after it the new one.
+func _test_weather_turns_at_a_break() -> void:
+	# The rate: over many matches at an outdoor ground, each start turns as often
+	# as the forecast's odds say (within three standard errors), at each break
+	# about as often, and always to a different condition.
+	var n := 6000
+	var rate_ok := true
+	var breaks := [0, 0, 0]
+	var to_other := true
+	var notes := []
+	for start in Weather.CONDITIONS:
+		var p := Weather.turn_chance(start, "MCG")
+		var turned := 0
+		for k in range(n):
+			var t := Weather.turn(start, "MCG", k)
+			if t.is_empty():
+				continue
+			turned += 1
+			breaks[int(t["after"]) - 1] += 1
+			if str(t["to"]) == start or not Weather.CONDITIONS.has(str(t["to"])):
+				to_other = false
+		var se := sqrt(p * (1.0 - p) / float(n))
+		var got := float(turned) / float(n)
+		notes.append("%s %.3f v %.2f" % [start, got, p])
+		if absf(got - p) > 3.0 * se + 0.0001:
+			rate_ok = false
+	_check(rate_ok, "Each start turns as often as the forecast says (%s)" % ", ".join(notes))
+	var total := float(breaks[0] + breaks[1] + breaks[2])
+	_check(breaks.all(func(b): return absf(float(b) / total - 1.0 / 3.0) < 0.03),
+			"Quarter time, half time and three-quarter time are each as likely (%s)" % str(breaks))
+	_check(to_other, "A turn is always to a different condition")
+	_check(Weather.turn("wet", "MCG", 77) == Weather.turn("wet", "MCG", 77),
+			"The same match always turns the same way: the odds stated are the ones played")
+	var roof := true
+	for k in range(500):
+		if not Weather.turn("wet", "Marvel Stadium", k).is_empty():
+			roof = false
+	_check(roof and Weather.turn_chance("perfect", "Marvel Stadium") == 0.0,
+			"Under the roof the day never turns")
+	_check(Weather.turn_odds_line(0.31) == "31% chance it turns at a break" and Weather.turn_odds_line(0.0) == "",
+			"The forecast states the odds as a percentage")
+	# The match: a perfect day that turns wet at half time.
+	var held := _sim(91)
+	held.set_day({"weather": "perfect", "chance": 0.04, "turn": {}})
+	var turns := _sim(91)
+	turns.set_day({"weather": "perfect", "chance": 0.04, "turn": {"after": 2, "to": "wet"}})
+	_check(turns.weather_turn_now().is_empty() and turns.weather_ahead() == "perfect",
+			"Nothing is announced before the first bounce")
+	var first_half_same := true
+	for q in range(2):
+		held.run_quarter()
+		turns.run_quarter()
+		if q == 0:
+			_check(turns.weather_turn_now().is_empty(), "Nothing is announced at quarter time")
+	first_half_same = held.events == turns.events
+	_check(first_half_same and turns.weather == "perfect",
+			"The first half is played in the day's weather, exactly as a day that holds")
+	var news := turns.weather_turn_now()
+	_check(str(news.get("to", "")) == "wet" and int(news.get("after", 0)) == 2 and turns.weather_ahead() == "wet",
+			"Half time announces the rain, and the plans are sized for it")
+	var dry_marks := float(held._rates()["mark_share_of_kicks"])
+	turns.run_quarter()
+	_check(turns.weather == "wet" and turns.weather_turn_now().is_empty(),
+			"The rain plays from the third quarter's bounce, announced once")
+	_check(float(turns._rates()["mark_share_of_kicks"]) < dry_marks,
+			"The wet's rates play for the quarters left (marks %.3f against %.3f)"
+			% [float(turns._rates()["mark_share_of_kicks"]), dry_marks])
+	turns.run_quarter()
+	var res := turns.result()
+	_check(str(res["weather"]) == "wet" and str(res["weather_start"]) == "perfect"
+			and int(res["weather_turned_after"]) == 2, "The result keeps how the day started and when it turned")
+	var line := Weather.turn_report_line("perfect", 2, "wet")
+	_check(line.begins_with("It started fine. The rain came in at half time:"),
+			"The match report says when it turned: " + line)
+	# A day that holds plays as it always has: a bare condition is the old game.
+	var bare := _sim(91)
+	bare.weather = "perfect"
+	var held2 := _sim(91)
+	held2.set_day({"weather": "perfect", "chance": 0.04, "turn": {}})
+	_check(bare.run()["events"] == held2.run()["events"], "A day that holds is the game exactly as before")
+
+
 ## Row 120 (director 2026-11-06): the wet brings fumbles, stoppages and tackles, and set
 ## shots get harder. Same lists and seeds, perfect day against wet.
 func _test_wet_weather_play() -> void:
@@ -1456,7 +1542,7 @@ func _fake(id: String, role: String, attr: Dictionary) -> Dictionary:
 func _good_count(traits: Array) -> int:
 	var n := 0
 	for k in traits:
-		if not Traits.is_bad(k) and not ["unicorn", "wet_weather"].has(k):
+		if not Traits.is_bad(k) and not Traits.ON_TOP.has(k):
 			n += 1
 	return n
 
@@ -1469,7 +1555,7 @@ func _test_traits() -> void:
 	var mt := Traits.of(many)
 	var good := 0
 	for k in mt:
-		if not Traits.is_bad(k) and not ["unicorn", "wet_weather"].has(k):
+		if not Traits.is_bad(k) and not Traits.ON_TOP.has(k):
 			good += 1
 	_check(good == 4 and mt.has("hothead"), "Every trait whose line he clears, plus Hothead for poor discipline (%s)" % str(mt))
 	# Up to five (director, 2026-11-12): clearing four lines earns four; clearing
@@ -2646,7 +2732,7 @@ func _test_tag_own_touches() -> void:
 	# The hot-player call and the break call say the same man's counts.
 	var lines := GateOdds.tag_call_lines("Q", "T", GateOdds.tag_kept(tagger, legs, quiet), GateOdds.usual_touches(quiet))
 	var brk: Array = GateOdds.tag_break_texts("Q", "T", GateOdds.tag_kept(tagger, legs, quiet), GateOdds.usual_touches(quiet))
-	var said := "usually gets %d touches; with T on him, about %d" % [GateOdds.usual_touches(quiet), GateOdds.tag_kept(tagger, legs, quiet)]
+	var said := "usually gets %d touches\nWith T on him, about %d" % [GateOdds.usual_touches(quiet), GateOdds.tag_kept(tagger, legs, quiet)]
 	_check(str(lines["tag_gain"]).contains(said) and str(brk[0]).contains(said),
 			"The in-play call and the break call size the same man the same (%s)" % said)
 
@@ -3619,7 +3705,7 @@ func _test_bounce_once() -> void:
 	late.current_minute = 110
 	late._fire_bounce(3)
 	var ten_t := str(late.pending_moment.get("title", ""))
-	_check(last_t == "Centre ball-up - 3 up in the last minute" and ten_t == "Centre ball-up - 3 up with 10 minutes left",
+	_check(last_t == "Centre bounce · 3 up in the last minute" and ten_t == "Centre bounce · 3 up with 10 minutes left",
 			"The late ball-up title reads naturally to the last minute ('%s', '%s')" % [last_t, ten_t])
 
 
@@ -4239,9 +4325,9 @@ func _test_set_shot_bands() -> void:
 		by[str(b["key"])] = b
 	_check(is_equal_approx(float(by["close"]["goal"]), 0.85) and is_equal_approx(float(by["front"]["goal"]), 0.71),
 			"An ordinary kick converts at the AFL rate in front (%.2f, %.2f)" % [float(by["close"]["goal"]), float(by["front"]["goal"])])
-	_check(MatchSim.chance_words(float(by["front"]["goal"])) == "He should kick it"
-			and MatchSim.chance_words(float(by["close"]["goal"])) == "He should kick it",
-			"Straight in front, an ordinary kick should kick it")
+	_check(MatchSim.chance_words(float(by["front"]["goal"])) == "He kicks these most days"
+			and MatchSim.chance_words(float(by["close"]["goal"])) == "He kicks these most days",
+			"Straight in front, an ordinary kick kicks these most days")
 	_check(float(by["pocket"]["goal"]) < float(by["front"]["goal"]) and float(by["long"]["goal"]) < 0.4
 			and float(by["angle"]["goal"]) < float(by["front"]["goal"]),
 			"The pocket, the angle and long shots are harder")
@@ -5000,3 +5086,78 @@ func _test_standing_plan_knowledge() -> void:
 		var want := "controlled" if PlanFit.edge(gg, "controlled") > PlanFit.STANDING_EDGE else "balanced"
 		ok = ok and PlanFit.standing_plan(gg, only_controlled) == want
 	_check(ok, "Controlled Tempo is a club's usual game when it is its best")
+
+
+## Row T1.R26 (bible principle 4; director 2026-11-10 "Gain / Cost
+## everywhere"): every match-day gate states, for each option, a Gain and a
+## Cost, sized, and never which option is better, so no option is left with
+## an upside and no stated downside. Every in-match call that can come up
+## (set shot, their hot midfielder, a run against, the late centre ball-up)
+## and every break call (plan, pep talk, risk cards).
+func _test_every_call_two_sided() -> void:
+	var sized := RegEx.create_from_string("[0-9]")
+	var verdict := RegEx.create_from_string("(?i)recommend|best (choice|option|call)|the better (choice|option|call)|you should")
+	var seen := {}
+	var check_call := func(m: Dictionary) -> void:
+		var kind := str(m.get("kind", ""))
+		seen[kind] = int(seen.get(kind, 0)) + 1
+		for o in m.get("options", []):
+			var g := str((o as Dictionary).get("gain", ""))
+			var c := str((o as Dictionary).get("cost", ""))
+			var what := "%s call, %s" % [kind, str(o.get("label", o.get("key", "")))]
+			_check(g.begins_with("Gain: ") and c.begins_with("Cost: "), "The %s states a Gain and a Cost (%s / %s)" % [what, g, c])
+			_check(str(o.get("key", "")) == "none" or sized.search(g + c) != null, "The %s gives a size or odds (%s / %s)" % [what, g, c])
+			_check(verdict.search(g + c + str(o.get("detail", ""))) == null, "The %s never says which is better" % what)
+	for seed in range(900, 920):
+		var sim := _sim(seed)
+		sim.always_offer_bounce = true
+		sim.moment_side = 0
+		while sim.current_quarter <= 4:
+			sim.begin_quarter()
+			while not sim.continue_quarter():
+				check_call.call(sim.pending_moment)
+				sim.resolve_moment(int(sim.pending_moment.get("default", 0)))
+			sim.end_quarter()
+		if seen.has("set_shot") and seen.has("momentum") and seen.has("bounce"):
+			break
+	for kind in ["set_shot", "momentum", "bounce"]:
+		_check(seen.has(kind), "(setup) a %s call came up in the seeded matches (%s)" % [kind, str(seen)])
+	# Their midfielder kicking a bag is rare in a seeded match: staged as the
+	# capture tool stages it (tools/visual/capture_tag_call.gd), once as a new
+	# tag and once with our tag already on another of theirs.
+	for tagged in [false, true]:
+		var sim := _sim(941)
+		sim.moment_side = 0
+		sim.begin_quarter()
+		sim.pending_moment = {}
+		sim._moments_this_q = 0
+		sim._last_moment_chain = sim._chain_no - 100
+		var hot_id := ""
+		for p in (sim.squads[1] as Squad).ground:
+			if str(p["role"]) == "MID" and sim.taggable(p):
+				hot_id = str(p["id"])
+				(sim.player_stats.get_or_add(hot_id, {}) as Dictionary)["goals"] = 3.0
+				break
+		if tagged:
+			for p in (sim.squads[1] as Squad).ground:
+				if str(p["id"]) != hot_id and sim.taggable(p):
+					sim.tactics[0]["tag_id"] = str(p["id"])
+					break
+		sim._boundary_moment()
+		_check(str(sim.pending_moment.get("kind", "")) == "hot", "(setup) the hot call comes up%s" % (" with a tag on" if tagged else ""))
+		check_call.call(sim.pending_moment)
+	# The break calls. Balanced and Stay composed are the no-change options:
+	# they state that nothing is gained and nothing given up, so carry no figure.
+	for plan in MatchSim.PLANS.keys() + ["balanced"]:
+		var t := GateOdds.plan_texts(str(plan))
+		_check(str(t[0]) != "" and str(t[1]) != "", "The %s plan states a gain and a cost" % plan)
+		_check(not GateOdds.PLAN_GAIN.has(MatchSim.plan_key(str(plan))) or sized.search(str(t[0]) + str(t[1])) != null,
+				"The %s plan sizes its gain and cost (%s / %s)" % [plan, t[0], t[1]])
+	for pep in GateOdds.PEP_GAIN.keys():
+		var t := GateOdds.pep_texts(str(pep))
+		_check(str(t[0]) != "" and str(t[1]) != "", "The %s pep talk states a gain and a cost" % pep)
+		_check(pep == "steady" or sized.search(str(t[0]) + str(t[1])) != null, "The %s pep talk is sized (%s / %s)" % [pep, t[0], t[1]])
+	for kind in GateOdds.BURST_GAIN.keys():
+		var t := GateOdds.burst_lines(str(kind), 20)
+		_check(sized.search(str(t[0])) != null and sized.search(str(t[1])) != null,
+				"The %s card sizes both its gain and its cost (%s / %s)" % [kind, t[0], t[1]])

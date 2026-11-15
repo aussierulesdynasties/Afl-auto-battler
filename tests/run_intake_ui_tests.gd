@@ -55,14 +55,39 @@ func _run() -> void:
 	quit(0 if _failures.is_empty() else 1)
 
 
+## Opening the off-season (retirements, delistings, trades and free agency for
+## every club) is most of what a draft test costs, and no test here is about
+## it. The first test at a club opens it and saves the career to that club's
+## own file; the next ones load that save. Everything a test sets up (picks,
+## trades, list sizes, the draft itself) comes after the opening.
+var _open_saved := {}
+
+
+## A seeded career at `club`, its first home-and-away done and the off-season open.
+func _offseason_open(club: String) -> void:
+	var keep: String = _state.save_path
+	_state.save_path = "user://test_intake_ui_open_%s.save" % club
+	var loaded: bool = bool(_open_saved.get(club, false)) and _state.load_career()
+	if not loaded:
+		_state.reset()
+		_state.replay_seed = SUITE_SEED
+		_state.start_season(club, _db.club_list(club))
+		_state.season.round_index = _state.season.fixture.size()
+		_state.open_offseason()
+		_open_saved[club] = _state.save_career()
+	_state.save_path = keep
+	_state.replay_seed = SUITE_SEED
+	_check(_state.my_club == club and _state.offseason_year == _state.season_year
+			and _state.season.round_index == _state.season.fixture.size(),
+			"(setup) %s's off-season is open at the end of the home-and-away (%s)" % [club, "loaded" if loaded else "opened"])
+
+
 ## The National Draft on the shared screen, driven by taps, through to the new list (the checks written in _run).
 func _test_intake_by_taps() -> void:
 	var first_year := int(_state.season_year)
-	_state.start_season("COL", _db.club_list("COL"))
+	_offseason_open("COL")
 	var season = _state.season
-	season.round_index = season.fixture.size()  # The H&A is done; draft time.
 	# A compensation pick for losing a free agent, so the order shows one.
-	_state.open_offseason()
 	_state.compensation.append({"club": "COL", "player": "comp_test", "name": "Sam Example",
 			"to": "CAR", "salary": 8, "years": 3, "value": 10.0, "after": 1})
 	# A first-round pick bought from Carlton for a player: the order and your
@@ -305,11 +330,17 @@ func _test_intake_by_taps() -> void:
 ## Real taps on "Pick for me" and "Pass" at one screen size.
 func _test_pass_and_pick_for_me(size: Vector2i) -> void:
 	var tag := "%dx%d" % [size.x, size.y]
-	_state.reset()
-	_state.replay_seed = SUITE_SEED
-	_state.start_season("COL", _db.club_list("COL"))
-	_state.season.round_index = _state.season.fixture.size()
-	_state.open_offseason()
+	_offseason_open("COL")
+	# Spare men put the list above the minimum after retirements, so Pass is
+	# allowed on the coach's turn (Draft.pass_block_reason).
+	var min_list := int(load("res://scripts/sim/Contracts.gd").min_list())
+	var staying: int = _state.my_list.filter(func(q): return not _state.retiring_now(q)).size()
+	var base: Dictionary = _state.my_list[_state.my_list.size() - 1]
+	for i in range(maxi(0, min_list + 1 - staying)):
+		var extra: Dictionary = base.duplicate(true)
+		extra["id"] = "pass_extra_%d" % i
+		extra.erase("retiring")
+		_state.my_list.append(extra)
 	if not _state.begin_intake_draft():
 		_check(false, "The draft opens for the pick buttons test (%s)" % tag)
 		return
@@ -337,7 +368,10 @@ func _test_pass_and_pick_for_me(size: Vector2i) -> void:
 		ui.queue_free()
 		return
 	_check(pick_me.text == "Pick for me" and pass_b.text == "Pass", "The buttons read Pick for me and Pass (%s)" % tag)
-	_check(not pick_me.disabled and not pass_b.disabled, "Both buttons are live on your turn (%s)" % tag)
+	_check(not pick_me.disabled, "Pick for me is live on your turn (%s)" % tag)
+	# Pass is live only once the list reaches the minimum (Draft.pass_block_reason).
+	_check(pass_b.disabled == (draft.pass_block_reason() != ""),
+			"Pass is live exactly when the list allows it (%s: %s)" % [tag, draft.pass_block_reason()])
 	var expect: String = str(draft._best_ai_pick(draft.user_club)["id"])
 	var before: int = draft.count()
 	await _press(pick_me, "Pick for me (%s)" % tag)
@@ -348,9 +382,16 @@ func _test_pass_and_pick_for_me(size: Vector2i) -> void:
 	while not draft.is_user_turn() and not draft.is_finished() and guard < 200:
 		guard += 1
 		draft.auto_until_user_turn()
+	# Fill the list to the minimum so passing is allowed.
+	guard = 0
+	while draft.is_user_turn() and draft.pass_block_reason() != "" and guard < 60:
+		guard += 1
+		draft.pick_for_me()
+		draft.auto_until_user_turn()
 	ui.call("_refresh")
 	await _settle()
 	if draft.is_user_turn():
+		_check(not pass_b.disabled, "Pass is live once the list reaches the minimum (%s)" % tag)
 		var taken: int = draft.count()
 		_state.set("_dirty", false)
 		await _press(pass_b, "Pass (%s)" % tag)
@@ -368,11 +409,7 @@ func _test_pass_and_pick_for_me(size: Vector2i) -> void:
 ## club's answer in words, and the way back to the draft.
 func _test_trade_picks_sheet(size: Vector2i) -> void:
 	var tag := "%dx%d" % [size.x, size.y]
-	_state.reset()
-	_state.replay_seed = SUITE_SEED
-	_state.start_season("FRE", _db.club_list("FRE"))
-	_state.season.round_index = _state.season.fixture.size()
-	_state.open_offseason()
+	_offseason_open("FRE")
 	if not _state.begin_intake_draft():
 		_check(false, "The draft opens for the trade sheet test (%s)" % tag)
 		return
@@ -564,23 +601,12 @@ func _test_pick_order_and_untouchable_ui() -> void:
 ## off-season screen to delist, and the draft screen says a pass when it
 ## happens. Real taps at a phone size.
 func _test_full_list_before_and_during_draft() -> void:
-	_state.reset()
-	_state.replay_seed = SUITE_SEED
-	_state.start_season("COL", _db.club_list("COL"))
+	_offseason_open("COL")
 	var s = _state.season
-	s.round_index = s.fixture.size()
 	# The season is over (the hub offers the draft only then): finals done.
 	s.finals = {"done": true, "premier": "CAR", "runner_up": "ESS"}
-	_state.open_offseason()
 	var cap: int = load("res://scripts/state/RookieList.gd").SENIOR_SPOTS
 	var rl = load("res://scripts/state/RookieList.gd")
-	var n := 0
-	while rl.senior_count(_state.my_list) < cap - 1 and n < 40:
-		var copy: Dictionary = (_state.my_list[n % _state.my_list.size()] as Dictionary).duplicate(true)
-		copy["id"] = "pad_%d" % n
-		copy["rookie_list"] = ""
-		_state.my_list.append(copy)
-		n += 1
 	for p in _state.my_list:
 		p["contract_years"] = 3
 	# Three cheap players out of contract: the ones Delist lands on.
@@ -588,6 +614,18 @@ func _test_full_list_before_and_during_draft() -> void:
 	cheap.sort_custom(func(x, y): return int(x.get("salary", 0)) < int(y.get("salary", 0)))
 	for q in cheap.slice(0, 3):
 		q["contract_years"] = 1
+	# Pad the list until one senior spot is open for next season, counted as the
+	# draft counts it (after retirements and the free-agency close), whatever
+	# size the club's list starts at (the year's minimum, Contracts.min_list()).
+	var n := 0
+	while int(_state.draft_list_spots()["held"]) < cap - 1 and n < 40:
+		var copy: Dictionary = (_state.my_list[n % _state.my_list.size()] as Dictionary).duplicate(true)
+		copy["id"] = "pad_%d" % n
+		copy["rookie_list"] = ""
+		copy["contract_years"] = 3
+		copy.erase("retiring")
+		_state.my_list.append(copy)
+		n += 1
 	var spots: Dictionary = _state.draft_list_spots()
 	_check((spots["passing"] as Array).size() >= 1, "Some picks have no spot (%s)" % str(spots))
 	# The reference phone (director, 2026-11-12 check: no scrolling to reach a Release button).
@@ -833,11 +871,7 @@ func _test_draft_night_words() -> void:
 			"The recruiter's line is football words: %s" % dn.recruiter_line(walter, "FRE"))
 	# Every prospect in a real class: the line reads only what is public, so
 	# scrambling every hidden figure leaves it as it was, and it never grades.
-	_state.reset()
-	_state.replay_seed = SUITE_SEED
-	_state.start_season("FRE", _db.club_list("FRE"))
-	_state.season.round_index = _state.season.fixture.size()
-	_state.open_offseason()
+	_offseason_open("FRE")
 	if not _state.begin_intake_draft():
 		_check(false, "The draft opens for the words test")
 		return
@@ -872,11 +906,18 @@ func _test_draft_night_screen(size: Vector2i) -> void:
 	var tag := "%dx%d" % [size.x, size.y]
 	var dn = load("res://scripts/ui/DraftNight.gd")
 	var feel = load("res://scripts/ui/Feel.gd")
-	_state.reset()
-	_state.replay_seed = SUITE_SEED
-	_state.start_season("FRE", _db.club_list("FRE"))
-	_state.season.round_index = _state.season.fixture.size()
-	_state.open_offseason()
+	_offseason_open("FRE")
+	# Room on the list for every pick Fremantle holds, so the coach is on the
+	# clock again after Pick for me (Back below): delist the cheapest players
+	# staying on until the picks all have a spot.
+	var staying: Array = _state.my_list.filter(func(q): return not _state.retiring_now(q))
+	staying.sort_custom(func(x, y): return int(x.get("salary", 0)) < int(y.get("salary", 0)))
+	for q in staying:
+		if (_state.draft_list_spots()["passing"] as Array).is_empty():
+			break
+		_state.release_player(str(q["id"]))
+	_check((_state.draft_list_spots()["passing"] as Array).is_empty(),
+			"Every Fremantle pick has a spot for the draft night test (%s: %s)" % [tag, str(_state.draft_list_spots())])
 	if not _state.begin_intake_draft() or dn == null:
 		_check(false, "The draft opens for the draft night test (%s)" % tag)
 		return
@@ -1118,11 +1159,7 @@ func _test_draft_night_screen(size: Vector2i) -> void:
 	feel.test_motion = false
 	if size.x >= 760:
 		return
-	_state.reset()
-	_state.replay_seed = SUITE_SEED
-	_state.start_season("FRE", _db.club_list("FRE"))
-	_state.season.round_index = _state.season.fixture.size()
-	_state.open_offseason()
+	_offseason_open("FRE")
 	_state.begin_intake_draft()
 	draft = _state.draft
 	ui = load("res://scenes/DraftScene.tscn").instantiate()

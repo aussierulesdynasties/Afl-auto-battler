@@ -170,9 +170,17 @@ static func block_words(list: Array, why: String) -> String:
 ## The 44 said in full, for a list of `n` (senior and Category A) at or over it.
 static func over_words(n: int) -> String:
 	if n > Contracts.max_list():
-		return "Your list holds %d and the limit is %d (senior list and Category A rookies together), so nobody joins until it is back under %d." % [
-				n, Contracts.max_list(), Contracts.max_list()]
-	return "Your list is full (%d: senior list and Category A rookies together)." % Contracts.max_list()
+		return "Your list holds %d and the limit is %d%s, so nobody joins until it is back under %d." % [
+				n, Contracts.max_list(), together_words(" (", ")"), Contracts.max_list()]
+	return "Your list is full (%d%s)." % [Contracts.max_list(), together_words(": ", "")]
+
+
+## "senior list and Category A rookies together" between `open` and `close`,
+## or "" in a season with no rookie list (before 1997, bug bash 4 L12).
+static func together_words(open: String, close: String) -> String:
+	if not EraRules.on("rookie_list", EraRules.list_year()):
+		return ""
+	return open + "senior list and Category A rookies together" + close
 
 
 ## Spots left in the 44 (never under 0).
@@ -334,6 +342,9 @@ static func open_draft(gs, order: Array) -> void:
 	if not in_force():
 		gs.rookie_draft = {"year": gs.season_year, "order": [], "next": 0, "round": 1,
 				"passed": {}, "picks": [], "upgrades": [], "done": true}
+		gs.relisted_unpicked()
+		# Lists are lodged now: a club short of the minimum fills it.
+		gs._fill_short_lists()
 		return
 	var clubs := []
 	for code in order:
@@ -483,6 +494,9 @@ static func _finish(gs) -> void:
 	if bool(rec.get("done", false)):
 		return
 	rec["done"] = true
+	gs.relisted_unpicked()
+	# Lists are lodged after the Rookie Draft: a club short of the minimum fills it.
+	gs._fill_short_lists()
 	var picks: Array = rec.get("picks", [])
 	var mine := picks.filter(func(k): return str(k["club"]) == gs.my_club)
 	var nobody := bool(rec.get("nobody_left", false))

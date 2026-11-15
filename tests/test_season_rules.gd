@@ -18,18 +18,20 @@ const SUITE_SEED := 2027
 ## 2026 fixture or finals. The played seasons depend on the ratings data:
 ## GOLDEN as tools/run_tests.sh and CI run it (AFL_SKIP_OVR_ROWS=1, the
 ## ratings overrides off), PLAYED_WITH_OVR when the suite runs on its own.
+## The played seasons were redrawn when the weather could turn at a break
+## (row 160): a turned day plays on in the new condition.
 const GOLDEN := {
 	"fixture:1": "88379d64dfcfdf22f88fcc1bbcc1bab4",
 	"fixture:2": "15aab1f43b8c605b37bc9eef32c73406",
 	"fixture:3": "928bc55d620e04e745cf7adb88b56ae8",
 	"fixture:2027": "57bffb38d600d4036767ef691d623a80",
 	"fixture:90210": "1734a8fcc9068e3e444e293a25f944b4",
-	"played:2027": "5091b4d036e24bf635ebc0ffed9897b8",
-	"played:7": "3abfb62a3dd86a5e244b1657032d51e3",
+	"played:2027": "0d3f654039a6a254d39e9fbdaca5f102",
+	"played:7": "11a9d3a80e35ead63e71c779940cc9b6",
 }
 const PLAYED_WITH_OVR := {
-	"played:2027": "01223f0ccb1f779b8307a2db35f1a526",
-	"played:7": "21a5bdf46290ceb79d3c143db615d6b2",
+	"played:2027": "f717eb64566f9b222cb5125e5b4f238c",
+	"played:7": "e2a5c195f8348fd1b759cd24ee8c7896",
 }
 
 const Golden := preload("res://tests/season_golden.gd")
@@ -411,13 +413,27 @@ func _test_week_titles() -> void:
 
 
 ## A past season simulated through: the engine plays 1990's league (14 clubs,
-## no extra time) and 1991's (15 clubs, byes) to a premier.
+## no extra time) and 1991's (15 clubs, byes) to a premier. Two rounds are
+## simulated (1991's with a bye club resting); the rest of the home and away
+## rounds take a fixed result each, since the finals are what is played through.
 func _test_past_season_played_through() -> void:
 	for y in [1990, 1991]:
 		var s := _season(y, 14 if y == 1990 else 15, 5)
-		while not s.is_regular_done():
+		var simmed := 0
+		for r in range(2):
+			simmed += (s.fixture[r] as Array).size()
 			s.play_round()
 		var p := 0
+		for row in s.ladder_sorted():
+			p += int(row["p"])
+		_check(simmed == (s.clubs.size() / 2) * 2 and p == simmed * 2,
+				"%d: the two simulated rounds' %d games are on the ladder (%d)" % [y, simmed, p])
+		while not s.is_regular_done():
+			for m in s.fixture[s.round_index]:
+				s.record_regular({"home": str(m["home"]), "away": str(m["away"]), "score": [80 + s.round_index, 60]})
+			s.round_index += 1
+			s.recalc_ladder()
+		p = 0
 		for row in s.ladder_sorted():
 			p += int(row["p"])
 		_check(p == s.clubs.size() * s.games_per_club(), "%d: every home-and-away game on the ladder (%d)" % [y, p])

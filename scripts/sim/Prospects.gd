@@ -13,8 +13,11 @@ extends RefCounted
 ## The 2026 class ships from data/draftees_2026.csv; every later class is
 ## generated deterministically from its year so careers can loop forever.
 
-const MIN_LIST := 32
 const MAX_RETIRE_PER_CLUB := 8
+## The youngest a real player of a Legacy start can be in his last real
+## season for that season to count as his retirement (should_retire). Younger,
+## he was delisted, and the sim's list decisions take his place.
+const REAL_RETIRE_AGE := 27.0
 ## Generated forwards run from small (172 cm) to key (203 cm), about a third
 ## of each by MatchSim.fwd_size, as in a real draft class: from 184 cm there
 ## were no small forwards, and over a career the league's forward lines
@@ -380,7 +383,10 @@ static func _shifted_overall(a: Dictionary, role: String, offset: float,
 ## Ages and redevelops every player on every list in place. Mutates the
 ## player dicts (they are shared with GameDB; a New Career resets via
 ## GameDB.reload()). Returns {"retired": [...], "developed": n, "declined": n}.
-static func age_league(lists: Dictionary, year: int) -> Dictionary:
+## `min_left` is the smallest a list may be left at: 0 after a National Draft,
+## which refills every list; a rollover with no draft (start_next_season)
+## keeps each list at Contracts.min_list(), as nobody drafts in their places.
+static func age_league(lists: Dictionary, year: int, min_left := 0) -> Dictionary:
 	var retired := []
 	var developed := 0
 	var declined := 0
@@ -401,21 +407,42 @@ static func age_league(lists: Dictionary, year: int) -> Dictionary:
 			var go := should_retire(p, year) or int(p.get("retiring", 0)) == year
 			if int(p.get("play_on", 0)) == year:
 				go = false
-			if go and arr.size() - dropped > MIN_LIST and dropped < MAX_RETIRE_PER_CLUB:
+			# After a draft, never held back by the list size: the draft made
+			# every club, yours included, fill the places its retirees leave
+			# (Draft.leaving), so a list that passes at the minimum still
+			# turns over (2026-11-13: a coach who passed every draft kept
+			# the same 32 for 36 years).
+			if go and dropped < MAX_RETIRE_PER_CLUB and arr.size() - dropped > min_left:
 				dropped += 1
 				retired.append({"id": str(p["id"]), "name": str(p.get("generic_name", p.get("name", "Player"))),
 						"club": str(code), "age": float(p.get("age", 26.0)),
 						"overall": int(p.get("overall", 40))})
 				p["retired"] = true
 			else:
+				# Held back by the cap on retirements or the list size: he
+				# plays the season, so nothing reads him as retiring in it
+				# (Contracts.payroll would leave his salary off the books).
+				if int(p.get("retiring", 0)) == year:
+					p.erase("retiring")
 				keep.append(p)
 		lists[code] = keep
 	return {"retired": retired, "developed": developed, "declined": declined}
 
 
 static func should_retire(p: Dictionary, year: int) -> bool:
-	var age := float(p.get("age", 26.0))
+	var age := Potential.retire_age(p)   # Fine Wine: three years later
 	var ov := int(p.get("overall", 50))
+	# A real player of a Legacy start retires about when he did (director,
+	# 2026-11-13: "make all historical players retirement start roughly when
+	# it did irl"), a year either side, whatever his age or rating; a coach
+	# can still talk him round (Retirement). Still listed in 2025: the sim's.
+	# His last real season is a retirement only when he was REAL_RETIRE_AGE or
+	# older in it: a younger man's career ended because his club delisted him,
+	# which is a list decision, so the sim's clubs make it. (Read as every last
+	# season, a 1990 start retired 12 a club, nine of them 26 or younger.)
+	var last := int(p.get("real_last", 0))
+	if last > 0 and float(p.get("age", 26.0)) - float(year - last) >= REAL_RETIRE_AGE:
+		return year > last + real_slack(p)
 	if ov <= 32:
 		return true
 	if age >= 37.0:
@@ -425,6 +452,13 @@ static func should_retire(p: Dictionary, year: int) -> bool:
 	if age >= 33.0 and ov < 42:
 		return _rng_for("%s|r%d" % [str(p["id"]), year]).randf() < 0.30
 	return false
+
+
+## How far his retirement falls from his real one: -1, 0 or +1 seasons
+## (one in four early, one in four late), fixed for him by his id.
+static func real_slack(p: Dictionary) -> int:
+	var r := _rng_for("%s|real_last" % str(p.get("id", ""))).randf()
+	return -1 if r < 0.25 else (1 if r >= 0.75 else 0)
 
 
 ## Age one player by a year and apply the development band. Returns the
@@ -439,7 +473,7 @@ static func age_player(p: Dictionary, year: int) -> float:
 	else:
 		p["sample"] = maxf(18.0, float(p.get("gm", 0.0)))
 
-	var d := Potential.age_step(age, rng.randf())
+	var d := Potential.age_step_for(age, rng.randf(), Traits.fine_wine(p))
 	var ov := int(p.get("overall", 50))
 	if age <= 25.0 and ov < 55:
 		d += 1.0  # late bloomers keep climbing
@@ -659,7 +693,13 @@ static func age_pool(pool: Array, year: int, drafted: Dictionary) -> Array:
 			p["age"] = float(p.get("age", 18.0)) + 1.0
 		else:
 			age_player(p, year)
-		if float(p.get("age", 18.0)) >= 22.0:
+		# A real class's mature-age pick (a Legacy career) is in his own draft
+		# whatever his age; passed over, he ages out like anyone else.
+		var own_real := bool(p.get("real_class", false)) and int(p.get("draft_year", 0)) == year
+		# A delisted man put back in the drafts (GameState._relist) waits for
+		# the Rookie Draft, then ends his career if nobody takes him.
+		var relisted := int(p.get("relisted", 0)) == year - 1
+		if float(p.get("age", 18.0)) >= 22.0 and not own_real and not relisted:
 			continue  # aged out of draft eligibility
 		out.append(p)
 	return out
@@ -757,6 +797,7 @@ static func generate_class(year: int, career_seed := 0) -> Array:
 				project(p)
 				rucks += 1
 	_maybe_unicorn(out, year, career_seed)
+	roll_fine_wine(out, "class-%d-%d" % [year, career_seed])
 	GameDB.assign_aliases(out)
 	InternationalProspects.apply(out, year)
 	return out
@@ -783,6 +824,27 @@ static func _maybe_unicorn(cls: Array, year: int, career_seed: int) -> void:
 	if not best.is_empty():
 		best["unicorn"] = true
 		best["note"] = "%d cm and moves like a much smaller player" % int(best["height_cm"])
+
+
+## Every generated draftee rolls once for Fine Wine at Traits.FINE_WINE_DRAFTEE_ODDS
+## (director, 2026-11-13: "every draftee should have a very slim chance").
+## Its own dice, so the class itself rolls as it always did. A real draftee
+## rolls too, unless his real career could already show it by the 2026 data
+## (born 1991 or earlier, so 60 games at 32+ were within reach by 2025): then his
+## record decides (Traits.fine_wine), as for any real player in a Legacy start.
+const FINE_WINE_RECORD_BORN := 1991
+
+
+static func roll_fine_wine(cls: Array, salt: String) -> void:
+	var rng := _rng_for("fine-wine-" + salt)
+	for p in cls:
+		var roll := rng.randf()
+		if not bool(p.get("generated", false)):
+			var born := str(p.get("dob", "")).substr(0, 4)
+			if not born.is_valid_int() or int(born) <= FINE_WINE_RECORD_BORN:
+				continue
+		if roll < Traits.FINE_WINE_DRAFTEE_ODDS:
+			p["fine_wine"] = true
 
 
 # ---------------------------------------------------------------------------
@@ -1074,6 +1136,7 @@ static func generate_expansion_list(code: String, year: int, size := 36, salt :=
 		project(p)
 		_mature_entry(p)
 		out.append(p)
+	roll_fine_wine(out, "expansion-%s-%d%s-%d" % [code, year, salt, first_rank])
 	GameDB.assign_aliases(out)
 	return out
 

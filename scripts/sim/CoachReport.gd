@@ -26,10 +26,10 @@ const PEP_NAMES := {
 }
 
 const PEP_EFFECTS := {
-	"steady": "No change.",
-	"fire_up": "A lift at the contest while you are chasing the game; level or in front it does nothing for you. Either way legs go quicker and tempers fray.",
-	"calm": "Settle them down: fewer errors, less rattled by pressure and legs last longer, but less ground gained.",
-	"heat": "Get on top of their ball carriers: more turnovers forced and more tackles laid, but legs burn out much faster, and it shows next week.",
+	"steady": "They stay as they are. No lift and no settling.",
+	"fire_up": "A lift at the contest while we're chasing the game. Level or in front, it does nothing for us. Either way, legs go quicker and tempers fray.",
+	"calm": "Settle them down. Fewer errors, and pressure rattles us less. Legs last longer, but we gain less ground.",
+	"heat": "Get on top of their ball carriers. We force more turnovers and lay more tackles. Legs burn out much faster, and it shows next week.",
 }
 
 ## What each plan does and gives up, in football words, from MatchSim.PLANS.
@@ -38,31 +38,31 @@ const PEP_EFFECTS := {
 ## squad is known; with one, plan_summary sizes the gain for that list today
 ## and the cost it pays (GateOdds.plan_texts_for, director 2026-11-10).
 const PLAN_PARTS := {
-	"balanced": {"does": "Play it straight: no extra edge, and nothing for them to exploit."},
+	"balanced": {"does": "Play it straight. No extra edge, and nothing for them to exploit."},
 	"attacking": {"does": "Go through the corridor.",
 			"gain": "More ground and better shots.",
-			"cost": "More turnovers, heavier legs, and they score more on the rebound.",
+			"cost": "More turnovers and heavier legs. They score more on the rebound.",
 			"beats": "Beats Controlled Tempo. A High Press squeezes it."},
 	"defensive": {"does": "Hunt the ball high and lock it in their half.",
-			"gain": "Win it back in their half.",
-			"cost": "Heavier legs, rushed shots, and space behind if they break it.",
+			"gain": "We win it back in their half.",
+			"cost": "Heavier legs and rushed shots. Space behind us if they break it.",
 			"beats": "Beats Attack Corridor. Controlled Tempo plays through it."},
-	"contest": {"does": "Numbers at the stoppage. Leans on your ball-winners and ruck.",
-			"gain": "More clearances won.",
-			"cost": "The ball moves a little slower and you are a little exposed on the rebound."},
-	"controlled": {"does": "Keep the ball. Asks nothing special of your list.",
-			"gain": "Fewer errors, less rattled by pressure, fresher legs.",
-			"cost": "Less ground gained.",
+	"contest": {"does": "Numbers at the stoppage. It leans on our ball-winners and ruck.",
+			"gain": "We win more clearances.",
+			"cost": "The ball moves a little slower. We are a little exposed on the rebound."},
+	"controlled": {"does": "Keep the ball. It asks nothing special of our list.",
+			"gain": "Fewer errors and fresher legs. Pressure rattles us less.",
+			"cost": "We gain less ground.",
 			"beats": "Plays through a High Press. Attack Corridor runs past it."},
 	# Your own plan (CustomPlan, director 2026-11-12): neutral, like Win Contest.
-	"custom": {"does": "Your own plan: the strength and the cost you picked. It beats no plan and no plan beats it."},
+	"custom": {"does": "A plan of our own: the strength and the cost you picked. It beats no plan and no plan beats it."},
 }
 
 const PEP_SUMMARY := {
-	"steady": "Keep them as they are: no lift at the contest, and no settling either.",
-	"fire_up": "A lift at the contest when you are chasing the game; legs go quicker and tempers fray.",
-	"calm": "Fewer errors and less rattled by pressure, legs last longer; less ground gained.",
-	"heat": "Harder pressure on their ball carriers forces more turnovers; legs burn out much faster, and it shows next week.",
+	"steady": "We keep them as they are. No lift at the contest, and no settling either.",
+	"fire_up": "A lift at the contest when we're chasing the game. Legs go quicker and tempers fray.",
+	"calm": "Fewer errors, and pressure rattles us less. Legs last longer. We gain less ground.",
+	"heat": "Harder pressure on their ball carriers forces more turnovers. Legs burn out much faster, and it shows next week.",
 }
 
 const TEAM_COMPARE := [
@@ -152,17 +152,21 @@ static func plan_parts(key: String) -> Dictionary:
 
 ## The parts joined into one paragraph, for screens that show a plan in a
 ## line. With `sq` the Gain and Cost are sized for that squad today
-## (GateOdds.plan_texts_for, M1); without it, in words.
+## (GateOdds.plan_texts_for, M1), one effect a line (style guide 5.1), so
+## each part takes its own line; without it, in words.
 static func plan_summary(key: String, sq: Squad = null, weather_key := "perfect") -> String:
 	var d := plan_parts(key)
 	var out := PackedStringArray([str(d["does"])])
+	var sep := " "
 	if sq != null:
+		sep = "\n"
 		var sized := GateOdds.plan_texts_for(sq, key, weather_key)
 		out.append(GateOdds.gain(str(sized[0])) + ".")
 		out.append(GateOdds.cost(str(sized[1])) + ".")
 	elif MatchSim.plan_key(key) == CustomPlan.KEY:
 		var own := CustomPlan.texts(CoachEffects.my_custom)
 		if not own.is_empty():
+			sep = "\n"
 			out.append(GateOdds.gain(str(own[0])) + ".")
 			out.append(GateOdds.cost(str(own[1])) + ".")
 	else:
@@ -172,7 +176,7 @@ static func plan_summary(key: String, sq: Squad = null, weather_key := "perfect"
 			out.append("Cost: " + str(d["cost"]))
 	if d.has("beats"):
 		out.append(str(d["beats"]))
-	return " ".join(out)
+	return sep.join(out)
 
 
 static func pep_summary(key: String) -> String:
@@ -287,6 +291,19 @@ static func rank_side(roster_side: Array, player_stats: Dictionary, quarters := 
 	return out
 
 
+## Every substitute who came on, from the match's own events (MatchSim
+## _bring_sub): [{"side", "id", "q", "min"}], minutes of the whole game.
+## Ordinary interchanges are not here: those players rotate all game.
+static func subs_on(res: Dictionary) -> Array:
+	var out := []
+	for ev in res.get("events", []):
+		var d: Dictionary = ev
+		if str(d.get("kind", "")) == "sub" and bool(d.get("substitute", false)):
+			out.append({"side": int(d.get("side", -1)), "id": str(d.get("player_id", "")),
+					"q": int(d.get("q", 0)), "min": int(d.get("min", 0))})
+	return out
+
+
 static func _by_delta(ranked: Array) -> Array:
 	var out := ranked.duplicate()
 	out.sort_custom(func(a, b): return float(a["delta"]) < float(b["delta"]))
@@ -368,6 +385,9 @@ static func half_time_report(res: Dictionary, my_side: int) -> Dictionary:
 			# Only who was hurt by half-time.
 			"injuries": (res.get("injuries", []) as Array).filter(
 					func(i): return int((i as Dictionary).get("q", 5)) <= 2),
+			# Only the substitutes on by half-time.
+			"subs_on": subs_on(res).filter(
+					func(s): return int((s as Dictionary).get("q", 5)) <= 2),
 		}
 		return _build_report(ht_res, my_side, 2)
 	return _build_report(res, my_side, _quarters_played(res))
@@ -403,6 +423,15 @@ static func _build_report(res: Dictionary, my_side: int, quarters: int) -> Dicti
 		for e in my_ranked:
 			if str(e["id"]) == str(rec.get("id", "")):
 				e["hurt_min"] = int(rec.get("min", 0))
+	# When a substitute came on (medical sub, or the 2011-15 sub), so Needs
+	# a lift can tell a late cameo from a poor game.
+	for s in res.get("subs_on", subs_on(res)):
+		var rec: Dictionary = s
+		if int(rec.get("side", -1)) != my_side:
+			continue
+		for e in my_ranked:
+			if str(e["id"]) == str(rec.get("id", "")):
+				e["on_min"] = int(rec.get("min", 0))
 	var my_by_delta := _by_delta(my_ranked)
 	var opp_by_delta := _by_delta(opp_ranked)
 
@@ -451,6 +480,8 @@ static func _build_report(res: Dictionary, my_side: int, quarters: int) -> Dicti
 		"opp_observed": opp_observed,
 		"keys": keys,
 		"weather": str(res.get("weather", "perfect")),
+		"weather_start": str(res.get("weather_start", "")),
+		"weather_turned_after": int(res.get("weather_turned_after", 0)),
 	}
 
 
@@ -760,6 +791,10 @@ static func glance(report: Dictionary, full_time := false) -> Dictionary:
 		read.append("An even %s: neither side is on top anywhere in particular." % span)
 	# The conditions, when they weren't a perfect day (ARD-M4-016).
 	var wx := Weather.report_line(str(report.get("weather", "perfect")))
+	# A day that turned at a break (row 160): how it started and when it turned.
+	if int(report.get("weather_turned_after", 0)) > 0:
+		wx = Weather.turn_report_line(str(report.get("weather_start", "perfect")),
+				int(report["weather_turned_after"]), str(report.get("weather", "perfect")))
 	if wx != "":
 		read.insert(0, wx)
 	var people := func(list: Array, n: int, keep: Callable) -> Array:
@@ -780,8 +815,18 @@ static func glance(report: Dictionary, full_time := false) -> Dictionary:
 	lift_pool.sort_custom(func(a, b):
 		return MatchNotes.rating(a.get("stats", {})) < MatchNotes.rating(b.get("stats", {})))
 	var quarters := int(report.get("quarters", 4))
+	var game := 30.0 * float(quarters)
 	var quiet := func(d: Dictionary) -> bool:
-		if d.has("hurt_min") and float(d["hurt_min"]) < LIFT_MIN_SHARE * 30.0 * float(quarters):
+		if d.has("hurt_min") and float(d["hurt_min"]) < LIFT_MIN_SHARE * game:
+			return false
+		# A substitute on for the last part of it had a cameo, not a game.
+		if d.has("on_min") and game - float(d["on_min"]) < LIFT_MIN_SHARE * game:
+			return false
+		# Not a disposal yet: he has not been in the game to judge it (a
+		# man not yet off the bench at half-time, a late cameo).
+		var st: Dictionary = d.get("stats", {})
+		if maxf(float(st.get("disposals", 0.0)),
+				float(st.get("kicks", 0.0)) + float(st.get("handballs", 0.0))) <= 0.0:
 			return false
 		return MatchNotes.rating(d.get("stats", {})) < LIFT_BELOW * float(quarters) / 4.0
 	return {

@@ -124,6 +124,11 @@ static func would_take(c: Dictionary, club: String, job: String, year: int) -> b
 	var sacked: Dictionary = c.get("sacked_by", {})
 	if sacked.has(club) and year + 1 - int(sacked[club]) < SACKED_CLUB_COOLDOWN:
 		return false
+	# Let go at the end of his contract here: the club does not hire him
+	# straight back either (bug bash 4, L5).
+	var let_go: Dictionary = c.get("not_renewed_by", {})
+	if let_go.has(club) and year + 1 - int(let_go[club]) < SACKED_CLUB_COOLDOWN:
+		return false
 	if job == "SC" and not sc_eligible(c, year):
 		return false
 	return true
@@ -282,6 +287,15 @@ static func _close_stint(c: Dictionary, year: int) -> void:
 	for s in c.get("stints", []):
 		if int(s[3]) == 0:
 			s[3] = year
+
+
+## `club` let him go at the end of his contract in `year` (would_take).
+static func _not_renewed(c: Dictionary, club: String, year: int) -> void:
+	if club == "":
+		return
+	if not (c.get("not_renewed_by") is Dictionary):
+		c["not_renewed_by"] = {}
+	(c["not_renewed_by"] as Dictionary)[club] = year
 
 
 static func _leave_job(c: Dictionary, year: int, status := "free") -> void:
@@ -545,6 +559,7 @@ static func offseason(ctx: Dictionary) -> Dictionary:
 				var won := str(ctx.get("premier", "")) == club
 				c["contract_to"] = year + term_years(c, "SC", bool(r.get("met", false)) or won)
 			else:
+				_not_renewed(c, club, year)
 				_leave_job(c, year)
 				log["expired"] += 1
 				news.append([2, "%s have not renewed %s's contract." % [GameDB.club_name(club), _name(c)]])
@@ -558,6 +573,7 @@ static func offseason(ctx: Dictionary) -> Dictionary:
 		if renews(coaches, c, year, seed, my_club):
 			c["contract_to"] = year + term_years(c, str(c["job"]))
 		else:
+			_not_renewed(c, str(c.get("club", "")), year)
 			_leave_job(c, year)
 			log["assistant_expired"] = int(log.get("assistant_expired", 0)) + 1
 	sack_list.sort_custom(func(a, b): return int(a[0]) > int(b[0]))
@@ -904,7 +920,7 @@ static func _prune(coaches: Dictionary, archive: Dictionary, year: int, my_club:
 					"generic_name": c.get("generic_name", ""), "stints": c.get("stints", []),
 					"former_sc": c.get("former_sc", false), "left": year + 1,
 					"former_player_id": c.get("former_player_id", ""), "spec": c.get("spec", ""),
-					"played": c.get("played", {})}
+					"played": c.get("played", {}), "coty": c.get("coty", [])}
 			log["archived"] += 1
 		else:
 			log["pruned"] += 1

@@ -59,19 +59,26 @@ func _check(ok: bool, what: String) -> void:
 		print("FAIL: " + what)
 
 
-## A fresh Geelong career at its first off-season, with three spare players
-## so the list (at its 32 minimum) can lose some.
+## A fresh Geelong career at its first off-season, with spare players only
+## when needed, so the list can lose three and stay at its minimum. No match is
+## played: the season is marked over by hand and the off-season opened, which
+## is what builds the lists, contracts and free-agent pool an undo puts back.
 func _to_offseason() -> void:
 	_state.replay_seed = SUITE_SEED
 	_state.reset()
 	_state.start_season("GEE", _db.club_list("GEE"))
 	_state.season.round_index = _state.season.fixture.size()
 	_state.ensure_finals()
-	while not _state.season.is_season_over():
-		_state.advance()
+	_state.season.finals["done"] = true
 	_state.open_offseason()
 	var base: Dictionary = _state.my_list[_state.my_list.size() - 1]
-	for i in range(3):
+	# Three releases must leave the list at its minimum (Contracts.min_list()),
+	# counting the draftees still to come (up to three of the club's picks, as
+	# release_player does). The list starts at the year's minimum, close to the
+	# cap, so spare men are added only when those draftees do not cover it:
+	# extra salaries would put the club over the cap and leave nothing to sign.
+	var takes := mini(3, (_state.draft_list_spots()["picks"] as Array).size())
+	for i in range(maxi(0, int(_contracts.min_list()) + 3 - _state.my_list.size() - takes)):
 		var extra: Dictionary = base.duplicate(true)
 		extra["id"] = "undo_extra_%d" % i
 		extra["contract_years"] = 2
@@ -315,7 +322,7 @@ func _test_undo_by_a_finger() -> void:
 	if b == null:
 		scene.queue_free()
 		return
-	_check(_text(said) == "You can undo this until the national draft starts.",
+	_check(_text(said) == "Undo it any time before the national draft starts.",
 			"Beside the delisting notice it says only what Undo does (%s)" % _text(said))
 	_check(b.size.y >= 44.0 and b.size.x >= 44.0, "Undo is thumb-sized (%s)" % str(b.size))
 	var r := b.get_global_rect()
@@ -337,7 +344,7 @@ func _test_undo_by_a_finger() -> void:
 	await _settle()
 	said = scene.find_child("UndoLastText", true, false)
 	var own := _text(said) if said != null else "none"
-	_check(own.begins_with("You delisted ") and own.contains(_db.player_display_name(p)),
+	_check(own.begins_with("We delisted ") and own.contains(_db.player_display_name(p)),
 			"On its own the row names the delisting it undoes (%s)" % own)
 	# A signing put into the trade you are building, then undone, leaves the trade too.
 	var deal := _signable()

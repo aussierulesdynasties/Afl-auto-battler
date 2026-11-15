@@ -37,6 +37,8 @@ func run() -> void:
 	_t("_test_data_whole")
 	_t("_test_cards_valid")
 	_t("_test_fine_cut")
+	_t("_test_fitzroy_stays_telling")
+	_t("_test_era_copy")
 	_t("_test_campaign_fires_across_decades")
 	_t("_test_week_fires_in_its_season")
 	_t("_test_switch_off_fires_no_controversy")
@@ -45,6 +47,7 @@ func run() -> void:
 	_t("_test_supplements_switch_apart")
 	_t("_test_supplements_bans_land_and_lift")
 	_t("_test_supplements_switch_saved")
+	_t("_test_supplements_rival_tops_up")
 	GameDB.reload()
 	print(Ran.line("Year events", self))
 
@@ -92,6 +95,80 @@ func _test_cards_valid() -> void:
 			if (o.get("effects", []) as Array).is_empty():
 				bare.append(str(t["id"]))
 	_check(bare.is_empty(), "Every option of every year card does something (%s)" % str(bare))
+	# Bug bash 4 (R6-R8): each event's choices follow its own story, so no
+	# two events share a choice, a result or a reason line.
+	var owner := {}
+	var shared := []
+	for e in YearEvents.all():
+		var card = e.get("card", {})
+		if not (card is Dictionary):
+			continue
+		for c in card.get("choices", []):
+			var lines := [str(c.get("label", "")), str(c.get("result", ""))]
+			for x in c.get("effects", []):
+				lines.append(str(x.get("why", "")))
+			for t in lines:
+				if t == "":
+					continue
+				if owner.has(t) and owner[t] != e["id"]:
+					shared.append("%s / %s: %s" % [owner[t], e["id"], t])
+				owner[t] = e["id"]
+	_check(shared.is_empty(), "No two year events share a choice line (%s)" % str(shared.slice(0, 5)))
+	var tank := _card_choice("tanking_inquiry", "close")
+	_check(str(tank.get("result", "")).contains("no tanking") and not str(_card_choice("tanking_inquiry", "own").get("label", "")).to_lower().contains("tank"),
+			"The tanking card follows the finding: the club was cleared, its officials were fined")
+	_check(str(_card_choice("swans_trade_ban", "own").get("label", "")).contains("ban"), "The Swans' card is about the league's ban")
+
+
+## Bug bash 4: era copy follows the season (L6, L9-L12).
+func _test_era_copy() -> void:
+	_check(Awards.golden_fist_name(2015) == "Golden Fist" and Awards.golden_fist_name(2020) == Awards.GOLDEN_FIST
+			and Awards.golden_fist_name(2030) == Awards.GOLDEN_FIST, "The Golden Fist takes Danny Frawley's name from 2020")
+	_check(not EraRules.on("rising_star", 1992) and EraRules.on("rising_star", 1993) and EraRules.on("rising_star", 2030),
+			"The Rising Star is first presented in 1993")
+	_check(TribunalFines.body(2004) == "the Tribunal" and TribunalFines.body(2005) == "the MRO" and TribunalFines.body(2030) == "the MRO",
+			"Fines come from the Tribunal before 2005 and the MRO from 2005")
+	var f1995 := TribunalFines.next_amount({}, 1995)
+	_check(f1995 > 0 and f1995 < 1000 and TribunalFines.next_amount({}, 2026) == 1000,
+			"A 1995 fine is in 1995 money ($%d), today's is $1,000" % f1995)
+	_check(ClubBudget.money_m(10.0, 1995) != "$10.0m" and ClubBudget.money_m(10.0, 2030) == "$10.0m",
+			"Budget lines read in the season's money (%s)" % ClubBudget.money_m(10.0, 1995))
+	var y := EraRules.year
+	var ahead := EraRules.list_ahead
+	EraRules.list_ahead = false
+	EraRules.year = 1995
+	var before := RookieList.together_words(" (", ")")
+	EraRules.year = 2000
+	var after := RookieList.together_words(" (", ")")
+	EraRules.year = y
+	EraRules.list_ahead = ahead
+	_check(before == "" and after.contains("Category A"), "No rookies in the list limit's words before 1997")
+
+
+## Bug bash 4 (L7): with Fitzroy playing on there are no merged Lions in 1997.
+func _test_fitzroy_stays_telling() -> void:
+	var e := {}
+	for x in YearEvents.all():
+		if str(x.get("id", "")) == "port_and_lions_enter":
+			e = x
+	var was = GameState.legacy
+	GameState.legacy = {"fitzroy": "merged"}
+	var merged := YearEvents.as_played(GameState, e)
+	GameState.legacy = {"fitzroy": "stays"}
+	var stays := YearEvents.as_played(GameState, e)
+	GameState.legacy = was
+	_check(str(merged["beats"]).contains("Lions") and (merged["clubs"] as Array).has("BRL"), "Merged: the Lions begin in 1997")
+	_check(not str(stays["beats"]).contains("Lions") and not str(stays["headline"]).contains("Lions")
+			and stays["clubs"] == ["PAD"], "Fitzroy play on: 1997's news is Port Adelaide's alone (%s)" % str(stays["headline"]))
+
+
+func _card_choice(id: String, key: String) -> Dictionary:
+	for e in YearEvents.all():
+		if str(e.get("id", "")) == id:
+			for c in (e.get("card", {}) as Dictionary).get("choices", []):
+				if str(c.get("key", "")) == key:
+					return c
+	return {}
 
 
 func _test_fine_cut() -> void:
@@ -326,15 +403,25 @@ func _test_supplements_bans_land_and_lift() -> void:
 				ids.append(str(q["id"]) if q is Dictionary else str(q))
 	_check(not ids.has(str(watson["id"])) and not ids.has(str(hurley["id"])),
 			"Essendon's side is picked without its banned players")
-	# The top-up rule: one for each of Essendon's own banned, up to ten, this season only.
-	var tops := []
-	for p in GameState.season.lists["ESS"]:
-		if int(p.get("top_up", 0)) == 2016:
-			tops.append(p)
-	_check(want > 0 and tops.size() == want and (GameState.season.lists["ESS"] as Array).size() == list_before + want,
-			"Essendon top up one player for each of their two banned (%d of %d)" % [tops.size(), want])
-	_check(tops.all(func(p): return int(p.get("contract_years", 0)) == 1),
-			"A top-up player is signed for this season only")
+	# You coach Essendon: you pick the top-ups yourself (director, 2026-11-13: "You pick them").
+	var t := YearEvents.top_up_pending(GameState)
+	_check(int(t.get("most", 0)) == 2 and int(t.get("left", 0)) == 2 and YearEvents.top_up_waiting(GameState)
+			and (GameState.season.lists["ESS"] as Array).size() == list_before,
+			"Coaching Essendon, the two top-up spots wait for you to pick (%s)" % str(t))
+	var first: Dictionary = MidseasonDraft.pool(GameState)[0]
+	_check(YearEvents.sign_top_up(GameState, str(first["id"])) and str(first["club"]) == "ESS"
+			and int(first.get("top_up", 0)) == 2016 and int(first.get("contract_years", 0)) == 1
+			and (GameState.season.lists["ESS"] as Array).size() == list_before + 1,
+			"You sign a top-up player, for this season only")
+	_check(int(YearEvents.top_up_pending(GameState).get("left", 0)) == 1, "One spot left")
+	# Round 1 is played without the second pick: the spot passes.
+	YearEvents.settle_top_up(GameState)
+	_check(YearEvents.top_up_pending(GameState).is_empty() and not YearEvents.top_up_waiting(GameState)
+			and (GameState.season.lists["ESS"] as Array).size() == list_before + 1,
+			"The spot you left passes when the next round is played")
+	_check(GameState.news.any(func(n): return "sign 1 top-up player for 2016" in str(n.get("text", ""))),
+			"The news names your top-up player")
+	_check(want > 0, "Someone is left to sign (%d)" % want)
 	# 2017: back.
 	GameState.season_year = 2017
 	GameState.season.round_index = 0
@@ -354,3 +441,21 @@ func _test_supplements_switch_saved() -> void:
 	_check(GameState._restore_career(state.duplicate(true)) and not GameState.supplements,
 			"An older save has the saga under Controversies")
 	GameState.set_setting("supplements", true)
+
+
+## A rival Essendon signs its own top-ups, the best left, one for each banned.
+func _test_supplements_rival_tops_up() -> void:
+	_start_1990("MEL", true, true)
+	var ess: Array = GameState.season.lists["ESS"]
+	_as(ess[0], "Jobe", "Watson", "1985-02-08")
+	_as(ess[1], "Michael", "Hurley", "1990-06-01")
+	_jump(2013)
+	var list_before: int = ess.size()
+	GameState.season_year = 2016
+	var want := mini(2, MidseasonDraft.pool(GameState).size())
+	_jump(2016)
+	var tops := (GameState.season.lists["ESS"] as Array).filter(func(p): return int(p.get("top_up", 0)) == 2016)
+	_check(want > 0 and tops.size() == want and (GameState.season.lists["ESS"] as Array).size() == list_before + want
+			and YearEvents.top_up_pending(GameState).is_empty(),
+			"A rival Essendon signs one top-up player for each of its two banned (%d of %d)" % [tops.size(), want])
+	_check(tops.all(func(p): return int(p.get("contract_years", 0)) == 1), "A top-up player is signed for this season only")

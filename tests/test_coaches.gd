@@ -37,6 +37,7 @@ func run() -> void:
 	await _t("_test_ui")
 	await _t("_test_ui_expiring")
 	await _t("_test_ui_promise_fits")
+	await _t("_test_ui_first_staff")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
 	print(Ran.line("Coaches", self))
@@ -67,6 +68,17 @@ func _t(test: String, args := []) -> Variant:
 func _new_career(club: String) -> void:
 	GameState.reset()
 	GameState.start_season(club, GameDB.club_list(club))
+
+
+## A career in its off-season, no match played: the season is marked over by
+## hand, which is all the Staff screen's Re-sign and Release read
+## (GameState.can_release_staff). The real season close is tested in
+## coach_market (_test_game_flow).
+func _offseason_career(club: String) -> void:
+	_new_career(club)
+	GameState.season.round_index = GameState.season.fixture.size()
+	GameState.ensure_finals()
+	GameState.season.finals["done"] = true
 
 
 func _test_seed_structure() -> void:
@@ -395,11 +407,7 @@ func _test_movement_is_visible() -> void:
 ## with a Re-sign beside Release; re-signing clears it.
 func _test_ui_expiring() -> void:
 	var tree := Engine.get_main_loop() as SceneTree
-	_new_career("CAR")
-	var guard := 0
-	while not GameState.season.is_season_over() and guard < 60:
-		GameState.advance()
-		guard += 1
+	_offseason_career("CAR")
 	var staff := GameState.club_staff("CAR")
 	var job := ""
 	for j in ["FWD", "MID", "DEF", "DEV", "SA"]:
@@ -434,11 +442,7 @@ func _test_ui_expiring() -> void:
 ## its row, above the next row, at phone size; Re-sign still takes a tap.
 func _test_ui_promise_fits() -> void:
 	var tree := Engine.get_main_loop() as SceneTree
-	_new_career("CAR")
-	var guard := 0
-	while not GameState.season.is_season_over() and guard < 60:
-		GameState.advance()
-		guard += 1
+	_offseason_career("CAR")
 	var staff := GameState.club_staff("CAR")
 	var job := ""
 	for j in ["FWD", "MID", "DEF", "DEV"]:
@@ -473,3 +477,80 @@ func _test_ui_promise_fits() -> void:
 	scene.queue_free()
 	await tree.process_frame
 	GameState.reset()
+
+
+## A created club's first staff (director 2026-11-15): "you orchestrate the
+## hiring of your coaching staff, rather than being given automatic standins".
+## At phone size the Staff screen opens on the senior assistant's shortlist,
+## each coach with his gain and cost; a finger's tap appoints any of the four,
+## and the next open job's shortlist follows.
+func _test_ui_first_staff() -> void:
+	var tree := Engine.get_main_loop() as SceneTree
+	GameState.reset()
+	var spec := {"name": "Port Melbourne", "short": "Borough", "code": "PMB",
+			"location": "port-melbourne", "primary": "#1B3A8C", "secondary": "#C8102E",
+			"accent": "#FFFFFF", "design": "hoops", "kit": "p/s/a"}
+	_check(GameState.create_club(spec) == "", "(the club is made)")
+	GameState.start_season("PMB", GameDB.club_list("CAR").duplicate(true))
+	_check(GameState.first_staff_open() and GameState.staff_vacancies.size() == 5,
+			"A created club's career opens with five jobs to fill")
+	tree.root.size = Vector2i(390, 844)
+	var scene: Control = load("res://scenes/StaffScene.tscn").instantiate()
+	tree.root.add_child(scene)
+	for i in range(3):
+		await tree.process_frame
+	_check(scene.find_child("FirstStaff", true, false) != null and _text(scene).contains("Hire our first staff"),
+			"The step says what it is: our first staff, before Round 1")
+	var sa := scene.find_child("Vacancy_SA", true, false)
+	_check(sa != null and sa.find_child("Appoint_SA_0", true, false) != null
+			and scene.find_child("Appoint_MID_0", true, false) == null
+			and scene.find_child("Shortlist_MID", true, false) != null,
+			"One shortlist at a time, the senior assistant's first")
+	var sided := true
+	for i in range(4):
+		var row := scene.find_child("Candidate_SA_%d" % i, true, false)
+		_check(row != null, "Shortlist row %d is there" % i)
+		if row == null:
+			continue
+		var t := _text(row)
+		sided = sided and t.contains("Gain:") and t.contains("Cost:") and t.contains("%")
+	_check(sided, "Every candidate states a gain and a cost, with its size")
+	var listed := []
+	for c in GameState.staff_shortlist("SA"):
+		listed.append(GameDB.player_display_name(c))
+	var sorted := listed.duplicate()
+	sorted.sort()
+	var shown := []
+	for i in range(4):
+		var who := scene.find_child("Candidate_SA_%d" % i, true, false)
+		if who != null:
+			shown.append((who.find_children("*", "Button", true, false)[0] as Button).text)
+	_check(shown == sorted, "The four are in name order, not the club's ranking (%s)" % str(shown))
+	var wide := 0.0
+	for n in scene.find_children("Candidate_*", "Control", true, false):
+		wide = maxf(wide, (n as Control).get_global_rect().end.x)
+	_check(wide <= 390.0, "Every candidate fits a 390 px phone (%.0f)" % wide)
+	var b: Button = scene.find_child("Appoint_SA_2", true, false)
+	var want: String = str(shown[2]) if shown.size() > 2 else ""
+	if b != null:
+		await _press(b, "Appoint")
+		for i in range(2):
+			await tree.process_frame
+	var hired: Dictionary = GameState.club_staff("PMB").get("SA", {})
+	_check(GameDB.player_display_name(hired) == want and GameState.staff_vacancies.size() == 4,
+			"A tap on Appoint hires the third of the four (%s)" % want)
+	_check(scene.find_child("Appoint_MID_0", true, false) != null,
+			"The next open job's shortlist follows")
+	var dev: Button = scene.find_child("Shortlist_DEV", true, false)
+	if dev != null:
+		await _press(dev, "See the shortlist")
+		await tree.process_frame
+	var auto: Button = scene.find_child("AutoFill_DEV", true, false)
+	_check(auto != null, "Any open job's shortlist is a tap away")
+	if auto != null:
+		await _press(auto, "Auto-fill")
+		await tree.process_frame
+	_check(GameState.club_staff("PMB").has("DEV") and GameState.staff_vacancies.size() == 3,
+			"Auto-fill gives a job the club's pick")
+	scene.queue_free()
+	await tree.process_frame

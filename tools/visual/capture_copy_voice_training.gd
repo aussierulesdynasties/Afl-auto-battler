@@ -4,7 +4,8 @@ extends SceneTree
 ## copy the pass changed, so the same script gives the before (on the base) and the after:
 ##   godot --path . --script tools/visual/capture_copy_voice_training.gd -- --out <prefix> [--only a,b]
 ## Writes <prefix>_<state>.png for: intro, list_no_change, group, player, player_changed,
-## player_lifted, stat_focus, stat_locked, learning, reserves, two_traits.
+## player_lifted, stat_focus, stat_locked, learning, reserves, two_traits, and (row 135's second
+## pass, 2026-11-15) learn_full, carry_on, potential.
 
 const CLUB := "FRE"
 var _out := "copy_voice_training"
@@ -139,6 +140,61 @@ func _run() -> void:
 			ui6.call("_build")
 			await _scroll_to(ui6, "StatFocusTrait")
 			await _shot("two_traits")
+
+	# Two players already learning a position: a third who could learn one is told why he waits.
+	if _want("learn_full"):
+		_fresh(intro_keys)
+		var started := 0
+		var waiting := ""
+		var open: Array = []
+		for q in _state.my_list:
+			if not _state.open_jobs(q).is_empty():
+				open.append(str(q["id"]))
+		for qid in open:
+			var keys: Array = []
+			for key in _state.plans_for(_state.list_player(qid)):
+				if str(key).begins_with(_state.LEARN_PREFIX):
+					keys.append(str(key))
+			if started < 2 and not keys.is_empty():
+				_state.set_player_plan(qid, str(keys[0]))
+				started += 1
+			elif waiting == "" and _state.project_job(_state.list_player(qid)) == "":
+				waiting = qid
+		print("learn_full: ", started, " ", waiting)
+		var ui7: Node = await _open()
+		ui7.call("_open_player", waiting)
+		await _scroll_to(ui7, "LearnPosition")
+		await _shot("learn_full")
+
+	# Last season's stat focus carrying on into a new season, not yet locked in.
+	if _want("carry_on"):
+		_fresh(intro_keys)
+		var c: Dictionary = _best()
+		c["train_focus"] = str(_state.focus_options(c)[0])
+		c["train_focus_year"] = int(_state.season_year) - 1
+		var ui8: Node = await _open()
+		ui8.call("_open_player", str(c["id"]))
+		await _scroll_to(ui8, "StatFocus")
+		await _shot("carry_on")
+
+	# A player past his potential, with the stats open: the potential note.
+	if _want("potential"):
+		_fresh(intro_keys)
+		var t: Dictionary = _best()
+		t["potential"] = int(t["overall"]) - 3
+		var ui9: Node = await _open()
+		ui9.call("_open_player", str(t["id"]))
+		ui9.set("_advanced", true)
+		ui9.call("_build")
+		await _frames(8)
+		var pot: Control = null
+		for n in ui9.find_children("*", "Label", true, false):
+			if (n as Label).text.begins_with("Potential "):
+				pot = n
+		if pot != null:
+			pot.name = "CapturePotential"
+		await _scroll_to(ui9, "CapturePotential")
+		await _shot("potential")
 
 	quit()
 

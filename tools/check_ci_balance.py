@@ -25,7 +25,7 @@ def check(root=ROOT, observed=None):
         assigned = {s for names in groups.values() for s in names}
         actual = {}
         seen = set()
-        for file in pathlib.Path(observed).glob("*.tsv"):
+        for file in pathlib.Path(observed).glob("shard-*.tsv"):
             total = 0
             for line in file.read_text().splitlines():
                 suite, seconds = line.split("\t")

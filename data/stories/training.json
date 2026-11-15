@@ -57,6 +57,7 @@
 		"id": "training_kid_pushing",
 		"category": "training",
 		"cooldown": 10,
+		"subject_per_season": 1,
 		"subject": {
 			"kind": "player",
 			"where": {
@@ -98,8 +99,8 @@
 			},
 			{
 				"key": "develop",
-				"label": "A week with the development coaches",
-				"note": "{name} wanted a game. A week of extra work with the development coaches tells {name} he isn't ready, and he can't be picked this week.",
+				"label": "Develop {first} instead",
+				"note": "{name} wanted a game. A week with the development coaches tells him he isn't ready. He can't be picked this week.",
 				"effects": [
 					{
 						"op": "xp",
@@ -135,7 +136,7 @@
 			"pick": "random"
 		},
 		"title": [
-			"{name} wants extra goalkicking after training"
+			"{name} is staying back to kick goals"
 		],
 		"text": [
 			"He's been staying back with the forwards coach after most sessions. The fitness staff would rather he went home."
@@ -191,7 +192,7 @@
 		"choices": [
 			{
 				"key": "leave",
-				"label": "Leave it on the track",
+				"label": "Let it go",
 				"effects": [
 					{
 						"op": "morale",
@@ -205,11 +206,11 @@
 						"why": "A fight at match sim was left alone"
 					}
 				],
-				"result": "It stays on the track. The board hears about it anyway."
+				"result": "It stays on the track."
 			},
 			{
 				"key": "pull",
-				"label": "Pull the group up on it",
+				"label": "Pull the group up",
 				"effects": [
 					{
 						"op": "morale",
@@ -234,7 +235,7 @@
 			"kind": "club"
 		},
 		"title": [
-			"The senior players want a day off"
+			"The leaders have asked for Monday off"
 		],
 		"text": [
 			"The leaders have asked for Monday off after a long block. The fitness staff are split."
@@ -260,7 +261,7 @@
 					}
 				],
 				"note": "The players miss Monday's work.",
-				"result": "Monday off. Fresh legs on Saturday."
+				"result": "Monday off. Fresh legs on game day."
 			},
 			{
 				"key": "train",
@@ -283,7 +284,7 @@
 		"when": {
 			"round_min": 8
 		},
-		"stakes": "A day off costs you Monday's session."
+		"stakes": "A day off costs us Monday's session."
 	},
 	{
 		"id": "training_time_trial",
@@ -295,7 +296,7 @@
 			"The fitness staff want a time trial"
 		],
 		"text": [
-			"A two-kilometre time trial in the middle of the season. It tells you who's fit; nobody loves it."
+			"A two-kilometre time trial in the middle of the season. It shows us who's fit. Nobody loves it."
 		],
 		"choices": [
 			{
@@ -317,7 +318,7 @@
 			},
 			{
 				"key": "skip",
-				"label": "Not this week",
+				"label": "Skip it",
 				"effects": [
 					{
 						"op": "morale",
@@ -341,10 +342,10 @@
 			"kind": "club"
 		},
 		"title": [
-			"The midfield coach wants a new stoppage set-up"
+			"The midfield coach has a new stoppage set-up"
 		],
 		"text": [
-			"He's been working on it for weeks and wants the whole of Thursday to drill it."
+			"He's been working on it for weeks. He wants all of Thursday to drill it."
 		],
 		"choices": [
 			{
@@ -365,7 +366,7 @@
 			},
 			{
 				"key": "hold",
-				"label": "Stick with what we know",
+				"label": "Keep our set-up",
 				"effects": [
 					{
 						"op": "morale",
@@ -402,7 +403,7 @@
 		"choices": [
 			{
 				"key": "earned",
-				"label": "Tell {first} he's earned his spot",
+				"label": "Say he's earned it",
 				"effects": [
 					{
 						"op": "morale",
@@ -422,7 +423,7 @@
 			},
 			{
 				"key": "grounded",
-				"label": "Keep {first}'s feet on the ground",
+				"label": "Keep him grounded",
 				"effects": [
 					{
 						"op": "xp",
@@ -466,7 +467,7 @@
 		"choices": [
 			{
 				"key": "again",
-				"label": "Back {first} in for another week",
+				"label": "Back {first} in again",
 				"effects": [
 					{
 						"op": "expects_game",
@@ -485,7 +486,7 @@
 			},
 			{
 				"key": "twos",
-				"label": "Send {first} back to the twos to find form",
+				"label": "Send {first} down",
 				"effects": [
 					{
 						"op": "xp",
@@ -544,7 +545,7 @@
 				"when": {
 					"finals_week": 3
 				},
-				"text": "Qualifying final won, a week off, and a home preliminary final to come."
+				"text": "Qualifying final won and a week off. A home preliminary final to come."
 			},
 			"A top-six finish buys a week off. The old argument is back: rest or rust?"
 		],
@@ -618,12 +619,12 @@
 			"{name} is behind the group"
 		],
 		"text": [
-			"{first} came in this summer and he's already off the back of the running group. The fitness staff want to know what you want done."
+			"{first} came in this summer. He's already off the back of the running group. The fitness staff want your call."
 		],
 		"choices": [
 			{
 				"key": "extra",
-				"label": "Put {first} on extra sessions",
+				"label": "Add extra sessions",
 				"effects": [
 					{
 						"op": "xp",
@@ -638,7 +639,7 @@
 			},
 			{
 				"key": "group",
-				"label": "Keep {first} with the group",
+				"label": "Train with the group",
 				"effects": [
 					{
 						"op": "morale",
@@ -676,7 +677,7 @@
 			"{name} has put on size"
 		],
 		"text": [
-			"{first} has packed on muscle over the summer and it shows in the contested work. The gym staff want to keep pushing him; the physio would rather hold the weight where it is."
+			"{first} has packed on muscle over the summer. It shows in the contested work. The gym staff want to keep pushing him. The physio would rather hold the weight."
 		],
 		"choices": [
 			{
@@ -695,7 +696,7 @@
 			},
 			{
 				"key": "hold",
-				"label": "Hold the weight where it is",
+				"label": "Hold the weight",
 				"effects": [
 					{
 						"op": "trust",
@@ -774,7 +775,7 @@
 			},
 			{
 				"key": "drill",
-				"label": "Stay home and drill the plan",
+				"label": "Stay home and drill",
 				"effects": [
 					{
 						"op": "drill",
@@ -808,12 +809,12 @@
 			"Premiers, and the legs know it"
 		],
 		"text": [
-			"A flag means a long summer, and the list has come back soft. The fitness staff say the running is behind where it usually is at this time of year."
+			"A flag means a long summer. The list has come back soft. The fitness staff say the running is behind. It's usually further on by now."
 		],
 		"choices": [
 			{
 				"key": "run",
-				"label": "Run it out of them",
+				"label": "Run them hard",
 				"effects": [
 					{
 						"op": "running",
@@ -835,7 +836,7 @@
 			},
 			{
 				"key": "ease",
-				"label": "Let them enjoy it a little longer",
+				"label": "Let them enjoy it",
 				"effects": [
 					{
 						"op": "morale",
@@ -869,15 +870,15 @@
 			"kind": "club"
 		},
 		"title": [
-			"Match sim got heated"
+			"The summer's first match sim boiled over"
 		],
 		"text": [
-			"Two of the boys had to be pulled apart at match sim. The assistants reckon it's the edge you've been after."
+			"Two of the boys squared up in the first hard match sim of the summer and had to be separated. The assistants reckon the group has found its bite early."
 		],
 		"choices": [
 			{
 				"key": "leave",
-				"label": "Leave it on the track",
+				"label": "Let it go",
 				"effects": [
 					{
 						"op": "morale",
@@ -895,7 +896,7 @@
 			},
 			{
 				"key": "pull",
-				"label": "Pull the group up on it",
+				"label": "Pull the group up",
 				"effects": [
 					{
 						"op": "culture",
@@ -941,12 +942,12 @@
 			"{name} wants a word about the {proj_word} move"
 		],
 		"text": [
-			"Week {proj_week} of {proj_weeks} learning to play as a {proj_word}. {first} rates {proj_there} as a {proj_word} and {proj_own} in his own spot, and has to close to within {proj_pass} points by week {proj_weeks}. Players this far off at this stage get there {take_odds} times. He wants to know what it's for."
+			"Week {proj_week} of {proj_weeks} learning to play as a {proj_word}. {first} rates {proj_there} there and {proj_own} in his own spot. He has to get within {proj_pass} points by week {proj_weeks}. Players this far off at this stage get there {take_odds} times. He wants to know what it's for."
 		],
 		"choices": [
 			{
 				"key": "promise",
-				"label": "Promise {first} a run there if the move works",
+				"label": "Promise a run there",
 				"effects": [
 					{
 						"op": "morale",
@@ -962,11 +963,11 @@
 						"op": "dev_promise"
 					}
 				],
-				"result": "You tell {name} that if the move works, he gets three games {proj_line}."
+				"result": "You tell {name} he gets three games {proj_line} if the move works."
 			},
 			{
 				"key": "depth",
-				"label": "Tell {first} it's for depth",
+				"label": "Say it's for depth",
 				"effects": [
 					{
 						"op": "no_promise"
@@ -981,7 +982,7 @@
 						"d": -3
 					}
 				],
-				"result": "You tell {name} it gives the side cover {proj_line}. He's picked there when the side needs him."
+				"result": "You tell {name} it gives us cover {proj_line}. He's picked there when we need him."
 			}
 		]
 	}

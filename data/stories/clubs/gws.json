@@ -1,0 +1,465 @@
+[
+	{
+		"id": "gws_derby_week",
+		"club": "GWS",
+		"controversy": false,
+		"category": "rivals",
+		"subject": {"kind": "club"},
+		"when": {"opp_deck": "SYD"},
+		"title": ["Sydney Derby week"],
+		"text": ["The Swans are the city's old club, with the harbour and the history; the Giants are the young club from out west. The best player on the day takes home the derby medal, and the players have talked about nothing else since Monday."],
+		"choices": [
+			{"key": "west", "label": "Make it about the west",
+			 "effects": [{"op": "morale", "d": 6, "who": "side"}, {"op": "slow_start", "chance": 20, "who": "side", "on": "week"}],
+			 "result": "Us against them, all week. Some of the players might come out overheated."},
+			{"key": "four", "label": "\"Same four points as any week.\"",
+			 "effects": [{"op": "xp", "d": 6, "who": "side"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "A normal week's work. The members wanted a fight for the city."}
+		]
+	},
+	{
+		"id": "gws_academy_cold_war",
+		"club": "GWS",
+		"controversy": false,
+		"category": "rivals",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["Whose kid is he?"],
+		"text": ["A Sydney teenager has trained in both clubs' programs at one time or another, and the Swans are telling the press he's theirs. The recruiters want to know whether to go public with the Giants' claim."],
+		"choices": [
+			{"key": "fight", "label": "Fight for him in public",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "odds", "chance": 30, "hit": [{"op": "morale", "d": -4, "who": "side"}], "hit_result": "The stoush turns ugly in the press, and the players are dragged into it."}],
+			 "result": "The club is seen backing its own region."},
+			{"key": "quiet", "label": "Let the league sort it out quietly",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The club stayed out of a public stoush"}, {"op": "board", "d": -3, "was": "members"}],
+			 "result": "No headlines. The members read it as rolling over."}
+		]
+	},
+	{
+		"id": "gws_bad_blood_dogs",
+		"club": "GWS",
+		"controversy": true,
+		"category": "rivals",
+		"subject": {"kind": "club"},
+		"when": {"opp_deck": "WBD"},
+		"title": ["Bad blood with the Dogs"],
+		"text": ["Every time these two meet it seems to end in a scuffle, and the vision is on a loop all week. The media want to know whether the Giants will stand up this time."],
+		"choices": [
+			{"key": "stand", "label": "\"We won't be pushed around.\"",
+			 "effects": [{"op": "morale", "d": 7, "who": "side"}, {"op": "board", "d": -4}],
+			 "result": "The players feel backed. The league and the sponsors don't like the tone."},
+			{"key": "ball", "label": "\"Play the ball, not the man.\"",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The coach asked the group to play the ball"}, {"op": "slow_start", "chance": 15, "who": "side", "on": "week"}],
+			 "result": "The message is clear. Some of the players might go in timid."}
+		]
+	},
+	{
+		"id": "gws_easter_show",
+		"club": "GWS",
+		"controversy": false,
+		"category": "training",
+		"subject": {"kind": "club"},
+		"when": {"round_max": 6},
+		"title": ["Evicted by the Easter Show"],
+		"text": ["The Easter Show takes over the Showground for a fortnight: cattle sheds and showbags where the centre square ought to be. The club has to play and train somewhere else."],
+		"choices": [
+			{"key": "manuka", "label": "Take both games to Manuka",
+			 "effects": [{"op": "board", "d": 3}, {"op": "odds", "chance": 20, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "Two weeks out of a suitcase catch up with them."}],
+			 "result": "Canberra is happy and the deal is honoured. The players live out of a suitcase."},
+			{"key": "sydney", "label": "Stay in Sydney and train at a suburban ground",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "forgo_xp", "d": 4, "who": "side"}],
+			 "result": "The players sleep in their own beds. The borrowed oval is cramped."}
+		]
+	},
+	{
+		"id": "gws_canberra_week",
+		"club": "GWS",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["A week in Canberra"],
+		"text": ["It's a Manuka home game, and the local government that helps pay for it wants players in the capital all week: school visits, a clinic and a dinner with the local football community."],
+		"choices": [
+			{"key": "base", "label": "Base the squad in Canberra all week",
+			 "effects": [{"op": "board", "d": 5}, {"op": "culture", "strand": "together", "d": 1, "why": "The squad gave Canberra a whole week"}, {"op": "forgo_xp", "d": 5, "who": "side"}],
+			 "result": "Canberra sees the Giants everywhere. The training is a long way from the club's facilities."},
+			{"key": "fly", "label": "Fly in Friday, out Sunday",
+			 "effects": [{"op": "xp", "d": 6, "who": "side"}, {"op": "board", "d": -3}],
+			 "result": "A full training week at home. The hosts feel short-changed."}
+		]
+	},
+	{
+		"id": "gws_move_to_canberra",
+		"club": "GWS",
+		"controversy": false,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"title": ["\"Move the club to Canberra\""],
+		"text": ["A big crowd at Manuka, a thin one at the Showground the next week, and the columnists say the Giants ought to pack up and move to the capital. The coach is asked where the club's heart is."],
+		"choices": [
+			{"key": "west", "label": "\"We're western Sydney's club.\"",
+			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "odds", "chance": 25, "hit": [{"op": "morale", "d": -3, "who": "side"}], "hit_result": "Canberra heard it too, and the next Manuka crowd is flat."}],
+			 "result": "The Sydney members love it."},
+			{"key": "both", "label": "\"We've got two homes, and we're proud of both.\"",
+			 "effects": [{"op": "morale", "d": 2, "who": "side"}, {"op": "board", "d": -2}],
+			 "result": "No one is offended. It sounds like the coach is sitting on the fence."}
+		]
+	},
+	{
+		"id": "gws_go_home_factor",
+		"club": "GWS",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "player", "pick": "random", "where": {"age_max": 21}},
+		"title": ["The go-home factor"],
+		"text": ["{name} has gone quiet. His mates say he's homesick, and his family keep asking when he's coming back. His contract runs out next year."],
+		"choices": [
+			{"key": "family", "label": "Fly his family up for a week",
+			 "effects": [{"op": "morale", "d": 10, "who": "subject"}, {"op": "trust", "d": 3, "why": "The club flew his family up"}, {"op": "board", "d": -3, "was": "funds"}],
+			 "result": "{name} has his family around him for a week. The board notes the cost, and the precedent."},
+			{"key": "housemate", "label": "Pair him with a senior housemate",
+			 "effects": [{"op": "morale", "d": 5, "who": "subject"}, {"op": "culture", "strand": "together", "d": 1, "why": "A senior player took a young one in"}, {"op": "forgo_xp", "d": 3, "who": "subject"}],
+			 "result": "{name} moves in with a senior player. The month goes on settling in, not extra work."},
+			{"key": "adjust", "label": "\"He's a professional, he'll adjust.\"",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "No player got special treatment"}, {"op": "morale", "d": -6, "who": "subject"}],
+			 "result": "No special treatment. {name} is still homesick, and his contract is still running down."}
+		]
+	},
+	{
+		"id": "gws_too_many_to_pay",
+		"club": "GWS",
+		"controversy": false,
+		"category": "selection",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["Too many to pay"],
+		"text": ["The young list has grown up at once and they are all due a raise. The cap can't keep them all: someone good has to go."],
+		"choices": [
+			{"key": "trade", "label": "Trade a proven midfielder for picks",
+			 "effects": [{"op": "board", "d": 3}, {"op": "morale", "d": -6, "who": "side"}],
+			 "result": "The cap is cleared and the future is stocked. The players lose a mate and a match-winner."},
+			{"key": "keep", "label": "Backload contracts to keep the group",
+			 "effects": [{"op": "morale", "d": 6, "who": "side"}, {"op": "board", "d": -5}],
+			 "result": "The group stays together. The board worries about how tight the cap gets next year."}
+		]
+	},
+	{
+		"id": "gws_riverina_trip",
+		"club": "GWS",
+		"controversy": false,
+		"category": "community",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["The Riverina road trip"],
+		"text": ["The Riverina is football country, and the bush has given the club some of its best young talent. The regional manager wants players at a clinic in Wagga and a night with the country clubs."],
+		"choices": [
+			{"key": "bus", "label": "Send a full bus of players",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The whole group went to the bush"}, {"op": "running", "d": -1}],
+			 "result": "The country clubs turn out in force. The fitness base loses a week."},
+			{"key": "two", "label": "Send two of the country boys home to run it",
+			 "effects": [{"op": "board", "d": 1, "was": "members"}, {"op": "culture", "strand": "together", "d": -1, "why": "The country clubs hoped for a full bus"}],
+			 "result": "Training stays on schedule. The country clubs hoped for more."}
+		]
+	},
+	{
+		"id": "gws_debut_out_west",
+		"club": "GWS",
+		"controversy": false,
+		"category": "selection",
+		"subject": {"kind": "player", "pick": "highest:potential", "where": {"games_max": 0, "age_max": 20, "fit": true}},
+		"title": ["Marketing wants a debut"],
+		"text": ["{name} is pushing for a debut, and marketing is begging for it: a young Giant in orange is worth a thousand ads in rugby league country."],
+		"choices": [
+			{"key": "pick", "label": "Pick {first} this week",
+			 "effects": [{"op": "morale", "d": 10, "who": "subject"}, {"op": "board", "d": 4, "was": "members"}, {"op": "slow_start", "chance": 20, "who": "subject", "on": "week"}],
+			 "result": "{name} gets his jumper. The occasion might get to him early."},
+			{"key": "ready", "label": "He debuts when he's ready",
+			 "effects": [{"op": "xp", "d": 8, "who": "subject"}, {"op": "board", "d": -2, "was": "members"}, {"op": "morale", "d": -3, "who": "subject"}],
+			 "result": "{name} gets another block in the reserves. Marketing and the kid are both disappointed."}
+		]
+	},
+	{
+		"id": "gws_rugby_league_country",
+		"club": "GWS",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"when": {"round_min": 20},
+		"title": ["Rugby league country"],
+		"text": ["The rugby league finals have taken over western Sydney, and the local paper hasn't mentioned the Giants in a fortnight. A league-mad high school has invited the players to its sports carnival."],
+		"choices": [
+			{"key": "go", "label": "Go, and kick the footy with them",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "morale", "d": 2, "who": "all"}, {"op": "forgo_xp", "d": 3, "who": "side"}],
+			 "result": "A few hundred league kids have a kick of a footy. Training is lighter."},
+			{"key": "own", "label": "Stick to our own clubs and juniors",
+			 "effects": [{"op": "xp", "d": 3, "who": "side"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "A normal week's work. The school takes the knock-back."}
+		]
+	},
+	{
+		"id": "gws_plastic_club",
+		"club": "GWS",
+		"controversy": false,
+		"category": "rivals",
+		"subject": {"kind": "club"},
+		"title": ["\"Plastic club\""],
+		"text": ["A rival club's president has called the Giants a plastic club with no history and no supporters, the old line. The players have seen it."],
+		"choices": [
+			{"key": "pin", "label": "Pin it to the noticeboard",
+			 "effects": [{"op": "morale", "d": 6, "who": "side"}, {"op": "odds", "chance": 20, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "Training goes too hard, and the legs pay for it."}],
+			 "result": "It's on the noticeboard by lunchtime. Training is fierce."},
+			{"key": "calm", "label": "\"Our history is being written.\"",
+			 "effects": [{"op": "board", "d": 3}, {"op": "morale", "d": -1, "who": "side"}],
+			 "result": "The board likes the answer. The players wanted the coach to bite."}
+		]
+	},
+	{
+		"id": "gws_the_leagues_club",
+		"club": "GWS",
+		"controversy": false,
+		"category": "leadership",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["Head office has a suggestion"],
+		"text": ["The league built the club and still has a big say at board level. Head office has suggested the Giants play an extra game in a growth market next season, a long way from either home."],
+		"choices": [
+			{"key": "yes", "label": "\"We owe the game. We'll go.\"",
+			 "effects": [{"op": "board", "d": 5}, {"op": "odds", "chance": 15, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "One more long trip, and the legs feel it."}],
+			 "result": "Head office is pleased. The fixture gets one more long trip."},
+			{"key": "no", "label": "\"Our members come first.\"",
+			 "effects": [{"op": "morale", "d": 3, "who": "side"}, {"op": "board", "d": -5}],
+			 "result": "The members and the players love it. The board does not."}
+		]
+	},
+	{
+		"id": "gws_empty_seats",
+		"club": "GWS",
+		"controversy": false,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"title": ["Empty seats at the Showground"],
+		"text": ["Television showed acres of empty orange seats at the Showground last week, and talkback has had a field day. The commercial team wants to flood the next game with free tickets for schools and junior clubs."],
+		"choices": [
+			{"key": "free", "label": "Free tickets to every junior club",
+			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "board", "d": -3, "was": "members"}],
+			 "result": "A full ground and a loud one. The paying members feel cheated."},
+			{"key": "win", "label": "\"Win and they'll come.\"",
+			 "effects": [{"op": "board", "d": 1, "was": "members"}, {"op": "morale", "d": -2, "who": "side"}],
+			 "result": "The paying members aren't undercut. It's a quiet ground again."}
+		]
+	},
+	{
+		"id": "gws_membership_drive",
+		"club": "GWS",
+		"controversy": false,
+		"category": "members",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["Membership drive in the suburbs"],
+		"text": ["The membership team wants players in shopping centres from Penrith to Parramatta for a weekend, signing posters and selling memberships to families who've never been to a game."],
+		"choices": [
+			{"key": "all", "label": "Every player does a shift",
+			 "effects": [{"op": "board", "d": 5, "was": "members"}, {"op": "forgo_xp", "d": 4, "who": "all"}],
+			 "result": "New families sign up all weekend. A week of full-ground work is lost."},
+			{"key": "leaders", "label": "The leadership group only",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "culture", "strand": "together", "d": -1, "why": "The leaders carried the load for the whole list"}],
+			 "result": "Training stays on schedule. The leaders carry the extra load."}
+		]
+	},
+	{
+		"id": "gws_summer_heat",
+		"club": "GWS",
+		"controversy": false,
+		"category": "training",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["Summer in the west"],
+		"text": ["It's 42 degrees at the training base and the fitness staff want the session moved to dawn. Some senior players say they ought to train in the heat: they'll have to play in it."],
+		"choices": [
+			{"key": "heat", "label": "Train in the heat",
+			 "effects": [{"op": "running", "d": 1}, {"op": "odds", "chance": 25, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "The heat takes more out of them than it gives."}],
+			 "result": "The players grind through it. The fitness base is a week further on."},
+			{"key": "dawn", "label": "Dawn sessions only",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "forgo_xp", "d": 4, "who": "side"}],
+			 "result": "Fresh legs to start the season. The sessions are shorter."}
+		]
+	},
+	{
+		"id": "gws_showground_in_summer",
+		"club": "GWS",
+		"controversy": false,
+		"category": "training",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["The Showground in summer"],
+		"text": ["The Showground doubles as a cricket ground in summer, and the club's own ovals are booked up. The players want a few sessions on the main surface before the season."],
+		"choices": [
+			{"key": "hire", "label": "Pay to hire it for match-day practice",
+			 "effects": [{"op": "xp", "d": 6, "who": "side"}, {"op": "board", "d": -3, "was": "funds"}],
+			 "result": "Match-day drills on the match-day ground. It isn't cheap."},
+			{"key": "base", "label": "Make do at the training base",
+			 "effects": [{"op": "board", "d": 1, "was": "funds"}, {"op": "forgo_xp", "d": 4, "who": "all"}],
+			 "result": "No cost to the club. A week of full-ground work is lost."}
+		]
+	},
+	{
+		"id": "gws_where_we_came_from",
+		"club": "GWS",
+		"controversy": false,
+		"category": "leadership",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["Where the club came from"],
+		"text": ["One of the people who built the club in its first years has dropped in at pre-season training and offered to tell the group where the Giants came from."],
+		"choices": [
+			{"key": "floor", "label": "Give him the floor for an hour",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The group heard how the club was built"}, {"op": "morale", "d": 4, "who": "all"}, {"op": "forgo_xp", "d": 3, "who": "side"}],
+			 "result": "The young ones hear about the early years and the hidings. The session runs short."},
+			{"key": "hello", "label": "A quick hello at the end",
+			 "effects": [{"op": "xp", "d": 3, "who": "side"}, {"op": "culture", "strand": "together", "d": -1, "why": "The group missed hearing where the club came from"}],
+			 "result": "Training stays on schedule. He'd hoped to say more."}
+		]
+	},
+	{
+		"id": "gws_best_and_fairest",
+		"club": "GWS",
+		"controversy": false,
+		"category": "leadership",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["Best and fairest night"],
+		"text": ["The players want the count held out west at a community venue with the fans. The sponsors want the black-tie ballroom in the city."],
+		"choices": [
+			{"key": "west", "label": "Out west, with the fans",
+			 "effects": [{"op": "morale", "d": 4, "who": "all"}, {"op": "culture", "strand": "together", "d": 1, "why": "The count was held out west with the fans"}, {"op": "board", "d": -2}],
+			 "result": "The players and the fans have a great night. The sponsors wanted the big room."},
+			{"key": "city", "label": "Black tie in the city",
+			 "effects": [{"op": "board", "d": 3}, {"op": "culture", "strand": "together", "d": -1, "why": "The western fans felt shut out of the count"}],
+			 "result": "The sponsors are happy. The players find it stiff, and the western fans feel shut out."}
+		]
+	},
+	{
+		"id": "gws_end_of_season_function",
+		"club": "GWS",
+		"controversy": true,
+		"category": "media",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["After the end-of-season function"],
+		"text": ["Photos and videos from the players' end-of-season function have reached the league. Several Giants players broke the code of conduct, and the club has to decide how hard to come down."],
+		"choices": [
+			{"key": "front", "label": "Front it and hand out our own penalties",
+			 "effects": [{"op": "board", "d": 3}, {"op": "culture", "strand": "standards", "d": 1, "why": "The club punished its own players"}, {"op": "morale", "d": -5, "who": "all"}],
+			 "result": "The board backs the penalties. The playing group closes ranks."},
+			{"key": "protect", "label": "Protect the players and wait for the league",
+			 "effects": [{"op": "morale", "d": 2, "who": "all"}, {"op": "board", "d": -6}],
+			 "result": "The group feels protected. The board is furious."}
+		]
+	},
+	{
+		"id": "gws_player_charged",
+		"club": "GWS",
+		"controversy": true,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"title": ["A Giants player is charged"],
+		"text": ["One of the Giants' players has been charged after a night out. The case is months away, and the press want to know whether he plays this week."],
+		"choices": [
+			{"key": "standdown", "label": "Stand him down until it's resolved",
+			 "effects": [{"op": "board", "d": 4}, {"op": "morale", "d": -4, "who": "all"}],
+			 "result": "The board backs the call. The group feels one of its own has been hung out."},
+			{"key": "plays", "label": "\"Innocent until proven guilty. He plays.\"",
+			 "effects": [{"op": "morale", "d": 3, "who": "all"}, {"op": "board", "d": -6}],
+			 "result": "The group sees the club back its own. The board does not like the headlines."}
+		]
+	},
+	{
+		"id": "gws_is_this_the_year",
+		"club": "GWS",
+		"controversy": false,
+		"category": "media",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["Is this the year?"],
+		"text": ["The season launch question for the Giants is the same as always: is this the year they win the flag?"],
+		"choices": [
+			{"key": "win", "label": "\"We're here to win it.\"",
+			 "effects": [{"op": "board", "d": 5, "was": "members"}, {"op": "loss_sting", "chance": 20, "d": -5, "who": "side"}],
+			 "result": "The members love it. Every loss this season will be measured against those words."},
+			{"key": "september", "label": "\"We'll judge ourselves in September.\"",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The coach kept the talk on the work"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "No promise on the record. The members wanted belief."}
+		]
+	},
+	{
+		"id": "gws_youngest_list",
+		"club": "GWS",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"when": {"losing_run_min": 1},
+		"title": ["Belted by ten goals"],
+		"text": ["A young Giants side got belted by ten goals. The kids are flat, and a couple of senior players want the coach to tear strips off them."],
+		"choices": [
+			{"key": "spray", "label": "Spray them: standards matter",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The coach demanded more after a hiding"}, {"op": "morale", "d": -5, "who": "side"}],
+			 "result": "The review is brutal. The young ones walk out shaken."},
+			{"key": "arm", "label": "An arm around the shoulder: this is how they learn",
+			 "effects": [{"op": "morale", "d": 5, "who": "side"}, {"op": "odds", "chance": 15, "hit": [{"op": "culture", "strand": "standards", "d": -1, "why": "The senior players think the coach went soft after a hiding"}], "hit_result": "The senior players think the coach has gone soft."}],
+			 "result": "The kids lift their heads."}
+		]
+	},
+	{
+		"id": "gws_song_goes_viral",
+		"club": "GWS",
+		"controversy": false,
+		"category": "media",
+		"phase": ["finals"],
+		"subject": {"kind": "club"},
+		"title": ["The club song goes viral"],
+		"text": ["Rival fans mock the club song, comedians are covering it, and the players are filmed singing it after every win. A breakfast show wants the whole team to sing it live on air in finals week."],
+		"choices": [
+			{"key": "sing", "label": "Do it, and enjoy the joke",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "morale", "d": 3, "who": "all"}, {"op": "slow_start", "chance": 15, "who": "side"}],
+			 "result": "The whole country is singing along. Some think the Giants are getting ahead of themselves."},
+			{"key": "no", "label": "\"Not in finals week.\"",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The coach kept finals week about the football"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "No distraction. The fans wanted the fun."}
+		]
+	},
+	{
+		"id": "gws_multicultural_round",
+		"club": "GWS",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["The multicultural round"],
+		"text": ["The club's community centre runs programs for families new to Australia, and this is multicultural round. The staff want players to run a clinic for kids who've never held an oval ball."],
+		"choices": [
+			{"key": "squad", "label": "Whole squad, one afternoon",
+			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The whole squad ran a clinic for new families"}, {"op": "forgo_xp", "d": 4, "who": "side"}],
+			 "result": "A few hundred kids kick their first footy. Training is lighter."},
+			{"key": "few", "label": "A handful of volunteers",
+			 "effects": [{"op": "xp", "d": 3, "who": "side"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "Training stays on schedule. The program staff wanted the squad."}
+		]
+	},
+	{
+		"id": "gws_sharing_the_oval",
+		"club": "GWS",
+		"controversy": false,
+		"category": "training",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["Sharing the main oval"],
+		"text": ["The reserves and the academy both train at the base, and everyone wants the main oval on the same evenings. The academy coaches ask for joint sessions so the kids feel part of one club."],
+		"choices": [
+			{"key": "joint", "label": "Joint sessions twice a week",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The seniors trained with the academy kids"}, {"op": "board", "d": 2}, {"op": "forgo_xp", "d": 4, "who": "all"}],
+			 "result": "The academy kids train beside their heroes. The seniors lose some full-ground work."},
+			{"key": "keep", "label": "The senior list keeps its slots",
+			 "effects": [{"op": "xp", "d": 4, "who": "all"}, {"op": "board", "d": -3}],
+			 "result": "The full program for the seniors. The academy feels second best."}
+		]
+	}
+]

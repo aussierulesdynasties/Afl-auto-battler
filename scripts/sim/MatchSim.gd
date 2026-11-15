@@ -278,6 +278,63 @@ var weather := "perfect":
 	set(v):
 		weather = v if WEATHER_RATES.has(v) or v == "perfect" else "perfect"
 		_rates_cache = {}
+## The day may turn once, at a break (row 160, director 2026-11-12: "Yes, at a
+## break"): {"after": the quarter whose break it turns at (1-3), "to": the
+## condition from there}, or {} for a day that holds (Weather.turn, from the
+## same key as the forecast, so the forecast's odds are the ones played). It is
+## announced at that break (weather_turn_now) and played from the next
+## quarter's first bounce: begin_quarter switches `weather`, so every rate,
+## plan and trait reads the new condition for the quarters left, as the
+## starting weather does for the first. The quarter already played keeps its
+## own (the oval replays it after the siren). Draws nothing from the RNG.
+var weather_turn := {}
+## The forecast's odds that the day turns at a break (Weather.turn_chance),
+## shown before the first bounce; 0 for a day that can't.
+var weather_odds := 0.0
+
+
+## The day as Season.weather_day gives it ({weather, chance, turn}), or a bare
+## condition that holds all match.
+func set_day(day: Variant) -> void:
+	if day is Dictionary:
+		weather = str((day as Dictionary).get("weather", "perfect"))
+		weather_odds = float((day as Dictionary).get("chance", 0.0))
+		weather_turn = ((day as Dictionary).get("turn", {}) as Dictionary).duplicate()
+	else:
+		weather = str(day)
+
+
+## The weather at the first bounce, once a turn has changed `weather`.
+var weather_start := ""
+## The quarter whose break the weather turned at, once it has (0: not yet).
+var weather_turned_after := 0
+
+
+## The turn announced at the break just reached, or {} (none due here).
+func weather_turn_now() -> Dictionary:
+	if weather_turn.is_empty() or weather_turned_after > 0 or _q_active:
+		return {}
+	if int(weather_turn.get("after", 0)) != current_quarter - 1:
+		return {}
+	return {"after": int(weather_turn["after"]), "from": weather, "to": str(weather_turn.get("to", weather))}
+
+
+## The weather the next quarter is played in: the turn's at the break it is
+## announced, else the day's. A break's gate sizes the plans for it.
+func weather_ahead() -> String:
+	var t := weather_turn_now()
+	return str(t["to"]) if not t.is_empty() else weather
+
+
+func _apply_weather_turn() -> void:
+	var t := weather_turn_now()
+	if t.is_empty():
+		return
+	weather_start = weather
+	weather = str(t["to"])
+	weather_turned_after = int(t["after"])
+
+
 ## Ratings.T multipliers, applied in _rates() after the match-flow overrides.
 ## chains_per_game scales the quarter's chains, the bursts and the rotation
 ## cadence together, so legs per game are unchanged: the wet's shorter chains
@@ -2495,6 +2552,18 @@ const GENERAL_SPOIL_MAX := 0.95
 const GENERAL_MARK_ROLES := {"FWD": 1.0, "MID": 0.85, "DEF": 0.65, "RUCK": 0.70}
 
 
+## Where a pressure act happened, from the presser's end, for the balance
+## harness (Champion Data's PressureActsDefensiveHalf and TacklesInside50):
+## in his defensive half (the carrier going forward, atk_fp > 0) and a tackle
+## inside his forward 50 (the carrier in his own defensive 50). Bookkeeping
+## only: no dice.
+func _press_where(presser_side: int, atk_fp: float, in_d50: bool, tackle: bool) -> void:
+	if atk_fp > 0.0:
+		_t(presser_side, "pressure_acts_dhalf")
+	if tackle and in_d50:
+		_t(presser_side, "tackles_i50")
+
+
 static func _press_zone(atk_fp: float) -> int:
 	if atk_fp < -PRESS_ZONE_EDGE:
 		return 0
@@ -3465,6 +3534,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			_p(tackler, "tackles")
 			_t(opp, "pressure_acts")
 			_p(tackler, "pressure_acts")
+			_press_where(opp, atk_fp, in_d50, true)
 			tackled = true
 			# High contact belongs to the tackle itself. The ball carrier keeps
 			# possession via a free; the tackler is credited the infringement.
@@ -3523,6 +3593,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			var presser = _pick_presser(opp, zone)
 			_t(opp, "pressure_acts")
 			_p(presser, "pressure_acts")
+			_press_where(opp, atk_fp, in_d50, false)
 			var turn_p: float = (_tv("PRESS_TURNOVER", PRESS_TURNOVER_FLOW)
 					* (0.80 + 0.40 * _a(presser, "pressure") / 100.0)
 					* (1.20 - 0.40 * _a(carrier, "disposal") / 100.0))
@@ -3574,6 +3645,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 				_p(smotherer, "one_percenters")
 				_t(opp, "pressure_acts")
 				_p(smotherer, "pressure_acts")
+				_press_where(opp, atk_fp, in_d50, false)
 				_emit("smother", opp, fp, smotherer,
 						"%s smothers the kick" % GameDB.player_display_name(smotherer))
 				return {"outcome": "loose", "fp": fp, "actor": smotherer}
@@ -4444,6 +4516,8 @@ func quarter_in_progress() -> bool:
 
 
 func begin_quarter() -> void:
+	# A turn announced at this break plays from this bounce (row 160).
+	_apply_weather_turn()
 	var T := _rates()
 	_fit_cache.clear()
 	# A tired-star call lasts to the break.
@@ -4935,6 +5009,10 @@ func result() -> Dictionary:
 		"away": squads[1].code,
 		"tactics_history": tactics_history.duplicate(true),
 		"weather": weather,
+		# The day's turn at a break, once played (row 160): where it started and
+		# which break it turned at; "" and 0 for a day that held.
+		"weather_start": weather_start,
+		"weather_turned_after": weather_turned_after,
 		# Which side kicks with the breeze in the first quarter, for the ground's flags and
 		# the big screen's arrow after the match (looks only: set from the seed at the start).
 		"breeze_side": breeze_side,
@@ -4989,11 +5067,11 @@ const STAR_OVR := 80
 ## Energy below which a player is rotated off: stars are ridden harder.
 const ROTATION_POLICIES := {
 	"hard": {"label": "Protect freshness", "role": 80.0, "star": 68.0,
-			"text": "Anyone tiring comes off early, your stars included: fresh legs all day, less time on the ground for your best."},
+			"text": "Anyone tiring comes off early, our stars included. Fresh legs all day, less time on the ground for our best."},
 	"normal": {"label": "Balanced rotations", "role": 70.0, "star": 50.0,
-			"text": "Rotate the group; your stars stay on a little longer than the rest."},
+			"text": "Rotate the group. Our stars stay on a little longer than the rest."},
 	"stars": {"label": "Prioritise key players", "role": 68.0, "star": 25.0,
-			"text": "Your stars stay on until they are cooked: more of their time on the ground, but they fade late."},
+			"text": "Our stars stay on until they are cooked. More time on the ground for them, but they fade late."},
 }
 ## fit(): effective-attribute multiplier. 0.80 + 0.25 x energy puts an
 ## average match (~80 energy) at 1.0: fresh 1.05, cooked (30) 0.875.
@@ -5633,7 +5711,7 @@ const MOMENT_GAP := 8                # chains between moments
 ## card says "the next ten minutes" - and every call ends at the break.
 ## (They lasted 4-8 chains, about two minutes, and measured as no-ops.)
 const BURSTS := {
-	"stack": {"label": "Stack the stoppage", "chains": 12, "for": "for the next few centre ball-ups"},
+	"stack": {"label": "Stack the centre bounce", "chains": 12, "for": "for the next few centre bounces"},
 	"flood": {"label": "Flood behind the ball", "chains": 45, "for": "for the rest of the quarter"},
 	"push": {"label": "Push numbers forward", "chains": 45, "for": "for the rest of the quarter"},
 	"surge": {"label": "Throw numbers at it", "chains": 15, "for": "for the next ten minutes"},
@@ -5734,7 +5812,7 @@ func _fire_bounce(margin: int) -> void:
 	var left: int = current_quarter * 30 - current_minute
 	var to_go := EraFootball.clock_minutes(120 - current_minute, season_year)
 	var when := "in the last minute" if to_go <= 1 else "with %d minutes left" % to_go
-	var title := "Centre ball-up - %s %s" % [state, when]
+	var title := "Centre bounce · %s %s" % [state, when]
 	# Two distinct calls, each with its own upside and downside and no
 	# "Play it straight" (row 15): Flood behind the ball and Push numbers
 	# forward (row 151, director 2026-11-10). Unanswered (skipped, auto-played)
@@ -5743,9 +5821,9 @@ func _fire_bounce(margin: int) -> void:
 		"text": "Set up for the rest of the game.",
 		"options": _sized([
 			{"key": "flood", "label": "Flood behind the ball",
-				"detail": "Numbers behind the ball: they score less easily, and so do you."},
+				"detail": "Numbers behind the ball. They score less easily, and so do we."},
 			{"key": "push", "label": "Push numbers forward",
-				"detail": "Numbers ahead of the ball: you score more easily, and so do they when they win it back."},
+				"detail": "Numbers ahead of the ball. We score more easily, and so do they when they win it back."},
 		], left, GateOdds.NONE_COST_BOUNCE)})
 
 
@@ -5851,11 +5929,11 @@ func _boundary_moment() -> bool:
 				GateOdds.usual_touches(tagged), GateOdds.tag_kept(on_him, legs, tagged))
 		_fire({"kind": "hot", "player_id": str(id), "default": 1,
 			"title": "%s has kicked %d" % [hot_name, int(st["goals"])],
-			"text": "Their midfielder is hurting you on the scoreboard.",
+			"text": "Their midfielder is hurting us on the scoreboard.",
 			"options": [
 				{"key": "tag", "label": ("Tag him with %s" if on_now == "" else "Move %s onto him") % stopper,
 					"gain": lines["tag_gain"], "cost": lines["tag_cost"]},
-				{"key": "leave", "label": "Back your defenders" if on_now == "" else "Leave the tag on %s" % on_now,
+				{"key": "leave", "label": "Back our defenders" if on_now == "" else "Leave the tag on %s" % on_now,
 					"gain": lines["leave_gain"], "cost": lines["leave_cost"]},
 			]})
 		return true
@@ -5884,7 +5962,7 @@ func _fire_run_moves(run: int) -> void:
 		"text": "Two ways to answer it from the next centre bounce.",
 		"options": _sized([
 			{"key": "stack", "label": "Stack the centre bounce",
-				"detail": "Extra numbers at the ball-up."},
+				"detail": "Extra numbers at the centre bounce."},
 			{"key": "flood", "label": "Flood behind the ball",
 				"detail": "Everyone back, so they cannot run it in."},
 		], current_quarter * 30 - current_minute, GateOdds.NONE_COST_RUN)})
@@ -5950,7 +6028,7 @@ func _offer_set_shot(side: int, p_fp: float, shooter: Dictionary, defender, band
 	# (bomb_odds) under their own keys.
 	var pack := bomb_odds(side, shooter)
 	options.append({"key": "bomb", "label": "Bomb it to the goal square",
-		"detail": "Into the pack: a forward might mark it or a crumber snap it, but more often the defence clears it.",
+		"detail": "Into the pack. A forward might mark it or a crumber snap it. More often the defence clears it.",
 		"goal": bomb_goal, "behind": 0.30,
 		"show_goal": float(pack["goal"]), "show_behind": float(pack["behind"])})
 	# Each option's gain and cost with the odds it plays at (M7, director 2026-11-10).
@@ -6072,7 +6150,7 @@ func _set_shot_split(goal_p: float, behind_p: float) -> Dictionary:
 ## A shot's chance in a coach's words, never a percentage.
 static func chance_words(p: float) -> String:
 	if p >= 0.65:
-		return "He should kick it"
+		return "He kicks these most days"
 	if p >= 0.5:
 		return "Better than even"
 	if p >= 0.35:
@@ -6096,7 +6174,7 @@ static func kick_words(p: Dictionary) -> String:
 	var a: Dictionary = p.get("attr", {})
 	var k := 0.5 * float(a.get("goalkicking", 50)) + 0.5 * float(a.get("accuracy", 50))
 	if k >= 78:
-		return "one of your best kicks for goal"
+		return "one of our best kicks for goal"
 	if k >= 65:
 		return "a reliable kick"
 	if k >= 50:
@@ -6175,7 +6253,7 @@ func resolve_moment(choice: int) -> Dictionary:
 				var t: Dictionary = (tactics[side] as Dictionary).duplicate()
 				t["tag_id"] = str(m["player_id"])
 				tactics[side] = t
-				outcome = "Tag on. You can call it off at the break."
+				outcome = "Tag on. We can call it off at the break."
 			else:
 				outcome = "Structure unchanged."
 		"momentum", "bounce":

@@ -109,11 +109,12 @@ static func story(item: Dictionary, my_club := "") -> Dictionary:
 					"headline": "%s suspended for %s" % [m.get_string(1), "a match" if w == 1 else "%s matches" % _word(w)],
 					"standfirst": "%s lose him for %s." % [m.get_string(2), m.get_string(4)]}, true)
 			return _mine(s, my_club)
-		m = _re("fine", "^(.+) \\((.+)\\) was fined by the MRO for (.+)\\.$").search(text)
+		# "fined $1,000 by the MRO", or "by the Tribunal" before 2005 (TribunalFines.body).
+		m = _re("fine", "^(.+) \\((.+)\\) was fined (?:\\$[\\d,]+ )?by (the MRO|the Tribunal) for (.+)\\.$").search(text)
 		if m != null:
 			s.merge({"name": m.get_string(1), "club": code_of(m.get_string(2)), "weight": 30,
 					"headline": "%s fined" % m.get_string(1),
-					"standfirst": "%s: cited by the MRO for %s." % [m.get_string(2), m.get_string(3)]}, true)
+					"standfirst": "%s: cited by %s for %s." % [m.get_string(2), m.get_string(3), m.get_string(4)]}, true)
 			return _mine(s, my_club)
 	elif kind == "tribunal":
 		s["group"] = _MRO
@@ -391,10 +392,14 @@ static func _brief_row(st: Dictionary, key: String) -> Control:
 
 
 ## One round as a front page into `body`. `wide` lays it out in columns.
-static func fill(body: Container, items: Array, my_club: String, wide: bool, names := {}) -> void:
+## `now` dates the page by the week the coach is in ("1990  Round 1"); empty
+## keeps the newest story's own date ("Off-season").
+static func fill(body: Container, items: Array, my_club: String, wide: bool, names := {}, now := "") -> void:
 	_names = names
 	# The front page is the newest round; older rounds go under "Earlier" below.
 	var page := build(latest_round(items), my_club)
+	if now != "":
+		page["dateline"] = now
 	var head := UiKit.hbox(8)
 	var title := UiKit.heading("League news", UiKit.H1)
 	title.autowrap_mode = TextServer.AUTOWRAP_OFF
@@ -491,9 +496,11 @@ static func _wash(club: String) -> Color:
 
 ## The hub's small front page: the lead and up to three more headlines, the
 ## whole card one tap (the button named NewsMore sits behind the words).
-static func mini(items: Array, my_club: String, on_open: Callable, names := {}) -> Control:
+static func mini(items: Array, my_club: String, on_open: Callable, names := {}, now := "") -> Control:
 	_names = names
 	var page := build(latest_round(items), my_club)
+	if now != "":
+		page["dateline"] = now
 	var card := MarginContainer.new()
 	card.name = "NewsCard"
 	# The whole card is one tap: names in it are inked but open nothing (NameInk).

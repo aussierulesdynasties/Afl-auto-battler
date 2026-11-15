@@ -95,6 +95,34 @@ static func age_step(age: float, roll: float) -> float:
 	return d
 
 
+## The age a player's development step is read at: Fine Wine runs his decline
+## Traits.FINE_WINE_YEARS behind his age once he is past the growing years
+## (the 0-to-2 band ends at 27), so his growth is untouched.
+const DECLINE_FROM := 27.0
+
+
+static func ageing_age(age: float, fine_wine: bool) -> float:
+	if not fine_wine or age <= DECLINE_FROM:
+		return age
+	return maxf(DECLINE_FROM, age - Traits.FINE_WINE_YEARS)
+
+
+## The age-band step for him: a Fine Wine player's band comes three years
+## later, and a loss is Traits.FINE_WINE_SLOPE of a normal one.
+static func age_step_for(age: float, roll: float, fine_wine: bool) -> float:
+	var d := age_step(ageing_age(age, fine_wine), roll)
+	if fine_wine and d < 0.0:
+		d *= Traits.FINE_WINE_SLOPE
+	return d
+
+
+## The age the retirement rules read for him (Prospects.should_retire): Fine
+## Wine retires Traits.FINE_WINE_YEARS later.
+static func retire_age(p: Dictionary) -> float:
+	var age := float(p.get("age", 26.0))
+	return age - Traits.FINE_WINE_YEARS if Traits.fine_wine(p) else age
+
+
 static func rehab_pull(age: float) -> float:
 	return REHAB_PULL * clampf(1.0 - REHAB_AGE_EASE * maxf(0.0, age - 30.0), REHAB_PULL_FLOOR, 1.0)
 
@@ -227,12 +255,14 @@ static func outlook(p: Dictionary, years: int) -> Array:
 	var pot := maxf(r, float(p.get("potential", r)))
 	var age := float(p.get("age", 26.0))
 	var rehab := bool(p.get("rehab", false))
+	var fine := Traits.fine_wine(p)
+	var shift := Traits.FINE_WINE_YEARS if fine else 0.0
 	var alive := 1.0
 	var out := []
 	for t in range(years):
 		out.append([r, alive])
 		age += 1.0
-		var d := age_step(age, 0.5)
+		var d := age_step_for(age, 0.5, fine)
 		if age <= 25.0 and r < 55.0:
 			d += 1.0
 		if age <= 23.0 and r >= 80.0:
@@ -250,11 +280,12 @@ static func outlook(p: Dictionary, years: int) -> Array:
 			next = minf(next, maxf(r, pot))
 		r = next
 		var go := 0.0
-		if r <= 32.0 or age >= 37.0:
+		var ra := age - shift
+		if r <= 32.0 or ra >= 37.0:
 			go = 1.0
-		elif age >= 35.0:
+		elif ra >= 35.0:
 			go = 0.70
-		elif age >= 33.0 and r < 42.0:
+		elif ra >= 33.0 and r < 42.0:
 			go = 0.30
 		alive *= 1.0 - go
 	return out

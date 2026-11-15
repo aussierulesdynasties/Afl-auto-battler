@@ -181,6 +181,7 @@ func _ready() -> void:
 	_crowd.name = "Crowd"
 	add_child(_crowd)
 	_build()
+	_pitch.three_d = GameState.match_3d_on()
 	_pitch.setup(_res)
 	_refresh_rings()
 	# Whose first AFL goal the feed can say, if it comes today (MatchNotes).
@@ -1030,6 +1031,14 @@ const PEP_TALKS := [
 ## The break: what happened, then your calls for the next quarter. It
 ## surfaces the problem - their midfield on top, a forward hurting you - and
 ## leaves the answer to you. No advice, no expected points.
+## The forecast before the first bounce: "Forecast: wet · 31% chance it turns
+## at a break". The odds are left off for a roofed ground, where it can't turn.
+func _forecast_line(sim: MatchSim) -> String:
+	var odds := Weather.turn_odds_line(sim.weather_odds)
+	var day := "Forecast: %s" % Weather.label(sim.weather).to_lower()
+	return day if odds == "" else "%s  ·  %s" % [day, odds]
+
+
 func _show_coach_box() -> void:
 	if _coach_overlay != null and is_instance_valid(_coach_overlay):
 		return
@@ -1117,6 +1126,17 @@ func _show_coach_box() -> void:
 			where.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			where.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		bv.add_child(where)
+		# The forecast, with the odds it turns at a break (row 160, director
+		# 2026-11-12: "Yes, at a break"): numbers at the gate, a fact, no advice.
+		var fc := _forecast_line(sim)
+		if fc != "":
+			var fcl := UiKit.lbl(fc, UiKit.BODY, UiKit.TEXT)
+			fcl.name = "BreakForecast"
+			fcl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			ClubDuel.on_colour(fcl)
+			if wide:
+				fcl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			bv.add_child(fcl)
 	else:
 		var sc := UiKit.lbl(MatchNotes.break_score(str(_res["home"]), str(_res["away"]),
 				_res.get("goals", [0, 0]), _res.get("behinds", [0, 0]), not wide), UiKit.NAME, UiKit.TEXT, true)
@@ -1139,6 +1159,14 @@ func _show_coach_box() -> void:
 		else:
 			rep.add_child(stats)
 			rep.add_child(UiKit.spacer(UiKit.GAP))
+		# The weather turns at this break (row 160): said first, in bold, as
+		# it changes how the rest is played.
+		var wt := sim.weather_turn_now()
+		if not wt.is_empty():
+			var news := UiKit.lbl(Weather.turn_news(int(wt["after"]), str(wt["to"])), UiKit.BODY, UiKit.TEXT, true)
+			news.name = "BreakWeatherTurn"
+			news.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			rep.add_child(news)
 		var played := UiKit.section(str({2: "First quarter", 3: "Second quarter",
 				4: "Third quarter"}.get(q, "Last quarter")))
 		played.name = "QuarterHeading"
@@ -1211,9 +1239,10 @@ func _show_coach_box() -> void:
 		plan_note.add_child(does)
 		# Sized for this list today: its fit, coaches, familiarity and the
 		# day's weather (M1, director 2026-11-10).
-		var sized := GateOdds.plan_texts_for(sim.squads[_my_side], key, sim.weather)
-		plan_note.add_child(_plan_row("Gain:", str(sized[0]), "PlanGain"))
-		plan_note.add_child(_plan_row("Cost:", str(sized[1]), "PlanCost"))
+		# At a break the weather turns at, the plans are sized for the new one (row 160).
+		var sized := GateOdds.plan_texts_for(sim.squads[_my_side], key, sim.weather_ahead())
+		plan_note.add_child(_plan_row("Gain:", _break_line(str(sized[0])), "PlanGain"))
+		plan_note.add_child(_plan_row("Cost:", _break_line(str(sized[1])), "PlanCost"))
 		if d.has("beats"):
 			var beats := UiKit.lbl(str(d["beats"]), UiKit.SECONDARY, UiKit.TEXT)
 			beats.name = "PlanBeats"
@@ -1349,8 +1378,8 @@ func _show_coach_box() -> void:
 			(h[0] as Label).text = now
 			if is_instance_valid(h[1]):
 				(h[1] as Button).set_meta("card_text", str((h[1] as Button).get_meta("card_text", "")).replace(old, now))
-		NameInk.set_line(tag_rows[0], str(gc[0]), _names())
-		NameInk.set_line(tag_rows[1], str(gc[1]), _names())
+		NameInk.set_line(tag_rows[0], _break_line(str(gc[0])), _names())
+		NameInk.set_line(tag_rows[1], _break_line(str(gc[1])), _names())
 		tag_note.set_meta("plain", GateOdds.gain(str(gc[0])) + "\n" + GateOdds.cost(str(gc[1])))
 	# The tag is offered on their listed midfielders only (director, 2026-10-14:
 	# "Only listed midfielders"): the names, and "Other midfielder..." for the
@@ -1537,8 +1566,8 @@ func _show_coach_box() -> void:
 			c.queue_free()
 		var psim: MatchSim = GameState.pending_sim
 		var sized := GateOdds.pep_texts(key, psim.fire_up_contest(_my_side) if psim != null else MatchSim.PEP_FIRE_CONTEST)
-		pep_note.add_child(_plan_row("Gain:", str(sized[0]), "PepGain"))
-		pep_note.add_child(_plan_row("Cost:", str(sized[1]), "PepCost"))
+		pep_note.add_child(_plan_row("Gain:", _break_line(str(sized[0])), "PepGain"))
+		pep_note.add_child(_plan_row("Cost:", _break_line(str(sized[1])), "PepCost"))
 	# Four talks: a two-column grid of their full names, which fits a 360 phone
 	# and the PC column alike (one row of four ran off a phone).
 	var pep := _choice_grid("PepPicker", PEP_TALKS, calls, "pep", 2, sync_pep)
@@ -1857,6 +1886,10 @@ func _mount_one_line(c: Dictionary) -> void:
 			put.call(pane, bodies[key])
 		v.add_child(cols)
 	if q > 1:
+		# The weather's turn, when it turns at this break, leads the page (row 160).
+		var turn_news: Control = take.call("BreakWeatherTurn")
+		if turn_news != null:
+			put.call(page, turn_news)
 		var head := UiKit.hbox(8)
 		if quarter_head != null:
 			quarter_head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -2298,9 +2331,16 @@ func _quarter_view(q: int) -> Control:
 	# Moments already played out in the feed are not replayed here; the
 	# ones that carry on are under "What your calls did".
 	var lines: Array = MatchNotes.quarter_facts(_res, _my_side, q, _break_answers())
+	# A break the weather turns at leads with the turn (row 160): it takes one of
+	# the facts' places, so the break keeps its height on a phone.
+	var room := MatchNotes.MAX_FACTS
+	var sim: MatchSim = GameState.pending_sim
+	if sim != null and not sim.weather_turn_now().is_empty():
+		room -= 1
+	lines = lines.slice(0, room)
 	var opp_last := _opp_last_plan()
 	if opp_last != "":
-		lines = lines.slice(0, MatchNotes.MAX_FACTS - 1)
+		lines = lines.slice(0, room - 1)
 		# What they played, their answer to yours, their mood (RivalRead).
 		lines.append(RivalRead.break_line(GameState.pending_sim, _my_side))
 	if lines.is_empty():
@@ -2331,14 +2371,31 @@ func _break_answers() -> Dictionary:
 	return out
 
 
+## The break sheet holds every call at once and must fit without scrolling
+## (director's no-scroll ruling), so a gate's effects, one a line on the call
+## cards (style guide 5.1), run on one line here, parted by " · ". A bracketed
+## line ("(X% for a list that suits it)") rides on the line before it.
+const _BREAK_LOWER := ["Our", "Their", "He", "With", "No", "Nobody", "Nothing", "Never", "For", "To", "On",
+		"Anyone", "The", "When"]
+
+
+static func _break_line(text: String) -> String:
+	var parts := text.replace("\n(", " (").split("\n", false)
+	for i in range(1, parts.size()):
+		var first := str(parts[i]).get_slice(" ", 0)
+		if first in _BREAK_LOWER:
+			parts[i] = str(parts[i]).substr(0, 1).to_lower() + str(parts[i]).substr(1)
+	return " · ".join(parts)
+
+
 ## A "Gain:" / "Cost:" style row: the marker bold, the sentence beside it, both
 ## in full ink (the card-stakes pattern).
 ## Fill `box` with a call's "Gain:" and "Cost:" rows ([gain, cost], unlabelled),
 ## the plan's look: the label in the label ink, the line in body text.
 func _gain_cost_rows(box: Control, gc: Array, prefix: String) -> void:
 	UiKit.clear(box)
-	box.add_child(_plan_row("Gain:", str(gc[0]), prefix + "Gain"))
-	box.add_child(_plan_row("Cost:", str(gc[1]), prefix + "Cost"))
+	box.add_child(_plan_row("Gain:", _break_line(str(gc[0])), prefix + "Gain"))
+	box.add_child(_plan_row("Cost:", _break_line(str(gc[1])), prefix + "Cost"))
 
 
 func _plan_row(mark: String, text: String, node_name: String, traits := false, size := UiKit.SECONDARY) -> Control:
@@ -4455,10 +4512,13 @@ func _votes_side(code: String, ink: Color, players: Array, votes: Dictionary, pc
 
 
 ## What the votes are, said once over both clubs: who voted, how the list runs.
+## Hidden in a season before the coaches voted (2003, EraRules coaches_votes;
+## director 2026-11-13: "Hide before 2003"): the best players still show.
 func _votes_header() -> Control:
 	var l := UiKit.lbl("Coaches' votes: each coach gives his best five 5, 4, 3, 2, 1", UiKit.BODY, UiKit.TEXT)
 	l.name = "VotesHeading"
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.visible = EraRules.on("coaches_votes")
 	return l
 
 
@@ -4470,7 +4530,7 @@ func _votes_figure(votes: Dictionary, id: String) -> Label:
 	var n := int(votes.get(id, 0))
 	var l := UiKit.line("%d vote%s" % [n, "" if n == 1 else "s"] if n > 0 else "", UiKit.BODY, UiKit.TEXT, true)
 	l.name = "StandoutVotes"
-	l.visible = n > 0
+	l.visible = n > 0 and EraRules.on("coaches_votes")
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	return l
 

@@ -119,9 +119,12 @@ static func _add_slop(label: RichTextLabel) -> void:
 	_fit_slop.call_deferred(label)
 
 
-static func _fit_slop(label: RichTextLabel) -> void:
-	if not is_instance_valid(label):
+## Untyped on purpose: the deferred call can run after the label is freed (a screen
+## rebuilt in the same frame), and a typed parameter fails before the check below.
+static func _fit_slop(target: Variant) -> void:
+	if not is_instance_valid(target) or not target is RichTextLabel:
 		return
+	var label := target as RichTextLabel
 	var hit := label.get_node_or_null(HIT_NAME) as Control
 	if hit == null:
 		return

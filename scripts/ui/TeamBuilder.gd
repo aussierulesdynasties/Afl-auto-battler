@@ -117,6 +117,8 @@ var after_bench: Control = null
 ## With field_only: a line under each name in place of position and OVR
 ## (id -> text; the All-Australian team shows each player's club).
 var notes := {}
+## Each of your players' fatigue, morale and form as numbers (PlayerCondition, row 183).
+var condition := false
 ## The form marks (ReservesForm.marks): the coldest three in the side and the
 ## hottest three in the twos. Your own side only; read again each build.
 var _marks := {"cold": {}, "hot": {}}
@@ -195,6 +197,8 @@ func _build() -> void:
 			card.name = "Spot_" + str(keys[i])
 			card.set_meta("spot", str(keys[i]))
 			_pitch.add_child(card)
+	if _shows_condition():
+		field.add_child(_condition_key())
 	var inter := UiKit.lbl("Interchange", UiKit.SMALL, UiKit.MUTED, true)
 	inter.autowrap_mode = TextServer.AUTOWRAP_OFF
 	if interchange_actions != null:
@@ -557,6 +561,24 @@ func _fill_grid() -> void:
 		_grid.add_child(UiKit.lbl("Nobody else here.", UiKit.SMALL, UiKit.MUTED))
 
 
+## Fatigue, morale and form show on your own players' cards, never a rival's
+## (his load and mood are his club's business) or a field-only team sheet.
+## Team selection asks for them (`condition`); the read-only boards elsewhere don't.
+func _shows_condition() -> bool:
+	return condition and not field_only and not _rival
+
+
+## What the three numbers under each name are, in their order.
+func _condition_key() -> Control:
+	var key := UiKit.hbox(6)
+	key.name = "ConditionKey"
+	key.add_child(UiKit.lbl("Under each name:", UiKit.FINE, UiKit.MUTED))
+	key.add_child(UiKit.lbl("Fatigue · Morale · Form", UiKit.FINE, UiKit.TEXT, true))
+	for l in key.get_children():
+		(l as Label).autowrap_mode = TextServer.AUTOWRAP_OFF
+	return key
+
+
 ## A player as a compact card: name and OVR, then position, playing style and
 ## age, then traits (or why he can't play), then his top three attributes, a
 ## row each. On the oval, the short version.
@@ -613,7 +635,20 @@ func _card(id: String, on_field: bool, place: String) -> Button:
 				sb.border_width_top = 3
 				sb.border_color = UiKit.club_ink(GameState.my_club)
 				b.add_theme_stylebox_override(st, sb)
-		if not field_only and not _rival and Workload.value(p) >= Workload.CARRYING:
+		b.tooltip_text = GameDB.player_display_name(p) + ("\n" + _trial_note(id) if _trial_note(id) != "" else "")
+		if _shows_condition():
+			# His fatigue, morale and form as numbers, under his name (row 183;
+			# director, 2026-11-14): no profile needed to see them. The key
+			# under the oval names the three; the words are the tooltip.
+			var strip := PlayerCondition.strip(p, GameState.form_log, GameState.reserves_log, UiKit.TINY)
+			# As wide as a phone tile's face, centred: a PC bench card is far wider,
+			# and the three spread across it read as unrelated numbers.
+			strip.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+			strip.custom_minimum_size.x = UiKit.px(58)
+			face.add_child(strip)
+			b.custom_minimum_size.y = 60
+			b.tooltip_text += "\n" + PlayerCondition.tooltip(PlayerCondition.read(p, GameState.form_log, GameState.reserves_log))
+		elif not field_only and not _rival and Workload.value(p) >= Workload.CARRYING:
 			# How fresh he is, on the card: no profile needed to see it.
 			var ready := UiKit.lbl(Workload.label(p), UiKit.TINY, UiKit.BAD if Workload.value(p) >= Workload.NEEDS_BREAK else UiKit.MUTED)
 			ready.name = "Readiness_" + id
@@ -621,7 +656,6 @@ func _card(id: String, on_field: bool, place: String) -> Button:
 			ready.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			face.add_child(ready)
 			b.custom_minimum_size.y = 58
-		b.tooltip_text = GameDB.player_display_name(p) + ("\n" + _trial_note(id) if _trial_note(id) != "" else "")
 		if (_marks["cold"] as Dictionary).has(id):
 			# Among the three furthest below their own season: the gap on the
 			# tile, both numbers in the tooltip and on his profile.
@@ -671,6 +705,12 @@ func _card(id: String, on_field: bool, place: String) -> Button:
 		third_l.name = "Third"
 		face.add_child(third_l)
 		var three_h := PlayerSheet.top_three_height(UiKit.FINE)
+		if _shows_condition():
+			# Fatigue, morale and form (row 183): a PC card names each; a phone's
+			# half-width card shows the numbers in the oval's order, the key above.
+			face.add_child(PlayerCondition.strip(p, GameState.form_log, GameState.reserves_log, UiKit.FINE, _wide))
+			three_h += 22.0
+			b.tooltip_text = PlayerCondition.tooltip(PlayerCondition.read(p, GameState.form_log, GameState.reserves_log))
 		if (_marks["hot"] as Dictionary).has(id):
 			# Among the three in the best form in the twos: his rating there and
 			# his latest game, above his attributes.
@@ -679,7 +719,7 @@ func _card(id: String, on_field: bool, place: String) -> Button:
 			hot.name = "FormHot_" + id
 			face.add_child(hot)
 			three_h += 16.0
-			b.tooltip_text = ReservesForm.hot_full(r)
+			b.tooltip_text = ReservesForm.hot_full(r) + ("\n" + b.tooltip_text if b.tooltip_text != "" else "")
 		face.add_child(PlayerSheet.top_three(p, UiKit.FINE))
 		b.custom_minimum_size = Vector2(160, 62 + three_h)
 		if _wide:

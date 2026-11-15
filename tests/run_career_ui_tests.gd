@@ -520,8 +520,8 @@ func _test_press_standing() -> void:
 			"The gate and the result say his opinion of you, and both fade lengths when they differ (%s)" % str(texts))
 	var one_fade: Array = PS.press_outcome_rows({"fade_rounds": 2, "fade_morale": 2, "fade_board": 0}, "")
 	_check(str(one_fade[0][1]) == "It wears off over 2 rounds.", "One fade length is said once (%s)" % str(one_fade))
-	_check(_state.press_odds_line(0).contains("Gary warms to you (+5% next time)")
-			and _state.press_odds_line(2).contains("Gary cools on you (-5% next time)"),
+	_check(_state.press_odds_line(0).contains("Gary warms to you: +5% next time")
+			and _state.press_odds_line(2).contains("Gary cools on you: -5% next time"),
 			"Each answer says how it moves your standing with him, as odds (%s)" % _state.press_odds_line(0))
 	_state.media_memory = {"standing": {"muckraker": 2}, "standing_year": int(_state.season_year)}
 	_check(not _state.press_odds_line(0).contains("warms to you"),
@@ -665,10 +665,10 @@ func _test_press_opinion() -> void:
 		if str(r[0]) == "MediaOutcomeOpinion":
 			opinion_row = str(r[1])
 	# Last, after "it wears off": his opinion of you never does.
-	_check(opinion_row == "%s's opinion of you: 50 → %d/100" % [name, 50 - drop]
+	_check(opinion_row == "%s's opinion of you: 50 → %d out of 100" % [name, 50 - drop]
 			and str(rows[rows.size() - 1][0]) == "MediaOutcomeOpinion",
 			"The press result shows his opinion of you moving, on its last line (%s)" % opinion_row)
-	_check(took_news.ends_with("%s's opinion of you: 50 → %d/100." % [name, 50 - drop]),
+	_check(took_news.ends_with("%s's opinion of you: 50 → %d out of 100." % [name, 50 - drop]),
 			"The news line says it too (%s)" % took_news)
 	# Backing him by name gives it back, whichever way the backing lands.
 	var backing: Dictionary = MC.pick({"club": "FRE", "opponent_name": "Carlton", "round": 12, "year": int(_state.season_year),
@@ -745,7 +745,7 @@ func _test_press_record() -> void:
 	_check(int(c["a"]["board"]) == 0 and int(c["b"]["board"]) == -2 and str(c["notes"]).contains("Ladder Watch")
 			and int(s["a"]["morale"]) == 2,
 			"Contradicted costs the board a point both ways; supported adds one to the lead size")
-	_check(MC.record_line({"w": 7, "l": 3, "pct": 118.4, "pos": 4, "last": "WWLWW"}) == "Your record: 7-3, 4th, 118%, form WWLWW.",
+	_check(MC.record_line({"w": 7, "l": 3, "pct": 118.4, "pos": 4, "last": "WWLWW"}) == "Our record: 7-3, 4th, 118%, form WWLWW.",
 			"The record is shown as it stands")
 	_press_reset()
 	_state.media_conference = {"key": "close_game", "journalist": "stats", "options": [{"label": "x", "kind": "back"}]}
@@ -1638,12 +1638,14 @@ func _run() -> void:
 	await _t("_test_list_tabs_kept")
 	await _t("_test_remembered")
 	await _t("_test_list_problem_and_ask_around")
+	await _t("_test_ask_around_red_club_ink")
 	await _t("_test_ask_price_tap")
 	await _t("_test_names_fit")
 	_state.delete_saved_career()
 	await _t("_test_new_career_keeps_the_save")
 	await _t("_test_new_career_canberra_choice")
 	await _t("_test_new_career_forged_row_redraft_only")
+	await _t("_test_forge_on_every_start")
 	await _t("_test_new_career_challenge_taps")
 	await _t("_test_canberra_2030_warning")
 	await _t("_test_every_start_reaches_interview")
@@ -1656,6 +1658,7 @@ func _run() -> void:
 	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
 		await _t("_test_list_words_fit", [sz])
 	await _t("_test_restore_earlier_save_tap")
+	await _t("_test_top_up_sheet_taps")
 	print(Ran.line("Career UI", self))
 	_state.replay_seed = 0
 	quit(0 if _failures.is_empty() else 1)
@@ -2478,7 +2481,7 @@ func _test_menu_and_career() -> void:
 			and back_mark != null and back_mark.text == "Gain:" and cost_mark != null and cost_mark.text == "Cost:"
 			and cost_mark.get_theme_font("font") != rest_cost.get_theme_font("font") and cost_mark.get_theme_color("font_color") == load("res://scripts/ui/UiKit.gd").label_ink()
 			and back_gain != null and back_cost != null and back_cost.text.contains("promise breaks")
-			and rest_gain != null and rest_cost != null and rest_cost.text.contains("'s opinion of you down") and not rest_cost.text.begins_with("His ") and rest_cost.text.contains("re-sign with you")
+			and rest_gain != null and rest_cost != null and rest_cost.text.contains("'s opinion of you down") and not rest_cost.text.begins_with("His ") and rest_cost.text.contains("re-sign with us")
 			and same_style and rest_btn != null and rest_cost.get_global_rect().position.y >= rest_gain.get_global_rect().end.y - 1.0
 			and rest_gain.get_global_rect().position.y >= rest_btn.get_global_rect().end.y - 1.0,
 			"Each answer says its gains then its costs under its own button, in the same full-strength text (%s / %s)" % [back_cost.text if back_cost != null else "none", rest_cost.text if rest_cost != null else "none"])
@@ -2507,22 +2510,22 @@ func _test_menu_and_career() -> void:
 	var twords: Label = tsheet.find_child("TrustWords", true, false)
 	var twhy: Button = tsheet.find_child("TrustWhy", true, false)
 	var treasons: Control = tsheet.find_child("TrustReasons", true, false)
-	_check(twords != null and twords.text == "Opinion of you 61/100." and treasons != null and not treasons.visible,
+	_check(twords != null and twords.text == "Opinion of you 61 out of 100." and treasons != null and not treasons.visible,
 			"The profile shows his opinion of you out of 100, with the reasons folded away (%s)" % (twords.text if twords != null else "missing"))
 	var why_tap: String = await Tap.tap(twhy) if twhy != null else "missing"
 	await _settle()
 	var first_reason: Label = treasons.get_child(1) if treasons != null and treasons.get_child_count() > 2 else null
 	_check(why_tap == "" and treasons.visible and twhy.size.y >= 44 and first_reason != null
 			and first_reason.text.begins_with("Round 5, ") and first_reason.text.ends_with("Opinion of you +5.")
-			and (treasons.get_child(0) as Label).text.contains("he may refuse to re-sign with you"),
+			and (treasons.get_child(0) as Label).text.contains("he may refuse to re-sign with us"),
 			"A tap on Why shows the rule, then his reasons newest first with their size (%s, %s)" % [why_tap,
 					first_reason.text if first_reason != null else "missing"])
 	tsheet.queue_free()
 	var ssheet: Control = load("res://scripts/ui/PlayerSheet.gd").open(current_scene, stranger)
 	await _settle()
 	var swords: Label = ssheet.find_child("TrustWords", true, false)
-	_check(swords != null and swords.text == "Opinion of you 50/100.",
-			"A player you've had nothing to do with is at 50/100 (%s)" % (swords.text if swords != null else "missing"))
+	_check(swords != null and swords.text == "Opinion of you 50 out of 100.",
+			"A player you've had nothing to do with is at 50 out of 100 (%s)" % (swords.text if swords != null else "missing"))
 	ssheet.queue_free()
 	_state.relations = saved_rel
 	await _settle()
@@ -2598,8 +2601,18 @@ func _test_menu_and_career() -> void:
 	# A first this match settled, as the round would have kept it (Firsts.gd):
 	# full time says so, now and after a reload.
 	var mine_side := 0 if str(_state.last_match["home"]) == _state.my_club else 1
-	var debutant: Dictionary = _state.list_player(str((_state.last_match["roster"][mine_side] as Array)[0]["id"]))
-	load("res://scripts/sim/Firsts.gd").note(debutant, "debut", _state.season_year, str(_state.last_match["label"]))
+	# The debutant is chosen, not left to the seed: a player in the side whose
+	# debut is on record from no earlier match (Firsts.note writes a first once)
+	# and who is not in fact on debut, which the milestone line says instead.
+	var firsts = load("res://scripts/sim/Firsts.gd")
+	var debutant := {}
+	for r in (_state.last_match["roster"][mine_side] as Array):
+		var q: Dictionary = _state.list_player(str(r["id"]))
+		if not q.is_empty() and not firsts.has(q, "debut") and _state.games_played(q) != 1:
+			debutant = q
+			break
+	_check(not debutant.is_empty(), "A player in the side to give a debut at full time")
+	firsts.note(debutant, "debut", _state.season_year, str(_state.last_match["label"]))
 	var debutant_name: String = _db.player_display_name(debutant)
 	if rv != null:
 		rv.emit_signal("pressed")
@@ -3128,7 +3141,7 @@ func _test_menu_and_career() -> void:
 		elif refuse != null:
 			refuse_text = str(refuse.get("text"))
 		_check(tid != "" and at_fifty and refuse != null and refuse.is_visible_in_tree()
-				and refuse_text == "His opinion of you: 44/100. 6% he won't re-sign with you.",
+				and refuse_text == "His opinion of you: 44 out of 100. 6% he won't re-sign with us.",
 				"Talks at 44/100 say the chance he won't re-sign before you offer, and at 50 say nothing (%s)" % refuse_text)
 		_router.handle_back(true)
 		await _settle()
@@ -3204,8 +3217,11 @@ func _test_menu_and_career() -> void:
 	# percentage would be a model value leaking out.
 	# The familiarity line states its percentages on purpose (row 125): a gate's numbers.
 	var fam_line: String = load("res://scripts/sim/TeamFamiliarity.gd").signing_line()
-	var no_money := RegEx.create_from_string("\\$[0-9][0-9.,]*[mk]?").sub(_screen_text().replace(fam_line, ""), "", true)
-	_check(decimal.search(no_money) == null, "The trade screen shows no internal values")
+	# So does the team rating: the ladder's number, to one decimal (row 177).
+	var rated := RegEx.create_from_string("Team rating [0-9.]+[.] On this list, [0-9.]+ in three years[.]").sub(_screen_text().replace(fam_line, ""), "", true)
+	var no_money := RegEx.create_from_string("\\$[0-9][0-9.,]*[mk]?").sub(rated, "", true)
+	var leak := decimal.search(no_money)
+	_check(leak == null, "The trade screen shows no internal values (%s)" % (no_money.substr(maxi(0, leak.get_start() - 40), 80) if leak else ""))
 	_check(current_scene.find_child("TradeClubPhase", true, false) != null,
 			"The trade tab says where the other club is in its cycle")
 	var pick_btns := current_scene.find_children("Mine_pick_*", "Button", true, false)
@@ -3359,7 +3375,7 @@ func _test_menu_and_career() -> void:
 	var opp_line: Label = current_scene.find_child("OppTeamOutlook", true, false)
 	var own_o: Dictionary = _state.team_outlook(_state.my_club)
 	var opp_o: Dictionary = _state.team_outlook(str(_state.my_next_opponent().get("code", "")))
-	var rating_tail := "%s. Team rating %d. On this list, %d in three years."
+	var rating_tail := "%s. Team rating %.1f. On this list, %.1f in three years."
 	_check(own_line != null and opp_line != null
 			and own_line.text == rating_tail % [own_o["category"], own_o["rating"], own_o["forecast"]]
 			and opp_line.text.ends_with(rating_tail % [opp_o["category"], opp_o["rating"], opp_o["forecast"]])
@@ -3642,7 +3658,7 @@ func _test_list_problem_and_ask_around() -> void:
 	_state.open_offseason()
 	var lines: Array = _state.list_problem()
 	_check(lines.size() == 3 and str(lines[0]).contains("out of contract")
-			and str(lines[1]).begins_with("Your best six average") and str(lines[2]).contains("draft"),
+			and str(lines[1]).begins_with("Our best six average") and str(lines[2]).contains("draft"),
 			"The list problem is three lines of fact (%s)" % " | ".join(lines))
 	var size_before := root.size
 	root.size = Vector2i(390, 844)
@@ -3701,6 +3717,84 @@ func _test_list_problem_and_ask_around() -> void:
 				"With nobody keen there is no way into a trade from the answers")
 	scene.queue_free()
 	root.size = size_before
+	# Ask their price by a finger, in this same off-season (opening one costs
+	# seconds), on a fresh screen: asking around offered, tabled and moved nothing.
+	await _ask_price_tap_in_offseason()
+	await _settle()
+
+
+## Ask around names in their club's ink when the club is red (row 174; director
+## 2026-11-12, "sanders uncoloured?"). The state that dropped it: Ryley Sanders
+## at Essendon (his save had traded him there), whose red was turned to plain
+## white for a player's name. Asked about from Essendon's list, his name in the
+## heading is in Essendon's ink, never white, and every player an answer names
+## is in his own club's ink (the red rivals' too).
+func _test_ask_around_red_club_ink() -> void:
+	_state.reset()
+	_state.career_seed = 5508
+	_state.replay_seed = 5508
+	_state.start_season("ESS", _db.club_list("ESS"))
+	var wbd: Array = _state.season.lists["WBD"]
+	var sanders := {}
+	for p in wbd:
+		if _db.player_display_name(p) == "Ryley Sanders":
+			sanders = p
+	_check(not sanders.is_empty(), "Ryley Sanders is on the Bulldogs' list to start")
+	if sanders.is_empty():
+		return
+	wbd.erase(sanders)
+	sanders["club"] = "ESS"
+	_state.season.lists["ESS"].append(sanders)
+	_check(_state.list_player(str(sanders["id"])) == sanders, "He is on your Essendon list now")
+	_state.season.round_index = _state.season.fixture.size()
+	_state.open_offseason()
+	var size_before := root.size
+	root.size = Vector2i(390, 844)
+	var scene: Control = load("res://scenes/OffseasonScene.tscn").instantiate()
+	root.add_child(scene)
+	await _settle()
+	await Tap.tap(scene.find_child("Tab_trade", true, false))
+	await _settle()
+	await Tap.tap(scene.find_child("TradeSide_mine", true, false))
+	await _settle()
+	var why_pick: String = await Tap.tap(scene.find_child("Mine_" + str(sanders["id"]), true, false))
+	await _settle()
+	var why_ask: String = await Tap.tap(scene.find_child("AskAround", true, false))
+	await _settle()
+	var uk = load("res://scripts/ui/UiKit.gd")
+	var ni = load("res://scripts/ui/NameInk.gd")
+	var ink := "[color=#%s]Ryley%sSanders" % [uk.club_ink("ESS").to_html(false), ni.NBSP]
+	var head := scene.find_child("AskHead", true, false)
+	_check(why_pick == "" and why_ask == "" and head is RichTextLabel and (head as RichTextLabel).text.contains(ink),
+			"A finger on Ask around heads the answers with his name in Essendon's red (%s %s %s)" % [why_pick, why_ask,
+			(head as RichTextLabel).text if head is RichTextLabel else str(head)])
+	# Every name in every answer: Sanders in Essendon's ink, each player offered
+	# in his own club's (Gold Coast, Melbourne, St Kilda and Sydney are red too).
+	var named := 0
+	var reds := 0
+	var bad := []
+	var rows := {}
+	for r in scene.get("_asked"):
+		rows[str(r["club"])] = r
+	for a in scene.find_children("Answer_*", "", true, false):
+		var club := str(a.name).trim_prefix("Answer_")
+		var bb := (a as RichTextLabel).text if a is RichTextLabel else ""
+		var r: Dictionary = rows.get(club, {})
+		for id in (r.get("mine", []) as Array) + (r.get("theirs", []) as Array):
+			if str(id).begins_with("pick:"):
+				continue
+			var who: String = _state._ask_name(str(id))
+			if not str(ni.plain(a)).contains(who):
+				continue
+			var owner := "ESS" if str(id) == str(sanders["id"]) else club
+			named += 1
+			reds += 1 if uk.club_name_colour(uk.club_ink(owner)) == uk.TEXT else 0
+			if not bb.contains("[color=#%s]%s" % [uk.club_ink(owner).to_html(false), who.replace(" ", ni.NBSP)]):
+				bad.append("%s: %s" % [club, ni.plain(a)])
+	_check(named > 0 and reds > 0 and bad.is_empty(),
+			"Every player named in the answers (%d, %d at red clubs) is in his club's ink, never white (%s)" % [named, reds, " | ".join(bad)])
+	scene.queue_free()
+	root.size = size_before
 	await _settle()
 
 
@@ -3734,12 +3828,12 @@ func _test_ask_price_tap() -> void:
 		return false)
 	_check(asked.size() == int(_state.ASK_PRICE_TRIES),
 			"Packages well over the price are weighed only among the first %d (%d weighed)" % [int(_state.ASK_PRICE_TRIES), asked.size()])
-	_state.reset()
-	_state.career_seed = 5508
-	_state.replay_seed = 5508
-	_state.start_season("MEL", _db.club_list("MEL"))
-	_state.season.round_index = _state.season.fixture.size()
-	_state.open_offseason()
+	# The tap runs in _test_list_problem_and_ask_around, on its off-season.
+
+
+## The tap behind Ask their price, on the off-season already open.
+func _ask_price_tap_in_offseason() -> void:
+	_check(_state.offseason_year == _state.season_year and _state.my_club == "MEL", "(setup) Melbourne's off-season is open")
 	var size_before := root.size
 	root.size = Vector2i(390, 844)
 	var scene: Control = load("res://scenes/OffseasonScene.tscn").instantiate()
@@ -3881,11 +3975,9 @@ func _test_finals_card_taps() -> void:
 ## the coach could play (your round, your final). A bye, a finals week off, a
 ## finals week you are out of and the off-season go straight ahead. Real taps
 ## on a 390 phone.
+## The season already on is reused (a new career costs a second): every ladder
+## row is written again and the finals start afresh.
 func _fre_in_finals_at(rank: int) -> void:
-	_state.reset()
-	_state.career_seed = 4402
-	_state.replay_seed = 4402
-	_state.start_season("FRE", _db.club_list("FRE"))
 	var sea = _state.season
 	var codes: Array = sea.ladder.keys()
 	codes.sort()
@@ -3903,6 +3995,8 @@ func _fre_in_finals_at(rank: int) -> void:
 	sea.recalc_ladder()
 	sea.start_finals()
 	_state.week_events = []
+	# The bye round played earlier named a carnival squad: its sheet was seen then.
+	_state.midseason["carnival_seen"] = true
 
 
 func _hub_tap(button_name: String) -> Array:
@@ -3960,6 +4054,7 @@ func _test_sim_asks_only_before_your_match() -> void:
 			"A finger on Play Round %d during the bye sims it with no question (%s)" % [bye_round + 1, got[0]])
 
 	# Finals: his own final asks; a week off and a week he is out of do not.
+	# This season again, each time with the ladder written for the case.
 	_fre_in_finals_at(8)
 	got = await _hub_tap("SimRound")
 	_check(got[0] == "" and got[1] and int(_state.season.finals["week"]) == 1,
@@ -4196,8 +4291,9 @@ func _find_named(n: Node, named: String, out: Array) -> void:
 
 
 ## The Canberra question on New career (director, 2026-11-08): "Canberra
-## joins?" answers No by default, and a real tap on Yes puts Canberra in the
-## League redraft with Tasmania, both as equals.
+## joins?" answers No by default; a real tap on Yes keeps Canberra for 2030.
+## The 2027 League redraft is the founding eighteen either way: Tasmania join
+## in 2028 (director, 2026-11-12: "Join in 2028").
 func _test_new_career_canberra_choice() -> void:
 	_state.delete_saved_career()
 	for pick_it in [false, true]:
@@ -4220,10 +4316,12 @@ func _test_new_career_canberra_choice() -> void:
 		await _settle()
 		var clubs: Array = _state.draft.clubs if _state.draft != null else []
 		_check(both_there and t1 == "" and t2 == "" and _router.current() == "draft"
-				and bool(_state.canberra_on) == pick_it and clubs.has("CANB") == pick_it and clubs.has("TAS")
-				and clubs.size() == (20 if pick_it else 19),
-				("A tap on Yes puts Canberra and Tasmania in the 2027 League redraft (%s %s, %d clubs)" if pick_it
-				else "Left at No, the 2027 League redraft has Tasmania and no Canberra (%s %s, %d clubs)") % [
+				and bool(_state.canberra_on) == pick_it and not clubs.has("CANB") and not clubs.has("TAS")
+				and clubs.size() == 18
+				and _db.enter_year("CANB") == (2030 if pick_it else 9999)
+				and _db.enter_year("TAS") == 2028,
+				("A tap on Yes keeps Canberra for 2030; the 2027 League redraft is 18 clubs (%s %s, %d clubs)" if pick_it
+				else "Left at No, the 2027 League redraft is 18 clubs and Canberra never join (%s %s, %d clubs)") % [
 					t1, t2, clubs.size()])
 	_state.reset()
 	_router.stack = []
@@ -4431,7 +4529,12 @@ func _test_every_start_reaches_interview() -> void:
 		_check(cont == "" and _router.current() == "draft" and str(current_scene.get("_phase")) == "board",
 				"%s: Continue goes back to the draft board (tap %s, at %s, phase %s)" % [
 					label, cont, _router.current(), current_scene.get("_phase")])
-		# The draft to its end; the hub never asks again.
+		# The draft to its end; the hub never asks again. The interview is due
+		# only from New career (Main), so one League redraft carries the proof
+		# for the redraft starts: every club drafts its whole list there, the
+		# cost of this test, and the 1990 one (14 clubs) is the shortest.
+		if str(st[1]) == "redraft" and label != "The 1990 League redraft":
+			continue
 		var ds := current_scene
 		var guard := 0
 		while d != null and not d.is_finished() and guard < 200:
@@ -4464,6 +4567,87 @@ func _first_named(n: Node, prefix: String) -> Control:
 		if f != null:
 			return f
 	return null
+
+
+## "EVERY mode needs to be able to host our forge creations" (director,
+## 2026-11-15). Every start on the year step offers your Forge prospect and
+## your Forge club (its row, or on real lists the line saying why), by a real
+## tap on the start; every season's League redraft brings both into the
+## career, and its real lists bring the prospect. A new start added to the year
+## step is checked here without editing this test.
+func _test_forge_on_every_start() -> void:
+	_state.delete_saved_career()
+	_state.reset()
+	_state.set_forge_club({"name": "Port Melbourne", "short": "Borough", "code": "PMB",
+			"location": "port-melbourne", "primary": "#1B3A8C", "secondary": "#C8102E",
+			"accent": "#FFFFFF", "design": "hoops", "kit": "p/s/a"})
+	_state.set_forge_player({"first": "Ted", "last": "Forge", "role": "FWD", "height_cm": 185,
+			"style": "small_forward", "strengths": ["goalkicking"], "weaknesses": ["kicking"], "foot": "L"})
+	# The reference phone: seven starts scroll under the heading there.
+	var size_was := root.size
+	root.size = Vector2i(390, 844)
+	_router.stack = []
+	_router.go("main")
+	await _settle()
+	var ids: Array = current_scene.call("_year_ids")
+	var missing := []
+	for id in ids:
+		if await _open_start(str(id)) != "":
+			missing.append("%s: no tap" % id)
+			continue
+		var prospect := current_scene.find_child("Prospect_in", true, false) as Control
+		var row := current_scene.find_child("ForgedClub", true, false) as Control
+		var note := current_scene.find_child("ForgedClubOnly", true, false) as Control
+		if prospect == null:
+			missing.append("%s: prospect" % id)
+		if row == null or note == null or row.visible == note.visible:
+			missing.append("%s: club" % id)
+		# A new club's start plays years without you: its rows are checked
+		# above. Every other start: its League redraft and its real lists.
+		if int(current_scene.get("_pick_future")) > 0:
+			continue
+		for mode in ["redraft", "real"]:
+			if mode == "real" and await _open_start(str(id)) != "":
+				missing.append("%s real: no tap" % id)
+				continue
+			current_scene.set("_pick_start", mode)
+			current_scene.set("_pick_prospect", true)
+			current_scene.set("_pick_club", true)
+			current_scene.call("_start_new_career")
+			await _settle()
+			var d = _state.draft
+			if _state.custom_prospect_id == "":
+				missing.append("%s %s: prospect not in the career" % [id, mode])
+			if mode == "redraft" and (d == null or not d.clubs.has("PMB")):
+				missing.append("%s redraft: club not in the draft" % id)
+	_check(ids.size() >= 2 and missing.is_empty(),
+			"Every start hosts your Forge prospect and club (%d starts; missing: %s)" % [ids.size(), str(missing)])
+	_state.set_forge_club({})
+	_state.set_forge_player({})
+	_state.delete_saved_career()
+	_state.reset()
+	_router.stack = []
+	root.size = size_was
+
+
+## New career from the main menu to the setup of start `id`, by real taps
+## (the start scrolled into view first). Returns "" or why a tap failed.
+func _open_start(id: String) -> String:
+	_state.reset()
+	_router.stack = []
+	_router.go("main")
+	await _settle()
+	var why: String = await Tap.tap(current_scene.find_child("NewCareer", true, false))
+	if why != "":
+		return why
+	await _settle()
+	var card := current_scene.find_child("StartYear_" + id, true, false) as Control
+	var sc := current_scene.find_child("StartsScroll", true, false) as ScrollContainer
+	if sc != null and card != null:
+		await _settle()
+		sc.ensure_control_visible(card)
+		await _settle()
+	return await _pick_year(id)
 
 
 ## The Forge club joins League redraft careers only (director, 2026-11-08):
@@ -4906,7 +5090,8 @@ func _test_restore_earlier_save_tap() -> void:
 	_state.reset()
 	_state.start_season("STK", _db.club_list("STK"))
 	_check(_state.save_career(), "Round 1 is saved")
-	_state.advance()
+	# On to round 2 without playing round 1's matches (seconds the restore does not read).
+	_state.season.round_index = 1
 	_check(_state.save_career(), "Round 2 is saved")
 	_router.stack = ["main"]
 	_router.go("hub")
@@ -4989,6 +5174,10 @@ func _test_sacked_job_choice_taps() -> void:
 	var take: Button = current_scene.find_child("TakeJob_%s" % code, true, false)
 	_check(take != null and take.get_combined_minimum_size().x <= take.size.x + 0.5,
 			"Each club with a job open has a Take button that reads whole on a 390 phone")
+	# Taking a job opens the new club's off-season market (seconds of rival
+	# trading this test does not read): marked open already, so the tap
+	# proves the move alone.
+	_state.offseason_year = _state.season_year
 	var why: String = await Tap.tap(take) if take != null else "missing"
 	await _settle()
 	# Row 179: he is that club's coach from the tap, so every off-season call is theirs.
@@ -5007,10 +5196,20 @@ func _test_sacked_job_choice_taps() -> void:
 			"A club joining next season offers its job, saying when it joins (%s)" % (tas_why.text if tas_why != null else "missing"))
 	take = current_scene.find_child("TakeJob_TAS", true, false)
 	_check(take != null and take.get_combined_minimum_size().x <= take.size.x + 0.5, "Tasmania's Take button reads whole on a 390 phone")
+	# The sacking comes at the season's close: the home-and-away rounds are done.
+	_state.season.round_index = _state.season.fixture.size()
 	why = await Tap.tap(take) if take != null else "missing"
+	for i in range(900):
+		if _router.current() == "draft" and not bool(root.get_node("ScreenTransition").busy):
+			break
+		await process_frame
 	await _settle()
-	_check(why == "" and not _state.is_sacked() and str(_state.coach_arcs["move"].get("to", "")) == "TAS" and _state.my_club == "FRE",
-			"A finger on Take the job at Tasmania sets the move for their first draft; he is at Fremantle until then (%s)" % why)
+	# Row 189: Fremantle play out the off-season under their own staff and he
+	# goes straight to Tasmania's first National Draft as their coach.
+	_check(why == "" and not _state.is_sacked() and _router.current() == "draft" and _state.my_club == "TAS"
+			and _state.draft != null and _state.draft.user_club == "TAS",
+			"A finger on Take the job at Tasmania opens their first National Draft with him as their coach (%s; screen %s, club %s)" % [
+			why, _router.current(), _state.my_club])
 	# A fresh sacking: retire instead, and the record is read out.
 	_sacked_with_offers()
 	_router.go("hub")
@@ -5088,6 +5287,10 @@ func _test_rival_letter_taps() -> void:
 	_season_with_letter(false)
 	_check(moves.letter_open(_state) and not _state.offseason_open(),
 			"A strong season ends with a rival board's letter, and the off-season waits for the answer")
+	# The same letter is answered twice (Stay, then Take): the career is saved
+	# here and loaded for the second answer instead of playing its finals again.
+	var letter_was: Dictionary = moves.letter(_state).duplicate(true)
+	_check(_state.save_career(), "The career with the letter saves")
 	_router.stack = ["main"]
 	_router.go("hub")
 	await _settle()
@@ -5110,7 +5313,13 @@ func _test_rival_letter_taps() -> void:
 			and _screen_text().contains("Trades & Contracts"),
 			"After the answer the hub says so, and trades, contracts and the draft are back")
 	# A ladder club's letter, taken.
-	_season_with_letter(false)
+	_check(_state.load_career() and moves.letter(_state) == letter_was and moves.letter_open(_state)
+			and _state.my_club == "FRE" and not _state.offseason_open(),
+			"The saved career loads with its letter still unanswered (%s)" % str(moves.letter(_state)))
+	_db.set_enter_year("TAS", 9999)
+	_state.week_events = []
+	_state.media_conference = {}
+	_state.postseason_intro_seen = true
 	var code := str(moves.letter(_state).get("code", ""))
 	_router.go("hub")
 	await _settle()
@@ -5127,8 +5336,8 @@ func _test_rival_letter_taps() -> void:
 			"After taking it the hub says so, who replaced him at Fremantle and where from, and his new club's trades, contracts and draft are open (%s)"
 			% (answered.text if answered != null else "missing"))
 	# Row T5.Q25: Tasmania, joining next season, write first. Taken, he
-	# takes over at their first National Draft and runs Fremantle's
-	# off-season until then.
+	# takes over at their first National Draft, which opens at once:
+	# Fremantle play out the off-season under their own staff (row 189).
 	_season_with_letter()
 	_check(str(moves.letter(_state).get("code", "")) == "TAS", "A strong season before Tasmania join brings their letter")
 	_router.go("hub")
@@ -5138,14 +5347,17 @@ func _test_rival_letter_taps() -> void:
 			"The letter says he would take over at their first National Draft (%s)" % (start.text if start != null else "missing"))
 	take = current_scene.find_child("RivalLetterTake", true, false)
 	why = await Tap.tap(take) if take != null else "missing"
+	for i in range(900):
+		if _router.current() == "draft" and not bool(root.get_node("ScreenTransition").busy):
+			break
+		await process_frame
 	await _settle()
-	_check(why == "" and _state.my_club == "FRE" and str(_state.coach_arcs["move"].get("to", "")) == "TAS" and _state.offseason_open(),
-			"A finger on Take signs him with Tasmania; Fremantle's off-season opens and stays his until the draft (%s)" % why)
-	answered = current_scene.find_child("RivalLetterAnswered", true, false)
-	_check(answered != null and answered.text.contains("Tasmania") and answered.text.contains("National Draft")
-			and _screen_text().contains("Trades & Contracts"),
-			"After taking it the hub says when he takes over, and Fremantle's trades and contracts are open (%s)"
-			% (answered.text if answered != null else "missing"))
+	_check(why == "" and _router.current() == "draft" and _state.my_club == "TAS"
+			and _state.draft != null and _state.draft.user_club == "TAS",
+			"A finger on Take signs him with Tasmania and opens their first National Draft with him as their coach (%s; screen %s, club %s)" % [
+			why, _router.current(), _state.my_club])
+	_check(_state.trade_offers.is_empty() and _state.trade_requests.is_empty() and _state.staff_vacancies.is_empty(),
+			"Fremantle's trades, contracts and staff jobs were their own staff's: none is left for him")
 	root.size = size_before
 
 
@@ -5430,7 +5642,9 @@ func _test_skip_season() -> void:
 
 	# Played out the long way: Sim the week until the season is over. Both
 	# runs start in the finals, where the long press skips to the end of them.
+	# The start is saved and loaded for the second run rather than played again.
 	_skip_start_finals(5511)
+	_check(_state.save_career(), "The finals start saves")
 	var year: int = _state.season_year
 	var guard := 0
 	while not _state.season.is_season_over() and guard < 80:
@@ -5439,7 +5653,10 @@ func _test_skip_season() -> void:
 	var played := _skip_shape()
 
 	# Skipped: a long press of the week's button asks first.
-	_skip_start_finals(5511)
+	_check(_state.load_career() and _state.season_year == year and not _state.season.is_season_over(),
+			"The finals start loads, the season not over")
+	_state.week_events = []
+	_state.media_conference = {}
 	_router.stack = ["main"]
 	_router.go("hub")
 	await _settle()
@@ -5693,7 +5910,9 @@ func _skip_orders_run(orders: Dictionary) -> Dictionary:
 	_state.replay_seed = 7301
 	_state.start_season("HAW", _db.club_list("HAW"))
 	_state.week_events = []
-	_state.season.round_index = _state.season.fixture.size() - 8
+	# One home-and-away round is enough for the kids' answer to promise runs;
+	# the finals after it are played out as ever.
+	_state.season.round_index = _state.season.fixture.size() - 1
 	var year: int = _state.season_year
 	var res: Dictionary = _state.skip_season(orders)
 	var runs := 0
@@ -6007,3 +6226,61 @@ func _count_named(n: Node, prefix: String, hit: Callable) -> void:
 		hit.call()
 	for c in n.get_children():
 		_count_named(c, prefix, hit)
+
+
+## Essendon's 2016 top-ups, when you coach them (director, 2026-11-13: "You
+## pick them"): the sheet opens over the hub, a real tap on Sign signs the
+## player and the sheet comes back for the next spot; Back leaves the spot
+## open; Done leaves the rest empty.
+func _test_top_up_sheet_taps() -> void:
+	var ye = load("res://scripts/sim/YearEvents.gd")
+	var md = load("res://scripts/state/MidseasonDraft.gd")
+	_state.reset()
+	_state.career_seed = 4402
+	_state.replay_seed = 4402
+	_state.start_season("ESS", _db.club_list("ESS"))
+	var size_before := root.size
+	root.size = Vector2i(390, 844)
+	_router.stack = ["main"]
+	_state.week_events = []
+	# A fresh career has nobody unsigned yet: pass over a few of this year's class.
+	for p in (_state.draftee_pool as Array).slice(0, 4):
+		p["draft_year"] = _state.season_year - 1
+	ye.state(_state)["top_up"] = {"year": _state.season_year, "club": "ESS", "left": 2, "most": 2, "signed": []}
+	var pool: Array = md.pool(_state)
+	_check(not pool.is_empty(), "Someone is left to sign (%d)" % pool.size())
+	if pool.is_empty():
+		root.size = size_before
+		return
+	var list_before: int = (_state.my_list as Array).size()
+	_router.go("hub")
+	await _settle()
+	var sheet: Control = current_scene.find_child("TopUpSheet", true, false)
+	var count: Label = sheet.find_child("TopUpCount", true, false) if sheet != null else null
+	_check(count != null and count.text == "Signed 0 of 2", "The top-up sheet opens over the hub (%s)" % (count.text if count != null else "none"))
+	var pid := str(pool[0]["id"])
+	var sign: Button = sheet.find_child("TopUpSign_" + pid, true, false) if sheet != null else null
+	var why: String = (await Tap.tap(sign)) if sign != null else "missing"
+	await _settle()
+	var signed := (_state.my_list as Array).filter(func(q): return str(q["id"]) == pid)
+	_check(why == "" and signed.size() == 1 and int(signed[0].get("top_up", 0)) == _state.season_year,
+			"A real tap on Sign signs the best player left (%s)" % why)
+	var again: Control = current_scene.find_child("TopUpSheet", true, false)
+	var count2: Label = again.find_child("TopUpCount", true, false) if again != null else null
+	_check(count2 != null and count2.text == "Signed 1 of 2" and again.find_child("TopUpSign_" + pid, true, false) == null,
+			"The sheet comes back for the second spot, without him")
+	_router.handle_back(true)
+	await _settle()
+	_check(_router.current() == "hub" and current_scene.find_child("TopUpSheet", true, false) == null
+			and int(ye.top_up_pending(_state).get("left", 0)) == 1, "Back closes the sheet; the spot stays open")
+	_router.go("hub")
+	await _settle()
+	var last: Control = current_scene.find_child("TopUpSheet", true, false)
+	var done: Button = last.find_child("TopUpDone", true, false) if last != null else null
+	var done_tap: String = (await Tap.tap(done)) if done != null else "missing"
+	await _settle()
+	_check(done_tap == "" and ye.top_up_pending(_state).is_empty()
+			and current_scene.find_child("TopUpSheet", true, false) == null
+			and (_state.my_list as Array).size() == list_before + 1,
+			"A real tap on Done leaves the last spot empty (%s)" % done_tap)
+	root.size = size_before

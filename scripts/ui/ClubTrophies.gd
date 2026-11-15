@@ -322,21 +322,38 @@ static func _club_item(host: Control, it: Dictionary) -> Button:
 	return b
 
 
-## Your club's achievement (Achievements.gd): when it came, or what it asks.
+## Your club's two achievements (Achievements.gd), when each came or what it
+## asks, then the coach achievements you have earned.
 static func _achievement(seasons: Array) -> Control:
-	var d := Achievements.definition_by_club(GameState.my_club)
-	if d.is_empty():
+	var forge: Array = []
+	if bool((GameDB.clubs.get(GameState.my_club, {}) as Dictionary).get("custom", false)):
+		forge = [GameState.my_club]
+	var defs := Achievements.for_code(GameState.my_club, forge)
+	if defs.is_empty():
 		return null
 	var v := UiKit.vbox(2)
 	v.name = "ClubAchievement"
-	var got: Dictionary = GameState.achievements.get(str(d["id"]), {})
 	var start := int(seasons[0]["year"]) if not seasons.is_empty() else GameState.season_year
-	if not got.is_empty() and int(got.get("year", 0)) >= start:
-		v.add_child(UiKit.lbl("%s, %d" % [str(d["name"]), int(got["year"])], UiKit.BODY, UiKit.TEXT, true))
-		v.add_child(_para(str(d["desc"])))
-	else:
-		v.add_child(UiKit.lbl(str(d["name"]), UiKit.BODY, UiKit.MUTED, true))
-		v.add_child(_para("Not yet: " + str(d["desc"])))
+	for d in defs:
+		var got: Dictionary = GameState.achievements.get(str(d["id"]), {})
+		if not got.is_empty() and int(got.get("year", 0)) >= start:
+			v.add_child(UiKit.lbl("%s, %d" % [str(d["name"]), int(got["year"])], UiKit.BODY, UiKit.TEXT, true))
+			v.add_child(_para(str(d["desc"])))
+		else:
+			v.add_child(UiKit.lbl(str(d["name"]), UiKit.BODY, UiKit.MUTED, true))
+			v.add_child(_para("Not yet: " + str(d["desc"])))
+	var coach := Achievements.coach_list()
+	var earned := []
+	for d in coach:
+		var got: Dictionary = GameState.achievements.get(str(d["id"]), {})
+		if not got.is_empty():
+			earned.append("%s (%d)" % [str(d["name"]), int(got.get("year", 0))])
+	var head := UiKit.lbl("Your coaching: %d of %d achievements" % [earned.size(), coach.size()],
+			UiKit.BODY, UiKit.TEXT, true)
+	head.name = "CoachAchievements"
+	v.add_child(head)
+	if not earned.is_empty():
+		v.add_child(_para(", ".join(earned)))
 	return v
 
 

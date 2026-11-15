@@ -1,6 +1,6 @@
 extends SceneTree
 ## The full-screen press conference (row 105, item 7), for QC at phone size:
-##   godot --path . --resolution 390x844 --windowed --script tools/visual/capture_press_scene.gd -- --out DIR
+##   godot --path . --resolution 390x844 --windowed --script tools/visual/capture_press_scene.gd -- --out DIR [--club FRE]
 ## Writes DIR/press_muckraker_gate.png (a heavy loss, a fourth answer naming a
 ## player), DIR/press_stats_gate.png (a close game, the record read on the gate)
 ## and DIR/press_result.png (the Muckraker answered). Vignettes on, so the room
@@ -47,6 +47,9 @@ func _run() -> void:
 	var router = root.get_node("Router")
 	var MC = load("res://scripts/sim/MediaConference.gd")
 	var club := "COL"
+	for i in range(a.size() - 1):
+		if str(a[i]) == "--club":
+			club = str(a[i + 1])
 	state.autosave_enabled = false
 	state.save_path = "user://capture_press_scene.save"
 	state.settings_path = "user://capture_press_scene.cfg"

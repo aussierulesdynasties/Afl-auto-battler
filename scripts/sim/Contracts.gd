@@ -16,7 +16,9 @@ extends RefCounted
 ## whose talks broke down goes to free agency. Contracts tick down at the
 ## rollover.
 
-const MIN_LIST := 32
+## The game's list minimum (2026 on: 36 senior and one rookie). A Legacy
+## season reads its own year's minimum: min_list().
+const MIN_LIST := 37
 ## The game's list limit (senior and Category A rookies). A Legacy season
 ## reads its own year's limit: max_list().
 const MAX_LIST := 44
@@ -55,6 +57,12 @@ static func max_list() -> int:
 	return EraRules.list_max()
 
 
+## The season's list minimum: MIN_LIST in the game's league, the year's own
+## in a Legacy season (EraRules.list_min: 48 in 1993, 38 in 1994, ...).
+static func min_list() -> int:
+	return EraRules.list_min()
+
+
 ## The real cap for an era season, or 0 when the record has none (2026 on).
 static func era_cap(year: int) -> int:
 	if year <= 0 or year >= 2027:
@@ -77,17 +85,38 @@ static func dollars(amount: int, year := -1) -> int:
 	return int(round(float(amount) * s / 1000.0)) * 1000
 
 
+## A player's pay per 2027 model dollar in `year`: the cap's scale spread over
+## that year's list (EraRules.list_max). Today's model pays a 44-man list; a
+## 1990 club carried 52 under its $1.5m cap, so each man drew less of it
+## (audit 2026-11-15: era starts opened over the cap). Players only: club
+## departments stay at dollars().
+static func pay_scale(year: int) -> float:
+	var s := era_scale(year)
+	if s == 1.0:
+		return 1.0
+	return s * float(MAX_LIST) / float(maxi(1, EraRules.list_max(year)))
+
+
+## `amount` 2027 model dollars of player pay in `year`'s dollars (default:
+## the season being played), to the nearest $1k. Unchanged outside the era.
+static func pay(amount: int, year := -1) -> int:
+	var s := pay_scale(money_year if year < 0 else year)
+	if s == 1.0:
+		return amount
+	return int(round(float(amount) * s / 1000.0)) * 1000
+
+
 ## The senior minimum wage and one offer step, in this season's dollars. The
 ## minimum is the CBA's own base payment where the record has it (senior_min).
 static func senior_min(year := -1) -> int:
 	var y := money_year if year < 0 else year
 	if era_cap(y) > 0 and EraRules.has("senior_min", y):
 		return int(EraRules.value("senior_min", y))
-	return dollars(SENIOR_MIN_2027, year)
+	return pay(SENIOR_MIN_2027, year)
 
 
 static func salary_step(year := -1) -> int:
-	return maxi(1000, dollars(SALARY_STEP, year))
+	return maxi(1000, pay(SALARY_STEP, year))
 
 
 static func salary_cap_for_year(year: int) -> int:
@@ -104,7 +133,7 @@ static func salary_cap_for_year(year: int) -> int:
 
 static func indexed_money_2027(amount: int, year: int) -> int:
 	if era_cap(year) > 0:
-		return dollars(amount, year)
+		return pay(amount, year)
 	var value := float(amount)
 	for y in range(2028, year + 1):
 		value *= FUTURE_GROWTH
@@ -138,7 +167,7 @@ static func old_points_to_salary(points: int) -> int:
 ## does not make money overwhelm role, security, rating or age.
 static func salary_score(salary: int) -> float:
 	# Read in 2027 dollars, so an era season's offers weigh the same.
-	var s := float(salary) / era_scale(money_year)
+	var s := float(salary) / pay_scale(money_year)
 	return clampf(1.0 + 9.0 * (s - 155000.0) / (1250000.0 - 155000.0), 1.0, 12.0)
 
 
@@ -159,7 +188,7 @@ static func assign_initial(list: Array) -> void:
 		else:
 			years = rng.randi_range(1, 2)
 		p["contract_years"] = years
-		p["salary"] = dollars(int(p.get("value", 3)))
+		p["salary"] = pay(int(p.get("value", 3)))
 
 
 ## A first-year National Draft deal (a draftee's, on the senior list; the
@@ -182,7 +211,7 @@ static func draftee_deal(p: Dictionary, year := 2027) -> void:
 
 ## What re-signing (or signing) this player costs now.
 static func asking_salary(p: Dictionary) -> int:
-	var price := dollars(Ratings.salary_value(int(p.get("overall", 50))))
+	var price := pay(Ratings.salary_value(int(p.get("overall", 50))))
 	# An unhappy player wants paying to stay.
 	if ClubLife.morale(p) < 40:
 		price = ceili(price * 1.25)
@@ -209,19 +238,19 @@ const INSULT_MORALE := 5
 const REFUSE_BELOW := 50
 const REFUSE_PER_POINT := 1
 ## What the talks say before you decide, and what happens when he refuses.
-const REFUSE_ODDS := "His opinion of you: %d/100. %d%% he won't re-sign with you."
+const REFUSE_ODDS := "His opinion of you: %d out of 100. %d%% he won't re-sign with us."
 ## The news line (name, opinion), then where he goes.
-const REFUSED := "%s won't re-sign with you: his opinion of you is %d/100."
+const REFUSED := "%s won't re-sign with us. His opinion of you: %d out of 100."
 const REFUSED_GOES := "He goes to free agency."
 const REFUSED_SEASON_END := "He goes to free agency when the season ends."
 const REFUSED_STAYS := "He stays on the market."
 ## What talks with him say once he has refused.
-const REFUSED_TALKS := "He won't re-sign with you: his opinion of you is %d/100."
+const REFUSED_TALKS := "He won't re-sign with us. His opinion of you: %d out of 100."
 ## On his contract card once he has refused.
-const REFUSED_CARD := "Won't re-sign: his opinion of you is %d/100"
+const REFUSED_CARD := "Won't re-sign with us. His opinion of you: %d out of 100"
 
 
-## The chance (percent) he refuses to re-sign with you, from his opinion of you.
+## The chance (percent) he refuses to re-sign with us, from his opinion of you.
 static func refuse_chance(opinion: int) -> int:
 	return maxi(0, REFUSE_BELOW - opinion) * REFUSE_PER_POINT
 
@@ -245,10 +274,10 @@ static func stance(p: Dictionary) -> String:
 	# Leverage first: a minimum-wage fringe player's lowest is clamped up to
 	# his ask by the senior floor, but he is fighting for a spot, not firm.
 	if leverage(p) < 0.35:
-		return "He's fighting for a spot on a list and will take less."
+		return "He's fighting for a list spot. He'll take less."
 	var want := wants(p)
 	if lowest(p, int(want["years"])) >= int(want["salary"]):
-		return "He knows his worth and won't take less."
+		return "He knows his worth. He won't take less."
 	return "He'd give a little on salary for the security he wants."
 
 
@@ -258,10 +287,10 @@ static func stance(p: Dictionary) -> String:
 ## club's culture takes off (GameState.culture_effect "resign_floor"), so the
 ## line quotes the very floor `respond` is given. Every figure comes from
 ## `lowest`, the insult rule and MAX_OFFERS; the templates hold none.
-const BEND_DOWN := "He'd sign for %s a season, %s under his ask, for %s or more."
+const BEND_DOWN := "For %s or more, he'd sign for %s a season. That is %s under his ask."
 const BEND_FIRM := "He won't go under his ask for %s or more."
 const BEND_SHORT := "Fewer seasons cost at least %s a season."
-const BEND_INSULT := "Offer under %s and he's insulted: it uses up %d of your %d offers and his morale drops %d%%."
+const BEND_INSULT := "Offer under %s and he's insulted. It uses up %d of our %d offers. His morale drops %d%%."
 
 
 static func floor_after(p: Dictionary, years: int, floor_share := 0.0) -> int:
@@ -282,7 +311,7 @@ static func bend_line(p: Dictionary, floor_share := 0.0) -> String:
 	var low := floor_after(p, years, floor_share)
 	var parts: PackedStringArray = []
 	if low < ask:
-		parts.append(BEND_DOWN % [money(low), "%d%%" % roundi(100.0 * float(ask - low) / float(ask)), term])
+		parts.append(BEND_DOWN % [term, money(low), "%d%%" % roundi(100.0 * float(ask - low) / float(ask))])
 	else:
 		parts.append(BEND_FIRM % term)
 	if years > 1:
@@ -330,10 +359,10 @@ static func free_agent_terms(_p: Dictionary, facts: Dictionary) -> Dictionary:
 	if not bool(facts.get("in_best22", true)):
 		if int(facts.get("rivals", 0)) > 0:
 			refuse = true
-			reasons.append("He wants senior football: he wouldn't make your best 23, and a club that would play him has made an offer.")
+			reasons.append("He wants senior football. He wouldn't make our best 23. A club that would play him has made an offer.")
 			code = "fa_wants_senior_football"
 		else:
-			reasons.append("He wouldn't make your best 23, but no club that would play him has made an offer.")
+			reasons.append("He wouldn't make our best 23. No club that would play him has made an offer.")
 	return {"premium": 0, "refuse": refuse, "reasons": reasons, "code": code}
 
 
@@ -498,13 +527,13 @@ static func offer_view(p: Dictionary, o: Dictionary, other: Dictionary, club_nam
 			top = k
 	match top:
 		"money":
-			return "Best financial offer."
+			return "The most money."
 		"role":
 			return "Clearer path into the best 23."
 		"security":
 			return "More contract security."
 		"push":
-			return "Prefers %s offer: they are pushing to win now." % CopyRules.possessive(club_name)
+			return "Prefers %s offer. They are pushing to win now." % CopyRules.possessive(club_name)
 		"club":
 			return "Prefers %s offer after their stronger season." % CopyRules.possessive(club_name)
 	return ""
@@ -518,7 +547,7 @@ const POINT_DOLLARS := (1250000.0 - 155000.0) / 9.0
 
 ## Dollars a season that `points` of his score are worth, to the nearest $10k.
 static func points_money(points: float) -> int:
-	var s := era_scale(money_year)
+	var s := pay_scale(money_year)
 	var unit := 10000.0 if s == 1.0 else 1000.0
 	return int(round(points * POINT_DOLLARS * s / unit)) * int(unit)
 
@@ -528,20 +557,20 @@ static func points_money(points: float) -> int:
 ## and its push to win, each at its offer_score weight. A higher worth is the
 ## offer he prefers (`prefers`), ties aside.
 static func worth_to_him(p: Dictionary, o: Dictionary) -> int:
-	var s := era_scale(money_year)
+	var s := pay_scale(money_year)
 	var unit := 10000.0 if s == 1.0 else 1000.0
 	return int(round(((offer_score(p, o) - 1.0) * POINT_DOLLARS * s + float(senior_min())) / unit)) * int(unit)
 
 
 ## How he weighs any offer besides its salary, each part in dollars a season
 ## (row T1.R26): one rule, the same for every club.
-const WEIGH_LINE := "Besides salary he counts a best-23 spot as %s a season (a bench spot %s), each season up to the %d he wants as %s, and a club's finish last year up to %s (premiers over the wooden spoon)."
+const WEIGH_LINE := "Besides salary, he counts a best-23 spot as %s a season. A bench spot is %s. Each season up to the %d he wants is %s. A club's finish last year is worth up to %s, from the wooden spoon to the flag."
 
 
 ## Your free-agency offer as a gate (row T1.R26: "Gain / Cost everywhere"):
 ## Gain, he signs with you if yours is worth the most to him once rivals have
-## answered; Cost, its salary on your cap for its term.
-const FA_GAIN := "he signs with you if yours is still worth the most to him after rivals answer (yours %s a season to him, the best other %s). An offer only just worth the most still leads about %d times in 10 once they answer; when they go past it, leading again costs about %s a season more"
+## answered; Cost, its salary on our cap for its term.
+const FA_GAIN := "he signs with us if ours is still worth the most to him after rivals answer. Ours is worth %s a season to him, the best other %s. Only just ahead, we still lead about %d times in 10 once they answer. Once they go past us, leading again costs about %s a season more"
 ## The odds on that Gain, measured (row T1.R26 L3, tools/balance/rival_reads.gd:
 ## 931 talks over six seeded careers, tools/balance/rival_reads_measured.json):
 ## the cheapest offer that leads still led after rivals answered in 380 of
@@ -552,8 +581,8 @@ const FA_GAIN := "he signs with you if yours is still worth the most to him afte
 ## holds both to the measured counts.
 const FA_HOLDS_IN_10 := 4
 const FA_RELEAD_EXTRA := 100000
-const FA_GAIN_ALONE := "no other club has offered: he signs with you (yours is worth %s a season to him)"
-const FA_COST := "%s a season on your cap for %d season%s, %s in all"
+const FA_GAIN_ALONE := "no other club has offered, so he signs with us. Ours is worth %s a season to him"
+const FA_COST := "%s a season on our cap for %d season%s. %s in all"
 
 
 static func fa_lines(salary: int, years: int, worth: int, best_other: int) -> Array:
@@ -659,11 +688,22 @@ static func pick_words(after: int, clubs: int) -> String:
 	return "after pick %d, %s" % [after, where]
 
 
+## What `list` costs against the cap. In the off-season (money_year is then
+## next season, GameState._sync_money_year) a player retiring at the rollover
+## is off the books: his salary was this season's, and counting it left a
+## Legacy club with ten retirees no room to re-sign anyone.
 static func payroll(list: Array) -> int:
 	var total := 0
 	for p in list:
-		total += int(p["salary"]) if p.has("salary") else dollars(int(p.get("value", SENIOR_MIN_2027)))
+		if retired_by(p, money_year):
+			continue
+		total += int(p["salary"]) if p.has("salary") else pay(int(p.get("value", SENIOR_MIN_2027)))
 	return total
+
+
+## Retiring at the start of season `year`, and not talked round to play it.
+static func retired_by(p: Dictionary, year: int) -> bool:
+	return year > 0 and int(p.get("retiring", 0)) == year and int(p.get("play_on", 0)) != year
 
 
 static func expiring(list: Array) -> Array:
@@ -733,8 +773,8 @@ static func evaluate_trade(ai_list: Array, give: Array, take: Array, cap: int,
 	# able to deal as long as the trade leaves its list no smaller: only a
 	# medical retirement (GameState._medical_retire) puts a club there, and it
 	# stays a player short until its next intake (director, 2026-11-11).
-	if (ai_after < MIN_LIST and ai_after < ai_list.size()) or (my_after < MIN_LIST and my_after < my_list.size()):
-		return _verdict(false, "trade_list_under", ctx, {"n": MIN_LIST})
+	if (ai_after < min_list() and ai_after < ai_list.size()) or (my_after < min_list() and my_after < my_list.size()):
+		return _verdict(false, "trade_list_under", ctx, {"n": min_list()})
 	var ai_pay := payroll(ai_list) - payroll(give) + payroll(take)
 	if ai_pay > cap:
 		return _verdict(false, "trade_their_cap", ctx)

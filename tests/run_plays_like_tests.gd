@@ -480,6 +480,28 @@ func _fresh_career(club := "FRE") -> void:
 	_state.set_setting("seen_weekly_loop_intro", true)
 
 
+## Opening the off-season costs most of a draft-screen test and is not under
+## test here: the National Draft test opens it once and saves the career to
+## its own file; the Rookie Draft test loads that.
+const OPEN_SAVE := "user://test_plays_like_open.save"
+var _open_saved := false
+
+
+func _offseason_open() -> void:
+	var keep: String = _state.save_path
+	_state.save_path = OPEN_SAVE
+	var loaded: bool = _open_saved and _state.load_career()
+	if not loaded:
+		_fresh_career()
+		_state.season.round_index = _state.season.fixture.size()
+		_state.open_offseason()
+		_open_saved = _state.save_career()
+	_state.save_path = keep
+	_state.tutorials = false
+	_check(_state.offseason_year == _state.season_year and _state.season.round_index == _state.season.fixture.size(),
+			"(setup) the off-season is open at the end of the home-and-away (%s)" % ("loaded" if loaded else "opened"))
+
+
 func _open_and_check_detail(ui: Control, p: Dictionary, what: String) -> void:
 	var inspect := ui.find_child("Inspect_" + str(p["id"]), true, false) as Button
 	_check(inspect != null, "%s: his row is on the board" % what)
@@ -508,9 +530,7 @@ func _open_and_check_detail(ui: Control, p: Dictionary, what: String) -> void:
 
 
 func _test_national_draft_tap() -> void:
-	_fresh_career()
-	_state.season.round_index = _state.season.fixture.size()
-	_state.open_offseason()
+	_offseason_open()
 	# An international prospect is in this class (they come with the generated classes).
 	var abroad: Dictionary = (_prospects.filter(func(p): return p.has("intl"))[0] as Dictionary).duplicate(true)
 	abroad["id"] = "pl_test_intl"
@@ -595,8 +615,7 @@ func _test_league_draft_tap() -> void:
 
 
 func _test_rookie_draft_sheet() -> void:
-	_fresh_career()
-	_state.season.round_index = _state.season.fixture.size()
+	_offseason_open()
 	var ok: bool = _state.begin_intake_draft()
 	_check(ok, "The National Draft opens before the Rookie Draft")
 	if not ok:
@@ -650,6 +669,9 @@ func _test_midseason_draft_sheet() -> void:
 		(class_now[class_now.size() - 1 - i] as Dictionary)["draft_year"] = year - 1
 	while (_state.season.lists["FRE"] as Array).size() >= Ct.MAX_LIST:
 		(_state.season.lists["FRE"] as Array).pop_back()
+	# Only the round the draft follows is played: the ten before it are not
+	# under test and cost most of this function.
+	_state.season.round_index = MD.DRAFT_AFTER - 1
 	var guard := 0
 	while _state.season.round_index < MD.DRAFT_AFTER and guard < 40:
 		_state.advance()
