@@ -234,14 +234,14 @@ func _test_hints_in_words() -> void:
 ## is worth to the coach is read straight off the effects here, apart from the
 ## engine's own wording, so the lines cannot drift from what the choice does.
 const GAIN_WORDS := {
-	"morale": "(?i)morale", "xp": "(?i)development", "board": "(?i)board confidence", "trust": "opinion of you (up [0-9]+|stays)",
+	"morale": "(?i)morale", "xp": "(?i)development", "board": "(?i)board confidence", "trust": "opinion of you (up [0-9]+|warms a little)",
 	"fresh": "legs", "promise_win": "Win and", "extend_early": "signs on", "captaincy_swap": "takes the armband",
 	"rush_back": "cleared to play", "role_trial": "plays as a", "rest": "can't get hurt", "culture": "(Standards|Togetherness|Ambition) up [0-9]+%",
 	"running": "more weeks? of running", "drill": "on the game plan", "open_price": "early premium", "new_club_keep": "stays for",
 	"no_promise": "No promise to keep",
 }
 const COST_WORDS := {
-	"morale": "(?i)morale", "board": "(?i)board confidence", "trust": "opinion of you (down [0-9]+|falls [0-9]+|stays)",
+	"morale": "(?i)morale", "board": "(?i)board confidence", "trust": "opinion of you (down [0-9]+|falls [0-9]+|slips a little)",
 	"rest": "misses", "heavy_legs": "Heavy legs", "sore": "chance he is injured", "expects_game": "expects a game",
 	"start_backing": "expects to be picked", "back_kid": "is promised", "promise_win": "Lose or draw and", "extend_early": "Locked in", "captaincy_swap": "mid-season",
 	"rush_back": "hurt again", "slow_start": "slowly", "loss_sting": "also falls", "role_trial": "away from his usual spot", "on_record": "on the record",
@@ -638,7 +638,7 @@ func _test_bug_bash_4_story() -> void:
 	var after := StoryEngine.aftermath({"opinion": [50, 53], "opinion_name": "Bailey"})
 	_check(after == "Bailey's opinion of you: 50 → 53 out of 100.", "The result names whose opinion moved (%s)" % after)
 	# A trust move too small to show on the 100 still says which way it went.
-	var t0 := 1
+	var t0 := 0
 	var dd := -1
 	_check(Trust.opinion_move(t0, dd) == 0, "A one-point trust move can round to no move in opinion")
 	var tiny := str(StoryEngine._trust_words(dd, t0))
