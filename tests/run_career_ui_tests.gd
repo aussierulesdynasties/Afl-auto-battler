@@ -2510,7 +2510,7 @@ func _test_menu_and_career() -> void:
 	var twords: Label = tsheet.find_child("TrustWords", true, false)
 	var twhy: Button = tsheet.find_child("TrustWhy", true, false)
 	var treasons: Control = tsheet.find_child("TrustReasons", true, false)
-	_check(twords != null and twords.text.replace(String.chr(0xA0), " ") == GameDB.player_display_name(trusted) + "'s opinion of you: 61 out of 100." and treasons != null and not treasons.visible,
+	_check(twords != null and twords.text.replace(String.chr(0xA0), " ") == str(_db.player_display_name(trusted)) + "'s opinion of you: 61 out of 100." and treasons != null and not treasons.visible,
 			"The profile shows his opinion of you out of 100, with the reasons folded away (%s)" % (twords.text if twords != null else "missing"))
 	var why_tap: String = await Tap.tap(twhy) if twhy != null else "missing"
 	await _settle()
@@ -2524,7 +2524,7 @@ func _test_menu_and_career() -> void:
 	var ssheet: Control = load("res://scripts/ui/PlayerSheet.gd").open(current_scene, stranger)
 	await _settle()
 	var swords: Label = ssheet.find_child("TrustWords", true, false)
-	_check(swords != null and swords.text.replace(String.chr(0xA0), " ") == GameDB.player_display_name(stranger) + "'s opinion of you: 50 out of 100.",
+	_check(swords != null and swords.text.replace(String.chr(0xA0), " ") == str(_db.player_display_name(stranger)) + "'s opinion of you: 50 out of 100.",
 			"A player you've had nothing to do with is at 50 out of 100 (%s)" % (swords.text if swords != null else "missing"))
 	ssheet.queue_free()
 	_state.relations = saved_rel
