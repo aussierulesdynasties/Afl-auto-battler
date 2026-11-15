@@ -419,7 +419,8 @@ static func settle_merger(gs) -> void:
 ## True once `code` has merged away (Fitzroy, its list gone): from the 1996
 ## off-season on it has no seat at a draft and holds no pick.
 static func merged_away(gs, code: String) -> bool:
-	return code == MERGED and bool(_st(gs).get("merge_done", false))
+	# Outside Legacy there is no merger: asking must not create a legacy record.
+	return on() and code == MERGED and bool(_st(gs).get("merge_done", false))
 
 
 ## Merge or play on: finals in two of the last three seasons give a
