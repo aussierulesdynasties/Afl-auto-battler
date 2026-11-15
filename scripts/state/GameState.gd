@@ -7385,36 +7385,53 @@ func training_summary_line() -> String:
 	var auto: Dictionary = last_training_report.get("auto", {})
 	var rises: Array = auto.get("rises", [])
 	var traits: Array = auto.get("traits", [])
-	var at_pot: Array = auto.get("at_pot", [])
 	if rises.is_empty() and traits.is_empty():
 		return ""
 	var bits: PackedStringArray = []
 	if not rises.is_empty():
 		bits.append("%d %s in OVR." % [rises.size(), "player rose" if rises.size() == 1 else "players rose"])
-	for t in traits:
+	var more := training_unlock_line()
+	if more != "":
+		bits.append(more)
+	return "Training: " + " ".join(bits)
+
+
+## The rest of the last game's training news, without the rise count: "Jones
+## unlocked Sharpshooter. Smith reached his potential." - or "". Training leads
+## with the count as a figure (row V5) and says these in words under it.
+func training_unlock_line() -> String:
+	var auto: Dictionary = last_training_report.get("auto", {})
+	var bits: PackedStringArray = []
+	for t in auto.get("traits", []):
 		bits.append("%s unlocked %s." % [_short_name(str(t[0])), Traits.label(str(t[1]))])
+	var at_pot: Array = auto.get("at_pot", [])
 	if at_pot.size() == 1:
 		bits.append("%s reached his potential." % _short_name(str(at_pot[0])))
 	elif at_pot.size() > 1:
 		bits.append("%d players reached their potential." % at_pot.size())
-	return "Training: " + " ".join(bits)
+	return " ".join(bits)
 
 
 ## Every player the last game's training lifted, one entry each, "Jack Steele
 ## 76 to 77", biggest rise first then by name.
 func training_rise_lines() -> PackedStringArray:
+	var out: PackedStringArray = []
+	for row in training_rise_rows():
+		out.append("%s %d to %d" % [row["name"], row["from"], row["to"]])
+	return out
+
+
+## The same risers as data, in the same order: {id, name, from, to}.
+func training_rise_rows() -> Array:
 	var rises: Array = (last_training_report.get("auto", {}) as Dictionary).get("rises", [])
 	var rows: Array = []
 	for r in rises:
-		rows.append([_short_name(str(r[0])), int(r[1]), int(r[2])])
+		rows.append({"id": str(r[0]), "name": _short_name(str(r[0])), "from": int(r[1]), "to": int(r[2])})
 	rows.sort_custom(func(x, y):
-		var dx: int = int(x[2]) - int(x[1])
-		var dy: int = int(y[2]) - int(y[1])
-		return dx > dy if dx != dy else str(x[0]) < str(y[0]))
-	var out: PackedStringArray = []
-	for row in rows:
-		out.append("%s %d to %d" % [row[0], row[1], row[2]])
-	return out
+		var dx: int = int(x["to"]) - int(x["from"])
+		var dy: int = int(y["to"]) - int(y["from"])
+		return dx > dy if dx != dy else str(x["name"]) < str(y["name"]))
+	return rows
 
 
 func _short_name(id: String) -> String:
