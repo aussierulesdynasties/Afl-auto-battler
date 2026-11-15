@@ -1669,6 +1669,7 @@ func _run() -> void:
 	await _t("_test_new_career_keeps_the_save")
 	await _t("_test_new_career_canberra_choice")
 	await _t("_test_new_career_forged_row_redraft_only")
+	await _t("_test_forge_on_every_start")
 	await _t("_test_new_career_challenge_taps")
 	await _t("_test_canberra_2030_warning")
 	await _t("_test_every_start_reaches_interview")
@@ -4590,6 +4591,87 @@ func _first_named(n: Node, prefix: String) -> Control:
 		if f != null:
 			return f
 	return null
+
+
+## "EVERY mode needs to be able to host our forge creations" (director,
+## 2026-11-15). Every start on the year step offers your Forge prospect and
+## your Forge club (its row, or on real lists the line saying why), by a real
+## tap on the start; every season's League redraft brings both into the
+## career, and its real lists bring the prospect. A new start added to the year
+## step is checked here without editing this test.
+func _test_forge_on_every_start() -> void:
+	_state.delete_saved_career()
+	_state.reset()
+	_state.set_forge_club({"name": "Port Melbourne", "short": "Borough", "code": "PMB",
+			"location": "port-melbourne", "primary": "#1B3A8C", "secondary": "#C8102E",
+			"accent": "#FFFFFF", "design": "hoops", "kit": "p/s/a"})
+	_state.set_forge_player({"first": "Ted", "last": "Forge", "role": "FWD", "height_cm": 185,
+			"style": "small_forward", "strengths": ["goalkicking"], "weaknesses": ["kicking"], "foot": "L"})
+	# The reference phone: seven starts scroll under the heading there.
+	var size_was := root.size
+	root.size = Vector2i(390, 844)
+	_router.stack = []
+	_router.go("main")
+	await _settle()
+	var ids: Array = current_scene.call("_year_ids")
+	var missing := []
+	for id in ids:
+		if await _open_start(str(id)) != "":
+			missing.append("%s: no tap" % id)
+			continue
+		var prospect := current_scene.find_child("Prospect_in", true, false) as Control
+		var row := current_scene.find_child("ForgedClub", true, false) as Control
+		var note := current_scene.find_child("ForgedClubOnly", true, false) as Control
+		if prospect == null:
+			missing.append("%s: prospect" % id)
+		if row == null or note == null or row.visible == note.visible:
+			missing.append("%s: club" % id)
+		# A new club's start plays years without you: its rows are checked
+		# above. Every other start: its League redraft and its real lists.
+		if int(current_scene.get("_pick_future")) > 0:
+			continue
+		for mode in ["redraft", "real"]:
+			if mode == "real" and await _open_start(str(id)) != "":
+				missing.append("%s real: no tap" % id)
+				continue
+			current_scene.set("_pick_start", mode)
+			current_scene.set("_pick_prospect", true)
+			current_scene.set("_pick_club", true)
+			current_scene.call("_start_new_career")
+			await _settle()
+			var d = _state.draft
+			if _state.custom_prospect_id == "":
+				missing.append("%s %s: prospect not in the career" % [id, mode])
+			if mode == "redraft" and (d == null or not d.clubs.has("PMB")):
+				missing.append("%s redraft: club not in the draft" % id)
+	_check(ids.size() >= 2 and missing.is_empty(),
+			"Every start hosts your Forge prospect and club (%d starts; missing: %s)" % [ids.size(), str(missing)])
+	_state.set_forge_club({})
+	_state.set_forge_player({})
+	_state.delete_saved_career()
+	_state.reset()
+	_router.stack = []
+	root.size = size_was
+
+
+## New career from the main menu to the setup of start `id`, by real taps
+## (the start scrolled into view first). Returns "" or why a tap failed.
+func _open_start(id: String) -> String:
+	_state.reset()
+	_router.stack = []
+	_router.go("main")
+	await _settle()
+	var why: String = await Tap.tap(current_scene.find_child("NewCareer", true, false))
+	if why != "":
+		return why
+	await _settle()
+	var card := current_scene.find_child("StartYear_" + id, true, false) as Control
+	var sc := current_scene.find_child("StartsScroll", true, false) as ScrollContainer
+	if sc != null and card != null:
+		await _settle()
+		sc.ensure_control_visible(card)
+		await _settle()
+	return await _pick_year(id)
 
 
 ## The Forge club joins League redraft careers only (director, 2026-11-08):

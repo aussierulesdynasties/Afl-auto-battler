@@ -1,0 +1,449 @@
+[
+	{
+		"id": "syd_bloods_standard",
+		"club": "SYD",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"title": ["The leaders want the room"],
+		"text": ["After a sloppy week on the track, the leadership group has called a players-only meeting about what it means to wear the red and white. They've asked you to stay out."],
+		"choices": [
+			{"key": "out", "label": "Leave it to the leaders",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "The players set their own standard"}, {"op": "culture", "strand": "together", "d": 1, "why": "The group sorted it out among themselves"}, {"op": "odds", "chance": 15, "hit": [{"op": "morale", "d": -3, "who": "side"}], "miss": [], "hit_result": "It turned into a blame session and a few players walked out flat."}],
+			 "result": "The door shuts. You hear raised voices, then quiet."},
+			{"key": "sit", "label": "Sit in the back of the room",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The leaders said their piece with the coach there"}, {"op": "morale", "d": -1, "who": "all"}],
+			 "result": "The leaders speak well. The young blokes don't say a word."}
+		]
+	},
+	{
+		"id": "syd_character_call",
+		"club": "SYD",
+		"controversy": false,
+		"category": "selection",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["Is he a Swans person?"],
+		"text": ["The recruiters love a gifted midfielder who is there for the taking, but every reference check says the same thing: late to training, hard work off the field, sulks when dropped. The leaders want to know if he fits."],
+		"choices": [
+			{"key": "take", "label": "Bring him in and fix him",
+			 "effects": [{"op": "board", "d": 2, "was": "list"}, {"op": "culture", "strand": "standards", "d": -2, "why": "A known bad trainer joined the group"}, {"op": "odds", "chance": 30, "hit": [{"op": "morale", "d": -2, "who": "side"}], "miss": [], "hit_result": "By midseason he's still the same bloke, and the group has noticed."}],
+			 "result": "He signs. The board likes the talent; the leaders reserve judgement."},
+			{"key": "pass", "label": "Not our type of player",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "The club turned down talent that didn't fit"}, {"op": "board", "d": -2, "was": "list"}],
+			 "result": "He goes elsewhere. The leaders nod; the board watched the talent walk past."}
+		]
+	},
+	{
+		"id": "syd_culture_review",
+		"club": "SYD",
+		"controversy": true,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"title": ["The culture under the microscope"],
+		"text": ["A report of misbehaviour at a team function has reached the papers, and pundits are asking whether the famous Swans culture was ever real. The board wants a response today."],
+		"choices": [
+			{"key": "review", "label": "Open an independent review",
+			 "effects": [{"op": "board", "d": 2}, {"op": "culture", "strand": "standards", "d": 2, "why": "The club let outsiders hold it to account"}, {"op": "morale", "d": -3, "who": "all"}, {"op": "slow_start", "chance": 20, "who": "side"}],
+			 "result": "The review starts. The questions don't stop for weeks."},
+			{"key": "inhouse", "label": "Handle it in-house",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The group closed ranks"}, {"op": "board", "d": -2}, {"op": "odds", "chance": 35, "hit": [{"op": "board", "d": -3}], "miss": [], "hit_result": "More came out a week later, and the board was not impressed."}],
+			 "result": "The club says little. The players pull tight."},
+			{"key": "front", "label": "Front the media yourself",
+			 "effects": [{"op": "morale", "d": 2, "who": "all"}, {"op": "board", "d": 1}, {"op": "forgo_xp", "d": 2, "who": "side"}],
+			 "result": "You take every question. You're the story for a week, not them."}
+		]
+	},
+	{
+		"id": "syd_song_debut",
+		"club": "SYD",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "player", "pick": "lowest:games", "where": {"games_max": 1}},
+		"when": {"winning_run_min": 1},
+		"title": ["Cheer, cheer the red and the white"],
+		"text": ["{name} has played his first game and you've won. Tradition says the debutant stands in the middle of the rooms and leads the song. He's terrified."],
+		"choices": [
+			{"key": "middle", "label": "Into the middle, son",
+			 "effects": [{"op": "morale", "d": 3, "who": "subject"}, {"op": "culture", "strand": "together", "d": 2, "why": "The whole room sang with the new kid"}, {"op": "odds", "chance": 10, "hit": [{"op": "board", "d": -1}], "miss": [], "hit_result": "He fluffed the words, the footage got out and the papers had their fun."}],
+			 "result": "{first} gets through it, just. The room goes up."},
+			{"key": "captain", "label": "Let the captain lead it this week",
+			 "effects": [{"op": "trust", "d": 1, "why": "You spared him on his first night"}, {"op": "culture", "strand": "together", "d": -1, "why": "A club ritual was skipped"}],
+			 "result": "The captain leads it. {first} sings from the back, relieved."}
+		]
+	},
+	{
+		"id": "syd_ugly_football",
+		"club": "SYD",
+		"controversy": false,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"title": ["The ugliest footy in the league"],
+		"text": ["A Melbourne commentator says your pressure game is the ugliest footy going and is killing the game in a rugby league town. The marketing team wants a flashier brand."],
+		"choices": [
+			{"key": "win", "label": "We play to win, not to entertain",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "The club stuck to the way it plays"}, {"op": "morale", "d": 2, "who": "side"}, {"op": "board", "d": -2, "was": "sponsors"}],
+			 "result": "The players love it. The sponsors wanted highlights."},
+			{"key": "open", "label": "Open it up a bit",
+			 "effects": [{"op": "board", "d": 2}, {"op": "morale", "d": 1, "who": "side"}, {"op": "loss_sting", "chance": 25, "d": -3, "who": "side"}],
+			 "result": "The forwards get more room. The defence leaks while it learns."}
+		]
+	},
+	{
+		"id": "syd_derby_week",
+		"club": "SYD",
+		"controversy": false,
+		"category": "rivals",
+		"subject": {"kind": "club"},
+		"when": {"opp_deck": "GWS"},
+		"title": ["Derby week"],
+		"text": ["It's the Sydney Derby. The Giants have been saying the city is turning orange, and your older players remember when the Swans had Sydney to themselves."],
+		"choices": [
+			{"key": "ours", "label": "This is our town",
+			 "effects": [{"op": "morale", "d": 4, "who": "all"}, {"op": "slow_start", "chance": 20, "who": "side"}, {"op": "board", "d": -1}],
+			 "result": "The group is fired up. The Giants have a new line for their noticeboard."},
+			{"key": "grow", "label": "Two clubs grow the game",
+			 "effects": [{"op": "board", "d": 2}, {"op": "culture", "strand": "standards", "d": 1, "why": "The coach stayed above the noise"}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "The league loves the answer. The members wanted some fire."}
+		]
+	},
+	{
+		"id": "syd_west_clinics",
+		"club": "SYD",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"when": {"opp_deck": "GWS"},
+		"title": ["The fight for the west"],
+		"text": ["The Giants have stepped up junior clinics in Western Sydney. The community department wants three senior players out there for a day to show the kids the Swans are their club too."],
+		"choices": [
+			{"key": "seniors", "label": "Send three seniors",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The senior players went out west for the club"}, {"op": "forgo_xp", "d": 3, "who": "side"}, {"op": "odds", "chance": 10, "hit": [{"op": "heavy_legs", "who": "side"}], "miss": []}],
+			 "result": "The kids swarm the stars. The seniors come back tired."},
+			{"key": "rookies", "label": "Send the rookies",
+			 "effects": [{"op": "morale", "d": 1, "who": "all"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "The rookies have a ball. Nobody out west knows who they are."}
+		]
+	},
+	{
+		"id": "syd_eagles_grudge",
+		"club": "SYD",
+		"controversy": false,
+		"category": "rivals",
+		"subject": {"kind": "club"},
+		"when": {"opp_deck": "WCE"},
+		"title": ["The Eagles again"],
+		"text": ["Games against West Coast have a habit of coming down to a kick, and the players know it. The press calls it the closest rivalry going."],
+		"choices": [
+			{"key": "drill", "label": "Train for the last two minutes",
+			 "effects": [{"op": "xp", "d": 3, "who": "side"}, {"op": "odds", "chance": 15, "hit": [{"op": "heavy_legs", "who": "side"}], "miss": []}],
+			 "result": "A week of close-game drills. It's a hard week on the legs."},
+			{"key": "normal", "label": "Treat it as any other game",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "morale", "d": -1, "who": "all"}],
+			 "result": "A normal week. Some of the group feel the occasion was undersold."}
+		]
+	},
+	{
+		"id": "syd_hawks_hoodoo",
+		"club": "SYD",
+		"controversy": false,
+		"category": "rivals",
+		"subject": {"kind": "club"},
+		"when": {"opp_deck": "HAW"},
+		"title": ["Do the Hawks have our number?"],
+		"text": ["The papers are running the old line that Hawthorn beat Sydney when it matters, and a senior player admits the group carries it."],
+		"choices": [
+			{"key": "bury", "label": "Name it and bury it",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The group faced the Hawthorn question head on"}, {"op": "morale", "d": 3, "who": "side"}, {"op": "loss_sting", "chance": 30, "d": -4, "who": "side"}],
+			 "result": "It's out in the open. Now the group has to back it up."},
+			{"key": "none", "label": "There's no hoodoo",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The coach kept the focus on this week's job"}, {"op": "slow_start", "chance": 15, "who": "side"}],
+			 "result": "You brush it off in the press. Some of the players aren't so sure."}
+		]
+	},
+	{
+		"id": "syd_magpie_bogey",
+		"club": "SYD",
+		"controversy": false,
+		"category": "rivals",
+		"subject": {"kind": "club"},
+		"when": {"opp_deck": "COL"},
+		"title": ["Scared of black and white?"],
+		"text": ["The Magpie army will fill the ground, and a radio host asks whether the Swans are scared of Collingwood. The old bogey talk is back."],
+		"choices": [
+			{"key": "change", "label": "Change the plan for them",
+			 "effects": [{"op": "xp", "d": 2, "who": "side"}, {"op": "slow_start", "chance": 20, "who": "side"}],
+			 "result": "A new plan for one opponent. The group is still learning it at the first bounce."},
+			{"key": "back", "label": "Back our game",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The club trusted its own game against the Pies"}, {"op": "loss_sting", "chance": 30, "d": -3, "who": "side"}],
+			 "result": "Same plan, same players. If it goes wrong, the talk gets louder."}
+		]
+	},
+	{
+		"id": "syd_cricket_ground",
+		"club": "SYD",
+		"controversy": false,
+		"category": "members",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["The cricket's on"],
+		"text": ["The cricket has the SCG locked up, so the side is training at a suburban ground with a bumpy surface and no gym on site. The players are grumbling."],
+		"choices": [
+			{"key": "bus", "label": "Bus them to a proper facility",
+			 "effects": [{"op": "xp", "d": 2, "who": "side"}, {"op": "odds", "chance": 20, "hit": [{"op": "heavy_legs", "who": "side"}], "miss": []}, {"op": "board", "d": -1, "was": "funds"}],
+			 "result": "Good work done, and an hour each way in Sydney traffic."},
+			{"key": "make", "label": "Make do",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The group rolled its sleeves up on a rough ground"}, {"op": "forgo_xp", "d": 2, "who": "side"}, {"op": "odds", "chance": 10, "hit": [{"op": "heavy_legs", "who": "side"}], "miss": []}],
+			 "result": "Nobody loves the surface, but nobody whinges either."}
+		]
+	},
+	{
+		"id": "syd_south_roots",
+		"club": "SYD",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["A visit to the old South"],
+		"text": ["The Melbourne supporters, many from old South Melbourne families, want the team to visit the old Lake Oval grandstand the day before the next game in Melbourne. It means a long afternoon on a short trip."],
+		"choices": [
+			{"key": "home", "label": "Take them home",
+			 "effects": [{"op": "morale", "d": 3, "who": "all"}, {"op": "culture", "strand": "together", "d": 2, "why": "The players saw where the club began"}, {"op": "forgo_xp", "d": 2, "who": "side"}, {"op": "odds", "chance": 15, "hit": [{"op": "heavy_legs", "who": "side"}], "miss": []}],
+			 "result": "The old South families are thrilled. The players are a bit tired."},
+			{"key": "hotel", "label": "Hotel and recovery",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "The legs are right for the game. The old supporters feel forgotten."}
+		]
+	},
+	{
+		"id": "syd_keep_south",
+		"club": "SYD",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["A game back in Melbourne"],
+		"text": ["An old South Melbourne supporters' group has written to the board: the club has forgotten where it came from. They want one home game a year played in Melbourne."],
+		"choices": [
+			{"key": "give", "label": "Give them a game in Melbourne",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The old South members got a home game back"}, {"op": "heavy_legs", "who": "side"}, {"op": "board", "d": -2, "was": "funds"}],
+			 "result": "The old members are thrilled. The Sydney commercial team is not, and the side travels for a home game."},
+			{"key": "sydney", "label": "We're Sydney now",
+			 "effects": [{"op": "board", "d": 2}, {"op": "culture", "strand": "together", "d": -2, "why": "The old South members felt cut loose"}, {"op": "odds", "chance": 40, "hit": [{"op": "board", "d": -3, "was": "members"}], "miss": [], "hit_result": "The Melbourne members drifted away."}],
+			 "result": "Every home game stays at the SCG. The letter goes in a drawer."}
+		]
+	},
+	{
+		"id": "syd_riverina_trip",
+		"club": "SYD",
+		"controversy": false,
+		"category": "community",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["Up the road to the Riverina"],
+		"text": ["The league wants a practice match in the Riverina, the heartland of footy in New South Wales. Big crowd, small ground, long bus trip."],
+		"choices": [
+			{"key": "best", "label": "Take the best side",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "morale", "d": 2, "who": "all"}, {"op": "odds", "chance": 15, "hit": [{"op": "heavy_legs", "who": "side"}], "miss": [], "hit_result": "A hard country ground took a toll on the best players."}],
+			 "result": "The town turns out. The kids get their photos with the stars."},
+			{"key": "dev", "label": "Send a development side",
+			 "effects": [{"op": "xp", "d": 2, "who": "all"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "The young blokes get a run. The locals wanted the stars."}
+		]
+	},
+	{
+		"id": "syd_league_town",
+		"club": "SYD",
+		"controversy": false,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"title": ["A rugby league town"],
+		"text": ["The back pages are wall-to-wall rugby league this week. The media team says you'll get nothing unless a player does something eye-catching, like a beach photo shoot with a league star."],
+		"choices": [
+			{"key": "shoot", "label": "Do the shoot",
+			 "effects": [{"op": "board", "d": 2}, {"op": "forgo_xp", "d": 1, "who": "side"}, {"op": "odds", "chance": 10, "hit": [{"op": "culture", "strand": "standards", "d": -1, "why": "The group saw the shoot as a sideshow"}], "miss": []}],
+			 "result": "The Swans make the paper. A half-day goes on the beach."},
+			{"key": "footy", "label": "Let the footy do the talking",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The club kept its mind on football"}, {"op": "board", "d": -2, "was": "sponsors"}],
+			 "result": "Nothing in the papers. The commercial team wanted the exposure."}
+		]
+	},
+	{
+		"id": "syd_harbour_life",
+		"club": "SYD",
+		"controversy": false,
+		"category": "training",
+		"subject": {"kind": "club"},
+		"title": ["Beach or gym?"],
+		"text": ["It's a heatwave and the beach is five minutes away. The players want to swap a gym session for an ocean swim and a coffee at Bondi. The fitness staff say the program is the program."],
+		"choices": [
+			{"key": "beach", "label": "Beach session",
+			 "effects": [{"op": "morale", "d": 3, "who": "side"}, {"op": "fresh", "who": "side"}, {"op": "forgo_xp", "d": 2, "who": "side"}],
+			 "result": "Salt water and a flat white. The gym work waits."},
+			{"key": "gym", "label": "Gym as planned",
+			 "effects": [{"op": "xp", "d": 2, "who": "side"}, {"op": "morale", "d": -2, "who": "side"}],
+			 "result": "The work gets done. It's 38 degrees and everyone knows it."}
+		]
+	},
+	{
+		"id": "syd_local_junior",
+		"club": "SYD",
+		"controversy": false,
+		"category": "selection",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["Our own Sydney kid"],
+		"text": ["A Sydney junior the club has coached since he was fourteen is now rated by rival recruiters. To be sure of him, you'd have to spend your first pick well before most clubs would take him."],
+		"choices": [
+			{"key": "first", "label": "Take him with our first pick",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The club kept its own Sydney kid"}, {"op": "morale", "d": 1, "who": "all"}, {"op": "board", "d": -1, "was": "list"}],
+			 "result": "He stays home. A higher-rated player goes elsewhere."},
+			{"key": "gamble", "label": "Gamble he slides to our second pick",
+			 "effects": [{"op": "odds", "chance": 50, "hit": [{"op": "culture", "strand": "together", "d": -2, "why": "The juniors staff watched their kid go to a rival"}, {"op": "board", "d": -1, "was": "members"}], "miss": [{"op": "board", "d": 3, "was": "list"}], "hit_result": "A rival took him first. The juniors staff are crushed.", "miss_result": "He slid to your second pick, and the first went on the best player left."}],
+			 "result": "You hold your nerve on draft night."}
+		]
+	},
+	{
+		"id": "syd_concession_critics",
+		"club": "SYD",
+		"controversy": false,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"title": ["Were they gifts?"],
+		"text": ["Rival club bosses say the league's help for the northern clubs hands Sydney cheap stars and an easier pay packet. A journalist asks whether your best young players were gifts."],
+		"choices": [
+			{"key": "fight", "label": "We pay for every one of them",
+			 "effects": [{"op": "morale", "d": 2, "who": "all"}, {"op": "board", "d": 1}, {"op": "slow_start", "chance": 15, "who": "side"}, {"op": "odds", "chance": 20, "hit": [{"op": "board", "d": -3}], "miss": [], "hit_result": "The league took a harder line, and the board blamed the noise."}],
+			 "result": "Sydney is expensive, you say; ask any player. It runs all week."},
+			{"key": "league", "label": "It's the league's call",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The coach kept out of a fight with the league"}, {"op": "morale", "d": -1, "who": "all"}, {"op": "board", "d": -1}],
+			 "result": "The story dies. The young players heard their coach didn't defend them."}
+		]
+	},
+	{
+		"id": "syd_marquee_recruit",
+		"club": "SYD",
+		"controversy": false,
+		"category": "selection",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["Luring a star north"],
+		"text": ["A star forward at a Melbourne club is tempted by the harbour and a long contract. Getting him means a huge offer, and the leaders are asking if one player is worth it."],
+		"choices": [
+			{"key": "allin", "label": "Go all in",
+			 "effects": [{"op": "morale", "d": 2, "who": "side"}, {"op": "board", "d": 2}, {"op": "culture", "strand": "together", "d": -1, "why": "Teammates wondered about their own deals"}],
+			 "result": "He signs on the harbour. The cap is squeezed and the change rooms notice."},
+			{"key": "walk", "label": "Walk away",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The club kept the list balanced"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "He goes elsewhere. The members wanted the splash."}
+		]
+	},
+	{
+		"id": "syd_go_home",
+		"club": "SYD",
+		"controversy": false,
+		"category": "family",
+		"phase": ["season_end"],
+		"subject": {"kind": "player", "pick": "random", "where": {"age_max": 21, "real_named": false}},
+		"title": ["The go-home factor"],
+		"text": ["{name} is homesick. His family is on the other side of the country, the Sydney rent is brutal and his manager is hinting at a trade home."],
+		"choices": [
+			{"key": "extend", "label": "Extend him now, with help on housing",
+			 "effects": [{"op": "trust", "d": 2, "why": "You backed him with a new deal"}, {"op": "board", "d": -2, "was": "funds"}],
+			 "result": "{first} signs on. Others on the list want the same deal."},
+			{"key": "week", "label": "Give him a week at home",
+			 "effects": [{"op": "morale", "d": 3, "who": "subject"}, {"op": "forgo_xp", "d": 3, "who": "subject"}, {"op": "odds", "chance": 30, "hit": [{"op": "trust", "d": -3, "why": "He still asked about a trade home"}], "miss": [], "hit_result": "He came back and still asked about a trade."}],
+			 "result": "{first} flies home and comes back brighter."},
+			{"key": "shop", "label": "Let the manager shop him",
+			 "effects": [{"op": "board", "d": 2, "was": "list"}, {"op": "culture", "strand": "together", "d": -1, "why": "The group watched a teammate shopped around"}],
+			 "result": "The manager makes calls. The club will get something back."}
+		]
+	},
+	{
+		"id": "syd_wa_recruits",
+		"club": "SYD",
+		"controversy": false,
+		"category": "selection",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["The West Australian connection"],
+		"text": ["The recruiters say the best value in this draft is in Western Australia. The list manager points out the last batch of West Australians all went home."],
+		"choices": [
+			{"key": "wa", "label": "Back the WA kids",
+			 "effects": [{"op": "board", "d": 2, "was": "list"}, {"op": "odds", "chance": 30, "hit": [{"op": "culture", "strand": "together", "d": -1, "why": "One of the WA kids asked to go home"}], "miss": []}],
+			 "result": "A strong haul from the west. Time will tell if they stay."},
+			{"key": "local", "label": "Stay local and northern",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The club backed its own juniors"}, {"op": "board", "d": -1, "was": "list"}],
+			 "result": "The juniors staff are happy. The crop is a little weaker."}
+		]
+	},
+	{
+		"id": "syd_league_flagship",
+		"club": "SYD",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["The league's flagship"],
+		"text": ["League headquarters wants to move a home game to a midweek night to fill a prime-time slot in the Sydney market. It leaves a five-day break."],
+		"choices": [
+			{"key": "do", "label": "Do it for the game",
+			 "effects": [{"op": "board", "d": 3}, {"op": "heavy_legs", "who": "side"}, {"op": "slow_start", "chance": 20, "who": "side"}],
+			 "result": "The league is grateful. The legs aren't."},
+			{"key": "keep", "label": "Ask to keep the weekend slot",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -2}],
+			 "result": "The weekend game stays. The league remembers who said no."}
+		]
+	},
+	{
+		"id": "syd_showman",
+		"club": "SYD",
+		"controversy": false,
+		"category": "media",
+		"subject": {"kind": "player", "pick": "highest:overall"},
+		"title": ["The showman"],
+		"text": ["{name} has become a celebrity: TV spots, a magazine shoot, a guest spot on a variety show. The crowds love him; the leaders say he's training like a celebrity too."],
+		"choices": [
+			{"key": "shine", "label": "Let him shine",
+			 "effects": [{"op": "board", "d": 3}, {"op": "morale", "d": 2, "who": "subject"}, {"op": "culture", "strand": "standards", "d": -2, "why": "A star was let off the track for the cameras"}, {"op": "odds", "chance": 25, "hit": [{"op": "forgo_xp", "d": 2, "who": "subject"}], "miss": [], "hit_result": "His training dropped off."}],
+			 "result": "{first} is everywhere. The leaders grit their teeth."},
+			{"key": "rein", "label": "Rein him in",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "Nobody is bigger than the club"}, {"op": "morale", "d": -3, "who": "subject"}, {"op": "trust", "d": -1, "why": "You cut back his outside work"}],
+			 "result": "The TV spots stop. {first} isn't happy about it."}
+		]
+	},
+	{
+		"id": "syd_brownlow_heritage",
+		"club": "SYD",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"title": ["A Brownlow club"],
+		"text": ["The club has produced more Brownlow medallists than most. A club legend and former medallist offers to talk to the midfield about doing the team things that win votes."],
+		"choices": [
+			{"key": "in", "label": "Have him in",
+			 "effects": [{"op": "morale", "d": 2, "who": "side"}, {"op": "culture", "strand": "standards", "d": 1, "why": "A medallist showed the mids how it's done"}, {"op": "forgo_xp", "d": 1, "who": "side"}],
+			 "result": "An afternoon of stories. The mids hang on every word."},
+			{"key": "plan", "label": "Keep the focus on the game plan",
+			 "effects": [{"op": "xp", "d": 1, "who": "side"}, {"op": "board", "d": -1}],
+			 "result": "The week stays on the plan. The legend is disappointed."}
+		]
+	},
+	{
+		"id": "syd_crowd_booing",
+		"club": "SYD",
+		"controversy": true,
+		"category": "media",
+		"subject": {"kind": "club"},
+		"title": ["Booed on every ground"],
+		"text": ["One of your Indigenous players has been booed at every away game for weeks. He isn't sleeping and has asked for a week off. The media can't stop talking about it."],
+		"choices": [
+			{"key": "stand", "label": "Stand with him, publicly",
+			 "effects": [{"op": "culture", "strand": "together", "d": 3, "why": "The club stood beside one of its own"}, {"op": "morale", "d": 2, "who": "side"}, {"op": "forgo_xp", "d": 2, "who": "side"}, {"op": "board", "d": -1, "was": "sponsors"}],
+			 "result": "The club speaks up. A week of headlines follows, and the group is right behind him."},
+			{"key": "quiet", "label": "Give him the week, say little",
+			 "effects": [{"op": "board", "d": 1, "was": "sponsors"}, {"op": "culture", "strand": "together", "d": -1, "why": "The group wanted the club to speak up"}],
+			 "result": "He gets his week away. The players wanted more from the club."},
+			{"key": "play", "label": "Play him; footy is the answer",
+			 "effects": [{"op": "xp", "d": 2, "who": "side"}, {"op": "morale", "d": -2, "who": "side"}, {"op": "odds", "chance": 30, "hit": [{"op": "culture", "strand": "together", "d": -2, "why": "He stepped away for longer"}], "miss": []}],
+			 "result": "He plays. The week runs as planned, but he isn't right."}
+		]
+	}
+]

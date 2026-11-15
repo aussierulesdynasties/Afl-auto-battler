@@ -258,6 +258,12 @@ static func eligible_subject(t: Dictionary, ctx: Dictionary, story: Dictionary, 
 	var id := str(t["id"])
 	if bool(t.get("scripted", false)):
 		return {}   # dealt by the game itself (the result of a role trial), never drawn
+	# A club deck's card comes up only for its club; a controversy only with the switch on.
+	var deck := str(t.get("club", ""))
+	if deck != "" and deck != str((ctx.get("club", {}) as Dictionary).get("club_deck", "")):
+		return {}
+	if bool(t.get("controversy", false)) and int((ctx.get("club", {}) as Dictionary).get("controversies", 1)) == 0:
+		return {}
 	if not (t.get("phase", ["regular"]) as Array).has(str(ctx.get("phase", "regular"))):
 		return {}
 	# A week off in the finals: only the cards written for it.
@@ -788,6 +794,15 @@ static func _effect_parts(e: Dictionary, facts: Dictionary) -> Array:
 		var k := "gain" if d > 0 or op in ["xp", "fresh"] else "cost"
 		return [[k, str(e["line"])]]
 	match op:
+		"odds":
+			# A roll: each outcome under its own gain or cost, with its odds.
+			var rolled: Array = []
+			var hit := int(e.get("chance", 0))
+			for side in [["hit", "%s chance: " % _pct(hit)], ["miss", "%s chance: " % _pct(100 - hit)]]:
+				for ne in e.get(side[0], []):
+					for np in _effect_parts(ne, facts):
+						rolled.append([np[0], side[1] + str(np[1])])
+			return rolled
 		"delegate":
 			# Left to the captain: where the group stands now, then what each
 			# outcome does, each under its own gain or cost.

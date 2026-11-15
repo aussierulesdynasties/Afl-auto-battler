@@ -69,7 +69,21 @@ const OPS := {
 	# The development talk (T5.r93): games in his new position promised if it
 	# takes (a role trial when it does), or told it is for depth (no promise).
 	"dev_promise": true, "no_promise": true,
+	# A roll with its odds on the card (the club decks, row 157): `chance` percent of
+	# the time the `hit` effects land, otherwise the `miss` effects.
+	"odds": false,
 }
+## The odds a rolled outcome may carry, in percent.
+const ODDS_MIN := 5
+const ODDS_MAX := 95
+## Each club's own deck (TODO row 157), one file per deck: every card names its
+## deck in `club` and comes up only for that club, in any era. A card marked
+## `controversy` waits behind the Controversies switch.
+const CLUBS_DIR := "res://data/stories/clubs/"
+## The decks: every club's code, with the Brisbane Bears apart from the Lions
+## (ClubStories.deck_code).
+const CLUB_DECKS := ["ADE", "BRB", "BRL", "CANB", "CAR", "COL", "ESS", "FIT", "FRE", "GCS", "GEE",
+		"GWS", "HAW", "MEL", "NTH", "PAD", "RIC", "STK", "SYD", "TAS", "WBD", "WCE"]
 ## The biggest step a card may give a culture strand, and the most weeks of
 ## running or drilling it may add or take.
 const CULTURE_MAX := 3
@@ -140,7 +154,10 @@ const CLUB_FACTS := ["club", "opp", "round", "year", "losing_run", "winning_run"
 		# ("eliminated", "premier", "runner_up"), the final you lost, and the Grand
 		# Final's margin, the club's history and your best player, each as a line.
 		"underdog", "years_since_final", "last_final_year", "forecast_line",
-		"result", "lost_final", "lost_prelim", "margin", "margin_line", "history_line", "best_line"]
+		"result", "lost_final", "lost_prelim", "margin", "margin_line", "history_line", "best_line",
+		# The club decks: your deck and this week's opponent's (ClubStories.deck_code),
+		# and whether the Controversies switch is on (1) or off (0).
+		"club_deck", "opp_deck", "controversies"]
 
 const DEFAULTS := {"weight": 1, "cooldown": 40, "subject_cooldown": 8, "per_season": 0,
 		"phase": ["regular"], "default": -1, "bye": false, "priority": false, "always": false, "topical": false}
@@ -156,6 +173,7 @@ static func all() -> Array:
 	if _cache.is_empty():
 		_cache = load_dir(DIR)
 		_cache.append_array(load_file(INTERNATIONAL_FILE))
+		_cache.append_array(club_decks())
 	return _cache
 
 
@@ -189,6 +207,14 @@ static func load_file(path: String) -> Array:
 		for t in parsed:
 			if t is Dictionary:
 				out.append(normalise(t))
+	return out
+
+
+## Every club's deck (CLUBS_DIR), one file each, named by its code.
+static func club_decks() -> Array:
+	var out := []
+	for code in CLUB_DECKS:
+		out.append_array(load_file("%s%s.json" % [CLUBS_DIR, str(code).to_lower()]))
 	return out
 
 
@@ -258,6 +284,11 @@ static func _check_card(t: Dictionary) -> Array:
 	if kind != "player" and kind != "club":
 		errs.append("%s: subject kind must be player or club" % id)
 	var player := kind == "player"
+	var deck := str(t.get("club", ""))
+	if t.has("club") and not CLUB_DECKS.has(deck):
+		errs.append("%s: unknown club deck '%s'" % [id, deck])
+	if bool(t.get("controversy", false)) and deck == "":
+		errs.append("%s: only a club deck's card sits behind the Controversies switch" % id)
 	if bool(t.get("private", false)) and not player:
 		errs.append("%s: a private card must be about a player" % id)
 	for ph in t.get("phase", []):
@@ -378,6 +409,20 @@ static func _check_effect(where: String, e, player: bool) -> Array:
 			errs.append("%s: a role trial of %d games is outside 1..%d" % [where, wk, TRIAL_GAMES_MAX])
 	if op == "flag" and str(e.get("name", "")) == "":
 		errs.append("%s: a flag needs a name" % where)
+	if op == "odds":
+		var oc := int(e.get("chance", 0))
+		if oc < ODDS_MIN or oc > ODDS_MAX:
+			errs.append("%s: odds of %d percent are outside %d..%d" % [where, oc, ODDS_MIN, ODDS_MAX])
+		if (e.get("hit", []) as Array).is_empty() and (e.get("miss", []) as Array).is_empty():
+			errs.append("%s: a roll needs an outcome" % where)
+		for side in ["hit", "miss"]:
+			for ne in (e.get(side, []) as Array):
+				if ["odds", "delegate"].has(str((ne as Dictionary).get("op", ""))):
+					errs.append("%s: a rolled outcome cannot roll or delegate again" % where)
+				else:
+					errs.append_array(_check_effect(where + "/" + side, ne, player))
+		for field in ["hit_result", "miss_result"]:
+			errs.append_array(_check_text(where, str(e.get(field, "")), player))
 	if op == "delegate":
 		if (e.get("held", []) as Array).is_empty() and (e.get("failed", []) as Array).is_empty():
 			errs.append("%s: a dispute left to the captain needs an outcome" % where)
