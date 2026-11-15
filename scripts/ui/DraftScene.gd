@@ -595,6 +595,13 @@ func _show_first_offseason() -> void:
 	var close_l := UiKit.lbl(close_text, UiKit.SECONDARY, UiKit.MUTED)
 	close_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(close_l)
+	# Your challenge, said here too: free agency is where a Rebuild's rule bites.
+	var rule := Challenge.stated_line(GameState) if Challenge.kind(GameState) in ["youth", "rebuild"] else ""
+	if rule != "":
+		var said := UiKit.lbl(rule, UiKit.SMALL, UiKit.EMPH)
+		said.name = "ChallengeRule"
+		said.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(said)
 	var trades := UiKit.btn("Trades & Contracts", UiKit.NAME)
 	trades.name = "FirstOffseasonTrades"
 	trades.custom_minimum_size = Vector2(0, 48)
