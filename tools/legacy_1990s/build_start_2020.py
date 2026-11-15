@@ -154,6 +154,7 @@ def draft_type(d):
 
 
 def build(by_year, rated, lists):
+    hon = B.honours(by_year, rated, DATA_SEASON)
     last_of = last_listed()
     careers = careers_before(by_year)
     drafts = load_drafts()
@@ -178,7 +179,7 @@ def build(by_year, rated, lists):
         if row_ds and row_ds[1] > 0:
             cells = B.stat_cells(row_ds[2])
             players.append(dict(cells, club=club, num=L["num"], last=L["last"], first=L["first"],
-                                src=str(DATA_SEASON), real_pos=L.get("position", ""), dob=L["dob"],
+                                src=str(DATA_SEASON), real_pos=B.listed_pos(L, row_ds[2]), dob=L["dob"],
                                 age=age_at(L["dob"]), height_cm=L["height_cm"], weight_kg=L["weight_kg"],
                                 debut=debut, height_source="draftguru" if L["height_cm"] else ""))
             history.append({"club": club, "num": L["num"],
@@ -186,14 +187,14 @@ def build(by_year, rated, lists):
                             "draft_year": d["year"] if d else "", "draft_type": draft_type(d),
                             "draft_pick": d["pick"] if d else "", "seasons": ";".join(seasons),
                             "career": B.stints(careers.get(pid, [])), "peak": peak or "",
-                            "last_season": last_of(L)})
+                            "honours": "%.3g" % hon[pid] if hon.get(pid) else "", "last_season": last_of(L)})
             if L["list"] in ("rookie", "cat_b"):
                 list_types.append({"club": club, "first": L["first"], "last": L["last"], "dob": L["dob"],
                                    "list": L["list"], "source_url": L["source_url"].split(" | ")[0],
                                    "checked": L["checked"]})
         else:
             additions.append({"first": L["first"], "last": L["last"], "dob": L["dob"], "club": club,
-                              "position": L.get("position", ""), "height_cm": L["height_cm"], "list": L["list"],
+                              "position": B.listed_position(L), "height_cm": L["height_cm"], "list": L["list"],
                               "peak": peak or "", "last_season": last_of(L), "source_url": L["source_url"],
                               "checked": L["checked"]})
             latest = None
@@ -378,7 +379,7 @@ def main():
     B.write(os.path.join(OUT_DIR, "players_2020.csv"), B.ENRICHED, players)
     B.write(os.path.join(OUT_DIR, "history_2020.csv"),
             ["club", "num", "slug", "draft_year", "draft_type", "draft_pick", "seasons", "career", "peak",
-             "last_season"], history)
+             "honours", "last_season"], history)
     B.write(os.path.join(OUT_DIR, "list_additions_2020.csv"),
             ["first", "last", "dob", "club", "position", "height_cm", "list", "peak", "last_season", "source_url",
              "checked"], additions)
@@ -390,12 +391,15 @@ def main():
           % (gone.count(""), len(gone) - gone.count("")))
     print("players %d, additions %d (%d with an earlier season), rookie/cat B who played %d"
           % (len(players), len(additions), len(add_stats), len(list_types)))
-    coaches, captains = build_staff(a.cache, lists)
-    B.write(os.path.join(STAFF_DIR, "coaches_2020.csv"), ["club", "role", "name", "note", "source_url", "checked"],
-            coaches)
-    B.write(os.path.join(STAFF_DIR, "captains_2020.csv"),
-            ["club", "role", "first", "last", "draftguru_id", "source_url", "checked"], captains)
-    print("coaches %d, leaders %d" % (len(coaches), len(captains)))
+    if os.path.exists(os.path.join(a.cache, "en.wikipedia.org_wiki_2020_AFL_season.html")):
+        coaches, captains = build_staff(a.cache, lists)
+        B.write(os.path.join(STAFF_DIR, "coaches_2020.csv"), ["club", "role", "name", "note", "source_url", "checked"],
+                coaches)
+        B.write(os.path.join(STAFF_DIR, "captains_2020.csv"),
+                ["club", "role", "first", "last", "draftguru_id", "source_url", "checked"], captains)
+        print("coaches %d, leaders %d" % (len(coaches), len(captains)))
+    else:
+        print("no 2020 season page in %s: coaches_2020.csv and captains_2020.csv kept as they are" % a.cache)
     if a.report:
         path = os.path.join(ROOT, "docs", "research", "LEGACY_ERA_REPORT_2020.md")
         with open(path, "w", newline="\n", encoding="utf-8") as fh:

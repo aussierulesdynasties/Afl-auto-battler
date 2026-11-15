@@ -116,18 +116,17 @@ const ROLE_SHORT_TO_POS := {"RUCK": "RUC", "MID": "MID", "DEF": "DEF", "FWD": "F
 ## are projections (no sample to shrink); players who have completed a
 ## simulated season carry their bumped "sample" so a small 2026 games count
 ## cannot suppress them forever. Everything else keeps its real season games.
-## A short 2026 says little of a proven player (director, 2026-10-08: an
-## injury year must not sink Treloar, Hogan or Darcy). Under RECORD_SHORT
-## games, his rating is his record: the data season's OVR and the two before
-## it (2026, 2025 and 2024 for today's data) weighted by the games behind each
-## and by how recent (RECORD_W, by years before the data season). Only ever a lift, and only
-## when the record clearly says more (RECORD_LIFT); his attributes are refitted
-## to it and his rating then counts a full sample. Real players only, once,
+## Body of work (director 2026-11-15, "3 seasons, every start"): a real
+## player is rated on his last three seasons, not the data season alone - the
+## data season and the two before it (2026, 2025 and 2024 for today's data),
+## each weighted by the games behind it and by how recent (RECORD_W, by years
+## before the data season). It moves him up or down; a player with no earlier
+## season on record keeps his one season. His attributes are refitted to it and
+## his rating then counts at least a full sample (an injury year must not sink
+## Treloar, Hogan or Darcy, director 2026-10-08). Real players only, once,
 ## when the data loads (GameDB), after their history.
 const RECORD_W := {0: 1.0, 1: 0.75, 2: 0.5}
 const RECORD_SHORT := 14.0
-const RECORD_LIFT := 3.0
-const RECORD_SHARE := 0.6
 
 
 ## `season` is the data season (GameDB.DATA_SEASON): the one his numbers are from.
@@ -146,21 +145,17 @@ static func record_level(p: Dictionary, season := 2026) -> float:
 
 
 static func rate_on_record(p: Dictionary, season := 2026) -> void:
-	if bool(p.get("generated", false)) or bool(p.get("projected", false)) \
-			or float(p.get("gm", 0.0)) >= RECORD_SHORT or not p.has("attr"):
+	if bool(p.get("generated", false)) or bool(p.get("projected", false)) or not p.has("attr"):
 		return
 	var level := record_level(p, season)
-	if level < float(p.get("overall", 0)) + RECORD_LIFT:
+	if level < 0.0 or absf(level - float(p.get("overall", 0))) < 0.5:
 		return
 	var role := str(p.get("role", "MID"))
 	p["season_overall"] = int(p.get("overall", 0))   # what the data season alone said
-	# Most of the way to his record, not all of it: a long layoff still costs
-	# something, and a full lift crowded midfielders' best games further above
-	# everyone else's (the rating-parity check).
-	level = float(p.get("overall", 0)) + RECORD_SHARE * (level - float(p.get("overall", 0)))
-	p["attr"] = Prospects.fit_attributes(p["attr"], role, level, RECORD_SHORT)
-	p["sample"] = RECORD_SHORT
-	p["overall"] = rate_overall(p["attr"], role, RECORD_SHORT)
+	var games := maxf(RECORD_SHORT, effective_games(p))
+	p["attr"] = Prospects.fit_attributes(p["attr"], role, level, games)
+	p["sample"] = games
+	p["overall"] = rate_overall(p["attr"], role, games)
 	p["value"] = salary_value(p["overall"])
 	p["rated_on_record"] = true
 
@@ -455,10 +450,21 @@ const ATTR_ADJUSTMENTS := {
 ## him MID second when his numbers clear that gate). Only a ruck reading
 ## stands, since it is gated on real hit-out volume. Listed midfielders and
 ## rucks, and players with no listing, keep the numbers' reading.
+## A past start (Legacy) also keeps a listed midfielder in the midfield
+## (listed_lines): its listing is the position he is known for
+## (data/legacy/positions.csv), and before the 2000s most of the numbers that
+## read a defender (rebound 50s, one percenters) are estimates (director
+## 2026-11-15: "some are out of position like Garry Lyon in defence").
 ## Mirrored in tools/sim_harness.py.
+const TODAY_LISTED_LINES := ["FWD", "DEF"]
+const PAST_LISTED_LINES := ["FWD", "DEF", "MID"]
+## GameDB.reload sets it: PAST_LISTED_LINES for a past start.
+static var listed_lines: Array = TODAY_LISTED_LINES
+
+
 static func listed_primary(p: Dictionary, role: String) -> String:
 	var listed := str(p.get("real_pos", ""))
-	if (listed == "FWD" or listed == "DEF") and role != "RUCK":
+	if listed in listed_lines and role != "RUCK":
 		return listed
 	return role
 

@@ -149,6 +149,7 @@ def last_of(L, last):
 
 
 def build(rated, by_year):
+    hon = BS.honours(by_year, rated, DATA_SEASON)
     lists = [r for r in read_csv("2000s", "lists.csv") if int(r["year"]) == YEAR]
     last = last_seasons()
     careers = careers_before(by_year)
@@ -195,7 +196,7 @@ def build(rated, by_year):
         dy, dt, dp = draft_of(L, drafts)
         if row and row[1] > 0:
             players.append(dict(BS.stat_cells(row[2]), club=club, num=L["num"], last=L["last"],
-                                first=L["first"], src=str(DATA_SEASON), real_pos="", dob=L["dob"],
+                                first=L["first"], src=str(DATA_SEASON), real_pos=BS.listed_pos(L, row[2]), dob=L["dob"],
                                 age=age_at(L["dob"]), height_cm=L["height_cm"], weight_kg=L["weight_kg"],
                                 debut="01-04-%d" % first_year if first_year else "",
                                 height_source="draftguru" if L["height_cm"] else ""))
@@ -203,13 +204,13 @@ def build(rated, by_year):
                             "slug": pid.rsplit("/", 1)[-1].replace(".html", ""),
                             "draft_year": dy, "draft_type": dt, "draft_pick": dp,
                             "seasons": ";".join(seasons), "career": BS.stints(car), "peak": peak or "",
-                            "last_season": last_of(L, last)})
+                            "honours": "%.3g" % hon[pid] if hon.get(pid) else "", "last_season": last_of(L, last)})
             if L["list"] == "rookie":
                 list_types.append({"club": club, "first": L["first"], "last": L["last"], "dob": L["dob"],
                                    "list": "rookie", "source_url": L["source_url"], "checked": L["checked"]})
         else:
             additions.append({"first": L["first"], "last": L["last"], "dob": L["dob"], "club": club,
-                              "position": "", "height_cm": L["height_cm"], "list": L["list"],
+                              "position": BS.listed_position(L), "height_cm": L["height_cm"], "list": L["list"],
                               "peak": peak or "", "last_season": last_of(L, last),
                               "source_url": L["source_url"], "checked": L["checked"]})
             for y in (DATA_SEASON - 1, DATA_SEASON - 2):
@@ -313,7 +314,7 @@ def era_report(players, by_year, rated):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--cache", required=True)
+    ap.add_argument("--cache", help="coach and captain pages; left out, coaches_2000.csv and captains_2000.csv are kept as they are")
     ap.add_argument("--report", action="store_true")
     a = ap.parse_args()
     by_year = BS.load_seasons()
@@ -323,7 +324,7 @@ def main():
     os.makedirs(OUT_DIR, exist_ok=True)
     BS.write(os.path.join(OUT_DIR, "players_2000.csv"), BS.ENRICHED, players)
     BS.write(os.path.join(OUT_DIR, "history_2000.csv"),
-             ["club", "num", "slug", "draft_year", "draft_type", "draft_pick", "seasons", "career", "peak", "last_season"], history)
+             ["club", "num", "slug", "draft_year", "draft_type", "draft_pick", "seasons", "career", "peak", "honours", "last_season"], history)
     BS.write(os.path.join(OUT_DIR, "list_additions_2000.csv"),
              ["first", "last", "dob", "club", "position", "height_cm", "list", "peak", "last_season", "source_url", "checked"],
              additions)
@@ -333,10 +334,11 @@ def main():
         BS.write(lt, ["club", "first", "last", "dob", "list", "source_url", "checked"], list_types)
     elif os.path.exists(lt):
         os.remove(lt)
-    BS.write(os.path.join(STAFF_DIR, "coaches_2000.csv"), ["club", "role", "name", "note", "source_url", "checked"],
-             coaches(a.cache))
-    BS.write(os.path.join(STAFF_DIR, "captains_2000.csv"),
-             ["club", "role", "first", "last", "draftguru_id", "source_url", "checked"], captains(a.cache, lists))
+    if a.cache:
+        BS.write(os.path.join(STAFF_DIR, "coaches_2000.csv"), ["club", "role", "name", "note", "source_url", "checked"],
+                 coaches(a.cache))
+        BS.write(os.path.join(STAFF_DIR, "captains_2000.csv"),
+                 ["club", "role", "first", "last", "draftguru_id", "source_url", "checked"], captains(a.cache, lists))
     print("players %d, additions %d (%d with an earlier season), rookies who played %d"
           % (len(players), len(additions), len(add_stats), len(list_types)))
     if a.report:
