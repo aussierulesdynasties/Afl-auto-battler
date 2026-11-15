@@ -69,6 +69,21 @@ func _lines(res: Dictionary) -> Array:
 
 func _test_feed(res: Dictionary) -> void:
 	var lines := _lines(res)
+	# Copy voice pass 3 (row 132): the sim's own break and free-kick lines use one mark, " · ", and
+	# the feed's break parse (MatchNotes._break_words) still reads the sim's line as a break.
+	var breaks := 0
+	for ev in res["events"]:
+		var raw := str(ev.get("text", ""))
+		if str(ev.get("kind", "")) == "quarter" and raw.begins_with("End of Q"):
+			breaks += 1
+			var l := MatchNotes.feed_line(ev, str(res["home"]), str(res["away"]))
+			_check(raw.begins_with("End of Q%d · " % int(ev.get("q", 0))) and not raw.contains("|") and not raw.contains(" - ")
+					and not str(l.get("text", "")).begins_with("End of"),
+					"A sim break line reads End of Q, one mark, and the feed turns it into the break's name (%s -> %s)" % [raw, str(l.get("text", ""))])
+		if raw.contains("free kick to"):
+			_check(raw.contains(" · free kick to ") and not raw.contains(" - free") and not raw.contains("— free"),
+					"A free kick line uses the one mark (%s)" % raw)
+	_check(breaks >= 3, "The sim emits its quarter breaks as End of Q lines (%d)" % breaks)
 	var goals := int(res["goals"][0]) + int(res["goals"][1])
 	var behinds := int(res["behinds"][0]) + int(res["behinds"][1])
 	_check(lines.size() <= goals + behinds + 12,
@@ -160,12 +175,19 @@ func _test_lead_and_breaks() -> void:
 			"A break states the score and the lead (%s)" % b)
 	_check(not b.to_lower().contains("def"), "A break never says defeated")
 	_check(MatchNotes.break_score("COL", "CAR", [2, 2], [1, 1]).ends_with("scores level."), "A level break")
-	var qt := MatchNotes.feed_line({"kind": "quarter", "q": 2, "text": "End of quarter 2 - ...",
+	var qt := MatchNotes.feed_line({"kind": "quarter", "q": 2, "text": "End of Q2 · ...",
 			"score": [30, 30]}, "COL", "CAR")
 	_check(str(qt["text"]) == "Half time: scores level", "A level half time (%s)" % str(qt["text"]))
-	var et := MatchNotes.feed_line({"kind": "quarter", "q": 5, "text": "Scores level at full time - we are going to extra time!",
+	var et := MatchNotes.feed_line({"kind": "quarter", "q": 5, "text": "Scores level at full time · we are going to extra time!",
 			"score": [60, 60]}, "COL", "CAR")
 	_check(str(et["text"]) == "Scores level at full time: extra time", "Extra time is called plainly")
+	# Row 132: the calls readout is in the coach's voice, "Our game plan", never "Your gameplan".
+	var now := [{"gameplan": 3.0, "traits": 0.0}, {"gameplan": -2.0, "traits": 0.0}]
+	var zero := [{"gameplan": 0.0, "traits": 0.0}, {"gameplan": 0.0, "traits": 0.0}]
+	var labels := CoachReport.impact_lines(now, zero, 0).map(func(l): return str(l["label"]))
+	_check(labels.has("Our game plan") and labels.has("Their game plan")
+			and not labels.any(func(l): return l.begins_with("Your") or l.contains("gameplan")),
+			"The calls readout says Our/Their game plan (%s)" % str(labels))
 
 
 func _test_quarter_facts(res: Dictionary) -> void:
@@ -345,7 +367,7 @@ func _test_rating() -> void:
 	_check(MatchNotes.rating_text(118) == "118", "Shown as a whole number")
 	_check(MatchNotes.legs_line(60.0, 60.0) == "Both midfields are %s." % MatchNotes.legs_word(60.0),
 			"Same legs on both sides are said once")
-	_check(MatchNotes.legs_line(100.0, 0.0) == "Your midfield is %s; theirs is %s."
+	_check(MatchNotes.legs_line(100.0, 0.0) == "Our midfield is %s; theirs is %s."
 			% [MatchNotes.legs_word(100.0), MatchNotes.legs_word(0.0)], "Different legs name both sides")
 	# Parity: across real simulated matches, each position's better games
 	# reach similar ratings, and forwards and defenders are sometimes a
