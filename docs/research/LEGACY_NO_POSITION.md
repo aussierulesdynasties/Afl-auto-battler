@@ -1,6 +1,6 @@
 # Legacy starts: players with no position on record
 
-Director 2026-11-15, "Source real positions": no source found names these players' position: Wikipedia, australianfootball.com, Blueseum, Demonwiki, the Australian Rules Football Wiki and footywire.com were each read. Director 2026-11-15: "I'll place them" (tools/legacy_1990s/positions_director.csv). Until he does, the game reads his recorded stats; that reading is the last column. Stats AFL Tables did not keep in that season count for nothing.
+Director 2026-11-15, "Source real positions": a player listed here has no position from any source read: Wikipedia, australianfootball.com, Blueseum, Demonwiki, the Australian Rules Football Wiki, footywire.com and footyinfo.com biographies. The director places any such player himself (2026-11-15: "I'll place them"; tools/legacy_1990s/positions_director.csv). Until he does, the game reads his recorded stats; that reading is the last column. Stats AFL Tables did not keep in that season count for nothing.
 
 ## 1990 start (rated on 1989)
 
