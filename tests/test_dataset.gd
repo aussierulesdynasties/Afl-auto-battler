@@ -28,9 +28,9 @@ const GOLDEN_REAL := "d4fd9cfddd165faddd875f60720392cc"
 ## main before the change (Linux: run_on_github run 43024085570). Removing
 ## the own plan (bug bash 5: rivals no longer build one) redrew the season:
 ## Windows from a local run on that branch, Linux from its CI (shard 6).
-## Row 199's first off-season changes the lists the season is played on, and
-## with them the feed lines the copy pass (#1613) reworded reach the print:
-## Windows from a local run, Linux from its CI.
+## The game plan retune after it (bug bash 5) redrew it again, and row 199's
+## first off-season changes the lists the season is played on: Windows from a
+## local run, Linux from its CI.
 ## Result keys added after the golden was taken that record who earned a
 ## call's credit, not what happened (row 144). "impact" and "plan_traits" were
 ## already in main's results, so they stay in the hash. "breeze_side" (the
