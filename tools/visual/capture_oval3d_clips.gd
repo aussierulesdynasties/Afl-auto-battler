@@ -49,9 +49,27 @@ func _run() -> void:
 	var path := str(args[2]) if args.size() > 2 else "res://assets/oval3d/player_average.glb"
 	var scene: Node3D = (load(path) as PackedScene).instantiate()
 	root.add_child(scene)
+	# CLIP_CLUB=<code> dresses him in that club's home kit through the game's own kit shader
+	# (Oval3D._kit), so the stills show the guernsey as the match draws it. Without it the GLB's
+	# raw region colours draw (red guernsey, green shorts): a mask check, not the game's look.
+	var club := OS.get_environment("CLIP_CLUB")
+	if club != "":
+		var oval = load("res://scripts/ui/match/Oval3D.gd").new()
+		var kit: ShaderMaterial = oval._kit(root.get_node("GameDB").club_guernsey(club))
+		for mi in scene.find_children("*", "MeshInstance3D", true, false):
+			var m := mi as MeshInstance3D
+			for s in range(m.mesh.get_surface_count()):
+				var own := m.mesh.surface_get_material(s)
+				if own == null or own.resource_name != oval.BOOT_MATERIAL:
+					m.set_surface_override_material(s, kit)
+		oval.free()
+	# CLIP_ONLY=a,b captures just those animations.
+	var only := OS.get_environment("CLIP_ONLY").split(",", false)
 	var ap: AnimationPlayer = scene.find_children("*", "AnimationPlayer", true, false)[0]
 	var sk: Skeleton3D = scene.find_children("*", "Skeleton3D", true, false)[0]
 	for anim_name in ap.get_animation_list():
+		if not only.is_empty() and not only.has(str(anim_name)):
+			continue
 		ap.play(anim_name)
 		var length := ap.current_animation_length
 		# Pass 1: every bone's world position at 60 samples per second.

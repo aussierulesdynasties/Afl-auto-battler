@@ -49,7 +49,8 @@ const WORDS := ["no", "one", "two", "three", "four", "five", "six", "seven", "ei
 		"eleven", "twelve"]
 const PLACES := ["first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth",
 		"tenth", "11th", "12th", "13th", "14th", "15th", "16th", "17th", "18th", "19th", "20th"]
-## The finals places (the top ten, with the wildcard round).
+## The finals places when the season doesn't say (the top ten, with the
+## wildcard round). Older eras had a final five, six or eight.
 const TEN := 10
 
 static var _bank: Dictionary = {}
@@ -97,6 +98,7 @@ static func context(gs: Object) -> Dictionary:
 		"year": int(gs.get("season_year")),
 		"my_club": str(gs.get("my_club")),
 		"ladder": ladder,
+		"finalists": int(season.finalists()) if season != null else TEN,
 		"injuries": gs.get("last_injuries"),
 		"named": gs.get("_named_this_round"),
 		"player": func(id): return gs.call("_find_player", id),
@@ -359,14 +361,16 @@ static func _ladder_beat(sb: _Say, code: String, before: Array, after: Array, re
 	var was := before.find(code)
 	if now < 0 or was < 0:
 		return ""
-	var slots := {"club": GameDB.club_name(code), "pos": PLACES[mini(now, PLACES.size() - 1)]}
+	var top := int(sb.ctx.get("finalists", TEN))
+	var slots := {"club": GameDB.club_name(code), "pos": PLACES[mini(now, PLACES.size() - 1)],
+			"top": WORDS[clampi(top, 0, WORDS.size() - 1)]}
 	if now == 0 and was != 0:
 		return sb.line("ladder_top", slots)
 	if first:
 		return ""
-	if now < TEN and was >= TEN:
+	if now < top and was >= top:
 		return sb.line("ladder_into", slots)
-	if now >= TEN and was < TEN:
+	if now >= top and was < top:
 		return sb.line("ladder_out", slots)
 	if now < was:
 		return sb.line("ladder_up", slots)

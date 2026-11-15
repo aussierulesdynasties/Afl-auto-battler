@@ -260,7 +260,7 @@ func _how_we_play() -> Control:
 func _own_plan() -> Control:
 	var v := UiKit.vbox(6)
 	v.name = "OwnPlanSection"
-	v.add_child(_head("Your own plan"))
+	v.add_child(_head("Our own plan"))
 	v.add_child(_wrapped("One strength and one cost, as a plan of its own. It beats no plan and no plan beats it. Pick it in How we play once both are set.",
 			UiKit.SMALL, UiKit.MUTED))
 	var plan: Dictionary = GameState.custom_plan

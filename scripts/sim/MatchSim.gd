@@ -2124,6 +2124,17 @@ func _maybe_fifty(receiving_side: int, mark_fp: float, offender, recipient) -> f
 	return new_fp
 
 
+## The charge a reported tackle is written up as. Copy only: it reads the
+## incident the sim already rolled (who, when, how bad) and never draws a match
+## random number. The worst tackles (two weeks or more) are dangerous tackles.
+const REPORT_CHARGES := ["rough conduct", "high contact", "a dangerous tackle"]
+static func report_charge(offender_id: String, quarter: int, minute: int, severity: float) -> String:
+	if severity >= 0.94:
+		return "a dangerous tackle"
+	var pick := absi(hash("%s|%d|%d" % [offender_id, quarter, minute])) % REPORT_CHARGES.size()
+	return str(REPORT_CHARGES[pick])
+
+
 ## A tackle can become a reportable rough-conduct incident. It is attached to
 ## the real tackler/victim and current quarter/minute; no post-match re-roll.
 func _maybe_report(side: int, offender, victim) -> void:
@@ -2160,7 +2171,7 @@ func _maybe_report(side: int, offender, victim) -> void:
 		"victim_name": GameDB.player_display_name(victim),
 		"q": current_quarter,
 		"min": current_minute,
-		"reason": "rough conduct",
+		"reason": report_charge(str(offender.get("id", "")), current_quarter, current_minute, severity),
 		"outcome": outcome,
 		"weeks": weeks,
 		"tribunal_roll": tribunal_roll,

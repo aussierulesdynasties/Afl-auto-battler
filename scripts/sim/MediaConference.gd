@@ -115,8 +115,25 @@ static func pick(ctx: Dictionary, recent: Dictionary) -> Dictionary:
 			candidates.append(cb)
 		else:
 			var goals: Array = res.get("goals", [])
-			var hv := _turn(asked, "heavy_loss", 3)
-			if hv == 2:
+			# Six versions: a struggling side gets four or five heavy losses a
+			# season, and three came round again within the year (bug bash 4).
+			var hv := _turn(asked, "heavy_loss", 6)
+			if hv == 5:
+				candidates.append(_q("heavy_loss", "muckraker", "Supporters were walking out before three-quarter time. What do you say to them?",
+						round_no, "That they deserved more from the players.", "That we'll fix how we play, and fast.",
+						"That this group will make it up to them.",
+						_named(named.get("heavy_loss", {}), "criticise_named", "%s went missing today."), 5))
+			elif hv == 4:
+				candidates.append(_q("heavy_loss", "muckraker", "You were never in it against %s. Have the players stopped listening?" % opp,
+						round_no, "Some of them have. That changes now.", "They're listening. The plan broke down.",
+						"They haven't. They'll show it next week.",
+						_named(named.get("heavy_loss", {}), "criticise_named", "%s went missing today."), 4))
+			elif hv == 3:
+				candidates.append(_q("heavy_loss", "muckraker", "%d points down to %s. Is this as low as it gets?" % [-margin, opp],
+						round_no, "Only if the players decide it is.", "We've found where it's breaking. We'll fix it.",
+						"This group will bounce back.",
+						_named(named.get("heavy_loss", {}), "criticise_named", "%s went missing today."), 3))
+			elif hv == 2:
 				candidates.append(_q("heavy_loss", "muckraker", "That's %s %d-point hiding from %s. Do your players still believe in what you're selling?" % [
 						LeagueStories.an(-margin), -margin, opp], round_no,
 						"Some of them need a hard look at themselves.", "The plan's sound. We didn't carry it out.",
@@ -487,7 +504,7 @@ const ANSWERS := {
 ## "record" means the record check decides his standing and odds.
 const PERSONA := {
 	"muckraker": {"likes": ["criticise", "criticise_named"], "dislikes": ["back", "back_named"],
-		"odds": {"criticise": -10, "criticise_named": -10}, "odds_note": "His headline",
+		"odds": {"criticise": -10, "criticise_named": -10}, "odds_note": "%s's headline",
 		"board_up": true, "board_note": "The Siren gets read upstairs",
 		"rule": "The Siren gets read upstairs: a board move that hangs on how it lands is a point bigger."},
 	"sycophant": {"likes": ["back", "back_named"], "dislikes": ["criticise"],
@@ -548,7 +565,7 @@ const BOARD_FADE_ROUNDS := 1
 ## The gate's templates: no digits here, every number comes from the tables.
 ## One answer's line (director 2026-11-07, "Trim odds lines"): "40% resolve
 ## tightens, morale +1% · 60% hung out to dry, morale -2% · Board +1% either
-## way · His headline: 10% less likely · Gary warms to you: +5% next time".
+## way · Gary's headline: 10% less likely · Gary warms to you: +5% next time".
 const ODDS_TEMPLATE := "%d%% %s, %s · %d%% %s, %s"
 const SEP := " · "
 const EITHER_WAY := "%s either way"
@@ -559,6 +576,7 @@ const OPINION_SIZE := "his opinion of you %+d"
 const NO_BOARD := "board unchanged"
 const AFTER_MORALE := "morale %+d%% across the list"
 const AFTER_HIS := "%s's morale %+d%%"
+const AFTER_HIS_NAMED := "his morale %+d%%"
 const AFTER_BOARD := "board confidence %+d%%"
 ## A named player's opinion of you after the answer, out of 100.
 const AFTER_OPINION := "%s's opinion of you: %d → %d out of 100."
@@ -642,7 +660,10 @@ static func chance_parts(kind: String, facts: Dictionary) -> Array:
 	var j: Dictionary = PERSONA.get(str(facts.get("journalist", "")), {})
 	var jo := int((j.get("odds", {}) as Dictionary).get(kind, 0))
 	if jo != 0:
-		out.append({"pct": jo, "why": str(j.get("odds_note", ""))})
+		var note := str(j.get("odds_note", ""))
+		if note.contains("%s"):
+			note = note % first_name(str(facts.get("journalist", "")))
+		out.append({"pct": jo, "why": note})
 	var key := str(facts.get("key", ""))
 	var r := int((s["result"] as Dictionary).get(key, 0))
 	if r != 0:
@@ -890,11 +911,38 @@ static func after_line(kind: String, landed: String, fx: Dictionary = {}, name :
 	if int(o["morale"]) != 0:
 		bits.append(AFTER_MORALE % int(o["morale"]))
 	if int(o["his"]) != 0:
-		bits.append(AFTER_HIS % [name if name != "" else "his", int(o["his"])])
+		# The line already names him ("The spotlight weighed on Josh Treacy"):
+		# say "his morale", not his name a third time (bug bash 4).
+		if name != "" and str(o["after"]).contains(name):
+			bits.append(AFTER_HIS_NAMED % int(o["his"]))
+		else:
+			bits.append(AFTER_HIS % [name if name != "" else "the player", int(o["his"])])
 	if int(o["board"]) != 0:
 		bits.append(AFTER_BOARD % int(o["board"]))
 	var tail := ", ".join(bits)
 	return "%s: %s." % [str(o["after"]), tail] if tail != "" else str(o["after"]) + "."
+
+
+## Questions about one player: their answers may say "him" without his name.
+const ABOUT_ONE := ["star", "milestone", "debut", "injury"]
+static var _bare_him: RegEx
+
+
+## How the news quotes an answer: "Post-match", or "Post-match, on Isaiah
+## Dudley" when the answer says him/his/he about the player the question named
+## (bug bash 4: "Credit to him" stood bare in the news).
+static func news_lead(mc: Dictionary, label: String) -> String:
+	if not ABOUT_ONE.has(str(mc.get("key", ""))):
+		return "Post-match"
+	if _bare_him == null:
+		_bare_him = RegEx.new()
+		_bare_him.compile("(?i)\\b(him|his|he)\\b")
+	if _bare_him.search(label) == null:
+		return "Post-match"
+	for o in mc.get("options", []):
+		if o is Dictionary and str(o.get("player", "")) != "" and not (str(o.get("name", "")) in ["", "him", "He"]):
+			return "Post-match, on %s" % str(o["name"])
+	return "Post-match"
 
 
 ## "Jack Smith's opinion of you: 50 → 49 out of 100." from GameState's {"name",

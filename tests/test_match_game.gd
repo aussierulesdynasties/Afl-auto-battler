@@ -384,6 +384,18 @@ func _test_authenticity_events() -> void:
 			suspended += 1
 	_check(valid_mro and suspended > 0,
 			"Reportable tackles resolve once to no action, fine or 1-3 match suspension (%d reports)" % mro.reports.size())
+	# Bug bash 4: every charge was "rough conduct". The charge comes from the
+	# incident (who, when, how bad), with no match random number drawn.
+	var charges := {}
+	var bad_charge := ""
+	for row in mro.reports:
+		if not MatchSim.REPORT_CHARGES.has(str(row.get("reason", ""))):
+			bad_charge = str(row.get("reason", ""))
+	_check(bad_charge == "", "Every report carries a real charge (%s)" % bad_charge)
+	for m in range(40):
+		charges[MatchSim.report_charge(str(offender["id"]), 2, m, 0.6)] = true
+	_check(charges.size() == MatchSim.REPORT_CHARGES.size() and MatchSim.report_charge("x", 1, 3, 0.99) == "a dangerous tackle",
+			"Charges vary across incidents, and the worst tackles are dangerous tackles (%s)" % str(charges.keys()))
 
 
 ## ARD-M3-007: the free at the end of a chain follows where the chain was. A
@@ -1259,6 +1271,12 @@ func _test_weather_turns_at_a_break() -> void:
 	var line := Weather.turn_report_line("perfect", 2, "wet")
 	_check(line.begins_with("It started fine. The rain came in at half time:"),
 			"The match report says when it turned: " + line)
+	# Bug bash 4: a hot day that turns perfect cooled down; it never "fined up".
+	var cooled := Weather.turn_report_line("hot", 2, "perfect")
+	var fined := Weather.turn_report_line("wet", 2, "perfect")
+	_check(cooled == "It started hot. It cooled down by half time: fresher legs from there."
+			and fined.contains("It fined up by half time") and not Weather.turn_news(2, "perfect", "hot").contains("fined up"),
+			"A day turning perfect is worded by what it was (%s / %s)" % [cooled, fined])
 	# A day that holds plays as it always has: a bare condition is the old game.
 	var bare := _sim(91)
 	bare.weather = "perfect"
