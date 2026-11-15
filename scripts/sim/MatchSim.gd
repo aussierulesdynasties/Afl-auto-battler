@@ -1031,9 +1031,9 @@ const PLANS := {
 	"attacking": {"goal": 1.04, "gain": 1.05, "clangers": 1.12, "pace": 1.12, "exposed": 1.12},
 	# The press's own shots: legs spent chasing, shots taken rushed (0.88;
 	# director 2026-10-11, the real cost of winning it high, was 0.96).
-	"defensive": {"press": 1.09, "opp_goal": 0.965, "goal": 0.88, "gain": 0.95, "pace": 1.12},
+	"defensive": {"press": 1.09, "opp_goal": 0.95, "goal": 0.88, "gain": 0.97, "pace": 1.08},
 	# G4: more of the ball for less given up, so winning it shows on the scoreboard.
-	"contest": {"contest": 0.03, "gain": 0.96, "exposed": 1.02},
+	"contest": {"contest": 0.035, "gain": 0.96, "exposed": 1.02},
 	"controlled": {"taken": 0.96, "gain": 0.94, "goal": 1.01, "clangers": 0.93, "pace": 0.95},
 }
 
@@ -2509,7 +2509,7 @@ const PRESS_ZONE_TURNOVER := 1.5
 ## Out of the back third with nobody on him, a side has broken the press:
 ## the rest of that chain runs at a defence that is outnumbered, and its
 ## shot is this much likelier to be a goal. The cost of the plan.
-const PRESS_BROKEN_EXPOSED := 1.35
+const PRESS_BROKEN_EXPOSED := 1.25
 ## Non-tackle pressure acts per tackle chance, the share of those that turn
 ## the ball over outright, and the ground a rushed disposal still gains.
 ## 2026-11-09: a player's pressure acts ran at 60% of real (median 6.5 a game,
