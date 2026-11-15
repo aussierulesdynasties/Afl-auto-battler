@@ -861,7 +861,9 @@ func write_history(path: String, meta: Dictionary) -> bool:
 ## the caller then plays the years live. A forged prospect enters in 2026, so
 ## his career has to be played; a seeded run stays reproducible.
 func begin_from_history(first_season: int) -> bool:
-	if replay_seed != 0 or custom_prospect_id != "":
+	# A history made without your Forge creations cannot host them: the years
+	# play out with them instead (director, 2026-11-15).
+	if replay_seed != 0 or custom_prospect_id != "" or not custom_club.is_empty():
 		return false
 	var path := PremadeHistory.pick(first_season)
 	if path == "":
@@ -2086,6 +2088,14 @@ func begin_real_lists() -> void:
 		else:
 			open_pool.append(p)
 	draftee_pool = draftee_pool.filter(func(q): return str(q.get("id", "")) != custom_prospect_id)
+	# Your Club Forge club plays the first season as a new club, on the
+	# new-club package: state-league signings, a guest's seat at this draft
+	# holding the extra picks, and sign-on money (TODO row 172).
+	var forged := forged_real_club(active)
+	var playing: Array = active.filter(func(c): return str(c) != forged)
+	var forged_picks: Array = []
+	if forged != "":
+		forged_picks = ExpansionBuild.forged_entry(self, forged, playing.size(), open_pool.size())
 	# The starting lists split into senior and rookie lists, and the opening
 	# National Draft fills the senior list.
 	RookieList.seed_lists(league_lists)
@@ -2104,13 +2114,22 @@ func begin_real_lists() -> void:
 			pairs.append([r, str(p.get("role2", ""))])
 		role_counts[code] = c
 		role_pairs[code] = pairs
-	draft = Draft.build_intake(open_pool, active.duplicate(), opening_order(active),
+	draft = Draft.build_intake(open_pool, playing.duplicate(), opening_order(playing),
 			prospect_read_seed(), sizes, role_counts, role_pairs)
+	if forged != "":
+		draft.add_guest(forged, int(sizes[forged]), role_counts[forged], role_pairs[forged])
+		draft.add_compensation(forged_picks)
 	draft.senior_cap = RookieList.senior_spots()
 	_draft_sees_44()
 	draft.user_max_age = Challenge.max_age(self)
 	OwnProspect.check(self)
 	mark_dirty()
+
+
+## Your Club Forge club, when this real-lists career has it in the league; "".
+func forged_real_club(active: Array) -> String:
+	var code := str(custom_club.get("code", "")).strip_edges()
+	return code if code != "" and active.has(code) else ""
 
 
 ## The 2026 National Draft order: the real 2026 ladder reversed, the premiers
@@ -6611,7 +6630,7 @@ func finals_outcome_line(res: Dictionary) -> String:
 		return _past_finals_outcome_line(res, tag, won)
 	match tag.substr(0, 2):
 		"WC":
-			return "Through! You reseed by ladder position for a qualifying or elimination final." \
+			return "Through. We go into a qualifying or elimination final, placed by ladder position." \
 					if won else "Knocked out in the wildcard round. Your season is over."
 		"QF":
 			return "Straight through to a home preliminary final, with a week off." if won \
@@ -6623,7 +6642,7 @@ func finals_outcome_line(res: Dictionary) -> String:
 			return "Through to the preliminary finals." if won \
 					else "Knocked out in the semi finals. Your season is over."
 		"PF":
-			return "Into the Grand Final!" if won \
+			return "Into the Grand Final." if won \
 					else "One game short: out in the preliminary final."
 		"GF":
 			return ("%d PREMIERS" % season_year) if won \
@@ -6658,7 +6677,7 @@ func _past_finals_outcome_line(res: Dictionary, tag: String, won: bool) -> Strin
 				next_week = w
 				next_label = str(e[1])
 	if next_label == "Grand Final":
-		return "Into the Grand Final!" + (" A week off first." if next_week > at + 1 else "")
+		return "Into the Grand Final." + (" A week off first." if next_week > at + 1 else "")
 	if next_week > at + 1:
 		return "Through, with a week off before the %s." % SeasonRules.week_name(
 				season.finals_format(), next_week + 1).to_lower()
@@ -7978,9 +7997,11 @@ func _close_season_achievements() -> void:
 		if Achievements.is_coach(defn):
 			add_news("achievement", "Achievement unlocked: %s - %s" % [
 					str(defn["name"]), str(defn["desc"])])
+		elif club == my_club:
+			add_news("achievement", "Achievement unlocked: %s." % str(defn["name"]))
 		else:
-			add_news("achievement", "Achievement unlocked: %s - %s (%s)" % [
-					str(defn["name"]), GameDB.club_name(club), GameDB.club_short(club)])
+			# Another club's feat: theirs, not one you unlocked, and named once.
+			add_news("achievement", "%s earn an achievement: %s." % [GameDB.club_name(club), str(defn["name"])])
 
 
 ## This season's honoured players and premiership side that you drafted,
@@ -9912,6 +9933,7 @@ func _sign_fa(p: Dictionary, code: String, salary: int, years: int) -> void:
 	clear_market_marks(p)
 	free_agents.erase(p)
 	_bars.erase(code)
+	ExpansionBuild.note_free_agent(self, code, p)
 	offseason_log.append({"kind": "signed", "club": code, "id": str(p["id"]), "salary": salary, "years": years})
 	if bool(p.get("tested", false)):
 		p.erase("tested")
@@ -14238,7 +14260,7 @@ func _record_match_story(results: Array) -> void:
 	if str(rec["hero_name"]) != "":
 		var line := "%s. %s: %s." % [str(rec["headline"]), str(rec["hero_name"]), str(rec["hero_line"])]
 		if str(rec.get("my_best_name", "")) != "":
-			line += " Your best: %s, %s." % [str(rec["my_best_name"]), str(rec["my_best_line"])]
+			line += " Our best: %s, %s." % [str(rec["my_best_name"]), str(rec["my_best_line"])]
 		add_news("match_story", line)
 
 
@@ -14630,8 +14652,8 @@ func resolve_media_conference(option: int) -> Dictionary:
 	media_memory["said|" + key] = {"year": season_year, "option": option,
 			"opp": str(media_conference.get("opp", "")), "round": round_no}
 	var line := MediaConference.after_line(kind, landed, fx, str(ctx.get("name", "")))
-	add_news("media", ("Post-match: '%s' %s %s" % [str(picked.get("label", "")), line,
-			MediaConference.opinion_after(opinion)]).strip_edges())
+	add_news("media", ("%s: '%s' %s %s" % [MediaConference.news_lead(media_conference, str(picked.get("label", ""))),
+			str(picked.get("label", "")), line, MediaConference.opinion_after(opinion)]).strip_edges())
 	media_conference = {}
 	mark_dirty()
 	autosave()

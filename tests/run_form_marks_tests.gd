@@ -126,6 +126,12 @@ func _test_marks_pick() -> void:
 	var few: Dictionary = _rf.marks(["c", "d"], ["r3", "r4"], form, res, "K")
 	_check((few["cold"] as Dictionary).keys() == ["d"] and (few["hot"] as Dictionary).keys() == ["r4"],
 			"Fewer qualify, fewer marked (%s)" % str(few))
+	# A fraction off the season rounds to no change: no "Form 0" or "Form +0" mark.
+	var near_form := {"z": {"last": [60, 60, 61], "sum": 302, "n": 5}}    # 60.3 against 60.4
+	var near_res := {"q": {"last": [g.call(60), g.call(60), g.call(61)], "sum": 300, "n": 5, "key": "K"}}    # 60.3 against 60
+	var near: Dictionary = _rf.marks(["z"], ["q"], near_form, near_res, "K")
+	_check((near["cold"] as Dictionary).is_empty() and (near["hot"] as Dictionary).is_empty(),
+			"A gap that rounds to 0 gets no mark (%s)" % str(near))
 	for s in [_rf.cold_full(m["cold"]["a"]), _rf.hot_full(m["hot"]["r2"]), _rf.hot_short(m["hot"]["r2"])]:
 		var low := str(s).to_lower()
 		for w in ["drop", "bring in", "swap", "should", "recommend"]:
