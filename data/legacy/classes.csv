@@ -105,7 +105,7 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak,last_season
 1990,104,preseason,SYD,Andrew,Peck,1969-03-19,,,,,,1992
 1990,105,preseason,FIT,Wayne,Peters,1969-06-04,193,,Morwell,,,1991
 1990,106,preseason,RIC,John,Mrakov,1968-11-17,189,DEF,,,54,1991
-1990,107,preseason,GEE,Russell,Merriman,1968-04-06,175,MID,,,60,1993
+1990,107,preseason,GEE,Russell,Merriman,1968-04-06,175,MID,,,59,1993
 1990,108,preseason,STK,Damian,Pearce,1971-08-19,,,,,,1991
 1990,109,preseason,WBD,Scott,McDonald,1970-11-03,,,,,,1991
 1990,110,preseason,MEL,Kevin,Dyson,1967-05-04,180,MID,Blackburn South / Fitzroy Reserves / Carlton Reserves / Mornington / Oakleigh,,65,1997
@@ -115,7 +115,7 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak,last_season
 1990,114,preseason,BRL,Jon,Henry,1970-08-29,,,,,,1991
 1990,115,preseason,FIT,Jamie,Bond,1971-11-12,190,DEF,Beaufort,,,1991
 1990,116,preseason,GEE,Steven,Jankowicz,1971-03-20,,,East Gambier,,,1991
-1990,117,preseason,STK,Dean,Greig,1968-10-31,185,MID,Camberwell,,58,1994
+1990,117,preseason,STK,Dean,Greig,1968-10-31,185,MID,Camberwell,,57,1994
 1990,118,preseason,CAR,Mark,Bouw,1971-12-23,,,,,,1991
 1990,119,preseason,WBD,David,Ross,,,,North Melbourne U19s,,,
 1990,120,preseason,NTH,Anthony,Palmer,1971-08-29,,,,,,1991
@@ -164,7 +164,7 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak,last_season
 1990,163,signing,STK,Steven,Cummings,1969-08-16,178,MID,Noble Park / Frankston / Sandringham,,47,1992
 1990,164,signing,STK,Damian,Sexton,1968-12-03,178,MID,,,,
 1990,165,signing,STK,Chris,Melican,1963-11-21,,,South Gambier / Glenelg,,,
-1990,166,signing,SYD,Dale,Lewis,1969-05-04,188,DEF,North Ballarat,,92,2001
+1990,166,signing,SYD,Dale,Lewis,1969-05-04,188,MID,North Ballarat,,79,2001
 1990,167,signing,SYD,Paul,Smit,1968-08-06,,,,,,
 1990,168,signing,SYD,Tim,Symes,1969-03-03,,,,,,
 1990,169,signing,WBD,Jamie,Grant,1970-06-23,183,,Daylesford,,,1993
@@ -172,7 +172,7 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak,last_season
 1990,171,signing,WBD,Barry,Spierings,1966-04-12,,,,,,
 1990,172,signing,BRL,Richard,Champion,1968-04-14,186,DEF,Kadina / Woodville,,77,2000
 1990,173,signing,BRL,Matthew,AhMat,1974-06-27,175,DEF,Darwin FC / Norwood,,,1994
-1990,174,signing,BRL,Troy,Clarke,1969-06-08,173,MID,South Cairns / West Torrens,,62,1996
+1990,174,signing,BRL,Troy,Clarke,1969-06-08,173,MID,South Cairns / West Torrens,,61,1996
 1990,175,signing,BRL,Danny,Noonan,1968-11-29,188,MID,Clarence,,69,1993
 1990,176,signing,BRL,Jason,Millar,1970-08-30,197,RUCK,,,,1991
 1990,177,signing,BRL,Shane,Strempel,1969-01-21,199,DEF,,,,1991
@@ -188,14 +188,14 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak,last_season
 1990,187,signing,CAR,Michael,James,1971-12-30,180,MID,St Patrick's College / Ballarat FC,,59,1991
 1990,188,signing,CAR,Peter,White,1970-07-11,178,MID,,,,1991
 1990,189,signing,CAR,Andrew,Cavedon,1971-11-05,196,FWD,Lalor Lions,,53,1995
-1990,190,signing,CAR,Ang,Christou,1972-01-16,190,DEF,East Brunswick,,85,2002
+1990,190,signing,CAR,Ang,Christou,1972-01-16,190,DEF,East Brunswick,,86,2002
 1990,191,signing,CAR,Brendan,Parker,1971-03-23,184,,,,,1993
 1990,192,signing,CAR,Trevor,Robinson,1969-07-02,,,,,,1991
 1990,193,signing,COL,Mark,Richardson,1972-10-31,196,FWD,Macleod / Ivanhoe Grammar,,58,2002
 1990,194,signing,ESS,Peter,Filandia,1970-05-14,168,MID,Doutta Stars,,74,2000
 1990,195,signing,ESS,Rod,Saunders,1970-10-22,,,Mooroopna,,,1991
 1990,196,signing,ESS,David,McMurray,1967-11-18,,,,,,1991
-1990,197,signing,FIT,Joe,Cormack,1966-08-30,178,MID,,,62,1992
+1990,197,signing,FIT,Joe,Cormack,1966-08-30,178,MID,,,61,1992
 1990,198,signing,FIT,Brenton,Klaebe,1966-10-23,183,DEF,Payneham / Norwood,,,1991
 1990,199,signing,FIT,Stephen,Paxman,1970-12-04,188,DEF,East Doncaster,,66,2003
 1990,200,signing,FIT,Peter,Caven,1970-05-16,190,DEF,Montmorency,,75,2000
@@ -227,7 +227,7 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak,last_season
 1990,226,signing,STK,Jason,Briggs,1969-11-14,,,,,,1991
 1990,227,signing,STK,Justin,Pascoe,1971-02-19,,,,,,1991
 1990,228,signing,SYD,Ben,Doolan,1973-01-10,181,MID,Albury FC,,64,1999
-1990,229,signing,SYD,Neil,Brunton,1969-01-03,183,MID,Holroyd-Parramatta-Blacktown,,56,1995
+1990,229,signing,SYD,Neil,Brunton,1969-01-03,183,MID,Holroyd-Parramatta-Blacktown,,55,1995
 1990,230,signing,SYD,Darren,Holmes,1970-09-03,188,DEF,Lavington,,68,1996
 1990,231,signing,SYD,Jason,Love,1965-12-03,182,FWD,,,67,1992
 1990,232,signing,SYD,Jamie,Lawson,1971-10-05,168,MID,Wentworth,,59,1994
@@ -237,17 +237,17 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak,last_season
 1990,236,signing,SYD,Damian,Hogan,,,,,,,
 1990,237,signing,SYD,Robert,Neill,1974-01-05,184,,Southern District (ACT),,,1997
 1990,238,signing,SYD,Ben,Aulich,1975-02-06,,,,,,1991
-1990,239,signing,WCE,Mitchell,White,1973-03-28,190,DEF,Subiaco,,83,2003
+1990,239,signing,WCE,Mitchell,White,1973-03-28,190,DEF,Subiaco,,84,2003
 1990,240,signing,WCE,Glen,Jakovich,1973-03-24,193,DEF,South Fremantle,,83,2004
 1990,241,signing,WBD,Darren,Stanley,1972-02-02,174,MID,,,,1991
 1990,242,signing,WBD,Daryl,Argus,1969-10-11,,,,,,1991
 1990,243,signing,WBD,David,Preston,1970-11-12,,,Bairnsdale,,,1991
 1990,244,signing,WBD,Paul,Brown,1971-06-11,,,,,,1991
-1991,1,national,BRL,John,Hutton,1966-05-26,185,FWD,Claremont,,67,1995
+1991,1,national,BRL,John,Hutton,1966-05-26,185,FWD,Claremont,,68,1995
 1991,2,national,FIT,Marcus,Seecamp,1972-07-27,185,DEF,East Perth,,62,2000
 1991,3,national,MEL,Darren,Kowal,1972-06-18,173,DEF,Claremont,,58,1999
 1991,4,national,SYD,Andrew,McGovern,1968-04-07,177,,Claremont,,,1999
-1991,5,national,MEL,Jason,Norrish,1972-01-26,179,MID,Hale School / Claremont,,80,2002
+1991,5,national,MEL,Jason,Norrish,1972-01-26,179,MID,Hale School / Claremont,,81,2002
 1991,6,national,SYD,Paul,Burton,1969-04-30,183,,Claremont,,,1993
 1991,7,national,FIT,Jeremy,Guard,1970-07-11,180,DEF,Claremont,,63,1995
 1991,8,national,ESS,Michael,Symons,1971-09-16,182,FWD,Subiaco,,64,1999
@@ -288,7 +288,7 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak,last_season
 1991,43,national,HAW,Matthew,Henderson,,,,Morwell,,,
 1991,44,national,STK,Alastair,Gray,1974-09-13,180,,Carey Grammar,,,1993
 1991,45,national,CAR,Leigh,Snooks,1973-06-20,,,Derinallum,,,1992
-1991,46,national,SYD,Andrew,Dunkley,1968-06-29,192,DEF,Devon / St Kilda Reserves / North Launceston,,72,2002
+1991,46,national,SYD,Andrew,Dunkley,1968-06-29,192,DEF,Devon / St Kilda Reserves / North Launceston,,73,2002
 1991,47,national,COL,Greg,Turner,1972-01-23,,,South Fremantle,,,1992
 1991,48,national,ESS,James,Billington,1970-07-02,,,Subiaco,,,1992
 1991,49,national,STK,Michael,Addison,1973-08-12,,,Carey Grammar,,,1992
@@ -333,18 +333,18 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak,last_season
 1991,88,signing,ADE,Tony,Modra,1969-03-01,188,FWD,Christies Beach / West Adelaide,,83,2001
 1991,89,signing,ADE,Anthony,Ingerson,1969-10-13,193,DEF,Pembroke School / Central District,,61,2001
 1991,90,signing,ADE,Andrew,Geddes,1970-11-02,184,,Mornington,,,1993
-1991,91,signing,BRL,Steven,McLuckie,1973-02-12,174,MID,Southport,,59,1993
+1991,91,signing,BRL,Steven,McLuckie,1973-02-12,174,MID,Southport,,58,1993
 1991,92,signing,BRL,Adam,Kerinaiua,1974-06-17,178,MID,,,,1992
 1991,93,signing,BRL,Michael,Voss,1975-07-07,183,MID,Morningside,,91,2006
 1991,94,signing,BRL,Brett,Sherriff,1969-07-29,,,,,,1992
 1991,95,signing,BRL,Brad,Pearce,1971-08-16,185,,South Launceston / St Kilda U19s,,,1999
 1991,96,signing,BRL,John,Parker,1971-05-17,185,,,,,1993
-1991,97,signing,CAR,Ron,De Iulio,1972-04-15,180,DEF,Brunswick FC / Box Hill,,71,1999
+1991,97,signing,CAR,Ron,De Iulio,1972-04-15,180,DEF,Brunswick FC / Box Hill,,72,1999
 1991,98,signing,CAR,Anthony,Koutoufides,1973-01-18,191,MID,Lalor,,90,2007
 1991,99,signing,COL,Shane,Watson,1974-02-17,186,DEF,Montmorency,,81,2000
 1991,100,signing,COL,Terry,Hecker,1970-01-06,183,MID,Assumption College / Lalor,,,1992
 1991,101,signing,COL,Saverio,Rocca,1973-11-20,195,FWD,Reservoir Lakeside,,84,2006
-1991,102,signing,COL,Mark,Fraser,1971-02-04,183,MID,Montmorency,,76,2000
+1991,102,signing,COL,Mark,Fraser,1971-02-04,183,MID,Montmorency,,77,2000
 1991,103,signing,COL,Darren,Fraser,1973-02-25,180,,Montmorency / Essendon Reserves,,,1998
 1991,104,signing,COL,Jon,Hassall,1973-08-14,174,,Warrandyte,,,1999
 1991,105,signing,COL,Nick,Probert,1972-01-03,,,Burnie Hawks,,,1992
@@ -374,7 +374,7 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak,last_season
 1991,129,signing,HAW,Greg,Lochhead,1973-07-13,190,,,,,1993
 1991,130,signing,HAW,Kevin,O'Donnell,,,,,,,
 1991,131,signing,MEL,Chris,Sullivan,1972-08-08,180,MID,Mazenod Old Collegians,,54,1996
-1991,132,signing,MEL,Matthew,Febey,1969-08-19,184,MID,Devonport,,72,2000
+1991,132,signing,MEL,Matthew,Febey,1969-08-19,184,MID,Devonport,,73,2000
 1991,133,signing,MEL,Shane,Burgmann,1974-01-07,192,MID,,,,1992
 1991,134,signing,MEL,Sean,Charles,1975-05-18,175,MID,Powelltown,,59,2000
 1991,135,signing,MEL,Wayne,Lamb,1972-10-19,173,MID,Parkmore / Dingley,,54,1996
@@ -394,7 +394,7 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak,last_season
 1991,149,signing,SYD,Paul,Atkins,1968-12-23,180,MID,Wynyard,,,1992
 1991,150,signing,SYD,Jason,Mooney,1973-06-05,191,FWD,Turvey Park,,77,2001
 1991,151,signing,SYD,Gary,Stevens,1972-10-10,168,DEF,,,,1993
-1991,152,signing,SYD,Troy,Gray,1973-02-26,188,DEF,St Edmund's College / Queanbeyan,,64,1997
+1991,152,signing,SYD,Troy,Gray,1973-02-26,188,DEF,St Edmund's College / Queanbeyan,,65,1997
 1991,153,signing,SYD,Dwaine,Kretschmer,1972-05-25,180,,North Gambier,,,1993
 1991,154,signing,WCE,Jason,Ball,1972-11-21,201,FWD,Swan Districts,,80,2005
 1991,155,signing,WCE,Nathan,McIntosh,1968-10-11,190,,Scotch College (WA) / Subiaco,FS,,1992
@@ -488,7 +488,7 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak,last_season
 1992,84,national,ESS,Damien,Hardwick,1972-08-18,180,MID,Upwey-Tecoma / Springvale / St Joseph's College (Ferntree Gully) / North Melbourne U19s,,83,2004
 1992,85,national,CAR,Troy,Bond,1973-07-14,179,,Salisbury North / Port Adelaide (SANFL),,,2000
 1992,86,national,HAW,Hamish,Stuart,1970-03-27,,,Kybybolite / Glenelg,,,1993
-1992,87,national,COL,Scott,Burns,1974-12-23,181,DEF,Birdwood / Norwood,,82,2008
+1992,87,national,COL,Scott,Burns,1974-12-23,181,DEF,Birdwood / Norwood,,83,2008
 1992,88,national,STK,Jeremy,McVay,1975-01-25,182,,Healesville / Eastern U18,,,1993
 1992,89,national,WBD,Daniel,Southern,1975-01-01,188,DEF,Claremont,,69,2000
 1992,90,national,GEE,Adam,Shanahan,1975-04-24,180,,South Bendigo,,,1993
@@ -549,7 +549,7 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak,last_season
 1992,145,preseason,ESS,Brendan,Duncan,1974-04-12,198,,Western U18,,,1993
 1992,146,preseason,HAW,Guy,Rigoni,1974-07-27,181,MID,Myrtleford,,77,2005
 1992,147,preseason,COL,Jason,Williams,1970-04-21,187,,Williamstown,,,1993
-1992,148,preseason,STK,Darren,Bourke,1970-03-25,180,MID,Beverley Hills / Melbourne Reserves / Dandenong,,66,1996
+1992,148,preseason,STK,Darren,Bourke,1970-03-25,180,MID,Beverley Hills / Melbourne Reserves / Dandenong,,67,1996
 1992,149,preseason,GEE,Daniel,Fletcher,1974-08-16,183,DEF,Geelong U18,,,1994
 1992,150,preseason,BRL,John,Klug,1965-09-28,188,,Glenorchy / Woodville,,,1993
 1992,151,preseason,FIT,Nick,Mitchell,1973-02-01,180,,St Bernards,,,1996
@@ -684,7 +684,7 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak,last_season
 1993,47,national,SYD,Simon,Garlick,1975-04-10,177,FWD,Glen Waverley Rovers / St Kevin's College / Sandringham U18,,66,2004
 1993,48,national,RIC,Mark,Merenda,1975-10-29,181,MID,West Perth,,73,2002
 1993,49,national,STK,Kristian,Pascoe,,,,Northern U18,,,
-1993,50,national,FIT,Matthew,Dent,1972-01-17,185,DEF,Sturt,,76,2001
+1993,50,national,FIT,Matthew,Dent,1972-01-17,185,DEF,Sturt,,77,2001
 1993,51,national,COL,Justin,Mallon,1976-05-10,193,,Northern U18,,,1994
 1993,52,national,WBD,Sedat,Sir,1975-03-06,188,DEF,West Coburg / Sandringham U18,,53,1998
 1993,53,national,GEE,Grant,Tanner,1970-07-24,184,,Norwood,,,1998
@@ -736,7 +736,7 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak,last_season
 1994,22,national,FRE,Winston,Abraham,1974-09-29,175,,Perth,,,2002
 1994,23,national,FIT,John,Rombotis,1976-10-13,181,MID,Caulfield Grammar / Sandringham U18,,59,2000
 1994,24,national,FIT,Matthew,Manfield,1977-04-14,192,,Woodville-West Torrens,,,1999
-1994,25,national,STK,Steven,Sziller,1972-12-15,176,DEF,Woodville-West Torrens,,77,2002
+1994,25,national,STK,Steven,Sziller,1972-12-15,176,DEF,Woodville-West Torrens,,78,2002
 1994,26,national,STK,Tim,Elliott,1976-09-12,198,DEF,Lucknow / Gippsland U18,,58,2001
 1994,27,national,ADE,Toby,Kennett,1977-06-19,182,,Sturt,,,1995
 1994,28,national,ESS,Shawn,Lewfatt,1977-03-11,174,,Darwin FC / Western U18,,,1997
@@ -761,7 +761,7 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak,last_season
 1994,47,national,STK,Austinn,Jones,1976-09-28,176,MID,Beaconsfield / Dandenong U18,,76,2005
 1994,48,national,WBD,Shaun,Baxter,1977-10-02,188,,Bannockburn / Geelong U18,,,1998
 1994,49,national,ADE,Brett,Higgins,1977-09-03,183,,Port Adelaide (SANFL),,,1995
-1994,50,national,MEL,Clay,Sampson,1976-02-24,178,FWD,Morphett Vale / South Adelaide,,56,2000
+1994,50,national,MEL,Clay,Sampson,1976-02-24,178,FWD,Morphett Vale / South Adelaide,,55,2000
 1994,51,national,NTH,Danny,Stevens,1976-11-10,180,DEF,Greensborough / Northern U18,,53,1999
 1994,52,national,COL,Mark,Orchard,1976-04-02,175,MID,St Patrick's College / East Ballarat / North Ballarat U18,,62,2000
 1994,53,national,WCE,Ian,Downsborough,1972-01-19,192,RUCK,West Perth,,51,1999
@@ -852,7 +852,7 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak,last_season
 1995,27,national,STK,Andrew,Lamb,1978-12-23,190,,Wodonga Raiders / Murray U18,,,1998
 1995,28,national,HAW,Scott,Grainger,1978-12-12,191,,Lalor / Northern U18,,,1997
 1995,29,national,STK,Jason,Cripps,1976-10-14,183,MID,Ashwood / De La Salle College / Sandringham U18,,59,2002
-1995,30,national,COL,Luke,Godden,1978-09-21,180,DEF,Yarrambat / Northern U18,,67,1999
+1995,30,national,COL,Luke,Godden,1978-09-21,180,DEF,Yarrambat / Northern U18,,66,1999
 1995,31,national,STK,Ryan,Grinter,1978-01-02,198,,Ocean Grove / Geelong U18,,,1998
 1995,32,national,BRL,Troy,Johnson,1977-07-26,180,,South Fremantle,,,1998
 1995,33,national,WBD,Mark,West,1973-04-03,180,,South Adelaide,,,2000
@@ -992,7 +992,7 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak,last_season
 1996,70,national,COL,Dwayne,Griffin,1977-02-28,182,DEF,Swan Districts,,,1997
 1996,71,national,COL,Leigh,Singline,1977-08-17,183,,South Launceston,,,1997
 1996,72,rookie,PAD,Jason,Dylan,1976-08-01,,,Port Adelaide (SANFL),,,1997
-1996,73,rookie,WBD,Adam,Contessa,1976-12-29,176,DEF,Coburg / Northern U18 / North Melbourne Reserves,,66,2001
+1996,73,rookie,WBD,Adam,Contessa,1976-12-29,176,MID,Coburg / Northern U18 / North Melbourne Reserves,,54,2001
 1996,74,rookie,MEL,Nathan,Bassett,1976-12-07,190,DEF,Norwood Morialta HS / Norwood,,79,2008
 1996,75,rookie,FRE,Cameron,Venables,1975-10-29,193,DEF,Hale School / Subiaco,,,1999
 1996,76,rookie,ADE,Ben,Marsh,1976-07-09,201,RUCK,Flagstaff Hill / West Adelaide,,51,2004
@@ -1053,7 +1053,7 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak,last_season
 1997,13,national,WCE,Callum,Chambers,1979-11-19,184,MID,Lucknow / Gippsland U18,,54,2006
 1997,14,national,NTH,Shannon,Watt,1980-11-26,193,DEF,North Ballarat U18,,64,2009
 1997,15,national,GEE,Joel,McKay,1979-07-16,184,,Murray U18,,,2001
-1997,16,national,STK,Ben,Walton,1979-11-12,187,MID,Central District,,50,2001
+1997,16,national,STK,Ben,Walton,1979-11-12,187,FWD,Central District,,53,2001
 1997,17,national,ADE,Lance,Picioane,1980-06-07,183,MID,PEGS / Western U18,,65,2005
 1997,18,national,WBD,Mark,Alvey,1980-06-10,177,MID,Wentworth / Bendigo U18,,56,2005
 1997,19,national,HAW,Chris,Obst,1979-10-09,185,,Western U18,,,2002
@@ -1085,7 +1085,7 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak,last_season
 1997,45,national,ADE,Ian,Perrie,1979-04-09,193,FWD,Sorrento Duncraig JFC / East Perth,,68,2007
 1997,46,national,BRL,Scott,Ralph,1979-03-22,190,,Morningside,,,1999
 1997,47,national,ESS,Jordan,Doering,1979-09-14,187,DEF,Bendigo U18,,59,2002
-1997,48,national,RIC,Lionel,Proctor,1979-11-27,179,DEF,Alphington / Northern U18,,56,2001
+1997,48,national,RIC,Lionel,Proctor,1979-11-27,179,MID,Alphington / Northern U18,,42,2001
 1997,49,national,GEE,Justin,Wood,1979-12-18,183,,Glenorchy / Tasmania U18,,,2000
 1997,50,national,CAR,Craig,Black,1979-02-09,180,,Dandenong U18,,,1999
 1997,51,national,COL,Ben,Kinnear,1979-02-27,193,FWD,Central District,,54,2004
@@ -1136,7 +1136,7 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak,last_season
 1997,96,rookie,NTH,Craig,Folino,1979-08-28,176,,Eastern U18,,,1998
 1997,97,rookie,WBD,Shaun,Tinsley,1977-05-11,189,,Port Melbourne,,,1999
 1997,98,rookie,ADE,Tim,Davis,1977-08-31,193,,North Adelaide,,,1998
-1997,99,rookie,MEL,Ben,Beams,1978-08-17,183,FWD,Glenorchy / Tasmania U18,,53,2001
+1997,99,rookie,MEL,Ben,Beams,1978-08-17,183,FWD,Glenorchy / Tasmania U18,,52,2001
 1997,100,rookie,FRE,Cameron,Jackson,1975-08-06,205,RUCK,Basketball,,,1998
 1997,101,rookie,CAR,Scott,Freeborn,1978-05-20,183,,Woodville-West Torrens,,,2003
 1997,102,rookie,COL,Tarkyn,Lockyer,1979-10-30,178,DEF,East Fremantle,,71,2010
@@ -1196,7 +1196,7 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak,last_season
 1998,36,national,CAR,Brendan,Fevola,1981-01-20,191,,Beaconsfield / Dandenong U18,,,2011
 1998,37,national,PAD,Toby,Thurstans,1980-08-14,196,DEF,Padua College / Dandenong U18,,66,2009
 1998,38,national,RIC,James,White,1980-01-21,181,MID,Oakleigh U18,,,2000
-1998,39,national,COL,Craig,Jacotine,1980-06-21,178,MID,Dandenong U18,,42,2000
+1998,39,national,COL,Craig,Jacotine,1980-06-21,178,MID,Dandenong U18,,43,2000
 1998,40,national,WCE,Forfeit,,,,,,,,
 1998,41,national,COL,Heath,Scotland,1980-07-21,182,DEF,Darley / Western U18,,90,2014
 1998,42,national,BRL,Aaron,Shattock,1980-05-02,187,DEF,Sacred Heart College / Woodville-West Torrens,,56,2006
@@ -1208,7 +1208,7 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak,last_season
 1998,48,national,HAW,David,Loats,1981-02-13,200,RUCK,Geelong U18,,53,2004
 1998,49,national,STK,Troy,Schwarze,1981-12-23,190,DEF,Dingley / Sandringham U18,,61,2006
 1998,50,national,PAD,Derek,Murray,1980-03-25,173,MID,Murray U18,,48,2002
-1998,51,national,RIC,Marc,Dragicevic,1981-03-30,180,MID,Geelong U18,,47,2004
+1998,51,national,RIC,Marc,Dragicevic,1981-03-30,180,MID,Geelong U18,,48,2004
 1998,52,national,WCE,Andrew,Embley,1981-06-27,189,DEF,Bassendean / Trinity College (WA) / Swan Districts,,73,2013
 1998,53,national,CAR,Ian,Prendergast,1980-09-02,192,MID,Oakleigh U18,,58,2006
 1998,54,national,SYD,Dwayne,Simpson,1979-05-06,183,MID,East Fremantle,,,2001
@@ -1218,7 +1218,7 @@ year,rank,kind,club,first,last,dob,height_cm,role,origin,tie,peak,last_season
 1998,58,national,ADE,Clint,Kirey,1978-07-11,179,,East Fremantle,,,1999
 1998,59,national,FRE,Andrew,Shipp,1979-07-10,183,FWD,Gembrook Cockatoo / Springvale,,56,2002
 1998,60,national,HAW,Steven,Rode,1980-04-06,201,RUCK,Dandenong U18,,,2001
-1998,61,national,CAR,Brett,Backwell,1980-05-18,175,FWD,Zillmere,,49,2001
+1998,61,national,CAR,Brett,Backwell,1980-05-18,175,FWD,Zillmere,,48,2001
 1998,62,national,RIC,Matthew,Greig,1978-05-11,187,,Richmond Supplementary List,,,2000
 1998,63,national,WCE,Scott,Bennett,1980-01-08,180,MID,East Fremantle,,,2000
 1998,64,national,STK,Kurt,Heazlewood,1980-04-24,174,,Tasmania U18,,,2000

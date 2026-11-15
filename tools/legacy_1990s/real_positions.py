@@ -28,6 +28,9 @@ stats place him.
 7. positions_footywire.csv: the "Position" line of his footywire.com profile,
    matched by date of birth. It labels his whole career, so one that the
    season's record contradicts (Goodes, 186 hit-outs in 1999) is left out.
+8. positions_footyinfo.csv: the written bio on footyinfo.com, read in full
+   (director 2026-11-16: "all this info is on footyinfo.com"); a bio naming
+   only "utility" places no one.
 Before all of these, positions_director.csv: players the director places
 himself (2026-11-15: "I'll place them"; "going based on stats wont work";
 "Yze was a forward").
@@ -135,7 +138,8 @@ HAND = [(os.path.join(HERE, "positions_director.csv"), "the director"),
         (AFC, "australianfootball.com (read by hand)"),
         (os.path.join(HERE, "positions_sites.csv"), "club history site (read by hand)"),
         (os.path.join(HERE, "positions_fandom.csv"), "Australian Rules Football Wiki"),
-        (os.path.join(HERE, "positions_footywire.csv"), "footywire.com profile")]
+        (os.path.join(HERE, "positions_footywire.csv"), "footywire.com profile"),
+        (os.path.join(HERE, "positions_footyinfo.csv"), "footyinfo.com biography (read by hand)")]
 
 
 def info_role(s):
