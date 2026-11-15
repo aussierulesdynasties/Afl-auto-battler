@@ -68,6 +68,7 @@ supplies the vision, taste, AFL knowledge, priorities and final judgement.
   prompts, optimal matchup hints or "one more X" checklists on the main
   surface - there may be several reasonable answers with trade-offs.
 - **Every club gets it, and options are equal (director, 2026-11-09).** Every buff or cost the player's club gets, every rival club gets too. Options such as archetypes are equal, each with real positives and negatives, and none better on the scoreboard. Never ask the director either point: "stop asking stupid questions you know the answer to".
+- **Every mode hosts the Club Forge (director, 2026-11-15).** "EVERY mode needs to be able to host our forge creations": every start, season, challenge and new mode offers your Forge prospect and your Forge club, and brings them into the career. A mode that cannot host them yet is a bug to fix, not a rule to write. `_test_forge_on_every_start` walks every start on the year step.
 - **Questions only he can answer (director, 2026-11-09).** Before listing a decision for the director, search `docs/DIRECTOR_BIBLE.md`, `docs/TODO.md` and this file. Strike every question a ruling already answers and apply the ruling instead. Whoever shows him a list checks it first, including lists written by an agent.
 - **Restraint is a feature.** A good idea is not automatically a good addition.
   Prefer the simplest thing that creates the football fantasy.
