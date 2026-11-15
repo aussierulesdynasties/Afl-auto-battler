@@ -422,9 +422,9 @@ func full_words(code: String) -> String:
 	if full_at_44(code):
 		var n := list_now(code)
 		if n > Contracts.max_list():
-			return "your list holds %d and the limit is %d (senior list and Category A rookies together), so nobody joins until it is back under %d." % [
-					n, Contracts.max_list(), Contracts.max_list()]
-		return "your list is full (%d: senior list and Category A rookies together)." % Contracts.max_list()
+			return "your list holds %d and the limit is %d%s, so nobody joins until it is back under %d." % [
+					n, Contracts.max_list(), RookieList.together_words(" (", ")"), Contracts.max_list()]
+		return "your list is full (%d%s)." % [Contracts.max_list(), RookieList.together_words(": ", "")]
 	return "your %slist is full (%d)." % ["senior " if senior_cap > 0 else "", list_cap()]
 
 

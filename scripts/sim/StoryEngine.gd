@@ -201,6 +201,12 @@ static func _always_key(id: String, pid: String) -> String:
 	return "%s|%s" % [id, pid]
 
 
+## Does the card speak of this week's opponent ({opp} anywhere in it)? Asked
+## only in a week with no opponent.
+static func names_opp(t: Dictionary) -> bool:
+	return JSON.stringify(t).contains("{opp}")
+
+
 static func _pick_one(deck: Array, ctx: Dictionary, story: Dictionary, rng: RandomNumberGenerator, w: int,
 		quiet: bool, skip_cat: String, skip_pid: String) -> Dictionary:
 	var tiers := {"beat": [], "start": [], "one_off": []}
@@ -211,15 +217,27 @@ static func _pick_one(deck: Array, ctx: Dictionary, story: Dictionary, rng: Rand
 		var subj := eligible_subject(t, ctx, story, w, rng, skip_pid)
 		if subj.is_empty():
 			continue
-		if bool(t.get("topical", false)):
+		if bool(t.get("topical", false)) and int(story["season"].get(str(t["id"]), 0)) == 0:
 			topical.append([t, subj])
 		else:
 			tiers[tier(t)].append([t, subj])
-	# A card about the run the club is on right now (a losing streak) is this
-	# week's story: it comes before the running stories and in a quiet week too.
-	# Behind them it was never drawn, there is always an older story waiting.
+	# A card about the run the club is on right now (a losing or winning streak) is
+	# this week's story: it comes before the running stories and in a quiet week too.
+	# Behind them it was never drawn, there is always an older story waiting. Each
+	# leads once a season, the one dealt longest ago first, so one card never takes
+	# every run (bug bash 4: the board's call took 68% of its weeks and shut out the
+	# members' and the captain's); after that it waits in the draw like any other.
 	if not topical.is_empty():
-		var c: Array = topical[rng.randi_range(0, topical.size() - 1)]
+		var oldest := NEVER + 1
+		var pool := []
+		for c in topical:
+			var last := int(story["last"].get(str(c[0]["id"]), NEVER))
+			if pool.is_empty() or last < oldest:
+				oldest = last
+				pool = [c]
+			elif last == oldest:
+				pool.append(c)
+		var c: Array = pool[rng.randi_range(0, pool.size() - 1)]
 		return build(deck, c[0], c[1], ctx.get("club", {}), rng, w)
 	# A priority card (the Grand Final week's, a week off's) comes before the older ones.
 	for name in TIERS:
@@ -258,6 +276,12 @@ static func eligible_subject(t: Dictionary, ctx: Dictionary, story: Dictionary, 
 	var id := str(t["id"])
 	if bool(t.get("scripted", false)):
 		return {}   # dealt by the game itself (the result of a role trial), never drawn
+	# A club deck's card comes up only for its club; a controversy only with the switch on.
+	var deck := str(t.get("club", ""))
+	if deck != "" and deck != str((ctx.get("club", {}) as Dictionary).get("club_deck", "")):
+		return {}
+	if bool(t.get("controversy", false)) and int((ctx.get("club", {}) as Dictionary).get("controversies", 1)) == 0:
+		return {}
 	if not (t.get("phase", ["regular"]) as Array).has(str(ctx.get("phase", "regular"))):
 		return {}
 	# A week off in the finals: only the cards written for it.
@@ -274,6 +298,9 @@ static func eligible_subject(t: Dictionary, ctx: Dictionary, story: Dictionary, 
 	var club: Dictionary = ctx.get("club", {})
 	if not meets(club, t.get("when", {}), story["flags"].get("club", {})):
 		return {}
+	# A card about this week's opponent waits out a week with no opponent (a bye).
+	if not bool(club.get("has_opp", true)) and names_opp(t):
+		return {}
 	var subject: Dictionary = t.get("subject", {})
 	if str(subject.get("kind", "club")) != "player":
 		if not _arc_open_ok(t, story, "club", w):
@@ -285,6 +312,11 @@ static func eligible_subject(t: Dictionary, ctx: Dictionary, story: Dictionary, 
 		if pid == skip_pid:
 			continue
 		if bool(t.get("always", false)) and story["season"].has(_always_key(id, pid)):
+			continue
+		# The same card about the same player at most this often in a season (a kid told
+		# he isn't ready is not asked again ten weeks later).
+		var sps := int(t.get("subject_per_season", 0))
+		if sps > 0 and int(story["season"].get(_always_key(id, pid), 0)) >= sps:
 			continue
 		# No wait means no wait: Round 1's cards are drawn when the season is made, so
 		# their stamp is later than a pre-season week and the gap reads negative.
@@ -399,6 +431,8 @@ static func _record_pick(story: Dictionary, card: Dictionary, w: int) -> void:
 	var pid := str(card.get("player_id", ""))
 	if pid != "":
 		story["subj"][pid] = w
+		var k := _always_key(id, pid)
+		story["season"][k] = int(story["season"].get(k, 0)) + 1
 		if str(card.get("series", "")) != "":
 			story["subj"][_series_key(str(card["series"]), pid)] = w
 	(story["cats"] as Array).append([w, str(card["category"])])
@@ -788,6 +822,15 @@ static func _effect_parts(e: Dictionary, facts: Dictionary) -> Array:
 		var k := "gain" if d > 0 or op in ["xp", "fresh"] else "cost"
 		return [[k, str(e["line"])]]
 	match op:
+		"odds":
+			# A roll: each outcome under its own gain or cost, with its odds.
+			var rolled: Array = []
+			var hit := int(e.get("chance", 0))
+			for side in [["hit", "%s chance: " % _pct(hit)], ["miss", "%s chance: " % _pct(100 - hit)]]:
+				for ne in e.get(side[0], []):
+					for np in _effect_parts(ne, facts):
+						rolled.append([np[0], side[1] + str(np[1])])
+			return rolled
 		"delegate":
 			# Left to the captain: where the group stands now, then what each
 			# outcome does, each under its own gain or cost.
@@ -1071,8 +1114,8 @@ static func _running_words(d: int, facts := {}) -> String:
 	var head := ("%s more week%s of running" % [_count(n).capitalize(), "" if n == 1 else "s"]) if d > 0 			else ("%s week%s less running" % [_count(n).capitalize(), "" if n == 1 else "s"])
 	if str(facts.get("result", "")) != "" and d < 0:
 		# The week the season ends (B8): the cost lands on next pre-season's base.
-		return "The list starts next pre-season %s week%s of running behind: a strong fitness base takes %s weeks of running by Round 1." % [
-				_count(n), "" if n == 1 else "s", PreSeason.run_weeks_text(float(PreSeason.tune("base_strong_from")))]
+		return "Next pre-season, the list starts %s of running behind. A strong fitness base takes %s weeks of running by Round 1." % [
+				"a week" if n == 1 else "%s weeks" % _count(n), PreSeason.run_weeks_text(float(PreSeason.tune("base_strong_from")))]
 	if not facts.has("pre_run"):
 		return "%s: a strong fitness base takes %s weeks of running by Round 1." % [head, PreSeason.run_weeks_text(float(PreSeason.tune("base_strong_from")))]
 	var was := float(facts["pre_run"])
@@ -1180,8 +1223,10 @@ static func _board_words(d: int) -> String:
 ## "His opinion of you down 2, to 48 out of 100."
 static func _trust_words(d: int, t: int) -> String:
 	var o := Trust.opinion_move(t, d)
+	# A move too small to show on the 100 still moves him (bug bash 4: "stays 47"
+	# under Cost named no cost): say which way, and where it stands.
 	if o == 0:
-		return "His opinion of you stays %d out of 100." % Trust.opinion(t)
+		return "His opinion of you %s, still %d out of 100." % ["warms a little" if d > 0 else "slips a little", Trust.opinion(t)]
 	return "His opinion of you %s %d, to %d out of 100." % ["up" if o > 0 else "down", absi(o), Trust.opinion(t) + o]
 
 
@@ -1192,8 +1237,8 @@ static func _refuse_words(d: int, t: int) -> String:
 	var after := Trust.opinion(t) + Trust.opinion_move(t, d)
 	var chance := Contracts.refuse_chance(after)
 	if chance > 0:
-		return "At contract time that is %s %d%% chance he won't re-sign with you." % [LeagueStories.an(chance), chance]
-	return "Under %d out of 100 he may refuse to re-sign with you, %d%% for each point under." % [
+		return "At contract time that is %s %d%% chance he won't re-sign with us." % [LeagueStories.an(chance), chance]
+	return "Under %d out of 100 he may refuse to re-sign with us, %d%% for each point under." % [
 			Contracts.REFUSE_BELOW, Contracts.REFUSE_PER_POINT]
 
 
@@ -1202,7 +1247,9 @@ static func aftermath(applied: Dictionary) -> String:
 	var out: PackedStringArray = []
 	var o: Array = applied.get("opinion", [])
 	if o.size() == 2 and int(o[0]) != int(o[1]):
-		out.append("His opinion of you: %d → %d out of 100." % [int(o[0]), int(o[1])])
+		# Named, so it never reads as someone else's (the journalist on a media card).
+		var who := str(applied.get("opinion_name", ""))
+		out.append("%s opinion of you: %d → %d out of 100." % [(who + "'s") if who != "" else "The player's", int(o[0]), int(o[1])])
 	var b := int(applied.get("board", 0))
 	if b != 0:
 		out.append("Board confidence went up." if b > 0 else "Board confidence went down.")

@@ -209,7 +209,7 @@ func _budget(body: VBoxContainer) -> void:
 	# A league fine (YearEvents) cuts this year's budget: say so beside the total.
 	var fine_cut := ClubBudget.ANNUAL_M - GameState.department_budget_annual_m()
 	if fine_cut > 0.001:
-		var fine := _para("The league's fine takes $%.1fm off our budget this year." % fine_cut, 13, UiKit.BAD)
+		var fine := _para("The league's fine takes %s off our budget this year." % ClubBudget.money_m(fine_cut, year), 13, UiKit.BAD)
 		fine.name = "BudgetFine"
 		body.add_child(fine)
 	body.add_child(UiKit.spacer(4))
@@ -282,7 +282,14 @@ func _contracts(body: VBoxContainer) -> void:
 			body.add_child(got)
 	_retiring(body)
 	if GameState.offseason_open():
-		body.add_child(_para("Leave one of our best 23 unsigned and he tests free agency. Our offer stands at his asking price. Rivals can beat it. Other players re-sign for two seasons if the cap allows.", 12, UiKit.MUTED))
+		# No free agency before 2012 (EraRules free_agency): an unsigned player
+		# re-signs or is delisted (bug bash 4, L13).
+		var how := "Leave one of our best 23 unsigned and he tests free agency. Our offer stands at his asking price. Rivals can beat it. Other players re-sign for two seasons if the cap allows." \
+				if EraRules.on("free_agency", GameState.season_year) \
+				else "Leave a player unsigned and he re-signs for two seasons if the cap allows; if it doesn't, he is delisted. Free agency starts in 2012."
+		var how_para := _para(how, 12, UiKit.MUTED)
+		how_para.name = "UnsignedRule"
+		body.add_child(how_para)
 	var head := UiKit.lbl("Out of contract  (%d)" % expiring.size(), UiKit.BODY, UiKit.EMPH, true)
 	head.name = "OutOfContractHead"
 	body.add_child(head)
@@ -1111,7 +1118,7 @@ func _draft_picks(body: VBoxContainer, code: String, chosen: Array, prefix: Stri
 		body.add_child(story)
 
 
-## A list to add players from, best first: name, position, OVR, POT and age.
+## A list to add players from, best first: name, position, age, OVR and POT.
 func _pick_grid(body: VBoxContainer, list: Array, chosen: Array, prefix: String) -> void:
 	body.add_child(UiKit.lbl("Players", 14, UiKit.MUTED, true))
 	var sorted := list.duplicate()
@@ -1124,10 +1131,14 @@ func _pick_grid(body: VBoxContainer, list: Array, chosen: Array, prefix: String)
 		# Their players your challenge bars from coming to you: the tag sits
 		# by his name, where a trimmed row still shows it, and he can't be added.
 		var tag := Challenge.short_tag(GameState, p) if prefix == "Their_" else ""
-		var b := _asset_button("%s%s  ·  %s  ·  %d OVR  ·  %s POT  ·  %d%s" % [GameDB.player_display_name(p),
-				"  ·  " + tag if tag != "" else "",
-				Ratings.role_tag(p), int(p["overall"]), str(GameState.pot_view(p)["text"]),
-				int(p.get("age", 0)), "  ·  Untouchable" if GameState.is_untouchable(id) else ""], chosen.has(id))
+		# Who he is on the first line (Untouchable by his name, then his position);
+		# on a phone his age and ratings go on a second line, so a long position
+		# never cuts them off.
+		var head := "%s%s%s  ·  %s" % [GameDB.player_display_name(p), "  ·  " + tag if tag != "" else "",
+				"  ·  Untouchable" if GameState.is_untouchable(id) else "", Ratings.role_tag(p)]
+		var facts := "Age %d  ·  %d OVR  ·  %s POT" % [int(p.get("age", 0)), int(p["overall"]),
+				str(GameState.pot_view(p)["text"])]
+		var b := _asset_button(head + ("  ·  " if _wide() else "\n") + facts, chosen.has(id))
 		b.name = prefix + id
 		b.disabled = tag != "" and not chosen.has(id)
 		b.pressed.connect(func():

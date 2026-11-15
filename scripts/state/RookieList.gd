@@ -170,9 +170,17 @@ static func block_words(list: Array, why: String) -> String:
 ## The 44 said in full, for a list of `n` (senior and Category A) at or over it.
 static func over_words(n: int) -> String:
 	if n > Contracts.max_list():
-		return "Your list holds %d and the limit is %d (senior list and Category A rookies together), so nobody joins until it is back under %d." % [
-				n, Contracts.max_list(), Contracts.max_list()]
-	return "Your list is full (%d: senior list and Category A rookies together)." % Contracts.max_list()
+		return "Your list holds %d and the limit is %d%s, so nobody joins until it is back under %d." % [
+				n, Contracts.max_list(), together_words(" (", ")"), Contracts.max_list()]
+	return "Your list is full (%d%s)." % [Contracts.max_list(), together_words(": ", "")]
+
+
+## "senior list and Category A rookies together" between `open` and `close`,
+## or "" in a season with no rookie list (before 1997, bug bash 4 L12).
+static func together_words(open: String, close: String) -> String:
+	if not EraRules.on("rookie_list", EraRules.list_year()):
+		return ""
+	return open + "senior list and Category A rookies together" + close
 
 
 ## Spots left in the 44 (never under 0).
@@ -479,6 +487,9 @@ static func _take(gs, code: String, p: Dictionary) -> void:
 	Workload.reset({code: [p]})
 	(rec["picks"] as Array).append({"club": code, "id": id, "round": int(rec["round"]),
 			"name": GameDB.player_display_name(p), "from": from})
+	# Your Club Forge prospect taken here is news the day it happens.
+	if id == str(gs.custom_prospect_id):
+		OwnProspect.check(gs)
 
 
 static func _finish(gs) -> void:

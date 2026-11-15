@@ -138,7 +138,7 @@ func _test_media_conference_rules() -> void:
 	# turns, and the day's other stories each have a journalist of their own.
 	var hl_ctx := {"club": "COL", "opponent_name": "Carlton", "round": 8, "year": 2027,
 			"result": {"home": "COL", "away": "CAR", "score": [55, 101], "goals": [8, 15], "behinds": [7, 11]}}
-	var v0: Dictionary = MCY.pick(hl_ctx, {"asked": {"heavy_loss": 3}})
+	var v0: Dictionary = MCY.pick(hl_ctx, {"asked": {"heavy_loss": 6}})
 	var v1: Dictionary = MCY.pick(hl_ctx, {"asked": {"heavy_loss": 1}})
 	var v2: Dictionary = MCY.pick(hl_ctx, {"asked": {"heavy_loss": 2}})
 	_check(str(v0.get("qid", "")) == "heavy_loss.0" and str(v1.get("qid", "")) == "heavy_loss.1"
@@ -147,6 +147,16 @@ func _test_media_conference_rules() -> void:
 			and str(v2.get("question", "")).begins_with("That's a 46-point hiding from Carlton."),
 			"A question's three versions take turns (%s / %s / %s)" % [str(v0.get("question", "")),
 			str(v1.get("question", "")), str(v2.get("question", ""))])
+	# Bug bash 4: a struggling side met the three again within a season. Six
+	# versions, every one different, with the same four kinds of answer.
+	var hl_texts := {}
+	var hl_kinds_ok := true
+	for n in range(6):
+		var q: Dictionary = MCY.pick(hl_ctx, {"asked": {"heavy_loss": n}})
+		hl_texts[str(q.get("question", ""))] = true
+		var ks := (q.get("options", []) as Array).slice(0, 3).map(func(o): return str(o["kind"]))
+		hl_kinds_ok = hl_kinds_ok and str(q.get("qid", "")) == "heavy_loss.%d" % n and ks == ["criticise", "method", "back"]
+	_check(hl_texts.size() == 6 and hl_kinds_ok, "The heavy-loss question has six different versions (%s)" % str(hl_texts.keys()))
 	# Audit 19/60: the most-asked questions each have three versions, every
 	# one different, with the same four kinds of answer.
 	var third_ctx := {
@@ -541,8 +551,22 @@ func _test_press_personas() -> void:
 			and MC.chance("criticise", {"journalist": "muckraker"}) == MC.chance("criticise", {}) - 10,
 			"The Muckraker: a board move that depends on how it lands grows by one, a sure one never does")
 	var m_ctx := {"journalist": "muckraker", "facts": {"journalist": "muckraker"}}
-	_check(MC.odds_line("criticise", 40, MC.effects("criticise", m_ctx), m_ctx).contains("His headline: 10% less likely"),
+	_check(MC.odds_line("criticise", 40, MC.effects("criticise", m_ctx), m_ctx).contains("Gary's headline: 10% less likely"),
 			"The Muckraker's odds twist is named on the gate with its size")
+	# Bug bash 4: "The spotlight weighed on Josh Treacy: Josh Treacy's morale -1%".
+	var spot: String = MC.after_line("back_named", "b", {}, "Josh Treacy")
+	_check(spot.count("Josh Treacy") == 1 and spot.contains("his morale"),
+			"The press outcome names the player once (%s)" % spot)
+	# Bug bash 4: "Credit to him" stood bare in the news; the news says who.
+	var star_q: Dictionary = MC.pick({"club": "COL", "opponent_name": "Carlton", "round": 9, "year": 2027,
+			"star": {"id": "COL_x", "name": "Isaiah Dudley", "line": "kicked five"},
+			"result": {"home": "COL", "away": "CAR", "score": [90, 80]}}, {"asked": {"star": 0}})
+	_check(str(star_q.get("key", "")) == "star" and (MC.news_lead(star_q, "Credit to him and the whole group.") == "Post-match, on Isaiah Dudley"
+			and MC.news_lead(star_q, "Our structure set the side up.") == "Post-match"),
+			"A quoted answer that says him names the player (%s)" % MC.news_lead(star_q, "Credit to him and the whole group."))
+	_check(MC.news_lead({"key": "milestone", "options": [{"player": "p", "name": "Jack Smith"}]}, "The rest have to match his standards.")
+			== "Post-match, on Jack Smith" and MC.news_lead({"key": "heavy_loss", "options": []}, "Credit to him.") == "Post-match",
+			"Only answers about one named player are told with his name")
 	var y_ctx := {"journalist": "sycophant", "facts": {"journalist": "sycophant"}}
 	_check(MC.chance("back", {"journalist": "sycophant"}) == MC.chance("back", {}) - 5
 			and MC.odds_line("back", 55, MC.effects("back", y_ctx), y_ctx).contains("Praise is expected: 5% less likely"),
@@ -1644,7 +1668,8 @@ func _run() -> void:
 	_state.delete_saved_career()
 	await _t("_test_new_career_keeps_the_save")
 	await _t("_test_new_career_canberra_choice")
-	await _t("_test_new_career_forged_row_redraft_only")
+	await _t("_test_new_career_forged_row_every_start")
+	await _t("_test_forge_on_every_start")
 	await _t("_test_new_career_challenge_taps")
 	await _t("_test_canberra_2030_warning")
 	await _t("_test_every_start_reaches_interview")
@@ -2480,7 +2505,7 @@ func _test_menu_and_career() -> void:
 			and back_mark != null and back_mark.text == "Gain:" and cost_mark != null and cost_mark.text == "Cost:"
 			and cost_mark.get_theme_font("font") != rest_cost.get_theme_font("font") and cost_mark.get_theme_color("font_color") == load("res://scripts/ui/UiKit.gd").label_ink()
 			and back_gain != null and back_cost != null and back_cost.text.contains("promise breaks")
-			and rest_gain != null and rest_cost != null and rest_cost.text.contains("'s opinion of you down") and not rest_cost.text.begins_with("His ") and rest_cost.text.contains("re-sign with you")
+			and rest_gain != null and rest_cost != null and rest_cost.text.contains("'s opinion of you down") and not rest_cost.text.begins_with("His ") and rest_cost.text.contains("re-sign with us")
 			and same_style and rest_btn != null and rest_cost.get_global_rect().position.y >= rest_gain.get_global_rect().end.y - 1.0
 			and rest_gain.get_global_rect().position.y >= rest_btn.get_global_rect().end.y - 1.0,
 			"Each answer says its gains then its costs under its own button, in the same full-strength text (%s / %s)" % [back_cost.text if back_cost != null else "none", rest_cost.text if rest_cost != null else "none"])
@@ -2509,22 +2534,22 @@ func _test_menu_and_career() -> void:
 	var twords: Label = tsheet.find_child("TrustWords", true, false)
 	var twhy: Button = tsheet.find_child("TrustWhy", true, false)
 	var treasons: Control = tsheet.find_child("TrustReasons", true, false)
-	_check(twords != null and twords.text == "Opinion of you 61/100." and treasons != null and not treasons.visible,
+	_check(twords != null and twords.text == "Opinion of you 61 out of 100." and treasons != null and not treasons.visible,
 			"The profile shows his opinion of you out of 100, with the reasons folded away (%s)" % (twords.text if twords != null else "missing"))
 	var why_tap: String = await Tap.tap(twhy) if twhy != null else "missing"
 	await _settle()
 	var first_reason: Label = treasons.get_child(1) if treasons != null and treasons.get_child_count() > 2 else null
 	_check(why_tap == "" and treasons.visible and twhy.size.y >= 44 and first_reason != null
 			and first_reason.text.begins_with("Round 5, ") and first_reason.text.ends_with("Opinion of you +5.")
-			and (treasons.get_child(0) as Label).text.contains("he may refuse to re-sign with you"),
+			and (treasons.get_child(0) as Label).text.contains("he may refuse to re-sign with us"),
 			"A tap on Why shows the rule, then his reasons newest first with their size (%s, %s)" % [why_tap,
 					first_reason.text if first_reason != null else "missing"])
 	tsheet.queue_free()
 	var ssheet: Control = load("res://scripts/ui/PlayerSheet.gd").open(current_scene, stranger)
 	await _settle()
 	var swords: Label = ssheet.find_child("TrustWords", true, false)
-	_check(swords != null and swords.text == "Opinion of you 50/100.",
-			"A player you've had nothing to do with is at 50/100 (%s)" % (swords.text if swords != null else "missing"))
+	_check(swords != null and swords.text == "Opinion of you 50 out of 100.",
+			"A player you've had nothing to do with is at 50 out of 100 (%s)" % (swords.text if swords != null else "missing"))
 	ssheet.queue_free()
 	_state.relations = saved_rel
 	await _settle()
@@ -3186,6 +3211,15 @@ func _test_menu_and_career() -> void:
 	_check(theirs_btn != null and current_scene.find_child("TradeSide_mine", true, false) != null
 			and current_scene.find_children("Mine_*", "Button", true, false).is_empty(),
 			"The trade builder shows one list at a time: theirs, with yours a tap away")
+	# On a phone a player row is two lines: name and position, then age and
+	# ratings, so a long position never trims his age off the end.
+	var row_lines: PackedStringArray = str((theirs_btn as Button).text).split("\n") if theirs_btn != null else PackedStringArray()
+	for n in current_scene.find_children("Their_*", "Button", true, false):
+		if not str(n.name).begins_with("Their_pick_"):
+			row_lines = str((n as Button).text).split("\n")
+			break
+	_check(row_lines.size() == 2 and row_lines[1].begins_with("Age ") and row_lines[1].contains(" OVR") and row_lines[1].ends_with(" POT"),
+			"A player row on a phone puts his age and ratings on a line of their own (%s)" % str(row_lines))
 	var phone_rect := Rect2(Vector2.ZERO, root.get_visible_rect().size).grow(1)
 	var builder_fits := true
 	for nm in ["TradeClub", "MakeTrade", "TradeSide_theirs", "TradeSide_mine"]:
@@ -4568,10 +4602,119 @@ func _first_named(n: Node, prefix: String) -> Control:
 	return null
 
 
-## The Forge club joins League redraft careers only (director, 2026-11-08):
-## Real 2026 lists or Rebuild hide its row and say why; a League redraft
-## brings it back with the pick as it was.
-func _test_new_career_forged_row_redraft_only() -> void:
+## "EVERY mode needs to be able to host our forge creations" (director,
+## 2026-11-15). Every start on the year step offers your Forge prospect and
+## your Forge club (its row, or on real lists the line saying why), by a real
+## tap on the start; every season's League redraft brings both into the
+## career, and its real lists bring the prospect. A new start added to the year
+## step is checked here without editing this test.
+func _test_forge_on_every_start() -> void:
+	_state.delete_saved_career()
+	_state.reset()
+	_state.set_forge_club({"name": "Port Melbourne", "short": "Borough", "code": "PMB",
+			"location": "port-melbourne", "primary": "#1B3A8C", "secondary": "#C8102E",
+			"accent": "#FFFFFF", "design": "hoops", "kit": "p/s/a"})
+	_state.set_forge_player({"first": "Ted", "last": "Forge", "role": "FWD", "height_cm": 185,
+			"style": "small_forward", "strengths": ["goalkicking"], "weaknesses": ["kicking"], "foot": "L"})
+	# The reference phone: seven starts scroll under the heading there.
+	var size_was := root.size
+	root.size = Vector2i(390, 844)
+	_router.stack = []
+	_router.go("main")
+	await _settle()
+	var ids: Array = current_scene.call("_year_ids")
+	var missing := []
+	for id in ids:
+		if await _open_start(str(id)) != "":
+			missing.append("%s: no tap" % id)
+			continue
+		var prospect := current_scene.find_child("Prospect_in", true, false) as Control
+		var row := current_scene.find_child("ForgedClub", true, false) as Control
+		if prospect == null:
+			missing.append("%s: prospect" % id)
+		if row == null or not row.is_visible_in_tree():
+			missing.append("%s: club" % id)
+		# A new club's start plays years without you: its rows are checked
+		# above. Every other start: its League redraft and its real lists.
+		if int(current_scene.get("_pick_future")) > 0:
+			continue
+		for mode in ["redraft", "real"]:
+			if mode == "real" and await _open_start(str(id)) != "":
+				missing.append("%s real: no tap" % id)
+				continue
+			current_scene.set("_pick_start", mode)
+			current_scene.set("_pick_prospect", true)
+			current_scene.set("_pick_club", true)
+			current_scene.call("_start_new_career")
+			await _settle()
+			var d = _state.draft
+			if _state.custom_prospect_id == "":
+				missing.append("%s %s: prospect not in the career" % [id, mode])
+			if mode == "redraft" and (d == null or not d.clubs.has("PMB")):
+				missing.append("%s redraft: club not in the draft" % id)
+			# Real lists: a new club, its state-league list in hand and a
+			# guest's seat holding the extra picks (row 172).
+			if mode == "real" and (d == null or not d.guests.has("PMB")
+					or (_state.league_lists.get("PMB", []) as Array).size() < 20):
+				missing.append("%s real: club not in as a new club" % id)
+	_check(ids.size() >= 2 and missing.is_empty(),
+			"Every start hosts your Forge prospect and club (%d starts; missing: %s)" % [ids.size(), str(missing)])
+	# Its free agents are paid from their own pool, on top of the sign-on
+	# money its rivals' players use (director, 2026-11-15: "Separate pool").
+	var fst: Dictionary = _state.expansion.get("PMB", {})
+	if fst.is_empty() or _state.season != null:
+		_check(false, "The last real-lists start left the Forge club building, before its first season")
+	else:
+		var first: int = _db.enter_year("PMB")
+		var held: Array = fst["list"]
+		# The money is indexed to the year: an early Legacy year's cap is small.
+		var most: int = load("res://scripts/sim/Contracts.gd").indexed_money_2027(
+				load("res://scripts/sim/Expansion.gd").SIGN_ON_SEASON_MAX, first)
+		var fa_pay: int = most / 3
+		fst["list"] = [{"id": "T_RIVAL", "salary": most * 3}, {"id": "T_FA", "salary": fa_pay}]
+		fst["signings"] = ["T_RIVAL"]
+		fst["fa_signings"] = ["T_FA"]
+		var xb = load("res://scripts/state/ExpansionBuild.gd")
+		var rivals: int = xb._relief_in(_state, "PMB", first)
+		var fas: int = xb._relief_in(_state, "PMB", first, true)
+		fst["list"] = held
+		fst["signings"] = []
+		fst["fa_signings"] = []
+		_check(rivals == most and fas == fa_pay and fa_pay > 0,
+				"A Forge club's free agents have their own pool on top of its sign-on money (rivals %d, free agents %d)" % [rivals, fas])
+	_state.set_forge_club({})
+	_state.set_forge_player({})
+	_state.delete_saved_career()
+	_state.reset()
+	_router.stack = []
+	root.size = size_was
+
+
+## New career from the main menu to the setup of start `id`, by real taps
+## (the start scrolled into view first). Returns "" or why a tap failed.
+func _open_start(id: String) -> String:
+	_state.reset()
+	_router.stack = []
+	_router.go("main")
+	await _settle()
+	var why: String = await Tap.tap(current_scene.find_child("NewCareer", true, false))
+	if why != "":
+		return why
+	await _settle()
+	var card := current_scene.find_child("StartYear_" + id, true, false) as Control
+	var sc := current_scene.find_child("StartsScroll", true, false) as ScrollContainer
+	if sc != null and card != null:
+		await _settle()
+		sc.ensure_control_visible(card)
+		await _settle()
+	return await _pick_year(id)
+
+
+## The Forge club comes into every start (director, 2026-11-15: "EVERY mode
+## needs to be able to host our forge creations"): a League redraft drafts its
+## list; Real 2026 lists and Rebuild bring it in as a new club on the new-club
+## package (TODO row 172), and the line says so.
+func _test_new_career_forged_row_every_start() -> void:
 	_state.delete_saved_career()
 	_state.reset()
 	_state.set_forge_club({"name": "Port Melbourne", "short": "Borough", "code": "PMB",
@@ -4584,25 +4727,22 @@ func _test_new_career_forged_row_redraft_only() -> void:
 	await _settle()
 	await _pick_year()
 	var row := current_scene.find_child("ForgedClub", true, false) as Control
-	var note := current_scene.find_child("ForgedClubOnlyNote", true, false) as Label
-	_check(row != null and note != null and row.is_visible_in_tree() and not note.is_visible_in_tree(),
-			"A League redraft shows the Your club row")
+	var note := current_scene.find_child("ForgedClubNote", true, false) as Label
+	_check(row != null and note != null and row.is_visible_in_tree() and note.text.contains("League Draft"),
+			"A League redraft shows the Your club row: it drafts in the League Draft")
 	if row == null or note == null:
 		return
 	await Tap.tap(current_scene.find_child("ForgedClub_in", true, false))
 	await _settle()
 	await Tap.tap(current_scene.find_child("StartMode_real", true, false))
 	await _settle()
-	_check(not row.is_visible_in_tree() and note.is_visible_in_tree()
-			and note.text == "Your club joins League redraft careers only.",
-			"Real 2026 lists hide the Your club row and show the note")
-	await Tap.tap(current_scene.find_child("StartMode_redraft", true, false))
-	await _settle()
-	_check(row.is_visible_in_tree() and not note.is_visible_in_tree() and bool(current_scene.get("_pick_club")),
-			"Back on a League redraft, the row returns with your club still brought")
+	_check(row.is_visible_in_tree() and note.text.begins_with("It joins as a new club")
+			and note.text.contains("outside the salary cap") and bool(current_scene.get("_pick_club")),
+			"Real 2026 lists keep the Your club row: a new club on the new-club package (%s)" % note.text)
 	await Tap.tap(current_scene.find_child("Challenge_rebuild", true, false))
 	await _settle()
-	_check(not row.is_visible_in_tree() and note.is_visible_in_tree(), "Rebuild hides the Your club row too")
+	_check(row.is_visible_in_tree() and note.text.ends_with("You coach against it."),
+			"Rebuild keeps the row; you coach against your club (%s)" % note.text)
 	_state.set_forge_club({})
 	_state.reset()
 	_router.stack = []

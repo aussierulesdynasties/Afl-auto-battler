@@ -1,0 +1,482 @@
+[
+	{
+		"id": "ade_showdown_week",
+		"club": "ADE",
+		"controversy": false,
+		"category": "rivals",
+		"when": {"opp_deck": "PAD"},
+		"subject": {"kind": "club"},
+		"title": ["Showdown week"],
+		"text": ["It's Showdown week and the whole state has picked a side. Workmates won't speak, the papers run a countdown, and the players can feel it at the supermarket."],
+		"choices": [
+			{"key": "lean", "label": "Tell them it's the biggest game in the state",
+			 "effects": [{"op": "morale", "d": 4, "who": "all"}, {"op": "odds", "chance": 30, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "A wild week caught up with them by Saturday."}, {"op": "loss_sting", "chance": 20, "d": -3, "who": "side"}],
+			 "result": "The group is up and about. Everyone knows what a loss would mean now."},
+			{"key": "calm", "label": "Call it four points, same as any week",
+			 "effects": [{"op": "board", "d": 2}, {"op": "morale", "d": -1, "who": "all"}],
+			 "result": "The board likes the calm. A few players reckon the coach undersold it."}
+		]
+	},
+	{
+		"id": "ade_morning_after",
+		"club": "ADE",
+		"controversy": false,
+		"category": "media",
+		"when": {"losing_run_min": 1},
+		"subject": {"kind": "player", "pick": "highest:leadership"},
+		"title": ["The morning after"],
+		"text": ["In a two-club town a loss doesn't go away. Talkback is wall-to-wall, the cross-town fans are wearing their colours to work, and the members want to hear from someone."],
+		"choices": [
+			{"key": "front", "label": "Front the cameras yourself",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "odds", "chance": 25, "hit": [{"op": "board", "d": -3}], "hit_result": "One line got away from you and ran all week."}],
+			 "result": "The members saw the coach own it."},
+			{"key": "shut", "label": "Shut the doors and review it in-house",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The players felt protected after a loss"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "The review stays inside the club. Supporters read the silence as not caring."},
+			{"key": "captain", "label": "Send {name} out to face them",
+			 "effects": [{"op": "trust", "d": 3, "why": "You trusted him to front the city"}, {"op": "odds", "chance": 30, "hit": [{"op": "morale", "d": -3, "who": "subject"}], "hit_result": "{first} copped the heat for a call that wasn't his."}],
+			 "result": "{name} fronts up and says the right things."}
+		]
+	},
+	{
+		"id": "ade_preseason_showdown",
+		"club": "ADE",
+		"controversy": false,
+		"category": "selection",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["A Showdown in the pre-season"],
+		"text": ["The practice matches have thrown up the cross-town club. It counts for nothing on the ladder, but a big crowd will turn up and both sets of fans will treat it like it does."],
+		"choices": [
+			{"key": "best", "label": "Pick the best 22 and go hard",
+			 "effects": [{"op": "odds", "chance": 50, "hit": [{"op": "morale", "d": 3, "who": "all"}], "hit_result": "The Crows won it, and the city knew."}, {"op": "odds", "chance": 15, "hit": [{"op": "forgo_xp", "d": 4, "who": "side"}], "hit_result": "One of the best 22 tweaked a hamstring and missed a block of training."}],
+			 "result": "The best side goes out to win a game that doesn't count."},
+			{"key": "kids", "label": "Play the kids and the fringe",
+			 "effects": [{"op": "xp", "d": 3, "who": "all"}, {"op": "odds", "chance": 65, "hit": [{"op": "board", "d": -2, "was": "members"}], "hit_result": "The kids lost it, and the city let you hear about it."}],
+			 "result": "The young players get a real hit-out in front of a crowd."}
+		]
+	},
+	{
+		"id": "ade_kid_wants_home",
+		"club": "ADE",
+		"controversy": false,
+		"category": "contracts",
+		"subject": {"kind": "player", "pick": "lowest:games", "where": {"age_max": 21}},
+		"title": ["The kid wants to go home"],
+		"text": ["{name} has had a rough few months a long way from his family. His manager rings: the Melbourne clubs are circling and the word \"home\" keeps coming up."],
+		"choices": [
+			{"key": "extend", "label": "Offer a longer deal with flights home built in",
+			 "effects": [{"op": "trust", "d": 3, "why": "You backed him with a longer deal"}, {"op": "board", "d": -2, "was": "funds"}, {"op": "odds", "chance": 70, "hit": [{"op": "morale", "d": 3, "who": "subject"}], "miss": [{"op": "morale", "d": -3, "who": "subject"}], "hit_result": "{first} signed. He's staying.", "miss_result": "{first} hasn't signed. Home is still on his mind."}],
+			 "result": "The offer is on the table, and it isn't cheap."},
+			{"key": "trade", "label": "Open trade talks with his manager",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The club set the terms, not the manager"}, {"op": "trust", "d": -5, "why": "You put him up for trade"}],
+			 "result": "Talks are open. {first} knows the club will let him go at the right price."},
+			{"key": "wait", "label": "Back the program and wait",
+			 "effects": [{"op": "odds", "chance": 45, "hit": [{"op": "morale", "d": 3, "who": "subject"}], "miss": [{"op": "morale", "d": -4, "who": "subject"}], "hit_result": "{first} settled on his own. He's starting to call it home.", "miss_result": "{first} is still homesick, and his manager knows it."}],
+			 "result": "No new deal. The club backs its program to settle him."}
+		]
+	},
+	{
+		"id": "ade_names_one_club",
+		"club": "ADE",
+		"controversy": false,
+		"category": "contracts",
+		"phase": ["season_end"],
+		"subject": {"kind": "player", "pick": "highest:overall"},
+		"title": ["He's named one club"],
+		"text": ["{name} has asked for a trade and named a single Victorian club. Everyone knows naming one club drives the price down, and their list manager has stopped returning calls."],
+		"choices": [
+			{"key": "hold", "label": "Hold out to the last hour",
+			 "effects": [{"op": "odds", "chance": 75, "hit": [{"op": "board", "d": 3, "was": "funds"}], "miss": [{"op": "morale", "d": -5, "who": "subject"}], "hit_result": "You held your nerve and got a fair price.", "miss_result": "Nothing got done. {first} is staying, and he isn't happy."}],
+			 "result": "The phones stay quiet until the final hour."},
+			{"key": "take", "label": "Take the deal on the table",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The group moved on clean"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "It's done, below value. Supporters reckon the club rolled over."},
+			{"key": "public", "label": "Go public about his contract",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "trust", "d": -5, "why": "You aired his contract in public"}, {"op": "culture", "strand": "together", "d": -1, "why": "The list saw how the club treats a player who wants out"}],
+			 "result": "The members side with the club. The rest of the list takes note."}
+		]
+	},
+	{
+		"id": "ade_interstate_kids",
+		"club": "ADE",
+		"controversy": false,
+		"category": "family",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["Settling the interstate kids"],
+		"text": ["Recruiting has brought in four teenagers from interstate. The welfare manager wants money for host families and a trip home every few weeks."],
+		"choices": [
+			{"key": "fund", "label": "Fund the full program",
+			 "effects": [{"op": "morale", "d": 2, "who": "all"}, {"op": "board", "d": -2, "was": "funds"}],
+			 "result": "The kids settle with host families and train well. It comes out of the football budget."},
+			{"key": "house", "label": "Put them in a share house together",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The new kids bonded under one roof"}, {"op": "odds", "chance": 20, "hit": [{"op": "board", "d": -2}], "hit_result": "A late night at the share house made the papers."}],
+			 "result": "Four kids, one house, no adult."}
+		]
+	},
+	{
+		"id": "ade_local_kid",
+		"club": "ADE",
+		"controversy": false,
+		"category": "members",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["The local or the best on the board"],
+		"text": ["Your pick is up. The best player left is from Victoria. A South Australian kid from the state league, rated a touch lower, grew up with Crows posters on his wall."],
+		"choices": [
+			{"key": "local", "label": "Take the local kid",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "culture", "strand": "ambition", "d": -1, "why": "The recruiters wanted the higher ceiling"}],
+			 "result": "He'll be here for the long haul. The members love it."},
+			{"key": "best", "label": "Take the best player available",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "You backed the highest ceiling on the board"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "The best talent left is a Crow. Some locals wanted their own boy."}
+		]
+	},
+	{
+		"id": "ade_melbourne_supporters",
+		"club": "ADE",
+		"controversy": false,
+		"category": "members",
+		"subject": {"kind": "club"},
+		"title": ["The Crows in Melbourne"],
+		"text": ["The club's supporters in Melbourne, many of them South Australians who moved for work, want the players at a function the night before the next game over there."],
+		"choices": [
+			{"key": "all", "label": "Send the whole squad for an hour",
+			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "slow_start", "chance": 20, "who": "side"}],
+			 "result": "The Melbourne Crows feel part of the club. It's a late night on the road."},
+			{"key": "leaders", "label": "Send the captain and two leaders",
+			 "effects": [{"op": "board", "d": 1, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The leaders gave up their night for the supporters"}, {"op": "slow_start", "chance": 10, "who": "side"}],
+			 "result": "The supporters get a few faces. Most of the group rests."},
+			{"key": "clear", "label": "Keep the night clear",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "A normal away routine. The supporters who turned up feel snubbed."}
+		]
+	},
+	{
+		"id": "ade_state_league_clubs",
+		"club": "ADE",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["The state-league clubs feel left behind"],
+		"text": ["The South Australian state-league clubs say the Crows take their best kids and give little back. One club president has gone on radio about it."],
+		"choices": [
+			{"key": "clinics", "label": "Send your coaches to run their clinics",
+			 "effects": [{"op": "board", "d": 2}, {"op": "forgo_xp", "d": 3, "who": "all"}],
+			 "result": "Goodwill across the state, and the scouts see more kids. Your coaches lose a week on the track."},
+			{"key": "cheque", "label": "Write them a cheque",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The state-league clubs say the Crows have given back"}, {"op": "board", "d": -2, "was": "funds"}],
+			 "result": "A quick fix. Some reckon it looks like buying them off."},
+			{"key": "stand", "label": "Stand your ground on radio",
+			 "effects": [{"op": "morale", "d": 1, "who": "all"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "The players like a coach who backs the club. The state-league crowd turns sour."}
+		]
+	},
+	{
+		"id": "ade_membership_record",
+		"club": "ADE",
+		"controversy": false,
+		"category": "board",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["Chasing a membership record"],
+		"text": ["The board wants a new membership record. Marketing has a plan: the coach's face on every billboard in town."],
+		"choices": [
+			{"key": "coach", "label": "Do the campaign",
+			 "effects": [{"op": "board", "d": 3}, {"op": "odds", "chance": 30, "hit": [{"op": "board", "d": -3}], "hit_result": "A mid-season dip, and your face is still on the buses."}],
+			 "result": "Your face is everywhere. The board is pleased."},
+			{"key": "players", "label": "Put the players on the billboards",
+			 "effects": [{"op": "morale", "d": 2, "who": "all"}, {"op": "odds", "chance": 15, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "The extra appearances left a few players flat."}],
+			 "result": "The players enjoy it. More appearances, less rest."},
+			{"key": "no", "label": "Say no and let the footy sell it",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The coach kept the focus on footy"}, {"op": "board", "d": -2}],
+			 "result": "The group sees you protect them. The board wanted a team player."}
+		]
+	},
+	{
+		"id": "ade_forty_degrees",
+		"club": "ADE",
+		"controversy": false,
+		"category": "training",
+		"subject": {"kind": "club"},
+		"title": ["Forty degrees"],
+		"text": ["Adelaide is in a heatwave and the forecast is 40-plus all week. The fitness staff want the main session kept; the doctor wants it at dawn or cut short."],
+		"choices": [
+			{"key": "dawn", "label": "Train at dawn, full load",
+			 "effects": [{"op": "xp", "d": 3, "who": "all"}, {"op": "morale", "d": -1, "who": "all"}],
+			 "result": "The work gets done before the sun is up. The early starts wear on the group."},
+			{"key": "cut", "label": "Cut the session",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "forgo_xp", "d": 3, "who": "all"}],
+			 "result": "Bodies stay fresh. A week of fitness is gone."},
+			{"key": "through", "label": "Train through the heat",
+			 "effects": [{"op": "xp", "d": 4, "who": "all"}, {"op": "odds", "chance": 20, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "The heat took more out of them than it gave."}],
+			 "result": "They train in the full heat. It builds hard bodies."}
+		]
+	},
+	{
+		"id": "ade_resilience_camp",
+		"club": "ADE",
+		"controversy": true,
+		"category": "leadership",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["The resilience camp"],
+		"text": ["An outside firm pitches a pre-season \"mental resilience\" camp: sleep deprivation, confronting personal sessions, no phones. They say it will forge a premiership group."],
+		"choices": [
+			{"key": "book", "label": "Book the camp",
+			 "effects": [{"op": "odds", "chance": 50, "hit": [{"op": "culture", "strand": "together", "d": 2, "why": "Some of the group came back closer"}], "miss": [{"op": "culture", "strand": "together", "d": -1, "why": "Some of the group came back feeling humiliated"}], "hit_result": "Some of the group came home closer.", "miss_result": "Some players came home feeling humiliated."}, {"op": "odds", "chance": 40, "hit": [{"op": "board", "d": -4}, {"op": "morale", "d": -4, "who": "all"}], "hit_result": "What went on at the camp leaked to the press."}],
+			 "result": "The players hand in their phones and get on the bus."},
+			{"key": "own", "label": "Run your own leadership camp",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The club ran its own camp"}, {"op": "forgo_xp", "d": 2, "who": "all"}],
+			 "result": "Two days away, run by the club. Less drama, two days off the track."},
+			{"key": "none", "label": "No camp, train as normal",
+			 "effects": [{"op": "xp", "d": 2, "who": "all"}, {"op": "board", "d": -1}],
+			 "result": "Full training. The board wanted something done about the group."}
+		]
+	},
+	{
+		"id": "ade_quiet_side_deal",
+		"club": "ADE",
+		"controversy": true,
+		"category": "contracts",
+		"subject": {"kind": "club"},
+		"title": ["The quiet side deal"],
+		"text": ["A key forward will sign cheap if the club privately promises to trade him to the club of his choice later and tops up his pay through a third party. It's against the rules. Nobody would ever know."],
+		"choices": [
+			{"key": "deal", "label": "Do the deal",
+			 "effects": [{"op": "morale", "d": 2, "who": "all"}, {"op": "odds", "chance": 35, "hit": [{"op": "board", "d": -6}], "hit_result": "The league found out. Fines, lost picks, and a board that no longer trusts you."}],
+			 "result": "He stays, and he's cheap."},
+			{"key": "pay", "label": "Refuse, and pay him properly",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The club kept its books clean"}, {"op": "board", "d": -3, "was": "funds"}],
+			 "result": "Clean books. The pay squeezes the rest of the list."},
+			{"key": "walk", "label": "Refuse, and let him walk",
+			 "effects": [{"op": "board", "d": 1}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "Clean books, and a key forward gone."}
+		]
+	},
+	{
+		"id": "ade_perth_trip",
+		"club": "ADE",
+		"controversy": false,
+		"category": "rivals",
+		"when": {"opp_deck": "WCE"},
+		"subject": {"kind": "club"},
+		"title": ["Over to Perth"],
+		"text": ["You're off to play {opp} in Perth. Long flight, time difference, hostile crowd. The rivalry was built on these trips."],
+		"choices": [
+			{"key": "early", "label": "Fly over a day early",
+			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -2, "was": "funds"}],
+			 "result": "Bodies settle in Perth. An extra night in the hotel, and some bored players."},
+			{"key": "late", "label": "Fly in the day before",
+			 "effects": [{"op": "morale", "d": 1, "who": "all"}, {"op": "slow_start", "chance": 25, "who": "side"}],
+			 "result": "A normal week at home and a night with family. The travel sits in the legs."}
+		]
+	},
+	{
+		"id": "ade_talkback_town",
+		"club": "ADE",
+		"controversy": false,
+		"category": "media",
+		"when": {"losing_run_min": 1},
+		"subject": {"kind": "player", "pick": "highest:leadership"},
+		"title": ["Talkback town"],
+		"text": ["Adelaide is a footy town with a lot of radio. After the loss, one host spends an hour asking whether {name} is still the right captain."],
+		"choices": [
+			{"key": "ring", "label": "Ring the station and back him live",
+			 "effects": [{"op": "trust", "d": 4, "why": "You backed him on air"}, {"op": "board", "d": -1}, {"op": "odds", "chance": 40, "hit": [{"op": "morale", "d": -2, "who": "subject"}], "hit_result": "Your call kept the story alive another week."}],
+			 "result": "{first} and the group love it. You've fed the story too."},
+			{"key": "ignore", "label": "Ignore it",
+			 "effects": [{"op": "trust", "d": -2, "why": "You said nothing when the radio came for him"}, {"op": "odds", "chance": 70, "hit": [{"op": "board", "d": 1}], "miss": [{"op": "board", "d": -1}], "hit_result": "The story died in two days.", "miss_result": "The story ran on without you."}],
+			 "result": "You leave it alone. {first} wonders why you were quiet."}
+		]
+	},
+	{
+		"id": "ade_september_tag",
+		"club": "ADE",
+		"controversy": false,
+		"category": "media",
+		"phase": ["finals"],
+		"subject": {"kind": "club"},
+		"title": ["The September tag"],
+		"text": ["The papers say the Crows freeze in finals. A columnist has a list of September losses and a theory about the club's mindset."],
+		"choices": [
+			{"key": "psych", "label": "Bring in a sports psychologist",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The players got tools for finals pressure"}, {"op": "odds", "chance": 30, "hit": [{"op": "board", "d": -1}], "hit_result": "The press ran it as the Crows calling in the shrink."}],
+			 "result": "The players get tools for the pressure."},
+			{"key": "pin", "label": "Pin the column to the noticeboard",
+			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "heavy_legs", "who": "side"}],
+			 "result": "The group is fired up. They burnt energy all week."},
+			{"key": "laugh", "label": "Laugh it off",
+			 "effects": [{"op": "board", "d": 1}, {"op": "loss_sting", "chance": 30, "d": -4, "who": "side"}],
+			 "result": "Nobody overthinks it. Lose this week and the tag sticks harder."}
+		]
+	},
+	{
+		"id": "ade_club_great_visits",
+		"club": "ADE",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"title": ["A club great drops in"],
+		"text": ["One of the Crows' greats is in town and offers to talk to the group before the weekend."],
+		"choices": [
+			{"key": "floor", "label": "Give him the floor before the main session",
+			 "effects": [{"op": "morale", "d": 3, "who": "all"}, {"op": "forgo_xp", "d": 2, "who": "all"}],
+			 "result": "The room hangs off every word. The session runs late."},
+			{"key": "lunch", "label": "Have him to lunch with the leaders",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The leaders learnt what it takes from a club great"}, {"op": "morale", "d": -1, "who": "all"}],
+			 "result": "The leaders soak it up. The rest of the group misses out."}
+		]
+	},
+	{
+		"id": "ade_fan_favourite",
+		"club": "ADE",
+		"controversy": false,
+		"category": "contracts",
+		"phase": ["season_end"],
+		"subject": {"kind": "player", "pick": "highest:age", "where": {"age_min": 30}},
+		"title": ["The fan favourite's last contract"],
+		"text": ["{name} still kicks the goals that bring the house down, but his running numbers are falling. He wants two more years."],
+		"choices": [
+			{"key": "two", "label": "Give him two",
+			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "trust", "d": 3, "why": "You gave him the years he asked for"}, {"op": "culture", "strand": "ambition", "d": -1, "why": "Two years for an ageing forward ties up a spot the kids wanted"}],
+			 "result": "The crowd and the group love it. The second year may be a stretch."},
+			{"key": "one", "label": "Offer him one",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The club paid for form, not memories"}, {"op": "trust", "d": -2, "why": "He wanted two years and got one"}],
+			 "result": "A fair deal for both sides. {first} feels a little short-changed."},
+			{"key": "go", "label": "Thank him and let him go",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The spot goes to the next kid"}, {"op": "board", "d": -2, "was": "members"}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "A clean list spot. The supporters are furious."}
+		]
+	},
+	{
+		"id": "ade_born_to_do_great_things",
+		"club": "ADE",
+		"controversy": false,
+		"category": "leadership",
+		"subject": {"kind": "club"},
+		"title": ["Born to do great things"],
+		"text": ["The leadership group wants to rewrite the team's values around the motto on the crest, \"born to do great things\". It'll take a full afternoon off training."],
+		"choices": [
+			{"key": "give", "label": "Give them the afternoon",
+			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The players wrote their own values"}, {"op": "forgo_xp", "d": 3, "who": "all"}],
+			 "result": "The group owns its values. The session is gone."},
+			{"key": "self", "label": "Write them yourself over a weekend",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The coach set the standard in writing"}, {"op": "culture", "strand": "together", "d": -1, "why": "The leaders wanted their own words"}],
+			 "result": "No training lost. They're your words, not theirs."}
+		]
+	},
+	{
+		"id": "ade_kuwarna_week",
+		"club": "ADE",
+		"controversy": false,
+		"category": "community",
+		"subject": {"kind": "club"},
+		"title": ["Kuwarna week"],
+		"text": ["The Indigenous players ask to lead a week of the club's football: a session with a Kaurna elder on the meaning of \"Kuwarna\", the Kaurna word for crow, community visits, and the pre-game talk."],
+		"choices": [
+			{"key": "hand", "label": "Hand them the week",
+			 "effects": [{"op": "morale", "d": 3, "who": "all"}, {"op": "culture", "strand": "together", "d": 1, "why": "The Indigenous players led the club for a week"}, {"op": "slow_start", "chance": 20, "who": "side"}],
+			 "result": "Pride right through the group. Less time on match prep."},
+			{"key": "one", "label": "Keep it to one session",
+			 "effects": [{"op": "xp", "d": 2, "who": "all"}, {"op": "culture", "strand": "together", "d": -1, "why": "The players felt one session sold the week short"}],
+			 "result": "Normal preparation. The players feel the gesture was small."}
+		]
+	},
+	{
+		"id": "ade_country_tour",
+		"club": "ADE",
+		"controversy": false,
+		"category": "community",
+		"phase": ["preseason"],
+		"subject": {"kind": "club"},
+		"title": ["The country tour"],
+		"text": ["The club can take a pre-season game to a country town in South Australia. The locals are thrilled. The ground is rock hard."],
+		"choices": [
+			{"key": "seniors", "label": "Go, and play the seniors",
+			 "effects": [{"op": "board", "d": 5, "was": "members"}, {"op": "odds", "chance": 15, "hit": [{"op": "forgo_xp", "d": 4, "who": "side"}], "hit_result": "One of the best 22 jarred a knee on the hard ground and missed a block."}],
+			 "result": "The whole state hears about it. The ground is as hard as promised."},
+			{"key": "kids", "label": "Go, play the kids, seniors run clinics",
+			 "effects": [{"op": "xp", "d": 3, "who": "all"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "The kids get a game. The town wanted the stars on the field."},
+			{"key": "stay", "label": "Stay in the city",
+			 "effects": [{"op": "xp", "d": 2, "who": "all"}, {"op": "board", "d": -2, "was": "members"}],
+			 "result": "A safe deck and a full pre-season block. The country feels forgotten."}
+		]
+	},
+	{
+		"id": "ade_wine_sponsor",
+		"club": "ADE",
+		"controversy": false,
+		"category": "board",
+		"subject": {"kind": "club"},
+		"title": ["The wine country offer"],
+		"text": ["A wine region a short drive from the city offers a big sponsorship. The catch: player appearances at long tastings during the season."],
+		"choices": [
+			{"key": "all", "label": "Take it, appearances and all",
+			 "effects": [{"op": "board", "d": 4, "was": "funds"}, {"op": "odds", "chance": 20, "hit": [{"op": "board", "d": -3}], "hit_result": "A long afternoon at a tasting ended up in the papers."}],
+			 "result": "Money for the football department, and long afternoons out."},
+			{"key": "off", "label": "Take it, off-season appearances only",
+			 "effects": [{"op": "board", "d": 1, "was": "funds"}, {"op": "morale", "d": -1, "who": "all"}],
+			 "result": "Less money, a lukewarm sponsor, and players giving up part of their break."},
+			{"key": "no", "label": "Say no",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The group stayed on the footy"}, {"op": "board", "d": -2, "was": "funds"}],
+			 "result": "No risk. The board wanted the money."}
+		]
+	},
+	{
+		"id": "ade_great_son",
+		"club": "ADE",
+		"controversy": false,
+		"category": "family",
+		"phase": ["season_end"],
+		"subject": {"kind": "club"},
+		"title": ["A club great's son"],
+		"text": ["The son of a Crows champion has nominated for the draft as a father-son. He's a project: two years away, maybe three."],
+		"choices": [
+			{"key": "take", "label": "Take him as a father-son",
+			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "culture", "strand": "ambition", "d": -1, "why": "The pick could have bought a ready-made player"}],
+			 "result": "The family ties hold. The members love it."},
+			{"key": "pass", "label": "Let him go to the open draft",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "You kept the pick for the best player available"}, {"op": "board", "d": -1, "was": "members"}],
+			 "result": "You keep your pick. It looks cold to the club's old families."}
+		]
+	},
+	{
+		"id": "ade_one_voice_or_two",
+		"club": "ADE",
+		"controversy": false,
+		"category": "leadership",
+		"phase": ["preseason"],
+		"subject": {"kind": "player", "pick": "highest:leadership"},
+		"title": ["One voice or two"],
+		"text": ["The club has run co-captains before. {name} and another senior player are both ready, and the group is split on who leads."],
+		"choices": [
+			{"key": "co", "label": "Make them co-captains",
+			 "effects": [{"op": "trust", "d": 2, "why": "You shared the captaincy"}, {"op": "culture", "strand": "together", "d": 1, "why": "Both leaders kept a voice"}, {"op": "slow_start", "chance": 25, "who": "side"}],
+			 "result": "Both stay happy. In a tough week there may be two messages."},
+			{"key": "one", "label": "Give {name} the captaincy alone",
+			 "effects": [{"op": "trust", "d": 4, "why": "You made him the one voice"}, {"op": "morale", "d": -2, "who": "others"}],
+			 "result": "One clear voice. The other senior player feels passed over."}
+		]
+	},
+	{
+		"id": "ade_cheer_squad_banner",
+		"club": "ADE",
+		"controversy": false,
+		"category": "members",
+		"when": {"opp_deck": "PAD"},
+		"subject": {"kind": "club"},
+		"title": ["The cheer squad's banner"],
+		"text": ["The cheer squad wants a Showdown banner that takes a swipe at {opp}. It's funny, it's sharp, and the other mob will see it."],
+		"choices": [
+			{"key": "run", "label": "Let it run",
+			 "effects": [{"op": "morale", "d": 2, "who": "all"}, {"op": "slow_start", "chance": 30, "who": "side"}],
+			 "result": "The crowd and the players love it. {opp} come out breathing fire."},
+			{"key": "tone", "label": "Ask them to tone it down",
+			 "effects": [{"op": "board", "d": 1}, {"op": "culture", "strand": "together", "d": -1, "why": "The cheer squad feels the club gagged them"}],
+			 "result": "No extra fire for {opp}. The cheer squad grumbles."}
+		]
+	}
+]

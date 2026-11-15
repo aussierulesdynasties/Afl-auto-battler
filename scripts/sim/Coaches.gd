@@ -224,12 +224,14 @@ static func whereabouts(c: Dictionary) -> String:
 ## The Round 1 2026 coaching world for a career at `my_club`: every seeded
 ## coach, with that club's real senior coach moved out of the job you now
 ## hold. Deterministic: the same seed file gives the same records and names.
-static func seed(my_club: String) -> Dictionary:
+## `hire_own`: your club is one you created, and you hire its staff yourself
+## (director 2026-11-15): none of its jobs is filled here.
+static func seed(my_club: String, hire_own := false) -> Dictionary:
 	# A past start (Legacy mode) reads its own season's staff: the real senior
 	# coaches, yours making way (director 2026-11-13, "You replace him").
 	var file := str(GameDB.COACHES_CSV)
 	if file != "" and file != SEED_CSV:
-		return seed_era(my_club, file, int(GameDB.START_YEAR))
+		return seed_era(my_club, file, int(GameDB.START_YEAR), hire_own)
 	var rows := _read_seed()
 	var names := _alias_pool()
 	var out := {}
@@ -292,7 +294,7 @@ const ERA_SECOND_ROLES := {"reserves": "Reserves coach", "under_19s": "Under-19s
 ## him", "Joins the coach pool"). The reserves and under-19s coaches are
 ## working outside the senior jobs and can be hired; the five assistant jobs
 ## the file does not name are filled by new coaches, as a new club's are.
-static func seed_era(my_club: String, path: String, year: int) -> Dictionary:
+static func seed_era(my_club: String, path: String, year: int, hire_own := false) -> Dictionary:
 	var names := _alias_pool()
 	var rated := _era_ratings(path, year)
 	var out := {}
@@ -329,7 +331,10 @@ static func seed_era(my_club: String, path: String, year: int) -> Dictionary:
 			c["note"] = "%s, %s" % [ERA_SECOND_ROLES[role], GameDB.club_name(club)]
 		out[cid] = c
 	# The jobs the file does not name, at every club of the season.
-	CoachMarket.fill_with_new(out, GameDB.active_clubs(year), my_club, year - 1, COACH_NAME_SEED)
+	var clubs: Array = GameDB.active_clubs(year).duplicate()
+	if hire_own:
+		clubs.erase(my_club)
+	CoachMarket.fill_with_new(out, clubs, my_club, year - 1, COACH_NAME_SEED)
 	return out
 
 

@@ -1007,14 +1007,24 @@ func recalc_ladder() -> void:
 ## Points first, then percentage - the actual AFL tiebreak order.
 func ladder_sorted() -> Array:
 	var out := []
+	# Level on points, percentage and points for (every club before round 1):
+	# the club's name, A-Z, so a level ladder never comes out in a random order.
+	var names := {}
+	var loop := Engine.get_main_loop() as SceneTree
+	var db: Node = loop.root.get_node_or_null("GameDB") if loop != null else null
 	for c in ladder:
 		out.append(ladder[c])
+		names[str(c)] = str(db.club_name(str(c))) if db != null else str(c)
 	out.sort_custom(func(a, b):
 		if a["pts"] != b["pts"]:
 			return int(a["pts"]) > int(b["pts"])
 		if not is_equal_approx(a["pct"], b["pct"]):
 			return a["pct"] > b["pct"]
-		return int(a["pf"]) > int(b["pf"]))
+		if int(a["pf"]) != int(b["pf"]):
+			return int(a["pf"]) > int(b["pf"])
+		var na: String = names.get(str(a["code"]), str(a["code"]))
+		var nb: String = names.get(str(b["code"]), str(b["code"]))
+		return na < nb if na != nb else str(a["code"]) < str(b["code"]))
 	return out
 
 

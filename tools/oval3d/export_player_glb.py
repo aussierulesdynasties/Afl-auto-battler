@@ -84,8 +84,13 @@ for v in range(len(me.vertices)):
         gu[v], gv[v] = 0.0, (rest_z[v] - (knee_z - 0.17)) / 0.06
 assert me.uv_layers, "the MPFB body has no UV layer to carry the guernsey coordinates"
 uv1 = me.uv_layers[0]
+uv1_name = uv1.name
 col = me.color_attributes.new("kit", "FLOAT_COLOR", "CORNER")
-uv2 = me.uv_layers.new(name="kit_hair")
+# Not "kit_hair": that is already the hair field's attribute on the body, so Blender would name
+# this layer "kit_hair.001" and a joined shoe's "kit_hair" would come in as a second, empty layer.
+HAIR_UV = "uv_hair_front"
+uv2 = me.uv_layers.new(name=HAIR_UV)
+assert uv2.name == HAIR_UV, uv2.name
 for li, loop in enumerate(me.loops):
     v = loop.vertex_index
     col.data[li].color = (g[v], sh[v], so[v], bo[v])
@@ -202,8 +207,8 @@ def tripo_boots(guide, path, uv_name):
         kc = me2.color_attributes.new("kit", "FLOAT_COLOR", "CORNER")
         for li in range(len(me2.loops)):
             kc.data[li].color = (1.0, 1.0, 1.0, 1.0)
-        me2.uv_layers.new(name="kit_hair")
-        for d in me2.uv_layers["kit_hair"].data:
+        me2.uv_layers.new(name=HAIR_UV)
+        for d in me2.uv_layers[HAIR_UV].data:
             d.uv = (0.0, 0.0)
         print(f"BOOT {ob2.name}: length {length:.3f} m, scale {s:.3f}, yaw {math.degrees(yaw):.1f} deg, "
               f"mirror {mx < 0}, sole z {c.z:.3f}, tris {sum(len(p.vertices) - 2 for p in me2.polygons)}")
@@ -228,7 +233,7 @@ for name in json.loads(basemesh.get("extras", "[]")):
     while sm.uv_layers:
         sm.uv_layers.remove(sm.uv_layers[0])
     su1 = sm.uv_layers.new(name=uv1.name)
-    su2 = sm.uv_layers.new(name="kit_hair")
+    su2 = sm.uv_layers.new(name=HAIR_UV)
     scol = sm.color_attributes.new("kit", "FLOAT_COLOR", "CORNER")
     # The shoe asset carries its own sock up the shin: above the ankle it is the sock (the kit's
     # own rule, ard_body: sock above ankle + 3 cm), with the sock band's coordinates; a 1 cm
@@ -399,6 +404,14 @@ if CLIPS:
     bpy.data.objects.remove(theirs)
 rig.animation_data.use_nla = True
 t_anim = time.time()
+
+# Godot reads glTF TEXCOORD_0 as UV and TEXCOORD_1 as UV2, and the kit shader needs exactly
+# [guernsey coordinates, hair/front] there: a third layer pushes hair/front to TEXCOORD_2, where
+# Godot never reads it, so the design and the number lose front and back (#1606's shoe join did
+# this: no chevrons, the back number through the chest).
+uvs = basemesh.data.uv_layers
+print("UV layers before export:", [l.name for l in uvs])
+assert [l.name for l in uvs] == [uv1_name, HAIR_UV], [l.name for l in uvs]
 
 bpy.ops.object.select_all(action="DESELECT")
 basemesh.select_set(True)

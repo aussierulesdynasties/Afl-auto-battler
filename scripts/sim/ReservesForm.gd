@@ -104,7 +104,8 @@ static func marks(side_ids: Array, reserve_ids: Array, form_log: Dictionary,
 			recent += float(x)
 		recent /= float(last.size())
 		var season := float(f["sum"]) / float(n)
-		if recent < season:
+		# The mark shows the rounded gap, so a gap that rounds to 0 gets none.
+		if int(round(recent)) < int(round(season)):
 			cold.append({"id": str(id), "recent": int(round(recent)), "season": int(round(season)),
 					"gap": recent - season})
 	cold.sort_custom(func(a, b):
@@ -121,7 +122,7 @@ static func marks(side_ids: Array, reserve_ids: Array, form_log: Dictionary,
 			recent += float((g as Dictionary).get("pts", 0))
 		recent /= float(last.size())
 		var season := float(f["sum"]) / float(n)
-		if recent > season:
+		if int(round(recent)) > int(round(season)):
 			hot.append({"id": str(id), "recent": int(round(recent)), "season": int(round(season)),
 					"gap": recent - season, "games": last.size(), "last": last.back()})
 	hot.sort_custom(func(a, b):
