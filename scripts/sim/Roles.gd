@@ -77,6 +77,9 @@ const TAG_KEEP_FLOOR := 0.4
 ## outrun his contested ball.
 const TAGGER_PRESSURE := 0.70
 const TAGGER_MARGIN := 0.20
+## A midfielder who wins this much of the ball a game (a season of at least
+## WING_STAT_GAMES) is a ball-winner, however hard he presses: never a Tagger.
+const TAGGER_NEVER_DISPOSALS := 20.0
 
 
 ## What the wing rewards: carry and disposal. Raw attribute blend.
@@ -125,6 +128,9 @@ static func is_wing(p: Dictionary) -> bool:
 static func is_tagger(p: Dictionary) -> bool:
 	if str(p.get("role", "")) != "MID" or not p.has("attr"):
 		return false
+	var gm := float(p.get("gm", 0.0))
+	if gm >= WING_STAT_GAMES and float(p.get("di", 0.0)) / gm >= TAGGER_NEVER_DISPOSALS:
+		return false
 	var mid_view := p.duplicate()
 	mid_view["role"] = "MID"
 	var press := PlayerProfile.percentile(mid_view, "pressure", true)
@@ -155,7 +161,7 @@ static func usual_touches(target: Dictionary) -> float:
 		return TAG_USUAL_TOUCHES
 	var a: Dictionary = target["attr"]
 	var f: Array = USUAL_TOUCHES_FIT
-	var n := float(f[0]) + float(f[1]) * float(a.get("disposal", 0)) + float(f[2]) * float(a.get("carry", 0))
+	var n := float(f[0]) + float(f[1]) * Skills.disposal_of(a, 0.0) + float(f[2]) * float(a.get("carry", 0))
 	if on_wing(target):
 		n += float(f[3])
 	return maxf(USUAL_TOUCHES_MIN, n)

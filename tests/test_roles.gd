@@ -567,7 +567,8 @@ func _test_old_save_keeps_positions() -> void:
 	# As the build before row 91 rated him (the career holds its own copy).
 	him["role"] = "MID"
 	him["role2"] = ""
-	him["overall"] = 51
+	var was := Ratings.rate_overall(him["attr"], "MID", Ratings.effective_games(him))
+	him["overall"] = was
 	_check(GameState.save_career(), "The career saves")
 	GameState.reset()
 	_check(GameState.load_career(), "A career saved with the old reading loads")
@@ -575,7 +576,7 @@ func _test_old_save_keeps_positions() -> void:
 	for p in GameState.my_list:
 		if str(p.get("id", "")) == id:
 			back = p
-	_check(not back.is_empty() and str(back["role"]) == "MID" and int(back["overall"]) == 51,
+	_check(not back.is_empty() and str(back["role"]) == "MID" and int(back["overall"]) == was,
 			"It keeps the position and OVR it was saved with (%s %s)" % [back.get("role", "?"), back.get("overall", "?")])
 	GameState.reset()
 

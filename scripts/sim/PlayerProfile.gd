@@ -35,8 +35,9 @@ static func _values(role: String, key: String) -> Array:
 	var k := role + "|" + key
 	if not _sorted.has(k):
 		var vals := []
+		var apos := role.trim_prefix(APOS_PEERS) if role.begins_with(APOS_PEERS) else ""
 		for p in _game_db().players:
-			if str(p.get("role", "")) == role:
+			if (str(p.get("apos", "")) == apos) if apos != "" else (str(p.get("role", "")) == role):
 				vals.append(Skills.value(p["attr"], key, 0.0))
 		vals.sort()
 		# Off the main thread (a match on a worker) it is only read: warm()
@@ -59,11 +60,14 @@ static func warm() -> void:
 	var roles := {}
 	for p in _game_db().players:
 		roles[str(p.get("role", ""))] = true
-	if _sorted.size() >= roles.size() * ATTR_LABELS.size():
+	if _sorted.size() > roles.size() * ATTR_LABELS.size():
 		return
 	for role in roles:
 		for key in ATTR_LABELS:
 			_values(role, key)
+	for p in _game_db().players:
+		if str(p.get("apos", "")) != "":
+			_values(APOS_PEERS + str(p["apos"]), "contested_marking")
 
 
 ## Share of 2026 players of his role he is at least as good as (0..1): ties
@@ -181,10 +185,17 @@ static func player_type(p: Dictionary) -> String:
 	# tell a key defender from a rebounder, so he is just a Defender.
 	if role == "DEF" and not bool(p.get("projected", false)) and float(p.get("gm", 99.0)) < MIN_TYPE_GAMES:
 		return "Defender"
+	# A real player's AFL position (Wheelo, the AFL's 7 positions: director's
+	# interview 2026-11-15, ruling 20) says whether he is a key defender.
+	var apos := str(p.get("apos", ""))
+	if role == "DEF" and apos == KEY_DEF_APOS:
+		return "Key defender" if float(p.get("height_cm", 0.0)) >= KEY_DEF_CM else "Defender"
 	var best := ""
 	var best_score := -1.0
 	for row in GameState.TRAIN_PLANS:
 		if not row.has("weights") or not (row["roles"] as Array).has(role):
+			continue
+		if apos != "" and str(row.get("label", "")) == "Key defender":
 			continue
 		var w: Dictionary = row["weights"]
 		var total := 0.0
@@ -194,7 +205,7 @@ static func player_type(p: Dictionary) -> String:
 			total += float(w[key])
 		score /= maxf(0.001, total)
 		# A small forward stays small: a strong mark reads as a key forward.
-		if str(row["key"]) == "small_fwd" and int((p["attr"] as Dictionary).get("contested_marking", 0)) >= 52:
+		if str(row["key"]) == "small_fwd" and int((p["attr"] as Dictionary).get("contested_marking", 0)) >= Traits.SMALL_MAX_CM:
 			score -= 0.15
 		if score > best_score:
 			best_score = score
@@ -226,6 +237,16 @@ const FWD_TYPE_LINE := 0.70
 ## The shortest a key defender stands (player_type); under it a defender
 ## who reads as one is a Defender.
 const KEY_DEF_CM := 191.0
+## The AFL's own positions (Wheelo) that make a key defender and a key
+## forward, and the peer-group prefix for _values: "apos:Gen. Forward".
+const KEY_DEF_APOS := "Key Defender"
+const KEY_FWD_APOS := "Key Forward"
+const APOS_PEERS := "apos:"
+
+
+## How short he is for a small forward, 0 -> 1 down SMALL_FWD_CM.
+static func short_of(h: float) -> float:
+	return clampf((SMALL_FWD_CM[0] - h) / (SMALL_FWD_CM[0] - SMALL_FWD_CM[1]), 0.0, 1.0)
 ## The tallest a small defender stands; taller reads as a Defender.
 const SMALL_DEF_CM := 186.0
 ## Fewer games than this and a defender's archetype is noise (player_type).
@@ -236,14 +257,22 @@ static func forward_type(p: Dictionary) -> String:
 	var h := float(p.get("height_cm", 0.0))
 	if h <= 0.0 or not p.has("attr"):
 		return "Forward"
+	# A real player's AFL position settles key or not (ruling 20); his marking
+	# is weighed against forwards of that position, the players his skills
+	# were rated against (ruling 2). Within a general forward's position the
+	# marking spread is narrow, so his size decides most of "small".
+	var apos := str(p.get("apos", ""))
+	if apos == KEY_FWD_APOS:
+		return "Key forward"
 	var view := p.duplicate()
-	view["role"] = "FWD"
+	view["role"] = APOS_PEERS + apos if apos != "" else "FWD"
 	var aerial := percentile(view, "contested_marking", true)
+	if apos != "":
+		return "Small forward" if 0.8 * short_of(h) + 0.2 * (1.0 - aerial) >= FWD_TYPE_LINE - 0.10 else "Forward"
 	var tall := clampf((h - KEY_FWD_CM[0]) / (KEY_FWD_CM[1] - KEY_FWD_CM[0]), 0.0, 1.0)
-	var short := clampf((SMALL_FWD_CM[0] - h) / (SMALL_FWD_CM[0] - SMALL_FWD_CM[1]), 0.0, 1.0)
 	if 0.6 * tall + 0.4 * aerial >= FWD_TYPE_LINE:
 		return "Key forward"
-	if 0.6 * short + 0.4 * (1.0 - aerial) >= FWD_TYPE_LINE - 0.10:
+	if 0.6 * short_of(h) + 0.4 * (1.0 - aerial) >= FWD_TYPE_LINE - 0.10:
 		return "Small forward"
 	return "Forward"
 

@@ -2728,7 +2728,7 @@ func _test_tag_own_touches() -> void:
 	var f: Array = Roles.USUAL_TOUCHES_FIT
 	for p in [busy, quiet]:
 		var a: Dictionary = p["attr"]
-		var want := float(f[0]) + float(f[1]) * float(a["disposal"]) + float(f[2]) * float(a["carry"]) + (float(f[3]) if Roles.on_wing(p) else 0.0)
+		var want := float(f[0]) + float(f[1]) * Skills.disposal_of(a) + float(f[2]) * float(a["carry"]) + (float(f[3]) if Roles.on_wing(p) else 0.0)
 		_check(is_equal_approx(Roles.usual_touches(p), maxf(Roles.USUAL_TOUCHES_MIN, want)),
 				"%s usually gets what the sim gives his ratings (%.1f)" % [str(p["id"]), want])
 	# Tagged: the hold the sim plays with this man on him, as touches off his own count.
@@ -2744,7 +2744,8 @@ func _test_tag_own_touches() -> void:
 	inside["line"] = "C"
 	var wing := quiet.duplicate(true)
 	wing["line"] = "WING"
-	(wing["attr"] as Dictionary)["disposal"] = float((wing["attr"] as Dictionary)["disposal"]) - float(f[3]) / float(f[1])
+	for k in ["kicking", "handballing"]:
+		(wing["attr"] as Dictionary)[k] = float((wing["attr"] as Dictionary)[k]) - float(f[3]) / float(f[1])
 	_check(is_equal_approx(Roles.usual_touches(inside), Roles.usual_touches(wing))
 			and Roles.tag_touches(tagger, legs, wing) < Roles.tag_touches(tagger, legs, inside),
 			"Held the same, a wing keeps less than an inside man who usually gets as much")

@@ -29,12 +29,13 @@ const NEEDS := {
 }
 
 ## Where the league sits on each plan's score (mean, spread), from the 2027
-## match-day sides: 1.0 fit is an average list for that plan.
+## match-day sides: 1.0 fit is an average list for that plan. Re-measured on
+## the Wheelo ratings of 2026-11-16 (skills rated against the AFL position).
 const LEAGUE := {
-	"attacking": [71.3, 3.5],
-	"defensive": [49.8, 2.4],
-	"contest": [80.3, 3.8],
-	"controlled": [57.9, 1.6],
+	"attacking": [54.8, 3.6],
+	"defensive": [71.6, 2.4],
+	"contest": [68.3, 5.6],
+	"controlled": [55.9, 2.0],
 }
 ## How far one spread from the league moves a plan's upside, and its limits:
 ## the best-suited list gets about half as much again, the worst about half.

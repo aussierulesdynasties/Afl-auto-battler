@@ -13250,7 +13250,7 @@ func focus_trait(p: Dictionary, stat: String) -> Dictionary:
 		var need_roles: Array = d["roles"]
 		if not need_roles.is_empty() and not (need_roles.has(roles[0]) or need_roles.has(roles[1])):
 			continue
-		if bool(d.get("small", false)) and int(attr.get("contested_marking", 0)) >= 52:
+		if bool(d.get("small", false)) and int(attr.get("contested_marking", 0)) >= Traits.SMALL_MAX_CM:
 			continue
 		return {"key": key, "min": int(d["min"]), "gap": maxi(0, int(d["min"]) - int(attr.get(stat, 0))),
 				"crowded": good >= Traits.MAX_GOOD}
