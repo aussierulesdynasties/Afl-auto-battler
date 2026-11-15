@@ -26,8 +26,8 @@ const GOLDEN := {
 	"fixture:3": "928bc55d620e04e745cf7adb88b56ae8",
 	"fixture:2027": "57bffb38d600d4036767ef691d623a80",
 	"fixture:90210": "1734a8fcc9068e3e444e293a25f944b4",
-	"played:2027": "64a3cda8c08addad5463c2543736376d",
-	"played:7": "5e9b5d64dda3832ff4a877ff67d2b89f",
+	"played:2027": "31f61087a92c4b6d7b29a6a96635e769",
+	"played:7": "b603a5949f57cd10c068f87514845cf4",
 }
 const PLAYED_WITH_OVR := {
 	"played:2027": "f717eb64566f9b222cb5125e5b4f238c",
