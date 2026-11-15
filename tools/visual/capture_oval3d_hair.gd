@@ -1,6 +1,7 @@
 extends SceneTree
 ## Every Club Forge hair style on the 3D footballer (Oval3D.look), for the art check.
-##   godot --path . --script tools/visual/capture_oval3d_hair.gd -- OUTDIR
+##   godot --path . --script tools/visual/capture_oval3d_hair.gd -- OUTDIR [HAIR_GLB]
+## HAIR_GLB: a candidate hair set (res://...) in place of Oval3D.HAIR_GLB; only its styles show.
 ## One footballer per style (Appearance.HAIR_STYLES) in a line on the 3D ground, standing
 ## (idle), in a plain kit, each a different skin and hair colour: line.png from the broadcast
 ## height, then head_<style>.png: front, side and back of his head at 3x, one image each.
@@ -28,11 +29,15 @@ func _run() -> void:
 	oval._ground()
 	var scene: PackedScene = load(oval.PLAYER_GLB)
 	var styles: Array = Appearance.HAIR_STYLES
+	if args.size() > 1:
+		oval.hair_glb = str(args[1])
+		styles = oval.hair_shells().keys()
+		styles.sort()
 	var figs := []
 	for i in range(styles.size()):
 		var p: Dictionary = oval._player(scene, oval._kit(gdb.club_guernsey("FRE")), gdb.club_colours("FRE"))
 		var lk: Array = LOOKS[i % LOOKS.size()]
-		oval.look(p, {"skin": lk[0], "hair": lk[1], "hair_style": styles[i]})
+		oval.look(p, {"skin": lk[0], "hair": lk[1], "hair_style": styles[i]}, true)
 		(p["anim"] as AnimationPlayer).advance(1e-4)
 		var nd: Node3D = p["node"]
 		nd.position = Vector3((i - (styles.size() - 1) * 0.5) * GAP, 0.0, 0.0)
