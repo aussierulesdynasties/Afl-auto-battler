@@ -10,6 +10,15 @@ var checks := 0
 ## Words that would make a line advice, not a fact: the game's one banned list
 ## (scripts/core/CopyRules.gd) plus this surface's own.
 var ADVICE: Array = CopyRules.WORDS + ["try ", "switch", "lean ", "keep the", "protect", "tag him", "run play"]
+
+
+## Whether `low` (lower case) uses an ADVICE word, matched only at a word's start:
+## "lean " is advice, "McLean was" is a name.
+func _advises(low: String) -> bool:
+	for w in ADVICE:
+		if RegEx.create_from_string("(?<![a-z])" + str(w)).search(low) != null:
+			return true
+	return false
 ## Engine words that must never reach the player.
 const ENGINE := ["fp", "chain", "ballup", "ball-up", "inside50", "_", "|", "def "]
 
@@ -203,9 +212,8 @@ func _test_quarter_facts(res: Dictionary) -> void:
 	var bad := ""
 	for t in all:
 		var low := str(t).to_lower()
-		for w in ADVICE:
-			if low.contains(w):
-				bad = str(t)
+		if _advises(low):
+			bad = str(t)
 		for key in CoachReport.PLAN_NAMES:
 			if str(t).contains(str(CoachReport.PLAN_NAMES[key])) and key != "balanced":
 				bad = str(t)
@@ -249,9 +257,8 @@ func _test_half_time_keys() -> void:
 			n += keys.size()
 			for k in keys:
 				var low := str(k).to_lower()
-				for w in ADVICE:
-					if low.contains(w):
-						bad = str(k)
+				if _advises(low):
+					bad = str(k)
 				for key in CoachReport.PLAN_NAMES:
 					if key != "balanced" and str(k).contains(str(CoachReport.PLAN_NAMES[key])):
 						bad = str(k)
@@ -285,9 +292,8 @@ func _test_full_time() -> void:
 			total += f.size()
 			for t in f:
 				var low := str(t).to_lower()
-				for w in ADVICE:
-					if low.contains(w):
-						bad = str(t)
+				if _advises(low):
+					bad = str(t)
 				if low.contains("pts") or low.contains("expected"):
 					bad = str(t)
 		var best := MatchNotes.standouts(r, 0, 3)
@@ -574,9 +580,8 @@ func _test_report_glance() -> void:
 		_check(loud == "", "Needs a lift is a quiet game by the rating shown (seed %d: %s)" % [seed, loud])
 		for n in g["notes"]:
 			var t := str(n)
-			for w in ADVICE:
-				if t.to_lower().contains(w):
-					bad = t
+			if _advises(t.to_lower()):
+				bad = t
 		for group in ["best", "lift", "danger"]:
 			for p in g[group]:
 				if str(p["line"]).contains("disp (") or str(p["line"]).contains("CLR") or str(p["line"]).contains("vs par"):
@@ -857,8 +862,9 @@ func _test_comeback_telling() -> void:
 			_check(not str(f).contains("won the third quarter"), "No repeat of the third quarter's score (%s)" % str(f))
 		for l in [bl, line]:
 			var low := str(l).to_lower()
-			for w in ADVICE + ENGINE:
-				_check(not low.contains(w), "No advice or engine words in '%s' (%s)" % [l, w])
+			_check(not _advises(low), "No advice words in '%s'" % l)
+			for w in ENGINE:
+				_check(not low.contains(w), "No engine words in '%s' (%s)" % [l, w])
 	# A turn needs the quarters to add up and the bar from Headlines.
 	var fake := _hl("GEE", "MEL", [[10, 20], [6, 22], [30, 6], [20, 10]])
 	_check(ComebackTelling.turn_line(fake, 0) == "", "No quarter goals, no turn claimed")
