@@ -261,6 +261,10 @@ func _test_campaign_rolls_through_the_eras() -> void:
 		for code in GameState.season.lists:
 			for p in GameState.season.lists[code]:
 				var id := str(p["id"])
+				# A real career that ended under 27 ends his deal that off-season
+				# (Prospects.real_delisting_due): kept, he is on a new one.
+				if int(p.get("real_end", 0)) == y:
+					continue
 				if signed.has(id) and p.has("salary") and str(signed_by[id]) == "%s|%s" % [code, p.get("joined", "")]:
 					kept += 1
 					if int(p["salary"]) != int(signed[id]):
