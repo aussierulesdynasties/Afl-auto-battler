@@ -1490,6 +1490,9 @@ func _test_rebuild_walkouts_sign() -> void:
 	var gone: Array = GameState.challenge.get("gone", [])
 	_check(club != "" and GameState.my_club == club and gone.size() == 3,
 			"Rebuild takes over the bottom club, three gone (%s, %d)" % [club, gone.size()])
+	# Its off-season closes before the first pick, as the draft screen's
+	# Start does (row 199): the clubs draft to the lists free agency left them.
+	GameState.close_first_offseason()
 	var guard := 0
 	while GameState.draft != null and not GameState.draft.is_finished() and guard < 400:
 		guard += 1

@@ -135,7 +135,9 @@ func _ready() -> void:
 	add_child(_beat_timer)
 	get_viewport().size_changed.connect(_on_resize)
 	_build_layout()
-	if _phase == "board" and not _meet_if_due():
+	# The draft's tip waits for the first off-season to close (row 199): it
+	# would cover the off-season's own buttons, and Start the draft shows it.
+	if _phase == "board" and GameState.first_offseason != 1 and not _meet_if_due():
 		FirstVisitIntro.show_if_due.call_deferred(self, _intro_key())
 
 
@@ -428,7 +430,7 @@ func _on_club_chosen(code: String) -> void:
 	_show_board()
 	# A club taken on this screen meets its recruiting panel here, before the
 	# first pick, not only once the draft is opened again.
-	if not _meet_if_due():
+	if GameState.first_offseason != 1 and not _meet_if_due():
 		FirstVisitIntro.show_if_due.call_deferred(self, _intro_key())
 
 
@@ -440,6 +442,9 @@ func _season_without_draft() -> bool:
 	if not GameState.opening_draft or GameState.dataset == Datasets.DEFAULT \
 			or _draft.user_club == "" or not GameDB.draftees.is_empty():
 		return false
+	# Its off-season comes first (row 199): the season starts when it closes.
+	if GameState.first_offseason == 1:
+		return false
 	if GameState.finish_intake_draft():
 		Router.replace("hub")
 		return true
@@ -450,7 +455,8 @@ func _season_without_draft() -> bool:
 ## is yours: true when it meets now.
 func _meet_if_due() -> bool:
 	if not _draft.intake_mode or _phase != "board" or _draft.is_finished() \
-			or GameState.draft_meeting_year == GameState.season_year:
+			or GameState.draft_meeting_year == GameState.season_year \
+			or GameState.first_offseason == 1:
 		return false
 	GameState.draft_meeting_year = GameState.season_year
 	# Saved at once: a career loaded mid-draft has had its meeting.
@@ -567,12 +573,67 @@ func _hang(code: String) -> void:
 	_hung.add_child(crest)
 
 
+## A real-lists career's off-season, before the opening National Draft (row
+## 199; director, 2026-11-15: "yes, should be the full off season"): trades
+## and free agency are open, and close when the coach starts the draft (on a
+## Legacy start, the season).
+func _show_first_offseason() -> void:
+	var legacy := GameDB.draftees.is_empty()
+	_root.add_child(_header("The %d off-season" % GameState.season_year, GameDB.club_name(_club)))
+	var v := UiKit.vbox(10)
+	v.name = "FirstOffseason"
+	_root.add_child(v)
+	var open_l := UiKit.lbl("The trade period and free agency are open. Every club can trade players "
+			+ "and picks, and sign free agents, the players delisted this year among them.",
+			UiKit.BODY, UiKit.TEXT, true)
+	open_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(open_l)
+	var close_text := "They close when the National Draft starts."
+	if legacy:
+		close_text = "They close when the %d season starts. There is no National Draft before it." \
+				% GameState.season_year
+	var close_l := UiKit.lbl(close_text, UiKit.SECONDARY, UiKit.MUTED)
+	close_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(close_l)
+	# Your challenge, said here too: free agency is where a Rebuild's rule bites.
+	var rule := Challenge.stated_line(GameState) if Challenge.kind(GameState) in ["youth", "rebuild"] else ""
+	if rule != "":
+		var said := UiKit.lbl(rule, UiKit.SMALL, UiKit.EMPH)
+		said.name = "ChallengeRule"
+		said.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(said)
+	var trades := UiKit.btn("Trades & Contracts", UiKit.NAME)
+	trades.name = "FirstOffseasonTrades"
+	trades.custom_minimum_size = Vector2(0, 48)
+	trades.pressed.connect(func() -> void: Router.go("offseason"))
+	v.add_child(trades)
+	var start_text := "Start the %d season" % GameState.season_year if legacy else "Start the draft"
+	var start := UiKit.btn(start_text, UiKit.NAME, true)
+	start.name = "FirstOffseasonStart"
+	start.custom_minimum_size = Vector2(0, 48)
+	start.pressed.connect(_end_first_offseason)
+	v.add_child(start)
+
+
+func _end_first_offseason() -> void:
+	GameState.close_first_offseason()
+	GameState.autosave()
+	if _season_without_draft():
+		return
+	_show_board()
+	if not _meet_if_due():
+		FirstVisitIntro.show_if_due.call_deferred(self, _intro_key())
+
+
 # ---------------------------------------------------------------------------
 # Persistent summary and responsive workspace
 # ---------------------------------------------------------------------------
 func _show_board() -> void:
 	_search_timer.stop()
 	UiKit.clear(_root)
+	if GameState.first_offseason == 1:
+		_show_first_offseason()
+		return
 	_board = null
 	_your_pick = null
 	_recent_box = null
