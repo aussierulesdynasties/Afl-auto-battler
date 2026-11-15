@@ -882,7 +882,7 @@ func _test_impact_and_ai() -> void:
 	_check(credited_ok, "A gameplan's effect is measured in expected points (every match)")
 	_check(owner_ok, "Gameplan points go to the side that runs the plan")
 	var lines := CoachReport.impact_lines(imp, [{}, {}], 0)
-	_check(not lines.is_empty() and str(lines[0]["label"]).begins_with("Your")
+	_check(not lines.is_empty() and str(lines[0]["label"]).begins_with("Our")
 			or str(lines[0]["label"]).begins_with("Their"), "The readout names what the points came from")
 	# The rival coach plays its usual game, reacts to the scoreboard, and
 	# counters the plan you ran when the counter costs it little.
@@ -2680,7 +2680,7 @@ func _test_bring_the_heat() -> void:
 	# It burns legs, not extra kilometres: a side covers about the ground it always does.
 	_check(absf(dist[1] / maxf(1.0, dist[0]) - 1.0) < 0.04,
 			"...but they cover about the same ground (%.0f km against %.0f km a side)" % [dist[1] / 36000.0, dist[0] / 36000.0])
-	_check(CoachReport.pep_summary("heat").contains("legs") and CoachReport.pep_summary("heat") != CoachReport.pep_summary("fire_up"),
+	_check(CoachReport.pep_summary("heat").to_lower().contains("legs") and CoachReport.pep_summary("heat") != CoachReport.pep_summary("fire_up"),
 			"Its words name the cost and are its own")
 	# "Much faster" only while it costs more legs than Fire them up does.
 	var heat_pace := float(MatchSim.PEP_HEAT.get("pace", 1.0))
@@ -2820,7 +2820,7 @@ func _test_hot_player_moment() -> void:
 	_check(str(mv.get("kind", "")) == "hot" and str(mv["options"][0]["label"]) == "Move %s onto him" % who
 			and str(mv["options"][1]["label"]) == "Leave the tag on %s" % other_name,
 			"With a tag already on, the call is to move it or leave it (%s / %s)" % [mv["options"][0]["label"], mv["options"][1]["label"]])
-	_check(str(mv["options"][0]["cost"]) == "Cost: the tag comes off %s, who goes back to his usual %d touches" % [other_name, other_usual]
+	_check(str(mv["options"][0]["cost"]) == "Cost: " + GateOdds.TAG_MOVE_COST % [other_name, other_usual]
 			and not str(mv["options"][0]["cost"]).contains(GateOdds.tag_gives()),
 			"Moving the tag costs the hold on the other man, not a second share of the tagger's game (%s)" % mv["options"][0]["cost"])
 	_check(str(mv["options"][1]["gain"]) == "Gain: %s stays on %s, who is held to about %d touches" % [who, other_name, held]
@@ -4856,7 +4856,7 @@ func _test_decision_credits() -> void:
 			"The decision lines and the rest add up to the margin (%+.1f)" % margin)
 	# An old save's last match booked the bursts as "calls": still shown.
 	var old_lines := CoachReport.impact_lines([{"calls": 2.0}, {}], [{}, {}], 0)
-	_check(old_lines.size() == 1 and str(old_lines[0]["label"]) == "Your in-game calls"
+	_check(old_lines.size() == 1 and str(old_lines[0]["label"]) == "Our in-game calls"
 			and is_equal_approx(float(old_lines[0]["pts"]), 2.0),
 			"An old save's \"calls\" still reads as in-game calls (%s)" % str(old_lines))
 	# A moment: the call is worth its expected points against the default.
