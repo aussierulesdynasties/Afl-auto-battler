@@ -175,7 +175,7 @@ func _test_lead_and_breaks() -> void:
 	var qt := MatchNotes.feed_line({"kind": "quarter", "q": 2, "text": "End of Q2 · ...",
 			"score": [30, 30]}, "COL", "CAR")
 	_check(str(qt["text"]) == "Half time: scores level", "A level half time (%s)" % str(qt["text"]))
-	var et := MatchNotes.feed_line({"kind": "quarter", "q": 5, "text": "Scores level at full time · we go to extra time.",
+	var et := MatchNotes.feed_line({"kind": "quarter", "q": 5, "text": "Scores level at full time · we are going to extra time!",
 			"score": [60, 60]}, "COL", "CAR")
 	_check(str(et["text"]) == "Scores level at full time: extra time", "Extra time is called plainly")
 	# Row 132: the calls readout is in the coach's voice, "Our game plan", never "Your gameplan".
@@ -364,7 +364,7 @@ func _test_rating() -> void:
 	_check(MatchNotes.rating_text(118) == "118", "Shown as a whole number")
 	_check(MatchNotes.legs_line(60.0, 60.0) == "Both midfields are %s." % MatchNotes.legs_word(60.0),
 			"Same legs on both sides are said once")
-	_check(MatchNotes.legs_line(100.0, 0.0) == "Your midfield is %s; theirs is %s."
+	_check(MatchNotes.legs_line(100.0, 0.0) == "Our midfield is %s; theirs is %s."
 			% [MatchNotes.legs_word(100.0), MatchNotes.legs_word(0.0)], "Different legs name both sides")
 	# Parity: across real simulated matches, each position's better games
 	# reach similar ratings, and forwards and defenders are sometimes a

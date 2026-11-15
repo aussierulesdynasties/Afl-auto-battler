@@ -377,14 +377,14 @@ static func quarter_facts(res: Dictionary, my_side: int, q: int, answers := {}) 
 	if clr_t - clr_m >= CLEARANCE_EDGE:
 		out.append("Their midfield is on top at the stoppages: clearances %d to %d." % [clr_t, clr_m])
 	elif clr_m - clr_t >= CLEARANCE_EDGE:
-		out.append("Your midfield is winning the stoppages: clearances %d to %d." % [clr_m, clr_t])
+		out.append("Our midfield is winning the stoppages: clearances %d to %d." % [clr_m, clr_t])
 
 	var i50_m := int(mine.get("inside50", 0.0))
 	var i50_t := int(theirs.get("inside50", 0.0))
 	if i50_t - i50_m >= INSIDE50_EDGE:
 		out.append("They have had most of the ball going forward: %d inside 50s to %d." % [i50_t, i50_m])
 	elif i50_m - i50_t >= INSIDE50_EDGE:
-		out.append("You have had most of the ball going forward: %d inside 50s to %d." % [i50_m, i50_t])
+		out.append("We have had most of the ball going forward: %d inside 50s to %d." % [i50_m, i50_t])
 
 	var spare := _roamer_quarter_fact(res, now, was, opp)
 	if spare != "":
@@ -485,7 +485,7 @@ static func _standout(res: Dictionary, now: Dictionary, was: Dictionary, side: i
 ## so a problem at the break and the call you answered it with read the same.
 ## Facts only - never whether it was the right call.
 const CALLS_DID_NOTE := "Each line is the number that call is about, this quarter against the one before."
-const CALLS_WORTH_NOTE := "Points are what each call added to your margin or took off it, worked out from where the ball went."
+const CALLS_WORTH_NOTE := "Points are what each call added to our margin or took off it, worked out from where the ball went."
 
 
 static func calls_lines(res: Dictionary, my_side: int, q: int) -> Array:
@@ -712,7 +712,7 @@ static func legs_word(energy: float) -> String:
 	return "running on empty"
 
 
-## "Your midfield is fresh; theirs is tiring." from two group energies, or
+## "Our midfield is fresh; theirs is tiring." from two group energies, or
 ## "Both midfields are tiring." when they are the same. `reason` (RivalRead.
 ## legs_reason) follows when theirs are the more tired: "...; theirs is
 ## tiring: they've pressed since quarter time."
@@ -720,7 +720,7 @@ static func legs_line(mine: float, theirs: float, reason := "") -> String:
 	if legs_word(mine) == legs_word(theirs):
 		return "Both midfields are %s." % legs_word(mine)
 	var tail := ": " + reason if reason != "" and _legs_rank(theirs) > _legs_rank(mine) else ""
-	return "Your midfield is %s; theirs is %s%s." % [legs_word(mine), legs_word(theirs), tail]
+	return "Our midfield is %s; theirs is %s%s." % [legs_word(mine), legs_word(theirs), tail]
 
 
 ## 0 fresh, 1 tiring, 2 running on empty.

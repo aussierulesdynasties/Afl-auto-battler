@@ -4605,7 +4605,7 @@ func end_quarter() -> Dictionary:
 		if needs_extra_time():
 			# No siren: the pitch keeps going into extra time.
 			_emit("quarter", -1, 0.0, null,
-					"Scores level at full time · we go to extra time.")
+					"Scores level at full time · we are going to extra time!")
 		else:
 			_emit_full_time("Full time")
 	return result()
