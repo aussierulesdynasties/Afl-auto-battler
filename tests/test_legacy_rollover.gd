@@ -717,11 +717,11 @@ func _test_canon_move(id: String, how: String) -> void:
 			LegacyRollover.week(GameState)
 			_check(GameState.week_events.size() == 1, "%s: the card comes once" % id)
 		LegacyRollover.canon_moves(GameState, int(m["year"]))
-		var moved := false
+		# A club entering that year takes him onto the list it is building
+		# when it has the expansion package, else onto league_lists (canon_moves).
+		var moved := (GameState.league_lists.get(to, []) as Array).has(star)
 		if GameDB.enter_year(to) == int(m["year"]):
-			moved = ExpansionBuild.list_of(GameState, to).has(star)
-		else:
-			moved = (GameState.league_lists.get(to, []) as Array).has(star)
+			moved = moved or ExpansionBuild.list_of(GameState, to).has(star)
 		var at_home := (GameState.league_lists[from] as Array).has(star)
 		_check(moved != at_home, "%s: he is at exactly one club (moved %s, home %s)" % [id, moved, at_home])
 		if how != "fight":
