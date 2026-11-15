@@ -1330,18 +1330,23 @@ func _test_event_sheet_fits_every_card() -> void:
 	_router.stack = ["main"]
 	_state.week_events = []
 	_state.media_conference = {}
+	# A card's words do not depend on the window: write each once (a card reads the
+	# whole club, 40 ms), then lay it out at every size.
+	var cards := []
+	for t in _rules("StoryDeck").all():
+		var player: bool = str((t["subject"] as Dictionary).get("kind", "club")) != "club"
+		var card: Dictionary = _state.story_card(str(t["id"]), him if player else {})
+		if not card.is_empty():
+			cards.append([str(t["id"]), card])
 	for dims in [Vector2i(360, 640), Vector2i(390, 844), Vector2i(1280, 720)]:
 		root.size = dims
 		_router.go("hub")
 		await _settle()
 		var hub: Node = current_scene
 		var win := Rect2(Vector2.ZERO, Vector2(dims))
-		for t in _rules("StoryDeck").all():
-			var player: bool = str((t["subject"] as Dictionary).get("kind", "club")) != "club"
-			var card: Dictionary = _state.story_card(str(t["id"]), him if player else {})
-			if card.is_empty():
-				continue
-			_state.week_events = [card]
+		for pair in cards:
+			var t := {"id": pair[0]}
+			_state.week_events = [(pair[1] as Dictionary).duplicate(true)]
 			hub.call("_open_event_sheet", 0)
 			await process_frame
 			await process_frame

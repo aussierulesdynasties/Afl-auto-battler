@@ -84,6 +84,18 @@ func _test_helper() -> void:
 	var one: Dictionary = NI.from_squads([[{"name": "Sam Worrell", "generic_name": "Sam Worrell"}]], ["GWS"])
 	_check(NI.spans_in("Worrell took it. Not Worrellson.", one).size() == 1,
 			"A surname alone is tinted, a longer word is not")
+	# Names are looked up by their first word: one that starts or breaks on an
+	# apostrophe or hyphen is still found, and a name added to the same index after
+	# it was read is found too.
+	var marks: Dictionary = NI.from_squads([[{"name": "Tom O'Brien", "generic_name": "Tom O'Brien"},
+			{"name": "Jamarra Ugle-Hagan", "generic_name": "Jamarra Ugle-Hagan"}]], ["ADE"])
+	var said := "O'Brien found Ugle-Hagan, then Tom O'Brien again."
+	var got: Array = NI.spans_in(said, marks).map(func(s): return said.substr(int(s[0]), int(s[1]) - int(s[0])))
+	_check(got == ["O'Brien", "Ugle-Hagan", "Tom O'Brien"],
+			"Names with an apostrophe or a hyphen are found whole (%s)" % str(got))
+	marks["Riley Thilthorpe"] = "ADE"
+	_check(NI.spans_in("Riley Thilthorpe marked.", marks).size() == 1,
+			"A name added to an index already read is found")
 	var lbl: Control = NI.label(line, idx, UK.BODY, UK.TEXT)
 	_check(lbl is RichTextLabel and NI.plain(lbl) == line, "A tinted line is a RichTextLabel that still carries its words")
 	_check(NI.label("Scores level.", idx) is Label, "A line with no names stays a plain Label")
