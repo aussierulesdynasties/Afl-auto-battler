@@ -8,16 +8,38 @@ extends RefCounted
 ## fine of the season, $1,875 for his second, $3,125 from his third (the 2025
 ## MRO fines on record: zerohanger.com's 2025 MRO and Tribunal tracker).
 ##
+## In a Legacy season before 2025 the scale is in that season's money: scaled
+## by that season's salary cap against 2025's (bug bash 4, L11), to the
+## nearest $25.
+##
 ## Kept on the player as `tribunal_fines`: {"<year>": {"n": fines, "total": dollars}}.
 ## A save from before this has no key, and reads as no fines.
 
 const SCALE := [1000, 1875, 3125]
+const SCALE_YEAR := 2025
 const KEY := "tribunal_fines"
 
 
-## The fine for a player's next one in `year`: the scale by how many he has had.
+## The fine for a player's next one in `year`: the scale by how many he has
+## had, in that season's money.
 static func next_amount(p: Dictionary, year: int) -> int:
-	return SCALE[mini(count(p, year), SCALE.size() - 1)]
+	var base: int = SCALE[mini(count(p, year), SCALE.size() - 1)]
+	var cap := Contracts.era_cap(year)
+	var cap_then := Contracts.era_cap(SCALE_YEAR)
+	if year >= SCALE_YEAR or cap <= 0 or cap_then <= 0:
+		return base
+	return maxi(25, int(round(float(base) * float(cap) / float(cap_then) / 25.0)) * 25)
+
+
+## Who hands out a fine in `year`: the Match Review Panel from 2005 (EraRules
+## match_review), the Tribunal before it.
+static func body(year: int) -> String:
+	return "the MRO" if EraRules.on("match_review", year) else "the Tribunal"
+
+
+## "the MRO sanction" from 2005, "the sanction" before the panel existed.
+static func sanction(year: int) -> String:
+	return "the MRO sanction" if EraRules.on("match_review", year) else "the sanction"
 
 
 ## Charge him his next fine of `year`; returns the amount.

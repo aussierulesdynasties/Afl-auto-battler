@@ -982,9 +982,9 @@ func _week_section(season: Season) -> Control:
 		nv.add_child(poster)
 		nv.add_child(_match_way())
 		asks_at = nv.get_child_count()
-		var marquee := MarqueeGames.tradition(str(mine["home"]), str(mine["away"]))
+		var marquee := GameState.marquee_for(str(mine["home"]), str(mine["away"]))
 		if not marquee.is_empty():
-			var marquee_line := UiKit.lbl(str(marquee["name"]), UiKit.SMALL, UiKit.EMPH, true)
+			var marquee_line := UiKit.lbl(str(marquee["title"]), UiKit.SMALL, UiKit.EMPH, true)
 			marquee_line.name = "MarqueeContext"
 			nv.add_child(marquee_line)
 		# Sir Doug Nicholls Round (row 75): the name only,
@@ -1549,7 +1549,7 @@ func _tribunal_card() -> Control:
 			var w := int(row.get("weeks", 0))
 			sanction = "%d-match suspension" % w
 		else:
-			sanction = "MRO fine"
+			sanction = "MRO fine" if EraRules.on("match_review", GameState.season_year) else "Fine"
 		var stage := str(row.get("stage", "tribunal"))
 		var hearing := "Appeals Board" if stage == "appeal" else "Tribunal"
 		var line := NameInk.label("%s — %s. %s case: %s." % [
@@ -2738,7 +2738,7 @@ func _my_result(v: VBoxContainer, res: Dictionary) -> void:
 		v.add_child(md)
 	var mro := GameState.my_mro_lines()
 	if not mro.is_empty():
-		var mr := UiKit.lbl("MRO: " + ", ".join(mro), UiKit.SMALL, UiKit.BAD, true)
+		var mr := UiKit.lbl(("MRO: " if EraRules.on("match_review", GameState.season_year) else "Tribunal: ") + ", ".join(mro), UiKit.SMALL, UiKit.BAD, true)
 		mr.name = "MyMRO"
 		mr.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(mr)
