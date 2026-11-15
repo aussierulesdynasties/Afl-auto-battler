@@ -8854,8 +8854,10 @@ func open_offseason(keep_staff := false) -> void:
 			if not list.has(p):
 				continue   # already delisted to make cap room for a better player
 			var why := ai_release_reason(code, p)
-			# His real club delisted him now (_real_delistings): so does this one.
-			if int(p.get("real_end", 0)) == season_year + 1:
+			# His real club delisted him now (_real_delistings): so does this one,
+			# even from a short list (the draft fills it).
+			var real_gone := int(p.get("real_end", 0)) == season_year + 1
+			if real_gone:
 				why = "delist"
 			# Talked round this off-season, he cannot be delisted by choice
 			# until the next one: the club keeps him, as yours must.
@@ -8877,7 +8879,7 @@ func open_offseason(keep_staff := false) -> void:
 			var held := ListStings.release_held(p, season_year + 1)
 			if held:
 				why = ""
-			if why == "" or list.size() <= Contracts.min_list():
+			if why == "" or (list.size() <= Contracts.min_list() and not real_gone):
 				# Rivals bargain by the same rules: the least he takes for that term
 				# (a club pushing to win now keeps him a little cheaper, as yours does).
 				# Testers leave together later, so count them: the club must still
