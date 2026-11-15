@@ -54,7 +54,7 @@ static func build(index: int, narrow: bool, rebuild: Callable, show_rule: Callab
 			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			# Every choice wraps its own words: side by side each gets an equal
 			# share, and stacked on a phone a long answer at the largest text
-			# size ("Take it, with a preseason camp up there") stays on screen.
+			# size would otherwise push the whole hub past the screen's edge.
 			b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			b.pressed.connect(func():
 				GameState.resolve_card(index, i)
