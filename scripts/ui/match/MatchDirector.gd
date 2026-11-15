@@ -595,6 +595,12 @@ func _possession_phases(k: int) -> Array:
 	var prev: Dictionary = events[pk] if pk >= 0 else {}
 	var hb := str(prev.get("kind", "")) == "handball"
 	var d := (ball["pos"] as Vector2).distance_to(loc)
+	if d < FLIGHT_MIN:
+		# The ball is already where this possession is won (two events past
+		# the goal line both clamp to it): the receiver comes and takes it. A
+		# flight of no length only lifted the ball and held it there, hanging
+		# 2.45 m up while the marker ran in (picture_truth, traits' 2027 match).
+		return tail
 	if hb and d > 18.0:
 		hb = false
 	var shape := _flight_shape("handball" if hb else "kick", d)
@@ -1345,6 +1351,8 @@ const SET_SPOT_BACK := 20.0
 ## (12 trace_collect matches: 214 collects of 1.5 s or more, 166 at 3.0, 162 on
 ## main before the clearing kicks).
 const KICK_HANG_MAX := 3.0
+## A possession won closer than this to the ball (metres) has no flight.
+const FLIGHT_MIN := 1.0
 ## A handball stays flat: it never hangs more than this much longer.
 const HANDBALL_HANG_MAX := 1.8
 ## A receiver still short of a ball this close gets one bobble toward him.

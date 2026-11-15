@@ -42,6 +42,7 @@ func run() -> void:
 	_t("_test_auto_rotation")
 	_t("_test_background_matches_rotate")
 	_t("_test_hothead")
+	_t("_test_bash5_traits")
 	_t("_test_lockdown_midfielder")
 	_t("_test_traits")
 	_t("_test_weather")
@@ -1110,6 +1111,106 @@ func _test_hothead() -> void:
 			"Hotheads increase the side's weighted chance of giving a clanger away")
 
 
+## Bug bash 5 (traits): each trait does what its copy says, at its size.
+func _test_bash5_traits() -> void:
+	var sim := _sim(4243)
+	for side in [0, 1]:
+		for q in (sim.squads[side] as Squad).ground:
+			sim._traits[str(q["id"])] = []
+	# Ball magnet: the usage curve fades the player BALL_MAGNET later, so the extra
+	# share is not cancelled in a big game.
+	var p: Dictionary = (sim.squads[0] as Squad).ground[0]
+	sim.player_stats[str(p["id"])] = {"disposals": 23.0}
+	var plain := sim._usage_mult(p, false)
+	var magnet := sim._usage_mult(p, false, MatchSim.BALL_MAGNET)
+	_check(magnet > plain * 1.2, "A Ball magnet's usage curve fades later (%.3f vs %.3f)" % [magnet, plain])
+	# Ruck king: 5% more of the hit-outs, relative.
+	var r0 := [(sim.squads[0] as Squad).ground[1]]
+	var r1 := [(sim.squads[1] as Squad).ground[1]]
+	var even := sim._tap_share([r0, r1])
+	sim._traits[str(r0[0]["id"])] = ["ruck_king"]
+	var king := sim._tap_share([r0, r1])
+	_check(is_equal_approx(king, minf(even * MatchSim.RUCK_KING, 0.9)),
+			"A Ruck king wins 5%% more of the taps, relative (%.3f from %.3f)" % [king, even])
+	sim._traits[str(r1[0]["id"])] = ["ruck_king"]
+	_check(is_equal_approx(sim._tap_share([r0, r1]), even), "Two Ruck kings cancel out")
+	sim._traits[str(r0[0]["id"])] = []
+	sim._traits[str(r1[0]["id"])] = []
+	_check(MatchSim.RUCK_KING_ADV > 1.0, "A Ruck king's hit-outs go to advantage more often")
+	# Lockdown: every shot by the direct opponent, wherever it comes from.
+	var duel: Dictionary = sim.duels[1]
+	_check(not duel.is_empty(), "The defenders have direct opponents to lock down")
+	if not duel.is_empty():
+		var fid := str(duel.keys()[0])
+		var fwd := sim._on_ground(0, fid)
+		var dfd := sim._on_ground(1, str(duel[fid]))
+		if not fwd.is_empty() and not dfd.is_empty():
+			var before := sim._lockdown_on(0, fwd)
+			sim._traits[str(dfd["id"])] = ["lockdown"]
+			_check(is_equal_approx(sim._lockdown_on(0, fwd), MatchSim.LOCKDOWN) and before == 1.0,
+					"A Lockdown defender covers its forward's shots from anywhere, not only the contest it stands in")
+			sim._traits[str(dfd["id"])] = []
+	# Contested bull: each bull in the midfield or ruck swings the stoppage
+	# to the bull's side, so the side wins more clearances, not only the bull.
+	var mid := {}
+	for q in (sim.squads[0] as Squad).ground:
+		if str(q["role"]) == "MID":
+			mid = q
+			break
+	sim._traits[str(mid["id"])] = ["bull"]
+	_check(sim._bulls(0) == 1 and sim._bulls(1) == 0, "A midfield bull is counted at the stoppage")
+	sim._ruck_tap()
+	var adv := 0.0
+	if bool(sim._tap["adv"]):
+		adv = MatchSim.TAP_ADV_EDGE if int(sim._tap["side"]) == 0 else -MatchSim.TAP_ADV_EDGE
+	_check(is_equal_approx(float(sim._tap["edge"]) - adv, MatchSim.BULL_STOPPAGE),
+			"The bull's stoppage edge goes to the bull's side (%.3f)" % (float(sim._tap["edge"]) - adv))
+	sim._tap = {}
+	sim._traits[str(mid["id"])] = []
+	# Hothead: holding the ball counts too, HOTHEAD_FREES times as often.
+	var carrier: Dictionary = (sim.squads[0] as Squad).ground[2]
+	var counts := [0, 0]
+	for hot in [0, 1]:
+		sim._traits[str(carrier["id"])] = ["hothead"] if hot == 1 else []
+		sim.free_rng.seed = 991
+		for i in range(4000):
+			if sim._holding_ball_free(carrier, 1):
+				counts[hot] += 1
+	var ratio := float(counts[1]) / maxf(1.0, float(counts[0]))
+	_check(ratio > 1.55 and ratio < 1.95, "A Hothead is pinged for holding the ball HOTHEAD_FREES times as often (x%.2f)" % ratio)
+	sim._traits[str(carrier["id"])] = []
+	# Interceptor: a spoil in a general-play marking contest can be his
+	# intercept mark, so his extra spoils no longer cost him the ball.
+	var turned := [0, 0]
+	for on in [0, 1]:
+		var s2 := _sim(4244)
+		for side in [0, 1]:
+			for q in (s2.squads[side] as Squad).ground:
+				s2._traits[str(q["id"])] = ["interceptor"] if (side == 1 and on == 1) else []
+		for i in range(400):
+			var res := s2._general_aerial_contest(0, 20.0, null)
+			if str(res.get("outcome", "")) == "turnover":
+				turned[on] += 1
+	_check(turned[0] == 0 and turned[1] > 10,
+			"Interceptors take some of their general-play spoils as marks (%s)" % str(turned))
+	# Defensive forward is a forward's own job: a midfielder picked in a
+	# forward slot on match day does not carry it, nor is Training's near
+	# list pointing a midfielder who also plays forward at it.
+	var dmid := _fake("df1", "MID", {"pressure": 60})
+	dmid["role2"] = "FWD"
+	_check(not Traits.of(Ratings._for_slot(dmid, "FWD")).has("def_forward"),
+			"A midfielder picked forward is not a Defensive forward on match day")
+	var dfwd := _fake("df2", "FWD", {"pressure": 60})
+	_check(Traits.of(Ratings._for_slot(dfwd, "MID")).has("def_forward"),
+			"A forward picked in the midfield keeps it")
+	var near_mid := _fake("df3", "MID", {"pressure": 40})
+	near_mid["role2"] = "FWD"
+	var named_df := false
+	for n in Traits.near(near_mid):
+		named_df = named_df or str(n["key"]) == "def_forward"
+	_check(not named_df, "Training never points a midfielder at Defensive forward")
+
+
 ## GEE v COL, every COL player at pressure 50 (no Lockdowns), except COL's
 ## first on-ground midfielder at `minder_pressure` (64+ makes him a Lockdown).
 func _lockdown_sim(minder_pressure: int) -> MatchSim:
@@ -1140,8 +1241,8 @@ func _ranked(sim: MatchSim, role: String) -> Array:
 	return out
 
 
-## Lockdown on a midfielder: he picks up their best midfielder, whose shots
-## are 4% less likely to be goals. Before, only the forward-50 defender (a
+## Lockdown on a midfielder: it picks up their best midfielder, whose shots
+## are LOCKDOWN_MID times as likely to be goals. Before, only the forward-50 defender (a
 ## defender) could ever be the Lockdown on a shot.
 func _test_lockdown_midfielder() -> void:
 	var lock := _lockdown_sim(80)
@@ -1158,8 +1259,8 @@ func _test_lockdown_midfielder() -> void:
 			"The Lockdown midfielder picks up their best midfielder")
 	var p_lock := lock.shot_chance(0, best_lock, true, false)
 	var p_none := none.shot_chance(0, best_none, true, false)
-	_check(is_equal_approx(p_lock, p_none * 0.96),
-			"His opponent's shots are 4%% less likely to be goals (%.4f v %.4f)" % [p_lock, p_none])
+	_check(is_equal_approx(p_lock, p_none * MatchSim.LOCKDOWN_MID),
+			"The minded midfielder's shots are 20%% less likely to be goals (%.4f v %.4f)" % [p_lock, p_none])
 	# Only his opponent: their other midfielders and their forwards shoot as before.
 	var second_lock: Dictionary = _ranked(lock, "MID")[1]
 	var second_none: Dictionary = _ranked(none, "MID")[1]
