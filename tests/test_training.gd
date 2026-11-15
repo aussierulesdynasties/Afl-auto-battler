@@ -577,6 +577,12 @@ func _test_training_news() -> void:
 	_check(not GameState.training_summary_line().contains("more"), "The summary never says 'N more'")
 	GameState.last_training_report = {"auto": {"points": 5, "rises": [], "traits": []}}
 	_check(GameState.training_summary_line() == "", "Stat points alone are not news")
+	# Bug bash 5: a trait pushed out by the five-trait cap is news too.
+	var q: Dictionary = GameState.my_list[0]
+	GameState.last_training_report = {"auto": {"rises": [], "traits": [], "lost": [[str(q["id"]), "engine"]], "at_pot": []}}
+	var lost_line := GameState.training_summary_line()
+	_check(lost_line.contains("lost Engine") and lost_line.contains("five traits"),
+			"A trait lost to the five-trait cap is announced (%s)" % lost_line)
 
 
 ## A dual-role player can train toward either of his roles: a ruck who also
@@ -1445,6 +1451,11 @@ func _test_focus_grows_a_trait() -> void:
 	p["attr"]["contested"] = 99
 	_check(GameState.focus_trait(p, "contested").is_empty() or Traits.of(p).size() >= Traits.MAX_GOOD,
 			"Once he has it the focus names it no more")
+	# Bug bash 5: Defensive forward is a forward's own job, so a midfielder who
+	# also plays forward is never pointed at it.
+	var mf := {"id": "b5_df", "role": "MID", "role2": "FWD", "attr": {"pressure": 70}}
+	_check(str(GameState.focus_trait(mf, "pressure").get("key", "")) != "def_forward",
+			"A pressure focus never points a midfielder at Defensive forward")
 
 
 ## Every club gets it: a rival player near a synergy trait puts his focus on
