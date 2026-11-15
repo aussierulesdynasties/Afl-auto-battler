@@ -21,6 +21,7 @@ extends RefCounted
 ##   "status": "asked" | "kept" | "joining" | "joined" | "stayed", "carded"}],
 ##   "lost": [clubs that have lost a player to it], "signings": [player ids],
 ##   "relief": {year: sign-on money off the payroll}, "traded": bool}
+##   A Forge club also keeps "fa_signings" and "fa_relief": its free-agent pool.
 ## The package is the modern one (expansion_concessions in era_rules.csv, from
 ## Gold Coast's 2011 entry). A club entering before it (Adelaide 1991,
 ## Fremantle 1995, Port Adelaide 1997) approaches nobody, gets no extra or
@@ -715,42 +716,54 @@ static func set_relief(gs, year: int) -> void:
 		if year < first or year > first + 1 + Expansion.SIGN_ON_TAPER.size():
 			continue
 		(gs.expansion[code]["relief"] as Dictionary)[str(year)] = _relief_in(gs, str(code), year)
+		if _forged(str(code)):
+			if not gs.expansion[code].has("fa_relief"):
+				gs.expansion[code]["fa_relief"] = {}
+			(gs.expansion[code]["fa_relief"] as Dictionary)[str(year)] = _relief_in(gs, str(code), year, true)
 
 
 ## `code`'s sign-on money in `year`: from the pool in its first two seasons,
-## a share of the second season's in the two after, nothing otherwise.
-static func _relief_in(gs, code: String, year: int) -> int:
+## a share of the second season's in the two after, nothing otherwise. `fa`
+## is a Forge club's free-agent pool: the same rules, its own money.
+static func _relief_in(gs, code: String, year: int, fa := false) -> int:
 	var st: Dictionary = gs.expansion[code]
+	var key := "fa_relief" if fa else "relief"
+	var paid: Dictionary = st.get(key, {})
 	var first := GameDB.enter_year(code)
 	if year < first:
 		return 0
 	if year > first + 1:
-		return Expansion.tapered_relief(int((st["relief"] as Dictionary).get(str(first + 1), 0)),
-				year - first + 1, _signing_salaries(gs, code))
+		return Expansion.tapered_relief(int(paid.get(str(first + 1), 0)),
+				year - first + 1, _signing_salaries(gs, code, fa))
 	var used := 0
-	for y in st["relief"]:
+	for y in paid:
 		if int(y) < year:
-			used += int(st["relief"][y])
-	return Expansion.sign_on_relief(_signing_salaries(gs, code), year, used)
+			used += int(paid[y])
+	return Expansion.sign_on_relief(_signing_salaries(gs, code, fa), year, used)
 
 
-static func _signing_salaries(gs, code: String) -> int:
+## Salaries of the rivals' players `code` signed, or with `fa` the free agents
+## a Forge club signed.
+static func _signing_salaries(gs, code: String, fa := false) -> int:
 	var st: Dictionary = gs.expansion.get(code, {})
+	var ids: Array = st.get("fa_signings" if fa else "signings", [])
 	var total := 0
 	for p in list_of(gs, code):
-		var id := str(p["id"])
-		if (st.get("signings", []) as Array).has(id) or (st.get("fa_signings", []) as Array).has(id):
+		if ids.has(str(p["id"])):
 			total += int(p.get("salary", 0))
 	return total
 
 
-## A free agent a Club Forge club signs counts toward its sign-on money
+static func _forged(code: String) -> bool:
+	return bool((GameDB.clubs.get(code, {}) as Dictionary).get("custom", false))
+
+
+## A free agent a Club Forge club signs is paid from its own free-agent pool
 ## (director, 2026-11-15: "a stimulus package of increased salary to sign more
-## free agents"). Only a Forge club: it has no approach year, so free agents
-## stand in for the rivals' players Tasmania and Canberra sign (their sign-on
-## money is unchanged). Kept apart from "signings".
+## free agents"; "Separate pool": on top of the sign-on money its rivals'
+## signings use). Only a Forge club: Tasmania and Canberra are unchanged.
 static func note_free_agent(gs, code: String, p: Dictionary) -> void:
-	if not has_package(gs, code) or not bool((GameDB.clubs.get(code, {}) as Dictionary).get("custom", false)):
+	if not has_package(gs, code) or not _forged(code):
 		return
 	var st: Dictionary = gs.expansion[code]
 	if int(gs.season_year) + 1 > GameDB.enter_year(code) + 1 + Expansion.SIGN_ON_TAPER.size():
@@ -797,7 +810,13 @@ static func relief(gs, code: String) -> int:
 	if not gs.offseason_open():
 		# A save from before the money stepped down has no figure for its
 		# third or fourth season: worked out here, the same way.
-		if not (st["relief"] as Dictionary).has(str(year)):
-			return _relief_in(gs, code, year) if year > GameDB.enter_year(code) + 1 else 0
-		return int((st["relief"] as Dictionary).get(str(year), 0))
-	return _relief_in(gs, code, year + 1)
+		return _season_relief(gs, code, year, false) + (_season_relief(gs, code, year, true) if _forged(code) else 0)
+	var next := _relief_in(gs, code, year + 1)
+	return next + (_relief_in(gs, code, year + 1, true) if _forged(code) else 0)
+
+
+static func _season_relief(gs, code: String, year: int, fa: bool) -> int:
+	var paid: Dictionary = gs.expansion[code].get("fa_relief" if fa else "relief", {})
+	if not paid.has(str(year)):
+		return _relief_in(gs, code, year, fa) if year > GameDB.enter_year(code) + 1 else 0
+	return int(paid.get(str(year), 0))

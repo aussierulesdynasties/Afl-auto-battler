@@ -4626,6 +4626,24 @@ func _test_forge_on_every_start() -> void:
 				missing.append("%s real: club not in as a new club" % id)
 	_check(ids.size() >= 2 and missing.is_empty(),
 			"Every start hosts your Forge prospect and club (%d starts; missing: %s)" % [ids.size(), str(missing)])
+	# Its free agents are paid from their own pool, on top of the sign-on
+	# money its rivals' players use (director, 2026-11-15: "Separate pool").
+	var fst: Dictionary = _state.expansion.get("PMB", {})
+	if fst.is_empty() or _state.season != null:
+		_check(false, "The last real-lists start left the Forge club building, before its first season")
+	else:
+		var first: int = _db.enter_year("PMB")
+		var held: Array = fst["list"]
+		fst["list"] = [{"id": "T_RIVAL", "salary": 9000000}, {"id": "T_FA", "salary": 900000}]
+		fst["signings"] = ["T_RIVAL"]
+		fst["fa_signings"] = ["T_FA"]
+		var rivals := ExpansionBuild._relief_in(_state, "PMB", first)
+		var fas := ExpansionBuild._relief_in(_state, "PMB", first, true)
+		fst["list"] = held
+		fst["signings"] = []
+		fst["fa_signings"] = []
+		_check(rivals == Contracts.indexed_money_2027(Expansion.SIGN_ON_SEASON_MAX, first) and fas == 900000,
+				"A Forge club's free agents have their own pool on top of its sign-on money (rivals %d, free agents %d)" % [rivals, fas])
 	_state.set_forge_club({})
 	_state.set_forge_player({})
 	_state.delete_saved_career()
