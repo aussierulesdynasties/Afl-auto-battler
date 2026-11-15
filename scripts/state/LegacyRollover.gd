@@ -464,6 +464,8 @@ static func _merge(gs, to_draft: bool) -> void:
 		if i < LIONS_TAKE:
 			p["club"] = MERGED_INTO
 			p["joined"] = TALKS_YEAR + 1
+			# The merger screen says which side he came from (MergerCutScene).
+			p["merged_from"] = MERGED
 			lions.append(p)
 			taken.append(GameDB.player_display_name(p))
 		elif to_draft:
