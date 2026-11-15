@@ -882,7 +882,7 @@ func _test_impact_and_ai() -> void:
 	_check(credited_ok, "A gameplan's effect is measured in expected points (every match)")
 	_check(owner_ok, "Gameplan points go to the side that runs the plan")
 	var lines := CoachReport.impact_lines(imp, [{}, {}], 0)
-	_check(not lines.is_empty() and str(lines[0]["label"]).begins_with("Your")
+	_check(not lines.is_empty() and str(lines[0]["label"]).begins_with("Our")
 			or str(lines[0]["label"]).begins_with("Their"), "The readout names what the points came from")
 	# The rival coach plays its usual game, reacts to the scoreboard, and
 	# counters the plan you ran when the counter costs it little.
@@ -4856,7 +4856,7 @@ func _test_decision_credits() -> void:
 			"The decision lines and the rest add up to the margin (%+.1f)" % margin)
 	# An old save's last match booked the bursts as "calls": still shown.
 	var old_lines := CoachReport.impact_lines([{"calls": 2.0}, {}], [{}, {}], 0)
-	_check(old_lines.size() == 1 and str(old_lines[0]["label"]) == "Your in-game calls"
+	_check(old_lines.size() == 1 and str(old_lines[0]["label"]) == "Our in-game calls"
 			and is_equal_approx(float(old_lines[0]["pts"]), 2.0),
 			"An old save's \"calls\" still reads as in-game calls (%s)" % str(old_lines))
 	# A moment: the call is worth its expected points against the default.
