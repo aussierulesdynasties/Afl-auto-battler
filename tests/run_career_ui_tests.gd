@@ -4601,6 +4601,12 @@ func _test_every_start_reaches_interview() -> void:
 		if str(st[1]) == "redraft" and label != "The 1990 League redraft":
 			continue
 		var ds := current_scene
+		# A real-lists start opens its off-season before the draft (row 199):
+		# its Start the draft, a tap, brings the board.
+		var opener: Control = ds.find_child("FirstOffseasonStart", true, false)
+		if opener != null:
+			_check((await Tap.tap(opener)) == "", "%s: Start the draft takes a tap" % label)
+			await _settle()
 		var guard := 0
 		while d != null and not d.is_finished() and guard < 200:
 			guard += 1
