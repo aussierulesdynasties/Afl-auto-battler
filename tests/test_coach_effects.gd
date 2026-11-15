@@ -22,6 +22,7 @@ func run() -> void:
 	_t("_test_in_career")
 	_t("_test_togetherness")
 	_t("_test_gate_scale")
+	_t("_test_hire_lines")
 	GameState.delete_saved_career()
 	CoachEffects.table = {}
 	GameState.replay_seed = 0
@@ -414,3 +415,45 @@ func _test_gate_scale() -> void:
 				var want := 1.0 + (v - 1.0) * (up if (MatchSim.PLAN_UPSIDE[plan] as Array).has(key) else MatchSim.cost_scale(sq, plan))
 				_check(is_equal_approx(sim._pv(0, key), want),
 						"The %s gate sizes %s as the match plays it in %s (%.4f vs %.4f)" % [plan, key, weather, want, sim._pv(0, key)])
+
+
+## A hire's gate (director 2026-11-15, the created club's first staff): each
+## line's number is what the rule does against an average coach in the job,
+## both sides are always stated, and no line names a best choice.
+func _test_hire_lines() -> void:
+	var year := 2026
+	var fwd := {"cid": "T_H", "skills": {"teach": 88, "tactics": 80, "manage": 60}, "spec": "FWD",
+			"rep": 40, "born": year - 40}
+	var p := {"role": "FWD", "age": 26.0}
+	var avg := _staff(70)
+	var his := _staff(70)
+	his["FWD"] = fwd
+	var xp_gain := int(round(100.0 * (CoachEffects.xp_mult(his, p, true) - CoachEffects.xp_mult(avg, p, true))))
+	var lines := CoachEffects.hire_lines(fwd, "FWD", year)
+	_check(xp_gain > 0 and (lines["gain"] as Array).has("Our forwards develop %d%% more each game." % xp_gain),
+			"A strong forwards coach's gain is the XP the match pays (%d%%: %s)" % [xp_gain, str(lines["gain"])])
+	var spared := int(round(100.0 * (CoachEffects.soften(avg, p) - CoachEffects.soften(his, p))))
+	_check(spared > 0 and (lines["cost"] as Array).has("Dropped forwards lose %d%% more morale." % spared),
+			"His poor man-management is the cost, sized as the rule spares (%d%%: %s)" % [spared, str(lines["cost"])])
+	var sa := {"cid": "T_S", "skills": {"teach": 70, "tactics": 86, "manage": 70}, "spec": "", "rep": 70,
+			"born": year - 63}
+	var sl := CoachEffects.hire_lines(sa, "SA", year)
+	var exec := int(round(100.0 * (float(CoachEffects.tactics({"SA": sa}, true)["exec"]) - 1.0)))
+	_check((sl["gain"] as Array).has("Our game plan's upside is %d%% bigger." % exec),
+			"A sharp senior assistant's gain is the plan's upside as the match scales it (%s)" % str(sl["gain"]))
+	_check((sl["cost"] as Array).any(func(t): return str(t).begins_with("Well regarded"))
+			and (sl["cost"] as Array).has("He is 64: coaches retire from 64."),
+			"A well-regarded coach near retirement carries both as costs (%s)" % str(sl["cost"]))
+	var bad := []
+	for job in ["SA", "MID", "FWD", "DEF", "DEV"]:
+		for v in [56, 64, 70, 76, 84, 92]:
+			var c := {"cid": "T_%s%d" % [job, v], "skills": {"teach": v, "tactics": v, "manage": v},
+					"spec": {"MID": "MID", "FWD": "FWD", "DEF": "DEF", "DEV": "DEV"}.get(job, ""), "rep": 30,
+					"born": year - 45}
+			var g := CoachEffects.hire_lines(c, job, year)
+			if (g["gain"] as Array).is_empty() or (g["cost"] as Array).is_empty():
+				bad.append("%s %d: a side missing" % [job, v])
+			for t in g["gain"] + g["cost"]:
+				if not CopyRules.check(str(t)).is_empty():
+					bad.append("%s %d: %s" % [job, v, str(t)])
+	_check(bad.is_empty(), "Every hire states a gain and a cost in plain words (%s)" % str(bad))

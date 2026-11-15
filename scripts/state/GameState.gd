@@ -3453,10 +3453,20 @@ func start_season(club_code: String, list: Array) -> void:
 	ensure_contracts()
 	# The coaching world from its Round 1 2026 source, carried into this
 	# career's first season with you in your club's top job.
-	coaches = Coaches.seed(my_club)
+	var hire_own := my_club_forged()
+	coaches = Coaches.seed(my_club, hire_own)
 	# A created club has no 2026 staff to seed: it hires now, as an expansion
-	# club does before its first season.
-	CoachMarket.staff_new_clubs(coaches, GameDB.active_clubs(season_year), my_club, season_year - 1, career_seed)
+	# club does before its first season. Yours waits for you: its five jobs
+	# open, filled from the same pool and shortlist every club hires from
+	# (director 2026-11-15: "you orchestrate the hiring of your coaching staff").
+	var bare: Array = GameDB.active_clubs(season_year).duplicate()
+	staff_vacancies = []
+	if hire_own:
+		bare.erase(my_club)
+		for job in Coaches.JOBS:
+			if job != "SC":
+				staff_vacancies.append({"job": job, "reason": ""})
+	CoachMarket.staff_new_clubs(coaches, bare, my_club, season_year - 1, career_seed)
 	_ensure_department_budget()
 	if department_budget_year <= 0:
 		department_budget_year = season_year
@@ -3559,6 +3569,7 @@ func prepare_interactive_match() -> bool:
 		return false
 	match_way_live = match_way()
 	preseason_sim_to_round1()
+	_staff_before_round_one()
 	_settle_week_event()
 	YearEvents.settle_top_up(self)
 	MidseasonDraft.settle(self)
@@ -3819,6 +3830,7 @@ func _advance_prep() -> void:
 	recruit_undo.clear()
 	Season.beat()
 	preseason_sim_to_round1()
+	_staff_before_round_one()
 	Season.beat()
 	_settle_week_event()
 	Season.beat()
@@ -15433,6 +15445,28 @@ func _refresh_coach_tactics() -> void:
 			continue
 		var t: Dictionary = CoachEffects.table[code]
 		t["exec"] = clampf(float(t.get("exec", 1.0)) * ClubBudget.tactics_mult(level), 0.75, 1.35)
+
+
+## Your club is the one you created in Club Forge.
+func my_club_forged() -> bool:
+	return my_club != "" and not custom_club.is_empty() 			and str(custom_club.get("code", "")).strip_edges() == my_club
+
+
+## A created club's first staff, before its first bounce: the hiring step
+## after the League Draft opens on it.
+func first_staff_open() -> bool:
+	return season != null and my_club_forged() and season_year == my_first_season 			and season.round_index == 0 and not staff_vacancies.is_empty()
+
+
+## Round 1 is about to be played: any of your jobs still open goes to the
+## club's own pick, as at every season's start, and the news says so.
+func _staff_before_round_one() -> void:
+	if season == null or season.round_index != 0 or staff_vacancies.is_empty():
+		return
+	var n := staff_vacancies.size()
+	_fill_open_staff()
+	add_news("coaching", "The club filled our %s before Round 1." % (
+			"open coaching job" if n == 1 else "%d open coaching jobs" % n))
 
 
 func _vacancy_open(job: String) -> bool:
