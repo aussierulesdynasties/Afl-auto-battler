@@ -25,8 +25,10 @@ const FAINT_TOP := 0.15
 const FAINT_LEAST := 0.08
 ## How much of the match each playback watches (its first N events): enough
 ## turnovers, stoppages and called ball-ups to test each rule frame by frame,
-## and no more (director 2026-11-14: "shrink the tests").
-const CORRIDOR_EVENTS := 80
+## and no more (director 2026-11-14: "shrink the tests"). Under the director's
+## ratings (row 200) seed 42's first 80 events hold two turnovers from a full
+## corridor; 100 holds the three the fade check needs.
+const CORRIDOR_EVENTS := 100
 ## Under the D50 chip play seed 42's first 200 events hold six ball-ups and none called from a
 ## held ball; 300 takes in the tackles that are (events 244, 259, 276).
 const CONTEST_EVENTS := 300
