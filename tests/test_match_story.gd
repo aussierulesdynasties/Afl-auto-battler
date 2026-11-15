@@ -224,7 +224,7 @@ func _test_reasons_trace() -> void:
 					want = [int(res["q_goals"][i][side]) * 6 + int(res["q_behinds"][i][side]),
 							int(res["q_goals"][i][1 - side]) * 6 + int(res["q_behinds"][i][1 - side])]
 					if not MatchNotes.calls_lines(res, side, i + 1).has(str(r["call"])):
-						bad.append("call line not from What your calls did: %s" % str(r["call"]))
+						bad.append("call line not from What our calls did: %s" % str(r["call"]))
 					var dir := 1 if int(res["score"][side]) >= int(res["score"][1 - side]) else -1
 					var led := 0
 					for c in MatchStory.calls(res, side)["rows"]:

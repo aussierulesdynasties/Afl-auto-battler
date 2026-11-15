@@ -568,12 +568,18 @@ func _shows_condition() -> bool:
 	return condition and not field_only and not _rival
 
 
-## What the three numbers under each name are, in their order.
+## His potential as the coach sees it on his own list (GameState.pot_view):
+## never below his rating.
+static func pot(p: Dictionary) -> int:
+	return int(GameState.pot_view(p)["mid"])
+
+
+## What the numbers under each name are, in their order.
 func _condition_key() -> Control:
 	var key := UiKit.hbox(6)
 	key.name = "ConditionKey"
 	key.add_child(UiKit.lbl("Under each name:", UiKit.FINE, UiKit.MUTED))
-	key.add_child(UiKit.lbl("Fatigue · Morale · Form", UiKit.FINE, UiKit.TEXT, true))
+	key.add_child(UiKit.lbl("OVR/POT · Fatigue · Morale · Form", UiKit.FINE, UiKit.TEXT, true))
 	for l in key.get_children():
 		(l as Label).autowrap_mode = TextServer.AUTOWRAP_OFF
 	return key
@@ -610,8 +616,19 @@ func _card(id: String, on_field: bool, place: String) -> Button:
 		var tag := Ratings.role_tag(p)
 		if stacked and tag.length() > 8:
 			tag = str(p.get("role", tag))
+		var nums := "%d" % int(p["overall"])
+		if _shows_condition():
+			# His potential beside his rating (director, 2026-11-15: "a lot of
+			# players just want to play the highest upside team for development
+			# purposes"), as OVR/POT, named in the key under the oval. A second
+			# position gives way to his main one when both won't fit the tile.
+			nums = "%d/%d" % [int(p["overall"]), pot(p)]
+			var room := UiKit.px(70) - 12.0
+			if UiKit.FONT.get_string_size("%s %s" % [tag, nums], HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.px(11)).x > room:
+				tag = str(p.get("role", tag))
 		var sub := UiKit.lbl(str(notes[id]) if field_only and notes.has(id)
-				else "%s %d" % [tag, int(p["overall"])], 11, UiKit.MUTED)
+				else "%s %s" % [tag, nums], 11, UiKit.MUTED)
+		sub.name = "Sub_" + id
 		if not field_only and _trial_note(id) != "":
 			# A role trial from a story card: the position and the games left, in the
 			# tile's own second line (it does not grow the tile); the full words are the tooltip.
@@ -670,9 +687,15 @@ func _card(id: String, on_field: bool, place: String) -> Button:
 	else:
 		var row := UiKit.hbox(6)
 		face.add_child(row)
-		var n := UiKit.ellipsis(GameDB.player_display_name(p), 14, UiKit.TEXT, true)
+		var full_name := GameDB.player_display_name(p)
+		var n := UiKit.ellipsis(full_name, 14, UiKit.TEXT, true)
+		n.name = "Name_" + id
 		n.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(n)
+		# A long name beside OVR/POT on a phone card: initial and surname, then
+		# the surname, never a name cut short (the full name stays the tooltip).
+		n.resized.connect(func():
+			n.text = BenchDrawer._fit_name(full_name, n.size.x, n.get_theme_font_size("font_size")))
 		var ovr := UiKit.lbl("%d" % int(p["overall"]), 14, UiKit.TEXT, true)
 		ovr.autowrap_mode = TextServer.AUTOWRAP_OFF
 		ovr.custom_minimum_size.x = 26
@@ -685,7 +708,21 @@ func _card(id: String, on_field: bool, place: String) -> Button:
 			UiKit.near_figure(n, ovr, 170.0, 26.0)
 			b.resized.connect(func():
 				n.custom_minimum_size.x = clampf(b.size.x - 12.0 - 6.0 - 26.0, 0.0, 170.0))
-		row.add_child(ovr)
+		if _shows_condition():
+			# His potential right after his rating, in the oval's OVR/POT form;
+			# muted, so the rating he plays at this week still reads first.
+			var figs := UiKit.hbox(0)
+			figs.add_child(ovr)
+			var pot_l := UiKit.lbl("/%d" % pot(p), 14, UiKit.MUTED)
+			pot_l.name = "Pot_" + id
+			pot_l.autowrap_mode = TextServer.AUTOWRAP_OFF
+			figs.add_child(pot_l)
+			row.add_child(figs)
+			if _wide:
+				b.resized.connect(func():
+					n.custom_minimum_size.x = clampf(b.size.x - 12.0 - 6.0 - 26.0 - pot_l.size.x, 0.0, 170.0))
+		else:
+			row.add_child(ovr)
 		var age := int(p.get("age", 0))
 		face.add_child(UiKit.ellipsis("%s · %s · %d yo" % [Ratings.role_tag(p), PlayerProfile.player_type(p), age],
 				12, UiKit.MUTED))
