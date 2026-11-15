@@ -27,8 +27,10 @@ const FAINT_LEAST := 0.08
 ## turnovers, stoppages and called ball-ups to test each rule frame by frame,
 ## and no more (director 2026-11-14: "shrink the tests").
 const CORRIDOR_EVENTS := 80
-const CONTEST_EVENTS := 200
-const RING_EVENTS := 200
+## Under the D50 chip play seed 42's first 200 events hold six ball-ups and none called from a
+## held ball; 300 takes in the tackles that are (events 244, 259, 276).
+const CONTEST_EVENTS := 300
+const RING_EVENTS := 300
 const OTHER_EVENTS := 30
 const MOVES_EVENTS := 40
 const MOVES_FRAMES := 300
