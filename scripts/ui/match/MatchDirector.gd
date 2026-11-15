@@ -409,6 +409,9 @@ func _start_beat(k: int) -> void:
 	_phases = []
 	_pi = 0
 	_busy = {}
+	for t in tokens:
+		t.erase("cap")
+		t.erase("line")
 	var side := int(ev.get("side", -1))
 	if side >= 0 and not META.has(kind):
 		_poss = side
@@ -1296,17 +1299,50 @@ func _scrap(p: Dictionary, who: int) -> void:
 const COLLECT_LIMIT := 6.0
 ## How far a ball nobody holds spills out of a tackle toward the man who gathers it.
 const SPILL_METRES := 3.0
+## A spilled ball lands at least this far from the man who gathers it, so he has the run-up
+## to reach it at pace: from beside the tackle it squirts out the side, SPILL_PAST of the
+## way back from him for every metre across.
+const SPILL_RUNUP := 4.5
+const SPILL_PAST := 0.44
+## He goes down for a spilled ball once it rolls slower than this (m/s).
+const SCOOP_ROLLING := 1.5
 ## A spilled ball's gatherer takes it on the run with the scoop Oval3DAnim plays (SCOOP_CLIP,
-## measured from the clip): his hands reach the ball SCOOP_TOUCH clip seconds in, while the
-## clip runs him on at SCOOP_RUN metres a clip second; it starts SCOOP_LEAD metres short of
-## the ball (that run plus his reach ahead of his feet at the touch).
+## 3d view 2's v2 take, the director's own two-hand gather carried to the chest; measured in
+## the baked GLB): his right middle finger is lowest (0.03 m) SCOOP_TOUCH clip seconds in, SCOOP_REACH ahead of his hips
+## and SCOOP_SIDE to their right, his hips SCOOP_TRAVEL on from where the clip began. They
+## stand still until SCOOP_FROM (the bake's held first key) and then run a steady SCOOP_RUN
+## metres a clip second to its end. It starts SCOOP_LEAD short of the ball; nearer, the clip
+## starts later (scoop_from), never less than SCOOP_MIN before the touch.
 const SCOOP_CLIP := "ground_ball_run_01"
-const SCOOP_TOUCH := 0.4
-const SCOOP_RUN := 4.0
-const SCOOP_LEAD := 2.2
+const SCOOP_FROM := 0.05
+const SCOOP_TOUCH := 0.40
+const SCOOP_MIN := 0.25   # clip s: longer than Oval3DAnim.BLEND, so the scoop is fully his by the touch
+const SCOOP_RUN := 4.8
+const SCOOP_TRAVEL := 1.60
+const SCOOP_REACH := 0.45
+const SCOOP_SIDE := 0.34
+const SCOOP_LEAD := SCOOP_TRAVEL + SCOOP_REACH
 ## The scoop on this clock, which runs TEMPO times faster than the drawn one.
 const SCOOP_S := SCOOP_TOUCH * TEMPO
 const SCOOP_SPEED := SCOOP_RUN / TEMPO
+
+
+## The clip time a scoop starts at, d metres from the ball: late enough that his hips have
+## only what is left of that d to run before his hand reaches it.
+static func scoop_from(d: float) -> float:
+	return clampf(SCOOP_TOUCH - scoop_run(d) / SCOOP_RUN, SCOOP_FROM, SCOOP_TOUCH - SCOOP_MIN)
+
+
+## How far his hips run before his hand reaches a ball d metres off.
+static func scoop_run(d: float) -> float:
+	return sqrt(maxf(d * d - SCOOP_SIDE * SCOOP_SIDE, 0.0)) - SCOOP_REACH
+
+
+## The heading of a scoop at a ball `to` away: his right hand takes it SCOOP_SIDE out from
+## his line, so he runs that much left of it.
+static func scoop_yaw(to: Vector2) -> float:
+	return atan2(to.x, to.y) + atan2(SCOOP_SIDE, sqrt(maxf(to.length_squared() - SCOOP_SIDE * SCOOP_SIDE, 0.01)))
+
 ## How far past a loose ball he aims his run at it, so he reaches it at pace instead of
 ## easing to a stop over it.
 const RUN_THROUGH := 8.0
@@ -1513,14 +1549,21 @@ func _enter(p: Dictionary) -> void:
 			if p.has("drop"):
 				_drop_held(p["drop"])
 			if p.has("scoop"):
-				# He runs on through the ball at the scoop's own pace; it lies still
-				# until his hands reach it.
+				# He runs on through the ball at the scoop's own pace (held there until the
+				# beat ends, past the clip's end, so his hips never fall behind him); it
+				# lies still until his hands reach it.
+				# Nearer than a whole scoop, he runs only what is left to the touch.
 				var st: Dictionary = tokens[int(p["scoop"])]
-				var line := _line(st)
-				var top := float(st["top"])
-				var u := clampf((SCOOP_SPEED / maxf(top, 0.1) - MatchMotion.JOG_SHARE) / (1.0 - MatchMotion.JOG_SHARE), 0.0, 1.0)
-				st["vel"] = line * SCOOP_SPEED
-				MatchMotion.set_goal(st, (st["pos"] as Vector2) + line * RUN_THROUGH, u, true)
+				var to: Vector2 = (ball["pos"] as Vector2) - (st["pos"] as Vector2)
+				var yaw := scoop_yaw(to) if to.length() > 0.05 else _line(st).angle()
+				var line := Vector2(sin(yaw), cos(yaw)) if to.length() > 0.05 else _line(st)
+				var t0 := scoop_from(to.length())
+				var pace := clampf(scoop_run(to.length()) / (SCOOP_TOUCH - t0), 0.0, SCOOP_RUN) / TEMPO
+				p["dur"] = (SCOOP_TOUCH - t0) * TEMPO
+				st["vel"] = line * pace
+				st["cap"] = pace
+				st["line"] = line
+				MatchMotion.set_goal(st, (st["pos"] as Vector2) + line * RUN_THROUGH, 0.0, true)
 				_busy[int(p["scoop"])] = true
 				ball["vel"] = Vector2.ZERO
 			if p.get("ease", false):
@@ -1690,13 +1733,22 @@ func _enter(p: Dictionary) -> void:
 					_busy[int(t["id"])] = true
 		"spill":
 			# Out of the tackle, along the turf: at most SPILL_METRES, never past
-			# half the gap to the man who gathers it.
-			var to2: Vector2 = (tokens[int(p["toward"])]["pos"] as Vector2) - (ball["pos"] as Vector2)
-			var step2 := minf(SPILL_METRES, to2.length() * 0.5)
+			# half the gap to the man who gathers it. Beside the tackle there is no
+			# run-up in that, so it squirts out the side, away from him, to land
+			# SPILL_RUNUP from him: he runs onto it, it never rolls past his boots.
+			var gp: Vector2 = tokens[int(p["toward"])]["pos"]
+			var to2: Vector2 = gp - (ball["pos"] as Vector2)
+			var dir2 := to2.normalized() if to2.length() > 0.01 else Vector2.RIGHT.rotated(_rng.randf_range(0.0, TAU))
+			var land := (ball["pos"] as Vector2) + dir2 * minf(SPILL_METRES, to2.length() * 0.5)
+			if land.distance_to(gp) < SPILL_RUNUP:
+				var out := (dir2.orthogonal() * (1.0 if _rng.randf() < 0.5 else -1.0) - dir2 * SPILL_PAST).normalized()
+				var b := -to2.dot(out)   # b·out, b = ball - gp
+				var reach := -b + sqrt(maxf(b * b - to2.length_squared() + SPILL_RUNUP * SPILL_RUNUP, 0.0))
+				land = MatchMotion.clamp_to_oval((ball["pos"] as Vector2) + out * reach, 3.0)
 			ball["mode"] = "loose"
 			ball["holder"] = -1
 			# A loose ball decays at exp(-3t): a push of 3v travels about v metres.
-			ball["vel"] = to2.normalized() * step2 * 3.0 if to2.length() > 0.01 else Vector2.ZERO
+			ball["vel"] = (land - (ball["pos"] as Vector2)) * 3.0
 			MatchMotion.set_goal(tokens[int(p["toward"])], ball["pos"] + (ball["vel"] as Vector2) / 3.0, 1.0, true)
 			_busy[int(p["toward"])] = true
 		"fumble":
@@ -1704,8 +1756,13 @@ func _enter(p: Dictionary) -> void:
 			ball["holder"] = -1
 			var ang2 := _rng.randf_range(0.0, TAU)
 			if p.has("along"):
-				# Off his hands on the run: knocked on, ahead of him along his line.
-				ang2 = _line(tokens[int(p["along"])]).angle() + _rng.randf_range(-KNOCK_ON, KNOCK_ON)
+				# Off his hands on the run: knocked on, ahead of him along his line, and he
+				# runs on at the scoop's pace to its end.
+				var ft: Dictionary = tokens[int(p["along"])]
+				var line: Vector2 = ft.get("line", _line(ft))
+				ang2 = line.angle() + _rng.randf_range(-KNOCK_ON, KNOCK_ON)
+				ft["vel"] = line * SCOOP_SPEED
+				ft["cap"] = SCOOP_SPEED
 			ball["vel"] = Vector2(cos(ang2), sin(ang2)) * _rng.randf_range(6.0, 10.0)
 
 
@@ -1848,10 +1905,13 @@ func _done(p: Dictionary) -> bool:
 				ball["holder"] = -1
 			var d := (t["pos"] as Vector2).distance_to(ball["pos"])
 			if p.get("pace", false):
-				# At it flat out, aimed through it: he never eases up short of it.
+				# At it flat out, aimed through it, braking (as MatchMotion's arrive does)
+				# only to reach it at the scoop's own pace, never below. He goes down for
+				# it once it has all but stopped rolling.
 				var to := (ball["pos"] as Vector2) - (t["pos"] as Vector2)
 				MatchMotion.set_goal(t, (ball["pos"] as Vector2) + to.normalized() * RUN_THROUGH if d > 0.01 else ball["pos"], 1.0, true)
-				if d <= SCOOP_LEAD:
+				t["cap"] = sqrt(SCOOP_SPEED * SCOOP_SPEED + 2.0 * MatchMotion.BRAKE * 0.55 * maxf(d - SCOOP_LEAD, 0.0))
+				if d <= SCOOP_LEAD and (ball.get("vel", Vector2.ZERO) as Vector2).length() < SCOOP_ROLLING:
 					return true
 			else:
 				MatchMotion.set_goal(t, ball["pos"], 1.0, true)
@@ -1862,7 +1922,7 @@ func _done(p: Dictionary) -> bool:
 			# Never a freeze: a ball against the fence or a crowd round it can
 			# keep him just short of it. Close enough after a moment is his,
 			# and no collect lasts longer than COLLECT_LIMIT.
-			if (_pt >= 1.5 and d <= 3.0 and not p.get("reach", false)) or _pt >= COLLECT_LIMIT:
+			if (_pt >= 1.5 and d <= 3.0 and not p.get("pace", false)) or _pt >= COLLECT_LIMIT:
 				return true
 			if p.get("roll", false) and _pt > 0.1 and str(ball["mode"]) != "flight" and d <= ROLL_REACH:
 				# Still short of it: one bobble his way, aimed now and straight

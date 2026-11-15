@@ -89,6 +89,8 @@ static func step(t: Dictionary, dt: float) -> void:
 		var d := to.length()
 		var top: float = float(t["top"]) * float(t.get("reset", 1.0)) \
 				* lerpf(JOG_SHARE, 1.0, clampf(float(t["urgency"]), 0.0, 1.0))
+		if t.has("cap"):
+			top = minf(top, float(t["cap"]))   # held to a set pace (a scoop's own run)
 		if d > ARRIVE_STOP:
 			# Arrive: the fastest speed from which the token can still stop
 			# at the goal, so it eases in instead of overshooting.

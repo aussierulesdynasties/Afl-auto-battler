@@ -33,7 +33,7 @@ const GAP_MAX := 9.0           # m/s: and at most this fast
 const APART := 0.8             # m: on that run his hips stay this far from the man he tackled (or who tackled him)
 const REACH := 1.6             # m: MatchDirector's chase ends this close (its "chase" phase)
 const STEP := 1.0 / 30.0       # s: the takes' frame
-const SCOOP_END := 0.8         # clip s: up out of the scoop and running; he eases into the jog from here
+const SCOOP_END := 0.70        # clip s: ground_ball_run_01 ends in the GLB, ball at his chest, hips back at run height; the jog eases in over BLEND
 
 var director: MatchDirector
 var players: Array
@@ -354,7 +354,9 @@ func step(i: int, p: Dictionary, holder: int, pos: Vector2, vel: Vector2, dt: fl
 	if not o.is_empty():
 		# The clip carries him from where the scoop began (its own run): his token runs the
 		# same line at the same pace, and any gap left closes as from a take once it ends.
-		var spot: Vector2 = o["at"]
+		var t0 := float(o["t0"])
+		var k := clampf((float(o["t"]) - t0) / (MatchDirector.SCOOP_TOUCH - t0), 0.0, 1.0)
+		var spot: Vector2 = (o["at"] as Vector2) + (o["off"] as Vector2) * (1.0 - k)
 		_gap[i] = spot - pos
 		node.position = Vector3(spot.x, 0.0, spot.y)
 		_step_once(i, p, o, dt)
@@ -625,10 +627,21 @@ func event(i: int, kind: StringName, at: Vector2, other := -1) -> void:
 		var node: Node3D = players[i]["node"]
 		if not (players[i]["anim"] as AnimationPlayer).has_animation(MatchDirector.SCOOP_CLIP):
 			return
-		var to := at - Vector2(node.position.x, node.position.z)
+		var here := Vector2(node.position.x, node.position.z)
+		var to := at - here
 		_snap(i, players[i])
-		_once[i] = {"anim": MatchDirector.SCOOP_CLIP, "t": 0.0, "yaw": atan2(to.x, to.y) if to.length() > 0.05 else node.rotation.y,
-				"at": Vector2(node.position.x, node.position.z)}
+		# The clip starts where the director's touch lands (both from his token's distance).
+		var t0 := MatchDirector.scoop_from((director.tokens[i]["pos"] as Vector2).distance_to(at))
+		var side := MatchDirector.SCOOP_SIDE
+		var yaw := MatchDirector.scoop_yaw(to) if to.length() > 0.05 else node.rotation.y
+		var fw := Vector2(sin(yaw), cos(yaw))
+		var hand := Vector2(-cos(yaw), sin(yaw))   # his right, facing fw
+		# Placed so that hand meets the ball at the touch; his hips start where they are,
+		# and the difference eases out by the touch.
+		var spot := at - fw * MatchDirector.SCOOP_LEAD - hand * side
+		var run := maxf(MatchDirector.SCOOP_TRAVEL - (MatchDirector.SCOOP_TOUCH - t0) * MatchDirector.SCOOP_RUN, 0.0)
+		_once[i] = {"anim": MatchDirector.SCOOP_CLIP, "t": t0, "t0": t0, "yaw": yaw, "at": spot,
+				"off": here - fw * run - spot}
 		return
 	if not (_once[i] as Dictionary).is_empty():
 		_end_once(i)
