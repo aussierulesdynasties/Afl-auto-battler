@@ -31,9 +31,7 @@ const HAIR_LABELS := {
 	"short_quiff": "Short quiff", "wavy": "Wavy", "tight_curls": "Tight curls", "shaggy": "Shaggy",
 	"surfer": "Surfer", "high_top": "High top", "faux_hawk": "Faux hawk", "undercut": "Undercut",
 	"shoulder_length": "Shoulder length", "short_back_sides": "Short back and sides",
-	"skin_fade": "Skin fade", "middle_part": "Middle part",
-	"surfer_waves": "Surfer waves", "crew_classic": "Classic crew cut", "curly_taper": "Curly taper",
-	"cornrows": "Cornrows", "short_afro": "Short afro", "side_part_classic": "Classic side part",
+	"skin_fade": "Skin fade", "short_afro": "Short afro",
 	"french_crop": "French crop",
 }
 const BEARD_LABELS := {
