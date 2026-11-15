@@ -9,6 +9,9 @@ extends RefCounted
 ## Trust lost when a promise made on a card is broken after the match.
 const BROKEN_PROMISE_TRUST := StoryEngine.BROKEN_PROMISE_TRUST
 const BROKEN_RUN_TRUST := StoryEngine.BROKEN_RUN_TRUST
+## The opponent's name in a week with none (a bye); the cards about this week's
+## opponent wait it out (StoryEngine.names_opp).
+const NO_OPP := "the opposition"
 
 
 ## Your week of the season: the round, then the finals weeks after it.
@@ -460,11 +463,6 @@ static func _leader_facts(gs) -> Dictionary:
 			"vice_id": str(vice.get("id", "")), "has_vice": not vice.is_empty(),
 			"kid_name": GameDB.player_display_name(kid) if not kid.is_empty() else "",
 			"kid_id": str(kid.get("id", "")), "has_kid": not kid.is_empty()}
-
-
-## The opponent's name in a week with none (a bye); the cards about this week's
-## opponent wait it out (StoryEngine.names_opp).
-const NO_OPP := "the opposition"
 
 
 ## The club deck a club draws from (StoryDeck.CLUB_DECKS): its code, except that
