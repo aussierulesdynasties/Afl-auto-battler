@@ -221,7 +221,7 @@ func _test_effects() -> void:
 	var rs := Culture.reasons(GameState.relations, CLUB, "standards")
 	_check(not rs.is_empty() and str(rs[0]["why"]).begins_with("You pulled the group up") and str(rs[0]["w"]) != "",
 			"A strand step is logged on the culture page with its reason")
-	# The base: Run it out of them lifts the running, Let them enjoy lowers it.
+	# The base: Run them hard lifts the running, Let them enjoy lowers it.
 	_career()
 	var run0 := float(GameState.preseason["clubs"][CLUB]["run"])
 	GameState.preseason_add_running(1.0)
@@ -359,12 +359,12 @@ func _test_running_again() -> void:
 	_check(rush.contains("about %d pre-season development points" % want) and rush.contains("sore until Round 1")
 			and rush.contains("hurt in Round 1 and half that in the pre-season match") and rush.contains("two Heavy weeks")
 			and not rush.contains("you name him"), "Clearing him reads as the pre-season: %s" % rush)
-	_check(rush.contains("he starts each match"), "...both games, so each match: %s" % rush)
+	_check(rush.contains("He starts each match"), "...both games, so each match: %s" % rush)
 	# After week 7 the pre-season match has been played: Round 1 is all that is left.
 	var late := f.duplicate()
 	late["pre_week"] = PreSeason.tune("practice_week")
 	var last_stop := " / ".join(StoryEngine.stakes_lines(card["options"][0]["effects"], late))
-	_check(last_stop.contains("hurt in Round 1 (") and last_stop.contains("he starts it") and not last_stop.contains("pre-season match"),
+	_check(last_stop.contains("hurt in Round 1, by any injury") and last_stop.contains("He starts it") and not last_stop.contains("pre-season match"),
 			"After the pre-season match the odds are for Round 1 alone: %s" % last_stop)
 	var physio := " / ".join(StoryEngine.stakes_lines(card["options"][1]["effects"], f))
 	_check(physio.contains("goes without about %d pre-season development points" % want), "The physio's plan names the training it costs: %s" % physio)

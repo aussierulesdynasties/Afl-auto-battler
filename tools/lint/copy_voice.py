@@ -23,8 +23,6 @@ TALES = ["data/tales/career.json", "data/tales/league.json", "data/tales/season.
 ## Known hits, per file: [count, words, the pass that rewrites them]. Each reason names its copy
 ## voice row in docs/TODO.md (131-140, the screen passes).
 ALLOW = {
-    "data/stories/leadership.json": [1, "should", "row 140: a player's own question, reported"],
-    "data/stories/media.json": [2, "should", "row 140: a pundit's view, reported"],
     # Auto-pick is the Team selection button's name (director, 2026-11-12: "Auto pick. I already answered
     # this question"); these lines name the button, so the word stays.
     "scripts/sim/SkipOrders.gd": [2, "auto-pick", "kept: names the Auto-pick button (director, 2026-11-12)"],
@@ -229,6 +227,27 @@ TRAINING_OLD = [
     "but two players are already learning", "comes off it", "until you lock", "his projected peak",
 ]
 
+## The event cards and press pass (copy voice pass 11, row 140): per file, rewritten lines and the
+## lines they replaced. The full old -> new sheet is in the row 140 PR.
+STORY_PASS = {
+    "data/stories/media.json": [[
+        "He wants him dropped after a poor few weeks.",
+        "A former player on the radio wants {name} playing as a {trial_word}.",
+    ], []],
+    "data/stories/leadership.json": [[
+        "He's told you first. Do the players hear it now, or after the finals?",
+    ], []],
+    "scripts/sim/StoryEngine.gd": [[
+        "Board confidence stays where it is. The other choice costs it %s.",
+        "{keep_price} a season against our cap.", "If we lose that final, about a %s chance our morale also falls %s.",
+        "His opinion of you stays %d out of 100.", "development points. A senior game gives %d.",
+    ], ["(the other choice costs it", "against your cap", "(a senior game gives", "(any injury, not only this one;",
+        "If you lose that final", "%d/100", "(high fluency)", "(low, medium, high)"]],
+    "scripts/sim/MediaConference.gd": [[
+        "Our record: %s.", "%s's opinion of you: %d → %d out of 100.", "%s warms to you: +%d%% next time",
+    ], ["Your record: %s.", "%d/100", "next time)", "%% confidence)"]],
+}
+
 ## The draft and pre-season pass (copy voice pass 7, with the draft, League draft, Combine and
 ## pre-season intros): per file, the rewritten lines and the lines they replaced. A trialled
 ## prospect takes the place of "our weakest player in his line", never a "starter".
@@ -330,6 +349,7 @@ CONTRACTS_PASS = {
 PASSES = [(HUB, "copy voice pass 2, hub", HUB_NEW, HUB_OLD)] + [
     (path, "copy voice pass 5, team and coaching", v[0], v[1]) for path, v in TEAM_PASS.items()] + [
     (TRAINING, "copy voice pass 6, training", TRAINING_NEW, TRAINING_OLD)] + [
+    (path, "copy voice pass 11, event cards and press", v[0], v[1]) for path, v in STORY_PASS.items()] + [
     (path, "copy voice pass 7, draft and pre-season", v[0], v[1]) for path, v in DRAFT_PASS.items()] + [
     (path, "copy voice pass 8, contracts and trades", v[0], v[1]) for path, v in CONTRACTS_PASS.items()]
 

@@ -520,8 +520,8 @@ func _test_press_standing() -> void:
 			"The gate and the result say his opinion of you, and both fade lengths when they differ (%s)" % str(texts))
 	var one_fade: Array = PS.press_outcome_rows({"fade_rounds": 2, "fade_morale": 2, "fade_board": 0}, "")
 	_check(str(one_fade[0][1]) == "It wears off over 2 rounds.", "One fade length is said once (%s)" % str(one_fade))
-	_check(_state.press_odds_line(0).contains("Gary warms to you (+5% next time)")
-			and _state.press_odds_line(2).contains("Gary cools on you (-5% next time)"),
+	_check(_state.press_odds_line(0).contains("Gary warms to you: +5% next time")
+			and _state.press_odds_line(2).contains("Gary cools on you: -5% next time"),
 			"Each answer says how it moves your standing with him, as odds (%s)" % _state.press_odds_line(0))
 	_state.media_memory = {"standing": {"muckraker": 2}, "standing_year": int(_state.season_year)}
 	_check(not _state.press_odds_line(0).contains("warms to you"),
@@ -665,10 +665,10 @@ func _test_press_opinion() -> void:
 		if str(r[0]) == "MediaOutcomeOpinion":
 			opinion_row = str(r[1])
 	# Last, after "it wears off": his opinion of you never does.
-	_check(opinion_row == "%s's opinion of you: 50 → %d/100" % [name, 50 - drop]
+	_check(opinion_row == "%s's opinion of you: 50 → %d out of 100" % [name, 50 - drop]
 			and str(rows[rows.size() - 1][0]) == "MediaOutcomeOpinion",
 			"The press result shows his opinion of you moving, on its last line (%s)" % opinion_row)
-	_check(took_news.ends_with("%s's opinion of you: 50 → %d/100." % [name, 50 - drop]),
+	_check(took_news.ends_with("%s's opinion of you: 50 → %d out of 100." % [name, 50 - drop]),
 			"The news line says it too (%s)" % took_news)
 	# Backing him by name gives it back, whichever way the backing lands.
 	var backing: Dictionary = MC.pick({"club": "FRE", "opponent_name": "Carlton", "round": 12, "year": int(_state.season_year),
@@ -745,7 +745,7 @@ func _test_press_record() -> void:
 	_check(int(c["a"]["board"]) == 0 and int(c["b"]["board"]) == -2 and str(c["notes"]).contains("Ladder Watch")
 			and int(s["a"]["morale"]) == 2,
 			"Contradicted costs the board a point both ways; supported adds one to the lead size")
-	_check(MC.record_line({"w": 7, "l": 3, "pct": 118.4, "pos": 4, "last": "WWLWW"}) == "Your record: 7-3, 4th, 118%, form WWLWW.",
+	_check(MC.record_line({"w": 7, "l": 3, "pct": 118.4, "pos": 4, "last": "WWLWW"}) == "Our record: 7-3, 4th, 118%, form WWLWW.",
 			"The record is shown as it stands")
 	_press_reset()
 	_state.media_conference = {"key": "close_game", "journalist": "stats", "options": [{"label": "x", "kind": "back"}]}
