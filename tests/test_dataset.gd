@@ -41,7 +41,7 @@ const BOOKKEEPING_KEYS := ["impact_by", "breeze_side"]
 ## pressure zones (pressure acts in the defensive half, tackles inside 50,
 ## 2026-11-14) are counted without a draw, so leaving them out keeps the print.
 const TEAM_BOOKKEEPING_KEYS := ["pressure_acts_dhalf", "tackles_i50"]
-const GOLDEN_SEASON := {"Windows": "6a0a277374c4d20d0036ba64f239577b", "Linux": "d0043e9804c6d2b48248a0a4b4954bf3"}
+const GOLDEN_SEASON := {"Windows": "5494a32b9b8ef33687a1afe633eec837", "Linux": "d0043e9804c6d2b48248a0a4b4954bf3"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and
