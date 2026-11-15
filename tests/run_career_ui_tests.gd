@@ -3140,7 +3140,8 @@ func _test_menu_and_career() -> void:
 		elif refuse != null:
 			refuse_text = str(refuse.get("text"))
 		_check(tid != "" and at_fifty and refuse != null and refuse.is_visible_in_tree()
-				and refuse_text == "His opinion of you: 44 out of 100. 6% he won't re-sign with us.",
+				and refuse_text.begins_with("Opinion of you: 44 out of 100. 6% that ")
+				and refuse_text.ends_with(" won't re-sign with us.") and not refuse_text.contains(" he "),
 				"Talks at 44/100 say the chance he won't re-sign before you offer, and at 50 say nothing (%s)" % refuse_text)
 		_router.handle_back(true)
 		await _settle()
