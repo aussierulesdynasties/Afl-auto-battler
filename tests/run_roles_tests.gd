@@ -160,7 +160,7 @@ func _test_selection_tests() -> void:
 	var lock := func(n: int) -> Array:
 		var out := []
 		for i in range(n):
-			out.append({"id": "lk%d" % i, "role": "MID", "attr": {"pressure": 70, "discipline": 50}})
+			out.append({"id": "lk%d" % i, "role": "MID", "attr": {"pressure": Traits.DEFS["lockdown"]["min"] + 5, "discipline": 50}})
 		return out
 	_check(Traits.short_text(lock.call(2)) == "Lockdown unit: 1 lockdown player short.",
 			"One traited player missing says which synergy and what it's short: %s" % Traits.short_text(lock.call(2)))

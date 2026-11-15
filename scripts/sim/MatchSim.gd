@@ -5040,7 +5040,7 @@ func _trait(p: Dictionary, key: String) -> bool:
 
 ## A player's attribute as he is playing right now.
 func _a(p: Dictionary, key: String) -> float:
-	return Skills.value(p["attr"], key) * fit(p)
+	return Skills.engine(p, key) * fit(p)
 
 
 ## The back zone's role weights for a pick on ball use among `group`: each

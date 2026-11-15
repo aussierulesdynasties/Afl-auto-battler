@@ -87,8 +87,8 @@ func _test_words() -> void:
 	# The longer name wins ("Lockdown unit" is the synergy, not the trait inside it).
 	_check(_tl.markup("Lockdown unit").contains("trait:lockdown_unit"), "Lockdown unit is not read as Lockdown")
 	_check(_tl.markup("Lockdowns").find("[url") < 0, "a name inside a longer word is left alone")
-	_check(_tl.earn_text("hothead").contains("20"), "Hothead says its line")
-	_check(_tl.earn_text("wet_weather").contains("78"), "Wet-weather says its line")
+	_check(_tl.earn_text("hothead").contains(str(Traits.DEFS["hothead"]["max"])), "Hothead says its line")
+	_check(_tl.earn_text("wet_weather").contains(str(Traits.WET_WEATHER["contested"])), "Wet-weather says its line")
 
 
 func _overlay(host: Node, name: String) -> Control:

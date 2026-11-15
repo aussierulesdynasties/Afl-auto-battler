@@ -1495,6 +1495,13 @@ func _week_job_row(text: String, done: bool, route: String, big := false) -> But
 	t.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	h.add_child(t)
+	if big:
+		# The big call names a player, and a long name takes a second line
+		# rather than losing the question's end; the row grows to hold it.
+		t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		t.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+		t.resized.connect(func():
+			b.custom_minimum_size.y = maxf(44.0, ceilf(t.get_combined_minimum_size().y) + 8.0))
 	b.tooltip_text = text
 	if route == WeekChecklist.PLAN_SHEET:
 		# The fitness plan opens over the Hub, at its change step.

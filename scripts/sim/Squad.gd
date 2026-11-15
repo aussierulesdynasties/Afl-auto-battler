@@ -154,7 +154,7 @@ static func _mean(group: Array, key: String, fallback := 45.0) -> float:
 		return fallback
 	var total := 0.0
 	for p in group:
-		total += Skills.value(p["attr"], key)
+		total += Skills.engine(p, key)
 	return total / float(group.size())
 
 
@@ -165,7 +165,7 @@ static func _top(group: Array, key: String, n: int, fallback := 45.0) -> float:
 		return fallback
 	var vals := []
 	for p in group:
-		vals.append(Skills.value(p["attr"], key))
+		vals.append(Skills.engine(p, key))
 	vals.sort()
 	vals.reverse()
 	var take := mini(n, vals.size())

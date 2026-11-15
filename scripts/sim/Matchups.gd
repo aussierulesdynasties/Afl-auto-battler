@@ -63,7 +63,7 @@ static func _height_score(p: Dictionary) -> float:
 
 
 static func _a(p: Dictionary, key: String) -> float:
-	return Skills.value(p.get("attr", {}), key)
+	return Skills.engine(p, key)
 
 
 ## A forward's game in the air: his marking and his size.

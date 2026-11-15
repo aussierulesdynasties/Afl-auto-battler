@@ -22,6 +22,7 @@ var _advanced := false
 var _focus_choice := ""
 var _focus_notice := ""
 var _wide := false
+var _across := 2   # training cards a row: 2, or 1 when a skill's line can't fit half the row
 ## Long-press one player to enter group selection. Once active, ordinary
 ## taps add/remove players; the group picker only offers plans valid for all.
 var _bulk_selected := {}
@@ -668,16 +669,19 @@ func _fill_rows(rows: Node) -> void:
 		grid.name = "TrainingGrid"
 		rows.add_child(grid)
 		# Two across; an odd one out keeps a half-width card at the left and
-		# its row leaves the other half empty, so every card is one width.
-		for i in range(0, group.size(), 2):
-			var pair: Array = group.slice(i, i + 2)
+		# its row leaves the other half empty, so every card is one width. At
+		# a text size where a skill's name and rating can't fit half the row
+		# ("Uncontested marking 99" at the largest phone text), one across.
+		_across = 2 if _top_three_fits(_card_text_width(2)) else 1
+		for i in range(0, group.size(), _across):
+			var pair: Array = group.slice(i, i + _across)
 			var line := UiKit.hbox(6)
 			line.name = "GridRow"
 			grid.add_child(line)
 			for p in pair:
 				line.add_child(_player_card(p))
 				shown += 1
-			if pair.size() == 1:
+			if pair.size() < _across:
 				var hole := Control.new()
 				hole.name = "GridHole"
 				hole.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -846,12 +850,24 @@ static func _card_height() -> float:
 
 ## How wide a card's words can run: the page less its margins and the list
 ## panel's padding, shared between the two cards, less the bar and the padding.
-func _card_text_width() -> float:
+func _card_text_width(across := -1) -> float:
+	var n := _across if across < 0 else across
 	var row := UiKit.view_width(self) - 24.0 - 20.0
 	if _wide:
 		row = maxf(260.0, (UiKit.view_width(self) - 34.0) * 0.5 - 30.0)
-	var card := (row - 6.0) * 0.5
+	var card := (row - 6.0 * float(n - 1)) / float(n)
 	return card - CARD_BAR - 2.0 * CARD_PAD
+
+
+## Whether every skill's name and a two-figure rating fit on one line of a
+## card `width` wide (PlayerSheet.top_three's row: name, 8 px, rating).
+static func _top_three_fits(width: float) -> bool:
+	var fs := UiKit.px(CARD_FS_LOW)
+	var num := UiKit.FONT.get_string_size("99", HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	for label in PlayerProfile.ATTR_LABELS.values():
+		if UiKit.FONT.get_string_size(str(label), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 8.0 + num > width:
+			return false
+	return true
 
 
 ## "Mid +1": his own position, then how many more he can play. The full list
