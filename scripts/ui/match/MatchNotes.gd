@@ -80,6 +80,11 @@ static func goal_head(who: String, club: String) -> String:
 ## {"text", "tier"}: tier "goal" (its own row), "break" (bold), "play".
 static func feed_line(ev: Dictionary, home: String, away: String) -> Dictionary:
 	var kind := str(ev.get("kind", ""))
+	# A synergy switched by the substitute (for the rest of the match) is called;
+	# one an interchange switches comes and goes with the rotations, so it is
+	# left to the break sheet's synergies line.
+	if kind == "sub" and bool(ev.get("substitute", false)) and (ev.has("synergy_on") or ev.has("synergy_off")):
+		return {"text": synergy_switch_words(ev, home, away), "tier": "play"}
 	if kind == "sub" and bool(ev.get("substitute", false)):
 		# On for a hurt man: the injury line names him (story_feed_line).
 		if bool(ev.get("for_injury", false)):
@@ -120,6 +125,19 @@ static func substitute_words(ev: Dictionary, home: String, away: String) -> Stri
 	var club := home if int(ev.get("side", -1)) == 0 else away
 	return "%s: %s on for %s (%s)" % ["Medical sub" if bool(ev.get("medical", false)) else "Substitute",
 			str(ev.get("name", "")), str(ev.get("off_name", "")), GameDB.club_short(club)]
+
+
+## A change of the 18 that switched a synergy on or off (synergies follow the
+## players on the ground): "Engine room off (Dogs): Smith on for Bontempelli".
+static func synergy_switch_words(ev: Dictionary, home: String, away: String) -> String:
+	var club := home if int(ev.get("side", -1)) == 0 else away
+	var bits: PackedStringArray = []
+	for l in ev.get("synergy_on", []):
+		bits.append("%s on" % str(l))
+	for l in ev.get("synergy_off", []):
+		bits.append("%s off" % str(l))
+	return "%s (%s): %s on for %s" % [", ".join(bits), GameDB.club_short(club),
+			str(ev.get("name", "")), str(ev.get("off_name", ""))]
 
 
 ## The tone of a feed line to the coach: a goal for his club is "good", one against
@@ -1794,9 +1812,29 @@ static func synergy_lines(res: Dictionary, my_side: int) -> Array:
 				fact = "a pressure rating of %d to %d." % [MatchSim.pressure_rating(me, them), MatchSim.pressure_rating(them, me)]
 			"supply_line":
 				fact = "%d inside 50s to %d." % [int(me.get("inside50", 0)), int(them.get("inside50", 0))]
+			"running_machine":
+				var legs: Array = res.get("q4_legs", [])
+				if legs.size() == 2:
+					fact = "last-quarter legs %d to %d (out of 100)." % [roundi(float(legs[my_side])), roundi(float(legs[opp]))]
 		if fact != "":
-			out.append("%s: %s" % [Traits.label(str(key)), fact])
+			out.append("%s%s: %s" % [Traits.label(str(key)), _synergy_time(res, my_side, str(key)), fact])
 	return out
+
+
+## A synergy on for only part of the match says so (synergies follow the 18 on
+## the ground): "" when on all match or the share isn't known.
+static func _synergy_time(res: Dictionary, side: int, key: String) -> String:
+	var shares: Array = res.get("synergy_share", [])
+	if shares.size() != 2 or not (shares[side] as Dictionary).has(key):
+		return ""
+	var sh := float(shares[side][key])
+	if sh >= 0.95:
+		return ""
+	if sh >= 0.6:
+		return " (on for most of the match)"
+	if sh >= 0.35:
+		return " (on for about half the match)"
+	return " (on for part of the match)"
 
 
 ## The standing calls the quarter just played broke, for the break's

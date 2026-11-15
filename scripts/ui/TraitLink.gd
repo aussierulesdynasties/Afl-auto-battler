@@ -72,10 +72,11 @@ static func sheet_lines(key: String) -> Array:
 	var out := [Traits.label(key)]
 	if Traits.SYNERGIES.has(key):
 		var s: Dictionary = Traits.SYNERGIES[key]
-		out.append("Line synergy")
+		out.append("Synergy")
 		out.append(Traits.text(key))
 		out.append(str(s.get("about", "")))
 		out.append(Traits.requirement_text(key))
+		out.append(Traits.SYNERGY_CAP_NOTE)
 	else:
 		# A weakness says so in words, not in BAD alone.
 		out.append("Weakness" if Traits.is_bad(key) else "Trait")

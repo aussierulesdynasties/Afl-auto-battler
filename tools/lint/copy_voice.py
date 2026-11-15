@@ -44,7 +44,7 @@ STATS_PASS = {
         "Match-winning class. Lifts our side at the stoppages. It weighs heavily in his overall.",
         "Where we expect him to peak. It is not a limit. His growth slows as he nears it.",
         "Contest is our stoppage work. Attack is our forwards and carry. Defence is our pressure and intercept.",
-        "A standout stat earns a trait. The right mix in a line switches on a synergy. The Team screen shows ours, and when one is a player short",
+        "A standout stat earns a trait. The right mix of them on the ground switches on a synergy. The Team screen shows ours, and when one is a player short",
         "Every player risks injury each game. Durability lowers the risk. Tired players win less ball. Rotate them from the coach's box.",
         "Players earn development every game. What each one is developing as decides where it goes. A stat costs more the higher it already is. Past POT it costs much more.",
     ], [
@@ -56,7 +56,7 @@ STATS_PASS = {
         "Match-winning class. Lifts your side at the stoppages and drives a player's overall.",
         "Where he is projected to peak. A projection, not a limit; growth slows as he nears it.",
         "Contest is your stoppages, attack your forwards and carry, defence your pressure and intercept.",
-        "A standout stat earns a trait. The right mix in a line switches on a synergy; the Team screen shows yours, and says when one is a single player short",
+        "A standout stat earns a trait. The right mix on the ground switches on a synergy; the Team screen shows yours, and says when one is a single player short",
         "Every player risks injury each game, less with durability. Tired players win less ball, so rotate in the coach box.",
         "Players earn development every game, and what each one is developing as decides where it goes. A stat costs more the higher it already is, and much more past POT.",
     ]],

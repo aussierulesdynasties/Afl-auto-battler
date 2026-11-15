@@ -34,6 +34,7 @@ func run() -> void:
 	_t("_test_decision_credits")
 	_t("_test_pep_talks")
 	_t("_test_fatigue_parity")
+	_t("_test_synergies_follow_the_ground")
 	_t("_test_play_through")
 	_t("_test_play_through_by_job")
 	_t("_test_play_through_three")
@@ -5127,3 +5128,68 @@ func _test_every_call_two_sided() -> void:
 		var t := GateOdds.burst_lines(str(kind), 20)
 		_check(sized.search(str(t[0])) != null and sized.search(str(t[1])) != null,
 				"The %s card sizes both its gain and its cost (%s / %s)" % [kind, t[0], t[1]])
+
+
+## Bug bash 5: synergies follow the 18 on the ground. A carrier going to the
+## bench switches one off (the interchange's own event says so) and coming
+## back switches it on; no dice are drawn for it. The Engine room works at
+## stoppages only. Full time gives the Running machine its fact and says
+## when a synergy was on for only part of the match.
+func _test_synergies_follow_the_ground() -> void:
+	var sim := _sim(77)
+	var sq: Squad = sim.squads[0]
+	var key := "lockdown_unit"
+	var need := int((Traits.SYNERGIES[key]["needs"] as Dictionary)["lockdown"])
+	# Give the side enough stoppers (a back or midfielder at top pressure).
+	for p in sq.ground:
+		if Traits.carriers(key, sq.ground)[0][1].size() >= need:
+			break
+		if ["DEF", "MID"].has(str(p["role"])) and not Traits.of(p).has("lockdown"):
+			(p["attr"] as Dictionary)["pressure"] = 99
+	sim._refresh_synergies(0, false)
+	var on_now := (sim.synergies[0] as Array).has(key)
+	_check(on_now, "Enough stoppers on the ground switch on the Lockdown unit")
+	var state := sim.rng.state
+	# Take every stopper off: the bench has none to replace them.
+	for gi in range(sq.ground.size()):
+		if not Traits.active(sq.ground).has(key):
+			break
+		if Traits.of(sq.ground[gi]).has("lockdown"):
+			for bi in range(sq.bench.size()):
+				if not Traits.of(sq.bench[bi]).has("lockdown"):
+					sim._swap(0, gi, bi)
+					break
+	_check(not (sim.synergies[0] as Array).has(key), "A stopper going to the bench switches the Lockdown unit off")
+	var off_ev := {}
+	for ev in sim.events:
+		if (ev as Dictionary).has("synergy_off"):
+			off_ev = ev
+	_check(str(off_ev.get("kind", "")) == "sub" and (off_ev["synergy_off"] as Array).has("Lockdown unit"),
+			"The interchange that switched it off says so: %s" % str(off_ev))
+	_check(MatchNotes.feed_line(off_ev, "GEE", "COL").is_empty(), "A rotation's switch stays off the feed")
+	var sub_ev: Dictionary = off_ev.duplicate()
+	sub_ev["substitute"] = true
+	sub_ev["for_injury"] = true
+	var said := str(MatchNotes.feed_line(sub_ev, "GEE", "COL").get("text", ""))
+	_check(said.begins_with("Lockdown unit off (") and said.contains(" on for "), "The substitute's switch is called: %s" % said)
+	_check(sim.rng.state == state, "Following the 18 draws no random numbers")
+	var forced := _sim(77)
+	forced.synergy_forced[0]["engine_room"] = true
+	forced._refresh_synergies(0, false)
+	_check((forced.synergies[0] as Array).has("engine_room"), "An audit can hold a synergy on")
+	_check(forced._contest_traits(0, true) > 0.0 and forced._contest_traits(0, false) == 0.0,
+			"The Engine room wins more of the stoppages and nothing in general play")
+	var res := {"synergies": [["running_machine", "supply_line"], []], "goals": [12, 9], "q4_legs": [81.4, 66.0],
+			"synergy_share": [{"running_machine": 1.0, "supply_line": 0.5}, {}],
+			"team": [{"clearances": 40, "inside50": 55}, {"clearances": 33, "inside50": 48}]}
+	var lines := MatchNotes.synergy_lines(res, 0)
+	_check(lines.size() == 2 and str(lines[0]) == "Running machine: last-quarter legs 81 to 66 (out of 100)."
+			and str(lines[1]) == "Supply line (on for about half the match): 55 inside 50s to 48.",
+			"Full time: the Running machine's legs, and a synergy on for part of the match: %s" % str(lines))
+	var played := _sim(78)
+	var r := played.run()
+	var ok := (r["synergies"] as Array).size() == 2
+	for side in 2:
+		for k in (r["synergy_share"][side] as Dictionary):
+			ok = ok and (r["synergies"][side] as Array).has(k) and float(r["synergy_share"][side][k]) <= 1.0
+	_check(ok, "The result lists every synergy a side had on, with its share of the match")

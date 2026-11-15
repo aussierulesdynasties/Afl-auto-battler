@@ -428,7 +428,7 @@ func _synergy_words() -> String:
 	for r in Traits.progress(_state.my_squad().ground):
 		if bool(r["active"]):
 			on.append(Traits.with_effect(str(r["key"])))
-	return "Your side has: " + ", ".join(on) + "." if not on.is_empty() else "No line synergies in this side."
+	return "Your side has: " + ", ".join(on) + "." if not on.is_empty() else "No synergies in this side."
 
 
 ## Team selection without scrolling (director, 2026-10-13): a phone has "The
