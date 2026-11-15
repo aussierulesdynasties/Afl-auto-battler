@@ -8726,6 +8726,7 @@ func open_offseason(keep_staff := false) -> void:
 	if not keep_staff:
 		offseason_staff = Coaches.staff(coaches, my_club) if not coaches.is_empty() else {}
 	_decide_retirements()
+	_real_delistings()
 	# A Legacy career's Fitzroy merger is settled now, before any club
 	# re-signs: the leftovers go into this year's National Draft, as in 1996.
 	LegacyRollover.settle_merger(self)
@@ -8764,6 +8765,9 @@ func open_offseason(keep_staff := false) -> void:
 			if not list.has(p):
 				continue   # already delisted to make cap room for a better player
 			var why := ai_release_reason(code, p)
+			# His real club delisted him now (_real_delistings): so does this one.
+			if int(p.get("real_end", 0)) == season_year + 1:
+				why = "delist"
 			# Talked round this off-season, he cannot be delisted by choice
 			# until the next one: the club keeps him, as yours must.
 			if why == "delist" and ListStings.release_held(p, season_year + 1):
@@ -9026,6 +9030,22 @@ func _decide_retirements() -> void:
 			if bool(res["stays"]) and int(p.get("overall", 0)) >= NEWS_MIN_OVR:
 				add_news("retirement", "%s (%s) has decided to play on in %d." % [
 						GameDB.player_display_name(p), GameDB.club_name(str(code)), year])
+
+
+## Legacy: a real player whose AFL career ended before Prospects.REAL_RETIRE_AGE
+## was delisted then (Prospects.real_delisting_due), so his contract ends this
+## off-season at every club. A rival lets him go; yours decides, as for any
+## player out of contract. Once a career: a club that keeps him keeps him as
+## the sim's. Counted as a delisting, not a retirement (#1631 kept those at
+## two or three a club).
+func _real_delistings() -> void:
+	var year := season_year + 1
+	for code in season.lists:
+		for p in season.lists[code]:
+			if p.has("real_end") or retiring_now(p) or not Prospects.real_delisting_due(p, year):
+				continue
+			p["real_end"] = year
+			p["contract_years"] = mini(int(p.get("contract_years", 1)), 1)
 
 
 ## Who is still on `list` after the coming rollover: everyone but its
