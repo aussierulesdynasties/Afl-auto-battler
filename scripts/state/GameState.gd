@@ -235,7 +235,7 @@ var news: Array = []             # league news feed, newest first
 ## Players the round's news already named for their game (a milestone or a big
 ## game), so a career best does not give him a second item. Not saved.
 var _named_this_round := {}
-var board_patience := "fair"     # this career's board dial (DifficultyDials step)
+var board_patience := "patient"  # this career's board dial (DifficultyDials step)
 var rival_recruiting := "shrewd" # this career's rival dial (DifficultyDials step)
 var tutorials := true            # this career's first-visit menu tips (Tutorials.gd)
 ## The league's real controversies (YearEvents): chosen at New career, kept
@@ -13944,6 +13944,11 @@ func set_tutorials_on(on: bool) -> void:
 func new_career_dial(dial: String) -> String:
 	var saved := str(get_setting(dial, ""))
 	if saved == "":
+		# The old Easy / Normal / Hard setting never touched the board, so a
+		# device that has not picked a board starts on the default (Patient,
+		# director 2026-11-17); its rivals follow the old setting.
+		if dial == DifficultyDials.BOARD:
+			return DifficultyDials.default_key(dial)
 		return str(DifficultyDials.from_legacy(str(get_setting("difficulty", "normal")))[dial])
 	return DifficultyDials.normalize(dial, saved)
 
