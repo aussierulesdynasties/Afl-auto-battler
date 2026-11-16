@@ -126,10 +126,23 @@ a mix by distance. Cheer squads, banners and reactions to goals are part of the 
 **2e. The cameras.** Which views a match uses (broadcast wing, high whole ground, behind the goals,
 close-ups at a stoppage or a set shot).
 
-The answers are recorded in the Director Bible and summarised here. The freeze allows only the
+The answers are recorded in the Director Bible and summarised here.
+
+**Answers so far.**
+- 2a lighting, daylight (rule 2.80): sky light for every match (ambient and reflections from a sky
+  with the stands round its foot and the grass below); late-afternoon games add a low sun and the
+  stands' shade across the ground. Prototype: `tools/visual/capture_look3d.gd`.
+- 2a post-processing, tone (rule 2.81): AgX tonemapping with a footy-TV grade (contrast 1.1,
+  saturation 1.2), exposure set by the brightness of open grass; club rings keep their exact colour.
+- 2a lighting, night (rule 2.82): four light towers, one to each corner, each casting a shadow;
+  a roofed venue's lighting is settled with the stadium (2b). The crowd needs almost no shine.
+- 2a weather, wet (rule 2.83): cloud light (no sun, soft shadows) and rain falling on screen
+  (fine streaks from 15 m out). A distance haze barely shows at the match cameras' range.
+
+The freeze allows only the
 prototypes each question needs; nothing from step 2 is the settled look until he has chosen it.
 
-## Step 3. The asset and animation plan (after step 2)
+## Step 3. The asset and animation plan ([3D_ASSET_PLAN.md](3D_ASSET_PLAN.md); the rig waits on step 2's body)
 
 One inventory of every asset and animation the 3D view needs, written once the body is chosen. For
 each: what it is, where it comes from (his Rokoko takes, a free library, made by us), what it is made
@@ -158,6 +171,6 @@ vignettes. Nothing in step 4 starts before the football proof has passed and the
 |---|---|
 | Freeze | in force from 2026-11-16 |
 | 1. Football proof | harness in `tools/balance.sh shape`; spec with him; gap list above; fixes next (row 201) |
-| 2. The world and the look | not started (row 202: 2a foundation, 2b stadium, 2c crowd, 2d players' look, 2e cameras) |
+| 2. The world and the look | under way (row 202): 2a daylight, tone, night lighting and wet games chosen (rules 2.80-2.83); next weather and time of day, then 2b stadium, 2c crowd, 2d players' look, 2e cameras |
 | 3. Asset and animation plan | after step 2 (row 203) |
 | 4. Build | after 1 and 3 (rows 197, 198) |
