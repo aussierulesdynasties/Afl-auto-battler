@@ -796,7 +796,7 @@ func _boundary_free_phases(k: int) -> Array:
 		var shape := _flight_shape("kick", d)
 		out.append({"t": "flight", "to": at, "dur": shape.x, "apex": shape.y,
 				"recv": -1, "mode": "stoppage"})
-	out += [{"t": "emit", "log": true}] + _take_free(_actor_id(events[k])) 			+ [{"t": "wait", "dur": 0.35, "ease": true}]
+	out += [{"t": "emit", "log": true}] + _take_free(_actor_id(events[k])) + [{"t": "wait", "dur": 0.35, "ease": true}]
 	return out
 
 
@@ -816,20 +816,6 @@ func _fifty_phases(k: int) -> Array:
 		out += _take_free(who)
 		out.append({"t": "hold", "who": who, "carry": at, "run": true, "mode": "stoppage",
 				"max": d / float(tokens[who]["top"]) * 1.6 + 0.5})
-	elif d > 1.0 and who >= 0:
-		# The free's ball still lies where it was paid and he is up the ground
-		# (the tackler, paid holding the ball): it goes to him and he carries it
-		# up to the new mark. Flown ahead alone, it lay 6.2 s at the mark while
-		# he ran 26 m to it (picture_truth, a 50 after a holding-the-ball free).
-		var me: Vector2 = tokens[who]["pos"]
-		var dm := (ball["pos"] as Vector2).distance_to(me)
-		if dm > 1.0:
-			var shape := _flight_shape("handball" if dm < 18.0 else "kick", dm)
-			out.append({"t": "flight", "to": me, "dur": shape.x, "apex": shape.y, "recv": who,
-					"mode": "stoppage"})
-		out += [{"t": "collect", "who": who, "max": 0.3}, {"t": "possess", "who": who, "quiet": true},
-				{"t": "hold", "who": who, "carry": at, "run": true, "mode": "stoppage",
-					"max": me.distance_to(at) / float(tokens[who]["top"]) * 1.6 + 0.5}]
 	elif d > 1.0:
 		# Never quicker than a kick covers the ground: 0.35 + d / 110 sent a
 		# 50 m penalty's ball at 62.2 m a second (picture_truth, ball speed).
@@ -951,7 +937,7 @@ func _shot_phases(k: int) -> Array:
 		# He runs onto it before he shoots: capped at 0.35 s, the ball was put
 		# in his hands from up to 4.6 m and kicked from where it lay (seed 31
 		# FRE v STK, five open-play shots).
-		out += [{"t": "collect", "who": s}, {"t": "possess", "who": s, "quiet": true},
+		out += [{"t": "collect", "who": s, "roll": true}, {"t": "possess", "who": s, "quiet": true},
 				{"t": "hold", "who": s, "dur": 0.0, "carry": (ball["pos"] as Vector2) + on}]
 	var d := (ball["pos"] as Vector2).distance_to(target)
 	if not set_shot:
@@ -1092,7 +1078,9 @@ func _take_free(who: int) -> Array:
 		return []
 	if str(ball["mode"]) == "held" and int(ball["holder"]) == who:
 		return []
-	return [{"t": "collect", "who": who}, {"t": "possess", "who": who, "quiet": true}]
+	# (A ball still loose comes his way off the men round it, as any loose
+	# ball does: walking 30 m to a ball nobody touches is play waiting.)
+	return [{"t": "collect", "who": who, "roll": true}, {"t": "possess", "who": who, "quiet": true}]
 
 
 ## Who takes the free a possession beat restarts from: the man the free
