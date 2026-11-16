@@ -13,6 +13,10 @@ const PLAYER_GLB := "res://assets/oval3d/player_average.glb"
 ## the GLB's hand-posed jog, idle and carry: a neutral run loop (frame 75 = frame 0, the travel
 ## taken out), a stand-idle loop, and the run's arms swapped for a ball carrier's two-handed hold.
 const LOOPS_GLB := "res://assets/oval3d/player_loops.glb"
+## The player and loop files in use (PLAYER_GLB, LOOPS_GLB); a capture may point them at a
+## candidate body (row 202 2d: the MetaHuman footballer, which carries its own loops).
+static var player_glb := PLAYER_GLB
+static var loops_glb := LOOPS_GLB
 ## m/s the jog loop covers at rate 1 (14.6 m in its 2.5 s): the rate scales from this.
 const LOOP_SPEED := 5.83
 ## Club Forge's hair styles on the same rig, one mesh per style on the head bone
@@ -31,6 +35,9 @@ const SCALP := {"bald": 1, "buzz": 2, "dreadlocks": 0, "undercut": 2, "curly_sho
 const SCALP_UNDER_SHELL := 1
 ## The boots' own material in the GLB (export_player_glb.py, the Tripo boot): drawn as modelled.
 const BOOT_MATERIAL := "ARD_boot_real"
+## The eyes' material name in the GLB (a MetaHuman body's eyeballs, coloured by their vertex
+## colour): drawn as modelled, never in the kit.
+const EYE_MATERIAL := "ARD_eye"
 const HALF_LEN := MatchMotion.HALF_LEN
 const HALF_WID := MatchMotion.HALF_WID
 const GOAL_X := MatchMotion.GOAL_X
@@ -76,7 +83,7 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 	_ground()
 	_posts()
 	_stands(home, away)
-	var scene: PackedScene = load(PLAYER_GLB)
+	var scene: PackedScene = load(player_glb)
 	# Each club in its home guernsey, as the vignettes dress them (StoppageVignette._dress).
 	var kits := [_kit(GameDB.club_guernsey(home)), _kit(GameDB.club_guernsey(away))]
 	for t in director.tokens:
@@ -665,7 +672,7 @@ static func _loop_anims(skel_path: NodePath) -> Dictionary:
 	if _loops.has(key):
 		return _loops[key]
 	var out := {}
-	var ps: PackedScene = load(LOOPS_GLB)
+	var ps: PackedScene = load(loops_glb)
 	if ps:
 		var n := ps.instantiate()
 		var src: AnimationPlayer = n.find_children("*", "AnimationPlayer", true, false)[0]
@@ -689,13 +696,13 @@ static func _loop_anims(skel_path: NodePath) -> Dictionary:
 func _player(scene: PackedScene, kit: ShaderMaterial, cols: Array) -> Dictionary:
 	var node: Node3D = scene.instantiate()
 	add_child(node)
-	# Every surface wears the kit except the boots, which keep their own textured material.
+	# Every surface wears the kit except the boots and the eyes, which keep their own material.
 	for mi in node.find_children("*", "MeshInstance3D", true, false):
 		var m := mi as MeshInstance3D
 		m.mesh = _skull(m.mesh)
 		for s in range(m.mesh.get_surface_count()):
 			var own := m.mesh.surface_get_material(s)
-			if own == null or own.resource_name != BOOT_MATERIAL:
+			if own == null or not own.resource_name in [BOOT_MATERIAL, EYE_MATERIAL]:
 				m.set_surface_override_material(s, kit)
 		m.set_meta("kit", true)
 	var skel: Skeleton3D = node.find_children("*", "Skeleton3D", true, false)[0]
