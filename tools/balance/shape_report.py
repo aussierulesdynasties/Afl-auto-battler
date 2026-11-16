@@ -114,13 +114,12 @@ def mean_sd(v):
 def mark(value, ref):
     if not ref or ref.get("lo") is None:
         return "-"
+    # The director's pass mark (rule 2.86): IN within 10% of the real range's
+    # ends (74-78 m passes from 66.6 to 85.8 m), NEAR within 20%, else OUT.
     lo, hi = ref["lo"], ref["hi"]
-    span = hi - lo
-    nlo = ref.get("near_lo", lo - max(span * 0.5, abs(lo) * 0.1))
-    nhi = ref.get("near_hi", hi + max(span * 0.5, abs(hi) * 0.1))
-    if lo <= value <= hi:
+    if lo - abs(lo) * 0.1 <= value <= hi + abs(hi) * 0.1:
         return "IN"
-    if nlo <= value <= nhi:
+    if lo - abs(lo) * 0.2 <= value <= hi + abs(hi) * 0.2:
         return "NEAR"
     return "OUT"
 
