@@ -1,5 +1,6 @@
-// PROTOTYPE (row 202, 3D view plan step 2c): one supporter per instance, posed from a baked
-// vertex animation table (the crowd bake script, scratch until chosen): every frame's vertex positions are a row
+// The 3D view's near crowd (row 202 step 2c, Bible 2.92; Oval3DCrowd): one supporter per instance,
+// posed from a baked vertex animation table (tools/oval3d/bake_crowd_vat.py, packed into
+// assets/oval3d/crowd_set.res by tools/oval3d/build_crowd_set.gd): every frame's vertex positions are a row
 // of pos_tex, so thousands of people move with no skeletons. The mesh's UV.x holds each vertex's
 // column; its vertex colour says what the vertex is (R top, G pants, B skin, A hair).
 // INSTANCE_CUSTOM: x = this person's own time offset (0-1), y = side (0 home, 1 away, 0.5 nobody's),
