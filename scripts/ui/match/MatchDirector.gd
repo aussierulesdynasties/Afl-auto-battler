@@ -3645,7 +3645,7 @@ func _call_pace(side: int) -> float:
 ## How much longer a stoppage pack may take to form for each extra player in it.
 const PACK_EXTRA_WAIT := 0.15
 
-## Real footy's pauses (director, 2026-11-17, rule 2.91): a ball-up or throw-in
+## Real footy's pauses (director, 2026-11-17, rule 2.93): a ball-up or throw-in
 ## waits about 5 s of match time for the players to get there, and a player who
 ## marks takes about 3 s before he plays on. Row 201: thrown up 0.9 s after the
 ## ball landed, a ball-up had 17 players near it against 23 in real games, and a
