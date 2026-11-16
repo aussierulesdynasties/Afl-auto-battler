@@ -171,7 +171,7 @@ func play(from: int, count: int, out: String, weather: String,
 				if not MatchSim.BURSTS.has(burst):
 					push_error("balance: --burst is none or one of " + str(MatchSim.BURSTS.keys()))
 					return 1
-				(sim.bursts[i % 2] as Dictionary)[burst] = 1000000
+				_hold_burst(sim, i % 2, burst)
 		# --switch on|none (row 201, the shape harness): side i % 2 puts its
 		# best defender (overall) on the rival's best forward from the first
 		# bounce; "none" names the same pair and leaves the match-ups alone.
@@ -198,12 +198,14 @@ func play(from: int, count: int, out: String, weather: String,
 				sim.set_rotation_policy(coached, sim.auto_rotation(coached, "steady"))
 				sim.set_tactics(1 - coached, sim.ai_tactics(1 - coached))
 				sim.set_rotation_policy(1 - coached, sim.auto_rotation(1 - coached, "steady"))
+			_hold_burst(sim, i % 2, burst)
 			sim.run_quarter()
 			for side in range(2):
 				var e := _legs(sim, side)
 				legs[side].append(e[0])
 				tank[side].append(e[1])
 		if sim.needs_extra_time():
+			_hold_burst(sim, i % 2, burst)
 			sim.run_extra_time()
 		var r: Dictionary = sim.result()
 		# Each side's score at the end of each quarter (for comebacks), from the
@@ -774,3 +776,10 @@ static func type_sources(sim: MatchSim, r: Dictionary) -> Array:
 				d[str(lg[1]) + "_" + parts[0]] = int(d.get(str(lg[1]) + "_" + parts[0], 0)) + n
 				out[side][ty] = d
 	return out
+
+
+## --burst holds the call all match: MatchSim.end_quarter() clears every
+## burst at the siren, so it is set again before each quarter.
+static func _hold_burst(sim: MatchSim, side: int, burst: String) -> void:
+	if burst != "" and burst != "none":
+		(sim.bursts[side] as Dictionary)[burst] = 1000000

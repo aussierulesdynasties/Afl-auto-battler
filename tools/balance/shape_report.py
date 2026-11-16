@@ -73,7 +73,10 @@ def load(run, arm):
         for line in open(f, encoding="utf-8"):
             line = line.strip()
             if line:
-                r = json.loads(line)
+                try:
+                    r = json.loads(line)
+                except ValueError:  # a run stopped mid-write leaves half a line
+                    continue
                 if "shape" in r:
                     rows[r["i"]] = r
     return rows
