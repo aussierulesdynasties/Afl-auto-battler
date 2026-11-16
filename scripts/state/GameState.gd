@@ -9614,7 +9614,11 @@ func _open_market(players: Array) -> void:
 	# his AFL career ended then, so no club signs him; only a coach who keeps
 	# him off his own list keeps him playing (director, 2026-11-13).
 	for p in players.duplicate():
-		var delisted := not retiring_now(p) and int(p.get("real_end", 0)) == season_year + 1
+		# One a real draft or new club's list took this off-season or later
+		# (Damien Mellow: Adelaide's foundation list, then Sydney's 1991
+		# pre-season pick) is a free agent: the drafts see him (_relist).
+		var delisted := not retiring_now(p) and int(p.get("real_end", 0)) == season_year + 1 \
+				and not LegacyRollover.taken_later(p, season_year)
 		if retiring_now(p) or delisted:
 			players.erase(p)
 			free_agents.erase(p)
