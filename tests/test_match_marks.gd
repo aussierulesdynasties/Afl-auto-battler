@@ -25,8 +25,10 @@ const FAINT_TOP := 0.15
 const FAINT_LEAST := 0.08
 ## How much of the match each playback watches (its first N events): enough
 ## turnovers, stoppages and called ball-ups to test each rule frame by frame,
-## and no more (director 2026-11-14: "shrink the tests").
-const CORRIDOR_EVENTS := 80
+## and no more (director 2026-11-14: "shrink the tests"). Under the director's
+## ratings (row 200) seed 42's first 80 events hold two turnovers from a full
+## corridor; 100 holds the three the fade check needs.
+const CORRIDOR_EVENTS := 100
 ## Under the D50 chip play seed 42's first 200 events hold six ball-ups and none called from a
 ## held ball; 300 takes in the tackles that are (events 244, 259, 276).
 const CONTEST_EVENTS := 300
@@ -518,7 +520,9 @@ func _test_contest_playback(res: Dictionary) -> void:
 	_check(spans >= 5 and planted_moves == 0, "...planted there from the call to the clearance: it never follows the ball in (%d moves in %d showings)" % [planted_moves, spans])
 	_check(called >= 1 and called_on == called, "...and on from the umpire's call, before the ball-up itself (%d of %d)" % [called_on, called])
 	_check(gone_late == 0, "...and goes out at the clearance, gone half a second after it (%d late frames)" % gone_late)
-	_check(open_full > 200, "In open play the ring round the ball shows (%d frames at full)" % open_full)
+	# (A possession won where the ball already lies has no flight, so no ring: a
+	# zero-length flight only hovered the ball. 198 frames since; was over 200.)
+	_check(open_full > 180, "In open play the ring round the ball shows (%d frames at full)" % open_full)
 	_check(open_wrong == 0, "...and only in live open play (%d frames off it)" % open_wrong)
 	_check(glide_most <= MatchMotion.SPRINT * FRAME * MatchDirector.TEMPO + 0.01,
 			"...moving with the ball no faster than a sprint (%.2f m in a frame)" % glide_most)

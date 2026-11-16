@@ -84,7 +84,7 @@ func run() -> void:
 			var qa: Dictionary = quiet.get("attr", {})
 			print("TL %d %s %d %d %d %d %d" % [i, str(quiet["id"]),
 					int((r["players"] as Dictionary).get(str(quiet["id"]), {}).get("disposals", 0)),
-					int(qa.get("disposal", 0)), int(qa.get("contested", 0)), int(qa.get("carry", 0)),
+					int(Skills.disposal_of(qa, 0.0)), int(qa.get("contested", 0)), int(qa.get("carry", 0)),
 					1 if Roles.on_wing(quiet) else 0])
 		for t in on:
 			var id := str(t.get("id", ""))
@@ -100,6 +100,6 @@ func run() -> void:
 		var gm := float(t.get("gm", 0.0))
 		print("TU %s %d %.2f %.2f %d %d %d %d" % [id, int(m["g"]), float(m["di"]) / float(m["g"]),
 				float(t.get("di", 0.0)) / gm if gm > 0.0 else -1.0,
-				int(at.get("disposal", 0)), int(at.get("contested", 0)), int(at.get("carry", 0)),
+				int(Skills.disposal_of(at, 0.0)), int(at.get("contested", 0)), int(at.get("carry", 0)),
 				1 if Roles.on_wing(t) else 0])
 	print("SUMMARY tag_usual from %d count %d men %d" % [from, count, men.size()])

@@ -257,7 +257,8 @@ static func leaves_if_matched(gs, p: Dictionary, club: String, bars: Dictionary)
 
 static func _available(gs, p: Dictionary) -> bool:
 	return int(p.get("contract_years", 1)) <= 1 and not bool(p.get("resigned", false)) \
-			and float(p.get("age", 25.0)) < Expansion.TARGET_MAX_AGE and not gs.retiring_now(p)
+			and float(p.get("age", 25.0)) < Expansion.TARGET_MAX_AGE and not gs.retiring_now(p) \
+			and int(p.get("real_end", 0)) != gs.season_year + 1   # his real club delisted him now: no club signs him
 
 
 ## His place in a side with these selection bars (GameState.fa_role's rule).

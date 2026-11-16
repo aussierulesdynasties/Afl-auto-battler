@@ -79,15 +79,15 @@ static func reads(p: Dictionary) -> Dictionary:
 	var a: Dictionary = p.get("attr", {})
 	var height := float(p.get("height_cm", 0.0))
 	var hs := 50.0 if height <= 0.0 else clampf((height - 170.0) / 38.0 * 100.0, 1.0, 99.0)
-	var aerial := 0.45 * float(a.get("marking", 50)) + 0.35 * float(a.get("contested", 50)) + 0.20 * hs
+	var aerial := 0.45 * float(a.get("contested_marking", 50)) + 0.35 * float(a.get("contested", 50)) + 0.20 * hs
 	if str(p.get("role", "")) == "RUCK":
 		aerial = 0.45 * float(a.get("ruck", 50)) + 0.30 * float(a.get("contested", 50)) \
-				+ 0.15 * float(a.get("marking", 50)) + 0.10 * hs
+				+ 0.15 * float(a.get("contested_marking", 50)) + 0.10 * hs
 	return {
 		"move": 0.65 * float(a.get("carry", 50)) + 0.35 * float(a.get("pressure", 50)),
 		"repeat": 0.65 * float(a.get("pressure", 50)) + 0.35 * float(a.get("durability", 50)),
 		"aerial": aerial,
-		"kick": 0.60 * float(a.get("disposal", 50)) + 0.40 * float(a.get("accuracy", 50)),
+		"kick": 0.60 * float(a.get("kicking", 50)) + 0.40 * float(a.get("accuracy", 50)),
 	}
 
 

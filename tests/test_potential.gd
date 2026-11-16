@@ -87,17 +87,22 @@ func _test_history_and_pedigree() -> void:
 		if p.has("history"):
 			have_history += 1
 	_check(have_history > 500, "Most players carry rated past seasons (%d)" % have_history)
-	# The injured stars: short 2026, strong recent seasons.
+	# The injured stars: short 2026, strong recent seasons. Every start rates
+	# a player on his last three seasons (director, row 200, 2026-11-16:
+	# Ratings.rate_on_record), so each opens on his record, well above what
+	# his short 2026 alone said, and his POT is at least that.
 	for name in ["Connor Rozee", "Darcy Moore", "Sam Darcy"]:
 		var p := _real(name)
-		_check(bool(p.get("rehab", false)), "%s is flagged for a rehab year" % name)
-		# His opening rating is already lifted part of the way on his record
-		# (Ratings.rate_on_record); the rehab year closes the rest. POT still
-		# sits well above what his short 2026 alone said, and above today.
 		var short_year := int(p.get("season_overall", p["overall"]))
-		_check(int(p["potential"]) >= short_year + 15 and int(p["potential"]) > int(p["overall"]),
-				"%s's POT reflects his recent seasons (%d vs %d in 2026, %d now)" % [
-				name, int(p["potential"]), short_year, int(p["overall"])])
+		_check(int(p["overall"]) >= short_year + 15 and int(p["potential"]) >= int(p["overall"]),
+				"%s opens on his record (%d vs %d in 2026 alone, POT %d)" % [
+				name, int(p["overall"]), short_year, int(p["potential"])])
+	# The rehab year is for the one whose best season still sits well above
+	# that record: Sam Darcy (95 in 2025 on 17 games, 76 the year before).
+	var darcy := _real("Sam Darcy")
+	_check(bool(darcy.get("rehab", false)) and int(darcy["potential"]) > int(darcy["overall"]),
+			"Sam Darcy is flagged for a rehab year (%d now, POT %d)" % [
+			int(darcy["overall"]), int(darcy["potential"])])
 	# A full, healthy 2026 is not a rehab case, however good the history.
 	var daicos := _real("Nick Daicos")
 	_check(not daicos.has("rehab"), "A player with a full 2026 gets no rehab year")
@@ -137,7 +142,7 @@ func _age_once(p: Dictionary, year := 2027) -> Dictionary:
 
 
 func _test_rehab_rollover() -> void:
-	for name in ["Connor Rozee", "Darcy Moore", "Sam Darcy"]:
+	for name in ["Sam Darcy"]:
 		var p := _real(name)
 		var after := _age_once(p)
 		var gap := int(p["potential"]) - int(p["overall"])
@@ -148,14 +153,15 @@ func _test_rehab_rollover() -> void:
 		_check(int(after["overall"]) <= int(p["potential"]), "%s does not pass his POT" % name)
 		_check(not after.has("rehab"), "The rehab year is used up (%s)" % name)
 	# Without his history, the same player barely moves.
-	var rozee := _real("Connor Rozee").duplicate(true)
-	rozee.erase("potential")
-	rozee.erase("rehab")
-	rozee.erase("history")
-	Potential.assign(rozee)
-	var plain := _age_once(rozee)
-	_check(int(plain["overall"]) < int(_age_once(_real("Connor Rozee"))["overall"]) - 10,
-			"His history is what drives the rehab")
+	var bare := _real("Sam Darcy").duplicate(true)
+	bare.erase("potential")
+	bare.erase("rehab")
+	bare.erase("history")
+	Potential.assign(bare)
+	var plain := _age_once(bare)
+	_check(int(plain["overall"]) < int(_age_once(_real("Sam Darcy"))["overall"]) - 5,
+			"His history is what drives the rehab (%d without it, %d with)" % [
+			int(plain["overall"]), int(_age_once(_real("Sam Darcy"))["overall"])])
 
 
 func _test_growth_is_capped() -> void:
@@ -176,13 +182,13 @@ func _test_growth_is_capped() -> void:
 
 
 func _test_training_discount() -> void:
-	var p := _real("Connor Rozee").duplicate(true)
+	var p := _real("Sam Darcy").duplicate(true)
 	var at_ceiling := p.duplicate(true)
 	at_ceiling["potential"] = int(at_ceiling["overall"])
 	# POT is now what he can still reach (director, 2026-10-07), a little
 	# under his old peak, so the discount is a little smaller.
-	# Part of his rehab now comes as his opening rating, so less is left to
-	# train back: still well under full price.
+	# His record already sets his opening rating (Ratings.rate_on_record), so
+	# what is left to train back is his best season: still well under full price.
 	_check(Potential.training_multiplier(p) <= 0.8, "A rehab player trains well under full price (%.2f)" % Potential.training_multiplier(p))
 	var past := at_ceiling.duplicate(true)
 	past["potential"] = int(past["overall"]) - 2
@@ -200,7 +206,7 @@ func _test_training_discount() -> void:
 			mine = q
 	var normal := mine.duplicate(true)
 	normal["potential"] = int(normal["overall"]) + 1
-	var cur := int(mine["attr"]["disposal"])
+	var cur := int(mine["attr"]["kicking"])
 	var cheap := GameState._cost_for(cur, float(mine.get("gm", 18.0)), Potential.training_multiplier(mine))
 	var full := GameState._cost_for(cur, float(normal.get("gm", 18.0)), Potential.training_multiplier(normal))
 	_check(cheap > 0 and cheap < full, "Training cost reflects POT (%d vs %d)" % [cheap, full])
@@ -431,16 +437,17 @@ func _test_draftee_potential() -> void:
 
 func _test_save_and_backfill() -> void:
 	GameState.reset()
-	GameState.start_season("PAD", GameDB.club_list("PAD"))
+	GameState.start_season("WBD", GameDB.club_list("WBD"))
 	# No round is played: what is saved is on every player from the first day.
-	var rozee := {}
+	# Sam Darcy is the rehab case the record still leaves (_test_history_and_pedigree).
+	var darcy := {}
 	for q in GameState.my_list:
-		if str(q["real_name"]) == "Connor Rozee":
-			rozee = q
-	var pot_before := int(rozee["potential"])
+		if str(q["real_name"]) == "Sam Darcy":
+			darcy = q
+	var pot_before := int(darcy["potential"])
 	GameState.save_career()
 	GameState.load_career()
-	var loaded := GameState.list_player(str(rozee["id"]))
+	var loaded := GameState.list_player(str(darcy["id"]))
 	_check(int(loaded.get("potential", 0)) == pot_before and bool(loaded.get("rehab", false)),
 			"POT and the rehab flag survive a save")
 	_check(loaded.has("history") and loaded.has("drafted_pick"),
@@ -451,8 +458,8 @@ func _test_save_and_backfill() -> void:
 			p.erase("potential")
 			p.erase("rehab")
 	# An old save from before his first game: rated as the dataset has him.
-	var orig: Dictionary = GameDB.player_by_id(str(rozee["id"]))
-	var at_start := GameState.list_player(str(rozee["id"]))
+	var orig: Dictionary = GameDB.player_by_id(str(darcy["id"]))
+	var at_start := GameState.list_player(str(darcy["id"]))
 	at_start["attr"] = (orig["attr"] as Dictionary).duplicate()
 	at_start["overall"] = int(orig["overall"])
 	GameState.save_career()
@@ -463,7 +470,7 @@ func _test_save_and_backfill() -> void:
 			if not p.has("potential"):
 				missing += 1
 	_check(missing == 0, "Loading an old save fills in every POT")
-	var back := GameState.list_player(str(rozee["id"]))
+	var back := GameState.list_player(str(darcy["id"]))
 	_check(int(back.get("potential", 0)) == pot_before and bool(back.get("rehab", false)),
 			"An old save picks up the dataset's POT and rehab year")
 
@@ -500,6 +507,9 @@ func _test_fine_wine_real_players() -> void:
 ## longer and retires later. Paired: same id, so the same dice, the trait alone differs.
 func _test_fine_wine_careers() -> void:
 	var base: Dictionary = _real("Jordan Dawson").duplicate(true)
+	# A Fine Wine test, not a rehab one: under the suites' ratings his hand-set
+	# POT can flag a rehab year, which spares both arms their first decline.
+	base.erase("rehab")
 	var n := 300
 	var ov_plain := 0.0
 	var ov_fine := 0.0

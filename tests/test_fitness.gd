@@ -170,13 +170,13 @@ func _test_stamps() -> void:
 			"A level week clears last week's stamp")
 
 
-func _sim(seed: int, stamp: Dictionary) -> MatchSim:
-	var home: Array = GameDB.club_list("GEE").duplicate(true)
-	var away: Array = GameDB.club_list("COL").duplicate(true)
+func _sim(seed: int, stamp: Dictionary, h := "GEE", a := "COL") -> MatchSim:
+	var home: Array = GameDB.club_list(h).duplicate(true)
+	var away: Array = GameDB.club_list(a).duplicate(true)
 	for p in home:
 		for k in stamp:
 			p[k] = stamp[k]
-	return MatchSim.new(Squad.new("GEE", home, true, "GEE"), Squad.new("COL", away, false, "COL"), seed)
+	return MatchSim.new(Squad.new(h, home, true, h), Squad.new(a, away, false, a), seed)
 
 
 ## The player-effect fixture: the same match, a peaked side against the same
@@ -187,19 +187,24 @@ func _test_match_effect() -> void:
 	_check(plain["score"] == neutral["score"] and plain["exertion"] == neutral["exertion"],
 			"A level week plays exactly the match it did before conditioning")
 	# Each side's whole squad (on the ground and on the bench) from its own
-	# match, over a few seeds: the two sims rotate differently, so the final
-	# on-ground players need not be the same men, and one match is one draw.
+	# match, across six clubs and two seeds: the two sims rotate differently,
+	# so the final on-ground players need not be the same men, and one club's
+	# match is one draw (a side that rotates on tired legs can bring its
+	# peaked men off less and finish no fresher).
 	var legs := [0.0, 0.0]
-	for seed in [314, 315, 316, 317]:
-		var plain_sim := _sim(seed, {})
-		plain_sim.run()
-		var peaked_sim := _sim(seed, Conditioning.stamps(1.0))
-		peaked_sim.run()
-		var a := _mean_legs(plain_sim)
-		var b := _mean_legs(peaked_sim)
-		legs[0] += a
-		legs[1] += b
-	_check(legs[1] > legs[0], "A peaked side finishes the match with more in its legs")
+	var order: Array = GameDB.club_order
+	for ci in range(6):
+		for seed in [314, 315]:
+			var h := str(order[ci])
+			var aw := str(order[(ci + 1) % order.size()])
+			var plain_sim := _sim(seed, {}, h, aw)
+			plain_sim.run()
+			var peaked_sim := _sim(seed, Conditioning.stamps(1.0), h, aw)
+			peaked_sim.run()
+			legs[0] += _mean_legs(plain_sim)
+			legs[1] += _mean_legs(peaked_sim)
+	_check(legs[1] > legs[0], "A peaked side finishes the match with more in its legs (%.1f to %.1f across six clubs)"
+			% [legs[1] / 12.0, legs[0] / 12.0])
 
 
 func _mean_legs(sim: MatchSim) -> float:
