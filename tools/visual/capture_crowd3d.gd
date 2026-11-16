@@ -480,7 +480,7 @@ func _batch(oval, mesh: Mesh, mat: Material, seats: Array, n_bodies: int) -> Mul
 
 
 ## Concrete steps: each row a riser and a tread, between the fence and today's stand's top.
-func _terrace_mesh(oval, A: float, B: float, pitch: float, rise: float) -> void:
+func _terrace_mesh(oval, semi_a: float, semi_b: float, pitch: float, rise: float) -> void:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var seg := 240
@@ -496,8 +496,8 @@ func _terrace_mesh(oval, A: float, B: float, pitch: float, rise: float) -> void:
 			var y0 := 1.2 + float(r) * rise
 			var y1 := y0 + rise
 			var P := func(t: float, d: float, y: float) -> Vector3:
-				return Vector3(cos(t) * (A + d), y, sin(t) * (B + d))
-			var inward := -Vector3(cos(t0) / A, 0.0, sin(t0) / B).normalized()
+				return Vector3(cos(t) * (semi_a + d), y, sin(t) * (semi_b + d))
+			var inward := -Vector3(cos(t0) / semi_a, 0.0, sin(t0) / semi_b).normalized()
 			_quad(st, [P.call(t0, d0, y0), P.call(t0, d0, y1), P.call(t1, d0, y1), P.call(t1, d0, y0)], inward, riser)
 			_quad(st, [P.call(t0, d0, y1), P.call(t0, d1, y1), P.call(t1, d1, y1), P.call(t1, d0, y1)], Vector3.UP, tread)
 			if _seat_h > 0.0:
