@@ -107,7 +107,7 @@ The answers are recorded in the Director Bible and summarised here.
 The freeze allows only the
 prototypes each question needs; nothing from step 2 is the settled look until he has chosen it.
 
-## Step 3. The asset and animation plan (after step 2)
+## Step 3. The asset and animation plan ([3D_ASSET_PLAN.md](3D_ASSET_PLAN.md); the rig waits on step 2's body)
 
 One inventory of every asset and animation the 3D view needs, written once the body is chosen. For
 each: what it is, where it comes from (his Rokoko takes, a free library, made by us), what it is made
