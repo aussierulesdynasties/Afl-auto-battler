@@ -141,10 +141,11 @@ The answers are recorded in the Director Bible and summarised here.
   (fine streaks from 15 m out). A distance haze barely shows at the match cameras' range.
 - 2a skies (rule 2.84): the world has designed skies, one for each weather and time of day ("i 100% want skies"; "a world design decision"); the seven prototype skies approved ("Theyre gorgeous").
 - 2b the grounds (rule 2.90): every ground with an AFL premiership match since 1990 (36) gets its own 3D stadium, the 8 Legacy
-  grounds as they were in the 1990s included, plus Macquarie Point (Hobart) from its concept design; data/grounds.json holds 21 of them today.
+  grounds as they were in the 1990s included, plus Macquarie Point (Hobart) from its concept design; all 37 are in data/grounds.json, with their sources.
 - 2b roofed grounds at night (rule 2.91): as in real life, Marvel and Optus are lit from floodlights on their roofs, all the way round; the open grounds keep four towers (2.82).
 - 2d the body (rule 2.85): MetaHuman, made in Unreal 5.6+ used as a tool only and exported into the Godot
   game (the game stays in Godot); one is shown in our match before anything is built on it. Shown and approved (2.89). Builds, heads and faces next.
+- 2e the main camera (rule 2.93): the real AFL main camera (OP-33: centre line, 15 m up, 25 m back from the boundary; it pans, tilts and zooms to follow the ball, about a third of the ground across), in a 16:9 TV picture across the phone ("A TV shape"). Prototype: `tools/visual/capture_cameras3d.gd`. Sources: Free TV Australia OP-33 (2015); ABC News (2020).
 
 The freeze allows only the
 prototypes each question needs; nothing from step 2 is the settled look until he has chosen it.
@@ -178,6 +179,6 @@ vignettes. Nothing in step 4 starts before the football proof has passed and the
 |---|---|
 | Freeze | in force from 2026-11-16 |
 | 1. Football proof | harness in `tools/balance.sh shape`; spec checked (rule 2.86); gap list above; fixes next (row 201) |
-| 2. The world and the look | under way (row 202): 2a daylight, tone, night lighting and wet games chosen, skies chosen (rules 2.80-2.84); 2d body chosen: MetaHuman (2.85), shown in our match and approved (2.89); 2b every AFL ground since 1990 and Macquarie Point get their own stadium (2.90), roofed grounds lit from their roofs (2.91); 2c crowd chosen: a mix of 3D people and cards (2.92); next 2b building the grounds, 2d builds and faces, 2e cameras |
+| 2. The world and the look | under way (row 202): 2a daylight, tone, night lighting and wet games chosen, skies chosen (rules 2.80-2.84); 2d body chosen: MetaHuman (2.85), shown in our match and approved (2.89); 2b every AFL ground since 1990 and Macquarie Point get their own stadium (2.90), roofed grounds lit from their roofs (2.91); 2c crowd chosen: a mix of 3D people and cards (2.92); 2e main camera chosen: the real AFL main camera in a 16:9 TV picture (2.93); next 2b building the grounds, 2d builds and faces, 2e the other cameras, cuts and replays |
 | 3. Asset and animation plan | done (#1707) |
 | 4. Build | after 1 and 3 (rows 197, 198) |
