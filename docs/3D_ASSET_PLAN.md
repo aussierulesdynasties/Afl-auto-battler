@@ -184,6 +184,8 @@ The tackle pairs are the gap: a real tackle needs both men in one take, which hi
 
 ## Order of work (step 4 follows it)
 
+Director, 2026-11-17, asked this order directly: he chose "A, then B, then C".
+
 1. 2d chooses the body; heads, hair, kits and boots refit to it.
 2. **A**: getting around, the proof passage's actions (centre bounce, ruck tap, gather, handball, kick, contested
    mark), the tackle pairs, the field umpire. Row 198 makes them; row 197 plays them; phone check.
