@@ -406,8 +406,9 @@ var last_training_report: Dictionary = {}
 var _xp_grant_key := ""
 
 const TRAIN_STATS := [
-	["disposal", "Disposal"], ["contested", "Contested"], ["marking", "Marking"],
-	["pressure", "Pressure"], ["intercept", "Intercept"], ["carry", "Carry"],
+	["kicking", "Kicking"], ["handballing", "Handballing"], ["contested", "Contested ball"],
+	["contested_marking", "Contested marking"], ["uncontested_marking", "Uncontested marking"],
+	["pressure", "Pressure"], ["intercept", "Intercept"], ["speed", "Speed"], ["carry", "Carry"],
 	["goalkicking", "Goalkicking"], ["accuracy", "Accuracy"],
 	["creating", "Creating"], ["ruck", "Ruck"], ["discipline", "Discipline"],
 	["durability", "Durability"], ["star", "Star power"],
@@ -3421,8 +3422,8 @@ func _assign_draftee(code: String, p: Dictionary, kind: String) -> void:
 ## drafted_pick), so a career draftee's story reads like anyone's: "Pick 31,
 ## 2028 national draft". A pre-listed (father-son, academy) player has no
 ## pick. His potential was set when he was projected and is not re-derived.
-func _mark_drafted(p: Dictionary, kind: String, pick: int, club := "") -> void:
-	p["drafted_year"] = season_year
+func _mark_drafted(p: Dictionary, kind: String, pick: int, club := "", year := 0) -> void:
+	p["drafted_year"] = year if year > 0 else season_year
 	p["drafted_type"] = kind
 	# The club that first drafted him: a home-grown player (Challenge goals).
 	# Older saves lack it, and a player is only ever marked once.
@@ -6850,6 +6851,8 @@ func train_stat_label(key: String) -> String:
 	for row in TRAIN_STATS:
 		if str(row[0]) == key:
 			return str(row[1])
+	if key == "disposal":
+		return "Kicking and handballing"   # the derived ball use (Skills.value)
 	return key
 
 
@@ -7036,10 +7039,10 @@ const TRAIN_PLANS := [
 	{"key": "position", "label": "By position", "roles": []},
 	{"key": "inside_mid", "label": "Inside midfielder", "roles": ["MID"],
 			"text": "Wins the ball at stoppages and keeps it in the tackle.",
-			"weights": {"contested": 3.0, "disposal": 1.0}},
+			"weights": {"contested": 3.0, "handballing": 1.0}},
 	{"key": "outside_mid", "label": "Wing", "roles": ["MID"],
 			"text": "Runs the wing: carries it from defence to attack and hits targets inside 50.",
-			"weights": {"carry": 3.0, "disposal": 2.0, "creating": 1.0}},
+			"weights": {"carry": 3.0, "kicking": 2.0, "creating": 1.0}},
 	{"key": "key_def", "label": "Key defender", "roles": ["DEF"],
 			"text": "Stops the opposition: spoils and marks inside 50, tackles hard.",
 			"weights": {"intercept": 3.0, "pressure": 2.0}},
@@ -7048,7 +7051,7 @@ const TRAIN_PLANS := [
 			"weights": {"carry": 3.0, "intercept": 2.0}},
 	{"key": "key_fwd", "label": "Key forward", "roles": ["FWD"],
 			"text": "The target: marks inside 50 and kicks the goals.",
-			"weights": {"marking": 3.0, "goalkicking": 3.0, "accuracy": 1.0}},
+			"weights": {"contested_marking": 3.0, "goalkicking": 3.0, "accuracy": 1.0}},
 	{"key": "small_fwd", "label": "Small forward", "roles": ["FWD"],
 			"text": "Goals from the ground: kicks straight and creates, and stays small enough to crumb.",
 			"weights": {"goalkicking": 3.0, "accuracy": 2.0, "carry": 1.0, "creating": 1.0}},
@@ -7101,9 +7104,9 @@ const KEY_DEF_CM := PlayerProfile.KEY_DEF_CM
 const RUCK_CM := 196.0
 ## The jobs a player can learn, by line, with what each trains.
 const LEARN_JOBS := {
-	"mid": {"role": "MID", "word": "midfielder", "weights": {"contested": 3.0, "disposal": 1.0, "carry": 1.0}},
-	"key_fwd": {"role": "FWD", "word": "key forward", "weights": {"marking": 3.0, "goalkicking": 3.0, "accuracy": 1.0}},
-	"fwd": {"role": "FWD", "word": "forward", "weights": {"goalkicking": 3.0, "marking": 2.0, "accuracy": 1.0, "pressure": 1.0}},
+	"mid": {"role": "MID", "word": "midfielder", "weights": {"contested": 3.0, "kicking": 0.5, "handballing": 0.5, "carry": 1.0}},
+	"key_fwd": {"role": "FWD", "word": "key forward", "weights": {"contested_marking": 3.0, "goalkicking": 3.0, "accuracy": 1.0}},
+	"fwd": {"role": "FWD", "word": "forward", "weights": {"goalkicking": 3.0, "contested_marking": 2.0, "accuracy": 1.0, "pressure": 1.0}},
 	"small_fwd": {"role": "FWD", "word": "small forward", "weights": {"goalkicking": 3.0, "accuracy": 2.0, "carry": 1.0, "creating": 1.0}},
 	"key_def": {"role": "DEF", "word": "key defender", "weights": {"intercept": 3.0, "pressure": 2.0}},
 	"small_def": {"role": "DEF", "word": "small defender", "weights": {"pressure": 3.0, "carry": 2.0, "intercept": 1.0}},
@@ -7589,7 +7592,7 @@ func reserves_summary_line() -> String:
 func training_summary_line() -> String:
 	var auto: Dictionary = last_training_report.get("auto", {})
 	var rises: Array = auto.get("rises", [])
-	var traits: Array = auto.get("traits", [])
+	var traits: Array = auto.get("traits", []) + auto.get("lost", [])
 	if rises.is_empty() and traits.is_empty():
 		return ""
 	var bits: PackedStringArray = []
@@ -7609,6 +7612,9 @@ func training_unlock_line() -> String:
 	var bits: PackedStringArray = []
 	for t in auto.get("traits", []):
 		bits.append("%s unlocked %s." % [_short_name(str(t[0])), Traits.label(str(t[1]))])
+	for t in auto.get("lost", []):
+		bits.append("%s lost %s: five traits is the most a player carries." % [
+				_short_name(str(t[0])), Traits.label(str(t[1]))])
 	var at_pot: Array = auto.get("at_pot", [])
 	if at_pot.size() == 1:
 		bits.append("%s reached his potential." % _short_name(str(at_pot[0])))
@@ -8851,8 +8857,10 @@ func open_offseason(keep_staff := false) -> void:
 			if not list.has(p):
 				continue   # already delisted to make cap room for a better player
 			var why := ai_release_reason(code, p)
-			# His real club delisted him now (_real_delistings): so does this one.
-			if int(p.get("real_end", 0)) == season_year + 1:
+			# His real club delisted him now (_real_delistings): so does this one,
+			# even from a short list (the draft fills it).
+			var real_gone := int(p.get("real_end", 0)) == season_year + 1
+			if real_gone:
 				why = "delist"
 			# Talked round this off-season, he cannot be delisted by choice
 			# until the next one: the club keeps him, as yours must.
@@ -8874,7 +8882,7 @@ func open_offseason(keep_staff := false) -> void:
 			var held := ListStings.release_held(p, season_year + 1)
 			if held:
 				why = ""
-			if why == "" or list.size() <= Contracts.min_list():
+			if why == "" or (list.size() <= Contracts.min_list() and not real_gone):
 				# Rivals bargain by the same rules: the least he takes for that term
 				# (a club pushing to win now keeps him a little cheaper, as yours does).
 				# Testers leave together later, so count them: the club must still
@@ -9609,7 +9617,11 @@ func _open_market(players: Array) -> void:
 	# his AFL career ended then, so no club signs him; only a coach who keeps
 	# him off his own list keeps him playing (director, 2026-11-13).
 	for p in players.duplicate():
-		var delisted := not retiring_now(p) and int(p.get("real_end", 0)) == season_year + 1
+		# One a real draft or new club's list took this off-season or later
+		# (Damien Mellow: Adelaide's foundation list, then Sydney's 1991
+		# pre-season pick) is a free agent: the drafts see him (_relist).
+		var delisted := not retiring_now(p) and int(p.get("real_end", 0)) == season_year + 1 \
+				and not LegacyRollover.taken_later(p, season_year)
 		if retiring_now(p) or delisted:
 			players.erase(p)
 			free_agents.erase(p)
@@ -13313,11 +13325,22 @@ func _migrate_train_plans() -> void:
 ## ("focus_marking", cut 2026-11-03) becomes his stat focus, open to change
 ## this season, and his plan falls back as before. A save holding several
 ## focuses keeps the first his role can use; one he cannot use is dropped.
+## A focus on a skill the 16 skills split (save version 3) is renamed first:
+## Marking to Contested marking, Disposal to Kicking.
+const OLD_FOCUS := {"marking": "contested_marking", "disposal": "kicking"}
 func _migrate_focus(p: Dictionary, own: String) -> void:
 	if not p.has("train_focus") and own.begins_with("focus_"):
 		p["train_focus"] = own.trim_prefix("focus_")
 	if not p.has("train_focus"):
 		return
+	var f = p["train_focus"]
+	if f is Array:
+		var renamed := []
+		for x in f:
+			renamed.append(OLD_FOCUS.get(str(x), str(x)))
+		p["train_focus"] = renamed
+	else:
+		p["train_focus"] = OLD_FOCUS.get(str(f), str(f))
 	var keep := stat_focus(p)
 	if keep == "":
 		p.erase("train_focus")
@@ -13337,7 +13360,7 @@ func _closest_plan(p: Dictionary) -> String:
 		var sum := 0.0
 		for k in w:
 			tot += float(w[k])
-			sum += float(w[k]) * float(attr.get(k, 0))
+			sum += float(w[k]) * Skills.value(attr, k, 0.0)
 		return sum / tot if tot > 0.0 else 0.0
 	var best := "position"
 	var best_score: float = score.call(plan_weights(p, "position")) + 3.0
@@ -13354,10 +13377,11 @@ func _closest_plan(p: Dictionary) -> String:
 
 ## Spend every list player's XP under his plan. Returns
 ## {"points", "players", "by_player": {id: {stat: points}}, and what it
-## changed: "rises": [[id, from, to]], "traits": [[id, trait]],
+## changed: "rises": [[id, from, to]], "traits": [[id, trait]], "lost":
+## [[id, trait]] (pushed out by the five-trait cap),
 ## "at_pot": [id]}.
 func apply_train_plans() -> Dictionary:
-	var out := {"points": 0, "players": 0, "by_player": {}, "rises": [], "traits": [], "at_pot": []}
+	var out := {"points": 0, "players": 0, "by_player": {}, "rises": [], "traits": [], "lost": [], "at_pot": []}
 	for p in my_list:
 		var ov := int(p.get("overall", 0))
 		var had: Array = Traits.of(p)
@@ -13376,9 +13400,14 @@ func apply_train_plans() -> Dictionary:
 			var pot := int(p.get("potential", 0))
 			if ov < pot and now >= pot:
 				(out["at_pot"] as Array).append(str(p["id"]))
-		for t in Traits.of(p):
+		var now_traits: Array = Traits.of(p)
+		for t in now_traits:
 			if not had.has(t) and not Traits.is_bad(t):
 				(out["traits"] as Array).append([str(p["id"]), t])
+		# A sixth good trait pushes out the one he clears by the least.
+		for t in had:
+			if not now_traits.has(t) and not Traits.is_bad(str(t)):
+				(out["lost"] as Array).append([str(p["id"]), t])
 	return out
 
 
@@ -13453,7 +13482,7 @@ func set_stat_focus(player_id: String, key: String) -> bool:
 ## role can earn from that stat that he does not have yet, {key, min, gap,
 ## crowded} ({} when none). "crowded" when he already carries MAX_GOOD (five)
 ## good traits, so a rival club's player aims at nothing more (Traits.of keeps
-## the five furthest past their lines). The screen never explains it.
+## the five furthest past their lines); Training says so when he is past the line.
 func focus_trait(p: Dictionary, stat: String) -> Dictionary:
 	if stat == "":
 		return {}
@@ -13468,10 +13497,9 @@ func focus_trait(p: Dictionary, stat: String) -> Dictionary:
 		var d: Dictionary = Traits.DEFS[key]
 		if d.has("max") or str(d["stat"]) != stat or have.has(key):
 			continue
-		var need_roles: Array = d["roles"]
-		if not need_roles.is_empty() and not (need_roles.has(roles[0]) or need_roles.has(roles[1])):
+		if not Traits.role_can_earn(p, str(key), roles):
 			continue
-		if bool(d.get("small", false)) and int(attr.get("marking", 0)) >= 52:
+		if bool(d.get("small", false)) and int(attr.get("contested_marking", 0)) >= Traits.SMALL_MAX_CM:
 			continue
 		return {"key": key, "min": int(d["min"]), "gap": maxi(0, int(d["min"]) - int(attr.get(stat, 0))),
 				"crowded": good >= Traits.MAX_GOOD}

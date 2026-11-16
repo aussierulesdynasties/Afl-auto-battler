@@ -50,8 +50,8 @@ func _play(h: String, a: String, seed: int, arm: String) -> Dictionary:
 				pin_p = p
 		pinned = (pin_p["attr"] as Dictionary).duplicate()
 		var bonus := Matchups.interceptor_score(pin_p) - (0.55 * float(pinned.get("intercept", 0))
-				+ 0.30 * float(pinned.get("marking", 0)) + 0.15 * float(pinned.get("pressure", 0)))
-		for k in ["intercept", "marking", "pressure"]:
+				+ 0.30 * float(pinned.get("contested_marking", 0)) + 0.15 * float(pinned.get("pressure", 0)))
+		for k in ["intercept", "contested_marking", "pressure"]:
 			(pin_p["attr"] as Dictionary)[k] = int(round(target - bonus))
 	var away := Squad.new(a, GameDB.club_list(a), false, a)
 	away.ai_plans = true

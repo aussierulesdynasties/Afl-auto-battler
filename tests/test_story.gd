@@ -1360,12 +1360,20 @@ func _test_role_trial() -> void:
 				"No second position, no trial")
 
 
-## Take him off the ground and put him on the bench of a side.
+## Swap him with a bench man: off the ground, on the bench of a side. A side
+## left a man short fills the gap with the best suited (#1656), so a swap.
 func _bench_him(side: Dictionary, id: String) -> Dictionary:
 	var s := side.duplicate(true)
+	var bench: Array = s["BENCH"]
+	var sub := str(bench[0])
 	for k in ["RUCK", "MID", "WING", "DEF", "FWD"]:
-		s[k] = (s.get(k, []) as Array).filter(func(x): return str(x) != id)
-	(s["BENCH"] as Array).append(id)
+		var line: Array = s.get(k, [])
+		var at := line.find(id)
+		if at < 0:
+			at = line.find(int(id)) if str(id).is_valid_int() else -1
+		if at >= 0:
+			line[at] = sub
+	bench[0] = id
 	return s
 
 
@@ -1623,10 +1631,10 @@ func _test_leadership() -> void:
 
 	var twin := {"real_name": "Pat Example", "id": "x1", "age": 27.0, "club": "GEE", "gm": 20,
 			"career": {"games": 150, "stints": [["GEE", 2019, 2025, 150, 10]]}, "overall": 70,
-			"attr": {"disposal": 80}}
+			"attr": {"kicking": 80}}
 	var higher := twin.duplicate(true)
 	higher["overall"] = 95
-	higher["attr"] = {"disposal": 99, "star": 99}
+	higher["attr"] = {"kicking": 99, "star": 99}
 	_check(Leadership.of(twin) == Leadership.of(higher),
 			"Leadership ignores his playing quality (OVR and attributes)")
 	var veteran := twin.duplicate(true)
@@ -3354,7 +3362,7 @@ func _test_silent_defaults_announced() -> void:
 			"The sore star's card says leaving it plays him; the odds sit under Play him (%s / %s)" % [sl, play_lines])
 	# Saying nothing's own price still reads as before, now with its size.
 	var quiet := GameState.story_card("media_in_the_papers", p)
-	_check(StoryEngine.silence_line(quiet) == "Say nothing: his opinion of you down 1, to 49 out of 100.", "Saying nothing names its cost to his opinion of you, with the size (%s)" % StoryEngine.silence_line(quiet))
+	_check(StoryEngine.silence_line(quiet) == "Say nothing: %s opinion of you down 1, to 49 out of 100." % CopyRules.possessive(str(quiet["facts"]["name"])), "Saying nothing names its cost to his opinion of you, with the size (%s)" % StoryEngine.silence_line(quiet))
 
 
 ## Every Gain and Cost line carries its size: a percentage, a chance or a count of games.

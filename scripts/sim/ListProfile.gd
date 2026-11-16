@@ -31,11 +31,11 @@ const AVERAGE := 0.72
 const MARKERS := 6
 const CONTROL_W := {"disposal": 0.65, "discipline": 0.35}
 const FINISHERS := 5
-const FINISH_W := {"goalkicking": 0.5, "accuracy": 0.3, "marking": 0.2}
+const FINISH_W := {"goalkicking": 0.5, "accuracy": 0.3, "contested_marking": 0.2}
 
 
 static func _a(p: Dictionary, key: String) -> float:
-	return float((p.get("attr", {}) as Dictionary).get(key, 0.0))
+	return Skills.value(p.get("attr", {}), key, 0.0)
 
 
 static func _control(p: Dictionary) -> float:
@@ -70,7 +70,7 @@ static func score(ground: Array, dim: String) -> float:
 			var tot := 0.0
 			var best := leaders(ground, dim, MARKERS)
 			for p in best:
-				tot += _a(p, "marking")
+				tot += _a(p, "contested_marking")
 			return tot / float(maxi(1, best.size()))
 		"finishing":
 			var tot := 0.0
@@ -99,7 +99,7 @@ static func leaders(ground: Array, dim: String, n := 4) -> Array:
 		match dim:
 			"control": return _control(p)
 			"finishing": return _finish(p)
-		return _a(p, "marking")
+		return _a(p, "contested_marking")
 	pool.sort_custom(func(a, b):
 		var va: float = key.call(a)
 		var vb: float = key.call(b)

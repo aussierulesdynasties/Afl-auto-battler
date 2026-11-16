@@ -474,7 +474,9 @@ static func _take(gs, code: String, p: Dictionary) -> void:
 	else:
 		gs.draftee_pool.erase(p)
 		gs.drafted_draftees[id] = code
-		gs._mark_drafted(p, KIND, 0, code)
+		# The Rookie Draft runs after the rollover; it is that draft class's
+		# draft (the 2027 Rookie Draft), as real players' drafted_year reads.
+		gs._mark_drafted(p, KIND, 0, code, int(p.get("draft_year", gs.season_year)))
 	if not p.has("xp"):
 		p["xp"] = 0
 		p["xp_games"] = 0

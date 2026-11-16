@@ -42,6 +42,7 @@ func run() -> void:
 	_t("_test_auto_rotation")
 	_t("_test_background_matches_rotate")
 	_t("_test_hothead")
+	_t("_test_bash5_traits")
 	_t("_test_lockdown_midfielder")
 	_t("_test_traits")
 	_t("_test_weather")
@@ -137,10 +138,10 @@ func _test_general_contest_player_edge() -> void:
 	var base: Dictionary = (sim.squads[0] as Squad).ground[0]
 	var fwd: Dictionary = base.duplicate(true)
 	fwd["id"] = "bb_fwd"
-	fwd["attr"]["marking"] = 70
+	fwd["attr"]["contested_marking"] = 70
 	var level: Dictionary = base.duplicate(true)
 	level["id"] = "bb_def_level"
-	level["attr"]["marking"] = 50
+	level["attr"]["contested_marking"] = 50
 	level["attr"]["intercept"] = 70
 	var good: Dictionary = level.duplicate(true)
 	good["id"] = "bb_def_good"
@@ -1086,11 +1087,12 @@ func _discipline_sim(seed: int, disc: int) -> MatchSim:
 ## on top of his teammates' share - so his side gives away more clangers and
 ## free kicks, not just him.
 func _test_hothead() -> void:
-	var hot := _discipline_sim(60, 20)
-	var cool := _discipline_sim(60, 21)
+	var line := int(Traits.DEFS["hothead"]["max"])
+	var hot := _discipline_sim(60, line)
+	var cool := _discipline_sim(60, line + 1)
 	_check(hot._trait(hot.squads[0].ground[0], "hothead")
 			and not cool._trait(cool.squads[0].ground[0], "hothead"),
-			"Discipline 20 makes a Hothead, 21 does not")
+			"Discipline %d makes a Hothead, %d does not" % [line, line + 1])
 	var hw: Array = hot._clanger_weights(0)
 	var cw: Array = cool._clanger_weights(0)
 	_check(float(hw[0][0]) / float(cw[0][0]) > 1.45,
@@ -1108,6 +1110,106 @@ func _test_hothead() -> void:
 		cool_total += float(row)
 	_check(hot_total > cool_total,
 			"Hotheads increase the side's weighted chance of giving a clanger away")
+
+
+## Bug bash 5 (traits): each trait does what its copy says, at its size.
+func _test_bash5_traits() -> void:
+	var sim := _sim(4243)
+	for side in [0, 1]:
+		for q in (sim.squads[side] as Squad).ground:
+			sim._traits[str(q["id"])] = []
+	# Ball magnet: the usage curve fades the player BALL_MAGNET later, so the extra
+	# share is not cancelled in a big game.
+	var p: Dictionary = (sim.squads[0] as Squad).ground[0]
+	sim.player_stats[str(p["id"])] = {"disposals": 23.0}
+	var plain := sim._usage_mult(p, false)
+	var magnet := sim._usage_mult(p, false, MatchSim.BALL_MAGNET)
+	_check(magnet > plain * 1.2, "A Ball magnet's usage curve fades later (%.3f vs %.3f)" % [magnet, plain])
+	# Ruck king: 5% more of the hit-outs, relative.
+	var r0 := [(sim.squads[0] as Squad).ground[1]]
+	var r1 := [(sim.squads[1] as Squad).ground[1]]
+	var even := sim._tap_share([r0, r1])
+	sim._traits[str(r0[0]["id"])] = ["ruck_king"]
+	var king := sim._tap_share([r0, r1])
+	_check(is_equal_approx(king, minf(even * MatchSim.RUCK_KING, 0.9)),
+			"A Ruck king wins 5%% more of the taps, relative (%.3f from %.3f)" % [king, even])
+	sim._traits[str(r1[0]["id"])] = ["ruck_king"]
+	_check(is_equal_approx(sim._tap_share([r0, r1]), even), "Two Ruck kings cancel out")
+	sim._traits[str(r0[0]["id"])] = []
+	sim._traits[str(r1[0]["id"])] = []
+	_check(MatchSim.RUCK_KING_ADV > 1.0, "A Ruck king's hit-outs go to advantage more often")
+	# Lockdown: every shot by the direct opponent, wherever it comes from.
+	var duel: Dictionary = sim.duels[1]
+	_check(not duel.is_empty(), "The defenders have direct opponents to lock down")
+	if not duel.is_empty():
+		var fid := str(duel.keys()[0])
+		var fwd := sim._on_ground(0, fid)
+		var dfd := sim._on_ground(1, str(duel[fid]))
+		if not fwd.is_empty() and not dfd.is_empty():
+			var before := sim._lockdown_on(0, fwd)
+			sim._traits[str(dfd["id"])] = ["lockdown"]
+			_check(is_equal_approx(sim._lockdown_on(0, fwd), MatchSim.LOCKDOWN) and before == 1.0,
+					"A Lockdown defender covers its forward's shots from anywhere, not only the contest it stands in")
+			sim._traits[str(dfd["id"])] = []
+	# Contested bull: each bull in the midfield or ruck swings the stoppage
+	# to the bull's side, so the side wins more clearances, not only the bull.
+	var mid := {}
+	for q in (sim.squads[0] as Squad).ground:
+		if str(q["role"]) == "MID":
+			mid = q
+			break
+	sim._traits[str(mid["id"])] = ["bull"]
+	_check(sim._bulls(0) == 1 and sim._bulls(1) == 0, "A midfield bull is counted at the stoppage")
+	sim._ruck_tap()
+	var adv := 0.0
+	if bool(sim._tap["adv"]):
+		adv = MatchSim.TAP_ADV_EDGE if int(sim._tap["side"]) == 0 else -MatchSim.TAP_ADV_EDGE
+	_check(is_equal_approx(float(sim._tap["edge"]) - adv, MatchSim.BULL_STOPPAGE),
+			"The bull's stoppage edge goes to the bull's side (%.3f)" % (float(sim._tap["edge"]) - adv))
+	sim._tap = {}
+	sim._traits[str(mid["id"])] = []
+	# Hothead: holding the ball counts too, HOTHEAD_FREES times as often.
+	var carrier: Dictionary = (sim.squads[0] as Squad).ground[2]
+	var counts := [0, 0]
+	for hot in [0, 1]:
+		sim._traits[str(carrier["id"])] = ["hothead"] if hot == 1 else []
+		sim.free_rng.seed = 991
+		for i in range(4000):
+			if sim._holding_ball_free(carrier, 1):
+				counts[hot] += 1
+	var ratio := float(counts[1]) / maxf(1.0, float(counts[0]))
+	_check(ratio > 1.55 and ratio < 1.95, "A Hothead is pinged for holding the ball HOTHEAD_FREES times as often (x%.2f)" % ratio)
+	sim._traits[str(carrier["id"])] = []
+	# Interceptor: a spoil in a general-play marking contest can be his
+	# intercept mark, so his extra spoils no longer cost him the ball.
+	var turned := [0, 0]
+	for on in [0, 1]:
+		var s2 := _sim(4244)
+		for side in [0, 1]:
+			for q in (s2.squads[side] as Squad).ground:
+				s2._traits[str(q["id"])] = ["interceptor"] if (side == 1 and on == 1) else []
+		for i in range(400):
+			var res := s2._general_aerial_contest(0, 20.0, null)
+			if str(res.get("outcome", "")) == "turnover":
+				turned[on] += 1
+	_check(turned[0] == 0 and turned[1] > 10,
+			"Interceptors take some of their general-play spoils as marks (%s)" % str(turned))
+	# Defensive forward is a forward's own job: a midfielder picked in a
+	# forward slot on match day does not carry it, nor is Training's near
+	# list pointing a midfielder who also plays forward at it.
+	var dmid := _fake("df1", "MID", {"pressure": 75})
+	dmid["role2"] = "FWD"
+	_check(not Traits.of(Ratings._for_slot(dmid, "FWD")).has("def_forward"),
+			"A midfielder picked forward is not a Defensive forward on match day")
+	var dfwd := _fake("df2", "FWD", {"pressure": 75})
+	_check(Traits.of(Ratings._for_slot(dfwd, "MID")).has("def_forward"),
+			"A forward picked in the midfield keeps it")
+	var near_mid := _fake("df3", "MID", {"pressure": 67})
+	near_mid["role2"] = "FWD"
+	var named_df := false
+	for n in Traits.near(near_mid):
+		named_df = named_df or str(n["key"]) == "def_forward"
+	_check(not named_df, "Training never points a midfielder at Defensive forward")
 
 
 ## GEE v COL, every COL player at pressure 50 (no Lockdowns), except COL's
@@ -1140,8 +1242,8 @@ func _ranked(sim: MatchSim, role: String) -> Array:
 	return out
 
 
-## Lockdown on a midfielder: he picks up their best midfielder, whose shots
-## are 4% less likely to be goals. Before, only the forward-50 defender (a
+## Lockdown on a midfielder: it picks up their best midfielder, whose shots
+## are LOCKDOWN_MID times as likely to be goals. Before, only the forward-50 defender (a
 ## defender) could ever be the Lockdown on a shot.
 func _test_lockdown_midfielder() -> void:
 	var lock := _lockdown_sim(80)
@@ -1158,8 +1260,8 @@ func _test_lockdown_midfielder() -> void:
 			"The Lockdown midfielder picks up their best midfielder")
 	var p_lock := lock.shot_chance(0, best_lock, true, false)
 	var p_none := none.shot_chance(0, best_none, true, false)
-	_check(is_equal_approx(p_lock, p_none * 0.96),
-			"His opponent's shots are 4%% less likely to be goals (%.4f v %.4f)" % [p_lock, p_none])
+	_check(is_equal_approx(p_lock, p_none * MatchSim.LOCKDOWN_MID),
+			"The minded midfielder's shots are 20%% less likely to be goals (%.4f v %.4f)" % [p_lock, p_none])
 	# Only his opponent: their other midfielders and their forwards shoot as before.
 	var second_lock: Dictionary = _ranked(lock, "MID")[1]
 	var second_none: Dictionary = _ranked(none, "MID")[1]
@@ -1551,7 +1653,8 @@ func _test_weather_follows_the_real_games() -> void:
 
 
 func _fake(id: String, role: String, attr: Dictionary) -> Dictionary:
-	var base := {"disposal": 50, "contested": 50, "marking": 50, "pressure": 45, "intercept": 45,
+	var base := {"kicking": 50, "handballing": 50, "contested": 50, "contested_marking": 50, "uncontested_marking": 50,
+			"speed": 50, "pressure": 45, "intercept": 45,
 			"carry": 50, "goalkicking": 40, "accuracy": 55, "creating": 45, "ruck": 10,
 			"discipline": 50, "durability": 75, "star": 25}
 	base.merge(attr, true)
@@ -1567,10 +1670,10 @@ func _good_count(traits: Array) -> int:
 
 
 func _test_traits() -> void:
-	var shooter := _fake("t1", "FWD", {"accuracy": 80, "goalkicking": 70, "marking": 40})
+	var shooter := _fake("t1", "FWD", {"accuracy": 80, "goalkicking": 70, "contested_marking": 30})
 	var t := Traits.of(shooter)
 	_check(t.has("sharpshooter") and t.has("crumber"), "High stats earn traits (%s)" % str(t))
-	var many := _fake("t2", "MID", {"disposal": 95, "contested": 95, "accuracy": 90, "durability": 96, "discipline": 10})
+	var many := _fake("t2", "MID", {"kicking": 95, "handballing": 95, "contested": 95, "accuracy": 90, "durability": 96, "discipline": 10})
 	var mt := Traits.of(many)
 	var good := 0
 	for k in mt:
@@ -1579,11 +1682,11 @@ func _test_traits() -> void:
 	_check(good == 4 and mt.has("hothead"), "Every trait whose line he clears, plus Hothead for poor discipline (%s)" % str(mt))
 	# Up to five (director, 2026-11-12): clearing four lines earns four; clearing
 	# seven keeps the five he clears by the most; Unicorn comes on top.
-	var four := Traits.of(_fake("t5", "MID", {"disposal": 90, "contested": 90, "accuracy": 75, "durability": 95}))
+	var four := Traits.of(_fake("t5", "MID", {"kicking": 90, "handballing": 90, "contested": 90, "accuracy": 75, "durability": 95}))
 	_check(_good_count(four) == 4 and four.has("ball_magnet") and four.has("bull") and four.has("sharpshooter") and four.has("engine"),
 			"A player clearing four trait lines carries all four (%s)" % str(four))
-	var seven_p := _fake("t6", "MID", {"disposal": 95, "contested": 95, "accuracy": 90, "durability": 96,
-			"creating": 77, "pressure": 70, "star": 61})
+	var seven_p := _fake("t6", "MID", {"kicking": 95, "handballing": 95, "contested": 95, "accuracy": 90, "durability": 96,
+			"creating": 77, "pressure": 86, "star": 78})
 	var seven := Traits.of(seven_p)
 	_check(Traits.MAX_GOOD == 5 and _good_count(seven) == 5, "Clearing seven trait lines, he carries five (%s)" % str(seven))
 	_check(seven.has("sharpshooter") and seven.has("bull") and seven.has("ball_magnet") and seven.has("lockdown")
@@ -1594,15 +1697,15 @@ func _test_traits() -> void:
 	_check(uni.has("unicorn") and _good_count(uni) == 5, "Unicorn comes on top of the five (%s)" % str(uni))
 	# The wet-weather player (M4-016) sits on top of the five, never in place of one.
 	_check(mt.has("wet_weather"), "A contested ball-winner with clean hands is a wet-weather player")
-	_check(not Traits.of(_fake("t4", "MID", {"contested": 90, "disposal": 70})).has("wet_weather"),
+	_check(not Traits.of(_fake("t4", "MID", {"contested": 90, "kicking": 50, "handballing": 50})).has("wet_weather"),
 			"Without clean hands he is not")
-	var named := _fake("GWS_6", "DEF", {"contested": 36, "disposal": 74})
+	var named := _fake("GWS_6", "DEF", {"contested": 36, "kicking": 74, "handballing": 74})
 	named["real_name"] = "Lachie Whitfield"
 	_check(Traits.of(named).has("wet_weather"), "A player the evidence names has it by name")
-	var namesake := _fake("FORGE_1", "DEF", {"contested": 36, "disposal": 74})
+	var namesake := _fake("FORGE_1", "DEF", {"contested": 36, "kicking": 74, "handballing": 74})
 	namesake["real_name"] = "Lachie Whitfield"
 	_check(not Traits.of(namesake).has("wet_weather"), "A created player with the same name does not")
-	var close := _fake("t3", "FWD", {"accuracy": 68})
+	var close := _fake("t3", "FWD", {"accuracy": 66})
 	var near: Array = Traits.near(close)
 	_check(not near.is_empty() and str(near[0]["key"]) == "sharpshooter" and int(near[0]["gap"]) == 3,
 			"Training shows how close a player is to a trait")
@@ -2400,7 +2503,7 @@ func _test_loose_man_read() -> void:
 	# (the ratings are shared with the club lists: put them back after).
 	var good_attr: Dictionary = (good["attr"] as Dictionary).duplicate()
 	var poor_attr: Dictionary = (poor["attr"] as Dictionary).duplicate()
-	for k in ["intercept", "marking", "pressure"]:
+	for k in ["intercept", "contested_marking", "pressure"]:
 		(good["attr"] as Dictionary)[k] = 90
 		(poor["attr"] as Dictionary)[k] = 45
 	sim.set_interceptor(1, str(good["id"]), false)
@@ -2490,7 +2593,7 @@ func _test_loose_man_late() -> void:
 	var poor: Dictionary = defs[-1]
 	var good_attr: Dictionary = (good["attr"] as Dictionary).duplicate()
 	var poor_attr: Dictionary = (poor["attr"] as Dictionary).duplicate()
-	for k in ["intercept", "marking", "pressure"]:
+	for k in ["intercept", "contested_marking", "pressure"]:
 		(good["attr"] as Dictionary)[k] = 90
 		(poor["attr"] as Dictionary)[k] = 45
 	# Every entry is played twice from the same dice: once with the poor
@@ -2569,8 +2672,8 @@ func _test_ai_loose_needs_a_reader() -> void:
 				kept.append([at, at.duplicate()])
 				# His score lands on the pin whatever his traits add.
 				var bonus := Matchups.interceptor_score(p) - (0.55 * float(at.get("intercept", 0))
-						+ 0.30 * float(at.get("marking", 0)) + 0.15 * float(at.get("pressure", 0)))
-				for k in ["intercept", "marking", "pressure"]:
+						+ 0.30 * float(at.get("contested_marking", 0)) + 0.15 * float(at.get("pressure", 0)))
+				for k in ["intercept", "contested_marking", "pressure"]:
 					at[k] = float(pin) - bonus
 			var sim := MatchSim.new(home, away, 8304)
 			var named := str(sim.interceptor[1]) != ""
@@ -2584,7 +2687,7 @@ func _test_ai_loose_needs_a_reader() -> void:
 	# interceptor score of 66 is still named, as before (qa, W7 of #643).
 	var same := true
 	for v in [65.99, 66.0, 66.01]:
-		var edge := {"id": "EDGE", "name": "Edge", "role": "DEF", "attr": {"intercept": v, "marking": v, "pressure": v}}
+		var edge := {"id": "EDGE", "name": "Edge", "role": "DEF", "attr": {"intercept": v, "contested_marking": v, "pressure": v}}
 		same = same and Matchups.best_interceptor([edge]).is_empty() == Matchups.best_interceptor([edge], 66.0).is_empty()
 	_check(same, "The named bar names exactly who the old bar of 66 named")
 	_check(float(reads["ai62"]) < MatchSim.LOOSE_AI_MIN_READ and float(reads["ai72"]) >= MatchSim.LOOSE_AI_MIN_READ,
@@ -2728,7 +2831,7 @@ func _test_tag_own_touches() -> void:
 	var f: Array = Roles.USUAL_TOUCHES_FIT
 	for p in [busy, quiet]:
 		var a: Dictionary = p["attr"]
-		var want := float(f[0]) + float(f[1]) * float(a["disposal"]) + float(f[2]) * float(a["carry"]) + (float(f[3]) if Roles.on_wing(p) else 0.0)
+		var want := float(f[0]) + float(f[1]) * Skills.disposal_of(a) + float(f[2]) * float(a["carry"]) + (float(f[3]) if Roles.on_wing(p) else 0.0)
 		_check(is_equal_approx(Roles.usual_touches(p), maxf(Roles.USUAL_TOUCHES_MIN, want)),
 				"%s usually gets what the sim gives his ratings (%.1f)" % [str(p["id"]), want])
 	# Tagged: the hold the sim plays with this man on him, as touches off his own count.
@@ -2744,7 +2847,8 @@ func _test_tag_own_touches() -> void:
 	inside["line"] = "C"
 	var wing := quiet.duplicate(true)
 	wing["line"] = "WING"
-	(wing["attr"] as Dictionary)["disposal"] = float((wing["attr"] as Dictionary)["disposal"]) - float(f[3]) / float(f[1])
+	for k in ["kicking", "handballing"]:
+		(wing["attr"] as Dictionary)[k] = float((wing["attr"] as Dictionary)[k]) - float(f[3]) / float(f[1])
 	_check(is_equal_approx(Roles.usual_touches(inside), Roles.usual_touches(wing))
 			and Roles.tag_touches(tagger, legs, wing) < Roles.tag_touches(tagger, legs, inside),
 			"Held the same, a wing keeps less than an inside man who usually gets as much")
@@ -3014,19 +3118,19 @@ func _test_tag_hold() -> void:
 	sim.tactics[0] = {"gameplan": "balanced", "tag_id": str(target["id"]), "tagger_id": mid}
 	sim.energy[mid] = 100.0
 	# A hard presser who also wins his own ball: not a Tagger.
-	for k in ["pressure", "contested", "carry", "disposal"]:
+	for k in ["pressure", "contested", "carry", "kicking", "handballing"]:
 		(m["attr"] as Dictionary)[k] = 92
 	var hard := sim._tag_share(0)
 	sim.energy[mid] = 45.0
 	var hard_tired := sim._tag_share(0)
 	sim.energy[mid] = 100.0
 	# A Tagger: elite Pressure that outweighs his own ball-winning and running.
-	for k in ["contested", "carry", "disposal"]:
+	for k in ["contested", "carry", "kicking", "handballing"]:
 		(m["attr"] as Dictionary)[k] = 30
 	(m["attr"] as Dictionary)["pressure"] = 95
 	var spec := sim._tag_share(0)
 	# Ordinary Pressure.
-	for k in ["pressure", "contested", "carry", "disposal"]:
+	for k in ["pressure", "contested", "carry", "kicking", "handballing"]:
 		(m["attr"] as Dictionary)[k] = 40
 	var plain := sim._tag_share(0)
 	# The lowest Pressure there is, and that man out of legs: the floor of a tag.
@@ -3355,6 +3459,10 @@ func _test_play_through_mid_stands_in_midfield() -> void:
 		var where := ""
 		while sim.current_quarter <= 4:
 			sim.begin_quarter()
+			# He has an Engine (durability 91) and never tires past his line on
+			# his own: spent by the second quarter, he rests and comes back on.
+			if sim.current_quarter == 2:
+				sim.energy[pid] = 40.0
 			var total: int = sim._q_count
 			for k in range(total):
 				sim._q_count = k + 1
@@ -3371,10 +3479,15 @@ func _test_play_through_mid_stands_in_midfield() -> void:
 			sim.end_quarter()
 		_check(chains > 0 and wrong == 0, "Seed %d: on the ground for %d chains, never outside the midfield (%d off it, first %s)"
 				% [seed, chains, wrong, where])
-		if first_res.is_empty():
-			first_res = sim.result()
+		# The picture needs a match in which he rests and comes back on.
+		var r := sim.result()
+		if first_res.is_empty() and (r["events"] as Array).any(func(e): return str(e.get("kind", "")) == "sub" and str(e.get("player_id", "")) == pid):
+			first_res = r
 	# The picture: from the start to the end of the quarter he first comes
 	# back on in, his disc holds a midfield slot and sits off the goal square.
+	_check(not first_res.is_empty(), "Pickett rests and comes back on in one of the matches")
+	if first_res.is_empty():
+		return
 	var res := first_res
 	res["home"] = "MEL"
 	res["away"] = "FRE"
@@ -4619,7 +4732,7 @@ func _test_defensive_forward() -> void:
 	var spec: Dictionary = my_fwds[0]
 	var plain: Dictionary = my_fwds[my_fwds.size() - 1]
 	var was := [int(spec["attr"]["pressure"]), int(plain["attr"]["pressure"])]
-	(spec["attr"] as Dictionary)["pressure"] = 70
+	(spec["attr"] as Dictionary)["pressure"] = 80
 	(plain["attr"] as Dictionary)["pressure"] = 20
 	_check(Traits.has(spec, "def_forward") and not Traits.has(plain, "def_forward"),
 			"The trait follows the forward's Pressure")
@@ -5255,7 +5368,7 @@ func _test_synergies_follow_the_ground() -> void:
 	sub_ev["substitute"] = true
 	sub_ev["for_injury"] = true
 	var said := str(MatchNotes.feed_line(sub_ev, "GEE", "COL").get("text", ""))
-	_check(said.begins_with("Lockdown unit off (") and said.contains(" on for "), "The substitute's switch is called: %s" % said)
+	_check(said.contains("Lockdown unit off (") and said.contains(" on for "), "The substitute's switch is called: %s" % said)
 	_check(sim.rng.state == state, "Following the 18 draws no random numbers")
 	var forced := _sim(77)
 	forced.synergy_forced[0]["engine_room"] = true

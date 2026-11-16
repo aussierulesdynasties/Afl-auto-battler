@@ -821,13 +821,32 @@ func _test_calls_old_fixture() -> void:
 
 
 ## A match with your assistant on your side (MatchScene: Skip to full time and
-## the breaks run the same MatchSim calls), against a rival coach.
-func _assisted_sim(seed: int) -> MatchSim:
-	var a := Squad.new("FRE", GameDB.club_list("FRE"), true, "FRE")
+## the breaks run the same MatchSim calls), against a rival coach. `club`
+## defaults to the first that can play a man loose (_loose_clubs).
+func _assisted_sim(seed: int, club := "") -> MatchSim:
+	if club == "":
+		club = str(_loose_clubs()[0])
+	var a := Squad.new(club, GameDB.club_list(club), true, club)
 	a.assistant = true
 	var b := Squad.new("MEL", GameDB.club_list("MEL"), false, "MEL")
 	b.ai_plans = true
 	return MatchSim.new(a, b, seed)
+
+
+## The clubs (bar MEL, the rival) with a defender good enough to play loose
+## (Matchups.best_interceptor), `first` leading when it is one of them (a
+## search's known match, so it finds it at once). The director's ratings
+## (row 200) left Fremantle without one; these checks are about naming the
+## loose man, not which club has him.
+func _loose_clubs(first := "") -> Array:
+	var out := []
+	for c in GameDB.club_order:
+		if c != "MEL" and not GameDB.club_list(c).is_empty() 				and not Matchups.best_interceptor(Squad.new(c, GameDB.club_list(c), true, c).ground).is_empty():
+			out.append(c)
+	if out.has(first):
+		out.erase(first)
+		out.push_front(first)
+	return out
 
 
 ## Plays the match a quarter at a time: [result, loose man at each quarter's
@@ -848,32 +867,36 @@ func _play_quarters(sim: MatchSim) -> Array:
 ## Skip to full time before the first bounce: the assistant's loose man plays
 ## the whole match and is named, not "Our loose men" (he was never in the
 ## plans the quarters kept).
-## Seed-bound: the assistant rightly pulls the loose man to chase when the side
-## trails at half or three-quarter time (_ai_interceptor), so the match must be
-## one the side never trails at those breaks. The first such seed from 4411 is
-## used (4411 itself trailed at three-quarter time after the bug bash 5 trait
-## fixes moved its dice).
+## Match-bound: the assistant rightly pulls the loose man to chase when the side
+## trails at half or three-quarter time (_ai_interceptor), and picks another
+## when the match-ups free a better one, so the match must be one where the
+## side never trails at those breaks and he keeps one man. The first such
+## match from seed 4411 over _loose_clubs is used (Carlton 4411 on the ratings
+## of 2026-11-16, so the search starts there).
 func _test_calls_name_skip_loose() -> void:
 	var played := []
-	for seed in range(4411, 4441):
-		var sim := _assisted_sim(seed)
-		var behind := false
-		var who := []
-		var pts := []
-		while sim.current_quarter <= 4:
-			if sim.current_quarter >= 3 and sim.score(0) < sim.score(1):
-				behind = true
-			who.append(str(sim.interceptor[0]))
-			var before := float((sim.impact[0] as Dictionary).get("loose", 0.0))
-			sim.run_quarter()
-			pts.append(float((sim.impact[0] as Dictionary).get("loose", 0.0)) - before)
-		if behind:
-			continue
-		if sim.needs_extra_time():
-			sim.run_extra_time()
-		played = [sim.result(), who, pts]
-		break
-	_check(not played.is_empty(), "a seed where the side never trails at a late break")
+	for club in _loose_clubs("CAR"):
+		for seed in range(4411, 4441):
+			var sim := _assisted_sim(seed, str(club))
+			var behind := false
+			var who := []
+			var pts := []
+			while sim.current_quarter <= 4:
+				if sim.current_quarter >= 3 and sim.score(0) < sim.score(1):
+					behind = true
+				who.append(str(sim.interceptor[0]))
+				var before := float((sim.impact[0] as Dictionary).get("loose", 0.0))
+				sim.run_quarter()
+				pts.append(float((sim.impact[0] as Dictionary).get("loose", 0.0)) - before)
+			if behind or who[0] == "" or who.count(who[0]) != who.size():
+				continue
+			if sim.needs_extra_time():
+				sim.run_extra_time()
+			played = [sim.result(), who, pts]
+			break
+		if not played.is_empty():
+			break
+	_check(not played.is_empty(), "a match where the side never trails at a late break and keeps one loose man")
 	if played.is_empty():
 		return
 	var res: Dictionary = played[0]
@@ -887,32 +910,48 @@ func _test_calls_name_skip_loose() -> void:
 ## The coach box starts Q1 with A loose, then the match is skipped at quarter
 ## time and the assistant sends B: the row names the man who earned the most
 ## of the loose man's points, not A for the whole match.
+## Match-bound: the first match from seed 4412 over _loose_clubs where the
+## assistant sends another man at quarter time and he earns more than A
+## (Collingwood 4412 on the ratings of 2026-11-16, so the search starts there).
 func _test_calls_name_switched_loose() -> void:
-	var sim := _assisted_sim(4412)
-	var pick := str(sim.interceptor[0])
-	var a := ""
-	for p in Matchups.defenders((sim.squads[0] as Squad).ground):
-		if str(p["id"]) != pick:
-			a = str(p["id"])
+	var found := []
+	for club in _loose_clubs("COL"):
+		for seed in range(4412, 4442):
+			var sim := _assisted_sim(seed, str(club))
+			var pick := str(sim.interceptor[0])
+			var a := ""
+			for p in Matchups.defenders((sim.squads[0] as Squad).ground):
+				if str(p["id"]) != pick:
+					a = str(p["id"])
+					break
+			if a == "":
+				continue
+			var t: Dictionary = (sim.tactics[0] as Dictionary).duplicate()
+			t["interceptor_id"] = a
+			sim.set_tactics(0, t)
+			var played := _play_quarters(sim)
+			var who: Array = played[1]
+			var pts: Array = played[2]
+			if str(who[0]) != a or str(who[1]) == a or str(who[1]) == "":
+				continue
+			var by := {}
+			for i in range(who.size()):
+				by[str(who[i])] = float(by.get(str(who[i]), 0.0)) + float(pts[i])
+			var best := ""
+			for id in by:
+				if best == "" or absf(float(by[id])) > absf(float(by[best])):
+					best = str(id)
+			if best == a:
+				continue
+			found = [played[0], best]
 			break
-	_check(a != "", "a second defender to start loose")
-	var t: Dictionary = (sim.tactics[0] as Dictionary).duplicate()
-	t["interceptor_id"] = a
-	sim.set_tactics(0, t)
-	var played := _play_quarters(sim)
-	var res: Dictionary = played[0]
-	var who: Array = played[1]
-	var pts: Array = played[2]
-	_check(str(who[0]) == a and str(who[1]) != a and str(who[1]) != "",
-			"A plays Q1 loose and the assistant sends another man at quarter time (%s)" % str(who))
-	var by := {}
-	for i in range(who.size()):
-		by[str(who[i])] = float(by.get(str(who[i]), 0.0)) + float(pts[i])
-	var best := ""
-	for id in by:
-		if best == "" or absf(float(by[id])) > absf(float(by[best])):
-			best = str(id)
-	_check(best != a, "the man after quarter time earned more than A (%s)" % str(by))
+		if not found.is_empty():
+			break
+	_check(not found.is_empty(), "a match where A plays Q1 loose, the assistant sends another man at quarter time and he earns more than A")
+	if found.is_empty():
+		return
+	var res: Dictionary = found[0]
+	var best := str(found[1])
 	var got := str(MatchStory.call_names(res, 0)["loose"])
 	_check(got.begins_with(MatchStory._name_in(res, best) + " ") and got.contains("loose m"),
 			"the loose man's row leads with the biggest earner (%s, want %s first)" % [got, MatchStory._name_in(res, best)])

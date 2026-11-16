@@ -32,11 +32,13 @@ const NEEDS := {
 ## clubs' match-day sides on today's lists (bug bash 5, G15: the 2027 anchors
 ## had every plan's average fit at 1.13-1.22): 1.0 fit is an average list for
 ## that plan. tests/test_plan_know.gd holds the league's mean fit near 1.0.
+## Re-measured on the Wheelo ratings of 2026-11-16 (skills rated against the
+## AFL position).
 const LEAGUE := {
-	"attacking": [73.1, 4.3],
-	"defensive": [51.9, 2.6],
-	"contest": [82.1, 4.1],
-	"controlled": [59.5, 2.7],
+	"attacking": [54.8, 3.6],
+	"defensive": [71.6, 2.4],
+	"contest": [68.3, 5.6],
+	"controlled": [55.9, 2.0],
 }
 ## How far one spread from the league moves a plan's upside, and its limits:
 ## the best-suited list gets about half as much again, the worst about half.
@@ -52,7 +54,7 @@ static func _value(p: Dictionary, weights: Dictionary) -> float:
 	var a: Dictionary = p.get("attr", {})
 	var v := 0.0
 	for k in weights:
-		v += float(weights[k]) * float(a.get(k, 0.0))
+		v += float(weights[k]) * Skills.value(a, k, 0.0)
 	return v
 
 

@@ -114,24 +114,24 @@ static func combine_lines(p: Dictionary, club: String, seed: int, uncertainty_mu
 	var movement := 0.65 * float(a.get("carry", 50)) + 0.35 * float(a.get("pressure", 50))
 	var repeat := 0.65 * float(a.get("pressure", 50)) + 0.35 * float(a.get("durability", 50))
 	var height_score := _height_score(float(p.get("height_cm", 0.0)))
-	var aerial := 0.45 * float(a.get("marking", 50)) + 0.35 * float(a.get("contested", 50)) + 0.20 * height_score
+	var aerial := 0.45 * float(a.get("contested_marking", 50)) + 0.35 * float(a.get("contested", 50)) + 0.20 * height_score
 	var role := str(p.get("role", "MID"))
 	var craft := 50.0
 	var craft_label := "Football craft"
 	match role:
 		"MID":
 			craft_label = "Inside work"
-			craft = 0.60 * float(a.get("contested", 50)) + 0.25 * float(a.get("disposal", 50)) + 0.15 * float(a.get("pressure", 50))
+			craft = 0.60 * float(a.get("contested", 50)) + 0.25 * Skills.disposal_of(a) + 0.15 * float(a.get("pressure", 50))
 		"DEF":
 			craft_label = "Defensive craft"
 			craft = 0.55 * float(a.get("intercept", 50)) + 0.30 * float(a.get("pressure", 50)) + 0.15 * float(a.get("contested", 50))
 		"FWD":
 			craft_label = "Forward craft"
-			craft = 0.45 * float(a.get("goalkicking", 50)) + 0.25 * float(a.get("marking", 50)) + 0.20 * float(a.get("creating", 50)) + 0.10 * float(a.get("accuracy", 50))
+			craft = 0.45 * float(a.get("goalkicking", 50)) + 0.25 * float(a.get("contested_marking", 50)) + 0.20 * float(a.get("creating", 50)) + 0.10 * float(a.get("accuracy", 50))
 		"RUCK":
 			craft_label = "Ruck craft"
 			craft = 0.70 * float(a.get("ruck", 50)) + 0.20 * float(a.get("contested", 50)) + 0.10 * height_score
-			aerial = 0.45 * float(a.get("ruck", 50)) + 0.30 * float(a.get("contested", 50)) + 0.15 * float(a.get("marking", 50)) + 0.10 * height_score
+			aerial = 0.45 * float(a.get("ruck", 50)) + 0.30 * float(a.get("contested", 50)) + 0.15 * float(a.get("contested_marking", 50)) + 0.10 * height_score
 	return [
 		_line("Movement", movement, p, club, seed, "move", uncertainty_mult),
 		_line("Repeat effort", repeat, p, club, seed, "repeat", uncertainty_mult),

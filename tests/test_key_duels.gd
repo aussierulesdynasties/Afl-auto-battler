@@ -289,8 +289,11 @@ func _test_key_defender_takes_key_forward() -> void:
 	var ade := Squad.new("ADE", GameDB.club_list("ADE"), false, "ADE")
 	var car := Squad.new("CAR", GameDB.club_list("CAR"), true, "CAR")
 	var ruck := _player(GameDB.club_list("CAR"), "Pittonet")
+	# The ruck takes a back slot from a defender who is not a key defender (under
+	# the Wheelo ratings Carlton pick one, and he can come first in the line).
 	for i in range(car.ground.size()):
-		if str(car.ground[i]["role"]) == "DEF":
+		if str(car.ground[i]["role"]) == "DEF" \
+				and PlayerProfile.player_type(car.ground[i]) != "Key defender":
 			car.ground[i] = Ratings._for_slot(ruck, "DEF")
 			break
 	var keys := Matchups.defenders(car.ground).filter(

@@ -374,18 +374,33 @@ func _test_selection() -> void:
 	var list: Array = GameDB.club_list("GEE").duplicate(true)
 	var rucks := list.filter(func(p): return str(p["role"]) == "RUCK")
 	var tired: Dictionary = rucks[0]
-	var fresh: Dictionary = rucks[1]
 	for p in rucks:
 		p["overall"] = 50.0
 		p.erase("expects_game")
 	tired["overall"] = 74.0
 	tired["workload"] = 100.0
-	fresh["overall"] = 72.0
-	var automatic := Ratings.select_22(list)
-	var starting_ruck: Dictionary = automatic["ground"].filter(func(p): return str(p["role"]) == "RUCK")[0]
-	_check(str(starting_ruck["id"]) == str(fresh["id"]), "Auto-pick weighs freshness when ability is comparable")
+	# The ruck goes on his tap alone (#165), so freshness is shown on the
+	# defenders: seven for six spots, five clear of the pair, and the last
+	# spot between a loaded 74 and a fresh 72.
+	var backs: Array = GameDB.club_list("GEE").duplicate(true)
+	var defs := backs.filter(func(p): return str(p["role"]) == "DEF")
+	for p in defs.slice(7):
+		backs.erase(p)
+	for p in defs.slice(0, 7):
+		p["overall"] = 80.0
+		p.erase("expects_game")
+	var loaded: Dictionary = defs[0]
+	var rested: Dictionary = defs[1]
+	loaded["overall"] = 74.0
+	loaded["workload"] = 100.0
+	rested["overall"] = 72.0
+	var on_ground := {}
+	for p in Ratings.select_22(backs)["ground"]:
+		on_ground[str(p["id"])] = true
+	_check(on_ground.has(str(rested["id"])) and not on_ground.has(str(loaded["id"])),
+			"Auto-pick weighs freshness when ability is comparable")
 	var manual := Ratings.select_side(list, {"RUCK": [str(tired["id"])]})
-	starting_ruck = manual["ground"].filter(func(p): return str(p["role"]) == "RUCK")[0]
+	var starting_ruck: Dictionary = manual["ground"].filter(func(p): return str(p["role"]) == "RUCK")[0]
 	_check(str(starting_ruck["id"]) == str(tired["id"]), "The coach can still select a loaded player")
 
 

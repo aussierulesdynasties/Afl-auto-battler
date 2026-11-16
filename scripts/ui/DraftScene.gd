@@ -910,6 +910,9 @@ func _after_trade() -> void:
 
 
 func _on_pick_for_me() -> void:
+	if _draft.pick_for_me_passes():
+		_on_pass()
+		return
 	_finish_night()
 	var before := _draft.pick_history.size()
 	if _draft.pick_for_me():

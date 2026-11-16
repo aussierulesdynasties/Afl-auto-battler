@@ -35,6 +35,7 @@ func run() -> void:
 	_t("_test_funded_scouting")
 	_t("_test_asset_valuation")
 	_t("_test_combine_scouting")
+	_t("_test_pick_for_me_passes")
 	_t("_test_scouted_league_board")
 	_t("_test_rival_says_why")
 	_t("_test_draft_reasons_change_nothing")
@@ -133,8 +134,8 @@ func _test_position_guidance() -> void:
 func _dual(id: String, role: String, role2 := "") -> Dictionary:
 	return {"id": id, "name": id, "last": id, "club": "ORIGINAL", "role": role, "role2": role2,
 			"overall": 60, "value": 1, "gl": 0, "di": 0,
-			"attr": {"ruck": 10, "contested": 50, "disposal": 50, "carry": 50, "intercept": 40,
-				"pressure": 40, "goalkicking": 40, "marking": 40, "accuracy": 50, "creating": 40,
+			"attr": {"ruck": 10, "contested": 50, "kicking": 50, "handballing": 50, "carry": 50, "intercept": 40,
+				"pressure": 40, "goalkicking": 40, "contested_marking": 40, "uncontested_marking": 40, "speed": 50, "accuracy": 50, "creating": 40,
 				"discipline": 50, "durability": 60, "star": 20}}
 
 
@@ -718,6 +719,34 @@ func _test_funded_scouting() -> void:
 	_check(ordered, "National Draft Best rated follows the club's scouted view, not hidden OVR")
 
 
+## At a National Draft, Pick for me with nothing left the club would take (a
+## fourth ruck) passes, as a rival does at that pick, so the draft never waits.
+func _test_pick_for_me_passes() -> void:
+	var pool: Array = Prospects.generate_class(2028, 611).slice(0, 4)
+	for p in pool:
+		p["role"] = "RUCK"
+		p["role2"] = ""
+	var clubs := ["A", "B"]
+	var sizes := {"A": 40, "B": 40}
+	var counts := {
+		"A": {"RUCK": 3, "MID": 14, "DEF": 12, "FWD": 11},
+		"B": {"RUCK": 3, "MID": 14, "DEF": 12, "FWD": 11},
+	}
+	var d := Draft.build_intake(pool, clubs, clubs, 90210, sizes, counts)
+	d.start_for_user("A")
+	_check(d.is_user_turn() and d.pick_for_me_passes(), "Only fourth rucks left: your pick, made for you, is a pass")
+	var taken := d.count_for("A")
+	_check(d.pick_for_me() and d.count_for("A") == taken and d.passed_clubs.has("A"),
+			"Pick for me passes rather than leave the draft waiting")
+	# A list too short to pass takes the best of them instead.
+	sizes = {"A": 30, "B": 30}
+	d = Draft.build_intake(pool, clubs, clubs, 90210, sizes, counts)
+	d.start_for_user("A")
+	_check(d.is_user_turn() and d.pass_block_reason() != "" and not d.pick_for_me_passes(),
+			"A list too short to pass cannot pass")
+	_check(d.pick_for_me() and d.count_for("A") == 1, "...so Pick for me takes a ruck rather than wait")
+
+
 ## ARD-M5-012: the top of a draft goes to the best long-term assets. Need
 ## and scarcity steer close calls; they never bury a much better player.
 ## ARD-M5-014: the National Draft is a scouting decision, not access to the
@@ -830,7 +859,13 @@ func _test_asset_valuation() -> void:
 			and is_equal_approx(real._eval_certainty(at_rank[1]), Draft.AI_EVAL_TOP_SHARE)
 			and is_equal_approx(real._eval_certainty(at_rank[Draft.AI_EVAL_FULL_RANK + 5]), 1.0),
 			"Scouting disagreement shrinks for the consensus best, in full further down")
-	_check(is_zero_approx(real._vorp_weight()), "At the first pick scarcity counts for nothing")
+	_check(is_zero_approx(real._vorp_weight()) and is_zero_approx(real._vorp_weight("", "RUCK")),
+			"At the first pick scarcity counts for nothing, rucks included")
+	# One ruck plays at a time: a ruck's edge counts in full from round two.
+	real.pick_index = real.clubs.size() * Draft.AI_VORP_FULL_ROUNDS_RUCK
+	_check(is_equal_approx(real._vorp_weight("", "RUCK"), Draft.AI_VORP_WEIGHT)
+			and real._vorp_weight("", "MID") < Draft.AI_VORP_WEIGHT,
+			"From round two a ruck's scarcity counts in full, other positions' still ramping")
 	real.pick_index = real.clubs.size() * Draft.AI_VORP_FULL_ROUNDS
 	_check(is_equal_approx(real._vorp_weight(), Draft.AI_VORP_WEIGHT), "From the third round it counts in full")
 	# "Credible" is the consensus top eight, or anyone within 4 worth points of

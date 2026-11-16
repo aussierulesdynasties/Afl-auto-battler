@@ -16,28 +16,28 @@ Players who played the data season, as the game rates them at load (2020: each p
 
 | Start | players | 80+ | 85+ | 90+ | median | 90th pct | best |
 |---|---|---|---|---|---|---|---|
-| 2020 | 598 | 50 | 21 | 6 | 59 | 79 | 95 |
-| 2026 | 669 | 56 | 27 | 5 | 58 | 78 | 93 |
+| 2020 | 598 | 72 | 40 | 21 | 65 | 81 | 99 |
+| 2026 | 669 | 85 | 42 | 25 | 62 | 81 | 99 |
 
 | Club | 2020 median | 2020 80+ | 2026 median | 2026 80+ |
 |---|---|---|---|---|
-| ADE | 54 | 2 | 58 | 5 |
-| BRL | 58 | 3 | 60 | 5 |
-| CAR | 59 | 2 | 59 | 1 |
-| COL | 59 | 5 | 58 | 2 |
-| ESS | 57 | 2 | 54 | 0 |
-| FRE | 58 | 3 | 60 | 5 |
-| GCS | 59 | 0 | 56 | 2 |
-| GEE | 59 | 3 | 60 | 3 |
-| GWS | 58 | 4 | 59 | 5 |
-| HAW | 59 | 3 | 60 | 5 |
-| MEL | 58 | 2 | 58 | 3 |
-| NTH | 57 | 3 | 56 | 3 |
-| PAD | 60 | 2 | 55 | 3 |
-| RIC | 58 | 4 | 56 | 2 |
-| STK | 58 | 1 | 58 | 1 |
-| SYD | 59 | 3 | 60 | 6 |
-| WBD | 62 | 4 | 55 | 3 |
-| WCE | 59 | 4 | 55 | 2 |
+| ADE | 63 | 5 | 64 | 8 |
+| BRL | 63 | 6 | 66 | 6 |
+| CAR | 62 | 3 | 64 | 3 |
+| COL | 65 | 5 | 62 | 5 |
+| ESS | 68 | 6 | 61 | 2 |
+| FRE | 62 | 2 | 65 | 6 |
+| GCS | 64 | 3 | 63 | 5 |
+| GEE | 67 | 4 | 63 | 5 |
+| GWS | 63 | 5 | 62 | 3 |
+| HAW | 68 | 3 | 65 | 5 |
+| MEL | 62 | 3 | 66 | 5 |
+| NTH | 63 | 1 | 62 | 4 |
+| PAD | 67 | 3 | 61 | 3 |
+| RIC | 64 | 4 | 59 | 3 |
+| STK | 65 | 2 | 62 | 6 |
+| SYD | 66 | 4 | 66 | 7 |
+| WBD | 66 | 6 | 59 | 6 |
+| WCE | 69 | 7 | 59 | 3 |
 
-Top 15 in 2020: Nathan Fyfe (FRE) 95, Patrick Cripps (CAR) 93, Patrick Dangerfield (GEE) 92, Jeremy Cameron (GWS) 91, Jack Darling (WCE) 91, Lachie Neale (BRL) 90, Bachar Houli (RIC) 89, Michael Walters (FRE) 88, Dane Rampe (SYD) 88, Brodie Grundy (COL) 87, Adam Treloar (COL) 87, Elliot Yeo (WCE) 87, Tim Kelly (WCE) 87, Marcus Bontempelli (WBD) 87, Gary Ablett (GEE) 86
+Top 15 in 2020: Michael Walters (FRE) 99, Brodie Smith (ADE) 98, Gary Ablett (GEE) 97, Brodie Grundy (COL) 96, Tom Papley (SYD) 96, Jordan De Goey (COL) 95, Patrick Dangerfield (GEE) 94, Jason Johannisen (WBD) 94, Jamie Cripps (WCE) 93, Adam Treloar (COL) 92, Anthony McDonald-Tipungwuti (ESS) 92, Lachie Weller (GCS) 92, Luke Breust (HAW) 92, Max Gawn (MEL) 92, Dustin Martin (RIC) 91
