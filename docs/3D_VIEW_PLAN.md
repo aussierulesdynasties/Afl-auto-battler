@@ -117,7 +117,7 @@ part by part (kept, reworked or replaced).
 
 **2c. The crowd, cheaply.** Methods compared on looks and phone cost before any is chosen: shader-
 painted seats (today), instanced cards of baked figures (impostors), animated low-poly instances, and
-a mix by distance. Cheer squads, banners and reactions to goals are part of the choice.
+a mix by distance. Cheer squads, banners and reactions to goals are part of the choice. Chosen 2026-11-17: cards (rule 2.92).
 
 **2d. The players' look.** After 2a: the world's light decides how a body reads.
 1. **The body.** Our MPFB average body, the MetaHuman body, or another source; how many builds
@@ -177,6 +177,6 @@ vignettes. Nothing in step 4 starts before the football proof has passed and the
 |---|---|
 | Freeze | in force from 2026-11-16 |
 | 1. Football proof | harness in `tools/balance.sh shape`; spec checked (rule 2.86); gap list above; fixes next (row 201) |
-| 2. The world and the look | under way (row 202): 2a daylight, tone, night lighting and wet games chosen, skies chosen (rules 2.80-2.84); 2d body chosen: MetaHuman (2.85), shown in our match and approved (2.89); 2b every AFL ground since 1990 and Macquarie Point get their own stadium (2.90); next 2b more grounds and roofed grounds at night, 2c crowd, 2d builds and faces, 2e cameras |
+| 2. The world and the look | under way (row 202): 2a daylight, tone, night lighting and wet games chosen, skies chosen (rules 2.80-2.84); 2d body chosen: MetaHuman (2.85), shown in our match and approved (2.89); 2b every AFL ground since 1990 and Macquarie Point get their own stadium (2.90); 2c crowd chosen: cards (2.92); next 2b more grounds and roofed grounds at night, 2d builds and faces, 2e cameras |
 | 3. Asset and animation plan | done (#1707) |
 | 4. Build | after 1 and 3 (rows 197, 198) |
