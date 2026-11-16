@@ -235,7 +235,7 @@ var news: Array = []             # league news feed, newest first
 ## Players the round's news already named for their game (a milestone or a big
 ## game), so a career best does not give him a second item. Not saved.
 var _named_this_round := {}
-var board_patience := "fair"     # this career's board dial (DifficultyDials step)
+var board_patience := "patient"  # this career's board dial (DifficultyDials step)
 var rival_recruiting := "shrewd" # this career's rival dial (DifficultyDials step)
 var tutorials := true            # this career's first-visit menu tips (Tutorials.gd)
 ## The league's real controversies (YearEvents): chosen at New career, kept
@@ -1321,6 +1321,7 @@ func _restore_career(state: Dictionary) -> bool:
 	# Saves from before the one pre-season match (director, 2026-11-03) may hold
 	# the old intra-club match: it is gone, and the practice match is the match.
 	preseason.erase("intra")
+	_upgrade_preseason()
 	training_block = state.get("training_block", {}) if state.get("training_block") is Dictionary else {}
 	training_report = state.get("training_report", {}) if state.get("training_report") is Dictionary else {}
 	plan_known = state.get("plan_known", {}) if state.get("plan_known") is Dictionary else {}
@@ -4141,6 +4142,10 @@ func fitness_status_line() -> String:
 
 
 func can_revise_fitness() -> bool:
+	# The pre-season's plan stop sets it for the summer and Round 1 (rule 69a).
+	if season != null and fitness_week() == 0 and int(preseason.get("year", 0)) == season_year \
+			and bool(preseason.get("planned", false)):
+		return false
 	return season != null and not season.is_regular_done() \
 			and Conditioning.revision_weeks(fitness_bye_week(my_club)).has(fitness_week())
 
@@ -4172,19 +4177,20 @@ func _stamp_conditioning() -> void:
 				conditioning[club] = rec
 		season.fitness_plans[str(club)] = Conditioning.plan_at(rec, w)
 		Conditioning.stamp_list(season.lists[club],
-				Conditioning.actual(rec, w, fitness_hp_level(str(club))), Conditioning.plan_at(rec, w),
-				Conditioning.base_curve(rec, w))
+				Conditioning.actual(rec, w, fitness_hp_level(str(club))), Conditioning.plan_at(rec, w))
 
 
 # ---------------------------------------------------------------------------
 # The pre-season (PreSeason.gd): eight weeks between the wrap and Round 1
 # ---------------------------------------------------------------------------
-## Open this year's pre-season: every club gets its blocks (yours the default
-## plan, an AI club's by its phase). Called at the rollover and when a new
-## career's first season is made; start_season itself stays the plain "build
-## the season" step tests and tools use. Once a year; never mid-season.
-## `save`: false when the caller saves once itself at the end of a bigger
-## step (the rollover), so one tap writes the career once, not twice.
+## Open this year's pre-season (director, 2026-11-17, rule 69a): every rival
+## club books the running weeks its season fitness plan needs (its plan by its
+## phase, Conditioning.ai_plan); yours waits for the player meetings and your
+## own plan. Called at the rollover and when a new career's first season is
+## made; start_season itself stays the plain "build the season" step tests and
+## tools use. Once a year; never mid-season. `save`: false when the caller
+## saves once itself at the end of a bigger step (the rollover), so one tap
+## writes the career once, not twice.
 func open_preseason(save := true) -> void:
 	if season == null or season.round_index != 0 or season.is_regular_done():
 		return
@@ -4193,27 +4199,15 @@ func open_preseason(save := true) -> void:
 	# A year on: every plan slips a step over the off-season. The first
 	# year of a career (or of a save from before familiarity) has nothing to slip.
 	var offseason := not plan_known.is_empty()
-	var blocks := {}
+	var need := {}
 	for club in season.clubs:
 		var code := str(club)
-		if code == my_club:
-			var mine := PreSeason.default_blocks()
-			# After a slip, the plan you play is drilled in the last block
-			# unless you say otherwise.
-			if offseason and PreSeason.DRILL_PLANS.has(club_plan):
-				mine[mine.size() - 1] = [str(mine[mine.size() - 1][0]), "plan", [club_plan]]
-			blocks[code] = mine
-		else:
-			blocks[code] = PreSeason.with_plan_block(
-					PreSeason.ai_blocks(_club_phase(code), _best22_age(code)),
-					_club_phase(code), _usual_plan(code))
-	preseason = PreSeason.new_state(season_year, blocks)
-	if preseason_run_debt != 0.0:
-		# A season-end card's cost: the list starts this pre-season behind.
-		var mine_e: Dictionary = (preseason.get("clubs", {}) as Dictionary).get(my_club, {})
-		if not mine_e.is_empty():
-			mine_e["run"] = float(mine_e.get("run", 0.0)) + preseason_run_debt
-		preseason_run_debt = 0.0
+		need[code] = 0 if code == my_club else PreSeason.run_needed(fitness_plan(code))
+	preseason = PreSeason.new_state(season_year, need)
+	# The flag celebration (B8, rule 85, "One more running week"): this
+	# pre-season books one more running week than the plan needs.
+	preseason["extra_run"] = maxi(0, roundi(-preseason_run_debt))
+	preseason_run_debt = 0.0
 	if offseason:
 		_slip_plan_known()
 	_ensure_plan_known()
@@ -4222,37 +4216,46 @@ func open_preseason(save := true) -> void:
 		autosave()
 
 
-## The mean age of the side a club would pick (what _club_phase reads).
-func _best22_age(club: String) -> float:
-	var side := Ratings.select_22(season.lists[club])
-	var ages := 0.0
-	var n := 0
-	for q in (side["ground"] as Array) + (side["bench"] as Array):
-		ages += float(q.get("age", 25.0))
-		n += 1
-	return ages / float(maxi(1, n))
+## A pre-season saved before the 2026-11-17 rework (three blocks of load and
+## focus) carries on under the new rules from the week it reached: each club
+## books its plan's running, and the weeks already trained count as running
+## where the block ran and as drilling where it drilled the plan. One opened but
+## not yet started begins at the player meetings like any other.
+const _OLD_BLOCK_WEEKS := [[1, 3], [4, 5], [6, 7]]
 
 
-## Training injuries so far this pre-season, every club: [{id, club, week,
-## weeks, kind}], in the order they happened.
-func preseason_injuries() -> Array:
-	return preseason.get("injuries", [])
-
-
-## Your players hurt in training in weeks `from`..`to`, in the game's usual
-## injury words: "Name (hamstring, 2 weeks)". The weeks are as they were
-## when it happened.
-func preseason_injury_lines(from := 1, to := 99) -> Array:
-	var out := []
-	for inj in preseason_injuries():
-		if str(inj.get("club", "")) != my_club or int(inj.get("week", 0)) < from or int(inj.get("week", 0)) > to:
+func _upgrade_preseason() -> void:
+	if not (preseason.get("clubs") is Dictionary):
+		return
+	var clubs: Dictionary = preseason["clubs"]
+	var w := int(preseason.get("week", 0))
+	for code in clubs:
+		var e: Dictionary = clubs[code]
+		if not e.has("blocks"):
 			continue
-		var p := list_player(str(inj["id"]))
-		if p.is_empty():
-			continue
-		out.append("%s (%s, %s)" % [GameDB.player_display_name(p), Injuries.wording(str(inj["kind"])),
-				_weeks_text(int(inj["weeks"]))])
-	return out
+		var blocks: Array = e["blocks"]
+		var acts := []
+		var run := 0
+		for wk in range(1, mini(w, PreSeason.train_weeks()) + 1):
+			for i in range(mini(blocks.size(), _OLD_BLOCK_WEEKS.size())):
+				if wk < int(_OLD_BLOCK_WEEKS[i][0]) or wk > int(_OLD_BLOCK_WEEKS[i][1]):
+					continue
+				var b: Array = blocks[i]
+				if str(b[1]) == "running":
+					acts.append({"a": "run"})
+					run += 1
+				elif str(b[1]) == "plan" and b.size() > 2:
+					acts.append(PreSeason.clean_week({"a": "drill", "d": b[2], "s": b[3] if b.size() > 3 else {}}))
+		var mine := str(code) == my_club
+		clubs[code] = {"need": 0 if mine and w == 0 else PreSeason.run_needed(fitness_plan(str(code))),
+				"run": run, "acts": acts}
+	if w > 0:
+		preseason["met"] = true
+		preseason["planned"] = true
+	# Training hurt nobody under the new rules: only the practice match's injuries stay.
+	if preseason.get("injuries") is Array:
+		preseason["injuries"] = (preseason["injuries"] as Array).filter(
+				func(r): return r is Dictionary and str(r.get("how", "")) == "practice")
 
 
 ## A pre-season is running: opened this year, not finished, Round 1 unplayed.
@@ -4268,14 +4271,13 @@ func preseason_week() -> int:
 	return int(preseason.get("week", 0))
 
 
-## Where it is waiting for you: "plan" before week 1, "trial" after the time
-## trial, "" when it is not waiting (none running, or between weeks).
+## Where it is waiting for you: "meetings" then "plan" before week 1, "week"
+## for the next week's action, "trial" / "practice" / "papers" / "story" after
+## those, "" when it is not waiting (none running, or the quiet last week).
 func preseason_stop() -> String:
 	if not preseason_active():
 		return ""
 	var w := preseason_week()
-	if w == 0:
-		return "plan"
 	if str(PreSeason.STOPS.get(w, "")) == "trial" and not bool(preseason.get("trial_seen", false)):
 		return "trial"
 	# The pre-season match (director, 2026-11-03: the intra-club match and the
@@ -4287,64 +4289,101 @@ func preseason_stop() -> String:
 	if str(PreSeason.STOPS.get(w, "")) == "papers" and not papers_record().is_empty() \
 			and not bool(papers_record().get("seen", false)):
 		return "papers"
-	# The story cards the block threw up (data/stories, phase "preseason").
+	# The bonding week's card (data/stories, phase "bonding").
 	if bool(preseason.get("story_pending", false)):
 		return "story"
+	if w == 0 and not bool(preseason.get("met", false)):
+		return "meetings"
+	if w == 0 and not bool(preseason.get("planned", false)):
+		return "plan"
+	if w < PreSeason.train_weeks():
+		return "week"
 	return ""
 
 
-## A club's three blocks: [[load, focus], ...].
-func preseason_blocks(club := "") -> Array:
+## A club's pre-season: {"need": running weeks booked, "run": done, "acts": the weeks so far}.
+func preseason_entry(club := "") -> Dictionary:
 	var code := my_club if club == "" else club
-	return ((preseason.get("clubs", {}) as Dictionary).get(code, {}) as Dictionary).get("blocks", [])
+	return (preseason.get("clubs", {}) as Dictionary).get(code, {})
 
 
-## A block can be changed until its first week is trained.
-func preseason_block_open(i: int) -> bool:
-	return preseason_active() and i >= 0 and i < PreSeason.block_count() \
-			and preseason_week() < int(PreSeason.block_weeks(i)[0])
-
-
-## Set your load and focus for block `i`. False once it has started.
-func set_preseason_block(i: int, load: String, focus: String) -> bool:
-	if not preseason_block_open(i) or not PreSeason.valid_block(load, focus):
+## The player meetings are done (each player's stat focus and any position he
+## sets out to learn): on to the season fitness plan.
+func preseason_meetings_done() -> bool:
+	if preseason_stop() != "meetings":
 		return false
-	var blocks := preseason_blocks()
-	if i >= blocks.size():
-		return false
-	if focus == "plan":
-		# The plans it drills stay as they were, or start on the default.
-		var was: Array = PreSeason.clean_drills(blocks[i][2] if (blocks[i] as Array).size() > 2 else [])
-		if was.is_empty():
-			_ensure_plan_known()
-			was = PreSeason.default_drill(_usual_plan(my_club), plan_known.get(my_club, {}))
-		# A position group's own drills stay with the block while it is on Game plan.
-		var split := PreSeason.block_split(blocks[i])
-		blocks[i] = [load, focus, was, split] if not split.is_empty() else [load, focus, was]
-	else:
-		blocks[i] = [load, focus]
+	preseason["met"] = true
 	mark_dirty()
 	return true
 
 
-## Choose which plan (or two) a Game plan block drills: the plans given, up to
-## the most it allows. With `group` ("MID", "DEF", "FWD", "RUCK"; director,
-## 2026-11-06, row 101: "split it between position groups") for that group
-## alone; without, for the whole side, every group alike. False for a block
-## that is not on Game plan, or that has started, or when none of the plans
-## can be drilled.
-func set_preseason_drills(i: int, plans: Array, group := "") -> bool:
-	var blocks := preseason_blocks()
-	if not preseason_block_open(i) or i >= blocks.size() or str(blocks[i][1]) != "plan":
+## The running weeks `plan` would book this pre-season (the flag celebration's
+## one more included).
+func preseason_plan_runs(plan: String) -> int:
+	return PreSeason.run_needed(plan, int(preseason.get("extra_run", 0)))
+
+
+## Your season fitness plan, for the pre-season and the season beyond it: it
+## books the running weeks it needs, and the weeks begin. It is yours to
+## revise again at the season's usual points (Conditioning.revision_weeks), not
+## again before Round 1.
+func set_preseason_plan(plan: String) -> bool:
+	if preseason_stop() != "plan" or not Conditioning.valid_plan(plan):
+		return false
+	if fitness_plan(my_club) != plan and not set_fitness_plan(plan):
+		return false
+	var entry := preseason_entry()
+	entry["need"] = preseason_plan_runs(plan)
+	(preseason["clubs"] as Dictionary)[my_club] = entry
+	preseason["planned"] = true
+	mark_dirty()
+	return true
+
+
+## The running weeks you still owe.
+func preseason_run_left() -> int:
+	return PreSeason.run_left(preseason_entry())
+
+
+## The actions open for your next week (PreSeason.actions_open): [] when no week waits.
+func preseason_actions() -> Array:
+	if preseason_stop() != "week":
+		return []
+	return PreSeason.actions_open(preseason_week() + 1, preseason_run_left())
+
+
+## Your next week as set: {} until you pick an action.
+func preseason_next() -> Dictionary:
+	var next := PreSeason.clean_week(preseason.get("next", {}), [card_drill_plan()])
+	return next if preseason_actions().has(str(next.get("a", ""))) else {}
+
+
+## Your action for the next week: "run", "drill" (the plan you play, or the one
+## you set with set_preseason_drills) or "bond". False when it is not open.
+func set_preseason_action(a: String) -> bool:
+	if not preseason_actions().has(a):
+		return false
+	var was: Dictionary = preseason.get("next", {}) if preseason.get("next") is Dictionary else {}
+	preseason["next"] = PreSeason.clean_week(was if str(was.get("a", "")) == a else {"a": a}, [card_drill_plan()])
+	mark_dirty()
+	return true
+
+
+## Choose the plan a drilling week drills. With `group` ("MID", "DEF", "FWD",
+## "RUCK"; director, 2026-11-06, row 101: "split it between position groups")
+## for that group alone; without, for the whole side, every group alike. False
+## unless your next week is a drilling week, or when the plan cannot be drilled.
+func set_preseason_drills(plans: Array, group := "") -> bool:
+	var next := preseason_next()
+	if str(next.get("a", "")) != "drill":
 		return false
 	if group != "" and not PreSeason.GROUPS.has(group):
 		return false
 	var drills := PreSeason.clean_drills(plans)
 	if drills.is_empty():
 		return false
-	var b: Array = blocks[i]
-	var side: Array = PreSeason.clean_drills(b[2] if b.size() > 2 else [])
-	var split := PreSeason.block_split(b)
+	var side: Array = next.get("d", [])
+	var split := PreSeason.week_split(next)
 	if group == "":
 		side = drills
 		split = {}
@@ -4352,44 +4391,34 @@ func set_preseason_drills(i: int, plans: Array, group := "") -> bool:
 		split.erase(group)
 	else:
 		split[group] = drills
-	blocks[i] = [str(b[0]), "plan", side, split] if not split.is_empty() else [str(b[0]), "plan", side]
+	next["d"] = side
+	if split.is_empty():
+		next.erase("s")
+	else:
+		next["s"] = split
+	preseason["next"] = next
 	mark_dirty()
 	return true
 
 
-## The plans block `i` drills ([] unless it is a Game plan block): the whole
+## The plan your next drilling week drills ([] unless it is one): the whole
 ## side's, or with `group` what that position group drills.
-func preseason_drills(i: int, group := "") -> Array:
-	var blocks := preseason_blocks()
-	if i < 0 or i >= blocks.size() or str(blocks[i][1]) != "plan" or (blocks[i] as Array).size() < 3:
+func preseason_drills(group := "") -> Array:
+	var next := preseason_next()
+	if str(next.get("a", "")) != "drill":
 		return []
-	return PreSeason.group_drills(blocks[i], group) if group != "" else PreSeason.clean_drills(blocks[i][2])
+	return PreSeason.group_drills(next, group) if group != "" else PreSeason.clean_drills(next.get("d", []))
 
 
-## True when Game plan block `i` drills differently for the position groups.
-func preseason_drills_split(i: int) -> bool:
-	var blocks := preseason_blocks()
-	return i >= 0 and i < blocks.size() and not PreSeason.block_split(blocks[i]).is_empty()
+## True when your next drilling week drills differently for the position groups.
+func preseason_drills_split() -> bool:
+	return not PreSeason.week_split(preseason_next()).is_empty()
 
 
-## The fitness base your plan is heading for, were every block trained as it
-## is set now: "thin" / "sound" / "strong".
-func preseason_base() -> String:
-	return PreSeason.base_band(preseason_run_forecast())
-
-
-## The weeks of running your side will have by Round 1: what is already done
-## (cards included, such as a camp) and the weeks still to come as set now.
-## Before week 1 that is exactly the plan's total.
-func preseason_run_forecast() -> float:
-	var blocks := preseason_blocks()
-	var entry: Dictionary = (preseason.get("clubs", {}) as Dictionary).get(my_club, {})
-	var run := float(entry.get("run", 0.0))
-	for w in range(preseason_week() + 1, PreSeason.weeks() + 1):
-		var i := PreSeason.block_of_week(w)
-		if i >= 0 and i < blocks.size():
-			run += PreSeason.work(str(blocks[i][0]), str(blocks[i][1]), "running")
-	return run
+## Who the pre-season match hurt, at every club: rows {"id", "club", "week",
+## "weeks", "kind", "how": "practice"}. Training hurts nobody (rule 69a).
+func preseason_injuries() -> Array:
+	return preseason.get("injuries", []) if preseason.get("injuries") is Array else []
 
 
 ## The time trial, by player id: {"best": [...], "worst": [...]}, or {}.
@@ -4398,7 +4427,7 @@ func preseason_trial() -> Dictionary:
 
 
 ## Train one week, every club by the same rules. Returns where it stopped:
-## "trial" (the time trial has been run), "done" (Round 1 is next) or "".
+## a stop (preseason_stop), "done" (Round 1 is next) or "".
 func preseason_step_week() -> String:
 	var at: Variant = _preseason_week_begin()
 	if at is Dictionary:
@@ -4419,27 +4448,41 @@ func preseason_step_week_async() -> String:
 	return str(at)
 
 
+## Your week can be trained: an action set, or Sim to Round 1 deciding it.
+func _preseason_next_ok() -> bool:
+	return bool(preseason.get("hands_off", false)) or not preseason_next().is_empty()
+
+
 ## A pre-season week up to its practice matches: where it stops, or (the
 ## practice week) the matches to play, for _preseason_week_end.
 func _preseason_week_begin() -> Variant:
 	if not preseason_active():
 		return "done"
 	RookieList.settle(self)
-	if ["trial", "practice", "papers", "story"].has(preseason_stop()):
-		return preseason_stop()
+	var stop := preseason_stop()
+	if stop != "" and not (stop == "week" and _preseason_next_ok()):
+		return stop
 	if preseason_week() >= PreSeason.weeks():
 		_finish_preseason()
 		return "done"
 	var w := preseason_week() + 1
 	var clubs: Dictionary = preseason.get("clubs", {})
+	var bonded := false
 	for club in season.clubs:
-		if clubs.has(str(club)) and season.lists.has(club):
-			# A week passes for anyone already hurt, then the week is trained.
-			Injuries.tick(season.lists[club])
-			_light_heal(clubs[str(club)], season.lists[club], w)
-			_preseason_train(str(club), clubs[str(club)], w)
+		var code := str(club)
+		if not clubs.has(code) or not season.lists.has(club):
+			continue
+		# A week passes for anyone already hurt, then the week is taken.
+		Injuries.tick(season.lists[club])
+		if w <= PreSeason.train_weeks():
+			var wk := _preseason_week_for(code, w)
+			_preseason_take(code, clubs[code], wk, w)
+			bonded = bonded or (code == my_club and str(wk.get("a", "")) == "bond")
+	preseason.erase("next")
 	preseason["week"] = w
 	mark_dirty()
+	if bonded:
+		_preseason_cards()
 	if str(PreSeason.STOPS.get(w, "")) == "trial":
 		preseason["trial"] = PreSeason.trial(my_list, career_seed, season_year, my_club)
 		preseason["trial_seen"] = false
@@ -4452,110 +4495,60 @@ func _preseason_week_begin() -> Variant:
 	if w >= PreSeason.weeks():
 		_finish_preseason()
 		return "done"
-	return ""
+	return preseason_stop()
 
 
-## A Light week is easy on the body: the injured heal light_heal_extra weeks
-## more (a concussion runs on matches, under the protocols, so not that).
-func _light_heal(entry: Dictionary, list: Array, w: int) -> void:
-	var i := PreSeason.block_of_week(w)
-	var blocks: Array = entry.get("blocks", [])
-	if i < 0 or i >= blocks.size() or str(blocks[i][0]) != "light":
+## What a club does in week `w`: yours as you set it; a rival's (and yours
+## under Sim to Round 1) by the rivals' rule (PreSeason.ai_action): the booked
+## running, then the plan it plays drilled until the side knows it well, then
+## bonding.
+func _preseason_week_for(code: String, w: int) -> Dictionary:
+	var entry := preseason_entry(code)
+	var left := PreSeason.run_left(entry)
+	if code == my_club and not bool(preseason.get("hands_off", false)):
+		var next := PreSeason.clean_week(preseason.get("next", {}), [card_drill_plan()])
+		if PreSeason.actions_open(w, left).has(str(next.get("a", ""))):
+			return next
+	var plan := club_plan if code == my_club else _usual_plan(code)
+	var credit := _drill_credit_of(code)
+	var f := PreSeason.drilled_fluency(plan_fluency(code, plan), float(credit.get(plan, 0.0)))
+	var a := PreSeason.ai_action(w, left, plan, f)
+	if a == "drill":
+		return {"a": "drill", "d": [plan]}
+	return {"a": a} if a != "" else {}
+
+
+## One club's week taken: a running week counts toward its booking, a drilling
+## week toward its plan (counted at the end, _finish_drills), a rival's
+## bonding week rolls its card (ClubStories.rival_bond). The summer pays no
+## skill development (director, 2026-11-17: "No, starts at the game").
+func _preseason_take(code: String, entry: Dictionary, wk: Dictionary, w: int) -> void:
+	if wk.is_empty():
 		return
-	for p in list:
-		var left := int(p.get("injury_weeks", 0))
-		if left <= 0 or str(p.get("injury_kind", "")) == "concussion":
-			continue
-		p["injury_weeks"] = maxi(0, left - int(PreSeason.tune("light_heal_extra")))
-		if int(p["injury_weeks"]) == 0:
-			p.erase("injury_kind")
+	match str(wk["a"]):
+		"run":
+			entry["run"] = int(entry.get("run", 0)) + 1
+		"bond":
+			if code != my_club:
+				var card := ClubStories.rival_bond(self, code, w)
+				if card != "":
+					wk["card"] = card
+	if not (entry.get("acts") is Array):
+		entry["acts"] = []
+	(entry["acts"] as Array).append(wk)
 
 
-## One club's training week: running work toward its base, skills work as
-## development XP for every fit player, spent as a match's XP is.
-func _preseason_train(club: String, entry: Dictionary, w: int) -> void:
-	var i := PreSeason.block_of_week(w)
-	var blocks: Array = entry.get("blocks", [])
-	if i < 0 or i >= blocks.size():
-		return   # the quiet week: the side freshens up
-	var load := str(blocks[i][0])
-	var focus := str(blocks[i][1])
-	entry["run"] = float(entry.get("run", 0.0)) + PreSeason.work(load, focus, "running")
-	var xp := PreSeason.week_xp(load, focus)
-	var list: Array = season.lists[club]
-	if xp > 0:
-		var staff: Dictionary = CoachEffects.staffs(coaches).get(club, {}) if not coaches.is_empty() else {}
-		for p in list:
-			if int(p.get("injury_weeks", 0)) > 0:
-				continue
-			p["xp"] = int(p.get("xp", 0)) + _club_xp(club, p, xp, staff, false)
-			if club != my_club:
-				ai_spend_xp(p)
-		if club == my_club:
-			apply_train_plans()
-	_preseason_injuries(club, list, load, w)
-
-
-## A Heavy week's risk, every club alike: each fit player's own roll for a
-## soft-tissue injury (PreSeason.training_injury), recorded on him the way a
-## match injury is, in the pre-season's record, as a career fact, and (yours)
-## in the news.
-func _preseason_injuries(club: String, list: Array, load: String, w: int) -> void:
-	if load != "heavy":
-		return
-	var rows := []
-	for p in list:
-		var inj := PreSeason.training_injury(p, load, career_seed, season_year, club, w)
-		if inj.is_empty():
-			continue
-		p["injury_weeks"] = int(inj["weeks"])
-		p["injury_kind"] = str(inj["kind"])
-		rows.append({"id": str(p["id"]), "club": club, "week": w, "weeks": int(inj["weeks"]), "kind": str(inj["kind"])})
-		if club == my_club:
-			add_news("injury", "%s (%s, %s) was hurt in pre-season training." % [
-					GameDB.player_display_name(p), str(inj["kind"]), _weeks_text(int(inj["weeks"]))], "Pre-season")
-	if rows.is_empty():
-		return
-	if not (preseason.get("injuries") is Array):
-		preseason["injuries"] = []
-	(preseason["injuries"] as Array).append_array(rows)
-	_log_injuries(rows, "Pre-season")
-
-
-## Week 8 is done: each club's running work becomes the base on its season
-## fitness record (the one value handed over), and a heavy or light last block
-## is the existing heavy-legs or fresh week for Round 1.
+## Week 8 is done: each club's drilled plans move up (_finish_drills), and the
+## season is next.
 func _finish_preseason() -> void:
-	var clubs: Dictionary = preseason.get("clubs", {})
 	for club in season.clubs:
-		var code := str(club)
 		if season.lists.has(club):
 			TeamFamiliarity.round_one(season.lists[club])
-		if not clubs.has(code) or not season.lists.has(club):
-			continue
-		var entry: Dictionary = clubs[code]
-		var rec := fitness_record(code)
-		var band := PreSeason.base_band(float(entry.get("run", 0.0)))
-		if band == PreSeason.DEFAULT_BASE:
-			rec.erase("base")
-		else:
-			rec["base"] = band
-		conditioning[code] = rec
-		var flag := PreSeason.round_one_flag(entry.get("blocks", []))
-		for p in season.lists[club]:
-			p.erase("heavy_legs")
-			p.erase("fresh")
-			if flag != "":
-				p[flag] = true
 	preseason["done"] = true
-	preseason["legs"] = true
 	var drilled := _finish_drills()
-	if my_club != "" and clubs.has(my_club):
-		add_news("preseason", "Pre-season is done. %s go into Round 1 on %s.%s" % [
-				GameDB.club_name(my_club),
-				str(PreSeason.BASE_LABEL[Conditioning.base_of(fitness_record(my_club))]), drilled], "Pre-season")
+	if my_club != "" and (preseason.get("clubs", {}) as Dictionary).has(my_club):
+		add_news("preseason", "Pre-season is done. %s go into Round 1.%s" % [GameDB.club_name(my_club), drilled], "Pre-season")
 	mark_dirty()
-
 
 # ---------------------------------------------------------------------------
 # The papers (PreSeason.gd, week 8): a predicted ladder and one story to answer
@@ -4875,14 +4868,27 @@ func plan_fluency_after_drills(plan: String) -> float:
 	return PreSeason.drilled_fluency(plan_fluency(my_club, plan), float(my_drill_credit().get(plan, 0.0)))
 
 
-## Your weeks of drilling by plan: the blocks as set now and any card's.
-func my_drill_credit() -> Dictionary:
-	var credit: Dictionary = PreSeason.drill_credit(preseason_blocks(), PreSeason.group_shares(my_list))
-	var extra: Dictionary = preseason.get("bonus_drill", {})
-	for plan in extra:
-		credit[plan] = float(credit.get(plan, 0.0)) + float(extra[plan])
+## A club's weeks of drilling by plan so far: its drilling weeks (a split week
+## counted by each position group's share of its list) and, yours, any card's.
+func _drill_credit_of(code: String) -> Dictionary:
+	var list: Array = season.lists.get(code, []) if season != null else []
+	var credit: Dictionary = PreSeason.drill_credit(preseason_entry(code).get("acts", []), PreSeason.group_shares(list))
+	if code == my_club:
+		var extra: Dictionary = preseason.get("bonus_drill", {})
+		for plan in extra:
+			credit[plan] = float(credit.get(plan, 0.0)) + float(extra[plan])
 	return credit
 
+
+## Your weeks of drilling by plan: the weeks done, the week you have set, and any card's.
+func my_drill_credit() -> Dictionary:
+	var credit := _drill_credit_of(my_club)
+	var next := preseason_next()
+	if str(next.get("a", "")) == "drill":
+		var more: Dictionary = PreSeason.drill_credit([next], PreSeason.group_shares(my_list))
+		for plan in more:
+			credit[plan] = float(credit.get(plan, 0.0)) + float(more[plan])
+	return credit
 
 ## Whether the plans carry a "Plan fluency" line at all (a season and a club).
 func plan_known_shown() -> bool:
@@ -4906,14 +4912,7 @@ func _finish_drills() -> String:
 		var code := str(club)
 		if not plan_known.has(code):
 			continue
-		# A split block's drilling counts each position group by its share of the list.
-		var list: Array = season.lists.get(club, []) if season != null else []
-		var credit: Dictionary = PreSeason.drill_credit((clubs[club] as Dictionary).get("blocks", []),
-				PreSeason.group_shares(list))
-		if code == my_club:
-			var extra: Dictionary = preseason.get("bonus_drill", {})
-			for plan in extra:
-				credit[plan] = float(credit.get(plan, 0.0)) + float(extra[plan])
+		var credit := _drill_credit_of(code)
 		for plan in credit:
 			var was := float((plan_known[code] as Dictionary).get(plan, 0))
 			var now := PreSeason.drilled_fluency(was, float(credit[plan]))
@@ -5104,43 +5103,48 @@ func _settle_usual_plans() -> void:
 
 
 ## Press on from where the pre-season is waiting, to the next stop or to
-## Round 1. Returns "trial" or "done".
+## Round 1. Returns where it stopped (preseason_stop) or "done". The meetings
+## and the plan are yours to settle (preseason_meetings_done,
+## set_preseason_plan), and a week waits for its action (set_preseason_action).
 func preseason_advance() -> String:
 	if not preseason_active():
 		return "done"
-	if preseason_stop() == "trial":
-		preseason["trial_seen"] = true
-	elif preseason_stop() == "story":
-		_end_preseason_cards()
-	elif preseason_stop() == "practice":
-		if not practice_played():
-			sim_practice_match()
-			mark_dirty()
-			autosave()
-			return "practice"
-		(preseason["practice"] as Dictionary)["seen"] = true
-	elif preseason_stop() == "papers":
-		# Pressed on without answering: saying nothing is an answer, and costs
-		# what it costs on any card.
-		papers_say_nothing()
-		(preseason["papers"] as Dictionary)["seen"] = true
+	match preseason_stop():
+		"meetings", "plan":
+			return preseason_stop()
+		"week":
+			if not _preseason_next_ok():
+				return "week"
+		"trial":
+			preseason["trial_seen"] = true
+		"story":
+			_end_preseason_cards()
+		"practice":
+			if not practice_played():
+				sim_practice_match()
+				mark_dirty()
+				autosave()
+				return "practice"
+			(preseason["practice"] as Dictionary)["seen"] = true
+		"papers":
+			# Pressed on without answering: saying nothing is an answer, and costs
+			# what it costs on any card.
+			papers_say_nothing()
+			(preseason["papers"] as Dictionary)["seen"] = true
 	var at := ""
 	while at == "":
 		at = preseason_step_week()
-		# The end of a block may bring a card: it stops the pre-season after
-		# the time trial or the pre-season match, if that is the week.
-		if preseason_active() and PreSeason.STORY_WEEKS.has(preseason_week()) and int(preseason.get("cards_week", 0)) != preseason_week():
-			preseason["cards_week"] = preseason_week()
-			if _preseason_cards() and at == "":
-				at = "story"
 	mark_dirty()
 	autosave()
 	return at
 
 
-## "Sim to Round 1": the rest of the pre-season on the settings in force,
-## stopping for nothing. Also what a round played with a pre-season still
-## pending does first, so a hands-off run never skips one.
+## "Sim to Round 1" (director, 2026-11-17, "The rivals' rule"): the rest of the
+## pre-season stopping for nothing, your weeks taken as a rival takes its own
+## (the booked running, then the plan you play drilled until the side knows it
+## well, then bonding; a card settles as a skipped card does). Also what a round
+## played with a pre-season still pending does first, so a hands-off run never
+## skips one.
 func preseason_sim_to_round1() -> void:
 	if not preseason_active():
 		return
@@ -5169,8 +5173,16 @@ func preseason_sim_to_round1_async() -> void:
 	autosave()
 
 
-## A hands-off pre-season presses on past the trial and any card...
+## A hands-off pre-season keeps the meetings as they are and the fitness plan
+## you run (booking its running), and presses on past the trial and any card...
 func _hands_off_cards() -> void:
+	if preseason_stop() == "meetings":
+		preseason["met"] = true
+	if preseason_stop() == "plan":
+		var entry := preseason_entry()
+		entry["need"] = preseason_plan_runs(fitness_plan(my_club))
+		(preseason["clubs"] as Dictionary)[my_club] = entry
+		preseason["planned"] = true
 	preseason["trial_seen"] = true
 	if preseason_stop() == "story":
 		_end_preseason_cards()
@@ -5193,18 +5205,20 @@ func _hands_off_stops(simmed: bool) -> void:
 
 
 # ---------------------------------------------------------------------------
-# Pre-season story cards (data/stories, phase "preseason")
+# The bonding deck (data/stories/bonding.json, phase "bonding")
 # ---------------------------------------------------------------------------
-## The block just finished may stop the pre-season for a card (at most one;
-## most pre-seasons two or three over the three blocks). Round 1's cards, drawn
-## when the season was made, wait aside until the pre-season is done. Returns
-## whether a card is waiting.
+## Your bonding week deals one card from the bonding deck (director,
+## 2026-11-17, rule 69a). Round 1's cards, drawn when the season was made, wait
+## aside until it is answered. Returns whether a card is waiting.
 func _preseason_cards() -> bool:
 	if my_club == "" or not stories_on or is_sacked():
 		return false
-	var drawn := ClubStories.pick(self)
+	var drawn := ClubStories.bonding_pick(self)
 	if drawn.is_empty():
 		return false
+	var acts: Array = preseason_entry().get("acts", [])
+	if not acts.is_empty():
+		(acts[acts.size() - 1] as Dictionary)["card"] = str((drawn[0] as Dictionary).get("tid", ""))
 	if not preseason.has("round1"):
 		preseason["round1"] = week_events
 	week_events = drawn
@@ -5226,13 +5240,12 @@ func _end_preseason_cards() -> void:
 	mark_dirty()
 
 
-## Running done on a card, in weeks of solid running toward the fitness base.
+## Running done on a card, in weeks toward the running the plan booked.
 func preseason_add_running(weeks: float) -> void:
-	var entry: Dictionary = (preseason.get("clubs", {}) as Dictionary).get(my_club, {})
+	var entry := preseason_entry()
 	if entry.is_empty():
 		return
-	entry["run"] = maxf(0.0, float(entry.get("run", 0.0)) + weeks)
-
+	entry["run"] = maxi(0, int(entry.get("run", 0)) + roundi(weeks))
 
 ## The plan a card's drilling goes to: the one the side plays, or for a side
 ## that plays Balanced, the one it knows least.
@@ -5528,6 +5541,12 @@ func _practice_finish(club: String, built: Dictionary, res: Dictionary) -> Dicti
 			ai_spend_xp(p)
 	if club == my_club:
 		apply_train_plans()
+	# Retraining starts at the pre-season game (director, 2026-11-17, rule 69a):
+	# the match is the first week of every club's position projects.
+	if club == my_club:
+		_advance_projects()
+	else:
+		_ai_projects(list)
 	var rows := []
 	var w := preseason_week()
 	for inj in res.get("injuries", []):
@@ -5606,7 +5625,7 @@ func _preseason_week_end(job: Dictionary, results: Array) -> String:
 	if preseason_week() >= PreSeason.weeks():
 		_finish_preseason()
 		return "done"
-	return ""
+	return preseason_stop()
 
 
 ## Every other pair of clubs plays its practice match: each club's recruiters
@@ -13944,6 +13963,11 @@ func set_tutorials_on(on: bool) -> void:
 func new_career_dial(dial: String) -> String:
 	var saved := str(get_setting(dial, ""))
 	if saved == "":
+		# The old Easy / Normal / Hard setting never touched the board, so a
+		# device that has not picked a board starts on the default (Patient,
+		# director 2026-11-17); its rivals follow the old setting.
+		if dial == DifficultyDials.BOARD:
+			return DifficultyDials.default_key(dial)
 		return str(DifficultyDials.from_legacy(str(get_setting("difficulty", "normal")))[dial])
 	return DifficultyDials.normalize(dial, saved)
 
@@ -14418,6 +14442,13 @@ func _board_after_round(results: Array) -> void:
 	# the round. On a week off in the finals nothing was played, so the ones that
 	# are for the next match wait for it.
 	var week_off: bool = res.is_empty() and last_phase == "finals"
+	# A rival's bonding card can leave one of its players sore for a match
+	# (ClubStories.rival_bond): it ends with the round too.
+	if not week_off and season != null:
+		for code in season.lists:
+			if str(code) != my_club:
+				for q in season.lists[code]:
+					(q as Dictionary).erase("sore")
 	for p in my_list:
 		p.erase("rested")
 		p.erase("sore")

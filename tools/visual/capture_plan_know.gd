@@ -1,13 +1,12 @@
 extends SceneTree
 ## Plan familiarity, for the lead's check and the director's look. Needs a real renderer:
 ##   godot --path . --script tools/visual/capture_plan_know.gd -- --out /tmp/pk --club FRE [--size 1280x720]
-## Writes <out>_drill.png (a Game plan block and the plans it can drill, with how
-## well the side knows each), <out>_drill_two.png (two plans drilled),
-## <out>_tiles.png (the pre-match plan tiles, "Plan fluency"), <out>_break.png
-## (the break's plan call and the line under it). The levels shown are set by this
-## tool for the look (contest low, controlled medium); it is not a balance read.
-## <out>_part.png (row 126): a 2-week block split between two plans, each button saying
-## how far along it goes, and a plan already part way from last year.
+## Writes <out>_drill.png (a pre-season week on Game plan drilling: the plans it
+## can drill, with how well the side knows each), <out>_drill_split.png (the
+## forwards given a plan of their own), <out>_part.png (a plan already part way
+## from last year), <out>_tiles.png (the pre-match plan tiles, "Plan fluency"),
+## <out>_break.png (the break's plan call and the line under it). The levels
+## shown are set by this tool for the look; it is not a balance read.
 
 var W := 390
 var H := 844
@@ -76,32 +75,33 @@ func _run() -> void:
 	state.plan_known[club]["defensive"] = 0
 	state.plan_known[club]["controlled"] = 1
 	state.plan_known[club]["defensive"] = 1
+	# Past the meetings and the fitness plan (Develop: two weeks of running) to
+	# the first week, its action not yet picked (rule 69a).
+	state.preseason_meetings_done()
+	state.set_preseason_plan("develop")
+	var guard := 0
+	while state.preseason_stop() != "week" and guard < 10:
+		guard += 1
+		state.preseason_advance()
 	root.get_node("Router").go("hub")
 	await _frames(10)
-	await _press("Focus0_plan")
-	await _press("Drill0_contest")
-	await _press("Drill0_attacking")
-	await _scroll_to("BlockCost_0")
+	await _press("ActionTap_drill")
+	await _press("Drill_contest")
+	await _scroll_to("DrillPicker")
 	await _shot(out + "_drill.png")
-	await _press("Drill0_defensive")
-	await _scroll_to("BlockCost_0")
-	await _shot(out + "_drill_two.png")
-	await _press("Drill0_defensive")
-	# Row 126: the two-week block split between two plans, and a plan part way.
-	state.set_preseason_block(0, "solid", "running")
-	state.set_preseason_block(1, "solid", "plan")
-	state.set_preseason_drills(1, ["contest", "controlled"])
+	await _press("DrillFor_FWD")
+	await _press("Drill_attacking")
+	await _scroll_to("DrillSplit")
+	await _shot(out + "_drill_split.png")
+	await _press("DrillFor_ALL")
+	await _press("Drill_defensive")
+	# A plan part way from last year.
 	state.plan_known[club]["defensive"] = 0.5
 	root.get_node("Router").go("hub")
 	await _frames(10)
-	await _scroll_to("BlockCost_1")
+	await _scroll_to("DrillPicker")
 	await _shot(out + "_part.png")
 	state.plan_known[club]["defensive"] = 1
-	state.set_preseason_block(1, "solid", "running")
-	state.set_preseason_block(0, "solid", "plan")
-	state.set_preseason_drills(0, ["contest"])
-	root.get_node("Router").go("hub")
-	await _frames(10)
 	await _press("PreSeasonSim")
 	await _frames(6)
 	await _press("PreSeasonSimGo")

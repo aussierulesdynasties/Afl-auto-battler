@@ -319,7 +319,7 @@ func _test_fitness_debt() -> void:
 	_grand_final(4800, true, 10)
 	var card := GameState.story_card("gf_premiers")
 	var lines := " ".join(StoryEngine.stakes_lines(card["options"][0]["effects"], card["facts"]))
-	_check(lines.contains("Next pre-season, the list starts a week of running behind. A strong fitness base"), "B8 'Celebrate' says its cost: %s" % lines)
+	_check(lines.contains("Next pre-season books one week more running than the plan needs."), "B8 'Celebrate' says its cost: %s" % lines)
 	_play("gf_premiers", 0)
 	_check(GameState.preseason_run_debt == -1.0, "B8 'Celebrate': one week of running owed (%s)" % GameState.preseason_run_debt)
 	_check(GameState.save_career() and GameState.load_career() and GameState.preseason_run_debt == -1.0, "The debt survives a reload")
@@ -332,9 +332,8 @@ func _test_fitness_debt() -> void:
 	GameState.preseason_run_debt = -1.0
 	GameState.preseason = {}
 	GameState.open_preseason()
-	var entry: Dictionary = (GameState.preseason.get("clubs", {}) as Dictionary).get("GEE", {})
-	var other: Dictionary = (GameState.preseason.get("clubs", {}) as Dictionary).get("COL", {})
-	_check(float(entry.get("run", 0.0)) == float(other.get("run", 0.0)) - 1.0 and GameState.preseason_run_debt == 0.0,
-			"The pre-season opens a week of running behind, and the debt is paid (%s)" % str(entry.get("run", "?")))
+	# Rule 69a ("One more running week"): the plan books one more week of running.
+	_check(int(GameState.preseason.get("extra_run", 0)) == 1 and GameState.preseason_run_debt == 0.0,
+			"The next pre-season books one more running week, and the debt is paid (%s)" % str(GameState.preseason.get("extra_run", "?")))
 	PreSeason.reload()
 	GameState.delete_saved_career()

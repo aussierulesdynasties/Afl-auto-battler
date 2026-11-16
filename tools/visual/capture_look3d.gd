@@ -2,7 +2,8 @@ extends SceneTree
 ## PROTOTYPE (row 202, 3D view plan step 2a): the rendering foundation's options on the 3D oval,
 ## for the director to choose between. The options live here, not in the game: nothing is the
 ## settled look until he picks it (rule 2.78's freeze).
-##   godot --path . --script tools/visual/capture_look3d.gd -- OUTDIR LOOKS [WEATHER] [SLOT]
+##   godot --path . --script tools/visual/capture_look3d.gd -- OUTDIR LOOKS [WEATHER] [SLOT] [PLAYER_GLB]
+## PLAYER_GLB: a candidate player file (res://...) that carries its own jog, carry and idle loops.
 ## LOOKS is a comma list of options (see _apply); an option may join parts with "+", e.g. sky+agx. A seeded Fremantle v St Kilda match is
 ## played until the phone camera (PitchView's aim_end) holds at least MIN_IN_VIEW men with the
 ## ball among them, read from the logged positions, then that same moment is saved under each
@@ -38,6 +39,11 @@ func _run() -> void:
 	var looks := (str(args[1]) if args.size() > 1 else "today").split(",")
 	var weather := str(args[2]) if args.size() > 2 else "perfect"
 	var slot := str(args[3]) if args.size() > 3 else "day"
+	if args.size() > 4 and str(args[4]) != "":
+		var o3 = load("res://scripts/ui/match/Oval3D.gd")   # loaded, not named (see below)
+		o3.player_glb = str(args[4])
+		o3.loops_glb = str(args[4])
+		o3.hair_glb = "res://__no_hair_shells__.glb"   # the shells fit our old head: painted crop
 	DirAccess.make_dir_recursive_absolute(out)
 	OS.low_processor_usage_mode = false
 	var gdb = root.get_node("GameDB")
@@ -129,6 +135,39 @@ func _run() -> void:
 			for i in range(3):
 				await process_frame
 			await _save(oval, out, "look_%s_%s_%s_%s" % [look, slot, weather, cam])
+	# CLIP=N (a check of the players' movement, not a camera proposal): N frames of play on
+	# from the moment, the close camera following, saved as clip_0000.png ... at 24 a second.
+	var clip := int(OS.get_environment("CLIP")) if OS.get_environment("CLIP") != "" else 0
+	# CLIPFOLLOW=1: instead, the man nearest the ball, followed 4 m off his leading side, so one
+	# runner's legs, arms and face are seen through the whole clip.
+	var follow := OS.get_environment("CLIPFOLLOW") == "1"
+	var who: Node3D = null
+	var bb: Vector3 = oval.ball.global_position
+	for p in oval.players:
+		if who == null or (p["node"] as Node3D).global_position.distance_to(bb) < who.global_position.distance_to(bb):
+			who = p["node"]
+	var last := who.global_position
+	var heading := Vector3(0, 0, 1)
+	var eye := Vector3.ZERO
+	_size(SIZE)
+	for k in range(clip):
+		d.advance(DT)
+		oval.sync(DT)
+		if follow:
+			var at := who.global_position
+			var v := Vector3(at.x - last.x, 0.0, at.z - last.z)
+			if v.length() > 0.01:
+				heading = heading.lerp(v.normalized(), 0.15).normalized()
+			last = at
+			var side := heading.rotated(Vector3.UP, deg_to_rad(40.0))
+			var cam_to := at + side * 4.0 + Vector3(0, 1.7, 0)
+			eye = cam_to if k == 0 else eye.lerp(cam_to, 0.2)
+			oval.camera.global_position = eye
+			oval.camera.look_at(at + Vector3(0, 1.2, 0), Vector3.UP)
+		else:
+			oval.aim_close()
+		await process_frame
+		await _save(oval, out, "clip_%04d" % k)
 	quit()
 
 

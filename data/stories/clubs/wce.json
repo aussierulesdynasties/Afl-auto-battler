@@ -164,17 +164,18 @@
 		"club": "WCE",
 		"controversy": false,
 		"category": "community",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["Community camp"],
 		"text": ["The preseason community camp heads to a country town: the Goldfields, the Pilbara or the South West. The whole list could go, or just the leadership group."],
 		"choices": [
-			{"key": "all", "label": "Take the whole list",
-			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The whole list spent three days in the country together"}, {"op": "board", "d": 1, "was": "members"}, {"op": "forgo_xp", "d": 4, "who": "all"}],
-			 "result": "Three days of school visits and country hospitality. Three days off the track."},
 			{"key": "leaders", "label": "Send the leaders only",
-			 "effects": [{"op": "xp", "d": 4, "who": "all"}, {"op": "board", "d": -1, "was": "members"}],
-			 "result": "The training is banked. The town feels short-changed."}
+			 "effects": [{"op": "board", "d": 2}],
+			 "result": "The leaders go. The town loved it."},
+			{"key": "whole", "label": "Take the whole list",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The whole list went bush"}, {"op": "board", "d": 3}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "The whole list in a country town. A long trip."}
 		]
 	},
 	{
@@ -199,17 +200,18 @@
 		"club": "WCE",
 		"controversy": false,
 		"category": "training",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["Perth heat"],
 		"text": ["It's forecast to pass 38 degrees all week. The sports scientists want sessions moved to 6am; the senior players say the heat is part of being a Perth side."],
 		"choices": [
 			{"key": "dawn", "label": "Train at dawn",
-			 "effects": [{"op": "fresh", "who": "side"}, {"op": "morale", "d": -1, "who": "all"}],
-			 "result": "Alarms at 4:30. The legs stay good."},
+			 "effects": [{"op": "morale", "d": 2, "who": "all"}],
+			 "result": "Early starts and fresh legs. The group liked it."},
 			{"key": "heat", "label": "Train in the heat",
-			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The group trained through a Perth scorcher"}, {"op": "xp", "d": 3, "who": "all"}, {"op": "odds", "chance": 15, "hit": [{"op": "heavy_legs", "who": "side"}], "miss": []}],
-			 "result": "Hard work in the heat. The physios are busy."}
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "They trained through the heat"}, {"op": "culture", "strand": "together", "d": 1, "why": "They got through the heat together"}, {"op": "sore", "who": "one"}],
+			 "result": "Hard, hot sessions. One of them pulled up sore."}
 		]
 	},
 	{
