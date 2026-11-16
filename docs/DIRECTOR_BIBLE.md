@@ -341,7 +341,7 @@ Source tags: DB = DESIGN_BIBLE; RM26/27/28/29/30/32 = roadmap chapters 26, 27, 2
 
 **2.84** 3D world skies (2026-11-17; row 202, 2a). Shown the weather and time-of-day board, he asked for a twilight that looks "slightly more beautiful, sunsetty", and said "i 100% want skies" and "wanting skies is not a camera decision, its a world design decision": the world has designed skies, one for each weather and time of day, made with the light (2a).
 
-**2.85** 3D oval football proof: real AFL is the target, within 10% (2026-11-17; row 201). Asked whether the 3D oval should aim at the real numbers (team spread with our ball, their ball and a loose ball; ball-ups and throw-ins; kick-ins; set-shot spots; kick length, ground made and count), he chose the real numbers every time and said "stupid fkn questions when you already know i prefer things to be as real": real footy is the target by default, and is not asked again. Pass mark: "Within 10%" (a real 74-78 m passes from 67 to 86 m).
+**2.85** 3D oval football proof: real AFL is the target, within 10% (2026-11-17; row 201). Asked whether the 3D oval should aim at the real numbers (team spread with our ball, their ball and a loose ball; ball-ups and throw-ins; kick-ins; set-shot spots; kick length, ground made and count), he chose the real numbers every time and said "stupid fkn questions when you already know i prefer things to be as real": real footy is the target by default, and is not asked again. Pass mark: "Within 10%" (a real 74-78 m passes from 66.6 to 85.8 m).
 
 ---
 

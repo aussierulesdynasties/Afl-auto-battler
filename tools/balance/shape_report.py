@@ -115,7 +115,7 @@ def mark(value, ref):
     if not ref or ref.get("lo") is None:
         return "-"
     # The director's pass mark (rule 2.85): IN within 10% of the real range's
-    # ends (74-78 m passes from 67 to 86 m), NEAR within 20%, else OUT.
+    # ends (74-78 m passes from 66.6 to 85.8 m), NEAR within 20%, else OUT.
     lo, hi = ref["lo"], ref["hi"]
     if lo - abs(lo) * 0.1 <= value <= hi + abs(hi) * 0.1:
         return "IN"
