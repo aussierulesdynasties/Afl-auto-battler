@@ -35,6 +35,7 @@ func run() -> void:
 	_t("_test_real_lists_start")
 	_t("_test_rebuild_walkouts_sign")
 	_t("_test_gen_traits_rates")
+	_t("_test_copied_from_2012_on")
 	# Last: generated classes draw names from a shared counter, and a surname
 	# clash changes an international prospect's role, so running this earlier
 	# moved _test_class_tiers' comparison.
@@ -1370,6 +1371,73 @@ func _test_real_lists_start() -> void:
 	GameState.reset()
 	_check(GameState.start_mode == "redraft" and not GameState.opening_draft, "A new career is a redraft unless chosen")
 
+
+## Director, 2026-11-17: a generated player is copied from a real player of a season from
+## 2012 to 2026 ("they arent based on players pre-2012", "every other year"), and each
+## copied skill is moved by its own roll of up to 5% ("10% different ... to give a
+## fingerprint", then "5%").
+func _test_copied_from_2012_on() -> void:
+	var pool: Dictionary = Prospects._copy_pool()
+	var years := {}
+	var rows := 0
+	for role in ["DEF", "MID", "FWD", "RUCK"]:
+		var got: Array = (pool.get(role, {}) as Dictionary).get("rows", [])
+		_check(got.size() > 300, "The copy pool has %s player-seasons (%d)" % [role, got.size()])
+		rows += got.size()
+		for r in got:
+			years[int(r["_year"])] = true
+	var ys := years.keys()
+	ys.sort()
+	_check(ys.size() == 15 and int(ys[0]) == 2012 and int(ys[-1]) == 2026,
+			"Every season 2012-2026 is in the copy pool and none earlier (%s, %d rows)" % [str(ys), rows])
+	# The pick: one of the 10 player-seasons of his role nearest his level by overall.
+	var pick_rng := RandomNumberGenerator.new()
+	pick_rng.seed = 41
+	var near := Prospects.copy_candidates("MID", 75.0, pick_rng)
+	var far := 0.0
+	for r in near:
+		far = maxf(far, absf(float(r["_ovr"]) - 75.0))
+	var beyond := 0
+	for r in (pool["MID"] as Dictionary)["rows"]:
+		if absf(float(r["_ovr"]) - 75.0) < far:
+			beyond += 1
+	_check(near.size() == Prospects.SHAPE_NEAREST and beyond <= Prospects.SHAPE_NEAREST,
+			"He is copied from the %d midfielders nearest a 75 (furthest %.0f away)" % [near.size(), far])
+	# Dozens of player-seasons share a whole-number overall: the draw reaches every season,
+	# not only the first in the file.
+	var drawn := {}
+	for n in 200:
+		var r := RandomNumberGenerator.new()
+		r.seed = 1000 + n
+		for c in Prospects.copy_candidates("MID", 75.3, r):
+			drawn[int(c["_year"])] = true
+	_check(drawn.size() >= 12, "Copies of a 75 come from %d of the 15 seasons" % drawn.size())
+	# The fingerprint, on a draft-class player: every skill within 5% of the copied one's.
+	var p := {"id": "copytest", "draft_year": 2030, "generated": true}
+	var seed_rng := RandomNumberGenerator.new()
+	seed_rng.seed = 41
+	var shape: Dictionary = Prospects._copy_for("MID", seed_rng, 75.0, p)
+	var d: Dictionary = near[pick_rng.randi_range(0, near.size() - 1)]
+	var within := true
+	var moved := 0
+	for key in Prospects.ATTR_KEYS:
+		var real := float(d[key])
+		var mine := float(shape[key]) + float(d["_ovr"])
+		if mine < clampf(real * 0.95, 1.0, 99.0) - 0.001 or mine > clampf(real * 1.05, 1.0, 99.0) + 0.001:
+			within = false
+		if absf(mine - real) > 0.001:
+			moved += 1
+	_check(within and moved >= Prospects.ATTR_KEYS.size() - 1,
+			"Each copied skill is moved by its own roll within 5%% (%d of %d moved)" % [moved, Prospects.ATTR_KEYS.size()])
+	var again_rng := RandomNumberGenerator.new()
+	again_rng.seed = 41
+	_check(Prospects._copy_for("MID", again_rng, 75.0, p) == shape, "The same player is copied with the same fingerprint every time")
+	var other := p.duplicate()
+	other["id"] = "copytest2"
+	var other_rng := RandomNumberGenerator.new()
+	other_rng.seed = 41
+	_check(Prospects._copy_for("MID", other_rng, 75.0, other) != shape,
+			"Two players copied from the same real player carry different fingerprints")
 
 
 ## Row 104 (4.Q10): generated players carry the special traits at the
