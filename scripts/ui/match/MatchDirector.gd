@@ -937,7 +937,7 @@ func _shot_phases(k: int) -> Array:
 		# He runs onto it before he shoots: capped at 0.35 s, the ball was put
 		# in his hands from up to 4.6 m and kicked from where it lay (seed 31
 		# FRE v STK, five open-play shots).
-		out += [{"t": "collect", "who": s}, {"t": "possess", "who": s, "quiet": true},
+		out += [{"t": "collect", "who": s, "roll": true}, {"t": "possess", "who": s, "quiet": true},
 				{"t": "hold", "who": s, "dur": 0.0, "carry": (ball["pos"] as Vector2) + on}]
 	var d := (ball["pos"] as Vector2).distance_to(target)
 	if not set_shot:
@@ -1078,7 +1078,9 @@ func _take_free(who: int) -> Array:
 		return []
 	if str(ball["mode"]) == "held" and int(ball["holder"]) == who:
 		return []
-	return [{"t": "collect", "who": who}, {"t": "possess", "who": who, "quiet": true}]
+	# (A ball still loose comes his way off the men round it, as any loose
+	# ball does: walking 30 m to a ball nobody touches is play waiting.)
+	return [{"t": "collect", "who": who, "roll": true}, {"t": "possess", "who": who, "quiet": true}]
 
 
 ## Who takes the free a possession beat restarts from: the man the free
