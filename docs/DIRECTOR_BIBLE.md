@@ -341,6 +341,8 @@ Source tags: DB = DESIGN_BIBLE; RM26/27/28/29/30/32 = roadmap chapters 26, 27, 2
 
 **2.84** 3D world skies (2026-11-17; row 202, 2a). Shown the weather and time-of-day board, he asked for a twilight that looks "slightly more beautiful, sunsetty", and said "i 100% want skies" and "wanting skies is not a camera decision, its a world design decision": the world has designed skies, one for each weather and time of day, made with the light (2a). Shown the seven skies (fine, late game, hot, wet, twilight, night, night wet), he chose "All look right" and said "Theyre gorgeous well done".
 
+**2.85** 3D players' body: MetaHuman (2026-11-17; row 202, 2d). Shown our MPFB body beside Epic's own MetaHuman renders (a standing body, a face, many bodies; MPFB from the game's cameras and a Godot render), he chose "MetaHuman" over "MPFB (ours today)". The option he chose: Unreal Engine 5.6 or later is installed as a tool only, signed in with his Epic account; the MetaHuman players are made in it and exported into the Godot game; one is shown in our match before anything is built on it. The game stays in Godot (he asked "are you asking me if i want to port hte game to unreal?"; it is not ported). Licences read 2026-11-17: the MetaHuman licence (any engine, no royalty outside Unreal, free under US$1M a year, never used to train AI) and the Unreal EULA (models made with the editor are Non-Engine Products, royalty-free in other engines; no seat fee under US$1M a year). How many builds and how heads and faces vary are still to be asked (2d).
+
 ---
 
 ## 2.S Superseded and cut
