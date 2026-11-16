@@ -1105,7 +1105,7 @@ func _test_board_confidence() -> void:
 		states.append(ClubLife.board_state(c))
 	_check(states == ["Very secure", "Secure", "Stable", "Under pressure", "In trouble"],
 			"The board reads in words (%s)" % str(states))
-	_check(ClubLife.board_state(ClubLife.START_CONFIDENCE) == "Stable", "A new coach starts stable")
+	_check(ClubLife.board_state(ClubLife.START_CONFIDENCE) == "Very secure", "A new coach starts very secure")
 	_check(ClubLife.match_reason(top4, "Carlton", -5, 1) == "The loss to Carlton puts a top-four finish under threat."
 			and ClubLife.match_reason(battler, "Carlton", 20, 0) == "The win over Carlton keeps seven wins in reach."
 			and ClubLife.match_reason(top4, "Carlton", -5, 4).begins_with("Four losses in a row"),

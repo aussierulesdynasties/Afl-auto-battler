@@ -850,7 +850,7 @@ func _rival_letter_body() -> void:
 			"the letter gives both lists as their ratings now and in three years, no list word: %s | %s"
 			% [str(l.get("list", "")), str(l.get("my_list", ""))])
 	var risk := ClubMoves.letter_risk(GameState)
-	_check(risk.size() == 3 and risk[0].find("60 out of 100") >= 0 and risk[2].begins_with("Sacked there"),
+	_check(risk.size() == 3 and risk[0].find("%d out of 100" % ClubLife.START_CONFIDENCE) >= 0 and risk[2].begins_with("Sacked there"),
 			"the letter states the risk: %s" % str(risk))
 	_check(not GameState.offseason_open() and _undecided("FRE") > 0 and _undecided(code) > 0,
 			"the letter unanswered: the off-season waits, and neither club has settled its contracts (FRE %d, %s %d)"
