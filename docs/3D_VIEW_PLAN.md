@@ -103,6 +103,8 @@ The answers are recorded in the Director Bible and summarised here.
   saturation 1.2), exposure set by the brightness of open grass; club rings keep their exact colour.
 - 2a lighting, night (rule 2.82): four light towers, one to each corner, each casting a shadow;
   a roofed venue's lighting is settled with the stadium (2b). The crowd needs almost no shine.
+- 2a weather, wet (rule 2.83): cloud light (no sun, soft shadows) and rain falling on screen
+  (fine streaks from 15 m out). A distance haze barely shows at the match cameras' range.
 
 The freeze allows only the
 prototypes each question needs; nothing from step 2 is the settled look until he has chosen it.
@@ -136,6 +138,6 @@ vignettes. Nothing in step 4 starts before the football proof has passed and the
 |---|---|
 | Freeze | in force from 2026-11-16 |
 | 1. Football proof | not started (row 201) |
-| 2. The world and the look | under way (row 202): 2a daylight, tone and night lighting chosen (rules 2.80-2.82); next weather and time of day, then 2b stadium, 2c crowd, 2d players' look, 2e cameras |
+| 2. The world and the look | under way (row 202): 2a daylight, tone, night lighting and wet games chosen (rules 2.80-2.83); next weather and time of day, then 2b stadium, 2c crowd, 2d players' look, 2e cameras |
 | 3. Asset and animation plan | after step 2 (row 203) |
 | 4. Build | after 1 and 3 (rows 197, 198) |
