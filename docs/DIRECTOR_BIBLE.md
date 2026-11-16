@@ -351,6 +351,8 @@ Source tags: DB = DESIGN_BIBLE; RM26/27/28/29/30/32 = roadmap chapters 26, 27, 2
 
 **2.89** The MetaHuman body is built on (2026-11-17; row 202, 2d). As rule 2.85 asked, one MetaHuman was shown in our match first: a board of the old body beside the MetaHuman at the same moment of a match, built to our average player (chest, waist, hip, thigh and calf within 3 cm, 188 cm), with a film of him running in our match. Asked whether the MetaHuman passes as the body we build on, he said "Yes, build on it". How many builds and how heads and faces vary are still to be asked (2d).
 
+**2.90** 3D stadiums: all 21 grounds get their own (2026-11-17; row 202, 2b). Shown a board of the 21 grounds in the game's ground data from above, to scale (13 current grounds and 8 Legacy grounds as they were in the 1990s), one panel per option, and asked which grounds get their own 3D stadium, he chose "All 21 grounds" over the 13 current grounds or the eight named in his rulings: every match at a real ground looks like it, 1990 to today, Legacy grounds included. A ground outside the 21 plays on the default oval.
+
 ---
 
 ## 2.S Superseded and cut
