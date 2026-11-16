@@ -169,9 +169,11 @@ func _test_dataset() -> void:
 			and Career.complete(green),
 			"Two players on one number keep their own careers (%s / %s)" % [
 			str(amartey.get("career", {})), str(green.get("career", {}))])
+	# His seasons as data/player_history_2026.csv rates them: the ratings from
+	# the real record (#1659, part of row 200) re-rated every season.
 	var dawson := _find_real("Jordan Dawson")
-	_check(not dawson.is_empty() and str(dawson.get("history", [])) == str([[2021, 87, 23],
-			[2022, 91, 22], [2023, 81, 23], [2024, 73, 22], [2025, 83, 25]]),
+	_check(not dawson.is_empty() and str(dawson.get("history", [])) == str([[2021, 89, 23],
+			[2022, 88, 22], [2023, 78, 23], [2024, 73, 22], [2025, 77, 25]]),
 			"p[\"history\"] (potential's input) is unchanged (%s)" % str(dawson.get("history", [])))
 	var none := 0
 	for p in GameDB.draftees:
