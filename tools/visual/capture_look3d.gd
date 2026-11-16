@@ -3,7 +3,7 @@ extends SceneTree
 ## for the director to choose between. The options live here, not in the game: nothing is the
 ## settled look until he picks it (rule 2.78's freeze).
 ##   godot --path . --script tools/visual/capture_look3d.gd -- OUTDIR LOOKS [WEATHER] [SLOT]
-## LOOKS is a comma list of option names (see _apply). A seeded Fremantle v St Kilda match is
+## LOOKS is a comma list of options (see _apply); an option may join parts with "+", e.g. sky+agx. A seeded Fremantle v St Kilda match is
 ## played until the phone camera (PitchView's aim_end) holds at least MIN_IN_VIEW men with the
 ## ball among them, read from the logged positions, then that same moment is saved under each
 ## option from the phone camera, the wide (wing) camera and the close camera. For each frame it
@@ -90,7 +90,9 @@ func _run() -> void:
 	print("MOMENT (wing %+.0f): %.2f s, %d men in the phone view, ball at (%.1f, %.1f)" % [_wing_sign, played, _in_view(oval), bp.x, bp.y])
 	for look in looks:
 		_reset(oval, weather, slot)
-		_apply(oval, look)
+		for part in look.split("+"):
+			_apply(oval, part)
+		await _match_exposure(oval)
 		for cam in ["phone", "wide", "close"]:
 			_size(WIDE if cam == "wide" else SIZE)
 			if cam == "phone":
@@ -178,6 +180,99 @@ func _amb(fallback: float) -> float:
 	return float(OS.get_environment("AMB")) if OS.get_environment("AMB") != "" else fallback
 
 
+## With TURF=0.32 on the command line, the exposure is set so bare sunlit turf on the ball's row
+## reads that brightness in the phone frame (four passes, the tonemapper is not linear): tone options are
+## then compared at the same brightness of grass, not one simply brighter.
+func _match_exposure(oval) -> void:
+	if OS.get_environment("TURF") == "":
+		return
+	var want := float(OS.get_environment("TURF"))
+	var env: Environment = oval._env
+	_size(SIZE)
+	oval.aim_end(UP, BACK)
+	for i in range(4):
+		for f in range(3):
+			await process_frame
+		await RenderingServer.frame_post_draw
+		var img := root.get_viewport().get_texture().get_image()
+		var b: Vector3 = oval.ball.global_position
+		# Bare turf on the ball's screen row, 500 px towards the middle (the patch at the ball
+		# holds men and their rings, which the tonemappers treat differently from grass).
+		var c: Vector2 = oval.camera.unproject_position(Vector3(b.x, 0.0, b.z))
+		var got := _patch(img, Vector2(clampf(c.x - 500.0, 60.0, img.get_width() - 60.0), c.y))
+		env.tonemap_exposure *= pow(want / maxf(got, 0.01), 1.6)
+	print("EXPOSURE %.3f for turf %.2f" % [env.tonemap_exposure, want])
+	await _true_rings(oval)
+
+
+## The club rings are unlit paint, a marker, not part of the lit world: exposure and the tonemapper
+## would wash them (St Kilda red to peach at AgX's exposure). The game will draw them in their exact
+## club colour whatever the tone, so here each club's ring colour is corrected until the screen
+## shows the club colour (read at the ring's front edge, between the man and the camera).
+func _true_rings(oval) -> void:
+	var cam: Camera3D = oval.camera
+	var vp := Rect2(Vector2(4, 4), Vector2(root.size) - Vector2(8, 8))
+	var by_club := {}
+	for p in oval.players:
+		var mat: StandardMaterial3D = p["ring"].material_override
+		if not mat.has_meta("club"):
+			mat.set_meta("club", mat.albedo_color)
+		mat.albedo_color = mat.get_meta("club")
+		var key: String = (mat.get_meta("club") as Color).to_html()
+		if not by_club.has(key):
+			by_club[key] = {"ats": [], "near": INF, "mats": []}
+		by_club[key]["mats"].append(mat)
+		# Points along the ring's front arc, from the club's man nearest the camera.
+		var node: Node3D = p["node"]
+		var to_cam := cam.global_position - node.global_position
+		to_cam.y = 0.0
+		var ats := []
+		for deg in range(-50, 51, 10):
+			var at := node.global_position + to_cam.normalized().rotated(Vector3.UP, deg_to_rad(deg)) * 0.635 					+ Vector3(0, 0.03, 0)
+			if not cam.is_position_behind(at) and vp.has_point(cam.unproject_position(at)):
+				ats.append(at)
+		if ats.size() >= 6 and to_cam.length() < by_club[key]["near"]:
+			by_club[key]["near"] = to_cam.length()
+			by_club[key]["ats"] = ats
+	# The club colour is scaled as a whole (its hue kept) and the scale found by halving: below the
+	# tonemapper's shoulder the hue then comes through, only the brightness needs matching.
+	for key in by_club:
+		by_club[key]["lo"] = 0.02
+		by_club[key]["hi"] = 1.0
+	for i in range(10):
+		for key in by_club:
+			var c: Dictionary = by_club[key]
+			var sc := sqrt(c["lo"] * c["hi"])
+			c["s"] = sc
+			var club: Color = c["mats"][0].get_meta("club")
+			for m in c["mats"]:
+				m.albedo_color = Color(club.r * sc, club.g * sc, club.b * sc)
+		for f in range(3):
+			await process_frame
+		await RenderingServer.frame_post_draw
+		var img := root.get_viewport().get_texture().get_image()
+		for key in by_club:
+			var c: Dictionary = by_club[key]
+			var sum := Color(0, 0, 0, 0)
+			var k := 0
+			for at in c["ats"]:
+				var px := img.get_pixelv(Vector2i(cam.unproject_position(at)))
+				if px.g >= maxf(px.r, px.b):
+					continue
+				sum += px
+				k += 1
+			if k == 0:
+				continue
+			var got := sum / float(k)
+			var want: Color = c["mats"][0].get_meta("club")
+			if got.get_luminance() > want.get_luminance():
+				c["hi"] = c["s"]
+			else:
+				c["lo"] = c["s"]
+			if i == 9:
+				print("RING %s wants %s, shows %s (scale %.3f)" % [key, want.to_html(false), got.to_html(false), c["s"]])
+
+
 func _apply(oval, look: String) -> void:
 	var env: Environment = oval._env
 	var sun: DirectionalLight3D = oval._sun
@@ -203,6 +298,20 @@ func _apply(oval, look: String) -> void:
 			sun.light_color = Color(1.0, 0.9, 0.76)
 			sun.directional_shadow_max_distance = 320.0
 			_stand_shadow(oval, true)
+		# The picture's tone (post-processing), on top of a light above. Godot's tonemappers turn
+		# the scene's light into screen colour: filmic (today), ACES (punchy, saturated), AgX
+		# (natural, keeps bright colours from blowing out), and AgX with a broadcast grade.
+		"filmic":
+			env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+		"aces":
+			env.tonemap_mode = Environment.TONE_MAPPER_ACES
+		"agx":
+			env.tonemap_mode = Environment.TONE_MAPPER_AGX
+		"agxtv":
+			env.tonemap_mode = Environment.TONE_MAPPER_AGX
+			env.adjustment_enabled = true
+			env.adjustment_contrast = 1.1
+			env.adjustment_saturation = 1.2
 		_:
 			push_error("unknown look " + look)
 
