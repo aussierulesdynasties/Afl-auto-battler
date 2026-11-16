@@ -1449,10 +1449,10 @@ func _scrap(p: Dictionary, who: int) -> void:
 			# Off his hands it always moves, but never far from where MatchSim says it is won.
 			step = minf(step, maxf(_knock_room(at, way), FUMBLE_CLOSE))
 			_knock_on(by, way, step)
-			# He follows his own knock: on after it at the scoop's pace, never pulling up behind it.
-			var after: Vector2 = _ball_rest() - (bt["pos"] as Vector2)
-			if after.length() > 0.01:
-				MatchMotion.set_goal(bt, (bt["pos"] as Vector2) + after + after.normalized() * RUN_THROUGH, 0.0, true)
+			# He follows his own knock: on after it along its line at the scoop's pace, never pulling
+			# up behind it (aimed from where he stood at where it stops, a short knock turned him
+			# off its line: suite match, 39 degrees).
+			MatchMotion.set_goal(bt, _ball_rest() + way.normalized() * RUN_THROUGH, 0.0, true)
 			knocked += step
 			p["_knocked"] = knocked
 			p["_knock_t"] = _pt
@@ -1689,7 +1689,7 @@ func _scoop_start(who: int) -> float:
 ## scoop's pace within its length (SCOOP_AT_PACE), or nearer and slower, gathered from a stand
 ## (SCOOP_NEAR; director 2026-11-16: "retarget the grimes one", "we can use both"). Either way
 ## it rolls no faster than SCOOP_ROLL into his hands.
-func _scoop_pick(who: int, winner := false) -> int:
+func _scoop_pick(who: int) -> int:
 	var t: Dictionary = tokens[who]
 	for kind in [SCOOP_AT_PACE, SCOOP_NEAR]:
 		var run: Vector2 = _scoop_aim(who, kind) - (t["pos"] as Vector2)
@@ -1702,14 +1702,7 @@ func _scoop_pick(who: int, winner := false) -> int:
 		var dir := run.normalized() if run.length() > 0.01 else _line(t)
 		# Only a man already near the scoop's own pace goes down for it (_scoop_start sets his
 		# pace there: one sprinting past it stopped dead in a frame).
-		var top := scoop_speed(kind) + SCOOP_EASE
-		if kind == SCOOP_NEAR and winner:
-			# The winner coming in at the at-pace scoop's own pace (a close knock lands it a near gather's
-			# length ahead of him), too near for that one: he gathers it as he slows, rather than
-			# walking straight over it (suite match: the winner crossed it at 2.9 m/s, 7 times). Not a man
-			# in the scrap: just run past his own knock, he stopped dead from 2.9 to gather it behind him.
-			top = maxf(top, SCOOP_SPEED + 0.05)
-		if (t["vel"] as Vector2).length() > top:
+		if (t["vel"] as Vector2).length() > scoop_speed(kind) + SCOOP_EASE:
 			continue
 		if kind == SCOOP_NEAR or (t["vel"] as Vector2).dot(dir) >= SCOOP_SPEED * 0.85:
 			return kind
@@ -2512,10 +2505,16 @@ func _done(p: Dictionary) -> bool:
 				MatchMotion.set_goal(t, aim + to.normalized() * RUN_THROUGH if dr > 0.01 else aim, 1.0, true)
 				t["cap"] = sqrt(SCOOP_SPEED * SCOOP_SPEED + 2.0 * MatchMotion.BRAKE * 0.55 * maxf(dr - SCOOP_LEAD, 0.0))
 				# (where his hands will meet it, rolling no faster than SCOOP_ROLL by then).
-				var kind := _scoop_pick(who, true)
+				var kind := _scoop_pick(who)
 				if kind >= 0:
 					t["scoop_k"] = kind
 					return true
+				if dr <= scoop_lead(SCOOP_AT_PACE):
+					# Too near now to take it on the run (a close knock lands it a near gather's length
+					# ahead): he brakes the last of the way to the near gather's pace, in a stride, and
+					# takes it from there, rather than walking straight over it (suite match: the winner
+					# crossed it at 2.9 m/s, 7 times).
+					t["cap"] = minf(float(t["cap"]), scoop_speed(SCOOP_NEAR) + SCOOP_EASE - 0.05)
 				if _pt > 0.1 and str(ball["mode"]) in ["dead", "loose"]:
 					# While he is coming, the men already near it contest it (a spilled
 					# ball is a loose ball like any other).
