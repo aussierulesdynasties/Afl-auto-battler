@@ -61,7 +61,7 @@ jobs:
           git commit -q -m "Roadmap: update $word $ids (#$PR)"
           git push -q -f origin "HEAD:refs/heads/$branch"
           url=$(gh pr create --base main --head "$branch" --label roadmap --title "Roadmap: update $word $ids (#$PR)" --body "Closes or notes the TODO.md or TODO_RULINGS.md $word named by #$PR. Opened by the Roadmap close action.")
-          gh pr merge "$url" --auto --squash --delete-branch
+          gh pr merge "$url" --auto --squash  # no --delete-branch: the merge queue refuses it; the repo deletes merged branches itself
           gh workflow run tests.yml --ref "$branch" -f changed_files='docs/TODO.md docs/TODO_RULINGS.md'
           echo "Opened $url"
           # Approve the PR's held Tests run (see the note at the top). Best effort.
