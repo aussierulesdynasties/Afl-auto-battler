@@ -575,7 +575,7 @@ func _test_report_glance() -> void:
 		for n in g["notes"]:
 			var t := str(n)
 			for w in ADVICE:
-				if t.to_lower().contains(w):
+				if _has_word(t.to_lower(), w):
 					bad = t
 		for group in ["best", "lift", "danger"]:
 			for p in g[group]:
@@ -857,8 +857,10 @@ func _test_comeback_telling() -> void:
 			_check(not str(f).contains("won the third quarter"), "No repeat of the third quarter's score (%s)" % str(f))
 		for l in [bl, line]:
 			var low := str(l).to_lower()
-			for w in ADVICE + ENGINE:
-				_check(not low.contains(w), "No advice or engine words in '%s' (%s)" % [l, w])
+			for w in ADVICE:
+				_check(not _has_word(low, w), "No advice words in '%s' (%s)" % [l, w])
+			for w in ENGINE:
+				_check(not low.contains(w), "No engine words in '%s' (%s)" % [l, w])
 	# A turn needs the quarters to add up and the bar from Headlines.
 	var fake := _hl("GEE", "MEL", [[10, 20], [6, 22], [30, 6], [20, 10]])
 	_check(ComebackTelling.turn_line(fake, 0) == "", "No quarter goals, no turn claimed")
