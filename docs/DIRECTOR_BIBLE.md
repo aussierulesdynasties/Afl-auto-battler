@@ -349,6 +349,8 @@ Source tags: DB = DESIGN_BIBLE; RM26/27/28/29/30/32 = roadmap chapters 26, 27, 2
 
 **2.88** The match camera looks like a TV broadcast (2026-11-17; row 202, 2e). His words: "I want the game camera to look like a real tv broadcast of afl btw / complete with stat popups and journalist social media comments". The camera is not chosen yet; he asked for the camera design and the popups (stats and journalism) to start now, each in its own session.
 
+**2.90** Match stat popups sit over the 3D picture (2026-11-17; row 207). Shown today's match screen with one mock stat card (a player's name and club, then goals, disposals and marks) placed two ways, he chose "A  Over the picture" over "B  Below the picture": like a TV graphic, the card sits on the bottom of the 3D ground for a few seconds and hides the strip of ground behind it, rather than taking the place of the plan and feed lines under the picture. What a card shows, when it appears and how long it stays, and the journalists' posts, are still to be asked.
+
 ---
 
 ## 2.S Superseded and cut
