@@ -46,12 +46,14 @@ RECIPES = {
     "ruck": [("Hitouts", 35), ("HitoutsToAdvantage", 30), ("HitoutsWinPercentage", 20), ("TotalClearances", 15)],  # 15
     "discipline": [("FreesAgainst", 70), ("Clangers", 30)],                                          # 17
     "durability": [("games", 55), ("time_on_ground", 45)],                                           # 16
-    "star": [("coaches_votes", 100)],                                                                # 17
+    "star": [("coaches_votes", 100), ("BrownlowVotes", 100)],   # 17; Brownlow on AFL Tables (ruling 29)
 }
 SKILLS = list(RECIPES)
 
 # How each metric is put on 0..1 against his position:
 #   cap    - a count: 0 at zero, 1 at the position's 98th percentile
+#   cap98  - the same, and the overall sees it stopped there too (Brownlow
+#            votes: most players poll none, so twice the median is ~0)
 #   range  - a rate: 0 at the position's 2nd percentile, 1 at its 98th
 #   abs    - a fixed range for every position (durability is "as now")
 #   z      - already a standard score against his position (speed)
@@ -66,7 +68,7 @@ METRICS = {
     "GoalAssists": "cap", "ScoreInvolvements": "cap", "ScoreLaunches": "cap", "Inside50s": "cap",
     "Hitouts": "cap", "HitoutsToAdvantage": "cap", "HitoutsWinPercentage": "range",
     "FreesAgainst": "cap inv", "Clangers": "cap inv", "games": "abs", "time_on_ground": "abs",
-    "coaches_votes": "cap",
+    "coaches_votes": "cap", "BrownlowVotes": "cap98",
 }
 ABS_RANGE = {"games": (0.0, 26.0), "time_on_ground": (30.0, 95.0)}   # Ratings.build_norm_params
 
@@ -130,7 +132,8 @@ def tables_inputs(r: dict) -> dict:
     """The same metrics from an AFL Tables season row (totals). AFL Tables
     keeps no efficiencies, metres, pressure acts, ground ball gets,
     intercepts, one-on-ones, score involvements or launches, hit-outs to
-    advantage, hit-out win rate or coaches votes: those are left out."""
+    advantage or hit-out win rate: those are left out. Star reads
+    Brownlow votes in place of coaches votes (ruling 29)."""
     def n(k):
         v = r.get(k)
         return None if v in (None, "") else float(v)
@@ -142,6 +145,7 @@ def tables_inputs(r: dict) -> dict:
     m.update({"Kicks": pg("ki"), "Handballs": pg("hb"), "ContestedMarks": pg("cm"), "ContestedPossessions": pg("cp"),
               "TotalClearances": pg("cl"), "Tackles": pg("tk"), "Bounces": pg("bo"), "Goals_Avg": pg("gl"),
               "GoalAssists": pg("ga"), "Inside50s": pg("if50"), "Hitouts": pg("ho"), "FreesAgainst": pg("fa"),
+              "BrownlowVotes": pg("br"),
               "Clangers": pg("cg"), "games": g, "time_on_ground": n("pct_played") if n("pct_played") is not None else n("pctp")})
     mk, cm = n("mk"), n("cm")
     # Ruling 18: missing stats are left out of the recipe. Before 1999 there
@@ -314,6 +318,8 @@ def rate_season(players: list, speed: dict | None = None) -> None:
                 # skill shown stops at the 98th percentile (99).
                 if mode == "cap":
                     xr = v / (2.0 * med[k]) if med[k] > 0 else (v / hi if hi > 0 else 0.0)
+                elif mode == "cap98":
+                    xr = max(0.0, min(1.0, x))
                 else:
                     xr = max(0.0, min(1.0, x))
                 x = max(0.0, min(1.0, x))
