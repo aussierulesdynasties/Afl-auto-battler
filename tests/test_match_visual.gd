@@ -2691,6 +2691,44 @@ func _test_plan_tint_every_quarter() -> void:
 
 ## The 3D turf (Oval3DTurf): every weather and time of day lights it green, the wet one with a
 ## sheen, the play wears it where the players run, and the standing blades follow the ball.
+## The crowd (Bible 2.92): a supporter on most seats, 3D people within 55 m of the camera and
+## cards beyond, and the scoring side's supporters rise the moment a goal shows.
+func _check_crowd3d(oval: Oval3D) -> void:
+	var crowd := oval.crowd
+	_check(crowd != null and crowd.supporters > 30000,
+			"The 3D stand is full of supporters (%d)" % (crowd.supporters if crowd else -1))
+	var people := 0
+	var cards := 0
+	for ch: Dictionary in crowd._chunks:
+		for p: MultiMeshInstance3D in ch["people"]:
+			people += 1 if p.visibility_range_end == Oval3DCrowd.MIX_D and p.visibility_range_begin == 0.0 else 0
+		var c: MultiMeshInstance3D = ch["cards"]
+		cards += 1 if c.visibility_range_begin == Oval3DCrowd.MIX_D and c.visibility_range_end == 0.0 else 0
+	_check(crowd._chunks.size() == Oval3DCrowd.SECTORS * 2 and cards == crowd._chunks.size()
+			and people == cards * crowd._people_mats.size(),
+			"Near the camera the supporters are 3D people, beyond 55 m cards (%d people batches, %d card batches)"
+			% [people, cards])
+	_check(crowd._card_mat.get_shader_parameter("atlas") != null
+			and crowd._people_mats[0].get_shader_parameter("pos_tex") != null,
+			"The crowd's baked bodies and card pictures loaded")
+	var d := oval.director
+	var k := d.emitted
+	d.emitted = 1
+	var side := int((d.events[0] as Dictionary).get("side", 0))
+	var old_flash := d.flash
+	d.flash = {"pos": Vector2.ZERO, "left": 0.9, "goal": true}
+	oval._goal_on = false
+	oval._sync_crowd(0.5)
+	var m: ShaderMaterial = crowd._people_mats[0]
+	_check(is_equal_approx(float(m.get_shader_parameter("cheer_from")), oval._crowd_t)
+			and int(m.get_shader_parameter("cheer_side")) == side
+			and is_equal_approx(float(crowd._card_mat.get_shader_parameter("cheer_from")), oval._crowd_t),
+			"A goal shown sets the scoring side's supporters cheering, people and cards")
+	d.flash = old_flash
+	d.emitted = k
+	oval._goal_on = false
+
+
 func _check_turf3d(oval: Oval3D) -> void:
 	var turf: Oval3DTurf = oval.turf
 	_check(turf != null and turf.mat.get_shader_parameter("blades_tex") != null
@@ -2775,6 +2813,7 @@ func _test_three_d_view(res: Dictionary) -> void:
 	_check(seen.size() == flat_seen.size() and seen.size() > 0,
 			"The 3D oval releases the feed as the flat oval does (%d vs %d)" % [seen.size(), flat_seen.size()])
 	_check_turf3d(oval)
+	_check_crowd3d(oval)
 	# The ground paint lies on the 3D turf, under the bodies: the ring round the man on the ball.
 	pv.director.actor = 0
 	pv._paint_ground_3d()

@@ -7,6 +7,7 @@ extends "res://tools/visual/capture_look3d.gd"
 ##   people   every seat holds a low-poly 3D supporter, moving (a baked vertex animation)
 ##   cards    every seat holds a flat picture of that supporter that turns to the camera
 ##   mix      3D supporters near the camera, cards beyond MIXD metres (55 by default)
+##   game     the game's own crowd as Oval3D builds it (Oval3DCrowd, the chosen mix): nothing added
 ## VATDIR is a crowd bake (meta.json, mesh.bin, pos.bin, nrm.bin), or a comma list of bakes, each
 ## with its share of the seats (dir=0.3,dir=0.2,...; no share = 1): every seat takes one body.
 ## IDLE=a,b names the idle clips, CHEER=c the goal cheer (default: the first clip and the last).
@@ -130,14 +131,16 @@ func _run() -> void:
 	_clouds.noise = fn
 	await _clouds.changed
 	var t0 := Time.get_ticks_msec()
-	await _build_crowd(oval, vat_dir, gdb)
+	if methods != PackedStringArray(["game"]):
+		await _build_crowd(oval, vat_dir, gdb)
 	print("CROWD built in %.1f s" % ((Time.get_ticks_msec() - t0) / 1000.0))
 	_reset(oval, "perfect", "day")
 	for part in look.split("+"):
 		_apply(oval, part)
 	await _match_exposure(oval)
 	_sky_view(oval)
-	_set_now(played)
+	if _card_mat != null:
+		_set_now(played)
 	if mode == "stills":
 		for m in methods:
 			_method(oval, m)
@@ -174,7 +177,8 @@ func _run() -> void:
 			oval.sync(DT)
 			oval.aim_end(UP, BACK)
 			played += DT
-			_set_now(played)
+			if _card_mat != null:
+				_set_now(played)
 			for m in methods:
 				_method(oval, m)
 				await process_frame
@@ -194,6 +198,9 @@ func _set_now(t: float) -> void:
 
 ## One method on show: today's painted slope, or the stepped stand with people, cards or both.
 func _method(oval, m: String) -> void:
+	oval.crowd.visible = m == "game"
+	if m == "game":
+		return
 	for c in _crowds(oval):
 		c.visible = m == "painted"
 	_terrace.visible = m != "painted"
@@ -282,7 +289,7 @@ func _build_crowd(oval, vat_spec: String, gdb) -> void:
 	var ch: Dictionary = bodies[0]["cheer"]
 	var pm: ShaderMaterial = bodies[0]["mat"]
 	_card_mat = ShaderMaterial.new()
-	_card_mat.shader = load("res://tools/visual/crowd3d_card.gdshader")
+	_card_mat.shader = load("res://scripts/ui/match/oval3d_crowd_card.gdshader")
 	var cm := _card_mat
 	cm.set_shader_parameter("atlas", ImageTexture.create_from_image(atlas))
 	cm.set_shader_parameter("bodies", float(bodies.size()))
@@ -361,7 +368,7 @@ func _load_body(vat_dir: String, gdb) -> Dictionary:
 	var hc: Array = gdb.club_colours("FRE")
 	var ac: Array = gdb.club_colours("STK")
 	var pm := ShaderMaterial.new()
-	pm.shader = load("res://tools/visual/crowd3d_people.gdshader")
+	pm.shader = load("res://scripts/ui/match/oval3d_crowd_people.gdshader")
 	pm.set_shader_parameter("pos_tex", pos_tex)
 	pm.set_shader_parameter("nrm_tex", nrm_tex)
 	pm.set_shader_parameter("fps", float(meta["clips"][0]["fps"]))

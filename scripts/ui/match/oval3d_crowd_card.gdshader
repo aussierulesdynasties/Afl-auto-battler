@@ -1,6 +1,6 @@
-// PROTOTYPE (row 202, 3D view plan step 2c): one supporter per instance as a flat card that
-// turns to face the camera (upright, turning only round the vertical), cut from an atlas of the
-// 3D supporter drawn from the front (crowd3d_people.gdshader, mode 1). Columns 0-7 are his idle,
+// The 3D view's far crowd (row 202 step 2c, Bible 2.92; Oval3DCrowd, beyond 55 m): one supporter
+// per instance as a flat card that turns to face the camera (upright, turning only round the
+// vertical), cut from an atlas of the 3D supporter drawn from the front (oval3d_crowd_people, mode 1). Columns 0-7 are his idle,
 // 8-15 his cheer. The atlas holds which part each pixel is (top red, pants green, skin blue,
 // hair and shoes black) times the light, so each card wears its own clothes from one picture.
 // INSTANCE_CUSTOM as for the 3D people: x time offset, y side, z clothes seed; w which body.
