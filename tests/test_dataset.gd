@@ -17,12 +17,13 @@ const SUITE_SEED := 1990
 ## season print did not. The real-lists print moved again that day with the
 ## 44 rule (RookieList.add_block): West Coast, at 43 of the 44, lists one of
 ## its three tied prospects and passes its picks, so the opening draft differs.
-const GOLDEN_LOAD := "9baf6f36b146d2bfafd65e07b3235c55"
+const GOLDEN_LOAD := "c433ae52df88d13a3e8c2e4eccbbd90c"
 ## It moved again with row 199 (2026-11-15): the off-season before the
 ## opening draft closes with the rivals signing free agents, so the lists differ;
 ## the level ladder going A-Z by club (#1633) then changed the order the clubs
-## trade and sign in during it.
-const GOLDEN_REAL := "d4fd9cfddd165faddd875f60720392cc"
+## trade and sign in during it. Both prints were redrawn by the director's
+## ratings (row 200, 2026-11-16) on top of row 199.
+const GOLDEN_REAL := "25a204b4d21975a769a1cf539479a465"
 ## A played match's floating point differs between Windows and Linux builds of
 ## Godot, so the season has one fingerprint per platform; each was taken on
 ## main before the change (Linux: run_on_github run 43024085570). Removing
@@ -32,6 +33,7 @@ const GOLDEN_REAL := "d4fd9cfddd165faddd875f60720392cc"
 ## a local run, Linux from run_on_github run 43725691444 (with the 40% Controlled Tempo hold and #1613).
 ## The defensive-50 play (#1598) redrew it again: Windows from a local run,
 ## Linux from that PR's CI (with the synergies change, #1645).
+## The director's ratings (row 200, 2026-11-16) redrew it after that (Linux from run_on_github run 43765141166).
 ## Result keys added after the golden was taken that record who earned a
 ## call's credit, not what happened (row 144). "impact" and "plan_traits" were
 ## already in main's results, so they stay in the hash. "breeze_side" (the
@@ -48,7 +50,7 @@ const TEAM_BOOKKEEPING_KEYS := ["pressure_acts_dhalf", "tackles_i50", "poss_d50"
 		"d50_tackled", "d50_rushed", "d50_chips"]
 ## Team counts named by prefix (one key per way a defensive-50 chain ends).
 const TEAM_BOOKKEEPING_PREFIXES := ["d50_end_"]
-const GOLDEN_SEASON := {"Windows": "0d242830d617929bd6cea7a2b8e117e2", "Linux": "0f24a2970ef3e4ab421d5259c0c28116"}
+const GOLDEN_SEASON := {"Windows": "a7c8ea7bb81600add1bb7199eca2c2f5", "Linux": "0d97422618258f74863a2c85d2fea2ec"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and
@@ -703,17 +705,25 @@ func _test_real_1990() -> void:
 	_check(not roos.is_empty() and int(roos["overall"]) >= 78
 			and int(roos["overall"]) >= Ratings.honours_floor(float(roos.get("honours", 0.0))),
 			"Paul Roos, twice All-Australian, rates at least his honours floor (%d)" % int(roos.get("overall", 0)))
-	var platten: Dictionary = by_id.get("HAW_44", {})   # John Platten
-	_check(not platten.is_empty() and not bool(platten.get("rated_on_honours", false)),
-			"A star already above his floor keeps his own rating (Platten %d)" % int(platten.get("overall", 0)))
+	# Which honoured players sit under their floor moves with the ratings (row
+	# 200), so the rule is checked both ways rather than on two names.
+	var on_honours := 0
+	var own_rating := 0
+	for p in GameDB.players:
+		if float(p.get("honours", 0.0)) > 0.0:
+			if bool(p.get("rated_on_honours", false)):
+				on_honours += 1
+			elif int(p["overall"]) >= Ratings.honours_floor(float(p["honours"])):
+				own_rating += 1
+	_check(on_honours > 0, "An honoured player rated under his floor rates on his honours (%d)" % on_honours)
+	_check(own_rating > 0, "A star already above his floor keeps his own rating (%d)" % own_rating)
 	GameDB.reload()
 	var none := true
 	for p in GameDB.players:
 		if p.has("honours") or bool(p.get("rated_on_honours", false)):
 			none = false
 	_check(none, "Today's set carries no honours: a 2026 start is untouched")
-	_check(Ratings.era_anchors.is_empty() and Potential.peak_from_year == 2023,
-			"Back on 2026, positions scale on 2026's anchors again")
+	_check(Potential.peak_from_year == 2023, "Back on 2026, recent seasons count from 2026's data season again")
 	_golden("load after the 1990 set", _load_print(), GOLDEN_LOAD)
 
 

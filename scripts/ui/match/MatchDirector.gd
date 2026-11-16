@@ -804,6 +804,20 @@ func _fifty_phases(k: int) -> Array:
 		# while he ran to it (picture_truth, a 49 m penalty).
 		out.append({"t": "hold", "who": who, "carry": at, "run": true, "mode": "stoppage",
 				"max": d / float(tokens[who]["top"]) * 1.6 + 0.5})
+	elif d > 1.0 and who >= 0:
+		# The free's ball still lies where it was paid and he is up the ground
+		# (the tackler, paid holding the ball): it goes to him and he carries it
+		# up to the new mark. Flown ahead alone, it lay 6.2 s at the mark while
+		# he ran 26 m to it (picture_truth, a 50 after a holding-the-ball free).
+		var me: Vector2 = tokens[who]["pos"]
+		var dm := (ball["pos"] as Vector2).distance_to(me)
+		if dm > 1.0:
+			var shape := _flight_shape("handball" if dm < 18.0 else "kick", dm)
+			out.append({"t": "flight", "to": me, "dur": shape.x, "apex": shape.y, "recv": who,
+					"mode": "stoppage"})
+		out += [{"t": "collect", "who": who, "max": 0.3}, {"t": "possess", "who": who, "quiet": true},
+				{"t": "hold", "who": who, "carry": at, "run": true, "mode": "stoppage",
+					"max": me.distance_to(at) / float(tokens[who]["top"]) * 1.6 + 0.5}]
 	elif d > 1.0:
 		# Never quicker than a kick covers the ground: 0.35 + d / 110 sent a
 		# 50 m penalty's ball at 62.2 m a second (picture_truth, ball speed).

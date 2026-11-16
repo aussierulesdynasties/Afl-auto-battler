@@ -82,7 +82,7 @@ func _carrier(ground: Array, cfg: Dictionary) -> Dictionary:
 		var v := float((p["attr"] as Dictionary).get(stat, 0))
 		if key == "hothead":
 			v = -v
-		if key == "crumber" and int((p["attr"] as Dictionary).get("marking", 0)) >= 52:
+		if key == "crumber" and int((p["attr"] as Dictionary).get("contested_marking", 0)) >= Traits.SMALL_MAX_CM:
 			v -= 1000.0
 		if v > best_v:
 			best_v = v
@@ -197,9 +197,9 @@ func _prevalence(lists: Dictionary) -> void:
 							ok = true
 					if not ok:
 						continue
-				if int(attr.get(str(d["stat"]), 0)) < int(d["min"]):
+				if int(Skills.value(attr, str(d["stat"]), 0.0)) < int(d["min"]):
 					continue
-				if bool(d.get("small", false)) and int(attr.get("marking", 0)) >= 52:
+				if bool(d.get("small", false)) and int(attr.get("contested_marking", 0)) >= Traits.SMALL_MAX_CM:
 					continue
 				q += 1
 				qual[key] = int(qual.get(key, 0)) + 1

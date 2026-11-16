@@ -7,7 +7,7 @@ func run() -> void:
 			var gm := float(p.get("gm", 0.0))
 			if gm < 8:
 				continue
-			rows.append([float(p["attr"].get("goalkicking", 0)), float(p.get("gl", 0)) / gm, "%s %s" % [p.get("first", ""), p.get("last", "")], float(p["attr"].get("marking", 0)), int(p.get("overall", 0)), str(p.get("role", ""))])
+			rows.append([float(p["attr"].get("goalkicking", 0)), float(p.get("gl", 0)) / gm, "%s %s" % [p.get("first", ""), p.get("last", "")], float(p["attr"].get("contested_marking", 0)), int(p.get("overall", 0)), str(p.get("role", ""))])
 	rows.sort_custom(func(a, b): return a[1] > b[1])
 	var capped := 0
 	for r in rows:

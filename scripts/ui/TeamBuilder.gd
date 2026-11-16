@@ -363,6 +363,13 @@ func _build() -> void:
 	# Two abreast on a phone at the standard text size; a larger one (Settings)
 	# gives each card the width, so a full name and its lines stay whole.
 	_grid.columns = 2 if (_wide or UiKit.text_scale <= 1.0) else 1
+	if not _wide and _grid.columns == 2:
+		# A small phone's half-width card can't hold the longest skill name and
+		# its rating ("Uncontested marking 99"): the cards go one across there.
+		_grid.resized.connect(func():
+			var want := 2 if PlayerSheet.top_three_fits((_grid.size.x - 6.0) * 0.5 - 12.0, UiKit.FINE) else 1
+			if _grid.columns != want:
+				_grid.columns = want)
 	if stacked and _wide:
 		_grid.columns = 2 if rest_host != null else clampi(int(UiKit.view_width(self) / 400.0), 3, 8)
 	_grid.add_theme_constant_override("h_separation", 6)

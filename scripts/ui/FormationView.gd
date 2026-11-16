@@ -40,10 +40,10 @@ const ASSIGN := {
 	"RUCK": ["RUCK"],
 }
 const CALLOUT_ATTRS := {
-	"DEF": [["intercept", "Intercept"], ["pressure", "Pressure"], ["disposal", "Disposal"]],
-	"MID": [["disposal", "Disposal"], ["contested", "Contested"], ["carry", "Carry"]],
-	"FWD": [["goalkicking", "Goalkicking"], ["marking", "Marking"], ["accuracy", "Accuracy"]],
-	"RUCK": [["ruck", "Ruck"], ["contested", "Contested"], ["marking", "Marking"]],
+	"DEF": [["intercept", "Intercept"], ["pressure", "Pressure"], ["kicking", "Kicking"]],
+	"MID": [["contested", "Contested"], ["handballing", "Handballing"], ["carry", "Carry"]],
+	"FWD": [["goalkicking", "Goalkicking"], ["contested_marking", "Contested marking"], ["accuracy", "Accuracy"]],
+	"RUCK": [["ruck", "Ruck"], ["contested", "Contested"], ["contested_marking", "Contested marking"]],
 }
 
 var _ground: Array = []
