@@ -335,6 +335,8 @@ Source tags: DB = DESIGN_BIBLE; RM26/27/28/29/30/32 = roadmap chapters 26, 27, 2
 
 **2.81** 3D oval tone: the TV broadcast look (2026-11-16; row 202, 2a). Shown the same moment under sky light in four tones, each set so the open grass is equally bright (A today's filmic; B ACES, punchy, whites near blowing out; C AgX, natural and a little muted; D AgX with a footy-TV grade, contrast up a tenth and colour up a fifth), he chose "D TV broadcast". The club rings at the men's feet are markers, not lit: they show their exact club colour whatever the tone and exposure.
 
+**2.82** 3D oval night lighting: four towers (2026-11-16; row 202, 2a). Shown the same night moment under three lightings, each set so the open grass and the crowd are equally bright (A today's one bank of lights from a corner, one hard shadow; B four towers, one to each corner as at the MCG or Adelaide, four faint crossed shadows; C a roof ring as at Marvel or Optus, one soft shadow straight down), he chose "B Four towers". Night games are lit by four towers; whether a venue with a roof gets its own lighting is settled with the stadium (2b). The four towers' shadows are costed at the phone check.
+
 ---
 
 ## 2.S Superseded and cut
