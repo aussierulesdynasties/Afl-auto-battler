@@ -99,6 +99,8 @@ The answers are recorded in the Director Bible and summarised here.
 - 2a lighting, daylight (rule 2.80): sky light for every match (ambient and reflections from a sky
   with the stands round its foot and the grass below); late-afternoon games add a low sun and the
   stands' shade across the ground. Prototype: `tools/visual/capture_look3d.gd`.
+- 2a post-processing, tone (rule 2.81): AgX tonemapping with a footy-TV grade (contrast 1.1,
+  saturation 1.2), exposure set by the brightness of open grass; club rings keep their exact colour.
 
 The freeze allows only the
 prototypes each question needs; nothing from step 2 is the settled look until he has chosen it.
@@ -132,6 +134,6 @@ vignettes. Nothing in step 4 starts before the football proof has passed and the
 |---|---|
 | Freeze | in force from 2026-11-16 |
 | 1. Football proof | not started (row 201) |
-| 2. The world and the look | under way (row 202): 2a daylight chosen (rule 2.80); next 2a post-processing, then weather and time of day, then 2b stadium, 2c crowd, 2d players' look, 2e cameras |
+| 2. The world and the look | under way (row 202): 2a daylight and tone chosen (rules 2.80, 2.81); next weather and time of day, then 2b stadium, 2c crowd, 2d players' look, 2e cameras |
 | 3. Asset and animation plan | after step 2 (row 203) |
 | 4. Build | after 1 and 3 (rows 197, 198) |
