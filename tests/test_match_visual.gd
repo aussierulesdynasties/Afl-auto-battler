@@ -3041,9 +3041,12 @@ func _test_contacts(res: Dictionary) -> void:
 					stands.append("%.0f s, %s" % [d.time / MatchDirector.TEMPO, st])
 			else:
 				still[id] = 0.0
-			# Nor does anyone run straight across it upright: only a man going down for it is on top of it.
+			# Nor does anyone's own run carry him across it upright, at any pace (seed 31: one walked
+			# over it at the scoop's 2.9 m/s for half a second): only a man going down for it is on top
+			# of it. (A ball rolling past a man's boots is the ball moving, not him.)
 			var on_it: bool = scrap and (t["pos"] as Vector2).distance_to(d.ball["pos"]) < 0.6 \
-					and (t["vel"] as Vector2).length() > 3.0 and d._on_feet(id) \
+					and (t["vel"] as Vector2).length() >= 0.6 and d._on_feet(id) \
+					and (t["vel"] as Vector2).dot((d.ball["pos"] as Vector2) - (t["pos"] as Vector2)) > 0.0 \
 					and d.time - float(last_scoop.get(id, -99.0)) >= 1.5 * MatchDirector.TEMPO
 			if on_it and not over.get(id, false):
 				overs.append("%.0f s, %s, %.1f m/s" % [d.time / MatchDirector.TEMPO, st, (t["vel"] as Vector2).length()])
