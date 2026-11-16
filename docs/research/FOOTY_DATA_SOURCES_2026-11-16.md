@@ -50,5 +50,8 @@ An Australian Rules engine for writing bots: 8 a side on a 140 × 100 m oval (th
 - Its blog ("Claude Code can be a football analyst") rates positions with a network trained on its own games.
   That is a method idea only; the data are bot games.
 
-The MIT licence allows reuse with its notice kept, but nothing here is worth copying into the game: our sim
-and MatchDirector already own these jobs.
+**Permission.** Director, 2026-11-16: "we have permission to use anything in that github repo directly from
+the owner". Its code, ideas and data may be used directly (the MIT notice is kept on anything copied). Where it
+fits: its per-player zone, press and lead rules as a starting point for row 201's shape models, ported to
+GDScript in MatchDirector; its kick-error and pressure model as a reference when MatchSim's event spread is
+checked. Its numbers still need real AFL evidence before they count in the spec.
