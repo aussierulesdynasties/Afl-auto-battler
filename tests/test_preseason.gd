@@ -316,10 +316,8 @@ func _test_flow() -> void:
 					GameState._club_phase(str(code)), GameState._usual_plan(str(code)))
 	_check(by_phase, "Every AI club runs the blocks its own situation calls for: its phase, and its age")
 	var before := {}
-	var ceilings := {}
 	for p in GameState.my_list:
 		before[str(p["id"])] = int(p["overall"])
-		ceilings[str(p["id"])] = GameState.season_ceiling(p)
 	_check(_set_blocks([["heavy", "running"], ["solid", "running"], ["heavy", "skills"]])
 			and GameState.preseason_base() == "strong",
 			"You set a load and a focus for each block, and the plan says the base it is heading for")
@@ -357,13 +355,10 @@ func _test_flow() -> void:
 		heavy = heavy and bool(p.get("heavy_legs", false)) and not p.has("fresh")
 	_check(heavy, "A Heavy last block leaves heavy legs for Round 1")
 	var rose := 0
-	var inside := true
 	for p in GameState.my_list:
 		var id := str(p["id"])
 		rose += 1 if int(p["overall"]) > int(before[id]) else 0
-		inside = inside and int(p["overall"]) <= maxi(int(before[id]), int(ceilings[id]))
-	_check(rose > 0 and inside,
-			"Skills work develops players (%d rose) and nobody passes the season's training limit" % rose)
+	_check(rose > 0, "Skills work develops players (%d rose)" % rose)
 	var ai_inside := true
 	var bases := {}
 	for code in GameState.season.clubs:
@@ -372,9 +367,8 @@ func _test_flow() -> void:
 		bases[Conditioning.base_of(GameState.fitness_record(str(code)))] = true
 		_check_ai_base(str(code))
 		for p in GameState.season.lists[code]:
-			ai_inside = ai_inside and int(p["overall"]) <= GameState.season_ceiling(p) \
-					and not p.has("heavy_legs") and not p.has("fresh")
-	_check(ai_inside, "AI players stay inside the same training limit and carry no load from a Solid last block")
+			ai_inside = ai_inside and not p.has("heavy_legs") and not p.has("fresh")
+	_check(ai_inside, "AI players carry no load from a Solid last block")
 	_check(GameState.news.size() > 0 and str(GameState.news[0]["text"]).contains("strong fitness base"),
 			"The news says the base the club takes into Round 1")
 	GameState.advance()
@@ -631,8 +625,8 @@ func _test_ai_parity() -> void:
 	_check(off_inj == 0 and fair and on_inj <= GameState.preseason_injuries().size(),
 			"In training only a Heavy week hurts anyone, at any club, and only with a soft-tissue injury; the rest come from the pre-season match (%d in training, %d in the match, %d still out at Round 1)" % [
 			in_training, in_match, on_inj])
-	_check(BalanceGate.held(on_mean >= off_mean and on_mean - off_mean < 1.0 and most <= GameState.SEASON_TRAIN_GAIN + 2, "preseason mean rating lift under a point"),
-			"A pre-season lifts the league's mean rating by under a point (%.2f to %.2f), nobody by more than the season limit" % [off_mean, on_mean])
+	_check(BalanceGate.held(on_mean >= off_mean and on_mean - off_mean < 1.0, "preseason mean rating lift under a point"),
+			"A pre-season lifts the league's mean rating by under a point (%.2f to %.2f)" % [off_mean, on_mean])
 	_check(theirs > 0.0 and absf(mine - theirs) < 0.5,
 			"On the default plan your list develops like an AI club's (%.2f against %.2f a player)" % [mine, theirs])
 	_check(int(counts["sound"]) > 0 and int(counts["strong"]) > 0,

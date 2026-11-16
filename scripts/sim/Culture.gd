@@ -26,8 +26,7 @@ extends RefCounted
 ##   Ambition     - winning now: the price a player will re-sign for, and a free
 ##                  agent's weighing of the club's offer (Contracts); patient or
 ##                  rebuilding: how fast under-22s and first-season draftees
-##                  develop (match XP, GameState._club_xp) and how far in a
-##                  season (a point of training ceiling, GameState.season_ceiling)
+##                  develop (their XP, GameState._club_mult)
 ## A band in the middle does nothing; the screen says what each active band does.
 ## Effects move the odds of a season, never its certainty: each is a small tilt
 ## on a lever the game already has.
@@ -307,8 +306,7 @@ static func club_effect(rel: Dictionary, club: String, kind: String, strand: Str
 
 ## Which strand each kind of effect belongs to.
 const KIND_STRAND := {"recovery": "standards", "sting": "together", "match_contest": "together",
-		"resign_floor": "ambition", "free_agent_score": "ambition", "young_growth": "ambition",
-		"young_ceiling": "ambition"}
+		"resign_floor": "ambition", "free_agent_score": "ambition", "young_growth": "ambition"}
 
 
 ## Does a patient club's young-player effect reach this player: under the
@@ -343,7 +341,7 @@ static func effect_line(strand: String, t: int) -> String:
 					"more" if m > 0.0 else "less"]
 			return "Players %s." % ball if x == 0.0 else "Players %s and %s." % [ball, sting]
 		"ambition":
-			if effect_of("young_growth", strand, band) != 0.0 or effect_of("young_ceiling", strand, band) != 0.0:
+			if effect_of("young_growth", strand, band) != 0.0:
 				return "Young players come on a little quicker here."
 			var r := effect_of("resign_floor", strand, band)
 			var f := effect_of("free_agent_score", strand, band)

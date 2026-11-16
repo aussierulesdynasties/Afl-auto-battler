@@ -145,17 +145,10 @@ func _test_stamps() -> void:
 			"Develop and manage costs some legs but lowers soft-tissue risk")
 	var dev := Conditioning.new_season("develop", 2026, "GEE", 1, 1)
 	var pk := Conditioning.new_season("peak", 2026, "GEE", 1, 1)
-	_check(Conditioning.ceiling_step(dev, 10, 12, {"age": 20}) == 1
-			and Conditioning.ceiling_step(dev, 10, 12, {"age": 26}) == 0
-			and Conditioning.ceiling_step(pk, 10, 12, {"age": 20}) == 0,
-			"Develop and manage gives a young player a point more room this season")
-	var at_bye := Conditioning.revise(pk, 12, "develop")
-	var late := Conditioning.revise(Conditioning.new_season("steady", 2026, "GEE", 1, 1), 20, "develop")
-	var r14 := Conditioning.revise(pk, 13, "develop")
-	_check(Conditioning.ceiling_step(at_bye, 22, 12, {"age": 20}) == 1
-			and Conditioning.ceiling_step(late, 22, 12, {"age": 20}) == 0
-			and Conditioning.ceiling_step(r14, 22, 12, {"age": 20}) == 0,
-			"Only Develop from the pre-season or the bye earns the extra room; a late switch does not")
+	_check(Conditioning.xp_mult(Conditioning.plan_at(dev, 10), {"age": 20}) > 1.0
+			and Conditioning.xp_mult(Conditioning.plan_at(dev, 10), {"age": 26}) == 1.0
+			and Conditioning.xp_mult(Conditioning.plan_at(pk, 10), {"age": 20}) == 1.0,
+			"Develop and manage speeds a young player's development, and no one else's")
 	var p := {"id": "x", "age": 25, "attr": {"durability": 70}}
 	var base_chance := Injuries.chance(p)
 	_check(Workload.energy_cap(p) == 100.0 and Workload.drain_mult(p) == 1.0,
@@ -284,10 +277,10 @@ func _test_career() -> void:
 		if float(q.get("age", 30.0)) <= ClubBudget.YOUNG_AGE:
 			kid = q
 			break
-	var room := GameState.season_ceiling(kid)
+	var plain := GameState._club_mult("GEE", kid, {}, true)
 	GameState.set_fitness_plan("develop")
-	_check(not kid.is_empty() and GameState.season_ceiling(kid) == room + 1,
-			"Your develop plan lifts your young players' season ceiling")
+	_check(not kid.is_empty() and GameState._club_mult("GEE", kid, {}, true) > plain,
+			"Your develop plan speeds your young players' development")
 	GameState.set_fitness_plan("peak")
 	var before: Dictionary = GameState.season.lists["GEE"][0]
 	_check(not before.has("cond_cap"), "Nothing is stamped before the week's first match is built")
@@ -325,7 +318,7 @@ func _test_words() -> void:
 	_check(Conditioning.late_cost("peak", 0, 10) == "" and Conditioning.late_cost("steady", 13, 10) == ""
 			and Conditioning.late_cost("peak", 13, 10).contains("less time")
 			and Conditioning.late_cost("fast", 13, 10).contains("Too late")
-			and Conditioning.late_cost("develop", 13, 10).contains("extra room"),
+			and Conditioning.late_cost("develop", 13, 10) == "",
 			"A late change says what it costs; an early one costs nothing")
 
 
@@ -389,8 +382,7 @@ func _test_plan_copy() -> void:
 	var d := -Conditioning.DEVELOP_LEVEL
 	_check(dev.contains("Gain:") and dev.contains("Cost:")
 			and dev.contains("players %d and under" % int(ClubBudget.YOUNG_AGE))
-			and dev.contains(Conditioning.pct(Conditioning.DEVELOP_XP) + " more development,")
-			and dev.contains("%d more point" % Conditioning.DEVELOP_CEILING)
+			and dev.contains(Conditioning.pct(Conditioning.DEVELOP_XP) + " more development.")
 			and dev.contains(Conditioning.pct(Conditioning.INJURY_K * d) + " fewer")
 			and dev.contains(Conditioning.pct(Conditioning.DRAIN_K * d) + " faster"),
 			"Develop and manage says what the young gain and what the side gives up (%s)" % dev)

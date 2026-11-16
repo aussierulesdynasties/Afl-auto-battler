@@ -65,10 +65,9 @@ const CAP_K := 4.0           # legs off the energy cap at c = -1
 ## upside shows where it matters: in loaded legs late in the season.
 const RESTORE_K := 8.0
 const INJURY_K := 0.25       # soft-tissue risk x(1 - INJURY_K * c)
-## Develop and manage: extra development XP for players 22 and under, and the
-## points of extra season room a season of it earns them (ceiling_step).
+## Develop and manage: extra development XP for players 22 and under (no
+## extra room: there is no season ceiling now, director 2026-11-17).
 const DEVELOP_XP := 0.15
-const DEVELOP_CEILING := 1
 
 
 static func valid_plan(plan: String) -> bool:
@@ -250,18 +249,6 @@ static func xp_mult(plan: String, p: Dictionary) -> float:
 	return 1.0
 
 
-## Develop and manage also lifts a young player's season training ceiling a
-## point (the size of a good teacher's step): extra XP alone would sit unused
-## once he reaches the ordinary ceiling. Only a season of it earns the point:
-## the plan must have run since the pre-season or the club's bye (`bye_w`),
-## so a switch to Develop in the last month buys no extra room.
-static func ceiling_step(rec: Dictionary, w: int, bye_w: int, p: Dictionary) -> int:
-	var plan := plan_at(rec, w)
-	if xp_mult(plan, p) <= 1.0:
-		return 0
-	return DEVELOP_CEILING if chosen_at(rec, w) <= maxi(0, bye_w) else 0
-
-
 ## What an AI club runs, from where it is in its cycle (TradeValue.phase):
 ## contenders peak for September, rebuilders develop, the rest stay steady.
 static func ai_plan(phase: String) -> String:
@@ -373,8 +360,6 @@ static func late_cost(plan: String, w: int, bye_w: int) -> String:
 		if share <= 0.0:
 			return "Too late to build a peak this year."
 		return "Changing now leaves less time to build, so the peak comes lower."
-	if plan == "develop" and w > maxi(0, bye_w):
-		return "A season of it earns the young players their extra room. From now it only speeds their development."
 	return ""
 
 
@@ -392,7 +377,7 @@ const PLAN_ODDS := "The peak lands within %d weeks of plan about %s of the time;
 const PLAN_ODDS_SURE := "The peak lands within %d weeks of plan every season."
 const PLAN_UP_STEADY := "Gain: the same legs every week, with no heavy weeks and no extra soft-tissue risk."
 const PLAN_DOWN_STEADY := "Cost: no peak, so the side is no fresher in September than in March."
-const PLAN_UP_DEVELOP := "Gain: players %d and under earn %s more development, and with the plan on since the bye they have %d more %s of room to grow this season. %s fewer soft-tissue injuries all year."
+const PLAN_UP_DEVELOP := "Gain: players %d and under earn %s more development. %s fewer soft-tissue injuries all year."
 const PLAN_DOWN_DEVELOP := "Cost: all year the side tires %s faster and has %s less in the legs."
 ## Develop and manage also sets the match-day rotations (MatchSim.auto_rotation
 ## puts the club on "hard", every other plan on "normal"): the legs each
@@ -505,7 +490,7 @@ static func plan_effect(plan: String, hp_level: int) -> String:
 		"develop":
 			var d := -DEVELOP_LEVEL
 			# The age cut is the one xp_mult uses (ClubBudget.YOUNG_AGE).
-			lines.append(PLAN_UP_DEVELOP % [int(ClubBudget.YOUNG_AGE), pct(DEVELOP_XP), DEVELOP_CEILING, "point" if DEVELOP_CEILING == 1 else "points",
+			lines.append(PLAN_UP_DEVELOP % [int(ClubBudget.YOUNG_AGE), pct(DEVELOP_XP),
 					pct(INJURY_K * d)])
 			lines.append(PLAN_DOWN_DEVELOP % [pct(DRAIN_K * d), legs_pct(CAP_K * d)])
 			lines.append_array(rotation_lines())

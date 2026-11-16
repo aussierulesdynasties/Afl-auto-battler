@@ -183,8 +183,7 @@ var loaded := false
 ## True from a reload until a career takes the data (GameState.reset() clears it):
 ## a career mutates the player dicts in place, so only an untouched load is reused.
 var pristine := false
-## The 2026 league's mean overall. Each rollover re-anchors the league to it
-## (Prospects.renormalise_league), so ratings stay relative to the league.
+## The 2026 league's mean overall and spread.
 var baseline_overall := 0.0
 var baseline_spread := 0.0   # standard deviation of the 2026 overalls
 

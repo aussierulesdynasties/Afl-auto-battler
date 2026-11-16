@@ -570,6 +570,7 @@ func generated_lists(codes: Array) -> Dictionary:
 		for q in Prospects.generate_class(y, 4242 + y):
 			for k in range(1, GEN_GROW + 1):
 				Prospects.age_player(q, y + k)
+				Growth.play_games(q, 22)   # a season of ordinary games (Growth)
 			var r := str(q.get("role", "MID"))
 			if not pool.has(r):
 				pool[r] = []

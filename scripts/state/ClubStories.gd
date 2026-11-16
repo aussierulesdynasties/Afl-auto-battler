@@ -660,9 +660,13 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
 	out["home_club"] = str(p.get("draft_team", ""))
 	out["seasons_listed"] = int(gs.season_year) - int(p.get("drafted_year", int(gs.season_year) - 99))
 	out["goals"] = career_goals
-	# What waiting on an early extension can cost: the rise training can still
-	# bring his price this season (read on a copy: the ceiling marks the player).
-	out["wait_price"] = ClubLife.wait_words(p, gs.season_ceiling(p.duplicate()))
+	# What waiting on an early extension can cost: the rise his development
+	# brings by the off-season if he plays every game left (Growth).
+	var left := 0
+	if gs.season != null:
+		left = maxi(0, gs.season.regular_rounds() - gs.season.round_index)
+	out["wait_price"] = ClubLife.wait_words(p, int(round(
+			Growth.points_per_game(int(p.get("potential", p.get("overall", 60)))) * float(left))))
 	# His learning project, for the development talk (T5.r93).
 	out.merge(project_facts(gs, p), true)
 	# The result of his role trial, for the card that reports it.

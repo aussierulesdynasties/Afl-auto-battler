@@ -294,26 +294,6 @@ static func outlook(p: Dictionary, years: int) -> Array:
 	return out
 
 
-## Training price against POT, the same for every club. Well below it a
-## stat comes cheaper (down to half price); over the last few points it gets
-## dearer; at POT it costs PAST_POT_BASE and every point beyond multiplies
-## that by PAST_POT_STEP. No stop: an exceptional player can still be built
-## past his projection, but each point costs far more than the last.
-const NEAR_POT_GAP := 4
-const NEAR_POT_STEP := 0.15
-const PAST_POT_BASE := 1.6
-const PAST_POT_STEP := 1.7
-
-
-static func training_multiplier(p: Dictionary) -> float:
-	var gap := int(p.get("potential", p.get("overall", 0))) - int(p.get("overall", 0))
-	if gap <= 0:
-		return PAST_POT_BASE * pow(PAST_POT_STEP, float(-gap))
-	if gap < NEAR_POT_GAP:
-		return 1.0 + float(NEAR_POT_GAP - gap) * NEAR_POT_STEP
-	return clampf(1.0 - float(gap) / 50.0, 0.5, 1.0)
-
-
 ## A breakout: an off-season in which a player jumps well beyond his normal
 ## development - past his projection if he was near it. Rolled fresh each
 ## year for every player alike, likelier when young, rare at any age, and

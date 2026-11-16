@@ -2531,7 +2531,7 @@ func _test_culture_copy_is_true() -> void:
 	# CoachEffects gives a match squad its Togetherness from the relations GameState hands it (empty while culture effects are off).
 	effect_readers.sort()
 	_check(effect_readers == ["CoachEffects.gd", "GameState.gd"], "Only GameState and match day's CoachEffects apply a culture effect (%s)" % ", ".join(effect_readers))
-	for kind in ["recovery", "sting", "resign_floor", "free_agent_score", "young_growth", "young_ceiling"]:
+	for kind in ["recovery", "sting", "resign_floor", "free_agent_score", "young_growth"]:
 		_check(gs.contains("culture_effect(") and gs.contains("\"%s\")" % kind), "Culture's %s effect is applied" % kind)
 	for st in ["standards", "together", "ambition"]:
 		_check(Culture.moves_line(st) != "", "%s says what moves it" % st)
@@ -2595,8 +2595,8 @@ func _test_culture_effects() -> void:
 	# Director, 2026-10-18: a patient club brings its young on; veterans' asks are not lower there.
 	_check(Culture.effect_line("ambition", -20) == "Young players come on a little quicker here."
 			and Culture.effect_line("ambition", -50) == "Young players come on a little quicker here.", "Ambition, patient and rebuilding")
-	_check(Culture.effect_of("young_ceiling", "ambition", "patient") == 1.0 and Culture.effect_of("young_ceiling", "ambition", "rebuild") == 1.0
-			and Culture.effect_of("young_ceiling", "ambition", "now") == 0.0, "Young players: a point more season ceiling at a patient club only")
+	_check(Culture.effect_of("young_ceiling", "ambition", "patient") == 0.0,
+			"No season ceiling point at a patient club (director 2026-11-17: dropped with the ceiling)")
 	for band in ["patient", "rebuild"]:
 		_check(Culture.effect_of("resign_floor", "ambition", band) == 0.0 and Culture.effect_of("free_agent_score", "ambition", band) == 0.0,
 				"A %s club gets no re-sign or free-agent tilt" % band)
@@ -2665,16 +2665,6 @@ func _test_culture_effects() -> void:
 	GameState.culture_effects_on = true
 	_check(on_kid == int(round(float(off_kid) * 1.05)) and on_kid > off_kid and on_old == off_old,
 			"Rebuilding: a 19-year-old earns 5%% more from the same game, a 29-year-old the same (%d v %d; %d v %d)" % [on_kid, off_kid, on_old, off_old])
-	# ...and has a point more room this season, inside POT; a veteran does not.
-	var kid2 := {"id": "k2", "age": 19.0, "overall": 60, "potential": 80, "club": "GEE", "season_start_ov": 60}
-	var capped := {"id": "k3", "age": 19.0, "overall": 62, "potential": 63, "club": "GEE", "season_start_ov": 60}
-	var vet2 := {"id": "o2", "age": 29.0, "overall": 70, "potential": 80, "club": "GEE", "season_start_ov": 70}
-	var c_on := [GameState.season_ceiling(kid2), GameState.season_ceiling(capped), GameState.season_ceiling(vet2)]
-	GameState.culture_effects_on = false
-	var c_off := [GameState.season_ceiling(kid2), GameState.season_ceiling(capped), GameState.season_ceiling(vet2)]
-	GameState.culture_effects_on = true
-	_check(int(c_on[0]) == int(c_off[0]) + 1 and int(c_on[1]) == maxi(int(c_off[1]), mini(int(c_off[1]) + 1, 63)) and int(c_on[2]) == int(c_off[2]),
-			"Rebuilding: a 19-year-old's season ceiling is a point higher (inside POT), a 29-year-old's the same (%s v %s)" % [str(c_on), str(c_off)])
 	GameState.culture_effects_on = false
 	_check(GameState.culture_effect("GEE", "recovery") == 0.0, "Off means off")
 	GameState.culture_effects_on = true

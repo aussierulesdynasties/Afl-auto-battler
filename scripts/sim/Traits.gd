@@ -94,7 +94,7 @@ const EARNED := {
 	"unicorn": {"label": "Unicorn", "text": "Plays forward, midfield and back. On the ground, fills one missing place in one synergy.",
 			"scout": "Can play anywhere on the ground."},
 	"fine_wine": {"label": "Fine Wine",
-			"text": "Ages three years slower: the decline starts three years later and is 30% gentler, and retirement comes up to three years later (40 at the latest).",
+			"text": "Lasts like the real Fine Wine players: his career length is rolled from theirs, and retirement comes up to three years later (40 at the latest).",
 			"scout": "Gets better with age.",
 			"earn": "Born with it, not trained: every real player with 60 or more games in seasons aged 32 or older, and about 1 draftee in 52."},
 }
@@ -143,8 +143,9 @@ static func wet_weather(p: Dictionary) -> bool:
 ##
 ## The odds match the rate real draftees reached the same mark (director's
 ## choice): 54 of the 2,789 who joined a list at 21 or younger (1991 on, born by
-## 1990, played or not), 1 in 52 (docs/FINE_WINE_EVIDENCE.md). Ageing and retirement read
-## FINE_WINE_YEARS and FINE_WINE_SLOPE (Potential.age_step_for, Prospects.should_retire).
+## 1990, played or not), 1 in 52 (docs/FINE_WINE_EVIDENCE.md). A drafted one's
+## career length is rolled from the real Fine Wine careers (Growth.career_last);
+## retirement reads FINE_WINE_YEARS (Prospects.should_retire).
 const FINE_WINE_FROM_AGE := 32
 const FINE_WINE_GAMES := 60
 const FINE_WINE_DRAFTEE_ODDS := 1.0 / 52.0

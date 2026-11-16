@@ -390,14 +390,21 @@ static func age_league(lists: Dictionary, year: int, min_left := 0) -> Dictionar
 	var retired := []
 	var developed := 0
 	var declined := 0
+	var breakouts := []
 	for code in lists:
 		var arr: Array = lists[code]
 		for p in arr:
-			var delta := age_player(p, year)
-			if delta > 0.0:
+			age_player(p, year)
+			# The summer after the season just played (Growth, the director's
+			# design 2026-11-17): past his peak part of what he trained past
+			# his potential goes; once his career is over he falls.
+			var delta := Growth.summer(p, year - 1)
+			if delta > 0:
 				developed += 1
-			elif delta < 0.0:
+			elif delta < 0:
 				declined += 1
+		for b in Growth.breakouts(str(code), arr, year):
+			breakouts.append([str(code)] + b)
 		# Retire/trim pass, original order so it is deterministic.
 		var keep: Array = []
 		var dropped := 0
@@ -426,7 +433,7 @@ static func age_league(lists: Dictionary, year: int, min_left := 0) -> Dictionar
 					p.erase("retiring")
 				keep.append(p)
 		lists[code] = keep
-	return {"retired": retired, "developed": developed, "declined": declined}
+	return {"retired": retired, "developed": developed, "declined": declined, "breakouts": breakouts}
 
 
 static func should_retire(p: Dictionary, year: int) -> bool:
@@ -475,219 +482,23 @@ static func real_slack(p: Dictionary) -> int:
 	return -1 if r < 0.25 else (1 if r >= 0.75 else 0)
 
 
-## Age one player by a year and apply the development band. Returns the
-## intended overall delta (for stats). Everyone on a list has now played a
-## full simulated season, so the 2026 small-sample confidence shrink lifts.
-static func age_player(p: Dictionary, year: int) -> float:
-	var rng := _rng_for("%s|%d" % [str(p.get("id", "")), year])
-	var age := float(p.get("age", 26.0)) + 1.0
-	p["age"] = age
+## Age one player by a year. Everyone on a list has now played a full
+## simulated season, so the 2026 small-sample confidence shrink lifts. His
+## rating moves only by what he earns (Growth): no age step, no free points,
+## no growth toward his potential in the summer (director, 2026-11-17).
+static func age_player(p: Dictionary, _year: int) -> float:
+	p["age"] = float(p.get("age", 26.0)) + 1.0
 	if bool(p.get("projected", false)):
 		p["sample"] = 16.0
 	else:
 		p["sample"] = maxf(18.0, float(p.get("gm", 0.0)))
-
-	var d := Potential.age_step_for(age, rng.randf(), Traits.fine_wine(p))
-	var ov := int(p.get("overall", 50))
-	if age <= 25.0 and ov < 55:
-		d += 1.0  # late bloomers keep climbing
-	if age <= 23.0 and ov >= 80:
-		d += 1.0  # the young stars' ceilings stretch too
-	# Close part of the gap to potential (most of it in a rehab year). This
-	# replaces the age curve when it is bigger rather than stacking on it, so
-	# the league does not inflate. Natural growth stops at the projection.
-	var grow := Potential.growth(p, age)
-	if grow > 0.0:
-		d = maxf(d, grow)
-	# No off-season cap below his potential (director 2026-11-17: "off season
-	# doesnt fucking reset anything"): the ceiling is POT's, 97.
-	var target := clampf(float(ov) + d, 25.0, float(Potential.MAX_POT))
-	if d > 0.0 and p.has("potential"):
-		target = minf(target, float(maxi(ov, int(p["potential"]))))
-	# A breakout year: a jump on top of that, wherever he stands against his
-	# POT. Rolled fresh each year for every player alike - nobody is marked
-	# for it in advance - and remembered for his story.
-	if p.has("potential") and rng.randf() < Potential.breakout_chance(age):
-		var jump := Potential.breakout_jump(rng)
-		target = clampf(target + jump, 25.0, 97.0)
-		var story: Array = p.get("breakouts", [])
-		story.append([year, int(round(jump))])
-		p["breakouts"] = story
-
-	var role := str(p.get("role", "MID"))
 	var a: Dictionary = p.get("attr", {})
 	if not a.is_empty():
-		p["attr"] = fit_attributes(a, role, target, Ratings.effective_games(p))
-		p["overall"] = Ratings.rate_overall(p["attr"], role, Ratings.effective_games(p))
+		var ov := int(p.get("overall", 50))
+		p["overall"] = Ratings.rate_overall(a, str(p.get("role", "MID")), Ratings.effective_games(p))
 		p["value"] = Ratings.salary_value(int(p["overall"]))
-	return float(int(p["overall"]) - ov)
-
-
-## The season's training, taken back off where each player put it (row 90).
-## Clubs train a position's core - a midfielder's contested first of all -
-## and the re-anchor used to take the league's lift back evenly off every
-## attribute, so the core climbed against the rest of the game each year and
-## Contested bulls tripled over seven seasons.
-##
-## Each listed player gives back his position's average training lift (in
-## the rating's own blend), out of the attributes he trained himself:
-## - trained past the average: he gives back that share of each of his own
-##   gains and keeps the rest, so a club that trains better keeps its edge;
-## - trained less, or not at all: he gives back all his gains and the rest of
-##   the average evenly, as the re-anchor did.
-## Nobody gives back an attribute he did not train, so a star who spent his
-## points elsewhere keeps his contested (a role-wide average taken off
-## everyone pulled the best ruckmen, interceptors and bulls down and lifted
-## the players still building their core). Points the rating does not count
-## (temperament, an attribute outside his position) are never touched. Measured before ageing; returns {id: {attr: points
-## to take off}} for apply_training_unwind after ageing.
-static func training_unwind(lists: Dictionary, year: int) -> Dictionary:
-	var rows: Array = []
-	var sums := {}
-	var counts := {}
-	for code in lists:
-		for p in lists[code]:
-			var a: Dictionary = p.get("attr", {})
-			if a.is_empty():
-				continue
-			var role := str(p.get("role", "MID"))
-			var g := {}
-			var raw_g: Dictionary = p.get("season_gains", {})
-			for key in raw_g:
-				# Only what the rating counts: temperament, or marking bought
-				# for a midfielder, never lifted the league's rating, so it
-				# stays his.
-				if not a.has(key) or int(raw_g[key]) <= 0 or raw_lift({key: 1}, role) <= 0.0:
-					continue
-				g[key] = int(raw_g[key])
-			var lift := raw_lift(g, role)
-			rows.append([p, role, g, lift])
-			sums[role] = float(sums.get(role, 0.0)) + lift
-			counts[role] = int(counts.get(role, 0)) + 1
-	var plan := {}
-	for row in rows:
-		var p: Dictionary = row[0]
-		var role: String = row[1]
-		var g: Dictionary = row[2]
-		var lift: float = row[3]
-		var mean := float(sums[role]) / float(counts[role])
-		if mean <= 0.0:
-			continue
-		var id := str(p.get("id", ""))
-		var take := {}
-		if lift > mean:
-			var share := mean / lift
-			for key in g:
-				take[key] = _dithered(float(g[key]) * share, id, key, year)
-		else:
-			for key in g:
-				take[key] = int(g[key])
-			var even := mean - lift
-			for key in (p["attr"] as Dictionary):
-				if key in UNRATED_KEYS:
-					continue
-				take[key] = int(take.get(key, 0)) + _dithered(even, id, "even|" + str(key), year)
-		plan[id] = take
-	return plan
-
-
-## A season's gains in the rating's raw blend (Ratings.rate_overall: 70% the
-## position's weighted core, 22% star power, 8% durability).
-static func raw_lift(gains: Dictionary, role: String) -> float:
-	var w: Dictionary = Ratings.ROLE_WEIGHTS.get(role, Ratings.ROLE_WEIGHTS["MID"])
-	var out := 0.0
-	for key in gains:
-		if w.has(key):
-			out += 0.70 * float(w[key]) * float(gains[key])
-		elif key == "star":
-			out += 0.22 * float(gains[key])
-		elif key == "durability":
-			out += 0.08 * float(gains[key])
-	return out
-
-
-## A whole point more or less per player, so the league gives back the
-## average exactly: rounding 0.5 to 0 for everyone would leave it behind
-## every season. Keyed on player, attribute and year: seeded, no clock.
-static func _dithered(v: float, id: String, key: String, year: int) -> int:
-	var dither := float(absi(hash("%s|%s|%d" % [id, key, year])) % 1000) / 1000.0
-	return int(floor(v + dither))
-
-
-## Take the planned points off every player still listed after ageing. The
-## draft pool and a new expansion list never trained, so give nothing back.
-static func apply_training_unwind(lists: Dictionary, plan: Dictionary) -> void:
-	if plan.is_empty():
-		return
-	for code in lists:
-		for p in lists[code]:
-			var take: Dictionary = plan.get(str(p.get("id", "")), {})
-			var a: Dictionary = p.get("attr", {})
-			if take.is_empty() or a.is_empty():
-				continue
-			var role := str(p.get("role", "MID"))
-			for key in take:
-				if a.has(key):
-					a[key] = clampi(int(a[key]) - int(take[key]), 1, 99)
-			p["overall"] = Ratings.rate_overall(a, role, Ratings.effective_games(p))
-			p["value"] = Ratings.salary_value(int(p["overall"]))
-			# POT stays where it is: what he can still reach does not fall
-			# because he trained (director 2026-11-17, silent corrections).
-
-
-## Ratings are relative to the league. Training, development and new
-## draftees move the league a little every year - up in the middle, and
-## bunched toward it as stars age out faster than the young ones catch them.
-## Left alone, that would eventually crowd everyone together and push the
-## engine off its real 2026 calibration. After each rollover every player
-## (and every prospect still in the pool) is re-anchored so the league has
-## the 2026 average and spread again, keeping everyone's place relative to
-## everyone else: a club that trains or develops better keeps that edge.
-## Returns {"shift": mean drift, "stretch": spread ratio applied}.
-static func renormalise_league(lists: Dictionary, pool: Array, baseline: float,
-		baseline_spread := 0.0) -> Dictionary:
-	var vals: Array = []
-	for code in lists:
-		for p in lists[code]:
-			vals.append(float(p.get("overall", 0)))
-	if baseline <= 0.0 or vals.is_empty():
-		return {"shift": 0.0, "stretch": 1.0}
-	var mean := 0.0
-	for v in vals:
-		mean += v
-	mean /= float(vals.size())
-	var sq := 0.0
-	for v in vals:
-		sq += (v - mean) * (v - mean)
-	var spread := sqrt(sq / float(vals.size()))
-	var stretch := 1.0
-	if baseline_spread > 0.0 and spread > 0.0:
-		stretch = clampf(baseline_spread / spread, 0.85, 1.20)
-	if absf(mean - baseline) < 0.5 and absf(stretch - 1.0) < 0.02:
-		return {"shift": 0.0, "stretch": 1.0}
-	var to_scale := func(v: float) -> float: return baseline + (v - mean) * stretch
-	for code in lists:
-		for p in lists[code]:
-			_shift_player(p, to_scale.call(float(p["overall"])), to_scale)
-	for p in pool:
-		_shift_player(p, to_scale.call(float(p["overall"])), to_scale)
-	return {"shift": mean - baseline, "stretch": stretch}
-
-
-static func _shift_player(p: Dictionary, target_overall: float, to_scale: Callable) -> void:
-	var a: Dictionary = p.get("attr", {})
-	if a.is_empty():
-		return
-	var role := str(p.get("role", "MID"))
-	var target := clampf(target_overall, 25.0, 99.0)
-	p["attr"] = fit_attributes(a, role, target, Ratings.effective_games(p))
-	p["overall"] = Ratings.rate_overall(p["attr"], role, Ratings.effective_games(p))
-	p["value"] = Ratings.salary_value(int(p["overall"]))
-	# POT is a projection on the same scale as OVR: when the league is
-	# re-anchored it moves with it, so a player's distance to his projection
-	# is kept. It never moves to meet the rating he has reached.
-	if p.has("potential"):
-		p["potential"] = clampi(int(round(to_scale.call(float(p["potential"])))), 1, Potential.MAX_POT)
+		return float(int(p["overall"]) - ov)
+	return 0.0
 
 
 ## Age the undrafted pool between seasons. Prospects re-enter next year's
