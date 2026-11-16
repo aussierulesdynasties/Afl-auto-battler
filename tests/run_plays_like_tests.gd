@@ -18,9 +18,11 @@ const LEVEL_BAND := 3.0
 ## Held at what the Wheelo ratings of 2026-11-16 give (86% in band, 25% lacking
 ## the prospect's best attribute; 90% and 12% under the old ratings) until the
 ## plays-like lines are reassessed (director, 2026-11-16: "the whole plays like
-## lines will have to be reassessed in the future").
+## lines will have to be reassessed in the future"). Players with under 10
+## senior games are rated from their draft pick (director 2026-11-17), so they
+## leave the pool (it never held projected players) and 27.4% lack it.
 const NEAR_SHARE := 0.85
-const LACKS_SHARE := 0.27
+const LACKS_SHARE := 0.28
 const FIRST_YEAR := 2045
 const CLASSES := 11
 
@@ -279,7 +281,7 @@ func _test_strengths_count_for_more() -> void:
 
 func _test_pool_is_the_real_lists() -> void:
 	var pool: Array = _db.plays_like_pool
-	_check(pool.size() >= 600, "The pool is the launch lists (%d real players)" % pool.size())
+	_check(pool.size() >= 590, "The pool is the launch lists (%d real players)" % pool.size())
 	var real := {}
 	for q in _db.players:
 		real[str(q["id"])] = q
@@ -773,7 +775,7 @@ func _test_another_dataset_has_a_pool() -> void:
 	DS.remove("test_plays_like_1989")
 	_db.reload()
 	_state.reset()
-	_check(_db.plays_like_pool.size() >= 600, "Back on the 2026 lists (%d)" % _db.plays_like_pool.size())
+	_check(_db.plays_like_pool.size() >= 590, "Back on the 2026 lists (%d)" % _db.plays_like_pool.size())
 
 
 func _test_nobody_to_compare() -> void:
