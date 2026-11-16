@@ -90,10 +90,12 @@ func _test_defender_leads_the_back_zone() -> void:
 	_check(BalanceGate.held(d_on > 0.5, "defenders take most of the back-zone ball"), "defenders still take most of the back zone's ball (%.1f%%)" % (100 * d_on))
 
 
-## Two defenders, one a ball user (carry and disposal 90, intercept 30) and
-## one a spoiler (intercept 90, carry and disposal 30): in the back zone the
-## ball goes to the ball user, about (90/30)^2 = 9 to 1; the old intercept
-## pick sent it the other way.
+## Two general defenders, one a ball user (carry, kicking and handballing 90,
+## intercept 30) and one a spoiler (the reverse): in the back zone the ball
+## goes to the ball user by his ball use squared, as the engine reads it
+## (about 4 to 1 on the general defender's scale); the old intercept pick
+## sent it the other way. Both play the same position, so the engine scale
+## is the same for each (a key defender's carry tops out lower).
 func _test_back_carrier_follows_ball_use() -> void:
 	var sim := _sim(31)
 	var defs := []
@@ -110,12 +112,18 @@ func _test_back_carrier_follows_ball_use() -> void:
 		spoiler["attr"][k] = 30.0
 	user["attr"]["intercept"] = 30.0
 	spoiler["attr"]["intercept"] = 90.0
+	user["apos"] = "Gen. Defender"
+	spoiler["apos"] = "Gen. Defender"
+	var bu_user := pow(sim._ball_use(user), 2.0)
+	var expected := bu_user / (bu_user + pow(sim._ball_use(spoiler), 2.0))
 	var to_user := 0
 	for i in range(DRAWS):
 		if str(sim.pick_carrier(0, -50.0, [user, spoiler])["id"]) == str(user["id"]):
 			to_user += 1
 	var share := float(to_user) / DRAWS
-	_check(share > 0.8, "the back-zone ball goes to the ball user, not the spoiler (%.1f%%)" % (100 * share))
+	_check(share > 0.7 and absf(share - expected) < 0.05,
+			"the back-zone ball goes to the ball user, not the spoiler (%.1f%%, ball use squared gives %.1f%%)"
+			% [100 * share, 100 * expected])
 	_check(is_equal_approx(sim._ball_use(user), 0.58 * sim._a(user, "carry") + 0.42 * sim._a(user, "kicking")),
 			"ball use is kick_in_taker's carry/kicking blend")
 
