@@ -70,6 +70,7 @@ const _TABLE := {
 		"draftees": "res://data/draftees_2026.csv",
 		"history": "res://data/player_history_2026.csv",
 		"origin": "res://data/player_origin_2026.csv",
+		"indigenous": "res://data/player_indigenous_2026.csv",
 		"list_additions": "res://data/list_additions_2026.csv",
 		"list_addition_stats": "res://data/list_additions_stats.csv",
 		"rating_stats": "res://data/rating_stats_2026.csv",

@@ -184,17 +184,18 @@
 		"club": "SYD",
 		"controversy": false,
 		"category": "members",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["The cricket's on"],
 		"text": ["The cricket has the SCG locked up, so the side is training at a suburban ground with a bumpy surface and no gym on site. The players are grumbling."],
 		"choices": [
+			{"key": "make_do", "label": "Make do",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "They made do together"}],
+			 "result": "Bumpy ground, no gym. They made it work."},
 			{"key": "bus", "label": "Bus them to a proper facility",
-			 "effects": [{"op": "xp", "d": 2, "who": "side"}, {"op": "odds", "chance": 20, "hit": [{"op": "heavy_legs", "who": "side"}], "miss": []}, {"op": "board", "d": -1, "was": "funds"}],
-			 "result": "Good work done, and an hour each way in Sydney traffic."},
-			{"key": "make", "label": "Make do",
-			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The group rolled its sleeves up on a rough ground"}, {"op": "forgo_xp", "d": 2, "who": "side"}, {"op": "odds", "chance": 10, "hit": [{"op": "heavy_legs", "who": "side"}], "miss": []}],
-			 "result": "Nobody loves the surface, but nobody whinges either."}
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "Proper sessions at a proper facility"}, {"op": "morale", "d": 2, "who": "all"}, {"op": "board", "d": -2}],
+			 "result": "A proper facility. The bus bill went to the board."}
 		]
 	},
 	{
@@ -229,24 +230,6 @@
 			{"key": "sydney", "label": "We're Sydney now",
 			 "effects": [{"op": "board", "d": 2}, {"op": "culture", "strand": "together", "d": -2, "why": "The old South members felt cut loose"}, {"op": "odds", "chance": 40, "hit": [{"op": "board", "d": -3, "was": "members"}], "miss": [], "hit_result": "The Melbourne members drifted away."}],
 			 "result": "Every home game stays at the SCG. The letter goes in a drawer."}
-		]
-	},
-	{
-		"id": "syd_riverina_trip",
-		"club": "SYD",
-		"controversy": false,
-		"category": "community",
-		"phase": ["preseason"],
-		"subject": {"kind": "club"},
-		"title": ["Up the road to the Riverina"],
-		"text": ["The league wants a practice match in the Riverina, the heartland of footy in New South Wales. Big crowd, small ground, long bus trip."],
-		"choices": [
-			{"key": "best", "label": "Take the best side",
-			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "morale", "d": 2, "who": "all"}, {"op": "odds", "chance": 15, "hit": [{"op": "heavy_legs", "who": "side"}], "miss": [], "hit_result": "A hard country ground took a toll on the best players."}],
-			 "result": "The town turns out. The kids get their photos with the stars."},
-			{"key": "dev", "label": "Send a development side",
-			 "effects": [{"op": "xp", "d": 2, "who": "all"}, {"op": "board", "d": -1, "was": "members"}],
-			 "result": "The young blokes get a run. The locals wanted the stars."}
 		]
 	},
 	{

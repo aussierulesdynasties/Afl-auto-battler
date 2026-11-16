@@ -21,17 +21,24 @@ extends RefCounted
 
 const DIR := "res://data/stories/"
 const CATEGORIES := ["training", "health", "family", "media", "contracts", "leadership",
-		"community", "rivals", "board", "members", "selection"]
+		"community", "rivals", "board", "members", "selection", "bonding"]
 ## "season_end": the one card the week your season ends (knocked out, premiers or
 ## runners-up) (ClubStories.pick).
-const PHASES := ["regular", "finals", "preseason", "season_end"]
+## "bonding": the pre-season's Team bonding week, one card from the bonding deck
+## (data/stories/bonding.json; director, 2026-11-17, rule 69a).
+const PHASES := ["regular", "finals", "preseason", "season_end", "bonding"]
 const BEATS := ["start", "middle", "end"]
 
 ## The biggest effect one choice may carry, per lever.
 const CAPS := {"morale": 15, "xp": 26, "board": 8, "trust": Trust.STEP_MAX}
 ## Who a group effect reaches: the card's player, this week's side, the whole
 ## list, everyone but him, or the vice-captain (a captain's card's morale only).
-const WHO := ["subject", "side", "all", "others", "vice"]
+## The bonding deck adds: the leadership group (captain and vice-captains), the
+## rest of the list, the club's Indigenous players, and one fit player picked at
+## random when the card is dealt ("one": a sore on a club card).
+const WHO := ["subject", "side", "all", "others", "vice", "leaders", "rest", "indigenous", "one"]
+## Targets that let a player's lever (trust, sore) sit on a club card.
+const GROUP_PLAYER_WHO := {"trust": ["leaders", "indigenous"], "sore": ["one"]}
 ## Every effect a card can carry. Ops marked true need a player subject.
 const OPS := {
 	"morale": false, "xp": false, "board": false, "trust": true, "rest": true, "sore": true,
@@ -120,9 +127,8 @@ const PLAYER_FACTS := ["name", "first", "age", "games", "fit", "selected", "over
 		# finished in the time trial ("best", "worst" or ""), what he is injured with
 		# (the stored kind, and the words for it: "a hamstring strain").
 		"new_here", "trial_place", "injury_kind", "injury_word",
-		# Injured in the pre-season: the development, Heavy weeks and Round 1 weeks the
-		# physio's plan costs him.
-		"pre_miss_xp", "pre_miss_heavy", "pre_miss_rounds",
+		# Injured in the pre-season: the Round 1 weeks the physio's plan costs him.
+		"pre_miss_rounds",
 		# International prospects (international.json): who he is, and where he is in his career.
 		"intl", "intl_region", "from", "demonym", "home_club", "seasons_listed", "goals",
 		# The extension card: what waiting for the off-season can cost (ClubLife.wait_words).
@@ -157,7 +163,10 @@ const CLUB_FACTS := ["club", "opp", "has_opp", "round", "year", "losing_run", "w
 		"result", "lost_final", "lost_prelim", "margin", "margin_line", "history_line", "best_line",
 		# The club decks: your deck and this week's opponent's (ClubStories.deck_code),
 		# and whether the Controversies switch is on (1) or off (0).
-		"club_deck", "opp_deck", "controversies"]
+		"club_deck", "opp_deck", "controversies",
+		# The bonding deck: the club's Indigenous players (the cultural day needs one,
+		# director 2026-11-17), and the player a card's sore falls on, with his odds.
+		"indigenous", "sore_one_name", "sore_one_pct"]
 
 const DEFAULTS := {"weight": 1, "cooldown": 40, "subject_cooldown": 8, "per_season": 0, "subject_per_season": 0,
 		"phase": ["regular"], "default": -1, "bye": false, "priority": false, "always": false, "topical": false}
@@ -365,7 +374,10 @@ static func _check_effect(where: String, e, player: bool) -> Array:
 	var who := str(e.get("who", "subject"))
 	if not WHO.has(who):
 		errs.append("%s: unknown target '%s'" % [where, who])
-	if (bool(OPS[op]) or ((op == "morale" or op == "xp" or op == "slow_start" or op == "forgo_xp") and (who == "subject" or who == "others"))) and not player:
+	var group_ok: bool = (GROUP_PLAYER_WHO.get(op, []) as Array).has(who)
+	if who == "one" and op != "sore":
+		errs.append("%s: only a sore can fall on one player picked at random" % where)
+	if not group_ok and (bool(OPS[op]) or ((op == "morale" or op == "xp" or op == "slow_start" or op == "forgo_xp") and (who == "subject" or who == "others"))) and not player:
 		errs.append("%s: '%s' needs a player card" % [where, op])
 	if who == "vice" and op != "morale":
 		errs.append("%s: only a morale move can reach the vice-captain" % where)
