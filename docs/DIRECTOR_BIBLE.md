@@ -331,6 +331,8 @@ Source tags: DB = DESIGN_BIBLE; RM26/27/28/29/30/32 = roadmap chapters 26, 27, 2
 
 **2.79** Footy data sources for the football proof (2026-11-16). Of dfsaustralia.com: "theres HEAPS of resources on that site that oculd be useful for our sim", then "ahhh its paywalled / gather what you can from the free samples" (free pages only, read through normal use; docs/research/FOOTY_DATA_SOURCES_2026-11-16.md). Of github.com/AFLgains/AIFL: "we have permission to use anything in that github repo directly from the owner"; its code, ideas and data may be used directly, keeping its MIT notice on anything copied.
 
+**2.80** 3D oval daylight: sky light, and the stand's shade in late games (2026-11-16; row 202, 2a). Shown one wing moment of Fremantle v St Kilda from the phone camera and close, lit three ways (A today's one sun and flat grey fill; B sky light: the blue sky lights from above, the grass bounces light up, the stands round the ground darken the sides, so shadows go soft and a little blue and a white fence picks up the sky; C as B with a sun 22 degrees up behind the stand, about 4.30 pm in winter, its shade over about 25 m of the wing), he chose "B, C late games": sky light is the daylight of every match, and a late-afternoon game adds the low sun and the stands' shade across the ground. Brightness and colour are a separate question (post-processing); the shade's phone cost (a longer shadow reach or a shade drawn into the turf) is settled at the one phone costing.
+
 ---
 
 ## 2.S Superseded and cut

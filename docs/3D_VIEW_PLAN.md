@@ -93,7 +93,14 @@ a mix by distance. Cheer squads, banners and reactions to goals are part of the 
 **2e. The cameras.** Which views a match uses (broadcast wing, high whole ground, behind the goals,
 close-ups at a stoppage or a set shot).
 
-The answers are recorded in the Director Bible and summarised here. The freeze allows only the
+The answers are recorded in the Director Bible and summarised here.
+
+**Answers so far.**
+- 2a lighting, daylight (rule 2.80): sky light for every match (ambient and reflections from a sky
+  with the stands round its foot and the grass below); late-afternoon games add a low sun and the
+  stands' shade across the ground. Prototype: `tools/visual/capture_look3d.gd`.
+
+The freeze allows only the
 prototypes each question needs; nothing from step 2 is the settled look until he has chosen it.
 
 ## Step 3. The asset and animation plan (after step 2)
@@ -125,6 +132,6 @@ vignettes. Nothing in step 4 starts before the football proof has passed and the
 |---|---|
 | Freeze | in force from 2026-11-16 |
 | 1. Football proof | not started (row 201) |
-| 2. The world and the look | not started (row 202: 2a foundation, 2b stadium, 2c crowd, 2d players' look, 2e cameras) |
+| 2. The world and the look | under way (row 202): 2a daylight chosen (rule 2.80); next 2a post-processing, then weather and time of day, then 2b stadium, 2c crowd, 2d players' look, 2e cameras |
 | 3. Asset and animation plan | after step 2 (row 203) |
 | 4. Build | after 1 and 3 (rows 197, 198) |
