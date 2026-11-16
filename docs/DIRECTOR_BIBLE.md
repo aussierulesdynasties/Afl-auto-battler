@@ -337,6 +337,8 @@ Source tags: DB = DESIGN_BIBLE; RM26/27/28/29/30/32 = roadmap chapters 26, 27, 2
 
 **2.82** 3D oval night lighting: four towers (2026-11-16; row 202, 2a). Shown the same night moment under three lightings, each set so the open grass and the crowd are equally bright (A today's one bank of lights from a corner, one hard shadow; B four towers, one to each corner as at the MCG or Adelaide, four faint crossed shadows; C a roof ring as at Marvel or Optus, one soft shadow straight down), he chose "B Four towers". Night games are lit by four towers; whether a venue with a roof gets its own lighting is settled with the stadium (2b). The four towers' shadows are costed at the phone check.
 
+**2.83** 3D oval wet games: cloud light and falling rain (2026-11-16; row 202, 2a). Shown a wet day under cloud (grey light from all round, a faint soft shadow under each man) with and without rain falling across the view, he answered "yes it should, if its raining?": when it rains, rain falls on screen. A wet day is lit by cloud, not sun. The rain's phone cost is measured at the costing.
+
 ---
 
 ## 2.S Superseded and cut

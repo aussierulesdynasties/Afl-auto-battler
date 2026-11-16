@@ -204,13 +204,18 @@ func _amb(fallback: float) -> float:
 ## reads that brightness in the phone frame (four passes, the tonemapper is not linear): tone options are
 ## then compared at the same brightness of grass, not one simply brighter.
 func _match_exposure(oval) -> void:
-	if OS.get_environment("TURF") == "":
+	if OS.get_environment("TURF") == "" and OS.get_environment("EXPO") == "":
 		return
-	var want := float(OS.get_environment("TURF"))
+	var want := float(OS.get_environment("TURF")) if OS.get_environment("TURF") != "" else 0.0
 	var env: Environment = oval._env
 	_size(SIZE)
 	oval.aim_end(UP, BACK)
-	for i in range(4):
+	# EXPO=x fixes the exposure instead: a weather that changes the grass, not the light (hot,
+	# rain under the same towers), keeps the fine day's camera, or the men are over- or under-lit
+	# to make the grass match.
+	if OS.get_environment("EXPO") != "":
+		env.tonemap_exposure = float(OS.get_environment("EXPO"))
+	for i in range(0 if OS.get_environment("EXPO") != "" else 4):
 		for f in range(3):
 			await process_frame
 		await RenderingServer.frame_post_draw
@@ -236,7 +241,7 @@ func _match_exposure(oval) -> void:
 			crowd.material_override = cm
 			dials.append(cm)
 		var lo := 0.02
-		var hi := 2.0
+		var hi := 4.0
 		for i in range(10):
 			var k := sqrt(lo * hi)
 			for cm in dials:
@@ -387,6 +392,43 @@ func _apply(oval, look: String) -> void:
 			_lamp(oval, 0.0, 78.0, 0.9, true, 14.0)
 			for az in range(0, 360, 45):
 				_lamp(oval, float(az), 38.0, 0.16, false, 1.0)
+		# Twilight (run with SLOT twilight): rule 2.80's late-game sun, lower (8 degrees) and orange,
+		# the stands' shade across the ground, a dusk sky, and rule 2.82's towers coming on.
+		"twilight":
+			_sky(oval, _amb(1.0))
+			var sm: ShaderMaterial = env.sky.sky_material
+			sm.set_shader_parameter("zenith", Color(0.12, 0.2, 0.42))
+			sm.set_shader_parameter("horizon", Color(0.78, 0.56, 0.42))
+			sm.set_shader_parameter("bowl", Color(0.16, 0.15, 0.16))
+			sm.set_shader_parameter("grass", Color(0.12, 0.2, 0.08))
+			var e := deg_to_rad(8.0)
+			var h := Vector3(0.3, 0.0, -_wing_sign).normalized()
+			sun.global_basis = Basis.looking_at(h * cos(e) + Vector3(0.0, -sin(e), 0.0), Vector3.UP)
+			sun.light_color = Color(1.0, 0.68, 0.42)
+			sun.light_energy = 1.0
+			sun.directional_shadow_max_distance = 320.0
+			oval.turf.fill.visible = false
+			_stand_shadow(oval, true)
+			for az in [35.0, 145.0, 215.0, 325.0]:
+				_lamp(oval, az, 45.0, 0.25, false, 1.0)
+		# A hot day (run with WEATHER hot): the sun high and hard, the sky pale with glare.
+		"hot":
+			_sky(oval, _amb(1.2))
+			var sm: ShaderMaterial = env.sky.sky_material
+			sm.set_shader_parameter("zenith", Color(0.35, 0.55, 0.85))
+			sm.set_shader_parameter("horizon", Color(0.82, 0.86, 0.9))
+			sun.light_energy = 1.6
+			sun.light_color = Color(1.0, 0.96, 0.88)
+			# A hot day's ground is still a watered AFL ground: the fine day's green with some
+			# dried patches (today's full straw look goes lime under the TV grade).
+			# (loaded, not named: a class name here pulls GameDB into the script's compile)
+			var vw = load("res://scripts/ui/match/VignetteWeather.gd")
+			var vg = load("res://scripts/ui/match/VignetteGround.gd")
+			var g: Array = vw.grass("", vg.GRASS, "day")
+			oval.turf.mat.set_shader_parameter("grass_a", g[0])
+			oval.turf.mat.set_shader_parameter("grass_b", g[1])
+			oval.turf.mat.set_shader_parameter("hot", float(OS.get_environment("HOTG")) if OS.get_environment("HOTG") != "" else 0.4)
+			oval.turf._copy_look()
 		# A wet day (run with WEATHER wet). The sky is cloud: grey light from all round, the sun
 		# only a soft brightness from above, so a man's shadow is a faint pool at his feet.
 		"overcast":
