@@ -182,6 +182,25 @@ free under US$1M a year in revenue, an Unreal seat licence above it; never used 
 
 The tackle pairs are the gap: a real tackle needs both men in one take, which his Rokoko pair takes give.
 
+### Downloaded 2026-11-17
+
+57 Mixamo clips are in `Desktop/footy assets/mixamo/`, saved as FBX Binary, Without Skin, 30 fps, no keyframe
+reduction. Each one was imported in Blender and every file opened with the 65-bone Mixamo rig and an action.
+
+| GASP group | Downloaded (Mixamo title) |
+|---|---|
+| Stand idles and breaks | Standing Idle, Neutral Idle, Happy Idle, Breathing Idle, Unarmed Idle, Weight Shift, Looking Around |
+| Turns | Left Turn, Right Turn, Left Turn 45, Left Turn 90, Right Turn 90, Turn Left 45 Degrees, Turning Right 45 Degrees, Turning Right, Standing Turn Left 90, Standing Turn Right 90, Quick 180 Turn, Walking Turn 180 |
+| Sidesteps | Left Strafe, Right Strafe, Walk Strafe Left, Walk Strafe Right, Jog Strafe Left, Jog Strafe Right, Dodging Right |
+| Bench | Sitting Idle, Stand To Sit, Sit To Stand, Standing Up, Sitting Clap, Cheering While Sitting, Sitting Fist Pump, Sitting Victory |
+| Gestures and reactions | Agreeing, Shaking Head No, Annoyed Head Shake, Beckoning (come on), Dismissing Gesture, Standing Arguing, Rallying, Cheering, Clapping, Victory, Waving |
+| Get-ups | Getting Up |
+| Held poses and falls | Injured Idle, Injured Hurting Idle, Injured Stumble Idle, Knocked Out, Sitting Dazed, Fallen Idle, Fall Flat, Falling Flat Impact, Falling Down, Sweep Fall |
+| Tackles (one man) | Defender (running to tackle) |
+
+Not on Mixamo under the searched titles: Receiving A Football While Getting Tackled To The Ground and Running Tackle.
+Those tackles come from his Rokoko pair takes.
+
 ## Order of work (step 4 follows it)
 
 Director, 2026-11-17, asked this order directly: he chose "A, then B, then C".
