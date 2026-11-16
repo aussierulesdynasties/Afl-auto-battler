@@ -28,6 +28,11 @@ const LEAD_RATE := 1.5         # fastest the run-in plays to fit a short warning
 const SLOW := 0.6              # slowest it plays while the contact is still to come
 const CATCH_UP := 2.0          # fastest it plays when the contact has come first
 const HURRY := 2.0             # how fast the get-up plays once the play has moved on
+## Clip s from the arms meeting to the take's up_s: a tackled man is back on his feet 1.5 s
+## after the tackle (director, 2026-11-17: "1.5 would probably be the sweet spot"), so the
+## clip's own 2.7-3.1 s from contact to standing plays faster to fit (MatchDirector.TAKE_UP
+## lets him move from then).
+const UP_IN := 1.5
 const FAR := 5.0               # m: his token this far from him = the play has moved on
 const MOVE_OFF := 0.3          # m/s: his token moving this fast = the play wants him (a take ends at up_s)
 const KNOCK_UP := 0.2           # s of a scoop's clip past the touch before a ball off his hands ends it
@@ -219,10 +224,13 @@ func _advance(pr: Dictionary, dt: float) -> void:
 				due = _due(int(pr["who"]), int(pr["victim"]), float(ahead["left"]))
 			rate = clampf((cs - c) / maxf(due, 0.05), SLOW, LEAD_RATE)
 	else:
-		# Down: the get-up hurries when the play has gone on without them.
+		# Down and back up in UP_IN; then the take's standing tail at its own pace.
+		if c < float(pr["up"]):
+			rate = maxf(1.0, (float(pr["up"]) - cs) / UP_IN)
+		# The get-up hurries when the play has gone on without them.
 		for i in [int(pr["who"]), int(pr["victim"])]:
 			if _in[i] == pr and _drawn(i).distance_to(director.tokens[i]["pos"]) > FAR:
-				rate = HURRY
+				rate = maxf(rate, HURRY)
 	var nc := c + dt * rate
 	if c < cs and nc >= cs:
 		_hit(pr)
