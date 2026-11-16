@@ -641,7 +641,9 @@ func _process(delta: float) -> void:
 	if playing:
 		if _nudge_h >= 0.0:
 			_nudge_h += delta * speed * MatchDirector.TEMPO
-		var out := director.advance(delta * speed)
+		# Real footy's pauses (a ball-up waiting for the players, a player
+		# after a mark) play at double the watching speed (rule 2.87).
+		var out := director.advance(delta * speed * (MatchDirector.PAUSE_PLAY if director.pausing() else 1.0))
 		for ev in out:
 			_track_quarter(ev)
 			_name_the_scorer(ev)

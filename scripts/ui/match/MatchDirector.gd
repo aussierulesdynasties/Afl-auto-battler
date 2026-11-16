@@ -132,6 +132,9 @@ var _shadow := [[], []]
 ## Win Contest: where the pack's ring is being set this beat (INF for none):
 ## the play's other runs keep clear of it (_clear_of_pack).
 var _ring_at := Vector2.INF
+## The phase the structure is drawn for this refresh ("stp" a stoppage, "con" a
+## loose ball, "" open play: each side's own "att" or "def"), SHAPE_CEN.
+var _shape_state := ""
 ## Win Contest: ball-ups pinned to where the ball was when the umpire called them
 ## (event k -> the shift from the logged spot), _pin_ballup.
 var _ballup_pin := {}
@@ -652,7 +655,7 @@ func _hold(k: int, who: int) -> Dictionary:
 	var kind := str((events[k] as Dictionary).get("kind", ""))
 	var dur := 0.07 + _rng.randf_range(0.0, 0.06)
 	if kind == "mark":
-		dur = 0.32
+		dur = MARK_WAIT
 	elif kind == "kick":
 		dur = 0.12 + _rng.randf_range(0.0, 0.08)
 	var nk := _next_real(k)
@@ -676,7 +679,7 @@ func _hold(k: int, who: int) -> Dictionary:
 				return {"t": "hold", "who": who, "dur": dur, "carry": dish, "run": true,
 						"max": (gap - HANDBALL_DISH) / float(tokens[who]["top"]) * 1.6 + 0.5}
 			carry = here + (there - here).limit_length(minf(10.0, gap * 0.3))
-	return {"t": "hold", "who": who, "dur": dur, "carry": carry}
+	return {"t": "hold", "who": who, "dur": dur, "carry": carry, "pause": kind == "mark"}
 
 
 func _centre_phases(k: int, a: int, loc: Vector2) -> Array:
@@ -762,8 +765,8 @@ func _ballup_phases(k: int) -> Array:
 	if winner >= 0 and not members.has(winner):
 		members.append(winner)
 	var extra := _pack_n(0) + _pack_n(1) - 6
-	out += [{"t": "pack", "at": at, "members": members, "min": 0.35, "max": 0.9 + PACK_EXTRA_WAIT * extra,
-				"need": 4 + extra, "mode": "stoppage", "winner": winner, "drop": at},
+	out += [{"t": "pack", "at": at, "members": members, "min": STOPPAGE_WAIT, "max": STOPPAGE_WAIT + 0.55 + PACK_EXTRA_WAIT * extra,
+				"need": 4 + extra, "mode": "stoppage", "winner": winner, "drop": at, "pause": true},
 			{"t": "throwup", "at": at},
 			{"t": "emit", "log": true}]
 	return out
@@ -789,9 +792,9 @@ func _throwin_phases(k: int) -> Array:
 	if winner >= 0 and not members.has(winner):
 		members.append(winner)
 	var extra := _pack_n(0) + _pack_n(1) - 6
-	out += [{"t": "pack", "at": infield, "members": members, "min": 0.25, "max": 0.75 + PACK_EXTRA_WAIT * extra,
+	out += [{"t": "pack", "at": infield, "members": members, "min": STOPPAGE_WAIT, "max": STOPPAGE_WAIT + 0.5 + PACK_EXTRA_WAIT * extra,
 				"need": 4 + extra,
-				"mode": "stoppage", "winner": winner},
+				"mode": "stoppage", "winner": winner, "pause": true},
 			{"t": "emit", "log": true}]
 	return out
 
@@ -2791,6 +2794,7 @@ func _assign() -> void:
 		t["match"] = int(t.get("slot_match", -1))
 		t["loose"] = false
 		t["tagging"] = false
+		t["duel"] = false
 		t["chasing"] = -1
 	# Pairs the match recorded (its duels, the tag) and the loose men: the
 	# back line's fitting leaves these alone. A match-up shows while its
@@ -2805,6 +2809,7 @@ func _assign() -> void:
 			var d := int(by_pid.get(str(duels[fid]), -1))
 			if f >= 0 and d >= 0 and str(tokens[d]["role"]) == "DEF" and str(tokens[f]["role"]) == "FWD":
 				_pair(d, f)
+				tokens[d]["duel"] = true
 				held[f] = true
 				held[d] = true
 	for side in range(2):
@@ -2941,6 +2946,8 @@ func _refresh_structure() -> void:
 		return
 	var ball_p := _struct_ball
 	var crash := _stoppage_on()
+	var bk := str(_beat.get("kind", ""))
+	_shape_state = "stp" if bk == "ballup" or bk == "throwin" else ("con" if str(ball.get("mode", "")) == "loose" else "")
 	# The side in possession first, so the other side can mark up on them.
 	for side in [_poss, 1 - _poss]:
 		var spots := {}
@@ -3134,16 +3141,17 @@ func _structure_spot(t: Dictionary, ball_p: Vector2, poss: int) -> Vector2:
 	var role := str(t["role"])
 	var slot := str(t["slot"])
 	var has := poss == side
-	var x := base.x
-	match role:
-		"DEF":
-			x += 0.5 * bx if bx > 0.0 else 0.22 * bx
-		"FWD":
-			x += 0.15 * bx if bx > 0.0 else 0.5 * bx
-		_:
-			x += (0.7 if slot.begins_with("W") else 0.78) * bx
-	var width := 1.08 if has else 0.86
+	# Real team shape (row 201, rule 2.86): the side's centre follows the ball
+	# up and down the ground, and its lines close up to the team's real length,
+	# by phase (with the ball, without it, loose, at a stoppage).
+	var ph := _shape_state if _shape_state != "" else ("att" if has else "def")
+	var x := _shape_at(SHAPE_CEN[ph], bx) + base.x * _shape_at(SHAPE_LEN[ph], bx) / SHAPE_BASE_LEN
+	var width := ATTACK_BASE_WIDTH if has else 0.86
 	var pull := 0.12 if slot.begins_with("W") else (0.3 if role == "MID" or role == "RUCK" else 0.2)
+	if ph == "con" or ph == "stp":
+		# A loose ball or a stoppage: both sides squeeze in across the ground.
+		width = SQUEEZE_WIDTH
+		pull = maxf(pull, SQUEEZE_PULL)
 	if not has and _pressing(side, bx):
 		width *= PRESS_NARROW
 	# The coach's other structural calls (P-12; the notes above ATTACK_WIDTH):
@@ -3239,6 +3247,10 @@ func _structure_spot(t: Dictionary, ball_p: Vector2, poss: int) -> Vector2:
 		var ax := world.x * dir
 		world.x = signf(ax) * minf(absf(ax), STACK_HOLD_X) * dir
 	var flooding := not has and _flooding(side)
+	if has and bool(t.get("tagging", false)) and int(t["match"]) >= 0:
+		# With the ball too: the tag is permanent, so he stays on his man (rule 2.58).
+		var tg: Vector2 = tokens[int(t["match"])]["goal"]
+		world = tg + (own_goal - tg).normalized() * 2.5
 	if not has:
 		var o := int(t["match"])
 		if _is_loose(t, ball_p):
@@ -3254,15 +3266,19 @@ func _structure_spot(t: Dictionary, ball_p: Vector2, poss: int) -> Vector2:
 			world = world.lerp(hole, FLOOD_MID_SHARE)
 		elif o >= 0:
 			var og: Vector2 = tokens[o]["goal"]
-			if og.distance_to(world) < 35.0:
+			# A match-up the coach set (a tag, a named defender on a forward) is
+			# played on the man wherever he goes (rules 2.44, 2.58; row 201: held
+			# only inside 35 m, a tagger stood 21.7 m from his man on average).
+			var set_on := bool(t.get("tagging", false)) or bool(t.get("duel", false))
+			if set_on or og.distance_to(world) < 35.0:
 				var mark := og + (own_goal - og).normalized() * 2.5
 				var w := 0.65 if role == "DEF" else (0.45 if role == "MID" else 0.3)
 				if plan == "contest" and (mid or shadowing):
 					w *= CONTEST_MAN   # Win Contest: the midfield hunts the ball, not the man
 				if press_up:
 					w *= 0.1   # the press holds its band; it does not follow men back
-				if bool(t.get("tagging", false)):
-					w = 0.85   # a tagger plays the man
+				if set_on:
+					w = 1.0   # a tagger goes where his man goes (rule 2.58); a set match-up plays on him
 				world = world.lerp(mark, w)
 		if flooding and role == "FWD":
 			# ...and the half-forward line drops back to just goal-side of the
@@ -3275,6 +3291,36 @@ func _structure_spot(t: Dictionary, ball_p: Vector2, poss: int) -> Vector2:
 			var behind := ball_p.x - dir * FLOOD_HALF_BEHIND
 			world.x = lerpf(world.x, behind, FLOOD_HALF_SHARE if half else FLOOD_PUSH)
 	return _keep_in(world)
+
+
+## Real AFL team shape by phase (row 201, rule 2.86; tools/balance/afl_shape_rates.json,
+## Alexander et al. 2019 and 2021): the team's centre (metres up the ground from
+## halfway, in its attacking frame) and its length, deepest man to furthest, with
+## the ball in each quarter of the ground (the middles of the defensive 50, the
+## two halves of the midfield and the forward 50: SHAPE_B, where the ball is on
+## average in each, measured over the shape harness's matches). "att" has the
+## ball, "def" is without it, "con" a loose ball, "stp" a ball-up or throw-in.
+const SHAPE_B := [-45.0, -16.0, 16.0, 45.0]
+const SHAPE_CEN := {"att": [-39.0, -14.0, 15.0, 41.0], "def": [-62.0, -19.0, 2.0, 34.5],
+		"con": [-42.0, -20.0, -1.0, 37.5], "stp": [-40.0, -18.0, 18.0, 40.0]}
+const SHAPE_LEN := {"att": [87.0, 92.0, 85.0, 76.0], "def": [81.0, 85.0, 83.0, 77.0],
+		"con": [67.0, 95.0, 95.0, 87.0], "stp": [60.0, 70.0, 70.0, 60.0]}
+const SHAPE_BASE_LEN := 134.0   # the slots' own length, full back to full forward (SLOTS)
+const ATTACK_BASE_WIDTH := 1.2   # with the ball (row 201: 1.08 was 5-15% narrower than real AFL in three zones)
+const SQUEEZE_WIDTH := 0.6      # across the ground: 36-47 m wide on a loose ball against 62-76 m
+const SQUEEZE_PULL := 0.35
+
+
+## A shape table's value with the ball `bx` up the ground: straight lines
+## between the quarters' middles, held flat past the end ones.
+static func _shape_at(v: Array, bx: float) -> float:
+	if bx <= float(SHAPE_B[0]):
+		return float(v[0])
+	for i in range(1, SHAPE_B.size()):
+		if bx <= float(SHAPE_B[i]):
+			var f := (bx - float(SHAPE_B[i - 1])) / (float(SHAPE_B[i]) - float(SHAPE_B[i - 1]))
+			return lerpf(float(v[i - 1]), float(v[i]), f)
+	return float(v[-1])
 
 
 ## The High Press, drawn (V1, press pilot). `bx` is the ball's distance
@@ -3598,6 +3644,25 @@ func _call_pace(side: int) -> float:
 
 ## How much longer a stoppage pack may take to form for each extra player in it.
 const PACK_EXTRA_WAIT := 0.15
+
+## Real footy's pauses (director, 2026-11-17, rule 2.87): a ball-up or throw-in
+## waits about 5 s of match time for the players to get there, and a player who
+## marks takes about 3 s before he plays on. Row 201: thrown up 0.9 s after the
+## ball landed, a ball-up had 17 players near it against 23 in real games, and a
+## kick every 3 s of match time (real: about 17 s) left the midfield behind.
+const STOPPAGE_WAIT := 5.0
+const MARK_WAIT := 3.0
+## ...and those pauses play at double the speed the match is watched at.
+const PAUSE_PLAY := 2.0
+
+
+## Whether play is in one of real footy's pauses (STOPPAGE_WAIT, MARK_WAIT)
+## right now: the view plays it PAUSE_PLAY times as fast.
+func pausing() -> bool:
+	if _pi >= _phases.size():
+		return false
+	var p: Dictionary = _phases[_pi]
+	return bool(p.get("pause", false)) and bool(p.get("_entered", false))
 
 
 ## Players a side sends into a stoppage pack (a ball-up, a throw-in).

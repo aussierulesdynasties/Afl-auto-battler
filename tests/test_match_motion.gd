@@ -490,9 +490,14 @@ func _motion_pass(r2: Dictionary, speed: float, light := false) -> Dictionary:
 	clear.resize(d.tokens.size())
 	var settle := int(ceil(PitchView.RESIZE_SECS / h)) + 1
 	var guard := 0
+	var t_was: float = d.time
 	while pv.playing and guard < 200000:
 		guard += 1
 		pv._process(FRAME)
+		# Real footy's pauses play at double the watching speed (rule 2.87): a step is
+		# measured against the match time the frame played, never under the frame's own.
+		var played := maxf((d.time - t_was) / h, 1.0)
+		t_was = d.time
 		if pv.bench_open():
 			drawer_open += 1
 		var drawn: PackedVector2Array = pv.disc_positions()
@@ -524,9 +529,9 @@ func _motion_pass(r2: Dictionary, speed: float, light := false) -> Dictionary:
 		period = pv.period
 		if not prev_tok.is_empty():
 			for i in range(d.tokens.size()):
-				tok_most = maxf(tok_most, (d.tokens[i]["pos"] as Vector2).distance_to(prev_tok[i]))
+				tok_most = maxf(tok_most, (d.tokens[i]["pos"] as Vector2).distance_to(prev_tok[i]) / played)
 				if not flipped:
-					draw_most = maxf(draw_most, drawn[i].distance_to(prev_draw[i]) / s)
+					draw_most = maxf(draw_most, drawn[i].distance_to(prev_draw[i]) / s / played)
 		prev_tok = []
 		for t in d.tokens:
 			prev_tok.append(t["pos"])
@@ -704,8 +709,10 @@ func _test_call_visibility(results: Array) -> void:
 		var moved := (float(m.get(what, 0.0)) - float(bal.get(what, 0.0))) * float(c[4])
 		said.append("%s %.1f m" % [str(c[0]), moved])
 		var floor_m := CALL_FLOOR - (ATTACK_CALL_SLACK if key == "attacking|[]" else 0.0)
-		_check(moved >= floor_m, "%s moves Fremantle %.1f m from Balanced (%.1f against %.1f), at least %.1f m" % [
-				str(c[0]), moved, float(m.get(what, 0.0)), float(bal.get(what, 0.0)), floor_m])
+		# Printed, not gated: the director, 2026-11-17, "thats not my rule. idc about metrage, i just want the
+		# play to look like AFL footy" (the 8 m floor was never his).
+		if moved < floor_m:
+			print("  (under %.1f m) %s %.1f m" % [floor_m, str(c[0]), moved])
 	print("  calls against Balanced, as drawn: " + ", ".join(said))
 	var st: Dictionary = done["balanced|[\"stack\"]"]
 	print("  Stack the stoppage, the set-up alone (6-6-6 holds it): %.1f m front to back against Balanced's %.1f" % [
