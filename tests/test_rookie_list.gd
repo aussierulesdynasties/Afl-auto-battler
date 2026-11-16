@@ -1117,6 +1117,9 @@ func _test_the_44_rule() -> void:
 ## father-son or academy player is listed only where the 44 has room.
 func _test_the_44_national_draft() -> void:
 	_offseason_open()
+	# Free agency closes first (the draft would close it), so the rivals'
+	# signings land before the lists are shaped, not on top of them.
+	gs._close_free_agency()
 	var year: int = gs.season_year
 	_shape(CLUB, 36, 10, 2)
 	_shape("GEE", 36, 10, 0)
@@ -1153,7 +1156,8 @@ func _test_the_44_national_draft() -> void:
 	_check(not gs.drafted_draftees.has(str(gee_tie["id"])) and draft.pool.any(func(q): return str(q["id"]) == str(gee_tie["id"])),
 			"A club at 46 lists no father-son player: he is in the open draft")
 	_check(str(gs.drafted_draftees.get(str(col_tie["id"]), "")) == "COL" and RookieList.list_size(gs.league_lists["COL"]) == 44,
-			"A club at 43 lists its father-son player and is then at 44")
+			"A club at 43 lists its father-son player and is then at 44 (taken by %s, COL at %d)" % [
+				str(gs.drafted_draftees.get(str(col_tie["id"]), "nobody")), RookieList.list_size(gs.league_lists["COL"])])
 	_check(gs.ties_without_a_spot(CLUB).size() == 1 and gs.news.any(func(n): return str(n.get("text", n)).contains("No list spot for")),
 			"Your own tied player with no spot is named in the news (%s)" % str(gs.ties_without_a_spot(CLUB)))
 	_check(draft.open_spots("GEE") == 0 and draft.open_spots(CLUB) == 0 and draft.open_spots("COL") == 0,

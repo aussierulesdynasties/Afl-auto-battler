@@ -80,23 +80,13 @@ func _next_week() -> void:
 
 func _test_backing_from_state() -> void:
 	_fresh()
-	# Out of the box no MEL youngster is near the side: no backing call.
-	var young: Dictionary = BigCalls.ready_to_back(_state)
-	var kid := {}
-	for p in _state.club_roster("MEL"):
-		if _state.can_back(p):
-			kid = p
+	# A young player out of a side you named, his form lifted to the side's level.
+	var kid := _ready_kid()
 	_check(not kid.is_empty(), "MEL has a young player who could be backed")
 	if kid.is_empty():
 		return
-	if young.is_empty():
-		_check(not BigCalls.candidates(_state).has("backing"), "Nobody ready: no backing call")
-		# A side you named without him, so his rise does not pick him by itself
-		# (a player already in the side is never asked about).
-		_state.set_selection(_state.current_side())
-		kid["overall"] = 99
-		young = BigCalls.ready_to_back(_state)
-	_check(str(young.get("id", "")) == str(kid["id"]) or int(young.get("overall", 0)) >= int(kid["overall"]),
+	var young: Dictionary = BigCalls.ready_to_back(_state)
+	_check(str(young.get("id", "")) == str(kid["id"]),
 			"His form lifts him to the side's level: he is the one ready")
 	_check(not young.is_empty(), "A young player ready to hold a spot")
 	if young.is_empty():
@@ -125,9 +115,25 @@ func _ready_kid() -> Dictionary:
 			kid = p
 	if kid.is_empty():
 		return {}
+	# Name a side without him: his spot goes to a team-mate of his line who is
+	# not in it, so the auto-fill does not put him straight back.
 	var side: Dictionary = _state.current_side()
+	var named := {}
 	for k in side:
-		(side[k] as Array).erase(str(kid["id"]))
+		for id in side[k]:
+			named[str(id)] = true
+	var sub := ""
+	for p in _state.club_roster("MEL"):
+		if str(p["role"]) == str(kid["role"]) and not named.has(str(p["id"])) and str(p["id"]) != str(kid["id"]) 				and int(p.get("injury_weeks", 0)) <= 0:
+			sub = str(p["id"])
+			break
+	for k in side:
+		var i := (side[k] as Array).find(str(kid["id"]))
+		if i >= 0:
+			if sub != "":
+				side[k][i] = sub
+			else:
+				(side[k] as Array).remove_at(i)
 	_state.set_selection(side)
 	kid["overall"] = 99
 	return kid

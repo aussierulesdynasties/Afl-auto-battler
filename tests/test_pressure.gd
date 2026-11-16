@@ -157,9 +157,9 @@ func _test_high_pressure_forward() -> void:
 	_check(elite < 40.0, "...but not every one on the ground (%.1f a game)" % elite)
 
 
-## Who applies the pressure goes by Pressure to the power PRESS_PICK_POW: two
-## midfielders at 90 and 45 are picked about (90/45)^1.5 = 2.8 times as often
-## as each other, and the balance harness's tune key (in capitals, like every
+## Who applies the pressure goes by his tackler score (Pressure 60, speed 20,
+## Durability 20: the director's ruling 25, 2026-11-15) to the power
+## PRESS_PICK_POW, and the balance harness's tune key (in capitals, like every
 ## other) moves it.
 func _test_pick_power() -> void:
 	var sim := _sim(5)
@@ -168,7 +168,7 @@ func _test_pick_power() -> void:
 	var lo: Dictionary = mids[1]
 	hi["attr"]["pressure"] = 90.0
 	lo["attr"]["pressure"] = 45.0
-	var ar := sim._a(hi, "pressure") / sim._a(lo, "pressure")
+	var ar := sim._tackler_score(hi) / sim._tackler_score(lo)
 	var mr := sim._tactic_player_mult(1, hi, "tackler") / sim._tactic_player_mult(1, lo, "tackler")
 	var seen := _pick_ratio(sim, str(hi["id"]), str(lo["id"]))
 	var want := pow(ar, MatchSim.PRESS_PICK_POW) * mr

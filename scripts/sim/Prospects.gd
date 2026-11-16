@@ -24,9 +24,7 @@ const REAL_RETIRE_AGE := 27.0
 ## turned tall (ARD-M3-002).
 const FWD_MIN_CM := 172
 
-const ATTR_KEYS := ["disposal", "contested", "marking", "pressure", "intercept",
-		"carry", "goalkicking", "accuracy", "creating", "ruck", "discipline",
-		"durability", "star"]
+const ATTR_KEYS := Skills.KEYS
 
 ## Consensus-rank taper: pick 1 projects as an impact rookie, the back half of
 ## the draft as fringe/development talent. Deliberately below the best 2026
@@ -83,22 +81,22 @@ static func readiness(p: Dictionary) -> int:
 	return 1
 
 const ROLE_DELTAS := {
-	"MID": {"disposal": 6.0, "contested": 5.0, "pressure": 3.0, "carry": 4.0,
-			"creating": 2.0, "marking": -1.0, "goalkicking": -3.0, "intercept": 0.0,
-			"accuracy": -4.0, "discipline": -1.0, "star": 0.0, "durability": 0.0,
+	"MID": {"kicking": 6.0, "handballing": 6.0, "contested": 5.0, "pressure": 3.0, "carry": 4.0,
+			"creating": 2.0, "contested_marking": -1.0, "uncontested_marking": -1.0, "goalkicking": -3.0, "intercept": 0.0,
+			"accuracy": -4.0, "discipline": -1.0, "star": 0.0, "speed": 0.0, "durability": 0.0,
 			"ruck": -30.0},
-	"DEF": {"intercept": 8.0, "pressure": 6.0, "marking": 4.0, "disposal": 1.0,
+	"DEF": {"intercept": 8.0, "pressure": 6.0, "contested_marking": 4.0, "uncontested_marking": 4.0, "kicking": 1.0, "handballing": 1.0,
 			"accuracy": -5.0, "goalkicking": -8.0, "creating": -4.0, "carry": -3.0,
-			"contested": 1.0, "discipline": 0.0, "star": 0.0, "durability": 0.0,
+			"contested": 1.0, "discipline": 0.0, "star": 0.0, "speed": 0.0, "durability": 0.0,
 			"ruck": -30.0},
-	"FWD": {"goalkicking": 8.0, "marking": 5.0, "accuracy": 3.0, "creating": 4.0,
-			"disposal": -1.0, "intercept": -4.0, "pressure": 2.0, "carry": 1.0,
-			"contested": 0.0, "discipline": 0.0, "star": 0.0, "durability": 0.0,
+	"FWD": {"goalkicking": 8.0, "contested_marking": 5.0, "uncontested_marking": 5.0, "accuracy": 3.0, "creating": 4.0,
+			"kicking": -1.0, "handballing": -1.0, "intercept": -4.0, "pressure": 2.0, "carry": 1.0,
+			"contested": 0.0, "discipline": 0.0, "star": 0.0, "speed": 0.0, "durability": 0.0,
 			"ruck": -24.0},
-	"RUCK": {"ruck": 26.0, "contested": 8.0, "marking": 3.0, "disposal": -5.0,
+	"RUCK": {"ruck": 26.0, "contested": 8.0, "contested_marking": 3.0, "uncontested_marking": 3.0, "kicking": -5.0, "handballing": -5.0,
 			"goalkicking": -1.0, "intercept": -3.0, "pressure": 0.0, "carry": -5.0,
 			"accuracy": -5.0, "creating": -2.0, "discipline": -2.0, "star": 0.0,
-			"durability": 1.0},
+			"speed": 0.0, "durability": 1.0},
 }
 
 const JUNIOR_TEAMS := [
@@ -224,11 +222,13 @@ static func project(p: Dictionary) -> void:
 	# setting them apart moved the fit, which pulled every skill down.)
 	a["discipline"] = target + float((ROLE_DELTAS.get(role, ROLE_DELTAS["MID"]) as Dictionary).get("discipline", 0.0))
 	if di > 0.0:
-		a["disposal"] = float(a["disposal"]) + clampf((di - 16.0) * 0.4, -2.0, 5.0)
+		var use := clampf((di - 16.0) * 0.4, -2.0, 5.0)
+		a["kicking"] = float(a["kicking"]) + use
+		a["handballing"] = float(a["handballing"]) + use
 	if gl > 0.0:
 		a["goalkicking"] = float(a["goalkicking"]) + clampf((gl - 1.2) * 1.1, -1.5, 6.0)
 	if mk > 0.0:
-		a["marking"] = float(a["marking"]) + clampf((mk - 3.0) * 0.75, -1.0, 4.0)
+		a["uncontested_marking"] = float(a["uncontested_marking"]) + clampf((mk - 3.0) * 0.75, -1.0, 4.0)
 	if ho > 0.0 and role == "RUCK":
 		a["ruck"] = float(a["ruck"]) + clampf((ho - 10.0) * 0.4, 0.0, 7.0)
 	if tk > 0.0:
@@ -267,8 +267,8 @@ static func project(p: Dictionary) -> void:
 ## too rarely. (static var, not const, only so tools/audit can try arms in one run.)
 static var GEN_NUDGE := {
 	"DEF": {"intercept": -6.0, "pressure": -0.5, "accuracy": 1.0, "durability": -1.5},
-	"MID": {"contested": -6.0, "disposal": -2.0, "pressure": -1.0, "durability": -1.5},
-	"FWD": {"marking": -3.0, "pressure": 3.5, "accuracy": 1.0, "goalkicking": 1.5, "durability": -1.5},
+	"MID": {"contested": -6.0, "kicking": -2.0, "handballing": -2.0, "pressure": -1.0, "durability": -1.5},
+	"FWD": {"contested_marking": -3.0, "pressure": 3.5, "accuracy": 1.0, "goalkicking": 1.5, "durability": -1.5},
 	"RUCK": {"ruck": -10.0, "contested": -6.0, "durability": -1.5},
 }
 
@@ -373,7 +373,7 @@ static func _shifted_overall(a: Dictionary, role: String, offset: float,
 		games: float) -> float:
 	var shifted := {}
 	for key in a:
-		shifted[key] = clampf(float(a[key]) + offset, 1.0, 99.0)
+		shifted[key] = float(a[key]) if key in UNRATED_KEYS else clampf(float(a[key]) + offset, 1.0, 99.0)
 	return float(Ratings.rate_overall(shifted, role, games))
 
 
@@ -867,7 +867,7 @@ static func roll_fine_wine(cls: Array, salt: String) -> void:
 ## Strengths and weaknesses a coach can name, in football words, and the
 ## attribute each moves. A play style is two strengths for one role.
 const CUSTOM_TRAITS := {
-	"marking": "marking", "kicking": "disposal", "goalkicking": "goalkicking",
+	"marking": "contested_marking", "kicking": "kicking", "goalkicking": "goalkicking",
 	"contested": "contested", "pressure": "pressure", "reading": "intercept",
 	"running": "carry", "vision": "creating", "ruckwork": "ruck",
 }

@@ -41,10 +41,10 @@ Australian or Team of the Year pick, a Brownlow top 3 (4th-10th score half) -
 weighted by how recent (the last season in full, then 0.75, 0.5). The game
 lifts an honoured player's rating to a floor on that score (Ratings.HONOURS_*).
 
-Every season is rated against its own season's players (tools/sim_harness.py
-derive_ratings, the Python mirror of Ratings.gd), each position scaled on
-its own season (fit_era_anchors), so ratings are per era (director
-2026-11-10, "A: per era"; 2026-11-13, "Scale each position per season").
+Every season is rated against its own season's players: the Wheelo skills
+and the APR overall against his position (tools/wheelo/seasons_rated.py,
+interview 2026-11-15), so ratings are per era (director 2026-11-10, "A: per
+era"; 2026-11-13, "Scale each position per season").
 
     python3 tools/legacy_1990s/build_start.py            # write the files
     python3 tools/legacy_1990s/build_start.py --report   # also the era report
@@ -78,6 +78,32 @@ ENRICHED = ["club", "num", "last", "first", "gm", "ki", "mk", "hb", "di", "gl", 
             "if50", "cl", "cg", "ff", "fa", "br", "cp", "up", "cm", "mi", "onepct", "bo", "ga", "pctp",
             "src", "real_pos", "dob", "age", "height_cm", "weight_kg", "debut", "height_source"]
 ADD_STATS = ENRICHED[:29]
+
+
+# --------------------------------------------------------------- positions --
+def load_positions():
+    """data/legacy/known_lines.csv (tools/legacy_1990s/positions.py): the line
+    each player is known for, from his Wikipedia article. {(first, last, dob):
+    (pos, pos2)} and {afltables_id: (pos, pos2)}, each FWD / MID / DEF / RUC
+    (pos2 "" when he is known for one line). tools/wheelo/seasons_rated.py
+    reads it to tell a pre-2012 season's line (his real position, where a
+    record gives one, is data/legacy/positions.csv: real_position)."""
+    by_key, by_id = {}, {}
+    path = os.path.join(LEG, "known_lines.csv")
+    if not os.path.exists(path):
+        return by_key, by_id
+    with open(path, newline="", encoding="utf-8") as fh:
+        for r in csv.DictReader(fh):
+            if not r["pos"]:
+                continue
+            by_key[(r["first"], r["last"], r["dob"])] = (r["pos"], r["pos2"])
+            for aid in r["afltables_ids"].split(";"):
+                if aid:
+                    by_id[aid] = (r["pos"], r["pos2"])
+    return by_key, by_id
+
+
+POS_BY_KEY, POS_BY_ID = load_positions()
 
 
 def code(c):
@@ -240,6 +266,8 @@ def unrecorded_in(hp):
 def rate_seasons(by_year):
     """{year: {afltables_id: (overall, games, recorded row, role)}}."""
     rated = {}
+    # Every past season is rated as a past start's players are (Ratings.listed_lines).
+    H.LISTED_LINES = H.PAST_LISTED_LINES
     for y in sorted(by_year):
         missing = unrecorded(by_year[y])
         # A player traded mid-season has a row per club: one season, summed.
@@ -259,24 +287,40 @@ def rate_seasons(by_year):
         est = {pid: recorded(r, missing) for pid, r in merged.items()}
         H.set_unrecorded({GAME_KEY.get(k, k) for k in missing})
         players = [harness_player(e, code(e["club"]), i) for i, e in enumerate(est.values())]
-        H.ERA_ANCHORS.clear()
         H.derive_ratings(players)
-        H.fit_era_anchors(players)
         rated[y] = {pid: (p["overall"], int(e["gm"]), e, p["role"])
                     for (pid, e), p in zip(est.items(), players)}
+        # The season's overall is the director's (interview 2026-11-15): the
+        # AFL Player Rating against his position from 2012, before it his
+        # skills weighted as the AFL Player Rating weights them
+        # (tools/wheelo/seasons_rated.py). The estimated row above still
+        # feeds the stats, heights and the era report.
+        new = wheelo_rated(y)
+        for pid, (ovr, g, e, role) in list(rated[y].items()):
+            got = new.get(pid)
+            if got is not None:
+                rated[y][pid] = (int(round(got["ovr"])), g, e, role)
     return rated
 
 
+def wheelo_rated(year):
+    if os.path.join(ROOT, "tools", "wheelo") not in sys.path:
+        sys.path.insert(0, os.path.join(ROOT, "tools", "wheelo"))
+    import seasons_rated  # noqa: E402  (imports this module: loaded late)
+    return seasons_rated.rated(year)
+
+
 # ---------------------------------------------------------------- honours --
-def honours(by_year, rated):
-    """{afltables_id: score} over HONOURS_W's seasons. A named honour finds its
+def honours(by_year, rated, data_season=DATA_SEASON):
+    """{afltables_id: score} over the three seasons to data_season (the last
+    in full, then 0.75 and 0.5: HONOURS_W for 1990). Every start uses it. A named honour finds its
     player by the season's own rows: name and club, else a name unique that
     season, else a surname unique at that club (Steve / Stephen Malaxos). An
     honour with no match is printed."""
     def plain(last):
         return "".join(ch for ch in last.lower().replace(" sr.", "").replace(" jr.", "") if ch.isalpha())
     score = defaultdict(float)
-    for y, w in HONOURS_W.items():
+    for y, w in {data_season: 1.0, data_season - 1: 0.75, data_season - 2: 0.5}.items():
         by_name = defaultdict(set)
         by_name_club = {}
         by_last_club = defaultdict(set)
@@ -474,10 +518,8 @@ def era_report(by_year, rated, players):
                                for k, v in e.items()}, "first": r["first"], "last": r["last"]},
                            r["club"], r["num"])
         hp.append(p)
-    H.ERA_ANCHORS.clear()
     H.set_unrecorded(unrecorded_in(hp))
     H.derive_ratings(hp)
-    H.fit_era_anchors(hp)
     by_club = defaultdict(list)
     for p in hp:
         by_club[p["club"]].append(p["overall"])

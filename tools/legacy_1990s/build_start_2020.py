@@ -154,6 +154,7 @@ def draft_type(d):
 
 
 def build(by_year, rated, lists):
+    hon = B.honours(by_year, rated, DATA_SEASON)
     last_of = last_listed()
     careers = careers_before(by_year)
     drafts = load_drafts()
@@ -186,7 +187,7 @@ def build(by_year, rated, lists):
                             "draft_year": d["year"] if d else "", "draft_type": draft_type(d),
                             "draft_pick": d["pick"] if d else "", "seasons": ";".join(seasons),
                             "career": B.stints(careers.get(pid, [])), "peak": peak or "",
-                            "last_season": last_of(L)})
+                            "honours": "%.3g" % hon[pid] if hon.get(pid) else "", "last_season": last_of(L)})
             if L["list"] in ("rookie", "cat_b"):
                 list_types.append({"club": club, "first": L["first"], "last": L["last"], "dob": L["dob"],
                                    "list": L["list"], "source_url": L["source_url"].split(" | ")[0],
@@ -274,11 +275,8 @@ def rate_file(path):
 
 
 def shape(hp, fit):
-    H.ERA_ANCHORS.clear()
     H.set_unrecorded(B.unrecorded_in(hp))
     H.derive_ratings(hp)
-    if fit:
-        H.fit_era_anchors(hp)
     by_club = defaultdict(list)
     for p in hp:
         by_club[p["club"]].append(p["overall"])
@@ -379,7 +377,7 @@ def main():
     B.write(os.path.join(OUT_DIR, "players_2020.csv"), B.ENRICHED, players)
     B.write(os.path.join(OUT_DIR, "history_2020.csv"),
             ["club", "num", "slug", "draft_year", "draft_type", "draft_pick", "seasons", "career", "peak",
-             "last_season"], history)
+             "honours", "last_season"], history)
     B.write(os.path.join(OUT_DIR, "list_additions_2020.csv"),
             ["first", "last", "dob", "club", "position", "height_cm", "list", "peak", "last_season", "source_url",
              "checked"], additions)

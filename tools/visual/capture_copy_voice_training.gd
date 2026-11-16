@@ -75,7 +75,7 @@ func _run() -> void:
 		ui2.call("_build")
 		await _scroll_to(ui2, "FocusName")
 		await _shot("player_changed")
-		ui2.set("_notice", ui2.call("_spend_notice", {"marking": 1}, 70, 71))
+		ui2.set("_notice", ui2.call("_spend_notice", {"contested_marking": 1}, 70, 71))
 		ui2.call("_build")
 		await _scroll_to(ui2, "FocusName")
 		await _shot("player_lifted")
