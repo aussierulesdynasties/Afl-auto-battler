@@ -354,7 +354,8 @@ static func slim_results(v, with_box := false):
 ## a day that turned at a break (row 160), for the report's weather line.
 const REVIEW_KEYS := ["players", "roster", "team", "quarter_teams",
 		"injuries", "synergies", "duels", "duel_changes", "tactics_history", "weather",
-		"impact", "impact_by", "plan_traits", "breeze_side", "weather_start", "weather_turned_after"]
+		"impact", "impact_by", "plan_traits", "breeze_side", "weather_start", "weather_turned_after",
+		"synergy_share", "q4_legs"]
 const REVIEW_EVENT_KINDS := ["goal", "behind", "quarter", "final"]
 
 
