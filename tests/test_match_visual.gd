@@ -2747,6 +2747,23 @@ func _test_three_d_view(res: Dictionary) -> void:
 	var oval: Oval3D = pv._oval3d
 	_check(oval != null and oval.players.size() == pv.director.tokens.size(),
 			"The 3D oval puts a footballer on every token (%d)" % (oval.players.size() if oval else -1))
+	# The run, the carry and the stand are the motion-capture loops, looping, on his own bones.
+	var ap0: AnimationPlayer = oval.players[0]["anim"]
+	var skel0: Skeleton3D = oval.players[0]["skel"]
+	var on_bones := 0
+	var tracks := 0
+	var looping := 0
+	for n in ["jog", "carry", "idle"]:
+		var a: Animation = ap0.get_animation(n)
+		if a == null:
+			continue
+		looping += 1 if a.loop_mode == Animation.LOOP_LINEAR and a.length >= 2.4 else 0
+		for t in range(a.get_track_count()):
+			tracks += 1
+			on_bones += 1 if skel0.find_bone(a.track_get_path(t).get_concatenated_subnames()) >= 0 else 0
+	_check(looping == 3 and tracks > 0 and on_bones == tracks,
+			"Run, carry and stand are the capture loops on his bones (%d of 3 looping, %d of %d tracks)"
+			% [looping, on_bones, tracks])
 	_check(pv._view3d != null and pv._view3d.texture == pv._vp3d.get_texture() and pv._vp3d.size.x >= 360,
 			"The 3D picture is shown in the view, at least at the canvas's size")
 	_check(pv._view3d.show_behind_parent,
