@@ -494,8 +494,14 @@ static func age_player(p: Dictionary, _year: int) -> float:
 		p["sample"] = maxf(18.0, float(p.get("gm", 0.0)))
 	var a: Dictionary = p.get("attr", {})
 	if not a.is_empty():
+		# The summer neither adds nor takes (director 2026-11-17, Growth): his
+		# skills are refit to the rating he finished on, read at the bigger
+		# sample, as before. Re-rated as they stood, a kid of 1-8 games fell
+		# from the 40s to 30 and the 32-or-under rule retired him at 19.
 		var ov := int(p.get("overall", 50))
-		p["overall"] = Ratings.rate_overall(a, str(p.get("role", "MID")), Ratings.effective_games(p))
+		var role := str(p.get("role", "MID"))
+		p["attr"] = fit_attributes(a, role, float(ov), Ratings.effective_games(p))
+		p["overall"] = Ratings.rate_overall(p["attr"], role, Ratings.effective_games(p))
 		p["value"] = Ratings.salary_value(int(p["overall"]))
 		return float(int(p["overall"]) - ov)
 	return 0.0
