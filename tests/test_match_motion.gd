@@ -494,7 +494,7 @@ func _motion_pass(r2: Dictionary, speed: float, light := false) -> Dictionary:
 	while pv.playing and guard < 200000:
 		guard += 1
 		pv._process(FRAME)
-		# Real footy's pauses play at double the watching speed (rule 2.87): a step is
+		# Real footy's pauses play at double the watching speed (rule 2.91): a step is
 		# measured against the match time the frame played, never under the frame's own.
 		var played := maxf((d.time - t_was) / h, 1.0)
 		t_was = d.time
