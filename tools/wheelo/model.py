@@ -446,10 +446,40 @@ def season_scale(rows: list, keep: set) -> dict:
     return out
 
 
-def knn_position(train: list, v: list, k: int = 25) -> str:
-    """train: [(vector, position)]."""
+def knn_votes(train: list, v: list, k: int = 25) -> dict:
+    """train: [(vector, position)]. Each position's share of the k nearest votes."""
     d = sorted(((sum((a - b) ** 2 for a, b in zip(tv, v)), p) for tv, p in train))[:k]
     votes = defaultdict(float)
     for dist, p in d:
         votes[p] += 1.0 / (1.0 + dist)
+    total = sum(votes.values())
+    return {p: x / total for p, x in votes.items()}
+
+
+def knn_position(train: list, v: list, k: int = 25) -> str:
+    votes = knn_votes(train, v, k)
     return max(votes, key=votes.get)
+
+
+def calibrated_positions(votes: list, target: dict, rounds: int = 200) -> list:
+    """One position per player, with the season's mix held to `target`
+    (each position's share of 2012+ players).
+
+    Nearest-neighbour votes alone almost never pick a position that sits
+    between two bigger ones: a Mid-Forward's neighbours split between
+    Midfielder, Gen. Forward and Mid-Forward, so 2012+ seasons lose most of
+    their Mid-Forwards (6% of players) when re-guessed. Scaling each
+    position's votes until the season's count matches its share keeps the
+    mix real; each player still goes to the position his votes favour most
+    after scaling."""
+    scale = {p: 1.0 for p in target}
+    n = len(votes)
+    def pick(v):
+        return max(v, key=lambda p: v[p] * scale.get(p, 1.0))
+    for _ in range(rounds):
+        got = defaultdict(int)
+        for v in votes:
+            got[pick(v)] += 1
+        for p in scale:
+            scale[p] *= ((target[p] * n + 0.5) / (got[p] + 0.5)) ** 0.3
+    return [pick(v) for v in votes]

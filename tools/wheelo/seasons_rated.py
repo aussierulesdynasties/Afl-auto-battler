@@ -6,7 +6,8 @@ Every AFL season 1987-2026 rated the director's way (interview 2026-11-15):
           Rating against his position, wheelo.apr_ovr); skills from
           Wheelo's stats against his position (model.rate_season)
   < 2012  AFL Tables: the AFL position read from his known line and the
-          season's numbers (model.knn_position), skills from the stats the
+          season's numbers (model.knn_votes, the season's mix held to 2012+'s by
+          model.calibrated_positions), skills from the stats the
           season kept, overall from the skills by the weights measured on
           2012+ (fit.py, ruling 19)
 
@@ -138,13 +139,19 @@ def _rate_tables_year(year):
     sc = M.season_scale(list(rows.values()), keep)
     train = _position_train(tier)
     fit = fits()[tier]
-    ps = []
+    ps, votes = [], []
     for pid, r in rows.items():
         if float(r["gm"] or 0) <= 0:
             continue
-        pos = M.knn_position(train, M.pos_vector(r, B.POS_BY_ID.get(pid), keep, sc))
+        votes.append(M.knn_votes(train, M.pos_vector(r, B.POS_BY_ID.get(pid), keep, sc)))
         masked = {k: (r.get(k, "") if k in keep else "") for k in F.ALL_TABLES}
-        ps.append({"pos": pos, "m": M.tables_inputs(masked), "id": pid})
+        ps.append({"pos": "", "m": M.tables_inputs(masked), "id": pid})
+    share = defaultdict(int)
+    for _, p in train:
+        share[p] += 1
+    target = {p: share[p] / len(train) for p in W.POSITIONS}
+    for p, pos in zip(ps, M.calibrated_positions(votes, target)):
+        p["pos"] = pos
     M.rate_season(ps, {})
     out = {}
     for p in ps:
