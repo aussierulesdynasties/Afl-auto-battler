@@ -122,7 +122,7 @@
 			 "effects": [{"op": "board", "d": 2}],
 			 "result": "The development staff run the program."},
 			{"key": "every", "label": "Put players in every school",
-			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The list worked the schools together"}, {"op": "board", "d": 4}, {"op": "morale", "d": -2, "who": "all"}],
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The list worked the schools together"}, {"op": "board", "d": 3}, {"op": "morale", "d": -2, "who": "all"}],
 			 "result": "Players in every school. Long days for the list."}
 		]
 	},
@@ -176,8 +176,8 @@
 			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "One week at a time"}],
 			 "result": "A safe answer on the Broadwater."},
 			{"key": "flag", "label": "Say we're here to win the flag",
-			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "Here to win the flag"}, {"op": "board", "d": 4}, {"op": "loss_sting", "d": -5, "who": "side"}],
-			 "result": "The members roared. Now every loss will hurt."}
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "Here to win the flag"}, {"op": "board", "d": 3}, {"op": "morale", "d": -3, "who": "all"}],
+			 "result": "The members roared. The players feel the weight of it."}
 		]
 	},
 	{
@@ -282,9 +282,9 @@
 		"choices": [
 			{"key": "seniors", "label": "Play the senior spine",
 			 "effects": [{"op": "board", "d": 2}],
-			 "result": "The senior men lead this season."},
+			 "result": "The senior players lead this season."},
 			{"key": "kids", "label": "Play the kids",
-			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "A season for the kids"}, {"op": "culture", "strand": "ambition", "d": 1, "why": "Building for later"}, {"op": "board", "d": -3}],
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "A season for the kids"}, {"op": "culture", "strand": "ambition", "d": 1, "why": "Building for later"}, {"op": "board", "d": -2}],
 			 "result": "The kids get their chance. The board is nervous."}
 		]
 	},
@@ -320,7 +320,7 @@
 			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The coach stayed on the track"}],
 			 "result": "An assistant goes. The coach stays on the track."},
 			{"key": "go", "label": "Go yourself",
-			 "effects": [{"op": "board", "d": 4}, {"op": "culture", "strand": "standards", "d": -1, "why": "The coach missed a session"}],
+			 "effects": [{"op": "board", "d": 3}, {"op": "culture", "strand": "standards", "d": -1, "why": "The coach missed a session"}],
 			 "result": "The old club loved it. The coach missed a session."}
 		]
 	},
@@ -430,7 +430,7 @@
 			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "A Coast lifer leads the Coast"}],
 			 "result": "The lifer gets the armband. The rooms approve."},
 			{"key": "star", "label": "Hand it to {first}",
-			 "effects": [{"op": "morale", "d": 8, "who": "subject"}, {"op": "board", "d": 2}, {"op": "morale", "d": -2, "who": "others"}],
+			 "effects": [{"op": "morale", "d": 4, "who": "subject"}, {"op": "board", "d": 2}, {"op": "morale", "d": -2, "who": "others"}],
 			 "result": "{first} gets the armband. Some backed the lifer."}
 		]
 	},

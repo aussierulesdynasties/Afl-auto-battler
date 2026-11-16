@@ -14,8 +14,8 @@
 			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "A good footy club first"}],
 			 "result": "A quiet answer. The members wanted more fire."},
 			{"key": "prove", "label": "Tell them we're here to prove them wrong",
-			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "Here to prove them wrong"}, {"op": "board", "d": 3}, {"op": "loss_sting", "d": -3, "who": "side"}],
-			 "result": "The members roared. Now every loss will hurt."}
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "Here to prove them wrong"}, {"op": "board", "d": 3}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "The members roared. The players feel the weight of it."}
 		]
 	},
 	{
@@ -225,7 +225,7 @@
 			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "Day footy is who we are"}],
 			 "result": "We stay a day footy club."},
 			{"key": "night", "label": "Take the night slots",
-			 "effects": [{"op": "board", "d": 4}, {"op": "culture", "strand": "ambition", "d": 1, "why": "Prime time for a young club"}, {"op": "morale", "d": -2, "who": "all"}],
+			 "effects": [{"op": "board", "d": 3}, {"op": "culture", "strand": "ambition", "d": 1, "why": "Prime time for a young club"}, {"op": "morale", "d": -2, "who": "all"}],
 			 "result": "Night games and a big audience. The forwards hate the lights."}
 		]
 	},
@@ -389,7 +389,7 @@
 			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "Stuck inside together"}],
 			 "result": "Indoor sessions until the air clears."},
 			{"key": "coast", "label": "Pack up for the coast",
-			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "A week down the coast together"}, {"op": "morale", "d": 3, "who": "all"}, {"op": "board", "d": -3}],
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "A week down the coast together"}, {"op": "morale", "d": 3, "who": "all"}, {"op": "board", "d": -2}],
 			 "result": "Clean air and the beach. The board paid for it."}
 		]
 	},

@@ -14,7 +14,7 @@
 			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "A day in each city"}],
 			 "result": "A day in each city. Nobody can complain."},
 			{"key": "hobart", "label": "Hobart, where the members are",
-			 "effects": [{"op": "board", "d": 4}, {"op": "culture", "strand": "ambition", "d": 1, "why": "A big launch on the waterfront"}, {"op": "culture", "strand": "together", "d": -1, "why": "The north felt left out"}],
+			 "effects": [{"op": "board", "d": 3}, {"op": "culture", "strand": "ambition", "d": 1, "why": "A big launch on the waterfront"}, {"op": "culture", "strand": "together", "d": -1, "why": "The north felt left out"}],
 			 "result": "A big night in Hobart. Launceston noticed."}
 		]
 	},
@@ -50,8 +50,8 @@
 			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "Building something that lasts"}],
 			 "result": "A patient answer. The island wanted more."},
 			{"key": "finals", "label": "We'll play finals this year",
-			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "Finals this year"}, {"op": "board", "d": 5}, {"op": "loss_sting", "d": -4, "who": "side"}],
-			 "result": "The whole state heard it. Losses will hurt."}
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "Finals this year"}, {"op": "board", "d": 3}, {"op": "morale", "d": -3, "who": "all"}],
+			 "result": "The whole state heard it. The players feel the weight of it."}
 		]
 	},
 	{
@@ -67,10 +67,10 @@
 		"choices": [
 			{"key": "reserves", "label": "He earns it in the reserves first",
 			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "Even the island's kid earns it"}],
-			 "result": "He'll earn it. The paper is not happy."},
+			 "result": "{name} will earn it. The paper is not happy."},
 			{"key": "pick", "label": "Pick him for the first game",
-			 "effects": [{"op": "morale", "d": 8, "who": "subject"}, {"op": "board", "d": 4}, {"op": "loss_sting", "d": -6, "who": "subject"}],
-			 "result": "He's in for Round 1. The whole island is watching."}
+			 "effects": [{"op": "morale", "d": 4, "who": "subject"}, {"op": "board", "d": 3}, {"op": "morale", "d": -2, "who": "others"}],
+			 "result": "{name} is in for Round 1. Some senior players wonder why."}
 		]
 	},
 	{
@@ -368,7 +368,7 @@
 			 "effects": [{"op": "board", "d": 2}],
 			 "result": "The takings go to the appeal."},
 			{"key": "clean", "label": "The list goes to help clean up",
-			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The list cleaned up together"}, {"op": "board", "d": 4}, {"op": "morale", "d": -2, "who": "all"}],
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The list cleaned up together"}, {"op": "board", "d": 3}, {"op": "morale", "d": -2, "who": "all"}],
 			 "result": "Hard, dirty days in the east. The towns won't forget."}
 		]
 	},
@@ -439,7 +439,7 @@
 			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "Bodies to win now"}],
 			 "result": "Mature bodies fill the spots."},
 			{"key": "island", "label": "Island kids",
-			 "effects": [{"op": "board", "d": 5}, {"op": "culture", "strand": "together", "d": 1, "why": "Island kids on the island's list"}, {"op": "culture", "strand": "ambition", "d": -1, "why": "Kids, not men to win now"}],
+			 "effects": [{"op": "board", "d": 3}, {"op": "culture", "strand": "together", "d": 1, "why": "Island kids on the island's list"}, {"op": "culture", "strand": "ambition", "d": -1, "why": "Kids, not men to win now"}],
 			 "result": "The island's kids get the spots. They're years away."}
 		]
 	},

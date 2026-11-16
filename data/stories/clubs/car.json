@@ -283,10 +283,10 @@
 		"choices": [
 			{"key": "reserves", "label": "Bring him through the reserves",
 			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "Even the top pick earns his spot"}],
-			 "result": "He'll earn it. The press are not happy."},
+			 "result": "{name} will earn it. The press are not happy."},
 			{"key": "start", "label": "Play him from the start",
 			 "effects": [{"op": "morale", "d": 4, "who": "subject"}, {"op": "board", "d": 2}, {"op": "morale", "d": -2, "who": "others"}],
-			 "result": "{name} is in for Round 1. Some senior men wonder why."}
+			 "result": "{name} is in for Round 1. Some senior players wonder why."}
 		]
 	},
 	{

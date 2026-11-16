@@ -101,7 +101,7 @@
 			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "Footscray keeps its home games"}],
 			 "result": "Every home game stays in Melbourne."},
 			{"key": "two", "label": "Take two games a year",
-			 "effects": [{"op": "board", "d": 5}, {"op": "culture", "strand": "ambition", "d": 1, "why": "A new region on the map"}, {"op": "culture", "strand": "together", "d": -1, "why": "Footscray lost two home games"}],
+			 "effects": [{"op": "board", "d": 3}, {"op": "culture", "strand": "ambition", "d": 1, "why": "A new region on the map"}, {"op": "culture", "strand": "together", "d": -1, "why": "Footscray lost two home games"}],
 			 "result": "Two games go west. Footscray grumbles."}
 		]
 	},
@@ -120,7 +120,7 @@
 			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The game stays at home"}],
 			 "result": "The members keep their game."},
 			{"key": "sell", "label": "Sell it",
-			 "effects": [{"op": "board", "d": 5}, {"op": "culture", "strand": "ambition", "d": 1, "why": "A game in the Top End"}, {"op": "culture", "strand": "together", "d": -1, "why": "The members lost a home game"}],
+			 "effects": [{"op": "board", "d": 3}, {"op": "culture", "strand": "ambition", "d": 1, "why": "A game in the Top End"}, {"op": "culture", "strand": "together", "d": -1, "why": "The members lost a home game"}],
 			 "result": "Good money for the Top End. The members lost a game."}
 		]
 	},
@@ -137,10 +137,10 @@
 		"choices": [
 			{"key": "reserves", "label": "Let him train with the reserves",
 			 "effects": [{"op": "board", "d": 2}],
-			 "result": "He trains with the reserves. The west noticed."},
+			 "result": "The kid trains with the reserves. The west noticed."},
 			{"key": "spot", "label": "Give him a spot on the list",
 			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "A kid from the west on the list"}, {"op": "board", "d": 3}, {"op": "culture", "strand": "standards", "d": -1, "why": "A list spot before it was earned"}],
-			 "result": "A local kid on the list. He's raw."}
+			 "result": "A local kid on the list. The kid is raw."}
 		]
 	},
 	{
@@ -211,7 +211,7 @@
 			 "effects": [{"op": "board", "d": 2}],
 			 "result": "The coach does the tour alone."},
 			{"key": "every", "label": "Players at every event",
-			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The whole list did the tour"}, {"op": "board", "d": 4}, {"op": "morale", "d": -2, "who": "all"}],
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The whole list did the tour"}, {"op": "board", "d": 3}, {"op": "morale", "d": -2, "who": "all"}],
 			 "result": "Players at every event. Long days for the list."}
 		]
 	},
@@ -385,7 +385,7 @@
 			 "effects": [{"op": "board", "d": 2}],
 			 "result": "The big money comes in."},
 			{"key": "loyal", "label": "Stay loyal to the local",
-			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "We stand by our people"}, {"op": "culture", "strand": "standards", "d": 1, "why": "Loyalty is our standard"}, {"op": "board", "d": -4}],
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "We stand by our people"}, {"op": "culture", "strand": "standards", "d": 1, "why": "Loyalty is our standard"}, {"op": "board", "d": -2}],
 			 "result": "The local stays. The board counts the cost."}
 		]
 	},

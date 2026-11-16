@@ -90,7 +90,8 @@ func _test_deck() -> void:
 	_check(only, "A bonding card comes only in a bonding week, never in the season")
 	# The clubs' own summer cards became bonding cards ("Keep fitting ones"): no
 	# club card is left in the old pre-season phase, and each has a small choice
-	# (gain alone) and a big one (gain and a cost), with no running, loads or XP.
+	# (gain alone) and a big one (gain and a cost), with no running, loads, XP
+	# or finals-week effects.
 	var club_wrong := []
 	var club_cards := 0
 	for t in deck:
@@ -109,9 +110,10 @@ func _test_deck() -> void:
 			var cost := false
 			for e in (c.get("effects", []) as Array):
 				var op := str(e.get("op", ""))
-				if op in ["xp", "forgo_xp", "running", "heavy_legs", "fresh"]:
+				# Finals-week effects ("If we lose that final") have no place in summer.
+				if op in ["xp", "forgo_xp", "running", "heavy_legs", "fresh", "loss_sting", "slow_start"]:
 					club_wrong.append("%s uses %s" % [t["id"], op])
-				cost = cost or op in ["sore", "loss_sting", "slow_start"] or int(e.get("d", 0)) < 0
+				cost = cost or op == "sore" or int(e.get("d", 0)) < 0
 			big += 1 if cost else 0
 			small += 0 if cost else 1
 		if (t.get("choices", []) as Array).size() != 2 or small != 1 or big != 1:

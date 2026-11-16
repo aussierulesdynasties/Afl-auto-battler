@@ -54,6 +54,8 @@ func _run() -> void:
 	state.replay_seed = 4127
 	state.set_setting("seen_weekly_loop_intro", true)
 	state.set_setting("seen_training_intro", true)
+	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
+		state.set_setting("seen_%s_intro" % key, true)
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 	DisplayServer.window_set_size(Vector2i(W, H))
 	await _frames(10)
@@ -80,6 +82,13 @@ func _run() -> void:
 			["bond_community_week", {}, "03_community"], ["bond_beach_day", {}, "04_beach"],
 			["bond_cultural_day", {}, "05_cultural"], ["bond_leadership_workshop", {}, "06_workshop"],
 			["bond_families_day", {}, "07_families"], ["pre_leaders_vote", {}, "08_leaders"], ["pre_sim_heated", {}, "09_heated"]]
+	# Then the club's own bonding cards (10_<id> ...).
+	var n := 10
+	# Loaded at run time: a --script tool compiles before the autoloads exist.
+	for t in load("res://scripts/sim/StoryDeck.gd").all():
+		if str(t.get("club", "")) == club and (t.get("phase", []) as Array).has("bonding"):
+			shots.append([str(t["id"]), {}, "%02d_%s" % [n, t["id"]]])
+			n += 1
 	for shot in shots:
 		var card: Dictionary = state.story_card(str(shot[0]), shot[1])
 		print(shot[2], " card: ", card.get("title", "EMPTY"))

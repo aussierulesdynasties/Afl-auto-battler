@@ -417,7 +417,7 @@
 			 "result": "Two leaders share the armband. The group is settled."},
 			{"key": "one", "label": "Give {name} the captaincy alone",
 			 "effects": [{"op": "trust", "d": 4, "who": "subject"}, {"op": "culture", "strand": "standards", "d": 1, "why": "One clear voice"}, {"op": "morale", "d": -2, "who": "others"}],
-			 "result": "{name} leads alone. Some of the group backed the other man."}
+			 "result": "{name} leads alone. Some of the group backed the other leader."}
 		]
 	},
 	{

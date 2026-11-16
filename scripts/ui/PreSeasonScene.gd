@@ -741,14 +741,11 @@ func _meeting_row(p: Dictionary) -> Control:
 	row.add_child(v)
 	var top := UiKit.hbox(8)
 	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var n := UiKit.lbl(GameDB.player_display_name(p), UiKit.NAME,
-			UiKit.club_name_colour(UiKit.club_ink(GameState.my_club)), true)
+	var n := UiKit.name_label(GameDB.player_display_name(p), UiKit.NAME,
+			UiKit.club_name_colour(UiKit.club_ink(GameState.my_club)))
 	n.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	n.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	n.clip_text = true
-	n.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	top.add_child(n)
-	var role := UiKit.lbl("%s  %d" % [str(UiKit.ROLE_SHORT.get(str(p.get("role", "")), str(p.get("role", "")))),
+	var role := UiKit.line("%s  %d" % [str(UiKit.ROLE_SHORT.get(str(p.get("role", "")), str(p.get("role", "")))),
 			int(p.get("overall", 0))], UiKit.SECONDARY, UiKit.TEXT, true)
 	role.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top.add_child(role)
@@ -1105,7 +1102,7 @@ func _action_words(a: String) -> Array:
 	var done := int(entry.get("run", 0))
 	match a:
 		"run":
-			return ["Running week %d of the %d our plan books." % [done + 1, need],
+			return ["Running week %d of the %d in our plan." % [done + 1, need],
 					"No drilling or bonding this week."]
 		"drill":
 			var plans: Array = GameState.preseason_drills()

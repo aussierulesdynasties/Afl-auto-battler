@@ -63,6 +63,8 @@ func _run() -> void:
 	state.replay_seed = _seed
 	state.set_setting("seen_weekly_loop_intro", true)
 	state.set_setting("seen_training_intro", true)
+	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
+		state.set_setting("seen_%s_intro" % key, true)
 	# The canvas a player's screen gives the game, whatever this machine's display density.
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 	DisplayServer.window_set_size(Vector2i(W, H))

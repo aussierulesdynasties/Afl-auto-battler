@@ -344,8 +344,8 @@
 			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The coach sold a plan"}],
 			 "result": "The members heard a plan. Some wanted more."},
 			{"key": "finals", "label": "Promise them finals",
-			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The coach promised the members finals"}, {"op": "board", "d": 3}, {"op": "loss_sting", "d": -3, "who": "side"}],
-			 "result": "Finals, he said. Now every loss will hurt."}
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "The coach promised the members finals"}, {"op": "board", "d": 3}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "Finals, the coach said. The players feel the weight of it."}
 		]
 	},
 	{
@@ -380,7 +380,7 @@
 			 "effects": [{"op": "board", "d": 2}],
 			 "result": "The price holds. The money people are happy."},
 			{"key": "halve", "label": "Halve the price",
-			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "Families back at the footy"}, {"op": "morale", "d": 2, "who": "all"}, {"op": "board", "d": -3}],
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "Families back at the footy"}, {"op": "morale", "d": 2, "who": "all"}, {"op": "board", "d": -2}],
 			 "result": "Families fill the ground. The books take the hit."}
 		]
 	},

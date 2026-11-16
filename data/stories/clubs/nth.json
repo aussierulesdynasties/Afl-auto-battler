@@ -378,10 +378,10 @@
 		"choices": [
 			{"key": "cabinet", "label": "Keep it in the cabinet for now",
 			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The number is earned"}],
-			 "result": "The number waits. He'll earn it."},
+			 "result": "The number waits. {name} will earn it."},
 			{"key": "give", "label": "Give him the number",
-			 "effects": [{"op": "morale", "d": 6, "who": "subject"}, {"op": "culture", "strand": "ambition", "d": 1, "why": "A great's number back on the field"}, {"op": "slow_start", "who": "subject"}],
-			 "result": "He has the number. Every eye is on him now."}
+			 "effects": [{"op": "morale", "d": 4, "who": "subject"}, {"op": "culture", "strand": "ambition", "d": 1, "why": "A great's number back on the field"}, {"op": "morale", "d": -2, "who": "others"}],
+			 "result": "{name} has the number. A few senior players wanted it."}
 		]
 	},
 	{

@@ -50,8 +50,8 @@
 			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "One week at a time"}],
 			 "result": "A safe answer. The members wanted more."},
 			{"key": "flag", "label": "\"We're here to win the flag.\"",
-			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "Here to win the flag"}, {"op": "board", "d": 4}, {"op": "loss_sting", "d": -5, "who": "side"}],
-			 "result": "The members roared. Now every loss will hurt."}
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "Here to win the flag"}, {"op": "board", "d": 3}, {"op": "morale", "d": -3, "who": "all"}],
+			 "result": "The members roared. The players feel the weight of it."}
 		]
 	},
 	{
@@ -263,8 +263,8 @@
 			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "We play to win"}],
 			 "result": "The defence stays. So do the grumbles."},
 			{"key": "open", "label": "\"We'll take the game on more.\"",
-			 "effects": [{"op": "board", "d": 4}, {"op": "morale", "d": 3, "who": "all"}, {"op": "slow_start", "who": "side"}],
-			 "result": "The members are thrilled. A new style takes time to click."}
+			 "effects": [{"op": "board", "d": 3}, {"op": "morale", "d": 3, "who": "all"}, {"op": "culture", "strand": "standards", "d": -1, "why": "Less work on our defence"}],
+			 "result": "The members are thrilled. The defence gets less work."}
 		]
 	},
 	{

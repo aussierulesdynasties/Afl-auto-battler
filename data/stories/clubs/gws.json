@@ -264,7 +264,7 @@
 			 "effects": [{"op": "board", "d": 2}],
 			 "result": "The leaders do the shifts."},
 			{"key": "every", "label": "Every player does a shift",
-			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The whole list did the shifts"}, {"op": "board", "d": 4}, {"op": "morale", "d": -2, "who": "all"}],
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The whole list did the shifts"}, {"op": "board", "d": 3}, {"op": "morale", "d": -2, "who": "all"}],
 			 "result": "Every player signs posters all weekend. Long days."}
 		]
 	},
@@ -302,7 +302,7 @@
 			 "effects": [{"op": "board", "d": 2}],
 			 "result": "The training base it is. The money stays put."},
 			{"key": "hire", "label": "Pay to hire it for match-day practice",
-			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "Match-day work on the main ground"}, {"op": "culture", "strand": "ambition", "d": 1, "why": "Ready for Round 1"}, {"op": "board", "d": -3}],
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "Match-day work on the main ground"}, {"op": "culture", "strand": "ambition", "d": 1, "why": "Ready for Round 1"}, {"op": "board", "d": -2}],
 			 "result": "Proper sessions on the main ground. The hire fee stung."}
 		]
 	},
@@ -393,8 +393,8 @@
 			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "Judge us in September"}],
 			 "result": "A calm answer at the launch."},
 			{"key": "win", "label": "\"We're here to win it.\"",
-			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "Here to win the flag"}, {"op": "board", "d": 4}, {"op": "loss_sting", "d": -5, "who": "side"}],
-			 "result": "The members roared. Now every loss will hurt."}
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "Here to win the flag"}, {"op": "board", "d": 3}, {"op": "morale", "d": -3, "who": "all"}],
+			 "result": "The members roared. The players feel the weight of it."}
 		]
 	},
 	{

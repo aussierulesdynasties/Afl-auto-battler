@@ -71,8 +71,8 @@
 			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "Our own target: play finals"}],
 			 "result": "Finals is the target. The board wanted more."},
 			{"key": "say", "label": "Say it, and mean it",
-			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "Premiership or bust"}, {"op": "board", "d": 3}, {"op": "loss_sting", "d": -4, "who": "side"}],
-			 "result": "Premiership or bust, into the cameras. Losses will hurt."}
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "Premiership or bust"}, {"op": "board", "d": 3}, {"op": "morale", "d": -3, "who": "all"}],
+			 "result": "Premiership or bust, into the cameras. The players feel it."}
 		]
 	},
 	{
