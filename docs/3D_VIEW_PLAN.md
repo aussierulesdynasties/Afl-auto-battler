@@ -101,6 +101,8 @@ The answers are recorded in the Director Bible and summarised here.
   stands' shade across the ground. Prototype: `tools/visual/capture_look3d.gd`.
 - 2a post-processing, tone (rule 2.81): AgX tonemapping with a footy-TV grade (contrast 1.1,
   saturation 1.2), exposure set by the brightness of open grass; club rings keep their exact colour.
+- 2a lighting, night (rule 2.82): four light towers, one to each corner, each casting a shadow;
+  a roofed venue's lighting is settled with the stadium (2b). The crowd needs almost no shine.
 
 The freeze allows only the
 prototypes each question needs; nothing from step 2 is the settled look until he has chosen it.
@@ -134,6 +136,6 @@ vignettes. Nothing in step 4 starts before the football proof has passed and the
 |---|---|
 | Freeze | in force from 2026-11-16 |
 | 1. Football proof | not started (row 201) |
-| 2. The world and the look | under way (row 202): 2a daylight and tone chosen (rules 2.80, 2.81); next weather and time of day, then 2b stadium, 2c crowd, 2d players' look, 2e cameras |
+| 2. The world and the look | under way (row 202): 2a daylight, tone and night lighting chosen (rules 2.80-2.82); next weather and time of day, then 2b stadium, 2c crowd, 2d players' look, 2e cameras |
 | 3. Asset and animation plan | after step 2 (row 203) |
 | 4. Build | after 1 and 3 (rows 197, 198) |
