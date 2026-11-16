@@ -670,7 +670,7 @@ func _test_moves_nobody(res: Dictionary) -> void:
 			if not pv.playing:
 				break   # the view stops at the end of the log; so does the match alone
 			pv._process(FRAME)
-			bare.advance(FRAME * 4.0)
+			bare.advance(FRAME * 4.0 * (MatchDirector.PAUSE_PLAY if bare.pausing() else 1.0))   # pauses at 2x, as the view (rule 2.93)
 			shown = maxf(shown, maxf(_alpha(pv, "corridor", 0), _alpha(pv, "stop", 0)))
 		for t in range(bare.tokens.size()):
 			worst = maxf(worst, (bare.tokens[t]["pos"] as Vector2).distance_to(pv.director.tokens[t]["pos"]))
