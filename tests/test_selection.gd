@@ -976,9 +976,6 @@ func _test_youth_no_cycle() -> void:
 	_check(once and note.count(" for ") == came.size(), "Each youngster and each man out is named once, no swap back: %s" % note)
 
 
-## A selected player's own-game XP as his club turns it into development: a
-## young fifth interchange (on the director's ratings, row 200) gets the
-## development department's and the plan's share too, as every player does.
 ## His week for a senior game on the bench (director 2026-11-17, Growth): the
 ## game's match XP plus his training third, by his club's multiplier.
 func _week_paid(p: Dictionary, stats: Dictionary) -> int:
@@ -989,7 +986,3 @@ func _week_paid(p: Dictionary, stats: Dictionary) -> int:
 	return int(round((Growth.match_xp(p, game) + Growth.train_xp(p)) * mult))
 
 
-func _club_paid(p: Dictionary, base: int) -> int:
-	var staffs = CoachEffects.staffs(GameState.coaches) if not GameState.coaches.is_empty() else {}
-	var staff: Dictionary = staffs.get("GEE", {}) if not GameState.coaches.is_empty() else {}
-	return GameState._club_xp("GEE", p, base, staff, false, GameState.fitness_plan("GEE"))
