@@ -980,6 +980,22 @@ func _check_joined(tag: String, from: String, year: int, their_id: String) -> vo
 			"%s: his record closes %s at %d and starts Tasmania in %d: %s" % [tag, from, year, year + 1, str(rec)])
 	_check(_news_has("You are the new senior coach of %s. %s" % [GameDB.club_name("TAS"), ClubMoves.successor_line(GameState, from, "TAS", year)]),
 			"%s: the news says he is Tasmania's coach and who replaced him" % tag)
+	# The sign-on money needs a rival's player Tasmania signed. Whether a rival
+	# lets one go depends on how the season fell (on this seed none has since
+	# the 11-14 build: Adelaide re-signs the man it let go before), so with
+	# none the best free agent young enough is signed on the terms
+	# ExpansionBuild gives, as its first call signs one.
+	if ((GameState.expansion["TAS"]["signings"]) as Array).is_empty():
+		var best := {}
+		for p in GameState.free_agents:
+			if float(p.get("age", 30.0)) < Expansion.TARGET_MAX_AGE and (best.is_empty() or int(p["overall"]) > int(best["overall"])):
+				best = p
+		_check(not best.is_empty(), "%s: a free agent Tasmania can sign" % tag)
+		if not best.is_empty():
+			GameState.free_agents.erase(best)
+			var deal := ExpansionBuild.terms(best)
+			ExpansionBuild._sign(GameState, "TAS", best, int(deal["salary"]), int(deal["years"]))
+			(GameState.expansion["TAS"]["signings"] as Array).append(str(best["id"]))
 	var keep := GameState.save_path
 	GameState.save_path = "user://test_coach_arcs_joining.save"
 	_check(GameState.save_career() and GameState.load_career() and GameState.my_club == "TAS"
