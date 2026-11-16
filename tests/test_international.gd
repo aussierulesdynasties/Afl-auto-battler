@@ -129,13 +129,38 @@ func _test_classes(state: Node, db: Node) -> void:
 	var dom_rank_gap := 0.0
 	var dom_carry := 0.0
 	var dom_disp := 0.0
+	# A country's lean is the shape of his skills: each against his own average
+	# rated skill (the fit to his overall moves every skill alike, and a lean on a
+	# skill his position counts heavily would otherwise vanish into it), read
+	# against home-grown prospects of the same role, since skills are rated within
+	# each position (director, 2026-11-15): most Americans are rucks and forwards,
+	# most New Zealanders mids. "tackle" is his pressure itself, against the role.
+	var lean := func(p: Dictionary) -> Dictionary:
+		var a: Dictionary = p["attr"]
+		var avg := 0.0
+		var keys := 0.0
+		for k in Skills.KEYS:
+			if not k in Prospects.UNRATED_KEYS:
+				avg += float(a[k])
+				keys += 1.0
+		avg /= keys
+		return {"disp": Skills.disposal_of(a) - avg, "acc": float(a["accuracy"]) - avg,
+				"cont": float(a["contested"]) - avg, "mark": float(a["contested_marking"]) - avg,
+				"pres": float(a["pressure"]) - avg, "tackle": float(a["pressure"])}
+	var dom_role := {}
 	for y in range(FIRST_YEAR, FIRST_YEAR + 40):
 		for p in classes[y]:
 			if not p.has("intl"):
 				dom_gap += float(p["potential"]) - float(p["overall"])
 				dom_rank_gap += float(p["overall"]) - Prospects.rank_base_overall(int(p["draft_rank"]))
 				dom_carry += float(p["attr"]["carry"]) - float(p["overall"])
-				dom_disp += float(p["attr"]["disposal"]) - float(p["overall"])
+				dom_disp += Skills.disposal_of(p["attr"]) - float(p["overall"])
+				var base: Dictionary = dom_role.get(str(p["role"]), {"n": 0.0})
+				var l: Dictionary = lean.call(p)
+				for k in l:
+					base[k] = float(base.get(k, 0.0)) + float(l[k])
+				base["n"] = float(base["n"]) + 1.0
+				dom_role[str(p["role"])] = base
 				dom_n += 1
 	var raw_gap := 0.0
 	var raw_rank_gap := 0.0
@@ -146,12 +171,10 @@ func _test_classes(state: Node, db: Node) -> void:
 		s["n"] += 1
 		var a: Dictionary = p["attr"]
 		var ovr := float(p["overall"])
-		s["disp"] += float(a["disposal"]) - ovr
-		s["acc"] += float(a["accuracy"]) - ovr
-		s["cont"] += float(a["contested"]) - ovr
-		s["mark"] += float(a["marking"]) - ovr
-		s["pres"] += float(a["pressure"]) - ovr
-		s["tackle"] += float(a["pressure"])
+		var l: Dictionary = lean.call(p)
+		var base: Dictionary = dom_role[str(p["role"])]
+		for k in l:
+			s[k] += float(l[k]) - float(base[k]) / float(base["n"])
 		s["carry"] += float(a["carry"]) - ovr
 		s["h"] += float(p["height_cm"])
 		s["age_lo"] = minf(float(s["age_lo"]), float(p["age"]))
@@ -169,6 +192,11 @@ func _test_classes(state: Node, db: Node) -> void:
 			"Raw: rated under his rank's usual (%.1f vs %.1f)" % [raw_rank_gap / n_all, dom_rank_gap / float(dom_n)])
 	_check(raw_gap / n_all > dom_gap / float(dom_n),
 			"Decent potential: more room to grow than a domestic prospect (%.1f vs %.1f)" % [raw_gap / n_all, dom_gap / float(dom_n)])
+	# A country's lean names the game's own skills: a stale name ("disposal",
+	# "marking") lands on a key nothing reads and his code's shape is lost.
+	for c in INTL.countries():
+		for k in (c.get("bias", {}) as Dictionary):
+			_check(str(k) in Skills.KEYS, "%s leans on a real skill (%s)" % [c["id"], k])
 	var m := func(id: String, key: String) -> float:
 		return float(stat[id][key]) / float(stat[id]["n"])
 	print("INTL profile IRL disp %.1f acc %.1f | NZL cont %.1f pres %.1f | USA h %.0f mark %.1f disp %.1f | KEN carry %.1f disp %.1f" % [

@@ -86,7 +86,7 @@ func _run() -> void:
 			rec["attr"][str(kd["stat"])] = mini(int(rec["attr"].get(str(kd["stat"]), 0)), int(kd["min"]) - 3)
 	rec["attr"][str(d["stat"])] = int(d["min"]) + 6
 	if bool(d.get("small", false)):
-		rec["attr"]["marking"] = 45
+		rec["attr"]["contested_marking"] = 45
 	print("CAPTURE recruit for ", want_syn, " / ", want_t, ": ", state.synergy_fit(rec))
 	router.go("list")
 	await _frames(8)

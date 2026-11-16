@@ -1101,7 +1101,7 @@ func _test_custom_prospect() -> void:
 	g["weaknesses"] = []
 	var pm := Prospects.make_custom(m, GameState.season_year, seed)
 	var pg := Prospects.make_custom(g, GameState.season_year, seed)
-	_check(int(pm["attr"]["marking"]) > int(pg["attr"]["marking"]) and int(pg["attr"]["goalkicking"]) > int(pm["attr"]["goalkicking"])
+	_check(int(pm["attr"]["contested_marking"]) > int(pg["attr"]["contested_marking"]) and int(pg["attr"]["goalkicking"]) > int(pm["attr"]["goalkicking"])
 			and absi(int(pm["overall"]) - int(pg["overall"])) <= 1,
 			"Strengths reshape the footballer without lifting his overall")
 
@@ -1155,12 +1155,14 @@ func _test_panel_fit() -> void:
 	# The game you play, each way: only when his football is up to it.
 	var mid: Dictionary = base.duplicate(true)
 	mid["role"] = "MID"
-	mid["attr"]["pressure"] = 62
+	# Real pressure: ten points above the average AFL carrier (PlanFit.LEAGUE).
+	var real_pressure := int((PlanFit.LEAGUE["defensive"] as Array)[0]) + 10
+	mid["attr"]["pressure"] = real_pressure
 	_check(RecruitMeeting.fit_line(mid, none, "defensive") == "Suits our pressure game.",
 			"A midfielder with real pressure suits a pressure game")
 	mid["attr"]["pressure"] = 40
 	_check(RecruitMeeting.fit_line(mid, none, "defensive") == "", "Without the pressure, no style line")
-	mid["attr"]["pressure"] = 62
+	mid["attr"]["pressure"] = real_pressure
 	_check(RecruitMeeting.fit_line(mid, none, "balanced") == "", "A balanced plan leans on no kind of player: no style line")
 	var back: Dictionary = base.duplicate(true)
 	back["role"] = "DEF"

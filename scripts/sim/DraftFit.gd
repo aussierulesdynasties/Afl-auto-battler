@@ -102,7 +102,7 @@ static func read(p: Dictionary, id: String, club: String, seed: int, mult := 1.0
 		return {}
 	var score := 0.0
 	for k in WEIGHTS[id]:
-		score += float(WEIGHTS[id][k]) * float(a.get(k, 50.0))
+		score += float(WEIGHTS[id][k]) * Skills.value(a, k)
 	var seen := clampf(score + DraftScouting._normal(DraftScouting._key(p, club, seed, "fit_" + id))
 			* DraftScouting.COMBINE_NOISE * u, 1.0, 99.0)
 	var value := int(round(seen))

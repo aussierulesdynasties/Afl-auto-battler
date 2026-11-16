@@ -149,6 +149,7 @@ def last_of(L, last):
 
 
 def build(rated, by_year):
+    hon = BS.honours(by_year, rated, DATA_SEASON)
     lists = BS.with_heights([r for r in read_csv("2000s", "lists.csv") if int(r["year"]) == YEAR])
     last = last_seasons()
     careers = careers_before(by_year)
@@ -203,7 +204,7 @@ def build(rated, by_year):
                             "slug": pid.rsplit("/", 1)[-1].replace(".html", ""),
                             "draft_year": dy, "draft_type": dt, "draft_pick": dp,
                             "seasons": ";".join(seasons), "career": BS.stints(car), "peak": peak or "",
-                            "last_season": last_of(L, last)})
+                            "honours": "%.3g" % hon[pid] if hon.get(pid) else "", "last_season": last_of(L, last)})
             if L["list"] == "rookie":
                 list_types.append({"club": club, "first": L["first"], "last": L["last"], "dob": L["dob"],
                                    "list": "rookie", "source_url": L["source_url"], "checked": L["checked"]})
@@ -269,11 +270,8 @@ def era_report(players, by_year, rated):
             for k in BS.ENRICHED[4:28]:
                 e["one_pct" if k == "onepct" else "pct_played" if k == "pctp" else k] = (r[k] if r[k] == "" else float(r[k]))
             hp.append(BS.harness_player({**e, "first": r["first"], "last": r["last"]}, r["club"], r.get("num", i)))
-        H.ERA_ANCHORS.clear()
         H.set_unrecorded(BS.unrecorded_in(hp))
         H.derive_ratings(hp)
-        if era:
-            H.fit_era_anchors(hp)
         return hp
 
     with open(os.path.join(ROOT, "data", "players_enriched_2026.csv"), newline="", encoding="utf-8") as fh:
@@ -325,7 +323,7 @@ def main():
     os.makedirs(OUT_DIR, exist_ok=True)
     BS.write(os.path.join(OUT_DIR, "players_2000.csv"), BS.ENRICHED, players)
     BS.write(os.path.join(OUT_DIR, "history_2000.csv"),
-             ["club", "num", "slug", "draft_year", "draft_type", "draft_pick", "seasons", "career", "peak", "last_season"], history)
+             ["club", "num", "slug", "draft_year", "draft_type", "draft_pick", "seasons", "career", "peak", "honours", "last_season"], history)
     BS.write(os.path.join(OUT_DIR, "list_additions_2000.csv"),
              ["first", "last", "dob", "club", "position", "height_cm", "list", "peak", "last_season", "source_url", "checked"],
              additions)

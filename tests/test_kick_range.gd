@@ -50,7 +50,7 @@ func _kicker(sim: MatchSim, role: String, disposal: float) -> Dictionary:
 	for p in (sim.squads[0] as Squad).ground:
 		if str(p["role"]) == role:
 			var k: Dictionary = p.duplicate(true)
-			k["attr"]["disposal"] = disposal
+			k["attr"]["kicking"] = disposal
 			return k
 	return {}
 
@@ -79,7 +79,7 @@ func _test_out_of_range_never_chosen() -> void:
 	# The away side kicks the other way: same rule mirrored.
 	var k1: Dictionary = (sim.squads[1] as Squad).ground[0].duplicate(true)
 	k1["role"] = "DEF"
-	k1["attr"]["disposal"] = 40.0
+	k1["attr"]["kicking"] = 40.0
 	_check(not _roles(sim.kick_targets(1, 70.0, k1)).has("FWD"), "mirrored: away forward offered out of range")
 
 

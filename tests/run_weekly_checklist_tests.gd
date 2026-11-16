@@ -70,6 +70,11 @@ func _fresh() -> void:
 	_state.tutorials = false
 	_state.week_events = []
 	_state.staff_vacancies = []
+	# A plain week: nobody asked about yet to be backed (the backing call has its
+	# own suite, big_call). On the director's ratings a Melbourne youngster sits
+	# near the side from the first week, so this is set, not assumed.
+	for p in _state.club_roster("MEL"):
+		p["back_asked"] = _state.story_week()
 
 
 func _go(key: String) -> void:

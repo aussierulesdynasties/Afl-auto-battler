@@ -468,15 +468,15 @@ func _test_training_survives() -> void:
 	var p: Dictionary = GameState.my_list[0]
 	var id := str(p["id"])
 	p["xp"] = 500
-	var marking_before := int(p["attr"]["marking"])
-	p["attr"]["marking"] = marking_before + 3
+	var marking_before := int(p["attr"]["contested_marking"])
+	p["attr"]["contested_marking"] = marking_before + 3
 	p["xp"] = 123
-	var marking := int(p["attr"]["marking"])
+	var marking := int(p["attr"]["contested_marking"])
 	var xp := int(p["xp"])
 	GameState.save_career()
 	GameState.load_career()
 	var q := GameState.list_player(id)
-	_check(int(q["attr"]["marking"]) == marking, "Trained attributes survive a reload")
+	_check(int(q["attr"]["contested_marking"]) == marking, "Trained attributes survive a reload")
 	_check(int(q["xp"]) == xp, "Banked XP survives a reload")
 	var in_season := {}
 	for sp in GameState.season.lists["GEE"]:

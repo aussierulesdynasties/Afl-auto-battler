@@ -125,6 +125,10 @@ func _breakout_kid() -> String:
 		var best_pot := int(best.get("potential", best.get("overall", 0)))
 		if best.is_empty() or pot > best_pot or (pot == best_pot and str(p["id"]) < str(best["id"])):
 			best = p
+	# Every kid the papers could tip is already picked (St Kilda's two under the
+	# Wheelo ratings): the papers' own pick, for checks that only read the story.
+	if best.is_empty():
+		return GameState._papers_breakout()
 	return str(best.get("id", ""))
 
 
@@ -896,7 +900,8 @@ func _test_screen() -> void:
 	var head := scene.find_child("PapersTitle", true, false) as Control
 	_check(head is RichTextLabel and NameInk.plain(head).contains(GameDB.player_display_name(who))
 			and (head as RichTextLabel).text.contains("[color="),
-			"The breakout's name in the headline is in his club's colour")
+			"The breakout's name in the headline is in his club's colour (%s: %s)" % [
+				GameDB.player_display_name(who), (head as RichTextLabel).text if head is RichTextLabel else str(head)])
 	# Wide. (The breakout above was only read, never answered: forcing the
 	# finish story puts the papers back to an unanswered finish.)
 	_force("finish")

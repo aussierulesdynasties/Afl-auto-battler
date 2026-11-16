@@ -894,6 +894,12 @@ func _test_redraft_entry_saved() -> void:
 ## can be taken at the 2026 draft: 2027 plays without you, and you build the
 ## club at the 2027 National Draft with the same deal as under its own staff.
 func _test_real_lists_tasmania_2028() -> void:
+	# A seed of its own: whether any rival's out-of-contract player would
+	# rather play at Tasmania turns on that career's lists. Under the
+	# director's ratings (row 200) the suite's seed leaves none who would
+	# (2 careers in 7 sign nobody; seed 11 signs 5), and this test needs a
+	# signing to check the signing rules.
+	GameState.replay_seed = 11
 	GameState.reset()
 	GameState.set_canberra(false)
 	GameState.challenge = {"kind": "youth"}
