@@ -3090,6 +3090,7 @@ func _test_free_taker_kicks() -> void:
 	var free_k := -1
 	var restart_k := -1
 	var kicked := false
+	var held := false
 	var last_k := -1
 	var guard := 0
 	while not d.idle() and guard < 200000:
@@ -3098,7 +3099,13 @@ func _test_free_taker_kicks() -> void:
 		var k := int(d._beat.get("k", -1))
 		if k != last_k:
 			if restart_k >= 0 and not kicked:
-				not_taken.append("k%d %s: no kick off the taker's boot" % [restart_k, str(evs[restart_k].get("kind", ""))])
+				# Played on to himself (the next event is his own), he runs it
+				# on with the ball in his hands and disposes of it a beat later.
+				if d._actor_id(evs[restart_k]) == taker and held:
+					taken += 1
+				else:
+					not_taken.append("k%d %s by %d: no kick off the taker %d's boot" % [restart_k,
+							str(evs[restart_k].get("kind", "")), d._actor_id(evs[restart_k]), taker])
 			restart_k = -1
 			if str(d._beat.get("kind", "")) in ["free", "last_disposal", "out_on_full", "fifty"]:
 				free_k = k
@@ -3110,8 +3117,11 @@ func _test_free_taker_kicks() -> void:
 				var nkind := str(evs[k].get("kind", ""))
 				restart_k = k if taker >= 0 and not nkind in ["quarter", "final", "ballup", "throwin"] else -1
 				kicked = false
+				held = false
 				free_k = -1
 			last_k = k
+		if k == restart_k and str(d.ball["mode"]) == "held" and int(d.ball["holder"]) == taker:
+			held = true
 		for c in d.contacts:
 			if c["kind"] != &"kick":
 				continue
