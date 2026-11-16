@@ -275,24 +275,6 @@
 		]
 	},
 	{
-		"id": "gee_surf_coast_sandhills",
-		"club": "GEE",
-		"controversy": false,
-		"category": "training",
-		"phase": ["preseason"],
-		"subject": {"kind": "club"},
-		"title": ["Sandhills on the Surf Coast"],
-		"text": ["The fitness staff want a week on the dunes and beaches down the Surf Coast. The skills coaches want the time on the track."],
-		"choices": [
-			{"key": "sand", "label": "A week on the sand",
-			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The group suffered through the sandhills together"}, {"op": "xp", "d": 3, "who": "all"}, {"op": "odds", "chance": 15, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "Sore calves are still there for the first game."}],
-			 "result": "The group bonds on the dunes. Fewer skill sessions get done."},
-			{"key": "club", "label": "Stay at the club",
-			 "effects": [{"op": "xp", "d": 5, "who": "all"}, {"op": "morale", "d": -1, "who": "all"}],
-			 "result": "The skills sharpen. The group misses the getaway."}
-		]
-	},
-	{
 		"id": "gee_new_stand",
 		"club": "GEE",
 		"controversy": false,

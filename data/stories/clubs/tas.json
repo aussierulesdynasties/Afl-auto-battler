@@ -4,20 +4,18 @@
 		"club": "TAS",
 		"controversy": false,
 		"category": "community",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["North or south?"],
 		"text": ["The season launch has to go somewhere, and the island has argued about north and south for well over a century. Hobart wants it on the waterfront; Launceston says it always gets the scraps."],
 		"choices": [
-			{"key": "north", "label": "Launceston gets it",
-			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "odds", "chance": 20, "hit": [{"op": "board", "d": -3, "was": "members"}], "miss": [], "hit_result": "The southern papers ran a week of forgotten-Hobart stories."}],
-			 "result": "The season launches in Launceston. The north feels heard."},
-			{"key": "south", "label": "Hobart, where the members are",
-			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "odds", "chance": 25, "hit": [{"op": "board", "d": -4, "was": "members"}], "miss": [], "hit_result": "The north turned on the club for a week."}],
-			 "result": "The launch is on the Hobart waterfront. Launceston notices."},
 			{"key": "split", "label": "Split it: a day in each city",
-			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "Both ends of the island got their day"}, {"op": "forgo_xp", "d": 5, "who": "all"}],
-			 "result": "Two launches, two days on the road. Nobody is snubbed."}
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "A day in each city"}],
+			 "result": "A day in each city. Nobody can complain."},
+			{"key": "hobart", "label": "Hobart, where the members are",
+			 "effects": [{"op": "board", "d": 4}, {"op": "culture", "strand": "ambition", "d": 1, "why": "A big launch on the waterfront"}, {"op": "culture", "strand": "together", "d": -1, "why": "The north felt left out"}],
+			 "result": "A big night in Hobart. Launceston noticed."}
 		]
 	},
 	{
@@ -42,17 +40,18 @@
 		"club": "TAS",
 		"controversy": false,
 		"category": "media",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["A whole state of members"],
 		"text": ["The club signs up members in every town on the island, more per head than anywhere in the league. Every one of them wants to know when the cup comes across Bass Strait."],
 		"choices": [
-			{"key": "finals", "label": "We'll play finals this year",
-			 "effects": [{"op": "board", "d": 6, "was": "members"}, {"op": "loss_sting", "chance": 30, "d": -4, "who": "side"}],
-			 "result": "The members are thrilled. Every loss now gets measured against the promise."},
 			{"key": "build", "label": "We're building something that lasts",
-			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The coach promised work, not results"}, {"op": "board", "d": -3, "was": "members"}],
-			 "result": "No promise on the record. Some members hear excuses."}
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "Building something that lasts"}],
+			 "result": "A patient answer. The island wanted more."},
+			{"key": "finals", "label": "We'll play finals this year",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "Finals this year"}, {"op": "board", "d": 5}, {"op": "loss_sting", "d": -4, "who": "side"}],
+			 "result": "The whole state heard it. Losses will hurt."}
 		]
 	},
 	{
@@ -60,17 +59,18 @@
 		"club": "TAS",
 		"controversy": false,
 		"category": "selection",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "player", "pick": "lowest:age", "where": {"real_named": false}},
 		"title": ["The island's kid"],
 		"text": ["{name}, a Tasmanian out of the club's own academy, has made the senior list. The whole state knows his name, and the local paper has him on the front page before he's played a game."],
 		"choices": [
+			{"key": "reserves", "label": "He earns it in the reserves first",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "Even the island's kid earns it"}],
+			 "result": "He'll earn it. The paper is not happy."},
 			{"key": "pick", "label": "Pick him for the first game",
-			 "effects": [{"op": "morale", "d": 8, "who": "subject"}, {"op": "board", "d": 4, "was": "members"}, {"op": "loss_sting", "chance": 25, "d": -6, "who": "subject"}],
-			 "result": "{first} runs out in front of the island. The pressure on him is huge."},
-			{"key": "earn", "label": "He earns it in the reserves first",
-			 "effects": [{"op": "xp", "d": 8, "who": "subject"}, {"op": "board", "d": -3, "was": "members"}],
-			 "result": "{first} goes to the twos, out of the spotlight. The papers ask why."}
+			 "effects": [{"op": "morale", "d": 8, "who": "subject"}, {"op": "board", "d": 4}, {"op": "loss_sting", "d": -6, "who": "subject"}],
+			 "result": "He's in for Round 1. The whole island is watching."}
 		]
 	},
 	{
@@ -358,17 +358,18 @@
 		"club": "TAS",
 		"controversy": false,
 		"category": "community",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["Bushfire appeal"],
 		"text": ["Fires have been through farming country in the state's east, and towns that sent kids to the club's academy have lost sheds and stock. The appeal wants the club on the ground."],
 		"choices": [
-			{"key": "help", "label": "The list goes to help clean up",
-			 "effects": [{"op": "board", "d": 6, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The players worked side by side in the burnt country"}, {"op": "forgo_xp", "d": 8, "who": "all"}],
-			 "result": "Three days of fencing and clearing. The towns won't forget it."},
 			{"key": "donate", "label": "Donate the match-day takings",
-			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "morale", "d": -1, "who": "all"}],
-			 "result": "The money goes east. The players wanted to be there."}
+			 "effects": [{"op": "board", "d": 2}],
+			 "result": "The takings go to the appeal."},
+			{"key": "clean", "label": "The list goes to help clean up",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The list cleaned up together"}, {"op": "board", "d": 4}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "Hard, dirty days in the east. The towns won't forget."}
 		]
 	},
 	{
@@ -428,17 +429,18 @@
 		"club": "TAS",
 		"controversy": false,
 		"category": "selection",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["Room on the list"],
 		"text": ["The club has spots to fill on the list. The recruiters want mature mainland players who can win now; the academy wants them for island kids."],
 		"choices": [
 			{"key": "mature", "label": "Mature bodies",
-			 "effects": [{"op": "morale", "d": 4, "who": "side"}, {"op": "board", "d": -3, "was": "members"}],
-			 "result": "Experience on the track. The island wanted its own."},
-			{"key": "kids", "label": "Island kids",
-			 "effects": [{"op": "board", "d": 5, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The club filled its list with island kids"}, {"op": "forgo_xp", "d": 5, "who": "side"}],
-			 "result": "Local kids get their chance. The senior players spend weeks teaching."}
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "Bodies to win now"}],
+			 "result": "Mature bodies fill the spots."},
+			{"key": "island", "label": "Island kids",
+			 "effects": [{"op": "board", "d": 5}, {"op": "culture", "strand": "together", "d": 1, "why": "Island kids on the island's list"}, {"op": "culture", "strand": "ambition", "d": -1, "why": "Kids, not men to win now"}],
+			 "result": "The island's kids get the spots. They're years away."}
 		]
 	},
 	{

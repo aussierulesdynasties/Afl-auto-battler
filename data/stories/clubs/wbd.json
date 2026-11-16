@@ -4,7 +4,7 @@
 		"club": "WBD",
 		"controversy": false,
 		"category": "community",
-		"phase": ["preseason", "regular"],
+		"phase": ["regular"],
 		"subject": {"kind": "club"},
 		"title": ["Open the gates at the Kennel"],
 		"text": ["The locals want an open session at the Kennel on Sunday, kids on shoulders along the fence. The coaches would rather work without a crowd."],
@@ -91,20 +91,18 @@
 		"club": "WBD",
 		"controversy": false,
 		"category": "board",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["A regional city wants home games"],
 		"text": ["A big regional city to the west has offered the club a paid deal to play home games at its ground each season. Footscray is split."],
 		"choices": [
+			{"key": "melbourne", "label": "Keep every home game in Melbourne",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "Footscray keeps its home games"}],
+			 "result": "Every home game stays in Melbourne."},
 			{"key": "two", "label": "Take two games a year",
-			 "effects": [{"op": "board", "d": 5, "was": "funds"}, {"op": "odds", "chance": 20, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "The bus trip home takes it out of them."}],
-			 "result": "Steady money and a new heartland. Two home crowds go up the highway."},
-			{"key": "one", "label": "Take one game",
-			 "effects": [{"op": "board", "d": 2, "was": "funds"}, {"op": "odds", "chance": 10, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "The trip still costs them some legs."}],
-			 "result": "Some money and some goodwill. The city wanted two."},
-			{"key": "none", "label": "Keep every home game in Melbourne",
-			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The members kept every home game"}, {"op": "board", "d": -3, "was": "funds"}],
-			 "result": "The members keep their games. The board loses money it had budgeted for."}
+			 "effects": [{"op": "board", "d": 5}, {"op": "culture", "strand": "ambition", "d": 1, "why": "A new region on the map"}, {"op": "culture", "strand": "together", "d": -1, "why": "Footscray lost two home games"}],
+			 "result": "Two games go west. Footscray grumbles."}
 		]
 	},
 	{
@@ -112,17 +110,18 @@
 		"club": "WBD",
 		"controversy": false,
 		"category": "board",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["Sell a home game to the Top End?"],
 		"text": ["A government up north has offered strong money for a Dogs home game in the dry heat. The players lose a week of routine and the members lose a home game."],
 		"choices": [
+			{"key": "home", "label": "Keep it at home",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The game stays at home"}],
+			 "result": "The members keep their game."},
 			{"key": "sell", "label": "Sell it",
-			 "effects": [{"op": "board", "d": 5, "was": "funds"}, {"op": "slow_start", "chance": 25, "who": "side"}, {"op": "culture", "strand": "together", "d": -1, "why": "The members gave up a home game for the money"}],
-			 "result": "A big cheque comes in. The heat and the flights take something out of the side, and the members grumble."},
-			{"key": "keep", "label": "Keep it at home",
-			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The members kept their game at home"}, {"op": "fresh", "who": "side"}, {"op": "board", "d": -4, "was": "funds"}],
-			 "result": "The members are pleased and the side keeps its routine. The board misses the money."}
+			 "effects": [{"op": "board", "d": 5}, {"op": "culture", "strand": "ambition", "d": 1, "why": "A game in the Top End"}, {"op": "culture", "strand": "together", "d": -1, "why": "The members lost a home game"}],
+			 "result": "Good money for the Top End. The members lost a game."}
 		]
 	},
 	{
@@ -130,20 +129,18 @@
 		"club": "WBD",
 		"controversy": false,
 		"category": "selection",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["A kid from the western suburbs wants a go"],
 		"text": ["A raw teenager from a local junior club, son of migrants, has been tearing up the local league. The recruiters say he's two years away, maybe more."],
 		"choices": [
-			{"key": "list", "label": "Give him a spot on the list",
-			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "odds", "chance": 30, "hit": [{"op": "culture", "strand": "ambition", "d": 2, "why": "A kid from the west grew into a senior footballer"}], "miss": [{"op": "board", "d": -3, "was": "funds"}], "hit_result": "He keeps growing, and the west watches every step.", "miss_result": "He doesn't come on, and the spot was a ready-made player's."}],
-			 "result": "The west hears the Dogs have backed one of their own."},
-			{"key": "train", "label": "Let him train with the reserves",
-			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "odds", "chance": 25, "hit": [{"op": "board", "d": -4, "was": "members"}], "hit_result": "Another club lists him before the Dogs make up their mind."}],
-			 "result": "No list spot used, and the club keeps an eye on him."},
-			{"key": "pass", "label": "Pass on him",
-			 "effects": [{"op": "xp", "d": 3, "who": "all"}, {"op": "board", "d": -3, "was": "members"}],
-			 "result": "The list stays as planned. The local juniors hear the club passed on one of their own."}
+			{"key": "reserves", "label": "Let him train with the reserves",
+			 "effects": [{"op": "board", "d": 2}],
+			 "result": "He trains with the reserves. The west noticed."},
+			{"key": "spot", "label": "Give him a spot on the list",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "A kid from the west on the list"}, {"op": "board", "d": 3}, {"op": "culture", "strand": "standards", "d": -1, "why": "A list spot before it was earned"}],
+			 "result": "A local kid on the list. He's raw."}
 		]
 	},
 	{
@@ -204,20 +201,18 @@
 		"club": "WBD",
 		"controversy": false,
 		"category": "board",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["The membership drive in the west"],
 		"text": ["The Dogs have always had fewer members than the big Melbourne clubs. Marketing wants the coach and the players on a membership tour of the western suburbs."],
 		"choices": [
-			{"key": "full", "label": "Players at every event",
-			 "effects": [{"op": "board", "d": 5, "was": "members"}, {"op": "slow_start", "chance": 20, "who": "side"}],
-			 "result": "Membership grows. The players are busy, and it shows early in the season."},
 			{"key": "coach", "label": "The coach goes, the players stay home",
-			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "forgo_xp", "d": 2, "who": "side"}],
-			 "result": "Some new members sign up. The coach misses a few sessions on the road, and marketing wanted players."},
-			{"key": "none", "label": "No tour, focus on the football",
-			 "effects": [{"op": "xp", "d": 3, "who": "all"}, {"op": "board", "d": -4, "was": "members"}],
-			 "result": "A clean pre-season. Membership stays flat, and the board is disappointed."}
+			 "effects": [{"op": "board", "d": 2}],
+			 "result": "The coach does the tour alone."},
+			{"key": "every", "label": "Players at every event",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The whole list did the tour"}, {"op": "board", "d": 4}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "Players at every event. Long days for the list."}
 		]
 	},
 	{
@@ -380,17 +375,18 @@
 		"club": "WBD",
 		"controversy": false,
 		"category": "board",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["The local business or the big one"],
 		"text": ["A family business in Footscray has sponsored the club through the thin times. A big national company has offered more for the same spot, and the board wants the coach's view."],
 		"choices": [
-			{"key": "local", "label": "Stay loyal to the local",
-			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The club stuck by a family that stuck by it"}, {"op": "board", "d": -4, "was": "funds"}],
-			 "result": "The community and the members love it. The club leaves money on the table."},
 			{"key": "big", "label": "Take the big money",
-			 "effects": [{"op": "board", "d": 4, "was": "funds"}, {"op": "culture", "strand": "together", "d": -2, "why": "Footscray heard the club dropped a local family for money"}],
-			 "result": "More money for the club. The local family is hurt, and Footscray hears about it."}
+			 "effects": [{"op": "board", "d": 2}],
+			 "result": "The big money comes in."},
+			{"key": "loyal", "label": "Stay loyal to the local",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "We stand by our people"}, {"op": "culture", "strand": "standards", "d": 1, "why": "Loyalty is our standard"}, {"op": "board", "d": -4}],
+			 "result": "The local stays. The board counts the cost."}
 		]
 	},
 	{

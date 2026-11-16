@@ -88,6 +88,36 @@ func _test_deck() -> void:
 	for id in IDS:
 		only = only and (StoryDeck.by_id(deck, id).get("phase", []) as Array) == ["bonding"]
 	_check(only, "A bonding card comes only in a bonding week, never in the season")
+	# The clubs' own summer cards became bonding cards ("Keep fitting ones"): no
+	# club card is left in the old pre-season phase, and each has a small choice
+	# (gain alone) and a big one (gain and a cost), with no running, loads or XP.
+	var club_wrong := []
+	var club_cards := 0
+	for t in deck:
+		var club := str(t.get("club", ""))
+		var phase: Array = t.get("phase", [])
+		if club == "":
+			continue
+		if phase.has("preseason"):
+			club_wrong.append("%s still in the old pre-season" % t["id"])
+		if not phase.has("bonding"):
+			continue
+		club_cards += 1
+		var small := 0
+		var big := 0
+		for c in (t.get("choices", []) as Array):
+			var cost := false
+			for e in (c.get("effects", []) as Array):
+				var op := str(e.get("op", ""))
+				if op in ["xp", "forgo_xp", "running", "heavy_legs", "fresh"]:
+					club_wrong.append("%s uses %s" % [t["id"], op])
+				cost = cost or op in ["sore", "loss_sting", "slow_start"] or int(e.get("d", 0)) < 0
+			big += 1 if cost else 0
+			small += 0 if cost else 1
+		if (t.get("choices", []) as Array).size() != 2 or small != 1 or big != 1:
+			club_wrong.append("%s (%d small, %d big)" % [t["id"], small, big])
+	_check(club_cards == 58 and club_wrong.is_empty(),
+			"The 58 club cards are bonding cards with a small and a big choice (%d): %s" % [club_cards, " | ".join(PackedStringArray(club_wrong))])
 	# A small choice and a big one: one answer is a gain alone, the other a gain
 	# and a cost (rule 69a).
 	_career()
@@ -125,7 +155,9 @@ func _test_flow() -> void:
 	_check(GameState.preseason_stop() == "story" and GameState.week_events.size() == 1,
 			"A bonding week stops on one card (stop %s, %d cards)" % [GameState.preseason_stop(), GameState.week_events.size()])
 	var tid := str(GameState.week_events[0]["tid"]) if not GameState.week_events.is_empty() else ""
-	_check(IDS.has(tid), "...a card from the bonding deck (%s)" % tid)
+	var dealt := StoryDeck.by_id(StoryDeck.all(), tid)
+	_check(IDS.has(tid) or (str(dealt.get("club", "")) == CLUB and (dealt.get("phase", []) as Array).has("bonding")),
+			"...a card from the bonding deck or the club's own (%s)" % tid)
 	var acts: Array = GameState.preseason_entry().get("acts", [])
 	_check(not acts.is_empty() and str((acts[acts.size() - 1] as Dictionary).get("card", "")) == tid,
 			"...and the week records the card it dealt")
@@ -255,6 +287,21 @@ func _test_cultural_day() -> void:
 		dealt[ClubStories.rival_bond(GameState, rival, w)] = true
 	_check(not dealt.has("bond_cultural_day") and dealt.size() > 1,
 			"A rival with no Indigenous player never draws the cultural day (%s)" % ", ".join(PackedStringArray(dealt.keys())))
+	# A rival draws from the shared deck and its own club cards, never another
+	# club's, and never one about a named player (that needs your club's facts).
+	var deck := StoryDeck.all()
+	var own_seen := false
+	var wrong := []
+	for code in GameState.season.clubs:
+		if str(code) == CLUB:
+			continue
+		for w in range(1, 8):
+			var t := StoryDeck.by_id(deck, ClubStories.rival_bond(GameState, str(code), w))
+			var club := str(t.get("club", ""))
+			own_seen = own_seen or club == str(code)
+			if club != "" and (club != str(code) or str((t.get("subject", {}) as Dictionary).get("kind", "club")) != "club"):
+				wrong.append("%s drew %s" % [code, t["id"]])
+	_check(own_seen and wrong.is_empty(), "Rivals draw their own club's cards, never another club's or a named player's: %s" % " | ".join(PackedStringArray(wrong)))
 
 
 ## "Drill, then bond": a rival's bonding week rolls a card of its own, the same

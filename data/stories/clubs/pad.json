@@ -62,16 +62,17 @@
 		"controversy": false,
 		"category": "board",
 		"subject": {"kind": "club"},
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"title": ["We exist to win premierships"],
 		"text": ["The motto is painted above the rooms. At the season launch the board wants you to say it into the cameras: premiership or bust."],
 		"choices": [
-			{"key": "say", "label": "Say it, and mean it",
-			 "effects": [{"op": "culture", "strand": "ambition", "d": 2, "why": "The coach said the motto out loud"}, {"op": "board", "d": 3}, {"op": "loss_sting", "chance": 20, "d": -4, "who": "side"}],
-			 "result": "Premiership or bust. Every loss this year will be measured against it."},
 			{"key": "target", "label": "Back the motto, but set your own target: play finals",
-			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The coach set a target the group can measure"}, {"op": "board", "d": -4}],
-			 "result": "A measured line. Some on the board and in the stands hear it as soft."}
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "Our own target: play finals"}],
+			 "result": "Finals is the target. The board wanted more."},
+			{"key": "say", "label": "Say it, and mean it",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "Premiership or bust"}, {"op": "board", "d": 3}, {"op": "loss_sting", "d": -4, "who": "side"}],
+			 "result": "Premiership or bust, into the cameras. Losses will hurt."}
 		]
 	},
 	{
@@ -340,24 +341,6 @@
 		]
 	},
 	{
-		"id": "pad_summer_hills",
-		"club": "PAD",
-		"controversy": false,
-		"category": "training",
-		"subject": {"kind": "club"},
-		"phase": ["preseason"],
-		"title": ["The Port way: summer hills"],
-		"text": ["The senior players want to bring back the brutal summer sandhill and hill runs the old Port sides were built on. The fitness staff think it is old-fashioned."],
-		"choices": [
-			{"key": "hills", "label": "Back the senior players: hills",
-			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "Port trains hard"}, {"op": "running", "d": 1}, {"op": "odds", "chance": 15, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "The hills take their toll. Legs are still heavy by round one."}],
-			 "result": "Up and down the sandhills until they can't stand."},
-			{"key": "program", "label": "Back the fitness staff's program",
-			 "effects": [{"op": "xp", "d": 4, "who": "side"}, {"op": "culture", "strand": "together", "d": -1, "why": "The senior players were overruled on how Port trains"}],
-			 "result": "The modern program it is. The senior players grumble."}
-		]
-	},
-	{
 		"id": "pad_homesick",
 		"club": "PAD",
 		"controversy": false,
@@ -373,27 +356,6 @@
 			{"key": "housemate", "label": "Pair him with a senior housemate and keep him busy",
 			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The senior players took in a homesick kid"}, {"op": "odds", "chance": 50, "hit": [{"op": "morale", "d": 3, "who": "subject"}], "miss": [{"op": "trust", "d": -3, "why": "He still feels on his own"}], "hit_result": "He settles in. Home talk stops.", "miss_result": "He still feels on his own, and the home talk goes on."}],
 			 "result": "{first} moves in with one of the senior players."}
-		]
-	},
-	{
-		"id": "pad_overseas_game",
-		"club": "PAD",
-		"controversy": false,
-		"category": "board",
-		"subject": {"kind": "club"},
-		"phase": ["preseason"],
-		"title": ["An overseas partner wants a game"],
-		"text": ["A big overseas business partner wants the club to fly a pre-season match and clinics to their market. It means money, and a long flight. The coaches hate the timing."],
-		"choices": [
-			{"key": "go", "label": "Go",
-			 "effects": [{"op": "board", "d": 6, "was": "funds"}, {"op": "heavy_legs", "who": "side"}, {"op": "slow_start", "chance": 15, "who": "side"}],
-			 "result": "The club takes the trip. The players come home jet-lagged."},
-			{"key": "delegation", "label": "Send a delegation, not the team",
-			 "effects": [{"op": "xp", "d": 2, "who": "side"}, {"op": "board", "d": -1, "was": "funds"}],
-			 "result": "A few officials fly out. The pre-season stays intact, and some of the money goes elsewhere."},
-			{"key": "no", "label": "Say no",
-			 "effects": [{"op": "xp", "d": 4, "who": "side"}, {"op": "board", "d": -4}],
-			 "result": "The side stays home and trains. The board is not impressed."}
 		]
 	},
 	{

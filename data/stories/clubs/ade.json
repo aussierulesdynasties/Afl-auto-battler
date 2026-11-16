@@ -39,24 +39,6 @@
 		]
 	},
 	{
-		"id": "ade_preseason_showdown",
-		"club": "ADE",
-		"controversy": false,
-		"category": "selection",
-		"phase": ["preseason"],
-		"subject": {"kind": "club"},
-		"title": ["A Showdown in the pre-season"],
-		"text": ["The practice matches have thrown up the cross-town club. It counts for nothing on the ladder, but a big crowd will turn up and both sets of fans will treat it like it does."],
-		"choices": [
-			{"key": "best", "label": "Pick the best 22 and go hard",
-			 "effects": [{"op": "odds", "chance": 50, "hit": [{"op": "morale", "d": 3, "who": "all"}], "hit_result": "The Crows won it, and the city knew."}, {"op": "odds", "chance": 15, "hit": [{"op": "forgo_xp", "d": 4, "who": "side"}], "hit_result": "One of the best 22 tweaked a hamstring and missed a block of training."}],
-			 "result": "The best side goes out to win a game that doesn't count."},
-			{"key": "kids", "label": "Play the kids and the fringe",
-			 "effects": [{"op": "xp", "d": 3, "who": "all"}, {"op": "odds", "chance": 65, "hit": [{"op": "board", "d": -2, "was": "members"}], "hit_result": "The kids lost it, and the city let you hear about it."}],
-			 "result": "The young players get a real hit-out in front of a crowd."}
-		]
-	},
-	{
 		"id": "ade_kid_wants_home",
 		"club": "ADE",
 		"controversy": false,
@@ -102,17 +84,18 @@
 		"club": "ADE",
 		"controversy": false,
 		"category": "family",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["Settling the interstate kids"],
 		"text": ["Recruiting has brought in four teenagers from interstate. The welfare manager wants money for host families and a trip home every few weeks."],
 		"choices": [
+			{"key": "house", "label": "Put them in a share house",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "Four kids from interstate under one roof"}],
+			 "result": "One house, one fridge. They looked after each other."},
 			{"key": "fund", "label": "Fund the full program",
-			 "effects": [{"op": "morale", "d": 2, "who": "all"}, {"op": "board", "d": -2, "was": "funds"}],
-			 "result": "The kids settle with host families and train well. It comes out of the football budget."},
-			{"key": "house", "label": "Put them in a share house together",
-			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The new kids bonded under one roof"}, {"op": "odds", "chance": 20, "hit": [{"op": "board", "d": -2}], "hit_result": "A late night at the share house made the papers."}],
-			 "result": "Four kids, one house, no adult."}
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The club looked after the interstate kids"}, {"op": "morale", "d": 2, "who": "all"}, {"op": "board", "d": -2}],
+			 "result": "Host families and trips home. The kids settled fast."}
 		]
 	},
 	{
@@ -178,20 +161,18 @@
 		"club": "ADE",
 		"controversy": false,
 		"category": "board",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["Chasing a membership record"],
 		"text": ["The board wants a new membership record. Marketing has a plan: the coach's face on every billboard in town."],
 		"choices": [
-			{"key": "coach", "label": "Do the campaign",
-			 "effects": [{"op": "board", "d": 3}, {"op": "odds", "chance": 30, "hit": [{"op": "board", "d": -3}], "hit_result": "A mid-season dip, and your face is still on the buses."}],
-			 "result": "Your face is everywhere. The board is pleased."},
+			{"key": "footy", "label": "Let the footy sell it",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The summer stayed about footy"}],
+			 "result": "No billboards. The footy department liked that."},
 			{"key": "players", "label": "Put the players on the billboards",
-			 "effects": [{"op": "morale", "d": 2, "who": "all"}, {"op": "odds", "chance": 15, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "The extra appearances left a few players flat."}],
-			 "result": "The players enjoy it. More appearances, less rest."},
-			{"key": "no", "label": "Say no and let the footy sell it",
-			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The coach kept the focus on footy"}, {"op": "board", "d": -2}],
-			 "result": "The group sees you protect them. The board wanted a team player."}
+			 "effects": [{"op": "board", "d": 3}, {"op": "morale", "d": 2, "who": "all"}, {"op": "culture", "strand": "standards", "d": -1, "why": "Billboards before the work"}],
+			 "result": "Their faces are all over town. The board is thrilled."}
 		]
 	},
 	{
@@ -219,20 +200,18 @@
 		"club": "ADE",
 		"controversy": true,
 		"category": "leadership",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["The resilience camp"],
 		"text": ["An outside firm pitches a pre-season \"mental resilience\" camp: sleep deprivation, confronting personal sessions, no phones. They say it will forge a premiership group."],
 		"choices": [
-			{"key": "book", "label": "Book the camp",
-			 "effects": [{"op": "odds", "chance": 50, "hit": [{"op": "culture", "strand": "together", "d": 2, "why": "Some of the group came back closer"}], "miss": [{"op": "culture", "strand": "together", "d": -1, "why": "Some of the group came back feeling humiliated"}], "hit_result": "Some of the group came home closer.", "miss_result": "Some players came home feeling humiliated."}, {"op": "odds", "chance": 40, "hit": [{"op": "board", "d": -4}, {"op": "morale", "d": -4, "who": "all"}], "hit_result": "What went on at the camp leaked to the press."}],
-			 "result": "The players hand in their phones and get on the bus."},
 			{"key": "own", "label": "Run your own leadership camp",
-			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The club ran its own camp"}, {"op": "forgo_xp", "d": 2, "who": "all"}],
-			 "result": "Two days away, run by the club. Less drama, two days off the track."},
-			{"key": "none", "label": "No camp, train as normal",
-			 "effects": [{"op": "xp", "d": 2, "who": "all"}, {"op": "board", "d": -1}],
-			 "result": "Full training. The board wanted something done about the group."}
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The club ran its own camp"}],
+			 "result": "Two days away, run by the club. Less drama."},
+			{"key": "book", "label": "Book the camp",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The group came back closer"}, {"op": "culture", "strand": "standards", "d": 1, "why": "The camp set a hard standard"}, {"op": "morale", "d": -3, "who": "all"}],
+			 "result": "No sleep and no phones. They came back tired."}
 		]
 	},
 	{
@@ -385,27 +364,6 @@
 		]
 	},
 	{
-		"id": "ade_country_tour",
-		"club": "ADE",
-		"controversy": false,
-		"category": "community",
-		"phase": ["preseason"],
-		"subject": {"kind": "club"},
-		"title": ["The country tour"],
-		"text": ["The club can take a pre-season game to a country town in South Australia. The locals are thrilled. The ground is rock hard."],
-		"choices": [
-			{"key": "seniors", "label": "Go, and play the seniors",
-			 "effects": [{"op": "board", "d": 5, "was": "members"}, {"op": "odds", "chance": 15, "hit": [{"op": "forgo_xp", "d": 4, "who": "side"}], "hit_result": "One of the best 22 jarred a knee on the hard ground and missed a block."}],
-			 "result": "The whole state hears about it. The ground is as hard as promised."},
-			{"key": "kids", "label": "Go, play the kids, seniors run clinics",
-			 "effects": [{"op": "xp", "d": 3, "who": "all"}, {"op": "board", "d": -1, "was": "members"}],
-			 "result": "The kids get a game. The town wanted the stars on the field."},
-			{"key": "stay", "label": "Stay in the city",
-			 "effects": [{"op": "xp", "d": 2, "who": "all"}, {"op": "board", "d": -2, "was": "members"}],
-			 "result": "A safe deck and a full pre-season block. The country feels forgotten."}
-		]
-	},
-	{
 		"id": "ade_wine_sponsor",
 		"club": "ADE",
 		"controversy": false,
@@ -448,17 +406,18 @@
 		"club": "ADE",
 		"controversy": false,
 		"category": "leadership",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "player", "pick": "highest:leadership"},
 		"title": ["One voice or two"],
 		"text": ["The club has run co-captains before. {name} and another senior player are both ready, and the group is split on who leads."],
 		"choices": [
 			{"key": "co", "label": "Make them co-captains",
-			 "effects": [{"op": "trust", "d": 2, "why": "You shared the captaincy"}, {"op": "culture", "strand": "together", "d": 1, "why": "Both leaders kept a voice"}, {"op": "slow_start", "chance": 25, "who": "side"}],
-			 "result": "Both stay happy. In a tough week there may be two messages."},
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "Two captains, one group"}],
+			 "result": "Two leaders share the armband. The group is settled."},
 			{"key": "one", "label": "Give {name} the captaincy alone",
-			 "effects": [{"op": "trust", "d": 4, "why": "You made him the one voice"}, {"op": "morale", "d": -2, "who": "others"}],
-			 "result": "One clear voice. The other senior player feels passed over."}
+			 "effects": [{"op": "trust", "d": 4, "who": "subject"}, {"op": "culture", "strand": "standards", "d": 1, "why": "One clear voice"}, {"op": "morale", "d": -2, "who": "others"}],
+			 "result": "{name} leads alone. Some of the group backed the other man."}
 		]
 	},
 	{

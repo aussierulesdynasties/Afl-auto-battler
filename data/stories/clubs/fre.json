@@ -40,17 +40,18 @@
 		"club": "FRE",
 		"controversy": false,
 		"category": "media",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["Is this the year?"],
 		"text": ["Every season launch somebody asks the same question: is this the year Fremantle wins the flag? The members want to hear the coach say it."],
 		"choices": [
-			{"key": "flag", "label": "\"We're here to win the flag.\"",
-			 "effects": [{"op": "board", "d": 5, "was": "members"}, {"op": "loss_sting", "chance": 20, "d": -5, "who": "side"}],
-			 "result": "The members love it. Every loss this season will be measured against those words."},
 			{"key": "week", "label": "\"One week at a time.\"",
-			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The coach kept the talk on the next game"}, {"op": "board", "d": -2, "was": "members"}],
-			 "result": "No promise on the record. The faithful wanted belief."}
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "One week at a time"}],
+			 "result": "A safe answer. The members wanted more."},
+			{"key": "flag", "label": "\"We're here to win the flag.\"",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "Here to win the flag"}, {"op": "board", "d": 4}, {"op": "loss_sting", "d": -5, "who": "side"}],
+			 "result": "The members roared. Now every loss will hurt."}
 		]
 	},
 	{
@@ -93,17 +94,18 @@
 		"club": "FRE",
 		"controversy": false,
 		"category": "community",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["The Goldfields trip"],
 		"text": ["The club's fundraising trip to Kalgoorlie is on again: a dinner, and a clinic for the local juniors. It's a long way from the base in the middle of the pre-season."],
 		"choices": [
+			{"key": "fly", "label": "Fly a few senior players up for the night",
+			 "effects": [{"op": "board", "d": 2}],
+			 "result": "A few seniors fly up. Kalgoorlie loved it."},
 			{"key": "bus", "label": "Take a full bus",
-			 "effects": [{"op": "board", "d": 5, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The whole group made the trip to the Goldfields"}, {"op": "running", "d": -1}],
-			 "result": "The Goldfields turn out in purple. The fitness base loses a week."},
-			{"key": "few", "label": "Fly a few senior players up for the night",
-			 "effects": [{"op": "xp", "d": 3, "who": "all"}, {"op": "board", "d": -2, "was": "members"}],
-			 "result": "Training stays on schedule. The Goldfields wanted a full bus."}
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "A long bus trip together"}, {"op": "board", "d": 3}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "A full bus to the Goldfields. A long way there and back."}
 		]
 	},
 	{
@@ -128,17 +130,18 @@
 		"club": "FRE",
 		"controversy": false,
 		"category": "training",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["The Doctor's in"],
 		"text": ["The Fremantle Doctor has come in hard off the ocean for the third afternoon running. Kicking drills into it look ugly; the alternative is to take the session indoors."],
 		"choices": [
-			{"key": "kick", "label": "Kick into it",
-			 "effects": [{"op": "xp", "d": 12, "who": "all"}, {"op": "heavy_legs", "who": "side"}],
-			 "result": "The ball use into the breeze gets better by the day. The legs are heavy for the first game."},
 			{"key": "inside", "label": "Take it inside",
-			 "effects": [{"op": "fresh", "who": "side"}, {"op": "forgo_xp", "d": 6, "who": "all"}],
-			 "result": "Fresh legs, and less work done on the ball use."}
+			 "effects": [{"op": "morale", "d": 2, "who": "all"}],
+			 "result": "Inside, out of the wind. The players liked it."},
+			{"key": "kick", "label": "Kick into it",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "They kicked into the Doctor"}, {"op": "culture", "strand": "together", "d": 1, "why": "They got through it together"}, {"op": "sore", "who": "one"}],
+			 "result": "Ugly, windy drills. One player pulled up sore."}
 		]
 	},
 	{
@@ -250,17 +253,18 @@
 		"club": "FRE",
 		"controversy": false,
 		"category": "board",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["Fortress defence or fun footy"],
 		"text": ["The club has won plenty of games with a suffocating, numbers-behind-the-ball defence, and over summer the members have grumbled that it's boring to watch. The board would like to see the side open up."],
 		"choices": [
 			{"key": "win", "label": "\"We play to win, not to entertain.\"",
-			 "effects": [{"op": "xp", "d": 6, "who": "all"}, {"op": "board", "d": -4, "was": "members"}],
-			 "result": "Two more weeks drilling the defensive plan. The board is unhappy."},
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "We play to win"}],
+			 "result": "The defence stays. So do the grumbles."},
 			{"key": "open", "label": "\"We'll take the game on more.\"",
-			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "morale", "d": 3, "who": "all"}, {"op": "slow_start", "chance": 20, "who": "side"}],
-			 "result": "The players like the new freedom. The new style is still raw."}
+			 "effects": [{"op": "board", "d": 4}, {"op": "morale", "d": 3, "who": "all"}, {"op": "slow_start", "who": "side"}],
+			 "result": "The members are thrilled. A new style takes time to click."}
 		]
 	},
 	{
@@ -338,17 +342,18 @@
 		"club": "FRE",
 		"controversy": false,
 		"category": "members",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["A session for the port"],
 		"text": ["The members want an open session in the heart of the port, on a public oval by the harbour. The ground is cramped and the surface is tired, but the cappuccino strip would empty to watch."],
 		"choices": [
-			{"key": "open", "label": "Open session in the port",
-			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "morale", "d": 3, "who": "all"}, {"op": "running", "d": -1}],
-			 "result": "The whole port turns out. It's a lighter session for the crowd."},
 			{"key": "fences", "label": "Stay behind the fences",
-			 "effects": [{"op": "xp", "d": 4, "who": "all"}, {"op": "board", "d": -2, "was": "members"}],
-			 "result": "The full program gets done. The members are disappointed."}
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "A closed, sharp session"}],
+			 "result": "A closed session. The work got done."},
+			{"key": "port", "label": "Open session in the port",
+			 "effects": [{"op": "board", "d": 3}, {"op": "morale", "d": 2, "who": "all"}, {"op": "sore", "who": "one"}],
+			 "result": "A huge crowd by the harbour. The tired surface caught one."}
 		]
 	},
 	{

@@ -84,7 +84,12 @@ static func rival_bond(gs, code: String, w: int) -> String:
 	var facts := {"indigenous": indigenous_players(list).size(), "has_vice": _has_vice(gs, code, list)}
 	var pool := []
 	for t in StoryDeck.all():
-		if not (t.get("phase", []) as Array).has("bonding") or str(t.get("club", "")) != "" or had.has(str(t["id"])):
+		if not (t.get("phase", []) as Array).has("bonding") or had.has(str(t["id"])):
+			continue
+		# A club's own cards are its to draw. The ones about a named player stay
+		# with your club: picking that player needs your club's player facts.
+		var own := str(t.get("club", ""))
+		if own != "" and (own != code or str((t.get("subject", {}) as Dictionary).get("kind", "club")) != "club"):
 			continue
 		if StoryEngine.meets(facts, t.get("when", {}), {}):
 			pool.append(t)

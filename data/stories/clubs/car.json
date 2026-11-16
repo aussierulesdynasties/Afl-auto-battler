@@ -275,17 +275,18 @@
 		"club": "CAR",
 		"controversy": false,
 		"category": "selection",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "player", "pick": "highest:potential", "where": {"age_max": 19, "new_here": true}},
 		"title": ["The whole city wants to see {name}"],
 		"text": ["{name} has arrived as the club's prize draftee, and this club has been here before with top picks. The press want him playing in Round 1."],
 		"choices": [
-			{"key": "play", "label": "Play him from the start",
-			 "effects": [{"op": "morale", "d": 4, "who": "subject"}, {"op": "xp", "d": 5, "who": "subject"}, {"op": "board", "d": 2, "was": "members"}, {"op": "odds", "chance": 25, "hit": [{"op": "morale", "d": -4, "who": "subject"}], "hit_result": "He's dropped by mid-season, and it knocks him."}],
-			 "result": "{first} runs out in Round 1 with the whole city watching."},
 			{"key": "reserves", "label": "Bring him through the reserves",
-			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "Even the top pick earns his game"}, {"op": "board", "d": -2, "was": "members"}, {"op": "trust", "d": -1, "why": "He wanted to play straight away"}],
-			 "result": "{first} starts in the reserves, out of the spotlight. The members want to see him."}
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "Even the top pick earns his spot"}],
+			 "result": "He'll earn it. The press are not happy."},
+			{"key": "start", "label": "Play him from the start",
+			 "effects": [{"op": "morale", "d": 4, "who": "subject"}, {"op": "board", "d": 2}, {"op": "morale", "d": -2, "who": "others"}],
+			 "result": "{name} is in for Round 1. Some senior men wonder why."}
 		]
 	},
 	{
