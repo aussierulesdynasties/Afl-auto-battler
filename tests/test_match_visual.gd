@@ -62,6 +62,7 @@ func run() -> void:
 	_t("_test_three_d_view", [res])
 	_t("_test_three_d_hair", [res])
 	_t("_test_contacts", [res])
+	_t("_test_free_taker_kicks")
 	GameState.replay_seed = 0
 	print(Ran.line("Match visual", self))
 
@@ -2954,3 +2955,72 @@ func _test_contacts(res: Dictionary) -> void:
 	_check(bad.is_empty(), "Every touch names a real player (or the umpire for a bounce) and a spot: %s" % [bad.slice(0, 5)])
 	_check(int(kinds.get(&"kick", 0)) > int(kinds.get(&"goal_celebrate", 0)) and int(kinds.get(&"goal_celebrate", 0)) > 0,
 			"Goals are celebrated, and fewer times than the ball is kicked (%s)" % [kinds])
+
+
+## A free kick is taken by the man it is paid to, with the ball in his hands,
+## and every kick leaves from the kicker's boot. Seed 31 FRE v STK on main
+## (2026-11-16): after the clanger (k52) the free (k53) to FRE_32 rolled loose
+## through the whistle with nobody holding it, and the next kick (k54) flew
+## with no man within 4 m of the ball and no kick touch at all.
+func _test_free_taker_kicks() -> void:
+	var res := MatchSim.new(Squad.new("FRE", GameDB.club_list("FRE"), true, "FRE"),
+			Squad.new("STK", GameDB.club_list("STK"), false, "STK"), 31).run()
+	res["home"] = "FRE"
+	res["away"] = "STK"
+	res["label"] = "Round 1"
+	var evs: Array = res["events"]
+	var d := MatchDirector.new()
+	d.setup(res, evs)
+	d.want_contacts = true
+	var frees := 0
+	var taken := 0
+	var not_taken := []
+	var far := []
+	var kicks := 0
+	var taker := -1
+	var free_k := -1
+	var restart_k := -1
+	var kicked := false
+	var last_k := -1
+	var guard := 0
+	while not d.idle() and guard < 200000:
+		guard += 1
+		d.advance(0.05)
+		var k := int(d._beat.get("k", -1))
+		if k != last_k:
+			if restart_k >= 0 and not kicked:
+				not_taken.append("k%d %s: no kick off the taker's boot" % [restart_k, str(evs[restart_k].get("kind", ""))])
+			restart_k = -1
+			if str(d._beat.get("kind", "")) in ["free", "last_disposal", "out_on_full", "fifty"]:
+				free_k = k
+				taker = d._actor_id(evs[k])
+				frees += 1
+			elif free_k >= 0 and d._prev_real(k) == free_k:
+				# The beat the free is taken in: its first kick is the taker's
+				# (not a quarter's siren or a ball-up called before he kicks).
+				var nkind := str(evs[k].get("kind", ""))
+				restart_k = k if taker >= 0 and not nkind in ["quarter", "final", "ballup", "throwin"] else -1
+				kicked = false
+				free_k = -1
+			last_k = k
+		for c in d.contacts:
+			if c["kind"] != &"kick":
+				continue
+			kicks += 1
+			var who := int(c["who"])
+			# Where the ball left from: the flight's start, the frame it is kicked.
+			var from: Vector2 = d.ball["from"] if str(d.ball["mode"]) == "flight" else d.ball["pos"]
+			var gap: float = (d.tokens[who]["pos"] as Vector2).distance_to(from)
+			if gap > 1.5:
+				far.append("k%d: kicker %.1f m from the ball" % [k, gap])
+			if k == restart_k and not kicked:
+				kicked = true
+				if who == taker:
+					taken += 1
+				else:
+					not_taken.append("k%d: kicked by %d, the free was paid to %d" % [k, who, taker])
+		d.contacts.clear()
+	print("  frees: %d paid, %d taken off the taker's boot; %d kicks" % [frees, taken, kicks])
+	_check(frees > 10 and taken > 10, "Seed 31 pays frees and their takers kick them (%d paid, %d taken)" % [frees, taken])
+	_check(not_taken.is_empty(), "Every free's taker has the ball and kicks it himself (%d not: %s)" % [not_taken.size(), not_taken.slice(0, 5)])
+	_check(far.is_empty(), "No kick leaves with its kicker more than 1.5 m from the ball (%d: %s)" % [far.size(), far.slice(0, 5)])
