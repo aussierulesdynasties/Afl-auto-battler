@@ -753,14 +753,16 @@ func _move_umpires(dt: float) -> void:
 		var speed := vel.length()
 		var clip := "idle"
 		var rate := 1.0
+		# Turning at a pivot's pace, as the players do (Oval3DAnim.TURN).
+		var turn := Oval3DAnim.TURN * dt if dt > 0.0 else PI
 		if speed > UMP_RUN_FROM:
-			node.rotation.y = atan2(vel.x, vel.y)
+			node.rotation.y = rotate_toward(node.rotation.y, atan2(vel.x, vel.y), turn)
 			clip = "jog"
 			rate = clampf(speed / LOOP_SPEED, 0.45, 2.3)
 		else:
 			var to := bp - at
 			if to.length() > 0.5:
-				node.rotation.y = atan2(to.x, to.y)
+				node.rotation.y = rotate_toward(node.rotation.y, atan2(to.x, to.y), turn)
 		if ap.current_animation != clip:
 			ap.play(clip, 0.2)
 			ap.seek(fmod(float(u["k"]) * 1.37, ap.current_animation_length), false)
