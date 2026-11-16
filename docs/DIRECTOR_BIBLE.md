@@ -355,6 +355,8 @@ Source tags: DB = DESIGN_BIBLE; RM26/27/28/29/30/32 = roadmap chapters 26, 27, 2
 
 **2.91** Roofed grounds at night are lit as they are in real life (2026-11-17; row 202, 2b). Shown Marvel and Optus at night lit from a ring under the roof (one soft shadow straight down) beside four towers like every other ground, he said "however its done IRL". Neither has light towers: their floodlights sit on the roof all the way round (Optus: 891 LED floodlights at about 42 m, Philips/Interact case study). So Marvel Stadium and Optus Stadium are lit from their roofs; rule 2.82's four towers stay for the open grounds.
 
+**2.92** The 3D crowd is a mix: 3D people near the camera, cards beyond (2026-11-17; row 202, 2c). Shown a board of four crowd methods on the same 41,127 seats (men and women 62/38, 10 in 100 children, rule 2.87), each with a goal clip at real speed and four test views (phone, close, a few rows into the stand, the whole ground), plus the drawing cost of each, he was asked which crowd the 3D oval uses: painted seats, 3D people, cards, or a mix (3D people within 55 m of the camera, cards beyond). He first chose "Cards" (every supporter a flat picture of the 3D body that turns to face the camera). He then asked whether the 3D people's cost was alarming or easy to manage; told it was alarming only when every supporter is 3D, and that the mix costs the same as cards with the whole ground in view (0.34 ms, 1.36 million triangles) and a fifth more in close views (0.43 ms against 0.36 ms), he said "switch to mix": supporters within 55 m of the camera are 3D people, those beyond are cards, each wearing his own colours, and the scoring side's supporters rise for a goal.
+
 ---
 
 ## 2.S Superseded and cut
