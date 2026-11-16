@@ -162,6 +162,13 @@ Using them outside Unreal at all is outside that licence, so they are placeholde
 | Quaternius Universal Animation Library 1 and 2 ([1](https://quaternius.com/packs/universalanimationlibrary.html), [2](https://quaternius.com/packs/universalanimationlibrary2.html)) | CC0; Godot listed | Standard free, Pro $9.99 |
 | Tomasi Studios football mocap ([RenderHub](https://www.renderhub.com/tomasi-studios/18-football-motion-capture-animations-for-blender3d)) | Extended Use: "computer/web/mobile games" allowed ([terms](https://www.renderhub.com/info/3d-content-licensing)) | $15.50 |
 
+The bodies (2d's choice) are licensed for us too. Our MPFB average body: MakeHuman's core assets are CC0, "no restrictions" and no credit needed
+([licence page](https://static.makehumancommunity.org/about/license.html)). The MetaHuman body:
+Epic's [licence page](https://www.metahuman.com/license?lang=en-US), read 2026-11-17, says "MetaHumans can be used
+with any engine or creative software"; outside Unreal they are Non-Engine Products, so a Godot game pays no royalty;
+free under US$1M a year in revenue, an Unreal seat licence above it; never used to train AI. Unreal's own mannequins
+(Manny and Quinn, which GASP plays on) are Unreal-only and were never in our game.
+
 | GASP group | Replacement (Mixamo clip names, searched on mixamo.com) | Covered |
 |---|---|---|
 | Stand idles and breaks | Standing Idle, Weight Shift Idle, Breathing Idle, Neutral Idle, Happy Idle, looking-around idles (507 idle results) | yes |
