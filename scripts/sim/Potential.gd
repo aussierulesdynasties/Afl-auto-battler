@@ -210,10 +210,13 @@ static func pedigree_potential(p: Dictionary, pot: float) -> float:
 
 
 ## A hand-set POT (data/potential_overrides.csv). Also flags the rehab year
-## when the rating sits well below it, so the jump happens next rollover.
+## when the rating sits well below it after a short (injury) season, so the
+## jump happens next rollover. A full season's player grows at the ordinary
+## pace toward it (director 2026-11-17, silent corrections).
 static func set_override(p: Dictionary, pot: int) -> void:
 	p["potential"] = clampi(pot, int(p.get("overall", 1)), MAX_POT)
-	if int(p["potential"]) - int(p.get("overall", 0)) >= REHAB_GAP:
+	var games := float(p.get("gm", 0.0))
+	if int(p["potential"]) - int(p.get("overall", 0)) >= REHAB_GAP 			and games > 0.0 and games < REHAB_GAMES:
 		p["rehab"] = true
 
 
@@ -275,7 +278,7 @@ static func outlook(p: Dictionary, years: int) -> Array:
 			if pull > 0.0:
 				d = maxf(d, maxf(gap * pull, minf(gap, MIN_STEP)))
 		rehab = false
-		var next := clampf(r + d, 25.0, 93.0)
+		var next := clampf(r + d, 25.0, float(MAX_POT))
 		if d > 0.0:
 			next = minf(next, maxf(r, pot))
 		r = next

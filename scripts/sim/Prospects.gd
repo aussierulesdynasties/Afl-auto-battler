@@ -499,7 +499,9 @@ static func age_player(p: Dictionary, year: int) -> float:
 	var grow := Potential.growth(p, age)
 	if grow > 0.0:
 		d = maxf(d, grow)
-	var target := clampf(float(ov) + d, 25.0, 93.0)
+	# No off-season cap below his potential (director 2026-11-17: "off season
+	# doesnt fucking reset anything"): the ceiling is POT's, 97.
+	var target := clampf(float(ov) + d, 25.0, float(Potential.MAX_POT))
 	if d > 0.0 and p.has("potential"):
 		target = minf(target, float(maxi(ov, int(p["potential"]))))
 	# A breakout year: a jump on top of that, wherever he stands against his
@@ -624,16 +626,13 @@ static func apply_training_unwind(lists: Dictionary, plan: Dictionary) -> void:
 			if take.is_empty() or a.is_empty():
 				continue
 			var role := str(p.get("role", "MID"))
-			var before := int(p.get("overall", 0))
 			for key in take:
 				if a.has(key):
 					a[key] = clampi(int(a[key]) - int(take[key]), 1, 99)
 			p["overall"] = Ratings.rate_overall(a, role, Ratings.effective_games(p))
 			p["value"] = Ratings.salary_value(int(p["overall"]))
-			# POT moves with him, as in the re-anchor: his distance to it is kept.
-			if p.has("potential"):
-				p["potential"] = clampi(int(p["potential"]) + int(p["overall"]) - before,
-						1, Potential.MAX_POT)
+			# POT stays where it is: what he can still reach does not fall
+			# because he trained (director 2026-11-17, silent corrections).
 
 
 ## Ratings are relative to the league. Training, development and new

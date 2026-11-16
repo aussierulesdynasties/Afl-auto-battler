@@ -48,8 +48,6 @@ const BOTTOM_PLACES := 4
 ## moves for the clubs that stand out and the league as a whole never drifts.
 const AGE_GAP := 1.0
 const DISCIPLINE_GAP := 2.5
-## Each season a strand settles back a little towards neutral: culture is slow.
-const SETTLE_RATE := 0.12
 ## New faces from other clubs at the rollover, against the league median.
 const FACES_ABOVE := 4.0
 const FACES_BELOW := 3.0
@@ -103,19 +101,6 @@ static func band_key(strand: String, t: int) -> String:
 ## "A tight group", or "" while nothing stands out.
 static func words(strand: String, t: int) -> String:
 	return str(_band(strand, t)[2])
-
-
-## A strand settles back a little towards neutral (no reason kept: it is the
-## passing of time, not an event).
-static func settle(rel: Dictionary, club: String, strand: String) -> void:
-	var k := key(club, strand)
-	var entry: Dictionary = rel.get(k, {})
-	var t := int(entry.get("t", 0))
-	if absi(t) < 3:
-		return
-	var step := maxi(1, int(round(float(absi(t)) * SETTLE_RATE)))
-	entry["t"] = t - step if t > 0 else t + step
-	rel[k] = entry
 
 
 ## Does a band make the league news for a rival? Never a negative claim about

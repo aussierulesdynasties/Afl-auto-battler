@@ -14635,34 +14635,15 @@ func _press_named(res: Dictionary, side: int, hurt: Dictionary) -> Dictionary:
 	return out
 
 
-## Your standing with a journalist, -2..+2 (director 2026-11-06, Q1). Absent
-## means even. It fades one step toward even a season, applied the first time
-## it is read in a new season (no rollover code).
+## Your standing with a journalist, -2..+2 (director 2026-11-06, Q1), moved
+## only by your answers (56a): it never fades with time (director 2026-11-17).
+## Absent means even.
 func press_standing(journalist: String) -> int:
-	_press_standing_decay()
 	var st: Dictionary = media_memory.get("standing", {}) if media_memory.get("standing") is Dictionary else {}
 	return clampi(int(st.get(journalist, 0)), MediaConference.STANDING_MIN, MediaConference.STANDING_MAX)
 
 
-func _press_standing_decay() -> void:
-	if not (media_memory.get("standing") is Dictionary):
-		return
-	var year := int(media_memory.get("standing_year", season_year))
-	if year >= season_year:
-		media_memory["standing_year"] = maxi(year, season_year)
-		return
-	var st: Dictionary = media_memory["standing"]
-	for j in st.keys():
-		var v := MediaConference.standing_decayed(int(st[j]), season_year - year)
-		if v == 0:
-			st.erase(j)
-		else:
-			st[j] = v
-	media_memory["standing_year"] = season_year
-
-
 func _set_press_standing(journalist: String, v: int) -> void:
-	_press_standing_decay()
 	var st: Dictionary = media_memory.get("standing", {}) if media_memory.get("standing") is Dictionary else {}
 	if v == 0:
 		st.erase(journalist)
@@ -16686,8 +16667,8 @@ func _culture_season() -> void:
 				float(ages.get(code, age_mean)) - age_mean, float(disc.get(code, league_mean)) - league_mean,
 				season.finalists()):
 			_culture_move(code, str(st["strand"]), int(st["d"]), str(st["why"]))
-		for s in Culture.STRANDS:
-			Culture.settle(relations, code, str(s[0]))
+		# No seasonal settle: culture stays where the club built it (director
+		# 2026-11-17, silent corrections).
 
 
 ## At the rollover, every club: how many new faces came from other clubs.

@@ -1366,7 +1366,7 @@ func _test_training_lift_unwound() -> void:
 	var lo_c := int(lo["attr"]["contested"])
 	var other_c := int(other["attr"]["contested"])
 	var other_d := int(other["attr"]["kicking"])
-	var gap := int(hi.get("potential", 0)) - int(hi["overall"])
+	var pot_before := int(hi.get("potential", 0))
 	Prospects.apply_training_unwind(trio, Prospects.training_unwind(trio, 2027))
 	var hi_kept := int(hi["attr"]["contested"]) - (hi_c - 12)
 	var lo_kept := int(lo["attr"]["contested"]) - (lo_c - 2)
@@ -1374,8 +1374,10 @@ func _test_training_lift_unwound() -> void:
 			"The harder trainer keeps part of his gain, more than a light one (%d of 12 kept, %d of 2)" % [hi_kept, lo_kept])
 	_check(int(other["attr"]["kicking"]) < other_d and int(other["attr"]["contested"]) >= other_c - 1,
 			"A player who trained kicking gives back kicking, not contested (contested %d->%d, kicking %d->%d)" % [other_c, int(other["attr"]["contested"]), other_d, int(other["attr"]["kicking"])])
-	_check(int(hi.get("potential", 0)) - int(hi["overall"]) == gap,
-			"His distance to his projection is kept (%d)" % gap)
+	# Director 2026-11-17 (silent corrections): the give-back never lowers what
+	# he can still reach; only the league re-scale moves potential.
+	_check(int(hi.get("potential", 0)) == pot_before,
+			"The give-back leaves his potential where it was (%d -> %d)" % [pot_before, int(hi.get("potential", 0))])
 	# The real rollover: every listed player's season record is spent, and the
 	# training a league of midfielders bought does not change their shape.
 	_new_season()

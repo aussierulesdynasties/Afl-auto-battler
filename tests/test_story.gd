@@ -71,7 +71,6 @@ func run() -> void:
 	_t("_test_culture")
 	_t("_test_culture_news")
 	_t("_test_culture_reasons_read_cleanly")
-	_t("_test_culture_settles")
 	_t("_test_culture_signs_match_words")
 	_t("_test_culture_headline")
 	_t("_test_culture_order_and_tails")
@@ -2440,21 +2439,6 @@ func _test_culture_reasons_read_cleanly() -> void:
 	_check(Culture.quiet_words(0, false) == "Nothing stands out yet" and Culture.quiet_words(3, true) == "Starting to build"
 			and Culture.quiet_words(-3, true) == "Starting to slip" and not Culture.quiet_words(3, true).contains("normal"),
 			"A strand with no named band follows its latest move and never contradicts it")
-
-
-func _test_culture_settles() -> void:
-	var rel := {}
-	for i in range(5):
-		Culture.change(rel, "GEE", "together", 6, "Played finals", 2027, "Off-season")
-	var before := Culture.value(rel, "GEE", "together")
-	Culture.settle(rel, "GEE", "together")
-	var after := Culture.value(rel, "GEE", "together")
-	_check(after < before and after > 0 and Culture.reasons(rel, "GEE", "together").size() == 5,
-			"A strand settles back a little each season without adding a reason (%d to %d)" % [before, after])
-	var quiet := {}
-	Culture.change(quiet, "GEE", "standards", 2, "x", 2027, "Round 1")
-	Culture.settle(quiet, "GEE", "standards")
-	_check(Culture.value(quiet, "GEE", "standards") == 2, "A strand near neutral does not settle further")
 
 
 ## Every mover's sign matches its words: a loss fell, a win rose, a bottom finish
