@@ -298,11 +298,11 @@ func _test_cultural_day() -> void:
 		if str(code) == CLUB:
 			continue
 		for w in range(1, 8):
-			var t := StoryDeck.by_id(deck, ClubStories.rival_bond(GameState, str(code), w))
-			var club := str(t.get("club", ""))
+			var rc := StoryDeck.by_id(deck, ClubStories.rival_bond(GameState, str(code), w))
+			var club := str(rc.get("club", ""))
 			own_seen = own_seen or club == str(code)
-			if club != "" and (club != str(code) or str((t.get("subject", {}) as Dictionary).get("kind", "club")) != "club"):
-				wrong.append("%s drew %s" % [code, t["id"]])
+			if club != "" and (club != str(code) or str((rc.get("subject", {}) as Dictionary).get("kind", "club")) != "club"):
+				wrong.append("%s drew %s" % [code, rc["id"]])
 	_check(own_seen and wrong.is_empty(), "Rivals draw their own club's cards, never another club's or a named player's: %s" % " | ".join(PackedStringArray(wrong)))
 
 

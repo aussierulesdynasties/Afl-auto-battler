@@ -1186,8 +1186,8 @@ static func _running_words(d: int, facts := {}) -> String:
 		# running week"): next pre-season books it on top of the plan's.
 		return "Next pre-season books %s more running than the plan needs." % ("one week" if n == 1 else weeks)
 	if d > 0:
-		return "%s more running toward the weeks the plan books." % weeks.capitalize()
-	return "%s less running toward the weeks the plan books." % weeks.capitalize()
+		return "%d week%s more running toward the weeks the plan books." % [n, "" if n == 1 else "s"]
+	return "%d week%s less running toward the weeks the plan books." % [n, "" if n == 1 else "s"]
 
 ## Weeks of drilling the plan the side plays, in plain words: where its
 ## fluency goes and what that is worth (PreSeason familiar_mult), from the

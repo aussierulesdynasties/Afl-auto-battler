@@ -234,14 +234,14 @@ func _test_hints_in_words() -> void:
 ## is worth to the coach is read straight off the effects here, apart from the
 ## engine's own wording, so the lines cannot drift from what the choice does.
 const GAIN_WORDS := {
-	"morale": "(?i)morale", "xp": "(?i)development", "board": "(?i)board confidence", "trust": "opinion of you (up [0-9]+|warms a little)",
+	"morale": "(?i)morale", "xp": "(?i)development", "board": "(?i)board confidence", "trust": "opinion of you (up (about )?[0-9]+|warms a little)",
 	"fresh": "legs", "promise_win": "Win and", "extend_early": "signs on", "captaincy_swap": "takes the armband",
 	"rush_back": "cleared to play", "role_trial": "plays as a", "rest": "can't get hurt", "culture": "(Standards|Togetherness|Ambition) up [0-9]+%",
 	"running": "more weeks? of running", "drill": "on the game plan", "open_price": "early premium", "new_club_keep": "stays for",
 	"no_promise": "No promise to keep",
 }
 const COST_WORDS := {
-	"morale": "(?i)morale", "board": "(?i)board confidence", "trust": "opinion of you (down [0-9]+|falls [0-9]+|slips a little)",
+	"morale": "(?i)morale", "board": "(?i)board confidence", "trust": "opinion of you (down (about )?[0-9]+|falls [0-9]+|slips a little)",
 	"rest": "misses", "heavy_legs": "Heavy legs", "sore": "chance he is injured", "expects_game": "expects a game",
 	"start_backing": "expects to be picked", "back_kid": "is promised", "promise_win": "Lose or draw and", "extend_early": "Locked in", "captaincy_swap": "mid-season",
 	"rush_back": "hurt again", "slow_start": "slowly", "loss_sting": "also falls", "role_trial": "away from his usual spot", "on_record": "on the record",
@@ -3422,7 +3422,12 @@ func _test_line_numbers_match_effects() -> void:
 						var t0 := int(card["facts"].get("trust", 0))
 						var mv := Trust.opinion_move(t0, StoryEngine.effect_d(e, card["facts"]))
 						# A move too small to show on the 100 says which way it went.
-						want = ("opinion of you %s, still %d out of 100" % ["warms a little" if StoryEngine.effect_d(e, card["facts"]) > 0 else "slips a little", Trust.opinion(t0)]) if mv == 0 else \
+						if StoryEngine.GROUP_TRUST.has(str(e.get("who", "subject"))):
+							# A group's move is a neutral player's, and says so (the bonding deck).
+							var gm := Trust.opinion_move(0, StoryEngine.effect_d(e, card["facts"]))
+							want = "opinion of you %s about %d out of 100" % ["up" if gm >= 0 else "down", absi(gm)]
+						else:
+							want = ("opinion of you %s, still %d out of 100" % ["warms a little" if StoryEngine.effect_d(e, card["facts"]) > 0 else "slips a little", Trust.opinion(t0)]) if mv == 0 else \
 								"opinion of you %s %d, to %d out of 100" % ["up" if mv > 0 else "down", absi(mv), Trust.opinion(t0) + mv]
 					"xp":
 						want = "%d development points. A senior game gives %d" % [int(e["d"]), GameState.XP_SENIOR_GAME]
