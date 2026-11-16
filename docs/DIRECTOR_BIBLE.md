@@ -345,6 +345,10 @@ Source tags: DB = DESIGN_BIBLE; RM26/27/28/29/30/32 = roadmap chapters 26, 27, 2
 
 **2.86** 3D oval football proof: real AFL is the target, within 10% (2026-11-17; row 201). Asked whether the 3D oval should aim at the real numbers (team spread with our ball, their ball and a loose ball; ball-ups and throw-ins; kick-ins; set-shot spots; kick length, ground made and count), he chose the real numbers every time and said "stupid fkn questions when you already know i prefer things to be as real": real footy is the target by default, and is not asked again. Pass mark: "Within 10%" (a real 74-78 m passes from 66.6 to 85.8 m).
 
+**2.87** 3D crowd: men, women and children (2026-11-17; row 202, 2c). Shown the crowd prototype with one man's body in every seat, he said "we need women in the stands too though, and children". Men and women follow real attendance (Roy Morgan 2020, Australians 14+ at an AFL game: 1,497,000 men, 919,000 women, so 62 in 100 adults are men). No real count of children at games exists (the nearest, junior club members at about 23 in 100, includes Auskick); asked how many, he chose "10 in 100 children": of 1,000 seats, 100 children, 558 men, 342 women. Heights from the ABS Australian Health Survey 2011-12 (men 175.6 cm, women 161.8 cm).
+
+**2.88** The match camera looks like a TV broadcast (2026-11-17; row 202, 2e). His words: "I want the game camera to look like a real tv broadcast of afl btw / complete with stat popups and journalist social media comments". The camera is not chosen yet; he asked for the camera design and the popups (stats and journalism) to start now, each in its own session.
+
 ---
 
 ## 2.S Superseded and cut
