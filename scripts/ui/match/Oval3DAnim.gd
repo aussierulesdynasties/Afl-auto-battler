@@ -27,13 +27,14 @@ const SLOW := 0.6              # slowest it plays while the contact is still to 
 const CATCH_UP := 2.0          # fastest it plays when the contact has come first
 const HURRY := 2.0             # how fast the get-up plays once the play has moved on
 const FAR := 5.0               # m: his token this far from him = the play has moved on
+const KNOCK_UP := 0.2           # s of a scoop's clip past the touch before a ball off his hands ends it
+const KNOCK_OFF := 1.0          # m: how far off him that ball has to be by then
 const BLEND := 0.2             # s: the pose he was in eases into the clip (and the clip out)
 const GAP_CLOSE := 4.0         # m/s: after a tackle he runs back to his spot, at least this fast
 const GAP_MAX := 9.0           # m/s: and at most this fast
 const APART := 0.8             # m: on that run his hips stay this far from the man he tackled (or who tackled him)
 const REACH := 1.6             # m: MatchDirector's chase ends this close (its "chase" phase)
 const STEP := 1.0 / 30.0       # s: the takes' frame
-const SCOOP_END := MatchDirector.SCOOP_END   # clip s: ground_ball_run_01 ends; the jog eases in over BLEND
 
 var director: MatchDirector
 var players: Array
@@ -59,7 +60,7 @@ var _mate: Array = []          # per player: the other man of the take he is run
 var _rate: Array = []          # per player: the rate his running clip played at last
 var _takes := {}               # take name -> {dist: hips apart, foot: planted foot} per STEP
 var _tracks := {}              # animation name -> {bone: rotation track}, "hips": position track
-var _once: Array = []          # per player: the scoop he is in, {anim, t, yaw, at}, {} for none
+var _once: Array = []          # per player: the scoop he is in, {anim, t, t0, touch, end, yaw, at, off}, {} for none
 
 
 func _init(p_director: MatchDirector, p_players: Array) -> void:
@@ -333,7 +334,8 @@ func step(i: int, p: Dictionary, holder: int, pos: Vector2, vel: Vector2, dt: fl
 		return
 	var node: Node3D = p["node"]
 	var o: Dictionary = _once[i]
-	if not o.is_empty() and float(o["t"]) >= SCOOP_END:
+	if not o.is_empty() and (float(o["t"]) >= float(o["end"]) or _off_hands(i, o, holder, pos)):
+		# The clip's end (MatchDirector.SCOOPS): the jog eases in over BLEND.
 		_end_once(i)
 		o = {}
 	if _back[i] != Vector2.INF:
@@ -355,7 +357,7 @@ func step(i: int, p: Dictionary, holder: int, pos: Vector2, vel: Vector2, dt: fl
 		# The clip carries him from where the scoop began (its own run): his token runs the
 		# same line at the same pace, and any gap left closes as from a take once it ends.
 		var t0 := float(o["t0"])
-		var k := clampf((float(o["t"]) - t0) / (MatchDirector.SCOOP_TOUCH - t0), 0.0, 1.0)
+		var k := clampf((float(o["t"]) - t0) / (float(o["touch"]) - t0), 0.0, 1.0)
 		var spot: Vector2 = (o["at"] as Vector2) + (o["off"] as Vector2) * (1.0 - k)
 		_gap[i] = spot - pos
 		node.position = Vector3(spot.x, 0.0, spot.y)
@@ -407,6 +409,16 @@ func _step_once(i: int, p: Dictionary, o: Dictionary, dt: float) -> void:
 
 ## Out of the scoop: like the end of a take, he is where its hips left him and eases into
 ## running or standing, never a slide back.
+## Once his hands have been to it, a ball that has come off them and rolled on ends his scoop:
+## he is not left reaching down to the turf for it (seed 31: 0.6 s after a knock, director
+## 2026-11-16: "the ball never moves without a man's hands on it", nor do his hands without it).
+func _off_hands(i: int, o: Dictionary, holder: int, pos: Vector2) -> bool:
+	if holder == i or float(o["t"]) < float(o["touch"]) + KNOCK_UP:
+		return false
+	var b: Dictionary = director.ball
+	return str(b["mode"]) in ["loose", "dead"] and (b["pos"] as Vector2).distance_to(pos) > KNOCK_OFF
+
+
 func _end_once(i: int) -> void:
 	var p: Dictionary = players[i]
 	var spot: Vector2 = (_once[i] as Dictionary)["at"]
@@ -623,25 +635,28 @@ func event(i: int, kind: StringName, at: Vector2, other := -1) -> void:
 	if i < 0 or i >= _in.size():
 		return
 	if kind == &"ground_ball" and (_in[i] as Dictionary).is_empty():
-		# He goes down for the loose ball on the run and knocks it on (MatchDirector "scoop").
+		# He goes down for the loose ball (MatchDirector "scoop"), with the clip the director
+		# chose for him: on the run at pace, or nearer and slower, gathered from a stand.
 		var node: Node3D = players[i]["node"]
-		if not (players[i]["anim"] as AnimationPlayer).has_animation(MatchDirector.SCOOP_CLIP):
+		var clip := int(director.tokens[i].get("scoop_k", MatchDirector.SCOOP_AT_PACE))
+		var sc: Dictionary = MatchDirector.SCOOPS[clip]
+		if not (players[i]["anim"] as AnimationPlayer).has_animation(str(sc["clip"])):
 			return
 		var here := Vector2(node.position.x, node.position.z)
 		var to := at - here
 		_snap(i, players[i])
 		# The clip starts where the director's touch lands (both from his token's distance).
-		var t0 := MatchDirector.scoop_from((director.tokens[i]["pos"] as Vector2).distance_to(at))
-		var side := MatchDirector.SCOOP_SIDE
-		var yaw := MatchDirector.scoop_yaw(to) if to.length() > 0.05 else node.rotation.y
+		var t0 := MatchDirector.scoop_from((director.tokens[i]["pos"] as Vector2).distance_to(at), clip)
+		var side := float(sc["side"])
+		var yaw := MatchDirector.scoop_yaw(to, clip) if to.length() > 0.05 else node.rotation.y
 		var fw := Vector2(sin(yaw), cos(yaw))
 		var hand := Vector2(-cos(yaw), sin(yaw))   # his right, facing fw
-		# Placed so that hand meets the ball at the touch; his hips start where they are,
+		# Placed so that his hands meet the ball at the touch; his hips start where they are,
 		# and the difference eases out by the touch.
-		var spot := at - fw * MatchDirector.SCOOP_LEAD - hand * side
-		var run := maxf(MatchDirector.SCOOP_TRAVEL - (MatchDirector.SCOOP_TOUCH - t0) * MatchDirector.SCOOP_RUN, 0.0)
-		_once[i] = {"anim": MatchDirector.SCOOP_CLIP, "t": t0, "t0": t0, "yaw": yaw, "at": spot,
-				"off": here - fw * run - spot}
+		var spot := at - fw * MatchDirector.scoop_lead(clip) - hand * side
+		var run := maxf(float(sc["travel"]) - (float(sc["touch"]) - t0) * float(sc["run"]), 0.0)
+		_once[i] = {"anim": str(sc["clip"]), "t": t0, "t0": t0, "touch": float(sc["touch"]),
+				"end": float(sc["end"]), "yaw": yaw, "at": spot, "off": here - fw * run - spot}
 		return
 	if not (_once[i] as Dictionary).is_empty():
 		_end_once(i)
