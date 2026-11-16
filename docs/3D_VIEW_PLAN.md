@@ -40,7 +40,8 @@ football and answer the coach.
    each team's length and width, men behind the ball, spacing to the nearest opponent, how far and how
    often the ball is kicked and switched. Then, for every call (the four plans, Stack, Flood, Push,
    Throw numbers at it, tags and switches): what a coach would see change. Sources: his footage and
-   published AFL tracking studies, each number with its source. He checks the spec.
+   published AFL tracking studies, each number with its source. He checked the spec on 2026-11-17: real
+   footy is the target everywhere, and a number passes within 10% of the real one (rule 2.85).
 2. **Measure.** A harness in the style of `tools/balance.sh` logs every man's position over many
    matches and marks each number IN, NEAR or OUT of the spec. Paired runs (same seed, call on and
    off) give each call's change with its standard error. Where the sim's own events are not footy
@@ -171,7 +172,7 @@ vignettes. Nothing in step 4 starts before the football proof has passed and the
 | Step | State |
 |---|---|
 | Freeze | in force from 2026-11-16 |
-| 1. Football proof | harness in `tools/balance.sh shape`; spec with him; gap list above; fixes next (row 201) |
+| 1. Football proof | harness in `tools/balance.sh shape`; spec checked (rule 2.85); gap list above; fixes next (row 201) |
 | 2. The world and the look | under way (row 202): 2a daylight, tone, night lighting and wet games chosen, skies asked for (rules 2.80-2.84); next weather and time of day, then 2b stadium, 2c crowd, 2d players' look, 2e cameras |
 | 3. Asset and animation plan | after step 2 (row 203) |
 | 4. Build | after 1 and 3 (rows 197, 198) |
