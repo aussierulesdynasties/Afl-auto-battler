@@ -1952,6 +1952,8 @@ func _mount_one_line(c: Dictionary) -> void:
 		put.call(page, legs)
 	if not wide:
 		page.add_child(_skip_note(q, false))
+		if facts != null and facts.get_parent() == page:
+			_fit_break_facts(facts)
 		for key in order:
 			var k := str(key)
 			(row_of[key] as Button).pressed.connect(func(): _open_break_sheet(k, str(CALL_TITLES[k]), [bodies[k]], store))
@@ -2342,17 +2344,54 @@ func _quarter_view(q: int) -> Control:
 		room -= 1
 	lines = lines.slice(0, room)
 	var opp_last := _opp_last_plan()
+	var rival_at := -1
 	if opp_last != "":
 		lines = lines.slice(0, room - 1)
 		# What they played, their answer to yours, their mood (RivalRead).
+		rival_at = lines.size()
 		lines.append(RivalRead.break_line(GameState.pending_sim, _my_side))
 	if lines.is_empty():
 		lines.append("An even quarter.")
-	for t in lines:
-		var l := _say(str(t), UiKit.BODY, UiKit.TEXT)
+	for i in lines.size():
+		var l := _say(str(lines[i]), UiKit.BODY, UiKit.TEXT)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		if i == rival_at:
+			l.set_meta("rival", true)
 		v.add_child(l)
 	return v
+
+
+## A phone's break fits its sheet whatever the quarter threw up. Each fact can
+## run to two lines; when together they would push the page into scrolling,
+## the last ones give up their place, as a weather turn takes one (row 160).
+## Their plan (the rival's line) and the first fact always stay.
+func _fit_break_facts(facts: Control) -> void:
+	for i in range(2):
+		await get_tree().process_frame
+	while is_instance_valid(facts):
+		var sc: Node = facts.get_parent()
+		while sc != null and not (sc is ScrollContainer):
+			sc = sc.get_parent()
+		if sc == null:
+			return
+		var body: Control = null
+		for ch in sc.get_children():
+			if ch is Control and not (ch is ScrollBar):
+				body = ch
+				break
+		if body == null or body.get_combined_minimum_size().y <= (sc as Control).size.y + 1.0:
+			return
+		var drop: Control = null
+		var kept := 0
+		for ch in facts.get_children():
+			if (ch as Control).visible and not ch.has_meta("rival"):
+				kept += 1
+				drop = ch
+		if kept <= 1:
+			return
+		drop.visible = false
+		for i in range(2):
+			await get_tree().process_frame
 
 
 ## What a call can do about each of their players now: the defender on a key

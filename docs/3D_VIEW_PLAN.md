@@ -41,7 +41,7 @@ football and answer the coach.
    often the ball is kicked and switched. Then, for every call (the four plans, Stack, Flood, Push,
    Throw numbers at it, tags and switches): what a coach would see change. Sources: his footage and
    published AFL tracking studies, each number with its source. He checked the spec on 2026-11-17: real
-   footy is the target everywhere, and a number passes within 10% of the real one (rule 2.85).
+   footy is the target everywhere, and a number passes within 10% of the real one (rule 2.86).
 2. **Measure.** A harness in the style of `tools/balance.sh` logs every man's position over many
    matches and marks each number IN, NEAR or OUT of the spec. Paired runs (same seed, call on and
    off) give each call's change with its standard error. Where the sim's own events are not footy
@@ -139,7 +139,9 @@ The answers are recorded in the Director Bible and summarised here.
   a roofed venue's lighting is settled with the stadium (2b). The crowd needs almost no shine.
 - 2a weather, wet (rule 2.83): cloud light (no sun, soft shadows) and rain falling on screen
   (fine streaks from 15 m out). A distance haze barely shows at the match cameras' range.
-- 2a skies (rule 2.84): the world has designed skies, one for each weather and time of day ("i 100% want skies"; "a world design decision").
+- 2a skies (rule 2.84): the world has designed skies, one for each weather and time of day ("i 100% want skies"; "a world design decision"); the seven prototype skies approved ("Theyre gorgeous").
+- 2d the body (rule 2.85): MetaHuman, made in Unreal 5.6+ used as a tool only and exported into the Godot
+  game (the game stays in Godot); one is shown in our match before anything is built on it. Shown and approved (2.89). Builds, heads and faces next.
 
 The freeze allows only the
 prototypes each question needs; nothing from step 2 is the settled look until he has chosen it.
@@ -172,7 +174,7 @@ vignettes. Nothing in step 4 starts before the football proof has passed and the
 | Step | State |
 |---|---|
 | Freeze | in force from 2026-11-16 |
-| 1. Football proof | harness in `tools/balance.sh shape`; spec checked (rule 2.85); gap list above; fixes next (row 201) |
-| 2. The world and the look | under way (row 202): 2a daylight, tone, night lighting and wet games chosen, skies asked for (rules 2.80-2.84); next weather and time of day, then 2b stadium, 2c crowd, 2d players' look, 2e cameras |
-| 3. Asset and animation plan | after step 2 (row 203) |
+| 1. Football proof | harness in `tools/balance.sh shape`; spec checked (rule 2.86); gap list above; fixes next (row 201) |
+| 2. The world and the look | under way (row 202): 2a daylight, tone, night lighting and wet games chosen, skies chosen (rules 2.80-2.84); 2d body chosen: MetaHuman (2.85), shown in our match and approved (2.89); next 2b stadium, 2c crowd, 2d builds and faces, 2e cameras |
+| 3. Asset and animation plan | done (#1707) |
 | 4. Build | after 1 and 3 (rows 197, 198) |

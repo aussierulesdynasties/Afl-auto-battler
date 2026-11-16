@@ -2664,7 +2664,11 @@ func begin_intake_draft() -> bool:
 	# arrives with its own generated list at its first season (see
 	# _start_next_season) rather than drafting into one - unless it is
 	# building its list (ExpansionBuild): then it has a seat and early picks.
-	var active := GameDB.active_clubs(season_year)
+	# A club merged away this off-season (Fitzroy, 1996) has no seat either:
+	# left in, it drafts into a list the rollover drops, and the draft, with
+	# one club more than intake_order names, shuffles its order (Draft).
+	var active := GameDB.active_clubs(season_year).filter(
+			func(c): return not LegacyRollover.merged_away(self, str(c)))
 	# The scouting list read this class with prospect_read_seed all year: draft
 	# night must use the same seed, or its marks, ranges and rank disagree.
 	var seed := prospect_read_seed()
@@ -11186,7 +11190,8 @@ func _trade_target(club: String, from_list: Array, skip: Dictionary) -> Dictiona
 ## players outside its best ten, singly and in pairs, each valued as the
 ## club would value giving it up - never by what the other side thinks.
 ## Only packages worth no more than `most` to it; cheapest first:
-## [[assets, value], ...].
+## [[assets, value, ids, cost], ...], where cost is what the buyer gives up,
+## each asset in full, as Contracts.evaluate_trade weighs its side.
 ## `to`: the club the package would go to. Your challenge (Youth only,
 ## Rebuild) bars some players from coming to you, so a bid to you never
 ## includes them.
@@ -11220,11 +11225,12 @@ func _bids(buyer: String, most: float, prospects: Dictionary, to := "") -> Array
 			continue
 		var idi := str(pool[i][0]["id"])
 		if vi <= most:
-			out.append([[pool[i][0]], vi, idi])
+			out.append([[pool[i][0]], vi, idi, vi])
 		for j in range(i + 1, pool.size()):
 			var both := TradeValue.package([vi, float(pool[j][1])])   # priced as the other club prices it
 			if float(pool[j][1]) > 0.0 and both <= most:
-				out.append([[pool[i][0], pool[j][0]], both, idi + "," + str(pool[j][0]["id"])])
+				out.append([[pool[i][0], pool[j][0]], both, idi + "," + str(pool[j][0]["id"]),
+						vi + float(pool[j][1])])
 			if not night or float(pool[j][1]) <= 0.0:
 				continue
 			# On the night, picks are all a club can pay with: three may go together.
@@ -11232,7 +11238,8 @@ func _bids(buyer: String, most: float, prospects: Dictionary, to := "") -> Array
 				var three := TradeValue.package([vi, float(pool[j][1]), float(pool[k][1])])
 				if float(pool[k][1]) > 0.0 and three <= most:
 					out.append([[pool[i][0], pool[j][0], pool[k][0]], three,
-							idi + "," + str(pool[j][0]["id"]) + "," + str(pool[k][0]["id"])])
+							idi + "," + str(pool[j][0]["id"]) + "," + str(pool[k][0]["id"]),
+							vi + float(pool[j][1]) + float(pool[k][1])])
 	out.sort_custom(func(x, y):
 		if float(x[1]) != float(y[1]):
 			return float(x[1]) < float(y[1])
@@ -11251,16 +11258,45 @@ func _bid(club: String, asset: Dictionary, worth: float, shade: float, prospects
 		margin = float(difficulty_rules()["trade_margin"])
 	var most := worth / (1.0 + margin)
 	var options := _bids(club, most, prospects, other)
+	# The list floor, for both clubs, as Contracts.evaluate_trade reads it:
+	# no side ends under the minimum unless the trade leaves it no smaller.
+	var ours: int = (season.lists[club] as Array).size()
+	var theirs: int = (season.lists[other] as Array).size()
+	var coming := 0 if Contracts.is_pick(asset) else 1
+	var floor_ok := func(after: int, now: int) -> bool:
+		return after >= Contracts.min_list() or after >= now
+	# The club pays what each asset is worth to it, in full (the verdict's
+	# side of the scale), not the two-for-one price the other club would put
+	# on a pair: priced that way, the packages nearest the most it would pay
+	# were ones it then turned down.
+	options = options.filter(func(o):
+		if float(o[3]) > most:
+			return false
+		var going := (o[0] as Array).filter(func(a): return not Contracts.is_pick(a)).size()
+		return floor_ok.call(ours - going + coming, ours) and floor_ok.call(theirs - coming + going, theirs))
 	options.sort_custom(func(x, y):
-		var dx := absf(float(x[1]) - shade * most)
-		var dy := absf(float(y[1]) - shade * most)
+		var dx := absf(float(x[3]) - shade * most)
+		var dy := absf(float(y[3]) - shade * most)
 		if dx != dy:
 			return dx < dy
-		return float(x[1]) < float(y[1]))
-	for o in options.slice(0, 6):
-		if bool(_club_verdict(club, other, o[0], [asset], margin, prospects)["ok"]):
+		return float(x[3]) < float(y[3]))
+	# Six packages weighed, nearest the price first. One the list limits
+	# refuse (a list over its spots) is no bid, so it uses none of the six.
+	var tried := 0
+	for o in options:
+		if tried >= 6:
+			break
+		var v := _club_verdict(club, other, o[0], [asset], margin, prospects)
+		if bool(v["ok"]):
 			return o[0]
+		if not LIST_RULES.has(str(v["code"])):
+			tried += 1
 	return []
+
+
+## Trade verdicts on list size alone (Contracts.evaluate_trade): a package
+## either list can't take is never put to anyone.
+const LIST_RULES := ["trade_list_over", "trade_senior_over", "trade_list_under"]
 
 
 ## Rival clubs trade with each other when both come out ahead by their own
@@ -11568,7 +11604,7 @@ func _make_trade_offers(prospects: Dictionary) -> void:
 			var key := "%s|%s" % [str(club), str(id)]
 			if not season.lists.has(str(club)) or (trade_declined.has(key) and int(trade_declined[key]) >= season_year - 1):
 				continue
-			var pkg := _bid(str(club), p, _worth_to(str(club), p, prospects), UNASKED_BID, prospects)
+			var pkg := _bid(str(club), p, _worth_to(str(club), p, prospects, true), UNASKED_BID, prospects)
 			if pkg.is_empty():
 				continue
 			trade_offers.append({"club": str(club), "give": pkg.map(func(a): return str(a["id"])),
@@ -11588,7 +11624,7 @@ func _make_trade_offers(prospects: Dictionary) -> void:
 		var key := "%s|%s" % [club, str(target["id"])]
 		if trade_declined.has(key) and int(trade_declined[key]) >= season_year - 1:
 			continue
-		var pkg := _bid(club, target, _worth_to(club, target, prospects), UNASKED_BID, prospects)
+		var pkg := _bid(club, target, _worth_to(club, target, prospects, true), UNASKED_BID, prospects)
 		if pkg.is_empty():
 			continue
 		trade_offers.append({"club": club, "give": pkg.map(func(a): return str(a["id"])),
@@ -11602,7 +11638,9 @@ func _make_trade_offers(prospects: Dictionary) -> void:
 ## the prospect it expects; a player against its side as it stands. 0 for
 ## another club's player who wouldn't get a game there (unless the club is
 ## rebuilding and he is young and still growing).
-func _worth_to(club: String, asset: Dictionary, prospects: Dictionary) -> float:
+## `seen`: weigh last season's games, as the trade verdict does
+## (trade_context): a bid put to you is one the bidder stands by.
+func _worth_to(club: String, asset: Dictionary, prospects: Dictionary, seen := false) -> float:
 	var phase := club_phase(club)
 	if Contracts.is_pick(asset):
 		return TradeValue.pick_value(asset["positions"], prospects.get(str(asset["year"]), []), phase,
@@ -11613,7 +11651,10 @@ func _worth_to(club: String, asset: Dictionary, prospects: Dictionary) -> float:
 			and TradeValue.future_rating(asset) >= TradeValue.now_rating(asset) + 5.0
 	if not own and TradeValue.fit(asset, bars) < 0.6 and not growing:
 		return 0.0
-	return float(TradeValue.value(asset, {"phase": phase, "bars": bars, "own": own})["total"])
+	var games := -1
+	if seen and season_tally.has(str(asset["id"])):
+		games = int((season_tally[str(asset["id"])] as Dictionary).get("games", 0))
+	return float(TradeValue.value(asset, {"phase": phase, "bars": bars, "own": own, "games": games})["total"])
 
 
 ## Put one of your players or picks on the trade table. Every rival values
@@ -11642,7 +11683,7 @@ func put_on_trade_table(id: String) -> Dictionary:
 	for club in _club_order("table"):
 		if _wont_go([asset], club) != "":
 			continue
-		var v := _worth_to(club, asset, prospects)
+		var v := _worth_to(club, asset, prospects, true)
 		if v > 0.0:
 			keen.append([club, v])
 	keen.sort_custom(func(a, b):
@@ -11884,7 +11925,7 @@ func ask_around(id: String) -> Array:
 		var name := GameDB.club_name(club)
 		var row := {"club": club, "kind": "no", "line": "", "mine": [id], "theirs": []}
 		var wont := _wont_go([asset], club)
-		var worth := 0.0 if wont != "" else _worth_to(club, asset, prospects)
+		var worth := 0.0 if wont != "" else _worth_to(club, asset, prospects, true)
 		if wont != "":
 			row["line"] = "%s: not interested. %s" % [name, wont]
 		elif worth <= 0.0:
@@ -12249,7 +12290,10 @@ func _fa_staying() -> Array:
 ## "release"]], in order. A depth player re-signs if the cap allows, one of
 ## your best 23 tests the market, one who walked, refuses to re-sign with you
 ## (resign_refused) or does not fit is let go (at the list minimum he re-signs
-## instead). _close_free_agency runs this
+## instead). So is a Legacy man whose real club delisted him now
+## (_real_delistings): his career ends as it does at every club unless you
+## re-sign him yourself (director, 2026-11-13: careers end "about when he
+## really did"). _close_free_agency runs this
 ## plan and draft_list_spots counts it, so the two never disagree.
 func _fa_close_plan() -> Array:
 	var plan := []
@@ -12266,7 +12310,7 @@ func _fa_close_plan() -> Array:
 	for p in Contracts.expiring(my_list):
 		if bool(p.get("resigned", false)) or retiring_now(p):
 			continue
-		var walked := bool(p.get("talks", {}).get("walked", false)) or resign_refused(p)
+		var walked := bool(p.get("talks", {}).get("walked", false)) or resign_refused(p) 				or int(p.get("real_end", 0)) == season_year + 1
 		if walked and size <= Contracts.min_list():
 			plan.append([p, "resign1"])
 			continue
