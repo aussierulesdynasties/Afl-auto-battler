@@ -6,9 +6,15 @@ extends Node3D
 ##
 ## Ground metres map straight to world metres: director (x, y) -> world (x, 0, y), +x towards
 ## the goal side 0 attacks. The players are the vignette footballer (MPFB body, the pipeline's
-## own jog and idle), exported as assets/oval3d/player_average.glb, recoloured per club.
+## own body), exported as assets/oval3d/player_average.glb, recoloured per club.
 
 const PLAYER_GLB := "res://assets/oval3d/player_average.glb"
+## The run, the stand and the run with the ball, from motion capture on the same rig, replacing
+## the GLB's hand-posed jog, idle and carry: a neutral run loop (frame 75 = frame 0, the travel
+## taken out), a stand-idle loop, and the run's arms swapped for a ball carrier's two-handed hold.
+const LOOPS_GLB := "res://assets/oval3d/player_loops.glb"
+## m/s the jog loop covers at rate 1 (14.6 m in its 2.5 s): the rate scales from this.
+const LOOP_SPEED := 5.83
 ## Club Forge's hair styles on the same rig, one mesh per style on the head bone
 ## (tools/oval3d/export_hair_glb.py: the pipeline's own procedural shells, hair_lib.py).
 const HAIR_GLB := "res://assets/oval3d/hair_styles.glb"
@@ -34,7 +40,6 @@ const BEHIND_H := 6.5
 const FENCE := 6.0
 const STAND_DEPTH := 34.0
 const STAND_RISE := 24.0
-## The jog's 17 keys at 24 fps are one stride cycle in 0.67 s, matched to about 6 m/s.
 const LOOK_X := 78.0           # m: the camera follows the ball this far towards each goal
 const LOOK_Z := 55.0           # ...and this far out to each wing (the man on the ball stays in view)
 const BODY_GAP := 0.6         # m between two players' centres, drawn
@@ -611,6 +616,37 @@ static func scalp_for(style: String) -> int:
 	return int(SCALP.get(style, SCALP_UNDER_SHELL if hair_shells().has(style) else 0))
 
 
+static var _loops := {}
+
+
+## LOOPS_GLB's jog, carry and idle, looping, their tracks pointed at the skeleton at skel_path
+## (from the AnimationPlayer's root) by bone name. Loaded once; every player shares them.
+static func _loop_anims(skel_path: NodePath) -> Dictionary:
+	var key := str(skel_path)
+	if _loops.has(key):
+		return _loops[key]
+	var out := {}
+	var ps: PackedScene = load(LOOPS_GLB)
+	if ps:
+		var n := ps.instantiate()
+		var src: AnimationPlayer = n.find_children("*", "AnimationPlayer", true, false)[0]
+		for name in ["jog", "carry", "idle"]:
+			if not src.has_animation(name):
+				continue
+			var a: Animation = src.get_animation(name).duplicate(true)
+			for t in range(a.get_track_count()):
+				var path := a.track_get_path(t)
+				var bone := path.get_concatenated_subnames()
+				if bone == "":
+					bone = str(path.get_name(path.get_name_count() - 1))
+				a.track_set_path(t, NodePath(key + ":" + bone))
+			a.loop_mode = Animation.LOOP_LINEAR
+			out[name] = a
+		n.free()
+	_loops[key] = out
+	return out
+
+
 func _player(scene: PackedScene, kit: ShaderMaterial, cols: Array) -> Dictionary:
 	var node: Node3D = scene.instantiate()
 	add_child(node)
@@ -634,10 +670,13 @@ func _player(scene: PackedScene, kit: ShaderMaterial, cols: Array) -> Dictionary
 			sum += skel.get_bone_rest(c).origin.length()
 		hand_len.append(sum / maxf(1.0, kids.size()) if kids.size() > 0 else 0.1)
 	var ap: AnimationPlayer = node.find_children("*", "AnimationPlayer", true, false)[0]
-	for n in ["jog", "carry"]:
-		var a: Animation = ap.get_animation(n)
-		if a:
-			a.loop_mode = Animation.LOOP_LINEAR
+	var lib := ap.get_animation_library("")
+	var loops := _loop_anims(ap.get_node(ap.root_node).get_path_to(skel))
+	for n in ["jog", "carry", "idle"]:
+		if loops.has(n):
+			if lib.has_animation(n):
+				lib.remove_animation(n)
+			lib.add_animation(n, loops[n])
 	ap.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
 	ap.play("idle")
 	# The club ring at his feet: allegiance and a thumb target from any angle.
@@ -717,14 +756,14 @@ func _move_umpires(dt: float) -> void:
 		if speed > UMP_RUN_FROM:
 			node.rotation.y = atan2(vel.x, vel.y)
 			clip = "jog"
-			rate = clampf(speed / 6.0, 0.45, 2.3)
+			rate = clampf(speed / LOOP_SPEED, 0.45, 2.3)
 		else:
 			var to := bp - at
 			if to.length() > 0.5:
 				node.rotation.y = atan2(to.x, to.y)
 		if ap.current_animation != clip:
-			ap.play(clip)
-			ap.seek(fmod(float(u["k"]) * 0.137, ap.current_animation_length), false)
+			ap.play(clip, 0.2)
+			ap.seek(fmod(float(u["k"]) * 1.37, ap.current_animation_length), false)
 		ap.advance(maxf(dt * rate, 1e-4))
 
 

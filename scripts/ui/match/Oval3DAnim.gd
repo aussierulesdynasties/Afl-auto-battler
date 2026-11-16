@@ -5,7 +5,7 @@ extends RefCounted
 ## and the ball, and advances his AnimationPlayer by dt: jog / idle / carry, and the two-man
 ## tackle clips (row 197).
 
-const JOG_SPEED := 6.0
+const JOG_SPEED := Oval3D.LOOP_SPEED
 const RUN_FROM := 1.4          # m/s: slower than this he stands
 ## Eyes on the ball (plan §2.6): the neck takes part of the turn and the head the rest, inside a
 ## real person's range (about 80 degrees each way, 35 up or down), so nobody turns like an owl.
@@ -353,14 +353,19 @@ func step(i: int, p: Dictionary, holder: int, pos: Vector2, vel: Vector2, dt: fl
 		if to.length() > 0.5:
 			node.rotation.y = atan2(to.x, to.y)
 	if ap.current_animation != want:
-		var at := fmod(float(i) * 0.137, 0.66)
+		# Spread over the 10 s stand loop so a standing line doesn't sway in step.
+		var at := fmod(float(i) * 1.37, 10.0)
 		if ap.current_animation in ["jog", "carry"]:
 			at = ap.current_animation_position
+		if ap.current_animation in ["jog", "carry", "idle"]:
+			# Running to standing and back eases over BLEND: the capture's stride is too real to
+			# cut from mid-air to a stand in one frame.
+			_snap(i, p)
 		ap.play(want)
 		ap.seek(fmod(at, ap.current_animation_length), false)
 	if want == "carry" and rate == 0.0:
-		# Standing with the ball: the carry's first key, both legs under him (poses.carry
-		# at p = 0), not frozen mid-stride.
+		# Standing with the ball: the carry's first frame, a left foot-strike, not a
+		# flight phase.
 		ap.seek(0.0, false)
 	# A zero step leaves a freshly played pose unapplied (a standing holder kept the idle
 	# arms), so a still pose still advances by a sliver.
