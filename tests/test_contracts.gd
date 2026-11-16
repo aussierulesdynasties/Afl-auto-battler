@@ -411,13 +411,23 @@ func _test_real_delistings() -> void:
 	# Released, he is not on the market: no club signs him, his career ends.
 	_check(not (GameState.season.lists[rival] as Array).has(theirs) and not GameState.free_agents.has(theirs)
 			and str(theirs.get("released_by", "")) == rival and GameState.departed_names.has(str(theirs["id"])),
-			"%s let their best player go when his real club delisted him, and his career ends (%s; off-season of %d in %d, real_end %s, %d years, retiring %s, released_by '%s')" % [
+			"%s let their best player go when his real club delisted him, and his career ends (%s; off-season of %d in %d, real_end %s, %d years, retiring %s, released_by '%s', now %s)" % [
 			rival, GameDB.player_display_name(theirs), GameState.offseason_year, GameState.season_year,
 			str(theirs.get("real_end", "-")), int(theirs.get("contract_years", -1)), str(GameState.retiring_now(theirs)),
-			str(theirs.get("released_by", ""))])
+			str(theirs.get("released_by", "")), _where(theirs)])
 	_check(GameState.my_list.has(mine) and Contracts.expiring(GameState.my_list).has(mine),
 			"Yours is out of contract, and the decision is yours (%s)" % GameDB.player_display_name(mine))
 	_check(not GameState.retiring_now(mine) and not GameState.retiring_now(theirs), "It is a delisting, not a retirement")
+
+
+## Where a player is now, for a failure's message: a list, free agency or gone.
+func _where(p: Dictionary) -> String:
+	for code in GameState.season.lists:
+		if (GameState.season.lists[code] as Array).has(p):
+			return "on %s's list (resigned %s)" % [code, str(p.get("resigned", false))]
+	if GameState.free_agents.has(p):
+		return "a free agent"
+	return "gone" if GameState.departed_names.has(str(p["id"])) else "nowhere"
 
 
 func _test_offseason_flow() -> void:

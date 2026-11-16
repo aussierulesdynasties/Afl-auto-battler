@@ -573,7 +573,11 @@ func _no_package(code: String, year: int) -> void:
 			and (st.get("traded_picks", []) as Array).is_empty(),
 			"%s approach and sign nobody's players and trade no pick before %d (%s)" % [code, year, str(st.keys())])
 	var list: Array = GameState.league_lists.get(code, [])
-	var from_rivals := list.filter(func(p): return p.has("joined") or str(p.get("released_by", "")) != "")
+	# A man a playing club released to it. Draftees and free agents join it too
+	# (a "joined" mark), and are no rival's loss; a contracted man taken shows
+	# in the package's targets, signings and losses checked above.
+	var playing := GameDB.active_clubs(year)
+	var from_rivals := list.filter(func(p): return playing.has(str(p.get("released_by", ""))))
 	_check(from_rivals.is_empty(), "No rival loses a player to %s for %d (%s)" % [code, year, ", ".join(from_rivals.map(func(p):
 			return "%s joined %s released_by %s drafted %s" % [str(p.get("real_name", p["id"])), str(p.get("joined", "-")),
 					str(p.get("released_by", "-")), str(p.get("drafted_year", "-"))]))])
@@ -777,7 +781,9 @@ func _test_canon_retire(id: String, how: String) -> void:
 		if cards.is_empty():
 			return
 		var rule := str(cards[0]["options"][0]["rule"])
-		_check(("%d%% %s plays on" % [LegacyRollover.KEEP_PCT, GameDB.player_display_name(star)]) in rule,
+		var who := GameDB.player_display_name(star)
+		_check(("%d%% %s plays on" % [LegacyRollover.KEEP_PCT, who]) in rule
+				and ("%d%% %s retires anyway" % [100 - LegacyRollover.KEEP_PCT, who]) in rule,
 				"%s: the gate states the odds (%s)" % [id, rule])
 		LegacyRollover.answered(GameState, cards[0], 0 if how == "fight" else 1)
 		if how != "fight":

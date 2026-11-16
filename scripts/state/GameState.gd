@@ -3422,8 +3422,8 @@ func _assign_draftee(code: String, p: Dictionary, kind: String) -> void:
 ## drafted_pick), so a career draftee's story reads like anyone's: "Pick 31,
 ## 2028 national draft". A pre-listed (father-son, academy) player has no
 ## pick. His potential was set when he was projected and is not re-derived.
-func _mark_drafted(p: Dictionary, kind: String, pick: int, club := "") -> void:
-	p["drafted_year"] = season_year
+func _mark_drafted(p: Dictionary, kind: String, pick: int, club := "", year := 0) -> void:
+	p["drafted_year"] = year if year > 0 else season_year
 	p["drafted_type"] = kind
 	# The club that first drafted him: a home-grown player (Challenge goals).
 	# Older saves lack it, and a player is only ever marked once.
@@ -8857,8 +8857,10 @@ func open_offseason(keep_staff := false) -> void:
 			if not list.has(p):
 				continue   # already delisted to make cap room for a better player
 			var why := ai_release_reason(code, p)
-			# His real club delisted him now (_real_delistings): so does this one.
-			if int(p.get("real_end", 0)) == season_year + 1:
+			# His real club delisted him now (_real_delistings): so does this one,
+			# even from a short list (the draft fills it).
+			var real_gone := int(p.get("real_end", 0)) == season_year + 1
+			if real_gone:
 				why = "delist"
 			# Talked round this off-season, he cannot be delisted by choice
 			# until the next one: the club keeps him, as yours must.
@@ -8880,7 +8882,7 @@ func open_offseason(keep_staff := false) -> void:
 			var held := ListStings.release_held(p, season_year + 1)
 			if held:
 				why = ""
-			if why == "" or list.size() <= Contracts.min_list():
+			if why == "" or (list.size() <= Contracts.min_list() and not real_gone):
 				# Rivals bargain by the same rules: the least he takes for that term
 				# (a club pushing to win now keeps him a little cheaper, as yours does).
 				# Testers leave together later, so count them: the club must still
@@ -9615,7 +9617,11 @@ func _open_market(players: Array) -> void:
 	# his AFL career ended then, so no club signs him; only a coach who keeps
 	# him off his own list keeps him playing (director, 2026-11-13).
 	for p in players.duplicate():
-		var delisted := not retiring_now(p) and int(p.get("real_end", 0)) == season_year + 1
+		# One a real draft or new club's list took this off-season or later
+		# (Damien Mellow: Adelaide's foundation list, then Sydney's 1991
+		# pre-season pick) is a free agent: the drafts see him (_relist).
+		var delisted := not retiring_now(p) and int(p.get("real_end", 0)) == season_year + 1 \
+				and not LegacyRollover.taken_later(p, season_year)
 		if retiring_now(p) or delisted:
 			players.erase(p)
 			free_agents.erase(p)
