@@ -1,0 +1,96 @@
+{
+ "_about": "The director's weights for the 1987-2011 overall (his weights page, weights/current version 18, 2026-11-16). Star (Brownlow votes) per position was measured on 2012-25. 'era' overrides a position's weight for one record tier: before 1998 the Midfielder's Star is 30, so each season's top three Brownlow-polling midfielders sit where 2012-24's do on the AFL Player Rating (director: 'Yes, count more', 2026-11-16).",
+ "positions": {
+  "key_defender": {
+   "contested": 10,
+   "contested_marking": 25,
+   "discipline": 10,
+   "durability": 10,
+   "kicking": 10,
+   "pressure": 15,
+   "star": 5,
+   "uncontested_marking": 20
+  },
+  "gen_defender": {
+   "carry": 10,
+   "contested": 10,
+   "contested_marking": 7,
+   "discipline": 10,
+   "durability": 10,
+   "handballing": 5,
+   "kicking": 20,
+   "pressure": 15,
+   "star": 7,
+   "uncontested_marking": 15
+  },
+  "midfielder": {
+   "accuracy": 5,
+   "carry": 5,
+   "contested": 15,
+   "contested_marking": 5,
+   "creating": 5,
+   "discipline": 5,
+   "durability": 10,
+   "goalkicking": 5,
+   "handballing": 10,
+   "kicking": 15,
+   "pressure": 15,
+   "star": 9,
+   "uncontested_marking": 5
+  },
+  "mid_forward": {
+   "contested": 18,
+   "contested_marking": 4,
+   "creating": 13,
+   "durability": 9,
+   "goalkicking": 16,
+   "handballing": 10,
+   "kicking": 21,
+   "pressure": 6,
+   "star": 3,
+   "uncontested_marking": 3
+  },
+  "gen_forward": {
+   "accuracy": 10,
+   "contested": 5,
+   "contested_marking": 10,
+   "creating": 10,
+   "durability": 5,
+   "goalkicking": 20,
+   "handballing": 5,
+   "kicking": 15,
+   "pressure": 10,
+   "star": 7,
+   "uncontested_marking": 10
+  },
+  "key_forward": {
+   "accuracy": 15,
+   "contested": 7,
+   "contested_marking": 20,
+   "creating": 5,
+   "goalkicking": 31,
+   "kicking": 10,
+   "pressure": 5,
+   "star": 13,
+   "uncontested_marking": 7
+  },
+  "ruck": {
+   "contested": 6,
+   "contested_marking": 11,
+   "durability": 5,
+   "goalkicking": 9,
+   "handballing": 9,
+   "kicking": 9,
+   "pressure": 2,
+   "ruck": 40,
+   "star": 2
+  }
+ },
+ "era": {
+  "1987": {
+   "midfielder": {
+    "star": 30
+   }
+  }
+ }
+}

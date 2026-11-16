@@ -46,12 +46,14 @@ RECIPES = {
     "ruck": [("Hitouts", 35), ("HitoutsToAdvantage", 30), ("HitoutsWinPercentage", 20), ("TotalClearances", 15)],  # 15
     "discipline": [("FreesAgainst", 70), ("Clangers", 30)],                                          # 17
     "durability": [("games", 55), ("time_on_ground", 45)],                                           # 16
-    "star": [("coaches_votes", 100)],                                                                # 17
+    "star": [("coaches_votes", 100), ("BrownlowVotes", 100)],   # 17; Brownlow on AFL Tables (ruling 29)
 }
 SKILLS = list(RECIPES)
 
 # How each metric is put on 0..1 against his position:
 #   cap    - a count: 0 at zero, 1 at the position's 98th percentile
+#   cap98  - the same, and the overall sees it stopped there too (Brownlow
+#            votes)
 #   range  - a rate: 0 at the position's 2nd percentile, 1 at its 98th
 #   abs    - a fixed range for every position (durability is "as now")
 #   z      - already a standard score against his position (speed)
@@ -66,7 +68,7 @@ METRICS = {
     "GoalAssists": "cap", "ScoreInvolvements": "cap", "ScoreLaunches": "cap", "Inside50s": "cap",
     "Hitouts": "cap", "HitoutsToAdvantage": "cap", "HitoutsWinPercentage": "range",
     "FreesAgainst": "cap inv", "Clangers": "cap inv", "games": "abs", "time_on_ground": "abs",
-    "coaches_votes": "cap",
+    "coaches_votes": "cap", "BrownlowVotes": "cap98",
 }
 ABS_RANGE = {"games": (0.0, 26.0), "time_on_ground": (30.0, 95.0)}   # Ratings.build_norm_params
 
@@ -130,7 +132,8 @@ def tables_inputs(r: dict) -> dict:
     """The same metrics from an AFL Tables season row (totals). AFL Tables
     keeps no efficiencies, metres, pressure acts, ground ball gets,
     intercepts, one-on-ones, score involvements or launches, hit-outs to
-    advantage, hit-out win rate or coaches votes: those are left out."""
+    advantage or hit-out win rate: those are left out. Star reads
+    Brownlow votes in place of coaches votes (ruling 29)."""
     def n(k):
         v = r.get(k)
         return None if v in (None, "") else float(v)
@@ -142,6 +145,7 @@ def tables_inputs(r: dict) -> dict:
     m.update({"Kicks": pg("ki"), "Handballs": pg("hb"), "ContestedMarks": pg("cm"), "ContestedPossessions": pg("cp"),
               "TotalClearances": pg("cl"), "Tackles": pg("tk"), "Bounces": pg("bo"), "Goals_Avg": pg("gl"),
               "GoalAssists": pg("ga"), "Inside50s": pg("if50"), "Hitouts": pg("ho"), "FreesAgainst": pg("fa"),
+              "BrownlowVotes": pg("br"),
               "Clangers": pg("cg"), "games": g, "time_on_ground": n("pct_played") if n("pct_played") is not None else n("pctp")})
     mk, cm = n("mk"), n("cm")
     # Ruling 18: missing stats are left out of the recipe. Before 1999 there
@@ -269,15 +273,24 @@ def rate_season(players: list, speed: dict | None = None) -> None:
         for p in group:
             v = p["m"]["speed"]
             p["m"]["speed_z"] = 0.0 if v is None else (v - mean) / sd
+    # The overall reads each count against the whole league that season, not
+    # his position: 64 goals in 19 games beats 48 in 23 whoever kicked them
+    # (director, 2026-11-16, Carey and Heaver 1993). The skill shown stays
+    # against his position.
+    lbase = [p for p in players if (p["m"].get("games") or 0) >= NORM_GAMES] or players
+    league = {}
+    for k in METRICS:
+        vals = sorted(p["m"][k] for p in lbase if p["m"].get(k) is not None)
+        if vals:
+            league[k] = (_pct(vals, 0.02), _pct(vals, 0.98))
     for pos, group in by_pos.items():
         base = [p for p in group if (p["m"].get("games") or 0) >= NORM_GAMES] or group
-        scale, mean, med = {}, {}, {}
+        scale, mean = {}, {}
         for k, mode in METRICS.items():
             vals = sorted(p["m"][k] for p in base if p["m"].get(k) is not None)
             if not vals:
                 continue
             mean[k] = sum(vals) / len(vals)
-            med[k] = _pct(vals, 0.5)
             scale[k] = (_pct(vals, 0.02), _pct(vals, 0.98))
         for p in group:
             m = p["m"]
@@ -307,15 +320,16 @@ def rate_season(players: list, speed: dict | None = None) -> None:
                     x = v / hi if hi > 0 else 0.0
                 else:
                     x = (v - lo) / (hi - lo) if hi > lo else 0.5
-                # The overall sees a count in full, against twice the
-                # position's median: a season of great forwards (1993: Ablett,
-                # Dunstall, Lockett) moves its 98th percentile but not its
-                # median, so the greats are not measured on each other. The
-                # skill shown stops at the 98th percentile (99).
-                if mode == "cap":
-                    xr = v / (2.0 * med[k]) if med[k] > 0 else (v / hi if hi > 0 else 0.0)
+                # The overall sees a count in full, against the league's 98th
+                # percentile (a rate against the league's 2nd-98th); the skill
+                # shown stops at his position's 98th percentile (99).
+                llo, lhi = league.get(k, (lo, hi))
+                if mode.startswith("cap"):
+                    xr = v / lhi if lhi > 0 else 0.0
                 else:
-                    xr = max(0.0, min(1.0, x))
+                    xr = (v - llo) / (lhi - llo) if lhi > llo else 0.5
+                if mode == "cap98" or not mode.startswith("cap"):
+                    xr = max(0.0, min(1.0, xr))
                 x = max(0.0, min(1.0, x))
                 q[k] = 1.0 - x if mode.endswith("inv") else x
                 qr[k] = q[k] if mode.endswith("inv") else xr
@@ -446,10 +460,40 @@ def season_scale(rows: list, keep: set) -> dict:
     return out
 
 
-def knn_position(train: list, v: list, k: int = 25) -> str:
-    """train: [(vector, position)]."""
+def knn_votes(train: list, v: list, k: int = 25) -> dict:
+    """train: [(vector, position)]. Each position's share of the k nearest votes."""
     d = sorted(((sum((a - b) ** 2 for a, b in zip(tv, v)), p) for tv, p in train))[:k]
     votes = defaultdict(float)
     for dist, p in d:
         votes[p] += 1.0 / (1.0 + dist)
+    total = sum(votes.values())
+    return {p: x / total for p, x in votes.items()}
+
+
+def knn_position(train: list, v: list, k: int = 25) -> str:
+    votes = knn_votes(train, v, k)
     return max(votes, key=votes.get)
+
+
+def calibrated_positions(votes: list, target: dict, rounds: int = 200) -> list:
+    """One position per player, with the season's mix held to `target`
+    (each position's share of 2012+ players).
+
+    Nearest-neighbour votes alone almost never pick a position that sits
+    between two bigger ones: a Mid-Forward's neighbours split between
+    Midfielder, Gen. Forward and Mid-Forward, so 2012+ seasons lose most of
+    their Mid-Forwards (6% of players) when re-guessed. Scaling each
+    position's votes until the season's count matches its share keeps the
+    mix real; each player still goes to the position his votes favour most
+    after scaling."""
+    scale = {p: 1.0 for p in target}
+    n = len(votes)
+    def pick(v):
+        return max(v, key=lambda p: v[p] * scale.get(p, 1.0))
+    for _ in range(rounds):
+        got = defaultdict(int)
+        for v in votes:
+            got[pick(v)] += 1
+        for p in scale:
+            scale[p] *= ((target[p] * n + 0.5) / (got[p] + 0.5)) ** 0.3
+    return [pick(v) for v in votes]
