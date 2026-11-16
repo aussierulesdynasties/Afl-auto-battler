@@ -479,7 +479,7 @@ func _test_who_a_rival_keeps() -> void:
 		for q in list:
 			q["contract_years"] = 3
 		list.sort_custom(func(x, y): return int(x["overall"]) > int(y["overall"]))
-		# The 13th-best player, but never a recognised ruck: the one ruck slot
+		# The 13th-best player (5th for kept and let go), never a recognised ruck: the one ruck slot
 		# picks by tap work, not overall (Ratings.select_22), so lifting his
 		# teammates' ratings could never make his club willing to let a sole
 		# ruck go, and the "let go" case would test the career's luck instead.
@@ -487,8 +487,12 @@ func _test_who_a_rival_keeps() -> void:
 		# Kept: a best-23 regular, so he would rather stay than go (a matched
 		# player decides, Expansion.MATCHED_PLAYER_DECIDES), whatever this
 		# seed's draft left around him (row T1.R26 L1 moved your club's picks).
-		for i in range(4 if case == "kept" else 12, list.size()):
-			if not Ratings.plays_role(list[i], "RUCK"):
+		# Let go: one who would get a game at the new club (ExpansionBuild.role_at),
+		# or it turns him down whoever lets him go.
+		ExpansionBuild.ensure_foundation(GameState, "TAS")
+		var bars: Dictionary = GameState._selection_bars(ExpansionBuild.list_of(GameState, "TAS"))
+		for i in range(4 if case in ["kept", "let go"] else 12, list.size()):
+			if not Ratings.plays_role(list[i], "RUCK") 					and (case != "let go" or ExpansionBuild.role_at(list[i], bars) != "depth"):
 				p = list[i]
 				break
 		_check(not p.is_empty(), "A non-ruck to test the %s case with" % case)
