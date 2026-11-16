@@ -352,7 +352,7 @@ static func next_revision_name(w: int, bye_w: int) -> String:
 
 
 ## What choosing `plan` at week `w` costs, if it costs anything, in a line.
-static func late_cost(plan: String, w: int, bye_w: int) -> String:
+static func late_cost(plan: String, w: int, _bye_w: int) -> String:
 	if w <= 0:
 		return ""
 	if PEAK_WEEK.has(plan):
