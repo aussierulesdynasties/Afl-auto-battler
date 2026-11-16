@@ -1,0 +1,485 @@
+{
+ "_about": "Real-AFL references for tools/balance/shape_report.py (TODO row 201). Every entry names its source; a measure with no entry has no published number (see not_found). Phases as shape_probe.gd names them: att_ our ball, def_ their ball, con_ loose ball, by where the ball is in our frame.",
+ "phases": {
+  "att_d50": {
+   "len": {
+    "lo": 85.3,
+    "hi": 89.5,
+    "paper": 82,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "wid": {
+    "lo": 71.2,
+    "hi": 75.4,
+    "paper": 70,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "area": {
+    "lo": 5666.6,
+    "hi": 6001.3,
+    "paper": 5230,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "cen_x": {
+    "lo": -36.2,
+    "hi": -32.0,
+    "paper": -32,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "in_zone": {
+    "lo": 15.5,
+    "hi": 16.5,
+    "paper": 16,
+    "src": "Alexander 2021 (median)"
+   }
+  },
+  "att_dmid": {
+   "len": {
+    "lo": 89.5,
+    "hi": 93.8,
+    "paper": 86,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "wid": {
+    "lo": 72.2,
+    "hi": 76.4,
+    "paper": 71,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "area": {
+    "lo": 6090.5,
+    "hi": 6425.2,
+    "paper": 5610,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "cen_x": {
+    "lo": -16.0,
+    "hi": -11.7,
+    "paper": -13,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "in_zone": {
+    "lo": 16.5,
+    "hi": 17.5,
+    "paper": 17,
+    "src": "Alexander 2021 (median)"
+   }
+  },
+  "att_amid": {
+   "len": {
+    "lo": 83.1,
+    "hi": 87.4,
+    "paper": 80,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "wid": {
+    "lo": 63.8,
+    "hi": 68.0,
+    "paper": 63,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "area": {
+    "lo": 5242.8,
+    "hi": 5577.4,
+    "paper": 4850,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "cen_x": {
+    "lo": 12.8,
+    "hi": 17.1,
+    "paper": 14,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "in_zone": {
+    "lo": 16.5,
+    "hi": 17.5,
+    "paper": 17,
+    "src": "Alexander 2021 (median)"
+   }
+  },
+  "att_f50": {
+   "len": {
+    "lo": 73.5,
+    "hi": 77.8,
+    "paper": 71,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "wid": {
+    "lo": 61.7,
+    "hi": 65.9,
+    "paper": 61,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "area": {
+    "lo": 4484.2,
+    "hi": 4818.9,
+    "paper": 4170,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "cen_x": {
+    "lo": 28.8,
+    "hi": 33.0,
+    "paper": 29,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "in_zone": {
+    "lo": 18.5,
+    "hi": 19.5,
+    "paper": 19,
+    "src": "Alexander 2021 (median)"
+   }
+  },
+  "def_d50": {
+   "len": {
+    "lo": 78.9,
+    "hi": 83.1,
+    "paper": 76,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "wid": {
+    "lo": 54.4,
+    "hi": 58.6,
+    "paper": 54,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "area": {
+    "lo": 4361.5,
+    "hi": 4696.2,
+    "paper": 4060,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "cen_x": {
+    "lo": -46.9,
+    "hi": -42.6,
+    "paper": -42,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "in_zone": {
+    "lo": 18.5,
+    "hi": 19.5,
+    "paper": 19,
+    "src": "Alexander 2021 (median)"
+   }
+  },
+  "def_dmid": {
+   "len": {
+    "lo": 83.1,
+    "hi": 87.4,
+    "paper": 80,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "wid": {
+    "lo": 60.7,
+    "hi": 64.9,
+    "paper": 60,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "area": {
+    "lo": 5064.3,
+    "hi": 5398.9,
+    "paper": 4690,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "cen_x": {
+    "lo": -21.3,
+    "hi": -17.1,
+    "paper": -18,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "in_zone": {
+    "lo": 16.5,
+    "hi": 17.5,
+    "paper": 17,
+    "src": "Alexander 2021 (median)"
+   }
+  },
+  "def_amid": {
+   "len": {
+    "lo": 81.0,
+    "hi": 85.3,
+    "paper": 78,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "wid": {
+    "lo": 68.0,
+    "hi": 72.2,
+    "paper": 67,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "area": {
+    "lo": 5365.5,
+    "hi": 5700.1,
+    "paper": 4960,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "cen_x": {
+    "lo": 0.0,
+    "hi": 4.3,
+    "paper": 2,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "in_zone": {
+    "lo": 16.5,
+    "hi": 17.5,
+    "paper": 17,
+    "src": "Alexander 2021 (median)"
+   }
+  },
+  "def_f50": {
+   "len": {
+    "lo": 74.6,
+    "hi": 78.9,
+    "paper": 72,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "wid": {
+    "lo": 69.1,
+    "hi": 73.3,
+    "paper": 68,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "area": {
+    "lo": 4963.9,
+    "hi": 5298.5,
+    "paper": 4600,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "cen_x": {
+    "lo": 26.6,
+    "hi": 30.9,
+    "paper": 27,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "in_zone": {
+    "lo": 15.5,
+    "hi": 16.5,
+    "paper": 16,
+    "src": "Alexander 2021 (median)"
+   }
+  },
+  "con_d50": {
+   "len": {
+    "lo": 65.0,
+    "hi": 69.3,
+    "paper": 63,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "wid": {
+    "lo": 35.6,
+    "hi": 39.8,
+    "paper": 36,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "area": {
+    "lo": 2777.5,
+    "hi": 3112.2,
+    "paper": 2640,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "cen_x": {
+    "lo": -38.4,
+    "hi": -34.1,
+    "paper": -34,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   }
+  },
+  "con_dmid": {
+   "len": {
+    "lo": 92.7,
+    "hi": 97.0,
+    "paper": 89,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "wid": {
+    "lo": 36.6,
+    "hi": 40.8,
+    "paper": 37,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "area": {
+    "lo": 5064.3,
+    "hi": 5398.9,
+    "paper": 4690,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "cen_x": {
+    "lo": -22.4,
+    "hi": -18.1,
+    "paper": -19,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   }
+  },
+  "con_amid": {
+   "len": {
+    "lo": 92.7,
+    "hi": 97.0,
+    "paper": 89,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "wid": {
+    "lo": 39.8,
+    "hi": 44.0,
+    "paper": 40,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "area": {
+    "lo": 4785.4,
+    "hi": 5120.1,
+    "paper": 4440,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "cen_x": {
+    "lo": -3.2,
+    "hi": 1.1,
+    "paper": -1,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   }
+  },
+  "con_f50": {
+   "len": {
+    "lo": 85.3,
+    "hi": 89.5,
+    "paper": 82,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "wid": {
+    "lo": 42.9,
+    "hi": 47.1,
+    "paper": 43,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "area": {
+    "lo": 4517.7,
+    "hi": 4852.3,
+    "paper": 4200,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   },
+   "cen_x": {
+    "lo": 28.8,
+    "hi": 33.0,
+    "paper": 29,
+    "src": "Alexander 2019 Fig 2 (scaled)"
+   }
+  }
+ },
+ "kicks": {
+  "len": {
+   "lo": 25.0,
+   "hi": 25.0,
+   "src": "Spencer 2019 (25.0 +- 11.8 m)"
+  },
+  "len_sd": {
+   "lo": 11.8,
+   "hi": 11.8,
+   "src": "Spencer 2019"
+  },
+  "gain": {
+   "lo": 25.0,
+   "hi": 30.1,
+   "src": "Wheelo 2025-26, clubs low..high"
+  }
+ },
+ "roles": {
+  "_src": "Wheelo 2026 (tools/wheelo/seasons/2026.csv), per player per game by listed position, weighted by games: who does what where. Not marked by the report; the gap list compares the sim's per-role events.",
+  "Gen. Defender": {
+   "Inside50s": 1.86,
+   "Rebound50s": 3.53,
+   "Intercepts": 4.43,
+   "MarksOnLead": 0.25,
+   "TacklesInside50": 0.08,
+   "PressureActsDefensiveHalf": 6.68,
+   "Spoils": 1.63,
+   "ShotsAtGoal": 0.29
+  },
+  "Key Defender": {
+   "Inside50s": 0.78,
+   "Rebound50s": 2.7,
+   "Intercepts": 5.41,
+   "MarksOnLead": 0.13,
+   "TacklesInside50": 0.06,
+   "PressureActsDefensiveHalf": 4.83,
+   "Spoils": 4.85,
+   "ShotsAtGoal": 0.15
+  },
+  "Midfielder": {
+   "Inside50s": 3.42,
+   "Rebound50s": 1.63,
+   "Intercepts": 2.65,
+   "MarksOnLead": 0.42,
+   "TacklesInside50": 0.46,
+   "PressureActsDefensiveHalf": 7.52,
+   "Spoils": 0.46,
+   "ShotsAtGoal": 0.98,
+   "TotalClearances": 3.32
+  },
+  "Mid-Forward": {
+   "Inside50s": 3.06,
+   "Rebound50s": 0.98,
+   "Intercepts": 1.94,
+   "MarksOnLead": 0.55,
+   "TacklesInside50": 0.7,
+   "PressureActsDefensiveHalf": 6.21,
+   "Spoils": 0.37,
+   "ShotsAtGoal": 1.29
+  },
+  "Gen. Forward": {
+   "Inside50s": 2.53,
+   "Rebound50s": 0.47,
+   "Intercepts": 1.4,
+   "MarksOnLead": 0.69,
+   "TacklesInside50": 0.94,
+   "PressureActsDefensiveHalf": 3.82,
+   "Spoils": 0.38,
+   "ShotsAtGoal": 1.97
+  },
+  "Key Forward": {
+   "Inside50s": 1.69,
+   "Rebound50s": 0.19,
+   "Intercepts": 0.92,
+   "MarksOnLead": 1.38,
+   "TacklesInside50": 0.8,
+   "PressureActsDefensiveHalf": 1.93,
+   "Spoils": 0.98,
+   "ShotsAtGoal": 3.17
+  },
+  "Ruck": {
+   "Inside50s": 1.89,
+   "Rebound50s": 0.91,
+   "Intercepts": 1.97,
+   "MarksOnLead": 0.26,
+   "TacklesInside50": 0.46,
+   "PressureActsDefensiveHalf": 4.3,
+   "Spoils": 1.77,
+   "ShotsAtGoal": 0.85,
+   "Hitouts": 21.36
+  }
+ },
+ "laws": {
+  "centre_bounce": "Laws of Australian Football 2026: at a centre bounce each team has 6 in each 50 (the arcs), 4 in the centre square, 1 on each wing.",
+  "protected_area": "10 m around the man on the mark or with a free kick.",
+  "kick_in_mark": "The man on the mark stands 15 m out from the kick-off line."
+ },
+ "not_found": [
+  "Distance to the nearest opponent (no study gives it)",
+  "Team centre to ball distance",
+  "Any tactic in metres: press, flood, stack, tag, switch (no study measures a called tactic)",
+  "Switch rate in general play",
+  "Share of kicks 40 m and longer",
+  "Men behind the ball"
+ ],
+ "other_sources": {
+  "phase_shares": "Sheehan et al. 2021 (UTS thesis): contested 35.2%, offence 22.0%, defence 21.6%, umpire stoppage 13.5%, set shot 4.1%, goal reset 3.7%.",
+  "congestion": "Alexander et al. 2022, PLOS ONE e0272657: 73-76% of players outside any cluster; congested 23-26% of a game.",
+  "kick_ins": "AFL.com.au (Twomey): long right 24%, long left 18%, short left and right 42%, short corridor 10%, long corridor 6%.",
+  "set_shot_angles": "2024 set shots: directly in front 10.03%, off-centre 53.68%, 45 degrees 29.6%, pocket 6.69%.",
+  "stoppage_zone": "Alexander 2021 Fig 6: at stoppages, 23 players of both teams in the ball's zone in either 50, 17 in midfield (zone mixes in our 'stoppage' bucket, so not marked).",
+  "kick_ins_2026": "DFS Australia kick-in breakdown, 2026, all 18 clubs summed: 4,977 kick-ins in 436 team-games (11.4 per team per game; Hawthorn 9.8 to Richmond 13.7); played on 91.7% (Geelong 76% to GWS 97%)."
+ },
+ "sources": {
+  "Alexander 2019 Fig 2 (scaled)": "Alexander, Spencer, Sweeting, Mara & Robertson 2019, J Sports Sci, Fig 2 (one team, one match, 10 Hz GPS, Marvel Stadium 159.5 x 128.8 m); read off the figure to +-2 m (+-150 m2) and scaled to this ground (length and centre x1.066, width x1.047, area x1.115); the range is the read error only. https://vuir.vu.edu.au/38278/",
+  "Alexander 2021 (median)": "Alexander et al. 2021, PLOS ONE e0254591, Fig 6: median players of both teams in the ball's zone (either 50, defensive or attacking midfield) by phase, 12 matches of 2019 at Marvel Stadium, 12 clubs, 10 Hz LPS. Stoppage phase: 23 in either 50, 17 in midfield. The defending team has 1 to 2 more men in its own 50 in every phase. Range = the median's rounding. https://doi.org/10.1371/journal.pone.0254591",
+  "Spencer 2019": "Spencer et al. 2019, Front Psychol: kick distance 25.0 +- 11.8 m, density peak 17.3 m",
+  "Wheelo 2025-26, clubs low..high": "Wheelo KickMetresGainedPerKick (Champion Data metres gained), 18 clubs lowest..highest weighted by kicks: 2025 25.1..30.1, 2026 25.0..29.0; league 27.0 (tools/wheelo/seasons)",
+  "DFS Australia 2026": "dfsaustralia.com/afl-kickins/?team=<club>&season=2026 (free page; per-player KI and PO columns summed per club and across clubs; games = round columns shown), read 2026-11-16."
+ }
+}

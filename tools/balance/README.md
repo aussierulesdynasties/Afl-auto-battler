@@ -56,6 +56,25 @@ GODOT=<godot console exe> tools/balance.sh match 1000 --a "--weather perfect" --
   arm A from that other checkout and arm B from this one, on the same seeds. There are no feature switches:
   a change is in the game once merged, so the only A/B is main against the branch. Each worker log starts with
   `project: <path>`, so `head -1 <run>/a_0.log` proves which checkout arm A played.
+- **Team shape** (`tools/balance.sh shape N`, row 201, docs/3D_VIEW_PLAN.md step 1): the same seeded matches,
+  each also played through the match view (`MatchDirector`, headless, as the match screen and the 3D oval play it)
+  by `shape_probe.gd`, which measures where the 36 men stand without steering anyone. Snapshots at each centre
+  bounce, ball-up and throw-in (the umpire's bounce or throw), kick-in and set shot (the kick); open play every
+  0.5 s of presentation time, filed per side by possession and where the ball is in that side's frame (its
+  defensive 50, its half, their half, its forward 50). Per side: length and width (extremes and 10th-90th
+  percentile), convex-hull area, spread, the team centre against the ball, men behind the ball, men of each side
+  within 10 and 20 m of the ball, mean distance to the nearest opponent, men with nobody within 5 m, the ball
+  carrier's nearest opponent; every general-play kick's length, ground made, move across and whether it switches
+  play. `shape_report.py` marks each against `afl_shape_rates.json` (each entry names its published source; IN
+  inside the range, NEAR within half the range again, OUT) and, for a paired run, gives the called side's change
+  B-A with its se. Calls: `--side-plan P` (side `i % 2` plays plan P), `--burst none|stack|flood|push|surge|hold`
+  (side `i % 2` holds that call all match and makes no call of its own; `none` is the baseline), `--tag none|first`
+  (the tag, with the tagger's distance to his man), `--switch none|on` (side `i % 2` puts its best defender on
+  the rival's best forward; the report gives that pair's distance, share within 5 m and the defender's distance to
+  goal). Open play also files a loose ball (nobody has it) as `con_<zone>`, the papers' "contest" phase.
+  `tools/balance.sh shape 306 --a "--burst none" --b "--burst flood"`. Many calls against one baseline: run each
+  arm alone (on GitHub, `run_on_github.yml` `what=shape`, one runner per arm), then
+  `python tools/balance/shape_report.py --a-run <base run> --run <call run> --a=base --b=flood`.
 - **Report.** `balance_report.py` prints a markdown page (also saved to `<run>/report.md`): each stat per
   team-match against `afl_team_rates.json` (IN = inside the 18 clubs' lowest..highest, NEAR = within
   mean +-2 sd, OUT), plus margins, 60+/100+ blowouts, home win share against docs/LEAGUE_BALANCE.md.

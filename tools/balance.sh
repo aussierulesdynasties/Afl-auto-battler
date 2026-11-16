@@ -34,7 +34,16 @@ if [ "$mode" = "year" ]; then
   (cd "$root/tools/balance" && python year_report.py --run "$base") | tee "$base/year_report.md"
   exit 0
 fi
-[ "$mode" = "match" ] || { echo "modes: match, year"; exit 2; }
+# Shape mode (row 201): the same seeded matches, each also played through the
+# match view (MatchDirector) to measure where the 36 men stand; the report marks
+# each phase's shape against afl_shape_rates.json. Paired calls:
+#   tools/balance.sh shape 306 --a "--burst none" --b "--burst flood"
+#   tools/balance.sh shape 306 --a "--side-plan balanced" --b "--side-plan defensive"
+shape=0
+if [ "$mode" = "shape" ]; then
+  shape=1; mode=match; arm_a="$arm_a --shape"; [ "$paired" = 1 ] && arm_b="$arm_b --shape"
+fi
+[ "$mode" = "match" ] || { echo "modes: match, year, shape"; exit 2; }
 godot="${GODOT:-godot}"
 cores="$(nproc 2>/dev/null || echo 4)"
 jobs="${JOBS:-$(( cores > 3 ? cores - 2 : 1 ))}"
@@ -69,6 +78,13 @@ run_arm a "$arm_a" "$root_a"
 wait
 secs=$(( $(date +%s) - start ))
 for l in "$out"/*.log; do grep -q "SCRIPT ERROR\|Parse Error" "$l" && { echo "worker failed: $l"; tail -20 "$l"; exit 1; }; done
+if [ "$shape" = 1 ]; then
+  sargs=(--run "$out" "--a=${arm_a% --shape}${a_root:+ (from $a_root)}")
+  [ "$paired" = 1 ] && sargs+=("--b=${arm_b% --shape}")
+  echo "($n matches, ${secs}s)" | tee "$out/shape_report.md"
+  python "$root/tools/balance/shape_report.py" "${sargs[@]}" | tee -a "$out/shape_report.md"
+  exit 0
+fi
 args=(--run "$out" --n "$n" --secs "$secs" "--a=${arm_a:-base}${a_root:+ (from $a_root)}")
 b_label="${arm_b:-base}"; [ -z "$arm_b" ] && [ -n "$a_root" ] && b_label="this branch"
 # "--a=" and "--b=": a one-word label such as "--rival-traits" would read as a flag.
