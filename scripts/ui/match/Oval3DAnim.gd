@@ -27,6 +27,7 @@ const SLOW := 0.6              # slowest it plays while the contact is still to 
 const CATCH_UP := 2.0          # fastest it plays when the contact has come first
 const HURRY := 2.0             # how fast the get-up plays once the play has moved on
 const FAR := 5.0               # m: his token this far from him = the play has moved on
+const MOVE_OFF := 0.3          # m/s: his token moving this fast = the play wants him (a take ends at up_s)
 const KNOCK_UP := 0.2           # s of a scoop's clip past the touch before a ball off his hands ends it
 const KNOCK_OFF := 1.0          # m: how far off him that ball has to be by then
 const BLEND := 0.2             # s: the pose he was in eases into the clip (and the clip out)
@@ -311,6 +312,7 @@ func _start(who: int, v: int, arrived: bool, at := Vector2.INF) -> void:
 	var pr := {"id": tackles.size(), "name": name, "who": who, "victim": v, "P": P,
 			"c0": float(best["c0"]), "c": float(best["c0"]), "cs": float(best["cs"]),
 			"len": float(_pairs[name]["length_s"]), "arrived": arrived, "rec": rec,
+			"up": float(_pairs[name].get("up_s", _pairs[name]["length_s"])),
 			# Started by frame() this frame: its clock has already been stepped past.
 			"fresh": not arrived,
 			"roles": {
@@ -330,7 +332,7 @@ func _start(who: int, v: int, arrived: bool, at := Vector2.INF) -> void:
 ## Pose player i for this frame. holder = the index with the ball in his hands, or -1.
 func step(i: int, p: Dictionary, holder: int, pos: Vector2, vel: Vector2, dt: float) -> void:
 	if not (_in[i] as Dictionary).is_empty():
-		_step_pair(i, p, dt)
+		_step_pair(i, p, dt, vel)
 		return
 	var node: Node3D = p["node"]
 	var o: Dictionary = _once[i]
@@ -432,7 +434,7 @@ func _end_once(i: int) -> void:
 
 ## A man in a pair: the take at the pair's clip time, placed by the pair (and, over the run-in,
 ## the correction from where he really was), his club ring under his hips.
-func _step_pair(i: int, p: Dictionary, dt: float) -> void:
+func _step_pair(i: int, p: Dictionary, dt: float, vel := Vector2.ZERO) -> void:
 	var pr: Dictionary = _in[i]
 	var role: Dictionary = pr["roles"][i]
 	var ap: AnimationPlayer = p["anim"]
@@ -451,7 +453,9 @@ func _step_pair(i: int, p: Dictionary, dt: float) -> void:
 	_ease(i, p, dt)
 	var hips := _rig * (p["skel"] as Skeleton3D).get_bone_global_pose(_pelvis)
 	(p["ring"] as Node3D).position = Vector3(hips.origin.x, 0.03, hips.origin.z)
-	if float(pr["c"]) >= float(pr["len"]):
+	# Up off the ground (the pair's up_s), he goes as soon as the play wants him: the rest of
+	# the clip is the two of them standing (MatchDirector.TAKE_UP lets him move from then).
+	if float(pr["c"]) >= float(pr["len"]) or (float(pr["c"]) >= float(pr["up"]) and vel.length() > MOVE_OFF):
 		_leave(i)
 
 
