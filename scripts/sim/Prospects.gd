@@ -214,7 +214,10 @@ static func project(p: Dictionary) -> void:
 	# The draft-night drop is added back: it lowers where he starts, not where he can grow to.
 	var level := target + float(p.get("night_drop", 0.0)) + maxf(6.0, 22.0 - 0.25 * float(clampi(rank, 1, 80) - 1)) \
 			+ float(p.get("class_ceiling", 0.0))
-	var shape := _shape_for(role, rng, level)
+	# The game's own generated players copy a real player of 2012-2026 with his
+	# fingerprint (director, 2026-11-17); real-list players and a coach's Forge
+	# prospect copy from the start's lists as before.
+	var shape := _copy_for(role, rng, level, p) if _is_game_made(p) else _shape_for(role, rng, level)
 	for key in ATTR_KEYS:
 		a[key] = target + float(shape.get(key, 0.0))
 	# Temperament is his own: a donor's poor discipline on a lesser prospect
@@ -241,7 +244,7 @@ static func project(p: Dictionary) -> void:
 		a[key] = float(a.get(key, target)) + float(bias[key])
 	# Only the game's own generated players: real-list players projected from no
 	# senior game, the real draft class and a coach's Forge prospect stay as they were.
-	if bool(p.get("generated", false)) and not bool(p.get("user_created", false)):
+	if _is_game_made(p):
 		_real_trait_rates(a, p, role)
 
 	a = fit_attributes(a, role, target)
@@ -280,9 +283,8 @@ static var GEN_NUDGE := {
 static func _real_trait_rates(a: Dictionary, p: Dictionary, role: String) -> void:
 	for key in (GEN_NUDGE.get(role, {}) as Dictionary):
 		a[key] = float(a.get(key, 0.0)) + float(GEN_NUDGE[role][key])
-	if _shapes.is_empty():
-		_shape_for(role, _rng_for("warm"), 0.0)  # builds the real players' cache
-	var pool: Array = _discs.get(role, [])
+	# His temperament is a real 2012-2026 player's too (none before 2012, director 2026-11-17).
+	var pool: Array = (_copy_pool().get(role, {}) as Dictionary).get("disc", [])
 	if pool.is_empty():
 		return
 	var rng := _rng_for("disc|%s|%s" % [str(p.get("id", "")), str(p.get("draft_year", 2026))])
@@ -293,17 +295,126 @@ static func _real_trait_rates(a: Dictionary, p: Dictionary, role: String) -> voi
 ## overall ("_ovr"), from the 2026 lists (GameDB's own rows, in list order, so
 ## it's the same every run).
 static var _shapes := {}
-## Each role's real players' disciplines (row 104), from players with senior games only:
-## a list player projected from no senior game got his from the old rating formula.
-static var _discs := {}
 ## How many of the nearest real players, by overall, a shape is drawn from.
 const SHAPE_NEAREST := 10
 
 
 ## Forget the cached shapes: a new career rebuilds them from the 2026 players.
+## (The 2012-2026 copy pool is fixed data and stays loaded.)
 static func forget_cache() -> void:
 	_shapes = {}
-	_discs = {}
+
+
+## The real players a game-made player is copied from (director, 2026-11-17: "im happy
+## for generated players to be based on real players, but we have to make sure that they
+## arent based on players pre-2012"; which seasons: "every other year"): every player of
+## every AFL season 2012-2026, each season rated on its own (tools/wheelo/copy_pool.py).
+const COPY_POOL_CSV := "res://data/copy_pool.csv"
+## His fingerprint (director, 2026-11-17: "10% different ... to give a fingerprint", then
+## "5%"): each of the copied player's skills times its own roll between 0.95 and 1.05.
+const FINGERPRINT := 0.05
+## Per role: "rows" (each a real player-season's skills and "_ovr"), sorted by overall,
+## "ovr" (those overalls, for the search) and "disc" (their disciplines).
+static var _copy := {}
+
+
+## The game's own generated players: a draft class, an expansion list, a state-league
+## depth pool. Not a coach's Forge prospect, not a real-list player.
+static func _is_game_made(p: Dictionary) -> bool:
+	return bool(p.get("generated", false)) and not bool(p.get("user_created", false))
+
+
+static func _copy_pool() -> Dictionary:
+	if not _copy.is_empty():
+		return _copy
+	var f := FileAccess.open(COPY_POOL_CSV, FileAccess.READ)
+	if f == null:
+		return _copy
+	var head := f.get_csv_line()
+	var col := {}
+	for i in head.size():
+		col[head[i]] = i
+	var by_role := {}
+	while not f.eof_reached():
+		var line := f.get_csv_line()
+		if line.size() < head.size():
+			continue
+		var r := {"_ovr": float(line[col["ovr"]]), "_year": int(line[col["year"]])}
+		for key in ATTR_KEYS:
+			r[key] = float(line[col[key]])
+		var role := str(line[col["line"]])
+		if not by_role.has(role):
+			by_role[role] = []
+		(by_role[role] as Array).append(r)
+	for role in by_role:
+		var rows: Array = by_role[role]
+		# File order (season, player id) breaks ties, so the pick is the same every run.
+		for i in rows.size():
+			rows[i]["_i"] = i
+		rows.sort_custom(func(x, y): return x["_ovr"] < y["_ovr"] or (x["_ovr"] == y["_ovr"] and x["_i"] < y["_i"]))
+		var ovr := PackedFloat32Array()
+		var disc := []
+		for r in rows:
+			ovr.append(float(r["_ovr"]))
+			disc.append(float(r["discipline"]))
+		_copy[role] = {"rows": rows, "ovr": ovr, "disc": disc}
+	return _copy
+
+
+## The real 2012-2026 player-seasons of `role` whose overall is nearest `level`, the
+## SHAPE_NEAREST of them (as _shape_for picks from the start's lists). Fifteen seasons put
+## dozens of players on the same whole-number overall, so the last places among equally
+## near players go by `rng`'s draw, not file order (which would only ever copy 2012-2014).
+static func copy_candidates(role: String, level: float, rng: RandomNumberGenerator) -> Array:
+	var got: Dictionary = _copy_pool().get(role, {})
+	var rows: Array = got.get("rows", [])
+	var want := mini(SHAPE_NEAREST, rows.size())
+	if want == 0:
+		return []
+	var ovr: PackedFloat32Array = got["ovr"]
+	# The distance of the SHAPE_NEAREST-th nearest player.
+	var hi := ovr.bsearch(level)
+	var lo := hi - 1
+	var edge := 0.0
+	for n in want:
+		if hi >= rows.size() or (lo >= 0 and absf(ovr[lo] - level) <= absf(ovr[hi] - level)):
+			edge = absf(ovr[lo] - level)
+			lo -= 1
+		else:
+			edge = absf(ovr[hi] - level)
+			hi += 1
+	# Everyone nearer than that is in; the rest of the places are drawn from those at it.
+	var out := []
+	var tied := []
+	var i := ovr.bsearch(level - edge - 0.5)
+	while i < rows.size() and ovr[i] <= level + edge + 0.5:
+		var dist := absf(ovr[i] - level)
+		if dist < edge - 0.0001:
+			out.append(rows[i])
+		elif dist <= edge + 0.0001:
+			tied.append(rows[i])
+		i += 1
+	while out.size() < want and not tied.is_empty():
+		out.append(tied.pop_at(rng.randi_range(0, tied.size() - 1)))
+	return out
+
+
+## A game-made player's shape: one of the real 2012-2026 players of his role nearest
+## `level` (picked by `rng`, as _shape_for), each skill moved by its own fingerprint roll
+## (seeded by the player alone, so nothing else about him rolls differently).
+## Example: the copied player kicks 70 with an overall of 75; a roll of 1.03 makes it
+## 72.1, so the shape is 72.1 - 75 = -2.9 (the fit then sets his level as before).
+static func _copy_for(role: String, rng: RandomNumberGenerator, level: float, p: Dictionary) -> Dictionary:
+	var near := copy_candidates(role, level, rng)
+	if near.is_empty():
+		return _shape_for(role, rng, level)
+	var d: Dictionary = near[rng.randi_range(0, near.size() - 1)]
+	var frng := _rng_for("fp|%s|%s" % [str(p.get("id", "")), str(p.get("draft_year", 2026))])
+	var ovr := float(d["_ovr"])
+	var out := {}
+	for key in ATTR_KEYS:
+		out[key] = clampf(float(d[key]) * frng.randf_range(1.0 - FINGERPRINT, 1.0 + FINGERPRINT), 1.0, 99.0) - ovr
+	return out
 
 
 ## The shape of one of the real players of `role` nearest `level` overall,
@@ -326,10 +437,6 @@ static func _shape_for(role: String, rng: RandomNumberGenerator, level: float) -
 					if not _shapes.has(r):
 						_shapes[r] = []
 					(_shapes[r] as Array).append(d)
-					if not bool(q.get("projected", false)):
-						if not _discs.has(r):
-							_discs[r] = []
-						(_discs[r] as Array).append(float(at.get("discipline", 50)))
 	var pool: Array = (_shapes.get(role, []) as Array).duplicate()
 	if pool.is_empty():
 		return ROLE_DELTAS.get(role, ROLE_DELTAS["MID"])
