@@ -596,7 +596,7 @@ func _test_fifth_interchange() -> void:
 		elif str(r["id"]) == out:
 			row_out = r
 	_check(bool(row5.get("on_bench", false)) and not bool(row5.get("reserves", true))
-			and int(row5.get("xp", 0)) == _club_paid(mine.get(fifth, {}), GameState._xp_amount({"disposals": 8}, false, true)),
+			and int(row5.get("xp", 0)) == _week_paid(mine.get(fifth, {}), {"disposals": 8}),
 			"The fifth interchange is credited as selected and paid for his own game (%s)" % str(row5))
 
 	# An older save named four on the bench: the fifth is filled on match day.
@@ -979,6 +979,16 @@ func _test_youth_no_cycle() -> void:
 ## A selected player's own-game XP as his club turns it into development: a
 ## young fifth interchange (on the director's ratings, row 200) gets the
 ## development department's and the plan's share too, as every player does.
+## His week for a senior game on the bench (director 2026-11-17, Growth): the
+## game's match XP plus his training third, by his club's multiplier.
+func _week_paid(p: Dictionary, stats: Dictionary) -> int:
+	var staffs = CoachEffects.staffs(GameState.coaches) if not GameState.coaches.is_empty() else {}
+	var staff: Dictionary = staffs.get("GEE", {}) if not GameState.coaches.is_empty() else {}
+	var mult := GameState._club_mult("GEE", p, staff, false, GameState.fitness_plan("GEE"))
+	var game := float(GameState._xp_amount(stats, false, true)) / float(GameState.XP_SENIOR_GAME)
+	return int(round((Growth.match_xp(p, game) + Growth.train_xp(p)) * mult))
+
+
 func _club_paid(p: Dictionary, base: int) -> int:
 	var staffs = CoachEffects.staffs(GameState.coaches) if not GameState.coaches.is_empty() else {}
 	var staff: Dictionary = staffs.get("GEE", {}) if not GameState.coaches.is_empty() else {}
