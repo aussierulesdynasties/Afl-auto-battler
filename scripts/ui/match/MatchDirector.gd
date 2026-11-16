@@ -1133,7 +1133,17 @@ func _short_set_shot(k: int) -> bool:
 	if str((events[k] as Dictionary).get("kind", "")) != "rebound":
 		return false
 	var pk := _prev_real(k)
-	return pk >= 0 and str((events[pk] as Dictionary).get("kind", "")) == "mark" and (events[pk] as Dictionary).has("band")
+	if pk < 0:
+		return false
+	var prev: Dictionary = events[pk]
+	if str(prev.get("kind", "")) == "mark" and prev.has("band"):
+		return true
+	# A free's set shot that falls short (MatchSim tags it from_free and logs it
+	# where the free was paid): the taker kicks it and it comes down short.
+	# Drawn at the free's spot, the back took it out of the taker's hands with
+	# no kick (seed 31 FRE v STK k149).
+	return bool((events[k] as Dictionary).get("from_free", false)) \
+			and str(prev.get("kind", "")) in ["free", "fifty", "last_disposal", "out_on_full"]
 
 
 func _clanger_phases(k: int) -> Array:
@@ -1439,6 +1449,17 @@ func _lead_receivers(k: int, cur: int) -> void:
 		var nev: Dictionary = events[j]
 		var kind := str(nev.get("kind", ""))
 		if ["goal", "behind", "quarter", "final"].has(kind):
+			# A shot in open play off an entry: the man who kicks it runs onto
+			# where the entry lands, as a receiver leads. Left to start at the
+			# entry, he was 22-44 m off a ball lying dead (seed 42 RIC v SYD,
+			# six shots).
+			var sa := _actor_id(nev)
+			if prev_kind == "inside50" and not bool(nev.get("set_shot", true)) 					and sa >= 0 and sa != cur and not _busy.has(sa) and int(_lead.get(sa, j)) >= j:
+				var stok: Dictionary = tokens[sa]
+				if _lead.has(sa) or n < 2 or MatchMotion.eta(stok, prev_loc) + LEAD_SLACK >= t:
+					_lead[sa] = j
+					MatchMotion.set_goal(stok, prev_loc, 1.0)
+					_busy[sa] = true
 			break  # restarts stage their own players
 		if kind == "inside50":
 			# The entry itself stages its contest, but whoever wins the ball
@@ -1472,7 +1493,9 @@ func _lead_receivers(k: int, cur: int) -> void:
 			var floc := _loc(j)
 			t += 0.8
 			var fa := _actor_id(nev)
-			if fa >= 0 and fa != cur and not _busy.has(fa) and int(_lead.get(fa, j)) == j:
+			# A lead to something later gives way: he takes his free first
+			# (seed 1 RIC v SYD k21, led to his k27 kick, ran 25 m to his free).
+			if fa >= 0 and fa != cur and not _busy.has(fa) and int(_lead.get(fa, j)) >= j:
 				var ftok: Dictionary = tokens[fa]
 				if _lead.has(fa) or n < 2 or MatchMotion.eta(ftok, floc) + LEAD_SLACK >= t:
 					_lead[fa] = j
