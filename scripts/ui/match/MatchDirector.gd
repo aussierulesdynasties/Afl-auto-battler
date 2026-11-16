@@ -934,7 +934,10 @@ func _shot_phases(k: int) -> Array:
 				{"t": "hold", "who": s, "dur": 0.45, "carry": Vector2.INF, "back": true}]
 	elif s >= 0:
 		var on := (target - (ball["pos"] as Vector2)).normalized() * 4.0
-		out += [{"t": "collect", "who": s, "max": 0.35}, {"t": "possess", "who": s, "quiet": true},
+		# He runs onto it before he shoots: capped at 0.35 s, the ball was put
+		# in his hands from up to 4.6 m and kicked from where it lay (seed 31
+		# FRE v STK, five open-play shots).
+		out += [{"t": "collect", "who": s}, {"t": "possess", "who": s, "quiet": true},
 				{"t": "hold", "who": s, "dur": 0.0, "carry": (ball["pos"] as Vector2) + on}]
 	var d := (ball["pos"] as Vector2).distance_to(target)
 	if not set_shot:
@@ -1460,7 +1463,21 @@ func _lead_receivers(k: int, cur: int) -> void:
 			t += 1.2
 			continue
 		if kind in ["free", "last_disposal", "out_on_full", "fifty"]:
+			# The man it is paid to is on his way to the spot already, as a
+			# receiver leads: he takes the ball there and kicks it. Left to
+			# start at the whistle, seed 31's taker ran 65 m to a ball lying
+			# loose with a man stood over it.
+			var floc := _loc(j)
 			t += 0.8
+			var fa := _actor_id(nev)
+			if fa >= 0 and fa != cur and not _busy.has(fa) and int(_lead.get(fa, j)) == j:
+				var ftok: Dictionary = tokens[fa]
+				if _lead.has(fa) or n < 2 or MatchMotion.eta(ftok, floc) + LEAD_SLACK >= t:
+					_lead[fa] = j
+					MatchMotion.set_goal(ftok, floc, 1.0)
+					_busy[fa] = true
+			prev_loc = floc
+			prev_kind = kind
 			continue
 		if kind == "throwin":
 			var atb := _loc(j)
@@ -1611,6 +1628,10 @@ func _enter(p: Dictionary) -> void:
 			if p.has("recv") and int(p["recv"]) >= 0 and p.has("loc"):
 				MatchMotion.set_goal(tokens[int(p["recv"])], p["loc"], 1.0, true)
 		"flight":
+			if str(ball["mode"]) == "held":
+				# Kicked from his hands: a ball he took this frame has not been
+				# drawn there yet, and flew from where it lay 2.4 m off (seed 31).
+				_update_ball(0.0)
 			var to: Vector2 = p["to"]
 			var from: Vector2 = ball["pos"]
 			var dur := float(p.get("dur", 0.5))
