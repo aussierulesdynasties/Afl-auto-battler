@@ -141,7 +141,7 @@ The answers are recorded in the Director Bible and summarised here.
   (fine streaks from 15 m out). A distance haze barely shows at the match cameras' range.
 - 2a skies (rule 2.84): the world has designed skies, one for each weather and time of day ("i 100% want skies"; "a world design decision"); the seven prototype skies approved ("Theyre gorgeous").
 - 2b the grounds (rule 2.90): every ground with an AFL premiership match since 1990 (36) gets its own 3D stadium, the 8 Legacy
-  grounds as they were in the 1990s included, plus Macquarie Point (Hobart) from its concept design; data/grounds.json holds 21 of them today.
+  grounds as they were in the 1990s included, plus Macquarie Point (Hobart) from its concept design; all 37 are in data/grounds.json, with their sources.
 - 2b roofed grounds at night (rule 2.91): as in real life, Marvel and Optus are lit from floodlights on their roofs, all the way round; the open grounds keep four towers (2.82).
 - 2d the body (rule 2.85): MetaHuman, made in Unreal 5.6+ used as a tool only and exported into the Godot
   game (the game stays in Godot); one is shown in our match before anything is built on it. Shown and approved (2.89). Builds, heads and faces next.
