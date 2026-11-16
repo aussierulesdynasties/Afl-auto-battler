@@ -40,7 +40,8 @@ football and answer the coach.
    each team's length and width, men behind the ball, spacing to the nearest opponent, how far and how
    often the ball is kicked and switched. Then, for every call (the four plans, Stack, Flood, Push,
    Throw numbers at it, tags and switches): what a coach would see change. Sources: his footage and
-   published AFL tracking studies, each number with its source. He checks the spec.
+   published AFL tracking studies, each number with its source. He checked the spec on 2026-11-17: real
+   footy is the target everywhere, and a number passes within 10% of the real one (rule 2.86).
 2. **Measure.** A harness in the style of `tools/balance.sh` logs every man's position over many
    matches and marks each number IN, NEAR or OUT of the spec. Paired runs (same seed, call on and
    off) give each call's change with its standard error. Where the sim's own events are not footy
@@ -51,6 +52,39 @@ football and answer the coach.
 5. **The proof.** Paired films of each call (same match, call on and off) from a high whole-ground
    camera and the broadcast camera, at game speed. It passes when the numbers are IN and he watches
    and says it reads as footy and he can see his coaching (he chose "Numbers and your watch").
+
+### The gap list (row 201, 2026-11-16)
+
+Measured with `tools/balance.sh shape` (README: tools/balance), 153 matches per arm on GitHub (run 43859090677; the five burst calls re-run in run 43869053009, held all match). Real numbers and their sources
+are in `tools/balance/afl_shape_rates.json`; the spec page puts them to him. Each line names the system that owns
+it; step 4 fixes the system, not the incident.
+
+Lengths and widths are metres, end to end of the 18; "in the ball's zone" counts both sides in the ball's quarter
+of the ground. Calls are paired runs (same seed, call on and off), the change on the side that made the call.
+
+| # | Gap | Real | Oval now | Owner |
+|---|---|---|---|---|
+| 1 | The team is too long in open play | 74-94 m with the ball, 75-87 m without, 65-97 m loose (Alexander 2019) | 107-127 m everywhere | Phase shape: `MatchDirector._structure_spot` moves each line only 15-78% of the ball's travel, so the lines stay spread |
+| 2 | The team does not follow the ball to either end | team centre 29-33 m past halfway when attacking in the forward 50; 43-47 m back defending in the back 50 | 15 m; 18 m | Phase shape (`_structure_spot`, as 1) |
+| 3 | Too few men near the ball | 15.5-19.5 of the 36 in the ball's quarter (Alexander 2021) | 11.6-15.4 | Phase shape (as 1) |
+| 4 | No squeeze on a loose ball | 36-47 m wide (Alexander 2019) | 62-67 m | A loose-ball shape: none exists; loose balls use the open-play spots |
+| 5 | Stoppages around the ground are thin | 23 players in the ball's quarter in either 50, 17 in midfield (Alexander 2021) | 13.4 | Stoppage set-ups (`_centre_spot`, `_centre_setup`, the ball-up and throw-in spots) |
+| 6 | Kicks are short and gain little ground | 25.0 m average, ±11.8 (Spencer 2019); 25-30 m gained | 20.0 m, ±11.6; 11.2 m gained | MatchSim kick events (balance-gated) |
+| 7 | Too many kicks | 213 a team-game (Wheelo 2026) | 309 | MatchSim event count (balance-gated) |
+| 8 | Calls do not change how the side kicks | Attacking: no switch; Controlled and Slow it down: shorter, across and back (rule 2.45) | Attacking: switches stay 6%; Controlled: kicks 0.5 m longer; Slow it down: 0.2 m longer, 3 points fewer backward | MatchSim kick choice by plan (balance-gated) |
+| 9 | A tagger does not shadow his man | a tag is permanent and goes where his man goes (2.44, 2.58); no published distance | 21.7 m apart on average, within 5 m 15.6% of the time (off: 27.0 m, 6.9%) | Man-on-man pull in `_structure_spot`: only inside 35 m, at most 85% of the way |
+| 10 | A switched defender drifts off his forward | everyone has an opponent (2.44) | 25.3 m apart, within 5 m 15.7% (off: 28.9 m, 13.5%) | Man-on-man pull (as 9) |
+| 11 | Fumble then gather: the gatherer runs 3.9 m past and the ball lies alone ~0.7 s (seed 31, FRE v STK) | the nearest man scoops it | as stated (row 197 inbox) | Loose-ball pickup; the WIP on `claude/oval3d-loose-ball-wip` fails 8 match_visual checks |
+| 12 | No clean gather (down for it, picks it up) in the shipped game | | the first man knocks it on toward MatchSim's winner | Loose-ball pickup (as 11) |
+| 13 | A dead stop at the fence: 4-5 m/s to 1.1 m/s in one step, twice in four seeds | | as stated (row 197 inbox) | MatchMotion fence clamp |
+| 14 | Throw numbers at it does not put more men at the ball; it moves the team forward like Push | more of our men around the ball wherever it is (the call's own words) | men within 20 m of the ball +0.9 at most (+0.1 at stoppages); team centre 7-19 m further forward, as Push's 8-14 m | Call shape: `_structure_spot` lifts the lines forward for Surge and Push alike (`_surge_ref`); no pull toward the ball |
+
+What the calls already do (no gap): Attacking narrows the side 26-34 m in attack (about 39%; rule 2.45 asks about
+45%); Controlled widens it 13-24 m and shortens it 35-44 m; Defensive shortens it 29 m in midfield; Win Contest
+narrows it 18-25 m and puts 1.9 more men within 10 m of a stoppage. Flood pulls the team 10-13 m back with 2.2 more men behind the ball in our half;
+Push moves it 8-14 m forward with 2.5-2.9 fewer behind; Slow it down spreads it 16-27 m wider; Stack sets the
+lines 51 m shorter at the centre bounce (still 6-6-6, no extra men in the square). Not yet measured: what each position does
+(marks, tackles, kicks per role), which the harness does not count.
 
 ## Step 2. The world and the look (runs beside step 1; before anything that draws the game)
 
@@ -103,6 +137,11 @@ The answers are recorded in the Director Bible and summarised here.
   saturation 1.2), exposure set by the brightness of open grass; club rings keep their exact colour.
 - 2a lighting, night (rule 2.82): four light towers, one to each corner, each casting a shadow;
   a roofed venue's lighting is settled with the stadium (2b). The crowd needs almost no shine.
+- 2a weather, wet (rule 2.83): cloud light (no sun, soft shadows) and rain falling on screen
+  (fine streaks from 15 m out). A distance haze barely shows at the match cameras' range.
+- 2a skies (rule 2.84): the world has designed skies, one for each weather and time of day ("i 100% want skies"; "a world design decision"); the seven prototype skies approved ("Theyre gorgeous").
+- 2d the body (rule 2.85): MetaHuman, made in Unreal 5.6+ used as a tool only and exported into the Godot
+  game (the game stays in Godot); one is shown in our match before anything is built on it. Builds, heads and faces next.
 
 The freeze allows only the
 prototypes each question needs; nothing from step 2 is the settled look until he has chosen it.
@@ -135,7 +174,7 @@ vignettes. Nothing in step 4 starts before the football proof has passed and the
 | Step | State |
 |---|---|
 | Freeze | in force from 2026-11-16 |
-| 1. Football proof | not started (row 201) |
-| 2. The world and the look | under way (row 202): 2a daylight, tone and night lighting chosen (rules 2.80-2.82); next weather and time of day, then 2b stadium, 2c crowd, 2d players' look, 2e cameras |
+| 1. Football proof | harness in `tools/balance.sh shape`; spec checked (rule 2.86); gap list above; fixes next (row 201) |
+| 2. The world and the look | under way (row 202): 2a daylight, tone, night lighting and wet games chosen, skies chosen (rules 2.80-2.84); 2d body chosen: MetaHuman (2.85); next a MetaHuman in our match, then 2b stadium, 2c crowd, 2d builds and faces, 2e cameras |
 | 3. Asset and animation plan | after step 2 (row 203) |
 | 4. Build | after 1 and 3 (rows 197, 198) |

@@ -2,7 +2,7 @@
 
 _Step 3 of [the 3D view plan](3D_VIEW_PLAN.md) (TODO row 203, Director Bible 2.78). Written 2026-11-16, ahead of
 step 2's body choice, on the director's word: "may as well make the /plan now". Where an answer depends on the
-body (row 202, 2d), it says so; nothing here is made until that body is chosen._
+body (row 202, 2d), it says so; nothing here is made until that body is chosen. Chosen 2026-11-17: MetaHuman (rule 2.85)._
 
 ## What drives the list
 
@@ -18,7 +18,12 @@ A move the sim never produces is not made. A sim event with no animation is a ga
    - his Rokoko takes, of himself or of real footage studied frame by frame: the AFL moves no library has;
    - a library whose licence allows a Godot game sold on itch and Android (CC0, CC BY, Mixamo's terms);
    - made by us in Blender: poses, fixes, blends, never a whole move invented from nothing.
-2. **Retarget** onto the chosen body's rig (2d), names unchanged, one GLB action per clip.
+
+   **The licence is read before a source is proposed** (director, 2026-11-17: "make a rule you have to check
+   fucking licenses before sending me to download any fucking asset"). On the source's own page: allowed in a
+   Godot game, sold commercially, on itch and Android, attribution or not, what is forbidden, and the URL read.
+   Engine-locked (Unreal-only, Unity-only), non-commercial, editorial-only or unread means not proposed.
+2. **Retarget** onto the chosen body's rig (2d: MetaHuman, rule 2.85), names unchanged, one GLB action per clip.
 3. **Contact pass**: feet pinned while planted, hands on the ball, mesh clip check on every frame (the tools of
    3d view 2: contact3.py, meshlow.py, trim.py).
 4. **Markers**: foot plants, ball contact, release, mark secured, tackle contact, so the clip can be warped to
@@ -36,8 +41,8 @@ needs, **C** ceremony, reactions and the 3D scenes. Counts are estimates to plan
 
 | Item | Needed for | Have | Source | Order |
 |---|---|---|---|---|
-| The body, with 2-3 builds (key position, midfielder, small) | every player | MPFB average (placeholder) | 2d's choice | A |
-| Heads and faces that vary | "they look like clones" | one head | 2d's choice | B |
+| The body, with 2-3 builds (key position, midfielder, small) | every player | MPFB average (placeholder) | MetaHuman (2.85) | A |
+| Heads and faces that vary | "they look like clones" | one head | MetaHuman (2.85) | B |
 | Hair | identity | 31 styles (rule 2.77, passed) | kept; refit to the chosen head | A |
 | Guernseys, shorts, socks, 18+ clubs and clash | every match | passed on MPFB (2.75) | refit to the chosen body | A |
 | Boots | every player | one boot | refit | A |
@@ -137,7 +142,7 @@ Each is a scene on the same bodies and stadium. Order C, after full-match covera
 | Held poses: injured, on the ground, rolling (GASP) | 14 | placeholder until re-made (order C) | re-made |
 | Placeholder loops in the game (jog, idle, carry; #1689) | 3 | keep | re-target from his takes |
 
-Cut today: nothing. A clip no sim event calls stays out of the game build until its row needs it.
+The body is MetaHuman (2.85), so the "If another body" column applies. Cut today: nothing. A clip no sim event calls stays out of the game build until its row needs it.
 
 ## The licence question
 
@@ -146,14 +151,61 @@ bench clips, gestures and get-ups, the 14 held poses, and the 12 tackle clips th
 licenses GASP for Unreal Engine projects only, and our game is Godot
 ([CG Channel on the release](https://www.cgchannel.com/2024/06/get-500-free-game-ready-animations-for-use-in-unreal-engine);
 [Epic forum](https://forums.unrealengine.com/t/what-can-i-do-with-game-animation-sample-that-recently-was-at-100-off/1903980)).
-Release builds exclude `*.glb` today (`export_presets.cfg`), so no build has shipped them. A build that ships the
-3D oval with them would break that licence; they are placeholders until replaced. The director chooses the replacement:
-Mixamo (free, any engine, has idles, turns, sidesteps, sitting, gestures, get-ups and falls) or his Rokoko takes.
-The tackle pairs need two people in one take whichever way the rest goes.
+Using them outside Unreal at all is outside that licence, so they are placeholders until replaced.
+
+### Replacements found (licences read 2026-11-17)
+
+| Source | Licence, read on its own page | Cost |
+|---|---|---|
+| Mixamo ([FAQ](https://helpx.adobe.com/creative-cloud/faq/mixamo-faq.html)) | "royalty free for personal, commercial, and non-profit projects including... video games"; no engine named; needs an Adobe ID | free |
+| CMU mocap ([home](http://mocap.cs.cmu.edu/), [FAQ](http://mocap.cs.cmu.edu/faqs.php)) | may be included in commercially sold products; no reselling the data itself | free |
+| Quaternius Universal Animation Library 1 and 2 ([1](https://quaternius.com/packs/universalanimationlibrary.html), [2](https://quaternius.com/packs/universalanimationlibrary2.html)) | CC0; Godot listed | Standard free, Pro $9.99 |
+| Tomasi Studios football mocap ([RenderHub](https://www.renderhub.com/tomasi-studios/18-football-motion-capture-animations-for-blender3d)) | Extended Use: "computer/web/mobile games" allowed ([terms](https://www.renderhub.com/info/3d-content-licensing)) | $15.50 |
+
+The bodies (2d's choice) are licensed for us too. Our MPFB average body: MakeHuman's core assets are CC0, "no restrictions" and no credit needed
+([licence page](https://static.makehumancommunity.org/about/license.html)). The MetaHuman body:
+Epic's [licence page](https://www.metahuman.com/license?lang=en-US), read 2026-11-17, says "MetaHumans can be used
+with any engine or creative software"; outside Unreal they are Non-Engine Products, so a Godot game pays no royalty;
+free under US$1M a year in revenue, an Unreal seat licence above it; never used to train AI. Unreal's own mannequins
+(Manny and Quinn, which GASP plays on) are Unreal-only and were never in our game.
+
+| GASP group | Replacement (Mixamo clip names, searched on mixamo.com) | Covered |
+|---|---|---|
+| Stand idles and breaks | Standing Idle, Weight Shift Idle, Breathing Idle, Neutral Idle, Happy Idle, looking-around idles (507 idle results) | yes |
+| Turns in place | 45, 90, 135 and 180 degree turns each way, quick 90 and 180, walking turns 90 and 180 | yes |
+| Sidesteps (12) | walking and running strafes left and right, Soccer Strafe, boxing dodges | partly: an evasive step past a man at pace is AFL-specific, his Rokoko |
+| Bench (14) | Sitting Down, seated idles (elbows on knees, leaning forward), Sitting To Standing, clapping and cheering while seated | yes |
+| Gestures (3) | Agreeing Yes, Celebrating After A Win, fist pumps, Rallying The Crowd | agree yes; disagree and come-on to find |
+| Get-ups (2) | Getting Up From Back, Getting Up From Stomach, Getting Up From Being Knocked Down | yes |
+| Held poses (14) | Injured Holding Hurt Leg Idle, Hurt Ground Idle From A Soccer Fall, Knocked Out Falling To Back and To Stomach, Sitting Against A Wall Dazed | yes (holds taken from these) |
+| Tackle pairs (12) | Running To Tackle, Receiving A Football While Getting Tackled To The Ground, Falling Flat On Face From A Hit To The Back While Running, Getting Feet Swept Out | partly: one-man clips, not one take of two men; front, side and lead-foot variants missing. CMU's two-person takes are pulls and a stumble, no tackle |
+
+The tackle pairs are the gap: a real tackle needs both men in one take, which his Rokoko pair takes give.
+
+### Downloaded 2026-11-17
+
+57 Mixamo clips are in `Desktop/footy assets/mixamo/`, saved as FBX Binary, Without Skin, 30 fps, no keyframe
+reduction. Each one was imported in Blender and every file opened with the 65-bone Mixamo rig and an action.
+
+| GASP group | Downloaded (Mixamo title) |
+|---|---|
+| Stand idles and breaks | Standing Idle, Neutral Idle, Happy Idle, Breathing Idle, Unarmed Idle, Weight Shift, Looking Around |
+| Turns | Left Turn, Right Turn, Left Turn 45, Left Turn 90, Right Turn 90, Turn Left 45 Degrees, Turning Right 45 Degrees, Turning Right, Standing Turn Left 90, Standing Turn Right 90, Quick 180 Turn, Walking Turn 180 |
+| Sidesteps | Left Strafe, Right Strafe, Walk Strafe Left, Walk Strafe Right, Jog Strafe Left, Jog Strafe Right, Dodging Right |
+| Bench | Sitting Idle, Stand To Sit, Sit To Stand, Standing Up, Sitting Clap, Cheering While Sitting, Sitting Fist Pump, Sitting Victory |
+| Gestures and reactions | Agreeing, Shaking Head No, Annoyed Head Shake, Beckoning (come on), Dismissing Gesture, Standing Arguing, Rallying, Cheering, Clapping, Victory, Waving |
+| Get-ups | Getting Up |
+| Held poses and falls | Injured Idle, Injured Hurting Idle, Injured Stumble Idle, Knocked Out, Sitting Dazed, Fallen Idle, Fall Flat, Falling Flat Impact, Falling Down, Sweep Fall |
+| Tackles (one man) | Defender (running to tackle) |
+
+Not on Mixamo under the searched titles: Receiving A Football While Getting Tackled To The Ground and Running Tackle.
+Those tackles come from his Rokoko pair takes.
 
 ## Order of work (step 4 follows it)
 
-1. 2d chooses the body; heads, hair, kits and boots refit to it.
+Director, 2026-11-17, asked this order directly: he chose "A, then B, then C".
+
+1. 2d chose the body, MetaHuman (2.85); heads, hair, kits and boots refit to it.
 2. **A**: getting around, the proof passage's actions (centre bounce, ruck tap, gather, handball, kick, contested
    mark), the tackle pairs, the field umpire. Row 198 makes them; row 197 plays them; phone check.
 3. **B**: every other sim event, its failures, boundary and goal umpires, the bench, reactions.

@@ -9,18 +9,20 @@ name: Run on GitHub
 #   gh workflow run run_on_github.yml --ref <branch> -f what=balance -f years="1990 2000 2010 2020 2026" # year screen
 #   gh workflow run run_on_github.yml --ref <branch> -f what=histories
 #   gh workflow run run_on_github.yml --ref main -f what=bench -f refs="<sha> <sha>" -f reps=2 -f bench_args="--plain"
+#   gh workflow run run_on_github.yml --ref <branch> -f what=shape -f matches=153 #     -f a="base=--burst none;flood=--burst flood;switch=--switch on"   # team shape, one runner per arm
 #
 # Results: suite logs are artifacts run-logs-<suite>; a balance report is in the run summary and artifact
 # run-balance; regenerated histories are artifact run-histories (unzip into data/histories, then commit);
-# bench times (tools/perf/bench_refs.sh) are in the run summary and artifact run-bench.
+# bench times (tools/perf/bench_refs.sh) are in the run summary and artifact run-bench; each shape arm's
+# matches are artifact shape-<arm> (pair two with tools/balance/shape_report.py --a-run).
 on:
   workflow_dispatch:
     inputs:
       what:
-        description: "suites, balance, histories or bench"
+        description: "suites, balance, histories, bench or shape"
         required: true
         type: choice
-        options: [suites, balance, histories, bench]
+        options: [suites, balance, histories, bench, shape]
       suites:
         description: "suites: names separated by spaces"
         required: false
@@ -37,7 +39,7 @@ on:
         default: ""
         type: string
       a:
-        description: "balance: harness arguments for arm A"
+        description: "balance: harness arguments for arm A; shape: arms as name=args;name=args"
         required: false
         default: ""
         type: string
@@ -197,6 +199,78 @@ jobs:
           path: |
             ${{ runner.temp }}/balance-report.txt
             ${{ runner.temp }}/balance/*/a_*.jsonl
+          if-no-files-found: ignore
+          retention-days: 14
+
+  shape-plan:
+    if: inputs.what == 'shape'
+    runs-on: ubuntu-latest
+    outputs:
+      arms: ${{ steps.list.outputs.arms }}
+    steps:
+      - id: list
+        env:
+          ARMS: ${{ inputs.a }}
+        run: |
+          echo "arms=$(python3 -c '
+          import json, os, re, sys
+          arms = []
+          for part in os.environ["ARMS"].split(";"):
+              if not part.strip():
+                  continue
+              name, _, args = part.partition("=")
+              if not re.fullmatch(r"[a-z0-9_]+", name.strip()):
+                  sys.exit(f"::error::arm name must be lower-case letters, digits or _: {name!r}")
+              arms.append({"name": name.strip(), "args": args.strip()})
+          if not arms:
+              sys.exit("::error::shape needs arms in a, as name=args;name=args")
+          print(json.dumps(arms))
+          ')" >> "$GITHUB_OUTPUT"
+
+  shape:
+    name: shape ${{ matrix.arm.name }}
+    needs: shape-plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        arm: ${{ fromJSON(needs.shape-plan.outputs.arms) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache Godot
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/godot
+          key: godot-${{ env.GODOT_VERSION }}-linux-x86_64
+      - name: Download Godot
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot && cd ~/godot
+          name="Godot_v${GODOT_VERSION}-stable_linux.x86_64"
+          curl -fsSL --retry 3 -o godot.zip             "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/${name}.zip"           || curl -fsSL --retry 3 -o godot.zip             "https://downloads.godotengine.org/?version=${GODOT_VERSION}&flavor=stable&slug=linux.x86_64.zip&platform=linux.64"
+          unzip -q godot.zip && rm godot.zip
+          mv "${name}" godot && chmod +x godot
+      - name: Run the arm
+        env:
+          MATCHES: ${{ inputs.matches }}
+          ARGS: ${{ matrix.arm.args }}
+        run: |
+          case "$MATCHES" in ''|*[!0-9]*) echo "::error::matches must be a whole number, got '$MATCHES'"; exit 2 ;; esac
+          set +e
+          GODOT="$HOME/godot/godot" JOBS=4 OUT="$RUNNER_TEMP/shape" bash tools/balance.sh shape "$MATCHES" --a "$ARGS" 2>&1             | tee "$RUNNER_TEMP/shape-report.txt"
+          code=${PIPESTATUS[0]}
+          { echo '```'; head -c 60000 "$RUNNER_TEMP/shape-report.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit "$code"
+      - name: Upload the matches
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shape-${{ matrix.arm.name }}
+          path: |
+            ${{ runner.temp }}/shape-report.txt
+            ${{ runner.temp }}/shape/a_*.jsonl
           if-no-files-found: ignore
           retention-days: 14
 

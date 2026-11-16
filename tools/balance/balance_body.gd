@@ -158,6 +158,27 @@ func play(from: int, count: int, out: String, weather: String,
 		elif setup == "coached":
 			sim.moment_side = coached
 		var tag_rec := _set_tag(sim, i % 2) if tag != "" else {}
+		# --burst KIND (row 201, the shape harness): side i % 2 holds that call
+		# (MatchSim.BURSTS) all match; "none" is the paired baseline. Either way
+		# that side makes no call of its own, so the arms differ by the call alone.
+		var burst := ""
+		for ci in range(args.size() - 1):
+			if str(args[ci]) == "--burst":
+				burst = str(args[ci + 1])
+		if burst != "":
+			cside.ai_plans = false
+			if burst != "none":
+				if not MatchSim.BURSTS.has(burst):
+					push_error("balance: --burst is none or one of " + str(MatchSim.BURSTS.keys()))
+					return 1
+				_hold_burst(sim, i % 2, burst)
+		# --switch on|none (row 201, the shape harness): side i % 2 puts its
+		# best defender (overall) on the rival's best forward from the first
+		# bounce; "none" names the same pair and leaves the match-ups alone.
+		var switch_rec := {}
+		for ci in range(args.size() - 1):
+			if str(args[ci]) == "--switch":
+				switch_rec = _set_switch(sim, i % 2, str(args[ci + 1]) == "on")
 		var through_rec := {}
 		for ci in range(args.size() - 1):
 			if str(args[ci]) == "--through":
@@ -177,12 +198,14 @@ func play(from: int, count: int, out: String, weather: String,
 				sim.set_rotation_policy(coached, sim.auto_rotation(coached, "steady"))
 				sim.set_tactics(1 - coached, sim.ai_tactics(1 - coached))
 				sim.set_rotation_policy(1 - coached, sim.auto_rotation(1 - coached, "steady"))
+			_hold_burst(sim, i % 2, burst)
 			sim.run_quarter()
 			for side in range(2):
 				var e := _legs(sim, side)
 				legs[side].append(e[0])
 				tank[side].append(e[1])
 		if sim.needs_extra_time():
+			_hold_burst(sim, i % 2, burst)
 			sim.run_extra_time()
 		var r: Dictionary = sim.result()
 		# Each side's score at the end of each quarter (for comebacks), from the
@@ -293,6 +316,21 @@ func play(from: int, count: int, out: String, weather: String,
 				through_rec[slot] = {"id": through_rec[slot], "disposals": int(st.get("disposals", 0)),
 						"goals": int(st.get("goals", 0))}
 			row["through"] = through_rec
+		# --shape (row 201): where the 36 men stand, from the match view itself.
+		if args.has("--shape"):
+			r["home"] = h
+			r["away"] = a
+			r["label"] = "shape %d" % i
+			# The named pair the call is about (a tag, a switch), measured in
+			# both arms: the would-be tagger in the no-tag arm, the same
+			# defender in the no-switch arm.
+			if not switch_rec.is_empty():
+				r["probe_pair"] = [switch_rec["def"], switch_rec["fwd"]]
+			elif tag != "" and str(tag_rec.get("first", "")) != "":
+				r["probe_pair"] = [str(tag_rec["tagger"]) if str(tag_rec["tagger"]) != "" else str(tag_rec["first"]),
+						str(tag_rec["target"])]
+			row["shape"] = load("res://tools/balance/shape_probe.gd").measure(r)
+			row["called"] = i % 2
 		var line := JSON.stringify(row)
 		fh.store_line(line)
 		if echo:
@@ -411,10 +449,30 @@ func _set_tag(sim: MatchSim, side: int) -> Dictionary:
 	var rec := {"side": side, "target": str(target.get("id", "")), "tagger": str(who.get("id", "")),
 			"specialist": Roles.is_tagger(who) if not who.is_empty() else false,
 			"has_tagger": has_tagger, "set": false, "keeps": keeps}
+	rec["first"] = str((order[0] as Dictionary).get("id", "")) if not order.is_empty() else ""
 	if not target.is_empty() and not who.is_empty():
 		sim.set_tactics(side, {"gameplan": "balanced", "tag_id": rec["target"], "tagger_id": rec["tagger"], "tag_set": true})
 		rec["set"] = true
 		rec["keep"] = snappedf(sim._tag_share(side), 0.001)
+	return rec
+
+
+## --switch (row 201): side `side`'s best defender onto the rival's best forward
+## (overall), before the first bounce, when `on`; the pair either way.
+func _set_switch(sim: MatchSim, side: int, on: bool) -> Dictionary:
+	var best := func(sq: Squad, role: String) -> Dictionary:
+		var b := {}
+		for p in sq.ground:
+			if str(p["role"]) == role and (b.is_empty() or int(p["overall"]) > int(b["overall"])):
+				b = p
+		return b
+	var d: Dictionary = best.call(sim.squads[side] as Squad, "DEF")
+	var f: Dictionary = best.call(sim.squads[1 - side] as Squad, "FWD")
+	if d.is_empty() or f.is_empty():
+		return {}
+	var rec := {"def": str(d["id"]), "fwd": str(f["id"]), "set": false}
+	if on:
+		rec["set"] = sim.set_matchup(side, rec["fwd"], rec["def"], false)
 	return rec
 
 
@@ -719,3 +777,10 @@ static func type_sources(sim: MatchSim, r: Dictionary) -> Array:
 				d[str(lg[1]) + "_" + parts[0]] = int(d.get(str(lg[1]) + "_" + parts[0], 0)) + n
 				out[side][ty] = d
 	return out
+
+
+## --burst holds the call all match: MatchSim.end_quarter() clears every
+## burst at the siren, so it is set again before each quarter.
+static func _hold_burst(sim: MatchSim, side: int, burst: String) -> void:
+	if burst != "" and burst != "none":
+		(sim.bursts[side] as Dictionary)[burst] = 1000000

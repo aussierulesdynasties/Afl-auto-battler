@@ -94,7 +94,7 @@ func _ai_score(code: String, p: Dictionary, detail = null) -> float:
 	var err := _eval_error(code, p)
 	if str(model.get("score", "current")) == "bpa":
 		return _club_worth(code, p) + err + noise - penalty
-	var vorp_w := _vorp_weight() * float(model.get("vorp_scale", 1.0))
+	var vorp_scale := float(model.get("vorp_scale", 1.0))
 	var best := -INF
 	var roles := [[str(p["role"]), 1.0]]
 	var role2 := str(p.get("role2", ""))
@@ -107,7 +107,9 @@ func _ai_score(code: String, p: Dictionary, detail = null) -> float:
 			need *= SECOND_STAR_RUCK
 		var worth := _club_worth(code, p) + noise + err * (need if bool(model.get("eval_by_need", true)) else 1.0)
 		var over := minf(AI_VORP_CAP, worth - _replacement(code, role))
-		var s := (worth + vorp_w * over) * need * float(entry[1])
+		# The shipped ramp per role: a ruck's edge counts in full a round
+		# sooner in the League Draft (Draft.AI_VORP_FULL_ROUNDS_RUCK).
+		var s := (worth + _vorp_weight(code, role) * vorp_scale * over) * need * float(entry[1])
 		best = maxf(best, s)
 	return best - penalty
 

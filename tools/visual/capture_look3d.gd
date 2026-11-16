@@ -22,6 +22,7 @@ const MIN_IN_VIEW := 10
 const WING_Z := 38.0
 const MID_X := 60.0
 var _wing_sign := 1.0
+var _clouds: NoiseTexture2D
 const MAX_T := 300.0
 
 
@@ -45,6 +46,8 @@ func _run() -> void:
 	var res: Dictionary = Sim.new(Squad_.new("FRE", gdb.club_list("FRE"), true, "FRE"),
 			Squad_.new("STK", gdb.club_list("STK"), false, "STK"), 31).run()
 	root.content_scale_mode = Window.CONTENT_SCALE_MODE_DISABLED
+	# Debanding (a fine dither): dark skies otherwise show hard bands in 8-bit colour.
+	root.use_debanding = true
 	_size(SIZE)
 	# Pass 1, the log: every frame's men in the phone view and where the ball is (the camera is
 	# placed and projected without drawing). The moment is the frame with the most men in view
@@ -86,6 +89,21 @@ func _run() -> void:
 		oval.aim_end(UP, BACK)
 		played += DT
 		await process_frame
+	# The clouds' texture: seamless noise, made once (cheaper on a phone than noise worked out
+	# per pixel, and the same on every GPU).
+	var fn := FastNoiseLite.new()
+	fn.noise_type = FastNoiseLite.TYPE_PERLIN
+	fn.fractal_type = FastNoiseLite.FRACTAL_FBM
+	fn.fractal_octaves = 5
+	fn.frequency = 0.008
+	fn.seed = 7
+	_clouds = NoiseTexture2D.new()
+	_clouds.width = 512
+	_clouds.height = 512
+	_clouds.seamless = true
+	_clouds.generate_mipmaps = true
+	_clouds.noise = fn
+	await _clouds.changed
 	var bp: Vector2 = d.ball["pos"]
 	print("MOMENT (wing %+.0f): %.2f s, %d men in the phone view, ball at (%.1f, %.1f)" % [_wing_sign, played, _in_view(oval), bp.x, bp.y])
 	for look in looks:
@@ -93,12 +111,18 @@ func _run() -> void:
 		for part in look.split("+"):
 			_apply(oval, part)
 		await _match_exposure(oval)
-		for cam in ["phone", "wide", "close"]:
-			_size(WIDE if cam == "wide" else SIZE)
+		_sky_view(oval)
+		var cams := ["phone", "wide", "close"]
+		if OS.get_environment("SKYVIEW") == "1":
+			cams.append("sky")
+		for cam in cams:
+			_size(WIDE if cam == "wide" or cam == "sky" else SIZE)
 			if cam == "phone":
 				oval.aim_end(UP, BACK)
 			elif cam == "wide":
 				oval.aim_wing(UP, BACK * 1.3)
+			elif cam == "sky":
+				_aim_sky(oval)
 			else:
 				oval.aim_close()
 			_rain_place(oval)
@@ -106,6 +130,18 @@ func _run() -> void:
 				await process_frame
 			await _save(oval, out, "look_%s_%s_%s_%s" % [look, slot, weather, cam])
 	quit()
+
+
+## A check view of the sky only (SKYVIEW=1), not a camera proposal (cameras are step 2e): from
+## the far wing, looking across the ground toward the sun so the sky over the stands is in frame.
+func _aim_sky(oval) -> void:
+	var cam: Camera3D = oval.camera
+	var to_sun: Vector3 = oval._sun.global_basis.z  # a light shines down its -Z
+	var flat := Vector3(to_sun.x, 0.0, to_sun.z).normalized()
+	# From the far wing, 10 m up, across the ground to the stand on the sun's side.
+	var from := -flat * 70.0 + Vector3(0.0, 10.0, 0.0)
+	cam.global_position = from
+	cam.look_at(from + flat * 150.0 + Vector3(0.0, 150.0 * tan(deg_to_rad(9.0)), 0.0), Vector3.UP)
 
 
 func _size(s: Vector2i) -> void:
@@ -142,6 +178,7 @@ func _reset(oval, weather: String, slot: String) -> void:
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	env.tonemap_white = 1.0
 	env.adjustment_enabled = false
+	env.adjustment_color_correction = null
 	_stand_shadow(oval, false)
 	oval.get_viewport().msaa_3d = Viewport.MSAA_DISABLED
 	oval.get_viewport().screen_space_aa = Viewport.SCREEN_SPACE_AA_DISABLED
@@ -185,6 +222,7 @@ func _sky(oval, strength: float) -> void:
 	var sm := ShaderMaterial.new()
 	sm.shader = load("res://tools/visual/look3d_sky.gdshader")
 	sm.set_shader_parameter("energy", strength)
+	sm.set_shader_parameter("clouds_tex", _clouds)
 	var sky := Sky.new()
 	sky.sky_material = sm
 	sky.radiance_size = Sky.RADIANCE_SIZE_64
@@ -193,6 +231,42 @@ func _sky(oval, strength: float) -> void:
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
 	env.ambient_light_sky_contribution = 1.0
 	env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
+
+
+## The sky you see for each condition (rule 2.84): clouds, halo, stars, the towers' glow. Drawn
+## on screen only; the light from the sky (rules 2.80-2.83) is unchanged by it.
+func _sky_look(oval, p: Dictionary) -> void:
+	var env: Environment = oval._env
+	if env.sky == null or not (env.sky.sky_material is ShaderMaterial):
+		return
+	var sm: ShaderMaterial = env.sky.sky_material
+	for k in p:
+		if k == "target":
+			sm.set_meta("target", p[k])
+		else:
+			sm.set_shader_parameter(k, p[k])
+
+
+## The seen sky set for the exposure: its horizon at the condition's "target" brightness on
+## screen (a sunset sky is far brighter than the shaded grass the exposure is set for, and
+## would blow out white). Night skies keep their own brightness (no target).
+func _sky_view(oval) -> void:
+	var env: Environment = oval._env
+	if env.sky == null or not (env.sky.sky_material is ShaderMaterial):
+		return
+	var sm: ShaderMaterial = env.sky.sky_material
+	if not sm.has_meta("target"):
+		return
+	var hzv = sm.get_shader_parameter("seen_horizon")
+	if hzv == null or hzv.a == 0.0:
+		hzv = sm.get_shader_parameter("horizon")
+	if hzv == null:  # never set: the shader's own default
+		hzv = RenderingServer.shader_get_parameter_default(sm.shader.get_rid(), "horizon")
+	var hz: Color = hzv
+	var lum := 0.2126 * hz.r + 0.7152 * hz.g + 0.0722 * hz.b
+	var v := float(sm.get_meta("target")) / (env.tonemap_exposure * float(sm.get_shader_parameter("energy")) * lum)
+	sm.set_shader_parameter("view", v)
+	print("SKY VIEW %.3f" % v)
 
 
 ## Ambient strength for the sky options, from the command line (AMB=1.2) while tuning.
@@ -204,13 +278,18 @@ func _amb(fallback: float) -> float:
 ## reads that brightness in the phone frame (four passes, the tonemapper is not linear): tone options are
 ## then compared at the same brightness of grass, not one simply brighter.
 func _match_exposure(oval) -> void:
-	if OS.get_environment("TURF") == "":
+	if OS.get_environment("TURF") == "" and OS.get_environment("EXPO") == "":
 		return
-	var want := float(OS.get_environment("TURF"))
+	var want := float(OS.get_environment("TURF")) if OS.get_environment("TURF") != "" else 0.0
 	var env: Environment = oval._env
 	_size(SIZE)
 	oval.aim_end(UP, BACK)
-	for i in range(4):
+	# EXPO=x fixes the exposure instead: a weather that changes the grass, not the light (hot,
+	# rain under the same towers), keeps the fine day's camera, or the men are over- or under-lit
+	# to make the grass match.
+	if OS.get_environment("EXPO") != "":
+		env.tonemap_exposure = float(OS.get_environment("EXPO"))
+	for i in range(0 if OS.get_environment("EXPO") != "" else 4):
 		for f in range(3):
 			await process_frame
 		await RenderingServer.frame_post_draw
@@ -236,7 +315,7 @@ func _match_exposure(oval) -> void:
 			crowd.material_override = cm
 			dials.append(cm)
 		var lo := 0.02
-		var hi := 2.0
+		var hi := 4.0
 		for i in range(10):
 			var k := sqrt(lo * hi)
 			for cm in dials:
@@ -334,6 +413,8 @@ func _apply(oval, look: String) -> void:
 			_sky(oval, _amb(1.4))
 			sun.light_energy = 1.15
 			sun.light_color = Color(1.0, 0.95, 0.86)
+			# A fine winter's day: blue, a few fair-weather clouds, the sun's glare round it.
+			_sky_look(oval, {"cover": 0.32, "cloud_lit": Color(1.0, 1.0, 1.0), "cloud_dark": Color(0.62, 0.66, 0.74), "sun_halo": 0.35, "target": 0.75})
 		"skyshade":
 			# C: as B, with a mid-afternoon sun lower in the west, and the stands cast their
 			# shadow across the near wing and pocket.
@@ -348,6 +429,8 @@ func _apply(oval, look: String) -> void:
 			sun.light_color = Color(1.0, 0.9, 0.76)
 			sun.directional_shadow_max_distance = 320.0
 			_stand_shadow(oval, true)
+			# Late afternoon: the clouds warm on the sun's side, the sky paler toward it.
+			_sky_look(oval, {"cover": 0.4, "cloud_lit": Color(1.0, 0.93, 0.82), "cloud_dark": Color(0.56, 0.57, 0.64), "sun_halo": 0.55, "cloud_sun": 0.8, "target": 0.8})
 		# The picture's tone (post-processing), on top of a light above. Godot's tonemappers turn
 		# the scene's light into screen colour: filmic (today), ACES (punchy, saturated), AgX
 		# (natural, keeps bright colours from blowing out), and AgX with a broadcast grade.
@@ -371,6 +454,8 @@ func _apply(oval, look: String) -> void:
 			sm.set_shader_parameter("horizon", Color(0.03, 0.03, 0.04))
 			sm.set_shader_parameter("bowl", Color(0.3, 0.29, 0.27))
 			sm.set_shader_parameter("grass", Color(0.12, 0.22, 0.08))
+			# On screen: a deep navy, stars, a few dark clouds.
+			_sky_look(oval, {"seen_zenith": Color(0.006, 0.009, 0.025, 1.0), "seen_horizon": Color(0.02, 0.025, 0.05, 1.0), "stars": 1.0, "cover": 0.2, "cloud_lit": Color(0.035, 0.037, 0.05), "cloud_dark": Color(0.015, 0.016, 0.022), "cloud_sun": 0.0, "target": 0.05})
 		"towers":
 			# Four light towers at the corners, each throwing its own shadow (the four-way
 			# shadow under every man at a night game at the MCG, Adelaide or the Gabba).
@@ -379,6 +464,8 @@ func _apply(oval, look: String) -> void:
 			for az in [35.0, 145.0, 215.0, 325.0]:
 				# 45 degrees up: lower, the towers light upright bodies far harder than the grass.
 				_lamp(oval, az, 45.0, 0.62, true, 1.0)
+			# Their light thrown up over the rim, catching the underside of any cloud.
+			_sky_look(oval, {"rim": Color(0.55, 0.6, 0.7), "rim_energy": 0.06})
 		"roof":
 			# A ring of lights under the roof (Marvel, Optus): light from all round and above,
 			# so a man's shadow is one soft pool at his feet.
@@ -387,6 +474,70 @@ func _apply(oval, look: String) -> void:
 			_lamp(oval, 0.0, 78.0, 0.9, true, 14.0)
 			for az in range(0, 360, 45):
 				_lamp(oval, float(az), 38.0, 0.16, false, 1.0)
+		# Twilight (run with SLOT twilight): rule 2.80's late-game sun, lower (8 degrees) and orange,
+		# the stands' shade across the ground, a dusk sky, and rule 2.82's towers coming on.
+		"twilight":
+			_sky(oval, _amb(0.8 if OS.get_environment("SUNSET") != "0" else 1.0))
+			var sm: ShaderMaterial = env.sky.sky_material
+			# A sunset: the sky deep violet-blue overhead, rose to orange at the rim, glowing round
+			# the sun (that glow also lights the ground and the men's sides); the sun gold.
+			# SUNSET=0 keeps the first twilight for comparison.
+			var ss := OS.get_environment("SUNSET") != "0"
+			sm.set_shader_parameter("zenith", Color(0.13, 0.16, 0.42) if ss else Color(0.12, 0.2, 0.42))
+			sm.set_shader_parameter("horizon", Color(1.0, 0.6, 0.36) if ss else Color(0.78, 0.56, 0.42))
+			sm.set_shader_parameter("bowl", Color(0.2, 0.15, 0.17) if ss else Color(0.16, 0.15, 0.16))
+			sm.set_shader_parameter("grass", Color(0.12, 0.2, 0.08))
+			sm.set_shader_parameter("glow", Color(1.0, 0.5, 0.22))
+			sm.set_shader_parameter("glow_energy", float(OS.get_environment("GLOW")) if OS.has_environment("GLOW") else (1.2 if ss else 0.0))
+			# The sunset's sun is 10 degrees up on the far side, so its last gold light rakes
+			# across the play with long shadows while the far side lies in the stand's shade (at
+			# 8 degrees behind the near stand, its shade covered the whole ground).
+			var e := deg_to_rad(10.0 if ss else 8.0)
+			var h := Vector3(0.3, 0.0, _wing_sign if ss else -_wing_sign).normalized()
+			sun.global_basis = Basis.looking_at(h * cos(e) + Vector3(0.0, -sin(e), 0.0), Vector3.UP)
+			sun.light_color = Color(1.0, 0.56, 0.26) if ss else Color(1.0, 0.68, 0.42)
+			sun.light_energy = float(OS.get_environment("SUNE")) if OS.has_environment("SUNE") else (2.2 if ss else 1.0)
+			sun.directional_shadow_max_distance = 320.0
+			oval.turf.fill.visible = false
+			_stand_shadow(oval, true)
+			for az in [35.0, 145.0, 215.0, 325.0]:
+				_lamp(oval, az, 45.0, 0.25, false, 1.0)
+			# A golden-hour grade on the picture (post-processing): highlights gold, shadows a
+			# touch violet, the way a sunset reads on TV. TGRADE=0 leaves it off.
+			if ss and OS.get_environment("TGRADE") != "0":
+				var gr := Gradient.new()
+				gr.set_color(0, Color(0.0, 0.0, 0.035))
+				gr.set_color(1, Color(1.0, 0.92, 0.76))
+				gr.add_point(0.5, Color(0.56, 0.48, 0.42))
+				var gt := GradientTexture1D.new()
+				gt.gradient = gr
+				gt.width = 256
+				env.adjustment_enabled = true
+				env.adjustment_color_correction = gt
+			# The sunset itself: clouds lit rose and gold from below, violet in their bellies,
+			# the first stars overhead.
+			if ss:
+				_sky_look(oval, {"cover": 0.55, "cloud_size": 1.3, "cloud_lit": Color(1.0, 0.6, 0.42), "cloud_dark": Color(0.3, 0.22, 0.34), "cloud_sun": 1.4, "sun_halo": 0.6, "stars": 0.25, "sky_curve": 0.35, "disc": 4.0, "target": float(OS.get_environment("SKYT")) if OS.has_environment("SKYT") else 0.55})
+		# A hot day (run with WEATHER hot): the sun high and hard, the sky pale with glare.
+		"hot":
+			_sky(oval, _amb(1.2))
+			var sm: ShaderMaterial = env.sky.sky_material
+			sm.set_shader_parameter("zenith", Color(0.35, 0.55, 0.85))
+			sm.set_shader_parameter("horizon", Color(0.82, 0.86, 0.9))
+			sun.light_energy = 1.6
+			sun.light_color = Color(1.0, 0.96, 0.88)
+			# Cloudless, pale with glare, a big bright halo round the sun.
+			_sky_look(oval, {"cover": 0.06, "sun_halo": 1.2, "target": 0.7, "seen_horizon": Color(0.66, 0.78, 0.92, 1.0), "seen_zenith": Color(0.2, 0.42, 0.82, 1.0), "sky_curve": 0.45})
+			# A hot day's ground is still a watered AFL ground: the fine day's green with some
+			# dried patches (today's full straw look goes lime under the TV grade).
+			# (loaded, not named: a class name here pulls GameDB into the script's compile)
+			var vw = load("res://scripts/ui/match/VignetteWeather.gd")
+			var vg = load("res://scripts/ui/match/VignetteGround.gd")
+			var g: Array = vw.grass("", vg.GRASS, "day")
+			oval.turf.mat.set_shader_parameter("grass_a", g[0])
+			oval.turf.mat.set_shader_parameter("grass_b", g[1])
+			oval.turf.mat.set_shader_parameter("hot", float(OS.get_environment("HOTG")) if OS.get_environment("HOTG") != "" else 0.4)
+			oval.turf._copy_look()
 		# A wet day (run with WEATHER wet). The sky is cloud: grey light from all round, the sun
 		# only a soft brightness from above, so a man's shadow is a faint pool at his feet.
 		"overcast":
@@ -399,6 +550,8 @@ func _apply(oval, look: String) -> void:
 			sun.light_energy = 0.45
 			sun.light_color = Color(0.95, 0.97, 1.0)
 			sun.light_angular_distance = 12.0
+			# A full deck of grey cloud, darker bellies, no sun.
+			_sky_look(oval, {"cover": 1.0, "cloud_size": 1.6, "cloud_lit": Color(0.64, 0.66, 0.69), "cloud_dark": Color(0.4, 0.42, 0.45), "cloud_sun": 0.15, "target": 0.5})
 			sun.global_basis = Basis.looking_at(Vector3(0.2, -1.0, 0.35).normalized(), Vector3.UP)
 		# Rain haze: the air greys with distance, so the far stands fade and the near play stays
 		# clear (depth fog, cheap on a phone). HAZE= sets the density while tuning.
@@ -422,6 +575,10 @@ func _apply(oval, look: String) -> void:
 		# placed after the exposure is set so the streaks don't sway it).
 		"rain":
 			_rain(oval)
+			# At night the rain's low cloud hides the stars and holds the towers' light.
+			if env.sky != null and env.sky.sky_material is ShaderMaterial \
+					and env.sky.sky_material.get_shader_parameter("stars") != null 					and float(env.sky.sky_material.get_shader_parameter("stars")) > 0.0:
+				_sky_look(oval, {"stars": 0.0, "cover": 1.0, "cloud_size": 1.6, "cloud_lit": Color(0.03, 0.03, 0.035), "cloud_dark": Color(0.012, 0.012, 0.015), "rim_energy": 0.12})
 		_:
 			push_error("unknown look " + look)
 
