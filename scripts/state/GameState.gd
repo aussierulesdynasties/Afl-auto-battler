@@ -2664,7 +2664,11 @@ func begin_intake_draft() -> bool:
 	# arrives with its own generated list at its first season (see
 	# _start_next_season) rather than drafting into one - unless it is
 	# building its list (ExpansionBuild): then it has a seat and early picks.
-	var active := GameDB.active_clubs(season_year)
+	# A club merged away this off-season (Fitzroy, 1996) has no seat either:
+	# left in, it drafts into a list the rollover drops, and the draft, with
+	# one club more than intake_order names, shuffles its order (Draft).
+	var active := GameDB.active_clubs(season_year).filter(
+			func(c): return not LegacyRollover.merged_away(self, str(c)))
 	# The scouting list read this class with prospect_read_seed all year: draft
 	# night must use the same seed, or its marks, ranges and rank disagree.
 	var seed := prospect_read_seed()
