@@ -14,7 +14,9 @@ extends RefCounted
 ## while fit drags it down - stars most. It nudges match form (+/-3%) and an
 ## unhappy player asks 25% more to re-sign.
 
-const START_CONFIDENCE := 60
+## A new coach's board starts at 80 (director 2026-11-17: "start board
+## approval at 80", after the long tests showed sacking too common).
+const START_CONFIDENCE := 80
 ## The season line a Fair or Patient board uses (the board dial's
 ## poor_season_below, data/difficulty_dials.json): a season that ends under
 ## it counts as poor and moves the board towards the final warning or sack.
