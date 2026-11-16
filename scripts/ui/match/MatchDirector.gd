@@ -796,7 +796,7 @@ func _boundary_free_phases(k: int) -> Array:
 		var shape := _flight_shape("kick", d)
 		out.append({"t": "flight", "to": at, "dur": shape.x, "apex": shape.y,
 				"recv": -1, "mode": "stoppage"})
-	out += [{"t": "emit", "log": true}] + _take_free(_actor_id(events[k])) 			+ [{"t": "wait", "dur": 0.35, "ease": true}]
+	out += [{"t": "emit", "log": true}] + _take_free(_actor_id(events[k])) + [{"t": "wait", "dur": 0.35, "ease": true}]
 	return out
 
 
