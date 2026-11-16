@@ -3,8 +3,10 @@ extends RefCounted
 ## eternity"). A seeded career begun at St Kilda in 2010 rolls season after
 ## season past 2027: Gold Coast enter in 2011, GWS in 2012 and Tasmania in 2028
 ## as the sim's own expansion, every club keeps a full list, and the career is still the one
-## begun in 2010. About 18 seasons (some 7 minutes), so it runs nightly
-## (tools/ci_long_suites.txt). Run through tests/run_legacy_2010_long_tests.gd.
+## begun in 2010. Each off-season runs the drafts as the game does: a man his
+## real club delisted goes even from a short list, and the draft fills it
+## (#1676), so a rollover with no draft would leave the lists short. About 18
+## seasons, so it runs nightly (tools/ci_long_suites.txt). Run through tests/run_legacy_2010_long_tests.gd.
 
 const Ran := preload("res://tests/functions_ran.gd")
 
@@ -58,6 +60,30 @@ func _to_offseason() -> void:
 		GameState.advance()
 
 
+## The off-season's drafts as legacy_2000_long runs them: the National Draft
+## (his picks passed), then the Rookie Draft settled, so the list sizes read
+## after are the season's own.
+func _roll_through_draft() -> bool:
+	if not GameState.begin_intake_draft():
+		return GameState.start_next_season()
+	var draft: Draft = GameState.draft
+	var guard := 0
+	draft.auto_until_user_turn()
+	while not draft.is_finished() and guard < 4000:
+		guard += 1
+		if draft.is_user_turn() and draft.pass_block_reason() == "":
+			draft.user_pass()
+			continue
+		var cand := draft._best_ai_pick(draft.current_club())
+		if cand.is_empty() or not draft._draft_pick(draft.current_club(), cand):
+			draft._skip_current_pick()
+		draft.auto_until_user_turn()
+	if not GameState.finish_intake_draft():
+		return false
+	RookieList.settle(GameState)
+	return true
+
+
 func _test_rolls_past_2027() -> void:
 	_start()
 	_check(GameState.season_year == 2010 and GameDB.dataset_id == "2010",
@@ -76,7 +102,7 @@ func _test_rolls_past_2027() -> void:
 			sackings.append(from)
 			GameState.board["sacked"] = false
 			GameState.board["warned"] = false
-		if not GameState.start_next_season():
+		if not _roll_through_draft():
 			_check(false, "%d rolls into %d" % [from, from + 1])
 			return
 		var y := GameState.season_year
