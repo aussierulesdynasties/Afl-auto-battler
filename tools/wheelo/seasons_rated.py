@@ -8,8 +8,11 @@ Every AFL season 1987-2026 rated the director's way (interview 2026-11-15):
   < 2012  AFL Tables: the AFL position read from his known line and the
           season's numbers (model.knn_votes, the season's mix held to 2012+'s by
           model.calibrated_positions), skills from the stats the
-          season kept, overall from the skills by the weights measured on
-          2012+ (fit.py, ruling 19)
+          season kept, overall from the skills by the director's weights
+          (weights_pre2012.json), placed by rank on 2012-25's AFL Player
+          Rating: a season's mix is ranked among 2012-25's players of his
+          position, rated on the same stats, and takes the rating at that rank
+          (rank_maps)
 
 rated(year) -> {afltables_id: {"ovr", "gm", "pos", "skills", "wheelo"}}
 (2012+ AFL Tables players are matched to Wheelo by name and club.)
@@ -20,6 +23,7 @@ Stdlib only.
 """
 from __future__ import annotations
 
+import bisect
 import json
 import os
 import sys
@@ -63,6 +67,77 @@ def fits():
                 json.dump(f, fh, indent=1, sort_keys=True)
             _mem["fits"] = f
     return _mem["fits"]
+
+
+POS_KEY = dict(zip(W.POSITIONS, ["key_defender", "gen_defender", "midfielder", "mid_forward",
+                                  "gen_forward", "key_forward", "ruck"]))
+
+
+def weights():
+    if "weights" not in _mem:
+        with open(os.path.join(HERE, "weights_pre2012.json"), encoding="utf-8") as fh:
+            _mem["weights"] = json.load(fh)
+    return _mem["weights"]
+
+
+def recorded(skill_raws):
+    """The skills a set of players' stats feed: those that differ between them."""
+    return [k for k in M.SKILLS if len({round(s[k], 6) for s in skill_raws}) > 1]
+
+
+def mix_weights(tier, pos, rec):
+    """The director's weights for a position over the skills the tier records.
+    Where contested marks were not kept (before 1999) a mark is a mark: total
+    marks carry the contested-marking weight too (director 2026-11-16: Carey,
+    a centre half-forward, "marks up the ground")."""
+    wj = weights()
+    w = dict(wj["positions"][POS_KEY[pos]])
+    w.update(wj.get("era", {}).get(tier, {}).get(POS_KEY[pos], {}))
+    if "contested_marking" not in rec:
+        w["uncontested_marking"] = w.get("uncontested_marking", 0) + w.pop("contested_marking", 0)
+    return {k: w[k] for k in rec if w.get(k)}
+
+
+def mix(w, s):
+    tot = sum(w.values())
+    return sum(v * s[k] for k, v in w.items()) / tot if tot else 0.0
+
+
+def rank_maps():
+    """Per record tier and position: 2012-25's players (12+ games) rated on the
+    stats that tier kept, their mixes and AFL Player Ratings each sorted."""
+    if "rank" not in _mem:
+        path = os.path.join(CACHE, "rank_maps.json")
+        if os.path.exists(path):
+            with open(path, encoding="utf-8") as fh:
+                _mem["rank"] = json.load(fh)
+        else:
+            out = {}
+            for tier in F.TIERS:
+                smp = [(p, s, a) for p, s, a, g in F.tables_samples(tier) if g >= 12]
+                rec = recorded([s for _p, s, _a in smp])
+                out[tier] = {"recorded": rec, "positions": {}}
+                for pos in W.POSITIONS:
+                    w = mix_weights(tier, pos, rec)
+                    rows = [(mix(w, s), a) for p, s, a in smp if p == pos]
+                    out[tier]["positions"][pos] = [sorted(b for b, _a in rows), sorted(a for _b, a in rows)]
+            os.makedirs(CACHE, exist_ok=True)
+            with open(path, "w", newline="\n", encoding="utf-8") as fh:
+                json.dump(out, fh)
+            _mem["rank"] = out
+    return _mem["rank"]
+
+
+def by_rank(mixes, ratings, b):
+    """The rating at a mix's rank among 2012-25's (between two, in proportion)."""
+    i = bisect.bisect_left(mixes, b)
+    if i <= 0:
+        return ratings[0]
+    if i >= len(mixes):
+        return ratings[-1]
+    lo, hi = mixes[i - 1], mixes[i]
+    f = (b - lo) / (hi - lo) if hi > lo else 0.0
+    return ratings[i - 1] + f * (ratings[i] - ratings[i - 1])
 
 
 def tables_by_year():
@@ -138,7 +213,7 @@ def _rate_tables_year(year):
     rows = merged(year)
     sc = M.season_scale(list(rows.values()), keep)
     train = _position_train(tier)
-    fit = fits()[tier]
+    rm = rank_maps()[tier]
     ps, votes = [], []
     for pid, r in rows.items():
         if float(r["gm"] or 0) <= 0:
@@ -155,8 +230,9 @@ def _rate_tables_year(year):
     M.rate_season(ps, {})
     out = {}
     for p in ps:
-        f = fit.get(p["pos"])
-        o = M.overall_from(f, p["skill_raw"]) if f else W.APR_MIDDLE
+        mixes, ratings = rm["positions"][p["pos"]]
+        w = mix_weights(tier, p["pos"], rm["recorded"])
+        o = by_rank(mixes, ratings, mix(w, p["skill_raw"])) if mixes else W.APR_MIDDLE
         out[p["id"]] = {"ovr": round(max(W.OVR_MIN, min(W.OVR_MAX, o)), 2), "gm": int(p["m"]["games"]),
                         "pos": p["pos"], "skills": p["skills"]}
     return out
