@@ -880,7 +880,10 @@ func _pressure_phases(k: int) -> Array:
 	if ph.size() < 3:
 		return ph
 	var who := int((ph[0] as Dictionary)["who"])
-	return [ph[0], ph[1], {"t": "collect", "who": who}, {"t": "possess", "who": who}]
+	# A presser the chase left short: the spilled ball comes his way off the
+	# men nearest it, as a free's taker's does (seed 1 RIC v SYD k511, k545:
+	# 20-29 m off, the ball waited 1.8-2.5 s).
+	return [ph[0], ph[1], {"t": "collect", "who": who, "roll": true}, {"t": "possess", "who": who}]
 
 
 func _inside50_phases(k: int) -> Array:
@@ -1529,7 +1532,9 @@ func _lead_receivers(k: int, cur: int) -> void:
 		else:
 			t += _flight_shape("handball" if prev_kind == "handball" and d < 18.0 else "kick", d).x
 		var a := _actor_id(nev)
-		if a >= 0 and a != cur and not _busy.has(a) and int(_lead.get(a, j)) == j:
+		# His earliest touch comes first: a lead to a later one gives way
+		# (pauses over seeds 42 and 1-3: 121 with that lead kept, 102 without).
+		if a >= 0 and a != cur and not _busy.has(a) and int(_lead.get(a, j)) >= j:
 			var tok: Dictionary = tokens[a]
 			# The next two receivers always lead (as before); further ones start
 			# once the time left is about what they need to get there.
