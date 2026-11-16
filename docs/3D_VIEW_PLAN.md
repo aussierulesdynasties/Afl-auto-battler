@@ -176,5 +176,5 @@ vignettes. Nothing in step 4 starts before the football proof has passed and the
 | Freeze | in force from 2026-11-16 |
 | 1. Football proof | harness in `tools/balance.sh shape`; spec checked (rule 2.86); gap list above; fixes next (row 201) |
 | 2. The world and the look | under way (row 202): 2a daylight, tone, night lighting and wet games chosen, skies chosen (rules 2.80-2.84); 2d body chosen: MetaHuman (2.85); next a MetaHuman in our match, then 2b stadium, 2c crowd, 2d builds and faces, 2e cameras |
-| 3. Asset and animation plan | after step 2 (row 203) |
+| 3. Asset and animation plan | done (#1707) |
 | 4. Build | after 1 and 3 (rows 197, 198) |
