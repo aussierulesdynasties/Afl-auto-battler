@@ -7,12 +7,16 @@ extends RefCounted
 ##   GROW|seed|year|age band|players|mean in-season change (S to E)|share that rose
 ##   SUMMER|seed|year|age band|players|mean summer change (E to next S)|share that fell
 ##   BREAK|seed|year|breakouts this summer|clubs|per club|mean jump
+##   TRACE|seed|year|name|age|OVR at start|OVR at end|POT|career last|skill points bought past POT (held)
+##       eight players followed for the whole career: in each age band at the start, the best and
+##       the middle-rated; "next" start comes from the following season's line
 ## Args after the impl name: seeds (comma list) club seasons
 ## godot --headless --path . --script tools/audit/run_audit.gd -- league_growth_impl 1,2 MEL 10
 
 const BANDS := [[17, 22, "22 and under"], [23, 27, "23-27"], [28, 30, "28-30"], [31, 45, "31+"]]
 
 var seed_n := 1
+var traced: Array = []
 
 
 func _run_draft(d: Draft) -> void:
@@ -105,6 +109,41 @@ func _breakouts(year: int) -> void:
 	print("BREAK|%d|%d|%d|%d|%.2f|%.2f" % [seed_n, year, n, clubs, float(n) / maxf(1.0, clubs), jump / maxf(1.0, n)])
 
 
+func _find(id: String) -> Dictionary:
+	for code in GameState.season.lists:
+		for p in GameState.season.lists[code]:
+			if str(p["id"]) == id:
+				return p
+	return {}
+
+
+func _pick_traced() -> void:
+	traced = []
+	for b in BANDS:
+		var band: Array = []
+		for code in GameState.season.lists:
+			for p in GameState.season.lists[code]:
+				if _band(float(p.get("age", 25.0))) == str(b[2]):
+					band.append(p)
+		band.sort_custom(func(x, y): return int(x["overall"]) > int(y["overall"]))
+		if band.size() > 1:
+			traced.append(str(band[0]["id"]))
+			traced.append(str(band[band.size() / 2]["id"]))
+
+
+func _trace(year: int, start: Dictionary) -> void:
+	for id in traced:
+		var p := _find(id)
+		var over := 0.0
+		for k in p.get("over_gains", {}):
+			over += float(p["over_gains"][k])
+		if p.is_empty() or not start.has(id):
+			continue
+		print("TRACE|%d|%d|%s|%.0f|%d|%d|%d|%.1f|%d" % [seed_n, year, GameDB.player_display_name(p),
+				float(start[id][1]), int(start[id][0]), int(p["overall"]), int(p.get("potential", 0)),
+				float(p.get("career_last", 0.0)), int(over)])
+
+
 func run() -> void:
 	var args := OS.get_cmdline_user_args()
 	var seeds := str(args[1]).split(",") if args.size() > 1 else PackedStringArray(["1"])
@@ -124,12 +163,14 @@ func _career(club: String, seasons: int) -> void:
 	GameState.choose_real_club(club)
 	_run_draft(GameState.draft)
 	GameState.finish_intake_draft()
+	_pick_traced()
 	for s in range(seasons):
 		var year := GameState.season_year
 		var start := _snap(year, "S")
 		while not GameState.season.is_season_over():
 			GameState.advance()
 		var end := _snap(year, "E")
+		_trace(year, start)
 		_change("GROW", year, start, end, true)
 		if s == seasons - 1:
 			break
