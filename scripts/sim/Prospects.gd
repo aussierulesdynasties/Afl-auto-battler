@@ -132,6 +132,57 @@ const JUNIOR_TEAMS := [
 # ---------------------------------------------------------------------------
 # Projection
 # ---------------------------------------------------------------------------
+## A listed player with under FEW_GAMES senior games is rated from his real
+## draft pick on the prospect scale (rank_base_overall); with no pick, 80 in
+## 100 are bad (42-47), 18 role players (53-58) and 2 gems (63-68). His skills
+## are borrowed from a real player of his role at that level (project), and he
+## keeps the rating for life, growing only by XP, like a kid drafted in a save
+## (director 2026-11-17).
+const FEW_GAMES := 10
+const NO_PICK_TIERS := [[80, 42, 47], [18, 53, 58], [2, 63, 68]]
+
+
+## His senior games before the save: his AFL career, plus the data season's
+## games when the career column stops before it. -1 when his career is unknown.
+static func senior_games(p: Dictionary, data_season: int) -> int:
+	var c = p.get("career")
+	if not (c is Dictionary):
+		return int(p.get("gm", 0.0))
+	if not (c.get("unknown", []) as Array).is_empty():
+		return -1
+	var last := 0
+	for s in c.get("stints", []):
+		last = maxi(last, int(s[2]))
+	var games := int(c.get("games", 0))
+	if last < data_season:
+		games += int(p.get("gm", 0.0))
+	return games
+
+
+## The set rating of a player of few games: his pick on the prospect scale,
+## or a seeded roll on NO_PICK_TIERS.
+static func few_games_rating(p: Dictionary) -> float:
+	var pick := int(p.get("drafted_pick", 0))
+	if pick > 0:
+		return rank_base_overall(pick)
+	var rng := _rng_for("%s|nopick" % str(p.get("id", "")))
+	var roll := rng.randi_range(1, 100)
+	var acc := 0
+	for t in NO_PICK_TIERS:
+		acc += int(t[0])
+		if roll <= acc:
+			return float(rng.randi_range(int(t[1]), int(t[2])))
+	return float(NO_PICK_TIERS[0][1])
+
+
+## Rate a player of few games on few_games_rating: projected for life.
+static func project_few_games(p: Dictionary) -> void:
+	p["fixed_target"] = few_games_rating(p)
+	p["draft_rank"] = int(p.get("drafted_pick", 0))
+	project(p)
+	p.erase("fixed_target")
+
+
 ## Piecewise-linear rank taper with a floor; ranks beyond the list keep
 ## sliding down so generated classes and bubble names use the same curve.
 static func rank_base_overall(rank: int) -> float:
@@ -155,6 +206,9 @@ static func project(p: Dictionary) -> void:
 	var rank := int(p.get("draft_rank", 0))
 	var role := str(p.get("role", "MID"))
 	var target := rank_base_overall(rank)
+	# A listed player of few games is rated on a set number (few_games_rating):
+	# no draft night, no junior numbers, no age step or noise on it.
+	var fixed := float(p.get("fixed_target", 0.0))
 	p.erase("night_drop")
 	if DRAFT_NIGHT_SCALE != 1.0 and (p.has("class_shift") or bool(p.get("draft_class", false))):
 		var drop := target * (1.0 - DRAFT_NIGHT_SCALE)
@@ -196,6 +250,8 @@ static func project(p: Dictionary) -> void:
 		target += 1.0  # over-age means proven, at a small trade-off in ceiling
 	target += rng.randf_range(-1.5, 1.5)
 	target += float(p.get("class_shift", 0.0))
+	if fixed > 0.0:
+		target = fixed
 	var unscaled := target + float(p.get("night_drop", 0.0))
 	target = clampf(target, 38.0, 74.0)
 	if p.has("night_drop"):
@@ -494,14 +550,8 @@ static func age_player(p: Dictionary, _year: int) -> float:
 		p["sample"] = maxf(18.0, float(p.get("gm", 0.0)))
 	var a: Dictionary = p.get("attr", {})
 	if not a.is_empty():
-		# The summer neither adds nor takes (director 2026-11-17, Growth): his
-		# skills are refit to the rating he finished on, read at the bigger
-		# sample, as before. Re-rated as they stood, a kid of 1-8 games fell
-		# from the 40s to 30 and the 32-or-under rule retired him at 19.
 		var ov := int(p.get("overall", 50))
-		var role := str(p.get("role", "MID"))
-		p["attr"] = fit_attributes(a, role, float(ov), Ratings.effective_games(p))
-		p["overall"] = Ratings.rate_overall(p["attr"], role, Ratings.effective_games(p))
+		p["overall"] = Ratings.rate_overall(a, str(p.get("role", "MID")), Ratings.effective_games(p))
 		p["value"] = Ratings.salary_value(int(p["overall"]))
 		return float(int(p["overall"]) - ov)
 	return 0.0
