@@ -582,11 +582,20 @@ func _possession_phases(k: int) -> Array:
 			# the pack and let the logged winner collect it.
 			return [{"t": "flight", "to": loc, "dur": 0.55, "apex": 6.0, "h0": 1.0, "recv": a}] + tail
 		"free":
+			# The free's taker kicks it to the man who wins it: he has the ball
+			# in his hands first (seed 31 FRE v STK: the ball rolled loose
+			# through the free and flew off with nobody within 4 m of it).
+			# Played on to himself, he runs it to the spot instead.
+			var taker := _free_taker_of(k)
+			var take := _take_free(taker)
+			if taker >= 0 and taker == a:
+				return take + [{"t": "hold", "who": a, "carry": loc, "run": true,
+						"max": (ball["pos"] as Vector2).distance_to(loc) / float(tokens[a]["top"]) * 1.6 + 0.5}] + tail
 			# The ball comes to the mark as a kick would: 0.4 s when it is close,
 			# and a kick's own time when it is not (a fixed 0.4 s sent it 52 m
 			# from the boundary line in one frame at 8x).
 			var back := _flight_shape("kick", (ball["pos"] as Vector2).distance_to(loc))
-			return [{"t": "wait", "dur": 0.3, "ease": true},
+			return take + [{"t": "wait", "dur": 0.3, "ease": true},
 					{"t": "flight", "to": loc, "dur": maxf(0.4, back.x),
 						"apex": 1.5 if back.x <= 0.4 else back.y, "recv": a}] + tail
 		"loose":
@@ -787,7 +796,7 @@ func _boundary_free_phases(k: int) -> Array:
 		var shape := _flight_shape("kick", d)
 		out.append({"t": "flight", "to": at, "dur": shape.x, "apex": shape.y,
 				"recv": -1, "mode": "stoppage"})
-	out += [{"t": "emit", "log": true}, {"t": "wait", "dur": 0.35, "ease": true}]
+	out += [{"t": "emit", "log": true}] + _take_free(_actor_id(events[k])) 			+ [{"t": "wait", "dur": 0.35, "ease": true}]
 	return out
 
 
@@ -798,10 +807,13 @@ func _fifty_phases(k: int) -> Array:
 	var d := (ball["pos"] as Vector2).distance_to(at)
 	var who := _actor_id(events[k])
 	var out := []
-	if d > 1.0 and who >= 0 and str(ball["mode"]) == "held" and int(ball["holder"]) == who:
-		# He has the ball from the free: he carries it up to the new mark, as a
-		# player does. A ball flown 50 m ahead of him lay alone for six seconds
-		# while he ran to it (picture_truth, a 49 m penalty).
+	if d > 1.0 and who >= 0:
+		# He has the ball from the free (or takes it where it lies first): he
+		# carries it up to the new mark, as a player does. A ball flown 50 m
+		# ahead of him lay alone for six seconds while he ran to it
+		# (picture_truth, a 49 m penalty), and a ball flown with nobody kicking
+		# it breaks the oval's first rule.
+		out += _take_free(who)
 		out.append({"t": "hold", "who": who, "carry": at, "run": true, "mode": "stoppage",
 				"max": d / float(tokens[who]["top"]) * 1.6 + 0.5})
 	elif d > 1.0:
@@ -1050,8 +1062,29 @@ func _free_phases(k: int) -> Array:
 		var d := (ball["pos"] as Vector2).distance_to(loc)
 		if d > 1.0:
 			var shape := _flight_shape("handball" if pkind == "handball" and d < 18.0 else "kick", d)
-			out.append({"t": "flight", "to": loc, "dur": shape.x, "apex": shape.y})
-	return out + [{"t": "emit"}, {"t": "wait", "dur": 0.5, "ease": true}]
+			out.append({"t": "flight", "to": loc, "dur": shape.x, "apex": shape.y, "recv": _actor_id(events[k])})
+	# The umpire pays it, and the man it is paid to takes the ball: it never
+	# rolls on through the free with nobody's hands on it.
+	return out + [{"t": "emit"}] + _take_free(_actor_id(events[k])) + [{"t": "wait", "dur": 0.5, "ease": true}]
+
+
+## The free's taker goes to the ball and has it in his hands (nothing when he
+## already has it, or the log names nobody).
+func _take_free(who: int) -> Array:
+	if who < 0:
+		return []
+	if str(ball["mode"]) == "held" and int(ball["holder"]) == who:
+		return []
+	return [{"t": "collect", "who": who}, {"t": "possess", "who": who, "quiet": true}]
+
+
+## Who takes the free a possession beat restarts from: the man the free
+## before it was paid to (-1 when there is none).
+func _free_taker_of(k: int) -> int:
+	var pk := _prev_real(k)
+	if pk < 0 or not str((events[pk] as Dictionary).get("kind", "")) in ["free", "last_disposal", "out_on_full", "fifty"]:
+		return -1
+	return _actor_id(events[pk])
 
 
 ## Won back straight after a free kick: the free kick's set shot fell short
