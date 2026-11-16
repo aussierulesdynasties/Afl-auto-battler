@@ -913,6 +913,10 @@ func _beaten(def_side: int, fid: String) -> bool:
 	return n >= 3 and float(won) / float(n) >= 0.67
 
 
+## Below this a rematch is a rounding tie, not a better pairing.
+const REMATCH_MIN_GAIN := 0.0001
+
+
 ## Move a beaten key defender: the defender who gives `fid` the lowest mark
 ## chance (Matchups.mark_chance), never one in `held` (the loose man, calls
 ## the coach made himself). A defender already on another forward is swapped
@@ -943,7 +947,9 @@ func _rematch(def_side: int, fid: String, held: Dictionary) -> void:
 			if f2.is_empty():
 				continue
 			gain += Matchups.mark_chance(f2, c[2]) - Matchups.mark_chance(f2, cur)
-		if gain > 0.0:
+		# A real gain, not a rounding tie: two defenders the engine reads the
+		# same (both at the top of the scale) are no reason to move.
+		if gain > REMATCH_MIN_GAIN:
 			set_matchup(def_side, fid, str(c[1]))
 			return
 

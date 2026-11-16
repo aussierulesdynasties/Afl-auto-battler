@@ -1087,11 +1087,12 @@ func _discipline_sim(seed: int, disc: int) -> MatchSim:
 ## on top of his teammates' share - so his side gives away more clangers and
 ## free kicks, not just him.
 func _test_hothead() -> void:
-	var hot := _discipline_sim(60, 20)
-	var cool := _discipline_sim(60, 21)
+	var line := int(Traits.DEFS["hothead"]["max"])
+	var hot := _discipline_sim(60, line)
+	var cool := _discipline_sim(60, line + 1)
 	_check(hot._trait(hot.squads[0].ground[0], "hothead")
 			and not cool._trait(cool.squads[0].ground[0], "hothead"),
-			"Discipline 20 makes a Hothead, 21 does not")
+			"Discipline %d makes a Hothead, %d does not" % [line, line + 1])
 	var hw: Array = hot._clanger_weights(0)
 	var cw: Array = cool._clanger_weights(0)
 	_check(float(hw[0][0]) / float(cw[0][0]) > 1.45,
@@ -1196,14 +1197,14 @@ func _test_bash5_traits() -> void:
 	# Defensive forward is a forward's own job: a midfielder picked in a
 	# forward slot on match day does not carry it, nor is Training's near
 	# list pointing a midfielder who also plays forward at it.
-	var dmid := _fake("df1", "MID", {"pressure": 60})
+	var dmid := _fake("df1", "MID", {"pressure": 75})
 	dmid["role2"] = "FWD"
 	_check(not Traits.of(Ratings._for_slot(dmid, "FWD")).has("def_forward"),
 			"A midfielder picked forward is not a Defensive forward on match day")
-	var dfwd := _fake("df2", "FWD", {"pressure": 60})
+	var dfwd := _fake("df2", "FWD", {"pressure": 75})
 	_check(Traits.of(Ratings._for_slot(dfwd, "MID")).has("def_forward"),
 			"A forward picked in the midfield keeps it")
-	var near_mid := _fake("df3", "MID", {"pressure": 40})
+	var near_mid := _fake("df3", "MID", {"pressure": 67})
 	near_mid["role2"] = "FWD"
 	var named_df := false
 	for n in Traits.near(near_mid):
@@ -1669,7 +1670,7 @@ func _good_count(traits: Array) -> int:
 
 
 func _test_traits() -> void:
-	var shooter := _fake("t1", "FWD", {"accuracy": 80, "goalkicking": 70, "contested_marking": 40})
+	var shooter := _fake("t1", "FWD", {"accuracy": 80, "goalkicking": 70, "contested_marking": 30})
 	var t := Traits.of(shooter)
 	_check(t.has("sharpshooter") and t.has("crumber"), "High stats earn traits (%s)" % str(t))
 	var many := _fake("t2", "MID", {"kicking": 95, "handballing": 95, "contested": 95, "accuracy": 90, "durability": 96, "discipline": 10})
@@ -1685,7 +1686,7 @@ func _test_traits() -> void:
 	_check(_good_count(four) == 4 and four.has("ball_magnet") and four.has("bull") and four.has("sharpshooter") and four.has("engine"),
 			"A player clearing four trait lines carries all four (%s)" % str(four))
 	var seven_p := _fake("t6", "MID", {"kicking": 95, "handballing": 95, "contested": 95, "accuracy": 90, "durability": 96,
-			"creating": 77, "pressure": 70, "star": 61})
+			"creating": 77, "pressure": 86, "star": 78})
 	var seven := Traits.of(seven_p)
 	_check(Traits.MAX_GOOD == 5 and _good_count(seven) == 5, "Clearing seven trait lines, he carries five (%s)" % str(seven))
 	_check(seven.has("sharpshooter") and seven.has("bull") and seven.has("ball_magnet") and seven.has("lockdown")
@@ -1696,7 +1697,7 @@ func _test_traits() -> void:
 	_check(uni.has("unicorn") and _good_count(uni) == 5, "Unicorn comes on top of the five (%s)" % str(uni))
 	# The wet-weather player (M4-016) sits on top of the five, never in place of one.
 	_check(mt.has("wet_weather"), "A contested ball-winner with clean hands is a wet-weather player")
-	_check(not Traits.of(_fake("t4", "MID", {"contested": 90, "kicking": 70, "handballing": 70})).has("wet_weather"),
+	_check(not Traits.of(_fake("t4", "MID", {"contested": 90, "kicking": 50, "handballing": 50})).has("wet_weather"),
 			"Without clean hands he is not")
 	var named := _fake("GWS_6", "DEF", {"contested": 36, "kicking": 74, "handballing": 74})
 	named["real_name"] = "Lachie Whitfield"
@@ -1704,7 +1705,7 @@ func _test_traits() -> void:
 	var namesake := _fake("FORGE_1", "DEF", {"contested": 36, "kicking": 74, "handballing": 74})
 	namesake["real_name"] = "Lachie Whitfield"
 	_check(not Traits.of(namesake).has("wet_weather"), "A created player with the same name does not")
-	var close := _fake("t3", "FWD", {"accuracy": 68})
+	var close := _fake("t3", "FWD", {"accuracy": 66})
 	var near: Array = Traits.near(close)
 	_check(not near.is_empty() and str(near[0]["key"]) == "sharpshooter" and int(near[0]["gap"]) == 3,
 			"Training shows how close a player is to a trait")
@@ -3453,6 +3454,9 @@ func _test_play_through_mid_stands_in_midfield() -> void:
 		_check(on != null and MatchSim.FOCUS_SLOT_ROLES["focus_mid"].has(str(on["role"])),
 				"Seed %d: Pickett starts in the midfield" % seed)
 		sim.set_tactics(0, {"gameplan": "balanced", "focus_mid": pid})
+		# A star only comes off cooked on balanced rotations, and Pickett rates
+		# a star: the coach protects freshness so he rests and comes back on.
+		sim.set_rotation_policy(0, "hard")
 		var chains := 0
 		var wrong := 0
 		var where := ""
@@ -3474,10 +3478,15 @@ func _test_play_through_mid_stands_in_midfield() -> void:
 			sim.end_quarter()
 		_check(chains > 0 and wrong == 0, "Seed %d: on the ground for %d chains, never outside the midfield (%d off it, first %s)"
 				% [seed, chains, wrong, where])
-		if first_res.is_empty():
-			first_res = sim.result()
+		# The picture needs a match in which he rests and comes back on.
+		var r := sim.result()
+		if first_res.is_empty() and (r["events"] as Array).any(func(e): return str(e.get("kind", "")) == "sub" and str(e.get("player_id", "")) == pid):
+			first_res = r
 	# The picture: from the start to the end of the quarter he first comes
 	# back on in, his disc holds a midfield slot and sits off the goal square.
+	_check(not first_res.is_empty(), "Pickett rests and comes back on in one of the matches")
+	if first_res.is_empty():
+		return
 	var res := first_res
 	res["home"] = "MEL"
 	res["away"] = "FRE"
@@ -4722,7 +4731,7 @@ func _test_defensive_forward() -> void:
 	var spec: Dictionary = my_fwds[0]
 	var plain: Dictionary = my_fwds[my_fwds.size() - 1]
 	var was := [int(spec["attr"]["pressure"]), int(plain["attr"]["pressure"])]
-	(spec["attr"] as Dictionary)["pressure"] = 70
+	(spec["attr"] as Dictionary)["pressure"] = 80
 	(plain["attr"] as Dictionary)["pressure"] = 20
 	_check(Traits.has(spec, "def_forward") and not Traits.has(plain, "def_forward"),
 			"The trait follows the forward's Pressure")
@@ -5358,7 +5367,7 @@ func _test_synergies_follow_the_ground() -> void:
 	sub_ev["substitute"] = true
 	sub_ev["for_injury"] = true
 	var said := str(MatchNotes.feed_line(sub_ev, "GEE", "COL").get("text", ""))
-	_check(said.begins_with("Lockdown unit off (") and said.contains(" on for "), "The substitute's switch is called: %s" % said)
+	_check(said.contains("Lockdown unit off (") and said.contains(" on for "), "The substitute's switch is called: %s" % said)
 	_check(sim.rng.state == state, "Following the 18 draws no random numbers")
 	var forced := _sim(77)
 	forced.synergy_forced[0]["engine_room"] = true

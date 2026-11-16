@@ -378,15 +378,22 @@ func _test_rollover_2011_to_2012() -> void:
 			if GameState.tests_market(p, GameState.season.lists[code]):
 				testers.append([p, code])
 	_check(not testers.is_empty(), "Some %d players test the market (%d)" % [GAME_YEAR, testers.size()])
+	# 2012 picked three on the bench and a substitute, not today's four: a
+	# tester who is no longer in a 2012 side is out on selection, not on the
+	# free agency gate, so only the ones still in it are expected to walk.
 	var walk := {2011: 0, 2012: 0}
+	var in_side := 0
 	for y in walk:
 		EraRules.year = y
 		for t in testers:
 			if GameState.tests_market(t[0], GameState.season.lists[t[1]]):
 				walk[y] += 1
+			if y == 2012 and Contracts.needed(t[0], GameState.season.lists[t[1]]):
+				in_side += 1
 	EraRules.year = GameState.season_year
-	_check(walk[2011] == 0 and walk[2012] == testers.size(),
-			"The same players: none test the market under 2011's rules, all under 2012's (%s)" % str(walk))
+	_check(walk[2011] == 0 and in_side > 0 and walk[2012] == in_side,
+			"The same players: none test the market under 2011's rules, all still in a 2012 side do (%s of %d)"
+			% [str(walk), in_side])
 
 
 ## 2025 to 2026: the game's own rules take over.
