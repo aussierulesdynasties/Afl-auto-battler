@@ -1,6 +1,6 @@
 extends RefCounted
 ## A 2010 career never ends (director 2026-11-13: "campaigns can go for
-## eternity"). A seeded career begun at St Kilda in 2010 rolls season after
+## eternity"). A seeded career begun at Carlton in 2010 rolls season after
 ## season past 2027: Gold Coast enter in 2011, GWS in 2012 and Tasmania in 2028
 ## as the sim's own expansion, every club keeps a full list, and the career is still the one
 ## begun in 2010. Each off-season runs the drafts as the game does: a man his
@@ -14,7 +14,7 @@ var failures: Array[String] = []
 var checks := 0
 
 const SUITE_SEED := 2010
-const CLUB := "STK"
+const CLUB := "CAR"
 const PAST := 2028
 
 
@@ -96,12 +96,13 @@ func _test_rolls_past_2027() -> void:
 	while GameState.season_year < PAST:
 		var from := GameState.season_year
 		_to_offseason()
-		# The roll is under test, not the coach: a board may sack him with no
-		# job to go to (that ends a career), so keep him on and say so.
+		# A sacked coach is never put back in his job (director 2026-11-17: "never
+		# reappoint the same coach after sacking"). The test career is one that
+		# keeps its job to 2028 on the default board (director: "Pick a lasting
+		# career"), so a sacking is a failure, not waved off.
 		if GameState.is_sacked():
 			sackings.append(from)
-			GameState.board["sacked"] = false
-			GameState.board["warned"] = false
+		_check(not GameState.is_sacked(), "The Carlton board keeps its coach after %d" % from)
 		if not _roll_through_draft():
 			_check(false, "%d rolls into %d" % [from, from + 1])
 			return
@@ -118,7 +119,7 @@ func _test_rolls_past_2027() -> void:
 			if GameState.season.lists.get(code, []).size() < 30:
 				short.append("%s %d" % [code, GameState.season.lists.get(code, []).size()])
 		_check(y == from + 1 and GameDB.dataset_id == "2010" and GameState.my_club == CLUB,
-				"%d rolls into %d at St Kilda, still the 2010 career (%d, %s, set %s)" % [
+				"%d rolls into %d at Carlton, still the 2010 career (%d, %s, set %s)" % [
 					from, from + 1, y, GameState.my_club, GameDB.dataset_id])
 		_check(GameState.season.clubs.size() == want_clubs and short.is_empty(),
 				"%d: %d clubs with full lists (%d clubs; short: %s)" % [
@@ -128,7 +129,7 @@ func _test_rolls_past_2027() -> void:
 		for p in GameState.season.lists[code]:
 			if originals.has(str(p["id"])):
 				left += 1
-	print("Legacy 2010 long: reached %d; %d of the 2010 players still listed; board sackings waved off in %s"
+	print("Legacy 2010 long: reached %d; %d of the 2010 players still listed; board sackings in %s"
 			% [GameState.season_year, left, str(sackings)])
 	_check(GameState.season_year >= PAST, "The 2010 career reaches %d (%d)" % [PAST, GameState.season_year])
 	_check(GameState.season.clubs.has("GCS") and GameState.season.clubs.has("GWS")
