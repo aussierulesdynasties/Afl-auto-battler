@@ -68,6 +68,9 @@ func _bond_week() -> void:
 	Press.to("week")
 	GameState.set_preseason_action("bond")
 	GameState.preseason_advance()
+	# Week 3 ends on the time trial; the week's card waits behind it.
+	if GameState.preseason_stop() == "trial":
+		GameState.preseason_advance()
 
 
 func _test_deck() -> void:
