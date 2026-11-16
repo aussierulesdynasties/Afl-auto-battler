@@ -70,9 +70,9 @@ func _init(p_director: MatchDirector, p_players: Array) -> void:
 		_blend.append({})
 		_back.append(Vector2.INF)
 		_face.append(0.0)
+		_still.append(0.0)
 		_gap.append(Vector2.ZERO)
 		_rate.append(1.0)
-		_still.append(0.0)
 	var res = load(PAIRS)
 	if res is JSON:
 		_pairs = (res as JSON).data
