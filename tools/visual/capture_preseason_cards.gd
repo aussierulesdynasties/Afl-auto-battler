@@ -1,12 +1,11 @@
 extends SceneTree
-## The pre-season card stop (row 39, slice 5) for the lead's check and the director's look.
-## Needs a real renderer:
+## The bonding card stop (rule 69a) for the director's look. Needs a real renderer:
 ##   godot --path . --script tools/visual/capture_preseason_cards.gd -- --out /tmp/precards --club FRE [--size 1280x720]
-## Writes <out>_<NN>_<card>.png for each of the 11 cards (01_recruit ... 11_heated, and
-## 06b_knee_soon: the running-again card for a player back next week anyway), and
-## <out>_<NN>_<card>_low.png scrolled to the foot when the card runs past the screen. Each
-## stop is the real pre-season screen after week 3, with the card and its player forced so
-## it is the one on show.
+## Writes <out>_<NN>_<card>.png for each of the nine bonding cards (01_camp ...
+## 09_heated), and <out>_<NN>_<card>_low.png scrolled to the foot when the card
+## runs past the screen. Each stop is the real pre-season screen after a Team
+## bonding week, with the card forced so it is the one on show (three players
+## marked Indigenous, so the cultural day can come).
 
 var W := 390
 var H := 844
@@ -66,30 +65,21 @@ func _run() -> void:
 	await _frames(13)
 	state.start_season(club, db.club_list(club))
 	state.open_preseason()
-	state.preseason_advance()   # weeks 1 to 3: the time trial
-	state.preseason["trial_seen"] = true
-	var trial: Dictionary = state.preseason_trial()
-	var recruit: Dictionary = state.my_list[6]
-	recruit["joined"] = state.season_year - 1
-	var senior: Dictionary = state.my_list[2]
-	senior["contract_years"] = 1
-	senior["age"] = maxf(29.0, float(senior.get("age", 29.0)))
-	var young: Dictionary = state.my_list[12]
-	young["age"] = 20.0
-	young["potential"] = int(young.get("overall", 60)) + 10
-	var knee: Dictionary = state.my_list[9]
-	knee["injury_weeks"] = 3
-	knee["injury_kind"] = "knee"
-	# Back for next week's training anyway: the card still comes (director 2026-11-08).
-	var soon: Dictionary = state.my_list[10]
-	soon["injury_weeks"] = 1
-	soon["injury_kind"] = "hamstring"
-	var kid: Dictionary = state.list_player(str((trial["best"] as Array)[0]))
-	var star: Dictionary = state.list_player(str((trial["worst"] as Array)[0]))
-	var shots := [["pre_recruit_behind", recruit, "01_recruit"], ["pre_contract_talk", senior, "02_contract"],
-			["pre_bulking_up", young, "03_bulking"], ["pre_camp", {}, "04_camp"], ["pre_leaders_vote", {}, "05_leaders"],
-			["pre_knee_return", knee, "06_knee"], ["pre_knee_return", soon, "06b_knee_soon"], ["pre_flag_hangover", {}, "07_flag"], ["pre_kid_flying", kid, "08_kid"],
-			["pre_star_last", star, "09_starlast"], ["pre_members_open", {}, "10_members"], ["pre_sim_heated", {}, "11_heated"]]
+	# Past the meetings and the plan, then a week of Team bonding.
+	state.preseason_meetings_done()
+	state.set_preseason_plan("develop")
+	var guard := 0
+	while state.preseason_stop() != "week" and guard < 10:
+		guard += 1
+		state.preseason_advance()
+	state.set_preseason_action("bond")
+	state.preseason_advance()
+	for q in state.my_list.slice(0, 3):
+		q["indigenous"] = true
+	var shots := [["bond_away_camp", {}, "01_camp"], ["bond_talent_quest", {}, "02_talent"],
+			["bond_community_week", {}, "03_community"], ["bond_beach_day", {}, "04_beach"],
+			["bond_cultural_day", {}, "05_cultural"], ["bond_leadership_workshop", {}, "06_workshop"],
+			["bond_families_day", {}, "07_families"], ["pre_leaders_vote", {}, "08_leaders"], ["pre_sim_heated", {}, "09_heated"]]
 	for shot in shots:
 		var card: Dictionary = state.story_card(str(shot[0]), shot[1])
 		print(shot[2], " card: ", card.get("title", "EMPTY"))

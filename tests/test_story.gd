@@ -3143,8 +3143,8 @@ func _test_every_choice_has_both_sides() -> void:
 	var ids := {}
 	for t in deck:
 		ids[str(t["id"])] = true
-	_check(deck.size() >= 135 and ids.has("intl_homesick") and ids.has("pre_knee_return"),
-			"The check sees the whole deck, the international and pre-season cards included (%d cards)" % deck.size())
+	_check(deck.size() >= 130 and ids.has("intl_homesick") and ids.has("bond_away_camp"),
+			"The check sees the whole deck, the international and bonding cards included (%d cards)" % deck.size())
 	var view := FileAccess.get_file_as_string("res://scripts/ui/EventCardView.gd")
 	_check(view.contains("StoryEngine.stakes_lines(") and not view.contains("card_lines("),
 			"The card on screen prints stakes_lines, the lines this check reads")
@@ -3170,6 +3170,10 @@ func _test_every_choice_has_both_sides() -> void:
 			var c := _has_mark(screen, StoryEngine.COST_MARK)
 			if g and c:
 				continue
+			# A bonding card's small choice is a gain alone (rule 69a: "a small
+			# choice (gain only) and a big choice (gain plus a cost)").
+			if g and (t.get("phase", []) as Array).has("bonding"):
+				continue
 			if c and _has_mark(StoryEngine.card_lines(full, i), StoryEngine.GAIN_MARK):
 				spared.append(key)
 			else:
@@ -3179,7 +3183,7 @@ func _test_every_choice_has_both_sides() -> void:
 	_check(spared.is_empty(), "No choice's only gain is the other choice's cost it spares (%s)"
 			% ", ".join(PackedStringArray(spared)))
 	var both := n - short.size() - spared.size()
-	_check(n >= 290 and both == n, "%d of %d choices show a gain and a cost on screen" % [both, n])
+	_check(n >= 280 and both == n, "%d of %d choices show a gain and a cost on screen" % [both, n])
 	_check(nothing.is_empty(), "Every choice has a lasting effect, not only a story flag (%s)"
 			% ", ".join(PackedStringArray(nothing)))
 	# The check bites: a gain-only choice shows no Cost line...

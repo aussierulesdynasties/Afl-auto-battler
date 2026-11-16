@@ -13,7 +13,6 @@ extends SceneTree
 var W := 390
 var H := 844
 var _seed := 4127
-var _risk := -1.0
 var _real := false
 var _want_win := -999
 
@@ -50,10 +49,6 @@ func _run() -> void:
 			out = value
 		if flag == "--club":
 			club = value
-		if flag == "--risk":
-			# A bigger Heavy-week risk than the game's, so the "Hurt in training"
-			# list is sure to show (for the look only; never a balance read).
-			_risk = float(value)
 		if flag == "--art" and value == "off":
 			# The stops without their pictures, as they were (the before shot).
 			load("res://scripts/ui/UiArt.gd").set("dir", "res://assets/ui/none")
@@ -103,8 +98,9 @@ func _run() -> void:
 		if _want_win == -999:
 			break
 		var g := 0
-		while state.preseason_active() and state.preseason_stop() != "papers" and g < 12:
+		while state.preseason_active() and state.preseason_stop() != "papers" and g < 30:
 			g += 1
+			_answer(state)
 			state.preseason_advance()
 		var margin := int((state.preseason.get("practice_margins", {}) as Dictionary).get(club, -999))
 		print("seed ", _seed, " practice margin ", margin)
@@ -115,15 +111,14 @@ func _run() -> void:
 	state.set_setting("seen_weekly_loop_intro", true)
 	state.set_setting("seen_training_intro", true)
 	state.set_setting("seen_preseason_intro", true)
-	if _risk >= 0.0:
-		load("res://scripts/sim/PreSeason.gd").data()["heavy_week_injury"] = _risk
 	for m in state.season.fixture[0]:
 		if str(m["home"]) == club or str(m["away"]) == club:
 			print("round 1: ", m["home"], " v ", m["away"])
 	# Press on to week 8.
 	var guard := 0
-	while state.preseason_active() and state.preseason_stop() != "papers" and guard < 12:
+	while state.preseason_active() and state.preseason_stop() != "papers" and guard < 30:
 		guard += 1
+		_answer(state)
 		state.preseason_advance()
 	print("stop ", state.preseason_stop())
 	if _real:
@@ -231,3 +226,17 @@ func _press(node_name: String) -> void:
 	else:
 		print("MISSING ", node_name)
 	await _frames(3)
+
+
+## A stop that waits on a choice, answered as a coach who takes what is there
+## (rule 69a): the meetings as they stand, the club's own fitness plan, and
+## each week the first action open.
+func _answer(state) -> void:
+	if state.preseason_stop() == "meetings":
+		state.preseason_meetings_done()
+	if state.preseason_stop() == "plan":
+		state.set_preseason_plan(state.fitness_plan(state.my_club))
+	if state.preseason_stop() == "week" and state.preseason_next().is_empty():
+		var open: Array = state.preseason_actions()
+		if not open.is_empty():
+			state.set_preseason_action(str(open[0]))

@@ -74,8 +74,9 @@ func _run() -> void:
 	state.open_preseason()
 	# On to the practice stop: the earlier stops are simmed.
 	var guard := 0
-	while state.preseason_active() and state.preseason_stop() != "practice" and guard < 12:
+	while state.preseason_active() and state.preseason_stop() != "practice" and guard < 30:
 		guard += 1
+		_answer(state)
 		state.preseason_advance()
 	if _opp != "":
 		(state.preseason["practice"] as Dictionary)["opponent"] = _opp
@@ -165,3 +166,17 @@ func _press(node_name: String) -> void:
 	else:
 		print("MISSING ", node_name)
 	await _frames(3)
+
+
+## A stop that waits on a choice, answered as a coach who takes what is there
+## (rule 69a): the meetings as they stand, the club's own fitness plan, and
+## each week the first action open.
+func _answer(state) -> void:
+	if state.preseason_stop() == "meetings":
+		state.preseason_meetings_done()
+	if state.preseason_stop() == "plan":
+		state.set_preseason_plan(state.fitness_plan(state.my_club))
+	if state.preseason_stop() == "week" and state.preseason_next().is_empty():
+		var open: Array = state.preseason_actions()
+		if not open.is_empty():
+			state.set_preseason_action(str(open[0]))
