@@ -2945,38 +2945,56 @@ func _test_contacts(res: Dictionary) -> void:
 	var scoop_ball := Vector2.INF   # where his hands go down (the ground_ball touch's spot)
 	var off_hands := 0.0            # worst gap between that spot and the ball as it comes off them
 	var scoop_who := -1
+	var scoop_kind := MatchDirector.SCOOP_AT_PACE
 	var scoops := 0
 	var slow := []        # scoops he came into short of the scoop's pace
-	var off_line := []    # fumbles off a scoop knocked back or across him, not on along his line
+	var near_scoops := 0  # scoops gathered from a stand (the near gather)
+	var off_line := []    # fumbles off a scoop at pace knocked back or across him, not on along his line
 	var knock_who := -1   # the man whose scoop just ended, until the ball comes off him
 	var knocks := 0
 	var scrap_knocks := 0
 	var scrap_bare := 0   # scrap knocks with no man's scoop before them
-	var knocked_before := 0.0
+	var stops := []       # men whose speed dropped more than a step's braking as they went down for it
+	var stands := []      # men stood still beside a loose ball in a scrap (director 2026-11-16)
+	var overs := []       # men who ran straight across a loose ball upright, not going down for it
+	var over := {}
+	var still := {}
+	var last_scoop := {}
+	var scrap_s := 0.0
+	var drop_ok := MatchMotion.BRAKE * 0.05 * MatchDirector.TEMPO + MatchDirector.SCOOP_EASE + 0.01
 	while not d.idle() and guard < 120000:
 		guard += 1
+		var speeds := []
+		for t in d.tokens:
+			speeds.append((t["vel"] as Vector2).length())
 		var ball_before: Vector2 = d.ball["pos"]
 		var speed_before: float = (d.ball.get("vel", Vector2.ZERO) as Vector2).length()
+		# (A close fumble can knock it as little as FUMBLE_CLOSE: too small a push to read off its speed,
+		# so the scrap's own tally counts it, read off the phase it happened in, which may end in the same step.)
+		var ph_before: Dictionary = d._phases[d._pi] if d._pi < d._phases.size() else {}
+		var knocked_before := float(ph_before.get("_knocked", 0.0))
 		d.advance(0.05)
 		var ph: Dictionary = d._phases[d._pi] if d._pi < d._phases.size() else {}
-		var knocked := float(ph.get("_knocked", 0.0))
-		if knocked > knocked_before:
+		var scrap_knock := float(ph_before.get("_knocked", 0.0)) > knocked_before \
+				or (not is_same(ph, ph_before) and float(ph.get("_knocked", 0.0)) > 0.0)
+		if scrap_knock:
 			scrap_knocks += 1
 			if knock_who < 0 and not scoop_ball.is_finite():
 				scrap_bare += 1
-		knocked_before = knocked
 		if scoop_ball.is_finite() and not (d._pi < d._phases.size() and (d._phases[d._pi] as Dictionary).has("scoop")):
 			knock_who = scoop_who
 		# The knock: the ball jumps off his hands (it may still be rolling the last of the way in).
 		if knock_who >= 0 and str(d.ball["mode"]) == "loose" \
-				and (d.ball.get("vel", Vector2.ZERO) as Vector2).length() > speed_before + 1.0:
+				and (scrap_knock or (d.ball.get("vel", Vector2.ZERO) as Vector2).length() > speed_before + 1.0):
 			var bv: Vector2 = d.ball["vel"]
 			var line: Vector2 = d.tokens[knock_who]["vel"]
 			knocks += 1
 			# A loose ball rolls the last of the way into his hands, and comes off them there.
 			off_hands = maxf(off_hands, ball_before.distance_to(scoop_ball))
 			scoop_ball = Vector2.INF
-			if line.length() <= 0.5 or absf(line.angle_to(bv)) > MatchDirector.KNOCK_ON + 0.05:
+			# (Gathered from a stand, crouched over it, it can come off his hands any way.)
+			if scoop_kind == MatchDirector.SCOOP_AT_PACE \
+					and (line.length() <= 0.5 or absf(line.angle_to(bv)) > MatchDirector.KNOCK_ON + 0.05):
 				off_line.append("%d deg at %.1f m/s" % [roundi(rad_to_deg(absf(line.angle_to(bv)))), line.length()])
 			knock_who = -1
 		for c in d.contacts:
@@ -2984,9 +3002,17 @@ func _test_contacts(res: Dictionary) -> void:
 				scoop_ball = c["at"]
 				scoop_who = int(c["who"])
 				scoops += 1
+				# The scoop at pace is taken at its pace; the near gather starts from a stand.
 				var v := (d.tokens[scoop_who]["vel"] as Vector2).length()
-				if v < MatchDirector.SCOOP_SPEED * 0.8:
-					slow.append("%.1f m/s" % v)
+				scoop_kind = int(d.tokens[scoop_who].get("scoop_k", MatchDirector.SCOOP_AT_PACE))
+				last_scoop[scoop_who] = d.time
+				if float(speeds[scoop_who]) - v > drop_ok:
+					stops.append("%.1f to %.1f m/s" % [float(speeds[scoop_who]), v])
+				if scoop_kind == MatchDirector.SCOOP_AT_PACE:
+					if v < MatchDirector.SCOOP_SPEED * 0.8:
+						slow.append("%.1f m/s" % v)
+				else:
+					near_scoops += 1
 			kinds[c["kind"]] = int(kinds.get(c["kind"], 0)) + 1
 			var who := int(c["who"])
 			if c["kind"] == &"bounce":
@@ -2999,10 +3025,35 @@ func _test_contacts(res: Dictionary) -> void:
 			if not (c["at"] as Vector2).is_finite():
 				bad.append("%s nowhere" % c["kind"])
 		d.contacts.clear()
+		# In a scrap (spilled, fumbled, or the winner down for it), nobody on his feet stands
+		# within 2 m of the ball for 0.4 s, other than a man just gathering it.
+		var sp: Dictionary = d._phases[d._pi] if d._pi < d._phases.size() else {}
+		var st := str(sp.get("t", ""))
+		var scrap: bool = str(d.ball["mode"]) in ["loose", "dead"] and int(d.ball.get("holder", -1)) < 0 				and (st in ["spill", "fumble"] or (st == "collect" and sp.get("pace", false)) or (st == "wait" and sp.has("scoop")))
+		if scrap:
+			scrap_s += 0.05
+		for t in d.tokens:
+			var id := int(t["id"])
+			if scrap and (t["pos"] as Vector2).distance_to(d.ball["pos"]) < 2.0 and (t["vel"] as Vector2).length() < 0.6 					and d._on_feet(id) and d.time - float(last_scoop.get(id, -99.0)) >= 1.5 * MatchDirector.TEMPO:
+				still[id] = float(still.get(id, 0.0)) + 0.05
+				if absf(float(still[id]) - 0.4) < 0.025:
+					stands.append("%.0f s, %s" % [d.time / MatchDirector.TEMPO, st])
+			else:
+				still[id] = 0.0
+			# Nor does anyone run straight across it upright: only a man going down for it is on top of it.
+			var on_it: bool = scrap and (t["pos"] as Vector2).distance_to(d.ball["pos"]) < 0.6 \
+					and (t["vel"] as Vector2).length() > 3.0 and d._on_feet(id) \
+					and d.time - float(last_scoop.get(id, -99.0)) >= 1.5 * MatchDirector.TEMPO
+			if on_it and not over.get(id, false):
+				overs.append("%.0f s, %s, %.1f m/s" % [d.time / MatchDirector.TEMPO, st, (t["vel"] as Vector2).length()])
+			over[id] = on_it
 	_check(off_hands <= 0.25, "A loose ball comes off a man's hands where they go down for it (worst %.2f m off)" % off_hands)
-	_check(scoops > 0 and slow.is_empty(), "A spilled ball's man goes down for it at pace, not from a stop (%d scoops, slow: %s)" % [scoops, slow.slice(0, 5)])
+	_check(scoops > near_scoops and slow.is_empty(), "A man on the run goes down for a loose ball at pace, not from a stop (%d scoops, %d gathered from a stand, slow: %s)" % [scoops, near_scoops, slow.slice(0, 5)])
+	_check(stops.is_empty(), "A man goes down for a loose ball near its own pace, never stopping dead from a run (%d of %d: %s)" % [stops.size(), scoops, stops.slice(0, 5)])
+	_check(scrap_s > 10.0 and stands.is_empty(), "Nobody stands still beside a loose ball in a scrap (%d in %.0f s: %s)" % [stands.size(), scrap_s, stands.slice(0, 5)])
+	_check(scrap_s > 10.0 and overs.is_empty(), "Nobody runs straight across a loose ball upright in a scrap (%d: %s)" % [overs.size(), overs.slice(0, 5)])
 	_check(scrap_bare == 0, "A loose ball in a scrap moves only off a man's hands, never on its own (%d knocks, %d with no man)" % [scrap_knocks, scrap_bare])
-	_check(scoops > 0 and knocks == scoops and off_line.is_empty(), "A fumble on the run knocks the ball on along his line (%d scoops, %d knocks, off it: %s)" % [scoops, knocks, off_line.slice(0, 5)])
+	_check(scoops > 0 and knocks == scoops and off_line.is_empty(), "A fumble on the run at pace knocks the ball on along his line (%d scoops, %d knocks, off it: %s)" % [scoops, knocks, off_line.slice(0, 5)])
 	for k in [&"kick", &"handball", &"mark", &"gather", &"handball_receive", &"tackle", &"bounce", &"ruck_tap",
 			&"ground_ball"]:
 		_check(int(kinds.get(k, 0)) > 0, "A full match records %s touches (%d)" % [k, int(kinds.get(k, 0))])
