@@ -344,6 +344,15 @@ func _test_build_and_entry() -> void:
 
 
 func _test_second_year_and_end() -> void:
+	# The sign-on money follows what the signings are paid. A signing whose deal runs
+	# out can sign anywhere, and once they all have, the money stops; that turns on
+	# the market of the run. Keep them on long deals so the step-down is what's tested.
+	var kept := 0
+	for p in GameState.season.lists.get("TAS", []):
+		if (GameState.expansion["TAS"]["signings"] as Array).has(str(p["id"])):
+			p["contract_years"] = maxi(int(p.get("contract_years", 0)), 5)
+			kept += 1
+	_check(kept > 0, "Tasmania's signings are on its list in 2028 (%d)" % kept)
 	# 2028 -> 2029: the second draft carries one extra pick, pick 5.
 	GameState.season.round_index = GameState.season.fixture.size()
 	_check(GameState.begin_intake_draft(), "The 2028 draft opens")
