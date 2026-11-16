@@ -465,7 +465,13 @@ func _finished_draft(cover: bool) -> Control:
 		var board: Array = d.board(want, "", "", "overall", true)
 		board = board.filter(func(p): return d.can_pick_player(p))
 		if not cover:
-			board = board.filter(func(p): return str(p["role"]) != "DEF" and str(p.get("role2", "")) != "DEF")
+			# The pool holds barely more players than the draft's picks, so
+			# the last non-defenders can be gone before your last turn; a
+			# defender then fills the place, and the list stays short at
+			# defence while it holds fewer than the match-day side needs.
+			var others: Array = board.filter(func(p): return str(p["role"]) != "DEF" and str(p.get("role2", "")) != "DEF")
+			if not others.is_empty():
+				board = others
 		if board.is_empty():
 			break
 		board.sort_custom(func(a, b): return int(a["value"]) < int(b["value"]))

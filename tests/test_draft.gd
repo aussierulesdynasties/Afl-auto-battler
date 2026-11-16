@@ -830,7 +830,13 @@ func _test_asset_valuation() -> void:
 			and is_equal_approx(real._eval_certainty(at_rank[1]), Draft.AI_EVAL_TOP_SHARE)
 			and is_equal_approx(real._eval_certainty(at_rank[Draft.AI_EVAL_FULL_RANK + 5]), 1.0),
 			"Scouting disagreement shrinks for the consensus best, in full further down")
-	_check(is_zero_approx(real._vorp_weight()), "At the first pick scarcity counts for nothing")
+	_check(is_zero_approx(real._vorp_weight()) and is_zero_approx(real._vorp_weight("", "RUCK")),
+			"At the first pick scarcity counts for nothing, rucks included")
+	# One ruck plays at a time: a ruck's edge counts in full from round two.
+	real.pick_index = real.clubs.size() * Draft.AI_VORP_FULL_ROUNDS_RUCK
+	_check(is_equal_approx(real._vorp_weight("", "RUCK"), Draft.AI_VORP_WEIGHT)
+			and real._vorp_weight("", "MID") < Draft.AI_VORP_WEIGHT,
+			"From round two a ruck's scarcity counts in full, other positions' still ramping")
 	real.pick_index = real.clubs.size() * Draft.AI_VORP_FULL_ROUNDS
 	_check(is_equal_approx(real._vorp_weight(), Draft.AI_VORP_WEIGHT), "From the third round it counts in full")
 	# "Credible" is the consensus top eight, or anyone within 4 worth points of

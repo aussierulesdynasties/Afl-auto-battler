@@ -113,8 +113,15 @@ func _test_league_draft_balance() -> void:
 		_check(gawn_pick > 18 or d.club_horizon(gawn_club) == "now",
 				"Max Gawn (35) goes in round one only to a club going for the flag now (pick %d, %s)" % [gawn_pick, d.club_horizon(gawn_club)])
 		_check(young_ruck_pick <= 36, "The best ruck under 30 goes in the first two rounds (pick %d)" % young_ruck_pick)
+		# Pick one is elite: a star now, or, for a club building (director,
+		# 2026-10-07: "building clubs favour development"), a kid with an elite
+		# ceiling. Main's own drafts take a kid first in 7 of 20 seeds.
 		var first: Dictionary = GameDB.player_by_id(str(d.pick_history[0]["player_id"]))
-		_check(int(first["overall"]) >= 88, "Pick one is an elite player (%d)" % int(first["overall"]))
+		var first_club := str(d.pick_history[0]["club"])
+		_check(int(first["overall"]) >= 88
+				or (d.club_horizon(first_club) == "build" and int(first.get("potential", 0)) >= 88),
+				"Pick one is an elite player, or an elite prospect for a club building (%s %d, POT %d, %s)"
+				% [str(first["real_name"]), int(first["overall"]), int(first.get("potential", 0)), d.club_horizon(first_club)])
 
 
 ## Rival clubs judge players through their own scouting opinion (Draft

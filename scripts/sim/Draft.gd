@@ -1041,12 +1041,18 @@ const AI_LIST_SHARE := {"RUCK": 0.08, "MID": 0.30, "DEF": 0.33, "FWD": 0.33}
 ## first pick, in both drafts (row 37, director 2026-11-03), so a club takes
 ## the best player early and reaches for a thin position late.
 const AI_VORP_FULL_ROUNDS := 2
+## One ruck plays at a time and good ones are few, so in the League Draft a
+## ruck's edge over the next one counts in full a round sooner (still nothing
+## at the first pick): the best ruck under 30 goes by pick 36 (director,
+## 2026-10-07), which the ratings against each position (row 200) put at risk.
+const AI_VORP_FULL_ROUNDS_RUCK := 1
 
 
-func _vorp_weight(_code := "") -> float:
+func _vorp_weight(_code := "", role := "") -> float:
 	if clubs.is_empty():
 		return AI_VORP_WEIGHT
-	var ramp := float(pick_index) / float(clubs.size() * AI_VORP_FULL_ROUNDS)
+	var rounds := AI_VORP_FULL_ROUNDS_RUCK if role == "RUCK" and not intake_mode else AI_VORP_FULL_ROUNDS
+	var ramp := float(pick_index) / float(clubs.size() * rounds)
 	return AI_VORP_WEIGHT * clampf(ramp, 0.0, 1.0)
 
 
@@ -1102,7 +1108,7 @@ func _ai_score(code: String, p: Dictionary, detail = null) -> float:
 		# filling; for depth and surplus picks it leans on the consensus.
 		var worth := base + err * need
 		var over := minf(_vorp_cap(code), worth - _replacement(code, role))
-		var s := (worth + _vorp_weight(code) * over) * need * float(entry[1])
+		var s := (worth + _vorp_weight(code, role) * over) * need * float(entry[1])
 		if s > best and detail is Dictionary:
 			detail["role"] = role
 			detail["need"] = need

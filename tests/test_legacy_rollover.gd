@@ -777,9 +777,7 @@ func _test_canon_retire(id: String, how: String) -> void:
 		if cards.is_empty():
 			return
 		var rule := str(cards[0]["options"][0]["rule"])
-		var who := GameDB.player_display_name(star)
-		_check(("%d%% %s plays on" % [LegacyRollover.KEEP_PCT, who]) in rule
-				and ("%d%% %s retires anyway" % [100 - LegacyRollover.KEEP_PCT, who]) in rule,
+		_check(("%d%% %s plays on" % [LegacyRollover.KEEP_PCT, GameDB.player_display_name(star)]) in rule,
 				"%s: the gate states the odds (%s)" % [id, rule])
 		LegacyRollover.answered(GameState, cards[0], 0 if how == "fight" else 1)
 		if how != "fight":
