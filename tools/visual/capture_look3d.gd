@@ -101,6 +101,7 @@ func _run() -> void:
 				oval.aim_wing(UP, BACK * 1.3)
 			else:
 				oval.aim_close()
+			_rain_place(oval)
 			for i in range(3):
 				await process_frame
 			await _save(oval, out, "look_%s_%s_%s_%s" % [look, slot, weather, cam])
@@ -146,6 +147,7 @@ func _reset(oval, weather: String, slot: String) -> void:
 	oval.get_viewport().screen_space_aa = Viewport.SCREEN_SPACE_AA_DISABLED
 	oval._sun.directional_shadow_max_distance = 160.0
 	oval._sun.visible = true
+	oval._sun.light_angular_distance = 0.0
 	for m in _crowds(oval):
 		if m.material_override.has_meta("orig"):
 			m.material_override = m.material_override.get_meta("orig")
@@ -385,8 +387,94 @@ func _apply(oval, look: String) -> void:
 			_lamp(oval, 0.0, 78.0, 0.9, true, 14.0)
 			for az in range(0, 360, 45):
 				_lamp(oval, float(az), 38.0, 0.16, false, 1.0)
+		# A wet day (run with WEATHER wet). The sky is cloud: grey light from all round, the sun
+		# only a soft brightness from above, so a man's shadow is a faint pool at his feet.
+		"overcast":
+			_sky(oval, _amb(1.4))
+			var sm: ShaderMaterial = env.sky.sky_material
+			sm.set_shader_parameter("zenith", Color(0.55, 0.57, 0.6))
+			sm.set_shader_parameter("horizon", Color(0.66, 0.67, 0.69))
+			sm.set_shader_parameter("bowl", Color(0.16, 0.16, 0.17))
+			sm.set_shader_parameter("grass", Color(0.14, 0.2, 0.1))
+			sun.light_energy = 0.45
+			sun.light_color = Color(0.95, 0.97, 1.0)
+			sun.light_angular_distance = 12.0
+			sun.global_basis = Basis.looking_at(Vector3(0.2, -1.0, 0.35).normalized(), Vector3.UP)
+		# Rain haze: the air greys with distance, so the far stands fade and the near play stays
+		# clear (depth fog, cheap on a phone). HAZE= sets the density while tuning.
+		"haze":
+			# Depth fog that starts 40 m from the camera and thickens to the far
+			# stands, so the men stay clear and only the distance greys.
+			env.fog_enabled = true
+			env.fog_mode = Environment.FOG_MODE_DEPTH
+			env.fog_density = float(OS.get_environment("HAZE")) if OS.get_environment("HAZE") != "" else 0.55
+			env.fog_depth_begin = 40.0
+			env.fog_depth_end = 280.0
+			env.fog_depth_curve = 1.0
+			var fc := float(OS.get_environment("FOG")) if OS.get_environment("FOG") != "" else 0.15
+			env.fog_light_color = Color(fc, fc * 1.02, fc * 1.06)
+			env.fog_light_energy = 1.0
+			env.fog_sun_scatter = 0.0
+			env.fog_aerial_perspective = 0.0
+			env.fog_sky_affect = 0.0
+			env.fog_height_density = 0.0
+		# Falling rain: thin streaks in a box of air in front of the camera (one particle system,
+		# placed after the exposure is set so the streaks don't sway it).
+		"rain":
+			_rain(oval)
 		_:
 			push_error("unknown look " + look)
+
+
+func _rain(oval) -> void:
+	var p := GPUParticles3D.new()
+	p.set_meta("look3d", true)
+	p.name = "Look3DRain"
+	p.visible = false
+	p.amount = int(OS.get_environment("DROPS")) if OS.get_environment("DROPS") != "" else 40000
+	p.lifetime = 2.5
+	p.preprocess = 2.5
+	p.local_coords = false
+	p.visibility_aabb = AABB(Vector3(-80, -80, -80), Vector3(160, 160, 160))
+	var pm := ParticleProcessMaterial.new()
+	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	pm.emission_box_extents = Vector3(34.0, 18.0, 30.0)
+	pm.direction = Vector3(0.25, -1.0, 0.08)
+	pm.spread = 2.0
+	pm.initial_velocity_min = 11.0
+	pm.initial_velocity_max = 13.0
+	pm.gravity = Vector3(0.0, -2.0, 0.0)
+	p.process_material = pm
+	var q := QuadMesh.new()
+	# A drop falling 12 m/s blurs about half a metre in a 24th of a second.
+	q.size = Vector2(0.01, 0.32)
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.billboard_mode = BaseMaterial3D.BILLBOARD_FIXED_Y
+	m.billboard_keep_scale = true
+	var rc := float(OS.get_environment("RAINC")) if OS.get_environment("RAINC") != "" else 0.45
+	m.albedo_color = Color(rc, rc * 1.03, rc * 1.08, 0.18)
+	q.material = m
+	p.draw_pass_1 = q
+	oval.add_child(p)
+
+
+## The rain's box of air sits in front of whichever camera is drawing, filled at once.
+func _rain_place(oval) -> void:
+	var p = oval.get_node_or_null("Look3DRain")
+	if p == null:
+		return
+	var cam: Camera3D = oval.camera
+	var fwd := -cam.global_basis.z
+	var f := Vector3(fwd.x, 0.0, fwd.z).normalized()
+	# The box starts about 15 m out along the camera's aim (a drop nearer than that fills a phone
+	# screen as a long white needle), its middle 10 m up, so it fills the view whatever the tilt.
+	var c := cam.global_position + fwd * 45.0
+	p.global_position = Vector3(c.x, 10.0, c.z)
+	p.global_basis = Basis.looking_at(f, Vector3.UP)
+	p.visible = true
+	p.restart()
 
 
 ## One bank of lights: a directional light from azimuth az (degrees round the ground, 0 = towards
