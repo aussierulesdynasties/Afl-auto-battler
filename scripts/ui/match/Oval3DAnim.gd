@@ -5,8 +5,10 @@ extends RefCounted
 ## and the ball, and advances his AnimationPlayer by dt: jog / idle / carry, and the two-man
 ## tackle clips (row 197).
 
-const JOG_SPEED := 6.0
+const JOG_SPEED := Oval3D.LOOP_SPEED
 const RUN_FROM := 1.4          # m/s: slower than this he stands
+const STOP_HOLD := 0.2         # s: he must be that slow this long to stand; a shorter check is part of the run
+const TURN := 9.0              # rad/s (about 520 degrees): the fastest he turns, a footballer's pivot
 ## Eyes on the ball (plan §2.6): the neck takes part of the turn and the head the rest, inside a
 ## real person's range (about 80 degrees each way, 35 up or down), so nobody turns like an owl.
 ## The carrier looks where he runs, not at the ball in his hands.
@@ -54,6 +56,7 @@ var _back: Array = []          # per player: where a finished pair left him (INF
 var _face: Array = []          # per player: the way his hips faced when that pair finished
 var _gap: Array = []           # per player: his drawn spot minus his token's, closing
 var _rate: Array = []          # per player: the rate his running clip played at last
+var _still: Array = []         # per player: s he has been slower than RUN_FROM
 var _takes := {}               # take name -> {dist: hips apart, foot: planted foot} per STEP
 var _tracks := {}              # animation name -> {bone: rotation track}, "hips": position track
 
@@ -67,6 +70,7 @@ func _init(p_director: MatchDirector, p_players: Array) -> void:
 		_blend.append({})
 		_back.append(Vector2.INF)
 		_face.append(0.0)
+		_still.append(0.0)
 		_gap.append(Vector2.ZERO)
 		_rate.append(1.0)
 	var res = load(PAIRS)
@@ -343,24 +347,38 @@ func step(i: int, p: Dictionary, holder: int, pos: Vector2, vel: Vector2, dt: fl
 	var ap: AnimationPlayer = p["anim"]
 	var want := "carry" if i == holder else "idle"
 	var rate := 0.0 if i == holder else 1.0
-	if speed > RUN_FROM:
-		node.rotation.y = atan2(vel.x, vel.y)
+	_still[i] = 0.0 if speed > RUN_FROM else float(_still[i]) + dt
+	# A check in his stride (slow for under STOP_HOLD) is still running: he doesn't stand up
+	# for three frames and set off again.
+	var running: bool = speed > RUN_FROM or (float(_still[i]) < STOP_HOLD
+			and ap.current_animation in ["jog", "carry"] and dt > 0.0)
+	# He turns at a footballer's pivot, never through half a turn in one frame. dt 0 (the
+	# first draw) sets him facing.
+	var turn := TURN * dt if dt > 0.0 else PI
+	if running:
+		if speed > RUN_FROM:
+			node.rotation.y = rotate_toward(node.rotation.y, atan2(vel.x, vel.y), turn)
 		want = "carry" if i == holder else "jog"
-		rate = clampf(speed / JOG_SPEED, 0.45, 2.3)
+		rate = clampf(maxf(speed, RUN_FROM) / JOG_SPEED, 0.45, 2.3)
 	elif i != holder:
 		# Standing: face the ball (the carrier keeps his heading).
 		var to: Vector2 = (director.ball["pos"] as Vector2) - pos
 		if to.length() > 0.5:
-			node.rotation.y = atan2(to.x, to.y)
+			node.rotation.y = rotate_toward(node.rotation.y, atan2(to.x, to.y), turn)
 	if ap.current_animation != want:
-		var at := fmod(float(i) * 0.137, 0.66)
+		# Spread over the 10 s stand loop so a standing line doesn't sway in step.
+		var at := fmod(float(i) * 1.37, 10.0)
 		if ap.current_animation in ["jog", "carry"]:
 			at = ap.current_animation_position
+		if ap.current_animation in ["jog", "carry", "idle"]:
+			# Running to standing and back eases over BLEND: the capture's stride is too real to
+			# cut from mid-air to a stand in one frame.
+			_snap(i, p)
 		ap.play(want)
 		ap.seek(fmod(at, ap.current_animation_length), false)
 	if want == "carry" and rate == 0.0:
-		# Standing with the ball: the carry's first key, both legs under him (poses.carry
-		# at p = 0), not frozen mid-stride.
+		# Standing with the ball: the carry's first frame, a left foot-strike, not a
+		# flight phase.
 		ap.seek(0.0, false)
 	# A zero step leaves a freshly played pose unapplied (a standing holder kept the idle
 	# arms), so a still pose still advances by a sliver.
