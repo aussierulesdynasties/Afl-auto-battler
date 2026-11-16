@@ -349,6 +349,8 @@ Source tags: DB = DESIGN_BIBLE; RM26/27/28/29/30/32 = roadmap chapters 26, 27, 2
 
 **2.88** The match camera looks like a TV broadcast (2026-11-17; row 202, 2e). His words: "I want the game camera to look like a real tv broadcast of afl btw / complete with stat popups and journalist social media comments". The camera is not chosen yet; he asked for the camera design and the popups (stats and journalism) to start now, each in its own session.
 
+**2.89** The MetaHuman body is built on (2026-11-17; row 202, 2d). As rule 2.85 asked, one MetaHuman was shown in our match first: a board of the old body beside the MetaHuman at the same moment of a match, built to our average player (chest, waist, hip, thigh and calf within 3 cm, 188 cm), with a film of him running in our match. Asked whether the MetaHuman passes as the body we build on, he said "Yes, build on it". How many builds and how heads and faces vary are still to be asked (2d).
+
 ---
 
 ## 2.S Superseded and cut
