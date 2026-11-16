@@ -269,9 +269,12 @@ func _watch_a_full_match() -> void:
 ## One tick of the picture: move it a thirtieth of a second at 8x, then check it.
 func _tick(pitch, m: Control) -> void:
 	var period_before := int(pitch.period)
+	# A pause (a ball-up wait, a player after a mark) plays at double the watching speed (rule 2.93), so that
+	# tick covers twice the match time and the sprint budget doubles with it.
+	var pace: float = MatchDirector.PAUSE_PLAY if pitch.director.pausing() else 1.0
 	pitch._process(FRAME)
 	var d: MatchDirector = pitch.director
-	var h := FRAME * float(pitch.speed) * MatchDirector.TEMPO
+	var h := FRAME * float(pitch.speed) * MatchDirector.TEMPO * pace
 	_ok("speed set", is_equal_approx(float(pitch.speed), SPEED), "The match is still at 8x (%.2f)" % float(pitch.speed))
 
 	# 1. Nobody outruns a footballer, on the ground or on the screen.
