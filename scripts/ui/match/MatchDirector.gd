@@ -1407,12 +1407,13 @@ const SCRAP_MEN := 3
 const SCRAP_REACH := 15.0
 const SCRAP_HOLD := SCOOP_LEAD + SCOOP_SPEED * SCOOP_SPEED / (2.0 * MatchMotion.ACCEL) + 0.15 + 0.6
 ## The two men of a tackle are drawn in its take (Oval3DAnim: down, then back up) until they
-## are up: the latest of tackle_pairs.json's up_s - contact_s, 3.13 clip s, on this clock (the
-## take then lets him go as soon as he moves). Until then neither joins the scrap for a loose
+## are up: 1.5 s after the arms meet, on this clock (director, 2026-11-17: "he got tackled, not
+## shot, he needs to get up faster", then, having seen 1 s, "1.5 would probably be the sweet
+## spot"; Oval3DAnim plays the take's get-up to fit, UP_IN). The take then lets him go as soon as he moves. Until then neither joins the scrap for a loose
 ## ball (the take would not show him going down for it: Oval3DAnim plays a ground_ball touch
 ## only out of a take). Held to the clip's end (3.74 s), a man the play wanted next left the
 ## ball lying for 4 s and more (8 collects on the suite match, 16 over seeds 42 and 1-3).
-const TAKE_UP := 3.14 * TEMPO
+const TAKE_UP := 1.5 * TEMPO
 
 
 ## How far a knock along `way` from `at` can carry it and still finish within KNOCK_HOME metres
