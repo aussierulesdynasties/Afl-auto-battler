@@ -12249,7 +12249,10 @@ func _fa_staying() -> Array:
 ## "release"]], in order. A depth player re-signs if the cap allows, one of
 ## your best 23 tests the market, one who walked, refuses to re-sign with you
 ## (resign_refused) or does not fit is let go (at the list minimum he re-signs
-## instead). _close_free_agency runs this
+## instead). So is a Legacy man whose real club delisted him now
+## (_real_delistings): his career ends as it does at every club unless you
+## re-sign him yourself (director, 2026-11-13: careers end "about when he
+## really did"). _close_free_agency runs this
 ## plan and draft_list_spots counts it, so the two never disagree.
 func _fa_close_plan() -> Array:
 	var plan := []
@@ -12266,7 +12269,7 @@ func _fa_close_plan() -> Array:
 	for p in Contracts.expiring(my_list):
 		if bool(p.get("resigned", false)) or retiring_now(p):
 			continue
-		var walked := bool(p.get("talks", {}).get("walked", false)) or resign_refused(p)
+		var walked := bool(p.get("talks", {}).get("walked", false)) or resign_refused(p) 				or int(p.get("real_end", 0)) == season_year + 1
 		if walked and size <= Contracts.min_list():
 			plan.append([p, "resign1"])
 			continue

@@ -2,7 +2,7 @@
 
 _Step 3 of [the 3D view plan](3D_VIEW_PLAN.md) (TODO row 203, Director Bible 2.78). Written 2026-11-16, ahead of
 step 2's body choice, on the director's word: "may as well make the /plan now". Where an answer depends on the
-body (row 202, 2d), it says so; nothing here is made until that body is chosen._
+body (row 202, 2d), it says so; nothing here is made until that body is chosen. Chosen 2026-11-17: MetaHuman (rule 2.85)._
 
 ## What drives the list
 
@@ -23,7 +23,7 @@ A move the sim never produces is not made. A sim event with no animation is a ga
    fucking licenses before sending me to download any fucking asset"). On the source's own page: allowed in a
    Godot game, sold commercially, on itch and Android, attribution or not, what is forbidden, and the URL read.
    Engine-locked (Unreal-only, Unity-only), non-commercial, editorial-only or unread means not proposed.
-2. **Retarget** onto the chosen body's rig (2d), names unchanged, one GLB action per clip.
+2. **Retarget** onto the chosen body's rig (2d: MetaHuman, rule 2.85), names unchanged, one GLB action per clip.
 3. **Contact pass**: feet pinned while planted, hands on the ball, mesh clip check on every frame (the tools of
    3d view 2: contact3.py, meshlow.py, trim.py).
 4. **Markers**: foot plants, ball contact, release, mark secured, tackle contact, so the clip can be warped to
@@ -41,8 +41,8 @@ needs, **C** ceremony, reactions and the 3D scenes. Counts are estimates to plan
 
 | Item | Needed for | Have | Source | Order |
 |---|---|---|---|---|
-| The body, with 2-3 builds (key position, midfielder, small) | every player | MPFB average (placeholder) | 2d's choice | A |
-| Heads and faces that vary | "they look like clones" | one head | 2d's choice | B |
+| The body, with 2-3 builds (key position, midfielder, small) | every player | MPFB average (placeholder) | MetaHuman (2.85) | A |
+| Heads and faces that vary | "they look like clones" | one head | MetaHuman (2.85) | B |
 | Hair | identity | 31 styles (rule 2.77, passed) | kept; refit to the chosen head | A |
 | Guernseys, shorts, socks, 18+ clubs and clash | every match | passed on MPFB (2.75) | refit to the chosen body | A |
 | Boots | every player | one boot | refit | A |
@@ -142,7 +142,7 @@ Each is a scene on the same bodies and stadium. Order C, after full-match covera
 | Held poses: injured, on the ground, rolling (GASP) | 14 | placeholder until re-made (order C) | re-made |
 | Placeholder loops in the game (jog, idle, carry; #1689) | 3 | keep | re-target from his takes |
 
-Cut today: nothing. A clip no sim event calls stays out of the game build until its row needs it.
+The body is MetaHuman (2.85), so the "If another body" column applies. Cut today: nothing. A clip no sim event calls stays out of the game build until its row needs it.
 
 ## The licence question
 
@@ -182,9 +182,30 @@ free under US$1M a year in revenue, an Unreal seat licence above it; never used 
 
 The tackle pairs are the gap: a real tackle needs both men in one take, which his Rokoko pair takes give.
 
+### Downloaded 2026-11-17
+
+57 Mixamo clips are in `Desktop/footy assets/mixamo/`, saved as FBX Binary, Without Skin, 30 fps, no keyframe
+reduction. Each one was imported in Blender and every file opened with the 65-bone Mixamo rig and an action.
+
+| GASP group | Downloaded (Mixamo title) |
+|---|---|
+| Stand idles and breaks | Standing Idle, Neutral Idle, Happy Idle, Breathing Idle, Unarmed Idle, Weight Shift, Looking Around |
+| Turns | Left Turn, Right Turn, Left Turn 45, Left Turn 90, Right Turn 90, Turn Left 45 Degrees, Turning Right 45 Degrees, Turning Right, Standing Turn Left 90, Standing Turn Right 90, Quick 180 Turn, Walking Turn 180 |
+| Sidesteps | Left Strafe, Right Strafe, Walk Strafe Left, Walk Strafe Right, Jog Strafe Left, Jog Strafe Right, Dodging Right |
+| Bench | Sitting Idle, Stand To Sit, Sit To Stand, Standing Up, Sitting Clap, Cheering While Sitting, Sitting Fist Pump, Sitting Victory |
+| Gestures and reactions | Agreeing, Shaking Head No, Annoyed Head Shake, Beckoning (come on), Dismissing Gesture, Standing Arguing, Rallying, Cheering, Clapping, Victory, Waving |
+| Get-ups | Getting Up |
+| Held poses and falls | Injured Idle, Injured Hurting Idle, Injured Stumble Idle, Knocked Out, Sitting Dazed, Fallen Idle, Fall Flat, Falling Flat Impact, Falling Down, Sweep Fall |
+| Tackles (one man) | Defender (running to tackle) |
+
+Not on Mixamo under the searched titles: Receiving A Football While Getting Tackled To The Ground and Running Tackle.
+Those tackles come from his Rokoko pair takes.
+
 ## Order of work (step 4 follows it)
 
-1. 2d chooses the body; heads, hair, kits and boots refit to it.
+Director, 2026-11-17, asked this order directly: he chose "A, then B, then C".
+
+1. 2d chose the body, MetaHuman (2.85); heads, hair, kits and boots refit to it.
 2. **A**: getting around, the proof passage's actions (centre bounce, ruck tap, gather, handball, kick, contested
    mark), the tackle pairs, the field umpire. Row 198 makes them; row 197 plays them; phone check.
 3. **B**: every other sim event, its failures, boundary and goal umpires, the bench, reactions.

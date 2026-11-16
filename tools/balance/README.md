@@ -66,7 +66,7 @@ GODOT=<godot console exe> tools/balance.sh match 1000 --a "--weather perfect" --
   within 10 and 20 m of the ball, mean distance to the nearest opponent, men with nobody within 5 m, the ball
   carrier's nearest opponent; every general-play kick's length, ground made, move across and whether it switches
   play. `shape_report.py` marks each against `afl_shape_rates.json` (each entry names its published source; IN
-  within 10% of the range's ends, the director's pass mark of rule 2.85; NEAR within 20%; OUT) and, for a paired run, gives the called side's change
+  within 10% of the range's ends, the director's pass mark of rule 2.86; NEAR within 20%; OUT) and, for a paired run, gives the called side's change
   B-A with its se. Calls: `--side-plan P` (side `i % 2` plays plan P), `--burst none|stack|flood|push|surge|hold`
   (side `i % 2` holds that call all match and makes no call of its own; `none` is the baseline), `--tag none|first`
   (the tag, with the tagger's distance to his man), `--switch none|on` (side `i % 2` puts its best defender on
