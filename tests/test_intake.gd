@@ -1399,7 +1399,9 @@ func _test_gen_traits_rates() -> void:
 	var listed_attr := {}
 	for p in GameDB.list_additions:
 		listed_attr[str(p["id"])] = (p["attr"] as Dictionary).duplicate()
-	_check(real.size() > 600, "The real 2026 lists give the reference rates (%d players)" % real.size())
+	# Players with under 10 senior games are rated from their draft pick (projected), so
+	# about 70 fewer count here than before that rule (director 2026-11-17).
+	_check(real.size() > 590, "The real 2026 lists give the reference rates (%d players)" % real.size())
 	var bands := {}
 	var real_hot := 0
 	var real_bull := 0
