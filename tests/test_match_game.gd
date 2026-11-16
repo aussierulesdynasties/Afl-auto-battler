@@ -3454,14 +3454,15 @@ func _test_play_through_mid_stands_in_midfield() -> void:
 		_check(on != null and MatchSim.FOCUS_SLOT_ROLES["focus_mid"].has(str(on["role"])),
 				"Seed %d: Pickett starts in the midfield" % seed)
 		sim.set_tactics(0, {"gameplan": "balanced", "focus_mid": pid})
-		# A star only comes off cooked on balanced rotations, and Pickett rates
-		# a star: the coach protects freshness so he rests and comes back on.
-		sim.set_rotation_policy(0, "hard")
 		var chains := 0
 		var wrong := 0
 		var where := ""
 		while sim.current_quarter <= 4:
 			sim.begin_quarter()
+			# He has an Engine (durability 91) and never tires past his line on
+			# his own: spent by the second quarter, he rests and comes back on.
+			if sim.current_quarter == 2:
+				sim.energy[pid] = 40.0
 			var total: int = sim._q_count
 			for k in range(total):
 				sim._q_count = k + 1
