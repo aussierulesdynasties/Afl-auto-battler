@@ -145,7 +145,25 @@ func _reset(oval, weather: String, slot: String) -> void:
 	oval.get_viewport().msaa_3d = Viewport.MSAA_DISABLED
 	oval.get_viewport().screen_space_aa = Viewport.SCREEN_SPACE_AA_DISABLED
 	oval._sun.directional_shadow_max_distance = 160.0
+	oval._sun.visible = true
+	for m in _crowds(oval):
+		if m.material_override.has_meta("orig"):
+			m.material_override = m.material_override.get_meta("orig")
+	for l in oval.get_children():
+		if l.has_meta("look3d"):
+			l.queue_free()
 	oval.turf.apply(weather, slot)
+
+
+## Every mesh of the crowd (the stands are built in pieces), with today's or the prototype shader.
+func _crowds(oval) -> Array:
+	var out := []
+	for c in oval.get_children():
+		if c is MeshInstance3D and c.material_override is ShaderMaterial:
+			var path := str(c.material_override.shader.resource_path)
+			if path.ends_with("oval3d_crowd.gdshader") or path.ends_with("look3d_crowd.gdshader"):
+				out.append(c)
+	return out
 
 
 func _stand_shadow(oval, on: bool) -> void:
@@ -202,6 +220,36 @@ func _match_exposure(oval) -> void:
 		var got := _patch(img, Vector2(clampf(c.x - 500.0, 60.0, img.get_width() - 60.0), c.y))
 		env.tonemap_exposure *= pow(want / maxf(got, 0.01), 1.6)
 	print("EXPOSURE %.3f for turf %.2f" % [env.tonemap_exposure, want])
+	# With CROWD=0.2 the crowd at the top of the phone frame is held to that brightness (a copy of
+	# the crowd shader with a brightness dial, found by halving), so options differ in the
+	# field's light, not in how bright the stands happen to come out.
+	if OS.get_environment("CROWD") != "":
+		var want_c := float(OS.get_environment("CROWD"))
+		var dials := []
+		for crowd in _crowds(oval):
+			var orig: ShaderMaterial = crowd.material_override
+			var cm: ShaderMaterial = orig.duplicate()
+			cm.shader = load("res://tools/visual/look3d_crowd.gdshader")
+			cm.set_meta("orig", orig)
+			crowd.material_override = cm
+			dials.append(cm)
+		var lo := 0.02
+		var hi := 2.0
+		for i in range(10):
+			var k := sqrt(lo * hi)
+			for cm in dials:
+				cm.set_shader_parameter("lit", k)
+			for f in range(3):
+				await process_frame
+			await RenderingServer.frame_post_draw
+			var img := root.get_viewport().get_texture().get_image()
+			var got_c := _patch(img, Vector2(600, 50))
+			if got_c > want_c:
+				hi = k
+			else:
+				lo = k
+			if i == 9:
+				print("CROWD %.3f (albedo x%.2f)" % [got_c, k])
 	await _true_rings(oval)
 
 
@@ -312,8 +360,50 @@ func _apply(oval, look: String) -> void:
 			env.adjustment_enabled = true
 			env.adjustment_contrast = 1.1
 			env.adjustment_saturation = 1.2
+		# Night under lights (run with SLOT night). The sky at night: black above, the lit stands
+		# round the ground give the side light, the lit grass a little bounce.
+		"nightsky":
+			_sky(oval, _amb(1.0))
+			var sm: ShaderMaterial = env.sky.sky_material
+			sm.set_shader_parameter("zenith", Color(0.01, 0.012, 0.02))
+			sm.set_shader_parameter("horizon", Color(0.03, 0.03, 0.04))
+			sm.set_shader_parameter("bowl", Color(0.3, 0.29, 0.27))
+			sm.set_shader_parameter("grass", Color(0.12, 0.22, 0.08))
+		"towers":
+			# Four light towers at the corners, each throwing its own shadow (the four-way
+			# shadow under every man at a night game at the MCG, Adelaide or the Gabba).
+			sun.visible = false
+			oval.turf.fill.visible = false
+			for az in [35.0, 145.0, 215.0, 325.0]:
+				# 45 degrees up: lower, the towers light upright bodies far harder than the grass.
+				_lamp(oval, az, 45.0, 0.62, true, 1.0)
+		"roof":
+			# A ring of lights under the roof (Marvel, Optus): light from all round and above,
+			# so a man's shadow is one soft pool at his feet.
+			sun.visible = false
+			oval.turf.fill.visible = false
+			_lamp(oval, 0.0, 78.0, 0.9, true, 14.0)
+			for az in range(0, 360, 45):
+				_lamp(oval, float(az), 38.0, 0.16, false, 1.0)
 		_:
 			push_error("unknown look " + look)
+
+
+## One bank of lights: a directional light from azimuth az (degrees round the ground, 0 = towards
+## +x), el degrees up; soft is its angular size in degrees (a wide bank blurs its shadow).
+func _lamp(oval, az: float, el: float, energy: float, shadow: bool, soft: float) -> void:
+	var l := DirectionalLight3D.new()
+	l.set_meta("look3d", true)
+	l.light_color = Color(0.96, 0.98, 1.0)
+	l.light_energy = energy
+	l.shadow_enabled = shadow
+	l.light_angular_distance = soft
+	l.directional_shadow_max_distance = 160.0
+	oval.add_child(l)
+	var a := deg_to_rad(az)
+	var e := deg_to_rad(el)
+	var from := Vector3(cos(a) * cos(e), sin(e), sin(a) * cos(e))
+	l.global_basis = Basis.looking_at(-from, Vector3.UP if el < 89.0 else Vector3.FORWARD)
 
 
 func _save(oval, out: String, name: String) -> void:
