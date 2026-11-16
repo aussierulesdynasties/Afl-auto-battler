@@ -2199,9 +2199,9 @@ func _test_menu_and_career() -> void:
 			"New career has no player names choice: real names are the only names")
 	var note: Label = current_scene.find_child("BoardPatienceNote", true, false)
 	var rival_note: Label = current_scene.find_child("RivalRecruitingNote", true, false)
-	_check(note != null and note.visible and note.text == DifficultyDials.text("board_patience", "fair")
+	_check(note != null and note.visible and note.text == DifficultyDials.text("board_patience", "patient")
 			and rival_note != null and rival_note.visible and rival_note.text == DifficultyDials.text("rival_recruiting", "shrewd"),
-			"Each dial starts on its middle step and says what it means in one sentence")
+			"The board starts on Patient (director 2026-11-17), the rivals on their middle step, each said in one sentence")
 	var every_trade := true
 	for key in DifficultyDials.order("rival_recruiting"):
 		every_trade = every_trade and DifficultyDials.text("rival_recruiting", key).contains("trade")
@@ -2209,7 +2209,7 @@ func _test_menu_and_career() -> void:
 	if ruthless_btn != null:
 		ruthless_btn.emit_signal("pressed")
 		await _settle()
-	_check(_state.new_career_dial("board_patience") == "fair" and _state.new_career_dial("rival_recruiting") == "shrewd",
+	_check(_state.new_career_dial("board_patience") == "patient" and _state.new_career_dial("rival_recruiting") == "shrewd",
 			"A pick changes nothing before the career starts")
 	_check(note != null and note.text == DifficultyDials.text("board_patience", "ruthless"),
 			"The sentence follows the picked step")
@@ -2226,7 +2226,7 @@ func _test_menu_and_career() -> void:
 	_router.handle_back(false)
 	await _settle()
 	_check(_router.current() == "main" and current_scene.find_child("NewCareerSetup", true, false) == null
-			and _state.new_career_dial("board_patience") == "fair", "Back leaves the setup without changing anything")
+			and _state.new_career_dial("board_patience") == "patient", "Back leaves the setup without changing anything")
 	current_scene.find_child("NewCareer", true, false).emit_signal("pressed")
 	await _settle()
 	await _pick_year()
