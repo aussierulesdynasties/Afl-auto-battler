@@ -26,9 +26,13 @@ class_name PlaysLike
 ## Lowest distance wins; a tie goes to the lower id, so the answer never moves.
 ##
 ## The real players are the launch lists as loaded (GameDB.plays_like_pool, a
-## copy taken before a career ages anyone), so a prospect in 2060 is still
-## likened to a 2026 player and a reload gives the same name. Display only:
-## nothing in the sim reads it, and every club sees the same line.
+## copy taken before a career ages anyone) and every other AFL season from 2012
+## to 2026, the seasons generated players are copied from (Prospects._copy_pool;
+## director, 2026-11-17: "drop the year from the copy just 'plays like Mitch
+## Duncan'"): a past season is compared at that season's overall and shown by his
+## name alone. So a prospect in 2060 is still likened to a real player and a
+## reload gives the same name. Display only: nothing in the sim reads it, and
+## every club sees the same line.
 
 ## The attributes compared: those in the overall rating that say how he plays
 ## (not durability, and not temperament, which is not in the rating).
@@ -94,6 +98,69 @@ static func build_pool(players: Array) -> Array:
 	return out
 
 
+## Every 2012-2026 AFL season but `launch_season` (the launch lists' own, already
+## in `pool`) added to `pool` as entries like profile()'s: each player-season with a
+## height, at that season's overall ("peak"), with "person" his Wheelo id so his
+## seasons are one man. The launch lists' entries get their "person" too.
+static func add_past_seasons(pool: Array, launch_season: int) -> void:
+	for e in pool:
+		var who := person_of(str(e["real_name"]), str(e["club"]))
+		if who != "":
+			e["person"] = who
+	if not _past.has(launch_season):
+		var past := []
+		var copy: Dictionary = Prospects._copy_pool()
+		for role in ["DEF", "MID", "FWD", "RUCK"]:
+			for r in (copy.get(role, {}) as Dictionary).get("rows", []):
+				if int(r["_year"]) == launch_season or float(r["_height"]) <= 0.0:
+					continue
+				# His skills as the game's fit puts them at his overall that season, as a listed
+				# player's are (Prospects.fit_attributes; the shift is worked out once by
+				# tools/wheelo/fit_copy_pool.gd).
+				var shift := float(r["_fit"])
+				var vec := PackedFloat32Array()
+				for key in KEYS:
+					var v := float(r[key])
+					vec.append(roundf(v) if key in Prospects.UNRATED_KEYS else clampf(roundf(v + shift), 1.0, 99.0))
+				past.append({"id": "%s|%d" % [str(r["_id"]), int(r["_year"])], "person": str(r["_id"]),
+						"real_name": str(r["_name"]), "generic_name": str(r["_name"]), "role": role,
+						"club": str(r["_club"]), "height": float(r["_height"]), "peak": float(r["_ovr"]), "vec": vec})
+		_past[launch_season] = past
+	pool.append_array(_past[launch_season])
+
+
+## The past seasons' entries by launch season: fixed data, built once a run.
+static var _past := {}
+
+
+## The Wheelo id of the 2012-2026 player named `name`: the only one of that name, or
+## of two or more, the one who played at `club`. "" when none or still unclear.
+static func person_of(name: String, club: String) -> String:
+	if name.strip_edges() == "":
+		return ""
+	if _people.is_empty():
+		var copy: Dictionary = Prospects._copy_pool()
+		for role in copy:
+			for r in (copy[role] as Dictionary)["rows"]:
+				var ids: Dictionary = _people.get(str(r["_name"]), {})
+				var clubs: Dictionary = ids.get(str(r["_id"]), {})
+				clubs[str(r["_club"])] = true
+				ids[str(r["_id"])] = clubs
+				_people[str(r["_name"])] = ids
+	var ids: Dictionary = _people.get(name, {})
+	if ids.size() == 1:
+		return str(ids.keys()[0])
+	var at_club := []
+	for id in ids:
+		if (ids[id] as Dictionary).has(club):
+			at_club.append(id)
+	return str(at_club[0]) if at_club.size() == 1 else ""
+
+
+## name -> {Wheelo id: {club: true}} over the 2012-2026 seasons (person_of).
+static var _people := {}
+
+
 ## The gap between two profiles' ratings, in rating points: root-mean-square
 ## over KEYS, each attribute weighted by how far above `a`'s own average it is.
 static func rating_gap(a: Dictionary, b: Dictionary) -> float:
@@ -133,20 +200,25 @@ static func nearest(p: Dictionary, pool: Array) -> Dictionary:
 	if me.is_empty():
 		return {}
 	var own_name := str(p.get("real_name", "")).strip_edges()
-	var same := []
-	var others := []
-	for e in pool:
-		if str(e["id"]) == str(me["id"]) or (own_name != "" and str(e["real_name"]) == own_name
-				and is_equal_approx(float(e["height"]), float(me["height"]))):
-			continue
-		others.append(e)
-		if str(e["role"]) == str(me["role"]):
-			same.append(e)
-	if same.is_empty():
-		same = others
-	var near := same.filter(func(e): return _inside_both(me, e))
+	# His own seasons of 2012-2026 are himself too.
+	var own_person := person_of(own_name, str(p.get("club", ""))) if own_name != "" else ""
+	var himself := func(e: Dictionary) -> bool:
+		return str(e["id"]) == str(me["id"]) or (own_name != "" and str(e["real_name"]) == own_name
+				and is_equal_approx(float(e["height"]), float(me["height"]))) 				or (own_person != "" and str(e.get("person", "")) == own_person)
+	# Most often a player of his position inside both bands exists: look only there.
+	var near := []
+	var idx := _index(pool)
+	var role := str(me["role"])
+	var rows: Array = (idx["by_role"] as Dictionary).get(role, [])
+	var peaks: PackedFloat32Array = (idx["peaks"] as Dictionary).get(role, PackedFloat32Array())
+	var top := float(me["peak"]) + NEAR_LEVEL + 0.01
+	for i in range(peaks.bsearch(float(me["peak"]) - NEAR_LEVEL - 0.01), rows.size()):
+		if peaks[i] > top:
+			break
+		if _inside_both(me, rows[i]) and not himself.call(rows[i]):
+			near.append(rows[i])
 	if near.is_empty():
-		near = same
+		near = _nearest_wider(me, pool, himself)
 	var best := {}
 	var best_d := INF
 	for e in near:
@@ -157,15 +229,63 @@ static func nearest(p: Dictionary, pool: Array) -> Dictionary:
 	return best
 
 
+## nearest()'s candidates when no player of his position is inside both bands: his
+## position's players, or anyone when his position has nobody.
+static func _nearest_wider(me: Dictionary, pool: Array, himself: Callable) -> Array:
+	var same := []
+	var others := []
+	for e in pool:
+		if himself.call(e):
+			continue
+		others.append(e)
+		if str(e["role"]) == str(me["role"]):
+			same.append(e)
+	return others if same.is_empty() else same
+
+
 ## A pool entry's name as this career shows names (his real name, or his
 ## generated one when the coach chose generated names). Two real players who
-## share that name are told apart by club: "Bailey Williams (Eagles)".
+## share that name are told apart by club: "Bailey Williams (Eagles)". One man's
+## seasons are one player ("person").
 static func shown_name(e: Dictionary, pool: Array) -> String:
 	var n := GameDB.player_display_name(e)
-	for other in pool:
-		if str(other["id"]) != str(e["id"]) and GameDB.player_display_name(other) == n:
-			return "%s (%s)" % [n, GameDB.club_short(str(e["club"]))]
+	var people: Dictionary = (_index(pool)["names"] as Dictionary).get(n, {})
+	if people.size() > 1 or (people.size() == 1 and not people.has(str(e.get("person", e["id"])))):
+		return "%s (%s)" % [n, GameDB.club_short(str(e["club"]))]
 	return n
+
+
+## `pool` sorted for nearest() and shown_name(), rebuilt when the pool changes:
+## "by_role" {role: [entries by peak]}, "peaks" {role: their peaks}, "names" {shown
+## name: {person: true}}.
+static func _index(pool: Array) -> Dictionary:
+	if not is_same(pool, _indexed) or int(_by.get("size", -1)) != pool.size():
+		var by_role := {}
+		var names := {}
+		for e in pool:
+			var role := str(e["role"])
+			if not by_role.has(role):
+				by_role[role] = []
+			(by_role[role] as Array).append(e)
+			var n := GameDB.player_display_name(e)
+			if not names.has(n):
+				names[n] = {}
+			names[n][str(e.get("person", e["id"]))] = true
+		# Each position by level, so nearest() reads only the players near his.
+		var peaks := {}
+		for role in by_role:
+			(by_role[role] as Array).sort_custom(func(x, y): return float(x["peak"]) < float(y["peak"]))
+			var got := PackedFloat32Array()
+			for e in by_role[role]:
+				got.append(float(e["peak"]))
+			peaks[role] = got
+		_indexed = pool
+		_by = {"size": pool.size(), "by_role": by_role, "peaks": peaks, "names": names}
+	return _by
+
+
+static var _indexed: Array = []
+static var _by := {}
 
 
 ## The compared player's name as this career shows it. "" when there is none.

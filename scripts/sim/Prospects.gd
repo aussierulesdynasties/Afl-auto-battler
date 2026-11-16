@@ -313,7 +313,8 @@ const COPY_POOL_CSV := "res://data/copy_pool.csv"
 ## His fingerprint (director, 2026-11-17: "10% different ... to give a fingerprint", then
 ## "5%"): each of the copied player's skills times its own roll between 0.95 and 1.05.
 const FINGERPRINT := 0.05
-## Per role: "rows" (each a real player-season's skills and "_ovr"), sorted by overall,
+## Per role: "rows" (each a real player-season's skills, "_ovr", "_year", his Wheelo "_id",
+## "_name", "_club" and "_height", 0 when unknown), sorted by overall,
 ## "ovr" (those overalls, for the search) and "disc" (their disciplines).
 static var _copy := {}
 
@@ -339,7 +340,10 @@ static func _copy_pool() -> Dictionary:
 		var line := f.get_csv_line()
 		if line.size() < head.size():
 			continue
-		var r := {"_ovr": float(line[col["ovr"]]), "_year": int(line[col["year"]])}
+		var r := {"_ovr": float(line[col["ovr"]]), "_year": int(line[col["year"]]),
+				"_id": str(line[col["id"]]), "_name": str(line[col["name"]]), "_club": str(line[col["club"]]),
+				"_height": float(line[col["height_cm"]]) if str(line[col["height_cm"]]) != "" else 0.0,
+				"_fit": float(line[col["fit_shift"]]) if col.has("fit_shift") else 0.0}
 		for key in ATTR_KEYS:
 			r[key] = float(line[col[key]])
 		var role := str(line[col["line"]])
