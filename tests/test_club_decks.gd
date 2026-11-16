@@ -85,7 +85,10 @@ func _test_every_choice_has_gain_and_cost() -> void:
 		for c in t["choices"]:
 			var lines := StoryEngine.stakes_lines(c.get("effects", []), {})
 			var joined := "\n".join(lines)
-			_check(joined.contains(StoryEngine.GAIN_MARK) and joined.contains(StoryEngine.COST_MARK),
+			# A bonding card's small choice is a gain alone (rule 69a: "a small
+			# choice (gain only) and a big choice (gain plus a cost)").
+			var gain_only_ok := (t.get("phase", []) as Array).has("bonding")
+			_check(joined.contains(StoryEngine.GAIN_MARK) and (gain_only_ok or joined.contains(StoryEngine.COST_MARK)),
 					"%s/%s states a gain and a cost: %s" % [t["id"], c["key"], joined])
 
 
