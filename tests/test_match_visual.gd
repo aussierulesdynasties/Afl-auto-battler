@@ -854,7 +854,9 @@ func _test_truth(res: Dictionary) -> Array:
 ## The cap is main plus about one match's spread: 120; pressure at most 1 a match.
 ## A team-mate's hands on it are not a wait (row 197, 2026-11-16): while a man is
 ## down for a loose ball in the scrap (from going down to his hands reaching it),
-## the ball is being played, so that time is not counted against the collect.
+## the ball is being played, so that time is not counted against the collect. The same
+## goes for the collector's own pickup, from going down to his hands reaching it (the
+## gather clip, 0.66-1.3 s on this clock).
 ## Main has no such man (its scrap moved the ball with nobody on it): its 110 is
 ## unchanged. On main 739db4b22: 91; the spilled-ball scrap: 116, 1 after pressure.
 const PAUSE_S := 1.5
@@ -895,7 +897,8 @@ func _pauses(res: Dictionary) -> Array:
 		d.advance(h)
 		var p = d._phases[d._pi] if d._pi < d._phases.size() else null
 		if p == cur:
-			if p != null and p.has("_by"):
+			if p != null and (p.has("_by") \
+					or float(d.tokens[int(p.get("who", 0))].get("gather_t", -1.0)) > d.time):
 				hands += h * MatchDirector.TEMPO
 			continue
 		if cur != null and str(cur.get("t", "")) == "collect" and kind != "" and d.time - start - hands >= PAUSE_S:
@@ -2953,6 +2956,7 @@ func _test_contacts(res: Dictionary) -> void:
 	var off_line := []    # fumbles off a scoop at pace knocked back or across him, not on along his line
 	var knock_who := -1   # the man whose scoop just ended, until the ball comes off him
 	var knocks := 0
+	var gathers := 0      # scoops he picked up clean (director 2026-11-16: down for it, he can gather it)
 	var scrap_knocks := 0
 	var scrap_bare := 0   # scrap knocks with no man's scoop before them
 	var stops := []       # men whose speed dropped more than a step's braking as they went down for it
@@ -2982,6 +2986,11 @@ func _test_contacts(res: Dictionary) -> void:
 			scrap_knocks += 1
 			if knock_who < 0 and not scoop_ball.is_finite():
 				scrap_bare += 1
+		if scoop_ball.is_finite() and int(d.ball.get("holder", -1)) == scoop_who:
+			# Picked up clean in his hands: no knock to come off this scoop.
+			gathers += 1
+			scoop_ball = Vector2.INF
+			knock_who = -1
 		if scoop_ball.is_finite() and not (d._pi < d._phases.size() and (d._phases[d._pi] as Dictionary).has("scoop")):
 			knock_who = scoop_who
 		# The knock: the ball jumps off his hands (it may still be rolling the last of the way in).
@@ -3057,7 +3066,7 @@ func _test_contacts(res: Dictionary) -> void:
 	_check(scrap_s > 10.0 and stands.is_empty(), "Nobody stands still beside a loose ball in a scrap (%d in %.0f s: %s)" % [stands.size(), scrap_s, stands.slice(0, 5)])
 	_check(scrap_s > 10.0 and overs.is_empty(), "Nobody runs straight across a loose ball upright in a scrap (%d: %s)" % [overs.size(), overs.slice(0, 5)])
 	_check(scrap_bare == 0, "A loose ball in a scrap moves only off a man's hands, never on its own (%d knocks, %d with no man)" % [scrap_knocks, scrap_bare])
-	_check(scoops > 0 and knocks == scoops and off_line.is_empty(), "A fumble on the run at pace knocks the ball on along his line (%d scoops, %d knocks, off it: %s)" % [scoops, knocks, off_line.slice(0, 5)])
+	_check(scoops > 0 and knocks + gathers == scoops and off_line.is_empty(), "A man down for a loose ball gathers it or knocks it on, at pace along his line (%d scoops, %d gathered, %d knocks, off it: %s)" % [scoops, gathers, knocks, off_line.slice(0, 5)])
 	for k in [&"kick", &"handball", &"mark", &"gather", &"handball_receive", &"tackle", &"bounce", &"ruck_tap",
 			&"ground_ball"]:
 		_check(int(kinds.get(k, 0)) > 0, "A full match records %s touches (%d)" % [k, int(kinds.get(k, 0))])

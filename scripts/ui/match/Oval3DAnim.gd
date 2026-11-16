@@ -663,6 +663,9 @@ func event(i: int, kind: StringName, at: Vector2, other := -1) -> void:
 				"end": float(sc["end"]), "yaw": yaw, "at": spot, "off": here - fw * run - spot}
 		return
 	if not (_once[i] as Dictionary).is_empty():
+		if kind == &"gather":
+			# The ball his pickup went down for is his: the clip carries it up to his chest.
+			return
 		_end_once(i)
 	if kind == &"tackle" and other >= 0 and other < _in.size() and not _pairs.is_empty():
 		var pr: Dictionary = _in[i]
