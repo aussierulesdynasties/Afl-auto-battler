@@ -350,12 +350,20 @@ bake("carry", carry, 16, 10)
 # its own track; key times are rescaled to this scene's rate so the move keeps its real speed.
 # The check poses their rig and ours at the same moment and compares where the hands, feet and
 # head land: a rig whose bones were re-oriented on import would bend the limbs differently.
+# The clip blend holds every retargeted take; the game carries only those in player_clips.txt
+# (one action name a line), so the GLB stays the size the phone loads.
 CLIPS = os.environ.get("ARD_CLIPS", "")
 CLIP_FPS = 30.0
 if CLIPS:
     fps = bpy.context.scene.render.fps / bpy.context.scene.render.fps_base
+    keep_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "player_clips.txt")
+    with open(keep_path, encoding="utf-8") as f:
+        keep = [ln.strip() for ln in f if ln.strip() and not ln.startswith("#")]
     with bpy.data.libraries.load(CLIPS) as (src, dst):
-        dst.actions = list(src.actions)
+        lost = [n for n in keep if n not in src.actions]
+        if lost:
+            raise SystemExit(f"CLIPS: {CLIPS} lacks {lost} (player_clips.txt)")
+        dst.actions = [n for n in src.actions if n in keep]
         dst.objects = [n for n in src.objects]
     theirs = next(o for o in dst.objects if o and o.type == "ARMATURE")
     bpy.context.scene.collection.objects.link(theirs)
