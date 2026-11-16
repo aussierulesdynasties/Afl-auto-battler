@@ -42,5 +42,13 @@
 		"Pick the side shows each player's potential beside the rating, and Best side on form now picks purely on form.",
 		"Fixed: the tag card counts the touches of the player you tagged, not a set number.",
 		"Clearer news, press, story-card and player-sheet copy, a ladder you can sort on a phone, and bigger touch targets."
+	],
+	"1.0.20": [
+		"Player ratings are rebuilt from real match stats: 16 skills, each judged against the player's own position.",
+		"Every start rates players on their last three seasons, and traits such as Crumber and Hothead follow the new ratings.",
+		"The 3D match view has real turf, with blades of grass and mown stripes that change with the weather and the time of day.",
+		"Defenders chip the ball around their own 50, forwards tackle more inside theirs, and players run around each other, never through.",
+		"Synergies follow the 18 on the ground, every trait does what its card says, and each game plan has a plan that beats it.",
+		"Real-lists starts open with that year's off-season, and in Legacy you pick who goes after the Fitzroy merger."
 	]
 }

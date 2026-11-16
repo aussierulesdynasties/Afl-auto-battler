@@ -582,11 +582,20 @@ func _possession_phases(k: int) -> Array:
 			# the pack and let the logged winner collect it.
 			return [{"t": "flight", "to": loc, "dur": 0.55, "apex": 6.0, "h0": 1.0, "recv": a}] + tail
 		"free":
+			# The free's taker kicks it to the man who wins it: he has the ball
+			# in his hands first (seed 31 FRE v STK: the ball rolled loose
+			# through the free and flew off with nobody within 4 m of it).
+			# Played on to himself, he runs it to the spot instead.
+			var taker := _free_taker_of(k)
+			var take := _take_free(taker)
+			if taker >= 0 and taker == a:
+				return take + [{"t": "hold", "who": a, "carry": loc, "run": true,
+						"max": (ball["pos"] as Vector2).distance_to(loc) / float(tokens[a]["top"]) * 1.6 + 0.5}] + tail
 			# The ball comes to the mark as a kick would: 0.4 s when it is close,
 			# and a kick's own time when it is not (a fixed 0.4 s sent it 52 m
 			# from the boundary line in one frame at 8x).
 			var back := _flight_shape("kick", (ball["pos"] as Vector2).distance_to(loc))
-			return [{"t": "wait", "dur": 0.3, "ease": true},
+			return take + [{"t": "wait", "dur": 0.3, "ease": true},
 					{"t": "flight", "to": loc, "dur": maxf(0.4, back.x),
 						"apex": 1.5 if back.x <= 0.4 else back.y, "recv": a}] + tail
 		"loose":
@@ -787,7 +796,7 @@ func _boundary_free_phases(k: int) -> Array:
 		var shape := _flight_shape("kick", d)
 		out.append({"t": "flight", "to": at, "dur": shape.x, "apex": shape.y,
 				"recv": -1, "mode": "stoppage"})
-	out += [{"t": "emit", "log": true}, {"t": "wait", "dur": 0.35, "ease": true}]
+	out += [{"t": "emit", "log": true}] + _take_free(_actor_id(events[k])) + [{"t": "wait", "dur": 0.35, "ease": true}]
 	return out
 
 
@@ -798,26 +807,15 @@ func _fifty_phases(k: int) -> Array:
 	var d := (ball["pos"] as Vector2).distance_to(at)
 	var who := _actor_id(events[k])
 	var out := []
-	if d > 1.0 and who >= 0 and str(ball["mode"]) == "held" and int(ball["holder"]) == who:
-		# He has the ball from the free: he carries it up to the new mark, as a
-		# player does. A ball flown 50 m ahead of him lay alone for six seconds
-		# while he ran to it (picture_truth, a 49 m penalty).
+	if d > 1.0 and who >= 0:
+		# He has the ball from the free (or takes it where it lies first): he
+		# carries it up to the new mark, as a player does. A ball flown 50 m
+		# ahead of him lay alone for six seconds while he ran to it
+		# (picture_truth, a 49 m penalty), and a ball flown with nobody kicking
+		# it breaks the oval's first rule.
+		out += _take_free(who)
 		out.append({"t": "hold", "who": who, "carry": at, "run": true, "mode": "stoppage",
 				"max": d / float(tokens[who]["top"]) * 1.6 + 0.5})
-	elif d > 1.0 and who >= 0:
-		# The free's ball still lies where it was paid and he is up the ground
-		# (the tackler, paid holding the ball): it goes to him and he carries it
-		# up to the new mark. Flown ahead alone, it lay 6.2 s at the mark while
-		# he ran 26 m to it (picture_truth, a 50 after a holding-the-ball free).
-		var me: Vector2 = tokens[who]["pos"]
-		var dm := (ball["pos"] as Vector2).distance_to(me)
-		if dm > 1.0:
-			var shape := _flight_shape("handball" if dm < 18.0 else "kick", dm)
-			out.append({"t": "flight", "to": me, "dur": shape.x, "apex": shape.y, "recv": who,
-					"mode": "stoppage"})
-		out += [{"t": "collect", "who": who, "max": 0.3}, {"t": "possess", "who": who, "quiet": true},
-				{"t": "hold", "who": who, "carry": at, "run": true, "mode": "stoppage",
-					"max": me.distance_to(at) / float(tokens[who]["top"]) * 1.6 + 0.5}]
 	elif d > 1.0:
 		# Never quicker than a kick covers the ground: 0.35 + d / 110 sent a
 		# 50 m penalty's ball at 62.2 m a second (picture_truth, ball speed).
@@ -882,7 +880,10 @@ func _pressure_phases(k: int) -> Array:
 	if ph.size() < 3:
 		return ph
 	var who := int((ph[0] as Dictionary)["who"])
-	return [ph[0], ph[1], {"t": "collect", "who": who}, {"t": "possess", "who": who}]
+	# A presser the chase left short: the spilled ball comes his way off the
+	# men nearest it, as a free's taker's does (seed 1 RIC v SYD k511, k545:
+	# 20-29 m off, the ball waited 1.8-2.5 s).
+	return [ph[0], ph[1], {"t": "collect", "who": who, "roll": true}, {"t": "possess", "who": who}]
 
 
 func _inside50_phases(k: int) -> Array:
@@ -936,7 +937,10 @@ func _shot_phases(k: int) -> Array:
 				{"t": "hold", "who": s, "dur": 0.45, "carry": Vector2.INF, "back": true}]
 	elif s >= 0:
 		var on := (target - (ball["pos"] as Vector2)).normalized() * 4.0
-		out += [{"t": "collect", "who": s, "max": 0.35}, {"t": "possess", "who": s, "quiet": true},
+		# He runs onto it before he shoots: capped at 0.35 s, the ball was put
+		# in his hands from up to 4.6 m and kicked from where it lay (seed 31
+		# FRE v STK, five open-play shots).
+		out += [{"t": "collect", "who": s, "roll": true}, {"t": "possess", "who": s, "quiet": true},
 				{"t": "hold", "who": s, "dur": 0.0, "carry": (ball["pos"] as Vector2) + on}]
 	var d := (ball["pos"] as Vector2).distance_to(target)
 	if not set_shot:
@@ -1064,8 +1068,31 @@ func _free_phases(k: int) -> Array:
 		var d := (ball["pos"] as Vector2).distance_to(loc)
 		if d > 1.0:
 			var shape := _flight_shape("handball" if pkind == "handball" and d < 18.0 else "kick", d)
-			out.append({"t": "flight", "to": loc, "dur": shape.x, "apex": shape.y})
-	return out + [{"t": "emit"}, {"t": "wait", "dur": 0.5, "ease": true}]
+			out.append({"t": "flight", "to": loc, "dur": shape.x, "apex": shape.y, "recv": _actor_id(events[k])})
+	# The umpire pays it, and the man it is paid to takes the ball: it never
+	# rolls on through the free with nobody's hands on it.
+	return out + [{"t": "emit"}] + _take_free(_actor_id(events[k])) + [{"t": "wait", "dur": 0.5, "ease": true}]
+
+
+## The free's taker goes to the ball and has it in his hands (nothing when he
+## already has it, or the log names nobody).
+func _take_free(who: int) -> Array:
+	if who < 0:
+		return []
+	if str(ball["mode"]) == "held" and int(ball["holder"]) == who:
+		return []
+	# (A ball still loose comes his way off the men round it, as any loose
+	# ball does: walking 30 m to a ball nobody touches is play waiting.)
+	return [{"t": "collect", "who": who, "roll": true}, {"t": "possess", "who": who, "quiet": true}]
+
+
+## Who takes the free a possession beat restarts from: the man the free
+## before it was paid to (-1 when there is none).
+func _free_taker_of(k: int) -> int:
+	var pk := _prev_real(k)
+	if pk < 0 or not str((events[pk] as Dictionary).get("kind", "")) in ["free", "last_disposal", "out_on_full", "fifty"]:
+		return -1
+	return _actor_id(events[pk])
 
 
 ## Won back straight after a free kick: the free kick's set shot fell short
@@ -1109,7 +1136,17 @@ func _short_set_shot(k: int) -> bool:
 	if str((events[k] as Dictionary).get("kind", "")) != "rebound":
 		return false
 	var pk := _prev_real(k)
-	return pk >= 0 and str((events[pk] as Dictionary).get("kind", "")) == "mark" and (events[pk] as Dictionary).has("band")
+	if pk < 0:
+		return false
+	var prev: Dictionary = events[pk]
+	if str(prev.get("kind", "")) == "mark" and prev.has("band"):
+		return true
+	# A free's set shot that falls short (MatchSim tags it from_free and logs it
+	# where the free was paid): the taker kicks it and it comes down short.
+	# Drawn at the free's spot, the back took it out of the taker's hands with
+	# no kick (seed 31 FRE v STK k149).
+	return bool((events[k] as Dictionary).get("from_free", false)) \
+			and str(prev.get("kind", "")) in ["free", "fifty", "last_disposal", "out_on_full"]
 
 
 func _clanger_phases(k: int) -> Array:
@@ -1415,6 +1452,17 @@ func _lead_receivers(k: int, cur: int) -> void:
 		var nev: Dictionary = events[j]
 		var kind := str(nev.get("kind", ""))
 		if ["goal", "behind", "quarter", "final"].has(kind):
+			# A shot in open play off an entry: the man who kicks it runs onto
+			# where the entry lands, as a receiver leads. Left to start at the
+			# entry, he was 22-44 m off a ball lying dead (seed 42 RIC v SYD,
+			# six shots).
+			var sa := _actor_id(nev)
+			if prev_kind == "inside50" and not bool(nev.get("set_shot", true)) 					and sa >= 0 and sa != cur and not _busy.has(sa) and int(_lead.get(sa, j)) >= j:
+				var stok: Dictionary = tokens[sa]
+				if _lead.has(sa) or n < 2 or MatchMotion.eta(stok, prev_loc) + LEAD_SLACK >= t:
+					_lead[sa] = j
+					MatchMotion.set_goal(stok, prev_loc, 1.0)
+					_busy[sa] = true
 			break  # restarts stage their own players
 		if kind == "inside50":
 			# The entry itself stages its contest, but whoever wins the ball
@@ -1441,7 +1489,23 @@ func _lead_receivers(k: int, cur: int) -> void:
 			t += 1.2
 			continue
 		if kind in ["free", "last_disposal", "out_on_full", "fifty"]:
+			# The man it is paid to is on his way to the spot already, as a
+			# receiver leads: he takes the ball there and kicks it. Left to
+			# start at the whistle, seed 31's taker ran 65 m to a ball lying
+			# loose with a man stood over it.
+			var floc := _loc(j)
 			t += 0.8
+			var fa := _actor_id(nev)
+			# A lead to something later gives way: he takes his free first
+			# (seed 1 RIC v SYD k21, led to his k27 kick, ran 25 m to his free).
+			if fa >= 0 and fa != cur and not _busy.has(fa) and int(_lead.get(fa, j)) >= j:
+				var ftok: Dictionary = tokens[fa]
+				if _lead.has(fa) or n < 2 or MatchMotion.eta(ftok, floc) + LEAD_SLACK >= t:
+					_lead[fa] = j
+					MatchMotion.set_goal(ftok, floc, 1.0)
+					_busy[fa] = true
+			prev_loc = floc
+			prev_kind = kind
 			continue
 		if kind == "throwin":
 			var atb := _loc(j)
@@ -1468,7 +1532,9 @@ func _lead_receivers(k: int, cur: int) -> void:
 		else:
 			t += _flight_shape("handball" if prev_kind == "handball" and d < 18.0 else "kick", d).x
 		var a := _actor_id(nev)
-		if a >= 0 and a != cur and not _busy.has(a) and int(_lead.get(a, j)) == j:
+		# His earliest touch comes first: a lead to a later one gives way
+		# (pauses over seeds 42 and 1-3: 121 with that lead kept, 102 without).
+		if a >= 0 and a != cur and not _busy.has(a) and int(_lead.get(a, j)) >= j:
 			var tok: Dictionary = tokens[a]
 			# The next two receivers always lead (as before); further ones start
 			# once the time left is about what they need to get there.
@@ -1592,6 +1658,10 @@ func _enter(p: Dictionary) -> void:
 			if p.has("recv") and int(p["recv"]) >= 0 and p.has("loc"):
 				MatchMotion.set_goal(tokens[int(p["recv"])], p["loc"], 1.0, true)
 		"flight":
+			if str(ball["mode"]) == "held":
+				# Kicked from his hands: a ball he took this frame has not been
+				# drawn there yet, and flew from where it lay 2.4 m off (seed 31).
+				_update_ball(0.0)
 			var to: Vector2 = p["to"]
 			var from: Vector2 = ball["pos"]
 			var dur := float(p.get("dur", 0.5))
