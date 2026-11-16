@@ -339,6 +339,8 @@ Source tags: DB = DESIGN_BIBLE; RM26/27/28/29/30/32 = roadmap chapters 26, 27, 2
 
 **2.83** 3D oval wet games: cloud light and falling rain (2026-11-16; row 202, 2a). Shown a wet day under cloud (grey light from all round, a faint soft shadow under each man) with and without rain falling across the view, he answered "yes it should, if its raining?": when it rains, rain falls on screen. A wet day is lit by cloud, not sun. The rain's phone cost is measured at the costing.
 
+**2.84** 3D world skies (2026-11-17; row 202, 2a). Shown the weather and time-of-day board, he asked for a twilight that looks "slightly more beautiful, sunsetty", and said "i 100% want skies" and "wanting skies is not a camera decision, its a world design decision": the world has designed skies, one for each weather and time of day, made with the light (2a).
+
 ---
 
 ## 2.S Superseded and cut
