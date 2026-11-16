@@ -471,11 +471,12 @@
   "phase_shares": "Sheehan et al. 2021 (UTS thesis): contested 35.2%, offence 22.0%, defence 21.6%, umpire stoppage 13.5%, set shot 4.1%, goal reset 3.7%.",
   "congestion": "Alexander et al. 2022, PLOS ONE e0272657: 73-76% of players outside any cluster; congested 23-26% of a game.",
   "kick_ins": "AFL.com.au (Twomey): long right 24%, long left 18%, short left and right 42%, short corridor 10%, long corridor 6%.",
-  "set_shot_angles": "2024 set shots: directly in front 10.03%, off-centre 53.68%, 45 degrees 29.6%, pocket 6.69%."
+  "set_shot_angles": "2024 set shots: directly in front 10.03%, off-centre 53.68%, 45 degrees 29.6%, pocket 6.69%.",
+  "stoppage_zone": "Alexander 2021 Fig 6: at stoppages, 23 players of both teams in the ball's zone in either 50, 17 in midfield (zone mixes in our 'stoppage' bucket, so not marked)."
  },
  "sources": {
   "Alexander 2019 Fig 2 (scaled)": "Alexander, Spencer, Sweeting, Mara & Robertson 2019, J Sports Sci, Fig 2 (one team, one match, 10 Hz GPS, Marvel Stadium 159.5 x 128.8 m); read off the figure to +-2 m (+-150 m2) and scaled to this ground (length and centre x1.066, width x1.047, area x1.115); the range is the read error only. https://vuir.vu.edu.au/38278/",
-  "Alexander 2021 (median)": "Alexander et al. 2021, PLOS ONE e0254591: median players of both teams in the ball's zone (50s and half-midfields); range = the median's rounding. https://doi.org/10.1371/journal.pone.0254591",
+  "Alexander 2021 (median)": "Alexander et al. 2021, PLOS ONE e0254591, Fig 6: median players of both teams in the ball's zone (either 50, defensive or attacking midfield) by phase, 12 matches of 2019 at Marvel Stadium, 12 clubs, 10 Hz LPS. Stoppage phase: 23 in either 50, 17 in midfield. The defending team has 1 to 2 more men in its own 50 in every phase. Range = the median's rounding. https://doi.org/10.1371/journal.pone.0254591",
   "Spencer 2019": "Spencer et al. 2019, Front Psychol: kick distance 25.0 +- 11.8 m, density peak 17.3 m",
   "Wheelo 2025-26, clubs low..high": "Wheelo KickMetresGainedPerKick (Champion Data metres gained), 18 clubs lowest..highest weighted by kicks: 2025 25.1..30.1, 2026 25.0..29.0; league 27.0 (tools/wheelo/seasons)"
  }
