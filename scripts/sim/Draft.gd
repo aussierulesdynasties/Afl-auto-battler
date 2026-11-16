@@ -523,8 +523,27 @@ func pick_for_me() -> bool:
 		return false
 	var p := _best_ai_pick(user_club)
 	if p.is_empty():
-		return false
+		# Nothing left the club would take (a fourth ruck): pass, as a rival
+		# does at the same pick, rather than leave the draft waiting. A list
+		# too short to pass takes the best player you could take yourself.
+		if pick_for_me_passes():
+			return user_pass()
+		var best_score := -INF
+		for q in pool:
+			if can_pick_player(q):
+				var score := _ai_score(user_club, q)
+				if score > best_score:
+					best_score = score
+					p = q
+		if p.is_empty():
+			return false
 	return pick(p)
+
+
+## Your pick, made for you, would be a pass: at a National Draft with nothing
+## left your club would take, and a list long enough to pass.
+func pick_for_me_passes() -> bool:
+	return intake_mode and is_user_turn() and pass_block_reason() == "" and _best_ai_pick(user_club).is_empty()
 
 
 func auto_until_user_turn() -> void:

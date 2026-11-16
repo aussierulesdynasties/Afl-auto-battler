@@ -35,6 +35,7 @@ func run() -> void:
 	_t("_test_funded_scouting")
 	_t("_test_asset_valuation")
 	_t("_test_combine_scouting")
+	_t("_test_pick_for_me_passes")
 	_t("_test_scouted_league_board")
 	_t("_test_rival_says_why")
 	_t("_test_draft_reasons_change_nothing")
@@ -716,6 +717,34 @@ func _test_funded_scouting() -> void:
 			ordered = false
 			break
 	_check(ordered, "National Draft Best rated follows the club's scouted view, not hidden OVR")
+
+
+## At a National Draft, Pick for me with nothing left the club would take (a
+## fourth ruck) passes, as a rival does at that pick, so the draft never waits.
+func _test_pick_for_me_passes() -> void:
+	var pool: Array = Prospects.generate_class(2028, 611).slice(0, 4)
+	for p in pool:
+		p["role"] = "RUCK"
+		p["role2"] = ""
+	var clubs := ["A", "B"]
+	var sizes := {"A": 40, "B": 40}
+	var counts := {
+		"A": {"RUCK": 3, "MID": 14, "DEF": 12, "FWD": 11},
+		"B": {"RUCK": 3, "MID": 14, "DEF": 12, "FWD": 11},
+	}
+	var d := Draft.build_intake(pool, clubs, clubs, 90210, sizes, counts)
+	d.start_for_user("A")
+	_check(d.is_user_turn() and d.pick_for_me_passes(), "Only fourth rucks left: your pick, made for you, is a pass")
+	var taken := d.count_for("A")
+	_check(d.pick_for_me() and d.count_for("A") == taken and d.passed_clubs.has("A"),
+			"Pick for me passes rather than leave the draft waiting")
+	# A list too short to pass takes the best of them instead.
+	sizes = {"A": 30, "B": 30}
+	d = Draft.build_intake(pool, clubs, clubs, 90210, sizes, counts)
+	d.start_for_user("A")
+	_check(d.is_user_turn() and d.pass_block_reason() != "" and not d.pick_for_me_passes(),
+			"A list too short to pass cannot pass")
+	_check(d.pick_for_me() and d.count_for("A") == 1, "...so Pick for me takes a ruck rather than wait")
 
 
 ## ARD-M5-012: the top of a draft goes to the best long-term assets. Need
