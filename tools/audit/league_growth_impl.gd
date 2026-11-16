@@ -174,12 +174,18 @@ func _career(club: String, seasons: int) -> void:
 		_change("GROW", year, start, end, true)
 		if s == seasons - 1:
 			break
+		# The audit follows the league, not the coach: a sacking with no job
+		# left would hold the career on one year (as legacy_lists_probe does).
+		if ClubMoves.letter_open(GameState):
+			ClubMoves.decline_letter(GameState)
+		GameState.board.erase("sacked")
 		GameState.open_offseason()
 		if GameState.begin_intake_draft():
 			_run_draft(GameState.draft)
 			GameState.finish_intake_draft()
-		else:
-			GameState.start_next_season()
+		elif not GameState.start_next_season():
+			push_error("league_growth: the season did not roll on from %d" % year)
+			break
 		_breakouts(GameState.season_year)
 		var next := {}
 		for code in GameState.season.lists:
