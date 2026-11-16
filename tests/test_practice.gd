@@ -45,6 +45,7 @@ func _check(ok: bool, message: String) -> void:
 
 ## Runs one test function; it must make at least one check (tests/functions_ran.gd).
 const Ran := preload("res://tests/functions_ran.gd")
+const Press := preload("res://tests/preseason_press.gd")
 func _t(test: String, args := []) -> Variant:
 	return await Ran.one(self, test, args)
 
@@ -98,15 +99,15 @@ func _stop() -> void:
 ## Press on until the practice match is waiting for the coach.
 func _to_practice() -> bool:
 	var guard := 0
-	while GameState.preseason_active() and GameState.preseason_stop() != "practice" and guard < 12:
+	while GameState.preseason_active() and GameState.preseason_stop() != "practice" and guard < 20:
 		guard += 1
-		GameState.preseason_advance()
+		Press.advance()
 	return GameState.preseason_stop() == "practice"
 
 
 ## The papers wait in week 8 (their own suite, papers): pressing on passes them.
 func _past_papers(at: String) -> String:
-	return GameState.preseason_advance() if at == "papers" else at
+	return Press.advance() if at == "papers" else at
 
 
 ## The same on screen: a tap on the way on passes the papers.
@@ -222,7 +223,7 @@ func _test_flow() -> void:
 	_check(names == ["Fremantle", "West Coast"] and int(score[0]) >= 0 and int(score[1]) >= 0 and str(rep["opponent"]) == "WCE",
 			"The report names the two clubs and carries the score")
 	_check(not GameState.sim_practice_match(), "It cannot be played twice")
-	_check(_past_papers(GameState.preseason_advance()) == "done" and not GameState.preseason_active() and GameState.preseason_week() == 8,
+	_check(_past_papers(Press.advance()) == "done" and not GameState.preseason_active() and GameState.preseason_week() == 8,
 			"Pressing on from the report finishes the last week and opens Round 1")
 	# Set up and put down again, then pressed on: one career for both.
 	_stop()
@@ -233,7 +234,7 @@ func _test_flow() -> void:
 			"Coached from the box, it is Fremantle at home to West Coast")
 	GameState._clear_pending()
 	_check(before.size() == GameState.my_list.size() and not GameState.practice_played(), "...and setting it up changes nobody")
-	_check(GameState.preseason_advance() == "practice" and GameState.practice_played() and GameState.preseason_stop() == "practice",
+	_check(Press.advance() == "practice" and GameState.practice_played() and GameState.preseason_stop() == "practice",
 			"Pressing on without playing it sims it and shows the report")
 
 
@@ -423,20 +424,17 @@ func _test_saves() -> void:
 	# Old saves: made before there was a practice match.
 	_stop()
 	GameState.preseason.erase("practice")
-	_check(GameState.preseason_stop() == "" and _past_papers(GameState.preseason_advance()) == "done" and not GameState.preseason_active(),
+	_check(GameState.preseason_stop() == "" and _past_papers(Press.advance()) == "done" and not GameState.preseason_active(),
 			"A save from week 7 with no practice match runs on to Round 1")
 	_career()
-	GameState.preseason_advance()  # to the time trial, week 3
+	Press.advance()  # to the time trial, week 3
 	GameState.save_career()
 	var raw := CareerSave.read(GameState.save_path)
 	_check(not (raw.get("preseason", {}) as Dictionary).has("practice"), "(a save from before week 7 holds no practice match yet)")
 	_check(GameState.load_career() and GameState.preseason_week() < 5, "(setup) the save loads at the time trial")
 	# Pressed on from the time trial until past week 5 (where the old
 	# intra-club stop stood): it runs on to week 7 and the practice match.
-	var guard := 0
-	while GameState.preseason_week() < 5 and guard < 8:
-		guard += 1
-		GameState.preseason_advance()
+	Press.to("practice")
 	_check(GameState.preseason_week() == 7 and GameState.preseason_stop() == "practice",
 			"With no intra-club match, pressing on from the time trial runs to the practice match at the end of week 7")
 	_check(GameState.practice_opponent() == "WCE",
@@ -448,9 +446,9 @@ func _test_saves() -> void:
 	GameState.preseason.erase("practice")
 	GameState.preseason["intra"] = {"mode": "best", "invites": [], "played": false, "seen": false}
 	GameState.save_career()
-	_check(GameState.load_career() and not GameState.preseason.has("intra") and GameState.preseason_stop() == "",
-			"A save from the old intra-club stop loads with the old match gone and the pre-season not waiting")
-	_check(GameState.preseason_advance() == "practice" and GameState.preseason_week() == 7 and GameState.practice_opponent() == "WCE",
+	_check(GameState.load_career() and not GameState.preseason.has("intra") and GameState.preseason_stop() == "week",
+			"A save from the old intra-club stop loads with the old match gone and week 6 waiting")
+	_check(Press.to("practice") and GameState.preseason_week() == 7 and GameState.practice_opponent() == "WCE",
 			"...and pressing on meets the practice match at the end of week 7")
 
 
@@ -482,7 +480,7 @@ func _test_sim_to_round_one() -> void:
 			"Simmed past, the practice match's result and who stood out go in the news, once (%s)" % line)
 	# Round 1 set up with the pre-season still running (the hub's safety net) does the same.
 	_career()
-	GameState.preseason_advance()
+	Press.advance()
 	_check(GameState.prepare_interactive_match() and GameState.practice_played() and not GameState.preseason_active()
 			and _practice_news().size() == 1,
 			"Round 1 set up mid pre-season sims the practice match and puts its result in the news")
@@ -500,8 +498,14 @@ func _test_sim_to_round_one() -> void:
 func _tap_to_practice(tree: SceneTree) -> Control:
 	var scene: Control = await _open(tree)
 	var guard := 0
-	while GameState.preseason_stop() != "practice" and guard < 10:
+	while GameState.preseason_stop() != "practice" and guard < 30:
 		guard += 1
+		# A week waits on its one action: a finger picks the first one open.
+		if GameState.preseason_stop() == "week" and GameState.preseason_next().is_empty():
+			var a := str(GameState.preseason_actions()[0])
+			await _tap(scene.find_child("ActionTap_" + a, true, false), "the week's action")
+			await _frames(tree, 4)
+			scene = tree.current_scene as Control
 		var go := scene.find_child("PreSeasonGo", true, false) as Control
 		await _tap(go, "the way on")
 		await _frames(tree, 10)
@@ -615,8 +619,8 @@ func _test_sim_to_round_one_taps() -> void:
 	GameState.set_setting("seen_training_intro", true)
 	GameState.set_confirm_sim_round(true)
 	var scene: Control = await _open(tree)
-	_check(scene != null and scene.name == "PreSeasonScene" and GameState.preseason_stop() == "plan",
-			"Phone: a new career opens on the pre-season plan")
+	_check(scene != null and scene.name == "PreSeasonScene" and GameState.preseason_stop() == "meetings",
+			"Phone: a new career opens on the player meetings")
 	_check(await _tap(scene.find_child("PreSeasonSim", true, false), "Sim to Round 1"), "Phone: a finger's tap on Sim to Round 1")
 	await _frames(tree, 6)
 	var sheet := scene.get_node_or_null("PreSeasonSimConfirm") as Control
@@ -631,7 +635,7 @@ func _test_sim_to_round_one_taps() -> void:
 	_check(await _tap(cancel, "Cancel"), "Phone: a finger's tap on Cancel")
 	await _frames(tree, 4)
 	_check(scene.get_node_or_null("PreSeasonSimConfirm") == null and GameState.preseason_active()
-			and GameState.preseason_stop() == "plan" and not GameState.practice_played(),
+			and GameState.preseason_stop() == "meetings" and not GameState.practice_played(),
 			"Phone: Cancel closes it and nothing is played")
 	await _tap(scene.find_child("PreSeasonSim", true, false), "Sim to Round 1 again")
 	await _frames(tree, 6)
@@ -821,12 +825,12 @@ func _test_created_club() -> void:
 			"Created club, simmed: the match is played and its report shown")
 	# Pressed on without playing.
 	_from_snap("created_stop")
-	_check(GameState.preseason_advance() == "practice" and GameState.practice_played()
+	_check(Press.advance() == "practice" and GameState.practice_played()
 			and GameState.preseason_stop() == "practice",
 			"Created club, pressed on: the match is simmed and the report waits")
 	# Sim to Round 1 from the plan.
-	_check(_from_snap("created_plan") and GameState.preseason_stop() == "plan" and GameState.my_club == "PMB",
-			"(setup) the created club's career loads at the pre-season plan")
+	_check(_from_snap("created_plan") and GameState.preseason_stop() == "meetings" and GameState.my_club == "PMB",
+			"(setup) the created club's career loads at the player meetings")
 	scene = await _open(tree)
 	_check(await _tap(scene.find_child("PreSeasonSim", true, false), "Sim to Round 1"),
 			"Created club: a finger's tap sims to Round 1")

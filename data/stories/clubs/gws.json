@@ -148,17 +148,18 @@
 		"club": "GWS",
 		"controversy": false,
 		"category": "community",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["The Riverina road trip"],
 		"text": ["The Riverina is football country, and the bush has given the club some of its best young talent. The regional manager wants players at a clinic in Wagga and a night with the country clubs."],
 		"choices": [
-			{"key": "bus", "label": "Send a full bus of players",
-			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The whole group went to the bush"}, {"op": "running", "d": -1}],
-			 "result": "The country clubs turn out in force. The fitness base loses a week."},
 			{"key": "two", "label": "Send two of the country boys home to run it",
-			 "effects": [{"op": "board", "d": 1, "was": "members"}, {"op": "culture", "strand": "together", "d": -1, "why": "The country clubs hoped for a full bus"}],
-			 "result": "Training stays on schedule. The country clubs hoped for more."}
+			 "effects": [{"op": "board", "d": 2}],
+			 "result": "Two country boys go home. The clubs loved it."},
+			{"key": "bus", "label": "Send a full bus of players",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "A long bus trip together"}, {"op": "board", "d": 3}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "A full bus to Wagga. A long trip there and back."}
 		]
 	},
 	{
@@ -253,17 +254,18 @@
 		"club": "GWS",
 		"controversy": false,
 		"category": "members",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["Membership drive in the suburbs"],
 		"text": ["The membership team wants players in shopping centres from Penrith to Parramatta for a weekend, signing posters and selling memberships to families who've never been to a game."],
 		"choices": [
-			{"key": "all", "label": "Every player does a shift",
-			 "effects": [{"op": "board", "d": 5, "was": "members"}, {"op": "forgo_xp", "d": 4, "who": "all"}],
-			 "result": "New families sign up all weekend. A week of full-ground work is lost."},
 			{"key": "leaders", "label": "The leadership group only",
-			 "effects": [{"op": "board", "d": 2, "was": "members"}, {"op": "culture", "strand": "together", "d": -1, "why": "The leaders carried the load for the whole list"}],
-			 "result": "Training stays on schedule. The leaders carry the extra load."}
+			 "effects": [{"op": "board", "d": 2}],
+			 "result": "The leaders do the shifts."},
+			{"key": "every", "label": "Every player does a shift",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The whole list did the shifts"}, {"op": "board", "d": 3}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "Every player signs posters all weekend. Long days."}
 		]
 	},
 	{
@@ -271,17 +273,18 @@
 		"club": "GWS",
 		"controversy": false,
 		"category": "training",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["Summer in the west"],
 		"text": ["It's 42 degrees at the training base and the fitness staff want the session moved to dawn. Some senior players say they ought to train in the heat: they'll have to play in it."],
 		"choices": [
-			{"key": "heat", "label": "Train in the heat",
-			 "effects": [{"op": "running", "d": 1}, {"op": "odds", "chance": 25, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "The heat takes more out of them than it gives."}],
-			 "result": "The players grind through it. The fitness base is a week further on."},
 			{"key": "dawn", "label": "Dawn sessions only",
-			 "effects": [{"op": "fresh", "who": "side"}, {"op": "forgo_xp", "d": 4, "who": "side"}],
-			 "result": "Fresh legs to start the season. The sessions are shorter."}
+			 "effects": [{"op": "morale", "d": 2, "who": "all"}],
+			 "result": "Early starts and fresh legs. The group liked it."},
+			{"key": "heat", "label": "Train in the heat",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "They trained through the heat"}, {"op": "culture", "strand": "together", "d": 1, "why": "They got through the heat together"}, {"op": "sore", "who": "one"}],
+			 "result": "Hard, hot sessions. One of them pulled up sore."}
 		]
 	},
 	{
@@ -289,17 +292,18 @@
 		"club": "GWS",
 		"controversy": false,
 		"category": "training",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["The Showground in summer"],
 		"text": ["The Showground doubles as a cricket ground in summer, and the club's own ovals are booked up. The players want a few sessions on the main surface before the season."],
 		"choices": [
-			{"key": "hire", "label": "Pay to hire it for match-day practice",
-			 "effects": [{"op": "xp", "d": 6, "who": "side"}, {"op": "board", "d": -3, "was": "funds"}],
-			 "result": "Match-day drills on the match-day ground. It isn't cheap."},
 			{"key": "base", "label": "Make do at the training base",
-			 "effects": [{"op": "board", "d": 1, "was": "funds"}, {"op": "forgo_xp", "d": 4, "who": "all"}],
-			 "result": "No cost to the club. A week of full-ground work is lost."}
+			 "effects": [{"op": "board", "d": 2}],
+			 "result": "The training base it is. The money stays put."},
+			{"key": "hire", "label": "Pay to hire it for match-day practice",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "Match-day work on the main ground"}, {"op": "culture", "strand": "ambition", "d": 1, "why": "Ready for Round 1"}, {"op": "board", "d": -2}],
+			 "result": "Proper sessions on the main ground. The hire fee stung."}
 		]
 	},
 	{
@@ -307,17 +311,18 @@
 		"club": "GWS",
 		"controversy": false,
 		"category": "leadership",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["Where the club came from"],
 		"text": ["One of the people who built the club in its first years has dropped in at pre-season training and offered to tell the group where the Giants came from."],
 		"choices": [
-			{"key": "floor", "label": "Give him the floor for an hour",
-			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The group heard how the club was built"}, {"op": "morale", "d": 4, "who": "all"}, {"op": "forgo_xp", "d": 3, "who": "side"}],
-			 "result": "The young ones hear about the early years and the hidings. The session runs short."},
 			{"key": "hello", "label": "A quick hello at the end",
-			 "effects": [{"op": "xp", "d": 3, "who": "side"}, {"op": "culture", "strand": "together", "d": -1, "why": "The group missed hearing where the club came from"}],
-			 "result": "Training stays on schedule. He'd hoped to say more."}
+			 "effects": [{"op": "morale", "d": 2, "who": "all"}],
+			 "result": "A quick hello. The players liked it."},
+			{"key": "floor", "label": "Give him the floor for an hour",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The group heard where the club came from"}, {"op": "morale", "d": 3, "who": "all"}, {"op": "culture", "strand": "standards", "d": -1, "why": "Training ran short"}],
+			 "result": "An hour of stories. Training ran short."}
 		]
 	},
 	{
@@ -378,17 +383,18 @@
 		"club": "GWS",
 		"controversy": false,
 		"category": "media",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["Is this the year?"],
 		"text": ["The season launch question for the Giants is the same as always: is this the year they win the flag?"],
 		"choices": [
-			{"key": "win", "label": "\"We're here to win it.\"",
-			 "effects": [{"op": "board", "d": 5, "was": "members"}, {"op": "loss_sting", "chance": 20, "d": -5, "who": "side"}],
-			 "result": "The members love it. Every loss this season will be measured against those words."},
 			{"key": "september", "label": "\"We'll judge ourselves in September.\"",
-			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The coach kept the talk on the work"}, {"op": "board", "d": -2, "was": "members"}],
-			 "result": "No promise on the record. The members wanted belief."}
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "Judge us in September"}],
+			 "result": "A calm answer at the launch."},
+			{"key": "win", "label": "\"We're here to win it.\"",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "Here to win the flag"}, {"op": "board", "d": 3}, {"op": "morale", "d": -3, "who": "all"}],
+			 "result": "The members roared. The players feel the weight of it."}
 		]
 	},
 	{
@@ -449,17 +455,18 @@
 		"club": "GWS",
 		"controversy": false,
 		"category": "training",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["Sharing the main oval"],
 		"text": ["The reserves and the academy both train at the base, and everyone wants the main oval on the same evenings. The academy coaches ask for joint sessions so the kids feel part of one club."],
 		"choices": [
+			{"key": "seniors", "label": "The senior list keeps its slots",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The seniors keep their sessions"}],
+			 "result": "The senior list keeps the main oval."},
 			{"key": "joint", "label": "Joint sessions twice a week",
-			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The seniors trained with the academy kids"}, {"op": "board", "d": 2}, {"op": "forgo_xp", "d": 4, "who": "all"}],
-			 "result": "The academy kids train beside their heroes. The seniors lose some full-ground work."},
-			{"key": "keep", "label": "The senior list keeps its slots",
-			 "effects": [{"op": "xp", "d": 4, "who": "all"}, {"op": "board", "d": -3}],
-			 "result": "The full program for the seniors. The academy feels second best."}
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "One club on one oval"}, {"op": "board", "d": 2}, {"op": "culture", "strand": "standards", "d": -1, "why": "Less time on the main oval"}],
+			 "result": "The kids train with the seniors. Sessions get crowded."}
 		]
 	}
 ]

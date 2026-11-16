@@ -129,8 +129,9 @@ Each structural call has a shape, read from the match's recorded calls
 | Throw numbers at it | with the ball the midfield and the half-back line run past where the chain is going (the furthest lead already on), the forwards stay ahead of it and the back pockets come up, on the engine's quicker legs (up to a sprint) |
 | Slow it down | sits deeper with and without the ball (the backs 18 m, the midfield and forwards 24 m), spreads wide with the ball; moves slower, with shorter, slower leads that start only when they must. Carriers hold the ball no longer: the engine's hold chains have more disposals in the same minutes |
 
-Every shape moves its side at least 8 m from Balanced, measured as the phone
-draws it (`tests/test_match_motion.gd`): from the discs on the upright oval,
+How far each shape moves its side from Balanced is printed, not gated (director,
+2026-11-17: "idc about metrage, i just want the play to look like AFL footy"),
+measured as the phone draws it (`tests/test_match_motion.gd`): from the discs on the upright oval,
 over the frames the call applies, depth calls relative to the ball and to the
 other side. Balanced is also the bar for crowding: Attack corridor, about 45%
 narrower, keeps its heavy overlaps within 130% of Balanced's, its file-of-three

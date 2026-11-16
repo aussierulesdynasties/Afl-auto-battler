@@ -73,17 +73,18 @@
 		"club": "HAW",
 		"controversy": false,
 		"category": "community",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["Back to Glenferrie"],
 		"text": ["Glenferrie Oval is still the club's spiritual home. The heritage committee asks for one open session there: old grandstand, old members, local kids."],
 		"choices": [
-			{"key": "open", "label": "Run an open session at Glenferrie",
-			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "culture", "strand": "together", "d": 1, "why": "The players trained at the club's old home"}, {"op": "forgo_xp", "d": 3, "who": "side"}],
-			 "result": "The old stand is full. It's a light session for the crowd."},
 			{"key": "closed", "label": "Keep the session closed",
-			 "effects": [{"op": "xp", "d": 4, "who": "side"}, {"op": "board", "d": -1, "was": "members"}],
-			 "result": "A full, hard session behind closed gates. The heritage committee is disappointed."}
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "A closed, sharp session"}],
+			 "result": "A closed session. The work got done."},
+			{"key": "open", "label": "Run an open session at Glenferrie",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "A session at the old ground"}, {"op": "board", "d": 3}, {"op": "culture", "strand": "standards", "d": -1, "why": "A show, not a session"}],
+			 "result": "The old grandstand was full. More show than session."}
 		]
 	},
 	{
@@ -389,17 +390,18 @@
 		"club": "HAW",
 		"controversy": false,
 		"category": "training",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["Commando camp"],
 		"text": ["Hawthorn's hard men of old trained like commandos. The leadership group wants a punishing preseason camp in the bush."],
 		"choices": [
-			{"key": "camp", "label": "Run the camp",
-			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "They survived the commando camp together"}, {"op": "xp", "d": 6, "who": "side"}, {"op": "heavy_legs", "who": "side"}],
-			 "result": "Mud, hills and no sleep. The legs are still heavy come round one."},
 			{"key": "weekend", "label": "Run a team-building weekend instead",
-			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "A weekend away brought the group closer"}, {"op": "forgo_xp", "d": 4, "who": "side"}],
-			 "result": "A good weekend away. Not much hard work done."}
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "A team-building weekend"}],
+			 "result": "A weekend away. The group enjoyed it."},
+			{"key": "camp", "label": "Run the camp",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "A commando camp set the standard"}, {"op": "culture", "strand": "together", "d": 1, "why": "They got through the camp together"}, {"op": "sore", "who": "one"}],
+			 "result": "A punishing camp. One of them pulled up sore."}
 		]
 	},
 	{

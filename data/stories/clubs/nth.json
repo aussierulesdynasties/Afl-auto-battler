@@ -370,17 +370,18 @@
 		"club": "NTH",
 		"controversy": false,
 		"category": "selection",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "player", "pick": "highest:potential", "where": {"games_max": 0}},
 		"title": ["A great's number"],
 		"text": ["The list manager wants to give a famous premiership number to {name}. It would put a target on his back from his first game."],
 		"choices": [
-			{"key": "give", "label": "Give him the number",
-			 "effects": [{"op": "morale", "d": 6, "who": "subject"}, {"op": "slow_start", "chance": 20, "who": "subject"}],
-			 "result": "{first} walks taller. The number weighs on him early."},
 			{"key": "cabinet", "label": "Keep it in the cabinet for now",
-			 "effects": [{"op": "morale", "d": 1, "who": "subject"}, {"op": "board", "d": -1, "was": "members"}],
-			 "result": "No extra pressure on {first}. The members wanted the moment."}
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The number is earned"}],
+			 "result": "The number waits. {name} will earn it."},
+			{"key": "give", "label": "Give him the number",
+			 "effects": [{"op": "morale", "d": 4, "who": "subject"}, {"op": "culture", "strand": "ambition", "d": 1, "why": "A great's number back on the field"}, {"op": "morale", "d": -2, "who": "others"}],
+			 "result": "{name} has the number. A few senior players wanted it."}
 		]
 	},
 	{

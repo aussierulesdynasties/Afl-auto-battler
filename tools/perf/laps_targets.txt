@@ -83,7 +83,7 @@ scripts/state/ClubStories.gd _finals_facts
 scripts/state/GameState.gd current_side
 scripts/state/GameState.gd talk_info
 scripts/state/GameState.gd backing_drop_name
-scripts/state/GameState.gd _preseason_train
+scripts/state/GameState.gd _preseason_take
 scripts/state/GameState.gd fitness_bye_week
 scripts/state/GameState.gd fitness_record
 scripts/state/GameState.gd _club_phase

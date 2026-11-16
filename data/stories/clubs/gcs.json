@@ -112,17 +112,18 @@
 		"club": "GCS",
 		"controversy": false,
 		"category": "community",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["Rugby league town"],
 		"text": ["The Coast grew up on league and surf, and the local schools still play league first. The club can push a schools program hard this summer, but it costs the players' time."],
 		"choices": [
-			{"key": "schools", "label": "Put players in every school",
-			 "effects": [{"op": "board", "d": 5, "was": "members"}, {"op": "forgo_xp", "d": 6, "who": "all"}],
-			 "result": "Suns jumpers in every schoolyard. The players miss time on the track."},
 			{"key": "staff", "label": "Let the development staff run it",
-			 "effects": [{"op": "xp", "d": 6, "who": "all"}, {"op": "board", "d": -1, "was": "members"}],
-			 "result": "The list trains as normal. The schools would rather have met the players."}
+			 "effects": [{"op": "board", "d": 2}],
+			 "result": "The development staff run the program."},
+			{"key": "every", "label": "Put players in every school",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The list worked the schools together"}, {"op": "board", "d": 3}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "Players in every school. Long days for the list."}
 		]
 	},
 	{
@@ -165,17 +166,18 @@
 		"club": "GCS",
 		"controversy": false,
 		"category": "media",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["When's the flag coming?"],
 		"text": ["The season launch on the Broadwater turns to one question: when does the flag come to the Coast? The members want to hear the coach say it."],
 		"choices": [
-			{"key": "flag", "label": "Say we're here to win the flag",
-			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "culture", "strand": "ambition", "d": 1, "why": "The coach said the flag out loud"}, {"op": "loss_sting", "chance": 20, "d": -5, "who": "side"}],
-			 "result": "The members roar. Every loss this year will be measured against those words."},
 			{"key": "week", "label": "Say one week at a time",
-			 "effects": [{"op": "board", "d": -2, "was": "members"}, {"op": "culture", "strand": "standards", "d": 1, "why": "No promises, just the work"}],
-			 "result": "No promise on the record. The launch crowd wanted more."}
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "One week at a time"}],
+			 "result": "A safe answer on the Broadwater."},
+			{"key": "flag", "label": "Say we're here to win the flag",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "Here to win the flag"}, {"op": "board", "d": 3}, {"op": "morale", "d": -3, "who": "all"}],
+			 "result": "The members roared. The players feel the weight of it."}
 		]
 	},
 	{
@@ -201,17 +203,18 @@
 		"club": "GCS",
 		"controversy": false,
 		"category": "training",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["Summer heat"],
 		"text": ["It's 33 degrees and humid by mid-morning. The fitness staff want to train in the middle of the day to harden the side for the early rounds; the medical staff want dawn sessions."],
 		"choices": [
-			{"key": "heat", "label": "Train in the heat",
-			 "effects": [{"op": "running", "d": 2}, {"op": "odds", "chance": 20, "hit": [{"op": "heavy_legs", "who": "side"}], "miss": [], "hit_result": "The heat took more out of the legs than planned."}],
-			 "result": "The midday sessions are brutal. The side is fitter for them."},
 			{"key": "dawn", "label": "Train at dawn",
-			 "effects": [{"op": "fresh", "who": "side"}, {"op": "running", "d": -1}],
-			 "result": "Cool mornings and short sessions. The side starts fresh with less running in the legs."}
+			 "effects": [{"op": "morale", "d": 2, "who": "all"}],
+			 "result": "Early starts and fresh legs. The group liked it."},
+			{"key": "heat", "label": "Train in the heat",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "They trained through the heat"}, {"op": "culture", "strand": "together", "d": 1, "why": "They got through the heat together"}, {"op": "sore", "who": "one"}],
+			 "result": "Hard, hot sessions. One of them pulled up sore."}
 		]
 	},
 	{
@@ -271,17 +274,18 @@
 		"club": "GCS",
 		"controversy": false,
 		"category": "selection",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["Always a young list"],
 		"text": ["The list is full of young talent with a handful of older heads. Is this season about the kids playing through their mistakes, or the senior men winning now?"],
 		"choices": [
+			{"key": "seniors", "label": "Play the senior spine",
+			 "effects": [{"op": "board", "d": 2}],
+			 "result": "The senior players lead this season."},
 			{"key": "kids", "label": "Play the kids",
-			 "effects": [{"op": "xp", "d": 10, "who": "side"}, {"op": "board", "d": -3}],
-			 "result": "The kids get their games. The board wanted wins now."},
-			{"key": "spine", "label": "Play the senior spine",
-			 "effects": [{"op": "board", "d": 3}, {"op": "morale", "d": 3, "who": "side"}, {"op": "forgo_xp", "d": 6, "who": "all"}],
-			 "result": "The senior men play. The kids wait in the twos."}
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "A season for the kids"}, {"op": "culture", "strand": "ambition", "d": 1, "why": "Building for later"}, {"op": "board", "d": -2}],
+			 "result": "The kids get their chance. The board is nervous."}
 		]
 	},
 	{
@@ -306,17 +310,18 @@
 		"club": "GCS",
 		"controversy": false,
 		"category": "community",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["The local club that backed us"],
 		"text": ["The old local club that backed the Suns' bid is celebrating a milestone and has asked the senior coach to speak. Local footy still feels it built this club."],
 		"choices": [
-			{"key": "go", "label": "Go yourself",
-			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "forgo_xp", "d": 3, "who": "all"}],
-			 "result": "The old club feels remembered. The coach misses a session."},
 			{"key": "assistant", "label": "Send an assistant",
-			 "effects": [{"op": "xp", "d": 3, "who": "all"}, {"op": "board", "d": -1, "was": "members"}],
-			 "result": "Training goes ahead with the coach on the track. The old club noticed who came."}
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The coach stayed on the track"}],
+			 "result": "An assistant goes. The coach stays on the track."},
+			{"key": "go", "label": "Go yourself",
+			 "effects": [{"op": "board", "d": 3}, {"op": "culture", "strand": "standards", "d": -1, "why": "The coach missed a session"}],
+			 "result": "The old club loved it. The coach missed a session."}
 		]
 	},
 	{
@@ -335,24 +340,6 @@
 			{"key": "video", "label": "Send a video message",
 			 "effects": [{"op": "xp", "d": 4, "who": "all"}, {"op": "board", "d": -1, "was": "members"}],
 			 "result": "No time lost. The council expected faces."}
-		]
-	},
-	{
-		"id": "gcs_up_north",
-		"club": "GCS",
-		"controversy": false,
-		"category": "community",
-		"phase": ["preseason"],
-		"subject": {"kind": "club"},
-		"title": ["Take a game north"],
-		"text": ["North Queensland's footy clubs want the Suns to bring a practice match up the coast. It's a long, hot trip, but the region feels forgotten."],
-		"choices": [
-			{"key": "north", "label": "Take the game north",
-			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "odds", "chance": 20, "hit": [{"op": "heavy_legs", "who": "side"}], "miss": [], "hit_result": "The trip north is still in the legs come round one."}],
-			 "result": "A big crowd up north and kids in Suns colours."},
-			{"key": "home", "label": "Stay home and train",
-			 "effects": [{"op": "xp", "d": 6, "who": "side"}, {"op": "board", "d": -2, "was": "members"}],
-			 "result": "A full block at home. The north waits another year."}
 		]
 	},
 	{
@@ -396,17 +383,18 @@
 		"club": "GCS",
 		"controversy": false,
 		"category": "members",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["Red, gold and blue"],
 		"text": ["The members' panel wants a heritage guernsey night for the red, gold and blue. Merchandise says it'll sell."],
 		"choices": [
-			{"key": "back", "label": "Back the members' night",
-			 "effects": [{"op": "board", "d": 3, "was": "members"}, {"op": "forgo_xp", "d": 2, "who": "all"}],
-			 "result": "The members love it. The players give up a morning to the photographers."},
 			{"key": "later", "label": "Push it to after the season",
-			 "effects": [{"op": "xp", "d": 2, "who": "all"}, {"op": "board", "d": -1, "was": "members"}],
-			 "result": "No disruption to the preseason. The members' panel is disappointed."}
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "Footy first"}],
+			 "result": "Footy first. The heritage night can wait."},
+			{"key": "back", "label": "Back the members' night",
+			 "effects": [{"op": "board", "d": 3}, {"op": "culture", "strand": "together", "d": 1, "why": "Red, gold and blue night"}, {"op": "culture", "strand": "standards", "d": -1, "why": "A merchandise night in the pre-season"}],
+			 "result": "The old colours sell out. Training ran short that night."}
 		]
 	},
 	{
@@ -432,17 +420,18 @@
 		"club": "GCS",
 		"controversy": false,
 		"category": "leadership",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "player", "pick": "highest:overall", "where": {"age_max": 23}},
 		"title": ["Captain's call"],
 		"text": ["The vice-captain is a Coast lifer and next in line for the armband, but {name} is now the best player at the club. The leadership vote is close."],
 		"choices": [
 			{"key": "lifer", "label": "Give it to the lifer",
-			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "Loyalty to the club was rewarded"}, {"op": "morale", "d": 2, "who": "others"}, {"op": "morale", "d": -4, "who": "subject"}],
-			 "result": "The long-serving man gets the armband. {first} wanted it."},
-			{"key": "young", "label": "Hand it to {first}",
-			 "effects": [{"op": "morale", "d": 8, "who": "subject"}, {"op": "board", "d": 2}, {"op": "morale", "d": -2, "who": "others"}],
-			 "result": "{first} is captain. The vice-captain takes it hard, and some of the senior group with him."}
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "A Coast lifer leads the Coast"}],
+			 "result": "The lifer gets the armband. The rooms approve."},
+			{"key": "star", "label": "Hand it to {first}",
+			 "effects": [{"op": "morale", "d": 4, "who": "subject"}, {"op": "board", "d": 2}, {"op": "morale", "d": -2, "who": "others"}],
+			 "result": "{first} gets the armband. Some backed the lifer."}
 		]
 	},
 	{

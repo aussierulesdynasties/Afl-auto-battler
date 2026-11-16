@@ -272,25 +272,29 @@ func _deal() -> void:
 		GameState.resolve_card(i, pick)
 
 
-## The pre-season, stop by stop: the time trial, the pre-season match, the papers
-## and the card stops after each block, answered like any card.
-## Its triggers are asked on the card weeks it stops at (a card week that brings
-## no card and no other stop passes unasked), so a pre-season COND is a floor.
+## The pre-season, stop by stop (rule 69a): the meetings as they stand, the
+## club's own fitness plan (Peak with HEAVY=1), and each week Team bonding when
+## it is open, else the first action open. Every bonding week deals a card,
+## answered like any card; its triggers are asked on the bonding weeks (a
+## week with no card passes unasked), so a bonding COND is a floor.
 func _walk_preseason() -> void:
 	var guard := 0
-	var counted := -1
-	if heavy:
-		GameState.set_preseason_block(0, "heavy", "running")
+	GameState.preseason_meetings_done()
+	GameState.set_preseason_plan("peak" if heavy else GameState.fitness_plan(GameState.my_club))
 	while GameState.preseason_active() and guard < 100:
 		guard += 1
-		var pw := GameState.preseason_week()
-		if PreSeason.STORY_WEEKS.has(pw) and pw != counted:
-			counted = pw
-			weeks += 1
-			_count_cond(ClubStories.context(GameState))
-		if GameState.preseason_stop() == "story":
+		var stop := GameState.preseason_stop()
+		if stop == "week":
+			var open := GameState.preseason_actions()
+			var bond := open.has("bond")
+			if not open.is_empty():
+				GameState.set_preseason_action("bond" if bond else str(open[0]))
+			if bond:
+				weeks += 1
+				_count_cond(ClubStories.context(GameState, "bonding"))
+		elif stop == "story":
 			_deal()
-		elif GameState.preseason_stop() == "papers":
+		elif stop == "papers":
 			_answer_papers()
 		GameState.preseason_advance()
 

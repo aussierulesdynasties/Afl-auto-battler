@@ -58,6 +58,113 @@ static func pick(gs) -> Array:
 	return cards
 
 
+## A Team bonding week's card (director, 2026-11-17, rule 69a): one card from
+## the bonding deck (data/stories/bonding.json), never a quiet week.
+static func bonding_pick(gs) -> Array:
+	if gs.season == null:
+		return []
+	return StoryEngine.pick_card(StoryDeck.all(), context(gs, "bonding"), gs.story)
+
+
+## A rival's Team bonding week (rule 69a, "Drill, then bond": "a rival's bonding
+## week rolls one card choice for it at random"): a bonding card it can draw (not
+## one it has had this pre-season; the cultural day only with an Indigenous
+## player), one of its choices at random, and what that choice does to the club's
+## culture and its players. A board's confidence and a player's trust are in the
+## coach you play, so those parts are yours alone. Returns the card's id, "" when
+## none fits. Seeded by the career, year, club and week: a reload rolls the same.
+static func rival_bond(gs, code: String, w: int) -> String:
+	if gs.season == null:
+		return ""
+	var list: Array = gs.season.lists.get(code, [])
+	var had := {}
+	for wk in (gs.preseason_entry(code).get("acts", []) as Array):
+		had[str((wk as Dictionary).get("card", ""))] = true
+	var lead := leader_ids(gs, code, list)
+	var facts := {"indigenous": indigenous_players(list).size(), "has_vice": _has_vice(gs, code, list)}
+	var pool := []
+	for t in StoryDeck.all():
+		if not (t.get("phase", []) as Array).has("bonding") or had.has(str(t["id"])):
+			continue
+		# A club's own cards are its to draw. The ones about a named player stay
+		# with your club: picking that player needs your club's player facts.
+		var own := str(t.get("club", ""))
+		if own != "" and (own != code or str((t.get("subject", {}) as Dictionary).get("kind", "club")) != "club"):
+			continue
+		if StoryEngine.meets(facts, t.get("when", {}), {}):
+			pool.append(t)
+	if pool.is_empty():
+		return ""
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(["preseason", "bond", int(gs.career_seed), int(gs.season_year), code, w])
+	var card: Dictionary = pool[rng.randi_range(0, pool.size() - 1)]
+	var choices: Array = card.get("choices", [])
+	var pick: Dictionary = choices[rng.randi_range(0, choices.size() - 1)]
+	for e in (pick.get("effects", []) as Array):
+		var who := str(e.get("who", "subject"))
+		var d := int(e.get("d", 0))
+		match str(e.get("op", "")):
+			"culture":
+				gs._culture_move(code, str(e.get("strand", "")), d, str(e.get("why", "")))
+			"morale":
+				for q in group_targets(list, who, lead):
+					ClubLife.add_morale(q, d)
+			"sore":
+				var one := sore_one(list, rng.randi())
+				if not one.is_empty():
+					one["sore"] = true
+	return str(card["id"])
+
+
+## A club's players on record as Indigenous (data/player_indigenous_2026.csv).
+static func indigenous_players(list: Array) -> Array:
+	return list.filter(func(q): return bool((q as Dictionary).get("indigenous", false)))
+
+
+## The leadership group's ids: the captain and vice-captains on the club's record.
+static func leader_ids(gs, code: String, list: Array) -> Dictionary:
+	var rec: Dictionary = gs.captaincy_record(code)
+	var out := {}
+	for q in list:
+		var role := Captaincy.role_of(rec, str(q["id"]))
+		if role == "captain" or role == "vice":
+			out[str(q["id"])] = true
+	return out
+
+
+static func _has_vice(gs, code: String, list: Array) -> bool:
+	var rec: Dictionary = gs.captaincy_record(code)
+	for q in list:
+		if Captaincy.role_of(rec, str(q["id"])) == "vice":
+			return true
+	return false
+
+
+## The bonding deck's groups on a list: the leaders, the rest, the Indigenous
+## players, or everyone.
+static func group_targets(list: Array, who: String, lead: Dictionary) -> Array:
+	match who:
+		"leaders":
+			return list.filter(func(q): return lead.has(str(q["id"])))
+		"rest":
+			return list.filter(func(q): return not lead.has(str(q["id"])))
+		"indigenous":
+			return indigenous_players(list)
+	return list
+
+
+## One fit player picked at random from `seed` (picked by id, so the list's
+## order does not matter).
+static func sore_one(list: Array, seed: int) -> Dictionary:
+	var fit := list.filter(func(q): return int((q as Dictionary).get("injury_weeks", 0)) <= 0)
+	if fit.is_empty():
+		return {}
+	fit.sort_custom(func(a, b): return str(a["id"]) < str(b["id"]))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed
+	return fit[rng.randi_range(0, fit.size() - 1)]
+
+
 ## The week your season ends: out of the finals once the ladder is
 ## settled, knocked out, or the Grand Final played. One card, once a season
 ## (the story's season counts hold the mark). A side that missed the finals
@@ -126,17 +233,27 @@ static func club_facts(gs, week: int, ph: String) -> Dictionary:
 			"ladder": gs.my_position(), "board": gs.board_confidence(), "fit_count": fit,
 			"run_games": MatchNotes.count_word(Backing.RUN_GAMES),
 			"finals_week": finals_stage(gs, week) if ph == "finals" or ph == "season_end" else 0,
-			"pre_week": gs.preseason_week() if ph == "preseason" else 0, "premiers": _premiers_last_year(gs),
+			"pre_week": gs.preseason_week() if ph == "preseason" or ph == "bonding" else 0, "premiers": _premiers_last_year(gs),
 			"club_deck": deck_code(str(gs.my_club)), "opp_deck": _opponent_deck(gs),
 			"controversies": 0 if gs.get("controversies") != null and not bool(gs.get("controversies")) else 1}
 	facts.merge(_leader_facts(gs), true)
 	facts.merge(_finals_facts(gs, ph), true)
 	facts.merge(papers_facts(gs), true)
-	if ph == "preseason" and gs.preseason_active():
-		# The camp's levers in real terms: the running the plan adds up to and
-		# where the plan a card drills stands (StoryEngine _running_words, _drill_words).
+	# The cultural day comes only to a club with an Indigenous player (director,
+	# 2026-11-17: "if a club has no indigenous players then the card shouldnt appear").
+	facts["indigenous"] = indigenous_players(gs.my_list).size()
+	if ph == "bonding" and gs.preseason_active():
+		# A card's sore falls on one fit player, picked when the card is dealt, so
+		# the card names him and his odds before you answer.
+		var one := sore_one(gs.my_list, hash(["bond", "sore", int(gs.season.seed), int(gs.season_year), gs.preseason_week()]))
+		var sore := one.duplicate()
+		sore["sore"] = true
+		facts["sore_one_id"] = str(one.get("id", ""))
+		facts["sore_one_name"] = GameDB.player_display_name(one) if not one.is_empty() else ""
+		facts["sore_one_pct"] = _about_pct(roundi(Injuries.chance(sore) * 100.0)) if not one.is_empty() else ""
+	if (ph == "preseason" or ph == "bonding") and gs.preseason_active():
+		# Where the plan a card drills stands (StoryEngine _drill_words).
 		var plan: String = gs.card_drill_plan()
-		facts["pre_run"] = gs.preseason_run_forecast()
 		facts["drill_plan"] = CoachReport.plan_label(plan)
 		facts["drill_level"] = gs.plan_fluency(gs.my_club, plan)
 		facts["drill_credit"] = float(gs.my_drill_credit().get(plan, 0.0))
@@ -182,7 +299,7 @@ static func _premiers_last_year(gs) -> bool:
 static func _finals_facts(gs, ph: String) -> Dictionary:
 	var out := {"finals_math": "", "finals_bye": false, "lost_last_final": false, "gf_run": 0,
 			"gf_run_word": "", "gf_again": "", "rival": false}
-	if ph == "preseason":
+	if ph == "preseason" or ph == "bonding":
 		return out
 	if ph == "regular":
 		out["finals_math"] = gs.season.finals_math(gs.my_club)
@@ -645,8 +762,8 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
 			"new_here": _new_here(gs, p), "out_of_side": out_of_side(gs, p), "trial_place": _trial_place(gs, id),
 			"injury_kind": str(p.get("injury_kind", "")),
 			"injury_word": Injuries.wording(str(p.get("injury_kind", ""))) if int(p.get("injury_weeks", 0)) > 0 else "",
-			# Injured in the pre-season: what the physio's plan costs him (preseason_miss).
-			"pre_miss_xp": int(miss["xp"]), "pre_miss_heavy": int(miss["heavy"]), "pre_miss_rounds": int(miss["rounds"])}
+			# Injured in the pre-season: the Round 1 games the physio's plan costs him (preseason_miss).
+			"pre_miss_rounds": int(miss["rounds"])}
 	# International prospects' cards: where he comes from and how far into his career he is.
 	var country: Dictionary = InternationalProspects.country(str(p.get("intl", "")))
 	var career := Career.of(p)
@@ -742,31 +859,17 @@ static func _new_here(gs, p: Dictionary) -> bool:
 	return int(p.get("joined", 0)) == last or int(p.get("drafted_year", 0)) == last
 
 
-## What the physio's plan costs a player injured in the pre-season, on the club's
-## blocks as set: the development of the weeks he sits out (a week passes for him,
-## then the week is trained, as GameState.preseason_step_week does; PreSeason.week_xp,
-## before his coaches' touch), the Heavy weeks among them, and the injury weeks still
-## to run at Round 1. All 0 outside the pre-season or for a concussion.
+## What the physio's plan costs a player injured in the pre-season: the injury
+## weeks still to run at Round 1 (a week passes for him each pre-season week). The
+## summer pays no development and has no loads (rule 69a), so "xp" and "heavy" are
+## 0. All 0 outside the pre-season or for a concussion.
 static func preseason_miss(gs, p: Dictionary) -> Dictionary:
-	var out := {"xp": 0, "heavy": 0, "rounds": 0}
+	var out := {"rounds": 0}
 	var left := int(p.get("injury_weeks", 0))
 	if not gs.preseason_active() or left <= 0 or str(p.get("injury_kind", "")) == "concussion":
 		return out
-	var blocks: Array = gs.preseason_blocks()
-	for w in range(gs.preseason_week() + 1, PreSeason.weeks() + 1):
-		left -= 1
-		var i := PreSeason.block_of_week(w)
-		var block: Array = blocks[i] if i >= 0 and i < blocks.size() else []
-		if not block.is_empty() and str(block[0]) == "light":
-			left -= int(PreSeason.tune("light_heal_extra"))
-		if left <= 0:
-			return out
-		if not block.is_empty():
-			out["xp"] = int(out["xp"]) + PreSeason.week_xp(str(block[0]), str(block[1]))
-			out["heavy"] = int(out["heavy"]) + (1 if str(block[0]) == "heavy" else 0)
-	out["rounds"] = left
+	out["rounds"] = maxi(0, left - (PreSeason.weeks() - gs.preseason_week()))
 	return out
-
 
 ## Where he finished in this pre-season's time trial: "best", "worst" or "".
 static func _trial_place(gs, id: String) -> String:
@@ -840,7 +943,10 @@ static func card_for(gs, tid: String, p: Dictionary = {}, extra: Dictionary = {}
 	if t.is_empty():
 		return {}
 	var end_card := (t.get("phase", []) as Array).has("season_end")
-	var ctx := context(gs, "season_end" if end_card else "") if gs.season != null else {"club": {}, "players": []}
+	# A bonding card is built as the deck deals it (bonding_pick), so a sore
+	# names its one player.
+	var ph := "season_end" if end_card else ("bonding" if (t.get("phase", []) as Array).has("bonding") else "")
+	var ctx := context(gs, ph) if gs.season != null else {"club": {}, "players": []}
 	var subj := {"kind": "club"}
 	if not p.is_empty():
 		subj = {}
@@ -939,6 +1045,12 @@ static func _targets(gs, e: Dictionary, p: Dictionary, facts := {}) -> Array:
 			# have moved since (the card points at the Captaincy page).
 			var vid := str(facts.get("vice_id", ""))
 			return gs.my_list.filter(func(q): return vid != "" and str(q["id"]) == vid)
+		"leaders", "rest", "indigenous":
+			return group_targets(gs.my_list, str(e["who"]), leader_ids(gs, gs.my_club, gs.my_list))
+		"one":
+			# The player the card named when it was dealt (club_facts, sore_one_id).
+			var oid := str(facts.get("sore_one_id", ""))
+			return gs.my_list.filter(func(q): return oid != "" and str(q["id"]) == oid)
 	return gs.my_list
 
 
@@ -965,6 +1077,12 @@ static func _apply(gs, e: Dictionary, p: Dictionary, facts: Dictionary, applied:
 			var when: String = gs.season.round_name(int(facts.get("round", 1)) - 1) if int(facts.get("finals_week", 0)) == 0 else "Finals"
 			if int(facts.get("pre_week", 0)) > 0:
 				when = "Pre-season"
+			if StoryEngine.GROUP_TRUST.has(str(e.get("who", "subject"))):
+				# Each player in the group (the bonding deck's leaders, its Indigenous players).
+				for q in _targets(gs, e, p, facts):
+					applied["trust"] = int(applied.get("trust", 0)) + Trust.change(gs.relations, Trust.player_key(str(q["id"])),
+							d, StoryEngine.fill(str(e.get("why", "")), facts), int(gs.season_year), when)
+				return ""
 			var key := Trust.player_key(str(p["id"]))
 			var before := Trust.opinion(Trust.value(gs.relations, key))
 			applied["trust"] = int(applied.get("trust", 0)) + Trust.change(gs.relations, key,
@@ -1013,6 +1131,10 @@ static func _apply(gs, e: Dictionary, p: Dictionary, facts: Dictionary, applied:
 		"role_trial":
 			return gs.start_role_trial(p, int(e.get("weeks", 3)))
 		"sore":
+			if str(e.get("who", "subject")) == "one":
+				for q in _targets(gs, e, p, facts):
+					q["sore"] = true
+				return ""
 			if int(p.get("injury_weeks", 0)) > 0:
 				return "%s has since been ruled out anyway." % name
 			p["sore"] = true

@@ -49,6 +49,11 @@ const APPEARANCE_CSV := "res://data/player_appearance.csv"
 ## Where each 2026 player came from (a state, or INT), from his recruiting source;
 ## built by tools/build_player_origin.py. A blank state is left unset.
 var ORIGIN_CSV := "res://data/player_origin_2026.csv"
+## Who is Indigenous (director, 2026-11-17, "Add the record", for the bonding
+## deck's cultural day): the AFL Players' Association's 2026 Indigenous Player
+## Map and the AFL's academy squads, one cited row per player. A player on it
+## carries p["indigenous"]; nobody else does.
+var INDIGENOUS_CSV := "res://data/player_indigenous_2026.csv"
 ## Curated looks needed before their mix replaces Appearance.DEFAULT_SKIN_MIX.
 const MIX_FROM := 100
 
@@ -282,6 +287,7 @@ func reload(dataset := Datasets.DEFAULT) -> void:
 	_rate_few_games(players)
 	draftees = _load_draftees()
 	list_additions = _load_list_additions()
+	_apply_indigenous(players, list_additions, draftees)
 	# List additions become real players here, so the hand-set numbers reach
 	# them too; a row that matched nobody in either list is reported.
 	_apply_ovr_overrides(list_additions)
@@ -325,6 +331,7 @@ func _use_dataset(id: String, row: Dictionary) -> void:
 	DRAFTEES_CSV = str(row.get("draftees", ""))
 	HISTORY_CSV = str(row.get("history", ""))
 	ORIGIN_CSV = str(row.get("origin", ""))
+	INDIGENOUS_CSV = str(row.get("indigenous", ""))
 	LIST_ADDITIONS_CSV = str(row.get("list_additions", ""))
 	LIST_ADDITION_STATS_CSV = str(row.get("list_addition_stats", ""))
 	RATING_STATS_CSV = str(row.get("rating_stats", ""))
@@ -1050,6 +1057,50 @@ func _apply_origin(list: Array) -> void:
 		var key := "%s|%d|%s|%s" % [str(p["club"]), int(p["num"]), str(p["first"]), str(p["last"])]
 		if state_of.has(key):
 			p["home_state"] = state_of[key]
+
+
+## Mark p["indigenous"] from data/player_indigenous_2026.csv: a listed player
+## on club, number, first and last name (as the origin file); a list addition
+## (no number on the record) on club and name; a draft-class prospect on his
+## name. A player with no row is not marked.
+func _apply_indigenous(listed: Array, additions: Array, class_rows: Array) -> void:
+	if INDIGENOUS_CSV == "" or not FileAccess.file_exists(INDIGENOUS_CSV):
+		return
+	var rows := _read_rows(INDIGENOUS_CSV)
+	if rows.size() < 2:
+		return
+	var header: Array = rows[0]
+	var idx := {}
+	for j in range(header.size()):
+		idx[str(header[j]).strip_edges()] = j
+	for key in ["club", "num", "first", "last"]:
+		if not idx.has(key):
+			push_error("GameDB: %s has no '%s' column" % [INDIGENOUS_CSV, key])
+			return
+	var full := {}
+	var by_club := {}
+	var by_name := {}
+	for i in range(1, rows.size()):
+		var cells: Array = rows[i]
+		if cells.size() < header.size():
+			continue
+		var club := str(cells[idx["club"]]).strip_edges()
+		var num := str(cells[idx["num"]]).strip_edges()
+		var name := "%s|%s" % [str(cells[idx["first"]]).strip_edges(), str(cells[idx["last"]]).strip_edges()]
+		if num != "":
+			full["%s|%s|%s" % [club, num, name]] = true
+		else:
+			by_club["%s|%s" % [club, name]] = true
+			by_name[name] = true
+	for p in listed:
+		if full.has("%s|%d|%s|%s" % [str(p["club"]), int(p["num"]), str(p["first"]), str(p["last"])]):
+			p["indigenous"] = true
+	for p in additions:
+		if by_club.has("%s|%s|%s" % [str(p["club"]), str(p["first"]), str(p["last"])]):
+			p["indigenous"] = true
+	for p in class_rows:
+		if by_name.has("%s|%s" % [str(p["first"]), str(p["last"])]):
+			p["indigenous"] = true
 
 
 ## data/player_appearance.csv: first,last,dob,club,skin (1-6),hair (a HAIR_KEYS

@@ -658,6 +658,9 @@ func _test_event_decisions() -> void:
 func _test_sacking() -> void:
 	GameState.reset()
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
+	# The Fair board's rule (warned on one poor season, sacked on the next); every
+	# step's rule is _test_board_patience's.
+	GameState.board_patience = "fair"
 	GameState.board["goal"] = {"key": "top4", "text": "Finish in the top four", "pos": 0}
 	GameState.board["confidence"] = 10
 	# The board's season-end judgement on a home and away season that left GEE
