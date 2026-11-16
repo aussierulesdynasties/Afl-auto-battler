@@ -265,7 +265,7 @@ static func prospect_line(stats: Dictionary) -> String:
 	if d >= 12:
 		return "Found the ball %d times against senior bodies." % d
 	if d >= 1:
-		return "Had a quiet day against senior bodies: %d disposals." % d
+		return "Had a quiet day against senior bodies: %d disposal%s." % [d, "" if d == 1 else "s"]
 	return "Saw almost nothing of the ball."
 
 

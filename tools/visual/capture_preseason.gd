@@ -174,6 +174,12 @@ func _run() -> void:
 	await _shot(out + "_match_fulltime.png")
 	await _press("FullTimeContinue")
 	await _frames(14)
+	# The screen wipe swaps the scene on a thread; wait for the pre-season page, then the wipe.
+	var waited := 0
+	while (current_scene == null or current_scene.find_child("PreSeasonPage", true, false) == null) and waited < 600:
+		await process_frame
+		waited += 1
+	await _frames(60)
 	print("scene ", current_scene.name, " stop ", state.preseason_stop(), " played ", state.practice_played())
 	await _shot(out + "_practice_report.png")
 	await _scroll(true)
