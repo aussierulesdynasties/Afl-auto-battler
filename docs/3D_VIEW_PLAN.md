@@ -105,7 +105,7 @@ The answers are recorded in the Director Bible and summarised here.
 The freeze allows only the
 prototypes each question needs; nothing from step 2 is the settled look until he has chosen it.
 
-## Step 3. The asset and animation plan (after step 2)
+## Step 3. The asset and animation plan ([3D_ASSET_PLAN.md](3D_ASSET_PLAN.md); the rig waits on step 2's body)
 
 One inventory of every asset and animation the 3D view needs, written once the body is chosen. For
 each: what it is, where it comes from (his Rokoko takes, a free library, made by us), what it is made
@@ -135,5 +135,5 @@ vignettes. Nothing in step 4 starts before the football proof has passed and the
 | Freeze | in force from 2026-11-16 |
 | 1. Football proof | not started (row 201) |
 | 2. The world and the look | under way (row 202): 2a daylight and tone chosen (rules 2.80, 2.81); next weather and time of day, then 2b stadium, 2c crowd, 2d players' look, 2e cameras |
-| 3. Asset and animation plan | after step 2 (row 203) |
+| 3. Asset and animation plan | drafted early on his word ("may as well make the /plan now"): [3D_ASSET_PLAN.md](3D_ASSET_PLAN.md); the rig waits on 2d (row 203) |
 | 4. Build | after 1 and 3 (rows 197, 198) |
