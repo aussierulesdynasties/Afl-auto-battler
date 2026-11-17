@@ -7,7 +7,8 @@ extends SceneTree
 ##   --replay    instead of --at: one frame 1 s into the first goal's replay (rule 2.96)
 ##   --film N    instead of --at: N seconds of the match screen, frame by frame, for Godot's movie
 ##               writer (run with --write-movie OUT.avi --fixed-fps 30); the coach taps the picture
-##               1 s into the second replay. Prints each camera cut as "CUT frame shot".
+##               1 s into the second replay. Prints each camera cut as "CUT frame shot", and each
+##               change of the main camera's zoom as "ZOOM frame tv|zooming|wide".
 
 var _w := 540
 var _h := 1200
@@ -88,6 +89,7 @@ func _run() -> void:
 			" pitch ", pitch.size)
 	if film > 0.0:
 		var shot := ""
+		var zoom := ""  # rule 2.111: "tv" height, "wide" (57 m, sky) or "zooming" between them
 		var replays := 0
 		var was := false
 		var tap_at := -1
@@ -107,6 +109,10 @@ func _run() -> void:
 			if now != shot:
 				print("CUT ", f, " ", now)
 				shot = now
+			var z := "wide" if tv._zoom >= 1.0 else ("tv" if tv._zoom <= 0.0 else "zooming")
+			if z != zoom:
+				print("ZOOM ", f, " ", z)
+				zoom = z
 			if tv.replaying and not was:
 				replays += 1
 				if replays == 2:
