@@ -8,7 +8,8 @@ extends "res://tools/visual/capture_look3d.gd"
 ## The match moment: 2 s after the first goal of the seeded Fremantle v St Kilda match (a break in play).
 ## Env: ROW (default 8) the supporter's row; SIDE (default 0.45) m the camera sits off his right
 ## shoulder; BACK (default 1.25) m behind him; EYE (default 1.62) camera height over his tread;
-## FOV (default 50); TURN (default 0) deg the camera looks away from straight across the ground.
+## FOV (default 50); TURN (default 0) deg the camera looks away from straight across the ground;
+## WING (default 0 = the wing nearest the play) 1 or -1 picks a wing.
 
 const AFTER_GOAL := 2.0
 
@@ -75,6 +76,8 @@ func _run() -> void:
 	var dd: float = row * pitch + C.PERSON_D
 	var y: float = C.BASE_Y + (row + 1) * rise
 	var zs := -1.0 if oval.ball.global_position.z < 0.0 else 1.0
+	if _env("WING", 0.0) != 0.0:
+		zs = signf(_env("WING", 0.0))
 	var seat := Vector3(oval.ball.global_position.x * 0.0, y, zs * (O.HALF_WID + O.FENCE + dd))
 	var inward := Vector3(0, 0, -zs)
 	# Empty the seats between the camera and him, and his neighbours, so nothing of today's crowd
