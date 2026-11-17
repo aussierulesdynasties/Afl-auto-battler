@@ -17,8 +17,15 @@ edges, where the mesh puts its neck and armholes:
     collar C [w]        the binding round the neck, w cm wide (default 2)
     armholes C [w]      the bindings round both armholes, w cm wide (default 2)
 
-Like kits.txt: shapes and colours only, never sponsors, maker or league logos, or the club
-emblem (director 2026-11-13: "Leave them off").
+One more op is drawn after the others:
+
+    mark C NAME x0 y0 x1 y1   tools/kits/marks/NAME.png (white = the mark), in colour C,
+                              stretched into that box
+
+Shapes and colours only, never sponsors, maker or league logos (director 2026-11-13: "Leave them
+off"). The club marks that are part of the guernsey's own design (the Lions' lion, Carlton's
+monogram, the Eagles' head, the Suns' sun) are drawn: director 2026-11-17, "Draw all five marks".
+Each mask is cut from the club's shop photo (the Suns' sun is redrawn from its measured shapes).
 """
 import csv
 import math
@@ -59,17 +66,33 @@ def parse(path, clubs):
     return kits
 
 
+def draw(ops, cols, marks_dir):
+    """The side's picture: kit_atlas's ops, then each mark stamped on top."""
+    im = kit_atlas.draw_side([o for o in ops if o.split()[0] != "mark"], cols)
+    for op in ops:
+        t = op.split()
+        if t[0] != "mark":
+            continue
+        c, name = kit_atlas.colour(t[1], cols), t[2]
+        x0, y0, x1, y1 = [round(float(v) * SIDE) for v in t[3:7]]
+        mask = Image.open(os.path.join(marks_dir, name + ".png")).convert("L")
+        mask = mask.resize((x1 - x0, y1 - y0), Image.LANCZOS)
+        im.paste(Image.new("RGB", mask.size, c), (x0, y0), mask)
+    return im
+
+
 def main():
     root = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), "..", "..")
     out = sys.argv[2] if len(sys.argv) > 2 else None
     kits = parse(os.path.join(root, "tools", "kits", "kits_today.txt"), kit_atlas.club_colours(root))
     kit_atlas.SIDE = SIDE
+    marks = os.path.join(root, "tools", "kits", "marks")
     rows = math.ceil(len(kits) / PER_ROW)
     atlas = Image.new("RGB", (PER_ROW * SIDE * 2, max(1, rows) * SIDE), "#000000")
     for i, k in enumerate(kits):
         x, y = (i % PER_ROW) * SIDE * 2, (i // PER_ROW) * SIDE
-        atlas.paste(kit_atlas.draw_side(k["front"], k["cols"]), (x, y))
-        atlas.paste(kit_atlas.draw_side(k["back"], k["cols"]), (x + SIDE, y))
+        atlas.paste(draw(k["front"], k["cols"], marks), (x, y))
+        atlas.paste(draw(k["back"], k["cols"], marks), (x + SIDE, y))
     atlas.save(os.path.join(out or os.path.join(root, "assets", "oval3d"), "kits_today.png"), optimize=True)
     with open(os.path.join(out or os.path.join(root, "data"), "kits_today.csv"), "w", encoding="utf-8", newline="") as fh:
         w = csv.writer(fh, lineterminator="\n")
