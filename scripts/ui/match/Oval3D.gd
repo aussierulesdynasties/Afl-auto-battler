@@ -459,6 +459,9 @@ func _kit(kit: Dictionary) -> ShaderMaterial:
 		m.set_shader_parameter("kit_collar", today["collar"])
 		m.set_shader_parameter("kit_arms", today["armholes"])
 		m.set_shader_parameter("kit_trim", Vector2(float(today["collar_cm"]), float(today["armholes_cm"])) / 100.0)
+		# The number in the club's own colour (and edge, Richmond's black), from match photos.
+		m.set_shader_parameter("kit_number", today.get("number", Color(0, 0, 0, 0)))
+		m.set_shader_parameter("kit_number_edge", today.get("number_edge", Color(0, 0, 0, 0)))
 		# The club's own shorts with it (the guernsey's colour where they match).
 		if (today.get("shorts", Color(0, 0, 0, 0)) as Color).a > 0.0:
 			m.set_shader_parameter("shorts", today["shorts"])
@@ -662,6 +665,11 @@ const SKIN_REACH := 0.03
 const SKIN_GAP := 0.02
 ## And how far off the guernsey's surface, along its normal (metres).
 const SKIN_OFF := 0.004
+## How far off the body an armhole's edge, moved onto its smooth curve, stands (metres).
+const EDGE_LIFT := 0.003
+## How far off the skin an armhole's moved edge may stand at most (metres): twice the lift, as the
+## nearest skin point is up to a centimetre from the one truly under it.
+const EDGE_HOLD := 0.006
 ## CUSTOM1 and CUSTOM2 as four floats each (oval3d_player.gdshader: kit_edge, kit_fore, kit_g).
 ## CUSTOM0 stays the mesh's own: the MetaHuman skin coordinates.
 const EDGE_FORMAT := (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM1_SHIFT) 		| (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM2_SHIFT)
@@ -770,6 +778,54 @@ static func _kit_edges(m: Mesh) -> Mesh:
 	var arms := rest.slice(1)
 	for l in arms:
 		_bow_front(l)
+	# The armholes' own edges, cut along whole triangles, step in and out by up to 1.5 cm (the
+	# director's "triangles", 2026-11-17). Each corner on an armhole's edge moves out onto the
+	# drawn edge (the loop smoothed, set out to its farthest tooth), so the cloth itself ends in
+	# that clean curve. Only ever out: moving a corner in would open a gap onto the cut-away skin.
+	var snap := {}
+	for l in arms:
+		var ids: PackedInt32Array = l["ids"]
+		var lsm: PackedVector3Array = l["sm"]
+		var lin: PackedVector3Array = l["into"]
+		for k in range(ids.size()):
+			snap[ids[k]] = lsm[k] - lin[k] * float(l["out"])
+	# Each moved corner also stands EDGE_LIFT off the body, so the arm under the new edge never
+	# shows through the cloth.
+	var gnn: PackedVector3Array = ga[Mesh.ARRAY_NORMAL]
+	var moved := PackedVector3Array()
+	moved.resize(gv.size())
+	# Where the edge moves out over the rounded top of the shoulder it would stand off the body
+	# (the director would see a dark rim with the crowd behind it): there it comes back down to
+	# EDGE_HOLD off the skin under it (the nearest skin point, on that skin's surface).
+	var kv := PackedVector3Array()
+	var kn := PackedVector3Array()
+	if ks >= 0:
+		var ka := am.surface_get_arrays(ks)
+		var kav: PackedVector3Array = ka[Mesh.ARRAY_VERTEX]
+		var kan: PackedVector3Array = ka[Mesh.ARRAY_NORMAL]
+		var y0 := INF
+		for v in snap.values():
+			y0 = minf(y0, (v as Vector3).y)
+		for j in range(kav.size()):
+			if kav[j].y > y0 - 0.05:
+				kv.append(kav[j])
+				kn.append(kan[j].normalized())
+	for i in range(gv.size()):
+		if snap.has(wid[i]):
+			var at: Vector3 = (snap[wid[i]] as Vector3) + gnn[i] * EDGE_LIFT
+			var bj := -1
+			var bd := INF
+			for j in range(kv.size()):
+				var d := at.distance_squared_to(kv[j])
+				if d < bd:
+					bd = d
+					bj = j
+			if bj >= 0:
+				var off := (at - kv[bj]).dot(kn[bj])
+				if off > EDGE_HOLD:
+					at -= kn[bj] * (off - EDGE_HOLD)
+			moved[i] = at - gv[i]
+			gv[i] += moved[i]
 	var level := -INF
 	var hem_top := -INF
 	for q in hem["raw"]:
@@ -779,6 +835,9 @@ static func _kit_edges(m: Mesh) -> Mesh:
 	for l in rest:
 		for q in l["raw"]:
 			low = minf(low, q.y)
+	# The cloth under the drawn hem is worn as shorts: its moulded folds are smoothed away.
+	var gbs := am.surface_get_blend_shape_arrays(gs)
+	_smooth_hem(ga, gbs, gi, wid, pts.size(), faces, level)
 	# The guernsey's pattern coordinates (as the shader reads them) near its neck and armholes,
 	# lent to the skin there so the skin can wear the guernsey up to the drawn edge.
 	var guv: PackedVector2Array = ga[Mesh.ARRAY_TEX_UV]
@@ -839,9 +898,18 @@ static func _kit_edges(m: Mesh) -> Mesh:
 	for b in range(am.get_blend_shape_count()):
 		out.add_blend_shape(am.get_blend_shape_name(b))
 	for s in range(am.get_surface_count()):
-		var a := am.surface_get_arrays(s)
-		var bsa := am.surface_get_blend_shape_arrays(s)
+		var a := ga if s == gs else am.surface_get_arrays(s)
+		var bsa := gbs if s == gs else am.surface_get_blend_shape_arrays(s)
 		var flags := _custom_format(am, s)
+		if s == gs:
+			a[Mesh.ARRAY_VERTEX] = gv
+			# Glb blend shapes hold whole positions (normalized): each moves with its corner.
+			if am.blend_shape_mode == Mesh.BLEND_SHAPE_MODE_NORMALIZED:
+				for b in range(bsa.size()):
+					var bv: PackedVector3Array = bsa[b][Mesh.ARRAY_VERTEX]
+					for i in range(bv.size()):
+						bv[i] += moved[i]
+					bsa[b][Mesh.ARRAY_VERTEX] = bv
 		if s == gs or s == ss or s == ks:
 			var vs: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
 			var both: Array = measure.call(vs, 1.0 if s == gs else (0.5 if s == ss else SKIN))
@@ -853,6 +921,82 @@ static func _kit_edges(m: Mesh) -> Mesh:
 		out.surface_set_name(s, am.surface_get_name(s))
 	_edged[m] = out
 	return out
+
+
+## The guernsey's cloth below the drawn hem line (level), which the shader paints as shorts: the
+## mesh's hem dips up to 6 cm under that line in front and 3.6 cm behind, and the folds moulded into
+## that strip showed as lumps under the hem (director 2026-11-17, "lumpy seams between shorts and
+## shirt"; he chose "Smooth the 6 cm strip"). Each corner of the strip is eased towards its
+## neighbours (Taubin, which keeps the strip's size, so it does not sink into the body), in the rest
+## pose and in every build morph alike; the cloth's open edge, where the shorts begin, stays put so
+## no gap opens. The strip's normals are then taken from its new faces.
+static func _smooth_hem(ga: Array, bsa: Array, gi: PackedInt32Array, wid: PackedInt32Array,
+		count: int, faces: Dictionary, level: float) -> void:
+	var gv: PackedVector3Array = ga[Mesh.ARRAY_VERTEX]
+	var nbr := []
+	nbr.resize(count)
+	for i in range(count):
+		nbr[i] = PackedInt32Array()
+	for e: Vector2i in faces:
+		nbr[e.x].append(e.y)
+		nbr[e.y].append(e.x)
+	var edge := {}
+	for e: Vector2i in faces:
+		if faces[e] == 1:
+			edge[e.x] = true
+			edge[e.y] = true
+	var one := PackedInt32Array()  # one vertex index per welded corner
+	one.resize(count)
+	for i in range(gv.size()):
+		one[wid[i]] = i
+	var move := PackedInt32Array()
+	for w in range(count):
+		if gv[one[w]].y < level and not edge.has(w):
+			move.append(w)
+	if move.is_empty():
+		return
+	var sets := [ga]
+	sets.append_array(bsa)
+	for arrs: Array in sets:
+		var vs: PackedVector3Array = arrs[Mesh.ARRAY_VERTEX]
+		var p := PackedVector3Array()
+		p.resize(count)
+		for w in range(count):
+			p[w] = vs[one[w]]
+		for it in range(20):
+			for f in [0.5, -0.53]:
+				var t := p.duplicate()
+				for w in move:
+					var avg := Vector3.ZERO
+					for u in nbr[w]:
+						avg += p[u]
+					t[w] = p[w] + f * (avg / float(nbr[w].size()) - p[w])
+				p = t
+		for i in range(vs.size()):
+			vs[i] = p[wid[i]]
+		arrs[Mesh.ARRAY_VERTEX] = vs
+		# Normals of the moved corners from the faces round them.
+		var ns: PackedVector3Array = arrs[Mesh.ARRAY_NORMAL]
+		if ns == null or ns.is_empty():
+			continue
+		var acc := PackedVector3Array()
+		acc.resize(count)
+		for f in range(0, gi.size(), 3):
+			var a := wid[gi[f]]
+			var b := wid[gi[f + 1]]
+			var c := wid[gi[f + 2]]
+			var fn := (p[c] - p[a]).cross(p[b] - p[a])
+			acc[a] += fn
+			acc[b] += fn
+			acc[c] += fn
+		var moved := {}
+		for w in move:
+			moved[w] = true
+		for i in range(vs.size()):
+			if moved.has(wid[i]) and acc[wid[i]].length_squared() > 0.0:
+				var n := acc[wid[i]].normalized()
+				ns[i] = n if n.dot(ns[i]) >= 0.0 else -n
+		arrs[Mesh.ARRAY_NORMAL] = ns
 
 
 ## One open edge of the guernsey (ids: welded corners in order round it): its raw points, the
@@ -886,7 +1030,7 @@ static func _edge_loop(ids: PackedInt32Array, pts: PackedVector3Array) -> Dictio
 				k += 1
 		var v := sum / maxi(k, 1) - sm[i]
 		into[i] = (v - along * v.dot(along)).normalized()
-	var l := {"raw": raw, "sm": sm, "bow": sm, "into": into, "mid": mid / n, "deep": 0.0, "out": 0.0}
+	var l := {"ids": ids, "raw": raw, "sm": sm, "bow": sm, "into": into, "mid": mid / n, "deep": 0.0, "out": 0.0}
 	for q in raw:
 		var d := _inside(q, l).x
 		l["deep"] = maxf(float(l["deep"]), d)
