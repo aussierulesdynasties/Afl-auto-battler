@@ -379,6 +379,8 @@ Source tags: DB = DESIGN_BIBLE; RM26/27/28/29/30/32 = roadmap chapters 26, 27, 2
 
 **2.103** Ball-ups: close-ups of the two ruckmen in the wait (2026-11-17; row 202, 2e). Real TV spends 10-20 s on tight close-ups of key players before a ball-up, then the wide shot for the contest (ABC, 2020). In our match the pack settles only about 2 s before the ball-up. Shown one ball-up two ways (A the main camera only, B about a second on each ruckman, then back wide just before the bounce), he chose "B: ruckmen close-ups".
 
+**2.104** The woman supporter is a young blonde, the Vivian face (2026-11-17; row 202). Asked who the woman is, he answered "no need a cute, young blond babe" and "when i say young i mean like early-mid twenties, conventionally attractive blond girl". None of Epic's 13 MetaHuman women has blonde hair, so the hair is Epic's long straight hair with a fringe (Hair_L_StraightBangs), coloured blonde. Shown the three youngest fair faces with that hair in our close-up shot (A Vivian, B Celeste, C Jelena; front and three-quarter), he chose "A Vivian". Her gear and how she moves are still to be asked.
+
 ---
 
 ## 2.S Superseded and cut
