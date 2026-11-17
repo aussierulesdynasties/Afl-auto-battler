@@ -129,15 +129,8 @@ def fit(src, out, socket, tex_px):
     co0 = Vector((cx, cy, pc + off))
     bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:], plane_co=co0, plane_no=n,
                            clear_inner=True)
-    # His mesh is coarse low on his neck (Gawn's throat: single triangles from the cut to 5 cm up, under
-    # his beard). Every edge there longer than 6 mm is cut into 6 mm pieces, so the band stretches and
-    # takes the skin colour smoothly instead of smearing his beard down his throat.
-    near = lambda v: v.co.z - (pa * (v.co.x - cx) + pb * (v.co.y - cy) + pc + off) < 0.05
-    long_e = [e for e in bm.edges if (near(e.verts[0]) or near(e.verts[1])) and e.calc_length() > 0.006]
-    if long_e:
-        cuts = max(1, min(12, int(max(e.calc_length() for e in long_e) / 0.006)))
-        bmesh.ops.subdivide_edges(bm, edges=long_e, cuts=cuts, use_grid_fill=True)
-        print("low neck: %d long edges cut into %d pieces each" % (len(long_e), cuts + 1))
+    # (No subdividing of his low neck: cutting the long edges there also cut up his beard's cards, whose
+    # pieces then caught the light as dark shards.)
     bm.to_mesh(ob.data)
     bm.free()
     me = ob.data
