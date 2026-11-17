@@ -143,8 +143,10 @@ func _load_print() -> String:
 		var c: Dictionary = GameDB.clubs[code]
 		# pattern3 (L9's anchor colour) came after this golden; today's kits repeat
 		# pattern2 in it, which _test_guernseys_by_year checks.
+		# "today" (the 3D player's picture of the current home guernsey) is art, not load data.
 		var g := GameDB.club_guernsey(code)
 		g.erase("pattern3")
+		g.erase("today")
 		out.append("%s|%s|%s|%s|%d|%s" % [code, str(c.get("name", "")), str(c.get("short", "")),
 				str(c.get("ground", "")), int(c.get("enter", 0)), str(g)])
 	out.append(str(GameDB.club_order))
