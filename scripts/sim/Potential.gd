@@ -210,10 +210,13 @@ static func pedigree_potential(p: Dictionary, pot: float) -> float:
 
 
 ## A hand-set POT (data/potential_overrides.csv). Also flags the rehab year
-## when the rating sits well below it, so the jump happens next rollover.
+## when the rating sits well below it after a short (injury) season, so the
+## jump happens next rollover. A full season's player grows at the ordinary
+## pace toward it (director 2026-11-17, silent corrections).
 static func set_override(p: Dictionary, pot: int) -> void:
 	p["potential"] = clampi(pot, int(p.get("overall", 1)), MAX_POT)
-	if int(p["potential"]) - int(p.get("overall", 0)) >= REHAB_GAP:
+	var games := float(p.get("gm", 0.0))
+	if int(p["potential"]) - int(p.get("overall", 0)) >= REHAB_GAP 			and games > 0.0 and games < REHAB_GAMES:
 		p["rehab"] = true
 
 
@@ -275,7 +278,7 @@ static func outlook(p: Dictionary, years: int) -> Array:
 			if pull > 0.0:
 				d = maxf(d, maxf(gap * pull, minf(gap, MIN_STEP)))
 		rehab = false
-		var next := clampf(r + d, 25.0, 93.0)
+		var next := clampf(r + d, 25.0, float(MAX_POT))
 		if d > 0.0:
 			next = minf(next, maxf(r, pot))
 		r = next
@@ -289,26 +292,6 @@ static func outlook(p: Dictionary, years: int) -> Array:
 			go = 0.30
 		alive *= 1.0 - go
 	return out
-
-
-## Training price against POT, the same for every club. Well below it a
-## stat comes cheaper (down to half price); over the last few points it gets
-## dearer; at POT it costs PAST_POT_BASE and every point beyond multiplies
-## that by PAST_POT_STEP. No stop: an exceptional player can still be built
-## past his projection, but each point costs far more than the last.
-const NEAR_POT_GAP := 4
-const NEAR_POT_STEP := 0.15
-const PAST_POT_BASE := 1.6
-const PAST_POT_STEP := 1.7
-
-
-static func training_multiplier(p: Dictionary) -> float:
-	var gap := int(p.get("potential", p.get("overall", 0))) - int(p.get("overall", 0))
-	if gap <= 0:
-		return PAST_POT_BASE * pow(PAST_POT_STEP, float(-gap))
-	if gap < NEAR_POT_GAP:
-		return 1.0 + float(NEAR_POT_GAP - gap) * NEAR_POT_STEP
-	return clampf(1.0 - float(gap) / 50.0, 0.5, 1.0)
 
 
 ## A breakout: an off-season in which a player jumps well beyond his normal

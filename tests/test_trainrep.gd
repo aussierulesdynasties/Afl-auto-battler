@@ -71,6 +71,9 @@ func _boost_potential(n: int) -> void:
 	for p in GameState.my_list:
 		if made < n and int(p.get("potential", 0)) < 95:
 			p["potential"] = 95
+			# A banked head start: one game earns well under one stat point
+			# (director 2026-11-17, Growth), and these screens need risers.
+			p["xp_match"] = float(p.get("xp_match", 0.0)) + 6.0 * Growth.xp_per_point(p)
 			made += 1
 
 

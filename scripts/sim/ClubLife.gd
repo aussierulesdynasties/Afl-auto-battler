@@ -439,16 +439,16 @@ static func early_price(p: Dictionary) -> int:
 
 ## What waiting can cost on the "wants to talk contract" card, worked out
 ## from the rules (bible §4: the gate says the size): at the off-season he asks
-## the price of his rating then, and this season's training can lift that
-## rating at most to `ceiling` (GameState.season_ceiling). The templates hold
-## no figure; tests/test_club.gd checks the line against the price curve.
-const WAIT_LIFT := "At the off-season he asks what his rating is worth then. Training can lift him at most %d %s this season, up to %s a season more than today; less if his form drops."
-const WAIT_FLAT := "At the off-season he asks what his rating is worth then. Training can't lift him further this season; less if his form drops."
+## the price of his rating then, and `lift` is what his development adds by
+## then if he plays every game left (Growth.points_per_game). The templates
+## hold no figure; tests/test_club.gd checks the line against the price curve.
+const WAIT_LIFT := "At the off-season he asks what his rating is worth then. Playing every game from here, his development lifts him about %d %s this season, up to %s a season more than today; less if he misses games or his form drops."
+const WAIT_FLAT := "At the off-season he asks what his rating is worth then. The season is too far gone for his development to lift his price; less if his form drops."
 
 
-static func wait_words(p: Dictionary, ceiling: int) -> String:
+static func wait_words(p: Dictionary, lift: int) -> String:
 	var ovr := int(p.get("overall", 0))
-	var lift := maxi(0, ceiling - ovr)
+	lift = maxi(0, lift)
 	var up := p.duplicate()
 	up["overall"] = ovr + lift
 	var more := Contracts.asking_salary(up) - Contracts.asking_salary(p)

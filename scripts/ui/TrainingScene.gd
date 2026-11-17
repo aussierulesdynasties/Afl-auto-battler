@@ -1401,19 +1401,12 @@ func _ignore_mouse(node: Control) -> void:
 			_ignore_mouse(child)
 
 
-## Why this player trains cheap (or dear): potential sets the price.
+## What his potential means for his development now (Growth).
 func _potential_note(p: Dictionary) -> String:
-	var mult := Potential.training_multiplier(p)
-	if bool(p.get("rehab", false)):
-		return "Rehab: back near his %d POT after this season. Training is cheaper until then." % int(p["potential"])
-	if mult < 0.95:
-		return "Room to grow: training is cheaper while he is below his potential."
 	var gap := int(p.get("potential", p["overall"])) - int(p["overall"])
-	if gap < 0:
-		return "Past his potential: every point costs far more."
-	if mult > 1.0:
-		return "Close to his potential: training costs more."
-	return ""
+	if gap <= 0:
+		return "At his potential: each summer takes back part of what he trains past it."
+	return "Every game he plays brings him closer."
 
 
 ## Where his POT comes from: draft pedigree and recent rated seasons.

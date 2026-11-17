@@ -518,8 +518,8 @@ const PERSONA := {
 }
 
 ## Standing with each journalist, -2..+2 (director 2026-11-06, Q1): each step
-## moves outcome "a" of every answer to him by this much, and fades one step a
-## season.
+## moves outcome "a" of every answer to him by this much. Only your answers
+## move it; it never fades with time (director 2026-11-17).
 const STANDING_MIN := -2
 const STANDING_MAX := 2
 const STANDING_ODDS := 5
@@ -763,13 +763,6 @@ static func standing_move(journalist: String, kind: String, verdict := "") -> in
 ## Standing after one more move, inside -2..+2.
 static func standing_after(v: int, move: int) -> int:
 	return clampi(v + move, STANDING_MIN, STANDING_MAX)
-
-
-## Standing after `years` seasons: one step toward even a season.
-static func standing_decayed(v: int, years: int) -> int:
-	if years <= 0:
-		return v
-	return v - signi(v) * mini(absi(v), years)
 
 
 ## His opinion of you in one word: "Warm".

@@ -118,10 +118,14 @@ static func apply_match(res: Dictionary, lists: Dictionary, season_seed: int, ro
 
 ## A week passes for a club that just played: every existing injury is one
 ## game closer to healed. Call before rolling that round's new injuries.
-static func tick(list: Array) -> void:
+## `count`: a season game he missed hurt, kept for his career length
+## (Growth.season_end: 10 or more in a season take a quarter season off).
+static func tick(list: Array, count := false) -> void:
 	for p in list:
 		var w := int(p.get("injury_weeks", 0))
 		if w > 0:
+			if count:
+				p["games_missed_injured"] = int(p.get("games_missed_injured", 0)) + 1
 			p["injury_weeks"] = w - 1
 			if w - 1 == 0:
 				p.erase("injury_kind")

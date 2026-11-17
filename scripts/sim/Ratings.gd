@@ -626,6 +626,24 @@ static func rate_overall(a: Dictionary, role: String, games: float) -> int:
 	return clampi(int(round(overall)), OVR_MIN, OVR_MAX)
 
 
+## How much one point of `key` moves his rating in `role` (rate_overall is a
+## straight line in each skill, so this is the same at every level): 0 for a
+## skill the role does not count. Growth prices XP in rating points with it.
+static func overall_per_point(role: String, key: String, games: float) -> float:
+	var w: Dictionary = ROLE_WEIGHTS.get(role, ROLE_WEIGHTS["MID"])
+	if not w.has(key) or unknown_attrs.has(key):
+		return 0.0
+	var f: Dictionary = LINE_FIT.get(role, LINE_FIT["MID"])
+	var total := 0.0
+	var kept := 0.0
+	for k in w:
+		total += float(w[k])
+		if not unknown_attrs.has(k):
+			kept += float(w[k])
+	var conf: float = minf(1.0, games / 14.0)
+	return float(f["slope"]) * float(w[key]) / 98.0 * (total / kept) * (0.40 + 0.60 * conf)
+
+
 ## Second role only when the season numbers clear a gate. Empty string means
 ## one role. Must match tools/sim_harness.py::assign_secondary.
 static func assign_secondary(p: Dictionary) -> String:
