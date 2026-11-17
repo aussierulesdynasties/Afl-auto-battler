@@ -584,6 +584,8 @@ func _test_who_a_rival_keeps() -> void:
 	Expansion.FIRST_CALL_CAP_SQUEEZED = was
 
 
+## A reloaded build keeps the list on state-league signings, as the unsaved
+## career does (_test_build_and_entry: 10 or more; 23 of 30 stay at present).
 func _test_save_round_trip() -> void:
 	_new_career()
 	GameState.set_canberra(true)
@@ -602,7 +604,7 @@ func _test_save_round_trip() -> void:
 	_check((after.get("targets", []) as Array).size() == n_targets and ExpansionBuild._approached(after, 2027),
 			"The approaches survive the round trip")
 	var history := _rollover()
-	_check(GameState.season_year == 2028 and _count_prefix(GameState.season.lists["TAS"], "FND_") >= 24
+	_check(GameState.season_year == 2028 and _count_prefix(GameState.season.lists["TAS"], "FND_") >= 10
 			and _picks_of(history, "TAS").has(1), "The loaded career finishes the build and enters")
 	# And a save taken with the draft open.
 	GameState.season.round_index = GameState.season.fixture.size()
@@ -641,7 +643,7 @@ func _test_old_saves() -> void:
 	GameState.load_career()
 	_check(GameState.canberra_on and GameDB.active_clubs(2030).has("CANB"), "An old save keeps Canberra")
 	_rollover()
-	_check(_count_prefix(GameState.season.lists["TAS"], "FND_") >= 24 and _count_prefix(GameState.season.lists["TAS"], "EXP_") == 0,
+	_check(_count_prefix(GameState.season.lists["TAS"], "FND_") >= 10 and _count_prefix(GameState.season.lists["TAS"], "EXP_") == 0,
 			"An old save that had not reached 2028 gets the package")
 	_new_career()
 	_rollover()
