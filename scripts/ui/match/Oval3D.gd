@@ -664,6 +664,9 @@ const SKIN_GAP := 0.02
 const SKIN_OFF := 0.004
 ## How far off the body an armhole's edge, moved onto its smooth curve, stands (metres).
 const EDGE_LIFT := 0.003
+## How far off the skin an armhole's moved edge may stand at most (metres): twice the lift, as the
+## nearest skin point is up to a centimetre from the one truly under it.
+const EDGE_HOLD := 0.006
 ## CUSTOM1 and CUSTOM2 as four floats each (oval3d_player.gdshader: kit_edge, kit_fore, kit_g).
 ## CUSTOM0 stays the mesh's own: the MetaHuman skin coordinates.
 const EDGE_FORMAT := (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM1_SHIFT) 		| (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM2_SHIFT)
@@ -788,9 +791,37 @@ static func _kit_edges(m: Mesh) -> Mesh:
 	var gnn: PackedVector3Array = ga[Mesh.ARRAY_NORMAL]
 	var moved := PackedVector3Array()
 	moved.resize(gv.size())
+	# Where the edge moves out over the rounded top of the shoulder it would stand off the body
+	# (the director would see a dark rim with the crowd behind it): there it comes back down to
+	# EDGE_HOLD off the skin under it (the nearest skin point, on that skin's surface).
+	var kv := PackedVector3Array()
+	var kn := PackedVector3Array()
+	if ks >= 0:
+		var ka := am.surface_get_arrays(ks)
+		var kav: PackedVector3Array = ka[Mesh.ARRAY_VERTEX]
+		var kan: PackedVector3Array = ka[Mesh.ARRAY_NORMAL]
+		var y0 := INF
+		for v in snap.values():
+			y0 = minf(y0, (v as Vector3).y)
+		for j in range(kav.size()):
+			if kav[j].y > y0 - 0.05:
+				kv.append(kav[j])
+				kn.append(kan[j].normalized())
 	for i in range(gv.size()):
 		if snap.has(wid[i]):
-			moved[i] = (snap[wid[i]] as Vector3) + gnn[i] * EDGE_LIFT - gv[i]
+			var at: Vector3 = (snap[wid[i]] as Vector3) + gnn[i] * EDGE_LIFT
+			var bj := -1
+			var bd := INF
+			for j in range(kv.size()):
+				var d := at.distance_squared_to(kv[j])
+				if d < bd:
+					bd = d
+					bj = j
+			if bj >= 0:
+				var off := (at - kv[bj]).dot(kn[bj])
+				if off > EDGE_HOLD:
+					at -= kn[bj] * (off - EDGE_HOLD)
+			moved[i] = at - gv[i]
 			gv[i] += moved[i]
 	var level := -INF
 	var hem_top := -INF
