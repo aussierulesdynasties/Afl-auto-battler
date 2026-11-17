@@ -31,6 +31,27 @@ uniform ivec2 kit_grid = ivec2(1, 1);
 // The player's own number (0-99), per figure; -1 for none.
 instance uniform int number = -1;
 
+// His skin's own detail, from the MetaHuman body's maps (assets/oval3d/skin): pores, knuckles,
+// veins, tendons, the shading of muscle. UV3 (CUSTOM0.xy, mh_to_glb_morph.py's uv_skin) holds
+// the MetaHuman's own coordinates: u 0..1 the head, 1..2 the body. The colour is his skin times
+// the map over the map's average (linear, over its skin pixels: the grey
+// underwear panels left out), so the tone stays his.
+// The normal maps are DirectX (green down the image): green is flipped for Godot's OpenGL
+// convention. The mesh's tangents are built on these coordinates (mh_to_glb_morph.py v6).
+uniform sampler2D skin_body_col : source_color, filter_linear_mipmap_anisotropic, repeat_disable;
+uniform sampler2D skin_body_nrm : hint_normal, filter_linear_mipmap_anisotropic, repeat_disable;
+uniform sampler2D skin_body_srmf : filter_linear_mipmap, repeat_disable;
+uniform sampler2D skin_head_col : source_color, filter_linear_mipmap_anisotropic, repeat_disable;
+uniform sampler2D skin_head_nrm : hint_normal, filter_linear_mipmap_anisotropic, repeat_disable;
+uniform sampler2D skin_head_srmf : filter_linear_mipmap, repeat_disable;
+const vec3 BODY_MEAN = vec3(0.2715, 0.1044, 0.0605);
+const vec3 HEAD_MEAN = vec3(0.2555, 0.1074, 0.0594);
+varying vec2 skin_uv;
+
+void vertex() {
+	skin_uv = CUSTOM0.xy;
+}
+
 const vec2 NUMBER_ACROSS = vec2(0.24, 0.76);   // about 26 cm for two digits
 const vec2 NUMBER_UP = vec2(0.34, 0.80);       // about 27 cm tall, as AFL numbers are
 
@@ -269,7 +290,18 @@ void fragment() {
 	// The sock: base colour, the band in the pattern colour (the sprites' maskA).
 	float band = over(g.y, 0.0) * over(1.0, g.y);
 	vec3 sock = mix(base, pat, band);
-	vec3 c = skin.rgb;
+	bool on_body = skin_uv.x >= 1.0;
+	vec2 suv = vec2(fract(skin_uv.x), skin_uv.y);
+	vec3 s_col = on_body ? texture(skin_body_col, suv).rgb / BODY_MEAN : texture(skin_head_col, suv).rgb / HEAD_MEAN;
+	vec3 s_nrm = on_body ? texture(skin_body_nrm, suv).rgb : texture(skin_head_nrm, suv).rgb;
+	float s_rough = on_body ? texture(skin_body_srmf, suv).g : texture(skin_head_srmf, suv).g;
+	// A body without the MetaHuman coordinates (player_average.glb) reads 0,0: plain skin.
+	float has_maps = step(1e-4, skin_uv.x + skin_uv.y);
+	// Green and blue never lift more than red: the map's grey shading (stubble, the eye sockets,
+	// the knees) darkens his skin evenly instead of turning it olive; reds (lips, knuckles) stay.
+	s_col.gb = min(s_col.gb, vec2(s_col.r));
+	s_col = mix(vec3(1.0), s_col, has_maps);
+	vec3 c = skin.rgb * s_col;
 	vec3 scalp_col = scalp == 1 ? skin.rgb : (scalp == 2 ? mix(skin.rgb, hair.rgb, BUZZ_COVER) : hair.rgb);
 	c = mix(c, scalp_col, region(UV2.x));
 	// Where two kit regions meet, each field is about 0.5 and neither might pass it, which
@@ -280,5 +312,11 @@ void fragment() {
 	c = mix(c, shorts.rgb, region(COLOR.g + COLOR.r));
 	c = mix(c, jumper, region(COLOR.r));
 	ALBEDO = c;
-	ROUGHNESS = 0.82;
+	// Where bare skin shows: its own bumps and sheen. Kit and hair keep the flat cloth.
+	float bare = (1.0 - region(UV2.x)) * (1.0 - region(COLOR.a))
+		* (1.0 - region(COLOR.b + COLOR.a * step(0.02, COLOR.b))) * (1.0 - region(COLOR.g + COLOR.r))
+		* has_maps;
+	NORMAL_MAP = vec3(s_nrm.r, 1.0 - s_nrm.g, 1.0);
+	NORMAL_MAP_DEPTH = bare;
+	ROUGHNESS = mix(0.82, s_rough, bare);
 }

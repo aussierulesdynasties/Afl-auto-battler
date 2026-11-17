@@ -18,8 +18,8 @@ const GLB := "res://assets/oval3d/player_mh.glb"
 ## The men in the line-up, shortest to tallest; club and surname as in players_enriched_2026.
 const LINEUP := [["FRE", "Isaiah", "Dudley"], ["STK", "Liam", "Henry"], ["STK", "Nasiah", "Wanganeen-Milera"],
 		["FRE", "Caleb", "Serong"], ["STK", "Rowan", "Marshall"], ["FRE", "Sean", "Darcy"], ["FRE", "Mason", "Cox"]]
-## "heads": Max Gawn in his own Tripo head (rule 2.99) beside Darcy, still on the MetaHuman head.
-const LINEUP_HEADS := [["MEL", "Max", "Gawn"], ["FRE", "Sean", "Darcy"]]
+## "heads": Gawn, Pickett and Langford in their own Tripo heads (rule 2.99) beside Darcy, still on the MetaHuman head.
+const LINEUP_HEADS := [["MEL", "Max", "Gawn"], ["MEL", "Kysaiah", "Pickett"], ["MEL", "Harvey", "Langford"], ["FRE", "Sean", "Darcy"]]
 var _lineup_men: Array = LINEUP
 var _home := "FRE"
 var _away := "STK"

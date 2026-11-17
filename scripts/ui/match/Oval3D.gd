@@ -443,6 +443,10 @@ func _kit(kit: Dictionary) -> ShaderMaterial:
 			else float(maxi(0, GameDB.GUERNSEY_DESIGNS.find(str(kit.get("design", "plain")))))])
 	m.set_shader_parameter("shorts", kit.get("shorts", Color(0.94, 0.94, 0.92)))
 	m.set_shader_parameter("digits_tex", DIGITS)
+	for part in ["body", "head"]:
+		for map in [["col", "Basecolor"], ["nrm", "Normal"], ["srmf", "SRMF"]]:
+			m.set_shader_parameter("skin_%s_%s" % [part, map[0]],
+					load("res://assets/oval3d/skin/%s_%s.png" % [part.capitalize(), map[1]]))
 	m.set_shader_parameter("kit_atlas", GameDB.kit_atlas())
 	m.set_shader_parameter("kit_grid", GameDB.kit_grid())
 	return m
@@ -628,7 +632,7 @@ static func _skull(m: Mesh) -> Mesh:
 				if lift.has(k[i]):
 					bv[i] -= lift[k[i]] * SCALP_LIFT
 			(sh as Array)[Mesh.ARRAY_VERTEX] = bv
-		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, a, shapes)
+		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, a, shapes, {}, _custom_format(am, s))
 		out.surface_set_material(s, am.surface_get_material(s))
 		out.surface_set_name(s, am.surface_get_name(s))
 	_skulls[m] = out
@@ -744,10 +748,22 @@ static func _without_head(m: Mesh) -> Mesh:
 		if keep.is_empty():
 			keep = PackedInt32Array([0, 0, 0])
 		a[Mesh.ARRAY_INDEX] = keep
-		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, a, am.surface_get_blend_shape_arrays(s))
+		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, a, am.surface_get_blend_shape_arrays(s), {},
+				_custom_format(am, s))
 		out.surface_set_material(s, mat)
 		out.surface_set_name(s, am.surface_get_name(s))
 	_headless[m] = out
+	return out
+
+
+## The custom channels' types on surface s (the MetaHuman's own skin coordinates ride in
+## CUSTOM0, oval3d_player.gdshader), which a rebuilt surface must be told again.
+static func _custom_format(am: ArrayMesh, s: int) -> int:
+	var f := am.surface_get_format(s)
+	var out := 0
+	for c in range(4):
+		var shift: int = Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT + c * Mesh.ARRAY_FORMAT_CUSTOM_BITS
+		out |= f & (Mesh.ARRAY_FORMAT_CUSTOM_MASK << shift)
 	return out
 
 
