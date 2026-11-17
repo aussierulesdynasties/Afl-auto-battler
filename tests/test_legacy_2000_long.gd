@@ -51,10 +51,13 @@ func _start() -> void:
 	GameState.finish_intake_draft()
 
 
+## Plays the season out as Sim the week does (GameState.skip_season), so the
+## board judges games that were played: skipping the rounds left every club on
+## no wins, a certain miss of a "win 7 games" goal, and the board sacked the
+## coach for seasons nobody played.
 func _to_offseason() -> void:
-	GameState.season.round_index = GameState.season.fixture.size()
-	GameState.ensure_finals()
-	while not GameState.season.is_season_over():
+	GameState.skip_season()
+	while not GameState.season.is_season_over() and not GameState.is_sacked():
 		GameState.advance()
 
 
