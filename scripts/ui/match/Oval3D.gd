@@ -662,6 +662,8 @@ const SKIN_REACH := 0.03
 const SKIN_GAP := 0.02
 ## And how far off the guernsey's surface, along its normal (metres).
 const SKIN_OFF := 0.004
+## How far off the body an armhole's edge, moved onto its smooth curve, stands (metres).
+const EDGE_LIFT := 0.003
 ## CUSTOM1 and CUSTOM2 as four floats each (oval3d_player.gdshader: kit_edge, kit_fore, kit_g).
 ## CUSTOM0 stays the mesh's own: the MetaHuman skin coordinates.
 const EDGE_FORMAT := (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM1_SHIFT) 		| (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM2_SHIFT)
@@ -770,6 +772,26 @@ static func _kit_edges(m: Mesh) -> Mesh:
 	var arms := rest.slice(1)
 	for l in arms:
 		_bow_front(l)
+	# The armholes' own edges, cut along whole triangles, step in and out by up to 1.5 cm (the
+	# director's "triangles", 2026-11-17). Each corner on an armhole's edge moves out onto the
+	# drawn edge (the loop smoothed, set out to its farthest tooth), so the cloth itself ends in
+	# that clean curve. Only ever out: moving a corner in would open a gap onto the cut-away skin.
+	var snap := {}
+	for l in arms:
+		var ids: PackedInt32Array = l["ids"]
+		var lsm: PackedVector3Array = l["sm"]
+		var lin: PackedVector3Array = l["into"]
+		for k in range(ids.size()):
+			snap[ids[k]] = lsm[k] - lin[k] * float(l["out"])
+	# Each moved corner also stands EDGE_LIFT off the body, so the arm under the new edge never
+	# shows through the cloth.
+	var gnn: PackedVector3Array = ga[Mesh.ARRAY_NORMAL]
+	var moved := PackedVector3Array()
+	moved.resize(gv.size())
+	for i in range(gv.size()):
+		if snap.has(wid[i]):
+			moved[i] = (snap[wid[i]] as Vector3) + gnn[i] * EDGE_LIFT - gv[i]
+			gv[i] += moved[i]
 	var level := -INF
 	var hem_top := -INF
 	for q in hem["raw"]:
@@ -842,6 +864,15 @@ static func _kit_edges(m: Mesh) -> Mesh:
 		var a := am.surface_get_arrays(s)
 		var bsa := am.surface_get_blend_shape_arrays(s)
 		var flags := _custom_format(am, s)
+		if s == gs:
+			a[Mesh.ARRAY_VERTEX] = gv
+			# Glb blend shapes hold whole positions (normalized): each moves with its corner.
+			if am.blend_shape_mode == Mesh.BLEND_SHAPE_MODE_NORMALIZED:
+				for b in range(bsa.size()):
+					var bv: PackedVector3Array = bsa[b][Mesh.ARRAY_VERTEX]
+					for i in range(bv.size()):
+						bv[i] += moved[i]
+					bsa[b][Mesh.ARRAY_VERTEX] = bv
 		if s == gs or s == ss or s == ks:
 			var vs: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
 			var both: Array = measure.call(vs, 1.0 if s == gs else (0.5 if s == ss else SKIN))
@@ -886,7 +917,7 @@ static func _edge_loop(ids: PackedInt32Array, pts: PackedVector3Array) -> Dictio
 				k += 1
 		var v := sum / maxi(k, 1) - sm[i]
 		into[i] = (v - along * v.dot(along)).normalized()
-	var l := {"raw": raw, "sm": sm, "bow": sm, "into": into, "mid": mid / n, "deep": 0.0, "out": 0.0}
+	var l := {"ids": ids, "raw": raw, "sm": sm, "bow": sm, "into": into, "mid": mid / n, "deep": 0.0, "out": 0.0}
 	for q in raw:
 		var d := _inside(q, l).x
 		l["deep"] = maxf(float(l["deep"]), d)
