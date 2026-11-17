@@ -99,11 +99,30 @@ func _test_default_plan_spends() -> void:
 				had[k] = int(had.get(k, 0)) + int(week["by_player"][id][k])
 			auto["by_player"][id] = had
 	var changed := 0
+	var unspent := []
 	for p in GameState.my_list:
 		if p["attr"] != before[str(p["id"])]:
 			changed += 1
-	_check(changed > GameState.my_list.size() / 2,
-			"The Position plan trains most of the list over six games (%d)" % changed)
+		# A low-potential player earns a point every ten or so games at his
+		# pace (director 2026-11-17), so the plan's promise is that nobody
+		# is left holding the XP for a point it could have bought.
+		var w := {"xp": GameState.plan_weights(p),
+				"xp_match": Ratings.ROLE_WEIGHTS.get(str(p.get("role", "MID")), Ratings.ROLE_WEIGHTS["MID"])}
+		for bank in w:
+			# The plan saves for the stat with the most weight per XP.
+			var price := 0
+			var ratio := 0.0
+			for k in w[bank]:
+				if not (p["attr"] as Dictionary).has(k) or int(p["attr"][k]) >= 99:
+					continue
+				var c := Growth.cost(int(p["attr"][k]), float(p.get("gm", 18.0)))
+				if float(w[bank][k]) / float(c) > ratio:
+					ratio = float(w[bank][k]) / float(c)
+					price = c
+			if price > 0 and float(p.get(bank, 0.0)) >= float(price):
+				unspent.append("%s %s %.0f" % [p.get("name", ""), bank, float(p[bank])])
+	_check(changed > 0 and unspent.is_empty(),
+			"The Position plan spends every point a player has saved for (%d rose; unspent %s)" % [changed, unspent])
 	_check(bought > 0, "The report counts what the plans bought (%d points)" % bought)
 	_check(lines > 0, "The results screens get a summary line in a week someone rose (%d of 6)" % lines)
 	# Position plan follows the role's priorities.
