@@ -1617,6 +1617,16 @@ func _pace_in(who: int) -> float:
 	return dr
 
 
+## Too near now to take it on the run (a close knock lands it a near gather's length ahead): he
+## brakes the last of the way to the near gather's pace, in a stride, and takes it from there,
+## rather than walking straight over it (suite match: the winner crossed it at 2.9 m/s, 7 times)
+## or stopping dead from a run when the near gather starts (a man chasing a spilled ball at his
+## heels, 3 times).
+func _ease_near(who: int, dr: float) -> void:
+	if dr <= scoop_lead(SCOOP_AT_PACE):
+		tokens[who]["cap"] = minf(float(tokens[who]["cap"]), scoop_speed(SCOOP_NEAR) + SCOOP_EASE - 0.05)
+
+
 ## How fast a rolling ball slows: its speed falls by exp(-rate x seconds), so a push of `rate` x v
 ## rolls v metres. A ball knocked loose where MatchSim logs it rolls at the rate that brings it to
 ## rest in the seconds MatchSim gives it (_loose_rate); any other loose ball at 3.
@@ -2366,12 +2376,7 @@ func _done(p: Dictionary) -> bool:
 				if kind >= 0:
 					t["scoop_k"] = kind
 					return true
-				if dr <= scoop_lead(SCOOP_AT_PACE):
-					# Too near now to take it on the run (a close knock lands it a near gather's length
-					# ahead): he brakes the last of the way to the near gather's pace, in a stride, and
-					# takes it from there, rather than walking straight over it (suite match: the winner
-					# crossed it at 2.9 m/s, 7 times).
-					t["cap"] = minf(float(t["cap"]), scoop_speed(SCOOP_NEAR) + SCOOP_EASE - 0.05)
+				_ease_near(who, dr)
 				if _pt > 0.1 and str(ball["mode"]) in ["dead", "loose"]:
 					# While he is coming, the men already near it come at it too (a spilled
 					# ball is a loose ball like any other).
@@ -2438,7 +2443,7 @@ func _done(p: Dictionary) -> bool:
 					# 3.9 m/s as it stopped, too fast to go down for it, and ran over it); the
 					# gather starts the moment he can go down for it.
 					_scrap_in(p, w)
-					_pace_in(w)
+					_ease_near(w, _pace_in(w))
 					_busy[w] = true
 					if _scoop_pick(w) >= 0:
 						return _pt >= float(p.get("dur", 0.0))
