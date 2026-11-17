@@ -445,7 +445,24 @@ func _kit(kit: Dictionary) -> ShaderMaterial:
 	m.set_shader_parameter("digits_tex", DIGITS)
 	m.set_shader_parameter("kit_atlas", GameDB.kit_atlas())
 	m.set_shader_parameter("kit_grid", GameDB.kit_grid())
+	# The club's current home guernsey, drawn from its photo (data/kits_today.csv), with its
+	# collar and armhole bindings on the guernsey's own edges.
+	var today: Dictionary = kit.get("today", {})
+	if not today.is_empty() and GameDB.kits_today_atlas() != null:
+		m.set_shader_parameter("kit_design", [float(100 + int(today["cell"]))])
+		m.set_shader_parameter("kit_atlas", GameDB.kits_today_atlas())
+		m.set_shader_parameter("kit_grid", GameDB.kits_today_grid())
+		m.set_shader_parameter("kit_collar", today["collar"])
+		m.set_shader_parameter("kit_arms", today["armholes"])
+		m.set_shader_parameter("kit_trim_edge", Vector2(trim_edge(float(today["collar_cm"])),
+				trim_edge(float(today["armholes_cm"]))))
 	return m
+
+
+## Where a binding w cm wide ends in the guernsey's region field (0.5 at its edge): measured on
+## the MetaHuman guernsey, the field climbs about 0.22 a centimetre in from the neck and armholes.
+static func trim_edge(cm: float) -> float:
+	return clampf(0.5 + 0.22 * cm, 0.5, 0.98)
 
 
 ## His number on the back of his guernsey (0-99; -1 for none), per figure.

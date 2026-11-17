@@ -26,8 +26,14 @@ uniform vec4 kit_pattern2[1];
 uniform vec4 kit_pattern3[1];
 uniform float kit_design[1];
 uniform sampler2D digits_tex : filter_linear, repeat_disable;   // 0-9: R fill, G outline
-uniform sampler2D kit_atlas : filter_linear, repeat_disable;
+uniform sampler2D kit_atlas : source_color, filter_linear_mipmap, repeat_disable;   // kits_today has mipmaps (seen from 15 m up)
 uniform ivec2 kit_grid = ivec2(1, 1);
+// A current guernsey's collar and armhole bindings (data/kits_today.csv), drawn on the guernsey's
+// own edges: the region field runs from 0.5 at the edge up into the cloth, so a binding is where
+// it is still under kit_trim_edge (x the collar, y the armholes). Alpha 0: no binding.
+uniform vec4 kit_collar : source_color = vec4(0.0);
+uniform vec4 kit_arms : source_color = vec4(0.0);
+uniform vec2 kit_trim_edge = vec2(0.94, 0.94);
 // The player's own number (0-99), per figure; -1 for none.
 instance uniform int number = -1;
 
@@ -266,6 +272,11 @@ void fragment() {
 		vec4 num = number_on_back(number, g, under, false);
 		jumper = mix(jumper, num.rgb, num.a);
 	}
+	// The bindings: the neck edge high in the middle, the armholes high at the sides (not the hem).
+	float neck = over(g.y, 0.78) * over(0.22, abs(g.x - 0.5));
+	float high = over(g.y, 0.45);
+	jumper = mix(jumper, kit_collar.rgb, kit_collar.a * neck * (1.0 - over(COLOR.r, kit_trim_edge.x)));
+	jumper = mix(jumper, kit_arms.rgb, kit_arms.a * high * (1.0 - neck) * (1.0 - over(COLOR.r, kit_trim_edge.y)));
 	// The sock: base colour, the band in the pattern colour (the sprites' maskA).
 	float band = over(g.y, 0.0) * over(1.0, g.y);
 	vec3 sock = mix(base, pat, band);

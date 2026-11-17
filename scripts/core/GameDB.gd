@@ -454,6 +454,10 @@ func club_guernsey(code: String) -> Dictionary:
 	# gives the oval's discs and the colours).
 	if clubs.get(code, {}).has("kit"):
 		out["kit_cell"] = int(clubs[code]["kit"])
+	# The club's current home guernsey as the 3D match player wears it (kit_today), while the
+	# club wears clubs.csv's own guernsey (not a Legacy season's).
+	elif _today_kits().has(code) and str(clubs.get(code, {}).get("guernsey", "")) 			== str((_club_base.get(code, {}) as Dictionary).get("guernsey", clubs.get(code, {}).get("guernsey", ""))):
+		out["today"] = _today_kits()[code]
 	return out
 
 
@@ -1491,6 +1495,40 @@ func season_kit(code: String, year: int) -> Dictionary:
 		if int(k["from"]) <= year and year <= int(k["to"]):
 			return k
 	return {}
+
+
+## Every club's current home guernsey for the 3D match player (tools/kits/kits_today.py draws
+## both from tools/kits/kits_today.txt): code -> {cell, collar, collar_cm, armholes, armholes_cm},
+## a binding's colour Color(0, 0, 0, 0) where the guernsey has none.
+const KITS_TODAY_CSV := "res://data/kits_today.csv"
+const KITS_TODAY_ATLAS := "res://assets/oval3d/kits_today.png"
+const KITS_TODAY_PER_ROW := 4
+var _kits_today = null
+var _kits_today_tex: Texture2D = null
+
+
+func _today_kits() -> Dictionary:
+	if _kits_today == null:
+		_kits_today = {}
+		if FileAccess.file_exists(KITS_TODAY_CSV):
+			for r in _read_dicts(KITS_TODAY_CSV):
+				var trim := func(c: String) -> Color: return Color.from_string(c, Color(0, 0, 0, 0)) if c != "" else Color(0, 0, 0, 0)
+				_kits_today[str(r["code"])] = {"cell": int(r["cell"]), "collar": trim.call(str(r.get("collar", ""))),
+						"collar_cm": float(str(r.get("collar_cm", "0"))), "armholes": trim.call(str(r.get("armholes", ""))),
+						"armholes_cm": float(str(r.get("armholes_cm", "0")))}
+	return _kits_today
+
+
+## The current guernseys' atlas and its cells a row and rows (kits_today.py: 4 a row, square sides).
+func kits_today_atlas() -> Texture2D:
+	if _kits_today_tex == null and ResourceLoader.exists(KITS_TODAY_ATLAS):
+		_kits_today_tex = load(KITS_TODAY_ATLAS)
+	return _kits_today_tex
+
+
+func kits_today_grid() -> Vector2i:
+	var t := kits_today_atlas()
+	return Vector2i(KITS_TODAY_PER_ROW, maxi(1, int(t.get_height()) * KITS_TODAY_PER_ROW * 2 / int(t.get_width())) if t != null else 1)
 
 
 ## The kit atlas (loaded once; null when the file is missing).
