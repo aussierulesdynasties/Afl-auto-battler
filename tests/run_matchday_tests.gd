@@ -80,6 +80,7 @@ func _run() -> void:
 	await _t("_test_first_goal_line")
 	await _t("_test_feed_colours")
 	await _t("_test_momentum_meter")
+	await _t("_test_score_bug")
 	await _t("_test_vignettes_setting")
 	await _t("_test_game_feel_effects")
 	_t("_test_broken_calls")
@@ -2611,6 +2612,78 @@ func _test_momentum_meter() -> void:
 	m2.queue_free()
 	await _settle()
 
+
+## Rule 2.107: with the 3D picture on a phone the scoreboard panel goes; the score sits on the
+## picture as a TV score bug and momentum is a thin line along its foot. A finger on the line
+## still explains momentum, and the bench tab beside it still opens the bench.
+func _test_score_bug() -> void:
+	var db = root.get_node("GameDB")
+	_state.set_vignettes_on(false)
+	_state.set_setting("seen_momentum_intro", true)
+	_state.set_match_3d_on(true)
+	_state.reset()
+	_state.replay_seed = SUITE_SEED
+	_state.start_season("COL", db.club_list("COL"))
+	root.size = Vector2i(390, 844)
+	_state.prepare_interactive_match()
+	var m: Control = load("res://scenes/MatchScene.tscn").instantiate()
+	root.add_child(m)
+	await _settle()
+	# Past the pre-match calls, which open over the picture.
+	var box = m.find_child("CoachBox", true, false)
+	var start: Button = box.find_child("StartQuarter", true, false) if box != null else null
+	if start != null:
+		start.emit_signal("pressed")
+	await _settle()
+	var pitch: Control = m.get("_pitch")
+	var board: Control = m.get("_board")
+	var bug: Control = m.find_child("ScoreBug", true, false)
+	var line: Button = m.find_child("MomentumLine", true, false)
+	_check(pitch != null and bool(pitch.get("three_d")), "The match plays in 3D")
+	_check(board != null and not board.is_visible_in_tree(), "The scoreboard panel is gone")
+	_check(bug != null and bug.is_visible_in_tree() and pitch.get_global_rect().encloses(bug.get_global_rect()),
+			"The score sits on the picture")
+	_check(line != null and pitch.get_global_rect().encloses(line.get_global_rect())
+			and is_equal_approx(line.get_global_rect().end.y, pitch.get_global_rect().end.y),
+			"The momentum line runs along the picture's foot")
+	m.set("_shown_goals", [3, 1])
+	m.set("_shown_behinds", [2, 4])
+	m.call("_paint_clock")
+	var home_pts: Label = bug.get("_home_score") if bug != null else null
+	var away_pts: Label = bug.get("_away_score") if bug != null else null
+	_check(home_pts != null and home_pts.text == "20" and away_pts.text == "10",
+			"The bug shows points (%s - %s)" % [home_pts.text if home_pts else "-", away_pts.text if away_pts else "-"])
+	var meter: Control = line.find_child("MomentumMeter", true, false) if line != null else null
+	m.call("_track_momentum", {"mom": 0.6})
+	_check(meter != null and is_equal_approx(float(meter.get("_v")), float(m.get("_momentum"))),
+			"The line follows momentum")
+	var why: String = await Tap.tap(line)
+	await _settle()
+	var info: Node = m.find_child("MomentumInfo", true, false)
+	_check(why == "" and info != null, "A finger on the line explains momentum (%s)" % why)
+	m.call("handle_back")
+	await _settle()
+	var drawer = pitch.find_child("BenchDrawer", true, false) if pitch != null else null
+	var tab: Button = drawer.call("tab") if drawer != null else null
+	why = await Tap.tap(tab)
+	await _settle()
+	_check(why == "" and drawer != null and bool(drawer.get("is_open")),
+			"The bench tab beside the line still opens the bench (%s)" % why)
+	if drawer != null:
+		drawer.call("close")
+	m.queue_free()
+	await _settle()
+	_state.set_match_3d_on(false)
+	# 3D off: the scoreboard panel stays and no bug is made.
+	_state.prepare_interactive_match()
+	var m2: Control = load("res://scenes/MatchScene.tscn").instantiate()
+	root.add_child(m2)
+	await _settle()
+	var board2: Control = m2.get("_board")
+	_check(board2 != null and board2.is_visible_in_tree() and m2.find_child("ScoreBug", true, false) == null,
+			"Without 3D the scoreboard panel stays")
+	m2.queue_free()
+	await _settle()
 
 ## The first player a call offers: the id behind a "<prefix><id>" button.
 func _first_pick(box: Node, prefix: String) -> String:
