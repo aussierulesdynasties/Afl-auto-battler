@@ -67,9 +67,11 @@ def parse(path, clubs):
         for ops in (f_ops, b_ops):
             for op in ops:
                 t = op.split()
-                if t[0] in ("collar", "armholes", "shorts"):
+                if t[0] == "number":
+                    trims["number"] = (kit_atlas.colour(t[1], cols), kit_atlas.colour(t[2], cols) if len(t) > 2 else "")
+                elif t[0] in ("collar", "armholes", "shorts"):
                     trims[t[0]] = (kit_atlas.colour(t[1], cols), float(t[2]) if len(t) > 2 else 2.0)
-        drawn = lambda ops: [o for o in ops if o.split()[0] not in ("collar", "armholes", "shorts")]
+        drawn = lambda ops: [o for o in ops if o.split()[0] not in ("collar", "armholes", "shorts", "number")]
         kits.append({"code": code, "pic": pic, "front": drawn(f_ops), "back": drawn(b_ops), "cols": cols,
                      "trims": trims})
     return kits
@@ -111,12 +113,13 @@ def main():
     atlas.save(os.path.join(out or os.path.join(root, "assets", "oval3d"), "kits_today.png"), optimize=True)
     with open(os.path.join(out or os.path.join(root, "data"), "kits_today.csv"), "w", encoding="utf-8", newline="") as fh:
         w = csv.writer(fh, lineterminator="\n")
-        w.writerow(["code", "cell", "collar", "collar_cm", "armholes", "armholes_cm", "shorts", "picture"])
+        w.writerow(["code", "cell", "collar", "collar_cm", "armholes", "armholes_cm", "shorts", "picture",
+                    "number", "number_edge"])
         for i, k in enumerate(kits):
             c = k["trims"].get("collar", ("", 0.0))
             a = k["trims"].get("armholes", ("", 0.0))
             w.writerow([k["code"], i, c[0], c[1] if c[0] else "", a[0], a[1] if a[0] else "",
-                        k["trims"].get("shorts", ("", 0.0))[0], k["pic"]])
+                        k["trims"].get("shorts", ("", 0.0))[0], k["pic"], *k["trims"].get("number", ("", ""))])
     print("%d guernseys, atlas %dx%d" % (len(kits), atlas.width, atlas.height))
 
 

@@ -459,6 +459,9 @@ func _kit(kit: Dictionary) -> ShaderMaterial:
 		m.set_shader_parameter("kit_collar", today["collar"])
 		m.set_shader_parameter("kit_arms", today["armholes"])
 		m.set_shader_parameter("kit_trim", Vector2(float(today["collar_cm"]), float(today["armholes_cm"])) / 100.0)
+		# The number in the club's own colour (and edge, Richmond's black), from match photos.
+		m.set_shader_parameter("kit_number", today.get("number", Color(0, 0, 0, 0)))
+		m.set_shader_parameter("kit_number_edge", today.get("number_edge", Color(0, 0, 0, 0)))
 		# The club's own shorts with it (the guernsey's colour where they match).
 		if (today.get("shorts", Color(0, 0, 0, 0)) as Color).a > 0.0:
 			m.set_shader_parameter("shorts", today["shorts"])
