@@ -232,8 +232,7 @@ TRAINING_NEW = [
     "Get within %d by week %d and he can be picked there.",
     # Row 135, second pass (2026-11-15): the Learn picker added after pass 6, the carry-on line and the potential notes.
     "He can learn %s.\\nTwo of our players are learning a position already: %s.\\nHe can start when one of them finishes or stops.",
-    "carries on until we lock one in for %d.", "Past his potential: every point costs far more.",
-    "Close to his potential: training costs more.",
+    "carries on until we lock one in for %d.",
 ]
 TRAINING_OLD = [
     "should become", "safe default", "whenever you like", "Fit players you leave out", "improve quickest",

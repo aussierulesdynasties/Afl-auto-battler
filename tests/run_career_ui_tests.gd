@@ -500,14 +500,9 @@ func _test_press_standing() -> void:
 	_check(MC.chance("method", {"key": "close_game", "standing": 2}) == base + 10
 			and MC.chance("method", {"key": "close_game", "standing": -1}) == base - 5,
 			"Each step of standing moves every answer's odds by 5")
-	_state.media_memory = {"standing": {"muckraker": 2, "bogan": -1}, "standing_year": int(_state.season_year) - 1}
-	_check(_state.press_standing("muckraker") == 1 and _state.press_standing("bogan") == 0
-			and not (_state.media_memory["standing"] as Dictionary).has("bogan")
-			and int(_state.media_memory["standing_year"]) == int(_state.season_year),
-			"Standing fades a step toward even each new season, once (%s)" % str(_state.media_memory))
-	_check(_state.press_standing("muckraker") == 1, "Reading it again the same season does not fade it twice")
-	_state.media_memory = {"standing": {"muckraker": 2}, "standing_year": int(_state.season_year) - 3}
-	_check(_state.press_standing("muckraker") == 0, "Three seasons away and he is even again")
+	_state.media_memory = {"standing": {"muckraker": 2, "bogan": -1}, "standing_year": int(_state.season_year) - 3}
+	_check(_state.press_standing("muckraker") == 2 and _state.press_standing("bogan") == -1,
+			"Standing never fades with time: three quiet seasons on, he is still a firm fan (%s)" % str(_state.media_memory))
 	_state.media_memory = {"standing": {"muckraker": -1}, "standing_year": int(_state.season_year)}
 	_state.media_conference = conf.duplicate(true)
 	_state.media_conference["lead"] = MC.lead_in("muckraker", -1)

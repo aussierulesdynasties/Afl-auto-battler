@@ -41,7 +41,7 @@ func run() -> void:
 	_t("_test_project_endings")
 	_t("_test_pass_margin_tightened")
 	_t("_test_retraining_is_additive")
-	_t("_test_training_lift_unwound")
+	_t("_test_season_record")
 	_t("_test_teaching_moves_the_ceiling")
 	_t("_test_stat_focus_once_a_season")
 	_t("_test_stat_focus_split")
@@ -83,20 +83,48 @@ func _test_default_plan_spends() -> void:
 	_new_season()
 	_check(GameState.default_train_plan == "position", "New careers start on the Position plan")
 	var before := _snapshot()
-	# Two games: a player left out of one earns less than a stat point costs.
-	GameState.advance()
-	var first_auto: Dictionary = GameState.last_training_report.get("auto", {})
-	GameState.advance()
+	# His pace (director 2026-11-17) buys a stat point every few games, so
+	# six games, not two.
+	var bought := 0
+	var auto := {"by_player": {}}
+	var lines := 0
+	for i in range(6):
+		GameState.advance()
+		var week: Dictionary = GameState.last_training_report.get("auto", {})
+		bought += int(week.get("points", 0))
+		lines += 1 if GameState.training_summary_line() != "" else 0
+		for id in week.get("by_player", {}):
+			var had: Dictionary = auto["by_player"].get(id, {})
+			for k in week["by_player"][id]:
+				had[k] = int(had.get(k, 0)) + int(week["by_player"][id][k])
+			auto["by_player"][id] = had
 	var changed := 0
+	var unspent := []
 	for p in GameState.my_list:
 		if p["attr"] != before[str(p["id"])]:
 			changed += 1
-	_check(changed > GameState.my_list.size() / 2,
-			"The Position plan trains most of the list over two games (%d)" % changed)
-	var auto: Dictionary = GameState.last_training_report.get("auto", {})
-	_check(int(first_auto.get("points", 0)) > 0 and int(auto.get("points", 0)) > 0,
-			"The report counts what the plans bought each game")
-	_check(GameState.training_summary_line() != "", "The results screens get a summary line")
+		# A low-potential player earns a point every ten or so games at his
+		# pace (director 2026-11-17), so the plan's promise is that nobody
+		# is left holding the XP for a point it could have bought.
+		var w := {"xp": GameState.plan_weights(p),
+				"xp_match": Ratings.ROLE_WEIGHTS.get(str(p.get("role", "MID")), Ratings.ROLE_WEIGHTS["MID"])}
+		for bank in w:
+			# The plan saves for the stat with the most weight per XP.
+			var price := 0
+			var ratio := 0.0
+			for k in w[bank]:
+				if not (p["attr"] as Dictionary).has(k) or int(p["attr"][k]) >= 99:
+					continue
+				var c := Growth.cost(int(p["attr"][k]), float(p.get("gm", 18.0)))
+				if float(w[bank][k]) / float(c) > ratio:
+					ratio = float(w[bank][k]) / float(c)
+					price = c
+			if price > 0 and float(p.get(bank, 0.0)) >= float(price):
+				unspent.append("%s %s %.0f" % [p.get("name", ""), bank, float(p[bank])])
+	_check(changed > 0 and unspent.is_empty(),
+			"The Position plan spends every point a player has saved for (%d rose; unspent %s)" % [changed, unspent])
+	_check(bought > 0, "The report counts what the plans bought (%d points)" % bought)
+	_check(lines > 0, "The results screens get a summary line in a week someone rose (%d of 6)" % lines)
 	# Position plan follows the role's priorities.
 	var ruck := {}
 	for p in GameState.my_list:
@@ -125,7 +153,7 @@ func _test_focus() -> void:
 	var mid_attr: Dictionary = (mid["attr"] as Dictionary).duplicate()
 	# Injuries (seeded from the clock) or a week's card can leave him short
 	# of a point after three games, so spend a known amount under his plan.
-	mid["xp"] = int(mid["xp"]) + 400
+	mid["xp"] = float(mid["xp"]) + 400.0
 	GameState.apply_plan_to(mid)
 	var allowed: Dictionary = GameState.plan_weights(mid, "outside_mid")
 	var only_plan := true
@@ -145,6 +173,11 @@ func _hold(id: String) -> void:
 	p["season_start_ov"] = int(p["overall"]) - 30
 
 
+## Spend what is in his training bank (p["xp"]) on `w`, the game's own way.
+func _spend(p: Dictionary, w: Dictionary) -> Dictionary:
+	return GameState._spend_banks(p, w)
+
+
 func _first_of(role: String) -> Dictionary:
 	for p in GameState.my_list:
 		if str(p["role"]) == role:
@@ -158,24 +191,24 @@ func _test_changing_plans() -> void:
 	var p: Dictionary = {}
 	for q in GameState.my_list:
 		var room := int(q.get("potential", 0)) - int(q["overall"])
-		if room >= Potential.NEAR_POT_GAP and p.is_empty():
+		if room >= 3 and p.is_empty():
 			p = q
-	p["xp"] = int(p.get("xp", 0)) + 400
-	var banked := int(p["xp"])
+	p["xp"] = float(p.get("xp", 0)) + 400.0
+	var banked := float(p["xp"])
 	var own := "inside_mid" if str(p["role"]) == "MID" else ("key_def" if str(p["role"]) == "DEF" \
 			else ("key_fwd" if str(p["role"]) == "FWD" else "position"))
 	var gains := GameState.set_player_plan(str(p["id"]), own)
-	_check(not gains.is_empty() and int(p["xp"]) < banked,
+	_check(not gains.is_empty() and float(p["xp"]) < banked,
 			"Switching a player's plan spends his banked XP straight away")
 	var other: Dictionary = {}
 	for q in GameState.my_list:
 		var room := int(q.get("potential", 0)) - int(q["overall"])
-		if q != p and room >= Potential.NEAR_POT_GAP and other.is_empty():
+		if q != p and room >= 3 and other.is_empty():
 			other = q
-	other["xp"] = int(other.get("xp", 0)) + 400
-	var other_xp := int(other["xp"])
+	other["xp"] = float(other.get("xp", 0)) + 400.0
+	var other_xp := float(other["xp"])
 	var result := GameState.set_default_plan("position")
-	_check(int(other["xp"]) < other_xp and int(result.get("points", 0)) > 0,
+	_check(float(other["xp"]) < other_xp and int(result.get("points", 0)) > 0,
 			"Switching the club plan spends banked XP for everyone on it")
 	_check(GameState.plan_for(p) == own or own == "position", "A player's own plan wins over the club plan")
 	GameState.set_player_plan(str(p["id"]), "")
@@ -232,28 +265,16 @@ func _row(id: String) -> Dictionary:
 	return {}
 
 
-## Players left out of the senior side develop in the reserves at a reduced
-## rate; injured and rested players do not; the award is paid once a round
-## and survives a save.
+## Players left out of the senior side develop in the reserves (director
+## 2026-11-17: a VFL game earns half a senior game's match XP); injured and
+## rested players earn nothing; a suspended player still trains. The award is
+## paid once a round and survives a save.
 func _test_reserves_development() -> void:
 	_new_season()
 	GameState.board_patience = "fair"
 	GameState.rival_recruiting = "shrewd"
-	# The reserves rate itself, not the coaching around it: a Good (70)
-	# staff, each coach in his own line, teaches at exactly par.
-	var staff := GameState.club_staff(GameState.my_club)
-	for c in staff.values():
-		for k in ["teach", "tactics", "manage"]:
-			c["skills"][k] = 70
-		c["spec"] = {"MID": "MID", "FWD": "FWD", "DEF": "DEF", "DEV": "DEV"}.get(str(c["job"]), "")
-	_check(is_equal_approx(CoachEffects.xp_mult(staff, GameState.my_list[0], false), 1.0),
-			"A Good coaching staff leaves reserves development as it is")
-	var res_xp := GameState.reserves_xp()
-	_check(res_xp == 19 and GameState.XP_SENIOR_GAME == 37,
-			"A reserves game is half a full senior game (%d of %d)" % [res_xp, GameState.XP_SENIOR_GAME])
 	var side := GameState.current_side()
 	var senior := str(side["MID"][0])
-	# A fit depth player outside the 22, and a second one we injure.
 	var named := {}
 	for k in side:
 		for id in side[k]:
@@ -266,100 +287,102 @@ func _test_reserves_development() -> void:
 	# one a late withdrawal calls up (an injury on the day put him in the 22).
 	var depth: String = spare[spare.size() - 1]
 	var hurt: String = spare[0]
-	for id in [senior, depth, hurt]:
-		_hold(id)  # at his season limit, so the XP banks and can be counted
+	var banned: String = spare[1]
 	GameState.list_player(hurt)["injury_weeks"] = 5
+	GameState.list_player(banned)["suspension_weeks"] = 5
 
-	# 1-3: one round.
+	# One round.
 	_pick(senior, true)
-	var bank := {}
-	for id in [senior, depth, hurt]:
-		bank[id] = int(GameState.list_player(id)["xp"])
 	_round()
-	var s_gain := GameState.xp_gain_for(senior)
-	_check(bool(_row(senior).get("on_ground", false)) and not bool(_row(senior).get("reserves", true)),
+	var s_row := _row(senior)
+	_check(bool(s_row.get("on_ground", false)) and not bool(s_row.get("reserves", true)),
 			"A selected player is on the ground, not in the reserves")
-	# A senior game is the senior base plus what he did on the day (0 to the cap),
-	# so a quiet game can pay less than the reserves' flat rate: the base is the
-	# only part the match cannot move. (This used to also demand more than the
-	# reserves, which failed whenever the player had a quiet game.)
-	_check(s_gain >= GameState.XP_SQUAD + GameState.XP_SELECTED + GameState.XP_NAMED
-			and s_gain <= GameState.XP_SENIOR_GAME,
-			"A senior game pays the senior base plus his game, up to the full rate (%d)" % s_gain)
-	_check(GameState.xp_gain_for(depth) == res_xp and bool(_row(depth)["reserves"]),
-			"A fit player left out earns reserves development (%d)" % GameState.xp_gain_for(depth))
+	_check(float(s_row.get("match_xp", 0.0)) > 0.0 and float(s_row.get("train_xp", 0.0)) > 0.0,
+			"A senior game pays match XP and training XP")
+	_check(bool(_row(depth)["reserves"]) and _vfl_half(depth),
+			"A fit player left out earns a reserves game: match XP the size of his training week (%s)" % str(_row(depth)))
 	_check(GameState.last_duty(depth) == "Reserves", "His duty reads Reserves")
-	_check(GameState.xp_gain_for(hurt) == GameState.XP_SQUAD and not bool(_row(hurt)["reserves"]),
-			"An injured player earns only the squad share (%d)" % GameState.xp_gain_for(hurt))
+	_check(GameState.xp_gain_for(hurt) == 0 and float(_row(hurt).get("train_xp", 1.0)) == 0.0
+			and not bool(_row(hurt)["reserves"]),
+			"An injured player earns nothing (%s)" % str(_row(hurt)))
 	_check(GameState.last_duty(hurt) == "Not selected", "An injured player is not in the reserves")
-	_check(int(GameState.list_player(depth)["xp"]) - int(bank[depth]) == res_xp,
-			"The reserves XP reaches his bank")
+	_check(float(_row(banned).get("match_xp", 1.0)) == 0.0 and float(_row(banned).get("train_xp", 0.0)) > 0.0
+			and not bool(_row(banned)["reserves"]),
+			"A suspended player trains but plays no game (%s)" % str(_row(banned)))
 	var report := GameState.last_training_report
 	var counted := 0
 	for row in report["rows"]:
 		if bool(row["reserves"]):
 			counted += 1
-	_check(counted > 0 and int(report["reserves_count"]) == counted
-			and int(report["reserves_total"]) == counted * res_xp,
-			"The report counts the reserves (%d at %d)" % [counted, res_xp])
+	_check(counted > 0 and int(report["reserves_count"]) == counted, "The report counts the reserves (%d)" % counted)
 	_check(GameState.reserves_summary_line() == "%d %s developing in the reserves." % [counted, "player kept" if counted == 1 else "players kept"]
 			and not GameState.reserves_summary_line().contains("XP"),
 			"The results screens get a reserves line, with no XP in it (%s)" % GameState.reserves_summary_line())
 
-	# 7: the same match cannot pay twice.
-	var once := int(GameState.list_player(depth)["xp"])
+	# The same match cannot pay twice.
+	var once := _paid(depth)
 	GameState._grant_match_xp(GameState.last_match)
-	_check(int(GameState.list_player(depth)["xp"]) == once, "A round's XP is paid once only")
+	_check(_paid(depth) == once, "A round's XP is paid once only")
 
-	# A rested (or suspended) player is not available either.
+	# A rested player is not available either.
 	var rested: String = spare[2]
-	_hold(rested)
 	GameState.list_player(rested)["rested"] = true
-	# 4: several rounds accumulate.
-	var start := int(GameState.list_player(depth)["xp"])
 	for i in range(3):
 		_pick(depth, false)
 		GameState.list_player(hurt)["injury_weeks"] = 5
 		if i == 0:
 			_round()
-			_check(GameState.xp_gain_for(rested) == GameState.XP_SQUAD,
-					"A rested player earns only the squad share")
+			_check(GameState.xp_gain_for(rested) == 0, "A rested player earns nothing")
 		elif i == 2:
 			# Difficulty never changes development: the third reserves game is
-			# played on the hardest dials and pays the same.
+			# played on the hardest dials and pays the same share.
 			GameState.board_patience = "ruthless"
 			GameState.rival_recruiting = "cutthroat"
 			_round()
-			_check(GameState.xp_gain_for(depth) == res_xp,
-					"Reserves XP is the same on Ruthless and Cut-throat (%d)" % GameState.xp_gain_for(depth))
+			_check(bool(_row(depth)["reserves"]) and _vfl_half(depth),
+					"Reserves XP is the same share on Ruthless and Cut-throat (%s)" % str(_row(depth)))
 			GameState.board_patience = "fair"
 			GameState.rival_recruiting = "shrewd"
 		else:
 			_round()
-		var dq := GameState.list_player(depth)
-	_check(int(GameState.list_player(depth)["xp"]) - start == 3 * res_xp,
-			"Three rounds in the reserves bank exactly %d XP (%d)" % [3 * res_xp,
-			int(GameState.list_player(depth)["xp"]) - start])
 
-	# 6: a save between rounds neither repeats nor loses the award.
-	var before_save := int(GameState.list_player(depth)["xp"])
+	# A save between rounds neither repeats nor loses the award.
+	var before_save := _bank(depth)
+	var paid := _paid(depth)
 	GameState.save_career()
 	GameState.load_career()
-	_check(int(GameState.list_player(depth)["xp"]) == before_save, "Banked reserves XP survives a save")
+	_check(is_equal_approx(_bank(depth), before_save), "Banked reserves XP survives a save")
 	GameState._grant_match_xp(GameState.last_match)
-	_check(int(GameState.list_player(depth)["xp"]) == before_save,
-			"A reloaded save does not pay the last round again")
+	_check(_paid(depth) == paid, "A reloaded save does not pay the last round again")
 	_pick(depth, false)
 	_round()
-	_check(int(GameState.list_player(depth)["xp"]) - before_save == res_xp,
-			"The next round after a load pays one reserves game")
+	_check(bool(_row(depth)["reserves"]) and _vfl_half(depth), "The next round after a load pays one reserves game")
 
-	# 5: back in the senior side, the senior rate returns.
+	# Back in the senior side, the senior rate returns.
 	_pick(depth, true)
 	_round()
 	_check(bool(_row(depth).get("on_ground", false)) and not bool(_row(depth)["reserves"])
-			and GameState.xp_gain_for(depth) >= GameState.XP_SQUAD + GameState.XP_SELECTED + GameState.XP_NAMED,
-			"Recalled, he earns senior XP again (%d)" % GameState.xp_gain_for(depth))
+			and float(_row(depth).get("match_xp", 0.0)) > 0.0,
+			"Recalled, he earns senior match XP again (%s)" % str(_row(depth)))
+
+
+## A reserves game's match XP is half a senior game's: two-thirds of a week
+## halved, so the same size as his training third.
+func _vfl_half(id: String) -> bool:
+	var row := _row(id)
+	var t := float(row.get("train_xp", 0.0))
+	return t > 0.0 and absf(float(row.get("match_xp", 0.0)) - t) < 0.001 * t
+
+
+## What sits in his two banks.
+func _bank(id: String) -> float:
+	var p := GameState.list_player(id)
+	return float(p.get("xp", 0.0)) + float(p.get("xp_match", 0.0))
+
+
+## How many weeks he has been paid for.
+func _paid(id: String) -> int:
+	return int(GameState.list_player(id).get("xp_games", 0))
 
 
 func _test_department_development() -> void:
@@ -465,7 +488,7 @@ func _test_archetypes_differ() -> void:
 		var p: Dictionary = mid.duplicate(true)
 		p["train_plan"] = plan
 		p["xp"] = 4000
-		built[plan] = GameState._spend_with_weights(p, GameState.plan_weights(p, plan), false)
+		built[plan] = _spend(p, GameState.plan_weights(p, plan))
 	var inside: Dictionary = built["inside_mid"]
 	var outside: Dictionary = built["outside_mid"]
 	_check(int(inside.get("contested", 0)) > int(outside.get("contested", 0)) + 5
@@ -474,7 +497,7 @@ func _test_archetypes_differ() -> void:
 	var fwd := _first_of("FWD")
 	var small: Dictionary = fwd.duplicate(true)
 	small["xp"] = 4000
-	var sg := GameState._spend_with_weights(small, GameState.plan_weights(small, "small_fwd"), false)
+	var sg := _spend(small, GameState.plan_weights(small, "small_fwd"))
 	_check(not sg.has("contested_marking"), "A small forward never trains contested marking (it would stop him crumbing)")
 
 
@@ -487,7 +510,7 @@ func _test_traits_through_training() -> void:
 	fwd["role2"] = ""
 	fwd["xp"] = 2500
 	_check(not Traits.has(fwd, "crumber"), "(setup) no Crumber yet")
-	GameState._spend_with_weights(fwd, GameState.plan_weights(fwd, "small_fwd"), false)
+	_spend(fwd, GameState.plan_weights(fwd, "small_fwd"))
 	_check(Traits.has(fwd, "crumber"), "Small forward training unlocks Crumber")
 	var d: Dictionary = _first_of("DEF").duplicate(true)
 	# Controlled fixture: only Intercept is buyable, so this tests the plan/trait
@@ -497,7 +520,7 @@ func _test_traits_through_training() -> void:
 	d["attr"]["intercept"] = 74
 	d["attr"]["pressure"] = 99
 	d["xp"] = 3000
-	GameState._spend_with_weights(d, GameState.plan_weights(d, "key_def"), false)
+	_spend(d, GameState.plan_weights(d, "key_def"))
 	_check(int(d["attr"]["intercept"]) >= 80 and Traits.of(d).has("interceptor") or Traits.of(d).filter(func(k): return k != "wet_weather").size() >= 2,
 			"Key defender training reaches Interceptor (%d)" % int(d["attr"]["intercept"]))
 
@@ -723,16 +746,28 @@ func _test_learning_a_position() -> void:
 	_check(line.begins_with("Week 0 of %d" % GameState.PROJECT_WEEKS)
 			and line.contains("up to the standard" if ahead else "within %d by week" % GameState.PROJECT_PASS),
 			"Training shows the standard he is chasing, or that he has reached it (%s)" % line)
-	_check(GameState.season_ceiling(cand) == mini(int(cand["season_start_ov"]) + GameState.SEASON_TRAIN_GAIN + GameState.teach_step(cand),
-			int(cand["overall"]) + GameState.PROJECT_OWN_GAIN),
-			"The price: for the rest of the season his own position's training lifts him only %d more" % GameState.PROJECT_OWN_GAIN)
-	var mate := {}
-	for q in GameState.my_list:
-		if q != cand and GameState.project_job(q) == "":
-			mate = q
-			break
-	_check(mate.is_empty() or GameState.season_ceiling(mate) == int(mate["season_start_ov"]) + GameState.SEASON_TRAIN_GAIN + GameState.teach_step(mate),
-			"Team-mates on the club plan keep the full season's growth")
+	# The price (director 2026-11-17): while he learns, both his banks split
+	# four ways, a quarter to each of the top two stats of his own position
+	# and of the new one (a stat in both gets two quarters).
+	var split := GameState._learn_split(cand)
+	var share_sum := 0.0
+	for k in split:
+		share_sum += float(split[k])
+	_check(absf(share_sum - 1.0) < 0.001 and split.size() >= 2 and split.size() <= 4,
+			"While he learns, his XP splits four ways (%s)" % str(split))
+	var keep_attr: Dictionary = (cand["attr"] as Dictionary).duplicate()
+	cand["xp"] = 300.0
+	cand["xp_match"] = 300.0
+	GameState.apply_plan_to(cand)
+	var off_split := []
+	for k in keep_attr:
+		if int(cand["attr"][k]) != int(keep_attr[k]) and not split.has(k):
+			off_split.append(k)
+	_check(float(cand["xp"]) == 0.0 and float(cand["xp_match"]) == 0.0 and off_split.is_empty(),
+			"Both banks go into the split, and only its stats move (%s)" % str(off_split))
+	cand["attr"] = keep_attr
+	cand.erase("xp_split")
+	GameState._recalc_player_overall(cand)
 	# Club limit.
 	var started := 1
 	for q in GameState.my_list:
@@ -771,28 +806,6 @@ func _test_learning_a_position() -> void:
 			and str(kept.get("at", "")).begins_with("Round") and str(kept.get("club", "")) == GameState.my_club,
 			"The decision and its outcome are kept as a career fact (%s)" % str(kept))
 	_check(GameState.learnable_jobs(cand).is_empty(), "One project a season")
-	# The payback: next season his training may lift him LEARN_PAYBACK more,
-	# never past his POT.
-	_check(int(cand.get("learn_payback_year", 0)) == GameState.season_year + 1,
-			"A learned position earns next season's payback")
-	var keep_year := GameState.season_year
-	var keep_pot := int(cand.get("potential", 0))
-	var keep_start = cand.get("season_start_ov")
-	var keep_cap = cand.get("project_cap")
-	cand.erase("project_cap")
-	GameState.season_year = keep_year + 1
-	cand["season_start_ov"] = 60
-	cand["potential"] = 90
-	_check(GameState.season_ceiling(cand) == 60 + GameState.SEASON_TRAIN_GAIN + GameState.teach_step(cand) + GameState.LEARN_PAYBACK,
-			"The season after, his training limit is %d higher" % GameState.LEARN_PAYBACK)
-	cand["potential"] = 60 + GameState.SEASON_TRAIN_GAIN
-	_check(GameState.season_ceiling(cand) == 60 + GameState.SEASON_TRAIN_GAIN + GameState.teach_step(cand),
-			"The payback never takes him past his POT")
-	GameState.season_year = keep_year
-	cand["potential"] = keep_pot
-	cand["season_start_ov"] = keep_start
-	if keep_cap != null:
-		cand["project_cap"] = keep_cap
 	# Fail: a fresh player, kept well short.
 	var other := {}
 	for q in GameState.my_list:
@@ -931,7 +944,6 @@ func _test_rival_projects() -> void:
 func _test_pass_margin_tightened() -> void:
 	_check(GameState.PROJECT_PASS == 1, "The pass margin is 1 (was 3)")
 	_check(GameState.PROJECT_REACH == 6, "Reach is unchanged: a move within 6 may be tried")
-	_check(GameState.PROJECT_OWN_GAIN == 2, "The cost is unchanged: his own training lifts him only 2 more that season")
 	_new_season()
 	var cand := {}
 	var job := ""
@@ -983,8 +995,8 @@ func _test_project_endings() -> void:
 	GameState.save_career()
 	GameState.load_career()
 	var back := GameState.list_player(id0)
-	_check(GameState.project_job(back) != "" and int(back["project"]["weeks"]) == 3
-			and back.has("project_cap"), "A project survives a save mid-way")
+	_check(GameState.project_job(back) != "" and int(back["project"]["weeks"]) == 3,
+			"A project survives a save mid-way")
 	# A move to another club ends it; the season's chance stays spent.
 	var mover := GameState.list_player(str(learners[1]["id"]))
 	var other := ""
@@ -1011,38 +1023,15 @@ func _test_project_endings() -> void:
 			"A learned third position counts as his own")
 
 
-## Teaching (director, 4.Q1, 2026-11-04): teaching is XP scaling, not the
-## season-ceiling point, so no staff moves the ceiling (RPG-006 retired).
+## Teaching (director, 4.Q1, 2026-11-04): teaching is XP scaling, never a
+## ceiling step (there is no season ceiling now, director 2026-11-17).
 func _test_teaching_moves_the_ceiling() -> void:
 	var coach := func(teach: int): return {"skills": {"teach": teach, "tactics": 70, "manage": 70}}
 	var kid := {"role": "MID", "age": 19.0}
 	var vet := {"role": "MID", "age": 28.0}
 	for staff in [{"MID": coach.call(90), "DEV": coach.call(90)}, {"MID": coach.call(70), "DEV": coach.call(70)}, {}]:
 		_check(CoachEffects.teach_step(staff, kid) == 0 and CoachEffects.teach_step(staff, vet) == 0,
-				"No teaching staff moves the season ceiling")
-	var p: Dictionary = GameState.my_list[0]
-	p["season_start_ov"] = int(p["overall"])
-	p.erase("project_year")
-	p.erase("learn_payback_year")
-	_check(GameState.season_ceiling(p) == int(p["season_start_ov"]) + GameState.SEASON_TRAIN_GAIN + GameState.teach_step(p),
-			"The season ceiling carries his club's teaching step, the same rule at every club")
-	# A coach moved or sacked without changing the number of records: the next
-	# step reads the new staff, not the cached one.
-	var line_job := CoachEffects.line_job(p)
-	var line_coach: Dictionary = CoachEffects.staffs(GameState.coaches).get(str(p["club"]), {}).get(line_job, {})
-	if not line_coach.is_empty():
-		GameState.teach_step(p)   # fill the cache
-		var was_status := str(line_coach["status"])
-		line_coach["status"] = "free"
-		GameState.mark_dirty()
-		var fresh := CoachEffects.teach_step(CoachEffects.staffs(GameState.coaches).get(str(p["club"]), {}), p)
-		_check(GameState.teach_step(p) == fresh, "Sacking a coach changes his club's teaching step at once (%d)" % fresh)
-		line_coach["status"] = was_status
-		GameState.mark_dirty()
-	var free_agent: Dictionary = p.duplicate()
-	free_agent["club"] = ""
-	_check(GameState.teach_step(free_agent) == 0, "A player with no club is neither lifted nor held back by teachers")
-
+				"No teaching staff moves a ceiling")
 
 
 ## A player's most recent project fact (CareerFacts), or {}.
@@ -1170,6 +1159,8 @@ func _test_stat_focus_once_a_season() -> void:
 	_check(not GameState.set_stat_focus(id, other), "Still locked after a reload")
 
 
+## His focus takes all his training XP; his match XP still goes into his
+## position (director, 2026-11-17).
 func _test_stat_focus_split() -> void:
 	_new_season()
 	var pick := _focus_subject()
@@ -1178,31 +1169,29 @@ func _test_stat_focus_split() -> void:
 	var id := str(p["id"])
 	var before: Dictionary = (p["attr"] as Dictionary).duplicate()
 	_check(GameState.set_stat_focus(id, key), "Focus set for the split test")
-	# Bank a season's worth of XP and let the plan spend it.
-	p["xp"] = int(p.get("xp", 0)) + 3000
+	p["xp"] = 600.0
+	p["xp_match"] = 0.0
 	GameState.apply_plan_to(p)
-	var spent := GameState.focus_spent(p)
-	var total := int(spent[0]) + int(spent[1])
-	_check(total > 0, "Training spent XP with a focus set (%s)" % [spent])
-	# The season ceiling stops this after a few points, so the share is
-	# measured on a long run without the ceiling: about a third, never the
-	# 35-43% the first version overshot to.
-	var q: Dictionary = p.duplicate(true)
-	q.erase("focus_ledger")
-	q["xp"] = 6000
-	GameState._spend_with_weights(q, GameState.plan_weights(q), false, -1, "", key)
-	var led := GameState.focus_spent(q)
-	var long_total := int(led[0]) + int(led[1])
-	var share := float(led[0]) / float(maxi(long_total, 1))
-	_check(share >= 0.28 and share <= 0.37,
-			"The focus takes about a third of his training (%.1f%% of %d XP)" % [share * 100.0, long_total])
-	_check(int(p["attr"][key]) > int(before[key]), "His focus stat rose (%d to %d)" % [int(before[key]), int(p["attr"][key])])
-	var drills := 0
+	var others := 0
 	for k in before:
-		if k != key and int(p["attr"][k]) > int(before[k]):
-			drills += int(p["attr"][k]) - int(before[k])
-	_check(drills > 0, "The drills still bought points on his plan (%d)" % drills)
-	_check(int(p["overall"]) <= GameState.season_ceiling(p), "The season ceiling still holds with a focus")
+		if k != key and int(p["attr"][k]) != int(before[k]):
+			others += 1
+	_check(int(p["attr"][key]) > int(before[key]) and others == 0,
+			"His training all goes into his focus (%s %d to %d; %d other stats moved)" % [key, int(before[key]), int(p["attr"][key]), others])
+	var mid: Dictionary = (p["attr"] as Dictionary).duplicate()
+	p["xp_match"] = 600.0
+	GameState.apply_plan_to(p)
+	var role_w: Dictionary = Ratings.ROLE_WEIGHTS[str(p["role"])]
+	var on_role := 0
+	var off_role := 0
+	for k in mid:
+		var d := int(p["attr"][k]) - int(mid[k])
+		if d > 0:
+			if role_w.has(k):
+				on_role += d
+			else:
+				off_role += d
+	_check(on_role > 0 and off_role == 0, "His match XP still buys his position's stats (%d points, %d off it)" % [on_role, off_role])
 
 
 func _test_stat_focus_unlocks_next_season() -> void:
@@ -1212,9 +1201,6 @@ func _test_stat_focus_unlocks_next_season() -> void:
 	var key := str(pick[1])
 	var id := str(p["id"])
 	_check(GameState.set_stat_focus(id, key), "Focus set before the rollover")
-	p["xp"] = int(p.get("xp", 0)) + 600
-	GameState.apply_plan_to(p)
-	_check(int(GameState.focus_spent(p)[0]) > 0, "Focus XP counted this season")
 	var year := GameState.season_year
 	GameState._ensure_league_lists()
 	GameState._start_next_season(year + 1, 0)
@@ -1225,7 +1211,6 @@ func _test_stat_focus_unlocks_next_season() -> void:
 		return
 	_check(not GameState.focus_locked(p2), "The new season unlocks his focus")
 	_check(GameState.stat_focus(p2) == key, "Last season's focus carries on until the coach picks again")
-	_check(GameState.focus_spent(p2) == [0, 0], "The share starts fresh each season")
 	var other := _other_focus(p2, key)
 	_check(GameState.set_stat_focus(id, other), "A new focus can be picked in the new season (%s)" % other)
 	_check(GameState.focus_locked(p2) and GameState.stat_focus(p2) == other, "And it locks again")
@@ -1277,151 +1262,49 @@ func _test_stat_focus_club_move() -> void:
 	GameState.apply_plan_to(p)
 	var dest := "COL" if GameState.my_club != "COL" else "CAR"
 	GameState._join(dest, p)
-	_check(not p.has("train_focus") and not p.has("train_focus_year") and not p.has("focus_ledger"),
+	_check(not p.has("train_focus") and not p.has("train_focus_year"),
 			"A club move clears his focus: the new club's coach decides")
 
 
-## Row 90: the off-season takes the league's training lift back off where each
-## player put it. Before, the re-anchor took it evenly off every attribute,
-## so a midfielder trained on his role gained contested every year against
-## the rest of his game, and Contested bulls tripled in seven seasons.
-func _test_training_lift_unwound() -> void:
+## The season record the summer reads (Growth.summer, director 2026-11-17):
+## every point bought goes into season_gains, a point bought at or past his
+## potential into over_gains too, and the rollover clears both on every list
+## and for free agents.
+func _test_season_record() -> void:
 	_new_season()
-	var mids: Array = []
-	for code in GameState.season.lists:
-		for p in GameState.season.lists[code]:
-			if str(p["role"]) == "MID":
-				mids.append(p)
-	_check(mids.size() >= 100, "(setup) a league of midfielders (%d)" % mids.size())
-	# Training records what it bought for the season, in his own position only.
-	var one: Dictionary = (mids[0] as Dictionary).duplicate(true)
+	var one: Dictionary = (_first_of("MID") as Dictionary).duplicate(true)
 	one.erase("season_gains")
-	one["xp"] = 400
-	var bought := GameState._spend_with_weights(one, Ratings.ROLE_WEIGHTS["MID"], false)
-	_check(not bought.is_empty() and (one.get("season_gains", {}) as Dictionary) == bought,
-			"Training keeps the season's gains on the player (%s / %s)" % [str(bought), str(one.get("season_gains", {}))])
-	var learner: Dictionary = (mids[1] as Dictionary).duplicate(true)
-	learner.erase("season_gains")
-	learner["xp"] = 400
-	var learnt := GameState._spend_with_weights(learner, Ratings.ROLE_WEIGHTS["RUCK"], false, -1, "RUCK")
-	_check(not learnt.is_empty() and not learner.has("season_gains"),
-			"Learning a new position is his to keep: not counted (%s)" % str(learnt))
-	# Seven seasons of rival training on a copy of the league, re-anchored the
-	# old way (evenly) and the new way (each gives back out of his own gains).
-	var start := _mean_attr(mids, "contested")
-	var start_marking := _mean_attr(mids, "contested_marking")
-	var arms := {}
-	for arm in ["even", "unwound"]:
-		var lists := {}
-		for code in GameState.season.lists:
-			lists[code] = (GameState.season.lists[code] as Array).duplicate(true)
-		for year in range(7):
-			for code in lists:
-				for p in lists[code]:
-					p.erase("season_gains")
-					p["xp"] = 600
-					GameState._spend_with_weights(p, Ratings.ROLE_WEIGHTS[str(p["role"])], true,
-							int(p["overall"]) + GameState.SEASON_TRAIN_GAIN)
-			if arm == "unwound":
-				Prospects.apply_training_unwind(lists, Prospects.training_unwind(lists, 2027 + year))
-			Prospects.renormalise_league(lists, [], GameDB.baseline_overall, GameDB.baseline_spread)
-		var ms: Array = []
-		var bulls := 0
-		for code in lists:
-			for p in lists[code]:
-				if str(p["role"]) == "MID":
-					ms.append(p)
-					if Traits.has(p, "bull"):
-						bulls += 1
-		arms[arm] = {"contested": _mean_attr(ms, "contested"), "marking": _mean_attr(ms, "contested_marking"), "bulls": bulls}
-	var bulls_start := mids.filter(func(p): return Traits.has(p, "bull")).size()
-	var gap_start := start - start_marking
-	var gap_even := float(arms["even"]["contested"]) - float(arms["even"]["marking"])
-	var gap_new := float(arms["unwound"]["contested"]) - float(arms["unwound"]["marking"])
-	_check(gap_even > gap_start + 15.0,
-			"(control) the even re-anchor pulls contested away from the rest of a midfielder's game (gap %.1f -> %.1f)" % [gap_start, gap_even])
-	# With no retirements or draft in this copy, what the harder trainers keep
-	# piles up for seven years; the audit (traitdecay) measures the real league.
-	_check(gap_new - gap_start < 0.5 * (gap_even - gap_start),
-			"Seven seasons of training move a midfielder's shape less than half as far (contested over marking %.1f -> %.1f; even re-anchor %.1f)" % [gap_start, gap_new, gap_even])
-	# About half (director 2026-11-12, traits up to five): with no two-trait cap
-	# hiding Contested bulls behind other traits, the count is every midfielder
-	# past the line, 51 against 100 on this copy.
-	_check(int(arms["unwound"]["bulls"]) * 100 < int(arms["even"]["bulls"]) * 55,
-			"About half the Contested bulls the even re-anchor made, or fewer (%d at the start, %d now, %d with the even re-anchor)" % [bulls_start, int(arms["unwound"]["bulls"]), int(arms["even"]["bulls"])])
-	# Who gives back what: the harder trainer keeps his edge, a player who
-	# trained something else keeps the attribute he did not train.
-	var trio := {"A": [], "B": [], "C": []}
-	var codes := ["A", "B", "C"]
-	var gains := [{"contested": 12}, {"contested": 2}, {"kicking": 4}]
-	for i in range(3):
-		var p: Dictionary = (mids[i] as Dictionary).duplicate(true)
-		p["id"] = "row90_%d" % i
-		p["season_gains"] = gains[i]
-		(trio[codes[i]] as Array).append(p)
-	var hi: Dictionary = trio["A"][0]
-	var lo: Dictionary = trio["B"][0]
-	var other: Dictionary = trio["C"][0]
-	var hi_c := int(hi["attr"]["contested"])
-	var lo_c := int(lo["attr"]["contested"])
-	var other_c := int(other["attr"]["contested"])
-	var other_d := int(other["attr"]["kicking"])
-	var gap := int(hi.get("potential", 0)) - int(hi["overall"])
-	Prospects.apply_training_unwind(trio, Prospects.training_unwind(trio, 2027))
-	var hi_kept := int(hi["attr"]["contested"]) - (hi_c - 12)
-	var lo_kept := int(lo["attr"]["contested"]) - (lo_c - 2)
-	_check(hi_kept > 0 and hi_kept > lo_kept,
-			"The harder trainer keeps part of his gain, more than a light one (%d of 12 kept, %d of 2)" % [hi_kept, lo_kept])
-	_check(int(other["attr"]["kicking"]) < other_d and int(other["attr"]["contested"]) >= other_c - 1,
-			"A player who trained kicking gives back kicking, not contested (contested %d->%d, kicking %d->%d)" % [other_c, int(other["attr"]["contested"]), other_d, int(other["attr"]["kicking"])])
-	_check(int(hi.get("potential", 0)) - int(hi["overall"]) == gap,
-			"His distance to his projection is kept (%d)" % gap)
-	# The real rollover: every listed player's season record is spent, and the
-	# training a league of midfielders bought does not change their shape.
-	_new_season()
-	var before_gap := {}
-	for code in GameState.season.lists:
-		for p in GameState.season.lists[code]:
-			if str(p["role"]) == "MID":
-				before_gap[str(p["id"])] = int(p["attr"]["contested"]) - int(p["attr"]["contested_marking"])
-			p["xp"] = 600
-			GameState.ai_spend_xp(p)
-	var trained_gap := 0.0
-	var n_trained := 0
-	for code in GameState.season.lists:
-		for p in GameState.season.lists[code]:
-			if before_gap.has(str(p["id"])):
-				trained_gap += float(int(p["attr"]["contested"]) - int(p["attr"]["contested_marking"]) - int(before_gap[str(p["id"])]))
-				n_trained += 1
-	trained_gap /= maxf(1.0, float(n_trained))
-	# A delisted player who trained this season: he is on no list at the
-	# rollover, so nothing is given back, and his record must not linger.
-	var fa: Dictionary = (mids[2] as Dictionary).duplicate(true)
-	fa["id"] = "row90_fa"
+	one.erase("over_gains")
+	one["potential"] = int(one["overall"]) + 20
+	one["xp"] = 400.0
+	var bought := _spend(one, Ratings.ROLE_WEIGHTS["MID"])
+	_check(not bought.is_empty() and (one.get("season_gains", {}) as Dictionary) == bought and not one.has("over_gains"),
+			"Below his potential, training keeps the season's gains and none past it (%s / %s)" % [str(bought), str(one.get("season_gains", {}))])
+	var past: Dictionary = (_first_of("MID") as Dictionary).duplicate(true)
+	past.erase("season_gains")
+	past.erase("over_gains")
+	past["potential"] = int(past["overall"])
+	past["xp"] = 400.0
+	var past_bought := _spend(past, Ratings.ROLE_WEIGHTS["MID"])
+	_check(not past_bought.is_empty() and (past.get("over_gains", {}) as Dictionary) == past_bought,
+			"At his potential, every point he buys is noted as past it (%s / %s)" % [str(past_bought), str(past.get("over_gains", {}))])
+	var fa: Dictionary = (_first_of("FWD") as Dictionary).duplicate(true)
+	fa["id"] = "record_fa"
 	fa["season_gains"] = {"contested": 3}
+	fa["over_gains"] = {"contested": 1}
 	GameState.free_agents.append(fa)
+	for p in GameState.my_list:
+		p["season_gains"] = {"kicking": 1}
 	GameState._start_next_season(GameState.season_year + 1, 0)
-	var fa_now: Dictionary = {}
-	for p in GameState.free_agents:
-		if str(p.get("id", "")) == "row90_fa":
-			fa_now = p
 	var stale := 0
-	var rolled_gap := 0.0
-	var n_rolled := 0
 	for code in GameState.season.lists:
 		for p in GameState.season.lists[code]:
-			if p.has("season_gains"):
+			if p.has("season_gains") or p.has("over_gains"):
 				stale += 1
-			if str(p.get("id", "")) == "row90_fa":
-				fa_now = p
-			if before_gap.has(str(p["id"])) and str(p["role"]) == "MID":
-				rolled_gap += float(int(p["attr"]["contested"]) - int(p["attr"]["contested_marking"]) - int(before_gap[str(p["id"])]))
-				n_rolled += 1
-	rolled_gap /= maxf(1.0, float(n_rolled))
-	_check(stale == 0 and (fa_now.is_empty() or not fa_now.has("season_gains")),
-			"The rollover spends every season record, free agents' too (%d left; delisted record %s)" % [stale, str(fa_now.get("season_gains", "gone"))])
-	_check(trained_gap >= 1.5 and absf(rolled_gap) <= trained_gap * 0.4,
-			"Through the real rollover a midfielder's shape comes back (contested over marking +%.2f trained, %+.2f after)" % [trained_gap, rolled_gap])
+	for p in GameState.free_agents:
+		if p.has("season_gains") or p.has("over_gains"):
+			stale += 1
+	_check(stale == 0, "The rollover clears every season record, free agents' too (%d left)" % stale)
 	_new_season()
 
 
@@ -1483,8 +1366,7 @@ func _test_rivals_grow_traits() -> void:
 	var ft := GameState.focus_trait(p, stat)
 	_check(not ft.is_empty() and int(ft["gap"]) <= GameState.AI_TRAIT_REACH, "It is a trait within reach")
 	var before := int(p["attr"][stat])
-	# Room to grow this season, and a season's XP to spend.
-	p["season_start_ov"] = int(p["overall"])
-	p["xp"] = int(p.get("xp", 0)) + 3000
+	# A season's XP to spend.
+	p["xp"] = float(p.get("xp", 0)) + 3000.0
 	GameState.ai_spend_xp(p)
 	_check(int(p["attr"][stat]) > before, "His training lifts the focus stat (%d to %d)" % [before, int(p["attr"][stat])])

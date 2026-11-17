@@ -189,8 +189,7 @@ var loaded := false
 ## True from a reload until a career takes the data (GameState.reset() clears it):
 ## a career mutates the player dicts in place, so only an untouched load is reused.
 var pristine := false
-## The 2026 league's mean overall. Each rollover re-anchors the league to it
-## (Prospects.renormalise_league), so ratings stay relative to the league.
+## The 2026 league's mean overall and spread.
 var baseline_overall := 0.0
 var baseline_spread := 0.0   # standard deviation of the 2026 overalls
 
@@ -286,6 +285,7 @@ func reload(dataset := Datasets.DEFAULT) -> void:
 			players_by_club[p["club"]] = []
 		players_by_club[p["club"]].append(p)
 	Prospects.forget_cache()
+	_rate_few_games(players)
 	draftees = _load_draftees()
 	list_additions = _load_list_additions()
 	_apply_indigenous(players, list_additions, draftees)
@@ -2047,6 +2047,26 @@ func _apply_history_rows(list: Array) -> void:
 				hist.append([int(parts[0]), int(parts[1]), int(parts[2])])
 		if not hist.is_empty():
 			p["history"] = hist
+
+
+## Players of under Prospects.FEW_GAMES senior games are rated from their
+## draft pick, not their few games (director 2026-11-17): projected for life.
+## Run once the lists exist (the shapes are borrowed from them); the hand-set
+## numbers are applied again on top, as for everyone.
+func _rate_few_games(list: Array) -> void:
+	var few := []
+	for p in list:
+		if bool(p.get("projected", false)) or bool(p.get("generated", false)):
+			continue
+		var g := Prospects.senior_games(p, DATA_SEASON)
+		if g < 0 or g >= Prospects.FEW_GAMES:
+			continue
+		Prospects.project_few_games(p)
+		Potential.assign(p)
+		few.append(p)
+	if not few.is_empty():
+		_apply_ovr_overrides(few)
+		_apply_potential_overrides(few)
 
 
 ## Hand-set OVR (data/ovr_overrides.csv), matched on club + first + last name.

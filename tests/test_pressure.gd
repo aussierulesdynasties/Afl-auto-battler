@@ -150,9 +150,12 @@ func _test_high_pressure_forward() -> void:
 		if str(p["role"]) == "FWD":
 			target = str(p["id"])
 			break
-	var ordinary := _player_acts(target, 40.0)
-	var elite := _player_acts(target, 95.0)
-	_check(elite > ordinary * 1.5,
+	# Sixteen matches: four left the ratio a coin toss. Main measures x1.55 and
+	# the under-10-games ratings (director 2026-11-17) x1.39 (9.6 -> 13.4): the
+	# kids around him rate lower, so he already presses more at 40.
+	var ordinary := _player_acts(target, 40.0, 16)
+	var elite := _player_acts(target, 95.0, 16)
+	_check(elite > ordinary * 1.3,
 			"A high-Pressure forward generates far more pressure acts (%.1f -> %.1f a game)" % [ordinary, elite])
 	_check(elite < 40.0, "...but not every one on the ground (%.1f a game)" % elite)
 
@@ -194,15 +197,15 @@ func _pick_ratio(sim: MatchSim, hi: String, lo: String) -> float:
 	return float(n_hi) / float(maxi(1, n_lo))
 
 
-func _player_acts(id: String, pressure: float) -> float:
+func _player_acts(id: String, pressure: float, matches := MATCHES) -> float:
 	var total := 0.0
-	for i in range(MATCHES):
+	for i in range(matches):
 		var res := _sim(900 + i, func(sq: Squad):
 			for p in sq.ground:
 				if str(p["id"]) == id:
 					p["attr"]["pressure"] = pressure).run()
 		total += float((res["players"].get(id, {}) as Dictionary).get("pressure_acts", 0.0))
-	return total / MATCHES
+	return total / matches
 
 
 func _test_rating_formula() -> void:
