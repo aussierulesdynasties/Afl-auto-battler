@@ -835,6 +835,9 @@ static func _kit_edges(m: Mesh) -> Mesh:
 	for l in rest:
 		for q in l["raw"]:
 			low = minf(low, q.y)
+	# The cloth under the drawn hem is worn as shorts: its moulded folds are smoothed away.
+	var gbs := am.surface_get_blend_shape_arrays(gs)
+	_smooth_hem(ga, gbs, gi, wid, pts.size(), faces, level)
 	# The guernsey's pattern coordinates (as the shader reads them) near its neck and armholes,
 	# lent to the skin there so the skin can wear the guernsey up to the drawn edge.
 	var guv: PackedVector2Array = ga[Mesh.ARRAY_TEX_UV]
@@ -895,8 +898,8 @@ static func _kit_edges(m: Mesh) -> Mesh:
 	for b in range(am.get_blend_shape_count()):
 		out.add_blend_shape(am.get_blend_shape_name(b))
 	for s in range(am.get_surface_count()):
-		var a := am.surface_get_arrays(s)
-		var bsa := am.surface_get_blend_shape_arrays(s)
+		var a := ga if s == gs else am.surface_get_arrays(s)
+		var bsa := gbs if s == gs else am.surface_get_blend_shape_arrays(s)
 		var flags := _custom_format(am, s)
 		if s == gs:
 			a[Mesh.ARRAY_VERTEX] = gv
@@ -918,6 +921,82 @@ static func _kit_edges(m: Mesh) -> Mesh:
 		out.surface_set_name(s, am.surface_get_name(s))
 	_edged[m] = out
 	return out
+
+
+## The guernsey's cloth below the drawn hem line (level), which the shader paints as shorts: the
+## mesh's hem dips up to 6 cm under that line in front and 3.6 cm behind, and the folds moulded into
+## that strip showed as lumps under the hem (director 2026-11-17, "lumpy seams between shorts and
+## shirt"; he chose "Smooth the 6 cm strip"). Each corner of the strip is eased towards its
+## neighbours (Taubin, which keeps the strip's size, so it does not sink into the body), in the rest
+## pose and in every build morph alike; the cloth's open edge, where the shorts begin, stays put so
+## no gap opens. The strip's normals are then taken from its new faces.
+static func _smooth_hem(ga: Array, bsa: Array, gi: PackedInt32Array, wid: PackedInt32Array,
+		count: int, faces: Dictionary, level: float) -> void:
+	var gv: PackedVector3Array = ga[Mesh.ARRAY_VERTEX]
+	var nbr := []
+	nbr.resize(count)
+	for i in range(count):
+		nbr[i] = PackedInt32Array()
+	for e: Vector2i in faces:
+		nbr[e.x].append(e.y)
+		nbr[e.y].append(e.x)
+	var edge := {}
+	for e: Vector2i in faces:
+		if faces[e] == 1:
+			edge[e.x] = true
+			edge[e.y] = true
+	var one := PackedInt32Array()  # one vertex index per welded corner
+	one.resize(count)
+	for i in range(gv.size()):
+		one[wid[i]] = i
+	var move := PackedInt32Array()
+	for w in range(count):
+		if gv[one[w]].y < level and not edge.has(w):
+			move.append(w)
+	if move.is_empty():
+		return
+	var sets := [ga]
+	sets.append_array(bsa)
+	for arrs: Array in sets:
+		var vs: PackedVector3Array = arrs[Mesh.ARRAY_VERTEX]
+		var p := PackedVector3Array()
+		p.resize(count)
+		for w in range(count):
+			p[w] = vs[one[w]]
+		for it in range(20):
+			for f in [0.5, -0.53]:
+				var t := p.duplicate()
+				for w in move:
+					var avg := Vector3.ZERO
+					for u in nbr[w]:
+						avg += p[u]
+					t[w] = p[w] + f * (avg / float(nbr[w].size()) - p[w])
+				p = t
+		for i in range(vs.size()):
+			vs[i] = p[wid[i]]
+		arrs[Mesh.ARRAY_VERTEX] = vs
+		# Normals of the moved corners from the faces round them.
+		var ns: PackedVector3Array = arrs[Mesh.ARRAY_NORMAL]
+		if ns == null or ns.is_empty():
+			continue
+		var acc := PackedVector3Array()
+		acc.resize(count)
+		for f in range(0, gi.size(), 3):
+			var a := wid[gi[f]]
+			var b := wid[gi[f + 1]]
+			var c := wid[gi[f + 2]]
+			var fn := (p[c] - p[a]).cross(p[b] - p[a])
+			acc[a] += fn
+			acc[b] += fn
+			acc[c] += fn
+		var moved := {}
+		for w in move:
+			moved[w] = true
+		for i in range(vs.size()):
+			if moved.has(wid[i]) and acc[wid[i]].length_squared() > 0.0:
+				var n := acc[wid[i]].normalized()
+				ns[i] = n if n.dot(ns[i]) >= 0.0 else -n
+		arrs[Mesh.ARRAY_NORMAL] = ns
 
 
 ## One open edge of the guernsey (ids: welded corners in order round it): its raw points, the
