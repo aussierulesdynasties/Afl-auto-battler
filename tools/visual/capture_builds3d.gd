@@ -8,6 +8,8 @@ extends SceneTree
 ## MODE "match": Fremantle v St Kilda (seed 31), 20 s of the first quarter at real speed, from the
 ##   main camera (rule 2.93: centre line, 15 m up, 25 m back from the boundary, a third of the
 ##   ground across) and from a close test view that follows the ball (not a game camera).
+##   "heads": Melbourne v Fremantle from the first bounce, and the close test view follows Max Gawn
+##   (MEL_11, his own Tripo head) instead of the ball, 3 m of ground across at his head height.
 ## The look is rule 2.80-2.81's fine day, as capture_cameras3d.gd sets it.
 
 const DT := 1.0 / 60.0
@@ -16,6 +18,13 @@ const GLB := "res://assets/oval3d/player_mh.glb"
 ## The men in the line-up, shortest to tallest; club and surname as in players_enriched_2026.
 const LINEUP := [["FRE", "Isaiah", "Dudley"], ["STK", "Liam", "Henry"], ["STK", "Nasiah", "Wanganeen-Milera"],
 		["FRE", "Caleb", "Serong"], ["STK", "Rowan", "Marshall"], ["FRE", "Sean", "Darcy"], ["FRE", "Mason", "Cox"]]
+## "heads": Max Gawn in his own Tripo head (rule 2.99) beside Darcy, still on the MetaHuman head.
+const LINEUP_HEADS := [["MEL", "Max", "Gawn"], ["FRE", "Sean", "Darcy"]]
+var _lineup_men: Array = LINEUP
+var _home := "FRE"
+var _away := "STK"
+## The man the close view follows in "match heads" (player id); "" follows the ball.
+var _follow := ""
 var _clouds: NoiseTexture2D
 ## "gen_avg" / "gen_real": five 190 cm men with no weight on record (a generated player), drawn at
 ## the average weight for 190 cm (84.8 kg) or at five real 2026 weights of 190 cm men (of the 20
@@ -36,6 +45,8 @@ func _run() -> void:
 	var mode := str(args[1])
 	var flat := args.size() > 2 and str(args[2]) == "flat"
 	_gen = str(args[2]) if args.size() > 2 and str(args[2]).begins_with("gen") else ""
+	if args.size() > 2 and str(args[2]) == "heads":
+		_lineup_men = LINEUP_HEADS
 	DirAccess.make_dir_recursive_absolute(out)
 	OS.low_processor_usage_mode = false
 	root.content_scale_mode = Window.CONTENT_SCALE_MODE_DISABLED
@@ -47,8 +58,12 @@ func _run() -> void:
 	O3.hair_glb = "res://__no_hair_shells__.glb"
 	var gdb = root.get_node("GameDB")
 	var Squad_ = load("res://scripts/sim/Squad.gd")
-	var res: Dictionary = load("res://scripts/sim/MatchSim.gd").new(Squad_.new("FRE", gdb.club_list("FRE"), true, "FRE"),
-			Squad_.new("STK", gdb.club_list("STK"), false, "STK"), 31).run()
+	var heads := args.size() > 2 and str(args[2]) == "heads"
+	_home = "MEL" if heads and mode == "match" else "FRE"
+	_away = "FRE" if heads and mode == "match" else "STK"
+	_follow = "MEL_11" if heads and mode == "match" else ""
+	var res: Dictionary = load("res://scripts/sim/MatchSim.gd").new(Squad_.new(_home, gdb.club_list(_home), true, _home),
+			Squad_.new(_away, gdb.club_list(_away), false, _away), 31).run()
 	_make_clouds()
 	await _clouds.changed
 	if mode == "lineup":
@@ -66,18 +81,21 @@ func _lineup(out: String, res: Dictionary, gdb, flat: bool) -> void:
 	d.setup(res, res["events"])
 	var oval = load("res://scripts/ui/match/Oval3D.gd").new()
 	root.add_child(oval)
-	oval.build(d, "FRE", "STK")
+	oval.build(d, _home, _away)
 	_look(oval, 1.0)
 	for p in oval.players + oval.umpires:
 		(p["node"] as Node3D).visible = false
 	var scene: PackedScene = load(GLB)
-	var kits := {"FRE": oval._kit(gdb.club_guernsey("FRE")), "STK": oval._kit(gdb.club_guernsey("STK"))}
+	var kits := {}
+	for m in _lineup_men:
+		if not kits.has(str(m[0])):
+			kits[str(m[0])] = oval._kit(gdb.club_guernsey(str(m[0])))
 	var men := []
-	for i in range(LINEUP.size() if _gen == "" else GEN_REAL.size()):
-		var club := str(LINEUP[i][0])
+	for i in range(_lineup_men.size() if _gen == "" else GEN_REAL.size()):
+		var club := str(_lineup_men[i][0])
 		var who := {}
 		for pl in gdb.club_list(club):
-			if str(pl.get("first", "")) == str(LINEUP[i][1]) and str(pl.get("last", "")) == str(LINEUP[i][2]):
+			if str(pl.get("first", "")) == str(_lineup_men[i][1]) and str(pl.get("last", "")) == str(_lineup_men[i][2]):
 				who = pl
 				break
 		var p: Dictionary = oval._player(scene, kits[club], gdb.club_colours(club))
@@ -87,14 +105,14 @@ func _lineup(out: String, res: Dictionary, gdb, flat: bool) -> void:
 		if _gen != "":
 			Oval3DBuild.apply(p, GLB, {"height_cm": 190.0, "weight_kg": Oval3DBuild.avg_kg(190.0) if _gen == "gen_avg" else GEN_REAL[i]}, str(who.get("id", "")))
 		var n: Node3D = p["node"]
-		n.global_position = Vector3((i - ((LINEUP.size() if _gen == "" else GEN_REAL.size()) - 1) * 0.5) * 1.3, 0.0, 0.0)
+		n.global_position = Vector3((i - ((_lineup_men.size() if _gen == "" else GEN_REAL.size()) - 1) * 0.5) * 1.3, 0.0, 0.0)
 		n.rotation.y = 0.0
 		var ap: AnimationPlayer = p["anim"]
 		ap.play("idle")
 		ap.advance(0.4)
 		(p["ring"] as Node3D).visible = false
 		men.append(p)
-		print("MAN %s %s %s pid %s h %s w %s build %s leg %.3f" % [club, LINEUP[i][1], LINEUP[i][2], who.get("id", "?"),
+		print("MAN %s %s %s pid %s h %s w %s build %s leg %.3f" % [club, _lineup_men[i][1], _lineup_men[i][2], who.get("id", "?"),
 				who.get("height_cm", "?"), who.get("weight_kg", "?"), p.get("build", {}), float(p.get("leg", 1.0))])
 	var cam: Camera3D = oval.camera
 	cam.keep_aspect = Camera3D.KEEP_WIDTH
@@ -112,6 +130,7 @@ func _lineup(out: String, res: Dictionary, gdb, flat: bool) -> void:
 		var h: Vector3 = skel.global_transform * skel.get_bone_global_pose(skel.find_bone("head")).origin + Vector3(0, 0.02, 0)
 		views["head%d" % i] = [h + Vector3(0, 0.0, 3.0), h, 0.5]
 		views["head%d_q" % i] = [h + Vector3(2.1, 0.0, 2.1), h, 0.5]
+		views["head%d_b" % i] = [h + Vector3(1.8, 1.2, -2.1), h, 0.5]
 		# His whole body alone from the front and the side, a 2.4 m tall frame (4.27 m wide at 16:9), my
 		# own check of the kit and shape.
 		var at: Vector3 = (men[i]["node"] as Node3D).global_position + Vector3(0, 1.1, 0)
@@ -136,21 +155,27 @@ func _lineup(out: String, res: Dictionary, gdb, flat: bool) -> void:
 
 
 func _match(out: String, res: Dictionary) -> void:
-	var t0 := 30.0
+	var t0 := 30.0 if _follow == "" else 0.0
 	var dur := 20.0
 	var d = load("res://scripts/ui/match/MatchDirector.gd").new()
 	d.setup(res, res["events"])
 	var oval = load("res://scripts/ui/match/Oval3D.gd").new()
 	root.add_child(oval)
-	oval.build(d, "FRE", "STK")
+	oval.build(d, _home, _away)
 	var f0 := int(t0 / DT)
 	var f1 := int((t0 + dur) / DT)
 	var balls := []
 	var n := 0
+	var who := -1
+	print("FOLLOW ", _follow)
+	for i in range(oval.players.size()):
+		if str(oval.players[i].get("pid", "")) == _follow and _follow != "":
+			who = i
+	print("FOLLOW index ", who)
 	while n <= f1 and not d.idle():
 		d.advance(DT)
 		oval.sync(DT)
-		balls.append(oval.ball.global_position)
+		balls.append(oval.ball.global_position if who < 0 else (oval.players[who]["node"] as Node3D).global_position)
 		n += 1
 	f1 = mini(f1, balls.size() - 1)
 	oval.queue_free()
@@ -163,9 +188,9 @@ func _match(out: String, res: Dictionary) -> void:
 			a += balls[g]
 			c += 1
 		a /= float(c)
-		a.y = 1.0
+		a.y = 1.0 if _follow == "" else 1.9
 		aims.append(a)
-	for shot in [["main", Vector2i(1080, 608), 57.0], ["close", Vector2i(1080, 608), 14.0]]:
+	for shot in [["main", Vector2i(1080, 608), 57.0], ["close", Vector2i(1080, 608), 14.0 if _follow == "" else 3.0]]:
 		var size: Vector2i = shot[1]
 		root.size = size
 		DisplayServer.window_set_size(size)
@@ -173,7 +198,7 @@ func _match(out: String, res: Dictionary) -> void:
 		d.setup(res, res["events"])
 		oval = load("res://scripts/ui/match/Oval3D.gd").new()
 		root.add_child(oval)
-		oval.build(d, "FRE", "STK")
+		oval.build(d, _home, _away)
 		_look(oval, 1.0)
 		var cam: Camera3D = oval.camera
 		cam.keep_aspect = Camera3D.KEEP_WIDTH
@@ -185,7 +210,7 @@ func _match(out: String, res: Dictionary) -> void:
 				n += 1
 				continue
 			var aim: Vector3 = aims[clampi(n - f0, 0, f1 - f0)]
-			var eye := Vector3(0.0, 15.0, HALF_WID + 25.0) if shot[0] == "main" else aim + Vector3(0.0, 3.0, 22.0)
+			var eye := Vector3(0.0, 15.0, HALF_WID + 25.0) if shot[0] == "main" else aim + (Vector3(0.0, 3.0, 22.0) if _follow == "" else Vector3(0.0, 0.3, 7.0))
 			cam.global_position = eye
 			cam.look_at(aim, Vector3.UP)
 			cam.fov = rad_to_deg(2.0 * atan(float(shot[2]) * 0.5 / eye.distance_to(aim)))
