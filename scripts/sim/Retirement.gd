@@ -29,9 +29,13 @@ const LOW_MORALE := 40
 ## player keeps his "projected" mark for life, and the rollover retires him by
 ## the same rules, so he is asked the same question: skipping him let every
 ## draftee retire unannounced, uncounted by the draft (Draft.leaving).
+## The rollover ages him and then runs his summer (Prospects.age_league), so
+## the copy has the same summer: a veteran whose rating falls in it retires
+## at the rollover, and the draft must count him.
 static func intends(p: Dictionary, year: int) -> bool:
 	var dup := p.duplicate(true)
 	Prospects.age_player(dup, year)
+	Growth.summer(dup, year - 1)
 	return Prospects.should_retire(dup, year)
 
 
