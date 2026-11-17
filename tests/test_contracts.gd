@@ -20,6 +20,7 @@ func run() -> void:
 	_t("_test_offseason_books_are_next_seasons")
 	_t("_test_real_retirements_are_retirements")
 	_t("_test_real_delistings")
+	_t("_test_career_end_card")
 	_t("_test_list_costs")
 	_t("_test_fa_weights")
 	_t("_test_market_test")
@@ -418,6 +419,98 @@ func _test_real_delistings() -> void:
 	_check(GameState.my_list.has(mine) and Contracts.expiring(GameState.my_list).has(mine),
 			"Yours is out of contract, and the decision is yours (%s)" % GameDB.player_display_name(mine))
 	_check(not GameState.retiring_now(mine) and not GameState.retiring_now(theirs), "It is a delisting, not a retirement")
+
+
+## A young real player's career end is a card on your list (CareerEnd, director
+## 2026-11-17: "gracefully end it, ungracefully delist him or begrudgingly
+## resign him"). Each answer, the odds on the card, the second card after a
+## refusal, and the card left unanswered (let go, as before).
+func _test_career_end_card() -> void:
+	_new_season()
+	var year := GameState.season_year + 1
+	var picks := []
+	for q in GameState.my_list:
+		if picks.size() < 6 and float(q.get("age", 30.0)) < 26.0:
+			picks.append(q)
+	if picks.size() < 6:
+		_check(false, "Six young players to end careers with (found %d)" % picks.size())
+		return
+	var del_early: Dictionary = picks[0]
+	var keep: Dictionary = picks[1]
+	var retire: Dictionary = picks[2]
+	var left_alone: Dictionary = picks[3]
+	var refuser: Dictionary = picks[4]
+	var dealt: Dictionary = picks[5]
+	for q in picks:
+		q["age"] = 24.0
+		q["real_last"] = GameState.season_year - 1
+		q["contract_years"] = 3
+		q["salary"] = 150000
+	var tim_rule := CareerEnd._delist_rule(del_early)
+	_check(tim_rule.contains("2 seasons x $150k left = $150k"), "The delist line works the payout through: " + tim_rule)
+	# Answered in the season, before the off-season opens (a side knocked out).
+	var c := CareerEnd.card(GameState, del_early)
+	_check(c["options"].size() == 3 and str(c["title"]).ends_with("'s future"), "The card has its three choices")
+	retire["morale"] = 30   # unhappy: he always agrees
+	var cr := CareerEnd.card(GameState, retire)
+	_check(str(cr["options"][0]["rule"]).begins_with("He always agrees"), "With a reason, the card says he always agrees: " + str(cr["options"][0]["rule"]))
+	var other: Dictionary = {}
+	for q in GameState.my_list:
+		if not picks.has(q):
+			other = q
+			break
+	other["morale"] = 60
+	GameState.week_events = [c, CareerEnd.card(GameState, keep), cr]
+	GameState.resolve_card(0, 1)   # delist
+	_check(int(other["morale"]) == 60 + CareerEnd.DELIST_MORALE, "Delisting him costs the list %d morale (now %d)" % [-CareerEnd.DELIST_MORALE, int(other["morale"])])
+	GameState.resolve_card(1, 2)   # re-sign
+	_check(int(keep["contract_years"]) == 2 and bool(keep.get("resigned", false)), "Re-signed for a year")
+	var before := int(other["morale"])
+	var out := GameState.resolve_card(2, 0)   # ask: he agrees
+	_check(GameState.retiring_now(retire) and out.contains("agrees"), "Asked, the unhappy one agrees to retire: " + out)
+	_check(int(other["morale"]) == before + CareerEnd.RETIRE_MORALE, "His retirement costs the list %d morale" % -CareerEnd.RETIRE_MORALE)
+	_to_offseason()
+	_check(not GameState.my_list.has(del_early) and int(GameState.dead_for(GameState.my_club)) >= 150000,
+			"Delisted in the season, he goes when the off-season opens with $150k on next season's cap (dead %d, %s)" % [
+			int(GameState.dead_for(GameState.my_club)), _where(del_early)])
+	_check(GameState.my_list.has(keep) and int(keep["contract_years"]) == 2 and int(keep.get("real_end", -1)) == 0,
+			"Re-signed, his deal stands and his career is the sim's (%d years, real_end %s)" % [int(keep["contract_years"]), str(keep.get("real_end", "-"))])
+	_check(GameState.retiring_now(retire), "Agreed to retire, he retires at the rollover")
+	_check(int(left_alone["contract_years"]) == 1 and int(left_alone["real_end"]) == year,
+			"Left alone, he is let go as before: out of contract, his career ending")
+	# Answered after the off-season opened (the Grand Final sides): a refusal,
+	# then the second card, then delisted with the deal as signed.
+	refuser["injury_weeks"] = 0
+	refuser["morale"] = 80
+	GameState.season_tally[str(refuser["id"])] = {"games": 20}
+	var seed := 1
+	while seed < 5000:
+		var rng := RandomNumberGenerator.new()
+		rng.seed = hash("career_end|%s|%d|%d" % [str(refuser["id"]), year, seed])
+		if rng.randf() < ListStings.ASK_AGAIN_YES:
+			break
+		seed += 1
+	GameState.career_seed = seed
+	var cf := CareerEnd.card(GameState, refuser)
+	_check(str(cf["options"][0]["rule"]).begins_with("60% he agrees"), "Fit and happy, the odds are 60/40: " + str(cf["options"][0]["rule"]))
+	GameState.week_events = [cf]
+	var said := GameState.resolve_card(0, 0)
+	_check(GameState.week_events.size() == 2 and str(GameState.week_events[1]["tid"]) == CareerEnd.TID_AFTER and said.contains("says no"),
+			"He refuses, and the second card comes: delist or re-sign (%s)" % said)
+	var dead_before := int(GameState.dead_for(GameState.my_club))
+	GameState.resolve_card(1, 0)   # delist
+	_check(not GameState.my_list.has(refuser) and int(GameState.dead_for(GameState.my_club)) - dead_before == 150000,
+			"Delisted after the cut, half of his deal as signed stays on the cap (%d)" % (int(GameState.dead_for(GameState.my_club)) - dead_before))
+	# Dealt the week the season ends, once.
+	dealt.erase("real_end")
+	dealt.erase("end_talk")
+	GameState.week_events = []
+	CareerEnd.week(GameState)
+	var n := GameState.week_events.filter(func(e): return str(e.get("player_id", "")) == str(dealt["id"])).size()
+	CareerEnd.week(GameState)
+	var n2 := GameState.week_events.filter(func(e): return str(e.get("player_id", "")) == str(dealt["id"])).size()
+	_check(n == 1 and n2 == 1, "The card is dealt once the season ends, and only once (%d, %d)" % [n, n2])
+	_check(SkipOrders.card_choice(GameState.week_events[0], "players") == -1, "A skip never answers it for you")
 
 
 ## Where a player is now, for a failure's message: a list, free agency or gone.
