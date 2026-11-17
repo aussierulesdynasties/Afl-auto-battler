@@ -15,7 +15,8 @@ extends "res://tools/visual/capture_look3d.gd"
 ## 3D at twice the resolution and shrinks it, so sub-pixel lashes read as fine hairs. MSAA=2|4|8.
 ## Skin: SKINNORM (pore bump strength, 0.5 softens the speckle), SKINROUGH, SKINSPEC (sheen), SKINSSS (light
 ## through the skin), SKINCULL=1 one-sided. SHADOWRES=8192 SHADOWBLUR SHADOWDIST: a finer, softer sun shadow (its
-## jagged edge read as speckle on her cheek). HIDE=SUP_eye,SUP_lash hides those surfaces (fault hunting).
+## jagged edge read as speckle on her cheek). STANDBOUNCE=E lights her from below with the stand's colour (x E) instead of
+## the turf's green. HIDE=SUP_eye,SUP_lash hides those surfaces (fault hunting).
 ## SCARF / BEANIE: comma-separated club colours for the knitwear (SupporterMerch).
 
 const AFTER_GOAL := 2.0
@@ -74,6 +75,12 @@ func _run() -> void:
 	for part in ["sky", "agxtv"]:
 		_apply(oval, part)
 	await _match_exposure(oval)
+	if OS.has_environment("STANDBOUNCE"):   # she sits in the stand: the light from below is the stand's, not the turf's green
+		var skm = oval._env.sky.sky_material if oval._env.sky != null else null
+		if skm is ShaderMaterial:
+			var bowl = skm.get_shader_parameter("bowl")   # unset = the shader's default stand colour
+			skm.set_shader_parameter("grass", bowl if bowl != null else Color(0.22, 0.21, 0.23))
+			skm.set_shader_parameter("grass_energy", _env("STANDBOUNCE", 1.0))
 	if OS.has_environment("SS"):   # supersample: draw the 3D at SS x the resolution and shrink it
 		oval.get_viewport().scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
 		oval.get_viewport().scaling_3d_scale = float(OS.get_environment("SS"))
