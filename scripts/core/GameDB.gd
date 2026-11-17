@@ -1498,7 +1498,7 @@ func season_kit(code: String, year: int) -> Dictionary:
 
 
 ## Every club's current home guernsey for the 3D match player (tools/kits/kits_today.py draws
-## both from tools/kits/kits_today.txt): code -> {cell, collar, collar_cm, armholes, armholes_cm},
+## both from tools/kits/kits_today.txt): code -> {cell, collar, collar_cm, armholes, armholes_cm, shorts},
 ## a binding's colour Color(0, 0, 0, 0) where the guernsey has none.
 const KITS_TODAY_CSV := "res://data/kits_today.csv"
 const KITS_TODAY_ATLAS := "res://assets/oval3d/kits_today.png"
@@ -1515,7 +1515,7 @@ func _today_kits() -> Dictionary:
 				var trim := func(c: String) -> Color: return Color.from_string(c, Color(0, 0, 0, 0)) if c != "" else Color(0, 0, 0, 0)
 				_kits_today[str(r["code"])] = {"cell": int(r["cell"]), "collar": trim.call(str(r.get("collar", ""))),
 						"collar_cm": float(str(r.get("collar_cm", "0"))), "armholes": trim.call(str(r.get("armholes", ""))),
-						"armholes_cm": float(str(r.get("armholes_cm", "0")))}
+						"armholes_cm": float(str(r.get("armholes_cm", "0"))), "shorts": trim.call(str(r.get("shorts", "")))}
 	return _kits_today
 
 

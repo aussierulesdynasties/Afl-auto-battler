@@ -1,6 +1,6 @@
 """Draws every club's current home guernsey (2026) for the 3D match player, from
 tools/kits/kits_today.txt, into assets/oval3d/kits_today.png, and writes data/kits_today.csv
-(each club's cell and its collar and armhole bindings).
+(each club's cell, its collar and armhole bindings and its shorts).
 
     python -P tools/kits/kits_today.py [repo root] [scratch folder for the outputs]
 
@@ -16,6 +16,10 @@ edges, where the mesh puts its neck and armholes:
 
     collar C [w]        the binding round the neck, w cm wide (default 2)
     armholes C [w]      the bindings round both armholes, w cm wide (default 2)
+
+And the shorts worn with it, a plain colour (side stripes are not drawn):
+
+    shorts C            the shorts' colour, written to the csv for the 3D player
 
 One more op is drawn after the others:
 
@@ -58,9 +62,9 @@ def parse(path, clubs):
         for ops in (f_ops, b_ops):
             for op in ops:
                 t = op.split()
-                if t[0] in ("collar", "armholes"):
+                if t[0] in ("collar", "armholes", "shorts"):
                     trims[t[0]] = (kit_atlas.colour(t[1], cols), float(t[2]) if len(t) > 2 else 2.0)
-        drawn = lambda ops: [o for o in ops if o.split()[0] not in ("collar", "armholes")]
+        drawn = lambda ops: [o for o in ops if o.split()[0] not in ("collar", "armholes", "shorts")]
         kits.append({"code": code, "pic": pic, "front": drawn(f_ops), "back": drawn(b_ops), "cols": cols,
                      "trims": trims})
     return kits
@@ -96,11 +100,12 @@ def main():
     atlas.save(os.path.join(out or os.path.join(root, "assets", "oval3d"), "kits_today.png"), optimize=True)
     with open(os.path.join(out or os.path.join(root, "data"), "kits_today.csv"), "w", encoding="utf-8", newline="") as fh:
         w = csv.writer(fh, lineterminator="\n")
-        w.writerow(["code", "cell", "collar", "collar_cm", "armholes", "armholes_cm", "picture"])
+        w.writerow(["code", "cell", "collar", "collar_cm", "armholes", "armholes_cm", "shorts", "picture"])
         for i, k in enumerate(kits):
             c = k["trims"].get("collar", ("", 0.0))
             a = k["trims"].get("armholes", ("", 0.0))
-            w.writerow([k["code"], i, c[0], c[1] if c[0] else "", a[0], a[1] if a[0] else "", k["pic"]])
+            w.writerow([k["code"], i, c[0], c[1] if c[0] else "", a[0], a[1] if a[0] else "",
+                        k["trims"].get("shorts", ("", 0.0))[0], k["pic"]])
     print("%d guernseys, atlas %dx%d" % (len(kits), atlas.width, atlas.height))
 
 
