@@ -2903,9 +2903,16 @@ func _test_three_d_cameras(res: Dictionary) -> void:
 	var outs := {}
 	var inside := 0
 	var wide := 0.0
+	var vs := Vector2(pv._vp3d.size)
+	var tv_w := 57.0 * 9.0 / 16.0 * vs.x / vs.y  # 16:9 TV's top and bottom on the taller picture
+	var at_tv := 0
+	var at_wide := 0
+	var wide_long := 0  # wide-shot frames on a kick of 40 m or more (fully wide just after it lands)
+	var wide_bounce := 0  # ...and while the players walk back for a centre bounce
 	var goals_frames := 0
 	var cut_ks := {}  # the set shots the goals camera cut to: one cut each
 	var goals_eyes := {}
+	var behind_kicker := 0  # goals-camera frames from the far end, behind the kicker's back
 	var cuts := 0
 	var back := 0
 	var last := "main"
@@ -2964,6 +2971,8 @@ func _test_three_d_cameras(res: Dictionary) -> void:
 		if tv.shot == "goals":
 			goals_frames += 1
 			goals_eyes[snappedf(absf(cam.global_position.x), 0.1)] = true
+			var to := oval.global_transform * Vector3(tv._end_x, 0.0, 0.0)
+			behind_kicker += 1 if signf(cam.global_position.x) == -signf(to.x) else 0
 			continue
 		frames += 1
 		var bp := oval.ball.global_position
@@ -2977,10 +2986,22 @@ func _test_three_d_cameras(res: Dictionary) -> void:
 			wide = 999.0
 		var look := oval._world(oval._look)
 		var d := cam.global_position.distance_to(Vector3(look.x, Oval3DBroadcast.AIM_Y, look.z))
-		wide = maxf(wide, absf(2.0 * d * tan(deg_to_rad(cam.fov) * 0.5) - 57.0))
+		var w := 2.0 * d * tan(deg_to_rad(cam.fov) * 0.5)
+		wide = maxf(wide, maxf(tv_w - w, w - 57.0))
+		if absf(w - tv_w) < 0.5:
+			at_tv += 1
+		elif absf(w - 57.0) < 0.5:
+			at_wide += 1
+			var ph: Array = pv.director._phases
+			if not ph.is_empty() and str((ph[0] as Dictionary).get("mode", "")) == "centre":
+				wide_bounce += 1
+			elif tv._kick_wide:
+				wide_long += 1
 	_check(frames > 600 and inside >= frames * 0.97,
 			"The main camera keeps the ball in the picture (%d of %d frames; out: %s)" % [inside, frames, outs])
-	_check(wide < 0.5, "The main camera stays on its mount, 57 m across where it aims (off by %.2f m)" % wide)
+	_check(wide < 0.5, "The main camera stays on its mount, %.0f to 57 m across where it aims (off by %.2f m)" % [tv_w, wide])
+	_check(at_tv > frames / 2 and at_wide > 0 and wide_long > 0 and wide_bounce > 0,
+			"Rule 2.111: mostly at TV's height (%.0f m across: %d of %d frames), wide (57 m) on long kicks (%d) and the walk back to a centre bounce (%d)" % [tv_w, at_tv, frames, wide_long, wide_bounce])
 	_check(cuts > 0 and shot_ok == cuts and back >= cuts - 1,
 			"Set shots cut live to the camera behind the goals and back (%d cuts, %d set shots, %d back)" % [cuts, shot_ok, back])
 	_check(cut_ks.size() == cuts,
@@ -2994,6 +3015,8 @@ func _test_three_d_cameras(res: Dictionary) -> void:
 	_check(moved_in_hold == 0, "The centre bounce waits for the replay (%d of %d held frames moved on)" % [moved_in_hold, held])
 	_check(goals_eyes.size() == 1 and goals_eyes.has(snappedf(MatchMotion.HALF_LEN + 25.0, 0.1)),
 			"The goals camera stands 25 m behind a goal line, on the ground's middle (%s)" % [goals_eyes.keys()])
+	_check(goals_frames > 0 and behind_kicker == goals_frames,
+			"A set shot is filmed from behind the far goals, at the kicker's back, as on TV (%d of %d frames)" % [behind_kicker, goals_frames])
 	pv.free()
 
 
