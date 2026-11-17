@@ -639,23 +639,21 @@ static func _skull(m: Mesh) -> Mesh:
 	return out
 
 
-## The real players' Tripo heads (rule 2.99): <player id>.glb, fitted to the base body's head by
-## tools/oval3d/heads/fit_head.py, in the body's rest space. Hung on the head bone, so it follows
-## his height and every turn of his head.
+## The real players' Tripo heads (rule 2.99): <player id>.glb, cut and fitted onto the body's neck
+## socket by tools/oval3d/heads/fit_head.py, in the body's rest space. Director 2026-11-17: "have a
+## body with a neck socket and put sockets on all our heads".
 const HEADS_DIR := "res://assets/oval3d/heads/"
-const HEAD_BONE := "head"
-## The MetaHuman head is taken off above this height (base body rest space, metres): under his
-## Tripo head's jaw, so the MetaHuman neck meets it and fills in behind his beard.
-const HEAD_CUT := 1.65
-## Behind the ears the bust ends higher, so there the body's neck goes up to HEAD_CUT_BACK and
-## tucks inside his head (z: the body's front, +; linear between HEAD_CUT_Z).
-const HEAD_CUT_BACK := 1.71
-const HEAD_CUT_Z := Vector2(-0.02, 0.0)
-## Per head: {"skin": "#rrggbb"}, his skin under the back of his neck (fit_head.py prints it), so
-## the body under his head is his colour.
+## The socket: one of the body's own edge loops round the neck, just above the guernsey collar
+## (tools/oval3d/heads/socket.py). The body keeps everything below it; each head's cut edge sits on it.
+const SOCKET_JSON := "res://assets/oval3d/heads/socket.json"
+## Per head: {"skin": "#rrggbb"}, his skin under the back of his neck (fit_head.py prints it): the
+## body's skin, and the colour his neck's bottom 2 cm blends to.
 const HEADS_JSON := "res://assets/oval3d/heads/heads.json"
+const HEAD_SHADER := preload("res://scripts/ui/match/oval3d_head.gdshader")
 static var _headless := {}
 static var _heads_info = null
+static var _socket := {}
+static var _socket_heads := {}
 
 
 ## Put his own head on figure p if there is one; otherwise leave the MetaHuman head.
@@ -664,13 +662,16 @@ func _head(p: Dictionary, pid: String) -> void:
 		(p["head_node"] as Node).free()
 	p.erase("head_node")
 	var path := HEADS_DIR + pid + ".glb"
-	var has_head := pid != "" and ResourceLoader.exists(path)
+	var has_head := pid != "" and ResourceLoader.exists(path) and not socket().is_empty()
+	var body: MeshInstance3D = null
 	for mi in (p["node"] as Node3D).find_children("*", "MeshInstance3D", true, false):
 		var m := mi as MeshInstance3D
 		if not m.has_meta("kit"):
 			continue
 		if not m.has_meta("full_mesh"):
 			m.set_meta("full_mesh", m.mesh)
+		if body == null or m.mesh.get_surface_count() > body.mesh.get_surface_count():
+			body = m
 		var want: Mesh = _without_head(m.get_meta("full_mesh")) if has_head else m.get_meta("full_mesh")
 		if m.mesh != want:
 			var over := []
@@ -684,7 +685,7 @@ func _head(p: Dictionary, pid: String) -> void:
 				m.set_surface_override_material(s, over[s])
 			for k in range(shapes.size()):
 				m.set_blend_shape_value(k, shapes[k])
-	if not has_head:
+	if not has_head or body == null:
 		return
 	if p.get("hair_node") is Node:
 		(p["hair_node"] as Node).free()
@@ -693,36 +694,193 @@ func _head(p: Dictionary, pid: String) -> void:
 		_heads_info = JSON.parse_string(FileAccess.get_file_as_string(HEADS_JSON)) if FileAccess.file_exists(HEADS_JSON) else {}
 		if not _heads_info is Dictionary:
 			_heads_info = {}
-	# His skin on the body, and no painted crop on the body's neck where it tucks into his head.
 	var skin := str((_heads_info as Dictionary).get(pid, {}).get("skin", ""))
 	for mi in (p["node"] as Node3D).find_children("*", "MeshInstance3D", true, false):
 		if (mi as MeshInstance3D).has_meta("kit"):
 			(mi as GeometryInstance3D).set_instance_shader_parameter("scalp", SCALP["bald"])
 			if skin != "":
 				(mi as GeometryInstance3D).set_instance_shader_parameter("skin", Color(skin))
-	var skel: Skeleton3D = p["skel"]
-	var b := skel.find_bone(HEAD_BONE)
-	if b < 0:
-		return
-	# The head bone's place on the base body (before his build moves the joints).
-	var at := Transform3D.IDENTITY
-	var rest0: Array = p.get("rest0", [])
-	var chain := b
-	while chain >= 0:
-		at = (rest0[chain] if rest0.size() > chain else skel.get_bone_rest(chain)) * at
-		chain = skel.get_bone_parent(chain)
-	var on := BoneAttachment3D.new()
-	on.name = "Head"
-	on.bone_name = HEAD_BONE
-	skel.add_child(on)
-	var head: Node3D = (load(path) as PackedScene).instantiate()
-	head.transform = at.affine_inverse()
-	on.add_child(head)
-	p["head_node"] = on
+	# His head is skinned to the body's own skeleton: his neck bends with the body's neck bones and its
+	# bottom band carries the body's build morphs (Oval3DBuild sets them by name), so it stays on the
+	# socket whatever his height, weight or the turn of his head.
+	var head := MeshInstance3D.new()
+	head.name = "Head"
+	head.mesh = socket_head(path, body.get_meta("full_mesh"))
+	head.transform = body.transform
+	head.skin = body.skin
+	body.get_parent().add_child(head)
+	head.skeleton = head.get_path_to(body.get_node(body.skeleton))
+	if skin != "":
+		head.set_instance_shader_parameter("skin", Color(skin))
+	p["head_node"] = head
 
 
-## The body with the MetaHuman head taken off: every skin triangle wholly above HEAD_CUT, the
-## eyes and the scalp. The vertices and morphs stay, so his build still applies.
+## The socket ring (socket.json): "ring" its points in order round the neck, "centre" the middle of
+## the neck, "ang"/"y" each point's angle round the centre (0 his front, toward his left) and height.
+static func socket() -> Dictionary:
+	if not _socket.is_empty() or not FileAccess.file_exists(SOCKET_JSON):
+		return _socket
+	var d = JSON.parse_string(FileAccess.get_file_as_string(SOCKET_JSON))
+	if not d is Dictionary:
+		return _socket
+	var c := Vector3(d["centre"][0], d["centre"][1], d["centre"][2])
+	var pts := []
+	for q in d["ring"]:
+		var v := Vector3(q[0], q[1], q[2])
+		pts.append([_socket_angle(v, c), v])
+	pts.sort_custom(func(x, y): return x[0] < y[0])
+	_socket = {"centre": c, "ang": pts.map(func(x): return x[0]), "y": pts.map(func(x): return x[1].y),
+			"ring": pts.map(func(x): return x[1])}
+	return _socket
+
+
+static func _socket_angle(v: Vector3, c: Vector3) -> float:
+	return fposmod(atan2(v.x - c.x, v.z - c.z), TAU)
+
+
+## Where angle t falls on the ring: [i, j, w], between its points i and j, w of the way to j.
+static func _socket_at(t: float) -> Array:
+	var ang: Array = _socket["ang"]
+	var n := ang.size()
+	for i in range(n):
+		var a0: float = ang[i]
+		var a1: float = ang[(i + 1) % n] + (TAU if i == n - 1 else 0.0)
+		var tt := t + TAU if t < a0 else t
+		if tt <= a1:
+			return [i, (i + 1) % n, (tt - a0) / maxf(1e-6, a1 - a0)]
+	return [0, 0, 0.0]
+
+
+## The ring's height at v's angle round the neck.
+static func _socket_y(v: Vector3) -> float:
+	var at := _socket_at(_socket_angle(v, _socket["centre"]))
+	return lerpf(_socket["y"][at[0]], _socket["y"][at[1]], at[2])
+
+
+## His head (HEADS_DIR glb) as a mesh skinned to the body's skeleton, once per head and body: every
+## point takes the bone weights of the body's nearest skin point (the MetaHuman's own head and neck,
+## so his neck bends as theirs did), and his neck's bottom band (the vertex colour's red, fit_head.py:
+## 1 on the socket, 0 from 2 cm up) carries the body's build morphs as the socket's points move.
+static func socket_head(path: String, full: Mesh) -> Mesh:
+	var key := path + str(full.get_instance_id())
+	if _socket_heads.has(key):
+		return _socket_heads[key]
+	var am := full as ArrayMesh
+	var root: Node = (load(path) as PackedScene).instantiate()
+	var src: MeshInstance3D = root.find_children("*", "MeshInstance3D", true, false)[0]
+	var xf := Transform3D.IDENTITY
+	var n: Node = src
+	while n != root and n is Node3D:
+		xf = (n as Node3D).transform * xf
+		n = n.get_parent()
+	var head_arr := src.mesh.surface_get_arrays(0)
+	var head_mat := src.mesh.surface_get_material(0)
+	root.free()
+	# The body's skin points, bucketed in 2 cm cells for the nearest-point search.
+	var skin_s := 0
+	for s in range(am.get_surface_count()):
+		var mat := am.surface_get_material(s)
+		if mat != null and mat.resource_name == "ARD_skin":
+			skin_s = s
+	var ba := am.surface_get_arrays(skin_s)
+	var bv: PackedVector3Array = ba[Mesh.ARRAY_VERTEX]
+	var bb: PackedInt32Array = ba[Mesh.ARRAY_BONES]
+	var bw: PackedFloat32Array = ba[Mesh.ARRAY_WEIGHTS]
+	var per := bb.size() / maxi(1, bv.size())
+	var cells := {}
+	for i in range(bv.size()):
+		var k := Vector3i((bv[i] / 0.02).floor())
+		if not cells.has(k):
+			cells[k] = PackedInt32Array()
+		cells[k].append(i)
+	var nearest := func(v: Vector3) -> int:
+		var c := Vector3i((v / 0.02).floor())
+		var best := -1
+		var bd := INF
+		for reach in range(0, 8):
+			for dx in range(-reach, reach + 1):
+				for dy in range(-reach, reach + 1):
+					for dz in range(-reach, reach + 1):
+						if maxi(absi(dx), maxi(absi(dy), absi(dz))) != reach:
+							continue
+						var cell = cells.get(c + Vector3i(dx, dy, dz))
+						if cell == null:
+							continue
+						for i in cell:
+							var d := bv[i].distance_squared_to(v)
+							if d < bd:
+								bd = d
+								best = i
+			if best >= 0 and sqrt(bd) < 0.02 * reach:
+				break
+		return best
+	# Each ring point's body vertex, for the morphs' moves at the socket.
+	var ring: Array = socket()["ring"]
+	var ring_i := []
+	for q in ring:
+		ring_i.append(nearest.call(q))
+	var hv: PackedVector3Array = head_arr[Mesh.ARRAY_VERTEX]
+	var hn: PackedVector3Array = head_arr[Mesh.ARRAY_NORMAL]
+	var hc := PackedColorArray()
+	if head_arr[Mesh.ARRAY_COLOR] != null:
+		hc = head_arr[Mesh.ARRAY_COLOR]
+	var bones := PackedInt32Array()
+	var weights := PackedFloat32Array()
+	bones.resize(hv.size() * per)
+	weights.resize(hv.size() * per)
+	var share := PackedFloat32Array()
+	share.resize(hv.size())
+	var at := []
+	for i in range(hv.size()):
+		hv[i] = xf * hv[i]
+		hn[i] = (xf.basis * hn[i]).normalized()
+		var j: int = nearest.call(hv[i])
+		for k in range(per):
+			bones[i * per + k] = bb[j * per + k]
+			weights[i * per + k] = bw[j * per + k]
+		share[i] = hc[i].r if hc.size() == hv.size() else 0.0
+		at.append(_socket_at(_socket_angle(hv[i], socket()["centre"])) if share[i] > 0.0 else [])
+	head_arr[Mesh.ARRAY_VERTEX] = hv
+	head_arr[Mesh.ARRAY_NORMAL] = hn
+	head_arr[Mesh.ARRAY_BONES] = bones
+	head_arr[Mesh.ARRAY_WEIGHTS] = weights
+	head_arr[Mesh.ARRAY_TANGENT] = null
+	# Each build morph: the band moves as the socket's points do, by its share.
+	var shapes := []
+	var out := ArrayMesh.new()
+	out.blend_shape_mode = am.blend_shape_mode
+	var body_shapes := am.surface_get_blend_shape_arrays(skin_s)
+	for b in range(am.get_blend_shape_count()):
+		out.add_blend_shape(am.get_blend_shape_name(b))
+		var sv: PackedVector3Array = body_shapes[b][Mesh.ARRAY_VERTEX]
+		var mv := PackedVector3Array(hv)
+		for i in range(hv.size()):
+			if share[i] <= 0.0:
+				continue
+			var a: Array = at[i]
+			var d0: Vector3 = sv[ring_i[a[0]]] - bv[ring_i[a[0]]]
+			var d1: Vector3 = sv[ring_i[a[1]]] - bv[ring_i[a[1]]]
+			mv[i] += d0.lerp(d1, a[2]) * share[i]
+		var sh := []
+		sh.resize(Mesh.ARRAY_MAX)
+		sh[Mesh.ARRAY_VERTEX] = mv
+		sh[Mesh.ARRAY_NORMAL] = hn
+		shapes.append(sh)
+	var flags := am.surface_get_format(skin_s) & Mesh.ARRAY_FLAG_USE_8_BONE_WEIGHTS
+	out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, head_arr, shapes, {}, flags)
+	var mat := ShaderMaterial.new()
+	mat.shader = HEAD_SHADER
+	if head_mat is BaseMaterial3D:
+		mat.set_shader_parameter("tex", (head_mat as BaseMaterial3D).albedo_texture)
+		mat.set_shader_parameter("rough", (head_mat as BaseMaterial3D).roughness)
+	out.surface_set_material(0, mat)
+	_socket_heads[key] = out
+	return out
+
+
+## The body with the MetaHuman head taken off at the socket: every triangle above the ring (its corners
+## on or above it, one at least above), the eyes and the scalp. The vertices and morphs stay, so his
+## build still applies.
 static func _without_head(m: Mesh) -> Mesh:
 	if _headless.has(m):
 		return _headless[m]
@@ -741,8 +899,17 @@ static func _without_head(m: Mesh) -> Mesh:
 		var idx: PackedInt32Array = a[Mesh.ARRAY_INDEX]
 		var keep := PackedInt32Array()
 		if nm != HAIR_SURFACE and nm != EYE_MATERIAL:
+			# 1 above the ring, 0 on it (within 1 mm), -1 below.
+			var side := PackedInt32Array()
+			side.resize(vs.size())
+			for i in range(vs.size()):
+				var dy := vs[i].y - _socket_y(vs[i])
+				side[i] = 1 if dy > 0.001 else (0 if dy >= -0.001 else -1)
 			for f in range(0, idx.size(), 3):
-				if _above_cut(vs[idx[f]]) and _above_cut(vs[idx[f + 1]]) and _above_cut(vs[idx[f + 2]]):
+				var s0 := side[idx[f]]
+				var s1 := side[idx[f + 1]]
+				var s2 := side[idx[f + 2]]
+				if mini(s0, mini(s1, s2)) >= 0 and maxi(s0, maxi(s1, s2)) > 0:
 					continue
 				keep.append_array([idx[f], idx[f + 1], idx[f + 2]])
 		if keep.is_empty():
@@ -765,11 +932,6 @@ static func _custom_format(am: ArrayMesh, s: int) -> int:
 		var shift: int = Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT + c * Mesh.ARRAY_FORMAT_CUSTOM_BITS
 		out |= f & (Mesh.ARRAY_FORMAT_CUSTOM_MASK << shift)
 	return out
-
-
-static func _above_cut(v: Vector3) -> bool:
-	var t := clampf((v.z - HEAD_CUT_Z.x) / (HEAD_CUT_Z.y - HEAD_CUT_Z.x), 0.0, 1.0)
-	return v.y > lerpf(HEAD_CUT_BACK, HEAD_CUT, t)
 
 
 ## A triangle's outward normal, scaled by its area (Godot winds front faces clockwise).
