@@ -153,6 +153,7 @@ The answers are recorded in the Director Bible and summarised here.
   players from pre-made modular pieces, tested together, which later feed a character creator.
 - 2e the main camera (rule 2.93): the real AFL main camera (OP-33: centre line, 15 m up, 25 m back from the boundary; it pans, tilts and zooms to follow the ball, about a third of the ground across), in a 16:9 TV picture across the phone ("A TV shape"). Prototype: `tools/visual/capture_cameras3d.gd`. Sources: Free TV Australia OP-33 (2015); ABC News (2020).
 - 2e after a goal (rule 2.96): one skippable replay (B: the camera behind the goals, half speed) while the players go back to their 6-6-6 spots, sped up; a skip brings the picture back live and shows the rest of the walk back fast, then the bounce. No replay after a behind, except the deciding one: a behind that ends up the last score and wins or levels the game, replayed after the siren. Prototype: `tools/visual/capture_cameras3d.gd` (cuts, replays, slow and fast cuts). Sources: Tom Ryan, Substack (9 and 23 Sep 2026); SEN (18 Jun 2020).
+- Close-up supporters (rule 2.100): bespoke supporters for close-ups in breaks (the woman, a face-painted fan for each team, the cheer squad with signs and banners, the poncho stalwart in the rain) are MetaHumans ("A MetaHuman"); no kid ("nix kids"). Prototype shot: `tools/visual/capture_closeup3d.gd`.
 
 The freeze allows only the
 prototypes each question needs; nothing from step 2 is the settled look until he has chosen it.
