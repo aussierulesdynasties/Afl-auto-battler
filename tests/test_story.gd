@@ -2677,17 +2677,25 @@ func _test_culture_effects() -> void:
 ## sheet predicts fresher legs, players who take being left out better (read
 ## per game left out), and young players earning more development; each shows,
 ## and the size is printed.
+##
+## `growth_only`: only Ambition is set (rebuilding); Standards and Togetherness
+## stay neutral, so culture on changes nothing in the matches and the young
+## players' ratings at the season's end differ by the extra development alone.
+## Since #1718 a player grows only from the games he plays, and the culture's
+## +5% XP is about 0.12 OVR a season: with Togetherness on as well the two arms
+## play different matches, and that noise hides it.
 const FIXTURE_ROUNDS := 8
 
 
-func _culture_fixture_run(on: bool, run_seed := SUITE_SEED) -> Dictionary:
+func _culture_fixture_run(on: bool, run_seed := SUITE_SEED, growth_only := false) -> Dictionary:
 	GameState.reset()
 	GameState.career_seed = run_seed
 	GameState.replay_seed = run_seed
 	GameState.culture_effects_on = on
 	GameState.start_season("MEL", GameDB.club_list("MEL"))
-	GameState.relations[Culture.key("MEL", "standards")] = {"t": 70, "log": []}
-	GameState.relations[Culture.key("MEL", "together")] = {"t": 70, "log": []}
+	if not growth_only:
+		GameState.relations[Culture.key("MEL", "standards")] = {"t": 70, "log": []}
+		GameState.relations[Culture.key("MEL", "together")] = {"t": 70, "log": []}
 	GameState.relations[Culture.key("MEL", "ambition")] = {"t": -70, "log": []}
 	var load_sum := 0.0
 	var young_xp := 0
@@ -2747,7 +2755,8 @@ func _culture_fixture_run(on: bool, run_seed := SUITE_SEED) -> Dictionary:
 	GameState.culture_effects_on = true
 	return {"load": load_sum / float(FIXTURE_ROUNDS), "morale": morale / float(GameState.my_list.size()),
 			"young_xp": young_xp, "young": young_ids.size(), "bands": bands,
-			"young_gain": young_gain / float(maxi(1, young_n)), "rounds": r, "stings": stings}
+			"young_gain": young_gain / float(maxi(1, young_n)), "young_gain_sum": young_gain, "young_n": young_n,
+			"rounds": r, "stings": stings}
 
 
 ## Seeds the culture fixture is averaged over. The morale it ends the stretch
@@ -2771,14 +2780,15 @@ func _mean_se(xs: Array) -> Array:
 
 
 ## The fixture's runs over `seeds`: numbers averaged; bands joined, so
-## each must hold on every seed; every left-out game's sting pooled.
-func _culture_fixture_mean(on: bool, seeds: Array = CULTURE_SEEDS) -> Dictionary:
+## each must hold on every seed; every left-out game's sting pooled, and every
+## young player's OVR gain pooled ("young_pooled": total gain over all of them).
+func _culture_fixture_mean(on: bool, seeds: Array = CULTURE_SEEDS, growth_only := false) -> Dictionary:
 	var out := {"load": 0.0, "morale": 0.0, "young_xp": 0, "young": 0, "bands": "", "young_gain": 0.0, "rounds": 0,
-			"stings": [], "per_seed": []}
+			"stings": [], "per_seed": [], "young_gain_sum": 0.0, "young_n": 0}
 	var bands := {}
 	var n := float(seeds.size())
 	for sd in seeds:
-		var r := _culture_fixture_run(on, int(sd))
+		var r := _culture_fixture_run(on, int(sd), growth_only)
 		(out["stings"] as Array).append_array(r["stings"])
 		(out["per_seed"] as Array).append(float(r["morale"]))
 		out["load"] = float(out["load"]) + float(r["load"]) / n
@@ -2787,8 +2797,11 @@ func _culture_fixture_mean(on: bool, seeds: Array = CULTURE_SEEDS) -> Dictionary
 		out["young_xp"] = int(out["young_xp"]) + int(r["young_xp"])
 		out["young"] = int(out["young"]) + int(r["young"])
 		out["rounds"] = maxi(int(out["rounds"]), int(r["rounds"]))
+		out["young_gain_sum"] = float(out["young_gain_sum"]) + float(r["young_gain_sum"])
+		out["young_n"] = int(out["young_n"]) + int(r["young_n"])
 		bands[str(r["bands"])] = true
 	out["bands"] = ",".join(PackedStringArray(bands.keys()))
+	out["young_pooled"] = float(out["young_gain_sum"]) / float(maxi(1, int(out["young_n"])))
 	return out
 
 
@@ -2796,7 +2809,10 @@ func _test_culture_effects_fixture() -> void:
 	var t0 := Time.get_ticks_msec()
 	var off := _culture_fixture_mean(false)
 	var on := _culture_fixture_mean(true)
-	print("Culture fixture: %d runs in %.1f s" % [2 * CULTURE_SEEDS.size(), (Time.get_ticks_msec() - t0) / 1000.0])
+	# The growth arm: only Ambition set, so on and off play the same matches.
+	# Culture off ignores the strands, so the off arm above is its other half.
+	var grow := _culture_fixture_mean(true, CULTURE_SEEDS, true)
+	print("Culture fixture: %d runs in %.1f s" % [3 * CULTURE_SEEDS.size(), (Time.get_ticks_msec() - t0) / 1000.0])
 	var s_on := _mean_se(on["stings"])
 	var s_off := _mean_se(off["stings"])
 	var gap := float(s_off[0]) - float(s_on[0])
@@ -2818,8 +2834,14 @@ func _test_culture_effects_fixture() -> void:
 			float(s_on[0]), float(s_off[0]), gap, gap_se])
 	_check(float(on["young_xp"]) > float(off["young_xp"]) * 1.02,
 			"A rebuilding club's young players earn more development (%d v %d)" % [on["young_xp"], off["young_xp"]])
-	_check(float(on["young_gain"]) > float(off["young_gain"]),
-			"...and end the home-and-away season rated higher (%.2f v %.2f OVR gained)" % [on["young_gain"], off["young_gain"]])
+	# Rated higher: Ambition alone, Standards and Togetherness neutral, so the
+	# matches are the same either way; every young player pooled over the seeds.
+	print("Culture fixture, Ambition alone (rebuilding): bands %s | young OVR gain over the %d-round season %.3f v %.3f off (%d v %d young players, pooled)" % [
+			str(grow["bands"]), int(grow["rounds"]), float(grow["young_pooled"]), float(off["young_pooled"]),
+			int(grow["young_n"]), int(off["young_n"])])
+	_check(str(grow["bands"]) == "mid/mid/rebuild" and float(grow["young_pooled"]) > float(off["young_pooled"]),
+			"...and end the home-and-away season rated higher (%.3f v %.3f OVR gained, rebuilding alone, %s)" % [
+			grow["young_pooled"], off["young_pooled"], grow["bands"]])
 
 
 func _test_culture_sentences() -> void:
