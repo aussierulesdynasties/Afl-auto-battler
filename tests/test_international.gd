@@ -132,9 +132,11 @@ func _test_classes(state: Node, db: Node) -> void:
 	# A country's lean is the shape of his skills: each against his own average
 	# rated skill (the fit to his overall moves every skill alike, and a lean on a
 	# skill his position counts heavily would otherwise vanish into it), read
-	# against home-grown prospects of the same role, since skills are rated within
-	# each position (director, 2026-11-15): most Americans are rucks and forwards,
-	# most New Zealanders mids. "tackle" is his pressure itself, against the role.
+	# against the very same prospect made without his country's lean. A generated
+	# player copies a real 2012-2026 player (director, 2026-11-17), so two players
+	# of one role differ by about 14 points a skill: against a role average, a
+	# 4-point lean is lost in who he copied over 45 players. "tackle" is his
+	# pressure itself.
 	var lean := func(p: Dictionary) -> Dictionary:
 		var a: Dictionary = p["attr"]
 		var avg := 0.0
@@ -147,7 +149,6 @@ func _test_classes(state: Node, db: Node) -> void:
 		return {"disp": Skills.disposal_of(a) - avg, "acc": float(a["accuracy"]) - avg,
 				"cont": float(a["contested"]) - avg, "mark": float(a["contested_marking"]) - avg,
 				"pres": float(a["pressure"]) - avg, "tackle": float(a["pressure"])}
-	var dom_role := {}
 	for y in range(FIRST_YEAR, FIRST_YEAR + 40):
 		for p in classes[y]:
 			if not p.has("intl"):
@@ -155,12 +156,6 @@ func _test_classes(state: Node, db: Node) -> void:
 				dom_rank_gap += float(p["overall"]) - Prospects.rank_base_overall(int(p["draft_rank"]))
 				dom_carry += float(p["attr"]["carry"]) - float(p["overall"])
 				dom_disp += Skills.disposal_of(p["attr"]) - float(p["overall"])
-				var base: Dictionary = dom_role.get(str(p["role"]), {"n": 0.0})
-				var l: Dictionary = lean.call(p)
-				for k in l:
-					base[k] = float(base.get(k, 0.0)) + float(l[k])
-				base["n"] = float(base["n"]) + 1.0
-				dom_role[str(p["role"])] = base
 				dom_n += 1
 	var raw_gap := 0.0
 	var raw_rank_gap := 0.0
@@ -172,9 +167,12 @@ func _test_classes(state: Node, db: Node) -> void:
 		var a: Dictionary = p["attr"]
 		var ovr := float(p["overall"])
 		var l: Dictionary = lean.call(p)
-		var base: Dictionary = dom_role[str(p["role"])]
+		var plain: Dictionary = p.duplicate(true)
+		plain.erase("attr_bias")
+		Prospects.project(plain)
+		var base: Dictionary = lean.call(plain)
 		for k in l:
-			s[k] += float(l[k]) - float(base[k]) / float(base["n"])
+			s[k] += float(l[k]) - float(base[k])
 		s["carry"] += float(a["carry"]) - ovr
 		s["h"] += float(p["height_cm"])
 		s["age_lo"] = minf(float(s["age_lo"]), float(p["age"]))
