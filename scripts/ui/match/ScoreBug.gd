@@ -43,7 +43,7 @@ func setup(home: String, away: String) -> ScoreBug:
 	for l: Label in [_top, _bottom]:
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		l.add_theme_font_size_override("font_size", CLOCK_FS)
+		UiKit.set_font_size(l, CLOCK_FS, "font_size", true)  # fixed, as the board
 		v.add_child(l)
 	add_child(mid)
 	add_child(_cell(away, false, h))
@@ -77,7 +77,7 @@ func _cell(code: String, home: bool, h: float) -> Control:
 	crest.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var score := UiKit.figure("0", UiKit.RATING, Color.WHITE)
 	ClubDuel.on_colour(score)
-	score.add_theme_font_size_override("font_size", SCORE_FS)
+	UiKit.set_font_size(score, SCORE_FS, "font_size", true)  # fixed, as the board
 	score.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	score.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	score.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
