@@ -80,10 +80,11 @@ STK StKilda-2026 | fill #E6E8EE; rect #D11932 0 0 0.37 1; rect #1C1A1D 0.63 0 1 
 SYD Sydney-2026 | fill #F4F1F2; mark #E1251B syd_yoke 0 0 1 1; collar #E1251B 2; armholes #E1251B 1.5; shorts #E1251B | fill #E1251B; collar #E1251B 2; armholes #E1251B 1.5; number W
 
 # CANB: the director's design, 2026-11-17 (front only; "rich ocean blue, marble white, and bronze highlights",
-# "white numbers on the back", "the owls"). Ocean blue; two white wings rising from the hips to the shoulders,
-# the bronze owl with white eyes and a white CFC above it (masks canb_white and canb_bronze, cut from his picture,
-# side seams fitted into 0.13-0.87); bronze collar and armholes. Back: blue, bronze bindings, white number.
-CANB Canberra-design | fill #133968; mark #CDCFD1 canb_white 0.13 0.03 0.87 0.78; mark #A58F69 canb_bronze 0.13 0.03 0.87 0.78; collar #A58F69 3; armholes #A58F69 2.2 | fill #133968; collar #A58F69 3; armholes #A58F69 2.2; number W
+# "white numbers on the back", "the owls"). Ocean blue; two ivory wings rising from the hips to the shoulders,
+# the bronze owl with ivory eyes and an ivory CFC above it ("a sort of creamy ivory white"; the club's own
+# colours: blue #143868, ivory #F3EBD6, bronze #A28354) (masks canb_white and canb_bronze, cut from his picture,
+# side seams fitted into 0.13-0.87); bronze collar and armholes. Back: blue, bronze bindings, ivory number.
+CANB Canberra-design | fill #143868; mark #F3EBD6 canb_white 0.13 0.03 0.87 0.78; mark #A28354 canb_bronze 0.13 0.03 0.87 0.78; collar #A28354 3; armholes #A28354 2.2 | fill #143868; collar #A28354 3; armholes #A28354 2.2; number #F3EBD6
 
 # TAS: shop.devilsfc.com.au/tasmania-devils-new-balance-2026-home-guernsey (the 2026 VFL home). Green;
 # a gold hoop 0.402-0.481 and a red hoop 0.501-0.581 with the devil's head woven through both in green
