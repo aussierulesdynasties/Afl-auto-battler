@@ -158,6 +158,7 @@ The answers are recorded in the Director Bible and summarised here.
 - 2e supporters (rule 2.101): the gameplay cameras draw nobody within 20 m of the lens, so no supporter blocks the picture; supporter shots are for breaks (stretch goal).
 - 2e set shots (rule 2.102): "do what happens IRL": the live picture cuts to the camera behind the goals for the kick, then back to the main camera.
 - 2e ball-ups (rule 2.103): "B: ruckmen close-ups": in the wait before a ball-up the picture cuts to about a second on each ruckman, then back to the main camera just before the bounce.
+- 2e the picture on the phone (rule 2.105): "A but the stats part is very ugly": the main picture fills the screen between the scoreboard and the controls, taller than a TV picture at the same zoom; team stats on the match screen still to be asked.
 
 The freeze allows only the
 prototypes each question needs; nothing from step 2 is the settled look until he has chosen it.
@@ -191,6 +192,6 @@ vignettes. Nothing in step 4 starts before the football proof has passed and the
 |---|---|
 | Freeze | in force from 2026-11-16 |
 | 1. Football proof | harness in `tools/balance.sh shape`; spec checked (rule 2.86); gap list above; fixes next (row 201) |
-| 2. The world and the look | under way (row 202): 2a daylight, tone, night lighting and wet games chosen, skies chosen (rules 2.80-2.84); 2d body chosen: MetaHuman (2.85), shown in our match and approved (2.89), own height and weight (2.97, 2.98), faces: Tripo heads for the best 23, features for the rest (2.99); 2b every AFL ground since 1990 and Macquarie Point get their own stadium (2.90), roofed grounds lit from their roofs (2.91); 2c crowd chosen: a mix of 3D people and cards (2.92), built into the 3D view; 2e main camera chosen: the real AFL main camera in a 16:9 TV picture (2.93), after a goal one skippable replay while the players go back (2.96), set shots from behind the goals (2.102), ball-ups with close-ups of the two ruckmen (2.103); next 2b building the grounds, 2d the Tripo heads and the features, 2e the other cameras and cuts in play |
+| 2. The world and the look | under way (row 202): 2a daylight, tone, night lighting and wet games chosen, skies chosen (rules 2.80-2.84); 2d body chosen: MetaHuman (2.85), shown in our match and approved (2.89), own height and weight (2.97, 2.98), faces: Tripo heads for the best 23, features for the rest (2.99); 2b every AFL ground since 1990 and Macquarie Point get their own stadium (2.90), roofed grounds lit from their roofs (2.91); 2c crowd chosen: a mix of 3D people and cards (2.92), built into the 3D view; 2e main camera chosen: the real AFL main camera in a 16:9 TV picture (2.93), after a goal one skippable replay while the players go back (2.96), set shots from behind the goals (2.102), ball-ups with close-ups of the two ruckmen (2.103), the picture filling the phone between the scoreboard and the controls (2.105); next 2b building the grounds, 2d the Tripo heads and the features, 2e the other cameras and cuts in play |
 | 3. Asset and animation plan | done (#1707) |
 | 4. Build | after 1 and 3 (rows 197, 198) |
