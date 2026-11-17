@@ -88,7 +88,8 @@ static func card_choice(card: Dictionary, policy: String) -> int:
 	if policy != "players" and policy != "board":
 		return -1
 	var opts: Array = card.get("options", [])
-	if opts.is_empty():
+	# A card the survey cannot answer for you (CareerEnd): away, it is left.
+	if opts.is_empty() or bool(card.get("coach_only", false)):
 		return -1
 	var dflt := int(card.get("default", -1))
 	var best := -1
