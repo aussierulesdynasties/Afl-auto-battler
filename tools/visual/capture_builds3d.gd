@@ -131,6 +131,8 @@ func _lineup(out: String, res: Dictionary, gdb, flat: bool) -> void:
 		views["head%d" % i] = [h + Vector3(0, 0.0, 3.0), h, 0.5]
 		views["head%d_q" % i] = [h + Vector3(2.1, 0.0, 2.1), h, 0.5]
 		views["head%d_b" % i] = [h + Vector3(1.8, 1.2, -2.1), h, 0.5]
+		# His head and neck side on, level with his throat, 0.6 m across: the line from his collar to his chin.
+		views["head%d_p" % i] = [h + Vector3(0.9, -0.1, 0.0), h + Vector3(0, -0.1, 0), 0.6]
 		# His whole body alone from the front and the side, a 2.4 m tall frame (4.27 m wide at 16:9), my
 		# own check of the kit and shape.
 		var at: Vector3 = (men[i]["node"] as Node3D).global_position + Vector3(0, 1.1, 0)

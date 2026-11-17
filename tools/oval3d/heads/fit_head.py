@@ -31,6 +31,10 @@ EYE_FIT = 1.7524     # Gawn's eye line on the base body after the photo's growth
 MH_Z = 0.0236        # the base body's skull middle (glTF z; Blender -y)
 EAR_BELOW_EYE = 0.015
 BAND = 0.02
+# Per head, from the director's eye (2026-11-17, Gawn: "shrink it slightly and add some neck"):
+# HEAD_SCALE shrinks or grows the head, NECK (metres) lifts it and adds that much neck above the socket.
+HEAD_SCALE = float(os.environ.get("HEAD_SCALE", "1"))
+NECK = float(os.environ.get("NECK", "0"))
 
 
 def eye_line(ob):
@@ -77,9 +81,9 @@ def fit(src, out, socket, tex_px):
     top = [c for c in co if c.z > eye_y]
     mid_fwd = (min(-c.y for c in top) + max(-c.y for c in top)) / 2.0
     mid_x = (min(c.x for c in top) + max(c.x for c in top)) / 2.0
-    s = HEAD_DEPTH / depth
+    s = HEAD_DEPTH / depth * HEAD_SCALE
     print("nose tip", tip, "eye line", eye_y, "depth", depth, "scale", s)
-    ob.data.transform(Matrix.Translation(Vector((0.0, -MH_Z, EYE_FIT))) @ Matrix.Scale(s, 4)
+    ob.data.transform(Matrix.Translation(Vector((0.0, -MH_Z, EYE_FIT + NECK))) @ Matrix.Scale(s, 4)
                       @ Matrix.Translation(Vector((-mid_x, mid_fwd, -eye_y))))
     # The socket ring in Blender space, in order round the neck, and the plane it leans on.
     sk = json.load(open(socket))
@@ -97,7 +101,7 @@ def fit(src, out, socket, tex_px):
     pb = (syz * sxx - sxz * sxy) / det
     pc = sum(p.z for p in ring) / len(ring)
     plane = lambda x, y: pa * (x - cx) + pb * (y - cy) + pc
-    off = 0.0  # the cut runs on the socket's own line
+    off = NECK  # the cut runs on the socket's own line, raised by the neck added; the band fills the gap
     print("socket lean (deg): forward %.1f, sideways %.1f; at the sides %.1f cm below his ear" % (
         math.degrees(math.atan(-pb)), math.degrees(math.atan(pa)), 100 * (EYE_FIT - EAR_BELOW_EYE - pc)))
 
@@ -125,26 +129,83 @@ def fit(src, out, socket, tex_px):
     co0 = Vector((cx, cy, pc + off))
     bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:], plane_co=co0, plane_no=n,
                            clear_inner=True)
+    # His mesh is coarse low on his neck (Gawn's throat: single triangles from the cut to 5 cm up, under
+    # his beard). Every edge there longer than 6 mm is cut into 6 mm pieces, so the band stretches and
+    # takes the skin colour smoothly instead of smearing his beard down his throat.
+    near = lambda v: v.co.z - (pa * (v.co.x - cx) + pb * (v.co.y - cy) + pc + off) < 0.05
+    long_e = [e for e in bm.edges if (near(e.verts[0]) or near(e.verts[1])) and e.calc_length() > 0.006]
+    if long_e:
+        cuts = max(1, min(12, int(max(e.calc_length() for e in long_e) / 0.006)))
+        bmesh.ops.subdivide_edges(bm, edges=long_e, cuts=cuts, use_grid_fill=True)
+        print("low neck: %d long edges cut into %d pieces each" % (len(long_e), cuts + 1))
     bm.to_mesh(ob.data)
     bm.free()
     me = ob.data
-    # His neck's cut edge, in 5-degree steps round the neck: its radius there.
-    edge = {}
+    # His neck's bottom edge, in 5-degree steps round the neck: how high it stands over the cut and its
+    # radius there. Mostly it is the cut itself, but where his mesh is open below (Gawn's throat, under his
+    # beard, 2 cm short of the socket) it is the lowest skin he has, and that is what goes onto the socket.
+    # Sampled along every edge, not only at the corners, so a long triangle across a step still counts.
+    # His skin only: the largest piece of the mesh, joined across its texture seams (glTF splits points
+    # there). The beard's loose strands are separate pieces and hang lower than his throat skin.
+    key = {}
     for v in me.vertices:
-        c = v.co
-        if abs(c.z - (plane(c.x, c.y) + off)) < 1e-4:
+        key.setdefault((round(v.co.x, 5), round(v.co.y, 5), round(v.co.z, 5)), []).append(v.index)
+    par = list(range(len(me.vertices)))
+
+    def root(i):
+        while par[i] != i:
+            par[i] = par[par[i]]
+            i = par[i]
+        return i
+    for ids in key.values():
+        for i in ids[1:]:
+            par[root(i)] = root(ids[0])
+    for e in me.edges:
+        par[root(e.vertices[0])] = root(e.vertices[1])
+    size = {}
+    for i in range(len(par)):
+        size[root(i)] = size.get(root(i), 0) + 1
+    big = max(size, key=size.get)
+    print("skin: %d of %d points in the largest piece, %d pieces" % (size[big], len(par), len(size)))
+    low = {}
+    for e in me.edges:
+        if root(e.vertices[0]) != big:
+            continue
+        a0, a1 = me.vertices[e.vertices[0]].co, me.vertices[e.vertices[1]].co
+        for i in range(9):
+            c = a0.lerp(a1, i / 8.0)
             k = int(math.degrees(ang(c.x, c.y)) // 5) % 72
-            edge.setdefault(k, []).append(math.hypot(c.x - cx, c.y - cy))
-    print("cut edge: %d points, %d of 72 steps round the neck" % (sum(len(x) for x in edge.values()), len(edge)))
-    er = {k: sum(x) / len(x) for k, x in edge.items()}
+            u = c.z - (plane(c.x, c.y) + off)
+            low.setdefault(k, []).append((u, math.hypot(c.x - cx, c.y - cy)))
+    if os.environ.get("FIT_DEBUG"):
+        for k in (70, 71, 0, 1, 2, 3, 6, 12):
+            x = sorted(low.get(k, []))[:400:25]
+            print("LOW %3d deg: " % (5 * k) + " ".join("%.1f/%.1f" % (100 * u, 100 * r) for u, r in x))
+    lu, er = {}, {}
+    for k, x in low.items():
+        m = min(u for u, r in x)
+        near = [r for u, r in x if u < m + 0.003]
+        lu[k] = m
+        er[k] = sum(near) / len(near)
+    print("lowest skin: %d of 72 steps, %d stand over 5 mm above the cut: %s" % (
+        len(lu), sum(1 for m in lu.values() if m > 0.005),
+        ", ".join("%d deg %.1f cm" % (5 * k, 100 * m) for k, m in sorted(lu.items()) if m > 0.005)))
+
+    def step(t, table):  # the table's value at angle t, between its two nearest 5-degree steps
+        d = math.degrees(t) / 5.0 - 0.5
+        k0 = int(math.floor(d))
+
+        def at(k):
+            for dd in range(36):
+                for kk in ((k + dd) % 72, (k - dd) % 72):
+                    if kk in table:
+                        return table[kk]
+            return 0.0
+        w = d - k0
+        return at(k0 % 72) * (1.0 - w) + at((k0 + 1) % 72) * w
 
     def edge_r(t):
-        k = int(math.degrees(t) // 5) % 72
-        for d in range(36):
-            for kk in ((k + d) % 72, (k - d) % 72):
-                if kk in er:
-                    return er[kk]
-        return 0.06
+        return step(t, er) or 0.06
 
     if os.environ.get("FIT_DEBUG"):
         for deg in range(0, 360, 20):
@@ -152,13 +213,47 @@ def fit(src, out, socket, tex_px):
             rr, rz = ring_at(t)
             print("DBG %3d ring r %.4f z %.4f plane %.4f edge r %.4f" % (
                 deg, rr, rz, plane(cx + rr * math.sin(t), cy - rr * math.cos(t)), edge_r(t)))
+    # His mesh's open bottom edge itself: the edges with a face on one side only (points joined across
+    # texture seams), in the one chain of them that runs along the cut. Every point of it goes exactly
+    # onto the socket ring, so the edge closes on the socket with no gap anywhere round his neck.
+    pos = {}
+    for v in me.vertices:
+        pos.setdefault((round(v.co.x, 5), round(v.co.y, 5), round(v.co.z, 5)), v.index)
+    mid = [pos[(round(v.co.x, 5), round(v.co.y, 5), round(v.co.z, 5))] for v in me.vertices]
+    faces_on = {}
+    for f in me.polygons:
+        vs = [mid[i] for i in f.vertices]
+        for i in range(len(vs)):
+            e = tuple(sorted((vs[i], vs[(i + 1) % len(vs)])))
+            faces_on[e] = faces_on.get(e, 0) + 1
+    nb = {}
+    for (a, b), n in faces_on.items():
+        if n == 1:
+            nb.setdefault(a, []).append(b)
+            nb.setdefault(b, []).append(a)
+    on_cut = [i for i in nb if abs(me.vertices[i].co.z - (plane(me.vertices[i].co.x, me.vertices[i].co.y) + off)) < 1e-4]
+    rim_m = set()
+    todo = on_cut[:]
+    while todo:
+        i = todo.pop()
+        if i in rim_m:
+            continue
+        rim_m.add(i)
+        todo += nb[i]
+    rim = set(v.index for v in me.vertices if mid[v.index] in rim_m)
+    print("bottom edge: %d points, %d of them above the cut" % (len(rim_m), sum(
+        1 for i in rim_m if me.vertices[i].co.z - (plane(me.vertices[i].co.x, me.vertices[i].co.y) + off) > 0.002)))
     # The band: from the cut edge (share 1) to 2 cm up (0). Each point moves down by the gap between the
     # cut and the socket at its angle, and in or out by the ring's radius over his neck's, by its share.
     share = [0.0] * len(me.vertices)
+    skin = [0.0] * len(me.vertices)
     rs, hs = [], []
     for v in me.vertices:
         c = v.co
-        pz = plane(c.x, c.y) + off
+        lo = step(ang(c.x, c.y), lu)
+        if v.index in rim:
+            lo = c.z - (plane(c.x, c.y) + off)
+        pz = plane(c.x, c.y) + off + lo
         u = c.z - pz
         if u >= BAND:
             continue
@@ -167,20 +262,62 @@ def fit(src, out, socket, tex_px):
         w = w * w * (3.0 - 2.0 * w)
         rr, rz = ring_at(t)
         r = math.hypot(c.x - cx, c.y - cy)
-        f = 1.0 + w * (rr / max(1e-4, edge_r(t)) - 1.0)
+        # In to the socket's width over the band's bottom 60% first, so his throat rises straight up from
+        # the collar and turns out only under his jaw (director 2026-11-17: the throat sagged, coming out
+        # diagonally instead of upwards).
+        wr = min(1.0, w / 0.6)
+        f = 1.0 + wr * (rr / max(1e-4, edge_r(t)) - 1.0)
+        if v.index in rim:
+            f = rr / max(1e-4, r)
         rs.append(rr / max(1e-4, edge_r(t)))
         c.x = cx + (c.x - cx) * f
         c.y = cy + (c.y - cy) * f
         c.z += w * (rz - pz)
         hs.append(rz - pz)
         share[v.index] = w
+        # His skin colour over the band's bottom 70%, his own texture fading in over its top 30%: the band
+        # is stretched up to three times its height onto the socket, and at his throat it is beard.
+        skin[v.index] = min(1.0, max(0.0, 1.0 - u / BAND) / 0.3)
     if rs:
         print("neck to socket: radius x%.2f-%.2f, height %.1f to %.1f cm" % (
             min(rs), max(rs), 100 * min(hs), 100 * max(hs)))
-    # The share in the vertex colour's red.
+    # His throat rises up from the socket to under his chin, the way the MetaHuman's own does (it stands
+    # within 10 degrees of upright from the socket's throat to its chin), instead of running diagonally
+    # forward (director 2026-11-17: "adjust the gullet around the throat ... rather than upwards"). Under
+    # the chin, any point at his front that stands further out than that line is brought back onto it;
+    # full at the front of his neck, none at his sides (75 degrees round), easing off over the 3 cm
+    # under his chin. Above the chin he is untouched.
+    eye = EYE_FIT + NECK
+    fr = [v.co for v in me.vertices if abs(v.co.x) < 0.012 and eye - 0.16 < v.co.z < eye - 0.06]
+    top_f = max(-c.y for c in fr)
+    chin = min(c.z for c in fr if -c.y > top_f - 0.01)
+    moved = 0
+    for v in me.vertices:
+        c = v.co
+        if c.z >= chin:
+            continue
+        t = ang(c.x, c.y)
+        front = math.cos(t)
+        if front <= math.cos(math.radians(75)):
+            continue
+        rr, rz = ring_at(t)
+        lim = rr + max(0.0, c.z - rz) * math.tan(math.radians(10))
+        r = math.hypot(c.x - cx, c.y - cy)
+        if r <= lim:
+            continue
+        k = (front - math.cos(math.radians(75))) / (1.0 - math.cos(math.radians(75)))
+        # Easing off over the 3 cm under his chin, so his throat curves into his jaw, no shelf.
+        e = min(1.0, (chin - c.z) / 0.03)
+        e = e * e * (3.0 - 2.0 * e)
+        f = 1.0 + min(1.0, k * 1.5) * e * (lim / r - 1.0)
+        c.x = cx + (c.x - cx) * f
+        c.y = cy + (c.y - cy) * f
+        moved += 1
+    print("throat: chin at %.3f (%.1f cm below the eyes), %d points brought back" % (chin, 100 * (eye - chin), moved))
+    # The share in the vertex colour's red, the skin colour's blend in its green.
     col = me.color_attributes.new("Col", "FLOAT_COLOR", "POINT")
     for i, w in enumerate(share):
-        col.data[i].color = (w, 0.0, 0.0, 1.0)
+        col.data[i].color = (w, skin[i], 0.0, 1.0)
     # His skin colour, under the back of his neck and on his cheeks (heads.json takes the clear one).
     img = next((i for i in bpy.data.images if i.size[0] > 0), None)
     if img is not None:

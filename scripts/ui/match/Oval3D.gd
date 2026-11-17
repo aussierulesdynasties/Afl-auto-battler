@@ -784,6 +784,7 @@ static func socket_head(path: String, full: Mesh) -> Mesh:
 			skin_s = s
 	var ba := am.surface_get_arrays(skin_s)
 	var bv: PackedVector3Array = ba[Mesh.ARRAY_VERTEX]
+	var bn: PackedVector3Array = ba[Mesh.ARRAY_NORMAL]
 	var bb: PackedInt32Array = ba[Mesh.ARRAY_BONES]
 	var bw: PackedFloat32Array = ba[Mesh.ARRAY_WEIGHTS]
 	var per := bb.size() / maxi(1, bv.size())
@@ -840,6 +841,31 @@ static func socket_head(path: String, full: Mesh) -> Mesh:
 			weights[i * per + k] = bw[j * per + k]
 		share[i] = hc[i].r if hc.size() == hv.size() else 0.0
 		at.append(_socket_at(_socket_angle(hv[i], socket()["centre"])) if share[i] > 0.0 else [])
+		# On the socket his neck faces the way the body's skin does there, easing back to his own going
+		# up the band, so the light runs across the join without a line.
+		if share[i] > 0.0:
+			var aa: Array = at[i]
+			var rn: Vector3 = bn[ring_i[aa[0]]].lerp(bn[ring_i[aa[1]]], aa[2]).normalized()
+			hn[i] = hn[i].lerp(rn, share[i]).normalized()
+		# On the socket itself he bends exactly as the body's edge does between its two ring points: their
+		# bone weights blended by where he sits between them, so no gap opens along the join.
+		if share[i] >= 0.999:
+			var ab: Array = at[i]
+			var mix := {}
+			for e in [[ring_i[ab[0]], 1.0 - ab[2]], [ring_i[ab[1]], ab[2]]]:
+				for k in range(per):
+					var bw_k: float = bw[e[0] * per + k] * e[1]
+					if bw_k > 0.0:
+						var bone: int = bb[e[0] * per + k]
+						mix[bone] = mix.get(bone, 0.0) + bw_k
+			var order: Array = mix.keys()
+			order.sort_custom(func(x, y): return mix[x] > mix[y])
+			var total := 0.0
+			for k in range(mini(per, order.size())):
+				total += mix[order[k]]
+			for k in range(per):
+				bones[i * per + k] = order[k] if k < order.size() else 0
+				weights[i * per + k] = mix[order[k]] / total if k < order.size() else 0.0
 	head_arr[Mesh.ARRAY_VERTEX] = hv
 	head_arr[Mesh.ARRAY_NORMAL] = hn
 	head_arr[Mesh.ARRAY_BONES] = bones
@@ -872,7 +898,9 @@ static func socket_head(path: String, full: Mesh) -> Mesh:
 	mat.shader = HEAD_SHADER
 	if head_mat is BaseMaterial3D:
 		mat.set_shader_parameter("tex", (head_mat as BaseMaterial3D).albedo_texture)
-		mat.set_shader_parameter("rough", (head_mat as BaseMaterial3D).roughness)
+	# The body skin's own sheen (the MetaHuman body map's mean roughness, 0.73), not Tripo's 0.9: with
+	# its own, his neck read darker than the body's at the socket.
+	mat.set_shader_parameter("rough", 0.73)
 	out.surface_set_material(0, mat)
 	_socket_heads[key] = out
 	return out
