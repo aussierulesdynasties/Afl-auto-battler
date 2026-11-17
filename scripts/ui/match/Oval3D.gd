@@ -771,6 +771,8 @@ static func _kit_edges(m: Mesh) -> Mesh:
 	rest.sort_custom(func(a, b): return absf(a["mid"].x) < absf(b["mid"].x))
 	var neck: Dictionary = rest[0]
 	var arms := rest.slice(1)
+	for l in arms:
+		_bow_front(l)
 	var level := -INF
 	var hem_top := -INF
 	for q in hem["raw"]:
@@ -887,7 +889,7 @@ static func _edge_loop(ids: PackedInt32Array, pts: PackedVector3Array) -> Dictio
 				k += 1
 		var v := sum / maxi(k, 1) - sm[i]
 		into[i] = (v - along * v.dot(along)).normalized()
-	var l := {"raw": raw, "sm": sm, "into": into, "mid": mid / n, "deep": 0.0, "out": 0.0}
+	var l := {"raw": raw, "sm": sm, "bow": sm, "into": into, "mid": mid / n, "deep": 0.0, "out": 0.0}
 	for q in raw:
 		var d := _inside(q, l).x
 		l["deep"] = maxf(float(l["deep"]), d)
@@ -895,8 +897,71 @@ static func _edge_loop(ids: PackedInt32Array, pts: PackedVector3Array) -> Dictio
 	return l
 
 
+## An armhole's front half, seen from the front, as one smooth bow from the shoulder to the
+## armpit, as a guernsey's armhole is (director 2026-11-17: "real afl guernseys have a straight
+## curved line"). The mesh's armhole reaches forward onto the chest and turns back there, which
+## from the front reads as a V. The bow runs between the loop's top and bottom points and bends
+## just enough to stay inside every point of the drawn edge, so it only ever gives guernsey back to
+## skin (up to 2.2 cm, just below chest height), never paints guernsey onto the arm. Its drawn edge
+## keeps the loop's "out" (measured before the bow). The bow goes in "bow"; "sm" stays the mesh's
+## loop, so each point still finds the same nearest edge point as before and only measures from
+## where that point now lies.
+static func _bow_front(l: Dictionary) -> void:
+	var sm: PackedVector3Array = (l["sm"] as PackedVector3Array).duplicate()
+	var n := sm.size()
+	var top := 0
+	var bot := 0
+	for i in range(n):
+		if sm[i].y > sm[top].y:
+			top = i
+		if sm[i].y < sm[bot].y:
+			bot = i
+	# The two halves between the top and the bottom; the front one has the larger mean z.
+	var halves := [[], []]
+	for h in range(2):
+		var i := top
+		var stop := bot
+		var step := 1 if h == 0 else -1
+		while i != stop:
+			i = (i + step + n) % n
+			if i != stop:
+				halves[h].append(i)
+	var mean_z := func(ids: Array) -> float:
+		var z := 0.0
+		for i in ids:
+			z += sm[i].z
+		return z / maxf(1.0, ids.size())
+	var front: Array = halves[0] if mean_z.call(halves[0]) > mean_z.call(halves[1]) else halves[1]
+	var side := signf(sm[top].x)
+	var yt := sm[top].y
+	var yb := sm[bot].y
+	var xt := absf(sm[top].x)
+	var xb := absf(sm[bot].x)
+	var line := func(y: float) -> float: return xt + (xb - xt) * (y - yt) / (yb - yt)
+	# How deep the bow is: x = line(y) - k (y - yt)(yb - y), as deep as the armhole's deepest point
+	# in its middle half. Points near the shoulder and the armpit don't set it: there the bow is
+	# almost on the line, and a millimetre's gap would make it centimetres deep.
+	var wmax := 0.25 * (yt - yb) * (yt - yb)
+	var k := 0.0
+	for i in front:
+		var w := (sm[i].y - yt) * (yb - sm[i].y)
+		if w > 0.5 * wmax:
+			k = maxf(k, (line.call(sm[i].y) - absf(sm[i].x)) / w)
+	for i in front:
+		var w := maxf(0.0, (sm[i].y - yt) * (yb - sm[i].y))
+		sm[i].x = side * minf(absf(sm[i].x), line.call(sm[i].y) - k * w)
+	l["bow"] = sm
+	# Into the cloth stays square to the edge: square to the bow now, not to the mesh's V.
+	var into: PackedVector3Array = l["into"]
+	for i in range(n):
+		var along := (sm[(i + 1) % n] - sm[(i - 1 + n) % n]).normalized()
+		into[i] = (into[i] - along * into[i].dot(along)).normalized()
+	l["into"] = into
+
+
 ## Point p against an edge loop (_edge_loop): x metres inside its drawn edge (negative outside),
 ## y the distance to its nearest smoothed point, z that point's height in front of the middle.
+## x is measured from that point's place on the bow (_bow_front; the smoothed point itself elsewhere).
 static func _inside(p: Vector3, l: Dictionary) -> Vector3:
 	var sm: PackedVector3Array = l["sm"]
 	var bi := 0
@@ -907,7 +972,8 @@ static func _inside(p: Vector3, l: Dictionary) -> Vector3:
 			bd = d
 			bi = i
 	var into: PackedVector3Array = l["into"]
-	return Vector3((p - sm[bi]).dot(into[bi]), sqrt(bd), sm[bi].z)
+	var bow: PackedVector3Array = l["bow"]
+	return Vector3((p - bow[bi]).dot(into[bi]), sqrt(bd), sm[bi].z)
 
 
 ## _inside against the nearer armhole, x measured from its drawn edge (see _edge_loop's "out").
