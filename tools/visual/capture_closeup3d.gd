@@ -10,6 +10,8 @@ extends "res://tools/visual/capture_look3d.gd"
 ## shoulder; BACK (default 1.25) m behind him; EYE (default 1.62) camera height over his tread;
 ## FOV (default 50); TURN (default 0) deg the camera looks away from straight across the ground;
 ## WING (default 0 = the wing nearest the play) 1 or -1 picks a wing.
+## HAIRMODE card (hair_card / lash_card shaders; with MSAA=4) | scissor | a2c | prepass | hash (default).
+## SCARF / BEANIE: comma-separated club colours for the knitwear (SupporterMerch).
 
 const AFTER_GOAL := 2.0
 
@@ -67,6 +69,8 @@ func _run() -> void:
 	for part in ["sky", "agxtv"]:
 		_apply(oval, part)
 	await _match_exposure(oval)
+	if OS.has_environment("MSAA"):   # the look-test reset turns MSAA off; MSAA=2|4|8 puts it back
+		oval.get_viewport().msaa_3d = {"2": Viewport.MSAA_2X, "4": Viewport.MSAA_4X, "8": Viewport.MSAA_8X}[OS.get_environment("MSAA")]
 	# The seat: ROW rows up the stand on the wing nearest the play, square to the centre line.
 	var O = oval.get_script()
 	var C = Oval3DCrowd
@@ -105,8 +109,53 @@ func _run() -> void:
 				# Hair cards: cut out by their alpha and drawn from both sides.
 				var tex: Texture2D = mat.albedo_texture
 				if tex != null and tex.get_image() != null and tex.get_image().detect_alpha() != Image.ALPHA_NONE:
-					mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_HASH
+					match OS.get_environment("HAIRMODE"):
+						"prepass": mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_DEPTH_PRE_PASS
+						"scissor":
+							mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+							mat.alpha_scissor_threshold = float(OS.get_environment("HAIRCUT")) if OS.has_environment("HAIRCUT") else 0.3
+						"a2c":   # the cut-out softened by MSAA coverage (film with MSAA=4)
+							mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+							mat.alpha_scissor_threshold = float(OS.get_environment("HAIRCUT")) if OS.has_environment("HAIRCUT") else 0.3
+							mat.alpha_antialiasing_mode = BaseMaterial3D.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE_AND_TO_ONE
+							mat.alpha_antialiasing_edge = 0.3
+							if OS.has_environment("MIPS") and not tex.get_image().has_mipmaps():   # a GLB read at run time comes without mipmaps
+								var im := tex.get_image()
+								im.generate_mipmaps()
+								mat.albedo_texture = ImageTexture.create_from_image(im)
+								print("CLOSEUP hair mipmaps made: ", im.get_size())
+						"card" when not (m.name.contains("Hair_") or m.name.contains("Eyebrows") or m.name.begins_with("SUP_")):   # lashes: lash_card.gdshader
+							var lm := ShaderMaterial.new()
+							lm.shader = load("res://assets/oval3d/supporters/lash_card.gdshader")
+							var li := tex.get_image()
+							if not li.has_mipmaps():
+								li.generate_mipmaps()
+							lm.set_shader_parameter("albedo_tex", ImageTexture.create_from_image(li))
+							lm.set_shader_parameter("albedo_colour", mat.albedo_color)
+							lm.set_shader_parameter("tex_size", Vector2(li.get_size()))
+							if OS.has_environment("LASHGAIN"): lm.set_shader_parameter("mip_scale", float(OS.get_environment("LASHGAIN")))
+							(m as MeshInstance3D).set_surface_override_material(si, lm)
+							print("CLOSEUP lash shader on ", m.name)
+						"card":   # hair_card.gdshader: mip-compensated cut-out, MSAA edges (film with MSAA=4)
+							var sm := ShaderMaterial.new()
+							sm.shader = load("res://assets/oval3d/supporters/hair_card.gdshader")
+							var im := tex.get_image()
+							if not im.has_mipmaps():   # a GLB read at run time comes without mipmaps
+								im.generate_mipmaps()
+							sm.set_shader_parameter("albedo_tex", ImageTexture.create_from_image(im))
+							sm.set_shader_parameter("albedo_colour", mat.albedo_color)
+							sm.set_shader_parameter("tex_size", Vector2(im.get_size()))
+							if OS.has_environment("HAIRCUT"): sm.set_shader_parameter("cutoff", float(OS.get_environment("HAIRCUT")))
+							if OS.has_environment("MIPGAIN"): sm.set_shader_parameter("mip_scale", float(OS.get_environment("MIPGAIN")))
+							(m as MeshInstance3D).set_surface_override_material(si, sm)
+							print("CLOSEUP hair card shader on ", m.name, " ", im.get_size())
+						_: mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_HASH
 					mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	# Knitwear in club colours: SCARF="#hex,#hex[,..]" BEANIE="#hex,#hex" (any club, Forge clubs too).
+	if OS.has_environment("SCARF"):
+		var bc := OS.get_environment("BEANIE") if OS.has_environment("BEANIE") else OS.get_environment("SCARF")
+		print("CLOSEUP knitwear dressed: ", SupporterMerch.dress(fig, Array(OS.get_environment("SCARF").split(",")),
+				Array(bc.split(","))))
 	var ap := _anim_player(fig)
 	if ap != null and ap.has_animation(clip):
 		ap.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
