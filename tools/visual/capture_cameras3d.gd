@@ -120,6 +120,9 @@ func _run() -> void:
 			var width := float(cam_cfg.get("width", 40.0))
 			var cam: Camera3D = oval.camera
 			cam.keep_aspect = Camera3D.KEEP_WIDTH
+			# Nobody within 20 m of the lens is drawn: the camera spots sit just above the seats, and
+			# supporters in front of the lens never block the gameplay picture (rule 2.101).
+			cam.near = float(cam_cfg.get("near", 20.0))
 			n = 0
 			while n < a - 8:
 				d.advance(DT)
