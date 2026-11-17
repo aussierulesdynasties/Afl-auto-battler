@@ -10,7 +10,7 @@ extends SceneTree
 
 const GLB := "res://assets/oval3d/player_mh.glb"
 const CLUBS := ["ADE", "BRL", "CAR", "COL", "ESS", "FRE", "GEE", "GCS", "GWS", "HAW", "MEL", "NTH",
-		"PAD", "RIC", "STK", "SYD", "TAS", "WCE", "WBD"]
+		"PAD", "RIC", "STK", "SYD", "TAS", "CANB", "WCE", "WBD"]
 
 
 func _initialize() -> void:
