@@ -367,6 +367,8 @@ Source tags: DB = DESIGN_BIBLE; RM26/27/28/29/30/32 = roadmap chapters 26, 27, 2
 
 **2.100** The gameplay cameras never show supporters in the way (2026-11-17; row 202, 2e). Shown the main camera spot with the near 3D supporters filling the bottom of the picture, he said "our gameplay camera shouldnt include shots like this" (the supporter shot is for breaks in play: TODO "Stretch goal, special crowd characters"). Our camera spots (15 m up, 25 m back) sit about 1.6 m above the seats of our stand. Shown a board of the main and behind-the-goals cameras as they were and with a fix (the gameplay cameras draw nobody within 20 m of the lens: a supporter 10 m in front disappears, one 30 m away still shows), he chose "Yes, use it".
 
+**2.101** Set shots: what real TV does (2026-11-17; row 202, 2e). Shown a set shot three ways (A stay on the main camera, B cut live to the camera behind the goals for the kick, C half a second close on the kicker), he answered "do what happens IRL". Real coverage cuts to the behind-the-goals angle for a set shot (BigFooty fan reports, 2007 and 11 Jul 2020; replays of shots also come from behind the goals, Tom Ryan, Substack, 9 Sep 2026); its close-ups come while the kicker lines up, which in our match holds under half a second. So the live picture cuts to the camera behind the goals for the kick, then back to the main camera (option B).
+
 ---
 
 ## 2.S Superseded and cut
