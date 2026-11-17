@@ -346,7 +346,9 @@ func _test_events() -> void:
 			quiet += 1
 			continue
 		var e: Dictionary = cards[0]
-		seen[str(e["key"])] = true
+		# A big week deals two cards; the board's may be the second.
+		for c in cards:
+			seen[str((c as Dictionary)["key"])] = true
 		var opts: Array = e["options"]
 		if not (opts.size() >= 2 and int(e["default"]) < opts.size()):
 			_check(false, "Event %s offers a real choice" % e["key"])
