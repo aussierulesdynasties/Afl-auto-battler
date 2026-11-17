@@ -389,6 +389,10 @@ Source tags: DB = DESIGN_BIBLE; RM26/27/28/29/30/32 = roadmap chapters 26, 27, 2
 
 **2.108** Supporter scarves and beanies take any club's colours at run time, Forge clubs too (2026-11-17; row 202). Shown the woman's Blender scarf fitted in our close-up shot, he said "good, does it work for every club?" and then "it needs to work for Forge clubs too so the colours need to be completely switchable". So one scarf and one beanie model carry the knit and the stripe layout but no colour; the game paints the club's colours onto them. Shown in our shot on all 19 clubs and four Forge palettes. Shown a Forge club's scarf in two of its colours (teal, orange) and in all three (teal, orange, white), he chose "All three": a Forge club's scarf bars run through all three of its colours.
 
+**2.109** Ball-up close-ups run at the match's speed (2026-11-17; row 202, 2e). With rule 2.103 built into the match, at the default 4x a second of close-up on each ruckman means slowing play for those two seconds. Shown one ball-up both ways in our match on 4x (A about 1 second each, play running at real speed for the two close-ups; B sped up with the match, each close-up about a tenth of a second), he chose "B: Sped up with the match".
+
+**2.110** The coach skips a goal's replay by tapping the picture (2026-11-17; row 202, 2e). Shown our match screen 1 s into a replay (rule 2.96) two ways (A a "Skip replay" pill like the Bench pill, bottom right of the picture; B a tap anywhere on the picture skips, a "Replay: tap to skip" tag top left), he chose "B: Tap the picture".
+
 ---
 
 ## 2.S Superseded and cut
