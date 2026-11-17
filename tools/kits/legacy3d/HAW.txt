@@ -29,7 +29,7 @@ HAW Hawthorn-2015 | fill #F9AE33; poly #2E120B 0.13 0 0.28 0 0.28 0.92 0.13 0.5;
 # Hawthorn-2017 (2017-2018): 2018 backs gold top with brown number (a 2017 practice-match photo, 652329846, shows a brown-topped back: practice kit, not drawn). Photos: getty 652326360, getty 937343522, getty 926603412
 HAW Hawthorn-2017 | fill #F9AE33; poly #2E120B 0.13 0 0.28 0 0.28 1 0.205 1 0.13 0.5; rect #2E120B 0.43 0 0.58 1; poly #2E120B 0.72 0 0.87 0 0.87 0.5 0.795 1 0.72 1; vfill #2E120B 0.24 0.2; armholes #2E120B 2.5; collar #2E120B 2; shorts #2E120B | fill #F9AE33; rect #2E120B 0.13 0.65 0.28 1; rect #2E120B 0.43 0.65 0.58 1; rect #2E120B 0.72 0.65 0.87 1; collar #F9AE33 2; armholes #2E120B 2.5; number #2E120B
 
-# Hawthorn-2019 (2019-2020): thin brown V-neck trim; back gold top with brown number. Photos: getty 1185972965
+# Hawthorn-2019 (2019-2020): thin brown V-neck trim; back gold top with brown number. Photos: getty 1160212399, 1145584642
 HAW Hawthorn-2019 | fill #F9AE33; rect #2E120B 0.13 0 0.28 1; rect #2E120B 0.43 0 0.58 1; rect #2E120B 0.72 0 0.87 1; vneck #2E120B 0.16 0.16 0.025; armholes #2E120B 2.5; collar #2E120B 2; shorts #2E120B | fill #F9AE33; rect #2E120B 0.13 0.65 0.28 1; rect #2E120B 0.43 0.65 0.58 1; rect #2E120B 0.72 0.65 0.87 1; collar #2E120B 2; armholes #2E120B 2.5; number #2E120B
 
 # Hawthorn-2021 (2021-2022): brown V with a gold inner trim; back gold top, brown side piping, stripes lower. Photos: getty 1232510449, getty 1335344352
