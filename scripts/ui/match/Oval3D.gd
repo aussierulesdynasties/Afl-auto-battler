@@ -665,11 +665,6 @@ const SKIN_REACH := 0.03
 const SKIN_GAP := 0.02
 ## And how far off the guernsey's surface, along its normal (metres).
 const SKIN_OFF := 0.004
-## How far off the body an armhole's edge, moved onto its smooth curve, stands (metres).
-const EDGE_LIFT := 0.003
-## How far off the skin an armhole's moved edge may stand at most (metres): twice the lift, as the
-## nearest skin point is up to a centimetre from the one truly under it.
-const EDGE_HOLD := 0.006
 ## CUSTOM1 and CUSTOM2 as four floats each (oval3d_player.gdshader: kit_edge, kit_fore, kit_g).
 ## CUSTOM0 stays the mesh's own: the MetaHuman skin coordinates.
 const EDGE_FORMAT := (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM1_SHIFT) 		| (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM2_SHIFT)
@@ -683,9 +678,10 @@ static var _edged := {}
 ## The mesh with distances in CUSTOM1 on the guernsey, the shorts and the skin round the neck
 ## and armholes, so the shader draws the guernsey's edges as clean curves and the bindings a true
 ## width inside them. The guernsey was cut from the body along whole triangles, so its open edges
-## are staircases (notches up to 0.8 cm) and the skin fills the notches. So each neck and armhole
-## edge is drawn along its loop smoothed (Taubin, which keeps its size), set just outside the
-## farthest notch, and the skin inside that line wears the guernsey. The hem is drawn as one level
+## are staircases (notches up to 0.8 cm) and the skin fills the notches. The armholes are re-cut in
+## the model itself along one smooth line each (tools/oval3d/recut_armholes.py), so the skin round
+## them stays skin. The neck edge is drawn along its loop smoothed (Taubin, which keeps its size),
+## set just outside the farthest notch, and the skin inside that line wears the guernsey. The hem is drawn as one level
 ## line round the body, as a guernsey's hem is. The lowest loop is the hem, the
 ## one nearest the middle the neck, the other two the armholes.
 ## x: metres inside the neck's drawn edge (negative outside it); y: the same for the nearer
@@ -776,56 +772,6 @@ static func _kit_edges(m: Mesh) -> Mesh:
 	rest.sort_custom(func(a, b): return absf(a["mid"].x) < absf(b["mid"].x))
 	var neck: Dictionary = rest[0]
 	var arms := rest.slice(1)
-	for l in arms:
-		_bow_front(l)
-	# The armholes' own edges, cut along whole triangles, step in and out by up to 1.5 cm (the
-	# director's "triangles", 2026-11-17). Each corner on an armhole's edge moves out onto the
-	# drawn edge (the loop smoothed, set out to its farthest tooth), so the cloth itself ends in
-	# that clean curve. Only ever out: moving a corner in would open a gap onto the cut-away skin.
-	var snap := {}
-	for l in arms:
-		var ids: PackedInt32Array = l["ids"]
-		var lsm: PackedVector3Array = l["sm"]
-		var lin: PackedVector3Array = l["into"]
-		for k in range(ids.size()):
-			snap[ids[k]] = lsm[k] - lin[k] * float(l["out"])
-	# Each moved corner also stands EDGE_LIFT off the body, so the arm under the new edge never
-	# shows through the cloth.
-	var gnn: PackedVector3Array = ga[Mesh.ARRAY_NORMAL]
-	var moved := PackedVector3Array()
-	moved.resize(gv.size())
-	# Where the edge moves out over the rounded top of the shoulder it would stand off the body
-	# (the director would see a dark rim with the crowd behind it): there it comes back down to
-	# EDGE_HOLD off the skin under it (the nearest skin point, on that skin's surface).
-	var kv := PackedVector3Array()
-	var kn := PackedVector3Array()
-	if ks >= 0:
-		var ka := am.surface_get_arrays(ks)
-		var kav: PackedVector3Array = ka[Mesh.ARRAY_VERTEX]
-		var kan: PackedVector3Array = ka[Mesh.ARRAY_NORMAL]
-		var y0 := INF
-		for v in snap.values():
-			y0 = minf(y0, (v as Vector3).y)
-		for j in range(kav.size()):
-			if kav[j].y > y0 - 0.05:
-				kv.append(kav[j])
-				kn.append(kan[j].normalized())
-	for i in range(gv.size()):
-		if snap.has(wid[i]):
-			var at: Vector3 = (snap[wid[i]] as Vector3) + gnn[i] * EDGE_LIFT
-			var bj := -1
-			var bd := INF
-			for j in range(kv.size()):
-				var d := at.distance_squared_to(kv[j])
-				if d < bd:
-					bd = d
-					bj = j
-			if bj >= 0:
-				var off := (at - kv[bj]).dot(kn[bj])
-				if off > EDGE_HOLD:
-					at -= kn[bj] * (off - EDGE_HOLD)
-			moved[i] = at - gv[i]
-			gv[i] += moved[i]
 	var level := -INF
 	var hem_top := -INF
 	for q in hem["raw"]:
@@ -845,7 +791,7 @@ static func _kit_edges(m: Mesh) -> Mesh:
 	var gn: PackedVector3Array = ga[Mesh.ARRAY_NORMAL]
 	var lend := []
 	for i in range(gv.size()):
-		if gv[i].y > low - 0.06 and minf(_inside(gv[i], neck).y, _nearest_arm(gv[i], arms).y) < SKIN_REACH + 0.02:
+		if gv[i].y > low - 0.06 and _inside(gv[i], neck).y < SKIN_REACH + 0.02:
 			lend.append(i)
 	var measure := func(vs: PackedVector3Array, kind: float) -> Array:
 		var out := PackedFloat32Array()
@@ -863,9 +809,11 @@ static func _kit_edges(m: Mesh) -> Mesh:
 					# The bindings are a few centimetres at most: only the top of the guernsey is measured.
 					e.x = n.x + float(neck["out"])
 					e.y = r.x
-				elif minf(n.y, r.y) < SKIN_REACH:
-					e.x = n.x + float(neck["out"]) if n.y < SKIN_REACH else FAR
-					e.y = r.x if r.y < SKIN_REACH else FAR
+				elif n.y < SKIN_REACH:
+					# Round the armholes the model's own edge is the line (re-cut smooth in the
+					# model): skin there stays skin, and only the neck's line counts.
+					e.x = n.x + float(neck["out"])
+					e.y = FAR
 					var bi := -1
 					var bd := INF
 					for j in lend:
@@ -903,13 +851,6 @@ static func _kit_edges(m: Mesh) -> Mesh:
 		var flags := _custom_format(am, s)
 		if s == gs:
 			a[Mesh.ARRAY_VERTEX] = gv
-			# Glb blend shapes hold whole positions (normalized): each moves with its corner.
-			if am.blend_shape_mode == Mesh.BLEND_SHAPE_MODE_NORMALIZED:
-				for b in range(bsa.size()):
-					var bv: PackedVector3Array = bsa[b][Mesh.ARRAY_VERTEX]
-					for i in range(bv.size()):
-						bv[i] += moved[i]
-					bsa[b][Mesh.ARRAY_VERTEX] = bv
 		if s == gs or s == ss or s == ks:
 			var vs: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
 			var both: Array = measure.call(vs, 1.0 if s == gs else (0.5 if s == ss else SKIN))
@@ -1038,71 +979,9 @@ static func _edge_loop(ids: PackedInt32Array, pts: PackedVector3Array) -> Dictio
 	return l
 
 
-## An armhole's front half, seen from the front, as one smooth bow from the shoulder to the
-## armpit, as a guernsey's armhole is (director 2026-11-17: "real afl guernseys have a straight
-## curved line"). The mesh's armhole reaches forward onto the chest and turns back there, which
-## from the front reads as a V. The bow runs between the loop's top and bottom points and bends
-## just enough to stay inside every point of the drawn edge, so it only ever gives guernsey back to
-## skin (up to 2.2 cm, just below chest height), never paints guernsey onto the arm. Its drawn edge
-## keeps the loop's "out" (measured before the bow). The bow goes in "bow"; "sm" stays the mesh's
-## loop, so each point still finds the same nearest edge point as before and only measures from
-## where that point now lies.
-static func _bow_front(l: Dictionary) -> void:
-	var sm: PackedVector3Array = (l["sm"] as PackedVector3Array).duplicate()
-	var n := sm.size()
-	var top := 0
-	var bot := 0
-	for i in range(n):
-		if sm[i].y > sm[top].y:
-			top = i
-		if sm[i].y < sm[bot].y:
-			bot = i
-	# The two halves between the top and the bottom; the front one has the larger mean z.
-	var halves := [[], []]
-	for h in range(2):
-		var i := top
-		var stop := bot
-		var step := 1 if h == 0 else -1
-		while i != stop:
-			i = (i + step + n) % n
-			if i != stop:
-				halves[h].append(i)
-	var mean_z := func(ids: Array) -> float:
-		var z := 0.0
-		for i in ids:
-			z += sm[i].z
-		return z / maxf(1.0, ids.size())
-	var front: Array = halves[0] if mean_z.call(halves[0]) > mean_z.call(halves[1]) else halves[1]
-	var side := signf(sm[top].x)
-	var yt := sm[top].y
-	var yb := sm[bot].y
-	var xt := absf(sm[top].x)
-	var xb := absf(sm[bot].x)
-	var line := func(y: float) -> float: return xt + (xb - xt) * (y - yt) / (yb - yt)
-	# How deep the bow is: x = line(y) - k (y - yt)(yb - y), as deep as the armhole's deepest point
-	# in its middle half. Points near the shoulder and the armpit don't set it: there the bow is
-	# almost on the line, and a millimetre's gap would make it centimetres deep.
-	var wmax := 0.25 * (yt - yb) * (yt - yb)
-	var k := 0.0
-	for i in front:
-		var w := (sm[i].y - yt) * (yb - sm[i].y)
-		if w > 0.5 * wmax:
-			k = maxf(k, (line.call(sm[i].y) - absf(sm[i].x)) / w)
-	for i in front:
-		var w := maxf(0.0, (sm[i].y - yt) * (yb - sm[i].y))
-		sm[i].x = side * minf(absf(sm[i].x), line.call(sm[i].y) - k * w)
-	l["bow"] = sm
-	# Into the cloth stays square to the edge: square to the bow now, not to the mesh's V.
-	var into: PackedVector3Array = l["into"]
-	for i in range(n):
-		var along := (sm[(i + 1) % n] - sm[(i - 1 + n) % n]).normalized()
-		into[i] = (into[i] - along * into[i].dot(along)).normalized()
-	l["into"] = into
-
-
 ## Point p against an edge loop (_edge_loop): x metres inside its drawn edge (negative outside),
 ## y the distance to its nearest smoothed point, z that point's height in front of the middle.
-## x is measured from that point's place on the bow (_bow_front; the smoothed point itself elsewhere).
+## x is measured from that point's place on the bow (the smoothed point itself).
 static func _inside(p: Vector3, l: Dictionary) -> Vector3:
 	var sm: PackedVector3Array = l["sm"]
 	var bi := 0
