@@ -105,8 +105,18 @@ func _run() -> void:
 				# Hair cards: cut out by their alpha and drawn from both sides.
 				var tex: Texture2D = mat.albedo_texture
 				if tex != null and tex.get_image() != null and tex.get_image().detect_alpha() != Image.ALPHA_NONE:
-					mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_HASH
+					match OS.get_environment("HAIRMODE"):
+						"prepass": mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_DEPTH_PRE_PASS
+						"scissor":
+							mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+							mat.alpha_scissor_threshold = float(OS.get_environment("HAIRCUT")) if OS.has_environment("HAIRCUT") else 0.3
+						_: mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_HASH
 					mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	# Knitwear in club colours: SCARF="#hex,#hex[,..]" BEANIE="#hex,#hex" (any club, Forge clubs too).
+	if OS.has_environment("SCARF"):
+		var bc := OS.get_environment("BEANIE") if OS.has_environment("BEANIE") else OS.get_environment("SCARF")
+		print("CLOSEUP knitwear dressed: ", SupporterMerch.dress(fig, Array(OS.get_environment("SCARF").split(",")),
+				Array(bc.split(","))))
 	var ap := _anim_player(fig)
 	if ap != null and ap.has_animation(clip):
 		ap.get_animation(clip).loop_mode = Animation.LOOP_LINEAR

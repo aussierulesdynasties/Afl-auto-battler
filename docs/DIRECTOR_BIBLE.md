@@ -387,6 +387,8 @@ Source tags: DB = DESIGN_BIBLE; RM26/27/28/29/30/32 = roadmap chapters 26, 27, 2
 
 **2.107** The scoreboard panel above the 3D picture goes: the score sits on the picture as a TV score bug, and the picture grows into the panel's space (2026-11-17; row 202, 2e). Looking at the phone screen with the panel (both clubs' scores, the quarter and clock, the margin, and the momentum bar) above the picture, he said "we also dont need this anymore" and "we can put an on screen scoreboard like in ss2", sending a TV score bug (each club's emblem and score on its own colour, the quarter and clock between them). Then: "no, the momentum bar stays, make it unobtrusive" and "use the extra new space for more 3d view". Shown three places for a thin momentum bar that fills toward the club on top in its colour (A under the score bug, B along the top edge of the picture, C along the bottom edge of the picture), he chose "C: bottom of picture".
 
+**2.108** Supporter scarves and beanies take any club's colours at run time, Forge clubs too (2026-11-17; row 202). Shown the woman's Blender scarf fitted in our close-up shot, he said "good, does it work for every club?" and then "it needs to work for Forge clubs too so the colours need to be completely switchable". So one scarf and one beanie model carry the knit and the stripe layout but no colour; the game paints the club's colours onto them. Shown in our shot on all 19 clubs and four Forge palettes. Whether a Forge club's scarf uses two of its colours or all three is still to be asked.
+
 ---
 
 ## 2.S Superseded and cut
