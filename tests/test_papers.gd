@@ -947,11 +947,12 @@ func _test_screen() -> void:
 					missing.append(str(order[i]))
 				elif size.x >= 900 and (note.get_global_rect().end.y > view.end.y + 0.5 or note.get_global_rect().position.y < view.position.y
 						or note.get_global_rect().end.x > view.end.x + 0.5):
-					hidden.append(str(order[i]))
+					hidden.append("%s (row %d, ends %.0f,%.0f; view ends %.0f,%.0f)" % [str(order[i]), i,
+							note.get_global_rect().end.x, note.get_global_rect().end.y, view.end.x, view.end.y])
 			_check(order.size() == 18 and missing.is_empty(), "Every club's whole blurb is under its name, %s (missing: %s)" % [what, str(missing)])
 			if size.x < 900:
 				continue
-			_check(hidden.is_empty(), "On a PC every blurb is in view without scrolling, %s (out of view: %s)" % [what, str(hidden)])
+			_check(hidden.is_empty(), "On a PC every blurb is in view without scrolling, %s (out of view: %s; ladder %s)" % [what, str(hidden), str(order)])
 			# 1920x1080 holds the whole page. At 1280x720 the story's column (the
 			# story, the fitness plan and the weeks to come) can run a line past
 			# the window for some stories; it ran 12 to 24 px past before the
