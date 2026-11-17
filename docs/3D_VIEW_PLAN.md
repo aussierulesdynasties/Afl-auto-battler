@@ -146,6 +146,7 @@ The answers are recorded in the Director Bible and summarised here.
 - 2d the body (rule 2.85): MetaHuman, made in Unreal 5.6+ used as a tool only and exported into the Godot
   game (the game stays in Godot); one is shown in our match before anything is built on it. Shown and approved (2.89). Builds, heads and faces next.
 - 2e the main camera (rule 2.93): the real AFL main camera (OP-33: centre line, 15 m up, 25 m back from the boundary; it pans, tilts and zooms to follow the ball, about a third of the ground across), in a 16:9 TV picture across the phone ("A TV shape"). Prototype: `tools/visual/capture_cameras3d.gd`. Sources: Free TV Australia OP-33 (2015); ABC News (2020).
+- 2e after a goal (rule 2.96): one skippable replay (B: the camera behind the goals, half speed) while the players go back to their 6-6-6 spots, sped up; a skip brings the picture back live and shows the rest of the walk back fast, then the bounce. No replay after a behind, except the deciding one: a behind that ends up the last score and wins or levels the game, replayed after the siren. Prototype: `tools/visual/capture_cameras3d.gd` (cuts, replays, slow and fast cuts). Sources: Tom Ryan, Substack (9 and 23 Sep 2026); SEN (18 Jun 2020).
 
 The freeze allows only the
 prototypes each question needs; nothing from step 2 is the settled look until he has chosen it.
@@ -179,6 +180,6 @@ vignettes. Nothing in step 4 starts before the football proof has passed and the
 |---|---|
 | Freeze | in force from 2026-11-16 |
 | 1. Football proof | harness in `tools/balance.sh shape`; spec checked (rule 2.86); gap list above; fixes next (row 201) |
-| 2. The world and the look | under way (row 202): 2a daylight, tone, night lighting and wet games chosen, skies chosen (rules 2.80-2.84); 2d body chosen: MetaHuman (2.85), shown in our match and approved (2.89); 2b every AFL ground since 1990 and Macquarie Point get their own stadium (2.90), roofed grounds lit from their roofs (2.91); 2c crowd chosen: a mix of 3D people and cards (2.92); 2e main camera chosen: the real AFL main camera in a 16:9 TV picture (2.93); next 2b building the grounds, 2d builds and faces, 2e the other cameras, cuts and replays |
+| 2. The world and the look | under way (row 202): 2a daylight, tone, night lighting and wet games chosen, skies chosen (rules 2.80-2.84); 2d body chosen: MetaHuman (2.85), shown in our match and approved (2.89); 2b every AFL ground since 1990 and Macquarie Point get their own stadium (2.90), roofed grounds lit from their roofs (2.91); 2c crowd chosen: a mix of 3D people and cards (2.92), built into the 3D view; 2e main camera chosen: the real AFL main camera in a 16:9 TV picture (2.93), after a goal one skippable replay while the players go back (2.96); next 2b building the grounds, 2d builds and faces, 2e the other cameras and cuts in play |
 | 3. Asset and animation plan | done (#1707) |
 | 4. Build | after 1 and 3 (rows 197, 198) |

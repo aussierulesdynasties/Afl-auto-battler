@@ -4712,6 +4712,7 @@ func _test_defensive_forward() -> void:
 			var q: Dictionary = p.duplicate(true)
 			for k in range(1, 6):
 				Prospects.age_player(q, y + k)
+				Growth.play_games(q, 22)   # a season of ordinary games (Growth)
 			if Traits.has(q, "def_forward"):
 				gen += 1
 	_check(BalanceGate.held(gen >= 4, "drafted defensive forwards"), "Draft classes bring Defensive forwards too (%d in five classes, five seasons on)" % gen)

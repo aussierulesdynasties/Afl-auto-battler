@@ -3,8 +3,10 @@ extends SceneTree
 ## "Plays like: <real AFL player>" on every draftee (director, 2026-11-12):
 ## the rule (scripts/sim/PlaysLike.gd) uses position, height and the ratings
 ## at max potential with their level, each proven on made-up players where
-## only that fact differs; over 500 generated prospects the name is a real
-## player of the same position, of about the prospect's level, never himself,
+## only that fact differs; the real players are the launch lists and every
+## other 2012-2026 season, shown by name only (director, 2026-11-17: "drop the
+## year from the copy just 'plays like Mitch Duncan'"); over 500 generated
+## prospects the name is a real player of the same position, of about the prospect's level, never himself,
 ## the same on a second ask and after the lists age; and the line is on the
 ## National Draft, League Draft, Rookie Draft and mid-season draft screens on
 ## a phone, found after a real tap (tests/tap.gd).
@@ -18,9 +20,11 @@ const LEVEL_BAND := 3.0
 ## Held at what the Wheelo ratings of 2026-11-16 give (86% in band, 25% lacking
 ## the prospect's best attribute; 90% and 12% under the old ratings) until the
 ## plays-like lines are reassessed (director, 2026-11-16: "the whole plays like
-## lines will have to be reassessed in the future").
+## lines will have to be reassessed in the future"). Players with under 10
+## senior games are rated from their draft pick (director 2026-11-17), so they
+## leave the pool (it never held projected players) and 27.4% lack it.
 const NEAR_SHARE := 0.85
-const LACKS_SHARE := 0.27
+const LACKS_SHARE := 0.28
 const FIRST_YEAR := 2045
 const CLASSES := 11
 
@@ -279,14 +283,16 @@ func _test_strengths_count_for_more() -> void:
 
 func _test_pool_is_the_real_lists() -> void:
 	var pool: Array = _db.plays_like_pool
-	_check(pool.size() >= 600, "The pool is the launch lists (%d real players)" % pool.size())
+	var launch := pool.filter(func(e): return not _is_past(e))
+	var past := pool.filter(_is_past)
+	_check(launch.size() >= 590, "The pool holds the launch lists (%d real players)" % launch.size())
 	var real := {}
 	for q in _db.players:
 		real[str(q["id"])] = q
 	var roles := {}
 	var bad := 0
 	var eg := ""
-	for e in pool:
+	for e in launch:
 		roles[str(e["role"])] = true
 		var q: Dictionary = real.get(str(e["id"]), {})
 		if q.is_empty() or str(q["real_name"]) != str(e["real_name"]) or float(e["height"]) <= 0.0 \
@@ -295,6 +301,26 @@ func _test_pool_is_the_real_lists() -> void:
 			eg = "%s peak %d, today %d" % [str(e["real_name"]), int(e["peak"]), int(q.get("overall", 0))]
 	_check(bad == 0, "Every entry is a listed real player with a height, senior ratings and a peak no lower than today (%d are not: %s)" % [bad, eg])
 	_check(roles.size() == 4, "All four positions have real players (%s)" % str(roles.keys()))
+	# Every other 2012-2026 season: a real player-season with a height, one man's seasons one person.
+	_check(past.size() >= 8000, "The pool holds the other 2012-2026 seasons (%d player-seasons)" % past.size())
+	var years := {}
+	var bad_past := 0
+	var dated := 0
+	for e in past:
+		var year := int(str(e["id"]).get_slice("|", 1))
+		years[year] = true
+		if year < 2012 or year > 2026 or year == int(_db.DATA_SEASON) or float(e["height"]) <= 0.0 				or str(e.get("person", "")) != str(e["id"]).get_slice("|", 0) or str(e["real_name"]) == "":
+			bad_past += 1
+		if str(PL.shown_name(e, pool)).contains(str(year)):
+			dated += 1
+	_check(bad_past == 0, "Every past entry is a 2012-2026 season but the launch one, with a height and his person (%d are not)" % bad_past)
+	_check(years.size() == 14, "Fourteen past seasons are in (%s)" % str(years.keys()))
+	_check(dated == 0, "A past season is shown by his name only, no year (%d carry one)" % dated)
+
+
+## A pool entry from a 2012-2026 season other than the launch lists ("<id>|<year>").
+func _is_past(e: Dictionary) -> bool:
+	return str(e["id"]).contains("|")
 
 
 func _test_500_generated_prospects() -> void:
@@ -303,6 +329,8 @@ func _test_500_generated_prospects() -> void:
 	var real_names := {}
 	for q in _db.players:
 		real_names[str(q["real_name"])] = true
+	for e in pool.filter(_is_past):
+		real_names[str(e["real_name"])] = true
 	var names := {}
 	var wrong_role := 0
 	var not_real := 0
@@ -360,7 +388,7 @@ func _test_500_generated_prospects() -> void:
 	_check(lacks_strength <= int(n * LACKS_SHARE),
 			"The prospect's best attribute is 15 or more points lower in the named player for at most %d%% (%d of %d)" % [int(LACKS_SHARE * 100), lacks_strength, n])
 	_check(most <= int(n * 0.03), "No real player is named for more than 3%% of prospects (most %d of %d)" % [most, n])
-	_check(not_real == 0, "Every prospect is likened to a real player from the lists (%d are not)" % not_real)
+	_check(not_real == 0, "Every prospect is likened to a real player from the lists or a 2012-2026 season (%d are not)" % not_real)
 	_check(wrong_role == 0, "Always a real player of his own position (%d are not)" % wrong_role)
 	_check(moved == 0, "Asked again, and through the line the screens show, the name is the same (%d moved)" % moved)
 	_check(names.size() >= 40, "500 prospects name at least 40 different real players (%d)" % names.size())
@@ -384,7 +412,7 @@ func _test_never_himself() -> void:
 		var e: Dictionary = PL.nearest(p, pool)
 		if e.is_empty():
 			unnamed += 1
-		elif str(e["real_name"]) == str(p.get("real_name", "")) or str(e["id"]) == str(p["id"]):
+		elif str(e["id"]) == str(p["id"]) or (not _is_past(e) and str(e["real_name"]) == str(p.get("real_name", ""))) 				or (e.get("person", "") != "" and str(e["person"]) == PL.person_of(str(p.get("real_name", "")), str(p.get("club", "")))):
 			himself += 1
 	_check(himself == 0, "No real player or real draftee is likened to himself (%d are)" % himself)
 	_check(unnamed == 0, "Every real player and real draftee has a name to show (%d have none)" % unnamed)
@@ -428,17 +456,20 @@ func _test_its_own_line_not_his_name() -> void:
 	_check(not _db.player_display_name(p).to_lower().contains("plays like"), "His display name still carries no \"plays like\"")
 	# The longest line fits a phone row beside its button.
 	var UK = load("res://scripts/ui/UiKit.gd")
-	for key in ["real_name"]:
-		var widest := ""
-		var w := 0.0
-		for c in _db.plays_like_pool:
-			var l: Label = UK.lbl("Plays like: " + str(c[key]), UK.SECONDARY)
-			root.add_child(l)
-			if l.get_combined_minimum_size().x > w:
-				w = l.get_combined_minimum_size().x
-				widest = str(c[key])
-			l.free()
-		_check(w > 0.0 and w <= 270.0, "\"Plays like: %s\" (the widest %s) is %.0f px: one line in a 390 phone row beside its button" % [widest, key, w])
+	# Every name the line can show, a shared one with its club, each measured once.
+	var shown := {}
+	for c in _db.plays_like_pool:
+		shown[PL.shown_name(c, _db.plays_like_pool)] = true
+	var widest := ""
+	var w := 0.0
+	for name in shown:
+		var l: Label = UK.lbl("Plays like: " + str(name), UK.SECONDARY)
+		root.add_child(l)
+		if l.get_combined_minimum_size().x > w:
+			w = l.get_combined_minimum_size().x
+			widest = str(name)
+		l.free()
+	_check(w > 0.0 and w <= 270.0, "\"Plays like: %s\" (the widest name) is %.0f px: one line in a 390 phone row beside its button" % [widest, w])
 
 
 # --- the draft screens, by real taps -------------------------------------------
@@ -739,21 +770,27 @@ func _test_two_real_players_one_name() -> void:
 	var again: Dictionary = a.duplicate(true)
 	again["id"] = "twin_a_draftee"
 	_check(_named(again, [a, c]) == "other", "His own name at his own height is himself, whatever the id")
-	# The real lists: any shared name is shown with a club, and the line carries it.
+	# The real pool: a name two different men share is shown with a club; one man's
+	# seasons are one player, his name bare.
 	var real: Array = _db.plays_like_pool
-	var seen := {}
-	var shared := []
+	var people := {}
 	for e in real:
-		if seen.has(str(e["real_name"])):
-			shared.append(e)
-			shared.append(seen[str(e["real_name"])])
-		seen[str(e["real_name"])] = e
-	_check(shared.size() >= 2, "The real lists hold two players with one name (%d entries)" % shared.size())
-	var shown := {}
+		if not people.has(str(e["real_name"])):
+			people[str(e["real_name"])] = {}
+		people[str(e["real_name"])][str(e.get("person", e["id"]))] = true
+	var shared := real.filter(func(e): return (people[str(e["real_name"])] as Dictionary).size() > 1)
+	var alone := real.filter(func(e): return _is_past(e) and (people[str(e["real_name"])] as Dictionary).size() == 1)
+	_check(shared.size() >= 2, "The real pool holds two players with one name (%d entries)" % shared.size())
+	var unclubbed := 0
+	var eg := ""
 	for e in shared:
-		shown[PL.shown_name(e, real)] = true
-		_check(str(PL.shown_name(e, real)).ends_with("(%s)" % _db.club_short(str(e["club"]))), "%s is shown with his club" % PL.shown_name(e, real))
-	_check(shown.size() == shared.size(), "Every shared name reads differently (%s)" % str(shown.keys()))
+		if not str(PL.shown_name(e, real)).ends_with("(%s)" % _db.club_short(str(e["club"]))):
+			unclubbed += 1
+			eg = str(PL.shown_name(e, real))
+	_check(unclubbed == 0, "Every shared name is shown with his club (%d are not: %s)" % [unclubbed, eg])
+	_check(alone.size() >= 1000, "Many men have several past seasons (%d entries)" % alone.size())
+	var clubbed := alone.filter(func(e): return PL.shown_name(e, real) != str(e["real_name"]))
+	_check(clubbed.is_empty(), "One man's own seasons show his name bare (%d do not)" % clubbed.size())
 
 
 func _test_another_dataset_has_a_pool() -> void:
@@ -773,7 +810,7 @@ func _test_another_dataset_has_a_pool() -> void:
 	DS.remove("test_plays_like_1989")
 	_db.reload()
 	_state.reset()
-	_check(_db.plays_like_pool.size() >= 600, "Back on the 2026 lists (%d)" % _db.plays_like_pool.size())
+	_check(_db.plays_like_pool.size() >= 590, "Back on the 2026 lists (%d)" % _db.plays_like_pool.size())
 
 
 func _test_nobody_to_compare() -> void:

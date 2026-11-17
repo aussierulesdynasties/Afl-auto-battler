@@ -2,21 +2,29 @@ extends SceneTree
 ## PROTOTYPE (row 202, 3D view plan step 2e, the cameras): camera options on the 3D oval, filmed
 ## for the director to choose between. Nothing here is the game's camera until he picks one.
 ##   godot --path . --script tools/visual/capture_cameras3d.gd -- OUTDIR CONFIG.json
-## CONFIG: {"seed": 31, "t0": 30.0, "dur": 20.0, "expo": 1.0, "shots": [SHOT, ...]}
-## SHOT:   {"name": "A", "size": [w, h], "eye": [x, y, z], "width": 40.0, "lead": 0.0,
-##          "smooth": 0.5, "aim_y": 1.0}
+## CONFIG: {"seed": 31, "expo": 1.0, "turf": 0.32, "cams": {NAME: CAM, ...}, "edits": [EDIT, ...]}
+## CAM:    {"eye": [x, y, z], "width": 40.0, "smooth": 0.5, "aim_y": 1.0, "aim": "ball"}
+## EDIT:   {"name": "A", "size": [w, h], "cuts": [CUT, ...]}
+## CUT:    {"cam": NAME, "from": s, "to": s, "rate": 1.0, "who": token id (aim "player")}
+## The older form {"t0", "dur", "shots": [CAM + "name", "size"]} is still read: each shot is an
+## edit of one cut.
 ## Each camera works the way a real broadcast camera does: it stands still on its mount (eye, in
 ## metres: x up the ground, y up, z across; +z is the near wing) and only pans, tilts and zooms.
-## It aims at the ball (averaged over `smooth` seconds each side, as an operator's hand smooths
-## it), and zooms so `width` metres of ground across the picture are in shot at the ball.
-## Fremantle v St Kilda (seed), first quarter, filmed from t0 for dur seconds at 30 frames a
-## second (real speed). Pass 1 plays the director and the oval without drawing and logs where the
-## ball is; pass 2 plays them again and films each shot from the logged aim. For every shot it
-## prints how often the ball is inside the picture and how often the stands stand between the
-## camera and the ball (the line of sight, tested against the stand's rake).
+## It aims at the ball, or at one player (aim "player", the cut's "who"), averaged over `smooth`
+## seconds each side as an operator's hand smooths it, and zooms so `width` metres across the
+## picture are in shot at what it aims at.
+## An edit is the TV picture: its cuts play one after another, each from its own camera. A cut may
+## go back in time (a replay) and may run slow ("rate" 0.5 is half speed). Times are seconds of
+## the match as the game plays it back. Every frame is 1/30 s of the picture (real speed at rate
+## 1). The match always ticks in 1/120 s steps, so a slow cut plays exactly the same football.
+## Fremantle v St Kilda (seed). Pass 1 plays the director and the oval without drawing and logs
+## where the ball and every player are; pass 2 plays them again for each cut and films it from the
+## logged aim. For every cut it prints how often the ball is inside the picture and how often the
+## stands stand between the camera and the ball (the line of sight, tested against the stand's
+## rake), and writes OUTDIR/NAME_cuts.json (each cut's first and last frame).
 ## The look is rule 2.80-2.81's fine day (sky light, AgX with the TV grade); not the question.
 
-const DT := 1.0 / 60.0
+const DT := 1.0 / 120.0
 const HALF_LEN := 86.3
 const HALF_WID := 67.4
 const FENCE := 6.0
@@ -27,7 +35,7 @@ var _clouds: NoiseTexture2D
 
 func _initialize() -> void:
 	_run.call_deferred()
-	create_timer(1500.0).timeout.connect(func(): print("TIMEOUT"); quit(1))
+	create_timer(3000.0).timeout.connect(func(): print("TIMEOUT"); quit(1))
 
 
 func _run() -> void:
@@ -36,9 +44,14 @@ func _run() -> void:
 	var out := str(args[0])
 	var cfg: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(str(args[1])))
 	var seed := int(cfg.get("seed", 31))
-	var t0 := float(cfg.get("t0", 30.0))
-	var dur := float(cfg.get("dur", 20.0))
-	var shots: Array = cfg["shots"]
+	var cams: Dictionary = cfg.get("cams", {})
+	var edits: Array = cfg.get("edits", [])
+	if cfg.has("shots"):
+		var t0 := float(cfg.get("t0", 30.0))
+		for shot in cfg["shots"]:
+			cams[shot["name"]] = shot
+			edits.append({"name": shot["name"], "size": shot["size"],
+					"cuts": [{"cam": shot["name"], "from": t0, "to": t0 + float(cfg.get("dur", 20.0))}]})
 	DirAccess.make_dir_recursive_absolute(out)
 	OS.low_processor_usage_mode = false
 	root.content_scale_mode = Window.CONTENT_SCALE_MODE_DISABLED
@@ -48,122 +61,161 @@ func _run() -> void:
 	var res: Dictionary = load("res://scripts/sim/MatchSim.gd").new(Squad_.new("FRE", gdb.club_list("FRE"), true, "FRE"),
 			Squad_.new("STK", gdb.club_list("STK"), false, "STK"), seed).run()
 
-	# Pass 1: the ball's place every frame (the oval synced, nothing drawn).
+	# Pass 1: the ball's place and every player's place each step (the oval synced, nothing
+	# drawn), kept only around the cuts.
+	var last := 0.0
+	var keep := {}
+	for e in edits:
+		for c in e["cuts"]:
+			var sm := float((cams[c["cam"]] as Dictionary).get("smooth", 0.5))
+			last = maxf(last, float(c["to"]) + sm)
+			for f in range(int((float(c["from"]) - sm) / DT) - 2, int((float(c["to"]) + sm) / DT) + 3):
+				keep[f] = true
 	var d = load("res://scripts/ui/match/MatchDirector.gd").new()
 	d.setup(res, res["events"])
 	var oval = load("res://scripts/ui/match/Oval3D.gd").new()
 	root.add_child(oval)
 	oval.build(d, "FRE", "STK")
-	var f0 := int(t0 / DT)
-	var f1 := int((t0 + dur) / DT)
-	var balls := []
+	var balls := {}
+	var men := {}
 	var n := 0
-	while n <= f1 and not d.idle():
+	while n <= int(last / DT) + 2 and not d.idle():
 		d.advance(DT)
 		oval.sync(DT)
-		balls.append(oval.ball.global_position)
+		if keep.has(n):
+			balls[n] = oval.ball.global_position
+			var at := []
+			for p in oval.players:
+				at.append((p["node"] as Node3D).global_position)
+			men[n] = at
 		n += 1
-	f1 = mini(f1, balls.size() - 1)
-	print("PASS1 %d frames; window %d-%d; ball from %s to %s" % [balls.size(), f0, f1, balls[f0], balls[f1]])
+	print("PASS1 %d steps (%.1f s)" % [n, n * DT])
 	oval.queue_free()
 	await process_frame
 
-	for shot in shots:
-		var sm := float(shot.get("smooth", 0.5))
-		var k := int(sm / DT)
-		var aims := []
-		for f in range(f0, f1 + 1):
-			var a := Vector3.ZERO
-			var c := 0
-			for g in range(maxi(0, f - k), mini(balls.size() - 1, f + k) + 1):
-				a += balls[g]
-				c += 1
-			a /= float(c)
-			a.y = float(shot.get("aim_y", 1.0))
-			aims.append(a)
-		shot["aims"] = aims
-
-	# Pass 2, filmed: one play-through per shot (each its own picture size).
 	_make_clouds()
 	await _clouds.changed
-	for shot in shots:
-		var sz: Array = shot["size"]
+	for e in edits:
+		var sz: Array = e["size"]
 		var size := Vector2i(int(sz[0]), int(sz[1]))
 		root.size = size
 		DisplayServer.window_set_size(size)
-		d = load("res://scripts/ui/match/MatchDirector.gd").new()
-		d.setup(res, res["events"])
-		oval = load("res://scripts/ui/match/Oval3D.gd").new()
-		root.add_child(oval)
-		oval.build(d, "FRE", "STK")
-		_look(oval, float(cfg.get("expo", 1.0)))
-		var eye_a: Array = shot["eye"]
-		var eye := Vector3(float(eye_a[0]), float(eye_a[1]), float(eye_a[2]))
-		var cam: Camera3D = oval.camera
-		cam.keep_aspect = Camera3D.KEEP_WIDTH
-		var width := float(shot.get("width", 40.0))
-		# Exposure set by the open grass, as the look prototype sets it (TURF=0.32): from the
-		# shot's first aim, bare turf on the ball's row read four times and the exposure moved.
-		var aim0: Vector3 = (shot["aims"] as Array)[0]
-		cam.global_position = eye
-		cam.look_at(aim0, Vector3.UP)
-		cam.fov = rad_to_deg(2.0 * atan(width * 0.5 / eye.distance_to(aim0)))
-		var env: Environment = oval._env
-		for it in range(5):
-			for w in range(3):
-				await process_frame
-			await RenderingServer.frame_post_draw
-			var im := root.get_viewport().get_texture().get_image()
-			var got := _grass(im)
-			if it < 4:
-				env.tonemap_exposure *= pow(float(cfg.get("turf", 0.32)) / maxf(got, 0.01), 1.6)
-			else:
-				print("EXPOSURE %.3f, grass %.3f" % [env.tonemap_exposure, got])
-			# The seen sky held at the fine day's horizon brightness (0.75) at this exposure,
-			# as the look prototype's _sky_view does, or it blows out white.
-			var skm: ShaderMaterial = env.sky.sky_material
-			var hz: Color = RenderingServer.shader_get_parameter_default(skm.shader.get_rid(), "horizon")
-			var lum := 0.2126 * hz.r + 0.7152 * hz.g + 0.0722 * hz.b
-			skm.set_shader_parameter("view", 0.75 / (env.tonemap_exposure * 1.4 * lum))
-		var inside := 0
-		var blocked := 0
-		var total := 0
-		var fovs := []
-		n = 0
-		while n <= f1:
-			d.advance(DT)
-			oval.sync(DT)
-			if n < f0 - 6:
+		var frame := 0
+		var marks := []
+		for c in e["cuts"]:
+			var cam_cfg: Dictionary = cams[c["cam"]]
+			var a := int(float(c["from"]) / DT)
+			var b := int(float(c["to"]) / DT)
+			var rate := float(c.get("rate", 1.0))
+			var every := maxi(1, int(round(4.0 * rate)))
+			var aims := _aims(cam_cfg, c, a, b, balls, men)
+			d = load("res://scripts/ui/match/MatchDirector.gd").new()
+			d.setup(res, res["events"])
+			oval = load("res://scripts/ui/match/Oval3D.gd").new()
+			root.add_child(oval)
+			oval.build(d, "FRE", "STK")
+			_look(oval, float(cfg.get("expo", 1.0)))
+			var eye_a: Array = cam_cfg["eye"]
+			var eye := Vector3(float(eye_a[0]), float(eye_a[1]), float(eye_a[2]))
+			var width := float(cam_cfg.get("width", 40.0))
+			var cam: Camera3D = oval.camera
+			cam.keep_aspect = Camera3D.KEEP_WIDTH
+			n = 0
+			while n < a - 8:
+				d.advance(DT)
+				oval.sync(DT)
 				n += 1
-				continue
-			var aim: Vector3 = (shot["aims"] as Array)[clampi(n - f0, 0, f1 - f0)]
-			var dist := eye.distance_to(aim)
-			var hfov := rad_to_deg(2.0 * atan(width * 0.5 / dist))
-			cam.global_position = eye
-			cam.look_at(aim, Vector3.UP)
-			cam.fov = hfov
-			var f := n - f0
-			if f >= 0 and f % 2 == 0:
-				var b: Vector3 = oval.ball.global_position
-				var p := cam.unproject_position(b)
-				if not cam.is_position_behind(b) and Rect2(Vector2.ZERO, Vector2(size)).has_point(p):
-					inside += 1
-				if _stand_blocks(eye, b):
-					blocked += 1
-				total += 1
-				fovs.append(hfov)
-				await RenderingServer.frame_post_draw
-				var img := root.get_viewport().get_texture().get_image()
-				img.save_png(out.path_join("%s_%04d.png" % [shot["name"], f / 2]))
-			else:
-				await process_frame
-			n += 1
-		fovs.sort()
-		print("SHOT %s %dx%d eye %s width %.0f m | ball in picture %d/%d | stand blocks the ball %d | lens %.1f-%.1f deg across" % [
-				shot["name"], size.x, size.y, eye, width, inside, total, blocked, fovs[0], fovs[-1]])
-		oval.queue_free()
-		await process_frame
+			await _expose(oval, cam, eye, aims[0], width, float(cfg.get("turf", 0.32)))
+			while n < a:
+				d.advance(DT)
+				oval.sync(DT)
+				n += 1
+			var first := frame
+			var inside := 0
+			var blocked := 0
+			var total := 0
+			var fovs := []
+			while n <= b:
+				d.advance(DT)
+				oval.sync(DT)
+				var aim: Vector3 = aims[clampi(n - a, 0, b - a)]
+				var hfov := rad_to_deg(2.0 * atan(width * 0.5 / eye.distance_to(aim)))
+				cam.global_position = eye
+				cam.look_at(aim, Vector3.UP)
+				cam.fov = hfov
+				if (n - a) % every == 0:
+					var bp: Vector3 = oval.ball.global_position
+					var p := cam.unproject_position(bp)
+					if not cam.is_position_behind(bp) and Rect2(Vector2.ZERO, Vector2(size)).has_point(p):
+						inside += 1
+					if _stand_blocks(eye, bp):
+						blocked += 1
+					total += 1
+					fovs.append(hfov)
+					await RenderingServer.frame_post_draw
+					root.get_viewport().get_texture().get_image().save_png(
+							out.path_join("%s_%04d.png" % [e["name"], frame]))
+					frame += 1
+				else:
+					await process_frame
+				n += 1
+			fovs.sort()
+			marks.append({"cam": c["cam"], "from": c["from"], "to": c["to"], "rate": rate,
+					"first": first, "last": frame - 1})
+			print("CUT %s %s %.2f-%.2f s x%.2f frames %d-%d | ball in picture %d/%d | stand blocks the ball %d | lens %.1f-%.1f deg" % [
+					e["name"], c["cam"], float(c["from"]), float(c["to"]), rate, first, frame - 1,
+					inside, total, blocked, fovs[0], fovs[-1]])
+			oval.queue_free()
+			await process_frame
+		var fa := FileAccess.open(out.path_join("%s_cuts.json" % e["name"]), FileAccess.WRITE)
+		fa.store_string(JSON.stringify(marks))
+		fa.close()
 	quit()
+
+
+## The camera's aim each step of the cut: the ball, or the cut's player ("who"), averaged over the
+## camera's `smooth` seconds each side, at aim_y metres up.
+func _aims(cam_cfg: Dictionary, c: Dictionary, a: int, b: int, balls: Dictionary, men: Dictionary) -> Array:
+	var k := int(float(cam_cfg.get("smooth", 0.5)) / DT)
+	var who := int(c.get("who", -1)) if str(cam_cfg.get("aim", "ball")) == "player" else -1
+	var aims := []
+	for f in range(a, b + 1):
+		var s := Vector3.ZERO
+		var m := 0
+		for g in range(f - k, f + k + 1):
+			if not balls.has(g):
+				continue
+			s += (men[g] as Array)[who] if who >= 0 else balls[g]
+			m += 1
+		s /= float(maxi(1, m))
+		s.y = float(cam_cfg.get("aim_y", 1.0))
+		# An operator behind the goals stops tilting down at the goal line: the ball goes on
+		# under the picture into the crowd, the camera stays on the ground.
+		var cx := float(cam_cfg.get("clamp_x", 999.0))
+		s.x = clampf(s.x, -cx, cx)
+		aims.append(s)
+	return aims
+
+
+## Exposure set by the open grass, as the look prototype sets it (TURF=0.32): from the cut's first
+## aim, the grass read four times and the exposure moved; the seen sky held at the fine day's
+## horizon brightness (0.75) at that exposure, as the look prototype's _sky_view does.
+func _expose(oval, cam: Camera3D, eye: Vector3, aim0: Vector3, width: float, turf: float) -> void:
+	cam.global_position = eye
+	cam.look_at(aim0, Vector3.UP)
+	cam.fov = rad_to_deg(2.0 * atan(width * 0.5 / eye.distance_to(aim0)))
+	var env: Environment = oval._env
+	for it in range(5):
+		for w in range(3):
+			await process_frame
+		await RenderingServer.frame_post_draw
+		var got := _grass(root.get_viewport().get_texture().get_image())
+		if it < 4:
+			env.tonemap_exposure *= pow(turf / maxf(got, 0.01), 1.6)
+		var skm: ShaderMaterial = env.sky.sky_material
+		var hz: Color = RenderingServer.shader_get_parameter_default(skm.shader.get_rid(), "horizon")
+		var lum := 0.2126 * hz.r + 0.7152 * hz.g + 0.0722 * hz.b
+		skm.set_shader_parameter("view", 0.75 / (env.tonemap_exposure * 1.4 * lum))
 
 
 ## True when the stand's rake rises above the sight line from the eye to `p` (sampled).

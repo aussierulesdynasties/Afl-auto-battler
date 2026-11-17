@@ -22,16 +22,16 @@ func run() -> void:
 	GameDB.reload()
 	_t("_test_every_player_has_potential")
 	_t("_test_history_and_pedigree")
-	_t("_test_rehab_rollover")
-	_t("_test_growth_is_capped")
-	_t("_test_training_discount")
+	_t("_test_summer_adds_nothing")
+	_t("_test_growth_pace")
+	_t("_test_summer_take_back")
+	_t("_test_career_rolls")
 	_t("_test_draftee_potential")
 	_t("_test_youth_pace")
 	_t("_test_draftee_bands")
 	_t("_test_pick_values_held")
 	_t("_test_save_and_backfill")
 	_t("_test_fine_wine_real_players")
-	_t("_test_fine_wine_careers")
 	_t("_test_fine_wine_draftee_rate")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
@@ -141,79 +141,117 @@ func _age_once(p: Dictionary, year := 2027) -> Dictionary:
 	return copy
 
 
-func _test_rehab_rollover() -> void:
-	for name in ["Sam Darcy"]:
-		var p := _real(name)
-		var after := _age_once(p)
-		var gap := int(p["potential"]) - int(p["overall"])
-		var closed := int(after["overall"]) - int(p["overall"])
-		_check(float(closed) >= 0.75 * float(gap) - 3.0,
-				"%s closes most of the gap in the rehab year (%d -> %d, POT %d)" % [
-				name, int(p["overall"]), int(after["overall"]), int(p["potential"])])
-		_check(int(after["overall"]) <= int(p["potential"]), "%s does not pass his POT" % name)
-		_check(not after.has("rehab"), "The rehab year is used up (%s)" % name)
-	# Without his history, the same player barely moves.
-	var bare := _real("Sam Darcy").duplicate(true)
-	bare.erase("potential")
-	bare.erase("rehab")
-	bare.erase("history")
-	Potential.assign(bare)
-	var plain := _age_once(bare)
-	_check(int(plain["overall"]) < int(_age_once(_real("Sam Darcy"))["overall"]) - 5,
-			"His history is what drives the rehab (%d without it, %d with)" % [
-			int(plain["overall"]), int(_age_once(_real("Sam Darcy"))["overall"])])
-
-
-func _test_growth_is_capped() -> void:
-	var over := 0
-	var grew := 0
+## The summer adds nothing on its own (director 2026-11-17, the age jump and
+## the free points removed): a player grows only from the XP he earns.
+func _test_summer_adds_nothing() -> void:
+	var moved := 0
 	var young := 0
 	for p in GameDB.players:
 		if float(p["age"]) > 23.0:
 			continue
 		young += 1
 		var after := _age_once(p)
-		if int(after["overall"]) > maxi(int(p["potential"]), int(p["overall"])):
-			over += 1
-		if int(after["overall"]) > int(p["overall"]):
-			grew += 1
-	_check(over <= maxi(2, young / 10), "Off-season growth passes POT only in an occasional breakout (%d of %d)" % [over, young])
-	_check(grew > young / 2, "Most young players still grow (%d of %d)" % [grew, young])
+		if after["attr"] != p["attr"]:
+			moved += 1
+	_check(young > 0 and moved == 0, "Ageing a year changes no young player's attributes (%d of %d moved)" % [moved, young])
 
 
-func _test_training_discount() -> void:
-	var p := _real("Sam Darcy").duplicate(true)
-	var at_ceiling := p.duplicate(true)
-	at_ceiling["potential"] = int(at_ceiling["overall"])
-	# POT is now what he can still reach (director, 2026-10-07), a little
-	# under his old peak, so the discount is a little smaller.
-	# His record already sets his opening rating (Ratings.rate_on_record), so
-	# what is left to train back is his best season: still well under full price.
-	_check(Potential.training_multiplier(p) <= 0.8, "A rehab player trains well under full price (%.2f)" % Potential.training_multiplier(p))
-	var past := at_ceiling.duplicate(true)
-	past["potential"] = int(past["overall"]) - 2
-	var near := at_ceiling.duplicate(true)
-	near["potential"] = int(near["overall"]) + 2
-	_check(Potential.training_multiplier(near) > 1.0 and Potential.training_multiplier(at_ceiling) > Potential.training_multiplier(near)
-			and Potential.training_multiplier(past) > 2.5 * Potential.training_multiplier(at_ceiling) * 0.99,
-			"Training gets dearer near POT and steeply dearer past it (%.2f, %.2f, %.2f)" % [
-			Potential.training_multiplier(near), Potential.training_multiplier(at_ceiling), Potential.training_multiplier(past)])
-	GameState.reset()
-	GameState.start_season("PAD", GameDB.club_list("PAD"))
-	var mine := {}
-	for q in GameState.my_list:
-		if str(q["real_name"]) == "Connor Rozee":
-			mine = q
-	var normal := mine.duplicate(true)
-	normal["potential"] = int(normal["overall"]) + 1
-	var cur := int(mine["attr"]["kicking"])
-	var cheap := GameState._cost_for(cur, float(mine.get("gm", 18.0)), Potential.training_multiplier(mine))
-	var full := GameState._cost_for(cur, float(normal.get("gm", 18.0)), Potential.training_multiplier(normal))
-	_check(cheap > 0 and cheap < full, "Training cost reflects POT (%d vs %d)" % [cheap, full])
+## His pace (director 2026-11-17): a kid at 60 who plays every ordinary game
+## reaches potential 65 / 70 / 75 / 80 / 85+ after 65 / 100 / 125 / 140 / 150
+## games, the same rate for the same potential, the 65 rate below 65.
+func _test_growth_pace() -> void:
+	_check(Growth.games_to_potential(65) == 65.0 and Growth.games_to_potential(70) == 100.0
+			and Growth.games_to_potential(75) == 125.0 and Growth.games_to_potential(80) == 140.0
+			and Growth.games_to_potential(85) == 150.0 and Growth.games_to_potential(95) == 150.0,
+			"The pace table is his (%s)" % str([Growth.games_to_potential(65), Growth.games_to_potential(70),
+			Growth.games_to_potential(75), Growth.games_to_potential(80), Growth.games_to_potential(85), Growth.games_to_potential(95)]))
+	_check(absf(Growth.games_to_potential(72) - 110.0) < 0.01, "Between rows the games fill in evenly (72: %.1f)" % Growth.games_to_potential(72))
+	_check(Growth.points_per_game(60) == Growth.points_per_game(65), "Under 65 a game earns what a potential-65 game earns")
+	_check(absf(Growth.points_per_game(95) * 150.0 - 35.0) < 0.01, "Potential 95 earns 35 points in 150 games")
+	# Played out with the real grant and spending: a potential-85 midfielder
+	# at 60 gets there in about 150 games.
+	var base: Dictionary = {}
+	for p in GameDB.players:
+		if str(p.get("role", "")) == "MID" and not (p.get("attr", {}) as Dictionary).is_empty():
+			base = (p as Dictionary).duplicate(true)
+			break
+	base["id"] = "pace_mid"
+	base["gm"] = 18.0
+	base["sample"] = 18.0
+	base["attr"] = Prospects.fit_attributes(base["attr"], "MID", 60.0, Ratings.effective_games(base))
+	GameState._recalc_player_overall(base)
+	base["potential"] = 85
+	base["xp"] = 0.0
+	base["xp_match"] = 0.0
+	var games := 0
+	while int(base["overall"]) < 85 and games < 400:
+		Growth.play_games(base, 1)
+		games += 1
+	_check(games >= 140 and games <= 160, "A potential-85 midfielder from 60 reaches 85 after about 150 games (%d)" % games)
 
 
-## Young draftees (director 2026-10-14, "A: gentle"): they arrive lower than the old curve, a few
-## are ready-made, the ceiling is the same, and nobody already on a list is rescaled.
+## Past his peak (director 2026-11-17): the first summer takes 40% of what he
+## trained past his potential, rising to all of it by his last season; from his
+## last season on, the season's gains all go and he falls 2, then 3.
+func _test_summer_take_back() -> void:
+	var p: Dictionary = (_real("Jordan Dawson") as Dictionary).duplicate(true)
+	p["id"] = "take_back"
+	p["peak_year"] = 2030
+	p["career_last"] = 2035.0
+	var k := "kicking"
+	var at := int(p["attr"][k])
+	p["over_gains"] = {k: 10}
+	Growth.summer(p, 2030)
+	_check(int(p["attr"][k]) == at - 4, "The summer he peaks, 40%% of what he trained past it goes (%d to %d)" % [at, int(p["attr"][k])])
+	var q: Dictionary = (_real("Jordan Dawson") as Dictionary).duplicate(true)
+	q["id"] = "take_back_late"
+	q["peak_year"] = 2030
+	q["career_last"] = 2035.0
+	q["over_gains"] = {k: 10}
+	Growth.summer(q, 2034)
+	_check(int(q["attr"][k]) == at - 9, "A year before his last season, 88%% goes (%d to %d)" % [at, int(q["attr"][k])])
+	var old: Dictionary = (_real("Jordan Dawson") as Dictionary).duplicate(true)
+	old["id"] = "falls"
+	old["career_last"] = 2035.0
+	old["season_gains"] = {k: 3}
+	var ov := int(old["overall"])
+	Growth.summer(old, 2035)
+	var first := ov - int(old["overall"])
+	var ov2 := int(old["overall"])
+	Growth.summer(old, 2036)
+	var second := ov2 - int(old["overall"])
+	_check(first >= 2 and second == 3, "From his last season he falls: the season's gains and 2, then 3 (%d, %d)" % [first, second])
+	var hurt: Dictionary = (_real("Jordan Dawson") as Dictionary).duplicate(true)
+	hurt["id"] = "hurt"
+	hurt["career_last"] = 2035.0
+	hurt["games_missed_injured"] = 10
+	Growth.summer(hurt, 2030)
+	_check(float(hurt["career_last"]) == 2034.75, "A season with 10 games missed injured takes a quarter of a season off (%.2f)" % float(hurt["career_last"]))
+
+
+## His career length (director 2026-11-17): a retired real player keeps his
+## real last season; anyone else rolls from real careers with a similar peak,
+## never shorter than the seasons he has played plus one; a Fine Wine player
+## rolls from Fine Wine careers, which run longer.
+func _test_career_rolls() -> void:
+	var real := {"id": "real_last", "real_last": 2010, "potential": 80}
+	_check(Growth.career_last(real, 2005) == 2010.0, "A real player's own last season stands")
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	var plain := 0.0
+	var fine := 0.0
+	var short := 0
+	for i in range(300):
+		plain += float(Growth.roll_seasons(85, false, 1, rng))
+		fine += float(Growth.roll_seasons(85, true, 1, rng))
+		if Growth.roll_seasons(80, false, 12, rng) < 12:
+			short += 1
+	plain /= 300.0
+	fine /= 300.0
+	_check(short == 0, "A roll is never shorter than the seasons played plus one")
+	_check(fine >= plain + 2.0, "Fine Wine careers run longer (%.1f seasons against %.1f)" % [fine, plain])
+
+
 func _top_ten(scale: float) -> Array:
 	var old := Prospects.DRAFT_NIGHT_SCALE
 	Prospects.DRAFT_NIGHT_SCALE = scale
@@ -236,7 +274,6 @@ func _mean_of(ps: Array, key: String) -> float:
 
 func _test_youth_pace() -> void:
 	_check(is_equal_approx(Prospects.DRAFT_NIGHT_SCALE, 0.87), "The draft-night scale is 0.87 (row 65 bands)")
-	_check(Potential.YOUTH_STEP_PACE == 1.0 and Potential.YOUTH_GAP_PACE == 1.0, "The climb itself runs at the old pace")
 	var old_top := _top_ten(1.0)
 	var top := _top_ten(Prospects.DRAFT_NIGHT_SCALE)
 	var drop := _mean_of(old_top, "overall") - _mean_of(top, "overall")
@@ -258,26 +295,14 @@ func _test_youth_pace() -> void:
 	_check(BalanceGate.held(float(ready) / n >= 0.10 and float(ready) / n <= 0.35, "ready-made share of top 10"), "About 1 in 5 of a top 10 is ready-made (%d of %d)" % [ready, top.size()])
 	_check(BalanceGate.held(project > 0 and ready > 0 and ready_ov / float(ready) > project_ov / float(project) + 8.0, "ready-made vs project draft-night gap"),
 			"A ready-made pick is well ahead of a project on draft night")
-	# He climbs: three off-seasons add well over ten points to the average top-10 pick.
-	var start := _mean_of(top, "overall")
-	var after := 0.0
-	for p in top:
-		var c: Dictionary = p.duplicate(true)
-		for y in range(3):
-			Prospects.age_player(c, 2040 + y)
-		after += float(c["overall"])
-	after /= n
-	_check(BalanceGate.held(after - start >= 15.0, "top-10 three-season climb"), "The average top-10 pick climbs %.1f points in three seasons" % (after - start))
 	# Nobody already listed is rescaled: a saved draftee keeps his rating whatever the scale is now,
 	# and the real 2026 class (a draft class too, row 65) is rescaled like a generated one.
 	var saved: Dictionary = (_top_ten(1.0)[0] as Dictionary).duplicate(true)
 	var kept := int(saved["overall"])
 	var scale := Prospects.DRAFT_NIGHT_SCALE
 	Prospects.DRAFT_NIGHT_SCALE = 0.5
-	var after_aging := int(_age_once(saved)["overall"])
 	_check(int(saved["overall"]) == kept, "A draftee already on a list keeps his rating when the scale changes")
 	Prospects.DRAFT_NIGHT_SCALE = scale
-	_check(after_aging >= kept, "...and a young listed player still climbs")
 	var real_pick: Dictionary = {}
 	for p in GameDB.draftees:
 		real_pick = (p as Dictionary).duplicate(true)
@@ -368,7 +393,8 @@ func _test_draftee_bands() -> void:
 			same = false
 	_check(same, "Listed young players on the real lists keep their rating and POT whatever the scale")
 	# The pool year (row 65): a generated class is drafted at the rating it was made with, a year
-	# older; a prospect passed over in his own draft develops from then on.
+	# older. Passed over, he plays no AFL games, so he earns no XP and stays
+	# where he is (director 2026-11-17: a player grows only from the XP he earns).
 	var fresh := Prospects.generate_class(2030, 4)
 	var made: Dictionary = (fresh[0] as Dictionary).duplicate(true)
 	var pooled: Array = Prospects.age_pool(fresh, 2030, {})
@@ -384,7 +410,7 @@ func _test_draftee_bands() -> void:
 				was = r
 		if not was.is_empty() and int(q["overall"]) > int(was["overall"]):
 			grew += 1
-	_check(grew >= pooled.size() / 2, "Passed over, a prospect develops the next year (%d of %d grew)" % [grew, pooled.size()])
+	_check(grew == 0, "Passed over, a prospect does not grow without games (%d of %d grew)" % [grew, pooled.size()])
 
 
 ## Director 2026-10-14, "hold pick values where they are": a pick is read by the player it buys,
@@ -501,60 +527,6 @@ func _test_fine_wine_real_players() -> void:
 	_check(earn.contains("1 draftee in %d" % int(round(1.0 / Traits.FINE_WINE_DRAFTEE_ODDS))),
 			"The look-up states the draftee odds the game rolls (%s)" % earn)
 	_check(Traits.ON_TOP.has("fine_wine") and Traits.label("fine_wine") == "Fine Wine", "Fine Wine comes on top of the five")
-
-
-## Over seeded careers from 28, the same player with Fine Wine holds his rating
-## longer and retires later. Paired: same id, so the same dice, the trait alone differs.
-func _test_fine_wine_careers() -> void:
-	var base: Dictionary = _real("Jordan Dawson").duplicate(true)
-	# A Fine Wine test, not a rehab one: under the suites' ratings his hand-set
-	# POT can flag a rehab year, which spares both arms their first decline.
-	base.erase("rehab")
-	var n := 300
-	var ov_plain := 0.0
-	var ov_fine := 0.0
-	var at_34 := 0
-	var gone_plain := 0.0
-	var gone_fine := 0.0
-	for i in range(n):
-		var arms := []
-		for fine in [false, true]:
-			var p: Dictionary = base.duplicate(true)
-			p["id"] = "FW_%d" % i
-			p["generated"] = true
-			p["age"] = 28.0
-			p["potential"] = int(p["overall"])
-			p["fine_wine"] = fine
-			arms.append(p)
-		var retired := [0.0, 0.0]
-		var both_34 := true
-		var ov34 := [0, 0]
-		for a in range(2):
-			var p: Dictionary = arms[a]
-			for year in range(2027, 2045):
-				Prospects.age_player(p, year)
-				if float(p["age"]) == 34.0:
-					ov34[a] = int(p["overall"])
-				if Prospects.should_retire(p, year):
-					break
-			retired[a] = float(p["age"])
-			if float(p["age"]) < 34.0:
-				both_34 = false
-		if both_34:
-			at_34 += 1
-			ov_plain += ov34[0]
-			ov_fine += ov34[1]
-		gone_plain += retired[0]
-		gone_fine += retired[1]
-	gone_plain /= n
-	gone_fine /= n
-	print("Fine Wine careers from 28 (%d): OVR at 34 %.1f against %.1f; retires at %.1f against %.1f" % [
-			n, ov_fine / maxi(1, at_34), ov_plain / maxi(1, at_34), gone_fine, gone_plain])
-	_check(at_34 > n / 2 and ov_fine / at_34 >= ov_plain / at_34 + 5.0,
-			"At 34 a Fine Wine player holds his rating (%.1f against %.1f, %d careers)" % [
-			ov_fine / maxi(1, at_34), ov_plain / maxi(1, at_34), at_34])
-	_check(gone_fine >= gone_plain + 2.0 and gone_fine <= 40.0,
-			"He retires later (average age %.1f against %.1f), 40 at the latest" % [gone_fine, gone_plain])
 
 
 ## The draftee roll lands near the set odds, and generated classes carry it.
