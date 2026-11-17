@@ -369,6 +369,8 @@ Source tags: DB = DESIGN_BIBLE; RM26/27/28/29/30/32 = roadmap chapters 26, 27, 2
 
 **2.101** Set shots: what real TV does (2026-11-17; row 202, 2e). Shown a set shot three ways (A stay on the main camera, B cut live to the camera behind the goals for the kick, C half a second close on the kicker), he answered "do what happens IRL". Real coverage cuts to the behind-the-goals angle for a set shot (BigFooty fan reports, 2007 and 11 Jul 2020; replays of shots also come from behind the goals, Tom Ryan, Substack, 9 Sep 2026); its close-ups come while the kicker lines up, which in our match holds under half a second. So the live picture cuts to the camera behind the goals for the kick, then back to the main camera (option B).
 
+**2.102** Ball-ups: close-ups of the two ruckmen in the wait (2026-11-17; row 202, 2e). Real TV spends 10-20 s on tight close-ups of key players before a ball-up, then the wide shot for the contest (ABC, 2020). In our match the pack settles only about 2 s before the ball-up. Shown one ball-up two ways (A the main camera only, B about a second on each ruckman, then back wide just before the bounce), he chose "B: ruckmen close-ups".
+
 ---
 
 ## 2.S Superseded and cut
