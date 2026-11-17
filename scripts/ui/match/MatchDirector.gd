@@ -389,6 +389,89 @@ func tackle_ahead() -> Dictionary:
 	return {"who": int(p["who"]), "victim": int(p["victim"]), "left": maxf(0.0, float(p["max"]) - _pt)}
 
 
+## Whether event `k` (a behind) is the deciding behind of rule 2.96: no score comes after it
+## in the game, and with it its side wins by a point or levels the scores. Read-only.
+func deciding_behind(k: int) -> bool:
+	var ev: Dictionary = events[k]
+	if str(ev.get("kind", "")) != "behind":
+		return false
+	var pts := [0, 0]
+	for j in range(events.size()):
+		var e: Dictionary = events[j]
+		var kind := str(e.get("kind", ""))
+		if kind != "goal" and kind != "behind":
+			continue
+		if j > k:
+			return false
+		pts[int(e.get("side", 0))] += 6 if kind == "goal" else 1
+	var side := int(ev.get("side", 0))
+	var margin: int = pts[side] - pts[1 - side]
+	return margin == 0 or margin == 1
+
+
+## Whether the centre bounce is the next thing to happen: the players are on their spots and
+## the umpire is about to bounce it (the wait before the bounce). Rule 2.96: play holds here
+## while a goal's replay is shown. Read-only.
+func bounce_next() -> bool:
+	if _beat.is_empty() or _pi >= _phases.size():
+		return false
+	var p := str((_phases[_pi] as Dictionary).get("t", ""))
+	return p == "bounce" or (p == "wait" and _pi + 1 < _phases.size()
+			and str((_phases[_pi + 1] as Dictionary).get("t", "")) == "bounce")
+
+
+## The ball-up being set right now, for the TV picture (rule 2.103: a close-up on each ruckman
+## before the umpire throws it up): {rucks, t, min} with `rucks` the two sides' ruckmen nearest
+## the ball (side 0's first; -1 for a side with none up), `t` the director seconds the pack has
+## stood and `min` the least it stands; {} otherwise. Only a ball-up around the ground: a centre
+## bounce and a boundary throw-in are not this. Read-only.
+func ballup_now() -> Dictionary:
+	if _beat.is_empty() or _pi >= _phases.size() or str(_beat.get("kind", "")) != "ballup":
+		return {}
+	var p: Dictionary = _phases[_pi]
+	if str(p.get("t", "")) != "pack":
+		return {}
+	var at: Vector2 = p["at"]
+	var rucks := [-1, -1]
+	var near := [INF, INF]
+	for id in p["members"]:
+		var t: Dictionary = tokens[int(id)]
+		if str(t["role"]) != "RUCK" or float(t["down"]) > 0.0:
+			continue
+		var s := int(t["side"])
+		var d := (t["pos"] as Vector2).distance_to(at)
+		if d < float(near[s]):
+			near[s] = d
+			rucks[s] = int(id)
+	return {"rucks": rucks, "t": _pt, "min": float(p["min"])}
+
+
+## The shot at goal being played right now, for the TV picture (rule 2.102: a set shot is shown
+## from behind the goals): {set, to, phase} with `set` true for a set shot (from a mark), `to`
+## the middle of the goal line it is kicked at (metres on the ground), `k` its event, `goal` true
+## when it is a goal (a behind otherwise) and `phase` the step it is
+## on ("collect", "possess", "hold", "flight", "emit", "celebrate"), or "line_up" while the man
+## who marked lines up his set shot (his mark's wait is over, the kick is the next beat); {}
+## otherwise. Read-only.
+func shot_now() -> Dictionary:
+	var kind := str(_beat.get("kind", ""))
+	if _beat.is_empty() or _pi >= _phases.size():
+		return {}
+	var k := int(_beat["k"])
+	var phase := str((_phases[_pi] as Dictionary).get("t", ""))
+	if kind != "goal" and kind != "behind":
+		var nk := _next_real(k)
+		if kind != "mark" or pausing() or nk < 0 or not bool((events[nk] as Dictionary).get("set_shot", true)) \
+				or not str((events[nk] as Dictionary).get("kind", "")) in ["goal", "behind"]:
+			return {}
+		k = nk
+		phase = "line_up"
+	var ev: Dictionary = events[k]
+	return {"set": bool(ev.get("set_shot", true)), "k": k, "goal": str(ev.get("kind", "")) == "goal",
+			"to": Vector2(MatchMotion.GOAL_X * _dir(int(ev.get("side", 0))), 0.0),
+			"phase": phase}
+
+
 func _tick(h: float) -> void:
 	time += h
 	var guard := 0
