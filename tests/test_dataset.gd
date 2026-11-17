@@ -17,7 +17,7 @@ const SUITE_SEED := 1990
 ## season print did not. The real-lists print moved again that day with the
 ## 44 rule (RookieList.add_block): West Coast, at 43 of the 44, lists one of
 ## its three tied prospects and passes its picks, so the opening draft differs.
-const GOLDEN_LOAD := "504cc7d1ec21cf3e80e29046f8aa7e50"
+const GOLDEN_LOAD := "e6f604aedc9fbf756137094f20099015"  # moved with Canberra's name and colours (the Owls)
 ## It moved again with row 199 (2026-11-15): the off-season before the
 ## opening draft closes with the rivals signing free agents, so the lists differ;
 ## the level ladder going A-Z by club (#1633) then changed the order the clubs
