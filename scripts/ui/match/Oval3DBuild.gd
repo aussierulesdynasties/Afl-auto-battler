@@ -28,7 +28,7 @@ const HEIGHT_POWER := 1.96
 ## How far the light and heavy corners' girths sit from the average (x 0.88, x 1.12).
 const GIRTH_SPAN := 0.12
 const FACE_PREFIX := "face_"
-## Real 2026 heights and weights, for a man with no weight on record (rule 2.97).
+## Real 2026 heights and weights, for a man with no weight on record (rule 2.98).
 const REAL_CSV := "res://data/players_enriched_2026.csv"
 
 static var _data := {}
@@ -50,7 +50,7 @@ static func data_for(glb: String) -> Dictionary:
 	return d
 
 
-## A man with no weight on record takes a real man's weight (director, rule 2.97): the weight of a
+## A man with no weight on record takes a real man's weight (director, rule 2.98): the weight of a
 ## 2026 player of his height (the nearest height listed, within 3 cm), which one picked by his
 ## player id so he keeps it. 0 when nobody that height is listed.
 static func real_weight(h_cm: float, pid: String) -> float:
