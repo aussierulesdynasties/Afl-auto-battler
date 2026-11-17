@@ -10,12 +10,20 @@ extends RefCounted
 ## of ground are across the picture where it aims (about a third of the ground). On a phone the
 ## picture is taller than a TV picture (rule 2.105) at the same zoom: the width sets the lens.
 ## Nobody within 20 m of the lens is drawn (rule 2.101), so no supporter blocks the picture.
+## Rule 2.111: the phone's picture is taller than TV's, so the main camera normally zooms in until
+## its top and bottom are a TV picture's (about 26 m across), a strip of crowd and no sky. It
+## zooms out to the wide shot (57 m across, the ball in the middle, sky over the stand) while a
+## kick of 40 m or more is in the air, and while the players walk back for a centre bounce (after
+## a goal, once its replay is over, and at the start of each quarter), then back in for the
+## bounce. Each zoom is quick but eased, half a second of real time at any match speed.
 ##
-## A set shot (rule 2.102, "do what happens IRL") cuts live to the camera behind the goals it is
-## kicked at, 15 m up and 25 m back from the goal line, from when the man who marked lines up
-## until a third of a second after the ball reaches the goals, then back to the main camera.
-## That camera aims at the ball smoothed over 0.4 s, 40 m across, and stops tilting down 60 m
-## from the middle of the ground (past that the ball goes on under the picture).
+## A set shot (rule 2.102, "do what happens IRL") cuts live to the camera behind the goals at the
+## far end, behind the kicker's back (15 m up, 25 m back from that goal line), from when the man who
+## marked lines up until a third of a second after the ball reaches the goals, then back to the
+## main camera. Real TV frames that shot on the posts he kicks at, not on him (Seven, Adelaide v
+## Geelong and Fox, Fremantle v St Kilda, 2025, measured on the 6.4 m gaps between the posts):
+## 42 m across at the goal line, aimed 3.3 m up it, so the goal line sits two thirds down a
+## 16:9 picture with the crowd behind the posts above. It holds still while he kicks.
 ##
 ## A ball-up around the ground (rule 2.103) cuts to about a second close on each ruckman while
 ## the pack settles, then back to the main camera just before the umpire throws it up. Real TV
@@ -23,8 +31,8 @@ extends RefCounted
 ## TV OP-33): the shot comes from the first of them with a clear line to the ruckman, so no other
 ## man stands in front of him.
 ##
-## After a goal (rule 2.96) one replay: the last moments of the kick, from the camera behind the
-## goals, at half real speed (a 1.7 s kick and flight shows over 3.4 s), while play goes on
+## After a goal (rule 2.96) one replay: the last moments of the kick, from the same camera and
+## framing as a set shot's (behind the far goals, on the posts), at half real speed (a 1.7 s kick and flight shows over 3.4 s), while play goes on
 ## underneath and the players walk back; the centre bounce waits for the replay to end. A skip
 ## (skip_replay) brings the picture back live at once. A behind gets none, except the deciding
 ## one (it is the last score and wins or levels the game), replayed after the siren.
@@ -38,9 +46,8 @@ const MAIN_WIDTH := 57.0      # m of ground across the picture where the main ca
 const MAIN_SMOOTH := 0.5      # s of play the main camera's aim is averaged over
 const AIM_Y := 1.0            # m: the camera aims this high over the ball's spot
 const NEAR := 20.0            # m: nobody nearer the lens is drawn (rule 2.101)
-const GOALS_WIDTH := 40.0     # m across the picture from behind the goals
-const GOALS_SMOOTH := 0.4     # s
-const GOALS_STOP := 60.0      # m from the middle: the goals camera tilts down no further
+const GOALS_WIDTH := 42.0     # m across the picture at the goal line it is kicked at
+const GOALS_AIM_Y := 3.3      # m up the goal line the goals camera aims
 const SHOT_TAIL := 0.33       # s on the goals camera after the ball reaches the goals
 const CLOSE_WIDTH := 3.2      # m across the picture at a ruckman, close
 const CLOSE_SMOOTH := 0.3     # s
@@ -51,14 +58,14 @@ const CLEAR := 0.5            # m: a man nearer the sight line than this blocks 
 const REPLAY_RATE := 0.5      # the replay plays at half real speed
 const REPLAY_BEFORE := 0.58   # director s of the replay before the kick
 const REPLAY_AFTER := 0.23    # ...and after the ball reaches the goals
-const REPLAY_STOP := 80.0     # m from the middle: the replay's goals camera tilts down no further
+const LONG_KICK := 40.0       # m: a kick at least this long is watched on the wide shot
+const ZOOM_S := 0.5           # real s a zoom takes, in or out
 const CUT := 8.0              # m: a ball moved further than this in one frame was put back (a
                               # bounce after a goal, the change of ends); the camera goes straight there
 
 var oval: Oval3D
 var camera: Camera3D
 var _trail: Array = []        # [[t, world aim]] over the last MAIN_SMOOTH s
-var _goals_trail: Array = []  # ...and the goals camera's, over GOALS_SMOOTH s
 var _t := 0.0                 # match seconds this broadcast has run
 var _last_ball := Vector3.INF # where the ball was last frame
 var shot := "main"            # the camera the picture comes from: "main" or "goals"
@@ -78,6 +85,8 @@ var _replay_x := 0.0          # the goal line it was kicked at
 var _replay_t := 0.0          # where the replay is (director time)
 var _after_siren: Array = []  # the deciding behind's clip, for after the siren
 var replaying := false        # the picture shows a replay
+var _kick_wide := false       # a long kick's zoom out still running (rule 2.111)
+var _zoom := 1.0              # 0 the normal TV-height shot, 1 the wide shot (rule 2.111)
 
 
 func _init(p_oval: Oval3D) -> void:
@@ -105,7 +114,6 @@ func frame(dt: float, wall := 0.0) -> void:
 	var aim := Vector3(bp.x, AIM_Y, bp.z)
 	if dt <= 0.0 or bp.distance_to(_last_ball) > CUT:
 		_trail.clear()
-		_goals_trail.clear()
 	_last_ball = bp
 	var main_aim := _smooth(_trail, aim, MAIN_SMOOTH)
 	_set_shot(dt)
@@ -117,12 +125,45 @@ func frame(dt: float, wall := 0.0) -> void:
 		var gp := ((oval.players[_close_who] as Dictionary)["node"] as Node3D).global_position
 		_shoot(_close_eye, _smooth(_close_trail, Vector3(gp.x, CLOSE_AIM_Y, gp.z), CLOSE_SMOOTH), CLOSE_WIDTH)
 	elif shot == "goals":
-		var eye := oval.global_transform * Vector3(signf(_end_x) * (MatchMotion.HALF_LEN + EYE_BACK), EYE_UP, 0.0)
-		var at := _smooth(_goals_trail, aim, GOALS_SMOOTH)
-		at.x = clampf(at.x, -GOALS_STOP, GOALS_STOP)
-		_shoot(eye, at, GOALS_WIDTH)
+		_goals_shot(signf((oval.global_transform * Vector3(_end_x, 0.0, 0.0)).x))
 	else:
 		_shoot(main_eye(), main_aim, MAIN_WIDTH)
+		var b: Dictionary = oval.director.ball
+		if str(b.get("mode", "")) == "flight" and (b["from"] as Vector2).distance_to(b["to"]) >= LONG_KICK:
+			_kick_wide = true
+		elif _zoom >= 1.0:
+			_kick_wide = false
+		# A long kick's zoom always runs its whole half second ("B: steady half second"), so at
+		# speed the picture is fully wide just after the ball lands, then eases back in.
+		var want := 1.0 if _kick_wide or _wide() else 0.0
+		if dt > 0.0:  # paused or placed at once: the zoom holds
+			_zoom = move_toward(_zoom, want, (wall if wall > 0.0 else dt) / ZOOM_S)
+		_tv_height(smoothstep(0.0, 1.0, _zoom))
+
+
+## Rule 2.111: besides a long kick, the main camera is wide for the opening picture of each
+## quarter and while the players set up for a centre bounce, until the umpire is about to
+## bounce it. (A centre bounce's beat is named for what follows the bounce; its first phase is the
+## centre set-up.)
+func _wide() -> bool:
+	var d = oval.director
+	if d._beat.is_empty():
+		return true
+	if d.bounce_next() or d._pi >= d._phases.size() or d._phases.is_empty():
+		return false
+	var first: Dictionary = d._phases[0]
+	if str(first.get("t", "")) != "setup" or str(first.get("mode", "")) != "centre":
+		return false
+	return str((d._phases[d._pi] as Dictionary).get("t", "")) == "setup"
+
+
+## The main camera, aimed and zoomed for the wide shot, narrowed to the TV picture's height:
+## `wide` 0 is a 16:9 picture's top and bottom on the phone's taller picture, 1 the wide shot.
+func _tv_height(wide: float) -> void:
+	var vs := camera.get_viewport().get_visible_rect().size
+	var tw := tan(deg_to_rad(camera.fov) * 0.5)
+	var tv := tw * 9.0 / 16.0 * vs.x / vs.y  # the TV picture's half-height, as a half-width here
+	camera.fov = rad_to_deg(2.0 * atan(lerpf(tv, tw, wide)))
 
 
 ## The kick the goals camera waits for is through. The kicker's pause on his mark (before the
@@ -147,7 +188,6 @@ func _set_shot(dt: float) -> void:
 			shot = "goals"
 			_end_x = (s["to"] as Vector2).x
 			_shot_k = int(s["k"])
-			_goals_trail.clear()
 			_tail = -1.0
 		return
 	if _tail < 0.0 and ((s.is_empty() and _past_shot()) or (not s.is_empty() and str(s["phase"]) == "celebrate")):
@@ -267,7 +307,6 @@ func _start_replay(clip: Array) -> void:
 	_replay_t = float(clip[0]["t"])
 	_replay_end = float(clip[-1]["t"])
 	_replay_x = float(clip[0]["x"])
-	_goals_trail.clear()
 	replaying = true
 	shot = "goals"
 
@@ -280,6 +319,7 @@ func skip_replay() -> void:
 	_replay = []
 	shot = "main"
 	_trail.clear()
+	_zoom = 1.0  # rule 2.111: back from the replay on the ground and crowd, then in for the bounce
 
 
 ## One frame of the replay, `wall` real seconds on: every recorded man, umpire and the ball put
@@ -310,12 +350,14 @@ func _play_replay(wall: float) -> void:
 			skel.set_bone_pose_rotation(b, (q0[b] as Quaternion).slerp(q1[b], u))
 		skel.set_bone_pose_position(0, (m0[2] as Vector3).lerp(m1[2], u))
 	oval.ball.transform = (r0["ball"] as Transform3D).interpolate_with(r1["ball"], u)
-	var bp := oval.ball.global_position
-	var end := signf((oval.global_transform * Vector3(_replay_x, 0.0, 0.0)).x)
-	var eye := Vector3(end * (MatchMotion.HALF_LEN + EYE_BACK), EYE_UP, 0.0)
-	var at := _smooth(_goals_trail, Vector3(bp.x, AIM_Y, bp.z), GOALS_SMOOTH)
-	at.x = clampf(at.x, -REPLAY_STOP, REPLAY_STOP)
-	_shoot(eye, at, GOALS_WIDTH)
+	_goals_shot(signf((oval.global_transform * Vector3(_replay_x, 0.0, 0.0)).x))
+
+
+## The goals camera for a kick at the goals at world end `end` (+1 or -1): it stands behind the
+## other goals and holds on these posts.
+func _goals_shot(end: float) -> void:
+	var eye := Vector3(-end * (MatchMotion.HALF_LEN + EYE_BACK), EYE_UP, 0.0)
+	_shoot(eye, Vector3(end * MatchMotion.HALF_LEN, GOALS_AIM_Y, 0.0), GOALS_WIDTH)
 
 
 ## `aim` added to `trail` (now), and the mean of the trail's last `over` seconds.
