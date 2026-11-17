@@ -2629,6 +2629,11 @@ func _test_score_bug() -> void:
 	var m: Control = load("res://scenes/MatchScene.tscn").instantiate()
 	root.add_child(m)
 	await _settle()
+	# Past the pre-match calls, which open over the picture.
+	var box = m.find_child("CoachBox", true, false)
+	var start: Button = box.find_child("StartQuarter", true, false) if box != null else null
+	if start != null:
+		start.emit_signal("pressed")
 	await _settle()
 	var pitch: Control = m.get("_pitch")
 	var board: Control = m.get("_board")
