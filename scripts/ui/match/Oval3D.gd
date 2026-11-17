@@ -464,6 +464,10 @@ func _dress(p: Dictionary, t: Dictionary) -> void:
 	_number(p, int(t.get("num", -1)))
 	var who = GameDB.player_by_id(pid) if pid != "" else null
 	look(p, GameDB.figure_look(who) if who != null else StoppageVignette.UMPIRE_LOOK)
+	# His own Tripo head, where the director made one (rule 2.99): the MetaHuman head comes off.
+	_head(p, pid)
+	# His real height and weight, and a face of his own (Oval3DBuild; row 202, 2d).
+	Oval3DBuild.apply(p, player_glb, who if who is Dictionary else {}, pid)
 
 
 ## Skin, hair colour and hair style on one figure. l: {"skin", "hair"} palette indices
@@ -604,6 +608,10 @@ static func _skull(m: Mesh) -> Mesh:
 				if near.has(c):
 					near[c] += fn
 	var out := ArrayMesh.new()
+	# The builds' and faces' morph targets come across, their scalp drawn in by the same lift.
+	out.blend_shape_mode = am.blend_shape_mode
+	for b in range(am.get_blend_shape_count()):
+		out.add_blend_shape(am.get_blend_shape_name(b))
 	for s in range(surfs.size()):
 		var a: Array = surfs[s]
 		var ns: PackedVector3Array = a[Mesh.ARRAY_NORMAL]
@@ -613,11 +621,139 @@ static func _skull(m: Mesh) -> Mesh:
 			if n.length_squared() > 0.0:
 				ns[i] = n.normalized()
 		a[Mesh.ARRAY_NORMAL] = ns
-		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, a)
+		var shapes := am.surface_get_blend_shape_arrays(s)
+		for sh in shapes:
+			var bv: PackedVector3Array = (sh as Array)[Mesh.ARRAY_VERTEX]
+			for i in range(bv.size()):
+				if lift.has(k[i]):
+					bv[i] -= lift[k[i]] * SCALP_LIFT
+			(sh as Array)[Mesh.ARRAY_VERTEX] = bv
+		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, a, shapes)
 		out.surface_set_material(s, am.surface_get_material(s))
 		out.surface_set_name(s, am.surface_get_name(s))
 	_skulls[m] = out
 	return out
+
+
+## The real players' Tripo heads (rule 2.99): <player id>.glb, fitted to the base body's head by
+## tools/oval3d/heads/fit_head.py, in the body's rest space. Hung on the head bone, so it follows
+## his height and every turn of his head.
+const HEADS_DIR := "res://assets/oval3d/heads/"
+const HEAD_BONE := "head"
+## The MetaHuman head is taken off above this height (base body rest space, metres): under his
+## Tripo head's jaw, so the MetaHuman neck meets it and fills in behind his beard.
+const HEAD_CUT := 1.65
+## Behind the ears the bust ends higher, so there the body's neck goes up to HEAD_CUT_BACK and
+## tucks inside his head (z: the body's front, +; linear between HEAD_CUT_Z).
+const HEAD_CUT_BACK := 1.71
+const HEAD_CUT_Z := Vector2(-0.02, 0.0)
+## Per head: {"skin": "#rrggbb"}, his skin under the back of his neck (fit_head.py prints it), so
+## the body under his head is his colour.
+const HEADS_JSON := "res://assets/oval3d/heads/heads.json"
+static var _headless := {}
+static var _heads_info = null
+
+
+## Put his own head on figure p if there is one; otherwise leave the MetaHuman head.
+func _head(p: Dictionary, pid: String) -> void:
+	if p.get("head_node") is Node:
+		(p["head_node"] as Node).free()
+	p.erase("head_node")
+	var path := HEADS_DIR + pid + ".glb"
+	var has_head := pid != "" and ResourceLoader.exists(path)
+	for mi in (p["node"] as Node3D).find_children("*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		if not m.has_meta("kit"):
+			continue
+		if not m.has_meta("full_mesh"):
+			m.set_meta("full_mesh", m.mesh)
+		var want: Mesh = _without_head(m.get_meta("full_mesh")) if has_head else m.get_meta("full_mesh")
+		if m.mesh != want:
+			var over := []
+			for s in range(m.get_surface_override_material_count()):
+				over.append(m.get_surface_override_material(s))
+			var shapes := []
+			for k in range(m.get_blend_shape_count()):
+				shapes.append(m.get_blend_shape_value(k))
+			m.mesh = want
+			for s in range(over.size()):
+				m.set_surface_override_material(s, over[s])
+			for k in range(shapes.size()):
+				m.set_blend_shape_value(k, shapes[k])
+	if not has_head:
+		return
+	if p.get("hair_node") is Node:
+		(p["hair_node"] as Node).free()
+	p.erase("hair_node")
+	if _heads_info == null:
+		_heads_info = JSON.parse_string(FileAccess.get_file_as_string(HEADS_JSON)) if FileAccess.file_exists(HEADS_JSON) else {}
+		if not _heads_info is Dictionary:
+			_heads_info = {}
+	# His skin on the body, and no painted crop on the body's neck where it tucks into his head.
+	var skin := str((_heads_info as Dictionary).get(pid, {}).get("skin", ""))
+	for mi in (p["node"] as Node3D).find_children("*", "MeshInstance3D", true, false):
+		if (mi as MeshInstance3D).has_meta("kit"):
+			(mi as GeometryInstance3D).set_instance_shader_parameter("scalp", SCALP["bald"])
+			if skin != "":
+				(mi as GeometryInstance3D).set_instance_shader_parameter("skin", Color(skin))
+	var skel: Skeleton3D = p["skel"]
+	var b := skel.find_bone(HEAD_BONE)
+	if b < 0:
+		return
+	# The head bone's place on the base body (before his build moves the joints).
+	var at := Transform3D.IDENTITY
+	var rest0: Array = p.get("rest0", [])
+	var chain := b
+	while chain >= 0:
+		at = (rest0[chain] if rest0.size() > chain else skel.get_bone_rest(chain)) * at
+		chain = skel.get_bone_parent(chain)
+	var on := BoneAttachment3D.new()
+	on.name = "Head"
+	on.bone_name = HEAD_BONE
+	skel.add_child(on)
+	var head: Node3D = (load(path) as PackedScene).instantiate()
+	head.transform = at.affine_inverse()
+	on.add_child(head)
+	p["head_node"] = on
+
+
+## The body with the MetaHuman head taken off: every skin triangle wholly above HEAD_CUT, the
+## eyes and the scalp. The vertices and morphs stay, so his build still applies.
+static func _without_head(m: Mesh) -> Mesh:
+	if _headless.has(m):
+		return _headless[m]
+	var am := m as ArrayMesh
+	if am == null:
+		return m
+	var out := ArrayMesh.new()
+	out.blend_shape_mode = am.blend_shape_mode
+	for k in range(am.get_blend_shape_count()):
+		out.add_blend_shape(am.get_blend_shape_name(k))
+	for s in range(am.get_surface_count()):
+		var a := am.surface_get_arrays(s)
+		var mat := am.surface_get_material(s)
+		var nm := mat.resource_name if mat != null else ""
+		var vs: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
+		var idx: PackedInt32Array = a[Mesh.ARRAY_INDEX]
+		var keep := PackedInt32Array()
+		if nm != HAIR_SURFACE and nm != EYE_MATERIAL:
+			for f in range(0, idx.size(), 3):
+				if _above_cut(vs[idx[f]]) and _above_cut(vs[idx[f + 1]]) and _above_cut(vs[idx[f + 2]]):
+					continue
+				keep.append_array([idx[f], idx[f + 1], idx[f + 2]])
+		if keep.is_empty():
+			keep = PackedInt32Array([0, 0, 0])
+		a[Mesh.ARRAY_INDEX] = keep
+		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, a, am.surface_get_blend_shape_arrays(s))
+		out.surface_set_material(s, mat)
+		out.surface_set_name(s, am.surface_get_name(s))
+	_headless[m] = out
+	return out
+
+
+static func _above_cut(v: Vector3) -> bool:
+	var t := clampf((v.z - HEAD_CUT_Z.x) / (HEAD_CUT_Z.y - HEAD_CUT_Z.x), 0.0, 1.0)
+	return v.y > lerpf(HEAD_CUT_BACK, HEAD_CUT, t)
 
 
 ## A triangle's outward normal, scaled by its area (Godot winds front faces clockwise).
