@@ -2904,6 +2904,7 @@ func _test_three_d_cameras(res: Dictionary) -> void:
 	var inside := 0
 	var wide := 0.0
 	var goals_frames := 0
+	var cut_ks := {}  # the set shots the goals camera cut to: one cut each
 	var goals_eyes := {}
 	var cuts := 0
 	var back := 0
@@ -2955,6 +2956,8 @@ func _test_three_d_cameras(res: Dictionary) -> void:
 				cuts += 1
 				var s := pv.director.shot_now()
 				shot_ok += 1 if not s.is_empty() and bool(s["set"]) else 0
+				if not s.is_empty():
+					cut_ks[int(s["k"])] = true
 			else:
 				back += 1
 			last = tv.shot
@@ -2980,6 +2983,8 @@ func _test_three_d_cameras(res: Dictionary) -> void:
 	_check(wide < 0.5, "The main camera stays on its mount, 57 m across where it aims (off by %.2f m)" % wide)
 	_check(cuts > 0 and shot_ok == cuts and back >= cuts - 1,
 			"Set shots cut live to the camera behind the goals and back (%d cuts, %d set shots, %d back)" % [cuts, shot_ok, back])
+	_check(cut_ks.size() == cuts,
+			"Each set shot is one cut: no flick back to the main camera while he lines up (%d cuts, %d shots)" % [cuts, cut_ks.size()])
 	goals = goals_seen.size()
 	_check(closes.size() >= 2 and close_ok == closes.size() and close_frames > 0,
 			"Ball-ups show the ruckmen close, from a wing camera (%d ruckmen, %d from the wing)" % [closes.size(), close_ok])

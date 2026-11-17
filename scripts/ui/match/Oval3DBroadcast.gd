@@ -64,6 +64,7 @@ var _last_ball := Vector3.INF # where the ball was last frame
 var shot := "main"            # the camera the picture comes from: "main" or "goals"
 var _end_x := 0.0             # the goals camera's end: the goal line's x on the ground (+ or -)
 var _tail := -1.0             # s left on the goals camera after the ball got there; -1 not yet
+var _shot_k := -1            # the shot the goals camera is on (its event)
 var _close_eye := Vector3.ZERO  # the wing camera the close-up is shot from
 var _close_who := -1          # the ruckman the close-up is on; -1 none
 var _close_trail: Array = []
@@ -124,6 +125,16 @@ func frame(dt: float, wall := 0.0) -> void:
 		_shoot(main_eye(), main_aim, MAIN_WIDTH)
 
 
+## The kick the goals camera waits for is through. The kicker's pause on his mark (before the
+## kick) reads as no shot at all, so the camera holds until play is past the kick's own event.
+func _past_shot() -> bool:
+	var d = oval.director
+	if d._beat.is_empty():
+		return d.cursor > _shot_k
+	var bk := int(d._beat["k"])
+	return bk > _shot_k or (bk == _shot_k and d._pi >= d._phases.size())
+
+
 ## Rule 2.102: on the goals camera from the line-up to SHOT_TAIL after the ball gets there.
 func _set_shot(dt: float) -> void:
 	var s := oval.director.shot_now()
@@ -135,10 +146,11 @@ func _set_shot(dt: float) -> void:
 		if not s.is_empty() and bool(s["set"]) and str(s["phase"]) != "celebrate":
 			shot = "goals"
 			_end_x = (s["to"] as Vector2).x
+			_shot_k = int(s["k"])
 			_goals_trail.clear()
 			_tail = -1.0
 		return
-	if _tail < 0.0 and (s.is_empty() or str(s["phase"]) == "celebrate"):
+	if _tail < 0.0 and ((s.is_empty() and _past_shot()) or (not s.is_empty() and str(s["phase"]) == "celebrate")):
 		_tail = SHOT_TAIL
 	elif _tail >= 0.0:
 		_tail -= dt
