@@ -30,6 +30,11 @@ Shapes and colours only, never sponsors, maker or league logos (director 2026-11
 off"). The club marks that are part of the guernsey's own design (the Lions' lion, Carlton's
 monogram, the Eagles' head, the Suns' sun) are drawn: director 2026-11-17, "Draw all five marks".
 Each mask is cut from the club's shop photo (the Suns' sun is redrawn from its measured shapes).
+
+y 1 is the photo's hem. On the 3D player the guernsey's hem falls 87% of the way down the square
+(measured with a ruler picture, 2026-11-17), so each side is drawn whole and then squeezed into the
+top 87%: the photo's hem lands on the player's hem and nothing above it is cut off (director
+2026-11-17: "have the guernseys look exactly like the real ones").
 """
 import csv
 import math
@@ -72,6 +77,9 @@ def parse(path, clubs):
     return kits
 
 
+HEM = 0.87  # where the 3D guernsey's hem falls down the square
+
+
 def draw(ops, cols, marks_dir):
     """The side's picture: kit_atlas's ops, then each mark stamped on top."""
     im = kit_atlas.draw_side([o for o in ops if o.split()[0] != "mark"], cols)
@@ -84,7 +92,10 @@ def draw(ops, cols, marks_dir):
         mask = Image.open(os.path.join(marks_dir, name + ".png")).convert("L")
         mask = mask.resize((x1 - x0, y1 - y0), Image.LANCZOS)
         im.paste(Image.new("RGB", mask.size, c), (x0, y0), mask)
-    return im
+    # The photo's hem onto the player's hem; under it, the bottom row carried down (never seen).
+    full = im.crop((0, im.height - 1, im.width, im.height)).resize(im.size)
+    full.paste(im.resize((im.width, round(im.height * HEM)), Image.LANCZOS), (0, 0))
+    return full
 
 
 def main():

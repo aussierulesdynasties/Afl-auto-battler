@@ -436,7 +436,7 @@
 		"phase": ["bonding"],
 		"per_season": 1,
 		"subject": {"kind": "club"},
-		"title": ["Thunder Day"],
+		"title": ["Owls Day"],
 		"text": ["The members want a club day: families on the lawns, players signing jumpers and the club song learnt by heart. It's how a new club makes its traditions, but it eats a training day."],
 		"choices": [
 			{"key": "short", "label": "A short signing, then train",
