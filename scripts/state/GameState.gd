@@ -9208,14 +9208,45 @@ func _decide_retirements() -> void:
 ## market opens (_open_market): no club signs him. Yours decides, as for any
 ## player out of contract; re-signed, he is the sim's from then on. Counted as a delisting, not a retirement (#1631 kept those at
 ## two or three a club).
+## On your list the coach's answer to his card (CareerEnd) decides first: re-signed,
+## he is not here (real_end 0); asked to retire and agreeing, he retires; delisted,
+## he goes now with half of what is left on his deal on next season's cap.
 func _real_delistings() -> void:
 	var year := season_year + 1
+	var delist := []
 	for code in season.lists:
 		for p in season.lists[code]:
 			if p.has("real_end") or retiring_now(p) or not Prospects.real_delisting_due(p, year):
 				continue
 			p["real_end"] = year
+			# The deal as signed, for a delisting answered after this cut (CareerEnd).
+			p["real_end_years"] = int(p.get("contract_years", 1))
+			var talk: Dictionary = p.get("end_talk", {})
+			if str(code) == my_club and int(talk.get("year", 0)) == year and str(talk.get("call", "")) == "delist":
+				delist.append(p)
+				continue
 			p["contract_years"] = mini(int(p.get("contract_years", 1)), 1)
+	for p in delist:
+		career_end_delist(p)
+
+
+## Your player whose real career ends, delisted from his card (CareerEnd): off
+## your list now, and half of what is left on his deal as signed stays on next
+## season's cap (_release). His AFL career ends when the market opens.
+func career_end_delist(p: Dictionary) -> void:
+	if not my_list.has(p):
+		return
+	p["contract_years"] = maxi(int(p.get("contract_years", 1)), int(p.get("real_end_years", 1)))
+	_release(my_club, p, false)
+	HonourBoard.leave(self, p, "delisted")
+	_open_market([p])
+
+
+## Your player whose real career ends, re-signed from his card (CareerEnd): one
+## season at his asking price, and from then on his career is the sim's.
+func career_end_resign(p: Dictionary) -> void:
+	_resign(p, 1)
+	p["real_end"] = 0
 
 
 ## Who is still on `list` after the coming rollover: everyone but its
@@ -14959,6 +14990,7 @@ func _next_week_event() -> void:
 		week_events.push_front(year_cards[i])
 	ClubArcs.week(self)
 	LegacyRollover.week(self)
+	CareerEnd.week(self)
 
 
 ## Skip to the end of the season (director, 2026-11-07: "We need to bring back
@@ -15190,6 +15222,10 @@ func resolve_card(index: int, choice: int) -> String:
 	card["outcome"] = out
 	ClubArcs.answered(self, card, choice)
 	LegacyRollover.answered(self, card, choice)
+	var ended := CareerEnd.answered(self, card, choice)
+	if ended != "":
+		out = ended
+		card["outcome"] = out
 	mark_dirty()
 	return out
 
