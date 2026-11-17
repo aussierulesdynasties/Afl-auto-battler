@@ -159,8 +159,10 @@ func _add_look(p: Dictionary) -> void:
 		m.primary_rotation_axis = Vector3.AXIS_Y
 		m.use_angle_limitation = true
 		m.symmetry_limitation = true
-		m.primary_limit_angle = deg_to_rad(l[1] * 2.0)
-		m.secondary_limit_angle = deg_to_rad(l[2] * 2.0)
+		# With symmetry the limit is each way (Godot), so the angles go in as they are: twice them
+		# craned a ruckman's head 70 degrees back at the bounce.
+		m.primary_limit_angle = deg_to_rad(l[1])
+		m.secondary_limit_angle = deg_to_rad(l[2])
 		m.influence = l[3]
 		skel.add_child(m)
 		m.target_node = m.get_path_to(target)
