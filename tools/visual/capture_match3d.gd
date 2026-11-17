@@ -31,6 +31,7 @@ func _run() -> void:
 	var plan := ""
 	var replay := false
 	var film := 0.0
+	var windows: Array = []  # [a, b] frame ranges of the film saved as PNGs
 	var a := OS.get_cmdline_user_args()
 	for i in range(a.size()):
 		match str(a[i]):
@@ -44,6 +45,9 @@ func _run() -> void:
 				replay = true
 			"--film":
 				film = float(a[i + 1])
+			"--windows":
+				for w in str(a[i + 1]).split(","):
+					windows.append([int(w.split("-")[0]), int(w.split("-")[1])])
 			"--plan":
 				plan = str(a[i + 1])
 			"--club":
@@ -92,8 +96,14 @@ func _run() -> void:
 			var go = scene.find_child("StartQuarter", true, false)
 			if go != null and go.is_visible_in_tree():
 				go.pressed.emit()
-			var tv: Oval3DBroadcast = pitch._tv
-			var now := "replay" if tv.replaying else ("close" if tv._close_who >= 0 else tv.shot)
+			# An in-game call stops the play: the coach takes its first option, as the default.
+			var sim = state.pending_sim
+			var card = scene.find_child("MomentCard", true, false)
+			if card != null and is_instance_valid(card) and sim != null and not sim.pending_moment.is_empty():
+				print("MOMENT ", f)
+				scene.call("_on_moment_choice", int(sim.pending_moment.get("default", 0)))
+			var tv = pitch._tv
+			var now: String = "replay" if tv.replaying else ("close" if tv._close_who >= 0 else tv.shot)
 			if now != shot:
 				print("CUT ", f, " ", now)
 				shot = now
@@ -102,6 +112,11 @@ func _run() -> void:
 				if replays == 2:
 					tap_at = f + 30
 			was = tv.replaying
+			for w in windows:
+				if f >= int(w[0]) and f <= int(w[1]):
+					var img := root.get_viewport().get_texture().get_image()
+					img.convert(Image.FORMAT_RGB8)
+					img.save_png("%s_%05d.png" % [out, f])
 			if f == tap_at and tv.replaying:
 				print("TAP ", f)
 				# A finger on the middle of the picture, through the window like a phone's touch.
