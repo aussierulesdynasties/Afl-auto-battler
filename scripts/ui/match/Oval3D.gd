@@ -476,6 +476,8 @@ func _dress(p: Dictionary, t: Dictionary) -> void:
 	_number(p, int(t.get("num", -1)))
 	var who = GameDB.player_by_id(pid) if pid != "" else null
 	look(p, GameDB.figure_look(who) if who != null else StoppageVignette.UMPIRE_LOOK)
+	# His real height and weight, and a face of his own (Oval3DBuild; row 202, 2d).
+	Oval3DBuild.apply(p, player_glb, who if who is Dictionary else {}, pid)
 
 
 ## Skin, hair colour and hair style on one figure. l: {"skin", "hair"} palette indices
@@ -616,6 +618,10 @@ static func _skull(m: Mesh) -> Mesh:
 				if near.has(c):
 					near[c] += fn
 	var out := ArrayMesh.new()
+	# The builds' and faces' morph targets come across, their scalp drawn in by the same lift.
+	out.blend_shape_mode = am.blend_shape_mode
+	for b in range(am.get_blend_shape_count()):
+		out.add_blend_shape(am.get_blend_shape_name(b))
 	for s in range(surfs.size()):
 		var a: Array = surfs[s]
 		var ns: PackedVector3Array = a[Mesh.ARRAY_NORMAL]
@@ -625,7 +631,14 @@ static func _skull(m: Mesh) -> Mesh:
 			if n.length_squared() > 0.0:
 				ns[i] = n.normalized()
 		a[Mesh.ARRAY_NORMAL] = ns
-		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, a)
+		var shapes := am.surface_get_blend_shape_arrays(s)
+		for sh in shapes:
+			var bv: PackedVector3Array = (sh as Array)[Mesh.ARRAY_VERTEX]
+			for i in range(bv.size()):
+				if lift.has(k[i]):
+					bv[i] -= lift[k[i]] * SCALP_LIFT
+			(sh as Array)[Mesh.ARRAY_VERTEX] = bv
+		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, a, shapes)
 		out.surface_set_material(s, am.surface_get_material(s))
 		out.surface_set_name(s, am.surface_get_name(s))
 	_skulls[m] = out

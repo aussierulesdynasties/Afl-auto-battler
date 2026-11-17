@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://dn4wenosbs8q4"
+
+[deps]
+
+files=["res://tools/oval3d/heads/best23_2026.rank.translation", "res://tools/oval3d/heads/best23_2026.first.translation", "res://tools/oval3d/heads/best23_2026.last.translation", "res://tools/oval3d/heads/best23_2026.overall.translation", "res://tools/oval3d/heads/best23_2026.id.translation"]
+
+source_file="res://tools/oval3d/heads/best23_2026.csv"
+dest_files=["res://tools/oval3d/heads/best23_2026.rank.translation", "res://tools/oval3d/heads/best23_2026.first.translation", "res://tools/oval3d/heads/best23_2026.last.translation", "res://tools/oval3d/heads/best23_2026.overall.translation", "res://tools/oval3d/heads/best23_2026.id.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true
