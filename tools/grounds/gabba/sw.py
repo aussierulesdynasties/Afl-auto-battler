@@ -31,15 +31,15 @@ def _slab(q, hs, m, capm, uw, vm):   # 4-sided block with a sloped top (heights 
         L += s
     f = bm.faces.new(vt); f.material_index = capm; f = bm.faces.new(vb[::-1]); f.material_index = capm
 
-# pale gate block on Vulture St: front at the footpath, back on the facade. Heights from vertical edges:
+# pale gate block on Vulture St (roof dark: photo shows the shaded deck under the stadium overhang above its face): front at the footpath, back on the facade. Heights from vertical edges:
 # photo (477,927)-(479,995) 23.6 m, (567,925) 24.7 m -> G1 24 m; G2 21 m (top y ~935); G3 slopes 17.3 m (600,947) -> 13.4 m (687,958)
 _F = [(111.1, 93.3), (93.1, 98.2), (86.1, 100.0), (67.1, 104.6)]
 _Bk = [_fac(_ang(p), 0.3) for p in _F]
 _L = [math.dist(_F[i], _F[i + 1]) for i in range(3)]; _U = [0.0, _L[0], _L[0] + _L[1], sum(_L)]
-prism(_ccw([_F[0], _F[1], _Bk[1], _Bk[0]]), 0, 24.0, PT, True, 4, 4.8, 4.8, RD)
-prism(_ccw([_F[1], _F[2], _Bk[2], _Bk[1]]), 0, 21.0, PT, True, 4, 4.8, 4.8, RD)
+prism(_ccw([_F[0], _F[1], _Bk[1], _Bk[0]]), 0, 24.0, PT, True, 4, 4.8, 4.8, DK)
+prism(_ccw([_F[1], _F[2], _Bk[2], _Bk[1]]), 0, 21.0, PT, True, 4, 4.8, 4.8, DK)
 _q = _ccw([_F[2], _F[3], _Bk[3], _Bk[2]]); _h = {_F[2]: 17.3, _F[3]: 13.4, _Bk[3]: 13.4, _Bk[2]: 17.3}
-_slab(_q, [_h[p] for p in _q], PT, RD, 4.8, 4.8)
+_slab(_q, [_h[p] for p in _q], PT, DK, 4.8, 4.8)
 _skin(_F[0], _F[1], 0, 0, 24.0, 24.0, GF, _U[0], _U[1], 46.0, 24.0)
 _skin(_F[1], _F[2], 0, 0, 21.0, 21.0, GF, _U[1], _U[2], 46.0, 24.0)
 _skin(_F[2], _F[3], 0, 0, 17.3, 13.4, GF, _U[2], _U[3], 46.0, 24.0)
@@ -64,3 +64,17 @@ face([(x, y, 16.53) for x, y in _sq], SK, [(0, 0), (1, 0), (1, 1), (0, 1)])
 for (px, py), r in (((138.38, 70.33), 3.3), ((142.62, 62.36), 2.4)):                                                                 # round plant screens, photo (335,895) (311,871)
     tube((px, py, 15.0), (px, py, 18.5), r, r, WR, 28)
     face([(px + (r - 0.2) * math.cos(t), py + (r - 0.2) * math.sin(t), 18.52) for t in [2 * math.pi * k / 28 for k in range(28)]], DK)
+
+# dark navy face between the gate-7 block and the tiled gate face (photo 432-480 x 924-1000): skins 3 cm proud, away from each block's centre
+def _dskin(p0, p1, h, ctr, m=NW):
+    nx, ny = p1[1] - p0[1], -(p1[0] - p0[0]); L = math.hypot(nx, ny); nx, ny = nx / L, ny / L
+    if nx * ((p0[0] + p1[0]) / 2 - ctr[0]) + ny * ((p0[1] + p1[1]) / 2 - ctr[1]) < 0: nx, ny = -nx, -ny
+    q0 = (p0[0] + nx * 0.03, p0[1] + ny * 0.03); q1 = (p1[0] + nx * 0.03, p1[1] + ny * 0.03)
+    vs = [(*q0, 0.0), (*q1, 0.0), (*q1, h), (*q0, h)]; e = (q1[0] - q0[0], q1[1] - q0[1])
+    uvs = [(0, 0), (L / 3.0, 0), (L / 3.0, h / 3.0), (0, h / 3.0)]
+    if e[1] * nx - e[0] * ny < 0: vs, uvs = vs[::-1], uvs[::-1]
+    face(vs, m, uvs)
+_wc = (sum(x for x, y in _W) / len(_W), sum(y for x, y in _W) / len(_W))
+_dskin(_NR, (123.36, 86.28), 15.0, _wc); _dskin((123.36, 86.28), (115.99, 87.35), 15.0, _wc)
+_gc = ((_F[0][0] + _F[1][0] + _Bk[0][0] + _Bk[1][0]) / 4, (_F[0][1] + _F[1][1] + _Bk[0][1] + _Bk[1][1]) / 4)
+_dskin(_F[0], _Bk[0], 24.0, _gc)

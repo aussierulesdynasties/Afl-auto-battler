@@ -55,7 +55,10 @@ func _run() -> void:
 	env.environment = e
 	world.add_child(env)
 	var sun := DirectionalLight3D.new()
-	sun.rotation_degrees = Vector3(-45, 35, 0)
+	# sun fitted to the roof's shadow edge on the oval in g49: az -12, el 25 in the Blender frame (x, y, z) -> Godot (x, z, -y)
+	var saz := deg_to_rad(-12.0); var sel := deg_to_rad(25.0)
+	var to_sun := Vector3(cos(saz) * cos(sel), sin(sel), -sin(saz) * cos(sel))
+	sun.basis = Basis.looking_at(-to_sun, Vector3.UP)
 	sun.shadow_enabled = true
 	sun.light_energy = 1.5
 	sun.light_color = Color(1.0, 0.97, 0.92)
