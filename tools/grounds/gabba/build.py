@@ -224,15 +224,13 @@ for (x0, y0), (x1, y1) in [((-0.9, -90.6), (-22.2, -84.6))]:
     nx, ny = x0 - cx, y0 - cy; L = math.hypot(nx, ny); nx, ny = nx / L * 2.0, ny / L * 2.0
     x0, y0, x1, y1 = x0 - nx * 1.25, y0 - ny * 1.25, x1 - nx * 1.25, y1 - ny * 1.25   # 2.5 m toward the field: clear of the seat rows
     prism([(x0, y0), (x1, y1), (x1 + nx / 2, y1 + ny / 2), (x0 + nx / 2, y0 + ny / 2)], 1.0, 19.0, SC)   # 1 m deep, top at photo y 352
-    # screen face toward the field, then the white box at its foot (photo 777-801 x 390-405: 42-73% along, up to 6.2 m)
+    # screen face toward the field (the white box at its foot in the photo is left out: director 2026-11-18 "remove it")
     ox, oy = -nx / 2.0 * 0.06, -ny / 2.0 * 0.06
     face([(x0 + ox, y0 + oy, 1.0), (x1 + ox, y1 + oy, 1.0), (x1 + ox, y1 + oy, 19.0), (x0 + ox, y0 + oy, 19.0)], SF, [(0, 0), (1, 0), (1, 1), (0, 1)])
     bx = lambda f: (x0 + (x1 - x0) * f, y0 + (y1 - y0) * f)
     # plinth along its foot, wider than the face (photo 735-835 x 397-404: 13% past each end, 1.0 m tall, 2 m proud, the face stands on it, dark as photo)
     (lx_, ly_), (rx_, ry_) = bx(-0.13), bx(1.13); px_, py_ = -nx / 2.0 * 2.0, -ny / 2.0 * 2.0
     prism([(lx_ + nx / 2, ly_ + ny / 2), (rx_ + nx / 2, ry_ + ny / 2), (rx_ + px_, ry_ + py_), (lx_ + px_, ly_ + py_)], 0.0, 1.0, DK, True, 1, 4.0, None, DK)
-    (ax_, ay_), (bx_, by_) = bx(0.42), bx(0.73); fx, fy = -nx / 2.0 * 1.2, -ny / 2.0 * 1.2
-    prism([(ax_ + ox, ay_ + oy), (bx_ + ox, by_ + oy), (bx_ + fx, by_ + fy), (ax_ + fx, ay_ + fy)], 0.0, 6.2, RD, True, 1, 6.0, None, RD)
 exec(open('sw.py').read())   # south-west corner buildings
 # concourse apron around the facade
 for i in range(N):
