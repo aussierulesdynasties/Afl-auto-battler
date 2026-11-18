@@ -130,5 +130,32 @@ img=np.zeros((H_,W_,3))+rgb('#e1dccb');img+=noise(H_,W_,10,4,73)[...,None];img[-
 im=Image.fromarray(np.clip(img,0,255).astype(np.uint8));d=ImageDraw.Draw(im)
 # no lettering (director 2026-11-18): blank cream panel
 im.save(os.path.join(OUT,'cream_band.png'));PANEL['cream_band']=True
+# ---- south wing and under-deck (w04, c06, c08, c09): light grey render, charcoal wall, door panels, white benches ----
+img=base(int(2*PX),int(2*PX),'#a8a39a',5,6,401)+noise(int(2*PX),int(2*PX),90,3,402)[...,None]   # fine trowelled speckle
+save('render_grey',img);TILE['render_grey']=(2,2)
+save('under_wall',painted('#55575a',var=4,seed=403));TILE['under_wall']=(2,2)
+save('bench_white',painted('#e4e4df',tile=1.0,var=3,seed=404));TILE['bench_white']=(1,1)
+# black louvres on the wing's south face (c09): horizontal blades about 0.1 m apart, each lit on top, shadowed under
+w,h=int(1*PX),int(1*PX);img=base(h,w,'#1f2022',3,4,406);y_=(np.arange(h)/PX)%0.1
+img+=np.where(y_<0.012,26,np.where(y_>0.085,-10,0))[:,None,None];save('louvre_black',img);TILE['louvre_black']=(1,1)
+w,h=260,350;img=base(h,w,'#8f9295',3,4,405);yy,xx=np.mgrid[0:h,0:w]
+fr=(xx<9)|(xx>w-10)|(yy<9);img[fr]=rgb('#6c6f72')                       # steel frame round a flush door leaf
+img[(np.abs(xx-w*0.82)<5)&(np.abs(yy-h*0.52)<14)]=rgb('#c9cbcc')          # pull handle
+save('door_panel',img);PANEL['door_panel']=True
+def bars_rgba(name,Wm,Hm,pitch,bw,col,rails=(),posts=(),post_w=0.06,bows=False,seed=0):
+    # transparent background; vertical bars every `pitch` m (`bw` m wide), optional rails (z0,z1 in m from the bottom)
+    # and posts (x positions in m); bows: a half-loop over every pair of bars (bow-top fence)
+    Wp,Hp=int(Wm*PX),int(Hm*PX);A=np.zeros((Hp,Wp,4));yy,xx=np.mgrid[0:Hp,0:Wp]/PX;z=Hm-yy
+    on=((xx%pitch)<bw)&(z<Hm-(0.25 if bows else 0.0))
+    for z0,z1 in rails:on|=(z>=z0)&(z<z1)
+    for x0 in posts:on|=(np.abs(xx-x0)<post_w/2)
+    if bows:
+        cx=np.floor(xx/(2*pitch))*2*pitch+pitch+bw/2;r=np.hypot((xx-cx)/pitch,(z-(Hm-0.25))/0.22)
+        on|=(np.abs(r-1.0)<bw/pitch*0.9)&(z>=Hm-0.25)
+    A[...,:3]=rgb(col)+noise(Hp,Wp,20,3,seed)[...,None];A[...,3]=np.where(on,255,0)
+    Image.fromarray(np.clip(A,0,255).astype(np.uint8),'RGBA').save(os.path.join(OUT,name+'.png'));TILE[name]=(Wm,Hm)
+bars_rgba('rail_bars',1.2,1.0,0.12,0.02,'#d9dbdc',rails=((0.0,0.04),),seed=410)                                    # stand balustrades: white bars
+bars_rgba('rail_bow',2.4,1.2,0.12,0.018,'#1d1e20',rails=((0.08,0.12),(0.9,0.94)),posts=(0.03,),bows=True,seed=411)  # black bow-top
+bars_rgba('rail_pal',2.4,1.8,0.13,0.025,'#8a8e92',rails=((0.12,0.17),(1.6,1.65)),posts=(0.04,),post_w=0.07,seed=412) # grey vertical-bar palisade
 json.dump(dict(TILE=TILE,PANEL=list(PANEL)),open(os.path.join(OUT,'tex.json'),'w'))
 print(sorted(os.listdir(OUT)))

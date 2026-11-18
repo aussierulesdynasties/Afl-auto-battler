@@ -3,7 +3,8 @@
 # Read off: aerial (plan, blue wall 2.6 m via vertical lines), satellite (blue strip ~7 m deep, white strip ~4.5 m,
 # green hip roof behind), w09 (heights in door units), w04 (green eave ~6.6 m at its south-east corner).
 import json,numpy as np
-P0=np.array([-68.7,62.6]);EU=np.array([-74.1,42.4])-P0;EU/=np.linalg.norm(EU);EW=np.array([EU[1],-EU[0]])
+# front line moved onto the satellite with the stand (same rigid shift)
+P0=np.array([-61.69,69.88]);EU=np.array([-67.92,49.92])-P0;EU/=np.linalg.norm(EU);EW=np.array([EU[1],-EU[0]])
 if EW[0]>0:EW=-EW
 C=dict(blue_u1=24.0,blue_d=15.6,blue_zf=2.6,blue_ridge_w=8.0,blue_zr=4.9,ovh=0.6,
        bal_u0=20.9,bal_u1=29.5,bal_d=4.5,bal_floor=3.2,bal_z=6.3,
