@@ -532,10 +532,60 @@ func _run_phases(h: float) -> bool:
 			_pt += h
 			h = 0.0
 		if not _done(p):
+			_brake_for_next()
 			return false
 		_pi += 1
 	_beat = {}
 	return true
+
+
+## Whoever takes it up at pace next brakes for it already, whatever the play before his gather
+## is (the spill, the last knock, a kick that comes loose): flat out through it he reached the
+## ball too fast to go down for it and ran over it upright (suite match, seed 42: 9.8 m/s at
+## 1176 s, 9.3 m/s at 1471 s, 6.6 m/s at 1334 s). "The visual sim needs to marry up to the
+## match sim" (director 2026-11-17): MatchSim has him gather it. The phase keeps its own goal for
+## him; this only holds his top speed to the gather's own braking (as _pace_in does once it
+## starts), never below the scoop's pace.
+func _brake_for_next() -> void:
+	var w := -1
+	# The next phase that plays the ball, past the waits, the log and the ball coming loose
+	# (seed 42, 1334 s: a kick spilled at the receiver's feet, and he came on to it at 6.6 m/s).
+	var j := _pi + 1
+	while j < _phases.size() and str((_phases[j] as Dictionary).get("t", "")) in ["wait", "emit", "fumble"]:
+		j += 1
+	if j < _phases.size():
+		var q: Dictionary = _phases[j]
+		if str(q.get("t", "")) == "collect" and q.get("pace", false):
+			w = int(q.get("who", -1))
+	else:
+		# The beat's last phase: the next play opens with his gather at pace when MatchSim has
+		# him take the ball this one knocks loose (_start_beat), a possession of his own.
+		var nk := _next_real(int(_beat.get("k", -1)))
+		if nk >= 0 and _loose_src(nk) >= 0 and DISPOSALS.has(str((events[nk] as Dictionary).get("kind", ""))):
+			w = _actor_id(events[nk])
+	_brake_to(w)
+	var p: Dictionary = _phases[_pi]
+	if str(p.get("t", "")) == "fumble" and int(p.get("_kn", 0)) < int(p.get("_knocks", 0)) \
+			and not p.has("_kt") and int(p.get("_kfor", -1)) != int(p.get("_kn", 0)):
+		# Between a scrap's knocks, the man nearest it, who goes down for the next one, already
+		# brakes for it (seed 42, 449 s: chosen 1.9 m from it at 10.5 m/s, he ran over it).
+		_brake_to(_next_knocker(p))
+
+
+func _brake_to(w: int) -> void:
+	if w < 0 or int(ball.get("holder", -1)) == w or not _on_feet(w):
+		return
+	var t: Dictionary = tokens[w]
+	var aim: Vector2 = ball["to"] if str(ball["mode"]) == "flight" else ball["pos"]
+	if str(ball["mode"]) == "loose":
+		aim = _scoop_aim(w, SCOOP_AT_PACE)
+	var dr := (t["pos"] as Vector2).distance_to(aim)
+	var cap := sqrt(SCOOP_SPEED * SCOOP_SPEED + 2.0 * MatchMotion.BRAKE * 0.55 * maxf(dr - SCOOP_LEAD, 0.0))
+	# A lower pace the phase holds him to stands; the brake's own from last frame follows the ball.
+	if t.has("cap") and float(t["cap"]) != float(t.get("_brake", -1.0)):
+		cap = minf(cap, float(t["cap"]))
+	t["cap"] = cap
+	t["_brake"] = cap
 
 
 # ---------------------------------------------------------------------------
@@ -1739,11 +1789,36 @@ func _scoop_aim(who: int, kind := -1) -> Vector2:
 	if kind < 0:
 		kind = _sk(who)
 	var at: Vector2 = tokens[who]["pos"]
-	var touch := float(SCOOPS[kind]["touch"])
-	var aim := _ball_rest()
-	for i in 3:
-		aim = _ball_at((touch - scoop_from(at.distance_to(aim), kind)) * TEMPO)
-	return aim
+	var sc: Dictionary = SCOOPS[kind]
+	var touch := float(sc["touch"])
+	if str(ball["mode"]) != "loose":
+		return _ball_rest()
+	# The first moment his hand and the ball are at the same spot: the time left to the touch
+	# (from where the clip starts for that spot) equals the time the ball takes to roll there.
+	# Three guesses at it never settled for a ball rolling at him (seed 42, 819 s: his hands
+	# aimed where it was 0.24 s on and the touch came 0.75 s on, after it had rolled past).
+	var lo := float(sc["min"]) * TEMPO
+	var hi := (touch - float(sc["from"])) * TEMPO
+	var gap := func(s: float) -> float:
+		return (touch - scoop_from(at.distance_to(_ball_at(s)), kind)) * TEMPO - s
+	if gap.call(lo) <= 0.0:
+		return _ball_at(lo)
+	var a := lo
+	var b := hi
+	var n := 24
+	for i in n:
+		var s := lo + (hi - lo) * float(i + 1) / float(n)
+		if gap.call(s) <= 0.0:
+			a = s - (hi - lo) / float(n)
+			b = s
+			break
+	for i in 20:
+		var m := 0.5 * (a + b)
+		if gap.call(m) > 0.0:
+			a = m
+		else:
+			b = m
+	return _ball_at(b)
 
 
 ## How fast a loose ball is still rolling when his hands meet it if he goes down for it now.
@@ -1810,24 +1885,13 @@ func _knock_step(p: Dictionary) -> bool:
 		var secs := end - _pt if last else leg
 		_knock_on(kid, way if way.length() > 0.01 else _line(tokens[kid]), way.length(),
 				log(100.0) / maxf(secs, 0.4 * TEMPO))
+		p["_kout"] = _pt + scoop_runout(_sk(kid)) / maxf(scoop_speed(_sk(kid)), 0.1)
 		return not last
 	if _pt < leg * float(i + 1) - SCOOP_S - 0.5 * TEMPO:
 		return true
 	if int(p.get("_kfor", -1)) != i:
 		# The man nearest it goes down for it.
-		var nk := _next_real(bk)
-		var w := _actor_id(events[nk]) if nk >= 0 else -1
-		var at := _ball_rest()
-		var best := -1
-		var bd := INF
-		for t in tokens:
-			var id := int(t["id"])
-			if id == kid or id == w or float(t.get("down", 0.0)) > 0.0 or not _on_feet(id):
-				continue
-			var d := (t["pos"] as Vector2).distance_to(at)
-			if d < bd:
-				bd = d
-				best = id
+		var best := _next_knocker(p)
 		if best < 0:
 			return true
 		kid = best
@@ -1842,6 +1906,27 @@ func _knock_step(p: Dictionary) -> bool:
 		_contact(kid, &"ground_ball", _scoop_aim(kid, kind))
 		p["_kt"] = _pt + _scoop_start(kid)
 	return true
+
+
+## The man nearest the loose ball, who goes down for the scrap's next knock: not the one who
+## knocked it last, nor the one MatchSim has gather it. -1 when nobody can.
+func _next_knocker(p: Dictionary) -> int:
+	var bk := int(_beat.get("k", -1))
+	var kid := int(p.get("_kid", -1))
+	var nk := _next_real(bk)
+	var w := _actor_id(events[nk]) if nk >= 0 else -1
+	var at := _ball_rest()
+	var best := -1
+	var bd := INF
+	for t in tokens:
+		var id := int(t["id"])
+		if id == kid or id == w or float(t.get("down", 0.0)) > 0.0 or not _on_feet(id):
+			continue
+		var d := (t["pos"] as Vector2).distance_to(at)
+		if d < bd:
+			bd = d
+			best = id
+	return best
 
 
 ## The longest a player is left collecting before the ball is his.
@@ -2589,7 +2674,13 @@ func _done(p: Dictionary) -> bool:
 			# out, the man who fumbled it too (seed 31: he walked on beside it, and a man who dropped
 			# a mark stood still as it rolled off him).
 			if str(ball["mode"]) in ["dead", "loose"] and int(ball["holder"]) < 0:
-				_scrap_in(p, int(p.get("_kid", -1)))
+				# The man who knocked it is out of it only while he is down for it or running out of
+				# his knock; then he is after it again with the rest (seed 42, 1395 s: the scrap's last
+				# knocker pulled up 1.2 m from it and stood watching it).
+				var out := int(p.get("_kid", -1))
+				if not p.has("_kt") and _pt >= float(p.get("_kout", INF)):
+					out = -1
+				_scrap_in(p, out)
 			if p.has("_held") and str(ball["mode"]) == "loose" and _pt < FUMBLE_HOLD_MAX:
 				if _knock_step(p):
 					return false
