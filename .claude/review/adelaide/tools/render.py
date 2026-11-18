@@ -22,6 +22,7 @@ def mat_for(obj):
     obj.data.materials.append(m)
 
 for f in sorted(glob.glob(os.path.join(ROOT, 'model', '*.ply'))):
+    if os.environ.get('ONLY') and not any(k in os.path.basename(f) for k in os.environ['ONLY'].split(',')): continue
     bpy.ops.wm.ply_import(filepath=f)
     o = bpy.context.selected_objects[0]; shade.build(o)
     bpy.context.view_layer.objects.active = o

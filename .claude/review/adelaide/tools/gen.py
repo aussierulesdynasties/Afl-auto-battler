@@ -28,8 +28,9 @@ def densify(P, step):
         for k in range(n): out.append(a + (b - a) * k / n)
     return np.array(out)
 
-def fill(P, step):
-    """constrained-ish triangulation of polygon P (closed) with interior grid"""
+def fill(P, step, creases=None):
+    """constrained-ish triangulation of polygon P (closed) with interior grid; `creases` (n,2) are dense points along the
+    roof's fold lines (valleys, profile kinks): grid points near them are dropped so triangle edges follow the folds"""
     path = Path(P)
     B = densify(P, step)
     lo, hi = P.min(0), P.max(0)
@@ -37,6 +38,13 @@ def fill(P, step):
     I = np.c_[gx.ravel(), gy.ravel()]
     I = I[path.contains_points(I)]
     if len(I): I = I[seg_dist(I, P) > step * 0.4]
+    if creases is not None and len(creases):
+        C = creases[path.contains_points(creases)]
+        C = C[seg_dist(C, P) > step * 0.25]
+        from scipy.spatial import cKDTree
+        if len(I) and len(C): I = I[cKDTree(C).query(I)[0] > step * 0.6]
+        if len(B) and len(C): C = C[cKDTree(B).query(C)[0] > step * 0.25]
+        I = np.r_[I, C] if len(I) else C
     V = np.r_[B, I]
     T = Delaunay(V).simplices
     cen = V[T].mean(1)
@@ -58,6 +66,35 @@ class Mesh:
             for v, uv, c, k in zip(s.v, s.uv, s.c, s.k):
                 fh.write('%.3f %.3f %.3f %.3f %.3f %d %d %d %d' % (*v, *uv, *[int(max(0, min(255, x))) for x in c], k * 20) + chr(10))
             for f in s.f: fh.write('%d %s' % (len(f), ' '.join(map(str, f))) + chr(10))
+
+def smooth_outline(P, rf, sig, sig_end, end_w=0.1):
+    """Clean a traced roof outline: closed Gaussian smoothing along the outline, stronger at the two roof ends
+    (a traced plan wiggles there, which reads as a torn membrane edge)."""
+    from scipy.ndimage import gaussian_filter1d
+    Q = densify(P, 0.5); Q = Q[:-1] if np.linalg.norm(Q[0] - Q[-1]) < 1e-6 else Q
+    A = gaussian_filter1d(Q, sig / 0.5, axis=0, mode='wrap'); E = gaussian_filter1d(Q, sig_end / 0.5, axis=0, mode='wrap')
+    aa = (np.arctan2(Q[:, 1] - PC[1], Q[:, 0] - PC[0]) - rf['amid'] + math.pi) % (2 * math.pi) - math.pi
+    s = (aa - aa.min()) / (aa.max() - aa.min()); w = np.clip(1 - np.minimum(s, 1 - s) / end_w, 0, 1)
+    R = A * (1 - w)[:, None] + E * w[:, None]
+    # square each end off along one radial line, so the end edge is straight in plan and keeps one lobe height
+    if not rf.get('square', True): return np.r_[R, R[:1]]
+    rr = np.linalg.norm(R - PC, axis=1); ar = (np.arctan2(R[:, 1] - PC[1], R[:, 0] - PC[0]) - rf['amid'] + math.pi) % (2 * math.pi) - math.pi
+    lo, hi = ar.min() + 3.0 / rr.mean(), ar.max() - 3.0 / rr.mean(); ar = np.clip(ar, lo, hi) + rf['amid']
+    R = PC + np.c_[np.cos(ar), np.sin(ar)] * rr[:, None]
+    return np.r_[R, R[:1]]
+
+def iso_rings(P, ds, stp):
+    """Points along the lines at distances `ds` from the pitch, inside footprint P: mesh rows for fill() so a
+    profile kink or a colour change runs along a clean line instead of zigzagging across triangles."""
+    rr = np.linalg.norm(P - PC, axis=1); rs = np.arange(rr.min() - 5, rr.max() + 5, 0.25); out = []
+    for ang in np.arange(0, 2 * math.pi, stp * 0.3 / (rr.max() + 5)):
+        Q = PC + np.c_[np.cos(ang) * rs, np.sin(ang) * rs]; dq = seg_dist(Q, PITCH)
+        if np.any(np.diff(dq) < 0): k = np.argmax(np.maximum.accumulate(dq) > dq.max() - 1e-9); dq, rq = dq[:k + 1], rs[:k + 1]
+        else: rq = rs
+        dq = np.maximum.accumulate(dq)
+        for d in ds:
+            if dq.min() < d < dq.max(): out.append(PC + np.array([np.cos(ang), np.sin(ang)]) * np.interp(d, dq, rq))
+    return np.array(out) if out else None
 
 def arc_uv(V2, d):
     """UV for stand/roof surfaces: u = arc length round the pitch centre at this distance, v = distance from the boundary"""
@@ -204,6 +241,13 @@ def brick_tower(m, P, bt, col):
         m.add(quad, [(0, 1, 2, 3), (3, 2, 1, 0)], [col] * 4, [(k * bt['w'], 0), ((k + 1) * bt['w'], 0), ((k + 1) * bt['w'], H), (k * bt['w'], H)], 'brick')
     m.add([(q[0], q[1], H) for q in Q], [(0, 1, 2, 3), (3, 2, 1, 0)], [(150, 146, 140)] * 4, [(0, 0), (bt['w'], 0), (bt['w'], bt['w']), (0, bt['w'])], 'concrete')
 
+def stand_poly(st):
+    """stand outline; traced notches at corners (way_drop) stepped the seat edge and wall top, so the back runs straight there"""
+    P = way(st['way'])
+    if st.get('way_drop'): P = P[[i for i in range(len(P)) if i not in st['way_drop']]]
+    return P
+
+
 def in_block(st, mid):
     """True where a back edge belongs to the stand's separate south block (spec y range), which replaces the open back"""
     sb = st.get('south_block'); return bool(sb) and sb['y'][0] <= mid[1] <= sb['y'][1]
@@ -279,8 +323,9 @@ ground.save('ground')
 
 stands = Mesh()
 for st in S['stands']:
-    P = way(st['way'])
-    V, T = fill(P, st.get('step', 2.0))
+    P = stand_poly(st)
+    ds = [k for k, _ in st['profile']] + [x for b in st['bands'] for x in (b[0] - 0.05, b[0] + 0.05)]
+    V, T = fill(P, st.get('step', 2.0), iso_rings(P, ds, st.get('step', 2.0)))
     d = seg_dist(V, PITCH)
     z = interp(st['profile'], d)
     C = band_colour(st['bands'], d)
@@ -319,16 +364,60 @@ for blk in S.get('blocks', []):
 for rf in S['roofs']:
     if 'poly' in rf:  # outline traced from the Esri plan (lean-corrected), not OSM
         P = np.array(rf['poly'], float); P = np.r_[P, P[:1]] if np.linalg.norm(P[0] - P[-1]) > 1e-6 else P
+        if rf.get('smooth'): P = smooth_outline(P, rf, *rf['smooth'])
     else:
         P = way(rf['way']) + np.array(rf.get('off', [0, 0]), float)
-    V, T = fill(P, rf.get('step', 1.5))
+        if rf.get('smooth'): P = smooth_outline(P, rf, *rf['smooth'])
     a0, a1 = rf['a0'], rf['a1']
     if rf.get('off') or rf.get('dome') or 'poly' in rf:
         aa = (np.arctan2(P[:, 1] - PC[1], P[:, 0] - PC[0]) - rf['amid'] + math.pi) % (2 * math.pi) - math.pi; a0, a1 = aa.min(), aa.max()
-    def roofz(V, rf=rf, a0=a0, a1=a1):
+    # fold lines of the height field: radial valley lines between lobes, and rings at the kinks of the depth profiles
+    stp = rf.get('step', 1.5); cr = []; rr = np.linalg.norm(P - PC, axis=1); rlo, rhi = rr.min() - 5, rr.max() + 5
+    if rf.get('lobes') and rf.get('valleys'):
+        for f in rf['valleys']:
+            ang = rf['amid'] + a0 + f * (a1 - a0); r = np.arange(rlo, rhi, stp * 0.3)
+            cr.append(PC + np.c_[np.cos(ang) * r, np.sin(ang) * r])
+    ks = [k for k, _ in rf['tprof']] + ([k for k, _ in rf['lobet']] if rf.get('lobes') else []) + [0.0, 1.0]
+    ds = sorted({rf['d0'] + k * (rf['d1'] - rf['d0']) for k in ks})
+    span = a1 - a0; angs = rf['amid'] + np.arange(a0 - 0.05 * span, a1 + 0.05 * span, stp * 0.3 / rhi)
+    rs = np.arange(rlo, rhi, 0.25)
+    for ang in angs:
+        Q = PC + np.c_[np.cos(ang) * rs, np.sin(ang) * rs]; dq = seg_dist(Q, PITCH)
+        for d in ds:
+            if dq.min() < d < dq.max(): cr.append(PC + np.array([[np.cos(ang), np.sin(ang)]]) * np.interp(d, dq, rs))
+    dbk = None
+    if rf.get('rim_fit'):  # front hem and back rim follow the traced outline: depth runs from the outline's own front
+        from scipy.ndimage import gaussian_filter1d  # distance to its own back distance on each ray, so both edges are clean
+        Bd = densify(P, 0.5); tg = np.gradient(Bd, axis=0); nr = np.c_[tg[:, 1], -tg[:, 0]] * (1 if ccw(P) else -1)
+        cs = (nr * (Bd - PC)).sum(1) / (np.linalg.norm(nr, axis=1) * np.linalg.norm(Bd - PC, axis=1) + 1e-9)
+        A = (np.arctan2(Bd[:, 1] - PC[1], Bd[:, 0] - PC[0]) - rf['amid'] + math.pi) % (2 * math.pi) - math.pi; Dd = seg_dist(Bd, PITCH)
+        bins = np.linspace(A.min(), A.max(), 240)
+        def prof(sel, red, dflt):
+            idx = np.clip(np.searchsorted(bins, A[sel]), 0, len(bins) - 1); v = np.full(len(bins), np.nan)
+            for k in range(len(bins)):
+                if np.any(idx == k): v[k] = red(Dd[sel][idx == k])
+            ok = ~np.isnan(v)
+            if not ok.any(): return np.full(len(bins), dflt)
+            return gaussian_filter1d(np.interp(bins, bins[ok], v[ok]), rf['rim_fit'], mode='nearest')
+        dbk = (bins, prof(cs >= 0.5, np.max, rf['d1']))
+        dfr = (bins, prof(cs <= -0.5, np.min, rf['d0'])) if rf.get('front_fit') else None
+    else: dfr = None
+    if dbk is not None:  # drop the fixed back-depth rings; put the rings on each ray's own back distance instead
+        cr = []
+        for ang in angs:
+            Q = PC + np.c_[np.cos(ang) * rs, np.sin(ang) * rs]; dq = seg_dist(Q, PITCH)
+            a_rel = (ang - rf['amid'] + math.pi) % (2 * math.pi) - math.pi; d1 = np.interp(a_rel, *dbk)
+            d0 = np.interp(a_rel, *dfr) if dfr is not None else rf['d0']
+            for k in sorted(set(ks)):
+                d = d0 + k * (d1 - d0)
+                if dq.min() < d < dq.max(): cr.append(PC + np.array([[np.cos(ang), np.sin(ang)]]) * np.interp(d, dq, rs))
+    V, T = fill(P, stp, np.concatenate(cr) if cr else None)
+    def roofz(V, rf=rf, a0=a0, a1=a1, dbk=dbk, dfr=dfr):
         d = seg_dist(V, PITCH)
-        t = np.clip((d - rf['d0']) / (rf['d1'] - rf['d0']), 0, 1)
         ang = (np.arctan2(V[:, 1] - PC[1], V[:, 0] - PC[0]) - rf['amid'] + math.pi) % (2 * math.pi) - math.pi
+        d1 = np.interp(ang, *dbk) if dbk is not None else rf['d1']
+        d0 = np.interp(ang, *dfr) if dfr is not None else rf['d0']
+        t = np.clip((d - d0) / (d1 - d0), 0, 1)
         s = np.clip((ang - a0) / (a1 - a0), 0, 1)
         z = rf['hf'] + (rf['hb'] - rf['hf']) * interp(rf['tprof'], t)
         z = z - rf.get('dome', 0.0) * (2 * s - 1) ** 2
@@ -349,7 +438,7 @@ for rf in S['roofs']:
     m.add(np.c_[V, z - 0.3], [tuple(f[::-1]) for f in T], [rf['under']] * len(V), uv, 'steel')
     # back closure: on edges facing away from the pitch, a wall from the stand top (or ground) up to the roof edge
     if rf.get('back'):
-        sp = {x['way']: x for x in S['stands']}[rf['stand']]; SP = way(sp['way']); spath = Path(SP)
+        sp = {x['way']: x for x in S['stands']}[rf['stand']]; SP = stand_poly(sp); spath = Path(SP)
         B = densify(P, 1.5); B = np.r_[B, B[:1]]; zt = roofz(B[:, :2])
         inside = spath.contains_points(B)
         zb = np.where(inside, interp(sp['profile'], seg_dist(B, PITCH)), 0.0)
@@ -376,7 +465,7 @@ for rf in S['roofs']:
             j = bk[int(np.argmin(abs(BA - (a0 + f * (a1 - a0)))))]; c = B[j]
             t = B[min(j + 1, len(B) - 1)] - B[max(j - 1, 0)]; t /= np.linalg.norm(t)
             n = c - PC; n /= np.linalg.norm(n)
-            SB = densify(way(sp['way']), 0.5); base = SB[int(np.argmin(np.linalg.norm(SB - c, axis=1)))]
+            SB = densify(stand_poly(sp), 0.5); base = SB[int(np.argmin(np.linalg.norm(SB - c, axis=1)))]
             zb = tr['zb'] if 'zb' in tr else sp['wall_h'] + sp['band'][0]  # props stand on the brick base, outside the upper tier
             if tr.get('fan'):  # east (photo C): two struts fan down and out from the valley point to the stand back
                 for sgn in (-1, 1):

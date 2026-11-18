@@ -60,7 +60,8 @@ def outer(u0, u1, step=0.4, vfix=None, sigma=0.0):
 
 
 def normals(P):
-    t = np.gradient(P, axis=0); t /= np.linalg.norm(t, axis=1)[:, None]
+    t = gaussian_filter1d(np.gradient(P, axis=0), 3.0 / 0.4, axis=0, mode='nearest')  # ~3 m smoothing: the plan trace's
+    t /= np.linalg.norm(t, axis=1)[:, None]                                                  # jitter folded the roof's back line
     n = np.c_[t[:, 1], -t[:, 0]]
     if np.mean(np.sum(n * (P - PC), 1)) < 0: n = -n
     # smooth so the saw-tooth steps don't fold the back line
@@ -114,6 +115,8 @@ def ribbon(m, P, n, z0, z1, out, col, kind='steel'):
 def prism_shell(m, P, n, depth, z0, z1, col, kind, top_col=None, top_kind='concrete', bottom=False):
     """back wall, end caps and roof of the block behind facade P (the facade itself is built by facade())"""
     Bk = P - n * depth; S = arclen(P)
+    if len(Bk) > 8:  # an inward offset of a kinked trace folds; smooth the back line (~4 m) so the top's back edge is clean
+        Bk = gaussian_filter1d(Bk, 4.0 / max(S[-1] / (len(P) - 1), 1e-3), axis=0, mode='nearest')
     for i in range(len(P) - 1):  # back wall (faces the stand)
         a, b = Bk[i], Bk[i + 1]
         m.quad((*b, z0), (*a, z0), (*a, z1), (*b, z1), BACK, 'concrete', [(S[i + 1], z0), (S[i], z0), (S[i], z1), (S[i + 1], z1)])
@@ -184,7 +187,7 @@ for u0, u1, wins, doors in BLOCKS:
 # ---------- brick wings (south u 504-1442, north 3515-4460) ----------
 ROOM = 3.8
 for u0, u1 in ((504, 1442), (3515, 4460)):
-    P = outer(u0, u1); n = normals(P)
+    P = outer(u0, u1, sigma=4.0); n = normals(P)   # smoothed: the raw plan trace left a ragged roof edge
     def cell(s, f, z0, z1):
         if z1 <= 3.6: return ('glass', GLASS, 3.0)                          # recessed glazed ground floor
         if z0 >= 16.8: return ('glass', GLASS, 0.6)                         # glazed top floor under the roof
