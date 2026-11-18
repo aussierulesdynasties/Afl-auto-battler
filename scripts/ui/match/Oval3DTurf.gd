@@ -344,6 +344,8 @@ func _sky_view() -> void:
 		hzv = sm.get_shader_parameter("horizon")
 	if hzv == null:
 		hzv = RenderingServer.shader_get_parameter_default(SKY_SHADER.get_rid(), "horizon")
+	if hzv == null:
+		return # headless (tests): no renderer to give the shader's default
 	var hz: Color = hzv
 	var lum := 0.2126 * hz.r + 0.7152 * hz.g + 0.0722 * hz.b
 	sm.set_shader_parameter("view", float(sm.get_meta("target"))
