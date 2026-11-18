@@ -54,6 +54,17 @@ if mode == 'match' and c.get('model') == 'cyl':
     camd.central_cylindrical_range_u_min = -(W / 2) / fo; camd.central_cylindrical_range_u_max = (W / 2) / fo
     camd.central_cylindrical_range_v_min = (cyy - H) / fo; camd.central_cylindrical_range_v_max = cyy / fo
     sc.render.film_transparent = True
+elif mode == 'top':  # straight down, orthographic: TOP='cx,cy,size' metres, square image of TRES px, north up
+    tcx, tcy, tsz = map(float, os.environ.get('TOP', '0,-10,400').split(','))
+    sc.render.resolution_x = sc.render.resolution_y = int(os.environ.get('TRES', '1600'))
+    camd.type = 'ORTHO'; camd.ortho_scale = tsz; camd.clip_end = 2000
+    cam.location = (tcx, tcy, 500.0); cam.rotation_euler = (0, 0, 0); sc.render.film_transparent = True
+    w.node_tree.nodes['Background'].inputs['Color'].default_value = (0.0, 0.0, 0.0, 1)
+    if os.environ.get('LEAN'):  # shear like the off-nadir satellite: a point h m up shows (a*h, b*h) m away
+        la, lb = map(float, os.environ['LEAN'].split(','))
+        Sh = Matrix(((1, 0, la, 0), (0, 1, lb, 0), (0, 0, 1, 0), (0, 0, 0, 1)))
+        for ob in sc.objects:
+            if ob.type == 'MESH': ob.matrix_world = Sh @ ob.matrix_world
 elif mode == 'match':
     sc.render.resolution_x, sc.render.resolution_y = W, H
     Cx, Cy, Cz, yaw, pt, roll, fo, cx, cy = p

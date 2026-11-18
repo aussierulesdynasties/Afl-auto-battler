@@ -131,8 +131,17 @@ def build(obj):
     sj = g.m('MAXIMUM', g.band(g.frac(v, 0.6), 0.0, 0.02), g.band(g.frac(g.m('ADD', u, g.m('MULTIPLY', cid, 0.6)), 1.2), 0.0, 0.006))
     out[11] = (g.mix(sj, g.scale(C, g.m('MULTIPLY', ctone, wear)), g.scale(C, 0.7)), 0.85, 0.0)
 
+    # 12 turf (the Hill's grass patches): no mowing stripes, worn patches about 2 m across, blade noise
+    worn = g.m('ADD', 0.86, g.m('MULTIPLY', g.noise(obj_co, 0.45, 3.0), 0.28))
+    out[12] = (g.scale(C, g.m('MULTIPLY', worn, blade)), 0.92, 0.0)
+    # 13 scoreboard board: painted panels 1.2 m x 0.55 m with dark joints and slight tone changes
+    bid = g.m('ADD', g.m('FLOOR', g.m('DIVIDE', u, 1.2)), g.m('MULTIPLY', g.m('FLOOR', g.m('DIVIDE', v, 0.55)), 37.0))
+    btone = g.m('ADD', 0.9, g.m('MULTIPLY', wnoise(bid), 0.25))
+    bj = g.m('MAXIMUM', g.band(g.frac(u, 1.2), 0.0, 0.03), g.band(g.frac(v, 0.55), 0.0, 0.05))
+    out[13] = (g.mix(bj, g.scale(C, btone), g.scale(C, 0.45)), 0.6, 0.0)
+
     col, rough, met = out[0]
-    for k in range(1, 12):
+    for k in range(1, 14):
         e = g.m('COMPARE', kind, float(k)); n = g.N[-1] if False else None
         ck, rk, mk = out[k]
         col = g.mix(e, col, ck)

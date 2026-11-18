@@ -248,6 +248,19 @@ def stand_poly(st):
     return P
 
 
+def stand_z(st, V):
+    """seat height from the depth profile; a 'low_end' (east stand north tip, satellite + c07) keeps the Hill seats' low
+    rake on the far side of a plan line, stepping up to the full stand within 'blend' metres"""
+    z = interp(st['profile'], seg_dist(V, PITCH))
+    le = st.get('low_end')
+    if le:
+        a, b = np.array(le['line'], float); n = np.array([-(b - a)[1], (b - a)[0]]) / np.linalg.norm(b - a)
+        s = (V - a) @ n * le.get('side', 1)                       # > 0 on the low side
+        w = np.clip(0.5 + s / le['blend'], 0, 1)
+        z = (1 - w) * z + w * np.minimum(z, interp(le['profile'], seg_dist(V, PITCH)))
+    return z
+
+
 def in_block(st, mid):
     """True where a back edge belongs to the stand's separate south block (spec y range), which replaces the open back"""
     sb = st.get('south_block'); return bool(sb) and sb['y'][0] <= mid[1] <= sb['y'][1]
@@ -327,11 +340,11 @@ for st in S['stands']:
     ds = [k for k, _ in st['profile']] + [x for b in st['bands'] for x in (b[0] - 0.05, b[0] + 0.05)]
     V, T = fill(P, st.get('step', 2.0), iso_rings(P, ds, st.get('step', 2.0)))
     d = seg_dist(V, PITCH)
-    z = interp(st['profile'], d)
+    z = stand_z(st, V)
     C = band_colour(st['bands'], d)
     # faces upward: Delaunay order is ccw in plan -> upward normal
     stands.add(np.c_[V, z], T, C, arc_uv(V, d), band_kind(st['bands'], d))
-    zf = lambda B, st=st: interp(st['profile'], seg_dist(B[:, :2], PITCH))
+    zf = lambda B, st=st: stand_z(st, B[:, :2])
     wb = st.get('wall_h')
     if wb:
         walls(stands, P, lambda B: np.minimum(zf(B), wb), 0.0, st['wall'], kind=st.get('wall_kind', 'concrete'))

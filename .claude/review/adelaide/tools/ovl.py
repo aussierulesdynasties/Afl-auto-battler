@@ -1,7 +1,7 @@
 """ovl.py RENDER OUT [x0,y0,x1,y1] : photo with the render's silhouette/edges drawn on top, plus 50% blend"""
 import sys,os;from PIL import Image,ImageFilter,ImageChops
 import numpy as np
-r=Image.open(sys.argv[1]).convert('RGBA');ph=Image.open(os.environ.get('PHOTO','photos/crop.jpg')).convert('RGBA')
+ph=Image.open(os.environ.get('PHOTO','photos/crop.jpg')).convert('RGBA');r=Image.open(sys.argv[1]).convert('RGBA').resize(ph.size)
 crop=[int(v) for v in sys.argv[3].split(',')] if len(sys.argv)>3 else None
 # edges of render: luminance + alpha edges
 a=np.array(r).astype(float);lum=a[...,:3].mean(-1)*(a[...,3]/255)
