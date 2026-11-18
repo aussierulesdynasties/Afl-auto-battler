@@ -74,55 +74,198 @@ def dmax(a):
     w=wrap(a);near=np.abs(((_ba-w)+math.pi)%(2*math.pi)-math.pi)<math.radians(4)
     reach=(_bd[near].max()+3) if near.any() else 0
     return max(d_out(a)+(2 if in_stand(a) else 8),reach)
-# earth banks round the oval (aerial: dirt face, grassed back slope); stand section unchanged; UVs final (tile units)
-NST=int(round(ZT/0.375))
-bm=bmesh.new();cols=[]
-uvl=bm.loops.layers.uv.new('UVMap')
-for a in angs:
-    if in_stand(a):
-        df=float(iu(wrap(a),fa,fd));pts=[(0.3+(df-0.3)*q/(2*NST+1),0.15+0.85*q/(2*NST+1),2) for q in range(2*NST+2)]+[(df+0.5,0,2),(dmax(a),0,1)]
-    else:
-        do=d_out(a);pts=[(0.3,0,0),(0.6,0,0)]+[(0.6+(do-0.6)*q/(2*NST),ZT*q/(2*NST),0) for q in range(1,2*NST+1)]   # earth bank, smooth slope
-        pts+=[(do+6,0,1),(max(dmax(a),do+6.5),0,1)]
-    cols.append(pts)
-NP=len(cols[0])
-V=[[bm.verts.new(pt(angs[i],d,z)) for d,z,_ in cols[i]] for i in range(NA)]
-for i in range(NA):
-    j=(i+1)%NA
-    for k in range(NP-1):
-        f=bm.faces.new([V[i][k],V[i][k+1],V[j][k+1],V[j][k]]);mi=cols[i][k+1][2];f.material_index=mi
-        da=(angs[1]-angs[0]);ui=i*da*(rp(angs[i])+cols[i][k][0]);uj=ui+da*(rp(angs[i])+cols[i][k][0])
-        di0,zi0=cols[i][k][:2];di1,zi1=cols[i][k+1][:2];dj0,zj0=cols[j][k][:2];dj1,zj1=cols[j][k+1][:2]
-        if True:
-            sc_={0:4.0,1:10.0,2:1.4}[mi]
-            uvs=[(ui/sc_,di0/sc_),(ui/sc_,di1/sc_),(uj/sc_,dj1/sc_),(uj/sc_,dj0/sc_)]
-        for lp,uv in zip(f.loops,uvs):lp[uvl].uv=uv
-terr=obj('terrace',bm,[mat('ground',(0.55,0.5,0.42),0.95),mat('ground_grass',(0.4,0.6,0.3),0.95),mat('apron',(0.6,0.6,0.58),0.9)])
-terr['uv_final']=1
+# ---- terraces (1993 panorama: concrete steps from the boundary apron up to a walkway on the crest, chain-wire
+#      fence on the crest, grass behind). The banks keep their measured depth round the ground (23-41 m), so each
+#      sector's tread differs: 20 risers of 0.15 m spread over that sector's own depth. Stand pocket: 8 low steps.
+NRB=20;RB=ZT/NRB;WALK=1.8
+def bank_prof(a):
+    do=d_out(a);d0=0.6;d1=do-WALK;t=(d1-d0)/NRB
+    pts=[(0.3,0,0),(0.6,0,0)]
+    for q in range(NRB):pts+=[(d0+q*t,(q+1)*RB,0),(d0+(q+1)*t,(q+1)*RB,0)]
+    pts+=[(do,ZT,0),(do+6,0,1),(max(dmax(a),do+6.5),0,1)]
+    return pts
+NPK=8
+def pocket_prof(a):
+    df=float(iu(wrap(a),fa,fd));t=(df-0.3)/NPK;r=0.85/NPK
+    pts=[(0.3,0,0),(0.3,0.15,0)]
+    for q in range(NPK):pts+=[(0.3+q*t,0.15+(q+1)*r,0),(0.3+(q+1)*t,0.15+(q+1)*r,0)]
+    pts+=[(df+0.5,-0.02,0),(dmax(a),-0.02,1)]   # 2 cm under the bank's back ground where the two overlap
+    return pts
+def grid(A,prof,name,a0f=None):
+    bm=bmesh.new();uvl=bm.loops.layers.uv.new('UVMap');cols=[prof(a) for a in A]
+    V=[[bm.verts.new(pt(a0f(d) if (i==0 and a0f) else A[i],d,z)) for d,z,_ in cols[i]] for i in range(len(A))]
+    SC={0:1.4,1:10.0}
+    for i in range(len(A)-1):
+        for k in range(len(cols[i])-1):
+            mi=cols[i][k+1][2];s=SC[mi]
+            f=bm.faces.new([V[i][k],V[i][k+1],V[i+1][k+1],V[i+1][k]]);f.material_index=mi
+            L=lambda j,kk:sum(math.hypot(cols[j][m+1][0]-cols[j][m][0],cols[j][m+1][1]-cols[j][m][1]) for m in range(kk))
+            uvs=[]
+            for j,kk in ((i,k),(i,k+1),(i+1,k+1),(i+1,k)):uvs.append((A[j]*(rp(A[j])+cols[j][kk][0])/s,L(j,kk)/s))
+            for lp,uv in zip(f.loops,uvs):lp[uvl].uv=uv
+    for i,sg in ((0,1),(len(A)-1,-1)):                     # end caps down to the ground
+        c=cols[i]
+        for k in range(len(c)-1):
+            if c[k][1]<=0 and c[k+1][1]<=0:continue
+            vv=[V[i][k],V[i][k+1],bm.verts.new(pt(A[i],c[k+1][0],0)),bm.verts.new(pt(A[i],c[k][0],0))]
+            f=bm.faces.new(vv if sg<0 else vv[::-1]);f.material_index=0
+            for lp in f.loops:co=lp.vert.co;dd=math.hypot(co.x-PC[0],co.y-PC[1]);lp[uvl].uv=(dd/1.4,co.z/1.4)
+    bm.normal_update()
+    o=obj(name,bm,[mat('apron',(0.6,0.6,0.58),0.9),mat('ground_grass',(0.4,0.6,0.3),0.95)]);o['uv_final']=1;return o
+HI=wrap(hi);LO2=lo+2*math.pi
+AB=np.linspace(HI,LO2,int((LO2-HI)/math.radians(0.5))+1)
+AP=np.linspace(lo,HI,int((HI-lo)/math.radians(0.5))+1)
+# south end: the bank's first column follows the long stand's slanted end wall (front corner -> rear corner), so the
+# steps, walkway and crest fence run right up to the wall with no wedge between them
+RAE=float(ra[np.argmax(wrap(ra))]);RAE=wrap(RAE);RDE=float(rd[np.argmax(wrap(ra))]);DFE=float(fd[np.argmax(fa)])
+def south_wall_ang(d):
+    if d<=DFE:return HI
+    if d<=RDE:return HI+(RAE-HI)*(d-DFE)/(RDE-DFE)
+    return RAE
+terr=grid(AB,bank_prof,'terrace',south_wall_ang);grid(AP,pocket_prof,'terrace_pocket')
+# ---- chain-wire fence on the crest's outer edge (1993 panorama): 1.2 m mesh, posts every 2.5 m, top rail; it stops
+#      at the walls of the club buildings that stand in the bank
+def inpoly(q,poly):
+    x,y=q;c=False;n=len(poly)
+    for i in range(n):
+        x1,y1=poly[i];x2,y2=poly[(i+1)%n]
+        if (y1>y)!=(y2>y) and x<(x2-x1)*(y-y1)/(y2-y1)+x1:c=not c
+    return c
+BLD=[np.array(b['pts'],float)[:,:2] for b in O['club'] if b['n']!='redtower']
+CF=1.2;AC=np.linspace(HI,LO2,6000);CR=np.array([pt(RAE,RDE-0.05)[:2]]+[pt(a,d_out(a)-0.05)[:2] for a in AC[1:]]);inside=np.array([any(inpoly(q,p_) for p_ in BLD) for q in CR])
+runs=[];cur=[]
+for q,ins in zip(CR,inside):
+    if ins:
+        if len(cur)>1:runs.append(np.array(cur))
+        cur=[]
+    else:cur.append(q)
+if len(cur)>1:runs.append(np.array(cur))
+bw=bmesh.new();uvw=bw.loops.layers.uv.new('UVMap');bp_=bmesh.new()
+def seg_box(bmx,a_,b_,z0,z1,th,mi=0):
+    t_=(b_-a_)/np.linalg.norm(b_-a_);nn=np.array([-t_[1],t_[0]]);prism(bmx,ccw([a_-nn*th/2,b_-nn*th/2,b_+nn*th/2,a_+nn*th/2]),z0,z1,mi,True)
+def sq(bmx,c,w,z0,z1,mi=0):prism(bmx,ccw([c+np.array(v) for v in ((-w/2,-w/2),(w/2,-w/2),(w/2,w/2),(-w/2,w/2))]),z0,z1,mi,True)
+crest_posts=[]
+for r_ in runs:
+    s_=np.concatenate([[0],np.cumsum(np.hypot(*np.diff(r_,axis=0).T))]);L_=s_[-1]
+    if L_<1.0:continue
+    nseg=max(1,int(math.ceil(L_/2.5)));ps=[r_[min(np.searchsorted(s_,L_*k/nseg),len(r_)-1)] for k in range(nseg+1)]
+    for k in range(nseg):
+        a_,b_=ps[k],ps[k+1];u1=np.linalg.norm(b_-a_)/0.5
+        f=bw.faces.new([bw.verts.new((*a_,ZT+0.05)),bw.verts.new((*b_,ZT+0.05)),bw.verts.new((*b_,ZT+CF)),bw.verts.new((*a_,ZT+CF))])
+        for lp,uv in zip(f.loops,((0,0.1),(u1,0.1),(u1,CF/0.5),(0,CF/0.5))):lp[uvw].uv=uv
+        seg_box(bp_,a_,b_,ZT+CF-0.02,ZT+CF+0.02,0.04)
+    for q in ps:sq(bp_,q,0.06,ZT-0.1,ZT+CF+0.03);crest_posts.append(q)
+cw=obj('crest_wire',bw,mat('chainwire',(0.6,0.6,0.62),0.5,vc=False));cw['uv_final']=1
+obj('crest_posts',bp_,mat('crest_post',(0.6,0.61,0.62),0.5))
+print('crest fence runs',len(runs),'posts',len(crest_posts),flush=True)
+# ---- bank-top billboards (1993 panorama, camera fitted on the east crest; ends read to about +-3 deg): blank panels,
+#      no lettering (ruling). Straight panels of at most 6 m follow the crest, 0.6 m behind the fence.
+BB=[(-71.9,-78.2),(-78.9,-86.7),(-86.7,-98.5),(-98.8,-104.5),(-105.3,'RAE'),(76.4,81.0)]
+BZ0,BZ1=ZT+1.8,ZT+3.8
+bb=bmesh.new()
+def oface(bmx,vs,want,mi):
+    vs=[np.array(v,float) for v in vs];n_=np.cross(vs[1]-vs[0],vs[2]-vs[0])
+    if n_@np.array(want,float)<0:vs=vs[::-1]
+    f=bmx.faces.new([bmx.verts.new(tuple(v)) for v in vs]);f.material_index=mi;return f
+for a0,a1 in BB:
+    A0=wrap(math.radians(a0));A1=RAE if a1=='RAE' else wrap(math.radians(a1));AA_=np.linspace(min(A0,A1),max(A0,A1),200)
+    Q=np.array([pt(a,d_out(a)+0.6)[:2] for a in AA_]);s_=np.concatenate([[0],np.cumsum(np.hypot(*np.diff(Q,axis=0).T))]);L_=s_[-1]
+    n_=max(1,int(math.ceil(L_/6)));ps=[Q[min(np.searchsorted(s_,L_*k/n_),len(Q)-1)] for k in range(n_+1)]
+    NN=[(PC-q)/np.linalg.norm(PC-q) for q in ps]                      # each joint's inward normal: neighbours share it, so panels meet
+    for k in range(n_):
+        a_,b_=ps[k],ps[k+1];na,nb=NN[k],NN[k+1];nm=(na+nb)/2
+        oface(bb,[(*a_,BZ0),(*b_,BZ0),(*b_,BZ1),(*a_,BZ1)],(*nm,0),0)                       # front, blank white
+        oface(bb,[(*(a_-na*0.08),BZ0),(*(b_-nb*0.08),BZ0),(*(b_-nb*0.08),BZ1),(*(a_-na*0.08),BZ1)],(*-nm,0),1)
+        oface(bb,[(*a_,BZ1),(*b_,BZ1),(*(b_-nb*0.08),BZ1),(*(a_-na*0.08),BZ1)],(0,0,1),1)
+        oface(bb,[(*a_,BZ0),(*b_,BZ0),(*(b_-nb*0.08),BZ0),(*(a_-na*0.08),BZ0)],(0,0,-1),1)
+    for k,q in enumerate(ps):
+        sq(bb,q-NN[k]*0.14,0.1,ZT*(1-0.80/6)-0.05,BZ1,1)                                       # leg behind every joint
+        if k in (0,len(ps)-1):
+            t_=(ps[1]-ps[0]) if k==0 else (ps[-1]-ps[-2]);t_/=np.linalg.norm(t_);t_=-t_ if k==0 else t_
+            oface(bb,[(*q,BZ0),(*(q-NN[k]*0.08),BZ0),(*(q-NN[k]*0.08),BZ1),(*q,BZ1)],(*t_,0),1)
+bbo=obj('billboards',bb,[mat('bb_front',(0.92,0.92,0.9),0.6),mat('bb_back',(0.32,0.33,0.33),0.6)])
+for p_ in bbo.data.polygons:p_.use_smooth=False
 # (outside-site ground removed: stadium only, director 2026-11-18)
-# ---- boundary fence
+# ---- boundary fence: separate boards with a joint every BAY m, gates read off the photos
 bm=bmesh.new();n=len(P);fv=[]
 for i in range(n):
     a=P[i];b=P[(i+1)%n];L=np.hypot(*(b-a));k=max(1,int(L/2))
     for t in np.linspace(0,1,k,endpoint=False):fv.append(a+(b-a)*t)
 fv=np.array(fv);dv=fv-PC;fv=fv+0.3*dv/np.linalg.norm(dv,axis=1)[:,None]
-# boundary ad boards, plain colour (no brands): colours read on the aerial's north/east arc (adruns.json); arcs it can't show stay white (1993 photo: light boards)
-RUNS=json.load(open(os.path.join(D,'adruns.json')));CI={'W':0,'R':1,'B':2}
-def board_c(a):
-    for a0,a1,c in RUNS:
-        if min(a0,a1)<=a<=max(a0,a1):return CI[c]
-    return 0
-uvl=bm.loops.layers.uv.new('UVMap');sacc=0.0
-for i in range(len(fv)):
-    a=fv[i];b=fv[(i+1)%len(fv)];L=float(np.hypot(*(b-a)));m=(a+b)/2;mi=0   # bare fence, no boards (director 2026-11-18: 'C: no boards')
-    u0=sacc/6;u1=(sacc+L)/6;sacc+=L
-    f=quad(bm,(a[0],a[1],0),(b[0],b[1],0),(b[0],b[1],1.0),(a[0],a[1],1.0),mi)
-    for lp,uv in zip(f.loops,[(u0,0),(u1,0),(u1,1),(u0,1)]):lp[uvl].uv=uv
-    oa=(a-PC)/np.linalg.norm(a-PC)*0.06;ob=(b-PC)/np.linalg.norm(b-PC)*0.06;a2=a+oa;b2=b+ob   # back face 6 cm behind (board thickness)
-    f=quad(bm,(a2[0],a2[1],1.0),(b2[0],b2[1],1.0),(b2[0],b2[1],0),(a2[0],a2[1],0),0)   # back of the board
-    for lp,uv in zip(f.loops,[(u0,1),(u1,1),(u1,0),(u0,0)]):lp[uvl].uv=uv
+RING=np.vstack([fv,fv[:1]]);RS=np.concatenate([[0],np.cumsum(np.hypot(*np.diff(RING,axis=0).T))]);RL=RS[-1]
+def ring_at(s):
+    s=s%RL;i=min(np.searchsorted(RS,s,side='right')-1,len(RS)-2);t=(s-RS[i])/(RS[i+1]-RS[i]);return RING[i]+(RING[i+1]-RING[i])*t
+def ring_s_ang(a):
+    A=np.arctan2(fv[:,1]-PC[1],fv[:,0]-PC[0]);k=int(np.argmin(np.abs((A-a+math.pi)%(2*math.pi)-math.pi)));return RS[k]
+def ring_s_pt(q):k=int(np.argmin(np.hypot(*(fv-np.array(q)).T)));return RS[k]
+def outn(q):d=np.array(q)-PC;return d/np.linalg.norm(d)
+BAY=5.9;GAP=0.03;TH=0.06;FH=1.0
+# gates: NE pocket = dark 9.0 m break on the aerial (A.jpg px 364..383, angles 0.798..0.695);
+#        players' race = 1993 panorama, race box between the long stand's north end and the Huggins, 3.8 m wide
+gA,gB=sorted((ring_s_ang(0.798),ring_s_ang(0.695)))
+s_race=ring_s_pt(((-68.44-67.1)/2,(60.41+67.6)/2))
+GATES=[(gA,gB),(s_race-1.9,s_race+1.9)]
+cuts=[]
+for g0,g1 in GATES:cuts+=[g0,g1]
+# joints run from the NE gate's end, every BAY m, round the ring; a joint closer than 1.5 m to a gate edge is dropped
+s=gB+BAY
+while s<gB+RL-0.5:
+    ss=s%RL
+    if all(min(abs(ss-c),RL-abs(ss-c))>1.5 for c in cuts) and not any(g0<ss<g1 for g0,g1 in GATES):cuts.append(ss)
+    s+=BAY
+cuts=sorted(set(round(c,4) for c in cuts))
+def in_gate(a,b):
+    m=(a+(b-a if b>a else b+RL-a)/2)%RL;return any(g0<=m<=g1 for g0,g1 in GATES)
+uvl=bm.loops.layers.uv.new('UVMap')
+def fquad(a,b,c,d,mi,uv):
+    f=quad(bm,a,b,c,d,mi)
+    for lp,u in zip(f.loops,uv):lp[uvl].uv=u
+    return f
+posts_s=[]
+for i in range(len(cuts)):
+    a=cuts[i];b=cuts[(i+1)%len(cuts)];b=b if b>a else b+RL
+    if in_gate(a,b%RL if b>RL else b):continue
+    posts_s.append(a)
+    GE=[g for gg in GATES for g in gg];isg=lambda x:any(abs((x%RL)-g)<1e-3 for g in GE)
+    s0=a+(0.05 if isg(a) else GAP/2);s1=b-(0.05 if isg(b) else GAP/2)   # boards beside a gate stop at the gate post's face
+    ss=[s0]+[x for x in RS if s0<x<s1]+[x+RL for x in RS if s0<x+RL<s1]+[s1];ss=sorted(ss)
+    F=[ring_at(x) for x in ss];Bk=[q+outn(q)*TH for q in F]
+    for k in range(len(ss)-1):
+        u0=(ss[k]-s0)/6;u1=(ss[k+1]-s0)/6
+        fquad((*F[k],0),(*F[k+1],0),(*F[k+1],FH),(*F[k],FH),0,[(u0,0),(u1,0),(u1,1),(u0,1)])          # front
+        fquad((*Bk[k],FH),(*Bk[k+1],FH),(*Bk[k+1],0),(*Bk[k],0),0,[(u0,1),(u1,1),(u1,0),(u0,0)])      # back
+        fquad((*F[k],FH),(*F[k+1],FH),(*Bk[k+1],FH),(*Bk[k],FH),0,[(u0,0),(u1,0),(u1,0.06),(u0,0.06)]) # top cap
+    for q,bq,sg in ((F[0],Bk[0],1),(F[-1],Bk[-1],-1)):                                                # board ends
+        e=[(*q,0),(*bq,0),(*bq,FH),(*q,FH)]
+        if sg<0:e=e[::-1]
+        fquad(*e,0,[(0,0),(0.01,0),(0.01,1),(0,1)])
 fence=obj('fence',bm,mat('fence_white',(0.93,0.93,0.91),0.6))
 fence['uv_final']=1
+# joint posts: 80 mm square steel post behind every joint, to the board top
+bm=bmesh.new()
+def boxp(c,t_,nn,w,d,z0,z1,mi=0):
+    q=[c-t_*w/2,c+t_*w/2,c+t_*w/2+nn*d,c-t_*w/2+nn*d];prism(bm,ccw(q),z0,z1,mi,True)
+for c_ in cuts:
+    if any(abs(c_-g)<1e-3 for gg in GATES for g in gg):continue
+    q=ring_at(c_);t_=ring_at(c_+0.05)-ring_at(c_-0.05);t_/=np.linalg.norm(t_);boxp(q+outn(q)*TH,t_,outn(q),0.08,0.08,0,FH)
+# gates: tube frame + vertical bars (no photo pixels), dark steel; hinge posts 100 mm, leaves meet in the middle
+for g0,g1 in GATES:
+    for sg in (g0,g1):
+        q=ring_at(sg);t_=ring_at(sg+0.05)-ring_at(sg-0.05);t_/=np.linalg.norm(t_);boxp(q-outn(q)*0.02,t_,outn(q),0.10,0.10,0,FH,1)
+    W_g=g1-g0;mid=(g0+g1)/2
+    for l0,l1 in ((g0+0.07,mid-0.01),(mid+0.01,g1-0.07)):
+        n_=max(2,int((l1-l0)/0.12))
+        for k in range(n_+1):                       # vertical bars incl. the two stiles
+            sb=l0+(l1-l0)*k/n_;q=ring_at(sb);t_=ring_at(sb+0.05)-ring_at(sb-0.05);t_/=np.linalg.norm(t_)
+            w=0.05 if k in (0,n_) else 0.022;boxp(q+outn(q)*0.01,t_,outn(q),w,w,0.05,FH,1)
+        for z0 in (0.05,FH-0.025):                   # bottom and top rails, segmented along the curve
+            m_=max(1,int((l1-l0)/1.0))
+            for k in range(m_):
+                sa=l0+(l1-l0)*k/m_;sb=l0+(l1-l0)*(k+1)/m_;qa=ring_at(sa);qb=ring_at(sb);t_=(qb-qa)/np.linalg.norm(qb-qa)
+                c=(qa+qb)/2;L_=np.linalg.norm(qb-qa)+0.002;boxp(c+outn(c)*0.01,t_,outn(c),L_,0.05,z0-0.025,z0+0.025,1)
+obj('fence_posts_gates',bm,[mat('fence_post',(0.3,0.31,0.31),0.5),mat('gate_steel',(0.24,0.27,0.26),0.5)])
+json.dump({'gates':[[ring_at(a).tolist(),ring_at(b).tolist(),outn(ring_at((a+b)/2)).tolist()] for a,b in GATES],'joints':[[ring_at(c).tolist(),outn(ring_at(c)).tolist()] for c in cuts]},open(os.path.join(D,'fencepts.json'),'w'))
+print('fence: boards',len(posts_s),'joints',len(cuts),'gates',[(round(a,1),round(b,1),round(b-a,2)) for a,b in GATES],'ring',round(RL,1),flush=True)
 # ---- grandstand: real section read off the photos
 def resample(L,N):
     L=np.array(L);s=np.concatenate([[0],np.cumsum(np.hypot(*np.diff(L,axis=0).T))]);t=np.linspace(0,s[-1],N)
@@ -182,6 +325,8 @@ for i in range(len(RR)-1):
 nr=int(Lr/BAY)
 for k in range(nr+1):
     i=int(np.argmin(np.abs(SL-k*Lr/nr)));f=FF[i];r=RR[i];d_=(r-f)/np.linalg.norm(r-f);nv=np.array([-d_[1],d_[0]])*0.15;D_=depth(i)
+    if k in (0,nr):   # end ribs sit inside the end walls, not 0.15 m past them
+        ia,ib=(0,1) if k==0 else (-1,-2);tf=FF[ib]-FF[ia];tf/=np.linalg.norm(tf);tr=RR[ib]-RR[ia];tr/=np.linalg.norm(tr);f=f+tf*0.15;r=r+tr*0.15
     for a,b in ((f-nv,r-nv),(r+nv,f+nv)):
         hb_=0.9 if a is not None else 0
         Q((*a,H),(*b,H),(*b,H+(0.9 if np.allclose(b,r-nv) or np.allclose(b,r+nv) else 0.3)),(*a,H+(0.3 if np.allclose(a,f-nv) or np.allclose(a,f+nv) else 0.9)),1,[(0,0),(D_,0),(D_,.9),(0,.3)])
@@ -304,6 +449,7 @@ quad(bm,e[1],e[0],e[3],e[2],1)                                      # roof under
 # the lighter sheeting panel on the front slope (photo: middle 45% of the length, upper half)
 def onroof(t,f):a=np.array(PP(t,-0.8,8.8));b=np.array(PP(t,sm,10.8));q=a+(b-a)*f;return tuple(q+np.array([0,0,0.03]))
 quad(bm,onroof(LP*0.28,0.25),onroof(LP*0.75,0.25),onroof(LP*0.75,0.9),onroof(LP*0.28,0.9),6)
+bmesh.ops.bisect_plane(bm,geom=bm.verts[:]+bm.edges[:]+bm.faces[:],plane_co=(R0[0],R0[1],0),plane_no=(tv[0],tv[1],0),clear_outer=True)  # pavilion stops at the Huggins east end wall (its SW corner ran 3.5 m into the stand)
 obj('ian_drake_pavilion',bm,[mat('p_white',(0.92,0.92,0.9),0.8),mat('p_steel',(0.5,0.5,0.5),0.6),mat('p_rooms',(0.2,0.2,0.22),0.4),mat('p_tread',(0.7,0.69,0.66),0.9),mat('p_seat',(0.27,0.42,0.36),0.7),mat('p_roof',(0.72,0.73,0.72),0.6),mat('p_panel',(0.88,0.88,0.86),0.5)])
 bm=bmesh.new();f=quad(bm,PP(0,-0.02,4.2),PP(LP,-0.02,4.2),PP(LP,-0.02,5.0),PP(0,-0.02,5.0),0)
 uvl=bm.loops.layers.uv.new('UVMap')
@@ -343,27 +489,29 @@ for f in luv:
     for lp,uv in zip(f.loops,((0,0),(1,0),(1,1),(0,1))):lp[uvl].uv=uv
 lo=obj('lamp_lenses',bl,mat('lamp_lens',(0.85,0.85,0.8),0.2,vc=False));lo['uv_final']=1
 # goal posts left out (director "Posts out": the game draws its own)
-# ---- scoreboard
+# ---- scoreboard (aerial: size, place, white front with a dark lower panel; 1993 panorama: plain board on two
+#      end posts that run to the ground, dark back with vertical battens and a rail). Face blank: no lettering.
 S=O['score'];e0,e1=np.array(S['ends'][0]),np.array(S['ends'][1]);cen=(e0+e1)/2;tv=(e1-e0)/np.linalg.norm(e1-e0);w=np.linalg.norm(e1-e0)/2
 fn=np.array([-tv[1],tv[0]]);fn=fn if np.dot(PC-cen,fn)>0 else -fn
-bm=bmesh.new()
-prism(bm,ccw([cen-tv*w,cen+tv*w,cen+tv*w-fn*0.6,cen-tv*w-fn*0.6]),S['bot'],S['top'],0,True,0);bmesh.ops.subdivide_edges(bm,edges=bm.edges[:],cuts=10,use_grid_fill=True)
-for s in (-0.7,0.7):
-    c=cen+tv*w*s;prism(bm,ccw([c+q for q in (np.array([-.3,-.3]),np.array([.3,-.3]),np.array([.3,.3]),np.array([-.3,.3]))]),0,S['bot'],1,True,1)
-_fq=[tuple(cen-tv*w+fn*0.02)+(S['bot'],),tuple(cen+tv*w+fn*0.02)+(S['bot'],),tuple(cen+tv*w+fn*0.02)+(S['top'],),tuple(cen-tv*w+fn*0.02)+(S['top'],)]
-if np.array([tv[1],-tv[0]])@fn<0:_fq=_fq[::-1]
-f=quad(bm,*_fq,2)   # face, painted from the aerial
-sbo=obj('scoreboard',bm,[mat('sb_white',S['c'],0.6),mat('sb_leg',(0.4,0.4,0.4),0.7),mat('sb_face',S['face'],0.5)])
-me_=sbo.data;me_.uv_layers.new(name='UVMap');uvd_=me_.uv_layers[0].data;tw_=2*w;th_=S['top']-S['bot']
-for p_ in me_.polygons:
-    tl_=(tw_,th_) if p_.material_index==2 else (2.0,2.0)
-    for li in p_.loop_indices:
-        X=me_.vertices[me_.loops[li].vertex_index].co;n_=p_.normal
-        if p_.material_index==2:u_=float((np.array([X.x,X.y])-(cen-tv*w))@tv);v_=X.z-S['bot']
-        elif abs(n_.z)>0.7:u_,v_=X.x,X.y
-        else:t_=Vector((-n_.y,n_.x,0)).normalized();u_,v_=X.dot(t_),X.z
-        uvd_[li].uv=(u_/tl_[0],v_/tl_[1])
-sbo['uv_final']=1
+bm=bmesh.new();SD=0.35;H_=S['top']-S['bot']
+def sbq(vs,want,mi):
+    vs=[np.array(v,float) for v in vs];n_=np.cross(vs[1]-vs[0],vs[2]-vs[0])
+    if n_@np.array(want,float)<0:vs=vs[::-1]
+    f=bm.faces.new([bm.verts.new(tuple(v)) for v in vs]);f.material_index=mi;return f
+L_,R_=cen-tv*w,cen+tv*w
+prism(bm,ccw([L_,R_,R_-fn*SD,L_-fn*SD]),S['bot'],S['top'],3,True,3)          # board body, dark back and edges
+P3=lambda q,z,o=0.0:(*(q+fn*o),z)
+sbq([P3(L_,S['bot'],0.01),P3(R_,S['bot'],0.01),P3(R_,S['top'],0.01),P3(L_,S['top'],0.01)],(*fn,0),0)   # white front
+fz0,fz1=S['bot']+0.08*H_,S['bot']+0.55*H_;fl,fr_=L_+tv*0.06*2*w,R_-tv*0.06*2*w
+sbq([P3(fl,fz0,0.02),P3(fr_,fz0,0.02),P3(fr_,fz1,0.02),P3(fl,fz1,0.02)],(*fn,0),2)                       # blank dark face
+for s_ in (0.0,1.0):                                                                                    # end posts, ground to top
+    c=L_+(R_-L_)*s_-fn*(SD+0.18)+tv*(0.18 if s_==0 else -0.18);prism(bm,ccw([c+q for q in (np.array([-.18,-.18]),np.array([.18,-.18]),np.array([.18,.18]),np.array([-.18,.18]))]),0,S['top']+0.15,1,True,1)
+nb=int(round(2*w/1.8))
+for k in range(1,nb):                                                                                   # back battens
+    c=L_+(R_-L_)*k/nb-fn*(SD+0.06);prism(bm,ccw([c-tv*0.06,c+tv*0.06,c+tv*0.06-fn*0.12,c-tv*0.06-fn*0.12]),S['bot'],S['top'],1,True,1)
+for z_ in (S['bot']+0.1,S['bot']+H_/2,S['top']-0.1):                                                    # back rails
+    prism(bm,ccw([L_-fn*(SD+0.18)+tv*0.36,R_-fn*(SD+0.18)-tv*0.36,R_-fn*(SD+0.3)-tv*0.36,L_-fn*(SD+0.3)+tv*0.36]),z_-0.08,z_+0.08,1,True,1)
+sbo=obj('scoreboard',bm,[mat('sb_white',S['c'],0.6),mat('sb_leg',(0.4,0.4,0.4),0.7),mat('sb_face',S['face'],0.5),mat('sb_back',(0.17,0.18,0.18),0.8)])
 # ---- sheds
 # red shed and north shed removed: free-standing, outside the stadium (secretary 2026-11-18)
 # ---- hand-made textures (no photo pixels): UVs in metres / tile size, tinted copies for measured colours
@@ -378,10 +526,10 @@ def timg(t,tint=None):
     w,h=im.size;px_=np.array(im.pixels[:]).reshape(h,w,4).copy();mean=px_[...,:3].reshape(-1,3).mean(0)
     px_[...,:3]=np.clip(px_[...,:3]*(np.array(tint[:3])/np.maximum(mean,1e-3)),0,1)
     n2=bpy.data.images.new(t+'_'+'%02x%02x%02x'%tuple(int(c*255) for c in tint[:3]),w,h);n2.pixels[:]=px_.ravel();n2.pack();IMG[k]=n2;return n2
-TEXMAP={'grass':('grass',None),'ground':('bank_dirt',None),'ground_grass':('park_grass',None),'h_white':('white',None),'h_blue':('blue_seat',None),'h_conc':('concrete',None),'h_green':('green_seat',None),'h_band':('huggins_band',None),'h_glass':('glass',None),'h_roof':('brown_roof',None),'h_rear':('hug_rear',None),'apron':('concrete',None),'fence_white':('white',None),'ad_white':('adboard',None),'ad_red':('adboard',(0.7,0.17,0.15)),'ad_blue':('adboard',(0.37,0.49,0.67)),'g_park':('park_grass',None),'g_asphalt':('asphalt',None),'g_gravel':('gravel',None),'g_path':('path',None),'g_nets':('nets',None),'fence':('white',None),'roof':('roof_deck',None),'rib':('roof_deck',None),
+TEXMAP={'grass':('grass',None),'ground':('bank_dirt',None),'ground_grass':('park_grass',None),'h_white':('white',None),'h_blue':('blue_seat',None),'h_conc':('concrete',None),'h_green':('green_seat',None),'h_band':('huggins_band',None),'h_glass':('glass',None),'h_roof':('brown_roof',None),'h_rear':('hug_rear',None),'apron':('concrete',None),'fence_white':('white',None),'ad_white':('adboard',None),'ad_red':('adboard',(0.7,0.17,0.15)),'ad_blue':('adboard',(0.37,0.49,0.67)),'g_park':('park_grass',None),'g_asphalt':('asphalt',None),'g_gravel':('gravel',None),'g_path':('path',None),'g_nets':('nets',None),'fence':('white',None),'fence_post':('steel',(0.3,0.31,0.31)),'gate_steel':('steel',(0.24,0.27,0.26)),'roof':('roof_deck',None),'rib':('roof_deck',None),
  'band':('white',None),'frontwall':('white',None),'undercroft':('white',(0.45,0.46,0.46)),'standback':('darkwall',None),'benches':('bench',None),'roof_under':('roof_under',None),
  'rear_rooms':('rear_rooms',None),'concrete':('concrete',None),'blue':('blue_seat',None),'pole':('steel',None),'st_glass':('glass',None),'p_white':('white',None),'p_steel':('steel',None),'p_rooms':('rear_rooms',None),'p_tread':('concrete',None),'p_seat':('green_seat',None),'p_roof':('roof_deck',(0.72,0.73,0.72)),'p_panel':('roof_deck',(0.9,0.9,0.88)),'p_sign':('pav_sign',None),'lamp_body':('white',(0.86,0.87,0.87)),'lamp_lens':('lamp',None),'posts':('white',None),
- 'sb_white':('white',S['c']),'sb_leg':('steel',(0.4,0.4,0.4)),'sb_face':('sb_face',None),'redshed':('roof_deck',O['redshed_c']),'shedn':('roof_deck',C['shedn'])}
+ 'sb_white':('white',S['c']),'sb_leg':('steel',(0.4,0.4,0.4)),'sb_face':('white',S['face']),'sb_back':('darkwall',(0.17,0.18,0.18)),'apron':('concrete',None),'chainwire':('chainwire',None),'crest_post':('steel',(0.6,0.61,0.62)),'bb_front':('white',(0.92,0.92,0.9)),'bb_back':('steel',(0.32,0.33,0.33)),'redshed':('roof_deck',O['redshed_c']),'shedn':('roof_deck',C['shedn'])}
 for b_ in O['club']:
     TEXMAP['r_'+b_['n']]=('roof_deck',b_['c'])
     TEXMAP['w_'+b_['n']]=('brick_win',None) if b_['n'] in ('redtower','whiteblock') else ('white',(0.92,0.92,0.9))
@@ -390,6 +538,8 @@ def retex(m):
     for n in list(nt.nodes):
         if n.type in ('VERTEX_COLOR','TEX_IMAGE'):nt.nodes.remove(n)
     ti=nt.nodes.new('ShaderNodeTexImage');ti.image=timg(t,tint);nt.links.new(ti.outputs['Color'],bs.inputs['Base Color'])
+    if m.name=='chainwire':                      # cut-out mesh: glTF alphaMode MASK via a Round node
+        r_=nt.nodes.new('ShaderNodeMath');r_.operation='ROUND';nt.links.new(ti.outputs['Alpha'],r_.inputs[0]);nt.links.new(r_.outputs[0],bs.inputs['Alpha'])
     return TL[t]
 for o in list(sc.objects):
     if o.type!='MESH':continue
