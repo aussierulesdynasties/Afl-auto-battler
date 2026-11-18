@@ -26,8 +26,27 @@ uniform vec4 kit_pattern2[1];
 uniform vec4 kit_pattern3[1];
 uniform float kit_design[1];
 uniform sampler2D digits_tex : filter_linear, repeat_disable;   // 0-9: R fill, G outline
-uniform sampler2D kit_atlas : filter_linear, repeat_disable;
+uniform sampler2D kit_atlas : source_color, filter_linear_mipmap, repeat_disable;   // kits_today has mipmaps (seen from 15 m up)
 uniform ivec2 kit_grid = ivec2(1, 1);
+// A current guernsey's collar and armhole bindings (data/kits_today.csv), kit_trim metres wide
+// (x the collar, y the armholes), measured from the guernsey's own edges (kit_edge). Alpha 0: none.
+uniform vec4 kit_collar : source_color = vec4(0.0);
+uniform vec4 kit_arms : source_color = vec4(0.0);
+uniform vec2 kit_trim = vec2(0.02, 0.02);
+// A current guernsey's number: its fill and its edge, as on the club's 2026 match backs
+// (data/kits_today.csv). Alpha 0: the fill picked by the colour under it, the edge that colour.
+uniform vec4 kit_number : source_color = vec4(0.0);
+uniform vec4 kit_number_edge : source_color = vec4(0.0);
+// Oval3D._kit_edges, per vertex of the guernsey, the shorts and the skin round the neck and
+// armholes: x metres inside the neck's drawn edge (negative outside it), y the same for the
+// nearer armhole, z metres above the hem line (level across the front), w 1 on the guernsey, 0.5
+// on the shorts, 0.3 on that skin (0 unmeasured). The drawn edges are the mesh's stepped edges
+// smoothed, so they run as clean curves; the skin in the steps wears the guernsey. kit_fore: metres in front of the body's middle.
+varying vec4 kit_edge;
+varying float kit_fore;
+varying vec3 kit_g;  // on that skin, the nearest guernsey corner's pattern coordinates
+const float HEM_SHADOW = 0.35;     // how much the guernsey's hem darkens the shorts just under it
+const float HEM_SHADOW_M = 0.015;  // and how far down (1.5 cm)
 // The player's own number (0-99), per figure; -1 for none.
 instance uniform int number = -1;
 
@@ -48,12 +67,8 @@ const vec3 BODY_MEAN = vec3(0.2715, 0.1044, 0.0605);
 const vec3 HEAD_MEAN = vec3(0.2555, 0.1074, 0.0594);
 varying vec2 skin_uv;
 
-void vertex() {
-	skin_uv = CUSTOM0.xy;
-}
-
 const vec2 NUMBER_ACROSS = vec2(0.24, 0.76);   // about 26 cm for two digits
-const vec2 NUMBER_UP = vec2(0.34, 0.80);       // about 27 cm tall, as AFL numbers are
+const vec2 NUMBER_UP = vec2(0.485, 0.875);     // where 2026 match backs carry it: from 14% to 58% of the guernsey seen above the shorts
 
 float region(float f) {
 	float aa = max(fwidth(f), 1e-3);
@@ -236,14 +251,19 @@ vec3 design(int d, vec3 g) {
 	return vec3(0.0);
 }
 
-// A picture kit's colour at guernsey coordinate g (see kit_atlas).
-vec3 kit_image(int cell, vec3 g) {
-	bool front = g.z > 0.5;
+// A picture kit's colour at guernsey coordinate g (see kit_atlas). A triangle over the side or
+// shoulder seam runs from front (g.z 1) to back (0), so g.z can't say which side a pixel is on
+// (behind the neck it picked the front's collar lining, in dots): there the side it sits on does.
+vec3 kit_image(int cell, vec3 g, float fore) {
+	bool front = g.z > 0.98 || (g.z > 0.02 && fore > 0.0);
 	vec2 at = vec2(front ? g.x : 1.0 - g.x, 1.0 - g.y);
 	vec2 inset = vec2(0.5) / (vec2(textureSize(kit_atlas, 0)) / vec2(float(kit_grid.x) * 2.0, float(kit_grid.y)));
 	at = clamp(at, inset, vec2(1.0) - inset);
 	vec2 c = vec2(float(cell % kit_grid.x) * 2.0 + (front ? 0.0 : 1.0), float(cell / kit_grid.x));
-	return texture(kit_atlas, (c + at) / vec2(float(kit_grid.x) * 2.0, float(kit_grid.y))).rgb;
+	// The mip level comes from g itself: where a pixel block straddles the seam, the atlas
+	// position jumps a whole cell, which would pick the smallest mip and leave a dot of mixed colour.
+	vec2 cells = vec2(float(kit_grid.x) * 2.0, float(kit_grid.y));
+	return textureGrad(kit_atlas, (c + at) / cells, dFdx(g.xy) / cells, dFdy(g.xy) / cells).rgb;
 }
 
 // The number printed on the back: x = 1 where it's drawn (alpha), rgb its colour.
@@ -264,20 +284,32 @@ vec4 number_on_back(int n, vec3 g, vec3 base, bool mirrored) {
 	}
 	vec4 d = texture(digits_tex, vec2((float(digit) + dx) / 10.0, y));
 	float lum = dot(base, vec3(0.299, 0.587, 0.114));
-	vec3 ink = lum > 0.58 ? vec3(0.06, 0.06, 0.07) : vec3(1.0);
-	// Edged in the guernsey's own colour, so it reads across stripes and panels.
-	return vec4(mix(base, ink, d.r), d.g * (1.0 - smoothstep(0.35, 0.6, g.z)));
+	vec3 ink = kit_number.a > 0.0 ? kit_number.rgb : (lum > 0.58 ? vec3(0.06, 0.06, 0.07) : vec3(1.0));
+	// Edged in the guernsey's own colour, so it reads across stripes and panels (or the club's edge).
+	vec3 edge = kit_number_edge.a > 0.0 ? kit_number_edge.rgb : base;
+	return vec4(mix(edge, ink, d.r), d.g * (1.0 - smoothstep(0.35, 0.6, g.z)));
+}
+
+void vertex() {
+	skin_uv = CUSTOM0.xy;
+	kit_edge = CUSTOM1;
+	kit_fore = CUSTOM2.x;
+	kit_g = CUSTOM2.yzw;
 }
 
 void fragment() {
 	// glTF stores a texture coordinate's V as 1 - v (Blender's exporter flips it): undo that.
 	vec3 g = vec3(UV.x, 1.0 - UV.y, 1.0 - UV2.y);
+	bool on_skin = kit_edge.w > 0.25 && kit_edge.w < 0.4;
+	if (on_skin) {
+		g = kit_g;
+	}
 	vec3 base = kit_base[0].rgb, pat = kit_pattern[0].rgb, pat2 = kit_pattern2[0].rgb;
 	vec3 pat3 = kit_pattern3[0].rgb;
 	int dn = int(round(kit_design[0]));
 	vec3 jumper;
 	if (dn >= 100) {
-		jumper = kit_image(dn - 100, g);
+		jumper = kit_image(dn - 100, g, kit_fore);
 	} else {
 		vec3 p = design(dn, g);
 		jumper = base + (pat - base) * p.x + (pat2 - base) * p.y + (pat3 - base) * p.z;
@@ -286,6 +318,12 @@ void fragment() {
 		vec3 under = dn >= 100 ? jumper : base;
 		vec4 num = number_on_back(number, g, under, false);
 		jumper = mix(jumper, num.rgb, num.a);
+	}
+	// The bindings, a set width in from the neck and the armholes.
+	bool edged = kit_edge.w > 0.25;
+	if (edged) {
+		jumper = mix(jumper, kit_collar.rgb, kit_collar.a * (1.0 - over(kit_edge.x, kit_trim.x)));
+		jumper = mix(jumper, kit_arms.rgb, kit_arms.a * (1.0 - over(kit_edge.y, kit_trim.y)));
 	}
 	// The sock: base colour, the band in the pattern colour (the sprites' maskA).
 	float band = over(g.y, 0.0) * over(1.0, g.y);
@@ -309,8 +347,25 @@ void fragment() {
 	// wherever the two together cover the body, and the upper one over it at its own edge.
 	c = mix(c, boot.rgb, region(COLOR.a));
 	c = mix(c, sock, region(COLOR.b + COLOR.a * step(0.02, COLOR.b)));
-	c = mix(c, shorts.rgb, region(COLOR.g + COLOR.r));
-	c = mix(c, jumper, region(COLOR.r));
+	// The guernsey's own surface is all guernsey: its edge is the mesh's edge (the region field
+	// wanders a centimetre either side of it). The hem: the guernsey stops at a level line round
+	// the body (the mesh's own hem dips and rises), and shades the shorts just under it.
+	float top = region(COLOR.r);
+	float bottom = region(COLOR.g + COLOR.r);
+	float shade = 0.0;
+	if (edged) {
+		float below = 1.0 - over(kit_edge.z, 0.0);
+		if (kit_edge.w > 0.75) {
+			top = 1.0;
+			bottom = 1.0;
+		} else if (on_skin) {
+			top = over(min(kit_edge.x, kit_edge.y), 0.0);
+		}
+		top *= 1.0 - below;
+		shade = below * HEM_SHADOW * (1.0 - smoothstep(0.0, HEM_SHADOW_M, -kit_edge.z));
+	}
+	c = mix(c, shorts.rgb * (1.0 - shade), bottom);
+	c = mix(c, jumper, top);
 	ALBEDO = c;
 	// Where bare skin shows: its own bumps and sheen. Kit and hair keep the flat cloth.
 	float bare = (1.0 - region(UV2.x)) * (1.0 - region(COLOR.a))
