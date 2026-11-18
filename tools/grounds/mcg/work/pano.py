@@ -1,5 +1,5 @@
 # python work/pano.py b0 b1 out : facade elevation stitched from the f-views (nearest view per bearing), z 0..45
-import sys,json,numpy as np;sys.path.insert(0,'work');import tri
+import sys,os,json,numpy as np;sys.path.insert(0,'work');import tri
 from PIL import Image,ImageDraw
 exec(open('work/elev.py').read().split("v=sys.argv[1]")[0].split("D=json.load")[0])
 D=json.load(open('model/mcg.json'));C=json.load(open('work/cams.json'))
@@ -12,7 +12,7 @@ S=np.zeros((len(Z),len(B),3),np.uint8);which=[]
 for k in fv:
     sel=np.array([abs((b-tb[k]+180)%360-180)<=11.25 for b in B])
     if not sel.any():continue
-    c=tri.camv(k);im=np.asarray(Image.open(f'ge/{k}.png').convert('RGB'))
+    c=tri.camv(k);im=np.asarray(Image.open(f"{os.environ.get('IMG','ge')}/{k}.png").convert('RGB'))
     a=np.radians(B[sel])[None];r=rf[sel]
     X=np.stack([np.broadcast_to(r*np.sin(a),(len(Z),sel.sum())),np.broadcast_to(r*np.cos(a),(len(Z),sel.sum())),np.broadcast_to(Z[:,None],(len(Z),sel.sum()))],-1)
     P,_=projv(c,X);u=P[...,0].round().astype(int);w=P[...,1].round().astype(int);ok=(u>=0)&(u<1920)&(w>=85)&(w<1048)

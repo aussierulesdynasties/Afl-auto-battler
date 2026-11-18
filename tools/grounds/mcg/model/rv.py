@@ -10,7 +10,10 @@ if os.environ.get('FLAT'):
     for m in list(bpy.data.materials):
         hh=hashlib.md5(m.name.encode()).digest();col=(hh[0]/255,hh[1]/255,hh[2]/255,1)
         m.use_nodes=True;nt=m.node_tree;nt.nodes.clear()
-        e=nt.nodes.new('ShaderNodeBsdfDiffuse');e.inputs['Color'].default_value=col
+        if os.environ.get('FLAT')=='2':  # exact ID colours (unlit) for measuring
+            e=nt.nodes.new('ShaderNodeEmission');e.inputs['Color'].default_value=col
+        else:
+            e=nt.nodes.new('ShaderNodeBsdfDiffuse');e.inputs['Color'].default_value=col
         o=nt.nodes.new('ShaderNodeOutputMaterial');nt.links.new(e.outputs[0],o.inputs[0])
 C = json.load(open(os.path.join(SP, 'work', 'cams.json')))
 sc = bpy.context.scene
@@ -36,7 +39,7 @@ for v in argv[1:]:
             lx, ly = map(float, v.split('_')[1:3])
             for ob in sc.objects:
                 if ob.type == 'MESH':
-                    ob.matrix_world = mathutils.Matrix(((1, 0, lx, 0), (0, 1, ly, 0), (0, 0, 1, 0), (0, 0, 0, 1))) @ ob.matrix_world
+                    ob.data.transform(ob.matrix_world.inverted() @ mathutils.Matrix(((1, 0, lx, 0), (0, 1, ly, 0), (0, 0, 1, 0), (0, 0, 0, 1))) @ ob.matrix_world)  # shear the mesh: object matrices can't hold a shear
         sc.render.filepath = os.path.join(out, v + '.png'); bpy.ops.render.render(write_still=True)
         continue
     x0, y0, a, d, h, t = C[v]; c = earthcam.cam(h, t, d, tz=a - 13, tx=x0, ty=y0)
