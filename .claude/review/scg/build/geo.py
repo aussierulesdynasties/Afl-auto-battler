@@ -151,14 +151,29 @@ def trumback(d):
     return [(hi-3,0),(hi-3,zc-0.6),(hi,zc-0.6),(hi,zc),(hi,zc+s-0.9),(hi,zc+s),(hi,zc+2*s-0.9),(hi,zc+2*s),(hi,zg),
             (hi,0.83*zt),(hi,0.89*zt),(hi,zt)]
 band(trumback,-105.8,-30,['dark','slab','slab','glasst','spand','glasst','spand','glasst','cladl','glassblk','facade'])
-# O'Reilly back: no photo of its face; the Gate 9 photo shows the Trumper's top bands running on round the curve past
-# the glass, over an open shaded concourse with columns. Same bands from 74%; concrete set back 4 m below them.
+# O'Reilly back: no photo of its face. Built to the Trumper's own lines: the same ground concourse (set back 3 m under the
+# rake, soffit at the Trumper's height at the join), then shaded concourse glazing in two storeys with a grey floor
+# spandrel, then the Trumper's top bands (pale band, dark window strip, white cladding) that the Gate 9 photo shows
+# running on round the curve. The wall stays flush above the concourse: the seat rake's back row is only 0.7 m inside.
+ZC_J=0.22*(29.7-1.2)   # Trumper concourse soffit height at the join (-30 deg)
 def oreback(d):
     o=OUT.get(round(d*2)/2%360)
     if not o or o[4]!='oreilly':return None
-    lo,hi,zf,zo,k=o;zt=zo-1.2;zb=0.74*zt
-    return [(hi-4,0),(hi-4,zb-0.6),(hi,zb-0.6),(hi,zb),(hi,0.83*zt),(hi,0.89*zt),(hi,zt)]
-band(oreback,-32,22,['conc','slab','slab','cladl','glassblk','facade'])
+    lo,hi,zf,zo,k=o;zt=zo-1.2;zb=0.74*zt;s2=(zb-ZC_J)/2
+    return [(hi-3,0),(hi-3,ZC_J-0.6),(hi,ZC_J-0.6),(hi,ZC_J),(hi,ZC_J+s2-0.9),(hi,ZC_J+s2),(hi,zb),(hi,0.83*zt),(hi,0.89*zt),(hi,zt)]
+band(oreback,-32,22,['dark','slab','slab','glassm','spand','glassm','cladl','glassblk','facade'])
+# Trumper/O'Reilly join: the Trumper's last slice (-30.5) reaches 123 m out, the O'Reilly's first (-30) only 94.6 m, so the
+# seat rake twists across the wedge between them. A radial end wall at -30 carries the O'Reilly's bands out to the
+# Trumper's wall and up to the Trumper's top, so the two backs meet and no seats show.
+def _joinwall(d=-30.0):
+    o=OUT[round(d*2)/2%360];zt=o[3]-1.2;r0=o[1];r1=OUT[round((d-0.5)*2)/2%360][1];zT=OUT[round((d-0.5)*2)/2%360][3]-1.2
+    pr=oreback(d);zs=[z for _,z in pr[3:]]+[zT];ms=['glassm','spand','glassm','cladl','glassblk','facade','facade']
+    zs=[0.0,ZC_J-0.6]+zs;ms=['dark','slab']+ms
+    a=math.radians(d)
+    for i in range(len(zs)-1):
+        if zs[i+1]-zs[i]<1e-3:continue
+        quad(P(r0,a,zs[i]),P(r1,a,zs[i]),P(r1,a,zs[i+1]),P(r0,a,zs[i+1]),ms[i])
+_joinwall()
 # Messenger back (photo 063, east end): pale stone-panel podium ~18 m on the plan line, terrace with glass balustrade,
 # glazed upper concourse set 5 m in, running up to the roof underside; steel V-struts from the stand top to the roof
 MPOD=23.0   # podium top, 063 photo back-projected onto the plan line: 24, 24, 22 m at 44.5, 48.5, 51.7 deg
@@ -264,14 +279,25 @@ def photo_block(px,ze,rise,mwall,mroof,shrink=0.55):
         j=(i+1)%n;quad(lo[i],lo[j],hi[j],hi[i],mwall);quad(hi[i],hi[j],top[j],top[i],mroof);tri(top[i],top[j],cc,mroof)
     return W_
 HER=[  # heritage Members' and Ladies' stands: green-roof outlines read off the photo grid; eaves 13 m (brick wall heights measured 12.8-15.4 m)
- ([(251,407),(306,402),(306,413),(327,443),(343,482),(356,495),(350,503),(331,520),(303,523),(279,495),(258,501),(252,478),(239,462),(238,448),(234,432),(248,431),(245,417)],14.0,5.0),
+ # Ladies' Stand: three stepped gabled sections read off g/hz4 (back block, middle block with the dormers, front block)
+ ([(251,407),(306,402),(306,413),(318,433),(306,440),(248,447),(248,431),(245,417)],15.0,4.5),
+ ([(234,432),(248,431),(248,447),(306,440),(318,433),(327,443),(333,458),(307,461),(254,482),(252,478),(239,462),(238,448)],14.0,4.0),
+ ([(254,482),(307,461),(333,458),(343,482),(356,495),(350,503),(331,520),(303,523),(279,495),(258,501)],13.0,4.0),
  ([(350,503),(368,496),(388,505),(392,513),(413,521),(420,575),(408,580),(405,586),(391,583),(391,594),(384,590),(379,601),(355,599),(344,590),(343,581),(352,560),(342,556),(340,549),(322,539),(320,533),(312,528),(318,523),(331,526)],13.0,5.0),
  ([(422,528),(435,595),(447,601),(446,579),(452,554),(458,548),(471,549),(477,547),(462,544),(428,527)],11.0,3.0),
  ([(224,509),(229,519),(235,522),(233,535),(245,538),(271,526),(252,501),(235,498)],13.0,3.5),
  ([(300,528),(283,533),(279,541),(267,541),(274,556),(292,550),(294,545),(305,540)],12.0,3.0),
  ([(212,474),(220,492),(242,487),(246,482),(239,468),(222,468)],13.0,3.0)]
 exec(open('herit.py').read())
-for px,ze,rise in HER:hiproof(px_world(px,ze),ze,0.75,rise,'hroof','brick')
+HZ=[hiproof(px_world(px,ze),ze,0.75,rise,'hroof','brick',gable=True) for px,ze,rise in HER]
+# Ladies' Stand roof: two dormer lanterns read off the photo grid (px 253-268 x 461-469 and 275-288 x 452-459)
+for (u0,w0,u1,w1) in ((253,461,268,469),(275,452,288,459)):
+    a_,b_=np.array(px_world([(u0,(w0+w1)/2)],14)[0]),np.array(px_world([(u1,(w0+w1)/2)],14)[0])
+    c_=(a_+b_)/2;ln_=float(np.linalg.norm(b_-a_));wd_=float(np.linalg.norm(np.array(px_world([(u0,w1)],14)[0])-np.array(px_world([(u0,w0)],14)[0])))
+    zr=HZ[1](c_);gablebox(c_[0],c_[1],math.atan2(*(b_-a_)[::-1]),ln_,wd_,zr-1.0,zr+1.6,1.2,'hroof','glassblk','hroof')
+# Members Pavilion: the pediment gable facing the field under the clock tower (refs3/028)
+_t=np.array([-62.5,70.2]);_f=np.array(PC)-_t;_f=_f/np.linalg.norm(_f);_c=_t+_f*4.5
+gablebox(_c[0],_c[1],math.atan2(_f[1],_f[0]),9.0,10.0,0,13.0,3.6,'hroof','brick','stone')
 # Ladies' Stand: round brick tower at the back corner (16.8 m across, read off the photo), domed green roof
 prism(-107.0,41.8,8.4,28,0,13.0,'brick');cone(-107.0,41.8,8.9,28,13.0,18.5,'hroof',bulge=1)
 # Ladies' Stand cupola on the field-side corner; Members' clock tower on the main roof (photo 306,443 / 397,535)
@@ -332,13 +358,16 @@ def stand_cap(d):
     rp=[(lo,zf-1.6)]+[(lo+(hi-lo)*t,zf+(zo-zf)*t) for t in np.linspace(0,1,7)]+[(hi,zo-1.2)]
     rv=[P(r_,a,z_) for r_,z_ in rp]
     for i,j,l in earclip(rp):tri(rv[i],rv[j],rv[l],'fascia')
+def own_end(k,d,step):
+    while (OUT.get(round(d*2)/2%360) or (0,0,0,0,None))[4]!=k:d+=step
+    return d
 for k,(a0,a1,*_) in STANDS.items():
-    for d in (a0,min(a1,107) if k=='messenger' else a1):stand_cap(d)
+    for d,st in ((a0,0.5),(min(a1,107) if k=='messenger' else a1,-0.5)):stand_cap(own_end(k,d,st))
 # concourse columns under the Trumper and O'Reilly backs (Gate 9 photo), about every 9 m along the front line
-for k_,a0_,a1_,share in (('trumper',-105.8,-30,0.22),('oreilly',-32,22,0.74)):
+for k_,a0_,a1_,share in (('trumper',-105.8,-30,0.22),('oreilly',-30,22,None)):
     for d_ in np.arange(a0_+1.5,a1_-1.0,0.5):
         o=OUT.get(round(d_*2)/2%360)
         if not o or o[4]!=k_:continue
         lo,hi,zf,zo,_k=o;rc=hi-0.6
         if int(round(d_*2))%int(round(2*math.degrees(9.0/rc)))!=0:continue
-        a_=math.radians(d_);prism(PC[0]+rc*math.cos(a_),PC[1]+rc*math.sin(a_),0.45,12,0,share*(zo-1.2)-0.6,'conc')
+        a_=math.radians(d_);prism(PC[0]+rc*math.cos(a_),PC[1]+rc*math.sin(a_),0.45,12,0,(share*(zo-1.2) if share else ZC_J)-0.6,'conc')
