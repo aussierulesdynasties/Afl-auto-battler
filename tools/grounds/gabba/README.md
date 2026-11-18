@@ -1,6 +1,6 @@
 # Gabba exterior model (row 202 grounds)
 
-`gabba.glb` is the Gabba stadium (82,603 triangles), built from reference photo `refs/g49.jpg`.
+`gabba.glb` is the Gabba stadium (82,569 triangles), built from reference photo `refs/g49.jpg`.
 Every texture in `htex/` is hand-made (painted or procedural by `mktex_hand.py` and `mktex_sw.py`); no photo pixels.
 
 Director rulings applied (2026-11-18): "Leave field out" (no playing field, the game draws its own grass inside the
