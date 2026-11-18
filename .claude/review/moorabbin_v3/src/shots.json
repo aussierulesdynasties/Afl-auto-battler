@@ -1,0 +1,202 @@
+[
+{
+"eye": [
+188.34776310850236,
+185.34776310850236,
+110
+],
+"at": [
+4.5,
+1.5,
+0
+],
+"lens": 30,
+"out": "C:/Users/DANTE/AppData/Local/Temp/claude/9f4017b9c485d8cb/fb8d066d-4ddf-4085-adc6-c6288b802d1c/scratchpad/moor/proof/turn_045.png"
+},
+{
+"eye": [
+-179.34776310850233,
+185.34776310850236,
+110
+],
+"at": [
+4.5,
+1.5,
+0
+],
+"lens": 30,
+"out": "C:/Users/DANTE/AppData/Local/Temp/claude/9f4017b9c485d8cb/fb8d066d-4ddf-4085-adc6-c6288b802d1c/scratchpad/moor/proof/turn_135.png"
+},
+{
+"eye": [
+-179.3477631085024,
+-182.34776310850233,
+110
+],
+"at": [
+4.5,
+1.5,
+0
+],
+"lens": 30,
+"out": "C:/Users/DANTE/AppData/Local/Temp/claude/9f4017b9c485d8cb/fb8d066d-4ddf-4085-adc6-c6288b802d1c/scratchpad/moor/proof/turn_225.png"
+},
+{
+"eye": [
+188.3477631085023,
+-182.3477631085024,
+110
+],
+"at": [
+4.5,
+1.5,
+0
+],
+"lens": 30,
+"out": "C:/Users/DANTE/AppData/Local/Temp/claude/9f4017b9c485d8cb/fb8d066d-4ddf-4085-adc6-c6288b802d1c/scratchpad/moor/proof/turn_315.png"
+},
+{
+"eye": [
+134.50000000000003,
+-223.66660498395404,
+110
+],
+"at": [
+-42,
+80,
+8
+],
+"lens": 180,
+"res": [
+1920,
+1080
+],
+"out": "C:/Users/DANTE/AppData/Local/Temp/claude/9f4017b9c485d8cb/fb8d066d-4ddf-4085-adc6-c6288b802d1c/scratchpad/moor/proof/facade_turn_dist.png"
+},
+{
+"eye": [
+-18,
+52,
+9
+],
+"at": [
+-42,
+81,
+9.5
+],
+"lens": 30,
+"out": "C:/Users/DANTE/AppData/Local/Temp/claude/9f4017b9c485d8cb/fb8d066d-4ddf-4085-adc6-c6288b802d1c/scratchpad/moor/proof/close_huggins.png"
+},
+{
+"eye": [
+-38,
+-22,
+7
+],
+"at": [
+-80,
+-22,
+7
+],
+"lens": 30,
+"out": "C:/Users/DANTE/AppData/Local/Temp/claude/9f4017b9c485d8cb/fb8d066d-4ddf-4085-adc6-c6288b802d1c/scratchpad/moor/proof/close_longstand.png"
+},
+{
+"eye": [
+12,
+58,
+8
+],
+"at": [
+-18,
+98,
+7
+],
+"lens": 30,
+"out": "C:/Users/DANTE/AppData/Local/Temp/claude/9f4017b9c485d8cb/fb8d066d-4ddf-4085-adc6-c6288b802d1c/scratchpad/moor/proof/close_pavilion.png"
+},
+{
+"eye": [
+80,
+-6,
+9
+],
+"at": [
+115,
+-5,
+9
+],
+"lens": 35,
+"out": "C:/Users/DANTE/AppData/Local/Temp/claude/9f4017b9c485d8cb/fb8d066d-4ddf-4085-adc6-c6288b802d1c/scratchpad/moor/proof/close_scoreboard.png"
+},
+{
+"eye": [
+-10,
+-82,
+30
+],
+"at": [
+-15.3,
+-96.6,
+33.5
+],
+"lens": 50,
+"out": "C:/Users/DANTE/AppData/Local/Temp/claude/9f4017b9c485d8cb/fb8d066d-4ddf-4085-adc6-c6288b802d1c/scratchpad/moor/proof/close_tower.png"
+},
+{
+"eye": [
+-30,
+-30,
+4
+],
+"at": [
+-75,
+-30,
+3
+],
+"lens": 24,
+"out": "C:/Users/DANTE/AppData/Local/Temp/claude/9f4017b9c485d8cb/fb8d066d-4ddf-4085-adc6-c6288b802d1c/scratchpad/moor/proof/close_terrace_stand.png"
+},
+{
+"eye": [
+41.164325404320124,
+-6.221379296327488,
+4
+],
+"at": [
+78.73762636588974,
+-11.900028330324258,
+1.5
+],
+"lens": 28,
+"out": "C:/Users/DANTE/AppData/Local/Temp/claude/9f4017b9c485d8cb/fb8d066d-4ddf-4085-adc6-c6288b802d1c/scratchpad/moor/proof/close_bank_fence_n.png"
+},
+{
+"eye": [
+49.228350274924175,
+33.67892643703681,
+3
+],
+"at": [
+79.76576802658228,
+54.57069795265312,
+1.0
+],
+"lens": 28,
+"out": "C:/Users/DANTE/AppData/Local/Temp/claude/9f4017b9c485d8cb/fb8d066d-4ddf-4085-adc6-c6288b802d1c/scratchpad/moor/proof/close_bank_fence_e.png"
+},
+{
+"eye": [
+10,
+110,
+40
+],
+"at": [
+-43,
+80,
+14
+],
+"lens": 30,
+"out": "C:/Users/DANTE/AppData/Local/Temp/claude/9f4017b9c485d8cb/fb8d066d-4ddf-4085-adc6-c6288b802d1c/scratchpad/moor/proof/close_huggins_roof.png"
+}
+]
