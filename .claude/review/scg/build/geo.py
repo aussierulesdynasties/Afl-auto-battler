@@ -237,7 +237,7 @@ def polar_box(a0,a1,r0,r1,z,m):
     A0,A1=math.radians(a0),math.radians(a1)
     c=[P(r_,a_,h_) for h_ in (0,z) for a_ in (A0,A1) for r_ in (r0,r1)]
     for f in ((0,1,5,4),(2,6,7,3),(0,4,6,2),(1,3,7,5),(4,5,7,6)):quad(*[c[i] for i in f],m)
-polar_box(165,169.5,99,121,16.0,'brick')
+polar_box(165,169.5,99,121,16.0,'ashlar')
 def backwall(d):
     o=OUT.get(round(d*2)/2%360)
     if o and o[4]!='messenger':lo,hi,zf,zo,k=o;rb=nearclamp(d,hi-1.0);zb=min(zf*0.62,zo-4);return [(rb,zb),(rb,zo-1.2)]   # Messenger: its concourse wall (mesback) closes the back
@@ -278,37 +278,12 @@ def photo_block(px,ze,rise,mwall,mroof,shrink=0.55):
     for i in range(n):
         j=(i+1)%n;quad(lo[i],lo[j],hi[j],hi[i],mwall);quad(hi[i],hi[j],top[j],top[i],mroof);tri(top[i],top[j],cc,mroof)
     return W_
-HER=[  # heritage Members' and Ladies' stands: green-roof outlines read off the photo grid; eaves 13 m (brick wall heights measured 12.8-15.4 m)
- # Ladies' Stand: three stepped gabled sections read off g/hz4 (back block, middle block with the dormers, front block)
- ([(251,407),(306,402),(306,413),(318,433),(306,440),(248,447),(248,431),(245,417)],15.0,4.5),
- ([(234,432),(248,431),(248,447),(306,440),(318,433),(327,443),(333,458),(307,461),(254,482),(252,478),(239,462),(238,448)],14.0,4.0),
- ([(254,482),(307,461),(333,458),(343,482),(356,495),(350,503),(331,520),(303,523),(279,495),(258,501)],13.0,4.0),
- # Members Pavilion: five gabled sections read off g/hz5 (left wing, back block, clock-tower block, flatter centre,
- # lower-right gable) and the low roof under the dome
- ([(312,528),(318,523),(331,520),(350,503),(362,522),(368,548),(358,561),(352,560),(342,556),(340,549),(322,539),(320,533)],13.0,3.5),
- ([(350,503),(368,496),(388,505),(392,513),(398,525),(380,532),(362,522)],13.5,3.5),
- ([(392,513),(413,521),(420,555),(405,560),(398,525)],13.0,3.0),
- ([(362,522),(380,532),(398,525),(405,560),(392,565),(368,570),(358,561),(368,548)],12.5,2.0),
- ([(392,565),(405,560),(420,555),(420,575),(408,580),(405,586),(391,583)],12.0,2.5),
- ([(368,570),(392,565),(391,583),(391,594),(384,590),(379,601),(355,599),(344,590),(343,581),(352,560),(358,561)],12.0,2.0),
- ([(422,528),(435,595),(447,601),(446,579),(452,554),(458,548),(471,549),(477,547),(462,544),(428,527)],11.0,3.0),
- ([(224,509),(229,519),(235,522),(233,535),(245,538),(271,526),(252,501),(235,498)],13.0,3.5),
- ([(300,528),(283,533),(279,541),(267,541),(274,556),(292,550),(294,545),(305,540)],12.0,3.0),
- ([(212,474),(220,492),(242,487),(246,482),(239,468),(222,468)],13.0,3.0)]
 exec(open('herit.py').read())
-HZ=[hiproof(px_world(px,ze),ze,0.75,rise,'hroof','brick',gable=True) for px,ze,rise in HER]
-# Ladies' Stand roof: two dormer lanterns read off the photo grid (px 253-268 x 461-469 and 275-288 x 452-459)
-for (u0,w0,u1,w1) in ((253,461,268,469),(275,452,288,459)):
-    a_,b_=np.array(px_world([(u0,(w0+w1)/2)],14)[0]),np.array(px_world([(u1,(w0+w1)/2)],14)[0])
-    c_=(a_+b_)/2;ln_=float(np.linalg.norm(b_-a_));wd_=float(np.linalg.norm(np.array(px_world([(u0,w1)],14)[0])-np.array(px_world([(u0,w0)],14)[0])))
-    zr=HZ[1](c_);gablebox(c_[0],c_[1],math.atan2(*(b_-a_)[::-1]),ln_,wd_,zr-1.0,zr+1.6,1.2,'hroof','glassblk','hroof')
-# Members Pavilion: the pediment gable facing the field under the clock tower (refs3/028)
-_t=np.array([-62.5,70.2]);_f=np.array(PC)-_t;_f=_f/np.linalg.norm(_f);_c=_t+_f*4.5
-gablebox(_c[0],_c[1],math.atan2(_f[1],_f[0]),9.0,10.0,0,13.0,3.6,'hroof','brick','stone')
-# Ladies' Stand: round brick tower at the back corner (16.8 m across, read off the photo), domed green roof
-prism(-107.0,41.8,8.4,28,0,13.0,'brick');cone(-107.0,41.8,8.9,28,13.0,18.5,'hroof',bulge=1)
-# Ladies' Stand cupola on the field-side corner; Members' clock tower on the main roof (photo 306,443 / 397,535)
-for cx,cy,w,z0,z1,z2 in ((-97.0,35.0,1.6,15.0,21.5,24.5),(-62.5,70.2,2.0,15.0,23.0,27.0)):
+exec(open('herbld.py').read())   # heritage stands: clean gabled/hipped buildings (blds.py)
+# Ladies' Stand: round brick tower at the back (16.8 m across, read off the photo), domed green roof
+prism(-107.0,41.8,8.4,28,0,13.0,'brick');cone(-107.0,41.8,8.9,28,13.0,17.7,'hroof')   # conical roof at the stand's own pitch, meets the hip roof in clean valleys
+# Ladies' Stand cupola on the middle of the ridge (field photo); Members' clock tower (aerial photo px 306,443)
+for cx,cy,w,z0,z1,z2 in ((-91.5,41.7,1.1,18.0,20.9,22.3),(-62.5,70.2,2.0,15.0,23.0,27.0)):
     prism(cx,cy,w,4,z0,z1,'stone',math.pi/4);cone(cx,cy,w*1.15,4,z1,z1+0.4,'hroof',math.pi/4);cone(cx,cy,w*0.95,16,z1+0.4,z2,'hroof',bulge=1)
     prism(cx,cy,0.08,4,z2,z2+1.6,'steel')
 # dark glass building behind the Messenger stand (roof edge 35.5 m measured from its base)
@@ -319,7 +294,7 @@ SB=[(87.3,57.0),(91.2,31.8)];zb0,zb1=8.2,25.1
 fx_,fy_=math.cos(math.radians(189)),math.sin(math.radians(189))
 _sA,_sB=np.array(SB[0]),np.array(SB[1])
 def _sbp(t):return _sA+(_sB-_sA)*t
-DECALS={}
+DECALS=dict(HDEC)
 def sbpanel(t0,t1,z0,z1,m,depth=3.0):
     P0,P1=_sbp(t0),_sbp(t1)
     def q(X,z,off):return v(X[0]-fx_*off,X[1]-fy_*off,z)

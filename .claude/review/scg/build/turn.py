@@ -25,4 +25,7 @@ shot('close',215,6,95,lens=30,tgt=Vector((0.94+150*math.cos(math.radians(200)),-
 shot('trumper_back',-62,7,85,lens=30,tgt=polt(-68,128,13))
 shot('oreilly_back',-2,7,85,lens=30,tgt=polt(-5,128,12))
 shot('heritage_roofs',150,32,150,lens=35,tgt=polt(140,105,12))
+shot('her_field',322,9,75,lens=30,tgt=polt(140,108,10))
+shot('her_street',140,12,85,lens=30,tgt=polt(140,112,9))
+shot('her_join',300,14,45,lens=30,tgt=polt(150,108,10))
 print('TURN-DONE')

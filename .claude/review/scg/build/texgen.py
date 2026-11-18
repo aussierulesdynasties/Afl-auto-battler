@@ -160,4 +160,5 @@ def sbad():
     img[:,:10]=(20,22,24);img[:,-10:]=(20,22,24);img[:10]=(20,22,24);img[-10:]=(20,22,24)
     save('sbad',img,1.0,1.0)
 sbface();sbad()
+exec(open('hertex.py').read())
 json.dump(SCALE,open('out/tex/scale.json','w'),indent=0);print(sorted(SCALE))
