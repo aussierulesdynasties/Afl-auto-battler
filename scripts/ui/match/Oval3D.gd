@@ -125,7 +125,8 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 func _film() -> void:
 	var mat := ShaderMaterial.new()
 	mat.shader = preload("res://scripts/ui/match/oval3d_film.gdshader")
-	mat.render_priority = Material.RENDER_PRIORITY_MAX
+	# Drawn last but the club rings (RENDER_PRIORITY_MAX), which keep their exact colour (rule 2.81).
+	mat.render_priority = Material.RENDER_PRIORITY_MAX - 1
 	var qm := QuadMesh.new()
 	qm.size = Vector2(2, 2)
 	film = MeshInstance3D.new()
@@ -136,6 +137,7 @@ func _film() -> void:
 	film.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	film.position = Vector3(0, 0, -1)
 	camera.add_child(film)
+	turf.film = mat
 
 
 ## Copy the director's state onto the scene. The animations advance here, by dt, so the
@@ -1487,6 +1489,9 @@ func _player(scene: PackedScene, kit: ShaderMaterial, cols: Array) -> Dictionary
 	var rm := StandardMaterial3D.new()
 	rm.albedo_color = cols[0]
 	rm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	# A marker, not lit: drawn after the film and its tone, in the exact club colour (rule 2.81).
+	rm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	rm.render_priority = Material.RENDER_PRIORITY_MAX
 	ring.material_override = rm
 	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	node.add_child(ring)
