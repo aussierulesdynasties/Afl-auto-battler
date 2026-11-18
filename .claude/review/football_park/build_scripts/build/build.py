@@ -82,8 +82,10 @@ def rows(d0,z0,d1,z1):
     else:ds[-1]=d1
     return [(d,z0+(z1-z0)*(d-d0)/run) for d in ds]
 def seats(mname,ta,tb,pa0,pa1,pb0,pb1):
-    ra=rows(*pa0,*pa1);rb=rows(*pb0,*pb1);n=max(len(ra),len(rb))
-    ra+= [ra[-1]]*(n-len(ra));rb+=[rb[-1]]*(n-len(rb))
+    # both ends get the same row count, spread evenly, so every riser and tread runs unbroken from one end to the other
+    n=max(len(rows(*pa0,*pa1)),len(rows(*pb0,*pb1)))
+    def even(p0,p1):return [(p0[0]+(p1[0]-p0[0])*i/(n-1),p0[1]+(p1[1]-p0[1])*i/(n-1)) for i in range(n)]
+    ra=even(pa0,pa1);rb=even(pb0,pb1)
     ua,ub=bay(ta),bay(tb)
     if ub<ua:ub+=getattr(S,'AISLES',47)
     for i in range(n-1):
@@ -107,7 +109,8 @@ def bowl():
             if m.startswith('seat'):
                 seats(m,ta,tb,(pa[2*k],pa[2*k+1]),(pa[2*k+2],pa[2*k+3]),(pb[2*k],pb[2*k+1]),(pb[2*k+2],pb[2*k+3]));continue
             if m=='facade':
-                zt=max(a.z,b.z,c.z,d.z) or 1;q=fb*4;quad(m,a,b,c,d,uv=[(ta/q,a.z/zt),(ta/q,b.z/zt),(tb/q,c.z/zt),(tb/q,d.z/zt)]);continue
+                # v = height / the wall top at that vertex's own bearing: a shared edge gets the same UVs from both sides, so the bands meet
+                za=max(a.z,b.z) or 1;zb=max(c.z,d.z) or 1;q=fb*4;quad(m,a,b,c,d,uv=[(ta/q,a.z/za),(ta/q,b.z/za),(tb/q,c.z/zb),(tb/q,d.z/zb)]);continue
             quad(m,a,b,c,d)
 # ---- lofted strips (roofs): u = bays along t (S strip 'bay' degrees), v = 0 inner .. 1 outer
 def strip(st):

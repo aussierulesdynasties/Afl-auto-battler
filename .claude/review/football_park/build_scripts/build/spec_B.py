@@ -32,9 +32,9 @@ def bowl_mats(t):
     face='embank' if (138<=t<=240 or 40<=t<=135) else ('facade' if 240<t<318 else 'west_back')
     return ['apron',seat,'deck',back,face]
 STRIPS=[
- dict(t0=322,t1=35,keys=skeys('w_roof_in','w_roof_out',26.4,25,322,35),mat='west_roof',thick=1.0,mat_under='tan_under'),
+ dict(t0=322,t1=35,keys=skeys('w_roof_in','w_roof_out',26.5,25,322,35),mat='west_roof',thick=1.0,mat_under='tan_under'),
  dict(t0=148,t1=236,keys=skeys('e_roof_in','e_roof_out',11.4,11.5,148,236),mat='tan',thick=0.5,mat_under='tan_under'),
- dict(t0=257,t1=324,keys=skeys('ng_roof_in','ng_eave',26.5,26.5,257,324),mat='white',thick=1.0,mat_under='tan_under'),
+ dict(t0=257,t1=322,keys=[(t,([skeys('w_roof_in','w_roof_out',26.5,25,322,35)[0][1][0],p[1],p[2],p[3]] if t==322 else p)) for t,p in skeys('ng_roof_in','ng_eave',26.5,26.5,257,322)],mat='white',thick=1.0,mat_under='tan_under'),
  dict(t0=45,t1=135,keys=[(0,[26,12,34,12])],mat='box_roof',thick=1.2,mat_edge='signs',mat_under='tan_under'),
 ]
 WALLS=[dict(t0=257,t1=306,keys=[(t,[lin(K['ng_base'],t)-0.1,20,26.5]) for t in range(257,307,3)],mat='glass'),dict(t0=45,t1=135,keys=[(0,[26,7,11.6])],mat='glass')]
@@ -69,3 +69,7 @@ import importlib.util as _ilu,os as _os
 _af=_ilu.spec_from_file_location('apronfit',_os.path.join(_os.path.dirname(_os.path.abspath(__file__)),'apronfit.py'));_AF=_ilu.module_from_spec(_af);_af.loader.exec_module(_AF)
 _kedge=_AF.fit(_kedge,PRISMS,BOXES,TOWERS)
 APRONK=[(a,b,m,ki,_kedge) for a,b,m,ki,ko in APRONK]
+# join fix: the north grandstand's glass back wall runs on from 306 to 322 along the bowl's back top, up to the roof, so roof, wall and west stand meet with no slot
+_p306=dict(BOWL)[306];_p322=dict(BOWL)[322]
+def _bk(t):w=(t-306)/16;return [_p306[i]+(_p322[i]-_p306[i])*w for i in (8,9)]
+WALLS[0]=dict(WALLS[0],t1=322,keys=WALLS[0]['keys']+[(t,[_bk(t)[0],_bk(t)[1],26.5]) for t in range(308,323,2)])
