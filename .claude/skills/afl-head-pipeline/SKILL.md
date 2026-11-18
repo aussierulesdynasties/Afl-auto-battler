@@ -58,7 +58,7 @@ What each step does, and the line you must read:
 | # | Step (script) | What it does | Read this |
 | --- | --- | --- | --- |
 | 1 | clean (`clean_head.py`, Blender) | The director's four: deletes junk inside the neck; **detaches the head**: finds the clothing (any colour unlike his skin, dark or light), grows it up the collar, deletes it so the cut follows the collar, peels collar-coloured rims, drops loose collar scraps; keeps the face below the line just above the eyes; rebuilds the hair above it as one closed surface | `clothing faces N cut at X of height` (N in the hundreds or more; X roughly 0.25-0.5), `eye pieces` or `eye whites N`, `cap line`. A `STOP:` line ends the run on purpose: shoulders still on, or eyes not found. Fix the script, not the head. |
-| 2 | conform (Unreal p5, p7, p8, p9, p10) | Imports the clean head, tracks the face, conforms a MetaHuman head to it, exports MH head + scan | Any `Traceback` in `2_p*.log` stops the run |
+| 2 | conform (Unreal p5, p7, p8, p9, p10) | Deletes the head's old Unreal folder, imports the clean head, resizes the scan to a real adult head (15.5 cm wide, 8 cm below the top), tracks the face, conforms a MetaHuman head to it, exports MH head + scan | `old folder deleted True`, `scan scale ... width 15.5 cm`, `edit True`. Any `Traceback` in `2_p*.log`, or `edit False` (the script STOPs), ends the run |
 | 3 | transfer (`transfer2.py`) | Copies the scan's shape (along normals) and colour onto the MetaHuman head | `3_transfer.log` ends without error |
 | 4 | despeck (`despeck.py`) | Removes light specks and skin shards from the hair, dark specks and isolated dots from the skin | count lines in `4_despeck.log` |
 | 5 | source (`mh_head_src.py`) | One mesh, one material, the scan's eye colours, MetaHuman UV2 for the pore maps | `game/<pid>.glb` and `<pid>_scan.glb` exist |
@@ -111,6 +111,8 @@ Director: "add a final step which will improve the Skill with new learnings". Be
 | Neck chopped at the chin at the back | A flat cut at the front collar's height | `clean_head.py`: the cut follows the collar |
 | Nape hair turned to skin | A 6 cm colour fade | `fit_head.py`: colour join only 2 cm (shape join stays 6 cm) |
 | Old head still in the film | Godot used the stale import | `--import` before filming |
+| Colours scrambled (ear on the forehead), `edit False` in `2_p8.log` | Unreal's re-import only replaced the mesh; the old texture and old conformed MetaHuman were reused | `conform/p5.py` deletes `/Game/Heads/<name>` first; `make_head.sh` STOPs on `edit False` |
+| Many folds, child-size conform | Tripo exports each head at a different size; the old fixed scale made Chandler's scan 12.2 cm wide | `conform/p8.py` resizes every scan to 15.5 cm wide (director: yes). Game size still comes from the fit step |
 | Hard line under the jaw when he stands still | Lighting, not texture (the Mobile renderer ignores skin scattering) | Not fixed: proposed to the director, no OK yet |
 | Hair looks smooth at game distance | Not found yet (the shine test changed nothing) | Open |
 
