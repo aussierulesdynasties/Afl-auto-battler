@@ -22,8 +22,10 @@ void fragment() {
 	float scale = VIEWPORT_SIZE.x / 1080.0;
 	float frame = floor(TIME * 30.0);
 	vec3 c = texture(screen_tex, uv).rgb;
-	vec3 soft = textureLod(screen_tex, uv, 1.2 * scale).rgb;
-	vec3 bloom = textureLod(screen_tex, uv, 4.5).rgb;
+	// Blur sizes as a share of the picture: a picture half as wide blurs one mip level less.
+	float lod = log2(max(scale, 0.01));
+	vec3 soft = textureLod(screen_tex, uv, max(1.2 + lod, 0.0)).rgb;
+	vec3 bloom = textureLod(screen_tex, uv, max(4.5 + lod, 0.0)).rgb;
 	vec3 p = to_p(mix(c, soft, 0.55));
 	p += max(to_p(bloom) - 0.62, vec3(0.0)) * 0.55;
 	float l = luma(p);
@@ -31,6 +33,8 @@ void fragment() {
 	p = 0.035 + p * 0.955;
 	vec2 v = uv - 0.5;
 	p *= 1.0 - 0.22 * dot(v, v) * 1.6;
-	p += (hash(floor(uv * VIEWPORT_SIZE / max(scale, 1.0)) + vec2(frame * 17.13, frame * 3.71)) - 0.5) * 0.035;
+	// Grain grains are one pixel of a 1080-wide picture: on a smaller picture each pixel holds
+	// several, which average out, so the grain is fainter in the same proportion.
+	p += (hash(floor(uv * VIEWPORT_SIZE / max(scale, 1.0)) + vec2(frame * 17.13, frame * 3.71)) - 0.5) * 0.035 * min(scale, 1.0);
 	ALBEDO = to_l(p);
 }
