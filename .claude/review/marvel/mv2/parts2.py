@@ -251,15 +251,36 @@ def fill_line(name,L,z0,z1,off,side,top):
 for sg in(1,-1):
     tw='w' if sg>0 else 'e';m=lambda u,v:(sg*u,sg*v)
     prism('cornerN_tower_'+tw,[m(*c) for c in TWN],0.0,33.0,'louvre','concrete')
-    prism('cornerS_tower_'+tw,[m(*c) for c in TWS],0.0,33.0,'louvre','concrete')
+    if sg>0:prism('cornerS_tower_'+tw,[m(*c) for c in TWS],0.0,33.0,'louvre','concrete')
     for uc,vc in((-54.2,107.2),(54.3,108.4)):
-        cu,cv=m(uc,vc);box('beige_%s_%d'%(tw,int(uc)),cu-6,cu+6,cv-5,cv+5,0.0,27.4,'slate','canvas')
+        cu,cv=m(uc,vc);box('beige_%s_%d'%(tw,int(uc)),cu-6,cu+6,cv-5,cv+5,0.0,27.4,'slate','glass' if (sg<0 and cu<0) else 'canvas')
     for u0_,u1_ in((-80,-58),(57,80)):
         us=np.linspace(u0_,u1_,12);q=[m(u,face_v(u,3.5)) for u in us]+[m(u,face_v(u,-2)) for u in us[::-1]]
         prism('pod_%s_%d'%(tw,u0_),q,24.0,31.0,'curtain','silver')
     for k,L in enumerate((FLN,FLS)):
+        if sg<0 and k==1:L=[c for c in L if c[0]<88.0]  # NE: the satellite shows open paving north of u -88
         q=fill_line('',L,0,0,0.0,'','');prism('fill1_%s_%d'%(tw,k),[m(*c) for c in q],0.0,22.0,'louvre','concrete')
         q=fill_line('',L,0,0,2.5,'','');prism('fill0_%s_%d'%(tw,k),[m(*c) for c in q],0.0,10.0,'slate','concrete')
+# ---------------- east side, read off the straight-down satellite (roof outline seen at height z, footprint = roof + lean*z,
+# lean du +0.1738, dv +0.0805 per metre); heights from the shadow lengths (0.5 m of shadow per metre, calibrated on the roof edge)
+def lean(q,z):return [(u+0.1738*z,v+0.0805*z) for u,v in q]
+# NE corner: one long block (roof 9.3 m wide, 38.7 m long) from the roof corner to the plaza, z 33, plant room on top to 37
+NEB=[(-120.3,-59.1),(-125.6,-66.7),(-93.9,-88.9),(-88.6,-81.3)]
+prism('cornerNE_block',lean(NEB,33.0),0.0,33.0,'louvre','concrete')
+_c=np.mean(lean([(-106.4,-78.3)],37.0),0);rbox('cornerNE_plant',tuple(_c),9.0,7.5,math.atan2(-0.574,0.819),33.0,37.0,'silver','concrete')
+# B: office block north of the deck: roof u -55..-21, v -107..-125 (north half), out to -131 south of u -40; z 24
+for nm,q in(('eastB_n',[(-55.0,-107.0),(-55.0,-125.0),(-40.0,-125.0),(-40.0,-107.0)]),('eastB_s',[(-40.0,-107.0),(-40.0,-131.0),(-21.0,-131.0),(-21.0,-107.0)])):
+    f=lean(q,24.0);prism(nm+'_lo',f,0.0,9.0,'glass','concrete');prism(nm,f,9.0,24.0,'louvre','concrete')
+# D: office block south of the deck: roof u 10..47.5, east edge v -127.5 at u 12 to -124.4 at u 47.5; z 24
+q=[(10.0,-107.0),(10.0,-131.3),(47.5,-124.6),(47.5,-107.0)];f=lean(q,24.0)
+prism('eastD_lo',f,0.0,9.0,'glass','concrete');prism('eastD',f,9.0,24.0,'louvre','concrete')
+# roof plant on B and D (the dark grilles in the satellite)
+for nm,q,z in(('eastB_plant',[(-54.0,-109.0),(-54.0,-117.0),(-47.0,-117.0),(-47.0,-109.0)],24.0),('eastB_plant2',[(-38.0,-108.5),(-38.0,-123.0),(-22.5,-123.0),(-22.5,-108.5)],24.0),
+                ('eastD_plant',[(11.0,-110.0),(11.0,-124.0),(28.0,-124.0),(28.0,-110.0)],24.0),('eastD_plant2',[(32.0,-107.5),(32.0,-116.0),(44.5,-116.0),(44.5,-107.5)],24.0)):
+    prism(nm,lean(q,z+2.0),z,z+2.0,'louvre','silver')
+# C: car deck between B and D (roof u -21..10, v -116..-124, z 7) and the white walkway strip beside the wall (v -107..-116, z 10)
+prism('eastC_deck',lean([(-21.0,-116.0),(-21.0,-124.0),(10.0,-124.0),(10.0,-116.0)],7.0),0.0,7.0,'navy','paving')
+prism('eastC_walk',lean([(-21.0,-107.0),(-21.0,-116.0),(10.0,-116.0),(10.0,-107.0)],10.0),0.0,10.0,'glass','white')
 # ---------------- west forecourt: glazed hall under the terrace, front v 139.4, roof = deck 6.5; stairs down at both ends
 FU0,FU1,FV=-47.0,46.5,139.4
 fb=[(u,v) for u,v in bal if FU0<u<FU1]

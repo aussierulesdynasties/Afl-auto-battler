@@ -85,6 +85,21 @@ elif MODE=='views':
     for n,v in VW.items():
         sc.render.film_transparent=v.get('transparent',True)
         look(v['eye'],v['tgt'],v.get('lens',35),v.get('W',1600),v.get('H',1000));render(os.path.join(HERE,'r_%s.png'%n))
+elif MODE=='top':
+    # straight-down ortho render pixel-aligned with sat/lplan_all_clean.png (local s down, t left, 0.25 m/px, s,t in -200..200).
+    # The satellite leans: a point at height z shows at (s,t)+K*z, so the geometry gets the same shear.
+    c=np.array([-2.50683102,-7.7084982]);D=np.array([0.21444331,-0.97673644]);N=np.array([-0.97673644,-0.21444331])
+    K=np.array([-6.94,-2.2])/38.0;kw=K[0]*D+K[1]*N
+    Sh=Matrix.Identity(4);Sh[0][2]=kw[0];Sh[1][2]=kw[1]
+    for ob in OBJ:ob.data.transform(Sh);ob.data.update()  # shear the mesh itself: an object matrix keeps only loc/rot/scale
+    # frame: image x = (150-v)/0.25, y = (u+150)/0.25 (stadium u south+, v west+), 1200x1200 px
+    th=math.radians(-7.27);Ul=np.array([math.cos(th),math.sin(th)]);Vl=np.array([-Ul[1],Ul[0]]);Ol=np.array([-7.12,-6.5])
+    Uw=Ul[0]*D+Ul[1]*N;Vw=Vl[0]*D+Vl[1]*N;cw=c+Ol[0]*D+Ol[1]*N
+    cd.type='ORTHO';cd.ortho_scale=300.0;mw=Matrix.Identity(4);X=-Vw;Y=-Uw
+    for i in range(2):mw[i][0]=X[i];mw[i][1]=Y[i];mw[i][2]=0.0
+    mw[2][0]=0;mw[2][1]=0;mw[2][2]=1.0;mw[0][3]=cw[0]-C0[0];mw[1][3]=cw[1]-C0[1];mw[2][3]=600.0
+    cam.matrix_world=mw;sc.render.resolution_x=1200;sc.render.resolution_y=1200;sc.render.resolution_percentage=100
+    sun.rotation_euler=(math.radians(30),0,math.radians(160));render(os.path.join(HERE,'r_top.png'))
 elif MODE=='glb':
     # GLB: origin at the pitch centre, north = +Y. World x,y here are the local frame axes; rotate so u (south) = -Y.
     U=np.array([0.336,-0.942]);ang=math.atan2(-U[0],-U[1])  # rotate u-direction onto -Y
