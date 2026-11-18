@@ -21,6 +21,12 @@ hline(a,0,3,(0.66,0.67,0.66));save('deck',a,(12,12))
 a=base((0.30,0.32,0.34),0.012);px=N/12
 for i in range(20):x=i*0.6*px;vline(a,x,6,(0.40,0.42,0.44));vline(a,x+2,2,(0.52,0.54,0.56));vline(a,x+7,3,(0.22,0.23,0.25))
 save('ribs',a,(12,12))
+# end-roof terraces (2019 aerial): light grey sheet treads, seams every 0.6 m across the step, laps every 12 m
+a=base((0.54,0.54,0.53),0.008);px=N/12
+for i in range(20):x=i*0.6*px;vline(a,x,2,(0.66,0.66,0.65));vline(a,x+2,1,(0.86,0.86,0.84))
+vline(a,0,3,(0.60,0.60,0.59));save('endroof',a,(12,12))
+# terrace risers: shadowed grey flashing
+a=base((0.17,0.18,0.19),0.008);hline(a,0,4,(0.12,0.12,0.13));save('riser',a,(12,2))
 # gutter: yellow-brown, joints every 6 m
 a=base((0.66,0.53,0.30),0.01);vline(a,0,3,(0.45,0.36,0.20));vline(a,N/2,3,(0.45,0.36,0.20));save('gutter',a,(12,2))
 # white fascia: joints every 4 m
@@ -72,9 +78,9 @@ vline(a,0,int(0.9*px),(0.76,0.78,0.80))
 for i in range(1,5):vline(a,0.9*px+i*1.42*px,4,(0.30,0.31,0.33))
 hline(a,0,int(0.12*N),(0.70,0.72,0.74));hline(a,N-10,10,(0.5,0.5,0.5))
 save('base',a,(8,6))
-# pale concrete paving / podium deck: 1.2 m slabs with dark drainage strip every 6 m
-a=base((0.74,0.72,0.68),0.012);px=N/6
-for i in range(5):vline(a,i*1.2*px,2,(0.60,0.58,0.55));hline(a,i*1.2*px,2,(0.60,0.58,0.55))
+# tan concrete paving (concourse deck, forecourt; aerial reads sRGB ~150,132,97): 1.2 m slabs, dark drainage strip every 6 m
+a=base((0.62,0.54,0.40),0.012);px=N/6
+for i in range(5):vline(a,i*1.2*px,2,(0.50,0.43,0.32));hline(a,i*1.2*px,2,(0.50,0.43,0.32))
 hline(a,0,8,(0.35,0.35,0.36));save('paving',a,(6,6))
 # light grey rendered concrete wall, formwork joints 2.4 x 1.2 m
 a=base((0.80,0.80,0.78),0.01);px=N/4.8
@@ -100,6 +106,17 @@ for k in range(400):
     cx,cy=R.integers(0,N,2);r=R.integers(10,30);y,x=np.ogrid[-cy:N-cy,-cx:N-cx];m=(x*x+y*y)<r*r
     a[m]=a[m]*0.6+np.array((0.26,0.48,0.20))*0.4*R.uniform(0.7,1.3)
 save('plants',a,(4,4))
+# corner blocks: slate-blue cladding in 1.5 x 3 m panels (2019 aerial, NW/SW corner towers)
+a=base((0.27,0.30,0.38),0.01);px=N/6
+for i in range(4):vline(a,i*1.5*px,3,(0.17,0.19,0.25))
+for j in range(2):hline(a,j*3*px,3,(0.17,0.19,0.25))
+save('slate',a.copy(),(6,6))
+# same cladding with a louvre panel per 6 m bay: 2.4 m wide x 4 m tall, slats every 0.15 m
+x0,x1,y0,y1=int(1.8*px),int(4.2*px),int(1.0*px),int(5.0*px)
+a[y0:y1,x0:x1]=np.array((0.05,0.06,0.08))
+for y in np.arange(y0,y1,0.15*px):a[int(y):int(y)+6,x0:x1]=np.array((0.36,0.38,0.44))
+a[y0:y0+4,x0:x1]=a[y1-4:y1,x0:x1]=a[y0:y1,x0:x0+4]=a[y0:y1,x1-4:x1]=np.array((0.45,0.47,0.52))
+save('louvre',a,(6,6))
 # sign box faces (no lettering): red panel / black panel
 a=base((0.70,0.08,0.10),0.008);save('signred',a,(4,4))
 a=base((0.06,0.06,0.07),0.008);save('signblack',a,(4,4))
