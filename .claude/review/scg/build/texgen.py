@@ -74,12 +74,12 @@ def bricks(name,col,mortar,tu=2.4,tv=2.4,N=1024):
     img+=grain(N,N,4)
     save(name,img,tu,tv)
 
-def glass(name,tu=6.0,tv=3.6,N=1024,tint=(58,78,98),mull=1.5,mc=(184,188,192)):
+def glass(name,tu=6.0,tv=3.6,N=1024,tint=(58,78,98),mull=1.5,mc=(184,188,192),transom=True):
     W=N;H=int(N*tv/tu);yy,xx=np.mgrid[0:H,0:W]
     img=np.array(tint,float)+((xx/W*0.6+yy/H*0.4)[...,None]*np.array([40,40,38]))   # sky reflection gradient
     img[(((xx+yy*0.7)//90)%5==0)]+=14                                                     # reflection streaks
     for k in range(int(round(tu/mull))):x=M(k*mull,tu,W);img[:,x:x+10]=mc                        # mullions
-    img[:12]=mc;img[H//2-4:H//2+4]=mc                            # transom
+    if transom:img[:12]=mc;img[H//2-4:H//2+4]=mc                 # transom
     save(name,img,tu,tv)
 
 def tower():
@@ -134,6 +134,10 @@ def soffit():
 soffit()
 panels('rail',(150,152,154),2.0,2.0,2.0,2.0,(140,142,144),N=128)
 glass('glass');glass('glassblk',tint=(22,22,26),mc=(58,58,62));glass('glassd',tint=(46,62,82));glass('glassm',tint=(34,40,48));glass('glassroof',tu=3.5,tv=3.5,tint=(118,136,160),mull=1.75)
+# Trumper/O'Reilly backs (Gate 9 + Gate E photos): bright blue curtain glass, grey floor spandrels, pale grey band
+glass('glasst',tu=6.0,tv=3.0,tint=(48,104,176),mull=1.5,mc=(196,200,204),transom=False)
+panels('spand',(158,164,168),1.5,0.9,6.0,0.9,(128,132,136),N=512)
+panels('cladl',(208,211,212),1.5,1.0,6.0,2.0,(178,180,182))
 tower();lamp()
 
 # --- scoreboard face (one picture over the whole board, 31.4 x 16.9 m): dark frame, white venue name on the header band,

@@ -5,6 +5,7 @@ from scipy.spatial import Voronoi as _Vor,Delaunay as _Del
 def hiproof(W_,ze,slope,cap,mroof,mwall,walls=True,step=0.6):
     W_=np.array(W_,float);pg=_SP(W_)
     if not pg.is_valid:pg=pg.buffer(0)
+    pg=pg.simplify(1.0,preserve_topology=True);W_=np.array(pg.exterior.coords)[:-1]   # drop pixel-read wobble (<1 m): each wobble was a stray hip
     if pg.exterior.is_ccw is False:W_=W_[::-1]
     bnd=[]
     for i in range(len(W_)):
@@ -14,6 +15,12 @@ def hiproof(W_,ze,slope,cap,mroof,mwall,walls=True,step=0.6):
     vo=_Vor(bnd)
     for q in vo.vertices:
         if pg.contains(_Pt(q)) and pg.exterior.distance(_Pt(q))>0.25:pts.append(q)
+    # dense interior grid: the roof planes are sampled every 'step' m so no long thin triangle cuts across a ridge (the lumps)
+    x0,y0,x1,y1=pg.bounds
+    for gx in np.arange(x0+step/2,x1,step):
+        for gy in np.arange(y0+step/2,y1,step):
+            q=_Pt(gx,gy)
+            if pg.contains(q) and pg.exterior.distance(q)>step*0.4:pts.append(np.array([gx,gy]))
     pts=np.array(pts);dl=_Del(pts)
     zs=[ze+min(slope*pg.exterior.distance(_Pt(q)),cap) for q in pts]
     ids=[v(q[0],q[1],z) for q,z in zip(pts,zs)]

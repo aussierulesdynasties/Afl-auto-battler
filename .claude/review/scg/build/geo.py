@@ -1,6 +1,6 @@
 # SCG model geometry in world metres (x east, y north, z up), from OSM footprints + photo back-projection.
 exec(open('meas.py').read())
-MATS={'ground':(70,70,72),'grass':(95,140,55),'apron':(120,120,115),'seat':(45,105,100),'wall':(200,195,185),
+MATS={'glasst':(48,104,176),'spand':(158,164,168),'cladl':(208,211,212),'ground':(70,70,72),'grass':(95,140,55),'apron':(120,120,115),'seat':(45,105,100),'wall':(200,195,185),
  'roof':(236,236,232),'roofu':(150,150,150),'fascia':(225,222,215),'facade':(222,200,165),'facade2':(205,205,205),
  'tower':(118,106,88),'lamp':(240,240,230),'screen':(25,30,45),'hroof':(85,150,80),'brick':(195,120,85),'glass':(50,55,65),'plant':(180,180,175),'headback':(124,113,112),'glassroof':(95,95,100),'stone':(214,210,200),'steel':(200,202,205),'glassm':(34,40,48),'fence':(238,238,234),'ribbon':(232,112,38),'soffit':(52,58,64),'rail':(150,152,154),'sbface':(26,28,32),'sbad':(242,168,40),'glassblk':(30,28,30)}
 V=[];F=[]  # F: (i,j,k[,l], mat)
@@ -138,9 +138,27 @@ def fac(d):
     if not o:return None
     lo,hi,zf,zo,k=o
     if 168<=d%360<=256:return None   # near stand: modelled bay by bay in near.py
-    if k=='messenger':return None
+    if k in('messenger','trumper','oreilly'):return None
     return [(hi,0),(hi,zo-1.2)]
 band(fac,-180,180,'facade')
+# Trumper back (Gate 9 photo, ground to roof edge in shares of the wall height): recessed dark concourse to 22%,
+# three blue glass storeys with grey floor spandrels to 74%, pale grey band to 83%, dark window strip to 89%,
+# white cladding to the roof edge
+def trumback(d):
+    o=OUT.get(round(d*2)/2%360)
+    if not o or o[4]!='trumper':return None
+    lo,hi,zf,zo,k=o;zt=zo-1.2;zc=0.22*zt;zg=0.74*zt;s=(zg-zc)/3
+    return [(hi-3,0),(hi-3,zc-0.6),(hi,zc-0.6),(hi,zc),(hi,zc+s-0.9),(hi,zc+s),(hi,zc+2*s-0.9),(hi,zc+2*s),(hi,zg),
+            (hi,0.83*zt),(hi,0.89*zt),(hi,zt)]
+band(trumback,-105.8,-30,['dark','slab','slab','glasst','spand','glasst','spand','glasst','cladl','glassblk','facade'])
+# O'Reilly back: no photo of its face; the Gate 9 photo shows the Trumper's top bands running on round the curve past
+# the glass, over an open shaded concourse with columns. Same bands from 74%; concrete set back 4 m below them.
+def oreback(d):
+    o=OUT.get(round(d*2)/2%360)
+    if not o or o[4]!='oreilly':return None
+    lo,hi,zf,zo,k=o;zt=zo-1.2;zb=0.74*zt
+    return [(hi-4,0),(hi-4,zb-0.6),(hi,zb-0.6),(hi,zb),(hi,0.83*zt),(hi,0.89*zt),(hi,zt)]
+band(oreback,-32,22,['conc','slab','slab','cladl','glassblk','facade'])
 # Messenger back (photo 063, east end): pale stone-panel podium ~18 m on the plan line, terrace with glass balustrade,
 # glazed upper concourse set 5 m in, running up to the roof underside; steel V-struts from the stand top to the roof
 MPOD=23.0   # podium top, 063 photo back-projected onto the plan line: 24, 24, 22 m at 44.5, 48.5, 51.7 deg
@@ -316,3 +334,11 @@ def stand_cap(d):
     for i,j,l in earclip(rp):tri(rv[i],rv[j],rv[l],'fascia')
 for k,(a0,a1,*_) in STANDS.items():
     for d in (a0,min(a1,107) if k=='messenger' else a1):stand_cap(d)
+# concourse columns under the Trumper and O'Reilly backs (Gate 9 photo), about every 9 m along the front line
+for k_,a0_,a1_,share in (('trumper',-105.8,-30,0.22),('oreilly',-32,22,0.74)):
+    for d_ in np.arange(a0_+1.5,a1_-1.0,0.5):
+        o=OUT.get(round(d_*2)/2%360)
+        if not o or o[4]!=k_:continue
+        lo,hi,zf,zo,_k=o;rc=hi-0.6
+        if int(round(d_*2))%int(round(2*math.degrees(9.0/rc)))!=0:continue
+        a_=math.radians(d_);prism(PC[0]+rc*math.cos(a_),PC[1]+rc*math.sin(a_),0.45,12,0,share*(zo-1.2)-0.6,'conc')
