@@ -1697,6 +1697,70 @@ func _knock_on(who: int, way: Vector2, metres: float, rate := 3.0) -> void:
 	MatchMotion.set_goal(t, (t["pos"] as Vector2) + line * scoop_runout(kind), 0.0, true)
 
 
+## A scrap's knocks. MatchSim gives each loose ball the touches real footage shows before a
+## man had it (loose_touches: knocked on, none of them clean), and the replay plays each one:
+## the ball rolls in even legs along its way to MatchSim's rest spot, and at each leg's end the
+## man nearest it (not the one who knocked it last, nor the one MatchSim has gather it) goes
+## down for it and knocks it on to the next, the last knock to the rest spot. It is never left
+## lying untouched for more than a leg (director 2026-11-18: "Count untouched time"). A knock
+## that comes with under a leg and a half left goes straight to the rest spot, so the gather
+## keeps MatchSim's spot and seconds. Returns whether the scrap is still being knocked about.
+func _knock_step(p: Dictionary) -> bool:
+	var n := int(p.get("_knocks", 0))
+	var i := int(p.get("_kn", 0))
+	if i >= n:
+		return false
+	var leg := float(p["_leg"])
+	var end := leg * float(n + 1)
+	var bk := int(_beat.get("k", -1))
+	var kid := int(p.get("_kid", -1))
+	if p.has("_kt"):
+		# Down for it: the ball comes off his hands at the touch.
+		if _pt < float(p["_kt"]):
+			return true
+		p.erase("_kt")
+		i += 1
+		var last := i >= n or end - _pt < 1.5 * leg
+		p["_kn"] = n if last else i
+		var to := _rest_spot(bk) if last 				else (p["_from"] as Vector2).lerp(_rest_spot(bk), float(i + 1) / float(n + 1))
+		var way := to - (ball["pos"] as Vector2)
+		var secs := end - _pt if last else leg
+		_knock_on(kid, way if way.length() > 0.01 else _line(tokens[kid]), way.length(),
+				log(100.0) / maxf(secs, 0.4 * TEMPO))
+		return not last
+	if _pt < leg * float(i + 1) - SCOOP_S - 0.5 * TEMPO:
+		return true
+	if int(p.get("_kfor", -1)) != i:
+		# The man nearest it goes down for it.
+		var nk := _next_real(bk)
+		var w := _actor_id(events[nk]) if nk >= 0 else -1
+		var at := _ball_rest()
+		var best := -1
+		var bd := INF
+		for t in tokens:
+			var id := int(t["id"])
+			if id == kid or id == w or float(t.get("down", 0.0)) > 0.0 or not _on_feet(id):
+				continue
+			var d := (t["pos"] as Vector2).distance_to(at)
+			if d < bd:
+				bd = d
+				best = id
+		if best < 0:
+			return true
+		kid = best
+		p["_kid"] = kid
+		p["_kfor"] = i
+		(p.get("_in", {}) as Dictionary).erase(kid)
+	_ease_near(kid, _pace_in(kid))
+	_busy[kid] = true
+	var kind := _scoop_pick(kid)
+	if kind >= 0:
+		tokens[kid]["scoop_k"] = kind
+		_contact(kid, &"ground_ball", _scoop_aim(kid, kind))
+		p["_kt"] = _pt + _scoop_start(kid)
+	return true
+
+
 ## The longest a player is left collecting before the ball is his.
 const COLLECT_LIMIT := 6.0
 ## He goes down for a loose ball once his hands will meet it a scoop's length ahead
@@ -2214,6 +2278,15 @@ func _enter(p: Dictionary) -> void:
 				way = _rest_spot(bk) - (ball["pos"] as Vector2)
 				rate = _loose_rate(bk)
 				p["_held"] = float((events[bk] as Dictionary).get("loose_s", 0.0)) * TEMPO
+				var n := int((events[bk] as Dictionary).get("loose_touches", 0))
+				if n > 0:
+					# Knocked about on its way (_knock_step): the first leg only to the first knock.
+					p["_knocks"] = n
+					p["_kn"] = 0
+					p["_from"] = ball["pos"]
+					p["_leg"] = minf(float(p["_held"]), FUMBLE_HOLD_MAX) / float(n + 1)
+					way = (ball["pos"] as Vector2).lerp(_rest_spot(bk), 1.0 / float(n + 1)) - (ball["pos"] as Vector2)
+					rate = log(100.0) / maxf(float(p["_leg"]), 0.4 * TEMPO)
 			if p.has("along"):
 				# Off his hands on the run: knocked on, and he runs on after it.
 				var ft: Dictionary = tokens[int(p["along"])]
@@ -2433,8 +2506,10 @@ func _done(p: Dictionary) -> bool:
 			# out, the man who fumbled it too (seed 31: he walked on beside it, and a man who dropped
 			# a mark stood still as it rolled off him).
 			if str(ball["mode"]) in ["dead", "loose"] and int(ball["holder"]) < 0:
-				_scrap_in(p, -1)
+				_scrap_in(p, int(p.get("_kid", -1)))
 			if p.has("_held") and str(ball["mode"]) == "loose" and _pt < FUMBLE_HOLD_MAX:
+				if _knock_step(p):
+					return false
 				var nk0 := _next_real(int(_beat.get("k", -1)))
 				var w := _actor_id(events[nk0]) if nk0 >= 0 else -1
 				if w >= 0 and DISPOSALS.has(str((events[nk0] as Dictionary).get("kind", ""))) and _on_feet(w):
