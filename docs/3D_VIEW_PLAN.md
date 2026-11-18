@@ -115,6 +115,22 @@ cameras actually see. The stadium we have "is ok, but it was just thrown togethe
 plan" (2026-11-16): the plan first sets what a stadium needs, then today's is assessed against it,
 part by part (kept, reworked or replaced).
 
+   What a stadium needs, part by part, as the real grounds have it (2026-11-17), against today's (row 202
+   2c's stand, seen from the 2.93 main camera):
+
+   | Part | What the real grounds have | Today's 3D view | Verdict |
+   | --- | --- | --- | --- |
+   | Stands | Each ground's own tiers (the MCG three, most two, small grounds one), concourses between them | One ring stand, 34 m deep, 24 m high, the same at every ground | Replaced: each ground's tiers from data/grounds.json |
+   | Crowd | Sits on those tiers | 41,127 on the one ring (2.92 mix) | Kept, seated on each ground's tiers |
+   | Roof | Edge lip, canopy over the top tier, or a closed roof (Marvel) | None | New, from the data's roof kind |
+   | Outer facade | Each ground its own: "the outer facades are all very different" (director, 2026-11-17) | One plain grey wall round every ground | Replaced: each ground's own facade |
+   | Light towers | MCG's tubular masts, plain masts, or lights on the roof (Marvel, Optus: 2.91) | None | New, from the data |
+   | Scoreboards | One or two big screens at the ends; heritage boards (SCG) | None | New, from the data |
+   | Fence | Advertising boards at the boundary's edge | A plain white wall | Reworked: plain board panels, no sponsor's mark |
+   | Goal ends | Nets raised behind the goals | Posts only | New |
+   | Main camera | A camera platform with a clear view (2.93's spot) | The eye sits among the seats: near heads fill the wide view | New: a platform on each wing, no seats in front of the lens |
+   | Field size | Each ground its own size | One size for every ground | Open: whether size affects play is the director's open question (bible items 26 and 51) |
+
 **2c. The crowd, cheaply.** Methods compared on looks and phone cost before any is chosen: shader-
 painted seats (today), instanced cards of baked figures (impostors), animated low-poly instances, and
 a mix by distance. Cheer squads, banners and reactions to goals are part of the choice. Chosen 2026-11-17: a mix, 3D people within 55 m of the camera and cards beyond (rule 2.92).

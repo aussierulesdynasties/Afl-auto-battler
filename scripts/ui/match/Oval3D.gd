@@ -67,6 +67,7 @@ var ball: MeshInstance3D
 var camera: Camera3D
 var anim: Oval3DAnim          # the animation session's controller (row 198)
 var umpires: Array = []        # [{node, anim, ring, role, k}]: the vignettes' umpire set
+var stadium: Oval3DStadium
 var crowd: Oval3DCrowd
 var _crowd_t := 0.0           # s of match the crowd has run (its idle and cheer clock)
 var _goal_on := false          # the director was showing a goal last frame
@@ -400,31 +401,22 @@ func _posts() -> void:
 			add_child(p)
 
 
-## The stand all the way round and its crowd (Oval3DCrowd: 3D people near the camera, cards
-## beyond, each in his club's colours), then the fence at its foot.
+## The ground's own stadium round the fence (Oval3DStadium, from data/grounds.json for the
+## match's venue, VignetteGround.venue) with its crowd (Oval3DCrowd: 3D people near the camera,
+## cards beyond, each in his club's colours).
 func _stands(home: String, away: String) -> void:
-	crowd = Oval3DCrowd.new()
-	crowd.name = "Crowd"
-	add_child(crowd)
-	crowd.build(HALF_LEN + FENCE, HALF_WID + FENCE, STAND_DEPTH, STAND_RISE,
+	stadium = Oval3DStadium.new()
+	stadium.name = "Stadium"
+	add_child(stadium)
+	stadium.home_name = GameDB.club_name(home)
+	stadium.ground_name = VignetteGround.venue
+	stadium.build(HALF_LEN + FENCE, HALF_WID + FENCE, VignetteGround.spec_of(VignetteGround.venue), HALF_WID,
 			GameDB.club_colours(home), GameDB.club_colours(away))
-	# The fence: a low white wall at the foot of the stand.
-	var fence := MeshInstance3D.new()
-	var fm := CylinderMesh.new()
-	fm.top_radius = 1.0
-	fm.bottom_radius = 1.0
-	fm.height = 1.2
-	fm.radial_segments = 128
-	fm.cap_top = false
-	fm.cap_bottom = false
-	fence.mesh = fm
-	fence.scale = Vector3(HALF_LEN + FENCE, 1.0, HALF_WID + FENCE)
-	fence.position.y = 0.6
-	var fmat := StandardMaterial3D.new()
-	fmat.albedo_color = Color(0.92, 0.92, 0.9)
-	fmat.cull_mode = BaseMaterial3D.CULL_DISABLED
-	fence.material_override = fmat
-	add_child(fence)
+	crowd = stadium.crowd
+	if stadium.closed:
+		# The first turf.apply ran before the stadium stood: the roof's lights take over now.
+		_sun.visible = false
+		turf.fill.visible = false
 
 
 ## One kit material per club: the region fields in the mesh pick skin, hair, guernsey,

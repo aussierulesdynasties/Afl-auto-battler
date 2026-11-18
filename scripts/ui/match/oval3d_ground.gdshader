@@ -128,6 +128,10 @@ void fragment() {
 	// Boundary: the ellipse's distance, approximately, in metres.
 	vec2 g = 2.0 * p / (half_size * half_size);
 	float db = (dot(p / half_size, p / half_size) - 1.0) / max(length(g), 1e-4);
+	// Behind each goal the boundary is the goal line: straight through all four posts, out
+	// to where the oval meets it, as on a real ground (one line, not two).
+	float yc = half_size.y * sqrt(max(1.0 - (goal_x / half_size.x) * (goal_x / half_size.x), 0.0));
+	if (abs(p.y) < yc && abs(p.x) > goal_x - 6.0) db = abs(p.x) - goal_x;
 	ink = max(ink, paint(db, line_w * 1.4));
 	if (e < 1.0) {
 		float sq = max(abs(p.x), abs(p.y)) - 25.0;

@@ -2704,7 +2704,7 @@ func _check_crowd3d(oval: Oval3D) -> void:
 			people += 1 if p.visibility_range_end == Oval3DCrowd.MIX_D and p.visibility_range_begin == 0.0 else 0
 		var c: MultiMeshInstance3D = ch["cards"]
 		cards += 1 if c.visibility_range_begin == Oval3DCrowd.MIX_D and c.visibility_range_end == 0.0 else 0
-	_check(crowd._chunks.size() == Oval3DCrowd.SECTORS * 2 and cards == crowd._chunks.size()
+	_check(crowd._chunks.size() == Oval3DCrowd.SECTORS * 2 * oval.stadium.stands.reduce(func(n, s): return n + (s["tiers"] as Array).size(), 0) and cards == crowd._chunks.size()
 			and people == cards * crowd._people_mats.size(),
 			"Near the camera the supporters are 3D people, beyond 55 m cards (%d people batches, %d card batches)"
 			% [people, cards])
@@ -2727,6 +2727,25 @@ func _check_crowd3d(oval: Oval3D) -> void:
 	d.flash = old_flash
 	d.emitted = k
 	oval._goal_on = false
+
+
+## The ground's own stadium (row 202, 2b): its tiers, roof and towers from data/grounds.json, and
+## the main camera's platform with no seat in front of the lens.
+func _check_stadium3d(oval: Oval3D) -> void:
+	var st := oval.stadium
+	var spec := VignetteGround.spec_of(VignetteGround.venue)
+	_check(st != null and st.tiers.size() == (spec.get("tiers", []) as Array).size() and st.tiers.size() > 0,
+			"The 3D stadium has the ground's own tiers (%d)" % (st.tiers.size() if st else -1))
+	var eye := Vector3(0.0, Oval3DStadium.CAM_UP, Oval3D.HALF_WID + Oval3DStadium.CAM_BACK)
+	var blocked := 0
+	for ch: Dictionary in oval.crowd._chunks:
+		for p: MultiMeshInstance3D in ch["people"]:
+			var mm := p.multimesh
+			for i in range(mm.instance_count):
+				var at := mm.get_instance_transform(i).origin
+				if absf(at.x) < 3.0 and at.z > eye.z - 8.0 and at.z < eye.z + 1.0 and at.y > eye.y - 4.0:
+					blocked += 1
+	_check(blocked == 0, "No supporter sits in front of the main camera's lens (%d)" % blocked)
 
 
 func _check_turf3d(oval: Oval3D) -> void:
@@ -2814,6 +2833,7 @@ func _test_three_d_view(res: Dictionary) -> void:
 			"The 3D oval releases the feed as the flat oval does (%d vs %d)" % [seen.size(), flat_seen.size()])
 	_check_turf3d(oval)
 	_check_crowd3d(oval)
+	_check_stadium3d(oval)
 	# The ground paint lies on the 3D turf, under the bodies: the ring round the man on the ball.
 	pv.director.actor = 0
 	pv._paint_ground_3d()
