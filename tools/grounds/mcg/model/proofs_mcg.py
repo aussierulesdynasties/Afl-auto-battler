@@ -55,9 +55,12 @@ if 'stills' in jobs:
         orbit(az); shot(os.path.join(out, f'turntable_{az:03d}.png'))
 if 'close' in jobs:  # one sharp close-up per hand-painted facade texture, 18 m out at eye height 9 m
     cd.angle = math.radians(50)
-    for b, name in ((20, 'north_windows'), (31, 'north_open'), (100, 'east_white'), (140, 'east_panel'),
-                    (160, 'glass_tower'), (200, 'south_bluewall_a'), (225, 'south_bluewall_b'),
-                    (265.5, 'mcc_windows'), (275, 'mcc_louvre'), (318, 'nw_grey'), (334, 'nw_glass'), (344, 'nw_windows'), (3, 'north_entry'), (58, 'ne_light'), (68, 'ne_band'), (255.5, 'west_grey')):
+    for b, name in ((3, 'north_entry'), (20, 'north_windows'), (31, 'north_open'), (50, 'ne_box'), (64, 'east_glass'),
+                    (77.7, 'east_tower'), (80, 'east_glass2'), (95, 'east_precast'), (115.5, 'east_tower2'),
+                    (135, 'se_block'), (145, 'se_porthole'), (159.5, 'south_balconies'), (163.5, 'south_recess'),
+                    (183, 'south_gss'), (198.5, 'south_balconies2'), (224, 'sw_dark'), (242, 'sw_pale'),
+                    (255.5, 'west_grey'), (265.5, 'mcc_windows'), (275, 'mcc_louvre'), (302, 'nw_recess'),
+                    (314.5, 'nw_dark'), (334, 'nw_glass'), (344, 'nw_windows')):
         p = facade_hit(b, 9.0)
         if p is None: print('no hit', b); continue
         n = mathutils.Vector((math.sin(math.radians(b)), math.cos(math.radians(b)), 0))
@@ -67,7 +70,8 @@ if 'close' in jobs:  # one sharp close-up per hand-painted facade texture, 18 m 
 if 'joins' in jobs:  # where parts meet: roof on facade, truss feet, screen on roof, light-tower foot, canopy
     cd.angle = math.radians(55)
     for b, z0, up, name in ((100, 18, 14, 'roof_facade_east'), (300, 18, 16, 'truss_feet_west'), (59, 20, 16, 'screen_ne'),
-                            (242, 20, 16, 'screen_sw'), (5, 6, 10, 'north_canopy'), (180, 6, 18, 'south_gss')):
+                            (242, 20, 16, 'screen_sw'), (5, 6, 10, 'north_canopy'), (180, 6, 18, 'south_gss'),
+                            (172, 6, 14, 'gss_end'), (160, 6, 12, 'south_towers')):
         p = facade_hit(b, z0) or mathutils.Vector((150 * math.sin(math.radians(b)), 150 * math.cos(math.radians(b)), z0))
         n = mathutils.Vector((math.sin(math.radians(b)), math.cos(math.radians(b)), 0))
         look(p + n * 32 + mathutils.Vector((0, 0, 2)), p + mathutils.Vector((0, 0, up)))

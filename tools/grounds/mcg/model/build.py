@@ -40,9 +40,17 @@ def tower(mb, T):
     def P(u, v, d=0.0):
         w = wb + (wt - wb) * v / hh; return c0 + s * (u * w / 2) + up * v + nrm * d
     q = [P(-1, 0), P(1, 0), P(1, hh), P(-1, hh)]
-    mb.face(q, 'lamps', uv=[(0, 0), (1, 0), (1, 1), (0, 1)])            # field side: lamp grid
     qb = [P(-1, 0, -0.9), P(1, 0, -0.9), P(1, hh, -0.9), P(-1, hh, -0.9)]
-    mb.face(qb[::-1], 'lamps', uv=[(1, 0), (0, 0), (0, 1), (1, 1)][::-1])  # back of the head: open lamp frame
+    # the head tapers, so one UV quad bends the lamp grid along its diagonal: cut it into a fine grid instead
+    NU, NV = 8, 16
+    for i in range(NU):
+        for j in range(NV):
+            u0, u1, v0, v1 = i / NU, (i + 1) / NU, j / NV, (j + 1) / NV
+            g = lambda u, v, d: P(2 * u - 1, v * hh, d)
+            mb.face([g(u0, v0, 0), g(u1, v0, 0), g(u1, v1, 0), g(u0, v1, 0)], 'lamps',
+                    uv=[(u0, v0), (u1, v0), (u1, v1), (u0, v1)])                  # field side: lamp grid
+            mb.face([g(u0, v1, -0.9), g(u1, v1, -0.9), g(u1, v0, -0.9), g(u0, v0, -0.9)], 'lamps',
+                    uv=[(1 - u0, v1), (1 - u1, v1), (1 - u1, v0), (1 - u0, v0)])  # back of the head: lamp frame
     for i in range(4):
         j = (i + 1) % 4; mb.face([q[j], q[i], qb[i], qb[j]], 'paint_white')
 
@@ -103,11 +111,11 @@ def bowl_all(col):
         rfp = max(rfp, rf + d3 + 6)
         # (r, z, material-of-segment-from-previous-point)
         S = [(rf, -5.3, None), (rf, -4.2, 'fence'), (rf + 1.5, -4.2, 'conc_grey'), (rf + d1, z1, matat('t1', b)),
-             (rf + d2, z1, 'conc_grey'), (rf + d2, zb2, 'conc_light'), (rf + d2 - 0.4, zt2, 'fascia'),
-             (rf + e2, z2, matat('t2', b)), (rf + d3, z2, 'conc_grey'), (rf + d3, zb3, 'conc_light'),
-             (rf + d3 - 0.4, zt3, 'fascia'), (rout - 8, zback, matat('t3', b)), (rout - 8, h - edge(b)[1], 'conc_grey'),
-             (min(rfp, rout), h - edge(b)[1], 'roof_soffit')]
-        secs.append(dict(b=b, S=S, ed=edge(b), dk=matat('deck', b) if 'deck' in mats else 'conc_light', rin=rin, rout=rout, h=h, rfp=rfp, zfac=zfac, tw=tw_(b)[0], fm=fseg[3], fs0=fseg[0]))
+             (rf + d2, z1, 'conc_grey'), (rf + d2, zb2, 'tier_wall'), (rf + d2 - 0.4, zt2, 'tier_fascia'),
+             (rf + e2, z2, matat('t2', b)), (rf + d3, z2, 'conc_grey'), (rf + d3, zb3, 'tier_wall'),
+             (rf + d3 - 0.4, zt3, 'tier_fascia'), (rout - 8, zback, matat('t3', b)), (rout - 8, h - edge(b)[1], 'conc_grey'),
+             (min(rfp, rout, screen_rb(b) - 0.3), h - edge(b)[1], 'roof_soffit')]
+        secs.append(dict(b=b, S=S, ed=edge(b), dk=matat('deck', b) if 'deck' in mats else 'conc_light', rin=rin, rout=rout, h=h, rfp=rfp, zfac=zfac, tw=tw_(b)[0], fm=fseg[3], fs0=fseg[0], fend=fseg[4] if len(fseg) > 4 else fseg[3]))
     mb = MB('bowl')
     n = len(secs)
     for i in range(n):
@@ -116,7 +124,12 @@ def bowl_all(col):
             m = A['S'][k][2]
             p0 = (*pol(A['b'], A['S'][k - 1][0]), A['S'][k - 1][1]); p1 = (*pol(A['b'], A['S'][k][0]), A['S'][k][1])
             q0 = (*pol(Bs['b'], Bs['S'][k - 1][0]), Bs['S'][k - 1][1]); q1 = (*pol(Bs['b'], Bs['S'][k][0]), Bs['S'][k][1])
-            mb.face([p0, q0, q1, p1], m)
+            # rake UVs: u = arc length along the tier (at the segment's mid radius), v = distance up the section,
+            # so seat rows run along the bowl and climb the rake (planar xy UVs smeared them into a flat wall)
+            tu, tv = TILE.get(m, (1, 1)); rm = 0.5 * (A['S'][k - 1][0] + A['S'][k][0]); kk = math.pi / 180
+            L = math.hypot(A['S'][k][0] - A['S'][k - 1][0], A['S'][k][1] - A['S'][k - 1][1])
+            ua = A['b'] * kk * rm / tu; ub = ua + ((Bs['b'] - A['b']) % 360) * kk * rm / tu
+            mb.face([p0, q0, q1, p1], m, uv=[(ua, 0), (ub, 0), (ub, L / tv), (ua, L / tv)])
         # facade wall and deck at the footprint
         fz = A['zfac']; gz = Bs['zfac']  # each sector keeps its own block height; steps at block edges
         a0 = (*pol(A['b'], A['rfp']), 0.0); b0 = (*pol(Bs['b'], Bs['rfp']), 0.0)
@@ -125,25 +138,37 @@ def bowl_all(col):
         ua = (A['b'] - A['fs0']) * k * A['rfp'] / tu; ub = ua + ((Bs['b'] - A['b']) % 360) * k * 0.5 * (A['rfp'] + Bs['rfp']) / tu
         mb.face([a0, a1, b1, b0], A['fm'], uv=[(ua, 0), (ua, fz / tv), (ub, fz / tv), (ub, 0)])
         c0 = (*pol(A['b'], A['rout'] - 8), fz); c1 = (*pol(Bs['b'], Bs['rout'] - 8), fz)
-        mb.face([c0, a1, b1, c1][::-1], A['dk'])
+        if A['dk'] in ('solar', 'terrace'):  # panels / paving only on the front 9 m of the block roof, plain roof behind
+            ra, rb_ = max(A['rout'] - 8, A['rfp'] - 9), max(Bs['rout'] - 8, Bs['rfp'] - 9)
+            m0 = (*pol(A['b'], ra), fz); m1 = (*pol(Bs['b'], rb_), fz)
+            mb.face([m0, a1, b1, m1][::-1], A['dk']); mb.face([c0, m0, m1, c1][::-1], 'roof_grey')
+        else:
+            mb.face([c0, a1, b1, c1][::-1], A['dk'])
         # upper back wall: deck up to the roof's outer fascia, set 1.5 m in from the roof edge
         wa = min(A['rfp'], A['rout']) - 1.5; wb = min(Bs['rfp'], Bs['rout']) - 1.5
+        wa = backr(A['b'], wa); wb = backr(Bs['b'], wb)  # set-back stand wall (north gate terrace)
         for za, zb, m in back_bands(A['b'], fz, A['h'] - A['ed'][1]):
             mb.face([(*pol(A['b'], wa), za), (*pol(A['b'], wa), zb), (*pol(Bs['b'], wb), zb), (*pol(Bs['b'], wb), za)], m)
         if abs(fz - gz) > 0.01:  # end wall where the next block is lower or higher
-            lo, top = min(fz, gz), max(fz, gz); hm = A['fm'] if fz > gz else Bs['fm']
+            lo, top = min(fz, gz), max(fz, gz); hm = A['fend'] if fz > gz else Bs['fend']
             q = [(*pol(Bs['b'], Bs['rfp']), lo), (*pol(Bs['b'], Bs['rfp']), top), (*pol(Bs['b'], Bs['rout'] - 8), top), (*pol(Bs['b'], Bs['rout'] - 8), lo)]
             mb.face(q, hm); mb.face(q[::-1], hm)
         # radial step between neighbouring footprint radii shows as a wall (handled by the quad above)
     mb.build(col)
-    # plaza: concrete from under the facade out to its measured edge, then the park gravel strip
-    pz = periodic(D['plaza']); gv = periodic(D['gravel']); mp = MB('plaza')
-    for i in range(n):
-        A = secs[i]; Bs = secs[(i + 1) % n]
-        for r0a, r0b, r1a, r1b, m in ((A['rfp'] - 3, Bs['rfp'] - 3, pz(A['b'])[0], pz(Bs['b'])[0], 'paving'),
-                                      (pz(A['b'])[0], pz(Bs['b'])[0], gv(A['b'])[0], gv(Bs['b'])[0], 'gravel')):
+    # plaza: traced on Esri where the paving ends (mcg.json plaza_poly = hard ground to the lawn/fence/rail,
+    # paving_poly = grey paving; tan gravel between them on the north). Sampled at every 0.5 deg plus every polygon
+    # corner's bearing, so each edge is one straight line with no lumps.
+    HP = D['plaza_poly']; PP = D['paving_poly']
+    vb = [math.degrees(math.atan2(x, y)) % 360 for x, y in HP + PP]
+    pb = np.array(sorted(set(np.round(np.concatenate([bs, vb]), 4))))
+    rin_ = np.array([s['rfp'] - 3 for s in secs]); bb = np.concatenate([bs - 360, bs, bs + 360]); rr3 = np.concatenate([rin_] * 3)
+    r0 = np.interp(pb, bb, rr3); rh_ = polar_of_poly(HP, pb); rp_ = np.fmin(polar_of_poly(PP, pb), rh_)
+    mp = MB('plaza'); n2 = len(pb)
+    for i in range(n2):
+        j = (i + 1) % n2; ba, bq = pb[i], pb[j]
+        for r0a, r0b, r1a, r1b, m in ((r0[i], r0[j], rp_[i], rp_[j], 'paving'), (rp_[i], rp_[j], rh_[i], rh_[j], 'gravel')):
             if r1a - r0a < 0.05 and r1b - r0b < 0.05: continue
-            mp.face([(*pol(A['b'], r0a), 0.0), (*pol(Bs['b'], r0b), 0.0), (*pol(Bs['b'], max(r0b, r1b)), 0.0), (*pol(A['b'], max(r0a, r1a)), 0.0)], m)
+            mp.face([(*pol(ba, r0a), 0.0), (*pol(bq, r0b), 0.0), (*pol(bq, max(r0b, r1b)), 0.0), (*pol(ba, max(r0a, r1a)), 0.0)], m)
     mp.build(col)
     # roof
     mr = MB('roof')
@@ -204,6 +229,18 @@ def back_bands(b, z0, z1):
     return out
 
 
+def backr(b, r):
+    """Upper back wall radius: a measured set-back (mcg.json backr [b0, b1, r]) or the default r."""
+    for b0, b1, rr in D.get('backr', []):
+        if b0 <= b % 360 < b1: return rr
+    return r
+
+
+def screen_rb(b):
+    """Back face radius of the screen box at bearing b (inf outside the screens): the bowl soffit stops behind it."""
+    return min([S['rb'] for S in D.get('screens', []) if S['b0'] <= b % 360 <= S['b1']] or [1e9])
+
+
 def in_screen(b):
     return any(S['b0'] <= b % 360 <= S['b1'] for S in D.get('screens', []))
 
@@ -226,7 +263,7 @@ def screens_all(col):
         else:
             pts = [pol(S['b0'] + (S['b1'] - S['b0']) * (0.15 + 0.7 * k / (S['posts'] - 1)), S['rb'] - 1.0) for k in range(S['posts'])]
         for x, y in pts:
-            mb.beam((x, y, S['zt']), (x, y, S['post_top']), 0.4, 0.4, 'steel_galv')
+            mb.beam((x, y, S['zt']), (x, y, S['post_top']), 0.25, 0.25, 'steel_galv')  # poles: GE f045 (NE), f225 (SW)
     mb.build(col)
 
 
@@ -241,8 +278,29 @@ def canopy_all(col):
         if k % 2 == 0: mb.beam(P3(b0, C['rf'] - 2, C['zdeck']), P3(b0, C['rf'] - 2, z0), 0.3, 0.3, 'steel_white')
     for b0, b1, r, z0, z1 in D['glassbox']:
         for a0, a1 in zip(np.linspace(b0, b1, 5), np.linspace(b0, b1, 5)[1:]):
-            q = [P3(a0, r, z0), P3(a1, r, z0), P3(a1, r, z1), P3(a0, r, z1)]; mb.face(q, 'glass'); mb.face(q[::-1], 'glass')
+            q = [P3(a0, r, z0), P3(a1, r, z0), P3(a1, r, z1), P3(a0, r, z1)]; mb.face(q, 'backglass'); mb.face(q[::-1], 'backglass')
             mb.face([P3(a0, r, z1), P3(a1, r, z1), P3(a1, r - 8, z1), P3(a0, r - 8, z1)], 'roof_grey')
+    for b0, b1, r0, r1, zt, fm, sm in D.get('blocks', []):  # stair towers and podiums standing out from the facade
+        n = max(2, int(abs(b1 - b0) / 0.5) + 1); bb = np.linspace(b0, b1, n); kk = math.pi / 180
+        tu, tv = TILE.get(fm, (1, 1)); su, sv = TILE.get(sm, (1, 1))
+        for a0, a1 in zip(bb, bb[1:]):
+            u0 = (a0 - b0) * kk * r1 / tu; u1 = (a1 - b0) * kk * r1 / tu
+            mb.face([P3(a0, r1, 0), P3(a1, r1, 0), P3(a1, r1, zt), P3(a0, r1, zt)][::-1], fm,
+                    uv=[(u0, 0), (u1, 0), (u1, zt / tv), (u0, zt / tv)][::-1])
+            mb.face([P3(a0, r0, zt), P3(a1, r0, zt), P3(a1, r1, zt), P3(a0, r1, zt)], 'roof_grey')
+        for b, sg in ((b0, -1), (b1, 1)):
+            q = [P3(b, r0, 0), P3(b, r1, 0), P3(b, r1, zt), P3(b, r0, zt)]; L = (r1 - r0) / su
+            mb.face(q if sg > 0 else q[::-1], sm, uv=[(0, 0), (L, 0), (L, zt / sv), (0, zt / sv)] if sg > 0 else [(0, zt / sv), (L, zt / sv), (L, 0), (0, 0)])
+    for b0, b1, rf, rb, zf, zb in D.get('lanterns', []):  # sloped glazed skylight on a block roof (NW glass block, f315)
+        bb = np.linspace(b0, b1, max(2, int(abs(b1 - b0) / 0.5) + 1)); kk = math.pi / 180; L = math.hypot(rf - rb, zb - zf)
+        for a0, a1 in zip(bb, bb[1:]):
+            u0 = (a0 - b0) * kk * rf / 6.0; u1 = (a1 - b0) * kk * rf / 6.0
+            mb.face([P3(a0, rf, zf), P3(a1, rf, zf), P3(a1, rb, zb), P3(a0, rb, zb)], 'skylight', uv=[(u0, 0), (u1, 0), (u1, L / 24.0), (u0, L / 24.0)])
+            mb.face([P3(a0, rb, zf), P3(a0, rb, zb), P3(a1, rb, zb), P3(a1, rb, zf)], 'steel_dark')
+        for b, sg in ((b0, 1), (b1, -1)):
+            q = [P3(b, rf, zf), P3(b, rb, zb), P3(b, rb, zf)]; mb.face(q if sg > 0 else q[::-1], 'steel_dark')
+    for b, r, z in D.get('legs', []):  # legs under the north-east metal box
+        mb.beam(P3(b, r, 0.0), P3(b, r, z), 0.45, 0.45, 'paint_white')
     mb.build(col)
 
 
@@ -280,13 +338,13 @@ def struct_all(col):
     tops = []
     for b in bs:
         o = ro(b)[0]; zt = mt(b)[0]; tp = P3(b, o, zt); tops.append((b, o, zt))
-        mm.beam(P3(b, o, M['z0']), tp, 1.0, 0.8, 'steel_white')
-        ri_ = o - M['stay_in']; mm.beam(tp, P3(b, ri_, zroof(b, ri_) + 0.2), 0.25, 0.25, 'steel_white')
+        mm.beam(P3(b, o, M['z0']), tp, 1.0, 0.8, 'steel_galv')
+        ri_ = o - M['stay_in']; mm.beam(tp, P3(b, ri_, zroof(b, ri_) + 0.2), 0.25, 0.25, 'steel_galv')
     for (b1, o1, z1), (b2, o2, z2) in zip(tops, tops[1:]):
         zl = M['z0'] + 1.0; zu = min(rh(b1)[0], rh(b2)[0]) - 4.5
-        mm.beam(P3(b1, o1, zl), P3(b2, o2, zu), 0.3, 0.3, 'steel_white')
-        mm.beam(P3(b1, o1, zu), P3(b2, o2, zl), 0.3, 0.3, 'steel_white')
+        mm.beam(P3(b1, o1, zl), P3(b2, o2, zu), 0.3, 0.3, 'steel_galv')
+        mm.beam(P3(b1, o1, zu), P3(b2, o2, zl), 0.3, 0.3, 'steel_galv')
         bm = b1 + ((b2 - b1 + 180) % 360 - 180) / 2; om = ro(bm)[0]; ap = P3(bm, om, zroof(bm, om) - 1.0)
-        mm.beam(P3(b1, o1, z1), ap, 0.3, 0.3, 'steel_white'); mm.beam(P3(b2, o2, z2), ap, 0.3, 0.3, 'steel_white')  # V stays
-        mm.beam(P3(b1, o1, z1), P3(b2, o2, z2), 0.25, 0.25, 'steel_white')  # tie along the mast tops
+        mm.beam(P3(b1, o1, z1), ap, 0.3, 0.3, 'steel_galv'); mm.beam(P3(b2, o2, z2), ap, 0.3, 0.3, 'steel_galv')  # V stays
+        mm.beam(P3(b1, o1, z1), P3(b2, o2, z2), 0.25, 0.25, 'steel_galv')  # tie along the mast tops
     mm.build(col)

@@ -123,6 +123,11 @@ class MB:
         for f, poly in enumerate(me.polygons):
             m = s.M[f]; poly.material_index = idx[m]; poly.use_smooth = False
             tu, tv = TILE.get(m, (1, 1)); n = poly.normal; uvx = s.UV[f]
+            if uvx is None and abs(n.z) <= 0.7:  # wall: whole bays from the face's own edge, so no window wraps a corner
+                h = math.hypot(n.x, n.y); tx, ty = (-n.y / h, n.x / h) if h > 1e-6 else (1, 0)
+                pr = [me.vertices[me.loops[li].vertex_index].co for li in poly.loop_indices]
+                pr = [c.x * tx + c.y * ty for c in pr]; p0 = min(pr); wd = max(pr) - p0; nb = round(wd / tu)
+                tw, off = (wd / nb, 0.0) if nb >= 1 else (tu, 0.5 - 0.5 * wd / tu)
             for k, li in enumerate(poly.loop_indices):
                 v = me.vertices[me.loops[li].vertex_index].co
                 if uvx is not None:
@@ -130,8 +135,7 @@ class MB:
                 elif abs(n.z) > 0.7:
                     uv = (v.x / tu, v.y / tv)
                 else:
-                    h = math.hypot(n.x, n.y); tx, ty = (-n.y / h, n.x / h) if h > 1e-6 else (1, 0)
-                    uv = ((v.x * tx + v.y * ty) / tu, v.z / tv)
+                    uv = ((v.x * tx + v.y * ty - p0) / tw + off, v.z / tv)
                 uvl.data[li].uv = uv
         ob = bpy.data.objects.new(s.name, me)
         (col or bpy.context.scene.collection).objects.link(ob)

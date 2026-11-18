@@ -10,21 +10,29 @@ def noise(n,sc,amp):
     a=np.asarray(im,float)[n//2:n//2+n,n//2:n//2+n]/255-0.5;return a*amp
 def fine(n,amp):return R.normal(0,amp,(n,n))
 def flat(col,f=3,s=5):return np.ones((N,N,3))*np.array(col,float)+fine(N,f)[:,:,None]+noise(N,24,s)[:,:,None]
-# Seat rows: one tile = 4 m along the row x 3.2 m up the rake (4 rows of 0.8 m). Plastic seats 0.5 m wide,
-# backrest band, concrete riser and walkway between rows. v runs up the rake.
-def seats(name,col,riser=(150,150,146)):
-    a=np.ones((N,N,3))*np.array(riser,float);pu=N/4.0;pv=N/3.2
+# Seat rows (copied from GE f180 / n_w): one tile = 12 m along the tier x 3.2 m up the rake (4 rows of 0.8 m).
+# A 1.0 m concrete aisle stair at u 0-1.0 (step nosing every 0.4 m), then 21 plastic seats at 0.524 m pitch.
+# Each row from the front: narrow concrete tread, seat pan, backrest, dark riser shadow. v = 0 is the row front.
+def seats(name,col,tread=(78,84,92),aisle=(118,122,126)):
+    W,Hh=2048,1024;pu=W/12.0;pv=Hh/3.2;c0=np.array(col,float)
+    a=np.ones((Hh,W,3))*np.array(tread,float)
+    Y=lambda v:Hh-int(round(v*pv))  # image row of v metres (v up the rake; image row 0 = top of tile)
     for r in range(4):
         v0=r*0.8
-        for k in range(8):
-            u0=k*0.5;c=np.array(col,float)*(1+R.normal(0,0.03))
-            x0,x1=int((u0+0.02)*pu),int((u0+0.48)*pu)
-            # seat pan (lower) and backrest (upper, slightly darker)
-            a[int((v0+0.08)*pv):int((v0+0.40)*pv),x0:x1]=c
-            a[int((v0+0.40)*pv):int((v0+0.70)*pv),x0:x1]=c*0.85
-        a[int((v0+0.70)*pv):int((v0+0.74)*pv)]=np.array(riser)*0.7  # shadow line at the riser
-    a+=fine(N,2.5)[:,:,None];save(name,a,(4.0,3.2))
-seats('seat_teal',(96,170,176));seats('seat_navy',(22,74,118),riser=(64,68,74));seats('seat_blue',(58,98,150));seats('seat_grey',(128,138,150))
+        for k in range(21):
+            u0=1.0+k*0.524;c=c0*(1+R.normal(0,0.025));x0,x1=int((u0+0.03)*pu),int((u0+0.494)*pu)
+            a[Y(v0+0.42):Y(v0+0.14),x0:x1]=c            # seat pan
+            a[Y(v0+0.74):Y(v0+0.42),x0:x1]=c*0.86       # backrest
+            a[Y(v0+0.44):Y(v0+0.40),x0:x1]=c*0.7        # pan/back crease
+        a[Y(v0+0.8):Y(v0+0.75),int(1.0*pu):]=np.array(tread)*0.6   # riser shadow under the next row
+    # aisle stair: concrete with a nosing line every 0.4 m and a centre handrail
+    a[:,:int(1.0*pu)]=np.array(aisle,float)
+    for k in range(8):a[Y(k*0.4+0.04):Y(k*0.4),:int(1.0*pu)]=np.array(aisle)*0.72
+    a[:,int(0.48*pu):int(0.52*pu)]=(200,204,206)
+    a+=R.normal(0,2.0,(Hh,W,1));save(name,a,(12.0,3.2))
+seats('seat_navy',(18,80,124));seats('seat_slate',(70,100,125));seats('seat_steel',(112,124,134));seats('seat_grey',(158,158,150))
+# Tier fronts: the walkway wall and the fascia below each tier lip read dark in every photo (shaded, black LED ribbon).
+save('tier_wall',flat((86,90,96),2,4),(2.0,2.0));save('tier_fascia',flat((44,48,54),2,3),(2.0,2.0))
 # Roof sheeting: light metal deck, ribs every 0.3 m along v (radial), long panels.
 def deck(name,col,pitch=0.3,tile=3.0):
     x=np.arange(N)/N*(tile/pitch);rib=np.where((x%1)<0.14,0.82,1.0)+0.03*np.cos(2*math.pi*x)
@@ -42,13 +50,13 @@ def panels(name,col,pu=3.0,pv=1.5):
     save(name,a,(6.0,6.0))
 panels('conc_light',(204,200,190));panels('conc_beige',(196,184,160));panels('conc_grey',(150,152,152))
 # Glazing band: dark blue-grey glass, mullions every 1.5 m, transom every 1.6 m.
-a=flat((52,66,82),2,6);p=N/3.0
+a=flat((44,54,66),2,6);p=N/3.0
 v=np.linspace(0,1,N)[:,None,None];a=a*(0.85+0.3*v)
 for k in range(2):a[:,int(k*1.5*p):int(k*1.5*p)+8]=(150,156,160)
 for k in range(2):a[int(k*1.6*p):int(k*1.6*p)+8]=(150,156,160)
 save('glass',a,(3.0,3.2))
 # Steel: painted white towers, MCG blue roof trusses, galvanised grey, black screen.
-for nm,col in (('steel_white',(234,236,234)),('steel_blue',(54,104,170)),('steel_galv',(156,160,164)),('steel_dark',(62,66,72)),('screen',(18,20,24)),('paint_white',(238,238,234))):
+for nm,col in (('steel_white',(234,236,234)),('steel_blue',(146,150,152)),('steel_galv',(156,160,164)),('steel_dark',(62,66,72)),('screen',(18,20,24)),('paint_white',(238,238,234))):
     save(nm,flat(col,2,4),(2.0,2.0))
 # Light tower head: frame of 4 x 8 lamps, white frame, grey lamp faces with a bright rim.
 a=np.ones((N,N,3))*np.array((236,236,232),float);cu,cv=N/8,N/4
@@ -79,18 +87,17 @@ save('roof_teal',a,(3.0,3.0))
 def facade(name,base,f):
     a=flat(base,2,6);pu=N/6.0;pv=N/3.6;f(a,pu,pv);save(name,a,(6.0,3.6))
 def _band(a,pu,pv):  # dark glass with a grey spandrel band per floor, mullions every 1.5 m
-    a[int(2.4*pv):]=np.array((126,132,138))+fine(N,2)[int(2.4*pv):,:,None]
-    for k in range(4):a[:int(2.4*pv),int(k*1.5*pu):int(k*1.5*pu)+5]=(140,146,150)
+    a[int(1.4*pv):]=np.array((198,200,198))+fine(N,2)[int(1.4*pv):,:,None]  # pale concrete spandrel, 1.4 m dark glass per floor
+    for k in range(4):a[:int(1.4*pv),int(k*1.5*pu):int(k*1.5*pu)+5]=(190,194,196)
 def _grey(a,pu,pv):  # grey metal cladding with two teal-glass windows per tile
     for k in range(2):
-        x0=int((k*3+0.6)*pu);x1=int((k*3+2.4)*pu);a[int(0.9*pv):int(2.6*pv),x0:x1]=(70,112,118);a[int(1.7*pv):int(1.7*pv)+4,x0:x1]=(160,166,168)
+        x0=int((k*3+0.6)*pu);x1=int((k*3+2.4)*pu);a[int(0.9*pv):int(2.6*pv),x0:x1]=(46,60,68);a[int(1.7*pv):int(1.7*pv)+4,x0:x1]=(160,166,168)
         a[int(0.9*pv):int(2.6*pv),x0:x0+4]=(170,174,176);a[int(0.9*pv):int(2.6*pv),x1-4:x1]=(170,174,176)
     for k in range(4):a[:,int(k*1.5*pu):int(k*1.5*pu)+2]*=0.85
 def _white(a,pu,pv):  # white precast with a dark window strip per floor and panel joints every 1.5 m
     a[int(1.2*pv):int(2.2*pv)]=np.array((44,52,62))+fine(N,2)[int(1.2*pv):int(2.2*pv),:,None]
     for k in range(4):a[:,int(k*1.5*pu):int(k*1.5*pu)+3]*=0.8
-def _blue(a,pu,pv):  # blue-grey curtain wall, mullions 1.5 m, transom per floor
-    for k in range(4):a[:,int(k*1.5*pu):int(k*1.5*pu)+5]=(150,160,168)
-    a[:6]=(150,160,168);a[int(1.1*pv):int(1.1*pv)+4]=(130,140,150)
-facade('fac_band',(48,60,74),_band);facade('fac_grey',(116,122,128),_grey);facade('fac_white',(214,216,212),_white);facade('fac_blue',(76,100,124),_blue)
+def _blue(a,pu,pv):  # screen back (GE f045, f225): dark slate cladding, vertical seams every 1.5 m
+    for k in range(4):a[:,int(k*1.5*pu):int(k*1.5*pu)+4]*=0.78
+facade('fac_band',(44,54,66),_band);facade('fac_grey',(196,198,198),_grey);facade('fac_white',(214,216,212),_white);facade('fac_blue',(62,68,76),_blue)
 json.dump(TILE,open(OUT+'tiles.json','w'),indent=0);print(sorted(TILE))
