@@ -159,7 +159,8 @@ def raster(mask):
     return out
 shape = raster(cloth).astype(np.float32)
 layers = [shape * 0 + 1] + [raster(cloth & (k == c)).astype(np.float32) for c in range(1, len(P))]
-kk = np.zeros((Hh * U, Ww * U), np.uint8)
+# a pixel no smoothed region covers (where two regions' smoothed edges part) takes its own traced colour, not colour 0
+kk = cv2.resize(k.astype(np.uint8), (Ww * U, Hh * U), interpolation=cv2.INTER_NEAREST)
 for c in range(1, len(P)):
     kk[layers[c] > 0] = c
 col = Q[kk].astype(np.float32)
