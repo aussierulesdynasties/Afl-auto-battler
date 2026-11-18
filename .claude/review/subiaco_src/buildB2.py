@@ -1,14 +1,17 @@
 # Subiaco Oval 1997 (version B, redo to the new gate: texB/ hand-made 1024 px textures, photo-read ribs and aisles, daylight render), built in world metres (x east, y north, z up) from photo refs/c/17.jpg through
 # the fitted camera camB.json; all positions from measureA.py -> layoutA.json. Hand-made textures in tex/.
 #   blender -b --python buildA.py -- SPDIR OUT.glb RENDER.png
-import bpy,bmesh,sys,math,json
+import bpy,bmesh,sys,math,json,os
 import numpy as np
 from mathutils import Vector,Matrix
 SP,OUT,REN=sys.argv[sys.argv.index('--')+1:]
 J=json.load(open(SP+'/layoutA.json'));C0=J['C0'];FJ=J['fence'];co=FJ['co'];K=FJ['K'];RK=J['RAKE']
 def rf(a):
     t=math.radians(a);return sum(co[k]*math.cos(k*t) for k in range(K+1))+sum(co[K+k]*math.sin(k*t) for k in range(1,K+1))
+FOT=json.load(open(SP+'/nsfo.json'));fo=lambda a:float(np.interp(a,[t[0] for t in FOT],[t[1] for t in FOT]))
+WARP=None
 def P(a,d,z):
+    if WARP:a=a+WARP(a,d)
     r=rf(a)+d;t=math.radians(a);return Vector((C0[0]+r*math.cos(t),C0[1]+r*math.sin(t),z))
 def unwrap(a,ref):
     while a<ref-180:a+=360
@@ -25,7 +28,7 @@ def mat(name,rough=0.85):
     t=nt.nodes.new('ShaderNodeTexImage');t.image=bpy.data.images.load(SP+'/texB/'+name+'.png')
     nt.links.new(t.outputs['Color'],b.inputs['Base Color']);b.inputs['Roughness'].default_value=rough
     import colorsys;m.diffuse_color=(*colorsys.hsv_to_rgb((len(MI)*0.618)%1,0.6,0.9),1);me.materials.append(m);MI[name]=len(me.materials)-1
-for n in('turf','paint','terrace','seats','roof','roofd','wall','brick','under','fascia','asphalt','paving','picket','steel','can','glass','seatsb','facade','pad','bank','ads','lamps','facaded','aisle'):mat(n)
+for n in('turf','paint','terrace','seats','roof','roofd','wall','brick','under','fascia','asphalt','paving','picket','steel','can','glass','seatsb','facade','pad','bank','ads','lamps','facaded','aisle','roofcg'):mat(n)
 bm=bmesh.new();uv=bm.loops.layers.uv.new()
 def face(vs,m,uvs=None):
     if uvs is None:uvs=[(0,0),(1,0),(1,1),(0,1)]+[(0,0)]*max(0,len(vs)-4)
@@ -81,7 +84,7 @@ for s in(1,-1):
             t0=2*math.pi*j/n;t1=2*math.pi*(j+1)/n;o0=Vector((math.cos(t0),math.sin(t0),0))*0.15;o1=Vector((math.cos(t1),math.sin(t1),0))*0.15
             face([b+o0,b+o1,b+o1+Vector((0,0,h)),b+o0+Vector((0,0,h))],'fascia')
 # picket fence on the fence line
-sweep(-180,180,lambda a:[(0,0),(0,1.1)],['picket'],tile=2.0,step=0.5)
+sweep(-180,180,lambda a:[(fo(a),0),(fo(a),1.1)],['picket'],tile=2.0,step=0.5)   # on the photo's fence line (fo, north side)
 # ================= 1997 (version B) parts, all from layoutB.json (measured on refs/c/17.jpg through camB.json)
 JB=json.load(open(SP+'/layoutB.json'))
 def fD(S,ref):return fn(S,1,ref)
@@ -100,6 +103,9 @@ def tube(b,h,r0,r1,m='steel',n=10):
         face([b+c0*r0,b+c1*r0,b+c1*r1+Vector((0,0,h)),b+c0*r1+Vector((0,0,h))],m)
 # ---- near bowl (south and near side, under one long roof): front rows from the fence, roof measured on both edges
 SF=[[a,max(d,0.5),z] for a,d,z in JB['SF']];SB=JB['SB']
+# the roof's west end is oblique in photo 17 (send.py): front edge ends at -133.7, back edge at -128.1; the last 20 deg
+# of the near bowl are pulled in by up to that much, linear in depth, so the end edge lands on the photo's edge
+WARP=lambda a,d:max(0.0,1-(a+141.4)/20.0)*min(13.3,max(6.5,7.7+(d-2.7)*5.6/14.7)) if a<-121.4 else 0.0
 sfd,sfz,sbd,sbz=fP(SF,1,-70),fP(SF,2,-70),fP(SB,1,-70),fP(SB,2,-70)
 def nb_prof(a):
     dF,zF,dB,zB=sfd(a),sfz(a),sbd(a),sbz(a)
@@ -109,6 +115,7 @@ sweep(-141.4,-4.3,nb_prof,NBM,tile=4)
 sweep(-141.4,-95,lambda a:nb_prof(a)[4:6],['roof'],tile=4);sweep(-95,-4.3,lambda a:nb_prof(a)[4:6],['roofd'],tile=4)
 sweep(-141.4,-4.3,lambda a:[(sbd(a),0),(sbd(a),sbz(a))],['facaded'],tile=16,vabs=True)
 endcap(-141.4,lambda a:[(0,0),(sbd(a),0),(sbd(a),sbz(a)),(sfd(a),sfz(a)),(0,1.2)],'wall')
+WARP=None
 # ---- near-right stand: concrete multi-storey block with a dark flat roof
 NRF,NRB=JB['NRF'],JB['NRB'];nfd,nfz,nbd=fD(NRF,10),fZ(NRF,10),fD(NRB,10)
 def nr_prof(a):dF,z=nfd(a),nfz(a);dB=max(nbd(a),dF+8);return [(0,0),(0,1.2),(0.8,1.2),(dB-1,z-4),(dB,z),(dF,z),(dF,z-1.0)]
@@ -117,22 +124,95 @@ sweep(-4.3,33.2,lambda a:[(nr_prof(a)[4][0],0),nr_prof(a)[4]],['facade'],tile=16
 endcap(-4.3,lambda a:[(0,0),(nr_prof(a)[4][0],0),nr_prof(a)[4],nr_prof(a)[5],(0,1.2)],'wall')
 endcap(-4.3,lambda a:[(0,0),(sbd(a),0),(sbd(a),sbz(a)),(sfd(a),sfz(a)),(0,1.2)],'wall')
 endcap(33.2,lambda a:[(0,0),(nr_prof(a)[4][0],0),nr_prof(a)[4],nr_prof(a)[5],(0,1.2)],'wall')
-# ---- north stand: blue seats raked from the fence up under a white roof (east end under the grey corner roof)
-BF=JB['BF'];BB=JB['BB'];bfd,bfz,bbd,bbz=fP(BF,1,100),fP(BF,2,100),fP(BB,1,100),fP(BB,2,100)
-def bs_prof(a):dF,zF,dB,zB=bfd(a),bfz(a),bbd(a),bbz(a);return [(0,0),(0,1.2),(0.8,1.2),(dF,zF-1.2),(dB-0.5,zF-1.2),(dB,zB),(dF,zF),(dF,zF-1.0)]
-sweep(33.2,136.0,bs_prof,['wall','fascia','seatsb','under','wall',None,'fascia'],tile=4)
-sweep(62.3,136.0,lambda a:bs_prof(a)[5:7],['roof'],tile=4)
-sweep(33.2,136.0,lambda a:[(bbd(a),0),(bbd(a),bbz(a))],['wall'],tile=4)
-endcap(136.0,lambda a:[(0,0),(bbd(a),0),(bbd(a),bbz(a)),(bfd(a),bfz(a)),(0,1.2)],'wall')
-block([p for p in JB['CR']],18.0,'wall','steel')                                              # grey corner roof block
+# ---- north stand, measured on 17.jpg. Main section 62.3-119.5 is a straight stand: the s2 walkway, the white s1 walkway and the
+# roof's front and back edges are straight parallel lines (strline.py -> nslines.json); the lower tier's white front wall
+# follows fo(a), so the lower rake changes with depth and the walkway stays level. West section 119.5-136.5 (wsolve3.py): lower
+# rows to the yellow s2 line, back rows to a white walkway at 12-13 m, a dark back wall, and its own light roof slab built from
+# the four photo corners, about 3 m above the walkway. East end 33.2-62.3 keeps the older fitted profile (no roof).
+BF=JB['BF'];bfd,bfz=fP(BF,1,100),fP(BF,2,100)
+def rkm(a):return (bfz(a)-2.4)/(bfd(a)-0.8)
+def pv(c,a,lo=75.0,hi=119.5):return float(np.polyval(c,min(max(a,lo),hi)))
+LNS=json.load(open(SP+'/nslines2.json'))   # walkway lines re-fitted on the photo (walkfit.py)
+def dline(a,k):
+    (px,py),(ux,uy)=LNS[k];t=math.radians(a);ex,ey=math.cos(t),math.sin(t);px-=C0[0];py-=C0[1]
+    return (px*uy-py*ux)/(ex*uy-ey*ux)-rf(a)
+Z1C=6.2   # walkway level used by walkfit.py
+ZRF,ZRB=pv([0.00254,-0.510358,38.626569],95),pv([-0.000627,0.113438,11.580262],95)
+def nsM(a):  # main section: straight lines
+    F=fo(a)+0.1;d2,d1f,d1b,dRF,dRB=[dline(a,k) for k in('d2','d1f','d1b','dRF','dRB')]
+    m=(Z1C-1.2)/(d1f-F-0.8);rk=lambda d:1.2+(d-F-0.8)*m
+    return dict(F=F,rk=rk,d2=d2,z2=rk(d2-0.6),d1f=d1f,z1=Z1C,d1b=d1b,dRF=dRF,zRF=ZRF,dRB=dRB,zRB=ZRB)
+def nsE(a):  # east end: older fitted profile
+    F=fo(a)+0.1;m=rkm(a);rk=lambda d:1.2+(d-F-0.8)*m
+    d2=pv([0.000976,-0.175185,20.756503],a);d1f=pv([0.003841,-0.753024,53.632603],a);d1b=pv([0.000612,-0.168759,30.243754],a)
+    return dict(F=F,rk=rk,d2=d2,z2=rk(d2-0.6),d1f=d1f,z1=rk(d1f),d1b=d1b)
+WTOP=15.4
+def nsW(a):  # west section, linear fits of the yellow line and the white walkway (wsolve3.py)
+    F=fo(a)+0.1;m=rkm(a);rk=lambda d:1.2+(d-F-0.8)*m
+    d2=17.85-0.245*(a-125.4);d1f=22.18-0.387*(a-129.04)
+    return dict(F=F,rk=rk,d2=d2,z2=rk(d2-0.6),d1f=d1f,z1=rk(d1f),d1b=d1f+1.5)
+def zr(N,d):return N['zRF']+(d-N['dRF'])*(N['zRB']-N['zRF'])/(N['dRB']-N['dRF'])
+def zs(N,d):  # seat surface height at depth d
+    if d<=N['d2']+0.6:return N['rk'](min(d,N['d2']-0.6))
+    return N['z2']+(d-N['d2']-0.6)*(N['z1']-N['z2'])/(N['d1f']-N['d2']-0.6)
+def prM(a):
+    N=nsM(a);F=N['F']
+    return [(F,0),(F,1.2),(F+0.8,1.2),(N['d2']-0.6,N['z2']),(N['d2']+0.6,N['z2']),(N['d1f'],N['z1']),(N['d1b'],N['z1']),(N['d1b'],zr(N,N['d1b'])-0.05)]
+def prW(a):
+    N=nsW(a);F=N['F']
+    return [(F,0),(F,1.2),(F+0.8,1.2),(N['d2']-0.6,N['z2']),(N['d2']+0.6,N['z2']),(N['d1f'],N['z1']),(N['d1b'],N['z1']),(N['d1b'],WTOP)]
+def prE(a):
+    N=nsE(a);F=N['F']
+    return [(F,0),(F,1.2),(F+0.8,1.2),(N['d2']-0.6,N['z2']),(N['d2']+0.6,N['z2']),(N['d1f'],N['z1']),(N['d1b'],N['z1']),(N['d1b'],0)]
+SM=['wall','fascia','seatsb','aisle','seatsb','aisle','under']
+sweep(33.2,62.3,prE,SM,tile=4)
+sweep(62.3,119.5,prM,SM,tile=4)
+sweep(119.5,136.5,prW,SM,tile=4)
+sweep(119.5,136.5,lambda a:[(nsW(a)['d1b'],WTOP),(nsW(a)['d1b'],0)],['under'],tile=4)          # back of the west back wall
+sweep(62.3,119.5,lambda a:[(nsM(a)['dRF'],ZRF-0.6),(nsM(a)['dRF'],ZRF),(nsM(a)['dRB'],ZRB)],['fascia','roof'],tile=4)
+sweep(62.3,119.5,lambda a:[(nsM(a)['dRB'],ZRB-0.05),(nsM(a)['dRF'],ZRF-0.6)],['under'],tile=4)   # soffit
+sweep(62.3,119.5,lambda a:[(nsM(a)['dRB'],0),(nsM(a)['dRB'],ZRB-0.05)],['wall'],tile=4,vabs=True)  # outer back wall
+for a in(62.3,119.5):
+    N=nsM(a);pr=prM(a)
+    endcap(a,lambda a_:pr[:-1]+[(pr[-1][0],zr(N,pr[-1][0])),(N['dRF'],N['zRF']-0.6),(N['dRF'],N['zRF']),(N['dRB'],N['zRB']),(N['dRB'],0)],'under' if a>100 else 'wall')   # west end in shadow in photo 17
+endcap(62.3,lambda a:prE(a),'wall');endcap(33.2,lambda a:prE(a),'wall')
+endcap(119.5,lambda a:prW(a)+[(nsW(a)['d1b'],0)],'wall');endcap(136.5,lambda a:prW(a)+[(nsW(a)['d1b'],0)],'wall')
+# west roof slab: corners back-projected from the photo (front edge z 16.0, back edge z 17.5), fascia round the edge
+WR=[Vector(v) for v in([-71.48,80.11,16.0],[-56.48,89.23,16.0],[-58.56,98.24,17.5],[-72.36,89.41,17.5])]   # WF EF EB WB
+face(WR,'roof',[((q.x)/8,(q.y)/8) for q in WR])
+D6=Vector((0,0,-0.6))
+for i in range(4):
+    p,q=WR[i],WR[(i+1)%4];face([p+D6,q+D6,q,p],'fascia')
+face([q+D6 for q in WR[::-1]],'under')
+face([WR[3]+D6,WR[2]+D6,Vector((WR[2].x,WR[2].y,0)),Vector((WR[3].x,WR[3].y,0))],'under')                   # back wall, dark in photo 17
+face([WR[0]+D6,WR[3]+D6,Vector((WR[3].x,WR[3].y,0)),Vector((WR[0].x,WR[0].y,0))],'under')                    # west side, in shadow
+# low grey building at the stand's west end (wsolve3.py, top at 3 m)
+block([(142.35,32.35),(142.66,40.03),(138.19,40.33),(137.99,33.6)],3.0,'under','asphalt')
+# corner block: dark sides, mid-grey corrugated roof whose valleys run along (-0.172,0.985), 6.5 m apart (crvalley.py)
+CRP=[P(a,d,0) for a,d,*_ in JB['CR']];CRT=[P(a,d,18.0) for a,d,*_ in JB['CR']]
+for i in range(len(CRP)):face([CRP[i],CRP[(i+1)%len(CRP)],CRT[(i+1)%len(CRP)],CRT[i]],'under',[(0,0),(1,0),(1,4.5),(0,4.5)])
+cd_,cn_=Vector((-0.172,0.985,0)),Vector((-0.985,-0.172,0))
+face(CRT,'roofcg',[((q.dot(cn_)+66.35)/6.5,q.dot(cd_)/6.5) for q in CRT])
 # ---- west end under construction: bare lit pad, grass bank, perimeter boards
 W1,W2=JB['W1'],JB['W2'];w1d,w2d=fD(W1,170),fD(W2,170)
-sweep(136.0,196.0,lambda a:[(0.1,0.05),(w1d(a),0.3)],['pad'],tile=12)
+sweep(136.0,196.0,lambda a:[(fo(a)+0.1,0.05),(w1d(a),0.3)],['pad'],tile=12)
 sweep(136.0,196.0,lambda a:[(w1d(a),0.3),(w2d(a),3.0)],['bank'],tile=8)
 sweep(142.0,192.0,lambda a:[(w2d(a),3.0),(w2d(a),5.4)],['wall'],tile=24)
 sweep(196.0,218.6,lambda a:[(0.1,0.05),(w1d(a)*0.9,0.3)],['pad'],tile=12)                 # SW corner pad to the near roof
-block(JB['LW'],8.0,'wall','roof');block(JB['FL1'],8.0,'brick','roofd');block(JB['FL2'],5.0,'wall','roofd')
-block(JB['GB'],10.0,'wall','steel')
+# two low white site buildings on the west pad, roofs back-projected from photo 17 (wbld.py): B1 mono-pitch, B2 gable
+WB=json.load(open(SP+'/wbld.json'));V=lambda q:Vector(q);G0=lambda q:Vector((q[0],q[1],0.0))
+def wq(vs,m):
+    L=(Vector(vs[1])-Vector(vs[0])).length/4;face([V(q) if not isinstance(q,Vector) else q for q in vs],m,[(0,0),(L,0),(L,1),(0,1)]+[(0,0)]*max(0,len(vs)-4))
+def wall(q0,q1,m='wall'):wq([G0(q0),G0(q1),V(q1),V(q0)],m)
+r=WB['B1']['roof']
+face([V(q) for q in r],'roof',[(q[0]/4,q[1]/4) for q in r])
+for i in range(4):wall(r[i],r[(i+1)%4])
+we,rg,ee=WB['B2']['we'],WB['B2']['rg'],WB['B2']['ee']
+face([V(we[0]),V(we[1]),V(rg[1]),V(rg[0])],'roof',[(q[0]/4,q[1]/4) for q in(we[0],we[1],rg[1],rg[0])])
+face([V(rg[0]),V(rg[1]),V(ee[1]),V(ee[0])],'roof',[(q[0]/4,q[1]/4) for q in(rg[0],rg[1],ee[1],ee[0])])
+wall(we[0],we[1]);wall(ee[1],ee[0])
+for k in(0,1):face([G0(we[k]),V(we[k]),V(rg[k]),V(ee[k]),G0(ee[k])],'wall',[(0,0),(0,0.7),(0.5,0.9),(1,0.7),(1,0)])   # gable ends
+block(JB['FL1'],8.0,'brick','roofd');block(JB['FL2'],5.0,'wall','roofd')
 # ---- four light towers: tapered (thicker at the base), lamp head facing the centre
 for x,y,h in JB['TOW']:
     b=Vector((x,y,0));tube(b,h-3.0,0.9,0.45,'steel',12)
@@ -147,10 +227,33 @@ def bar(p0,p1,w,h,m):
 # near roof: white steel roof girders running front to back over the sheeting
 for a in(-92.8,-77.8,-65.0,-55.2,-46.2,-39.2,-34.5,-30.8,-26.5,-21.8,-16.2,-10.8,-5.0):
     bar(P(a,sfd(a)+0.3,sfz(a)),P(a,sbd(a)-0.3,sbz(a)),0.45,0.35,'fascia')
-# north stand: 1.2 m white concrete aisles from the fence wall up to the roof line
-for a in(128.0,120.8,111.4,103.4,94.4,86.8,78.6,71.2,64.4):
-    w=math.degrees(0.6/(rf(a)+10));d1,z1=bfd(a),bfz(a)-1.2;L=math.hypot(d1-0.8,z1-1.2)
-    face([P(a-w,0.8,1.23),P(a+w,0.8,1.23),P(a+w,d1,z1+0.03),P(a-w,d1,z1+0.03)],'aisle',[(0,0),(0.3,0),(0.3,L/4),(0,L/4)])
+if os.environ.get('ZONEDUMP'):
+    out={}
+    for zone,fs in((0,[0.15,0.3,0.45,0.6,0.75,0.9]),(1,[0.15,0.35,0.55,0.75,0.9])):
+        for f in fs:
+            rows=[]
+            for i in range(560,1370):
+                a=i/10;NF=nsM if a<119.5 else nsW
+                if a<62.3:continue
+                N=NF(a);d=(N['F']+0.8+f*(N['d2']-0.6-N['F']-0.8)) if zone==0 else (N['d2']+0.6+f*(N['d1f']-N['d2']-0.6))
+                q=P(a,d,zs(N,d));rows.append([a,q.x,q.y,q.z])
+            out['%d_%.2f'%(zone,f)]=rows
+    json.dump(out,open(SP+'/zonedump.json','w'))
+# north stand aisles, read off 17.jpg on the corrected stand (nsais2.py): 1.2 m white strips, each a straight line in
+# (angle, depth fraction) from its front angle a0 to its back angle a1; lower zone front wall -> s2, back zone s2 -> s1
+def aisle(a0,a1,NF,zone):
+    pts=[]
+    for i in range(11):
+        f=i/10;a=a0+(a1-a0)*f;N=NF(a)
+        d=(N['F']+0.8+f*(N['d2']-0.6-N['F']-0.8)) if zone==0 else (N['d2']+0.6+f*(N['d1f']-N['d2']-0.6))
+        w=math.degrees(0.6/(rf(a)+d));pts.append((P(a-w,d,zs(N,d)+0.03),P(a+w,d,zs(N,d)+0.03)))
+    L=0.0
+    for i in range(10):
+        l=(pts[i+1][0]-pts[i][0]).length/4;face([pts[i][0],pts[i][1],pts[i+1][1],pts[i+1][0]],'aisle',[(0,L),(0.3,L),(0.3,L+l),(0,L+l)]);L+=l
+for a0,a1 in((59.8,56.6),(65.3,63.3),(75.6,73.3),(85.0,83.8),(94.9,93.9),(104.9,103.3),(115.0,112.2)):aisle(a0,a1,nsM,0)
+for a0,a1 in((123.5,118.7),(128.9,123.1),(134.5,128.9)):aisle(a0,a1,nsW,0)
+for a0,a1 in((74.6,73.4),(83.8,82.0),(93.9,91.6),(101.6,101.6),(110.3,111.4),(119.0,119.8)):aisle(a0,a1,nsM,1)
+for a0,a1 in((125.8,123.6),(130.8,130.0)):aisle(a0,a1,nsW,1)
 # ---------------- matched-camera render
 def daylight(sc):
     try:sc.render.engine='BLENDER_EEVEE'

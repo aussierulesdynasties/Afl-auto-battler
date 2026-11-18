@@ -71,4 +71,12 @@ d.rectangle([0, 0, S, S / 60], fill=(70, 72, 76)); save(np.array(l, float), 'lam
 M = S / 4.0; u = xx / M
 dd = tint([66, 68, 70], (grain(1.0), 3), (blotch(400), 3)); ph = (u % 0.25) / 0.25
 dd[ph < 0.10] *= 0.75; dd[(ph >= 0.10) & (ph < 0.16)] *= 1.2; save(dd, 'roofd')
+# ---- corner block (east end): mid-grey corrugated sheet, one tile = one 6.5 m bay; a dark valley gutter at each bay edge
+#      and the two roof slopes either side of it lit slightly differently (photo 17: four valleys about 6.5 m apart)
+u = xx / S; ph = (u * 26) % 1.0
+cg = tint([100, 104, 98], (grain(1.0), 3), (blotch(400), 4))
+cg[ph < 0.18] *= 0.82; cg[(ph >= 0.18) & (ph < 0.30)] *= 1.10
+cg *= np.where(u < 0.5, 1.06, 0.94)[..., None]
+vd = np.minimum(u, 1 - u); cg[vd < 0.016] = [38, 40, 38]; cg[(vd >= 0.016) & (vd < 0.03)] *= 0.7
+save(cg, 'roofcg')
 print('ok', sorted(os.listdir('texB')))
