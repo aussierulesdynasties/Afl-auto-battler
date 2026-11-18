@@ -14,7 +14,13 @@ void vertex() {
 vec3 to_p(vec3 c) { return pow(max(c, vec3(0.0)), vec3(1.0 / 2.2)); }
 vec3 to_l(vec3 c) { return pow(max(c, vec3(0.0)), vec3(2.2)); }
 float luma(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
-float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+// A hash with no sine in it: the sine hash leaves diagonal lines across a phone-sized picture,
+// which read as old TV lines instead of film grain (director 2026-11-19).
+float hash(vec2 p) {
+	vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+	p3 += dot(p3, p3.yzx + 33.33);
+	return fract((p3.x + p3.y) * p3.z);
+}
 
 // The tone (rule 2.81) applied here rather than by the environment, so the club rings drawn after
 // the film keep their exact colour (Oval3DTurf._tone_to_film hands it over). Godot 4.7's own AgX
@@ -67,14 +73,13 @@ vec3 tone_map(vec3 c) {
 
 void fragment() {
 	vec2 uv = SCREEN_UV;
-	// Picture width / 1080, so the softening and grain keep the same size on every screen.
-	float scale = VIEWPORT_SIZE.x / 1080.0;
+	// The picked prototype's numbers, exactly (it drew 1080 wide); a wider picture scales them up.
+	// Scaled down for the phone they lost the film grain haze he picked (director 2026-11-19).
+	float scale = max(VIEWPORT_SIZE.x / 1080.0, 1.0);
 	float frame = floor(TIME * 30.0);
 	vec3 c = texture(screen_tex, uv).rgb;
-	// Blur sizes as a share of the picture: a picture half as wide blurs one mip level less.
-	float lod = log2(max(scale, 0.01));
-	vec3 soft = textureLod(screen_tex, uv, max(1.2 + lod, 0.0)).rgb;
-	vec3 bloom = textureLod(screen_tex, uv, max(4.5 + lod, 0.0)).rgb;
+	vec3 soft = textureLod(screen_tex, uv, 1.2 * scale).rgb;
+	vec3 bloom = textureLod(screen_tex, uv, 4.5).rgb;
 	vec3 p = to_p(mix(c, soft, 0.55));
 	p += max(to_p(bloom) - 0.62, vec3(0.0)) * 0.55;
 	float l = luma(p);
@@ -82,9 +87,7 @@ void fragment() {
 	p = 0.035 + p * 0.955;
 	vec2 v = uv - 0.5;
 	p *= 1.0 - 0.22 * dot(v, v) * 1.6;
-	// Grain grains are one pixel of a 1080-wide picture: on a smaller picture each pixel holds
-	// several, which average out, so the grain is fainter in the same proportion.
-	p += (hash(floor(uv * VIEWPORT_SIZE / max(scale, 1.0)) + vec2(frame * 17.13, frame * 3.71)) - 0.5) * 0.035 * min(scale, 1.0);
+	p += (hash(floor(uv * VIEWPORT_SIZE / scale) + vec2(mod(frame, 251.0) * 17.13, mod(frame, 251.0) * 3.71)) - 0.5) * 0.035;
 	vec3 o = to_l(p);
 	if (tone) {
 		o = tone_map(o);
