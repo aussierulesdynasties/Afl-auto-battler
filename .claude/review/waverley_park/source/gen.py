@@ -81,7 +81,7 @@ def stair_prof(r):
     d=DEP*r;z=z_r(r);return [(d,z),(d+0.4,z),(d+0.4,z+0.14),(d+0.8,z+0.14),(d+0.8,z+RISE)]
 for s0,s1,col,k in blocks:
     a,b=s0+0.6,s1-0.6
-    subs=[(a,b,col)]
+    subs=[(a,b,('bk%d'%k) if 33<=k<=47 else col)]   # right end: shades matched to the photo (mktex4)
     if k==62:
         w=(b-a);edges=[a]+[a+w*f for f in(0.22,0.27,0.47,0.52,0.72,0.77)]+[b];cs=['W','N','W','N','W','N','W']
         subs=[(edges[i],edges[i+1],cs[i]) for i in range(7)]
@@ -112,22 +112,87 @@ BM=BM[:len(bowl_back)-1]
 RS=MEM[1];RE=MEM[0]+PER
 ssB=sgrid(RS,RE,1.5)
 def _light(s):s=s%PER;return 249<=s<=300   # photo: the open terrace in the gap has light treads
-BML=[('bowllight' if m=='bowlconc' else m) for m in BM]
+BML=[({'bowlconc':'bowlgap','seat_grey':'seat_gapg'}.get(m,m)) for m in BM]   # gap rows: photo shade (mktex4)
+def zrow(d):   # top of the grey rows at depth d (tread level)
+    return ZB+RISE*math.floor((d-DP1)/0.8+1e-6)+RISE
+UPA=0.6   # half width of an upper-tier aisle (photo: aisles run straight on through both tiers)
+UPS=sorted(set(round(b[1]%PER,3) for b in blocks if not in_rng(b[1]%PER,(MEM[0]-1,MEM[1]+1))))
+# holes cut out of the grey rows, read off the photo grid: (s0, s1, d0, d1, kind)
+#  portal: a dark vomitory mouth 3 m wide at each block centre, at the front of the upper tier
+#  pit:    the sunken ramp well in the gap terrace
+#  deck:   the white walkway along the back of the gap terrace
+HOLES=[]
+for s0,s1,col,k in blocks:
+    sc=(s0+s1)/2
+    if not in_rng(sc%PER,(MEM[0]-2,MEM[1]+2)):HOLES.append((sc-1.5,sc+1.5,DP1,24.0,'portal'))
+HOLES.append((275.0,287.5,26.4,31.2,'pit'));HOLES.append((258.0,292.0,32.0,34.4,'deck'))
+def _cuts(lo,hi):
+    c=[lo,hi]
+    for a in UPS:c+=[a-UPA,a+UPA,a-UPA+PER,a+UPA+PER]
+    for h in HOLES:c+=[h[0],h[1],h[0]+PER,h[1]+PER]
+    return sorted(set(x for x in c if lo<=x<=hi))
+def _piece(pr,mm,d0,d1):   # the part of the row profile from d0 to d1 (inclusive ends)
+    ia=min(i for i,(dd,zz) in enumerate(pr) if dd>=d0-1e-6) if d0>pr[0][0] else 0
+    ib=max(i for i,(dd,zz) in enumerate(pr) if dd<=d1+1e-6)
+    if d0>pr[0][0]:ia=max(i for i,(dd,zz) in enumerate(pr) if dd<=d0+1e-6)
+    if d1<pr[-1][0]:ib=min(i for i,(dd,zz) in enumerate(pr) if dd>=d1-1e-6)
+    return pr[ia:ib+1],mm[ia:ib]
+def _bowl(lo,hi,light):
+    cuts=_cuts(lo,hi)
+    for a,b in zip(cuts[:-1],cuts[1:]):
+        if b-a<1e-3:continue
+        mid=(a+b)/2;isA=any(abs(((mid-u+PER/2)%PER)-PER/2)<UPA for u in UPS)
+        ss=sgrid(a,b,1.5)
+        mm=(['concrete']+['aislec']*(len(bowl_back)-3)+['concrete']) if isA else (BML if light else BM)   # aisle: in line with the aisle below
+        hs=sorted([h for h in HOLES if h[0]<mid%PER<h[1]],key=lambda h:h[2])
+        dlo=bowl_back[0][0]
+        for h in hs+[(0,0,bowl_back[-1][0]+1,0,'end')]:
+            if h[4]=='end':pr,m_=_piece(bowl_back,mm,dlo,bowl_back[-1][0])
+            else:pr,m_=_piece(bowl_back,mm,dlo,h[2])
+            if len(pr)>1:strip(ss,pr,m_)
+            if h[4]!='end':dlo=h[3]
 _i0=0
 for _i in range(1,len(ssB)+1):
     if _i==len(ssB) or _light(ssB[_i])!=_light(ssB[_i0]):
-        _seg=ssB[_i0:min(_i+1,len(ssB))];strip(_seg,bowl_back,BML if _light(ssB[_i0]) else BM);_i0=_i
-for s0,s1,col,k in blocks:   # portals at each block centre
-    sc=(s0+s1)/2
-    if in_rng(sc%PER,MEM):continue
-    ss=sgrid(sc-1.2,sc+1.2,2.4)
-    strip(ss,[(19.6,ZB),(19.6,ZB+1.0),(DP1,ZB+1.0)],['black','concrete'])
-    endcap(sc-1.2,[(19.6,ZB+1.0),(DP1,ZB+1.0)],'concrete');endcap(sc+1.2,[(19.6,ZB+1.0),(DP1,ZB+1.0)],'concrete',True)
+        _seg=ssB[_i0:min(_i+1,len(ssB))];_bowl(_seg[0],_seg[-1],_light(ssB[_i0]));_i0=_i
+def _hole_walls(h,zf,mside,mfloor,mback):
+    s0,s1,d0,d1,kind=h
+    pr=[(dd,zz) for dd,zz in bowl_back if d0-1e-6<=dd<=d1+1e-6]
+    for sx_,fl_ in((s0,True),(s1,False)):   # side walls: floor up to the row profile
+        for (da,za),(db,zb) in zip(pr[:-1],pr[1:]):
+            if db-da<1e-3:continue
+            a=P([sx_],da,zf)[0];b=P([sx_],db,zf)[0];c=P([sx_],db,zb)[0];e=P([sx_],da,za)[0]
+            quad(b,a,e,c,mside) if fl_ else quad(a,b,c,e,mside)
+    ss=sgrid(s0,s1,1.0)
+    strip(ss,[(d0,pr[0][1]),(d0,zf),(d1,zf),(d1,pr[-1][1])],[mback if pr[0][1]>zf+1e-3 else None,mfloor,mback])
+    return ss
+for h in HOLES:
+    if h[4]=='portal':_hole_walls(h,ZB,'aislec','black','black')
+# the ramp well: walls down below the walkway level, a dark floor and a ramp falling from the left end of the well
+_ph=[h for h in HOLES if h[4]=='pit'][0];_zf=ZB-0.5
+_wss=_hole_walls(_ph,_zf,'concrete','black','concrete')
+_pa,_pb,_pd0=_ph[0],_ph[1],_ph[2]
+for _k in range(len(_wss)-1):   # ramp: rises from the well floor at s 285.5 to the terrace at the left end
+    sa,sb=_wss[_k],_wss[_k+1]
+    if sb>285.5:continue
+    za=_zf+(zrow(_pd0)-_zf)*(285.5-sa)/(285.5-_pa);zb_=_zf+(zrow(_pd0)-_zf)*(285.5-sb)/(285.5-_pa)
+    quad(P([sa],_pd0+0.4,za)[0],P([sa],_pd0+2.6,za)[0],P([sb],_pd0+2.6,zb_)[0],P([sb],_pd0+0.4,zb_)[0],'aislec')
+    beam(P([sa],_pd0+2.6,za+1.0)[0],P([sb],_pd0+2.6,zb_+1.0)[0],0.08,'white')
+_dh=[h for h in HOLES if h[4]=='deck'][0]   # white deck: a raised walkway across the back of the gap terrace
+_dpr=[(dd,zz) for dd,zz in bowl_back if dd<=_dh[2]+1e-6]
+strip(sgrid(_dh[0],_dh[1],1.0),[(_dh[2],_dpr[-1][1]),(_dh[2],ZT+0.4),(34.4,ZT+0.4)],['white','white'])
+for sx_,fl_ in((_dh[0],True),(_dh[1],False)):
+    pr=[(dd,zz) for dd,zz in bowl_back if dd>=_dh[2]-1e-6]
+    for (da,za),(db,zb) in zip(pr[:-1],pr[1:]):
+        if db-da<1e-3:continue
+        a=P([sx_],da,ZT+0.4)[0];b=P([sx_],db,ZT+0.4)[0];c=P([sx_],db,zb)[0];e=P([sx_],da,za)[0]
+        quad(a,b,c,e,'white') if fl_ else quad(b,a,e,c,'white')
 def facade_frame(s0,s1,ztop=None,dout=None):
     """outer wall under the roof: dark void 0.8 m back, columns every 2 m, slabs every 2 m, mullions between (photo layout)"""
     zt=ZR_OUT-0.8 if ztop is None else ztop;DO=DR_OUT if dout is None else dout;DV=DO-0.8
     ss=sgrid(s0,s1,1.0)
     strip2(ss,lambda s:[(DV,zt),(DV,ZG(s)-0.3)],['fvoid'])
+    strip2(ss,lambda s:[(DV,ZG(s)),(DO,ZG(s))],['pave'])   # floor under the column line: no gap to the sky at the wall foot
     strip(ss,[(DO,zt),(DO,zt+0.01),(DV,zt+0.01)],[None,'fslab'])
     for sc in np.arange(math.ceil(s0/2.0)*2.0,s1-0.2,2.0):
         g=ZG(sc)-0.3
@@ -311,10 +376,11 @@ ax=np.array(TJ['ax']);ay=np.array([-ax[1],ax[0]])
 # director 2026-11-18 'Posts out': the game draws its own goal and behind posts
 # ---------------- light towers ----------------
 # 4th value: tower foot height above the stadium ring ground (A stands on higher ground; photo grid: foot at y 160)
-TW=[(-135.2,12.0,58.3,5.0),(86.0,131.8,55.7,0.0),(140.2,-40.7,45.9,0.0),(-10.9,-133.2,47.3,0.0)]
-for x,y,zh,zb in TW:
+# 5th value: lamp panel height. Photo grid: C and D heads read about 1.3x shorter than A/B's 6 m panel
+TW=[(-135.2,12.0,58.3,5.0,6.0),(86.0,131.8,55.7,0.0,6.0),(140.2,-40.7,45.9,0.0,4.6),(-10.9,-133.2,47.3,0.0,4.6)]
+for x,y,zh,zb,hh in TW:
     base=np.array([x,y]);to=(PC-base)/np.linalg.norm(PC-base);sd=np.array([-to[1],to[0]])
-    sx_=np.arange(0,PER,0.5);zg=ZG(sx_[np.argmin(np.linalg.norm(F(sx_)-[x,y],axis=1))])+zb;ztop=zh-7.5;NPAN=max(6,int(round(ztop/4.5)))
+    sx_=np.arange(0,PER,0.5);zg=ZG(sx_[np.argmin(np.linalg.norm(F(sx_)-[x,y],axis=1))])+zb;ztop=zh-hh-1.5;NPAN=max(6,int(round(ztop/4.5)))
     def leg(i,j,z):
         hw=1.8+(1.5-1.8)*(z-zg)/(ztop-zg);c=base+sd*i*hw+to*j*hw;return np.r_[c,z]
     cs=[(1,1),(-1,1),(-1,-1),(1,-1)]
@@ -330,7 +396,7 @@ for x,y,zh,zb in TW:
     # head copied from the photo: a lamp panel about 12 x 7 m, curved in plan (front view of A/B reads as a
     # rectangle, back view of C/D reads as an arch), tilted to the ground, on a service platform
     R_=8.7;to3=np.r_[to,0]
-    def hp(ph,t_,f_):return hc+sd3*R_*math.sin(ph)-to3*R_*(1-math.cos(ph))+up*(t_*3.0-3.0)+nrm*f_
+    def hp(ph,t_,f_):return hc+sd3*R_*math.sin(ph)-to3*R_*(1-math.cos(ph))+up*(t_*hh/2-hh/2)+nrm*f_
     PH=np.linspace(-0.61,0.61,13)
     for k in range(len(PH)-1):
         a0,a1=PH[k],PH[k+1]
@@ -345,9 +411,22 @@ for x,y,zh,zb in TW:
     for s_ in(-1,1):beam(pq(s_,-1,0.2),pq(s_,-1,1.3),0.08,'white');beam(pq(s_,1,0.2),pq(s_,1,1.3),0.08,'white')
     beam(pq(-1,-1,1.3),pq(1,-1,1.3),0.08,'white');beam(pq(-1,1,1.3),pq(1,1,1.3),0.08,'white')
     for ph in(PH[0],0.0,PH[-1]):beam(hp(ph,-0.6,-0.4),pc+np.array([0,0,0.2]),0.25,'steel')
+# near side (s 110-300): undercroft and paving matched to the photo's darker shade (mktex4 *_n textures)
+_NS=np.arange(0,PER,0.5);_FX=F(_NS)
+for _L,_M in((QV,QM),):
+    for _i in range(len(_L)):
+        _n=MATN[_M[_i]]
+        if _n not in('pave','fvoid','fcol','fslab','underside','facade','aislec'):continue
+        _c=np.mean(_L[_i],axis=0)[:2];_j=np.argmin(np.sum((_FX-_c)**2,axis=1));_s=_NS[_j];_d=float(np.linalg.norm(_FX[_j]-_c))
+        if _n=='facade' and _d>38.0:continue   # the sheds keep their own shade
+        if _n=='aislec' and _d<36.0:continue   # only the stairs and ramps outside the stand
+        if 110<=_s<=300:
+            if _n=='pave':   # near paving: the darker middle blends into the lighter ends over 20 m (5 steps), no hard seam
+                _t=float(np.clip(min((_s-150)/20,(240-_s)/20),0,1));_M[_i]=mi('pave_b%d'%int(round(_t*4)))
+            else:_M[_i]=mi(_n+'_n')
 np.savez('mesh.npz',QV=np.array(QV,np.float32),QU=np.array(QU,np.float32),QM=np.array(QM,np.int32),TV=np.array(TV,np.float32),TU=np.array(TU,np.float32),TM=np.array(TM,np.int32))
 json.dump(MATN,open('mats.json','w'))
 print('quads',len(QV),'tris',len(TV),'mats',MATN)
 # tower base distance to facade line (embedded check)
-for x,y,zh,zb in TW:
+for x,y,zh,zb,hh in TW:
     sx=np.arange(0,PER,0.5);dd=np.linalg.norm(F(sx)-[x,y],axis=1);i=np.argmin(dd);print('tower',(x,y),'s',sx[i],'d from fence',round(dd[i],1))
