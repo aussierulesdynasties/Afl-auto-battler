@@ -186,12 +186,11 @@ c.save('screen.png', grain=1.2)
 
 # ---------------------------------------------------------------- big screen face (photo 745-822 x 351-403): 22 x 18.4 m,
 # pale blue screen in three panels with dark seams (photo y 358, 369, 383 -> z 15.8, 11.9, 7.0 above its 1.6 m base), light ledge at the foot
-c = Canvas(22, 18.4, 64, (150, 186, 220))
-c.grad(0, 1.8, 22, 18.4, (168, 200, 228), (128, 168, 208))
-c.rect(0, 16.9, 22, 18.4, (182, 206, 226))            # top cap
-for zz in (15.8, 11.9, 7.0): c.rect(0, zz - 0.18, 22, zz + 0.18, (34, 54, 76))
-c.rect(0, 0, 22, 1.8, (206, 218, 228))                 # ledge
-c.vline(0.04, 0, 18.4, (60, 80, 100), 0.08); c.vline(21.96, 0, 18.4, (60, 80, 100), 0.08)
+c = Canvas(22, 18.0, 64, (80, 148, 200))                # blank LED face, saturated blue as photo (70-90,140-160,190-205)
+c.grad(0, 0, 22, 18.0, (88, 156, 204), (60, 128, 186))
+c.rect(0, 16.5, 22, 18.0, (104, 146, 180))            # top cap, greyer (photo y 352-356)
+for zz in (15.4, 11.5, 6.6): c.rect(0, zz - 0.16, 22, zz + 0.16, (20, 60, 100))
+c.vline(0.04, 0, 18.0, (30, 60, 90), 0.08); c.vline(21.96, 0, 18.0, (30, 60, 90), 0.08)
 c.save('scoreface.png', grain=1.0)
 
 # ---------------------------------------------------------------- lamp head: fan of lamps in a grey frame (panorama photo for the layout)

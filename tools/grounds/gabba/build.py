@@ -171,12 +171,26 @@ def prism(poly, z0, z1, m, vh=None, nz=6, uw=10.0, vm=None, capm=None, uo=0.0):
 _A, _B, _R = (-133.47, -44.10), (-135.11, -30.20), 2.8
 _dx, _dy = _B[0] - _A[0], _B[1] - _A[1]; _L = math.hypot(_dx, _dy); _ux, _uy = _dx / _L, _dy / _L; _nx, _ny = -_uy, _ux
 _th0 = math.atan2(_ny, _nx); _st = []
-for k in range(13): th = _th0 + math.pi * k / 12; _st.append((_B[0] + _R * math.cos(th) * 1 + 0, _B[1] + _R * math.sin(th)))
-for k in range(13): th = _th0 + math.pi + math.pi * k / 12; _st.append((_A[0] + _R * math.cos(th), _A[1] + _R * math.sin(th)))
+for k in range(13): th = _th0 - math.pi * k / 12; _st.append((_B[0] + _R * math.cos(th), _B[1] + _R * math.sin(th)))   # end bulges out past B
+for k in range(13): th = _th0 + math.pi - math.pi * k / 12; _st.append((_A[0] + _R * math.cos(th), _A[1] + _R * math.sin(th)))   # and past A
 _st = [(x, y) for x, y in _st]
-prism(_st, 20.0, 24.0, RD, True, 1, 6.0)
-_in = [(x - (x - (_A[0] + _B[0]) / 2) * 0.06, y - (y - (_A[1] + _B[1]) / 2) * 0.06) for x, y in _st]
-prism(_in, 20.0, 21.6, DK, True, 1, 4.0, None, DK)
+# photo: an open white shell (walls ~4 m, 0.3 m thick), pale floor ~1.6 m below the rim, three dark round fans along it
+_mx, _my = (_A[0] + _B[0]) / 2, (_A[1] + _B[1]) / 2
+_in = []
+for x, y in _st:                                 # 0.3 m inset: the arcs shrink in radius, the straight sides move in
+    _t = (x - _mx) * _ux + (y - _my) * _uy; _cxp, _cyp = _mx + _ux * max(-_L / 2, min(_L / 2, _t)), _my + _uy * max(-_L / 2, min(_L / 2, _t))
+    _d = math.hypot(x - _cxp, y - _cyp); _in.append((_cxp + (x - _cxp) * (_d - 0.3) / _d, _cyp + (y - _cyp) * (_d - 0.3) / _d))
+_n = len(_st)
+for _k in range(_n):
+    _a, _b = _st[_k], _st[(_k + 1) % _n]; _c, _e = _in[_k], _in[(_k + 1) % _n]
+    face([(_a[0], _a[1], 20.0), (_b[0], _b[1], 20.0), (_b[0], _b[1], 24.0), (_a[0], _a[1], 24.0)], RD)    # outer wall
+    face([(_e[0], _e[1], 22.4), (_c[0], _c[1], 22.4), (_c[0], _c[1], 24.0), (_e[0], _e[1], 24.0)], RD)    # inner wall
+    face([(_a[0], _a[1], 24.0), (_b[0], _b[1], 24.0), (_e[0], _e[1], 24.0), (_c[0], _c[1], 24.0)], RD)    # rim
+prism(_in, 20.0, 22.4, RD, True, 1, 6.0)          # plant floor, capped
+for _f in (0.2, 0.5, 0.8):                        # fans: grey shroud 3.2 m across, dark hub
+    _fx, _fy = _A[0] + _dx * _f, _A[1] + _dy * _f
+    tube((_fx, _fy, 22.4), (_fx, _fy, 23.0), 1.6, 1.6, ST, 20)       # grey fan shroud (photo: pale grey discs)
+    tube((_fx, _fy, 23.0), (_fx, _fy, 23.15), 0.6, 0.6, DK, 12)      # dark hub
 for vx, vy in [(-127.25, -16.88), (-130.66, -18.33), (-128.18, -13.65), (-130.32, -12.97), (-128.39, -11.5)]:
     tube((vx, vy, 20.0), (vx, vy, 20.8), 0.6, 0.6, ST, 12)
 for k, poly in D['parts'].items(): prism(poly, 0, 20, HY, True, 6, 11.0, 20.0, RD)   # Hyundai Centre wall, Commons e5
@@ -208,11 +222,15 @@ for _b in ([(-95.66, 76.99), (-105.17, 79.54), (-92.3, 102.87), (-83.07, 100.62)
 # far-end screen block in front of the south stand, base at the fence (photo 745-822 x 351-402)
 for (x0, y0), (x1, y1) in [((-0.9, -90.6), (-22.2, -84.6))]:
     nx, ny = x0 - cx, y0 - cy; L = math.hypot(nx, ny); nx, ny = nx / L * 2.0, ny / L * 2.0
-    prism([(x0, y0), (x1, y1), (x1 + nx, y1 + ny), (x0 + nx, y0 + ny)], 1.6, 20.0, SC)
+    x0, y0, x1, y1 = x0 - nx * 1.25, y0 - ny * 1.25, x1 - nx * 1.25, y1 - ny * 1.25   # 2.5 m toward the field: clear of the seat rows
+    prism([(x0, y0), (x1, y1), (x1 + nx / 2, y1 + ny / 2), (x0 + nx / 2, y0 + ny / 2)], 1.0, 19.0, SC)   # 1 m deep, top at photo y 352
     # screen face toward the field, then the white box at its foot (photo 777-801 x 390-405: 42-73% along, up to 6.2 m)
     ox, oy = -nx / 2.0 * 0.06, -ny / 2.0 * 0.06
-    face([(x0 + ox, y0 + oy, 1.6), (x1 + ox, y1 + oy, 1.6), (x1 + ox, y1 + oy, 20.0), (x0 + ox, y0 + oy, 20.0)], SF, [(0, 0), (1, 0), (1, 1), (0, 1)])
+    face([(x0 + ox, y0 + oy, 1.0), (x1 + ox, y1 + oy, 1.0), (x1 + ox, y1 + oy, 19.0), (x0 + ox, y0 + oy, 19.0)], SF, [(0, 0), (1, 0), (1, 1), (0, 1)])
     bx = lambda f: (x0 + (x1 - x0) * f, y0 + (y1 - y0) * f)
+    # plinth along its foot, wider than the face (photo 735-835 x 397-404: 13% past each end, 1.0 m tall, 2 m proud, the face stands on it, dark as photo)
+    (lx_, ly_), (rx_, ry_) = bx(-0.13), bx(1.13); px_, py_ = -nx / 2.0 * 2.0, -ny / 2.0 * 2.0
+    prism([(lx_ + nx / 2, ly_ + ny / 2), (rx_ + nx / 2, ry_ + ny / 2), (rx_ + px_, ry_ + py_), (lx_ + px_, ly_ + py_)], 0.0, 1.0, DK, True, 1, 4.0, None, DK)
     (ax_, ay_), (bx_, by_) = bx(0.42), bx(0.73); fx, fy = -nx / 2.0 * 1.2, -ny / 2.0 * 1.2
     prism([(ax_ + ox, ay_ + oy), (bx_ + ox, by_ + oy), (bx_ + fx, by_ + fy), (ax_ + fx, ay_ + fy)], 0.0, 6.2, RD, True, 1, 6.0, None, RD)
 exec(open('sw.py').read())   # south-west corner buildings

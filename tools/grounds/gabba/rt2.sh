@@ -6,4 +6,8 @@ rm -rf tt && mkdir tt
 "$G" --path gp --script "$PWD/closeup.gd" -- "$GL" "$PWD/cu_facade.png" 82.37 142.87 5 61.27 103.13 12 2>&1 | grep -iE "^error" | head -3 || true
 "$G" --path gp --script "$PWD/closeup.gd" -- "$GL" "$PWD/cu_hyundai.png" -152.44 -0.26 4 -112.49 1.75 10 2>&1 | grep -iE "^error" | head -3 || true
 "$G" --path gp --script "$PWD/closeup.gd" -- "$GL" "$PWD/cu_gate.png" $(cat cu_gate.args) 2>&1 | grep -iE "^error" | head -3 || true
+"$G" --path gp --script "$PWD/closeup.gd" -- "$GL" "$PWD/cu_screen.png" -6 -45 14 -11.5 -88 9 2>&1 | grep -iE "^error" | head -3 || true
+"$G" --path gp --script "$PWD/closeup.gd" -- "$GL" "$PWD/cu_plant.png" -112 -30 38 -134.3 -37.2 22 2>&1 | grep -iE "^error" | head -3 || true
+"$G" --path gp --script "$PWD/closeup.gd" -- "$GL" "$PWD/cu_south.png" 150 150 22 118 88 10 2>&1 | grep -iE "^error" | head -3 || true
+"$G" --path gp --script "$PWD/closeup.gd" -- "$GL" "$PWD/cu_edge.png" 10.8 8 60 60 80 32 2>&1 | grep -iE "^error" | head -3 || true
 ls tt | wc -l; echo DONE
