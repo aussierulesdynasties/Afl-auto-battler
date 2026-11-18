@@ -362,7 +362,7 @@ func _test_seventeen_clubs() -> void:
 	GameDB.reload("1990")
 
 
-## The campaign: 1990 to 2012 at Fitzroy, then Brisbane.
+## The campaign: 1990 to 2012 at Fitzroy, then Brisbane, every match played.
 func _test_campaign() -> void:
 	GameState.reset("1990")
 	GameState.start_season("FIT", GameDB.club_list("FIT"))
@@ -662,6 +662,15 @@ func _play_season() -> bool:
 		GameState.sim_week()
 	print("  %d season played: %d weeks in %.0f s" % [year, guard, (Time.get_ticks_msec() - started) / 1000.0])
 	_check(GameState.season.is_season_over(), "The %d season plays to its premier (%d weeks)" % [year, guard])
+	# The board never sacks this test's coach (director 2026-11-18: "Board
+	# never sacks him"): a sacking with no second chance ends the career and
+	# stops the league, so the campaign would never reach 2012. Sackings are
+	# checked in tests/test_coach_arcs.gd.
+	if GameState.is_sacked():
+		print("  %d: the board's sack of the test coach at %s is cleared" % [year, GameState.my_club])
+		GameState.board["sacked"] = false
+		if GameState.coach_arcs is Dictionary and not GameState.coach_arcs.is_empty():
+			ClubArcs._st(GameState)["offers"] = []
 	return GameState.season.is_season_over()
 
 
