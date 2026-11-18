@@ -675,6 +675,39 @@ const SKIN := 0.3
 static var _edged := {}
 
 
+## The guernsey's depth-middle (halfway between its front and back) every centimetre up the body,
+## from its corners within 2 cm of that height: the line between the front and back pictures
+## (the guernsey's build splits its picture coordinates on the same line). [0] is the lowest height.
+static func _depth_middle(gv: PackedVector3Array) -> PackedFloat32Array:
+	var lo := INF
+	var hi := -INF
+	for q in gv:
+		lo = minf(lo, q.y)
+		hi = maxf(hi, q.y)
+	var n := int(ceil((hi - lo) / 0.01)) + 1
+	var zmin := PackedFloat32Array()
+	var zmax := PackedFloat32Array()
+	zmin.resize(n)
+	zmax.resize(n)
+	zmin.fill(INF)
+	zmax.fill(-INF)
+	for q in gv:
+		var r := int(round((q.y - lo) / 0.01))
+		for k in range(maxi(0, r - 2), mini(n, r + 3)):
+			zmin[k] = minf(zmin[k], q.z)
+			zmax[k] = maxf(zmax[k], q.z)
+	var out := PackedFloat32Array([lo])
+	for k in range(n):
+		out.append((zmin[k] + zmax[k]) * 0.5 if zmax[k] >= zmin[k] else 0.0)
+	return out
+
+
+static func _middle_at(mid: PackedFloat32Array, y: float) -> float:
+	var f := clampf((y - mid[0]) / 0.01, 0.0, float(mid.size() - 2))
+	var k := mini(int(f), mid.size() - 3)
+	return lerpf(mid[k + 1], mid[k + 2], f - float(k))
+
+
 ## The mesh with distances in CUSTOM1 on the guernsey, the shorts and the skin round the neck
 ## and armholes, so the shader draws the guernsey's edges as clean curves and the bindings a true
 ## width inside them. The guernsey was cut from the body along whole triangles, so its open edges
@@ -793,6 +826,7 @@ static func _kit_edges(m: Mesh) -> Mesh:
 	for i in range(gv.size()):
 		if gv[i].y > low - 0.06 and _inside(gv[i], neck).y < SKIN_REACH + 0.02:
 			lend.append(i)
+	var mid := _depth_middle(gv)
 	var measure := func(vs: PackedVector3Array, kind: float) -> Array:
 		var out := PackedFloat32Array()
 		out.resize(vs.size() * 4)
@@ -801,7 +835,7 @@ static func _kit_edges(m: Mesh) -> Mesh:
 		for i in range(vs.size()):
 			var p := vs[i]
 			var e := Vector4(FAR, FAR, FAR, kind)
-			more[i * 4] = p.z
+			more[i * 4] = p.z - _middle_at(mid, p.y)
 			if kind != 0.5 and p.y > low - 0.06:
 				var n := _inside(p, neck)
 				var r := _nearest_arm(p, arms)

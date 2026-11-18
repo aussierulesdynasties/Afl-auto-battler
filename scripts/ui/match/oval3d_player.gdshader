@@ -69,6 +69,9 @@ varying vec2 skin_uv;
 
 const vec2 NUMBER_ACROSS = vec2(0.24, 0.76);   // about 26 cm for two digits
 const vec2 NUMBER_UP = vec2(0.485, 0.875);     // where 2026 match backs carry it: from 14% to 58% of the guernsey seen above the shorts
+// The same spot on a picture kit, whose coordinates are the photo's own pixels (row 189 the shoulder line, 2310 px a metre).
+const vec2 NUMBER_ACROSS_PIC = vec2(0.3525, 0.6525);
+const vec2 NUMBER_UP_PIC = vec2(0.5425, 0.818);
 
 float region(float f) {
 	float aa = max(fwidth(f), 1e-3);
@@ -267,12 +270,14 @@ vec3 kit_image(int cell, vec3 g, float fore) {
 }
 
 // The number printed on the back: x = 1 where it's drawn (alpha), rgb its colour.
-vec4 number_on_back(int n, vec3 g, vec3 base, bool mirrored) {
-	float x = (NUMBER_ACROSS.y - g.x) / (NUMBER_ACROSS.y - NUMBER_ACROSS.x);   // from behind, left to right
+vec4 number_on_back(int n, vec3 g, vec3 base, bool mirrored, bool pic) {
+	vec2 across = pic ? NUMBER_ACROSS_PIC : NUMBER_ACROSS;
+	vec2 up = pic ? NUMBER_UP_PIC : NUMBER_UP;
+	float x = (across.y - g.x) / (across.y - across.x);   // from behind, left to right
 	if (mirrored) {
 		x = 1.0 - x;      // the frame is flipped on screen: flip the digits back
 	}
-	float y = (NUMBER_UP.y - g.y) / (NUMBER_UP.y - NUMBER_UP.x);             // top down
+	float y = (up.y - g.y) / (up.y - up.x);             // top down
 	int digit = n;
 	float dx = (x - 0.25) * 2.0;
 	if (n >= 10) {
@@ -316,7 +321,7 @@ void fragment() {
 	}
 	if (number >= 0) {
 		vec3 under = dn >= 100 ? jumper : base;
-		vec4 num = number_on_back(number, g, under, false);
+		vec4 num = number_on_back(number, g, under, false, dn >= 100);
 		jumper = mix(jumper, num.rgb, num.a);
 	}
 	// The bindings, a set width in from the neck and the armholes.
