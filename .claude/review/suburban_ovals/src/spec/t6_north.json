@@ -1,0 +1,205 @@
+{
+ "name": "oval_t6_north",
+ "seed": 6,
+ "field": {
+  "a": 80.0,
+  "b": 65.0,
+  "turf": "turf_tropic",
+  "apron": 3.0
+ },
+ "surround": [
+  {
+   "d0": 3.0,
+   "d1": 7.0,
+   "tex": "red_earth"
+  },
+  {
+   "d0": 6.0,
+   "d1": 40.0,
+   "tex": "turf_dry"
+  }
+ ],
+ "outer": {
+  "d": 400,
+  "tex": "turf_dry"
+ },
+ "fence": {
+  "type": "chainlink",
+  "tex": "chainlink_black",
+  "d": 3.0,
+  "h": 1.0,
+  "post_tex": "dark_metal",
+  "rails": [
+   0.98,
+   0.05
+  ]
+ },
+ "posts": {
+  "goal_h": 12.0,
+  "behind_h": 7.0,
+  "pad": "pad_red"
+ },
+ "buildings": [
+  {
+   "t": 1.6057029118347832,
+   "d": 7.0,
+   "w": 46.0,
+   "dpt": 10.0,
+   "h": 3.0,
+   "wall": "clad_charcoal",
+   "front": "clad_charcoal",
+   "roof": "skillion",
+   "rise": 1.4,
+   "roof_tex": "white_paint",
+   "overhang": 0.6,
+   "verandah": {
+    "d": 3.2,
+    "h": 2.7,
+    "post": "white_paint",
+    "tex": "white_paint",
+    "bay": 4.6
+   },
+   "doors": [
+    [
+     -14.0,
+     1.0,
+     2.1,
+     "door_white"
+    ],
+    [
+     -2.0,
+     1.8,
+     2.1,
+     "door_white"
+    ],
+    [
+     12.0,
+     1.0,
+     2.1,
+     "door_white"
+    ]
+   ]
+  }
+ ],
+ "sails": [
+  {
+   "t": 4.71238898038469,
+   "d": 6.0,
+   "len": 18.0,
+   "rows": 4,
+   "n": 3,
+   "tex": "sail_white",
+   "seat": "seats_white"
+  }
+ ],
+ "coaches": [
+  {
+   "t": 4.4505895925855405,
+   "d": 6.0,
+   "w": 3.6,
+   "wall": "white_paint"
+  },
+  {
+   "t": 4.974188368183839,
+   "d": 6.0,
+   "w": 3.6,
+   "wall": "white_paint"
+  }
+ ],
+ "benches": [
+  {
+   "t": 4.520402762665314,
+   "d": 4.2,
+   "w": 7.0,
+   "h": 2.0,
+   "wall": "white_paint"
+  },
+  {
+   "t": 4.904375198104066,
+   "d": 4.2,
+   "w": 7.0,
+   "h": 2.0,
+   "wall": "white_paint"
+  }
+ ],
+ "scoreboards": [
+  {
+   "t": 0.0,
+   "d": 10.0,
+   "w": 7.0,
+   "h": 3.6,
+   "lift": 2.6,
+   "tex": "scoreboard_led",
+   "back": "dark_metal"
+  }
+ ],
+ "lights": [
+  {
+   "t": 1.0471975511965976,
+   "d": 7.0,
+   "h": 30,
+   "r0": 0.19,
+   "r1": 0.15,
+   "rows": 2,
+   "cols": 3,
+   "led": true
+  },
+  {
+   "t": 2.0943951023931953,
+   "d": 7.0,
+   "h": 30,
+   "r0": 0.19,
+   "r1": 0.15,
+   "rows": 2,
+   "cols": 3,
+   "led": true
+  },
+  {
+   "t": 4.1887902047863905,
+   "d": 7.0,
+   "h": 30,
+   "r0": 0.19,
+   "r1": 0.15,
+   "rows": 2,
+   "cols": 3,
+   "led": true
+  },
+  {
+   "t": 5.235987755982989,
+   "d": 7.0,
+   "h": 30,
+   "r0": 0.19,
+   "r1": 0.15,
+   "rows": 2,
+   "cols": 3,
+   "led": true
+  }
+ ],
+ "bg_trees": [
+  {
+   "kind": "palm",
+   "t0": 1.2217304763960306,
+   "t1": 1.9198621771937625,
+   "d": 17.0,
+   "n": 9,
+   "h": 11.0,
+   "djit": 2.0
+  },
+  {
+   "kind": "palm",
+   "t0": 3.490658503988659,
+   "t1": 4.014257279586958,
+   "d": 10.0,
+   "n": 4,
+   "h": 10.0
+  },
+  {
+   "kind": "palm",
+   "t0": 5.410520681182422,
+   "t1": 5.934119456780721,
+   "d": 10.0,
+   "n": 4,
+   "h": 10.0
+  }
+ ]
+}

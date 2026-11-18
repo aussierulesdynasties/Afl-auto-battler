@@ -1,0 +1,360 @@
+{
+ "name": "oval_t4_country",
+ "seed": 4,
+ "field": {
+  "a": 80.0,
+  "b": 65.0,
+  "turf": "turf",
+  "apron": 3.0
+ },
+ "surround": [
+  {
+   "d0": 3.0,
+   "d1": 12.0,
+   "tex": "concrete"
+  },
+  {
+   "d0": 12.0,
+   "d1": 40.0,
+   "tex": "gravel"
+  }
+ ],
+ "outer": {
+  "d": 400,
+  "tex": "turf_dry"
+ },
+ "fence": {
+  "type": "chainlink",
+  "d": 3.0,
+  "h": 1.2
+ },
+ "posts": {
+  "goal_h": 12.0,
+  "behind_h": 7.0,
+  "pad": "pad_blue"
+ },
+ "stands": [
+  {
+   "x": -15.215,
+   "y": 73.532,
+   "rot": -1.5,
+   "len": 15.12,
+   "rows": 9,
+   "tread": 0.8,
+   "riser": 0.22,
+   "base": 3.6,
+   "seat": "bench_timber",
+   "riser_tex": "concrete",
+   "front": "block_grey",
+   "back": "block_grey",
+   "back_h": 0.0,
+   "ends": "block_grey",
+   "roof": "gable",
+   "eave": 6.5,
+   "ridge": 8.1,
+   "roof_over": 1.2,
+   "roof_back": 0.3,
+   "roof_end": 0.8,
+   "roof_tex": "iron_skyblue",
+   "bay": 3.7,
+   "truss": "white_paint",
+   "rail": true,
+   "doors": [
+    [
+     -1.12,
+     0.9,
+     2.04,
+     "door_black"
+    ],
+    [
+     6.49,
+     0.95,
+     2.04,
+     "door_white"
+    ]
+   ],
+   "stairs": [
+    {
+     "x": -6.42,
+     "top": 3.6,
+     "dir": 1,
+     "run": 4.2,
+     "y": -1.1
+    },
+    {
+     "x": 6.43,
+     "top": 3.6,
+     "dir": -1,
+     "run": 4.4,
+     "y": -1.1
+    }
+   ]
+  }
+ ],
+ "buildings": [
+  {
+   "x": -34.243,
+   "y": 72.727,
+   "rot": 27.06,
+   "w": 10.8,
+   "dpt": 12.0,
+   "h": 2.9,
+   "wall": "block_grey",
+   "front": "glass_curtain",
+   "roof": "flat",
+   "roof_tex": "iron_zinc",
+   "parapet": "white_paint"
+  },
+  {
+   "x": -27.434,
+   "y": 76.206,
+   "rot": 27.06,
+   "w": 4.49,
+   "dpt": 12.0,
+   "h": 3.2,
+   "wall": "block_grey",
+   "front": "block_grey",
+   "roof": "flat",
+   "roof_tex": "iron_zinc",
+   "parapet": "white_paint",
+   "doors": [
+    [
+     0.0,
+     1.6,
+     2.1,
+     "door_black"
+    ]
+   ]
+  },
+  {
+   "x": -4.438,
+   "y": 70.931,
+   "rot": 27.06,
+   "w": 4.78,
+   "dpt": 8.0,
+   "h": 3.3,
+   "wall": "block_grey",
+   "front": "block_grey_window",
+   "roof": "skillion",
+   "rise": 1.0,
+   "roof_tex": "iron_skyblue",
+   "overhang": 0.4,
+   "doors": [
+    [
+     -1.81,
+     0.9,
+     2.0,
+     "door_white",
+     1.4
+    ],
+    [
+     1.28,
+     0.95,
+     2.04,
+     "door_white"
+    ]
+   ],
+   "stairs": [
+    {
+     "x": -1.31,
+     "top": 1.4,
+     "dir": 1,
+     "run": 2.4,
+     "y": -1.1
+    }
+   ]
+  },
+  {
+   "x": 1.756,
+   "y": 74.096,
+   "rot": 27.06,
+   "w": 9.14,
+   "dpt": 10.0,
+   "h": 3.4,
+   "wall": "block_grey",
+   "front": "block_grey_window",
+   "roof": "skillion",
+   "rise": 1.7,
+   "roof_tex": "iron_skyblue",
+   "overhang": 0.4,
+   "doors": [
+    [
+     0.35,
+     0.95,
+     2.04,
+     "door_white"
+    ]
+   ],
+   "stairs": [
+    {
+     "x": -4.43,
+     "top": 1.8,
+     "dir": -1,
+     "run": 1.6,
+     "y": -1.1,
+     "landing": false
+    }
+   ]
+  }
+ ],
+ "boxes": [
+  {
+   "x": -40.791,
+   "y": 69.719,
+   "rot": 27.06,
+   "w": 3.25,
+   "dpt": 4.0,
+   "h": 3.4,
+   "wall": "white_paint",
+   "z0": 2.85,
+   "top": "iron_zinc"
+  }
+ ],
+ "benches": [
+  {
+   "x": -10.879,
+   "y": 63.832,
+   "rot": 27.06,
+   "w": 3.86,
+   "h": 1.33,
+   "dd": 1.8,
+   "wall": "iron_zinc"
+  },
+  {
+   "x": -4.229,
+   "y": 64.504,
+   "rot": 27.05,
+   "w": 1.22,
+   "h": 1.3,
+   "dd": 1.6,
+   "wall": "iron_zinc"
+  },
+  {
+   "x": 2.217,
+   "y": 64.338,
+   "rot": 27.06,
+   "w": 2.37,
+   "h": 1.3,
+   "dd": 1.8,
+   "wall": "iron_zinc"
+  }
+ ],
+ "poles": [
+  {
+   "x": -9.623,
+   "y": 77.933,
+   "h": 8.6,
+   "r": 0.05
+  }
+ ],
+ "lights": [
+  {
+   "t": 0.6108652381980153,
+   "d": 9,
+   "h": 24,
+   "rows": 2,
+   "cols": 3
+  },
+  {
+   "t": 2.530727415391778,
+   "d": 9,
+   "h": 24,
+   "rows": 2,
+   "cols": 3
+  },
+  {
+   "t": 3.7524578917878086,
+   "d": 9,
+   "h": 24,
+   "rows": 2,
+   "cols": 3
+  },
+  {
+   "t": 5.672320068981571,
+   "d": 9,
+   "h": 24,
+   "rows": 2,
+   "cols": 3
+  }
+ ],
+ "bg_trees": [
+  {
+   "p0": [
+    -60.225,
+    79.073
+   ],
+   "p1": [
+    -28.999,
+    88.288
+   ],
+   "n": 7,
+   "h": 21,
+   "kind": "gum_mix",
+   "djit": 3
+  },
+  {
+   "p0": [
+    -12.04,
+    92.459
+   ],
+   "p1": [
+    5.79,
+    99.322
+   ],
+   "n": 4,
+   "h": 13,
+   "kind": "gum_mix",
+   "djit": 2
+  },
+  {
+   "t0": 3.490658503988659,
+   "t1": 5.934119456780721,
+   "d": 26,
+   "n": 26,
+   "h": 18,
+   "kind": "pine",
+   "djit": 1.5
+  }
+ ],
+ "off_signs": [
+  {
+   "t0": 1.95166,
+   "t1": 1.97144,
+   "n": 1,
+   "d": 2.92,
+   "z": [
+    0.35,
+    1.1
+   ],
+   "tex": [
+    "sign_sponsor3"
+   ]
+  },
+  {
+   "t0": 1.87766,
+   "t1": 1.91893,
+   "n": 1,
+   "d": 2.92,
+   "z": [
+    0.35,
+    1.1
+   ],
+   "tex": [
+    "sign_sponsor2"
+   ]
+  },
+  {
+   "t0": 1.8088,
+   "t1": 1.84183,
+   "n": 1,
+   "d": 2.92,
+   "z": [
+    0.35,
+    1.1
+   ],
+   "tex": [
+    "sign_sponsor4"
+   ]
+  }
+ ]
+}

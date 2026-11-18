@@ -1,0 +1,15 @@
+{"name":"test","seed":1,"field":{"a":80,"b":65,"turf":"turf","apron":4},
+ "surround":[{"d0":4,"d1":7,"tex":"gravel"},{"d0":7,"d1":30,"tex":"turf_dry"}],
+ "outer":{"d":80,"tex":"turf_dry"},
+ "fence":{"type":"picket","d":3.5},
+ "signs":[{"t0":3.6,"t1":4.4,"n":6,"d":3.0}],
+ "buildings":[{"t":1.5708,"d":10,"w":28,"dpt":12,"h":3.6,"wall":"brick_red","front":"brick_red_window","roof_tex":"iron_zinc","verandah":{"d":3,"h":2.8},"sign":"sign_club","doors":[[-11,2.6,2.4]]}],
+ "stands":[{"t":1.2,"d":8,"len":24,"rows":6,"seat":"seats_maroon","sign":"sign_sponsor4"}],
+ "coaches":[{"t":1.75,"d":6},{"t":1.40,"d":6}],
+ "benches":[{"t":1.62,"d":3.2},{"t":1.52,"d":3.2}],
+ "scoreboards":[{"t":4.71,"d":8,"tex":"scoreboard_manual","box":true}],
+ "lights":[{"t":0.7,"d":14,"h":28},{"t":2.44,"d":14,"h":28,"led":true}],
+ "trees":[{"t0":3.5,"t1":5.9,"d":20,"n":14,"h":16,"kind":"gum_mix"},{"x":0,"y":-110,"h":12,"kind":"palm"},{"t0":-0.5,"t1":0.5,"d":24,"n":10,"h":14,"kind":"pine"}],
+ "cars":[{"t0":-0.6,"t1":0.6,"d":8}],
+ "sails":[{"t":5.2,"d":8,"len":18}]
+}

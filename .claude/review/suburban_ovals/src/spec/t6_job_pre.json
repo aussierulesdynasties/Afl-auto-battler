@@ -1,0 +1,1 @@
+{"out": "../out/t6/pre", "res": [1000, 625], "samples": 12, "sun": {"az": 230, "el": 40, "power": 4.0}, "views": [{"name": "turn", "orbit": {"r": 175, "z": 70, "look": [0, 0, 0], "frames": 4, "start_deg": 90, "fov_h": 55, "only": [0, 1]}}, {"name": "facade", "cam": [0.0, 30.0, 6.0], "look": [0.0, 76.0, 3.0], "fov_h": 55}]}

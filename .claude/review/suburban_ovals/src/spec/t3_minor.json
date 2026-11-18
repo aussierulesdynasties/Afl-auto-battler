@@ -1,0 +1,271 @@
+{
+ "name": "oval_t3_minor",
+ "seed": 3,
+ "field": {
+  "a": 80.0,
+  "b": 65.0,
+  "turf": "turf",
+  "apron": 3.0
+ },
+ "surround": [
+  {
+   "d0": 3.0,
+   "d1": 9.0,
+   "tex": "concrete"
+  },
+  {
+   "d0": 9.0,
+   "d1": 40.0,
+   "tex": "turf_dry"
+  }
+ ],
+ "outer": {
+  "d": 400,
+  "tex": "turf_dry"
+ },
+ "fence": {
+  "type": "chainlink",
+  "tex": "chainlink_black",
+  "d": 3.0,
+  "h": 1.1,
+  "post_tex": "dark_metal",
+  "rails": [
+   1.08,
+   0.05
+  ]
+ },
+ "posts": {
+  "goal_h": 12.0,
+  "behind_h": 7.0,
+  "pad": "pad_blue"
+ },
+ "buildings": [
+  {
+   "t": 1.8936822384138476,
+   "d": 8.0,
+   "w": 24.0,
+   "dpt": 12.0,
+   "h": 3.4,
+   "wall": "brick_red",
+   "front": "brick_red_window",
+   "roof": "gable",
+   "rise": 2.0,
+   "roof_tex": "iron_green",
+   "overhang": 0.6,
+   "upper": {
+    "h": 3.2,
+    "front": "glass_curtain",
+    "wall": "brick_red",
+    "set": 1.5,
+    "rail": true,
+    "roof_tex": "iron_green"
+   },
+   "doors": [
+    [
+     -6.0,
+     1.0,
+     2.1,
+     "door_white"
+    ],
+    [
+     5.0,
+     1.0,
+     2.1,
+     "door_white"
+    ]
+   ]
+  },
+  {
+   "t": 1.0122909661567112,
+   "d": 8.0,
+   "w": 12.0,
+   "dpt": 8.0,
+   "h": 3.0,
+   "wall": "brick_cream",
+   "front": "brick_cream_window",
+   "roof": "gable",
+   "rise": 1.6,
+   "roof_tex": "iron_red",
+   "overhang": 0.5
+  },
+  {
+   "t": 4.71238898038469,
+   "d": 8.0,
+   "w": 14.0,
+   "dpt": 8.0,
+   "h": 3.0,
+   "wall": "brick_red",
+   "front": "brick_red_window",
+   "roof": "skillion",
+   "rise": 0.8,
+   "roof_tex": "iron_zinc",
+   "verandah": {
+    "d": 2.4,
+    "h": 2.6
+   }
+  }
+ ],
+ "stands": [
+  {
+   "t": 1.4660765716752369,
+   "d": 7.0,
+   "len": 42.0,
+   "rows": 7,
+   "tread": 0.8,
+   "riser": 0.38,
+   "base": 3.2,
+   "seat": "seats_white",
+   "riser_tex": "concrete",
+   "front": "brick_red",
+   "back": "iron_green",
+   "back_h": 1.0,
+   "ends": "brick_red",
+   "roof": "skillion",
+   "roof_front": 11.4,
+   "roof_over": 2.5,
+   "roof_tex": "iron_green",
+   "bay": 7.0,
+   "post": "dark_metal",
+   "rail": true,
+   "doors": [
+    [
+     -12.0,
+     1.0,
+     2.1,
+     "door_white"
+    ],
+    [
+     -4.0,
+     1.0,
+     2.1,
+     "door_white"
+    ],
+    [
+     6.0,
+     1.0,
+     2.1,
+     "door_white"
+    ],
+    [
+     14.0,
+     1.0,
+     2.1,
+     "door_white"
+    ]
+   ],
+   "stairs": [
+    {
+     "x": -19.5,
+     "top": 3.2,
+     "dir": 1,
+     "run": 5.0,
+     "y": -1.1
+    }
+   ]
+  }
+ ],
+ "coaches": [
+  {
+   "t": 1.3962634015954636,
+   "d": 4.5,
+   "w": 3.6,
+   "wall": "dark_metal"
+  },
+  {
+   "t": 1.6755160819145565,
+   "d": 4.5,
+   "w": 3.6,
+   "wall": "dark_metal"
+  }
+ ],
+ "benches": [
+  {
+   "t": 1.4486232791552935,
+   "d": 3.6,
+   "w": 6.5,
+   "h": 2.0,
+   "wall": "dark_metal"
+  },
+  {
+   "t": 1.6231562043547265,
+   "d": 3.6,
+   "w": 6.5,
+   "h": 2.0,
+   "wall": "dark_metal"
+  }
+ ],
+ "scoreboards": [
+  {
+   "t": 4.71238898038469,
+   "d": 12.0,
+   "w": 8.0,
+   "h": 3.6,
+   "lift": 2.6,
+   "tex": "scoreboard_manual",
+   "back": "iron_green",
+   "box": true
+  }
+ ],
+ "lights": [
+  {
+   "t": 0.5235987755982988,
+   "d": 7.0,
+   "h": 26,
+   "r0": 0.19,
+   "r1": 0.15,
+   "rows": 2,
+   "cols": 3,
+   "led": false
+  },
+  {
+   "t": 2.6179938779914944,
+   "d": 7.0,
+   "h": 26,
+   "r0": 0.19,
+   "r1": 0.15,
+   "rows": 2,
+   "cols": 3,
+   "led": false
+  },
+  {
+   "t": 3.6651914291880923,
+   "d": 7.0,
+   "h": 26,
+   "r0": 0.19,
+   "r1": 0.15,
+   "rows": 2,
+   "cols": 3,
+   "led": false
+  },
+  {
+   "t": 4.363323129985824,
+   "d": 7.0,
+   "h": 26,
+   "r0": 0.19,
+   "r1": 0.15,
+   "rows": 2,
+   "cols": 3,
+   "led": false
+  },
+  {
+   "t": 5.061454830783556,
+   "d": 7.0,
+   "h": 26,
+   "r0": 0.19,
+   "r1": 0.15,
+   "rows": 2,
+   "cols": 3,
+   "led": false
+  },
+  {
+   "t": 5.759586531581287,
+   "d": 7.0,
+   "h": 26,
+   "r0": 0.19,
+   "r1": 0.15,
+   "rows": 2,
+   "cols": 3,
+   "led": false
+  }
+ ]
+}

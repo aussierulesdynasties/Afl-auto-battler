@@ -1,0 +1,1 @@
+{"out": "../out/t2/proof", "res": [1600, 1000], "samples": 32, "sun": {"az": 230, "el": 40, "power": 4.0}, "views": [{"name": "turntable", "video": {"r": 175, "z": 70, "look": [0, 0, 0], "frames": 96, "start_deg": 90, "fov_h": 55, "res": [1280, 720], "samples": 12}}]}
