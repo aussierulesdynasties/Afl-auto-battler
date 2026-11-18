@@ -42,7 +42,7 @@ specs["t3_minor"] = {
                  stairs=[{"x": -19.5, "top": 3.2, "dir": 1, "run": 5.0, "y": -1.1}])],
     "coaches": [T(t=a, d=4.5, w=3.6, wall="dark_metal") for a in (80, 96)],
     "benches": [T(t=a, d=3.6, w=6.5, h=2.0, wall="dark_metal") for a in (83, 93)],
-    "scoreboards": [T(t=270, d=12.0, w=8.0, h=3.6, lift=2.6, tex="scoreboard_manual", back="iron_green", box=True)],
+    "scoreboards": [T(t=270, d=12.0, w=8.0, h=3.6, lift=4.2, tex="scoreboard_manual", back="iron_green", box=True)],
     "lights": towers((30, 150, 210, 250, 290, 330)),
 }
 

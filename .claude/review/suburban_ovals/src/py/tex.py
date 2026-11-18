@@ -390,7 +390,8 @@ def font(px):
     return ImageFont.load_default()
 
 
-LETTERS = False   # director 2026-11-18 "C: no lettering": words off every board; score digits stay
+LETTERS = False   # director 2026-11-18 "C: no lettering": words off every board
+DIGITS = False    # same ruling (lead 2026-11-18): every sign blank, scoreboard digits too
 
 
 def scoreboard_manual(n=1024):
@@ -408,7 +409,7 @@ def scoreboard_manual(n=1024):
         for row, val in ((0, ("7", "9", "51")), (1, ("5", "11", "41"))):
             y = H * (0.14 + row * 0.47)
             d.rectangle([x, y, x + W * 0.17, y + H * 0.33], fill=(20, 20, 20), outline=(220, 220, 214), width=3)
-            d.text((x + W * 0.05, y + H * 0.06), val[i], font=f3, fill=(246, 246, 240))
+            if DIGITS: d.text((x + W * 0.05, y + H * 0.06), val[i], font=f3, fill=(246, 246, 240))
     if LETTERS: d.text((W * 0.05, H * 0.42), "QTR", font=f2, fill=(240, 220, 120))
     for q in range(4):
         x = W * (0.14 + q * 0.04); d.rectangle([x, H * 0.42, x + W * 0.03, H * 0.48], fill=(240, 220, 120) if q < 3 else (20, 20, 20))
@@ -427,7 +428,7 @@ def scoreboard_led(n=1024):
     if LETTERS: d.text((W * 0.06, H * 0.12), "HOME", font=f1, fill=(240, 240, 240))
     if LETTERS: d.text((W * 0.06, H * 0.58), "AWAY", font=f1, fill=(240, 240, 240))
     for row, s in ((0, "7.9  51"), (1, "5.11 41")):
-        d.text((W * 0.40, H * (0.06 + row * 0.47)), s, font=f3, fill=(255, 186, 40))
+        if DIGITS: d.text((W * 0.40, H * (0.06 + row * 0.47)), s, font=f3, fill=(255, 186, 40))
     save("scoreboard_led", np.array(im, float), 8.0)
 
 
