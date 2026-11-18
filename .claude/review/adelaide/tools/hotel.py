@@ -83,7 +83,8 @@ def facade(m, P, n, zs, cell, inset_depth=0.15):
             if ins > 0:  # reveals back to the wall plane
                 A, B = P[i], P[i + 1]
                 m.quad((*A, z1), (*B, z1), (*b, z1), (*a, z1), col, kind, [(S[i], 0), (S[i + 1], 0), (S[i + 1], ins), (S[i], ins)])
-                m.quad((*a, z0), (*b, z0), (*B, z0), (*A, z0), col, kind, [(S[i], 0), (S[i + 1], 0), (S[i + 1], ins), (S[i], ins)])
+                if z0 > 0.01:  # no floor strip at ground level (it z-fought the lawn)
+                    m.quad((*a, z0), (*b, z0), (*B, z0), (*A, z0), col, kind, [(S[i], 0), (S[i + 1], 0), (S[i + 1], ins), (S[i], ins)])
 
 
 def reveal_sides(m, P, n, zs, cell):
@@ -159,21 +160,23 @@ m = Mesh()
 
 # ---------- copper blocks (south u 1442-1880, north 3085-3515) ----------
 # windows per storey as fractions of the block's facade length, read from photo C (south: 3 windows, north: 3)
-BLOCKS = [(1442, 1905, [(0.155, 0.29), (0.32, 0.48), (0.70, 0.81)]),
-          (3085, 3515, [(0.10, 0.16), (0.47, 0.57), (0.78, 0.88)])]
-for u0, u1, wins in BLOCKS:
+BLOCKS = [(1442, 1905, [(0.155, 0.29), (0.32, 0.48), (0.70, 0.81)], [(0.25, 0.32), (0.69, 0.81), (0.82, 0.88)]),
+          (3085, 3515, [(0.10, 0.16), (0.47, 0.57), (0.78, 0.88)], [])]   # ground-floor service doors from photo C (north hidden by trees)
+DOOR = (138, 140, 140)
+for u0, u1, wins, doors in BLOCKS:
     P = outer(u0, u1, sigma=1.2); n = normals(P)
-    def cell(s, f, z0, z1, wins=wins):
+    def cell(s, f, z0, z1, wins=wins, doors=doors):
+        if z1 <= 2.6 and in_any(f, doors): return ('steel', DOOR, 2.0)      # grey service doors in the recess
         if z1 <= 3.6: return ('concrete', PALE, 2.0)                       # recessed ground floor
         if in_any(f, wins) and z0 >= 3.6 + 0.3 and z1 <= 20 - 0.3: return ('glass', GLASS, 0.12)
         return ('copper', COPPER, 0.0)
-    zs = [0.0, 3.6]
+    zs = [0.0, 2.6, 3.6]
     for a, b in zip(SLABS[:-1], SLABS[1:]): zs += [a + 0.35, b - 0.35, b]
     zs = sorted(set(zs))
     facade(m, P, n, zs, cell); reveal_sides(m, P, n, zs, cell)
     for z in SLABS[:-1]: ribbon(m, P, n, z - 0.12, z + 0.28, 0.25, BLACK)          # black floor frames
     ribbon(m, P, n, 19.7, 20.4, 0.3, BLACK)                                          # roof frame
-    ribbon(m, P - n * 2.0, n, 3.2, 3.6, 2.0, SOFFIT, 'concrete')                     # soffit over the recess
+    ribbon(m, P - n * 2.0, n, 3.0, 3.6, 2.0, COPPER, 'copper')                       # copper-clad fascia over the recess (photo C)
     prism_shell(m, P, n, 12.0, 0.0, 20.4, COPPER, 'copper', (90, 90, 92))
     for f in (0.02, 0.98):  # corner columns under the block
         i = int(f * (len(P) - 1)); column(m, P[i] - n[i] * 0.5, 0, 3.6, 0.35, PALE, 'concrete')

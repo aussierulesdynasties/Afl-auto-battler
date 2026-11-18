@@ -137,6 +137,8 @@ def open_back(m, P, zf, z0, st):
             continue
         q = [(a[0], a[1], z0), (b[0], b[1], z0), (b[0], b[1], zt[i + 1]), (a[0], a[1], zt[i])]
         if not back:
+            if max(zt[i], zt[i + 1]) <= z0 + 0.01: run += L; continue  # the stand is below the base wall here (pitch side)
+            q = [(a[0], a[1], z0), (b[0], b[1], z0), (b[0], b[1], max(zt[i + 1], z0)), (a[0], a[1], max(zt[i], z0))]
             m.add(q, [(0, 1, 2, 3)[::-1] if flip else (0, 1, 2, 3)], [st['wall2']] * 4,
                   [(run, z0), (run + L, z0), (run + L, zt[i + 1]), (run, zt[i])], st.get('wall2_kind', 'concrete'))
             run += L; continue
@@ -146,6 +148,7 @@ def open_back(m, P, zf, z0, st):
         m.add(S, [(0, 1, 2, 3), (3, 2, 1, 0)], [ob['slab']] * 4, [(run, 0), (run + L, 0), (run + L, ins), (run, ins)], 'concrete')
         T = [(ai[0], ai[1], z0 + 0.05), (bi[0], bi[1], z0 + 0.05), (b[0], b[1], zt[i + 1]), (a[0], a[1], zt[i])]
         m.add(T, [(0, 1, 2, 3), (3, 2, 1, 0)], [ob['soffit']] * 4, [(run, 0), (run + L, 0), (run + L, ins), (run, ins)], 'steel')
+        while nxt < run: nxt += ob['strut_every']  # catch up after edges without struts
         while nxt <= run + L:  # a raking strut from the slab edge up to the back edge, leaning along the facade
             t = (nxt - run) / L; p = a + e * t; o = nrm * 0.4; zt_p = zt[i] + (zt[i + 1] - zt[i]) * t
             lean = e / (L + 1e-9) * (zt_p - z0) * 0.6
