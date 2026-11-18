@@ -27,29 +27,35 @@ for t in np.linspace(0.04,0.96,6):
     q=lerp(lerp(FS,FN,t),lerp(BS,BN,t),0.4/math.dist(FS,BS))
     add('pole','cr_post','post',base=q,z1=cF,r0=0.08,r1=0.08)
 # ---------- boundary fence: photo picks + west side from the boundary line pushed out 5.5 m ----------
-F=json.load(open('fence_picks.json'));Bd=json.load(open('bnd_m.json'))
-ring=[q for q in F if not (q[0]<-50 and q[1]>85)]
-for x,y in Bd:
-    if x<-40 and -70<y<95:
-        r=math.hypot(x,y);ring.append([x+5.5*x/r,y+5.5*y/r])
-from scipy.spatial import ConvexHull
-ring=[ring[i] for i in ConvexHull(np.array(ring)).vertices]
-for _ in range(3):  # Chaikin corner cutting: the picked line, rounded between picks
-    ring=[q for i in range(len(ring)) for q in ([0.75*ring[i][0]+0.25*ring[(i+1)%len(ring)][0],0.75*ring[i][1]+0.25*ring[(i+1)%len(ring)][1]],[0.25*ring[i][0]+0.75*ring[(i+1)%len(ring)][0],0.25*ring[i][1]+0.75*ring[(i+1)%len(ring)][1]])]
+# boundary fence: traced on the Google satellite all round (ringfit.py: 51 fence points read off z19/z20, the OSM pitch
+# outline fitted to them fills the stretches hidden in shadow); 1-degree steps round the centre (5, 10)
+ring=json.load(open('ring_sat.json'))
 add('ground_ref','fence_ring','none',pts=ring)
 def fmat(a,b):
     x=(a[0]+b[0])/2;y=(a[1]+b[1])/2
     if y>0 and -25<x<22:return 'hoard_blue'
     if x>=35 or (x>=22 and y>0):return 'hoard'
     if y<0 and -8<x<35:return 'hoard_white'
-    return 'rail'
-runs=[];n=len(ring)
-for i in range(n):
-    a,b=ring[i],ring[(i+1)%n];m=fmat(a,b)
+    # west side: open chain-link in front of the stand and clubrooms; the white backing sheet only on the south-west arc (c05)
+    if y<-22:return 'rail'
+    return 'rail_open'
+# no boundary fence along the stand and clubroom front (c05, w04: the turf runs to the bench feet). The ring stops at
+# index 124 north of the clubrooms (satellite g19: the fence line with its shadow starts there) and at index 197 south
+# of the stand, where a low open chain-link turns in to the arch's north edge (w04 fence zoom, c05)
+import stand as _st0
+path=ring[197:]+ring[:125]
+runs=[]
+for i in range(len(path)-1):
+    a,b=path[i],path[i+1];m=fmat(a,b)
     if runs and runs[-1][0]==m:runs[-1][1].append(b)
     else:runs.append([m,[a,b]])
-if len(runs)>1 and runs[0][0]==runs[-1][0]:runs[0][1]=runs[-1][1][:-1]+runs[0][1];runs.pop()
-for m,pts in runs:add('fence','fence_'+m,m,pts=pts,h=1.0 if m=='rail' else 1.1,open=True)
+runs.append(['rail_open',[ring[197],_st0.W(10.9,_st0.P['pl_t'],0)[:2]]])
+for m,pts in runs:add('fence','fence_'+m,m,pts=pts,h=1.0 if m.startswith('rail') else 1.1,open=True)
+# south forecourt: black bow-top fence round the grassed yard south of the stand (satellite z20 trace; c05)
+add('fence','fence_bow','rail_bow',pts=[[-82.6,-18.0],[-82.5,-24.7],[-65.9,-20.7]],h=1.2,open=True)
+# grey vertical-bar palisade round the stair tower and the south door (c08, c09), stand frame s -5.8, t 1.5..23.5
+import stand as _st
+add('fence','fence_pal','rail_pal',pts=[_st.W(-1.0,1.5,0)[:2],_st.W(-5.8,1.5,0)[:2],_st.W(-5.8,23.5,0)[:2],_st.W(-1.0,23.5,0)[:2]],h=1.8,open=True)
 # ---------- outer east wall ----------
 add('fence','east_wall','brick',pts=[[96.7,93.4],[91.6,-72.1]],h=2.2,open=True)
 # ---------- scoreboard: legs at photo (787,485)/(825,485), board 479..449 ----------
@@ -71,11 +77,14 @@ for u,v,rp in TR:
     add('tree','tree','tree',xy=[float(c[0]),float(c[1])],r=r,h=7+r*0.6,cd=r*1.2)
 # ---------- towers ----------
 T=json.load(open('towers.json'))
+SATB={'FL_pole':[-52.0,97.5],'FL_2':[-61.0,75.0],'NL_pole':[-58.5,-72.5]}   # satellite: head seen from above / shadow foot
+T0={k:dict(v) for k,v in T.items()}
+for k in SATB:T[k]['base']=SATB[k]
 for k,v in T.items():
-    b=v['base'];lat=k.endswith('lat')
+    b=v['base'];lat=k.endswith('lat') or k.endswith('_2')   # c05: FL_2 is a lattice mast with a square head; FR_2 the same (era tower, unphotographed close)
     r0,r1={'NL_pole':(1.1,0.5),'R_pole':(1.1,0.5),'FL_pole':(0.9,0.45),'FR_pole':(0.9,0.45),'FL_2':(0.7,0.35),'FR_2':(0.7,0.35)}.get(k,(1.1,0.7))
     add('lattice' if lat else 'pole',k,'steel',base=b,z1=float(v['hbot']),r0=r0,r1=r1)
-    add('head',k+'_head','lamps',base=b,z0=float(v['hbot']),z1=float(v['top']),w=6.5)
+    add('head',k+'_head','lamps',base=b,z0=float(v['hbot']),z1=float(v['top']),w=6.5,lat=lat)
 json.dump(prims,open('prims.json','w'),indent=0)
 if __name__=='__main__':
     print('cr',BS,BN,FN,FS,'sb',L,Rr,zb,zt)
@@ -83,8 +92,8 @@ if __name__=='__main__':
 # ---------- pole signs (photo boxes on the pole) ----------
 SG=[('FL_pole',(396,415,409,430),'sign_tio',0.9),('FR_pole',(886,904,395,415),'sign_tio',0.9),('NL_pole',(165,202,830,875),'sign_white',1.1)]
 for k,(u0,u1,v0,v1),m,rr in SG:
-    b=T[k]['base'];z0=float(at_vline(P,(u0+u1)/2,v1,b)[2]);z1=float(at_vline(P,(u0+u1)/2,v0,b)[2])
-    d=float(np.linalg.norm(np.array(b+[(z0+z1)/2])-P[:3]));w=(u1-u0)*d/P[6]
+    b0=T0[k]['base'];b=T[k]['base'];z0=float(at_vline(P,(u0+u1)/2,v1,b0)[2]);z1=float(at_vline(P,(u0+u1)/2,v0,b0)[2])
+    d=float(np.linalg.norm(np.array(b0+[(z0+z1)/2])-P[:3]));w=(u1-u0)*d/P[6]
     add('sign',k+'_sign',m,base=b,z0=z0,z1=z1,w=w,off=rr+0.1)
 json.dump(prims,open('prims.json','w'),indent=0)
 if __name__=='__main__':print([(p['name'],round(p['z0'],1),round(p['z1'],1),round(p['w'],1)) for p in prims if p['kind']=='sign'])

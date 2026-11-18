@@ -8,7 +8,7 @@ bpy.ops.wm.read_factory_settings(use_empty=True)
 sc=bpy.context.scene
 COL={'roof_white':(0.86,0.85,0.82),'base_dark':(0.09,0.10,0.12),'glass':(0.10,0.14,0.18),'wall_cream':(0.72,0.66,0.55),
 'wall_white':(0.85,0.85,0.83),'brick':(0.45,0.22,0.13),'post':(0.85,0.85,0.85),'steel':(0.62,0.64,0.65),'frame':(0.18,0.19,0.2),
-'roof_green':(0.04,0.13,0.10),'tree':(0.20,0.22,0.07),'trunk':(0.55,0.50,0.42),'dirt':(0.36,0.17,0.10),'grass':(0.08,0.22,0.04)}
+'roof_green':(0.04,0.13,0.10),'lamp_face':(0.78,0.80,0.80),'tree':(0.20,0.22,0.07),'trunk':(0.55,0.50,0.42),'dirt':(0.36,0.17,0.10),'grass':(0.08,0.22,0.04)}
 TEXM={'lamps':'lamps.png','hoard':'hoard.png','sign_tio':'sign_tio.png','sign_white':'sign_white.png','roof_blue':'roof_blue.png','screen':'screen.png','hoard_blue':'hoard_blue.png','hoard_white':'hoard_white.png','rail':'rail.png'}
 EMIT={'screen':0.6}   # daytime reference: lamps are off
 TJ=json.load(open(os.path.join(os.path.dirname(os.path.abspath(PR)),'tex3','tex.json')));TILE=TJ['TILE']
@@ -20,7 +20,9 @@ def mat(n):
     if os.path.exists(T3) or n in TEXM:
         t=nt.nodes.new('ShaderNodeTexImage');t.image=bpy.data.images.load(T3 if os.path.exists(T3) else os.path.join(TEX,TEXM[n]));nt.links.new(t.outputs['Color'],b.inputs['Base Color'])
         if n.startswith('rail'):
-            nt.links.new(t.outputs['Alpha'],b.inputs['Alpha']);m.blend_method='CLIP' if hasattr(m,'blend_method') else None
+            nt.links.new(t.outputs['Alpha'],b.inputs['Alpha'])
+            # smooth alpha: dithered alpha turned the sub-pixel chain-link into grain over dark walls (w04 arch)
+            if hasattr(m,'surface_render_method'):m.surface_render_method='BLENDED'
         if n in EMIT:
             nt.links.new(t.outputs['Color'],b.inputs['Emission Color']);b.inputs['Emission Strength'].default_value=EMIT[n]
     else:b.inputs['Base Color'].default_value=(*COL.get(n,(0.5,0.5,0.5)),1)
@@ -100,11 +102,50 @@ for pr in P:   # the hoardings were traced over the permanent fence: the runs st
             p,q=L[i];return tuple(p[j]+(q[j]-p[j])*t for j in range(3))
         for s in range(steps):
             for i in range(4):rod(n+'_br',at(i,s/steps),at((i+1)%4,(s+1)/steps),0.04,m)
-    elif k=='head':
-        b=pr['base'];f,s=face_dir(b);w=pr['w']/2;z0,z1=pr['z0'],pr['z1'];B=Vector((b[0],b[1],0))
-        c=[B-s*w,B+s*w,B+s*w-f*0.8,B-s*w-f*0.8]
-        mk(n+'_frame',[(v.x,v.y,z0) for v in c]+[(v.x,v.y,z1) for v in c],box_faces(4),'frame')
-        quad(n,B-s*w+f*0.05,B+s*w+f*0.05,z0,z1,'lamps',False)
+    elif k=='head':   # 3D lamp heads facing the field (c05, w04): poles carry a tilted rack of round lamps on a railed
+        # platform with the pole running on to a crossbar; lattice towers carry a square panel of square lamps
+        b=pr['base'];f,sd=face_dir(b);z0,z1=pr['z0'],pr['z1'];B=Vector((b[0],b[1],0));lat=pr.get('lat',False)
+        nc,nr,W_,H_=(5,5,4.6,z1-z0-0.6) if lat else (8,7,7.0,min(6.6,z1-z0-0.4))
+        # rack top leans 12 degrees toward the field so the lamps aim down at the ground; the rack hangs 1 m in front of the pole
+        tilt=math.radians(12);up=Vector((0,0,1))*math.cos(tilt)+f*math.sin(tilt);nrm=f*math.cos(tilt)-Vector((0,0,1))*math.sin(tilt)
+        base_z=z0+0.5;C0=B+f*1.0+Vector((0,0,base_z))
+        V=[];F=[]
+        def cyl(p,q,r,seg):
+            d=(q-p).normalized();u=d.cross(Vector((0,0,1)));u=u.normalized() if u.length>1e-6 else Vector((1,0,0));v=d.cross(u);o=len(V)
+            for e in(p,q):
+                for i in range(seg):an=2*math.pi*i/seg;V.append(tuple(e+r*(u*math.cos(an)+v*math.sin(an))))
+            F.append(tuple(range(o+seg-1,o-1,-1)));F.append(tuple(range(o+seg,o+2*seg)))
+            for i in range(seg):j=(i+1)%seg;F.append((o+i,o+j,o+seg+j,o+seg+i))
+        Vl=[];Fl=[]
+        for i in range(nc):
+            for j in range(nr):
+                c=C0+sd*((i+0.5)/nc-0.5)*W_+up*((j+0.5)/nr)*H_
+                if lat:   # square lamp box 0.7 x 0.7, 0.3 deep
+                    hw=0.33;o=len(Vl)
+                    for dz in(0,0.3):
+                        for (a_,b_) in((-1,-1),(1,-1),(1,1),(-1,1)):Vl.append(tuple(c-nrm*dz+sd*a_*hw+up*b_*hw))
+                    Fl+=[(0,1,2,3),(7,6,5,4),(0,4,5,1),(1,5,6,2),(2,6,7,3),(3,7,4,0)];Fl[-6:]=[tuple(o+x for x in t) for t in Fl[-6:]]
+                else:
+                    o=len(V);cyl(c-nrm*0.35,c,0.29,10)
+                    # the lamp's front cap goes to the glass mesh
+                    Vl+=V[o:];Fl.append(tuple(range(len(Vl)-10,len(Vl))));del V[o:];F[:]=[t for t in F if max(t)<o]
+                    o2=len(V);p_,q_=c-nrm*0.35,c-nrm*0.02;cyl(p_,q_,0.30,10)
+        # rack frame: outline and two crossbars behind the lamps
+        for t_ in(0.0,0.5,1.0):cyl(C0-nrm*0.4-sd*W_/2+up*H_*t_,C0-nrm*0.4+sd*W_/2+up*H_*t_,0.06,6)
+        for e in(-0.5,0.5):cyl(C0-nrm*0.4+sd*W_*e,C0-nrm*0.4+sd*W_*e+up*H_,0.06,6)
+        # platform under the rack with a rail on its open sides
+        pw=W_/2+0.3;pd=1.4;o=len(V);zp=z0+0.2
+        for dz in(0,0.12):
+            for (a_,b_) in((-1,-0.4),(1,-0.4),(1,1),(-1,1)):V.append(tuple(B+sd*a_*pw+f*(b_*pd)+Vector((0,0,zp+dz))))
+        F+=[tuple(o+x for x in t) for t in((3,2,1,0),(4,5,6,7),(0,1,5,4),(1,2,6,5),(2,3,7,6),(3,0,4,7))]
+        for (pa,pb) in((B-sd*pw+f*pd,B+sd*pw+f*pd),(B-sd*pw-f*pd*0.4,B-sd*pw+f*pd),(B+sd*pw-f*pd*0.4,B+sd*pw+f*pd)):
+            za=Vector((0,0,zp+1.1));cyl(pa+za,pb+za,0.03,5)
+            for t_ in(0,0.5,1):q=pa+(pb-pa)*t_;cyl(q+Vector((0,0,zp)),q+za,0.025,5)
+        if not lat:   # the pole runs on behind the rack to a crossbar at the top
+            cyl(B+Vector((0,0,z0)),B+Vector((0,0,z1)),0.4,10);cyl(B-sd*W_/2+Vector((0,0,z1)),B+sd*W_/2+Vector((0,0,z1)),0.12,8)
+        else:     # lattice: the four legs carry on to the panel top
+            for (a_,b_) in((-1,-1),(1,-1),(1,1),(-1,1)):cyl(B+Vector((a_*0.35,b_*0.35,z0)),B+Vector((a_*0.35,b_*0.35,z1-0.3)),0.08,6)
+        mk(n+'_frame',V,F,'steel');mk(n+'_lamps',Vl,Fl,'lamp_face')
     elif k=='sign':
         b=pr['base'];f,s=face_dir(b);B=Vector((b[0],b[1],0))+f*pr['off'];w=pr['w']/2
         quad(n,B-s*w,B+s*w,pr['z0'],pr['z1'],m)

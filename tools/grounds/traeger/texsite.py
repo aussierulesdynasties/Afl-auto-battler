@@ -55,8 +55,10 @@ for name,backed in (('rail',True),('rail_open',False)):
     W,H=int(16*PX),int(1.0*PX);rgbA=np.zeros((H,W,4));yy,xx=np.mgrid[0:H,0:W]/PX;m=0.05
     sheet=(yy>0.09)&(yy<0.90)&backed;rgbA[...,:3]=rgb('#eef0ef');rgbA[...,3]=np.where(sheet,255,0)
     rgbA[sheet,:3]-=((yy[sheet]-0.09)*14)[:,None]                      # faint shading down the sheet
-    dia=(np.abs(((xx+yy)%m)-m/2)<0.004)|(np.abs(((xx-yy)%m)-m/2)<0.004)
-    rgbA[dia,:3]=rgb('#9a9c98');rgbA[dia,3]=np.maximum(rgbA[dia,3],225)
+    # 3 mm galvanised wire on a 50 mm mesh: one 5 mm texel per wire at 60% cover, so from the stands the open mesh
+    # reads as a faint grey haze with the wall showing through (w04: the arch shows through the chain-link)
+    dia=(np.abs(((xx+yy)%m)-m/2)<0.0025)|(np.abs(((xx-yy)%m)-m/2)<0.0025)
+    rgbA[dia,:3]=rgb('#8c8e8a');rgbA[dia,3]=np.maximum(rgbA[dia,3],150)
     xp=xx%2.5
     for x0,x1 in ((0.0,0.045),(0.075,0.11),(1.24,1.27)):                   # joint pair, then the mid post
         q=(xp>=x0)&(xp<x1);rgbA[q,:3]=rgb('#b9b4a8');rgbA[q,3]=255
