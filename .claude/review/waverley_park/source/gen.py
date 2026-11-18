@@ -43,7 +43,7 @@ def strip2(ss,pf,mats):
             a=P([ss[i]],A[j][0],A[j][1])[0];b=P([ss[i+1]],B[j][0],B[j][1])[0];c=P([ss[i+1]],B[j+1][0],B[j+1][1])[0];d_=P([ss[i]],A[j+1][0],A[j+1][1])[0]
             if np.linalg.norm(d_-a)<1e-4 and np.linalg.norm(c-b)<1e-4:continue
             quad(a,b,c,d_,m)
-ZGK=np.array([(0,0),(95,0),(110,4.5),(128,4.5),(140,4.5),(160,7),(175,11),(200,11),(212,8),(225,8.5),(235,9),(245,6),(320,5),(380,10),(400,10),(415,0),(PER,0)],float)
+ZGK=np.array([(0,0),(95,0),(110,4.5),(128,4.5),(140,4.5),(160,7),(175,11),(197,11),(201,11.5),(214,8.8),(220,8.33),(225,8.5),(235,9),(245,6),(320,5),(380,10),(400,10),(415,0),(PER,0)],float)
 def ZG(s):return float(np.interp(s%PER,ZGK[:,0],ZGK[:,1]))
 def endcap(s,prof,m,flip=False):
     for j in range(len(prof)-1):
@@ -61,7 +61,7 @@ def beam(a,b,w,m):
 COL=['rose','rose','rose','Y','G','R','B','Y','R','sage','Y','B','B','B','B','Y','R','R','R','B','G','Y','M','M','G','M','M','Y','G','B','R','Y','sage','L','rose','rose','rose','K','W','P','L','K','rose','sage','B','Y','R','G','B','Y','rose','rose','rose','G','G','M','Y','M','G','G','G','N','W','R']+['G']*7
 blocks=[[s0,s0+w,COL[k],k] for k,(s0,w) in enumerate(SEG)]
 a0,a1=blocks[0][0],blocks[1][1];blocks[0][1]=blocks[1][0]=(a0+a1)/2
-MEM=(392.0,522.0);GAP=(249.4,297.6);XAISLE=(260,360)
+MEM=(392.0,522.0);GAP=(252.5,297.6);XAISLE=(260,360)
 RISE=0.28;DEP=0.8;NPAINT=24
 def z_r(r):return 1.0+RISE*r
 def in_rng(s,r):return r[0]<=s<=r[1]
@@ -79,6 +79,7 @@ def walk_prof(r):
     d=DEP*r;z=z_r(r);return [(d,z),(d+0.8,z),(d+0.8,z+RISE)]
 def stair_prof(r):
     d=DEP*r;z=z_r(r);return [(d,z),(d+0.4,z),(d+0.4,z+0.14),(d+0.8,z+0.14),(d+0.8,z+RISE)]
+NZ=(195.0,252.5);NX=10   # near-right corner: painted rows run on under the roof (rows 24-33, to d 27.2)
 for s0,s1,col,k in blocks:
     a,b=s0+0.6,s1-0.6
     subs=[(a,b,('bk%d'%k) if 33<=k<=47 else col)]   # right end: shades matched to the photo (mktex4)
@@ -91,9 +92,16 @@ for s0,s1,col,k in blocks:
             dmid=DEP*r+0.4
             if 16.4<=dmid<=17.6 and in_rng((sa+sb)/2,XAISLE):strip(ss,walk_prof(r),['concrete','concrete'])
             else:strip(ss,seat_prof(r),['concrete','seat_'+cc,'seat_'+cc,'seat_'+cc,'seat_'+cc])
+        ea,eb=max(sa,NZ[0]),min(sb,NZ[1])
+        if eb>ea:
+            for r in range(NPAINT,NPAINT+NX):strip(sgrid(ea,eb),seat_prof(r),['concrete','seat_'+cc,'seat_'+cc,'seat_'+cc,'seat_'+cc])
+            if eb==NZ[1]:
+                for r in range(NPAINT,NPAINT+NX):
+                    pr=seat_prof(r);cap=[pr[1],pr[2],pr[3],pr[4],(pr[4][0],z_r(NPAINT))]
+                    V=[P([eb],d,z)[0] for d,z in cap];tri(V[0],V[2],V[1],'aislec');tri(V[0],V[3],V[2],'aislec');tri(V[0],V[4],V[3],'aislec')
     ss=sgrid(b,s1+0.6,0.6)
-    for r in range(NPAINT):strip(ss,stair_prof(r),['aislec']*4)   # photo: aisles barely show against the seats
-    for r in range(NPAINT):
+    for r in range(NPAINT+(NX if NZ[0]<=b and s1+0.6<=NZ[1] else 0)):strip(ss,stair_prof(r),['aislec']*4)   # photo: aisles barely show against the seats
+    for r in range(NPAINT+(NX if NZ[0]<=a and b<=NZ[1] else 0)):
         pr=seat_prof(r);cap=[pr[1],pr[2],pr[3],pr[4],(pr[4][0],pr[0][1])]
         for sx in(a,b):
             V=[P([sx],d,z)[0] for d,z in cap];tri(V[0],V[1],V[2],'aislec');tri(V[0],V[2],V[3],'aislec');tri(V[0],V[3],V[4],'aislec')
@@ -124,7 +132,7 @@ UPS=sorted(set(round(b[1]%PER,3) for b in blocks if not in_rng(b[1]%PER,(MEM[0]-
 HOLES=[]
 for s0,s1,col,k in blocks:
     sc=(s0+s1)/2
-    if not in_rng(sc%PER,(MEM[0]-2,MEM[1]+2)):HOLES.append((sc-1.5,sc+1.5,DP1,24.0,'portal'))
+    if not in_rng(sc%PER,(MEM[0]-2,MEM[1]+2)) and not in_rng(sc%PER,NZ):HOLES.append((sc-1.5,sc+1.5,DP1,24.0,'portal'))
 HOLES.append((275.0,287.5,26.4,31.2,'pit'));HOLES.append((258.0,292.0,32.0,34.4,'deck'))
 def _cuts(lo,hi):
     c=[lo,hi]
@@ -211,10 +219,11 @@ def facade_frame(s0,s1,ztop=None,dout=None):
 def roof_on(s):return not in_rng(s%PER,GAP)
 ZR_IN,ZR_OUT,DR_IN,DR_OUT=8.9,15.6,19.7,35.2
 def zroof(d):return ZR_IN+(ZR_OUT-ZR_IN)*(d-DR_IN)/(DR_OUT-DR_IN)
-DINK=np.array([(0,32),(47,31),(63,29),(86,27),(97,28),(105,22),(119,21),(140,19.7),(250,19.7),(300,24),(309,25.5),(318,28),(328,32),(PER,32)],float)
+DINK=np.array([(0,32),(47,31),(63,29),(86,27),(97,28),(105,22),(119,21),(140,19.7),(195,19.7),(205,21.0),(230,21.2),(240,23.0),(246,23.6),(250,25.0),(253,26.0),(297.6,23.8),(300,24),(309,25.5),(318,28),(328,32),(PER,32)],float)
 def DIN(s):return float(np.interp(s%PER,DINK[:,0],DINK[:,1]))   # roof inner edge, measured from the photo
 roof_sets=[];cur=[]
-for s in ssB:
+ssR=np.unique(np.r_[ssB,GAP[0]+PER-1e-4,GAP[1]+PER+1e-4])   # the roof ends exactly at the gap
+for s in ssR:
     if roof_on(s):cur.append(s)
     elif cur:roof_sets.append(cur);cur=[]
 if cur:roof_sets.append(cur)
@@ -351,14 +360,14 @@ def stair(s_bot,s_top,zb,zt,d0=DR_OUT,d1=DR_OUT+2.0):
     strip(ls,[(d0,zt),(d1,zt),(d1,zt-0.4)],['aislec','aislec'])
     sd_=s_top-np.sign(s_bot-s_top)*0.75;strip(sgrid(sd_-0.6,sd_+0.6,1.2),[(d0-0.02,zt),(d0-0.02,min(zt+2.1,ZR_OUT-0.9))],['black'])
 stair(179.5,172.0,ZG(179.5),14.0);stair(201.5,195.0,ZG(201.5),14.0)
+KD0,KD1,KH=33.6,35.3,1.8   # photo: kiosks stand under the roof, front just proud of the column line, about 1.8 m tall
 def kiosk(s0,s1,m):
     z0=10.0 if s0<170 else ZG(s0);ss=sgrid(s0,s1,1.0)
-    strip(ss,[(DR_OUT,z0+2.6),(37.4,z0+2.6),(37.4,z0)],['aislec',m])
-    endcap(s0,[(DR_OUT,z0+2.6),(37.4,z0+2.6)],m) if z0==0 else None
+    strip(ss,[(KD0,z0+KH),(KD1,z0+KH),(KD1,z0)],['aislec',m])
     for sx_,fl_ in((s0,False),(s1,True)):
-        a_=P([sx_],DR_OUT,z0)[0];b_=P([sx_],37.4,z0)[0];c_=P([sx_],37.4,z0+2.6)[0];e_=P([sx_],DR_OUT,z0+2.6)[0]
+        a_=P([sx_],KD0,z0)[0];b_=P([sx_],KD1,z0)[0];c_=P([sx_],KD1,z0+KH)[0];e_=P([sx_],KD0,z0+KH)[0]
         quad(b_,a_,e_,c_,m) if fl_ else quad(a_,b_,c_,e_,m)
-for s0,s1,m in((166.5,168.5,'kiosko'),(168.5,172.0,'redpaint'),(174.2,175.6,'kiosko'),(186,188.5,'kioskb'),(189.5,192,'kioskb'),(193,195,'kioskb'),(203.5,206,'kiosko'),(206,210,'redpaint')):kiosk(s0,s1,m)
+for s0,s1,m in((166.5,168.5,'kiosko'),(168.5,172.0,'redpaint'),(172.2,173.6,'kiosko'),(186,188.5,'kioskb'),(189.5,192,'kioskb'),(193,195,'kioskb'),(204.2,205.5,'kiosko'),(205.8,214.8,'redpaint'),(216.0,219.0,'redpaint')):kiosk(s0,s1,m)
 # long low building on the near side, outside the concourse (photo x 480-725, y 458-516): green walls, grey sheet roof
 def lbuild(s0,s1,df,db,hf,hb,mf,mb):
     ss=sgrid(s0,s1,1.0)
