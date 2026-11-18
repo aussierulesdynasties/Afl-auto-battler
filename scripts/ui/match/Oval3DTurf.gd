@@ -194,6 +194,12 @@ func apply(p_weather: String, p_slot: String) -> void:
 	if wet:
 		exposure *= 1.85
 	env.tonemap_exposure = exposure
+	# Under a closed roof no sun reaches the field: the roof's own lights do it (rule 2.91).
+	var stadium = oval.get("stadium")
+	var roofed: bool = stadium != null and stadium.closed
+	sun.visible = not roofed
+	if roofed:
+		fill.visible = false
 	if wet:
 		# Overcast: the key goes soft and cool, the sky does most of the lighting.
 		sun.light_energy *= 0.55 if slot == VignetteKickoff.DAY else 0.85

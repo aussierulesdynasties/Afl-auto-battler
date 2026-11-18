@@ -8,14 +8,13 @@ extends Node3D
 ## Looks only: it reads nothing from the match but the time and who kicked the goal.
 
 const CROWD_SET := "res://assets/oval3d/crowd_set.res"
-const ROWS := 42
+const PITCH := 34.0 / 42.0  # m from one row to the next (the 2c stand: 42 rows in 34 m)
 const SEAT := 0.55           # m between neighbours along a row
 const AISLE_EVERY := 28      # seats between aisles (an aisle is two seats wide)
 const EMPTY := 0.08          # share of seats left empty
 const NEUTRAL := 0.12        # share of supporters in neither club's colours
-const SECTORS := 96          # chunks round the ground (each also split front rows / back rows)
+const SECTORS := 96          # chunks round the ground (each tier also split front rows / back rows)
 const MIX_D := 55.0          # m from the camera: 3D people nearer, cards beyond
-const BASE_Y := 1.2          # m: the front row's step, level with the fence top
 ## The bench: SEAT_H high, from SEAT_F to SEAT_B m back from the row's front edge; the
 ## supporter's origin PERSON_D m back; a card stands CARD_FWD m forward of it (a seated body's
 ## knees reach forward of its origin). Chosen on the 2c board (2026-11-17).
@@ -29,15 +28,16 @@ var supporters := 0
 var _people_mats: Array = []
 var _card_mat: ShaderMaterial
 var _chunks: Array = []      # [{people: [MultiMeshInstance3D per body], cards: MultiMeshInstance3D}]
+var _rng := RandomNumberGenerator.new()
+var _home_share: Array = []
 
 
-## The stand round an ellipse a x b m (the fence line), STAND_DEPTH deep, rising to rise_to m,
-## and its supporters. home and away are each club's two colours (GameDB.club_colours).
-func build(a: float, b: float, depth: float, rise_to: float, home: Array, away: Array) -> void:
+## The stands round an ellipse a x b m (the fence line) and their supporters. Each tier is
+## [inner offset, outer offset, inner height, outer height] in m beyond the fence (data/grounds.json);
+## its rows are about PITCH apart. No seat inside any AABB of `clear` (the camera platforms).
+## home and away are each club's two colours (GameDB.club_colours).
+func build(a: float, b: float, stands: Array, home: Array, away: Array, clear: Array = []) -> void:
 	var cs: Oval3DCrowdSet = load(CROWD_SET)
-	var pitch := depth / ROWS
-	var rise := (rise_to - BASE_Y) / ROWS
-	_terrace(a, b, pitch, rise)
 	for body: Dictionary in cs.bodies:
 		var pm := ShaderMaterial.new()
 		pm.shader = preload("res://scripts/ui/match/oval3d_crowd_people.gdshader")
@@ -64,7 +64,17 @@ func build(a: float, b: float, depth: float, rise_to: float, home: Array, away: 
 	_card_mat.set_shader_parameter("cheer_dur", cs.cheer_s)
 	_card_mat.set_shader_parameter("cheer_len", cs.cheer_s + 1.0)
 	_colours(_card_mat, home, away)
-	_seat(cs, a, b, pitch, rise)
+	_rng.seed = 2026
+	for s in range(SECTORS):
+		_home_share.append(_rng.randf_range(0.4, 0.8))
+	for s: Dictionary in stands:
+		var arc := Vector2(s["t0"], s["t1"])
+		for t: Array in s["tiers"]:
+			var rows := maxi(2, roundi((float(t[1]) - float(t[0])) / PITCH))
+			var pitch := (float(t[1]) - float(t[0])) / rows
+			var rise := (float(t[3]) - float(t[2])) / rows
+			_terrace(a + float(t[0]), b + float(t[0]), pitch, rise, rows, float(t[2]), arc)
+			_seat(cs, a + float(t[0]), b + float(t[0]), pitch, rise, rows, float(t[2]), clear, arc)
 
 
 ## The match clock (s), which every supporter's idle and cheer run on.
@@ -89,21 +99,19 @@ func _colours(m: ShaderMaterial, home: Array, away: Array) -> void:
 
 ## A supporter on each seat, row by row, evenly spaced round each row's ellipse, aisles and a few
 ## empty seats left. Each sector leans to one club (40-80% home); a few wear neither.
-func _seat(cs: Oval3DCrowdSet, a0: float, b0: float, pitch: float, rise: float) -> void:
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 2026
-	var home_share := []
-	for s in range(SECTORS):
-		home_share.append(rng.randf_range(0.4, 0.8))
+func _seat(cs: Oval3DCrowdSet, a0: float, b0: float, pitch: float, rise: float, rows: int,
+		base_y: float, clear: Array, arc := Vector2(0.0, TAU)) -> void:
+	var rng := _rng
+	var home_share := _home_share
 	var wsum := 0.0
 	for body: Dictionary in cs.bodies:
 		wsum += float(body["share"])
 	var per := []
 	for i in range(SECTORS * 2):
 		per.append([])
-	for r in range(ROWS):
+	for r in range(rows):
 		var dd := float(r) * pitch + PERSON_D
-		var y := BASE_Y + float(r + 1) * rise
+		var y := base_y + float(r + 1) * rise
 		var a := a0 + dd
 		var b := b0 + dd
 		# Arc length round this row's ellipse, so seats sit evenly spaced.
@@ -126,7 +134,11 @@ func _seat(cs: Oval3DCrowdSet, a0: float, b0: float, pitch: float, rise: float) 
 			while j < N and acc[j + 1] < at:
 				j += 1
 			var th := TAU * (float(j) + (at - acc[j]) / maxf(0.0001, acc[j + 1] - acc[j])) / N
+			if not _in_arc(th, arc):
+				continue
 			var pos := Vector3(a * cos(th), y, b * sin(th))
+			if clear.any(func(box: AABB): return box.has_point(pos)):
+				continue
 			var outward := Vector3(cos(th) / a, 0.0, sin(th) / b).normalized()
 			var basis := Basis(Vector3.UP, rng.randf_range(-0.2, 0.2)) * Basis.looking_at(outward, Vector3.UP)
 			basis = basis.scaled(Vector3.ONE * rng.randf_range(0.92, 1.06))
@@ -137,7 +149,7 @@ func _seat(cs: Oval3DCrowdSet, a0: float, b0: float, pitch: float, rise: float) 
 			while bi < cs.bodies.size() - 1 and pick >= float(cs.bodies[bi]["share"]):
 				pick -= float(cs.bodies[bi]["share"])
 				bi += 1
-			per[sector * 2 + (0 if r < ROWS / 2 else 1)].append(
+			per[sector * 2 + (0 if r < rows / 2 else 1)].append(
 					[Transform3D(basis, pos), Color(rng.randf(), side, rng.randf(), rng.randf()), bi])
 			supporters += 1
 	var card := _card_mesh()
@@ -192,7 +204,8 @@ func _card_mesh() -> ArrayMesh:
 
 
 ## Concrete steps: each row a riser and a tread, and a bench along it.
-func _terrace(semi_a: float, semi_b: float, pitch: float, rise: float) -> void:
+func _terrace(semi_a: float, semi_b: float, pitch: float, rise: float, rows: int, base_y: float,
+		arc := Vector2(0.0, TAU)) -> void:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var seg := 240
@@ -201,14 +214,15 @@ func _terrace(semi_a: float, semi_b: float, pitch: float, rise: float) -> void:
 	var seat := Color(0.28, 0.3, 0.36)
 	var P := func(t: float, d: float, y: float) -> Vector3:
 		return Vector3(cos(t) * (semi_a + d), y, sin(t) * (semi_b + d))
-	for i in range(seg):
-		var t0 := TAU * float(i) / seg
-		var t1 := TAU * float(i + 1) / seg
+	var n := maxi(1, ceili(seg * (arc.y - arc.x) / TAU))
+	for i in range(n):
+		var t0 := arc.x + (arc.y - arc.x) * float(i) / n
+		var t1 := arc.x + (arc.y - arc.x) * float(i + 1) / n
 		var inward := -Vector3(cos(t0) / semi_a, 0.0, sin(t0) / semi_b).normalized()
-		for r in range(ROWS):
+		for r in range(rows):
 			var d0 := float(r) * pitch
 			var d1 := d0 + pitch
-			var y0 := BASE_Y + float(r) * rise
+			var y0 := base_y + float(r) * rise
 			var y1 := y0 + rise
 			_quad(st, [P.call(t0, d0, y0), P.call(t0, d0, y1), P.call(t1, d0, y1), P.call(t1, d0, y0)], inward, riser)
 			_quad(st, [P.call(t0, d0, y1), P.call(t0, d1, y1), P.call(t1, d1, y1), P.call(t1, d0, y1)], Vector3.UP, tread)
@@ -228,6 +242,11 @@ func _terrace(semi_a: float, semi_b: float, pitch: float, rise: float) -> void:
 	mi.material_override = m
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mi)
+
+
+## Is angle th (0..TAU) inside the arc x..y (y may pass TAU)?
+func _in_arc(th: float, arc: Vector2) -> bool:
+	return (th >= arc.x and th <= arc.y) or (th + TAU >= arc.x and th + TAU <= arc.y)
 
 
 func _quad(st: SurfaceTool, q: Array, n: Vector3, c: Color) -> void:
