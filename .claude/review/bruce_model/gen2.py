@@ -28,8 +28,8 @@ def ell_dir(th, grow=0.0):
 
 
 # ---- the bowl outer top edge O (wall top), clockwise in ref46 from the west stand's north end to its south end
-O = [(880, 945, 8), (830, 912, 6), (760, 900, 5), (700, 885, 5), (640, 860, 5), (600, 838, 5), (568, 800, 5), (552, 760, 5),
-     (542, 700, 5), (543, 640, 5), (548, 600, 5), (563, 550, 5), (588, 505, 6), (615, 470, 7), (645, 445, 8), (686, 405, 9),
+O = [(880, 945, 8), (830, 912, 6), (760, 900, 5), (700, 885, 5), (640, 860, 5), (600, 838, 5), (568, 800, 5), (551, 760, 5),
+     (528, 700, 5), (530, 650, 5), (548, 600, 5), (563, 550, 5), (588, 505, 6), (615, 470, 7), (645, 445, 8), (686, 405, 9),
      (761, 361, 10), (830, 333, 10), (917, 314, 10), (1009, 313, 11), (1123, 309, 11), (1216, 316, 8), (1300, 331, 6),
      (1350, 357, 5), (1400, 388, 5), (1450, 422, 5), (1485, 458, 5), (1508, 520, 5), (1515, 580, 5), (1520, 640, 5),
      (1515, 690, 5), (1500, 725, 6), (1480, 745, 8)]
@@ -62,8 +62,8 @@ def ringO(th): return interp_trace(un, [list(p) for p in OW], th)
 
 PLAZA = -2.5
 rings = {k: [] for k in ('grass', 'fence', 'fence_top', 'seat_front', 'walk_a', 'walk_b', 'top_in', 'top_out', 'foot')}
-# east walkway: inner edge traced in ref46 at 5.5 m
-WALK = [(680, 432), (750, 412), (850, 393), (950, 382), (1050, 377), (1140, 377)]
+# east walkway: centre of the grey band, found column by column in ref46 (walkdet.py) and checked on the grid
+WALK = [(710, 477), (740, 464), (770, 452), (820, 434), (870, 418), (920, 404), (960, 394), (1000, 385), (1050, 374), (1080, 369), (1120, 363)]
 WW = [bp(u, v, 5.5) for u, v in WALK]; wun = [polar(p) for p in WW]
 for i in range(1, len(wun)):
     wun[i] = wun[i - 1] + ((wun[i] - wun[i - 1] + math.pi) % (2 * math.pi) - math.pi)
@@ -115,6 +115,111 @@ GW = np.convolve(np.pad(np.array(GW), 6, mode='edge'), np.ones(13) / 13, mode='v
 for i in range(len(TH)):
     d, po = DS[i], PO[i]; c = po + d * max(2.0, GW[i])
     rings['path_out'].append([*po, 0.0]); rings['conc_out'].append([*c, 0.0]); rings['skirt'].append([*(c + d * 5.0), PLAZA])
+
+# ---- bowl lines (lead's fix list, 2026-11-18): every ring point sits exactly on the ray at TH[i] from the centre, so an
+# aisle (one bay edge per ring index) is one straight radial line through both tiers; front edge, walkway, rim and the
+# navy band are each one smooth curve; tiers keep their order front -> walkway -> rim, so no section folds or gaps.
+def r_ell(th, grow=0.0):
+    ph = th - E['t']; return 1.0 / math.sqrt((math.cos(ph) / (E['A'] + grow)) ** 2 + (math.sin(ph) / (E['B'] + grow)) ** 2)
+
+
+def ell_ray(th, grow=0.0):
+    r = r_ell(th, grow); return np.array([CX + r * math.cos(th), CY + r * math.sin(th)])
+
+
+def gsmooth(a, sig):
+    a = np.asarray(a, float); h = int(3 * sig); k = np.exp(-0.5 * (np.arange(-h, h + 1) / sig) ** 2); k /= k.sum()
+    return np.convolve(np.pad(a, h, mode='edge'), k, mode='valid')
+
+
+def unwrap_to(ths, ref):
+    out = [ths[0] + 2 * math.pi * round((ref - ths[0]) / (2 * math.pi))]
+    for t in ths[1:]: out.append(out[-1] + ((t - out[-1] + math.pi) % (2 * math.pi)) - math.pi)
+    return np.array(out)
+
+
+SG = 1 if TH[-1] > TH[0] else -1
+
+
+def polar_ring(pts):
+    """radius and height of a traced ring where it crosses each ray TH[i]"""
+    P_ = np.array(pts, float); a = unwrap_to([polar(p) for p in P_], TH[0]); r = np.linalg.norm(P_[:, :2] - [CX, CY], axis=1)
+    o = np.argsort(a * SG); a, r, z = a[o] * SG, r[o], P_[o, 2]
+    return np.interp(TH * SG, a, r), np.interp(TH * SG, a, z)
+
+
+cosT, sinT = np.cos(TH), np.sin(TH)
+# front edge: the ellipse fence, except the south end, where ref46 shows the grass ending inside it (traced on a pixel grid)
+r_f = np.array([r_ell(t, G) for t in TH])
+FS = [(675, 855), (652, 838), (636, 820), (622, 800), (612, 780), (604, 760), (598, 740), (594, 720), (592, 700), (592, 680),
+      (594, 650), (596, 630), (600, 610), (608, 590), (625, 568), (650, 552), (680, 540)]
+FSW = [bp(u, v, E['z']) for u, v in FS]
+fa = unwrap_to([polar(p) for p in FSW], TH.mean()); fr_ = np.array([np.linalg.norm(p[:2] - [CX, CY]) for p in FSW])
+o = np.argsort(fa * SG); fa, fr_ = fa[o] * SG, fr_[o]
+ins = (TH * SG >= fa[0]) & (TH * SG <= fa[-1]); idx = np.where(ins)[0]
+w = np.zeros(N); w[idx] = 1.0
+TAPER = 8
+for j in range(TAPER):  # ease in/out over the first and last 8 rays of the traced span
+    f = (j + 1) / (TAPER + 1); w[idx[0] + j] = min(w[idx[0] + j], f); w[idx[-1] - j] = min(w[idx[-1] - j], f)
+r_trace = np.interp(TH * SG, fa, fr_)
+# only the pull-in is taken (the trace's last points sit on the boards' shadow and read up to 2.6 m outside the fence)
+r_f = r_f + gsmooth(w * np.minimum(0.0, r_trace - r_f), 4.0)
+print('south fence trace: rays %d-%d, max pull-in %.1f m' % (idx[0], idx[-1], float((np.array([r_ell(t, G) for t in TH]) - r_f).max())))
+# rim (wall top): the traced O ring on each ray, smoothed along the bowl
+r_o, z_o = polar_ring(rings['top_out'])
+r_o = gsmooth(r_o, 3.0); z_o = gsmooth(z_o, 4.0)
+MINW = 6.0  # every tier at least 6 m deep in plan, so front edge, walkway and rim never cross
+push = np.maximum(0, (r_f + 1.0 + MINW + 3.0) - r_o)
+if push.max() > 0: print('rim pushed out on %d rays, max %.1f m' % (int((push > 0).sum()), float(push.max())))
+r_o = gsmooth(r_o + push, 2.0)
+r_sf = r_f + 1.0; r_ti = r_o - 3.0
+# walkway: where ref46 shows it (east, traced), as a share of the rake; held and eased round the rest of the bowl
+lo = np.where((TH * SG >= min(np.array(wun) * SG)) & (TH * SG <= max(np.array(wun) * SG)))[0]
+# share read in the image: the point on each ray's rake line (front -> rim) whose ref46 pixel lies on the traced walkway
+# edge, so it does not depend on the walkway's height
+WP = np.array(WALK, float); SS = np.linspace(0.0, 1.0, 401)
+
+
+def seg_dist(q, P_):
+    best = 1e9
+    for k in range(len(P_) - 1):
+        a_, b_ = P_[k], P_[k + 1]; e_ = b_ - a_; t_ = np.clip(np.dot(q - a_, e_) / np.dot(e_, e_), 0, 1)
+        best = min(best, float(np.linalg.norm(q - (a_ + e_ * t_))))
+    return best
+
+
+s_tr = []
+for i in lo:
+    A_ = np.array([CX + r_sf[i] * cosT[i], CY + r_sf[i] * sinT[i], 1.6]); B_ = np.array([CX + r_ti[i] * cosT[i], CY + r_ti[i] * sinT[i], z_o[i]])
+    px = pr46(A_[None, :] + SS[:, None] * (B_ - A_)[None, :])
+    s_tr.append(SS[int(np.argmin([seg_dist(q, WP) for q in px]))])
+s_tr = np.array(s_tr)
+cf = np.polyfit(lo.astype(float), s_tr, 2)
+s_w = np.polyval(cf, np.clip(np.arange(N), lo[0], lo[-1]).astype(float))
+s_w = gsmooth(s_w, 8.0)
+print('walkway share of the rake: traced %.2f-%.2f, smoothed %.2f-%.2f' % (s_tr.min(), s_tr.max(), s_w.min(), s_w.max()))
+r_wa = r_sf + s_w * (r_ti - r_sf) - 1.0; z_wa = 1.6 + s_w * (z_o - 1.6)
+r_wa = gsmooth(np.maximum(r_wa, r_sf + 2.5), 3.0); z_wa = 1.6 + (r_wa - r_sf) / (r_ti - r_sf) * (z_o - 1.6)  # lower tier at least ~2 m deep
+print('lower tier thinnest %.1f m at ray %d' % (float((r_wa - r_sf).min()), int((r_wa - r_sf).argmin())))
+r_wb = r_wa + 2.0
+nr_ = np.interp(TH, nth, nrat) if nth[0] < nth[-1] else np.interp(TH, nth[::-1], nrat[::-1])
+r_ft = gsmooth(r_o + nr_ * z_o, 3.0)
+r_po = r_ft + 3.0; r_co = r_po + gsmooth(np.maximum(2.0, GW), 5.0); r_sk = r_co + 5.0
+
+
+def put(name, r, z):
+    z = np.broadcast_to(np.asarray(z, float), r.shape)
+    rings[name] = [[CX + r[i] * cosT[i], CY + r[i] * sinT[i], float(z[i])] for i in range(N)]
+
+
+put('grass', np.array([r_ell(t) for t in TH]), E['z']); put('fence', r_f, E['z']); put('fence_top', r_f, 1.6)
+put('seat_front', r_sf, 1.6); put('walk_a', r_wa, z_wa); put('walk_b', r_wb, z_wa)
+put('top_in', r_ti, z_o); put('top_out', r_o, z_o); put('foot', r_ft, 0.0)
+put('path_out', r_po, 0.0); put('conc_out', r_co, 0.0); put('skirt', r_sk, PLAZA)
+order = [r_f, r_sf, r_wa, r_wb, r_ti, r_o, r_ft, r_po, r_co, r_sk]
+gaps = [float((order[k + 1] - order[k]).min()) for k in range(len(order) - 1)]
+print('smallest plan depth between neighbouring rings (m):', np.round(gaps, 2))
+
 strips = [['fence', 'fence_top', 'fence'],  # no grass inside the fence: the game draws it (director: 'Leave field out')
           ['fence_top', 'seat_front', 'seats'],
           ['seat_front', 'walk_a', 'seats'], ['walk_a', 'walk_b', 'concrete'], ['walk_b', 'top_in', 'seats'],
@@ -150,7 +255,7 @@ lofts.append(dict(name='roof_rear_fascia', a=lines[3].tolist(), b=under[1].tolis
 # seating under the roof: fence top -> seat back (2 m in front of the rear wall, 9 m)
 fence_full = []
 for P_ in Fr:
-    th = polar(P_); f = ell_dir(th, G); fence_full.append([*f, 1.6])
+    th = polar(P_); f = ell_ray(th, G); fence_full.append([*f, 1.6])
 fence_full = np.array(fence_full)
 seat_back = Rr.copy(); dirv = (fence_full[:, :2] - Rr[:, :2]); dirv /= np.linalg.norm(dirv, axis=1)[:, None]
 seat_back[:, :2] += dirv * 2.0; seat_back[:, 2] = 9.0
@@ -160,7 +265,7 @@ grass_w = np.array([[*ell_dir(polar(p)), E['z']] for p in Fr])
 # apron and fence under the stand: the same ellipse offsets as the bowl, over the gap between the bowl's two ends
 t0 = TH[-1]; d_ = (TH[0] - TH[-1] + math.pi) % (2 * math.pi) - math.pi  # short way round, under the stand
 G_TH = np.linspace(t0, t0 + d_, 60)
-gg = [[*ell_dir(t), E['z']] for t in G_TH]; gf = [[*ell_dir(t, G), E['z']] for t in G_TH]; gt = [[*ell_dir(t, G), 1.6] for t in G_TH]
+gg = [[*ell_dir(t), E['z']] for t in G_TH]; gf = [[*ell_ray(t, G), E['z']] for t in G_TH]; gt = [[*ell_ray(t, G), 1.6] for t in G_TH]
 pass  # w_apron dropped: the game's turf covers the oval to the fence
 lofts.append(dict(name='w_fence', a=gf, b=gt, close='fence', step=2))
 top_walk = Rr.copy(); top_walk[:, 2] = 9.0

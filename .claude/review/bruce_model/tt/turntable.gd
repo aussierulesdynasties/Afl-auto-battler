@@ -8,6 +8,7 @@ var centre := Vector3.ZERO
 var radius := 300.0
 var elev := 22.0
 var out := ""
+var cams: PackedStringArray = []
 
 func _init():
 	args = OS.get_cmdline_user_args()
@@ -50,6 +51,13 @@ func _init():
 	root.add_child(cam)
 	root.size = Vector2i(1280, 720)
 	DirAccess.make_dir_recursive_absolute(out)
+	# TT_CAMS=file: one camera per line, "ex,ey,ez tx,ty,tz" (world metres); one frame per line
+	var cf := OS.get_environment("TT_CAMS")
+	if cf != "":
+		for ln in FileAccess.get_file_as_string(cf).split("
+", false):
+			if ln.strip_edges() != "": cams.append(ln.strip_edges())
+		frames = cams.size()
 
 func _unshade(n: Node) -> void:
 	for h in OS.get_environment("TT_HIDE").split(",", false):
@@ -75,7 +83,11 @@ func _process(_d):
 	var k: int = max(i - 3, 0)
 	var a := TAU * float(k) / float(frames)
 	var el := deg_to_rad(elev)
-	if args.size() > 5:
+	if cams.size() > 0:
+		var pr := cams[min(k, cams.size() - 1)].split(" ")
+		var e2: PackedFloat64Array = pr[0].split_floats(","); var t2: PackedFloat64Array = pr[1].split_floats(",")
+		cam.look_at_from_position(Vector3(e2[0], e2[2], -e2[1]), Vector3(t2[0], t2[2], -t2[1]), Vector3.UP)
+	elif args.size() > 5:
 		# fixed close-up: EYE and TARGET in world metres (x east, y north, z up) -> glTF (x, z, -y)
 		var e: PackedFloat64Array = args[5].split_floats(","); var t: PackedFloat64Array = args[6].split_floats(",")
 		cam.look_at_from_position(Vector3(e[0], e[2], -e[1]), Vector3(t[0], t[2], -t[1]), Vector3.UP)
