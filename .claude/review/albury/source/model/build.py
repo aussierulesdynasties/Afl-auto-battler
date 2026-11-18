@@ -366,9 +366,10 @@ def ground():
 def extras():
     # brick lean-to on the east end of the north hall, x -10.8 to -3.5 (g_nw_180): red brick under a grey skillion that
     # falls east from the hall's gable end (frame u points west, so the high side v1 is against the hall)
-    m = MB('north_hall_leanto'); o = dict(c=(-7.15, 80.4), L=7.3, W=6.0, a=171.3); F = Frame(o)
-    m.prism([F.P(u, v) for u, v in ((-3.65, -3.0), (3.65, -3.0), (3.65, 3.0), (-3.65, 3.0))], -0.3, 3.6, 'brick_red')
-    roof(m, F, -3.65, 3.65, -3.0, 3.0, 'skillion', 3.6, 4.6, 'roof_grey', over=0.2, ridge_axis='v')
+    # north wall held 0.2 m inside the north wire fence (OSM 482330187), which runs along it: width 5.6 m, south wall unchanged
+    m = MB('north_hall_leanto'); o = dict(c=(-7.18, 80.20), L=7.3, W=5.6, a=171.3); F = Frame(o)
+    m.prism([F.P(u, v) for u, v in ((-3.65, -2.8), (3.65, -2.8), (3.65, 2.8), (-3.65, 2.8))], -0.3, 3.6, 'brick_red')
+    roof(m, F, -3.65, 3.65, -2.8, 2.8, 'skillion', 3.6, 4.6, 'roof_grey', over=0.2, ridge_axis='v')
     # bare sign wall on the west side (boards left out, director: no boards), x -87, y 2 to 22 (g_w_270 right, g_w_090 left): boards face the ground,
     # dark brown back
     m.box((-87.15, 12.0), 0.3, 20.0, 2.4, 0, 'gutter_brown')
