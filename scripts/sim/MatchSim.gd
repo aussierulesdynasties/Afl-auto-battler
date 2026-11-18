@@ -3977,7 +3977,8 @@ func kick_in_fp(side: int) -> float:
 func resolve_forward50(side: int, fp: float, feeder) -> Dictionary:
 	# The entry (logged just before): a ball spoiled or spilled out of its pack comes to rest
 	# where the footage says, written on it.
-	var entry_ev: Dictionary = events[events.size() - 1]
+	# (Empty when a test calls this on its own, with no entry logged.)
+	var entry_ev: Dictionary = events[events.size() - 1] if not events.is_empty() else {}
 	var T := _rates()
 	var opp := 1 - side
 	var atk: Squad = squads[side]
