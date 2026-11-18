@@ -2203,13 +2203,12 @@ func _test_discs_apart() -> void:
 		_check(top_ok, "%s: the man with the ball is drawn on top of every disc" % str(view[2]))
 		_check(moved_engine == 0, "%s: drawing the discs apart moves no player" % str(view[2]))
 		_check(ball_off <= 1.0, "%s: a held ball is drawn at its holder's disc (%.2f m off)" % [str(view[2]), ball_off])
-		# Fully apart lifts the cap, for the comparison capture only; the player
-		# never sees it. Main's bar was 24 m (seed 31 inside this suite: 21.0 m on main).
-		# A loose ball's scrap (row 197) brings the nearest three to it, so a pack drawn
-		# fully apart spreads wider: 25.5 m (main 739db4b22: 22.1 m), bar 28 m. The
-		# capped view the player sees keeps its 20 m bar (3.8 m at most on both).
-		var far_m := 28.0 if bool(view[3]) else 20.0
-		_check(worst_nudge_m < far_m, "%s: no disc is drawn far from its player (%.1f m at most)" % [str(view[2]), worst_nudge_m])
+		# Fully apart lifts the cap, for the comparison capture only; the player never sees
+		# it, and its distance is not checked (director 2026-11-19: "i dont care about 2d
+		# disc view atall / 3d is the only thing that matters now"). The capped view keeps
+		# its 20 m bar.
+		if not bool(view[3]):
+			_check(worst_nudge_m < 20.0, "%s: no disc is drawn far from its player (%.1f m at most)" % [str(view[2]), worst_nudge_m])
 		print("  discs apart, %s: closest %.2f diameters (players %.2f), biggest nudge %.1f m" % [
 				str(view[2]), closest, real_closest, worst_nudge_m])
 		pv.free()
