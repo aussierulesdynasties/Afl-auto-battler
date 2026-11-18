@@ -120,6 +120,18 @@ save('louvre',a,(6,6))
 # sign box faces (no lettering): red panel / black panel
 a=base((0.70,0.08,0.10),0.008);save('signred',a,(4,4))
 a=base((0.06,0.06,0.07),0.008);save('signblack',a,(4,4))
+# light grey metal cladding (west podium, photo): 3.0 m wide x 1.2 m high panels, fine dark joints
+a=base((0.70,0.72,0.75),0.008);px=N/6
+for i in range(2):vline(a,i*3.0*px,3,(0.52,0.54,0.57))
+for j in range(5):hline(a,j*1.2*px,2,(0.56,0.58,0.61))
+save('panel_lt',a,(6,6))
+# recessed shopfront glazing: 1.2 m mullions, transom at 2.6 m, silver frames, sky-to-floor gradient
+a=np.zeros((N,N,3));px=N/4.8;t=(yy/N)
+a[:]=(np.array((0.30,0.38,0.46))*(1-t[...,None])+np.array((0.09,0.11,0.14))*t[...,None])
+a+=R.normal(0,0.005,(N,N,1))
+for i in range(4):vline(a,i*1.2*px,6,(0.66,0.68,0.70))
+hline(a,(4.8-2.6)*px,7,(0.66,0.68,0.70));hline(a,0,7,(0.66,0.68,0.70))
+save('shopglass',a,(4.8,4.8))
 for k,v in OUT.items():Image.fromarray((v*255).astype(np.uint8)).save('tex/%s.png'%k)
 json.dump(TILE,open('tex/tiles.json','w'),indent=0)
 print(sorted(TILE))

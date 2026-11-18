@@ -208,15 +208,28 @@ from scipy.interpolate import splprep,splev
 tck,_=splprep(BAL.T,s=6.0);bal=np.array(splev(np.linspace(0,1,80),tck)).T
 prism('plinth_deck',np.r_[bal,[(55.5,95.0),(-56.2,95.0)]],0.0,ZP,'base','paving')
 gl=[np.c_[bal,np.full(len(bal),ZP)],np.c_[bal,np.full(len(bal),ZP+1.1)]];loft('plinth_balustrade',gl,['glass'],closed=False)
+loft('plinth_balustrade_top',[np.c_[bal,np.full(len(bal),ZP+1.1)],np.c_[bal,np.full(len(bal),ZP+1.22)]],['white'],closed=False)
 # ---------------- west podium: glazed ground storey (front v 119), terrace 13.2, upper block (front v 113.5) to 21.4
 def band_poly(u0,u1,vout,o=-3.0):
     us=np.linspace(u0,u1,25);vb=[]
     for u in us:
         vv=np.linspace(0,130,2600);thv=np.arctan2(vv,u);j=np.where(np.hypot(u,vv)<=se_r(thv,OA,OB,ON)+o)[0][-1];vb.append(vv[j])
     return [(u,vout) for u in us]+[(u,v) for u,v in zip(us[::-1],vb[::-1])]
-prism('podium_l1',band_poly(-40,46,119.0),ZP,13.2,'base','paving')
-box('podium_rail',-40,46,118.8,119.0,13.2,14.3,'glass','white')
-prism('podium_l2',band_poly(-43,31,113.5),13.2,21.4,'navy','concrete')
+def prism_f(name,q,z0,z1,fn,top):
+    q=np.asarray(q,float);a=0.5*np.sum(q[:,0]*np.roll(q[:,1],-1)-np.roll(q[:,0],-1)*q[:,1])
+    if a<0:q=q[::-1]
+    sm=[fn((q[i]+q[(i+1)%len(q)])/2) for i in range(len(q))];prism(name,q,z0,z1,'x',top,side_m=sm)
+def podium_storey(nm,u0,u1,vout,z0,z1,nb,zo,rec=1.2,top='paving'):
+    # photo: light panel piers on the front line, deep recessed glazed bays between, a solid spandrel band above the bays
+    prism_f(nm,band_poly(u0,u1,vout-rec),z0,z1,lambda m:'shopglass' if m[1]>vout-rec-0.05 else 'panel_lt',top)
+    pitch=(u1-u0)/nb;pw=pitch-zo
+    for i in range(nb+1):
+        uc=u0+i*pitch;a,b=max(u0,uc-pw/2),min(u1,uc+pw/2)
+        box(nm+'_pier%d'%i,a,b,vout-rec,vout,z0,z1,'panel_lt','concrete')
+    box(nm+'_spandrel',u0,u1,vout-rec,vout,z1-1.8 if z1-z0>7.5 else z1-1.6,z1,'panel_lt','concrete')
+podium_storey('podium_l1',-40.0,46.0,119.0,ZP,13.2,10,6.4)
+box('podium_rail',-40,46,118.85,119.0,13.2,14.3,'glass','white');box('podium_rail_top',-40,46,118.8,119.05,14.3,14.42,'white','white')
+podium_storey('podium_l2',-43.0,31.0,113.5,13.2,21.4,9,5.6,top='concrete')
 for i,(u,w) in enumerate(((-41.5,5),(-26.0,4.4),(-21.6,4.4),(9.6,4.4),(14.0,4.4),(28.5,5))):
     box('canopy%d'%i,u-w/2,u+w/2,114.0,118.4,15.7,16.0,'canvas','canvas','canvas')
     for du,dv in((-1,0.2),(1,0.2),(-1,4.2),(1,4.2)):cyl('canopy%d_post%d%d'%(i,du>0,dv>1),(u+du*(w/2-0.2),114+dv),0.07,13.2,15.7,'white','white',6)
@@ -291,5 +304,22 @@ def stair(name,u0,u1,v0,v1,zt):
 stair('plinth_stairN',FU0,-62.0,124.0,137.0,ZP);stair('plinth_stairS',FU1,60.5,126.0,137.0,ZP)
 # ---------------- sign box on the wall top under the roof (no lettering): red panel + black panel
 box('sign_red',-16,-2.5,104.5,105.5,36.5,41.2,'signred','signred');box('sign_black',-2.5,17.4,104.5,105.5,36.5,41.2,'signblack','signblack')
+from shapely.geometry import Polygon,MultiPoint
+from shapely.ops import unary_union
+_S=np.array([uvw(u,v,0.0)[:2] for u,v in((0,0),(1,0),(0,1))]);_A=np.linalg.inv(np.stack([_S[1]-_S[0],_S[2]-_S[0]],1))
+def to_uv(xy):return (_A@(np.asarray(xy)[:2]-_S[0]))
+_fp=[]
+for p in PARTS:
+    V=np.asarray(p['V']);g=V[V[:,2]<0.5]
+    if len(g)>=3 and V[:,2].max()>2.0:
+        h=MultiPoint([tuple(to_uv(x)) for x in g]).convex_hull
+        if h.area>1.0:_fp.append(h.buffer(0.01))
+_U=unary_union(_fp).buffer(6.0,join_style=2).buffer(-4.0,join_style=2)
+_U=max(_U.geoms,key=lambda g:g.area) if _U.geom_type=='MultiPolygon' else _U
+_ex=np.array(_U.exterior.coords)[:-1];_ang=np.arctan2(_ex[:,1],_ex[:,0])
+# radial ring with the same angles for the hole (plinth inner edge), so the pad is one loft band (top) plus an outer skirt
+_r=np.hypot(_ex[:,0],_ex[:,1]);_hole=np.stack([(se_r(_ang,OA,OB,ON)-6.0)*np.cos(_ang),(se_r(_ang,OA,OB,ON)-6.0)*np.sin(_ang)],1)
+ZB0=-1.0;ZB1=0.05
+loft('site_base',[z3(_ex,ZB0),z3(_ex,ZB1),z3(_hole,ZB1)],['concrete','paving'])
 json.dump(dict(parts=PARTS,cam=P('c5.json')),open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'parts2.json'),'w'))
 print(len(PARTS),'parts',sum(len(p['F']) for p in PARTS),'faces')

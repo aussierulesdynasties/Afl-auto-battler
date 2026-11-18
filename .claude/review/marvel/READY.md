@@ -1,6 +1,6 @@
 # Marvel Stadium exterior (row 202 2b): ready for gate
 
-Model: mv2/marvel2.glb (199 parts, 23,570 faces, origin at the pitch centre, north +Y). Hand-made textures only (mv2/tex,
+Model: mv2/marvel2.glb (225 parts, about 25,000 faces, origin at the pitch centre, north +Y). Hand-made textures only (mv2/tex,
 gen_tex.py). No field, posts, goal nets, lettering, boards, temporary stands or background buildings.
 
 ## Proofs (mv2/proof/)
@@ -11,6 +11,15 @@ gen_tex.py). No field, posts, goal nets, lettering, boards, temporary stands or 
 - Turntable: r_tt_w/n/e/s.jpg, sheet sh_tt.jpg. Orbit video: marvel_orbit.mp4 (72 frames, 12 fps).
 - Facade close-up: r_cu_facade.jpg. Join close-ups: r_cu_corner_nw/sw/ne/se, r_cu_roofedge_nw/s, r_cu_tiers,
   r_cu_east, r_cu_join_east_c (sheets sh_cu.jpg, sh_cu_east.jpg).
+
+## Gate round 2 (fixes for the f5aced2ad gate)
+- Base: one site pad (paving top, concrete skirt, z -1.0 to 0.05) runs under every wall. It is the union of every
+  ground-touching footprint plus 2 m, with a hole at the plinth's inner edge (no field). Proof: r_tt_*, r_cu_corner_*,
+  eye-level r_low_0..7 (sheet sh_low.jpg).
+- West facade as the photo shows: light-grey panel cladding (new hand-made texture panel_lt) on both podium storeys;
+  10 deep recessed glazed bays on the ground storey and 9 on the upper, glass 1.2 m behind the piers, with silver
+  mullions and transoms (new texture shopglass); a spandrel band above the bays; the terrace glass balustrade and
+  the forecourt balustrade each get a white top rail. No photo pixels, no lettering. Proof: r_cu_facade.jpg.
 
 ## East side
 Rebuilt from the satellite (no longer a mirror of the west): NE block (z33, plant to 37), box A (z27.4), block B (z24,
