@@ -32,7 +32,7 @@ def tower(mb, T):
         a0, a1 = 2 * math.pi * k / n, 2 * math.pi * (k + 1) / n
         p = lambda a, r, z: (x + r * math.cos(a), y + r * math.sin(a), z)
         mb.face([p(a0, r0, 0), p(a1, r0, 0), p(a1, r1, zb + 1.0), p(a0, r1, zb + 1.0)], 'paint_white')
-    # head faces the field centre, tilted back by T['tilt'] degrees
+    # head faces the field centre; tilt < 0 leans its top toward the field so the lamps point down (GE n_n: top 5 m in)
     dx, dy = -x, -y; L = math.hypot(dx, dy); f = np.array([dx / L, dy / L, 0.0]); s = np.array([-f[1], f[0], 0.0])
     tl = math.radians(T['tilt']); up = np.array([0, 0, 1.0]) * math.cos(tl) - f * math.sin(tl)
     nrm = f * math.cos(tl) + np.array([0, 0, 1.0]) * math.sin(tl)
@@ -143,7 +143,7 @@ def bowl_all(col):
         for r0a, r0b, r1a, r1b, m in ((A['rfp'] - 3, Bs['rfp'] - 3, pz(A['b'])[0], pz(Bs['b'])[0], 'paving'),
                                       (pz(A['b'])[0], pz(Bs['b'])[0], gv(A['b'])[0], gv(Bs['b'])[0], 'gravel')):
             if r1a - r0a < 0.05 and r1b - r0b < 0.05: continue
-            mp.face([(*pol(A['b'], r0a), 0.0), (*pol(Bs['b'], r0b), 0.0), (*pol(Bs['b'], max(r0b, r1b)), 0.0), (*pol(A['b'], max(r0a, r1a)), 0.0)][::-1], m)
+            mp.face([(*pol(A['b'], r0a), 0.0), (*pol(Bs['b'], r0b), 0.0), (*pol(Bs['b'], max(r0b, r1b)), 0.0), (*pol(A['b'], max(r0a, r1a)), 0.0)], m)
     mp.build(col)
     # roof
     mr = MB('roof')
@@ -160,10 +160,31 @@ def bowl_all(col):
                                      (lambda s: s['rout'], lambda s: s['h'] - s['ed'][0], lambda s: s['rout'], lambda s: s['h'] - s['ed'][1], 'roof_fascia'),
                                      (lambda s: s['rout'], lambda s: s['h'] - s['ed'][1], lambda s: s['rin'], lambda s: s['h'] - 3.0, 'roof_soffit')]:
             mr.face([ring(A, ra(A), za(A)), ring(A, rb(A), zb_(A)), ring(Bs, rb(Bs), zb_(Bs)), ring(Bs, ra(Bs), za(Bs))][::-1], m)
+    # dark gutter walkway along each truss line, inner teal edge to the outer fascia (GE n_n: ~0.9 m wide)
+    STEP = D.get('step', 0.5)
+    for tb in list(D['trusses']['b']) + mast_bearings():
+        if in_screen(tb): continue
+        A = secs[int(round(tb / STEP)) % n]
+        r0 = A['rin'] + (min(A['tw'], A['rout'] - A['rin'] - 1) if A['tw'] > 0.5 else 0.0); r1 = A['rout']
+        zr = lambda r: A['h'] - A['ed'][0] * (r - A['rin']) / (A['rout'] - A['rin']) + 0.08
+        da = math.degrees(0.45 / max(r0, 1)); db = math.degrees(0.45 / r1)
+        mr.face([(*pol(tb - da, r0), zr(r0)), (*pol(tb + da, r0), zr(r0)), (*pol(tb + db, r1), zr(r1)), (*pol(tb - db, r1), zr(r1))][::-1], 'steel_dark')
     mr.build(col)
     struct_all(col)
     screens_all(col)
     canopy_all(col)
+
+
+def mast_bearings():
+    """Bearings of the Northern Stand roof masts: one every M['arc'] metres of outer roof edge from M['b0']."""
+    M = D['masts']; ro = periodic(D['roof_outer']); bs = []
+    span = lambda b: (b % 360) >= M['lo'] or (b % 360) <= M['hi']
+    for sgn in (1, -1):
+        b = M['b0']
+        while span(b):
+            if b % 360 not in bs: bs.append(b % 360)
+            b += sgn * math.degrees(M['arc'] / ro(b)[0])
+    return bs
 
 
 def edge(b):

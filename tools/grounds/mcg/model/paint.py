@@ -18,13 +18,13 @@ def seats(name,col,riser=(150,150,146)):
         v0=r*0.8
         for k in range(8):
             u0=k*0.5;c=np.array(col,float)*(1+R.normal(0,0.03))
-            x0,x1=int((u0+0.04)*pu),int((u0+0.46)*pu)
+            x0,x1=int((u0+0.02)*pu),int((u0+0.48)*pu)
             # seat pan (lower) and backrest (upper, slightly darker)
-            a[int((v0+0.30)*pv):int((v0+0.48)*pv),x0:x1]=c
-            a[int((v0+0.48)*pv):int((v0+0.70)*pv),x0:x1]=c*0.82
+            a[int((v0+0.08)*pv):int((v0+0.40)*pv),x0:x1]=c
+            a[int((v0+0.40)*pv):int((v0+0.70)*pv),x0:x1]=c*0.85
         a[int((v0+0.70)*pv):int((v0+0.74)*pv)]=np.array(riser)*0.7  # shadow line at the riser
     a+=fine(N,2.5)[:,:,None];save(name,a,(4.0,3.2))
-seats('seat_teal',(96,170,176));seats('seat_navy',(46,66,104));seats('seat_blue',(58,98,150));seats('seat_grey',(128,138,150))
+seats('seat_teal',(96,170,176));seats('seat_navy',(22,74,118),riser=(64,68,74));seats('seat_blue',(58,98,150));seats('seat_grey',(128,138,150))
 # Roof sheeting: light metal deck, ribs every 0.3 m along v (radial), long panels.
 def deck(name,col,pitch=0.3,tile=3.0):
     x=np.arange(N)/N*(tile/pitch);rib=np.where((x%1)<0.14,0.82,1.0)+0.03*np.cos(2*math.pi*x)

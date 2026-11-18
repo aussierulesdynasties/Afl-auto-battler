@@ -79,11 +79,65 @@ t.rect(0,5.8,7.0,21.0,(70,88,108));t.a[t.Y(21):t.Y(7)]*=np.linspace(1.15,0.9,t.Y
 for u in (0.3,3.2):t.vline(u,0.45,7.0,21.0,(220,224,226));t.vline(u+1.45,0.12,7.0,21.0,(150,154,158));t.vline(u+0.3,0.08,7.0,21.0,(150,154,158))
 for z in (7.0,21.0):t.hline(z,0.25,col=(226,228,226))
 t.save('fac_louvre')
+# North-west (Olympic stand) 326.4-342: dark full-height glazing, fine transoms every 0.7 m, light main transoms at
+# z 6.0, 9.4, 13.0, 17.5, 20.0, white marker dashes on the z 20 transom every 9 m, faint mullions every 1.5 m.
+t=T(9.0,(38,52,72))
+for z in np.arange(0.7,23.4,0.7):t.hline(z,0.04,(54,70,92))
+for u in np.arange(0,9,1.5):t.vline(u,0.05,0,23.4,(60,74,94))
+for z in (6.0,9.4,13.0,17.5,20.0):t.hline(z,0.14,(150,160,170))
+t.rect(4.2,4.8,19.7,20.4,(236,238,236))
+t.rect(0,9,23.4,24,(150,156,160))
+t.save('fac_nwglass')
+# Grey blocks either side 308.5-326.4: blue-grey panels (3 m), white sills at z 4.5, 10.2, 15.5, small teal windows
+# at z 20-22.
+t=T(6.0,(132,144,152))
+for u in (0,3):t.vline(u,0.05)
+for z in np.arange(0,24,3):t.hline(z,0.05)
+for z in (4.5,10.2,15.5):t.rect(0,6,z-0.12,z+0.12,(228,230,228))
+for u in (0.6,4.2):glasspane(t,u,u+1.2,20.0,22.0,(70,130,140))
+t.save('fac_nwgrey')
+# 342-350.5: the same grey with full-height teal window columns (1.1 m) at u 0.3 and 3.3, split at the sills.
+t=T(6.0,(132,144,152))
+for u in (0,3):t.vline(u,0.05)
+for z in (4.5,10.2,15.5):t.rect(0,6,z-0.12,z+0.12,(228,230,228))
+for u in (0.3,3.3):
+    for z0,z1 in ((4.7,10.0),(10.4,15.3),(15.7,22.0)):glasspane(t,u,u+1.1,z0,z1,(70,130,140),ny=2,nx=1)
+t.save('fac_nwgrey2')
+# North entrance 350.5-10 (f000 zoom): dark open undercroft to z 6.1 with columns every 10 m, light grey-blue cladding
+# 6.1-11.3, a dark window band 11.3-13.7 (1.2 m mullions), white ledge, light glass balustrade 14.3-16.5.
+def nentry(side):
+    t=T(10.0,(150,166,180))
+    t.rect(0,10,0,6.1,(34,44,60));t.rect(4.7,5.3,0,6.1,(170,176,180))
+    for u in np.arange(0,10,1.2):t.vline(u,0.04,6.1,11.3,mul=0.9)
+    if side:
+        for u in np.arange(0.2,10,2.4):glasspane(t,u,u+2.2,7.2,9.6,(52,74,104),nx=2)
+    glasspane(t,0,10,11.3,13.7,(58,82,112),nx=8)
+    t.rect(0,10,13.7,14.3,(232,234,232))
+    glasspane(t,0,10,14.3,16.5,(168,192,206),nx=8,frame=(200,206,210))
+    t.save('fac_nentry2' if side else 'fac_nentry')
+nentry(False);nentry(True)
+# NE 53-64 (pzc60/pzc0): light blue-grey glazed cladding, horizontal rows every 1.5 m, mullions every 1.5 m.
+t=T(6.0,(150,170,184))
+for z in np.arange(0,24,1.5):t.hline(z,0.06,(110,126,140))
+for u in np.arange(0,6,1.5):t.vline(u,0.04,mul=0.85)
+for z in (6.0,12.0,18.0):t.hline(z,0.18,(220,224,226))
+t.save('fac_nelight')
+# 64-73 (pzc60): light grey cladding with three dark window bands at z 7-9, 12-14.5, 17-19.5 and white ledges.
+t=T(6.0,(190,196,200))
+for u in (0,3):t.vline(u,0.05)
+for z0,z1 in ((7.0,9.0),(12.0,14.5),(17.0,19.5)):glasspane(t,0,6,z0,z1,(64,86,112),nx=4);t.hline(z0-0.1,0.16,(232,234,232))
+t.save('fac_neband')
+# West 250-261 (pzc240, in shade like the NW greys): blue-grey panels (3 m), dark window strip at z 14.5-17.5.
+t=T(6.0,(136,150,162))
+for u in (0,3):t.vline(u,0.05)
+for z in np.arange(0,24,3):t.hline(z,0.05)
+glasspane(t,0,6,14.5,17.5,(46,64,88),nx=4)
+t.save('fac_wgrey')
 # Plaza concrete: light broom-finished slabs with saw joints on a 3 m grid and a darker diagonal band every 12 m;
 # park gravel: tan crushed rock.
-N=1024;a=np.ones((N,N,3))*np.array((200,198,192),float)+R.normal(0,4,(N,N,1));p=N/12.0
+N=1024;a=np.ones((N,N,3))*np.array((186,178,165),float)+R.normal(0,4,(N,N,1));p=N/12.0
 for k in range(4):a[int(k*3*p):int(k*3*p)+3]*=0.8;a[:,int(k*3*p):int(k*3*p)+3]*=0.8
 Image.fromarray(np.clip(a,0,255).astype(np.uint8)).save(OUT+'paving.png');TILE['paving']=(12.0,12.0)
-a=np.ones((N,N,3))*np.array((196,160,118),float)+R.normal(0,9,(N,N,1))*np.array((1,0.9,0.8))
+a=np.ones((N,N,3))*np.array((214,188,160),float)+R.normal(0,9,(N,N,1))*np.array((1,0.9,0.8))
 Image.fromarray(np.clip(a,0,255).astype(np.uint8)).save(OUT+'gravel.png');TILE['gravel']=(4.0,4.0)
 json.dump(TILE,open(OUT+'tiles.json','w',newline=''),indent=0);print('ok')
