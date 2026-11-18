@@ -90,6 +90,19 @@ What each step does, and the line you must read:
    jaw or neck, hair reads as hair, nothing floating or clipping. Fix the class of fault and refilm before sending.
 5. Send the mp4 with a one-line caption and the step times from `times.txt`.
 
+## Step 5 (final, every head): improve this Skill with what you learnt
+
+Director: "add a final step which will improve the Skill with new learnings". Before you call a head done:
+1. Ask: did anything go wrong, surprise you, or take a second try on this head? Did the director name a fault?
+2. For each one, once its cause is proven (not guessed): add a row to **Known faults** (what you saw, the proven
+   cause, the script and fix), or correct the row that was wrong. A fault whose fix has no director OK yet goes in
+   as "Not fixed: ..." so the next session doesn't rediscover it.
+3. Update anything in Steps 0-4 that turned out wrong or missing: a command, a path, a log line, an expected
+   number (add this head's numbers beside Chandler's when they help the next session judge a log).
+4. Keep it current-state only: replace stale lines, never append a diary. Only proven lessons, never a new rule or
+   fix the director hasn't OK'd.
+5. Commit the Skill on its own (`Row 202 2d: afl-head-pipeline skill, <what you learnt>`) and push.
+
 ## Known faults and where they come from
 
 | You see | Cause | Fixed in |
