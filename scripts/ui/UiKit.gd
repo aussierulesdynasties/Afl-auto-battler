@@ -639,7 +639,7 @@ const CLUB_INKS := {
 	"ADE": ["#FFC83A", "#F0455C"],  # gold, then red (director 2026-10-14: "why is there no yellow for the crows?"); a gold 14 from West Coast's
 	"BRL": ["#F7CE8A", "#4D90E0"],  # gold, then blue
 	"CAR": ["#6B7CF2", "#F1EEE6"],  # navy lifted to blue, then white
-	"CANB": ["#4FA0F0", "#F5B301"],  # navy lifted to blue, then gold
+	"CANB": ["#4FA0F0", "#AA8B5C"],  # ocean blue lifted, then bronze lifted
 	"COL": ["#F1EEE6", "#F1EEE6"],  # black and white: plain text
 	"ESS": ["#EE5A66", "#F1EEE6"],  # red, then white
 	"FRE": ["#B48AF0", "#F1EEE6"],  # purple, then white

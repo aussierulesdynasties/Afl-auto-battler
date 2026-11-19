@@ -5,7 +5,9 @@ extends SceneTree
 ## CONFIG: {"seed": 31, "expo": 1.0, "turf": 0.32, "cams": {NAME: CAM, ...}, "edits": [EDIT, ...]}
 ## CAM:    {"eye": [x, y, z], "width": 40.0, "smooth": 0.5, "aim_y": 1.0, "aim": "ball"}
 ## EDIT:   {"name": "A", "size": [w, h], "cuts": [CUT, ...]}
-## CUT:    {"cam": NAME, "from": s, "to": s, "rate": 1.0, "who": token id (aim "player")}
+## CUT:    {"cam": NAME, "from": s, "to": s, "rate": 1.0, "who": token id (aim "player"),
+##          "pauses": 2.0 (real footy's pauses play this many times faster, as the match view's
+##          MatchDirector.PAUSE_PLAY; default 1), "eye": [x, y, z] (stand the camera here instead)}
 ## The older form {"t0", "dur", "shots": [CAM + "name", "size"]} is still read: each shot is an
 ## edit of one cut.
 ## Each camera works the way a real broadcast camera does: it stands still on its mount (eye, in
@@ -107,7 +109,8 @@ func _run() -> void:
 			var a := int(float(c["from"]) / DT)
 			var b := int(float(c["to"]) / DT)
 			var rate := float(c.get("rate", 1.0))
-			var every := maxi(1, int(round(4.0 * rate)))
+			var pauses := float(c.get("pauses", 1.0))
+			var due := 0.0
 			var aims := _aims(cam_cfg, c, a, b, balls, men)
 			d = load("res://scripts/ui/match/MatchDirector.gd").new()
 			d.setup(res, res["events"])
@@ -115,7 +118,9 @@ func _run() -> void:
 			root.add_child(oval)
 			oval.build(d, "FRE", "STK")
 			_look(oval, float(cfg.get("expo", 1.0)))
-			var eye_a: Array = cam_cfg["eye"]
+			# A cut may stand its camera somewhere else ("eye" on the cut: another mount of the same
+			# kind, e.g. the wing camera at a 50 m line when the centre one's view of a man is blocked).
+			var eye_a: Array = c.get("eye", cam_cfg["eye"])
 			var eye := Vector3(float(eye_a[0]), float(eye_a[1]), float(eye_a[2]))
 			var width := float(cam_cfg.get("width", 40.0))
 			var cam: Camera3D = oval.camera
@@ -146,7 +151,11 @@ func _run() -> void:
 				cam.global_position = eye
 				cam.look_at(aim, Vector3.UP)
 				cam.fov = hfov
-				if (n - a) % every == 0:
+				# A frame every 1/30 s of the picture: `rate` seconds of play each second, `pauses`
+				# times that in one of real footy's pauses (as the match view plays them).
+				due -= 1.0
+				if due <= 0.0:
+					due += 4.0 * rate * (pauses if d.pausing() else 1.0)
 					var bp: Vector3 = oval.ball.global_position
 					var p := cam.unproject_position(bp)
 					if not cam.is_position_behind(bp) and Rect2(Vector2.ZERO, Vector2(size)).has_point(p):

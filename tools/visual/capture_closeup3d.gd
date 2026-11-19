@@ -164,6 +164,8 @@ func _run() -> void:
 	var ap := _anim_player(fig)
 	if ap != null and ap.has_animation(clip):
 		ap.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
+		# Stepped by hand, one film frame (DT) per saved frame: the clip keeps its real speed however long a save takes.
+		ap.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
 		ap.play(clip)
 	print("CLOSEUP figure %s: %.2f m tall unscaled, scale %.3f, clip %s (%s)" % [fig_path, aabb.size.y, k,
 			clip, "playing" if ap != null and ap.has_animation(clip) else "MISSING"])
@@ -179,6 +181,8 @@ func _run() -> void:
 	for i in range(frames):
 		d.advance(DT)
 		oval.sync(DT)
+		if ap != null and ap.is_playing():
+			ap.advance(DT if i > 0 else 0.0)
 		# sync aims the camera at the play: put ours back.
 		cam.global_position = eye
 		cam.look_at(tgt, Vector3.UP)
