@@ -1,8 +1,8 @@
 # ---- south-west corner buildings (photo g49 x 262-700, y 725-1000): measured on pixel grids, unprojected through camB
 PT = mat('paletile', W1, 0.8, 'paletile.png'); GF = mat('gatefront', W1, 0.8, 'gatefront.png')
-NW = mat('navywall', W1, 0.7, 'navywall.png'); N7F = mat('n7front', W1, 0.7, 'n7front.png'); N7R = mat('n7roof', W1, 0.8, 'n7roof.png')
+NW = mat('navywall', W1, 0.7, 'navywall.png'); N7F = mat('n7front', W1, 0.7, 'n7front.png'); N7S = mat('n7strip', W1, 0.7, 'n7strip.png'); N7R = mat('n7roof', W1, 0.8, 'n7roof.png')
 WR = mat('whiterender', W1, 0.8, 'whiterender.png'); DD = mat('deckdots', W1, 0.9, 'deckdots.png'); SK = mat('skylight', W1, 0.4, 'skylight.png')
-BOX.update({PT: 4.8, NW: 9.0, WR: 9.0, DD: 6.0, GF: 46.0, N7F: 8.5, N7R: 10.0, SK: 12.0})
+BOX.update({PT: 4.8, NW: 9.0, WR: 9.0, DD: 6.0, GF: 46.0, N7F: 8.5, N7S: 9.0, N7R: 10.0, SK: 12.0})
 def _ccw(p):
     s = sum(p[i][0] * p[(i + 1) % len(p)][1] - p[(i + 1) % len(p)][0] * p[i][1] for i in range(len(p)))
     return p if s > 0 else p[::-1]
@@ -53,6 +53,7 @@ _skin(_F[2], _F[3], 0, 0, 17.3, 13.4, GF, _U[2], _U[3], 46.0, 24.0)
 _NV = [(102.8, 72.9), (108.7, 66.5), (114.4, 70.0), (111.5, 81.5), (103.0, 81.5)]
 prism(_ccw(_NV), 0, 8.5, NW, True, 2, 9.0, 9.0, NW)
 _skin(_NV[3], _NV[4], 0, 0, 8.5, 8.5, N7F, 0, 8.5, 8.5, 8.5)   # u from the east corner so the "7" reads from Vulture St
+_skin(_NV[2], _NV[3], 0, 0, 8.5, 8.5, N7S, 0, 11.86, 9.0, 8.5)   # NE face: navy, maroon strip at the bottom (g49 left face)
 face([(x, y, 8.53) for x, y in _ccw(_NV)], N7R, [(0, 0), (1, 0), (1, 1), (0.5, 1), (0, 1)])
 
 # white rendered building, 15 m: OSM part 483353591 east side, west side on the stadium facade (sat: its dark south deck runs to the facade)
@@ -65,9 +66,33 @@ face([(x, y, 15.05) for x, y in _ccw([(107.0, 38.0), (117.0, 33.0), (119.3, 44.0
 _sk = [(103.0, 59.6), (110.2, 62.9), (117.5, 49.4), (112.0, 45.7)]                                       # skylight lantern (11135 trace + lean)
 prism(_ccw(_sk), 15.0, 16.5, WR, True, 1, 9.0, 9.0, WR)
 face([(x, y, 16.53) for x, y in _ccw(_sk)], SK, [(0, 0), (1, 0), (1, 1), (0, 1)])
-for (px, py), r in (((116.0, 62.9), 3.1), ((119.2, 56.3), 2.6)):                                          # round plant screens (11135 + lean at 18.5 m)
-    tube((px, py, 15.0), (px, py, 18.5), r, r, WR, 28)
-    face([(px + (r - 0.2) * math.cos(t), py + (r - 0.2) * math.sin(t), 18.52) for t in [2 * math.pi * k / 28 for k in range(28)]], DK)
+# round fan drums (director 2026-11-19 gate: "shows a round tower on it. Build the round tower"): open-topped white drums
+# on the roof, footprints from tile 11135 (+ lean), height 4.3 m from photo g49 (rim 33 px wide, 25 px deep, wall 15 px),
+# a fan housing inside each and a steel frame across the top
+DH = 4.3
+def _drum(px, py, r, z0, z1, n=36):
+    T = [2 * math.pi * k / n for k in range(n + 1)]
+    ri = r - 0.25
+    for k in range(n):
+        a, b = T[k], T[k + 1]; u0, u1 = k * 2 * math.pi * r / n / 9.0, (k + 1) * 2 * math.pi * r / n / 9.0
+        face([(px + r * math.cos(a), py + r * math.sin(a), z0), (px + r * math.cos(b), py + r * math.sin(b), z0),
+              (px + r * math.cos(b), py + r * math.sin(b), z1), (px + r * math.cos(a), py + r * math.sin(a), z1)], WR,
+             [(u0, z0 / 9.0), (u1, z0 / 9.0), (u1, z1 / 9.0), (u0, z1 / 9.0)])
+        face([(px + ri * math.cos(b), py + ri * math.sin(b), z0 + 0.3), (px + ri * math.cos(a), py + ri * math.sin(a), z0 + 0.3),
+              (px + ri * math.cos(a), py + ri * math.sin(a), z1), (px + ri * math.cos(b), py + ri * math.sin(b), z1)], DK,
+             [(u1, 0), (u0, 0), (u0, (z1 - z0) / 6.0), (u1, (z1 - z0) / 6.0)])
+        face([(px + ri * math.cos(a), py + ri * math.sin(a), z1), (px + r * math.cos(a), py + r * math.sin(a), z1),
+              (px + r * math.cos(b), py + r * math.sin(b), z1), (px + ri * math.cos(b), py + ri * math.sin(b), z1)], WR,
+             [(u0, 0), (u0, 0.03), (u1, 0.03), (u1, 0)])
+    face([(px + ri * math.cos(t), py + ri * math.sin(t), z0 + 0.3) for t in T[:-1]], DK)
+    hb = 0.42 * r                                                            # fan housing: white box with the dark fan on top
+    prism(_ccw([(px - hb, py - hb), (px + hb, py - hb), (px + hb, py + hb), (px - hb, py + hb)]), z0 + 0.3, z1 - 1.2, WR, True, 1, 9.0, 9.0, WR)
+    face([(px + 0.8 * hb * math.cos(t), py + 0.8 * hb * math.sin(t), z1 - 1.17) for t in T[:-1]], DK)
+    for d in (-0.45 * r, 0.45 * r):                                          # steel frame across the rim, both ways
+        tube((px - r, py + d, z1 + 0.1), (px + r, py + d, z1 + 0.1), 0.08, 0.08, ST, 6)
+        tube((px + d, py - r, z1 + 0.1), (px + d, py + r, z1 + 0.1), 0.08, 0.08, ST, 6)
+for (px, py), r in (((116.0, 62.9), 3.1), ((119.2, 56.3), 2.6)):
+    _drum(px, py, r, 15.0, 15.0 + DH)
 
 # dark navy face between the gate-7 block and the tiled gate face (photo 432-480 x 924-1000): skins 3 cm proud, away from each block's centre
 def _dskin(p0, p1, h, ctr, m=NW):

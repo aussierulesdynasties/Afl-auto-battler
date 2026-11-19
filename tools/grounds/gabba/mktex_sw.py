@@ -38,15 +38,22 @@ c.save('gatefront.png', grain=1.2)
 NAVY, MAR = (30, 40, 78), (112, 26, 40)
 c = Canvas(9.0, 9.0, 48, NAVY)
 for k in range(3): c.vline(k * 3.0 + 0.02, 0, 9, tone(NAVY, -10), 0.04); c.hline(k * 3.0 + 0.02, tone(NAVY, -10), 0.04)   # 3 m panel joints, 9 m tile
-weather(c, mo=4.0, mc=0.8, streaks=130, sl=(0.6, 3.2), sk=-22, tops=[9.0, 6.0, 3.0], seed=22); c.save('navywall.png', grain=1.5)
-c = Canvas(8.5, 8.5, 64, MAR); c.rect(0, 7.3, 8.5, 8.5, NAVY)
-# the gate "7" (the ground's own sign, iconography ruling 2026-11-19), white, drawn from photo g49 crop ref_7 (x 389-397, y 974-986):
-# 2.5 m tall, top just under the navy band, 3.2 m from the east (viewer's left) corner; u runs east to west on this face
-W7 = (238, 238, 236); u7 = 3.2
-poly(c, [(u7, 7.05), (u7 + 1.55, 7.05), (u7 + 1.55, 6.7), (u7 + 0.75, 4.5), (u7 + 0.33, 4.5), (u7 + 1.12, 6.68), (u7, 6.68)], W7)
-poly(c, [(u7, 7.05), (u7 + 0.3, 7.05), (u7 + 0.3, 6.4), (u7, 6.5)], W7)       # the down-tick at the bar's left end
-weather(c, mo=4, mc=1.5, streaks=26, sl=(0.8, 3.5), sk=-14, tops=[7.3], seed=23)
+weather(c, mo=1.2, mc=0.8, streaks=420, sl=(0.6, 3.6), sk=-30, tops=[9.0, 6.0, 3.0], seed=22); c.save('navywall.png', grain=1.5)
+# director 2026-11-19 gate: "a navy block with a maroon strip only at the bottom" (g49 330,900,450,1000): navy above 3.4 m,
+# maroon strip 0-3.4 m holding the white "7" (2.5 m tall, 3.2 m from the east corner; u runs east to west on this face)
+SH = 3.4
+c = Canvas(8.5, 8.5, 64, NAVY); c.rect(0, 0, 8.5, SH, MAR)
+c.hline(SH + 0.02, tone(NAVY, -10), 0.04)
+W7 = (238, 238, 236); u7 = 3.2; dz = -4.05
+poly(c, [(u, z + dz) for u, z in [(u7, 7.05), (u7 + 1.55, 7.05), (u7 + 1.55, 6.7), (u7 + 0.75, 4.5), (u7 + 0.33, 4.5), (u7 + 1.12, 6.68), (u7, 6.68)]], W7)
+poly(c, [(u, z + dz) for u, z in [(u7, 7.05), (u7 + 0.3, 7.05), (u7 + 0.3, 6.4), (u7, 6.5)]], W7)   # the down-tick at the bar's left end
+weather(c, mo=1.2, mc=0.8, streaks=360, sl=(0.6, 3.6), sk=-30, tops=[8.5, SH], seed=23)
 c.save('n7front.png', grain=1.5)
+# NE face of the same block (photo g49 left face): navy with the same maroon strip, 9 m tile
+c = Canvas(9.0, 8.5, 48, NAVY); c.rect(0, 0, 9.0, SH, MAR)
+c.hline(SH + 0.02, tone(NAVY, -10), 0.04)
+for k in range(3): c.vline(k * 3.0 + 0.02, SH, 8.5, tone(NAVY, -10), 0.04); c.vline(k * 3.0 + 0.02, 0, SH, tone(MAR, -16), 0.04)
+weather(c, mo=1.2, mc=0.8, streaks=380, sl=(0.6, 3.6), sk=-30, tops=[8.5, SH], seed=26); c.save('n7strip.png', grain=1.5)
 c = Canvas(10.0, 10.0, 32, (34, 46, 84))                                        # roof: white upstand line set in from the edge
 for a, b in (((0.8, 0.8), (9.2, 0.95)), ((0.8, 9.05), (9.2, 9.2)), ((0.8, 0.8), (0.95, 9.2)), ((9.05, 0.8), (9.2, 9.2))): c.rect(a[0], a[1], b[0], b[1], (230, 232, 232))
 for u, z in ((3.0, 6.5), (5.0, 3.2), (6.6, 7.4), (2.2, 2.4)): ell(c, u, z, 0.35, 0.35, (230, 232, 232))
