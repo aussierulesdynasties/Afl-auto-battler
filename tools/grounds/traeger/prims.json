@@ -3029,23 +3029,6 @@
 "open": true
 },
 {
-"kind": "fence",
-"name": "east_wall",
-"mat": "brick",
-"pts": [
-[
-96.7,
-93.4
-],
-[
-91.6,
--72.1
-]
-],
-"h": 2.2,
-"open": true
-},
-{
 "kind": "board",
 "name": "scoreboard",
 "mat": "screen",

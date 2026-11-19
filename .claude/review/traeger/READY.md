@@ -41,11 +41,11 @@ Measurement grids stay in `measure/`.
 
 ## Texture pass (Row 202 2b)
 Script: `tools/grounds/traeger/paint_tex.py` (helpers in `texpaint.py`), run after texgen/texclub/texsite.
-Every mark is drawn by hand at the real module sizes: no photo pixels. Colours keep each map's mean, and the geometry is unchanged, so the `gate13/top/` overlays still hold.
+Every mark is drawn by hand at the real module sizes: no photo pixels. Colours keep each map's mean. The east wall line is removed (`tex/top_wall_removed.jpg`: top-down before/after over the satellite).
 - Roof sheeting: 0.76 m trimdek sheets with dirt runs along the pans.
-- Render and steel: 1 x 2 m joints, rain streaks from the ledges, grime at the foot.
+- South wing render and white steel: smooth cream render, no joints or streaks, a light grime at the foot (matches its photo crop).
 - Concrete: 1.5 m bays. Block wall: 0.4 x 0.2 m stretcher bond, even tone.
-- Seats: moulded back, seat pan and gap at 0.5 m, empty, in their real navy and white.
+- Seats: moulded back, seat pan and gap at 0.5 m, empty. Pattern copied from the photo: white front rows with odd navy seats, a mixed 4th row, navy behind with odd white seats.
 - Rails: paint chips. The bow-top bars get a sky highlight.
 - The ground's own signs (director 2026-11-19), sponsor logos left off:
   - "Traeger Park Oval" on the navy banner (s 15.8-19.0 m);
@@ -55,17 +55,17 @@ Every mark is drawn by hand at the real module sizes: no photo pixels. Colours k
   - The TIO boxes are a sponsor, so they are left off.
 - Crowd: none to remove. The model never had one, and the seats show empty.
 
-Grey-level stddev: every map is 10 or more, lowest 10.6. Table on `tex/tex_board_2.jpg`.
+A texture passes when it looks like its photo crop (director; the stddev floor is dropped).
 
 Proofs (`tex/`):
 - `tex_board_1.jpg` and `tex_board_2.jpg` show one row per surface: photo crop | before | game camera | close.
-- The stills follow.
+- Real close-ups a few metres from the surface: `seats_close.jpg`, `roof_close.jpg`, `stair_close.jpg`, `south_wing.jpg`.
 
 Checklist:
 1. Hand-made, no photo pixels: yes.
-2. Every map has stddev 10 or more: yes.
+2. Each surface looks like its photo crop: yes.
 3. Colours true to the photo: yes, each map's mean is kept.
-4. Geometry unchanged: yes.
+4. Geometry unchanged apart from the east wall removal: yes.
 5. Ground's own signs, no sponsor logos: yes.
 6. No crowd, seats empty: yes.
 7. Inside the fence only: yes.

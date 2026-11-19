@@ -57,7 +57,7 @@ add('fence','fence_bow','rail_bow',pts=[[-82.6,-18.0],[-82.5,-24.7],[-65.9,-20.7
 import stand as _st
 add('fence','fence_pal','rail_pal',pts=[_st.W(-1.0,1.5,0)[:2],_st.W(-5.8,1.5,0)[:2],_st.W(-5.8,23.5,0)[:2],_st.W(-1.0,23.5,0)[:2]],h=1.8,open=True)
 # ---------- outer east wall ----------
-add('fence','east_wall','brick',pts=[[96.7,93.4],[91.6,-72.1]],h=2.2,open=True)
+# east_wall removed (director 2026-11-19 "Remove wall": it ran through the tennis courts on the satellite)
 # ---------- scoreboard: legs at photo (787,485)/(825,485), board 479..449 ----------
 L=bp(787,485);Rr=bp(825,485);M=lerp(L,Rr,.5)
 zb=float(at_vline(P,806,479,M)[2]);zt=float(at_vline(P,806,449,M)[2])

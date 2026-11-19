@@ -182,10 +182,11 @@ def build():
     # cheek wall closing the seat rows at their south end (s 8.0), walkway level up to the concourse
     quad('cheek_S','render_grey',[W(8.0,pt+P['walk'],pz),W(8.0,t,pz),W(8.0,t,z+0.05),W(8.0,pt+P['walk'],z+0.05)][::-1])
     # seats: one shell per seat, 0.5 m pitch (w04 counts)
+    import random;_rng=random.Random(404)   # fixed seed: same seat pattern every build
     for r,(t,zz) in enumerate(rows):
         n=int((ps1-1.0-(ps0+2.5))/0.5)
         for i in range(n):
-            s=ps0+2.5+0.25+i*0.5;mat='seat_white' if r<3 else 'seat_navy'   # w04 (2025 stand): three light-grey front rows, navy behind
+            s=ps0+2.5+0.25+i*0.5;mat='seat_white' if _rng.random()<(0.92,0.92,0.88,0.6,0.12,0.08,0.06)[min(r,6)] else 'seat_navy'   # w04 zoom: white front rows with odd navy seats, a mixed 4th row, navy behind with odd white seats
             box('seat%d_%d'%(r,i),mat,s-0.21,s+0.21,t+0.15,t+0.55,zz+0.35,zz+0.42,skip=('bottom',))
             quad('seatback%d_%d'%(r,i),mat,[W(s-0.21,t+0.56,zz+0.40),W(s+0.21,t+0.56,zz+0.40),W(s+0.21,t+0.62,zz+0.85),W(s-0.21,t+0.62,zz+0.85)])
     # front balustrade and the two stairs (south up to the concourse, north down to the walkway)

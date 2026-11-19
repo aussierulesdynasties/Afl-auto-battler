@@ -34,7 +34,12 @@ c.grime_bottom(2.0,0.22,col=(0.35,0.33,0.30));c.speckle(1.5,(0.02,0.06),0.2);out
 P={'fascia':(1.0,2.0,0.04),'steel_white':(1.0,2.0,0.04),'steel_grey':(1.0,2.0,0.10),'steel':(1.0,2.0,0.10),'cream':(1.0,1.0,0.05),
    'rear_dark':(1.0,2.0,0.18),'under_wall':(1.0,1.0,0.16),'render_grey':(1.0,1.0,0.05),'club_render':(1.0,1.0,0.05),
    'bal_back_blue':(1.0,2.0,0.16)}
+SMOOTH={'cream':None,'render_grey':None,'steel_white':None,'fascia':None,'steel':None,'steel_grey':None}   # lead 2026-11-20: south wing is smooth render and panels in the photo (c08), no blotches
 for i,(n,(pw,ph,tone)) in enumerate(P.items()):
+    if n in SMOOTH:
+        c=load(n,130+i);pp=SMOOTH[n]
+        if pp:c.panels(pp[0],pp[1],joint=0.006,dark=0.88,tone=0.0)
+        c.grime_bottom(0.3,0.05);c.grain(0.006);out(n,c);continue
     c=load(n,130+i);dark=c.col.mean()<0.4
     c.mottle(0.18 if dark else 0.06,(1.5,0.5,0.12));c.panels(pw,ph,joint=0.012,dark=0.6,tone=tone)
     c.streaks([0.0,1.0],per_m=1.5,length=(0.3,1.2),amt=0.45 if dark else 0.35,col=(0.8,0.78,0.74) if dark else (0.35,0.33,0.30))
