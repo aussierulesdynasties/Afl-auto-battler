@@ -27,6 +27,7 @@ def seats(name,col,tread=(78,84,92)):
             a[Y(v0+0.44):Y(v0+0.40),x0:x1]=c*0.7        # pan/back crease
         a[Y(v0+0.8):Y(v0+0.75),:]=np.array(tread)*0.6   # riser shadow under the next row
     a+=R.normal(0,2.0,(Hh,W,1));save(name,a,(12.0,3.2))
+def seat3(name,col):save(name,flat(col,1,2),(1.0,1.0))
 def steps(name,col=(150,152,152)):
     # aisle stair, 1.2 m wide: concrete treads, dark nosing every 0.4 m up the rake, centre handrail
     W,Hh=256,1024;pu=W/1.2;pv=Hh/3.2;a=np.ones((Hh,W,3))*np.array(col,float)
@@ -35,9 +36,12 @@ def steps(name,col=(150,152,152)):
     a[:,int(0.58*pu):int(0.62*pu)]=(206,208,210);a[:,:3]*=0.8;a[:,-3:]*=0.8
     a+=R.normal(0,2.5,(Hh,W,1));save(name,a,(1.2,3.2))
 steps('aisle_dark',(84,90,98));steps('aisle_light',(176,178,174))
-seats('seat_navy',(18,80,124));seats('seat_slate',(70,100,125));seats('seat_steel',(112,124,134));seats('seat_grey',(158,158,150))
+seat3('seat_navy',(18,80,124));seat3('seat_slate',(70,100,125));seat3('seat_steel',(112,124,134));seat3('seat_grey',(158,158,150))
+# 3D seats (build.py seats3d) wear a plain moulded-plastic colour; the rows they sit on are concrete steps.
+save('tread_dark',flat((92,96,102),2,4),(2.0,2.0));save('tread_dark_riser',flat((70,74,80),2,4),(2.0,2.0))
+save('tread_light',flat((196,198,192),2,3),(2.0,2.0));save('tread_light_riser',flat((168,170,166),2,3),(2.0,2.0))
 # MCC sector (290-8 deg): mossy teal-green seats on white concrete treads (director 2026-11-19)
-seats('seat_moss',(112,152,142),tread=(186,188,182))  # hue of the CC0 close photo (146,184,176), at model exposure
+seat3('seat_moss',(112,152,142))  # hue of the CC0 close photo (146,184,176), at model exposure
 # Tier fronts: the walkway wall and the fascia below each tier lip read dark in every photo (shaded, black LED ribbon).
 save('tier_wall',flat((86,90,96),2,4),(2.0,2.0));save('tier_fascia',flat((44,48,54),2,3),(2.0,2.0))
 # MCC sector tier fronts (commons MCC 050425.jpg, CC0): white concrete band, black glass rail along its top, posts every 2 m; painted clean, not weathered (the photo's bands are clean white).

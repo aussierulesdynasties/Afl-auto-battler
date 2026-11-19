@@ -3,7 +3,7 @@
 import bpy, math, json, os, sys
 import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
-from mb import MB, rect, ccw, TILE
+from mb import MB, rect, ccw, TILE, mat
 D = json.load(open(os.path.join(HERE, 'mcg.json')))
 
 
@@ -91,6 +91,113 @@ def sec_tab(name, default):
     return periodic(D[name]) if name in D else (lambda q: default)
 
 
+SEATK = {3: 't1', 7: 't2', 11: 't3'}
+ROW = 0.8  # row pitch up the rake (horizontal), as the painted rows had
+
+
+def rows_of(ra, za, rb, zb):
+    n = max(1, int(round((rb - ra) / ROW))); return n, (rb - ra) / n, (zb - za) / n
+
+
+def seat_steps(mb, A, Bs, k, tn, sm, seatq):
+    """one strip of a seating tier as concrete steps (riser + tread per row), and its rows queued for seats3d.
+    Rows are counted at A's profile and the same count used at Bs, so neighbouring strips meet edge to edge."""
+    (ra, za), (rb, zb) = A['S'][k - 1][:2], A['S'][k][:2]; (qa, wa), (qb, wb) = Bs['S'][k - 1][:2], Bs['S'][k][:2]
+    n = A['nrow'][k]; dH, dV = (rb - ra) / n, (zb - za) / n; eH, eV = (qb - qa) / n, (wb - wa) / n
+    tm = 'tread_light' if sm == 'seat_moss' else 'tread_dark'
+    ba, bb = A['b'], A['b'] + ((Bs['b'] - A['b']) % 360)
+    for j in range(n):
+        r0, r1, z0, z1 = ra + j * dH, ra + (j + 1) * dH, za + j * dV, za + (j + 1) * dV
+        s0, s1, y0, y1 = qa + j * eH, qa + (j + 1) * eH, wa + j * eV, wa + (j + 1) * eV
+        mb.face([(*pol(ba, r0), z0), (*pol(bb, s0), y0), (*pol(bb, s0), y1), (*pol(ba, r0), z1)], tm + '_riser')
+        mb.face([(*pol(ba, r0), z1), (*pol(bb, s0), y1), (*pol(bb, s1), y1), (*pol(ba, r1), z1)], tm)
+        seatq.append((tn, j, ba, bb, r0, s0, z1, y1, dH, eH, sm))
+
+
+SEATW = 0.52  # seat pitch along the row (the painted tile's 23 seats per 12 m)
+# one seat in row-local metres: (u across, w back from the row's front edge, h above the tread, lean of the top
+# corners); moulded shell proportions from commons "MCC 050425.jpg": pan at knee height, a backrest, a stem to
+# the tread, a hand's gap between seats.
+SEATBOX = [(-0.22, 0.22, 0.12, 0.50, 0.40, 0.45, 0.0), (-0.22, 0.22, 0.47, 0.53, 0.44, 0.86, 0.07),
+           (-0.04, 0.04, 0.26, 0.34, 0.0, 0.40, 0.0)]
+
+
+def respace(P, AIS, AW, GW, g0, g1):
+    """seats between two aisles fill the block evenly from edge to edge, so every aisle has a straight edge
+    (a fixed pitch from one end leaves a ragged 0-0.5 m gap that changes row to row)"""
+    out = []; runs = []; byrow = {}
+    for p in P: byrow.setdefault((p[6], p[7]), []).append(p)  # each row in bearing order
+    for row in byrow.values():
+        cur = []
+        for p in row:
+            if not p[5]:
+                if cur: runs.append(cur)
+                cur = []
+            else: cur.append(p)
+        if cur: runs.append(cur)
+    for run in runs:
+        tn = run[0][6]; r = run[0][1]; z = run[0][2]; ab = AIS.get(tn)
+        if ab is None or not len(ab) or len(run) < 2:
+            out += [q[:5] for q in run]; continue
+        hw = GW / 2 if (tn == 't3' and g0 - 0.3 <= z <= g1 + 0.3) else AW / 2
+        b0, b1 = run[0][0], run[-1][0]
+        lo = ab[np.argmin((b0 - ab) % 360)]; hi = ab[np.argmin((ab - b1) % 360)]
+        eL = lo + math.degrees(hw / r); eR = hi - math.degrees(hw / r)
+        span = (eR - eL) % 360; gl = ((b0 - eL + 180) % 360 - 180) * math.pi / 180 * r; gr = ((eR - b1 + 180) % 360 - 180) * math.pi / 180 * r
+        if not (0 <= gl < 0.9 and 0 <= gr < 0.9):
+            out += [q[:5] for q in run]; continue
+        k = max(1, int(math.radians(span) * r / SEATW))
+        for i in range(k):
+            b = (eL + span * (i + 0.5) / k) % 360; q = run[min(len(run) - 1, int(i * len(run) / k))]
+            out.append((b, q[1], q[2], q[3], q[4]))
+    return out
+
+
+def seats3d(seatq, D, col):
+    """every seat a real mesh (pan, back, stem), in rows on each tier, skipping aisles and the t3 cross landings"""
+    AW = D.get('aisle_w', 1.2); g0, g1 = D.get('gangway_t3', (20.4, 21.2)); GW = D.get('gangway_w', 3.6)
+    AIS = {tn: np.array(v, float) for tn, v in D.get('aisles', {}).items()}
+    acc = {}; P = []
+    for tn, j, ba, bb, r0, s0, z1, y1, dH, eH, sm in seatq:
+        rm = 0.5 * (r0 + s0); L = math.radians(bb - ba) * rm; a0 = acc.get((tn, j), 0.0)
+        s = math.ceil(a0 / SEATW - 1e-9) * SEATW
+        while s < a0 + L:
+            t = (s - a0) / L; b = ba + t * (bb - ba); r = r0 + t * (s0 - r0); z = z1 + t * (y1 - z1); h = dH + t * (eH - dH)
+            ok = True
+            if tn in AIS and len(AIS[tn]):
+                dm = np.abs((AIS[tn] - b + 180) % 360 - 180).min() * math.pi / 180 * r
+                if dm < AW / 2 + SEATW / 2: ok = False
+                if tn == 't3' and g0 - 0.3 <= z <= g1 + 0.3 and dm < GW / 2 + SEATW / 2: ok = False
+            P.append((b % 360, r, z, h, sm, ok, tn, j))
+            s += SEATW
+        acc[(tn, j)] = a0 + L
+    P = respace(P, AIS, AW, GW, g0, g1)
+    names = sorted(set(p[4] for p in P)); idx = {m: i for i, m in enumerate(names)}
+    b = np.radians(np.array([p[0] for p in P])); r = np.array([p[1] for p in P]); z = np.array([p[2] for p in P])
+    sc = np.clip(np.array([p[3] for p in P]) / ROW, 0.6, 1.0); mi = np.array([idx[p[4]] for p in P])
+    er = np.stack([np.sin(b), np.cos(b)], 1); et = np.stack([np.cos(b), -np.sin(b)], 1)
+    V = []; F = []; nv = 0
+    CUBE = [(0, 3, 2, 1), (4, 5, 6, 7), (0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)]
+    for u0, u1, w0, w1, h0, h1, lean in SEATBOX:
+        for (u, w, h, ln) in [(u0, w0, h0, 0), (u1, w0, h0, 0), (u1, w1, h0, 0), (u0, w1, h0, 0),
+                              (u0, w0, h1, lean), (u1, w0, h1, lean), (u1, w1, h1, lean), (u0, w1, h1, lean)]:
+            xy = (r + (w + ln) * sc)[:, None] * er + u * et
+            V.append(np.concatenate([xy, (z + h)[:, None]], 1))
+        F += [[nv + c for c in f] for f in CUBE]; nv += 8
+    N = len(P); V = np.stack(V, 1).reshape(-1, 3)  # seat-major: seat i owns vertices i*nv .. i*nv+nv-1
+    F = np.array(F); FF = (F[None, :, :] + (np.arange(N) * nv)[:, None, None]).reshape(-1, 4)
+    me = bpy.data.meshes.new('seats'); me.vertices.add(len(V)); me.vertices.foreach_set('co', V.ravel())
+    me.loops.add(FF.size); me.loops.foreach_set('vertex_index', FF.ravel())
+    me.polygons.add(len(FF)); me.polygons.foreach_set('loop_start', np.arange(0, FF.size, 4))
+    for m in names: me.materials.append(mat(m))
+    me.polygons.foreach_set('material_index', np.repeat(mi, len(F)))
+    me.update(); me.validate()
+    import bmesh
+    bm = bmesh.new(); bm.from_mesh(me); bmesh.ops.recalc_face_normals(bm, faces=bm.faces); bm.to_mesh(me); bm.free()
+    ob = bpy.data.objects.new('seats', me); (col or bpy.context.scene.collection).objects.link(ob)
+    print('seats3d', N, 'seats', len(FF), 'faces')
+
+
 def bowl_all(col):
     STEP = D.get('step', 0.5); bs = np.arange(0, 360, STEP)
     fb = periodic(D['fence']); ri = periodic(D['roof_inner']); ro = periodic(D['roof_outer']); rh = periodic(D['roof_h'])
@@ -118,11 +225,17 @@ def bowl_all(col):
              (min(rfp, rout, screen_rb(b) - 0.3), h - edge(b)[1], 'roof_soffit')]
         secs.append(dict(b=b, S=S, ed=edge(b), dk=matat('deck', b) if 'deck' in mats else 'conc_light', rin=rin, rout=rout, h=h, rfp=rfp, zfac=zfac, tw=tw_(b)[0], fm=fseg[3], fs0=fseg[0], fend=fseg[4] if len(fseg) > 4 else fseg[3]))
     mb = MB('bowl')
-    n = len(secs)
+    n = len(secs); seatq = []
+    for k in SEATK:  # rows per section from the tier depth averaged over +-5 deg, so the row count changes rarely
+        dep = np.array([A['S'][k][0] - A['S'][k - 1][0] for A in secs]); w = int(round(5 / STEP))
+        sm_ = np.array([dep[[(i + d) % n for d in range(-w, w + 1)]].mean() for i in range(n)])
+        for A, v in zip(secs, sm_): A.setdefault('nrow', {})[k] = max(1, int(round(v / ROW)))
     for i in range(n):
         A = secs[i]; Bs = secs[(i + 1) % n]
         for k in range(1, len(A['S'])):
             m = A['S'][k][2]
+            if k in SEATK:  # stepped concrete rows; the seats themselves are real meshes (seats3d)
+                seat_steps(mb, A, Bs, k, SEATK[k], m, seatq); continue
             p0 = (*pol(A['b'], A['S'][k - 1][0]), A['S'][k - 1][1]); p1 = (*pol(A['b'], A['S'][k][0]), A['S'][k][1])
             q0 = (*pol(Bs['b'], Bs['S'][k - 1][0]), Bs['S'][k - 1][1]); q1 = (*pol(Bs['b'], Bs['S'][k][0]), Bs['S'][k][1])
             # rake UVs: u = arc length along the tier (at the segment's mid radius), v = distance up the section,
@@ -150,16 +263,21 @@ def bowl_all(col):
         for ab in D.get('aisles', {}).get(tn, []):
             A = secs[int(round(ab / STEP)) % n]; (ra, za), (rb, zb) = A['S'][k1 - 1][:2], A['S'][k1][:2]
             m = 'aisle_dark' if matat(tn, ab) in ('seat_navy', 'seat_slate') else 'aisle_light'
-            L = math.hypot(rb - ra, zb - za); (r0, z0), (r1, z1) = lift(ra, za, ra, za, rb, zb), lift(rb, zb, ra, za, rb, zb)
-            d0 = math.degrees(AW / 2 / r0); d1 = math.degrees(AW / 2 / r1)
-            mb.face([(*pol(ab - d0, r0), z0), (*pol(ab + d0, r0), z0), (*pol(ab + d1, r1), z1), (*pol(ab - d1, r1), z1)],
-                    m, uv=[(0, 0), (AW / TU, 0), (AW / TU, L / TV), (0, L / TV)])
-            if tn == 't3':
-                q = []
-                for zg in (g0, g1):
-                    r = ra + (rb - ra) * (zg - za) / (zb - za); q.append(lift(r, zg, ra, za, rb, zb, 0.04))
-                (r0, z0), (r1, z1) = q; dg = math.degrees(GW / 2 / r0)
-                mb.face([(*pol(ab - dg, r0), z0), (*pol(ab + dg, r0), z0), (*pol(ab + dg, r1), z1), (*pol(ab - dg, r1), z1)], m)
+            nr = A['nrow'][k1]; dH, dV = (rb - ra) / nr, (zb - za) / nr
+            for j in range(nr):  # stepped stair over the stepped rows: riser + tread per row, 3 cm proud
+                dd = math.degrees(AW / 2 / (ra + j * dH)); r0 = ra + j * dH - 0.03; r1 = ra + (j + 1) * dH; z0 = za + j * dV; z1 = za + (j + 1) * dV + 0.03
+                mb.face([(*pol(ab - dd, r0), z0), (*pol(ab + dd, r0), z0), (*pol(ab + dd, r0), z1), (*pol(ab - dd, r0), z1)], m,
+                        uv=[(0, 0), (AW / TU, 0), (AW / TU, 0.2), (0, 0.2)])
+                mb.face([(*pol(ab - dd, r0), z1), (*pol(ab + dd, r0), z1), (*pol(ab + dd, r1), z1), (*pol(ab - dd, r1), z1)], m,
+                        uv=[(0, 0.2), (AW / TU, 0.2), (AW / TU, 0.45), (0, 0.45)])
+            if tn == 't3':  # cross landing: a flat walkway on the rows whose tread lies in the gangway band
+                dg = math.degrees(GW / 2 / ra)
+                for j in range(nr):
+                    z1 = za + (j + 1) * dV
+                    if g0 - 0.3 <= z1 <= g1 + 0.3:
+                        r0 = ra + j * dH - 0.02; r1 = ra + (j + 1) * dH
+                        mb.face([(*pol(ab - dg, r0), z1 + 0.04), (*pol(ab + dg, r0), z1 + 0.04), (*pol(ab + dg, r1), z1 + 0.04),
+                                 (*pol(ab - dg, r1), z1 + 0.04)], m)
     # the ground's own name signs (mcg.json signs: centre bearing, length m, texture), hand-drawn in signs.py, fixed
     # 5 cm proud of the top tier's front fascia and centred on it (MCC: members' upper tier, photo commons
     # MCC 050425.jpg; Shane Warne Stand: south top-tier front)
@@ -178,6 +296,7 @@ def bowl_all(col):
             mb.face([(*pol(ba, rz(ba, z0)[0]), z0), (*pol(bb_, rz(bb_, z0)[0]), z0), (*pol(bb_, rz(bb_, z1)[0]), z1),
                      (*pol(ba, rz(ba, z1)[0]), z1)], sm, uv=[(ua, 0), (ub, 0), (ub, 1), (ua, 1)])
     mb.build(col)
+    seats3d(seatq, D, col)
     # plaza: traced on Esri where the paving ends (mcg.json plaza_poly = hard ground to the lawn/fence/rail,
     # paving_poly = grey paving; tan gravel between them on the north). Sampled at every 0.5 deg plus every polygon
     # corner's bearing, so each edge is one straight line with no lumps.
@@ -376,6 +495,21 @@ def facade_all(mb, secs, fb, ri, ro, rh, tiers, matat):
                         S_ = A if abs(A['b'] - be) < 1e-6 else Bs
                         q = [P3(be, S_['rfp'] - sbk, 0.0), P3(be, S_['rfp'] - sbk, zu), P3(be, S_['rfp'], zu), P3(be, S_['rfp'], 0.0)]
                         mb.face(q, 'uc_back'); mb.face(q[::-1], 'uc_back')
+    # support columns under an open ground floor (undercroft entry's 5th value = spacing, metres): a column at each
+    # end and evenly between, 0.5 m square, just inside the facade line, from the plaza up to the slab
+    for uc in D.get('undercroft', []):
+        if len(uc) < 5: continue
+        pts = [np.array(pol(A['b'], A['rfp'] - 0.3)) for A in F if uc[0] - 1e-6 <= A['b'] <= uc[1] + 1e-6]
+        if len(pts) < 2: continue
+        seg = [np.linalg.norm(q - p) for p, q in zip(pts, pts[1:])]; Ltot = sum(seg)
+        ncol = max(1, int(math.ceil((Ltot - 0.5) / uc[4])))
+        for k in range(ncol + 1):
+            t_ = 0.25 + (Ltot - 0.5) * k / ncol; acc = 0.0
+            for p, q, L in zip(pts, pts[1:], seg):
+                if acc + L >= t_ - 1e-9:
+                    c = p + (q - p) * ((t_ - acc) / max(L, 1e-9)); break
+                acc += L
+            mb.beam((*c, 0.0), (*c, uc[2]), 0.5, 0.5, 'conc_light')
     # solid corner strips (director: "a solid strip at every corner"): at each sharp footprint corner, C/2 of plain
     # wall each side of the edge, 3 cm proud of the facade, full face height (from the slab up over an open floor)
     for k in range(n):

@@ -40,17 +40,19 @@ class T:
 
 
 GREY = (150, 157, 164); LEDGE = (226, 228, 226); TEAL = (52, 86, 92)
-# North-west block 342-350.5 (f000): mid-grey cladding, white ledges at z 7.3 and 13.2, teal window columns:
-# west column u 0.5-3.7 every floor, middle column u 8.6-10.9 top floor only, east column u 18.4-21.9 with the wide
-# three-pane window u 14.1-21.9 on the middle floor.
+# North-west block 342-350.5 (f000): mid-grey cladding raised on a 2.0 m open ground floor (pale slab edge at z 2.0,
+# a pale post at each corner below it), white ledges at z 8.6 and 14.1, teal window columns (u from the 342 end):
+# u 0.75-3.5 every floor, u 8.1-10.6 top floor only, u 18.2-21.4 top and ground floors with the wide window
+# u 13.5-21.4 on the middle floor. Windows sit inside the 0.6 m corner strips (photo: glazing runs almost to the edges).
 t = T(22.1, GREY)
 for u in np.arange(0, 22.1, 3.0): t.vl(u, 0.03, mul=0.92)
-for z in (7.3, 13.2): t.hl(z, 0.28, LEDGE); t.hl(z - 0.2, 0.12, mul=0.75)
-fl = ((0.6, 6.7), (7.8, 12.6), (13.7, 22.4))
-for z0, z1 in fl: t.win(0.5, 3.7, z0, z1, TEAL, nx=2, ny=3)
-t.win(8.6, 10.9, 13.7, 22.4, TEAL, nx=1, ny=3)
-t.win(18.4, 21.9, 13.7, 22.4, TEAL, nx=2, ny=3); t.win(14.1, 21.9, 7.8, 12.6, TEAL, nx=5, ny=2); t.win(18.4, 21.9, 0.6, 6.7, TEAL, nx=2, ny=2)
-t.rect(19.6, 20.6, 2.0, 4.0, (210, 214, 220))  # the sign in the ground-floor window
+t.hl(2.0, 0.3, LEDGE)
+for z in (8.6, 14.1): t.hl(z, 0.28, LEDGE); t.hl(z - 0.2, 0.12, mul=0.75)
+fl = ((2.4, 8.1), (9.1, 13.6), (14.6, 22.4))
+for z0, z1 in fl: t.win(0.75, 3.5, z0, z1, TEAL, nx=2, ny=3)
+t.win(8.1, 10.6, 14.6, 22.4, TEAL, nx=1, ny=3)
+t.win(18.2, 21.4, 14.6, 22.4, TEAL, nx=2, ny=3); t.win(13.5, 21.4, 9.1, 13.6, TEAL, nx=5, ny=2); t.win(18.2, 21.4, 2.4, 8.1, TEAL, nx=2, ny=2)
+t.rect(19.4, 20.4, 3.8, 5.8, (210, 214, 220))  # the sign in the ground-floor window
 t.hl(23.4, 0.25, (200, 204, 204))
 t.save('fac_nwblock')
 # Pale concrete end walls of the blocks (the sunlit east end of 342-350.5): plain off-white, faint joints.
@@ -238,20 +240,27 @@ t = T(8.8, (198, 200, 198))
 for u in np.arange(0, 8.8, 1.5): t.vl(u, 0.04, mul=0.86)
 for z0, z1 in ((2.0, 5.4), (6.6, 10.0), (12.2, 15.6)): t.win(0.8, 8.0, z0, z1, (46, 56, 68), (226, 228, 226), nx=4, ny=2, fw=0.1)
 t.save('fac_mcc_win')
-# North-west clad block 308.5-326.4 (f315): dark grey metal cladding, fine horizontal seams every 0.75 m, pale floor
-# lines at z 4.5, 9.5, 14.5, 19.0, a glazed corner window u 0.6-4.6 at z 6-14 (towards 312), parapet at 23.
-t = T(6.0, (78, 86, 94))
+# North-west clad blocks 310-326.4 (f315), one layout for the whole run, u = metres from the 310 end (47.3 m):
+# right building s 0-23.8 (two short faces, the angled face 7.9-13.2, then its front 13.2-23.8), a dark slot
+# s 23.8-26.7, the left building s 26.7-47.3. Dark grey metal cladding, fine seams every 0.75 m. Open ground floor
+# below z 4.0 (right building) and z 2.6 (left building); pale slab edge there. Right building: glazed band z 8.5-15.2
+# on the angled face and the front (s 8.7-12.5, 13.9-19.8), pale lines at z 16.6 (front) and z 12.4 (s 19.8-23.8).
+# Left building: pale ledges at z 9.35 and 15.0, windows top floor s 43.7-46.5, 36.9-39.2, 26.9-30.4; middle floor
+# s 43.5-46.5, 26.9-34.7; lower floor s 43.5-46.5, 26.9-30.2. Parapet 22.7-23.5.
+DK = (78, 86, 94); GL = (58, 80, 94); FR = (128, 138, 146)
+t = T(47.3, DK)
 for z in np.arange(0.75, 23.5, 0.75): t.hl(z, 0.03, (66, 74, 82))
-for u in (0.0, 3.0): t.vl(u, 0.05, mul=0.8)
-for z in (4.5, 9.5, 14.5, 19.0): t.hl(z, 0.18, (150, 158, 164))
-t.rect(0, 6.0, 22.7, 23.5, (120, 128, 134))
+for u in (7.92, 13.19): t.vl(u, 0.05, mul=0.8)
+t.hl(4.0, 0.3, (150, 158, 164), u0=0, u1=23.8); t.hl(2.6, 0.3, (150, 158, 164), u0=26.7, u1=47.3)
+t.hl(16.6, 0.22, (150, 158, 164), u0=13.19, u1=23.8); t.hl(12.4, 0.2, (150, 158, 164), u0=19.8, u1=23.8)
+for u0, u1 in ((8.7, 12.5), (13.9, 19.8)): t.win(u0, u1, 8.5, 15.2, GL, FR, nx=3, ny=2, fw=0.08)
+t.rect(23.8, 26.7, 0, 23.5, (40, 46, 54))  # recessed slot between the two buildings
+for z in (9.35, 15.0): t.hl(z, 0.22, (150, 158, 164), u0=26.7, u1=47.3)
+for u0, u1, z0, z1 in ((43.7, 46.5, 15.6, 22.3), (36.9, 39.2, 15.6, 22.3), (26.9, 30.4, 15.6, 22.3),
+                       (43.5, 46.5, 9.9, 14.5), (26.9, 34.7, 9.9, 14.5), (43.5, 46.5, 3.1, 8.8), (26.9, 30.2, 3.1, 8.8)):
+    t.win(u0, u1, z0, z1, GL, FR, nx=max(1, round((u1 - u0) / 1.6)), ny=2, fw=0.08)
+t.rect(0, 47.3, 22.7, 23.5, (120, 128, 134))
 t.save('fac_nwdark')
-t = T(6.0, (78, 86, 94))
-for z in np.arange(0.75, 23.5, 0.75): t.hl(z, 0.03, (66, 74, 82))
-for z in (4.5, 9.5, 14.5, 19.0): t.hl(z, 0.18, (150, 158, 164))
-t.win(0.6, 5.4, 6.0, 14.0, (50, 70, 84), (150, 160, 166), nx=3, ny=2, fw=0.08)
-t.rect(0, 6.0, 22.7, 23.5, (120, 128, 134))
-t.save('fac_nwdark_w')
 # North-west recess 296-310 (f315): dark recessed floors behind pale slab edges at z 5.0, 9.5, 14.0, 18.5, top 22.
 t = T(3.0, (56, 64, 74))
 t.a[t.Y(22):] *= np.linspace(0.9, 1.1, t.h - t.Y(22))[:, None, None]
