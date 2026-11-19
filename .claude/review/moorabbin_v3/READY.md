@@ -25,6 +25,20 @@ Stadium only (stops at the outer fence). No field (the game draws its own), no g
 ## Textures (all hand-made, no photo pixels; grey stddev 0-255 as used)
 All are 10.5 or higher. The lowest are the Huggins roof (10.5) and the scoreboard face (10.7). Full list: src/chk/texstd.json.
 
+## Seats reopened ("Send seats back"), closed
+Seats were flat painted strips. Now every stand has real 3D seats, empty, in their real colours (proof/seats_vs_photo.png:
+seat-height render beside the photo crop for each stand; also proof/seat_*.png):
+- Huggins: 720 blue (front tier) and 1274 green (middle and upper tiers) moulded seats. Each has a pedestal, a pan
+  (0.44 x 0.40 m at 0.42 m) and a back leaning 12 degrees, at 0.50 m pitch, so there is a 6 cm gap between seats.
+  The treads under them are plain concrete (the painted seat texture is gone).
+- Ian Drake pavilion: 245 of the same green seats on its 7 treads. No close photo of the pavilion seats exists among the
+  sources, so they copy the Huggins green seat.
+- Long stand: the photo (moorabbin-old-grandstands3.jpg) shows long green timber benches, not single seats, so they are
+  copied as benches: 3 seat slats and 2 back slats with real gaps, on steel brackets every 1.4 m; runs end at aisles.
+- Seats are one shared seat shape copied along every row and merged into one mesh per stand (huggins_seats,
+  pavilion_seats, longstand_benches). Model is now 346k triangles and 29.5 MB (was 10.5 MB).
+- New hand-made textures: hand/plastic.png (fine moulded grain) and hand/timber.png (painted timber grain).
+
 ## Gate 2 (60c52dc6d) proof faults, both closed
 1. park_grass crop showed legs and a fence: now a crop of the bank-top grass strip (hb/moo-3-goals.jpg).
    That crop showed the texture was too fresh a green, while the bank grass is olive (photo mean RGB 110,102,31;

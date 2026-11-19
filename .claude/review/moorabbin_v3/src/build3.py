@@ -34,6 +34,32 @@ def ccw(poly):
     poly=[tuple(q) for q in poly]
     a=sum(poly[i][0]*poly[(i+1)%len(poly)][1]-poly[(i+1)%len(poly)][0]*poly[i][1] for i in range(len(poly)))
     return poly if a>0 else poly[::-1]
+def hexa(bm,c8,mi=0):
+    # 8 corners: bottom a,b,c,d then top a,b,c,d (any winding); faces wound outward
+    V=[bm.verts.new(tuple(map(float,p))) for p in c8];cen=np.mean([np.array(p,float) for p in c8],0)
+    for ix in ((0,1,2,3),(7,6,5,4),(0,4,5,1),(1,5,6,2),(2,6,7,3),(3,7,4,0)):
+        f=bm.faces.new([V[i] for i in ix]);f.material_index=mi;f.normal_update()
+        if np.dot(np.array(f.normal),np.array(f.calc_center_median())-cen)<0:f.normal_flip()
+def obox(bm,o,ex,ey,ez,mi=0):
+    # box from origin corner o along 3D edge vectors ex,ey,ez
+    o=np.array(o,float);ex,ey,ez=(np.array(v,float) for v in (ex,ey,ez))
+    hexa(bm,[o,o+ex,o+ex+ey,o+ey,o+ez,o+ex+ez,o+ex+ey+ez,o+ey+ez],mi)
+# individual moulded seat (photo: Huggins blue tier, moorabbin-old-grandstands1.jpg): pedestal, pan and back, 0.50 m pitch
+SEAT_W,SEAT_P=0.44,0.50
+def seat(bm,f,t,n,mi_seat,mi_leg):
+    # f: tread front-edge point at tread height (3D); t: along the row; n: into the stand (away from the pitch)
+    f=np.array(f,float);t=np.array(t,float);n=np.array(n,float);z=np.array([0,0,1.0])
+    a=f-t*SEAT_W/2
+    obox(bm,f-t*0.03+n*0.30,t*0.06,n*0.20,z*0.40,mi_leg)                       # pedestal
+    obox(bm,a+n*0.08+z*0.40,t*SEAT_W,n*0.40,z*0.04,mi_seat)                    # pan
+    up=z*math.cos(math.radians(12))+n*math.sin(math.radians(12))               # back leans 12 deg
+    obox(bm,a+n*0.46+z*0.42,t*SEAT_W,n*0.035,up*0.40,mi_seat)                  # back
+def seat_row(bm,p0,p1,n,mi_seat,mi_leg):
+    p0=np.array(p0,float);p1=np.array(p1,float);L=float(np.linalg.norm(p1-p0));t=(p1-p0)/L
+    k=int((L-0.1)//SEAT_P);off=(L-k*SEAT_P)/2+SEAT_P/2
+    for i in range(k):seat(bm,p0+t*(off+i*SEAT_P),t,n,mi_seat,mi_leg)
+    return k
+SEATS={}
 C=O['colors']
 P=np.array(O['pitch'])
 if np.allclose(P[0],P[-1]):P=P[:-1]
@@ -284,6 +310,8 @@ def P_(i,s,z):
 def depth(i):return float(np.linalg.norm(RR[i]-FF[i]))
 def in_aisle(l):
     k=l/(BAY*AISLE_EVERY);return abs(k-round(k))*BAY*AISLE_EVERY<AISLE/2 and 0<l<Lr
+BENCH=[]
+def seg_ais(i):return True if i>=len(RR)-1 else in_aisle((SL[i]+SL[i+1])/2)
 bm=bmesh.new();uvq=[]
 def Q(a,b,c,d,mi,uv):
     f=quad(bm,a,b,c,d,mi);uvq.append((f,uv))
@@ -317,11 +345,7 @@ for i in range(len(RR)-1):
             Q(P_(j,sma,z),P_(i,sma,z),P_(i,sma,z+(z-zp)/2),P_(j,smb,z+(z-zp)/2),7,[(l1,0),(l0,0),(l0,.2),(l1,.2)])
             Q(P_(i,sma,z+(z-zp)/2),P_(j,smb,z+(z-zp)/2),P_(j,s1b,z+(z-zp)/2),P_(i,s1a,z+(z-zp)/2),7,[(l0,0),(l1,0),(l1,.4),(l0,.4)])
         else:
-            # bench: seat slab and back
-            sa=s0a+0.15;sb=s0b+0.15;za=z+0.42
-            Q(P_(i,sa,za),P_(j,sb,za),P_(j,sb+0.38,za),P_(i,sa+0.38,za),4,[(l0,0),(l1,0),(l1,.38),(l0,.38)])
-            Q(P_(j,sb,za-0.05),P_(i,sa,za-0.05),P_(i,sa,za),P_(j,sb,za),4,[(l1,0),(l0,0),(l0,.05),(l1,.05)])
-            Q(P_(j,sb+0.42,za+0.05),P_(i,sa+0.42,za+0.05),P_(i,sa+0.48,za+0.45),P_(j,sb+0.48,za+0.45),4,[(l1,0),(l0,0),(l0,.4),(l1,.4)])
+            BENCH.append((i,j,s0a,s0b,z,seg_ais(i+1)))
 # roof ribs every bay, tapering 0.9 m at the rear to 0.3 m at the front
 nr=int(Lr/BAY)
 for k in range(nr+1):
@@ -339,6 +363,28 @@ uvl=bm.loops.layers.uv.new('UVMap')
 for f,uv in uvq:
     for lp,(u,v) in zip(f.loops,uv):lp[uvl].uv=(u,v)
 stand=obj('grandstand',bm,[mat('roof',C['roof'],0.5),mat('rib',C['rib'],0.6),mat('band',C['band'],0.5),mat('standback',C['back'],0.9),mat('benches',(0.18,0.36,0.30),0.8),mat('roof_under',(0.08,0.08,0.09),0.9),mat('rear_rooms',(0.12,0.13,0.16),0.6),mat('concrete',(0.62,0.61,0.58),0.9),mat('frontwall',(0.85,0.85,0.83),0.8),mat('undercroft',(0.45,0.46,0.46),0.9)])
+# long-stand benches (photo moorabbin-old-grandstands3.jpg): painted timber, 3 seat slats and 2 back slats on steel brackets,
+# real gaps between slats and under the seat; each run ends at an aisle
+bm=bmesh.new()
+def BP(i,s0,ds,z):return np.array(P_(i,s0+ds,z),float)
+def slat(i,j,sa,sb,d0,d1,z0,z1,lean=0.0):
+    hexa(bm,[BP(i,sa,d0,z0),BP(j,sb,d0,z0),BP(j,sb,d1,z0),BP(i,sa,d1,z0),
+             BP(i,sa,d0+lean,z1),BP(j,sb,d0+lean,z1),BP(j,sb,d1+lean,z1),BP(i,sa,d1+lean,z1)],0)
+def bracket(i,s0,z,tv_):
+    q=np.array(P_(i,s0,z),float);nn=np.array(P_(i,s0+1,z),float)-q;nn/=np.linalg.norm(nn);tv_=tv_/np.linalg.norm(tv_);zz=np.array([0,0,1.0])
+    obox(bm,q-tv_*0.025+nn*0.15,tv_*0.05,nn*0.05,zz*0.40,1)                      # front leg
+    obox(bm,q-tv_*0.025+nn*0.50,tv_*0.05,nn*0.05,zz*0.84,1)                      # rear leg up to the back
+    obox(bm,q-tv_*0.025+nn*0.12+zz*0.36,tv_*0.05,nn*0.45,zz*0.04,1)              # seat rail
+NB=0
+for i,j,sa,sb,z,end in BENCH:
+    for d0 in (0.15,0.28,0.41):slat(i,j,sa,sb,d0,d0+0.11,z+0.40,z+0.44)       # 3 seat slats, 20 mm gaps
+    for zb in (z+0.55,z+0.73):slat(i,j,sa,sb,0.55,0.58,zb,zb+0.11,0.02)       # 2 back slats, 70 mm gap
+    tv_=np.array(P_(j,sa,z),float)-np.array(P_(i,sa,z),float)
+    bracket(i,sa,z,tv_)
+    if end:bracket(j,sb,z,tv_)
+    NB+=1
+obj('longstand_benches',bm,[mat('benches',(0.18,0.36,0.30),0.8),mat('bench_leg',(0.25,0.27,0.27),0.6)])
+SEATS['longstand_bench_m']=round(sum(float(SL[j]-SL[i]) for i,j,*_ in BENCH),1)
 # ---- club complex
 for b in O['club']:
     if b['n'] in ('darkroof','greyroof','redtower'):continue
@@ -383,11 +429,13 @@ def HP(t,s_,z):q=R0+tv*t+no*s_;return (q[0],q[1],z)
 bl=np.array(O['blueseats']);bt=[(np.dot(q-R0,tv)) for q in bl];BT0,BT1=min(bt),max(bt)
 bm=bmesh.new();uvq=[]
 def HQ(a,b,c,d,mi,uv):f=quad(bm,a,b,c,d,mi);uvq.append((f,uv))
-def tier(t0,t1,s0,s1,z0,z1,n,mi):
+HSEAT=[]
+def tier(t0,t1,s0,s1,z0,z1,n,smi,mi=2):
     for k in range(n):
         sa=s0+(s1-s0)*k/n;sb=s0+(s1-s0)*(k+1)/n;za=z0+(z1-z0)*k/n;zb=z0+(z1-z0)*(k+1)/n
         HQ(HP(t1,sa,za),HP(t0,sa,za),HP(t0,sa,zb),HP(t1,sa,zb),mi,[(t1,0.44),(t0,0.44),(t0,0.8),(t1,0.8)])
         HQ(HP(t0,sa,zb),HP(t1,sa,zb),HP(t1,sb,zb),HP(t0,sb,zb),mi,[(t0,0),(t1,0),(t1,0.44),(t0,0.44)])
+        HSEAT.append((t0,t1,sa,zb,smi))
 def wall(t0,t1,s_,z0,z1,mi,flip=False):
     a,b=(t1,t0) if not flip else (t0,t1)
     HQ(HP(a,s_,z0),HP(b,s_,z0),HP(b,s_,z1),HP(a,s_,z1),mi,[(a,z0),(b,z0),(b,z1),(a,z1)])
@@ -396,13 +444,13 @@ def slab(t0,t1,s0,s1,z,mi,down=False):
     if down:q=q[::-1];uv=uv[::-1]
     HQ(*q,mi,uv)
 wall(BT0,BT1,-15.8,0,0.5,0)                       # front rail wall
-tier(BT0,BT1,-15.8,-6.0,0.5,3.5,12,1)            # blue tier
+tier(BT0,BT1,-15.8,-6.0,0.5,3.5,12,0)            # blue tier
 slab(BT0,BT1,-6.0,-5.0,3.5,2)                     # walkway
 wall(0,LH,-5.0,0,5.2,0)                           # white parapet
-tier(0,LH,-5.0,0.0,5.2,7.0,6,3)                  # middle green tier
+tier(0,LH,-5.0,0.0,5.2,7.0,6,1)                  # middle green tier
 HQ(HP(LH,0,7.8),HP(0,0,7.8),HP(0,0,10.0),HP(LH,0,10.0),4,[(0,0),(LH,0),(LH,2.2),(0,2.2)])  # blue sign fascia, u west->east
 wall(0,LH,0.0,7.0,7.8,5)                          # glazing behind middle tier
-tier(0,LH,0.0,5.8,10.0,12.6,7,3)                 # upper green tier
+tier(0,LH,0.0,5.8,10.0,12.6,7,1)                 # upper green tier
 HQ(HP(LH,5.8,12.6),HP(0,5.8,12.6),HP(0,5.8,13.6),HP(LH,5.8,13.6),7,[(LH,0),(0,0),(0,1),(LH,1)])  # rear wall: bays with round windows (1993)
 slab(0,LH,5.8,HD,12.6,2)
 slab(0,LH,-0.4,HD,14.0,6)                       # roof top
@@ -424,6 +472,11 @@ for t_ in (BT0,BT1):
 uvl=bm.loops.layers.uv.new('UVMap')
 for f,uv in uvq:
     for lp,(u,v) in zip(f.loops,uv):lp[uvl].uv=(u,v)
+# Huggins seats: empty moulded seats on concrete treads, blue front tier, green middle and upper tiers
+sb_=bmesh.new();n3=np.array([no[0],no[1],0.0]);nh={0:0,1:0}
+for t0,t1,sa,zb,smi in HSEAT:nh[smi]+=seat_row(sb_,HP(t0,sa+0.02,zb),HP(t1,sa+0.02,zb),n3,smi,2)
+obj('huggins_seats',sb_,[mat('seat_blue',(0.3,0.36,0.5),0.5),mat('seat_green',(0.27,0.42,0.36),0.5),mat('seat_leg',(0.25,0.27,0.27),0.6)])
+SEATS['huggins_blue']=nh[0];SEATS['huggins_green']=nh[1]
 hg=obj('huggins_stand',bm,[mat('h_white',(0.92,0.92,0.9),0.8),mat('h_blue',(0.3,0.36,0.5),0.7),mat('h_conc',(0.7,0.69,0.66),0.9),mat('h_green',(0.27,0.42,0.36),0.7),mat('h_band',(0.2,0.3,0.55),0.6),mat('h_glass',(0.15,0.17,0.2),0.3),mat('h_roof',(0.27,0.24,0.21),0.7),mat('h_rear',(0.23,0.21,0.2),0.7)])
 # ---- Ian Drake Junior Development Pavilion (1993 panorama), on the aerial's grey-roof footprint, front facing the pitch
 G=[np.array(q) for q in next(b for b in O['club'] if b['n']=='greyroof')['pts']]
@@ -433,14 +486,14 @@ DP=float(abs(np.dot(G[2]-PB,pn)))
 def PP(t,s_,z):q=PB+pt*t+pn*s_;return (q[0],q[1],z)
 bm=bmesh.new()
 quad(bm,PP(0,0,0),PP(LP,0,0),PP(LP,0,4.2),PP(0,0,4.2),2)          # ground floor rooms
-NR=7;zs0,zs1,ss0,ss1=5.0,7.6,0.4,7.6
+NR=7;zs0,zs1,ss0,ss1=5.0,7.6,0.4,7.6;PSEAT=[]
 quad(bm,PP(0,0,5.0),PP(LP,0,5.0),PP(LP,0,5.3),PP(0,0,5.3),0)       # front rail wall
-quad(bm,PP(0,0,5.0),PP(0,ss0,5.0),PP(LP,ss0,5.0),PP(LP,0,5.0),4)
+quad(bm,PP(0,0,5.0),PP(0,ss0,5.0),PP(LP,ss0,5.0),PP(LP,0,5.0),3)
 for r in range(NR):
     a=ss0+(ss1-ss0)*r/NR;b_=ss0+(ss1-ss0)*(r+1)/NR;z0=zs0+(zs1-zs0)*r/NR;z1=zs0+(zs1-zs0)*(r+1)/NR
-    quad(bm,PP(0,a,z0),PP(LP,a,z0),PP(LP,a,z1),PP(0,a,z1),4)
+    quad(bm,PP(0,a,z0),PP(LP,a,z0),PP(LP,a,z1),PP(0,a,z1),3);PSEAT.append((a,z1))
     quad(bm,PP(0,a,z1),PP(0,b_,z1),PP(LP,b_,z1),PP(LP,a,z1),3)
-quad(bm,PP(0,ss1,zs1),PP(0,DP,zs1),PP(LP,DP,zs1),PP(LP,ss1,zs1),4)
+quad(bm,PP(0,ss1,zs1),PP(0,DP,zs1),PP(LP,DP,zs1),PP(LP,ss1,zs1),3)
 quad(bm,PP(LP,DP,0),PP(0,DP,0),PP(0,DP,8.8),PP(LP,DP,8.8),0)       # back wall
 quad(bm,PP(LP,0,0),PP(LP,DP,0),PP(LP,DP,8.8),PP(LP,0,8.8),0)       # white north end wall
 quad(bm,PP(0,DP,0),PP(0,0,0),PP(0,0,8.8),PP(0,DP,8.8),0)
@@ -458,6 +511,10 @@ quad(bm,e[1],e[0],e[3],e[2],1)                                      # roof under
 def onroof(t,f):a=np.array(PP(t,-0.8,8.8));b=np.array(PP(t,sm,10.8));q=a+(b-a)*f;return tuple(q+np.array([0,0,0.03]))
 quad(bm,onroof(LP*0.28,0.25),onroof(LP*0.75,0.25),onroof(LP*0.75,0.9),onroof(LP*0.28,0.9),6)
 bmesh.ops.bisect_plane(bm,geom=bm.verts[:]+bm.edges[:]+bm.faces[:],plane_co=(R0[0],R0[1],0),plane_no=(tv[0],tv[1],0),clear_outer=True)  # pavilion stops at the Huggins east end wall (its SW corner ran 3.5 m into the stand)
+ps_=bmesh.new();n3=np.array([pn[0],pn[1],0.0]);npv=0
+for a,z1 in PSEAT:npv+=seat_row(ps_,PP(0.3,a+0.02,z1),PP(LP-0.3,a+0.02,z1),n3,0,1)
+bmesh.ops.bisect_plane(ps_,geom=ps_.verts[:]+ps_.edges[:]+ps_.faces[:],plane_co=(R0[0],R0[1],0),plane_no=(tv[0],tv[1],0),clear_outer=True)
+obj('pavilion_seats',ps_,[mat('seat_green',(0.27,0.42,0.36),0.5),mat('seat_leg',(0.25,0.27,0.27),0.6)]);SEATS['pavilion']=npv
 obj('ian_drake_pavilion',bm,[mat('p_white',(0.92,0.92,0.9),0.8),mat('p_steel',(0.5,0.5,0.5),0.6),mat('p_rooms',(0.2,0.2,0.22),0.4),mat('p_tread',(0.7,0.69,0.66),0.9),mat('p_seat',(0.27,0.42,0.36),0.7),mat('p_roof',(0.72,0.73,0.72),0.6),mat('p_panel',(0.88,0.88,0.86),0.5)])
 bm=bmesh.new();f=quad(bm,PP(0,-0.02,4.2),PP(LP,-0.02,4.2),PP(LP,-0.02,5.0),PP(0,-0.02,5.0),0)
 uvl=bm.loops.layers.uv.new('UVMap')
@@ -542,7 +599,7 @@ def timg(t,tint=None):
     px_[...,:3]=q
     n2=bpy.data.images.new(t+'_'+'%02x%02x%02x'%tuple(int(c*255) for c in tint[:3]),w,h);n2.pixels[:]=px_.ravel();n2.pack();IMG[k]=n2;return n2
 TEXMAP={'grass':('grass',None),'ground':('bank_dirt',None),'ground_grass':('park_grass',None),'h_white':('white',None),'h_blue':('blue_seat',None),'h_conc':('concrete',None),'h_green':('green_seat',None),'h_band':('huggins_band',None),'h_glass':('glass',None),'h_roof':('brown_roof',None),'h_rear':('hug_rear',None),'apron':('concrete',None),'fence_white':('white',None),'ad_white':('adboard',None),'ad_red':('adboard',(0.7,0.17,0.15)),'ad_blue':('adboard',(0.37,0.49,0.67)),'g_park':('park_grass',None),'g_asphalt':('asphalt',None),'g_gravel':('gravel',None),'g_path':('path',None),'g_nets':('nets',None),'fence':('white',None),'fence_post':('steel',(0.3,0.31,0.31)),'gate_steel':('steel',(0.24,0.27,0.26)),'roof':('roof_deck',None),'rib':('roof_deck',None),
- 'band':('white',None),'frontwall':('white',None),'undercroft':('white',(0.45,0.46,0.46)),'standback':('darkwall',None),'benches':('bench',None),'roof_under':('roof_under',None),
+ 'band':('white',None),'frontwall':('white',None),'undercroft':('white',(0.45,0.46,0.46)),'standback':('darkwall',None),'benches':('timber',(0.18,0.36,0.30)),'bench_leg':('steel',(0.25,0.27,0.27)),'seat_blue':('plastic',(0.3,0.36,0.5)),'seat_green':('plastic',(0.27,0.42,0.36)),'seat_leg':('steel',(0.25,0.27,0.27)),'roof_under':('roof_under',None),
  'rear_rooms':('rear_rooms',None),'concrete':('concrete',None),'blue':('blue_seat',None),'pole':('steel',None),'st_glass':('glass',None),'p_white':('white',None),'p_steel':('steel',None),'p_rooms':('rear_rooms',None),'p_tread':('concrete',None),'p_seat':('green_seat',None),'p_roof':('roof_deck',(0.72,0.73,0.72)),'p_panel':('roof_deck',(0.9,0.9,0.88)),'p_sign':('pav_sign',None),'lamp_body':('white',(0.86,0.87,0.87)),'lamp_lens':('lamp',None),'posts':('white',None),
  'sb_white':('white',S['c']),'sb_leg':('steel',(0.4,0.4,0.4)),'sb_face':('white',S['face']),'sb_back':('darkwall',(0.17,0.18,0.18)),'apron':('concrete',None),'chainwire':('chainwire',None),'crest_post':('steel',(0.6,0.61,0.62)),'bb_front':('white',(0.92,0.92,0.9)),'bb_back':('steel',(0.32,0.33,0.33)),'redshed':('roof_deck',O['redshed_c']),'shedn':('roof_deck',C['shedn'])}
 for b_ in O['club']:
@@ -592,4 +649,5 @@ bpy.ops.wm.save_as_mainfile(filepath=os.path.join(D,'moorabbin3.blend'))
 for o in sc.objects:o.select_set(o.type=='MESH')
 bpy.ops.export_scene.gltf(filepath=OUT,use_selection=True,export_format='GLB',export_vertex_color='NONE')
 sc.render.engine='BLENDER_EEVEE';sc.render.filepath=os.path.join(D,'render3_cam.png');bpy.ops.render.render(write_still=True)
+print('SEATS',SEATS,'tris',sum(sum(len(p.vertices)-2 for p in o.data.polygons) for o in sc.objects if o.type=='MESH'),flush=True)
 print('DONE')

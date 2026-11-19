@@ -3,8 +3,8 @@ import json
 from PIL import Image,ImageDraw,ImageFont
 f=ImageFont.truetype('arial.ttf',18);fs=ImageFont.truetype('arial.ttf',14)
 G='dl/moorabbin-old-grandstands1.jpg';P93='dl/moorabbin-1993-last-game.jpg'
-ROWS=[('blue_seat','Huggins front tier: blue seats, empty',G,(300,395,600,480)),
- ('green_seat','Huggins middle/upper tiers, pavilion: green seats, empty',G,(420,280,700,330)),
+ROWS=[('plastic','Moulded seats (3D): Huggins blue front tier, Huggins and pavilion green tiers, empty',[(G,(300,395,600,480)),(G,(420,280,700,330))]),
+ ('timber','Long-stand benches (3D): painted timber slats',[('dl/moorabbin-old-grandstands3.jpg',(560,330,760,470))]),
  ('concrete','Steps, walkways, aprons',G,(0,415,150,520)),
  ('white','Painted walls and fascias',G,(480,335,630,385)),
  ('glass','Glazing behind the tiers',G,(310,75,520,140)),
