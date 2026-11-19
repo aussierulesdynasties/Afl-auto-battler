@@ -13,13 +13,11 @@ def panel_wall(col,tile,pw,ph,seed,joint=0.012,tone=0.045,streak=0.16,grime=0.10
     c=Canvas(*tile,col,seed);c.mottle(mott);c.panels(pw,ph,joint=joint,dark=0.5,tone=tone)
     c.streaks(ledges if ledges is not None else [k*ph for k in range(int(round(tile[1]/ph)))],per_m=1.0,amt=streak)
     c.grime_bottom(min(0.5,ph*0.4),grime,band=ph);c.speckle(0.6,(0.005,0.012),0.15);c.grain(0.012);c.keep_mean();return c
-# ---- concrete: 2.4 x 1.2 m formwork panels, tie holes every 0.6 m, rain streaks under the ledge, blotching
-c=Canvas(4.8,4.8,(0.80,0.80,0.78),11);c.mottle(0.05,(1.6,0.5,0.12));c.panels(2.4,1.2,joint=0.010,dark=0.62,tone=0.05,stagger=0.5)
+# ---- concrete: one even grey with faint 2.4 x 1.2 m formwork joints and tie holes; no per-panel tone, blotching or streaks (director 2026-11-20: "Even the concrete too")
+c=Canvas(4.8,4.8,(0.80,0.80,0.78),11);c.panels(2.4,1.2,joint=0.010,dark=0.80,tone=0.0,stagger=0.5,bevel=False)
 for i in range(8):
-    for j in range(8):c.a[int((j*0.6+0.3)*c.pv)-2:int((j*0.6+0.3)*c.pv)+3,int((i*0.6+0.3)*c.pu)-2:int((i*0.6+0.3)*c.pu)+3]*=0.72
-c.streaks([0.0],per_m=2.2,length=(0.8,3.6),width=(0.03,0.22),amt=0.30)
-c.streaks([1.2,2.4,3.6],per_m=0.8,length=(0.2,0.9),amt=0.14)
-c.grime_bottom(0.5,0.14);c.speckle(2,(0.006,0.02),0.15);c.grain(0.018);c.keep_mean();out('concrete',c)
+    for j in range(8):c.a[int((j*0.6+0.3)*c.pv)-2:int((j*0.6+0.3)*c.pv)+3,int((i*0.6+0.3)*c.pu)-2:int((i*0.6+0.3)*c.pu)+3]*=0.85
+c.grain(0.01);c.keep_mean();out('concrete',c)
 # ---- paving: one even tan with faint 1.2 m joints, no per-slab tone (director 2026-11-19: "Even out both")
 c=Canvas(6,6,(0.62,0.54,0.40),12);c.panels(1.2,1.2,joint=0.010,dark=0.85,tone=0.0,bevel=False)
 c.grain(0.01);c.keep_mean();out('paving',c)
@@ -55,7 +53,7 @@ def roof(col,seed,crest,shadow,name):
 roof((0.86,0.87,0.85),15,(0.97,0.97,0.96),(0.62,0.63,0.62),'deck')
 roof((0.54,0.54,0.53),16,(0.80,0.80,0.79),(0.38,0.38,0.38),'endroof')
 # ---- painted steel and fascias: seams, wear, grime toward the bottom edge
-c=Canvas(4,4,(0.33,0.62,0.55),17);c.panels(2,2,joint=0.025,dark=0.3,tone=0.0,bevel=True,lip=1.0)   # even paint, deeper 2 m plate seams only: no mottle, blotch or tint (director 2026-11-19)
+c=Canvas(4,4,(0.33,0.62,0.55),17);c.panels(2,2,joint=0.012,dark=0.55,tone=0.0,bevel=True,lip=1.0)   # even paint, 2 m plate seams at round-3 depth: no mottle, blotch or tint (director 2026-11-19; stddev floor dropped)
 c.speckle(4,(0.006,0.02),0.35);c.grain(0.012);c.keep_mean();out('teal',c)
 c=Canvas(12,2,(0.93,0.93,0.91),18);c.mottle(0.03);c.panels(4,2,joint=0.015,dark=0.6,tone=0.03,bevel=False)
 c.streaks([0.0],per_m=1.4,length=(0.3,1.6),amt=0.22);c.grime_bottom(0.45,0.22);c.hline(1.97,0.06,(0.70,0.70,0.69));c.grain(0.01);c.keep_mean();out('fascia',c)
