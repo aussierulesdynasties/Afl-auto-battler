@@ -25,6 +25,17 @@ def roofz(x,y):
         if y>=yp and abs(x-xg)<=hw:z=max(z,ap-(ap-ba)/hw*abs(x-xg))
     return z
 def roofunder(x,y):return roofz(x,y)-0.22
+SEATS=[]   # (x centre, tread front y, tread z) in the Gorringe frame
+def seat_faces():   # one empty tip-up bucket seat, copied from the 1992/2009 Gorringe photos: stem, pan, raked back
+    F=[]
+    def bx(x0,x1,y0,y1,z0,z1,m,top=None,dy=0.0):   # dy: shift of the top face back (rake)
+        P=[(x0,y0,z0),(x1,y0,z0),(x1,y1,z0),(x0,y1,z0),(x0,y0+dy,z1),(x1,y0+dy,z1),(x1,y1+dy,z1),(x0,y1+dy,z1)]
+        for q in((0,1,5,4),(1,2,6,5),(2,3,7,6),(3,0,4,7)):F.append(([P[i] for i in q],m))
+        F.append(([P[i] for i in(4,5,6,7)],top or m));F.append(([P[i] for i in(3,2,1,0)],m))
+    bx(-0.04,0.04,0.40,0.48,0.0,0.38,'steel_dark')
+    bx(-0.22,0.22,0.20,0.62,0.38,0.43,'seat_pan')
+    bx(-0.22,0.22,0.60,0.65,0.43,0.86,'seats',dy=0.09)
+    return F
 def gor_build(addobj):
     xs=sorted(set([round(float(v),3) for v in list(np.arange(0,41.0001,0.1))+[XS,XN,XS-0.005,XN+0.005,8.27,16.47,24.75,33.25]+XK+[d[0] for d in DORM]+[d[0]+s*d[4] for d in DORM for s in(-1,1)]]))
     nt=246
@@ -116,7 +127,9 @@ def gor_build(addobj):
             if a>x:segs.append((x,a))
             x=max(x,b)
         segs.append((x,40.4))
-        for a,b in segs:box(a,b,ya+0.3,ya+0.7,zr,zr+0.45,'seats',top='seats_top')
+        for a,b in segs:   # one real seat every 0.5 m (0.44 shell + 0.06 gap), instanced in world2.py (gate 3, 2026-11-20)
+            n=int((b-a+1e-6)/0.5);off=(b-a-n*0.5)/2
+            for k in range(n):SEATS.append((a+off+k*0.5+0.25,ya,zr))
     yb_=y0+14*0.8;zt=z0+14*0.36
     for r in range(RR):   # SE end side stair: half-steps between the tiers, handrail on its seat side (photo)
         ya=y0+r*0.8;zr=z0+(r+1)*0.36

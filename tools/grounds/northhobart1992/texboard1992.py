@@ -9,7 +9,7 @@ P90='../../../.claude/review/north_hobart/boards/photo_1990_scoreboard.jpg'
 # roof_iron: the Ryde/Lewis roofs are the Gorringe's maroon iron (same hue in the 1992 aerial, 0.8x as bright), so it is paired with the Gorringe roof photo
 REF={'roof_iron':('gorringe','roof_gables',(230,120,380,200)),'roof_gor':('gorringe','roof_gables',(230,120,380,200)),
  'brick':('gorringe','se_end',(215,560,320,650)),
- 'render_cream':('gorringe','entrance',(130,120,230,160)),'seats':('gorringe','se_end',(260,465,430,540)),
+ 'render_cream':('gorringe','entrance',(130,120,230,160)),'seats':('gorringe','se_end',(260,465,430,540)),'seat_pan':('gorringe','se_end',(300,500,430,540)),
  'post_maroon':('gorringe','se_end',(190,330,220,500)),'fascia':('gorringe','se_end',(300,226,440,256)),
  'pediment':('gorringe','clock_gable',(55,110,180,150)),'trim_white':('gorringe','roof_gables',(185,100,235,190)),
  'ceiling':('gorringe','se_end',(300,340,450,368)),'roof_white':('aerial','ryde_stand',(110,238,570,256)),
@@ -24,7 +24,7 @@ REF={'roof_iron':('gorringe','roof_gables',(230,120,380,200)),'roof_gor':('gorri
 def crop(tag,part,b):return (Image.open(part).convert('RGB') if tag=='file' else photo_panel(tag,part)).crop(b)
 def fit(im,T):
     w,h=im.size;k=T/max(w,h);im=im.resize((max(1,int(w*k)),max(1,int(h*k))));B=Image.new('RGB',(T,T),(20,20,20));B.paste(im,((T-im.size[0])//2,(T-im.size[1])//2));return B
-names=['roof_iron','roof_gor','brick','render_cream','seats','post_maroon','fascia','pediment','trim_white','ceiling','roof_white','asphalt','tread','concrete',
+names=['roof_iron','roof_gor','brick','render_cream','seats','seat_pan','post_maroon','fascia','pediment','trim_white','ceiling','roof_white','asphalt','tread','concrete',
  'cladding_grey','steel_dark','pole_grey','sb_face','interior_dark','fence_white','glass_screen','roof_clear','bench','clock','gor_name','club_sign_lettered']
 T=260;cols=4;rows=(len(names)+cols-1)//cols;S=Image.new('RGB',(cols*(2*T+30),rows*(T+34)),(20,20,20));d=ImageDraw.Draw(S)
 for k,n in enumerate(names):

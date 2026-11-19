@@ -10,6 +10,9 @@ before=set(bpy.data.objects);gor_build(addobj)
 AX,NY=GOR_AX,GOR_NY
 Mg=Matrix(((AX[0],NY[0],0,GOR_F0[0]),(AX[1],NY[1],0,GOR_F0[1]),(0,0,1,0),(0,0,0,1)))
 for o in set(bpy.data.objects)-before:o.matrix_world=Mg
+seat=addobj('gor_seat',seat_faces());sm=seat.data;bpy.context.scene.collection.objects.unlink(seat)   # one seat mesh, linked to every seat (glTF: one mesh, many nodes)
+for i,(x,y,z) in enumerate(SEATS):
+    o=bpy.data.objects.new('gor_seat_%04d'%i,sm);sc.collection.objects.link(o);o.matrix_world=Mg@Matrix.Translation((x,y,z))
 G=json.load(open(NH+'/geo2.json'))
 import os
 for name,faces in G['objs'].items():
@@ -99,3 +102,7 @@ elif MODE=='joins':
     for k,(e,t,l) in J.items():look(e,t,l,1600,1000);render(OUT.replace('#',k))
 elif MODE=='close':
     gc=Mg@Vector((20.6,-14,5.5));tg=Mg@Vector((20.6,1,6.0));look(tuple(gc),tuple(tg),30,1600,1000);render(OUT)
+elif MODE=='seats':
+    # seat-height close-ups for the seat gate: along a row from the aisle, and the SE end block from the front like the photo
+    gc=Mg@Vector((6.6,5.0,5.9));tg=Mg@Vector((11.0,4.0,4.4));look(tuple(gc),tuple(tg),28,1600,1000);render(OUT.replace('#','row'))
+    gc=Mg@Vector((4.0,-5.0,3.6));tg=Mg@Vector((3.0,6.0,5.4));look(tuple(gc),tuple(tg),35,1000,1000);render(OUT.replace('#','front'))

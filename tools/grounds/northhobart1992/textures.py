@@ -58,13 +58,12 @@ def pediment():
 pediment()
 # seat rows: one row 0.8 m tread x 0.3 m riser; texture covers 4 m wide x 1 row (u along row, v up the step profile)
 def seats():
-    W,H=1024,256;mu=4.0;a=np.ones((H,W,3))*np.array((150,146,138))+noise(H,W,8,4)[...,None]
-    pitch=0.5;sw=0.44
-    for k in np.arange(0,mu,pitch):
-        x0=int(k*W/mu);x1=int((k+sw)*W/mu)
-        a[int(H*0.15):int(H*0.55),x0:x1]=np.array((103,144,146))   # seat back, light teal: fitted so the render's median matches the photo crop's median (gate 2026-11-19) (was 52,104,84)
-        a[int(H*0.55):int(H*0.75),x0:x1]=np.array((86,122,122))    # seat pan (was 40,84,68)
-    save('seats',a,(mu,1.0))
+    # moulded plastic shells on real 3D seats (gate 3): plain light teal with faint moulding mottle
+    W,H=256,256
+    a=np.ones((H,W,3))*np.array((103,144,146))+noise(H,W,16,3)[...,None]   # seat back: fitted to the photo crop median (gate 2026-11-19) (was 52,104,84)
+    save('seats',a,(0.5,0.5))
+    a=np.ones((H,W,3))*np.array((86,122,122))+noise(H,W,16,3)[...,None]    # seat pan (was 40,84,68)
+    save('seat_pan',a,(0.5,0.5))
 seats()
 # clock face
 im=Image.new('RGB',(512,512),(226,211,172));d=ImageDraw.Draw(im);d.ellipse((40,40,472,472),fill=(30,30,30));d.ellipse((60,60,452,452),fill=(245,243,236))

@@ -10,6 +10,8 @@ run X=1 gor $(cygpath -m $R)/renders/r_full_gor.png 1.0
 run TRANSP=1 aerial $(cygpath -m $R)/renders/r_full_aerial.png 1.0
 run X=1 tt $(cygpath -m $R)/renders/r_tt#.png
 run X=1 close $(cygpath -m $R)/renders/r_close.png
+run X=1 seats $(cygpath -m $R)/renders/r_seats_#.png
+$PY seats1992.py
 rm -f frames/f_*.png
 cnt(){ ls frames | grep -cE '^f_[0-9]{4}\.png$'; }
 for try in 1 2 3 4 5 6 7 8; do n=$(cnt); [ "$n" -ge 240 ] && break; echo "mp4 try $try $(date +%H:%M) have $n"
