@@ -44,7 +44,7 @@ GREY = (150, 157, 164); LEDGE = (226, 228, 226); TEAL = (52, 86, 92)
 # a pale post at each corner below it), white ledges at z 8.6 and 14.1, teal window columns (u from the 342 end):
 # u 0.75-3.5 every floor, u 8.1-10.6 top floor only, u 18.2-21.4 top and ground floors with the wide window
 # u 13.5-21.4 on the middle floor. Windows sit inside the 0.6 m corner strips (photo: glazing runs almost to the edges).
-t = T(22.1, GREY)
+t = T(22.1, (72, 84, 98))  # photo wall reads dark blue-grey (66,90,112 in f000)
 for u in np.arange(0, 22.1, 3.0): t.vl(u, 0.03, mul=0.92)
 t.hl(2.0, 0.3, LEDGE)
 for z in (8.6, 14.1): t.hl(z, 0.28, LEDGE); t.hl(z - 0.2, 0.12, mul=0.75)
