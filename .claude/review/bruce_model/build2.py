@@ -135,17 +135,20 @@ R = {k: [V(p) for p in v] for k, v in P['rings'].items()}  # bowl rings, equal l
 
 # bowl: grass edge -> apron -> fence face -> terraces (walkway where present) -> top band -> outer face
 order = P['ring_order']
-for (ka, kb, close) in P['bowl_strips']:
-    A = list(R[ka]); B = list(R[kb])
+for si, s_ in enumerate(P['bowl_strips']):
+    ka, kb, close = s_[:3]
+    A = list(R[ka]); B = list(R[kb]); TH = list(P['ring_th'])
     if P.get('closed', True):
-        A.append(R[ka][0]); B.append(R[kb][0])
+        A.append(R[ka][0]); B.append(R[kb][0]); TH.append(P['ring_th'][0])
+    if len(s_) > 3:  # a run of rays [i0, i1]: the bowl changes material round the ground
+        A = A[s_[3]:s_[4] + 1]; B = B[s_[3]:s_[4] + 1]; TH = TH[s_[3]:s_[4] + 1]
     if CLOSE[close].get('bay'):
-        TH = list(P['ring_th']) + ([P['ring_th'][0]] if P.get('closed', True) else [])
-        U = [(t - P['bay_phase']) / P['bay_ang'] for t in TH]
+        ph, ba = (s_[5], s_[6]) if len(s_) > 5 else (P['bay_phase'], P['bay_ang'])
+        U = [(t - ph) / ba for t in TH]
     else:
         U = arclen(A)
     F, T = strip_uv(A, B, U, P.get('step', 2.0))
-    mk('bowl_' + ka + '_' + kb, F, close, uvs=T)
+    mk('bowl_%s_%s_%d' % (ka, kb, si), F, close, uvs=T)
 
 # field
 fe = [V(p) for p in P['field_ring']] if 'field_ring' in P else R['grass']
