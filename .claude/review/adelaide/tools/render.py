@@ -29,6 +29,36 @@ for f in sorted(glob.glob(os.path.join(ROOT, 'model', '*.ply'))):
     try: bpy.ops.object.shade_smooth_by_angle(angle=math.radians(35))
     except Exception as e: print('smooth', e)
 
+# seats: one closed shell instanced on every seat point (gen.py seat_shell / inst/seats.npz), one points object per colour
+_inst = os.path.join(ROOT, 'model', 'inst')
+if os.path.exists(os.path.join(_inst, 'seats.npz')) and not os.environ.get('ONLY'):
+    import numpy as np
+    D = np.load(os.path.join(_inst, 'seats.npz')); P, Y, Cc = D['pos'], D['yaw'], D['col']
+    bpy.ops.wm.ply_import(filepath=os.path.join(_inst, 'seat_shell.ply')); shell = bpy.context.selected_objects[0]
+    bpy.context.view_layer.objects.active = shell; bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.mesh.normals_make_consistent(inside=False); bpy.ops.object.mode_set(mode='OBJECT')
+    keys = np.unique(Cc, axis=0)
+    for ki, col in enumerate(keys):
+        sh = shell.copy(); sh.data = shell.data.copy(); sc.collection.objects.link(sh)
+        ca = sh.data.color_attributes[0]; lin = ca.data_type == 'FLOAT_COLOR'
+        rgb = tuple(pow(c / 255.0, 2.2) if lin else c / 255.0 for c in col)
+        for e in ca.data: e.color = (*rgb, e.color[3])
+        shade.build(sh); sh.hide_render = True; sh.hide_viewport = True
+        sel = np.all(Cc == col, axis=1); me = bpy.data.meshes.new('seatpts%d' % ki); me.vertices.add(int(sel.sum()))
+        me.vertices.foreach_set('co', P[sel].ravel()); at = me.attributes.new('yaw', 'FLOAT', 'POINT'); at.data.foreach_set('value', Y[sel])
+        po = bpy.data.objects.new('seats%d' % ki, me); sc.collection.objects.link(po)
+        ng = bpy.data.node_groups.new('inst%d' % ki, 'GeometryNodeTree')
+        ng.interface.new_socket('Geometry', in_out='INPUT', socket_type='NodeSocketGeometry'); ng.interface.new_socket('Geometry', in_out='OUTPUT', socket_type='NodeSocketGeometry')
+        N = ng.nodes; gi = N.new('NodeGroupInput'); go = N.new('NodeGroupOutput'); io = N.new('GeometryNodeInstanceOnPoints')
+        oi = N.new('GeometryNodeObjectInfo'); oi.inputs['Object'].default_value = sh; oi.transform_space = 'ORIGINAL'
+        na = N.new('GeometryNodeInputNamedAttribute'); na.data_type = 'FLOAT'; na.inputs['Name'].default_value = 'yaw'
+        cx = N.new('ShaderNodeCombineXYZ'); L = ng.links
+        L.new(na.outputs['Attribute'], cx.inputs['Z']); L.new(cx.outputs[0], io.inputs['Rotation'])
+        L.new(gi.outputs[0], io.inputs['Points']); L.new(oi.outputs['Geometry'], io.inputs['Instance']); L.new(io.outputs[0], go.inputs[0])
+        mo = po.modifiers.new('inst', 'NODES'); mo.node_group = ng
+    shell.hide_render = True; shell.hide_viewport = True
+    print('seat instances', len(P), 'colours', len(keys))
+
 # light: low late-afternoon sun from the west-north-west (photo shadows), plus sky fill
 sun = bpy.data.lights.new('sun', 'SUN'); sun.energy = 4.0; sun.angle = 0.02
 so = bpy.data.objects.new('sun', sun); sc.collection.objects.link(so)

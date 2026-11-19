@@ -144,13 +144,14 @@ def walls(m, P, ztop_fn, zbot, col, step=2.0, kind='concrete', skip=None):
     """vertical walls on every edge of P from zbot to ztop_fn(points), outward facing; skip = boxes [x0,y0,x1,y1]
     where another model (the hotel) is the stand's outer face"""
     B = densify(P, step); B = np.r_[B, B[:1]]
-    zt = ztop_fn(B); n = len(B)
+    zt = np.maximum(ztop_fn(B), zbot); n = len(B)
     V = np.r_[np.c_[B, np.full(n, zbot)], np.c_[B, zt]]
     F = []
     flip = not ccw(P)
     for i in range(n - 1):
         mid = (B[i] + B[i + 1]) / 2
         if skip and any(b[0] <= mid[0] <= b[2] and b[1] <= mid[1] <= b[3] for b in skip): continue
+        if zt[i] <= zbot + 0.01 and zt[i + 1] <= zbot + 0.01: continue   # top below the base (the low pitch-side edge): no wall
         q = (i, i + 1, n + i + 1, n + i)
         F.append(q[::-1] if flip else q)
     L = np.r_[0, np.cumsum(np.linalg.norm(np.diff(B, axis=0), axis=1))]
@@ -342,6 +343,34 @@ ROW, PITCH_S, SEAT_W = 0.8, 0.5, 0.44
 SHELL = [(0.30, 0.34), (0.32, 0.43), (0.66, 0.40), (0.72, 0.56), (0.78, 0.84)]
 TREAD = (122, 120, 115)
 
+SEAT_INST = []
+def seat_shell():
+    """one closed moulded seat (pan and back with 25 mm thickness) in seat-local metres: x across, y away from the pitch, z up;
+    closed so it reads as a solid seat from below and from behind as well as from the front"""
+    T = []
+    for j, (dn, dz) in enumerate(SHELL):
+        row = []
+        for sx in (-1, -0.6, 0, 0.6, 1):              # five across: the back's sides wrap forward, top corners rounded
+            wing = (0.07 if abs(sx) == 1 else 0.02 if sx else 0.0) if j >= 4 else (0.02 if abs(sx) == 1 else 0.0)
+            drop = 0.07 if (abs(sx) == 1 and j == len(SHELL) - 1) else 0.0
+            row.append((sx * SEAT_W / 2, dn - wing, dz - drop))
+        T.append(row)
+    T = np.array(T, float); nj = len(SHELL)
+    N = np.zeros((nj, 2))                              # profile normals (y, z), facing up / toward the pitch
+    for j in range(nj):
+        a, b = SHELL[max(0, j - 1)], SHELL[min(nj - 1, j + 1)]; ty, tz = b[0] - a[0], b[1] - a[1]; L = math.hypot(ty, tz)
+        N[j] = (-tz / L, ty / L)
+    B = T.copy(); B[:, :, 1] -= N[:, None, 0] * 0.025; B[:, :, 2] -= N[:, None, 1] * 0.025
+    V = np.r_[T.reshape(-1, 3), B.reshape(-1, 3)]; o = nj * 5; ix = lambda j, c: j * 5 + c
+    F = [(ix(j, c), ix(j, c + 1), ix(j + 1, c + 1), ix(j + 1, c)) for j in range(nj - 1) for c in range(4)]
+    F += [(o + ix(j, c), o + ix(j + 1, c), o + ix(j + 1, c + 1), o + ix(j, c + 1)) for j in range(nj - 1) for c in range(4)]
+    for c in range(4):                                  # front lip and top edge
+        F += [(ix(0, c + 1), ix(0, c), o + ix(0, c), o + ix(0, c + 1)), (ix(nj - 1, c), ix(nj - 1, c + 1), o + ix(nj - 1, c + 1), o + ix(nj - 1, c))]
+    for j in range(nj - 1):                             # the two sides
+        F += [(ix(j, 0), ix(j + 1, 0), o + ix(j + 1, 0), o + ix(j, 0)), (ix(j + 1, 4), ix(j, 4), o + ix(j, 4), o + ix(j + 1, 4))]
+    UV = [(v[0], v[1] + v[2]) for v in V]
+    return V, F, UV
+
 def seat_rows(m, P, zfn, bands):
     """rows along lines at fixed distances from the pitch (the stand's rake), clipped to the outline P"""
     from shapely.geometry import Polygon, LineString
@@ -383,15 +412,8 @@ def seat_rows(m, P, zfn, bands):
                     for i in range(k):
                         s0 = ra + (rb - ra - k * PITCH_S) / 2 + (i + 0.5) * PITCH_S
                         q, t, nv, z0, z1 = frame(s0)
-                        V = []; C = []; UV = []
-                        for j, (dn, dz) in enumerate(SHELL):
-                            for sx in (-1, -0.6, 0, 0.6, 1):              # five across: the back's sides wrap forward, top corners rounded
-                                wing = (0.07 if abs(sx) == 1 else 0.02 if sx else 0.0) if j >= 4 else (0.02 if abs(sx) == 1 else 0.0)
-                                drop = 0.07 if (abs(sx) == 1 and j == len(SHELL) - 1) else 0.0
-                                p = q + t * sx * SEAT_W / 2 + nv * (dn - wing)
-                                V.append((p[0], p[1], z1 + dz - drop)); C.append(col); UV.append((s0 + sx * SEAT_W / 2, dn + dz))
-                        F = [(j * 5 + c, j * 5 + c + 1, (j + 1) * 5 + c + 1, (j + 1) * 5 + c) for j in range(len(SHELL) - 1) for c in range(4)]
-                        m.add(V, F, C, UV, 'seats')
+                        # instanced: one seat shell (seat_shell) placed at q, z1, local +y along nv (away from the pitch)
+                        SEAT_INST.append((q[0], q[1], z1, math.atan2(-nv[0], nv[1]), *col))
             dk += ROW
 
 # ---------------------------------------------------------------- build
@@ -465,8 +487,14 @@ for st, PL, le in low_parts:
     walls(stands, PL, zl, 0.0, st['wall'], kind=st.get('wall_kind', 'concrete'))
 stands.save('stands')
 for i_, (P_, zfn_, bands_) in enumerate(seat_jobs):   # one file per stand (and the Hill's low seats), each well under 50 MB
-    seats = Mesh(); seat_rows(seats, P_, zfn_, bands_)
-    seats.save_bin('seats_%d' % i_); print('seats_%d' % i_, len(seats.f), 'faces', len(seats.v), 'verts')
+    seats = Mesh(); n0 = len(SEAT_INST); seat_rows(seats, P_, zfn_, bands_)
+    seats.save_bin('seats_%d' % i_); print('seats_%d' % i_, len(seats.f), 'tread faces', len(SEAT_INST) - n0, 'seats')
+# the seats themselves: one shell, instanced (render.py: Geometry Nodes; game: MultiMesh), as on the MCG
+os.makedirs(os.path.join(OUT, 'inst'), exist_ok=True)
+_sv, _sf, _suv = seat_shell(); _sh = Mesh(); _sh.add(_sv, _sf, [(255, 255, 255)] * len(_sv), _suv, 'seats'); _sh.save('inst/seat_shell')
+_I = np.array(SEAT_INST, np.float32)
+np.savez_compressed(os.path.join(OUT, 'inst', 'seats.npz'), pos=_I[:, :3], yaw=_I[:, 3], col=_I[:, 4:7].astype(np.uint8))
+print('seat instances', len(_I))
 
 for blk in S.get('blocks', []):
     m = Mesh(); P = way(blk['way']) if 'way' in blk else np.array(blk['poly'], float)

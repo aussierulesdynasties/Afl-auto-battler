@@ -19,4 +19,7 @@ python rend/p/signs_board.py && cp rend/p/signs_board.jpg proof/
 cp rend/s/texboard.jpg proof/texture_board.jpg
 cp rend/s/seats_near.png proof/empty_seats_closeup.png
 cp rend/s/seats_far.png proof/empty_seats_far.png
+cp rend/s/seats_below_close.png proof/seats_from_below_close.png
+cp rend/s/seats_below_far.png proof/seats_from_below_far.png
+cp rend/s/seats_field.png proof/seats_from_field.png
 echo BOARDS_DONE

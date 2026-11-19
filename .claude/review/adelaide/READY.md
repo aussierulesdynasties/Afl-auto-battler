@@ -8,6 +8,12 @@ Plan shapes from the Esri satellite and OSM only; heights and looks from the pho
 | --- | --- | --- |
 | Seats were flat painted stripes; the photo has real seat backs and gaps | Every seat is now its own 3D moulded shell: a pan with a front lip, a tall back whose sides wrap forward, rounded top corners, 0.44 m wide on a 0.5 m pitch (a gap between each). Seats sit in rows on stepped concrete treads and risers (0.8 m rows on each stand's rake), in each stand's band colours, with straight aisles every 14 m. About 55,000 seats across the west, east and river stands and the Hill's low seats (gen.py seat_rows -> model/seats_0..3.ply). The roof underside is unchanged | proof/empty_seats_closeup.png, proof/empty_seats_far.png, proof/texture_board.jpg (seats row), proof/turntable_4.jpg, proof/A/B/C_photo_render_overlay.jpg |
 
+## Fixed since 29d16d09f (resume, 2026-11-20)
+| Fault | Fix | Proof |
+| --- | --- | --- |
+| Seats were one-sided surfaces baked into 56 MB of PLY (model 66 MB, over the 50 MB limit, not instanced) | One closed seat shell (pan and back, 25 mm thick, solid from below and behind) in model/inst/seat_shell.ply, placed on 56,606 seat points (model/inst/seats.npz: position, facing, colour). render.py draws them with Geometry Nodes instancing, one points object per colour; the game can use one MultiMesh per colour as on the MCG. Model now 20 MB | proof/seats_from_below_close.png, proof/seats_from_below_far.png, proof/empty_seats_closeup.png |
+| A dark wall up to ~10 m stood along the pitch-side front of the stands, hiding the lower seats from field level (walls() drew the upper wall bands downward where the rake is lower than their base) | walls() draws nothing where the top is below the base; the front keeps only its low brick fence | proof/seats_from_field.png, every re-rendered proof |
+
 ## Faults fixed since the gate rejection of 32d3d049f
 | Fault | Fix | Proof |
 | --- | --- | --- |
