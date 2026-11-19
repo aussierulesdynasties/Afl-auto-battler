@@ -1,6 +1,6 @@
 # People First Stadium (Carrara) exterior, row 202 step 2b
 
-Ready for gate (build r34, 2026-11-20). No open faults.
+Ready for gate (build r35, 2026-11-20). No open faults.
 
 ## Files
 - model/peoplefirst.glb: the game model. model/peoplefirst.blend: its Blender source.

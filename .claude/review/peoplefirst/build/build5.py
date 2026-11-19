@@ -410,7 +410,11 @@ _UA=arange(NEARW[0],NEARW[1],0.5)
 for _a0,_a1 in zip(_UA,_UA[1:]):
     _q2=[]
     for _a in (_a0,_a1):
-        _e=rp(_a,1.0,0.0);_zl=hout(_a)-UNDZ;_q2.append((Vector((_e.x,_e.y,_zl)),P(_a,25.0,_zl),P(_a,25.0,21.0),_zl))
+        _e=rp(_a,1.0,0.0);_zl=hout(_a)-UNDZ;_w=P(_a,25.0,0.0)
+        # inner end: never above the roof's under-surface at the wall line (r34 poked through the membrane there)
+        _ri=rin(_a)-NAVYW+0.8-1.6*math.sin(math.pi*phase(_a));_sw=min(1.0,max(0.0,((_w-Vector((SH[0],SH[1],0))).length-_ri)/max(1.0,rout(_a)-_ri)))
+        _zi=min(_zl,min(rp(_a,_sw+d,-0.6).z for d in (-0.06,-0.03,0.0,0.03,0.06) if 0<=_sw+d<=1)-0.4);_zl=min(_zl,rp(_a,0.97,-0.6).z-0.4)
+        _q2.append((Vector((_e.x,_e.y,_zl)),P(_a,25.0,_zi),P(_a,25.0,21.0),_zi))
     face([bm.verts.new(v) for v in (_q2[0][0],_q2[1][0],_q2[1][1],_q2[0][1])],DARK)
     if _q2[0][3]>21.0 and _q2[1][3]>21.0:face([bm.verts.new(v) for v in (_q2[0][1],_q2[1][1],_q2[1][2],_q2[0][2])],DARK)
 R=RO  # columns and later rib users stand under the outer rib ends
