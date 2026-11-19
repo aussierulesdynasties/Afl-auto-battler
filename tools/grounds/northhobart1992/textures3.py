@@ -78,6 +78,7 @@ a=load('interior_dark');a=a+10;a=grain(a,6);a=joints(a,'interior_dark',du=1.2,dv
 a=load('pediment');a=grain(a,5);a=joints(a,'pediment',du=0.45,dark=0.82,w=3);a=blotch(a,8);a=streaks(a,25,0.16,0.7);P['pediment']=a
 # red corrugated iron: rust and grime blotches, runs down the ribs, lap lines darker at the eaves
 a=load('roof_iron');a=grain(a,4);a=blotch(a,10,64);a=streaks(a,40,0.15,0.9,(2,5));P['roof_iron']=a
+a=load('roof_gor');a=grain(a,4);a=blotch(a,10,64);a=streaks(a,40,0.15,0.9,(2,5));P['roof_gor']=a
 # asphalt: patches, cracks, oil stains, aggregate speckle
 a=load('asphalt');a=grain(a,8);a=patches(a,10,0.9,(80,260));a=cracks(a,18,0.55);a=blotch(a,9,128);P['asphalt']=a
 # concrete terrace treads: 2.0 m expansion joints, worn centre line, stains

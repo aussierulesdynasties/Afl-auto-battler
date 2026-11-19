@@ -38,7 +38,7 @@ W_=json.load(open(NH+'/world.json'));az,el=map(math.radians,W_['sun'])
 sv=Vector((math.sin(az)*math.cos(el),math.cos(az)*math.cos(el),math.sin(el)))
 ld=bpy.data.lights.new('sun','SUN');ld.energy=4.0;ld.angle=math.radians(0.5);lo=bpy.data.objects.new('sun',ld);sc.collection.objects.link(lo)
 lo.rotation_euler=sv.to_track_quat('Z','Y').to_euler()
-w=bpy.data.worlds.new('w');sc.world=w;w.use_nodes=True;bg=w.node_tree.nodes['Background'];bg.inputs[0].default_value=(0.55,0.65,0.8,1);bg.inputs[1].default_value=0.7
+w=bpy.data.worlds.new('w');sc.world=w;w.use_nodes=True;bg=w.node_tree.nodes['Background'];bg.inputs[0].default_value=(0.55,0.65,0.8,1);bg.inputs[1].default_value=1.1
 sc.render.engine='CYCLES';sc.cycles.device='CPU';sc.view_settings.view_transform='AgX';sc.cycles.samples=24
 cd=bpy.data.cameras.new('cam');co=bpy.data.objects.new('cam',cd);sc.collection.objects.link(co);sc.camera=co;cd.clip_start=1;cd.clip_end=5000
 def look(eye,tgt,lens,Wp,Hp):

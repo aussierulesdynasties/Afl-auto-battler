@@ -127,7 +127,7 @@ a,b=L[fi],L[(fi+1)%4];o=np.array([b[1]-a[1],-(b[0]-a[0])]);o/=np.linalg.norm(o)
 if np.dot(o,(a+b)/2-np.mean(L,0))<0:o=-o
 a2,b2=a+o*0.03,b+o*0.03
 OBJ.setdefault('ne_board_face',[]).append(([[*b2,SBB],[*a2,SBB],[*a2,SBT],[*b2,SBT]],'sb_face'))
-s=S('scoreboard_n');L=[xy(v) for v in s['v']];prism('scoreboard_n',Polygon(L),0,8.5,'steel_dark','sb_black')
+s=S('scoreboard_n');L=[xy(v) for v in s['v']];prism('scoreboard_n',Polygon(L),0,8.5,'roof_white','render_cream')   # 1992 aerial: pale roof, long shadow; world.json col cream; face unknown (no photo)
 # ---------- light poles (aerial shadows), terraces, fence, wall, trees, ground
 for i,p in enumerate(D['poles']):
     for k in range(8):

@@ -15,6 +15,6 @@ W,H=2048,166;im=Image.new('RGB',(W,H),(128,128,132));d=ImageDraw.Draw(im);d.rect
 try:fn=ImageFont.truetype('arialbd.ttf',120)
 except Exception:fn=ImageFont.load_default()
 t='HORRIE GORRINGE STAND';bb=d.textbbox((0,0),t,font=fn);d.text(((W-(bb[2]-bb[0]))/2-bb[0],(H-(bb[3]-bb[1]))/2-bb[1]),t,fill=(236,236,232),font=fn)
-a=np.asarray(im).astype(float);a+=np.random.default_rng(8).normal(0,4,a.shape[:2])[...,None];Image.fromarray(np.clip(a,0,255).astype(np.uint8)).save('tex/gor_name.png');S['gor_name']=(3.2,0.26)
+a=np.asarray(im).astype(float);a+=np.random.default_rng(8).normal(0,4,a.shape[:2])[...,None];Image.fromarray(np.clip(a,0,255).astype(np.uint8)).save('tex/gor_name.png');S['gor_name']=(4.14,0.30)
 json.dump(S,open('tex/sizes.json','w'))
 for n in('clock','gor_name'):print(n,'sd',round(ImageStat.Stat(Image.open(f'tex/{n}.png').convert('L')).stddev[0],1))

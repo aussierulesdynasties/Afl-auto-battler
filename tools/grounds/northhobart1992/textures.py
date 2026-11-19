@@ -17,7 +17,8 @@ def iron(name,col,W=1024,H=1536,mu=2.0,mv=3.0):
     a[lap]*=0.85
     for k in range(0,W,int(W*0.0762*4/mu)):a[:,k:k+1]*=0.92   # screw lines on every 4th rib
     save(name,a,(mu,mv))
-iron('roof_iron',(158,52,46))
+iron('roof_iron',(86,51,58))   # Ryde/Lewis roofs: roof_gor x (aerial Ryde roof / aerial Gorringe roof) = (0.83,0.78,0.82); was (158,52,46) bright red (gate 2026-11-19)
+iron('roof_gor',(103,65,71))   # Gorringe roof: fitted so the render's median matches the photo crop's median, sky 1.1 (gate 2026-11-19)
 # brick, stretcher bond 230x76 + 10 mm mortar, one bay 5.6 m wide x 3.0 m high
 def brick(name,base,W=2048,H=1100,mu=5.6,mv=3.0):
     a=np.zeros((H,W,3));px=W/mu
@@ -36,12 +37,12 @@ def brick(name,base,W=2048,H=1100,mu=5.6,mv=3.0):
             x+=bl+jt
     a+=noise(H,W,6,6)[...,None]
     save(name,a,(mu,mv))
-brick('brick',(150,66,52))
+brick('brick',(150,91,83))   # fitted so the render's median matches the photo crop's median (gate 2026-11-19), gorringe se_end (was 150,66,52)
 def render(name,col,mu=4.0,mv=4.0,W=1024,H=1024,grime=True):
     a=np.ones((H,W,3))*np.array(col)+noise(H,W,32,4)[...,None]+noise(H,W,4,2.5)[...,None]
     if grime:a*=(0.93+0.07*np.linspace(0,1,H))[:,None,None][::-1]*0+1
     save(name,a,(mu,mv))
-render('render_cream',(226,211,172))
+render('render_cream',(238,218,180))   # fitted so the render's median matches the photo crop's median (gate 2026-11-19), entrance pilaster (was 226,211,172)
 render('ceiling',(214,204,178))
 render('interior_dark',(46,42,40))
 render('concrete',(176,172,164))
@@ -61,8 +62,8 @@ def seats():
     pitch=0.5;sw=0.44
     for k in np.arange(0,mu,pitch):
         x0=int(k*W/mu);x1=int((k+sw)*W/mu)
-        a[int(H*0.15):int(H*0.55),x0:x1]=np.array((52,104,84))   # seat back (green)
-        a[int(H*0.55):int(H*0.75),x0:x1]=np.array((40,84,68))    # seat pan
+        a[int(H*0.15):int(H*0.55),x0:x1]=np.array((103,144,146))   # seat back, light teal: fitted so the render's median matches the photo crop's median (gate 2026-11-19) (was 52,104,84)
+        a[int(H*0.55):int(H*0.75),x0:x1]=np.array((86,122,122))    # seat pan (was 40,84,68)
     save('seats',a,(mu,1.0))
 seats()
 # clock face

@@ -126,7 +126,7 @@ json.dump(SIZES,open('tex/sizes.json','w'))
 
 # glazed end screen of the Cazaly stand (1965 and 2009 photos): pale grey-blue panes, dark mullions every 1.5 m
 def glass_screen():
-    W=H=768;a=np.ones((H,W,3))*np.array((150,166,178));a+=np.linspace(14,-14,H)[:,None,None];a+=noise(H,W,48,3)[...,None]
+    W=H=768;a=np.ones((H,W,3))*np.array((62,70,80))   # dark like the Gorringe deck glass in the photo (gate 2026-11-19; was 150,166,178);a+=np.linspace(14,-14,H)[:,None,None];a+=noise(H,W,48,3)[...,None]
     m=int(0.08*W/3.0)
     for k in range(2):s=k*W//2;a[:,s:s+m]=(60,64,68);a[s:s+m,:]=(60,64,68)
     save('glass_screen',a,(3.0,3.0))
