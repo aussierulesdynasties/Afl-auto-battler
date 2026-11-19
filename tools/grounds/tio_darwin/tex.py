@@ -65,11 +65,11 @@ def roof(n,col,tile=(6,12),rib=0.3,grime=0.25):
     g=np.linspace(0,1,H)[:,None]**2*grime*noise(H,W,6)
     a*= (1-g)[...,None]
     a=streaks(a,0.1,30);save(n,a,tile)
-roof('roof_grey',(158,166,172))       # centre roof, satellite grey (Maurice Rioli Stand)
+roof('roof_grey',(196,200,202))       # centre roof, satellite light grey (Maurice Rioli Stand)
 roof('roof_white',(232,232,228),grime=0.18)  # wing roofs, satellite white
 roof('roof_mlc',(226,226,222),grime=0.12)
-# --- roof underside: dark steel deck with purlins every 1.2 m and rafters every 8 m (10, 11, 17)
-W=512;a=base(W,W,(58,60,64),0.2,4);p=W/8
+# --- roof underside: mid-grey steel deck with purlins every 1.2 m and rafters every 8 m (10, 11, 17)
+W=512;a=base(W,W,(92,96,100),0.2,4);p=W/8
 for k in range(int(8/1.2)+1):
     y=int(k*1.2*p);a[y:y+5,:]*=0.6;a[y+5:y+7,:]*=1.3
 for k in range(int(8/0.3)):
@@ -85,7 +85,24 @@ def glass(n,col,frame,tile=(3,3.5),pw=1.5,trans=None):
     for y in (0,int(1.0*pv)):a[max(0,y-3):y+4,:]=frame
     a=a*(0.9+0.2*noise(H,W,3))[...,None];save(n,a,tile)
 glass('glass',(70,86,100),(220,222,218))
-glass('glass_mlc',(40,46,52),(30,30,32),pw=1.2)
+# MLC south facade (18), one 4.8 x 9.6 m tile, bottom up: dark plinth; ground-floor glass with dark mullions every 1.2 m
+# and a transom at 2.6 m; charcoal slab edge; glass balustrade with a light top rail; upper glass; charcoal ribbed fascia
+W,H=480,960;pm=100;a=np.zeros((H,W,3))
+def zr(z0,z1):return slice(H-round(z1*pm),H-round(z0*pm))
+a[zr(0,0.3)]=base(30,W,(52,54,56),0.2,3)
+g=base(300,W,(46,54,62),0.15,2)*(0.8+0.45*np.linspace(1,0,300))[:,None,None];a[zr(0.3,3.3)]=g
+a[zr(3.3,4.1)]=base(80,W,(54,56,60),0.2,3)
+a[zr(4.1,5.1)]=base(100,W,(112,122,128),0.12,2)
+a[zr(5.1,7.4)]=base(230,W,(50,58,66),0.15,2)*(0.85+0.35*np.linspace(1,0,230))[:,None,None]
+r=base(220,W,(48,50,54),0.18,3)
+for y in range(0,220,14):r[y:y+2]*=0.75
+a[zr(7.4,9.6)]=r
+for x in range(0,W,int(1.2*pm)):
+    for z0,z1,c in ((0.3,3.3,(72,74,78)),(5.1,7.4,(64,66,70))):a[zr(z0,z1),max(0,x-3):x+4]=c
+    a[zr(4.1,5.1),max(0,x-1):x+2]=(150,152,150)
+for z,c in ((2.6,(72,74,78)),(6.6,(64,66,70))):a[zr(z-0.03,z+0.03)]=c
+a[zr(5.02,5.1)]=(196,198,196)
+a=a*(0.93+0.14*noise(H,W,4))[...,None];save('glass_mlc',a,(4.8,9.6))
 glass('glass_box',(150,165,170),(60,62,66),pw=1.8)    # corporate boxes: pale glass, dark frames (17)
 # --- cladding panels: light grey fibre-cement 1.2 x 2.4 m with joints (rear building, 04, 05, 14)
 def clad(n,col,pw=1.2,ph=2.4,tile=(4.8,4.8),var=0.14):
@@ -95,7 +112,11 @@ def clad(n,col,pw=1.2,ph=2.4,tile=(4.8,4.8),var=0.14):
     save(n,a,tile)
 clad('clad_grey',(150,152,152))
 clad('clad_cream',(214,208,190))
-clad('clad_dark',(66,70,78),var=0.3)
+clad('clad_dark',(168,170,168),var=0.2)   # centre stand band under the boxes: light grey fascia (17)
+# east building wall (07, 15, 19): cream render, dark window band 0.9-2.3 m, 4.8 x 4.2 m tile
+S=512;a=base(S,S,(212,204,184),0.14,3);a=streaks(a,0.14,40);pv=S/4.2;y0,y1=S-int(2.3*pv),S-int(0.9*pv);a[y0:y1,:]=base(y1-y0,S,(38,44,50),0.2,2)
+for k in range(0,S,int(S/4.8*1.6)):a[y0:y1,max(0,k-2):k+3]=(150,150,146)
+save('wall_east',a,(4.8,4.2))
 # --- blockwork: navy painted block 0.4 x 0.2 m (gate houses, 03, 12)
 S=512;a=base(S,S,(44,50,70),0.25,4);pu=S/4
 for r in range(0,S,int(0.2*pu)):
@@ -112,46 +133,16 @@ def paint(n,col,tile=(2,4),var=0.14,wear=0.2):
 paint('orange',(232,110,40))           # stair drums and rails (04, 05)
 paint('steel_white',(226,228,226),var=0.12)   # light towers (07)
 paint('steel_dark',(52,54,58))
+# seat plastics (10, 11, 15, 16, 17): light blue, orange, purple, red, teal; sun-faded, scuffs
+for n_,c_ in (('seat_blue',(96,184,222)),('seat_orange',(236,112,46)),('seat_purple',(158,84,150)),('seat_red',(206,60,48)),('seat_teal',(48,150,160))):save(n_,base(128,128,c_,0.1,3)*(0.94+0.12*noise(128,128,4))[...,None],(0.5,0.5))
 paint('steel_rust',(128,72,52))   # scoreboard legs (07)
-paint('steel_galv',(160,164,166))
-paint('screen_back',(40,42,46))
+paint('screen_back',(122,120,88))   # olive cladding on the screen box sides (19)
 paint('timber',(150,104,66),var=0.3)
-# timber battens on the Michael Long Centre (18)
-H,W=512,512;a=base(H,W,(138,96,60),0.25,3)
-for x in range(0,W,24):a[:,x:x+4]*=0.55;a[:,x+4:x+20]*=0.95+0.1*rng.random()
+# copper-brown cladding panels on the Michael Long Centre entry (18): smooth sheets 1.2 x 3 m, dark joints
+H,W=512,512;a=base(H,W,(146,88,58),0.18,3);a=streaks(a,0.12,40)
+for x in range(0,W,int(W/3*1.2)):a[:,x:x+3]*=0.5
+a[H//2-1:H//2+2,:]*=0.55
 save('timber',a,(3,3))
-# --- seats: empty tip-up seats in the 2025 mosaic (light blue, orange, purple, red, teal), row shadows, aisle (10, 11, 15, 16, 17)
-# one tile = 12 m along the row x 16 rows; aisle stair at the tile edge; colour patches are irregular blocks as in the photos
-SEATW=0.5;ROW=0.8;NR=16;L=12
-W,H=1536,1024;a=np.zeros((H,W,3))
-step=np.array([[150,148,144]])
-pal=np.array([[96,184,222],[236,112,46],[158,84,150],[206,60,48],[48,150,160]],float)
-wts=[0.4,0.3,0.22,0.04,0.04]
-pu=W/L;pv=H/NR
-# patch map: blocks of 3-8 seats x 2-5 rows, colours chosen by weight
-cells=np.zeros((NR,int(L/SEATW)),int)
-for r in range(NR):
-    c=0
-    while c<cells.shape[1]:
-        k=rng.choice(5,p=wts);n=rng.integers(2,8);cells[r,c:c+n]=k;c+=n
-for r in range(1,NR):
-    m=rng.random(cells.shape[1])<0.55;cells[r,m]=cells[r-1,m]
-a[:]=(120,118,114)
-for r in range(NR):
-    y0=int(r*pv);y1=int((r+1)*pv)
-    a[y0:y1]=(150,147,140)
-    a[y0:y0+int(pv*0.12)]=(80,78,76)       # riser shadow
-    for c in range(cells.shape[1]):
-        x0=int(c*SEATW*pu)+3;x1=int((c+1)*SEATW*pu)-3
-        if x0<int(1.2*pu):continue            # aisle 1.2 m
-        col=pal[cells[r,c]]*(0.9+0.2*rng.random())
-        a[y0+int(pv*0.22):y0+int(pv*0.7),x0:x1]=col           # seat back
-        a[y0+int(pv*0.7):y0+int(pv*0.82),x0:x1]=col*0.62      # seat pan in shadow
-        a[y0+int(pv*0.22):y0+int(pv*0.27),x0:x1]=col*1.12
-    # aisle steps: grey with yellow nosing
-    a[y0:y1,0:int(1.2*pu)]=(160,156,148);a[y0:y0+5,0:int(1.2*pu)]=(210,190,70)
-a=a*(0.92+0.16*noise(H,W,6))[...,None]
-save('seats',a,(L,NR*ROW))
 # --- chain-link boundary fence: 50 mm diamond mesh, galvanised; alpha (07, 10, 18)
 S=512;tile=(2,1.2);A=np.zeros((S,S));pu=S/2
 yy,xx=np.mgrid[0:S,0:S]/pu
@@ -177,16 +168,16 @@ for x in range(0,S,64):A[:,x:x+6]=255
 for x in range(0,S,8):A[:,x:x+2]=200
 c[:4,:]+=50;c[rng.random((S,S))<0.02]-=60                                          # lit top edge, chips
 save('rail_orange',c,(2,1.1),A)
-# --- big screen face (blank, dark, off): pixel grid hint and frame
-S=512;a=base(S,S,(28,30,34),0.3,8)
+# --- big screen face (off): khaki-olive panel face as photo 19, pixel grid hint and frame
+S=512;a=base(S,S,(112,104,78),0.2,8)
 for k in range(0,S,8):a[k:k+1,:]*=0.7;a[:,k:k+1]*=0.7
-a[:12,:]=a[-12:,:]=a[:,:12]=a[:,-12:]=(70,72,76)
+a[:12,:]=a[-12:,:]=a[:,:12]=a[:,-12:]=(60,62,58)
 save('screen',a,(1,1))
 # --- signs (ground's own names only), lettering redrawn by hand from photos 03, 12, 17, 07
 def font(n,s):return ImageFont.truetype(F+n,s)
-def tio_logo(d,x,y,h):
+def tio_logo(d,x,y,h,box=(245,245,245)):
     # white box, blue T, red i, blue O with a white NT outline inside (03, 07)
-    w=int(h*1.65);d.rounded_rectangle([x,y,x+w,y+h],radius=h//10,fill=(245,245,245),outline=(200,200,205),width=max(2,h//30))
+    w=int(h*1.65);d.rounded_rectangle([x,y,x+w,y+h],radius=h//10,fill=box,outline=(200,200,205),width=max(2,h//30))
     f=font('arialbd.ttf',int(h*0.92))
     d.text((x+int(h*0.08),y+int(h*0.02)),'T',font=f,fill=(30,80,180))
     d.rectangle([x+int(h*0.62),y+int(h*0.28),x+int(h*0.80),y+int(h*0.88)],fill=(220,30,40))
@@ -194,17 +185,18 @@ def tio_logo(d,x,y,h):
     d.ellipse([x+int(h*0.86),y+int(h*0.1),x+int(h*1.55),y+int(h*0.9)],fill=(30,80,180))
     d.polygon([(x+int(h*1.05),y+int(h*0.25)),(x+int(h*1.3),y+int(h*0.25)),(x+int(h*1.3),y+int(h*0.5)),(x+int(h*1.38),y+int(h*0.6)),(x+int(h*1.3),y+int(h*0.75)),(x+int(h*1.05),y+int(h*0.75))],fill=(245,245,245))
     return w
-def sign_band(n,w_m,h_m,text_parts,ppm=80):
+def sign_band(n,w_m,h_m,text_parts,ppm=80,box=(245,245,245)):
     W,H=int(w_m*ppm),int(h_m*ppm);im=Image.new('RGB',(W,H),(34,78,160));d=ImageDraw.Draw(im)
     d.rectangle([0,0,W,int(H*0.18)],fill=(20,44,110));d.rectangle([0,int(H*0.82),W,H],fill=(20,44,110))
     d.rectangle([0,int(H*0.32),W,int(H*0.68)],fill=(48,110,200))
     f=font('segoeui.ttf',int(H*0.5));x=int(W*0.08)
     l=d.textlength('Welcome to',font=f);lw=int(H*0.62*1.65);r=d.textlength('Stadium',font=f);tot=l+lw+r+2*H*0.15;x=(W-tot)/2
     d.text((x,int(H*0.18)),'Welcome to',font=f,fill=(250,250,250));x+=l+H*0.15
-    tio_logo(d,int(x),int(H*0.19),int(H*0.62));x+=lw+H*0.15
+    tio_logo(d,int(x),int(H*0.19),int(H*0.62),box);x+=lw+H*0.15
     d.text((x,int(H*0.18)),'Stadium',font=f,fill=(250,250,250))
     a=np.asarray(im,float)*(0.92+0.16*noise(H,W,4))[...,None];save(n,a,(w_m,h_m))
 sign_band('sign_welcome',13.0,1.6,None)
+sign_band('sign_welcome_tan',13.0,1.6,None,box=(214,160,104))   # Bonson gate: the logo sits on a tan box (12)
 def sign_text(n,text,w_m,h_m,bg,fg,fnt='arialbd.ttf',ppm=80,size=0.5,blocks=None):
     W,H=int(w_m*ppm),int(h_m*ppm)
     a=np.ones((H,W,3))*np.array(bg,float)*(0.85+0.3*noise(H,W,4))[...,None]
@@ -217,7 +209,37 @@ def sign_text(n,text,w_m,h_m,bg,fg,fnt='arialbd.ttf',ppm=80,size=0.5,blocks=None
     tw=d.textlength(text,font=f);d.text(((W-tw)/2,H*(1-size)/2-H*0.06),text,font=f,fill=fg)
     a=np.asarray(im,float);save(n,a,(w_m,h_m))
 sign_text('sign_ahmat','THE AH MAT GATES',13.0,1.4,(44,50,70),(236,236,236),'bahnschrift.ttf',size=0.42,blocks=True)
-sign_text('sign_bonson','THE BONSON GATES',11.0,1.4,(44,50,70),(236,236,236),'georgiab.ttf',size=0.42,blocks=True)
+# Bonson gate front (12), 14.3 x 4.5 m: navy block; cream raised letters on the block; two open passages with black gates;
+# recessed ticket bay with three windows; ENTRY ONLY / EXIT ONLY, a dark ticket-price board and a grey display box.
+# Positions are fractions of the wall width read off photo 12 (wall 150-1840 px, 100 px per metre of height).
+def gate_front(name,GW,text,tc,box,entry,ticket,GH=4.5,gp=80):
+    W,H=int(GW*gp),int(GH*gp)
+    a=base(H,W,(44,50,70),0.25,4)
+    for r in range(0,H,int(0.2*gp)):
+        a[r:r+2,:]*=0.6;off=int(0.2*gp) if (r//int(0.2*gp))%2 else 0
+        for x in range(off,W,int(0.4*gp)):a[r:r+int(0.2*gp),x:x+2]*=0.6
+    def R(f0,f1,z0,z1):return slice(H-round(z1*gp),H-round(z0*gp)),slice(round(f0*W),round(f1*W))
+    for f0,f1 in ((0.168,0.257),(0.713,0.802)):   # passages: dark depth, black palisade gate
+        a[R(f0,f1,0,3.15)]=base(round(3.15*gp),round(f1*W)-round(f0*W),(70,72,70),0.2,3)
+        ys,xs=R(f0,f1,0,2.3);sub=a[ys,xs]
+        for x in range(0,sub.shape[1],9):sub[:,x:x+3]=(18,18,20)
+        sub[:6]=(18,18,20)
+    ys,xs=R(0.299,0.666,0,3.15);a[ys,xs]*=0.72;a[R(0.299,0.666,2.95,3.15)]=(22,22,28)   # recessed bay, soffit shadow
+    for f0,f1 in ((0.364,0.402),(0.464,0.506),(0.569,0.611)):
+        a[R(f0-0.004,f1+0.004,1.36,2.49)]=(214,214,210);a[R(f0,f1,1.4,2.45)]=base(84,round(f1*W)-round(f0*W),(52,62,58),0.2,2)
+    if ticket:a[R(0.775,0.893,1.7,3.2)]=(16,16,18)      # ticket-price board
+    a[R(*box,3.4,4.4)]=(150,154,156);a[R(box[0]+0.006,box[1]-0.006,3.48,4.32)]=(70,74,76)   # display box
+    im=Image.fromarray(np.clip(a,0,255).astype(np.uint8));d=ImageDraw.Draw(im)
+    for f0,f1,t in (((0.200,0.243,'ENTRY'),(0.882,0.918,'EXIT')) if entry else ()):
+        d.rectangle([round(f0*W),H-round(4.3*gp),round(f1*W),H-round(3.35*gp)],fill=(238,232,222))
+        fs=font('arialbd.ttf',int(0.26*gp))
+        for k,w_ in enumerate((t,'ONLY')):
+            tw=d.textlength(w_,font=fs);d.text(((f0+f1)/2*W-tw/2,H-round(4.2*gp)+k*int(0.38*gp)),w_,font=fs,fill=(196,40,48))
+    fs=font('bahnschrift.ttf',int(0.5*gp));t=text;tw=d.textlength(t,font=fs)
+    d.text((tc*W-tw/2+3,H-round(4.28*gp)+3),t,font=fs,fill=(20,20,26));d.text((tc*W-tw/2,H-round(4.28*gp)),t,font=fs,fill=(236,232,218))
+    save(name,np.asarray(im,float),(GW,GH))
+gate_front('gate_bonson_front',14.3,'THE BONSON GATES',0.4855,(0.672,0.758),True,True)
+gate_front('gate_ahmat_front',14.8,'THE AH MAT GATES',0.48,(0.169,0.256),False,False)   # same family (03): no entry/exit signs or ticket board
 sign_text('sign_rioli','MAURICE RIOLI STAND',16.0,1.2,(60,62,68),(236,110,80),'times.ttf',size=0.8)
 # tower panel (07, 15): blue board, light-blue block band on top, TIO logo box, 'Stadium'; 6.2 x 5.8 m
 W,H=520,480;im=Image.new('RGB',(W,H),(36,84,176));d=ImageDraw.Draw(im)
@@ -227,14 +249,14 @@ lh=int(H*0.24);tio_logo(d,int((W-lh*1.65)/2),int(H*0.11),lh)
 f=font('segoeuib.ttf',int(H*0.17));tw=d.textlength('Stadium',font=f);d.text(((W-tw)/2,int(H*0.50)),'Stadium',font=f,fill=(250,250,250))
 a=np.asarray(im,float)*(0.92+0.16*noise(H,W,3))[...,None];save('sign_tower',a,(6.2,5.8))
 # main scoreboard (07): blue 'TIO Stadium' banner on top, black 'Larrakia Country - Darwin' band under it; 9.3 m wide
-W,H=860,160;im=Image.new('RGB',(W,H),(30,84,180));d=ImageDraw.Draw(im)
+W,H=860,130;im=Image.new('RGB',(W,H),(30,84,180));d=ImageDraw.Draw(im)
 for y in range(H):d.line([(0,y),(W,y)],fill=(30+int(30*y/H),84+int(40*y/H),180+int(30*y/H)))
 d.rectangle([0,0,W,5],fill=(20,40,100));d.rectangle([0,H-5,W,H],fill=(20,40,100))
 lh=int(H*0.62);f=font('segoeuib.ttf',int(H*0.6));tw=d.textlength('Stadium',font=f);tot=lh*1.65+H*0.15+tw;x=(W-tot)/2
 tio_logo(d,int(x),int(H*0.19),lh);d.text((x+lh*1.65+H*0.15,int(H*0.06)),'Stadium',font=f,fill=(250,250,250))
-a=np.asarray(im,float)*(0.92+0.16*noise(H,W,3))[...,None];save('sign_sb_banner',a,(8.6,1.6))
-sign_text('sign_sb_band','Larrakia Country - Darwin',8.6,1.1,(24,24,26),(240,240,240),'arialbd.ttf',size=0.62)
-# report grey stddev of every texture (rule: none under 10)
+a=np.asarray(im,float)*(0.92+0.16*noise(H,W,3))[...,None];save('sign_sb_banner',a,(8.6,1.3))
+sign_text('sign_sb_band','Larrakia Country - Darwin',8.6,0.9,(24,24,26),(240,240,240),'arialbd.ttf',size=0.62)
+# report grey stddev of every texture (for the board; no floor since 2026-11-19)
 res={}
 for n in TILE:
     g=np.asarray(Image.open(os.path.join(OUT,n+'.png')).convert('L'),float);res[n]=round(float(g.std()),1)

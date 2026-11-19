@@ -106,18 +106,37 @@ NROW=p('rows',16);ROWD=0.8;Z0=p('rake_z0',1.3);RISE=p('rise',0.325);DR=0.6     #
 ZB=Z0+NROW*RISE;DB=DR+NROW*ROWD                                                # back of the rake
 def tsteps(t0,t1,step=2.5):
     L=abs(t1-t0)*0.5*(EA+EB);n=max(2,int(L/step));return [t0+(t1-t0)*i/n for i in range(n+1)]
-seats=Acc('stand_seats','seats',True);conc=Acc('stand_concrete','concrete');soff=Acc('stand_rake_soffit','concrete')
-TL,TV=TILE['seats']
+steps=Acc('stand_steps','concrete');conc=Acc('stand_concrete','concrete');soff=Acc('stand_rake_soffit','concrete')
+# real 3D tip-up seats, empty, in the 2025 mosaic (10, 11, 15, 16, 17): 0.5 m pitch, 1.2 m aisle every 12 m; colour runs of 2-7 seats,
+# 55 % of seats take the colour of the seat in front (the blocky patches in the photos). No crowd.
+import random;SR=random.Random(7);SEATW=0.5;AISLE=1.2;BAY=12.0
+SPAL=['seat_blue','seat_orange','seat_purple','seat_red','seat_teal'];SW=[0.4,0.3,0.22,0.04,0.04]
+SACC={k:Acc('stand_'+k,k) for k in SPAL};SROW={};SPREV={}
+def seat_colour(r,i):
+    st=SROW.setdefault(r,[0,0])
+    if st[1]<=0:st[0]=SR.choices(range(5),SW)[0];st[1]=SR.randint(2,7)
+    st[1]-=1;k=st[0]
+    if r>0 and (r-1,i) in SPREV and SR.random()<0.55:k=SPREV[(r-1,i)]
+    SPREV[(r,i)]=k;return SPAL[k]
+SIDX={}
 def rake(ts,s0=0.0):
     s=s0
     for i in range(len(ts)-1):
-        t0,t1=ts[i],ts[i+1];L=math.dist(P(t0,0,0)[:2],P(t1,0,0)[:2]);u0,u1=s/TL,(s+L)/TL
+        t0,t1=ts[i],ts[i+1];L=math.dist(P(t0,0,0)[:2],P(t1,0,0)[:2])
         # front wall
         conc.face([P(t0,0,0),P(t1,0,0),P(t1,0,Z0),P(t0,0,Z0)][::-1]);conc.face([P(t0,0,Z0),P(t1,0,Z0),P(t1,DR,Z0),P(t0,DR,Z0)][::-1])
         for r in range(NROW):
             d0=DR+r*ROWD;z0=Z0+r*RISE;z1=z0+RISE;v=r/NROW
-            seats.face([P(t0,d0,z0),P(t0,d0,z1),P(t1,d0,z1),P(t1,d0,z0)],[(u0,v),(u0,v+0.22/NROW),(u1,v+0.22/NROW),(u1,v)])              # riser
-            seats.face([P(t0,d0,z1),P(t0,d0+ROWD,z1),P(t1,d0+ROWD,z1),P(t1,d0,z1)],[(u0,v+0.22/NROW),(u0,v+1/NROW),(u1,v+1/NROW),(u1,v+0.22/NROW)])  # tread
+            steps.face([P(t0,d0,z0),P(t0,d0,z1),P(t1,d0,z1),P(t1,d0,z0)])              # riser
+            steps.face([P(t0,d0,z1),P(t0,d0+ROWD,z1),P(t1,d0+ROWD,z1),P(t1,d0,z1)])  # tread
+            a0=Vector(P(t0,d0,z1));a1=Vector(P(t1,d0,z1));b0=Vector(P(t0,d0+ROWD,z1));al=(a1-a0).normalized();bk=((b0-a0)-al*al.dot(b0-a0)).normalized();up=Vector((0,0,1))
+            q=math.ceil(s/SEATW-1e-6)*SEATW
+            while q+SEATW<=s+L+1e-6:
+                if (q%BAY)>=AISLE-1e-6:
+                    i=SIDX.get(r,0);SIDX[r]=i+1;acc=SACC[seat_colour(r,i)];c=a0+al*(q-s+SEATW/2)
+                    box(acc,c+bk*0.36+up*0.42,al,bk,up,0.21,0.19,0.03)        # seat pan
+                    box(acc,c+bk*0.6+up*0.5,al,bk,up,0.21,0.025,0.36)         # back, down to the tread as its support
+                q+=SEATW
         soff.face([P(t0,0.3,0),P(t1,0.3,0),P(t1,DB,ZB-0.6),P(t0,DB,ZB-0.6)])   # underside seen from the back (06)
         s+=L
     return s
@@ -196,7 +215,7 @@ for yy in (ct2[0],ct2[-1]):
 cfa.quad2([(XR,P(ct2[0],0,0)[1],CRZ[1]-RTH-0.6),(XR,P(ct2[-1],0,0)[1],CRZ[1]-RTH-0.6),(XR,P(ct2[-1],0,0)[1],CRZ[1]),(XR,P(ct2[0],0,0)[1],CRZ[1])])
 for t in ct2[1:-1:3]:   # centre roof columns on the box line (17)
     c=P(t,DB+BOXD-0.5,0);rod(stl,(c[0],c[1],ZBOX),(c[0],c[1],CRZ[0]-RTH-0.2-(CRZ[0]-CRZ[1])*0.4),0.25,8)
-for o in (seats,conc,soff,deck,kiosk,rail,rf,ru,fas,stl,cr,cu,cfa):o.done()
+for o in list(SACC.values())+[steps,conc,soff,deck,kiosk,rail,rf,ru,fas,stl,cr,cu,cfa]:o.done()
 # ---- orange stair drums at the centre/wing joins, white disc canopies on a column (04, 05, 14; satellite circles)
 for nm,c in (('drum_n',p('drum_n',(-107.0,30.0))),('drum_s',p('drum_s',(-92.4,-31.0)))):
     cyl(nm,c,3.0,0,p('drum_h',8.5),'orange',32);cyl(nm+'_post',c,0.35,8.5,p('disc_z',14.0),'white',12)
@@ -206,15 +225,18 @@ mlc=OSM['buildings']['477647201']
 if mlc[0]==mlc[-1]:mlc=mlc[:-1]
 MZ=p('mlc_h',9.6)
 # walls: dark glass on the long south face, timber elsewhere; per-edge objects keep the materials apart
-gm=Acc('mlc_glass','glass_mlc');tw=Acc('mlc_timber','timber')
+gm=Acc('mlc_glass','glass_mlc');tw=Acc('mlc_timber','timber');mc=Acc('mlc_render','clad_cream')   # end and back walls cream render, copper only on the narrow step panels (18)
 area=sum(mlc[i][0]*mlc[(i+1)%len(mlc)][1]-mlc[(i+1)%len(mlc)][0]*mlc[i][1] for i in range(len(mlc)))
 for i in range(len(mlc)):
     a=mlc[i];b=mlc[(i+1)%len(mlc)]
     if area<0:a,b=b,a
     q=[(a[0],a[1],0),(b[0],b[1],0),(b[0],b[1],MZ),(a[0],a[1],MZ)]
     dx,dy=b[0]-a[0],b[1]-a[1];nx,ny=dy,-dx   # outward for a CCW ring
-    (gm if ny<-0.5*math.hypot(nx,ny) else tw).face(q)
-gm.done();tw.done()
+    (gm if ny<-0.5*math.hypot(nx,ny) else tw if math.hypot(nx,ny)<6 else mc).face(q)
+    if ny<-0.5*math.hypot(nx,ny):   # roof overhang 2 m out over the glass (18)
+        L_=math.hypot(nx,ny);ox,oy=nx/L_*2.0,ny/L_*2.0
+        prism('mlc_eave_%d'%i,[(a[0],a[1]),(a[0]+ox,a[1]+oy),(b[0]+ox,b[1]+oy),(b[0],b[1])],MZ-0.35,MZ,'steel_dark',top='roof_mlc',bottom=True)
+gm.done();tw.done();mc.done()
 bm=bmesh.new();vs=[bm.verts.new((x,y,MZ)) for x,y in (mlc if area>0 else mlc[::-1])];bm.faces.new(vs)
 me=bpy.data.meshes.new('mlc_roof');bm.normal_update();world_uv(bm,'roof_mlc');bm.to_mesh(me);bm.free()
 o=bpy.data.objects.new('mlc_roof',me);coll('model').objects.link(o);me.materials.append(mat('roof_mlc'))
@@ -262,7 +284,7 @@ for k,(bx,by) in TW.items():
 lat.done();lamps.done();hd.done()
 # ---------------- NE big screen on its frame: OSM way 1549614585 (blank, no content)
 sc_fp=OSM['buildings']['1549614585'][:4]
-xs=sorted(sc_fp,key=lambda q:q[0]);a=Vector((72.4,59.8,0));b=Vector((78.2,48.5,0))   # satellite top of the box (fits photo 15 within 8 px)
+xs=sorted(sc_fp,key=lambda q:q[0]);a=Vector((72.4,57.3,0));b=Vector((78.2,46.0,0))   # satellite top of the box less the image lean (~1.7 m S), photos 15 and 19 put it 2.3-4.6 m S of the old line: 2.5 m S
 sk=Acc('screen_frame','steel_dark');ZS0,ZS1=p('screen_z',[4.6,12.7])   # photo 15
 board('screen_face',(a.x,a.y),(b.x,b.y),ZS0,ZS1,'screen')
 bk=b+(Vector((1,0.45,0)).normalized()*3.0);ak=a+(Vector((1,0.45,0)).normalized()*3.0)   # satellite: box 3 m deep, white top
@@ -270,14 +292,14 @@ board('screen_back',(bk.x,bk.y),(ak.x,ak.y),ZS0,ZS1,'screen_back')
 mk('screen_top',[(a.x,a.y,ZS1),(b.x,b.y,ZS1),(bk.x,bk.y,ZS1),(ak.x,ak.y,ZS1)],[(0,1,2,3)],'roof_white',[[(0,0),(1,0),(1,1),(0,1)]])
 board('screen_end_a',(ak.x,ak.y),(a.x,a.y),ZS0,ZS1,'screen_back',True);board('screen_end_b',(b.x,b.y),(bk.x,bk.y),ZS0,ZS1,'screen_back',True)
 for t in (0.05,0.35,0.65,0.95):
-    q=a+(b-a)*t;qk=ak+(bk-ak)*t
-    rod(sk,(q.x,q.y,0),(q.x,q.y,ZS1),0.2,8);rod(sk,(qk.x,qk.y,0),(qk.x,qk.y,ZS1),0.2,8);rod(sk,(q.x,q.y,ZS0-0.2),(qk.x,qk.y,ZS0-0.2),0.12,6)
+    q=a+(b-a)*t;qk=ak+(bk-ak)*t;q=q+(qk-q).normalized()*0.3   # front legs stop under the screen, behind the face (19)
+    rod(sk,(q.x,q.y,0),(q.x,q.y,ZS0),0.2,8);rod(sk,(qk.x,qk.y,0),(qk.x,qk.y,ZS1),0.2,8);rod(sk,(q.x,q.y,ZS0-0.2),(qk.x,qk.y,ZS0-0.2),0.12,6)
 sk.done()
-# ---------------- east building: OSM way 477648585, single storey, white roof, dark walls (19, 20)
+# ---------------- east building: OSM way 477648585, single storey, white roof
 eb=OSM['buildings']['477648585'];eb=eb[:-1] if eb[0]==eb[-1] else eb
-prism('east_building',eb,0,p('east_h',4.2),'clad_dark',top='roof_white')
+prism('east_building',eb,0,p('east_h',4.2),'wall_east',top='roof_white')   # cream walls, dark window band (07, 15, 19)
 # ---------------- main scoreboard at the east end (07, 15): sits in the OSM notch of the east building, face along x about 79.
-# Heights from photo 07 (camera 07, ~25 px/m): legs to 4.0 m, blank screen 4.0-8.0, black 'Larrakia Country - Darwin' band 8.0-9.1, blue 'TIO Stadium' banner 9.1-10.7.
+# Heights: top 10.7 and legs from photo 07; splits from photo 19 (screen 0.67, band 0.13, banner 0.20 of the face): screen 4.0-8.5, band 8.5-9.4, banner 9.4-10.7.
 sa=Vector(p('sb_a',(79.5,-8.0)));sb_=Vector(p('sb_b',(78.8,-16.6)));sdv=sb_-sa;wn=Vector((sdv.y,-sdv.x)).normalized()   # wn faces west; satellite top strip x 79.5-78.6, ends from photo 07 (front face 8.6 m)
 SBD=p('sb_depth',1.6);ka=sa-wn*SBD;kb=sb_-wn*SBD   # satellite: box top 79.5-81.0
 mb=Acc('scoreboard_box','clad_grey')
@@ -285,9 +307,9 @@ for (p0,p1) in ((sa,ka),(ka,kb),(kb,sb_)):mb.face([(p0.x,p0.y,3.8),(p1.x,p1.y,3.
 mb.face([(sa.x,sa.y,10.7),(sb_.x,sb_.y,10.7),(kb.x,kb.y,10.7),(ka.x,ka.y,10.7)][::-1]);mb.face([(sa.x,sa.y,3.8),(sb_.x,sb_.y,3.8),(kb.x,kb.y,3.8),(ka.x,ka.y,3.8)])
 mb.face([(sa.x,sa.y,3.8),(sb_.x,sb_.y,3.8),(sb_.x,sb_.y,10.7),(sa.x,sa.y,10.7)]);mb.done()
 o_=wn*0.04
-board('scoreboard_screen',tuple((sa+o_).xy),tuple((sb_+o_).xy),4.0,8.0,'screen')
-board('scoreboard_band',tuple((sa+o_).xy),tuple((sb_+o_).xy),8.0,9.1,'sign_sb_band')
-board('scoreboard_banner',tuple((sa+o_*2+sdv.normalized()*0.0).xy),tuple((sb_+o_*2).xy),9.1,10.7,'sign_sb_banner')
+board('scoreboard_screen',tuple((sa+o_).xy),tuple((sb_+o_).xy),4.0,8.5,'screen')
+board('scoreboard_band',tuple((sa+o_).xy),tuple((sb_+o_).xy),8.5,9.4,'sign_sb_band')
+board('scoreboard_banner',tuple((sa+o_*2+sdv.normalized()*0.0).xy),tuple((sb_+o_*2).xy),9.4,10.7,'sign_sb_banner')
 lg=Acc('scoreboard_legs','steel_rust')
 for t in (0.03,0.5,0.97):
     for q in (sa+sdv*t+wn*0.3,ka+sdv*t+wn*0.3):rod(lg,(q.x,q.y,0),(q.x,q.y,3.8),0.15,8)
@@ -300,14 +322,16 @@ for nm,fp_,h in (('nw_kiosk',[(-61.7,84.0),(-57.6,88.6),(-61.1,92.1),(-64.9,88.6
     prism(nm,fp_,0,h,'clad_grey',top='roof_white')
 nb2=OSM['buildings']['1549614584'];nb2=nb2[:-1] if nb2[0]==nb2[-1] else nb2;prism('ne_shed',nb2,0,3.6,'clad_grey',top='roof_white')
 # ---------------- gate houses (03, 12): navy blockwork, blue welcome band on top, gate name in white letters
-def gate(nm,fp_,face_a,face_b,signname,h=p('gate_h',4.6)):
+def gate(nm,fp_,face_a,face_b,signname,h=p('gate_h',4.6),welcome='sign_welcome'):
     prism(nm,fp_,0,h,'block_navy',top='concrete_dark')
     a=Vector(face_a);b=Vector(face_b);d=(b-a);n=Vector((d.y,-d.x)).normalized()*0.06   # board normal = (dy,-dx): face_a->face_b runs left to right for a viewer outside
-    board(nm+'_welcome',tuple(a+n),tuple(b+n),h-0.1,h+1.5,'sign_welcome')
+    board(nm+'_welcome',tuple(a+n),tuple(b+n),h-0.1,h+1.5,welcome)
+    if signname.endswith('_front'):   # whole painted front (openings, windows, name), flush on the wall
+        board(nm+'_front',tuple(a+n),tuple(b+n),0,h-0.1,signname);return
     m_=(a+b)/2;dd=d.normalized()*min(d.length*0.45,TILE[signname][0]/2)
     board(nm+'_name',tuple(m_-dd+n*1.5),tuple(m_+dd+n*1.5),h-1.9,h-0.5,signname)
-gate('gate_ahmat',[(-117.4,55.0),(-102.6,55.0),(-102.6,63.8),(-117.4,63.8)],(-102.6,63.85),(-117.4,63.85),'sign_ahmat')   # faces north to the path (02, 03)
-gate('gate_bonson',[(-138.9,-48.4),(-134.3,-43.2),(-125.0,-51.1),(-129.6,-59.2)],(-138.95,-48.45),(-129.6,-59.25),'sign_bonson')   # faces south-west (12)
+gate('gate_ahmat',[(-117.4,55.0),(-102.6,55.0),(-102.6,63.8),(-117.4,63.8)],(-102.6,63.85),(-117.4,63.85),'gate_ahmat_front')   # faces north to the path (02, 03)
+gate('gate_bonson',[(-138.9,-48.4),(-134.3,-43.2),(-125.0,-51.1),(-129.6,-59.2)],(-138.95,-48.45),(-129.6,-59.25),'gate_bonson_front',welcome='sign_welcome_tan')   # faces south-west (12)
 # outer palisade fence between the gates along the plaza's west edge (dark line on the satellite at x about -125)
 pal=p('palisade',[(-117.4,57.0),(-125.0,57.0),(-125.5,0.0),(-126.8,-25.0),(-126.5,-44.6)])
 pf=Acc('outer_fence','palisade',True);s=0
