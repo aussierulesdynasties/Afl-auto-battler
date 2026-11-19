@@ -160,7 +160,7 @@ obj('crest_posts',bp_,mat('crest_post',(0.6,0.61,0.62),0.5))
 print('crest fence runs',len(runs),'posts',len(crest_posts),flush=True)
 # ---- bank-top billboards (1993 panorama, camera fitted on the east crest; ends read to about +-3 deg): blank panels,
 #      no lettering (ruling). Straight panels of at most 6 m follow the crest, 0.6 m behind the fence.
-BB=[(-71.9,-78.2),(-78.9,-86.7),(-86.7,-98.5),(-98.8,-104.5),(-105.3,'RAE'),(76.4,81.0)]
+BB=[]   # bank billboards removed: ads are not modelled (ground rules, 2026-11-19); were [(-71.9,-78.2),(-78.9,-86.7),(-86.7,-98.5),(-98.8,-104.5),(-105.3,'RAE'),(76.4,81.0)]
 BZ0,BZ1=ZT+1.8,ZT+3.8
 bb=bmesh.new()
 def oface(bmx,vs,want,mi):
@@ -183,8 +183,9 @@ for a0,a1 in BB:
         if k in (0,len(ps)-1):
             t_=(ps[1]-ps[0]) if k==0 else (ps[-1]-ps[-2]);t_/=np.linalg.norm(t_);t_=-t_ if k==0 else t_
             oface(bb,[(*q,BZ0),(*(q-NN[k]*0.08),BZ0),(*(q-NN[k]*0.08),BZ1),(*q,BZ1)],(*t_,0),1)
-bbo=obj('billboards',bb,[mat('bb_front',(0.92,0.92,0.9),0.6),mat('bb_back',(0.32,0.33,0.33),0.6)])
-for p_ in bbo.data.polygons:p_.use_smooth=False
+if BB:
+    bbo=obj('billboards',bb,[mat('bb_front',(0.92,0.92,0.9),0.6),mat('bb_back',(0.32,0.33,0.33),0.6)])
+    for p_ in bbo.data.polygons:p_.use_smooth=False
 # (outside-site ground removed: stadium only, director 2026-11-18)
 # ---- boundary fence: separate boards with a joint every BAY m, gates read off the photos
 bm=bmesh.new();n=len(P);fv=[]
@@ -340,7 +341,9 @@ for f,uv in uvq:
 stand=obj('grandstand',bm,[mat('roof',C['roof'],0.5),mat('rib',C['rib'],0.6),mat('band',C['band'],0.5),mat('standback',C['back'],0.9),mat('benches',(0.18,0.36,0.30),0.8),mat('roof_under',(0.08,0.08,0.09),0.9),mat('rear_rooms',(0.12,0.13,0.16),0.6),mat('concrete',(0.62,0.61,0.58),0.9),mat('frontwall',(0.85,0.85,0.83),0.8),mat('undercroft',(0.45,0.46,0.46),0.9)])
 # ---- club complex
 for b in O['club']:
-    if b['n'] in ('darkroof','greyroof','redtower'):continue  # redtower stands 11.9 m clear of the Huggins: removed
+    if b['n'] in ('darkroof','greyroof','redtower'):continue
+    if b['n']=='rearroof':
+        bm=bmesh.new();prism(bm,ccw(b['pts']),0,b['h'],0,True,1);obj('club_rearroof',bm,[mat('r_rearroof',b['c'],0.6),mat('w_rearroof',(0.92,0.92,0.9),0.8)]);continue  # redtower stands 11.9 m clear of the Huggins: removed
     if b['n']=='sawtooth':
         # sawtooth roof (aerial: white strips across the building); walls 12 m, teeth to 13.5 m, below the Huggins roof (1993 photo)
         q=[np.array(v) for v in b['pts']];bm=bmesh.new();prism(bm,ccw(b['pts']),0,12.0,1,False)
@@ -356,7 +359,7 @@ for b in O['club']:
     pts_=b['pts']
     if b['n']=='whiteblock':
         # beside the Huggins west end (1993 panorama), not inside it: keep the part west of the stand's end line
-        _R0=np.array([-19.0,93.1]);_R1=np.array([-67.1,67.6]);_tv=(_R1-_R0)/np.linalg.norm(_R1-_R0);_L=float(np.linalg.norm(_R1-_R0))
+        _R0=np.array([-19.0,93.1]);_R1=np.array([-67.1,67.6]);_tv=(_R1-_R0)/np.linalg.norm(_R1-_R0);_L=49.5
         P=[np.array(q) for q in pts_];out=[]
         for i in range(len(P)):
             a_,b2=P[i],P[(i+1)%len(P)];da=np.dot(a_-_R0,_tv)-_L;db=np.dot(b2-_R0,_tv)-_L
@@ -364,13 +367,14 @@ for b in O['club']:
             if (da>=0)!=(db>=0):out.append(a_+(b2-a_)*(da/(da-db)))
         pts_=[list(q) for q in out]
     bm=bmesh.new();poly=ccw(pts_)
-    wall=(0.62,0.17,0.15) if b['n']=='redtower' else (0.92,0.92,0.9)
+    wall=(0.62,0.17,0.15) if b['n'] in ('redtower','brickblock') else (0.92,0.92,0.9)
     hb=min(b['h'],13.5) if b['n']=='redtower' else b['h']  # 1993 panorama: nothing rises above the Huggins roof
     prism(bm,poly,0,hb,0,True,1);bmesh.ops.subdivide_edges(bm,edges=bm.edges[:],cuts=14,use_grid_fill=True)
     obj('club_'+b['n'],bm,[mat('r_'+b['n'],b['c'],0.6),mat('w_'+b['n'],wall,0.8)])
 # ---- G.G. Huggins Stand: tiers read off the near-frontal photo, plan from the aerial
-R0=np.array([-19.0,93.1]);R1=np.array([-67.1,67.6]);LH=float(np.linalg.norm(R1-R0));tv=(R1-R0)/LH;no=np.array([-tv[1],tv[0]])
+R0=np.array([-19.0,93.1]);R1=np.array([-67.1,67.6]);tv=(R1-R0)/float(np.linalg.norm(R1-R0));LH=49.5;R1=R0+tv*LH;no=np.array([-tv[1],tv[0]])  # length: straight-down Esri 2014/2017, dark roof ends 49-50 m from the east end
 if np.dot(PC-R0,no)>0:no=-no
+HD=15.0  # roof back edge: straight-down Esri 2014-07/2017-02 show the dark roof 15 m deep behind the fascia
 def HP(t,s_,z):q=R0+tv*t+no*s_;return (q[0],q[1],z)
 bl=np.array(O['blueseats']);bt=[(np.dot(q-R0,tv)) for q in bl];BT0,BT1=min(bt),max(bt)
 bm=bmesh.new();uvq=[]
@@ -396,20 +400,20 @@ HQ(HP(LH,0,7.8),HP(0,0,7.8),HP(0,0,10.0),HP(LH,0,10.0),4,[(0,0),(LH,0),(LH,2.2),
 wall(0,LH,0.0,7.0,7.8,5)                          # glazing behind middle tier
 tier(0,LH,0.0,5.8,10.0,12.6,7,3)                 # upper green tier
 HQ(HP(LH,5.8,12.6),HP(0,5.8,12.6),HP(0,5.8,13.6),HP(LH,5.8,13.6),7,[(LH,0),(0,0),(0,1),(LH,1)])  # rear wall: bays with round windows (1993)
-slab(0,LH,5.8,7.65,12.6,2)
-slab(0,LH,-0.4,7.65,14.0,6)                       # roof top
-slab(0,LH,-0.4,7.65,13.6,6,True)                  # roof underside
+slab(0,LH,5.8,HD,12.6,2)
+slab(0,LH,-0.4,HD,14.0,6)                       # roof top
+slab(0,LH,-0.4,HD,13.6,6,True)                  # roof underside
 wall(0,LH,-0.4,13.6,14.0,6)                       # roof fascia
 for k in range(11):                               # roof rafters (aerial: white ribs across the roof, one per 5.44 m bay)
     t_=min(max(k*LH/10,0.15),LH-0.15);t0,t1=t_-0.15,t_+0.15
-    slab(t0,t1,-0.4,7.65,14.45,0)
-    HQ(HP(t0,-0.4,14),HP(t0,7.65,14),HP(t0,7.65,14.45),HP(t0,-0.4,14.45),0,[(0,14),(8.05,14),(8.05,14.45),(0,14.45)])
-    HQ(HP(t1,7.65,14),HP(t1,-0.4,14),HP(t1,-0.4,14.45),HP(t1,7.65,14.45),0,[(0,14),(8.05,14),(8.05,14.45),(0,14.45)])
-    wall(t0,t1,-0.4,14,14.45,0);wall(t0,t1,7.65,14,14.45,0,True)
-wall(0,LH,7.65,0,14.0,0,True)                     # back wall
+    slab(t0,t1,-0.4,HD,14.45,0)
+    HQ(HP(t0,-0.4,14),HP(t0,HD,14),HP(t0,HD,14.45),HP(t0,-0.4,14.45),0,[(0,14),(HD+0.4,14),(HD+0.4,14.45),(0,14.45)])
+    HQ(HP(t1,HD,14),HP(t1,-0.4,14),HP(t1,-0.4,14.45),HP(t1,HD,14.45),0,[(0,14),(HD+0.4,14),(HD+0.4,14.45),(0,14.45)])
+    wall(t0,t1,-0.4,14,14.45,0);wall(t0,t1,HD,14,14.45,0,True)
+wall(0,LH,HD,0,14.0,0,True)                     # back wall
 for t_ in (0,LH):                                 # end walls
-    q=[HP(t_,-5,0),HP(t_,7.65,0),HP(t_,7.65,14),HP(t_,-5,14)];q=q if t_==0 else q[::-1]
-    HQ(*q,0,[(0,0),(12.65,0),(12.65,14),(0,14)])
+    q=[HP(t_,-5,0),HP(t_,HD,0),HP(t_,HD,14),HP(t_,-5,14)];q=q if t_==0 else q[::-1]
+    HQ(*q,0,[(0,0),(HD+5,0),(HD+5,14),(0,14)])
 for t_ in (BT0,BT1):
     q=[HP(t_,-15.8,0),HP(t_,-5,0),HP(t_,-5,3.5),HP(t_,-15.8,0.5)];q=q if t_==BT0 else q[::-1]
     HQ(*q,0,[(0,0),(10.8,0),(10.8,3.5),(0,.5)])
@@ -525,6 +529,13 @@ def timg(t,tint=None):
     if tint is None:IMG[k]=im;return im
     w,h=im.size;px_=np.array(im.pixels[:]).reshape(h,w,4).copy();mean=px_[...,:3].reshape(-1,3).mean(0)
     px_[...,:3]=np.clip(px_[...,:3]*(np.array(tint[:3])/np.maximum(mean,1e-3)),0,1)
+    # a dark or near-white tint scales the grain down with the colour: stretch it about the tint until grey std >= 10.5/255 (ground rule: std >= 10)
+    base=px_[...,:3].copy();tm=np.array(tint[:3]);k=1.0
+    while k<8:
+        q=np.clip(tm+(base-tm)*k,0,1);g=(q*np.array([0.299,0.587,0.114])).sum(-1)
+        if g.std()*255>=10.5:break
+        k*=1.15
+    px_[...,:3]=q
     n2=bpy.data.images.new(t+'_'+'%02x%02x%02x'%tuple(int(c*255) for c in tint[:3]),w,h);n2.pixels[:]=px_.ravel();n2.pack();IMG[k]=n2;return n2
 TEXMAP={'grass':('grass',None),'ground':('bank_dirt',None),'ground_grass':('park_grass',None),'h_white':('white',None),'h_blue':('blue_seat',None),'h_conc':('concrete',None),'h_green':('green_seat',None),'h_band':('huggins_band',None),'h_glass':('glass',None),'h_roof':('brown_roof',None),'h_rear':('hug_rear',None),'apron':('concrete',None),'fence_white':('white',None),'ad_white':('adboard',None),'ad_red':('adboard',(0.7,0.17,0.15)),'ad_blue':('adboard',(0.37,0.49,0.67)),'g_park':('park_grass',None),'g_asphalt':('asphalt',None),'g_gravel':('gravel',None),'g_path':('path',None),'g_nets':('nets',None),'fence':('white',None),'fence_post':('steel',(0.3,0.31,0.31)),'gate_steel':('steel',(0.24,0.27,0.26)),'roof':('roof_deck',None),'rib':('roof_deck',None),
  'band':('white',None),'frontwall':('white',None),'undercroft':('white',(0.45,0.46,0.46)),'standback':('darkwall',None),'benches':('bench',None),'roof_under':('roof_under',None),
@@ -532,7 +543,7 @@ TEXMAP={'grass':('grass',None),'ground':('bank_dirt',None),'ground_grass':('park
  'sb_white':('white',S['c']),'sb_leg':('steel',(0.4,0.4,0.4)),'sb_face':('white',S['face']),'sb_back':('darkwall',(0.17,0.18,0.18)),'apron':('concrete',None),'chainwire':('chainwire',None),'crest_post':('steel',(0.6,0.61,0.62)),'bb_front':('white',(0.92,0.92,0.9)),'bb_back':('steel',(0.32,0.33,0.33)),'redshed':('roof_deck',O['redshed_c']),'shedn':('roof_deck',C['shedn'])}
 for b_ in O['club']:
     TEXMAP['r_'+b_['n']]=('roof_deck',b_['c'])
-    TEXMAP['w_'+b_['n']]=('brick_win',None) if b_['n'] in ('redtower','whiteblock') else ('white',(0.92,0.92,0.9))
+    TEXMAP['w_'+b_['n']]=('brick_win',None) if b_['n'] in ('redtower','whiteblock','brickblock') else ('white',(0.92,0.92,0.9))
 def retex(m):
     t,tint=TEXMAP[m.name];nt=m.node_tree;bs=nt.nodes['Principled BSDF']
     for n in list(nt.nodes):

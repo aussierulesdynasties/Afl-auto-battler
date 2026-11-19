@@ -18,15 +18,15 @@ def box(P,pad=12):
 sf=O['stand']['front'];sr=O['stand']['rear'];hs=O['stand']['h']
 parts=[('Long stand: seats and rake',[[x,y,0] for x,y in sf]+[[x,y,8] for x,y in sr]),
  ('Long stand: roof',[[x,y,hs] for x,y in sf+sr]),
- ('G.G. Huggins Stand: facade and tiers',[[-19,93.1,0],[-67.1,67.6,0],[-19,93.1,14],[-67.1,67.6,14],[-25,78,0],[-70,55,0]]),
+ ('G.G. Huggins Stand: facade and tiers',[[-19,93.1,0],[-62.8,69.9,0],[-19,93.1,14],[-62.8,69.9,14],[-25,78,0],[-70,55,0]]),
  ('Club buildings behind the Huggins',[[x,y,0] for b in O['club'] for x,y in b['pts']]+[[x,y,b['h']] for b in O['club'] for x,y in b['pts']]),
  ('Scoreboard',[[*O['score']['ends'][0],0],[*O['score']['ends'][1],O['score']['top']]]),
  ('Light towers (two)',[[*O['poles']['P6'][0],0],[*O['poles']['P6'][0],O['poles']['P6'][1]],[*O['poles']['P7'][0],0],[*O['poles']['P7'][0],O['poles']['P7'][1]]]),
  ('Boundary fence: NE gate (dark 9 m break) and board joints',[[*q,0] for q in G0[:2]]+[[*q,1] for q in G0[:2]]),
  ('Boundary fence: players race gate beside the Huggins',[[*q,0] for q in G1[:2]]+[[*q,1] for q in G1[:2]]),
  ('Terraces and boundary',[[-31,-93,0],[52,-68,0],[30,-60,0],[0,-80,4]]),
- ('SE bank: steps, crest fence and blank billboards',[[32,-94,0],[-56,-107,0],[32,-94,7],[-56,-107,7],[20,-70,0]]),
- ('North bank: steps, crest fence and blank billboard',[[17,106,0],[27,108,0],[17,106,7],[27,108,7],[20,80,0]]),
+ ('SE bank: steps and crest fence',[[32,-94,0],[-56,-107,0],[32,-94,7],[-56,-107,7],[20,-70,0]]),
+ ('North bank: steps and crest fence',[[17,106,0],[27,108,0],[17,106,7],[27,108,7],[20,80,0]]),
  ('East bank and scoreboard',[[116,-11,0],[116,0,14],[80,-20,0],[80,15,0]])]
 rows=[]
 for t,P in parts:
