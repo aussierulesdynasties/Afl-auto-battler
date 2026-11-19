@@ -143,11 +143,11 @@ t = T(1.0, 1.0, (150, 154, 156), n=5, bl=(0.5, 8)); t.hl(0.5, 0.04, mul=0.8); t.
 t = T(5.0, 0.95, (178, 176, 166), n=5, bl=(0.8, 9))
 for u in (0.0, 2.5): t.vl(u + 0.02, 0.04, mul=0.7)
 t.hl(0.9, 0.06, mul=0.82); t.save('terrace')
-# grass hill: dry summer grass, mown stripes, worn patches
-t = T(10.0, 10.0, (138, 140, 92), n=10, bl=(2.5, 16))
-for u in np.arange(0, 10, 2.5): t.rect(u, u + 1.25, 0, 10, mul=np.array([1.06, 1.05, 1.0]))
+# grass hill (GE f135, gate 2026-11-19): green grass with dry straw patches, faint mower stripes
+t = T(10.0, 10.0, (100, 134, 80), n=10, bl=(2.5, 16))
+for u in np.arange(0, 10, 2.5): t.rect(u, u + 1.25, 0, 10, mul=np.array([1.06, 1.06, 1.02]))
 for _ in range(14):
-    u, z, r = R.uniform(0, 10), R.uniform(0, 10), R.uniform(0.3, 1.0); t.rect(u, u + r, z, z + r * 0.6, mul=np.array([1.25, 1.12, 1.15]))
+    u, z, r = R.uniform(0, 10), R.uniform(0, 10), R.uniform(0.4, 1.4); t.rect(u, u + r, z, z + r * 0.6, mul=np.array([1.38, 1.14, 1.3]))
 t.save('grass_hill')
 # concourse apron: concrete slabs 3 m with saw joints, oil stains
 t = T(6.0, 6.0, (158, 156, 150), n=5, bl=(1.5, 10))
@@ -203,11 +203,14 @@ def fac_ponting():
         u = k * 12.5
         tris += [([(u, 20), (u + 12.5, 20), (u + 6.25, 14)], (228, 232, 234)), ([(u + 6.25, 14), (u + 12.5, 20), (u + 18.75, 14)], (200, 210, 216))]
     tris += [([(0, 14), (6.25, 14), (0, 20)], (200, 210, 216))]
-    for k in range(2):                                   # middle band: navy triangles between pale ones
-        u = k * 12.5
-        tris += [([(u, 8), (u + 12.5, 8), (u + 6.25, 14)], (64, 82, 146) if k == 0 else (186, 198, 208)),
-                 ([(u + 6.25, 14), (u + 18.75, 14), (u + 12.5, 8)], (78, 96, 156) if k == 1 else (206, 214, 220))]
-    tris += [([(0, 14), (6.25, 14), (0, 8)], (206, 214, 220)), ([(18.75, 14), (25, 14), (25, 8)], (64, 82, 146))]
+    # middle band (GE f270 crop, gate 2026-11-19): a pale row of facets over a band of long slanted panels, mid-blue
+    # (80,113,150), sky blue (117,154,197), blue-grey (123,141,167) and pale, sampled from the photo; no navy triangles
+    for k in range(4):
+        u = k * 6.25; tris += [([(u, 12), (u + 6.25, 12), (u + 3.125, 14)], (204, 214, 220)), ([(u + 3.125, 14), (u + 9.375, 14), (u + 6.25, 12)], (190, 202, 210))]
+    tris += [([(0, 12), (0, 14), (-3.125, 14)], (190, 202, 210))]
+    cols = [(80, 113, 150), (196, 208, 214), (117, 154, 197), (123, 141, 167)]
+    for k in range(5):
+        u = k * 6.25 - 2.0; tris += [([(u, 8), (u + 6.25, 8), (u + 8.25, 12), (u + 2.0, 12)], cols[k % 4])]
     for k in range(4):                                   # lower band: slanted pale facets tucking in
         u = k * 6.25; tris += [([(u, 8), (u + 6.25, 8), (u + 6.25, 4.6), (u, 4.6)], (172, 184, 192) if k % 2 else (186, 196, 204))]
     for poly, col in tris:
@@ -216,7 +219,7 @@ def fac_ponting():
         d.line([(X(u), Y(z)) for u, z in poly + [poly[0]]], fill=255, width=9)
     t.a += blotch(t.h, t.w, 2, 5)[:, :, None]
     ln = np.asarray(im) > 0; t.a[ln] = t.a[ln] * 0.3 + np.array([238, 242, 244]) * 0.7
-    for z in (8.0, 14.0): t.hl(z, 0.12, (236, 240, 242))
+    for z in (8.0, 12.0, 14.0): t.hl(z, 0.12, (236, 240, 242))
     t.rect(0, W, 0, 4.6, (58, 64, 72)); t.a[t.Y(4.6):t.Y(0)] *= np.linspace(0.8, 1.2, t.Y(0) - t.Y(4.6))[:, None, None]
     for u in np.arange(2.0, W, 8.33): t.vl(u, 0.45, 0, 4.6, (214, 216, 214))
     t.hl(4.6, 0.25, (150, 158, 164)); t.save('fac_ponting')
