@@ -8,9 +8,9 @@ grass.png 8.2
 hyundai.png 65.0
 lamphead.png 67.8
 membrane.png 10.1
-n7front.png 30.0
+n7front.png 28.7
 n7roof.png 41.3
-n7strip.png 13.4
+n7strip.png 6.8
 navywall.png 12.2
 paletile.png 11.2
 path.png 10.4

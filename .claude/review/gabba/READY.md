@@ -6,14 +6,15 @@ Model: tools/grounds/gabba/gabba.glb (83,227 tris), built by tools/grounds/gabba
 - Camera-matched overlay on photo g49: v6_ov.png (model edges on the photo).
 - Top-down on the Esri 2011 satellite tile: topov_s.png (straight), topov_l.png / topov_l_blend.png (lean-matched), edge_l.png (outline).
 - Turntable: tt.gif (60 frames), tt_sheet.png.
-- Gate fault fixes beside the photo crops the director named: board_faults.png. East roof edge proof: east_edge_proof.png.
+- Gate fault fixes beside the photo crops the director named: board_faults.png, board_gate7_flat.png (Gate 7 flat paint). East roof edge proof: east_edge_proof.png.
 - Close-ups and joins: cu_*.png (gate 7, gate 7 from the NE, fan drums from above and from the east, gate block, facade, south, edge, west, north, plant, screen, white building, navy side, roof deck, mast, roof top, roof underside, seats west/east).
 - Texture beside photo crop: board_textures.png. Signs beside photo crop: board_signs.png. Stddev list: stddev.txt.
 
 ## Gate faults of 2026-11-19, fixed
 - Gate 7 block: navy all over with a maroon strip only at the bottom (0-3.4 m), as photo g49 (330, 900, 450, 1000).
   The white "7" (2.5 m tall) sits in the strip on the Vulture St face; the NE face carries the same strip
-  (textures n7front, n7strip). board_faults.png rows 1 and 4, cu_gate7.png, cu_gate7ne.png.
+  (textures n7front, n7strip). Both bands are flat paint as in the photo: no run-off streaks, no panel lines
+  (gate of 2026-11-20, "Send streaks back"). board_gate7_flat.png, board_faults.png rows 1 and 4, cu_gate7.png, cu_gate7ne.png.
 - Fan building: the two short capped tubes are now open-topped round drums, 4.3 m tall on the 15 m roof, each with a
   fan housing inside and a steel frame across the rim, as photo g49 (290, 860, 420, 950). Footprints from the
   satellite. Height from the photo: rim top to base is 27 px in g49 and 26 px in our render through the same camera,
