@@ -1,7 +1,7 @@
 # gcs_flat.py (after norm2 and gcs_front_edge, before trace): GCS's sun and side lines are tonal (a lighter red on
 # red), too close to the base for trace's colour snap under the photo's lighting. Each is found by its local contrast
 # (a pixel lighter than the 25-61 px around it) and the refs are redrawn flat: base red, the lighter red for the sun
-# and the side lines, the neck lining and the collar flag left as they are. Sponsors (VOAO, AFL, Hostplus, the jock
+# and the side lines, the neck lining left as they are. Sponsors (VOAO, AFL, Hostplus, the jock
 # tag, Zambrero, SIXT) are not part of any motif, so they fall to the base red.
 # The side lines are clearest on the side turned away from the camera, which gcs_ref mirrors away: they are read from
 # the straightened photo (dl_gcs/f_15nm.png) before the mirror, put in the frame with norm2's transform and drawn on
@@ -65,9 +65,6 @@ for side in ('front', 'back'):
         m &= cloth & ~sun
         out[m] = SUN
         np.save('gcs_lines_mask.npy', m)
-    else:
-        flag = np.zeros_like(cloth); flag[0:60, 960:1045] = True
-        flag &= (np.abs(a[:, :, 0] - a[:, :, 2]) > 40) & ~((a[:, :, 0] - a[:, :, 2] > 80) & (a[:, :, 1] < 120))
-        out[flag] = a[flag]
+    # the back is plain base: the collar flag is left off (director 2026-11-19: "remove from gcs")
     Image.fromarray(out.astype(np.uint8)).save(f'ref/GCS_{side}.png')
     print(side, 'cloth', cloth.sum())
