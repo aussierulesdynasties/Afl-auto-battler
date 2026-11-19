@@ -1,7 +1,7 @@
 exec(open('pj.py',encoding='utf-8').read())
 import sys
 from PIL import ImageDraw
-ZGK=np.array([(0,0),(95,0),(110,4.5),(128,4.5),(140,4.5),(160,7),(175,11),(200,11),(212,8),(225,8.5),(235,9),(245,6),(320,5),(380,10),(400,10),(415,0),(PER,0)],float)
+ZGK=np.array([(0,0),(95,0),(110,4.5),(128,4.5),(140,4.5),(160,7),(175,11),(197,11),(201,11.5),(214,8.8),(220,8.33),(225,8.5),(235,9),(245,6),(320,5),(380,10),(400,10),(415,0),(PER,0)],float)
 def ZG(s):return 10.0 if 136<=s<170 and KZ else float(np.interp(s%PER,ZGK[:,0],ZGK[:,1]))
 KZ=False
 x0,y0,x1,y1,sc=map(int,sys.argv[1:6]);pts=eval(sys.argv[6])   # list of (s,d,dz,label)

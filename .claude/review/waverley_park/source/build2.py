@@ -66,9 +66,20 @@ if MODE=='close':
         c2.rotation_euler=(tg-e_).to_track_quat('-Z','Y').to_euler();sc.camera=c2
         sc.render.film_transparent=False;sc.render.resolution_x=1600;sc.render.resolution_y=1000
         sc.render.filepath=OUT+'/close_%d.png'%k;bpy.ops.render.render(write_still=True)
+# north: rigid fit of the fence to today's satellite oval (north.json from the top-down check); the model frame came
+# from the oblique photo, so it is turned th radians off true north. Oval centre goes to the origin, north = +y.
+NJ=json.load(open(WD+'/north.json'));PCn=Vector((NJ['PC'][0],NJ['PC'][1],0))
+RN=Matrix.Rotation(NJ['th'],4,'Z')@Matrix.Translation(-PCn)
+if MODE=='top':
+    ob.matrix_world=Matrix.Translation(Vector((NJ['tx'],NJ['ty'],0)))@RN
+    cdt=bpy.data.cameras.new('top');cdt.type='ORTHO';cdt.ortho_scale=500;cdt.clip_end=2000
+    ct=bpy.data.objects.new('top',cdt);sc.collection.objects.link(ct);ct.location=(0,0,600);ct.rotation_euler=(0,0,0);sc.camera=ct
+    sc.render.resolution_x=2000;sc.render.resolution_y=2000;sc.render.film_transparent=True
+    sc.render.filepath=OUT+'/top.png';bpy.ops.render.render(write_still=True)
 if MODE in('all','render'):
     sc.render.filepath=OUT+'/render.png';bpy.ops.render.render(write_still=True)
 if MODE in('all','export'):
+    ob.matrix_world=RN;bpy.context.view_layer.update()
     bpy.ops.wm.save_as_mainfile(filepath=OUT+'/waverley2.blend')
     bpy.ops.object.select_all(action='DESELECT');ob.select_set(True);bpy.context.view_layer.objects.active=ob
     bpy.ops.export_scene.gltf(filepath=OUT+'/waverley_park.glb',export_format='GLB',use_selection=True)

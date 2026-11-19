@@ -6,7 +6,7 @@ MATN=[]
 def mi(n):
     if n not in MATN:MATN.append(n)
     return MATN.index(n)
-TILE={'greenpaint':(2,2.6),'roofm':(2,4),'dirt':(4,4),'kiosko':(2,2),'kioskb':(2,2),'rib':(1,1),'pave':(4,4),'grass':(4,4),'concrete':(4,4),'aislec':(4,4),'bowlconc':(4,4),'bowllight':(4,4),'facade':(4,4),'fvoid':(2,2),'fcol':(1,1),'fslab':(1,1),'roof':(4,4),'roofn':(4,4),'white':(2,2),'steel':(2,2),'underside':(4,4),'glass':(4,2),'race':(4,2),'blueroof':(4,2),'navywall':(3,3),'redpaint':(2,2),'black':(2,2)}
+TILE={'greenpaint':(2,2.6),'roofm':(2,4),'dirt':(4,4),'kiosko':(2,2),'kioskr':(2,2),'kioskb':(2,2),'rib':(1,1),'pave':(4,4),'grass':(4,4),'concrete':(4,4),'aislec':(4,4),'bowlconc':(4,4),'bowllight':(4,4),'facade':(4,4),'fvoid':(2,2),'fcol':(1,1),'fslab':(1,1),'roof':(4,4),'roofn':(4,4),'white':(2,2),'steel':(2,2),'underside':(4,4),'glass':(4,2),'race':(4,2),'blueroof':(4,2),'navywall':(3,3),'redpaint':(2,2),'black':(2,2)}
 def tile(m):
     if m.startswith('seat_'):return (2,1)
     return TILE.get(m,(4,4))
@@ -219,7 +219,7 @@ def facade_frame(s0,s1,ztop=None,dout=None):
 def roof_on(s):return not in_rng(s%PER,GAP)
 ZR_IN,ZR_OUT,DR_IN,DR_OUT=8.9,15.6,19.7,35.2
 def zroof(d):return ZR_IN+(ZR_OUT-ZR_IN)*(d-DR_IN)/(DR_OUT-DR_IN)
-DINK=np.array([(0,32),(47,31),(63,29),(86,27),(97,28),(105,22),(119,21),(140,19.7),(195,19.7),(205,21.0),(230,21.2),(240,23.0),(246,23.6),(250,25.0),(253,26.0),(297.6,23.8),(300,24),(309,25.5),(318,28),(328,32),(PER,32)],float)
+DINK=np.array([(0,32),(47,31),(63,29),(86,27),(97,28),(105,22),(119,21),(140,19.7),(195,19.7),(205,21.0),(230,21.2),(240,23.0),(246,23.6),(250,25.0),(253,26.0),(297.6,23.8),(300,30.5),(309,31.5),(318,32),(328,32),(PER,32)],float)
 def DIN(s):return float(np.interp(s%PER,DINK[:,0],DINK[:,1]))   # roof inner edge, measured from the photo
 roof_sets=[];cur=[]
 ssR=np.unique(np.r_[ssB,GAP[0]+PER-1e-4,GAP[1]+PER+1e-4])   # the roof ends exactly at the gap
@@ -241,7 +241,7 @@ for rs in roof_sets:
 gap_ss=np.array([s for s in ssB if not roof_on(s)])
 if len(gap_ss):
     gs=np.r_[gap_ss[0]-1.5,gap_ss,gap_ss[-1]+1.5]
-    strip2(gs,lambda s:[(34.4,ZT+0.4),(34.4,ZT+1.5),(DR_OUT,ZT+1.5),(DR_OUT,ZT-2.5),(DR_OUT,ZG(s))],['white','white','white','facade'])  # photo: white band on the open terrace's back wall
+    strip2(gs,lambda s:[(34.4,ZT+0.4),(34.4,ZT+1.5),(DR_OUT,ZT+1.5),(DR_OUT,ZT+0.3),(DR_OUT,ZG(s))],['white','white','white','bowlconc'])  # photo scan s 253-265 (d 35.25): grey concrete face, white only on the top 1.2 m coping
 for sb in np.arange(0,PER,5.0):   # end roofs: light purlins every 5 m (photo, both ends)
     if 110<sb<290 or in_rng(sb,MEM) or not roof_on(sb):continue
     A=P([sb],DIN(sb),zroof(DIN(sb)))[0];B=P([sb],DR_OUT,ZR_OUT)[0];beam(A+[0,0,0.12],B+[0,0,0.12],0.25,'white')
@@ -266,9 +266,14 @@ ZUT=z+UR+0.42
 mid_pr+=[(52.2,ZUT)];mid_mats+=['concrete']   # top walk stops at the back frame's void plane
 strip(mss,mid_pr,mid_mats)
 strip(mss,[(35.0,33.4),(35.0,34.0),(53.0,39.0),(53.0,38.3),(35.0,33.4)],['white','roofm','white','underside'])
-facade_frame(MEM[0],MEM[1],ztop=38.3,dout=53.0)   # members' back wall: same column/slab frame as the outer wall
+# rear block (top-down check, 2026-11-19): straight-down imagery (Esri 2018 and 2026 flights) shows the members' roof at d 35.5-54
+# and a lower roof behind it to d 60 that the 1990s photo cannot see (hidden behind the main roof). Plan from the satellite;
+# height kept under the main roof's sight line from the photo camera (era-appropriate where no photo shows it).
+strip(mss,[(53.0,38.3),(53.0,31.0),(60.0,29.0)],['facade','roof'])
+facade_frame(MEM[0],MEM[1],ztop=29.0,dout=60.0)   # members' back wall: same column/slab frame as the outer wall
 for sx,fl in((MEM[0],False),(MEM[1],True)):
     endcap(sx,mid_pr[:-1],'white' if not fl else 'facade',fl)
+    endcap(sx,[(53.0,31.0),(60.0,29.0)],'facade',fl)
     V=[P([sx],d,z)[0] for d,z in[(35.0,33.4),(35.0,34.0),(53.0,39.0),(53.0,38.3)]];quad(*V,'white')
     if fl:   # left (west) end: open steel frame under the roof, as photographed
         a=P([sx],35.0,20.4)[0];b=P([sx],35.0,33.4)[0];c=P([sx],53.0,ZUT)[0];e=P([sx],53.0,38.3)[0]
@@ -359,15 +364,22 @@ def stair(s_bot,s_top,zb,zt,d0=DR_OUT,d1=DR_OUT+2.0):
     ls=sgrid(s_top,s_top-np.sign(s_bot-s_top)*1.5,1.5)   # top landing and door
     strip(ls,[(d0,zt),(d1,zt),(d1,zt-0.4)],['aislec','aislec'])
     sd_=s_top-np.sign(s_bot-s_top)*0.75;strip(sgrid(sd_-0.6,sd_+0.6,1.2),[(d0-0.02,zt),(d0-0.02,min(zt+2.1,ZR_OUT-0.9))],['black'])
-stair(179.5,172.0,ZG(179.5),14.0);stair(201.5,195.0,ZG(201.5),14.0)
-KD0,KD1,KH=33.6,35.3,1.8   # photo: kiosks stand under the roof, front just proud of the column line, about 1.8 m tall
-def kiosk(s0,s1,m):
-    z0=10.0 if s0<170 else ZG(s0);ss=sgrid(s0,s1,1.0)
-    strip(ss,[(KD0,z0+KH),(KD1,z0+KH),(KD1,z0)],['aislec',m])
+stair(179.5,172.0,ZG(179.5),14.0);stair(198.5,202.0,ZG(198.5),14.0)   # photo: rises toward larger s, top landing by the orange kiosk (samp5 check 2026-11-19)
+KD0,KD1=33.6,35.3   # photo: kiosks stand under the roof, front just proud of the column line
+# photo read at the column line (d 35): a coloured band on a dark base; band bottom/top z per group
+def kfloor(s):return 10.0 if s<175 else ZG(s)
+def kiosk(s0,s1,m,zb,zt):
+    ss=sgrid(s0,s1,1.0)
+    strip2(ss,lambda s:[(KD1,kfloor(s)),(KD1,zb)],['fvoid'])          # dark base, floor up to the band
+    strip(ss,[(KD0,zt),(KD1,zt),(KD1,zb)],['aislec',m])                # coloured band and its top
     for sx_,fl_ in((s0,False),(s1,True)):
-        a_=P([sx_],KD0,z0)[0];b_=P([sx_],KD1,z0)[0];c_=P([sx_],KD1,z0+KH)[0];e_=P([sx_],KD0,z0+KH)[0]
-        quad(b_,a_,e_,c_,m) if fl_ else quad(a_,b_,c_,e_,m)
-for s0,s1,m in((166.5,168.5,'kiosko'),(168.5,172.0,'redpaint'),(172.2,173.6,'kiosko'),(186,188.5,'kioskb'),(189.5,192,'kioskb'),(193,195,'kioskb'),(204.2,205.5,'kiosko'),(205.8,214.8,'redpaint'),(216.0,219.0,'redpaint')):kiosk(s0,s1,m)
+        g=kfloor(sx_)
+        for z0_,z1_,mm in((g,zb,'fvoid'),(zb,zt,m)):
+            a_=P([sx_],KD0,z0_)[0];b_=P([sx_],KD1,z0_)[0];c_=P([sx_],KD1,z1_)[0];e_=P([sx_],KD0,z1_)[0]
+            quad(b_,a_,e_,c_,mm) if fl_ else quad(a_,b_,c_,e_,mm)
+for s0,s1,m,zb,zt in((165.6,168.5,'kiosko',11.2,12.3),(168.5,172.6,'kioskr',11.2,12.3),(172.6,173.4,'kiosko',11.2,12.3),
+                     (186.8,191.2,'kioskb',11.3,12.8),(191.4,193.2,'concrete',11.3,12.8),(193.5,195.8,'kioskb',11.3,12.8),
+                     (204.2,205.5,'kiosko',11.8,13.0),(205.8,215.8,'kioskr',11.8,13.0)):kiosk(s0,s1,m,zb,zt)   # photo scan along d 35.3, 0.5 m steps
 # long low building on the near side, outside the concourse (photo x 480-725, y 458-516): green walls, grey sheet roof
 def lbuild(s0,s1,df,db,hf,hb,mf,mb):
     ss=sgrid(s0,s1,1.0)
