@@ -401,28 +401,52 @@ _TC={'lo':(216,208,203),'mid':(246,221,191),'up':(178,182,188)};_AX=np.array((0.
 def _bx(x0,x1,y0,y1,z0,z1):
     return [(x0,y0,z0),(x1,y0,z0),(x1,y1,z0),(x0,y1,z0),(x0,y0,z1),(x1,y0,z1),(x1,y1,z1),(x0,y1,z1)]
 _BF=[[0,3,2,1],[4,5,6,7],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7]]
-_T=np.array(_bx(-0.22,0.22,-0.22,0.20,0.40,0.46)+_bx(-0.22,0.22,-0.30,-0.24,0.46,0.86)+_bx(-0.025,0.025,-0.12,-0.04,0.0,0.40))
-_TF=[[f+o for f in ff] for o in (0,8,16) for ff in _BF]
-SEAT=[];SMAT=[];_depth=[]
+# pan, back, and two side standards from tread to pan (stadium seats stand on side frames, not a centre stalk)
+_T=np.array(_bx(-0.22,0.22,-0.22,0.20,0.40,0.46)+_bx(-0.22,0.22,-0.30,-0.24,0.46,0.86)+_bx(-0.25,-0.21,-0.22,0.04,0.0,0.40)+_bx(0.21,0.25,-0.22,0.04,0.0,0.40))
+_TF=[[f+o for f in ff] for o in (0,8,16,24) for ff in _BF]
+SEAT=[];SMAT=[];_depth=[];AST=[]
 def _seats(Ra,za,Rb,zb,rowsn,tier_of,aoff,vom):
     for r in range(1,rowsn+1):
         t0=(r-1)/rowsn;t1=r/rowsn;pz=za+(zb-za)*t0
         Rf=[Ra[i].lerp(Rb[i],t0) for i in range(N)];Rk=[Ra[i].lerp(Rb[i],t1) for i in range(N)]
-        R=[Rf[i].lerp(Rk[i],0.55) for i in range(N)];_depth.append((Rk[0]-Rf[0]).length)
-        cs=arcs(R);sc_=cs[N]/SL[N];tn=tier_of(r-1);s=0.3
-        while s<cs[N]-0.3:
-            i=max(0,min(N-1,max(k for k in range(N) if cs[k]<=s) if s>0 else 0));f=(s-cs[i])/max(cs[i+1]-cs[i],1e-9)
-            bay=(SU[i]+(SU[i+1]-SU[i])*f)*14.8;m=(bay-aoff)%7.4;d=min(m,7.4-m)*sc_
-            if d<0.6*sc_+0.22:s+=0.1;continue
-            bm_=(bay%14.8)
-            if vom and pz+0.01>=10.2*ZK and 3.2-0.25<=bm_<=5.0+0.25:s+=0.1;continue
-            j=(i+1)%N;p=R[i].lerp(R[j],f);fw=-(p-oc);fw.z=0;fw.normalize()
-            SEAT.append((p.x,p.y,pz,fw.x,fw.y))
-            c=np.array(_TC[tn])/255*(1.0 if (r-1)%2 else 0.96)+(1 if _R.random()<0.5 else -1)*0.075*_R.uniform(0.7,1.0)*_AX
-            SMAT.append(c);s+=0.5
+        R=[Rf[i]+(Rk[i]-Rf[i])*(1-0.38/max((Rk[i]-Rf[i]).length,0.5)) for i in range(N)];_depth.append((Rk[0]-Rf[0]).length)   # seat back 8 cm off the riser behind
+        cs=np.array(arcs(R));sc_=cs[N]/SL[N];tn=tier_of(r-1);bayv=np.array(SU)*14.8
+        # gaps along this row (aisles every 7.4 bay metres, the vomitory on the top rows), then each block between two
+        # gaps is packed edge to edge, centred, so every block ends on the same radial line in every row
+        gaps=[]
+        for c in np.arange(aoff-7.4,bayv[-1]+7.5,7.4):gaps.append((np.interp(c-0.6,bayv,cs),np.interp(c+0.6,bayv,cs)))
+        if r>1:   # aisle stairs: a half step on each row's tread (the rows rise ~0.6 m, so a real aisle has two steps per row)
+            for c in np.arange(aoff,bayv[-1]-0.1,7.4):
+                s=float(np.interp(c,bayv,cs));i=int(min(N-1,max(0,np.searchsorted(cs,s,side='right')-1)));f=(s-cs[i])/max(cs[i+1]-cs[i],1e-9);j=(i+1)%N
+                AST.append((Rf[i].lerp(Rf[j],f),Rk[i].lerp(Rk[j],f),pz,(zb-za)/rowsn,0.6*sc_))
+        if vom and pz+0.01>=10.2*ZK:
+            for b0 in np.arange(0,bayv[-1],14.8):gaps.append((np.interp(b0+3.2,bayv,cs),np.interp(b0+5.0,bayv,cs)))
+        gaps=sorted((max(0.0,a),min(cs[N],b)) for a,b in gaps if b>0 and a<cs[N])
+        edges=[0.0]+[x for g in gaps for x in g]+[cs[N]]
+        for a,b in zip(edges[0::2],edges[1::2]):
+            L=b-a-0.04;n=int((L+0.06)//0.5)
+            for k in range(n):
+                s=(a+b)/2+(k-(n-1)/2)*0.5;i=int(min(N-1,max(0,np.searchsorted(cs,s,side='right')-1)));f=(s-cs[i])/max(cs[i+1]-cs[i],1e-9)
+                j=(i+1)%N;p=R[i].lerp(R[j],f);fw=-(p-oc);fw.z=0;fw.normalize()
+                SEAT.append((p.x,p.y,pz,fw.x,fw.y))
+                c=np.array(_TC[tn])/255*(1.0 if (r-1)%2 else 0.96)+(1 if _R.random()<0.5 else -1)*0.075*_R.uniform(0.7,1.0)*_AX
+                SMAT.append(c)
 _seats(L0,1.6*ZK,L1,12.0*ZK,24,lambda r:'lo' if 1.6+10.4*(r+1)/24<=6.4+0.01 else 'mid',0.0,True)
 _seats(L1,15.0*ZK,L3,31.5*ZK,30,lambda r:'up',3.7,False)
 print('seats',len(SEAT),'tread depth min/max %.2f %.2f'%(min(_depth),max(_depth)))
+# drop any seat whose spot is taken by other structure (roof columns, walls): ray down from 1.2 m over the pan's
+# back, middle and front must land on the seat's own tread
+from mathutils.bvhtree import BVHTree
+_bv=BVHTree.FromObject(ob,bpy.context.evaluated_depsgraph_get());_keep=[]
+for x,y,z,fx,fy in SEAT:
+    ok=True
+    for d in (-0.28,0.0,0.18):
+        for sx in (-0.2,0.2):
+            q=Vector((x+fx*d+fy*sx,y+fy*d-fx*sx,z+1.2));h=_bv.ray_cast(q,Vector((0,0,-1)),2.0)
+            if h[0] is None or abs(h[0].z-z)>0.02:ok=False
+    _keep.append(ok)
+print('seats dropped (spot taken)',_keep.count(False))
+SEAT=[s for s,k in zip(SEAT,_keep) if k];SMAT=[s for s,k in zip(SMAT,_keep) if k]
 SE=np.array(SEAT,float);SC=np.clip(np.array(SMAT),0,1)
 # six plastics: each tier colour pushed grey-blue or tan (mean of its seats), so the export stays plain materials
 _TL=[];_TLc=[]
@@ -433,15 +457,38 @@ _TLc=np.clip(np.array(_TLc),0,1)
 mi=np.argmin(((SC[:,None,:]-_TLc[None,:,:])**2).sum(2),1)
 fwd=np.c_[SE[:,3:5],np.zeros(len(SE))];side=np.c_[fwd[:,1],-fwd[:,0],np.zeros(len(SE))]
 V=(SE[:,None,:3]+_T[None,:,0,None]*side[:,None,:]+_T[None,:,1,None]*fwd[:,None,:]+_T[None,:,2,None]*np.array([0,0,1.0])).reshape(-1,3)
+# block ends: a seat with no neighbour 0.5 m to one side gets that leg moved in 3 cm, flush with the pan
+import mathutils as _mu
+_kd=_mu.kdtree.KDTree(len(SE))
+for i,p in enumerate(SE[:,:3]):_kd.insert(p,i)
+_kd.balance();V=V.reshape(len(SE),len(_T),3)
+for i in range(len(SE)):
+    for sgn,box in ((-1,2),(1,3)):
+        q=SE[i,:3]+sgn*0.5*side[i]
+        if _kd.find(q)[2]>0.1:V[i,box*8:box*8+8]-=sgn*0.03*side[i]
+V=V.reshape(-1,3)
 nT=len(_T);F=(np.array(_TF)[None,:,:]+(np.arange(len(SE))*nT)[:,None,None]).reshape(-1,4)
 sme=bpy.data.meshes.new('seats3d');sme.vertices.add(len(V));sme.vertices.foreach_set('co',V.ravel())
 sme.loops.add(F.size);sme.loops.foreach_set('vertex_index',F.ravel());sme.polygons.add(len(F))
-sme.polygons.foreach_set('loop_start',np.arange(0,F.size,4));sme.polygons.foreach_set('material_index',np.repeat(mi,len(_TF)))
+sme.polygons.foreach_set('loop_start',np.arange(0,F.size,4));sme.polygons.foreach_set('material_index',np.where(np.tile(np.arange(len(_TF))>=len(_TF)//2,len(SE)),len(_TL),np.repeat(mi,len(_TF))))
 sme.update();sme.validate()
 for (tn,sgn),c in zip(_TL,_TLc):
     sm=bpy.data.materials.new('seat_%s_%s'%(tn,'blue' if sgn>0 else 'tan'));sm.use_nodes=True;sb=sm.node_tree.nodes['Principled BSDF']
     sb.inputs['Base Color'].default_value=(*[float(x)**2.2 for x in c],1);sb.inputs['Roughness'].default_value=0.55;sme.materials.append(sm)
+sm=bpy.data.materials.new('seat_legs_steel');sm.use_nodes=True;sb=sm.node_tree.nodes['Principled BSDF'];sb.inputs['Base Color'].default_value=(0.24,0.25,0.26,1);sb.inputs['Metallic'].default_value=0.6;sb.inputs['Roughness'].default_value=0.45;sme.materials.append(sm)
 sob=bpy.data.objects.new('seats3d',sme);bpy.context.scene.collection.objects.link(sob)
+# aisle half steps: box from mid-tread to the riser, half a riser high, 1.2 m wide (bay scale), concrete
+AV=[];AF=[]
+for fr,bk,z0,h,w in AST:
+    fw=bk-fr;fw.z=0;d=fw.length;fw.normalize();sd=Vector((fw.y,-fw.x,0));m=fr+fw*(d*0.5)
+    o=len(AV);AV+=[tuple(v) for v in _bx(-w,w,0,d*0.5,0,h*0.5)]
+    for k in range(o,o+8):
+        x,y,z=AV[k];q=m+sd*x+fw*y;AV[k]=(q.x,q.y,z0+z)
+    AF+=[[f+o for f in ff] for ff in _BF]
+ame=bpy.data.meshes.new('aisle_steps');ame.from_pydata(AV,[],AF);ame.update()
+am=bpy.data.materials.new('aisle_step');am.use_nodes=True;ab=am.node_tree.nodes['Principled BSDF']
+ab.inputs['Base Color'].default_value=(*[(c/255)**2.2 for c in (196,190,182)],1);ab.inputs['Roughness'].default_value=0.85;ame.materials.append(am)
+bpy.context.scene.collection.objects.link(bpy.data.objects.new('aisle_steps',ame));print('aisle steps',len(AST))
 json.dump({'n':len(SEAT),'seats':[[round(float(x),3) for x in s] for s in SEAT[::50]]},open(os.path.join(here,'seats_sample.json'),'w'))
 bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(blend))
 bpy.ops.object.select_all(action='SELECT')

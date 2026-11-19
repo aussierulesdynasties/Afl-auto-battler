@@ -16,13 +16,14 @@ and photo o2 (south-west, without it). No crowd was in the model; nothing remove
   writes `views_tex.json`; `scripts/views.py` renders it; `scripts/board_tex.py` makes the boards.
 
 ## 3D seats (2026-11-20)
-Real empty seats replace the painted ones: 58,291 seats, each a pan, a back and a pedestal (0.44 m wide at 0.5 m pitch,
-so a 6 cm gap between seats), one per row on the ~1.0 m concrete treads of both tiers (24 + 30 rows). Aisles and the
-vomitories stay where the stand texture paints them (every 7.4 m of a 14.8 m bay, upper tier offset 3.7 m), so they
-run straight up each tier. Colours are the texture pass's tier colours (lower cream, middle tan, upper grey), each seat
-pushed toward grey-blue or tan at random, as in the empty-seat photos; six plain plastic materials. The painted seats
-are gone from `tex/seats.png`: risers and treads are bare concrete with worn nosings. No crowd.
-- `proof/seat_board.jpg`: the photo crop beside two seat-height close-ups and the lower tier's rows and aisles.
+Real empty seats replace the painted ones: 56,473 seats, each a pan, a back and steel side legs (0.44 m pans at 0.5 m
+pitch; neighbours share one grey steel leg under each gap, block-end legs flush with the pan). Every seat sits on its
+own tread, back 8 cm off the riser, at the row's height (raycast: 0 off-tread, 54 rows = 54 heights); blocks packed
+edge to edge between straight aisles with a half step on every row; 260 seats that clashed with structure dropped.
+Aisles every 7.4 m of a 14.8 m bay (upper tier offset 3.7 m) plus the vomitories. Colours: the tier colours (lower
+cream, middle tan, upper grey), each seat pushed toward grey-blue or tan at random. Painted seats removed from
+`tex/seats.png` (bare concrete risers, worn nosings). No crowd.
+- `proof/seat_board.jpg`: the photo crop beside a photo-style view and two seat-height close-ups (SE, NW).
 - `proof/tex_board_1.jpg`: seats row re-rendered with the 3D seats.
 - Code: the seat block at the end of `scripts/build.py`; the riser repaint in `scripts/paint_tex.py` (rowband).
 
