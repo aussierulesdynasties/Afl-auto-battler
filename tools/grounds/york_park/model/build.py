@@ -95,7 +95,72 @@ def strip(mb, bs, prof, mats, rdir_out):
             tu, tv = TILE.get(m, (1, 1)); rm = 0.5 * (r0 + r1) if L > 1e-6 else r0
             ua = math.radians(ba) * rm / tu; ub = math.radians(bb) * rm / tu
             uv = [(ua, 0), (ub, 0), (ub, L / tv), (ua, L / tv)]
+            if dz < -1e-6: uv = [(ua, L / tv), (ub, L / tv), (ub, 0), (ua, 0)]   # walls going down: wall top = image top
             oriented(mb, [P3(ba, r0, z0), P3(bb, s0, w0), P3(bb, s1, w1), P3(ba, r1, z1)], m, out, uv)
+
+
+SEATS = None      # MB for the 3D seats, set by build_all
+AISLES = []       # aisle-stair bearings (for the seat-height proof)
+ROW = 0.8         # tread depth (m): one row of seats
+
+
+def stepped(p0, p1, n):
+    """the straight rake p0 -> p1 (r, z) as n treads with risers between them"""
+    (r0, z0), (r1, z1) = p0, p1; pts = [(r0, z0)]
+    for k in range(n):
+        zk = z0 + (z1 - z0) * k / (n - 1) if n > 1 else z0; rk = r0 + (r1 - r0) * (k + 1) / n
+        if k > 0: pts.append((pts[-1][0], zk))
+        pts.append((rk, zk))
+    return pts
+
+
+def terrace(prof, mats, segs):
+    """swap each seat segment k of prof for n stepped treads; segs = [(k, n)]"""
+    def p2(b):
+        P = prof(b)
+        for k, n in sorted(segs, reverse=True): P = P[:k] + stepped(P[k], P[k + 1], n) + P[k + 2:]
+        return P
+    M = list(mats)
+    for k, n in sorted(segs, reverse=True): M = M[:k] + ['conc_tread'] * (2 * n - 1) + M[k + 1:]
+    return p2, M
+
+
+def nrows(prof, bs, k):
+    P = prof(0.5 * (bs[0] + bs[-1])); return max(1, int(round((P[k + 1][0] - P[k][0]) / ROW)))
+
+
+def seat(P, t, o, z):
+    """one empty plastic seat: P = xy of the back of its tread, t = along the row, o = away from the pitch, z = tread top.
+    Pan 0.44 wide, 0.42 deep at +0.43, front lip, backrest +0.45..+0.85 leaning back, centre pedestal."""
+    P = np.array(P, float); t = np.array(t, float); o = np.array(o, float); hw = 0.22
+    def X(a, d, h):
+        q = P + t * a + o * d; return (q[0], q[1], z + h)
+    up = np.array([0, 0, 1.0]); o3 = np.array([*o, 0.0])
+    oriented(SEATS, [X(-hw, -0.66, 0.43), X(hw, -0.66, 0.43), X(hw, -0.24, 0.45), X(-hw, -0.24, 0.45)], 'seat_plastic', up, [(0, 0), (1, 0), (1, 1), (0, 1)])
+    oriented(SEATS, [X(-hw, -0.66, 0.36), X(hw, -0.66, 0.36), X(hw, -0.66, 0.43), X(-hw, -0.66, 0.43)], 'seat_plastic', -o3, [(0, 0), (1, 0), (1, .15), (0, .15)])
+    oriented(SEATS, [X(-hw, -0.24, 0.45), X(hw, -0.24, 0.45), X(hw, -0.14, 0.85), X(-hw, -0.14, 0.85)], 'seat_plastic', -o3 + up * 0.25, [(0, 0), (1, 0), (1, 1), (0, 1)])
+    oriented(SEATS, [X(-0.04, -0.45, 0.0), X(0.04, -0.45, 0.0), X(0.04, -0.45, 0.43), X(-0.04, -0.45, 0.43)], 'steel_galv', -o3)
+
+
+def seat_rows(bs, prof, k, n, aisle=12.0, gap=1.1):
+    """3D seats on the n treads of seat segment k of a polar stand: one every 0.5 m, an aisle stair every 12 m"""
+    b0, b1 = bs[0], bs[-1]; rf = prof(0.5 * (b0 + b1))[k][0]
+    ab = []; s = aisle / 2
+    while True:
+        b = b0 + math.degrees(s / rf)
+        if b > b1 - math.degrees(2 / rf): break
+        ab.append(b); s += aisle
+    AISLES.extend(ab)
+    for j in range(n):
+        b = b0 + math.degrees(0.6 / rf)
+        while True:
+            P = prof(b); (r0, z0), (r1, z1) = P[k], P[k + 1]
+            rr = r0 + (r1 - r0) * (j + 1) / n; zz = z0 + (z1 - z0) * j / (n - 1) if n > 1 else z0
+            if b > b1 - math.degrees(0.6 / rr): break
+            if all(abs(math.radians(b - a)) * rr > gap / 2 + 0.25 for a in ab):
+                a = math.radians(b); o = (math.sin(a), math.cos(a)); t = (math.cos(a), -math.sin(a))
+                seat(pol(b, rr), t, o, zz)
+            b += math.degrees(0.5 / rr)
 
 
 def endcap(mb, b, pts, m, sign):
@@ -128,10 +193,12 @@ def single(S, mb, mr):
         rf, ri, ro, rs0, rb = geo(b); zb = zr1 - 0.6 - (zr1 - zr0) * (S['back_in'] / (ro - ri))
         # front wall up, seats up the rake, back wall of the bowl up to the roof, cap, facade down
         return [(rs0, 0.0), (rs0, zs0), (rb - 0.4, zs1), (rb - 0.4, zb), (rb, zb), (rb, 0.0)]
-    strip(mb, bs, prof, [M['front'], M['seat'], 'conc_wall', 'conc_wall', M['back']], -1)
+    n = nrows(prof, bs, 1); tp, tm = terrace(prof, [M['front'], M['seat'], 'conc_wall', 'conc_wall', M['back']], [(1, n)])
+    strip(mb, bs, tp, tm, -1); seat_rows(bs, prof, 1, n)
     for b, sg in ((bs[0], -1), (bs[-1], 1)):
-        endcap(mb, b, prof(b), 'conc_wall', sg)
-    roof_strip(S, bs, geo, mr)
+        endcap(mb, b, tp(b), 'conc_wall', sg)
+    ribs = roof_strip(S, bs, geo, mr)
+    if S.get('brace'): bracing(S, ribs, geo, mr)
 
 
 def roof_strip(S, bs, geo, mr):
@@ -167,14 +234,14 @@ def roof_strip(S, bs, geo, mr):
         ri, ro = deck(b); a = math.radians(b); tan = np.array([math.cos(a), -math.sin(a), 0.0]) * sg
         oriented(mr, [P3(b, ri, zr0 - th - 0.6), P3(b, ro, zr1 - th - 0.3), P3(b, ro, zr1), P3(b, ri, zr0)], 'fascia', tan)
     # top trusses: a bottom chord on the deck, a raised top chord peaking 2.4 m above it 40% back from the front, diagonals
-    sp = S.get('rib', 0)
-    if not sp: return
+    sp = S.get('rib', 0); ribs = []
+    if not sp: return ribs
     b, b_end = bs[0], bs[-1]
     while True:
         ri, ro = deck(b); rm = 0.5 * (ri + ro); step = math.degrees(sp / rm)
         b += step if b != bs[0] else 0.35 * step
         if b > b_end - 0.2 * step: break
-        ri, ro = deck(b)
+        ri, ro = deck(b); ribs.append(b)
         z = lambda r: zr0 + (zr1 - zr0) * (r - ri) / (ro - ri)
         pk = ri + 0.4 * (ro - ri); H = 2.4
         A = P3(b, ri + 0.2, z(ri + 0.2) + 0.15); K = P3(b, pk, z(pk) + H); Bp = P3(b, ro - 0.2, z(ro - 0.2) + 0.15)
@@ -183,6 +250,26 @@ def roof_strip(S, bs, geo, mr):
         for f in (0.2, 0.55, 0.8):
             r1 = ri + f * (ro - ri); zt = (z(r1) + H * (r1 - ri) / (pk - ri)) if r1 < pk else (z(r1) + H * (ro - r1) / (ro - pk))
             mr.beam(P3(b, r1, z(r1) + 0.15), P3(b, r1, zt), 0.18, 0.18, 'steel_white')
+    return ribs
+
+
+def bracing(S, ribs, geo, mr):
+    """steel frame on the stand back (aerial4, GE): a white column under each roof truss standing 1.3 m proud of the
+    cladding up to the roof's rear edge (and one halfway between trusses), a top beam and a girt at 0.68 of the height joining them, and an X brace from
+    the girt to the ground in every third bay"""
+    zr1 = S['z_roof'][1]; H = zr1 - 0.5; zg = 0.68 * H; cols = []
+    full = [x for i, rb0 in enumerate(ribs) for x in ([rb0] if i == 0 else [0.5 * (ribs[i - 1] + rb0), rb0])]
+    for b in full:   # a column under each truss and one halfway between (aerial4: about twice as many columns as trusses)
+        rf, ri, ro, rs0, rb = geo(b); r = rb + 1.3; cols.append((b, r))
+        mr.beam(P3(b, r, 0.0), P3(b, r, H), 0.4, 0.4, 'steel_white')
+        mr.beam(P3(b, r, H - 0.3), P3(b, rb, H - 0.3), 0.3, 0.3, 'steel_white')
+    for i in range(len(cols) - 1):
+        (ba, ra), (bb, rb_) = cols[i], cols[i + 1]
+        mr.beam(P3(ba, ra, H - 0.2), P3(bb, rb_, H - 0.2), 0.3, 0.4, 'steel_white')
+        mr.beam(P3(ba, ra, zg), P3(bb, rb_, zg), 0.25, 0.3, 'steel_white')
+        if i % 3 == 1:
+            mr.beam(P3(ba, ra, zg), P3(bb, rb_, 0.3), 0.2, 0.2, 'steel_white')
+            mr.beam(P3(bb, rb_, zg), P3(ba, ra, 0.3), 0.2, 0.2, 'steel_white')
 
 
 def two_tier(S, mb, mr):
@@ -194,9 +281,11 @@ def two_tier(S, mb, mr):
         rf, ri, ro, rs0, rb = geo(b); rl = rs0 + S['lower_back']; rbx = rl + zb0
         zb = zr1 - 0.6 - (zr1 - zr0) * (S['back_in'] / (ro - ri))
         return [(rs0, 0.0), (rs0, zs0), (rl, zs1), (rl, zb1), (rl + 0.6, zb1), (rl + 0.6, zu0), (rb - 0.4, zu1), (rb - 0.4, zb), (rb, zb), (rb, 0.0)]
-    strip(mb, bs, prof, [M['front'], M['seat'], M['box'], 'conc_wall', 'conc_wall', M['seat'], 'conc_wall', 'conc_wall', M['back']], -1)
+    n1, n5 = nrows(prof, bs, 1), nrows(prof, bs, 5)
+    tp, tm = terrace(prof, [M['front'], M['seat'], M['box'], 'conc_wall', 'conc_wall', M['seat'], 'conc_wall', 'conc_wall', M['back']], [(1, n1), (5, n5)])
+    strip(mb, bs, tp, tm, -1); seat_rows(bs, prof, 1, n1); seat_rows(bs, prof, 5, n5)
     for b, sg in ((bs[0], -1), (bs[-1], 1)):
-        endcap(mb, b, prof(b), 'conc_wall', sg)
+        endcap(mb, b, tp(b), 'conc_wall', sg)
     roof_strip(S, bs, geo, mr)
 
 
@@ -205,9 +294,10 @@ def open_stand(S, mb):
     def prof(b):
         rf = fence_r(b % 360); rs0 = rf + S['seat_front']; rb = interp(S['back'], b)[0]
         return [(rs0, 0.0), (rs0, zs0), (rb - 0.4, zs1), (rb - 0.4, zs1 + 1.1), (rb, zs1 + 1.1), (rb, 0.0)]
-    strip(mb, bs, prof, [M['front'], M['seat'], 'conc_wall', 'conc_wall', M['back']], -1)
+    n = nrows(prof, bs, 1); tp, tm = terrace(prof, [M['front'], M['seat'], 'conc_wall', 'conc_wall', M['back']], [(1, n)])
+    strip(mb, bs, tp, tm, -1); seat_rows(bs, prof, 1, n)
     for b, sg in ((bs[0], -1), (bs[-1], 1)):
-        endcap(mb, b, prof(b), 'conc_wall', sg)
+        endcap(mb, b, tp(b), 'conc_wall', sg)
 
 
 def block(S, mb, mr):
@@ -215,9 +305,10 @@ def block(S, mb, mr):
     def prof(b):
         rf = fence_r(b % 360); rs0 = rf + S['front_seats'][0]; r1, r2 = interp(S['block'], b)
         return [(rs0, 0.0), (rs0, zs0), (r1, zs1), (r1, H), (r2, H), (r2, 0.0)]
-    strip(mb, bs, prof, [M['front'], M['seat'], M['back'], M['roof'], M['back']], -1)
+    n = nrows(prof, bs, 1); tp, tm = terrace(prof, [M['front'], M['seat'], M['back'], M['roof'], M['back']], [(1, n)])
+    strip(mb, bs, tp, tm, -1); seat_rows(bs, prof, 1, n)
     for b, sg in ((bs[0], -1), (bs[-1], 1)):
-        endcap(mb, b, prof(b), M['back'], sg)
+        endcap(mb, b, tp(b), M['back'], sg)
     if 'poly' in S:   # building traced from the satellite roof, moved by the lean at its height
         L = np.mean(np.array(S['lean'], float)[:, 1:], 0) / S['lean_z']
         P = [(x + L[0] * S['poly_z'], y + L[1] * S['poly_z']) for x, y in S['poly']]
@@ -286,20 +377,70 @@ def tower(mb, T):
         oriented(mb, q, 'steel_galv', np.mean(q, 0) - cen)
 
 
+def scoreboard(mb, L, R, inset, z0, z1, depth, frame, back, faces, rim, back_rim=None):
+    """board box between plan points L and R (pulled 'inset' toward the pitch): frame material all round, the screen
+    faces [(f0, f1, mat)] across the front inside a rim, a plain back panel inside the same rim"""
+    u = (R - L) / np.linalg.norm(R - L); n_in = np.array([-u[1], u[0]])
+    if np.dot(n_in, -(L + R) / 2) < 0: n_in = -n_in
+    c = (L + R) / 2 + n_in * inset; ang = math.degrees(math.atan2(u[1], u[0])); wd = np.linalg.norm(R - L)
+    mb.box(c, wd, depth, z1 - z0, ang, frame, z0=z0)
+    a0 = c - u * (wd / 2 - rim); a1 = c + u * (wd / 2 - rim); hz = z1 - z0 - 2 * rim
+    for sg, items in ((1, faces), (-1, [(0.0, 1.0, back)])):
+        for f0, f1, m in items:
+            p = c + n_in * sg * (depth / 2 + 0.02); A = a0 + (a1 - a0) * f0 + (p - c); Bq = a0 + (a1 - a0) * f1 + (p - c)
+            w_ = np.linalg.norm(Bq - A); tu, tv = TILE.get(m, (1, 1))
+            oriented(mb, [(*A, z0 + rim), (*Bq, z0 + rim), (*Bq, z1 - rim), (*A, z1 - rim)], m, np.array([*(n_in * sg), 0.0]),
+                     [(0, 0), (w_ / tu, 0), (w_ / tu, hz / tv), (0, hz / tv)])
+    if back_rim:   # a different colour round the back panel: a full-size face just behind the panel
+        p = c - n_in * (depth / 2 + 0.01); A = c - u * wd / 2 + (p - c); Bq = c + u * wd / 2 + (p - c)
+        oriented(mb, [(*A, z0), (*Bq, z0), (*Bq, z1), (*A, z1)], back_rim, np.array([*(-n_in), 0.0]))
+    return c, u, n_in, wd
+
+
+def pav_bank(mb, cc, uu, vv, Lp, run, h, hb):
+    """seat bank on a pavilion roof: stepped rows from the pitch edge (z h) back to a rear wall (z h + hb), 3D seats,
+    stepped side walls in the blue panels"""
+    n = max(2, int(round(run / ROW))); f0 = cc + vv * run
+    d = lambda j: run * j / n; zj = lambda j: h + hb * j / (n - 1)
+    Pt = lambda dd, ss, z: (*(f0 - vv * dd + uu * ss), z)
+    up = np.array([0, 0, 1.0]); vv3 = np.array([*vv, 0.0])
+    sec = [(0.0, h)]
+    for j in range(n):
+        if j > 0:
+            oriented(mb, [Pt(d(j), -Lp / 2, zj(j - 1)), Pt(d(j), Lp / 2, zj(j - 1)), Pt(d(j), Lp / 2, zj(j)), Pt(d(j), -Lp / 2, zj(j))], 'conc_tread', vv3)
+            sec.append((d(j), zj(j)))
+        oriented(mb, [Pt(d(j), -Lp / 2, zj(j)), Pt(d(j), Lp / 2, zj(j)), Pt(d(j + 1), Lp / 2, zj(j)), Pt(d(j + 1), -Lp / 2, zj(j))], 'conc_tread', up)
+        sec.append((d(j + 1), zj(j)))
+        sx = -Lp / 2 + 0.5
+        while sx < Lp / 2 - 0.45:
+            if abs(sx) > 0.55 + 0.25:   # aisle stair down the middle
+                seat(f0 - vv * d(j + 1) + uu * sx, uu, -vv, zj(j))
+            sx += 0.5
+    from mb import earclip
+    sec.append((run, h))
+    for s_ in (-1, 1):
+        for tri in earclip(ccw2(sec)):
+            oriented(mb, [Pt(dd, s_ * Lp / 2, z) for dd, z in tri], 'panel_blue', np.array([*(uu * s_), 0.0]))
+
+
 def extras(col):
     """NE gap between the North and Eastern stands: the scoreboard on the NE tower, its round base, two pavilions"""
     E = D.get('extras'); mb = MB('extras')
     if not E: return
     B = E['board']; L, R = np.array(B['left'], float), np.array(B['right'], float); z0, z1 = B['z']
-    u = (R - L) / np.linalg.norm(R - L); n_in = np.array([-u[1], u[0]])
-    if np.dot(n_in, -(L + R) / 2) < 0: n_in = -n_in
-    c = (L + R) / 2 + n_in * B['in']; ang = math.degrees(math.atan2(u[1], u[0])); wd = np.linalg.norm(R - L)
-    mb.box(c, wd, B['depth'], z1 - z0, ang, 'steel_galv', z0=z0)
-    fr = [c + n_in * (B['depth'] / 2 + 0.02) - u * (wd / 2 - 0.3), c + n_in * (B['depth'] / 2 + 0.02) + u * (wd / 2 - 0.3)]
-    oriented(mb, [(*fr[0], z0 + 0.3), (*fr[1], z0 + 0.3), (*fr[1], z1 - 0.3), (*fr[0], z1 - 0.3)], 'screen_off',
-             np.array([*n_in, 0.0]), [(0, 0), ((wd - 0.6) / 2, 0), ((wd - 0.6) / 2, (z1 - z0 - 0.6) / 2), (0, (z1 - z0 - 0.6) / 2)])
+    c, u, n_in, wd = scoreboard(mb, L, R, B['in'], z0, z1, B['depth'], B['frame'], B['back'], [(0.0, 1.0, 'screen_off')], B['rim'], B.get('back_rim'))
     for k in (-1, 1):   # two legs down to the base
-        p = c + u * k * (wd / 2 - 1.5); mb.box(p, 0.6, 0.6, z0, ang, 'steel_galv')
+        p = c + u * k * (wd / 2 - 1.5); mb.box(p, 0.6, 0.6, z0, math.degrees(math.atan2(u[1], u[0])), 'steel_galv')
+    W = E.get('board_sw')
+    if W:   # the older SW scoreboard on the SW corner building: LED screen plus a dark side panel toward the Gunns
+        b0, b1 = W['b']; L, R = np.array(pol(b0, W['r'])), np.array(pol(b1, W['r'])); z0, z1 = W['z']
+        c, u, n_in, wd = scoreboard(mb, L, R, 0.0, z0, z1, W['depth'], W['frame'], W['back'],
+                                    [(0.0, W['split'], 'screen_off'), (W['split'], 1.0, 'board_side')], W['rim'])
+        ang = math.degrees(math.atan2(u[1], u[0])); back = c - n_in * (W['depth'] / 2 + 0.03)
+        for k in (-1, 1):   # maroon side posts and a white top beam on the back (GE l000, l180)
+            p = back + u * k * (wd / 2 - 0.25); mb.box(p, 0.5, 0.3, z1 - z0 + 0.2, ang, W['post'], z0=z0 - 0.1)
+        mb.box(back, wd, 0.32, 0.5, ang, 'paint_white', z0=z1 - 0.4)
+        mb.box(c, wd - 1.0, W['depth'] * 0.8, z0 - W['base'], ang, W['back'], z0=W['base'])
     G = E['ring']; mb.cyl(G['c'], G['r'], 0, G['h'], 'conc_wall', n=36, top='paving')
     for P in E['pavilions']:
         a = math.radians(P['a']); uu = np.array([math.cos(a), math.sin(a)]); vv = np.array([-uu[1], uu[0]]); cc = np.array(P['c'], float)
@@ -309,13 +450,10 @@ def extras(col):
         # seat bank on the roof: rises from the pitch edge to a rear wall at the middle line
         f0, f1 = cc + vv * Wp / 2, cc
         q = lambda base_, s_, z: (*(base_ + uu * s_ * Lp / 2), z)
-        oriented(mb, [q(f0, -1, h), q(f0, 1, h), q(f1, 1, h + hb), q(f1, -1, h + hb)], 'seats_green', np.array([*vv, 1.0]),
-                 [(0, 0), (Lp / 12, 0), (Lp / 12, 1.0 * Wp / 2 / 3.2), (0, Wp / 2 / 3.2)])
+        pav_bank(mb, cc, uu, vv, Lp, Wp / 2, h, hb)
         oriented(mb, [q(f1, -1, h), q(f1, 1, h), q(f1, 1, h + hb + 0.4), q(f1, -1, h + hb + 0.4)], 'panel_blue', np.array([*(-vv), 0.0]))
         oriented(mb, [q(f1, -1, h + hb + 0.4), q(f1, 1, h + hb + 0.4), q(f1 + vv * 0.2, 1, h + hb + 0.4), q(f1 + vv * 0.2, -1, h + hb + 0.4)],
                  'paint_white', np.array([0, 0, 1.0]))
-        for s_ in (-1, 1):
-            oriented(mb, [q(f0, s_, h), q(f1, s_, h), q(f1, s_, h + hb)], 'panel_blue', np.array([*(uu * s_), 0.0]))
     for G in D.get('signs', []):   # flat panel 5 cm proud of the facade, facing the pitch
         c = np.array(G['c'], float); u = np.array(G['u'], float); n = np.array([u[1], -u[0]])
         if np.dot(n, -c) < 0: n = -n
@@ -326,12 +464,13 @@ def extras(col):
 
 def build_all():
     clear(); col = bpy.context.scene.collection
-    mb = MB('stands'); mr = MB('roofs')
+    global SEATS
+    mb = MB('stands'); mr = MB('roofs'); SEATS = MB('seats')
     for S in D['stands']:
         {'single': lambda: single(S, mb, mr), 'two_tier': lambda: two_tier(S, mb, mr),
          'open': lambda: open_stand(S, mb), 'block': lambda: block(S, mb, mr)}[S['kind']]()
     mb.build(col); mr.build(col)
-    fence(col); extras(col)
+    fence(col); extras(col); SEATS.build(col)
     if not os.environ.get('NOCONC'): concourse(col)
     if D['towers']:
         mt = MB('towers')

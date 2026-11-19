@@ -79,6 +79,29 @@ if 'seats' in jobs:  # empty seats: from the boundary looking up into the Gunns 
         look(p + mathutils.Vector((0, 0, 1.7)), p + s * 20 + mathutils.Vector((0, 0, 5)))
         shot(os.path.join(out, f'seats_{name}.png'))
     cd.angle = math.radians(40)
+if 'boards' in jobs:   # both scoreboards, front and back, oblique so the gap to the NE tower shows
+    import numpy as np
+    cd.angle = math.radians(45); E = build.D['extras']
+    B = E['board']; L, R = np.array(B['left']), np.array(B['right']); c = (L + R) / 2; u = (R - L) / np.linalg.norm(R - L)
+    n = np.array([-u[1], u[0]]); n = n if np.dot(n, -c) > 0 else -n
+    W = E['board_sw']; b = 0.5 * sum(W['b']); c2 = np.array(build.pol(b, W['r'])); n2 = -c2 / np.linalg.norm(c2)
+    u2 = np.array([-n2[1], n2[0]])
+    for name, cc, nn, uu, zc, d, side, h in (('ne_front', c, n, u, 9.2, 26, 9, 3.0), ('ne_back', c, -n, u, 9.2, 18, 9, 5.0),
+                                             ('sw_front', c2, n2, u2, 13.0, 34, 8, 6.0), ('sw_back', c2, -n2, u2, 13.0, 24, 9, 8.0)):
+        tg = mathutils.Vector((*cc, zc)); look(tg + mathutils.Vector((*(nn * d + uu * side), h - zc + 2)), tg)
+        shot(os.path.join(out, f'board_{name}.png'))
+    cd.angle = math.radians(40)
+if 'seatcu' in jobs:   # empty seats from seat height: eye 1.2 m above a mid-rake tread, looking along the row
+    cd.angle = math.radians(60)
+    for b_, r_off, name in ((12, 9.0, 'north'), (245, 7.0, 'gunns')):
+        b = min(build.AISLES, key=lambda a: abs(a - b_))   # stand in the aisle stair, eye 1.2 m above the tread
+        s_ = mathutils.Vector((math.sin(math.radians(b)), math.cos(math.radians(b)), 0)); t_ = mathutils.Vector((s_.y, -s_.x, 0))
+        p = s_ * (build.fence_r(b) + r_off)
+        ok, loc, *_ = sc.ray_cast(dg, p + mathutils.Vector((0, 0, 8.4)), mathutils.Vector((0, 0, -1)))
+        z = (loc.z if ok else 4.0)
+        eye = p + mathutils.Vector((0, 0, z + 1.2)); look(eye, eye + t_ * 10 - s_ * 2.5 + mathutils.Vector((0, 0, -1.6)))
+        shot(os.path.join(out, f'seatcu_{name}.png'))
+    cd.angle = math.radians(40)
 if 'sign' in jobs:   # the name sign from the pitch, as in the photo
     cd.angle = math.radians(30)
     G = build.D['signs'][0]; c = mathutils.Vector((*G['c'], G['z0'] + G['h'] / 2))

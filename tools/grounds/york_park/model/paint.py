@@ -60,7 +60,13 @@ def seats(name, col, tread=(112, 114, 116), aisle=(140, 140, 138)):
     save(name, a, (12.0, 3.2))
 
 
-seats('seats_green', (34, 88, 84))           # dark teal-green plastic seats (drone5, aerial4)
+# 3D seat plastic (aerial4, drone5): teal-green, a darker moulded rim and a soft sheen down the middle. UV 0-1 per face.
+a = base(128, 128, (70, 100, 90), 2, 6)
+a[:, :8] *= 0.78; a[:, -8:] *= 0.78; a[:6] *= 0.85; a[-6:] *= 0.7
+a[:, 40:88] *= (1 + 0.10 * np.sin(np.linspace(0, math.pi, 48)))[None, :, None]
+save('seat_plastic', a, (1, 1))
+# concrete treads and risers under the seats: plain grey, a dark nosing line, scuffing
+a = base(512, 512, (138, 138, 134), 5, 14); a[:10] *= 0.7; weather(a, 0.06, 10, 20, top_dark=False); save('conc_tread', a, (2.0, 0.8))
 
 # ---- concrete: precast panels 3.0 x 1.5 m with joints, rain streaks, blotches ----
 def concrete(name, col, pu=3.0, pv=1.5, tile=(6.0, 6.0)):
@@ -72,7 +78,7 @@ def concrete(name, col, pu=3.0, pv=1.5, tile=(6.0, 6.0)):
 
 concrete('conc_wall', (176, 172, 164))
 # paving: concourse concrete slabs 1.2 m, saw joints, stains
-a = base(N, N, (178, 176, 170), 7, 24); p = N / 2.4
+a = base(N, N, (112, 104, 98), 7, 24); p = N / 2.4
 for k in range(2): a[int(k * 1.2 * p):int(k * 1.2 * p) + 3] *= 0.7; a[:, int(k * 1.2 * p):int(k * 1.2 * p) + 3] *= 0.7
 for _ in range(25):
     cx, cy, rr = R.integers(0, N), R.integers(0, N), R.integers(10, 60); yy, xx = np.ogrid[:N, :N]
@@ -127,17 +133,16 @@ def _nw(a, pu, pv, h, w):     # NW stand back: grey render with a red-brick pier
     for k in range(4): a[:, int((1.0 + k * 1.25) * pu):int((1.0 + k * 1.25) * pu) + 3] *= 0.8
 
 
-def _lattice(a, pu, pv, h, w):  # N stand back: white X bracing over dark blue sheet, column every 6 m
-    a[:] = np.array((46, 62, 98)) + fine(h, w, 4)[:, :, None]
-    for k in range(int(3.6 / 0.4)): a[int(k * 0.4 * pv):int(k * 0.4 * pv) + 2] *= 0.8
-    yy, xx = np.mgrid[0:h, 0:w]; u = xx / pu; v = yy / pv
-    for d in (np.abs(u / 6 * 3.6 - v), np.abs((6 - u) / 6 * 3.6 - v)): a[d < 0.09] = (232, 234, 232)
-    a[:, :int(0.3 * pu)] = (232, 234, 232); a[:int(0.2 * pv)] = (232, 234, 232)
+def _lattice(a, pu, pv, h, w):  # N stand back, one tile = the full 8.9 m wall (aerial4): teal ribbed cladding, a lighter grey
+    # band under the roof's rear edge; the white frame and X bracing are modelled (build.bracing), not painted
+    a[:] = np.array((74, 107, 116)) + fine(h, w, 4)[:, :, None] + noise(h, w, 8, 10)[:, :, None]
+    for k in range(int(6 / 0.25)): a[:, int(k * 0.25 * pu):int(k * 0.25 * pu) + 3] *= 0.86      # sheet ribs
+    a[:int(1.6 * pv)] = np.array((168, 176, 178)) + fine(int(1.6 * pv), w, 3)[:, :, None]
+    a[int(1.6 * pv):int(1.6 * pv) + 6] *= 0.6
 
 
 def _es(a, pu, pv, h, w):     # east-south back: pale grey sheet cladding, white columns every 8.3 m (one per tile edge), dark louvres
     for k in range(int(6 / 0.5)): a[:, int(k * 0.5 * pu):int(k * 0.5 * pu) + 3] *= 0.84
-    a[:, :int(0.35 * pu)] = (234, 234, 232)
     a[int(0.6 * pv):int(1.3 * pv), int(1.0 * pu):int(5.0 * pu)] = (70, 76, 84)
     for k in range(10): a[int(0.6 * pv) + int(k * 0.07 * pv):int(0.6 * pv) + int(k * 0.07 * pv) + 3, int(1.0 * pu):int(5.0 * pu)] = (120, 126, 132)
 
@@ -163,13 +168,13 @@ def _cw(a, pu, pv, h, w):     # old Centre West, one tile = the full 12 m (row 0
 
 
 def _boxes(a, pu, pv, h, w):  # Gunns box level: tinted glass with mullions every 1.5 m and a white sill
-    a[:] = np.array((42, 52, 60)) + fine(h, w, 3)[:, :, None] + noise(h, w, 6, 18)[:, :, None]
+    a[:] = np.array((28, 36, 44)) + fine(h, w, 3)[:, :, None] + noise(h, w, 6, 18)[:, :, None]
     for k in range(4): a[:, int(k * 1.5 * pu):int(k * 1.5 * pu) + 6] = (196, 200, 202)
     a[int(2.9 * pv):] = (214, 216, 214); a[:int(0.3 * pv)] = (214, 216, 214)
 
 
-facade('facade_nw', (176, 178, 176), _nw); facade('facade_lattice', (46, 62, 98), _lattice)
-facade('facade_es', (196, 198, 198), _es); facade('facade_gunns', (150, 164, 184), _gunns)
+facade('facade_nw', (176, 178, 176), _nw); facade('facade_lattice', (74, 107, 116), _lattice, (6.0, 8.9), 1024, 1520)
+facade('facade_es', (196, 198, 198), _es); facade('facade_gunns', (110, 132, 146), _gunns)
 facade('facade_cw', (226, 226, 222), _cw, (6.0, 12.0), 1024, 2048); facade('boxes_glass', (42, 52, 60), _boxes)
 a = base(512, 512, (46, 56, 66), 2, 18); a[:, 250:258] = (180, 184, 186); a[250:258] = (180, 184, 186); save('glass', a, (3.0, 3.0))
 # light tower head: 4 x 8 lamps in a white frame
@@ -188,7 +193,7 @@ def _pav(a, pu, pv, h, w):     # white render, dark glazed band 1.0-2.6 m with a
 
 
 def _panel(a, pu, pv, h, w):   # blue sheet panels, a light joint every 1.5 m and a white capping strip
-    a[:] = np.array((58, 92, 150)) + fine(h, w, 4)[:, :, None] + noise(h, w, 8, 14)[:, :, None]
+    a[:] = np.array((54, 84, 96)) + fine(h, w, 4)[:, :, None] + noise(h, w, 8, 14)[:, :, None]
     for k in range(4): a[:, int(k * 1.5 * pu):int(k * 1.5 * pu) + 4] = (150, 170, 196)
     a[:int(0.25 * pv)] = (220, 222, 220)
 
@@ -199,11 +204,18 @@ def _sw(a, pu, pv, h, w):      # SW corner building, one tile = full 9 m height:
     a[:int(0.4 * pv)] = (226, 226, 222)
 
 
-facade('facade_sw', (218, 218, 214), _sw, (6.0, 9.0), 1024, 1536); facade('facade_pav', (214, 214, 208), _pav); facade('panel_blue', (58, 92, 150), _panel)
+facade('facade_sw', (218, 218, 214), _sw, (6.0, 9.0), 1024, 1536); facade('facade_pav', (214, 214, 208), _pav); facade('panel_blue', (54, 84, 96), _panel)
 a = base(512, 512, (24, 26, 30), 4, 14)
 for k in range(0, 512, 16): a[:, k:k + 2] *= 0.6; a[k:k + 2] *= 0.6        # LED module joints
 a[:10] = (60, 62, 66); a[-10:] = (60, 62, 66); a[:, :10] = (60, 62, 66); a[:, -10:] = (60, 62, 66)
 save('screen_off', a, (2.0, 2.0))
+# scoreboard frames and backs (GE 2026 l225/l270 for the NE board, grandstand photo and GE l000/l180 for the SW board)
+a = base(512, 512, (76, 108, 140), 3, 8); a[:, 250:254] *= 0.8; a[250:254] *= 0.8; weather(a, 0.08, 8, 12); save('board_frame', a, (2.0, 2.0))
+a = base(512, 512, (60, 62, 66), 3, 10)
+for k in range(0, 512, 128): a[:, k:k + 3] *= 0.7; a[k:k + 3] *= 0.7
+save('board_back', a, (2.0, 2.0))
+a = base(256, 256, (40, 46, 54), 3, 8); save('board_side', a, (2.0, 2.0))
+a = base(256, 256, (112, 42, 46), 5, 14); weather(a, 0.12, 12, 10); save('steel_maroon', a, (2.0, 2.0))
 
 # Name sign on the old Centre West front (photo ref/UTAS-Stadium-grandstand.jpg): light panel, red crest, two-line serif name.
 # Lettering is drawn here with the system Georgia face; the crest is a hand-drawn rampant lion in the photo's red.
@@ -212,19 +224,28 @@ SW_, SH_ = 2048, 512
 im = Image.fromarray(np.clip(base(SH_, SW_, (226, 228, 224), 3, 8), 0, 255).astype(np.uint8)); dr = ImageDraw.Draw(im)
 dr.rectangle([0, 0, SW_ - 1, SH_ - 1], outline=(150, 152, 150), width=10)
 red = (196, 30, 40)
-lion = [(0.30, 0.95), (0.36, 0.62), (0.22, 0.55), (0.12, 0.62), (0.05, 0.50), (0.16, 0.40), (0.10, 0.22), (0.24, 0.05), (0.34, 0.18),
-        (0.42, 0.10), (0.48, 0.24), (0.58, 0.18), (0.56, 0.36), (0.70, 0.30), (0.80, 0.42), (0.66, 0.50), (0.78, 0.62), (0.92, 0.48),
-        (0.98, 0.62), (0.82, 0.78), (0.66, 0.72), (0.60, 0.95), (0.50, 0.80), (0.42, 0.95)]
-cx0, cy0, cs = 90, 70, 370
-dr.polygon([(cx0 + u * cs, cy0 + v * cs) for u, v in lion], fill=red)
-for k in range(5): dr.line([(cx0 + 0.18 * cs + k * 34, cy0 + 0.30 * cs), (cx0 + 0.30 * cs + k * 34, cy0 + 0.42 * cs)], fill=(226, 228, 224), width=8)
+red = (170, 34, 40); blk = (30, 26, 28)
+lion = [(0.10, 0.16), (0.18, 0.08), (0.30, 0.02), (0.46, 0.06), (0.52, 0.16), (0.50, 0.28), (0.58, 0.40), (0.62, 0.55), (0.70, 0.62),
+        (0.88, 0.48), (0.96, 0.30), (1.00, 0.22), (0.92, 0.26), (0.86, 0.44), (0.74, 0.66), (0.70, 0.78), (0.66, 0.98), (0.48, 0.98),
+        (0.54, 0.90), (0.52, 0.80), (0.40, 0.86), (0.22, 0.84), (0.30, 0.76), (0.40, 0.70), (0.36, 0.58), (0.30, 0.46), (0.16, 0.50),
+        (0.04, 0.58), (0.06, 0.50), (0.18, 0.40), (0.10, 0.36), (0.00, 0.30), (0.04, 0.24), (0.18, 0.30), (0.22, 0.26), (0.12, 0.24),
+        (0.08, 0.20)]
+cx0, cy0, ch = 110, 50, 410; cw = 0.62 * ch
+L_ = lambda u, v: (cx0 + u * cw, cy0 + v * ch)
+dr.polygon([L_(u, v) for u, v in lion], fill=red, outline=blk, width=7)
+for k in range(5):   # mane
+    dr.line([L_(0.26 + 0.05 * k, 0.07 + 0.02 * k), L_(0.20 + 0.06 * k, 0.24 + 0.02 * k)], fill=blk, width=7)
+dr.ellipse([L_(0.17, 0.12), L_(0.22, 0.15)], fill=blk)                                       # eye
+for (u0, v0, u1, v1) in ((0.02, 0.29, 0.10, 0.31), (0.05, 0.55, 0.12, 0.53), (0.50, 0.97, 0.62, 0.97), (0.24, 0.83, 0.34, 0.82)):
+    dr.line([L_(u0, v0), L_(u1, v1)], fill=blk, width=6)                                      # claws
+dr.line([L_(0.40, 0.50), L_(0.52, 0.66)], fill=blk, width=6); dr.line([L_(0.58, 0.60), L_(0.56, 0.82)], fill=blk, width=6)   # haunch, leg
 F1 = ImageFont.truetype('C:/Windows/Fonts/georgia.ttf', 150); F2 = ImageFont.truetype('C:/Windows/Fonts/georgia.ttf', 96)
 def spaced(y, txt, f, x=560, sp=14):
     for ch in txt:
         dr.text((x, y), ch, font=f, fill=(66, 66, 72)); x += dr.textlength(ch, font=f) + sp
     return x
-x = spaced(70, 'UNIVERSITY', F1); spaced(118, 'of', F2, x + 30, 4)
-spaced(270, 'TASMANIA', F1, 560, 40)
+x = spaced(70, 'UNIVERSITY', F1, 440); spaced(118, 'of', F2, x + 30, 4)
+spaced(270, 'TASMANIA', F1, 440, 40)
 a = np.asarray(im, float) + noise(SH_, SW_, 10, 6)[:, :, None]; save('sign_utas', a, (7.0, 1.75))
 
 json.dump(TILE, open(OUT + 'tiles.json', 'w', newline=''), indent=0)
