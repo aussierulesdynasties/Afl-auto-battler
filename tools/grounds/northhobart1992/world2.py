@@ -48,6 +48,10 @@ def look(eye,tgt,lens,Wp,Hp):
     eye=Vector(eye);d=(Vector(tgt)-eye);co.location=eye;co.rotation_euler=d.to_track_quat('-Z','Y').to_euler()
     cd.sensor_fit='HORIZONTAL';cd.sensor_width=36;cd.lens=lens;sc.render.resolution_x,sc.render.resolution_y=Wp,Hp
 def render(fn):sc.render.filepath=fn;bpy.ops.render.render(write_still=True)
+for _n in('gor_roof','gor_ceiling'):   # the roof is flat planes on a 0.1 m grid: weld and merge coplanar faces (same shape, far fewer vertices; keeps the GLB under 50 MB)
+    _m=bpy.data.objects[_n].data;_b=bmesh.new();_b.from_mesh(_m);bmesh.ops.remove_doubles(_b,verts=_b.verts,dist=1e-4)
+    bmesh.ops.dissolve_limit(_b,angle_limit=math.radians(0.5),verts=_b.verts,edges=_b.edges,delimit={'MATERIAL','UV'});bmesh.ops.triangulate(_b,faces=_b.faces)
+    _b.to_mesh(_m);_b.free();print('DISSOLVE',_n,len(_m.vertices))
 if MODE=='glb':
     bpy.ops.export_scene.gltf(filepath=OUT,export_format='GLB');sys.exit(0)
 if MODE=='aerial':
