@@ -13,9 +13,9 @@ Model: `leederville_oval.glb`. Build: `build/` (build.py, tex_*.py, grass_fix.py
 4. **Top-down overlay on satellite:** `topdown/topdown_satellite_overlay.png`, `topdown/topdown_outlines_on_satellite.png`
    (10 m grid; outlines sit on the satellite edges within about 2 m). The apron is tan dirt where the satellite is tan
    (north and east) and grass only where the satellite is green, read per metre from the satellite (`build/apron_mask.py`).
-5. **Textures:** `textures_photo_vs_handmade_1..3.png` (photo crop beside hand-made texture per surface), each judged against
+5. **Textures:** `textures_photo_vs_handmade_1..4.png` (photo crop beside hand-made texture per surface), each judged against
    its crop. Crops fixed: render_beige = Members tower render, concrete = Members front wall, fascia_cream = media band;
-   new apron_dirt row (satellite crop). `texture_stddev.txt` is for information only. No photo pixels on the model.
+   new apron_dirt row (satellite crop). Also re-cropped to the real surface: fence, galv pole, roof edge, shop glass, awning, orange band, plant roof; south seats and steps from the empty blue stand (gn26), seat colour = its measured blue. `texture_stddev.txt` is for information only. No photo pixels on the model.
 6. **Seating close-up, empty seats:** `closeups/ms_seats.png` (Members Stand: maroon bucket seats, E14). All three stands carry
    empty seats: green grandstand, maroon Members, blue south stand (its seats were missing before; fixed). No crowd anywhere.
 7. **Signs beside their reference crops:** `signs_photo_vs_model.png`: Members band (SUBIACO FOOTBALL CLUB + SFC monogram |
