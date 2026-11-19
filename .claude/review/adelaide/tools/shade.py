@@ -69,13 +69,36 @@ def build(obj):
     grain = g.noise(obj_co, 1.3, 6.0)                       # large-scale weathering, about 1 m
     fine = g.noise(uvv, 9.0, 3.0)                           # fine grain, about 10 cm
     wear = g.m('ADD', 0.9, g.m('MULTIPLY', g.m('ADD', grain, g.m('MULTIPLY', fine, 0.5)), 0.13))
+    # texture pass (director 2026-11-19): blotching, rain streaks and grime, all procedural
+    xyz = g.node('ShaderNodeSeparateXYZ'); g.link(obj_co, xyz.inputs[0]); wz = xyz.outputs[2]
+    geo = g.node('ShaderNodeNewGeometry'); nsep = g.node('ShaderNodeSeparateXYZ'); g.link(geo.outputs['Normal'], nsep.inputs[0])
+    wall = g.m('SUBTRACT', 1.0, g.m('ABSOLUTE', nsep.outputs[2]))            # 1 on a vertical face, 0 on a flat one
+    sv = g.node('ShaderNodeCombineXYZ'); g.link(g.m('MULTIPLY', xyz.outputs[0], 6.0), sv.inputs[0])
+    g.link(g.m('MULTIPLY', xyz.outputs[1], 6.0), sv.inputs[1]); g.link(g.m('MULTIPLY', wz, 0.3), sv.inputs[2])
+    def nz(vec, sc, detail=3.0, lo=0.35, hi=0.65):  # noise stretched to 0..1
+        return g.m('MINIMUM', 1.0, g.m('MAXIMUM', 0.0, g.m('DIVIDE', g.m('SUBTRACT', g.noise(vec, sc, detail), lo), hi - lo)))
+    region = nz(obj_co, 0.22, 2.0, 0.45, 0.6)                                            # streaks only in some stretches of wall
+    streak = g.m('MULTIPLY', nz(sv.outputs[0], 0.45, 2.0, 0.55, 0.7), region)              # sparse vertical runs, 10-30 cm wide
+    blotch = g.m('ADD', 0.88, g.m('MULTIPLY', nz(obj_co, 0.35, 3.0), 0.24))                # weathered patches about 3 m across
+    soft = g.m('ADD', 0.95, g.m('MULTIPLY', nz(obj_co, 0.35, 3.0), 0.1))                  # the same, gentler (membranes)
+    GRIME = g.rgb((0.16, 0.15, 0.13))
+
+    def wnoise(x):
+        n = g.node('ShaderNodeTexWhiteNoise', noise_dimensions='1D'); g.link(x, n.inputs['W']); return n.outputs['Value']
+
+    def under_ledge(period):  # 1 just under each ledge or joint every `period` m of height, fading to 0 at the next one down
+        d = g.frac(wz, period); return g.m('MULTIPLY', d, d)
 
     out = {}  # kind -> (colour, roughness, metallic)
     # 0 plain: the material colour with fine weathering
-    out[0] = (g.scale(C, wear), 0.8, 0.0)
+    pg = g.m('MULTIPLY', g.m('MULTIPLY', streak, g.m('SUBTRACT', 1.0, g.frac(wz, 2.5))), g.m('MULTIPLY', wall, 0.5))
+    chalky = g.m('ADD', 0.84, g.m('MULTIPLY', nz(obj_co, 0.5, 3.0), 0.32))                    # sun-faded, chalky paint
+    qid = g.m('ADD', g.m('FLOOR', g.m('DIVIDE', u, 2.4)), g.m('MULTIPLY', g.m('FLOOR', g.m('DIVIDE', v, 1.2)), 41.0))
+    qtone = g.m('ADD', 0.85, g.m('MULTIPLY', wnoise(qid), 0.3))                                # each painted sheet fades its own way
+    out[0] = (g.mix(pg, g.scale(C, g.m('MULTIPLY', g.m('MULTIPLY', wear, chalky), qtone)), g.scale(C, 0.6)), 0.8, 0.0)
     # 1 seats: rows every 0.8 m (step tread + seat back), seats 0.5 m wide, aisles every 14 m
     r = g.frac(v, 0.8); su = g.frac(u, 0.5); au = g.frac(u, 14.0)
-    tread = g.rgb((0.20, 0.20, 0.19))
+    tread = g.scale(g.rgb((0.20, 0.20, 0.19)), g.m('MULTIPLY', g.m('ADD', 0.45, g.m('MULTIPLY', r, 1.6)), blotch))  # darkest under the seat in front
     seat = g.scale(C, g.m('ADD', 0.95, g.m('MULTIPLY', fine, 0.1)))
     seat = g.mix(g.band(su, 0.0, 0.08), seat, g.scale(C, 0.45))              # gap between seats
     seat = g.mix(g.band(r, 0.82, 0.9), seat, g.scale(C, 1.25))               # lit top of the seat back
@@ -84,14 +107,36 @@ def build(obj):
     out[1] = (col, 0.55, 0.0)
     # 2 concrete: panels 4 m x 3 m with dark joints, weathered grain
     j = g.m('MAXIMUM', g.band(g.frac(u, 4.0), 0.0, 0.006), g.band(g.frac(v, 3.0), 0.0, 0.008))
-    out[2] = (g.mix(j, g.scale(C, wear), g.scale(C, 0.62)), 0.9, 0.0)
+    pid = g.m('ADD', g.m('FLOOR', g.m('DIVIDE', u, 4.0)), g.m('MULTIPLY', g.m('FLOOR', g.m('DIVIDE', v, 3.0)), 37.0))
+    ptone = g.m('ADD', 0.82, g.m('MULTIPLY', wnoise(pid), 0.36))                       # each panel cast a little different
+    cc = g.scale(C, g.m('MULTIPLY', g.m('MULTIPLY', wear, blotch), ptone))
+    rain = g.m('MULTIPLY', g.m('MULTIPLY', streak, under_ledge(3.0)), g.m('MULTIPLY', wall, 0.55))   # rain runs under each ledge
+    cc = g.mix(rain, cc, g.scale(C, 0.55))   # rain darkens its own colour (grey grime would lighten dark concrete)
+    agg = g.m('ADD', 0.88, g.m('MULTIPLY', nz(uvv, 30.0, 2.0), 0.24))                                 # aggregate and pitting, 3 cm
+    cc = g.scale(cc, agg)
+    out[2] = (g.mix(j, cc, g.scale(C, 0.5)), 0.9, 0.0)
     # 3 roof membrane (PTFE): seams every 1.6 m, faint lengthwise sheen
-    seam = g.band(g.frac(u, 1.6), 0.0, 0.035)
-    memb = g.scale(C, g.m('ADD', 0.97, g.m('MULTIPLY', fine, 0.04)))
-    out[3] = (g.mix(seam, memb, g.scale(C, 0.86)), 0.45, 0.0)
+    fu = g.frac(u, 1.6); seam = g.band(fu, 0.0, 0.02)
+    lap = g.band(fu, 0.02, 0.085)                                                          # 10 cm welded overlap beside each seam
+    ds = g.m('MULTIPLY', g.m('MINIMUM', fu, g.m('SUBTRACT', 1.0, fu)), 1.6)               # metres to the nearest seam
+    sg = g.m('MAXIMUM', 0.0, g.m('SUBTRACT', 1.0, g.m('DIVIDE', ds, 0.4)))
+    sgr = g.m('MULTIPLY', g.m('MULTIPLY', sg, sg), g.m('ADD', 0.3, g.m('MULTIPLY', nz(obj_co, 2.5, 3.0), 0.7)))  # grime along seams
+    tseam = g.band(g.frac(v, 4.0), 0.0, 0.006)                                             # cross welds every 4 m
+    memb = g.scale(C, g.m('MULTIPLY', soft, g.m('ADD', 0.95, g.m('MULTIPLY', nz(uvv, 6.0, 4.0), 0.08))))   # creases and woven texture
+    memb = g.mix(g.m('MULTIPLY', nz(obj_co, 0.12, 2.0, 0.5, 0.7), 0.2), memb, GRIME)           # broad dust drifts
+    memb = g.mix(g.m('MULTIPLY', sgr, 0.7), memb, GRIME)
+    memb = g.mix(lap, memb, g.scale(C, 0.93))
+    out[3] = (g.mix(g.m('MAXIMUM', seam, tseam), memb, g.scale(C, 0.72)), 0.45, 0.0)
     # 4 steel: painted steel, purlins every 3 m on undersides
     pur = g.band(g.frac(u, 3.0), 0.0, 0.07)
-    out[4] = (g.mix(pur, g.scale(C, wear), g.scale(C, 0.6)), 0.35, 0.6)
+    sh = g.m('MAXIMUM', g.band(g.frac(u, 1.2), 0.0, 0.012), g.band(g.frac(v, 2.4), 0.0, 0.006))   # sheet seams 1.2 m x 2.4 m
+    sid = g.m('ADD', g.m('FLOOR', g.m('DIVIDE', u, 1.2)), g.m('MULTIPLY', g.m('FLOOR', g.m('DIVIDE', v, 2.4)), 43.0))
+    st = g.scale(C, g.m('MULTIPLY', g.m('MULTIPLY', wear, blotch), g.m('ADD', 0.86, g.m('MULTIPLY', wnoise(sid), 0.28))))   # each sheet its own tone
+    low = g.m('SUBTRACT', 1.0, g.frac(wz, 2.4)); low = g.m('MULTIPLY', low, low)            # grime toward each sheet's bottom edge
+    sgm = g.m('MULTIPLY', g.m('ADD', g.m('MULTIPLY', low, 0.75), g.m('MULTIPLY', streak, 0.4)), g.m('MULTIPLY', wall, 0.5))
+    st = g.mix(sgm, st, g.scale(C, 0.62))                                                  # grime darkens its own colour
+    st = g.mix(sh, st, g.scale(C, 0.6))
+    out[4] = (g.mix(pur, st, g.scale(C, 0.6)), 0.35, 0.6)
     # 5 glass: dark tinted panes 1.5 m x 3.2 m in aluminium frames
     fr = g.m('MAXIMUM', g.band(g.frac(u, 1.5), 0.0, 0.045), g.band(g.frac(v, 3.2), 0.0, 0.03))
     pane = g.mix(0.25, g.rgb((0.035, 0.05, 0.065)), C)
@@ -103,11 +148,12 @@ def build(obj):
     br.inputs['Bias'].default_value = 0.0
     g.link(C, br.inputs['Color1']); g.link(g.scale(C, 0.78), br.inputs['Color2'])
     br.inputs['Mortar'].default_value = (0.42, 0.40, 0.37, 1)
-    out[6] = (br.outputs['Color'], 0.85, 0.0)
+    out[6] = (g.scale(br.outputs['Color'], g.m('MULTIPLY', blotch, g.m('ADD', 0.86, g.m('MULTIPLY', wnoise(pid), 0.28)))), 0.85, 0.0)
     # 7 grass: mowing stripes 10 m wide across the ground (world x), fine blade noise
     wx = g.node('ShaderNodeSeparateXYZ'); g.link(obj_co, wx.inputs[0])
     stripe = g.m('ADD', 0.93, g.m('MULTIPLY', g.m('LESS_THAN', g.frac(wx.outputs[0], 10.0), 0.5), 0.14))
     blade = g.m('ADD', 0.9, g.m('MULTIPLY', g.noise(obj_co, 40.0, 2.0), 0.2))
+    blade2 = g.m('ADD', 0.84, g.m('MULTIPLY', nz(obj_co, 40.0, 2.0), 0.3))                 # individual blades and clover leaves
     out[7] = (g.scale(C, g.m('MULTIPLY', stripe, blade)), 0.9, 0.0)
     # 8 fins: vertical copper/timber fins 0.45 m apart with dark gaps
     fin = g.band(g.frac(u, 0.45), 0.0, 0.5)
@@ -118,8 +164,6 @@ def build(obj):
     out[9] = (g.scale(C, g.m('MULTIPLY', board, wear)), 0.7, 0.0)
 
     # 10 copper cladding: vertical panels 0.6 m wide, each its own tone (hotel blocks), dark standing seams
-    def wnoise(x):
-        n = g.node('ShaderNodeTexWhiteNoise', noise_dimensions='1D'); g.link(x, n.inputs['W']); return n.outputs['Value']
     pid = g.m('FLOOR', g.m('DIVIDE', u, 0.6))
     tone = g.m('ADD', 0.68, g.m('MULTIPLY', wnoise(pid), 0.62))
     cop = g.scale(C, g.m('MULTIPLY', tone, g.m('ADD', 0.96, g.m('MULTIPLY', fine, 0.08))))
@@ -132,13 +176,19 @@ def build(obj):
     out[11] = (g.mix(sj, g.scale(C, g.m('MULTIPLY', ctone, wear)), g.scale(C, 0.7)), 0.85, 0.0)
 
     # 12 turf (the Hill's grass patches): no mowing stripes, worn patches about 2 m across, blade noise
-    worn = g.m('ADD', 0.86, g.m('MULTIPLY', g.noise(obj_co, 0.45, 3.0), 0.28))
-    out[12] = (g.scale(C, g.m('MULTIPLY', worn, blade)), 0.92, 0.0)
+    worn = g.m('ADD', 0.68, g.m('MULTIPLY', nz(obj_co, 0.45, 3.0), 0.58))
+    clump = g.m('ADD', 0.7, g.m('MULTIPLY', nz(obj_co, 3.0, 4.0), 0.6))                 # clumps and clover, about 30 cm
+    bare = nz(obj_co, 0.7, 4.0, 0.56, 0.7)                                                # worn spots
+    tf = g.scale(C, g.m('MULTIPLY', g.m('MULTIPLY', worn, clump), blade2))
+    tf = g.mix(g.m('MULTIPLY', nz(obj_co, 0.25, 2.0, 0.5, 0.7), 0.35), tf, g.rgb((0.36, 0.38, 0.14)))     # dry yellowed stretches
+    out[12] = (g.mix(g.m('MULTIPLY', bare, 0.6), tf, g.rgb((0.30, 0.27, 0.17))), 0.92, 0.0)
     # 13 scoreboard board: painted panels 1.2 m x 0.55 m with dark joints and slight tone changes
     bid = g.m('ADD', g.m('FLOOR', g.m('DIVIDE', u, 1.2)), g.m('MULTIPLY', g.m('FLOOR', g.m('DIVIDE', v, 0.55)), 37.0))
-    btone = g.m('ADD', 0.9, g.m('MULTIPLY', wnoise(bid), 0.25))
+    btone = g.m('ADD', 0.78, g.m('MULTIPLY', wnoise(bid), 0.46))
     bj = g.m('MAXIMUM', g.band(g.frac(u, 1.2), 0.0, 0.03), g.band(g.frac(v, 0.55), 0.0, 0.05))
-    out[13] = (g.mix(bj, g.scale(C, btone), g.scale(C, 0.45)), 0.6, 0.0)
+    chalk = g.m('MULTIPLY', streak, 0.2)                                                  # pale weathering runs (photo c11)
+    bc = g.mix(chalk, g.scale(C, btone), g.rgb((0.30, 0.34, 0.33)))
+    out[13] = (g.mix(bj, bc, g.scale(C, 0.45)), 0.6, 0.0)
 
     col, rough, met = out[0]
     for k in range(1, 14):
