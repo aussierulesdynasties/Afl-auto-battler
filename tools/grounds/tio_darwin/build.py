@@ -112,27 +112,29 @@ steps=Acc('stand_steps','concrete');conc=Acc('stand_concrete','concrete');soff=A
 import random;SR=random.Random(7);SEATW=0.5;AISLE=1.2;BAY=12.0
 SPAL=['seat_blue','seat_orange','seat_purple','seat_red','seat_teal'];SW=[0.27,0.31,0.42,0.0,0.0]   # photo 17: blue, orange, purple only
 SACC={k:Acc('stand_'+k,k) for k in SPAL};SROW={};SPREV={};steelA=Acc('seat_pedestal','steel_dark')
-def seat_colour(r,i):
-    st=SROW.setdefault(r,[0,0])
-    if st[1]<=0:st[0]=SR.choices(range(5),SW)[0];st[1]=SR.randint(3,8)
-    st[1]-=1;k=st[0]
-    if r>0 and (r-1,i-1) in SPREV and SR.random()<0.8:k=SPREV[(r-1,i-1)]   # bands climb diagonally (photo 17)
-    SPREV[(r,i)]=k;return SPAL[k]
-# one bucket seat, local x across, y back from the riser edge, z up (photo 17: tip-up plastic buckets, 0.44 wide in a 0.5 pitch)
-def _seat_template(N=6,M=5,HW=0.22):
-    Q=[];xs=[-HW+2*HW*k/N for k in range(N+1)]
-    def pan(x,v,t):   # v 0 front .. 1 rear; dished across, front edge rolled down
-        y=0.06+0.32*v;z=0.43+0.025*(x/HW)**2-0.035*(1-v)**4-t;return (x*(1-0.05*v),y,z)
-    def back(x,v,t):  # v 0 bottom .. 1 top; curved forward at the sides, leaning back, narrowing to the top
-        w=1-0.12*v;z=0.46+0.48*v;y=0.40+0.16*v-0.07*(x/HW)**2+t;return (x*w,y,z)
-    for f in (pan,back):
-        for t,flip in ((0,False),(0.022,True)):
-            for a in range(N):
-                for b in range(M):
-                    q=[f(xs[a],b/M,t),f(xs[a+1],b/M,t),f(xs[a+1],(b+1)/M,t),f(xs[a],(b+1)/M,t)]
-                    if (f is back)!=flip:q=q[::-1]
-                    Q.append(q)
+# photo 17: clean diagonal bands; each row repeats the row below shifted one seat, band widths in seats (blue 9, orange 5, purple 3 of 17)
+BANDS=[(0,4),(1,3),(0,3),(2,3),(0,2),(1,2)];BSEQ=[k for k,n in BANDS for _ in range(n)]
+def seat_colour(r,q):return SPAL[BSEQ[(int(round(q/SEATW))-r)%len(BSEQ)]]
+# one empty tip-up seat, pan folded up (photo 17), as two closed solid shells: local x across, y back from the riser edge, z up
+def _slab(f,N,M,T):
+    Q=[];xs=[k/N for k in range(N+1)];vs=[k/M for k in range(M+1)]
+    for a in range(N):
+        for b in range(M):
+            Q.append([f(xs[a],vs[b],0),f(xs[a+1],vs[b],0),f(xs[a+1],vs[b+1],0),f(xs[a],vs[b+1],0)])
+            Q.append([f(xs[a],vs[b],T),f(xs[a],vs[b+1],T),f(xs[a+1],vs[b+1],T),f(xs[a+1],vs[b],T)])
+    for a in range(N):
+        for v in (0,1):
+            q=[f(xs[a],v,0),f(xs[a+1],v,0),f(xs[a+1],v,T),f(xs[a],v,T)];Q.append(q if v==0 else q[::-1])
+    for b in range(M):
+        for u in (0,1):
+            q=[f(u,vs[b],0),f(u,vs[b],T),f(u,vs[b+1],T),f(u,vs[b+1],0)];Q.append(q if u==0 else q[::-1])
     return Q
+def _seat_template(HW=0.22):
+    def back(u,v,t):   # curved shell, sides wrap forward, slight lean back
+        x=(2*u-1)*HW*(1-0.08*v);return (x,0.36+0.10*v-0.06*(2*u-1)**2+t,0.40+0.42*v)
+    def pan(u,v,t):    # folded pan standing in front of the back
+        x=(2*u-1)*HW*0.92;return (x,0.27+0.04*v-0.04*(2*u-1)**2-t,0.30+0.36*v)
+    return _slab(back,6,4,0.045)+_slab(pan,6,3,0.04)
 SEATQ=_seat_template()
 SIDX={}
 def rake(ts,s0=0.0):
@@ -149,9 +151,9 @@ def rake(ts,s0=0.0):
             q=math.ceil(s/SEATW-1e-6)*SEATW
             while q+SEATW<=s+L+1e-6:
                 if (q%BAY)>=AISLE-1e-6:
-                    i=SIDX.get(r,0);SIDX[r]=i+1;acc=SACC[seat_colour(r,i)];c=a0+al*(q-s+SEATW/2)
+                    i=SIDX.get(r,0);SIDX[r]=i+1;acc=SACC[seat_colour(r,q)];c=a0+al*(q-s+SEATW/2)
                     for qd in SEATQ:acc.face([c+al*x+bk*y+up*z for x,y,z in qd])   # bucket seat template (photo 17)
-                    box(steelA,c+bk*0.40+up*0.20,al,bk,up,0.025,0.025,0.20)   # stem behind the pan
+                    box(steelA,c+bk*0.38+up*0.20,al,bk,up,0.03,0.03,0.20)   # pedestal under the shell
                 q+=SEATW
         soff.face([P(t0,0.3,0),P(t1,0.3,0),P(t1,DB,ZB-0.6),P(t0,DB,ZB-0.6)])   # underside seen from the back (06)
         s+=L
