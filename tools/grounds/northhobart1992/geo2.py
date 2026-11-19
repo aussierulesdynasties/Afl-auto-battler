@@ -119,12 +119,14 @@ flatroof('letitia_roof',plan.buffer(0.3,join_style='mitre'),15.0,'roof_white','s
 for n in('bench0','bench1','bench2'):
     s=S(n);L=[xy(v) for v in s['v']];prism(n,Polygon(L),0,1.5,'roof_white','trim_white')
 # ---------- scoreboards. NE board per the 1990 photo: grey base, black number board, red header (lettering left off)
+# top at 10.0 m to match the 1992 aerial (ground lead 2026-11-19); base and face heights scaled together from the 12.8 m build
+SBT=10.0;SBB=3.4*SBT/12.8
 s=S('ne_board');L=[xy(v) for v in s['v']];sc=front_edges(L);fi=int(np.argmax(sc))
-P=Polygon(L);prism('ne_board',P,0,12.8,'steel_dark','cladding_grey')
+P=Polygon(L);prism('ne_board',P,0,SBT,'steel_dark','cladding_grey')
 a,b=L[fi],L[(fi+1)%4];o=np.array([b[1]-a[1],-(b[0]-a[0])]);o/=np.linalg.norm(o)
 if np.dot(o,(a+b)/2-np.mean(L,0))<0:o=-o
 a2,b2=a+o*0.03,b+o*0.03
-OBJ.setdefault('ne_board_face',[]).append(([[*b2,3.4],[*a2,3.4],[*a2,12.8],[*b2,12.8]],'sb_face'))
+OBJ.setdefault('ne_board_face',[]).append(([[*b2,SBB],[*a2,SBB],[*a2,SBT],[*b2,SBT]],'sb_face'))
 s=S('scoreboard_n');L=[xy(v) for v in s['v']];prism('scoreboard_n',Polygon(L),0,8.5,'steel_dark','sb_black')
 # ---------- light poles (aerial shadows), terraces, fence, wall, trees, ground
 for i,p in enumerate(D['poles']):

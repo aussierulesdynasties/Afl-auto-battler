@@ -65,7 +65,7 @@ def gor_build(addobj):
     quad((DOOR[0],FY-0.3),(DOOR[1],FY-0.3),0,2.0,'interior_dark')
     quad((e1,FY-0.4),(e1,FY),0,3.1,'render_cream');quad((e0,FY),(e0,FY-0.4),0,3.1,'render_cream')
     box(e0-0.06,e1+0.06,FY-0.46,FY+0.06,3.1,3.3,'render_cream')
-    _w=e1-e0;addobj('gor_sign',[([(e0+0.19*_w,FY-0.47,2.25),(e0+0.82*_w,FY-0.47,2.25),(e0+0.82*_w,FY-0.47,2.8),(e0+0.19*_w,FY-0.47,2.8)],'club_sign')],double=True,uvfit=True)
+    _w=e1-e0;addobj('gor_sign',[([(e0+0.19*_w,FY-0.47,2.25),(e0+0.82*_w,FY-0.47,2.25),(e0+0.82*_w,FY-0.47,2.8),(e0+0.19*_w,FY-0.47,2.8)],'club_sign_lettered')],double=True,uvfit=True)
     for a,b,dr in STAIRS:
         n=11;run=(b-a)/n
         for k in range(n):

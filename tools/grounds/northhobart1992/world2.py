@@ -57,11 +57,17 @@ if MODE=='aerial':
     Wp,Hp=int(cw*SC),int(ch*SC);sc.render.resolution_x,sc.render.resolution_y=Wp,Hp
     cd.sensor_fit='HORIZONTAL';cd.sensor_width=36;cd.lens=36*F*SC/Wp;cd.clip_end=5000;cd.clip_start=10
     ppx=(U0+p[6]-cx)*SC;ppy=(V0+p[7]-cy)*SC;cd.shift_x=(Wp/2-ppx)/Wp;cd.shift_y=(ppy-Hp/2)/Wp
-    sc.view_settings.view_transform='Standard'
+    sc.view_settings.view_transform='Standard';sc.render.film_transparent=bool(os.environ.get('TRANSP'))
     if os.environ.get('BORDER'):
         x0,y0,x1,y1=map(float,os.environ['BORDER'].split(','));r=sc.render;r.use_border=True;r.use_crop_to_border=True
         r.border_min_x,r.border_max_x=x0/cw,x1/cw;r.border_min_y,r.border_max_y=1-y1/ch,1-y0/ch
     render(OUT)
+elif MODE=='top':
+    # straight down, north up, orthographic, same box as the rectified 1992 aerial (x -140..125, y -145..115, SC m/px)
+    X0,X1,Y0,Y1=-140,125,-145,115;co.location=((X0+X1)/2,(Y0+Y1)/2,300);co.rotation_euler=(0,0,0)
+    cd.type='ORTHO';cd.sensor_fit='HORIZONTAL';cd.ortho_scale=X1-X0;cd.clip_end=1000
+    sc.render.resolution_x,sc.render.resolution_y=int((X1-X0)/SC),int((Y1-Y0)/SC);sc.render.film_transparent=True
+    sc.view_settings.view_transform='Standard';render(OUT)
 elif MODE=='gor':
     c=json.load(open(NH+'/cam_gor.json'));R=Matrix(c['R']);Cc=Vector(c['C'])
     Rb=R.transposed()@Matrix(((1,0,0),(0,-1,0),(0,0,-1)))
