@@ -291,6 +291,9 @@ func _test_break_words() -> void:
 			== "they've been fired up since quarter time", "Fired up since quarter time")
 	_check(RivalRead.legs_reason(_calls(["balanced", "defensive", "defensive"], ["steady", "steady", "fire_up"]), plain)
 			== "they've pressed since quarter time and been fired up since half time", "The press and the fire-up")
+	_check(RivalRead.legs_reason(_calls(["balanced", "balanced", "attacking"], ["steady", "steady", "fire_up"]), plain)
+			== "they've run it through the corridor and been fired up since half time",
+			"The corridor and the fire-up from the same break say it once")
 	_check(RivalRead.legs_reason(_calls(["controlled", "controlled"], ["fire_up", "fire_up"]), plain)
 			== "they've been fired up all game", "A fire-up outruns a plan that saves legs")
 	# Only when their calls are the cause: yours cost as much, no reason.

@@ -231,6 +231,8 @@ var lockup_rng := RandomNumberGenerator.new()
 ## The wet ball's fumbles (row 120): their own stream, drawn only on a wet day,
 ## so every other day's dice are where they were.
 var fumble_rng := RandomNumberGenerator.new()
+## Where a ball knocked loose comes to rest (_comes_to_rest): its own stream.
+var loose_rng := RandomNumberGenerator.new()
 ## The last chain ended in a ball-up called in play (a tackle held, a contest
 ## locked up): the next chain starts at that stoppage.
 var _prev_locked := false
@@ -478,7 +480,82 @@ func _wet_fumble(side: int, carrier, at_fp: float) -> Dictionary:
 	_last_disp = {"carrier": carrier, "kind": "", "end": "fumble"}
 	if fumble_rng.randf() < WET_FUMBLE_HELD:
 		return {"outcome": "stoppage", "fp": at_fp, "actor": carrier}
-	return {"outcome": "loose", "fp": at_fp, "actor": carrier}
+	var rest := _comes_to_rest("fumble", side, at_fp)
+	(events[events.size() - 1] as Dictionary).merge(rest)
+	return {"outcome": "loose", "fp": float(rest.get("loose_to", at_fp)), "actor": carrier}
+
+
+## Where a ball knocked loose comes to rest (director, 2026-11-17: "the visual sim needs to
+## marry up to the match sim"). Each row is one real loose ball measured off AFL broadcast
+## footage (docs/research/LOOSE_BALL_TRAVEL.md): [metres up the ground toward the goal the
+## side that lost it attacks (negative: back toward its own goal), metres across (negative:
+## to the left as that side attacks), seconds until a player had it, touches before that
+## (knocked on in the scrap, none of them clean)]. The match draws one real ball of its kind:
+## no formula is fitted over them.
+const LOOSE_TRAVEL := {
+	"tackle": [  # Tackle spills: 26 filmed
+		[0.0, 0.5, 0.9, 0], [0.0, -0.5, 0.9, 0], [3.9, 1.4, 1.8, 0], [3.9, -1.4, 1.8, 0], [-1.5, 0.3, 1.4, 0], [-1.5, -0.3, 1.4, 0],
+		[6.7, 7.4, 2.7, 2], [6.7, -7.4, 2.7, 2], [-1.7, 0.3, 0.9, 0], [-1.7, -0.3, 0.9, 0], [-3.0, 0.5, 0.75, 0],
+		[-3.0, -0.5, 0.75, 0], [-3.6, 1.0, 0.8, 0], [-3.6, -1.0, 0.8, 0], [-1.9, 0.8, 0.7, 0], [-1.9, -0.8, 0.7, 0],
+		[-6.0, 6.5, 3.0, 1], [-6.0, -6.5, 3.0, 1], [-2.0, 2.2, 0.75, 0], [-2.0, -2.2, 0.75, 0], [0.0, 2.5, 0.2, 0],
+		[0.0, -2.5, 0.2, 0], [0.9, 2.1, 1.4, 1], [0.9, -2.1, 1.4, 1], [-5.8, 1.5, 1.7, 1], [-5.8, -1.5, 1.7, 1], [-0.7, 1.4, 1.2, 1],
+		[-0.7, -1.4, 1.2, 1], [-9.4, 1.7, 1.4, 0], [-9.4, -1.7, 1.4, 0], [-3.2, 1.1, 2.45, 2], [-3.2, -1.1, 2.45, 2],
+		[0.5, 1.0, 2.25, 0], [0.5, -1.0, 2.25, 0], [4.0, 1.5, 2.0, 1], [4.0, -1.5, 2.0, 1], [3.2, 1.8, 1.4, 1], [3.2, -1.8, 1.4, 1],
+		[-7.9, 3.0, 1.0, 0], [-7.9, -3.0, 1.0, 0], [2.2, 0.3, 0.5, 0], [2.2, -0.3, 0.5, 0], [-0.5, 2.0, 1.25, 0],
+		[-0.5, -2.0, 1.25, 0], [0.7, 1.5, 0.25, 0], [0.7, -1.5, 0.25, 0], [-0.5, 6.0, 2.85, 0], [-0.5, -6.0, 2.85, 0],
+		[0.2, 0.7, 0.25, 0], [0.2, -0.7, 0.25, 0], [-0.7, 1.0, 0.8, 0], [-0.7, -1.0, 0.8, 0],
+	],
+	"fumble": [  # Fumbles: 23 filmed
+		[-1.2, 1.0, 2.3, 2], [-1.2, -1.0, 2.3, 2], [1.3, 0.0, 0.4, 0], [-7.6, 1.1, 0.95, 0], [-7.6, -1.1, 0.95, 0],
+		[2.0, 1.0, 0.6, 0], [2.0, -1.0, 0.6, 0], [-7.9, 5.4, 1.8, 1], [-7.9, -5.4, 1.8, 1], [-0.6, 0.5, 0.4, 0],
+		[-0.6, -0.5, 0.4, 0], [-2.2, 1.5, 1.55, 1], [-2.2, -1.5, 1.55, 1], [-7.5, 1.0, 4.0, 2], [-7.5, -1.0, 4.0, 2],
+		[8.0, 3.0, 2.6, 1], [8.0, -3.0, 2.6, 1], [3.6, 1.0, 1.9, 0], [3.6, -1.0, 1.9, 0], [-0.6, 0.9, 1.0, 0], [-0.6, -0.9, 1.0, 0],
+		[4.1, 1.0, 0.7, 1], [4.1, -1.0, 0.7, 1], [-4.0, 2.3, 3.05, 2], [-4.0, -2.3, 3.05, 2], [1.5, 1.0, 2.55, 2],
+		[1.5, -1.0, 2.55, 2], [4.9, 3.5, 2.3, 2], [4.9, -3.5, 2.3, 2], [-2.4, 0.3, 1.1, 0], [-2.4, -0.3, 1.1, 0],
+		[-1.5, 0.7, 0.45, 0], [-1.5, -0.7, 0.45, 0], [-4.0, 2.3, 1.5, 1], [-4.0, -2.3, 1.5, 1], [-1.2, 0.5, 1.2, 0],
+		[-1.2, -0.5, 1.2, 0], [4.5, 3.0, 3.2, 2], [4.5, -3.0, 3.2, 2], [-4.2, 2.8, 3.2, 1], [-4.2, -2.8, 3.2, 1],
+		[-1.7, 0.9, 0.6, 0], [-1.7, -0.9, 0.6, 0], [-2.0, 1.0, 1.5, 0], [-2.0, -1.0, 1.5, 0],
+	],
+	"spoil": [  # Spoils: 16 filmed
+		[-20.0, 3.0, 3.0, 0], [-20.0, -3.0, 3.0, 0], [-3.3, 0.0, 1.0, 0], [-11.0, 0.5, 1.0, 0], [-11.0, -0.5, 1.0, 0],
+		[0.0, 0.0, 1.1, 0], [2.4, 0.0, 0.6, 0], [2.0, -21.0, 2.3, 0], [2.0, 21.0, 2.3, 0], [-2.5, -3.0, 1.6, 1], [-2.5, 3.0, 1.6, 1],
+		[-2.4, 0.5, 0.6, 0], [-2.4, -0.5, 0.6, 0], [-7.4, 1.5, 2.05, 3], [-7.4, -1.5, 2.05, 3], [3.5, -1.0, 3.0, 3],
+		[3.5, 1.0, 3.0, 3], [-3.0, 1.0, 1.2, 0], [-3.0, -1.0, 1.2, 0], [-1.0, 2.0, 8.5, 6], [-1.0, -2.0, 8.5, 6],
+		[0.6, 0.3, 0.25, 0], [0.6, -0.3, 0.25, 0], [12.0, -2.0, 3.5, 0], [12.0, 2.0, 3.5, 0], [-2.0, 3.0, 6.25, 3],
+		[-2.0, -3.0, 6.25, 3], [24.0, -10.0, 2.7, 0], [24.0, 10.0, 2.7, 0],
+	],
+	"smother": [  # Smothers: 10 filmed
+		[-6.8, 7.8, 2.25, 0], [-6.8, -7.8, 2.25, 0], [8.0, 14.0, 3.4, 0], [8.0, -14.0, 3.4, 0], [6.0, 3.0, 3.0, 0],
+		[6.0, -3.0, 3.0, 0], [-3.0, 0.5, 1.1, 1], [-3.0, -0.5, 1.1, 1], [-6.4, 5.5, 2.1, 0], [-6.4, -5.5, 2.1, 0],
+		[0.7, 0.6, 1.6, 1], [0.7, -0.6, 1.6, 1], [-2.5, 1.0, 0.35, 0], [-2.5, -1.0, 0.35, 0], [-1.4, 1.3, 0.5, 0],
+		[-1.4, -1.3, 0.5, 0], [12.0, 4.0, 2.0, 0], [12.0, -4.0, 2.0, 0], [9.0, 1.5, 1.67, 1], [9.0, -1.5, 1.67, 1],
+	],
+	"pack_spill": [  # Pack spills: 16 filmed
+		[3.5, 1.0, 0.9, 0], [3.5, -1.0, 0.9, 0], [-0.2, -13.2, 1.75, 1], [-0.2, 13.2, 1.75, 1], [-2.9, -0.9, 0.9, 0],
+		[-2.9, 0.9, 0.9, 0], [1.5, 0.3, 0.5, 0], [1.5, -0.3, 0.5, 0], [-0.5, 0.5, 2.0, 0], [-0.5, -0.5, 2.0, 0], [6.0, -2.0, 2.8, 2],
+		[6.0, 2.0, 2.8, 2], [2.4, 1.7, 1.3, 0], [2.4, -1.7, 1.3, 0], [4.2, 6.5, 1.6, 0], [4.2, -6.5, 1.6, 0], [-5.3, 3.1, 1.0, 0],
+		[-5.3, -3.1, 1.0, 0], [-4.9, -0.9, 1.4, 3], [-4.9, 0.9, 1.4, 3], [2.2, -2.3, 2.0, 3], [2.2, 2.3, 2.0, 3],
+		[-6.1, -0.9, 1.0, 1], [-6.1, 0.9, 1.0, 1], [-0.4, -5.0, 1.7, 2], [-0.4, 5.0, 1.7, 2], [-3.4, 0.9, 1.25, 0],
+		[-3.4, -0.9, 1.25, 0], [-0.6, 0.3, 0.74, 0], [-0.6, -0.3, 0.74, 0], [11.3, 1.0, 2.25, 0], [11.3, -1.0, 2.25, 0],
+	],
+}
+## A loose ball stays in play: it comes to rest at least this far inside either goal line.
+const LOOSE_IN_PLAY := 1.0
+
+
+## The ball lost by `side` at `at_fp` comes loose (`how`: a LOOSE_TRAVEL kind). Returns the
+## fields its loose event carries for the pitch: "loose_how", "loose_to" (where it comes to
+## rest, the next chain's spot), "loose_across" (metres across, + toward the pitch's +y),
+## "loose_s" and "loose_touches". {} when the kind has no footage. Dice: loose_rng only.
+func _comes_to_rest(how: String, side: int, at_fp: float) -> Dictionary:
+	var rows: Array = LOOSE_TRAVEL.get(how, [])
+	if rows.is_empty():
+		return {}
+	var r: Array = rows[loose_rng.randi() % rows.size()]
+	var way := 1.0 if side == 0 else -1.0
+	var lim := float(Ratings.T["goal_line"]) - LOOSE_IN_PLAY
+	return {"loose_how": how, "loose_to": snappedf(clampf(at_fp + float(r[0]) * way, -lim, lim), 0.01),
+			"loose_across": float(r[1]) * way, "loose_s": float(r[2]), "loose_touches": int(r[3])}
 
 
 ## Momentum: who has the run of play, -1 (away on top) .. 1 (home on top).
@@ -549,6 +626,7 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	lockup_rng.seed = seed * 107 + 109
 	gather_rng.seed = seed * 113 + 127
 	fumble_rng.seed = seed * 127 + 131
+	loose_rng.seed = seed * 181 + 191
 	lead_rng.seed = seed * 109 + 113
 	# Its own seed: it once shared lead_rng's, so the mid-kick intercept dice
 	# replayed the key-lead dice. Every stream here needs a seed of its own.
@@ -2870,7 +2948,9 @@ func _general_aerial(side: int, mark_fp: float, carrier, gain: float, rushed: bo
 		sev["against_id"] = str(receiver.get("id", ""))
 		if not man.is_empty():
 			_log_duel(side, receiver, man, false, sev)
-		return {"outcome": "loose", "actor": defender}
+		var rest := _comes_to_rest("spoil", side, mark_fp)
+		sev.merge(rest)
+		return {"outcome": "loose", "fp": float(rest.get("loose_to", mark_fp)), "actor": defender}
 	# Neither marked nor spoiled: a contest he did not win, as inside 50.
 	if not man.is_empty():
 		_log_duel(side, receiver, man, false)
@@ -3199,7 +3279,9 @@ func _general_aerial_contest(side: int, mark_fp: float, carrier) -> Dictionary:
 				_roam_note(roamer, target, true)
 		elif not man.is_empty():
 			_log_duel(side, target, man, false, sev)
-		return {"outcome": "loose", "fp": mark_fp, "actor": defender}
+		var rest := _comes_to_rest("spoil", side, mark_fp)
+		sev.merge(rest)
+		return {"outcome": "loose", "fp": float(rest.get("loose_to", mark_fp)), "actor": defender}
 	if roaming:
 		_roam_note(roamer, target, false)
 	elif not man.is_empty():
@@ -3694,14 +3776,17 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			# it counts as a spilled tackle and the gatherer's possession is a
 			# ground ball get (_first_gain, an unmarked turnover).
 			if lockup_rng.randf() < _tv("TACKLE_SPILL", TACKLE_SPILL) * _wx("tackle_spill"):
-				var taker = _aerial_defender(opp, fp)
+				var rest := _comes_to_rest("tackle", side, fp)
+				var lands := float(rest.get("loose_to", fp))
+				var taker = _aerial_defender(opp, lands)
 				if taker == null:
 					taker = tackler
 				_t(opp, "tackle_spills")
 				_won_back = {"side": opp, "id": str(taker.get("id", ""))}
 				_emit("tackle", opp, fp, tackler,
 						"%s tackles %s - it spills free" % [GameDB.player_display_name(tackler), GameDB.player_display_name(carrier)])
-				return {"outcome": "turnover", "fp": fp, "actor": taker}
+				(events[events.size() - 1] as Dictionary).merge(rest)
+				return {"outcome": "turnover", "fp": lands, "actor": taker}
 			_emit("tackle", opp, fp, tackler,
 					"%s tackles %s - ball up" % [GameDB.player_display_name(tackler), GameDB.player_display_name(carrier)])
 			return {"outcome": "stoppage", "fp": fp, "actor": carrier}
@@ -3766,7 +3851,9 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 				_press_where(opp, atk_fp, in_d50, false)
 				_emit("smother", opp, fp, smotherer,
 						"%s smothers the kick" % GameDB.player_display_name(smotherer))
-				return {"outcome": "loose", "fp": fp, "actor": smotherer}
+				var rest := _comes_to_rest("smother", side, fp)
+				(events[events.size() - 1] as Dictionary).merge(rest)
+				return {"outcome": "loose", "fp": float(rest.get("loose_to", fp)), "actor": smotherer}
 
 		var prev_atk_fp := atk_fp
 		var gain: float = (float(T["metres_gain_mean"])
@@ -3841,7 +3928,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			var aerial := _general_aerial(side, fp, carrier, gain, rushed)
 			if not aerial.is_empty():
 				if str(aerial.get("outcome", "")) == "loose":
-					return {"outcome": "loose", "fp": fp, "actor": aerial.get("actor")}
+					return {"outcome": "loose", "fp": float(aerial.get("fp", fp)), "actor": aerial.get("actor")}
 				if str(aerial.get("outcome", "")) == "turnover":
 					_last_disp["end"] = "aerial"
 					return aerial
@@ -3888,6 +3975,10 @@ func kick_in_fp(side: int) -> float:
 ## Forward-50 entry resolution: contest the mark, then roll for goal / behind /
 ## rebound. This is where almost all of the scoring variance lives.
 func resolve_forward50(side: int, fp: float, feeder) -> Dictionary:
+	# The entry (logged just before): a ball spoiled or spilled out of its pack comes to rest
+	# where the footage says, written on it.
+	# (Empty when a test calls this on its own, with no entry logged.)
+	var entry_ev: Dictionary = events[events.size() - 1] if not events.is_empty() else {}
 	var T := _rates()
 	var opp := 1 - side
 	var atk: Squad = squads[side]
@@ -4061,6 +4152,12 @@ func resolve_forward50(side: int, fp: float, feeder) -> Dictionary:
 			crumbed = true
 			var size: String = fwd_size(ground_fwd) if str(ground_fwd.get("role", "")) == "FWD" else "general"
 			ground_lost = rng.randf() >= float(GROUND_WIN[size]) * (0.85 + 0.30 * _a(ground_fwd, "pressure") / 100.0)
+	# Spoiled to the deck, or spilled out of the pack: it comes to rest where the footage
+	# says, and the snap, the crumb, the rebound or the ball-up is played from there.
+	if not marked and (spoilt or crumbed):
+		var rest := _comes_to_rest("spoil" if spoilt else "pack_spill", side, fp)
+		entry_ev.merge(rest)
+		fp = float(rest.get("loose_to", fp))
 	var goal_p := shot_chance(side, shooter, marked, spoilt, true, feeder, defender)
 	var behind_p: float = (float(T["inside50_behind"])
 			* (0.80 + 0.40 * _a(shooter, "goalkicking") / 100.0))
@@ -4930,8 +5027,9 @@ func _play_one_chain(T: Dictionary) -> void:
 		_p(err, "clangers")
 		var clanger_line: String = CLANGER_WHY[cause] if cause != "" else "%s gives away a clanger"
 		_emit("clanger", side, fp, err, clanger_line % GameDB.player_display_name(err))
+		var cev: Dictionary = events[events.size() - 1]
 		if cause != "":
-			events[events.size() - 1]["why"] = cause
+			cev["why"] = cause
 		_lost_by = side
 		# After a behind the kick-in comes first, and after a goal the centre
 		# bounce (director, 2026-11-03): no free is paid over either.
@@ -4948,6 +5046,12 @@ func _play_one_chain(T: Dictionary) -> void:
 		elif zone_intercepts and next_side < 0 and not at_centre and not kick_in \
 				and rng.randf() < CLANGER_TAKEN:
 			_clanger_taken(side, fp)
+		elif next_side < 0 and not at_centre and not kick_in:
+			# Nobody's: the error leaves it loose for either side, and it comes to rest
+			# where the footage says before anyone has it.
+			var rest := _comes_to_rest("fumble", side, fp)
+			cev.merge(rest)
+			fp = float(rest.get("loose_to", fp))
 	_after_chain()
 
 
@@ -6647,6 +6751,12 @@ func _bomb(side: int, shooter: Dictionary, defender: Dictionary) -> Dictionary:
 			{"spoiler_id": str(back["id"]), "crumber_id": str(crumber["id"]) if gathers else ""},
 			"%s spoils it to the deck%s" % [GameDB.player_display_name(back),
 				(" and %s gathers" % GameDB.player_display_name(crumber)) if gathers else ""])
+	# It comes to rest where the footage says: the snap, the rushed behind or the
+	# rebound is played from there.
+	var rest := _comes_to_rest("spoil", side, sq_fp)
+	(events[events.size() - 1] as Dictionary).merge(rest)
+	if not rest.is_empty():
+		fp = float(rest["loose_to"])
 	if gathers:
 		_t(side, "disposals")
 		_t(side, "kicks")

@@ -1,0 +1,87 @@
+# Fremantle home guernseys 1995-2025, copied from photos (no sponsor, maker or league logos).
+# Colours: purple #2A0D54 is today's (data/clubs.csv). The anchor's red #FD3827 and green #276741 are retired:
+# sampled from the WA Museum photo (H2014.414, shot beside a colour card) and used for every anchor year.
+# Across, the photo's width is laid on 0.15-0.85 of the square: the part of the body the game camera sees from the
+# front or back; the square outside it wraps round the sides, so shapes that reach a side seam in the photo carry
+# on to the square's edge. Chevron slopes are the photo slope / 0.70 (the same mapping).
+# Backs follow footyjumpers.com where no back photo was found (named on each line).
+
+# Fremantle-1995 (1995-1998). Match photos (all one design, home games at Subiaco and the MCG):
+# https://www.gettyimages.com.au/detail/news-photo/winston-abraham-of-fremantle-in-action-in-the-match-between-news-photo/1182769
+# https://www.gettyimages.com.au/detail/news-photo/ben-allan-of-fremantle-fights-for-the-ball-against-drew-news-photo/1182756
+# https://www.gettyimages.com.au/detail/news-photo/scott-chisholm-of-fremantle-in-action-in-the-match-between-news-photo/1563072
+# Read: green chest on the player's right, red on his left, purple V collar, white wedge between them that widens
+# down into the anchor's flukes across the chest, flukes running to the side seams, purple below. The outline
+# follows footyjumpers (no flat photo of this year), the widening wedge follows the match photos.
+# Back (footyjumpers; the match back photo is side-on): red then green across the shoulders to 0.12, white number.
+FRE Fremantle-1995 | fill #2A0D54; poly W 0.000 0.000 0.000 0.410 0.150 0.410 0.185 0.424 0.255 0.457 0.360 0.482 0.430 0.510 0.500 0.540 0.570 0.510 0.640 0.482 0.745 0.457 0.815 0.424 0.850 0.410 1.000 0.410 1.000 0.000; poly #276741 0.000 0.000 0.150 0.000 0.458 0.000 0.430 0.360 0.423 0.400 0.360 0.422 0.255 0.396 0.185 0.364 0.150 0.350 0.000 0.350; poly #FD3827 1.000 0.000 0.850 0.000 0.542 0.000 0.570 0.360 0.577 0.400 0.640 0.422 0.745 0.396 0.815 0.364 0.850 0.350 1.000 0.350; vfill W 0.22 0.13; vneck #2A0D54 0.22 0.13 0.04; collar #2A0D54 2; armholes #2A0D54 1; shorts #2A0D54 | fill #2A0D54; rect #FD3827 0 0 0.5 0.12; rect #276741 0.5 0 1 0.12; collar #2A0D54 2; armholes #2A0D54 1; number W
+
+# Fremantle-1999 (1999-2000). Front https://images.perthnow.com.au/publication/B881244832Z/1561698992058_G0S29MVO1.1-2.jpg :
+# the same anchor as 1995. Back https://museum.wa.gov.au/online-collections/content/H2014.414 (image
+# https://museum.wa.gov.au/online-collections/sites/default/files/styles/x-large/public/item/history/H2014/H2014.414__side.JPG):
+# red then green across the whole upper back down to 0.36, purple below.
+FRE Fremantle-1999 | fill #2A0D54; poly W 0.000 0.000 0.000 0.410 0.150 0.410 0.185 0.424 0.255 0.457 0.360 0.482 0.430 0.510 0.500 0.540 0.570 0.510 0.640 0.482 0.745 0.457 0.815 0.424 0.850 0.410 1.000 0.410 1.000 0.000; poly #276741 0.000 0.000 0.150 0.000 0.458 0.000 0.430 0.360 0.423 0.400 0.360 0.422 0.255 0.396 0.185 0.364 0.150 0.350 0.000 0.350; poly #FD3827 1.000 0.000 0.850 0.000 0.542 0.000 0.570 0.360 0.577 0.400 0.640 0.422 0.745 0.396 0.815 0.364 0.850 0.350 1.000 0.350; vfill W 0.22 0.13; vneck #2A0D54 0.22 0.13 0.04; collar #2A0D54 2; armholes #2A0D54 1; shorts #2A0D54 | fill #2A0D54; rect #FD3827 0 0 0.5 0.36; rect #276741 0.5 0 1 0.36; collar #2A0D54 2; armholes #2A0D54 1; number W
+
+# Fremantle-2001. Front https://www.gettyimages.com.au/detail/news-photo/leigh-brown-for-fremantle-celebrates-his-fourth-goal-during-news-photo/996646 :
+# a bigger anchor, the flukes' point down to 0.70. Back
+# https://www.gettyimages.com.au/detail/news-photo/heath-black-for-fremantle-celebrate-their-win-during-round-news-photo/996654 :
+# red then green across the shoulders to about 0.25, white number.
+FRE Fremantle-2001 | fill #2A0D54; poly W 0.000 0.000 0.000 0.420 0.150 0.420 0.185 0.455 0.255 0.556 0.360 0.634 0.444 0.674 0.500 0.702 0.556 0.674 0.640 0.634 0.745 0.556 0.815 0.455 0.850 0.420 1.000 0.420 1.000 0.000; poly #276741 0.000 0.000 0.150 0.000 0.458 0.000 0.430 0.500 0.423 0.530 0.360 0.525 0.255 0.475 0.185 0.396 0.150 0.370 0.000 0.370; poly #FD3827 1.000 0.000 0.850 0.000 0.542 0.000 0.570 0.500 0.577 0.530 0.640 0.525 0.745 0.475 0.815 0.396 0.850 0.370 1.000 0.370; vfill W 0.22 0.13; vneck #2A0D54 0.22 0.13 0.04; collar #2A0D54 2; armholes #2A0D54 1; shorts #2A0D54 | fill #2A0D54; rect #FD3827 0 0 0.5 0.25; rect #276741 0.5 0 1 0.25; collar #2A0D54 2; armholes #2A0D54 1; number W
+
+# Fremantle-2002 (2002-2003). Front https://www.gettyimages.com.au/detail/news-photo/dale-kickett-for-the-dockers-with-his-boys-lead-the-dockers-news-photo/924551 :
+# the anchor's point at 0.66, wedge widening down. Back (footyjumpers): red then green to 0.15, white number.
+FRE Fremantle-2002 | fill #2A0D54; poly W 0.000 0.000 0.000 0.380 0.150 0.380 0.185 0.409 0.255 0.510 0.360 0.586 0.444 0.630 0.500 0.657 0.556 0.630 0.640 0.586 0.745 0.510 0.815 0.409 0.850 0.380 1.000 0.380 1.000 0.000; poly #276741 0.000 0.000 0.150 0.000 0.458 0.000 0.430 0.450 0.423 0.480 0.360 0.480 0.255 0.429 0.185 0.351 0.150 0.330 0.000 0.330; poly #FD3827 1.000 0.000 0.850 0.000 0.542 0.000 0.570 0.450 0.577 0.480 0.640 0.480 0.745 0.429 0.815 0.351 0.850 0.330 1.000 0.330; vfill W 0.22 0.13; vneck #2A0D54 0.22 0.13 0.04; collar #2A0D54 2; armholes #2A0D54 1; shorts #2A0D54 | fill #2A0D54; rect #FD3827 0 0 0.5 0.15; rect #276741 0.5 0 1 0.15; collar #2A0D54 2; armholes #2A0D54 1; number W
+
+# Fremantle-2004. Front https://www.gettyimages.com.au/detail/news-photo/paul-medhurst-of-the-dockers-celebrates-a-goal-during-the-news-photo/50885311 :
+# the 2002 anchor. Back (footyjumpers; the match back photo is side-on): red then green to 0.15, white number.
+FRE Fremantle-2004 | fill #2A0D54; poly W 0.000 0.000 0.000 0.380 0.150 0.380 0.185 0.409 0.255 0.510 0.360 0.586 0.444 0.630 0.500 0.657 0.556 0.630 0.640 0.586 0.745 0.510 0.815 0.409 0.850 0.380 1.000 0.380 1.000 0.000; poly #276741 0.000 0.000 0.150 0.000 0.458 0.000 0.430 0.450 0.423 0.480 0.360 0.480 0.255 0.429 0.185 0.351 0.150 0.330 0.000 0.330; poly #FD3827 1.000 0.000 0.850 0.000 0.542 0.000 0.570 0.450 0.577 0.480 0.640 0.480 0.745 0.429 0.815 0.351 0.850 0.330 1.000 0.330; vfill W 0.22 0.13; vneck #2A0D54 0.22 0.13 0.04; collar #2A0D54 2; armholes #2A0D54 1; shorts #2A0D54 | fill #2A0D54; rect #FD3827 0 0 0.5 0.15; rect #276741 0.5 0 1 0.15; collar #2A0D54 2; armholes #2A0D54 1; number W
+
+# Fremantle-2005 (2005-2008). Front http://cdn.freewebstore.com/origin/707967/img_20240824_124530943removebgpreview_1727181292682.png
+# (flat): white measured down each column: a narrow straight stem 0.455-0.545 under the V, flukes from 0.34 at
+# their tips to a point at 0.59, the tips stopping at 0.13 of the width. Back (footyjumpers): red then green to 0.15,
+# white number.
+FRE Fremantle-2005 | fill #2A0D54; poly W 0.241 0.000 0.241 0.360 0.255 0.385 0.290 0.456 0.325 0.499 0.360 0.527 0.395 0.548 0.430 0.563 0.465 0.581 0.500 0.594 0.535 0.581 0.570 0.563 0.605 0.548 0.640 0.527 0.675 0.499 0.710 0.456 0.745 0.385 0.759 0.360 0.759 0.000; poly #276741 0.206 0.000 0.469 0.000 0.469 0.465 0.430 0.464 0.395 0.458 0.360 0.447 0.325 0.424 0.290 0.366 0.255 0.340 0.241 0.345; poly #FD3827 0.794 0.000 0.531 0.000 0.531 0.465 0.570 0.464 0.605 0.458 0.640 0.447 0.675 0.424 0.710 0.366 0.745 0.340 0.759 0.345; vfill W 0.22 0.13; vneck #2A0D54 0.22 0.13 0.04; collar #2A0D54 2; armholes #2A0D54 1; shorts #2A0D54 | fill #2A0D54; rect #FD3827 0 0 0.5 0.15; rect #276741 0.5 0 1 0.15; collar #2A0D54 2; armholes #2A0D54 1; number W
+
+# Fremantle-2009. Front https://www.picclickimg.com/QGMAAOSwD-pjwkGQ/Vintage-Fremantle-Dockers-Kids-AFL-On-Field-Reebok.webp :
+# the 2005 flukes with a wider stem, 0.415-0.585. Back (footyjumpers): red then green to 0.15, white number.
+FRE Fremantle-2009 | fill #2A0D54; poly W 0.241 0.000 0.241 0.360 0.255 0.385 0.290 0.456 0.325 0.499 0.360 0.527 0.395 0.548 0.430 0.563 0.465 0.581 0.500 0.594 0.535 0.581 0.570 0.563 0.605 0.548 0.640 0.527 0.675 0.499 0.710 0.456 0.745 0.385 0.759 0.360 0.759 0.000; poly #276741 0.206 0.000 0.441 0.000 0.441 0.465 0.430 0.464 0.395 0.458 0.360 0.447 0.325 0.424 0.290 0.366 0.255 0.340 0.241 0.345; poly #FD3827 0.794 0.000 0.559 0.000 0.559 0.465 0.570 0.464 0.605 0.458 0.640 0.447 0.675 0.424 0.710 0.366 0.745 0.340 0.759 0.345; vfill W 0.22 0.13; vneck #2A0D54 0.22 0.13 0.04; collar #2A0D54 2; armholes #2A0D54 1; shorts #2A0D54 | fill #2A0D54; rect #FD3827 0 0 0.5 0.15; rect #276741 0.5 0 1 0.15; collar #2A0D54 2; armholes #2A0D54 1; number W
+
+# Fremantle-2010. Front https://www.gettyimages.com.au/detail/news-photo/anthony-morabito-of-the-dockers-kicks-the-ball-during-the-news-photo/103186979
+# and https://www.gettyimages.com.au/detail/news-photo/greg-broughton-of-the-dockers-looks-for-a-pass-during-the-news-photo/99305031 :
+# the 2009 anchor. Back (footyjumpers): red then green to 0.15, white number.
+FRE Fremantle-2010 | fill #2A0D54; poly W 0.241 0.000 0.241 0.360 0.255 0.385 0.290 0.456 0.325 0.499 0.360 0.527 0.395 0.548 0.430 0.563 0.465 0.581 0.500 0.594 0.535 0.581 0.570 0.563 0.605 0.548 0.640 0.527 0.675 0.499 0.710 0.456 0.745 0.385 0.759 0.360 0.759 0.000; poly #276741 0.206 0.000 0.441 0.000 0.441 0.465 0.430 0.464 0.395 0.458 0.360 0.447 0.325 0.424 0.290 0.366 0.255 0.340 0.241 0.345; poly #FD3827 0.794 0.000 0.559 0.000 0.559 0.465 0.570 0.464 0.605 0.458 0.640 0.447 0.675 0.424 0.710 0.366 0.745 0.340 0.759 0.345; vfill W 0.22 0.13; vneck #2A0D54 0.22 0.13 0.04; collar #2A0D54 2; armholes #2A0D54 1; shorts #2A0D54 | fill #2A0D54; rect #FD3827 0 0 0.5 0.15; rect #276741 0.5 0 1 0.15; collar #2A0D54 2; armholes #2A0D54 1; number W
+
+# Fremantle-2011 (2011-2012). Front https://i.pinimg.com/originals/bc/b1/5b/bcb15b54a579ce32c1e64efa2714c682.jpg
+# (flat): three white chevrons, tops at the centre 0.341 / 0.456 / 0.567, 0.054 thick, photo slope 0.39, each
+# stopping at 0.08 of the width from the side seams. Back (footyjumpers): purple, white number.
+FRE Fremantle-2011 | fill #2A0D54; poly W 0.206 0.505 0.5 0.341 0.794 0.505 0.794 0.559 0.5 0.395 0.206 0.559; poly W 0.206 0.620 0.5 0.456 0.794 0.620 0.794 0.674 0.5 0.510 0.206 0.674; poly W 0.206 0.731 0.5 0.567 0.794 0.731 0.794 0.785 0.5 0.621 0.206 0.785; collar #2A0D54 2; armholes #2A0D54 1; shorts #2A0D54 | fill #2A0D54; collar #2A0D54 2; armholes #2A0D54 1; number W
+
+# Fremantle-2013 (2013-2015). Front https://i.ebayimg.com/images/g/pIQAAOSwO3xiIZV4/s-l1600.jpg : tops 0.312 / 0.413
+# / 0.511, 0.05 thick; the photo lies at an angle, so slope and ends follow 2016. Back
+# https://i.ebayimg.com/images/g/KT8AAOSwtKtZ4C7X/s-l1600.jpg : plain purple; white number (footyjumpers).
+FRE Fremantle-2013 | fill #2A0D54; poly W 0.206 0.501 0.5 0.312 0.794 0.501 0.794 0.551 0.5 0.362 0.206 0.551; poly W 0.192 0.611 0.5 0.413 0.808 0.611 0.808 0.661 0.5 0.463 0.192 0.661; poly W 0.171 0.723 0.5 0.511 0.829 0.723 0.829 0.773 0.5 0.561 0.171 0.773; collar #2A0D54 2; armholes #2A0D54 1; shorts #2A0D54 | fill #2A0D54; collar #2A0D54 2; armholes #2A0D54 1; number W
+
+# Fremantle-2016 (2016-2017). Front https://www.aflfootyshop.com.au/assets/webshop/cms/37/13737.jpg (flat): tops
+# 0.321 / 0.433 / 0.543, 0.054 thick, photo slope 0.45, ends 0.08 / 0.06 / 0.03 from the side seams. Back
+# (footyjumpers): purple, white number.
+FRE Fremantle-2016 | fill #2A0D54; poly W 0.206 0.510 0.5 0.321 0.794 0.510 0.794 0.564 0.5 0.375 0.206 0.564; poly W 0.192 0.631 0.5 0.433 0.808 0.631 0.808 0.685 0.5 0.487 0.192 0.685; poly W 0.171 0.755 0.5 0.543 0.829 0.755 0.829 0.809 0.5 0.597 0.171 0.809; collar #2A0D54 2; armholes #2A0D54 1; shorts #2A0D54 | fill #2A0D54; collar #2A0D54 2; armholes #2A0D54 1; number W
+
+# Fremantle-2018 (2018-2020). Match photos https://www.gettyimages.com.au/detail/news-photo/nathan-fyfe-of-the-dockers-celebrates-a-goal-during-the-news-photo/1022955978
+# and https://www.gettyimages.com.au/detail/news-photo/nathan-fyfe-of-the-dockers-looks-to-pass-the-ball-during-news-photo/962944868 :
+# the 2016 chevrons (no flat photo, so the 2016 measurements). Back
+# https://www.gettyimages.com.au/detail/news-photo/travis-colyer-of-the-dockers-celebrates-a-goal-during-the-news-photo/1264998029 :
+# purple, white number.
+FRE Fremantle-2018 | fill #2A0D54; poly W 0.206 0.510 0.5 0.321 0.794 0.510 0.794 0.564 0.5 0.375 0.206 0.564; poly W 0.192 0.631 0.5 0.433 0.808 0.631 0.808 0.685 0.5 0.487 0.192 0.685; poly W 0.171 0.755 0.5 0.543 0.829 0.755 0.829 0.809 0.5 0.597 0.171 0.809; collar #2A0D54 2; armholes #2A0D54 1; shorts #2A0D54 | fill #2A0D54; collar #2A0D54 2; armholes #2A0D54 1; number W
+
+# Fremantle-2021 (2021-2022). Match photos https://www.gettyimages.com.au/detail/news-photo/nat-fyfe-of-the-dockers-looks-to-pass-the-ball-during-the-news-photo/1232492364
+# and https://www.gettyimages.com.au/detail/news-photo/michael-walters-of-the-dockers-celebrates-a-winning-play-news-photo/1240482509 :
+# the 2016 chevrons (no flat photo, so the 2016 measurements). Back
+# https://www.gettyimages.com.au/detail/news-photo/david-mundy-of-the-dockers-talks-with-umpire-nick-brown-news-photo/1333023547 :
+# purple, white number.
+FRE Fremantle-2021 | fill #2A0D54; poly W 0.206 0.510 0.5 0.321 0.794 0.510 0.794 0.564 0.5 0.375 0.206 0.564; poly W 0.192 0.631 0.5 0.433 0.808 0.631 0.808 0.685 0.5 0.487 0.192 0.685; poly W 0.171 0.755 0.5 0.543 0.829 0.755 0.829 0.809 0.5 0.597 0.171 0.809; collar #2A0D54 2; armholes #2A0D54 1; shorts #2A0D54 | fill #2A0D54; collar #2A0D54 2; armholes #2A0D54 1; number W
+
+# Fremantle-2023-Home (2023-2025). Front https://www.sportinghousedirect.com.au/assets/full/93F001M.jpg (flat):
+# tops 0.312 / 0.387 / 0.46, 0.035 thick, photo slope 0.30, running off the side seams; purple V collar with a
+# white inside. Back https://www.jimkiddsports.com.au/cdn/shop/files/SHOPIFY_0000s_0001_95F001MS01.jpg : plain
+# purple; white number (footyjumpers).
+FRE Fremantle-2023-Home | fill #2A0D54; poly W 0.000 0.527 0.5 0.312 1.000 0.527 1.000 0.562 0.5 0.347 0.000 0.562; poly W 0.000 0.602 0.5 0.387 1.000 0.602 1.000 0.637 0.5 0.422 0.000 0.637; poly W 0.000 0.675 0.5 0.460 1.000 0.675 1.000 0.710 0.5 0.495 0.000 0.710; vfill #E6E6E6 0.22 0.13; vneck #2A0D54 0.22 0.13 0.04; collar #2A0D54 2; armholes #2A0D54 1; shorts #2A0D54 | fill #2A0D54; collar #2A0D54 2; armholes #2A0D54 1; number W

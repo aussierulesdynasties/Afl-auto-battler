@@ -41,6 +41,8 @@ const BLADE_SPAN := 16.0      # m: the square of standing blades round the ball
 const BLADE_NEAR := 32.0      # m: farther than this from the ball the camera can't see a blade
 var blades: MultiMeshInstance3D
 var _bmat: ShaderMaterial
+var _clouds: NoiseTexture2D
+const SKY_SHADER := preload("res://scripts/ui/match/oval3d_sky.gdshader")
 
 
 func _init(p_oval: Node3D, p_mat: ShaderMaterial, p_env: Environment, p_sun: DirectionalLight3D, half: Vector2) -> void:
@@ -119,7 +121,6 @@ func apply(p_weather: String, p_slot: String) -> void:
 	var wet := weather == VignetteWeather.WET
 	var hot := weather == VignetteWeather.HOT
 	var d := VignetteKickoff.daylight(slot)
-	var lamps := VignetteKickoff.lights(slot)
 	var g: Array = VignetteWeather.grass(weather, VignetteGround.GRASS, slot)
 	if wet:
 		# The flat views darken wet turf to show the wet; here the sheen shows it, so the
@@ -145,63 +146,238 @@ func apply(p_weather: String, p_slot: String) -> void:
 	# Under lights the stripes stand out more than in flat daylight.
 	mat.set_shader_parameter("stripe_amount", lerpf(0.24, 0.16, d))
 
+	# A hot day's ground is still a watered AFL ground: the fine day's green with some dried
+	# patches (the full straw look goes lime under the TV tone, rule 2.81; approved hot sky, 2.84).
+	if hot:
+		g = VignetteWeather.grass("", VignetteGround.GRASS, slot)
+		mat.set_shader_parameter("grass_a", g[0])
+		mat.set_shader_parameter("grass_b", g[1])
+		mat.set_shader_parameter("hot", 0.4)
 	_copy_look()
-	# The sky behind the stands; at night one dark colour.
+
+	# Rule 2.81, the TV broadcast tone: AgX with a footy-TV grade (contrast up a tenth, colour up
+	# a fifth), for every match.
+	env.tonemap_mode = Environment.TONE_MAPPER_AGX
+	env.adjustment_enabled = true
+	env.adjustment_contrast = 1.1
+	env.adjustment_saturation = 1.2
+	env.adjustment_color_correction = null
+	sun.shadow_enabled = true
+	sun.light_angular_distance = 0.0
+	sun.directional_shadow_max_distance = 160.0
+	_stand_shade(false)
+	if slot == VignetteKickoff.NIGHT:
+		_night(wet)
+	else:
+		fill.visible = false
+		_sky_light(hot)
+		if slot == VignetteKickoff.TWILIGHT:
+			_late_game()
+		if wet:
+			_cloud_light()
+	# The exposure, set by the brightness of open grass (rule 2.81): each look's grass near a fine
+	# day's, as a broadcast camera opens up in poorer light.
+	var exposure: float = EXPOSURE[slot]
+	if wet:
+		exposure *= EXPOSURE_WET[slot]
+	env.tonemap_exposure = exposure
+	_sky_view()
+	_tone_to_film()
+
+
+## The match film (Oval3D._film) applies the tone itself, after its own look, so the club rings
+## drawn after it keep their exact club colour whatever the tone and exposure (rule 2.81). The
+## environment hands the film its AgX, exposure and grade, and passes the picture through as it is.
+var film: ShaderMaterial:
+	set(v):
+		film = v
+		_tone_to_film()
+
+
+func _tone_to_film() -> void:
+	if film == null or env.tonemap_mode != Environment.TONE_MAPPER_AGX:
+		return
+	# Godot's own AgX curve settings (environment_storage.cpp, 4.7): white 2.0 on the Mobile renderer.
+	var c: float = env.tonemap_agx_contrast
+	const X := 0.18
+	const WHITE := 2.0
+	var toe := (1.0 / X - 1.0) * pow(X, c)
+	var den := pow(X, c) + toe
+	var slope := c * pow(X, c - 1.0) * toe / (den * den)
+	var w := (WHITE - X) * (WHITE - X) / (1.0 - X) * slope
+	film.set_shader_parameter("tone", true)
+	film.set_shader_parameter("exposure", env.tonemap_exposure)
+	film.set_shader_parameter("awp", Vector4(c, toe, slope, w))
+	var adj := env.adjustment_enabled
+	film.set_shader_parameter("grade", Vector3(env.adjustment_brightness if adj else 1.0,
+			env.adjustment_contrast if adj else 1.0, env.adjustment_saturation if adj else 1.0))
+	env.tonemap_mode = Environment.TONE_MAPPER_LINEAR
+	env.tonemap_exposure = 1.0
+	env.adjustment_enabled = false
+
+
+## AgX exposure for each time of day, and the factor a wet day adds (measured with
+## tools/visual/capture_turf3d.gd: open grass in each look against the fine day's).
+const EXPOSURE := {"day": 1.0, "twilight": 2.81, "night": 1.91}
+const EXPOSURE_WET := {"day": 1.83, "twilight": 1.83, "night": 1.84}
+
+
+## Night: the towers, high and cool white from behind the far wing, a weaker set from the other
+## side, under one dark sky colour (rule 2.80's sky light is the daylight).
+func _night(wet: bool) -> void:
+	env.sky = null
+	env.background_mode = Environment.BG_COLOR
 	var sky: Array = VignetteWeather.sky(weather, slot)
 	env.background_color = sky[1] if sky.size() > 1 else VignetteGround.SKY
+	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	# The backdrop is one flat colour, not a sky: mirrored in the turf at a low angle it
 	# lays a grey film over the grass. The wet sheen comes from the lights instead.
 	env.reflected_light_source = Environment.REFLECTION_SOURCE_DISABLED
-
-	# The key light: the sun by day and at twilight (low and warm then), the towers at night.
-	sun.shadow_enabled = true
-	if slot == VignetteKickoff.NIGHT:
-		# The towers: high, cool white, from behind the far wing; a weaker set from the other side.
-		sun.rotation_degrees = Vector3(-58.0, 150.0, 0.0)
-		sun.light_color = Color(0.97, 1.0, 0.97)
-		sun.light_energy = 1.6
-		fill.visible = true
-		fill.rotation_degrees = Vector3(-58.0, -30.0, 0.0)
-		fill.light_color = Color(0.92, 0.95, 1.0)
-		fill.light_energy = 0.5
-		env.ambient_light_color = Color(0.4, 0.46, 0.4)
-		env.ambient_light_energy = 0.35
-	elif slot == VignetteKickoff.TWILIGHT:
-		sun.rotation_degrees = Vector3(-22.0, -60.0, 0.0)
-		sun.light_color = Color(1.0, 0.75, 0.52)
-		sun.light_energy = 1.9
-		fill.visible = lamps > 0.0
-		fill.rotation_degrees = Vector3(-58.0, 150.0, 0.0)
-		fill.light_color = Color(0.92, 0.95, 1.0)
-		fill.light_energy = 0.4 * lamps
-		env.ambient_light_color = Color(0.6, 0.55, 0.66)
-		env.ambient_light_energy = 0.7
-	else:
-		fill.visible = false
-		sun.rotation_degrees = Vector3(-68.0 if hot else -52.0, -35.0, 0.0)
-		sun.light_color = Color(1.0, 0.95, 0.85) if hot else Color(1.0, 0.98, 0.94)
-		sun.light_energy = 1.55 if hot else 1.25
-		env.ambient_light_color = Color(0.62, 0.66, 0.72)
-		env.ambient_light_energy = 0.32 if hot else 0.4
-	# The broadcast camera opens up in poorer light, as a real one does (measured: the ground's
-	# brightness in each look within about 15% of a fine day's).
-	var exposure := 1.0
-	match slot:
-		VignetteKickoff.TWILIGHT:
-			exposure = 2.05
-		VignetteKickoff.NIGHT:
-			exposure = 1.7
+	sun.rotation_degrees = Vector3(-58.0, 150.0, 0.0)
+	sun.light_color = Color(0.97, 1.0, 0.97)
+	sun.light_energy = 1.6
+	fill.visible = true
+	fill.rotation_degrees = Vector3(-58.0, -30.0, 0.0)
+	fill.light_color = Color(0.92, 0.95, 1.0)
+	fill.light_energy = 0.5
+	env.ambient_light_color = Color(0.4, 0.46, 0.4)
+	env.ambient_light_energy = 0.35
 	if wet:
-		exposure *= 1.85
-	env.tonemap_exposure = exposure
-	if wet:
-		# Overcast: the key goes soft and cool, the sky does most of the lighting.
-		sun.light_energy *= 0.55 if slot == VignetteKickoff.DAY else 0.85
+		sun.light_energy *= 0.85
 		sun.light_color = sun.light_color.lerp(Color(0.85, 0.9, 1.0), 0.5)
-		# A grey sky by day; under lights the night sky is black, so no grey cast.
-		if slot == VignetteKickoff.DAY:
-			env.ambient_light_color = env.ambient_light_color.lerp(Color(0.6, 0.65, 0.72), 0.5)
-		env.ambient_light_energy *= 2.4 if slot == VignetteKickoff.DAY else 1.1
+		env.ambient_light_energy *= 1.1
+
+
+## Rule 2.80, sky light: the sky lights the ground and the men (ambient and reflections from it),
+## the grass bounces light up and the stands round the ground darken the sides. Rule 2.84: the
+## sky you see for the weather. Values copied from the approved prototype (capture_look3d.gd).
+func _sky_light(hot: bool) -> void:
+	var sm := ShaderMaterial.new()
+	sm.shader = SKY_SHADER
+	sm.set_shader_parameter("clouds_tex", _cloud_noise())
+	var sky := Sky.new()
+	sky.sky_material = sm
+	sky.radiance_size = Sky.RADIANCE_SIZE_64
+	env.sky = sky
+	env.background_mode = Environment.BG_SKY
+	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
+	env.ambient_light_sky_contribution = 1.0
+	env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
+	if hot:
+		# The sun high and hard, the sky pale with glare, cloudless.
+		sun.rotation_degrees = Vector3(-68.0, -35.0, 0.0)
+		sm.set_shader_parameter("energy", 1.2)
+		sm.set_shader_parameter("zenith", Color(0.35, 0.55, 0.85))
+		sm.set_shader_parameter("horizon", Color(0.82, 0.86, 0.9))
+		sun.light_energy = 1.6
+		sun.light_color = Color(1.0, 0.96, 0.88)
+		_sky_look({"cover": 0.06, "sun_halo": 1.2, "target": 0.7, "seen_horizon": Color(0.66, 0.78, 0.92, 1.0),
+				"seen_zenith": Color(0.2, 0.42, 0.82, 1.0), "sky_curve": 0.45})
+	else:
+		# A fine winter's day: blue, a few fair-weather clouds, the sun's glare round it.
+		sun.rotation_degrees = Vector3(-52.0, -35.0, 0.0)
+		sm.set_shader_parameter("energy", 1.4)
+		sun.light_energy = 1.15
+		sun.light_color = Color(1.0, 0.95, 0.86)
+		_sky_look({"cover": 0.32, "cloud_lit": Color(1.0, 1.0, 1.0), "cloud_dark": Color(0.62, 0.66, 0.74),
+				"sun_halo": 0.35})
+
+
+## Rule 2.80's late game ("C late games"): the sun 22 degrees up behind the near stand (about
+## 4.30 pm in winter), so the stand's top, 24 m up and 34 m back from the fence, shades about 25 m
+## of the near wing; the clouds warm on the sun's side (the approved late-game sky, rule 2.84).
+func _late_game() -> void:
+	var sm: ShaderMaterial = env.sky.sky_material
+	sun.light_energy = 1.2
+	var e := deg_to_rad(22.0)
+	var h := Vector3(0.3, 0.0, -1.0).normalized()
+	sun.global_basis = Basis.looking_at(h * cos(e) + Vector3(0.0, -sin(e), 0.0), Vector3.UP)
+	sun.light_color = Color(1.0, 0.9, 0.76)
+	sun.directional_shadow_max_distance = 320.0
+	_stand_shade(true)
+	_sky_look({"cover": 0.4, "cloud_lit": Color(1.0, 0.93, 0.82), "cloud_dark": Color(0.56, 0.57, 0.64), "sun_halo": 0.55,
+			"cloud_sun": 0.8, "target": 0.8})
+
+
+## A wet day (rule 2.83): the sky is cloud, grey light from all round, the sun only a soft
+## brightness from above, so a man's shadow is a faint pool at his feet.
+func _cloud_light() -> void:
+	var sm: ShaderMaterial = env.sky.sky_material
+	sm.set_shader_parameter("energy", 1.4)
+	sm.set_shader_parameter("zenith", Color(0.55, 0.57, 0.6))
+	sm.set_shader_parameter("horizon", Color(0.66, 0.67, 0.69))
+	sm.set_shader_parameter("bowl", Color(0.16, 0.16, 0.17))
+	sm.set_shader_parameter("grass", Color(0.14, 0.2, 0.1))
+	sm.set_shader_parameter("glow_energy", 0.0)
+	sm.set_shader_parameter("stars", 0.0)
+	sun.light_energy = 0.45
+	sun.light_color = Color(0.95, 0.97, 1.0)
+	sun.light_angular_distance = 12.0
+	sun.global_basis = Basis.looking_at(Vector3(0.2, -1.0, 0.35).normalized(), Vector3.UP)
+	sun.directional_shadow_max_distance = 160.0
+	_stand_shade(false)
+	env.adjustment_color_correction = null
+	_sky_look({"cover": 1.0, "cloud_size": 1.6, "cloud_lit": Color(0.64, 0.66, 0.69), "cloud_dark": Color(0.4, 0.42, 0.45),
+			"cloud_sun": 0.15, "target": 0.5})
+
+
+func _sky_look(p: Dictionary) -> void:
+	var sm: ShaderMaterial = env.sky.sky_material
+	for k in p:
+		if k == "target":
+			sm.set_meta("target", p[k])
+		else:
+			sm.set_shader_parameter(k, p[k])
+
+
+## The seen sky set for the exposure: its horizon at the look's "target" brightness on screen (a
+## sunset sky is far brighter than the grass the exposure is set for, and would blow out white).
+## A look without a target keeps the sky's own brightness.
+func _sky_view() -> void:
+	if env.sky == null:
+		return
+	var sm: ShaderMaterial = env.sky.sky_material
+	if not sm.has_meta("target"):
+		return
+	var hzv = sm.get_shader_parameter("seen_horizon")
+	if hzv == null or hzv.a == 0.0:
+		hzv = sm.get_shader_parameter("horizon")
+	if hzv == null:
+		hzv = RenderingServer.shader_get_parameter_default(SKY_SHADER.get_rid(), "horizon")
+	if hzv == null:
+		return # headless (tests): no renderer to give the shader's default
+	var hz: Color = hzv
+	var lum := 0.2126 * hz.r + 0.7152 * hz.g + 0.0722 * hz.b
+	sm.set_shader_parameter("view", float(sm.get_meta("target"))
+			/ (env.tonemap_exposure * float(sm.get_shader_parameter("energy")) * lum))
+
+
+## The stands cast their shade across the ground (a late game, rule 2.80).
+func _stand_shade(on: bool) -> void:
+	for c in oval.get_children():
+		if c is MeshInstance3D and c.material_override is ShaderMaterial \
+				and str(c.material_override.shader.resource_path).ends_with("oval3d_crowd.gdshader"):
+			c.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_DOUBLE_SIDED if on \
+					else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+
+## Seamless cloud noise for the sky, made once.
+func _cloud_noise() -> NoiseTexture2D:
+	if _clouds != null:
+		return _clouds
+	var fn := FastNoiseLite.new()
+	fn.noise_type = FastNoiseLite.TYPE_PERLIN
+	fn.fractal_type = FastNoiseLite.FRACTAL_FBM
+	fn.fractal_octaves = 5
+	fn.frequency = 0.008
+	fn.seed = 7
+	_clouds = NoiseTexture2D.new()
+	_clouds.width = 512
+	_clouds.height = 512
+	_clouds.seamless = true
+	_clouds.generate_mipmaps = true
+	_clouds.noise = fn
+	return _clouds
 
 
 func _process(dt: float) -> void:
