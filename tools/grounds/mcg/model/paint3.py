@@ -7,10 +7,18 @@ R = np.random.default_rng(11); OUT = os.path.join(os.path.dirname(os.path.abspat
 TILE = json.load(open(OUT + 'tiles.json')); H = 24.0; PPM = 96
 
 
+def winspans(name, wins, W):
+    """where the windows are along the tile (u metres), for wallcols.py: a corner may never cut one. Ribbon glazing
+    that runs the full tile width is left out (it crosses every corner by design; the corner strip covers it)."""
+    p = OUT + 'winspans.json'; J = json.load(open(p)) if os.path.exists(p) else {}
+    J[name] = [[max(0.0, a), min(W, b)] for a, b in wins if b - a < 0.95 * W]
+    json.dump(J, open(p, 'w', newline=''))
+
+
 class T:
     def __init__(s, W, col, n=2.0):
         s.W = W; s.w = int(W * PPM); s.h = int(H * PPM); s.a = np.ones((s.h, s.w, 3)) * np.array(col, float)
-        s.a += R.normal(0, n, (s.h, s.w, 1))
+        s.a += R.normal(0, n, (s.h, s.w, 1)); s.wins = []  # u spans of the windows drawn (tex/winspans.json)
     def Y(s, z): return int(round((H - z) * PPM))
     def X(s, u): return int(round(u * PPM))
     def rect(s, u0, u1, z0, z1, col=None, mul=None):
@@ -21,13 +29,14 @@ class T:
     def hl(s, z, t, col=None, mul=0.7, u0=0, u1=None): s.rect(u0, s.W if u1 is None else u1, z - t / 2, z + t / 2, col, None if col else mul)
     def vl(s, u, t, z0=0, z1=H, col=None, mul=0.75): s.rect(u - t / 2, u + t / 2, z0, z1, col, None if col else mul)
     def win(s, u0, u1, z0, z1, col=(44, 74, 80), frame=(214, 218, 218), nx=2, ny=2, fw=0.07):
-        s.rect(u0, u1, z0, z1, col)
+        s.rect(u0, u1, z0, z1, col); s.wins.append((u0 - fw, u1 + fw))
         y0, y1 = s.Y(z1), s.Y(z0); s.a[y0:y1, s.X(u0):s.X(u1)] *= np.linspace(1.18, 0.88, y1 - y0)[:, None, None]
         for k in range(nx + 1): s.vl(u0 + (u1 - u0) * k / nx, fw, z0, z1, frame)
         for k in range(ny + 1): s.hl(z0 + (z1 - z0) * k / ny, fw, frame, u0=u0, u1=u1)
         s.hl(z0 - 0.08, 0.16, None, 0.7, u0, u1)  # sill shadow
     def save(s, name):
         Image.fromarray(np.clip(s.a, 0, 255).astype(np.uint8)).save(OUT + name + '.png'); TILE[name] = (s.W, H)
+        winspans(name, s.wins, s.W)
 
 
 GREY = (150, 157, 164); LEDGE = (226, 228, 226); TEAL = (52, 86, 92)
@@ -69,13 +78,15 @@ def gate(side):
 
 
 gate(False); gate(True)
-# Metal box 10-17 on legs (f000): grey ribbed metal (ribs every 0.3 m), open undercroft z 0-3.2, one wide window
+# Metal box 10-17 on legs (f000): grey ribbed metal (ribs every 0.3 m), open undercroft z 0-4.6 (built as geometry), one wide window
 # strip z 7.8-10.4 across most of the north face (u 11.2-17.9), a small window on the angled west face (u 2.4-3.7).
-t = T(18.0, (146, 156, 166))
-for u in np.arange(0, 18, 0.3): t.vl(u, 0.05, 3.2, 24, mul=0.86)
-t.rect(0, 18, 0, 3.2, (36, 44, 56)); t.hl(3.3, 0.2, (120, 128, 136))
-t.win(11.2, 17.9, 7.8, 10.4, (40, 58, 66), frame=(196, 202, 206), nx=6, ny=1)
-t.hl(7.7, 0.2, (200, 206, 210), u0=11.2, u1=17.9)
+# One tile = the whole 27.2 m run along the footprint (10-17): angled faces s 0-19.5, front face s 19.5-27.2 (f022:
+# window strip across the middle of the front, ~1.5 m plain each side).
+t = T(27.2, (146, 156, 166))
+for u in np.arange(0, 27.2, 0.3): t.vl(u, 0.05, 4.6, 24, mul=0.86)
+t.rect(0, 27.2, 0, 4.6, (36, 44, 56)); t.hl(4.7, 0.2, (120, 128, 136))
+t.win(21.0, 25.7, 7.8, 10.4, (40, 58, 66), frame=(196, 202, 206), nx=4, ny=1)
+t.hl(7.7, 0.2, (200, 206, 210), u0=21.0, u1=25.7)
 t.win(2.4, 3.7, 9.2, 11.9, (60, 84, 92), nx=1, ny=1)
 t.save('fac_box')
 # Poster block 17-24 (f000): grey cladding with paler pilasters, white ledges at z 8.2 and 15.4, two columns of
@@ -108,13 +119,13 @@ for z0, z1 in ((1.2, 6.5), (8.8, 13.0), (13.8, 19.2)):
     for u0, u1 in ((5.5, 9.6), (10.6, 15.0)): t.win(u0, u1, z0, z1, TEAL, nx=2, ny=2)
 t.rect(0.3, 4.6, 0.8, 19.6, (232, 234, 232)); t.rect(1.2, 3.7, 16.0, 18.4, (40, 120, 92)); t.rect(1.8, 3.1, 16.6, 17.8, (232, 234, 232))
 t.save('fac_neblock')
-# NE metal box 46-54 on legs (f045): open undercroft z 0-3.5 (u 2.6-21), a long dark window strip z 3.6-6.4 at
+# NE metal box 46-54 on legs (f045, f090): open undercroft z 0-4.4 (built as geometry), a long dark window strip z 7.0-10.2 at
 # u 12.0-20.7, grey panel grid (3 m) above with two dark slots at u 5.6-6.4, a shadowed recess u 0-2.6 at the join.
 t = T(21.0, (156, 164, 172))
-for u in np.arange(0, 21, 3.0): t.vl(u, 0.05, 3.5, 24, mul=0.84)
+for u in np.arange(0, 21, 3.0): t.vl(u, 0.05, 4.4, 24, mul=0.84)
 for z in np.arange(6.5, 24, 3.4): t.hl(z, 0.05, mul=0.84)
-t.rect(2.6, 21, 0, 3.5, (34, 42, 54)); t.hl(3.55, 0.15, (120, 128, 136), u0=2.6)
-t.win(12.0, 20.7, 3.7, 6.4, (38, 52, 62), frame=(190, 196, 200), nx=5, ny=1)
+t.rect(2.6, 21, 0, 4.4, (34, 42, 54)); t.hl(4.47, 0.15, (120, 128, 136), u0=2.6)
+t.win(12.0, 20.7, 7.0, 10.2, (38, 52, 62), frame=(190, 196, 200), nx=5, ny=1)
 for u in (5.6, 6.1): t.rect(u, u + 0.3, 9.5, 15.0, (44, 52, 62))
 t.rect(0, 2.6, 0, 24, (116, 124, 132))
 t.save('fac_nebox')
@@ -254,6 +265,18 @@ for u in np.arange(0, 6, 1.2): t.vl(u, 0.09, col=(118, 130, 140))
 for z in np.arange(0, 24, 1.5): t.hl(z, 0.06, (150, 160, 168))
 t.a[:] *= np.linspace(1.04, 0.9, t.h)[:, None, None]
 t.save('skylight')
+# Open ground floors under the NE blocks (f045): the back wall in deep shade (dark glazed doors and panels, slim
+# mullions every 1.5 m, a door head at z 2.6) and the soffit under the slab.
+t = T(6.0, (26, 31, 38))
+for u in np.arange(0, 6, 1.5): t.vl(u, 0.08, 0, 2.6, col=(46, 52, 60))
+t.hl(2.6, 0.12, (46, 52, 60)); t.rect(0, 6, 2.66, 24, (36, 40, 46))
+t.save('uc_back')
+t = T(6.0, (52, 58, 66))
+for u in np.arange(0, 6, 1.2): t.vl(u, 0.05, col=(42, 48, 56))
+t.save('uc_soffit')
+t = T(6.0, (96, 100, 104))
+for u in np.arange(0, 6, 1.2): t.vl(u, 0.03, col=(86, 90, 94))
+t.save('uc_floor')
 N = 768; a = np.ones((N, N, 3)) * np.array((168, 174, 174), float) + R.normal(0, 3, (N, N, 1)); p = N / 6.0
 for r0 in (0.5, 3.5):
     for c in np.arange(0.05, 5.9, 1.0):

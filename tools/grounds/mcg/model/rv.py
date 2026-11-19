@@ -42,6 +42,13 @@ for v in argv[1:]:
                     ob.data.transform(ob.matrix_world.inverted() @ mathutils.Matrix(((1, 0, lx, 0), (0, 1, ly, 0), (0, 0, 1, 0), (0, 0, 0, 1))) @ ob.matrix_world)  # shear the mesh: object matrices can't hold a shear
         sc.render.filepath = os.path.join(out, v + '.png'); bpy.ops.render.render(write_still=True)
         continue
+    if v.startswith('at_'):  # at_<ex>_<ey>_<ez>_<tx>_<ty>_<tz>[_<fov>]: eye looking at a target (close-ups)
+        q = list(map(float, v.split('_')[1:])); e = mathutils.Vector(q[:3]); f = (mathutils.Vector(q[3:6]) - e).normalized()
+        cd.angle_y = math.radians(q[6] if len(q) > 6 else 35)
+        r = f.cross(mathutils.Vector((0, 0, 1))).normalized(); u = r.cross(f)
+        co.matrix_world = mathutils.Matrix.Translation(e) @ mathutils.Matrix((r, u, -f)).transposed().to_4x4()
+        sc.render.filepath = os.path.join(out, v + '.png'); bpy.ops.render.render(write_still=True); cd.angle_y = math.radians(35)
+        continue
     x0, y0, a, d, h, t = C[v]; c = earthcam.cam(h, t, d, tz=a - 13, tx=x0, ty=y0)
     R = mathutils.Matrix((c['right'], c['up'], -c['fwd'])).transposed()
     co.matrix_world = mathutils.Matrix.Translation(c['C']) @ R.to_4x4()

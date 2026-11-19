@@ -8,7 +8,7 @@ TILE=json.load(open(OUT+'tiles.json'));H=24.0;PPM=128  # pixels per metre
 class T:
     def __init__(s,W,col):
         s.W=W;s.w=int(W*PPM);s.h=int(H*PPM);s.a=np.ones((s.h,s.w,3))*np.array(col,float)
-        s.a+=R.normal(0,2.0,(s.h,s.w,1))
+        s.a+=R.normal(0,2.0,(s.h,s.w,1));s.wins=[]  # u spans of the windows drawn (tex/winspans.json)
     def Y(s,z):return int(round((H-z)*PPM))
     def X(s,u):return int(round(u*PPM))
     def rect(s,u0,u1,z0,z1,col,mul=None):
@@ -20,8 +20,10 @@ class T:
     def vline(s,u,t,z0=0,z1=H,col=None,mul=0.75):s.rect(u-t/2,u+t/2,z0,z1,col,None if col else mul)
     def save(s,name):
         Image.fromarray(np.clip(s.a,0,255).astype(np.uint8)).save(OUT+name+'.png');TILE[name]=(s.W,H)
+        p=OUT+'winspans.json';J=json.load(open(p)) if os.path.exists(p) else {}  # ribbons (>=95% of the tile) left out
+        J[name]=[[max(0.0,a),min(s.W,b)] for a,b in s.wins if b-a<0.95*s.W];json.dump(J,open(p,'w',newline=''))
 def glasspane(t,u0,u1,z0,z1,col,frame=(226,228,226),fw=0.08,nx=2,ny=1):
-    t.rect(u0,u1,z0,z1,col)
+    t.rect(u0,u1,z0,z1,col);t.wins.append((u0-fw,u1+fw))
     y0,y1=t.Y(z1),t.Y(z0);g=np.linspace(1.12,0.9,y1-y0)[:,None,None];t.a[y0:y1,t.X(u0):t.X(u1)]*=g  # sky reflection fade
     for k in range(nx+1):t.vline(u0+(u1-u0)*k/nx,fw,z0,z1,frame)
     for k in range(ny+1):t.rect(u0,u1,z0+(z1-z0)*k/ny-fw/2,z0+(z1-z0)*k/ny+fw/2,frame)

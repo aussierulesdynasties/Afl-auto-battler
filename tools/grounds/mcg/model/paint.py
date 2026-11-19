@@ -13,26 +13,40 @@ def flat(col,f=3,s=5):return np.ones((N,N,3))*np.array(col,float)+fine(N,f)[:,:,
 # Seat rows (copied from GE f180 / n_w): one tile = 12 m along the tier x 3.2 m up the rake (4 rows of 0.8 m).
 # A 1.0 m concrete aisle stair at u 0-1.0 (step nosing every 0.4 m), then 21 plastic seats at 0.524 m pitch.
 # Each row from the front: narrow concrete tread, seat pan, backrest, dark riser shadow. v = 0 is the row front.
-def seats(name,col,tread=(78,84,92),aisle=(118,122,126)):
-    W,Hh=2048,1024;pu=W/12.0;pv=Hh/3.2;c0=np.array(col,float)
+def seats(name,col,tread=(78,84,92)):
+    # one 12 m tile of seat rows, no aisle: the aisles are their own radial strips in the model (mcg.json aisles)
+    W,Hh=2048,1024;pu=W/12.0;pv=Hh/3.2;c0=np.array(col,float);sw=12.0/23
     a=np.ones((Hh,W,3))*np.array(tread,float)
     Y=lambda v:Hh-int(round(v*pv))  # image row of v metres (v up the rake; image row 0 = top of tile)
     for r in range(4):
         v0=r*0.8
-        for k in range(21):
-            u0=1.0+k*0.524;c=c0*(1+R.normal(0,0.025));x0,x1=int((u0+0.03)*pu),int((u0+0.494)*pu)
+        for k in range(23):
+            u0=k*sw;c=c0*(1+R.normal(0,0.025));x0,x1=int((u0+0.03)*pu),int((u0+sw-0.03)*pu)
             a[Y(v0+0.42):Y(v0+0.14),x0:x1]=c            # seat pan
             a[Y(v0+0.74):Y(v0+0.42),x0:x1]=c*0.86       # backrest
             a[Y(v0+0.44):Y(v0+0.40),x0:x1]=c*0.7        # pan/back crease
-        a[Y(v0+0.8):Y(v0+0.75),int(1.0*pu):]=np.array(tread)*0.6   # riser shadow under the next row
-    # aisle stair: concrete with a nosing line every 0.4 m and a centre handrail
-    a[:,:int(1.0*pu)]=np.array(aisle,float)
-    for k in range(8):a[Y(k*0.4+0.04):Y(k*0.4),:int(1.0*pu)]=np.array(aisle)*0.72
-    a[:,int(0.48*pu):int(0.52*pu)]=(200,204,206)
+        a[Y(v0+0.8):Y(v0+0.75),:]=np.array(tread)*0.6   # riser shadow under the next row
     a+=R.normal(0,2.0,(Hh,W,1));save(name,a,(12.0,3.2))
+def steps(name,col=(150,152,152)):
+    # aisle stair, 1.2 m wide: concrete treads, dark nosing every 0.4 m up the rake, centre handrail
+    W,Hh=256,1024;pu=W/1.2;pv=Hh/3.2;a=np.ones((Hh,W,3))*np.array(col,float)
+    for k in range(8):
+        y=Hh-int(round(k*0.4*pv));a[max(0,y-int(0.05*pv)):y]=np.array(col)*0.66;a[max(0,y-int(0.4*pv)):max(0,y-int(0.3*pv))]*=0.93
+    a[:,int(0.58*pu):int(0.62*pu)]=(206,208,210);a[:,:3]*=0.8;a[:,-3:]*=0.8
+    a+=R.normal(0,2.5,(Hh,W,1));save(name,a,(1.2,3.2))
+steps('aisle_dark',(84,90,98));steps('aisle_light',(176,178,174))
 seats('seat_navy',(18,80,124));seats('seat_slate',(70,100,125));seats('seat_steel',(112,124,134));seats('seat_grey',(158,158,150))
+# MCC sector (290-8 deg): mossy teal-green seats on white concrete treads (director 2026-11-19)
+seats('seat_moss',(112,152,142),tread=(186,188,182))  # hue of the CC0 close photo (146,184,176), at model exposure
 # Tier fronts: the walkway wall and the fascia below each tier lip read dark in every photo (shaded, black LED ribbon).
 save('tier_wall',flat((86,90,96),2,4),(2.0,2.0));save('tier_fascia',flat((44,48,54),2,3),(2.0,2.0))
+# MCC sector tier fronts (commons MCC 050425.jpg, CC0): white concrete band, black glass rail along its top, posts every 2 m; painted clean, not weathered (the photo's bands are clean white).
+def fascia_mcc():
+    a=flat((224,226,222),2,4);pv=N/3.0;pu=N/2.0;t=int(1.0*pv)
+    a[:t]=flat((26,28,31),2,3)[:t];a[:int(0.06*pv)]=(60,62,66);a[t-int(0.04*pv):t]=(70,72,74)
+    for x in (0,N-int(0.05*pu)):a[:t,x:x+int(0.05*pu)]=(14,15,17)
+    a[t:t+int(0.05*pv)]*=0.8;save('fascia_mcc',a,(2.0,3.0))
+fascia_mcc()
 # Roof sheeting: light metal deck, ribs every 0.3 m along v (radial), long panels.
 def deck(name,col,pitch=0.3,tile=3.0):
     x=np.arange(N)/N*(tile/pitch);rib=np.where((x%1)<0.14,0.82,1.0)+0.03*np.cos(2*math.pi*x)
@@ -56,7 +70,7 @@ for k in range(2):a[:,int(k*1.5*p):int(k*1.5*p)+8]=(150,156,160)
 for k in range(2):a[int(k*1.6*p):int(k*1.6*p)+8]=(150,156,160)
 save('glass',a,(3.0,3.2))
 # Steel: painted white towers, MCG blue roof trusses, galvanised grey, black screen.
-for nm,col in (('steel_white',(234,236,234)),('steel_blue',(146,150,152)),('steel_galv',(156,160,164)),('steel_dark',(62,66,72)),('screen',(18,20,24)),('paint_white',(238,238,234))):
+for nm,col in (('steel_white',(234,236,234)),('steel_blue',(92,118,140)),('steel_galv',(156,160,164)),('steel_dark',(62,66,72)),('screen',(18,20,24)),('paint_white',(238,238,234))):
     save(nm,flat(col,2,4),(2.0,2.0))
 # Light tower head: frame of 4 x 8 lamps, white frame, grey lamp faces with a bright rim.
 a=np.ones((N,N,3))*np.array((236,236,232),float);cu,cv=N/8,N/4

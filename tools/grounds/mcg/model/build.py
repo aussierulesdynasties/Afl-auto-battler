@@ -107,13 +107,14 @@ def bowl_all(col):
         rf = fb(b)[0]; rin = ri(b)[0]; rout = ro(b)[0]; h = rh(b)[0]
         d1, z1, d2, zb2, zt2, e2, z2, d3, zb3, zt3, zback, zfac = tiers(b)
         fseg = facseg(b); zfac = fseg[2]
+        fasc = matat('fascia', b) if 'fascia' in mats else 'tier_fascia'  # tier-front band per sector (white at the MCC)
         rfp = fp[i] if not np.isnan(fp[i]) else rout
         rfp = max(rfp, rf + d3 + 6)
         # (r, z, material-of-segment-from-previous-point)
         S = [(rf, -5.3, None), (rf, -4.2, 'fence'), (rf + 1.5, -4.2, 'conc_grey'), (rf + d1, z1, matat('t1', b)),
-             (rf + d2, z1, 'conc_grey'), (rf + d2, zb2, 'tier_wall'), (rf + d2 - 0.4, zt2, 'tier_fascia'),
+             (rf + d2, z1, 'conc_grey'), (rf + d2, zb2, 'tier_wall'), (rf + d2 - 0.4, zt2, fasc),
              (rf + e2, z2, matat('t2', b)), (rf + d3, z2, 'conc_grey'), (rf + d3, zb3, 'tier_wall'),
-             (rf + d3 - 0.4, zt3, 'tier_fascia'), (rout - 8, zback, matat('t3', b)), (rout - 8, h - edge(b)[1], 'conc_grey'),
+             (rf + d3 - 0.4, zt3, fasc), (rout - 8, zback, matat('t3', b)), (rout - 8, h - edge(b)[1], 'conc_grey'),
              (min(rfp, rout, screen_rb(b) - 0.3), h - edge(b)[1], 'roof_soffit')]
         secs.append(dict(b=b, S=S, ed=edge(b), dk=matat('deck', b) if 'deck' in mats else 'conc_light', rin=rin, rout=rout, h=h, rfp=rfp, zfac=zfac, tw=tw_(b)[0], fm=fseg[3], fs0=fseg[0], fend=fseg[4] if len(fseg) > 4 else fseg[3]))
     mb = MB('bowl')
@@ -130,30 +131,52 @@ def bowl_all(col):
             L = math.hypot(A['S'][k][0] - A['S'][k - 1][0], A['S'][k][1] - A['S'][k - 1][1])
             ua = A['b'] * kk * rm / tu; ub = ua + ((Bs['b'] - A['b']) % 360) * kk * rm / tu
             mb.face([p0, q0, q1, p1], m, uv=[(ua, 0), (ub, 0), (ub, L / tv), (ua, L / tv)])
-        # facade wall and deck at the footprint
-        fz = A['zfac']; gz = Bs['zfac']  # each sector keeps its own block height; steps at block edges
-        a0 = (*pol(A['b'], A['rfp']), 0.0); b0 = (*pol(Bs['b'], Bs['rfp']), 0.0)
-        a1 = (*pol(A['b'], A['rfp']), fz); b1 = (*pol(Bs['b'], Bs['rfp']), fz)
-        tu, tv = TILE.get(A['fm'], (1, 1)); k = math.pi / 180
-        ua = (A['b'] - A['fs0']) * k * A['rfp'] / tu; ub = ua + ((Bs['b'] - A['b']) % 360) * k * 0.5 * (A['rfp'] + Bs['rfp']) / tu
-        mb.face([a0, a1, b1, b0], A['fm'], uv=[(ua, 0), (ua, fz / tv), (ub, fz / tv), (ub, 0)])
-        c0 = (*pol(A['b'], A['rout'] - 8), fz); c1 = (*pol(Bs['b'], Bs['rout'] - 8), fz)
-        if A['dk'] in ('solar', 'terrace'):  # panels / paving only on the front 9 m of the block roof, plain roof behind
-            ra, rb_ = max(A['rout'] - 8, A['rfp'] - 9), max(Bs['rout'] - 8, Bs['rfp'] - 9)
-            m0 = (*pol(A['b'], ra), fz); m1 = (*pol(Bs['b'], rb_), fz)
-            mb.face([m0, a1, b1, m1][::-1], A['dk']); mb.face([c0, m0, m1, c1][::-1], 'roof_grey')
-        else:
-            mb.face([c0, a1, b1, c1][::-1], A['dk'])
         # upper back wall: deck up to the roof's outer fascia, set 1.5 m in from the roof edge
         wa = min(A['rfp'], A['rout']) - 1.5; wb = min(Bs['rfp'], Bs['rout']) - 1.5
         wa = backr(A['b'], wa); wb = backr(Bs['b'], wb)  # set-back stand wall (north gate terrace)
+        fz = A['zfac']
         for za, zb, m in back_bands(A['b'], fz, A['h'] - A['ed'][1]):
             mb.face([(*pol(A['b'], wa), za), (*pol(A['b'], wa), zb), (*pol(Bs['b'], wb), zb), (*pol(Bs['b'], wb), za)], m)
-        if abs(fz - gz) > 0.01:  # end wall where the next block is lower or higher
-            lo, top = min(fz, gz), max(fz, gz); hm = A['fend'] if fz > gz else Bs['fend']
-            q = [(*pol(Bs['b'], Bs['rfp']), lo), (*pol(Bs['b'], Bs['rfp']), top), (*pol(Bs['b'], Bs['rout'] - 8), top), (*pol(Bs['b'], Bs['rout'] - 8), lo)]
-            mb.face(q, hm); mb.face(q[::-1], hm)
         # radial step between neighbouring footprint radii shows as a wall (handled by the quad above)
+    facade_all(mb, secs, fb, ri, ro, rh, tiers, matat)
+    # aisle stairs: a radial strip per aisle on each tier at the bearings read off the photos (mcg.json aisles),
+    # lifted 3 cm off the seats; dark concrete through navy seats, pale through grey and MCC green (photos).
+    # Top tier: each aisle has a short cross landing at z ~20.7 (the "+" in every far-side photo).
+    AW = D.get('aisle_w', 1.2); TU, TV = TILE.get('aisle_dark', (1.2, 3.2))
+    def lift(r, z, ra, za, rb, zb, h=0.03):
+        L = math.hypot(rb - ra, zb - za); return r - h * (zb - za) / L, z + h * (rb - ra) / L
+    g0, g1 = D.get('gangway_t3', (20.4, 21.2)); GW = D.get('gangway_w', 3.6)
+    for tn, k1 in (('t1', 3), ('t2', 7), ('t3', 11)):
+        for ab in D.get('aisles', {}).get(tn, []):
+            A = secs[int(round(ab / STEP)) % n]; (ra, za), (rb, zb) = A['S'][k1 - 1][:2], A['S'][k1][:2]
+            m = 'aisle_dark' if matat(tn, ab) in ('seat_navy', 'seat_slate') else 'aisle_light'
+            L = math.hypot(rb - ra, zb - za); (r0, z0), (r1, z1) = lift(ra, za, ra, za, rb, zb), lift(rb, zb, ra, za, rb, zb)
+            d0 = math.degrees(AW / 2 / r0); d1 = math.degrees(AW / 2 / r1)
+            mb.face([(*pol(ab - d0, r0), z0), (*pol(ab + d0, r0), z0), (*pol(ab + d1, r1), z1), (*pol(ab - d1, r1), z1)],
+                    m, uv=[(0, 0), (AW / TU, 0), (AW / TU, L / TV), (0, L / TV)])
+            if tn == 't3':
+                q = []
+                for zg in (g0, g1):
+                    r = ra + (rb - ra) * (zg - za) / (zb - za); q.append(lift(r, zg, ra, za, rb, zb, 0.04))
+                (r0, z0), (r1, z1) = q; dg = math.degrees(GW / 2 / r0)
+                mb.face([(*pol(ab - dg, r0), z0), (*pol(ab + dg, r0), z0), (*pol(ab + dg, r1), z1), (*pol(ab - dg, r1), z1)], m)
+    # the ground's own name signs (mcg.json signs: centre bearing, length m, texture), hand-drawn in signs.py, fixed
+    # 5 cm proud of the top tier's front fascia and centred on it (MCC: members' upper tier, photo commons
+    # MCC 050425.jpg; Shane Warne Stand: south top-tier front)
+    for cb, SL, sm in D.get('signs', []):
+        st, sh = TILE.get(sm, (SL, 1.2))
+        def rz(b, z):  # the fascia's radius at this bearing and height (interpolated between sections), 5 cm proud
+            f = (b % 360) / STEP; i0 = int(f) % n; t = f - int(f); out = []
+            for A in (secs[i0], secs[(i0 + 1) % n]):
+                (ra, za), (rb, zb) = A['S'][9][:2], A['S'][10][:2]; out.append((ra + (rb - ra) * (z - za) / (zb - za), za, zb))
+            return out[0][0] * (1 - t) + out[1][0] * t - 0.05, out[0][1] * (1 - t) + out[1][1] * t, out[0][2] * (1 - t) + out[1][2] * t
+        _, za, zb = rz(cb, 17); zc = 0.5 * (za + zb); sh = min(sh, zb - za); z0, z1 = zc - sh / 2, zc + sh / 2
+        half = math.degrees(SL / 2 / rz(cb, zc)[0]); NS = max(2, int(SL / 0.5))
+        for k in range(NS):
+            ba = cb - half + 2 * half * k / NS; bb_ = cb - half + 2 * half * (k + 1) / NS  # bearing rises left to right seen from the field
+            ua, ub = k / NS, (k + 1) / NS
+            mb.face([(*pol(ba, rz(ba, z0)[0]), z0), (*pol(bb_, rz(bb_, z0)[0]), z0), (*pol(bb_, rz(bb_, z1)[0]), z1),
+                     (*pol(ba, rz(ba, z1)[0]), z1)], sm, uv=[(ua, 0), (ub, 0), (ub, 1), (ua, 1)])
     mb.build(col)
     # plaza: traced on Esri where the paving ends (mcg.json plaza_poly = hard ground to the lawn/fence/rail,
     # paving_poly = grey paving; tan gravel between them on the north). Sampled at every 0.5 deg plus every polygon
@@ -177,13 +200,14 @@ def bowl_all(col):
         if in_screen(A['b']) and in_screen(Bs['b']): continue  # the screen box replaces the roof here
         def ring(s, r, z): return (*pol(s['b'], r), z)
         mclear = D.get('roof_clear_w', 0.0)
+        FI = D.get('roof_fascia_in', 1.0)  # inner roof edge depth: a slim ~1 m beam (ground photo s10), not a 3 m band
         tw = lambda s: min(s['tw'], s['rout'] - s['rin'] - 1) if s['tw'] > 0.5 else 0.0
         zr = lambda s, r: s['h'] - s['ed'][0] * (r - s['rin']) / (s['rout'] - s['rin'])
-        for (ra, za, rb, zb_, m) in [(lambda s: s['rin'], lambda s: s['h'] - 3.0, lambda s: s['rin'], lambda s: s['h'], 'roof_fascia'),
+        for (ra, za, rb, zb_, m) in [(lambda s: s['rin'], lambda s: s['h'] - FI, lambda s: s['rin'], lambda s: s['h'], 'roof_fascia'),
                                      (lambda s: s['rin'], lambda s: s['h'], lambda s: s['rin'] + tw(s), lambda s: zr(s, s['rin'] + tw(s)), 'roof_teal'),
                                      (lambda s: s['rin'] + tw(s), lambda s: zr(s, s['rin'] + tw(s)), lambda s: s['rout'], lambda s: s['h'] - s['ed'][0], matat('roof', A['b'])),
                                      (lambda s: s['rout'], lambda s: s['h'] - s['ed'][0], lambda s: s['rout'], lambda s: s['h'] - s['ed'][1], 'roof_fascia'),
-                                     (lambda s: s['rout'], lambda s: s['h'] - s['ed'][1], lambda s: s['rin'], lambda s: s['h'] - 3.0, 'roof_soffit')]:
+                                     (lambda s: s['rout'], lambda s: s['h'] - s['ed'][1], lambda s: s['rin'], lambda s: s['h'] - FI, 'roof_soffit')]:
             mr.face([ring(A, ra(A), za(A)), ring(A, rb(A), zb_(A)), ring(Bs, rb(Bs), zb_(Bs)), ring(Bs, ra(Bs), za(Bs))][::-1], m)
     # dark gutter walkway along each truss line, inner teal edge to the outer fascia (GE n_n: ~0.9 m wide)
     STEP = D.get('step', 0.5)
@@ -198,6 +222,191 @@ def bowl_all(col):
     struct_all(col)
     screens_all(col)
     canopy_all(col)
+
+
+# ---------------- facade corners: each flat face lays out its own whole windows ----------------
+_WP = os.path.join(HERE, 'tex', 'wallcols.json')
+WALLC = json.load(open(_WP)) if os.path.exists(_WP) else {}
+CORNER_C = D.get('corner_c', 0.6)  # plain wall each side of a sharp corner, metres (the texture's own window edges can widen it)
+
+
+def wallu(m):
+    """a plain-wall column of texture m, as a fraction of its tile"""
+    W = WALLC.get(m)
+    if not W: return 0.0
+    n = W['n']; idx = [i for i, w in enumerate(W['wall']) if w]
+    return ((W['best'] if W['wall'][W['best']] or not idx else idx[0]) + 0.5) / n
+
+
+def wallok(m, u):
+    W = WALLC.get(m)
+    return True if not W else bool(W['wall'][int(math.floor(u * W['n'])) % W['n']])
+
+
+def snap_in(m, u, step):
+    """from tile coordinate u, walk by `step` (+1 / -1 columns) to the first plain-wall column; returns that u"""
+    W = WALLC.get(m)
+    if not W or not any(W['wall']): return u
+    n = W['n']
+    for k in range(4 * n):
+        uu = u + step * k / n
+        if W['wall'][int(math.floor(uu * n)) % n]: return uu
+    return u
+
+
+def face_u(m, s, sa, sb, cl, cr, whole):
+    """tile u at distance s along a flat face [sa, sb] (metres along the wall), corner strips cl / cr wide.
+    whole: the texture is one layout for the whole run (u = metres / tile); else repeating bays."""
+    tw = TILE.get(m, (1, 1))[0]
+    if whole:  # layout drawn from the photo for this whole run: only a window that crosses a corner inside it goes
+        uL = snap_in(m, sa / tw, 1) if cl > 0 else sa / tw
+        uR = snap_in(m, sb / tw, -1) if cr > 0 else sb / tw
+        if uR < uL: return wallu(m)
+        return min(max(s / tw, uL), uR)
+    Lf = sb - sa; N = int(math.floor((Lf - cl - cr) / tw + 1e-6)); uw = wallu(m)
+    if N < 1: return uw
+    mL = cl + 0.5 * (Lf - cl - cr - N * tw)
+    return uw + min(max((s - sa - mL) / tw, 0.0), N)
+
+
+def env_corners():
+    """bearings of the sharp corners (turn >= 15 deg) on the outer footprint (osm envelope)"""
+    out = []
+    for k in ('shane_warne', 'mcc', 'olympic', 'ponsford'):
+        P = np.array(D['osm'][k], float); n = len(P)
+        for i in range(n):
+            a, b, c = P[i - 1], P[i], P[(i + 1) % n]
+            br = math.degrees(math.atan2(b[0], b[1])) % 360; r = math.hypot(*b)
+            env = np.nanmax([polar_of_poly(D['osm'][kk], [br])[0] for kk in ('shane_warne', 'mcc', 'olympic', 'ponsford')] + [0.0])
+            if abs(env - r) > 0.3: continue
+            d1 = b - a; d2 = c - b
+            if abs(math.degrees(math.atan2(d1[0] * d2[1] - d1[1] * d2[0], d1 @ d2))) >= 15: out.append(round(br, 4))
+    return sorted(set(out))
+
+
+def facade_all(mb, secs, fb, ri, ro, rh, tiers, matat):
+    """Facade walls, undercrofts, block decks and end walls at the footprint, on bearings refined so every footprint
+    corner, facade segment edge and undercroft edge is an exact vertex. Each flat face between corners lays out its own
+    whole windows with a plain strip at each sharp corner; no texture runs round an edge."""
+    STEP = D.get('step', 0.5); C = CORNER_C
+    corners = env_corners(); cs = set(corners)
+    brk = set(np.round(np.arange(0, 360, STEP), 4)) | cs | {round(s_[0] % 360, 4) for s_ in D['facade']}
+    for u in D.get('undercroft', []): brk |= {round(u[0], 4), round(u[1], 4)}
+    fbs = np.array(sorted(brk))
+    fp = np.full(len(fbs), np.nan)
+    for k in ('shane_warne', 'mcc', 'olympic', 'ponsford'):
+        fp = np.fmax(fp, polar_of_poly(D['osm'][k], fbs))
+    F = []
+    for i, b in enumerate(fbs):
+        rf = fb(b)[0]; rout = ro(b)[0]; d3 = tiers(b)[7]
+        rfp = fp[i] if not np.isnan(fp[i]) else rout; rfp = max(rfp, rf + d3 + 6)
+        fs = facseg(b)
+        F.append(dict(b=float(b), rfp=rfp, rout=rout, zfac=fs[2], fm=fs[3], fs0=fs[0], fend=fs[4] if len(fs) > 4 else fs[3],
+                      dk=matat('deck', b) if 'deck' in D['mats'] else 'conc_light'))
+    n = len(F); P3 = lambda b, r, z: (*pol(b, r), z)
+    for i in range(n):  # distance along the wall from each facade segment's start
+        A = F[i]
+        if i == 0 or F[i - 1]['fs0'] != A['fs0']: A['s'] = 0.0
+        else:
+            Pv = F[i - 1]; A['s'] = Pv['s'] + math.dist(pol(Pv['b'], Pv['rfp']), pol(A['b'], A['rfp']))
+    # sharp corners also read off the built wall line itself (a turn >= 15 deg between built points), so a corner whose
+    # footprint vertex sits behind another block's outline (the 351 deg step) still gets its corner treatment
+    XY = [np.array(pol(A['b'], A['rfp'])) for A in F]
+    for k in range(n):
+        d1 = XY[k] - XY[k - 1]; d2 = XY[(k + 1) % n] - XY[k]
+        if np.linalg.norm(d1) < 0.05 or np.linalg.norm(d2) < 0.05: continue
+        if abs(math.degrees(math.atan2(d1[0] * d2[1] - d1[1] * d2[0], d1 @ d2))) >= 15: cs.add(round(F[k]['b'], 4))
+    runs = []; i = 0
+    while i < n:
+        j = i
+        while j + 1 < n and F[j + 1]['s'] > 0: j += 1
+        runs.append((i, j + 1)); i = j + 1
+    for i0, i1 in runs:  # sections i0 .. i1-1; F[i1 % n] (next run's start) closes the last quad
+        A0 = F[i0]; m = A0['fm']; fz = A0['zfac']; tw, tv = TILE.get(m, (1, 1))
+        E = F[i1 % n]; L_ = F[i1 - 1]; send = L_['s'] + math.dist(pol(L_['b'], L_['rfp']), pol(E['b'], E['rfp']))
+        whole = True  # photo-aligned layout (u = metres / tile) for every run; windows move only at corners
+        prv = F[(i0 - 1) % n]
+        step0 = abs(prv['zfac'] - fz) > 0.01; step1 = abs(E['zfac'] - fz) > 0.01
+        cuts = [i0] + [k for k in range(i0 + 1, i1) if round(F[k]['b'], 4) in cs] + [i1]
+        faces = [dict(fa=fa, fb=fz_, sa=F[fa]['s'], sb=send if fz_ == i1 else F[fz_]['s'], d=0.0, uL=-1e9, uR=1e9) for fa, fz_ in zip(cuts, cuts[1:])]
+        if whole:  # photo layout for the whole run: at each corner inside it, a window that crosses the corner moves whole
+            cw = C / tw  # onto the face holding most of it, leaving a plain strip C wide at the corner
+            for Lf, Rf in zip(faces, faces[1:]):
+                uc = Lf['sb'] / tw - Lf['d']; Rf['d'] = Lf['d']
+                if wallok(m, uc): Lf['uR'] = uc; Rf['uL'] = uc; continue
+                ws = snap_in(m, uc, -1); we = snap_in(m, uc, 1)
+                if we - uc >= uc - ws:  # mostly on the right face: left face ends on plain wall, right face shifts
+                    Lf['uR'] = ws; Rf['d'] = Lf['sb'] / tw - (ws - cw); Rf['uL'] = ws
+                else:  # mostly on the left face: it shifts so the window ends a strip short of the corner
+                    Lf['d'] = Lf['sb'] / tw - (we + cw); Lf['uR'] = we; Rf['uL'] = we
+        cw = C / tw
+        if round(A0['b'], 4) in cs or step0:  # run starts on a sharp corner or a height step: no part-window at the edge
+            u0 = faces[0]['sa'] / tw
+            if not wallok(m, u0 + cw): faces[0]['d'] = 0.0; faces[0]['uL'] = snap_in(m, u0 + cw, 1)
+            else: faces[0]['uL'] = u0 + cw
+            faces[0]['uL'] = max(faces[0]['uL'], u0)
+        if round(E['b'], 4) in cs or step1:
+            fl = faces[-1]; u1 = send / tw - fl['d']
+            fl['uR'] = min(fl['uR'], snap_in(m, u1 - cw, -1) if not wallok(m, u1 - cw) else u1 - cw)
+        for fc in faces:
+            fa, fz_, sa, sb = fc['fa'], fc['fb'], fc['sa'], fc['sb']
+            cl = C if (fa > i0 or round(F[fa]['b'], 4) in cs or step0) else 0.0
+            cr = C if (fz_ < i1 or round(E['b'], 4) in cs or step1) else 0.0
+            if whole: fu = lambda s_, fc=fc: min(max(s_ / tw - fc['d'], fc['uL']), fc['uR'])
+            else: fu = lambda s_, sa=sa, sb=sb, cl=cl, cr=cr: face_u(m, s_, sa, sb, cl, cr, False)
+            for k in range(fa, fz_):
+                A = F[k]; Bs = F[(k + 1) % n]; s0 = A['s']; s1 = sb if k + 1 == fz_ else Bs['s']
+                ua = fu(s0); ub = fu(s1)
+                a0 = P3(A['b'], A['rfp'], 0.0); b0 = P3(Bs['b'], Bs['rfp'], 0.0); a1 = P3(A['b'], A['rfp'], fz); b1 = P3(Bs['b'], Bs['rfp'], fz)
+                uc = next((u for u in D.get('undercroft', []) if u[0] <= A['b'] < u[1]), None)
+                if uc is None:
+                    mb.face([a0, a1, b1, b0], m, uv=[(ua, 0), (ua, fz / tv), (ub, fz / tv), (ub, 0)])
+                    continue
+                # open ground floor (f045 NE blocks): wall from the slab up, dark back wall set in, soffit, shaded floor
+                zu, sbk = uc[2], uc[3]; ra, rb_ = A['rfp'] - sbk, Bs['rfp'] - sbk; kq = math.pi / 180
+                a2 = P3(A['b'], A['rfp'], zu); b2 = P3(Bs['b'], Bs['rfp'], zu)
+                mb.face([a2, a1, b1, b2], m, uv=[(ua, zu / tv), (ua, fz / tv), (ub, fz / tv), (ub, zu / tv)])
+                ka, kb = P3(A['b'], ra, 0.0), P3(Bs['b'], rb_, 0.0); ka2, kb2 = P3(A['b'], ra, zu), P3(Bs['b'], rb_, zu)
+                ub2 = ((Bs['b'] - uc[0]) % 360) * kq * ra / 6.0; ua2 = (A['b'] - uc[0]) * kq * ra / 6.0
+                mb.face([ka, ka2, kb2, kb], 'uc_back', uv=[(ua2, 0), (ua2, zu / 24.0), (ub2, zu / 24.0), (ub2, 0)])
+                mb.face([ka2, a2, b2, kb2], 'uc_soffit')
+                mb.face([P3(A['b'], ra, 0.02), P3(Bs['b'], rb_, 0.02), P3(Bs['b'], Bs['rfp'], 0.02), P3(A['b'], A['rfp'], 0.02)], 'uc_floor')
+                for be in (uc[0], uc[1]):  # end walls where the open floor meets the closed one
+                    if abs(A['b'] - be) < 1e-6 or abs(Bs['b'] - be) < 1e-6:
+                        S_ = A if abs(A['b'] - be) < 1e-6 else Bs
+                        q = [P3(be, S_['rfp'] - sbk, 0.0), P3(be, S_['rfp'] - sbk, zu), P3(be, S_['rfp'], zu), P3(be, S_['rfp'], 0.0)]
+                        mb.face(q, 'uc_back'); mb.face(q[::-1], 'uc_back')
+    # solid corner strips (director: "a solid strip at every corner"): at each sharp footprint corner, C/2 of plain
+    # wall each side of the edge, 3 cm proud of the facade, full face height (from the slab up over an open floor)
+    for k in range(n):
+        if round(F[k]['b'], 4) not in cs: continue
+        Pc = F[k]; Pv = F[(k - 1) % n]; Pn = F[(k + 1) % n]; kc = pol(Pc['b'], Pc['rfp'])
+        out = np.array(pol(Pc['b'], 1.0)) - np.array(pol(Pc['b'], 0.0)); out = out / np.linalg.norm(out) * 0.03
+        for Q, Sd in ((Pv, Pv), (Pn, Pc)):  # Sd: the section whose face this half sits on
+            kq = np.array(pol(Q['b'], Q['rfp'])) - np.array(kc); Lq = np.linalg.norm(kq)
+            if Lq < 1e-3: continue
+            e = np.array(kc) + kq / Lq * min(C / 2, Lq) + out; c0 = np.array(kc) + out
+            zt = Sd['zfac']; ucq = next((u for u in D.get('undercroft', []) if u[0] <= Sd['b'] < u[1]), None)
+            zb = ucq[2] if ucq else 0.0; mm = 'cs_' + Sd['fm']; tvq = TILE.get(mm, (0.6, 1))[1]
+            q = [(*c0, zb), (*c0, zt), (*e, zt), (*e, zb)]; uv = [(0, zb / tvq), (0, zt / tvq), (0.5, zt / tvq), (0.5, zb / tvq)]
+            mb.face(q, mm, uv=uv); mb.face(q[::-1], mm, uv=uv[::-1])
+    for k in range(n):  # block roofs (decks) and the end walls where the next block is lower or higher
+        A = F[k]; Bs = F[(k + 1) % n]; fz = A['zfac']; gz = Bs['zfac']
+        a1 = P3(A['b'], A['rfp'], fz); b1 = P3(Bs['b'], Bs['rfp'], fz)
+        c0 = P3(A['b'], A['rout'] - 8, fz); c1 = P3(Bs['b'], Bs['rout'] - 8, fz)
+        if A['dk'] in ('solar', 'terrace'):  # panels / paving only on the front 9 m of the block roof, plain roof behind
+            ra, rb_ = max(A['rout'] - 8, A['rfp'] - 9), max(Bs['rout'] - 8, Bs['rfp'] - 9)
+            m0 = P3(A['b'], ra, fz); m1 = P3(Bs['b'], rb_, fz)
+            mb.face([m0, a1, b1, m1][::-1], A['dk']); mb.face([c0, m0, m1, c1][::-1], 'roof_grey')
+        else:
+            mb.face([c0, a1, b1, c1][::-1], A['dk'])
+        if abs(fz - gz) > 0.01:  # end wall: its own whole windows, plain strip at both vertical edges
+            lo, top = min(fz, gz), max(fz, gz); hm = A['fend'] if fz > gz else Bs['fend']
+            L = Bs['rfp'] - (Bs['rout'] - 8); tv = TILE.get(hm, (1, 1))[1]
+            u0 = face_u(hm, 0.0, 0.0, L, C, C, False); u1 = face_u(hm, L, 0.0, L, C, C, False)
+            q = [P3(Bs['b'], Bs['rfp'], lo), P3(Bs['b'], Bs['rfp'], top), P3(Bs['b'], Bs['rout'] - 8, top), P3(Bs['b'], Bs['rout'] - 8, lo)]
+            uv = [(u0, lo / tv), (u0, top / tv), (u1, top / tv), (u1, lo / tv)]
+            mb.face(q, hm, uv=uv); mb.face(q[::-1], hm, uv=uv[::-1])
 
 
 def mast_bearings():
@@ -282,15 +491,24 @@ def canopy_all(col):
             mb.face([P3(a0, r, z1), P3(a1, r, z1), P3(a1, r - 8, z1), P3(a0, r - 8, z1)], 'roof_grey')
     for b0, b1, r0, r1, zt, fm, sm in D.get('blocks', []):  # stair towers and podiums standing out from the facade
         n = max(2, int(abs(b1 - b0) / 0.5) + 1); bb = np.linspace(b0, b1, n); kk = math.pi / 180
-        tu, tv = TILE.get(fm, (1, 1)); su, sv = TILE.get(sm, (1, 1))
-        for a0, a1 in zip(bb, bb[1:]):
-            u0 = (a0 - b0) * kk * r1 / tu; u1 = (a1 - b0) * kk * r1 / tu
+        tv = TILE.get(fm, (1, 1))[1]; sv = TILE.get(sm, (1, 1))[1]; Lf = (b1 - b0) * kk * r1
+        whole = TILE.get(fm, (1, 1))[0] >= 0.8 * Lf; Cc = CORNER_C
+        for a0, a1 in zip(bb, bb[1:]):  # front: its own whole windows, plain strip at both corners
+            u0 = face_u(fm, (a0 - b0) * kk * r1, 0.0, Lf, Cc, Cc, whole); u1 = face_u(fm, (a1 - b0) * kk * r1, 0.0, Lf, Cc, Cc, whole)
             mb.face([P3(a0, r1, 0), P3(a1, r1, 0), P3(a1, r1, zt), P3(a0, r1, zt)][::-1], fm,
                     uv=[(u0, 0), (u1, 0), (u1, zt / tv), (u0, zt / tv)][::-1])
             mb.face([P3(a0, r0, zt), P3(a1, r0, zt), P3(a1, r1, zt), P3(a0, r1, zt)], 'roof_grey')
-        for b, sg in ((b0, -1), (b1, 1)):
-            q = [P3(b, r0, 0), P3(b, r1, 0), P3(b, r1, zt), P3(b, r0, zt)]; L = (r1 - r0) / su
-            mb.face(q if sg > 0 else q[::-1], sm, uv=[(0, 0), (L, 0), (L, zt / sv), (0, zt / sv)] if sg > 0 else [(0, zt / sv), (L, zt / sv), (L, 0), (0, 0)])
+        for b, sg in ((b0, -1), (b1, 1)):  # sides: the same, so no window sits on either vertical edge
+            q = [P3(b, r0, 0), P3(b, r1, 0), P3(b, r1, zt), P3(b, r0, zt)]; L = r1 - r0
+            v0, v1 = face_u(sm, 0.0, 0.0, L, Cc, Cc, False), face_u(sm, L, 0.0, L, Cc, Cc, False)
+            mb.face(q if sg > 0 else q[::-1], sm, uv=[(v0, 0), (v1, 0), (v1, zt / sv), (v0, zt / sv)] if sg > 0 else [(v0, zt / sv), (v1, zt / sv), (v1, 0), (v0, 0)])
+            # solid strip on both faces at this front corner (director: "a solid strip at every corner")
+            cp = np.array(pol(b, r1)); tg = np.array(pol(b + sg * 0.01, r1)) - cp; tg /= np.linalg.norm(tg)
+            ro = np.array(pol(b, 1.0)) - np.array(pol(b, 0.0)); ro /= np.linalg.norm(ro); h = CORNER_C / 2
+            for m_, dirv, nv in ((fm, -tg, ro), (sm, -ro, tg)):  # front face runs back along -tg, side face inward
+                mm = 'cs_' + m_; tq = TILE.get(mm, (0.6, 1))[1]; o = nv * 0.03
+                q = [(*(cp + o), 0), (*(cp + o), zt), (*(cp + dirv * h + o), zt), (*(cp + dirv * h + o), 0)]
+                uv = [(0, 0), (0, zt / tq), (0.5, zt / tq), (0.5, 0)]; mb.face(q, mm, uv=uv); mb.face(q[::-1], mm, uv=uv[::-1])
     for b0, b1, rf, rb, zf, zb in D.get('lanterns', []):  # sloped glazed skylight on a block roof (NW glass block, f315)
         bb = np.linspace(b0, b1, max(2, int(abs(b1 - b0) / 0.5) + 1)); kk = math.pi / 180; L = math.hypot(rf - rb, zb - zf)
         for a0, a1 in zip(bb, bb[1:]):
