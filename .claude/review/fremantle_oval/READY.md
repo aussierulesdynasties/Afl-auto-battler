@@ -20,6 +20,8 @@ Notes
 - Solar panels follow the current satellite.
 - g18 camera eye is 3.6 m: the field is crowned about 2 m above the boundary.
 - GJ fascia lettering placed from photo g34.
+- The 2024 gate's small lettering is not legible at model scale.
+- a02 (drone) overlay is a close, not exact, fit; a04, g34 and g18 line up.
 - Textures are hand-painted (source/tex/paint_fo.py); no photo pixels on the model.
 
 no open faults
