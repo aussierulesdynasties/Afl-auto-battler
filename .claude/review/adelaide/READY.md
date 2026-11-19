@@ -3,6 +3,11 @@
 Stadium only, inside the outer fence: no field, posts, nets, trees, temporary stands, ads or crowd (seats empty).
 Plan shapes from the Esri satellite and OSM only; heights and looks from the photos. All textures and lettering hand-made (no photo pixels).
 
+## Fault fixed since the gate rejection of 3eedc590f (director: "Seats only")
+| Fault | Fix | Proof |
+| --- | --- | --- |
+| Seats were flat painted stripes; the photo has real seat backs and gaps | Every seat is now its own 3D moulded shell: a pan with a front lip, a tall back whose sides wrap forward, rounded top corners, 0.44 m wide on a 0.5 m pitch (a gap between each). Seats sit in rows on stepped concrete treads and risers (0.8 m rows on each stand's rake), in each stand's band colours, with straight aisles every 14 m. About 55,000 seats across the west, east and river stands and the Hill's low seats (gen.py seat_rows -> model/seats_0..3.ply). The roof underside is unchanged | proof/empty_seats_closeup.png, proof/empty_seats_far.png, proof/texture_board.jpg (seats row), proof/turntable_4.jpg, proof/A/B/C_photo_render_overlay.jpg |
+
 ## Faults fixed since the gate rejection of 32d3d049f
 | Fault | Fix | Proof |
 | --- | --- | --- |
@@ -29,7 +34,7 @@ Proof: proof/topdown_overlay.png.
 - empty_seats_closeup.png, empty_seats_far.png: seating close-ups, seats empty.
 
 ## Textures (hand-made, procedural in tools/shade.py; no photo pixels)
-Every big surface carries hand-made detail: concrete panels with joints, mottled weathering, aggregate speckle and rain runs under ledges; membrane seams, welded laps, seam grime and dust drifts, and from below a steel lattice with daylight through the fabric; steel sheet seams, faded sheets, scuffs and grime toward sheet bottoms; seats as rows, backs, gaps and concrete aisle steps; Hill turf wear; brick bond; banded stone courses; scoreboard panels faded unevenly.
+Every big surface carries hand-made detail: concrete panels with joints, mottled weathering, aggregate speckle and rain runs under ledges; membrane seams, welded laps, seam grime and dust drifts, and from below a steel lattice with daylight through the fabric; steel sheet seams, faded sheets, scuffs and grime toward sheet bottoms; seats as moulded plastic shells (the seats themselves are geometry), concrete treads; Hill turf wear; brick bond; banded stone courses; scoreboard panels faded unevenly.
 
 Pass rule (director, relayed by the stadium lead 2026-11-19): a texture passes when it looks like its photo crop; the stddev is information only. Dark concrete copies the photo's weathering (director's answer here: "Yes, use A").
 
@@ -56,6 +61,8 @@ Grey stddev (0-255) of each material's base colour, measured unlit on a 24 m wal
 | seats_red | 16.4 / 13.6 | 22.4 / 21.9 | 31.2 |
 | seats_slate | 15.2 / 12.4 | 21.4 / 21.3 | 31.2 |
 | seats_teal | 12.7 / 10.0 | 20.0 / 20.4 | 31.2 |
+
+The five seat rows above measure the old painted seats. The seats are now 3D geometry, so the texture board's seats row (photo crop beside the render) is their proof.
 | steel_grey | 8.3 / 7.6 | 9.7 / 8.5 | 2.2 (pale fascia) |
 | steel_pale | 9.8 / 8.9 | 11.4 / 9.9 | 2.2 (pale fascia) |
 | steel_white | 11.7 / 10.7 | 13.7 / 11.9 | 2.2 (pale fascia) |
@@ -64,7 +71,7 @@ Grey stddev (0-255) of each material's base colour, measured unlit on a 24 m wal
 Grey stddev scales with brightness: dark concrete (mean 53) at sd 4.7 varies about as much, relative to its own colour, as cream concrete (mean 212) at 15.7.
 
 ## No crowd
-No crowd existed in this model: no crowd cards, painted crowd or crowd meshes were ever built, so there was nothing to remove. Every seat is empty, in its real colour, with the hand-made seat texture (rows, backs, gaps, aisle steps). Proof: proof/empty_seats_closeup.png and proof/empty_seats_far.png.
+No crowd existed in this model: no crowd cards, painted crowd or crowd meshes were ever built, so there was nothing to remove. Every seat is empty, in its real colour, each one a 3D seat (pan, back, gap) on stepped concrete rows. Proof: proof/empty_seats_closeup.png and proof/empty_seats_far.png.
 
 ## Ground's own signs added (no sponsors, ads, banners or posters)
 Each one is shown beside its reference crop in proof/signs_board.jpg.

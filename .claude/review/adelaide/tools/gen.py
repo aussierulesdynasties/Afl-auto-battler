@@ -67,6 +67,18 @@ class Mesh:
             for v, uv, c, k in zip(s.v, s.uv, s.c, s.k):
                 fh.write('%.3f %.3f %.3f %.3f %.3f %d %d %d %d' % (*v, *uv, *[int(max(0, min(255, x))) for x in c], k * 20) + chr(10))
             for f in s.f: fh.write('%d %s' % (len(f), ' '.join(map(str, f))) + chr(10))
+    def save_bin(s, name):
+        """binary PLY (same layout as save) for the large seat mesh; all faces are quads"""
+        vt = np.dtype([(c, '<f4') for c in 'xyzst'] + [(c, 'u1') for c in ('red', 'green', 'blue', 'alpha')])
+        va = np.zeros(len(s.v), vt); V = np.array(s.v, float); UV = np.array(s.uv, float); C = np.clip(np.array(s.c, float), 0, 255)
+        for i, c in enumerate('xyz'): va[c] = V[:, i]
+        va['s'] = UV[:, 0]; va['t'] = UV[:, 1]
+        for i, c in enumerate(('red', 'green', 'blue')): va[c] = C[:, i]
+        va['alpha'] = np.array(s.k) * 20
+        ft = np.dtype([('n', 'u1'), ('i', '<i4', (4,))]); fa = np.zeros(len(s.f), ft); fa['n'] = 4; fa['i'] = np.array(s.f)
+        hdr = ['ply', 'format binary_little_endian 1.0', 'element vertex %d' % len(s.v)] + ['property float ' + c for c in 'xyzst'] + ['property uchar ' + c for c in ('red', 'green', 'blue', 'alpha')] + ['element face %d' % len(s.f), 'property list uchar int vertex_indices', 'end_header']
+        with open(os.path.join(OUT, name + '.ply'), 'wb') as fh:
+            fh.write((chr(10).join(hdr) + chr(10)).encode()); fh.write(va.tobytes()); fh.write(fa.tobytes())
 
 def smooth_outline(P, rf, sig, sig_end, end_w=0.1):
     """Clean a traced roof outline: closed Gaussian smoothing along the outline, stronger at the two roof ends
@@ -323,6 +335,65 @@ def south_block(m, P, st):
         for c in (V[2], V[3]):  # posts at the outer corners
             box(m, (c[0], c[1], 0), c, 0.2, sv['post'], 'steel')
 
+# real seats (gate 2026-11-20, director: seats only): every seat its own moulded shell (pan and back) with a gap to the
+# next, in rows on stepped concrete treads, in each stand's band colours; aisles every 14 m as on the old painted rows
+ROW, PITCH_S, SEAT_W = 0.8, 0.5, 0.44
+# shell profile across the row, (metres out from the row's front edge, metres above its tread): pan lip, pan, back
+SHELL = [(0.30, 0.34), (0.32, 0.43), (0.66, 0.40), (0.72, 0.56), (0.78, 0.84)]
+TREAD = (122, 120, 115)
+
+def seat_rows(m, P, zfn, bands):
+    """rows along lines at fixed distances from the pitch (the stand's rake), clipped to the outline P"""
+    from shapely.geometry import Polygon, LineString
+    inner = Polygon(P).buffer(-0.3); pitch = Polygon(PITCH)
+    lo = 0.0; ivs = []
+    for b in bands:
+        if (b[2] if len(b) > 2 else 'seats') == 'seats': ivs.append((lo, b[0], b[1]))
+        lo = b[0]
+    for d0, d1, col in ivs:
+        dk = d0
+        while dk + ROW <= d1 + 1e-6:
+            ring = pitch.buffer(dk, 64).exterior; part = ring.intersection(inner)
+            lines = getattr(part, 'geoms', [part])
+            for ln in lines:
+                if ln.geom_type != 'LineString' or ln.length < 1.0: continue
+                def frame(s0):
+                    q = np.array(ln.interpolate(s0).coords[0]); qa = np.array(ln.interpolate(max(0, s0 - 0.05)).coords[0]); qb = np.array(ln.interpolate(min(ln.length, s0 + 0.05)).coords[0])
+                    t = qb - qa; t /= np.linalg.norm(t); nv = np.array([t[1], -t[0]])
+                    if seg_dist((q + nv * 0.3)[None], PITCH)[0] < seg_dist((q - nv * 0.3)[None], PITCH)[0]: nv = -nv
+                    zz = zfn(np.array([q, q + nv * ROW])); return q, t, nv, zz[0], max(zz[1], zz[0])
+                n = int(ln.length // PITCH_S); hw = PITCH_S / 2
+                V = []; UV = []                                       # riser and tread all along the row, aisles included: one strip
+                for x in np.linspace(0, ln.length, n + 2):
+                    q, t, nv, z0, z1 = frame(x); c = q + nv * ROW
+                    V += [(q[0], q[1], z0), (q[0], q[1], z1), (c[0], c[1], z1)]; UV += [(x, z0), (x, z1), (x, z1 + ROW)]
+                F = [f for i in range(n + 1) for f in ((3 * i, 3 * i + 3, 3 * i + 4, 3 * i + 1), (3 * i + 1, 3 * i + 4, 3 * i + 5, 3 * i + 2))]
+                m.add(V, F, [TREAD] * len(V), UV, 'concrete')
+                # seats in blocks between aisles; each block starts at its aisle edge so the aisles run straight up the rake
+                ss = np.arange(0, ln.length, 0.05); Q = np.array([ln.interpolate(x).coords[0] for x in ss])
+                w = np.unwrap(np.arctan2(Q[:, 1] - PC[1], Q[:, 0] - PC[0])) * 90.0
+                free = (w % 14.0) >= 1.2
+                runs = []; st0 = None
+                for x, f in zip(ss, free):
+                    if f and st0 is None: st0 = x
+                    if not f and st0 is not None: runs.append((st0, x)); st0 = None
+                if st0 is not None: runs.append((st0, ln.length))
+                for ra, rb in runs:
+                    k = int((rb - ra) // PITCH_S)
+                    for i in range(k):
+                        s0 = ra + (rb - ra - k * PITCH_S) / 2 + (i + 0.5) * PITCH_S
+                        q, t, nv, z0, z1 = frame(s0)
+                        V = []; C = []; UV = []
+                        for j, (dn, dz) in enumerate(SHELL):
+                            for sx in (-1, -0.6, 0, 0.6, 1):              # five across: the back's sides wrap forward, top corners rounded
+                                wing = (0.07 if abs(sx) == 1 else 0.02 if sx else 0.0) if j >= 4 else (0.02 if abs(sx) == 1 else 0.0)
+                                drop = 0.07 if (abs(sx) == 1 and j == len(SHELL) - 1) else 0.0
+                                p = q + t * sx * SEAT_W / 2 + nv * (dn - wing)
+                                V.append((p[0], p[1], z1 + dz - drop)); C.append(col); UV.append((s0 + sx * SEAT_W / 2, dn + dz))
+                        F = [(j * 5 + c, j * 5 + c + 1, (j + 1) * 5 + c + 1, (j + 1) * 5 + c) for j in range(len(SHELL) - 1) for c in range(4)]
+                        m.add(V, F, C, UV, 'seats')
+            dk += ROW
+
 # ---------------------------------------------------------------- build
 ground = Mesh()
 S = SPEC
@@ -353,7 +424,7 @@ def cut_low(P, le):
     ring = lambda g: np.array(g.exterior.coords)
     return ring(max(hi, key=lambda g: g.area)), ring(max(lo, key=lambda g: g.area))
 
-low_parts = []
+low_parts = []; seat_jobs = []
 for st in S['stands']:
     P = stand_poly(st)
     if st.get('low_end'):  # the full stand ends in a wall on the line; low seats beyond it (c09 camera stands there)
@@ -365,7 +436,8 @@ for st in S['stands']:
     z = stand_z(st, V)
     C = band_colour(st['bands'], d)
     # faces upward: Delaunay order is ccw in plan -> upward normal
-    stands.add(np.c_[V, z], T, C, arc_uv(V, d), band_kind(st['bands'], d))
+    stands.add(np.c_[V, z], T, C, arc_uv(V, d), ['concrete' if k == 'seats' else k for k in band_kind(st['bands'], d)])  # under the stepped treads
+    seat_jobs.append((P, lambda B, st=st: stand_z(st, B[:, :2]), st['bands']))
     zf = lambda B, st=st: stand_z(st, B[:, :2])
     wb = st.get('wall_h')
     if wb:
@@ -388,9 +460,13 @@ for st in S['stands']:
 for st, PL, le in low_parts:
     zl = lambda B, le=le: interp(le['profile'], seg_dist(B[:, :2], PITCH))
     V, T = fill(PL, 2.0, iso_rings(PL, [k for k, _ in le['profile']], 2.0)); d = seg_dist(V, PITCH)
-    stands.add(np.c_[V, zl(V)], T, band_colour(st['bands'], d), arc_uv(V, d), band_kind(st['bands'], d))
+    stands.add(np.c_[V, zl(V)], T, band_colour(st['bands'], d), arc_uv(V, d), ['concrete' if k == 'seats' else k for k in band_kind(st['bands'], d)])
+    seat_jobs.append((PL, zl, st['bands']))
     walls(stands, PL, zl, 0.0, st['wall'], kind=st.get('wall_kind', 'concrete'))
 stands.save('stands')
+for i_, (P_, zfn_, bands_) in enumerate(seat_jobs):   # one file per stand (and the Hill's low seats), each well under 50 MB
+    seats = Mesh(); seat_rows(seats, P_, zfn_, bands_)
+    seats.save_bin('seats_%d' % i_); print('seats_%d' % i_, len(seats.f), 'faces', len(seats.v), 'verts')
 
 for blk in S.get('blocks', []):
     m = Mesh(); P = way(blk['way']) if 'way' in blk else np.array(blk['poly'], float)

@@ -99,15 +99,9 @@ def build(obj):
     pc = g.scale(C, g.m('MULTIPLY', g.m('MULTIPLY', wear, chalky), qtone))
     pc = g.mix(g.m('MULTIPLY', wnoise(g.m('ADD', qid, 5.0)), 0.15), pc, g.scale(C, 1.2))   # each sheet sun-bleached its own amount
     out[0] = (g.mix(pg, pc, g.scale(C, 0.6)), 0.8, 0.0)
-    # 1 seats: rows every 0.8 m (step tread + seat back), seats 0.5 m wide, aisles every 14 m
-    r = g.frac(v, 0.8); su = g.frac(u, 0.5); au = g.frac(u, 14.0)
-    tread = g.scale(g.rgb((0.20, 0.20, 0.19)), g.m('MULTIPLY', g.m('ADD', 0.45, g.m('MULTIPLY', r, 1.6)), blotch))  # darkest under the seat in front
-    seat = g.scale(C, g.m('ADD', 0.95, g.m('MULTIPLY', fine, 0.1)))
-    seat = g.mix(g.band(su, 0.0, 0.08), seat, g.scale(C, 0.45))              # gap between seats
-    seat = g.mix(g.band(r, 0.82, 0.9), seat, g.scale(C, 1.25))               # lit top of the seat back
-    col = g.mix(g.band(r, 0.38, 0.9), tread, seat)
-    col = g.mix(g.band(au, 0.0, 0.085), col, g.scale(g.rgb((0.30, 0.30, 0.29)), wear))  # concrete aisle steps
-    out[1] = (col, 0.55, 0.0)
+    # 1 seats: each seat is its own moulded plastic shell in the model (gen.py seat_rows), glossy like the photo crop
+    seat = g.scale(C, g.m('MULTIPLY', g.m('ADD', 0.95, g.m('MULTIPLY', fine, 0.1)), g.m('ADD', 0.96, g.m('MULTIPLY', grain, 0.08))))
+    out[1] = (seat, 0.35, 0.0)
     # 2 concrete: panels 4 m x 3 m with dark joints, weathered grain
     j = g.m('MAXIMUM', g.band(g.frac(u, 4.0), 0.0, 0.006), g.band(g.frac(v, 3.0), 0.0, 0.008))
     pid = g.m('ADD', g.m('FLOOR', g.m('DIVIDE', u, 4.0)), g.m('MULTIPLY', g.m('FLOOR', g.m('DIVIDE', v, 3.0)), 37.0))
