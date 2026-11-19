@@ -69,6 +69,12 @@ var film: MeshInstance3D  # the broadcast film look (_film)
 var anim: Oval3DAnim          # the animation session's controller (row 198)
 var umpires: Array = []        # [{node, anim, ring, role, k}]: the vignettes' umpire set
 var crowd: Oval3DCrowd
+## The ground's model (assets/grounds/<dir>), set before build(); "" keeps the stand and crowd.
+var ground := ""
+const GROUND_MODELS := {"MCG": "mcg"}
+## Where each model's fence centre and arena floor sit in its own metres (measured off the bowl;
+## the MCG's floor is 4.2 m below its street).
+const GROUND_SHIFT := {"mcg": Vector3(-0.45, 4.2, -0.45)}
 var _crowd_t := 0.0           # s of match the crowd has run (its idle and cheer clock)
 var _goal_on := false          # the director was showing a goal last frame
 var _look := Vector3.ZERO
@@ -86,7 +92,10 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 	_environment()
 	_ground()
 	_posts()
-	_stands(home, away)
+	if GROUND_MODELS.has(ground):
+		_ground_model(str(GROUND_MODELS[ground]))
+	else:
+		_stands(home, away)
 	var scene: PackedScene = load(player_glb)
 	# Each club in its home guernsey, as the vignettes dress them (StoppageVignette._dress).
 	var kits := [_kit(GameDB.club_guernsey(home)), _kit(GameDB.club_guernsey(away))]
@@ -295,6 +304,8 @@ func _hold_ball(p: Dictionary) -> void:
 ## supporters rise.
 func _sync_crowd(dt: float) -> void:
 	_crowd_t += dt
+	if crowd == null:
+		return
 	crowd.set_now(_crowd_t)
 	var goal := not director.flash.is_empty() and bool(director.flash.get("goal", false))
 	if goal and not _goal_on and director.emitted > 0:
@@ -447,6 +458,51 @@ func _stands(home: String, away: String) -> void:
 	fmat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	fence.material_override = fmat
 	add_child(fence)
+
+
+## A real ground's model in place of the stand, its crowd and the fence: the bowl, roof and
+## towers from <dir>.glb, and the seats drawn as one seat many times (MultiMesh): seat_tmpl.bin
+## is the seat (36 triangles), seats_<colour>.bin a row-major 3x4 transform per seat.
+## No crowd: the seats are empty (director, 2026-11-19).
+func _ground_model(dir: String) -> void:
+	var base := "res://assets/grounds/%s/" % dir
+	var root := Node3D.new()
+	root.name = "Ground"
+	root.position = GROUND_SHIFT.get(dir, Vector3.ZERO)
+	add_child(root)
+	var scene: PackedScene = load(base + dir + ".glb")
+	root.add_child(scene.instantiate())
+	var tmpl := FileAccess.get_file_as_bytes(base + "seat_tmpl.bin").to_float32_array()
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for i in range(0, tmpl.size(), 3):
+		st.add_vertex(Vector3(tmpl[i], tmpl[i + 1], tmpl[i + 2]))
+	st.generate_normals()
+	var seat := st.commit()
+	for f in DirAccess.get_files_at(base):
+		if not (f.begins_with("seats_") and f.ends_with(".bin")):
+			continue
+		var buf := FileAccess.get_file_as_bytes(base + f).to_float32_array()
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = seat
+		mm.instance_count = buf.size() / 12
+		mm.buffer = buf
+		var mi := MultiMeshInstance3D.new()
+		mi.name = f.get_basename()
+		mi.multimesh = mm
+		var mat := StandardMaterial3D.new()
+		mat.albedo_color = SEAT_COLOURS.get(f.get_basename().trim_prefix("seats_"), Color.GRAY)
+		mi.material_override = mat
+		root.add_child(mi)
+
+
+## Each seat colour as the model paints it (the mean of its seat texture).
+const SEAT_COLOURS := {
+	"seat_grey": Color(0.618, 0.618, 0.586), "seat_moss": Color(0.437, 0.594, 0.555),
+	"seat_navy": Color(0.068, 0.311, 0.484), "seat_slate": Color(0.272, 0.39, 0.488),
+	"seat_steel": Color(0.437, 0.484, 0.524),
+}
 
 
 ## One kit material per club: the region fields in the mesh pick skin, hair, guernsey,
