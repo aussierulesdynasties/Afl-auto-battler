@@ -10,7 +10,7 @@ extends SceneTree
 
 const GLB := "res://assets/oval3d/player_mh.glb"
 const CLUBS := ["ADE", "BRL", "CAR", "COL", "ESS", "FRE", "GEE", "GCS", "GWS", "HAW", "MEL", "NTH",
-		"PAD", "RIC", "STK", "SYD", "WCE", "WBD"]
+		"PAD", "RIC", "STK", "SYD", "TAS", "CANB", "WCE", "WBD"]
 
 
 func _initialize() -> void:
@@ -84,6 +84,11 @@ func _run() -> void:
 			"side": [mid + Vector3(6.0, 0, 0), mid, 0.62],
 			"full": [at + Vector3(0, 1.0, 8.0), at + Vector3(0, 1.0, 0), 1.75],
 		}
+		# Close-ups of each armhole's front (the trim edge), a quarter-turn round from the front.
+		for sd in [["armR", "upperarm_r"], ["armL", "upperarm_l"]]:
+			var sh := _bone(skel, [sd[1]])
+			var aim := Vector3(sh.x * 0.8 + chest.x * 0.2, sh.y - 0.08, sh.z + 0.06)
+			views[sd[0]] = [aim + Vector3(signf(sh.x - chest.x) * 3.0, 0, 4.0), aim, 0.30]
 		for v in views:
 			var eye: Vector3 = views[v][0]
 			var aim: Vector3 = views[v][1]

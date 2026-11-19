@@ -1,0 +1,150 @@
+# Collingwood's past home guernseys (1990-2025) for the 3D match player, one line per footyjumpers
+# picture (tools/kits/kits.txt), each copied from photos of the real guernsey (sources above each line).
+# Format and ops: tools/kits/kits_today.py.
+# Colours, sampled from the photos: black #111111, white #F2F2F2 (1998 framed B #141317 / W #CED2CA,
+# 1998 mannequin B #070707 / W #DFDFDF, 1990 wool replica B #0B090A / W #D7D3C8, Sharkey 1990 B #1B1C16 /
+# W #ECEAE8; the 2026 line's #141414 black). Shorts black at home in every photo (white shorts are the
+# clash pair).
+# Positions as kits_today.txt: y 0 the top of the shoulder by the neck, 1 the hem (armpit about 0.34,
+# shorts hide below about 0.86); x 0..1 seam to seam as you look at that side. Read off flat framed
+# guernseys where one exists, otherwise off match photos (y calibrated on the shorts line = 0.86).
+# Where a photo and the footyjumpers drawing disagree, the photo wins; 2009, 2011 and 2013 have no
+# usable photo and follow the drawing only.
+# Two layouts: 1990-2000 is a WHITE guernsey with three black stripes (black centre, white sides);
+# 2001 on is a BLACK guernsey with three white stripes (white centre, black sides). refs.md's "9 bands,
+# black at both sides" for 1990-2000 was the black armhole bindings: every zoomed photo (Sharkey,
+# McCartney, the 1990 replica, the 1998 framed and mannequin items) shows white side panels.
+# Sponsors, maker and league logos left off. Club emblems not drawn: every one is a small crest
+# (0.14 of the width at most, 2017's 125-year crest the largest), as the 2026 line leaves its crest off.
+
+# 1990. Sources: CF https://forever-cdn.collingwoodfc.com.au/cfc-forever/wp-content/uploads/2014/08/1007-Francis_Tony.jpg
+# and .../2014/08/1037-Sharkey_Paul.jpg; club wool replica of the 1990 GF guernsey
+# https://shop.collingwoodfc.com.au/collingwood-mens-wool-guernsey-spicers-gf-1990 (image
+# https://cdn11.bigcommerce.com/s-mm0mppllbm/images/stencil/1280x1280/products/1316/4210/FE1903SD_1__50939.1781673143.jpg).
+# Front read: white, black stripes 0.222-0.333, 0.444-0.556 (centre), 0.667-0.778 (1998 flat, same
+# layout on Sharkey, McCartney and the replica). Plain V (the drawing's polo collar is not in any
+# photo): point 0.19, half 0.19 at the top, black trim about 0.03, white inside. Black armholes.
+# Back: no photo; the drawing gives the same three black stripes from 0.50 under a plain white
+# number panel, black number.
+COL Collingwood-1990 | fill #F2F2F2; rect #111111 0.222 0 0.333 1; rect #111111 0.444 0 0.556 1; rect #111111 0.667 0 0.778 1; vfill #F2F2F2 0.19 0.19; vneck #111111 0.19 0.19 0.03; collar #111111 2; armholes #111111 2; shorts #111111 | fill #F2F2F2; rect #111111 0.222 0.50 0.333 1; rect #111111 0.444 0.50 0.556 1; rect #111111 0.667 0.50 0.778 1; collar #111111 2; armholes #111111 2; number #111111
+
+# 1994. Sources: CF https://forever-cdn.collingwoodfc.com.au/cfc-forever/wp-content/uploads/2014/08/cf_869-Shaw_Tony.jpg
+# and .../2014/08/1032-Todd_Curley.jpg.
+# Front read: as 1990 (Curley close front: plain black V trim about 0.03, white sides, black centre).
+# Back: no photo; the drawing gives the stripes from 0.605 (measured; refs.md said 0.74), the white
+# sponsor panel above them left off, black number.
+COL Collingwood-1994 | fill #F2F2F2; rect #111111 0.222 0 0.333 1; rect #111111 0.444 0 0.556 1; rect #111111 0.667 0 0.778 1; vfill #F2F2F2 0.19 0.19; vneck #111111 0.19 0.19 0.03; collar #111111 2; armholes #111111 2; shorts #111111 | fill #F2F2F2; rect #111111 0.222 0.605 0.333 1; rect #111111 0.444 0.605 0.556 1; rect #111111 0.667 0.605 0.778 1; collar #111111 2; armholes #111111 2; number #111111
+
+# 1998. Sources: LES LA503 https://www.leski.com.au/catalogues/LA503_Cat_Flipbook/inc/pages/page60.jpg
+# (lots 241-242) and .../page61.jpg (lot 244); CF .../2014/08/1079-Davis_Nick.jpg.
+# Front read on the framed flat (seam 20-340 px): black 0.23-0.33, 0.44-0.55, 0.67-0.78, white from
+# 0 to 0.23 and 0.78 to 1; mannequin the same. Neck: plain V, point 0.17, half 0.16, black trim 0.03
+# (Freeborn 1998-99, Rocca 2000, the drawing); the 2000 game-worn items have a flat black polo
+# collar instead (points at x 0.36/0.64, y 0.18, placket to 0.25), not drawn. Black armholes about 0.04.
+# Back: no photo; the drawing gives the stripes from 0.58, black number.
+COL Collingwood-1998 | fill #F2F2F2; rect #111111 0.222 0 0.333 1; rect #111111 0.444 0 0.556 1; rect #111111 0.667 0 0.778 1; vfill #F2F2F2 0.17 0.16; vneck #111111 0.17 0.16 0.03; collar #111111 2; armholes #111111 2.5; shorts #111111 | fill #F2F2F2; rect #111111 0.222 0.58 0.333 1; rect #111111 0.444 0.58 0.556 1; rect #111111 0.667 0.58 0.778 1; collar #111111 2; armholes #111111 2.5; number #111111
+
+# 2001. Sources: LES LA503 https://www.leski.com.au/catalogues/LA503_Cat_Flipbook/inc/pages/page62.jpg
+# (lot 246), .../page61.jpg (lot 245), back .../page63.jpg (lot 251).
+# Front read (2002 framed flat, same cut, seam 32-638 px, at the hem): white 0.203-0.318,
+# 0.437-0.553, 0.670-0.786, symmetrised to 0.21-0.324, 0.442-0.558, 0.676-0.79; black sides 0-0.21.
+# Neck: white lining V, point 0.215, half 0.136; the black V band covers the centre stripe, which
+# starts flat at 0.222; thin white piping on the V, the neck and the armholes.
+# Back read (top 203 px, hem 772 px): white 0.214-0.328, 0.442-0.558, 0.674-0.79 from 0.643; white
+# number, no outline.
+COL Collingwood-2001 | fill #111111; rect #F2F2F2 0.21 0 0.324 1; rect #F2F2F2 0.442 0.222 0.558 1; rect #F2F2F2 0.676 0 0.79 1; vfill #F2F2F2 0.215 0.136; vneck #F2F2F2 0.215 0.136 0.012; collar #F2F2F2 0.5; armholes #F2F2F2 0.5; shorts #111111 | fill #111111; rect #F2F2F2 0.212 0.643 0.326 1; rect #F2F2F2 0.442 0.643 0.558 1; rect #F2F2F2 0.674 0.643 0.788 1; collar #F2F2F2 0.5; armholes #F2F2F2 0.5; number #F2F2F2
+
+# 2002. Sources: LES LA503 https://www.leski.com.au/catalogues/LA503_Cat_Flipbook/inc/pages/page66.jpg
+# (lot 265, 2002 GF), .../page67.jpg (lot 275), .../page68.jpg (lot 277); CF
+# https://forever-cdn.collingwoodfc.com.au/cfc-forever/wp-content/uploads/2014/07/Nathan_buckley.jpg.
+# Front read: the framed flat measured for 2001 above (this is that guernsey); same neck and piping.
+# Back: no photo; 2001's back read (stripes from 0.643; the drawing gives 0.57-0.58 for both years).
+COL Collingwood-2002 | fill #111111; rect #F2F2F2 0.21 0 0.324 1; rect #F2F2F2 0.442 0.222 0.558 1; rect #F2F2F2 0.676 0 0.79 1; vfill #F2F2F2 0.215 0.136; vneck #F2F2F2 0.215 0.136 0.012; collar #F2F2F2 0.5; armholes #F2F2F2 0.5; shorts #111111 | fill #111111; rect #F2F2F2 0.212 0.643 0.326 1; rect #F2F2F2 0.442 0.643 0.558 1; rect #F2F2F2 0.674 0.643 0.788 1; collar #F2F2F2 0.5; armholes #F2F2F2 0.5; number #F2F2F2
+
+# 2006. Sources: WM https://commons.wikimedia.org/wiki/File:Alan_Didak.jpg and
+# https://commons.wikimedia.org/wiki/File:Brodie_Holland_2006.jpg (both too small to measure); drawn
+# as 2007 (same sponsor era 2006-08; the drawing's flat-topped centre stripe is the same).
+# Front: 2002 stripe layout; black V-neck without white piping, point 0.15, half 0.13, white lining;
+# the centre white starts flat at 0.17; white side stripes reach the shoulders; black armholes.
+# Back: stripes from 0.57, white number.
+COL Collingwood-2006 | fill #111111; rect #F2F2F2 0.21 0 0.324 1; rect #F2F2F2 0.442 0.17 0.558 1; rect #F2F2F2 0.676 0 0.79 1; vfill #F2F2F2 0.15 0.13; vneck #111111 0.15 0.13 0.035; collar #111111 2; armholes #111111 2; shorts #111111 | fill #111111; rect #F2F2F2 0.21 0.57 0.324 1; rect #F2F2F2 0.442 0.57 0.558 1; rect #F2F2F2 0.676 0.57 0.79 1; collar #111111 2; armholes #111111 2; number #F2F2F2
+
+# 2007. Sources: CF https://forever-cdn.collingwoodfc.com.au/cfc-forever/wp-content/uploads/2014/08/1101-Ryan_Lonie.jpg,
+# .../2014/08/1039-Scott_Burns.jpg, .../2014/08/1107-James_Clement.jpg; WM
+# https://commons.wikimedia.org/wiki/File:An_AFL_match_between_Collingwood_and_Carlton_Football_Clubs.jpg;
+# back WM https://commons.wikimedia.org/wiki/File:Rhyce_Shaw_handball,_Collingwood_vs._Adelaide_2008-02-09_(2252733776).jpg
+# Front read (Lonie, Burns): black V-neck, no white piping, V point 0.12-0.17 (0.15), half 0.13;
+# centre white starts flat at about 0.17; white side stripes to the shoulders; black armholes.
+# Back read: stripes from 0.52-0.60 on a twisting body, the drawing 0.57; 0.57 used. White number.
+COL Collingwood-2007 | fill #111111; rect #F2F2F2 0.21 0 0.324 1; rect #F2F2F2 0.442 0.17 0.558 1; rect #F2F2F2 0.676 0 0.79 1; vfill #F2F2F2 0.15 0.13; vneck #111111 0.15 0.13 0.035; collar #111111 2; armholes #111111 2; shorts #111111 | fill #111111; rect #F2F2F2 0.21 0.57 0.324 1; rect #F2F2F2 0.442 0.57 0.558 1; rect #F2F2F2 0.676 0.57 0.79 1; collar #111111 2; armholes #111111 2; number #F2F2F2
+
+# 2009. Source: the footyjumpers drawing only, https://www.footyjumpers.com/images/Collingwood-2009.gif
+# (no usable photo found).
+# Front read (seam 5-248 px, at the hem): white 0.169-0.305, 0.44-0.58, 0.72-0.86, symmetrised to
+# 0.157-0.293, 0.432-0.568, 0.707-0.843. Round scoop neck: white lining U, half 0.15, depth 0.125; a
+# black U bib covers the centre stripe to 0.215 at the middle (0.17 at its edges). Black band across
+# the shoulder tops to 0.05. The small magpie emblem not drawn.
+# Back read: white 0.165-0.29, 0.435-0.565, 0.71-0.835 under a thin white arched line, y 0.65 at the
+# edges, 0.632 at x 0.1, 0.603 at 0.25, 0.594 at 0.36, 0.589 at the middle; black above. White number.
+COL Collingwood-2009 | fill #111111; rect #F2F2F2 0.157 0 0.293 1; poly #F2F2F2 0.432 1 0.432 0.17 0.45 0.195 0.475 0.21 0.5 0.215 0.525 0.21 0.55 0.195 0.568 0.17 0.568 1; rect #F2F2F2 0.707 0 0.843 1; band #111111 0 0.05; poly #F2F2F2 0.35 -0.01 0.35 0 0.37 0.0625 0.394 0.088 0.425 0.108 0.461 0.121 0.5 0.125 0.539 0.121 0.575 0.108 0.606 0.088 0.63 0.0625 0.65 0 0.65 -0.01; collar #111111 2; armholes #111111 2; shorts #111111 | fill #111111; rect #F2F2F2 0.165 0.58 0.29 1; rect #F2F2F2 0.435 0.58 0.565 1; rect #F2F2F2 0.71 0.58 0.835 1; poly #111111 -0.01 0.55 1.01 0.55 1.01 0.65 0.9 0.632 0.75 0.603 0.64 0.594 0.5 0.589 0.36 0.594 0.25 0.603 0.1 0.632 -0.01 0.65; poly #F2F2F2 -0.01 0.642 0.1 0.624 0.25 0.595 0.36 0.586 0.5 0.581 0.64 0.586 0.75 0.595 0.9 0.624 1.01 0.642 1.01 0.65 0.9 0.632 0.75 0.603 0.64 0.594 0.5 0.589 0.36 0.594 0.25 0.603 0.1 0.632 -0.01 0.65; collar #111111 2; armholes #111111 2; number #F2F2F2
+
+# 2011. Source: the footyjumpers drawing only, https://www.footyjumpers.com/images/Collingwood-2011.gif
+# (no usable photo found).
+# Front read: white 0.155-0.29, 0.435-0.565, 0.71-0.845, black sides. White lining V, point 0.175,
+# half 0.155; the black V band covers the centre stripe, which starts in a V from 0.215 at its edges
+# to 0.255 at the middle. Black diagonal shoulder yokes from x 0.30 at y 0.07 out to x 0.155 at
+# 0.137. The small grey magpie not drawn.
+# Back read: white stripes from 0.606, same x layout. White number.
+COL Collingwood-2011 | fill #111111; rect #F2F2F2 0.155 0 0.29 1; poly #F2F2F2 0.435 1 0.435 0.215 0.5 0.255 0.565 0.215 0.565 1; rect #F2F2F2 0.71 0 0.845 1; poly #111111 -0.01 -0.01 0.30 -0.01 0.30 0.070 0.155 0.137 -0.01 0.137; poly #111111 1.01 -0.01 0.70 -0.01 0.70 0.070 0.845 0.137 1.01 0.137; vfill #F2F2F2 0.175 0.155; collar #111111 2; armholes #111111 2; shorts #111111 | fill #111111; rect #F2F2F2 0.155 0.606 0.29 1; rect #F2F2F2 0.435 0.606 0.565 1; rect #F2F2F2 0.71 0.606 0.845 1; collar #111111 2; armholes #111111 2; number #F2F2F2
+
+# 2013. Source: the footyjumpers drawing only, https://www.footyjumpers.com/images/Collingwood-2013.gif
+# (no usable photo found).
+# Front read (front 3-244 px, top 9 px, hem 397 px): white 0.178-0.303, 0.436-0.564, 0.697-0.826,
+# symmetrised to 0.177-0.303 / 0.697-0.823. Black shoulder yoke: the side white stripes start at
+# 0.046 on their inner edge and 0.077 on their outer edge. White lining V with a flat bottom: half
+# 0.174 at y 0.039, 0.162 at 0.062, 0.131 at 0.093, 0.083 at 0.131, flat across x 0.445-0.555 at
+# 0.152; below it a black band to 0.19 with a black pentagon tab at the middle to 0.214 (the star
+# maker logo on the tab left off). Back read: stripes from 0.606, same x layout. White number.
+COL Collingwood-2013 | fill #111111; poly #F2F2F2 0.177 1 0.177 0.077 0.303 0.046 0.303 1; poly #F2F2F2 0.436 1 0.436 0.19 0.45 0.19 0.5 0.214 0.55 0.19 0.564 0.19 0.564 1; poly #F2F2F2 0.697 1 0.697 0.046 0.823 0.077 0.823 1; poly #F2F2F2 0.326 -0.01 0.326 0.039 0.338 0.062 0.369 0.093 0.417 0.131 0.445 0.152 0.555 0.152 0.583 0.131 0.631 0.093 0.662 0.062 0.674 0.039 0.674 -0.01; collar #111111 2; armholes #111111 2; shorts #111111 | fill #111111; rect #F2F2F2 0.177 0.606 0.303 1; rect #F2F2F2 0.436 0.606 0.564 1; rect #F2F2F2 0.697 0.606 0.823 1; collar #111111 2; armholes #111111 2; number #F2F2F2
+
+# 2016. Source: WM https://commons.wikimedia.org/wiki/File:Collingwood_huddle,_Col_v_Melb_2016_(26826720385).jpg
+# Front read: white about 0.19-0.32, 0.438-0.562 (agrees with the 2002 flat, which is used); black
+# round crew neck, shallow (about 0.08, the body's own neck), the centre white runs up to the neck
+# binding; black armholes. The small gold emblem near sponsor height not drawn.
+# Back read (#34): stripes from 0.55-0.64 depending on the calibration; 0.62 used (refs.md's
+# reading). White number.
+COL Collingwood-2016 | fill #111111; rect #F2F2F2 0.21 0 0.324 1; rect #F2F2F2 0.442 0 0.558 1; rect #F2F2F2 0.676 0 0.79 1; collar #111111 2.5; armholes #111111 2; shorts #111111 | fill #111111; rect #F2F2F2 0.21 0.62 0.324 1; rect #F2F2F2 0.442 0.62 0.558 1; rect #F2F2F2 0.676 0.62 0.79 1; collar #111111 2.5; armholes #111111 2; number #F2F2F2
+
+# 2017. Sources: WM https://commons.wikimedia.org/wiki/File:Scott_Pendlebury_2017.5.jpg (front);
+# the club's 2020 launch render (same design 2017-20)
+# https://collingwoodfc.com.au/news/211146/collingwood-launch-2020-guernsey, image
+# https://resources.collingwoodfc.com.au/photo-resources/2019/11/28/4cb550c5-fd71-44c3-8240-d1c768eee8ed/sCVunJUM.jpg?width=1600
+# (back). WM File:Pendlebury_clearance.jpg is the clash guernsey, not used.
+# Front read (Pendlebury, y on the shorts line): wide stripes, white and black about equal width
+# (centre white 52 px, next black 42, next white 57 on a turned body), only the armhole binding
+# between the armhole and the side white: white 0.025-0.215, 0.405-0.595, 0.785-0.975 (the render
+# back's layout). Black V-neck, inside black, point 0.143, half 0.165 (black on black, so not
+# painted). The centre white starts in a notch: 0.174 at its edges, 0.19 at the middle; a faint grey
+# chevron just under the notch (a fold or a print) not drawn. Black armholes, broad. The 125-year
+# crest (black and grey, about 0.14 wide at y 0.36-0.46, centred on the black stripe at x 0.62) not
+# drawn.
+# Front stripes corrected to the footyjumpers drawing (white 49-78, 108-138, 169-197 px of a 3-243 px
+# front at y 0.55: 0.19-0.31, 0.44-0.56, 0.69-0.81, black between them the same width); the club render
+# and the Pendlebury/Grundy match photo show the same seven narrow stripes. The turned-body reading above
+# counted five.
+# Back read (render, top 254 px, hem 903 px): white 0.025-0.215, 0.405-0.595, 0.785-0.975 under a
+# thin white arched line: y 0.59 at the middle, 0.603 at x 0.32/0.68, 0.625 at 0.2/0.8, 0.653 at
+# 0.08/0.92, 0.665 at the edges; black above. White number; the small CFC at the top not drawn.
+COL Collingwood-2017 | fill #111111; rect #F2F2F2 0.19 0 0.31 1; poly #F2F2F2 0.44 1 0.44 0.174 0.5 0.19 0.56 0.174 0.56 1; rect #F2F2F2 0.69 0 0.81 1; collar #111111 2; armholes #111111 3; shorts #111111 | fill #111111; rect #F2F2F2 0.025 0.58 0.215 1; rect #F2F2F2 0.405 0.58 0.595 1; rect #F2F2F2 0.785 0.58 0.975 1; poly #111111 -0.01 0.55 1.01 0.55 1.01 0.665 0.92 0.653 0.8 0.625 0.68 0.603 0.5 0.59 0.32 0.603 0.2 0.625 0.08 0.653 -0.01 0.665; poly #F2F2F2 -0.01 0.658 0.08 0.646 0.2 0.618 0.32 0.596 0.5 0.583 0.68 0.596 0.8 0.618 0.92 0.646 1.01 0.658 1.01 0.665 0.92 0.653 0.8 0.625 0.68 0.603 0.5 0.59 0.32 0.603 0.2 0.625 0.08 0.653 -0.01 0.665; collar #111111 2; armholes #111111 3; number #F2F2F2
+
+# 2021. Source: LES LA522 https://www.leski.com.au/catalogues/LA522_Cat_Flipbook/inc/pages/page96.jpg
+# (lot 659, De Goey, 2023 GF, framed front and back).
+# Front read (top 57 px, hem 663 px; at y 0.53, front 70-427 px): white 0.045-0.224, 0.409-0.591,
+# 0.776-0.955. Black shoulder band: the side whites start at 0.115 on their outer edge and 0.075 on
+# their inner edge. White lining V, point 0.137, about 0.17 half at the top; black V collar band
+# about 0.035; the centre white starts in a notch, 0.14 at its edges and 0.17 at the middle. Black
+# armholes. The magpie crest (about 0.13 wide, on the black stripe right of centre, y 0.15-0.23)
+# not drawn.
+# Back read (top 62 px, hem 675 px; at y 0.81, back 78-419 px): white 0.021-0.213, 0.406-0.594,
+# 0.787-0.979 from 0.73, straight edge. White number, no outline.
+COL Collingwood-2021 | fill #111111; poly #F2F2F2 0.045 1 0.045 0.115 0.224 0.075 0.224 1; poly #F2F2F2 0.409 1 0.409 0.14 0.5 0.17 0.591 0.14 0.591 1; poly #F2F2F2 0.776 1 0.776 0.075 0.955 0.115 0.955 1; vfill #F2F2F2 0.152 0.17; vneck #111111 0.152 0.17 0.03; collar #111111 2; armholes #111111 2; shorts #111111 | fill #111111; rect #F2F2F2 0.021 0.73 0.213 1; rect #F2F2F2 0.406 0.73 0.594 1; rect #F2F2F2 0.787 0.73 0.979 1; collar #111111 2; armholes #111111 2; number #F2F2F2

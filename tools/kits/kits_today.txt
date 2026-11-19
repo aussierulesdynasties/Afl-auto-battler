@@ -11,81 +11,100 @@
 
 # ADE: shop.afc.com.au/adelaide-crows-2026-authentic-home-guernsey. Navy; from 0.32 down hoops of
 # red, gold, navy. Back: navy to 0.70, then gold, navy, red, gold.
-ADE Adelaide-2026 | fill #14213F; band #C8102E 0.316 0.400; band #F0921E 0.400 0.490; band #C8102E 0.593 0.698; band #F0921E 0.698 0.801; band #C8102E 0.898 0.975; band #F0921E 0.975 1; collar #14213F 2; armholes #14213F 1; shorts #14213F | fill #14213F; band #F0921E 0.705 0.790; band #C8102E 0.868 0.955; band #F0921E 0.955 1; collar #14213F 2; armholes #14213F 1
+ADE Adelaide-2026 | fill #14213F; band #C8102E 0.316 0.400; band #F0921E 0.400 0.490; band #C8102E 0.593 0.698; band #F0921E 0.698 0.801; band #C8102E 0.898 0.975; band #F0921E 0.975 1; collar #14213F 2; armholes #14213F 1; shorts #14213F | fill #14213F; band #F0921E 0.705 0.790; band #C8102E 0.868 0.955; band #F0921E 0.955 1; collar #14213F 2; armholes #14213F 1; number #E8A21E
 
 # BRL: the director's photo of the 2026 home guernsey (2026-11-17, "the real lions guernsey"): maroon; a
 # blue yoke to a straight line at 0.27; narrow gold collar and armholes; the gold lion walking with
 # its paw on a football. Back (shop.lions.com.au/2026-afl-home-guernsey): blue band to 0.11.
-BRL Brisbane-2026 | fill #A52B4D; rect #024190 0 0 1 0.274; collar #F4AE63 1.3; armholes #F4AE63 1.5; mark #FDDFA9 lion 0.084 0.318 0.898 0.603; shorts #A52B4D | fill #A52B4D; rect #024190 0 0 1 0.11; collar #F4AE63 1.3; armholes #F4AE63 1.5
+BRL Brisbane-2026 | fill #A52B4D; rect #024190 0 0 1 0.274; collar #F4AE63 1.3; armholes #F4AE63 1.5; mark #FDDFA9 lion 0.13 0.30 0.85 0.769; shorts #A52B4D | fill #A52B4D; rect #024190 0 0 1 0.11; collar #F4AE63 1.3; armholes #F4AE63 1.5; number #F9B857
 
 # CAR: thecarltonshop.com.au/2026-puma-men-s-home-guernsey-updating. Navy all over, a shallow V
 # to 0.12 with white lining. Back: navy.
-CAR Carlton-2026 | fill #141C2E; collar #141C2E 2; armholes #141C2E 1; mark W cfc 0.33 0.28 0.66 0.72; shorts #141C2E | fill #141C2E; collar #141C2E 2; armholes #141C2E 1
+CAR Carlton-2026 | fill #141C2E; collar #141C2E 2; armholes #141C2E 1; mark W cfc 0.33 0.28 0.66 0.72; shorts #141C2E | fill #141C2E; collar #141C2E 2; armholes #141C2E 1; number W
 
-# COL: rebelsport.com.au/p/collingwood-magpies-2026-home-guernsey-M72797401 (official youth page
-# for the stripe places). Black and white stripes, white at the centre; a black V to 0.14.
-# Back: black to 0.75, then the stripes, black at the centre.
-COL Collingwood-2026 | fill W; rect #141414 0.04 0 0.17 1; rect #141414 0.31 0 0.44 1; rect #141414 0.58 0 0.715 1; rect #141414 0.855 0 0.99 1; vfill W 0.14 0.14; vneck #141414 0.14 0.14 0.035; collar #141414 2; armholes #141414 3; shorts #141414 | fill #141414; rect W 0.04 0.75 0.175 1; rect W 0.31 0.75 0.44 1; rect W 0.58 0.75 0.715 1; rect W 0.855 0.75 0.99 1; collar #141414 2; armholes #141414 3
+# COL: shop.collingwoodfc.com.au/collingwood-2025-nike-adults-home-guernsey (worn in 2026). Black and
+# white stripes, black at the centre; no V (director 2026-11-17: "hallucinated white triangle").
+# Back: black to 0.75, then the stripes, black at the centre. The photo's width (seam to seam) is fitted
+# into the part of the square seen from straight on (the front's full-length stripes into 0.14-0.86, between
+# the chest's 0.1-0.9 and the waist's 0.19-0.83; the back's low stripes into the waist's), so its edge stripes show; black carries on round the side.
+COL Collingwood-2026 | fill W; rect #141414 0 0 0.14 1; rect #141414 0.208 0 0.32 1; rect #141414 0.435 0 0.565 1; rect #141414 0.68 0 0.792 1; rect #141414 0.86 0 1 1; collar #141414 2; armholes #141414 3; shorts #141414 | fill #141414; rect W 0.19 0.75 0.251 1; rect W 0.35 0.75 0.452 1; rect W 0.568 0.75 0.67 1; rect W 0.769 0.75 0.83 1; collar #141414 2; armholes #141414 3; number W
 
 # ESS: au.puma.com essendon-fc-2026-mens-replica-home-guernsey/784494. Black; a red sash from the
 # wearer's left shoulder to his right hip, leaving the side at 0.85. Back: the sash goes on over
-# the same shoulder to the other side.
-ESS Essendon-2026 | fill #1C1A1D; poly #E2001A 0.66 -0.02 1.02 -0.02 0.915 0.10 0.88 0.20 0.80 0.40 0.69 0.50 0.55 0.60 0.40 0.70 0.21 0.80 -0.02 0.86 -0.02 0.665 0.11 0.60 0.28 0.50 0.42 0.40 0.65 0.20 0.74 0.10; collar #1C1A1D 2; shorts #1C1A1D | fill #1C1A1D; poly #E2001A -0.02 -0.02 0.30 -0.02 0.27 0.10 0.97 0.70 1.02 0.72 1.02 0.88 0.60 0.70 0.10 0.10 -0.02 0.06; collar #1C1A1D 2
+# the same shoulder to the other side, one even width with straight edges.
+ESS Essendon-2026 | fill #1C1A1D; poly #E2001A 0.66 -0.02 1.02 -0.02 0.915 0.10 0.88 0.20 0.80 0.40 0.69 0.50 0.55 0.60 0.40 0.70 0.21 0.80 -0.02 0.86 -0.02 0.665 0.11 0.60 0.28 0.50 0.42 0.40 0.65 0.20 0.74 0.10; collar #1C1A1D 2; shorts #1C1A1D | fill #1C1A1D; poly #E2001A -0.366 0 0.004 0 1.404 1 1.034 1; collar #1C1A1D 2; number W
 
 # FRE: teamstore.fremantlefc.com.au/2025-mens-home-jumper-updating ("2026 Sekem Men's Home Jumper").
-# Purple; three white chevrons, points at 0.32, 0.40 and 0.48; lighter purple armholes. Back: plain.
-FRE Fremantle-2026 | fill #221544; poly #E6E6E6 0 0.114 0.5 0.320 1 0.114 1 0.148 0.5 0.354 0 0.148; poly #E6E6E6 0 0.194 0.5 0.400 1 0.194 1 0.229 0.5 0.435 0 0.229; poly #E6E6E6 0 0.274 0.5 0.480 1 0.274 1 0.309 0.5 0.515 0 0.309; collar #221544 2; armholes #5E4F75 2.5; shorts #221544 | fill #221544; collar #221544 2; armholes #5E4F75 2.5
+# Purple; three white chevrons, points at 0.32, 0.40 and 0.48, arms as steep on the body as in the
+# photo; purple armholes (director 2026-11-17: not light purple). Back: plain.
+FRE Fremantle-2026 | fill #221544; poly #E6E6E6 0 -0.114 0.5 0.319 1 -0.114 1 -0.073 0.5 0.360 0 -0.073; poly #E6E6E6 0 -0.031 0.5 0.402 1 -0.031 1 0.010 0.5 0.443 0 0.010; poly #E6E6E6 0 0.051 0.5 0.484 1 0.051 1 0.092 0.5 0.525 0 0.092; collar #221544 2; armholes #221544 1; shorts #221544 | fill #221544; collar #221544 2; armholes #221544 1; number W
 
 # GEE: thecatsshoponline.com.au/gfc-2026-adult-home-guernsey-s-s. White; five navy hoops from 0.15;
-# a navy V to 0.20. Back: white to 0.675, then navy, white, navy, white.
-GEE Geelong-2026 | fill W; band #1C3C6E 0.15 0.23; band #1C3C6E 0.32 0.405; band #1C3C6E 0.495 0.583; band #1C3C6E 0.673 0.762; band #1C3C6E 0.851 0.940; vfill W 0.20 0.13; vneck #1C3C6E 0.20 0.13 0.04; collar #1C3C6E 2; armholes #1C3C6E 2.5; shorts #1C3C6E | fill W; band #1C3C6E 0.675 0.765; band #1C3C6E 0.853 0.940; collar #1C3C6E 2; armholes #1C3C6E 2.5
+# no V (director 2026-11-17: "a hallucination"). Thin navy armholes. Back: white to 0.665, then navy,
+# white, navy, white.
+GEE Geelong-2026 | fill W; band #1C3C6E 0.15 0.25; band #1C3C6E 0.312 0.40; band #1C3C6E 0.488 0.577; band #1C3C6E 0.664 0.753; band #1C3C6E 0.841 0.929; collar #1C3C6E 2; armholes #1C3C6E 1; shorts #1C3C6E | fill W; band #1C3C6E 0.665 0.755; band #1C3C6E 0.843 0.931; collar #1C3C6E 2; armholes #1C3C6E 1; number #070913
 
 # GCS: shop.goldcoastfc.com.au/2026-replica-home-guernsey-updating. Red-orange, lighter at the top;
 # back the same, with the blue and gold stripe at the back of the neck.
-GCS GoldCoast-2026 | fill #B83224; band #E04A31 0.000 0.060; band #DD4830 0.060 0.120; band #DA462F 0.120 0.180; band #D7442E 0.180 0.240; band #D4432D 0.240 0.300; band #D1412C 0.300 0.360; band #CE3F2B 0.360 0.420; band #CA3D2A 0.420 0.480; band #C73B29 0.480 0.540; band #C43928 0.540 0.600; band #C13827 0.600 0.660; band #BE3626 0.660 0.720; band #BB3425 0.720 0.780; band #B83224 0.780 0.840; collar #E04A31 2; armholes #D3412B 1; mark #F2603E sun 0.27 0.33 0.73 0.67; shorts #B83224 | fill #B83224; band #E04A31 0.000 0.060; band #DD4830 0.060 0.120; band #DA462F 0.120 0.180; band #D7442E 0.180 0.240; band #D4432D 0.240 0.300; band #D1412C 0.300 0.360; band #CE3F2B 0.360 0.420; band #CA3D2A 0.420 0.480; band #C73B29 0.480 0.540; band #C43928 0.540 0.600; band #C13827 0.600 0.660; band #BE3626 0.660 0.720; band #BB3425 0.720 0.780; band #B83224 0.780 0.840; rect #3762A3 0.485 0 0.5 0.07; rect #F4EBBA 0.5 0 0.515 0.07; collar #E04A31 2; armholes #D3412B 1
+GCS GoldCoast-2026 | fill #B83224; band #E04A31 0.000 0.060; band #DD4830 0.060 0.120; band #DA462F 0.120 0.180; band #D7442E 0.180 0.240; band #D4432D 0.240 0.300; band #D1412C 0.300 0.360; band #CE3F2B 0.360 0.420; band #CA3D2A 0.420 0.480; band #C73B29 0.480 0.540; band #C43928 0.540 0.600; band #C13827 0.600 0.660; band #BE3626 0.660 0.720; band #BB3425 0.720 0.780; band #B83224 0.780 0.840; collar #E04A31 2; armholes #D3412B 1; mark #F2603E sun 0.27 0.33 0.73 0.67; shorts #B83224 | fill #B83224; band #E04A31 0.000 0.060; band #DD4830 0.060 0.120; band #DA462F 0.120 0.180; band #D7442E 0.180 0.240; band #D4432D 0.240 0.300; band #D1412C 0.300 0.360; band #CE3F2B 0.360 0.420; band #CA3D2A 0.420 0.480; band #C73B29 0.480 0.540; band #C43928 0.540 0.600; band #C13827 0.600 0.660; band #BE3626 0.660 0.720; band #BB3425 0.720 0.780; band #B83224 0.780 0.840; rect #3762A3 0.485 0 0.5 0.07; rect #F4EBBA 0.5 0 0.515 0.07; collar #E04A31 2; armholes #D3412B 1; number #EACD8D
 
 # GWS: shop.gwsgiants.com.au/giants-2026-new-balance-home-guernsey-adult-updating. Orange to 0.36,
 # charcoal below with the white G. Back: all orange.
-GWS GWS-2026 | fill #2B2F33; band #F47920 0 0.36; poly W 0.14 0.41 0.81 0.41 0.73 0.50 0.37 0.50 0.37 0.56 0.63 0.56 0.47 0.80 0.14 0.80; collar #F47920 2; armholes #F47920 1; shorts #2B2F33 | fill #F47920; collar #F47920 2; armholes #F47920 1
+GWS GWS-2026 | fill #2B2F33; band #F47920 0.000 0.366; mark W gws_g 0 0 1 1; collar #F47920 2; armholes #F47920 1; shorts #2B2F33 | fill #F47920; collar #F47920 2; armholes #F47920 1; number W
 
 # HAW: hawksmerchandise.com.au/hawthorn-2026-ua-mens-home-guernsey-hdgi (front only). Gold; brown
 # stripes, brown at the centre; brown V to 0.12. Back: no photo on the page; the 2025 back
 # (gold, the stripes from 0.69 down).
-HAW Hawthorn-2026 | fill #F9AE33; rect #2E120B 0.07 0 0.20 1; rect #2E120B 0.40 0 0.60 1; rect #2E120B 0.80 0 0.93 1; vfill #2E120B 0.12 0.12; collar #2E120B 2; armholes #2E120B 2.5; shorts #2E120B | fill #F9AE33; rect #2E120B 0.07 0.69 0.20 1; rect #2E120B 0.40 0.69 0.60 1; rect #2E120B 0.80 0.69 0.93 1; collar #2E120B 2; armholes #2E120B 2.5
+HAW Hawthorn-2026 | fill #F9AE33; poly #2E120B 0.177 -0.019 0.177 0.000 0.181 0.401 0.199 0.478 0.224 0.573 0.241 0.669 0.247 0.764 0.250 1.000 0.310 1.000 0.308 0.764 0.304 0.669 0.291 0.573 0.272 0.478 0.258 0.401 0.255 0.000 0.255 -0.019; poly #2E120B 0.424 -0.019 0.424 0.000 0.425 0.401 0.429 0.478 0.435 0.573 0.439 0.669 0.441 0.764 0.441 1.000 0.566 1.000 0.567 0.764 0.568 0.669 0.573 0.573 0.580 0.478 0.585 0.401 0.586 0.000 0.586 -0.019; poly #2E120B 0.744 -0.019 0.744 0.000 0.741 0.401 0.727 0.478 0.708 0.573 0.695 0.669 0.691 0.764 0.689 1.000 0.767 1.000 0.769 0.764 0.775 0.669 0.793 0.573 0.820 0.478 0.840 0.401 0.844 0.000 0.844 -0.019; poly #2E120B -0.020 -0.020 -0.020 0.000 -0.020 0.344 0.180 0.344 0.177 0.000 0.177 -0.020; poly #2E120B 0.844 -0.020 0.844 0.000 0.840 0.344 1.020 0.344 1.020 0.000 1.020 -0.020; poly #2E120B 0.425 0.233 0.425 0.317 0.742 0.317 0.742 0.233; vfill #2E120B 0.115 0.13; collar #2E120B 2; armholes #2E120B 2.5; shorts #2E120B | fill #F9AE33; poly #2E120B 0.215 0.718 0.218 0.764 0.221 1.000 0.221 1.020 0.323 1.020 0.323 1.000 0.322 0.764 0.320 0.718; poly #2E120B 0.449 0.718 0.449 0.764 0.450 1.000 0.450 1.020 0.564 1.020 0.564 1.000 0.564 0.764 0.565 0.718; poly #2E120B 0.701 0.718 0.699 0.764 0.697 1.000 0.697 1.020 0.776 1.020 0.776 1.000 0.779 0.764 0.782 0.718; collar #2E120B 2; armholes #2E120B 2.5; number #2E120B
 
 # MEL: shop.melbournefc.com.au/melbourne-demons-nb-26-adult-home-guernsey-updating and the
 # director's photo (2026-11-17). Navy; a red yoke to a V at 0.375; red V-neck to 0.145. Back: no
 # photo on the page; the 2025 back (a red band across the shoulders).
-MEL Melbourne-2026 | fill #1A2C66; poly #E1141F 0 0 1 0 1 0.19 0.93 0.19 0.80 0.23 0.5 0.375 0.20 0.23 0.07 0.19 0 0.19; vfill W 0.145 0.13; vneck #E1141F 0.145 0.13 0.04; collar #E1141F 2; armholes #E1141F 1.5; shorts #1A2C66 | fill #1A2C66; band #E1141F 0 0.16; collar #E1141F 2; armholes #E1141F 1.5
+MEL Melbourne-2026 | fill #1A2C66; poly #E1141F 0.041 -0.019 0.959 -0.019 0.5 0.363; collar #E1141F 2; armholes #E1141F 1.5; shorts #1A2C66 | fill #1A2C66; band #E1141F 0.000 0.153; collar #E1141F 2; armholes #E1141F 1.5; number W
 
 # NTH: shop.nmfc.com.au/kangaroos-2026-home-guernsey-adult-mens. Five stripes, blue at the centre;
 # a round blue scoop neck to 0.165. Back: white to 0.65, then the stripes.
-NTH North-2026 | fill W; rect #1F3C8C 0 0 0.20 1; rect #1F3C8C 0.40 0 0.60 1; rect #1F3C8C 0.80 0 1 1; collar #1F3C8C 2; armholes #476BA7 1; shorts #1F3C8C | fill W; rect #1F3C8C 0 0.65 0.20 1; rect #1F3C8C 0.40 0.65 0.60 1; rect #1F3C8C 0.80 0.65 1 1; collar #1F3C8C 2; armholes #1F3C8C 1
+NTH North-2026 | fill W; poly #1F3C8C -0.020 -0.019 -0.020 0.000 -0.020 0.401 -0.020 0.478 -0.020 0.573 -0.020 0.669 -0.020 0.764 -0.020 1.000 0.311 1.000 0.309 0.764 0.305 0.669 0.292 0.573 0.273 0.478 0.259 0.401 0.256 0.000 0.256 -0.019; poly #1F3C8C 0.420 -0.019 0.420 0.000 0.421 0.401 0.426 0.478 0.432 0.573 0.436 0.669 0.437 0.764 0.438 1.000 0.564 1.000 0.565 0.764 0.567 0.669 0.571 0.573 0.577 0.478 0.582 0.401 0.583 0.000 0.583 -0.019; poly #1F3C8C 0.745 -0.019 0.745 0.000 0.742 0.401 0.728 0.478 0.709 0.573 0.696 0.669 0.692 0.764 0.690 1.000 1.020 1.000 1.020 0.764 1.020 0.669 1.020 0.573 1.020 0.478 1.020 0.401 1.020 0.000 1.020 -0.019; collar #1F3C8C 2; armholes #476BA7 1; shorts #1F3C8C | fill W; poly #1F3C8C -0.020 0.656 -0.020 0.669 -0.020 0.764 -0.020 1.000 -0.020 1.020 0.314 1.020 0.314 1.000 0.312 0.764 0.308 0.669 0.306 0.656; poly #1F3C8C 0.435 0.656 0.436 0.669 0.437 0.764 0.438 1.000 0.438 1.020 0.562 1.020 0.562 1.000 0.563 0.764 0.564 0.669 0.565 0.656; poly #1F3C8C 0.694 0.656 0.692 0.669 0.688 0.764 0.686 1.000 0.686 1.020 1.020 1.020 1.020 1.000 1.020 0.764 1.020 0.669 1.020 0.656; collar #1F3C8C 2; armholes #1F3C8C 1; number #1F1D1F
 
 # PAD: portstore.com.au/pa-macron-2026-afl-home-guernsey-adult. Black; a teal V (points 0.33 and
 # 0.44) inside a white V (0.45 and 0.55); black V-neck to 0.18. Back: a white panel 0.06-0.51.
-PAD Port-2026 | fill #1E2124; poly #39BACD -0.03 0 0.08 0 0.5 0.33 0.92 0 1.03 0 0.5 0.44; poly #E6E9EE 0 0.04 0.5 0.45 1 0.04 1 0.14 0.5 0.55 0 0.14; vfill #1E2124 0.18 0.13; collar #1E2124 2; armholes #1E2124 2; shorts #1E2124 | fill #1E2124; rect #E6E9EE 0 0.06 1 0.51; collar #1E2124 2; armholes #1E2124 2
+PAD Port-2026 | fill #1E2124; poly #E6E9EE 0.088 -0.019 0.5 0.630 0.912 -0.019; poly #39BACD 0.157 -0.019 0.5 0.521 0.843 -0.019; poly #1E2124 0.225 -0.019 0.5 0.414 0.775 -0.019; vfill #1E2124 0.172 0.13; collar #1E2124 2; armholes #1E2124 2; shorts #1E2124 | fill #1E2124; rect #E6E9EE 0 0.057 1 0.487; collar #1E2124 2; armholes #1E2124 2; number #0A0C0E
 
 # RIC: au.puma.com richmond-fc-2026-mens-replica-home-guernsey/783961 (the club shop refused).
 # Black; a yellow sash from the wearer's left shoulder to his right hip. Back: the sash goes on.
-RIC Richmond-2026 | fill #1D1A1C; poly #F9D64B 0.66 -0.02 1.02 -0.02 0.90 0.10 0.86 0.23 0.70 0.50 0.51 0.63 0.235 0.77 -0.02 0.87 -0.02 0.64 0.07 0.63 0.32 0.50 0.62 0.23 0.71 0.10; collar #1D1A1C 2; shorts #1D1A1C | fill #1D1A1C; poly #F9D64B -0.02 -0.02 0.32 -0.02 0.487 0.366 0.995 0.768 1.02 0.80 1.02 0.94 0.755 0.768 0.174 0.366 -0.02 0.20; collar #1D1A1C 2
+RIC Richmond-2026 | fill #1D1A1C; poly #F9D64B 0.66 -0.019 1.02 -0.019 0.90 0.096 0.86 0.220 0.70 0.478 0.51 0.602 0.235 0.735 -0.02 0.831 -0.02 0.611 0.07 0.602 0.32 0.478 0.62 0.220 0.71 0.096; collar #1D1A1C 2; shorts #1D1A1C | fill #1D1A1C; poly #F9D64B -0.02 -0.019 0.149 -0.019 1.02 0.726 1.02 0.933 -0.02 0.230; collar #1D1A1C 2; number W #1D1A1C
 
 # STK: shop.saints.com.au/2026-nb-home-guernsey-adults-updating (front only). Red, white, black
 # panels; white V-neck to 0.175; black armholes. Back: no photo on the page; the 2025 back (black).
-STK StKilda-2026 | fill #E6E8EE; rect #D11932 0 0 0.37 1; rect #1C1A1D 0.63 0 1 1; vfill W 0.175 0.13; vneck #E6E8EE 0.175 0.13 0.04; collar #E6E8EE 2; armholes #1C1A1D 3; shorts #1C1A1D | fill #1C1A1D; collar #E6E8EE 2; armholes #1C1A1D 3
+STK StKilda-2026 | fill #E6E8EE; rect #D11932 0 0 0.37 1; rect #1C1A1D 0.63 0 1 1; vfill W 0.175 0.13; vneck #E6E8EE 0.175 0.13 0.04; collar #E6E8EE 2; armholes #1C1A1D 3; shorts #1C1A1D | fill #1C1A1D; collar #E6E8EE 2; armholes #1C1A1D 3; number W
 
 # SYD: shop.sydneyswans.com.au/sydney-swans-2026-mens-nike-home-guernsey (and the same product on
 # nike.com for the back). White; a red yoke edged with downward flames to 0.47; red stripes down
 # the side seams. Back: all red.
-SYD Sydney-2026 | fill #F4F1F2; poly #E1251B 0 0 1 0 1 0.34 0.90 0.31 0.84 0.42 0.78 0.35 0.68 0.44 0.62 0.36 0.52 0.47 0.46 0.37 0.38 0.44 0.32 0.36 0.22 0.42 0.16 0.35 0.10 0.31 0 0.34; rect #E1251B 0 0 0.035 1; rect #E1251B 0.965 0 1 1; collar #E1251B 2; armholes #E1251B 1.5; shorts #E1251B | fill #E1251B; collar #E1251B 2; armholes #E1251B 1.5
+SYD Sydney-2026 | fill #F4F1F2; mark #E1251B syd_yoke 0 0 1 1; collar #E1251B 2; armholes #E1251B 1.5; shorts #E1251B | fill #E1251B; collar #E1251B 2; armholes #E1251B 1.5; number W
+
+# CANB: the director's design, 2026-11-17 (front only; "rich ocean blue, marble white, and bronze highlights",
+# "white numbers on the back", "the owls"). Ocean blue; two ivory wings rising from the hips to the shoulders,
+# the bronze owl with ivory eyes and an ivory CFC above it ("a sort of creamy ivory white"; the club's own
+# colours: blue #143868, ivory #F3EBD6, bronze #A28354) (masks canb_white and canb_bronze, cut from his picture,
+# side seams fitted into 0.13-0.87); bronze collar and armholes. Back: blue, bronze bindings, ivory number.
+CANB Canberra-design | fill #143868; mark #F3EBD6 canb_white 0.13 0.03 0.87 0.78; mark #A28354 canb_bronze 0.13 0.03 0.87 0.78; collar #A28354 3; armholes #A28354 2.2 | fill #143868; collar #A28354 3; armholes #A28354 2.2; number #F3EBD6
+
+# TAS: shop.devilsfc.com.au/tasmania-devils-new-balance-2026-home-guernsey (the 2026 VFL home). Green;
+# a gold hoop 0.402-0.481 and a red hoop 0.501-0.581 with the devil's head woven through both in green
+# (masks tas_gold and tas_red, cut from the photo seam to seam and fitted into 0.13-0.87, the part of
+# the square seen from straight on at that height; the hoops run on plain round the sides); red
+# V-neck and armholes. Back: green, gold number.
+# Shorts green, numbers the hoop's gold (afl.com.au round 1 2026 photos, "the devils in detail").
+TAS Tasmania-2026 | fill #2B5A56; rect #E1B14B 0 0.402 0.135 0.481; rect #E1B14B 0.865 0.402 1 0.481; rect #C82337 0 0.501 0.135 0.581; rect #C82337 0.865 0.501 1 0.581; mark #E1B14B tas_gold 0.13 0.38 0.87 0.60; mark #C82337 tas_red 0.13 0.38 0.87 0.60; collar #C82337 1.7; armholes #C82337 1.9; shorts #2B5A56 | fill #2B5A56; collar #C82337 1.7; armholes #C82337 1.9; number #E1B14B
 
 # WCE: wcesuperstore.com.au west-coast-eagles-new-balance-men-s-home-guernsey-2027-updating (the
 # newest men's home on sale) and the AFLW 2026 home (same design, straight on). Blue; gold over
 # both shoulders, the blue a wedge from the neck widening down; blue V-neck to 0.125. Back: two
 # gold bands from the sides down to points that do not meet.
-WCE WestCoast-2026 | fill #0D3D8B; poly #F2B13A -0.01 -0.01 0.45 -0.01 0.43 0.08 0.40 0.20 0.34 0.34 0.26 0.46 0.17 0.56 -0.01 0.66; poly #F2B13A 1.01 -0.01 0.55 -0.01 0.57 0.08 0.60 0.20 0.66 0.34 0.74 0.46 0.83 0.56 1.01 0.66; vfill #0D3D8B 0.125 0.11; collar #0D3D8B 2; armholes #0D3D8B 2.5; mark #F2B13A eagle 0.32 0.34 0.68 0.64; mark #FFFFFF eagle_eye 0.32 0.34 0.68 0.64; shorts #0D3D8B | fill #0D3D8B; poly #F2B13A -0.01 0.37 0.06 0.38 0.14 0.42 0.22 0.50 0.28 0.60 0.36 0.79 0.26 0.71 0.16 0.62 0.08 0.56 -0.01 0.52; poly #F2B13A 1.01 0.37 0.94 0.38 0.86 0.42 0.78 0.50 0.72 0.60 0.64 0.79 0.74 0.71 0.84 0.62 0.92 0.56 1.01 0.52; collar #0D3D8B 2; armholes #0D3D8B 2.5
+WCE WestCoast-2026 | fill #0D3D8B; poly #F2B13A -0.01 -0.01 0.45 -0.01 0.43 0.08 0.40 0.20 0.34 0.34 0.26 0.46 0.17 0.56 -0.01 0.66; poly #F2B13A 1.01 -0.01 0.55 -0.01 0.57 0.08 0.60 0.20 0.66 0.34 0.74 0.46 0.83 0.56 1.01 0.66; vfill #0D3D8B 0.125 0.11; collar #0D3D8B 2; armholes #0D3D8B 2.5; mark #F2B13A eagle 0.32 0.34 0.68 0.64; mark #FFFFFF eagle_eye 0.32 0.34 0.68 0.64; shorts #0D3D8B | fill #0D3D8B; poly #F2B13A -0.01 0.37 0.06 0.38 0.14 0.42 0.22 0.50 0.28 0.60 0.36 0.79 0.26 0.71 0.16 0.62 0.08 0.56 -0.01 0.52; poly #F2B13A 1.01 0.37 0.94 0.38 0.86 0.42 0.78 0.50 0.72 0.60 0.64 0.79 0.74 0.71 0.84 0.62 0.92 0.56 1.01 0.52; collar #0D3D8B 2; armholes #0D3D8B 2.5; number #F2B13A
 
 # WBD: shop.westernbulldogs.com.au/western-bulldogs-asics-2026-home-guernsey-adult-updating. Royal
 # blue; a red hoop 0.46-0.55 and a white hoop 0.585-0.68; red collar and wide red armholes. Back:
 # the same hoops.
-WBD Footscray-2026 | fill #0A47B0; band #E40A23 0.46 0.55; band #F2F2F7 0.585 0.68; collar #E40A23 2; armholes #E40A23 2.5; shorts #0A47B0 | fill #0A47B0; band #E40A23 0.475 0.55; band #F2F2F7 0.578 0.668; collar #E40A23 2; armholes #E40A23 2.5
+WBD Footscray-2026 | fill #0A47B0; band #E40A23 0.439 0.525; band #F2F2F7 0.559 0.649; collar #E40A23 2; armholes #E40A23 2.5; shorts #0A47B0 | fill #0A47B0; band #E40A23 0.465 0.534; band #F2F2F7 0.534 0.675; collar #E40A23 2; armholes #E40A23 2.5; number W
