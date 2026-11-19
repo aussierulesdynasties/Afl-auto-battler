@@ -289,12 +289,15 @@ static func legs_reason(theirs: Array, mine: Array) -> String:
 			verb = "pressed"
 		elif run.size() == 1 and run.has("attacking"):
 			verb = "run it through the corridor"
-		bits.append("%s %s" % [verb, str(SINCE.get(start + 1, "late"))])
+		bits.append([verb, str(SINCE.get(start + 1, "late"))])
 	var pep := _pep(theirs[n - 1])
 	if PEP_WORDS.has(pep):
 		var since := _run_start(theirs, func(c): return _pep(c) == pep)
-		bits.append("%s %s" % [PEP_WORDS[pep], str(SINCE.get(since + 1, "late"))])
-	return "they've " + " and ".join(bits)
+		bits.append([PEP_WORDS[pep], str(SINCE.get(since + 1, "late"))])
+	if bits.size() == 2 and bits[0][1] == bits[1][1]:
+		# Both since the same break, said once: "they've pressed and been fired up since half time".
+		return "they've %s and %s %s" % [bits[0][0], bits[1][0], bits[1][1]]
+	return "they've " + " and ".join(bits.map(func(b): return "%s %s" % b))
 
 
 # ---------------------------------------------------------------------------

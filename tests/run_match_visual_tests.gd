@@ -17,7 +17,8 @@ func _run() -> void:
 		quit(1)
 		return
 	var suite = script.new()
-	suite.run()
+	# The suite waits on real frames (the 3D cameras' tap): quit only once it has finished.
+	await suite.run()
 	quit(0 if suite.failures.is_empty() else 1)
 
 

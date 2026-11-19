@@ -353,7 +353,9 @@ func _test_news() -> void:
 	_check(not GameState.news.is_empty() and GameState.news.size() <= GameState.MAX_NEWS,
 			"A season fills the news feed, within its limit (%d items)" % GameState.news.size())
 	_check(kinds.has("award") and kinds.has("premiers"), "The awards and the premiers make the news")
-	_check(kinds.has("game") or kinds.has("injury") or kinds.has("development"),
+	# A round's biggest games and injuries are told as league stories, and an
+	# injury told as a story gets no plain line (_round_news), so they count.
+	_check(kinds.has("game") or kinds.has("injury") or kinds.has("development") or kinds.has("league_story"),
 			"Big games, injuries or rival development make the news (%s)" % str(kinds.keys()))
 	# Your club's own coach arc can open after the flag (a player out of
 	# contract): newest of the league's news, as above.
