@@ -57,6 +57,9 @@ tileable noise and drawn detail, with no photo pixels. Tiles are 8 m per 1024 px
 
 No crowd (standing rule, 2026-11-19): the crowd that was painted on the seat textures is deleted from the code. The
 scoreboard's painted "live crowd picture" is replaced by a blank screen, switched off. All seats show empty.
+Crowd parts removed: the people painted on the `seats`, `seats_dark` and `crowd_shade` textures (62-92% of seats),
+and the scoreboard screen picture. The model had no crowd cards, billboards or crowd meshes. Close-up of a seating
+tier showing empty seats: `proof/textures/tex_seats_close.png` (game distance: `tex_seats_game.png`).
 
 Stddev of every texture in the glb (grey levels 0-255; 10 or more counts as not flat):
 
