@@ -3,7 +3,7 @@ import bpy,bmesh,sys,math,json,os
 from mathutils import Vector,Matrix
 sys.path.insert(0,os.getcwd())
 out,rpng=sys.argv[sys.argv.index('--')+1:][:2]
-D=json.load(open('geo_build.json'));CAM=json.load(open('cam.json'))['p']
+D=json.load(open(os.environ.get('GEO','geo_build.json')));CAM=json.load(open('cam.json'))['p']
 RG,RIN,ROUT=D['RG'],D['rin'],D['rout']
 def lerp_arr(A,a):
     f=(a%360)*4;i=int(f)%1440;t=f-int(f);return A[i]*(1-t)+A[(i+1)%1440]*t
@@ -23,7 +23,7 @@ def mat(name,col,tex=None,rough=0.85,metal=0.0):
         t=nt.nodes.new('ShaderNodeTexImage');t.image=bpy.data.images.load(os.path.abspath('htex/'+tex+'.png'));t.interpolation='Linear'
         nt.links.new(t.outputs['Color'],b.inputs['Base Color'])
     me.materials.append(m);i=len(me.materials)-1;MT[i]=TEX[tex] if tex else [4.0,4.0];return i
-GROUND=mat('ground',(150,150,140),None,0.95);APRON=mat('apron',(165,165,160),'apron');FENCE=mat('fence',(40,48,80),'led',0.5)
+GROUND=mat('ground',(150,150,140),None,0.95);APRON=mat('apron',(165,165,160),'apron');FENCE=mat('fence',(40,48,80),'led',0.5);FENCEL=mat('fencelow',(236,236,233),'fencelow',0.6)
 SEAT=mat('seats',(214,74,62),'seat_low');SEATU=mat('seats_up',(214,74,62),'seat_up');AIS=mat('aisle',(200,200,196),'aisle_low');AISU=mat('aisle_up',(200,200,196),'aisle_up')
 WALK=mat('walk',(170,170,165),'walk');NAVY=mat('navy',(52,60,88),'navy',0.5)
 GLASS=mat('glass',(45,52,70),'glass',0.25);CONC=mat('concrete',(190,188,182),'concrete');ROOF=mat('roof',(246,246,244),'roof',0.6)
@@ -43,9 +43,9 @@ def face(vs,mi,uvs=None):
     return f
 def P(a,d,z,base=None):
     r=(rg(a) if base is None else base(a))+d;t=math.radians(a);return Vector((r*math.cos(t),r*math.sin(t),z))
-def sweep(angles,prof,base=None,uscale=None,mfun=None):
+def sweep(angles,prof,base=None,uscale=None,mfun=None,pf=None):
     angles=sorted(set(round(a,4) for a in angles))
-    rows=[[bm.verts.new(P(a,d,z,base)) for a in angles] for d,z,_,_ in prof]
+    rows=[[bm.verts.new(P(a,*(pf(a,k) if pf else (d,z)),base)) for a in angles] for k,(d,z,_,_) in enumerate(prof)]
     vacc=0.0
     for k in range(1,len(prof)):
         mi=prof[k][2];L=math.hypot(prof[k][0]-prof[k-1][0],prof[k][1]-prof[k-1][1])
@@ -73,13 +73,13 @@ def low_m(k,a,mi):
     return SEAT
 def up_m(k,a,mi):
     # red cladding on the stand's outer wall, west side (photo: x 440-850 under the roof edge, render-matched 130-174 deg)
-    if k==9 and 130.0<=a%360<=174.0:return RED
+    if k==11 and 130.0<=a%360<=174.0:return RED
     # vom openings: the seat slope is cut away over each tunnel mouth (photo: flush dark openings)
-    if k in (3,4,5):
+    if k in (5,6,7):
         for c in VOMS:
             if inint(a,c,math.degrees(VHW/(rg(a)+11))):return None
     if mi is not SEAT:return mi
-    if k==4:return SEATU
+    if k==6:return SEATU
     for c in VOMS:
         if inint(a,c,math.degrees(0.55/(rg(a)+13))):return AISU
     return SEATU
@@ -93,12 +93,28 @@ VHW=1.1  # half-width of a vom mouth (photo: ~10 px wide on the far stand = 2.2 
 UPE=edges(VOMS,13,0.55)+edges(VOMS,11,VHW)
 # no ground beyond the stadium (director 2026-11-18: background scene is a later pass)
 # lower bowl all round
-sweep(arange(0,360,0.5)+[e%360 for e in LOWE],[(0,0.02,None,0),(1.5,0.02,APRON,1),(1.5,1.0,FENCE,1),(6.5,4.0,SEAT,1.0),(8.5,4.0,WALK,1)],mfun=low_m)
+# north end (no roof): seats run back to the satellite's seat edge (north_db, per degree), same rake as the stands' lower tier
+NDB=D['north_db']
+def ndb(a):
+    a=a%360
+    if not (A1-360<=a<=A0):return 6.5
+    return float(__import__('numpy').interp(a,[t[0] for t in NDB],[t[1] for t in NDB]))
+RAKE=0.6
+def low_pf(a,k):
+    db=ndb(a);zb=1.0+RAKE*(db-1.5)
+    return [(0,0.02),(1.5,0.02),(1.5,1.0),(db,zb),(db+2.0,zb)][k]
+NA=arange(A1-360,A0,0.5)
+sweep(arange(A0,A1,0.5)+[e for e in [x%360 for x in LOWE]+[x%360+360 for x in LOWE] if A0<e<A1],[(0,0.02,None,0),(1.5,0.02,APRON,1),(1.5,1.0,FENCEL,1),(6.5,4.0,SEAT,1.0),(8.5,4.0,WALK,1)],mfun=low_m)
+sweep(NA+[e%360 for e in LOWE if A1-360<e%360<A0],[(0,0.02,None,0),(1.5,0.02,APRON,1),(1.5,1.0,FENCEL,1),(6.5,4.0,SEAT,1.0),(8.5,4.0,WALK,1)],mfun=low_m,pf=low_pf)
 span=arange(A0,A1,0.5)
-SPROF=[(6.5,4.0),(6.5,6.0),(9.0,6.0),(9.0,6.4),(10.226,7.265),(11.2,7.952),(24.0,16.98),(24.0,21.0),(25.0,21.0),(25.0,8.0),(26.0,8.0),(26.0,7.0),(16.0,7.0),(16.0,0.0)];SMAT=[None,FENCE,WALK,CONC,SEAT,SEAT,SEAT,NAVY,CONC,NAVY,WALK,WALK,UNDER,DARK]
+SPROF=[(6.5,4.0),(6.5,6.9),(6.8,6.9),(6.8,6.0),(9.0,6.0),(9.0,6.4),(10.226,7.265),(11.2,7.952),(24.0,16.98),(24.0,21.0),(25.0,21.0),(25.0,8.0),(26.0,8.0),(26.0,7.0),(16.0,7.0),(16.0,0.0)];SMAT=[None,FENCE,WHITE,CONC,WALK,CONC,SEAT,SEAT,SEAT,NAVY,CONC,NAVY,WALK,WALK,UNDER,DARK]
 sweep(span+[e for e in UPE if A0<e<A1],[(d,z,SMAT[i],1) for i,(d,z) in enumerate(SPROF)],mfun=up_m)
 sweep(span,[(26.0,8.0,None,0),(26.0,9.1,YEL,1)])
-sweep(arange(A1-360,A0,0.5),[(8.5,4.0,None,0),(14.0,4.0,WALK,1),(14.0,0.0,CONC,1)])
+def nc_pf(a,k):
+    db=ndb(a);zb=1.0+RAKE*(db-1.5);w=max(14.0,db+5.5)
+    return [(db+2.0,zb),(w,zb),(w,0.0)][k]
+sweep(NA,[(8.5,4.0,None,0),(14.0,4.0,WALK,1),(14.0,0.0,CONC,1)],pf=nc_pf)
+# the stands' own end walls (below) close the deeper north seats
 for a,flip in((A0,False),(A1,True)):
     for poly in ([(6.5,0),(6.5,4.0),(6.5,6.0),(9.0,6.0),(9.0,6.4),(24,16.98),(24,21),(25,21),(25,8),(16,7),(16,0)],[(25,8),(26,8),(26,7),(16,7)]):
         vs=[bm.verts.new(P(a,d,z)) for d,z in poly];face(vs[::-1] if flip else vs,CONC)
@@ -111,7 +127,7 @@ for v in V+[A1]:
 R[-1]=A1
 # near (west) side: lobe ribs read off the photo's white ribs (x 578-1408), angles by projecting each rib onto the roof
 RIBS_NEAR=[128.89,135.5,142.12,149.52,157.89,167.8,177.6,186.6,193.5,200.0,206.4,213.0,219.2,228.9,237.2,243.9,250.5]
-R=sorted([r for r in R if not (126.0<r<252.5)]+RIBS_NEAR)
+if not os.environ.get('SATRIBS'):R=sorted([r for r in R if not (126.0<r<252.5)]+RIBS_NEAR)  # SATRIBS: ribs from the satellite valleys (top-down plan)
 print('R near',[round(r,1) for r in R if 115<r<265])
 def phase(a):
     for i in range(len(R)-1):

@@ -68,11 +68,18 @@ W,H=int(6*PPM),int(6*PPM);a=img(H,W,(212,212,208))+noise(H,W,20,3,15)[...,None]
 for y in np.arange(0,6,2.0):rect(a,0,y*PPM,W,y*PPM+5,(170,170,166))
 save(a,'roofunder',6.0,6.0)
 panels('podroof',(234,231,227),6.0,6.0,2,(214,211,207),2.5,16,12.0,12.0)
-# LED fascia (photo, far stand): 2 m face, top 60% pale blue LED band (lettering left out), bottom 40% navy; panel seams 1 m
-W,H=int(8*PPM),int(2.0*PPM);a=img(H,W,(32,42,63))
-rect(a,0,0,W,0.6*H,(178,216,238));rect(a,0,0.6*H-3,W,0.6*H,(110,160,195))
-for k in range(8):rect(a,k*PPM,0,k*PPM+2,0.6*H,(150,190,215))
-save(a,'led',8.0,2.0)
+# LED fascia (photo, far stand, x 975 / 1100): 2.9 m parapet face: white cap 0.15 m, pale blue LED 1.55 m (lettering left out), navy 1.2 m; panel seams 1 m
+W,H=int(8*PPM),int(2.9*PPM);a=img(H,W,(32,42,63))+noise(H,W,6,2,21)[...,None]
+c0,c1=int(0.15*PPM),int(1.70*PPM)
+a[:c0]=(236,236,232);a[c0:c1]=(178,216,238);a[c0:c1]+=noise(c1-c0,W,4,2,22)[...,None];a[c1-3:c1]=(110,160,195)
+for k in range(8):rect(a,k*PPM,c0,k*PPM+2,c1,(150,190,215));rect(a,k*PPM,c1,k*PPM+2,H,(24,32,50))
+save(a,'led',8.0,2.9)
+# field-side fence (photo: white board face; the LED ads on it are left out): white panels 2 m, navy capping rail, grime toward the bottom
+W,H=int(8*PPM),int(1.0*PPM);a=img(H,W,(236,236,233))+noise(H,W,5,3,23)[...,None]
+a[:4]=(40,48,70)
+yy=np.linspace(0,1,H)[:,None,None];a-=12*yy**3
+for k in range(4):rect(a,k*2*PPM,0,k*2*PPM+2,H,(196,196,192))
+save(a,'fencelow',8.0,1.0)
 # podium fins: vertical fins 0.6 m pitch on a white wall; each fin stacked colour blocks (blue, red, orange, yellow) 0.8-2.4 m tall
 W,H=int(12*PPM),int(10.6*PPM);a=img(H,W,(224,222,219))+noise(H,W,6,3,17)[...,None]
 pal=[(52,86,170),(208,58,48),(238,136,58),(244,196,88)]
