@@ -19,3 +19,6 @@ Textures are hand-made (mktexC6.py, mktexB6.py): flat colours read off the photo
 - The C east roof back from -50 to -20 deg follows photo 03. The satellite puts it up to 7 m further out.
 
 No open faults.
+
+## B gate 2 (lead, 2026-11-20)
+Fixed by eye on photo 17 (b17_by_eye.png): blue seats only in a low roofed stand on the near right (-160..-100); near side dark multi-storey roofed stand with front columns; far right a low open terrace; grass shown in the board render (the model leaves the field out, director 2026-11-18). No open faults.
