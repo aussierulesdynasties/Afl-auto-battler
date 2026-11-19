@@ -55,10 +55,11 @@ for f in D['F']:
         l[uvl].uv=(u/tu,v/tv)
 bm.normal_update();bm.to_mesh(me);me.update()
 exec(open(S+'/seats3d.py').read())
-# raised lettering (signs.json from geo.py): Blender's built-in font, extruded, converted to mesh, joined into the model
+# raised lettering (signs.json from geo.py): Liberation Sans Bold, extruded, converted to mesh, joined into the model
+SFONT=bpy.data.fonts.load(S+'/fonts/LiberationSans-Bold.ttf')   # SIL OFL 1.1, Arial-design grotesque: matches the SCG sign capitals (photo nrl.com 2022 + refs3/100)
 if os.path.exists(S+'/signs.json'):
     for sg in json.load(open(S+'/signs.json')):
-        cu=bpy.data.curves.new('sign','FONT');cu.body=sg['txt'];cu.align_x='CENTER';cu.size=1.0;cu.extrude=sg['d']/2
+        cu=bpy.data.curves.new('sign','FONT');cu.body=sg['txt'];cu.font=SFONT;cu.align_x='CENTER';cu.size=1.0;cu.extrude=sg['d']/2
         to=bpy.data.objects.new('sign',cu);bpy.context.scene.collection.objects.link(to)
         dg=bpy.context.evaluated_depsgraph_get();tm=bpy.data.meshes.new_from_object(to.evaluated_get(dg));bpy.data.objects.remove(to)
         xs=[v.co.x for v in tm.vertices];sc=sg['w']/(max(xs)-min(xs));x0=(max(xs)+min(xs))/2;ymin=min(v.co.y for v in tm.vertices);hh=(max(v.co.y for v in tm.vertices)-ymin)*sc

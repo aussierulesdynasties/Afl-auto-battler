@@ -227,6 +227,7 @@ def seats(d):
     g=rr_at(GR,d)[1]
     o=OUT.get(round(d*2)/2%360)
     if 110<d%360<169.5:return None   # heritage bowl: its own band (hseats)
+    if 169.5<=d%360<260:return None   # near stand: its own two-tier band with the box level (brew)
     if o is None and 106.5<d%360<110:o=OUT[106.5]   # photo: the Messenger lower bowl runs on past its roof to the Members' Pavilion
     if o is None:
         rb,zb=g+22,10.0
@@ -242,6 +243,19 @@ def seats(d):
     lower=[];upper=[(rb,zb)]   # one straight seat section each side of the cross-aisle, so the 3D seat rows run unbroken
     return [(g,0.05),(g+0.5,1.2)]+lower+mid+upper   # director: leave the field out (game draws grass inside the fence)
 band(seats,-180,180,['fence','seat','dark','dark','dark','ribbon','slab','seat'])
+# near stand (Brewongle + Clive Churchill, one build), photo refs3/044 from the fence up: lower tier, box-level LED
+# fascia (1.4 m), recessed box glass (2.4 m) under a 0.9 m overhang, upper-tier LED fascia (1.0 m), upper tier to the
+# back wall, then the window band on the back wall (pale 0.4 m sill, 1.8 m of glass) seen just under the roof fascia,
+# dark wall above it to the roof underside. Photo heights: lower tier 65 px, box level 58 px, upper tier 95 px.
+def brew(d):
+    g=rr_at(GR,d)[1];o=OUT.get(round(d*2)/2%360)
+    if o is None:return None
+    lo,hi,zf,zo,k=o;rb=nearclamp(d,hi-1.0)
+    zr=(zf-1.6)+((zo-1.2)-(zf-1.6))*(rb-lo)/(hi-lo)   # roof underside over the back wall
+    rL=g+11.0;zL=1.2+0.24*(rL-g-0.5);rU=rL+1.4;zU=zL+4.8   # photo 044 heights upper:box:lower 97:73:65 px -> rise 4.1 : 4.8 : 2.5 m (the rakes also gain height from depth)
+    zb=min(zf-3.2,zr-4.6)   # top row 0.4 m sill + 1.8 m glass under the line of sight past the roof front (photo 044)
+    return [(g,0.05),(g+0.5,1.2),(rL,zL),(rL,zL+1.4),(rL+1.5,zL+1.4),(rL+1.5,zL+3.8),(rL+0.6,zL+3.8),(rL+0.6,zU),(rU,zU),(rb,zb),(rb,zb+0.4),(rb,zb+2.2),(rb,zr)]
+band(brew,169.5,260,['fence','seat','ribbon','slab','glassm','slab','ribbon','dark','seat','slab','glassm','dark'])
 # heritage bowl (110-169.5 deg): maroon lower-tier seats from the fence up to the stands' field edge (satellite + field
 # photo), topping out 1.5 m under the verandah so the stand faces show from the verandah up
 exec(open('blds.py').read())
@@ -412,7 +426,7 @@ def earclip(pts):
 def stand_cap(d):
     o=OUT.get(round(d*2)/2%360)
     if not o:return
-    lo,hi,zf,zo,k=o;a=math.radians(d);pr=seats(d);rb,zb=pr[-1]
+    lo,hi,zf,zo,k=o;a=math.radians(d);pr=seats(d) or brew(d);rb,zb=pr[-1]
     ring=[(pr[0][0],0)]+list(pr)+[(rb,zo-1.2),(hi,zo-1.2),(hi,0)]
     pv=[P(r_,a,z_) for r_,z_ in ring]
     for i,j,l in earclip(ring):tri(pv[i],pv[j],pv[l],'soffit' if k=='messenger' else 'facade')   # 063: dark stepped underside at the Messenger's east end

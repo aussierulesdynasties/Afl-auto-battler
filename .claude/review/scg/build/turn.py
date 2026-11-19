@@ -32,6 +32,8 @@ shot('scoreboard',200,12,70,lens=35,tgt=Vector((89.2,45.0,21.0)))   # board face
 shot('mes_tip',230,20,60,lens=35,tgt=Vector((80.0,56.0,28.0)))   # Messenger roof tip over the scoreboard end (satellite corner)
 shot('mes_tip_out',40,15,70,lens=35,tgt=Vector((82.0,58.0,26.0)))
 for _az in (170,185,200,215):shot('brew%d'%_az,_az+180,3,90,lens=35,tgt=polt(_az,80,12))   # field-side looks at the stands beside the Ladies (refs3/044 view)
+for _e,_n in ((1.0,'brew044'),(9,'brew044h')):shot(_n,5,_e,170,lens=85,tgt=polt(183,88,10))   # refs3/044 view: across the ground, long lens
+shot('brew_end',259+180-25,10,70,lens=35,tgt=polt(259,88,8));shot('brew_west',170+180+25,10,70,lens=35,tgt=polt(170,85,8))   # the two ends of the near-stand box-level section
 shot('brew_sign',5,4,22,lens=35,tgt=Vector((-84.6,-28.0,14.75)))   # Brewongle Stand fascia lettering close-up
 shot('seats_close',240,14,16,lens=35,tgt=polt(60,74,4))   # empty-seat close-up: Messenger lower tier from the boundary
 shot('seats_close2',150,12,16,lens=35,tgt=polt(-30,72,4))   # O'Reilly lower tier
