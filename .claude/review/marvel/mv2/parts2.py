@@ -302,8 +302,9 @@ def stair(name,u0,u1,v0,v1,zt):
     V=[(u0,v0,zt),(u0,v1,zt),(u1,v1,0.0),(u1,v0,0.0),(u0,v0,0.0),(u0,v1,0.0)]
     add(name,V,[[0,1,2,3],[4,0,3],[5,2,1],[0,4,5,1]],['paving','concrete','concrete','concrete'])
 stair('plinth_stairN',FU0,-62.0,124.0,137.0,ZP);stair('plinth_stairS',FU1,60.5,126.0,137.0,ZP)
-# ---------------- sign box on the wall top under the roof (no lettering): red panel + black panel
-box('sign_red',-16,-2.5,104.5,105.5,36.5,41.2,'signred','signred');box('sign_black',-2.5,17.4,104.5,105.5,36.5,41.2,'signblack','signblack')
+# ---------------- sign box on the wall top under the roof red MARVEL panel + black STADIUM panel; lettering on the outward face only (ground's own sign, director 2026-11-19)
+prism('sign_red',[(-16,104.5),(-2.5,104.5),(-2.5,105.5),(-16,105.5)],36.5,41.2,'signred','signred',side_m=['signred','signred','sign_marvel','signred'])
+prism('sign_black',[(-2.5,104.5),(17.4,104.5),(17.4,105.5),(-2.5,105.5)],36.5,41.2,'signblack','signblack',side_m=['signblack','signblack','sign_stadium','signblack'])
 from shapely.geometry import Polygon,MultiPoint
 from shapely.ops import unary_union
 _S=np.array([uvw(u,v,0.0)[:2] for u,v in((0,0),(1,0),(0,1))]);_A=np.linalg.inv(np.stack([_S[1]-_S[0],_S[2]-_S[0]],1))

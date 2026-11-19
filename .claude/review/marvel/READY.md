@@ -1,7 +1,8 @@
 # Marvel Stadium exterior (row 202 2b): ready for gate
 
 Model: mv2/marvel2.glb (225 parts, about 25,000 faces, origin at the pitch centre, north +Y). Hand-made textures only (mv2/tex,
-gen_tex.py). No field, posts, goal nets, lettering, boards, temporary stands or background buildings.
+gen_tex.py then paint_tex.py). No field, posts, goal nets, sponsor ads, boards, temporary stands or background buildings;
+the ground's own MARVEL STADIUM sign is lettered (director 2026-11-19).
 
 ## Proofs (mv2/proof/)
 - Camera-matched overlay on the 2019 oblique aerial: ov8_on.jpg, ov8_blend.jpg; end roofs photo|model: j_end_n.jpg, j_end_s.jpg.
@@ -27,6 +28,15 @@ two widths), C deck (z7) and walkway (z10), block D (z24, east edge v-131.3 to -
 shadow lengths (0.5 m shadow per m), checked against oblique photo 31603700. Satellite roofs lean
 (u-0.1738z, v-0.0805z); parts2.py `lean()` turns a roof reading into the true footprint.
 
+## Texture pass (2026-11-19)
+Every big surface repainted by hand in paint_tex.py (helpers in texpaint.py), no photo pixels, colours kept to the old
+means: concrete formwork panels 2.4 x 1.2 m with tie holes and rain streaks; roof sheeting seams every 0.6 m with dirt
+along them; soffit ribs 0.2 m and purlins 1.5 m; seats 0.5 m with gaps, row shadows and a 1.2 m aisle every 24 seats;
+fascias, gutters and teal steel with seams and grime toward the bottom; cladding panels with per-panel tone and streaks;
+paving 1.2 m slabs; glazing per-pane reflection. Sign: white MARVEL on red, white STADIUM on black, outward face only
+(Bahnschrift Bold Condensed, sized to the panels as in the 2019 aerial). Proof: proof/tex_board_1.jpg, tex_board_2.jpg
+(photo | before | game camera | close per surface, stddev before -> after); board_tex.py rebuilds it.
+
 ## Rebuild
-python parts2.py; then Blender 5.2 via gpu_slot: build2.py -- ov | views [views*.json] | top | glb; python ovtop.py,
+python gen_tex.py; python paint_tex.py; python parts2.py; then Blender 5.2 via gpu_slot: build2.py -- ov | views [views*.json] | top | glb; python ovtop.py,
 ovb.py r_ov.png ov8, board.py, zoomuv.py u0 u1 v0 v1 px/m out edge.

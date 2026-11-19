@@ -1,0 +1,5 @@
+{"cl_concrete":{"eye":[-118,-38,31],"tgt":[-101.9,-30.2,21.4],"lens":35,"W":1200,"H":800,"transparent":false},
+ "gc_concrete":{"eye":[-230,-80,70],"tgt":[-101.9,-30.2,21.4],"lens":35,"W":1200,"H":800,"transparent":false},
+ "cl_glass":{"eye":[150,15,6],"tgt":[132,12,4.5],"lens":35,"W":1200,"H":800,"transparent":false},
+ "gc_glass":{"eye":[280,40,40],"tgt":[132,12,5],"lens":35,"W":1200,"H":800,"transparent":false},
+ "cl_steel":{"eye":[-112,-42,47],"tgt":[-94.5,-33.8,43.4],"lens":35,"W":1200,"H":800,"transparent":false}}
