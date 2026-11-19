@@ -29,3 +29,7 @@ legacy_2010_long
 # The balance harness suites ran nightly before this rule and still do.
 balance
 league_balance
+# Split off story and matchday (director 2026-11-18, "Yes, split both"): story ran 2732 s
+# of its 3000 and matchday 3057 on a slow runner (nightly 44291619971).
+story_culture
+matchday_breaks

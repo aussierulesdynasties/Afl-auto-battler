@@ -65,6 +65,7 @@ var director: MatchDirector
 var players: Array = []        # [{node, anim, ring}] in director.tokens order
 var ball: MeshInstance3D
 var camera: Camera3D
+var film: MeshInstance3D  # the broadcast film look (_film)
 var anim: Oval3DAnim          # the animation session's controller (row 198)
 var umpires: Array = []        # [{node, anim, ring, role, k}]: the vignettes' umpire set
 var crowd: Oval3DCrowd
@@ -115,7 +116,28 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 	# the camera where the broadcast puts it.
 	camera.top_level = true
 	add_child(camera)
+	_film()
 	sync(0.0)
+
+
+## The broadcast film look over the whole picture (director's pick, rule 2.112): a quad
+## glued to the camera that redraws what the camera drew (oval3d_film.gdshader).
+func _film() -> void:
+	var mat := ShaderMaterial.new()
+	mat.shader = preload("res://scripts/ui/match/oval3d_film.gdshader")
+	# Drawn last but the club rings (RENDER_PRIORITY_MAX), which keep their exact colour (rule 2.81).
+	mat.render_priority = Material.RENDER_PRIORITY_MAX - 1
+	var qm := QuadMesh.new()
+	qm.size = Vector2(2, 2)
+	film = MeshInstance3D.new()
+	film.mesh = qm
+	film.material_override = mat
+	# The shader places it over the whole screen, wherever the camera looks.
+	film.extra_cull_margin = 16384.0
+	film.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	film.position = Vector3(0, 0, -1)
+	camera.add_child(film)
+	turf.film = mat
 
 
 ## Copy the director's state onto the scene. The animations advance here, by dt, so the
@@ -1575,6 +1597,9 @@ func _player(scene: PackedScene, kit: ShaderMaterial, cols: Array, club := "") -
 	var rm := StandardMaterial3D.new()
 	rm.albedo_color = cols[0]
 	rm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	# A marker, not lit: drawn after the film and its tone, in the exact club colour (rule 2.81).
+	rm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	rm.render_priority = Material.RENDER_PRIORITY_MAX
 	ring.material_override = rm
 	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	node.add_child(ring)

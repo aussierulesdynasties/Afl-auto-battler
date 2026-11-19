@@ -1,5 +1,14 @@
 {
   "permissions": {
     "deny": ["mcp__Blender"]
-  }
+  },
+  "enabledPlugins": {
+    "unity@inline": false,
+    "unity-perf@inline": false,
+    "meshy-3d-agent@inline": false
+  },
+  "deniedMcpServers": [
+    { "serverName": "rokoko" },
+    { "serverName": "claude.ai ElevenLabs" }
+  ]
 }
