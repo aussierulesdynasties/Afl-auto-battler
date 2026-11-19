@@ -49,6 +49,25 @@ for g,qs in G.items():
         tu,tv=tile(m)
         for j,li in enumerate(poly.loop_indices):uvl.data[li].uv=(uv[j][0]/tu,uv[j][1]/tv)
     ob=bpy.data.objects.new(g,me);sc.collection.objects.link(ob);OBJ.append(ob)
+# ---------- real seats: pan + back per seat (0.44 m wide, 0.5 m pitch), plain plastic in the photo's lit-seat colour RGB(108,128,146)
+def _bx(x0,x1,y0,y1,z0,z1):
+    return [(x0,y0,z0),(x1,y0,z0),(x1,y1,z0),(x0,y1,z0),(x0,y0,z1),(x1,y0,z1),(x1,y1,z1),(x0,y1,z1)]
+_BF=[[0,3,2,1],[4,5,6,7],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7]]
+# local frame: x along the row, y towards the pitch, z up; origin on the tread at the seat centre
+_T=np.array(_bx(-0.22,0.22,-0.22,0.20,0.40,0.46)+_bx(-0.22,0.22,-0.30,-0.24,0.46,0.86)+_bx(-0.025,0.025,-0.12,-0.04,0.0,0.40))
+_TF=[[f+o for f in ff] for o in (0,8,16) for ff in _BF]
+SE=np.array(J.get('seats',[]),float)
+if len(SE):
+    fwd=np.c_[SE[:,3:5],np.zeros(len(SE))];side=np.c_[fwd[:,1],-fwd[:,0],np.zeros(len(SE))]
+    base=SE[:,:3]-C0
+    V=(base[:,None,:]+_T[None,:,0,None]*side[:,None,:]+_T[None,:,1,None]*fwd[:,None,:]+_T[None,:,2,None]*np.array([0,0,1.0])).reshape(-1,3)
+    nT=len(_T);F=(np.array(_TF)[None,:,:]+(np.arange(len(SE))*nT)[:,None,None]).reshape(-1,4)
+    me=bpy.data.meshes.new('seats3d');me.vertices.add(len(V));me.vertices.foreach_set('co',V.ravel())
+    me.loops.add(F.size);me.loops.foreach_set('vertex_index',F.ravel());me.polygons.add(len(F))
+    me.polygons.foreach_set('loop_start',np.arange(0,F.size,4));me.update();me.validate()
+    sm=bpy.data.materials.new('seat3d');sm.use_nodes=True;sb=sm.node_tree.nodes['Principled BSDF']
+    sb.inputs['Base Color'].default_value=(*[(c/255)**2.2 for c in (62,80,104)],1);sb.inputs['Roughness'].default_value=0.55
+    me.materials.append(sm);ob=bpy.data.objects.new('seats3d',me);sc.collection.objects.link(ob);OBJ.append(ob)
 # ---------- light: summer midday sun from the north, sky fill
 wd=bpy.data.worlds.new('w');sc.world=wd;wd.use_nodes=True;bg=wd.node_tree.nodes['Background']
 bg.inputs['Color'].default_value=(0.62,0.72,0.86,1);bg.inputs['Strength'].default_value=0.9

@@ -62,6 +62,14 @@ ovb.py r_ov.png ov8, board.py, zoomuv.py u0 u1 v0 v1 px/m out edge.
   tie holes are kept. Stddev 4.3 (the stddev floor is dropped: a texture passes when it looks like its photo crop).
 - Teal confirmed at round-3 depth: even paint, 2 m plate seams, stddev 5.9. Re-rendered every proof and tex_board_1/2.
 
+## Gate round 6 (director on the seat audit: "Reopen all flat/boxes")
+- Seats are real 3D now (57,535; capacity is about 53,000). Each tier is concrete steps, 0.8 m treads, instead of one sloped
+  band with a seat texture. Every row has a real seat mesh: pan, back and pedestal, 0.44 m wide at 0.5 m pitch, so there is
+  a 6 cm gap between seats. Radial aisle stairs are 1.2 m wide, one every 24 seats, at the same angles up each tier.
+  The plastic is plain, in the photo's blue-grey; the seats are empty, with no crowd.
+- Seat-height close-ups: r_seats_close.png, r_seats_close2.png, r_seats_row.png; tex_board_1 seats row (close column).
+- Code: parts2.py tier() (steps + seat_row/aisle_angles writes `seats` to parts2.json); build2.py builds the seats3d mesh.
+
 ## Gate checklist (ground builder rules, 8 items)
 1. Overlays: ov8_on.jpg, ov8_blend.jpg (oblique aerial), j_end_n.jpg, j_end_s.jpg.
 2. Turntable: r_tt_w/n/e/s.jpg, sh_tt.jpg, marvel_orbit.mp4 (72 frames).

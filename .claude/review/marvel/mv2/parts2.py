@@ -238,11 +238,36 @@ for cu,cv,h in((-45.8,110.4,17.8),(43.3,111.8,16.7)):
 # ---------------- seating bowl inside (no field): three tiers between the pitch fence and the outer wall
 PA,PB,PN=G('PA',86.0),G('PB',72.0),G('PN',2.2)
 rp=se_r(TH,PA,PB,PN)+2.0;D=r0-6.0-rp
+SEATS=[]
+def _arc(R):
+    Rc=np.r_[R,R[:1]];d=np.linalg.norm(np.diff(Rc[:,:2],axis=0),axis=1);return Rc,d,np.r_[0,np.cumsum(d)]
+def aisle_angles(R,pitch=0.5,block=24,aisle=1.2):
+    # radial aisle stairs: one every 24 seats along the tier's front row; every row above keeps the same angles
+    Rc,d,cs=_arc(R);out=[];s=0.6+block*pitch
+    while s<cs[-1]-0.6:
+        j=max(0,min(int(np.searchsorted(cs,s))-1,len(R)-1));p=Rc[j]+(Rc[j+1]-Rc[j])*(s-cs[j])/max(d[j],1e-9)
+        out.append(math.atan2(p[1],p[0]));s+=block*pitch+aisle
+    return np.array(out)
+def seat_row(R,AA,pitch=0.5,aisle=1.2):
+    Rc,d,cs=_arc(R);s=0.3
+    while s<cs[-1]-0.3:
+        j=max(0,min(int(np.searchsorted(cs,s))-1,len(R)-1));p=Rc[j]+(Rc[j+1]-Rc[j])*(s-cs[j])/max(d[j],1e-9)
+        r=math.hypot(p[0],p[1]);da=np.abs((AA-math.atan2(p[1],p[0])+np.pi)%(2*np.pi)-np.pi)*r
+        if len(AA) and da.min()<aisle/2+0.22:s+=0.1;continue
+        w0=np.array(wv(p));w1=np.array(wv(p*np.array([0.99,0.99,1.0])))  # inward = towards the pitch centre
+        dv=w1[:2]-w0[:2];dv/=np.linalg.norm(dv)+1e-12;SEATS.append([round(float(w0[0]),3),round(float(w0[1]),3),round(float(w0[2]),3),round(float(dv[0]),4),round(float(dv[1]),4)])
+        s+=pitch
 def tier(name,f0,f1,zf,zb,lip=1.1):
     a=rp+D*f0;b=rp+D*f1;c=np.cos(TH);s=np.sin(TH)
     P=lambda r,z:np.stack([r*c,r*s,np.full(K,z) if np.ndim(z)==0 else z],1)
-    rings=[P(a,zf-lip-0.6),P(a,zf),P(b,zb),P(b,zb-1.0),P(a,zf-lip-0.6)]
-    loft(name,rings[:4]+[rings[0]],['concrete','seats','concrete','soffit'])
+    # stepped concrete rows (0.8 m treads) with a real seat on each row (pan + back, 0.44 m wide, 0.5 m pitch, 1.2 m aisle every 24)
+    n=max(1,int(round(np.mean(b-a)/0.8)));zz=lambda i:zf+(np.asarray(zb)-zf)*i/n;rr=lambda i:a+(b-a)*i/n
+    rings=[P(a,zf-lip-0.6),P(a,zf)];mats=['concrete'];AA=aisle_angles(P(a+(b-a)*0.55/n,zf))
+    for i in range(n):
+        rings+=[P(rr(i+1),zz(i)),P(rr(i+1),zz(i+1))];mats+=['concrete','riser']
+        rs=rr(i)+(rr(i+1)-rr(i))*0.55;seat_row(P(rs,zz(i)),AA)
+    rings+=[P(b,np.asarray(zb)-1.0),P(a,zf-lip-0.6)];mats+=['concrete','soffit']
+    loft(name,rings,mats)
 tier('tier1',0.0,0.62,FL+1.4,FL+12.0);tier('tier2',0.40,0.80,FL+15.0,FL+23.0);_b3=rp+D*1.0;_rt=np.array([roof_top(r*math.cos(t),r*math.sin(t)) for r,t in zip(_b3,TH)])
 tier('tier3',0.62,1.0,FL+26.5,np.minimum(FL+37.0,_rt-1.5))  # back row stays under the roof (ends at 33-38 m)
 # ---------------- corner complexes (west measured: satellite lean + aerial, mv/sz.py, mv/vert.py); east = 180-degree twin
@@ -322,5 +347,5 @@ _ex=np.array(_U.exterior.coords)[:-1];_ang=np.arctan2(_ex[:,1],_ex[:,0])
 _r=np.hypot(_ex[:,0],_ex[:,1]);_hole=np.stack([(se_r(_ang,OA,OB,ON)-6.0)*np.cos(_ang),(se_r(_ang,OA,OB,ON)-6.0)*np.sin(_ang)],1)
 ZB0=-1.0;ZB1=0.05
 loft('site_base',[z3(_ex,ZB0),z3(_ex,ZB1),z3(_hole,ZB1)],['concrete','paving'])
-json.dump(dict(parts=PARTS,cam=P('c5.json')),open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'parts2.json'),'w'))
-print(len(PARTS),'parts',sum(len(p['F']) for p in PARTS),'faces')
+json.dump(dict(parts=PARTS,seats=SEATS,cam=P('c5.json')),open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'parts2.json'),'w'))
+print(len(SEATS),'seats',len(PARTS),'parts',sum(len(p['F']) for p in PARTS),'faces')
