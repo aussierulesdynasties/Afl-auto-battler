@@ -48,8 +48,39 @@ def hit(b, z, inward=True):
 
 
 if 'glb' in jobs:   # Blender +Y (north) becomes glTF -Z
+    # the seat shells stay out of the GLB: one shell (seat_tmpl.bin, triangles, glTF frame) drawn once per seat
+    # from seats_seat_plastic.bin (row-major 3x4 per seat), the MCG format Oval3D._ground_model reads
+    import numpy as np
+    for ob in sc.objects: ob.select_set(ob.type == 'MESH' and ob.name != 'seats')
     bpy.ops.export_scene.gltf(filepath=os.path.join(out, 'york_park.glb'), export_format='GLB',
-                              use_selection=False, export_cameras=False, export_lights=False)
+                              use_selection=True, export_cameras=False, export_lights=False)
+    C = np.array([[1, 0, 0], [0, 0, 1], [0, -1, 0.0]])          # Blender (x, y, z) -> glTF (x, z, -y)
+    tm = build.MB('tmpl'); build.seat((0.0, 0.0), (1.0, 0.0), (0.0, 1.0), 0.0, shell=tm)
+    tri = [tm.V[f[k]] for f in tm.F for i in range(1, len(f) - 1) for k in (0, i, i + 1)]
+    (np.array(tri) @ C.T).astype('<f4').tofile(os.path.join(out, 'seat_tmpl.bin'))
+    xf = []
+    for P, t, o, z in build.SEAT_XF:
+        A = np.array([[t[0], o[0], 0], [t[1], o[1], 0], [0, 0, 1.0]])
+        xf.append(np.hstack([C @ A @ C.T, (C @ np.array([P[0], P[1], z]))[:, None]]).ravel())
+    np.array(xf).astype('<f4').tofile(os.path.join(out, 'seats_seat_plastic.bin'))
+    print('seats instanced:', len(xf), 'template tris:', len(tri) // 3)
+if 'ship' in jobs:   # later jobs film what ships: the exported GLB plus the seats rebuilt from the two .bin files
+    import numpy as np
+    C = np.array([[1, 0, 0], [0, 0, 1], [0, -1, 0.0]])
+    for ob in [o for o in sc.objects if o.type == 'MESH']: bpy.data.objects.remove(ob)
+    bpy.ops.import_scene.gltf(filepath=os.path.join(out, 'york_park.glb'))
+    T = np.fromfile(os.path.join(out, 'seat_tmpl.bin'), '<f4').reshape(-1, 3)
+    X = np.fromfile(os.path.join(out, 'seats_seat_plastic.bin'), '<f4').reshape(-1, 3, 4)
+    V = np.concatenate([T @ M[:, :3].T + M[:, 3] for M in X]) @ C
+    me = bpy.data.meshes.new('seats_inst'); me.from_pydata([tuple(v) for v in V], [], [(i, i + 1, i + 2) for i in range(0, len(V), 3)])
+    im = bpy.data.images.load(os.path.join(HERE, 'tex', 'seat_plastic.png')); px = np.array(im.pixels[:]).reshape(-1, 4)
+    sm = bpy.data.materials.new('seat_mean'); sm.use_nodes = True   # the game draws seats in one colour: the texture mean
+    c = px[:, :3].mean(0); c = np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)   # PNG pixels are sRGB
+    sm.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = (*c, 1)
+    print('seat mean colour (linear):', c)
+    me.materials.append(sm); me.update()
+    ob = bpy.data.objects.new('seats_inst', me); sc.collection.objects.link(ob)
+    dg = bpy.context.evaluated_depsgraph_get()
 if 'stills' in jobs:
     for az in range(0, 360, 45):
         orbit(az); shot(os.path.join(out, f'turntable_{az:03d}.png'))

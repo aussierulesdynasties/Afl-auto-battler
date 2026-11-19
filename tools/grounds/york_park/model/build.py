@@ -99,7 +99,9 @@ def strip(mb, bs, prof, mats, rdir_out):
             oriented(mb, [P3(ba, r0, z0), P3(bb, s0, w0), P3(bb, s1, w1), P3(ba, r1, z1)], m, out, uv)
 
 
-SEATS = None      # MB for the 3D seats, set by build_all
+SEATS = None      # MB for the 3D seat shells (proof renders only; the GLB instances them), set by build_all
+POSTS = None      # MB for the seat pedestals (exported in the GLB)
+SEAT_XF = []      # (P, t, o, z) per seat, for the instanced seat files
 AISLES = []       # aisle-stair bearings (for the seat-height proof)
 ROW = 0.8         # tread depth (m): one row of seats
 
@@ -129,10 +131,12 @@ def nrows(prof, bs, k):
     P = prof(0.5 * (bs[0] + bs[-1])); return max(1, int(round((P[k + 1][0] - P[k][0]) / ROW)))
 
 
-def seat(P, t, o, z):
+def seat(P, t, o, z, shell=None):
     """one empty moulded plastic shell (2024 empty-seat photo): pan and back one curved piece, dished across its width,
     a rolled top edge; P = xy of the back of its tread, t = along the row, o = away from the pitch, z = tread top.
     Centre pedestal under the pan."""
+    tmpl = shell is not None; shell = shell if tmpl else SEATS
+    if not tmpl: SEAT_XF.append((tuple(P), tuple(t), tuple(o), z))
     P = np.array(P, float); t = np.array(t, float); o = np.array(o, float); hw = 0.22
     def X(a, d, h):
         q = P + t * a + o * d; return np.array((q[0], q[1], z + h))
@@ -146,9 +150,10 @@ def seat(P, t, o, z):
         dd, dh = prof[i + 1][0] - prof[i][0], prof[i + 1][1] - prof[i][1]
         out = -dh * o3 + dd * up
         for j in (-1, 0):
-            oriented(SEATS, [V(i, j), V(i, j + 1), V(i + 1, j + 1), V(i + 1, j)], 'seat_plastic', out,
+            oriented(shell, [V(i, j), V(i, j + 1), V(i + 1, j + 1), V(i + 1, j)], 'seat_plastic', out,
                      [((j + 1) / 2, i / 6), ((j + 2) / 2, i / 6), ((j + 2) / 2, (i + 1) / 6), ((j + 1) / 2, (i + 1) / 6)])
-    oriented(SEATS, [X(-0.04, -0.45, 0.0), X(0.04, -0.45, 0.0), X(0.04, -0.45, 0.38), X(-0.04, -0.45, 0.38)], 'steel_galv', -o3)
+    if tmpl: return
+    oriented(POSTS,[X(-0.04, -0.45, 0.0), X(0.04, -0.45, 0.0), X(0.04, -0.45, 0.38), X(-0.04, -0.45, 0.38)], 'steel_galv', -o3)
 
 
 def seat_rows(bs, prof, k, n, aisle=12.0, gap=1.1):
@@ -473,13 +478,13 @@ def extras(col):
 
 def build_all():
     clear(); col = bpy.context.scene.collection
-    global SEATS
-    mb = MB('stands'); mr = MB('roofs'); SEATS = MB('seats'); SEATS.smooth = True
+    global SEATS, POSTS
+    mb = MB('stands'); mr = MB('roofs'); SEATS = MB('seats'); SEATS.smooth = True; POSTS = MB('seat_posts'); SEAT_XF.clear()
     for S in D['stands']:
         {'single': lambda: single(S, mb, mr), 'two_tier': lambda: two_tier(S, mb, mr),
          'open': lambda: open_stand(S, mb), 'block': lambda: block(S, mb, mr)}[S['kind']]()
     mb.build(col); mr.build(col)
-    fence(col); extras(col); SEATS.build(col)
+    fence(col); extras(col); SEATS.build(col); POSTS.build(col)
     if not os.environ.get('NOCONC'): concourse(col)
     if D['towers']:
         mt = MB('towers')
