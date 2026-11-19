@@ -368,8 +368,8 @@ def tier_seats(b0, b1, tiers, key, col_i, tiers_c=None):
 def _bx(x0, x1, y0, y1, z0, z1):
     return [(x0, y0, z0), (x1, y0, z0), (x1, y1, z0), (x0, y1, z0), (x0, y0, z1), (x1, y0, z1), (x1, y1, z1), (x0, y1, z1)]
 _BF = [[0, 3, 2, 1], [4, 5, 6, 7], [0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7]]
-# seat: pan, back, two half-legs at the seat's edges (neighbours' halves meet as one shared steel leg under each gap)
-_T = np.array(_bx(-0.22, 0.22, -0.22, 0.20, 0.40, 0.46) + _bx(-0.22, 0.22, -0.30, -0.24, 0.46, 0.86) +
+# seat: pan 40 cm wide, back 36 cm (a clear 10/14 cm gap to the next seat at 0.5 m pitch), two half-legs at the seat's edges (neighbours' halves meet as one shared steel leg under each gap)
+_T = np.array(_bx(-0.20, 0.20, -0.22, 0.20, 0.40, 0.46) + _bx(-0.18, 0.18, -0.30, -0.24, 0.46, 0.86) +
               _bx(-0.25, -0.21, -0.22, 0.04, 0.0, 0.40) + _bx(0.21, 0.25, -0.22, 0.04, 0.0, 0.40))
 _TF = [[f + o for f in ff] for o in (0, 8, 16, 24) for ff in _BF]
 
@@ -417,7 +417,7 @@ def seats3d(col):
     kd.balance()
     for i in range(len(P)):   # block ends: the outer leg moves in 3 cm, flush with the pan
         for sgn, box in ((-1, 2), (1, 3)):
-            if kd.find(P[i] + sgn * 0.5 * side[i])[2] > 0.1: V[i, box * 8:box * 8 + 8] -= sgn * 0.03 * side[i]
+            if kd.find(P[i] + sgn * 0.5 * side[i])[2] > 0.1: V[i, box * 8:box * 8 + 8] -= sgn * 0.05 * side[i]
     F = (np.array(_TF)[None] + (np.arange(len(P)) * len(_T))[:, None, None]).reshape(-1, 4)
     me = bpy.data.meshes.new('seats3d'); me.from_pydata(V.reshape(-1, 3).tolist(), [], F.tolist())
     for m in (plain('seat_blue', (56, 92, 120)), plain('seat_dark', (40, 44, 52)), plain('seat_legs_steel', (62, 64, 67), 0.45, 0.6)):

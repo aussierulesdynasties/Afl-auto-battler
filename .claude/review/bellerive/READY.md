@@ -55,3 +55,8 @@ The lead's folder `trusting-edison-c1068b` was NOT reset (no reset, checkout, st
 - Boon to Ponting: each block between two aisles keeps one rake, so rows are level and the rake changes at an aisle.
 - Check: every seat raycast onto its tread: 0 off-tread, 0 clashing, 0 dropped.
 - Colours: Boon/Ponting blue (56,92,120), members and Northern Stand dark (40,44,52).
+
+## Re-gate: separate seats (2026-11-20)
+Ponting lower rows and the Members wing read as long benches: pans were 44 cm on a 50 cm pitch (6 cm gap, lost at a low angle).
+Pans now 40 cm (10 cm gap), backs 36 cm (14 cm gap), same pitch and shared steel legs; row-end legs moved 5 cm in, flush.
+11,494 seats, 0 dropped. All five close_seatlow shots re-rendered and checked. No open faults.
