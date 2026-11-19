@@ -4,6 +4,17 @@ Rebuilt model, rendered from the camera matched to photo o2, overlaid on the pho
 satellite. All 7 faults from the paused round are dealt with below. Stadium only: the pavilions, plaza, trees and
 roads around it are left out (background pass later). Every texture is hand-made (tex/), no photo pixels.
 
+## Texture pass (2026-11-19)
+Big surfaces repainted by hand, colours kept, no geometry change: roof PTFE (1.6 m strips, seams, sag, streaks), roof
+underside, seats (per-seat grey/tan mix around each tier's colour, aisles, worn nosings), bronze (dust, grain, rain
+tracks), glass (per-pane reflection, dust), podium wall, terrace, plaza/deck/concrete paving (1 m flags, aggregate),
+cladding, stairs. The ground's own name signs added on the bronze, drawn by hand from photo 018 (east, with the "yes")
+and photo o2 (south-west, without it). No crowd was in the model; nothing removed.
+- `proof/tex_board_1.jpg`, `proof/tex_board_2.jpg`: one row per surface, photo crop | game camera | close-up (before and
+  after), grey stddev before -> after, the empty-seat close-up, each sign beside its photo.
+- Rebuild order: `scripts/paint_tex.py` (reads `tex_base/`, writes `tex/`), then build.py. Views: `scripts/shots.py`
+  writes `views_tex.json`; `scripts/views.py` renders it; `scripts/board_tex.py` makes the boards.
+
 ## Proof (all in this folder)
 - `proof/board.png`: photo | render from the matched camera | 50% overlay. `proof/edges.png`: edge overlay.
   `proof/parts.png`: part-by-part crops, photo beside render (roof, glass, bronze, podium, stair, lift, west terrace).
@@ -62,7 +73,30 @@ roads around it are left out (background pass later). Every texture is hand-made
 - `scripts/`: build.py (Blender 5.2: `blender -b --python build.py -- <abs>/optus.glb <abs>/optus.blend`), geom.json,
   render.py + camL.json (matched camera), turn.py, board.py, parts.py, proof.sh, joins.sh, westfix.py, bpj.py,
   topdown.py, topov.py, roofsat.py, roofmark.py, period.py, stov.py, stz.py, cpair.py, texture makers.
-- `tex/`: hand-made textures the build reads (build.py looks for `tex/` beside itself: copy it into `scripts/`
-  before building). The 64 MB ground/turf images are left out; the model does not use them.
-- The 84 MB glb is not committed; build.py rebuilds it (148,870 triangles). Last gate-passed model:
+- `tex_base/`: the first hand-made textures; `tex/`: the texture-pass maps the build reads (build.py looks for `tex/` beside itself: copy it into `scripts/`
+  before building). The ground mat and turf are no longer loaded (the game draws the turf).
+- The 84 MB glb is not committed; build.py rebuilds it (148,873 triangles). Last gate-passed model:
   `.claude/review/optus_model/` (commit 82bc8feb3).
+
+## Gate checklist (ground builder rules, 8 items)
+1. Camera-matched overlays: `proof/board.png` (photo o2 | render | 50% overlay), `proof/edges.png`, `proof/parts.png`,
+   `proof/full_pair.png`, `proof/stov.png`.
+2. Turntable: `proof/turntable.mp4` (48 frames), `proof/turn4.png`.
+3. Facade and join close-ups: `proof/close_E.png`, `close_W.png`, `close_S.png`, `end_S.png`, `end_N.png`,
+   `proof/joins8.png`, `proof/jn/`. Every join clean (podium-wall panel tone cut to 0.015 so it no longer reads as stripes).
+4. Top-down overlay: `topdown/topov_lean.png` and the eight zooms; roof edge median 0.00 m, 157 of 180 probes within 2 m,
+   every outlier explained above.
+5. Texture close-up per surface beside a photo crop: `proof/tex_board_1.jpg`, `proof/tex_board_2.jpg`. Grey stddev
+   (PIL, 0-255), every map 10 or more: aisle 16.5, bench 50.5, bronze 30.7, clad 11.9, column 15.8, concrete 13.3,
+   dark 46.3, deck 12.5, entrance 35.3, glass 50.0, grille 62.4, lamp 12.3, louvre 16.7, mesh 30.0, pglass 10.4,
+   plaza 12.6, plouvre 20.4, podwall 11.3, rail 10.3, riser 14.9, roof 10.8, seats 46.9, sign_a 42.0, sign_b 43.6,
+   steps 22.2, terrace 15.0, under 11.4, white 16.8.
+6. Seating close-up, empty seats: `proof/tex_board_1.jpg` row 3. No crowd was in the model (no cards, meshes, people
+   boards or painted crowd); nothing removed. Seat colours unchanged from the passed model: tiers read from o2 (lower
+   pale grey, middle tan, upper grey); the seat crop (upper tier in shade, mean RGB 180,177,167) matches the model's
+   upper tier (178,182,188).
+7. Each sign beside its reference crop: `proof/tex_board_2.jpg` rows 4-5 (sign A from photo 018 with the "yes", sign B
+   from o2 without it).
+8. no open faults
+
+no open faults

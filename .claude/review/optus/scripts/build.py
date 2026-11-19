@@ -12,8 +12,8 @@ def mat(name,rough=0.8,metal=0.0):
     nt.links.new(t.outputs['Color'],b.inputs['Base Color']);b.inputs['Roughness'].default_value=rough;b.inputs['Metallic'].default_value=metal
     m.use_backface_culling=False;me.materials.append(m);return len(me.materials)-1
 MB=mat('bronze',0.55,0.3);MG=mat('glass',0.15,0.2);MS=mat('seats');MR=mat('roof',0.6);MW=mat('white',0.5);MU=mat('under')
-MC=mat('concrete');MT=mat('terrace');MP=mat('plaza');MD=mat('deck');MK=mat('clad',0.4,0.4);MKL=mat('clad',0.85,0.0);MF=mat('turf',0.95);MX=mat('dark')
-MPW=mat('podwall');MPRN=mat('proof_near');MPRF=mat('proof_far');MLV=mat('louvre',0.5);MBN=mat('bench');MAI=mat('aisle');MRS=mat('riser')
+MC=mat('concrete');MT=mat('terrace');MP=mat('plaza');MD=mat('deck');MK=mat('clad',0.4,0.4);MKL=mat('clad',0.85,0.0);MX=mat('dark')
+MPW=mat('podwall');MLV=mat('louvre',0.5);MBN=mat('bench');MAI=mat('aisle');MRS=mat('riser')
 bm=bmesh.new();uv=bm.loops.layers.uv.new('UVMap')
 N=J['N'];K=J['K'];NB=J['NB']
 V2=lambda p:Vector((p[0],p[1],0))
@@ -44,7 +44,7 @@ c=lambda z:(lambda i:z)
 # o2 sees podium segments 382..415,0..123. Segments 144..367 (two bays inside the hidden arc, on bay boundaries) get
 # the street-level glazed entrance storey of close-ups 092/192 and c5 instead of the raised podium.
 HS,HE=144,368;hid=lambda i:HS<=i<HE;vis=lambda i:not hid(i)
-MGD=mat('ground');GB=TI['ground_box'];MEN=mat('entrance',0.12,0.1);MCO=mat('column',0.5)
+MEN=mat('entrance',0.12,0.1);MCO=mat('column',0.5)
 # plaza apron, podium wall, terrace
 pass
 wall(POD,c(0.0),c(6.4),MPW,TI['podwall_m'][0],TI['podwall_m'][1],sel=vis)
@@ -67,8 +67,13 @@ for a_,b_ in ((HS,HS+1),(HE-1,HE)):            # entrance-side ends: bronze bott
     vs_=[P(DR[a_],ZE),P(DR[b_],ZE)]+([P(DR[b_],zv(b_))] if zv(b_)>ZE+1e-6 else [])+([P(DR[a_],zv(a_))] if zv(a_)>ZE+1e-6 else [])
     if len(vs_)>=3:face(vs_,MX,[(0,0),(0.4,0),(0.4,0.4),(0,0.4)][:len(vs_)],w)
 lo=[P(DR[i],zv(i)) for i in range(N)];hi=[P(DR[i],HB[i]) for i in range(N)]
+SG=TI.get('signs',{});SM={k:mat(k,0.55,0.3) for k in SG}
 for i in range(N):
     j=(i+1)%N;w=Vector((DR[i].x+DR[j].x,DR[i].y+DR[j].y,0)).normalized()
+    sg=[k for k,(a0,a1,z0,z1) in SG.items() if a0<=i<a1]
+    if sg:                                       # ground name signs (texture pass): own map, u along the sign, v=(z-z0)/(z1-z0)
+        a0,a1,z0,z1=SG[sg[0]];u0,u1=(sD[i]-sD[a0])/(sD[a1]-sD[a0]),(sD[i+1]-sD[a0])/(sD[a1]-sD[a0]);vz=lambda z:(z-z0)/(z1-z0)
+        face([lo[i],lo[j],hi[j],hi[i]],SM[sg[0]],[(u0,vz(zv(i))),(u1,vz(zv(j))),(u1,vz(HB[j])),(u0,vz(HB[i]))],w);continue
     face([lo[i],lo[j],hi[j],hi[i]],MB,[(sD[i]/BAY2,1-(HB[i]-zv(i))/BH),(sD[i+1]/BAY2,1-(HB[j]-zv(j))/BH),(sD[i+1]/BAY2,1.0),(sD[i]/BAY2,1.0)],w)
 # shadowed recess under the screen with posts every half bay (o2: dark strip and white posts under the bronze)
 DRI=[DR[i]-Vector((DR[i].x,DR[i].y,0)).normalized()*1.2 for i in range(N)]
@@ -81,7 +86,7 @@ def gflat(Ra,Rb,z,sel):
     a=[P(Ra[i],z) for i in range(N)];b=[P(Rb[i],z) for i in range(N)]
     for i in range(N):
         if not sel(i):continue
-        j=(i+1)%N;vs=[a[i],a[j],b[j],b[i]];face(vs,MGD,[((v.co.x-GB[0])/GB[2],(v.co.y-GB[1])/GB[2]) for v in vs],Vector((0,0,1)))
+        j=(i+1)%N;vs=[a[i],a[j],b[j],b[i]];face(vs,MP,[(v.co.x/TI['plaza_m'],v.co.y/TI['plaza_m']) for v in vs],Vector((0,0,1)))   # street apron: plain paving (texture pass)
 gflat(POD,DRG,0.0,hid)
 lo_=[P(DRG[i],0.0) for i in range(N)];hi_=[P(DRG[i],ZE) for i in range(N)]
 for i in range(HS,HE):
