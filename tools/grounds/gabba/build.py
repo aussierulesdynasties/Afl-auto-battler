@@ -367,24 +367,33 @@ for i, p_ in enumerate(PS): kd.insert(p_, i)
 kd.balance()
 PAN = (_bx(-0.20, 0.20, -0.22, 0.20, 0.40, 0.46), (1, 3, 4, 5)); BACK = (_bx(-0.18, 0.18, -0.30, -0.24, 0.46, 0.86), (1, 2, 3, 4, 5))
 LEGF = (3, 4, 5)   # leg rear faces the riser 16 cm behind: never seen
-mats = (plain('seat_gold', (226, 168, 30)), plain('seat_orange', (222, 120, 34)), plain('seat_white', (236, 236, 230)),
-        plain('seat_blue', (34, 64, 152)), plain('seat_legs_steel', (62, 64, 67), 0.45, 0.6))
-CH = 800
-for c0 in range(0, len(PS), CH):
-    vv = []; ff = []; mm = []
-    def put(i, box, faces, mat):
-        o = len(vv)
-        for x, y, z in box: vv.append(tuple(PS[i] + x * side[i] + y * fw[i] + (0, 0, z)))
-        for k in faces: ff.append([q + o for q in _BF[k]]); mm.append(mat)
-    for i in range(c0, min(c0 + CH, len(PS))):
-        put(i, PAN[0], PAN[1], int(ci[i])); put(i, BACK[0], BACK[1], int(ci[i]))
-        if kd.find(PS[i] + 0.5 * side[i])[2] < 0.1: put(i, _bx(0.21, 0.29, -0.22, 0.04, 0.0, 0.40), LEGF, 4)
-        else: put(i, _bx(0.16, 0.20, -0.22, 0.04, 0.0, 0.40), LEGF, 4)
-        if kd.find(PS[i] - 0.5 * side[i])[2] > 0.1: put(i, _bx(-0.20, -0.16, -0.22, 0.04, 0.0, 0.40), LEGF, 4)
-    sm_ = bpy.data.meshes.new('seats3d_%02d' % (c0 // CH)); sm_.from_pydata(vv, [], ff)
-    for m in mats: sm_.materials.append(m)
-    sm_.polygons.foreach_set('material_index', mm); sm_.update()
-    bpy.context.scene.collection.objects.link(bpy.data.objects.new(sm_.name, sm_))
+# Seats as the MCG: one seat drawn many times (MultiMesh), not meshes in the glb. seat_tmpl.bin and leg_tmpl.bin are
+# float32 triangles in Godot axes (y up), outward faces counter-clockwise; seats_seat_<colour>.bin and legs_steel.bin
+# hold a row-major 3x4 transform per seat or leg. A shared 8 cm leg under each gap; a block end gets a 4 cm leg
+# (the leg template squeezed to half width), flush under the pan.
+import os
+OUTD = os.path.dirname(os.path.abspath(args[1]))
+C = np.array([[1, 0, 0], [0, 0, 1], [0, -1, 0]], float)   # Blender (x, y, z) -> Godot (x, z, -y)
+def tris(boxfaces):
+    out = []
+    for box, faces in boxfaces:
+        for k in faces:
+            q = [C @ np.array(box[j]) for j in _BF[k]]; out += [q[0], q[1], q[2], q[0], q[2], q[3]]
+    return np.array(out, '<f4')
+tris([PAN, BACK]).tofile(OUTD + '/seat_tmpl.bin')
+tris([(_bx(-0.04, 0.04, -0.22, 0.04, 0.0, 0.40), LEGF)]).tofile(OUTD + '/leg_tmpl.bin')
+def xf(o, sd, f, sx=1.0):
+    B = np.c_[sd * sx, f, (0, 0, 1.0)]; R = C @ B @ C.T
+    return np.c_[R, C @ o].astype('<f4').ravel()
+SN = ('seat_gold', 'seat_orange', 'seat_white', 'seat_blue'); XS = {n: [] for n in SN}; XL = []
+for i in range(len(PS)):
+    XS[SN[int(ci[i])]].append(xf(PS[i], side[i], fw[i]))
+    if kd.find(PS[i] + 0.5 * side[i])[2] < 0.1: XL.append(xf(PS[i] + 0.25 * side[i], side[i], fw[i]))
+    else: XL.append(xf(PS[i] + 0.18 * side[i], side[i], fw[i], 0.5))
+    if kd.find(PS[i] - 0.5 * side[i])[2] > 0.1: XL.append(xf(PS[i] - 0.18 * side[i], side[i], fw[i], 0.5))
+for n in SN: np.array(XS[n], '<f4').tofile(OUTD + '/seats_%s.bin' % n)
+np.array(XL, '<f4').tofile(OUTD + '/legs_steel.bin')
+print('SEAT BINS', {n: len(XS[n]) for n in SN}, 'legs', len(XL))
 av = []; af = []
 for p_, f_, w, d, hh in ASTEPS:
     f_ = np.array((*f_, 0.0)); sd = np.array([f_[1], -f_[0], 0.0]); o = len(av)
@@ -393,6 +402,9 @@ for p_, f_, w, d, hh in ASTEPS:
 am = bpy.data.meshes.new('aisle_steps'); am.from_pydata(av, [], af); am.materials.append(plain('aisle_concrete', (182, 182, 176), 0.85))
 am.update(); bpy.context.scene.collection.objects.link(bpy.data.objects.new('aisle_steps', am))
 print('SEATS', len(PS), 'rows', NROWS, 'aisle steps', len(ASTEPS))
+for im in bpy.data.images:   # textures as the MCG: 512 px at most, WebP
+    if im.size[0] and max(im.size) > 512:
+        k = 512 / max(im.size); im.scale(max(1, round(im.size[0] * k)), max(1, round(im.size[1] * k)))
 bpy.ops.wm.save_as_mainfile(filepath=args[2])
-bpy.ops.export_scene.gltf(filepath=args[1], export_format='GLB', export_image_format='JPEG', export_jpeg_quality=92)
+bpy.ops.export_scene.gltf(filepath=args[1], export_format='GLB', export_image_format='WEBP')
 print('TRIS', sum(len(p.vertices) - 2 for p in me.polygons))
