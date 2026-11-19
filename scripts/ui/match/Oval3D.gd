@@ -92,7 +92,7 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 	var kits := [_kit(GameDB.club_guernsey(home)), _kit(GameDB.club_guernsey(away))]
 	for t in director.tokens:
 		var side := int(t.get("side", 0))
-		var p := _player(scene, kits[side], GameDB.club_colours(home if side == 0 else away))
+		var p := _player(scene, kits[side], GameDB.club_colours(home if side == 0 else away), home if side == 0 else away)
 		_dress(p, t)
 		players.append(p)
 	anim = Oval3DAnim.new(director, players)
@@ -848,6 +848,12 @@ static func _kit_edges(m: Mesh) -> Mesh:
 	for i in range(gv.size()):
 		if gv[i].y > low - 0.06 and _inside(gv[i], neck).y < SKIN_REACH + 0.02:
 			lend.append(i)
+	# The guernsey's own cut edge round the neck and armholes (not the hem): the shader fades the cloth
+	# to the skin over the last pixel before it, measured on the mesh itself (CUSTOM2.y: 0 on it, 1 off it).
+	var cut := {}
+	for v in nbr:
+		if pts[v].y > low - 0.01:
+			cut[v] = true
 	var mid := _depth_middle(gv)
 	var measure := func(vs: PackedVector3Array, kind: float) -> Array:
 		var out := PackedFloat32Array()
@@ -858,6 +864,8 @@ static func _kit_edges(m: Mesh) -> Mesh:
 			var p := vs[i]
 			var e := Vector4(FAR, FAR, FAR, kind)
 			more[i * 4] = p.z - _middle_at(mid, p.y)
+			if kind == 1.0:
+				more[i * 4 + 1] = 0.0 if cut.has(wid[i]) else 1.0
 			if kind != 0.5 and p.y > low - 0.06:
 				var n := _inside(p, neck)
 				var r := _nearest_arm(p, arms)
@@ -1446,13 +1454,126 @@ static func _loop_anims(skel_path: NodePath) -> Dictionary:
 	return out
 
 
-func _player(scene: PackedScene, kit: ShaderMaterial, cols: Array) -> Dictionary:
+## Each club's guernsey cut to its own photo's outline (tools/kits/guernsey3d: recut5.py, then
+## cut_res.gd): the skin and guernsey surfaces of the body, rebuilt for that club's men. A cut file
+## names the shared body's points by number and keeps only the points the cut added.
+const CUTS_DIR := "res://assets/oval3d/cuts"
+static var _club_bodies := {}
+
+
+## Body mesh m with club's own guernsey cut, where one exists for this body (the same morph
+## targets in the same order, the same point counts); otherwise m. Once per mesh and club; the
+## club's men share it.
+static func club_body(m: Mesh, club: String) -> Mesh:
+	var path := "%s/%s.res" % [CUTS_DIR, club]
+	var am := m as ArrayMesh
+	if club == "" or am == null or not ResourceLoader.exists(path):
+		return m
+	var key := [m, club]
+	if _club_bodies.has(key):
+		return _club_bodies[key]
+	_club_bodies[key] = m
+	var cut := load(path) as ArrayMesh
+	if cut == null or cut.get_blend_shape_count() != am.get_blend_shape_count():
+		return m
+	for b in range(am.get_blend_shape_count()):
+		if cut.get_blend_shape_name(b) != am.get_blend_shape_name(b):
+			return m
+	var added := {}
+	for c in range(cut.get_surface_count()):
+		added[cut.surface_get_name(c)] = c
+	var swaps := 0
+	for s in range(am.get_surface_count()):
+		var nm := _surface_name(am, s)
+		if cut.has_meta(nm + "_index"):
+			if int(cut.get_meta(nm + "_base")) != am.surface_get_array_len(s):
+				return m
+			swaps += 1
+	if swaps == 0:
+		return m
+	var out := ArrayMesh.new()
+	out.blend_shape_mode = am.blend_shape_mode
+	for b in range(am.get_blend_shape_count()):
+		out.add_blend_shape(am.get_blend_shape_name(b))
+	for s in range(am.get_surface_count()):
+		var nm := _surface_name(am, s)
+		var a := am.surface_get_arrays(s)
+		var shapes := am.surface_get_blend_shape_arrays(s)
+		var flags := _custom_format(am, s)
+		if cut.has_meta(nm + "_index"):
+			var c: int = added.get(nm, -1)
+			if c >= 0:
+				_append_points(a, cut.surface_get_arrays(c))
+				var more := cut.surface_get_blend_shape_arrays(c)
+				for b in range(shapes.size()):
+					_append_points(shapes[b], more[b])
+			a[Mesh.ARRAY_INDEX] = cut.get_meta(nm + "_index")
+			# The guernsey's flat pattern (unwrap.py, cut_res.gd): each point's place in the club's atlas cell.
+			if cut.has_meta(nm + "_unwrap"):
+				a[Mesh.ARRAY_CUSTOM3] = cut.get_meta(nm + "_unwrap")
+				flags |= Mesh.ARRAY_CUSTOM_RG_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM3_SHIFT
+			_drop_unused(a, shapes)
+		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, a, shapes, {}, flags)
+		out.surface_set_material(s, am.surface_get_material(s))
+		out.surface_set_name(s, am.surface_get_name(s))
+	_club_bodies[key] = out
+	return out
+
+
+static func _surface_name(am: ArrayMesh, s: int) -> String:
+	var mat := am.surface_get_material(s)
+	return mat.resource_name if mat != null else ""
+
+
+## Keeps only the points the triangles use (the cut leaves the shared body's points it cut away
+## unused; the kit edges must not measure them), renumbering the index; shapes alike.
+static func _drop_unused(a: Array, shapes: Array) -> void:
+	var idx: PackedInt32Array = a[Mesh.ARRAY_INDEX]
+	var n := (a[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()
+	var map := PackedInt32Array()
+	map.resize(n)
+	map.fill(-1)
+	var keep := PackedInt32Array()
+	for i in idx:
+		if map[i] < 0:
+			map[i] = 0
+	for i in range(n):
+		if map[i] == 0:
+			map[i] = keep.size()
+			keep.append(i)
+	if keep.size() == n:
+		return
+	for j in range(idx.size()):
+		idx[j] = map[idx[j]]
+	a[Mesh.ARRAY_INDEX] = idx
+	for arrs in [a] + shapes:
+		for t in range(Mesh.ARRAY_MAX):
+			if t == Mesh.ARRAY_INDEX or arrs[t] == null:
+				continue
+			var src = arrs[t]
+			var per: int = src.size() / n
+			var dst = src.slice(0, 0)
+			for r in keep:
+				for c in range(per):
+					dst.append(src[r * per + c])
+			arrs[t] = dst
+
+
+## Adds the points in more (no index) to the end of a, channel by channel.
+static func _append_points(a: Array, more: Array) -> void:
+	for t in range(Mesh.ARRAY_MAX):
+		if t != Mesh.ARRAY_INDEX and a[t] != null and more[t] != null:
+			a[t].append_array(more[t])
+
+
+## club: whose guernsey cut he wears (club_body); "" the body as it is.
+func _player(scene: PackedScene, kit: ShaderMaterial, cols: Array, club := "") -> Dictionary:
 	var node: Node3D = scene.instantiate()
 	add_child(node)
 	# Every surface wears the kit except the boots and the eyes, which keep their own material.
 	for mi in node.find_children("*", "MeshInstance3D", true, false):
 		var m := mi as MeshInstance3D
-		m.mesh = _kit_edges(_skull(m.mesh))
+		m.mesh = _kit_edges(_skull(club_body(m.mesh, club)))
 		for s in range(m.mesh.get_surface_count()):
 			var own := m.mesh.surface_get_material(s)
 			if own == null or not own.resource_name in [BOOT_MATERIAL, EYE_MATERIAL]:
