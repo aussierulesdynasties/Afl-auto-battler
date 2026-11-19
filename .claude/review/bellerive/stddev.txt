@@ -3,10 +3,10 @@ backwall             16.6
 conc_grey            10.6
 fac_boon             41.6
 fac_members          37.2
-fac_ponting          66.0
+fac_ponting          62.4
 fence                40.6
 glass_members        61.5
-grass_hill           15.9
+grass_hill           16.4
 lamps                84.9
 nstand_wall          14.9
 plant                19.9

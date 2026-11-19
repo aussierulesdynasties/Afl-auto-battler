@@ -207,7 +207,7 @@ def terrace(col):
         r, z = f + 0.4, 0.5
         for k in range(T['rows']):
             s += [(r, z + T['rise'], 'conc_grey'), (r + T['run'], z + T['rise'], 'terrace')]; r += T['run']; z += T['rise']
-        s += [(f + HR(b)[0], T['hill_z'], 'grass_hill'), (f + HR(b)[0] + 3.0, 0.0, 'grass_hill')]
+        s += [(r + 1.0, z, 'grass_hill'), (f + HR(b)[0], 0.0, 'grass_hill')]   # GE f135: grass falls away from the top step
         return s
     sweep(mb, bs, sec, capm='grass_hill')
     mb.build(col)

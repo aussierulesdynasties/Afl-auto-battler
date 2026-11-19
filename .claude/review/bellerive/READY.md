@@ -36,6 +36,8 @@ wider on the N and E because it includes the apron and the grass hill, which are
 Light towers, scoreboard and Northern Stand sit on their satellite positions.
 
 ## Faults fixed before push
+- Gate 2026-11-19, fault 1: the Ponting wall's navy triangles are gone. The wall now copies GE f270: pale facets over a band of slanted panels in mid-blue (80,113,150), sky blue (117,154,197) and blue-grey (123,141,167), all sampled from the photo.
+- Gate 2026-11-19, fault 2: the east hill is now green grass (100,134,80, with dry patches). It falls from the top terrace step down to the hill's outer edge. The flat raised ring is gone, and the terrace has 7 concrete steps. See `overlay_f135.jpg`.
 - The Ponting seat blue was too saturated. It now copies the GE sample (56,92,120).
 - The sign lacked the cap emblem, and its navy panel ran to the top. Both now match GE x330.
 - The facade textures were upside down.
