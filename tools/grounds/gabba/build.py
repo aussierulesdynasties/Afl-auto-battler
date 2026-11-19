@@ -308,7 +308,7 @@ bm.to_mesh(me); bm.free()
 def _bx(x0, x1, y0, y1, z0, z1):
     return [(x0, y0, z0), (x1, y0, z0), (x1, y1, z0), (x0, y1, z0), (x0, y0, z1), (x1, y0, z1), (x1, y1, z1), (x0, y1, z1)]
 _BF = [[0, 3, 2, 1], [4, 5, 6, 7], [0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7]]
-_T = np.array(_bx(-0.22, 0.22, -0.22, 0.20, 0.40, 0.46) + _bx(-0.22, 0.22, -0.30, -0.24, 0.46, 0.86) +
+_T = np.array(_bx(-0.20, 0.20, -0.22, 0.20, 0.40, 0.46) + _bx(-0.18, 0.18, -0.30, -0.24, 0.46, 0.86) +
               _bx(-0.25, -0.21, -0.22, 0.04, 0.0, 0.40) + _bx(0.21, 0.25, -0.22, 0.04, 0.0, 0.40))
 _TF = [[f + o for f in ff] for o in (0, 8, 16, 24) for ff in _BF]
 def plain(name, rgb, rough=0.55, metal=0.0):
@@ -365,7 +365,7 @@ for i, p_ in enumerate(PS): kd.insert(p_, i)
 kd.balance()
 for i in range(len(PS)):   # block ends: the outer leg moves in 3 cm, flush with the pan
     for sgn, box in ((-1, 2), (1, 3)):
-        if kd.find(PS[i] + sgn * 0.5 * side[i])[2] > 0.1: V[i, box * 8:box * 8 + 8] -= sgn * 0.03 * side[i]
+        if kd.find(PS[i] + sgn * 0.5 * side[i])[2] > 0.1: V[i, box * 8:box * 8 + 8] -= sgn * 0.05 * side[i]
 F = (np.array(_TF)[None] + (np.arange(len(PS)) * len(_T))[:, None, None]).reshape(-1, 4)
 sm_ = bpy.data.meshes.new('seats3d'); sm_.from_pydata(V.reshape(-1, 3).tolist(), [], F.tolist())
 for m in (plain('seat_gold', (226, 168, 30)), plain('seat_orange', (222, 120, 34)), plain('seat_white', (236, 236, 230)),
