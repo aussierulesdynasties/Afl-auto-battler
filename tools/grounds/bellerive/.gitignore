@@ -1,0 +1,8 @@
+ge/
+rr/
+sat/
+model/tex/
+__pycache__/
+work/*.png
+work/*.jpg
+work/*.npy
