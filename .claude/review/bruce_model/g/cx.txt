@@ -5,3 +5,8 @@
 85,62,12 110,70,5 bank_east
 -35,10,10 -60,-5,4 seats_sw
 -5,95,12 -20,128,6 seats_n
+-130,15,14 -88,45,0 stand_south_end
+-30,165,14 -25,125,0 stand_north_end
+-140,0,-1 -88,45,-1 low_out_south_end
+-35,180,-1 -25,125,-1 low_out_north_end
+5,-105,-1 5,-50,-1 low_out_south_bank

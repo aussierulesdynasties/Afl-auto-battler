@@ -405,6 +405,9 @@ for i in (0, N - 1):
     # inside the bowl the end wall stops at field level (no fin below the fence); behind the seats it runs to the plaza
     low = [[p[0], p[1], E['z'] if j < 5 else PLAZA] for j, p in enumerate(prof)]
     lofts.append(dict(name='bowl_end', a=prof, b=low, close='concrete', step=2))
+    # gate 3 (2026-11-19): the outer stack (wall, concourse, path, outer bank) closes down to the plaza too: no cut soil, no sky
+    po_ = [rings[k][i] for k in ('top_out', 'foot', 'path_out', 'conc_out', 'skirt')]
+    lofts.append(dict(name='bowl_end_out', a=po_, b=[[p[0], p[1], PLAZA] for p in po_], close='concrete', step=2))
 for i in (0, NR - 1):
     prof = [list(fence_full[i]), list(seat_back[i]), list(top_walk[i]), [Rr[i][0], Rr[i][1], 17.2]]
     low = [[p[0], p[1], E['z'] if j == 0 else PLAZA] for j, p in enumerate(prof)]
@@ -491,6 +494,10 @@ for b_ in boxes:
 from scipy.spatial import ConvexHull
 _pts = np.array(_pts); _h = ConvexHull(_pts)
 plaza.append(dict(name='g_pad', poly=[[*_pts[v], PLAZA - 0.03] for v in _h.vertices], close='pavers', rot=0.0))
+# gate 3: solid ground under everything: a 260 m disc at plaza height (no outer edge hangs over sky), and a field-level
+# floor inside the fence (the game lays its own field on top; the floor only stops sky showing through)
+plaza.append(dict(name='g_ground', poly=[[CX + 260 * math.cos(a), CY + 260 * math.sin(a), PLAZA - 0.12] for a in np.linspace(0, 2 * math.pi, 96, endpoint=False)], close='bank', rot=0.0))
+plaza.append(dict(name='g_infield', poly=[[p[0], p[1], E['z'] - 0.05] for p in rings['fence']], close='lawn', rot=0.0))
 out = dict(cams=cams, centre=[CX, CY], field_ring=field_ring, rings=rings, ring_order=list(rings), bowl_strips=strips, closed=False,
            lofts=lofts, boxes=boxes, tubes=tubes, flats=plaza, no_field=True, closeups=cl, step=2.0, min_cos=0.30, no_photo=True,
            ring_th=TH.tolist(), bay_ang=BAY_ANG, bay_phase=BAY_PHASE, field_axis=E['t'])

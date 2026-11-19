@@ -17,6 +17,7 @@ ROWS = [('seat', 'bucket seat', lambda: c46(1000, 350, 20), 'ref46, N seats (ora
         ('concrete', 'rim walkway', lambda: c90(-110, 21.5, 8), '1990 vertical, S rim'),
         ('gravel', 'gravel', lambda: c90(-95, 30), '1990 vertical, S gravel'),
         ('path', 'path', lambda: c90(-100, 35.5, 8), '1990 vertical, S path'),
+        ('bank', 'outer bank, ground', lambda: c46(560, 1000, 20), 'ref46, dry grass outside the bowl (W)'),
         ('lawn', 'lawn', lambda: c90(-122, 28), '1990 vertical, SW lawn'),
         ('roof', 'stand roof', lambda: c46(1150, 830, 35), 'ref46, stand roof'),
         ('facade', 'stand facade', lambda: c46(1120, 915, 60), 'ref46, stand front'),

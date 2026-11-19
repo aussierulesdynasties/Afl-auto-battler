@@ -152,7 +152,7 @@ save('path', c, 4.0, 3.0)
 P = 40
 gr = base(8 * P, 8 * P, (168, 110, 78), grain=0.12, mott=0.07, mott_px=40)
 save('gravel', gr, 8.0, 8.0)
-b = base(8 * P, 8 * P, (150, 128, 92), grain=0.08, mott=0.08, mott_px=50)
+b = base(8 * P, 8 * P, (82, 60, 52), grain=0.10, mott=0.10, mott_px=50)  # dry brown grass outside the bowl, read off ref46 (80,57,52)
 save('bank', b, 8.0, 8.0)
 
 # ---- roof deck: grey metal, ribs every 0.3 m running front to back (u = along the stand), 64 px/m

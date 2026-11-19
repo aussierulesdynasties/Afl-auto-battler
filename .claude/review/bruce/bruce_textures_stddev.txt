@@ -1,5 +1,5 @@
 asphalt      12.8
-bank         11.6
+bank         7.2
 board        63.4
 carpark      24.9
 concrete     11.6
