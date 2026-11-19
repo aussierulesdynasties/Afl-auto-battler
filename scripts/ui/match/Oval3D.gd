@@ -1499,6 +1499,7 @@ static func club_body(m: Mesh, club: String) -> Mesh:
 		var nm := _surface_name(am, s)
 		var a := am.surface_get_arrays(s)
 		var shapes := am.surface_get_blend_shape_arrays(s)
+		var flags := _custom_format(am, s)
 		if cut.has_meta(nm + "_index"):
 			var c: int = added.get(nm, -1)
 			if c >= 0:
@@ -1507,8 +1508,12 @@ static func club_body(m: Mesh, club: String) -> Mesh:
 				for b in range(shapes.size()):
 					_append_points(shapes[b], more[b])
 			a[Mesh.ARRAY_INDEX] = cut.get_meta(nm + "_index")
+			# The guernsey's flat pattern (unwrap.py, cut_res.gd): each point's place in the club's atlas cell.
+			if cut.has_meta(nm + "_unwrap"):
+				a[Mesh.ARRAY_CUSTOM3] = cut.get_meta(nm + "_unwrap")
+				flags |= Mesh.ARRAY_CUSTOM_RG_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM3_SHIFT
 			_drop_unused(a, shapes)
-		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, a, shapes, {}, _custom_format(am, s))
+		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, a, shapes, {}, flags)
 		out.surface_set_material(s, am.surface_get_material(s))
 		out.surface_set_name(s, am.surface_get_name(s))
 	_club_bodies[key] = out

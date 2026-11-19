@@ -44,6 +44,8 @@ uniform vec4 kit_number_edge : source_color = vec4(0.0);
 // smoothed, so they run as clean curves; the skin in the steps wears the guernsey. kit_fore: metres in front of the body's middle.
 varying vec4 kit_edge;
 varying float kit_fore;
+// 1 + the point's place in the club's flat pattern (CUSTOM3, Oval3D.club_body); 0 where there is none.
+varying vec2 kit_uw;
 varying vec3 kit_g;  // on that skin, the nearest guernsey corner's pattern coordinates
 const float HEM_SHADOW = 0.35;     // how much the guernsey's hem darkens the shorts just under it
 const float HEM_SHADOW_M = 0.015;  // and how far down (1.5 cm)
@@ -257,7 +259,15 @@ vec3 design(int d, vec3 g) {
 // A picture kit's colour at guernsey coordinate g (see kit_atlas). A triangle over the side or
 // shoulder seam runs from front (g.z 1) to back (0), so g.z can't say which side a pixel is on
 // (behind the neck it picked the front's collar lining, in dots): there the side it sits on does.
-vec3 kit_image(int cell, vec3 g, float fore) {
+vec3 kit_image(int cell, vec3 g, float fore, vec2 uw) {
+	vec2 cells = vec2(float(kit_grid.x) * 2.0, float(kit_grid.y));
+	if (uw.x > 0.5) {
+		// The club's flat pattern (tools/kits/guernsey3d/unwrap.py): the cell holds every bit of the
+		// cloth at its own pixels (x 0-2 across the cell's two squares, y 0-1), so nothing side-on stretches.
+		vec2 p = uw - vec2(1.0);
+		vec2 o = vec2(float(cell % kit_grid.x) * 2.0, float(cell / kit_grid.x));
+		return textureGrad(kit_atlas, (o + p) / cells, dFdx(p) / cells, dFdy(p) / cells).rgb;
+	}
 	bool front = g.z > 0.98 || (g.z > 0.02 && fore > 0.0);
 	vec2 at = vec2(front ? g.x : 1.0 - g.x, 1.0 - g.y);
 	vec2 inset = vec2(0.5) / (vec2(textureSize(kit_atlas, 0)) / vec2(float(kit_grid.x) * 2.0, float(kit_grid.y)));
@@ -265,7 +275,6 @@ vec3 kit_image(int cell, vec3 g, float fore) {
 	vec2 c = vec2(float(cell % kit_grid.x) * 2.0 + (front ? 0.0 : 1.0), float(cell / kit_grid.x));
 	// The mip level comes from g itself: where a pixel block straddles the seam, the atlas
 	// position jumps a whole cell, which would pick the smallest mip and leave a dot of mixed colour.
-	vec2 cells = vec2(float(kit_grid.x) * 2.0, float(kit_grid.y));
 	return textureGrad(kit_atlas, (c + at) / cells, dFdx(g.xy) / cells, dFdy(g.xy) / cells).rgb;
 }
 
@@ -299,6 +308,7 @@ void vertex() {
 	skin_uv = CUSTOM0.xy;
 	kit_edge = CUSTOM1;
 	kit_fore = CUSTOM2.x;
+	kit_uw = CUSTOM3.xy;
 	kit_g = CUSTOM2.yzw;
 }
 
@@ -314,7 +324,7 @@ void fragment() {
 	int dn = int(round(kit_design[0]));
 	vec3 jumper;
 	if (dn >= 100) {
-		jumper = kit_image(dn - 100, g, kit_fore);
+		jumper = kit_image(dn - 100, g, kit_fore, kit_uw);
 	} else {
 		vec3 p = design(dn, g);
 		jumper = base + (pat - base) * p.x + (pat2 - base) * p.y + (pat3 - base) * p.z;

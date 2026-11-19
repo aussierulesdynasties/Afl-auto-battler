@@ -25,3 +25,16 @@ photo's design as a picture. Run from a work folder holding `ref/CODE_front.png`
 
 Done for: ESS. The game still loads one body (player_mh.glb) for every club; a per-club guernsey
 in the game is not built yet.
+
+## Flat pattern (director 2026-11-19, "Yes, all clubs"; done for NTH and STK)
+
+The guernsey is unfolded into a flat pattern (front half in the cell's left square, back half in its
+right), and the photos are copied onto it once. Cloth turned more than 70 degrees from a photo's
+camera takes the nearest face-on cloth's colour, so the shoulders and sides don't streak.
+
+5. Unfold: `python unwrap.py CODE` -> unwrap_CODE.json (xatlas).
+6. Cut with the pattern: `godot --headless --path . --script tools/kits/guernsey3d/cut_res.gd -- wrap5_CODE.glb CODE unwrap_CODE.json`.
+7. Bake (PLANAR = an atlas where step 3 put the photos in CELL): `python bake_unwrap.py CODE CELL PLANAR kits_today.png`.
+   It also writes texels_CODE.npz for club fixes that paint by place on the body.
+8. St Kilda then: `python club_fixes/stk_panels_uw.py kits_today.png 14` and
+   `python club_fixes/stk_neck_uw.py kits_today.png 14` (in that order).
