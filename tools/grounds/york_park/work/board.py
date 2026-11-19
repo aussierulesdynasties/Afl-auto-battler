@@ -52,7 +52,7 @@ REF = {'roof_white': ('d5', (430, 740, 640, 840)), 'facade_lattice': ('a4', (300
        'fence': ('gs', (140, 416, 200, 432)), 'roof_soffit': ('ws', (280, 0, 560, 60)), 'fascia': ('d5', (760, 728, 900, 758)),
        'boxes_glass': ('ws', (380, 95, 580, 145)), 'glass': ('gs', (730, 265, 800, 300)), 'facade_gunns': ('l045', (640, 775, 1000, 840)),
        'facade_sw': ('cw', (200, 335, 300, 445)), 'roof_grey': ('l045', (540, 590, 640, 660)), 'board_frame': ('l045', (1015, 355, 1080, 405)),
-       'board_back': ('l225', (805, 690, 860, 750)), 'board_side': ('gs', (70, 330, 108, 375)), 'panel_blue': ('a4', (1030, 400, 1075, 480)),
+       'board_back': ('l225', (805, 690, 860, 750)), 'board_back_ne': ('l225', (770, 640, 900, 790)), 'board_side': ('gs', (70, 330, 108, 375)), 'panel_blue': ('a4', (1030, 400, 1075, 480)),
        'roof_flat': ('d5', (1110, 440, 1200, 500)), 'steel_galv': ('cw', (285, 215, 320, 360)), 'lamps': ('cw', (296, 205, 326, 255)),
        'paint_white': ('cw', (240, 368, 300, 396)), 'steel_maroon': ('cw', (205, 360, 240, 440)), 'paving': ('d5', (250, 610, 310, 680)),
        'steel_white': ('d5', (300, 760, 460, 880)), 'sign_utas': ('gs', (700, 205, 800, 265))}
@@ -83,7 +83,7 @@ def crop(src, b): return Image.open(SRC.get(src, src)).convert('RGB').crop(b)
 
 R_ = lambda n: Image.open(f'render/proofs/{n}.png')
 grid([(R_('seatcu_north'), 'model: seat height, Northern stand aisle'), (R_('seatcu_gunns'), 'model: seat height, Gunns aisle'),
-      (crop('ws', (0, 200, 600, 338)), 'photo: empty seats (2024)'), (crop('a4', (480, 300, 760, 350)), 'photo: seat colour, aerial')]
+      (crop('ws', (0, 180, 420, 338)), 'photo: empty seats (2024)'), (crop('a4', (480, 300, 760, 350)), 'photo: seat colour, aerial')]
      + [(Image.open(f), 'model: ' + os.path.basename(f)[:-4]) for f in sorted(glob.glob('render/proofs/seats_*.png'))], '6_empty_seats.jpg')
 # 8 scoreboards: each face beside the picture it was copied from
 grid([(R_('board_ne_front'), 'model: NE board, front'), (crop('l045', (960, 300, 1130, 430)), 'Google Earth 2026 l045: NE board front, tower behind'),

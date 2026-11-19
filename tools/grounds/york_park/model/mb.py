@@ -72,7 +72,7 @@ def earclip(P):
 
 class MB:
     def __init__(s, name):
-        s.name = name; s.V = []; s.F = []; s.M = []; s.UV = []
+        s.name = name; s.V = []; s.F = []; s.M = []; s.UV = []; s.smooth = False   # smooth: weld + smooth-shade (seat shells)
 
     def face(s, pts, m, uv=None):
         i0 = len(s.V); s.V += [tuple(map(float, p)) for p in pts]
@@ -137,6 +137,10 @@ class MB:
                 else:
                     uv = ((v.x * tx + v.y * ty - p0) / tw + off, v.z / tv)
                 uvl.data[li].uv = uv
+        if s.smooth:
+            import bmesh
+            bm = bmesh.new(); bm.from_mesh(me); bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-4); bm.to_mesh(me); bm.free()
+            for poly in me.polygons: poly.use_smooth = True
         ob = bpy.data.objects.new(s.name, me)
         (col or bpy.context.scene.collection).objects.link(ob)
         return ob

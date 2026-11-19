@@ -130,16 +130,25 @@ def nrows(prof, bs, k):
 
 
 def seat(P, t, o, z):
-    """one empty plastic seat: P = xy of the back of its tread, t = along the row, o = away from the pitch, z = tread top.
-    Pan 0.44 wide, 0.42 deep at +0.43, front lip, backrest +0.45..+0.85 leaning back, centre pedestal."""
+    """one empty moulded plastic shell (2024 empty-seat photo): pan and back one curved piece, dished across its width,
+    a rolled top edge; P = xy of the back of its tread, t = along the row, o = away from the pitch, z = tread top.
+    Centre pedestal under the pan."""
     P = np.array(P, float); t = np.array(t, float); o = np.array(o, float); hw = 0.22
     def X(a, d, h):
-        q = P + t * a + o * d; return (q[0], q[1], z + h)
+        q = P + t * a + o * d; return np.array((q[0], q[1], z + h))
     up = np.array([0, 0, 1.0]); o3 = np.array([*o, 0.0])
-    oriented(SEATS, [X(-hw, -0.66, 0.43), X(hw, -0.66, 0.43), X(hw, -0.24, 0.45), X(-hw, -0.24, 0.45)], 'seat_plastic', up, [(0, 0), (1, 0), (1, 1), (0, 1)])
-    oriented(SEATS, [X(-hw, -0.66, 0.36), X(hw, -0.66, 0.36), X(hw, -0.66, 0.43), X(-hw, -0.66, 0.43)], 'seat_plastic', -o3, [(0, 0), (1, 0), (1, .15), (0, .15)])
-    oriented(SEATS, [X(-hw, -0.24, 0.45), X(hw, -0.24, 0.45), X(hw, -0.14, 0.85), X(-hw, -0.14, 0.85)], 'seat_plastic', -o3 + up * 0.25, [(0, 0), (1, 0), (1, 1), (0, 1)])
-    oriented(SEATS, [X(-0.04, -0.45, 0.0), X(0.04, -0.45, 0.0), X(0.04, -0.45, 0.43), X(-0.04, -0.45, 0.43)], 'steel_galv', -o3)
+    # side section (depth d from the tread back, height h): rolled front lip -> pan -> curved up into the back
+    prof = [(-0.66, 0.40), (-0.58, 0.45), (-0.36, 0.44), (-0.25, 0.52), (-0.19, 0.70), (-0.16, 0.82), (-0.165, 0.87)]
+    def V(i, j):   # j = -1, 0, 1 across; the middle is dished (down on the pan, back on the backrest), the back narrows to the top
+        d, h = prof[i]; w = min(1.0, max(0.0, (h - 0.45) / 0.2)); c = 1 - abs(j)
+        return X(j * hw * (1 - 0.35 * max(0.0, (h - 0.74) / 0.13) ** 2), d + 0.07 * c * w, h - 0.05 * c * (1 - w) + 0.02 * c * (h > 0.86))
+    for i in range(len(prof) - 1):
+        dd, dh = prof[i + 1][0] - prof[i][0], prof[i + 1][1] - prof[i][1]
+        out = -dh * o3 + dd * up
+        for j in (-1, 0):
+            oriented(SEATS, [V(i, j), V(i, j + 1), V(i + 1, j + 1), V(i + 1, j)], 'seat_plastic', out,
+                     [((j + 1) / 2, i / 6), ((j + 2) / 2, i / 6), ((j + 2) / 2, (i + 1) / 6), ((j + 1) / 2, (i + 1) / 6)])
+    oriented(SEATS, [X(-0.04, -0.45, 0.0), X(0.04, -0.45, 0.0), X(0.04, -0.45, 0.38), X(-0.04, -0.45, 0.38)], 'steel_galv', -o3)
 
 
 def seat_rows(bs, prof, k, n, aisle=12.0, gap=1.1):
@@ -465,7 +474,7 @@ def extras(col):
 def build_all():
     clear(); col = bpy.context.scene.collection
     global SEATS
-    mb = MB('stands'); mr = MB('roofs'); SEATS = MB('seats')
+    mb = MB('stands'); mr = MB('roofs'); SEATS = MB('seats'); SEATS.smooth = True
     for S in D['stands']:
         {'single': lambda: single(S, mb, mr), 'two_tier': lambda: two_tier(S, mb, mr),
          'open': lambda: open_stand(S, mb), 'block': lambda: block(S, mb, mr)}[S['kind']]()

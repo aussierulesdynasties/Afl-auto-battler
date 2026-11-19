@@ -25,3 +25,10 @@ Gate fixes (lead, 2026-11-20, "Send all four"):
 Left out as ads: the red panel beside the UTAS sign, club logos on the NE board back. Centre West rests on the satellite and grandstand photo only (current GE shows it demolished).
 
 No open faults.
+
+## Gate 2 fixes (2026-11-20)
+- Seats: moulded one-piece shells copied from the 2024 empty-seat photo (pan curving up into the back, dished, rounded top), real 3D, same colour, smooth-shaded; board 6 sets seat-height close-ups beside the photo.
+- NE board back: white rim, dark panel with hand-drawn club artwork from GE l225 (mauve block logo and white lines left, maroon emblem with pale outline right); board 8 sets it beside the l225 crop.
+- GLB 54 MB.
+
+No open faults.

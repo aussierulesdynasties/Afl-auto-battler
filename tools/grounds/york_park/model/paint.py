@@ -215,6 +215,27 @@ a = base(512, 512, (60, 62, 66), 3, 10)
 for k in range(0, 512, 128): a[:, k:k + 3] *= 0.7; a[k:k + 3] *= 0.7
 save('board_back', a, (2.0, 2.0))
 a = base(256, 256, (40, 46, 54), 3, 8); save('board_side', a, (2.0, 2.0))
+# NE board back, one tile = the whole 11.6 x 7.9 m panel inside the white rim (GE 2026 l225): dark panel, club artwork
+# hand-drawn: left half a mauve block logo over two white text lines and a white script line, right half a big maroon
+# emblem outlined in white
+from PIL import ImageDraw as _D
+a = base(700, 1024, (34, 36, 46), 2, 6); im = Image.fromarray(np.clip(a, 0, 255).astype(np.uint8)); d = _D.Draw(im)
+mv, wt, mr = (196, 150, 186), (226, 226, 232), (128, 36, 72)
+pk = (214, 168, 196)
+d.rounded_rectangle([60, 70, 420, 240], 20, fill=mv)                         # mauve block wordmark, dark letter cuts
+for x, y0, y1 in ((110, 105, 205), (150, 70, 150), (205, 120, 240), (255, 70, 170), (300, 140, 240), (350, 95, 195)):
+    d.rectangle([x, y0, x + 16, y1], fill=(34, 36, 46))
+for y in (300, 352):                                                          # two text lines
+    for x in range(70, 400, 24): d.rectangle([x, y, x + 16, y + 28], fill=wt)
+d.line([(70, 452), (140, 440), (220, 456), (300, 438), (400, 450)], fill=wt, width=9)    # script line
+E = [(0.30, 0.02), (0.62, 0.00), (0.86, 0.10), (0.98, 0.32), (0.90, 0.52), (0.98, 0.74), (0.80, 0.96), (0.52, 1.00),
+     (0.40, 0.88), (0.56, 0.80), (0.70, 0.66), (0.50, 0.58), (0.20, 0.70), (0.04, 0.56), (0.12, 0.34), (0.02, 0.16)]
+q = lambda u, v: (600 + u * 330, 70 + v * 560)
+d.polygon([q(u, v) for u, v in E], fill=mr, outline=pk, width=14)           # emblem: maroon body, pale pink outline
+d.line([q(0.22, 0.20), q(0.46, 0.12), q(0.72, 0.22), q(0.80, 0.40)], fill=pk, width=16)     # curling strokes
+d.line([q(0.18, 0.44), q(0.42, 0.40), q(0.62, 0.48)], fill=wt, width=12)
+d.line([q(0.60, 0.86), q(0.76, 0.78), q(0.86, 0.62)], fill=pk, width=12)
+save('board_back_ne', np.asarray(im).astype(float), (11.6, 7.9))
 a = base(256, 256, (112, 42, 46), 5, 14); weather(a, 0.12, 12, 10); save('steel_maroon', a, (2.0, 2.0))
 
 # Name sign on the old Centre West front (photo ref/UTAS-Stadium-grandstand.jpg): light panel, red crest, two-line serif name.
