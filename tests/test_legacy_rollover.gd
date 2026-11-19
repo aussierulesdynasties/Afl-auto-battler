@@ -362,7 +362,7 @@ func _test_seventeen_clubs() -> void:
 	GameDB.reload("1990")
 
 
-## The campaign: 1990 to 2012 at Fitzroy, then Brisbane.
+## The campaign: 1990 to 2012 at Fitzroy, then Brisbane, every match played.
 func _test_campaign() -> void:
 	GameState.reset("1990")
 	GameState.start_season("FIT", GameDB.club_list("FIT"))
@@ -375,7 +375,8 @@ func _test_campaign() -> void:
 			"Adelaide enters for 1991 without the expansion package (entering %s, building %s)" % [
 			str(ExpansionBuild.entering(GameState)), str(ExpansionBuild.building(GameState))])
 	# 1990 -> 1991: the clubs draft the real class.
-	_skip_season()
+	if not _play_season():
+		return
 	var offered := {}
 	_check(_draft_year(offered), "The 1990 intake draft runs and the season rolls over")
 	_check(GameState.season_year == 1991 and GameDB.active_clubs(1991).size() == 15,
@@ -395,11 +396,18 @@ func _test_campaign() -> void:
 	_check(_not_offered(offered, 1990).is_empty(), "Every player of the real 1990 class is in the 1990 draft (missing: %s)" % str(_not_offered(offered, 1990)))
 	# On to 2012.
 	var lions_checked := false
+	var fitzroy_merged := true
+	var coach_at_fitzroy := false
 	while GameState.season_year < 2012:
 		var year := GameState.season_year
-		_skip_season()
+		if not _play_season():
+			return
+		if year == 1996:
+			coach_at_fitzroy = GameState.my_club == "FIT"
 		if not _draft_year(offered):
-			_check(false, "%d's draft runs and the season rolls over" % year)
+			_check(false, "%d's draft runs and the season rolls over (coach at %s, sacked %s, offers %d, season over %s)" % [
+					year, GameState.my_club, str(GameState.is_sacked()), ClubMoves.offers(GameState).size(),
+					str(GameState.season != null and GameState.season.is_season_over())])
 			return
 		var now := GameState.season_year
 		var missing := _not_offered(offered, year)
@@ -418,33 +426,50 @@ func _test_campaign() -> void:
 				_package(code, now)
 		if now == 1997:
 			lions_checked = true
-			_check(str(GameState.legacy.get("fitzroy", "")) == "merged", "Fitzroy, out of the finals, merge (%s)" % str(GameState.legacy))
-			_check(not GameDB.active_clubs(1997).has("FIT") and GameDB.active_clubs(1997).size() == 16,
-					"1997 has 16 clubs and no Fitzroy (%d)" % GameDB.active_clubs(1997).size())
-			_check(GameDB.club_short("BRL") == "Lions", "The Bears are the Brisbane Lions (%s)" % GameDB.club_short("BRL"))
-			var left: Array = GameState.league_lists.get("FIT", [])
-			_check(left.is_empty(), "Fitzroy's list is empty (%d: %s)" % [left.size(),
-					str(left.slice(0, 3).map(func(p): return [p.get("id"), p.get("joined"), p.get("club"), p.get("released_by")]))])
-			var lions: Array = GameState.league_lists["BRL"]
-			var from_fitzroy := lions.filter(func(p): return int(p.get("joined", 0)) == 1997 and not str(p.get("id", "")).begins_with("E"))
-			_check(from_fitzroy.size() >= 1 and from_fitzroy.size() <= LegacyRollover.LIONS_TAKE,
-					"The Lions take Fitzroy's best (%d)" % from_fitzroy.size())
-			_check(GameState.my_club == "BRL", "Fitzroy's coach goes to the Brisbane Lions (%s)" % GameState.my_club)
-			var stray := 0
-			for cid in GameState.coaches:
-				var c: Dictionary = GameState.coaches[cid]
-				if str(c.get("status", "")) == "club" and str(c.get("club", "")) == "FIT":
-					stray += 1
-			_check(stray == 0, "No coach is left at Fitzroy (%d)" % stray)
-			_check(GameState.news.any(func(n): return "have merged" in str(n.get("text", ""))), "The news tells of the merger")
+			# The director's merger rule (2026-11-11), on this save's own ladders:
+			# out of the finals in two of 1994-96, Fitzroy merge; in them, the board's
+			# slim chance decides. The merger's and the play-on's details have their
+			# own tests (_test_fitzroy_draft, _test_fitzroy_stays, _test_seventeen_clubs).
+			var regular := LegacyRollover.finals_in(GameState, "FIT", [1994, 1995, 1996]) >= LegacyRollover.FINALS_NEEDED
+			fitzroy_merged = str(GameState.legacy.get("fitzroy", "")) == "merged"
+			_check(bool(GameState.legacy.get("fitzroy_regular", false)) == regular,
+					"Fitzroy's finals record decides the merger (finals in two of 1994-96: %s; %s)" % [str(regular), str(GameState.legacy)])
+			if not regular:
+				_check(fitzroy_merged, "Fitzroy, out of the finals, merge (%s)" % str(GameState.legacy))
+			if not fitzroy_merged:
+				_check(GameDB.active_clubs(1997).has("FIT") and GameDB.active_clubs(1997).size() == 17,
+						"Fitzroy play on: 1997 has 17 clubs with Fitzroy (%d)" % GameDB.active_clubs(1997).size())
+				_check(not (GameState.league_lists.get("FIT", []) as Array).is_empty(), "Fitzroy play on with their list")
+				_check(GameState.news.any(func(n): return "fought off the merger" in str(n.get("text", ""))), "The news says Fitzroy play on")
+			else:
+				_check(not GameDB.active_clubs(1997).has("FIT") and GameDB.active_clubs(1997).size() == 16,
+						"1997 has 16 clubs and no Fitzroy (%d)" % GameDB.active_clubs(1997).size())
+				_check(GameDB.club_short("BRL") == "Lions", "The Bears are the Brisbane Lions (%s)" % GameDB.club_short("BRL"))
+				var left: Array = GameState.league_lists.get("FIT", [])
+				_check(left.is_empty(), "Fitzroy's list is empty (%d: %s)" % [left.size(),
+						str(left.slice(0, 3).map(func(p): return [p.get("id"), p.get("joined"), p.get("club"), p.get("released_by")]))])
+				var lions: Array = GameState.league_lists["BRL"]
+				var from_fitzroy := lions.filter(func(p): return int(p.get("joined", 0)) == 1997 and not str(p.get("id", "")).begins_with("E"))
+				_check(from_fitzroy.size() >= 1 and from_fitzroy.size() <= LegacyRollover.LIONS_TAKE,
+						"The Lions take Fitzroy's best (%d)" % from_fitzroy.size())
+				if coach_at_fitzroy:
+					_check(GameState.my_club == "BRL", "Fitzroy's coach goes to the Brisbane Lions (%s)" % GameState.my_club)
+				var stray := 0
+				for cid in GameState.coaches:
+					var c: Dictionary = GameState.coaches[cid]
+					if str(c.get("status", "")) == "club" and str(c.get("club", "")) == "FIT":
+						stray += 1
+				_check(stray == 0, "No coach is left at Fitzroy (%d)" % stray)
+				_check(GameState.news.any(func(n): return "have merged" in str(n.get("text", ""))), "The news tells of the merger")
 			var real_1996 := 0
 			for code in GameState.league_lists:
 				for p in GameState.league_lists[code]:
 					if str(p.get("id", "")).begins_with("R"):
 						real_1996 += 1
 			_check(real_1996 > 0, "Real draftees are on the lists")
-	_check(lions_checked and GameState.season_year == 2012 and GameDB.active_clubs(2012).size() == 18,
-			"2012 has 18 clubs (%d)" % GameDB.active_clubs(GameState.season_year).size())
+	var clubs_2012 := 18 if fitzroy_merged else 19
+	_check(lions_checked and GameState.season_year == 2012 and GameDB.active_clubs(2012).size() == clubs_2012,
+			"2012 has %d clubs (%d)" % [clubs_2012, GameDB.active_clubs(GameState.season_year).size()])
 	var loaded := GameState._save_state()
 	_check(loaded.has("legacy") and (loaded["legacy"] as Dictionary).has("finals"), "The save keeps the Legacy record")
 
@@ -622,6 +647,31 @@ func _test_concessions_by_entry() -> void:
 
 func _skip_season() -> void:
 	GameState.season.round_index = GameState.season.fixture.size()
+
+
+## The campaign plays every match, as a Legacy career does (director,
+## 2026-11-18, "Play the matches"): players grow only from the games they play
+## and train through, so a skipped season leaves the whole league where it was
+## drafted and the 2012 league unlike any played career's.
+func _play_season() -> bool:
+	var year := GameState.season_year
+	var started := Time.get_ticks_msec()
+	var guard := 0
+	while not GameState.season.is_season_over() and guard < 60:
+		guard += 1
+		GameState.sim_week()
+	print("  %d season played: %d weeks in %.0f s" % [year, guard, (Time.get_ticks_msec() - started) / 1000.0])
+	_check(GameState.season.is_season_over(), "The %d season plays to its premier (%d weeks)" % [year, guard])
+	# The board never sacks this test's coach (director 2026-11-18: "Board
+	# never sacks him"): a sacking with no second chance ends the career and
+	# stops the league, so the campaign would never reach 2012. Sackings are
+	# checked in tests/test_coach_arcs.gd.
+	if GameState.is_sacked():
+		print("  %d: the board's sack of the test coach at %s is cleared" % [year, GameState.my_club])
+		GameState.board["sacked"] = false
+		if GameState.coach_arcs is Dictionary and not GameState.coach_arcs.is_empty():
+			ClubArcs._st(GameState)["offers"] = []
+	return GameState.season.is_season_over()
 
 
 ## start_season fills season.lists; a real career's league_lists is the same

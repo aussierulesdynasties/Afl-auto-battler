@@ -10,6 +10,14 @@ extends "res://tools/visual/capture_look3d.gd"
 ## shoulder; BACK (default 1.25) m behind him; EYE (default 1.62) camera height over his tread;
 ## FOV (default 50); TURN (default 0) deg the camera looks away from straight across the ground;
 ## WING (default 0 = the wing nearest the play) 1 or -1 picks a wing.
+## HAIRMODE scissor | prepass | hash (default). ALLMIPS=1 gives every texture mipmaps (a GLB read at run time has
+## none, so skin pores speckle); LASHRAW=1 leaves the lashes without (mipmaps fade them away); SS=2 draws the
+## 3D at twice the resolution and shrinks it, so sub-pixel lashes read as fine hairs. MSAA=2|4|8.
+## Skin: SKINNORM (pore bump strength, 0.5 softens the speckle), SKINROUGH, SKINSPEC (sheen), SKINSSS (light
+## through the skin), SKINCULL=1 one-sided. SHADOWRES=8192 SHADOWBLUR SHADOWDIST: a finer, softer sun shadow (its
+## jagged edge read as speckle on her cheek). STANDBOUNCE=E lights her from below with the stand's colour (x E) instead of
+## the turf's green. HIDE=SUP_eye,SUP_lash hides those surfaces (fault hunting).
+## SCARF / BEANIE: comma-separated club colours for the knitwear (SupporterMerch).
 
 const AFTER_GOAL := 2.0
 
@@ -67,6 +75,22 @@ func _run() -> void:
 	for part in ["sky", "agxtv"]:
 		_apply(oval, part)
 	await _match_exposure(oval)
+	if OS.has_environment("STANDBOUNCE"):   # she sits in the stand: the light from below is the stand's, not the turf's green
+		var skm = oval._env.sky.sky_material if oval._env.sky != null else null
+		if skm is ShaderMaterial:
+			var bowl = skm.get_shader_parameter("bowl")   # unset = the shader's default stand colour
+			skm.set_shader_parameter("grass", bowl if bowl != null else Color(0.22, 0.21, 0.23))
+			skm.set_shader_parameter("grass_energy", _env("STANDBOUNCE", 1.0))
+	if OS.has_environment("SS"):   # supersample: draw the 3D at SS x the resolution and shrink it
+		oval.get_viewport().scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
+		oval.get_viewport().scaling_3d_scale = float(OS.get_environment("SS"))
+	if OS.has_environment("SHADOWRES"):   # the sun's shadow drawn finer and softened (a jagged edge reads as speckle on skin)
+		RenderingServer.directional_shadow_atlas_set_size(int(OS.get_environment("SHADOWRES")), true)
+		for l in oval.find_children("*", "DirectionalLight3D", true, false):
+			(l as DirectionalLight3D).shadow_blur = _env("SHADOWBLUR", 1.0)
+			(l as DirectionalLight3D).directional_shadow_max_distance = _env("SHADOWDIST", 20.0)
+	if OS.has_environment("MSAA"):   # the look-test reset turns MSAA off; MSAA=2|4|8 puts it back
+		oval.get_viewport().msaa_3d = {"2": Viewport.MSAA_2X, "4": Viewport.MSAA_4X, "8": Viewport.MSAA_8X}[OS.get_environment("MSAA")]
 	# The seat: ROW rows up the stand on the wing nearest the play, square to the centre line.
 	var O = oval.get_script()
 	var C = Oval3DCrowd
@@ -96,20 +120,52 @@ func _run() -> void:
 		for si in mesh.get_surface_count():
 			var mat := mesh.surface_get_material(si)
 			if mat is BaseMaterial3D:
+				if OS.has_environment("ALLMIPS"):   # a GLB read at run time has no mipmaps: fine detail (pores) aliases to speckle
+					for slot in [BaseMaterial3D.TEXTURE_ALBEDO, BaseMaterial3D.TEXTURE_NORMAL, BaseMaterial3D.TEXTURE_ROUGHNESS, BaseMaterial3D.TEXTURE_METALLIC, BaseMaterial3D.TEXTURE_AMBIENT_OCCLUSION]:
+						var tx: Texture2D = mat.get_texture(slot)
+						if tx != null and tx.get_image() != null and not tx.get_image().has_mipmaps() and not (OS.has_environment("LASHRAW") and mat.resource_name == "SUP_lash"):
+							var ti := tx.get_image()
+							if ti.is_compressed(): ti.decompress()
+							ti.generate_mipmaps()
+							mat.set_texture(slot, ImageTexture.create_from_image(ti))
 				# Mixamo's roughness map multiplies the value down to wet shine: drop it.
 				mat.roughness_texture = null
 				mat.roughness = 0.9
 				mat.metallic = 0.0
 				mat.metallic_texture = null
 				mat.metallic_specular = 0.2
+				if mat.resource_name in ["SUP_head", "SUP_body"]:   # skin look tests
+					if OS.has_environment("SKINCULL"): mat.cull_mode = BaseMaterial3D.CULL_BACK   # the GLB marks skin two-sided
+					if OS.has_environment("SKINNORM"): mat.normal_scale = float(OS.get_environment("SKINNORM"))
+					if OS.has_environment("SKINROUGH"): mat.roughness = float(OS.get_environment("SKINROUGH"))
+					if OS.has_environment("SKINSPEC"): mat.metallic_specular = float(OS.get_environment("SKINSPEC"))
+					if OS.has_environment("SKINSSS"):
+						mat.subsurf_scatter_enabled = true
+						mat.subsurf_scatter_strength = float(OS.get_environment("SKINSSS"))
+						mat.subsurf_scatter_skin_mode = true
+				if OS.has_environment("HIDE") and mat.resource_name in OS.get_environment("HIDE").split(","):
+					mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+					mat.albedo_color.a = 0.0
 				# Hair cards: cut out by their alpha and drawn from both sides.
 				var tex: Texture2D = mat.albedo_texture
 				if tex != null and tex.get_image() != null and tex.get_image().detect_alpha() != Image.ALPHA_NONE:
-					mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_HASH
+					match OS.get_environment("HAIRMODE"):
+						"prepass": mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_DEPTH_PRE_PASS
+						"scissor":
+							mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+							mat.alpha_scissor_threshold = float(OS.get_environment("HAIRCUT")) if OS.has_environment("HAIRCUT") else 0.3
+						_: mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_HASH
 					mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	# Knitwear in club colours: SCARF="#hex,#hex[,..]" BEANIE="#hex,#hex" (any club, Forge clubs too).
+	if OS.has_environment("SCARF"):
+		var bc := OS.get_environment("BEANIE") if OS.has_environment("BEANIE") else OS.get_environment("SCARF")
+		print("CLOSEUP knitwear dressed: ", SupporterMerch.dress(fig, Array(OS.get_environment("SCARF").split(",")),
+				Array(bc.split(","))))
 	var ap := _anim_player(fig)
 	if ap != null and ap.has_animation(clip):
 		ap.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
+		# Stepped by hand, one film frame (DT) per saved frame: the clip keeps its real speed however long a save takes.
+		ap.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
 		ap.play(clip)
 	print("CLOSEUP figure %s: %.2f m tall unscaled, scale %.3f, clip %s (%s)" % [fig_path, aabb.size.y, k,
 			clip, "playing" if ap != null and ap.has_animation(clip) else "MISSING"])
@@ -125,6 +181,8 @@ func _run() -> void:
 	for i in range(frames):
 		d.advance(DT)
 		oval.sync(DT)
+		if ap != null and ap.is_playing():
+			ap.advance(DT if i > 0 else 0.0)
 		# sync aims the camera at the play: put ours back.
 		cam.global_position = eye
 		cam.look_at(tgt, Vector3.UP)
