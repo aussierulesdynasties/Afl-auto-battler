@@ -92,5 +92,10 @@ elif MODE=='mp4':
     sc.render.filepath=OUT;bpy.ops.render.render(animation=True)
 elif MODE=='sb':
     look((73.03-0.987*35,20.28-0.161*35,7.0),(73.03,20.28,8.0),40,1200,1000);render(OUT)
+elif MODE=='joins':
+    # close-ups of every stand end and join, from inside the fence looking out (eye, target, lens)
+    J=dict(se_argyle=((-35,-45,12),(-58,-80,5),35),letitia_terrace=((0,45,12),(14,80,5),35),lewis_terrace=((-60,-15,12),(-90,-35,5),35),
+           ryde_se=((10,-20,12),(10,-70,5),30),ne_board_sheds=((40,10,10),(80,12,6),35),north_terrace=((-20,25,8),(-50,50,3),35))
+    for k,(e,t,l) in J.items():look(e,t,l,1600,1000);render(OUT.replace('#',k))
 elif MODE=='close':
     gc=Mg@Vector((20.6,-14,5.5));tg=Mg@Vector((20.6,1,6.0));look(tuple(gc),tuple(tg),30,1600,1000);render(OUT)

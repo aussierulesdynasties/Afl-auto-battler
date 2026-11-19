@@ -62,7 +62,7 @@ def gor_build(addobj):
     e0,e1=ENT
     quad((e0,FY-0.4),(DOOR[0],FY-0.4),0,3.1,'render_cream');quad((DOOR[1],FY-0.4),(e1,FY-0.4),0,3.1,'render_cream')
     quad((DOOR[0],FY-0.4),(DOOR[1],FY-0.4),2.0,3.1,'render_cream')
-    quad((DOOR[0],FY-0.3),(DOOR[1],FY-0.3),0,2.0,'interior_dark')
+    quad((DOOR[0],FY-0.3),(DOOR[1],FY-0.3),0,2.0,'post_maroon')   # maroon door (photo)
     quad((e1,FY-0.4),(e1,FY),0,3.1,'render_cream');quad((e0,FY),(e0,FY-0.4),0,3.1,'render_cream')
     box(e0-0.06,e1+0.06,FY-0.46,FY+0.06,3.1,3.3,'render_cream')
     _w=e1-e0;addobj('gor_sign',[([(e0+0.19*_w,FY-0.47,2.25),(e0+0.82*_w,FY-0.47,2.25),(e0+0.82*_w,FY-0.47,2.8),(e0+0.19*_w,FY-0.47,2.8)],'club_sign_lettered')],double=True,uvfit=True)
@@ -121,5 +121,6 @@ def gor_build(addobj):
             for a_,b_ in(((-.05,-.05),(.05,-.05)),((.05,-.05),(.05,.05)),((.05,.05),(-.05,.05)),((-.05,.05),(-.05,-.05))):
                 Bl.append(([(xg+a_[0],yb+a_[1],ap),(xg+b_[0],yb+b_[1],ap),(xg+b_[0],yb+b_[1],ap+0.55),(xg+a_[0],yb+a_[1],ap+0.55)],'trim_white'))
     addobj('gor_barge',Bl,double=True)
-    xg,yp,ap,ba,hw=DORM[1];c=0.75;zc=10.6;yc=yp-0.03
+    xg,yp,ap,ba,hw=DORM[1];c=0.49;zc=10.65;yc=yp-0.03   # clock frame 1.0 m square, centre 0.75 m above the gable base (photo)
     addobj('gor_clock',[([(xg-c,yc,zc-c),(xg+c,yc,zc-c),(xg+c,yc,zc+c),(xg-c,yc,zc+c)],'clock')],uvfit=True,double=True)
+    zs=10.11;hs=1.6;addobj('gor_name',[([(xg-hs,yc,zs-0.13),(xg+hs,yc,zs-0.13),(xg+hs,yc,zs+0.13),(xg-hs,yc,zs+0.13)],'gor_name')],uvfit=True,double=True)   # HORRIE GORRINGE STAND board (photo)

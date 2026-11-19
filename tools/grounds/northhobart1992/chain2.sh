@@ -3,8 +3,8 @@ cd "$(dirname "$0")"; NH=$(cygpath -m "$PWD"); B="/c/Program Files/Blender Found
 R=../../../.claude/review/north_hobart; mkdir -p $R/renders frames
 FF="C:/Users/DANTE/AppData/Roaming/Python/Python314/site-packages/imageio_ffmpeg/binaries/ffmpeg-win-x86_64-v7.1.exe"
 PY=C:/Python314/python.exe
-$PY textures.py >/dev/null && $PY textures2.py >/dev/null && $PY textures3.py && $PY fence1992.py && $PY geo2.py | head -1 || exit 1
-run(){ for t in 1 2 3; do env $1 "$B" -b --factory-startup --python world2.py -- $NH $2 $3 $4 > log_$2.txt 2>&1 && grep -q "Blender quit" log_$2.txt && break; done; echo "$2 $(date +%H:%M) try $t"; }
+$PY textures.py >/dev/null && $PY textures2.py >/dev/null && $PY textures3.py && $PY signs1992.py && $PY fence1992.py && $PY geo2.py | head -1 || exit 1
+run(){ for t in 1 2 3; do env $1 "$B" -b --factory-startup --python world2.py -- $NH $2 $3 $4 > log_$2.txt 2>&1 && grep -qE "Blender quit|Finished glTF" log_$2.txt && break; done; echo "$2 $(date +%H:%M) try $t"; }
 run X=1 glb $NH/northhobart1992.glb
 run X=1 gor $(cygpath -m $R)/renders/r_full_gor.png 1.0
 run TRANSP=1 aerial $(cygpath -m $R)/renders/r_full_aerial.png 1.0
