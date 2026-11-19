@@ -5,12 +5,13 @@ import bpy, os, sys, math
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); import shade
 from mathutils import Matrix
 argv = sys.argv[sys.argv.index('--') + 1:]; OUT = argv[0]
-MATS = [('concrete_light', 2, (205, 200, 190)), ('concrete', 2, (184, 180, 170)), ('concrete_dark', 2, (70, 70, 72)),
-        ('membrane', 3, (240, 236, 230)), ('steel_white', 4, (238, 238, 236)), ('steel_grey', 4, (170, 165, 160)),
-        ('steel_dark', 4, (30, 30, 32)), ('fascia_cream', 0, (222, 210, 168)), ('paint_green', 0, (104, 132, 96)),
-        ('seats_red', 1, (200, 62, 36)), ('seats_blue', 1, (35, 55, 77)), ('seats_grey', 1, (95, 105, 118)),
-        ('hill_turf', 12, (96, 128, 58)), ('scoreboard', 13, (40, 52, 46)), ('copper', 10, (146, 121, 110)),
-        ('brick', 6, (196, 138, 110)), ('glass', 5, (60, 80, 100))]
+MATS = [('concrete_cream', 2, (222, 214, 204)), ('concrete_grey', 2, (150, 148, 142)), ('concrete_slate', 2, (60, 70, 80)),
+        ('concrete_dark', 2, (52, 54, 58)), ('concrete_mid', 2, (90, 90, 92)), ('membrane', 3, (240, 236, 230)),
+        ('steel_white', 4, (238, 238, 236)), ('steel_pale', 4, (196, 196, 192)), ('steel_grey', 4, (170, 165, 160)),
+        ('seats_slate', 1, (95, 105, 118)), ('seats_teal', 1, (95, 118, 112)), ('seats_red', 1, (200, 62, 36)),
+        ('seats_maroon', 1, (150, 45, 50)), ('seats_navy', 1, (35, 55, 77)), ('brick_red', 6, (172, 84, 58)),
+        ('brick', 6, (196, 138, 110)), ('glass', 5, (45, 60, 75)), ('copper', 10, (146, 121, 110)),
+        ('stone', 11, (196, 186, 166)), ('hill_turf', 12, (96, 128, 58)), ('scoreboard', 13, (40, 52, 46))]
 bpy.ops.wm.read_factory_settings(use_empty=True); sc = bpy.context.scene
 sc.render.engine = 'CYCLES'; sc.cycles.samples = 4; sc.cycles.use_denoising = False   # unlit emission: no noise
 sc.view_settings.view_transform = 'Standard'
