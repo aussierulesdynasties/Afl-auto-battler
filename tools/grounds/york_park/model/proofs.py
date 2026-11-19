@@ -79,6 +79,10 @@ if 'ship' in jobs:   # later jobs film what ships: the exported GLB plus the sea
     sm.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = (*c, 1)
     print('seat mean colour (linear):', c)
     me.materials.append(sm); me.update()
+    # shade as Godot does: SurfaceTool.generate_normals averages the normals of every corner at the same position
+    import bmesh
+    bm = bmesh.new(); bm.from_mesh(me); bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5); bm.to_mesh(me); bm.free()
+    for p in me.polygons: p.use_smooth = True
     ob = bpy.data.objects.new('seats_inst', me); sc.collection.objects.link(ob)
     dg = bpy.context.evaluated_depsgraph_get()
 if 'stills' in jobs:
