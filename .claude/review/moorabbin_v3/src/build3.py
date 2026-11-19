@@ -369,8 +369,12 @@ for b in O['club']:
     bm=bmesh.new();poly=ccw(pts_)
     wall=(0.62,0.17,0.15) if b['n'] in ('redtower','brickblock') else (0.92,0.92,0.9)
     hb=min(b['h'],13.5) if b['n']=='redtower' else b['h']  # 1993 panorama: nothing rises above the Huggins roof
-    prism(bm,poly,0,hb,0,True,1);bmesh.ops.subdivide_edges(bm,edges=bm.edges[:],cuts=14,use_grid_fill=True)
-    obj('club_'+b['n'],bm,[mat('r_'+b['n'],b['c'],0.6),mat('w_'+b['n'],wall,0.8)])
+    if b['n'] in ('redtower','whiteblock','brickblock'):
+        # plain brick below the first window row (3.4 m tile): the 3 m bank meets these walls, and the 1993 panorama shows plain brick low down
+        prism(bm,poly,0,3.4,2,False,2);prism(bm,poly,3.4,hb,0,True,1)
+    else:prism(bm,poly,0,hb,0,True,1)
+    bmesh.ops.subdivide_edges(bm,edges=bm.edges[:],cuts=14,use_grid_fill=True)
+    obj('club_'+b['n'],bm,[mat('r_'+b['n'],b['c'],0.6),mat('w_'+b['n'],wall,0.8),mat('p_'+b['n'],wall,0.8)])
 # ---- G.G. Huggins Stand: tiers read off the near-frontal photo, plan from the aerial
 R0=np.array([-19.0,93.1]);R1=np.array([-67.1,67.6]);tv=(R1-R0)/float(np.linalg.norm(R1-R0));LH=49.5;R1=R0+tv*LH;no=np.array([-tv[1],tv[0]])  # length: straight-down Esri 2014/2017, dark roof ends 49-50 m from the east end
 if np.dot(PC-R0,no)>0:no=-no
@@ -544,6 +548,7 @@ TEXMAP={'grass':('grass',None),'ground':('bank_dirt',None),'ground_grass':('park
 for b_ in O['club']:
     TEXMAP['r_'+b_['n']]=('roof_deck',b_['c'])
     TEXMAP['w_'+b_['n']]=('brick_win',None) if b_['n'] in ('redtower','whiteblock','brickblock') else ('white',(0.92,0.92,0.9))
+    TEXMAP['p_'+b_['n']]=('brick',None)
 def retex(m):
     t,tint=TEXMAP[m.name];nt=m.node_tree;bs=nt.nodes['Principled BSDF']
     for n in list(nt.nodes):

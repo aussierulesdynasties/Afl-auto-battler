@@ -16,6 +16,15 @@
 ]
 ],
 [
+"brick.png",
+30.3,
+116.1,
+[
+"p_brickblock",
+"p_whiteblock"
+]
+],
+[
 "brick_win.png",
 39.8,
 111.6,
