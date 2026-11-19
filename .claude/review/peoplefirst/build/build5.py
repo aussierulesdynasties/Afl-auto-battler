@@ -30,7 +30,7 @@ GLASS=mat('glass',(45,52,70),'glass',0.25);CONC=mat('concrete',(190,188,182),'co
 UNDER=mat('roofunder',(215,215,212),'roofunder',0.7);YEL=mat('yellow',(238,190,40),'yellow',0.5,0.2);TW=mat('tower',(244,244,244),'tower',0.5)
 LAMP=mat('lamps',(235,235,235),'lamps',0.4);SCR=mat('screen',(25,30,45),'screen',0.3);STR=mat('stripes',(200,120,80),'stripes',0.6)
 SBF=mat('scorefront',(28,32,42),'scorefront',0.35);SBP=mat('scorepost',(250,249,248),'scorepost');RSG=mat('redsign',(243,56,59),'redsign',0.5)
-POD=mat('podroof',(232,230,226),'podroof');DARK=mat('darkblock',(62,68,82),'dark',0.5);RED=mat('red',(205,40,40),'red',0.5);VBLUE=mat('vomblue',(10,125,200),None,0.5);WHITE=mat('white',(236,236,236),'white')
+POD=mat('podroof',(232,230,226),'podroof');DARK=mat('darkblock',(62,68,82),'dark',0.5);RED=mat('red',(205,40,40),'red',0.5);GRASS=mat('grass',(98,132,62),'grass',0.95);VBLUE=mat('vomblue',(10,125,200),None,0.5);PFS=mat('pfsign',(10,8,66),'pfsign',0.5);WHITE=mat('white',(236,236,236),'white')
 UVSET=set()
 def face(vs,mi,uvs=None):
     try:f=bm.faces.new(vs)
@@ -71,13 +71,20 @@ def low_m(k,a,mi):
     for c in MK['low_aisles']:
         if inint(a,c,math.degrees(0.55/(rg(a)+4))):return AIS
     return SEAT
+NEARW=(126.0,199.0)  # near side under the roof edge where the photo shows short vertical posts (photo x 400-1100)
+POSTL=6.6  # post length below the roof edge (postz.py: photo posts 6.5-7.1 m)
 def up_m(k,a,mi):
-    # red cladding on the stand's outer wall, west side (photo: x 440-850 under the roof edge, render-matched 130-174 deg)
-    if k==11 and 130.0<=a%360<=174.0:return RED
-    # vom openings: the seat slope is cut away over each tunnel mouth (photo: flush dark openings)
-    if k in (5,6,7):
+    # near side outer wall, copied from the photo (lead 2026-11-20): bands measured on the wall line through cam_j
+    # (wallz.py): dark band from the roof down to 18.4 m, red board 15.0-18.4 m (130 deg to photo x 848 = 176.6 deg,
+    # navy beyond), grey 12.9-15.0 m, light concrete base down to the podium deck
+    if k in (14,15,16,17) and NEARW[0]<=a%360<=NEARW[1]:
+        return (DARK,RED if 130.0<=a%360<=176.6 else NAVY,WALK,CONC)[k-14]
+    # vom openings: the seat slope is cut away over each tunnel mouth, one row above the walkway, 4 rows tall, inside a
+    # light concrete frame 0.6 m wide with one row of frame above and below (photo, far stand: ~10x16 px opening, pale surround)
+    if k in (6,7,8,9,10):
         for c in VOMS:
-            if inint(a,c,math.degrees(VHW/(rg(a)+11))):return None
+            if inint(a,c,math.degrees(VHW/(rg(a)+11))):return None if k in (7,8) else CONC
+            if inint(a,c,math.degrees((VHW+VFR)/(rg(a)+11))):return CONC
     if mi is not SEAT:return mi
     if k==6:return SEATU
     for c in VOMS:
@@ -90,7 +97,8 @@ def edges(lst,dr,hwm):
     return out
 LOWE=edges(MK['low_aisles'],4,0.55)+[x for o in MK['low_openings'] for x in o]
 VHW=1.1  # half-width of a vom mouth (photo: ~10 px wide on the far stand = 2.2 m)
-UPE=edges(VOMS,13,0.55)+edges(VOMS,11,VHW)
+VFR=0.6  # vom frame width each side
+UPE=edges(VOMS,13,0.55)+edges(VOMS,11,VHW)+edges(VOMS,11,VHW+VFR)
 # no ground beyond the stadium (director 2026-11-18: background scene is a later pass)
 # lower bowl all round
 # north end (no roof): seats run back to the satellite's seat edge (north_db, per degree), same rake as the stands' lower tier
@@ -99,21 +107,27 @@ def ndb(a):
     a=a%360
     if not (A1-360<=a<=A0):return 6.5
     return float(__import__('numpy').interp(a,[t[0] for t in NDB],[t[1] for t in NDB]))
-RAKE=0.6
+RAKE=0.18  # photo (cam_j): seat back edge vs satellite depth, median of 48-72 deg
+GAP=(88.0,95.5)  # today's ground (satellite 2019-2026): grass strip behind the goals, no seats
+ingap=lambda a:GAP[0]<=a%360<=GAP[1]
 def low_pf(a,k):
     db=ndb(a);zb=1.0+RAKE*(db-1.5)
+    if ingap(a):return [(0,0.02),(1.5,0.02),(1.5,0.03),(db,0.03),(db,zb)][k]
     return [(0,0.02),(1.5,0.02),(1.5,1.0),(db,zb),(db+2.0,zb)][k]
+def low_mn(k,a,mi):
+    if ingap(a):return [None,APRON,None,GRASS,CONC][k]
+    return low_m(k,a,mi)
 NA=arange(A1-360,A0,0.5)
 sweep(arange(A0,A1,0.5)+[e for e in [x%360 for x in LOWE]+[x%360+360 for x in LOWE] if A0<e<A1],[(0,0.02,None,0),(1.5,0.02,APRON,1),(1.5,1.0,FENCEL,1),(6.5,4.0,SEAT,1.0),(8.5,4.0,WALK,1)],mfun=low_m)
-sweep(NA+[e%360 for e in LOWE if A1-360<e%360<A0],[(0,0.02,None,0),(1.5,0.02,APRON,1),(1.5,1.0,FENCEL,1),(6.5,4.0,SEAT,1.0),(8.5,4.0,WALK,1)],mfun=low_m,pf=low_pf)
+sweep(NA+list(GAP)+[e%360 for e in LOWE if A1-360<e%360<A0],[(0,0.02,None,0),(1.5,0.02,APRON,1),(1.5,1.0,FENCEL,1),(6.5,4.0,SEAT,1.0),(8.5,4.0,WALK,1)],mfun=low_mn,pf=low_pf)
 span=arange(A0,A1,0.5)
-SPROF=[(6.5,4.0),(6.5,6.9),(6.8,6.9),(6.8,6.0),(9.0,6.0),(9.0,6.4),(10.226,7.265),(11.2,7.952),(24.0,16.98),(24.0,21.0),(25.0,21.0),(25.0,8.0),(26.0,8.0),(26.0,7.0),(16.0,7.0),(16.0,0.0)];SMAT=[None,FENCE,WHITE,CONC,WALK,CONC,SEAT,SEAT,SEAT,NAVY,CONC,NAVY,WALK,WALK,UNDER,DARK]
+SPROF=[(6.5,4.0),(6.5,6.9),(6.8,6.9),(6.8,6.0),(9.0,6.0),(9.0,6.4),(10.226,7.265),(11.2,7.952),(12.9,9.151),(14.3,10.139),(15.1,10.703),(24.0,16.98),(24.0,21.0),(25.0,21.0),(25.0,18.4),(25.0,15.0),(25.0,12.9),(25.0,8.0),(26.0,8.0),(26.0,7.0),(16.0,7.0),(16.0,0.0)];SMAT=[None,FENCE,WHITE,CONC,WALK,CONC,SEAT,SEAT,SEAT,SEAT,SEAT,SEAT,NAVY,CONC,NAVY,NAVY,NAVY,NAVY,WALK,WALK,UNDER,DARK]
 sweep(span+[e for e in UPE if A0<e<A1],[(d,z,SMAT[i],1) for i,(d,z) in enumerate(SPROF)],mfun=up_m)
 sweep(span,[(26.0,8.0,None,0),(26.0,9.1,YEL,1)])
 def nc_pf(a,k):
     db=ndb(a);zb=1.0+RAKE*(db-1.5);w=max(14.0,db+5.5)
-    return [(db+2.0,zb),(w,zb),(w,0.0)][k]
-sweep(NA,[(8.5,4.0,None,0),(14.0,4.0,WALK,1),(14.0,0.0,CONC,1)],pf=nc_pf)
+    return [(db if ingap(a) else db+2.0,zb),(w,zb),(w,0.0)][k]
+sweep(NA+list(GAP),[(8.5,4.0,None,0),(14.0,4.0,WALK,1),(14.0,0.0,CONC,1)],pf=nc_pf)
 # the stands' own end walls (below) close the deeper north seats
 for a,flip in((A0,False),(A1,True)):
     for poly in ([(6.5,0),(6.5,4.0),(6.5,6.0),(9.0,6.0),(9.0,6.4),(24,16.98),(24,21),(25,21),(25,8),(16,7),(16,0)],[(25,8),(26,8),(26,7),(16,7)]):
@@ -129,20 +143,54 @@ R[-1]=A1
 RIBS_NEAR=[128.89,135.5,142.12,149.52,157.89,167.8,177.6,186.6,193.5,200.0,206.4,213.0,219.2,228.9,237.2,243.9,250.5]
 if not os.environ.get('SATRIBS'):R=sorted([r for r in R if not (126.0<r<252.5)]+RIBS_NEAR)  # SATRIBS: ribs from the satellite valleys (top-down plan)
 print('R near',[round(r,1) for r in R if 115<r<265])
-def phase(a):
-    for i in range(len(R)-1):
-        if R[i]<=a<=R[i+1]:return (a-R[i])/(R[i+1]-R[i])
+# FARRIBS=file.json: [[inner_deg,outer_deg],...] read off the photo for the far roof (lead 2026-11-19: copy the photo's ribs);
+# replaces the satellite ribs between the first and last inner angle. A rib runs from its inner angle (s=0) to its outer angle (s=1).
+RI=list(R);RO=list(R)
+if os.environ.get('FARRIBS'):
+    FR=sorted(json.load(open(os.environ['FARRIBS'])));lo,hi=min(min(p) for p in FR)-0.5,max(max(p) for p in FR)+0.5
+    keep=[r for r in R if not lo<r<hi];RI=sorted(keep+[p[0] for p in FR]);RO=sorted(keep+[p[1] for p in FR])
+    print('FARRIBS',FR)
+def ribat(i,s):return RI[i]+(RO[i]-RI[i])*s
+def phase(a,s=0.0):
+    for i in range(len(RI)-1):
+        r0,r1=ribat(i,s),ribat(i+1,s)
+        if r0<=a<=r1:return (a-r0)/(r1-r0)
     return 0.0
-SR=[0,0.03,0.06,0.09,0.12,0.15,0.18,0.21,0.24,0.28,0.34,0.45,0.6,0.72,0.82,0.88,0.92,0.95,0.975,0.99,1.0]
+# Far roof outer edge from the photo (lead 2026-11-19: deep round scallops, sharp valleys), plan from the satellite.
+# FARVR=file.json [[photo valley deg, satellite notch radius m],...]: the plan V at each photo outer valley sits on the
+# satellite's measured notch radius; each lobe keeps the satellite crest radius (largest over its middle half):
+# r = v(t) + (crest - v(t))*sqrt(sin(pi*t)). FARDZ=m: the outer edge drops by up to FARDZ at each valley (s^2 from the
+# inner edge), sized on the photo silhouette.
+_FZ=None
+if os.environ.get('FARRIBS') and os.environ.get('FARVR'):
+    _VR=dict((round(x,2),y) for x,y in json.load(open(os.environ['FARVR'])));_rsat=rout
+    _i0=RO.index(min(p[1] for p in FR))-1;_i1=RO.index(max(p[1] for p in FR))+1
+    _CR={i:max(_rsat(RO[i]+(RO[i+1]-RO[i])*k/40) for k in range(10,31)) for i in range(_i0,_i1)}
+    def _vr(i):return _VR.get(round(RO[i],2),_rsat(RO[i]))
+    def rout(a,_r=_rsat):
+        for i in range(_i0,_i1):
+            if RO[i]<=a<=RO[i+1]:
+                t=(a-RO[i])/(RO[i+1]-RO[i]);v=_vr(i)+(_vr(i+1)-_vr(i))*t;return v+(_CR[i]-v)*math.sqrt(max(0.0,math.sin(math.pi*t)))
+        return _r(a)
+    _FZ=(_i0,_i1,float(os.environ.get('FARDZ',0)))
+    print('FARVR',[(round(RO[i],2),round(_vr(i),2),round(_CR[i],2)) for i in range(_i0,_i1)],'FARDZ',_FZ[2])
+def fardz(a,s,inzone=0):
+    if not _FZ:return 0.0
+    i0,i1,dz=_FZ
+    if not ribat(i0,s)<=a<=ribat(i1,s):return 0.0
+    if inzone:return 1.0
+    return -dz*(1-math.sqrt(max(0.0,math.sin(math.pi*phase(a,s)))))*s*s
+SR=[0,0.03,0.06,0.09,0.12,0.15,0.18,0.21,0.24,0.28,0.32,0.36,0.40,0.45,0.50,0.55,0.60,0.65,0.70,0.75,0.80,0.84,0.88,0.92,0.95,0.975,0.99,1.0]  # dense rows: slanted far ribs cut diagonally across them
 NAVYW=5.25  # navy glazed strip inside the white membrane, measured on the photo (near side 5.75, far side 4.5 m)
 LOBE_IN=float(os.environ.get('LOBE_IN',0.35));LOBE_OUT=float(os.environ.get('LOBE_OUT',1.1));CAP0=float(os.environ.get('CAP0',0.94));LOBEP=float(os.environ.get('LOBEP',1.5))
+LOBE_FAR=float(os.environ.get('LOBE_FAR',LOBE_OUT));FARPOW=float(os.environ.get('FARPOW',1.0))
 ra=arange(A0,A1,0.125)
 def rp(a,s,dz=0.0):
-    ph=phase(a);ri=rin(a)-NAVYW+0.8-1.6*math.sin(math.pi*ph);ro=rout(a);r=ri+(ro-ri)*s;z=hin(a)+(hout(a)-hin(a))*s
+    ph=phase(a,s);ri=rin(a)-NAVYW+0.8-1.6*math.sin(math.pi*phase(a));ro=rout(a);r=ri+(ro-ri)*s;z=hin(a)+(hout(a)-hin(a))*s
     # inflated tube lobe: round cross-section (sqrt of sine), height grows outward, domed cap at the outer end
-    A=LOBE_IN+(LOBE_OUT-LOBE_IN)*s
+    A=LOBE_IN+(LOBE_FAR-LOBE_IN)*s**FARPOW if fardz(a,s,1) else LOBE_IN+(LOBE_OUT-LOBE_IN)*s  # far zone: LOBE_FAR, height kept near the outer edge (photo: flat inner membrane)
     cap=math.sqrt(max(0.0,1-((s-CAP0)/(1-CAP0))**2)) if s>CAP0 else 1.0
-    z+=A*max(0.0,math.sin(math.pi*ph))**LOBEP*cap+dz
+    z+=A*max(0.0,math.sin(math.pi*ph))**LOBEP*cap+dz+fardz(a,s)
     t=math.radians(a);return Vector((r*math.cos(t)+SH[0],r*math.sin(t)+SH[1],z))
 SH=D.get('roofshift',[0,0])
 # navy/white edge: row 7 of every column sits exactly on that column's navy line, so the edge is one smooth line
@@ -153,13 +201,15 @@ def SC(a):
     nb=NBULGE_NEAR if 126.0<a%360<252.5 else NBULGE  # near side: band keeps its width along the scallop (photo)
     nf=(rin(a)+0.6+nb*math.sin(math.pi*ph)-ri)/max(1.0,ro-ri);nf=min(max(nf,0.14),0.40);c=list(SR)
     for j,d in zip(range(5,10),(-0.05,-0.025,0.0,0.025,0.05)):c[j]=nf+d
+    for j in range(10,len(c)-1):c[j]=max(c[j],c[j-1]+0.015)  # keep rows in order past the navy rows
     return c
 SCA=[SC(a) for a in ra]
 top=[[bm.verts.new(rp(a,SCA[i][k])) for i,a in enumerate(ra)] for k in range(len(SR))];bot=[[bm.verts.new(rp(a,SCA[i][k],-0.6)) for i,a in enumerate(ra)] for k in range(len(SR))]
 def gridcum(G):
     U=[[0.0]+[0.0]*(len(ra)-1) for _ in SR];Vv=[[0.0]*len(ra) for _ in SR]
-    for k in range(len(SR)):
-        for i in range(1,len(ra)):U[k][i]=U[k][i-1]+(G[k][i].co-G[k][i-1].co).length
+    km=len(SR)//2  # one shared U per column (arc length along the middle ring): per-ring U drifted metres apart over 270 deg and sheared the texture into wavy lines
+    for i in range(1,len(ra)):U[km][i]=U[km][i-1]+(G[km][i].co-G[km][i-1].co).length
+    for k in range(len(SR)):U[k]=list(U[km])
     for k in range(1,len(SR)):
         for i in range(len(ra)):Vv[k][i]=Vv[k-1][i]+(G[k][i].co-G[k-1][i].co).length
     return U,Vv
@@ -289,14 +339,28 @@ for i in range(13):
     t=math.radians(90+180*i/12);dr.append((cx+rr*math.cos(t),cy_+rr*math.sin(t)))
 prism(dr,10.6,21.0,RED,DARK,uscale=40.0)
 # white ribs across the navy strip at every lobe dip
-for a in R[1:-1]:
-    nf=SC(a)[7];cyl(rp(a,0.0,0.08),rp(a,nf,0.08),0.14,0.14,WHITE,6)
+for i in range(1,len(RI)-1):
+    a=RI[i];nf=SC(a)[7];cyl(rp(a,0.0,0.08),rp(ribat(i,nf),nf,0.08),0.14,0.14,WHITE,6)
 # yellow raking columns under the west and south-west roof edge, one per ridge
+R=RO  # columns and later rib users stand under the outer rib ends
 for i in range(1,len(R)-1):
-    a=R[i];t=math.radians(a);ro=rout(a)-9;g0=Vector((ro*math.cos(t)+SH[0],ro*math.sin(t)+SH[1],0));fk=Vector((g0.x,g0.y,9.0))
+    a=R[i]
+    if NEARW[0]<=a%360<=NEARW[1]:
+        tp=rp(a,1.0,-0.3);cyl(tp,Vector((tp.x,tp.y,hout(a)-POSTL)),0.35,0.35,YEL,8);continue
+    t=math.radians(a);ro=rout(a)-9;g0=Vector((ro*math.cos(t)+SH[0],ro*math.sin(t)+SH[1],0));fk=Vector((g0.x,g0.y,9.0))
     cyl(g0,fk,0.45,0.4,YEL,8)
     for da in (-0.32,0.32):
         a2=a+da*(R[i+1]-R[i] if da>0 else R[i]-R[i-1]);cyl(fk,rp(a2,0.93,-0.6),0.35,0.3,YEL,8)
+# the ground's own sign, People First Stadium (current photo, drone from the south): a flat navy panel hung on the
+# yellow columns behind the south-end stand (2.4 m out from the column feet, in front of the raking arms, as in the photo), centred on the 250 deg rib, 39 m wide, 7.33:1, bottom 8.75 m above the ground (just above the
+# concourse slab). Lettering hand-painted in handtex.py.
+ci=min(range(1,len(R)-1),key=lambda i:abs(R[i]-250.0));a=R[ci];t=math.radians(a)
+ro=rout(a)-9;cb=Vector((ro*math.cos(t)+SH[0],ro*math.sin(t)+SH[1],0));n_=Vector((math.cos(t),math.sin(t),0));tg=Vector((-math.sin(t),math.cos(t),0))
+sw_=39.0;sh_=sw_/7.33;c_=cb+n_*2.4;z0_=8.75  # width and bottom fitted with the photo's camera (c6cam.py: sign corners + three V-column feet, 1.6 px)
+print('sign rib',round(a,2),'width',round(sw_,1),'height',round(sh_,2))
+vs=[bm.verts.new(c_+tg*(sx*sw_/2)+Vector((0,0,z))) for sx,z in ((-1,z0_),(1,z0_),(1,z0_+sh_),(-1,z0_+sh_))]
+tw_,th_=MT[PFS];face(vs,PFS,[(0,0),(tw_,0),(tw_,th_),(0,th_)])
+vs=[bm.verts.new(c_+tg*(sx*sw_/2)-n_*0.15+Vector((0,0,z))) for sx,z in ((-1,z0_),(1,z0_),(1,z0_+sh_),(-1,z0_+sh_))];face(vs[::-1],NAVY)
 # vomitories: opening in the upper tier at each measured angle, 2.4 m wide, front 1.5 m up the slope, hood over 3 m
 def T(a,sl,dz=0.0):
     t=sl/11.62;d=9.0+9.5*t;z=6.4+6.7*t+dz;r=rg(a)+d;th=math.radians(a);return Vector((r*math.cos(th),r*math.sin(th),z))
@@ -305,12 +369,13 @@ for c in VOMS:
     if not (A0<c<A1):continue
     hw=math.degrees(VHW/(rg(c)+11));al,ar=c-hw,c+hw
     # floor of the tunnel (dark), side walls along the cut seat line (concrete), back wall dark under a red cap
-    face([bm.verts.new(v) for v in (P(al,9.0,6.0),P(ar,9.0,6.0),P(ar,11.2,6.0),P(al,11.2,6.0))][::-1],DARK)
+    z0,dB,zT=7.265,14.3,10.139
+    face([bm.verts.new(v) for v in (P(al,10.226,z0),P(ar,10.226,z0),P(ar,dB,z0),P(al,dB,z0))][::-1],DARK)
     for aa,fl in ((al,False),(ar,True)):
-        vs=[bm.verts.new(P(aa,d,z)) for d,z in VPROF+[(11.2,6.0)]];face(vs[::-1] if fl else vs,VBLUE)
-    zc=7.952-0.8
-    face([bm.verts.new(v) for v in (P(al,11.2,6.0),P(ar,11.2,6.0),P(ar,11.2,zc),P(al,11.2,zc))],DARK)
-    face([bm.verts.new(v) for v in (P(al,11.2,zc),P(ar,11.2,zc),P(ar,11.2,7.952),P(al,11.2,7.952))],RED)
+        vs=[bm.verts.new(P(aa,d,z)) for d,z in [(10.226,z0),(11.2,7.952),(dB,zT),(dB,z0)]];face(vs[::-1] if fl else vs,VBLUE)
+    zc=zT-0.8
+    face([bm.verts.new(v) for v in (P(al,dB,z0),P(ar,dB,z0),P(ar,dB,zc),P(al,dB,zc))],DARK)
+    face([bm.verts.new(v) for v in (P(al,dB,zc),P(ar,dB,zc),P(ar,dB,zT),P(al,dB,zT))],RED)
 bm.normal_update()
 for f in bm.faces:
     if f in UVSET:continue

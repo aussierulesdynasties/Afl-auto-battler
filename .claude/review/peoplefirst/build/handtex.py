@@ -49,7 +49,7 @@ def panels(name,col,pw,ph,joint,jc,nz,seed,mw=6.0,mh=3.0):
 panels('concrete',(190,188,182),3.0,1.5,2,(160,158,154),6,4)
 panels('walk',(172,172,168),2.0,2.0,2,(150,150,147),5,5)
 panels('apron',(168,168,163),2.0,2.0,2,(146,146,142),5,6)
-panels('navy',(62,78,98),1.5,3.0,2,(40,50,66),3,7)
+panels('navy',(58,76,110),1.5,3.0,2,(38,50,74),3,7)  # blue lifted: render median 69,84,103 vs photo 66,82,114 (r16)
 panels('dark',(56,58,66),1.2,1.2,2,(38,40,46),3,8)
 panels('red',(205,44,40),3.0,3.0,2,(160,30,28),4,9)
 panels('white',(236,236,234),3.0,1.5,2,(205,205,202),3,10)
@@ -61,13 +61,13 @@ for x in np.arange(0,6,1.5):rect(a,x*PPM,0,x*PPM+4,H,(150,156,166))
 for y in (0,1.0,3.0):rect(a,0,y*PPM,W,y*PPM+4,(150,156,166))
 save(a,'glass',6.0,4.0)
 # roof membrane (PTFE white), seams every 1.5 m along u
-W,H=int(6*PPM),int(6*PPM);a=img(H,W,(247,247,245))+noise(H,W,20,2.5,14)[...,None]
-for x in np.arange(0,6,1.5):rect(a,x*PPM,0,x*PPM+2,H,(232,232,230))
-save(a,'roof',6.0,6.0)
+W,H=int(30*PPM),int(30*PPM);a=img(H,W,(247,247,245))+noise(H,W,20,2.5,14)[...,None]   # 30 m tile: 5 m soiling on a 6 m tile repeated as a quilt
+for x in np.arange(0,30,1.5):rect(a,x*PPM,0,x*PPM+2,H,(232,232,230))
+save(a,'roof',30.0,30.0)
 W,H=int(6*PPM),int(6*PPM);a=img(H,W,(212,212,208))+noise(H,W,20,3,15)[...,None]
 for y in np.arange(0,6,2.0):rect(a,0,y*PPM,W,y*PPM+5,(170,170,166))
 save(a,'roofunder',6.0,6.0)
-panels('podroof',(234,231,227),6.0,6.0,2,(214,211,207),2.5,16,12.0,12.0)
+panels('podroof',(234,231,227),6.0,6.0,2,(229,226,222),2.5,16,12.0,12.0)
 # LED fascia (photo, far stand, x 975 / 1100): 2.9 m parapet face: white cap 0.15 m, pale blue LED 1.55 m (lettering left out), navy 1.2 m; panel seams 1 m
 W,H=int(8*PPM),int(2.9*PPM);a=img(H,W,(32,42,63))+noise(H,W,6,2,21)[...,None]
 c0,c1=int(0.15*PPM),int(1.70*PPM)
@@ -115,4 +115,63 @@ for t0,sp in ((0.21,0.23),(0.60,0.25)):   # two triangles per face, base at 0.28
 save(b.astype(float),'scorepost',3.4,12.2)
 # sign under the board: red with white frame
 W,H=int(8.3*PPM),int(2.6*PPM);a=img(H,W,(243,56,59));a[:6]=a[-6:]=(250,249,248);a[:,:6]=a[:,-6:]=(250,249,248);a+=noise(H,W,4,3,12)[...,None];save(a,'redsign',8.3,2.6)
+# grass (north-end strip behind the goals, satellite 2026): green, mown stripes 1 m, clumps
+W,H=int(4*PPM),int(4*PPM);a=img(H,W,(98,132,62))+noise(H,W,6,9,21)[...,None]*np.array([0.8,1,0.6])
+for k in range(4):
+    if k%2:a[:,k*PPM:(k+1)*PPM]*=1.06
+save(a,'grass',4.0,4.0)
+# ground's own sign "People First Stadium" (south end, behind the stand, centred on the 250 deg rib).
+# Copied by hand from a current photo (news.com.au rename story, drone shot): layout as fractions of the panel,
+# panel edges in the photo tilt 8 px over its width (top 338-346, height 120 px): v measured from the local top edge.
+# colours = photo medians x1.4 (the sign hangs in shade; x1.4 brings the white lettering to white). Font: Segoe UI Semibold.
+from PIL import ImageDraw,ImageFont
+SGW,SGH=40.5,5.5;W,H=int(SGW*PPM),int(SGH*PPM)
+im=Image.new('RGB',(W,H),(10,8,66));d=ImageDraw.Draw(im)
+def bx(u0,v0,u1,v1):return [int(u0*W),int(v0*H),int(u1*W),int(v1*H)]
+P_,G_,B_=(83,80,179),(22,118,91),(11,123,210)
+x0,y0,x1,y1=bx(0.270,0.090,0.2925,0.250);d.pieslice([2*x0-x1,2*y0-y1,x1,y1],0,90,fill=P_)                 # i dot: quarter disc, square corner top-left
+x0,y0,x1,y1=bx(0.2714,0.348,0.2952,0.932);w_=x1-x0
+d.rectangle([x0,y0,x1,y1-w_],fill=G_);d.rectangle([x0+w_//2,y1-w_,x1,y1],fill=G_);d.pieslice([x0,y1-2*w_,x0+2*w_,y1],90,180,fill=G_)   # stem, bottom-left rounded
+x0,y0,x1,y1=bx(0.3138,0.093,0.3521,0.668);d.pieslice([2*x0-x1,y0,x1,y1],270,450,fill=B_)                  # blue half-disc, flat side left
+FNT=ImageFont.truetype('C:/Windows/Fonts/seguisb.ttf',200)
+def ink(t,sw):
+    g=Image.new('L',(1400,400),0);ImageDraw.Draw(g).text((50,50),t,font=FNT,fill=255,stroke_width=sw,stroke_fill=255);return g
+CAPH=np.where(np.asarray(ink('H',1)).max(1)>0)[0];CAPT,CAPB=CAPH.min(),CAPH.max()   # cap top / baseline rows
+def word(t,u0,u1,vtop,vbase):
+    # measured on the photo: left/right ink edges (u) and cap top / baseline (v) of each word
+    g=ink(t,0);xs=np.where(np.asarray(g).max(0)>0)[0];g=g.crop((xs.min(),CAPT,xs.max()+1,400))
+    sy=(vbase-vtop)*H/(CAPB-CAPT);sx=(u1-u0)*W/g.width
+    g=g.resize((max(1,round(g.width*sx)),max(1,round(g.height*sy))),Image.LANCZOS)
+    im.paste((236,238,244),(int(u0*W),int(vtop*H)),g)
+word('People',0.381,0.5915,0.100,0.467);word('First',0.6034,0.7248,0.100,0.467);word('Stadium',0.381,0.6197,0.592,0.969)
+a=np.asarray(im).astype(float)+noise(H,W,6,2.5,31)[...,None]
+rect(a,W//2-1,0,W//2+1,H,(4,4,40))                                                                       # panel seam at the centre column
+a[:3]=a[-3:]=(30,30,70);save(a,'pfsign',SGW,SGH)
+
+# ---- weathering pass (hand-made, procedural): tileable blotches, rain streaks running down from each joint, grime
+# under joints, fine grain. Each texture is matched by eye to its photo crop (z_texboard); clean surfaces stay clean.
+def pnoise(h,w,sx,sy,seed):
+    # periodic (tileable) noise: white noise filtered in the frequency domain, std 1; sx/sy = feature size in px
+    r=np.random.default_rng(seed);F=np.fft.fft2(r.standard_normal((h,w)))
+    fy=np.fft.fftfreq(h)[:,None];fx=np.fft.fftfreq(w)[None,:];F*=np.exp(-((fx*sx)**2+(fy*sy)**2)*6)
+    n=np.real(np.fft.ifft2(F));return (n-n.mean())/(n.std()+1e-9)
+def weather(name,blot,streak,grain,seed,joints_y=(),stain=0.0,stain_len=0.6):
+    p='htex/'+name+'.png';a=np.asarray(Image.open(p).convert('RGB')).astype(float);h,w=a.shape[:2]
+    d=blot*pnoise(h,w,PPM*1.2,PPM*1.2,seed)+streak*pnoise(h,w,6,PPM*1.5,seed+1)*(0.5+0.5*pnoise(h,w,PPM*0.8,PPM*3,seed+2).clip(0,None))
+    d+=grain*np.random.default_rng(seed+3).standard_normal((h,w))
+    yy=np.arange(h)[:,None]
+    for yj in joints_y:                                   # dark run-off below each horizontal joint (image row 0 = top)
+        t=(yy-yj*PPM)%h;d-=stain*np.exp(-t/(stain_len*PPM))*(0.6+0.4*pnoise(h,w,8,PPM,seed+4).clip(-1,1))
+    a+=d[...,None];Image.fromarray(np.clip(a,0,255).astype(np.uint8)).save(p)
+weather('concrete',4,3,2,40,joints_y=(0,1.5),stain=6)
+weather('walk',8,2,4,41);weather('apron',8,2,4,42)
+weather('navy',7,7,3,43,joints_y=(0,),stain=6);weather('dark',8,6,3,44,joints_y=(0,),stain=6)
+weather('red',7,6,3,45,joints_y=(0,),stain=10);weather('white',2,2,1,46,joints_y=(0,1.5),stain=3)
+weather('tower',2,2,1,47,joints_y=(0,),stain=3,stain_len=1.5);weather('yellow',7,7,3,48,stain=0)
+# roof membrane: clean PTFE in the photo (clean patch at x 1000-1100, y 880-930: grey std 1.6), so only faint soft soiling
+_p='htex/roof.png';_a=np.asarray(Image.open(_p).convert('RGB')).astype(float);_h,_w=_a.shape[:2]
+_d=-abs(3*pnoise(_h,_w,PPM*5,PPM*5,49))+1*pnoise(_h,_w,6,PPM*2,50)+1*np.random.default_rng(51).standard_normal((_h,_w))
+Image.fromarray(np.clip(_a+_d[...,None]+5,0,255).astype(np.uint8)).save(_p)
+weather('roofunder',7,4,3,50);weather('podroof',2,1,1,51)
+weather('grass',9,0,4,52);weather('screen',3,0,9,53)
 json.dump(TEX,open('htex/tex.json','w',newline=''),indent=1);print(TEX)
