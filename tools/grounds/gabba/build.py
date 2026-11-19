@@ -1,6 +1,7 @@
 # Gabba exterior, world metres (x east, y north, z up).
 # blender -b -P build.py -- model_in.json OUT.glb OUT.blend TEXDIR
 import bpy, bmesh, sys, math, json
+import numpy as np
 import mathutils as mu
 args = sys.argv[sys.argv.index('--') + 1:]
 D = json.load(open(args[0])); TEX = args[3]
@@ -62,10 +63,26 @@ FENCE = kn('fence', 6.0); ZB = kn('bowl_top', 33.0)
 def prof(a):
     r0 = rP(a) + FENCE; rb = rF(a) - 2.0; rm = r0 + kn('tier_split', 0.5) * (rb - r0)
     return [(r0, 0.0), (r0, 1.6), (rm, 13.0), (rm, 13.4), (rm + 2.5, 13.4), (rm + 2.5, 16.0), (rb, ZB), (rF(a), ZB)]
-MATS = [WK, SE, WK, WK, GL, SE, DK]
+# the two seat rakes are concrete steps, one row each (the real 3D seats stand on them, end of file). Same row count
+# all round, so every tread is level all the way round the bowl.
+ROW = 0.8
+def _tiers(a):
+    p = prof(a); return [(p[1][0], p[1][1], p[2][0], p[2][1]), (p[5][0], p[5][1], p[6][0], p[6][1])]
+NROWS = [max(2, int(round(float(np.median([_tiers(a)[ti][2] - _tiers(a)[ti][0] for a in A])) / ROW))) for ti in (0, 1)]
+def _steps(r0, z0, r1, z1, n):
+    t = (r1 - r0) / n; h = (z1 - z0) / (n - 1); out = []
+    for k in range(n):
+        if k: out.append((r0 + k * t, z0 + k * h))
+        out.append((r0 + (k + 1) * t, z0 + k * h))
+    return out
+def prof_s(a):
+    p = prof(a); T = _tiers(a); a_ = _steps(*T[0], NROWS[0]); b_ = _steps(*T[1], NROWS[1])
+    pts = [p[0], p[1]] + a_ + [(p[2][0], p[3][1]), p[4], p[5]] + b_ + [p[7]]
+    mats = [WK] + [WK] * len(a_) + [WK, WK, GL] + [WK] * len(b_) + [DK]
+    return pts, mats
 for i in range(N):
     a0 = A[i]; a1 = a0 + 2 * math.pi / N
-    p0, p1 = prof(a0), prof(a1)
+    (p0, MATS), (p1, _m) = prof_s(a0), prof_s(a1)
     for k in range(len(p0) - 1):
         ns = 8 if MATS[k] == SE else 1
         for j in range(ns):
@@ -284,6 +301,87 @@ for f in bm.faces:
             l[uv].uv = (x / S, y / S) if nz_ >= max(nx, ny) else ((y / S, z / S) if nx >= ny else (x / S, z / S))
 print('BOXUV', nbox)
 bm.to_mesh(me); bm.free()
+
+# ---------------------------------------------------------------- real 3D empty seats (as Optus): pan, back, two half legs;
+# neighbours' half legs meet as one grey steel leg under each gap, block-end legs trimmed flush with the pan.
+# Colour mix seat by seat as the painted seats had (g49 sunlit east stand): gold 50%, orange 15%, white 31%, blue 4%.
+def _bx(x0, x1, y0, y1, z0, z1):
+    return [(x0, y0, z0), (x1, y0, z0), (x1, y1, z0), (x0, y1, z0), (x0, y0, z1), (x1, y0, z1), (x1, y1, z1), (x0, y1, z1)]
+_BF = [[0, 3, 2, 1], [4, 5, 6, 7], [0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7]]
+_T = np.array(_bx(-0.22, 0.22, -0.22, 0.20, 0.40, 0.46) + _bx(-0.22, 0.22, -0.30, -0.24, 0.46, 0.86) +
+              _bx(-0.25, -0.21, -0.22, 0.04, 0.0, 0.40) + _bx(0.21, 0.25, -0.22, 0.04, 0.0, 0.40))
+_TF = [[f + o for f in ff] for o in (0, 8, 16, 24) for ff in _BF]
+def plain(name, rgb, rough=0.55, metal=0.0):
+    m = bpy.data.materials.new(name); m.use_nodes = True; b = m.node_tree.nodes['Principled BSDF']
+    b.inputs['Base Color'].default_value = (*[(c / 255) ** 2.2 for c in rgb], 1)
+    b.inputs['Roughness'].default_value = rough; b.inputs['Metallic'].default_value = metal; return m
+SEATS = []; ASTEPS = []
+AF = np.linspace(-math.pi, math.pi, 7201)
+for ti in (0, 1):
+    n = NROWS[ti]; TT = np.array([_tiers(a)[ti] for a in AF])
+    for k in range(n):
+        t = (TT[:, 2] - TT[:, 0]) / n; h = (TT[0, 3] - TT[0, 1]) / (n - 1); z = TT[0, 1] + k * h
+        rr = TT[:, 0] + (k + 1) * t - 0.38
+        xy = np.c_[cx + rr * np.cos(AF), cy + rr * np.sin(AF)]
+        sm = np.r_[0, np.cumsum(np.linalg.norm(np.diff(xy, axis=0), axis=1))]
+        # blocks of about 24 seats (12 m at the tier's middle row) with a 1.2 m aisle stair between them, as the painted
+        # seats had (aisle every 24); the aisles run straight up the rake, on the same bearings for every row
+        if k == 0:
+            rmid = TT[:, 0] + (n // 2 + 1) * t - 0.38; xm = np.c_[rmid * np.cos(AF), rmid * np.sin(AF)]
+            smid = np.r_[0, np.cumsum(np.linalg.norm(np.diff(xm, axis=0), axis=1))]; nb = int(smid[-1] // 13.2)
+            AIS = np.interp(np.arange(nb + 1) * smid[-1] / nb, smid, AF)
+        for b in range(nb):
+            sa, sb = np.interp(AIS[b], AF, sm), np.interp(AIS[b + 1], AF, sm); blk = sb - sa
+            ns = int((blk - 1.2) // 0.5); s0 = sa + 0.6 + (blk - 1.2 - ns * 0.5) / 2
+            for j in range(ns):
+                s = s0 + (j + 0.5) * 0.5; a = float(np.interp(s, sm, AF)); r = float(np.interp(s, sm, rr))
+                SEATS.append(((cx + r * math.cos(a), cy + r * math.sin(a), z), (-math.cos(a), -math.sin(a))))
+            if k < n - 1:   # aisle stair: half steps up each riser
+                a = float(AIS[b]); r0_ = float(np.interp(a, AF, TT[:, 0])); tk = float(np.interp(a, AF, t))
+                rs = r0_ + (k + 1) * tk - tk / 4
+                ASTEPS.append(((cx + rs * math.cos(a), cy + rs * math.sin(a), z), (-math.cos(a), -math.sin(a)), 1.2, tk / 2, h / 2))
+from mathutils.bvhtree import BVHTree
+from mathutils import Vector
+import mathutils
+PS = np.array([s[0] for s in SEATS]); fw = np.array([(*s[1], 0.0) for s in SEATS]); side = np.c_[fw[:, 1], -fw[:, 0], np.zeros(len(PS))]
+me.update(); bvh = BVHTree.FromPolygons([tuple(v.co) for v in me.vertices], [list(q.vertices) for q in me.polygons])
+keep = np.ones(len(PS), bool); up = Vector((0, 0, 1)); dn = Vector((0, 0, -1))
+for i in range(len(PS)):   # each seat on the tread under it; dropped if the corners disagree or anything fills its space
+    hz = []
+    for x in (-0.21, 0.21):
+        for y in (-0.26, 0.18):
+            hh = bvh.ray_cast(Vector(PS[i] + x * side[i] + y * fw[i] + (0, 0, 1.0)), dn, 2.0); hz.append(None if hh[0] is None else hh[0].z)
+    if None in hz or max(hz) - min(hz) > 0.02: keep[i] = False; continue
+    PS[i, 2] = max(hz)
+    for x in (-0.2, 0.0, 0.2):
+        if bvh.ray_cast(Vector(PS[i] + x * side[i] + (0, 0, 0.05)), up, 0.85)[0] is not None: keep[i] = False
+print('SEATS dropped', int((~keep).sum()))
+PS, fw, side = PS[keep], fw[keep], side[keep]
+FINAL = (PS, fw, side)
+ci = np.random.default_rng(49).choice(4, len(PS), p=[0.50, 0.15, 0.31, 0.04])
+V = PS[:, None, :] + _T[None, :, 0, None] * side[:, None, :] + _T[None, :, 1, None] * fw[:, None, :] + _T[None, :, 2, None] * np.array([0, 0, 1.0])
+kd = mathutils.kdtree.KDTree(len(PS))
+for i, p_ in enumerate(PS): kd.insert(p_, i)
+kd.balance()
+for i in range(len(PS)):   # block ends: the outer leg moves in 3 cm, flush with the pan
+    for sgn, box in ((-1, 2), (1, 3)):
+        if kd.find(PS[i] + sgn * 0.5 * side[i])[2] > 0.1: V[i, box * 8:box * 8 + 8] -= sgn * 0.03 * side[i]
+F = (np.array(_TF)[None] + (np.arange(len(PS)) * len(_T))[:, None, None]).reshape(-1, 4)
+sm_ = bpy.data.meshes.new('seats3d'); sm_.from_pydata(V.reshape(-1, 3).tolist(), [], F.tolist())
+for m in (plain('seat_gold', (226, 168, 30)), plain('seat_orange', (222, 120, 34)), plain('seat_white', (236, 236, 230)),
+          plain('seat_blue', (34, 64, 152)), plain('seat_legs_steel', (62, 64, 67), 0.45, 0.6)):
+    sm_.materials.append(m)
+leg = np.tile(np.arange(len(_TF)) >= len(_TF) // 2, len(PS)); mi = np.where(leg, 4, np.repeat(ci, len(_TF)))
+sm_.polygons.foreach_set('material_index', mi); sm_.update()
+bpy.context.scene.collection.objects.link(bpy.data.objects.new('seats3d', sm_))
+av = []; af = []
+for p_, f_, w, d, hh in ASTEPS:
+    f_ = np.array((*f_, 0.0)); sd = np.array([f_[1], -f_[0], 0.0]); o = len(av)
+    av += [tuple(np.array(p_) + x * sd + y * f_ + np.array([0, 0, z_])) for x, y, z_ in _bx(-w / 2, w / 2, -d / 2, d / 2, 0, hh)]
+    af += [[i + o for i in ff] for ff in _BF]
+am = bpy.data.meshes.new('aisle_steps'); am.from_pydata(av, [], af); am.materials.append(plain('aisle_concrete', (182, 182, 176), 0.85))
+am.update(); bpy.context.scene.collection.objects.link(bpy.data.objects.new('aisle_steps', am))
+print('SEATS', len(PS), 'rows', NROWS, 'aisle steps', len(ASTEPS))
 bpy.ops.wm.save_as_mainfile(filepath=args[2])
 bpy.ops.export_scene.gltf(filepath=args[1], export_format='GLB')
 print('TRIS', sum(len(p.vertices) - 2 for p in me.polygons))
