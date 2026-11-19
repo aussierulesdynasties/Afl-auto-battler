@@ -191,7 +191,7 @@ def terrace(name, A, B, ub, aisle):
             F.append([p0[k], p1[k], p1[k + 1], p0[k + 1]]); T.append([(s0, v0[k]), (s1, v1[k]), (s1, v1[k + 1]), (s0, v0[k + 1])])
     mk(name + '_steps', F, 'concrete', uvs=T)
     # seats: one row per tread, set along a line 0.6 of the way back from the tread's front edge
-    SF = []; ST = []; nseat = 0
+    SF = []; ST = []; LF = []; LT = []; nseat = 0
     for k in range(n):
         line = []
         for a, b, u, s in cols:
@@ -200,22 +200,30 @@ def terrace(name, A, B, ub, aisle):
             line.append((p, u, d, (a - b).to_2d().normalized()))
         L = [0.0]
         for j in range(1, len(line)): L.append(L[-1] + (line[j][0] - line[j - 1][0]).to_2d().length)
-        sv = SEAT_W / 2; j = 0
+        sv = SEAT_W / 2; j = 0; row = []; q = 0
         while sv < L[-1] - SEAT_W / 2:
             while L[j + 1] < sv: j += 1
             x = (sv - L[j]) / max(1e-9, L[j + 1] - L[j])
             p = line[j][0].lerp(line[j + 1][0], x); u = line[j][1] + (line[j + 1][1] - line[j][1]) * x
-            sv += SEAT_W
+            sv += SEAT_W; q += 1
             if aisle(u): continue
             d = line[j][2] + (line[j + 1][2] - line[j][2]) * x
             f2 = line[j][3].lerp(line[j + 1][3], x).normalized(); f = Vector((f2.x, f2.y, 0)); t = Vector((0, 0, 1)).cross(f)
-            r = d / 0.8  # tread depth relative to 0.8 m: keep the seat on its tread
-            for bx in ((-0.21, 0.21, -0.20 * r, 0.20 * r, 0.40, 0.45),       # pan
-                       (-0.21, 0.21, -0.27 * r, -0.21 * r, 0.40, 0.84),      # back
-                       (-0.05, 0.05, -0.16 * r, -0.04 * r, 0.0, 0.40)):      # pedestal
-                Fb, Tb = _box(p, t, f, *bx, bottom=(bx[4] > 0.1)); SF += Fb; ST += Tb
+            row.append((q, p, t, f, d / 0.8))  # r: tread depth relative to 0.8 m, keeps the seat on its tread
+        # as the passed grounds: pan 40 cm, back 36 cm behind the pan with its foot on the pan top (no faces cutting
+        # through); one thin galvanised post (4 x 5 cm) under each gap, shared by both seats, and one flush under a row or aisle end
+        for m_, (q, p, t, f, r) in enumerate(row):
+            for bx in ((-0.20, 0.20, -0.24 * r, 0.20 * r, 0.40, 0.46),       # pan
+                       (-0.18, 0.18, -0.30 * r, -0.24 * r, 0.40, 0.86)):     # back, flush on the pan's rear face
+                Fb, Tb = _box(p, t, f, *bx, bottom=True); SF += Fb; ST += Tb
+            right = m_ + 1 < len(row) and row[m_ + 1][0] == q + 1
+            left = m_ > 0 and row[m_ - 1][0] == q - 1
+            legs = [(0.23, 0.27) if right else (0.16, 0.20)] + ([] if left else [(-0.20, -0.16)])
+            for x0, x1 in legs:
+                Fb, Tb = _box(p, t, f, x0, x1, -0.06 * r, -0.01 * r, 0.0, 0.40); LF += Fb; LT += Tb
             nseat += 1
     if SF: mk(name + '_seats', SF, 'seat', uvs=ST)
+    if LF: mk(name + '_seatlegs', LF, 'rail', uvs=LT)
     return nseat
 
 
