@@ -56,6 +56,11 @@ CLOSE = {  # name: (eye, target, fov)
     'join_nstand': (polar(40, 40, 8), polar(30, 82, 3), 45),
     'seats_boon': ((0, -35, 9), (0, -85, 5), 40),
     'seats_ponting': ((-35, 5, 12), (-85, 5, 9), 40),
+    'seatlow_boon': (polar(172, 83, 5.6), polar(186, 79, 3.2), 50),
+    'seatlow_ponting': (polar(240, 62, 4.0), polar(258, 80, 5.0), 55),
+    'seatlow_trans': (polar(205, 60, 4.0), polar(222, 78, 5.0), 55),
+    'seatlow_members': (polar(310, 78, 3.6), polar(326, 84, 2.0), 50),
+    'seatlow_nstand': ((16.0, 68.0, 3.2), (30.0, 80.0, 1.6), 50),
     'sign_tower': ((-82, 130, 13), (-55, 96.5, 11), 42),
 }
 

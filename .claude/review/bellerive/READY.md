@@ -27,6 +27,7 @@ The model holds:
 | Each surface: hand-made texture, GE photo crop, model at the same pixels | `textures_vs_photo.jpg` |
 | Grey stddev of every texture (all >= 10; lowest conc_grey 10.6) | `stddev.txt` |
 | Seating close-ups, empty seats in their real colours | `close_seats_boon.jpg`, `close_seats_ponting.jpg` |
+| Real 3D seats at seat height | `close_seatlow_boon.jpg`, `close_seatlow_ponting.jpg`, `close_seatlow_trans.jpg`, `close_seatlow_members.jpg`, `close_seatlow_nstand.jpg` |
 | Ground sign beside its reference crop | `sign_vs_ref.jpg` |
 
 ## Top-down fit
@@ -46,3 +47,11 @@ Light towers, scoreboard and Northern Stand sit on their satellite positions.
 no open faults
 
 The lead's folder `trusting-edison-c1068b` was NOT reset (no reset, checkout, stash or clean there).
+
+## Real 3D empty seats
+
+- 11,494 seats, each a pan, back and two half legs; neighbouring halves make one grey steel leg, block-end legs trimmed flush (as Optus).
+- Every row sits on its own concrete tread (0.8 m rows); white aisle steps every 10 m of arc.
+- Boon to Ponting: each block between two aisles keeps one rake, so rows are level and the rake changes at an aisle.
+- Check: every seat raycast onto its tread: 0 off-tread, 0 clashing, 0 dropped.
+- Colours: Boon/Ponting blue (56,92,120), members and Northern Stand dark (40,44,52).
