@@ -10,7 +10,7 @@ Ready for gate (build r33, 2026-11-20). No open faults.
 - gate/: the proof set.
   - full_board.jpg: photo, render and 50% overlay.
   - parts_board.jpg and part_*.png.
-  - turn_*.png and turn_board.jpg: turntable.
+  - turn_*.png: turntable.
   - facade_closeup*.png.
   - near_wall*.png: near-side wall beside the photo, same camera.
   - topdown_overlay.png, topdown_tiles.png and topdown_valleys.txt: straight-down render on the satellite.
