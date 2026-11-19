@@ -4450,7 +4450,9 @@ func _test_tag_tradeoff() -> void:
 	var t_off := 0.0
 	var g_on := 0.0
 	var g_off := 0.0
-	var n := 20
+	# 100 pairs: over 20 the tagger's own loss (about 3 a game, give or take
+	# 1.2 over 20) can land near nothing on an unlucky set of seeds.
+	var n := 100
 	for i in range(n):
 		var on := _sim(900 + i, without, opp)
 		on.set_tactics(0, {"tag_id": str(star["id"])})
