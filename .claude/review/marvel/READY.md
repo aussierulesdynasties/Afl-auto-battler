@@ -40,3 +40,27 @@ paving 1.2 m slabs; glazing per-pane reflection. Sign: white MARVEL on red, whit
 ## Rebuild
 python gen_tex.py; python paint_tex.py; python parts2.py; then Blender 5.2 via gpu_slot: build2.py -- ov | views [views*.json] | top | glb; python ovtop.py,
 ovb.py r_ov.png ov8, board.py, zoomuv.py u0 u1 v0 v1 px/m out edge.
+
+## Gate round 3 (fixes for the 82dba61b4 texture gate)
+- Every map now 10 or more grey stddev (lowest 10.3). Sign fills (signred, signblack) get aluminium trim at each
+  1 m x 2 m panel joint, light streaks and a dust bloom toward the foot; the MARVEL / STADIUM lettering is drawn after
+  the fill and stays crisp. signblack's mean rose from RGB (15,15,17) to (28,28,31): a pure black fill cannot reach
+  stddev 10 without either going grey or adding lighter marks, and the photo's black panel reads dark grey in daylight.
+- Seats matched to the seat reference crop (tex_board_1, seats row): mean of the lit seat pixels in the crop is
+  RGB (108,128,146). Seat map before RGB (37,46,77) navy, after RGB (108,128,146). Seats empty: no crowd anywhere.
+- Slate corner blocks (and navy cladding): panel size read from exterior photo 000 (street level), scaled by the 1.5 m
+  mesh bays: 1.5 m wide x 3.6 m tall. Dark 20 mm joints, per-panel tone, rain streaks from every joint.
+
+## Gate checklist (ground builder rules, 8 items)
+1. Overlays: ov8_on.jpg, ov8_blend.jpg (oblique aerial), j_end_n.jpg, j_end_s.jpg.
+2. Turntable: r_tt_w/n/e/s.jpg, sh_tt.jpg, marvel_orbit.mp4 (72 frames).
+3. Facade and join close-ups: r_cu_facade, r_cu_corner_nw/sw/ne/se, r_cu_roofedge_nw/s, r_cu_tiers, r_cu_east,
+   r_cu_join_east_c (sh_cu.jpg, sh_cu_east.jpg); eye level r_low_0..7 (sh_low.jpg).
+4. Top-down overlay: t_on.jpg, t_blend.jpg; zooms zE1e, zE2e, zNEe, zSEe; part boards board_parts_1/2.jpg.
+5. Texture close-up per surface beside a photo crop: tex_board_1.jpg, tex_board_2.jpg (photo | before | game camera |
+   close). Grey stddev before->after, all 10 or more: base 61.3->61.3, canvas 2.9->17.6, concrete 5.0->13.9, curtain 28.9->28.9, deck 9.5->14.3, endroof 12.5->13.1, fascia 5.5->12.4, glass 9.6->13.2, gutter 4.5->11.5, louvre 25.9->19.4, mesh 18.4->18.4, navy 3.7->10.3, panel_lt 5.6->12.3, paving 6.7->13.8, plants 9.7->20.3, ribs 14.3->14.3, riser 2.3->10.8, seats 14.8->51.4, shopglass 28.2->28.2, sign_marvel new->73.6, sign_stadium new->99.7, signblack 2.1->12.6, signred 2.1->12.3, silver 16.2->14.9, slate 4.5->12.1, soffit 4.2->12.5, tank 8.7->13.5, teal 2.4->13.6, white 2.2->15.6.
+6. Seating close-up, empty seats: tex_board_1 seats row (game camera and close); r_cu_tiers.jpg. Crowd removed: none
+   (the model never had one).
+7. Each sign beside its crop: tex_board_2 last row, MARVEL STADIUM beside the 2019 aerial crop. It is the ground's only
+   own sign.
+8. no open faults
