@@ -24,8 +24,8 @@ def mat(name, rough=0.9):
 
 
 MN = ['grass', 'park', 'asphalt', 'seats', 'terrace', 'brick', 'roof', 'sawtooth', 'wood', 'white', 'greyroof',
-      'under', 'fosterblue', 'scoreblue', 'pool', 'yellow', 'red', 'orange', 'steel', 'concrete', 'glass', 'glassdark', 'timber',
-      'brickdark', 'seatslegends', 'roofgrey', 'steeldark', 'fosterssign', 'carltonsign']
+      'under', 'pool', 'yellow', 'red', 'orange', 'steel', 'concrete', 'glass', 'glassdark', 'timber',
+      'brickdark', 'seatslegends', 'roofgrey', 'steeldark']
 TILE = {'brick': 2, 'brickdark': 2, 'timber': 2, 'wood': 2, 'glass': 3, 'glassdark': 3, 'grass': 20, 'park': 20,
         'asphalt': 10}
 M = {n: mat(n) for n in MN}
