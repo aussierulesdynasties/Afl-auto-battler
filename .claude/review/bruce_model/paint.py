@@ -85,18 +85,19 @@ g = base(H, W, (62, 118, 50), grain=0.10, mott=0.05, mott_px=60)
 stripe = np.where((np.arange(W) // (8 * P)) % 2 == 0, 1.07, 0.93)[None, :, None]
 g = g * stripe
 save('grass_field', g, 16.0, 16.0)
-# ---- apron grass, no stripes
-ga = base(10 * P, 10 * P, (64, 116, 50), grain=0.14, mott=0.12, mott_px=50)
+# ---- apron grass, no stripes; dull green read off the 1990 vertical (SE apron median 53, 88, 67)
+ga = base(10 * P, 10 * P, (52, 86, 62), grain=0.14, mott=0.12, mott_px=50)
 for k in range(5):  # mower runs 2 m wide, alternate light/dark
     ga[:, int(k * 2 * P):int((k * 2 + 1) * P)] *= 1.07
-ga = blotch(ga, (128, 122, 70), 0.35, 30, 1.0)  # worn, dry patches
+ga = blotch(ga, (100, 104, 78), 0.35, 30, 1.0)  # worn, dry patches
 save('grass', ga, 10.0, 10.0)
-# ---- grass banks (south, east, north-east): mown across the slope every 1.5 m, worn tracks and dry patches
-gb = base(8 * P, 8 * P, (70, 122, 54), grain=0.14, mott=0.12, mott_px=40)
+# ---- grass banks (south, east, north-east): dull dark green read off the sunlit south bank in the 1990 vertical
+# (median 76, 101, 74), mown across the slope every 1.5 m, darker clumps and dry worn patches
+gb = base(8 * P, 8 * P, (72, 96, 68), grain=0.16, mott=0.14, mott_px=40)
 for k in range(6):
-    gb[int(k * 1.5 * P * 8 / 9):int((k * 1.5 + 0.75) * P * 8 / 9)] *= 1.08
-gb = blotch(gb, (140, 128, 80), 0.45, 25, 0.9)
-gb = blotch(gb, (40, 80, 38), 0.3, 18, 1.1)
+    gb[int(k * 1.5 * P * 8 / 9):int((k * 1.5 + 0.75) * P * 8 / 9)] *= 1.06
+gb = blotch(gb, (112, 112, 84), 0.40, 25, 0.9)
+gb = blotch(gb, (44, 66, 50), 0.40, 18, 1.0)
 save('grassbank', gb, 8.0, 8.0)
 
 # ---- bowl seating: one bay (u in bay units) x 4 rows (0.85 m per row up the rake), 48 px/m on a 15 m bay
@@ -125,6 +126,18 @@ vline(s, 0, 3, (240, 240, 236)); vline(s, aw - 3, 3, (240, 240, 236))
 save('seats', s, 1.0, RW * NROW, bay=True)
 # covered stand seating (same rows, aisles every 15 m along the stand)
 save('seats_m', s, BW, RW * NROW)
+
+# ---- moulded plastic bucket seat (pan, back, pedestal), 0.5 m tile, 400 px/m: orange-tan shell, faded top,
+# a darker moulded rim, scuffs and dust
+P = 400; n_ = int(0.5 * P)
+st = base(n_, n_, (196, 140, 96), grain=0.05, mott=0.10, mott_px=12)
+yy, xx = np.mgrid[0:n_, 0:n_] / n_
+rim = np.minimum(np.minimum(xx, 1 - xx), np.minimum(yy, 1 - yy))
+st = st * (0.80 + 0.20 * np.clip(rim / 0.08, 0, 1))[..., None]
+st = st * (1.06 - 0.12 * yy)[..., None]  # sun-faded toward the top
+st = blotch(st, (120, 92, 70), 0.35, 6, 1.0)  # scuffs
+st = blotch(st, (214, 196, 170), 0.25, 10, 1.2)  # dust
+save('seat', st, 0.5, 0.5)
 
 # ---- concrete (walkways, top band, ends): 6 m x 3 m, joints every 3 m, 64 px/m
 P = 64
@@ -295,9 +308,9 @@ for k in range(10):
 hline(pv, 0, 2, (150, 140, 128)); vline(pv, 0, 2, (150, 140, 128)); hline(pv, 3 * P, 2, (150, 140, 128)); vline(pv, 3 * P, 2, (150, 140, 128))
 save('pavers', pv, 6.0, 6.0)
 P = 32
-lw = base(int(12 * P), int(12 * P), (86, 112, 58), grain=0.14, mott=0.06, mott_px=60)
+lw = base(int(12 * P), int(12 * P), (64, 90, 66), grain=0.14, mott=0.06, mott_px=60)
 dry = (np.clip(noise(int(12 * P), int(12 * P), 110, 1.0), -1, 1) * 0.5 + 0.5)[..., None] * 0.25
-lw = lw * (1 - dry) + col((132, 124, 84)) * dry
+lw = lw * (1 - dry) + col((110, 108, 84)) * dry
 save('lawn', lw, 12.0, 12.0)
 # car park, measured on ref46: pairs of 5 m bays either side of a 4 m grass strip, 7.5 m aisles; a pair every 21.5 m.
 # u across the rows (u = 0 at the grass strip's centre), v along the rows (a bay line every 2.5 m)

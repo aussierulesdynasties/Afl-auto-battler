@@ -12,8 +12,8 @@ def c90(b, g, m=12.0):
 def c46(x, y, h): return R46.crop((x - h, y - h, x + h, y + h))
 R50 = Image.open('ref50.jpg').convert('RGB')
 def c50(x, y, h): return R50.crop((x - h, y - h, x + h, y + h))
-ROWS = [('seats', 'seats', lambda: c90(-30, 25), '1990 vertical, SE seats'),
-        ('grassbank', 'grass bank', lambda: c90(20, 8, 6), '1990 vertical, E bank'),
+ROWS = [('seat', 'bucket seat', lambda: c46(1000, 350, 20), 'ref46, N seats (orange shells between the crowd)'),
+        ('grassbank', 'grass bank', lambda: c90(-100, 11, 6), '1990 vertical, sunlit S bank'),
         ('concrete', 'rim walkway', lambda: c90(-110, 21.5, 8), '1990 vertical, S rim'),
         ('gravel', 'gravel', lambda: c90(-95, 30), '1990 vertical, S gravel'),
         ('path', 'path', lambda: c90(-100, 35.5, 8), '1990 vertical, S path'),

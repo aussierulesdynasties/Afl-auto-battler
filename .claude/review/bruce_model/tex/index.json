@@ -25,6 +25,11 @@
   "w": 15.0,
   "h": 3.4
  },
+ "seat": {
+  "img": "tex/seat.png",
+  "w": 0.5,
+  "h": 0.5
+ },
  "concrete": {
   "img": "tex/concrete.png",
   "w": 6.0,

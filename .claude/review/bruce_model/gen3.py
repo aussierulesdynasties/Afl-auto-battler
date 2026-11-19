@@ -374,7 +374,7 @@ boxes.append(dict(name='white_box', c=list(ctr[:2]), hx=float(np.linalg.norm(e1[
                   yaw=math.atan2(e1[1], e1[0]), close='white'))
 for k, (u0, v0, u1, v1, z) in enumerate(((1400, 862, 1478, 787, 6.0), (1410, 868, 1486, 795, 4.5), (1420, 874, 1494, 803, 3.0), (1430, 880, 1502, 811, 1.5))):
     pa = bp(u0, v0, z); pb = bp(u1, v1, z); c = (pa + pb) / 2; d = pb - pa
-    boxes.append(dict(name='ramp%d' % k, c=list(c[:2]), hx=float(np.linalg.norm(d[:2]) / 2), hy=1.0, z0=z - 0.4, z1=z, yaw=math.atan2(d[1], d[0]), close='concrete'))
+    boxes.append(dict(name='ramp%d' % k, c=list(c[:2]), hx=float(np.linalg.norm(d[:2]) / 2), hy=1.0, z0=PLAZA, z1=z, yaw=math.atan2(d[1], d[0]), close='concrete'))  # solid to the plaza (no floating slabs)
 # light towers: shafts thick at the base, thin at the top; lamp heads read off ref46 at the head height
 TOW = json.load(open('osm/geo.json'))['towers']; TH_ = json.load(open('cam2.json'))['p'][7]
 for (x, y) in TOW:
@@ -467,8 +467,32 @@ _c = bp(1545, 1115, PLAZA); rd = bp(1595, 1250, PLAZA)[:2] - _c[:2]; rd = rd / n
 flats = [dict(name='g_lawn', poly=[list(bp(u, v, PLAZA - 0.06)) for u, v in LAWN], close='lawn', rot=0.0),
          dict(name='g_pave', poly=[list(bp(u, v, PLAZA - 0.03)) for u, v in PAVE], close='pavers', rot=0.0),
          dict(name='g_carpark', poly=[list(bp(u, v, PLAZA - 0.02)) for u, v in CARP], close='carpark', rot=float(math.atan2(_n[1], _n[0])), uoff=float(np.dot(_c[:2], _n)))]
+# the plaza the stand stands on (gate 2026-11-19: the stand hung in the air): pale pavers at plaza height from the
+# stand's rear wall out 18 m (past the stair feet and turnstiles, 13 m, and the stepped ramps, up to 18 m), joined at both ends
+# to the foot of the bowl's outer bank (skirt)
+_out = Rr[:, :2] - np.array([CX, CY]); _out /= np.linalg.norm(_out, axis=1)[:, None]
+# the line runs on 6 m past each end of the stand to take the end trusses' feet (4 m past the ends)
+_in = Rr[:, :2].copy(); _e0 = _in[0] - _in[1]; _e0 /= np.linalg.norm(_e0); _e1 = _in[-1] - _in[-2]; _e1 /= np.linalg.norm(_e1)
+_in = np.vstack([_in[0] + _e0 * 6.0, _in, _in[-1] + _e1 * 6.0]); _out = np.vstack([_out[0], _out, _out[-1]])
+_far = _in + _out * 18.0
+_sk = np.array(rings['skirt'])
+_poly = [[*q, PLAZA - 0.02] for q in _in] + [[*_sk[-1][:2], PLAZA - 0.02]] + [[*q, PLAZA - 0.02] for q in _far[::-1]] + [[*_sk[0][:2], PLAZA - 0.02]]
+plaza = [dict(name='g_plaza', poly=_poly, close='pavers', rot=0.0)]
+# the white box and the four stepped ramps stand past the stand's south end: a paved pad under them (their corners'
+# convex hull, 2 m wider all round)
+_pts = []
+for b_ in boxes:
+    if b_['name'] == 'white_box' or b_['name'].startswith('ramp'):
+        _c_, _s_ = math.cos(b_['yaw']), math.sin(b_['yaw'])
+        for x_, y_ in ((-1, -1), (1, -1), (1, 1), (-1, 1)):
+            for gx, gy in ((-2, -2), (2, -2), (2, 2), (-2, 2)):
+                X = x_ * b_['hx'] + gx * 0.5 * (1 if x_ > 0 else 1); Y = y_ * b_['hy'] + gy * 0.5
+                _pts.append([b_['c'][0] + _c_ * (X + gx * 0.5) - _s_ * (Y + gy * 0.5), b_['c'][1] + _s_ * (X + gx * 0.5) + _c_ * (Y + gy * 0.5)])
+from scipy.spatial import ConvexHull
+_pts = np.array(_pts); _h = ConvexHull(_pts)
+plaza.append(dict(name='g_pad', poly=[[*_pts[v], PLAZA - 0.03] for v in _h.vertices], close='pavers', rot=0.0))
 out = dict(cams=cams, centre=[CX, CY], field_ring=field_ring, rings=rings, ring_order=list(rings), bowl_strips=strips, closed=False,
-           lofts=lofts, boxes=boxes, tubes=tubes, flats=[], no_field=True, closeups=cl, step=2.0, min_cos=0.30, no_photo=True,
+           lofts=lofts, boxes=boxes, tubes=tubes, flats=plaza, no_field=True, closeups=cl, step=2.0, min_cos=0.30, no_photo=True,
            ring_th=TH.tolist(), bay_ang=BAY_ANG, bay_phase=BAY_PHASE, field_axis=E['t'])
 json.dump(out, open('parts.json', 'w'), default=lambda o: o.tolist() if hasattr(o, 'tolist') else float(o))
 print('rings', len(TH), 'lofts', len(lofts), 'boxes', len(boxes), 'tubes', len(tubes))

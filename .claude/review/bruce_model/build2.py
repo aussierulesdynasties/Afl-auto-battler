@@ -133,6 +133,94 @@ def arclen(A):
 V = lambda p: Vector(p)
 R = {k: [V(p) for p in v] for k, v in P['rings'].items()}  # bowl rings, equal length, closed
 
+# ---------------------------------------------------------------- seating built as seats (gate 2026-11-19: "Build them as seats")
+# the seat surface is a flight of concrete steps (one tread per row, about 0.8 m deep), each row carrying moulded
+# bucket seats 0.5 m apart (pan, back, a pedestal under the pan); aisles keep their steps and no seats
+ROW_D = 0.8; SEAT_W = 0.5
+
+
+def _box(o, t, f, x0, x1, y0, y1, z0, z1, bottom=False):
+    """box in a local frame (o origin, t along the row, f toward the field, z up): outward-wound quads + metre uvs"""
+    up = Vector((0, 0, 1))
+    P_ = lambda x, y, z: o + t * x + f * y + up * z
+    lo = [P_(x0, y0, z0), P_(x1, y0, z0), P_(x1, y1, z0), P_(x0, y1, z0)]
+    hi = [P_(x0, y0, z1), P_(x1, y0, z1), P_(x1, y1, z1), P_(x0, y1, z1)]
+    # (x0,y0)->(x1,y0)->(x1,y1)->(x0,y1) runs anticlockwise from above when t x f points up
+    if t.cross(f).z < 0:
+        lo = lo[::-1]; hi = hi[::-1]
+    F = [hi] + ([lo[::-1]] if bottom else [])
+    for i in range(4):
+        j = (i + 1) % 4; F.append([lo[i], lo[j], hi[j], hi[i]])
+    U = []
+    for q in F:
+        e = (q[1] - q[0]); h = e.length; e = e.normalized() if h > 0 else e
+        n = e.cross(q[-1] - q[0]).normalized() if h > 0 else up
+        w = n.cross(e)
+        U.append([((p - q[0]).dot(e), (p - q[0]).dot(w)) for p in q])
+    return F, U
+
+
+def terrace(name, A, B, ub, aisle):
+    """A front (low) and B back (high) polylines; ub per index: the aisle coordinate (bay units or metres); aisle(u) True
+    where the aisle runs. Builds the stepped concrete, then the seats on every tread outside the aisles."""
+    dep = sorted(((B[i] - A[i]).to_2d().length for i in range(len(A))))
+    n = max(1, int(round(dep[len(dep) // 2] / ROW_D)))
+    cols = []  # (a, b, u, s) columns along the strip, s = metres along A
+    s_ = 0.0
+    for i in range(len(A) - 1):
+        m = max(1, int(math.ceil(max((A[i + 1] - A[i]).length, (B[i + 1] - B[i]).length) / 2.0)))
+        for k in range(m + (1 if i == len(A) - 2 else 0)):
+            x = k / m
+            a = A[i].lerp(A[i + 1], x); b = B[i].lerp(B[i + 1], x)
+            if cols: s_ += (a - cols[-1][0]).length
+            cols.append((a, b, ub[i] + (ub[i + 1] - ub[i]) * x, s_))
+    prof = []
+    for a, b, u, s in cols:
+        P0 = [a.lerp(b, k / n) for k in range(n + 1)]
+        pts = [P0[0]]
+        for k in range(n):
+            pts.append(Vector((P0[k].x, P0[k].y, P0[k + 1].z))); pts.append(P0[k + 1])
+        vv = [0.0]
+        for k in range(1, len(pts)): vv.append(vv[-1] + (pts[k] - pts[k - 1]).length)
+        prof.append((pts, vv, s))
+    F = []; T = []
+    for c in range(len(prof) - 1):
+        (p0, v0, s0), (p1, v1, s1) = prof[c], prof[c + 1]
+        for k in range(len(p0) - 1):
+            if (p0[k + 1] - p0[k]).length < 1e-4 and (p1[k + 1] - p1[k]).length < 1e-4: continue
+            F.append([p0[k], p1[k], p1[k + 1], p0[k + 1]]); T.append([(s0, v0[k]), (s1, v1[k]), (s1, v1[k + 1]), (s0, v0[k + 1])])
+    mk(name + '_steps', F, 'concrete', uvs=T)
+    # seats: one row per tread, set along a line 0.6 of the way back from the tread's front edge
+    SF = []; ST = []; nseat = 0
+    for k in range(n):
+        line = []
+        for a, b, u, s in cols:
+            fr = a.lerp(b, k / n); bk = a.lerp(b, (k + 1) / n); p = fr.lerp(bk, 0.6); p.z = bk.z
+            d = (fr - bk).to_2d().length
+            line.append((p, u, d, (a - b).to_2d().normalized()))
+        L = [0.0]
+        for j in range(1, len(line)): L.append(L[-1] + (line[j][0] - line[j - 1][0]).to_2d().length)
+        sv = SEAT_W / 2; j = 0
+        while sv < L[-1] - SEAT_W / 2:
+            while L[j + 1] < sv: j += 1
+            x = (sv - L[j]) / max(1e-9, L[j + 1] - L[j])
+            p = line[j][0].lerp(line[j + 1][0], x); u = line[j][1] + (line[j + 1][1] - line[j][1]) * x
+            sv += SEAT_W
+            if aisle(u): continue
+            d = line[j][2] + (line[j + 1][2] - line[j][2]) * x
+            f2 = line[j][3].lerp(line[j + 1][3], x).normalized(); f = Vector((f2.x, f2.y, 0)); t = Vector((0, 0, 1)).cross(f)
+            r = d / 0.8  # tread depth relative to 0.8 m: keep the seat on its tread
+            for bx in ((-0.21, 0.21, -0.20 * r, 0.20 * r, 0.40, 0.45),       # pan
+                       (-0.21, 0.21, -0.27 * r, -0.21 * r, 0.40, 0.84),      # back
+                       (-0.05, 0.05, -0.16 * r, -0.04 * r, 0.0, 0.40)):      # pedestal
+                Fb, Tb = _box(p, t, f, *bx, bottom=(bx[4] > 0.1)); SF += Fb; ST += Tb
+            nseat += 1
+    if SF: mk(name + '_seats', SF, 'seat', uvs=ST)
+    return nseat
+
+
+NSEAT = 0
+
 # bowl: grass edge -> apron -> fence face -> terraces (walkway where present) -> top band -> outer face
 order = P['ring_order']
 for si, s_ in enumerate(P['bowl_strips']):
@@ -147,6 +235,9 @@ for si, s_ in enumerate(P['bowl_strips']):
         U = [(t - ph) / ba for t in TH]
     else:
         U = arclen(A)
+    if close == 'seats':  # aisle where the bay coordinate's fraction is in the painted aisle (first 8% of the bay)
+        NSEAT += terrace('bowl_%s_%s_%d' % (ka, kb, si), A, B, U, lambda u: (u % 1.0) < 0.08)
+        continue
     F, T = strip_uv(A, B, U, P.get('step', 2.0))
     mk('bowl_%s_%s_%d' % (ka, kb, si), F, close, uvs=T)
 
@@ -180,6 +271,9 @@ for fl in P.get('flats', []):
 # generic polyline lofts and boxes from parts.json
 for s in P.get('lofts', []):
     A = [V(p) for p in s['a']]; B = [V(p) for p in s['b']]
+    if s['close'] == 'seats_m':  # covered stand: an aisle 1.2 m wide every 15 m along the stand
+        NSEAT += terrace(s['name'], A, B, arclen(A), lambda u: (u % 15.0) < 1.2)
+        continue
     F, T = strip_uv(A, B, arclen(A), s.get('step', 2.0))
     mk(s['name'], F, s['close'], uvs=T)
 
@@ -308,7 +402,7 @@ for o, close, bay in PARTS:
                     uu, vv = h.dot(X), X.z
                 uv.data[li].uv = (uu / cl['w'], (vv - cl.get('v0', 0.0)) / cl['h'])
             stats['hand_' + close if NOPH else 'close_' + close] = stats.get('close_' + close, 0) + 1
-print('FACES', stats)
+print('FACES', stats, 'SEATS', NSEAT)
 
 out = os.path.abspath(a[1])
 bpy.ops.export_scene.gltf(filepath=out, export_format='GLB', export_image_format='JPEG', export_jpeg_quality=95)
