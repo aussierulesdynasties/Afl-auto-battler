@@ -6,6 +6,7 @@ Run from this folder (Git Bash), with B = blender.exe and G = Godot console exe:
     python maketex2.py && python mktex3.py && python seattex.py && python turf.py   # hand-made textures -> tex2/
     python mktex4.py                                # photo-matched shade variants (re-runs mktex3 first, safe to repeat)
     python paint_tex.py                             # hand-painted detail on every plain map (texpaint.py), keeps mktex4's mean colour
+    python paint_tex2.py                            # gate fix: apron dirt/asphalt/grass, dark steel deck, grey roof masts
     python gen.py                                   # geometry in metres -> mesh.npz, mats.json
     WAV_CYCLES=1 "$B" -b --python build2.py -- "$PWD/out" render    # matched-camera render (camr6.json)
     python ov2.py && python cmp.py && python proofs.py              # photo | render | overlay, crop boards
@@ -28,4 +29,6 @@ Run from this folder (Git Bash), with B = blender.exe and G = Godot console exe:
   radial.py / radial2.py read brightness along lines straight out from the fence, satellite vs model.
 - fence.py: the oval's boundary parameterisation P(s, d, z) (perimeter 520.4 m).
 - Left out per director rulings of 2026-11-18: the playing field, goal and behind posts, ground boards, all lettering.
+- apchk.py (apron colour, photo vs render at traced points), mastchk.py (roof mast tops in the photo), samp6.py
+  (photo/render crops with marks at absolute heights): gate-fix checks.
 - gcrop.py, pj.py, lines.py, dinline.py: measuring helpers (crops, projection, roof-edge d-lines) for checking the model against ref.jpg.

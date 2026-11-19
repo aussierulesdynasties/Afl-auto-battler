@@ -15,6 +15,18 @@ Row 202 step 2b, resumed 2026-11-19 under ground_builder_rules.md. Reference: re
 - No crowd: every seat shows empty in its real colour.
 - North: the model is turned 4.05 deg onto true north (north.json). The glb has the oval centre at the origin, north = glTF -Z.
 
+## Gate faults of 88c9baa78, fixed (lead's board waverley_gate_faults.jpg)
+1. Near-left, along the wall s 136-170: the white concrete walkway on piers is now a dark steel deck and frame against
+   the wall (steel posts at d 36 and 39.3 every 3 m, X bracing, dark rails), deck at z 10 as in the photo. The stair
+   rails are dark too.
+2. Apron, traced from the photo (apchk.py: photo vs render colour at traced points): plain dirt on the ring s 118-178;
+   dirt slope with grass tufts s 118-182 (grass beyond d 48 for s < 160); light pink dirt in front of the green building
+   s 182-187; asphalt ring s 178-252; a grey plaza s 187-200 down to d 52, with the road running on down the slope at
+   s 191-199; dry grass s 200-252. Every new ground map has
+   fine detail only on an 8 m repeat: no blotches, no per-patch tones, so no seams.
+3. Members roof masts: tops measured from the photo at z 44.5-45.5 (median 45.0, mastchk.py), was 45.5; masts 0.3 m,
+   stays 0.18 m, grey (mastg), not white.
+
 ## Proofs (this folder)
 1. Camera-matched overlays: waverley_photo_render_overlay.png, waverley_overlay50_1023.png, part_*.png (six crops),
    waverley_cmp_{rf,nf,lf,mem,farR}.png (photo above, model below).

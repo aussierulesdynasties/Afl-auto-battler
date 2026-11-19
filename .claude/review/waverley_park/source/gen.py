@@ -6,13 +6,13 @@ MATN=[]
 def mi(n):
     if n not in MATN:MATN.append(n)
     return MATN.index(n)
-TILE={'greenpaint':(2,2.6),'roofm':(2,4),'dirt':(4,4),'kiosko':(2,2),'kioskr':(2,2),'kioskb':(2,2),'rib':(1,1),'pave':(4,4),'grass':(4,4),'concrete':(4,4),'aislec':(4,4),'bowlconc':(4,4),'bowllight':(4,4),'facade':(4,4),'fvoid':(2,2),'fcol':(1,1),'fslab':(1,1),'roof':(4,4),'roofn':(4,4),'white':(2,2),'steel':(2,2),'underside':(4,4),'glass':(4,2),'race':(4,2),'blueroof':(4,2),'navywall':(3,3),'redpaint':(2,2),'black':(2,2)}
+TILE={'greenpaint':(2,2.6),'roofm':(2,4),'dirt':(4,4),'kiosko':(2,2),'kioskr':(2,2),'kioskb':(2,2),'rib':(1,1),'pave':(4,4),'grass':(4,4),'dirtA':(8,8),'dirtS':(8,8),'dirtP':(8,8),'asph':(8,8),'asphp':(8,8),'grass_n':(8,8),'grass_nl':(8,8),'steeldk':(2,2),'mastg':(1,1),'concrete':(4,4),'aislec':(4,4),'bowlconc':(4,4),'bowllight':(4,4),'facade':(4,4),'fvoid':(2,2),'fcol':(1,1),'fslab':(1,1),'roof':(4,4),'roofn':(4,4),'white':(2,2),'steel':(2,2),'underside':(4,4),'glass':(4,2),'race':(4,2),'blueroof':(4,2),'navywall':(3,3),'redpaint':(2,2),'black':(2,2)}
 def tile(m):
     if m.startswith('seat_'):return (2,1)
     return TILE.get(m,(4,4))
 def quad(a,b,c,d,m,uv=None):
     a,b,c,d=[np.asarray(x,float) for x in(a,b,c,d)]
-    if uv is None and m in ('grass','dirt','pave'):   # ground: world-planar UVs so the texture runs on across quads
+    if uv is None and m in ('grass','dirt','pave','dirtA','dirtS','dirtP','asph','asphp','grass_n','grass_nl'):   # ground: world-planar UVs so the texture runs on across quads
         tu,tv=tile(m);uv=[(x[0]/tu,x[1]/tv) for x in(a,b,c,d)]
     if uv is None:
         tu,tv=tile(m);lu=np.linalg.norm(b-a);lv=np.linalg.norm(d-a)
@@ -279,7 +279,8 @@ for sx,fl in((MEM[0],False),(MEM[1],True)):
         a=P([sx],35.0,20.4)[0];b=P([sx],35.0,33.4)[0];c=P([sx],53.0,ZUT)[0];e=P([sx],53.0,38.3)[0]
         for u_,v_ in((a,b),(c,e),(a,e),(b,c)):beam(u_,v_,0.35,'steel')
 for sm in np.arange(MEM[0]+2.0,MEM[1]+0.1,8.0):   # 17 roof masts, one every 8 m, stays to the front
-    top=P([sm],53.0,45.5)[0];beam(P([sm],53.0,38.5)[0],top,0.5,'white');beam(top,P([sm],37.0,34.6)[0],0.3,'white');beam(P([sm],35.3,34.15)[0],P([sm],52.9,39.1)[0],0.25,'white')
+    # gate fix 2026-11-19: photo posts are thin and grey, tops at z 44.5-45.5 (median 45.0, mastchk.py)
+    top=P([sm],53.0,45.0)[0];beam(P([sm],53.0,38.5)[0],top,0.3,'mastg');beam(top,P([sm],37.0,34.6)[0],0.18,'mastg');beam(P([sm],35.3,34.15)[0],P([sm],52.9,39.1)[0],0.15,'mastg')
 # the photographed west end is skewed: the back corner sits 3.3 m short of the front corner
 def _shear(Vs):
     Vs=np.asarray(Vs,float);sh=Vs.shape;X=Vs.reshape(-1,3);sg=np.arange(380,535,0.05);Fg=F(sg)
@@ -337,19 +338,32 @@ def outer_d(s):
     if 279<=s<=309:return max(45.0+18.0*w,46.5+(min(max(s,283),305)-284.8)*0.406+2.0)
     return 45.0+18.0*w
 ssG=sgrid(0,PER,2.0)
-ssP=ssG[(ssG>=126)&(ssG<=PER-1)];ssD=ssG[ssG<=126]
-strip2(ssP,lambda s:[(DR_OUT,ZG(s)),(outer_d(s),ZG(s))],['pave'])
-strip2(ssD,lambda s:[(DR_OUT,ZG(s)),(outer_d(s),ZG(s))],['dirt'])
-ssG1=ssG[(ssG>=118)&(ssG<=180)];ssG2=np.r_[ssG[ssG>=180]];ssG0=ssG[ssG<=118]
-for sg_,m_ in((ssG0,'grass'),(ssG1,'dirt'),(ssG2,'grass')):strip2(sg_,lambda s:[(outer_d(s),ZG(s)),(outer_d(s)+2.0*ZG(s)+0.01,0.0)],[m_])
+def _ss(a,b):return ssG[(ssG>=a)&(ssG<=b)]
+# concourse ring (d 35.2 to outer_d). Gate fix 2026-11-19, traced from the photo: plain dirt s 118-178, asphalt s 178-252
+ssD=ssG[ssG<=118]
+for sg_,m_ in((ssD,'dirt'),(_ss(118,178),'dirtA'),(_ss(178,252),'asph'),(_ss(252,PER-1),'pave')):strip2(sg_,lambda s:[(DR_OUT,ZG(s)),(outer_d(s),ZG(s))],[m_])
+# embankment down to z 0. Photo: grass beyond d 48 at s 118-160 (dirt above it), dirt with tufts s 160-186,
+# a grey asphalt plaza and road down the slope in front of the green building s 186-206, dry grass s 206-252
+def emb(s,d):return ZG(s)-(d-outer_d(s))/2.0
+def emb_split(ss,dk,m0,m1):strip2(ss,lambda s:[(outer_d(s),ZG(s)),(dk,emb(s,dk)),(outer_d(s)+2.0*ZG(s)+0.01,0.0)],[m0,m1])
+# plaza traced from the photo: s 187-200 down to d 52 (light pink dirt with small trees s 182-187), then only the road s 191-199 runs on down the slope
+ssG=np.unique(np.r_[ssG,182,187,191,199,200])
+for sg_,m_ in((ssG[ssG<=118],'grass'),(_ss(160,182),'dirtS'),(_ss(182,187),'dirtP'),(_ss(191,199),'asphp'),(_ss(200,252),'grass_n'),(_ss(252,PER),'grass')):strip2(sg_,lambda s:[(outer_d(s),ZG(s)),(outer_d(s)+2.0*ZG(s)+0.01,0.0)],[m_])
+emb_split(_ss(118,160),48.0,'dirtS','grass_nl');emb_split(_ss(187,191),52.0,'asphp','dirtP');emb_split(_ss(199,200),52.0,'asphp','grass_n')
 # ---------------- near-side outside works, from the photo (s 136-210) ----------------
 ssd=sgrid(136,170,1.5)   # raised concourse deck where the ground falls away
-strip(ssd,[(DR_OUT,10.0),(39.5,10.0),(39.5,9.4),(DR_OUT,9.4)],['pave','concrete','underside'])
-endcap(136,[(DR_OUT,10.0),(39.5,10.0)],'concrete')
-for sx in np.arange(136.5,170,6.0):beam(P([sx],39.0,ZG(sx)-0.3)[0],P([sx],39.0,9.4)[0],0.6,'concrete')
+# gate fix 2026-11-19: the photo shows a dark steel deck and frame along the wall (no white piers, no white rails)
+strip(ssd,[(DR_OUT,10.0),(39.5,10.0),(39.5,9.4),(DR_OUT,9.4)],['steeldk','steeldk','steeldk'])
+endcap(136,[(DR_OUT,10.0),(39.5,10.0),(39.5,9.4)],'steeldk')
+_fs=np.arange(136.5,170.1,3.0)
+for sx in _fs:   # steel posts at the outer edge and at the wall, 3 m apart
+    for dd in(36.0,39.3):beam(P([sx],dd,ZG(sx)-0.3)[0],P([sx],dd,9.4)[0],0.2,'steeldk')
+for a_,b_ in zip(_fs[:-1],_fs[1:]):   # X bracing in the outer frame
+    za=ZG(a_);zb=ZG(b_)
+    if 9.4-max(za,zb)>0.8:beam(P([a_],39.3,za)[0],P([b_],39.3,9.4)[0],0.12,'steeldk');beam(P([b_],39.3,zb)[0],P([a_],39.3,9.4)[0],0.12,'steeldk')
 ssr=sgrid(136,176,1.0)
-for zr in(10.5,11.05):strip(ssr,[(39.4,zr),(39.4,zr+0.07)],['white'])
-for sx in np.arange(136,176,2.0):beam(P([sx],39.4,10.0)[0],P([sx],39.4,11.1)[0],0.06,'white')
+for zr in(10.5,11.05):strip(ssr,[(39.4,zr),(39.4,zr+0.07)],['steeldk'])
+for sx in np.arange(136,176,2.0):beam(P([sx],39.4,10.0)[0],P([sx],39.4,11.1)[0],0.06,'steeldk')
 # photo: stairs and kiosk tops sit in the roof's shade and read dark grey
 def stair(s_bot,s_top,zb,zt,d0=DR_OUT,d1=DR_OUT+2.0):
     n=int(round((zt-zb)/0.18));dz=(zt-zb)/n
@@ -359,7 +373,7 @@ def stair(s_bot,s_top,zb,zt,d0=DR_OUT,d1=DR_OUT+2.0):
         quad(P([sa],d1,z-dz)[0],P([sa],d1,z)[0],P([sa],d0,z)[0],P([sa],d0,z-dz)[0],'aislec')
     for dd in(d1,):
         strip(sgrid(min(s_bot,s_top),max(s_bot,s_top),1.0),[(dd,0)],[]) if False else None
-        beam(P([s_bot],dd,zb+1.0)[0],P([s_top],dd,zt+1.0)[0],0.06,'white')
+        beam(P([s_bot],dd,zb+1.0)[0],P([s_top],dd,zt+1.0)[0],0.06,'steeldk')   # photo: stair rails read dark
         A=P([s_bot],dd,zb)[0];B=P([s_top],dd,zt)[0];C_=P([s_top],dd,zt-0.5)[0];D=P([s_bot],dd,zb-0.01)[0];quad(A,B,C_,D,'aislec')
     ls=sgrid(s_top,s_top-np.sign(s_bot-s_top)*1.5,1.5)   # top landing and door
     strip(ls,[(d0,zt),(d1,zt),(d1,zt-0.4)],['aislec','aislec'])
