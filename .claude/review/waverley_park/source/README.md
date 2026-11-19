@@ -30,5 +30,5 @@ Run from this folder (Git Bash), with B = blender.exe and G = Godot console exe:
 - fence.py: the oval's boundary parameterisation P(s, d, z) (perimeter 520.4 m).
 - Left out per director rulings of 2026-11-18: the playing field, goal and behind posts, ground boards, all lettering.
 - apchk.py (apron colour, photo vs render at traced points), mastchk.py (roof mast tops in the photo), samp6.py
-  (photo/render crops with marks at absolute heights): gate-fix checks.
+  (photo/render crops with marks at absolute heights), towchk.py (light tower steel colour, photo vs render): gate-fix checks.
 - gcrop.py, pj.py, lines.py, dinline.py: measuring helpers (crops, projection, roof-edge d-lines) for checking the model against ref.jpg.

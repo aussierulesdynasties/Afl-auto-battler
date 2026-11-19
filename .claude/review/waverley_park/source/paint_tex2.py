@@ -42,3 +42,10 @@ grass('grass_nl',c255(75,78,34),75)             # slope grass s 118-160 (photo 8
 grass('grass_n',c255(66,52,23),76)              # slope grass s 200-252, dry (photo 80,67,42)
 steeldk('steeldk',c255(38,30,30),77)            # near-left deck, frame and rails (photo 32,25,26)
 mastg('mastg',c255(140,135,132),78)             # Members roof masts and stays: grey (photo posts ~150,145,140)
+# gate 2 (2026-11-19, lead's board waverley_gate2_faults.jpg): light tower lattice, legs, platform and head stays are
+# dark grey steel. Photo along tower A's legs (towchk.py) median 100,100,86 vs render 159,164,170 on steel (mean 186,189,192).
+def towerg(name,t,seed):
+    c=Canvas(2,2,t,seed,N);c.mul(1+0.06*c.noise(0.1,0.4))
+    for v in np.arange(0,2,0.5):c.hline(v,0.02,t*0.7,0.6)          # bolted splice plates
+    c.speckle(10,(0.005,0.02),0.30);c.speckle(6,(0.005,0.015),0.25,light=True);c.grain(0.05);out(name,c,t)
+towerg('towerg',c255(62,60,56),80)   # first try 108,106,100 still read light grey beside the photo crop

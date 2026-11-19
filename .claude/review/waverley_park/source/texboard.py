@@ -8,7 +8,7 @@ ROWS=[('roof','near roof sheeting',(500,437)),('roofm','members roof',(482,89)),
 ('greenpaint','long low building',(520,507)),('glass','members glass band',(485,128)),('steel','light tower steel',(140,350)),
 ('grass','outside embankment grass',(975,455)),('dirt','outside dirt',(930,505)),('white','white paint (low building roof)',(620,482)),
 ('dirtA','near ring dirt',(300,495)),('dirtS','near slope dirt',(415,545)),('dirtP','pink dirt by the building',(510,530)),('grass_nl','near-left slope grass',(270,551)),('asph','near ring asphalt',(750,485)),
-('asphp','plaza and road',(600,540)),('grass_n','near-right dry grass',(800,545)),('steeldk','dark steel deck (near left)',(307,460)),('mastg','members roof masts',(480,76))]
+('asphp','plaza and road',(600,540)),('grass_n','near-right dry grass',(800,545)),('steeldk','dark steel deck (near left)',(307,460)),('mastg','members roof masts',(480,76)),('towerg','light tower steel',(262,120))]
 C=230;pad=8;cols=4;rows=(len(ROWS)+cols-1)//cols
 B=Image.new('RGB',(cols*(2*C+3*pad),rows*(C+40)+10),(24,24,24));d=ImageDraw.Draw(B)
 lst=[]

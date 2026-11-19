@@ -27,6 +27,12 @@ Row 202 step 2b, resumed 2026-11-19 under ground_builder_rules.md. Reference: re
 3. Members roof masts: tops measured from the photo at z 44.5-45.5 (median 45.0, mastchk.py), was 45.5; masts 0.3 m,
    stays 0.18 m, grey (mastg), not white.
 
+## Gate fault of a6691dd8c, fixed (lead's board waverley_gate2_faults.jpg)
+1. Light towers: the lattice, legs, platform and head stays were bright white steel. They are now dark grey steel
+   (towerg, mean 62,60,56), matched by eye against the photo crop of the left-end tower (waverley_tower_ab.png:
+   photo left, model right; waverley_cmp_lf.png). A first try at 108,106,100 still read light grey, so it went darker.
+   Texture board row "light tower steel".
+
 ## Proofs (this folder)
 1. Camera-matched overlays: waverley_photo_render_overlay.png, waverley_overlay50_1023.png, part_*.png (six crops),
    waverley_cmp_{rf,nf,lf,mem,farR}.png (photo above, model below).

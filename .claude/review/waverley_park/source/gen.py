@@ -6,7 +6,7 @@ MATN=[]
 def mi(n):
     if n not in MATN:MATN.append(n)
     return MATN.index(n)
-TILE={'greenpaint':(2,2.6),'roofm':(2,4),'dirt':(4,4),'kiosko':(2,2),'kioskr':(2,2),'kioskb':(2,2),'rib':(1,1),'pave':(4,4),'grass':(4,4),'dirtA':(8,8),'dirtS':(8,8),'dirtP':(8,8),'asph':(8,8),'asphp':(8,8),'grass_n':(8,8),'grass_nl':(8,8),'steeldk':(2,2),'mastg':(1,1),'concrete':(4,4),'aislec':(4,4),'bowlconc':(4,4),'bowllight':(4,4),'facade':(4,4),'fvoid':(2,2),'fcol':(1,1),'fslab':(1,1),'roof':(4,4),'roofn':(4,4),'white':(2,2),'steel':(2,2),'underside':(4,4),'glass':(4,2),'race':(4,2),'blueroof':(4,2),'navywall':(3,3),'redpaint':(2,2),'black':(2,2)}
+TILE={'greenpaint':(2,2.6),'roofm':(2,4),'dirt':(4,4),'kiosko':(2,2),'kioskr':(2,2),'kioskb':(2,2),'rib':(1,1),'pave':(4,4),'grass':(4,4),'dirtA':(8,8),'dirtS':(8,8),'dirtP':(8,8),'asph':(8,8),'asphp':(8,8),'grass_n':(8,8),'grass_nl':(8,8),'steeldk':(2,2),'mastg':(1,1),'towerg':(2,2),'concrete':(4,4),'aislec':(4,4),'bowlconc':(4,4),'bowllight':(4,4),'facade':(4,4),'fvoid':(2,2),'fcol':(1,1),'fslab':(1,1),'roof':(4,4),'roofn':(4,4),'white':(2,2),'steel':(2,2),'underside':(4,4),'glass':(4,2),'race':(4,2),'blueroof':(4,2),'navywall':(3,3),'redpaint':(2,2),'black':(2,2)}
 def tile(m):
     if m.startswith('seat_'):return (2,1)
     return TILE.get(m,(4,4))
@@ -409,7 +409,7 @@ ss=sgrid(183.8,186.4,0.5);strip2(ss,lambda s:[(43.2,ZG(s)+2.9),(43.2,ZG(s)+4.6),
 # ---------------- goal posts ----------------
 ax=np.array(TJ['ax']);ay=np.array([-ax[1],ax[0]])
 # director 2026-11-18 'Posts out': the game draws its own goal and behind posts
-# ---------------- light towers ----------------
+# ---------------- light towers ----------------  (gate 2, 2026-11-19: frames dark grey steel, towerg, as in the photo)
 # 4th value: tower foot height above the stadium ring ground (A stands on higher ground; photo grid: foot at y 160)
 # 5th value: lamp panel height. Photo grid: C and D heads read about 1.3x shorter than A/B's 6 m panel
 TW=[(-135.2,12.0,58.3,5.0,6.0),(86.0,131.8,55.7,0.0,6.0),(140.2,-40.7,45.9,0.0,4.6),(-10.9,-133.2,47.3,0.0,4.6)]
@@ -419,13 +419,13 @@ for x,y,zh,zb,hh in TW:
     def leg(i,j,z):
         hw=1.8+(1.5-1.8)*(z-zg)/(ztop-zg);c=base+sd*i*hw+to*j*hw;return np.r_[c,z]
     cs=[(1,1),(-1,1),(-1,-1),(1,-1)]
-    for i,j in cs:beam(leg(i,j,zg),leg(i,j,ztop),0.35,'steel')
+    for i,j in cs:beam(leg(i,j,zg),leg(i,j,ztop),0.35,'towerg')
     zs=np.linspace(zg,ztop,NPAN+1)
     for k in range(NPAN):
         za,zb=zs[k],zs[k+1]
         for q_ in range(4):
             (i0,j0),(i1,j1)=cs[q_],cs[(q_+1)%4]
-            beam(leg(i0,j0,za),leg(i1,j1,zb),0.14,'steel');beam(leg(i1,j1,za),leg(i0,j0,zb),0.14,'steel');beam(leg(i0,j0,zb),leg(i1,j1,zb),0.16,'steel')
+            beam(leg(i0,j0,za),leg(i1,j1,zb),0.14,'towerg');beam(leg(i1,j1,za),leg(i0,j0,zb),0.14,'towerg');beam(leg(i0,j0,zb),leg(i1,j1,zb),0.16,'towerg')
     tilt=math.radians(15);up=np.array([0,0,math.cos(tilt)])+np.r_[to,0]*math.sin(tilt);nrm=np.r_[to,0]*math.cos(tilt)-np.array([0,0,math.sin(tilt)])
     hc=np.array([x,y,zh])+np.r_[to,0]*0.2;sd3=np.r_[sd,0]
     # head copied from the photo: a lamp panel about 12 x 7 m, curved in plan (front view of A/B reads as a
@@ -442,10 +442,10 @@ for x,y,zh,zb,hh in TW:
     for ph in(PH[0],PH[-1]):quad(hp(ph,-1,-0.4),hp(ph,-1,0.4),hp(ph,1,0.4),hp(ph,1,-0.4),'white')
     pc=np.array([x,y,ztop])
     def pq(s_,t_,z_):return pc+sd3*s_*3.2+to3*t_*1.6+np.array([0,0,z_])
-    quad(pq(-1,-1,0.2),pq(1,-1,0.2),pq(1,1,0.2),pq(-1,1,0.2),'steel')
+    quad(pq(-1,-1,0.2),pq(1,-1,0.2),pq(1,1,0.2),pq(-1,1,0.2),'towerg')
     for s_ in(-1,1):beam(pq(s_,-1,0.2),pq(s_,-1,1.3),0.08,'white');beam(pq(s_,1,0.2),pq(s_,1,1.3),0.08,'white')
     beam(pq(-1,-1,1.3),pq(1,-1,1.3),0.08,'white');beam(pq(-1,1,1.3),pq(1,1,1.3),0.08,'white')
-    for ph in(PH[0],0.0,PH[-1]):beam(hp(ph,-0.6,-0.4),pc+np.array([0,0,0.2]),0.25,'steel')
+    for ph in(PH[0],0.0,PH[-1]):beam(hp(ph,-0.6,-0.4),pc+np.array([0,0,0.2]),0.25,'towerg')
 # near side (s 110-300): undercroft and paving matched to the photo's darker shade (mktex4 *_n textures)
 _NS=np.arange(0,PER,0.5);_FX=F(_NS)
 for _L,_M in((QV,QM),):

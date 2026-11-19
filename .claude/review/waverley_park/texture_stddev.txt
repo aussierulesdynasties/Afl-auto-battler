@@ -62,6 +62,7 @@ kiosko        12.2
 kioskr        13.2
 kioskb        11.2
 greenpaint    11.3
+towerg        10.8
 lamps         70.7
 lampback      32.9
 facade_n      11.3
