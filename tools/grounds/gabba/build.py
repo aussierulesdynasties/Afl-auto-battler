@@ -359,21 +359,32 @@ print('SEATS dropped', int((~keep).sum()))
 PS, fw, side = PS[keep], fw[keep], side[keep]
 FINAL = (PS, fw, side)
 ci = np.random.default_rng(49).choice(4, len(PS), p=[0.50, 0.15, 0.31, 0.04])
-V = PS[:, None, :] + _T[None, :, 0, None] * side[:, None, :] + _T[None, :, 1, None] * fw[:, None, :] + _T[None, :, 2, None] * np.array([0, 0, 1.0])
+# Lean seat mesh (glb under 50 MB): only faces that can be seen. Pan: top, front, two sides. Back: all but the bottom.
+# One 8 cm steel leg under each gap (both neighbours stand on it), a 4 cm leg flush under a block end; leg sides only.
+# Chunks of 800 seats keep each part under 65,536 vertices (16-bit indices).
 kd = mathutils.kdtree.KDTree(len(PS))
 for i, p_ in enumerate(PS): kd.insert(p_, i)
 kd.balance()
-for i in range(len(PS)):   # block ends: the outer leg moves in 3 cm, flush with the pan
-    for sgn, box in ((-1, 2), (1, 3)):
-        if kd.find(PS[i] + sgn * 0.5 * side[i])[2] > 0.1: V[i, box * 8:box * 8 + 8] -= sgn * 0.05 * side[i]
-F = (np.array(_TF)[None] + (np.arange(len(PS)) * len(_T))[:, None, None]).reshape(-1, 4)
-sm_ = bpy.data.meshes.new('seats3d'); sm_.from_pydata(V.reshape(-1, 3).tolist(), [], F.tolist())
-for m in (plain('seat_gold', (226, 168, 30)), plain('seat_orange', (222, 120, 34)), plain('seat_white', (236, 236, 230)),
-          plain('seat_blue', (34, 64, 152)), plain('seat_legs_steel', (62, 64, 67), 0.45, 0.6)):
-    sm_.materials.append(m)
-leg = np.tile(np.arange(len(_TF)) >= len(_TF) // 2, len(PS)); mi = np.where(leg, 4, np.repeat(ci, len(_TF)))
-sm_.polygons.foreach_set('material_index', mi); sm_.update()
-bpy.context.scene.collection.objects.link(bpy.data.objects.new('seats3d', sm_))
+PAN = (_bx(-0.20, 0.20, -0.22, 0.20, 0.40, 0.46), (1, 3, 4, 5)); BACK = (_bx(-0.18, 0.18, -0.30, -0.24, 0.46, 0.86), (1, 2, 3, 4, 5))
+LEGF = (3, 4, 5)   # leg rear faces the riser 16 cm behind: never seen
+mats = (plain('seat_gold', (226, 168, 30)), plain('seat_orange', (222, 120, 34)), plain('seat_white', (236, 236, 230)),
+        plain('seat_blue', (34, 64, 152)), plain('seat_legs_steel', (62, 64, 67), 0.45, 0.6))
+CH = 800
+for c0 in range(0, len(PS), CH):
+    vv = []; ff = []; mm = []
+    def put(i, box, faces, mat):
+        o = len(vv)
+        for x, y, z in box: vv.append(tuple(PS[i] + x * side[i] + y * fw[i] + (0, 0, z)))
+        for k in faces: ff.append([q + o for q in _BF[k]]); mm.append(mat)
+    for i in range(c0, min(c0 + CH, len(PS))):
+        put(i, PAN[0], PAN[1], int(ci[i])); put(i, BACK[0], BACK[1], int(ci[i]))
+        if kd.find(PS[i] + 0.5 * side[i])[2] < 0.1: put(i, _bx(0.21, 0.29, -0.22, 0.04, 0.0, 0.40), LEGF, 4)
+        else: put(i, _bx(0.16, 0.20, -0.22, 0.04, 0.0, 0.40), LEGF, 4)
+        if kd.find(PS[i] - 0.5 * side[i])[2] > 0.1: put(i, _bx(-0.20, -0.16, -0.22, 0.04, 0.0, 0.40), LEGF, 4)
+    sm_ = bpy.data.meshes.new('seats3d_%02d' % (c0 // CH)); sm_.from_pydata(vv, [], ff)
+    for m in mats: sm_.materials.append(m)
+    sm_.polygons.foreach_set('material_index', mm); sm_.update()
+    bpy.context.scene.collection.objects.link(bpy.data.objects.new(sm_.name, sm_))
 av = []; af = []
 for p_, f_, w, d, hh in ASTEPS:
     f_ = np.array((*f_, 0.0)); sd = np.array([f_[1], -f_[0], 0.0]); o = len(av)
@@ -383,5 +394,5 @@ am = bpy.data.meshes.new('aisle_steps'); am.from_pydata(av, [], af); am.material
 am.update(); bpy.context.scene.collection.objects.link(bpy.data.objects.new('aisle_steps', am))
 print('SEATS', len(PS), 'rows', NROWS, 'aisle steps', len(ASTEPS))
 bpy.ops.wm.save_as_mainfile(filepath=args[2])
-bpy.ops.export_scene.gltf(filepath=args[1], export_format='GLB')
+bpy.ops.export_scene.gltf(filepath=args[1], export_format='GLB', export_image_format='JPEG', export_jpeg_quality=92)
 print('TRIS', sum(len(p.vertices) - 2 for p in me.polygons))
