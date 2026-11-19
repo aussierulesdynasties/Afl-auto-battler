@@ -1,0 +1,12 @@
+82,6,9 107,-10,4 seats_se
+8,85,14 -12,126,5 join_north
+-35,36,14 -68,34,5 join_south
+12,-18,10 5,-54,3 bank_south
+85,62,12 110,70,5 bank_east
+-35,10,10 -60,-5,4 seats_sw
+-5,95,12 -20,128,6 seats_n
+-130,15,14 -88,45,0 stand_south_end
+-30,165,14 -25,125,0 stand_north_end
+-140,0,-1 -88,45,-1 low_out_south_end
+-35,180,-1 -25,125,-1 low_out_north_end
+5,-105,-1 5,-50,-1 low_out_south_bank

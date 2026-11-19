@@ -349,6 +349,8 @@ func _setup_3d() -> void:
 		_figs.visible = false
 	_oval3d = Oval3D.new()
 	_vp3d.add_child(_oval3d)
+	# The ground the match is at: its real model where one is in the game (Oval3D.GROUND_MODELS).
+	_oval3d.ground = VignetteGround.ground_of(result)
 	_oval3d.build(director, home_code, away_code)
 	_tv = Oval3DBroadcast.new(_oval3d)
 	# The turf and light for the day, as the flat oval and the vignettes draw it.
