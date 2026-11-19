@@ -26,7 +26,7 @@ if mask:
         e.inputs['Color'].default_value = (((i*67)%255)/255, ((i*131+40)%255)/255, ((i*29+90)%255)/255, 1); nt.links.new(e.outputs[0], o.inputs[0])
     sc.view_settings.view_transform = 'Standard'
 else:
-    bg.inputs['Color'].default_value = (0.42, 0.58, 0.85, 1); bg.inputs['Strength'].default_value = 0.85   # clear blue sky: blue shade as in g49
+    bg.inputs['Color'].default_value = (0.42, 0.58, 0.85, 1); bg.inputs['Strength'].default_value = cam.get('sky', 0.85)   # clear blue sky: blue shade as in g49
     sd = bpy.data.lights.new('sun', 'SUN'); sd.energy = 4.0; so = bpy.data.objects.new('sun', sd); sc.collection.objects.link(so)
     # sun fitted to the roof's shadow edge on the oval (camB.json sun_az/sun_el)
     az = math.radians(cam.get('sun_az', 270)); el = math.radians(cam.get('sun_el', 25))

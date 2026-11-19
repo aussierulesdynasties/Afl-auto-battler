@@ -36,6 +36,37 @@ class Canvas:
 
 def tone(c, k): return tuple(max(0, min(255, int(v + k))) for v in c)
 
+def weather(c, mo=0.0, mc=1.0, blots=0, br=(0.3, 1.2), bk=(-14, 8), streaks=0, sl=(0.5, 2.5), sk=-18, tops=None, grime=0.0, seed=1):
+    # Hand-painted wear, drawn on the canvas and wrapped so the tile still repeats:
+    # blots = soft patches lighter/darker (concrete blotching, fabric soiling); streaks = rain runs that start at a
+    # ledge or joint (z in tops, else anywhere) and fade downward; grime = darkening towards the bottom of the tile.
+    rg = np.random.default_rng(seed); W, H = c.W, c.H
+    d = np.zeros((H, W), float)
+    for _ in range(blots):
+        r = rg.uniform(*br) * c.ppm; x0, y0 = rg.uniform(0, W), rg.uniform(0, H); k = rg.uniform(*bk)
+        for ox in (-W, 0, W):
+            for oy in (-H, 0, H):
+                x, y = x0 + ox, y0 + oy
+                if x + r < 0 or x - r > W or y + r < 0 or y - r > H: continue
+                ys, xs = np.ogrid[max(0, int(y - r)):min(H, int(y + r) + 1), max(0, int(x - r)):min(W, int(x + r) + 1)]
+                q = ((xs - x) ** 2 + (ys - y * 1.0) ** 2) / (r * r)
+                d[ys, xs] += k * np.clip(1 - q, 0, 1) ** 2
+    for k in range(3):   # mottling: random values on a coarse grid that divides the tile, smoothly enlarged (wraps)
+        cm = mc / 2 ** k; nx, ny = max(1, round(W / c.ppm / cm)), max(1, round(H / c.ppm / cm))
+        g = rg.normal(0, 1, (ny, nx)); g3 = np.tile(g, (3, 3))
+        im = Image.fromarray(g3.astype(np.float32), 'F').resize((3 * W, 3 * H), Image.BICUBIC)
+        d += mo / 1.6 ** k * np.asarray(im)[H:2 * H, W:2 * W]
+    for _ in range(streaks):
+        x = int(rg.uniform(0, W)); w = max(1, int(rg.uniform(0.02, 0.08) * c.ppm))
+        y0 = c.Y(rg.choice(tops)) if tops else int(rg.uniform(0, H)); L = int(rg.uniform(*sl) * c.ppm); k = sk * rg.uniform(0.5, 1.0)
+        for j in range(L):
+            y = (y0 + j) % H; f = (1 - j / L) ** 1.5
+            for i in range(w): d[y, (x + i) % W] += k * f
+    d *= 2.2   # strength set so each big surface reads at grey stddev >= 10 like the photo crops
+    if grime: d += grime * (np.arange(H)[:, None] / H) ** 2
+    a = np.asarray(c.im).astype(float) + d[..., None]
+    c.im = Image.fromarray(np.clip(a, 0, 255).astype(np.uint8)); c.d = ImageDraw.Draw(c.im)
+
 # ---------------------------------------------------------------- facade bay (11.6 m wide, 25 m tall)
 # Layout read off the Commons street photos (e1 south side, e4 Vulture St): precast concrete podium to 10.5 m,
 # dark blue-grey cladding to 16 m, two window bands to 22 m, white horizontal louvres to the top.
@@ -81,24 +112,32 @@ c = Canvas(4, 4, 96, (196, 196, 190))
 for i in range(2):
     for j in range(2): c.rect(i * 2, j * 2, i * 2 + 2, j * 2 + 2, tone((196, 196, 190), R.integers(-5, 6)))
 c.hline(0.015, (156, 156, 152), 0.03); c.vline(0.015, 0, 4, (156, 156, 152), 0.03)
+weather(c, mo=5, mc=1.2, streaks=30, sl=(0.4, 1.8), sk=-22, tops=[4.0, 2.0], seed=11)
 c.save('concrete.png', grain=3.0)
-c = Canvas(4, 4, 64, (58, 60, 64)); c.hline(0.015, (40, 42, 45), 0.03); c.save('darkdeck.png', grain=2.0)
+c = Canvas(4, 4, 64, (58, 60, 64)); c.hline(0.015, (40, 42, 45), 0.03); c.vline(2.0, 0, 4, (46, 48, 51), 0.02)
+weather(c, mo=4, mc=0.8, blots=12, br=(0.04, 0.15), bk=(-10, 10), seed=12); c.save('darkdeck.png', grain=2.0)
 
 # ---------------------------------------------------------------- footpath: light-tan concrete, 3 x 3.2 m saw-cut bays (Commons e2)
 c = Canvas(3.0, 3.2, 128, (200, 192, 174))
 c.rect(0, 0, 3.0, 3.2, (200, 192, 174))
 c.hline(0.012, (148, 142, 128), 0.025); c.vline(0.012, 0, 3.2, (148, 142, 128), 0.025)
+weather(c, mo=4, mc=1.0, blots=30, br=(0.03, 0.09), bk=(-26, -10), seed=13)   # gum spots, wear and water marks
 c.save('path.png', grain=4.0)
 
 # ---------------------------------------------------------------- white steel (booms, masts, light poles)
 c = Canvas(1.0, 4.0, 64, (238, 238, 234))
 for z in np.arange(0, 4.0, 2.0): c.hline(z + 0.01, (214, 214, 210), 0.02)   # weld ring every 2 m
+for x in (0.25, 0.75): c.vline(x, 0, 4.0, (226, 226, 222), 0.015)          # longitudinal seam lines
+weather(c, mo=4, mc=0.5, streaks=12, sl=(0.6, 1.9), sk=-24, tops=[2.0, 4.0], seed=14)
 c.save('steel.png', grain=1.2)
 
 # ---------------------------------------------------------------- roof fabric: one bay, u across 0-1, v = inner to outer edge 0-1
 c = Canvas(12.0, 24.0, 32, (246, 246, 241))
-for k in range(1, 6): c.vline(k * 2.0, 0, 24, (226, 226, 221), 0.05)       # fabric panel seams, 2 m panels
+for k in range(1, 6): c.hline(k * 4.0, (228, 228, 223), 0.06); c.hline(k * 4.0 + 0.08, (238, 238, 233), 0.05)   # panel seams across the bay every 4 m, with their lap (g49 bays)
 c.rect(0, 0, 12, 0.25, (232, 232, 227)); c.rect(0, 23.75, 12, 24, (232, 232, 227))   # edge cable pockets
+weather(c, mo=2.2, mc=3.0, streaks=70, sl=(1.5, 6.0), sk=-12, tops=[24.0, 12.0], seed=15)   # soiling, run-off from seams
+u = np.arange(c.W) / c.ppm; e = np.clip(1 - np.minimum(u, 12.0 - u) / 2.5, 0, 1) ** 2   # dirt gathers in the valleys beside each boom
+a_ = np.asarray(c.im).astype(float) - 30 * e[None, :, None]; c.im = Image.fromarray(np.clip(a_, 0, 255).astype(np.uint8)); c.d = ImageDraw.Draw(c.im)
 c.save('membrane.png', grain=1.5)
 
 # ---------------------------------------------------------------- seats: 24 deg of bowl per tile (64 seats), 4 rows of 1.0 m up the rake
@@ -176,6 +215,7 @@ c.rect(3, 3.6, 11, 3.75, (60, 64, 70))
 c.save('hyundai.png', grain=2.0)
 c = Canvas(6, 6, 48, (232, 234, 234))                                      # flat roofs: pale grey membrane, lapped sheets
 for k in range(4): c.hline(k * 1.5 + 0.01, (206, 208, 208), 0.02)
+weather(c, mo=5, mc=1.5, blots=6, br=(0.4, 0.9), bk=(-8, -4), streaks=10, sl=(0.4, 1.2), sk=-16, tops=[1.5, 3.0, 4.5, 6.0], seed=16)   # ponding stains, lap grime
 c.save('roofdeck.png', grain=1.5)
 
 # ---------------------------------------------------------------- screen block: pale grey cladding, 4 m tile
