@@ -54,8 +54,7 @@ func _init():
 	# TT_CAMS=file: one camera per line, "ex,ey,ez tx,ty,tz" (world metres); one frame per line
 	var cf := OS.get_environment("TT_CAMS")
 	if cf != "":
-		for ln in FileAccess.get_file_as_string(cf).split("
-", false):
+		for ln in FileAccess.get_file_as_string(cf).split("\n", false):
 			if ln.strip_edges() != "": cams.append(ln.strip_edges())
 		frames = cams.size()
 
