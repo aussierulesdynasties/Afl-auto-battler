@@ -123,6 +123,67 @@ sweep(NA+list(GAP)+[e%360 for e in LOWE if A1-360<e%360<A0],[(0,0.02,None,0),(1.
 span=arange(A0,A1,0.5)
 SPROF=[(6.5,4.0),(6.5,6.9),(6.8,6.9),(6.8,6.0),(9.0,6.0),(9.0,6.4),(10.226,7.265),(11.2,7.952),(12.9,9.151),(14.3,10.139),(15.1,10.703),(24.0,16.98),(24.0,21.0),(25.0,21.0),(25.0,18.4),(25.0,15.0),(25.0,12.9),(25.0,8.0),(26.0,8.0),(26.0,7.0),(16.0,7.0),(16.0,0.0)];SMAT=[None,FENCE,WHITE,CONC,WALK,CONC,SEAT,SEAT,SEAT,SEAT,SEAT,SEAT,NAVY,CONC,NAVY,NAVY,NAVY,NAVY,WALK,WALK,UNDER,DARK]
 sweep(span+[e for e in UPE if A0<e<A1],[(d,z,SMAT[i],1) for i,(d,z) in enumerate(SPROF)],mfun=up_m)
+# 3D seats (lead 2026-11-20, director "Seats + underside": each seat its own back, pan and gap, in rows, empty).
+# Every seat slope is stepped: one riser + tread per row at the old texture's row pitch (lower 0.70 m, upper 0.86 m
+# along the slope), and on each tread a seat every 0.5 m: pan 0.40 deep at 0.44 m, back 0.40 tall leaning back 0.06 m,
+# 0.44 wide (0.06 m gap), on a centre stem. Colours from the old seat texture (photo swatches): red 242,92,74, light
+# grey 214,208,202 (upper tier 22% grey, lower all red). Aisles, voms and openings keep their steps but get no seats.
+import random as _rnd
+SRED=mat('seat_red',(242,92,74),None,0.45);SGRY=mat('seat_grey',(214,208,202),None,0.45);TRD=mat('tread',(196,186,180),None,0.9)
+_SEATN=[0]
+def _nv(p):return bm.verts.new(p)
+def _q(a,b,c,d,m):face([_nv(a),_nv(b),_nv(c),_nv(d)],m)
+def tiers(alist,segfun,pitch,mf,kfun,seatmats,grey,seed):
+    A=sorted(set(round(x,4) for x in alist));rr=_rnd.Random(seed)
+    nrow=lambda a:(lambda s:max(1,int(round(math.hypot(s[2]-s[0],s[3]-s[1])/pitch))))(segfun(a))
+    def row(a,i,n):
+        d0,z0,d1,z1=segfun(a);return (d0+(d1-d0)*i/n,z0+(z1-z0)*i/n)
+    # risers and treads
+    for a0,a1 in zip(A,A[1:]):
+        am=(a0+a1)/2;n=nrow(am)
+        for i in range(n):
+            dm=row(am,i+0.5,n)[0];m=mf(kfun(dm),am,seatmats[0])
+            if m is None or m==GRASS:continue
+            tm=CONC if m==CONC else TRD
+            (e0,f0),(e1,f1)=row(a0,i,n),row(a0,i+1,n);(g0,h0),(g1,h1)=row(a1,i,n),row(a1,i+1,n)
+            _q(P(a0,e0,f0),P(a1,g0,h0),P(a1,g0,h1),P(a0,e0,f1),tm)
+            _q(P(a0,e0,f1),P(a1,g0,h1),P(a1,g1,h1),P(a0,e1,f1),tm)
+    # seats along each row, every 0.5 m of arc
+    nmax=max(nrow(a) for a in A)
+    for i in range(nmax):
+        acc=0.25;prev=None;a=A[0]
+        while a<=A[-1]:
+            n=nrow(a)
+            if i<n:
+                dr,zt=row(a,i+1,n);p=P(a,dr,zt)
+                if prev is not None:acc+=(p-prev).length
+                prev=p
+                if acc>=0.5:
+                    acc-=0.5;df,_=row(a,i,n);dm=(df+dr)/2;m=mf(kfun(dm),a,seatmats[0])
+                    if m in seatmats:
+                        col=SGRY if rr.random()<grey else SRED;_seat(a,dr,zt,col);_SEATN[0]+=1
+            else:prev=None
+            a+=0.04
+def _seat(a,dr,zt,col):
+    o=P(a,dr,zt);rad=(P(a,dr+1,zt)-o);rad.z=0;rad.normalize();tg=Vector((-rad.y,rad.x,0));up=Vector((0,0,1))
+    w=0.22;X=lambda d,u,z:o+rad*d+tg*u+up*z
+    # pan (top + front), back (front, top, rear), stem
+    _q(X(-0.50,-w,0.44),X(-0.50,w,0.44),X(-0.10,w,0.44),X(-0.10,-w,0.44),col)
+    _q(X(-0.50,-w,0.39),X(-0.50,w,0.39),X(-0.50,w,0.44),X(-0.50,-w,0.44),col)
+    _q(X(-0.12,-w,0.44),X(-0.12,w,0.44),X(-0.06,w,0.84),X(-0.06,-w,0.84),col)
+    _q(X(-0.06,-w,0.84),X(-0.06,w,0.84),X(-0.02,w,0.84),X(-0.02,-w,0.84),col)
+    _q(X(-0.08,-w,0.44),X(-0.08,w,0.44),X(-0.02,w,0.84),X(-0.02,-w,0.84),col)
+    _q(X(-0.32,-0.04,0.0),X(-0.32,0.04,0.0),X(-0.32,0.04,0.40),X(-0.32,-0.04,0.40),DARK)
+_NOR=lambda a:A1-360<=a%360<=A0 or A1-360<=a-360<=A0
+def _lowseg(a):
+    if (A1-360)<=a<=A0:
+        (d0,z0),(d1,z1)=low_pf(a,2),low_pf(a,3);return (d0,z0,d1,z1)
+    return (1.5,1.0,6.5,4.0)
+def _lowmf(k,a,mi):return low_mn(3,a,mi) if (A1-360)<=a<=A0 else low_m(3,a,mi)
+tiers(arange(A1-360,A1,1.0)+[e for e in [x%360 for x in LOWE]+[x%360+360 for x in LOWE]+[x%360-360 for x in LOWE] if A1-360<e<A1],_lowseg,0.70,_lowmf,lambda d:3,(SEAT,),0.0,1)
+_SK=[(10.226,6),(11.2,7),(12.9,8),(14.3,9),(15.1,10),(99,11)]
+tiers(arange(A0,A1,1.0)+[e for e in UPE if A0<e<A1],lambda a:(9.0,6.4,24.0,16.98),0.86,up_m,lambda d:next(k for x,k in _SK if d<=x),(SEATU,SEAT),0.22,2)
+print('SEATS',_SEATN[0])
 sweep(span,[(26.0,8.0,None,0),(26.0,9.1,YEL,1)])
 def nc_pf(a,k):
     db=ndb(a);zb=1.0+RAKE*(db-1.5);w=max(14.0,db+5.5)
@@ -342,6 +403,16 @@ prism(dr,10.6,21.0,RED,DARK,uscale=40.0)
 for i in range(1,len(RI)-1):
     a=RI[i];nf=SC(a)[7];cyl(rp(a,0.0,0.08),rp(ribat(i,nf),nf,0.08),0.14,0.14,WHITE,6)
 # yellow raking columns under the west and south-west roof edge, one per ridge
+# near side: flat dark underside 1.0 m below the roof edge, from the edge in to the stand's outer wall, and the wall face
+# carried up to meet it (lead 2026-11-20 "Seats + underside"; photo: dark band just under the gutter; lower, it hid the red board)
+UNDZ=1.0
+_UA=arange(NEARW[0],NEARW[1],0.5)
+for _a0,_a1 in zip(_UA,_UA[1:]):
+    _q2=[]
+    for _a in (_a0,_a1):
+        _e=rp(_a,1.0,0.0);_zl=hout(_a)-UNDZ;_q2.append((Vector((_e.x,_e.y,_zl)),P(_a,25.0,_zl),P(_a,25.0,21.0),_zl))
+    face([bm.verts.new(v) for v in (_q2[0][0],_q2[1][0],_q2[1][1],_q2[0][1])],DARK)
+    if _q2[0][3]>21.0 and _q2[1][3]>21.0:face([bm.verts.new(v) for v in (_q2[0][1],_q2[1][1],_q2[1][2],_q2[0][2])],DARK)
 R=RO  # columns and later rib users stand under the outer rib ends
 for i in range(1,len(R)-1):
     a=R[i]

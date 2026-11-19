@@ -1,6 +1,6 @@
 # People First Stadium (Carrara) exterior, row 202 step 2b
 
-Ready for gate (build r33, 2026-11-20). No open faults.
+Ready for gate (build r34, 2026-11-20). No open faults.
 
 ## Files
 - model/peoplefirst.glb: the game model. model/peoplefirst.blend: its Blender source.
@@ -17,6 +17,10 @@ Ready for gate (build r33, 2026-11-20). No open faults.
   - texboard.jpg: each hand-made texture beside its photo crop.
   - ribstrip.png and ribsat.png: far roof ribs, photo and satellite.
   - seats_empty.png: seating close-up, empty seats, no crowd.
+- Seats are real 3D seats (gate 2026-11-20, "Seats + underside"): every tier is stepped (lower and north row pitch
+  0.70 m, upper 0.86 m) and carries 24,647 separate seats, 0.5 m apart (0.44 m wide, 0.06 m gap), each with its own pan
+  and back. Lower tier red, upper tier red with 22% light grey. Aisles, voms and openings stay clear. Model 668,730
+  triangles.
   - sign.png and signcmp.png: the People First Stadium sign.
   - scoreboard_9m.png: scoreboard placed from the satellite.
 - reference/: photo_clean.png (oblique photo; camera build/cam.json), sat.png, satgrid_osm.png. Reference only.
@@ -31,5 +35,7 @@ Ready for gate (build r33, 2026-11-20). No open faults.
   - the red board, 15.0-18.4 m, from 130 to 176.6 deg (navy beyond);
   - grey;
   - a light concrete base on the podium deck.
+- A flat dark underside runs 1.0 m under the roof edge, in to the stand's outer wall, on 126-199 deg (the photo's
+  dark band under the gutter; set there so the red board stays visible).
 - The roof edge drops on short vertical yellow posts (6.6 m) from 126 to 199 deg (photo x 400-1100).
 - East of 199 deg the branching yellow trees and trusses stay as they were.
