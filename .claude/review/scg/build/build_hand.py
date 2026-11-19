@@ -44,13 +44,27 @@ for f in D['F']:
         if m in DEC:
             dd=DEC[m];u=((p.x-dd['o'][0])*dd['d'][0]+(p.y-dd['o'][1])*dd['d'][1])/dd['w'];v=(p.z-dd['z0'])/(dd['z1']-dd['z0']);l[uvl].uv=(u,v);continue
         if m in PLANAR:u,v=p.x,p.y
+        elif m in('seat','seatm'):
+            nr=n.dot(rad);s_=math.hypot(nr,n.z) or 1;rf=100.0 if m=='seat' else 86.0;u,v=a*rf,(r*n.z-p.z*nr)/s_   # one radius per seat material (median r): aisles radial and continuous   # rows along the arc, pitch along the rake
         elif abs(n.z)>0.75:u,v=a*r,r                                # roofs, slabs: seams run round the ground
-        elif m=='seat':
-            nr=n.dot(rad);s_=math.hypot(nr,n.z) or 1;u,v=a*r,(r*n.z-p.z*nr)/s_   # rows along the arc, pitch along the rake
         elif abs(n.dot(rad))>=abs(n.dot(tan)):u,v=a*r,p.z         # walls facing out or in
         else:u,v=r,p.z                                             # side walls of fins and boxes
         l[uvl].uv=(u/tu,v/tv)
 bm.normal_update();bm.to_mesh(me);me.update()
+# raised lettering (signs.json from geo.py): Blender's built-in font, extruded, converted to mesh, joined into the model
+if os.path.exists(S+'/signs.json'):
+    for sg in json.load(open(S+'/signs.json')):
+        cu=bpy.data.curves.new('sign','FONT');cu.body=sg['txt'];cu.align_x='CENTER';cu.size=1.0;cu.extrude=sg['d']/2
+        to=bpy.data.objects.new('sign',cu);bpy.context.scene.collection.objects.link(to)
+        dg=bpy.context.evaluated_depsgraph_get();tm=bpy.data.meshes.new_from_object(to.evaluated_get(dg));bpy.data.objects.remove(to)
+        xs=[v.co.x for v in tm.vertices];sc=sg['w']/(max(xs)-min(xs));x0=(max(xs)+min(xs))/2;ymin=min(v.co.y for v in tm.vertices);hh=(max(v.co.y for v in tm.vertices)-ymin)*sc
+        rx,ry=-sg['ny'],sg['nx']   # reading direction: right of a viewer facing the sign
+        for v in tm.vertices:
+            a,b,c=(v.co.x-x0)*sc,(v.co.y-ymin)*sc*sg.get('h',hh)/hh,v.co.z*sc
+            v.co=Vector((sg['x']+rx*a+sg['nx']*c,sg['y']+ry*a+sg['ny']*c,sg['z']+0.15+b))
+        tm.materials.append(me.materials[MI[sg['m']]]);so=bpy.data.objects.new('signm',tm);bpy.context.scene.collection.objects.link(so)
+        bpy.ops.object.select_all(action='DESELECT');so.select_set(True);ob.select_set(True);bpy.context.view_layer.objects.active=ob;bpy.ops.object.join()
+        print('SIGN',sg['txt'],'height %.2f m'%sg.get('h',hh))
 # GLB in metres, Godot Y-up handled by exporter
 bpy.ops.object.select_all(action='DESELECT');ob.select_set(True)
 bpy.ops.export_scene.gltf(filepath=OUTGLB,export_format='GLB',use_selection=True,export_yup=True)

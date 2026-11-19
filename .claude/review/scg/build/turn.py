@@ -28,4 +28,9 @@ shot('heritage_roofs',150,32,150,lens=35,tgt=polt(140,105,12))
 shot('her_field',322,9,75,lens=30,tgt=polt(140,108,10))
 shot('her_street',140,12,85,lens=30,tgt=polt(140,112,9))
 shot('her_join',300,14,45,lens=30,tgt=polt(150,108,10))
+shot('scoreboard',200,12,70,lens=35,tgt=Vector((89.2,45.0,21.0)))   # board face and its raised lettering, from the field
+shot('mes_tip',230,20,60,lens=35,tgt=Vector((80.0,56.0,28.0)))   # Messenger roof tip over the scoreboard end (satellite corner)
+shot('mes_tip_out',40,15,70,lens=35,tgt=Vector((82.0,58.0,26.0)))
+for _az in (170,185,200,215):shot('brew%d'%_az,_az+180,3,90,lens=35,tgt=polt(_az,80,12))   # field-side looks at the stands beside the Ladies (refs3/044 view)
+shot('brew_sign',5,4,22,lens=35,tgt=Vector((-84.6,-28.0,14.75)))   # Brewongle Stand fascia lettering close-up
 print('TURN-DONE')
