@@ -70,3 +70,11 @@ ovb.py r_ov.png ov8, board.py, zoomuv.py u0 u1 v0 v1 px/m out edge.
 7. Each sign beside its crop: tex_board_2 last row, MARVEL STADIUM beside the 2019 aerial crop. It is the ground's only
    own sign.
 8. no open faults
+
+## Gate round 5 (director: "Even out both")
+- Glazing: one even dark blue-grey (RGB 38,48,61), mullions only. No per-pane sky tone, no gradient, no dirt line.
+- Paving: one even tan with faint 1.2 m joints. No per-slab tone, no drainage strip, no spots.
+- The stddev floor is dropped (director: "Drop it, use B"), so both maps match the photo: glass 4.3, paving 2.5.
+- Re-rendered: proof/tex_board_1.jpg, proof/tex_board_2.jpg, and the turntable, close, low and orbit proofs.
+
+No open faults.

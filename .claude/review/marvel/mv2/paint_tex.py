@@ -20,10 +20,9 @@ for i in range(8):
 c.streaks([0.0],per_m=2.2,length=(0.8,3.6),width=(0.03,0.22),amt=0.30)
 c.streaks([1.2,2.4,3.6],per_m=0.8,length=(0.2,0.9),amt=0.14)
 c.grime_bottom(0.5,0.14);c.speckle(2,(0.006,0.02),0.15);c.grain(0.018);c.keep_mean();out('concrete',c)
-# ---- paving: 1.2 m slabs, slab-to-slab tone, dark drainage strip, gum/oil spots
-c=Canvas(6,6,(0.62,0.54,0.40),12);c.mottle(0.05,(2.0,0.6,0.1));c.panels(1.2,1.2,joint=0.014,dark=0.50,tone=0.07,bevel=False)
-c.hline(0.05,0.10,(0.33,0.33,0.34));c.speckle(2.5,(0.01,0.04),0.30);c.tint(0.25,0.8,(0.45,0.42,0.36))
-c.grain(0.02);c.keep_mean();out('paving',c)
+# ---- paving: one even tan with faint 1.2 m joints, no per-slab tone (director 2026-11-19: "Even out both")
+c=Canvas(6,6,(0.62,0.54,0.40),12);c.panels(1.2,1.2,joint=0.010,dark=0.85,tone=0.0,bevel=False)
+c.grain(0.01);c.keep_mean();out('paving',c)
 # ---- seats: 24 seats x 0.5 m then a 1.2 m aisle (13.2 m repeat), rows 0.8 m: riser shadow, seat back, gaps
 SEAT=np.array((108,128,146))/255            # seat crop mean (lit seat pixels, tex_board_1 row 3)
 W,H=13.2,8.0;c=Canvas(W,H,tuple(SEAT),13);y,x=np.mgrid[0:c.n,0:c.n];um=x/c.pu;vm=y/c.pv
@@ -100,14 +99,11 @@ for yv in np.arange(y0,y1,0.15*c.pv):
     yi=int(yv);a[yi:yi+5,x0:x1]=np.array((0.42,0.44,0.50));a[yi+5:yi+14,x0:x1]=np.array((0.33,0.35,0.41));a[yi+14:yi+20,x0:x1]=np.array((0.12,0.13,0.16))
 a[y0:y0+5,x0:x1]=a[y1-5:y1,x0:x1]=a[y0:y1,x0:x0+5]=a[y0:y1,x1-5:x1]=np.array((0.50,0.52,0.57))
 c.a=a;c.grime_bottom(0.4,0.15,band=7.2);out('louvre',c,(6,7.2))
-# ---- dark glazing: each pane reflects a slightly different sky, dirt at the pane foot, lit mullion edge
-c=Canvas(6,6,(0.15,0.20,0.26),30);y,x=np.mgrid[0:c.n,0:c.n];um=x/c.pu;vm=y/c.pv
-t=(vm%3.0)/3.0;pane=(np.floor(um/1.5)+4*np.floor(vm/3.0)).astype(int);pt=1+0.10*c.R.normal(size=16)
-c.a=(np.array((0.21,0.28,0.35))*(1-t[...,None])+np.array((0.10,0.13,0.17))*t[...,None])*pt[pane%16][...,None]
-c.mul(1+0.05*c.noise(0.8,2.0));c.grime_bottom(0.3,0.10,band=3.0,col=(0.5,0.47,0.42))
+# ---- dark glazing: one even dark blue-grey, mullions only (director 2026-11-19: "Even out both")
+c=Canvas(6,6,(0.15,0.20,0.26),30);c.a[:]=np.array((0.15,0.19,0.24))
 for i in range(4):c.vline(i*1.5,0.05,(0.22,0.23,0.25));c.vline(i*1.5+0.03,0.01,(0.40,0.41,0.44))
 for j in range(2):c.hline(j*3.0,0.06,(0.22,0.23,0.25));c.hline(j*3.0+0.035,0.01,(0.40,0.41,0.44))
-c.grain(0.008);out('glass',c)
+c.grain(0.004);out('glass',c)
 # ---- ground's own sign (director 2026-11-19: "Yes, ground's own signs"): white MARVEL on the red panel, white
 # STADIUM on the black one, outward face only. Letters are drawn from a font (Bahnschrift Bold Condensed, the
 # straight-sided condensed caps of the photos), sized to fill the panel like the 2019 aerial; a grey inset line
