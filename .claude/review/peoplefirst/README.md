@@ -36,6 +36,7 @@ Ready for gate (build r35, 2026-11-20). No open faults.
   - grey;
   - a light concrete base on the podium deck.
 - A flat dark underside runs 1.0 m under the roof edge, in to the stand's outer wall, on 126-199 deg (the photo's
-  dark band under the gutter; set there so the red board stays visible).
+  dark band under the gutter; set there so the red board stays visible). Where the roof dips lower,
+  its inner end drops to just under the roof, so it never shows through the membrane.
 - The roof edge drops on short vertical yellow posts (6.6 m) from 126 to 199 deg (photo x 400-1100).
 - East of 199 deg the branching yellow trees and trusses stay as they were.
