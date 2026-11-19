@@ -1,0 +1,61 @@
+# GWS Giants home guernseys 2012-2025, copied from photos (no sponsor, maker or league logos; the CANBERRA,
+# CBR and collar-tape words are left off as they are not part of the club's design).
+# Colours: orange #F47920 and charcoal #2B2F33 are today's (data/clubs.csv). The 2012-16 lower body is a
+# purple-navy, retired: #2A2A51 sampled from the 2012 replica photo below.
+# Across, the photo's width is laid on 0.15-0.85 of the square: the part of the body the game camera sees from
+# the front or back (measured with a strip test guernsey); the square outside it wraps round the sides, so
+# side panels and side strips start at the square's edge and reach the photo's width inside 0.15-0.85.
+
+# GWS-2012-Home (2012-2016).
+# Front https://www.upcycledlocker.com.au/cdn/shop/files/1_68cb54fb-add7-4027-a534-1f801777de4d.png : orange
+# to 0.36 of the height, navy below; the white G (mask gws_2012_g, cut from this photo) runs off the left side
+# seam. Back https://www.upcycledlocker.com.au/cdn/shop/files/2_c3682c9a-e8ad-4ab0-b75c-bb04db69d355.png : orange,
+# navy side panels from the armpits, widening to 0.11 of the width at the hem. Number dark (footyjumpers; the
+# replica has none).
+GWS GWS-2012-Home | fill #2A2A51; band #F47920 0 0.36; mark W gws_2012_g 0.15 0 0.85 1; collar #F47920 2; armholes #F47920 1; shorts #2A2A51 | fill #F47920; poly #2A2A51 0 0.30 0.171 0.30 0.227 1 0 1; poly #2A2A51 1 0.30 0.829 0.30 0.773 1 1 1; collar #F47920 2; armholes #F47920 1; number #2A2A51
+
+# GWS-2017-Home (2017) and GWS-2018-Home (2018-2019): one design.
+# Front https://d2q7r0rjkm1t8k.cloudfront.net/uplister/images/c41bd1e08d772cb82c6c0f9a5e4726c8.webp : orange to
+# 0.50, charcoal below; the white G (mask gws_2017_g, cut from this photo) runs off the left side seam; the
+# 2017 signed photo https://taylormadememorabilia.com.au/wp-content/uploads/2021/02/IMG-7623-1.jpg is the same.
+# Back https://taylormadememorabilia.com.au/wp-content/uploads/2021/02/IMG-7626-1.jpg : orange, charcoal side
+# panels 0.12 wide from the armpits (0.35) to the hem. Number charcoal (footyjumpers; the replica has none).
+GWS GWS-2017-Home | fill #2B2F33; band #F47920 0 0.50; mark W gws_2017_g 0.15 0 0.85 1; collar #F47920 2; armholes #F47920 1; shorts #2B2F33 | fill #F47920; poly #2B2F33 0 0.35 0.234 0.35 0.241 1 0 1; poly #2B2F33 1 0.35 0.766 0.35 0.759 1 1 1; collar #F47920 2; armholes #F47920 1; number #2B2F33
+GWS GWS-2018-Home | fill #2B2F33; band #F47920 0 0.50; mark W gws_2017_g 0.15 0 0.85 1; collar #F47920 2; armholes #F47920 1; shorts #2B2F33 | fill #F47920; poly #2B2F33 0 0.35 0.234 0.35 0.241 1 0 1; poly #2B2F33 1 0.35 0.766 0.35 0.759 1 1 1; collar #F47920 2; armholes #F47920 1; number #2B2F33
+
+# GWS-2020-Home (2020). Match photos (round 1 and the 2020 season):
+# https://www.gettyimages.com.au/detail/news-photo/stephen-coniglio-of-the-giants-handpasses-during-the-round-news-photo/1213858932
+# https://www.gettyimages.com.au/detail/news-photo/tom-green-of-the-giants-runs-the-ball-during-the-round-1-news-photo/1213838398
+# https://www.gettyimages.com.au/detail/news-photo/lachie-whitfield-and-zac-williams-of-the-giants-celebrate-news-photo/1270410927
+# https://www.gettyimages.com.au/detail/news-photo/harry-himmelberg-of-the-giants-runs-the-ball-during-the-news-photo/1213851676
+# Read: orange shoulders and chest, charcoal from the waist, the white G across the join, as the 2018 flat photo
+# above (only the sponsors moved), so it is drawn as 2018.
+GWS GWS-2020-Home | fill #2B2F33; band #F47920 0 0.50; mark W gws_2017_g 0.15 0 0.85 1; collar #F47920 2; armholes #F47920 1; shorts #2B2F33 | fill #F47920; poly #2B2F33 0 0.35 0.234 0.35 0.241 1 0 1; poly #2B2F33 1 0.35 0.766 0.35 0.759 1 1 1; collar #F47920 2; armholes #F47920 1; number #2B2F33
+
+# GWS-2021-Home (2021-2022).
+# Front https://cdn11.bigcommerce.com/s-6de89n07mh/images/stencil/1280w/products/326/305/765565_01_GWS_Home_Guernsey01__53628.1613108088.jpg :
+# orange to 0.385, charcoal below with thin orange side strips; the centred white G (mask gws_2021_g, cut from
+# this photo). Back https://cdn11.bigcommerce.com/s-6de89n07mh/images/stencil/1280w/products/326/304/765565_01_GWS_Home_Guernsey03__90522.1613108089.jpg :
+# plain orange. Number charcoal (footyjumpers).
+GWS GWS-2021-Home | fill #2B2F33; band #F47920 0 0.385; rect #F47920 0 0.385 0.171 1; rect #F47920 0.829 0.385 1 1; mark W gws_2021_g 0.15 0 0.85 1; collar #F47920 2; armholes #F47920 1; shorts #2B2F33 | fill #F47920; collar #F47920 2; armholes #F47920 1; number #2B2F33
+
+# GWS-2023-Home (2023).
+# Front https://cdn11.bigcommerce.com/s-6de89n07mh/images/stencil/1280w/products/516/800/770259_01__75531.1668980100.png :
+# orange to 0.385, charcoal below, the white G (mask gws_2023_g, cut from this photo). Back
+# https://cdn11.bigcommerce.com/s-6de89n07mh/images/stencil/1280w/products/516/801/770259_01_bv__93515.1668980101.png :
+# plain orange. Number charcoal (footyjumpers).
+GWS GWS-2023-Home | fill #2B2F33; band #F47920 0 0.385; mark W gws_2023_g 0.15 0 0.85 1; collar #F47920 2; armholes #F47920 1; shorts #2B2F33 | fill #F47920; collar #F47920 2; armholes #F47920 1; number #2B2F33
+
+# GWS-2024 (2024).
+# Front https://cdn11.bigcommerce.com/s-6de89n07mh/images/stencil/1280w/products/615/1004/775905-01__64035.1699403014.png :
+# orange to 0.385, charcoal below, the white G (mask gws_2024_g, cut from this photo). Back
+# https://cdn11.bigcommerce.com/s-6de89n07mh/images/stencil/1280w/products/615/1005/775905-01_bv__67493.1699403015.png :
+# plain orange. Number charcoal (footyjumpers).
+GWS GWS-2024 | fill #2B2F33; band #F47920 0 0.385; mark W gws_2024_g 0.15 0 0.85 1; collar #F47920 2; armholes #F47920 1; shorts #2B2F33 | fill #F47920; collar #F47920 2; armholes #F47920 1; number #2B2F33
+
+# GWS-2025 (2025).
+# Front https://cdn11.bigcommerce.com/s-6de89n07mh/images/stencil/1280w/products/797/1435/GFC76136---Home-Guernsey-Front__59432.1732938004.png :
+# orange to 0.39, charcoal below with thin orange side piping, the white G (mask gws_2025_g, cut from this
+# photo). Back https://cdn11.bigcommerce.com/s-6de89n07mh/images/stencil/1280w/products/797/1436/GFC76136---Home-Guernsey-Back__68371.1732938005.png :
+# plain orange. Number charcoal with a white edge (footyjumpers).
+GWS GWS-2025 | fill #2B2F33; band #F47920 0 0.39; rect #F47920 0 0.39 0.1605 1; rect #F47920 0.8395 0.39 1 1; mark W gws_2025_g 0.15 0 0.85 1; collar #F47920 2; armholes #F47920 1; shorts #2B2F33 | fill #F47920; collar #F47920 2; armholes #F47920 1; number #2B2F33 W

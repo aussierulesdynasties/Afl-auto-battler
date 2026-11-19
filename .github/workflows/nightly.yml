@@ -39,7 +39,10 @@ jobs:
     name: long ${{ matrix.suite }}
     needs: plan
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # legacy_rollover plays every match of 22 Legacy seasons, about 1.5 to 2 hours
+    # (director 2026-11-18: "Play the matches", then 2 hours: "ok do it"). The
+    # suites run side by side, so it only makes the report arrive later.
+    timeout-minutes: ${{ matrix.suite == 'legacy_rollover' && 130 || 60 }}
     strategy:
       fail-fast: false
       matrix:
@@ -64,7 +67,7 @@ jobs:
           unzip -q godot.zip && rm godot.zip
           mv "${name}" godot && chmod +x godot
       - name: Run ${{ matrix.suite }}
-        run: SUITE_TIMEOUT=3000 SUITES_ONLY=1 GODOT="$HOME/godot/godot" LOG_DIR="$RUNNER_TEMP/test-logs" tools/run_tests.sh ${{ matrix.suite }}
+        run: SUITE_TIMEOUT=${{ matrix.suite == 'legacy_rollover' && 7200 || 3000 }} SUITES_ONLY=1 GODOT="$HOME/godot/godot" LOG_DIR="$RUNNER_TEMP/test-logs" tools/run_tests.sh ${{ matrix.suite }}
       - name: Upload test logs
         if: always()
         uses: actions/upload-artifact@v4
