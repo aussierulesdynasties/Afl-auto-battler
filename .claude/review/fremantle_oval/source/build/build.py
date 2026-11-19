@@ -5,6 +5,7 @@ from mathutils import Vector, Matrix
 import numpy as np
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+NO_ADS = True   # director 2026-11-19: no ads, banners, posters or sponsor boards on ground models
 argv = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
 MODE = argv[0] if argv else 'a04'          # a04 | glb | turn | close
 OUT = os.path.abspath(os.path.join(ROOT, argv[1])) if len(argv) > 1 else os.path.join(ROOT, 'build', 'out.png')
@@ -275,7 +276,7 @@ M = dict(
     roof_zinc_pav=corrugated('roof_zinc_pav', (0.05, 0.17, 0.32), axis=1, metal=0.0, rough=0.75),
     fret=fret('fret'),
     balustrade=balustrade('balustrade'),
-    seat_timber=flat('seat_timber', (0.06, 0.08, 0.07), 0.8, 0, 6, 0.2),
+    seat_timber=flat('seat_timber', (0.0802, 0.0742, 0.0561), 0.8, 0, 6, 0.2),
     roof_zinc=corrugated('roof_zinc', (0.42, 0.48, 0.52), axis=1),
     roof_zinc_x=corrugated('roof_zinc_x', (0.42, 0.48, 0.52), axis=0),
     roof_white=corrugated('roof_white', (0.86, 0.87, 0.85), axis=0, metal=0.2, rough=0.5),
@@ -446,16 +447,29 @@ def ground():
             x1, y1 = poly[i]; x2, y2 = poly[(i + 1) % n]
             if (y1 > y) != (y2 > y) and x < x1 + (y - y1) * (x2 - x1) / (y2 - y1): c = not c
         return c
-    q = []
+    q = []; qp = []
+    FM = np.load(os.path.join(ROOT, 'build', 'ground_fine.npy'))   # 0.5 m paver mask, row 0 = y 140, col 0 = x -135
+    def fm(xa, ya, s):
+        c0, r0 = int(round((xa + 135) * 2)), int(round((140 - ya - s) * 2)); k = int(round(s * 2))
+        blk = FM[max(r0, 0):r0 + k, max(c0, 0):c0 + k]
+        return blk.mean() if blk.size else 0.0
+    def cell(xa, ya, s, out):
+        c = [(xa, ya), (xa + s, ya), (xa + s, ya + s), (xa, ya + s)]
+        if all(inside(p) for p in c): return
+        cl = c if all(in_site(p) for p in c) else clip_cell(xa, ya, xa + s, ya + s)
+        if len(cl) < 3: return
+        out.append([(a, b, zg(a, b) - 0.02) for a, b in cl])
     step = 2.0
     for x in np.arange(-135, 115, step):
         for y in np.arange(-135, 140, step):
-            c = [(x, y), (x + step, y), (x + step, y + step), (x, y + step)]
-            if all(inside(p) for p in c): continue
-            cl = c if all(in_site(p) for p in c) else clip_cell(x, y, x + step, y + step)
-            if len(cl) < 3: continue
-            q.append([(a, b, zg(a, b) - 0.02) for a, b in cl])
-    faces_obj(q, 'ground_asphalt', 'asphalt')
+            f = fm(x, y, step)
+            if f <= 0.0 or f >= 1.0:
+                cell(x, y, step, qp if f >= 1.0 else q)
+            else:   # paver edge: split into 0.5 m cells so the edge follows the satellite outline
+                for sx in np.arange(x, x + step, 0.5):
+                    for sy in np.arange(y, y + step, 0.5):
+                        cell(sx, sy, 0.5, qp if fm(sx, sy, 0.5) >= 0.5 else q)
+    faces_obj(q, 'ground_asphalt', 'asphalt'); faces_obj(qp, 'ground_pavers', 'pavers')   # cover from the satellite, 0.5 m at paver edges
     # red brick paving: SFFC forecourt / south walk (satellite 2025-12-06: red band south-west to south)
     q = []
     o1 = off(6.0); o2 = off(16.0)
@@ -524,7 +538,7 @@ def terrace(rows=11, tread=0.85, rise=0.40, start=1.6):
         while acc + seg >= nxt:
             t = (nxt - acc) / seg; posts.append((pts[k] + (pts[k + 1] - pts[k]) * t, pts[k + 1] - pts[k])); nxt += 6.4
         acc += seg
-    for n_, (pp, tv) in enumerate(posts):
+    for n_, (pp, tv) in enumerate([] if NO_ADS else posts):   # advertising boards: none on a ground model (no ads rule)
         x, y = pp; rot = math.atan2(tv[1], tv[0])
         cyl((x, y, zt), (x, y, zt + 3.75), 0.06, f'tsign_post_{n_}', 'white', 8)
         box((x, y, zt + 3.15), (3.0, 0.06, 1.1), f'tsign_board_{n_}', 'sign_white', rot=rot)
@@ -542,7 +556,7 @@ def terrace(rows=11, tread=0.85, rise=0.40, start=1.6):
         if (j - i) % len(CONTOUR) != 1: continue
         if fb[i][1] > 80 and fb[j][0] < 12.7: continue
         q.append([(*fb[i], 0), (*fb[j], 0), (*fb[j], 0.9), (*fb[i], 0.9)])
-    faces_obj(q, 'terrace_boards', 'seat_white')
+    if not NO_ADS: faces_obj(q, 'terrace_boards', 'seat_white')   # perimeter ad boards: none (no ads rule)
 
 # ---------------------------------------------------------------- Victoria Pavilion (a04 fit 2026-11-18)
 # Front line (oval side) x = -107.5 + 0.16 y. Seven gables, ridges every 6.79 m from y 0.42.
@@ -590,7 +604,15 @@ def pavilion():
         z = 2.7 + i * 0.45; s0 = 1.2 + i * 1.0; s1 = s0 + 1.0
         q.append([PF(Y_S, s0, z), PF(Y_N, s0, z), PF(Y_N, s1, z), PF(Y_S, s1, z)])
         q.append([PF(Y_S, s1, z), PF(Y_N, s1, z), PF(Y_N, s1, z + 0.45), PF(Y_S, s1, z + 0.45)])
-    faces_obj(q, 'pav_seats', 'seat_timber')
+    faces_obj(q, 'pav_tiers', 'seat_timber')
+    q = []; ql = []     # one slatted bench per tier, seat 0.42 m above the tread, at the back of the tread (g39)
+    for i in range(9):
+        z = 2.7 + i * 0.45; s1 = 1.2 + i * 1.0 + 1.0; b0, b1 = s1 - 0.62, s1 - 0.22
+        q.append([PF(Y_S, b0, z + 0.42), PF(Y_N, b0, z + 0.42), PF(Y_N, b1, z + 0.42), PF(Y_S, b1, z + 0.42)])
+        q.append([PF(Y_S, b0, z + 0.3), PF(Y_N, b0, z + 0.3), PF(Y_N, b0, z + 0.42), PF(Y_S, b0, z + 0.42)])
+        for y_ in np.arange(Y_S + 0.6, Y_N, 2.4):
+            ql.append([PF(y_, b0 + 0.05, z), PF(y_ + 0.06, b0 + 0.05, z), PF(y_ + 0.06, b0 + 0.05, z + 0.3), PF(y_, b0 + 0.05, z + 0.3)])
+    faces_obj(q, 'pav_seats', 'seat_timber'); faces_obj(ql, 'pav_seat_legs', 'white')   # white metal brackets (g39)
     M.setdefault('mesh_dark', chain_mesh('mesh_dark'))
     prism([PF(Y_S, -0.2)[:2], PF(Y_N, -0.2)[:2], PF(Y_N, 1.2)[:2], PF(Y_S, 1.2)[:2]], 0, 2.6, 'pav_plinth', 'mesh_dark', top=False)
     faces_obj([[PF(Y_S, -0.2, 2.6), PF(Y_N, -0.2, 2.6), PF(Y_N, 1.2, 2.6), PF(Y_S, 1.2, 2.6)]], 'pav_deck', 'concrete')
@@ -642,6 +664,29 @@ def pavilion():
     box((tx, ty, 10.1), (5.3, 5.3, 0.3), 'pav_tower_cornice', 'white', rot=rot)
     dome((tx, ty, 10.25), 2.7, 3.1, 'pav_tower_dome', ogee=True)
     cyl((tx, ty, 13.3), (tx, ty, 17.5), 0.05, 'pav_tower_flag', 'white', 6)
+    # north verandah (g36 2023-12-11: balcony with white balustrade, blue hip roof on green posts, fenced
+    # under-croft; a04 2024-07-15: stair from the balcony down toward the oval). Depth 4.5 m north of the stand.
+    tv = Vector((tx, ty, 0.0)) - Vector(PF(Y_N, 0.0)); st = tv.dot(BN) - 2.4      # back edge = tower's east face
+    ya, yb, sa, sb = Y_N, Y_N + 4.5, -0.2, st
+    prism([PF(ya, sa)[:2], PF(yb, sa)[:2], PF(yb, sb)[:2], PF(ya, sb)[:2]], 2.45, 2.6, 'pav_ann_deck', 'concrete')
+    faces_obj([[PF(ya, sa, 0.0), PF(yb, sa, 0.0), PF(yb, sa, 2.45), PF(ya, sa, 2.45)],
+               [PF(yb, sa, 0.0), PF(yb, sb, 0.0), PF(yb, sb, 2.45), PF(yb, sa, 2.45)]], 'pav_ann_fence', 'mesh_dark')
+    SG = (yb - 1.3, yb - 0.1)     # stair opening at the NE corner of the balcony
+    faces_obj([[PF(ya, sa, 2.75), PF(SG[0], sa, 2.75), PF(SG[0], sa, 3.4), PF(ya, sa, 3.4)],
+               [PF(yb, sa + 0.0, 2.75), PF(yb, sb, 2.75), PF(yb, sb, 3.4), PF(yb, sa, 3.4)]], 'pav_ann_balustrade', 'balustrade')
+    for k, (y_, s_) in enumerate(((ya, sa), (yb, sa), (yb, sb), (ya + (yb - ya) / 2, sa))):
+        cyl(PF(y_, s_, 2.6), PF(y_, s_, 5.4), 0.1, f'pav_ann_post_{k}', 'green', 8)
+    e = 0.4; zr, ze = 6.9, 5.4
+    c0, c1, c2, c3 = PF(ya - 0.2, sa - e, ze), PF(yb + e, sa - e, ze), PF(yb + e, sb + e, ze), PF(ya - 0.2, sb + e, ze)
+    ym = (ya + yb) / 2; r0, r1 = PF(ym, sa + 2.2, zr), PF(ym, sb - 2.2, zr)
+    faces_obj([[c0, c1, r0], [c1, c2, r1, r0], [c2, c3, r1], [c3, c0, r0, r1]], 'pav_ann_roof', 'roof_zinc_pav')
+    faces_obj([[PF(ya - 0.2, sa - e, ze - 0.25), PF(yb + e, sa - e, ze - 0.25), PF(yb + e, sa - e, ze), PF(ya - 0.2, sa - e, ze)],
+               [PF(yb + e, sa - e, ze - 0.25), PF(yb + e, sb + e, ze - 0.25), PF(yb + e, sb + e, ze), PF(yb + e, sa - e, ze)]], 'pav_ann_fascia', 'green')
+    for k in range(13):     # stair down toward the oval, 13 risers of 0.2 m
+        z1 = 2.6 - k * 0.2; s0_ = sa - (k + 1) * 0.28
+        prism([PF(SG[0], s0_)[:2], PF(SG[1], s0_)[:2], PF(SG[1], s0_ + 0.28)[:2], PF(SG[0], s0_ + 0.28)[:2]], 0.0, z1, f'pav_ann_step_{k}', 'concrete')
+    for y_ in SG:
+        cyl(PF(y_, sa, 3.5), PF(y_, sa - 13 * 0.28, 0.9), 0.03, f'pav_ann_rail_{y_:.1f}', 'green', 6)
 
 
 def dome(c, r, h, name, ogee=False, seg=24):
@@ -690,7 +735,7 @@ def buildings():
     def ztop(x): return zin(x, XS, (10.34, 10.55, 10.57))
     # a04 colours: the band is the Community Bank purple (shaded 55-60, 30-35, 70), the Bendigo panel pale blue with
     # navy-purple lettering and mark
-    M.setdefault('bank_purple', flat('bank_purple', (0.30, 0.10, 0.43), 0.45))
+    M.setdefault('bank_purple', flat('bank_purple', (0.30, 0.105, 0.205), 0.45))   # maroon-magenta, hue from g33/a04 sign pixels
     M.setdefault('bendigo_blue', flat('bendigo_blue', (0.50, 0.74, 0.92), 0.4))
     M.setdefault('bendigo_ink', flat('bendigo_ink', (0.05, 0.04, 0.16), 0.45))
     ZF2 = 9.5                                  # roof edge where it bends back (a04 white edge falls past u 3065)
@@ -703,7 +748,7 @@ def buildings():
     def plate(pa, pb, name, mat):
         faces_obj([[(*pa, zbot(pa[0])), (*pb, zbot(pb[0])), (*pb, ztop(pb[0])), (*pa, ztop(pa[0]))]], name, mat)
     plate(SL, SR, 'nstand_sign_maroon', 'bank_purple')
-    plate(SR, SB, 'nstand_sign_white', 'bendigo_blue')
+    plate(SR, SB, 'nstand_sign_white', 'white')   # sponsor panel painted out (no ads)
     faces_obj([[(*F0, zbot(F0[0]) - 0.15), (*SL, zbot(SL[0]) - 0.15), (*SL, zbot(SL[0])), (*F0, zbot(F0[0]))]], 'nstand_eave_l', 'white')
     faces_obj([[(*F1, zbot(F1[0]) - 0.3), (*F2, ZF2 - 0.3), (*F2, ZF2), (*F1, zbot(F1[0]))]], 'nstand_edge', 'white')
     faces_obj([[(*F2, ZB - 0.3), (*B2, ZB - 0.3), (*B2, ZB), (*F2, ZF2)]], 'nstand_end_r', 'white')
@@ -1149,9 +1194,11 @@ def griff_john():
         gj_box(u - 0.12, u + 0.12, -1.15, -0.9, D + rise_, rsof(-1.0), f'gj_column_{k}', 'steel_dark')
     # lettering: SOUTH FREMANTLE   FOOTBALL CLUB, red on the white fascia, bulldog badge at the SE end
     zc = (f0 + f1) / 2
-    gj_text('SOUTH FREMANTLE', 23.4, 0.03, zc - 0.05, 2.0, 'red', 'gj_text_sf', width=14.4)
-    gj_text('FOOTBALL CLUB', 7.6, 0.03, zc - 0.05, 2.0, 'red', 'gj_text_fc', width=12.2)
-    gj_badge(36.0, 0.03, zc, 0.62, 'v')
+    # positions read off g34 (2023) through the fitted camera fit/cam_g34g.json: SOUTH FREMANTLE u 41.5-32.5, FOOTBALL CLUB
+    # u 31.0-23.0, a badge at each end (u 44.8, 19.7); letter height 0.58 of the band
+    gj_text('SOUTH FREMANTLE', 37.0, 0.03, zc - 0.05, 1.3, 'red', 'gj_text_sf', width=9.1)
+    gj_text('FOOTBALL CLUB', 27.0, 0.03, zc - 0.05, 1.3, 'red', 'gj_text_fc', width=8.0)
+    gj_badge(44.8, 0.03, zc, 0.55, 'v'); gj_badge(19.7, 0.03, zc, 0.55, 'v')
     # --- function room at the SE end (OSM front v -0.5, u 46.4-56.9): painted brick, white render, four glass bays
     gj_box(46.4, 56.9, -12.5, -0.5, 0.0, 1.2, 'gj_fr_brick', 'brick_pink', top=False)
     gj_box(46.4, 56.9, -12.5, -0.5, 1.2, 2.4, 'gj_fr_render', 'render_white', top=False)
@@ -1381,7 +1428,7 @@ HQ_ZE_LOW = HQ_ZB + 5.38  # glass-hall gables 1-4: eaves (g18 fit)
 HQ_RISE_LOW = 1.96
 HQ_WIDTHS = [5.79] * 4 + [8.09] + [5.73] * 4   # g18/g34 fit: hall 5.79, first two-storey 8.09, four more at 5.73
 HQ_WBIG = 7.0    # entrance section past gable 9: ridge along the front, west-facing gable end (g34 pW fit)
-HQ_DBIG = 10.0   # its depth front to back (ridge at half depth)
+HQ_DBIG = 8.0   # its depth front to back (ridge at half depth)
 
 def hq_at(s):
     pts = HQ_FRONT; acc = 0.0
@@ -1404,7 +1451,7 @@ def hq():
     acc_ = [0.0]
     for w_ in HQ_WIDTHS: acc_.append(acc_[-1] + w_)
     spans = [(acc_[k], acc_[k + 1]) for k in range(9)] + [(acc_[9], acc_[9] + HQ_WBIG)]
-    roof, sof, barge, glassq, cols, mull, solar, cream, dark, slab, rail, railg, plinth, bank = ([] for _ in range(14))
+    roof, sof, barge, glassq, cols, mull, solar, cream, dark, slab, rail, railg, plinth, bank, roofb, sky = ([] for _ in range(16))
     for k, (s0, s1) in enumerate(spans):
         A = Vector(hq_at(s0)); B = Vector(hq_at(s1))
         w = (B - A).length; u = (B - A) / w; n = Vector((-u.y, u.x))   # n points into the building (away from the oval)
@@ -1412,7 +1459,7 @@ def hq():
         big = k == 9
         low = k < 4
         ze = HQ_ZE_LOW if low else ZE_HI
-        rise = HQ_RISE_LOW if low else HQ_RISE
+        rise = HQ_RISE_LOW if low else (1.4 if big else HQ_RISE)   # big: the low blue-grey entrance roof (a02)
         depth = HQ_DBIG if big else (13.0 if low else 8.0)
         oh = 1.0                                   # roof overhang in front of the front line
         zr_ = ze + rise; h = w / 2
@@ -1422,7 +1469,7 @@ def hq():
             if k == 3: lowcut.append((P(w, -oh - 0.5, 0)[:2], P(w, depth, 0)[:2]))
         if big:
             zr_ = ze + rise; dm = depth / 2
-            roof += [[P(0, -oh, ze), P(w + oh * 0.6, -oh, ze), P(w + oh * 0.6, dm, zr_), P(0, dm, zr_)],
+            roofb += [[P(0, -oh, ze), P(w + oh * 0.6, -oh, ze), P(w + oh * 0.6, dm, zr_), P(0, dm, zr_)],
                      [P(0, dm, zr_), P(w + oh * 0.6, dm, zr_), P(w + oh * 0.6, depth, ze), P(0, depth, ze)]]
             sof += [[P(0, -oh, ze - 0.12), P(0, dm, zr_ - 0.12), P(w + oh * 0.6, dm, zr_ - 0.12), P(w + oh * 0.6, -oh, ze - 0.12)],
                     [P(0, dm, zr_ - 0.12), P(0, depth, ze - 0.12), P(w + oh * 0.6, depth, ze - 0.12), P(w + oh * 0.6, dm, zr_ - 0.12)],
@@ -1459,6 +1506,12 @@ def hq():
                     d0 = -oh + 0.5 + j * 1.72; d1 = d0 + 1.68
                     def SP(f, d): return P(h + h * f, d, zr_ - rise * f + 0.05)
                     solar.append([SP(f0, d0), SP(f1, d0), SP(f1, d1), SP(f0, d1)])
+        if 4 <= k <= 6:
+            Ls = math.hypot(h, rise)
+            for j in range(int((depth - 1.6) / 1.72)):
+                d0 = -oh + 0.5 + j * 1.72; d1 = d0 + 1.68
+                def KP(f, d): return P(h * f, d, zl + (zr_ - zl) * f + 0.04)
+                sky.append([KP(0.18, d0), KP(0.82, d0), KP(0.82, d1), KP(0.18, d1)])
         if k < 4 or big:
             dv = 1.0 if big else 0.0                  # the entrance hall glazing sits a metre back
             glassq.append([P(0, dv, zb), P(w, dv, zb), P(w, dv, ze - 0.12), P(0, dv, ze - 0.12)])
@@ -1502,19 +1555,14 @@ def hq():
         if k == 4:   # the small scoreboard on the ground floor front by the glass hall (g18, g34)
             hq_sb = [P(3.7, -0.25, zb + 1.7), P(6.4, -0.25, zb + 1.7), P(6.4, -0.25, zb + 3.35), P(3.7, -0.25, zb + 3.35)]
             hq_sbi = [P(3.85, -0.27, zb + 1.85), P(6.25, -0.27, zb + 1.85), P(6.25, -0.27, zb + 3.2), P(3.85, -0.27, zb + 3.2)]
-        if big:      # purple entrance porch at the west end of the wide gable (g34): a small white gable on green posts
-            pa, pb = w - 4.6, w - 0.8; ph = (pa + pb) / 2; pz, pr = zb + 3.0, zb + 4.3
-            pq = [[P(pa, -1.8, pz), P(ph, -1.8, pr), P(ph, 1.0, pr), P(pa, 1.0, pz)],
-                  [P(ph, -1.8, pr), P(pb, -1.8, pz), P(pb, 1.0, pz), P(ph, 1.0, pr)]]
-            faces_obj(pq, 'hq_porch_roof', 'roof_white')
-            faces_obj([[P(pa + 0.2, -1.82, pz + 0.05), P(pb - 0.2, -1.82, pz + 0.05), P(ph, -1.82, pr - 0.1)]], 'hq_porch_sign', 'club_purple')
-            for k2, a in enumerate((pa + 0.15, pb - 0.15)):
-                c = A + u * a + n * -1.7
-                cols.append(((c.x, c.y), zb, pz))
-            hq_bigP = P
     for k2, ((x, y), z0, z1) in enumerate(cols):
         box((x, y, (z0 + z1) / 2), (0.26, 0.26, z1 - z0), f'hq_col_{k2}', 'green')
+    ncol_ = len(cols)
     faces_obj(roof, 'hq_roof', 'roof_white'); faces_obj(sof, 'hq_soffit', 'sign_white')
+    M.setdefault('roof_blue', corrugated('roof_blue', (0.50, 0.56, 0.62), axis=1, metal=0.2, rough=0.5))
+    M.setdefault('sky_amber', flat('sky_amber', (0.78, 0.52, 0.16), 0.25))
+    M.setdefault('vine', leaves('vine', (0.10, 0.22, 0.06), (0.22, 0.34, 0.10)))
+    faces_obj(roofb, 'hq_entrance_roof', 'roof_blue'); faces_obj(sky, 'hq_skylights', 'sky_amber')
     faces_obj(barge, 'hq_bargeboards', 'green'); faces_obj(glassq, 'hq_glass', 'hq_glass')
     faces_obj(mull, 'hq_mullions', 'green'); faces_obj(solar, 'hq_solar', 'solar')
     faces_obj(cream, 'hq_ground_floor', 'render_cream'); faces_obj(dark, 'hq_doors', 'dark')
@@ -1549,20 +1597,127 @@ def hq():
         if y1 > -100.5 and y2 > -100.5 and x1 > -22.0 and x2 > -22.0: continue   # the gabled front
         wq.append([(x1, y1, 0.0), (x2, y2, 0.0), (x2, y2, ze - 0.3), (x1, y1, ze - 0.3)])
     faces_obj(wq, 'hq_walls', 'render_cream')
-    # punched windows on the west (cream office) face, two floors (g34)
+    O_ = Vector((-20.0, -90.0)); U_ = Vector((0.857, -0.515)); V_ = Vector((-0.515, -0.857))
+    def F(u, v, z): q = O_ + U_ * u + V_ * v; return (q.x, q.y, z)
+    zt = HQ_ZB + 1.0
+    # entrance box (OSM pts 4-5-6, u -8..-2.2, v 0.7..7.5): low blue-grey hipped roof, glazed oval face (a02)
+    ze2, zr2 = ZE_HI - 0.6, ZE_HI + 0.9
+    faces_obj([[F(-8.6, 0.1, ze2), F(-1.6, 0.1, ze2), F(-3.2, 4.1, zr2), F(-7.0, 4.1, zr2)],
+               [F(-1.6, 0.1, ze2), F(-1.6, 8.0, ze2), F(-3.2, 4.1, zr2)],
+               [F(-1.6, 8.0, ze2), F(-8.6, 8.0, ze2), F(-7.0, 4.1, zr2), F(-3.2, 4.1, zr2)],
+               [F(-8.6, 8.0, ze2), F(-8.6, 0.1, ze2), F(-7.0, 4.1, zr2)]], 'hq_entry_roof', 'roof_blue')
+    faces_obj([[F(-8.0, 0.7, zb), F(-2.2, 0.7, zb), F(-2.2, 0.7, ze2), F(-8.0, 0.7, ze2)],
+               [F(-8.2, 7.4, zb), F(-8.0, 0.7, zb), F(-8.0, 0.7, ze2), F(-8.2, 7.4, ze2)]], 'hq_entry_glass', 'hq_glass')
+    for a in (-8.0, -6.1, -4.1, -2.2):
+        q = F(a, 0.68, 0); cols.append(((q[0], q[1]), zb, ze2))
+    box(F(-5.1, 0.66, zb + 3.0), (5.8, 0.12, 0.14), 'hq_entry_transom', 'green', rot=math.atan2(U_.y, U_.x))
+    # tall cross-gable behind it: ridge along U, gable end facing west over the notch (g34+a02 apex (-28.46,-97.45,11.64))
+    gv0, gv1, gez, gaz, gu0, gu1 = 7.9, 13.7, 9.2, 11.64, -4.8, 4.0
+    gvm = (gv0 + gv1) / 2
+    faces_obj([[F(gu0, gv0 - 0.3, gez - 0.1), F(gu1, gv0 - 0.3, gez - 0.1), F(gu1, gvm, gaz), F(gu0, gvm, gaz)],
+               [F(gu0, gvm, gaz), F(gu1, gvm, gaz), F(gu1, gv1 + 0.3, gez - 0.1), F(gu0, gv1 + 0.3, gez - 0.1)]], 'hq_cross_roof', 'roof_white')
+    faces_obj([[F(gu0 + 0.3, gv0, gez - 0.12), F(gu0 + 0.3, gvm, gaz - 0.15), F(gu0 + 0.3, gv1, gez - 0.12)]], 'hq_cross_gable', 'sign_white')
+    faces_obj([[F(gu0 - 0.01, gv0 - 0.3, gez - 0.35), F(gu0 - 0.01, gvm, gaz - 0.25), F(gu0 - 0.01, gvm, gaz + 0.02), F(gu0 - 0.01, gv0 - 0.3, gez - 0.08)],
+               [F(gu0 - 0.01, gvm, gaz - 0.25), F(gu0 - 0.01, gv1 + 0.3, gez - 0.35), F(gu0 - 0.01, gv1 + 0.3, gez - 0.08), F(gu0 - 0.01, gvm, gaz + 0.02)]], 'hq_cross_barge', 'green')
+    faces_obj([[F(gu0 + 0.3, gv0, zb), F(gu0 + 0.3, gv0, gez - 0.12), F(gu0 + 0.3, gv1, gez - 0.12), F(gu0 + 0.3, gv1, zb)]], 'hq_cross_glass', 'hq_glass')
+    faces_obj([[F(gu0 + 0.3, gv0, gez - 0.12), F(gu1, gv0, gez - 0.12), F(gu1, gv0, ZE_HI - 0.3), F(gu0 + 0.3, gv0, ZE_HI - 0.3)],
+               [F(gu1, gv1, gez - 0.12), F(gu0 + 0.3, gv1, gez - 0.12), F(gu0 + 0.3, gv1, ZE_HI - 0.3), F(gu1, gv1, ZE_HI - 0.3)]], 'hq_cross_sides', 'render_cream')
+    for v in (gv0, gv1):
+        q = F(gu0 + 0.25, v, 0); cols.append(((q[0], q[1]), zb, gez))
+    # purple porch in the notch (OSM pts 2-3, u -6, v 7.6..11.3), facing west under the gable end (g34)
+    pv0, pv1 = 7.7, 11.2; pvm = (pv0 + pv1) / 2; pz, pr = zb + 3.0, zb + 4.3; pu = -7.3
+    faces_obj([[F(pu, pv0 - 0.2, pz), F(-4.5, pv0 - 0.2, pz), F(-4.5, pvm, pr), F(pu, pvm, pr)],
+               [F(pu, pvm, pr), F(-4.5, pvm, pr), F(-4.5, pv1 + 0.2, pz), F(pu, pv1 + 0.2, pz)]], 'hq_porch_roof', 'roof_white')
+    faces_obj([[F(pu - 0.02, pv0 + 0.1, pz + 0.05), F(pu - 0.02, pvm, pr - 0.1), F(pu - 0.02, pv1 - 0.1, pz + 0.05)]], 'hq_porch_sign', 'club_purple')
+    for v in (pv0, pv1):
+        q = F(pu + 0.15, v, 0); cols.append(((q[0], q[1]), zb, pz))
+    # cream west block (OSM pts 0-1-2 + the back), 1.9 m above the flat roof (g34 roof line), punched windows west face
+    zc_ = ZE_HI - 0.3 + 1.9
+    prism([F(-9.5, 11.2, 0)[:2], F(-4.5, 11.3, 0)[:2], F(-4.5, 30.8, 0)[:2], (-37.9, -115.2), (-44.5, -110.8)],
+          0.0, zc_, 'hq_west_block', 'render_cream')
+    faces_obj([[F(-9.9, 11.0, zc_ + 0.02), F(-4.3, 11.0, zc_ + 0.02), F(-4.3, 31.0, zc_ + 0.02), F(-10.5, 31.0, zc_ + 0.02)]], 'hq_west_roof', 'roof_cream')
     win = []
-    a_, b_ = Vector((-27.3, -86.6)), Vector((-44.5, -110.8)); t_ = (b_ - a_).normalized(); nn = Vector((-t_.y, t_.x))
+    pa_, pb_ = Vector((-33.9, -94.7)), Vector((-44.5, -110.8)); t_ = (pb_ - pa_).normalized(); nn = Vector((t_.y, -t_.x))
     for zc in (2.2, 5.4):
-        for s in np.arange(9.0, 29.0, 2.6):
-            c = a_ + t_ * s - nn * 0.04
-            win.append([(c.x - t_.x * 0.5, c.y - t_.y * 0.5, zc - 0.6), (c.x + t_.x * 0.5, c.y + t_.y * 0.5, zc - 0.6),
-                        (c.x + t_.x * 0.5, c.y + t_.y * 0.5, zc + 0.6), (c.x - t_.x * 0.5, c.y - t_.y * 0.5, zc + 0.6)])
-    faces_obj(win, 'hq_windows', 'hq_glass')
+        for s_ in np.arange(1.6, (pb_ - pa_).length - 1.0, 2.2):
+            c = pa_ + t_ * s_ + nn * 0.03
+            win.append([(c.x - t_.x * 0.5, c.y - t_.y * 0.5, zc - 0.55), (c.x + t_.x * 0.5, c.y + t_.y * 0.5, zc - 0.55),
+                        (c.x + t_.x * 0.5, c.y + t_.y * 0.5, zc + 0.55), (c.x - t_.x * 0.5, c.y - t_.y * 0.5, zc + 0.55)])
+    faces_obj(win, 'hq_west_windows', 'hq_glass')
+    # green pergola in front of the west block: 4 small gabled bays, ridges across the face, vines on top (g34, a02)
+    pg = []; pgv = []
+    for i in range(4):
+        v0, v1 = 12.2 + i * 2.4, 12.2 + (i + 1) * 2.4; vm = (v0 + v1) / 2; ua, ub = -13.4, -10.3
+        for u in (ua, ub):
+            for v in (v0, v1):
+                q = F(u, v, 0); box((q[0], q[1], (zb + 1.5) / 2), (0.14, 0.14, zb + 1.5), f'hq_perg_post_{i}_{u}_{v}', 'green')
+        pg += [[F(ua - 0.03, v0, zb + 1.5), F(ua - 0.03, vm, zb + 2.4), F(ua - 0.03, vm, zb + 2.25), F(ua - 0.03, v0 + 0.15, zb + 1.4)],
+               [F(ua - 0.03, vm, zb + 2.4), F(ua - 0.03, v1, zb + 1.5), F(ua - 0.03, v1 - 0.15, zb + 1.4), F(ua - 0.03, vm, zb + 2.25)]]
+        pgv += [[F(ua, v0, zb + 1.5), F(ub, v0, zb + 1.5), F(ub, vm, zb + 2.35), F(ua, vm, zb + 2.35)],
+                [F(ua, vm, zb + 2.35), F(ub, vm, zb + 2.35), F(ub, v1, zb + 1.5), F(ua, v1, zb + 1.5)]]
+    faces_obj(pg, 'hq_pergola_frame', 'green'); faces_obj(pgv, 'hq_pergola_vines', 'vine')
+    for k2, ((x, y), z0, z1) in enumerate(cols[ncol_:]):
+        box((x, y, (z0 + z1) / 2), (0.26, 0.26, z1 - z0), f'hq_colw_{k2}', 'green')
     # rooftop plant on the flat roof (a02)
     for k2, (x, y) in enumerate(((-10, -112), (-2, -115), (6, -118), (-18, -108), (14, -116))):
         box((x, y, ze - 0.3 + 0.4), (1.4, 1.0, 0.8), f'hq_plant_{k2}', 'aircon')
 
-ground(); fence(); terrace(); north_boards(); pavilion(); buildings(); towers(); hq()   # trees() deferred to the background scene pass (director 2026-11-18, via the secretary)
+ground(); fence(); terrace(); pavilion(); buildings(); towers(); hq()   # trees() deferred to the background scene pass (director 2026-11-18, via the secretary)
+
+# ---------------------------------------------------------------- texture pass (hand-painted maps from tex/paint_fo.py)
+# glTF exports image textures, not procedural nodes: every material with a painted map gets Image Texture (UVMap)
+# -> Base Color (roughness and metal kept; procedural colour and bump nodes removed). UVs are world metres / repeat
+# size per face: walls and roofs run u along the horizontal, v up the face (image top = up, so rain streaks run
+# down and roof ribs run down the slope); flat faces use world x / y, except seat treads, which run u along the
+# tread's long edge so the seats follow each row.
+def texture_pass():
+    TD = os.path.join(ROOT, 'tex'); TL = json.load(open(os.path.join(TD, 'tiles.json')))
+    # text signs become meshes first (a text object has no UV map to carry the painted map)
+    fonts = [o for o in scn.objects if o.type == 'FONT']
+    if fonts:
+        bpy.ops.object.select_all(action='DESELECT')
+        for o in fonts: o.select_set(True)
+        bpy.context.view_layer.objects.active = fonts[0]; bpy.ops.object.convert(target='MESH')
+    for m in bpy.data.materials:
+        p = os.path.join(TD, m.name + '.png')
+        if m.name not in TL or not os.path.exists(p) or not m.use_nodes: continue
+        nt = m.node_tree; bs = next((n for n in nt.nodes if n.type == 'BSDF_PRINCIPLED'), None)
+        if bs is None: continue
+        for inp in ('Base Color', 'Normal'):
+            for l in list(bs.inputs[inp].links): nt.links.remove(l)
+        it = nt.nodes.new('ShaderNodeTexImage'); it.image = bpy.data.images.load(p); it.interpolation = 'Linear'
+        uvn = nt.nodes.new('ShaderNodeUVMap'); uvn.uv_map = 'UVMap'
+        nt.links.new(uvn.outputs['UV'], it.inputs['Vector']); nt.links.new(it.outputs['Color'], bs.inputs['Base Color'])
+        live = set(); stack = [n for n in nt.nodes if n.type == 'OUTPUT_MATERIAL']
+        while stack:
+            n = stack.pop()
+            if n in live: continue
+            live.add(n); stack += [l.from_node for i_ in n.inputs for l in i_.links]
+        for n in [n for n in nt.nodes if n not in live]: nt.nodes.remove(n)
+    Z = Vector((0, 0, 1))
+    for ob in list(scn.objects):
+        if ob.type != 'MESH' or not ob.data.materials: continue
+        me = ob.data; mw = ob.matrix_world; nmx = mw.to_3x3().inverted_safe().transposed()
+        for l_ in list(me.uv_layers): me.uv_layers.remove(l_)
+        bm = bmesh.new(); bm.from_mesh(me); uv = bm.loops.layers.uv.new('UVMap')
+        for f in bm.faces:
+            mt = me.materials[f.material_index] if f.material_index < len(me.materials) else None
+            tw, th = TL.get(mt.name, [4.0, 4.0]) if mt else (4.0, 4.0)
+            n = (nmx @ f.normal).normalized()
+            if abs(n.z) > 0.98:
+                if mt and mt.name.startswith('seat_'):
+                    e = max(f.edges, key=lambda e_: e_.calc_length())
+                    d = (mw @ e.verts[1].co) - (mw @ e.verts[0].co); d.z = 0
+                    tv = d.normalized() if d.length > 1e-6 else Vector((1, 0, 0)); bv = Z.cross(tv)
+                else: tv, bv = Vector((1, 0, 0)), Vector((0, 1, 0))
+            else:
+                tv = Z.cross(n).normalized(); bv = n.cross(tv)
+            for l in f.loops:
+                p = mw @ l.vert.co; l[uv].uv = (p.dot(tv) / tw, p.dot(bv) / th)
+        bm.to_mesh(me); bm.free()
+        me.uv_layers.active = me.uv_layers['UVMap']
+
+texture_pass()
 
 # ---------------------------------------------------------------- light + world
 sun = bpy.data.lights.new('sun', 'SUN'); sun.energy = 5.0; sun.angle = math.radians(0.6)
@@ -1596,7 +1751,8 @@ scn.render.engine = 'BLENDER_EEVEE'
 scn.view_settings.view_transform = 'Standard'
 scn.render.film_transparent = True
 # no lettering on any ground model (lead via the secretary, 2026-11-18): every text object goes; boards stay blank
-LETTER_PREFIXES = ('nstand_txt', 'gate_letter_', 'gate_logo_text', 'media_name_text_', 'gj_text_', 'gj_mural_l', 'nboard_txt_')
+# director 2026-11-19 "Yes, ground's own signs" + no ads: the ground's name, gate, media box and club signs stay; sponsor lettering goes
+LETTER_PREFIXES = ('nstand_txt2', 'nstand_logo', 'nboard_txt_')
 _gone = [o for o in list(scn.objects) if o.name.startswith(LETTER_PREFIXES)]
 print('LETTERING_REMOVED', len(_gone), sorted({o.name.rstrip('0123456789_') for o in _gone}))
 for o in _gone: bpy.data.objects.remove(o, do_unlink=True)
@@ -1608,7 +1764,8 @@ elif MODE in ('turn', 'close'):
     import mathutils
     os.makedirs(OUT, exist_ok=True)
     # review renders only: a plain grass fill where the game's own pitch goes (never exported in the GLB)
-    faces_obj([[(*pt, -0.01) for pt in off(0.0)]], 'review_pitch_fill', 'grass_edge')
+    M['review_grass'] = flat('review_grass', (0.12, 0.3, 0.06), 0.9)   # own plain material: never the bank's painted map
+    faces_obj([[(*pt, -0.04) for pt in off(0.0)]], 'review_pitch_fill', 'review_grass')
     scn.render.film_transparent = False
     cam = bpy.data.cameras.new('tcam'); cam.lens = 35; cam.clip_end = 3000
     co = bpy.data.objects.new('tcam', cam); scn.collection.objects.link(co); scn.camera = co
@@ -1618,20 +1775,24 @@ elif MODE in ('turn', 'close'):
         # facade close-ups from the oval: north stand sign, gate, pavilion
         shots = {'close_nstand': ((-20.0, 60.0, 6.0), (-20.0, 97.0, 8.0)),
                  'close_gate': ((-60.0, 40.0, 4.0), (-95.0, 70.0, 4.0)),
+                 'pav_annex': ((-78.0, 66.0, 8.0), (-101.0, 50.0, 3.5)),
                  'close_pavilion': ((-70.0, 20.0, 6.0), (-108.0, 20.0, 6.0)),
                  'close_terrace': ((40.0, 0.0, 5.0), (80.0, 0.0, 3.0)),
                  'gj_front': (GJ(22, 19, 1.6), GJ(22, 0, 4.0)),
                  'gj_se': (GJ(64, 14, 1.6), GJ(24, 0, 4.0)),
                  'gj_nw': (GJ(-25, -19, 1.6), GJ(0, -19, 4.0)),
                  'gj_air': (GJ(30, 75, 45), GJ(30, -10, 2.0)),
-                 'gj_fascia': (GJ(30, 16, 4.0), GJ(30, 0, 6.6)),
+                 'gj_fascia': (GJ(32, 30, 4.0), GJ(32, 0, 6.6)),
                  'media_oval': (MB_EYE, MB_AT),
                  'media_street': (MB_EYE2, MB_AT),
                  'hq_g18': ((-36.0, -46.0, 1.7), (14.0, -100.0, 4.5)),
                  'hq_g34': ((-58.0, 30.0, 1.5), (-5.0, -96.0, 4.0)),
                  'hq_front': ((5.0, -62.0, 2.0), (5.0, -98.0, 5.0)),
                  'hq_air': ((-12.0, -30.0, 38.0), (-2.0, -100.0, 3.0)),
-                 'hq_facade': ((12.0, -82.0, 2.5), (12.0, -99.0, 5.0))}
+                 'hq_facade': ((12.0, -82.0, 2.5), (12.0, -99.0, 5.0)),
+                 'seat_nstand': ((-14.0, 82.0, 3.5), (-22.0, 93.0, 3.0)),
+                 'seat_gj': (GJ(18, 7, 6.5), GJ(24, -3.5, 2.2)),
+                 'seat_pav': (tuple(PF(10.0, 7.7, 7.0)), tuple(PF(30.0, 2.0, 3.6)))}
         if len(sys.argv) > sys.argv.index('--') + 3:
             only = sys.argv[sys.argv.index('--') + 3].split(',')
             shots = {k: v for k, v in shots.items() if k in only}
@@ -1683,7 +1844,22 @@ elif MODE == 'photos':
         co = bpy.data.objects.new('pcam%d' % i_, cam); scn.collection.objects.link(co)
         co.matrix_world = mathutils.Matrix.Translation(p[:3]) @ rot.to_4x4(); scn.camera = co
         scn.render.resolution_x, scn.render.resolution_y = W_, H_; scn.render.resolution_percentage = 100
+        if os.environ.get('BORDER'):
+            bx0, by0, bx1, by1 = [float(v) for v in os.environ['BORDER'].split(',')]   # pixels, y down
+            scn.render.use_border = True; scn.render.use_crop_to_border = False
+            scn.render.border_min_x, scn.render.border_max_x = bx0 / W_, bx1 / W_
+            scn.render.border_min_y, scn.render.border_max_y = 1 - by1 / H_, 1 - by0 / H_
         scn.render.filepath = os.path.join(ROOT, out_); bpy.ops.render.render(write_still=True)
+elif MODE == 'top':
+    # straight-down orthographic render of a box in model metres: -- top out.png x0 y0 x1 y1 px_per_m
+    x0_, y0_, x1_, y1_, ppm_ = [float(v) for v in argv[2:7]]
+    cam = bpy.data.cameras.new('topcam'); cam.type = 'ORTHO'; cam.clip_end = 1000
+    cam.ortho_scale = max(x1_ - x0_, y1_ - y0_)
+    co = bpy.data.objects.new('topcam', cam); scn.collection.objects.link(co); scn.camera = co
+    co.location = ((x0_ + x1_) / 2, (y0_ + y1_) / 2, 400.0); co.rotation_euler = (0, 0, 0)
+    scn.render.resolution_x = int(round((x1_ - x0_) * ppm_)); scn.render.resolution_y = int(round((y1_ - y0_) * ppm_))
+    scn.render.resolution_percentage = 100
+    scn.render.filepath = OUT; bpy.ops.render.render(write_still=True)
 elif MODE == 'glb':
-    bpy.ops.export_scene.gltf(filepath=OUT, export_format='GLB', export_apply=True)
+    bpy.ops.export_scene.gltf(filepath=OUT, export_format='GLB', export_apply=True, export_image_format='JPEG', export_jpeg_quality=90)   # maps are RGB only
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(ROOT, 'build', 'fremantle_oval.blend'))
