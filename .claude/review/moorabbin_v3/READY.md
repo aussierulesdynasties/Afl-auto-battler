@@ -25,6 +25,16 @@ Stadium only (stops at the outer fence). No field (the game draws its own), no g
 ## Textures (all hand-made, no photo pixels; grey stddev 0-255 as used)
 All are 10.5 or higher. The lowest are the Huggins roof (10.5) and the scoreboard face (10.7). Full list: src/chk/texstd.json.
 
+## Seats FAIL on 41a2cbfd4 ("Send seats back"), closed
+1. Huggins and pavilion seats read as continuous slabs at seat height. Each seat is now a moulded shell copied from the
+   Huggins photo: a dished pan with a rolled front lip, and a curved back leaning 12 degrees that narrows to the top.
+   The shell is 25 mm thick and sits on a pedestal. Seats are 0.44 m wide at 0.50 m pitch, so a 6 cm gap shows between
+   every seat. The shells shade smooth and the pedestals stay flat.
+2. The plastic was speckled. hand/plastic.png is now an even, smooth finish: flat 150 grey with only a very gentle,
+   large-scale shade (grey stddev 2.5), no speckle. Plastic is exempt from the grain stretch in timg().
+The long-stand benches are unchanged (they passed). The model is now 910k triangles (the seats were 346k).
+Proof: proof/seats_vs_photo.png (seat-height render beside the photo crop for each stand) and proof/seat_*.png.
+
 ## Seats reopened ("Send seats back"), closed
 Seats were flat painted strips. Now every stand has real 3D seats, empty, in their real colours (proof/seats_vs_photo.png:
 seat-height render beside the photo crop for each stand; also proof/seat_*.png):

@@ -47,13 +47,33 @@ def obox(bm,o,ex,ey,ez,mi=0):
 # individual moulded seat (photo: Huggins blue tier, moorabbin-old-grandstands1.jpg): pedestal, pan and back, 0.50 m pitch
 SEAT_W,SEAT_P=0.44,0.50
 def seat(bm,f,t,n,mi_seat,mi_leg):
-    # f: tread front-edge point at tread height (3D); t: along the row; n: into the stand (away from the pitch)
+    # moulded shell (photo: Huggins seats): dished pan with a rolled front lip, curved back that narrows to the top,
+    # 25 mm shell; pedestal under the pan. f: tread front-edge point at tread height; t: along the row; n: into the stand
     f=np.array(f,float);t=np.array(t,float);n=np.array(n,float);z=np.array([0,0,1.0])
-    a=f-t*SEAT_W/2
-    obox(bm,f-t*0.03+n*0.30,t*0.06,n*0.20,z*0.40,mi_leg)                       # pedestal
-    obox(bm,a+n*0.08+z*0.40,t*SEAT_W,n*0.40,z*0.04,mi_seat)                    # pan
-    up=z*math.cos(math.radians(12))+n*math.sin(math.radians(12))               # back leans 12 deg
-    obox(bm,a+n*0.46+z*0.42,t*SEAT_W,n*0.035,up*0.40,mi_seat)                  # back
+    obox(bm,f-t*0.03+n*0.28,t*0.06,n*0.18,z*0.39,mi_leg)                       # pedestal
+    sl=math.sin(math.radians(12));cl=math.cos(math.radians(12))
+    prof=[(0.07,0.38,0.205),(0.10,0.425,0.215),(0.20,0.42,0.22),(0.32,0.415,0.22),(0.44,0.43,0.22),(0.48,0.48,0.215),
+          (0.48+0.12*sl,0.48+0.12*cl,0.21),(0.48+0.26*sl,0.48+0.26*cl,0.20),(0.48+0.38*sl,0.48+0.38*cl,0.185),(0.48+0.42*sl,0.48+0.42*cl,0.17)]
+    NU=7;us=np.linspace(-1,1,NU);TH=0.025
+    def P(k,u,inner):
+        dn,dz,hw=prof[k]
+        a=prof[max(k-1,0)];b=prof[min(k+1,len(prof)-1)];tn,tz=b[0]-a[0],b[1]-a[1];L=math.hypot(tn,tz);nn_,nz_=-tz/L,tn/L   # normal of the profile (up/forward side)
+        dish=0.025*(1-u*u)                                                     # dished across the width
+        dn2=dn-nn_*dish;dz2=dz-nz_*dish
+        if inner:dn2-=nn_*TH;dz2-=nz_*TH
+        return f+t*(u*hw)+n*dn2+z*dz2
+    O_=[[bm.verts.new(tuple(P(k,u,0))) for u in us] for k in range(len(prof))]
+    I_=[[bm.verts.new(tuple(P(k,u,1))) for u in us] for k in range(len(prof))]
+    for k in range(len(prof)-1):
+        for m in range(NU-1):
+            bm.faces.new([O_[k][m],O_[k+1][m],O_[k+1][m+1],O_[k][m+1]]).material_index=mi_seat
+            bm.faces.new([I_[k][m],I_[k][m+1],I_[k+1][m+1],I_[k+1][m]]).material_index=mi_seat
+        bm.faces.new([O_[k][0],I_[k][0],I_[k+1][0],O_[k+1][0]]).material_index=mi_seat       # side edges
+        bm.faces.new([O_[k][-1],O_[k+1][-1],I_[k+1][-1],I_[k][-1]]).material_index=mi_seat
+    for k in (0,len(prof)-1):                                                  # front lip and top edge
+        for m in range(NU-1):
+            q=[O_[k][m],O_[k][m+1],I_[k][m+1],I_[k][m]]
+            bm.faces.new(q if k==0 else q[::-1]).material_index=mi_seat
 def seat_row(bm,p0,p1,n,mi_seat,mi_leg):
     p0=np.array(p0,float);p1=np.array(p1,float);L=float(np.linalg.norm(p1-p0));t=(p1-p0)/L
     k=int((L-0.1)//SEAT_P);off=(L-k*SEAT_P)/2+SEAT_P/2
@@ -591,8 +611,8 @@ def timg(t,tint=None):
     w,h=im.size;px_=np.array(im.pixels[:]).reshape(h,w,4).copy();mean=px_[...,:3].reshape(-1,3).mean(0)
     px_[...,:3]=np.clip(px_[...,:3]*(np.array(tint[:3])/np.maximum(mean,1e-3)),0,1)
     # a dark or near-white tint scales the grain down with the colour: stretch it about the tint until grey std >= 10.5/255 (ground rule: std >= 10)
-    base=px_[...,:3].copy();tm=np.array(tint[:3]);k=1.0
-    while k<8:
+    base=px_[...,:3].copy();tm=np.array(tint[:3]);k=1.0;q=base
+    while k<8 and t!='plastic':
         q=np.clip(tm+(base-tm)*k,0,1);g=(q*np.array([0.299,0.587,0.114])).sum(-1)
         if g.std()*255>=10.5:break
         k*=1.15
@@ -645,6 +665,10 @@ sc.camera=co;sc.render.resolution_x=W_;sc.render.resolution_y=H_
 sun=bpy.data.lights.new('sun','SUN');sun.energy=3.0;so=bpy.data.objects.new('sun',sun);sc.collection.objects.link(so);so.rotation_euler=(math.radians(40),0,math.radians(150))
 wd=bpy.data.worlds.new('w');sc.world=wd;wd.use_nodes=True;wd.node_tree.nodes['Background'].inputs['Color'].default_value=(0.75,0.8,0.85,1);wd.node_tree.nodes['Background'].inputs['Strength'].default_value=0.9
 sc.view_settings.view_transform='Standard'
+for o in sc.objects:                                                            # moulded shells shade smooth; pedestals stay flat
+    if o.type=='MESH' and o.name in ('huggins_seats','pavilion_seats'):
+        ms=[m.name.startswith('seat_') and not m.name.startswith('seat_leg') for m in o.data.materials]
+        for p in o.data.polygons:p.use_smooth=ms[p.material_index]
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(D,'moorabbin3.blend'))
 for o in sc.objects:o.select_set(o.type=='MESH')
 bpy.ops.export_scene.gltf(filepath=OUT,use_selection=True,export_format='GLB',export_vertex_color='NONE')
