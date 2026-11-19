@@ -3,7 +3,8 @@ Plan: OSM 191661675 (north seat terraces), 621872719 (heritage scoreboard) and t
 metre grids (hill/plan_*.jpg): concourse, grass patches, paths, the big screen (shadow-fitted), the palisade fence.
 Heights and looks: photos hill/cand/big_c00 (2026), c01 (2026), c09 (2022), c11 (2023) - see SOURCES.md.
 Director 2026-11-19: "it is basically grass patches by the old historic scoreboard where people gather to watch".
-No lettering on the scoreboard or screen, no sponsor banner (the West End board on the palisade is left out), no trees."""
+The scoreboard's own painted lettering is on (director 2026-11-19: the ground's own signs yes, ads no); no sponsor
+banner (the West End board on the palisade is left out), nothing on the screen, no trees."""
 import json, os, math
 import numpy as np
 from scipy.spatial import Delaunay
@@ -217,6 +218,26 @@ def wallq(s0, t0, s1, t1, z0, z1, col, kind):
     m.quad(W(s0, t0, z0), W(s1, t1, z0), W(s1, t1, z1), W(s0, t0, z1), col, kind)
 # board: dark green face with panel joints, cream-painted back and ends
 wallq(0, T_F, S_TW, T_F, Z_VER, Z_CORN, SB_BOARD, 'board')
+# painted lettering (c11 face-on, traced on the board and back-projected through camH11b; tools/sbmap.py): word, s0, z0, s1, z1
+# above the path. Hand-made: DejaVu Sans Bold outlines stretched to each traced box (tools/letters.py). Board yellow from c11.
+import sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from letters import word_tris
+SB_WORDS = [('V', 10.71, 11.02, 11.16, 11.56),('BOWLERS', 4.99, 10.15, 7.16, 10.85),('WKTS', 7.37, 10.2, 8.49, 10.87),('RUNS', 8.77, 10.22, 9.95, 10.87),('BATSMEN', 10.25, 10.27, 12.41, 10.91),('OUT', 12.73, 10.31, 13.62, 10.91),('B', 13.73, 10.31, 14.02, 10.91),('RUNS', 14.13, 10.32, 15.2, 10.92),('FALL', 15.4, 10.34, 16.16, 10.94),('OF', 16.19, 10.53, 16.48, 10.81),('WKTS', 16.5, 10.37, 17.54, 10.97),('1', 0.14, 10.18, 0.35, 10.74),('ST', 0.42, 10.46, 0.77, 10.73),('INNINGS', 0.95, 10.19, 2.6, 10.76),('2', 0.1, 9.6, 0.38, 10.12),('ND', 0.41, 9.84, 0.78, 10.11),('INNINGS', 0.95, 9.6, 2.6, 10.14),('1', 0.15, 8.35, 0.36, 8.88),('ST', 0.42, 8.6, 0.77, 8.87),('INNINGS', 0.95, 8.35, 2.6, 8.9),('2', 0.1, 7.75, 0.38, 8.27),('ND', 0.41, 7.99, 0.78, 8.25),('INNINGS', 0.96, 7.75, 2.6, 8.29),('WICKETS', 0.2, 6.93, 2.5, 7.5),('SUNDRIES', 0.11, 4.65, 2.52, 5.26),('TOTAL', 0.34, 3.91, 2.5, 4.5),('UMPIRES', 7.94, 3.44, 10.04, 3.99),('1', 4.67, 9.54, 4.85, 10.07),('2', 4.6, 8.92, 4.97, 9.45),('3', 4.6, 8.3, 4.98, 8.84),('4', 4.6, 7.7, 4.98, 8.24),('5', 4.59, 7.07, 4.97, 7.61),('6', 4.59, 6.44, 4.97, 7.0),('7', 4.59, 5.83, 4.97, 6.39),('8', 4.59, 5.22, 4.97, 5.77),('9', 4.59, 4.61, 4.97, 5.15),('1', 15.57, 9.74, 15.73, 10.19),('FOR', 15.78, 9.76, 16.23, 10.1),('2', 15.45, 9.1, 15.82, 9.63),('3', 15.46, 8.46, 15.82, 9.01),('4', 15.46, 7.85, 15.84, 8.39),('5', 15.45, 7.24, 15.84, 7.77),('6', 15.46, 6.6, 15.83, 7.14),('7', 15.46, 5.98, 15.83, 6.52),('8', 15.46, 5.33, 15.82, 5.89),('9', 15.45, 4.73, 15.81, 5.28),('OVERS', 15.12, 4.33, 16.15, 4.71),("R'QD", 15.25, 3.87, 16.07, 4.25)]
+SB_YEL = (206, 160, 44)
+for w, s0, z0, s1, z1 in SB_WORDS:
+    s0, s1 = [(s + 0.11) / 17.68 * S_TW for s in (s0, s1)]          # c11 board edges s -0.11..17.57 -> the model board 0..S_TW
+    V2, T2 = word_tris(w, (s0, z0, s1, z1))
+    m.add([W(a, T_F - 0.03, zb + b) for a, b in V2], [tuple(x) for x in T2] + [tuple(x[::-1]) for x in T2], [SB_YEL] * len(V2), [tuple(v) for v in V2], 'plain')
+# the small paired dots in c11: after the right-hand numbers 2-9 and under each ND
+def sb_dot(s, z, d=0.075):
+    s = (s + 0.11) / 17.68 * S_TW
+    m.quad(W(s, T_F - 0.03, zb + z), W(s + d, T_F - 0.03, zb + z), W(s + d, T_F - 0.03, zb + z + d), W(s, T_F - 0.03, zb + z + d), SB_YEL, 'plain')
+for w, s0, z0, s1, z1 in SB_WORDS:
+    if s0 > 15.4 and w in '23456789':
+        zm = (z0 + z1) / 2 - 0.04
+        sb_dot(s1 + 0.06, zm); sb_dot(s1 + 0.2, zm)
+    if w == 'ND':
+        sb_dot(s0 + 0.08, z0 - 0.14); sb_dot(s0 + 0.22, z0 - 0.14)
 wallq(S_TW, T_B, 0, T_B, zb, Z_CORN, SB_TOWER, 'timber')
 wallq(0, T_B, 0, T_F, zb, Z_CORN, SB_TOWER, 'timber')
 wallq(0, T_F, S_TW, T_F, zb, Z_VER, (60, 64, 58), 'plain')        # wall behind the verandah
@@ -235,7 +256,7 @@ for zw in (zb + 6.3, zb + 10.5):
     wallq(S_TW + 0.5, TTW - 0.02, LS - 0.5, TTW - 0.02, zw, zw + 1.0, (46, 46, 44), 'fins')
     wallq(LS + 0.02, 1.5, LS + 0.02, 2.7, zw, zw + 1.0, (46, 46, 44), 'fins')
 # verandah: red roof, cream arched frieze, green posts, green palisade below (sponsor board left out)
-m.quad(W(-1.4, -0.3, Z_VER), W(S_BR, -0.3, Z_VER), W(S_BR, T_F, Z_VER + 0.4), W(-1.4, T_F, Z_VER + 0.4), SB_ROOF, 'plain')
+m.quad(W(-1.4, -0.3, Z_VER), W(S_BR, -0.3, Z_VER), W(S_BR, T_F, Z_VER + 0.1), W(-1.4, T_F, Z_VER + 0.1), SB_ROOF, 'plain')   # meets the board at z 3.3 (c11)
 wallq(-1.4, -0.3, S_BR, -0.3, Z_VER - 0.25, Z_VER, SB_GREEN, 'plain')
 wallq(-1.4, 0.0, S_BR, 0.0, Z_VER - 1.0, Z_VER - 0.25, SB_CREAM, 'plain')
 for i in range(7):                                                   # six arches between posts
@@ -250,9 +271,8 @@ def slab(s0, s1, t0, t1):
         wallq(a, b, c, d, Z_CORN, Z_CORN + 0.45, SB_GREEN, 'plain')
 slab(-CS, S_TW, T_F - CO, T_B + CS)                 # over the board
 slab(S_TW, LS + CS, TTW - CO, T_B + CS)             # over the tower
-for i in range(15):
-    s = 0.6 + i * (S_TW - 1.0) / 14
-    m.quad(W(s - 0.18, T_F - 0.02, Z_CORN - 0.9), W(s + 0.18, T_F - 0.02, Z_CORN - 0.9), W(s + 0.18, T_F - CO + 0.1, Z_CORN), W(s - 0.18, T_F - CO + 0.1, Z_CORN), SB_GREEN, 'plain')
+for s in (1.3, 2.0, 2.72, 3.43, 4.16, 6.97, 7.71, 8.45, 9.21, 9.95, 12.85, 13.61, 14.37, 15.1, 15.85):   # c11: three groups of five
+    m.quad(W(s - 0.14, T_F - 0.02, Z_CORN - 0.6), W(s + 0.14, T_F - 0.02, Z_CORN - 0.6), W(s + 0.14, T_F - CO + 0.1, Z_CORN), W(s - 0.14, T_F - CO + 0.1, Z_CORN), (206, 200, 164), 'plain')
 # parapet: the front's top line traced off c11 (colour edge, back-projected to the face): two low humps with
 # three-slot ornaments, the clock block with sloping shoulders, an arched end over the tower; dark cap moulding
 PROF = [(-0.3, 12.95), (1.6, 12.95), (2.2, 13.0), (3.0, 13.12), (3.8, 13.0), (4.4, 12.95), (13.3, 12.95), (13.9, 13.05), (14.6, 13.35), (15.4, 13.08), (15.9, 12.95), (17.7, 12.95)] +        [(18.2 - 0.5 * math.cos(a), 12.95 + 0.5 * math.sin(a)) for a in np.linspace(0.15, math.pi - 0.15, 9)] +        [(18.7, 12.95), (LS + 0.3, 12.95)]

@@ -29,3 +29,7 @@
 - East stand north tip capped (spec stands east `low_end`, gen.py stand_z): clears the sky in c09.
 - Top-down: tools/render.py `top` mode with LEAN=0.2008,-0.0637 (satellite off-nadir shear); tools/topdown.py + topcrop.py. Readings: fence oval N/E/W/S within ~1 m, east roof hem ~1 m, west back edge ~1 m, Hill grass edges ~1-2 m, screen ~1 m.
 - STILL OPEN: Fault 1 east-roof lobes still lumpy (rend/j/join_west.png 2026-11-19); end-wall fold; river front dip; c11 Hill overlay recheck (parapet maybe 10 px low); Hill close-up + NW/NE join close-ups; SOURCES.md Hill photo URLs (hill/cand/list.json: c00,c01 2026-07-21; c07,c09 2022-09-22; c11 2023-02-14); full proof set.
+
+## Progress 2026-11-19 15:30 Melbourne (usage limit again)
+- Fixed: east lobes, end-wall fold, river dip, c11 Hill aligned. Signs added: heritage scoreboard lettering (hill.py), "East Gate" + "Adelaide Oval" pylon (hotel.py, letters.py).
+- Next: wait for/rerun `bash tools/proof.sh` (writes rend/p/done.txt), build boards (board3.py, rend/p/signs_board.py), self-check, copy to proof/, move wip/READY_draft.md to READY.md, delete PAUSE.md, commit, push, report.

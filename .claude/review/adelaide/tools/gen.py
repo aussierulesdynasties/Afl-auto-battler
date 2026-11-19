@@ -1,6 +1,7 @@
 """Adelaide Oval geometry in world metres (x east, y north, z up) -> PLY files with vertex colours.
 Every footprint comes from OSM (osm/geo.json); heights and profiles come from photo measurements (spec.json)."""
 import json, math, sys, os
+import functools
 import numpy as np
 from scipy.spatial import Delaunay
 from matplotlib.path import Path
@@ -163,6 +164,12 @@ def open_back(m, P, zf, z0, st):
     ob = st['open_back']; ins = ob['inset']
     B = densify(P, 2.0); B = np.r_[B, B[:1]]; zt = zf(B); flip = not ccw(P)
     run = 0.0; nxt = ob['strut_every'] / 2
+    from shapely.geometry import Polygon, Point
+    from shapely.ops import nearest_points
+    PP = Polygon(P).buffer(0)
+    def inside(q):
+        if PP.contains(Point(q)): return q
+        r = nearest_points(PP.exterior, Point(q))[0]; return np.array([r.x, r.y])
     for i in range(len(B) - 1):
         a, b = B[i], B[i + 1]; mid = (a + b) / 2; e = b - a; L = np.linalg.norm(e)
         nrm = np.array([e[1], -e[0]]) / (L + 1e-9)
@@ -180,6 +187,7 @@ def open_back(m, P, zf, z0, st):
                   [(run, z0), (run + L, z0), (run + L, zt[i + 1]), (run, zt[i])], st.get('wall2_kind', 'concrete'))
             run += L; continue
         ai, bi = a - nrm * ins, b - nrm * ins
+        ai, bi = inside(ai), inside(bi)  # at an acute corner the inset point can fall outside the end wall: keep it on the wall
         # slab (faces up) and soffit (faces down and out): drawn both ways so face order cannot hide them
         S = [(a[0], a[1], z0), (b[0], b[1], z0), (bi[0], bi[1], z0), (ai[0], ai[1], z0)]
         m.add(S, [(0, 1, 2, 3), (3, 2, 1, 0)], [ob['slab']] * 4, [(run, 0), (run + L, 0), (run + L, ins), (run, ins)], 'concrete')
@@ -335,8 +343,22 @@ ground.add(np.c_[V, np.zeros(len(V))], T, [gs['lawn']] * len(V), kind='grass')
 ground.save('ground')
 
 stands = Mesh()
+def cut_low(P, le):
+    """split a stand outline along the low_end line: (the full stand, the low seats beyond the line)"""
+    from shapely.geometry import Polygon, LineString
+    from shapely.ops import split
+    a, b = np.array(le['line'], float); u = (b - a) / np.linalg.norm(b - a); n = np.array([-u[1], u[0]]) * le.get('side', 1)
+    parts = split(Polygon(P).buffer(0), LineString([a - u * 500, b + u * 500])).geoms
+    hi = [g for g in parts if (np.array(g.centroid.coords[0]) - a) @ n < 0]; lo = [g for g in parts if g not in hi]
+    ring = lambda g: np.array(g.exterior.coords)
+    return ring(max(hi, key=lambda g: g.area)), ring(max(lo, key=lambda g: g.area))
+
+low_parts = []
 for st in S['stands']:
     P = stand_poly(st)
+    if st.get('low_end'):  # the full stand ends in a wall on the line; low seats beyond it (c09 camera stands there)
+        P, PL = cut_low(P, st['low_end']); low_parts.append((st, PL, st['low_end']))
+        st = {k: v for k, v in st.items() if k != 'low_end'}
     ds = [k for k, _ in st['profile']] + [x for b in st['bands'] for x in (b[0] - 0.05, b[0] + 0.05)]
     V, T = fill(P, st.get('step', 2.0), iso_rings(P, ds, st.get('step', 2.0)))
     d = seg_dist(V, PITCH)
@@ -363,6 +385,11 @@ for st in S['stands']:
         open_back(stands, P, zf, z0, st)
     else:
         walls(stands, P, zf, 0.0, st['wall'], kind=st.get('wall_kind', 'concrete'), skip=st.get('wall_skip'))
+for st, PL, le in low_parts:
+    zl = lambda B, le=le: interp(le['profile'], seg_dist(B[:, :2], PITCH))
+    V, T = fill(PL, 2.0, iso_rings(PL, [k for k, _ in le['profile']], 2.0)); d = seg_dist(V, PITCH)
+    stands.add(np.c_[V, zl(V)], T, band_colour(st['bands'], d), arc_uv(V, d), band_kind(st['bands'], d))
+    walls(stands, PL, zl, 0.0, st['wall'], kind=st.get('wall_kind', 'concrete'))
 stands.save('stands')
 
 for blk in S.get('blocks', []):
@@ -387,9 +414,16 @@ for rf in S['roofs']:
     # fold lines of the height field: radial valley lines between lobes, and rings at the kinks of the depth profiles
     stp = rf.get('step', 1.5); cr = []; rr = np.linalg.norm(P - PC, axis=1); rlo, rhi = rr.min() - 5, rr.max() + 5
     if rf.get('lobes') and rf.get('valleys'):
-        for f in rf['valleys']:
-            ang = rf['amid'] + a0 + f * (a1 - a0); r = np.arange(rlo, rhi, stp * 0.3)
-            cr.append(PC + np.c_[np.cos(ang) * r, np.sin(ang) * r])
+        vv = rf['valleys']
+        for i, f in enumerate(vv):  # the valley line, plus lines close beside it where the lobe rises steeply
+            fs = [f]
+            for k in rf.get('valley_rows', []):
+                if i > 0: fs.append(f - k * (f - vv[i - 1]))
+                if i < len(vv) - 1: fs.append(f + k * (vv[i + 1] - f))
+            for g in fs:
+                ang = rf['amid'] + a0 + g * (a1 - a0); r = np.arange(rlo, rhi, stp * 0.3)
+                cr.append(PC + np.c_[np.cos(ang) * r, np.sin(ang) * r])
+    vcr = list(cr)
     ks = [k for k, _ in rf['tprof']] + ([k for k, _ in rf['lobet']] if rf.get('lobes') else []) + [0.0, 1.0]
     ds = sorted({rf['d0'] + k * (rf['d1'] - rf['d0']) for k in ks})
     span = a1 - a0; angs = rf['amid'] + np.arange(a0 - 0.05 * span, a1 + 0.05 * span, stp * 0.3 / rhi)
@@ -413,18 +447,19 @@ for rf in S['roofs']:
             if not ok.any(): return np.full(len(bins), dflt)
             return gaussian_filter1d(np.interp(bins, bins[ok], v[ok]), rf['rim_fit'], mode='nearest')
         dbk = (bins, prof(cs >= 0.5, np.max, rf['d1']))
-        dfr = (bins, prof(cs <= -0.5, np.min, rf['d0'])) if rf.get('front_fit') else None
+        dfr_o = (bins, prof(cs <= -0.5, np.min, rf['d0']))  # the traced front's own distance per ray
+        dfr = dfr_o if rf.get('front_fit') else None
     else: dfr = None
-    if dbk is not None:  # drop the fixed back-depth rings; put the rings on each ray's own back distance instead
-        cr = []
-        for ang in angs:
-            Q = PC + np.c_[np.cos(ang) * rs, np.sin(ang) * rs]; dq = seg_dist(Q, PITCH)
-            a_rel = (ang - rf['amid'] + math.pi) % (2 * math.pi) - math.pi; d1 = np.interp(a_rel, *dbk)
-            d0 = np.interp(a_rel, *dfr) if dfr is not None else rf['d0']
-            for k in sorted(set(ks)):
-                d = d0 + k * (d1 - d0)
-                if dq.min() < d < dq.max(): cr.append(PC + np.array([[np.cos(ang), np.sin(ang)]]) * np.interp(d, dq, rs))
-    V, T = fill(P, stp, np.concatenate(cr) if cr else None)
+    if dbk is not None and rf.get('rebuild'):  # outline rebuilt from the smoothed edge distances: no traced wiggle
+        from scipy.ndimage import gaussian_filter1d
+        bb = dbk[0]; d1s = gaussian_filter1d(dbk[1], rf['rebuild'], mode='nearest')
+        d0s = gaussian_filter1d(dfr_o[1], rf['rebuild'], mode='nearest')  # outline front: the traced front, smoothed
+        dbk = (bb, d1s); dfr = (bb, d0s) if dfr is not None else None
+        def rpt(a_rel, d):
+            ang = a_rel + rf['amid']; Q = PC + np.c_[np.cos(ang) * rs, np.sin(ang) * rs]
+            return PC + np.array([np.cos(ang), np.sin(ang)]) * np.interp(d, np.maximum.accumulate(seg_dist(Q, PITCH)), rs)
+        Fr = np.array([rpt(a, d) for a, d in zip(bb, d0s)]); Bk = np.array([rpt(a, d) for a, d in zip(bb, d1s)])
+        P = np.r_[Fr, Bk[::-1], Fr[:1]]
     def roofz(V, rf=rf, a0=a0, a1=a1, dbk=dbk, dfr=dfr):
         d = seg_dist(V, PITCH)
         ang = (np.arctan2(V[:, 1] - PC[1], V[:, 0] - PC[0]) - rf['amid'] + math.pi) % (2 * math.pi) - math.pi
@@ -434,6 +469,8 @@ for rf in S['roofs']:
         s = np.clip((ang - a0) / (a1 - a0), 0, 1)
         z = rf['hf'] + (rf['hb'] - rf['hf']) * interp(rf['tprof'], t)
         z = z - rf.get('dome', 0.0) * (2 * s - 1) ** 2
+        if rf.get('hem_dz'):  # hem height read off the photo, per point along the stand (s 0..1), fading out to the back rim
+            hd = np.array(rf['hem_dz'], float); z = z + np.interp(s, np.linspace(0, 1, len(hd)), hd) * (1 - t)
         if rf.get('lobes'):
             if rf.get('valleys'):
                 vv = np.array(rf['valleys']); i = np.clip(np.searchsorted(vv, s) - 1, 0, len(vv) - 2)
@@ -444,6 +481,33 @@ for rf in S['roofs']:
             if rf.get('vz'): z = z + np.interp(s, np.array(rf['valleys']), np.array(rf['vz']))
             z = z + amp * np.sqrt(np.clip(np.sin(math.pi * fr), 0, 1)) * interp(rf['lobet'], t)
         return z
+    if rf.get('front_cut'):  # front hem traced off the straight-down satellite (leaned frame): cut the outline there
+        from shapely.geometry import Polygon
+        la, lb = rf['front_cut']['lean']; F = np.array(rf['front_cut']['pts'], float); Fo = F.copy()
+        for _ in range(3): F = Fo - np.c_[la * roofz(F), lb * roofz(F)]  # undo the lean: a point h m up shows (a*h, b*h) away
+        u0 = F[0] - F[1]; u1 = F[-1] - F[-2]
+        E = np.r_[[F[0] + u0 / np.linalg.norm(u0) * 60], F, [F[-1] + u1 / np.linalg.norm(u1) * 60]]
+        far = PC + (E - PC) * 4.0
+        keep = Polygon(np.r_[E, far[::-1]]).buffer(0); got = Polygon(P).buffer(0).intersection(keep)
+        if got.geom_type != 'Polygon': got = max(got.geoms, key=lambda g: g.area)
+        rr = rf['front_cut'].get('round', 0.0)  # metres: round the corners where the cut meets the end edges (no spike, no notch)
+        if rr: got = got.buffer(-rr).buffer(rr).buffer(rr).buffer(-rr)
+        if got.geom_type != 'Polygon': got = max(got.geoms, key=lambda g: g.area)
+        P = np.array(got.exterior.coords)
+        if rf['front_cut'].get('as_front'):  # depth runs from the hem itself, so the hem height is smooth along the stand
+            Fd = densify(F, 0.5); Fa = (np.arctan2(Fd[:, 1] - PC[1], Fd[:, 0] - PC[0]) - rf['amid'] + math.pi) % (2 * math.pi) - math.pi
+            o = np.argsort(Fa); dfr = (Fa[o], seg_dist(Fd, PITCH)[o])
+            roofz = functools.partial(roofz, dfr=dfr)
+    if dbk is not None:  # drop the fixed back-depth rings; put the rings on each ray's own back distance instead
+        cr = list(vcr)  # keep the valley lines
+        for ang in angs:
+            Q = PC + np.c_[np.cos(ang) * rs, np.sin(ang) * rs]; dq = seg_dist(Q, PITCH)
+            a_rel = (ang - rf['amid'] + math.pi) % (2 * math.pi) - math.pi; d1 = np.interp(a_rel, *dbk)
+            d0 = np.interp(a_rel, *dfr) if dfr is not None else rf['d0']
+            for k in sorted(set(ks)):
+                d = d0 + k * (d1 - d0)
+                if dq.min() < d < dq.max(): cr.append(PC + np.array([[np.cos(ang), np.sin(ang)]]) * np.interp(d, dq, rs))
+    V, T = fill(P, stp, np.concatenate(cr) if cr else None)
     z = roofz(V)
     uv = arc_uv(V, seg_dist(V, PITCH))
     m = Mesh(); m.add(np.c_[V, z], T, [rf['col']] * len(V), uv, 'roof')

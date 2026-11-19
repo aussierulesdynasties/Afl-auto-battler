@@ -256,5 +256,35 @@ Pf = outer(1990, 2050, vfix=2085); nf = normals(Pf)
 facade(m, Pf, nf, [7.2, 11.2], lambda s, f, z0, z1: ('fins', (52, 52, 55), 0.0))
 prism_shell(m, Pf, nf, 4.5, 7.2, 11.2, (52, 52, 55), 'fins', (60, 60, 62), 'concrete', bottom=True)
 
+# ---------- the ground's own signs on the east side (photo C, placed by rays through camC14: tools/signC.py) ----------
+from letters import place, ring
+NF = np.array([0.98, 0.21, 0.0]); NF /= np.linalg.norm(NF)                      # facade normal (photo C hits)
+# 'Adelaide Oval' pylon in front of the pod, north of the atrium: 3.5 m wide, ground to 13.0 m (photo C)
+PL, PR = np.array([129.41, 37.87]), np.array([128.67, 41.31]); PD = 1.2
+cn = [np.r_[PL, 0], np.r_[PR, 0]]; bk = [c - np.r_[NF[:2] * PD, 0] for c in cn]
+for z0, z1, col in ((0.0, 13.0, (190, 186, 178)),):
+    q = lambda P, z: (P[0], P[1], z)
+    m.quad(q(cn[0], z0), q(cn[1], z0), q(cn[1], z1), q(cn[0], z1), col, 'concrete', [(0, 0)] * 4)
+    m.quad(q(bk[1], z0), q(bk[0], z0), q(bk[0], z1), q(bk[1], z1), col, 'concrete', [(0, 0)] * 4)
+    m.quad(q(bk[0], z0), q(cn[0], z0), q(cn[0], z1), q(bk[0], z1), col, 'concrete', [(0, 0)] * 4)
+    m.quad(q(cn[1], z0), q(bk[1], z0), q(bk[1], z1), q(cn[1], z1), col, 'concrete', [(0, 0)] * 4)
+    m.quad(q(cn[0], z1), q(cn[1], z1), q(bk[1], z1), q(bk[0], z1), col, 'concrete', [(0, 0)] * 4)
+c0 = (PL + PR) / 2 - NF[:2] * PD / 2; tt = (PR - PL) / np.linalg.norm(PR - PL)   # dark light bracket on top (photo C)
+box(m, (*(c0 - tt * 1.2), 13.0), (*(c0 + tt * 1.2), 13.4), PD * 0.6, BLACK, 'steel')
+BRONZE = (150, 98, 58)
+up = np.array([0, 0, 1.0]); lft = np.r_[(PL - PR) / np.linalg.norm(PL - PR), 0]   # logo reads upward, letter tops face north
+o = np.r_[128.78, 40.78, 0] + NF * 0.03                                     # right edge of the lettering at its foot
+for txt, b0, b1 in (('Adelaide', 8.10, 10.50), ('val', 11.86, 12.27)):
+    V, T = place(txt, o, up, lft, (b0, 0.0, b1, 0.88), 'bold')
+    m.add(V, [tuple(x) for x in T], [BRONZE] * len(V), [(0, 0)] * len(V), 'plain')
+RG = ring(11.185, 0.445, 0.63, 0.49, 25, 75)   # the ringed O in sign metres (a up, b to the letter tops), open towards 'val' (photo C)
+V, T = place(RG, o, up, lft, RG.bounds)
+m.add(V, [tuple(x) for x in T], [BRONZE] * len(V), [(0, 0)] * len(V), 'plain')
+# 'East Gate' on the atrium glass over the entrance, 0.93 m letters
+eo = np.array([123.7, 24.82, 3.59]) + NF * 0.05; ea = np.array([122.56, 30.16, 3.59]) - np.array([123.7, 24.82, 3.59])
+EL = np.linalg.norm(ea); ea /= EL
+V, T = place('East Gate', eo, ea, up, (0.0, 0.0, EL, 0.93), 'normal')
+m.add(V, [tuple(x) for x in T], [(200, 200, 204)] * len(V), [(0, 0)] * len(V), 'plain')
+
 m.save('hotel')
 print('hotel.ply', len(m.v), 'verts', len(m.f), 'faces')
