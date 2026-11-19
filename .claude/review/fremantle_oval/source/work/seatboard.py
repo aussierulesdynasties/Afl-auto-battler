@@ -3,7 +3,7 @@ import sys
 from PIL import Image, ImageDraw, ImageFont
 P, out = sys.argv[1], sys.argv[2]
 ROWS = [('North stand navy seats', 'g33', (480, 540, 760, 690), 'seat_nstand'),
-        ('Pavilion timber seats', 'g39', (3150, 900, 3716, 1650), 'seat_pav')]
+        ('Pavilion timber plank benches', 'g39', (3150, 900, 3716, 1650), 'seat_pav')]
 F = ImageFont.truetype('C:/Windows/Fonts/arial.ttf', 22); H = 520; W = 1500
 b = Image.new('RGB', (W, (H + 40) * len(ROWS)), (24, 24, 24)); d = ImageDraw.Draw(b)
 for i, (n, ph, box, sh) in enumerate(ROWS):

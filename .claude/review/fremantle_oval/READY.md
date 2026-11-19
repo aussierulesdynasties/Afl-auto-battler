@@ -24,6 +24,6 @@ Notes
 - a02 (drone) overlay is a close, not exact, fit; a04, g34 and g18 line up.
 - Textures are hand-painted (source/tex/paint_fo.py); no photo pixels on the model.
 
-| Seat close-ups beside photo crops (north stand navy chairs vs g33, pavilion timber chairs with grey frames vs g39) | proofs/seats_vs_photo.jpg |
+| Seat close-ups beside photo crops (north stand level navy seats in neat rows vs g33, pavilion g39 timber plank benches on white brackets vs g39) | proofs/seats_vs_photo.jpg |
 
 no open faults

@@ -1,0 +1,238 @@
+{
+"aircon": [
+4.0,
+4.0
+],
+"asphalt": [
+6.0,
+6.0
+],
+"balustrade": [
+4.0,
+4.0
+],
+"bank_purple": [
+4.0,
+4.0
+],
+"black_paint": [
+4.0,
+4.0
+],
+"brick_pink": [
+2.76,
+2.76
+],
+"chain_see": [
+4.0,
+4.0
+],
+"club_purple": [
+4.0,
+4.0
+],
+"club_red": [
+4.0,
+4.0
+],
+"concrete": [
+4.8,
+4.8
+],
+"corr_white_h": [
+6.0,
+6.0
+],
+"cream_boards": [
+4.8,
+4.8
+],
+"cream_letters": [
+4.0,
+4.0
+],
+"cream_quoin": [
+3.6,
+3.6
+],
+"dirt": [
+3.0,
+3.0
+],
+"fret": [
+4.0,
+4.0
+],
+"galv": [
+4.0,
+4.0
+],
+"glass": [
+6.0,
+6.0
+],
+"glass_green": [
+6.0,
+6.0
+],
+"green_steel": [
+4.0,
+4.0
+],
+"hq_glass": [
+6.0,
+6.0
+],
+"kerb_grass": [
+3.0,
+3.0
+],
+"lamp": [
+4.0,
+4.0
+],
+"led_screen": [
+4.0,
+4.0
+],
+"limestone": [
+2.4,
+2.4
+],
+"maroon_fascia": [
+4.0,
+4.0
+],
+"mesh_dark": [
+4.0,
+4.0
+],
+"mid_grey": [
+6.0,
+6.0
+],
+"mural_pink": [
+4.0,
+4.0
+],
+"mural_red": [
+4.0,
+4.0
+],
+"pavers": [
+2.4,
+2.4
+],
+"red_brick": [
+2.76,
+2.76
+],
+"render_cream": [
+6.0,
+6.0
+],
+"render_white": [
+6.0,
+6.0
+],
+"roof_blue": [
+6.0,
+6.0
+],
+"roof_cream": [
+6.0,
+6.0
+],
+"roof_dark": [
+6.0,
+6.0
+],
+"roof_green": [
+4.0,
+4.0
+],
+"roof_ns": [
+6.0,
+6.0
+],
+"roof_white": [
+6.0,
+6.0
+],
+"roof_zinc_pav": [
+6.0,
+6.0
+],
+"roof_zinc_x": [
+6.0,
+6.0
+],
+"sb_yellow": [
+4.0,
+4.0
+],
+"seat_green": [
+2.0,
+2.0
+],
+"seat_navy": [
+2.0,
+2.0
+],
+"seat_timber": [
+4.8,
+4.8
+],
+"seat_white": [
+2.0,
+2.0
+],
+"shade_interior": [
+4.0,
+4.0
+],
+"sign_white": [
+4.0,
+4.0
+],
+"silver": [
+4.0,
+4.0
+],
+"sky_amber": [
+4.0,
+4.0
+],
+"skylight": [
+4.0,
+4.0
+],
+"soffit": [
+6.0,
+6.0
+],
+"solar": [
+2.04,
+3.36
+],
+"steel_dark": [
+4.0,
+4.0
+],
+"step_dark": [
+4.8,
+4.8
+],
+"vine": [
+3.0,
+3.0
+],
+"white_paint": [
+4.0,
+4.0
+],
+"seat_plank": [
+4.8,
+4.8
+]
+}

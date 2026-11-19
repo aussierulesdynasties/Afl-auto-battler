@@ -276,7 +276,7 @@ M = dict(
     roof_zinc_pav=corrugated('roof_zinc_pav', (0.05, 0.17, 0.32), axis=1, metal=0.0, rough=0.75),
     fret=fret('fret'),
     balustrade=balustrade('balustrade'),
-    seat_timber=flat('seat_timber', (0.055, 0.050, 0.038), 0.8, 0, 6, 0.2),
+    seat_timber=flat('seat_timber', (0.032, 0.032, 0.022), 0.8, 0, 6, 0.2),
     roof_zinc=corrugated('roof_zinc', (0.42, 0.48, 0.52), axis=1),
     roof_zinc_x=corrugated('roof_zinc_x', (0.42, 0.48, 0.52), axis=0),
     roof_white=corrugated('roof_white', (0.86, 0.87, 0.85), axis=0, metal=0.2, rough=0.5),
@@ -299,6 +299,7 @@ M = dict(
     seat_green=flat('seat_green', (0.05, 0.3, 0.14), 0.4),
     seat_white=flat('seat_white', (0.85, 0.86, 0.84), 0.4),
     seat_navy=flat('seat_navy', (0.03, 0.07, 0.12), 0.4),
+    seat_plank=flat('seat_plank', (0.25, 0.225, 0.18), 0.8),
     seat_pavchair=flat('seat_pavchair', (0.30, 0.28, 0.23), 0.7, 0, 9, 0.35),
     maroon=flat('maroon_fascia', (0.32, 0.04, 0.12), 0.45),
     red=flat('club_red', (0.62, 0.04, 0.05), 0.45),
@@ -606,14 +607,21 @@ def pavilion():
         q.append([PF(Y_S, s0, z), PF(Y_N, s0, z), PF(Y_N, s1, z), PF(Y_S, s1, z)])
         q.append([PF(Y_S, s1, z), PF(Y_N, s1, z), PF(Y_N, s1, z + 0.45), PF(Y_S, s1, z + 0.45)])
     faces_obj(q, 'pav_tiers', 'seat_timber')
-    q = []; fr = []     # 3D empty seats in the timber colour (g39), one every 0.5 m along each tier, facing the field
+    def bx6(pts):   # pts: 4 plan corners (x, y) + z0, z1 -> 6 quads
+        (c, z0, z1) = pts; lo = [(*v, z0) for v in c]; hi = [(*v, z1) for v in c]
+        return [hi, lo[::-1]] + [[lo[k], lo[(k + 1) % 4], hi[(k + 1) % 4], hi[k]] for k in range(4)]
+    pl = []; br = []   # g39: long timber plank benches, three 100 mm planks with 20 mm gaps, on white cast brackets every 1.0 m
     for i in range(9):
-        z = 2.7 + i * 0.45; sc = 1.2 + i * 1.0 + 0.55
-        for y_ in np.arange(Y_S + 0.35, Y_N - 0.2, 0.5):
-            c0 = np.array(PF(y_, sc, 0)[:2]); fv = np.array(PF(y_, sc - 1.0, 0)[:2]) - c0
-            cq = chair_q(c0, fv, z); q += cq[:-1]; fr.append(cq[-1])
-    faces_obj(q, 'pav_seats', 'seat_pavchair')
-    faces_obj(fr, 'pav_seat_frames', 'mid_grey')   # grey metal seat frames (g39 brackets)
+        z = 2.7 + i * 0.45; s1 = 1.2 + i * 1.0 + 1.0; b0 = s1 - 0.62
+        for k in range(3):
+            u0 = b0 + k * 0.12; u1 = u0 + 0.10
+            pl += bx6(([PF(Y_S, u0)[:2], PF(Y_N, u0)[:2], PF(Y_N, u1)[:2], PF(Y_S, u1)[:2]], z + 0.385, z + 0.42))
+        for y_ in np.arange(Y_S + 0.5, Y_N - 0.3, 1.0):
+            Q = lambda u, w: [PF(y_, u)[:2], PF(y_ + w, u)[:2], PF(y_ + w, u + 0.03)[:2], PF(y_, u + 0.03)[:2]]
+            br += bx6((Q(b0 + 0.12, 0.03), z, z + 0.385))                       # upright under the middle plank
+            br += bx6(([PF(y_, b0 + 0.02)[:2], PF(y_ + 0.03, b0 + 0.02)[:2], PF(y_ + 0.03, b0 + 0.30)[:2], PF(y_, b0 + 0.30)[:2]], z + 0.355, z + 0.385))  # arm under the planks
+            br += bx6(([PF(y_, b0 + 0.12)[:2], PF(y_ + 0.03, b0 + 0.12)[:2], PF(y_ + 0.03, b0 + 0.26)[:2], PF(y_, b0 + 0.26)[:2]], z, z + 0.03))     # foot to the back
+    faces_obj(pl, 'pav_seats', 'seat_plank'); faces_obj(br, 'pav_seat_legs', 'white')
     M.setdefault('mesh_dark', chain_mesh('mesh_dark'))
     prism([PF(Y_S, -0.2)[:2], PF(Y_N, -0.2)[:2], PF(Y_N, 1.2)[:2], PF(Y_S, 1.2)[:2]], 0, 2.6, 'pav_plinth', 'mesh_dark', top=False)
     faces_obj([[PF(Y_S, -0.2, 2.6), PF(Y_N, -0.2, 2.6), PF(Y_N, 1.2, 2.6), PF(Y_S, 1.2, 2.6)]], 'pav_deck', 'concrete')
@@ -813,16 +821,43 @@ def buildings():
             q.append([(*a0, z), (*b0, z), (*b1, z), (*a1, z)])
             r.append([(*a0, z - 0.42), (*b0, z - 0.42), (*b0, z - 0.06), (*a0, z - 0.06)])
             nose.append([(*a0, z - 0.06), (*b0, z - 0.06), (*b0, z + 0.003), (*a0, z + 0.003)])
-    # 3D empty navy seats (g33): one every 0.5 m along each row, on the tread centre, facing the field
-    ch = []
+    # 3D empty navy seats (g33): level, all square to one stand axis, in straight rows every 0.5 m on each tread
+    def inq(P4, c):   # point inside a convex quad (either winding)
+        sg = [np.cross(P4[(k + 1) % 4] - P4[k], c - P4[k]) for k in range(4)]
+        return all(v >= 0 for v in sg) or all(v <= 0 for v in sg)
+    fvs = []
     for t in q:
-        a0, b0, b1, a1 = [np.array(v[:2]) for v in t]; z = t[0][2]
-        L = np.linalg.norm(b0 - a0)
+        a0, b0, b1, a1 = [np.array(v[:2]) for v in t]; L = np.linalg.norm(b0 - a0)
         if L < 0.3: continue
-        fv = (a0 + b0) / 2 - (a1 + b1) / 2
-        for k in np.arange(0.25, L - 0.2, 0.5):
-            m = k / L; cc = (a0 + (b0 - a0) * m) * 0.55 + (a1 + (b1 - a1) * m) * 0.45
-            ch += chair_q(cc, fv, z, h=0.40, hb=0.38)
+        e = (b0 - a0) / L; nv = np.array([-e[1], e[0]]); f0 = (a0 + b0) / 2 - (a1 + b1) / 2
+        fvs.append((nv if nv @ f0 > 0 else -nv) * L)
+    fv = np.sum(fvs, axis=0); fv /= np.linalg.norm(fv); ax = np.array([-fv[1], fv[0]])
+    rows = {}
+    for t in q: rows.setdefault(round(t[0][2], 2), []).append(t)
+    ch = []
+    for z, ts in rows.items():
+        segs = []
+        for t in ts:
+            a0, b0, b1, a1 = [np.array(v[:2]) for v in t]
+            p0, p1 = a0 * 0.55 + a1 * 0.45, b0 * 0.55 + b1 * 0.45
+            if (p1 - p0) @ ax < 0: p0, p1 = p1, p0
+            if np.linalg.norm(p1 - p0) > 0.05: segs.append((p0 @ ax, p0, p1))
+        segs.sort(key=lambda r: r[0]); carry = 0.25; prev = None; done = []; dirs = []
+        for _, p0, p1 in segs:     # walk the row's seat line by arc length, 0.5 m pitch, across the tread pieces
+            if prev is not None and np.linalg.norm(p0 - prev) > 0.3: carry = 0.25   # a stair or gap: restart the row
+            L = np.linalg.norm(p1 - p0); e = (p1 - p0) / L; nv = np.array([-e[1], e[0]]); nv = nv if nv @ fv > 0 else -nv
+            k = carry
+            while k <= L - 0.0:
+                c_ = p0 + e * k
+                if all(np.hypot(*(c_ - d_)) >= 0.45 for d_ in done[-40:]):   # tread pieces overlap at the west corner
+                    done.append(c_); dirs.append(nv)
+                k += 0.5
+            carry = k - L; prev = p1
+        if done:   # facing turns smoothly along the row (tread pieces kink up to 23 deg at the west end): 4 m moving average
+            D = np.array(dirs); K = 8
+            for m_, c_ in enumerate(done):
+                f_ = D[max(0, m_ - K):m_ + K + 1].mean(0); f_ /= np.linalg.norm(f_)
+                ch += chair_q(c_, f_, z, h=0.40, hb=0.38)
     faces_obj(q, 'nstand_treads', 'concrete')
     faces_obj(ch, 'nstand_seats', 'seat_navy')
     faces_obj(r, 'nstand_risers', 'concrete')
@@ -1814,7 +1849,7 @@ elif MODE in ('turn', 'close'):
                  'hq_facade': ((12.0, -82.0, 2.5), (12.0, -99.0, 5.0)),
                  'seat_nstand': ((-14.0, 82.0, 3.5), (-22.0, 93.0, 3.0)),
                  'seat_gj': (GJ(18, 7, 6.5), GJ(24, -3.5, 2.2)),
-                 'seat_pav': (tuple(PF(8.0, -6.0, 5.0)), tuple(PF(16.0, 4.0, 5.0)))}
+                 'seat_pav': (tuple(PF(10.0, 3.3, 5.4)), tuple(PF(13.5, 3.1, 4.0)))}
         if len(sys.argv) > sys.argv.index('--') + 3:
             only = sys.argv[sys.argv.index('--') + 3].split(',')
             shots = {k: v for k, v in shots.items() if k in only}

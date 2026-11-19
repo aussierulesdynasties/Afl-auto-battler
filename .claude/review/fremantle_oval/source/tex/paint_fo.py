@@ -136,10 +136,10 @@ def seats(col, seed, tile=5.4):
     y = np.arange(c.n) / c.pv; c.mul((0.92 + 0.10 * np.abs(np.sin(np.pi * (y % 0.9) / 0.9)))[:, None])
     c.speckle(1.5, (0.02, 0.06), 0.18); c.mottle(0.04, (1.5, 0.4)); c.grain(0.01); c.keep_mean(); return c
 
-def timber(col, seed, tile=4.8):
+def timber(col, seed, tile=4.8, gaps=True):
     # bench slats along the row: a 90 mm slat + 15 mm gap, grain along u, weathered ends every 4.8 m
     c = Canvas(tile, tile, col, seed); y = np.arange(c.n) / c.pv; s = y % 0.105
-    c.mul(np.where(s < 0.015, 0.35, np.where(s < 0.022, 1.25, 1.0))[:, None] * np.ones((1, c.n)))
+    if gaps: c.mul(np.where(s < 0.015, 0.35, np.where(s < 0.022, 1.25, 1.0))[:, None] * np.ones((1, c.n)))
     slat = np.floor(y / 0.105).astype(int); c.mul((1 + 0.08 * c.R.normal(size=slat.max() + 2))[slat][:, None] * np.ones((1, c.n)))
     c.mul(1 + 0.08 * c.noise(1.5, 0.004)); c.vline(0.0, 0.01, tuple(base * 0.4 for base in col))
     c.speckle(2, (0.004, 0.012), 0.3); c.grain(0.02); c.keep_mean(); return c
@@ -184,7 +184,7 @@ FAM = {
     'white_paint': (paint, {}), 'cream_boards': (boards, {}), 'red_brick': (brick, {}), 'brick': (brick, {}),
     'brick_pink': (brick, {'mortar': (0.93, 0.91, 0.89)}), 'limestone': (stone, {}), 'concrete': (concrete, {}),
     'asphalt': (asphalt, {}), 'pavers': (pavers, {}), 'glass': (glass, {}), 'hq_glass': (glass, {}), 'glass_green': (glass, {}),
-    'seat_green': (plastic, {}), 'seat_white': (plastic, {}), 'seat_navy': (seats, {}), 'seat_timber': (timber, {}),
+    'seat_green': (plastic, {}), 'seat_white': (plastic, {}), 'seat_navy': (plastic, {}), 'seat_timber': (timber, {}), 'seat_plank': (timber, {'gaps': False}),
     'fig': (leaves, {}), 'pine': (leaves, {}), 'vine': (leaves, {}), 'solar': (solar, {}), 'kerb_grass': (grass, {}),
     'dirt': (grass, {}), 'step_dark': (concrete, {}), 'mid_grey': (render, {}),
 }
