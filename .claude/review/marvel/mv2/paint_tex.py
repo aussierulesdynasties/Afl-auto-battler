@@ -1,10 +1,12 @@
 # Texture pass (row 202 2b, director: painted detail on every big surface, "vibrant, real life textures, not
 # fucking blurry photos"). Runs after gen_tex.py and repaints the big-surface maps by hand (texpaint.py): no photo
 # pixels. Colours keep gen_tex.py's means (keep_mean), so only detail changes. Module sizes in metres.
-import json,numpy as np
+import json,os,numpy as np
 from texpaint import Canvas,save,gstd
 T=json.load(open('tex/tiles.json'))
+ONLY=set(filter(None,os.environ.get('ONLY','').split(',')))   # ONLY=seats,teal repaints just those maps (plants is not idempotent)
 def out(name,c,tile=None):
+    if ONLY and name not in ONLY:return
     if tile:T[name]=list(tile)
     save(c.img(),'tex/%s.png'%name)
 def panel_wall(col,tile,pw,ph,seed,joint=0.012,tone=0.045,streak=0.16,grime=0.10,ledges=None,mott=0.035):
@@ -36,9 +38,7 @@ A[r>=0.70]=np.array(tread)*0.62                             # tread behind the s
 gap=(um%0.5)<0.035;sel=gap&(r>=0.16)&(r<0.70);A[sel]=(0.06,0.07,0.10)
 ai=um>=12.0;A[ai]=np.array(tread)*np.where((vm[ai]%0.4)<0.04,0.55,1.0)[:,None]   # aisle stairs: two steps per row
 A[(um>=12.0)&(um<12.04)|(um>=13.16)]=(0.30,0.30,0.30)
-seat=np.floor(um/0.5).astype(int);row=np.floor(vm/0.8).astype(int);tone=1+0.05*c.R.normal(size=(30,12))
-c.a=A*np.where(ai,1.0,tone[seat%30,row%12])[...,None]
-c.mottle(0.04,(2.5,0.8));c.grain(0.01);c.keep_mean(SEAT);out('seats',c,(W,H))
+c.a=A;c.grain(0.01);c.keep_mean(SEAT);out('seats',c,(W,H))   # even like the photo: no per-seat tone or mottle (director 2026-11-19 "Remove the mottle first")
 # ---- roof underside: profiled sheet ribs every 0.2 m, purlins every 1.5 m, sheet laps every 12 m, grime
 c=Canvas(12,12,(0.20,0.21,0.23),14);c.mottle(0.09,(3,1,0.3));c.panels(1.2,1.5,joint=0.01,dark=1.0,tone=0.10,bevel=False)
 for i in range(60):c.vline(i*0.2,0.035,(0.36,0.37,0.40),0.9);c.vline(i*0.2+0.045,0.035,(0.09,0.09,0.10),0.8)
@@ -56,8 +56,8 @@ def roof(col,seed,crest,shadow,name):
 roof((0.86,0.87,0.85),15,(0.97,0.97,0.96),(0.62,0.63,0.62),'deck')
 roof((0.54,0.54,0.53),16,(0.80,0.80,0.79),(0.38,0.38,0.38),'endroof')
 # ---- painted steel and fascias: seams, wear, grime toward the bottom edge
-c=Canvas(4,4,(0.33,0.62,0.55),17);c.mottle(0.09,(1.5,0.4,0.1));c.panels(2,2,joint=0.012,dark=0.55,tone=0.06,bevel=True,lip=1.0)
-c.mul(1-0.12*np.clip(c.noise(0.3,1.2),0,3));c.tint(0.18,0.6,(0.85,0.90,0.88));c.speckle(4,(0.006,0.02),0.35);c.grain(0.012);c.keep_mean();out('teal',c)
+c=Canvas(4,4,(0.33,0.62,0.55),17);c.panels(2,2,joint=0.025,dark=0.3,tone=0.0,bevel=True,lip=1.0)   # even paint, deeper 2 m plate seams only: no mottle, blotch or tint (director 2026-11-19)
+c.speckle(4,(0.006,0.02),0.35);c.grain(0.012);c.keep_mean();out('teal',c)
 c=Canvas(12,2,(0.93,0.93,0.91),18);c.mottle(0.03);c.panels(4,2,joint=0.015,dark=0.6,tone=0.03,bevel=False)
 c.streaks([0.0],per_m=1.4,length=(0.3,1.6),amt=0.22);c.grime_bottom(0.45,0.22);c.hline(1.97,0.06,(0.70,0.70,0.69));c.grain(0.01);c.keep_mean();out('fascia',c)
 c=Canvas(12,2,(0.66,0.53,0.30),19);c.mottle(0.07);c.panels(3,2,joint=0.02,dark=0.5,tone=0.07,bevel=False)
