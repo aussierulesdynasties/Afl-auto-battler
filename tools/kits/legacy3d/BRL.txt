@@ -1,0 +1,151 @@
+# Brisbane legacy home guernseys on the 3D match player, copied from the photos.
+# Sources: footyjumpers home page https://www.footyjumpers.com/brisbanehome.htm (gifs
+# https://www.footyjumpers.com/images/Brisbane-<year>.gif), Getty pages
+# https://www.gettyimages.com.au/detail/news-photo/x/<id>, eBay listings https://www.ebay.com.au/itm/<id>.
+# Every y is a fraction of guernsey height read off the photo (0 = top of shoulder by the neck, 1 = hem),
+# every x a fraction of guernsey width (0 = viewer's left). Replica photos win over gifs; gifs only where no photo.
+# Left off: sponsors (CUB, Coca-Cola, XXXX, Vodafone, BOQ, Vero, Oaks, XL Express, McDonald's, Caltex,
+# Conergy, National Storage, Camperdown, neds, youi, Hyundai), makers (Puma, KooGa, BLK, Majestic, Classic,
+# New Balance) and the AFL shield/logo. Tonal lion/shield patterns in the cloth are not drawn.
+# Colours sampled from the replica photos (median-cut on the body, lighting averaged across photos):
+#   Bears maroon #7E1A30 (1990 #410F15 shaded, 1992 #561820; gif #B51F41), Bears gold #E89A1A (1990 #DF8913/#D0801B)
+#   Lions maroon #7A2340 (1997 #8B253B, 2002 #6C2243, 2015 #79262B, 2017 #772137, 2023 #772448)
+#   Lions blue #0E3CA5 (2011 #023BA7, 2023 #1D3DAC, 2002 #3A3DA4), gold trim and lion #E3A848 (1997 #DBAF5C,
+#   2002 #E0A85C, 2011 #DC9F40, 2015 #DDA345), 2021/2023 paler lion #F4D49D (2021 #FEE9B5, 2023 #F4D49D),
+#   1997 cream V #F0E2C0, white W.
+# Marks: brl_1990_bb (Bears pyramid with the koala head, traced from the 1990 gif), lion (existing Fitzroy-style
+# lion with paw on ball, reused for 1997-2008 and 2015-2023), brl_2010_lion (head-on lion of 2010-2012, from the
+# 2011 gif), brl_2002_bbffc (plain BBFFC lettering, from the 2007 back photo), brl_2012_bbffc (small lion + BBFFC,
+# from the 2012 back photo; reused on 2015-2021 backs and the 2021/2023 hip).
+# Mark widths: the x ranges quoted below are as read off the photos. Drawn, each mark keeps its mask's own
+# width-to-height, centred where the photo has it: the 3D body shows a unit of cell x 1.07 times narrower than a
+# unit of cell y, so width = mask ratio x height x 1.07 (the 2007 replica's lion measures 1.44 wide per unit high,
+# as its mask does; drawn at the photo's x range it came out 2.1). The 1990 side bar runs on to meet the pyramid.
+
+# Brisbane Bears 1990. Match photo https://www.gettyimages.com.au/detail/news-photo/x/51107175 (1991), replica front
+# https://i.ebayimg.com/images/g/6gwAAeSwpkFo0La4/s-l1600.jpg and back https://i.ebayimg.com/images/g/XysAAeSwE7No0LbK/s-l1600.jpg
+# (https://www.ebay.com.au/itm/178407761851). Front maroon yoke to 0.26 on both the match photo and the replica front
+# (the 0.17 the researcher gave is the replica BACK yoke). BB pyramid with the koala head, apex at x 0.5, x 0.259-0.691,
+# y 0.265-0.638; maroon bar from the viewer's-left side into the pyramid y 0.602-0.647. Koala yoke badge is on the replica
+# only, not the match guernsey: not drawn. Maroon polo collar, no armhole trim. Back: gif bar x 0.37-1 at the same height
+# (match version; the replica back is plain), maroon number.
+BRL Brisbane-1990 | fill #E89A1A; rect #7E1A30 0 0 1 0.26; rect #7E1A30 0 0.602 0.33 0.647; mark #7E1A30 brl_1990_bb 0.322 0.265 0.628 0.638; collar #7E1A30 2; armholes #E89A1A 1; shorts #7E1A30 | fill #E89A1A; rect #7E1A30 0 0 1 0.17; rect #7E1A30 0.37 0.602 1 0.647; collar #7E1A30 2; armholes #E89A1A 1; number #7E1A30
+
+# Brisbane Bears 1992. Match https://www.gettyimages.com.au/detail/news-photo/x/97087181 and /97087294, replica
+# https://i.ebayimg.com/images/g/upgAAeSwVCxqsKEW/s-l1600.jpg (https://www.ebay.com.au/itm/178514806588), backs
+# https://i.ebayimg.com/images/g/8WoAAeSwXFlqsKEl/s-l1600.jpg and https://www.gettyimages.com.au/detail/news-photo/x/51312493.
+# Chevron: white top edge 0.125 at the sides to 0.43 at the centre; gold 0.15-0.275 at the sides, 0.455-0.56 at the
+# centre; white below to 0.30 at the sides, 0.595 at the centre. White polo collar with a V placket to 0.21, dark maroon
+# inside. White armhole trim. CUB badge is a sponsor (Carlton United Breweries): off. Back plain maroon, gold number
+# with white outline.
+BRL Brisbane-1992 | fill #7E1A30; poly W 0 0.125 0.5 0.43 1 0.125 1 0.30 0.5 0.595 0 0.30; poly #E89A1A 0 0.15 0.5 0.455 1 0.15 1 0.275 0.5 0.56 0 0.275; vfill W 0.21 0.21; vfill #5E1124 0.175 0.13; collar W 2; armholes W 1.5; shorts #7E1A30 | fill #7E1A30; collar W 2; armholes W 1.5; number #E89A1A W
+
+# Brisbane Bears 1996. Match https://www.gettyimages.com.au/detail/news-photo/x/71507866, /96942517, /96942555.
+# Chevron as 1992, 0.01 higher (gif). White folded V collar, depth 0.20 on the photos (researcher 0.12, gif 0.19),
+# maroon inside. White armholes. No back photo: back follows the gif and 1992 (plain maroon, gold number, white outline).
+BRL Brisbane-1996 | fill #7E1A30; poly W 0 0.115 0.5 0.42 1 0.115 1 0.29 0.5 0.585 0 0.29; poly #E89A1A 0 0.14 0.5 0.445 1 0.14 1 0.265 0.5 0.55 0 0.265; vneck W 0.20 0.17 0.045; collar W 2; armholes W 1.5; shorts #7E1A30 | fill #7E1A30; collar W 2; armholes W 1.5; number #E89A1A W
+
+# 1997. Replica https://i.ebayimg.com/images/g/qVYAAOSwWjBny5ev/s-l1600.jpg (https://www.ebay.com.au/itm/157578807377) and
+# https://i.ebayimg.com/images/g/jy4AAeSwgwRqg~77/s-l1600.jpg (https://www.ebay.com.au/itm/327315737770); backs
+# https://i.ebayimg.com/images/g/v-MAAOSwD7Nny5ew/s-l1600.jpg, https://i.ebayimg.com/images/g/BLgAAeSwaHVqg~77/s-l1600.jpg.
+# Blue yoke to 0.29 front (gif 0.32), 0.243 back. Gold V outer depth 0.225 half 0.18, cream insert depth 0.19 half 0.145.
+# Lion x 0.245-0.71, y 0.335-0.545. Gold armholes. Back gold number, white outline (back2 "48").
+BRL Brisbane-1997 | fill #7A2340; rect #0E3CA5 0 0 1 0.29; vfill #E3A848 0.225 0.18; vfill #F0E2C0 0.19 0.145; mark #E3A848 lion 0.315 0.335 0.640 0.545; collar #E3A848 2; armholes #E3A848 2; shorts #7A2340 | fill #7A2340; rect #0E3CA5 0 0 1 0.243; collar #E3A848 2; armholes #E3A848 2; number #E3A848 W
+
+# 2000. Match https://www.gettyimages.com.au/detail/news-photo/x/1042793 and /1042778, back /1048903 (Getty only).
+# Blue yoke 0.30 front, 0.33 back. Gold V with blue inside. Lion placed as 1997/2002 (x 0.245-0.72, y 0.34-0.55).
+# Back gold numbers (the thin maroon outline is not drawn).
+BRL Brisbane-2000 | fill #7A2340; rect #0E3CA5 0 0 1 0.30; vfill #E3A848 0.20 0.18; vfill #0E3CA5 0.165 0.145; mark #E3A848 lion 0.320 0.34 0.645 0.55; collar #E3A848 2; armholes #E3A848 2; shorts #7A2340 | fill #7A2340; rect #0E3CA5 0 0 1 0.33; collar #E3A848 2; armholes #E3A848 2; number #E3A848
+
+# 2002. Replica https://i.ebayimg.com/images/g/vb8AAeSwmXNqsQJA/s-l1600.jpg (https://www.ebay.com.au/itm/407233880146),
+# https://i.ebayimg.com/images/g/08YAAeSwaw5qsdtM/s-l1600.jpg (https://www.ebay.com.au/itm/287600895380); backs
+# https://i.ebayimg.com/images/g/s0IAAeSwi8lqsQI7/s-l1600.jpg, https://i.ebayimg.com/images/g/uxYAAeSwNsRqsdtM/s-l1600.jpg.
+# Yoke 0.285 front (photo 0.30, researcher 0.28), 0.26 back. Notched gold V point 0.19, outer half 0.175, white inside.
+# Lion x 0.245-0.73, y 0.335-0.543. BBFFC on the back yoke is WHITE on both photos and the gif (researcher said gold),
+# x 0.437-0.604, y 0.052-0.092.
+BRL Brisbane-2002 | fill #7A2340; rect #0E3CA5 0 0 1 0.285; vfill #E3A848 0.19 0.175; vfill W 0.16 0.145; mark #E3A848 lion 0.327 0.335 0.648 0.543; collar #E3A848 2; armholes #E3A848 2; shorts #7A2340 | fill #7A2340; rect #0E3CA5 0 0 1 0.26; mark W brl_2002_bbffc 0.464 0.052 0.577 0.092; collar #E3A848 2; armholes #E3A848 2; number #E3A848
+
+# 2004. Match https://www.gettyimages.com.au/detail/news-photo/x/51676106, replica
+# https://i.ebayimg.com/images/g/oTIAAeSwgQNqrm9K/s-l1600.jpg and back https://i.ebayimg.com/images/g/jmAAAeSwShxqrm95/s-l1600.jpg
+# (https://www.ebay.com.au/itm/178509973771). Yoke 0.35 on the replica, about the armpit (researcher 0.32): 0.34 used;
+# back 0.35. Notched gold V point 0.20, outer half 0.176, white inside. Lion x 0.257-0.711, y 0.426-0.636.
+# White BBFFC x 0.418-0.570, y 0.068-0.101.
+BRL Brisbane-2004 | fill #7A2340; rect #0E3CA5 0 0 1 0.34; vfill #E3A848 0.20 0.176; vfill W 0.17 0.145; mark #E3A848 lion 0.322 0.426 0.646 0.636; collar #E3A848 2; armholes #E3A848 2; shorts #7A2340 | fill #7A2340; rect #0E3CA5 0 0 1 0.35; mark W brl_2002_bbffc 0.447 0.068 0.541 0.101; collar #E3A848 2; armholes #E3A848 2; number #E3A848
+
+# 2006. Match https://www.gettyimages.com.au/detail/news-photo/x/71170378, replica
+# https://i.ebayimg.com/images/g/SqYAAeSw~z1ozzvF/s-l1600.jpg and back https://i.ebayimg.com/images/g/iZgAAeSw-n5ozzvR/s-l1600.jpg
+# (https://www.ebay.com.au/itm/226984633593). Yoke 0.42 on the replica and about 0.4 on the match photo (researcher 0.35);
+# back 0.42. Notched gold V point 0.23, outer half 0.21, blue inside. Lion x 0.214-0.769, y 0.458-0.683.
+# White BBFFC y 0.087-0.14 (back photo angled: centred, x 0.40-0.60).
+BRL Brisbane-2006 | fill #7A2340; rect #0E3CA5 0 0 1 0.42; vfill #E3A848 0.23 0.21; vfill #0E3CA5 0.19 0.165; mark #E3A848 lion 0.318 0.458 0.665 0.683; collar #E3A848 2; armholes #E3A848 2; shorts #7A2340 | fill #7A2340; rect #0E3CA5 0 0 1 0.42; mark W brl_2002_bbffc 0.425 0.087 0.575 0.14; collar #E3A848 2; armholes #E3A848 2; number #E3A848
+
+# 2007. Replica front https://i.ebayimg.com/images/g/rPwAAOSwzwRoRQI-/s-l1600.jpg and back
+# https://i.ebayimg.com/images/g/rQMAAOSwDDNoRQJT/s-l1600.jpg (https://www.ebay.com.au/itm/226803217676).
+# Yoke 0.47 front, 0.49 back (slightly wavy). Deep notched gold V point 0.245, outer half 0.23, blue insert inside.
+# Lion x 0.21-0.77, y 0.52-0.756. White BBFFC x 0.39-0.63, y 0.057-0.107.
+BRL Brisbane-2007 | fill #7A2340; rect #0E3CA5 0 0 1 0.47; vfill #E3A848 0.245 0.23; vfill #0E3CA5 0.195 0.175; mark #E3A848 lion 0.308 0.52 0.672 0.756; collar #E3A848 2; armholes #E3A848 2; shorts #7A2340 | fill #7A2340; rect #0E3CA5 0 0 1 0.49; mark W brl_2002_bbffc 0.439 0.057 0.581 0.107; collar #E3A848 2; armholes #E3A848 2; number #E3A848
+
+# 2008. Match https://www.gettyimages.com.au/detail/news-photo/x/82565450 and /82565451, back
+# https://i.ebayimg.com/images/g/12QAAeSwINFqsRQk/s-l1600.jpg (https://www.ebay.com.au/itm/168704687452).
+# Yoke 0.43 on the match photo (researcher 0.42), no white inner band; narrow gold V trim to 0.12. Lion straddles the
+# yoke edge, x 0.20-0.78, y 0.43-0.69 (the arm hides its right end; width from the gif). Back yoke 0.36, white BBFFC
+# x 0.42-0.58, y 0.052-0.096.
+BRL Brisbane-2008 | fill #7A2340; rect #0E3CA5 0 0 1 0.43; vneck #E3A848 0.12 0.15 0.035; mark #E3A848 lion 0.289 0.43 0.691 0.69; collar #E3A848 2; armholes #E3A848 2; shorts #7A2340 | fill #7A2340; rect #0E3CA5 0 0 1 0.36; mark W brl_2002_bbffc 0.438 0.052 0.562 0.096; collar #E3A848 2; armholes #E3A848 2; number #E3A848
+
+# 2010. Match https://www.gettyimages.com.au/detail/news-photo/x/101253188 and /103177198 (no replica).
+# Head-on lion lying with paw on ball over a curved yoke edge; edge read off the gif: 0.63 at the viewer's left,
+# 0.61 centre, 0.59 right (the researcher's 0.45-0.65 is not what the gif or photos show). Lion x 0.06-0.94, y 0.35-0.74.
+# Narrow gold V trim to 0.10. No back photo: back follows the gif (blue band 0.085 with white BBFFC, gold number).
+BRL Brisbane-2010 | fill #7A2340; poly #0E3CA5 0 0 1 0 1 0.59 0.7 0.60 0.5 0.61 0.3 0.62 0 0.63; vneck #E3A848 0.10 0.16 0.04; mark #E3A848 brl_2010_lion 0.182 0.35 0.818 0.74; collar #E3A848 2; armholes #E3A848 2.5; shorts #7A2340 | fill #7A2340; rect #0E3CA5 0 0 1 0.085; mark W brl_2002_bbffc 0.436 0.02 0.564 0.065; collar #E3A848 2; armholes #E3A848 2.5; number #E3A848
+
+# 2011. Match https://www.gettyimages.com.au/detail/news-photo/x/115214208, replica
+# https://i.ebayimg.com/images/g/iyMAAeSwiWpq5XJF/s-l1600.jpg and back https://i.ebayimg.com/images/g/730AAeSw5ZNq5XJR/s-l1600.jpg
+# (https://www.ebay.com.au/itm/137888819058). Yoke edge on the replica: 0.78 at the viewer's left, 0.72 at x 0.3,
+# 0.68 centre, 0.66 at x 0.7, 0.70 at the right (deeper than the gif's 0.66/0.63/0.59). Lion x 0.09-0.91,
+# y 0.377-0.825. Narrow gold V to 0.10. Back blue band 0.107 centre, 0.08 sides; white BBFFC x 0.453-0.557, y 0.047-0.073.
+BRL Brisbane-2011 | fill #7A2340; poly #0E3CA5 0 0 1 0 1 0.70 0.7 0.66 0.5 0.68 0.3 0.72 0 0.78; vneck #E3A848 0.10 0.16 0.04; mark #E3A848 brl_2010_lion 0.135 0.377 0.865 0.825; collar #E3A848 2; armholes #E3A848 2.5; shorts #7A2340 | fill #7A2340; poly #0E3CA5 0 0 1 0 1 0.08 0.5 0.107 0 0.08; mark W brl_2002_bbffc 0.468 0.047 0.542 0.073; collar #E3A848 2; armholes #E3A848 2.5; number #E3A848
+
+# 2012. Match https://www.gettyimages.com.au/detail/news-photo/x/151135405, replica
+# https://i.ebayimg.com/images/g/lSYAAeSwvqxq0DPt/s-l1600.jpg and back https://i.ebayimg.com/images/g/7f8AAeSwwlpq0DPs/s-l1600.jpg
+# (https://www.ebay.com.au/itm/407291192757), back https://www.gettyimages.com.au/detail/news-photo/x/151135408.
+# Yoke edge 0.66 at the viewer's left, 0.63 centre, 0.605 right. Lion x 0.08-0.92, y 0.31-0.76. Gold V to 0.115.
+# Back blue band 0.14 centre, 0.16 sides; GOLD small lion + BBFFC x 0.39-0.585, y 0.08-0.11; plain gold number.
+BRL Brisbane-2012 | fill #7A2340; poly #0E3CA5 0 0 1 0 1 0.605 0.5 0.63 0 0.66; vneck #E3A848 0.115 0.16 0.035; mark #E3A848 brl_2010_lion 0.133 0.31 0.867 0.76; collar #E3A848 2; armholes #E3A848 2.5; shorts #7A2340 | fill #7A2340; poly #0E3CA5 0 0 1 0 1 0.16 0.5 0.14 0 0.16; mark #E3A848 brl_2012_bbffc 0.410 0.08 0.565 0.11; collar #E3A848 2; armholes #E3A848 2.5; number #E3A848
+
+# 2015. Match https://www.gettyimages.com.au/detail/news-photo/x/480474482, replica
+# https://i.ebayimg.com/images/g/uzgAAOSwHaVhRJL3/s-l1600.jpg (https://www.ebay.com.au/itm/158172993553).
+# Flat blue yoke 0.355 (hem near the photo's bottom edge). Gold V collar to 0.12, half 0.20. Lion (paw on ball)
+# x 0.195-0.78, y 0.41-0.67. No back photo: back follows the gif (blue band 0.14, gold lion + BBFFC, gold number).
+BRL Brisbane-2015 | fill #7A2340; rect #0E3CA5 0 0 1 0.355; vneck #E3A848 0.12 0.20 0.05; mark #E3A848 lion 0.287 0.41 0.688 0.67; collar #E3A848 2; armholes #E3A848 2; shorts #7A2340 | fill #7A2340; rect #0E3CA5 0 0 1 0.14; mark #E3A848 brl_2012_bbffc 0.397 0.025 0.553 0.055; collar #E3A848 2; armholes #E3A848 2; number #E3A848
+
+# 2017. Match https://www.gettyimages.com.au/detail/news-photo/x/669007544, replica
+# https://i.ebayimg.com/images/g/qWYAAeSwCZlq5XEU/s-l1600.jpg and back https://i.ebayimg.com/images/g/n2UAAeSwGqJq5XEh/s-l1600.jpg
+# (https://www.ebay.com.au/itm/137888817681). Yoke 0.374 (researcher 0.33-0.35). Gold V point 0.178, outer half 0.168,
+# white inside. Lion x 0.225-0.76, y 0.40-0.66. Back blue band 0.14, gold small lion + BBFFC x 0.39-0.545, y 0.02-0.045.
+BRL Brisbane-2017 | fill #7A2340; rect #0E3CA5 0 0 1 0.374; vfill #E3A848 0.178 0.168; vfill W 0.145 0.135; mark #E3A848 lion 0.292 0.40 0.693 0.66; collar #E3A848 2; armholes #E3A848 2; shorts #7A2340 | fill #7A2340; rect #0E3CA5 0 0 1 0.14; mark #E3A848 brl_2012_bbffc 0.403 0.02 0.532 0.045; collar #E3A848 2; armholes #E3A848 2; number #E3A848
+
+# 2018. Match https://www.gettyimages.com.au/detail/news-photo/x/940420958, replica
+# https://i.ebayimg.com/images/g/lyMAAeSwHZRqyuY3/s-l1600.jpg (https://www.ebay.com.au/itm/407281852258), back
+# https://www.gettyimages.com.au/detail/news-photo/x/993179728. Yoke 0.355. Round gold collar to 0.10 (gif and match
+# photos; the replica's collar reads blue). Lion x 0.20-0.83, y 0.34-0.58. Back: the huddle photo is too small to read
+# the band, so the gif's blue band 0.14 with gold lion + BBFFC is used.
+BRL Brisbane-2018 | fill #7A2340; rect #0E3CA5 0 0 1 0.355; round #E3A848 0.10 0.19 0.035; mark #E3A848 lion 0.330 0.34 0.700 0.58; collar #E3A848 2; armholes #E3A848 2; shorts #7A2340 | fill #7A2340; rect #0E3CA5 0 0 1 0.14; mark #E3A848 brl_2012_bbffc 0.386 0.035 0.594 0.075; collar #E3A848 2; armholes #E3A848 2; number #E3A848
+
+# 2020. Match https://www.gettyimages.com.au/detail/news-photo/x/1229119254 and /1229117524, back /1229118308.
+# Yoke 0.38. Gold V point 0.16, outer half 0.20, white inside. Lion x 0.15-0.85, y 0.41-0.69 (gif; photos agree in
+# size). Back almost all maroon on the photo; the gif's thin blue band 0.09 with gold lion + BBFFC is kept.
+BRL Brisbane-2020 | fill #7A2340; rect #0E3CA5 0 0 1 0.38; vfill #E3A848 0.16 0.20; vfill W 0.125 0.16; mark #E3A848 lion 0.284 0.41 0.716 0.69; collar #E3A848 2; armholes #E3A848 2; shorts #7A2340 | fill #7A2340; rect #0E3CA5 0 0 1 0.09; mark #E3A848 brl_2012_bbffc 0.386 0.025 0.594 0.065; collar #E3A848 2; armholes #E3A848 2; number #E3A848
+
+# 2021. Replica https://i.ebayimg.com/images/g/1~MAAOSw9zliLxDc/s-l1600.jpg (https://www.ebay.com.au/itm/185338899256),
+# backs https://www.gettyimages.com.au/detail/news-photo/x/1335388466 and /1319215374. Yoke 0.34. Gold V point 0.15
+# (measured on the replica: 262 px against a 100-1240 px jumper), outer half 0.24, gold band 0.025, white inside. Pale gold lion x 0.20-0.78, y 0.42-0.70 (replica photographed at an
+# angle; x centred). Hip lion + BBFFC x 0.75-0.94, y 0.95-0.98 (under the shorts on the 3D player). Back: gif blue band
+# 0.09 with gold lion + BBFFC; the huddle photos show maroon backs with gold numbers but are too small to rule the band out.
+BRL Brisbane-2021 | fill #7A2340; rect #0E3CA5 0 0 1 0.34; vfill #E3A848 0.15 0.24; vfill W 0.125 0.20; mark #F4D49D lion 0.274 0.42 0.706 0.70; mark #F4D49D brl_2012_bbffc 0.767 0.95 0.923 0.98; collar #E3A848 2; armholes #E3A848 2; shorts #7A2340 | fill #7A2340; rect #0E3CA5 0 0 1 0.09; mark #E3A848 brl_2012_bbffc 0.386 0.025 0.594 0.065; collar #E3A848 2; armholes #E3A848 2; number #E3A848
+
+# 2023. Match https://www.gettyimages.com.au/detail/news-photo/x/1625018227, replica
+# https://i.ebayimg.com/images/g/C3EAAOSwritoUlu4/s-l1600.jpg (https://www.ebay.com.au/itm/286660379530).
+# Yoke 0.33. Round gold collar to 0.14 (the gif draws a small notch; the replica is round). Pale gold lion x 0.25-0.74,
+# y 0.39-0.62. Hip lion + BBFFC on the viewer's right, x 0.77-0.90, y 0.82-0.845. No back photo: back follows the gif
+# (blue band 0.13 carrying only the sponsor, gold number).
+BRL Brisbane-2023 | fill #7A2340; rect #0E3CA5 0 0 1 0.33; round #E3A848 0.14 0.20 0.03; mark #F4D49D lion 0.317 0.39 0.673 0.62; mark #F4D49D brl_2012_bbffc 0.770 0.82 0.900 0.845; collar #E3A848 2; armholes #E3A848 2; shorts #7A2340 | fill #7A2340; rect #0E3CA5 0 0 1 0.13; collar #E3A848 2; armholes #E3A848 2; number #E3A848

@@ -509,15 +509,17 @@ func _test_free_set_shots_counted() -> void:
 
 
 ## Row 12: a clanger that ends a chain in the wet or the wind names it and
-## belongs to the last disposal's player.
+## belongs to the last disposal's player. The wind blames kicks only, about one
+## clanger in two windy games, so eight windy games show none about one time in
+## fifty: the sample adds 24 more (32 windy games, about 16 expected).
 func _test_clanger_cause() -> void:
 	var withwhy := 0
 	var plain_on := 0
 	var causes := {}
 	var line_ok := true
 	var names_ok := true
-	for seed in range(24):
-		var weather := "wet" if seed % 3 == 0 else ("windy" if seed % 3 == 1 else "perfect")
+	for seed in range(48):
+		var weather := "windy" if seed >= 24 else ("wet" if seed % 3 == 0 else ("windy" if seed % 3 == 1 else "perfect"))
 		var ron := _sim(9100 + seed)
 		ron.weather = weather
 		var res_on: Dictionary = ron.run()
@@ -2080,7 +2082,16 @@ func _test_play_through_three() -> void:
 		_check(who.has(role), "(setup) a %s is on the ground" % role)
 		if not who.has(role):
 			return
+	# The pillar is the midfielder the game expects to touch it least
+	# (Roles.usual_touches): the call is a bias of FOCUS_CARRY until he nears
+	# about USAGE_START_FOCUSED touches (the gate's "he keeps getting it to
+	# about 21"), so it shows on a man who sits under that. A midfielder who
+	# already has 30-odd a game is past it, and the call adds nothing
+	# measurable to him (Max Holmes since #1718: 33.6 v 34.1 a game).
 	var mid: Dictionary = who["MID"]
+	for p in probe.squads[0].ground:
+		if str(p["role"]) == "MID" and Roles.usual_touches(p) < Roles.usual_touches(mid):
+			mid = p
 	var fwd: Dictionary = who["FWD"]
 	var def: Dictionary = who["DEF"]
 	var plain_mid := _job_mult(probe, mid, "carrier", "middle")
@@ -2135,7 +2146,7 @@ func _test_play_through_three() -> void:
 			acc["td"] += float(((pair[0]["team"] as Array)[0] as Dictionary).get("disposals", 0.0))
 		for id in three.values():
 			on["top"] = maxf(float(on["top"]), float(((ra["players"] as Dictionary).get(id, {}) as Dictionary).get("disposals", 0.0)))
-	_check(on["md"] > base["md"], "Pillar: more of the ball (%.1f v %.1f a game)" % [on["md"] / n, base["md"] / n])
+	_check(on["md"] > base["md"], "Pillar: more of the ball (%s, %.1f v %.1f a game)" % [GameDB.player_display_name(mid), on["md"] / n, base["md"] / n])
 	_check(on["fs"] > base["fs"], "Target: more shots (%.2f v %.2f a game)" % [on["fs"] / n, base["fs"] / n])
 	_check(on["dk"] > base["dk"], "Distributor: more of the ball (%.1f v %.1f a game)" % [on["dk"] / n, base["dk"] / n])
 	_check(absf(on["td"] - base["td"]) / base["td"] < 0.03,
@@ -4395,7 +4406,10 @@ func _test_tag_tradeoff() -> void:
 	# Without a specialist the hold follows his Pressure (Roles.tag_keep):
 	# the midfielder who holds a man least (last in tag_order) plays the man
 	# for nothing much and gives up his own game.
-	# Of the clubs without one, the midfielder who holds a man least.
+	# Of the clubs without one, the inside midfielder who holds a man least:
+	# the good midfielder who has to do the job. A wing's own game in the
+	# battle is only his disposals (MatchSim._mid_value), so a wing sent to tag
+	# gives up too little to make the loss this check is about.
 	var loose_club := ""
 	var loose_id := ""
 	var loose_keep := 0.0
@@ -4405,7 +4419,10 @@ func _test_tag_tradeoff() -> void:
 		var order := MatchSim.tag_order(Squad.new(code, GameDB.club_list(code), true, code).ground)
 		if order.is_empty() or Roles.is_tagger(order[0]):
 			continue
-		var last: Dictionary = order[order.size() - 1]
+		var inside := order.filter(func(q): return not Roles.on_wing(q))
+		if inside.is_empty():
+			continue
+		var last: Dictionary = inside[inside.size() - 1]
 		if Roles.tag_keep(last, 100.0) > loose_keep:
 			loose_keep = Roles.tag_keep(last, 100.0)
 			loose_club = code
@@ -4433,7 +4450,9 @@ func _test_tag_tradeoff() -> void:
 	var t_off := 0.0
 	var g_on := 0.0
 	var g_off := 0.0
-	var n := 20
+	# 100 pairs: over 20 the tagger's own loss (about 3 a game, give or take
+	# 1.2 over 20) can land near nothing on an unlucky set of seeds.
+	var n := 100
 	for i in range(n):
 		var on := _sim(900 + i, without, opp)
 		on.set_tactics(0, {"tag_id": str(star["id"])})

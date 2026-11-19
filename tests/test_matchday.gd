@@ -646,7 +646,7 @@ const PALETTE := {
 	"WCE": ["#003087", "#F2A900", "#FFFFFF"],
 	"WBD": ["#BD002B", "#20539D", "#FFFFFF"],
 	"TAS": ["#2C5530", "#E8D44D", "#C2274D"],
-	"CANB": ["#1B3B6F", "#FFFFFF", "#F5B301"],
+	"CANB": ["#143868", "#F3EBD6", "#A28354"],
 }
 
 

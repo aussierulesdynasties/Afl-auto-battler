@@ -17,7 +17,7 @@ const SUITE_SEED := 1990
 ## season print did not. The real-lists print moved again that day with the
 ## 44 rule (RookieList.add_block): West Coast, at 43 of the 44, lists one of
 ## its three tied prospects and passes its picks, so the opening draft differs.
-const GOLDEN_LOAD := "504cc7d1ec21cf3e80e29046f8aa7e50"
+const GOLDEN_LOAD := "e6f604aedc9fbf756137094f20099015"  # moved with Canberra's name and colours (the Owls)
 ## It moved again with row 199 (2026-11-15): the off-season before the
 ## opening draft closes with the rivals signing free agents, so the lists differ;
 ## the level ladder going A-Z by club (#1633) then changed the order the clubs
@@ -50,7 +50,7 @@ const TEAM_BOOKKEEPING_KEYS := ["pressure_acts_dhalf", "tackles_i50", "poss_d50"
 		"d50_tackled", "d50_rushed", "d50_chips"]
 ## Team counts named by prefix (one key per way a defensive-50 chain ends).
 const TEAM_BOOKKEEPING_PREFIXES := ["d50_end_"]
-const GOLDEN_SEASON := {"Windows": "e023f2a3db045eace7c7a5c89f73ff21", "Linux": "152497f449b2d3e1913d39c6cfad2ca6"}
+const GOLDEN_SEASON := {"Windows": "4a60c57aa723ec9cf0c936b1592edace", "Linux": "29731d9d3aaf8306ecd99aa67c1bf4da"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and

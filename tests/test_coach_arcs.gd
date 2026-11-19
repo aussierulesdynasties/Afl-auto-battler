@@ -990,9 +990,23 @@ func _check_joined(tag: String, from: String, year: int, their_id: String) -> vo
 		for p in GameState.free_agents:
 			if float(p.get("age", 30.0)) < Expansion.TARGET_MAX_AGE and (best.is_empty() or int(p["overall"]) > int(best["overall"])):
 				best = p
-		_check(not best.is_empty(), "%s: a free agent Tasmania can sign" % tag)
+		# At the draft free agency has closed and the pool keeps only its unsigned under-26s,
+		# often none (#1748's copied players): then a rival's player young enough, taken off
+		# his list the way ExpansionBuild._settle takes one.
+		var from_list: Array = []
+		if best.is_empty():
+			for code in GameState.season.lists:
+				var list: Array = GameState.season.lists[code]
+				if str(code) == "TAS" or list.size() <= Contracts.min_list():
+					continue
+				for p in list:
+					if float(p.get("age", 30.0)) < Expansion.TARGET_MAX_AGE and (best.is_empty() or int(p["overall"]) > int(best["overall"])):
+						best = p
+						from_list = list
+		_check(not best.is_empty(), "%s: a player Tasmania can sign" % tag)
 		if not best.is_empty():
 			GameState.free_agents.erase(best)
+			from_list.erase(best)
 			var deal := ExpansionBuild.terms(best)
 			ExpansionBuild._sign(GameState, "TAS", best, int(deal["salary"]), int(deal["years"]))
 			(GameState.expansion["TAS"]["signings"] as Array).append(str(best["id"]))

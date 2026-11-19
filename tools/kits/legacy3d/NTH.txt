@@ -1,0 +1,45 @@
+# North Melbourne legacy home guernseys, 1990-2025, for the 3D player (row 197). Format: tools/kits/kits_today.txt.
+# Layout from the footyjumpers illustration of each design, checked against the Getty photos named above each line
+# (https://www.gettyimages.com.au/detail/<id>). Colours: today's blue #1F3C8C and white.
+
+# North-1990 (1990-1995): narrow blue and white stripes, blue V collar and armholes; back white top with blue number, stripes below. Photos: getty 96942500, getty 57559301
+NTH North-1990 | fill #FFFFFF; stripes #1F3C8C 7; vneck #1F3C8C 0.25 0.22 0.035; armholes #1F3C8C 2; collar #1F3C8C 2; shorts #1F3C8C | fill #FFFFFF; stripes #1F3C8C 7 0 1 0.50 1; collar #1F3C8C 2; armholes #1F3C8C 2; number #1F3C8C
+
+# North-1996-Home1 (alternate home 1996): blue and white stripes fanning from the neck. No match photo found; illustration only
+NTH North-1996-Home1 | fill #FFFFFF; vcyc -0.04 0.12 9 #1F3C8C #FFFFFF; vneck #1F3C8C 0.21 0.2 0.035; armholes #1F3C8C 2; collar #1F3C8C 2; shorts #1F3C8C | fill #FFFFFF; vcyc -0.04 0.12 9 #1F3C8C #FFFFFF; rect #FFFFFF 0 0 1 0.48; collar #1F3C8C 2; armholes #1F3C8C 2; number #1F3C8C
+
+# North-1996-Home2 (1996-1997): wide blue and white stripes (1996 premiership guernsey); back white top with blue number. Photos: getty 97189686
+NTH North-1996-Home2 | fill #FFFFFF; stripes #1F3C8C 7; vneck #1F3C8C 0.21 0.2 0.035; armholes #1F3C8C 2; collar #1F3C8C 2; shorts #1F3C8C | fill #FFFFFF; stripes #1F3C8C 7 0 1 0.48 1; collar #1F3C8C 2; armholes #1F3C8C 2; number #1F3C8C
+
+# North-1998 (1998): three blue stripes on white, blue V collar; back white top, stripes below. No match photo found; illustration only
+NTH North-1998 | fill #FFFFFF; rect #1F3C8C 0.20 0 0.315 1; rect #1F3C8C 0.44 0 0.56 1; rect #1F3C8C 0.685 0 0.80 1; vneck #1F3C8C 0.2 0.18 0.04; armholes #1F3C8C 2; collar #1F3C8C 2; shorts #1F3C8C | fill #FFFFFF; rect #1F3C8C 0.20 0.62 0.315 1; rect #1F3C8C 0.44 0.62 0.56 1; rect #1F3C8C 0.685 0.62 0.80 1; collar #1F3C8C 2; armholes #1F3C8C 2; number #1F3C8C
+
+# North-1999 (1999-2000): three blue stripes on white, blue V collar. Photos: getty 1554417
+NTH North-1999 | fill #FFFFFF; rect #1F3C8C 0.20 0 0.315 1; rect #1F3C8C 0.44 0 0.56 1; rect #1F3C8C 0.685 0 0.80 1; vneck #1F3C8C 0.2 0.18 0.04; armholes #1F3C8C 2; collar #1F3C8C 2; shorts #1F3C8C | fill #FFFFFF; rect #1F3C8C 0.20 0.6 0.315 1; rect #1F3C8C 0.44 0.6 0.56 1; rect #1F3C8C 0.685 0.6 0.80 1; collar #1F3C8C 2; armholes #1F3C8C 2; number #1F3C8C
+
+# North-2001 (2001): three blue stripes on white, narrow V collar. No match photo found; illustration only
+NTH North-2001 | fill #FFFFFF; rect #1F3C8C 0.20 0 0.315 1; rect #1F3C8C 0.44 0 0.56 1; rect #1F3C8C 0.685 0 0.80 1; vneck #1F3C8C 0.21 0.15 0.03; armholes #1F3C8C 2; collar #1F3C8C 2; shorts #1F3C8C | fill #FFFFFF; rect #1F3C8C 0.20 0.6 0.315 1; rect #1F3C8C 0.44 0.6 0.56 1; rect #1F3C8C 0.685 0.6 0.80 1; collar #1F3C8C 2; armholes #1F3C8C 2; number #1F3C8C
+
+# North-2002 (2002-2005): three blue stripes on white, blue V panel at the neck. Photos: getty 2074916
+NTH North-2002 | fill #FFFFFF; rect #1F3C8C 0.20 0 0.315 1; rect #1F3C8C 0.44 0 0.56 1; rect #1F3C8C 0.685 0 0.80 1; vfill #FFFFFF 0.36 0.21; vfill #1F3C8C 0.32 0.18; armholes #1F3C8C 2; collar #1F3C8C 2; shorts #1F3C8C | fill #FFFFFF; rect #1F3C8C 0.20 0.58 0.315 1; rect #1F3C8C 0.44 0.58 0.56 1; rect #1F3C8C 0.685 0.58 0.80 1; collar #1F3C8C 2; armholes #1F3C8C 2; number #1F3C8C
+
+# North-2006 (2006-2010): three blue stripes on white, wide V collar. Photos: getty 73330880
+NTH North-2006 | fill #FFFFFF; rect #1F3C8C 0.18 0 0.30 1; rect #1F3C8C 0.44 0 0.56 1; rect #1F3C8C 0.70 0 0.82 1; vneck #1F3C8C 0.21 0.22 0.05; armholes #1F3C8C 2; collar #1F3C8C 2; shorts #1F3C8C | fill #FFFFFF; rect #1F3C8C 0.18 0.56 0.30 1; rect #1F3C8C 0.44 0.56 0.56 1; rect #1F3C8C 0.70 0.56 0.82 1; collar #1F3C8C 2; armholes #1F3C8C 2; number #1F3C8C
+
+# North-2011 (2011): three blue stripes on white; back white top with blue number, stripes below. Photos: getty 115249729
+NTH North-2011 | fill #FFFFFF; rect #1F3C8C 0.18 0 0.30 1; rect #1F3C8C 0.44 0 0.56 1; rect #1F3C8C 0.70 0 0.82 1; vneck #1F3C8C 0.21 0.22 0.05; armholes #1F3C8C 2; collar #1F3C8C 2; shorts #1F3C8C | fill #FFFFFF; rect #1F3C8C 0.18 0.64 0.30 1; rect #1F3C8C 0.44 0.64 0.56 1; rect #1F3C8C 0.70 0.64 0.82 1; collar #1F3C8C 2; armholes #1F3C8C 2; number #1F3C8C
+
+# North-2012 (2012-2014): three blue stripes on white; back white top with blue number, stripes below. Photos: getty 151628120, getty 150449124
+NTH North-2012 | fill #FFFFFF; rect #1F3C8C 0.18 0 0.30 1; rect #1F3C8C 0.44 0 0.56 1; rect #1F3C8C 0.70 0 0.82 1; vneck #1F3C8C 0.19 0.2 0.03; armholes #1F3C8C 2; collar #1F3C8C 2; shorts #1F3C8C | fill #FFFFFF; rect #1F3C8C 0.18 0.64 0.30 1; rect #1F3C8C 0.44 0.64 0.56 1; rect #1F3C8C 0.70 0.64 0.82 1; collar #1F3C8C 2; armholes #1F3C8C 2; number #1F3C8C
+
+# North-2015 (2015; alternate home 2016): three blue stripes on white, white V panel; back white top, stripes below. No match photo found; illustration only
+NTH North-2015 | fill #FFFFFF; rect #1F3C8C 0.18 0 0.30 1; rect #1F3C8C 0.44 0 0.56 1; rect #1F3C8C 0.70 0 0.82 1; vfill #FFFFFF 0.28 0.26; vneck #1F3C8C 0.21 0.2 0.05; armholes #1F3C8C 2; collar #1F3C8C 2; shorts #1F3C8C | fill #FFFFFF; rect #1F3C8C 0.18 0.7 0.30 1; rect #1F3C8C 0.44 0.7 0.56 1; rect #1F3C8C 0.70 0.7 0.82 1; collar #1F3C8C 2; armholes #1F3C8C 2; number #1F3C8C
+
+# North-2016 (2016-2019): three white stripes on blue; back blue top with white number, stripes below. Photos: getty 949882624, getty 949882586
+NTH North-2016 | fill #1F3C8C; rect #FFFFFF 0.17 0 0.30 1; rect #FFFFFF 0.43 0 0.56 1; rect #FFFFFF 0.69 0 0.81 1; vfill #1F3C8C 0.28 0.26; vneck #1F3C8C 0.20 0.2 0.03; armholes #1F3C8C 2; collar #1F3C8C 2; shorts #1F3C8C | fill #1F3C8C; rect #FFFFFF 0.17 0.7 0.30 1; rect #FFFFFF 0.43 0.7 0.56 1; rect #FFFFFF 0.69 0.7 0.81 1; collar #1F3C8C 2; armholes #1F3C8C 2; number W
+
+# North-2020 (2020-2021): white stripes on blue with fine blue pinstripes; back blue top with white number, stripes below. Photos: getty 1250870481, getty 1270767216
+NTH North-2020 | fill #1F3C8C; rect #FFFFFF 0.17 0 0.30 1; rect #FFFFFF 0.43 0 0.56 1; rect #FFFFFF 0.69 0 0.81 1; rect #1F3C8C 0.185 0 0.195 1; rect #1F3C8C 0.28 0 0.29 1; rect #1F3C8C 0.445 0 0.455 1; rect #1F3C8C 0.535 0 0.545 1; rect #1F3C8C 0.705 0 0.715 1; rect #1F3C8C 0.79 0 0.80 1; vfill #1F3C8C 0.26 0.26; vneck #1F3C8C 0.20 0.2 0.03; armholes #1F3C8C 2; collar #1F3C8C 2; shorts #1F3C8C | fill #1F3C8C; rect #FFFFFF 0.17 0.68 0.30 1; rect #FFFFFF 0.43 0.68 0.56 1; rect #FFFFFF 0.69 0.68 0.81 1; rect #1F3C8C 0.185 0.68 0.195 1; rect #1F3C8C 0.28 0.68 0.29 1; rect #1F3C8C 0.445 0.68 0.455 1; rect #1F3C8C 0.535 0.68 0.545 1; rect #1F3C8C 0.705 0.68 0.715 1; rect #1F3C8C 0.79 0.68 0.80 1; collar #1F3C8C 2; armholes #1F3C8C 2; number W
+
+# North-2022 (2022-2025): blue and white stripes, blue V collar; back white top with blue number, stripes below. Photos: getty 1468980737
+NTH North-2022 | fill #FFFFFF; stripes #1F3C8C 7; vneck #1F3C8C 0.18 0.2 0.06; armholes #1F3C8C 2; collar #1F3C8C 2; shorts #1F3C8C | fill #FFFFFF; stripes #1F3C8C 7 0 1 0.61 1; collar #1F3C8C 2; armholes #1F3C8C 2; number #1F3C8C

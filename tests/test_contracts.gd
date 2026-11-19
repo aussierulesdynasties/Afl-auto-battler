@@ -1739,9 +1739,18 @@ func _test_trade_value() -> void:
 	var bundles_refused := true
 	var tried := 0
 	for code in GameDB.CLUB_ORDER:
-		var list: Array = GameDB.club_list(code)
+		var list: Array = (GameDB.club_list(code) as Array).duplicate()
 		var young := list.filter(func(q): return float(q["age"]) <= 22.0)
 		young.sort_custom(func(x, y): return TradeValue.future_rating(x) > TradeValue.future_rating(y))
+		# Since #1718 a hand-set potential is a rehab pull only after a short season, so few
+		# real kids clear the bar: make each club's best one elite (72 OVR / 92 POT at 20,
+		# 50 senior games: a future rating of 82.8) so every club tests the promise.
+		if not young.is_empty() and TradeValue.future_rating(young[0]) < 78.0:
+			var career: Dictionary = (young[0].get("career", {}) as Dictionary).duplicate(true)
+			career["games"] = 50
+			var elite := _with(young[0], {"overall": 72, "potential": 92, "age": 20.0, "rehab": false, "career": career})
+			list[list.find(young[0])] = elite
+			young[0] = elite
 		# Elite young talent only: a solid package can fairly buy a lesser one.
 		if young.is_empty() or ordinary.size() < 4 or TradeValue.future_rating(young[0]) < 78.0:
 			continue

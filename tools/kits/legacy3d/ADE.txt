@@ -1,0 +1,115 @@
+# Adelaide's past home guernseys (1991-2025) for the 3D match player, one line per footyjumpers
+# picture (tools/kits/kits.txt), each copied from the club's own captioned photos on
+# crowshistory.afc.com.au/main-home-jumpers-afl (files under crowshistory.afc.com.au/wp-content/uploads/).
+# Format and ops: tools/kits/kits_today.py. Explicit colours, sampled from photos because clubs.csv's
+# #002B5C navy and #FFD200 lemon gold render royal blue and yellow on the 3D player, where every photo
+# shows near-black navy and an orange gold: navy #14213F (as the 2026 line), red #D6031B and gold #FBAD03
+# from the club's 2025 product shot (2025/11/Home-Gurnsey-2025-5.jpg); the 1991 mannequin's gold has
+# the same hue (about 40 degrees).
+# Positions as kits_today.txt: y 0 the top of the shoulder by the neck, 1 the hem. Where a photo
+# and the footyjumpers drawing disagree, the photo wins. Numbers gold; a white outline 1996-2020
+# (club page: added 1996, removed 2021). Sponsors, maker and league logos left off.
+
+# 1991-95: 2022/01/Mickan2-1.jpg (front), 2021/10/1995-h-1.jpg (1995 jumper on a mannequin, front),
+# 2022/01/1995-h-back-1.jpg (back), 2021/10/1991-back-no-Toyota.jpg. Read off the mannequin: hoops
+# from 0.338, each about 0.11 (red, gold, navy, red, gold, navy, red hem); gold V trim to 0.13; gold
+# armholes. Back: navy to 0.68, then red, gold, navy, a red hem; gold number, no outline.
+ADE Adelaide-1991 | fill #14213F; band #D6031B 0.338 0.449; band #FBAD03 0.449 0.556; band #D6031B 0.664 0.772; band #FBAD03 0.772 0.881; band #D6031B 0.976 1; vneck #FBAD03 0.13 0.20 0.035; collar #FBAD03 2; armholes #FBAD03 2; shorts #14213F | fill #14213F; band #D6031B 0.680 0.772; band #FBAD03 0.772 0.880; band #D6031B 0.974 1; collar #FBAD03 2; armholes #FBAD03 2; number #FBAD03
+
+# 1996-98: 2019/03/McGuinness-52745021-web.jpg, 2021/11/1997-front-rehn.jpg, 2021/10/1998-home-bicks.jpg
+# (fronts), 2022/01/1996-back-full.jpg, 2022/01/1997-gf-back.jpg (backs). The 1991 body again (hoops
+# from about 0.35, about 0.11 each, red hem); the number now white-outlined.
+ADE Adelaide-1996 | fill #14213F; band #D6031B 0.345 0.454; band #FBAD03 0.454 0.561; band #D6031B 0.668 0.775; band #FBAD03 0.775 0.882; band #D6031B 0.976 1; vneck #FBAD03 0.13 0.20 0.035; collar #FBAD03 2; armholes #FBAD03 2; shorts #14213F | fill #14213F; band #D6031B 0.680 0.772; band #FBAD03 0.772 0.880; band #D6031B 0.974 1; collar #FBAD03 2; armholes #FBAD03 2; number #FBAD03 W
+
+# 1999-2000: 2022/01/1999-home-bond.jpg, 2021/10/2000-home-front-vardy.jpg (fronts),
+# 2022/01/2000-back-home-goody.jpg (back). Hoops from 0.35, 0.10 each; a shallower gold V to 0.10.
+# Back: red, gold, navy, red from 0.70.
+ADE Adelaide-1999 | fill #14213F; band #D6031B 0.35 0.45; band #FBAD03 0.45 0.55; band #D6031B 0.65 0.75; band #FBAD03 0.75 0.85; band #D6031B 0.95 1; vneck #FBAD03 0.10 0.19 0.03; collar #FBAD03 2; armholes #FBAD03 2; shorts #14213F | fill #14213F; band #D6031B 0.70 0.79; band #FBAD03 0.79 0.88; band #D6031B 0.97 1; collar #FBAD03 2; armholes #FBAD03 2; number #FBAD03 W
+
+# 2001-02: 2021/11/2001-home-front-tyson.jpg, 2021/11/2002-home-front-burton.jpg (fronts),
+# 2022/01/2001-home-back-robran.jpg, 2022/01/2002-home-back-goody.jpg (backs). Hoops from 0.38, 0.10
+# each; a broad gold V to 0.15 with a solid gold insert filling its lower half. Back hoops from 0.70.
+ADE Adelaide-2001 | fill #14213F; band #D6031B 0.38 0.48; band #FBAD03 0.48 0.58; band #D6031B 0.68 0.78; band #FBAD03 0.78 0.88; band #D6031B 0.98 1; vneck #FBAD03 0.15 0.20 0.04; poly #FBAD03 0.44 0.075 0.56 0.075 0.5 0.15; collar #FBAD03 2; armholes #FBAD03 2; shorts #14213F | fill #14213F; band #D6031B 0.70 0.79; band #FBAD03 0.79 0.88; band #D6031B 0.97 1; collar #FBAD03 2; armholes #FBAD03 2; number #FBAD03 W
+
+# 2003: 2021/11/2003-home-front-torney.jpg (front), 2022/01/2003-back-home-goody.jpg (back),
+# 2022/01/2003-wide-main.jpg. The 2001 body; one gold V ending in a small solid gold tab at the point.
+# Back hoops from 0.72.
+ADE Adelaide-2003 | fill #14213F; band #D6031B 0.38 0.48; band #FBAD03 0.48 0.58; band #D6031B 0.68 0.78; band #FBAD03 0.78 0.88; band #D6031B 0.98 1; vneck #FBAD03 0.15 0.20 0.04; rect #FBAD03 0.465 0.11 0.535 0.165; collar #FBAD03 2; armholes #FBAD03 2; shorts #14213F | fill #14213F; band #D6031B 0.72 0.81; band #FBAD03 0.81 0.90; band #D6031B 0.99 1; collar #FBAD03 2; armholes #FBAD03 2; number #FBAD03 W
+
+# 2004: 2022/02/2004-front-welsh.jpg (square-on front), 2022/01/2004-home-back-roo.jpg (back).
+# Read off Welsh: red 0.33, gold 0.43, navy 0.53, red 0.62, gold 0.72, navy 0.81, red 0.90 to the hem;
+# gold V to 0.15 with a small gold block at the point. Back hoops from 0.70.
+ADE Adelaide-2004 | fill #14213F; band #D6031B 0.33 0.43; band #FBAD03 0.43 0.53; band #D6031B 0.62 0.72; band #FBAD03 0.72 0.81; band #D6031B 0.90 1; vneck #FBAD03 0.15 0.20 0.04; poly #FBAD03 0.46 0.105 0.54 0.105 0.5 0.15; collar #FBAD03 2; armholes #FBAD03 2; shorts #14213F | fill #14213F; band #D6031B 0.70 0.79; band #FBAD03 0.79 0.88; band #D6031B 0.97 1; collar #FBAD03 2; armholes #FBAD03 2; number #FBAD03 W
+
+# 2005: 2022/02/2005-home-3.jpg and 2022/01/2005-back-1.jpg (the club's jumper on a mannequin, front
+# and back). Hoops 0.087 from 0.35 ending in a gold hem band; a narrow gold V to 0.14. Back: red 0.63,
+# gold 0.71, navy 0.79, red 0.88, gold 0.96.
+ADE Adelaide-2005 | fill #14213F; band #D6031B 0.35 0.44; band #FBAD03 0.44 0.52; band #D6031B 0.61 0.70; band #FBAD03 0.70 0.79; band #D6031B 0.88 0.96; band #FBAD03 0.96 1; vneck #FBAD03 0.14 0.19 0.025; collar #FBAD03 2; armholes #FBAD03 2; shorts #14213F | fill #14213F; band #D6031B 0.63 0.71; band #FBAD03 0.71 0.79; band #D6031B 0.88 0.96; band #FBAD03 0.96 1; collar #FBAD03 2; armholes #FBAD03 2; number #FBAD03 W
+
+# 2006: 2021/10/2006-h.jpg (mannequin front), 2022/01/2006-home-back-tyson.jpg (back). Hoops 0.088
+# from 0.36 ending in a gold hem band; navy side panels from the second red, thin at first and widening
+# to the hem ("blue side panels split the lower hoops"); gold V to 0.15; navy armholes (the club: gold
+# armhole trim removed in 2006).
+ADE Adelaide-2006 | fill #14213F; band #D6031B 0.36 0.45; band #FBAD03 0.45 0.54; band #D6031B 0.62 0.71; band #FBAD03 0.71 0.79; band #D6031B 0.88 0.97; band #FBAD03 0.97 1; poly #14213F -0.01 0.60 0.04 0.60 0.14 1.01 -0.01 1.01; poly #14213F 1.01 0.60 0.96 0.60 0.86 1.01 1.01 1.01; vneck #FBAD03 0.15 0.20 0.04; collar #FBAD03 2; armholes #14213F 1; shorts #14213F | fill #14213F; band #D6031B 0.63 0.71; band #FBAD03 0.71 0.79; band #D6031B 0.88 0.96; band #FBAD03 0.96 1; poly #14213F -0.01 0.60 0.04 0.60 0.14 1.01 -0.01 1.01; poly #14213F 1.01 0.60 0.96 0.60 0.86 1.01 1.01 1.01; collar #FBAD03 2; armholes #14213F 1; number #FBAD03 W
+
+# 2007-08: 2021/10/2007-front-home-roo.jpg (front), 2022/01/2007_home-back-23.jpg (back),
+# 2021/10/2008-home-front-pic.jpg, 2021/11/2008-home-goodwin.jpg. As 2006, hoops 0.092 from 0.39:
+# red, gold, navy, red, gold, navy, red and a thin gold hem; navy side panels; navy armholes.
+ADE Adelaide-2007 | fill #14213F; band #D6031B 0.39 0.48; band #FBAD03 0.48 0.57; band #D6031B 0.67 0.76; band #FBAD03 0.76 0.85; band #D6031B 0.94 0.98; band #FBAD03 0.98 1; poly #14213F -0.01 0.62 0.04 0.62 0.14 1.01 -0.01 1.01; poly #14213F 1.01 0.62 0.96 0.62 0.86 1.01 1.01 1.01; vneck #FBAD03 0.15 0.20 0.04; collar #FBAD03 2; armholes #14213F 1; shorts #14213F | fill #14213F; band #D6031B 0.63 0.72; band #FBAD03 0.72 0.81; band #D6031B 0.90 0.98; band #FBAD03 0.98 1; poly #14213F -0.01 0.62 0.04 0.62 0.14 1.01 -0.01 1.01; poly #14213F 1.01 0.62 0.96 0.62 0.86 1.01 1.01 1.01; collar #FBAD03 2; armholes #14213F 1; number #FBAD03 W
+
+# 2009: 2021/10/2009-home-front.jpg (mannequin front), 2022/01/2009-home-back-knights.jpg (back),
+# 2022/01/2009-wide-main.jpg. Hoops 0.10 from 0.34, nearly full width from the front; a round gold
+# collar over a solid gold bib about 0.15 deep; gold armholes again. Back: a thin curved red line
+# under the number, then gold, navy, red, gold.
+ADE Adelaide-2009 | fill #14213F; band #D6031B 0.34 0.44; band #FBAD03 0.44 0.54; band #D6031B 0.64 0.75; band #FBAD03 0.75 0.85; band #D6031B 0.94 1; poly #FBAD03 0.370 -0.010 0.370 0.060 0.374 0.083 0.387 0.105 0.408 0.124 0.435 0.138 0.466 0.147 0.500 0.150 0.534 0.147 0.565 0.138 0.592 0.124 0.613 0.105 0.626 0.083 0.630 0.060 0.630 -0.010; collar #FBAD03 2; armholes #FBAD03 2; shorts #14213F | fill #14213F; poly #D6031B 0 0.66 0.25 0.69 0.5 0.70 0.75 0.69 1 0.66 1 0.675 0.75 0.705 0.5 0.715 0.25 0.705 0 0.675; band #FBAD03 0.74 0.82; band #D6031B 0.90 0.97; band #FBAD03 0.97 1; collar #FBAD03 2; armholes #FBAD03 2; number #FBAD03 W
+
+# 2010-12: 2021/11/2010-front-Sloane.jpg, 2022/01/2011-main-full-callinan-1.jpg (fronts),
+# 2022/01/2010-home-back-Porps.jpg, 2022/01/2011-home-back-Walker.jpg (backs). Hoops 0.09 from 0.38; a
+# deep scoop neck to 0.20 with a thin gold trim and a navy insert. Back hoops from 0.64.
+ADE Adelaide-2010 | fill #14213F; band #D6031B 0.38 0.47; band #FBAD03 0.47 0.56; band #D6031B 0.65 0.74; band #FBAD03 0.74 0.83; band #D6031B 0.92 1; round #FBAD03 0.20 0.20 0.025; collar #FBAD03 1.5; armholes #FBAD03 2; shorts #14213F | fill #14213F; band #D6031B 0.64 0.73; band #FBAD03 0.73 0.82; band #D6031B 0.91 1; collar #FBAD03 1.5; armholes #FBAD03 2; number #FBAD03 W
+
+# 2013-14: 2022/01/2013-home-thommo.jpg (front), 2022/01/2013-back-home-otten.jpg (back),
+# 2022/01/2014-puma-front.jpg and 2022/01/2014-back-puma.jpg (mannequin). Hoops 0.098 from 0.41; thin
+# navy side strips on the lower body; a rolled gold crew collar with a small V notch. Back: red 0.78,
+# gold 0.86, navy 0.95; navy side strips. (The tonal crows watermark is navy on navy: not drawn.)
+ADE Adelaide-2013 | fill #14213F; band #D6031B 0.41 0.51; band #FBAD03 0.51 0.60; band #D6031B 0.70 0.79; band #FBAD03 0.79 0.89; band #D6031B 0.98 1; rect #14213F 0 0.41 0.04 1; rect #14213F 0.96 0.41 1 1; vneck #FBAD03 0.06 0.05 0.03; collar #FBAD03 2.5; armholes #FBAD03 2; shorts #14213F | fill #14213F; band #D6031B 0.78 0.86; band #FBAD03 0.86 0.95; rect #14213F 0 0.6 0.05 1; rect #14213F 0.95 0.6 1 1; collar #FBAD03 2.5; armholes #FBAD03 2; number #FBAD03 W
+
+# 2015 (rounds 1-13): 2022/01/2015-BLK-front.jpg and 2022/01/2015-back.jpg (signed jumper on a
+# mannequin). Hoops 0.095 from 0.32; navy side panels about a tenth of the jumper width down the
+# hoops (drawn to 0.20 so they read past the armpit on the 3D body); a gold stand-up collar meeting in a shallow V to 0.07. Back: red 0.67, gold 0.75, navy
+# 0.84, red 0.92; side panels.
+ADE Adelaide-2015 | fill #14213F; band #D6031B 0.32 0.41; band #FBAD03 0.41 0.51; band #D6031B 0.60 0.70; band #FBAD03 0.70 0.80; band #D6031B 0.90 1; poly #14213F -0.01 0.32 0.20 0.32 0.21 1.01 -0.01 1.01; poly #14213F 1.01 0.32 0.80 0.32 0.79 1.01 1.01 1.01; vneck #FBAD03 0.07 0.14 0.03; collar #FBAD03 2.5; armholes #FBAD03 2; shorts #14213F | fill #14213F; band #D6031B 0.67 0.75; band #FBAD03 0.75 0.84; band #D6031B 0.92 1; poly #14213F -0.01 0.60 0.15 0.60 0.17 1.01 -0.01 1.01; poly #14213F 1.01 0.60 0.85 0.60 0.83 1.01 1.01 1.01; collar #FBAD03 2.5; armholes #FBAD03 2; number #FBAD03 W
+
+# 2016: 2022/01/2016-front-sloane.jpg (front), 2022/01/2016-home-back-21.jpg (back),
+# 2022/01/2016-wide-home.jpg. Full hoops again, 0.10 from 0.37 ending red; a gold V band to 0.12 with
+# a small navy insert at the point. Back: red, gold, navy, red, gold from 0.65.
+ADE Adelaide-2016 | fill #14213F; band #D6031B 0.37 0.47; band #FBAD03 0.47 0.57; band #D6031B 0.66 0.75; band #FBAD03 0.75 0.85; band #D6031B 0.96 1; vneck #FBAD03 0.12 0.19 0.04; collar #FBAD03 2; armholes #FBAD03 2; shorts #14213F | fill #14213F; band #D6031B 0.65 0.73; band #FBAD03 0.73 0.81; band #D6031B 0.89 0.97; band #FBAD03 0.97 1; collar #FBAD03 2; armholes #FBAD03 2; number #FBAD03 W
+
+# 2017 (rounds 4-23): 2022/01/2017-front-talia.jpg (front), 2022/01/2017-home-CHR-back-12.jpg (back).
+# The 2017 body (hoops 0.098 from 0.39 ending red); a navy V-neck with no gold trim; gold tabs on top
+# of each shoulder by the neck; gold armholes. Back: red, gold, navy, red, gold from 0.66.
+ADE Adelaide-2017 | fill #14213F; band #D6031B 0.39 0.48; band #FBAD03 0.48 0.58; band #D6031B 0.68 0.78; band #FBAD03 0.78 0.87; band #D6031B 0.97 1; rect #FBAD03 0.08 -0.01 0.33 0.06; rect #FBAD03 0.67 -0.01 0.92 0.06; collar #14213F 2; armholes #FBAD03 2; shorts #14213F | fill #14213F; rect #FBAD03 0.08 -0.01 0.33 0.06; rect #FBAD03 0.67 -0.01 0.92 0.06; band #D6031B 0.66 0.74; band #FBAD03 0.74 0.82; band #D6031B 0.90 0.98; band #FBAD03 0.98 1; collar #14213F 2; armholes #FBAD03 2; number #FBAD03 W
+
+# 2017 (rounds 1-3 and finals): 2021/10/2017-GF-1.jpg (grand final jumper on a mannequin),
+# 2021/10/2017-home-back-betts.jpg (back), 2022/01/2017-main-wide.jpg. Red 0.39, gold 0.48, navy 0.58,
+# red 0.68, gold 0.78, navy 0.87, red 0.97; navy V-neck, no gold trim (no white anywhere at the neck);
+# gold shoulder tabs. Back: red, gold, navy, red from 0.66.
+ADE Adelaide-2017-Toyota | fill #14213F; band #D6031B 0.39 0.48; band #FBAD03 0.48 0.58; band #D6031B 0.68 0.78; band #FBAD03 0.78 0.87; band #D6031B 0.97 1; rect #FBAD03 0.08 -0.01 0.33 0.06; rect #FBAD03 0.67 -0.01 0.92 0.06; collar #14213F 2; armholes #FBAD03 2; shorts #14213F | fill #14213F; rect #FBAD03 0.08 -0.01 0.33 0.06; rect #FBAD03 0.67 -0.01 0.92 0.06; band #D6031B 0.66 0.75; band #FBAD03 0.75 0.84; band #D6031B 0.93 1; collar #14213F 2; armholes #FBAD03 2; number #FBAD03 W
+
+# 2018-21: 2022/01/2018-home-full-mcrouch-1.jpg, 2022/01/2019-front-sloane.jpg (fronts),
+# 2022/01/2018-home-back-1.jpg, 2022/01/2019-back-home-sloane.jpg (backs). Red 0.42, gold 0.49, navy
+# 0.58, red 0.67, gold 0.76, navy 0.85, red 0.95; a gold scoop band to 0.10. Back from 0.66.
+ADE Adelaide-2018 | fill #14213F; band #D6031B 0.42 0.49; band #FBAD03 0.49 0.58; band #D6031B 0.67 0.76; band #FBAD03 0.76 0.85; band #D6031B 0.95 1; round #FBAD03 0.10 0.19 0.035; collar #FBAD03 2; armholes #FBAD03 2; shorts #14213F | fill #14213F; band #D6031B 0.66 0.74; band #FBAD03 0.74 0.82; band #D6031B 0.90 0.98; band #FBAD03 0.98 1; collar #FBAD03 2; armholes #FBAD03 2; number #FBAD03 W
+
+# 2022-24: 2022/08/2022-home-laird.jpg (front), 2024/01/2022-back-home.jpg (back),
+# 2024/09/2024-home-wide.jpg. Red 0.41, gold 0.51, navy 0.61, red 0.70, gold 0.80, navy 0.89, red 0.97;
+# a gold collar. Back: gold, navy, red, gold from 0.66; plain gold number.
+ADE Adelaide-2022 | fill #14213F; band #D6031B 0.41 0.51; band #FBAD03 0.51 0.61; band #D6031B 0.70 0.80; band #FBAD03 0.80 0.89; band #D6031B 0.97 1; collar #FBAD03 2.5; armholes #FBAD03 2; shorts #14213F | fill #14213F; band #FBAD03 0.66 0.74; band #D6031B 0.82 0.90; band #FBAD03 0.90 1; collar #FBAD03 2.5; armholes #FBAD03 2; number #FBAD03
+
+# 2025: 2025/11/Home-Gurnsey-2025-5.jpg and 2025/11/Home-Gurnsey-2025-8.jpg (product shots, front and
+# back; amber gold #FBAD03, red #D6031B, navy #221C32 sampled there, gold kept as the sample since it
+# differs from today's). Red 0.41, gold 0.49, navy 0.57, red 0.65, gold 0.73, navy 0.81, red 0.89, gold
+# hem 0.97; a crew neck lined with a broad gold band (0.10-0.15 deep at the centre) right round the neck
+# (the 3D collar binding is one colour for front and back, so it is gold on both); broad gold armholes.
+# Back: gold 0.72, navy 0.80, red 0.88, gold 0.96; plain gold number.
+ADE Adelaide-2025 | fill #14213F; band #D6031B 0.41 0.49; band #FBAD03 0.49 0.57; band #D6031B 0.65 0.73; band #FBAD03 0.73 0.81; band #D6031B 0.89 0.97; band #FBAD03 0.97 1; round #FBAD03 0.15 0.19 0.06; collar #FBAD03 3; armholes #FBAD03 2.5; shorts #14213F | fill #14213F; band #FBAD03 0.72 0.80; band #D6031B 0.88 0.96; band #FBAD03 0.96 1; collar #FBAD03 3; armholes #FBAD03 2.5; number #FBAD03

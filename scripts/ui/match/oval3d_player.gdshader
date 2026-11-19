@@ -33,6 +33,10 @@ uniform ivec2 kit_grid = ivec2(1, 1);
 uniform vec4 kit_collar : source_color = vec4(0.0);
 uniform vec4 kit_arms : source_color = vec4(0.0);
 uniform vec2 kit_trim = vec2(0.02, 0.02);
+// A current guernsey's number: its fill and its edge, as on the club's 2026 match backs
+// (data/kits_today.csv). Alpha 0: the fill picked by the colour under it, the edge that colour.
+uniform vec4 kit_number : source_color = vec4(0.0);
+uniform vec4 kit_number_edge : source_color = vec4(0.0);
 // Oval3D._kit_edges, per vertex of the guernsey, the shorts and the skin round the neck and
 // armholes: x metres inside the neck's drawn edge (negative outside it), y the same for the
 // nearer armhole, z metres above the hem line (level across the front), w 1 on the guernsey, 0.5
@@ -64,7 +68,10 @@ const vec3 HEAD_MEAN = vec3(0.2555, 0.1074, 0.0594);
 varying vec2 skin_uv;
 
 const vec2 NUMBER_ACROSS = vec2(0.24, 0.76);   // about 26 cm for two digits
-const vec2 NUMBER_UP = vec2(0.34, 0.80);       // about 27 cm tall, as AFL numbers are
+const vec2 NUMBER_UP = vec2(0.485, 0.875);     // where 2026 match backs carry it: from 14% to 58% of the guernsey seen above the shorts
+// The same spot on a picture kit, whose coordinates are the photo's own pixels (row 189 the shoulder line, 2310 px a metre).
+const vec2 NUMBER_ACROSS_PIC = vec2(0.3525, 0.6525);
+const vec2 NUMBER_UP_PIC = vec2(0.5425, 0.818);
 
 float region(float f) {
 	float aa = max(fwidth(f), 1e-3);
@@ -263,12 +270,14 @@ vec3 kit_image(int cell, vec3 g, float fore) {
 }
 
 // The number printed on the back: x = 1 where it's drawn (alpha), rgb its colour.
-vec4 number_on_back(int n, vec3 g, vec3 base, bool mirrored) {
-	float x = (NUMBER_ACROSS.y - g.x) / (NUMBER_ACROSS.y - NUMBER_ACROSS.x);   // from behind, left to right
+vec4 number_on_back(int n, vec3 g, vec3 base, bool mirrored, bool pic) {
+	vec2 across = pic ? NUMBER_ACROSS_PIC : NUMBER_ACROSS;
+	vec2 up = pic ? NUMBER_UP_PIC : NUMBER_UP;
+	float x = (across.y - g.x) / (across.y - across.x);   // from behind, left to right
 	if (mirrored) {
 		x = 1.0 - x;      // the frame is flipped on screen: flip the digits back
 	}
-	float y = (NUMBER_UP.y - g.y) / (NUMBER_UP.y - NUMBER_UP.x);             // top down
+	float y = (up.y - g.y) / (up.y - up.x);             // top down
 	int digit = n;
 	float dx = (x - 0.25) * 2.0;
 	if (n >= 10) {
@@ -280,9 +289,10 @@ vec4 number_on_back(int n, vec3 g, vec3 base, bool mirrored) {
 	}
 	vec4 d = texture(digits_tex, vec2((float(digit) + dx) / 10.0, y));
 	float lum = dot(base, vec3(0.299, 0.587, 0.114));
-	vec3 ink = lum > 0.58 ? vec3(0.06, 0.06, 0.07) : vec3(1.0);
-	// Edged in the guernsey's own colour, so it reads across stripes and panels.
-	return vec4(mix(base, ink, d.r), d.g * (1.0 - smoothstep(0.35, 0.6, g.z)));
+	vec3 ink = kit_number.a > 0.0 ? kit_number.rgb : (lum > 0.58 ? vec3(0.06, 0.06, 0.07) : vec3(1.0));
+	// Edged in the guernsey's own colour, so it reads across stripes and panels (or the club's edge).
+	vec3 edge = kit_number_edge.a > 0.0 ? kit_number_edge.rgb : base;
+	return vec4(mix(edge, ink, d.r), d.g * (1.0 - smoothstep(0.35, 0.6, g.z)));
 }
 
 void vertex() {
@@ -311,7 +321,7 @@ void fragment() {
 	}
 	if (number >= 0) {
 		vec3 under = dn >= 100 ? jumper : base;
-		vec4 num = number_on_back(number, g, under, false);
+		vec4 num = number_on_back(number, g, under, false, dn >= 100);
 		jumper = mix(jumper, num.rgb, num.a);
 	}
 	// The bindings, a set width in from the neck and the armholes.

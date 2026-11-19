@@ -1,0 +1,39 @@
+# Hawthorn legacy home guernseys, 1990-2025, for the 3D player (row 197). Format: tools/kits/kits_today.txt.
+# Layout from the footyjumpers illustration of each design, checked against the Getty photos named above each line
+# (https://www.gettyimages.com.au/detail/<id>). Colours: today's brown #2E120B and gold #F9AE33 (photos match them).
+
+# Hawthorn-1990 (1990-1996): 1995-96 photos (same design 1990-96): brown polo collar lying in a V, three brown stripes, wide brown armholes; back gold with brown number. Photos: getty 52765049, getty 52765051, getty 52765044
+HAW Hawthorn-1990 | fill #F9AE33; rect #2E120B 0.10 0 0.26 1; rect #2E120B 0.42 0 0.59 1; rect #2E120B 0.75 0 0.91 1; poly #2E120B 0.23 -0.01 0.77 -0.01 0.65 0.15 0.5 0.27 0.35 0.15; armholes #2E120B 2; collar #2E120B 2; shorts #2E120B | fill #F9AE33; collar #2E120B 2; armholes #2E120B 2; number #2E120B
+
+# Hawthorn-1997 (1997-1998): brown V collar, centre stripe running into the V, wide brown armholes; gold sampled #F9AF02 = today's gold. Photos: getty 96971421
+HAW Hawthorn-1997 | fill #F9AE33; rect #2E120B 0.17 0 0.31 1; rect #2E120B 0.44 0 0.58 1; rect #2E120B 0.69 0 0.84 1; vfill #2E120B 0.24 0.22; armholes #2E120B 2.5; collar #2E120B 2; shorts #2E120B | fill #F9AE33; collar #2E120B 2; armholes #2E120B 2.5; number #2E120B
+
+# Hawthorn-1999 (1999-2002): three brown stripes, brown V collar; back plain gold with brown number. Photos: getty 1565119, getty 1563487
+HAW Hawthorn-1999 | fill #F9AE33; rect #2E120B 0.17 0 0.31 1; rect #2E120B 0.44 0 0.58 1; rect #2E120B 0.69 0 0.84 1; vfill #2E120B 0.24 0.21; armholes #2E120B 2; collar #2E120B 2; shorts #2E120B | fill #F9AE33; collar #2E120B 2; armholes #2E120B 2; number #2E120B
+
+# Hawthorn-2003 (2003-2005): as 1999 with the darker brown; V collar brown. Photos: getty 1926467, getty 72571350
+HAW Hawthorn-2003 | fill #F9AE33; rect #2E120B 0.17 0 0.31 1; rect #2E120B 0.44 0 0.58 1; rect #2E120B 0.69 0 0.84 1; vfill #2E120B 0.24 0.21; armholes #2E120B 2; collar #2E120B 2; shorts #2E120B | fill #F9AE33; collar #2E120B 2; armholes #2E120B 2; number #2E120B
+
+# Hawthorn-2006 (2006-2007): wider stripes, brown V collar; back striped full length (white box behind the number in the illustration is the number edge, sponsor below not drawn). Photos: getty 57342264, getty 71230635, getty 71676731
+HAW Hawthorn-2006 | fill #F9AE33; rect #2E120B 0.13 0 0.30 1; rect #2E120B 0.43 0 0.59 1; rect #2E120B 0.71 0 0.88 1; vfill #2E120B 0.25 0.22; armholes #2E120B 2.5; collar #2E120B 2; shorts #2E120B | fill #F9AE33; rect #2E120B 0.13 0 0.30 1; rect #2E120B 0.43 0 0.59 1; rect #2E120B 0.71 0 0.88 1; collar #2E120B 2; armholes #2E120B 2.5; number #2E120B W
+
+# Hawthorn-2008 (2008-2012): back striped full length, brown number with a white edge. Photos: getty 98777349, getty 103689276, getty 98778273
+HAW Hawthorn-2008 | fill #F9AE33; rect #2E120B 0.14 0 0.29 1; rect #2E120B 0.43 0 0.58 1; rect #2E120B 0.72 0 0.87 1; vfill #2E120B 0.24 0.20; armholes #2E120B 2.5; collar #2E120B 2; shorts #2E120B | fill #F9AE33; rect #2E120B 0.14 0 0.29 1; rect #2E120B 0.43 0 0.58 1; rect #2E120B 0.72 0 0.87 1; collar #2E120B 2; armholes #2E120B 2.5; number #2E120B W
+
+# Hawthorn-2013 (2013-2014): stripes, small brown V; back gold top with brown number, stripes from about 0.6 down. Photos: getty 182101210, getty 182098161
+HAW Hawthorn-2013 | fill #F9AE33; rect #2E120B 0.13 0 0.28 1; rect #2E120B 0.43 0 0.58 1; rect #2E120B 0.72 0 0.87 1; vfill #2E120B 0.21 0.20; armholes #2E120B 2.5; collar #2E120B 2; shorts #2E120B | fill #F9AE33; rect #2E120B 0.13 0.61 0.28 1; rect #2E120B 0.43 0.61 0.58 1; rect #2E120B 0.72 0.61 0.87 1; collar #2E120B 2; armholes #2E120B 2.5; number #2E120B
+
+# Hawthorn-2015 (2015-2016): outer stripes taper; back gold top, brown number, stripes lower. Photos: getty 491123170, getty 468711878, getty 480467766
+HAW Hawthorn-2015 | fill #F9AE33; poly #2E120B 0.13 0 0.28 0 0.28 0.92 0.13 0.5; rect #2E120B 0.43 0 0.58 1; poly #2E120B 0.72 0 0.87 0 0.87 0.5 0.72 0.92; vfill #2E120B 0.21 0.2; armholes #2E120B 2.5; collar #2E120B 2; shorts #2E120B | fill #F9AE33; rect #2E120B 0.13 0.61 0.28 1; rect #2E120B 0.43 0.61 0.58 1; rect #2E120B 0.72 0.61 0.87 1; collar #2E120B 2; armholes #2E120B 2.5; number #2E120B
+
+# Hawthorn-2017 (2017-2018): 2018 backs gold top with brown number (a 2017 practice-match photo, 652329846, shows a brown-topped back: practice kit, not drawn). Photos: getty 652326360, getty 937343522, getty 926603412
+HAW Hawthorn-2017 | fill #F9AE33; poly #2E120B 0.13 0 0.28 0 0.28 1 0.205 1 0.13 0.5; rect #2E120B 0.43 0 0.58 1; poly #2E120B 0.72 0 0.87 0 0.87 0.5 0.795 1 0.72 1; vfill #2E120B 0.24 0.2; armholes #2E120B 2.5; collar #2E120B 2; shorts #2E120B | fill #F9AE33; rect #2E120B 0.13 0.65 0.28 1; rect #2E120B 0.43 0.65 0.58 1; rect #2E120B 0.72 0.65 0.87 1; collar #F9AE33 2; armholes #2E120B 2.5; number #2E120B
+
+# Hawthorn-2019 (2019-2020): thin brown V-neck trim; back gold top with brown number. Photos: getty 1160212399, 1145584642
+HAW Hawthorn-2019 | fill #F9AE33; rect #2E120B 0.13 0 0.28 1; rect #2E120B 0.43 0 0.58 1; rect #2E120B 0.72 0 0.87 1; vneck #2E120B 0.16 0.16 0.025; armholes #2E120B 2.5; collar #2E120B 2; shorts #2E120B | fill #F9AE33; rect #2E120B 0.13 0.65 0.28 1; rect #2E120B 0.43 0.65 0.58 1; rect #2E120B 0.72 0.65 0.87 1; collar #2E120B 2; armholes #2E120B 2.5; number #2E120B
+
+# Hawthorn-2021 (2021-2022): brown V with a gold inner trim; back gold top, brown side piping, stripes lower. Photos: getty 1232510449, getty 1335344352
+HAW Hawthorn-2021 | fill #F9AE33; rect #2E120B 0.14 0 0.29 1; rect #2E120B 0.43 0 0.58 1; rect #2E120B 0.72 0 0.86 1; vfill #2E120B 0.22 0.22; vfill #F9AE33 0.18 0.18; armholes #2E120B 3; collar #F9AE33 2; shorts #2E120B | fill #F9AE33; rect #2E120B 0.14 0.68 0.29 1; rect #2E120B 0.43 0.68 0.58 1; rect #2E120B 0.72 0.68 0.86 1; rect #2E120B 0 0.34 0.025 1; rect #2E120B 0.975 0.34 1 1; collar #2E120B 2; armholes #2E120B 3; number #2E120B
+
+# Hawthorn-2023 (2023-2025): wide stripes, brown V collar; back gold top with brown number. Photos: getty 1595531188, getty 1595521354, getty 1595486774
+HAW Hawthorn-2023 | fill #F9AE33; rect #2E120B 0.09 0 0.26 1; rect #2E120B 0.42 0 0.59 1; rect #2E120B 0.75 0 0.92 1; poly #2E120B 0.33 -0.01 0.67 -0.01 0.64 0.16 0.5 0.21 0.36 0.16; armholes #2E120B 2.5; collar #2E120B 2; shorts #2E120B | fill #F9AE33; rect #2E120B 0.09 0.69 0.26 1; rect #2E120B 0.42 0.69 0.59 1; rect #2E120B 0.75 0.69 0.92 1; collar #2E120B 2; armholes #2E120B 2.5; number #2E120B

@@ -1,0 +1,88 @@
+# Geelong home guernseys 1990-2025, copied from photos (no sponsor, maker or league logos).
+# Navy #002B5C is today's (data/clubs.csv) on white. Hoops are measured on each flat photo: the guernsey from the
+# top of the shoulder (0) to the hem (1), navy runs read down the chest between and beside the logos.
+# Backs: white upper with the number, navy hoops below, as every back photo shows; where no back photo was found
+# the number of lower hoops follows footyjumpers.com and their heights are the front photo's hoops.
+
+# Geelong-1990 (1990-91). Front https://www.grailed.com/listings/92757074-vintage-vintage-geelong-cats-afl-football-jersey-knit-vest-ford-90s
+# (image https://media-assets.grailed.com/prd/listing/temp/392914a77f6a4330be2fafa8e565c094): white shoulders, navy
+# polo collar, hoops 0.111-0.189, 0.261-0.343 (the crest and Ford sit on it), 0.426-0.515, 0.604-0.693,
+# 0.784-0.878 and a navy hem band from 0.972; wide navy armhole trim. Back (footyjumpers): the lowest three hoops.
+GEE Geelong-1990 | fill W; band #002B5C 0.111 0.189; band #002B5C 0.261 0.343; band #002B5C 0.426 0.515; band #002B5C 0.604 0.693; band #002B5C 0.784 0.878; band #002B5C 0.972 1.000; vfill W 0.17 0.08; vneck #002B5C 0.17 0.08 0.03; collar #002B5C 4; armholes #002B5C 2; shorts #002B5C | fill W; band #002B5C 0.426 0.515; band #002B5C 0.604 0.693; band #002B5C 0.784 0.878; band #002B5C 0.972 1.000; collar #002B5C 4; armholes #002B5C 2; number #002B5C
+
+# Geelong-1992 (1992-93). Front https://www.etsy.com/listing/4326639527/vtg-geelong-cats-sekem-rugby-afl
+# (image https://i.etsystatic.com/18362240/r/il/6bc803/7020614369/il_1080xN.7020614369_ma0k.jpg): navy V collar, navy
+# across the shoulders to 0.092, hoops 0.181-0.271, 0.361-0.452, 0.548-0.639, 0.734-0.826, 0.921 to the hem.
+# Back (footyjumpers): the lowest three hoops.
+GEE Geelong-1992 | fill W; band #002B5C 0.000 0.092; band #002B5C 0.181 0.271; band #002B5C 0.361 0.452; band #002B5C 0.548 0.639; band #002B5C 0.734 0.826; band #002B5C 0.921 1.000; vfill W 0.22 0.13; vneck #002B5C 0.22 0.13 0.04; collar #002B5C 2; armholes #002B5C 1; shorts #002B5C | fill W; band #002B5C 0.548 0.639; band #002B5C 0.734 0.826; band #002B5C 0.921 1.000; collar #002B5C 2; armholes #002B5C 1; number #002B5C
+
+# Geelong-1994. Front https://www.ebay.com.au/itm/156020934166 (image https://i.ebayimg.com/images/g/vZgAAOSw~stlrfQh/s-l500.jpg):
+# navy polo collar with a short V, white shoulders, hoops 0.068-0.191, 0.275-0.388 (crest and Ford on it),
+# 0.494-0.593, 0.682-0.776, 0.852-0.946, hem band from 0.983. Back: a 1994 match photo (number 16) shows white with
+# navy lower hoops; footyjumpers draws two: the lowest two hoops and the hem band.
+GEE Geelong-1994 | fill W; band #002B5C 0.068 0.191; band #002B5C 0.275 0.388; band #002B5C 0.494 0.593; band #002B5C 0.682 0.776; band #002B5C 0.852 0.946; band #002B5C 0.983 1.000; vfill W 0.17 0.08; vneck #002B5C 0.17 0.08 0.03; collar #002B5C 4; armholes #002B5C 1; shorts #002B5C | fill W; band #002B5C 0.682 0.776; band #002B5C 0.852 0.946; band #002B5C 0.983 1.000; collar #002B5C 4; armholes #002B5C 1; number #002B5C
+
+# Geelong-1995 (1995-98). Front https://picclick.com.au/Geelong-Cats-football-jumper-Official-AFL-merchandise-Sekem-276465016068
+# (image https://www.picclickimg.com/E1EAAOSwG31kBB0t/Geelong-Cats-football-jumper-Official-AFL-merchandise-Sekem.webp,
+# the 1996-98 AFL-logo variant on a mannequin): navy V collar, navy shoulder edge to 0.035, four wider hoops
+# 0.145-0.270, 0.390-0.520, 0.635-0.755, 0.855-0.950. Back (footyjumpers): the lowest two hoops.
+GEE Geelong-1995 | fill W; band #002B5C 0.000 0.035; band #002B5C 0.145 0.270; band #002B5C 0.390 0.520; band #002B5C 0.635 0.755; band #002B5C 0.855 0.950; vfill W 0.22 0.13; vneck #002B5C 0.22 0.13 0.04; collar #002B5C 2; armholes #002B5C 1; shorts #002B5C | fill W; band #002B5C 0.635 0.755; band #002B5C 0.855 0.950; collar #002B5C 2; armholes #002B5C 1; number #002B5C
+
+# Geelong-1999. Match photos https://www.gettyimages.com.au/detail/news-photo/anthony-ingerson-of-melbourne-and-john-barnes-of-geelong-news-photo/1009672 ,
+# https://www.gettyimages.com.au/detail/news-photo/ronnie-burns-of-geelong-in-action-during-the-round-6-afl-news-photo/1011154 and
+# https://www.gettyimages.com.au/detail/news-photo/david-mensch-of-the-geelong-cats-in-action-during-the-afl-news-photo/1010301 :
+# the Fila guernsey with navy across the shoulders, as the 2000 flat photo (no flat 1999 photo, so the 2000
+# measurements). Back (footyjumpers): the lowest two hoops and the hem band.
+GEE Geelong-1999 | fill W; band #002B5C 0.030 0.130; band #002B5C 0.225 0.320; band #002B5C 0.415 0.510; band #002B5C 0.605 0.700; band #002B5C 0.795 0.890; band #002B5C 0.982 1.000; vfill W 0.22 0.13; vneck #002B5C 0.22 0.13 0.04; collar #002B5C 2; armholes #002B5C 1; shorts #002B5C | fill W; band #002B5C 0.605 0.700; band #002B5C 0.795 0.890; band #002B5C 0.982 1.000; collar #002B5C 2; armholes #002B5C 1; number #002B5C
+
+# Geelong-2000 (2000-03). Front https://upcycledlocker.com.au/products/geelong-cats-2000-home-guernsey (flat): deep
+# navy V collar, navy across the shoulders 0.03-0.13, hoops 0.225-0.320, 0.415-0.510, 0.605-0.700, 0.795-0.890,
+# hem band from 0.982. Back (footyjumpers): the lowest two hoops and the hem band.
+GEE Geelong-2000 | fill W; band #002B5C 0.030 0.130; band #002B5C 0.225 0.320; band #002B5C 0.415 0.510; band #002B5C 0.605 0.700; band #002B5C 0.795 0.890; band #002B5C 0.982 1.000; vfill W 0.22 0.13; vneck #002B5C 0.22 0.13 0.04; collar #002B5C 2; armholes #002B5C 1; shorts #002B5C | fill W; band #002B5C 0.605 0.700; band #002B5C 0.795 0.890; band #002B5C 0.982 1.000; collar #002B5C 2; armholes #002B5C 1; number #002B5C
+
+# Geelong-2004. Front https://www.picclickimg.com/0dIAAOSwtZhlf9t2/Geelong-Cats-Slazenger-Official-AFL-Jersey-Vintage-2000-2007.webp
+# (picclick listing "Geelong Cats Slazenger Official AFL Jersey Vintage 2000-2007"; Slazenger years 2004-05): navy V
+# collar, navy shoulders to 0.125, hoops 0.218-0.318, 0.414-0.514, 0.614-0.720, 0.826-0.935, hem band from 0.964.
+# Back (footyjumpers): the lowest two hoops and the hem band.
+GEE Geelong-2004 | fill W; band #002B5C 0.000 0.125; band #002B5C 0.218 0.318; band #002B5C 0.414 0.514; band #002B5C 0.614 0.720; band #002B5C 0.826 0.935; band #002B5C 0.964 1.000; vfill W 0.22 0.13; vneck #002B5C 0.22 0.13 0.04; collar #002B5C 2; armholes #002B5C 1; shorts #002B5C | fill W; band #002B5C 0.614 0.720; band #002B5C 0.826 0.935; band #002B5C 0.964 1.000; collar #002B5C 2; armholes #002B5C 1; number #002B5C
+
+# Geelong-2005. The same Slazenger photo as 2004 (the only one found for 2004-05), so the 2004 line.
+GEE Geelong-2005 | fill W; band #002B5C 0.000 0.125; band #002B5C 0.218 0.318; band #002B5C 0.414 0.514; band #002B5C 0.614 0.720; band #002B5C 0.826 0.935; band #002B5C 0.964 1.000; vfill W 0.22 0.13; vneck #002B5C 0.22 0.13 0.04; collar #002B5C 2; armholes #002B5C 1; shorts #002B5C | fill W; band #002B5C 0.614 0.720; band #002B5C 0.826 0.935; band #002B5C 0.964 1.000; collar #002B5C 2; armholes #002B5C 1; number #002B5C
+
+# Geelong-2006 (2006-07). Front https://phantomsports.com.au/wp-content/uploads/2020/09/Geelong-Website-3.jpg (2007
+# premiers replica, flat): navy V collar, white shoulders, hoops 0.110-0.190, 0.258-0.340, 0.420-0.503, 0.590-0.682,
+# 0.777-0.875, hem band from 0.910. Back https://phantomsports.com.au/wp-content/uploads/2020/09/Geelong-Website-4.jpg :
+# number 07 in navy on white, the lowest two hoops and the hem band.
+GEE Geelong-2006 | fill W; band #002B5C 0.110 0.190; band #002B5C 0.258 0.340; band #002B5C 0.420 0.503; band #002B5C 0.590 0.682; band #002B5C 0.777 0.875; band #002B5C 0.910 1.000; vfill W 0.22 0.13; vneck #002B5C 0.22 0.13 0.04; collar #002B5C 2; armholes #002B5C 1; shorts #002B5C | fill W; band #002B5C 0.590 0.682; band #002B5C 0.777 0.875; band #002B5C 0.910 1.000; collar #002B5C 2; armholes #002B5C 1; number #002B5C
+
+# Geelong-2008 (2008-09). Front phantomsports.com.au wp-content/uploads/2021/02/Geelong-2009-Premiership-Jumper-768x768.jpg
+# (flat): navy V collar, white shoulders, hoops 0.140-0.206, 0.275-0.353, 0.431-0.510, 0.591-0.678, 0.767-0.860, hem
+# band from 0.912. Back https://www.timesnewsgroup.com.au (Ablett guernsey article, Ablett-Guernsey-better.png,
+# number 29): navy number on white, hoops 0.661-0.757 and 0.852-0.944, white hem.
+GEE Geelong-2008 | fill W; band #002B5C 0.140 0.206; band #002B5C 0.275 0.353; band #002B5C 0.431 0.510; band #002B5C 0.591 0.678; band #002B5C 0.767 0.860; band #002B5C 0.912 1.000; vfill W 0.22 0.13; vneck #002B5C 0.22 0.13 0.04; collar #002B5C 2; armholes #002B5C 1; shorts #002B5C | fill W; band #002B5C 0.661 0.757; band #002B5C 0.852 0.944; collar #002B5C 2; armholes #002B5C 1; number #002B5C
+
+# Geelong-2010 (2010-12). Front: 2011 premiers signed guernsey listing (flat, page not kept), checked against the
+# match photos File:Cameron Mooney (2011 round 19) and File:Joel Selwood 6005345834 on Wikimedia Commons: navy V
+# collar, hoops 0.110-0.200, 0.262-0.333, 0.400-0.480, 0.565-0.655, 0.750-0.855, hem band from 0.910.
+# Back (footyjumpers): the lowest hoop and the hem band.
+GEE Geelong-2010 | fill W; band #002B5C 0.110 0.200; band #002B5C 0.262 0.333; band #002B5C 0.400 0.480; band #002B5C 0.565 0.655; band #002B5C 0.750 0.855; band #002B5C 0.910 1.000; vfill W 0.22 0.13; vneck #002B5C 0.22 0.13 0.04; collar #002B5C 2; armholes #002B5C 1; shorts #002B5C | fill W; band #002B5C 0.750 0.855; band #002B5C 0.910 1.000; collar #002B5C 2; armholes #002B5C 1; number #002B5C
+
+# Geelong-2013 (2013-15). Front https://i.ebayimg.com/images/g/7pAAAOSwh-RlLRaN/s-l1600.jpg (flat): navy V collar,
+# hoops 0.062-0.150, 0.237-0.331, 0.428-0.527, 0.632-0.740, 0.851-0.975. Back (memorabilia listing, number 23):
+# black number on white, hoops 0.569-0.657, 0.747-0.840 and from 0.948.
+GEE Geelong-2013 | fill W; band #002B5C 0.062 0.150; band #002B5C 0.237 0.331; band #002B5C 0.428 0.527; band #002B5C 0.632 0.740; band #002B5C 0.851 0.975; vfill W 0.22 0.13; vneck #002B5C 0.22 0.13 0.04; collar #002B5C 2; armholes #002B5C 1; shorts #002B5C | fill W; band #002B5C 0.569 0.657; band #002B5C 0.747 0.840; band #002B5C 0.948 1.000; collar #002B5C 2; armholes #002B5C 1; number #070913
+
+# Geelong-2016. Front https://www.sportinghousedirect.com.au/assets/full/7GC5HJS1A.jpg (flat): big navy V collar,
+# hoops 0.087-0.178, 0.274-0.371, 0.468-0.565, 0.661-0.758, 0.855-0.952. Back (footyjumpers): the lowest two hoops.
+GEE Geelong-2016 | fill W; band #002B5C 0.087 0.178; band #002B5C 0.274 0.371; band #002B5C 0.468 0.565; band #002B5C 0.661 0.758; band #002B5C 0.855 0.952; vfill W 0.22 0.13; vneck #002B5C 0.22 0.13 0.04; collar #002B5C 2; armholes #002B5C 1; shorts #002B5C | fill W; band #002B5C 0.661 0.758; band #002B5C 0.855 0.952; collar #002B5C 2; armholes #002B5C 1; number #002B5C
+
+# Geelong-2017 (2017-18). Front https://www.prosportsmemorabilia.com.au/wp-content/uploads/2017/03/Geelong-Cats-Team-Signed-Guernsey.jpg
+# (a framed COAR guernsey marked "concept only", the one flat image found; the match photos round it show the same
+# hoops): navy V collar, hoops 0.035-0.105, 0.200-0.310, 0.425-0.540, 0.637-0.738, 0.837-0.937.
+# Back (footyjumpers): the lowest two hoops.
+GEE Geelong-2017 | fill W; band #002B5C 0.035 0.105; band #002B5C 0.200 0.310; band #002B5C 0.425 0.540; band #002B5C 0.637 0.738; band #002B5C 0.837 0.937; vfill W 0.22 0.13; vneck #002B5C 0.22 0.13 0.04; collar #002B5C 2; armholes #002B5C 1; shorts #002B5C | fill W; band #002B5C 0.637 0.738; band #002B5C 0.837 0.937; collar #002B5C 2; armholes #002B5C 1; number #002B5C
+
+# Geelong-2019 (2019-25). Front https://www.sportinghousedirect.com.au/assets/full/9800625-01.jpg (flat): navy V
+# collar, hoops 0.067-0.153, 0.250-0.355, 0.463-0.570, 0.676-0.783, 0.887-0.990. Back (eBay listing, number 34):
+# navy number on white, hoops 0.652-0.742 and 0.836-0.929.
+GEE Geelong-2019 | fill W; band #002B5C 0.067 0.153; band #002B5C 0.250 0.355; band #002B5C 0.463 0.570; band #002B5C 0.676 0.783; band #002B5C 0.887 0.990; vfill W 0.22 0.13; vneck #002B5C 0.22 0.13 0.04; collar #002B5C 2; armholes #002B5C 1; shorts #002B5C | fill W; band #002B5C 0.652 0.742; band #002B5C 0.836 0.929; collar #002B5C 2; armholes #002B5C 1; number #002B5C

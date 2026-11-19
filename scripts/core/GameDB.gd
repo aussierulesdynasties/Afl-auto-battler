@@ -1515,7 +1515,8 @@ func _today_kits() -> Dictionary:
 				var trim := func(c: String) -> Color: return Color.from_string(c, Color(0, 0, 0, 0)) if c != "" else Color(0, 0, 0, 0)
 				_kits_today[str(r["code"])] = {"cell": int(r["cell"]), "collar": trim.call(str(r.get("collar", ""))),
 						"collar_cm": float(str(r.get("collar_cm", "0"))), "armholes": trim.call(str(r.get("armholes", ""))),
-						"armholes_cm": float(str(r.get("armholes_cm", "0"))), "shorts": trim.call(str(r.get("shorts", "")))}
+						"armholes_cm": float(str(r.get("armholes_cm", "0"))), "shorts": trim.call(str(r.get("shorts", ""))),
+						"number": trim.call(str(r.get("number", ""))), "number_edge": trim.call(str(r.get("number_edge", "")))}
 	return _kits_today
 
 

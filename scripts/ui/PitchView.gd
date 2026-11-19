@@ -214,8 +214,10 @@ var three_d := false
 var _oval3d: Oval3D = null
 var _vp3d: SubViewport = null
 var _view3d: TextureRect = null
-const CAM3D_UP := 18.0
-const CAM3D_BACK := 28.0
+var _tv: Oval3DBroadcast = null  # the TV coverage: which camera, where it points
+var _siren_replay := false     # the deciding behind's replay is on after the siren
+const REPLAY_TAG := "Replay: tap to skip"
+const REPLAY_TAG_W := 150.0    # px: the tag's pill, as the director picked it on the board
 
 
 ## The figures' own layer: the figure shader is a material on a CanvasItem,
@@ -348,6 +350,7 @@ func _setup_3d() -> void:
 	_oval3d = Oval3D.new()
 	_vp3d.add_child(_oval3d)
 	_oval3d.build(director, home_code, away_code)
+	_tv = Oval3DBroadcast.new(_oval3d)
 	# The turf and light for the day, as the flat oval and the vignettes draw it.
 	var weather := str(result.get("weather", ""))
 	_oval3d.turf.apply(weather, time_of_day(weather))
@@ -372,19 +375,55 @@ func _fit_3d() -> void:
 
 
 ## `dt` is match time (the play speed applied), so the bodies run at the director's pace.
-func _sync_3d(dt: float) -> void:
+func _sync_3d(dt: float, wall := 0.0) -> void:
 	_fit_3d()
 	_oval3d.sync(dt)
 	if not is_inside_tree():
 		return
-	# Portrait: from behind the play, the ground running up the screen; wide: from the wing.
-	# The match screen gives the oval about a third of a phone, so the camera sits closer
-	# than the full-screen prototype's (34 m up, 52 m back): a player stands about a tenth
-	# of the view tall.
-	if size.y > size.x:
-		_oval3d.aim_end(CAM3D_UP, CAM3D_BACK)
-	else:
-		_oval3d.aim_wing(CAM3D_UP, CAM3D_BACK * 1.3)
+	# The TV coverage: the real AFL main camera on the wing, phone and PC alike (rules 2.93,
+	# 2.105), set shots from behind the goals (2.102), the ruckmen close before a ball-up
+	# (2.103) and a goal's replay (2.96).
+	_tv.frame(dt, wall)
+
+
+## The 3D picture is showing a replay (rule 2.96), not the live play.
+func _replaying() -> bool:
+	return _tv != null and _tv.replaying
+
+
+## Where the replay's tag is drawn: the picture's top-left corner, the Bench pill's twin
+## in height and style (director, 2026-11-17: "B: Tap the picture").
+func replay_tag_rect() -> Rect2:
+	return Rect2(BenchDrawer.EDGE, BenchDrawer.EDGE, REPLAY_TAG_W, BenchDrawer.TAB_PILL_H)
+
+
+## "Replay: tap to skip" on a dark pill, as the Bench pill is drawn.
+func _draw_replay_tag() -> void:
+	var pill := replay_tag_rect()
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color(UiKit.BG, 0.92)
+	box.border_color = Color(RING_COLOUR, 0.55)
+	box.set_border_width_all(1)
+	box.set_corner_radius_all(4)
+	draw_style_box(box, pill)
+	var fs := UiKit.px(UiKit.SECONDARY)
+	var w := UiKit.BOLD.get_string_size(REPLAY_TAG, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	draw_string(UiKit.BOLD, Vector2(pill.position.x + (pill.size.x - w) * 0.5,
+			pill.position.y + pill.size.y * 0.5 + fs * 0.36), REPLAY_TAG, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, RING_COLOUR)
+
+
+## The final siren: the match is over, once the deciding behind's replay (rule 2.96) has run.
+func _full_time() -> void:
+	if _tv != null and _tv.replay_after_siren():
+		_siren_replay = true
+		return
+	finished.emit()
+
+
+## The coach skips the replay on the 3D picture (rule 2.96): the picture is live again at once.
+func skip_replay() -> void:
+	if _tv != null:
+		_tv.skip_replay()
 
 
 ## The overlays on the 3D view (director, 2026-11-15: "Overlays first"). The flat
@@ -510,6 +549,10 @@ func _paint_ground_3d() -> void:
 		return
 	_paint3d.clear_surfaces()
 	_painting = null
+	if _replaying():
+		# A replay shows the recorded moment; the live play's paint would sit under nobody.
+		drawn_layers = ["3d"]
+		return
 	_paint_want = _paint_mat
 	_layout_3d()
 	drawn_layers = ["3d"]
@@ -561,6 +604,10 @@ func _draw_3d() -> void:
 	if _vp3d == null or not is_inside_tree():
 		return
 	draw_set_transform(shake_offset() if _shake > 0.0 else Vector2.ZERO)
+	if _replaying():
+		# Names and captions follow the live play, not the replayed bodies: none on a replay.
+		_draw_replay_tag()
+		return
 	_layout_3d()
 	var tr := token_radius()
 	_draw_role_labels(tr)
@@ -642,8 +689,11 @@ func _process(delta: float) -> void:
 		if _nudge_h >= 0.0:
 			_nudge_h += delta * speed * MatchDirector.TEMPO
 		# Real footy's pauses (a ball-up waiting for the players, a player
-		# after a mark) play at double the watching speed (rule 2.93).
-		var out := director.advance(delta * speed * (MatchDirector.PAUSE_PLAY if director.pausing() else 1.0))
+		# after a mark) play at double the watching speed (rule 2.93). The centre
+		# bounce waits for a goal's replay to end (rule 2.96).
+		var out := []
+		if not (_tv != null and _tv.replaying and director.bounce_next()):
+			out = director.advance(delta * speed * (MatchDirector.PAUSE_PLAY if director.pausing() else 1.0))
 		for ev in out:
 			_track_quarter(ev)
 			_name_the_scorer(ev)
@@ -652,11 +702,11 @@ func _process(delta: float) -> void:
 			event_played.emit(ev)
 			if str((ev as Dictionary).get("kind", "")) == "final":
 				playing = false
-				finished.emit()
+				_full_time()
 				break
 		if playing and director.idle():
 			playing = false
-			finished.emit()
+			_full_time()
 		if _flip_pending and director.mode != "break":
 			# The next period is setting up: now the sides change ends.
 			_change_ends()
@@ -674,7 +724,10 @@ func _process(delta: float) -> void:
 		queue_redraw()
 	_update_camera(delta)
 	if _oval3d != null:
-		_sync_3d(delta * speed if playing else 0.0)
+		_sync_3d(delta * speed if playing else 0.0, delta if playing or _siren_replay else 0.0)
+		if _siren_replay and not _tv.replaying:
+			_siren_replay = false
+			finished.emit()
 		_paint_ground_3d()
 		queue_redraw()
 		return
@@ -716,6 +769,11 @@ func set_marks(next: Dictionary) -> void:
 ## does nothing here.
 func _gui_input(e: InputEvent) -> void:
 	if e is InputEventMouseButton and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
+		if (e as InputEventMouseButton).pressed and _replaying():
+			# A tap anywhere on the picture skips the replay (rule 2.96).
+			skip_replay()
+			accept_event()
+			return
 		if (e as InputEventMouseButton).pressed:
 			_hold_at = (e as InputEventMouseButton).position
 			_held = true

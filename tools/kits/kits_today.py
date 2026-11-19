@@ -30,6 +30,11 @@ Shapes and colours only, never sponsors, maker or league logos (director 2026-11
 off"). The club marks that are part of the guernsey's own design (the Lions' lion, Carlton's
 monogram, the Eagles' head, the Suns' sun) are drawn: director 2026-11-17, "Draw all five marks".
 Each mask is cut from the club's shop photo (the Suns' sun is redrawn from its measured shapes).
+
+y 1 is the photo's hem. On the 3D player the guernsey's hem falls 87% of the way down the square
+(measured with a ruler picture, 2026-11-17), so each side is drawn whole and then squeezed into the
+top 87%: the photo's hem lands on the player's hem and nothing above it is cut off (director
+2026-11-17: "have the guernseys look exactly like the real ones").
 """
 import csv
 import math
@@ -62,12 +67,17 @@ def parse(path, clubs):
         for ops in (f_ops, b_ops):
             for op in ops:
                 t = op.split()
-                if t[0] in ("collar", "armholes", "shorts"):
+                if t[0] == "number":
+                    trims["number"] = (kit_atlas.colour(t[1], cols), kit_atlas.colour(t[2], cols) if len(t) > 2 else "")
+                elif t[0] in ("collar", "armholes", "shorts"):
                     trims[t[0]] = (kit_atlas.colour(t[1], cols), float(t[2]) if len(t) > 2 else 2.0)
-        drawn = lambda ops: [o for o in ops if o.split()[0] not in ("collar", "armholes", "shorts")]
+        drawn = lambda ops: [o for o in ops if o.split()[0] not in ("collar", "armholes", "shorts", "number")]
         kits.append({"code": code, "pic": pic, "front": drawn(f_ops), "back": drawn(b_ops), "cols": cols,
                      "trims": trims})
     return kits
+
+
+HEM = 0.87  # where the 3D guernsey's hem falls down the square
 
 
 def draw(ops, cols, marks_dir):
@@ -82,7 +92,10 @@ def draw(ops, cols, marks_dir):
         mask = Image.open(os.path.join(marks_dir, name + ".png")).convert("L")
         mask = mask.resize((x1 - x0, y1 - y0), Image.LANCZOS)
         im.paste(Image.new("RGB", mask.size, c), (x0, y0), mask)
-    return im
+    # The photo's hem onto the player's hem; under it, the bottom row carried down (never seen).
+    full = im.crop((0, im.height - 1, im.width, im.height)).resize(im.size)
+    full.paste(im.resize((im.width, round(im.height * HEM)), Image.LANCZOS), (0, 0))
+    return full
 
 
 def main():
@@ -100,12 +113,13 @@ def main():
     atlas.save(os.path.join(out or os.path.join(root, "assets", "oval3d"), "kits_today.png"), optimize=True)
     with open(os.path.join(out or os.path.join(root, "data"), "kits_today.csv"), "w", encoding="utf-8", newline="") as fh:
         w = csv.writer(fh, lineterminator="\n")
-        w.writerow(["code", "cell", "collar", "collar_cm", "armholes", "armholes_cm", "shorts", "picture"])
+        w.writerow(["code", "cell", "collar", "collar_cm", "armholes", "armholes_cm", "shorts", "picture",
+                    "number", "number_edge"])
         for i, k in enumerate(kits):
             c = k["trims"].get("collar", ("", 0.0))
             a = k["trims"].get("armholes", ("", 0.0))
             w.writerow([k["code"], i, c[0], c[1] if c[0] else "", a[0], a[1] if a[0] else "",
-                        k["trims"].get("shorts", ("", 0.0))[0], k["pic"]])
+                        k["trims"].get("shorts", ("", 0.0))[0], k["pic"], *k["trims"].get("number", ("", ""))])
     print("%d guernseys, atlas %dx%d" % (len(kits), atlas.width, atlas.height))
 
 

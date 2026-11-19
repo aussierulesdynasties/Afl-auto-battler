@@ -146,7 +146,7 @@ const DEFINITIONS := [
 	{"id": "tas_early_flag", "club": "TAS", "name": "Apple Isle flag",
 		"desc": "Tasmania win a premiership in their first five seasons.",
 		"type": "flag_within", "n": 5},
-	{"id": "canb_expansion_double", "club": "CANB", "name": "Thunder over Devils",
+	{"id": "canb_expansion_double", "club": "CANB", "name": "Owls over Devils",
 		"desc": "Canberra beat Tasmania twice in a season.",
 		"type": "beat_twice", "opp": "TAS"},
 	{"id": "canb_early_flag", "club": "CANB", "name": "Capital flag",

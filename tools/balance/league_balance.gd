@@ -26,8 +26,8 @@ extends RefCounted
 ##            in-season training for every club, your club's default plans,
 ##            morale, weekly events - exactly a normal career's first season
 ## plus a controlled sensitivity experiment: one club's whole list shifted by
-## +k overall with Prospects._shift_player (the refit the game's own
-## renormalisation uses), against the same opponents with the same seeds.
+## +k overall with the game's own refit (Prospects.fit_attributes),
+## against the same opponents with the same seeds.
 ##
 ## Loaded with load() by tools/balance/league_balance_report.gd and the CI
 ## smoke suite (tests/test_league_balance.gd).
@@ -254,7 +254,7 @@ func _match_row(res: Dictionary, ratings: Dictionary, tag: String) -> Dictionary
 # Controlled sensitivity experiment
 # ---------------------------------------------------------------------------
 ## Copies of `list` with every player shifted by `k` overall through the
-## game's own refit (Prospects._shift_player: uniform attribute shift, then
+## game's own refit (Prospects.fit_attributes: uniform attribute shift, then
 ## re-rated). k = 0 returns plain copies.
 func shifted_list(list: Array, k: int) -> Array:
 	var out := []
@@ -264,9 +264,24 @@ func shifted_list(list: Array, k: int) -> Array:
 			# Sensitivity shifts the whole rating scale by k, so POT moves by
 			# the same amount and preserves the player's projected headroom.
 			var to_scale := func(v: float) -> float: return v + float(k)
-			Prospects._shift_player(q, float(int(q["overall"]) + k), to_scale)
+			_shift_player(q, float(int(q["overall"]) + k), to_scale)
 		out.append(q)
 	return out
+
+
+## One player moved to `target_overall` by the game's refit; POT moves on the same scale. (This was
+## Prospects._shift_player until #1718 removed it with the league re-anchor; the experiment keeps it.)
+static func _shift_player(p: Dictionary, target_overall: float, to_scale: Callable) -> void:
+	var a: Dictionary = p.get("attr", {})
+	if a.is_empty():
+		return
+	var role := str(p.get("role", "MID"))
+	var games := Ratings.effective_games(p)
+	p["attr"] = Prospects.fit_attributes(a, role, clampf(target_overall, 25.0, 99.0), games)
+	p["overall"] = Ratings.rate_overall(p["attr"], role, games)
+	p["value"] = Ratings.salary_value(int(p["overall"]))
+	if p.has("potential"):
+		p["potential"] = clampi(int(round(to_scale.call(float(p["potential"])))), 1, Potential.MAX_POT)
 
 
 ## `subject` plays every other club home and away, `reps` times, once per k.

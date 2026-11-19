@@ -61,6 +61,7 @@ func run() -> void:
 	_t("_test_plan_tint_every_quarter")
 	_t("_test_three_d_view", [res])
 	_t("_test_three_d_hair", [res])
+	await _t("_test_three_d_cameras", [res])
 	_t("_test_contacts", [res])
 	_t("_test_free_taker_kicks")
 	GameState.replay_seed = 0
@@ -75,6 +76,7 @@ func _check(condition: bool, message: String) -> void:
 
 ## Runs one test function; it must make at least one check (tests/functions_ran.gd).
 const Ran := preload("res://tests/functions_ran.gd")
+const Tap := preload("res://tests/tap.gd")
 func _t(test: String, args := []) -> Variant:
 	return await Ran.one(self, test, args)
 
@@ -507,13 +509,13 @@ func _test_match_flow(res: Dictionary) -> void:
 	pv.set_speed(1.0)
 	pv.playing = true
 	var d = pv.director
+	d.want_contacts = true
 	var h := 1.0 / 30.0
 	var t := 0.0
 	var far := 0.0
 	var far_entry := 0.0
 	var worst := 0.0
-	var beat_k := -1
-	var beat_t := 0.0
+	var still := 0.0
 	var last: Vector2 = d.ball["pos"]
 	var guard := 0
 	while pv.playing and guard < 400000:
@@ -531,14 +533,17 @@ func _test_match_flow(res: Dictionary) -> void:
 				var pk: int = d._prev_real(int(d._beat.get("k", 0)))
 				if pk >= 0 and str((d.events[pk] as Dictionary).get("kind", "")) == "inside50":
 					far_entry += h
-		var k := int(d._beat.get("k", -1))
-		if k != beat_k:
-			worst = maxf(worst, beat_t)
-			beat_k = k
-			beat_t = 0.0
-		beat_t += h
+		# A ball no man holds or touches, lying still (director 2026-11-18: "Count untouched
+		# time": a real scrap knocked about for 8.5 s is one moment, not a hang).
+		var touched: bool = not (d.contacts as Array).is_empty()
+		(d.contacts as Array).clear()
+		if touched or moving or int(d.ball.get("holder", -1)) >= 0:
+			still = 0.0
+		else:
+			still += h
+			worst = maxf(worst, still)
 	pv.free()
-	_check(worst <= 8.0, "No moment of a watched match hangs (longest beat %.1f s)" % worst)
+	_check(worst <= 8.0, "No moment of a watched match hangs (the ball lies untouched at most %.1f s)" % worst)
 	_check(far <= 0.12 * t, "The ball is rarely left waiting on a far-off receiver (%.0f s of %.0f)" % [far, t])
 	# Playtest: after a forward-50 entry the rebounding defender used to run
 	# 30 m to a ball landing among others. The entry now lands toward him and
@@ -1476,7 +1481,10 @@ func _test_set_shot_calls() -> void:
 		for k in range(evs.size()):
 			var ev: Dictionary = evs[k]
 			var kind := str(ev.get("kind", ""))
-			if kind == "pass":
+			if kind == "sub":
+				# As playback does: the man coming on takes his number, so a pass to him finds him.
+				d._sub(ev)
+			elif kind == "pass":
 				pass_seen += 1
 				var nk := d._next_real(k)
 				var want := d._actor_id(evs[nk]) if nk >= 0 else -1
@@ -2195,13 +2203,12 @@ func _test_discs_apart() -> void:
 		_check(top_ok, "%s: the man with the ball is drawn on top of every disc" % str(view[2]))
 		_check(moved_engine == 0, "%s: drawing the discs apart moves no player" % str(view[2]))
 		_check(ball_off <= 1.0, "%s: a held ball is drawn at its holder's disc (%.2f m off)" % [str(view[2]), ball_off])
-		# Fully apart lifts the cap, for the comparison capture only; the player
-		# never sees it. Main's bar was 24 m (seed 31 inside this suite: 21.0 m on main).
-		# A loose ball's scrap (row 197) brings the nearest three to it, so a pack drawn
-		# fully apart spreads wider: 25.5 m (main 739db4b22: 22.1 m), bar 28 m. The
-		# capped view the player sees keeps its 20 m bar (3.8 m at most on both).
-		var far_m := 28.0 if bool(view[3]) else 20.0
-		_check(worst_nudge_m < far_m, "%s: no disc is drawn far from its player (%.1f m at most)" % [str(view[2]), worst_nudge_m])
+		# Fully apart lifts the cap, for the comparison capture only; the player never sees
+		# it, and its distance is not checked (director 2026-11-19: "i dont care about 2d
+		# disc view atall / 3d is the only thing that matters now"). The capped view keeps
+		# its 20 m bar.
+		if not bool(view[3]):
+			_check(worst_nudge_m < 20.0, "%s: no disc is drawn far from its player (%.1f m at most)" % [str(view[2]), worst_nudge_m])
 		print("  discs apart, %s: closest %.2f diameters (players %.2f), biggest nudge %.1f m" % [
 				str(view[2]), closest, real_closest, worst_nudge_m])
 		pv.free()
@@ -2810,6 +2817,8 @@ func _test_three_d_view(res: Dictionary) -> void:
 	pv.play()
 	for i in range(300):
 		pv._process(1.0 / 60.0)
+		# The flat oval has no replays (rule 2.96): skip each one, so the feed runs as the flat one's.
+		pv.skip_replay()
 	_check(seen.size() == flat_seen.size() and seen.size() > 0,
 			"The 3D oval releases the feed as the flat oval does (%d vs %d)" % [seen.size(), flat_seen.size()])
 	_check_turf3d(oval)
@@ -2872,6 +2881,148 @@ func _test_three_d_view(res: Dictionary) -> void:
 	_check(pv._oval3d == null and pv._vp3d == null, "With the setting off the flat oval comes back")
 	pv.free()
 	flat.free()
+
+
+## The TV coverage on the 3D oval (row 202, 2e): the real AFL main camera (rule 2.93: centre
+## line, 15 m up, 25 m back from the boundary, 57 m across where it aims; nobody within 20 m of
+## the lens, rule 2.101) keeps the ball in the picture; a set shot cuts live to the camera
+## behind the goals it is kicked at, then back (rule 2.102); a ball-up shows each ruckman close
+## (2.103); a goal gets one replay from behind the goals, the centre bounce waiting for it, and
+## a skip brings the picture back live at once (2.96).
+func _test_three_d_cameras(res: Dictionary) -> void:
+	var pv := PitchView.new()
+	pv.size = Vector2(360, 480)
+	pv.three_d = true
+	(Engine.get_main_loop() as SceneTree).root.add_child(pv)
+	pv.setup(res)
+	var oval: Oval3D = pv._oval3d
+	var cam := oval.camera
+	var eye := Oval3DBroadcast.main_eye()
+	_check(cam.global_position.is_equal_approx(Vector3(0.0, 15.0, MatchMotion.HALF_WID + 25.0)) and eye == cam.global_position,
+			"The main camera stands on the centre line, 15 m up and 25 m back from the boundary (%s)" % [cam.global_position])
+	_check(is_equal_approx(cam.near, 20.0) and cam.keep_aspect == Camera3D.KEEP_WIDTH,
+			"Nobody within 20 m of the lens is drawn, and the picture's width sets the zoom")
+	pv.set_speed(4.0)
+	pv.play()
+	var frames := 0
+	var outs := {}
+	var inside := 0
+	var wide := 0.0
+	var vs := Vector2(pv._vp3d.size)
+	var tv_w := 57.0 * 9.0 / 16.0 * vs.x / vs.y  # 16:9 TV's top and bottom on the taller picture
+	var at_tv := 0
+	var at_wide := 0
+	var wide_long := 0  # wide-shot frames on a kick of 40 m or more (fully wide just after it lands)
+	var wide_bounce := 0  # ...and while the players walk back for a centre bounce
+	var goals_frames := 0
+	var cut_ks := {}  # the set shots the goals camera cut to: one cut each
+	var goals_eyes := {}
+	var behind_kicker := 0  # goals-camera frames from the far end, behind the kicker's back
+	var cuts := 0
+	var back := 0
+	var last := "main"
+	var shot_ok := 0
+	var closes := {}
+	var close_ok := 0
+	var close_frames := 0
+	var replays := 0
+	var skipped := 0
+	var goals := 0
+	var held := 0
+	var moved_in_hold := 0
+	var was_replay := false
+	var tv: Oval3DBroadcast = pv._tv
+	var goals_seen := {}
+	pv.event_played.connect(func(ev: Dictionary) -> void:
+		if str(ev.get("kind", "")) == "goal":
+			goals_seen[goals_seen.size()] = true)
+	for i in range(12000):
+		var held_now := tv.replaying and pv.director.bounce_next()
+		var t0 := pv.director.time
+		pv._process(1.0 / 60.0)
+		if held_now:
+			held += 1
+			moved_in_hold += 1 if pv.director.time != t0 else 0
+		if not pv.playing:
+			break
+		if tv.replaying and not was_replay:
+			replays += 1
+			if replays == 2:
+				# The coach taps the picture during the second one (a real tap): the picture is
+				# live again at once.
+				var why: String = await Tap.tap_at(pv, pv.size * 0.5)
+				pv._process(1.0 / 60.0)
+				skipped += 1 if why == "" and not tv.replaying and tv.shot == "main" else 0
+		was_replay = tv.replaying
+		if tv.replaying:
+			continue
+		if tv._close_who >= 0:
+			close_frames += 1
+			if not closes.has(tv._close_who):
+				closes[tv._close_who] = true
+				var t: Dictionary = pv.director.tokens[tv._close_who]
+				close_ok += 1 if str(t["role"]) == "RUCK" and is_equal_approx(tv._close_eye.y, 15.0) else 0
+			continue
+		if tv.shot != last:
+			if tv.shot == "goals":
+				cuts += 1
+				var s := pv.director.shot_now()
+				shot_ok += 1 if not s.is_empty() and bool(s["set"]) else 0
+				if not s.is_empty():
+					cut_ks[int(s["k"])] = true
+			else:
+				back += 1
+			last = tv.shot
+		if tv.shot == "goals":
+			goals_frames += 1
+			goals_eyes[snappedf(absf(cam.global_position.x), 0.1)] = true
+			var to := oval.global_transform * Vector3(tv._end_x, 0.0, 0.0)
+			behind_kicker += 1 if signf(cam.global_position.x) == -signf(to.x) else 0
+			continue
+		frames += 1
+		var bp := oval.ball.global_position
+		var at := cam.unproject_position(bp)
+		if not cam.is_position_behind(bp) and Rect2(Vector2.ZERO, Vector2(pv._vp3d.size)).has_point(at):
+			inside += 1
+		else:
+			var why := "high" if at.y < 0.0 else ("low" if at.y > pv._vp3d.size.y else "side")
+			outs[why] = int(outs.get(why, 0)) + 1
+		if not cam.global_position.is_equal_approx(eye):
+			wide = 999.0
+		var look := oval._world(oval._look)
+		var d := cam.global_position.distance_to(Vector3(look.x, Oval3DBroadcast.AIM_Y, look.z))
+		var w := 2.0 * d * tan(deg_to_rad(cam.fov) * 0.5)
+		wide = maxf(wide, maxf(tv_w - w, w - 57.0))
+		if absf(w - tv_w) < 0.5:
+			at_tv += 1
+		elif absf(w - 57.0) < 0.5:
+			at_wide += 1
+			var ph: Array = pv.director._phases
+			if not ph.is_empty() and str((ph[0] as Dictionary).get("mode", "")) == "centre":
+				wide_bounce += 1
+			elif tv._kick_wide:
+				wide_long += 1
+	_check(frames > 600 and inside >= frames * 0.97,
+			"The main camera keeps the ball in the picture (%d of %d frames; out: %s)" % [inside, frames, outs])
+	_check(wide < 0.5, "The main camera stays on its mount, %.0f to 57 m across where it aims (off by %.2f m)" % [tv_w, wide])
+	_check(at_tv > frames / 2 and at_wide > 0 and wide_long > 0 and wide_bounce > 0,
+			"Rule 2.111: mostly at TV's height (%.0f m across: %d of %d frames), wide (57 m) on long kicks (%d) and the walk back to a centre bounce (%d)" % [tv_w, at_tv, frames, wide_long, wide_bounce])
+	_check(cuts > 0 and shot_ok == cuts and back >= cuts - 1,
+			"Set shots cut live to the camera behind the goals and back (%d cuts, %d set shots, %d back)" % [cuts, shot_ok, back])
+	_check(cut_ks.size() == cuts,
+			"Each set shot is one cut: no flick back to the main camera while he lines up (%d cuts, %d shots)" % [cuts, cut_ks.size()])
+	goals = goals_seen.size()
+	_check(closes.size() >= 2 and close_ok == closes.size() and close_frames > 0,
+			"Ball-ups show the ruckmen close, from a wing camera (%d ruckmen, %d from the wing)" % [closes.size(), close_ok])
+	_check(goals > 0 and replays >= mini(goals, 2) and replays <= goals,
+			"A goal gets one replay (%d goals, %d replays)" % [goals, replays])
+	_check(skipped == 1, "A tap on the picture skips the replay: live again at once")
+	_check(moved_in_hold == 0, "The centre bounce waits for the replay (%d of %d held frames moved on)" % [moved_in_hold, held])
+	_check(goals_eyes.size() == 1 and goals_eyes.has(snappedf(MatchMotion.HALF_LEN + 25.0, 0.1)),
+			"The goals camera stands 25 m behind a goal line, on the ground's middle (%s)" % [goals_eyes.keys()])
+	_check(goals_frames > 0 and behind_kicker == goals_frames,
+			"A set shot is filmed from behind the far goals, at the kicker's back, as on TV (%d of %d frames)" % [behind_kicker, goals_frames])
+	pv.free()
 
 
 ## Club Forge hair on the 3D oval (director, 2026-11-15: "make the forge haircuts actually
@@ -3006,11 +3157,11 @@ func _test_contacts(res: Dictionary) -> void:
 	var scoops := 0
 	var slow := []        # scoops he came into short of the scoop's pace
 	var near_scoops := 0  # scoops gathered from a stand (the near gather)
-	var off_line := []    # fumbles off a scoop at pace knocked back or across him, not on along his line
 	var knock_who := -1   # the man whose scoop just ended, until the ball comes off him
 	var knocks := 0
-	var scrap_knocks := 0
-	var scrap_bare := 0   # scrap knocks with no man's scoop before them
+	var rests := 0        # loose balls MatchSim gave a resting spot
+	var rest_off := []    # ...that the replay sent anywhere else
+	var beat_k := -1
 	var stops := []       # men whose speed dropped more than a step's braking as they went down for it
 	var stands := []      # men stood still beside a loose ball in a scrap (director 2026-11-16)
 	var overs := []       # men who ran straight across a loose ball upright, not going down for it
@@ -3026,33 +3177,33 @@ func _test_contacts(res: Dictionary) -> void:
 			speeds.append((t["vel"] as Vector2).length())
 		var ball_before: Vector2 = d.ball["pos"]
 		var speed_before: float = (d.ball.get("vel", Vector2.ZERO) as Vector2).length()
-		# (A close fumble can knock it as little as FUMBLE_CLOSE: too small a push to read off its speed,
-		# so the scrap's own tally counts it, read off the phase it happened in, which may end in the same step.)
-		var ph_before: Dictionary = d._phases[d._pi] if d._pi < d._phases.size() else {}
-		var knocked_before := float(ph_before.get("_knocked", 0.0))
 		d.advance(0.05)
-		var ph: Dictionary = d._phases[d._pi] if d._pi < d._phases.size() else {}
-		var scrap_knock := float(ph_before.get("_knocked", 0.0)) > knocked_before \
-				or (not is_same(ph, ph_before) and float(ph.get("_knocked", 0.0)) > 0.0)
-		if scrap_knock:
-			scrap_knocks += 1
-			if knock_who < 0 and not scoop_ball.is_finite():
-				scrap_bare += 1
+		# A beat whose ball MatchSim knocked loose leaves it rolling to MatchSim's spot, before
+		# anyone has it (director, 2026-11-17: "the visual sim needs to marry up to the match sim").
+		var now_k := int(d._beat.get("k", -1))
+		if now_k != beat_k:
+			if beat_k >= 0 and (d.events[beat_k] as Dictionary).has("loose_to"):
+				rests += 1
+				var off_m := 99.0
+				if int(d.ball.get("holder", -1)) < 0:
+					off_m = d._ball_rest().distance_to(d._rest_spot(beat_k))
+				if off_m > 0.3:
+					rest_off.append("k%d %s %.1f m" % [beat_k, str(d.events[beat_k].get("kind", "")), off_m])
+			beat_k = now_k
 		if scoop_ball.is_finite() and not (d._pi < d._phases.size() and (d._phases[d._pi] as Dictionary).has("scoop")):
 			knock_who = scoop_who
+		if knock_who >= 0 and (int(d.ball.get("holder", -1)) >= 0 or str(d.ball["mode"]) == "flight"):
+			# He took it cleanly, or it was kicked on: nothing came off his hands, so a later loose
+			# ball is not his knock.
+			scoop_ball = Vector2.INF
+			knock_who = -1
 		# The knock: the ball jumps off his hands (it may still be rolling the last of the way in).
 		if knock_who >= 0 and str(d.ball["mode"]) == "loose" \
-				and (scrap_knock or (d.ball.get("vel", Vector2.ZERO) as Vector2).length() > speed_before + 1.0):
-			var bv: Vector2 = d.ball["vel"]
-			var line: Vector2 = d.tokens[knock_who]["vel"]
+				and (d.ball.get("vel", Vector2.ZERO) as Vector2).length() > speed_before + 1.0:
 			knocks += 1
 			# A loose ball rolls the last of the way into his hands, and comes off them there.
 			off_hands = maxf(off_hands, ball_before.distance_to(scoop_ball))
 			scoop_ball = Vector2.INF
-			# (Gathered from a stand, crouched over it, it can come off his hands any way.)
-			if scoop_kind == MatchDirector.SCOOP_AT_PACE \
-					and (line.length() <= 0.5 or absf(line.angle_to(bv)) > MatchDirector.KNOCK_ON + 0.05):
-				off_line.append("%d deg at %.1f m/s" % [roundi(rad_to_deg(absf(line.angle_to(bv)))), line.length()])
 			knock_who = -1
 		for c in d.contacts:
 			if c["kind"] == &"ground_ball":
@@ -3086,7 +3237,7 @@ func _test_contacts(res: Dictionary) -> void:
 		# within 2 m of the ball for 0.4 s, other than a man just gathering it.
 		var sp: Dictionary = d._phases[d._pi] if d._pi < d._phases.size() else {}
 		var st := str(sp.get("t", ""))
-		var scrap: bool = str(d.ball["mode"]) in ["loose", "dead"] and int(d.ball.get("holder", -1)) < 0 				and (st in ["spill", "fumble"] or (st == "collect" and sp.get("pace", false)) or (st == "wait" and sp.has("scoop")))
+		var scrap: bool = str(d.ball["mode"]) in ["loose", "dead"] and int(d.ball.get("holder", -1)) < 0 				and (st == "fumble" or (st == "collect" and sp.get("pace", false)) or (st == "wait" and sp.has("scoop")))
 		if scrap:
 			scrap_s += 0.05
 		for t in d.tokens:
@@ -3112,8 +3263,8 @@ func _test_contacts(res: Dictionary) -> void:
 	_check(stops.is_empty(), "A man goes down for a loose ball near its own pace, never stopping dead from a run (%d of %d: %s)" % [stops.size(), scoops, stops.slice(0, 5)])
 	_check(scrap_s > 10.0 and stands.is_empty(), "Nobody stands still beside a loose ball in a scrap (%d in %.0f s: %s)" % [stands.size(), scrap_s, stands.slice(0, 5)])
 	_check(scrap_s > 10.0 and overs.is_empty(), "Nobody runs straight across a loose ball upright in a scrap (%d: %s)" % [overs.size(), overs.slice(0, 5)])
-	_check(scrap_bare == 0, "A loose ball in a scrap moves only off a man's hands, never on its own (%d knocks, %d with no man)" % [scrap_knocks, scrap_bare])
-	_check(scoops > 0 and knocks == scoops and off_line.is_empty(), "A fumble on the run at pace knocks the ball on along his line (%d scoops, %d knocks, off it: %s)" % [scoops, knocks, off_line.slice(0, 5)])
+	_check(rests > 20 and rest_off.is_empty(), "A ball knocked loose rolls to where MatchSim says it comes to rest, and no further (%d loose balls, off it: %s)" % [rests, rest_off.slice(0, 5)])
+	_check(scoops > 0 and knocks > 0, "A man fumbles a loose ball on the run, and it comes off his hands (%d scoops, %d knocks)" % [scoops, knocks])
 	for k in [&"kick", &"handball", &"mark", &"gather", &"handball_receive", &"tackle", &"bounce", &"ruck_tap",
 			&"ground_ball"]:
 		_check(int(kinds.get(k, 0)) > 0, "A full match records %s touches (%d)" % [k, int(kinds.get(k, 0))])
