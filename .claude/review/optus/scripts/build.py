@@ -392,6 +392,57 @@ rp=[R0.lerp(R1,k/nr) for k in range(nr+1)]
 for zz in (0.12,0.95,1.86):sweep(rp,zz,zz+0.05,0.05,MRL)
 for p in rp:boxp(p,0.035,0.0,1.91,MRL)
 bm.to_mesh(me);bm.free()
+# ---------- real seats: pan + back per seat (0.44 m wide, 0.5 m pitch, 6 cm gap), on every row of both tiers.
+# Aisles and the vomitory stay where the stand texture paints them (bay metres 0 and 7.4, upper tier offset 3.7).
+# Colours: paint_tex's tier colours, each seat pushed toward grey-blue or tan, half each (Commons 032, 005).
+import numpy as np,random as _rnd
+_R=_rnd.Random(7)
+_TC={'lo':(216,208,203),'mid':(246,221,191),'up':(178,182,188)};_AX=np.array((0.70,0.76,0.82))-np.array((0.86,0.79,0.66));_AX/=np.linalg.norm(_AX)
+def _bx(x0,x1,y0,y1,z0,z1):
+    return [(x0,y0,z0),(x1,y0,z0),(x1,y1,z0),(x0,y1,z0),(x0,y0,z1),(x1,y0,z1),(x1,y1,z1),(x0,y1,z1)]
+_BF=[[0,3,2,1],[4,5,6,7],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7]]
+_T=np.array(_bx(-0.22,0.22,-0.22,0.20,0.40,0.46)+_bx(-0.22,0.22,-0.30,-0.24,0.46,0.86)+_bx(-0.025,0.025,-0.12,-0.04,0.0,0.40))
+_TF=[[f+o for f in ff] for o in (0,8,16) for ff in _BF]
+SEAT=[];SMAT=[];_depth=[]
+def _seats(Ra,za,Rb,zb,rowsn,tier_of,aoff,vom):
+    for r in range(1,rowsn+1):
+        t0=(r-1)/rowsn;t1=r/rowsn;pz=za+(zb-za)*t0
+        Rf=[Ra[i].lerp(Rb[i],t0) for i in range(N)];Rk=[Ra[i].lerp(Rb[i],t1) for i in range(N)]
+        R=[Rf[i].lerp(Rk[i],0.55) for i in range(N)];_depth.append((Rk[0]-Rf[0]).length)
+        cs=arcs(R);sc_=cs[N]/SL[N];tn=tier_of(r-1);s=0.3
+        while s<cs[N]-0.3:
+            i=max(0,min(N-1,max(k for k in range(N) if cs[k]<=s) if s>0 else 0));f=(s-cs[i])/max(cs[i+1]-cs[i],1e-9)
+            bay=(SU[i]+(SU[i+1]-SU[i])*f)*14.8;m=(bay-aoff)%7.4;d=min(m,7.4-m)*sc_
+            if d<0.6*sc_+0.22:s+=0.1;continue
+            bm_=(bay%14.8)
+            if vom and pz+0.01>=10.2*ZK and 3.2-0.25<=bm_<=5.0+0.25:s+=0.1;continue
+            j=(i+1)%N;p=R[i].lerp(R[j],f);fw=-(p-oc);fw.z=0;fw.normalize()
+            SEAT.append((p.x,p.y,pz,fw.x,fw.y))
+            c=np.array(_TC[tn])/255*(1.0 if (r-1)%2 else 0.96)+(1 if _R.random()<0.5 else -1)*0.075*_R.uniform(0.7,1.0)*_AX
+            SMAT.append(c);s+=0.5
+_seats(L0,1.6*ZK,L1,12.0*ZK,24,lambda r:'lo' if 1.6+10.4*(r+1)/24<=6.4+0.01 else 'mid',0.0,True)
+_seats(L1,15.0*ZK,L3,31.5*ZK,30,lambda r:'up',3.7,False)
+print('seats',len(SEAT),'tread depth min/max %.2f %.2f'%(min(_depth),max(_depth)))
+SE=np.array(SEAT,float);SC=np.clip(np.array(SMAT),0,1)
+# six plastics: each tier colour pushed grey-blue or tan (mean of its seats), so the export stays plain materials
+_TL=[];_TLc=[]
+for tn,base in _TC.items():
+    b=np.array(base)/255
+    for sgn in (1,-1):_TL.append((tn,sgn));_TLc.append(b+sgn*0.075*0.85*_AX)
+_TLc=np.clip(np.array(_TLc),0,1)
+mi=np.argmin(((SC[:,None,:]-_TLc[None,:,:])**2).sum(2),1)
+fwd=np.c_[SE[:,3:5],np.zeros(len(SE))];side=np.c_[fwd[:,1],-fwd[:,0],np.zeros(len(SE))]
+V=(SE[:,None,:3]+_T[None,:,0,None]*side[:,None,:]+_T[None,:,1,None]*fwd[:,None,:]+_T[None,:,2,None]*np.array([0,0,1.0])).reshape(-1,3)
+nT=len(_T);F=(np.array(_TF)[None,:,:]+(np.arange(len(SE))*nT)[:,None,None]).reshape(-1,4)
+sme=bpy.data.meshes.new('seats3d');sme.vertices.add(len(V));sme.vertices.foreach_set('co',V.ravel())
+sme.loops.add(F.size);sme.loops.foreach_set('vertex_index',F.ravel());sme.polygons.add(len(F))
+sme.polygons.foreach_set('loop_start',np.arange(0,F.size,4));sme.polygons.foreach_set('material_index',np.repeat(mi,len(_TF)))
+sme.update();sme.validate()
+for (tn,sgn),c in zip(_TL,_TLc):
+    sm=bpy.data.materials.new('seat_%s_%s'%(tn,'blue' if sgn>0 else 'tan'));sm.use_nodes=True;sb=sm.node_tree.nodes['Principled BSDF']
+    sb.inputs['Base Color'].default_value=(*[float(x)**2.2 for x in c],1);sb.inputs['Roughness'].default_value=0.55;sme.materials.append(sm)
+sob=bpy.data.objects.new('seats3d',sme);bpy.context.scene.collection.objects.link(sob)
+json.dump({'n':len(SEAT),'seats':[[round(float(x),3) for x in s] for s in SEAT[::50]]},open(os.path.join(here,'seats_sample.json'),'w'))
 bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(blend))
 bpy.ops.object.select_all(action='SELECT')
 bpy.ops.export_scene.gltf(filepath=os.path.abspath(dst),export_format='GLB')

@@ -63,11 +63,8 @@ def rowband(z0,z1,n,tier_of,aoff=0.0):
         sc=(SC[None,:]+k[:,None]*AX[None,:])*tone[:,None]
         cols=sc[np.minimum(np.arange(SW)//s_px,nseat-1)]                                   # (SW,3)
         t=yA-yM;yp=yM+max(1,t//2)
-        a[yB:yM]=cols[None]*0.88                                                            # seat backs
-        a[yM:yp]=cols[None]                                                                 # seat pans
-        if yp-yM>=2:a[yM:yM+1]=np.minimum(cols[None]*1.08,1)                               # lit front lip of the pan
-        for x in range(0,SW,s_px):a[yB:yp,x:x+2]=GAP
-        a[yB:yB+max(1,(yM-yB)//5)]=GAP*1.2
+        a[yB:yM]=CON*0.84*(1-0.08*tread_dirt[yB:yM,:,None])                                 # bare riser: the seats are real 3D now (build.py)
+        a[yM-1:yM+1]=np.array((236,234,228))/255                                            # tread nosing
         for ax in [0.0,7.4]:
             x0=int((ax+aoff)*PX)-int(0.6*PX);x1=int((ax+aoff)*PX)+int(0.6*PX)
             for xa,xb in ((x0,x1),(x0+SW,x1+SW),(x0-SW,x1-SW)):

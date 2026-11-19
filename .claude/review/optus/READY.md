@@ -15,6 +15,17 @@ and photo o2 (south-west, without it). No crowd was in the model; nothing remove
 - Rebuild order: `scripts/paint_tex.py` (reads `tex_base/`, writes `tex/`), then build.py. Views: `scripts/shots.py`
   writes `views_tex.json`; `scripts/views.py` renders it; `scripts/board_tex.py` makes the boards.
 
+## 3D seats (2026-11-20)
+Real empty seats replace the painted ones: 58,291 seats, each a pan, a back and a pedestal (0.44 m wide at 0.5 m pitch,
+so a 6 cm gap between seats), one per row on the ~1.0 m concrete treads of both tiers (24 + 30 rows). Aisles and the
+vomitories stay where the stand texture paints them (every 7.4 m of a 14.8 m bay, upper tier offset 3.7 m), so they
+run straight up each tier. Colours are the texture pass's tier colours (lower cream, middle tan, upper grey), each seat
+pushed toward grey-blue or tan at random, as in the empty-seat photos; six plain plastic materials. The painted seats
+are gone from `tex/seats.png`: risers and treads are bare concrete with worn nosings. No crowd.
+- `proof/seat_board.jpg`: the photo crop beside two seat-height close-ups and the lower tier's rows and aisles.
+- `proof/tex_board_1.jpg`: seats row re-rendered with the 3D seats.
+- Code: the seat block at the end of `scripts/build.py`; the riser repaint in `scripts/paint_tex.py` (rowband).
+
 ## Proof (all in this folder)
 - `proof/board.png`: photo | render from the matched camera | 50% overlay. `proof/edges.png`: edge overlay.
   `proof/parts.png`: part-by-part crops, photo beside render (roof, glass, bronze, podium, stair, lift, west terrace).
@@ -75,7 +86,7 @@ and photo o2 (south-west, without it). No crowd was in the model; nothing remove
   topdown.py, topov.py, roofsat.py, roofmark.py, period.py, stov.py, stz.py, cpair.py, texture makers.
 - `tex_base/`: the first hand-made textures; `tex/`: the texture-pass maps the build reads (build.py looks for `tex/` beside itself: copy it into `scripts/`
   before building). The ground mat and turf are no longer loaded (the game draws the turf).
-- The 84 MB glb is not committed; build.py rebuilds it (148,873 triangles). Last gate-passed model:
+- The glb is not committed; build.py rebuilds it (148,873 triangles plus the seats3d object, 105 MB). Last gate-passed model:
   `.claude/review/optus_model/` (commit 82bc8feb3).
 
 ## Gate checklist (ground builder rules, 8 items)
