@@ -1,19 +1,20 @@
 # GMHBA Stadium (Kardinia Park) exterior: ready for gate
 
-Model: `model/gmhba.glb` (built 2026-11-19 20:51 Melbourne). Stadium only: no field, posts, nets, sponsor ads,
+Model: `model/gmhba.glb` (built 2026-11-19 21:34 Melbourne). Stadium only: no field, posts, nets, sponsor ads,
 advertising boards, banners, posters, temporary stands or crowd (seats are empty). The ground's own signs are back
 (ruling of 2026-11-19). Hand-made textures only, no photo pixels.
 
-## Faults fixed this round (gate of 7cd2c798d)
-- Crest: the cat face is traced from the p1 crop on a grid, each half on its own: almond eyes with pupils, the
-  white star between them, the nose and mouth, wavy whiskers through the first hoop, and the chin. The rim's flared
-  top corners are traced too. The trace is pre-warped to the facade's angle in p1. Proof:
-  `proof/signs/crest_board.png` (photo p1 | model through the p1 camera | the hand drawing, all at the same size).
-- Seats: the seats now sit tight together as in p12, blue and white with no grey gaps between seats. The new proof
-  `proof/textures/tex_seats_row_close.png` is shot from seat height (1.3 m), looking across the tier along the rows.
-- Navy steel, deck and soffit: each has a free-camera close-up next to the surface, shown beside a p1 crop and the
-  model at the same crop (rows 7-9 of `proof/textures/texture_board.png`). The navy columns' UVs now stay inside one
-  steel panel, which removes a two-tone band the close-up showed.
+## Faults fixed this round (gate 2)
+- Seats are built as seats (p12). Every seating tier is now stepped concrete rows, about 0.8 m deep, and each row
+  carries 3D seats: a pan 0.42 m up and a back tilted up to 0.88 m. The shells are hand-drawn: blue and white, a
+  rolled top lip, the cup holder on the back's top corner and curved, shaded sides. They are cut out by alpha (glTF
+  alpha mask), so the concrete shows between seats. The colours run in pairs, shifted one seat per row. Aisles run
+  straight down each tier every 8 degrees, with yellow step nosing. The whole model is 101,691 triangles.
+  Proof: row 5 of `proof/textures/texture_board.png`: p12 | `tex_seats_close.png` | `tex_seats_row_close.png`
+  (from an aisle, eye 1.25 m above the step).
+- Roof top: the north stand's sawtooth roof had navy striped faces (`solar`). Both faces of each fold are now the pale
+  grey sheeting, as in p1. Proof: row 3 of the texture board, plus `proof/overlays/ov_p1.png` and the turntable.
+- Kept as they passed: the crest, top-down, p1 overlay, both name signs, the PREMIERSHIP STAND band and no crowd.
 
 ## Top-down (Esri z19, north up, 0.25 m/px, lean corrected y+0.035 z): model edge vs satellite
 | Sector (deg from pitch centre) | Result |
@@ -42,34 +43,37 @@ advertising boards, banners, posters, temporary stands or crowd (seats are empty
 
 ## Texture pass (approved for all grounds, 2026-11-19)
 Every big surface is painted by hand in `build/texdetail.py`, which runs after `tex.py` and `mktex.py`. It uses
-tileable noise and drawn detail, with no photo pixels. Tiles are 8 m per 1024 px (128 px/m); seats use 12 m.
+tileable noise and drawn detail, with no photo pixels. Tiles are 8 m per 1024 px (128 px/m); the seat
+shells are drawn in `build/seatshell.py` on a 2 m tile (4 seats, 256 px per seat).
 - Concrete (wall, cream precast, recess): 2.0 x 1.6 m panels, dark joints, a tone per panel, blotching, and rain
   streaks under each ledge. The recess also has rake beams every 4 m.
 - Roof sheeting (roof, roofdark, roofgrey, underside): ribs 0.25 m apart, each with a lit crest and a shadowed flank,
   dirt along the ribs, and an end lap every 4 m. The underside ribs are stronger, because p13 shows deep shadow lines.
-- Seats: 16 rows per 12 m (0.75 m rows), 0.5 m seats tight together (a dark join line between seats, no gaps), the row's shadow on the tread, and a 1.2 m aisle with
-  yellow step nosing. The colours follow p12: blue (20,88,150) and white in pairs, shifted one seat per row.
+- Seats: 3D rows (tread, riser, pan, back). The shells are alpha-cut 0.5 m seats with a 1 cm gap, rolled lip, cup
+  holder and shaded sides, in four row bands. The colours follow p12: blue (20,88,150) and white in pairs, shifted
+  one seat per row. The treads are concrete, with a joint every 2 m. The aisles are paler steps with yellow nosing.
 - Painted steel and fascias: 0.4 m folded cladding panels with two facets, staggered joints and grime at each panel
   foot. The teal fascia uses 1.0 m panels. Steel (towers, navy, soffit) has panel seams and grime toward the bottom.
 - Sizes are estimated from photos p8, p11, p12 and p13, not measured: concrete panels 2.0 x 1.6 m, cladding 0.4 m,
-  ribs 0.25 m (Klip-Lok is about 0.23 m), seat rows 0.75 m, seats 0.5 m.
+  ribs 0.25 m (Klip-Lok is about 0.23 m), seat rows about 0.8 m, seats 0.5 m.
 
 No crowd (standing rule, 2026-11-19): the crowd that was painted on the seat textures is deleted from the code. The
 scoreboard's painted "live crowd picture" is replaced by a blank screen, switched off. All seats show empty.
 Crowd parts removed: the people painted on the `seats`, `seats_dark` and `crowd_shade` textures (62-92% of seats),
 and the scoreboard screen picture. The model had no crowd cards, billboards or crowd meshes. Close-up of a seating
-tier showing empty seats, from seat height: `proof/textures/tex_seats_row_close.png` (from above the tier:
-`tex_seats_close.png`; game distance: `tex_seats_game.png`).
+tier showing empty seats: `proof/textures/tex_seats_close.png`, and from seat height `tex_seats_row_close.png`
+(game distance: `tex_seats_game.png`). The flat `seats`, `seats_dark`, `crowd_shade` and `seats_empty` textures are no
+longer in the glb.
 
 Stddev of every texture in the glb (grey levels 0-255; 10 or more counts as not flat):
 
 | Texture | Stddev | Texture | Stddev | Texture | Stddev |
 |---|---|---|---|---|---|
-| wall | 16.4 | roof | 13.4 | seats | 66.2 |
-| cream | 17.4 | roofdark | 12.2 | seats_dark | 36.3 |
-| recess | 11.9 | roofgrey | 13.0 | crowd_shade (empty seats in shade) | 36.3 |
-| fascia | 16.8 | under | 19.6 | seats_empty | 66.2 |
-| teal | 10.7 | solar | 28.8 | turf | 10.5 |
+| wall | 16.4 | roof | 13.4 | seatback | 72.6 |
+| cream | 17.4 | roofdark | 12.2 | seatback_d (in roof shade) | 40.0 |
+| recess | 11.9 | roofgrey | 13.0 | seatpan / seatpan_d | 68.0 / 37.4 |
+| fascia | 16.8 | under | 19.6 | tread / tread_d | 18.2 / 10.0 |
+| teal | 10.7 | aisle / aisle_d | 20.2 / 11.1 | turf | 10.5 |
 | tower | 11.5 | glass | 20.8 | deck | 11.1 |
 | navy | 13.0 | aglass | 12.5 | deckg | 12.4 |
 | soffit | 11.4 | pave | 12.0 | blueband | 15.4 |

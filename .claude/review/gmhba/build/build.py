@@ -76,7 +76,10 @@ def mat(name,img,rough=0.85,clamp=False):
 for n,i,r,c in(('turf','turf',.95,0),('seats','seats',.8,0),('seatsd','seats_dark',.8,0),('crowds','crowd_shade',.9,0),('seatse','seats_empty',.8,0),('roof','roof',.5,0),
                ('under','under',.8,0),('roofd','roofdark',.6,0),('roofg','roofgrey',.5,0),('wall','wall',.8,0),('fascia','fascia',.5,0),
                ('tower','tower',.4,0),('solar','solar',.3,0),('glass','glass',.2,0),('lamp','lamp',.3,0),('beige','beige',.8,1),
-               ('wedge','wedge',.7,1),('wedgef','wedgef',.6,1),('rhend','rhend',.7,1),('slats','slats',.7,1),('players','players',.7,0),('screen','screen',.3,1),('teal','teal',.4,0),('sign','sign',.4,1),('photo','photo',.8,1),('cream','cream',.8,0),('deck','deck',.9,0),('plant','plant',.6,0),('fins','fins',.6,0),('blueband','blueband',.5,0),('aglass','aglass',.15,0),('pave','pave',.9,0),('line','line',.6,0),('pad','pad',.5,0),('logo','logo',.8,1),('navy','navy',.5,0),('deckg','deckg',.85,0),('soffit','soffit',.8,0),('banners','banners',.7,0),('recess','recess',.8,0)):mat(n,i,r,c)
+               ('wedge','wedge',.7,1),('wedgef','wedgef',.6,1),('rhend','rhend',.7,1),('slats','slats',.7,1),('players','players',.7,0),('screen','screen',.3,1),('teal','teal',.4,0),('sign','sign',.4,1),('photo','photo',.8,1),('cream','cream',.8,0),('deck','deck',.9,0),('plant','plant',.6,0),('fins','fins',.6,0),('blueband','blueband',.5,0),('aglass','aglass',.15,0),('pave','pave',.9,0),('line','line',.6,0),('pad','pad',.5,0),('logo','logo',.8,1),('navy','navy',.5,0),('deckg','deckg',.85,0),('soffit','soffit',.8,0),('banners','banners',.7,0),('recess','recess',.8,0),('seatback','seatback',.45,0),('seatpan','seatpan',.45,0),('tread','tread',.9,0),('aisle','aisle',.9,0),('seatback_d','seatback_d',.45,0),('seatpan_d','seatpan_d',.45,0),('tread_d','tread_d',.9,0),('aisle_d','aisle_d',.9,0)):mat(n,i,r,c)
+for _n in('seatback','seatpan','seatback_d','seatpan_d'):   # seat shells cut out by alpha (glTF alphaMode MASK)
+    _m=bpy.data.materials[_n];_nt=_m.node_tree;_ti=[n for n in _nt.nodes if n.type=='TEX_IMAGE'][0];_rd=_nt.nodes.new('ShaderNodeMath');_rd.operation='ROUND'
+    _nt.links.new(_ti.outputs['Alpha'],_rd.inputs[0]);_nt.links.new(_rd.outputs[0],_nt.nodes['Principled BSDF'].inputs['Alpha'])
 _lm=bpy.data.materials['logo'];_nt=_lm.node_tree;_nt.links.new([n for n in _nt.nodes if n.type=='TEX_IMAGE'][0].outputs['Alpha'],_nt.nodes['Principled BSDF'].inputs['Alpha'])
 bm=bmesh.new();uv=bm.loops.layers.uv.new()
 def face(vs,m,uvs):
@@ -92,12 +95,42 @@ def sweep(a0,a1,prof,mats,tile=8.0,step=1.0):
     for i in range(len(A)-1):
         c0,c1=cols[i],cols[i+1]
         for k in range(len(c0)-1):
-            if mats[k] is None:continue
+            if mats[k] is None or mats[k] in SEATM:continue
             tl=TILEM.get(mats[k],tile)   # hand-painted textures are drawn to a fixed size in metres
             u0=i*step*math.radians(1)*(rp(A[i])+20)/tl;u1=u0+step*math.radians(1)*(rp(A[i])+20)/tl
             l=(c0[k+1]-c0[k]).length/tl
             v0,v1=(l,0) if c0[k+1].z<c0[k].z-1e-6 else (0,l)   # image top stays up on walls that run downward
             face([c0[k],c1[k],c1[k+1],c0[k+1]],mats[k],[(u0,v0),(u1,v0),(u1,v1),(u0,v1)])
+    for k,m in enumerate(mats):
+        if m in SEATM:seat_rows(A,[prof(a) for a in A],k,m,step)
+SEATM=('seats','seatsd','crowds','seatse')
+def seat_rows(A,profs,k,m,step):
+    # p12: real seat rows instead of a flat rake. Each row is a concrete tread and riser, a seat pan 0.42 m up and a
+    # back tilted up to 0.88 m; the shells are cut out of hand-drawn textures by alpha. Aisles: every 8th degree step.
+    sfx='_d' if m in('seatsd','crowds') else ''
+    runs=[p[k+1][0]-p[k][0] for p in profs]
+    if min(runs)<=0.5:
+        print('seat_rows flat fallback',k,m);return
+    n=max(1,int(round(float(np.median(runs))/0.8)));ul=[0.0]*n
+    def pt(i,j,f,dz):
+        (d0,z0),(d1,z1)=profs[i][k],profs[i][k+1];dd=(d1-d0)/n
+        return P(A[i],d0+dd*(j+f),z0+(z1-z0)*j/n+dz)
+    def zr(i,j):(d0,z0),(d1,z1)=profs[i][k],profs[i][k+1];return z0+(z1-z0)*j/n
+    for i in range(len(A)-1):
+        ais=(i%8)==4
+        for j in range(n):
+            L=(pt(i+1,j,0.15,0)-pt(i,j,0.15,0)).length/2.0;u0,u1=ul[j],ul[j]+L;ul[j]=u1
+            rise=zr(i,j+1)-zr(i,j);r=j%4
+            a,b=lambda f,dz:pt(i,j,f,dz),lambda f,dz:pt(i+1,j,f,dz)
+            tm=('aisle' if ais else 'tread')+sfx
+            face([a(0,0),b(0,0),b(1,0),a(1,0)],tm,[(u0,1),(u1,1),(u1,0.02),(u0,0.02)])                       # tread, nosing at the front
+            (d0,z0),(d1,z1)=profs[i][k],profs[i][k+1]
+            ra=P(A[i],d0+(d1-d0)*(j+1)/n,zr(i,j));rb=P(A[i+1],profs[i+1][k][0]+(profs[i+1][k+1][0]-profs[i+1][k][0])*(j+1)/n,zr(i+1,j))
+            face([ra,rb,rb+Vector((0,0,zr(i+1,j+1)-zr(i+1,j))),ra+Vector((0,0,rise))],tm,[(u0,0.05),(u1,0.05),(u1,0.15),(u0,0.15)])   # riser
+            if ais:continue
+            vt,vb=1-r/4-0.001,1-(r+1)/4+0.001
+            face([a(0.15,0.42),b(0.15,0.42),b(0.62,0.42),a(0.62,0.42)],'seatpan'+sfx,[(u0,vt),(u1,vt),(u1,vb),(u0,vb)])   # pan, front lip first
+            face([a(0.62,0.40),b(0.62,0.40),b(0.75,0.88),a(0.75,0.88)],'seatback'+sfx,[(u0,vb),(u1,vb),(u1,vt),(u0,vt)])   # back, top lip up
 def arc(a0,a1):
     s=0;a=a0
     while a<a1-1e-9:s+=ro(math.degrees(math.radians(a)) if False else a)*math.radians(0.5);a+=0.5
@@ -368,7 +401,7 @@ for (cx_,cy_) in((-116.0,74.8),(-113.2,62.7)):  # canopy columns read off p1, mo
 # north solar sawtooth: 10 peak tips on p1 fitted (0.96 px rms) to tips every 3.78 deg from a=36.94, d=dOs+8.3, z 27.36-0.044(a-80)
 @lru_cache(None)
 def NZ(a):return zkeep(P(a,dOs(a)+8.3,25.56-0.044*(a-80)),P(a,nB(a),0))   # back edge moved to the satellite, p1 row kept
-pleat(35.05,99.31,lambda a:20,lambda a:24,nB,NZ,1.8,17,faces=('solar','roof'),ph=1)
+pleat(35.05,99.31,lambda a:20,lambda a:24,nB,NZ,1.8,17,faces=('roof','roof'),ph=1)   # director 2026-11-19 gate: p1 shows pale grey folded sheeting, no navy stripes
 face([P(99.31,20,24),P(99.31,nB(99.31),NZ(99.31)-1.8),P(100,nB(100),NZ(100)-1.8),P(100,20,24)],'roof',[(0,0),(1,0),(1,1),(0,1)])
 # ---- Reg Hickey roof (photos p1,p2,p3): thin flat light-grey cantilever sloping down to the back, dark underside and
 # front fascia; nine curved white masts in radial planes rise from the back of the roof and land on its front half

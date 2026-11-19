@@ -30,7 +30,7 @@ func _initialize():
 	print("materials ",bym.keys())
 	var PC=Vector3(-10.755,0,24.161)
 	# name, material, game-shot mode: "n" = along the face normal, "p" = from the pitch at 18 m
-	var jobs=[["concrete","wall","n"],["cladding","fascia","n"],["roof_top","roof","n"],["roof_dark","roofd","n"],["roof_under","under","u"],["seats","seats","p"],["steel_tower","tower","p"],["seats_row","seats","s"],["steel_navy","navy","f"],["deck","deck","f"],["paving","pave","n"],["soffit","soffit","f"],["recess","recess","n"],["teal","teal","n"],["glass","aglass","n"],["precast","cream","n"]]
+	var jobs=[["concrete","wall","n"],["cladding","fascia","n"],["roof_top","roof","n"],["roof_dark","roofd","n"],["roof_under","under","u"],["seats","seatback","p"],["steel_tower","tower","p"],["seats_row","aisle","s"],["steel_navy","navy","f"],["deck","deck","f"],["paving","pave","n"],["soffit","soffit","f"],["recess","recess","n"],["teal","teal","n"],["glass","aglass","n"],["precast","cream","n"]]
 	for j in jobs:
 		if not bym.has(j[1]): print("no material ",j[1]); continue
 		var L=bym[j[1]].duplicate(); L.sort_custom(func(x,y): return _area(x)>_area(y))
@@ -49,11 +49,11 @@ func _initialize():
 					if fp.y<0.5 or not _clear(fp,c): continue
 					cam.fov=50.0; cam.look_at_from_position(fp,c,Vector3.UP if abs((c-fp).normalized().y)<0.95 else Vector3.FORWARD)
 				else:
-					# a spectator's eye 1.3 m above the raked seats, two rows back, looking across the tier and down the rake
-					var h=(PC-c); h.y=0; h=h.normalized(); var tg=h.cross(Vector3.UP); var up=nn if nn.y>0 else -nn
-					var dr=(-h-up*((-h).dot(up))).normalized(); var sp=c+dr*1.5+tg*3.0+up*1.3; var tgt=c-dr*6.0-tg*6.0
-					if not _clear(sp,c) or not _clear(sp,tgt): sp=c+dr*1.5-tg*3.0+up*1.3; tgt=c-dr*6.0+tg*6.0
-					if not _clear(sp,c) or not _clear(sp,tgt): continue
+					# a spectator standing in an aisle, eye 1.25 m above the step, looking along the row and a little down the rake
+					var h=(PC-c); h.y=0; h=h.normalized(); var tg=h.cross(Vector3.UP)
+					var sp=c+Vector3.UP*1.25; var tgt=c+tg*8.0+h*2.5-Vector3.UP*0.6
+					if not _clear(sp,tgt): tgt=c-tg*8.0+h*2.5-Vector3.UP*0.6
+					if c.y<6.0 or not _clear(sp,tgt): continue
 					cam.fov=60.0; cam.look_at_from_position(sp,tgt,Vector3.UP)
 				for i in 8: await process_frame
 				root.get_viewport().get_texture().get_image().save_png("%s/tex_%s_close.png"%[out,j[0]])

@@ -13,7 +13,7 @@ R=[('concrete (wall)',c('ph/p8.jpg',(0,380,300,620),2000/1280),'p8',[G('concrete
    ('cladding (fascia)',c('ph/p13.jpg',(190,280,480,700),2),'p13',[G('cladding'),CL('cladding')]),
    ('roof sheeting, top',c('photo.jpg',(560,395,720,450)),'p1',[G('roof_top'),CL('roof_top')]),
    ('roof sheeting, underside',c('ph/p13.jpg',(560,0,760,200),2),'p13',[G('roof_under'),CL('roof_under')]),
-   ('seats (empty, no crowd)',c('ph/p12.jpg',(0,0,2560,1440)),'p12',[G('seats'),CL('seats_row','seat height, across the tier')]),
+   ('seats (empty, no crowd)',c('ph/p12.jpg',(560,240,2000,1050)),'p12',[CL('seats','close, from the pitch side'),CL('seats_row','seat height, from an aisle')]),
    ('painted steel (tower)',c('ph/p11.jpg',(120,0,240,440),2),'p11',[G('steel_tower'),CL('steel_tower')]),
    ('navy steel (columns)',c('photo.jpg',(925,512,985,572)),'p1',[P1((925,512,985,572)),CL('steel_navy','free camera, 4 m')]),
    ('deck (roof terrace)',c('photo.jpg',(255,412,345,457)),'p1',[P1((255,412,345,457)),CL('deck','free camera, 3 m above')]),

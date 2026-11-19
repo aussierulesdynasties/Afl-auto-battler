@@ -1,7 +1,7 @@
 #!/bin/bash
 # full rebuild: textures, Blender build and renders, crop boards, region brightness vs p1
 cd "$(dirname "$0")"
-python tex.py >/dev/null && python mktex.py >/dev/null && python texdetail.py || { echo TEX FAIL; exit 1; }
+python tex.py >/dev/null && python mktex.py >/dev/null && python texdetail.py && python seatshell.py >/dev/null || { echo TEX FAIL; exit 1; }
 D=$(cygpath -m "$PWD"); "/c/Program Files/Blender Foundation/Blender 5.2/blender.exe" -b --python build.py -- "$D" "$D/gmhba.glb" "$D/ren.png" > build.log 2>&1
 grep -A3 "build.py\", line" build.log && { echo BUILD FAIL; exit 1; }
 ls -l --time-style=+%H:%M:%S ren.png
