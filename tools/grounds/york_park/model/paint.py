@@ -149,10 +149,17 @@ def _gunns(a, pu, pv, h, w):  # Gunns back: blue-grey panels 1.5 x 1.2 m, a wind
     for k in range(4): a[int(1.4 * pv):int(2.2 * pv), int((0.4 + k * 1.3) * pu):int((0.4 + k * 1.3) * pu) + 4] = (190, 196, 200)
 
 
-def _cw(a, pu, pv, h, w):     # Centre West function building: white render, a full-width dark window band per floor, joints
-    a[int(0.7 * pv):int(2.3 * pv)] = np.array((48, 58, 66)) + fine(int(2.3 * pv) - int(0.7 * pv), w, 3)[:, :, None]
-    for k in range(5): a[int(0.7 * pv):int(2.3 * pv), int(k * 1.5 * pu):int(k * 1.5 * pu) + 6] = (208, 210, 208)
-    a[int(0.7 * pv):int(0.7 * pv) + 6] *= 0.6
+def _cw(a, pu, pv, h, w):     # old Centre West, one tile = the full 12 m (row 0 = top): white fascia, light panel band
+    # (the sign band), a tall dark glazed function level with a mullion every 1.5 m, light grey wall below with a window band
+    a[:int(0.5 * pv)] = (232, 232, 228)
+    b0, b1 = int(0.5 * pv), int(3.0 * pv); a[b0:b1] = np.array((206, 208, 206)) + fine(b1 - b0, w, 3)[:, :, None]
+    g0, g1 = int(3.0 * pv), int(7.0 * pv)
+    a[g0:g1] = np.array((40, 48, 56)) + fine(g1 - g0, w, 3)[:, :, None] + noise(g1 - g0, w, 6, 16)[:, :, None]
+    for k in range(4): a[g0:g1, int(k * 1.5 * pu):int(k * 1.5 * pu) + 7] = (190, 194, 196)
+    a[g1:g1 + 8] = (170, 172, 170)
+    a[g1:] = np.array((188, 190, 188)) + fine(h - g1, w, 3)[:, :, None]
+    a[int(8.4 * pv):int(9.4 * pv), :] = (58, 66, 74)
+    for k in range(4): a[int(8.4 * pv):int(9.4 * pv), int(k * 1.5 * pu):int(k * 1.5 * pu) + 6] = (188, 190, 188)
 
 
 def _boxes(a, pu, pv, h, w):  # Gunns box level: tinted glass with mullions every 1.5 m and a white sill
@@ -163,7 +170,7 @@ def _boxes(a, pu, pv, h, w):  # Gunns box level: tinted glass with mullions ever
 
 facade('facade_nw', (176, 178, 176), _nw); facade('facade_lattice', (46, 62, 98), _lattice)
 facade('facade_es', (196, 198, 198), _es); facade('facade_gunns', (150, 164, 184), _gunns)
-facade('facade_cw', (226, 226, 222), _cw); facade('boxes_glass', (42, 52, 60), _boxes)
+facade('facade_cw', (226, 226, 222), _cw, (6.0, 12.0), 1024, 2048); facade('boxes_glass', (42, 52, 60), _boxes)
 a = base(512, 512, (46, 56, 66), 2, 18); a[:, 250:258] = (180, 184, 186); a[250:258] = (180, 184, 186); save('glass', a, (3.0, 3.0))
 # light tower head: 4 x 8 lamps in a white frame
 a = np.ones((N, N, 3)) * np.array((230, 230, 226), float); cu, cv = N / 8, N / 4
@@ -172,6 +179,53 @@ for i in range(8):
         x0, y0 = int(i * cu + 8), int(j * cv + 10); x1, y1 = int((i + 1) * cu - 8), int((j + 1) * cv - 10)
         a[y0:y1, x0:x1] = (170, 176, 180); a[y0 + 8:y1 - 8, x0 + 8:x1 - 8] = (86, 92, 98)
 save('lamps', a, (1, 1))
+
+# NE gap (scoreboard corner): pavilion render with a dark window band, blue rear panels of the roof seat banks, screen switched off
+def _pav(a, pu, pv, h, w):     # white render, dark glazed band 1.0-2.6 m with a mullion every 1.5 m, grey plinth
+    a[int(1.0 * pv):int(2.6 * pv)] = np.array((52, 60, 68)) + fine(int(2.6 * pv) - int(1.0 * pv), w, 3)[:, :, None]
+    for k in range(4): a[int(1.0 * pv):int(2.6 * pv), int(k * 1.5 * pu):int(k * 1.5 * pu) + 6] = (200, 202, 200)
+    a[int(3.3 * pv):] = (150, 152, 150)
+
+
+def _panel(a, pu, pv, h, w):   # blue sheet panels, a light joint every 1.5 m and a white capping strip
+    a[:] = np.array((58, 92, 150)) + fine(h, w, 4)[:, :, None] + noise(h, w, 8, 14)[:, :, None]
+    for k in range(4): a[:, int(k * 1.5 * pu):int(k * 1.5 * pu) + 4] = (150, 170, 196)
+    a[:int(0.25 * pv)] = (220, 222, 220)
+
+
+def _sw(a, pu, pv, h, w):      # SW corner building, one tile = full 9 m height: white render, a window per 3 m bay on three floors (row 0 = top)
+    for fl in (1.3, 4.1, 6.9):
+        for k in range(2): a[int(fl * pv):int((fl + 0.9) * pv), int((0.9 + k * 3) * pu):int((2.1 + k * 3) * pu)] = (54, 62, 70)
+    a[:int(0.4 * pv)] = (226, 226, 222)
+
+
+facade('facade_sw', (218, 218, 214), _sw, (6.0, 9.0), 1024, 1536); facade('facade_pav', (214, 214, 208), _pav); facade('panel_blue', (58, 92, 150), _panel)
+a = base(512, 512, (24, 26, 30), 4, 14)
+for k in range(0, 512, 16): a[:, k:k + 2] *= 0.6; a[k:k + 2] *= 0.6        # LED module joints
+a[:10] = (60, 62, 66); a[-10:] = (60, 62, 66); a[:, :10] = (60, 62, 66); a[:, -10:] = (60, 62, 66)
+save('screen_off', a, (2.0, 2.0))
+
+# Name sign on the old Centre West front (photo ref/UTAS-Stadium-grandstand.jpg): light panel, red crest, two-line serif name.
+# Lettering is drawn here with the system Georgia face; the crest is a hand-drawn rampant lion in the photo's red.
+from PIL import ImageDraw, ImageFont
+SW_, SH_ = 2048, 512
+im = Image.fromarray(np.clip(base(SH_, SW_, (226, 228, 224), 3, 8), 0, 255).astype(np.uint8)); dr = ImageDraw.Draw(im)
+dr.rectangle([0, 0, SW_ - 1, SH_ - 1], outline=(150, 152, 150), width=10)
+red = (196, 30, 40)
+lion = [(0.30, 0.95), (0.36, 0.62), (0.22, 0.55), (0.12, 0.62), (0.05, 0.50), (0.16, 0.40), (0.10, 0.22), (0.24, 0.05), (0.34, 0.18),
+        (0.42, 0.10), (0.48, 0.24), (0.58, 0.18), (0.56, 0.36), (0.70, 0.30), (0.80, 0.42), (0.66, 0.50), (0.78, 0.62), (0.92, 0.48),
+        (0.98, 0.62), (0.82, 0.78), (0.66, 0.72), (0.60, 0.95), (0.50, 0.80), (0.42, 0.95)]
+cx0, cy0, cs = 90, 70, 370
+dr.polygon([(cx0 + u * cs, cy0 + v * cs) for u, v in lion], fill=red)
+for k in range(5): dr.line([(cx0 + 0.18 * cs + k * 34, cy0 + 0.30 * cs), (cx0 + 0.30 * cs + k * 34, cy0 + 0.42 * cs)], fill=(226, 228, 224), width=8)
+F1 = ImageFont.truetype('C:/Windows/Fonts/georgia.ttf', 150); F2 = ImageFont.truetype('C:/Windows/Fonts/georgia.ttf', 96)
+def spaced(y, txt, f, x=560, sp=14):
+    for ch in txt:
+        dr.text((x, y), ch, font=f, fill=(66, 66, 72)); x += dr.textlength(ch, font=f) + sp
+    return x
+x = spaced(70, 'UNIVERSITY', F1); spaced(118, 'of', F2, x + 30, 4)
+spaced(270, 'TASMANIA', F1, 560, 40)
+a = np.asarray(im, float) + noise(SH_, SW_, 10, 6)[:, :, None]; save('sign_utas', a, (7.0, 1.75))
 
 json.dump(TILE, open(OUT + 'tiles.json', 'w', newline=''), indent=0)
 for nm in sorted(TILE):

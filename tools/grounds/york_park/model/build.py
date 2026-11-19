@@ -33,7 +33,8 @@ def unlean(S):
     S['b0'], S['b1'] = round(ends[0][0], 2), round(ends[0][1], 2)
 
 
-for _S in D['stands']: unlean(_S)
+for _S in D['stands']:
+    if not _S.get('no_unlean'): unlean(_S)
 
 
 def clear():
@@ -217,6 +218,19 @@ def block(S, mb, mr):
     strip(mb, bs, prof, [M['front'], M['seat'], M['back'], M['roof'], M['back']], -1)
     for b, sg in ((bs[0], -1), (bs[-1], 1)):
         endcap(mb, b, prof(b), M['back'], sg)
+    if 'poly' in S:   # building traced from the satellite roof, moved by the lean at its height
+        L = np.mean(np.array(S['lean'], float)[:, 1:], 0) / S['lean_z']
+        P = [(x + L[0] * S['poly_z'], y + L[1] * S['poly_z']) for x, y in S['poly']]
+        mb.prism(P, 0.0, S['poly_z'], M['back'], top=M['roof'])
+        if 'overhang' in S:   # roof slab projecting toward the pitch along the front edge (poly points 0-1)
+            p, q = np.array(P[0]), np.array(P[1]); t = (q - p) / np.linalg.norm(q - p); n = np.array([t[1], -t[0]])
+            if np.dot(n, -(p + q) / 2) < 0: n = -n
+            o = S['overhang']; Z = S['poly_z']
+            mb.prism([tuple(p), tuple(q), tuple(q + n * o), tuple(p + n * o)], Z - 0.6, Z, 'paint_white', top=M['roof'], bot='roof_soffit')
+        G = S.get('plant')
+        if G:
+            c = (G['c'][0] + L[0] * G['z'][1], G['c'][1] + L[1] * G['z'][1])
+            mb.box(c, G['L'], G['W'], G['z'][1] - G['z'][0], G['a'], 'paint_white', z0=G['z'][0])
 
 
 # ---------------- fence, concourse, towers ----------------
@@ -272,6 +286,44 @@ def tower(mb, T):
         oriented(mb, q, 'steel_galv', np.mean(q, 0) - cen)
 
 
+def extras(col):
+    """NE gap between the North and Eastern stands: the scoreboard on the NE tower, its round base, two pavilions"""
+    E = D.get('extras'); mb = MB('extras')
+    if not E: return
+    B = E['board']; L, R = np.array(B['left'], float), np.array(B['right'], float); z0, z1 = B['z']
+    u = (R - L) / np.linalg.norm(R - L); n_in = np.array([-u[1], u[0]])
+    if np.dot(n_in, -(L + R) / 2) < 0: n_in = -n_in
+    c = (L + R) / 2 + n_in * B['in']; ang = math.degrees(math.atan2(u[1], u[0])); wd = np.linalg.norm(R - L)
+    mb.box(c, wd, B['depth'], z1 - z0, ang, 'steel_galv', z0=z0)
+    fr = [c + n_in * (B['depth'] / 2 + 0.02) - u * (wd / 2 - 0.3), c + n_in * (B['depth'] / 2 + 0.02) + u * (wd / 2 - 0.3)]
+    oriented(mb, [(*fr[0], z0 + 0.3), (*fr[1], z0 + 0.3), (*fr[1], z1 - 0.3), (*fr[0], z1 - 0.3)], 'screen_off',
+             np.array([*n_in, 0.0]), [(0, 0), ((wd - 0.6) / 2, 0), ((wd - 0.6) / 2, (z1 - z0 - 0.6) / 2), (0, (z1 - z0 - 0.6) / 2)])
+    for k in (-1, 1):   # two legs down to the base
+        p = c + u * k * (wd / 2 - 1.5); mb.box(p, 0.6, 0.6, z0, ang, 'steel_galv')
+    G = E['ring']; mb.cyl(G['c'], G['r'], 0, G['h'], 'conc_wall', n=36, top='paving')
+    for P in E['pavilions']:
+        a = math.radians(P['a']); uu = np.array([math.cos(a), math.sin(a)]); vv = np.array([-uu[1], uu[0]]); cc = np.array(P['c'], float)
+        if np.dot(vv, -cc) < 0: vv = -vv            # vv points to the pitch
+        h, hb, Lp, Wp = P['h'], P['bank'], P['L'], P['W']
+        mb.box(cc, Lp, Wp, h, P['a'], P['mat'], mtop='roof_flat')
+        # seat bank on the roof: rises from the pitch edge to a rear wall at the middle line
+        f0, f1 = cc + vv * Wp / 2, cc
+        q = lambda base_, s_, z: (*(base_ + uu * s_ * Lp / 2), z)
+        oriented(mb, [q(f0, -1, h), q(f0, 1, h), q(f1, 1, h + hb), q(f1, -1, h + hb)], 'seats_green', np.array([*vv, 1.0]),
+                 [(0, 0), (Lp / 12, 0), (Lp / 12, 1.0 * Wp / 2 / 3.2), (0, Wp / 2 / 3.2)])
+        oriented(mb, [q(f1, -1, h), q(f1, 1, h), q(f1, 1, h + hb + 0.4), q(f1, -1, h + hb + 0.4)], 'panel_blue', np.array([*(-vv), 0.0]))
+        oriented(mb, [q(f1, -1, h + hb + 0.4), q(f1, 1, h + hb + 0.4), q(f1 + vv * 0.2, 1, h + hb + 0.4), q(f1 + vv * 0.2, -1, h + hb + 0.4)],
+                 'paint_white', np.array([0, 0, 1.0]))
+        for s_ in (-1, 1):
+            oriented(mb, [q(f0, s_, h), q(f1, s_, h), q(f1, s_, h + hb)], 'panel_blue', np.array([*(uu * s_), 0.0]))
+    for G in D.get('signs', []):   # flat panel 5 cm proud of the facade, facing the pitch
+        c = np.array(G['c'], float); u = np.array(G['u'], float); n = np.array([u[1], -u[0]])
+        if np.dot(n, -c) < 0: n = -n
+        c = c + n * 0.05; a, b = c - u * G['w'] / 2, c + u * G['w'] / 2; z0, z1 = G['z0'], G['z0'] + G['h']
+        oriented(mb, [(*a, z0), (*b, z0), (*b, z1), (*a, z1)], G['mat'], np.array([*n, 0.0]), [(0, 0), (1, 0), (1, 1), (0, 1)])
+    mb.build(col)
+
+
 def build_all():
     clear(); col = bpy.context.scene.collection
     mb = MB('stands'); mr = MB('roofs')
@@ -279,7 +331,7 @@ def build_all():
         {'single': lambda: single(S, mb, mr), 'two_tier': lambda: two_tier(S, mb, mr),
          'open': lambda: open_stand(S, mb), 'block': lambda: block(S, mb, mr)}[S['kind']]()
     mb.build(col); mr.build(col)
-    fence(col)
+    fence(col); extras(col)
     if not os.environ.get('NOCONC'): concourse(col)
     if D['towers']:
         mt = MB('towers')

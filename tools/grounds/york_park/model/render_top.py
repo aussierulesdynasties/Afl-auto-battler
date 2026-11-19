@@ -4,6 +4,18 @@ import sys, os, math
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
 import bpy, build
 build.build_all()
+# RELEAN=1: give the model the satellite's own relief lean, so it compares like with like: each point moves by
+# -(lean shift / lean height) x its height, from the per-stand tables in york_park.json (lean fitted at lean_z).
+if os.environ.get('RELEAN'):
+    import numpy as np
+    K = sorted((b, dx / S['lean_z'], dy / S['lean_z']) for S in build.D['stands'] for b, dx, dy in S['lean'])
+    Kb = np.array([k[0] for k in K]); Kx = np.array([k[1] for k in K]); Ky = np.array([k[2] for k in K])
+    Kb = np.r_[Kb - 360, Kb, Kb + 360]; Kx = np.r_[Kx, Kx, Kx]; Ky = np.r_[Ky, Ky, Ky]
+    for ob in bpy.context.scene.objects:
+        if ob.type != 'MESH': continue
+        for v in ob.data.vertices:
+            x, y, z = v.co; b = math.degrees(math.atan2(x, y)) % 360
+            v.co.x = x - np.interp(b, Kb, Kx) * z; v.co.y = y - np.interp(b, Kb, Ky) * z
 sc = bpy.context.scene
 for eng in ('BLENDER_EEVEE_NEXT', 'BLENDER_EEVEE'):
     try: sc.render.engine = eng; break
