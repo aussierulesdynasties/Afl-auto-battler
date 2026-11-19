@@ -25,7 +25,16 @@ Stadium only (stops at the outer fence). No field (the game draws its own), no g
 ## Textures (all hand-made, no photo pixels; grey stddev 0-255 as used)
 All are 10.5 or higher. The lowest are the Huggins roof (10.5) and the scoreboard face (10.7). Full list: src/chk/texstd.json.
 
-## Faults from the last gate, all closed
+## Gate 2 (60c52dc6d) proof faults, both closed
+1. park_grass crop showed legs and a fence: now a crop of the bank-top grass strip (hb/moo-3-goals.jpg).
+   That crop showed the texture was too fresh a green, while the bank grass is olive (photo mean RGB 110,102,31;
+   the sky in the same photo is true blue, so this is not a film cast). Texture recoloured to that mean, grain kept.
+2. steel crop was a sliver: now three crops (galvanised post from hb/moo-5-keep-off.jpg; light tower pole and head
+   from dl/200503-Moorabbin2.jpg). Those crops showed plain grey steel, while the texture had a rust gradient that
+   banded the light-tower poles orange every metre. The gradient is removed; the texture is plain galvanised grey.
+Model geometry unchanged. Turntable, parts board, close-ups and texture sheet are re-rendered.
+
+## Faults from the gate before, all closed
 1. Crest fence ended inside buildings: the fence is now split at every club wall, and each run ends at a wall within 5 cm
    (runs 0.2-93.6, 100.8-103.7, 138.8-139.5, 243.4-359.0 deg). Proof: zoom_crest_fence_meets_building, _between_buildings(_top).
 2. North bank end at 139.5 deg: a short run from the whiteblock wall to the stand end. Proof: zoom_bank_meets_stand_north.
