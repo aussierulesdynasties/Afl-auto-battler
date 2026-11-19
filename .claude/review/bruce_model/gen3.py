@@ -50,6 +50,8 @@ for t in thO[1:]:
     d = (t - un[-1] + math.pi) % (2 * math.pi) - math.pi; un.append(un[-1] + d)
 N = 300
 TH = np.linspace(un[0], un[-1], N)
+# the 1990 vertical shows the bowl seats running on to the stand's ends (front corners at 111.35 and -176.73 deg)
+TH = np.linspace(math.radians(111.3), math.radians(111.3 - 287.9), N)
 
 
 def interp_trace(un, pts, th):
@@ -227,18 +229,19 @@ for k in A90.COLS: put(k, R9[k], zr[k])
 put('skirt', R9['conc_out'] + 5.0, PLAZA)
 order = [R9[k] for k in A90.COLS]
 print('smallest plan depth between neighbouring rings (m):', np.round([float((order[k + 1] - order[k]).min()) for k in range(len(order) - 1)], 2))
-BD = (np.degrees(TH) + 180) % 360 - 180; SEC = A90.sector(BD); WK = A90.walkway(BD)
+BD = (np.degrees(TH) + 180) % 360 - 180; SEC = A90.sector(BD); WK = A90.walkway(BD); BK = A90.block(BD)
+LAWN = (SEC == 'S') & (BD < -113)
 SEAT = np.isin(SEC, ['N', 'SE', 'SW'])
 # per strip, the material on each ray (the bowl changes between seats and grass banks round the ground)
 MAT = {('fence', 'fence_top'): lambda i: 'fence', ('fence_top', 'fence_bk'): lambda i: 'fence', ('fence_bk', 'fence_bf'): lambda i: 'fence',
        ('fence_bf', 'toe_a'): lambda i: 'apron' if SEC[i] in ('E', 'SE') else 'concrete',
        ('toe_a', 'toe'): lambda i: 'apron' if SEC[i] == 'E' else 'concrete',
-       ('toe', 'walk_a'): lambda i: 'seats' if SEAT[i] else 'grassbank',
-       ('walk_a', 'walk_b'): lambda i: ('concrete' if WK[i] else 'seats') if SEAT[i] else 'grassbank',
-       ('walk_b', 'top_in'): lambda i: 'seats' if SEAT[i] else 'grassbank',
+       ('toe', 'walk_a'): lambda i: ('concrete' if BK[i] else 'seats') if SEAT[i] else 'grassbank',
+       ('walk_a', 'walk_b'): lambda i: ('concrete' if WK[i] or BK[i] else 'seats') if SEAT[i] else 'grassbank',
+       ('walk_b', 'top_in'): lambda i: ('concrete' if BK[i] or (SEC[i] == 'N' and BD[i] < 82.5) else 'seats') if SEAT[i] else 'grassbank',
        ('top_in', 'top_out'): lambda i: 'concrete',
-       ('top_out', 'foot'): lambda i: 'wall' if SEAT[i] else 'gravel',
-       ('foot', 'path_out'): lambda i: 'gravel', ('path_out', 'conc_out'): lambda i: 'path', ('conc_out', 'skirt'): lambda i: 'bank'}
+       ('top_out', 'foot'): lambda i: 'wall' if SEAT[i] else ('lawn' if LAWN[i] else 'gravel'),
+       ('foot', 'path_out'): lambda i: 'lawn' if LAWN[i] else 'gravel', ('path_out', 'conc_out'): lambda i: 'path', ('conc_out', 'skirt'): lambda i: 'bank'}
 # radial aisles per stand, read as pale peaks across the seats in the 1990 vertical (aisle centres):
 # south-east -57.6 -47.9 -38.1 -27.6 -17.9 -8.5; north 74.0 82.6 91.5 101.1; south-west -143.1 -135.1 (degrees)
 # -> [phase, bay angle] in radians, phase put 0.04 bay before a centre (the painted aisle spans the bay's first 8%)
@@ -399,12 +402,20 @@ cams = [dict(name='46', C=p46[:3], M=M46.tolist(), f=p46[6], W=1936, H=1290, img
 # the open ends: the bowl's last cross-section runs down to the plaza as a wall; the stand's ends close the same way
 for i in (0, N - 1):
     prof = [rings[k][i] for k in ('fence_top', 'fence_bk', 'fence_bf', 'toe_a', 'toe', 'walk_a', 'walk_b', 'top_in', 'top_out')]
-    low = [[p[0], p[1], PLAZA] for p in prof]
+    # inside the bowl the end wall stops at field level (no fin below the fence); behind the seats it runs to the plaza
+    low = [[p[0], p[1], E['z'] if j < 5 else PLAZA] for j, p in enumerate(prof)]
     lofts.append(dict(name='bowl_end', a=prof, b=low, close='concrete', step=2))
 for i in (0, NR - 1):
     prof = [list(fence_full[i]), list(seat_back[i]), list(top_walk[i]), [Rr[i][0], Rr[i][1], 17.2]]
-    low = [[p[0], p[1], PLAZA] for p in prof]
+    low = [[p[0], p[1], E['z'] if j == 0 else PLAZA] for j, p in enumerate(prof)]
     lofts.append(dict(name='stand_end', a=prof, b=low, close='white', step=2))
+# the joins: the bowl's end ray and the stand's slanted end leave a wedge between them; the seats run on across it
+# (1990 vertical), so a seated surface spans the bowl's end profile (fence top -> rim) and the stand's (fence -> seat back)
+for ib, js in ((0, 0), (N - 1, NR - 1)):
+    pa_ = resample([rings[k][ib] for k in ('fence_top', 'toe_a', 'toe', 'walk_a', 'walk_b', 'top_in')], 12)
+    pb_ = resample([list(fence_full[js]), list(seat_back[js])], 12)
+    lofts.append(dict(name='join_seats', a=pa_.tolist(), b=pb_.tolist(), close='concrete', step=2))
+    lofts.append(dict(name='join_back', a=[list(pa_[-1]), list(pb_[-1])], b=[[pa_[-1][0], pa_[-1][1], PLAZA], [pb_[-1][0], pb_[-1][1], PLAZA]], close='concrete', step=2))
 field_ring =[[*ell(i / 240 * 2 * math.pi), E['z']] for i in range(240)]
 # stair flights from the plaza up to the 9 m walkway, between the facade blocks (ref46 centrelines, 5 m wide)
 for k, ((tu, tv), (bu, bv)) in enumerate((((1040, 918), (1048, 978)), ((1235, 888), (1242, 936)), ((1360, 820), (1378, 868)))):

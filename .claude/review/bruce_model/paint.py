@@ -45,6 +45,40 @@ def hline(img, y, hpx, c, a=1.0):
         img[(y0 + k) % H, :] = img[(y0 + k) % H, :] * (1 - a) + col(c)[0] * a
 
 
+def streaks(img, n, c, a=0.35, wpx=(2, 6), lpx=(0.3, 0.9), top=True):
+    """rain/rust streaks: thin darker runs falling from the top (or rising grime from the bottom), fading out"""
+    H, W = img.shape[:2]
+    for _ in range(n):
+        x = int(rng.integers(0, W)); w = int(rng.integers(*wpx)); L = int(H * rng.uniform(*lpx)); y0 = int(rng.integers(0, H))
+        f = np.linspace(1, 0, L) ** 1.5 * a
+        for k in range(w):
+            xx = (x + k) % W; ys = (y0 + np.arange(L)) % H
+            img[ys, xx] = img[ys, xx] * (1 - f[:, None]) + col(c)[0] * f[:, None]
+
+
+def foot_grime(img, frac, c, a=0.45):
+    """wear and dirt toward the bottom of the tile (image row H-1 = bottom)"""
+    H = img.shape[0]; n = int(H * frac); f = (np.linspace(0, 1, n) ** 2 * a)[:, None, None]
+    img[H - n:] = img[H - n:] * (1 - f) + col(c) * f
+
+
+def blotch(img, c, a=0.25, px=25, thr=0.8):
+    """patchy stains: where smooth noise passes thr, blend toward c"""
+    H, W = img.shape[:2]; m = np.clip((noise(H, W, px) - thr) / 1.2, 0, 1)[..., None] * a
+    return img * (1 - m) + col(c) * m
+
+
+def steel_tex(c, W_m, H_m, P_, seam_m):
+    s_ = base(int(H_m * P_), int(W_m * P_), c, grain=0.05, mott=0.10, mott_px=20)
+    for k in range(int(round(W_m / seam_m))):
+        vline(s_, k * seam_m * P_, 3, tuple(v * 0.45 for v in c)); vline(s_, k * seam_m * P_ + 2, 1, tuple(min(255, v * 1.25) for v in c))
+    s_ = blotch(s_, (96, 70, 52), 0.35, 12, 0.9)
+    s_ = blotch(s_, (196, 198, 204), 0.3, 8, 1.2)  # chalked, chipped paint
+    streaks(s_, 14, (80, 60, 46), 0.4)
+    foot_grime(s_, 0.35, (60, 54, 48))
+    return s_
+
+
 # ---- field grass with mow stripes (8 m bands across the long axis), tile 16 m x 16 m, 40 px/m
 P = 40; W = H = 16 * P
 g = base(H, W, (62, 118, 50), grain=0.10, mott=0.05, mott_px=60)
@@ -52,7 +86,18 @@ stripe = np.where((np.arange(W) // (8 * P)) % 2 == 0, 1.07, 0.93)[None, :, None]
 g = g * stripe
 save('grass_field', g, 16.0, 16.0)
 # ---- apron grass, no stripes
-save('grass', base(10 * P, 10 * P, (64, 116, 50), grain=0.10, mott=0.06, mott_px=50), 10.0, 10.0)
+ga = base(10 * P, 10 * P, (64, 116, 50), grain=0.14, mott=0.12, mott_px=50)
+for k in range(5):  # mower runs 2 m wide, alternate light/dark
+    ga[:, int(k * 2 * P):int((k * 2 + 1) * P)] *= 1.07
+ga = blotch(ga, (128, 122, 70), 0.35, 30, 1.0)  # worn, dry patches
+save('grass', ga, 10.0, 10.0)
+# ---- grass banks (south, east, north-east): mown across the slope every 1.5 m, worn tracks and dry patches
+gb = base(8 * P, 8 * P, (70, 122, 54), grain=0.14, mott=0.12, mott_px=40)
+for k in range(6):
+    gb[int(k * 1.5 * P * 8 / 9):int((k * 1.5 + 0.75) * P * 8 / 9)] *= 1.08
+gb = blotch(gb, (140, 128, 80), 0.45, 25, 0.9)
+gb = blotch(gb, (40, 80, 38), 0.3, 18, 1.1)
+save('grassbank', gb, 8.0, 8.0)
 
 # ---- bowl seating: one bay (u in bay units) x 4 rows (0.85 m per row up the rake), 48 px/m on a 15 m bay
 P = 48; BW = 15.0; RW = 0.85; NROW = 4
@@ -66,7 +111,7 @@ for r in range(NROW):
     for k in range(int(0.62 * P)):
         yy = int(by + k) % H
         sh = 0.90 + 0.12 * (k / (0.62 * P))
-        s[yy, :] = col((178, 100, 78))[0] * sh * (1 + noise(1, W, 1.0, 0.03)[0][:, None])
+        s[yy, :] = col((196, 140, 96))[0] * sh * (1 + noise(1, W, 1.0, 0.03)[0][:, None])
     for k in range(3):  # slat gaps
         hline(s, by + (k + 1) * 0.155 * P, 1, (110, 60, 48), 0.6)
     hline(s, by + 0.62 * P, 2, (70, 50, 40), 0.7)  # bench shadow on the tread
@@ -90,12 +135,6 @@ save('concrete', c, 6.0, 3.0)
 c = base(3 * P, 4 * P, (170, 168, 162), grain=0.06, mott=0.05, mott_px=30)
 vline(c, 0, 2, (115, 112, 108)); vline(c, 2 * P, 2, (115, 112, 108))
 save('path', c, 4.0, 3.0)
-# ---- navy outer wall: painted, panels every 5 m, faint vertical weathering
-P = 40
-n = base(6 * P, 10 * P, (30, 42, 86), grain=0.04, mott=0.05)
-n *= (1 + noise(6 * P, 10 * P, 6, 0.02) * np.linspace(0.3, 1, 6 * P)[:, None])[..., None]
-vline(n, 0, 2, (15, 20, 45)); vline(n, 5 * P, 2, (15, 20, 45))
-save('navy', n, 10.0, 6.0)
 # ---- red-brown gravel concourse (decomposed granite) and the dry grass bank
 P = 40
 gr = base(8 * P, 8 * P, (168, 110, 78), grain=0.12, mott=0.07, mott_px=40)
@@ -110,9 +149,12 @@ for k in range(10):
     x = k * 0.3 * P
     vline(r, x, 2, (108, 110, 118)); vline(r, x + 2, 2, (62, 64, 72))
 save('roof', r, 3.0, 6.0)
-ru = base(6 * P, 6 * P, (112, 114, 120), grain=0.03, mott=0.04)
-for k in range(4):
-    hline(ru, k * 1.5 * P, 4, (80, 82, 88))
+ru = base(6 * P, 6 * P, (112, 114, 120), grain=0.04, mott=0.08)
+for k in range(20):  # sheet ribs every 0.3 m
+    vline(ru, k * 0.3 * P, 2, (88, 90, 96)); vline(ru, k * 0.3 * P + 2, 1, (136, 138, 144))
+for k in range(4):  # purlins every 1.5 m
+    hline(ru, k * 1.5 * P, 6, (70, 72, 78)); hline(ru, k * 1.5 * P + 6, 2, (140, 142, 148))
+ru = blotch(ru, (90, 84, 78), 0.3, 20, 1.0)
 save('roof_under', ru, 6.0, 6.0)
 
 # ---- white concrete walls: panels 3 m x 1.5 m
@@ -145,13 +187,16 @@ save('fence', np.flipud(fe), 24.0, 1.15)
 
 # ---- light tower shaft: concrete, formwork lines every 0.6 m, pour joints every 3 m (u = round the shaft)
 P = 64
-t = base(6 * P, int(1.8 * P), (176, 176, 178), grain=0.04, mott=0.05, mott_px=40)
+t = base(6 * P, int(1.8 * P), (176, 176, 178), grain=0.05, mott=0.09, mott_px=40)
 for k in range(3):
-    vline(t, k * 0.6 * P, 1, (150, 150, 152), 0.6)
-hline(t, 0, 2, (135, 135, 138)); hline(t, 3 * P, 2, (135, 135, 138))
+    vline(t, k * 0.6 * P, 2, (140, 140, 142), 0.8)
+for y in (0, 3 * P):  # pour joints with a rain run below each
+    hline(t, y, 3, (120, 120, 124))
+streaks(t, 10, (120, 118, 116), 0.4)
+t = blotch(t, (150, 146, 136), 0.3, 15, 0.9)
 save('tower', t, 1.8, 6.0)
 # ---- painted steel (end trusses, scoreboard legs): blue
-save('steel', base(2 * P, 2 * P, (58, 88, 168), grain=0.04, mott=0.05), 2.0, 2.0)
+save('steel', steel_tex((58, 88, 168), 2.0, 2.0, P, 1.0), 2.0, 2.0)
 # ---- lamp head: grey frame, 4 rows x 10 lamps facing the field
 P = 48; W = int(11 * P); H = int(6.5 * P)
 L = base(H, W, (150, 150, 156), grain=0.03, mott=0.03)
@@ -173,12 +218,13 @@ save('board', sb, 22.0, 7.0)
 
 # ---- flat roofs of the facade blocks: dark grey membrane, 6 m tile, laps every 1 m
 P = 48
-rf = base(6 * P, 6 * P, (88, 90, 96), grain=0.05, mott=0.05, mott_px=40)
-for k in range(6):
-    hline(rf, k * P, 1, (72, 74, 80), 0.7)
+rf = base(6 * P, 6 * P, (88, 90, 96), grain=0.06, mott=0.10, mott_px=40)
+for k in range(6):  # membrane laps every 1 m: a dark seam and the lit lap edge
+    hline(rf, k * P, 3, (60, 62, 68)); hline(rf, k * P + 3, 1, (120, 122, 128))
+rf = blotch(rf, (120, 116, 106), 0.4, 20, 0.9)  # dried ponding stains
 save('roof_flat', rf, 6.0, 6.0)
 # ---- rear masts: grey painted steel
-save('mast', base(2 * 64, 2 * 64, (128, 128, 132), grain=0.03, mott=0.04), 2.0, 2.0)
+save('mast', steel_tex((128, 128, 132), 2.0, 2.0, 64, 1.0), 2.0, 2.0)
 # ---- stair flights: concrete, a tread edge every 0.3 m along the flight, 4 m wide tile
 P = 64
 st = base(int(3 * P), 4 * P, (178, 175, 168), grain=0.05, mott=0.04)
@@ -217,7 +263,9 @@ save('wall', wl, WW, HH)
 save('wall_z', wl, WW, HH, v0=-2.5)
 # ---- stair treads (pale, lit from above) and risers (the shaded upright faces)
 save('tread', base(96, 96, (214, 210, 200), grain=0.05, mott=0.04), 1.0, 1.0)
-save('riser', base(96, 96, (158, 155, 148), grain=0.05, mott=0.04), 1.0, 1.0)
+ri = base(96, 96, (158, 155, 148), grain=0.06, mott=0.10)
+streaks(ri, 6, (120, 116, 110), 0.35); foot_grime(ri, 0.4, (96, 92, 86), 0.5)
+save('riser', ri, 1.0, 1.0)
 # ---- turnstile cabinet: painted steel, darker kick plate, a coin-counter window
 P = 96; tw = int(1.1 * P); th_ = int(1.0 * P)
 ts = base(th_, tw, (92, 108, 96), grain=0.04, mott=0.03)
@@ -226,9 +274,12 @@ ts[int(0.12 * P):int(0.24 * P), int(0.15 * P):int(0.35 * P)] = col((215, 218, 21
 hline(ts, int(0.12 * P), 2, (40, 44, 42)); hline(ts, int(0.24 * P), 2, (40, 44, 42))
 save('turnstile', ts, 1.1, 1.0, v0=-2.5)
 # ---- step nosing: dark grey anti-slip strip
-save('nosing', base(64, 64, (70, 70, 72), grain=0.06, mott=0.03), 1.0, 1.0)
+no = base(64, 64, (70, 70, 72), grain=0.08, mott=0.06)
+for k in range(0, 64, 4):  # anti-slip ribs
+    vline(no, k, 1, (40, 40, 42)); vline(no, k + 1, 1, (110, 110, 112))
+save('nosing', no, 1.0, 1.0)
 # ---- handrail and gate steel
-save('rail', base(64, 64, (150, 152, 156), grain=0.02, mott=0.02), 1.0, 1.0)
+save('rail', steel_tex((150, 152, 156), 1.0, 1.0, 64, 0.5), 1.0, 1.0)
 P = 64; gw = int(5 * P); gh = int(2.4 * P)
 gt = np.ones((gh, gw, 3)) * col((215, 120, 80))
 gt *= (1 + noise(gh, gw, 1.0, 0.02))[..., None]

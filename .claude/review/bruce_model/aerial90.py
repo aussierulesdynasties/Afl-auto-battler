@@ -52,12 +52,15 @@ def pale(bdeg):
 # apron end, seat/bank toe, walkway a, walkway b, rim inner edge, rim outer edge, outer foot, gravel end, path end
 COLS = ('toe_a', 'toe', 'walk_a', 'walk_b', 'top_in', 'top_out', 'foot', 'path_out', 'conc_out')
 KP = [
-    # north seats: one tier 3 -> 14 m, a second short tier 15 -> 19 m from 92 to 104 degrees, pale concourse behind
-    (110, 0.8, 1.2, 10.0, 11.0, 17.5, 20.0, 24.0, 28.0, 33.0),
-    (104, 1.4, 1.8, 13.0, 15.0, 19.0, 21.5, 25.5, 29.5, 34.0),
-    (92, 3.4, 3.8, 13.0, 15.0, 19.0, 21.5, 25.5, 29.5, 34.0),
-    (88, 3.4, 3.8, 9.0, 10.0, 14.5, 18.0, 22.0, 26.0, 31.0),
-    (70, 3.6, 4.0, 9.0, 10.0, 14.0, 17.0, 21.0, 25.0, 30.0),
+    # north (re-read on unrolled strips, 2026-11-19): lower tier front -> 13.5 m all along; from the stand to 91 deg a
+    # pale cross walkway 13.5 -> 15 m and an upper tier to 19 m; from 90 deg the upper tier is a sliver to 82 deg, then
+    # only the pale rim behind the lower tier
+    (112, 0.8, 1.2, 13.5, 15.0, 19.0, 21.0, 24.0, 28.0, 33.0),
+    (104, 1.4, 1.8, 13.5, 15.0, 19.0, 21.5, 25.5, 29.5, 34.0),
+    (91.5, 3.2, 3.6, 13.5, 15.0, 19.0, 21.5, 25.5, 29.5, 34.0),
+    (90.5, 3.3, 3.7, 13.5, 15.0, 16.3, 18.5, 22.5, 26.5, 31.0),
+    (82, 3.4, 3.8, 13.5, 15.0, 15.4, 18.0, 22.0, 26.0, 31.0),
+    (70, 3.6, 4.0, 13.5, 14.0, 14.4, 17.0, 21.0, 25.0, 30.0),
     # north-east to east: grass bank from the fence, pale rim walkway, terracotta gravel, pale path
     (66, 3.6, 4.0, 8.5, 9.5, 13.5, 16.5, 20.0, 24.0, 28.0),
     (58, 3.5, 3.9, 9.0, 10.0, 15.0, 20.0, 23.0, 30.0, 34.0),
@@ -72,19 +75,21 @@ KP = [
     (-46, 12.0, 16.0, 23.5, 24.0, 32.0, 35.5, 39.0, 43.5, 48.0),
     (-56, 13.0, 17.0, 24.5, 25.0, 32.5, 36.0, 40.0, 44.5, 49.0),
     (-66, 15.0, 19.0, 25.5, 26.0, 33.0, 36.0, 40.0, 44.5, 49.0),
-    # south: grass bank behind a 5 m pale apron; its top edge runs diagonally out towards the south-east seats
-    (-71, 5.0, 6.0, 17.5, 18.5, 30.5, 34.5, 36.5, 44.0, 49.0),
-    (-80, 5.0, 6.0, 16.5, 17.5, 28.0, 32.0, 34.0, 40.0, 45.0),
-    (-88, 5.0, 6.0, 15.0, 16.0, 25.0, 29.0, 31.0, 39.0, 44.0),
-    (-94, 5.0, 6.0, 14.0, 15.0, 22.5, 27.0, 29.0, 37.0, 42.0),
-    (-110, 5.0, 6.0, 12.5, 13.5, 20.0, 24.0, 26.0, 35.0, 40.0),
-    (-120, 5.0, 6.0, 12.0, 13.0, 19.0, 22.0, 24.5, 31.0, 36.0),
-    (-130, 5.0, 6.0, 11.5, 12.5, 18.0, 20.0, 23.0, 28.0, 33.0),
-    # south-west seats: 1.5 -> 12 m to -150, then a lower tier, a pale walkway 10.5 -> 12.5 m and an upper tier to 15.5 m
-    (-132, 1.0, 1.5, 6.5, 7.0, 12.0, 15.0, 20.0, 25.0, 30.0),
-    (-150, 1.0, 1.5, 6.5, 7.0, 12.0, 15.0, 20.0, 25.0, 30.0),
-    (-156, 0.6, 1.0, 10.5, 12.5, 15.5, 18.0, 22.0, 26.0, 30.0),
-    (-180, 0.6, 1.0, 10.5, 12.5, 15.5, 18.0, 22.0, 26.0, 30.0),
+    # south: grass bank behind a 5 m pale apron; its top edge runs diagonally out towards the south-east seats;
+    # gravel then the pale path end 33-35 m and 37-39 m out (re-read 2026-11-19), a lawn instead of gravel past -113
+    (-71, 5.0, 6.0, 17.5, 18.5, 30.5, 34.5, 36.5, 40.0, 45.0),
+    (-80, 5.0, 6.0, 16.5, 17.5, 28.0, 32.0, 33.5, 35.5, 39.0),
+    (-88, 5.0, 6.0, 15.0, 16.0, 25.0, 29.0, 30.5, 33.0, 37.0),
+    (-94, 5.0, 6.0, 14.0, 15.0, 22.5, 27.0, 28.5, 33.5, 37.0),
+    (-110, 5.0, 6.0, 12.5, 13.5, 20.0, 23.0, 24.5, 34.5, 37.5),
+    (-120, 5.0, 6.0, 12.0, 13.0, 19.0, 22.0, 23.5, 34.0, 37.0),
+    (-130, 5.0, 6.0, 11.5, 12.5, 18.0, 20.0, 22.0, 30.0, 33.0),
+    # south-west (re-read 2026-11-19): to -147.5 a pale apron to 3.6 m, one tier 4.2 -> 14.5 m, pale rim to 17.5 m;
+    # a concrete vomitory block -147.5 .. -154; then seats 1.5 -> 14 m, a pale walkway to 16.5 m, an upper tier to 20.5 m
+    (-132, 3.6, 4.2, 8.0, 9.0, 14.5, 17.5, 19.5, 24.0, 27.0),
+    (-147.5, 3.6, 4.2, 8.0, 9.0, 14.5, 17.5, 19.5, 24.0, 27.0),
+    (-154, 0.9, 1.5, 14.0, 16.5, 20.5, 22.0, 24.0, 27.0, 30.0),
+    (-180, 0.9, 1.5, 14.0, 16.5, 20.5, 22.0, 24.0, 27.0, 30.0),
 ]
 
 
@@ -95,8 +100,13 @@ def sector(bdeg):
 
 
 def walkway(bdeg):
-    """a pale cross walkway between two seat tiers: north 90-105, south-west beyond -153"""
-    b = np.asarray(bdeg, float); return ((b > 90) & (b < 105)) | (b < -153)
+    """a pale cross walkway between two seat tiers: all the north stand, south-west beyond -151"""
+    b = np.asarray(bdeg, float); return (b > 68) | (b < -151)
+
+
+def block(bdeg):
+    """the concrete vomitory block in the south-west seats"""
+    b = np.asarray(bdeg, float); return (b > -154.5) & (b < -147.0)
 
 
 def gsmooth(a, sig):
