@@ -134,7 +134,7 @@ paint('orange',(232,110,40))           # stair drums and rails (04, 05)
 paint('steel_white',(226,228,226),var=0.12)   # light towers (07)
 paint('steel_dark',(52,54,58))
 # seat plastics (10, 11, 15, 16, 17): light blue, orange, purple, red, teal; sun-faded, scuffs
-for n_,c_ in (('seat_blue',(96,184,222)),('seat_orange',(236,112,46)),('seat_purple',(158,84,150)),('seat_red',(206,60,48)),('seat_teal',(48,150,160))):save(n_,base(128,128,c_,0.1,3)*(0.94+0.12*noise(128,128,4))[...,None],(0.5,0.5))
+for n_,c_ in (('seat_blue',(122,199,230)),('seat_orange',(239,118,75)),('seat_purple',(162,89,118)),('seat_red',(206,60,48)),('seat_teal',(48,150,160))):save(n_,(np.ones((128,128,3))*np.array(c_,float)+(rng.random((128,128))-0.5)[...,None]*8)*(0.97+0.06*noise(128,128,2))[...,None],(0.5,0.5))
 paint('steel_rust',(128,72,52))   # scoreboard legs (07)
 paint('screen_back',(122,120,88))   # olive cladding on the screen box sides (19)
 paint('timber',(150,104,66),var=0.3)

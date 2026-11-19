@@ -110,14 +110,30 @@ steps=Acc('stand_steps','concrete');conc=Acc('stand_concrete','concrete');soff=A
 # real 3D tip-up seats, empty, in the 2025 mosaic (10, 11, 15, 16, 17): 0.5 m pitch, 1.2 m aisle every 12 m; colour runs of 2-7 seats,
 # 55 % of seats take the colour of the seat in front (the blocky patches in the photos). No crowd.
 import random;SR=random.Random(7);SEATW=0.5;AISLE=1.2;BAY=12.0
-SPAL=['seat_blue','seat_orange','seat_purple','seat_red','seat_teal'];SW=[0.4,0.3,0.22,0.04,0.04]
-SACC={k:Acc('stand_'+k,k) for k in SPAL};SROW={};SPREV={}
+SPAL=['seat_blue','seat_orange','seat_purple','seat_red','seat_teal'];SW=[0.27,0.31,0.42,0.0,0.0]   # photo 17: blue, orange, purple only
+SACC={k:Acc('stand_'+k,k) for k in SPAL};SROW={};SPREV={};steelA=Acc('seat_pedestal','steel_dark')
 def seat_colour(r,i):
     st=SROW.setdefault(r,[0,0])
-    if st[1]<=0:st[0]=SR.choices(range(5),SW)[0];st[1]=SR.randint(2,7)
+    if st[1]<=0:st[0]=SR.choices(range(5),SW)[0];st[1]=SR.randint(3,8)
     st[1]-=1;k=st[0]
-    if r>0 and (r-1,i) in SPREV and SR.random()<0.55:k=SPREV[(r-1,i)]
+    if r>0 and (r-1,i-1) in SPREV and SR.random()<0.8:k=SPREV[(r-1,i-1)]   # bands climb diagonally (photo 17)
     SPREV[(r,i)]=k;return SPAL[k]
+# one bucket seat, local x across, y back from the riser edge, z up (photo 17: tip-up plastic buckets, 0.44 wide in a 0.5 pitch)
+def _seat_template(N=6,M=5,HW=0.22):
+    Q=[];xs=[-HW+2*HW*k/N for k in range(N+1)]
+    def pan(x,v,t):   # v 0 front .. 1 rear; dished across, front edge rolled down
+        y=0.06+0.32*v;z=0.43+0.025*(x/HW)**2-0.035*(1-v)**4-t;return (x*(1-0.05*v),y,z)
+    def back(x,v,t):  # v 0 bottom .. 1 top; curved forward at the sides, leaning back, narrowing to the top
+        w=1-0.12*v;z=0.46+0.48*v;y=0.40+0.16*v-0.07*(x/HW)**2+t;return (x*w,y,z)
+    for f in (pan,back):
+        for t,flip in ((0,False),(0.022,True)):
+            for a in range(N):
+                for b in range(M):
+                    q=[f(xs[a],b/M,t),f(xs[a+1],b/M,t),f(xs[a+1],(b+1)/M,t),f(xs[a],(b+1)/M,t)]
+                    if (f is back)!=flip:q=q[::-1]
+                    Q.append(q)
+    return Q
+SEATQ=_seat_template()
 SIDX={}
 def rake(ts,s0=0.0):
     s=s0
@@ -134,8 +150,8 @@ def rake(ts,s0=0.0):
             while q+SEATW<=s+L+1e-6:
                 if (q%BAY)>=AISLE-1e-6:
                     i=SIDX.get(r,0);SIDX[r]=i+1;acc=SACC[seat_colour(r,i)];c=a0+al*(q-s+SEATW/2)
-                    box(acc,c+bk*0.36+up*0.42,al,bk,up,0.21,0.19,0.03)        # seat pan
-                    box(acc,c+bk*0.6+up*0.5,al,bk,up,0.21,0.025,0.36)         # back, down to the tread as its support
+                    for qd in SEATQ:acc.face([c+al*x+bk*y+up*z for x,y,z in qd])   # bucket seat template (photo 17)
+                    box(steelA,c+bk*0.40+up*0.20,al,bk,up,0.025,0.025,0.20)   # stem behind the pan
                 q+=SEATW
         soff.face([P(t0,0.3,0),P(t1,0.3,0),P(t1,DB,ZB-0.6),P(t0,DB,ZB-0.6)])   # underside seen from the back (06)
         s+=L
@@ -215,7 +231,7 @@ for yy in (ct2[0],ct2[-1]):
 cfa.quad2([(XR,P(ct2[0],0,0)[1],CRZ[1]-RTH-0.6),(XR,P(ct2[-1],0,0)[1],CRZ[1]-RTH-0.6),(XR,P(ct2[-1],0,0)[1],CRZ[1]),(XR,P(ct2[0],0,0)[1],CRZ[1])])
 for t in ct2[1:-1:3]:   # centre roof columns on the box line (17)
     c=P(t,DB+BOXD-0.5,0);rod(stl,(c[0],c[1],ZBOX),(c[0],c[1],CRZ[0]-RTH-0.2-(CRZ[0]-CRZ[1])*0.4),0.25,8)
-for o in list(SACC.values())+[steps,conc,soff,deck,kiosk,rail,rf,ru,fas,stl,cr,cu,cfa]:o.done()
+for o in list(SACC.values())+[steelA,steps,conc,soff,deck,kiosk,rail,rf,ru,fas,stl,cr,cu,cfa]:o.done()
 # ---- orange stair drums at the centre/wing joins, white disc canopies on a column (04, 05, 14; satellite circles)
 for nm,c in (('drum_n',p('drum_n',(-107.0,30.0))),('drum_s',p('drum_s',(-92.4,-31.0)))):
     cyl(nm,c,3.0,0,p('drum_h',8.5),'orange',32);cyl(nm+'_post',c,0.35,8.5,p('disc_z',14.0),'white',12)
