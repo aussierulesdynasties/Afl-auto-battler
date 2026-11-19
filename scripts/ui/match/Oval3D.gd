@@ -848,6 +848,12 @@ static func _kit_edges(m: Mesh) -> Mesh:
 	for i in range(gv.size()):
 		if gv[i].y > low - 0.06 and _inside(gv[i], neck).y < SKIN_REACH + 0.02:
 			lend.append(i)
+	# The guernsey's own cut edge round the neck and armholes (not the hem): the shader fades the cloth
+	# to the skin over the last pixel before it, measured on the mesh itself (CUSTOM2.y: 0 on it, 1 off it).
+	var cut := {}
+	for v in nbr:
+		if pts[v].y > low - 0.01:
+			cut[v] = true
 	var mid := _depth_middle(gv)
 	var measure := func(vs: PackedVector3Array, kind: float) -> Array:
 		var out := PackedFloat32Array()
@@ -858,6 +864,8 @@ static func _kit_edges(m: Mesh) -> Mesh:
 			var p := vs[i]
 			var e := Vector4(FAR, FAR, FAR, kind)
 			more[i * 4] = p.z - _middle_at(mid, p.y)
+			if kind == 1.0:
+				more[i * 4 + 1] = 0.0 if cut.has(wid[i]) else 1.0
 			if kind != 0.5 and p.y > low - 0.06:
 				var n := _inside(p, neck)
 				var r := _nearest_arm(p, arms)
