@@ -22,3 +22,10 @@ Model: `leederville_oval.glb`. Build: `build/` (build.py, tex_*.py, grass_fix.py
    MEMBERS STAND | Home of the LIONS), THE LION'S DEN gable, JACK SWEET MEDIA CENTRE plate, all hand-lettered.
    HOLMAN / SULLIVAN ads removed (plain fascia, plain scoreboard cabinet).
 8. no open faults
+
+## Seat legs: one shared steel leg under each gap (as Optus)
+
+The chunky maroon block under each seat is gone. Each seat now stands on grey steel legs (62,64,67, metallic 0.6, rough 0.45):
+one 8 cm leg under every gap between neighbours, and a 4 cm leg at each row end, flush with the pan.
+Seat colours unchanged (grandstand green, members maroon, south stand blue). Empty seats, no crowd.
+Proof: `seat_legs_board.jpg` (photos E08/E14 beside four close-ups) and `seats_*.jpg`. No open faults.
