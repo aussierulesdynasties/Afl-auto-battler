@@ -31,9 +31,13 @@ def _slab(q, hs, m, capm, uw, vm):   # 4-sided block with a sloped top (heights 
         L += s
     f = bm.faces.new(vt); f.material_index = capm; f = bm.faces.new(vb[::-1]); f.material_index = capm
 
-# pale gate block on Vulture St (roof dark: photo shows the shaded deck under the stadium overhang above its face): front at the footpath, back on the facade. Heights from vertical edges:
-# photo (477,927)-(479,995) 23.6 m, (567,925) 24.7 m -> G1 24 m; G2 21 m (top y ~935); G3 slopes 17.3 m (600,947) -> 13.4 m (687,958)
-_F = [(111.1, 93.3), (93.1, 98.2), (86.1, 100.0), (67.1, 104.6)]
+# ---- NE corner (v6): plan from the top-down sources only (Esri 11135 + current capture, lean-corrected; OSM part 483353591),
+# heights from photo g49. Satellite lean: tall points appear shifted (-0.117, -0.117) m per m of height in 11135.
+def _pf(deg, off=1.0): a = math.radians(deg); return P(a, rF(a) + off, 0)[:2]
+# pale gate block: face 1 m proud of the facade, under the roof overhang, palms on the footpath in front (sat palms at y 84-88).
+# corners from photo columns 477/567/600/687, measured from the NE light tower (photo col 460, angle 40.4 deg) at 8.6 px per degree
+_F = [_pf(42.4), _pf(52.8), _pf(56.7), _pf(66.8)]
+# heights: photo (477,927)-(479,995) 23.6 m, (567,925) 24.7 m -> G1 24 m; G2 21 m; G3 slopes 17.3 m -> 13.4 m
 _Bk = [_fac(_ang(p), 0.3) for p in _F]
 _L = [math.dist(_F[i], _F[i + 1]) for i in range(3)]; _U = [0.0, _L[0], _L[0] + _L[1], sum(_L)]
 prism(_ccw([_F[0], _F[1], _Bk[1], _Bk[0]]), 0, 24.0, PT, True, 4, 4.8, 4.8, DK)
@@ -44,24 +48,24 @@ _skin(_F[0], _F[1], 0, 0, 24.0, 24.0, GF, _U[0], _U[1], 46.0, 24.0)
 _skin(_F[1], _F[2], 0, 0, 21.0, 21.0, GF, _U[1], _U[2], 46.0, 24.0)
 _skin(_F[2], _F[3], 0, 0, 17.3, 13.4, GF, _U[2], _U[3], 46.0, 24.0)
 
-# navy gate-7 block: roof corners (360,940) (381,966) (420,944), front edge (381,966)-(384,990) -> 8.5 m
-_NL, _NF, _NR = (134.7, 78.7), (131.3, 86.6), (122.3, 83.1); _NB = (_NL[0] + _NR[0] - _NF[0], _NL[1] + _NR[1] - _NF[1])
-prism(_ccw([_NL, _NF, _NR, _NB]), 0, 8.5, NW, True, 2, 3.0, 3.0, NW)
-_skin(_NF, _NR, 0, 0, 8.5, 8.5, N7F, 0, 9.7, 9.7, 8.5)
-_rq = [_NB, _NL, _NF, _NR]; _rq = _rq if sum(_rq[i][0] * _rq[(i + 1) % 4][1] - _rq[(i + 1) % 4][0] * _rq[i][1] for i in range(4)) > 0 else None
-face([(x, y, 8.53) for x, y in (_rq or [_NB, _NR, _NF, _NL])], N7R, [(0, 0), (1, 0), (1, 1), (0, 1)])
+# navy Gate 7 block, 8.5 m: north of the white building's notch (OSM 483353591 vertices), north face from the current
+# capture's navy roof (raw y 80, x 100) + lean (2.9, 1.5) at 8.5 m. The "7" face is the north face toward Vulture St.
+_NV = [(102.8, 72.9), (108.7, 66.5), (114.4, 70.0), (111.5, 81.5), (103.0, 81.5)]
+prism(_ccw(_NV), 0, 8.5, NW, True, 2, 3.0, 3.0, NW)
+_skin(_NV[4], _NV[3], 0, 0, 8.5, 8.5, N7F, 0, 8.5, 8.5, 8.5)
+face([(x, y, 8.53) for x, y in _ccw(_NV)], N7R, [(0, 0), (1, 0), (1, 1), (0.5, 1), (0, 1)])
 
-# white building with roof plant, 15 m (its wall rises 18 px above the navy roof): outline unprojected at 15 m
-_W = [(142.3, 18.2), (147.7, 32.3), (151.3, 56.8), (151.2, 62.6), (149.05, 70.21), (142.03, 77.64), _NL, _NB, _NR, (123.36, 86.28), (115.99, 87.35)]
+# white rendered building, 15 m: OSM part 483353591 east side, west side on the stadium facade (sat: its dark south deck runs to the facade)
+_W = [(117.9, 31.1), (120.3, 44.4), (117.3, 49.3), (118.8, 50.2), (120.1, 48.1), (125.8, 51.6), (114.4, 70.0), (108.7, 66.5),
+      (110.2, 64.0), (108.8, 63.1), (102.8, 72.9), (94.8, 68.0), (98.6, 64.2)]
 _W += _arc(_ang(_W[-1]), _ang(_W[0]), 16)
 prism(_ccw(_W), 0, 15.0, WR, True, 3, 3.0, 3.0, RD)
-face([(x, y, 15.05) for x, y in _ccw([(144.11, 38.69), (134.6, 40.28), (131.54, 49.73), (138.57, 55.95), (145.16, 52.1)])], DD)        # dark deck, photo 292-355 x 790-846
-face([(x, y, 15.05) for x, y in _ccw([_out(p) for p in [(129.01, 70.11), (121.27, 62.63), (112.69, 67.81), (115.45, 86.76), (123.36, 86.28)]])], DD)   # dark deck, photo 372-452 x 852-938
-_sk = [_out(p) for p in [(138.6, 57.43), (131.64, 51.54), (121.33, 63.8), (129.04, 71.25)]]                                           # skylight lantern, photo L(326,846) T(354,820) R(408,852) B(378,885)
+face([(x, y, 15.05) for x, y in _ccw([(95.6, 67.6), (102.6, 71.9), (107.9, 63.3), (98.9, 64.8)])], DD)   # terrace with tables (11135 + current)
+face([(x, y, 15.05) for x, y in _ccw([(107.0, 38.0), (117.0, 33.0), (119.3, 44.0), (112.0, 45.0)])], DD)  # planted south deck (both captures)
+_sk = [(103.0, 59.6), (110.2, 62.9), (117.5, 49.4), (112.0, 45.7)]                                       # skylight lantern (11135 trace + lean)
 prism(_ccw(_sk), 15.0, 16.5, WR, True, 1, 3.0, 3.0, WR)
-_sq = _sk if sum(_sk[i][0] * _sk[(i + 1) % 4][1] - _sk[(i + 1) % 4][0] * _sk[i][1] for i in range(4)) > 0 else _sk[::-1]
-face([(x, y, 16.53) for x, y in _sq], SK, [(0, 0), (1, 0), (1, 1), (0, 1)])
-for (px, py), r in (((138.38, 70.33), 3.3), ((142.62, 62.36), 2.4)):                                                                 # round plant screens, photo (335,895) (311,871)
+face([(x, y, 16.53) for x, y in _ccw(_sk)], SK, [(0, 0), (1, 0), (1, 1), (0, 1)])
+for (px, py), r in (((116.0, 62.9), 3.1), ((119.2, 56.3), 2.6)):                                          # round plant screens (11135 + lean at 18.5 m)
     tube((px, py, 15.0), (px, py, 18.5), r, r, WR, 28)
     face([(px + (r - 0.2) * math.cos(t), py + (r - 0.2) * math.sin(t), 18.52) for t in [2 * math.pi * k / 28 for k in range(28)]], DK)
 
@@ -75,6 +79,5 @@ def _dskin(p0, p1, h, ctr, m=NW):
     if e[1] * nx - e[0] * ny < 0: vs, uvs = vs[::-1], uvs[::-1]
     face(vs, m, uvs)
 _wc = (sum(x for x, y in _W) / len(_W), sum(y for x, y in _W) / len(_W))
-_dskin(_NR, (123.36, 86.28), 15.0, _wc); _dskin((123.36, 86.28), (115.99, 87.35), 15.0, _wc)
 _gc = ((_F[0][0] + _F[1][0] + _Bk[0][0] + _Bk[1][0]) / 4, (_F[0][1] + _F[1][1] + _Bk[0][1] + _Bk[1][1]) / 4)
 _dskin(_F[0], _Bk[0], 24.0, _gc)

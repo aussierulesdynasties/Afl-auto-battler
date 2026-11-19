@@ -193,34 +193,37 @@ for _f in (0.2, 0.5, 0.8):                        # fans: grey shroud 3.2 m acro
     tube((_fx, _fy, 23.0), (_fx, _fy, 23.15), 0.6, 0.6, DK, 12)      # dark hub
 for vx, vy in [(-127.25, -16.88), (-130.66, -18.33), (-128.18, -13.65), (-130.32, -12.97), (-128.39, -11.5)]:
     tube((vx, vy, 20.0), (vx, vy, 20.8), 0.6, 0.6, ST, 12)
-for k, poly in D['parts'].items(): prism(poly, 0, 20, HY, True, 6, 11.0, 20.0, RD)   # Hyundai Centre wall, Commons e5
-prism(D['t411'], 0, D['h411'], T4, True, 6, 19.0, None, RD)
-# 411 Vulture St: a balcony slab at every floor, standing 1.0 m proud of the face (photo: serrated edge, 12 bands)
-_q = D['t411'][:-1] if D['t411'][0] == D['t411'][-1] else D['t411']
-_cx = sum(x for x, y in _q) / len(_q); _cy = sum(y for x, y in _q) / len(_q)
-_o = [(x + (x - _cx) / math.hypot(x - _cx, y - _cy) * 1.0, y + (y - _cy) / math.hypot(x - _cx, y - _cy) * 1.0) for x, y in _q]
-# slab faces sit on the photo's bright bands: bottoms 49.95 m down in 3.8 m steps, 0.7 m deep
-for lv in range(13):
-    zz = 49.95 - 3.8 * lv
-    prism(_o, zz, zz + 0.7, T4S, True, 1, 19.0, None, None, 0.25 * (lv % 2))   # notches alternate floor to floor
-# 411 rooftop plant (photo, unprojected at 54.1 m), clipped 1 m inside the roof edge
-def _clip(poly, x0, x1, y0, y1):
-    for ax, lim, keep in ((0, x0, 1), (0, x1, -1), (1, y0, 1), (1, y1, -1)):
-        out = []
-        for i in range(len(poly)):
-            P, Q = poly[i - 1], poly[i]
-            pin, qin = (P[ax] - lim) * keep >= 0, (Q[ax] - lim) * keep >= 0
-            if qin != pin:
-                t = (lim - P[ax]) / (Q[ax] - P[ax]); out.append((P[0] + t * (Q[0] - P[0]), P[1] + t * (Q[1] - P[1])))
-            if qin: out.append(Q)
-        poly = out
-    return poly
-for _b in ([(-95.66, 76.99), (-105.17, 79.54), (-92.3, 102.87), (-83.07, 100.62)],
-           [(-105.83, 88.85), (-114.25, 93.99), (-104.75, 108.67), (-97.25, 104.08)]):
-    _b = _clip(_b, -110.5, -83.0, 65.5, 102.5)
-    if len(_b) >= 3: prism(_b, D['h411'], D['h411'] + 2.5, SC, True, 1, 4.0, None, RD)
+for k, poly in D["parts"].items():
+    if k == "483353591": continue   # NE white building: built in sw.py from the satellite
+    prism(poly, 0, 20, HY, True, 6, 11.0, 20.0, RD)   # Hyundai Centre wall, Commons e5
+if D.get('t411'):   # 411 Vulture St office: outside the stadium site line, left out (director rule: model stops at the outer fence)
+    prism(D['t411'], 0, D['h411'], T4, True, 6, 19.0, None, RD)
+    # 411 Vulture St: a balcony slab at every floor, standing 1.0 m proud of the face (photo: serrated edge, 12 bands)
+    _q = D['t411'][:-1] if D['t411'][0] == D['t411'][-1] else D['t411']
+    _cx = sum(x for x, y in _q) / len(_q); _cy = sum(y for x, y in _q) / len(_q)
+    _o = [(x + (x - _cx) / math.hypot(x - _cx, y - _cy) * 1.0, y + (y - _cy) / math.hypot(x - _cx, y - _cy) * 1.0) for x, y in _q]
+    # slab faces sit on the photo's bright bands: bottoms 49.95 m down in 3.8 m steps, 0.7 m deep
+    for lv in range(13):
+        zz = 49.95 - 3.8 * lv
+        prism(_o, zz, zz + 0.7, T4S, True, 1, 19.0, None, None, 0.25 * (lv % 2))   # notches alternate floor to floor
+    # 411 rooftop plant (photo, unprojected at 54.1 m), clipped 1 m inside the roof edge
+    def _clip(poly, x0, x1, y0, y1):
+        for ax, lim, keep in ((0, x0, 1), (0, x1, -1), (1, y0, 1), (1, y1, -1)):
+            out = []
+            for i in range(len(poly)):
+                P, Q = poly[i - 1], poly[i]
+                pin, qin = (P[ax] - lim) * keep >= 0, (Q[ax] - lim) * keep >= 0
+                if qin != pin:
+                    t = (lim - P[ax]) / (Q[ax] - P[ax]); out.append((P[0] + t * (Q[0] - P[0]), P[1] + t * (Q[1] - P[1])))
+                if qin: out.append(Q)
+            poly = out
+        return poly
+    for _b in ([(-95.66, 76.99), (-105.17, 79.54), (-92.3, 102.87), (-83.07, 100.62)],
+               [(-105.83, 88.85), (-114.25, 93.99), (-104.75, 108.67), (-97.25, 104.08)]):
+        _b = _clip(_b, -110.5, -83.0, 65.5, 102.5)
+        if len(_b) >= 3: prism(_b, D['h411'], D['h411'] + 2.5, SC, True, 1, 4.0, None, RD)
 # far-end screen block in front of the south stand, base at the fence (photo 745-822 x 351-402)
-for (x0, y0), (x1, y1) in [((-0.9, -90.6), (-22.2, -84.6))]:
+for (x0, y0), (x1, y1) in [D.get('screen', ((-0.9, -90.6), (-22.2, -84.6)))]:
     nx, ny = x0 - cx, y0 - cy; L = math.hypot(nx, ny); nx, ny = nx / L * 2.0, ny / L * 2.0
     x0, y0, x1, y1 = x0 - nx * 1.25, y0 - ny * 1.25, x1 - nx * 1.25, y1 - ny * 1.25   # 2.5 m toward the field: clear of the seat rows
     prism([(x0, y0), (x1, y1), (x1 + nx / 2, y1 + ny / 2), (x0 + nx / 2, y0 + ny / 2)], 1.0, 19.0, SC)   # 1 m deep, top at photo y 352

@@ -1,7 +1,7 @@
 import numpy as np,json,sys
 from PIL import Image,ImageFilter,ImageChops,ImageDraw
 exec(open('cam.py').read())
-P=np.array(json.load(open('camfit8.json'))['p']);k=P[31];fo=P[6];cx,cy=P[7],P[8]
+import os;P=np.array(json.load(open(os.environ.get('CAMFIT','camfit8.json')))['p']);k=P[31];fo=P[6];cx,cy=P[7],P[8]
 def distort(img):
     a=np.asarray(img).astype(np.float32);H,W=a.shape[:2]
     u,v=np.meshgrid(np.arange(W),np.arange(H));A=(u-cx)/fo;B=-(v-cy)/fo;x,y=A.copy(),B.copy()
