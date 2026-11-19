@@ -40,8 +40,8 @@ func _run() -> void:
 	print("AABB ", box)
 	if first:
 		quit(1); return
-	var c := box.get_center()
-	var r := box.size.length() * 0.5
+	var c := Vector3(2.47, 14.0, 3.47)   # bowl centre Cc (model x, h, -y): the light towers no longer pull the orbit off-centre
+	var r := 165.0   # furthest building from Cc is ~150 m
 	var env := WorldEnvironment.new()
 	var e := Environment.new()
 	var sky := Sky.new()
@@ -58,8 +58,8 @@ func _run() -> void:
 	env.environment = e
 	world.add_child(env)
 	var sun := DirectionalLight3D.new()
-	# sun fitted to the roof's shadow edge on the oval in g49: az -12, el 25 in the Blender frame (x, y, z) -> Godot (x, z, -y)
-	var saz := deg_to_rad(-12.0); var sel := deg_to_rad(25.0)
+	# sun fitted to the roof's shadow edge on the oval in g49: az -12, el 21 (refit with the plan fixed: shadow edge + lit crescents) in the Blender frame (x, y, z) -> Godot (x, z, -y)
+	var saz := deg_to_rad(-12.0); var sel := deg_to_rad(21.0)
 	var to_sun := Vector3(cos(saz) * cos(sel), sin(sel), -sin(saz) * cos(sel))
 	sun.basis = Basis.looking_at(-to_sun, Vector3.UP)
 	sun.shadow_enabled = true

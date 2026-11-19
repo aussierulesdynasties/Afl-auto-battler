@@ -124,6 +124,20 @@ for i in range(len(B)):
             f = bm.faces.new((G[u][v], G[u + 1][v], G[u + 1][v + 1], G[u][v + 1])); f.material_index = MB
             for l, t in zip(f.loops, [(u / NU, v / NV), ((u + 1) / NU, v / NV), ((u + 1) / NU, (v + 1) / NV), (u / NU, (v + 1) / NV)]): l[uv].uv = t
 
+# dark band closing the slot between the facade top and the roof underside (g49: the stand back is closed up to the roof;
+# an open slot let low sun through onto the shaded east seats and field)
+ZC = kn('band_top', 99.0)   # flat top of the band: above it, the roof lifts at each mast and lets the sun through (g49's lit crescents)
+def _roofz(a, t, r):
+    ri = rI(a) + SCAL * 4 * t * (1 - t); ro = rO(a); s = min(1.0, max(0.0, (r - ri) / (ro - ri)))
+    return zi + (zo - zi) * s + ARCH * math.sin(math.pi * t) * (math.sin(math.pi * s) - s)
+for i in range(len(B)):
+    a0 = B[i]; a1 = B[(i + 1) % len(B)]
+    if a1 < a0: a1 += 2 * math.pi
+    for j in range(NU):
+        t0, t1 = j / NU, (j + 1) / NU; b0 = a0 + (a1 - a0) * t0; b1 = a0 + (a1 - a0) * t1; zt = min(ZB, ZF)
+        z0 = min(_roofz(b0, t0, rF(b0)) - 0.15, ZC); z1 = min(_roofz(b1, t1, rF(b1)) - 0.15, ZC)
+        if z0 > zt or z1 > zt: face([P(b0, rF(b0), zt), P(b1, rF(b1), zt), P(b1, rF(b1), max(z1, zt)), P(b0, rF(b0), max(z0, zt))], DK)
+
 def tube(p0, p1, r0, r1, m, n=8):
     a = mu.Vector(p0); b = mu.Vector(p1); d = (b - a).normalized()
     up = mu.Vector((0, 0, 1)) if abs(d.z) < 0.9 else mu.Vector((1, 0, 0))

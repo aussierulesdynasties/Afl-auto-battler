@@ -2,7 +2,7 @@
 PT = mat('paletile', W1, 0.8, 'paletile.png'); GF = mat('gatefront', W1, 0.8, 'gatefront.png')
 NW = mat('navywall', W1, 0.7, 'navywall.png'); N7F = mat('n7front', W1, 0.7, 'n7front.png'); N7R = mat('n7roof', W1, 0.8, 'n7roof.png')
 WR = mat('whiterender', W1, 0.8, 'whiterender.png'); DD = mat('deckdots', W1, 0.9, 'deckdots.png'); SK = mat('skylight', W1, 0.4, 'skylight.png')
-BOX.update({PT: 4.8, NW: 3.0, WR: 3.0, DD: 6.0, GF: 46.0, N7F: 9.7, N7R: 10.0, SK: 12.0})
+BOX.update({PT: 4.8, NW: 9.0, WR: 9.0, DD: 6.0, GF: 46.0, N7F: 8.5, N7R: 10.0, SK: 12.0})
 def _ccw(p):
     s = sum(p[i][0] * p[(i + 1) % len(p)][1] - p[(i + 1) % len(p)][0] * p[i][1] for i in range(len(p)))
     return p if s > 0 else p[::-1]
@@ -51,19 +51,19 @@ _skin(_F[2], _F[3], 0, 0, 17.3, 13.4, GF, _U[2], _U[3], 46.0, 24.0)
 # navy Gate 7 block, 8.5 m: north of the white building's notch (OSM 483353591 vertices), north face from the current
 # capture's navy roof (raw y 80, x 100) + lean (2.9, 1.5) at 8.5 m. The "7" face is the north face toward Vulture St.
 _NV = [(102.8, 72.9), (108.7, 66.5), (114.4, 70.0), (111.5, 81.5), (103.0, 81.5)]
-prism(_ccw(_NV), 0, 8.5, NW, True, 2, 3.0, 3.0, NW)
-_skin(_NV[4], _NV[3], 0, 0, 8.5, 8.5, N7F, 0, 8.5, 8.5, 8.5)
+prism(_ccw(_NV), 0, 8.5, NW, True, 2, 9.0, 9.0, NW)
+_skin(_NV[3], _NV[4], 0, 0, 8.5, 8.5, N7F, 0, 8.5, 8.5, 8.5)   # u from the east corner so the "7" reads from Vulture St
 face([(x, y, 8.53) for x, y in _ccw(_NV)], N7R, [(0, 0), (1, 0), (1, 1), (0.5, 1), (0, 1)])
 
 # white rendered building, 15 m: OSM part 483353591 east side, west side on the stadium facade (sat: its dark south deck runs to the facade)
 _W = [(117.9, 31.1), (120.3, 44.4), (117.3, 49.3), (118.8, 50.2), (120.1, 48.1), (125.8, 51.6), (114.4, 70.0), (108.7, 66.5),
       (110.2, 64.0), (108.8, 63.1), (102.8, 72.9), (94.8, 68.0), (98.6, 64.2)]
 _W += _arc(_ang(_W[-1]), _ang(_W[0]), 16)
-prism(_ccw(_W), 0, 15.0, WR, True, 3, 3.0, 3.0, RD)
+prism(_ccw(_W), 0, 15.0, WR, True, 3, 9.0, 9.0, RD)
 face([(x, y, 15.05) for x, y in _ccw([(95.6, 67.6), (102.6, 71.9), (107.9, 63.3), (98.9, 64.8)])], DD)   # terrace with tables (11135 + current)
 face([(x, y, 15.05) for x, y in _ccw([(107.0, 38.0), (117.0, 33.0), (119.3, 44.0), (112.0, 45.0)])], DD)  # planted south deck (both captures)
 _sk = [(103.0, 59.6), (110.2, 62.9), (117.5, 49.4), (112.0, 45.7)]                                       # skylight lantern (11135 trace + lean)
-prism(_ccw(_sk), 15.0, 16.5, WR, True, 1, 3.0, 3.0, WR)
+prism(_ccw(_sk), 15.0, 16.5, WR, True, 1, 9.0, 9.0, WR)
 face([(x, y, 16.53) for x, y in _ccw(_sk)], SK, [(0, 0), (1, 0), (1, 1), (0, 1)])
 for (px, py), r in (((116.0, 62.9), 3.1), ((119.2, 56.3), 2.6)):                                          # round plant screens (11135 + lean at 18.5 m)
     tube((px, py, 15.0), (px, py, 18.5), r, r, WR, 28)
@@ -75,7 +75,7 @@ def _dskin(p0, p1, h, ctr, m=NW):
     if nx * ((p0[0] + p1[0]) / 2 - ctr[0]) + ny * ((p0[1] + p1[1]) / 2 - ctr[1]) < 0: nx, ny = -nx, -ny
     q0 = (p0[0] + nx * 0.03, p0[1] + ny * 0.03); q1 = (p1[0] + nx * 0.03, p1[1] + ny * 0.03)
     vs = [(*q0, 0.0), (*q1, 0.0), (*q1, h), (*q0, h)]; e = (q1[0] - q0[0], q1[1] - q0[1])
-    uvs = [(0, 0), (L / 3.0, 0), (L / 3.0, h / 3.0), (0, h / 3.0)]
+    uvs = [(0, 0), (L / 9.0, 0), (L / 9.0, h / 9.0), (0, h / 9.0)]
     if e[1] * nx - e[0] * ny < 0: vs, uvs = vs[::-1], uvs[::-1]
     face(vs, m, uvs)
 _wc = (sum(x for x, y in _W) / len(_W), sum(y for x, y in _W) / len(_W))

@@ -5,14 +5,14 @@ PALE, JOINT = (226, 228, 224), (198, 202, 200)
 def tiles(c, w, h, tw=1.2, th=0.6):
     for i in range(int(w / tw) + 1):
         for j in range(int(h / th) + 1):
-            c.rect(i * tw, j * th, (i + 1) * tw, (j + 1) * th, tone(PALE, R.integers(-4, 5)))
+            c.rect(i * tw, j * th, (i + 1) * tw, (j + 1) * th, tone(PALE, R.integers(-8, 9)))
     for i in range(int(w / tw) + 1): c.vline(i * tw, 0, h, JOINT, 0.03)
     for j in range(int(h / th) + 1): c.hline(j * th, JOINT, 0.03)
 def poly(c, pts, col): c.d.polygon([(c.X(u), c.Y(z)) for u, z in pts], fill=col)
 def ell(c, u, z, w, h, col): c.d.ellipse([c.X(u - w / 2), c.Y(z + h / 2), c.X(u + w / 2), c.Y(z - h / 2)], fill=col)
 
 # pale tiled wall, repeat 4.8 m (sides and backs of the gate block)
-c = Canvas(4.8, 4.8, 64, PALE); tiles(c, 4.8, 4.8); c.save('paletile.png', grain=1.2)
+c = Canvas(4.8, 4.8, 64, PALE); tiles(c, 4.8, 4.8); weather(c, mo=3, mc=1.2, streaks=22, sl=(0.6, 2.4), sk=-20, tops=[4.8, 2.4], seed=21); c.save('paletile.png', grain=1.2)
 
 # gate block front: G1 u 0-18.7 (photo x 477-567), G2 18.7-25.9 (567-600), G3 25.9-45.4 (600-690), z 0-24
 GW, GH = 46.0, 24.0
@@ -36,9 +36,16 @@ c.save('gatefront.png', grain=1.2)
 
 # navy block walls (repeat 3 m) and its maroon front with the gate "7" (9.7 x 8.5 m)
 NAVY, MAR = (30, 40, 78), (112, 26, 40)
-c = Canvas(3.0, 3.0, 64, NAVY); c.vline(0.02, 0, 3, tone(NAVY, -10), 0.04); c.hline(0.02, tone(NAVY, -10), 0.04); c.save('navywall.png', grain=1.5)
-c = Canvas(9.7, 8.5, 64, MAR); c.rect(0, 7.3, 9.7, 8.5, NAVY)
-# the gate "7" left off: blank maroon panel (director 2026-11-18 "C: no lettering")
+c = Canvas(9.0, 9.0, 48, NAVY)
+for k in range(3): c.vline(k * 3.0 + 0.02, 0, 9, tone(NAVY, -10), 0.04); c.hline(k * 3.0 + 0.02, tone(NAVY, -10), 0.04)   # 3 m panel joints, 9 m tile
+weather(c, mo=4.0, mc=0.8, streaks=130, sl=(0.6, 3.2), sk=-22, tops=[9.0, 6.0, 3.0], seed=22); c.save('navywall.png', grain=1.5)
+c = Canvas(8.5, 8.5, 64, MAR); c.rect(0, 7.3, 8.5, 8.5, NAVY)
+# the gate "7" (the ground's own sign, iconography ruling 2026-11-19), white, drawn from photo g49 crop ref_7 (x 389-397, y 974-986):
+# 2.5 m tall, top just under the navy band, 3.2 m from the east (viewer's left) corner; u runs east to west on this face
+W7 = (238, 238, 236); u7 = 3.2
+poly(c, [(u7, 7.05), (u7 + 1.55, 7.05), (u7 + 1.55, 6.7), (u7 + 0.75, 4.5), (u7 + 0.33, 4.5), (u7 + 1.12, 6.68), (u7, 6.68)], W7)
+poly(c, [(u7, 7.05), (u7 + 0.3, 7.05), (u7 + 0.3, 6.4), (u7, 6.5)], W7)       # the down-tick at the bar's left end
+weather(c, mo=4, mc=1.5, streaks=26, sl=(0.8, 3.5), sk=-14, tops=[7.3], seed=23)
 c.save('n7front.png', grain=1.5)
 c = Canvas(10.0, 10.0, 32, (34, 46, 84))                                        # roof: white upstand line set in from the edge
 for a, b in (((0.8, 0.8), (9.2, 0.95)), ((0.8, 9.05), (9.2, 9.2)), ((0.8, 0.8), (0.95, 9.2)), ((9.05, 0.8), (9.2, 9.2))): c.rect(a[0], a[1], b[0], b[1], (230, 232, 232))
@@ -47,7 +54,9 @@ c.save('n7roof.png', grain=1.0)
 
 # white rendered walls (repeat 3 m), dark roof deck with white tables and timber benches (repeat 6 m), skylight lantern top
 WH = (238, 240, 238)
-c = Canvas(3.0, 3.0, 64, WH); c.vline(0.02, 0, 3, (216, 218, 216), 0.03); c.hline(0.02, (216, 218, 216), 0.03); c.save('whiterender.png', grain=1.0)
+c = Canvas(9.0, 9.0, 48, WH)
+for k in range(3): c.vline(k * 3.0 + 0.02, 0, 9, (216, 218, 216), 0.03); c.hline(k * 3.0 + 0.02, (216, 218, 216), 0.03)   # 3 m render joints, 9 m tile
+weather(c, mo=3.0, mc=0.8, streaks=150, sl=(0.8, 3.8), sk=-22, tops=[9.0, 6.0, 3.0], seed=24); c.save('whiterender.png', grain=1.0)
 c = Canvas(6.0, 6.0, 48, (44, 48, 54))
 for u, z in ((1.0, 1.2), (2.6, 4.4), (4.2, 1.8), (5.2, 4.9), (1.6, 3.4), (3.6, 2.9)): ell(c, u, z, 0.55, 0.55, (226, 228, 228))
 c.rect(0.6, 5.0, 2.4, 5.35, (120, 86, 52)); c.rect(3.4, 0.4, 5.4, 0.75, (120, 86, 52))
