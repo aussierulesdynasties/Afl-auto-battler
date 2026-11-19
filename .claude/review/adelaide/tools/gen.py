@@ -511,8 +511,8 @@ for rf in S['roofs']:
     z = roofz(V)
     uv = arc_uv(V, seg_dist(V, PITCH))
     m = Mesh(); m.add(np.c_[V, z], T, [rf['col']] * len(V), uv, 'roof')
-    # second side (underside) so it shows from below: steel purlins under the membrane
-    m.add(np.c_[V, z - 0.3], [tuple(f[::-1]) for f in T], [rf['under']] * len(V), uv, 'steel')
+    # second side (underside) so it shows from below: the membrane fabric itself, cream, lit through (photo west_stands_2023)
+    m.add(np.c_[V, z - 0.3], [tuple(f[::-1]) for f in T], [rf['under']] * len(V), uv, 'roof')
     # back closure: on edges facing away from the pitch, a wall from the stand top (or ground) up to the roof edge
     if rf.get('back'):
         sp = {x['way']: x for x in S['stands']}[rf['stand']]; SP = stand_poly(sp); spath = Path(SP)

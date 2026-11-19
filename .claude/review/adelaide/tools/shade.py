@@ -1,7 +1,7 @@
 """Hand-made procedural materials (no photo pixels). Every vertex carries its colour (read from the photos as a
 material colour), a material kind in the alpha channel (kind * 20 / 255) and UVs in metres. The shader paints the
 pattern of the real material at real size: seat rows, concrete panels, membrane seams, steel, glass, brick, grass."""
-import bpy
+import bpy, os
 
 
 class G:
@@ -134,6 +134,10 @@ def build(obj):
     memb = g.mix(g.m('MULTIPLY', sgr, 0.7), memb, GRIME)
     memb = g.mix(lap, memb, g.scale(C, 0.93))
     out[3] = (g.mix(g.m('MAXIMUM', seam, tseam), memb, g.scale(C, 0.72)), 0.45, 0.0)
+    down = g.m('LESS_THAN', nsep.outputs[2], -0.3)                                        # membrane seen from below
+    lat = g.m('MAXIMUM', g.band(g.frac(g.m('ADD', xyz.outputs[0], xyz.outputs[1]), 9.0), 0.0, 0.04), g.band(g.frac(g.m('SUBTRACT', xyz.outputs[0], xyz.outputs[1]), 9.0), 0.0, 0.04))   # in plan, so it runs on across triangles
+    lat = g.m('MULTIPLY', lat, down)                                                       # diagonal steel lattice under the fabric, 7 m diamonds (photo west_stands_2023)
+    out[3] = (g.mix(lat, out[3][0], g.rgb((0.30, 0.28, 0.20))), 0.45, 0.0)
     # 4 steel: painted steel, purlins every 3 m on undersides
     pur = g.band(g.frac(u, 3.0), 0.0, 0.07)
     sh = g.m('MAXIMUM', g.band(g.frac(u, 1.2), 0.0, 0.012), g.band(g.frac(v, 2.4), 0.0, 0.006))   # sheet seams 1.2 m x 2.4 m
@@ -207,6 +211,9 @@ def build(obj):
         col = g.mix(e, col, ck)
         rough = g.mixf(e, rough, rk); met = g.mixf(e, met, mk)
     g.link(col, bs.inputs['Base Color'])
+    # daylight through the membrane seen from below (director 2026-11-20 chose B, medium); the lattice tubes stay opaque
+    g.link(col, bs.inputs['Emission Color'])
+    g.link(g.m('MULTIPLY', g.m('MULTIPLY', g.m('MULTIPLY', g.m('COMPARE', kind, 3.0), down), g.m('SUBTRACT', 1.0, lat)), 0.5), bs.inputs['Emission Strength'])
     for name, val in (('Roughness', rough), ('Metallic', met)):
         if isinstance(val, (int, float)): bs.inputs[name].default_value = val
         else: g.link(val, bs.inputs[name])
