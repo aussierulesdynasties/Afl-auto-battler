@@ -276,7 +276,7 @@ M = dict(
     roof_zinc_pav=corrugated('roof_zinc_pav', (0.05, 0.17, 0.32), axis=1, metal=0.0, rough=0.75),
     fret=fret('fret'),
     balustrade=balustrade('balustrade'),
-    seat_timber=flat('seat_timber', (0.0802, 0.0742, 0.0561), 0.8, 0, 6, 0.2),
+    seat_timber=flat('seat_timber', (0.055, 0.050, 0.038), 0.8, 0, 6, 0.2),
     roof_zinc=corrugated('roof_zinc', (0.42, 0.48, 0.52), axis=1),
     roof_zinc_x=corrugated('roof_zinc_x', (0.42, 0.48, 0.52), axis=0),
     roof_white=corrugated('roof_white', (0.86, 0.87, 0.85), axis=0, metal=0.2, rough=0.5),
@@ -299,6 +299,7 @@ M = dict(
     seat_green=flat('seat_green', (0.05, 0.3, 0.14), 0.4),
     seat_white=flat('seat_white', (0.85, 0.86, 0.84), 0.4),
     seat_navy=flat('seat_navy', (0.03, 0.07, 0.12), 0.4),
+    seat_pavchair=flat('seat_pavchair', (0.30, 0.28, 0.23), 0.7, 0, 9, 0.35),
     maroon=flat('maroon_fascia', (0.32, 0.04, 0.12), 0.45),
     red=flat('club_red', (0.62, 0.04, 0.05), 0.45),
     mural_red=flat('mural_red', (0.22, 0.006, 0.009), 0.45),
@@ -605,14 +606,14 @@ def pavilion():
         q.append([PF(Y_S, s0, z), PF(Y_N, s0, z), PF(Y_N, s1, z), PF(Y_S, s1, z)])
         q.append([PF(Y_S, s1, z), PF(Y_N, s1, z), PF(Y_N, s1, z + 0.45), PF(Y_S, s1, z + 0.45)])
     faces_obj(q, 'pav_tiers', 'seat_timber')
-    q = []; ql = []     # one slatted bench per tier, seat 0.42 m above the tread, at the back of the tread (g39)
+    q = []; fr = []     # 3D empty seats in the timber colour (g39), one every 0.5 m along each tier, facing the field
     for i in range(9):
-        z = 2.7 + i * 0.45; s1 = 1.2 + i * 1.0 + 1.0; b0, b1 = s1 - 0.62, s1 - 0.22
-        q.append([PF(Y_S, b0, z + 0.42), PF(Y_N, b0, z + 0.42), PF(Y_N, b1, z + 0.42), PF(Y_S, b1, z + 0.42)])
-        q.append([PF(Y_S, b0, z + 0.3), PF(Y_N, b0, z + 0.3), PF(Y_N, b0, z + 0.42), PF(Y_S, b0, z + 0.42)])
-        for y_ in np.arange(Y_S + 0.6, Y_N, 2.4):
-            ql.append([PF(y_, b0 + 0.05, z), PF(y_ + 0.06, b0 + 0.05, z), PF(y_ + 0.06, b0 + 0.05, z + 0.3), PF(y_, b0 + 0.05, z + 0.3)])
-    faces_obj(q, 'pav_seats', 'seat_timber'); faces_obj(ql, 'pav_seat_legs', 'white')   # white metal brackets (g39)
+        z = 2.7 + i * 0.45; sc = 1.2 + i * 1.0 + 0.55
+        for y_ in np.arange(Y_S + 0.35, Y_N - 0.2, 0.5):
+            c0 = np.array(PF(y_, sc, 0)[:2]); fv = np.array(PF(y_, sc - 1.0, 0)[:2]) - c0
+            cq = chair_q(c0, fv, z); q += cq[:-1]; fr.append(cq[-1])
+    faces_obj(q, 'pav_seats', 'seat_pavchair')
+    faces_obj(fr, 'pav_seat_frames', 'mid_grey')   # grey metal seat frames (g39 brackets)
     M.setdefault('mesh_dark', chain_mesh('mesh_dark'))
     prism([PF(Y_S, -0.2)[:2], PF(Y_N, -0.2)[:2], PF(Y_N, 1.2)[:2], PF(Y_S, 1.2)[:2]], 0, 2.6, 'pav_plinth', 'mesh_dark', top=False)
     faces_obj([[PF(Y_S, -0.2, 2.6), PF(Y_N, -0.2, 2.6), PF(Y_N, 1.2, 2.6), PF(Y_S, 1.2, 2.6)]], 'pav_deck', 'concrete')
@@ -812,8 +813,19 @@ def buildings():
             q.append([(*a0, z), (*b0, z), (*b1, z), (*a1, z)])
             r.append([(*a0, z - 0.42), (*b0, z - 0.42), (*b0, z - 0.06), (*a0, z - 0.06)])
             nose.append([(*a0, z - 0.06), (*b0, z - 0.06), (*b0, z + 0.003), (*a0, z + 0.003)])
-    faces_obj(q, 'nstand_seats', 'seat_navy')
-    faces_obj(r, 'nstand_risers', 'seat_navy')
+    # 3D empty navy seats (g33): one every 0.5 m along each row, on the tread centre, facing the field
+    ch = []
+    for t in q:
+        a0, b0, b1, a1 = [np.array(v[:2]) for v in t]; z = t[0][2]
+        L = np.linalg.norm(b0 - a0)
+        if L < 0.3: continue
+        fv = (a0 + b0) / 2 - (a1 + b1) / 2
+        for k in np.arange(0.25, L - 0.2, 0.5):
+            m = k / L; cc = (a0 + (b0 - a0) * m) * 0.55 + (a1 + (b1 - a1) * m) * 0.45
+            ch += chair_q(cc, fv, z, h=0.40, hb=0.38)
+    faces_obj(q, 'nstand_treads', 'concrete')
+    faces_obj(ch, 'nstand_seats', 'seat_navy')
+    faces_obj(r, 'nstand_risers', 'concrete')
     faces_obj(nose, 'nstand_nosing', 'concrete')
     # posts on the seat front line, up to the roof underside there (front edge -> back line B)
     def fy(x):
@@ -1116,6 +1128,16 @@ def gj_badge(u, v, z, r, face, red='red'):
     hd = [P(r * 0.30 * _m.cos(2 * _m.pi * i / 20), -r * 0.05 + r * 0.26 * _m.sin(2 * _m.pi * i / 20), 0.045) for i in range(20)]
     faces_obj([hd, [P(-r * 0.30, r * 0.12, 0.045), P(-r * 0.12, r * 0.18, 0.045), P(-r * 0.26, r * 0.36, 0.045)],
                [P(r * 0.12, r * 0.18, 0.045), P(r * 0.30, r * 0.12, 0.045), P(r * 0.26, r * 0.36, 0.045)]], n + '_head', 'mid_grey')
+
+def chair_q(c, f, z, w=0.40, d=0.40, h=0.42, hb=0.40):
+    # one empty moulded seat on a tread: pan, raked back and a front skirt; c = pan centre (x, y), f = unit vector
+    # toward the field, z = tread top. Neighbours are placed with a gap, so each seat reads on its own.
+    c = np.array(c[:2], float); f = np.array(f[:2], float); f = f / np.linalg.norm(f); sd = np.array([-f[1], f[0]])
+    P = lambda a, b, zz: (*(c + f * a + sd * b), zz)
+    hw = w / 2
+    return [[P(d / 2, -hw, z + h), P(d / 2, hw, z + h), P(-d / 2, hw, z + h), P(-d / 2, -hw, z + h)],
+            [P(-d / 2, -hw, z + h), P(-d / 2, hw, z + h), P(-d / 2 - 0.08, hw, z + h + hb), P(-d / 2 - 0.08, -hw, z + h + hb)],
+            [P(d / 2 - 0.02, -hw + 0.02, z), P(d / 2 - 0.02, hw - 0.02, z), P(d / 2 - 0.02, hw - 0.02, z + h), P(d / 2 - 0.02, -hw + 0.02, z + h)]]
 
 def griff_john():
     global GJ_FONT
@@ -1792,7 +1814,7 @@ elif MODE in ('turn', 'close'):
                  'hq_facade': ((12.0, -82.0, 2.5), (12.0, -99.0, 5.0)),
                  'seat_nstand': ((-14.0, 82.0, 3.5), (-22.0, 93.0, 3.0)),
                  'seat_gj': (GJ(18, 7, 6.5), GJ(24, -3.5, 2.2)),
-                 'seat_pav': (tuple(PF(10.0, 7.7, 7.0)), tuple(PF(30.0, 2.0, 3.6)))}
+                 'seat_pav': (tuple(PF(8.0, -6.0, 5.0)), tuple(PF(16.0, 4.0, 5.0)))}
         if len(sys.argv) > sys.argv.index('--') + 3:
             only = sys.argv[sys.argv.index('--') + 3].split(',')
             shots = {k: v for k, v in shots.items() if k in only}
