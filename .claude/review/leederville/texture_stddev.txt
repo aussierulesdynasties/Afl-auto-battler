@@ -24,7 +24,8 @@ glass_shop      14.9
 brick_red       33.5
 roof_tan        12.3
 bank_soil       13.2
+apron_dirt      17.5
 step_tread      10.6
-seat_blue       16.8
+seat_blue_blk   36.8
 roof_grey       11.9
 orange_band     10.1
