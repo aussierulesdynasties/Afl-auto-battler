@@ -1,8 +1,8 @@
 # SCG model geometry in world metres (x east, y north, z up), from OSM footprints + photo back-projection.
 exec(open('meas.py').read())
 MATS={'glasst':(48,104,176),'spand':(158,164,168),'cladl':(208,211,212),'ground':(70,70,72),'grass':(95,140,55),'apron':(120,120,115),'seat':(45,105,100),'seatm':(104,40,46),'wall':(200,195,185),
- 'roof':(236,236,232),'roofu':(150,150,150),'fascia':(225,222,215),'facade':(222,200,165),'facade2':(205,205,205),
- 'tower':(118,106,88),'lamp':(240,240,230),'screen':(25,30,45),'hroof':(85,150,80),'brick':(195,120,85),'glass':(50,55,65),'plant':(180,180,175),'headback':(124,113,112),'glassroof':(95,95,100),'stone':(214,210,200),'steel':(200,202,205),'glassm':(34,40,48),'fence':(238,238,234),'ribbon':(232,112,38),'soffit':(52,58,64),'rail':(150,152,154),'sbface':(26,28,32),'sbad':(242,168,40),'glassblk':(30,28,30)}
+ 'roof':(236,236,232),'roofu':(150,150,150),'fascia':(225,222,215),'facade':(222,200,165),'facade2':(205,205,205),'sbback':(58,62,70),
+ 'tower':(118,106,88),'lamp':(240,240,230),'screen':(25,30,45),'hroof':(85,150,80),'brick':(195,120,85),'glass':(50,55,65),'plant':(180,180,175),'headback':(124,113,112),'glassroof':(95,95,100),'stone':(214,210,200),'podium':(206,202,200),'steel':(200,202,205),'glassm':(34,40,48),'fence':(238,238,234),'ribbon':(232,112,38),'soffit':(52,58,64),'rail':(150,152,154),'sbface':(26,28,32),'sbad':(242,168,40),'glassblk':(30,28,30)}
 V=[];F=[]  # F: (i,j,k[,l], mat)
 def v(x,y,z):V.append((x,y,z));return len(V)-1
 def quad(a,b,c,d,m):F.append(((a,b,c,d),m))
@@ -71,7 +71,12 @@ def _mes_zo(d):return interp(TF['203o'],d)+interp(_MDZ,d) if d<=107 else float(n
 exec(open('sat_plan.py').read())
 def _sp(k):return lambda d:interp(SP[k],d)
 _mf0=_sp('mes_f');_mes_o=_sp('mes_o')
-def _mes_f(d):return float(np.mean([_mf0(d+e) for e in np.arange(-1.5,1.51,0.25)]))   # +-1.5 deg mean: rounds the corners of the hand-traced satellite polyline (the real field edge is one smooth curve)
+def _mes_fs(d):return float(np.mean([_mf0(d+e) for e in np.arange(-1.5,1.51,0.25)]))   # +-1.5 deg mean: rounds the corners of the hand-traced satellite polyline (the real field edge is one smooth curve)
+# director 2026-11-20 ("The photos"): the front edge follows the two-photo triangulation (aerial + 063), 13-23 m out
+# from the satellite trace (roof lean in the off-nadir satellite); the glazing keeps its satellite width behind it
+_MFIT={42:14.5,45:14.5,50:13.5,55:13,60:13.5,65:14,70:15,75:16,80:17.5,85:19.5,90:23.5,100:13.5,107:13.5}
+def _mes_dr(d):return float(np.mean([interp(_MFIT,d+e) for e in np.arange(-2.5,2.51,0.25)]))
+def _mes_f(d):return min(_mes_fs(d)+_mes_dr(d),_mes_o(d)-6.0)
 def _mes_zf(d):return interp(TF['203'],d)
 def _mes_zo(d):return interp(TF['203o'],d)
 MLOW=97.5   # heritage photo: the Messenger's upper tier and podium end here; only the low bowl and roof tip go on
@@ -104,7 +109,7 @@ for k,(a0,a1,rf,zf,ro,zo) in STANDS.items():
     if k=='messenger':
         # photos (reference + 063): a thin white rim at the field edge, then glazing with cross ribs sloping up 4 m to the
         # white blade (widest ~9 m mid-span, tapering to nothing at both ends); the blade rises from there to the back edge
-        def _gw0(d):return max(0.0,interp(SP['mes_w'],d)-_mes_f(d)-1.5)
+        def _gw0(d):return max(0.0,interp(SP['mes_w'],d)-_mes_fs(d)-1.5)
         def gw(d):return float(np.mean([_gw0(d+e) for e in np.arange(-2.5,2.51,0.25)]))   # +-2.5 deg mean: the two satellite traces have knots at different angles, raw difference ripples ~1 m (saw-tooth glass top)
         def pmes(d,rf=rf,zf=zf,ro=ro,zo=zo):
             lo,hi=rf(d),ro(d)
@@ -193,7 +198,7 @@ def mesback(d):
     lo,hi,zf,zo,k=o;top=max(MPOD+5.6,mund(d,hi-5,lo))
     # podium, glass balustrade, terrace, then the concourse 5 m in: white upstand, window band, white band, shaded void to the roof
     return [(hi,0),(hi,MPOD),(hi,MPOD+1.1),(hi,MPOD),(hi-5,MPOD),(hi-5,MPOD+1.2),(hi-5,MPOD+4.2),(hi-5,MPOD+5.2),(hi-5,top)]
-band(mesback,44.5,MLOW,['stone','glass','glass','slab','wall','glassm','wall','dark'])
+band(mesback,44.5,MLOW,['podium','glass','glass','slab','wall','glassm','wall','dark'])
 def mescore(d):   # 42-44.5 deg: concrete stair core beside the podium (063 photo x 690-755)
     o=OUT.get(round(d*2)/2%360)
     if not o or o[4]!='messenger':return None
@@ -234,10 +239,9 @@ def seats(d):
         rD=(g+0.5+rb)/2;zD=sl(rD);mid=[(rD,zD)]*6
     else:
         rD=g+D;zD=sl(rD-3.0);mid=[(rD-3.0,zD),(rD,zD),(rD,zD+1.2),(rD-1.0,zD+1.2),(rD-1.0,zD+2.2),(rD-0.4,zD+2.2)]   # photo: a shaded cross-aisle (~2 m seen) under the ribbon's 1 m overhang
-    lower=[(g+0.5+(mid[0][0]-g-0.5)*t,sl(g+0.5+(mid[0][0]-g-0.5)*t)) for t in (0.5,)]
-    u0=mid[-1];upper=[(u0[0]+(rb-u0[0])*t,u0[1]+(zb-u0[1])*t) for t in (0.33,0.67,1.0)]
+    lower=[];upper=[(rb,zb)]   # one straight seat section each side of the cross-aisle, so the 3D seat rows run unbroken
     return [(g,0.05),(g+0.5,1.2)]+lower+mid+upper   # director: leave the field out (game draws grass inside the fence)
-band(seats,-180,180,['fence','seat','seat','dark','dark','dark','ribbon','slab','seat','seat','seat'])
+band(seats,-180,180,['fence','seat','dark','dark','dark','ribbon','slab','seat'])
 # heritage bowl (110-169.5 deg): maroon lower-tier seats from the fence up to the stands' field edge (satellite + field
 # photo), topping out 1.5 m under the verandah so the stand faces show from the verandah up
 exec(open('blds.py').read())
@@ -367,14 +371,14 @@ def sbpanel(t0,t1,z0,z1,m,depth=3.0):
     def q(X,z,off):return v(X[0]-fx_*off,X[1]-fy_*off,z)
     a1,a2,b2,b1=q(P0,z0,0),q(P1,z0,0),q(P1,z1,0),q(P0,z1,0)
     c1,c2,d2,d1=q(P0,z0,depth),q(P1,z0,depth),q(P1,z1,depth),q(P0,z1,depth)
-    F.append(((a1,a2,b2,b1),m));quad(c2,c1,d1,d2,'facade2');quad(a2,c2,d2,b2,'facade2');quad(c1,a1,b1,d1,'facade2');quad(b1,b2,d2,d1,'facade2');quad(a1,c1,c2,a2,'facade2')
+    F.append(((a1,a2,b2,b1),m));quad(c2,c1,d1,d2,'sbback');quad(a2,c2,d2,b2,'sbback');quad(c1,a1,b1,d1,'sbback');quad(b1,b2,d2,d1,'sbback');quad(a1,c1,c2,a2,'sbback')   # back and sides: dark ribbed cladding (photo 063 median 47,51,59)
     d_=(P1-P0);W_=float(np.linalg.norm(d_));DECALS[m]={'o':[float(P0[0]),float(P0[1])],'d':[float(d_[0]/W_),float(d_[1]/W_)],'w':W_,'z0':z0,'z1':z1}
 sbpanel(0.0,0.955,zb0,zb1,'sbface',0.8);sbpanel(0.955,1.165,zb0,zb1+0.5,'sbad',0.8)
 sbpanel(0.02,0.62,4.0,zb0,'facade2',1.0)   # grey base wall under the board's left half (photo)
 # --- the ground's own signs (director: ground's own lettering yes, no sponsor boards). Raised letters on the scoreboard
 # roof, 'SYDNEY CRICKET GROUND' (refs3/101.jpg): about 90% of the board width, set just behind the face, facing the field.
 _sc=_sbp(0.4775);SIGNS=[{'txt':'SYDNEY CRICKET GROUND','x':float(_sc[0]-fx_*0.4),'y':float(_sc[1]-fy_*0.4),'z':zb1,
-  'nx':float(fx_),'ny':float(fy_),'w':0.9*0.955*float(np.linalg.norm(_sB-_sA)),'h':1.55,'d':0.25,'m':'steel'},
+  'nx':float(fx_),'ny':float(fy_),'w':0.9*0.955*float(np.linalg.norm(_sB-_sA)),'h':1.55,'d':0.25,'m':'facade'},   # near-white painted letters (photo 101: ~236,241,230)
   # 'BREWONGLE STAND' on the roof fascia beside the Ladies (refs3/044.jpg): dark letters, 40 x 4 photo px -> 2.7 x 0.3 m,
   # 1.5 m under the roof edge; point ray-cast from a matched field view (rc.py, brew185 pixel 674,462)
   # front face of the roof fascia (ray-cast: x -84.65 at y -27.98, z 14.15-15.75, normal 0.996,0.094); letters 14.6-14.9 m, lower-middle of the band as in the photo

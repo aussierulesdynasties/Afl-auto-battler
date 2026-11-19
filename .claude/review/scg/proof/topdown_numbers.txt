@@ -1,0 +1,13 @@
+outline pts 4342 (868 m)  median 0.44 m  p90 1.68 m  within 1 m 75%  within 2 m 93%  max 7.2 m
+    0- 30 deg  n  325  median 0.44  p90 1.44  >2 m 0%
+   30- 60 deg  n  365  median 1.44  p90 4.24  >2 m 28%
+   60- 90 deg  n  336  median 0.28  p90 0.72  >2 m 0%
+   90-120 deg  n  622  median 1.24  p90 3.63  >2 m 27%
+  120-150 deg  n  424  median 0.44  p90 1.60  >2 m 4%
+  150-180 deg  n  432  median 0.80  p90 1.44  >2 m 2%
+  180-210 deg  n  287  median 0.40  p90 0.64  >2 m 0%
+  210-240 deg  n  283  median 0.64  p90 1.08  >2 m 0%
+  240-270 deg  n  318  median 0.28  p90 0.56  >2 m 0%
+  270-300 deg  n  326  median 0.20  p90 0.40  >2 m 0%
+  300-330 deg  n  344  median 0.34  p90 1.00  >2 m 1%
+  330-360 deg  n  280  median 0.40  p90 0.84  >2 m 0%

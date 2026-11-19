@@ -13,23 +13,23 @@ def base(h,w,col):return np.ones((h,w,3))*np.array(col,float)
 def M(x,tu,W):return int(round(x/tu*W))   # metres -> px along u
 
 # --- seats: 24 seats of 0.5 m + a 1.1 m aisle stair = 13.1 m wide; 4 rows of 0.85 m
-def seats():
-    tu,tv=13.1,3.4;W,H=2048,532;img=base(H,W,(104,108,104))+grain(H,W,4)   # concrete terrace, in the seats' shade
+def seats(name='seat',col=(32,128,122),bg=(104,108,104),sh=(80,82,80),ai=(140,140,134),no=(205,180,40)):
+    tu,tv=13.1,3.4;W,H=2048,532;img=base(H,W,bg)+grain(H,W,4)   # concrete terrace, in the seats' shade
     rp=H/4
     for r in range(4):
         y0=int(r*rp)
-        img[y0:y0+int(rp*0.10)]=(80,82,80)                         # riser shadow line
+        img[y0:y0+int(rp*0.10)]=sh                         # riser shadow line
         for s in range(24):
             x0=M(s*0.5+0.02,tu,W);x1=M(s*0.5+0.48,tu,W)
-            c=np.array((32,128,122))+rng.integers(-5,6,3)            # SCG teal seats
+            c=np.array(col)+rng.integers(-5,6,3)            # SCG teal seats; heritage maroon
             img[y0+int(rp*0.12):y0+int(rp*0.66),x0:x1]=c               # seat back
             img[y0+int(rp*0.12):y0+int(rp*0.16),x0:x1]=c+28            # top edge catching light
             img[y0+int(rp*0.66):y0+int(rp*0.86),x0+2:x1-2]=c*0.62      # seat pan in shade
         ax=M(12.0,tu,W)                                               # aisle stair
-        img[y0:y0+int(rp),ax:ax+M(1.1,tu,W)]=(140,140,134)
-        for k in range(3):img[y0+int(rp*k/3):y0+int(rp*k/3)+3,ax:ax+M(1.1,tu,W)]=(205,180,40)   # yellow step nosings
+        img[y0:y0+int(rp),ax:ax+M(1.1,tu,W)]=ai
+        for k in range(3):img[y0+int(rp*k/3):y0+int(rp*k/3)+3,ax:ax+M(1.1,tu,W)]=no   # yellow step nosings
         img[y0:y0+int(rp),ax:ax+4]=(120,120,118);img[y0:y0+int(rp),ax+M(1.1,tu,W)-4:ax+M(1.1,tu,W)]=(120,120,118)
-    save('seat',img,tu,tv)
+    save(name,img,tu,tv)
 
 def grass():
     tu=tv=40.0;N=2048;img=base(N,N,(92,142,58));x=np.arange(N)
@@ -95,7 +95,7 @@ def lamp():
             cv2.circle(img,(int((i+0.5)*N/4),int((j+0.5)*N/4)),int(N/10),(246,246,238),-1);cv2.circle(img,(int((i+0.5)*N/4),int((j+0.5)*N/4)),int(N/10),(150,150,150),3)
     save('lamp',img,tu,tv)
 
-seats();grass();roof();roofu();fascia()
+seats();seats('seatm',(100,34,40),bg=(74,68,66),sh=(44,38,40),ai=(112,106,98),no=(176,166,140));grass();roof();roofu();fascia()
 panels('wall',(212,208,198),4.0,3.0,8.0,6.0,(170,166,158))
 panels('conc',(196,192,184),2.4,1.2,4.8,4.8,(160,156,150))
 panels('slab',(228,226,221),6.0,10.0,6.0,1.0,(190,188,184),N=512)
@@ -110,7 +110,7 @@ panels('plant',(182,182,177),1.0,1.0,4.0,4.0,(150,150,146),ribs=0.1)
 panels('headback',(112,114,118),1.0,1.0,4.0,4.0,(90,92,96),N=512)
 panels('screen',(22,24,30),4.0,4.0,4.0,4.0,(22,24,30),N=256)
 panels('hroof',(60,124,58),40.0,40.0,2.0,2.0,(60,124,58),N=512,ribs=0.2)
-bricks('buff',(206,178,132),(222,214,198));bricks('brick',(160,78,58),(196,186,172))
+bricks('buff',(206,178,132),(222,214,198));bricks('brick',(120,74,64),(150,140,128))   # photo 063 Members-end brick: median 126,85,77, dark mortar
 # --- boundary fence (reference photo): white boards with red panels; pattern runs along the fence only
 def fence():
     tu,tv=12.0,1.2;W,H=1024,128;img=base(H,W,(238,238,234))+grain(H,W,1.5)
@@ -161,4 +161,5 @@ def sbad():
     save('sbad',img,1.0,1.0)
 sbface();sbad()
 exec(open('hertex.py').read())
+exec(open('texpass.py').read())
 json.dump(SCALE,open('out/tex/scale.json','w'),indent=0);print(sorted(SCALE))

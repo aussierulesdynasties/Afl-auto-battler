@@ -33,4 +33,6 @@ shot('mes_tip',230,20,60,lens=35,tgt=Vector((80.0,56.0,28.0)))   # Messenger roo
 shot('mes_tip_out',40,15,70,lens=35,tgt=Vector((82.0,58.0,26.0)))
 for _az in (170,185,200,215):shot('brew%d'%_az,_az+180,3,90,lens=35,tgt=polt(_az,80,12))   # field-side looks at the stands beside the Ladies (refs3/044 view)
 shot('brew_sign',5,4,22,lens=35,tgt=Vector((-84.6,-28.0,14.75)))   # Brewongle Stand fascia lettering close-up
+shot('seats_close',240,14,16,lens=35,tgt=polt(60,74,4))   # empty-seat close-up: Messenger lower tier from the boundary
+shot('seats_close2',150,12,16,lens=35,tgt=polt(-30,72,4))   # O'Reilly lower tier
 print('TURN-DONE')

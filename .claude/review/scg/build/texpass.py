@@ -77,7 +77,7 @@ def led(name,tu,tv,W,H,col=(30,32,36),cell=0.32):
 concrete('conc',(196,192,184),4.8,4.8,2.4,1.2,(150,146,140))
 concrete('wall',(212,208,198),8.0,6.0,4.0,3.0,(160,156,148),streak=60)
 concrete('slab',(228,226,221),6.0,1.0,6.0,1.0,(176,174,170),N=1024,streak=30,ties=False)
-concrete('tower',(168,160,146),2.0,4.0,0.5,1.2,(140,133,120),N=512,var=9,streak=36,ties=False)
+metal('tower',(104,132,122),2.0,4.0,2.0,4.0,(80,104,96),N=512,var=6,streak=36,wear=40)   # light towers: painted green steel (photo 063 shaft: lit ~140,170,157, shade ~55,85,85)
 concrete('dark',(48,50,54),6.0,6.0,3.0,3.0,(26,28,30),var=9,streak=40)
 concrete('headback',(112,114,118),4.0,4.0,1.0,1.0,(84,86,90),N=512,var=8)
 # --- sandstone ashlar base (stone): coursed blocks, each its own tone, darker weathering at the foot
@@ -88,8 +88,11 @@ def stone():
     img+=_streaks(H,W,40,16)
     save('stone',img,tu,tv)
 stone()
+# --- Messenger podium (photo 063): tall pale precast panels ~1.5 m wide, full-height vertical joints, faint streaks
+concrete('podium',(206,202,200),6.0,6.0,1.5,6.0,(170,166,164),var=6,streak=30,ties=False)
 # --- metal cladding
 metal('facade',(226,227,225),7.2,7.2,1.2,3.6,(186,188,188))
+metal('sbback',(58,62,70),6.0,6.0,3.0,6.0,(40,42,48),ribs=0.3,streak=20,wear=20)   # scoreboard back and sides (photo 063: dark ribbed, median 47,51,59 in shade)
 metal('facade2',(152,157,162),6.0,6.0,3.0,3.0,(116,120,124),ribs=0.3)
 metal('cladl',(208,211,212),6.0,2.0,1.5,1.0,(160,162,164),var=9,streak=50)
 metal('spand',(158,164,168),6.0,0.9,1.5,0.9,(122,126,130),N=1024,streak=20)

@@ -28,6 +28,9 @@ bm=bmesh.new();vs=[bm.verts.new(v) for v in D['V']];uvl=bm.loops.layers.uv.new('
 PC=Vector((0.94,-11.82,0))
 PLANAR=('grass','ground','apron')
 import os
+SEATQ=[]
+for f in D['F']:
+    if f['m'] in('seat','seatm'):SEATQ.append((f['m'],[D['V'][i] for i in f['v']]));f['m']='conc'
 DEC=json.load(open(S+'/decals.json')) if os.path.exists(S+'/decals.json') else {}
 for f in D['F']:
     try:fa=bm.faces.new([vs[i] for i in f['v']])
@@ -51,6 +54,7 @@ for f in D['F']:
         else:u,v=r,p.z                                             # side walls of fins and boxes
         l[uvl].uv=(u/tu,v/tv)
 bm.normal_update();bm.to_mesh(me);me.update()
+exec(open(S+'/seats3d.py').read())
 # raised lettering (signs.json from geo.py): Blender's built-in font, extruded, converted to mesh, joined into the model
 if os.path.exists(S+'/signs.json'):
     for sg in json.load(open(S+'/signs.json')):
@@ -67,7 +71,8 @@ if os.path.exists(S+'/signs.json'):
         print('SIGN',sg['txt'],'height %.2f m'%sg.get('h',hh))
 # GLB in metres, Godot Y-up handled by exporter
 bpy.ops.object.select_all(action='DESELECT');ob.select_set(True)
-bpy.ops.export_scene.gltf(filepath=OUTGLB,export_format='GLB',use_selection=True,export_yup=True)
+for so_ in SEATOBJ:so_.select_set(True)
+bpy.ops.export_scene.gltf(filepath=OUTGLB,export_format='GLB',use_selection=True,export_yup=True,export_gpu_instances=True,export_gn_mesh=True)
 # matched camera
 p=cam['p'];W,H=cam.get('W',1200),cam.get('H',675)
 def R(yaw,pitch,roll):
