@@ -1,0 +1,45 @@
+# Melbourne legacy home guernseys, 1990-2025, for the 3D player (row 197). Format: tools/kits/kits_today.txt.
+# Layout from the footyjumpers illustration of each design, checked against the Getty photos named above each line
+# (https://www.gettyimages.com.au/detail/<id>). Colours: today's navy #1A2C66 and red #E1141F.
+
+# Melbourne-1990 (1990-1997): navy with a red V yoke to mid-chest, red armholes and collar; back navy with a red top band, white number. Photos: getty 50809759, getty 2741399
+MEL Melbourne-1990 | fill #1A2C66; poly #E1141F 0 0 1 0 1 0.14 0.5 0.51 0 0.14; armholes #E1141F 2.5; collar #E1141F 2; shorts #1A2C66 | fill #1A2C66; band #E1141F 0 0.15; collar #E1141F 2; armholes #E1141F 2.5; number W
+
+# Melbourne-1998 (1998-2000): deeper red yoke, red armholes; back navy with a red top band. Photos: getty 96942387
+MEL Melbourne-1998 | fill #1A2C66; poly #E1141F 0 0 1 0 1 0.23 0.5 0.49 0 0.23; armholes #E1141F 2.5; collar #E1141F 2; shorts #1A2C66 | fill #1A2C66; band #E1141F 0 0.14; collar #E1141F 2; armholes #E1141F 2.5; number W
+
+# Melbourne-2001 (2001): red yoke in a stepped V, red armholes. Photos: getty 72523294
+MEL Melbourne-2001 | fill #1A2C66; poly #E1141F 0 0 1 0 1 0.18 0.85 0.27 0.7 0.37 0.5 0.48 0.3 0.37 0.15 0.27 0 0.18; armholes #E1141F 2.5; collar #E1141F 2; shorts #1A2C66 | fill #1A2C66; band #E1141F 0 0.14; armholes #E1141F 2.5; collar #E1141F 2; number W
+
+# Melbourne-2002 (2002-2003): stepped red V yoke, navy armholes. Photos: getty 1136266, getty 72569071
+MEL Melbourne-2002 | fill #1A2C66; poly #E1141F 0 0 1 0 1 0.2 0.85 0.27 0.7 0.34 0.5 0.43 0.3 0.34 0.15 0.27 0 0.2; armholes #1A2C66 1; collar #E1141F 2; shorts #1A2C66 | fill #1A2C66; band #E1141F 0 0.15; armholes #1A2C66 1; collar #E1141F 2; number W
+
+# Melbourne-2004 (2004-2006): stepped red V yoke to mid-chest, navy armholes; back navy with a red top band. Photos: getty 51169005
+MEL Melbourne-2004 | fill #1A2C66; poly #E1141F 0 0 1 0 1 0.2 0.85 0.27 0.7 0.34 0.5 0.45 0.3 0.34 0.15 0.27 0 0.2; armholes #1A2C66 1; collar #E1141F 2; shorts #1A2C66 | fill #1A2C66; band #E1141F 0 0.15; armholes #1A2C66 1; collar #E1141F 2; number W
+
+# Melbourne-2007 (2007): stepped red V yoke, thin white line near the hem. No match photo found; illustration only
+MEL Melbourne-2007 | fill #1A2C66; poly #E1141F 0 0 1 0 1 0.21 0.85 0.28 0.7 0.35 0.5 0.46 0.3 0.35 0.15 0.28 0 0.21; rect W 0 0.945 1 0.975; collar #E1141F 2; shorts #1A2C66 | fill #1A2C66; band #E1141F 0 0.17; collar #E1141F 2; number W
+
+# Melbourne-2008 (2008): stepped red V yoke, white hem line; back red yoke dipping to a point. No match photo found; illustration only
+MEL Melbourne-2008 | fill #1A2C66; poly #E1141F 0 0 1 0 1 0.18 0.85 0.25 0.7 0.35 0.5 0.47 0.3 0.35 0.15 0.25 0 0.18; rect W 0 0.93 1 0.95; collar #E1141F 2; shorts #1A2C66 | fill #1A2C66; poly #E1141F 0 0 1 0 1 0.30 0.85 0.27 0.7 0.21 0.5 0.19 0.3 0.21 0.15 0.27 0 0.30; collar #E1141F 2; number W
+
+# Melbourne-2009 (2009): as 2008, shorter V. No match photo found; illustration only
+MEL Melbourne-2009 | fill #1A2C66; poly #E1141F 0 0 1 0 1 0.18 0.85 0.25 0.7 0.34 0.5 0.42 0.3 0.34 0.15 0.25 0 0.18; rect W 0 0.93 1 0.95; collar #E1141F 2; shorts #1A2C66 | fill #1A2C66; poly #E1141F 0 0 1 0 1 0.30 0.85 0.27 0.7 0.21 0.5 0.19 0.3 0.21 0.15 0.27 0 0.30; collar #E1141F 2; number W
+
+# Melbourne-2010 (2010): stepped red V yoke, white hem line; red yoke on the back. Photos: getty 103076567
+MEL Melbourne-2010 | fill #1A2C66; poly #E1141F 0 0 1 0 1 0.19 0.85 0.26 0.7 0.33 0.5 0.43 0.3 0.33 0.15 0.26 0 0.19; rect W 0 0.93 1 0.95; collar #E1141F 2; shorts #1A2C66 | fill #1A2C66; poly #E1141F 0 0 1 0 1 0.30 0.85 0.27 0.7 0.21 0.5 0.14 0.3 0.21 0.15 0.27 0 0.30; collar #E1141F 2; number W
+
+# Melbourne-2011 (2011-2012): stepped red V yoke, navy hem band. Photos: getty 143244515
+MEL Melbourne-2011 | fill #1A2C66; poly #E1141F 0 0 1 0 1 0.17 0.85 0.24 0.7 0.36 0.5 0.43 0.3 0.36 0.15 0.24 0 0.17; rect #1A2C66 0 0.93 1 0.96; collar #E1141F 2; shorts #1A2C66 | fill #1A2C66; band #E1141F 0 0.16; rect #1A2C66 0 0.95 1 1; collar #E1141F 2; number W
+
+# Melbourne-2013 (2013): deep stepped red V yoke, white hem line; red yoke on the back. Photos: getty 167112125
+MEL Melbourne-2013 | fill #1A2C66; poly #E1141F 0 0 1 0 1 0.2 0.85 0.27 0.7 0.37 0.5 0.48 0.3 0.37 0.15 0.27 0 0.2; rect W 0 0.93 1 0.95; collar #E1141F 2; shorts #1A2C66 | fill #1A2C66; poly #E1141F 0 0 1 0 1 0.30 0.85 0.27 0.7 0.21 0.5 0.13 0.3 0.21 0.15 0.27 0 0.30; collar #E1141F 2; number W
+
+# Melbourne-2014 (2014): stepped red V yoke; back navy with a red top band. No match photo found; illustration only
+MEL Melbourne-2014 | fill #1A2C66; poly #E1141F 0 0 1 0 1 0.16 0.85 0.23 0.7 0.33 0.5 0.45 0.3 0.33 0.15 0.23 0 0.16; collar #E1141F 2; shorts #1A2C66 | fill #1A2C66; band #E1141F 0 0.16; collar #E1141F 2; number W
+
+# Melbourne-2015 (2015-2023): stepped red V yoke; back navy with a red top band. Photos: getty 598855312, getty 526308910
+MEL Melbourne-2015 | fill #1A2C66; poly #E1141F 0 0 1 0 1 0.18 0.85 0.25 0.7 0.35 0.5 0.43 0.3 0.35 0.15 0.25 0 0.18; collar #E1141F 2; shorts #1A2C66 | fill #1A2C66; band #E1141F 0 0.16; collar #E1141F 2; number W
+
+# Melbourne-2024 (2024-2025): shorter stepped red V yoke; back navy with a red top band. Photos: getty 2147048002
+MEL Melbourne-2024 | fill #1A2C66; poly #E1141F 0 0 1 0 1 0.16 0.85 0.23 0.7 0.31 0.5 0.4 0.3 0.31 0.15 0.23 0 0.16; collar #E1141F 2; shorts #1A2C66 | fill #1A2C66; band #E1141F 0 0.16; collar #E1141F 2; number W

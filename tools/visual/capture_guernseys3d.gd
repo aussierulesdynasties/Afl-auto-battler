@@ -10,7 +10,7 @@ extends SceneTree
 
 const GLB := "res://assets/oval3d/player_mh.glb"
 const CLUBS := ["ADE", "BRL", "CAR", "COL", "ESS", "FRE", "GEE", "GCS", "GWS", "HAW", "MEL", "NTH",
-		"PAD", "RIC", "STK", "SYD", "WCE", "WBD"]
+		"PAD", "RIC", "STK", "SYD", "TAS", "CANB", "WCE", "WBD"]
 
 
 func _initialize() -> void:
@@ -53,7 +53,7 @@ func _run() -> void:
 		var km: ShaderMaterial = oval._kit(gdb.club_guernsey(club))
 		if args.size() > 3 and ResourceLoader.exists(str(args[3])):
 			km.shader = load(str(args[3]))   # a debug copy of the shader (my own checks)
-		var p: Dictionary = oval._player(scene, km, gdb.club_colours(club))
+		var p: Dictionary = oval._player(scene, km, gdb.club_colours(club), club)
 		oval._number(p, 7)
 		oval.look(p, {"skin": 1, "hair": 1})
 		var n: Node3D = p["node"]
