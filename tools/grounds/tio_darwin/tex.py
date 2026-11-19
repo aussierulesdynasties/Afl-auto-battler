@@ -112,6 +112,7 @@ def paint(n,col,tile=(2,4),var=0.14,wear=0.2):
 paint('orange',(232,110,40))           # stair drums and rails (04, 05)
 paint('steel_white',(226,228,226),var=0.12)   # light towers (07)
 paint('steel_dark',(52,54,58))
+paint('steel_rust',(128,72,52))   # scoreboard legs (07)
 paint('steel_galv',(160,164,166))
 paint('screen_back',(40,42,46))
 paint('timber',(150,104,66),var=0.3)
@@ -218,12 +219,21 @@ def sign_text(n,text,w_m,h_m,bg,fg,fnt='arialbd.ttf',ppm=80,size=0.5,blocks=None
 sign_text('sign_ahmat','THE AH MAT GATES',13.0,1.4,(44,50,70),(236,236,236),'bahnschrift.ttf',size=0.42,blocks=True)
 sign_text('sign_bonson','THE BONSON GATES',11.0,1.4,(44,50,70),(236,236,236),'georgiab.ttf',size=0.42,blocks=True)
 sign_text('sign_rioli','MAURICE RIOLI STAND',16.0,1.2,(60,62,68),(236,110,80),'times.ttf',size=0.8)
-# tower panel: navy board, light-blue band, TIO logo, 'Stadium' (07)
-W,H=400,500;im=Image.new('RGB',(W,H),(22,52,128));d=ImageDraw.Draw(im)   # photo 15: navy board, light-blue block band on top, logo, 'Stadium'
-for i in range(0,W,40):d.rectangle([i,0,i+19,22],fill=(70,140,215))
-lh=int(H*0.2);tio_logo(d,int((W-lh*1.65)/2),int(H*0.14),lh)
-f=font('arialbd.ttf',int(H*0.13));tw=d.textlength('Stadium',font=f);d.text(((W-tw)/2,int(H*0.42)),'Stadium',font=f,fill=(250,250,250))
-a=np.asarray(im,float)*(0.92+0.16*noise(H,W,3))[...,None];save('sign_tower',a,(6,7.5))
+# tower panel (07, 15): blue board, light-blue block band on top, TIO logo box, 'Stadium'; 6.2 x 5.8 m
+W,H=520,480;im=Image.new('RGB',(W,H),(36,84,176));d=ImageDraw.Draw(im)
+d.rectangle([0,int(H*0.06),W,int(H*0.40)],fill=(28,70,160))
+for i in range(0,W,40):d.rectangle([i,int(H*0.13),i+22,int(H*0.33)],fill=(80,150,225))
+lh=int(H*0.24);tio_logo(d,int((W-lh*1.65)/2),int(H*0.11),lh)
+f=font('segoeuib.ttf',int(H*0.17));tw=d.textlength('Stadium',font=f);d.text(((W-tw)/2,int(H*0.50)),'Stadium',font=f,fill=(250,250,250))
+a=np.asarray(im,float)*(0.92+0.16*noise(H,W,3))[...,None];save('sign_tower',a,(6.2,5.8))
+# main scoreboard (07): blue 'TIO Stadium' banner on top, black 'Larrakia Country - Darwin' band under it; 9.3 m wide
+W,H=860,160;im=Image.new('RGB',(W,H),(30,84,180));d=ImageDraw.Draw(im)
+for y in range(H):d.line([(0,y),(W,y)],fill=(30+int(30*y/H),84+int(40*y/H),180+int(30*y/H)))
+d.rectangle([0,0,W,5],fill=(20,40,100));d.rectangle([0,H-5,W,H],fill=(20,40,100))
+lh=int(H*0.62);f=font('segoeuib.ttf',int(H*0.6));tw=d.textlength('Stadium',font=f);tot=lh*1.65+H*0.15+tw;x=(W-tot)/2
+tio_logo(d,int(x),int(H*0.19),lh);d.text((x+lh*1.65+H*0.15,int(H*0.06)),'Stadium',font=f,fill=(250,250,250))
+a=np.asarray(im,float)*(0.92+0.16*noise(H,W,3))[...,None];save('sign_sb_banner',a,(8.6,1.6))
+sign_text('sign_sb_band','Larrakia Country - Darwin',8.6,1.1,(24,24,26),(240,240,240),'arialbd.ttf',size=0.62)
 # report grey stddev of every texture (rule: none under 10)
 res={}
 for n in TILE:

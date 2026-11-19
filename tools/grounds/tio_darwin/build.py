@@ -222,14 +222,19 @@ o=bpy.data.objects.new('mlc_roof',me);coll('model').objects.link(o);me.materials
 ter=p('mlc_terrace',[-40,35,90.5,96.8,1.4])
 prism('mlc_terrace',[(ter[0],ter[2]),(ter[1],ter[2]),(ter[1],ter[3]),(ter[0],ter[3])],0,ter[4],'concrete',top='concrete')
 # ---------------- light towers: white lattice, four legs tapering, X-braced, lamp frame on top facing the centre, TIO panel (07, 19, 20)
-TW=p('towers',{'NW':[-55.0,80.0],'NE':[52.6,82.0],'SW':[-56.0,-77.0],'SE':[54.0,-79.0],'E':[102.2,1.2]})   # wide (foot) end of each satellite smear, checked on photo 15 bearings
-TH=p('tower_h',41.5)   # lattice top; lamp frame 41.5-48.5 m (photo 15: NE 47.5, E 49.8 to lamp top)
-PANELS=p('tower_panels',['NE','SE'])   # TIO Stadium panels seen on photo 15; others carry sponsor boards (left off)
+# Bases: satellite smear axis (base = NW end; head leans to the SE) crossed with the photo bearings; SE triangulated on 07 + 15.
+# Two designs: NE/SE/NW/SW twin towers with a round-lamp head; E has a wider block head. Heights: photos 15 (14 mm) and 19
+# (24 mm, camera resected from the NE/E/SE bearings) agree: twin lamp tops ~42 m, E ~45 m. All three photos agree on the
+# proportions (lamp top = 2.4 x panel top); photo 07's camera refits to the same heights (cam07h).
+TW=p('towers',{'NW':[-54.5,80.0],'NE':[54.3,78.6],'SW':[-56.5,-75.5],'SE':[49.7,-74.5],'E':[101.3,2.3]})
+#           lattice top, head w, head h, foot, waist, top width, lamps (cols x rows), panel (bottom, w, h) or None
+TD=p('tower_design',{'twin':[35.3,8.4,6.7,6.0,3.1,3.8,[6,5],[12.4,6.2,5.8]],'E':[37.5,9.7,7.5,6.6,3.2,4.2,[4,3],[13.7,5.2,5.4]]})
+PANELS=p('tower_panels',['NE','SE','E'])   # TIO Stadium panels on 07/15; NW/SW carry sponsor boards (left off); INPEX boards left off
 lat=Acc('tower_lattice','steel_white');lamps=Acc('tower_lamps','lamp');hd=Acc('tower_heads','steel_white')
 for k,(bx,by) in TW.items():
+    TH,HW,HH,FW,WW,TWd,(nc,nr),PN=TD['E' if k=='E' else 'twin']
     f=Vector((-bx,-by,0)).normalized();sd=Vector((-f.y,f.x,0));up=Vector((0,0,1));B=Vector((bx,by,0))
-    # photo 15: 6.4 m square foot, waist 3.0 m at 78 % height, flaring to 4.6 m under the lamp frame
-    w0,w1,w2=p('tower_w0',6.4)/2,p('tower_w1',3.0)/2,p('tower_w2',4.6)/2;zw=TH*0.78
+    w0,w1,w2=FW/2,WW/2,TWd/2;zw=TH*0.78
     segs=[(0,zw,w0,w1),(zw,TH,w1,w2)]
     for (za,zb,wa,wb) in segs:
         leg=[(B+(f*a+sd*b)*wa+up*za,B+(f*a+sd*b)*wb+up*zb) for a in(-1,1) for b in(-1,1)]
@@ -242,26 +247,28 @@ for k,(bx,by) in TW.items():
             for j in range(4):
                 a_,b_=order[j],order[(j+1)%4]
                 rod(lat,at(a_,t0),at(b_,t1),0.06,4);rod(lat,at(b_,t0),at(a_,t1),0.06,4);rod(lat,at(a_,t1),at(b_,t1),0.07,4)
-    # lamp frame (photo 15): 10 m wide, 7 m tall, tilted 10 deg toward the field, 6 x 5 lamps
+    # lamp frame tilted 10 deg toward the field, lamps in a grid on its face
     tilt=math.radians(10);nrm=(f*math.cos(tilt)-up*math.sin(tilt));vv=up*math.cos(tilt)+f*math.sin(tilt)
-    C=B+up*(TH+3.5)+f*0.4
-    box(hd,C-nrm*0.35,sd,vv,nrm,5.0,3.5,0.15)
-    for i in range(6):
-        for j in range(5):box(lamps,C+sd*(-4.1+i*1.64)+vv*(-2.8+j*1.4)+nrm*0.1,sd,vv,nrm,0.62,0.55,0.3)
-    box(hd,B+up*(TH+0.1),f,sd,up,2.6,3.0,0.12)   # service platform
+    C=B+up*(TH+HH/2)+f*0.4
+    box(hd,C-nrm*0.35,sd,vv,nrm,HW/2,HH/2,0.15)
+    cw,rh=HW/nc,HH/nr
+    for i in range(nc):
+        for j in range(nr):box(lamps,C+sd*(-HW/2+cw*(i+0.5))+vv*(-HH/2+rh*(j+0.5))+nrm*0.1,sd,vv,nrm,cw*0.38,rh*0.39,0.3)
+    box(hd,B+up*(TH+0.1),f,sd,up,w2+0.6,w2+0.8,0.12)   # service platform
     if k in PANELS:
-        # TIO Stadium panel on the field face (photo 15): 6.0 x 7.5 m, bottom 12.4 m up
-        pz=p('tower_panel_z',12.4);wl=w0+(w1-w0)*pz/zw+0.25
-        a=B+f*wl-sd*3.0;b=B+f*wl+sd*3.0
-        board('tower_panel_'+k,(a.x,a.y),(b.x,b.y),pz,pz+7.5,'sign_tower')
+        pz,pw,ph=PN;wl=w0+(w1-w0)*(pz+ph/2)/zw+0.1   # flush on the lattice face (07)
+        a=B+f*wl-sd*pw/2;b=B+f*wl+sd*pw/2
+        board('tower_panel_'+k,(a.x,a.y),(b.x,b.y),pz,pz+ph,'sign_tower')
 lat.done();lamps.done();hd.done()
 # ---------------- NE big screen on its frame: OSM way 1549614585 (blank, no content)
 sc_fp=OSM['buildings']['1549614585'][:4]
-xs=sorted(sc_fp,key=lambda q:q[0]);a=Vector((72.4,54.6,0));b=Vector((78.2,43.3,0))
-sk=Acc('screen_frame','steel_dark');ZS0,ZS1=p('screen_z',[4.0,10.5])
+xs=sorted(sc_fp,key=lambda q:q[0]);a=Vector((72.4,59.8,0));b=Vector((78.2,48.5,0))   # satellite top of the box (fits photo 15 within 8 px)
+sk=Acc('screen_frame','steel_dark');ZS0,ZS1=p('screen_z',[4.6,12.7])   # photo 15
 board('screen_face',(a.x,a.y),(b.x,b.y),ZS0,ZS1,'screen')
-bk=b+(Vector((1,0.45,0)).normalized()*1.4);ak=a+(Vector((1,0.45,0)).normalized()*1.4)
+bk=b+(Vector((1,0.45,0)).normalized()*3.0);ak=a+(Vector((1,0.45,0)).normalized()*3.0)   # satellite: box 3 m deep, white top
 board('screen_back',(bk.x,bk.y),(ak.x,ak.y),ZS0,ZS1,'screen_back')
+mk('screen_top',[(a.x,a.y,ZS1),(b.x,b.y,ZS1),(bk.x,bk.y,ZS1),(ak.x,ak.y,ZS1)],[(0,1,2,3)],'roof_white',[[(0,0),(1,0),(1,1),(0,1)]])
+board('screen_end_a',(ak.x,ak.y),(a.x,a.y),ZS0,ZS1,'screen_back',True);board('screen_end_b',(b.x,b.y),(bk.x,bk.y),ZS0,ZS1,'screen_back',True)
 for t in (0.05,0.35,0.65,0.95):
     q=a+(b-a)*t;qk=ak+(bk-ak)*t
     rod(sk,(q.x,q.y,0),(q.x,q.y,ZS1),0.2,8);rod(sk,(qk.x,qk.y,0),(qk.x,qk.y,ZS1),0.2,8);rod(sk,(q.x,q.y,ZS0-0.2),(qk.x,qk.y,ZS0-0.2),0.12,6)
@@ -269,6 +276,25 @@ sk.done()
 # ---------------- east building: OSM way 477648585, single storey, white roof, dark walls (19, 20)
 eb=OSM['buildings']['477648585'];eb=eb[:-1] if eb[0]==eb[-1] else eb
 prism('east_building',eb,0,p('east_h',4.2),'clad_dark',top='roof_white')
+# ---------------- main scoreboard at the east end (07, 15): sits in the OSM notch of the east building, face along x about 79.
+# Heights from photo 07 (camera 07, ~25 px/m): legs to 4.0 m, blank screen 4.0-8.0, black 'Larrakia Country - Darwin' band 8.0-9.1, blue 'TIO Stadium' banner 9.1-10.7.
+sa=Vector(p('sb_a',(79.5,-8.0)));sb_=Vector(p('sb_b',(78.8,-16.6)));sdv=sb_-sa;wn=Vector((sdv.y,-sdv.x)).normalized()   # wn faces west; satellite top strip x 79.5-78.6, ends from photo 07 (front face 8.6 m)
+SBD=p('sb_depth',1.6);ka=sa-wn*SBD;kb=sb_-wn*SBD   # satellite: box top 79.5-81.0
+mb=Acc('scoreboard_box','clad_grey')
+for (p0,p1) in ((sa,ka),(ka,kb),(kb,sb_)):mb.face([(p0.x,p0.y,3.8),(p1.x,p1.y,3.8),(p1.x,p1.y,10.7),(p0.x,p0.y,10.7)])
+mb.face([(sa.x,sa.y,10.7),(sb_.x,sb_.y,10.7),(kb.x,kb.y,10.7),(ka.x,ka.y,10.7)][::-1]);mb.face([(sa.x,sa.y,3.8),(sb_.x,sb_.y,3.8),(kb.x,kb.y,3.8),(ka.x,ka.y,3.8)])
+mb.face([(sa.x,sa.y,3.8),(sb_.x,sb_.y,3.8),(sb_.x,sb_.y,10.7),(sa.x,sa.y,10.7)]);mb.done()
+o_=wn*0.04
+board('scoreboard_screen',tuple((sa+o_).xy),tuple((sb_+o_).xy),4.0,8.0,'screen')
+board('scoreboard_band',tuple((sa+o_).xy),tuple((sb_+o_).xy),8.0,9.1,'sign_sb_band')
+board('scoreboard_banner',tuple((sa+o_*2+sdv.normalized()*0.0).xy),tuple((sb_+o_*2).xy),9.1,10.7,'sign_sb_banner')
+lg=Acc('scoreboard_legs','steel_rust')
+for t in (0.03,0.5,0.97):
+    for q in (sa+sdv*t+wn*0.3,ka+sdv*t+wn*0.3):rod(lg,(q.x,q.y,0),(q.x,q.y,3.8),0.15,8)
+    q0=sa+sdv*t+wn*0.3;q1=ka+sdv*t+wn*0.3;rod(lg,(q0.x,q0.y,0.2),(q1.x,q1.y,3.7),0.07,6)
+for t0,t1 in ((0.03,0.5),(0.5,0.97)):
+    q0=sa+sdv*t0+wn*0.3;q1=sa+sdv*t1+wn*0.3;rod(lg,(q0.x,q0.y,0.3),(q1.x,q1.y,3.7),0.07,6);rod(lg,(q1.x,q1.y,0.3),(q0.x,q0.y,3.7),0.07,6)
+lg.done()
 # small buildings inside the ground (satellite roofs 15, 16 and OSM 1549614584)
 for nm,fp_,h in (('nw_kiosk',[(-61.7,84.0),(-57.6,88.6),(-61.1,92.1),(-64.9,88.6)],3.6),('ne_building',[(45.1,79.9),(52.9,85.4),(46.8,94.5),(39.2,89.8)],4.2)):
     prism(nm,fp_,0,h,'clad_grey',top='roof_white')
@@ -327,6 +353,7 @@ for e in('BLENDER_EEVEE_NEXT','BLENDER_EEVEE'):
     except TypeError:pass
 sc.view_settings.view_transform='Standard';sc.render.resolution_x=1600;sc.render.resolution_y=1000
 sc.render.filepath=os.path.join(OUT,'overview.png');bpy.ops.render.render(write_still=True)
+bpy.data.objects.remove(bpy.data.objects['ground_apron'])   # rule: no turf in the model (preview only)
 bpy.ops.export_scene.gltf(filepath=os.path.join(OUT,'tio_darwin.glb'),export_format='GLB',export_cameras=False,export_lights=False)
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT,'tio_darwin.blend'))
 tri=sum(len(o.data.polygons) for o in bpy.data.objects if o.type=='MESH')
