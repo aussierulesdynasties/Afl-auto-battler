@@ -104,7 +104,7 @@ def seat_steps(mb, A, Bs, k, tn, sm, seatq):
     Rows are counted at A's profile and the same count used at Bs, so neighbouring strips meet edge to edge."""
     (ra, za), (rb, zb) = A['S'][k - 1][:2], A['S'][k][:2]; (qa, wa), (qb, wb) = Bs['S'][k - 1][:2], Bs['S'][k][:2]
     n = A['nrow'][k]; dH, dV = (rb - ra) / n, (zb - za) / n; eH, eV = (qb - qa) / n, (wb - wa) / n
-    tm = 'tread_light' if sm == 'seat_moss' else 'tread_dark'
+    tm = 'tread_dark'  # every stand, MCC included: gaps between seats read dark in the photos
     ba, bb = A['b'], A['b'] + ((Bs['b'] - A['b']) % 360)
     for j in range(n):
         r0, r1, z0, z1 = ra + j * dH, ra + (j + 1) * dH, za + j * dV, za + (j + 1) * dV
@@ -190,7 +190,15 @@ def seats3d(seatq, D, col):
     me.loops.add(FF.size); me.loops.foreach_set('vertex_index', FF.ravel())
     me.polygons.add(len(FF)); me.polygons.foreach_set('loop_start', np.arange(0, FF.size, 4))
     for m in names: me.materials.append(mat(m))
-    me.polygons.foreach_set('material_index', np.repeat(mi, len(F)))
+    # backrest boxes wear <colour>_back (0.86 of the seat colour, as the painted seat tile had); every downward face
+    # (pan and back undersides) wears <colour>_under, the shadow under a seat (photo s02: gaps 0.6 of the seat colour),
+    # baked in so each seat and row reads apart from below whatever the light
+    for m in names: me.materials.append(mat(m + '_back'))
+    for m in names: me.materials.append(mat(m + '_under'))
+    fi = np.tile(np.repeat(np.arange(len(SEATBOX)), 6), (N, 1)); fc = np.tile(np.arange(6), (N, len(SEATBOX)))
+    mif = np.repeat(mi, len(F)).reshape(N, -1)
+    mif = np.where(fc == 0, mif + 2 * len(names), np.where(fi == 1, mif + len(names), mif))
+    me.polygons.foreach_set('material_index', mif.ravel())
     me.update(); me.validate()
     import bmesh
     bm = bmesh.new(); bm.from_mesh(me); bmesh.ops.recalc_face_normals(bm, faces=bm.faces); bm.to_mesh(me); bm.free()
@@ -270,14 +278,20 @@ def bowl_all(col):
                         uv=[(0, 0), (AW / TU, 0), (AW / TU, 0.2), (0, 0.2)])
                 mb.face([(*pol(ab - dd, r0), z1), (*pol(ab + dd, r0), z1), (*pol(ab + dd, r1), z1), (*pol(ab - dd, r1), z1)], m,
                         uv=[(0, 0.2), (AW / TU, 0.2), (AW / TU, 0.45), (0, 0.45)])
+            # centre handrail: one straight steel bar 0.9 m over the stair nosings, broken at the t3 cross landing
+            # (it was painted into the stair texture, where it wiggled from face to face)
+            land = [j for j in range(nr) if tn == 't3' and g0 - 0.3 <= za + (j + 1) * dV <= g1 + 0.3]
+            runs = [(0, min(land) - 1), (max(land) + 2, nr)] if land else [(0, nr)]
+            for j0, j1 in runs:
+                if j1 - j0 < 2: continue
+                mb.beam((*pol(ab, ra + j0 * dH), za + j0 * dV + 0.9), (*pol(ab, ra + j1 * dH), za + j1 * dV + 0.9), 0.05, 0.05, 'steel_white')
             if tn == 't3':  # cross landing: a flat walkway on the rows whose tread lies in the gangway band
-                dg = math.degrees(GW / 2 / ra)
-                for j in range(nr):
-                    z1 = za + (j + 1) * dV
-                    if g0 - 0.3 <= z1 <= g1 + 0.3:
-                        r0 = ra + j * dH - 0.02; r1 = ra + (j + 1) * dH
-                        mb.face([(*pol(ab - dg, r0), z1 + 0.04), (*pol(ab + dg, r0), z1 + 0.04), (*pol(ab + dg, r1), z1 + 0.04),
-                                 (*pol(ab - dg, r1), z1 + 0.04)], m)
+                # plain concrete treads on the landing rows (the stair texture's nosings and rail showed as dark notches)
+                dg = math.degrees(GW / 2 / ra); m = 'tread_dark' if m == 'aisle_dark' else 'tread_light'
+                for j in land:
+                    z1 = za + (j + 1) * dV; r0 = ra + j * dH - 0.02; r1 = ra + (j + 1) * dH
+                    mb.face([(*pol(ab - dg, r0), z1 + 0.04), (*pol(ab + dg, r0), z1 + 0.04), (*pol(ab + dg, r1), z1 + 0.04),
+                             (*pol(ab - dg, r1), z1 + 0.04)], m)
     # the ground's own name signs (mcg.json signs: centre bearing, length m, texture), hand-drawn in signs.py, fixed
     # 5 cm proud of the top tier's front fascia and centred on it (MCC: members' upper tier, photo commons
     # MCC 050425.jpg; Shane Warne Stand: south top-tier front)
