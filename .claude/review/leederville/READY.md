@@ -29,3 +29,8 @@ The chunky maroon block under each seat is gone. Each seat now stands on grey st
 one 8 cm leg under every gap between neighbours, and a 4 cm leg at each row end, flush with the pan.
 Seat colours unchanged (grandstand green, members maroon, south stand blue). Empty seats, no crowd.
 Proof: `seat_legs_board.jpg` (photos E08/E14 beside four close-ups) and `seats_*.jpg`. No open faults.
+
+## Re-gate (2026-11-20): painted seats removed, seats stand apart
+The grandstand treads still carried the old painted-seat texture (teal patches under the 3D seats); they now use the plain
+concrete tread the members and south stands use. No stand has painted seats left. Seats narrowed as Bellerive: pan 40 cm,
+back 36 cm on the 0.5 m pitch; end legs flush. Four close-ups re-rendered and checked. No open faults.
