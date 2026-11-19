@@ -25,7 +25,7 @@ def mat(name, rough=0.9):
 
 MN = ['grass', 'park', 'asphalt', 'seats', 'terrace', 'brick', 'roof', 'sawtooth', 'wood', 'white', 'greyroof',
       'under', 'pool', 'yellow', 'red', 'orange', 'steel', 'concrete', 'glass', 'glassdark', 'timber',
-      'brickdark', 'seatslegends', 'roofgrey', 'steeldark']
+      'brickdark', 'seatslegends', 'roofgrey', 'steeldark', 'seatrow', 'seatrowlegends', 'cladding']
 TILE = {'brick': 2, 'brickdark': 2, 'timber': 2, 'wood': 2, 'glass': 3, 'glassdark': 3, 'grass': 20, 'park': 20,
         'asphalt': 10}
 M = {n: mat(n) for n in MN}
@@ -230,12 +230,46 @@ def seatmat(i):
     return 'terrace'
 
 
-def tier_w(i):
+def owner(i):
+    # the one stand that owns sector i: where two stands' spans overlap, the split is at the middle of the overlap
+    t = -math.pi + 2 * math.pi * (i + 1) / NA
+    best, bd = None, -1
+    for n, (a0, a1) in zip(STANDS, standang):
+        for k in (-1, 0, 1):
+            x = t + k * 2 * math.pi
+            if a0 <= x <= a1 and min(x - a0, a1 - x) > bd:
+                best, bd = n, min(x - a0, a1 - x)
+    return best
+
+
+def back_at(n, t):
+    # the owner's own back edge on the ray at angle t: (r, seat-back z)
+    B = G[n]['back']
+    dx, dy = math.cos(t), math.sin(t)
+    best = None
+    for k in range(len(B) - 1):
+        p0, p1 = B[k], B[k + 1]
+        ex, ey = p1[0] - p0[0], p1[1] - p0[1]
+        den = dx * ey - dy * ex
+        if abs(den) < 1e-9:
+            continue
+        ox, oy = p0[0] - C.x, p0[1] - C.y
+        r = (ox * ey - oy * ex) / den
+        s_ = (ox * dy - oy * dx) / den
+        if -1e-6 <= s_ <= 1 + 1e-6 and r > 1:
+            best = (r, p0[2] + (p1[2] - p0[2]) * s_)
+    if best is None:  # ray just past the stand end: hold the end point
+        e = min((B[0], B[-1]), key=lambda p: abs(((pol(p)[0] - t) + math.pi) % (2 * math.pi) - math.pi))
+        best = (pol(e)[1], e[2])
+    return best[0], best[1] - G[n].get('seatdrop', 3.0)
+
+
+def tier_w(i, own):
     t = -math.pi + 2 * math.pi * (i + 0.5) / NA
     tj = t + 2 * math.pi / NA
     for n, (a0, a1) in zip(STANDS, standang):
         tr = G[n].get('tier')
-        if tr and _inspan(t, a0, a1) and _inspan(tj, a0, a1):
+        if tr and n == own and _inspan(t, a0, a1) and _inspan(tj, a0, a1):
             A = [p[0] for p in tr['pts']]
             W = [p[1] for p in tr['pts']]
 
@@ -257,44 +291,214 @@ def tier_w(i):
     return None
 
 
+# per-sector outer edge: a stand sector takes both corners from its own stand's back edge, so two stands of
+# different height meet in a clean vertical step at the corner where the owner changes (gate fault 2)
+OWN = [owner(i) for i in range(NA)]
+OUT = []
+for i in range(NA):
+    j = (i + 1) % NA
+    if OWN[i]:
+        t0 = -math.pi + 2 * math.pi * (i + 0.5) / NA
+        OUT.append((back_at(OWN[i], t0), back_at(OWN[i], t0 + 2 * math.pi / NA)))
+    else:
+        OUT.append((ob_[i], ob_[j]))
+TREAD = 0.8   # row depth (Moorabbin bar)
+SEATM = {'seats': 'seatrow', 'seatslegends': 'seatrowlegends'}
+
+
+def rows_of(parts0, parts1):
+    # parts: [(r_front, z_front, r_back, z_back)] at the two corners; equal row counts so the rows join up
+    out = []
+    for (a, b) in zip(parts0, parts1):
+        n = max(1, round(((a[2] - a[0]) + (b[2] - b[0])) / 2 / TREAD))
+        out.append((a, b, n))
+    return out
+
+
+def profile(parts, ns):
+    # stepped (r, z) outline of one corner: riser up, tread back, row by row
+    P = [(parts[0][0], parts[0][1])]
+    for (rf_, zf_, rb_, zb_), n in zip(parts, ns):
+        if (rf_, zf_) != P[-1]:
+            P.append((rf_, zf_))
+        for k in range(n):
+            r0 = rf_ + (rb_ - rf_) * k / n
+            r1 = rf_ + (rb_ - rf_) * (k + 1) / n
+            z1 = zf_ + (zb_ - zf_) * (k + 1) / n
+            P += [(r0, z1), (r1, z1)]
+    return P
+
+
+def ptc(c, r, z):
+    # point on corner ray c (corner c sits between sector c-1 and sector c)
+    t = -math.pi + 2 * math.pi * (c + 0.5) / NA
+    return Vector((C.x + r * math.cos(t), C.y + r * math.sin(t), z))
+
+
+def parts_of(i):
+    j = (i + 1) % NA
+    rf0, rf1 = fence[i][0], fence[j][0]
+    (ro0, zo0), (ro1, zo1) = OUT[i]
+    tw = tier_w(i, OWN[i])
+    if tw is None:
+        return [(rf0, 1.1, ro0, zo0)], [(rf1, 1.1, ro1, zo1)]
+    (wi, wj), rise, sm = tw
+    rbi, rbj = rf0 + (ro0 - rf0) * wi, rf1 + (ro1 - rf1) * wj
+    zbi, zbj = 1.1 + (zo0 - 1.1) * wi, 1.1 + (zo1 - 1.1) * wj
+    return [(rf0, 1.1, rbi, zbi), (rbi, zbi + rise, ro0, zo0)], [(rf1, 1.1, rbj, zbj), (rbj, zbj + rise, ro1, zo1)]
+
+
+# one row count per run of sectors with the same owner and tier, so every row runs unbroken along a stand
+PARTS = [parts_of(i) for i in range(NA)]
+KEY = [(OWN[i], len(PARTS[i][0])) for i in range(NA)]
+NROW = [None] * NA
+st = next((i for i in range(NA) if KEY[i] != KEY[i - 1]), 0)
+i = st
+while True:
+    run = [i]
+    while KEY[(run[-1] + 1) % NA] == KEY[i] and (run[-1] + 1) % NA != st:
+        run.append((run[-1] + 1) % NA)
+    ns = []
+    for q in range(KEY[i][1]):
+        d = [(PARTS[k][c][q][2] - PARTS[k][c][q][0]) for k in run for c in (0, 1)]
+        ns.append(max(1, round(sum(d) / len(d) / TREAD)))
+    for k in run:
+        NROW[k] = ns
+    i = (run[-1] + 1) % NA
+    if i == st:
+        break
+
+
+PROF = []
 for i in range(NA):
     j = (i + 1) % NA
     rf0, rf1 = fence[i][0], fence[j][0]
-    ro0, zo0 = ob_[i]
-    ro1, zo1 = ob_[j]
-    # no playing surface: the game draws the turf (lead 2026-11-18)
+    (ro0, zo0), (ro1, zo1) = OUT[i]
     f = face([pt(i, rf0, 0), pt(j, rf1, 0), pt(j, rf1, 1.1), pt(i, rf0, 1.1)], 'white')
     outward(f, C)
-    m = seatmat(i)
-    rows = max(1, round(math.hypot(ro0 - rf0, zo0 - 1.1) / 0.8)) / 4
-    a0 = 2 * math.pi * rf0 / NA
-    tw = tier_w(i)
+    m = G[OWN[i]].get('seatmat', 'seats') if OWN[i] else 'terrace'
+    tw = tier_w(i, OWN[i])
     if tw is None:
-        f = face([pt(i, rf0, 1.1), pt(j, rf1, 1.1), pt(j, ro1, zo1), pt(i, ro0, zo0)], m,
-                 uvs=[(i * a0 / 4, 0), ((i + 1) * a0 / 4, 0), ((i + 1) * a0 / 4, rows), (i * a0 / 4, rows)])
-        upward(f)
+        p0, p1 = [(rf0, 1.1, ro0, zo0)], [(rf1, 1.1, ro1, zo1)]
     else:
         (wi, wj), rise, sm = tw
         rbi, rbj = rf0 + (ro0 - rf0) * wi, rf1 + (ro1 - rf1) * wj
         zbi, zbj = 1.1 + (zo0 - 1.1) * wi, 1.1 + (zo1 - 1.1) * wj
-        r1 = max(1, round(math.hypot(rbi - rf0, zbi - 1.1) / 0.8)) / 4
-        r2 = max(1, round(math.hypot(ro0 - rbi, zo0 - zbi - rise) / 0.8)) / 4
-        f = face([pt(i, rf0, 1.1), pt(j, rf1, 1.1), pt(j, rbj, zbj), pt(i, rbi, zbi)], m,
-                 uvs=[(i * a0 / 4, 0), ((i + 1) * a0 / 4, 0), ((i + 1) * a0 / 4, r1), (i * a0 / 4, r1)])
-        upward(f)
+        p0 = [(rf0, 1.1, rbi, zbi), (rbi, zbi + rise, ro0, zo0)]
+        p1 = [(rf1, 1.1, rbj, zbj), (rbj, zbj + rise, ro1, zo1)]
+        # the tier walkway's white riser and its sign
         f = face([pt(i, rbi, zbi), pt(j, rbj, zbj), pt(j, rbj, zbj + rise), pt(i, rbi, zbi + rise)], 'white')
         outward(f, Vector((C.x, C.y, zbi)))
         if sm:
             g = face([pt(i, rbi - 0.05, zbi + 0.1), pt(j, rbj - 0.05, zbj + 0.1),
                       pt(j, rbj - 0.05, zbj + rise - 0.1), pt(i, rbi - 0.05, zbi + rise - 0.1)], sm)
             outward(g, Vector((C.x, C.y, zbi)))
-        f = face([pt(i, rbi, zbi + rise), pt(j, rbj, zbj + rise), pt(j, ro1, zo1), pt(i, ro0, zo0)], m,
-                 uvs=[(i * a0 / 4, 0), ((i + 1) * a0 / 4, 0), ((i + 1) * a0 / 4, r2), (i * a0 / 4, r2)])
-        upward(f)
-    if seatmat(i) != 'seatslegends':
+    R = [(a, b, n) for (a, b), n in zip(zip(p0, p1), NROW[i])]
+    PROF.append((profile(p0, [n for _, _, n in R]), profile(p1, [n for _, _, n in R])))
+    seated = m in SEATM and i % 12 != 0     # every 12th sector is an aisle: steps, no seats
+    ta, tb = 2 * math.pi * i / NA, 2 * math.pi * (i + 1) / NA
+    for a, b, n in R:
+        for k in range(n):
+            ra0 = a[0] + (a[2] - a[0]) * k / n
+            ra1 = a[0] + (a[2] - a[0]) * (k + 1) / n
+            rb0 = b[0] + (b[2] - b[0]) * k / n
+            rb1 = b[0] + (b[2] - b[0]) * (k + 1) / n
+            za0 = a[1] + (a[3] - a[1]) * k / n
+            za1 = a[1] + (a[3] - a[1]) * (k + 1) / n
+            zb0 = b[1] + (b[3] - b[1]) * k / n
+            zb1 = b[1] + (b[3] - b[1]) * (k + 1) / n
+            u0, u1 = ta * ra0 / 4, tb * rb0 / 4     # u from each corner's own radius: continuous across sectors
+            if za1 - za0 > 0.02 or zb1 - zb0 > 0.02:   # riser
+                f = face([pt(i, ra0, za0), pt(j, rb0, zb0), pt(j, rb0, zb1), pt(i, ra0, za1)], 'concrete',
+                         uvs=[(u0, za0 / 4), (u1, zb0 / 4), (u1, zb1 / 4), (u0, za1 / 4)])
+                outward(f, Vector((C.x, C.y, za1 + 5)))
+            f = face([pt(i, ra0, za1), pt(j, rb0, zb1), pt(j, rb1, zb1), pt(i, ra1, za1)], 'concrete',
+                     uvs=[(u0, 0), (u1, 0), (u1, (ra1 - ra0) / 4), (u0, (ra1 - ra0) / 4)])
+            upward(f)
+            if not seated:
+                continue
+            # empty tip-up seats copied from the Moorabbin bench: pan 0.42 up, 0.15 behind the riser, 0.38 deep,
+            # 0.05 front lip, back 0.42-0.48 behind the pan front, 0.05-0.45 above it (scaled to a shallow row)
+            # scale per corner, so a corner shared by two sectors gets the same seat edge from both (no cracks)
+            sca, scb = min(1.0, (ra1 - ra0) / TREAD), min(1.0, (rb1 - rb0) / TREAD)
+            sa, sb = ra0 + 0.15 * sca, rb0 + 0.15 * scb
+            ya, yb = za1 + 0.42, zb1 + 0.42
+            su0, su1 = ta * ra0 / 2, tb * rb0 / 2     # seatrow texture: 2 m = 4 seats
+            sm_ = SEATM[m]
+            f = face([pt(i, sa, ya), pt(j, sb, yb), pt(j, sb + 0.38 * scb, yb), pt(i, sa + 0.38 * sca, ya)], sm_,
+                     uvs=[(su0, 0.05), (su1, 0.05), (su1, 0.5), (su0, 0.5)])
+            upward(f)
+            f = face([pt(i, sa, ya - 0.05), pt(j, sb, yb - 0.05), pt(j, sb, yb), pt(i, sa, ya)], sm_,
+                     uvs=[(su0, 0.0), (su1, 0.0), (su1, 0.05), (su0, 0.05)])
+            outward(f, Vector((C.x, C.y, ya + 5)))
+            f = face([pt(i, sa + 0.42 * sca, ya + 0.05), pt(j, sb + 0.42 * scb, yb + 0.05),
+                      pt(j, sb + 0.48 * scb, yb + 0.45), pt(i, sa + 0.48 * sca, ya + 0.45)], sm_,
+                     uvs=[(su0, 0.5), (su1, 0.5), (su1, 1.0), (su0, 1.0)])
+            outward(f, Vector((C.x, C.y, ya + 5)))
+    if m != 'seatslegends' and G.get(OWN[i], {}).get('facade') != 'posts':   # posts stands carry their own rear wall
         f = face([pt(i, ro0, 0), pt(j, ro1, 0), pt(j, ro1, zo1), pt(i, ro0, zo0)],
                  'brick' if understand(i) else 'wood')
         outward(f, C)
+
+
+def env(P, r):
+    # height of a stepped outline at radius r (0 beyond its back)
+    z = 0.0
+    for q in range(len(P) - 1):
+        (r0, z0), (r1, z1) = P[q], P[q + 1]
+        if abs(z1 - z0) < 1e-9 and min(r0, r1) - 1e-6 <= r <= max(r0, r1) + 1e-6:
+            z = max(z, z0)
+    return z
+
+
+# end walls where the outline changes between two sectors: one vertical face in the radial plane, the upper
+# envelope of both outlines, so neither stand's rows run through the other
+NWALL = 0
+for i in range(NA):
+    j = (i + 1) % NA
+    A, B = PROF[i][1], PROF[j][0]
+    if len(A) == len(B) and all(abs(p[0] - q[0]) < 0.05 and abs(p[1] - q[1]) < 0.05 for p, q in zip(A, B)):
+        continue
+    rs = sorted(set(round(p[0], 4) for p in A + B))
+    cl = []
+    for q in range(len(rs) - 1):
+        mid = (rs[q] + rs[q + 1]) / 2
+        z = max(env(A, mid), env(B, mid))
+        if z <= 0:
+            continue
+        if not cl:
+            cl.append((rs[q], 0.0))
+        if abs(cl[-1][0] - rs[q]) > 1e-4:
+            cl.append((cl[-1][0], 0.0))
+            cl.append((rs[q], 0.0))
+        cl.append((rs[q], z))
+        cl.append((rs[q + 1], z))
+    if not cl:
+        continue
+    cl.append((cl[-1][0], 0.0))
+    pts = []
+    for p in cl:
+        if not pts or abs(pts[-1][0] - p[0]) > 1e-4 or abs(pts[-1][1] - p[1]) > 1e-4:
+            pts.append(p)
+    # drop collinear middles
+    k = 1
+    while k < len(pts) - 1 and len(pts) > 3:
+        (x0, y0), (x1, y1), (x2, y2) = pts[k - 1], pts[k], pts[k + 1]
+        if abs((x1 - x0) * (y2 - y0) - (y1 - y0) * (x2 - x0)) < 1e-6:
+            pts.pop(k)
+        else:
+            k += 1
+    if len(pts) < 3:
+        continue
+    low = i if OUT[i][1][1] < OUT[j][0][1] else j
+    tl = -math.pi + 2 * math.pi * (low + 1) / NA
+    ref = Vector((C.x + 60 * math.cos(tl), C.y + 60 * math.sin(tl), 5))
+    f = face([ptc(j, r, z) for r, z in pts], 'concrete')
+    f.normal_update()
+    if (ref - f.calc_center_median()).dot(f.normal) < 0:
+        f.normal_flip()
+    NWALL += 1
+print('end walls', NWALL)
 # no park disc: the model stops at the stadium (director 2026-11-18)
 
 
@@ -449,7 +653,7 @@ def seat_z(x, y):
     a, r = pol((x, y))
     i = int((a + math.pi) / (2 * math.pi) * NA) % NA
     rf = fence[i][0]
-    ro, zo = ob_[i]
+    ro, zo = OUT[i][0]
     w = 0 if ro == rf else (r - rf) / (ro - rf)
     return 1.1 + (zo - 1.1) * max(0, min(1, w))
 
@@ -674,6 +878,7 @@ if 'sign' in G:
     f = face([s0 + Vector((0, 0, 4)), s1 + Vector((0, 0, 4)), s1 + Vector((0, 0, 7.5)), s0 + Vector((0, 0, 7.5))],
              'yellow')
     outward(f, C)
+bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.0005)   # weld shared sector corners
 bm.to_mesh(me)
 me.validate()
 bm.free()

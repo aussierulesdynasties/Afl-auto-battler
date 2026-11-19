@@ -1,6 +1,7 @@
 asphalt 13.0
 brick 17.4
 brickdark 21.5
+cladding 19.3
 concrete 12.4
 glass 62.4
 glassdark 23.0
@@ -13,6 +14,8 @@ red 10.9
 roof 24.1
 roofgrey 16.9
 sawtooth 20.2
+seatrow 11.9
+seatrowlegends 13.5
 seats 52.5
 seatslegends 49.8
 steel 11.6

@@ -45,6 +45,23 @@ def seats(name,seat,seed,tread=(176,174,168)):
     put(name,cv)
 seats('seats',(34,62,120),3);seats('seatslegends',(40,70,132),4)
 
+# ---- modelled seat rows (gate fault 1): one row of empty tip-up seats, 2 m = 4 seats of 0.5 m, v: 0-0.05 front lip,
+#      0.05-0.5 seat pan, 0.5-1.0 seat back. Dark 40 mm gap between seats, pan dished toward the back, rim on the back.
+def seatrow(name,seat,seed):
+    cv=Canvas(2,1,C((26,26,28)),seed);n=cv.n;pu,pv=cv.pu,cv.pv;S=C(seat)
+    for s in range(4):
+        x0,x1=int((s*0.5+0.02)*pu),int((s*0.5+0.48)*pu);k=1+cv.R.normal(0,0.05)
+        cv.a[0:int(0.05*pv),x0:x1]=S*0.6*k                                    # front lip in shade
+        g=np.linspace(1.12,0.78,int(0.45*pv))[:,None,None]                    # pan: light front, dished back
+        cv.a[int(0.05*pv):int(0.05*pv)+g.shape[0],x0:x1]=S*k*g
+        g=np.linspace(0.92,0.7,int(0.5*pv))[:,None,None]                      # back: lit top to shaded foot
+        cv.a[int(0.5*pv):int(0.5*pv)+g.shape[0],x0:x1]=S*k*g[::-1]
+        cv.a[n-int(0.04*pv):n,x0:x1]=S*1.3*k                                  # top rim of the back
+        xc=(x0+x1)//2;cv.a[int(0.55*pv):int(0.95*pv),xc-2:xc+2]*=0.85          # moulding line down the back
+    cv.mottle(0.04,(0.5,0.2,0.05));cv.grain(0.02);cv.speckle(3,(0.005,0.015),0.2)
+    put(name,cv)
+seatrow('seatrow',(34,62,120),30);seatrow('seatrowlegends',(40,70,132),31)
+
 # ---- concrete terrace steps: 4 m x 4 steps of 0.8 m, with crush rail line every 4 m
 cv=Canvas(4,3.2,C((168,166,160)),5);pv,pu=cv.pv,cv.pu
 cv.mottle(0.08)
@@ -55,14 +72,17 @@ cv.grain(0.03);put('terrace',cv)
 
 # ---- corrugated roof sheet: 4 x 4 m, ribs every 0.2 m (shading across the rib), sheet laps every 1 m along the slope,
 #      sheet ends staggered, rust/grime toward the low (front) edge = v 0.
-def roof(name,c,seed,rib=0.2):
+def roof(name,c,seed,rib=0.2,tone=0.04,mot=0.05):
     cv=Canvas(4,4,C(c),seed);n=cv.n;x=np.arange(n)/cv.pu;ph=(x%rib)/rib
     cv.mul((0.88+0.12*np.cos(ph*2*np.pi))[None,:]*np.ones((n,1)))
-    cv.panels(0.76,1.0,joint=0.012,dark=0.82,tone=0.04,stagger=0.5,lip=0.4,bevel=True)
-    cv.mottle(0.05,(2.0,0.5,0.1));cv.streaks([0.0,1.0,2.0,3.0],0.8,(0.3,1.5),(0.02,0.06),0.12)
+    cv.panels(0.76,1.0,joint=0.012,dark=0.82,tone=tone,stagger=0.5,lip=0.4,bevel=True)
+    cv.mottle(mot,(2.0,0.5,0.1));cv.streaks([0.0,1.0,2.0,3.0],0.8,(0.3,1.5),(0.02,0.06),0.12)
     cv.grime_bottom(1.2,0.10);cv.speckle(2,(0.01,0.03),0.2);cv.grain(0.02)
     put(name,cv)
 roof('roof',(232,234,230),6);roof('greyroof',(150,156,158),7);roof('sawtooth',(196,200,200),8);roof('roofgrey',(166,175,188),9)
+# Pratt Stand rear (gate fault 3): ribbed light-grey wall cladding on steel columns, as the Austadiums aerial shows;
+#   same sheet painter as the roof, ribs vertical (u runs along the wall), grime at the foot (v 0).
+roof('cladding',(214,218,218),40,tone=0.012,mot=0.02)
 
 # ---- off-form concrete: 4 m, formwork panels 1.2 x 2.4 m, tie holes, rain streaks, blotching
 cv=Canvas(4,4,C((206,204,196)),10)
