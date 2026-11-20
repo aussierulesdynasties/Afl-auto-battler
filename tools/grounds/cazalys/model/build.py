@@ -288,7 +288,13 @@ def building(B, mb):
         def ring(Q, z0, z1, m):   # curved walls smooth-shaded too (lead gate 2026-11-21); FASC keeps corners over 35 deg sharp
             Q = ccw(Q)
             for i in range(len(Q)): FASC.wall(Q[i], Q[(i + 1) % len(Q)], z0, z1, m)
-        W = ccw(inset(P, e, B.get('eave_n', 0.0))); ring(W, 0.0, H - sd, B['wall']); slab(P, H - sd, H)
+        W = ccw(inset(P, e, B.get('eave_n', 0.0))); slab(P, H - sd, H)
+        gy, gm = B.get('glazed_w', (-1e9, B['wall']))   # DA p11: the west face is glazed south of y = gy
+        for i in range(len(W)):
+            p, q = np.array(W[i]), np.array(W[(i + 1) % len(W)]); t = q - p; west = t[1] < 0 and abs(t[1]) > abs(t[0]) * 0.3   # CCW: west face runs south
+            if west and (p[1] - gy) * (q[1] - gy) < 0:
+                c = p + t * (gy - p[1]) / t[1]; FASC.wall(p, c, 0.0, H - sd, B['wall']); FASC.wall(c, q, 0.0, H - sd, gm)
+            else: FASC.wall(p, q, 0.0, H - sd, gm if west and (p[1] + q[1]) / 2 < gy else B['wall'])
         for y0, y1, z0, z1 in B.get('doors_w', []):   # doors on the west face, DA p11 elevation: (south y, north y, sill z, head z)
             hits = []
             for i in range(len(W)):

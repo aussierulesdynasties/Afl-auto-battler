@@ -43,6 +43,7 @@ to 2026; I have no ground photo yet to confirm the as-built heights.
 | Eave overhang past the wall | p10 section at 400 dpi, 44 px/m: west 2.2 m, east 2.5 m; raised slab 1.7 m W, 2.0 m E | walls inset 2.3 m from the aerial (slab) outline, raised 1.85 m; slabs 1.0 / 0.8 m deep |
 | West door | DA p11: 1.3 m wide, sill at FFL, head 2.35 m above FFL, 8.3 m south of the slab NE corner | quad on the wall face, y -0.42 to 0.88, z 0.7 to 3.05; tone UNVERIFIED |
 | High window band | 0.1 m below the slab underside | moved down 0.1 m |
+| Glazed bay, west face | DA p11: glazed from window band to floor south of board x 1233 (26.5 m from the slab NE corner), mullions ~1.1 m, framed row 1.32 m | `glazed_w` y < -17.3, texture shedg; glass tone UNVERIFIED |
 | North end wall face | DA p11 west elevation: wall starts 0.9 m further in than a 2.3 m eave (board_da_west2, x 340 vs 305 at 38.4 px/m) | north-facing wall inset 3.2 m |
 | Raised roof N/S ends | DA design 1 m (N) / 2 m (S) longer | aerial as-built (±0.5 m) kept: plan extents follow the aerial, heights follow the DA |
 | External ramp and stairs along the west face | drawn | **OPEN**: not modelled |

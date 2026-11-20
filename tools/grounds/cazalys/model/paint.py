@@ -165,7 +165,15 @@ def _shedr(a, pu, pv, h, w):   # bldg_w raised wall, one tile = 6.6 m x 5.5 m, r
     a[m - 2:m + 2] = (196, 198, 200)
 
 
-facade('shedw', (200, 200, 198), _shedw, (6.6, 3.6)); facade('shedr', (200, 200, 198), _shedr, (6.6, 5.5))
+def _shedg(a, pu, pv, h, w):   # bldg_w glazed bay (DA p11, south of y -17.3): the panel band and the framed row glazed, mullions ~1.1 m
+    _shedw(a, pu, pv, h, w)
+    for z0, z1, step in ((0.63, 1.85, 1.1), (1.85, 2.91, 1.32)):
+        r0, r1 = int(z0 * pv), int(z1 * pv); a[r0:r1] = np.array((58, 68, 78)) + noise(r1 - r0, w, 6, 14)[:, :, None]
+        for k in range(int(6.6 / step) + 1): a[r0:r1, int(k * step * pu):int(k * step * pu) + 6] = (90, 92, 96)
+        a[r1 - 6:r1] = (90, 92, 96)
+
+
+facade('shedw', (200, 200, 198), _shedw, (6.6, 3.6)); facade('shedg', (200, 200, 198), _shedg, (6.6, 3.6)); facade('shedr', (200, 200, 198), _shedr, (6.6, 5.5))
 facade('gstand_back', (206, 204, 198), _gstand); facade('shed', (230, 230, 226), _shed)
 # coaches' box (photos 09-11): matt black boarding, five slit windows along the top
 a = base(512, 512, (30, 32, 36), 3, 6)
