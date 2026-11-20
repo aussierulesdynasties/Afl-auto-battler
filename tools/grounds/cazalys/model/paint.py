@@ -149,7 +149,7 @@ facade('clad_grey', (200, 202, 202), _clad); facade('club', (222, 220, 214), _cl
 def _shedw(a, pu, pv, h, w):   # bldg_w wall under the slab, one tile = 6.6 m x 3.6 m, row 0 = slab underside. DA p11 at 37.8 px/m:
     def band(z0, z1): return int(z0 * pv), int(z1 * pv)   # metres down from the slab
     for k in range(int(3.6 / 0.2)): a[int(k * 0.2 * pv):int(k * 0.2 * pv) + 3] *= 0.86   # horizontal profiled metal cladding
-    r0, r1 = band(0, 0.53); a[r0:r1] = np.array((58, 68, 78)) + noise(r1 - r0, w, 6, 14)[:, :, None]   # high level windows
+    r0, r1 = band(0.1, 0.63); a[r0:r1] = np.array((58, 68, 78)) + noise(r1 - r0, w, 6, 14)[:, :, None]   # high level windows
     for k in range(6): a[r0:r1, int(k * 1.1 * pu):int(k * 1.1 * pu) + 5] = (196, 198, 200)
     r0, r1 = band(1.85, 2.91)   # framed panel row, frames every 1.3 m (TONE UNVERIFIED)
     a[r0:r0 + 6] = (90, 92, 96); a[r1 - 6:r1] = (90, 92, 96)

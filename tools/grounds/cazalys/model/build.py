@@ -288,7 +288,18 @@ def building(B, mb):
         def ring(Q, z0, z1, m):   # curved walls smooth-shaded too (lead gate 2026-11-21); FASC keeps corners over 35 deg sharp
             Q = ccw(Q)
             for i in range(len(Q)): FASC.wall(Q[i], Q[(i + 1) % len(Q)], z0, z1, m)
-        ring(inset(P, e, B.get('eave_n', 0.0)), 0.0, H - sd, B['wall']); slab(P, H - sd, H)
+        W = ccw(inset(P, e, B.get('eave_n', 0.0))); ring(W, 0.0, H - sd, B['wall']); slab(P, H - sd, H)
+        for y0, y1, z0, z1 in B.get('doors_w', []):   # doors on the west face, DA p11 elevation: (south y, north y, sill z, head z)
+            hits = []
+            for i in range(len(W)):
+                p, q = np.array(W[i]), np.array(W[(i + 1) % len(W)])
+                if min(p[1], q[1]) <= (y0 + y1) / 2 <= max(p[1], q[1]) and abs(q[1] - p[1]) > 1e-6: hits.append((p, q))
+            p, q = min(hits, key=lambda h: h[0][0] + h[1][0]); t = (q - p) / np.linalg.norm(q - p); nrm = np.array([t[1], -t[0]])
+            at = lambda y: p + (q - p) * (y - p[1]) / (q[1] - p[1]) + nrm * 0.03
+            a_, b_ = at(y0), at(y1)
+            fq = [(*a_, z0), (*b_, z0), (*b_, z1), (*a_, z1)]
+            if np.dot(np.cross(np.array(fq[1]) - fq[0], np.array(fq[3]) - fq[0])[:2], nrm) < 0: fq = fq[::-1]
+            mb.face(fq, 'paint_grey')
         if B.get('raised'):
             RP, rh = B['raised']; RP = [tuple(q) for q in RP]; re_, rsd = B['raised_eave']; RH = rh + 0.5
             ring(inset(RP, re_), 0.0, RH - rsd, B.get('raised_wall', B['wall'])); slab(RP, RH - rsd, RH)
