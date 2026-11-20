@@ -173,7 +173,24 @@ def _shedg(a, pu, pv, h, w):   # bldg_w glazed bay (DA p11, south of y -17.3): t
         a[r1 - 6:r1] = (90, 92, 96)
 
 
-facade('shedw', (200, 200, 198), _shedw, (6.6, 3.6)); facade('shedg', (200, 200, 198), _shedg, (6.6, 3.6)); facade('shedr', (200, 200, 198), _shedr, (6.6, 5.5))
+def _shedl(a, pu, pv, h, w):   # bldg_w south face louvre bay (DA p11 south elevation): horizontal louvres from the window band down 1.6 m, framed row below
+    _shedw(a, pu, pv, h, w)
+    r0, r1 = int(0.63 * pv), int(2.2 * pv); a[r0:r1] = (176, 178, 180)
+    for k in range((r1 - r0) // 9): a[r0 + k * 9:r0 + k * 9 + 4] = (120, 124, 128)
+
+
+def _shedgs(a, pu, pv, h, w):   # bldg_w south face glazed bay (DA p11 south elevation): one ~1 m bay per tile, window band, a transom, tall glazing to floor level
+    _shedw(a, pu, pv, h, w)
+    r0, r1 = int(0.63 * pv), int(2.91 * pv); a[r0:r1] = np.array((58, 68, 78)) + noise(r1 - r0, w, 6, 14)[:, :, None]
+    a[:int(2.91 * pv), :6] = (90, 92, 96); a[r0:r0 + 6] = (90, 92, 96); a[r1 - 6:r1] = (90, 92, 96)
+
+
+def _shedp(a, pu, pv, h, w):   # bldg_w south face plain bay (DA p11 south elevation): plain panel from the window band to floor level, colour UNVERIFIED
+    _shedw(a, pu, pv, h, w)
+    r0, r1 = int(0.63 * pv), int(2.91 * pv); a[r0:r1] = np.array((206, 206, 204)) + noise(r1 - r0, w, 3, 5)[:, :, None]
+
+
+facade('shedw', (200, 200, 198), _shedw, (6.6, 3.6)); facade('shedgs', (200, 200, 198), _shedgs, (1.0, 3.6), 256); facade('shedl', (200, 200, 198), _shedl, (6.6, 3.6)); facade('shedp', (200, 200, 198), _shedp, (6.6, 3.6)); facade('shedg', (200, 200, 198), _shedg, (6.6, 3.6)); facade('shedr', (200, 200, 198), _shedr, (6.6, 5.5))
 facade('gstand_back', (206, 204, 198), _gstand); facade('shed', (230, 230, 226), _shed)
 # coaches' box (photos 09-11): matt black boarding, five slit windows along the top
 a = base(512, 512, (30, 32, 36), 3, 6)

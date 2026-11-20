@@ -294,6 +294,13 @@ def building(B, mb):
             p, q = np.array(W[i]), np.array(W[(i + 1) % len(W)]); t = q - p; west = t[1] < 0 and abs(t[1]) > abs(t[0]) * 0.3   # CCW: west face runs south
             if west and (p[1] - gy) * (q[1] - gy) < 0:
                 c = p + t * (gy - p[1]) / t[1]; FASC.wall(p, c, 0.0, H - sd, B['wall']); FASC.wall(c, q, 0.0, H - sd, gm)
+            elif t[0] > 0 and abs(t[0]) > abs(t[1]) * 0.3 and B.get('bays_s'):   # DA p11 south elevation: the south face in bays, west to east (x end, material)
+                a0 = p
+                for xe, m in B['bays_s']:
+                    if xe <= a0[0] + 1e-6: continue
+                    b0 = p + t * (min(xe, q[0]) - p[0]) / t[0]; FASC.wall(a0, b0, 0.0, H - sd, m); a0 = b0
+                    if a0[0] >= q[0] - 1e-6: break
+                if a0[0] < q[0] - 1e-6: FASC.wall(a0, q, 0.0, H - sd, B['wall'])
             else: FASC.wall(p, q, 0.0, H - sd, gm if west and (p[1] + q[1]) / 2 < gy else B['wall'])
         for y0, y1, z0, z1 in B.get('doors_w', []):   # doors on the west face, DA p11 elevation: (south y, north y, sill z, head z)
             hits = []
