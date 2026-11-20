@@ -235,10 +235,11 @@ if os.environ.get('FARRIBS') and os.environ.get('FARVR'):
         return _r(a)
     _FZ=(_i0,_i1,float(os.environ.get('FARDZ',0)))
     print('FARVR',[(round(RO[i],2),round(_vr(i),2),round(_CR[i],2)) for i in range(_i0,_i1)],'FARDZ',_FZ[2])
+NEARDZ=float(os.environ.get('NEARDZ',0))
 def fardz(a,s,inzone=0):
     if not _FZ:return 0.0
     i0,i1,dz=_FZ
-    if not ribat(i0,s)<=a<=ribat(i1,s):return 0.0
+    if not ribat(i0,s)<=a<=ribat(i1,s):return 0.0 if inzone else -NEARDZ*(1-math.sqrt(max(0.0,math.sin(math.pi*phase(a,s)))))*s*s  # rest of the roof: dips at the ribs, depth fitted on the director's photo (director_roof_wave_ref)
     if inzone:return 1.0
     return -dz*(1-math.sqrt(max(0.0,math.sin(math.pi*phase(a,s)))))*s*s
 SR=[0,0.03,0.06,0.09,0.12,0.15,0.18,0.21,0.24,0.28,0.32,0.36,0.40,0.45,0.50,0.55,0.60,0.65,0.70,0.75,0.80,0.84,0.88,0.92,0.95,0.975,0.99,1.0]  # dense rows: slanted far ribs cut diagonally across them
@@ -406,7 +407,7 @@ for i in range(1,len(RI)-1):
 # near side: flat dark underside 1.0 m below the roof edge, from the edge in to the stand's outer wall, and the wall face
 # carried up to meet it (lead 2026-11-20 "Seats + underside"; photo: dark band just under the gutter; lower, it hid the red board)
 UNDZ=1.0
-_UA=arange(NEARW[0],NEARW[1],0.5)
+_UA=arange(NEARW[0],NEARW[1],0.125)  # same step as the roof grid, so no slice spans a rib cusp
 for _a0,_a1 in zip(_UA,_UA[1:]):
     _q2=[]
     for _a in (_a0,_a1):
@@ -414,8 +415,18 @@ for _a0,_a1 in zip(_UA,_UA[1:]):
         # inner end: never above the roof's under-surface at the wall line (r34 poked through the membrane there)
         _ri=rin(_a)-NAVYW+0.8-1.6*math.sin(math.pi*phase(_a));_sw=min(1.0,max(0.0,((_w-Vector((SH[0],SH[1],0))).length-_ri)/max(1.0,rout(_a)-_ri)))
         _zi=min(_zl,min(rp(_a,_sw+d,-0.6).z for d in (-0.06,-0.03,0.0,0.03,0.06) if 0<=_sw+d<=1)-0.4);_zl=min(_zl,rp(_a,0.97,-0.6).z-0.4)
-        _q2.append((Vector((_e.x,_e.y,_zl)),P(_a,25.0,_zi),P(_a,25.0,21.0),_zi))
-    face([bm.verts.new(v) for v in (_q2[0][0],_q2[1][0],_q2[1][1],_q2[0][1])],DARK)
+        _q2.append((Vector((_e.x,_e.y,_zl)),P(_a,25.0,_zi),P(_a,25.0,21.0),_zi,_sw))
+    # split edge-to-wall into 8 strips, each kept 0.4 m under the roof's under-surface (the rib dips sag below a straight chord)
+    _rows=[]
+    for _j,(_e2,_w2,_,_zi2,_sw2) in enumerate(_q2):
+        _a=(_a0,_a1)[_j];_r=[]
+        for _k in range(9):
+            _u=_k/8;_v=_e2.lerp(_w2,_u);_s=1.0-(1.0-_sw2)*_u
+            _dv=Vector((_v.x-SH[0],_v.y-SH[1],0));_av=math.degrees(math.atan2(_dv.y,_dv.x))%360
+            _ri2=rin(_av)-NAVYW+0.8-1.6*math.sin(math.pi*phase(_av));_s=(_dv.length-_ri2)/max(1.0,rout(_av)-_ri2)  # the roof point straight above this one
+            _r.append(Vector((_v.x,_v.y,min(_v.z,min(rp(_av+da,min(1.0,max(0.0,_s+d)),-0.6).z for d in (-0.03,0.0,0.03) for da in (-0.1,0.0,0.1))-0.4))))
+        _rows.append(_r)
+    for _k in range(8):face([bm.verts.new(v) for v in (_rows[0][_k],_rows[1][_k],_rows[1][_k+1],_rows[0][_k+1])],DARK)
     if _q2[0][3]>21.0 and _q2[1][3]>21.0:face([bm.verts.new(v) for v in (_q2[0][1],_q2[1][1],_q2[1][2],_q2[0][2])],DARK)
 R=RO  # columns and later rib users stand under the outer rib ends
 for i in range(1,len(R)-1):
