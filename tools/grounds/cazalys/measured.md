@@ -123,3 +123,9 @@ Roof-level registration of the Esri z19 aerial: the three visible slab corners s
 | Roof and raised block | ge3d_1, 3, 4 | MATCH: slab outline, raised block extent and position, two dark wells with light kerbs, rib direction, roof tone, navy fascia |
 | West face | ge3d_0, 1, 4 | MATCH: curved west wall line, dark cladding, eave depth; ramp and balustrade sit in the eave shadow in GE (colour UNVERIFIED, see table above) |
 | South face and surroundings | ge3d_2, 3, 0 | MATCH: south slab edge, dark south clerestory band, shed position and size, ground line |
+
+### Recheck 2 (2026-11-21, glb 5bf49f2e)
+
+- Sixth points come from the raised-slab corners (z 6.3). rms on the 1280-wide photo: v0 3.46 px (6 pts, was 3.63/5), v1 2.31 (6, was 1.93/5), v2 3.74 (7, was 3.52/5), v4 3.64 (7). v3: 4.04 px on 5 points, but the board shows a false fit (the render is offset from the photo). Each raised-corner sixth point pushes it to 7.8-11 px. FAIL, unresolved. v5: bldg_w is cut off by the frame's bottom edge, so no clear corners. Not solved.
+- Tower t2 moved from (-86.0,42.0) to (-82.2,39.2): the root of its shadow in the Esri aerial, corrected by t1's 1.25 m ground offset. The aerial, v1 and v3 put it 4.7, 10.5 and 10.3 m from the old spot. The two GE views disagree with each other by 13 m (the pole base is hidden behind the sheds), so the aerial decides.
+- East edge: GE solves disagree +-3 m, model inside spread, unresolved.
