@@ -279,10 +279,10 @@ def building(B, mb):
     if np.allclose(P[0], P[-1]): P = P[:-1]
     if B.get('eave'):   # DA 3998/2010 p10 section: roof slabs overhang the walls; the aerial outline is the slab edge
         e, sd = B['eave']; H = B['h'] + 0.5
-        mb.prism(inset(P, e), 0.0, H - sd, B['wall']); mb.prism(P, H - sd, H, 'paint_white', top=B['roof'], bot='paint_white')
+        mb.prism(inset(P, e), 0.0, H - sd, B['wall']); mb.prism(P, H - sd, H, 'slab_white', top=B['roof'], bot='slab_white')
         if B.get('raised'):
             RP, rh = B['raised']; RP = [tuple(q) for q in RP]; re_, rsd = B['raised_eave']; RH = rh + 0.5
-            mb.prism(inset(RP, re_), 0.0, RH - rsd, B.get('raised_wall', B['wall'])); mb.prism(RP, RH - rsd, RH, 'paint_white', top=B['roof'], bot='paint_white')
+            mb.prism(inset(RP, re_), 0.0, RH - rsd, B.get('raised_wall', B['wall'])); mb.prism(RP, RH - rsd, RH, 'slab_white', top=B['roof'], bot='slab_white')
         return
     if B.get('replace'):   # satellite-traced edge replacing a run of OSM points (first..last, inclusive)
         f, l, R_ = B['replace']; i = min(range(len(P)), key=lambda k: math.dist(P[k], f)); j = min(range(len(P)), key=lambda k: math.dist(P[k], l))

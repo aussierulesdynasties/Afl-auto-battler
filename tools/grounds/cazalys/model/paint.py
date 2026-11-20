@@ -103,6 +103,7 @@ for nm, col in (('steel_white', (232, 234, 232)), ('steel_galv', (152, 156, 160)
     a = base(256, 256, col, 6, 22 if lite else 8); a[:, 120:126] *= 0.7 if lite else 1.35; a[:, 0:4] *= 0.75 if lite else 1.3
     if lite: weather(a, 0.14, 16, 16)
     save(nm, a, (2.0, 2.0))
+save('slab_white', base(256, 1024, (234, 234, 230), 2, 4), (8.0, 2.0))   # bldg_w slab fascia: continuous painted concrete edge, no seams (lead gate 2026-11-21)
 # aluminium bleacher planks: 250 mm extruded boards, ribs along the plank, oxidised streaks (GE n290 NW bleacher)
 a = base(256, 512, (186, 190, 192), 4, 12)
 for k in range(0, 256, 32): a[k:k + 3] *= 0.7
