@@ -243,6 +243,20 @@ facade('clubw_white', (234, 234, 230), _cw_white, (6.0, 8.0), 1024, 1366, 0.08)
 facade('clubw_glass', (70, 84, 96), _cw_glass, (3.0, 3.6), 512, 616, 0.02)
 for nm, col in (('paint_cream', (226, 214, 176)), ('paint_brown', (64, 52, 48)), ('bollard', (204, 160, 40)), ('paint_grey', (112, 116, 118))):
     a = base(128, 128, col, 4, 8); save(nm, a, (1.0, 1.0))
+# club forecourt (photo 12): broom-finished concrete drive with saw joints, garden mulch, shrubs, palm trunk and fronds
+a = base(256, 256, (236, 236, 232), 2, 4); yy, xx = np.ogrid[:256, :256]; a[((yy - 128) ** 2 + (xx - 128) ** 2) < 36] = (250, 248, 236); save('soffit_white', a, (3.0, 3.0))   # canopy soffit: smooth white, a downlight every 3 m
+concrete('conc_drive', (176, 174, 168), 4.0, 4.0, (8.0, 8.0), 0.04)
+save('mulch', base(256, 256, (92, 64, 44), 14, 18), (2.0, 2.0))
+a = base(256, 256, (58, 104, 44), 22, 30); a[R.random((256, 256)) < 0.08] *= 0.6; save('shrub', a, (1.5, 1.5))
+a = base(128, 128, (120, 108, 92), 6, 10); a[::12] *= 0.8; save('palm_trunk', a, (1.0, 1.0))
+# palm frond (photo 12): RGBA, a pinnate blade along v (base at v=0), a pale rib, ~40 drooping leaflet pairs, open between
+FW, FH = 256, 1024; im = Image.new('RGBA', (FW, FH), (0, 0, 0, 0)); dr = ImageDraw.Draw(im)
+for k in range(40):
+    y = FH - 40 - k * (FH - 80) / 40; L_ = (FW / 2 - 6) * math.sin(math.pi * (0.12 + 0.85 * k / 40)) ** 0.7
+    g = tuple(int(c) for c in (np.array((54, 104, 40)) * R.uniform(0.8, 1.15)))
+    for sg in (-1, 1): dr.line([FW / 2, y, FW / 2 + sg * L_, y - 0.55 * L_], fill=g + (255,), width=7)
+dr.line([FW / 2, FH - 10, FW / 2, 30], fill=(150, 150, 96, 255), width=6)
+a = np.asarray(im, float); save('palm_frond', a, (1.0, 1.0))
 # angled 'Cazalys' sign: dark brown inverted trapezoid (drawn on the mesh), vertical panel joints, raised white script
 SW2, SH2 = 1024, 400
 im = Image.fromarray(np.clip(base(SH2, SW2, (66, 54, 50), 2, 4), 0, 255).astype(np.uint8)); dr = ImageDraw.Draw(im)

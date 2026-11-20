@@ -275,9 +275,11 @@ def axes(poly):
 
 
 def building(B, mb):
-    if B.get('kind') == 'club_w': return club_w(B, mb)
     P = [tuple(p) for p in np.array(OSM[B['osm']], float)]
     if np.allclose(P[0], P[-1]): P = P[:-1]
+    if B.get('replace'):   # satellite-traced edge replacing a run of OSM points (first..last, inclusive)
+        f, l, R_ = B['replace']; i = min(range(len(P)), key=lambda k: math.dist(P[k], f)); j = min(range(len(P)), key=lambda k: math.dist(P[k], l))
+        P = P[:i] + [tuple(q) for q in R_] + P[j + 1:]
     if B.get('setback'):   # the club: pitch-front points pushed back; the strip in front takes the sails and a terrace
         P = [(x, y - B['setback']) if y > -99.5 else (x, y) for x, y in P]
     mb.prism(P, 0.0, B['h'], B['wall'], top=B['roof'])
@@ -290,71 +292,114 @@ def building(B, mb):
         oriented(mb, [(*p, B['h']), (*q, B['h']), (*q, B['h'] + 0.5), (*p, B['h'] + 0.5)], 'fascia', np.array([*n, 0]))
 
 
-def club_w(B, mb):
-    """west leagues club (Commons photo 12, GE 'n' views): white render all round with a dark glazing band; along the car-park
-    (south) front a grey shopfront with posters, a white awning, a sloped glazed upper floor with cream struts; at its west end
-    the entrance canopy on slanted cream posts carrying the angled 'Cazalys' script sign; yellow bollards on the footpath"""
-    P = [tuple(p) for p in np.array(OSM[B['osm']], float)]
-    if np.allclose(P[0], P[-1]): P = P[:-1]
-    P = ccw(P); H = B['h']; GF, AW = 4.2, 4.5
-    S0, S1 = np.array([-126.27, -33.51]), np.array([-93.69, -26.1])          # the shopfront edge
-    for i in range(len(P)):
-        p, q = np.array(P[i]), np.array(P[(i + 1) % len(P)])
-        if np.linalg.norm(p - S0) < 0.1 and np.linalg.norm(q - S1) < 0.1: continue
-        mb.wall(P[i], P[(i + 1) % len(P)], 0.0, H, 'clubw_white')
-    mb.cap(P, H, B['roof'])
-    d = S1 - S0; Ls = np.linalg.norm(d); d /= Ls; n = np.array([d[1], -d[0]])      # n: outward (right of p->q on a CCW outline)
-    Q = lambda s, o, z: (*(S0 + d * s + n * o), z)
-    mb.face([Q(0, 0, 0), Q(Ls, 0, 0), Q(Ls, 0, GF), Q(0, 0, GF)], 'clubw_gf')
-    sb = 1.2                                                                     # upper glazing: foot set back, head out at the wall line
-    g0 = 12.0                                                                    # photo 12: west of the entrance the upper floor is white render
-    mb.face([Q(0, 0, GF), Q(g0, 0, GF), Q(g0, 0, H), Q(0, 0, H)], 'clubw_white', [(0, GF / 8.0), (2, GF / 8.0), (2, 1), (0, 1)])
-    oriented(mb, [Q(g0, -sb, AW), Q(Ls, -sb, AW), Q(Ls, 0, H - 0.3), Q(g0, 0, H - 0.3)], 'clubw_glass', np.array([*n, 0.3]),
-             [(0, 0), ((Ls - g0) / 3.0, 0), ((Ls - g0) / 3.0, 1), (0, 1)])
-    for s_, out in ((g0, -d), (Ls, d)):                                          # white end cheeks closing the slope
-        oriented(mb, [Q(s_, -sb, AW), Q(s_, 0, AW), Q(s_, 0, H - 0.3)], 'paint_white', np.array([*out, 0]))
-    oriented(mb, [Q(g0, 0, H - 0.3), Q(Ls, 0, H - 0.3), Q(Ls, 0, H + 0.3), Q(g0, 0, H + 0.3)], 'paint_white', np.array([*n, 0]))
-    oriented(mb, [Q(g0, -sb, GF), Q(Ls, -sb, GF), Q(Ls, -sb, AW), Q(g0, -sb, AW)], 'paint_white', np.array([*n, 0]))
-    # awning along the shopfront: thin white slab 3 m out, white fascia
-    aw = [Q(0, -sb, GF), Q(Ls, -sb, GF), Q(Ls, 3.0, GF), Q(0, 3.0, GF)]
-    oriented(mb, aw, 'roof_soffit', np.array([0, 0, -1.0])); oriented(mb, [(x, y, AW) for x, y, _ in aw], 'roof_white', UP)
-    oriented(mb, [Q(0, 3.0, GF), Q(Ls, 3.0, GF), Q(Ls, 3.0, AW), Q(0, 3.0, AW)], 'paint_white', np.array([*n, 0]))
-    for s_, out in ((0, -d), (Ls, d)):
-        oriented(mb, [Q(s_, 0, GF), Q(s_, 3.0, GF), Q(s_, 3.0, AW), Q(s_, 0, AW)], 'paint_white', np.array([*out, 0]))
-    # poster groups in the shopfront east of the entrance (three panels per group, a pilaster between groups)
-    for s_ in np.arange(15.0, Ls - 3.5, 5.0):
-        oriented(mb, [Q(s_, 0.03, 0.4), Q(s_ + 3.3, 0.03, 0.4), Q(s_ + 3.3, 0.03, 3.4), Q(s_, 0.03, 3.4)], 'posters_w', np.array([*n, 0]),
-                 [(0, 0), (1, 0), (1, 1), (0, 1)])
-        mb.box(tuple(S0 + d * (s_ - 0.85) + n * 0.15), 0.5, 0.3, GF, math.degrees(math.atan2(d[1], d[0])), 'paint_grey')
-    # cream struts in front of the upper glazing, leaning out
-    for s_ in np.arange(12.0, Ls - 1.0, 7.0):
-        mb.beam(Q(s_, 1.0, AW), Q(s_ - 0.3, 1.3, H + 1.6), 0.28, 0.28, 'paint_cream', tube=True)
-    # entrance canopy: white slab, plan bulging out in a curve, 13 m along the front, 7 m deep
-    e0, e1, dep, zc = 1.0, 14.0, 7.0, 5.2
-    arc = [(e0 + (e1 - e0) * t, 3.0 + (dep - 3.0) * math.sin(math.pi * t) ** 0.6) for t in np.linspace(0, 1, 13)]
-    plan = [(e1, -sb)] + [(s, o) for s, o in arc[::-1]] + [(e0, -sb)]
-    pts = [Q(s, o, 0)[:2] for s, o in plan]
-    mb.prism(pts, zc, zc + 0.4, 'paint_white', top='roof_white', bot='roof_soffit')
-    for f, t in (((4.6, 5.8), (4.0, 5.4)), ((10.8, 6.0), (10.2, 5.6))):       # photo 12: slanted cream posts, all tops leaning west
-        mb.beam(Q(*f, 0), Q(*t, zc), 0.3, 0.3, 'paint_cream', tube=True)
-    mb.beam(Q(12.6, 5.6, 0), Q(12.0, 4.6, zc + 4.8), 0.3, 0.3, 'paint_cream', tube=True)   # the tall pole through the canopy
-    mb.beam(Q(1.0, 2.6, 0), Q(0.6, 2.2, zc + 3.0), 0.26, 0.26, 'paint_cream', tube=True)   # the pole at the west end of the canopy
-    # angled sign on the canopy: inverted trapezoid, 5.4 m top / 3.0 m foot, 2.2 m tall, tipped back 12 deg
-    sc, so, z0, z1 = 6.5, 3.4, zc + 0.4, zc + 2.6; tb = 0.47
-    ts = math.radians(25); ds = d * math.cos(ts) + n * math.sin(ts); ns = n * math.cos(ts) - d * math.sin(ts)   # turned 25 deg to face the car park
-    c0 = S0 + d * sc + n * so; F_ = lambda a, b, z: (*(c0 + ds * a + ns * b), z)
-    fr = [F_(-1.5, 0, z0), F_(1.5, 0, z0), F_(2.7, -tb, z1), F_(-2.7, -tb, z1)]; n = ns
-    uv = [(0.222, 0), (0.778, 0), (1, 1), (0, 1)]
-    oriented(mb, fr, 'sign_clubw', np.array([*n, 0]), uv)
-    bk = [tuple(np.array(p) - np.array([*n, 0]) * 0.25) for p in fr]
-    oriented(mb, bk, 'paint_brown', np.array([*(-n), 0]))
+def front_path(F):
+    """arc-length frame along a facade polyline (CCW building, so outward is to the right of travel)"""
+    F = np.array(F, float); seg = np.diff(F, axis=0); Ls = np.linalg.norm(seg, axis=1); cum = np.concatenate([[0], np.cumsum(Ls)])
+    def at(s):
+        i = int(np.clip(np.searchsorted(cum, s, 'right') - 1, 0, len(Ls) - 1)); d = seg[i] / Ls[i]
+        return F[i] + d * (s - cum[i]), d, np.array([d[1], -d[0]])
+    def Q(s, o, z):
+        p, d, n = at(s); return (*(p + n * o), z)
+    def runs(s0, s1):   # split [s0, s1] at the polyline corners
+        cuts = [s0] + [c for c in cum[1:-1] if s0 < c < s1] + [s1]; return list(zip(cuts[:-1], cuts[1:]))
+    return at, Q, runs, cum[-1]
+
+
+def club_front(C, mb):
+    """club entrance (Commons photo 12, Kerry Raymond 2018 photo, Andrew Watson 2013 set): on the club's east face by the
+    Mulgrave Rd corner. A flat white entrance canopy on three cream posts (outer two rise through it), the tilted brown
+    'Cazalys' sign on the canopy, a covered walkway along the grey shopfront with ClubsLink poster bays, a sloped glazed
+    upper floor with cream mullions curving round to the north-east, yellow bollards on the kerb, a concrete drive and a
+    palm garden island"""
+    at, Q, runs, L = front_path(C['front']); at0, Q0, runs0 = at, Q, runs
+    ch = front_path(C['chamfer']); cat, cQ, cruns, cL = ch; GF, AWz, AWt, AWo = C['gf'], C['aw_z'], C['aw_t'], C['aw_o']
+    Hg = C['glaze_top']; c0, c1, co, cz, ct = C['canopy']
+    def piece(s0, s1, o, z0, z1, m, tu=None):
+        for a, b in runs(s0, s1):
+            _, _, n = at(0.5 * (a + b))
+            uv = None if tu is None else [(a / tu[0], z0 / tu[1]), (b / tu[0], z0 / tu[1]), (b / tu[0], z1 / tu[1]), (a / tu[0], z1 / tu[1])]
+            oriented(mb, [Q(a, o, z0), Q(b, o, z0), Q(b, o, z1), Q(a, o, z1)], m, np.array([*n, 0]), uv)
+    def slab(s0, s1, o0, o1, z0, z1, top, side, fr=None):
+        at, Q, runs = fr or (at0, Q0, runs0)
+        for a, b in runs(s0, s1):
+            _, _, n = at(0.5 * (a + b))
+            q = [Q(a, o0, z0), Q(b, o0, z0), Q(b, o1, z0), Q(a, o1, z0)]
+            oriented(mb, q, 'soffit_white', np.array([0, 0, -1.0]), [(p[0] / 3.0, p[1] / 3.0) for p in q]); oriented(mb, [(x, y, z1) for x, y, _ in q], top, UP)
+            oriented(mb, [Q(a, o1, z0), Q(b, o1, z0), Q(b, o1, z1), Q(a, o1, z1)], side, np.array([*n, 0]))
+        for s_, sg in ((s0, -1), (s1, 1)):
+            _, d, _ = at(s_); oriented(mb, [Q(s_, o0, z0), Q(s_, o1, z0), Q(s_, o1, z1), Q(s_, o0, z1)], side, np.array([*(d * sg), 0]))
+    # ground floor: grey shopfront the whole way
+    piece(0.0, L, 0.06, 0.0, GF, 'clubw_gf', (6.0, 4.2))
+    mb.prism([tuple(q) for q in C['lobby']['poly']], 0.0, C['lobby']['h'], 'club', top='roof_white')   # the low white block at the corner (photo 12: sky above the canopy)
+    # upper floor right of the canopy: glazing leaning out (foot 1.2 m in, head 0.4 m out), cream mullions, white head band
+    g0 = 0.0
+    for a, b in runs(g0, L):
+        _, _, n = at(0.5 * (a + b))
+        oriented(mb, [Q(a, -1.2, AWz + AWt), Q(b, -1.2, AWz + AWt), Q(b, 0.4, Hg), Q(a, 0.4, Hg)], 'clubw_glass', np.array([*n, 0.4]),
+                 [(a / 3.0, 0), (b / 3.0, 0), (b / 3.0, 1), (a / 3.0, 1)])
+        oriented(mb, [Q(a, 0.4, Hg), Q(b, 0.4, Hg), Q(b, 0.4, Hg + 0.4), Q(a, 0.4, Hg + 0.4)], 'paint_white', np.array([*n, 0]))
+    for s_ in np.arange(g0 + 0.1, L, C['mullion']):
+        mb.beam(Q(s_, -1.0, AWz + AWt), Q(s_, 0.5, Hg), 0.14, 0.14, 'paint_cream')
+    _, d1, _ = at(L)
+    oriented(mb, [Q(L, -1.2, AWz + AWt), Q(L, 0.4, AWz + AWt), Q(L, 0.4, Hg + 0.4), Q(L, -1.2, Hg + 0.4)], 'paint_white', np.array([*d1, 0]))
+    # covered walkway along the shopfront: flat white soffit, thin white fascia
+    slab(0.0, L, 0.0, AWo, AWz, AWz + AWt, 'roof_white', 'paint_white')
+    # entrance canopy: flat wedge off the cut-off corner (lobby doors face south-east), a touch higher than the walkway
+    slab(c0, c1, -0.2, co, cz, cz + ct, 'roof_white', 'paint_white', ch[:3])
+    for s_, top in C['posts']:
+        mb.beam(cQ(s_, co - 0.7, 0), cQ(s_ - 0.04 * top, co - 0.7, top), 0.32, 0.32, 'paint_cream', tube=True)   # photo 12: every post leans a little to the south-west
+    # the tilted sign on the canopy: inverted trapezoid, tipped back, turned toward the Mulgrave Rd approach
+    sc, so, sw0, sw1, sh, tb, turn = C['sign']; z0 = cz + ct; z1 = z0 + sh
+    p0, d, n = cat(sc); ts = math.radians(turn); ds = d * math.cos(ts) + n * math.sin(ts); ns = n * math.cos(ts) - d * math.sin(ts)
+    cc = p0 + n * so; F_ = lambda a, b, z: (*(cc + ds * a + ns * b), z)
+    fr = [F_(-sw0 / 2, 0, z0), F_(sw0 / 2, 0, z0), F_(sw1 / 2, -tb, z1), F_(-sw1 / 2, -tb, z1)]
+    e = (sw1 - sw0) / 2 / sw1
+    oriented(mb, fr, 'sign_clubw', np.array([*ns, 0]), [(e, 0), (1 - e, 0), (1, 1), (0, 1)])
+    bk = [tuple(np.array(p) - np.array([*ns, 0]) * 0.25) for p in fr]
+    oriented(mb, bk, 'paint_brown', np.array([*(-ns), 0]))
     for i in range(4):
         j = (i + 1) % 4; mb.face([fr[i], fr[j], bk[j], bk[i]], 'paint_brown'); mb.face([fr[i], bk[i], bk[j], fr[j]], 'paint_brown')
-    mb.beam(Q(sc, so - 0.35, zc + 0.4), Q(sc, so - 0.35, z0 + 0.2), 0.2, 0.2, 'steel_galv')
-    n = np.array([d[1], -d[0]])
-    # yellow bollards along the footpath kerb in front of the shopfront
-    for s_ in np.arange(15.5, Ls - 1.0, 2.6):
-        mb.cyl(Q(s_, 3.6, 0)[:2], 0.08, 0, 1.0, 'bollard', n=10, top='bollard')
+    # poster bays: ClubsLink bays of three posters, a grey pilaster before each bay
+    for s_ in C['bays']:
+        for a, b in runs(s_, s_ + 3.3):
+            _, _, n = at(0.5 * (a + b))
+            oriented(mb, [Q(a, 0.09, 0.4), Q(b, 0.09, 0.4), Q(b, 0.09, 3.4), Q(a, 0.09, 3.4)], 'posters_w', np.array([*n, 0]),
+                     [((a - s_) / 3.3, 0), ((b - s_) / 3.3, 0), ((b - s_) / 3.3, 1), ((a - s_) / 3.3, 1)])
+        p, d, n = at(s_ - 0.6); mb.box(tuple(p + n * 0.15), 0.5, 0.3, GF, math.degrees(math.atan2(d[1], d[0])), 'paint_grey')
+    # footpath under the walkway and canopy: raised concrete, kerb at the drive edge, yellow bollards along the kerb
+    for a, b in runs(0.0, L):
+        q = [Q(a, 0.06, 0.15), Q(b, 0.06, 0.15), Q(b, AWo + 0.3, 0.15), Q(a, AWo + 0.3, 0.15)]
+        oriented(mb, q, 'paving', UP, [(p[0] / 2.4, p[1] / 2.4) for p in q])
+    piece(0.0, L, AWo + 0.3, 0.0, 0.15, 'conc_kerb')
+    oriented(mb, [cQ(0, 0.08, 0), cQ(cL, 0.08, 0), cQ(cL, 0.08, GF), cQ(0, 0.08, GF)], 'clubw_gf', np.array([*cat(1)[2], 0]), [(0, 0), (cL / 6.0, 0), (cL / 6.0, 1), (0, 1)])   # entrance doors under the canopy
+    q = [cQ(c0, 0.06, 0.15), cQ(c1, 0.06, 0.15), cQ(c1, co + 0.3, 0.15), cQ(c0, co + 0.3, 0.15)]   # paving under the canopy
+    oriented(mb, q, 'paving', UP, [(p[0] / 2.4, p[1] / 2.4) for p in q])
+    for a, b in cruns(c0, c1):
+        _, _, n = cat(0.5 * (a + b)); oriented(mb, [cQ(a, co + 0.3, 0), cQ(b, co + 0.3, 0), cQ(b, co + 0.3, 0.15), cQ(a, co + 0.3, 0.15)], 'conc_kerb', np.array([*n, 0]))
+    for s_ in C['bollards']:
+        mb.cyl(Q(s_, AWo, 0.15)[:2], 0.09, 0.15, 1.15, 'bollard', n=10, top='bollard')
+    # concrete drive and the garden island (kerbed bed, shrubs, palms)
+    for c in earclip(ccw([tuple(p) for p in C['drive']])):
+        oriented(mb, [(x, y, 0.0) for x, y in c], 'conc_drive', UP, [(x / 8.0, y / 8.0) for x, y in c])
+    G = C['garden']
+    mb.prism(rect(G['c'], G['L'], G['W'], G['a']), 0.0, 0.2, 'conc_kerb', top='mulch')
+    rng = np.random.default_rng(5); u = np.array([math.cos(math.radians(G['a'])), math.sin(math.radians(G['a']))]); v = np.array([-u[1], u[0]])
+    for _ in range(G['shrubs']):
+        c = np.array(G['c']) + u * rng.uniform(-0.42, 0.42) * G['L'] + v * rng.uniform(-0.36, 0.36) * G['W']
+        r, h = rng.uniform(0.5, 0.9), rng.uniform(0.6, 1.2)   # rounded shrub: a squashed dome
+        rings = [(r * math.cos(t), 0.2 + h * math.sin(t)) for t in np.linspace(0, math.pi / 2, 5)]
+        for (r0, z0), (r1, z1) in zip(rings[:-1], rings[1:]):
+            for k in range(10):
+                a0, a1 = 2 * math.pi * k / 10, 2 * math.pi * (k + 1) / 10
+                pt = lambda rr, zz, aa: (c[0] + rr * math.cos(aa), c[1] + rr * math.sin(aa), zz)
+                mb.face([pt(r0, z0, a0), pt(r0, z0, a1), pt(r1, z1, a1), pt(r1, z1, a0)] if r1 > 1e-3 else [pt(r0, z0, a0), pt(r0, z0, a1), pt(0, z1, 0)], 'shrub')
+    for px, py, h in G['palms']:   # slim palms: a thin trunk, 12 arching frond cards (RGBA pinnate blades) in two whorls
+        mb.beam((px, py, 0.2), (px + 0.25, py, h), 0.16, 0.16, 'palm_trunk', tube=True); c2 = np.array([px + 0.25, py])
+        for k in range(12):
+            t = 2 * math.pi * k / 6 + (0.5 if k >= 6 else 0); e2 = np.array([math.cos(t), math.sin(t)]); W2 = np.array([-e2[1], e2[0], 0]) * 0.7
+            up = 0.7 if k >= 6 else 0.25; P0 = np.array([*c2, h]); P1 = np.array([*(c2 + e2 * 1.3), h + up]); P2 = np.array([*(c2 + e2 * 2.4), h + up - 1.1])
+            mb.face([P0 - W2 * 0.4, P1 - W2, P1 + W2, P0 + W2 * 0.4], 'palm_frond', [(0.3, 0), (0, 0.5), (1, 0.5), (0.7, 0)])
+            mb.face([P1 - W2, P2 - W2 * 0.3, P2 + W2 * 0.3, P1 + W2], 'palm_frond', [(0, 0.5), (0.35, 1), (0.65, 1), (1, 0.5)])
 
 
 def shelter(S, mb):
@@ -640,6 +685,7 @@ def build_all():
     for S in D['terraces']: open_terrace(S, mb)
     grandstand(D['grandstand'], mb, mr)
     for B in D['buildings']: building(B, mx)
+    club_front(D['club_front'], mx)
     for S in D['shelters']: shelter(S, mx)
     for T in D['tents']: tent(T, mx)
     bleacher(D['bleacher'], mx); sails(D['sails'], mx); scoreboard(D['scoreboard'], mx)
