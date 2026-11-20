@@ -279,10 +279,15 @@ def building(B, mb):
     if np.allclose(P[0], P[-1]): P = P[:-1]
     if B.get('eave'):   # DA 3998/2010 p10 section: roof slabs overhang the walls; the aerial outline is the slab edge
         e, sd = B['eave']; H = B['h'] + 0.5
-        mb.prism(inset(P, e), 0.0, H - sd, B['wall']); mb.prism(P, H - sd, H, 'slab_white', top=B['roof'], bot='slab_white')
+
+        def slab(Q, z0, z1):   # caps in mb; the fascia ring in FASC, welded and smooth-shaded so the curve has no facet bands (lead gate 2026-11-21)
+            Q = ccw(Q)
+            for i in range(len(Q)): FASC.wall(Q[i], Q[(i + 1) % len(Q)], z0, z1, 'slab_white')
+            mb.cap(Q, z1, B['roof']); mb.cap(Q, z0, 'slab_white', down=True)
+        mb.prism(inset(P, e), 0.0, H - sd, B['wall']); slab(P, H - sd, H)
         if B.get('raised'):
             RP, rh = B['raised']; RP = [tuple(q) for q in RP]; re_, rsd = B['raised_eave']; RH = rh + 0.5
-            mb.prism(inset(RP, re_), 0.0, RH - rsd, B.get('raised_wall', B['wall'])); mb.prism(RP, RH - rsd, RH, 'slab_white', top=B['roof'], bot='slab_white')
+            mb.prism(inset(RP, re_), 0.0, RH - rsd, B.get('raised_wall', B['wall'])); slab(RP, RH - rsd, RH)
         return
     if B.get('replace'):   # satellite-traced edge replacing a run of OSM points (first..last, inclusive)
         f, l, R_ = B['replace']; i = min(range(len(P)), key=lambda k: math.dist(P[k], f)); j = min(range(len(P)), key=lambda k: math.dist(P[k], l))
@@ -831,6 +836,7 @@ def ground(col):
 def build_all():
     clear(); col = bpy.context.scene.collection
     global POSTS
+    global FASC; FASC = MB('fascia_smooth'); FASC.smooth = True; FASC.sharp = 35
     mb = MB('stands'); mr = MB('roofs'); mx = MB('extras'); POSTS = MB('seat_posts'); SEATS.clear(); SEAT_XF.clear(); AISLES.clear()
     RNG.bit_generator.state = np.random.default_rng(7).bit_generator.state
     for S in D['terraces']: open_terrace(S, mb)
@@ -844,7 +850,7 @@ def build_all():
     for C in D['coach_box']: coach_box(C, mx)
     gate(D['gate'], mx)
     boundary_seats(mx)
-    mb.build(col); mr.build(col); mx.build(col); fence(col)
+    mb.build(col); mr.build(col); mx.build(col); FASC.build(col); fence(col)
     for c_, m_ in SEATS.items():
         m_.M = [c_ if x == 'seat' else x for x in m_.M]; m_.build(col)
     POSTS.build(col)

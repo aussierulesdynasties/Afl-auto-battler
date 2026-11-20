@@ -142,6 +142,7 @@ class MB:
             import bmesh
             bm = bmesh.new(); bm.from_mesh(me); bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-4); bm.to_mesh(me); bm.free()
             for poly in me.polygons: poly.use_smooth = True
+            if getattr(s, 'sharp', None): me.set_sharp_from_angle(angle=math.radians(s.sharp))   # curved fascias: smooth along the curve, hard at corners
         ob = bpy.data.objects.new(s.name, me)
         (col or bpy.context.scene.collection).objects.link(ob)
         return ob
