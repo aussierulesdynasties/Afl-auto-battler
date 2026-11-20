@@ -288,7 +288,7 @@ def building(B, mb):
         def ring(Q, z0, z1, m):   # curved walls smooth-shaded too (lead gate 2026-11-21); FASC keeps corners over 35 deg sharp
             Q = ccw(Q)
             for i in range(len(Q)): FASC.wall(Q[i], Q[(i + 1) % len(Q)], z0, z1, m)
-        ring(inset(P, e), 0.0, H - sd, B['wall']); slab(P, H - sd, H)
+        ring(inset(P, e, B.get('eave_n', 0.0)), 0.0, H - sd, B['wall']); slab(P, H - sd, H)
         if B.get('raised'):
             RP, rh = B['raised']; RP = [tuple(q) for q in RP]; re_, rsd = B['raised_eave']; RH = rh + 0.5
             ring(inset(RP, re_), 0.0, RH - rsd, B.get('raised_wall', B['wall'])); slab(RP, RH - rsd, RH)
@@ -317,11 +317,11 @@ def building(B, mb):
                 oriented(mb, [(*a, hl), (*b_, hl), (*b_, B['h']), (*a, B['h'])], 'render_white', np.array([*(-nn), 0]))
 
 
-def inset(P, d):   # polygon offset d metres inward (CCW: inward is left of travel); mitred corners
+def inset(P, d, north=0.0):   # polygon offset d metres inward (CCW: inward is left of travel); mitred corners; north: extra inset on north-facing edges
     P = ccw(P); n = len(P); L = []
     for i in range(n):
         p, q = np.array(P[i], float), np.array(P[(i + 1) % n], float); t = (q - p) / np.linalg.norm(q - p)
-        L.append((p + np.array([-t[1], t[0]]) * d, t))
+        L.append((p + np.array([-t[1], t[0]]) * (d + (north if -t[0] > 0.7 else 0.0)), t))
     out = []
     for i in range(n):
         (a, ta), (b, tb) = L[i - 1], L[i]; M = np.array([ta, -tb]).T
