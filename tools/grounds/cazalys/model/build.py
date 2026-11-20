@@ -290,6 +290,13 @@ def building(B, mb):
     else: parts = [(P, B['h'], B['wall'])]
     for P, h, wm in parts:
         if len(P) >= 3: prism_cap(mb, dict(B, wall=wm), P, h)
+    if B.get('low'):   # wvEC photo: the main block's wall above the low strip is white render, not the club cladding
+        M = parts[0][0]; c = nn @ p0 + dp
+        for i in range(len(M)):
+            a, b_ = np.array(M[i], float), np.array(M[(i + 1) % len(M)], float)
+            if abs(nn @ a - c) < 0.05 and abs(nn @ b_ - c) < 0.05 and np.linalg.norm(b_ - a) > 0.1:
+                a, b_ = a - nn * 0.03, b_ - nn * 0.03
+                oriented(mb, [(*a, hl), (*b_, hl), (*b_, B['h']), (*a, B['h'])], 'render_white', np.array([*(-nn), 0]))
 
 
 def hclip(P, n, c, sg):   # keep the side where sg*(n.p - c) >= 0
@@ -447,7 +454,8 @@ def south_front(S, mb):
         a0, a1, o, z0, z1 = S[k]; decal(a0, a1, o, z0, z1, m)
     quad(0.0, L, 0.06, 0.0, GF, 'clubw_glass', (1.5, GF))   # Street View: dark glass shopfront the full height, mullions ~1.5 m
     W_ = S['west']; r0, r1 = W_['recess']
-    quad(0.0, r0, 0.04, GF, E, 'paint_grey'); quad(r1, L, 0.04, GF, E, 'paint_grey')
+    quad(0.0, r0, 0.04, GF, E, 'paint_grey'); cw = min(W_['box'][1], L); quad(r1, cw, 0.04, GF, E, 'paint_grey')
+    if cw < L: quad(cw, L, 0.04, GF, E, 'render_white')   # wvEC photo: past the box wrap the NW return is white render
     # west wing (pano mIsaus, Feb 2025): recessed upper bay, red-brown wall behind cream mullions
     rd = W_['recess_d']; quad(r0, r1, -rd, GF, E, 'paint_rust')
     for a in (r0, r1):
