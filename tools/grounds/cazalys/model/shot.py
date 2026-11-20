@@ -21,5 +21,5 @@ for spec in argv[1:]:
     name, e, t, f = spec.split(':'); e = mathutils.Vector([float(v) for v in e.split(',')]); t = mathutils.Vector([float(v) for v in t.split(',')])
     co.location = e; co.rotation_euler = (t - e).to_track_quat('-Z', 'Y').to_euler()
     if f.startswith('o'): cd.type = 'ORTHO'; cd.ortho_scale = float(f[1:])   # 'o<width m>': orthographic, for elevation boards
-    else: cd.angle_y = math.radians(float(f))
+    else: cd.type = 'PERSP'; cd.angle_y = math.radians(float(f))
     sc.render.filepath = os.path.join(out, name + '.png'); bpy.ops.render.render(write_still=True); print('rendered', name)
