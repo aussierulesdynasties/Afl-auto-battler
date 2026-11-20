@@ -71,7 +71,7 @@ for _ in range(900):
     x, y = R.integers(0, 510), R.integers(0, 506); a[y:y + 6, x:x + 1] *= R.uniform(0.75, 1.2)
 save('grass_bank', a, (3.0, 3.0))
 # Mars seat colours (press/aus_new.jpg): royal blue, grey-blue, cream (new upper tiers), white (old stands); same moulding
-for nm, col in (('seat_blue', (38, 74, 150)), ('seat_greyblue', (112, 122, 142)), ('seat_cream', (206, 196, 172)), ('seat_white', (214, 218, 222))):
+for nm, col in (('seat_blue', (38, 74, 150)), ('seat_greyblue', (112, 122, 142)), ('seat_cream', (206, 196, 172)), ('seat_white', (214, 218, 222)), ('seat_navyblue', (40, 60, 128)), ('seat_charcoal', (36, 42, 58)), ('seat_slategrey', (92, 100, 114))):
     a = base(128, 128, col, 2, 6); a[:, :8] *= 0.8; a[:, -8:] *= 0.8; a[:6] *= 0.86; a[-6:] *= 0.72
     a[:, 40:88] *= (1 + 0.08 * np.sin(np.linspace(0, math.pi, 48)))[None, :, None]; save(nm, a, (1, 1))
 # concrete treads and risers under the seats: plain grey, a dark nosing line, scuffing
@@ -112,6 +112,10 @@ def deck(name, col, pitch=0.3, tile=(6.0, 6.0), grime=18):
 
 deck('roof_white', (214, 216, 216)); deck('roof_grey', (170, 174, 176)); deck('roof_soffit', (190, 194, 198), grime=14)
 deck('roof_flat', (150, 152, 152), pitch=0.6, grime=22)
+# old stands' roofs (finished-ground aerial press/gi/ta_aerial.jpg): white deck with a grey translucent sheet 1.4 m wide
+# every 6 m along the arc, so the roof reads as white with radial grey stripes
+deck('roof_skylit', (214, 216, 216)); _a = np.asarray(Image.open(os.path.join(OUT, 'roof_skylit.png')).convert('RGB'), float).copy()
+_a[:, :int(N * 1.4 / 6.0)] = _a[:, :int(N * 1.4 / 6.0)] * 0.25 + np.array((128, 136, 142)) * 0.75; save('roof_skylit', _a, (6.0, 6.0))
 # solar panels: 1.0 x 1.7 m modules, dark blue cells, silver frames, row gaps
 a = np.ones((N, N, 3)) * np.array((38, 48, 72), float); mu, mv = N / 4.0, N / (1.7 * 2 / 1.7 * 1.7 * 2 / 1.7) / 1.0
 mv = N / 3.4

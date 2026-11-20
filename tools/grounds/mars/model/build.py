@@ -150,18 +150,17 @@ def seat(P, t, o, z, shell=None):
     oriented(POSTS,[X(-0.04, -0.45, 0.0), X(0.04, -0.45, 0.0), X(0.04, -0.45, 0.38), X(-0.04, -0.45, 0.38)], 'steel_galv', -o3)
 
 
-SEAT_COL = ['seat_blue']
+SEAT_COL = ['seat_navyblue']
 
 
 def seat_colour(pal, j, n, b):
-    """seat colours copied from press/aus_new.jpg and al_2026.png: 'blue' = the new lower banks (all royal blue); 'fade' =
-    the new upper tiers, blue at the front turning to grey-blue then cream at the back, scattered seat by seat; 'mix' =
-    the old stands, blue and white seats scattered about half and half"""
+    """seat colours from the finished-ground aerial press/gi/ta_aerial.jpg (sampled) and the 2017 Commons photo
+    press/wm/20170707_141248: 'blue' = the new lower banks (navy blue); 'fade' = the new upper tiers (dark charcoal navy);
+    'mix' = the old stands, navy blue and slate grey scattered about half and half"""
     h = (math.sin(j * 12.9898 + b * 78.233) * 43758.5453) % 1.0
-    if pal == 'blue': return 'seat_blue'
-    if pal == 'mix': return 'seat_white' if h < 0.55 else 'seat_blue'
-    t = j / max(1, n - 1); pc = min(1.0, max(0.0, (t - 0.25) / 0.75)) ** 1.2; ps = 0.45 * (1 - abs(2 * t - 1) * 0.6)
-    return 'seat_cream' if h < pc else ('seat_greyblue' if h < pc + ps * (1 - pc) else 'seat_blue')
+    if pal == 'blue': return 'seat_navyblue'
+    if pal == 'mix': return 'seat_slategrey' if h < 0.5 else 'seat_navyblue'
+    return 'seat_charcoal'
 
 
 def seat_rows(bs, prof, k, n, aisle=12.0, gap=1.1, pal='mix'):
@@ -265,13 +264,14 @@ def roof_strip(S, bs, geo, mr):
         if b > b_end - 0.2 * step: break
         ri, ro = deck(b); ribs.append(b)
         z = lambda r: zr0 + (zr1 - zr0) * (r - ri) / (ro - ri)
-        pk = ri + 0.4 * (ro - ri); H = 2.4
-        A = P3(b, ri + 0.2, z(ri + 0.2) + 0.15); K = P3(b, pk, z(pk) + H); Bp = P3(b, ro - 0.2, z(ro - 0.2) + 0.15)
+        pk = ri + 0.4 * (ro - ri); H = 2.4; o = 0.15
+        if S.get('rib_under'): H, o = -2.4, -th - 0.15   # aerial: the old roofs are flat white on top, trusses hang underneath
+        A = P3(b, ri + 0.2, z(ri + 0.2) + o); K = P3(b, pk, z(pk) + o + H); Bp = P3(b, ro - 0.2, z(ro - 0.2) + o)
         mr.beam(A, K, 0.35, 0.35, 'steel_white'); mr.beam(K, Bp, 0.35, 0.35, 'steel_white')
         mr.beam(A, Bp, 0.25, 0.25, 'steel_white')
         for f in (0.2, 0.55, 0.8):
-            r1 = ri + f * (ro - ri); zt = (z(r1) + H * (r1 - ri) / (pk - ri)) if r1 < pk else (z(r1) + H * (ro - r1) / (ro - pk))
-            mr.beam(P3(b, r1, z(r1) + 0.15), P3(b, r1, zt), 0.18, 0.18, 'steel_white')
+            r1 = ri + f * (ro - ri); zt = o + ((z(r1) + H * (r1 - ri) / (pk - ri)) if r1 < pk else (z(r1) + H * (ro - r1) / (ro - pk)))
+            mr.beam(P3(b, r1, z(r1) + o), P3(b, r1, zt), 0.18, 0.18, 'steel_white')
     return ribs
 
 
@@ -547,6 +547,16 @@ def extras(col):
         oriented(mb, [(*a, z0), (*b, z0), (*b, z1), (*a, z1)], G['mat'], np.array([*n, 0.0]), [(0, 0), (1, 0), (1, 1), (0, 1)])
     mb.build(col)
 
+def buildings(col):
+    """club buildings traced from the GE top view: prism walls, flat roof, rooftop plant, round drums"""
+    mb = MB('buildings')
+    for B in D.get('buildings', []):
+        mb.prism([tuple(q) for q in B['poly']], 0.0, B['z'], B['wall'], top=B['roof'])
+        for c, L, W, h, a in B.get('plant', []):
+            mb.box(tuple(c), L, W, h, a, 'paint_white', z0=B['z'])
+        for c, r, z in B.get('drums', []):
+            mb.cyl(tuple(c), r, 0.0, z, B.get('drum', 'conc_wall'), n=36, top=B['roof'])
+    mb.build(col)
 
 def build_all():
     clear(); col = bpy.context.scene.collection
@@ -556,7 +566,7 @@ def build_all():
         {'bank': lambda: bank(S, mb), 'single': lambda: single(S, mb, mr), 'two_tier': lambda: two_tier(S, mb, mr),
          'open': lambda: open_stand(S, mb), 'block': lambda: block(S, mb, mr)}[S['kind']]()
     mb.build(col); mr.build(col)
-    fence(col); extras(col); SEATS.build(col); POSTS.build(col)
+    fence(col); extras(col); buildings(col); SEATS.build(col); POSTS.build(col)
     if not os.environ.get('NOCONC'): concourse(col)
     if D['towers']:
         mt = MB('towers')
