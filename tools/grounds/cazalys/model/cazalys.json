@@ -1,0 +1,48 @@
+{
+"_": "Cazaly's Stadium, Cairns (2022-24). Plan from the Esri tile and OSM (work/osm_xy.json), heights from GE captures and the Commons photos. x east, y north, metres; bearings cw from north.",
+"step": 0.5,
+"fence_h": 1.1,
+"terraces": [
+  {"name": "west_south", "b0": 202.0, "b1": 225.6, "front": 1.2, "z_seat": [0.5, 3.4], "back": [[202, 94.5], [212, 92.0], [225.6, 88.5]], "pal": "gstand"},
+  {"name": "west_north", "b0": 252.4, "b1": 281.0, "front": 1.2, "z_seat": [0.5, 3.4], "back": [[252.4, 86.5], [262, 87.5], [272, 89.5], [281, 91.5]], "pal": "gstand"}
+],
+"grandstand": {"b0": 225.6, "b1": 252.4, "front": 1.2, "z_lower": [0.5, 3.4],
+  "upper_front": [[225.6, 84.7], [234.7, 84.4], [241, 84.5], [252.4, 82.5]],
+  "upper_back": [[225.6, 101.0], [252.4, 99.0]],
+  "z_upper": [5.2, 10.4], "z_glaze": 13.0,
+  "rear": [[225.6, 119.0], [232, 119.0], [240, 114.0], [248, 111.0], [252.4, 110.0]],
+  "z_roof": [13.6, 14.6], "roof_over": 1.5,
+  "masts": [{"b": 229.0}, {"b": 235.5}, {"b": 242.0}, {"b": 248.5}], "mast_h": 7.5,
+  "pal": "gstand"},
+"palettes": {"gstand": [["s_blue", 0.58], ["s_orange", 0.30], ["s_grey", 0.12]],
+             "boundary": [["s_maroon", 3], ["s_gold", 3], ["s_teal", 3]]},
+"boundary_seats": {"arcs": [[283, 360], [0, 199]], "behind": 0.9, "group": 3, "gap": 1.6, "skip": [[14, 22], [84, 98], [148, 156]]},
+"buildings": [
+  {"name": "bldg_w", "osm": "bldg_w", "h": 7.5, "wall": "clad_grey", "roof": "roof_grey"},
+  {"name": "bldg_se", "osm": "bldg_se", "h": 3.6, "wall": "shed", "roof": "roof_white"},
+  {"name": "club", "osm": "bldg_s", "h": 9.0, "wall": "club", "roof": "roof_club", "setback": 6.0}
+],
+"shelters": [
+  {"name": "bench_nw", "osm": "bldg_nw", "h": 2.8, "rows": 2, "pal": "s_teal"},
+  {"name": "bench_nnw", "osm": "bldg_n2", "h": 2.8, "rows": 2, "pal": "s_teal"}
+],
+"tents": [
+  {"name": "nw_tent_1", "c": [-87.5, 31.7], "L": 14.0, "W": 10.0, "a": 60.0, "kind": "gable", "eave": 2.8, "ridge": 4.6},
+  {"name": "nw_tent_2", "c": [-73.5, 59.5], "L": 14.0, "W": 9.0, "a": 35.0, "kind": "gable", "eave": 2.8, "ridge": 4.6},
+  {"name": "north_marquee", "c": [7.5, 101.0], "L": 20.0, "W": 12.0, "a": -10.0, "kind": "peaks", "nu": 3, "nv": 1, "eave": 2.6, "ridge": 6.0},
+  {"name": "east_marquee", "c": [99.0, 2.5], "L": 16.0, "W": 14.0, "a": 75.0, "kind": "peaks", "nu": 2, "nv": 2, "eave": 2.6, "ridge": 6.5}
+],
+"bleacher": {"front": [[-59.2, 65.0], [-29.8, 82.6]], "depth": 7.0, "rows": 10, "z0": 0.45, "rise": 0.4},
+"sails": {"from": [-30.0, -92.0], "to": [37.0, -91.0], "n": 6, "lo": 3.2, "hi": 5.6, "depth": 6.0},
+"scoreboard": {"c": [26.1, 86.4], "u": [8.4, -4.0], "w": 9.6, "depth": 0.9, "legs": 0.5,
+  "faces": [[1.0, 2.6, "sign_cazalys"], [2.9, 6.4, "screen_off"], [6.7, 11.4, "screen_off"]], "top": 12.2},
+"coach_box": [{"c": [70.0, -65.6], "L": 3.0, "W": 2.4, "h": 2.6}],
+"towers": [
+  {"xy": [-47.0, -84.0]}, {"xy": [-100.0, -52.5]}, {"xy": [-86.0, 42.0]},
+  {"xy": [45.0, 72.8]}, {"xy": [80.8, 23.8]}, {"xy": [87.5, -35.0]}
+],
+"tower_top": 39.0,
+"gate": {"c": [-9.8, 128.3], "L": 25.5, "W": 12.5, "a": 0.0, "h": 5.4, "booth": [13.0, 3.2, 3.0], "booth_off": 1.0},
+"perimeter": [[-45, 108], [-26, 138], [6, 138], [22, 122], [128, 2], [112, -30], [85, -62], [62, -96], [40, -98], [-30, -94], [-62, -80], [-90, -82], [-112, -60], [-130, -34], [-130, 10], [-106, 40], [-106, 70], [-72, 96]],
+"perimeter_fence": [[0, 6]]
+}
