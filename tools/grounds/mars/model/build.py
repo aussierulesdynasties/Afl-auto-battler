@@ -213,8 +213,12 @@ def single(S, mb, mr):
     def prof(b):
         rf, ri, ro, rs0, rb = geo(b); zb = zr1 - 0.6 - (zr1 - zr0) * (S['back_in'] / (ro - ri))
         # front wall up, seats up the rake, back wall of the bowl up to the roof, cap, facade down
+        if S.get('nose'):  # open undercroft (2026 ground-floor photo): rake underside is the ceiling, blockwork wall set deep
+            N = S['nose']; rw = rb - N.get('deep', 8.0); zw = zs0 + (zs1 - zs0) * (rw - rs0) / (rb - 0.4 - rs0) - 0.8
+            return [(rs0, 0.0), (rs0, zs0), (rb - 0.4, zs1), (rb - 0.4, zb), (rb, zb), (rb, N['under']), (rw, zw), (rw, 0.0)]
         return [(rs0, 0.0), (rs0, zs0), (rb - 0.4, zs1), (rb - 0.4, zb), (rb, zb), (rb, 0.0)]
-    n = nrows(prof, bs, 1); tp, tm = terrace(prof, [M['front'], M['seat'], 'conc_wall', 'conc_wall', 'boxes_glass' if S.get('nose') else M['back']], [(1, n)])
+    tail = ['conc_wall', 'roof_soffit', 'conc_block'] if S.get('nose') else [M['back']]
+    n = nrows(prof, bs, 1); tp, tm = terrace(prof, [M['front'], M['seat'], 'conc_wall', 'conc_wall'] + tail, [(1, n)])
     strip(mb, bs, tp, tm, -1); seat_rows(bs, prof, 1, n, pal=S.get('pal', 'mix'))
     for b, sg in ((bs[0], -1), (bs[-1], 1)):
         endcap(mb, b, tp(b), 'conc_wall', sg)
@@ -233,16 +237,50 @@ def nose(S, bs, geo, mr, mb):
             t0, t1 = k * math.pi / 2 / K, (k + 1) * math.pi / 2 / K; tm = 0.5 * (t0 + t1)
             pa = lambda r0, t: (r0 + R * math.sin(t), zr1 - R + R * math.cos(t))
             (a0r, a0z), (a1r, a1z), (b0r, b0z), (b1r, b1z) = pa(roa, t0), pa(roa, t1), pa(rob, t0), pa(rob, t1)
-            oriented(mr, [P3(ba, a0r, a0z), P3(bb, b0r, b0z), P3(bb, b1r, b1z), P3(ba, a1r, a1z)], M['roof'], rad * math.sin(tm) + up * math.cos(tm),
+            oriented(mr, [P3(ba, a0r, a0z), P3(bb, b0r, b0z), P3(bb, b1r, b1z), P3(ba, a1r, a1z)], 'fascia', rad * math.sin(tm) + up * math.cos(tm),
                      [(ua, t0 * R / 6), (ub, t0 * R / 6), (ub, t1 * R / 6), (ua, t1 * R / 6)])
         ra, rb_ = roa + R, rob + R; zt = zr1 - R
-        tu, tv = TILE.get(M['back'], (6, 12)); va, vb = math.radians(ba) * ra / tu, math.radians(bb) * rb_ / tu
-        oriented(mb, [P3(ba, ra, zu), P3(bb, rb_, zu), P3(bb, rb_, zt), P3(ba, ra, zt)], M['back'], rad, [(va, zu / tv), (vb, zu / tv), (vb, zt / tv), (va, zt / tv)])
+        if 'cell' not in N:
+            tu, tv = TILE.get(M['back'], (6, 12)); va, vb = math.radians(ba) * ra / tu, math.radians(bb) * rb_ / tu
+            oriented(mb, [P3(ba, ra, zu), P3(bb, rb_, zu), P3(bb, rb_, zt), P3(ba, ra, zt)], M['back'], rad, [(va, zu / tv), (vb, zu / tv), (vb, zt / tv), (va, zt / tv)])
+        else:  # dark backing behind the open triangles
+            oriented(mb, [P3(ba, ra - 0.4, zu), P3(bb, rb_ - 0.4, zu), P3(bb, rb_ - 0.4, zt), P3(ba, ra - 0.4, zt)], 'boxes_glass', rad)
         rba, rbb = geo(ba)[4], geo(bb)[4]
         oriented(mb, [P3(ba, rba, zu), P3(bb, rbb, zu), P3(bb, rb_, zu), P3(ba, ra, zu)], 'roof_soffit', -up)
-    b = bs[0]
+    if 'cell' in N: tri_band(N, bs, geo, R, zu, zr1 - R, mb)
+    b = bs[0] + math.degrees(0.5 * N.get('col', 6.0) / geo(bs[0])[2])
     while b <= bs[-1]:
-        ro = geo(b)[2]; mr.beam(P3(b, ro + R - 0.6, 0.0), P3(b, ro + R - 0.6, zu), 0.5, 0.5, 'steel_white'); b += math.degrees(N.get('col', 6.0) / ro)
+        ro = geo(b)[2]; rc = ro + R - 0.8
+        mb.cyl(pol(b, rc), 0.35, 0.0, zu - 1.2, 'steel_white', n=16)
+        if 'cell' in N:  # Y head: two raked arms from the column top out to the band bottom (photo: V-branching columns)
+            for sg in (-1, 1):
+                mb.beam(P3(b, rc, zu - 1.2), P3(b + sg * math.degrees(1.6 / rc), rc + 0.3, zu), 0.25, 0.25, 'steel_white')
+            mb.beam(P3(b, rc, zu - 1.2), P3(b, rc, zu), 0.3, 0.3, 'steel_white')
+        b += math.degrees(N.get('col', 6.0) / ro)
+
+def tri_band(N, bs, geo, R, z0, z1, mb):
+    """3D folded triangle panels (photo measure: cells cw x ch, each cut by its two diagonals into 4 triangles whose shared
+    centre is pushed out 'fold' m; a seeded share 'dark' of triangles are open (dark glass behind), the rest white)"""
+    cw, ch, fold, dk = N['cell'][0], N['cell'][1], N.get('fold', 0.35), N.get('dark', 0.4)
+    rows = max(1, round((z1 - z0) / ch)); ch = (z1 - z0) / rows
+    rng = np.random.default_rng(int(bs[0] * 10))
+    b = bs[0]
+    while True:
+        r = geo(b)[2] + R; b2 = b + math.degrees(cw / r)
+        if b2 > bs[-1]: break
+        r2 = geo(b2)[2] + R; bm = 0.5 * (b + b2); rm = 0.5 * (r + r2); a = math.radians(bm); out = np.array([math.sin(a), math.cos(a), 0.0])
+        for k in range(rows):
+            za, zb = z0 + k * ch, z0 + (k + 1) * ch; c = P3(bm, rm + fold, 0.5 * (za + zb))
+            corners = [P3(b, r, za), P3(b2, r2, za), P3(b2, r2, zb), P3(b, r, zb)]
+            for j in range(4):
+                p, q = corners[j], corners[(j + 1) % 4]
+                ci = int(round((b - bs[0]) * math.pi / 180 * r / cw))
+                if (j % 2) == ((ci + k) % 2):  # regular bow-tie diamonds (2026 aerials): side pair open on even cells, top/bottom on odd  # open triangle: white frame edges only
+                    for u, v in ((p, c), (q, c)): mb.beam(u, v, 0.08, 0.08, 'paint_white')
+                else:
+                    oriented(mb, [p, q, c], 'paint_white', out)
+            mb.beam(corners[0], corners[1], 0.12, 0.12, 'paint_white'); mb.beam(corners[0], corners[3], 0.12, 0.12, 'paint_white')
+        b = b2
 
 def roof_strip(S, bs, geo, mr):
     """roof deck from ri (z_roof[0]) to ro (z_roof[1]), 0.5 m thick, white trusses on top every S['rib'] metres"""

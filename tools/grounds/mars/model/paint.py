@@ -86,6 +86,7 @@ def concrete(name, col, pu=3.0, pv=1.5, tile=(6.0, 6.0)):
 
 
 concrete('conc_wall', (176, 172, 164))
+concrete('conc_block', (168, 166, 160), pu=0.4, pv=0.2, tile=(4.0, 4.0))  # grey concrete blockwork, 400 x 200 units
 # paving: concourse concrete slabs 1.2 m, saw joints, stains
 a = base(N, N, (112, 104, 98), 7, 24); p = N / 2.4
 for k in range(2): a[int(k * 1.2 * p):int(k * 1.2 * p) + 3] *= 0.7; a[:, int(k * 1.2 * p):int(k * 1.2 * p) + 3] *= 0.7
@@ -115,7 +116,7 @@ deck('roof_flat', (150, 152, 152), pitch=0.6, grime=22)
 # old stands' roofs (finished-ground aerial press/gi/ta_aerial.jpg): white deck with a grey translucent sheet 1.4 m wide
 # every 6 m along the arc, so the roof reads as white with radial grey stripes
 deck('roof_skylit', (214, 216, 216)); _a = np.asarray(Image.open(os.path.join(OUT, 'roof_skylit.png')).convert('RGB'), float).copy()
-_a[:, :int(N * 1.4 / 6.0)] = _a[:, :int(N * 1.4 / 6.0)] * 0.25 + np.array((128, 136, 142)) * 0.75; save('roof_skylit', _a, (6.0, 6.0))
+_w = int(N * 2.2 / 10.0); _a[:, :_w] = _a[:, :_w] * 0.25 + np.array((128, 136, 142)) * 0.75; save('roof_skylit', _a, (10.0, 10.0))  # 2026 aerial: ~10 stripes over the 100 m west arc
 # solar panels: 1.0 x 1.7 m modules, dark blue cells, silver frames, row gaps
 a = np.ones((N, N, 3)) * np.array((38, 48, 72), float); mu, mv = N / 4.0, N / (1.7 * 2 / 1.7 * 1.7 * 2 / 1.7) / 1.0
 mv = N / 3.4
