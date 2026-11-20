@@ -21,8 +21,11 @@ if os.environ.get('SHOT_TURF'):   # review renders only: the game draws the fiel
     tm = bpy.data.materials.new('turf_review'); tm.diffuse_color = (0.16, 0.33, 0.09, 1); tm.use_nodes = True; tm.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = (0.16, 0.33, 0.09, 1); tp.data.materials.append(tm)
 argv = sys.argv[sys.argv.index('--') + 1:]; out = os.path.abspath(argv[0]); os.makedirs(out, exist_ok=True)
 for spec in argv[1:]:
-    name, e, t, f = spec.split(':'); e = mathutils.Vector([float(v) for v in e.split(',')]); t = mathutils.Vector([float(v) for v in t.split(',')])
+    name, e, t, f, *up = spec.split(':'); e = mathutils.Vector([float(v) for v in e.split(',')]); t = mathutils.Vector([float(v) for v in t.split(',')])
     co.location = e; co.rotation_euler = (t - e).to_track_quat('-Z', 'Y').to_euler()
+    if up:   # optional 5th field ux,uy,uz: the solved camera's up vector, so a camera solve's roll is kept
+        F = (t - e).normalized(); U = mathutils.Vector([float(v) for v in up[0].split(',')]); R = F.cross(U).normalized(); U = R.cross(F)
+        co.rotation_euler = mathutils.Matrix((R, U, -F)).transposed().to_euler()
     if f.startswith('o'): cd.type = 'ORTHO'; cd.ortho_scale = float(f[1:])   # 'o<width m>': orthographic, for elevation boards
     else: cd.type = 'PERSP'; cd.angle_y = math.radians(float(f))
     sc.render.filepath = os.path.join(out, name + '.png'); bpy.ops.render.render(write_still=True); print('rendered', name)
