@@ -34,7 +34,7 @@ def corrugated(col, wm, hm, rib=0.076, along_v=True, depth=0.22, seed=0, lap=Non
     x = np.arange(w) / PPM
     sh = 1 + depth * np.sin(2 * np.pi * x / rib)                 # lit flank / shaded flank
     img = solid(h, w, col) * sh[None, :, None]
-    img += noise(h, w, 64, 6, seed)[..., None] + grain(h, w, 2.0, seed)[..., None]
+    img += noise(h, w, 64, 2, seed)[..., None] + grain(h, w, 2.0, seed)[..., None]
     if lap:                                                       # sheet side-laps (darker line)
         for k in range(int(wm / lap)):
             c = int(k * lap * PPM); img[:, c:c + 2] *= 0.85
@@ -51,7 +51,7 @@ white = ((x % 1.66) < 0.83)
 base = np.where(white[:, None], np.array([236, 236, 233.]), np.array([28, 28, 30.]))   # (w,3)
 img = np.repeat(base[None], h, 0)
 img *= (1 + 0.16 * np.sin(2 * np.pi * x / (0.83 / 11)))[None, :, None]
-img += noise(h, w, 80, 5, 3)[..., None] + grain(h, w, 1.5, 3)[..., None]
+img += noise(h, w, 80, 2, 3)[..., None] + grain(h, w, 1.5, 3)[..., None]
 save('cladding', img, (3.32, 3.32))
 
 # ---- Lulie St boundary wall: one bay = exposed-aggregate panel between smooth concrete piers, coping on top ----
@@ -68,7 +68,7 @@ pcol = np.where(pebble[..., None], np.array([150, 140, 126.]), np.array([96, 90,
 pcol += grain(h, w, 14, 5)[..., None]
 img[panel] = pcol[panel]
 pier = ~panel
-img[pier] = (np.array([200, 194, 182.]) + grain(h, w, 4, 6)[..., None] + noise(h, w, 60, 5, 6)[..., None])[pier]
+img[pier] = (np.array([200, 194, 182.]) + grain(h, w, 4, 6)[..., None] + noise(h, w, 60, 2, 6)[..., None])[pier]
 # panel border recess and coping shadow
 img[int(h * 0.3 / 4):int(h * 0.3 / 4) + 6] *= 0.7
 img[:, pier_w:pier_w + 5] *= 0.7; img[:, w - 4:] *= 0.85
@@ -89,9 +89,9 @@ img += grain(h, w, 5, 9)[..., None]
 save('brick', img, (wm, hm))
 
 # ---- concrete (plats, terraces, risers, walks, concourse): board-formed, joints every 2 m ----
-def concrete(col, wm, hm, seed, joint=None, big=9):
+def concrete(col, wm, hm, seed, joint=None, big=2):
     w, h = int(wm * PPM), int(hm * PPM)
-    img = solid(h, w, col) + noise(h, w, 128, big, seed)[..., None] + noise(h, w, 16, 3, seed + 1)[..., None] + grain(h, w, 3, seed)[..., None]
+    img = solid(h, w, col) + noise(h, w, 128, big, seed)[..., None] + noise(h, w, 16, 1.5, seed + 1)[..., None] + grain(h, w, 3, seed)[..., None]
     if joint:
         for k in range(int(wm / joint)): c = int(k * joint * PPM); img[:, c:c + 3] *= 0.8
     return img
@@ -162,7 +162,7 @@ print(sorted(TILE))
 # ---- Social Club north face (reference zoom): 9 x 7 white panels on a dark frame, a few panels maroon; plain white margin strips each side are separate faces (sc_north_white)
 cw, ch, cpx, cpy = 9, 7, 360, 220
 w, h = cw * cpx, ch * cpy
-img = solid(h, w, (58, 60, 68)) + noise(h, w, 40, 4, 62)[..., None]          # dark enamel spandrel panels
+img = solid(h, w, (58, 60, 68)) + noise(h, w, 40, 1.5, 62)[..., None]          # dark enamel spandrel panels
 for i in range(1, cw): img[:, i * cpx - 2:i * cpx + 2] *= 0.75                 # panel joints
 for j in range(1, ch): img[j * cpy - 2:j * cpy + 2] *= 0.75
 RED = {(2, 2), (2, 3), (1, 6), (1, 7), (2, 7)}

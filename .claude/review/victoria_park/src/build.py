@@ -4,7 +4,7 @@ from mathutils import Matrix, Vector
 argv = sys.argv[sys.argv.index('--') + 1:]
 OUT = argv[0]; DO_GLB = len(argv) > 1 and argv[1] == 'glb'
 HERE = os.path.dirname(os.path.abspath(__file__)) if '__file__' in dir() else os.getcwd()
-os.chdir(r'C:/Users/DANTE/AppData/Local/Temp/claude/719bd28297a24873/353a80fe-22fd-45ba-8aa3-2524095314c7/scratchpad/vp')
+os.chdir(HERE)
 bpy.ops.wm.read_factory_settings(use_empty=True)
 sc = bpy.context.scene
 MESH = json.load(open('meshes.json'))
