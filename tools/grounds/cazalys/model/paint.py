@@ -145,28 +145,26 @@ def _shed(a, pu, pv, h, w):     # small white block building (SE): white render,
 
 
 facade('clad_grey', (200, 202, 202), _clad); facade('club', (222, 220, 214), _club, (6.0, 9.0), 1024, 1536)
-def _shedw(a, pu, pv, h, w):   # bldg_w lower wall, one tile = 6.6 m x 4.1 m, row 0 = wall top. DA p11 west elevation, 37.8 px/m:
-    def band(z0, z1): return int(z0 * pv), int(z1 * pv)   # metres down from the wall top
-    for k in range(int(4.1 / 0.2)): a[int(k * 0.2 * pv):int(k * 0.2 * pv) + 3] *= 0.86   # horizontal profiled metal cladding
-    r0, r1 = band(0, 0.5); a[r0:r1] = (232, 232, 228)   # roof slab edge: 1.0 m with the 0.5 m cap above
-    r0, r1 = band(0.5, 1.03); a[r0:r1] = np.array((58, 68, 78)) + noise(r1 - r0, w, 6, 14)[:, :, None]   # high level windows
+def _shedw(a, pu, pv, h, w):   # bldg_w wall under the slab, one tile = 6.6 m x 3.6 m, row 0 = slab underside. DA p11 at 37.8 px/m:
+    def band(z0, z1): return int(z0 * pv), int(z1 * pv)   # metres down from the slab
+    for k in range(int(3.6 / 0.2)): a[int(k * 0.2 * pv):int(k * 0.2 * pv) + 3] *= 0.86   # horizontal profiled metal cladding
+    r0, r1 = band(0, 0.53); a[r0:r1] = np.array((58, 68, 78)) + noise(r1 - r0, w, 6, 14)[:, :, None]   # high level windows
     for k in range(6): a[r0:r1, int(k * 1.1 * pu):int(k * 1.1 * pu) + 5] = (196, 198, 200)
-    r0, r1 = band(2.35, 3.41)   # framed panel row above the floor line, frames every 1.3 m (TONE UNVERIFIED)
+    r0, r1 = band(1.85, 2.91)   # framed panel row, frames every 1.3 m (TONE UNVERIFIED)
     a[r0:r0 + 6] = (90, 92, 96); a[r1 - 6:r1] = (90, 92, 96)
     for k in range(6): a[r0:r1, int(k * 1.32 * pu):int(k * 1.32 * pu) + 7] = (90, 92, 96)
-    r0, r1 = band(3.41, 4.1); a[r0:r1] = np.array((168, 166, 160)) + noise(r1 - r0, w, 4, 8)[:, :, None]   # plinth below floor level (ground 0.7 m lower)
+    r0, r1 = band(2.91, 3.6); a[r0:r1] = np.array((168, 166, 160)) + noise(r1 - r0, w, 4, 8)[:, :, None]   # plinth below floor level
 
 
-def _shedr(a, pu, pv, h, w):   # bldg_w raised wall, one tile = 6.6 m x 5.8 m; DA p11: 0.8 m slab edge, 1.03 m windows over louvres
-    a[:int(0.3 * pv)] = (232, 232, 228)
-    r0, r1 = int(0.3 * pv), int(1.3 * pv); a[r0:r1] = np.array((58, 68, 78)) + noise(r1 - r0, w, 6, 14)[:, :, None]
+def _shedr(a, pu, pv, h, w):   # bldg_w raised wall, one tile = 6.6 m x 5.5 m, row 0 = slab underside; 0.9 m visible over the low roof
+    r0, r1 = 0, int(0.9 * pv); a[r0:r1] = np.array((58, 68, 78)) + noise(r1 - r0, w, 6, 14)[:, :, None]
     m = (r0 + r1) // 2
     for k in range((r1 - m) // 8): a[m + k * 8:m + k * 8 + 4] = (150, 154, 158)   # louvre blades
     for k in range(6): a[r0:r1, int(k * 1.1 * pu):int(k * 1.1 * pu) + 5] = (196, 198, 200)
     a[m - 2:m + 2] = (196, 198, 200)
 
 
-facade('shedw', (200, 200, 198), _shedw, (6.6, 4.1)); facade('shedr', (200, 200, 198), _shedr, (6.6, 5.8))
+facade('shedw', (200, 200, 198), _shedw, (6.6, 3.6)); facade('shedr', (200, 200, 198), _shedr, (6.6, 5.5))
 facade('gstand_back', (206, 204, 198), _gstand); facade('shed', (230, 230, 226), _shed)
 # coaches' box (photos 09-11): matt black boarding, five slit windows along the top
 a = base(512, 512, (30, 32, 36), 3, 6)

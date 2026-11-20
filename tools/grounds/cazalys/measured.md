@@ -40,5 +40,5 @@ to 2026; I have no ground photo yet to confirm the as-built heights.
 | Below floor level to outside ground | 0.70 m (section) | plinth |
 | Raised slab edge / clerestory | 0.8 m / 1.03 m, windows over louvres | 0.3+0.5 m / 1.0 m |
 | Cladding colour | **UNVERIFIED**: no photo yet | neutral grey placeholder |
-| Eave overhang past the wall | drawn, depth not on p11 | **OPEN**: not modelled |
+| Eave overhang past the wall | p10 section at 400 dpi, 44 px/m: west 2.2 m, east 2.5 m; raised slab 1.7 m W, 2.0 m E | walls inset 2.3 m from the aerial (slab) outline, raised 1.85 m; slabs 1.0 / 0.8 m deep |
 | External ramp and stairs along the west face | drawn | **OPEN**: not modelled |

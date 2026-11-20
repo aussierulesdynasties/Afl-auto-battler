@@ -277,6 +277,13 @@ def axes(poly):
 def building(B, mb):
     P = [tuple(p) for p in np.array(OSM[B['osm']], float)]
     if np.allclose(P[0], P[-1]): P = P[:-1]
+    if B.get('eave'):   # DA 3998/2010 p10 section: roof slabs overhang the walls; the aerial outline is the slab edge
+        e, sd = B['eave']; H = B['h'] + 0.5
+        mb.prism(inset(P, e), 0.0, H - sd, B['wall']); mb.prism(P, H - sd, H, 'paint_white', top=B['roof'], bot='paint_white')
+        if B.get('raised'):
+            RP, rh = B['raised']; RP = [tuple(q) for q in RP]; re_, rsd = B['raised_eave']; RH = rh + 0.5
+            mb.prism(inset(RP, re_), 0.0, RH - rsd, B.get('raised_wall', B['wall'])); mb.prism(RP, RH - rsd, RH, 'paint_white', top=B['roof'], bot='paint_white')
+        return
     if B.get('replace'):   # satellite-traced edge replacing a run of OSM points (first..last, inclusive)
         f, l, R_ = B['replace']; i = min(range(len(P)), key=lambda k: math.dist(P[k], f)); j = min(range(len(P)), key=lambda k: math.dist(P[k], l))
         P = P[:i] + [tuple(q) for q in R_] + P[j + 1:]
@@ -299,6 +306,18 @@ def building(B, mb):
             if abs(nn @ a - c) < 0.05 and abs(nn @ b_ - c) < 0.05 and np.linalg.norm(b_ - a) > 0.1:
                 a, b_ = a - nn * 0.03, b_ - nn * 0.03
                 oriented(mb, [(*a, hl), (*b_, hl), (*b_, B['h']), (*a, B['h'])], 'render_white', np.array([*(-nn), 0]))
+
+
+def inset(P, d):   # polygon offset d metres inward (CCW: inward is left of travel); mitred corners
+    P = ccw(P); n = len(P); L = []
+    for i in range(n):
+        p, q = np.array(P[i], float), np.array(P[(i + 1) % n], float); t = (q - p) / np.linalg.norm(q - p)
+        L.append((p + np.array([-t[1], t[0]]) * d, t))
+    out = []
+    for i in range(n):
+        (a, ta), (b, tb) = L[i - 1], L[i]; M = np.array([ta, -tb]).T
+        out.append(tuple(b) if abs(np.linalg.det(M)) < 1e-6 else tuple(a + ta * np.linalg.solve(M, b - a)[0]))
+    return out
 
 
 def hclip(P, n, c, sg):   # keep the side where sg*(n.p - c) >= 0
