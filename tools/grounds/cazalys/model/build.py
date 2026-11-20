@@ -386,7 +386,7 @@ def club_front(C, mb):
         q = [Q(a, 0.06, 0.15), Q(b, 0.06, 0.15), Q(b, AWo + 0.3, 0.15), Q(a, AWo + 0.3, 0.15)]
         oriented(mb, q, 'paving', UP, [(p[0] / 2.4, p[1] / 2.4) for p in q])
     piece(0.0, L, AWo + 0.3, 0.0, 0.15, 'conc_kerb')
-    oriented(mb, [cQ(0, 0.08, 0), cQ(cL, 0.08, 0), cQ(cL, 0.08, GF), cQ(0, 0.08, GF)], 'clubw_gf', np.array([*cat(1)[2], 0]), [(0, 0), (cL / 6.0, 0), (cL / 6.0, 1), (0, 1)])   # entrance doors under the canopy
+    do = C.get('door_o', 0.08); oriented(mb, [cQ(0, do, 0), cQ(cL, do, 0), cQ(cL, do, GF), cQ(0, do, GF)], 'clubw_gf', np.array([*cat(1)[2], 0]), [(0, 0), (cL / 6.0, 0), (cL / 6.0, 1), (0, 1)])   # entrance doors under the canopy
     q = [cQ(c0, 0.06, 0.15), cQ(c1, 0.06, 0.15), cQ(c1, co + 0.3, 0.15), cQ(c0, co + 0.3, 0.15)]   # paving under the canopy
     oriented(mb, q, 'paving', UP, [(p[0] / 2.4, p[1] / 2.4) for p in q])
     for a, b in cruns(c0, c1):
