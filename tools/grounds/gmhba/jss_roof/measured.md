@@ -22,3 +22,8 @@ Exterior faults found here (separate from this PR, to confirm, not fixed without
 1. SW tower head in the model sits about 10 m north of the 2026 aerial head.
 2. Roof-top edges of the passed exterior were traced on a leaning tile; high parts may be shifted south by up to height x 0.26 m (24 m Cats roof: about 6 m).
 
+## Geo origin of gmhba.glb
+
+Model origin (0, 0) sits at lat -38.1579976, lon 144.3546774, north-aligned, no rotation.
+Fitted (shift only) from 7 Google Earth wall-foot points (N 3, S 1, W 3), rms 0.51 m; 4 points dropped as false matches (2 S matched the inner ring, 2 E straddle a bend).
+The old placement at lat -38.158219, lon 144.354577 was inferred; its origin file was not found. The fit moves the model 8.8 m east and 24.6 m north of it.
