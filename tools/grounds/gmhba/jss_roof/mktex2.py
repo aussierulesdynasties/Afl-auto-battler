@@ -12,7 +12,7 @@ def ribs(base,crest,shade,name,lap=True):
     if lap:
         for y in(0,512):d.rectangle([0,y,N,y+3],fill=shade)
     im.filter(ImageFilter.GaussianBlur(0.6)).save(out+'/'+name)
-ribs((96,101,105),(118,123,127),(74,78,82),'jss_top.png')        # roof top: dark grey ribbed sheet
+ribs((190,196,200),(212,217,220),(160,166,171),'jss_top.png')    # roof top: silver-white ribbed sheet (GE 3D sunlit roof 170-200)
 ribs((222,224,225),(236,238,239),(196,199,201),'jss_soffit.png')  # roof underside: white ribbed liner
 # skylight triangles: white translucent sheet with glazing bars every 1 m
 im=Image.new('RGB',(N,N),(232,236,238));d=ImageDraw.Draw(im)
