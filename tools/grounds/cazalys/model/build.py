@@ -454,6 +454,8 @@ def south_front(S, mb):
         a0, a1, o, z0, z1 = S[k]; decal(a0, a1, o, z0, z1, m)
     quad(0.0, L, 0.06, 0.0, GF, 'clubw_glass', (1.5, GF))   # Street View: dark glass shopfront the full height, mullions ~1.5 m
     W_ = S['west']; r0, r1 = W_['recess']
+    for a0, a1 in W_.get('gf_wall', []):   # wvEC photo: solid grey ground-floor wall between the box and the glass doors
+        quad(a0, a1, 0.09, 0.0, GF, 'paint_grey')
     quad(0.0, r0, 0.04, GF, E, 'paint_grey'); cw = min(W_['box'][1], L); quad(r1, cw, 0.04, GF, E, 'paint_grey')
     if cw < L: quad(cw, L, 0.04, GF, E, 'render_white')   # wvEC photo: past the box wrap the NW return is white render
     # west wing (pano mIsaus, Feb 2025): recessed upper bay, red-brown wall behind cream mullions
