@@ -90,7 +90,7 @@ for v in job["views"]:
         # PNG frames; mp4 encoded outside Blender (py/enc.py) - Blender's encoder left empty files under load
         fd = os.path.join(job["out"], v["name"] + "_frames"); os.makedirs(fd, exist_ok=True)
         sc.render.image_settings.file_format = "PNG"
-        sc.render.filepath = os.path.join(fd, "f_")
+        sc.render.filepath = os.path.join(fd, "f_"); sc.render.use_overwrite = False; sc.render.use_placeholder = False
         bpy.ops.render.render(animation=True)
         sc.render.resolution_x, sc.render.resolution_y = rx, ry
     elif "rt" in v:   # camera from rotation matrix (OpenCV convention) + centre

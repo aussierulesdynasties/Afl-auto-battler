@@ -173,13 +173,28 @@ for _nm, _sel, _mt in (('bg_far_suburb', _sub, mat_mul('far_suburb', os.path.joi
     _mr.inputs['From Min'].default_value = 1500; _mr.inputs['From Max'].default_value = 4000; _mr.inputs['To Min'].default_value = 0; _mr.inputs['To Max'].default_value = 0.7
     _fd = _nt.nodes.new('ShaderNodeMix'); _fd.data_type = 'RGBA'; _fd.inputs[7].default_value = _mc   # distance fade: tile -> its mean, contrast 30% by 4 km
     _nt.links.new(_cd.outputs['View Distance'], _mr.inputs['Value']); _nt.links.new(_mr.outputs['Result'], _fd.inputs[0])
-    _nt.links.new(_t.outputs['Color'], _fd.inputs[6]); _nt.links.new(_fd.outputs[2], _mu.inputs[7])
+    _nt.links.new(_t.outputs['Color'], _fd.inputs[6]);     _tm = _nt.nodes.new('ShaderNodeTexImage'); _tm.image = bpy.data.images.load(os.path.join(HERE, 'tex', 'mt', 'suburb_macro.png'))   # km-scale neighbourhood tones, roads, parks: 1 tile = 4 km
+    _uv = _nt.nodes.new('ShaderNodeTexCoord'); _mp = _nt.nodes.new('ShaderNodeMapping'); _mp.inputs['Scale'].default_value = (0.125, 0.125, 1)
+    _nt.links.new(_uv.outputs['UV'], _mp.inputs['Vector']); _nt.links.new(_mp.outputs['Vector'], _tm.inputs['Vector'])
+    _mm = _nt.nodes.new('ShaderNodeMix'); _mm.data_type = 'RGBA'; _mm.blend_type = 'MULTIPLY'; _mm.inputs[0].default_value = 1
+    _nt.links.new(_fd.outputs[2], _mm.inputs[6]); _nt.links.new(_tm.outputs['Color'], _mm.inputs[7])
+    _gm = _nt.nodes.new('ShaderNodeVectorMath'); _gm.operation = 'SCALE'; _gm.inputs['Scale'].default_value = 1 / float(open(os.path.join(HERE, 'tex', 'mt', 'suburb_macro.mean')).read())
+    _nt.links.new(_mm.outputs[2], _gm.inputs[0]); _nt.links.new(_gm.outputs[0], _mu.inputs[7])
     if _sel.any():
         _F = FF[_sel]; _o = mk_obj(_nm, VF, _F.tolist(), _mt); _l = _F.ravel()
         _svc = np.array(lin((122, 122, 110)))[None, :3] * (1 - hz) + np.array(lin(PAL['haze']))[None, :3] * hz; set_corner_col(_o.data, np.concatenate([_svc[_l], np.ones((len(_l), 1))], 1)); set_uv(_o.data, np.stack([VF[_l, 0] / 500.0, VF[_l, 1] / 500.0], 1))
 FF = FF[~_wf & ~_sub]
-ob = mk_obj('bg_far_terrain', VF, FF.tolist(), mat_vcol('far', 0.95))
+_fm = mat_mul('far_land', os.path.join(HERE, 'tex', 'mt', 'far_land.png'), 0.95, 1 / float(open(os.path.join(HERE, 'tex', 'mt', 'far_land.mean')).read()))
+_nt = _fm.node_tree; _t = [n for n in _nt.nodes if n.type == 'TEX_IMAGE'][0]; _mu = [n for n in _nt.nodes if n.type == 'MIX'][0]
+_px = np.array(_t.image.pixels[:]).reshape(-1, 4)[:, :3]; _mc = list((_px ** 2.2).mean(0)) + [1.0]
+_cd = _nt.nodes.new('ShaderNodeCameraData'); _mr = _nt.nodes.new('ShaderNodeMapRange')
+_mr.inputs['From Min'].default_value = 4000; _mr.inputs['From Max'].default_value = 12000; _mr.inputs['To Min'].default_value = 0; _mr.inputs['To Max'].default_value = 0.25
+_fd = _nt.nodes.new('ShaderNodeMix'); _fd.data_type = 'RGBA'; _fd.inputs[7].default_value = _mc   # paddocks soften toward the haze
+_nt.links.new(_cd.outputs['View Distance'], _mr.inputs['Value']); _nt.links.new(_mr.outputs['Result'], _fd.inputs[0])
+_nt.links.new(_t.outputs['Color'], _fd.inputs[6]); _nt.links.new(_fd.outputs[2], _mu.inputs[7])
+ob = mk_obj('bg_far_terrain', VF, FF.tolist(), _fm)
 lp = FF.ravel()
+_c, _s = math.cos(0.41), math.sin(0.41); set_uv(ob.data, np.stack([VF[lp, 0] * _c - VF[lp, 1] * _s, VF[lp, 0] * _s + VF[lp, 1] * _c], 1) / 1600.0)   # rotated tile: no screen-aligned repeat
 set_corner_col(ob.data, np.concatenate([vc[lp], np.ones((len(lp), 1))], 1))
 for p in ob.data.polygons: p.use_smooth = True
 
@@ -385,7 +400,7 @@ def build_class(cls, tex, tw, th, var=None, gr=0.13):
         wc = walls[b['wall'] % len(walls)] * (1 + 0.06 * (rng.random() - 0.5))
         rc = lin(b['roof_c']) if b.get('roof_c') else roofs[b['roof'] % len(roofs)] * (1 + 0.08 * (rng.random() - 0.5))
         shed = cls == 'block' and b['a'] >= 400 and h <= 10
-        V_, F_, C_, U_ = (CL if shed else (verts, faces, cols, uvs)); TW, TH = (4.0, 4.0) if shed else (tw, th)
+        V_, F_, C_, U_ = (CL if shed else (verts, faces, cols, uvs)); TW, TH = (12.0, 12.0) if shed else (tw, th)
         pitched = cls == 'house'
         if pitched: hc, hu, hv, hL, hW = hip_rect(P); rh = min(3.4, (hW / 2 + 0.45) * math.tan(math.radians(25)))
         else: rh = 0
@@ -408,8 +423,8 @@ def build_class(cls, tex, tw, th, var=None, gr=0.13):
         ct, st = math.cos(th_), math.sin(th_)
         src = b.get('roof_c'); kind = 'tile' if (cls == 'house' and PAL['roofs_house'][b['roof'] % len(PAL['roofs_house'])][0] > 1.3 * PAL['roofs_house'][b['roof'] % len(PAL['roofs_house'])][1]) else 'metal'
         RT = 3.04
-        if kind == 'metal' and cls == 'block' and b['a'] >= 400: kind, RT = 'far', 6.0   # sheds: sheet runs along the long axis, multiplied (512 px = 12 m)
-        if kind == 'far' and b['a'] >= 1500: kind, RT = 'far', 6.0   # big industrial roofs: coarse sheet runs (512 px = 24 m)
+        if kind == 'metal' and cls == 'block' and b['a'] >= 400: kind, RT = 'far', 12.0   # sheds: sheet runs along the long axis, multiplied (512 px = 12 m)
+        if kind == 'far' and b['a'] >= 1500: kind, RT = 'far', 12.0   # big industrial roofs: coarse sheet runs (512 px = 24 m)
         if kind == 'far': rc = np.minimum(0.35 * np.array(rc)[:3] + 0.65 * np.array(lin((120, 123, 124)))[:3], np.array(lin((98, 100, 100)))[:3])   # zincalume grey, never paper white
         rv, rf, rcl, ruv = RF[kind]; r0 = len(rv)
         def ruv_(x, y, sw=(kind == 'far')): a_, b_ = (x * ct + y * st) / RT, (-x * st + y * ct) / RT; return (b_, a_) if sw else (a_, b_)
@@ -421,8 +436,9 @@ def build_class(cls, tex, tw, th, var=None, gr=0.13):
             R2 = [hc - hu * rr, hc + hu * rr]
             for q in E4: rv.append((q[0], q[1], top)); ruv.append(ruv_(q[0], q[1]))
             for q in R2: rv.append((q[0], q[1], top + rh)); ruv.append(ruv_(q[0], q[1]))
-            for fc in ((0, 1, 5, 4), (2, 3, 4, 5), (1, 2, 5), (3, 0, 4)):
-                rf.append(tuple(r0 + t_ for t_ in fc)); rcl += [rc] * len(fc)
+            _rc3 = np.array(rc)[:3] ** 1.12   # deeper, less pastel roof colour
+            for fc, _sh in (((0, 1, 5, 4), 1.0), ((2, 3, 4, 5), 0.74), ((1, 2, 5), 0.88), ((3, 0, 4), 0.80)):   # each hip plane its own shade, so the roof reads as a hip from afar
+                rf.append(tuple(r0 + t_ for t_ in fc)); rcl += [tuple(_rc3 * _sh) + tuple(np.array(rc)[3:])] * len(fc)
         else:
             rf.append(tuple(r0 + i for i in range(k))); rcl += [rc] * k
             if kind == 'far':   # roof-edge flashing: a 0.36 m folded strip along every edge
@@ -434,7 +450,7 @@ def build_class(cls, tex, tw, th, var=None, gr=0.13):
                     FLS[1].append((o_, o_ + 1, o_ + 2, o_ + 3)); FLS[2] += [lin((112, 116, 118))] * 4
     sfx = '' if not var else '_v%d' % var[0]
     if CL[1]:
-        oc = mk_obj('bg_clad_' + cls + sfx, CL[0], CL[1], mat_mul('clad_' + cls, os.path.join(HERE, 'tex', 'mt', 'clad_rib.png'), 0.55, 1 / 0.455))
+        oc = mk_obj('bg_clad_' + cls + sfx, CL[0], CL[1], mat_mul('clad_' + cls, os.path.join(HERE, 'tex', 'mt', 'clad_rib.png'), 0.55, 1 / float(open(os.path.join(HERE, 'tex', 'mt', 'clad_rib.mean')).read())))
         set_corner_col(oc.data, np.concatenate([np.array(CL[2]), np.ones((len(CL[2]), 1))], 1)); set_uv(oc.data, CL[3])
     if FLS[1]:
         fo = mk_obj('bg_flash_' + cls + sfx, FLS[0], FLS[1], mat_vcol('flash_' + cls + sfx, 0.5))

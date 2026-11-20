@@ -1,3 +1,4 @@
+import math
 # swimming pools (exec'd from scene.py): OSM leisure=swimming_pool in the near square. Each pool: paver deck 3 m past the
 # water edge, white coping 0.3 m, one flat water face 4 cm below the coping; lap pools (long side >= 40 m) get dark lane
 # lines 0.25 m wide every 2.5 m along the long axis. Near-rectangular outlines are squared to their bounding rectangle.
@@ -90,10 +91,11 @@ for _el in json.load(open(os.path.join(HERE, 'data', name, 'osm.json'), encoding
     _c = _A.mean(0)
     if KFr is not None and all(np.hypot(*q) < KFr[int((np.degrees(np.arctan2(q[1], q[0])) % 360) // 2)] + 2 for q in _A): continue   # wholly under the ground model
     _hs = height(_A[:, 0], _A[:, 1]); v, f, uv = _CP; o = len(v)
-    v += [(x, y, float(z) + 0.08) for (x, y), z in zip(_A, _hs)]; f.append(tuple(range(o, o + len(_A)))); uv += [(x / 104.0, y / 104.0) for x, y in _A]
+    v += [(x, y, float(z) + 0.08) for (x, y), z in zip(_A, _hs)]; f.append(tuple(range(o, o + len(_A)))); _E = np.diff(np.vstack([_A, _A[:1]]), axis=0); _e = _E[np.argmax(np.hypot(_E[:, 0], _E[:, 1]))]; _th = math.atan2(_e[1], _e[0]); _cs, _sn = math.cos(_th), math.sin(_th)
+    uv += [((x * _cs + y * _sn) / 15.6, (-x * _sn + y * _cs) / 16.0) for x, y in _A]   # bay rows run along the lot's longest side
 if _CP[1]:
     from mathutils import noise as _nz2
-    _co = mk_obj('bg_carparks', _CP[0], _CP[1], mat_mul('park_asphalt', os.path.join(HERE, 'tex', 'road_asphalt_park.png'), 0.92, 1.0))
+    _co = mk_obj('bg_carparks', _CP[0], _CP[1], mat_mul('park_bays', os.path.join(HERE, 'tex', 'mt', 'park_bays.png'), 0.92, 1.0))
     _lv = [i for q in _CP[1] for i in q]
     _nn = np.array([_nz2.noise(Vector((_CP[0][i][0] / 40.0, _CP[0][i][1] / 40.0, 0.5))) for i in _lv]); _m = 0.85 + 0.15 * np.clip(_nn * 0.5 + 0.5, 0, 1)
     set_corner_col(_co.data, np.stack([_m, _m, _m, np.ones_like(_m)], 1)); set_uv(_co.data, [_CP[2][i] for i in _lv]); print('car parks', len(_CP[1]))
