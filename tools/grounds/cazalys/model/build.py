@@ -345,7 +345,14 @@ def club_front(C, mb):
     # covered walkway along the shopfront: flat white soffit, thin white fascia
     slab(0.0, L, 0.0, AWo, AWz, AWz + AWt, 'roof_white', 'paint_white')
     # entrance canopy: flat wedge off the cut-off corner (lobby doors face south-east), a touch higher than the walkway
-    slab(c0, c1, -0.2, co, cz, cz + ct, 'roof_white', 'paint_white', ch[:3])
+    # photo 12: a flat wedge, deep at the right (south) end and tapering to a point at the left; polygon in chamfer (s, o)
+    W_ = ccw([tuple(cQ(s_, o_, 0)[:2]) for s_, o_ in C['canopy_poly']])
+    for t in earclip(W_):
+        oriented(mb, [(x, y, cz) for x, y in t], 'soffit_white', np.array([0, 0, -1.0]), [(x / 3.0, y / 3.0) for x, y in t])
+        oriented(mb, [(x, y, cz + ct) for x, y in t], 'roof_white', UP)
+    for i in range(len(W_)):
+        (x0, y0), (x1, y1) = W_[i], W_[(i + 1) % len(W_)]; nn = np.array([y1 - y0, -(x1 - x0), 0]); nn /= np.linalg.norm(nn) + 1e-9
+        oriented(mb, [(x0, y0, cz), (x1, y1, cz), (x1, y1, cz + ct), (x0, y0, cz + ct)], 'paint_white', nn)
     for s_, top in C['posts']:
         mb.beam(cQ(s_, co - 0.7, 0), cQ(s_ - 0.04 * top, co - 0.7, top), 0.32, 0.32, 'paint_cream', tube=True)   # photo 12: every post leans a little to the south-west
     # the tilted sign on the canopy: inverted trapezoid, tipped back, turned toward the Mulgrave Rd approach
@@ -378,28 +385,8 @@ def club_front(C, mb):
         _, _, n = cat(0.5 * (a + b)); oriented(mb, [cQ(a, co + 0.3, 0), cQ(b, co + 0.3, 0), cQ(b, co + 0.3, 0.15), cQ(a, co + 0.3, 0.15)], 'conc_kerb', np.array([*n, 0]))
     for s_ in C['bollards']:
         mb.cyl(Q(s_, AWo, 0.15)[:2], 0.09, 0.15, 1.15, 'bollard', n=10, top='bollard')
-    # concrete drive and the garden island (kerbed bed, shrubs, palms)
-    for c in earclip(ccw([tuple(p) for p in C['drive']])):
-        oriented(mb, [(x, y, 0.0) for x, y in c], 'conc_drive', UP, [(x / 8.0, y / 8.0) for x, y in c])
-    G = C['garden']
-    mb.prism(rect(G['c'], G['L'], G['W'], G['a']), 0.0, 0.2, 'conc_kerb', top='mulch')
-    rng = np.random.default_rng(5); u = np.array([math.cos(math.radians(G['a'])), math.sin(math.radians(G['a']))]); v = np.array([-u[1], u[0]])
-    for _ in range(G['shrubs']):
-        c = np.array(G['c']) + u * rng.uniform(-0.42, 0.42) * G['L'] + v * rng.uniform(-0.36, 0.36) * G['W']
-        r, h = rng.uniform(0.5, 0.9), rng.uniform(0.6, 1.2)   # rounded shrub: a squashed dome
-        rings = [(r * math.cos(t), 0.2 + h * math.sin(t)) for t in np.linspace(0, math.pi / 2, 5)]
-        for (r0, z0), (r1, z1) in zip(rings[:-1], rings[1:]):
-            for k in range(10):
-                a0, a1 = 2 * math.pi * k / 10, 2 * math.pi * (k + 1) / 10
-                pt = lambda rr, zz, aa: (c[0] + rr * math.cos(aa), c[1] + rr * math.sin(aa), zz)
-                mb.face([pt(r0, z0, a0), pt(r0, z0, a1), pt(r1, z1, a1), pt(r1, z1, a0)] if r1 > 1e-3 else [pt(r0, z0, a0), pt(r0, z0, a1), pt(0, z1, 0)], 'shrub')
-    for px, py, h in G['palms']:   # slim palms: a thin trunk, 12 arching frond cards (RGBA pinnate blades) in two whorls
-        mb.beam((px, py, 0.2), (px + 0.25, py, h), 0.16, 0.16, 'palm_trunk', tube=True); c2 = np.array([px + 0.25, py])
-        for k in range(12):
-            t = 2 * math.pi * k / 6 + (0.5 if k >= 6 else 0); e2 = np.array([math.cos(t), math.sin(t)]); W2 = np.array([-e2[1], e2[0], 0]) * 0.7
-            up = 0.7 if k >= 6 else 0.25; P0 = np.array([*c2, h]); P1 = np.array([*(c2 + e2 * 1.3), h + up]); P2 = np.array([*(c2 + e2 * 2.4), h + up - 1.1])
-            mb.face([P0 - W2 * 0.4, P1 - W2, P1 + W2, P0 + W2 * 0.4], 'palm_frond', [(0.3, 0), (0, 0.5), (1, 0.5), (0.7, 0)])
-            mb.face([P1 - W2, P2 - W2 * 0.3, P2 + W2 * 0.3, P1 + W2], 'palm_frond', [(0, 0.5), (0.35, 1), (0.65, 1), (1, 0.5)])
+    # drive, garden island and car park sit outside the stadium fence: background scene (stadium-only rule)
+
 
 
 def shelter(S, mb):
