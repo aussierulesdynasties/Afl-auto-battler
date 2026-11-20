@@ -1,24 +1,26 @@
-# GMHBA Stadium: Joel Selwood Stand roof
+# GMHBA Stadium (Kardinia Park) exterior model
 
-`gmhba.glb` is the full ground model. Only the Joel Selwood Stand (JSS) roof changed. It is built from model cd2f83549874b433833b49d0507d161a by `jss_roof/build_jss.py` (Blender 5.2):
+`gmhba.glb` is the exterior that passed the gate at commit ff1fdabab (md5 2a5040de694f1afe4bf9c26f0d14db3e), with the Joel Selwood Stand (JSS) roof rebuilt on top of it (below).
 
-    blender -b --python jss_roof/build_jss.py -- <cd2f8354 model>.glb gmhba.glb <abs path to jss_roof/>
+- Exterior build scripts: `src/` (from .claude/review/gmhba/build at ff1fdabab; renamed from build/, which the repo .gitignore excludes).
+- Exterior gate notes: `READY.md`, `proof/topdown/players_roof_bays.txt`.
 
-The old smooth draped sheet (866 faces) is replaced with a roof copied from the Populous photos: the Gate 1 Polly Farmer elevation, the facade close-up and the dusk aerial.
-- Flat folded plates run from the front edge to the rear. Each bay has a ridge up to a beak peak and valleys between the peaks.
-- The beaks overhang the facade. The rear edge is straight in plan and zigzags in elevation.
-- Each peak has a white raking column under it, plus V-struts from each valley foot up to the two neighbouring peaks. The struts land on top of the white fin band.
-- Above the fin band is dark grey cladding.
-- The plates have white edge trims, steel ribs underneath and matte ribbed sheeting.
+## Joel Selwood Stand roof
 
-The textures are hand-made by `jss_roof/mktex.py`; there are no photo pixels. There is no crowd and nothing else in the model changed.
+Built from the exterior above by `jss_roof/build_jss.py` (Blender 5.2):
+
+    blender -b --python jss_roof/build_jss.py -- <exterior 2a5040de>.glb gmhba.glb <abs path to jss_roof/>
+
+The old smooth draped sheet is replaced with folded plates copied from the Populous photos, Fabritecture drone photos and the aerial.
+- Straight west edge: 8 raised peaks at a 12.2 m pitch, each on a white raking tube with V-struts from the valley feet.
+- North-west diagonal and curve: folded plates with a straight outer edge and no peaks (dusk aerial and daylight drone views).
+- Light soffit, dark-grey cladding above the white fin band, and a set-back upper wall.
+
+The textures are hand-made by `jss_roof/mktex.py`; there are no photo pixels. There is no crowd.
 
 | Part | Measured (source) | Model |
 | --- | --- | --- |
-| Rear edge length in plan | 155.7 m (traced on aerial, 0.47 m/px) | 155.7 m |
-| Bays and beak peaks | bay about 10-11 m (Gate 1 photo, bay about 1.5 x rise) | 15 bays of 10.38 m |
-| Beak rise above the valleys | about 0.65 x bay = 6.8 m (Gate 1 photo) | 7.0 m |
-| Beak overhang past the facade | about half a bay = 5.2 m (close-up photo) | 6.0 m |
-| Supports per peak | 1 column and 2 V-struts (Gate 1 photo) | 1 column and 2 V-struts |
-| Strut feet | top of the white fin band (Gate 1 photo) | top of the fin band, 11 m |
-| Join with the west stand | no gap (aerial) | the last valley sheet tucks under the neighbouring roof |
+| Rear edge in plan | 97.6 m straight + 20.0 m + 29.4 m diagonal + 6.1 m corner + 5.2 m south = 158.3 m (aerial g19, 0.235 m/px) | 158.3 m |
+| Peaks on the straight edge | 8 at 12.2 m, 8 x 12.2 = 97.6 m (aerial g19, S5_014 elevation) | 8 at 12.2 m |
+| Overhang past the facade | 5.2 m (Facade_011 close-up) | 5.2 m |
+| North-west fold depth | being measured from three views (p09, p20, Street View north) | not final |
