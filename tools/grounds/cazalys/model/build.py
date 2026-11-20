@@ -428,10 +428,10 @@ def south_front(S, mb):
         quad(a0, a1, 0.08, GF + 0.6, E - 0.35, 'clubw_glass', (3.0, E - GF - 0.95))
     a0, a1, o, z0, z1 = W_['logo']; decal(a0, a1, o, z0, z1, 'sign_clublogo2')
     # west end: white glazed box under a raised white skillion roof
-    c0, c1, zr0, zr1, cd = W_['box']; quad(c0, min(c1, L), 0.1, GF + 0.3, zr0 - 0.6, 'clubw_glass', (3.0, zr0 - GF))
+    c0, c1, zr0, zr1, cd = W_['box']; quad(c0, min(c1, L), 0.1, GF + 0.3, GF + 2.0, 'clubw_glass', (3.0, 1.7)); quad(c0, min(c1, L), 0.1, GF + 2.0, zr0 - 0.6, 'paint_white')
     zs2 = lambda s_: zr1 + (zr0 - zr1) * (s_ - A(min(c1, L))) / (min(c1, L) - c0)
     for s0, s1 in [(A(min(c1, L)), A(c0))]:
-        q = [Q(s0, 1.0, zs2(s0)), Q(s1, 1.0, zs2(s1)), Q(s1, -cd, zs2(s1)), Q(s0, -cd, zs2(s0))]
+        bo = W_['box_o']; q = [Q(s0, bo, zs2(s0)), Q(s1, bo, zs2(s1)), Q(s1, -cd, zs2(s1)), Q(s0, -cd, zs2(s0))]
         oriented(mb, [(x, y, z + 0.3) for x, y, z in q], 'roof_white', UP); oriented(mb, q, 'soffit_white', np.array([0, 0, -1.0]))
         _, _, n = at(0.5 * (s0 + s1))
         oriented(mb, [q[0], q[1], (*q[1][:2], q[1][2] + 0.3), (*q[0][:2], q[0][2] + 0.3)], 'paint_white', np.array([*n, 0]))
