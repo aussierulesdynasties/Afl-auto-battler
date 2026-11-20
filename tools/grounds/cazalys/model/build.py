@@ -290,6 +290,8 @@ def building(B, mb):
     else: parts = [(P, B['h'], B['wall'])]
     for P, h, wm in parts:
         if len(P) >= 3: prism_cap(mb, dict(B, wall=wm), P, h)
+    if B.get('raised'):   # DA 3998/2010 section: a raised roof over the warm-up hall (footprint from the aerial)
+        RP, rh = B['raised']; prism_cap(mb, B, [tuple(q) for q in RP], rh)
     if B.get('low'):   # wvEC photo: the main block's wall above the low strip is white render, not the club cladding
         M = parts[0][0]; c = nn @ p0 + dp
         for i in range(len(M)):
