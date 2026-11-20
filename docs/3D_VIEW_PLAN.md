@@ -199,7 +199,7 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 | Freeze (no new player art, no one-incident patches) | | in force since 2026-11-16 | lifts when steps 2 and 3 are done |
 | 1. Football proof | 201 | harness built (#1695), spec checked (2.86), gap list of 14 written | fix the systems on the gap list; none fixed yet |
 | 2a. Light, tone, weather, skies | 202 | chosen and built (2.80-2.84, #1693 #1694 #1696 #1701); film look over the picture (2.112, #1839) | phone costing once the foundation is together |
-| 2b. The 37 grounds | 202 | 23 of 37 have a model merged (table below); 6 have work in open PRs | Victoria Park and Riverway (open PRs), then the 12 not started; background scenes (#1878 #1892 #1897) |
+| 2b. The 37 grounds | 202 | 23 of 37 have a model merged, 2 more in open PRs, 4 under way locally (table below) | land Victoria Park, Riverway, Mars and Accor; confirm the other 8; background scenes (#1878 #1892 #1897) |
 | 2c. Crowd | 202 | chosen: 3D people within 55 m, cards beyond (2.92), built | |
 | 2d. Players' look | 202 | body: MetaHuman (2.85, 2.89); builds by height and weight (2.97, 2.98); faces ruled (2.99) | the Tripo heads (director generates) and the features for everyone else |
 | 2e. Cameras | 202 | main camera, goal replay, set shots, ball-up close-ups, tap to skip, TV framing, picture layout, stat bars, score bug all ruled and built (2.93-2.111, #1818) | the other cameras and cuts in play |
@@ -211,7 +211,7 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 
 ### 2b: the grounds (rule 2.90)
 
-"Model" means a ground model landed on main (from the merged PRs, 2026-11-20).
+"Model" means a ground model landed on main. Work that is still in a local worktree counts too: a ground session adds its row here when it starts, not only when it merges.
 
 | Ground | State | PRs |
 |---|---|---|
@@ -240,7 +240,11 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 | North Hobart Oval | 1991-92 model | #1854 |
 | Bruce Stadium | model, 3D seats | #1848 |
 | Riverway Stadium | model open | #1896 |
-| The Gabba, Barossa Park, Accor Stadium, Marrara Oval, Mars Stadium, Traeger Park, Sky Stadium, Jiangwan Stadium, Hands Oval, Blacktown, Summit Park, Macquarie Point | not started | |
+| Mars Stadium | model built, not yet pushed (local worktree, 2026-11-20) | |
+| Accor Stadium | model built, not yet pushed (local worktree, 2026-11-20) | |
+| Marrara Oval (TIO Darwin) | under way, not yet pushed (site data and roof scripts, 2026-11-19) | |
+| The Gabba | under way, not yet pushed (2026-11-19) | |
+| Barossa Park, Traeger Park, Sky Stadium, Jiangwan Stadium, Hands Oval, Blacktown, Summit Park, Macquarie Point | to confirm: no work found in the repo or its local worktrees | |
 
 ### Open questions for the director (3D only)
 
