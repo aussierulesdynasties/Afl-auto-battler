@@ -408,6 +408,13 @@ def south_front(S, mb):
             _, _, n = at(0.5 * (s0 + s1))
             uv = None if tu is None else [(s0 / tu[0], z0 / tu[1]), (s1 / tu[0], z0 / tu[1]), (s1 / tu[0], z1 / tu[1]), (s0 / tu[0], z1 / tu[1])]
             oriented(mb, [Q(s0, o, z0), Q(s1, o, z0), Q(s1, o, z1), Q(s0, o, z1)], m, np.array([*n, 0]), uv)
+    def decal(a0, a1, o, z0, z1, m):   # one texture stretched over [a0, a1], left edge at the west end
+        sw, se = A(a1), A(a0)
+        for s0, s1 in runs(sw, se):
+            _, _, n = at(0.5 * (s0 + s1)); u0, u1 = (s0 - sw) / (se - sw), (s1 - sw) / (se - sw)
+            oriented(mb, [Q(s0, o, z0), Q(s1, o, z0), Q(s1, o, z1), Q(s0, o, z1)], m, np.array([*n, 0]), [(u0, 0), (u1, 0), (u1, 1), (u0, 1)])
+    for k, m in (('lettering', 'sign_cafl'), ('logo', 'sign_clublogo')):   # Street View zoomed: gold caps on the glass, club logo on the wall
+        a0, a1, o, z0, z1 = S[k]; decal(a0, a1, o, z0, z1, m)
     quad(0.0, L, 0.06, 0.0, GF, 'clubw_glass', (1.5, GF))   # Street View: dark glass shopfront the full height, mullions ~1.5 m
     quad(0.0, L, 0.04, GF, E, 'paint_grey')
     for a0, a1 in S['upper_glass']:
@@ -422,18 +429,22 @@ def south_front(S, mb):
         oriented(mb, [Q(s0, AWo + 0.3, 0), Q(s1, AWo + 0.3, 0), Q(s1, AWo + 0.3, 0.15), Q(s0, AWo + 0.3, 0.15)], 'conc_kerb', np.array([*n, 0]))
     for a in np.arange(S['post_a0'], L, S['post_step']):
         mb.beam(Q(A(a), AWo - 0.3, 0.15), Q(A(a), AWo - 0.3, GF), 0.2, 0.2, 'paint_cream', tube=True)
-    for a in S['struts']:   # white struts on the upper wall, foot at the awning, head leaning west to the eave
-        mb.beam(Q(A(a), 0.25, GF + 0.3), Q(A(a + S['strut_lean']), 0.25, E), 0.22, 0.22, 'paint_white')
+    eo = S['eave_o']
+    for a in S['struts']:   # cream raking struts: foot on the wall at the awning, head out under the eave edge (pano solve)
+        mb.beam(Q(A(a), 0.12, GF + 0.3), Q(A(a + S['strut_lean']), eo - 0.15, E), 0.16, 0.16, 'paint_cream')
     for s0, s1 in runs(0.0, L):   # eave: roof edge overhang
         _, _, n = at(0.5 * (s0 + s1))
-        oriented(mb, [Q(s0, 0, E), Q(s1, 0, E), Q(s1, 0.8, E), Q(s0, 0.8, E)], 'soffit_white', np.array([0, 0, -1.0]))
-        oriented(mb, [Q(s0, 0.8, E), Q(s1, 0.8, E), Q(s1, 0.8, E + 0.35), Q(s0, 0.8, E + 0.35)], 'paint_white', np.array([*n, 0]))
+        oriented(mb, [Q(s0, 0, E), Q(s1, 0, E), Q(s1, eo, E), Q(s0, eo, E)], 'soffit_white', np.array([0, 0, -1.0]))
+        oriented(mb, [Q(s0, eo, E), Q(s1, eo, E), Q(s1, eo, E + 0.35), Q(s0, eo, E + 0.35)], 'paint_white', np.array([*n, 0]))
     # the white skillion box at the east end: glass band over the awning, white upper wall, roof rising to the east
-    b0, b1, zw, ze, bd = S['box']
-    quad(b0, b1, 0.1, GF + 0.3, E + 0.1, 'clubw_glass', (3.0, E - GF))
+    b0, b1, zw, ze, bd = S['box']; zg = S['box_glaze']; ow, oe = S['box_overhang']   # photo-solved: glass to 7.4, roof past both ends
+    quad(b0, b1, 0.1, GF + 0.3, zg, 'clubw_glass', (3.0, zg - GF))
+    zs = lambda s: zw + (ze - zw) * (s - A(b1)) / (b1 - b0)
     for s0, s1 in runs(A(b1), A(b0)):
-        _, _, n = at(0.5 * (s0 + s1)); zs = lambda s: zw + (ze - zw) * (s - A(b1)) / (b1 - b0)
-        oriented(mb, [Q(s0, 0.1, E + 0.1), Q(s1, 0.1, E + 0.1), Q(s1, 0.1, zs(s1)), Q(s0, 0.1, zs(s0))], 'paint_white', np.array([*n, 0]))
+        _, _, n = at(0.5 * (s0 + s1))
+        oriented(mb, [Q(s0, 0.1, zg), Q(s1, 0.1, zg), Q(s1, 0.1, zs(s1)), Q(s0, 0.1, zs(s0))], 'paint_white', np.array([*n, 0]))
+    for s0, s1 in [(A(b1 + ow), A(b0 - oe))]:
+        _, _, n = at(0.5 * (s0 + s1))
         q = [Q(s0, 1.0, zs(s0)), Q(s1, 1.0, zs(s1)), Q(s1, -bd, zs(s1)), Q(s0, -bd, zs(s0))]
         oriented(mb, [(x, y, z + 0.3) for x, y, z in q], 'roof_white', UP); oriented(mb, q, 'soffit_white', np.array([0, 0, -1.0]))
         oriented(mb, [Q(s0, 1.0, zs(s0)), Q(s1, 1.0, zs(s1)), Q(s1, 1.0, zs(s1) + 0.3), Q(s0, 1.0, zs(s0) + 0.3)], 'paint_white', np.array([*n, 0]))

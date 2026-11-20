@@ -21,7 +21,7 @@ def mat(name):
     o = SPECIAL.get(name, {})
     b.inputs['Roughness'].default_value = o.get('rough', 0.85)
     b.inputs['Metallic'].default_value = o.get('metal', 0.0)
-    if name in ('pickets', 'mesh', 'palm_frond'):
+    if name in ('pickets', 'mesh', 'palm_frond', 'sign_cafl', 'sign_clublogo'):
         nt.links.new(t.outputs['Alpha'], b.inputs['Alpha'])
         for attr, val in (('blend_method', 'CLIP'), ('surface_render_method', 'DITHERED')):
             try:

@@ -282,6 +282,32 @@ for i, (bg, fg, ttl) in enumerate(body):
     dr.ellipse([x0 + 100, 700, x1 - 100, 800], fill=fg)
 a = np.asarray(im, float) + noise(PH, PW, 10, 3)[:, :, None]; save('posters_w', a, (1, 1))
 
+# Mulgrave Rd lettering on the ground-floor glazing (Street View Feb 2025, pano dxiQEa8t zoomed): two lines of upright gold
+# caps, 'CAIRNS AUSTRALIAN' over 'FOOTBALL LEAGUE' (second line 4-91% of the first). One tile = the 6.2 m x 1.2 m panel.
+LW, LH = 2048, 400; im = Image.new('RGBA', (LW, LH), (0, 0, 0, 0)); FL = ImageFont.truetype('C:/Windows/Fonts/arialbd.ttf', 200)
+def line(txt, x0, x1, y0, y1):
+    t = Image.new('L', (2600, 260), 0); ImageDraw.Draw(t).text((10, 0), txt, font=FL, fill=255); t = t.crop(t.getbbox())
+    t = t.resize((x1 - x0, y1 - y0), Image.LANCZOS)
+    im.paste(Image.new('RGBA', t.size, (92, 74, 44, 255)), (x0 + 5, y0 + 5), t)        # letter returns, read as a dark edge
+    im.paste(Image.new('RGBA', t.size, (184, 156, 98, 255)), (x0, y0), t)
+line('CAIRNS AUSTRALIAN', 10, LW - 14, 14, 180); line('FOOTBALL LEAGUE', 10 + int(0.04 * LW), int(0.91 * LW), 214, 380)
+save('sign_cafl', np.asarray(im, float), (1, 1))
+# club logo on the grey upper wall (same pano): white 'Cazalys' script with a dark outline, then 'meet drink' over
+# 'eat play' in orange, blue, green and red lower case. One tile = the 5.8 m x 1.75 m logo.
+GW, GH = 2048, 618; im = Image.new('RGBA', (GW, GH), (0, 0, 0, 0)); FSc = ImageFont.truetype('C:/Windows/Fonts/segoescb.ttf', 400)
+t = Image.new('L', (2400, 700), 0); ImageDraw.Draw(t).text((10, 0), 'Cazalys', font=FSc, fill=255); t = t.crop(t.getbbox())
+t = t.rotate(8, expand=True, resample=Image.BICUBIC); t = t.resize((int(0.6 * GW), GH - 20), Image.LANCZOS)
+from PIL import ImageFilter
+im.paste(Image.new('RGBA', t.size, (48, 50, 54, 255)), (8, 8), t.filter(ImageFilter.MaxFilter(9)))
+im.paste(Image.new('RGBA', t.size, (246, 246, 242, 255)), (8, 8), t)
+FTg = ImageFont.truetype('C:/Windows/Fonts/arialbd.ttf', 150); dg = ImageDraw.Draw(im)
+def words(ws, x, y):
+    for w, c in ws:
+        dg.text((x, y), w, font=FTg, fill=(*c, 255)); x += dg.textlength(w, font=FTg) + 6
+words([('meet', (236, 120, 36)), ('drink', (40, 104, 196))], int(0.50 * GW), int(0.50 * GH))
+words([('eat', (64, 168, 72)), ('play', (214, 50, 44))], int(0.60 * GW), int(0.74 * GH))
+save('sign_clublogo', np.asarray(im, float), (1, 1))
+
 json.dump(TILE, open(OUT + 'tiles.json', 'w', newline=''), indent=0)
 for nm in sorted(TILE):
     g = np.asarray(Image.open(OUT + nm + '.png').convert('L'), float); print(f'{nm:16s} grey sd {g.std():5.1f}')
