@@ -499,6 +499,7 @@ func _ground_model(dir: String) -> void:
 
 ## Each seat colour as the model paints it (the mean of its seat texture).
 const SEAT_COLOURS := {
+	"seat_aqua": Color(0.527, 0.719, 0.757), "seat_teal": Color(0.427, 0.573, 0.627),
 	"seat_grey": Color(0.618, 0.618, 0.586), "seat_moss": Color(0.437, 0.594, 0.555),
 	"seat_navy": Color(0.068, 0.311, 0.484), "seat_slate": Color(0.272, 0.39, 0.488),
 	"seat_steel": Color(0.437, 0.484, 0.524),
