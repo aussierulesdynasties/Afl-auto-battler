@@ -92,13 +92,11 @@ render('gf',(126,119,123),6,2);render('chair',(190,150,70),6,6);render('emutruss
 # EMU CLUB sign board, 18.7 m x 2.1 m, drawn left to right as seen from the street
 from PIL import ImageFont
 SW,SH=2048,250;img=Image.new('RGB',(SW,SH),(40,40,48));d=ImageDraw.Draw(img);m2=lambda m:int(m/18.7*SW)
-d.rectangle([m2(0)+6,14,m2(6.5),SH-14],fill=(236,232,220))
-d.rectangle([m2(6.7),14,m2(8.7),SH-14],fill=(212,36,30))
-d.rectangle([m2(8.7),14,m2(13.5),SH-14],fill=(236,230,214))
-d.rectangle([m2(14.1),24,m2(18.7)-6,SH-24],fill=(205,205,212))
-f=ImageFont.truetype('C:/Windows/Fonts/arialbd.ttf',190)
+d.rectangle([m2(0)+6,14,m2(18.7)-6,SH-14],fill=(236,232,220))
+f=ImageFont.truetype('C:/Windows/Fonts/arialbd.ttf',150)
 def ctext(t,x0,x1):
     bb=d.textbbox((0,0),t,font=f);w=bb[2]-bb[0];h=bb[3]-bb[1];d.text(((x0+x1-w)//2-bb[0],(SH-h)//2-bb[1]),t,font=f,fill=(22,18,16))
+ctext('W.A.C.A.',m2(0),m2(18.7))  # ground's own name; no sponsors (director)
 img.save(os.path.join(out,'emusign.png'));SIZE['emusign']=18.7
 # scoreboard and billboards (layouts read off p92 u 887-1248), drawn by hand
 render('crownred',(205,30,22),6,6);render('bbframe',(150,120,60),6,6)
@@ -122,25 +120,15 @@ d.rectangle([q(0,0),q(16.7,0.28)],fill=(250,195,45));d.rectangle([q(0,2.45),q(16
 f2=ImageFont.truetype('C:/Windows/Fonts/arialbd.ttf',150)
 bb=d.textbbox((0,0),'EMU EXPORT LAGER',font=f2);sx=(q(16.2,0)[0]-q(5.0,0)[0])/(bb[2]-bb[0])
 tx=Image.new('RGBA',(bb[2]-bb[0]+4,bb[3]-bb[1]+4),(0,0,0,0));ImageDraw.Draw(tx).text((-bb[0]+2,-bb[1]+2),'EMU EXPORT LAGER',font=f2,fill=(250,205,60,255))
+bb=d.textbbox((0,0),'WACA',font=f2);d.text(((q(5.0,0)[0]+q(16.2,0)[0]-(bb[2]-bb[0]))//2-bb[0],(q(0,2.6)[1]-(bb[3]-bb[1]))//2-bb[1]),'WACA',font=f2,fill=(250,205,60))
 im.save(os.path.join(out,'sbcrown.png'));SIZE['sbcrown']=16.7
 # billboard 1, 14.8 x 6.6 m (mostly behind a light tower): white, a blue O at the right
 im,d,q=canvas(14.8,6.6,96,(238,236,230))
-d.ellipse([q(10.6,2.2),q(12.4,4.4)],outline=(30,50,140),width=22)
 im.save(os.path.join(out,'bb1.png'));SIZE['bb1']=14.8
 # billboard 2, 14.4 x 6.9 m: gold star at the left, GOLD STAR ACCOUNT, three text lines, red logo bar
 im,d,q=canvas(14.4,6.9,96,(240,236,226));g=(185,150,60)
 import math as _m
-cx,cy,R,r2=3.2,3.5,3.0,1.25;pts=[]
-for k in range(10):
-    a=-_m.pi/2+k*_m.pi/5;rr=R if k%2==0 else r2;pts.append(q(cx+rr*_m.cos(a),cy+rr*_m.sin(a)))
-d.polygon(pts,fill=g)
-for k in range(1,4):
-    pp=[q(cx+(R-0.45*k)*_m.cos(-_m.pi/2+j*_m.pi/5)*(1 if j%2==0 else r2/R),cy+(R-0.45*k)*_m.sin(-_m.pi/2+j*_m.pi/5)*(1 if j%2==0 else r2/R)) for j in range(10)]
-    d.polygon(pp,outline=(240,236,226),width=10)
-f3=ImageFont.truetype('C:/Windows/Fonts/arialbd.ttf',100)
-d.text(q(7.4,0.5),'GOLD STAR',font=f3,fill=(150,115,40));d.text(q(7.6,1.8),'ACCOUNT',font=f3,fill=(150,115,40))
-for k in range(3):d.rectangle([q(7.8,3.3+k*0.45),q(12.8,3.45+k*0.45)],fill=(110,100,95))
-d.rectangle([q(9.2,4.9),q(13.3,5.5)],fill=(200,50,90));d.rectangle([q(9.2,5.5),q(13.3,5.65)],fill=(60,40,90))
+# sponsor art removed (director: no sponsors); plain board
 im.save(os.path.join(out,'bb2.png'));SIZE['bb2']=14.4
 brick2('hallbrick',(118,40,28));brick2('ebrick',(196,70,30))
 deck('hallroofA',(174,191,214),hk=1.08,lk=0.9);deck('hallroofB',(226,236,248),hk=1.04,lk=0.92)

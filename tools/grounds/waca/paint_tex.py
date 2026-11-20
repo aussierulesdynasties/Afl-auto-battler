@@ -35,4 +35,4 @@ def render(nm,rgb,s=6.0,joint=3.0):
     for k in range(int(s/joint)+1):
         img[:,px(k*joint,s):px(k*joint,s)+2]=jc;img[px(k*joint,s):px(k*joint,s)+2,:]=jc
     Image.fromarray(np.clip(img,0,255).astype(np.uint8)).save(f'{d}/{nm}.png');print(nm,'sd %.1f'%img.mean(2).std())
-render('white',(236,236,238));render('concrete',(196,190,178))
+render('white',(236,236,238));render('concrete',(196,190,178));render('path',(153,146,134),6,1.5)
