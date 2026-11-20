@@ -416,11 +416,30 @@ def south_front(S, mb):
     for k, m in (('lettering', 'sign_cafl'), ('logo', 'sign_clublogo')):   # Street View zoomed: gold caps on the glass, club logo on the wall
         a0, a1, o, z0, z1 = S[k]; decal(a0, a1, o, z0, z1, m)
     quad(0.0, L, 0.06, 0.0, GF, 'clubw_glass', (1.5, GF))   # Street View: dark glass shopfront the full height, mullions ~1.5 m
-    quad(0.0, L, 0.04, GF, E, 'paint_grey')
+    W_ = S['west']; r0, r1 = W_['recess']
+    quad(0.0, r0, 0.04, GF, E, 'paint_grey'); quad(r1, L, 0.04, GF, E, 'paint_grey')
+    # west wing (pano mIsaus, Feb 2025): recessed upper bay, red-brown wall behind cream mullions
+    rd = W_['recess_d']; quad(r0, r1, -rd, GF, E, 'paint_rust')
+    for a in (r0, r1):
+        p, d, n = at(A(a)); oriented(mb, [(*(p + n * 0.04), GF), (*(p - n * rd), GF), (*(p - n * rd), E), (*(p + n * 0.04), E)], 'paint_grey', np.array([*d, 0]))
+    for a in np.arange(r0 + W_['mull'], r1 - 0.2, W_['mull']):
+        mb.beam(Q(A(a), -rd + 0.1, GF), Q(A(a), -rd + 0.1, E), 0.14, 0.14, 'paint_cream')
+    for a0, a1 in W_['upper_glass']:
+        quad(a0, a1, 0.08, GF + 0.6, E - 0.35, 'clubw_glass', (3.0, E - GF - 0.95))
+    a0, a1, o, z0, z1 = W_['logo']; decal(a0, a1, o, z0, z1, 'sign_clublogo2')
+    # west end: white glazed box under a raised white skillion roof
+    c0, c1, zr0, zr1, cd = W_['box']; quad(c0, min(c1, L), 0.1, GF + 0.3, zr0 - 0.6, 'clubw_glass', (3.0, zr0 - GF))
+    zs2 = lambda s_: zr1 + (zr0 - zr1) * (s_ - A(min(c1, L))) / (min(c1, L) - c0)
+    for s0, s1 in [(A(min(c1, L)), A(c0))]:
+        q = [Q(s0, 1.0, zs2(s0)), Q(s1, 1.0, zs2(s1)), Q(s1, -cd, zs2(s1)), Q(s0, -cd, zs2(s0))]
+        oriented(mb, [(x, y, z + 0.3) for x, y, z in q], 'roof_white', UP); oriented(mb, q, 'soffit_white', np.array([0, 0, -1.0]))
+        _, _, n = at(0.5 * (s0 + s1))
+        oriented(mb, [q[0], q[1], (*q[1][:2], q[1][2] + 0.3), (*q[0][:2], q[0][2] + 0.3)], 'paint_white', np.array([*n, 0]))
+        oriented(mb, [Q(s0, 0.1, zr0 - 0.6), Q(s1, 0.1, zr0 - 0.6), Q(s1, 0.1, zs2(s1)), Q(s0, 0.1, zs2(s0))], 'paint_white', np.array([*n, 0]))
     for a0, a1 in S['upper_glass']:
         quad(a0, a1, 0.08, GF + 0.6, E - 0.35, 'clubw_glass', (3.0, E - GF - 0.95))
-    for s0, s1 in runs(0.0, L):   # awning: flat white soffit, thin white fascia
-        _, _, n = at(0.5 * (s0 + s1)); z0, z1 = GF, GF + 0.3
+    for s0, s1 in runs(0.0, L):   # awning: flat white soffit, thin white fascia; stepped up west of the recess
+        _, _, n = at(0.5 * (s0 + s1)); z0 = GF + (S['west']['aw_dz'] if 0.5 * (s0 + s1) < A(S['west']['recess'][0]) else 0.0); z1 = z0 + 0.3
         q = [Q(s0, 0, z0), Q(s1, 0, z0), Q(s1, AWo, z0), Q(s0, AWo, z0)]
         oriented(mb, q, 'soffit_white', np.array([0, 0, -1.0]), [(p[0] / 3.0, p[1] / 3.0) for p in q]); oriented(mb, [(x, y, z1) for x, y, _ in q], 'roof_white', UP)
         oriented(mb, [Q(s0, AWo, z0), Q(s1, AWo, z0), Q(s1, AWo, z1), Q(s0, AWo, z1)], 'paint_white', np.array([*n, 0]))

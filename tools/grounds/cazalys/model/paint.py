@@ -241,7 +241,7 @@ def _cw_glass(a, pu, pv, h, w):  # sloped upper-floor glazing, one tile = 3 m x 
 facade('clubw_gf', (118, 122, 124), _cw_gf, (6.0, 4.2), 1024, 716, 0.05)
 facade('clubw_white', (234, 234, 230), _cw_white, (6.0, 8.0), 1024, 1366, 0.08)
 facade('clubw_glass', (70, 84, 96), _cw_glass, (3.0, 3.6), 512, 616, 0.02)
-for nm, col in (('paint_cream', (226, 214, 176)), ('paint_brown', (64, 52, 48)), ('bollard', (204, 160, 40)), ('paint_grey', (112, 116, 118))):
+for nm, col in (('paint_cream', (226, 214, 176)), ('paint_brown', (64, 52, 48)), ('bollard', (204, 160, 40)), ('paint_grey', (112, 116, 118)), ('paint_rust', (138, 72, 54))):
     a = base(128, 128, col, 4, 8); save(nm, a, (1.0, 1.0))
 # club forecourt (photo 12): broom-finished concrete drive with saw joints, garden mulch, shrubs, palm trunk and fronds
 a = base(256, 256, (236, 236, 232), 2, 4); yy, xx = np.ogrid[:256, :256]; a[((yy - 128) ** 2 + (xx - 128) ** 2) < 36] = (250, 248, 236); save('soffit_white', a, (3.0, 3.0))   # canopy soffit: smooth white, a downlight every 3 m
@@ -307,6 +307,11 @@ def words(ws, x, y):
 words([('meet', (236, 120, 36)), ('drink', (40, 104, 196))], int(0.50 * GW), int(0.50 * GH))
 words([('eat', (64, 168, 72)), ('play', (214, 50, 44))], int(0.60 * GW), int(0.74 * GH))
 save('sign_clublogo', np.asarray(im, float), (1, 1))
+
+# west wing logo (pano mIsaus, Feb 2025): the plain white 'Cazalys' script alone on the grey wall, rising to the right
+im = Image.new('RGBA', (GW, GH), (0, 0, 0, 0)); t = Image.new('L', (2400, 700), 0); ImageDraw.Draw(t).text((10, 0), 'Cazalys', font=FSc, fill=255)
+t = t.crop(t.getbbox()).rotate(8, expand=True, resample=Image.BICUBIC).resize((GW - 20, GH - 20), Image.LANCZOS)
+im.paste(Image.new('RGBA', t.size, (246, 246, 242, 255)), (10, 10), t); save('sign_clublogo2', np.asarray(im, float), (1, 1))
 
 json.dump(TILE, open(OUT + 'tiles.json', 'w', newline=''), indent=0)
 for nm in sorted(TILE):
