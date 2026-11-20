@@ -137,15 +137,14 @@ def _glass(a, pu, pv, h, w):    # corporate level behind the seats, one tile 6 x
     a[int(4.4 * pv):] = (196, 188, 166)
 
 
-def _back(a, pu, pv, h, w):     # stand back (GE l045): blue-grey sheet cladding, vertical ribs, a dark window strip
-    for k in range(30): a[:, int(k * 0.2 * pu):int(k * 0.2 * pu) + 3] *= 0.86
-    a[int(1.2 * pv):int(2.2 * pv), int(0.6 * pu):int(5.4 * pu)] = (52, 60, 70)
-    a[-int(0.4 * pv):] = (150, 146, 136)
+def _back(a, pu, pv, h, w):     # stand back (GE l090): dark grey-brown render, a panel joint every 3 m, darker plinth; windows are separate panels
+    for k in range(2): a[:, int(k * 3 * pu):int(k * 3 * pu) + 3] *= 0.84
+    a[-int(0.4 * pv):] *= 0.85
 
 
-facade('podium', (214, 202, 176), _podium, (6.0, 2.8), 1024, 478)
+facade('podium', (206, 170, 138), _podium, (6.0, 2.8), 1024, 478)
 facade('glass_corp', (220, 212, 190), _glass, (6.0, 5.0), 1024, 853)
-facade('facade_back', (128, 146, 160), _back, (6.0, 3.6))
+facade('facade_back', (112, 100, 88), _back, (6.0, 3.6))
 a = base(512, 512, (186, 206, 118), 3, 10); weather(a, 0.1, 10, 20); save('shelter_wall', a, (2.0, 2.0))   # pale lime (race photo)
 a = base(512, 512, (224, 214, 160), 3, 10); a[:, ::32] *= 0.85; save('shelter_roof', a, (2.0, 2.0))
 a = base(512, 512, (36, 112, 196), 3, 8); a[:, 250:256] *= 0.8; a[250:256] *= 0.8; save('sail_blue', a, (1, 1))
@@ -188,12 +187,28 @@ sign('sign_symonds', 'Andrew \u2018Roy\u2019 Symonds Grandstand', 8.0, 0.65, (24
 sign('sign_home', 'HOME', 3.8, 0.42, (214, 216, 214), (40, 44, 60), 1024, (150, 152, 150))
 sign('sign_away', 'AWAY', 3.8, 0.42, (214, 216, 214), (40, 44, 60), 1024, (150, 152, 150))
 
-# player race gates under the canopy (race photo): dark steel bar gates in two leaves, a grey post between, 8 x 2.25 m
-a = base(450, 1600, (34, 36, 40), 3, 8)
-for k in range(0, 1600, 22): a[:, k:k + 5] = (70, 74, 80)
-a[:, 780:820] = (120, 118, 112); a[:24] = (60, 62, 66); a[-20:] = (96, 94, 90)
+# player race gates under the canopy (race photo), 8 x 2.25 m at 200 px/m, left to right: galvanised side fence,
+# lime-green panel, glazed double doors, striped centre pier, barred double doors, galvanised side fence
+a = base(450, 1600, (30, 32, 34), 3, 6); M = 200
+def bars(x0, x1, col=(150, 154, 158), gap=24, wd=5):
+    for k in range(x0, x1, gap): a[:, k:k + wd] = col
+a[:, 0:90] = (52, 54, 56); bars(0, 90); a[:, 90:230] = (172, 204, 92)                       # fence, lime panel
+for x0 in (240, 520):                                                                       # two glazed leaves
+    a[20:440, x0:x0 + 270] = (44, 46, 48); a[40:420, x0 + 22:x0 + 248] = (40, 70, 58)        # frame, glass (green reflection)
+    a[220:232, x0 + 22:x0 + 248] = (44, 46, 48); a[220:236, x0 + 230:x0 + 248] = (170, 170, 166)  # mid rail, handle
+    a[60:200, x0 + 40:x0 + 120] += 18
+a[:, 800:880] = (96, 92, 86)                                                                # centre pier: horizontal stripes
+for k in range(0, 450, 36): a[k:k + 18, 800:880] = (150, 142, 128)
+for x0 in (890, 1170):                                                                      # two barred leaves
+    a[20:440, x0:x0 + 270] = (20, 22, 24); a[20:440, x0:x0 + 10] = (60, 62, 64); a[20:440, x0 + 260:x0 + 270] = (60, 62, 64)
+    bars(x0 + 18, x0 + 260, (64, 66, 70), 30, 6); a[220:232, x0:x0 + 270] = (60, 62, 64)
+a[:, 1450:1600] = (60, 62, 64); bars(1450, 1600, (176, 180, 184), 20, 6)                    # right fence
+a[:14] = (60, 62, 66); a[-14:] = (96, 94, 90)
 save('race_gates', a, (1, 1))
 
+# back-wall window (GE l090): tall slim glazing in a pale frame, 0.7 x 2.6 m; service door: dark green frame, 1.6 x 2.2 m
+a = base(520, 140, (206, 208, 204), 2, 4); a[14:506, 14:126] = (58, 66, 74); a[30:200, 24:60] += 22; save('window_back', a, (1, 1))
+a = base(440, 320, (52, 70, 58), 2, 6); a[24:440, 24:296] = (34, 38, 40); a[24:440, 158:162] = (52, 70, 58); save('door_back', a, (1, 1))
 json.dump(TILE, open(OUT + 'tiles.json', 'w', newline=''), indent=0)
 for nm in sorted(TILE):
     g = np.asarray(Image.open(OUT + nm + '.png').convert('L'), float); print(f'{nm:16s} grey sd {g.std():5.1f}')

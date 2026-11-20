@@ -473,6 +473,7 @@ def extras(col):
     for G in D.get('signs', []):   # flat panel 5 cm proud of the facade, facing the pitch
         c = np.array(G['c'], float); u = np.array(G['u'], float); n = np.array([u[1], -u[0]])
         if np.dot(n, -c) < 0: n = -n
+        if G.get('out'): n = -n   # panel on the stand's back wall, facing away from the pitch
         c = c + n * 0.05; a, b = c - u * G['w'] / 2, c + u * G['w'] / 2; z0, z1 = G['z0'], G['z0'] + G['h']
         oriented(mb, [(*a, z0), (*b, z0), (*b, z1), (*a, z1)], G['mat'], np.array([*n, 0.0]), [(0, 0), (1, 0), (1, 1), (0, 1)])
     if mb.F: mb.build(col)
