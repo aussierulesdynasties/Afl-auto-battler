@@ -92,7 +92,7 @@ func _season(draft_seed: int, lb) -> void:
 			"src_gpg": float(p.get("gl", 0.0)) / src_gm if src_gm > 0 else -1.0,
 			"src_gm": src_gm,
 			"gk": float(p["attr"].get("goalkicking", 0.0)), "acc": float(p["attr"].get("accuracy", 0.0)),
-			"mk": float(p["attr"].get("marking", 0.0)), "ovr": int(p.get("overall", 0)),
+			"mk": float(p["attr"].get("contested_marking", 0.0)), "ovr": int(p.get("overall", 0)),
 			"share": float(goals[id]) / maxf(1.0, float(team_goals.get(club, 0))),
 		}
 		season_rows.append(row)

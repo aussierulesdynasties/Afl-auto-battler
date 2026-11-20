@@ -25,6 +25,9 @@ const FROZEN := {
 	"career_v2_2026-11-11.save.gz": {"version": 2, "club": "FRE", "stage": "Round 3",
 		"ladder": ["STK 8", "NTH 8", "GCS 8", "ADE 8", "SYD 8", "FRE 8", "WCE 6", "CAR 4", "GEE 4",
 			"RIC 4", "WBD 4", "MEL 2", "COL 0", "ESS 0", "BRL 0", "GWS 0", "PAD 0", "HAW 0"]},
+	"career_v3_2026-11-16.save.gz": {"version": 3, "club": "FRE", "stage": "Round 3",
+		"ladder": ["GWS 8", "GCS 8", "SYD 8", "NTH 8", "GEE 8", "HAW 8", "MEL 4", "STK 4", "CAR 4",
+			"ADE 4", "ESS 4", "WBD 4", "COL 0", "FRE 0", "BRL 0", "PAD 0", "RIC 0", "WCE 0"]},
 }
 
 

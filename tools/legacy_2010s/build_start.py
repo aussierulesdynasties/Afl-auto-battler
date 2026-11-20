@@ -153,6 +153,7 @@ def last_seasons():
 
 
 def build(by_year, rated):
+    hon = B.honours(by_year, rated, DATA_SEASON)
     lists = load_lists()
     match_ids(lists, by_year)
     before = careers(by_year)
@@ -187,7 +188,8 @@ def build(by_year, rated):
                             "slug": pid.rsplit("/", 1)[-1].replace(".html", ""),
                             "draft_year": dyear, "draft_type": dtype, "draft_pick": dpick,
                             "seasons": ";".join(seasons), "career": B.stints(before.get(pid, [])),
-                            "peak": peak or "", "last_season": ended(pid, L["last"], L["dob"])})
+                            "peak": peak or "", "honours": "%.3g" % hon[pid] if hon.get(pid) else "",
+                            "last_season": ended(pid, L["last"], L["dob"])})
         else:
             additions.append({"first": L["first"], "last": L["last"], "dob": L["dob"], "club": club,
                               "position": B.real_position(pid, DATA_SEASON, B.stats_role(rated, pid, DATA_SEASON)), "height_cm": L["height_cm"], "list": L["list"],
@@ -213,10 +215,8 @@ def harness_from_enriched(rows):
         e = {("one_pct" if k == "onepct" else "pct_played" if k == "pctp" else k): (r[k] if r[k] == "" else float(r[k]))
              for k in B.ENRICHED[4:28]}
         hp.append(B.harness_player({**e, "first": r["first"], "last": r["last"]}, r["club"], r["num"]))
-    H.ERA_ANCHORS.clear()
     H.set_unrecorded(B.unrecorded_in(hp))
     H.derive_ratings(hp)
-    H.fit_era_anchors(hp)
     return hp
 
 
@@ -299,7 +299,7 @@ def main():
     B.write(os.path.join(OUT_DIR, "players_2010.csv"), B.ENRICHED, players)
     B.write(os.path.join(OUT_DIR, "history_2010.csv"),
             ["club", "num", "slug", "draft_year", "draft_type", "draft_pick", "seasons", "career", "peak",
-             "last_season"], history)
+             "honours", "last_season"], history)
     B.write(os.path.join(OUT_DIR, "list_additions_2010.csv"),
             ["first", "last", "dob", "club", "position", "height_cm", "list", "peak", "last_season", "source_url",
              "checked"], additions)

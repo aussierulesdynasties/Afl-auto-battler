@@ -21,7 +21,7 @@ const T := {
 	"clanger_per_chain": 0.625,     # chance the chain ends in an error
 	"clanger_is_free": 0.43,         # ...of which are free kicks against
 	"mark_share_of_kicks": 0.240,    # 0.280 before the D50 chip (2026-11-14): chips are marked 2.8x as often; 0.327 before the D50 clearing kick (2026-11-07): marks per kick back to real (0.43)
-	"handball_share": 0.44,
+	"handball_share": Skills.HANDBALL_SHARE,
 	"inside50_goal": 0.262,          # of inside-50 entries (0.279 before frees in 50 became set shots, backlog item 24; 0.269 before forward archetypes, ARD-M3-002)
 	"inside50_behind": 0.180,
 	"stoppage_share": 0.42,          # chains that begin at a genuine stoppage
@@ -111,32 +111,28 @@ const LIST_SIZE := 44
 ## blend below drops an unrecorded stat and shares its weight among the
 ## recorded ones. Empty for today's data. Mirrored in tools/sim_harness.py.
 static var unrecorded := {}
-## An attribute built only from unrecorded stats (contested and creating
-## before 1998) has no record: every player gets the same value, so it sets
-## no player above another, and it counts for nothing in his overall
-## (unknown_attrs). The values are the 2026 medians (players with 12+ games).
-const UNRECORDED_ATTR := {
-	"disposal": 53, "contested": 44, "marking": 46, "pressure": 42, "intercept": 40,
-	"carry": 45, "goalkicking": 20, "accuracy": 52, "creating": 44, "ruck": 10,
-	"discipline": 44, "durability": 77, "star": 23,
-}
+## A skill built only from unrecorded stats (contested and creating before
+## 1998) has no record: it is left at his position's average (50, ruling 18),
+## shown as a dash on his card (attr_unrecorded) and counts for nothing in his
+## overall (unknown_attrs).
 static var unknown_attrs := {}
-## Each attribute's blend of normalised rates: [weight, metric] or
-## [weight, metric, true] for one minus the rate.
+## Each skill's blend of rates normalised within his line: [weight, metric].
+## Intercept, speed and star power are not kept by AFL Tables (ruling 18):
+## 50 unless the rating file gives them.
 const ATTR_BLENDS := {
-	"disposal": [[0.60, "disposals_pg"], [0.25, "contested_pg"], [0.15, "clearances_pg"]],
-	"contested": [[0.45, "contested_pg"], [0.30, "clearances_pg"], [0.25, "contested_share"]],
-	"marking": [[0.50, "marks_pg"], [0.28, "contested_marks_pg"], [0.22, "marks_inside50_pg"]],
-	"pressure": [[0.62, "tackles_pg"], [0.38, "one_percenters_pg"]],
-	"intercept": [[0.45, "rebounds_pg"], [0.28, "marks_pg"], [0.27, "one_percenters_pg"]],
-	"carry": [[0.45, "inside50s_pg"], [0.28, "bounces_pg"], [0.27, "disposals_pg"]],
-	"goalkicking": [[0.66, "goals_pg"], [0.34, "marks_inside50_pg"]],
+	"kicking": [[1.0, "kicks_pg"]],
+	"handballing": [[1.0, "handballs_pg"]],
+	"contested_marking": [[1.0, "contested_marks_pg"]],
+	"uncontested_marking": [[1.0, "uncontested_marks_pg"]],
+	"contested": [[0.375, "contested_pg"], [0.4375, "clearances_pg"], [0.1875, "contested_share"]],
+	"pressure": [[1.0, "tackles_pg"]],
+	"carry": [[1.0, "bounces_pg"]],
+	"goalkicking": [[1.0, "goals_pg"]],
 	"accuracy": [[1.0, "accuracy"]],
-	"creating": [[0.45, "goal_assists_pg"], [0.30, "inside50s_pg"], [0.25, "marks_inside50_pg"]],
-	"ruck": [[0.70, "hitouts_pg"], [0.18, "clearances_pg"], [0.12, "contested_marks_pg"]],
-	"discipline": [[0.62, "clangers_pg"], [0.38, "frees_against_pg"]],
+	"creating": [[2.0 / 3.0, "goal_assists_pg"], [1.0 / 3.0, "inside50s_pg"]],
+	"ruck": [[1.0, "hitouts_pg"]],
+	"discipline": [[0.70, "frees_against_pg"], [0.30, "clangers_pg"]],
 	"durability": [[0.55, "games"], [0.45, "time_on_ground"]],
-	"star": [[0.68, "brownlow_pg"], [0.32, "disposals_pg"]],
 }
 ## The position reading's blends (FWD, MID, DEF in pick_role's order).
 const ROLE_BLENDS := {
@@ -145,7 +141,7 @@ const ROLE_BLENDS := {
 	"DEF": [[0.42, "rebounds_pg"], [0.30, "one_percenters_pg"], [0.20, "marks_pg"], [0.08, "goals_pg", true]],
 }
 ## Metrics read from a stat other than their own column.
-const METRIC_STAT := {"contested_share": "cp", "time_on_ground": "pctp"}
+const METRIC_STAT := {"contested_share": "cp", "time_on_ground": "pctp", "uncontested_marks_pg": "cm"}
 
 
 static func metric_recorded(metric: String) -> bool:
@@ -216,18 +212,17 @@ const ROLE_SHORT_TO_POS := {"RUCK": "RUC", "MID": "MID", "DEF": "DEF", "FWD": "F
 ## are projections (no sample to shrink); players who have completed a
 ## simulated season carry their bumped "sample" so a small 2026 games count
 ## cannot suppress them forever. Everything else keeps its real season games.
-## A short 2026 says little of a proven player (director, 2026-10-08: an
-## injury year must not sink Treloar, Hogan or Darcy). Under RECORD_SHORT
-## games, his rating is his record: the data season's OVR and the two before
-## it (2026, 2025 and 2024 for today's data) weighted by the games behind each
-## and by how recent (RECORD_W, by years before the data season). Only ever a lift, and only
-## when the record clearly says more (RECORD_LIFT); his attributes are refitted
-## to it and his rating then counts a full sample. Real players only, once,
+## Body of work (director 2026-11-15, "3 seasons, every start"): a real
+## player is rated on his last three seasons, not the data season alone - the
+## data season and the two before it (2026, 2025 and 2024 for today's data),
+## each weighted by the games behind it and by how recent (RECORD_W, by years
+## before the data season). It moves him up or down; a player with no earlier
+## season on record keeps his one season. His attributes are refitted to it and
+## his rating then counts at least a full sample (an injury year must not sink
+## Treloar, Hogan or Darcy, director 2026-10-08). Real players only, once,
 ## when the data loads (GameDB), after their history.
 const RECORD_W := {0: 1.0, 1: 0.75, 2: 0.5}
 const RECORD_SHORT := 14.0
-const RECORD_LIFT := 3.0
-const RECORD_SHARE := 0.6
 
 
 ## `season` is the data season (GameDB.DATA_SEASON): the one his numbers are from.
@@ -246,21 +241,17 @@ static func record_level(p: Dictionary, season := 2026) -> float:
 
 
 static func rate_on_record(p: Dictionary, season := 2026) -> void:
-	if bool(p.get("generated", false)) or bool(p.get("projected", false)) \
-			or float(p.get("gm", 0.0)) >= RECORD_SHORT or not p.has("attr"):
+	if bool(p.get("generated", false)) or bool(p.get("projected", false)) or not p.has("attr"):
 		return
 	var level := record_level(p, season)
-	if level < float(p.get("overall", 0)) + RECORD_LIFT:
+	if level < 0.0 or absf(level - float(p.get("overall", 0))) < 0.5:
 		return
 	var role := str(p.get("role", "MID"))
 	p["season_overall"] = int(p.get("overall", 0))   # what the data season alone said
-	# Most of the way to his record, not all of it: a long layoff still costs
-	# something, and a full lift crowded midfielders' best games further above
-	# everyone else's (the rating-parity check).
-	level = float(p.get("overall", 0)) + RECORD_SHARE * (level - float(p.get("overall", 0)))
-	p["attr"] = Prospects.fit_attributes(p["attr"], role, level, RECORD_SHORT)
-	p["sample"] = RECORD_SHORT
-	p["overall"] = rate_overall(p["attr"], role, RECORD_SHORT)
+	var games := maxf(RECORD_SHORT, effective_games(p))
+	p["attr"] = Prospects.fit_attributes(p["attr"], role, level, games)
+	p["sample"] = games
+	p["overall"] = rate_overall(p["attr"], role, games)
 	p["value"] = salary_value(p["overall"])
 	p["rated_on_record"] = true
 
@@ -311,22 +302,42 @@ static func effective_games(p: Dictionary) -> float:
 		return 14.0
 	return maxf(1.0, float(p.get("gm", 0.0)))
 
-## Overall-rating core per role: the attributes the match engine rewards a
-## player in that role for (Squad._aggregate and the MatchSim rolls),
-## weighted roughly by what each is worth to a result - measured by lifting
-## one attribute across a role and replaying the match (docs/DESIGN.md,
-## "Overall & salary"). Each role's weights add to 1.0.
-## A mid wins the stoppage and keeps the ball when tackled (contested), then
-## moves it (disposal, carry); a defender tackles (pressure) and wins the
-## ball back inside 50 (intercept); a forward kicks goals and marks inside
-## 50; a ruck wins the tap. What the engine never uses for a role - a
-## defender's disposal, a ruck's intercept - is left out.
+## The 16 skills (Skills.KEYS).
+const ATTR_KEYS := Skills.KEYS
+
+## How much each skill counts in a player's overall, by engine line: the mix
+## of skills that best matches the AFL Player Rating against his position,
+## measured on every 2012-2025 season (tools/wheelo/fit.py::game_fit; ruling 2:
+## a 2012+ player's overall is his AFL Player Rating against his position).
+## No skill counts against a player; each line's shares add to 1.0. A real
+## player's attributes are refitted so this gives his rated overall
+## (GameDB, Prospects.fit_attributes); a generated player, or one whose
+## skills change, is rated by it. Mirrored in tools/sim_harness.py.
 const ROLE_WEIGHTS := {
-	"RUCK": {"ruck": 0.90, "contested": 0.10},
-	"FWD": {"goalkicking": 0.30, "pressure": 0.20, "marking": 0.15, "accuracy": 0.15, "creating": 0.12, "carry": 0.08},
-	"MID": {"contested": 0.55, "disposal": 0.13, "carry": 0.14, "pressure": 0.10, "goalkicking": 0.04, "accuracy": 0.04},
-	"DEF": {"intercept": 0.40, "pressure": 0.35, "carry": 0.15, "contested": 0.10},
+	"RUCK": {"kicking": 0.097, "handballing": 0.018, "contested_marking": 0.081, "contested": 0.225,
+			"pressure": 0.049, "intercept": 0.054, "carry": 0.024, "goalkicking": 0.023, "accuracy": 0.059,
+			"creating": 0.070, "ruck": 0.187, "discipline": 0.043, "durability": 0.022, "star": 0.048},
+	"FWD": {"kicking": 0.083, "handballing": 0.030, "contested_marking": 0.032, "contested": 0.177,
+			"pressure": 0.058, "intercept": 0.056, "carry": 0.067, "goalkicking": 0.112, "accuracy": 0.072,
+			"creating": 0.147, "discipline": 0.049, "durability": 0.050, "star": 0.067},
+	"MID": {"kicking": 0.066, "handballing": 0.019, "contested_marking": 0.027, "contested": 0.236,
+			"pressure": 0.082, "intercept": 0.072, "carry": 0.070, "goalkicking": 0.058, "accuracy": 0.057,
+			"creating": 0.155, "discipline": 0.072, "durability": 0.018, "star": 0.068},
+	"DEF": {"kicking": 0.124, "handballing": 0.055, "contested_marking": 0.041, "contested": 0.161,
+			"pressure": 0.014, "intercept": 0.174, "carry": 0.074, "goalkicking": 0.050, "accuracy": 0.002,
+			"creating": 0.128, "ruck": 0.004, "discipline": 0.053, "durability": 0.052, "star": 0.068},
 }
+## The same fit's scale: a line's middle overall, its average share-weighted
+## skill (0..1) and overall points per unit of it.
+const LINE_FIT := {
+	"RUCK": {"mid": 63.22, "mean": 0.5518, "slope": 145.62},
+	"FWD": {"mid": 63.20, "mean": 0.5077, "slope": 162.96},
+	"MID": {"mid": 63.19, "mean": 0.5142, "slope": 142.95},
+	"DEF": {"mid": 63.18, "mean": 0.4952, "slope": 166.95},
+}
+## Overall bounds (the AFL Player Rating scale, tools/wheelo/wheelo.py).
+const OVR_MIN := 30
+const OVR_MAX := 99
 
 
 # ---------------------------------------------------------------------------
@@ -452,6 +463,8 @@ static func derive_all(players: Array, reference: Array = []) -> Array:
 		r["contested_share"] = (p["cp"] + 40.0) / (maxf(1.0, p["di"]) + 100.0)
 		r["games"] = gm
 		r["time_on_ground"] = p["pctp"] / 100.0
+		r["uncontested_marks_pg"] = shrunk_rate(maxf(0.0, p["mk"] - p["cm"]), gm,
+				maxf(0.0, league["marks_pg"] - league["contested_marks_pg"]), k_games)
 		r["score_involved_pg"] = shrunk_rate(
 				p["gl"] + p["bh"] + p["ga"] + p["mi"], gm, 4.0, k_games)
 		p["rates"] = r
@@ -465,26 +478,6 @@ static func derive_all(players: Array, reference: Array = []) -> Array:
 		for k in keys:
 			q[k] = norm(params, k, p["rates"][k])
 		p["norm"] = q
-
-		# ---- 1-99 attributes ----------------------------------------------
-		var a := {}
-		var unknown := []
-		for attr in ATTR_BLENDS:
-			var v := blend(q, ATTR_BLENDS[attr])
-			a[attr] = scale_attr(v) if v >= 0.0 else int(UNRECORDED_ATTR[attr])
-			if v < 0.0:
-				unknown.append(attr)
-		# Shown blank on his card, never as the stand-in value (director
-		# 2026-11-15, "I never okayed invented stats").
-		if unknown.is_empty():
-			p.erase("attr_unrecorded")
-		else:
-			p["attr_unrecorded"] = unknown
-		var adj := float(ATTR_ADJUSTMENTS.get("%s|%s %s" % [p.get("club", ""), p.get("first", ""), p.get("last", "")], 1.0))
-		if adj != 1.0:
-			for k in a:
-				a[k] = clampi(int(round(float(a[k]) * adj)), 1, 99)
-		p["attr"] = a
 
 		# ---- role classification ------------------------------------------
 		var hitouts_pg: float = p["ho"] / maxf(1.0, p["gm"])
@@ -500,6 +493,45 @@ static func derive_all(players: Array, reference: Array = []) -> Array:
 		if ROLE_CORRECTIONS.has(fix):
 			p["role"] = ROLE_CORRECTIONS[fix]
 		p["role2"] = assign_secondary(p)
+
+	# ---- 1-99 attributes: each against his own line -------------------------
+	# Ruling 18: what AFL Tables does not keep (intercept possessions, speed,
+	# coaches votes, hit-outs to advantage) is left out, at the middle (50).
+	var by_line := {}
+	for p in reference + players:
+		var line := str(p.get("role", "MID"))
+		if not by_line.has(line):
+			by_line[line] = []
+		by_line[line].append(p)
+	var line_params := {}
+	for line in by_line:
+		line_params[line] = build_norm_params(by_line[line], keys)
+	for p in players:
+		var lq := {}
+		var lp: Dictionary = line_params[str(p["role"])]
+		for k in keys:
+			lq[k] = norm(lp, k, p["rates"][k])
+		var a := {}
+		var unknown := []
+		for key in ATTR_BLENDS:
+			var v := blend(lq, ATTR_BLENDS[key])
+			a[key] = scale_attr(v) if v >= 0.0 else 50
+			if v < 0.0:
+				unknown.append(key)
+		a["intercept"] = 50
+		a["speed"] = 50
+		a["star"] = 50
+		# Shown blank on his card, never as the stand-in value (director
+		# 2026-11-15, "I never okayed invented stats").
+		if unknown.is_empty():
+			p.erase("attr_unrecorded")
+		else:
+			p["attr_unrecorded"] = unknown
+		var adj := float(ATTR_ADJUSTMENTS.get("%s|%s %s" % [p.get("club", ""), p.get("first", ""), p.get("last", "")], 1.0))
+		if adj != 1.0:
+			for k in a:
+				a[k] = clampi(int(round(float(a[k]) * adj)), 1, 99)
+		p["attr"] = a
 
 		# ---- overall + draft value ----------------------------------------
 		p["overall"] = rate_overall(a, str(p["role"]), float(p["gm"]))
@@ -518,14 +550,15 @@ const ROLE_CORRECTIONS := {
 }
 
 
-## Director's player-data balance corrections: every attribute scaled by the
-## factor, capped at 99, before OVR is rated. Named players only; never a
+## Director's player-data balance corrections: every skill scaled by the
+## factor, capped at 99, before OVR is rated (on the rating file's skills,
+## GameDB._apply_rating_stats, when it names him). Named players only; never a
 ## reason to change the generation model. Mirrored in tools/sim_harness.py.
-## Bowey's factor is the smallest that lifts his OVR 5% (68 to 71); his POT 5%
-## (72 to 76) is set in data/potential_overrides.csv.
+## Bowey's factor is the smallest that lifts his OVR 5% (86 to 90 on the
+## Wheelo ratings); his POT 5% is the "+5%" row in data/potential_overrides.csv.
 const ATTR_ADJUSTMENTS := {
 	"MEL|Harvey Langford": 1.15,
-	"MEL|Jake Bowey": 1.022,
+	"MEL|Jake Bowey": 1.036,
 	"PAD|Connor Rozee": 1.10,
 }
 
@@ -537,10 +570,21 @@ const ATTR_ADJUSTMENTS := {
 ## him MID second when his numbers clear that gate). Only a ruck reading
 ## stands, since it is gated on real hit-out volume. Listed midfielders and
 ## rucks, and players with no listing, keep the numbers' reading.
+## A past start (Legacy) also keeps a listed midfielder in the midfield
+## (listed_lines): its listing is the position he is known for
+## (data/legacy/positions.csv), and before the 2000s most of the numbers that
+## read a defender (rebound 50s, one percenters) are estimates (director
+## 2026-11-15: "some are out of position like Garry Lyon in defence").
 ## Mirrored in tools/sim_harness.py.
+const TODAY_LISTED_LINES := ["FWD", "DEF"]
+const PAST_LISTED_LINES := ["FWD", "DEF", "MID"]
+## GameDB.reload sets it: PAST_LISTED_LINES for a past start.
+static var listed_lines: Array = TODAY_LISTED_LINES
+
+
 static func listed_primary(p: Dictionary, role: String) -> String:
 	var listed := str(p.get("real_pos", ""))
-	if (listed == "FWD" or listed == "DEF") and role != "RUCK":
+	if listed in listed_lines and role != "RUCK":
 		return listed
 	return role
 
@@ -558,115 +602,46 @@ static func pick_role(scores: Dictionary) -> String:
 	return best
 
 
-## Raw blend (role core, star power, durability), the position scale, a
-## confidence shrink, then a stretch so the best 2026 players land near 90.
-## Must match
-## tools/sim_harness.py (the shrink lives in derive_ratings; the stretch is
-## scale_overall).
+## His skills mixed by his line's shares (ROLE_WEIGHTS) on the AFL Player
+## Rating scale (LINE_FIT), then a confidence shrink toward the middle for a
+## short sample. Must match tools/sim_harness.py::rate_overall.
 static func rate_overall(a: Dictionary, role: String, games: float) -> int:
-	var overall: float = position_stretch(raw_blend(a, role), role)
-	var conf: float = minf(1.0, games / 14.0)
-	overall = 40.0 + (overall - 40.0) * (0.40 + 0.60 * conf)
-	return scale_overall(overall)
-
-
-## Position scale. Each position's raw blend is mapped onto one shared
-## scale at three points - its 10th, 50th and 98th percentiles - piecewise
-## linearly, so every position's spread lands where the 2026 scale put it:
-## medians level with the midfield median, and the elite of every position
-## in the high 80s (the other positions' 98th percentile sits 85% of the way
-## to the midfield one, the key position concession). Outside the 10th-98th
-## band the map goes one for one, so an outlier is neither amplified nor
-## squashed. Monotonic within a position.
-## Anchors are the 2026 raw blends of players with 12+ games; they are fixed
-## so generated prospects and later seasons use the same scale.
-## Must match tools/sim_harness.py::position_stretch (and intake_harness.py).
-const STRETCH_ANCHORS := {                # [p10, p50, p98] raw blend
-	"MID": [41.22, 53.99, 82.62],
-	"DEF": [40.07, 47.75, 58.86],
-	"FWD": [36.86, 48.25, 61.42],
-	"RUCK": [39.13, 66.27, 86.90],
-}
-const STRETCH_TARGETS := {                # where they land
-	"MID": [37.74, 49.36, 78.04],
-	"DEF": [43.07, 49.41, 73.72],
-	"FWD": [38.38, 49.48, 78.04],
-	"RUCK": [37.50, 49.36, 73.56],
-}
-
-
-## A past start's own anchors, measured on its data season (fit_era_anchors):
-## each position's spread against its own season, as 2026's is against 2026
-## (director 2026-11-13, "Scale each position per season", TODO row 142).
-## Empty for today's start, which keeps the fixed 2026 anchors above.
-## GameDB.reload sets it; it holds for the whole career.
-static var era_anchors := {}
-
-
-## Players this many games or more set a season's anchors (as for 2026's).
-const ANCHOR_GAMES := 12.0
-
-
-## The raw blend rate_overall stretches: role core, star power, durability.
-static func raw_blend(a: Dictionary, role: String) -> float:
 	var w: Dictionary = ROLE_WEIGHTS.get(role, ROLE_WEIGHTS["MID"])
-	var core := 0.0
+	var f: Dictionary = LINE_FIT.get(role, LINE_FIT["MID"])
+	var b := 0.0
 	var total := 0.0
 	var kept := 0.0
 	for key in w:
 		total += float(w[key])
 		if unknown_attrs.has(key):
-			continue   # no record: counts for nothing
+			continue   # no record in his era: counts for nothing
 		kept += float(w[key])
-		core += float(w[key]) * float(a[key])
+		b += float(w[key]) * (float(a.get(key, 50)) - 1.0) / 98.0
 	if kept > 0.0:
-		core *= total / kept
-	return 0.70 * core + 0.22 * float(a["star"]) + 0.08 * float(a["durability"])
+		b *= total / kept
+	var mid := float(f["mid"])
+	var overall := mid + float(f["slope"]) * (b - float(f["mean"]))
+	var conf: float = minf(1.0, games / 14.0)
+	overall = mid + (overall - mid) * (0.40 + 0.60 * conf)
+	return clampi(int(round(overall)), OVR_MIN, OVR_MAX)
 
 
-## Measure each position's [p10, p50, p98] raw blend on these rated players
-## (12+ games), set them as era_anchors and rate every player again on them.
-## Mirrored in tools/sim_harness.py::fit_era_anchors.
-static func fit_era_anchors(players: Array) -> void:
-	var by_role := {}
-	for p in players:
-		if float(p.get("gm", 0.0)) < ANCHOR_GAMES or not p.has("attr"):
-			continue
-		var role := str(p["role"])
-		if not by_role.has(role):
-			by_role[role] = []
-		by_role[role].append(raw_blend(p["attr"], role))
-	era_anchors = {}
-	for role in STRETCH_ANCHORS:
-		var vals: Array = by_role.get(role, [])
-		if vals.size() >= 10:
-			era_anchors[role] = [percentile(vals, 0.10), percentile(vals, 0.50), percentile(vals, 0.98)]
-	for p in players:
-		if p.has("attr"):
-			p["overall"] = rate_overall(p["attr"], str(p["role"]), float(p["gm"]))
-			p["value"] = salary_value(p["overall"])
-
-
-static func position_stretch(raw: float, role: String) -> float:
-	if not STRETCH_ANCHORS.has(role):
-		return raw
-	var g: Array = era_anchors.get(role, STRETCH_ANCHORS[role])
-	var t: Array = STRETCH_TARGETS[role]
-	if raw <= float(g[0]):
-		return raw + (float(t[0]) - float(g[0]))
-	if raw <= float(g[1]):
-		return float(t[0]) + (raw - float(g[0])) * (float(t[1]) - float(t[0])) / (float(g[1]) - float(g[0]))
-	if raw <= float(g[2]):
-		return float(t[1]) + (raw - float(g[1])) * (float(t[2]) - float(t[1])) / (float(g[2]) - float(g[1]))
-	# Past the 98th percentile, one for one: an outlier is not amplified.
-	return float(t[2]) + (raw - float(g[2]))
-
-
-static func scale_overall(raw: float) -> int:
-	if raw < 32.0:
-		return clampi(int(round(30.0 + (raw - 20.0) * (14.0 / 12.0))), 1, 99)
-	var t := clampf((raw - 32.0) / 49.0, 0.0, 1.2)
-	return clampi(int(round(44.0 + pow(t, 0.92) * 48.0)), 1, 99)
+## How much one point of `key` moves his rating in `role` (rate_overall is a
+## straight line in each skill, so this is the same at every level): 0 for a
+## skill the role does not count. Growth prices XP in rating points with it.
+static func overall_per_point(role: String, key: String, games: float) -> float:
+	var w: Dictionary = ROLE_WEIGHTS.get(role, ROLE_WEIGHTS["MID"])
+	if not w.has(key) or unknown_attrs.has(key):
+		return 0.0
+	var f: Dictionary = LINE_FIT.get(role, LINE_FIT["MID"])
+	var total := 0.0
+	var kept := 0.0
+	for k in w:
+		total += float(w[k])
+		if not unknown_attrs.has(k):
+			kept += float(w[k])
+	var conf: float = minf(1.0, games / 14.0)
+	return float(f["slope"]) * float(w[key]) / 98.0 * (total / kept) * (0.40 + 0.60 * conf)
 
 
 ## Second role only when the season numbers clear a gate. Empty string means

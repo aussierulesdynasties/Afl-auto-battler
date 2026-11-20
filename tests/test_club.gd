@@ -346,7 +346,9 @@ func _test_events() -> void:
 			quiet += 1
 			continue
 		var e: Dictionary = cards[0]
-		seen[str(e["key"])] = true
+		# A big week deals two cards; the board's may be the second.
+		for c in cards:
+			seen[str((c as Dictionary)["key"])] = true
 		var opts: Array = e["options"]
 		if not (opts.size() >= 2 and int(e["default"]) < opts.size()):
 			_check(false, "Event %s offers a real choice" % e["key"])
@@ -535,13 +537,13 @@ func _test_event_decisions() -> void:
 	# Waiting's upside and its risk, sized from the price curve (bible §4).
 	var flat := {"id": "w_flat", "overall": 84, "age": 26.0, "morale": 70}
 	var up := flat.duplicate()
-	up["overall"] = 84 + GameState.SEASON_TRAIN_GAIN
+	up["overall"] = 84 + 3
 	var rise := Contracts.asking_salary(up) - Contracts.asking_salary(flat)
-	var waits := ClubLife.wait_words(flat, 84 + GameState.SEASON_TRAIN_GAIN)
-	_check(waits.contains("at most %d points" % GameState.SEASON_TRAIN_GAIN) and waits.contains(Contracts.money(rise))
-			and ClubLife.wait_words(flat, 84) == ClubLife.WAIT_FLAT
+	var waits := ClubLife.wait_words(flat, 3)
+	_check(waits.contains("about 3 points") and waits.contains(Contracts.money(rise))
+			and ClubLife.wait_words(flat, 0) == ClubLife.WAIT_FLAT
 			and RegEx.create_from_string("[0-9]").search(ClubLife.WAIT_LIFT + ClubLife.WAIT_FLAT) == null,
-			"Waiting says how far training can still lift his price this season (%s)" % waits)
+			"Waiting says how far his development should lift his price this season (%s)" % waits)
 	var wait_card: Dictionary = GameState.story_card("contracts_wants_to_extend", star)
 	var wait_opt: Dictionary = (wait_card.get("options", []) as Array)[1] if (wait_card.get("options", []) as Array).size() > 1 else {}
 	_check(str(wait_opt.get("detail", "")).contains("At the off-season he asks") and not str(wait_opt.get("detail", "")).contains("{"),
@@ -658,6 +660,9 @@ func _test_event_decisions() -> void:
 func _test_sacking() -> void:
 	GameState.reset()
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
+	# The Fair board's rule (warned on one poor season, sacked on the next); every
+	# step's rule is _test_board_patience's.
+	GameState.board_patience = "fair"
 	GameState.board["goal"] = {"key": "top4", "text": "Finish in the top four", "pos": 0}
 	GameState.board["confidence"] = 10
 	# The board's season-end judgement on a home and away season that left GEE
@@ -1102,7 +1107,7 @@ func _test_board_confidence() -> void:
 		states.append(ClubLife.board_state(c))
 	_check(states == ["Very secure", "Secure", "Stable", "Under pressure", "In trouble"],
 			"The board reads in words (%s)" % str(states))
-	_check(ClubLife.board_state(ClubLife.START_CONFIDENCE) == "Stable", "A new coach starts stable")
+	_check(ClubLife.board_state(ClubLife.START_CONFIDENCE) == "Very secure", "A new coach starts very secure")
 	_check(ClubLife.match_reason(top4, "Carlton", -5, 1) == "The loss to Carlton puts a top-four finish under threat."
 			and ClubLife.match_reason(battler, "Carlton", 20, 0) == "The win over Carlton keeps seven wins in reach."
 			and ClubLife.match_reason(top4, "Carlton", -5, 4).begins_with("Four losses in a row"),

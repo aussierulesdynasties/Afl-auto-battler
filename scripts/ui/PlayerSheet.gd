@@ -11,8 +11,9 @@ extends RefCounted
 const OPINION_RULE := "%s's opinion of you sets how much a talk lifts him.\nUnder %d, he may refuse to re-sign with us.\nEach point under adds %d%% to the odds he refuses."
 
 const ATTR_ROWS := [
-	["disposal", "Disposal"], ["contested", "Contested"], ["marking", "Marking"],
-	["pressure", "Pressure"], ["intercept", "Intercept"], ["carry", "Carry"],
+	["kicking", "Kicking"], ["handballing", "Handballing"], ["contested", "Contested ball"],
+	["contested_marking", "Contested marking"], ["uncontested_marking", "Uncontested marking"],
+	["pressure", "Pressure"], ["intercept", "Intercept"], ["speed", "Speed"], ["carry", "Carry"],
 	["goalkicking", "Goalkicking"], ["accuracy", "Accuracy"],
 	["creating", "Creating"], ["ruck", "Ruck"], ["discipline", "Discipline"],
 	["durability", "Durability"], ["star", "Star power"],
@@ -388,6 +389,19 @@ static func top_three(p: Dictionary, size: int, one_line := false) -> Control:
 		row.add_child(val)
 		box.add_child(row)
 	return box
+
+
+## Whether every skill's name and a two-figure rating fit on one line `width`
+## wide at text `size` (a top_three row: name, 8 px, rating). The director's
+## skill names run to "Uncontested marking" (row 200): a half-width card on a
+## small phone can't hold it, and a card that can't goes one across.
+static func top_three_fits(width: float, size: int) -> bool:
+	var fs := UiKit.px(size)
+	var num := UiKit.FONT.get_string_size("99", HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	for label in PlayerProfile.ATTR_LABELS.values():
+		if UiKit.FONT.get_string_size(str(label), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 8.0 + num > width:
+			return false
+	return true
 
 
 ## The height top_three's three rows take on a card, at the text size.

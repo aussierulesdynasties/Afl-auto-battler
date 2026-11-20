@@ -1,0 +1,85 @@
+extends SceneTree
+## Close-up stills of a GLB: godot --windowed --script cu.gd -- IN.glb OUTDIR SHOTS.json (each shot: name, eye, at, fov in Godot coords)
+
+func _initialize() -> void:
+	_run.call_deferred()
+
+
+func _run() -> void:
+	var a := OS.get_cmdline_user_args()
+	var src := str(a[0])
+	var out := str(a[1])
+	var shots: Array = JSON.parse_string(FileAccess.get_file_as_string(str(a[2])))
+	DirAccess.make_dir_recursive_absolute(out)
+	OS.low_processor_usage_mode = false
+	root.content_scale_mode = Window.CONTENT_SCALE_MODE_DISABLED
+	root.size = Vector2i(1280, 720)
+	DisplayServer.window_set_size(root.size)
+	var doc := GLTFDocument.new()
+	var st := GLTFState.new()
+	if doc.append_from_file(src, st) != OK:
+		print("LOAD FAILED"); quit(1); return
+	var model: Node3D = doc.generate_scene(st)
+	var world := Node3D.new()
+	root.add_child(world)
+	world.add_child(model)
+	for im in model.find_children("*", "ImporterMeshInstance3D", true, false):
+		var mi := MeshInstance3D.new()
+		mi.mesh = im.mesh.get_mesh()
+		mi.transform = im.transform
+		im.get_parent().add_child(mi)
+		im.queue_free()
+	# runtime GLTF images carry no mipmaps (the game's importer makes them): build them so tiled textures don't shimmer
+	for m in model.find_children("*", "MeshInstance3D", true, false):
+		var mi := m as MeshInstance3D
+		for si in mi.mesh.get_surface_count():
+			var mat := mi.mesh.surface_get_material(si) as BaseMaterial3D
+			if mat and mat.albedo_texture:
+				var img: Image = mat.albedo_texture.get_image()
+				if img.is_compressed(): img.decompress()
+				img.generate_mipmaps()
+				mat.albedo_texture = ImageTexture.create_from_image(img)
+				mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	var box := AABB()
+	var first := true
+	for m in model.find_children("*", "MeshInstance3D", true, false):
+		var mi := m as MeshInstance3D
+		var b: AABB = mi.global_transform * mi.get_aabb()
+		box = b if first else box.merge(b)
+		first = false
+	print("AABB ", box)
+	if first:
+		quit(1); return
+	var env := WorldEnvironment.new()
+	var e := Environment.new()
+	var sky := Sky.new()
+	var sm := ProceduralSkyMaterial.new()
+	sm.ground_bottom_color = Color(0.62, 0.66, 0.70)
+	sm.ground_horizon_color = Color(0.72, 0.76, 0.80)
+	sky.sky_material = sm
+	e.sky = sky
+	e.background_mode = Environment.BG_SKY
+	e.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
+	e.tonemap_mode = Environment.TONE_MAPPER_AGX
+	env.environment = e
+	world.add_child(env)
+	var sun := DirectionalLight3D.new()
+	sun.rotation_degrees = Vector3(-45, 35, 0)
+	sun.shadow_enabled = true
+	world.add_child(sun)
+	var cam := Camera3D.new()
+	cam.far = 5000.0
+	cam.near = 0.1
+	world.add_child(cam)
+	cam.current = true
+	for sh in shots:
+		cam.fov = float(sh["fov"])
+		var ey: Array = sh["eye"]
+		var at: Array = sh["at"]
+		cam.global_position = Vector3(ey[0], ey[1], ey[2])
+		cam.look_at(Vector3(at[0], at[1], at[2]), Vector3.UP)
+		for w in range(3):
+			await process_frame
+		await RenderingServer.frame_post_draw
+		root.get_viewport().get_texture().get_image().save_png(out.path_join(str(sh["name"]) + ".png"))
+	quit(0)

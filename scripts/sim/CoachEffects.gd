@@ -75,7 +75,7 @@ static func xp_mult(staff: Dictionary, p: Dictionary, on_ground: bool) -> float:
 
 ## Teaching no longer moves a player's season training ceiling (director,
 ## 4.Q1, 2026-11-04): "Teaching is XP scaling, not the season-ceiling point."
-## Kept as a neutral step so GameState.season_ceiling and old saves need no change.
+## Kept as a neutral step (there is no season ceiling now, director 2026-11-17).
 static func teach_step(_staff: Dictionary, _p: Dictionary) -> int:
 	return 0
 

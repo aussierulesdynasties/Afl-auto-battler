@@ -20,6 +20,9 @@ const DEFAULT := "2026"
 ## origin: each player's home state
 ## list_additions, list_addition_stats: listed players with no game that season
 ## list_types: which players who played that season were on a rookie list
+## rating_stats: each rated player's AFL position, overall and 16 skills that
+##   season, each against his position (tools/wheelo/build.py; director's
+##   interview 2026-11-15)
 ## departures, club_moves: who left or changed club before the first season
 ## ladder: the data season's final ladder (no "year" column needed)
 ## ovr_overrides, potential_overrides: the director's hand-set numbers
@@ -28,7 +31,7 @@ const DEFAULT := "2026"
 ## leadership: the season's captains and vice-captains (Leadership)
 ## A row without coaches or leadership uses 2026's (a test league).
 const FILE_KEYS := ["players", "draftees", "history", "origin", "list_additions", "list_addition_stats",
-		"list_types", "departures", "club_moves", "ladder", "ovr_overrides", "potential_overrides",
+		"rating_stats", "list_types", "departures", "club_moves", "ladder", "ovr_overrides", "potential_overrides",
 		"coaches", "leadership"]
 
 ## One more key, a folder rather than a file: state_leagues, the VFL, SANFL and
@@ -56,6 +59,7 @@ const _TABLE := {
 		"history": "res://data/legacy/2020/history_2020.csv",
 		"list_additions": "res://data/legacy/2020/list_additions_2020.csv",
 		"list_addition_stats": "res://data/legacy/2020/list_addition_stats_2020.csv",
+		"rating_stats": "res://data/legacy/2020/rating_stats_2020.csv",
 		"list_types": "res://data/legacy/2020/list_types_2020.csv",
 		"second_tier": "res://data/legacy/second_tier",
 	},
@@ -66,8 +70,10 @@ const _TABLE := {
 		"draftees": "res://data/draftees_2026.csv",
 		"history": "res://data/player_history_2026.csv",
 		"origin": "res://data/player_origin_2026.csv",
+		"indigenous": "res://data/player_indigenous_2026.csv",
 		"list_additions": "res://data/list_additions_2026.csv",
 		"list_addition_stats": "res://data/list_additions_stats.csv",
+		"rating_stats": "res://data/rating_stats_2026.csv",
 		"list_types": "res://data/list_types_2026.csv",
 		"departures": "res://data/departures_2026.csv",
 		"club_moves": "res://data/club_moves_2026.csv",
@@ -88,6 +94,7 @@ const _TABLE := {
 		"history": "res://data/legacy/2000/history_2000.csv",
 		"list_additions": "res://data/legacy/2000/list_additions_2000.csv",
 		"list_addition_stats": "res://data/legacy/2000/list_addition_stats_2000.csv",
+		"rating_stats": "res://data/legacy/2000/rating_stats_2000.csv",
 		"second_tier": "res://data/legacy/second_tier",
 	},
 	# The 1990 start: lists rated on 1989, the season just played, built by
@@ -102,6 +109,7 @@ const _TABLE := {
 		"history": "res://data/legacy/1990/history_1990.csv",
 		"list_additions": "res://data/legacy/1990/list_additions_1990.csv",
 		"list_addition_stats": "res://data/legacy/1990/list_addition_stats_1990.csv",
+		"rating_stats": "res://data/legacy/1990/rating_stats_1990.csv",
 		"second_tier": "res://data/legacy/second_tier",
 	},
 	# The 2010 start: lists rated on 2009, coaches rated from their records
@@ -116,6 +124,7 @@ const _TABLE := {
 		"history": "res://data/legacy/2010/history_2010.csv",
 		"list_additions": "res://data/legacy/2010/list_additions_2010.csv",
 		"list_addition_stats": "res://data/legacy/2010/list_addition_stats_2010.csv",
+		"rating_stats": "res://data/legacy/2010/rating_stats_2010.csv",
 		"second_tier": "res://data/legacy/second_tier",
 	},
 }

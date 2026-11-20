@@ -500,14 +500,9 @@ func _test_press_standing() -> void:
 	_check(MC.chance("method", {"key": "close_game", "standing": 2}) == base + 10
 			and MC.chance("method", {"key": "close_game", "standing": -1}) == base - 5,
 			"Each step of standing moves every answer's odds by 5")
-	_state.media_memory = {"standing": {"muckraker": 2, "bogan": -1}, "standing_year": int(_state.season_year) - 1}
-	_check(_state.press_standing("muckraker") == 1 and _state.press_standing("bogan") == 0
-			and not (_state.media_memory["standing"] as Dictionary).has("bogan")
-			and int(_state.media_memory["standing_year"]) == int(_state.season_year),
-			"Standing fades a step toward even each new season, once (%s)" % str(_state.media_memory))
-	_check(_state.press_standing("muckraker") == 1, "Reading it again the same season does not fade it twice")
-	_state.media_memory = {"standing": {"muckraker": 2}, "standing_year": int(_state.season_year) - 3}
-	_check(_state.press_standing("muckraker") == 0, "Three seasons away and he is even again")
+	_state.media_memory = {"standing": {"muckraker": 2, "bogan": -1}, "standing_year": int(_state.season_year) - 3}
+	_check(_state.press_standing("muckraker") == 2 and _state.press_standing("bogan") == -1,
+			"Standing never fades with time: three quiet seasons on, he is still a firm fan (%s)" % str(_state.media_memory))
 	_state.media_memory = {"standing": {"muckraker": -1}, "standing_year": int(_state.season_year)}
 	_state.media_conference = conf.duplicate(true)
 	_state.media_conference["lead"] = MC.lead_in("muckraker", -1)
@@ -2199,9 +2194,9 @@ func _test_menu_and_career() -> void:
 			"New career has no player names choice: real names are the only names")
 	var note: Label = current_scene.find_child("BoardPatienceNote", true, false)
 	var rival_note: Label = current_scene.find_child("RivalRecruitingNote", true, false)
-	_check(note != null and note.visible and note.text == DifficultyDials.text("board_patience", "fair")
+	_check(note != null and note.visible and note.text == DifficultyDials.text("board_patience", "patient")
 			and rival_note != null and rival_note.visible and rival_note.text == DifficultyDials.text("rival_recruiting", "shrewd"),
-			"Each dial starts on its middle step and says what it means in one sentence")
+			"The board starts on Patient (director 2026-11-17), the rivals on their middle step, each said in one sentence")
 	var every_trade := true
 	for key in DifficultyDials.order("rival_recruiting"):
 		every_trade = every_trade and DifficultyDials.text("rival_recruiting", key).contains("trade")
@@ -2209,7 +2204,7 @@ func _test_menu_and_career() -> void:
 	if ruthless_btn != null:
 		ruthless_btn.emit_signal("pressed")
 		await _settle()
-	_check(_state.new_career_dial("board_patience") == "fair" and _state.new_career_dial("rival_recruiting") == "shrewd",
+	_check(_state.new_career_dial("board_patience") == "patient" and _state.new_career_dial("rival_recruiting") == "shrewd",
 			"A pick changes nothing before the career starts")
 	_check(note != null and note.text == DifficultyDials.text("board_patience", "ruthless"),
 			"The sentence follows the picked step")
@@ -2226,7 +2221,7 @@ func _test_menu_and_career() -> void:
 	_router.handle_back(false)
 	await _settle()
 	_check(_router.current() == "main" and current_scene.find_child("NewCareerSetup", true, false) == null
-			and _state.new_career_dial("board_patience") == "fair", "Back leaves the setup without changing anything")
+			and _state.new_career_dial("board_patience") == "patient", "Back leaves the setup without changing anything")
 	current_scene.find_child("NewCareer", true, false).emit_signal("pressed")
 	await _settle()
 	await _pick_year()

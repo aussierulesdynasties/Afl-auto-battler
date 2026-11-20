@@ -12,13 +12,18 @@ extends RefCounted
 ##   over), medically retired, or aged out of the draft pool.
 ## It fails on:
 ##   - an id that vanishes, or sits in two places at once;
-##   - a real draftee (data/legacy/classes.csv) who never reaches a list;
+##   - a real state-league or academy player (a new club's state-league
+##     foundation man, a father-son or academy tie) who never reaches a list;
 ##   - real players cut while their real careers ran on: more than a few
 ##     ended (delisted, dropped, retired) years before their real last season;
 ##   - a rival list over its era's senior or rookie spots, or under the
 ##     minimum, after a rollover;
 ##   - a real state-league or academy player held in the pool past his own
 ##     draft and aged out.
+## Any other real draftee may go unpicked and age out of the pool: the save's
+## draft makes its own picks (director, 2026-11-13: "the sim will not
+## replicate historical draftee clubs"), and listing every real draftee would
+## mean more list churn than the real league's (P-81: churn is his call).
 ## Every other Legacy start on the dataset table (2000, 2010, 2020 once they
 ## land) gets a short run with the same checks. Run through
 ## tests/run_legacy_players_tests.gd.
@@ -139,6 +144,10 @@ func _snapshot() -> Dictionary:
 var laps := {}
 var lost_in := {}   # id -> the off-season phase he was last seen before
 var _seen := {}
+## Ids on a list at some point inside the off-season (a tie listed at the draft,
+## a draftee): one who leaves before the next start (a rating retirement) still
+## reached a list.
+var _listed_between := {}
 
 func _lap(what: String, t: int) -> void:
 	laps[what] = int(laps.get(what, 0)) + Time.get_ticks_msec() - t
@@ -166,7 +175,11 @@ func _roll_one() -> bool:
 	GameState.open_offseason()
 	_lap("open_offseason", t)
 	t = Time.get_ticks_msec()
+	_listed_between = {}
 	var drafting := GameState.begin_intake_draft()
+	for code in GameState.league_lists:
+		for q in GameState.league_lists[code]:
+			_listed_between[str(q.get("id", ""))] = true
 	_lap("begin_intake_draft", t)
 	t = Time.get_ticks_msec()
 	if drafting:
@@ -181,6 +194,8 @@ func _roll_one() -> bool:
 			var c := d._best_ai_pick(code)
 			if c.is_empty() or not d._draft_pick(code, c):
 				d._skip_current_pick()
+		for id in d.picked:
+			_listed_between[str(id)] = true
 		_lap("picks", t)
 		t = Time.get_ticks_msec()
 		GameState.finish_intake_draft()
@@ -213,6 +228,10 @@ func _trace(year: int, before: Dictionary, after: Dictionary, life: Dictionary) 
 		var loc := str(now["loc"])
 		if loc.begins_with("list:"):
 			row["listed"] += 1
+			# Marked here, before the new-arrival branch skips on: a man who joins
+			# a list straight away (a new club's foundation man, a draftee) and
+			# is gone by the next start was still listed.
+			life[id] = true
 		if not before.has(id):
 			if loc.begins_with("list:"):
 				if GameState.drafted_draftees.has(id):
@@ -227,8 +246,6 @@ func _trace(year: int, before: Dictionary, after: Dictionary, life: Dictionary) 
 			row["relisted"] += 1
 		elif loc == "fa" and was.begins_with("list:"):
 			row["to_fa"] += 1
-		if loc.begins_with("list:"):
-			life[id] = true
 	for id in before:
 		if id == "_twice" or after.has(id):
 			continue
@@ -254,7 +271,7 @@ func _trace(year: int, before: Dictionary, after: Dictionary, life: Dictionary) 
 		elif str(was["loc"]) == "pool":
 			how = "pool: aged out" if float(was["age"]) + 1.0 >= 22.0 else "pool: dropped young"
 			row["dropped"] += 1
-			if bool(was["real_class"]) and not life.has(id):
+			if _held_to_list(id, was) and not life.has(id):
 				row["aged_out_real"].append("%s (%s, class %d%s, age %d)" % [str(was["name"]), id,
 						int(was["draft_year"]), ", tied " + str(was["tied"]) if str(was["tied"]) != "" else "",
 						int(float(was["age"]) + 1.0)])
@@ -329,7 +346,8 @@ func _career(dataset: String, seasons: int) -> Dictionary:
 	_opening_draft()
 	GameState.finish_intake_draft()
 	RookieList.settle(GameState)
-	var real_seen := {}   # real class id -> {name, draft_year}
+	var real_seen := {}   # state-league or academy id -> {name, draft_year}
+	var other_seen := {}  # any other real draftee id -> his snapshot row (reported, not checked)
 	var life := {}        # id -> ever on a list during the run
 	var all := {"vanished": [], "twice": [], "early": [], "ended_real": 0, "aged_out_real": [], "caps": [], "rows": []}
 	var before := _snapshot()
@@ -340,12 +358,16 @@ func _career(dataset: String, seasons: int) -> Dictionary:
 	for i in range(seasons):
 		var year := GameState.season_year
 		for id in before:
-			if id != "_twice" and bool(before[id]["real_class"]):
+			if id != "_twice" and _held_to_list(id, before[id]):
 				real_seen[id] = before[id]
+			elif id != "_twice" and bool(before[id]["real_class"]):
+				other_seen[id] = before[id]
 		var t0 := Time.get_ticks_msec()
 		if not _roll_one():
 			_check(false, "%s: %d rolls over to %d (now %d)" % [dataset, year, year + 1, GameState.season_year])
 			break
+		for id in _listed_between:
+			life[id] = true
 		var after := _snapshot()
 		print("legacy_players: %s %d -> %d in %d ms %s" % [dataset, year, year + 1, Time.get_ticks_msec() - t0, laps])
 		laps = {}
@@ -361,8 +383,10 @@ func _career(dataset: String, seasons: int) -> Dictionary:
 		all["caps"].append_array(_caps(GameState.season_year))
 		before = after
 	for id in before:
-		if id != "_twice" and bool(before[id]["real_class"]):
+		if id != "_twice" and _held_to_list(id, before[id]):
 			real_seen[id] = before[id]
+		elif id != "_twice" and bool(before[id]["real_class"]):
+			other_seen[id] = before[id]
 	# Real draftees who never reached a list though their draft has been held.
 	var never := []
 	var held := 0
@@ -375,7 +399,26 @@ func _career(dataset: String, seasons: int) -> Dictionary:
 			never.append("%s (%s)" % [str(r["name"]), id])
 	all["never"] = never
 	all["held"] = held
+	# Every other real draftee: the save's draft may pass him over, so he is
+	# counted for the report only (still in the pool, or aged out of it).
+	var other := {"held": 0, "never": 0, "in_pool": 0}
+	for id in other_seen:
+		if int(other_seen[id]["draft_year"]) >= GameState.season_year:
+			continue
+		other["held"] += 1
+		if not life.has(id):
+			other["never"] += 1
+			if before.has(id):
+				other["in_pool"] += 1
+	all["other"] = other
 	return all
+
+
+## A real man the game owes a list: a new club's state-league foundation man
+## (FND_, LegacyRollover.foundation) or a real draftee tied to a club as a
+## father-son or academy pick.
+func _held_to_list(id: String, was: Dictionary) -> bool:
+	return id.begins_with("FND_") or (bool(was["real_class"]) and str(was["tie_type"]) != "")
 
 
 func _report(dataset: String, all: Dictionary) -> void:
@@ -384,7 +427,10 @@ func _report(dataset: String, all: Dictionary) -> void:
 		print("  %d | %d | %d | %d | %d | %d | %d | %d | %d | %d | %s" % [int(row["year"]), int(row["listed"]),
 				int(row["retired"]), int(row["medical"]), int(row["delisted"]), int(row["to_fa"]), int(row["drafted"]),
 				int(row["relisted"]), int(row["entered"]), int(row["dropped"]), str(row["reasons"])])
-	print("  real draftees never listed: %d of %d held drafts" % [(all["never"] as Array).size(), int(all["held"])])
+	print("  state-league and academy men never listed: %d of %d held drafts" % [(all["never"] as Array).size(), int(all["held"])])
+	var other: Dictionary = all["other"]
+	print("  other real draftees never listed: %d of %d held drafts (%d still in the pool, %d gone)" % [int(other["never"]),
+			int(other["held"]), int(other["in_pool"]), int(other["never"]) - int(other["in_pool"])])
 	print("  real careers ended early (> %d seasons before the real last): %d of %d ended" % [MARGIN,
 			(all["early"] as Array).size(), int(all["ended_real"])])
 
@@ -395,10 +441,10 @@ func _checks(dataset: String, all: Dictionary) -> void:
 	var twice: Array = all["twice"]
 	_check(twice.is_empty(), "%s: %d players in two places: %s" % [dataset, twice.size(), ", ".join(twice.slice(0, 8))])
 	var never: Array = all["never"]
-	_check(never.is_empty(), "%s: %d of %d real draftees never reached a list: %s" % [dataset, never.size(),
+	_check(never.is_empty(), "%s: %d of %d state-league and academy men never reached a list: %s" % [dataset, never.size(),
 			int(all["held"]), ", ".join(never.slice(0, 12))])
 	var aged: Array = all["aged_out_real"]
-	_check(aged.is_empty(), "%s: %d real prospects aged out of the pool: %s" % [dataset, aged.size(), ", ".join(aged.slice(0, 12))])
+	_check(aged.is_empty(), "%s: %d state-league and academy men aged out of the pool: %s" % [dataset, aged.size(), ", ".join(aged.slice(0, 12))])
 	var early: Array = all["early"]
 	var ended := maxi(1, int(all["ended_real"]))
 	_check(float(early.size()) / float(ended) <= EARLY_SHARE,

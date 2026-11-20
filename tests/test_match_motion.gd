@@ -421,13 +421,14 @@ func _test_motion_averaged(results: Array) -> void:
 	_check(PitchView.number_size(size_small_px) >= UiKit.FINE,
 			"The jumper number on the smallest disc is never under the %d px floor (%d px; %d px on a full disc)" % [
 			UiKit.FINE, PitchView.number_size(size_small_px), PitchView.number_size(size_full_px)])
-	_check(full_share > 0.5,
-			"1x over %d games: most disc-frames are at the full size (%.1f%% of %d)" % [g, 100.0 * full_share, size_n])
+	# The flat view's disc-size and disc-cover shares print but no longer gate: the
+	# flat view is being replaced by the 3D oval (director, 2026-11-17: "idgaf about
+	# the flat view as ive said a dozen times its being replaced so dont waste time
+	# tuning it"), and row 201's real AFL shape packs players closer than it did.
 	print("  disc size over %d games, 1x: %.1f%% of %d disc-frames at the full size, smallest radius %.2f px, %d clear disc-frames (%d not full), number %d px on the smallest disc and %d px on a full one" % [
 			g, 100.0 * full_share, size_n, size_least, size_clear_n, size_not_full,
 			PitchView.number_size(size_small_px), PitchView.number_size(size_full_px)])
-	_check(vis_n > 1000 and float(mean["vis_low_share"]) <= 0.01 and float(mean["vis_min0"]) >= VISIBLE_WORST and float(mean["vis_min1"]) >= VISIBLE_WORST,
-			"1x over %d games: at least %.0f%% of each side's disc area shows in 99 frames in 100 (%.2f%% below, on average), and %.0f%% in every frame (Fremantle %.0f%%, Melbourne %.0f%% at worst, on average)" % [
+	print("  1x over %d games (shown, not gated): at least %.0f%% of each side's disc area shows in 99 frames in 100 (%.2f%% below, on average), and %.0f%% in every frame (Fremantle %.0f%%, Melbourne %.0f%% at worst, on average)" % [
 			g, 100.0 * VISIBLE_FLOOR, 100.0 * float(mean["vis_low_share"]), 100.0 * VISIBLE_WORST, 100.0 * float(mean["vis_min0"]), 100.0 * float(mean["vis_min1"])])
 	_check(pack_n > 20 and float(mean["inner_most"]) <= 4.0 and float(mean["inner_side_most"]) <= 2.0 and float(mean["pack_gap"]) >= RING_GAP,
 			"1x over %d games: a Win Contest ball-up is a ring as the ball goes up: at most four discs within 3 m of the ball (%.2f on average), two a side (%.2f), and two of a side %.1f m apart at closest in the pack, 9 m round it (%.2f m on average; a pair with one of the four on the ball as players, the rest as drawn)" % [
@@ -490,9 +491,14 @@ func _motion_pass(r2: Dictionary, speed: float, light := false) -> Dictionary:
 	clear.resize(d.tokens.size())
 	var settle := int(ceil(PitchView.RESIZE_SECS / h)) + 1
 	var guard := 0
+	var t_was: float = d.time
 	while pv.playing and guard < 200000:
 		guard += 1
 		pv._process(FRAME)
+		# Real footy's pauses play at double the watching speed (rule 2.93): a step is
+		# measured against the match time the frame played, never under the frame's own.
+		var played := maxf((d.time - t_was) / h, 1.0)
+		t_was = d.time
 		if pv.bench_open():
 			drawer_open += 1
 		var drawn: PackedVector2Array = pv.disc_positions()
@@ -524,9 +530,9 @@ func _motion_pass(r2: Dictionary, speed: float, light := false) -> Dictionary:
 		period = pv.period
 		if not prev_tok.is_empty():
 			for i in range(d.tokens.size()):
-				tok_most = maxf(tok_most, (d.tokens[i]["pos"] as Vector2).distance_to(prev_tok[i]))
+				tok_most = maxf(tok_most, (d.tokens[i]["pos"] as Vector2).distance_to(prev_tok[i]) / played)
 				if not flipped:
-					draw_most = maxf(draw_most, drawn[i].distance_to(prev_draw[i]) / s)
+					draw_most = maxf(draw_most, drawn[i].distance_to(prev_draw[i]) / s / played)
 		prev_tok = []
 		for t in d.tokens:
 			prev_tok.append(t["pos"])
@@ -704,8 +710,10 @@ func _test_call_visibility(results: Array) -> void:
 		var moved := (float(m.get(what, 0.0)) - float(bal.get(what, 0.0))) * float(c[4])
 		said.append("%s %.1f m" % [str(c[0]), moved])
 		var floor_m := CALL_FLOOR - (ATTACK_CALL_SLACK if key == "attacking|[]" else 0.0)
-		_check(moved >= floor_m, "%s moves Fremantle %.1f m from Balanced (%.1f against %.1f), at least %.1f m" % [
-				str(c[0]), moved, float(m.get(what, 0.0)), float(bal.get(what, 0.0)), floor_m])
+		# Printed, not gated: the director, 2026-11-17, "thats not my rule. idc about metrage, i just want the
+		# play to look like AFL footy" (the 8 m floor was never his).
+		if moved < floor_m:
+			print("  (under %.1f m) %s %.1f m" % [floor_m, str(c[0]), moved])
 	print("  calls against Balanced, as drawn: " + ", ".join(said))
 	var st: Dictionary = done["balanced|[\"stack\"]"]
 	print("  Stack the stoppage, the set-up alone (6-6-6 holds it): %.1f m front to back against Balanced's %.1f" % [

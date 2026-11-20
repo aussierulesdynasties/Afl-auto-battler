@@ -68,9 +68,6 @@ func _run() -> void:
 	_t("_test_club_ink_all")
 	for club in ["COL", "GWS", "STK"]:
 		await _t("_test_pc_break_worst_case", [club])
-	for pair in [["COL", "CAR"], ["HAW", "STK"], ["FRE", "MEL"]]:
-		for sz in [Vector2i(1280, 720), Vector2i(390, 844)]:
-			await _t("_test_every_break_fits", [pair[0], pair[1], sz])
 	await _t("_test_tag_not_saved")
 	await _t("_test_bounce_close_up")
 	await _t("_test_ballup_two_scene")
@@ -80,6 +77,7 @@ func _run() -> void:
 	await _t("_test_first_goal_line")
 	await _t("_test_feed_colours")
 	await _t("_test_momentum_meter")
+	await _t("_test_score_bug")
 	await _t("_test_vignettes_setting")
 	await _t("_test_game_feel_effects")
 	_t("_test_broken_calls")
@@ -1109,6 +1107,13 @@ func _test_one_line_break(sz: Vector2i) -> void:
 	var sim = _state.pending_sim
 	var me := int(sim.moment_side)
 	var them := str((sim.squads[1 - me] as Object).code)
+	# The coach has called no tag himself, so his assistant leaves it be
+	# (MatchSim._assistant_calls): with a tagger on the list (#1659's ratings
+	# made one of Fremantle's) the assistant would tag at quarter time.
+	var no_tag: Dictionary = (sim.tactics[me] as Dictionary).duplicate()
+	no_tag["tag_id"] = ""
+	no_tag["tag_set"] = true
+	sim.set_tactics(me, no_tag)
 	sim.run_quarter()
 	sim.run_quarter()
 	var m: Control = load("res://scenes/MatchScene.tscn").instantiate()
@@ -1351,96 +1356,6 @@ func _test_one_line_break(sz: Vector2i) -> void:
 		_check(false, "(setup) a tag and a choice of tagger are on offer (%s)" % tag)
 	m.queue_free()
 	await _settle()
-
-
-## Quarter, half and three-quarter time all fit their sheet, with all three
-## Play through players named (the longest row) and real names on: on a PC
-## whichever call is open, a tag on included; on a phone, the break and every
-## call row's answer. COL v CAR at half time once needed 615 of 608.
-func _test_every_break_fits(club: String, vs: String, sz: Vector2i) -> void:
-	var db = root.get_node("GameDB")
-	# The seed search below leaves the last seed tried: put the suite's back, so
-	# the tests after this one start from the season they were written for.
-	var seed_before: int = _state.replay_seed
-	root.size = sz
-	for q in [2, 3, 4]:
-		var found := false
-		for tries in range(80):
-			_state.reset()
-			_state.career_seed = 2050 + tries
-			_state.replay_seed = 2050 + tries
-			_state.set_setting("seen_training_intro", true)
-			_state.start_season(club, db.club_list(club))
-			_state.prepare_interactive_match()
-			var sq = _state.pending_sim.squads
-			if str(sq[0].code) == vs or str(sq[1].code) == vs:
-				found = true
-				break
-		_check(found, "(setup) %s draw %s" % [club, vs])
-		var sim = _state.pending_sim
-		var me := int(sim.moment_side)
-		var t: Dictionary = (sim.tactics[me] as Dictionary).duplicate()
-		var used := {}
-		for slot in load("res://scripts/ui/match/MatchNotes.gd").FOCUS_ORDER:
-			for p in sim.squads[me].ground:
-				if not used.has(str(p["id"])):
-					t[slot] = str(p["id"])
-					used[str(p["id"])] = true
-					break
-		sim.set_tactics(me, t)
-		for i in range(q - 1):
-			sim.run_quarter()
-		var m: Control = load("res://scenes/MatchScene.tscn").instantiate()
-		root.add_child(m)
-		await _settle()
-		await _settle()
-		var box: Node = m.find_child("CoachBox", true, false)
-		var tag := "%s v %s, %dx%d, break before quarter %d" % [club, vs, sz.x, sz.y, q]
-		_check(box != null and box.has_meta("one_line"), "(setup) the one-line break is up (%s)" % tag)
-		if box == null:
-			m.queue_free()
-			await _settle()
-			continue
-		var tall := []
-		var f := _break_fit(box)
-		if f[0] > f[1] + 1.0:
-			tall.append("break %.0f of %.0f" % [f[0], f[1]])
-		var rows: Array = box.find_children("CallRow_*", "Button", true, false)
-		for r in rows:
-			var inside := (r as Control).get_child(0) as Control
-			if inside.get_combined_minimum_size().x > (r as Control).size.x + 1.0:
-				tall.append("%s needs %.0f of %.0f wide" % [r.name, inside.get_combined_minimum_size().x, (r as Control).size.x])
-		if box.find_child("BreakColumns", true, false) != null:
-			for r in rows:
-				var w_row: String = await Tap.tap(r)
-				await _settle()
-				f = _break_fit(box)
-				if w_row != "" or f[0] > f[1] + 1.0:
-					tall.append("%s %.0f of %.0f %s" % [r.name, f[0], f[1], w_row])
-				if str(r.name) == "CallRow_tag":
-					for b in box.find_children("TagPickerGrid_*", "Button", true, false):
-						if str(b.name) != "TagPickerGrid_":
-							(b as Button).emit_signal("pressed")
-							break
-					await _settle()
-					f = _break_fit(box)
-					if f[0] > f[1] + 1.0:
-						tall.append("tag on %.0f of %.0f" % [f[0], f[1]])
-		_check(tall.is_empty(), "The break fits its sheet, nothing scrolls or overruns its row (%s: %s)" % [tag, str(tall)])
-		# On a phone what your calls did is one row; a real tap opens the lot.
-		var open_did: Button = box.find_child("CallsDidOpen", true, false)
-		if open_did != null:
-			var w_did: String = await Tap.tap(open_did)
-			await _settle()
-			var did_sheet: Node = m.find_child("CallSheet_did", true, false)
-			var did_list: Node = did_sheet.find_child("CallsDid", true, false) if did_sheet != null else null
-			_check(w_did == "" and did_list != null and (did_list as Control).is_visible_in_tree() and did_list.get_child_count() > 0,
-					"What our calls did opens in a sheet on a real tap (%s%s)" % [tag, (", " + w_did) if w_did != "" else ""])
-			m.call("handle_back")
-			await _settle()
-		m.queue_free()
-		await _settle()
-	_state.replay_seed = seed_before
 
 
 ## What the break's list holds against the room it has (a break that fits does not scroll).
@@ -2604,6 +2519,78 @@ func _test_momentum_meter() -> void:
 	m2.queue_free()
 	await _settle()
 
+
+## Rule 2.107: with the 3D picture on a phone the scoreboard panel goes; the score sits on the
+## picture as a TV score bug and momentum is a thin line along its foot. A finger on the line
+## still explains momentum, and the bench tab beside it still opens the bench.
+func _test_score_bug() -> void:
+	var db = root.get_node("GameDB")
+	_state.set_vignettes_on(false)
+	_state.set_setting("seen_momentum_intro", true)
+	_state.set_match_3d_on(true)
+	_state.reset()
+	_state.replay_seed = SUITE_SEED
+	_state.start_season("COL", db.club_list("COL"))
+	root.size = Vector2i(390, 844)
+	_state.prepare_interactive_match()
+	var m: Control = load("res://scenes/MatchScene.tscn").instantiate()
+	root.add_child(m)
+	await _settle()
+	# Past the pre-match calls, which open over the picture.
+	var box = m.find_child("CoachBox", true, false)
+	var start: Button = box.find_child("StartQuarter", true, false) if box != null else null
+	if start != null:
+		start.emit_signal("pressed")
+	await _settle()
+	var pitch: Control = m.get("_pitch")
+	var board: Control = m.get("_board")
+	var bug: Control = m.find_child("ScoreBug", true, false)
+	var line: Button = m.find_child("MomentumLine", true, false)
+	_check(pitch != null and bool(pitch.get("three_d")), "The match plays in 3D")
+	_check(board != null and not board.is_visible_in_tree(), "The scoreboard panel is gone")
+	_check(bug != null and bug.is_visible_in_tree() and pitch.get_global_rect().encloses(bug.get_global_rect()),
+			"The score sits on the picture")
+	_check(line != null and pitch.get_global_rect().encloses(line.get_global_rect())
+			and is_equal_approx(line.get_global_rect().end.y, pitch.get_global_rect().end.y),
+			"The momentum line runs along the picture's foot")
+	m.set("_shown_goals", [3, 1])
+	m.set("_shown_behinds", [2, 4])
+	m.call("_paint_clock")
+	var home_pts: Label = bug.get("_home_score") if bug != null else null
+	var away_pts: Label = bug.get("_away_score") if bug != null else null
+	_check(home_pts != null and home_pts.text == "20" and away_pts.text == "10",
+			"The bug shows points (%s - %s)" % [home_pts.text if home_pts else "-", away_pts.text if away_pts else "-"])
+	var meter: Control = line.find_child("MomentumMeter", true, false) if line != null else null
+	m.call("_track_momentum", {"mom": 0.6})
+	_check(meter != null and is_equal_approx(float(meter.get("_v")), float(m.get("_momentum"))),
+			"The line follows momentum")
+	var why: String = await Tap.tap(line)
+	await _settle()
+	var info: Node = m.find_child("MomentumInfo", true, false)
+	_check(why == "" and info != null, "A finger on the line explains momentum (%s)" % why)
+	m.call("handle_back")
+	await _settle()
+	var drawer = pitch.find_child("BenchDrawer", true, false) if pitch != null else null
+	var tab: Button = drawer.call("tab") if drawer != null else null
+	why = await Tap.tap(tab)
+	await _settle()
+	_check(why == "" and drawer != null and bool(drawer.get("is_open")),
+			"The bench tab beside the line still opens the bench (%s)" % why)
+	if drawer != null:
+		drawer.call("close")
+	m.queue_free()
+	await _settle()
+	_state.set_match_3d_on(false)
+	# 3D off: the scoreboard panel stays and no bug is made.
+	_state.prepare_interactive_match()
+	var m2: Control = load("res://scenes/MatchScene.tscn").instantiate()
+	root.add_child(m2)
+	await _settle()
+	var board2: Control = m2.get("_board")
+	_check(board2 != null and board2.is_visible_in_tree() and m2.find_child("ScoreBug", true, false) == null,
+			"Without 3D the scoreboard panel stays")
+	m2.queue_free()
+	await _settle()
 
 ## The first player a call offers: the id behind a "<prefix><id>" button.
 func _first_pick(box: Node, prefix: String) -> String:

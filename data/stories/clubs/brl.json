@@ -46,20 +46,18 @@
 		"club": "BRL",
 		"controversy": false,
 		"category": "leadership",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["Two clubs in one jumper"],
 		"text": ["You're speaking at the season launch. The club carries Fitzroy's century in Melbourne, the Bears' battling years in Queensland and the Lions' own story since. Which one do you tell the group?"],
 		"choices": [
-			{"key": "fitzroy", "label": "Fitzroy: we were nearly lost once",
-			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "The group heard how close Fitzroy came to being lost"}, {"op": "board", "d": 1, "was": "members"}, {"op": "culture", "strand": "together", "d": -1, "why": "The Queensland members feel it isn't their story"}],
-			 "result": "Pride and grit. The Victorian members stand up; the Queenslanders sit on their hands."},
-			{"key": "bears", "label": "The Bears: nobody wanted us up here",
-			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The group took on the Bears' underdog chip"}, {"op": "board", "d": -1}],
-			 "result": "The local crowd loves it. The board hears the club talked down."},
 			{"key": "lions", "label": "The Lions: this club is ours to make",
-			 "effects": [{"op": "culture", "strand": "ambition", "d": 2, "why": "The coach told them the club is theirs to make"}, {"op": "loss_sting", "chance": 20, "d": -3, "who": "side"}],
-			 "result": "Ambition from the first week. It's a big claim to live up to."}
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "This club is ours to make"}],
+			 "result": "The group looked forward, not back."},
+			{"key": "fitzroy", "label": "Fitzroy: we were nearly lost once",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The group heard Fitzroy's story"}, {"op": "board", "d": 2}, {"op": "culture", "strand": "ambition", "d": -1, "why": "Looking back, not forward"}],
+			 "result": "The old Roys members loved it. The young ones listened."}
 		]
 	},
 	{
@@ -87,17 +85,18 @@
 		"club": "BRL",
 		"controversy": false,
 		"category": "leadership",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["The medal winners' morning"],
 		"text": ["Past winners of the club champion medal, named for a Bears great and a Fitzroy great, want to address the squad before the season. They'd take the morning session."],
 		"choices": [
-			{"key": "morning", "label": "Give them the morning",
-			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "Past champions told the group what the medal asks"}, {"op": "morale", "d": 2, "who": "all"}, {"op": "running", "d": -1}],
-			 "result": "The group hears what the medal asks of a player. A running session is gone."},
 			{"key": "ten", "label": "Ten minutes at the end of training",
-			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "Past champions had a word after training"}, {"op": "board", "d": -1}],
-			 "result": "The work gets done. The visitors feel rushed."}
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "Past champions spoke to the group"}],
+			 "result": "Ten good minutes. The players listened."},
+			{"key": "day", "label": "Give them the whole day",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "Past champions set the standard"}, {"op": "culture", "strand": "together", "d": 1, "why": "A morning with the club's greats"}, {"op": "board", "d": -2}],
+			 "result": "A whole day with the greats. The lunch wasn't cheap."}
 		]
 	},
 	{
@@ -271,17 +270,18 @@
 		"club": "BRL",
 		"controversy": false,
 		"category": "training",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["Brisbane heat"],
 		"text": ["It's stinking hot and humid. The southern sides hate coming up at this time of year, but your own players are cooking at training too."],
 		"choices": [
-			{"key": "heat", "label": "Train in the heat of the day",
-			 "effects": [{"op": "running", "d": 1}, {"op": "odds", "chance": 20, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "A few players wilted and carried it into the weekend."}],
-			 "result": "Harder bodies, and the home edge grows."},
 			{"key": "dawn", "label": "Train at dawn",
-			 "effects": [{"op": "fresh", "who": "side"}, {"op": "running", "d": -1}],
-			 "result": "Fresh legs, but less used to the worst of it."}
+			 "effects": [{"op": "morale", "d": 2, "who": "all"}],
+			 "result": "Early starts and fresh legs. The group liked it."},
+			{"key": "heat", "label": "Train in the heat of the day",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "They trained through the heat"}, {"op": "culture", "strand": "together", "d": 1, "why": "They got through the heat together"}, {"op": "sore", "who": "one"}],
+			 "result": "Hard, hot sessions. One of them pulled up sore."}
 		]
 	},
 	{
@@ -306,17 +306,18 @@
 		"club": "BRL",
 		"controversy": false,
 		"category": "training",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["The cricket's on"],
 		"text": ["The Gabba is a cricket ground through summer, so the club can't use it for match-day practice. You could hire another big ground, or train at a suburban oval."],
 		"choices": [
-			{"key": "hire", "label": "Hire a full-sized ground",
-			 "effects": [{"op": "xp", "d": 4, "who": "all"}, {"op": "board", "d": -2, "was": "funds"}],
-			 "result": "Proper match practice on a big ground. It costs the football budget."},
 			{"key": "suburban", "label": "Make do at the suburban oval",
-			 "effects": [{"op": "board", "d": 1, "was": "members"}, {"op": "forgo_xp", "d": 2, "who": "all"}],
-			 "result": "The locals turn up to watch. A smaller ground, and less match work."}
+			 "effects": [{"op": "board", "d": 2}],
+			 "result": "The suburban oval it is. The money stays in the bank."},
+			{"key": "hire", "label": "Hire a full-sized ground",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "Match-day work on a full-sized ground"}, {"op": "culture", "strand": "ambition", "d": 1, "why": "Ready for Round 1"}, {"op": "board", "d": -2}],
+			 "result": "Proper match-day practice. The hire fee stung."}
 		]
 	},
 	{
@@ -390,27 +391,6 @@
 			{"key": "closed", "label": "Closed sessions, one press day a week",
 			 "effects": [{"op": "fresh", "who": "side"}, {"op": "board", "d": -2}],
 			 "result": "Focus holds. The media turn cool."}
-		]
-	},
-	{
-		"id": "brl_up_the_coast",
-		"club": "BRL",
-		"controversy": false,
-		"category": "community",
-		"phase": ["preseason"],
-		"subject": {"kind": "club"},
-		"title": ["Pre-season up the coast"],
-		"text": ["A regional Queensland town wants the Lions for a practice match, to grow the game where league is king. The ground is hard and the facilities are basic."],
-		"choices": [
-			{"key": "best", "label": "Take the best side",
-			 "effects": [{"op": "board", "d": 5, "was": "members"}, {"op": "odds", "chance": 15, "hit": [{"op": "forgo_xp", "d": 4, "who": "side"}], "hit_result": "A player was jarred on the hard ground and missed a block."}],
-			 "result": "The town gets the stars and the region signs up."},
-			{"key": "young", "label": "Take the young players",
-			 "effects": [{"op": "xp", "d": 5, "who": "all"}, {"op": "board", "d": -1, "was": "members"}],
-			 "result": "The kids get a run. The town feels short-changed."},
-			{"key": "decline", "label": "Decline the invitation",
-			 "effects": [{"op": "xp", "d": 2, "who": "all"}, {"op": "board", "d": -1}],
-			 "result": "Preparation goes as planned. A chance missed in the regions."}
 		]
 	},
 	{

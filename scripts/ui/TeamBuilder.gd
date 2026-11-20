@@ -363,6 +363,13 @@ func _build() -> void:
 	# Two abreast on a phone at the standard text size; a larger one (Settings)
 	# gives each card the width, so a full name and its lines stay whole.
 	_grid.columns = 2 if (_wide or UiKit.text_scale <= 1.0) else 1
+	if not _wide and _grid.columns == 2:
+		# A small phone's half-width card can't hold the longest skill name and
+		# its rating ("Uncontested marking 99"): the cards go one across there.
+		_grid.resized.connect(func():
+			var want := 2 if PlayerSheet.top_three_fits((_grid.size.x - 6.0) * 0.5 - 12.0, UiKit.FINE) else 1
+			if _grid.columns != want:
+				_grid.columns = want)
 	if stacked and _wide:
 		_grid.columns = 2 if rest_host != null else clampi(int(UiKit.view_width(self) / 400.0), 3, 8)
 	_grid.add_theme_constant_override("h_separation", 6)
@@ -642,6 +649,8 @@ func _card(id: String, on_field: bool, place: String) -> Button:
 		face.add_child(sub)
 		# As wide as the text size (Settings) needs: a surname is never cut short.
 		b.custom_minimum_size = Vector2(UiKit.px(84 if _wide else 70), 44)
+		# A surname longer than the tile ("Moniz-Wakefield") widens it to fit.
+		b.set_meta("name_w", ceilf(UiKit.BOLD.get_string_size(top.text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.px(13)).x + 12.0))
 		if not on and not _rival:
 			# Your club's ink across the top of each of your players, on every oval
 			# (STYLE-04: My list's Best 23 matches Team selection). The readable ink,
@@ -969,7 +978,7 @@ func _place_spots() -> void:
 			at = Vector2(-at.x, at.y)
 		var u := Vector2(at.x, at.y) if _across else Vector2(at.y, -at.x)
 		var centre := r.get_center() + Vector2(u.x * r.size.x * 0.5, u.y * r.size.y * 0.5)
-		(c as Control).custom_minimum_size.x = UiKit.px(84 if _across else 70)
+		(c as Control).custom_minimum_size.x = maxf(UiKit.px(84 if _across else 70), float(c.get_meta("name_w", 0.0)))
 		var sz: Vector2 = (c as Control).get_combined_minimum_size()
 		(c as Control).size = sz
 		(c as Control).position = (centre - sz * 0.5).clamp(r.position, r.end - sz)

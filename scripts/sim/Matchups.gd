@@ -46,10 +46,11 @@ const DUEL_SCALE := 110.0
 ## him by default: a default match-up leaves the lines to decide on average.
 const DUEL_CENTRE := 8.0
 ## An entry's marking contest before the match-up (MatchSim.resolve_forward50):
-## an even chance, moved by the two lines (their forwards' marking against
+## a bit under even (0.45, so marks inside 50 sit at real AFL's 12.4 a team a
+## game, director 2026-11-21), moved by the two lines (their forwards' marking against
 ## your backs' intercepting, over MARK_LINES points), and a little more for
 ## an aerial specialist. The floor is the engine's own.
-const MARK_BASE := 0.5
+const MARK_BASE := 0.45
 const MARK_LINES := 240.0
 const AERIAL_EDGE := 0.06
 const MARK_FLOOR := 0.10
@@ -63,17 +64,17 @@ static func _height_score(p: Dictionary) -> float:
 
 
 static func _a(p: Dictionary, key: String) -> float:
-	return float((p.get("attr", {}) as Dictionary).get(key, 50.0))
+	return Skills.engine(p, key)
 
 
 ## A forward's game in the air: his marking and his size.
 static func forward_air(p: Dictionary) -> float:
-	return 0.7 * _a(p, "marking") + 0.3 * _height_score(p)
+	return 0.7 * _a(p, "contested_marking") + 0.3 * _height_score(p)
 
 
 ## A defender's game in the air: reading the ball, his own marking, his size.
 static func defender_air(p: Dictionary) -> float:
-	return 0.45 * _a(p, "intercept") + 0.30 * _a(p, "marking") + 0.25 * _height_score(p)
+	return 0.45 * _a(p, "intercept") + 0.30 * _a(p, "contested_marking") + 0.25 * _height_score(p)
 
 
 ## The shift in the forward's chance of marking when these two contest it.
@@ -192,7 +193,7 @@ static func defaults(attack_ground: Array, defence_ground: Array) -> Dictionary:
 ## Suitability to roam as the spare: reading the ball and marking first,
 ## defensive pressure second. OVR and height are deliberately not inputs.
 static func interceptor_score(p: Dictionary) -> float:
-	var score := 0.55 * _a(p, "intercept") + 0.30 * _a(p, "marking") + 0.15 * _a(p, "pressure")
+	var score := 0.55 * _a(p, "intercept") + 0.30 * _a(p, "contested_marking") + 0.15 * _a(p, "pressure")
 	var traits: Array = Traits.of(p)
 	if traits.has("interceptor"):
 		score += 6.0

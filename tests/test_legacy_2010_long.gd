@@ -1,10 +1,12 @@
 extends RefCounted
 ## A 2010 career never ends (director 2026-11-13: "campaigns can go for
-## eternity"). A seeded career begun at St Kilda in 2010 rolls season after
+## eternity"). A seeded career begun at Carlton in 2010 rolls season after
 ## season past 2027: Gold Coast enter in 2011, GWS in 2012 and Tasmania in 2028
 ## as the sim's own expansion, every club keeps a full list, and the career is still the one
-## begun in 2010. About 18 seasons (some 7 minutes), so it runs nightly
-## (tools/ci_long_suites.txt). Run through tests/run_legacy_2010_long_tests.gd.
+## begun in 2010. Each off-season runs the drafts as the game does: a man his
+## real club delisted goes even from a short list, and the draft fills it
+## (#1676), so a rollover with no draft would leave the lists short. About 18
+## seasons, so it runs nightly (tools/ci_long_suites.txt). Run through tests/run_legacy_2010_long_tests.gd.
 
 const Ran := preload("res://tests/functions_ran.gd")
 
@@ -12,7 +14,7 @@ var failures: Array[String] = []
 var checks := 0
 
 const SUITE_SEED := 2010
-const CLUB := "STK"
+const CLUB := "CAR"
 const PAST := 2028
 
 
@@ -58,6 +60,40 @@ func _to_offseason() -> void:
 		GameState.advance()
 
 
+## The off-season's drafts as legacy_2000_long runs them: the National Draft
+## (his picks passed), then the Rookie Draft settled, so the list sizes read
+## after are the season's own.
+func _roll_through_draft() -> bool:
+	if not GameState.begin_intake_draft():
+		return GameState.start_next_season()
+	var draft: Draft = GameState.draft
+	var guard := 0
+	draft.auto_until_user_turn()
+	while not draft.is_finished() and guard < 4000:
+		guard += 1
+		# His pick: "Pick for me", the player the assistant would take, as a
+		# rival takes at the same pick (a coach who passes every pick is no coach).
+		if draft.is_user_turn() and draft.pick_for_me():
+			draft.auto_until_user_turn()
+			continue
+		var cand := draft._best_ai_pick(draft.current_club())
+		if cand.is_empty() or not draft._draft_pick(draft.current_club(), cand):
+			draft._skip_current_pick()
+		draft.auto_until_user_turn()
+	if not GameState.finish_intake_draft():
+		return false
+	# The Rookie Draft: he takes the first man left, as each rival does
+	# (RookieList._run), while he has a rookie spot to fill.
+	var rguard := 0
+	while RookieList.waiting(GameState) and rguard < 40:
+		rguard += 1
+		var left := MidseasonDraft.pool(GameState)
+		if left.is_empty() or not RookieList.choose(GameState, str(left[0]["id"])):
+			RookieList.choose(GameState, "")
+	RookieList.settle(GameState)
+	return true
+
+
 func _test_rolls_past_2027() -> void:
 	_start()
 	_check(GameState.season_year == 2010 and GameDB.dataset_id == "2010",
@@ -70,13 +106,14 @@ func _test_rolls_past_2027() -> void:
 	while GameState.season_year < PAST:
 		var from := GameState.season_year
 		_to_offseason()
-		# The roll is under test, not the coach: a board may sack him with no
-		# job to go to (that ends a career), so keep him on and say so.
+		# A sacked coach is never put back in his job (director 2026-11-17: "never
+		# reappoint the same coach after sacking"). The test career is one that
+		# keeps its job to 2028 on the default board (director: "Pick a lasting
+		# career"), so a sacking is a failure, not waved off.
 		if GameState.is_sacked():
 			sackings.append(from)
-			GameState.board["sacked"] = false
-			GameState.board["warned"] = false
-		if not GameState.start_next_season():
+		_check(not GameState.is_sacked(), "The Carlton board keeps its coach after %d" % from)
+		if not _roll_through_draft():
 			_check(false, "%d rolls into %d" % [from, from + 1])
 			return
 		var y := GameState.season_year
@@ -92,7 +129,7 @@ func _test_rolls_past_2027() -> void:
 			if GameState.season.lists.get(code, []).size() < 30:
 				short.append("%s %d" % [code, GameState.season.lists.get(code, []).size()])
 		_check(y == from + 1 and GameDB.dataset_id == "2010" and GameState.my_club == CLUB,
-				"%d rolls into %d at St Kilda, still the 2010 career (%d, %s, set %s)" % [
+				"%d rolls into %d at Carlton, still the 2010 career (%d, %s, set %s)" % [
 					from, from + 1, y, GameState.my_club, GameDB.dataset_id])
 		_check(GameState.season.clubs.size() == want_clubs and short.is_empty(),
 				"%d: %d clubs with full lists (%d clubs; short: %s)" % [
@@ -102,7 +139,7 @@ func _test_rolls_past_2027() -> void:
 		for p in GameState.season.lists[code]:
 			if originals.has(str(p["id"])):
 				left += 1
-	print("Legacy 2010 long: reached %d; %d of the 2010 players still listed; board sackings waved off in %s"
+	print("Legacy 2010 long: reached %d; %d of the 2010 players still listed; board sackings in %s"
 			% [GameState.season_year, left, str(sackings)])
 	_check(GameState.season_year >= PAST, "The 2010 career reaches %d (%d)" % [PAST, GameState.season_year])
 	_check(GameState.season.clubs.has("GCS") and GameState.season.clubs.has("GWS")

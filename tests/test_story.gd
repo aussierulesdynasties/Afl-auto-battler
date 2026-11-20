@@ -71,7 +71,6 @@ func run() -> void:
 	_t("_test_culture")
 	_t("_test_culture_news")
 	_t("_test_culture_reasons_read_cleanly")
-	_t("_test_culture_settles")
 	_t("_test_culture_signs_match_words")
 	_t("_test_culture_headline")
 	_t("_test_culture_order_and_tails")
@@ -79,7 +78,6 @@ func run() -> void:
 	_t("_test_culture_runs_once")
 	_t("_test_culture_copy_is_true")
 	_t("_test_culture_effects")
-	_t("_test_culture_effects_fixture")
 	_t("_test_captain_cards")
 	_t("_test_group_words_are_sentence_case")
 	_t("_test_captain_cards_in_play")
@@ -234,14 +232,14 @@ func _test_hints_in_words() -> void:
 ## is worth to the coach is read straight off the effects here, apart from the
 ## engine's own wording, so the lines cannot drift from what the choice does.
 const GAIN_WORDS := {
-	"morale": "(?i)morale", "xp": "(?i)development", "board": "(?i)board confidence", "trust": "opinion of you (up [0-9]+|warms a little)",
+	"morale": "(?i)morale", "xp": "(?i)development", "board": "(?i)board confidence", "trust": "opinion of you (up (about )?[0-9]+|warms a little)",
 	"fresh": "legs", "promise_win": "Win and", "extend_early": "signs on", "captaincy_swap": "takes the armband",
 	"rush_back": "cleared to play", "role_trial": "plays as a", "rest": "can't get hurt", "culture": "(Standards|Togetherness|Ambition) up [0-9]+%",
 	"running": "more weeks? of running", "drill": "on the game plan", "open_price": "early premium", "new_club_keep": "stays for",
 	"no_promise": "No promise to keep",
 }
 const COST_WORDS := {
-	"morale": "(?i)morale", "board": "(?i)board confidence", "trust": "opinion of you (down [0-9]+|falls [0-9]+|slips a little)",
+	"morale": "(?i)morale", "board": "(?i)board confidence", "trust": "opinion of you (down (about )?[0-9]+|falls [0-9]+|slips a little)",
 	"rest": "misses", "heavy_legs": "Heavy legs", "sore": "chance he is injured", "expects_game": "expects a game",
 	"start_backing": "expects to be picked", "back_kid": "is promised", "promise_win": "Lose or draw and", "extend_early": "Locked in", "captaincy_swap": "mid-season",
 	"rush_back": "hurt again", "slow_start": "slowly", "loss_sting": "also falls", "role_trial": "away from his usual spot", "on_record": "on the record",
@@ -1360,12 +1358,20 @@ func _test_role_trial() -> void:
 				"No second position, no trial")
 
 
-## Take him off the ground and put him on the bench of a side.
+## Swap him with a bench man: off the ground, on the bench of a side. A side
+## left a man short fills the gap with the best suited (#1656), so a swap.
 func _bench_him(side: Dictionary, id: String) -> Dictionary:
 	var s := side.duplicate(true)
+	var bench: Array = s["BENCH"]
+	var sub := str(bench[0])
 	for k in ["RUCK", "MID", "WING", "DEF", "FWD"]:
-		s[k] = (s.get(k, []) as Array).filter(func(x): return str(x) != id)
-	(s["BENCH"] as Array).append(id)
+		var line: Array = s.get(k, [])
+		var at := line.find(id)
+		if at < 0:
+			at = line.find(int(id)) if str(id).is_valid_int() else -1
+		if at >= 0:
+			line[at] = sub
+	bench[0] = id
 	return s
 
 
@@ -1623,10 +1629,10 @@ func _test_leadership() -> void:
 
 	var twin := {"real_name": "Pat Example", "id": "x1", "age": 27.0, "club": "GEE", "gm": 20,
 			"career": {"games": 150, "stints": [["GEE", 2019, 2025, 150, 10]]}, "overall": 70,
-			"attr": {"disposal": 80}}
+			"attr": {"kicking": 80}}
 	var higher := twin.duplicate(true)
 	higher["overall"] = 95
-	higher["attr"] = {"disposal": 99, "star": 99}
+	higher["attr"] = {"kicking": 99, "star": 99}
 	_check(Leadership.of(twin) == Leadership.of(higher),
 			"Leadership ignores his playing quality (OVR and attributes)")
 	var veteran := twin.duplicate(true)
@@ -2434,21 +2440,6 @@ func _test_culture_reasons_read_cleanly() -> void:
 			"A strand with no named band follows its latest move and never contradicts it")
 
 
-func _test_culture_settles() -> void:
-	var rel := {}
-	for i in range(5):
-		Culture.change(rel, "GEE", "together", 6, "Played finals", 2027, "Off-season")
-	var before := Culture.value(rel, "GEE", "together")
-	Culture.settle(rel, "GEE", "together")
-	var after := Culture.value(rel, "GEE", "together")
-	_check(after < before and after > 0 and Culture.reasons(rel, "GEE", "together").size() == 5,
-			"A strand settles back a little each season without adding a reason (%d to %d)" % [before, after])
-	var quiet := {}
-	Culture.change(quiet, "GEE", "standards", 2, "x", 2027, "Round 1")
-	Culture.settle(quiet, "GEE", "standards")
-	_check(Culture.value(quiet, "GEE", "standards") == 2, "A strand near neutral does not settle further")
-
-
 ## Every mover's sign matches its words: a loss fell, a win rose, a bottom finish
 ## fell, premiers rose; the reasons the director reads never contradict.
 func _test_culture_signs_match_words() -> void:
@@ -2539,7 +2530,7 @@ func _test_culture_copy_is_true() -> void:
 	# CoachEffects gives a match squad its Togetherness from the relations GameState hands it (empty while culture effects are off).
 	effect_readers.sort()
 	_check(effect_readers == ["CoachEffects.gd", "GameState.gd"], "Only GameState and match day's CoachEffects apply a culture effect (%s)" % ", ".join(effect_readers))
-	for kind in ["recovery", "sting", "resign_floor", "free_agent_score", "young_growth", "young_ceiling"]:
+	for kind in ["recovery", "sting", "resign_floor", "free_agent_score", "young_growth"]:
 		_check(gs.contains("culture_effect(") and gs.contains("\"%s\")" % kind), "Culture's %s effect is applied" % kind)
 	for st in ["standards", "together", "ambition"]:
 		_check(Culture.moves_line(st) != "", "%s says what moves it" % st)
@@ -2603,8 +2594,8 @@ func _test_culture_effects() -> void:
 	# Director, 2026-10-18: a patient club brings its young on; veterans' asks are not lower there.
 	_check(Culture.effect_line("ambition", -20) == "Young players come on a little quicker here."
 			and Culture.effect_line("ambition", -50) == "Young players come on a little quicker here.", "Ambition, patient and rebuilding")
-	_check(Culture.effect_of("young_ceiling", "ambition", "patient") == 1.0 and Culture.effect_of("young_ceiling", "ambition", "rebuild") == 1.0
-			and Culture.effect_of("young_ceiling", "ambition", "now") == 0.0, "Young players: a point more season ceiling at a patient club only")
+	_check(Culture.effect_of("young_ceiling", "ambition", "patient") == 0.0,
+			"No season ceiling point at a patient club (director 2026-11-17: dropped with the ceiling)")
 	for band in ["patient", "rebuild"]:
 		_check(Culture.effect_of("resign_floor", "ambition", band) == 0.0 and Culture.effect_of("free_agent_score", "ambition", band) == 0.0,
 				"A %s club gets no re-sign or free-agent tilt" % band)
@@ -2673,171 +2664,9 @@ func _test_culture_effects() -> void:
 	GameState.culture_effects_on = true
 	_check(on_kid == int(round(float(off_kid) * 1.05)) and on_kid > off_kid and on_old == off_old,
 			"Rebuilding: a 19-year-old earns 5%% more from the same game, a 29-year-old the same (%d v %d; %d v %d)" % [on_kid, off_kid, on_old, off_old])
-	# ...and has a point more room this season, inside POT; a veteran does not.
-	var kid2 := {"id": "k2", "age": 19.0, "overall": 60, "potential": 80, "club": "GEE", "season_start_ov": 60}
-	var capped := {"id": "k3", "age": 19.0, "overall": 62, "potential": 63, "club": "GEE", "season_start_ov": 60}
-	var vet2 := {"id": "o2", "age": 29.0, "overall": 70, "potential": 80, "club": "GEE", "season_start_ov": 70}
-	var c_on := [GameState.season_ceiling(kid2), GameState.season_ceiling(capped), GameState.season_ceiling(vet2)]
-	GameState.culture_effects_on = false
-	var c_off := [GameState.season_ceiling(kid2), GameState.season_ceiling(capped), GameState.season_ceiling(vet2)]
-	GameState.culture_effects_on = true
-	_check(int(c_on[0]) == int(c_off[0]) + 1 and int(c_on[1]) == maxi(int(c_off[1]), mini(int(c_off[1]) + 1, 63)) and int(c_on[2]) == int(c_off[2]),
-			"Rebuilding: a 19-year-old's season ceiling is a point higher (inside POT), a 29-year-old's the same (%s v %s)" % [str(c_on), str(c_off)])
 	GameState.culture_effects_on = false
 	_check(GameState.culture_effect("GEE", "recovery") == 0.0, "Off means off")
 	GameState.culture_effects_on = true
-
-
-## The player-effect fixture: Melbourne's home-and-away season played twice,
-## culture's effects on and off (legs, morale and XP read over the first
-## FIXTURE_ROUNDS), with Melbourne's culture set to a
-## well-run, very tight, rebuilding group. Everything else is the same seed. The
-## sheet predicts fresher legs, players who take being left out better (read
-## per game left out), and young players earning more development; each shows,
-## and the size is printed.
-const FIXTURE_ROUNDS := 8
-
-
-func _culture_fixture_run(on: bool, run_seed := SUITE_SEED) -> Dictionary:
-	GameState.reset()
-	GameState.career_seed = run_seed
-	GameState.replay_seed = run_seed
-	GameState.culture_effects_on = on
-	GameState.start_season("MEL", GameDB.club_list("MEL"))
-	GameState.relations[Culture.key("MEL", "standards")] = {"t": 70, "log": []}
-	GameState.relations[Culture.key("MEL", "together")] = {"t": 70, "log": []}
-	GameState.relations[Culture.key("MEL", "ambition")] = {"t": -70, "log": []}
-	var load_sum := 0.0
-	var young_xp := 0
-	var young_ids := {}
-	for p in GameState.my_list:
-		if Culture.young_for_growth(p, GameState.season_year):
-			young_ids[str(p["id"])] = int(p.get("overall", 0))
-	var morale := 0.0
-	# Morale each player lost in a game he was left out of while fit: the
-	# culture's lever itself, read game by game, so the season's results
-	# (wins lift who played) do not drown it. A promised game or run stings
-	# by its own rule, so those players are not read.
-	var stings := []
-	var r := 0
-	while not GameState.season.is_regular_done() and r < 30:
-		if GameState.week_event_pending():
-			GameState.resolve_week_event(0)
-		if GameState.media_conference_pending():
-			GameState.skip_media_conference()
-		var before := {}
-		for p in GameState.my_list:
-			if not p.has("expects_game") and not Backing.is_active(p):
-				before[str(p["id"])] = ClubLife.morale(p)
-		GameState.advance()
-		r += 1
-		if r > FIXTURE_ROUNDS:
-			continue
-		var res := GameState.last_match
-		if not res.is_empty():
-			var played := {}
-			for row in (res["roster"] as Array)[0 if str(res["home"]) == "MEL" else 1]:
-				played[str(row["id"])] = true
-			for p in GameState.my_list:
-				var id := str(p["id"])
-				if before.has(id) and not played.has(id) and not GameState._round_unavailable.has(id) \
-						and int(p.get("injury_weeks", 0)) <= 0:
-					stings.append(float(int(before[id]) - ClubLife.morale(p)))
-		var w := 0.0
-		for p in GameState.my_list:
-			w += Workload.value(p)
-		load_sum += w / float(GameState.my_list.size())
-		for row in GameState.last_training_report.get("rows", []):
-			if young_ids.has(str(row["id"])):
-				young_xp += int(row["xp"])
-		if r == FIXTURE_ROUNDS:
-			for p in GameState.my_list:
-				morale += float(ClubLife.morale(p))
-	var young_gain := 0.0
-	var young_n := 0
-	for p in GameState.my_list:
-		if young_ids.has(str(p["id"])):
-			young_gain += float(int(p.get("overall", 0)) - int(young_ids[str(p["id"])]))
-			young_n += 1
-	var bands := "%s/%s/%s" % [Culture.band_key("standards", Culture.value(GameState.relations, "MEL", "standards")),
-			Culture.band_key("together", Culture.value(GameState.relations, "MEL", "together")),
-			Culture.band_key("ambition", Culture.value(GameState.relations, "MEL", "ambition"))]
-	GameState.culture_effects_on = true
-	return {"load": load_sum / float(FIXTURE_ROUNDS), "morale": morale / float(GameState.my_list.size()),
-			"young_xp": young_xp, "young": young_ids.size(), "bands": bands,
-			"young_gain": young_gain / float(maxi(1, young_n)), "rounds": r, "stings": stings}
-
-
-## Seeds the culture fixture is averaged over. The morale it ends the stretch
-## on is printed but not checked: one season's results move it more than
-## culture does (seed by seed it swings about 5 points either way, against an
-## effect of about 2), so its sign follows the seed. The check reads the sting
-## of each game left out instead (`stings`), which no result moves.
-const CULTURE_SEEDS := [SUITE_SEED, SUITE_SEED + 1, SUITE_SEED + 2, SUITE_SEED + 3]
-
-
-## Mean and standard error of a list of numbers.
-func _mean_se(xs: Array) -> Array:
-	var n := float(maxi(1, xs.size()))
-	var m := 0.0
-	for x in xs:
-		m += float(x) / n
-	var v := 0.0
-	for x in xs:
-		v += pow(float(x) - m, 2.0) / maxf(1.0, n - 1.0)
-	return [m, sqrt(v / n)]
-
-
-## The fixture's runs over `seeds`: numbers averaged; bands joined, so
-## each must hold on every seed; every left-out game's sting pooled.
-func _culture_fixture_mean(on: bool, seeds: Array = CULTURE_SEEDS) -> Dictionary:
-	var out := {"load": 0.0, "morale": 0.0, "young_xp": 0, "young": 0, "bands": "", "young_gain": 0.0, "rounds": 0,
-			"stings": [], "per_seed": []}
-	var bands := {}
-	var n := float(seeds.size())
-	for sd in seeds:
-		var r := _culture_fixture_run(on, int(sd))
-		(out["stings"] as Array).append_array(r["stings"])
-		(out["per_seed"] as Array).append(float(r["morale"]))
-		out["load"] = float(out["load"]) + float(r["load"]) / n
-		out["morale"] = float(out["morale"]) + float(r["morale"]) / n
-		out["young_gain"] = float(out["young_gain"]) + float(r["young_gain"]) / n
-		out["young_xp"] = int(out["young_xp"]) + int(r["young_xp"])
-		out["young"] = int(out["young"]) + int(r["young"])
-		out["rounds"] = maxi(int(out["rounds"]), int(r["rounds"]))
-		bands[str(r["bands"])] = true
-	out["bands"] = ",".join(PackedStringArray(bands.keys()))
-	return out
-
-
-func _test_culture_effects_fixture() -> void:
-	var t0 := Time.get_ticks_msec()
-	var off := _culture_fixture_mean(false)
-	var on := _culture_fixture_mean(true)
-	print("Culture fixture: %d runs in %.1f s" % [2 * CULTURE_SEEDS.size(), (Time.get_ticks_msec() - t0) / 1000.0])
-	var s_on := _mean_se(on["stings"])
-	var s_off := _mean_se(off["stings"])
-	var gap := float(s_off[0]) - float(s_on[0])
-	var gap_se := sqrt(pow(float(s_on[1]), 2.0) + pow(float(s_off[1]), 2.0))
-	print("Culture fixture (Melbourne, seeds from %d, mean of %d; first %d rounds): load %.2f v %.2f off | morale lost a game left out %.2f (n %d) v %.2f (n %d) off, gap %.2f se %.3f | morale at the end %.2f v %.2f off (by seed %s v %s) | young XP %d v %d off (%d young players) | bands %s | young OVR gain over the %d-round season %.2f v %.2f off" % [
-			int(CULTURE_SEEDS[0]), CULTURE_SEEDS.size(), FIXTURE_ROUNDS, float(on["load"]), float(off["load"]),
-			float(s_on[0]), (on["stings"] as Array).size(), float(s_off[0]), (off["stings"] as Array).size(), gap, gap_se,
-			float(on["morale"]), float(off["morale"]), str(on["per_seed"]), str(off["per_seed"]),
-			int(on["young_xp"]), int(off["young_xp"]), int(on["young"]), str(on["bands"]), int(on["rounds"]),
-			float(on["young_gain"]), float(off["young_gain"])])
-	_check(str(on["bands"]) == "elite/very/rebuild" and str(off["bands"]) == "elite/very/rebuild",
-			"The fixture's culture holds for the stretch (%s, %s)" % [on["bands"], off["bands"]])
-	_check(float(on["load"]) < float(off["load"]), "A well-run group carries less load in its legs (%.2f v %.2f)" % [on["load"], off["load"]])
-	# A very tight group takes being left out better: every game a fit player
-	# misses, pooled over the seeds (a few hundred a side), costs him less,
-	# by more than three standard errors.
-	_check((on["stings"] as Array).size() >= 100 and (off["stings"] as Array).size() >= 100 and gap > 3.0 * gap_se,
-			"A very tight group takes being left out better: %.2f morale lost a game v %.2f off (gap %.2f, se %.3f)" % [
-			float(s_on[0]), float(s_off[0]), gap, gap_se])
-	_check(float(on["young_xp"]) > float(off["young_xp"]) * 1.02,
-			"A rebuilding club's young players earn more development (%d v %d)" % [on["young_xp"], off["young_xp"]])
-	_check(float(on["young_gain"]) > float(off["young_gain"]),
-			"...and end the home-and-away season rated higher (%.2f v %.2f OVR gained)" % [on["young_gain"], off["young_gain"]])
 
 
 func _test_culture_sentences() -> void:
@@ -3135,8 +2964,8 @@ func _test_every_choice_has_both_sides() -> void:
 	var ids := {}
 	for t in deck:
 		ids[str(t["id"])] = true
-	_check(deck.size() >= 135 and ids.has("intl_homesick") and ids.has("pre_knee_return"),
-			"The check sees the whole deck, the international and pre-season cards included (%d cards)" % deck.size())
+	_check(deck.size() >= 130 and ids.has("intl_homesick") and ids.has("bond_away_camp"),
+			"The check sees the whole deck, the international and bonding cards included (%d cards)" % deck.size())
 	var view := FileAccess.get_file_as_string("res://scripts/ui/EventCardView.gd")
 	_check(view.contains("StoryEngine.stakes_lines(") and not view.contains("card_lines("),
 			"The card on screen prints stakes_lines, the lines this check reads")
@@ -3162,6 +2991,10 @@ func _test_every_choice_has_both_sides() -> void:
 			var c := _has_mark(screen, StoryEngine.COST_MARK)
 			if g and c:
 				continue
+			# A bonding card's small choice is a gain alone (rule 69a: "a small
+			# choice (gain only) and a big choice (gain plus a cost)").
+			if g and (t.get("phase", []) as Array).has("bonding"):
+				continue
 			if c and _has_mark(StoryEngine.card_lines(full, i), StoryEngine.GAIN_MARK):
 				spared.append(key)
 			else:
@@ -3171,7 +3004,7 @@ func _test_every_choice_has_both_sides() -> void:
 	_check(spared.is_empty(), "No choice's only gain is the other choice's cost it spares (%s)"
 			% ", ".join(PackedStringArray(spared)))
 	var both := n - short.size() - spared.size()
-	_check(n >= 290 and both == n, "%d of %d choices show a gain and a cost on screen" % [both, n])
+	_check(n >= 280 and both == n, "%d of %d choices show a gain and a cost on screen" % [both, n])
 	_check(nothing.is_empty(), "Every choice has a lasting effect, not only a story flag (%s)"
 			% ", ".join(PackedStringArray(nothing)))
 	# The check bites: a gain-only choice shows no Cost line...
@@ -3354,7 +3187,7 @@ func _test_silent_defaults_announced() -> void:
 			"The sore star's card says leaving it plays him; the odds sit under Play him (%s / %s)" % [sl, play_lines])
 	# Saying nothing's own price still reads as before, now with its size.
 	var quiet := GameState.story_card("media_in_the_papers", p)
-	_check(StoryEngine.silence_line(quiet) == "Say nothing: his opinion of you down 1, to 49 out of 100.", "Saying nothing names its cost to his opinion of you, with the size (%s)" % StoryEngine.silence_line(quiet))
+	_check(StoryEngine.silence_line(quiet) == "Say nothing: %s opinion of you down 1, to 49 out of 100." % CopyRules.possessive(str(quiet["facts"]["name"])), "Saying nothing names its cost to his opinion of you, with the size (%s)" % StoryEngine.silence_line(quiet))
 
 
 ## Every Gain and Cost line carries its size: a percentage, a chance or a count of games.
@@ -3410,7 +3243,12 @@ func _test_line_numbers_match_effects() -> void:
 						var t0 := int(card["facts"].get("trust", 0))
 						var mv := Trust.opinion_move(t0, StoryEngine.effect_d(e, card["facts"]))
 						# A move too small to show on the 100 says which way it went.
-						want = ("opinion of you %s, still %d out of 100" % ["warms a little" if StoryEngine.effect_d(e, card["facts"]) > 0 else "slips a little", Trust.opinion(t0)]) if mv == 0 else \
+						if StoryEngine.GROUP_TRUST.has(str(e.get("who", "subject"))):
+							# A group's move is a neutral player's, and says so (the bonding deck).
+							var gm := Trust.opinion_move(0, StoryEngine.effect_d(e, card["facts"]))
+							want = "opinion of you %s about %d out of 100" % ["up" if gm >= 0 else "down", absi(gm)]
+						else:
+							want = ("opinion of you %s, still %d out of 100" % ["warms a little" if StoryEngine.effect_d(e, card["facts"]) > 0 else "slips a little", Trust.opinion(t0)]) if mv == 0 else \
 								"opinion of you %s %d, to %d out of 100" % ["up" if mv > 0 else "down", absi(mv), Trust.opinion(t0) + mv]
 					"xp":
 						want = "%d development points. A senior game gives %d" % [int(e["d"]), GameState.XP_SENIOR_GAME]

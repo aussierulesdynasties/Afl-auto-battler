@@ -46,7 +46,7 @@ static func earn_text(key: String) -> String:
 	if Traits.SYNERGIES.has(key):
 		return ""
 	if key == "wet_weather":
-		return "Earned with Contested %d and Disposal %d or better." % [
+		return "Earned with Contested ball %d and kicking and handballing together %d or better." % [
 				int(Traits.WET_WEATHER["contested"]), int(Traits.WET_WEATHER["disposal"])]
 	var d: Dictionary = Traits.DEFS.get(key, {})
 	if d.is_empty():

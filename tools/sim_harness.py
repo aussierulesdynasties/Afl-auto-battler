@@ -83,9 +83,14 @@ STAT_KEYS = [
 # On-ground structure: 18 players = 6 DEF, 6 MID, 6 FWD, where the ruck is
 # counted with midfield (1 RUCK + 5 MID). Keep in lockstep with
 # Ratings.GROUND_SLOTS.
+# Ratings.listed_lines: the listed lines that set a first position. The
+# Legacy start builds (tools/legacy_1990s/build_start.py) use PAST_LISTED_LINES.
+TODAY_LISTED_LINES = ("FWD", "DEF")
+PAST_LISTED_LINES = ("FWD", "DEF", "MID")
+LISTED_LINES = TODAY_LISTED_LINES
 ROLE_CORRECTIONS = {"RIC|Maurice Rioli": "FWD", "WBD|Cody Weightman": "FWD"}
 # Ratings.ATTR_ADJUSTMENTS: director's named-player balance corrections.
-ATTR_ADJUSTMENTS = {"MEL|Harvey Langford": 1.15, "MEL|Jake Bowey": 1.022, "PAD|Connor Rozee": 1.10}
+ATTR_ADJUSTMENTS = {"MEL|Harvey Langford": 1.15, "MEL|Jake Bowey": 1.036, "PAD|Connor Rozee": 1.10}
 GROUND_SLOTS = {"RUCK": 1, "MID": 5, "DEF": 6, "FWD": 6}
 INTERCHANGE = 4
 LIST_SIZE = 44
@@ -211,6 +216,25 @@ METRIC_SPECS = [
 ]
 
 
+def _norms(players, keys):
+    """Ratings.build_norm_params: capped linear scaling, per metric."""
+    norms = {}
+    for k in keys:
+        vals = [p["rates"][k] for p in players]
+        invert = k in ("clangers_pg", "frees_against_pg")
+        if k == "accuracy":
+            norms[k] = _norm_map(vals, lo=0.22, hi=0.82)
+        elif k == "games":
+            norms[k] = _norm_map(vals, lo=0.0, hi=26.0)
+        elif k == "time_on_ground":
+            norms[k] = _norm_map(vals, lo=0.30, hi=0.95)
+        elif k == "brownlow_pg":
+            norms[k] = _norm_map(vals, cap=1.0)
+        else:
+            norms[k] = _norm_map(vals, invert=invert)
+    return norms
+
+
 def derive_ratings(players):
     """Attach per-game rates, 0..1 norms, role, 1-99 attributes and value."""
     league = player_league_rates(players)
@@ -227,41 +251,22 @@ def derive_ratings(players):
         r["contested_share"] = (p["cp"] + 40.0) / (max(1.0, p["di"]) + 100.0)
         r["games"] = gm
         r["time_on_ground"] = p["pctp"] / 100.0
+        r["uncontested_marks_pg"] = _shrunk_rate(max(0.0, p["mk"] - p["cm"]), gm,
+                                                 max(0.0, league["marks_pg"] - league["contested_marks_pg"]),
+                                                 T["shrink_games"])
         r["score_involved_pg"] = _shrunk_rate(
             p["gl"] + p["bh"] + p["ga"] + p["mi"], gm, 4.0, T["shrink_games"])
         p["rates"] = r
 
     keys = list(players[0]["rates"].keys())
-    norms = {}
-    for k in keys:
-        vals = [p["rates"][k] for p in players]
-        invert = k in ("clangers_pg", "frees_against_pg")
-        if k == "accuracy":
-            norms[k] = _norm_map(vals, lo=0.22, hi=0.82)
-        elif k == "games":
-            norms[k] = _norm_map(vals, lo=0.0, hi=26.0)
-        elif k == "time_on_ground":
-            norms[k] = _norm_map(vals, lo=0.30, hi=0.95)
-        elif k == "brownlow_pg":
-            norms[k] = _norm_map(vals, cap=1.0)
-        else:
-            norms[k] = _norm_map(vals, invert=invert)
+    norms = _norms(players, keys)
 
     def scale(v):
-        return int(round(1 + 98 * max(0.0, min(1.0, v))))
+        return _round(1 + 98 * max(0.0, min(1.0, v)))
 
     for p in players:
         q = {k: norms[k](p["rates"][k]) for k in keys}
         p["norm"] = q
-
-        a = {}
-        for attr, terms in ATTR_BLENDS.items():
-            v = blend(q, terms)
-            a[attr] = scale(v) if v >= 0.0 else UNRECORDED_ATTR[attr]
-        adj = ATTR_ADJUSTMENTS.get("%s|%s" % (p.get("club", ""), p.get("name", "")), 1.0)
-        if adj != 1.0:
-            a = {k: max(1, min(99, int(v * adj + 0.5))) for k, v in a.items()}  # GDScript rounds half up
-        p["attr"] = a
 
         # ---- role classification -----------------------------------------
         hitouts_pg = p["ho"] / max(1.0, p["gm"])
@@ -272,9 +277,10 @@ def derive_ratings(players):
             role_scores["RUCK"] = -1.0
         p["role"] = max(role_scores, key=role_scores.get)
         # Ratings.listed_primary: a listed forward or defender is his
-        # listed line unless the numbers read a ruck (row 91, T8.Q11).
+        # listed line unless the numbers read a ruck (row 91, T8.Q11); a
+        # past start keeps a listed midfielder there too (LISTED_LINES).
         listed = p.get("real_pos", "")
-        if listed in ("FWD", "DEF") and p["role"] != "RUCK":
+        if listed in LISTED_LINES and p["role"] != "RUCK":
             p["role"] = listed
         # A record naming several roles ("a wingman or half forward"): his
         # recorded stats choose among the roles it names (director 2026-11-15).
@@ -286,13 +292,30 @@ def derive_ratings(players):
         p["role_scores"] = role_scores
         p["role2"] = assign_secondary(p)
 
+    # ---- 1-99 skills: each against his own line (Ratings.derive_all) ------
+    # Ruling 18: what AFL Tables does not keep (intercept possessions, speed,
+    # coaches votes, hit-outs to advantage) is left out, at the middle (50).
+    by_line = {}
+    for p in players:
+        by_line.setdefault(p["role"], []).append(p)
+    line_norms = {line: _norms(group, keys) for line, group in by_line.items()}
+    for p in players:
+        n = line_norms[p["role"]]
+        lq = {k: n[k](p["rates"][k]) for k in keys}
+        a = {}
+        for key, terms in ATTR_BLENDS.items():
+            v = blend(lq, terms)
+            a[key] = scale(v) if v >= 0.0 else 50
+        a["intercept"] = 50
+        a["speed"] = 50
+        a["star"] = 50
+        adj = ATTR_ADJUSTMENTS.get("%s|%s" % (p.get("club", ""), p.get("name", "")), 1.0)
+        if adj != 1.0:
+            a = {k: max(1, min(99, _round(v * adj))) for k, v in a.items()}
+        p["attr"] = a
+
         # ---- overall + salary value --------------------------------------
-        core = role_core(a, p["role"])
-        overall = 0.70 * core + 0.22 * a["star"] + 0.08 * a["durability"]
-        overall = position_stretch(overall, p["role"])
-        conf = min(1.0, p["gm"] / 14.0)
-        overall = 40.0 + (overall - 40.0) * (0.40 + 0.60 * conf)
-        p["overall"] = scale_overall(overall)
+        p["overall"] = rate_overall(a, p["role"], p["gm"])
         p["value"] = salary_value(p["overall"])
 
     return players
@@ -300,29 +323,24 @@ def derive_ratings(players):
 
 # Stats a past season never recorded (Ratings.unrecorded, director 2026-11-15,
 # "No invented stats"): every blend drops them and shares their weight among
-# the recorded ones; an attribute with none recorded takes UNRECORDED_ATTR and
+# the recorded ones; a skill with none recorded stays at 50 (ruling 18) and
 # counts for nothing in the overall (UNKNOWN_ATTRS). set_unrecorded() sets both.
 UNRECORDED = set()
 UNKNOWN_ATTRS = set()
-UNRECORDED_ATTR = {
-    "disposal": 53, "contested": 44, "marking": 46, "pressure": 42, "intercept": 40,
-    "carry": 45, "goalkicking": 20, "accuracy": 52, "creating": 44, "ruck": 10,
-    "discipline": 44, "durability": 77, "star": 23,
-}
-ATTR_BLENDS = {
-    "disposal": [(0.60, "disposals_pg"), (0.25, "contested_pg"), (0.15, "clearances_pg")],
-    "contested": [(0.45, "contested_pg"), (0.30, "clearances_pg"), (0.25, "contested_share")],
-    "marking": [(0.50, "marks_pg"), (0.28, "contested_marks_pg"), (0.22, "marks_inside50_pg")],
-    "pressure": [(0.62, "tackles_pg"), (0.38, "one_percenters_pg")],
-    "intercept": [(0.45, "rebounds_pg"), (0.28, "marks_pg"), (0.27, "one_percenters_pg")],
-    "carry": [(0.45, "inside50s_pg"), (0.28, "bounces_pg"), (0.27, "disposals_pg")],
-    "goalkicking": [(0.66, "goals_pg"), (0.34, "marks_inside50_pg")],
+ATTR_BLENDS = {  # Ratings.gd::ATTR_BLENDS: each skill against his line
+    "kicking": [(1.0, "kicks_pg")],
+    "handballing": [(1.0, "handballs_pg")],
+    "contested_marking": [(1.0, "contested_marks_pg")],
+    "uncontested_marking": [(1.0, "uncontested_marks_pg")],
+    "contested": [(0.375, "contested_pg"), (0.4375, "clearances_pg"), (0.1875, "contested_share")],
+    "pressure": [(1.0, "tackles_pg")],
+    "carry": [(1.0, "bounces_pg")],
+    "goalkicking": [(1.0, "goals_pg")],
     "accuracy": [(1.0, "accuracy")],
-    "creating": [(0.45, "goal_assists_pg"), (0.30, "inside50s_pg"), (0.25, "marks_inside50_pg")],
-    "ruck": [(0.70, "hitouts_pg"), (0.18, "clearances_pg"), (0.12, "contested_marks_pg")],
-    "discipline": [(0.62, "clangers_pg"), (0.38, "frees_against_pg")],
+    "creating": [(2.0 / 3.0, "goal_assists_pg"), (1.0 / 3.0, "inside50s_pg")],
+    "ruck": [(1.0, "hitouts_pg")],
+    "discipline": [(0.70, "frees_against_pg"), (0.30, "clangers_pg")],
     "durability": [(0.55, "games"), (0.45, "time_on_ground")],
-    "star": [(0.68, "brownlow_pg"), (0.32, "disposals_pg")],
 }
 ROLE_BLENDS = {
     "FWD": [(0.50, "goals_pg"), (0.26, "marks_inside50_pg"), (0.14, "goal_assists_pg"), (0.10, "behinds_pg")],
@@ -330,7 +348,7 @@ ROLE_BLENDS = {
     "DEF": [(0.42, "rebounds_pg"), (0.30, "one_percenters_pg"), (0.20, "marks_pg"), (0.08, "goals_pg", True)],
 }
 METRIC_STAT = dict(METRIC_SPECS)
-METRIC_STAT.update({"contested_share": "cp", "time_on_ground": "pctp"})
+METRIC_STAT.update({"contested_share": "cp", "time_on_ground": "pctp", "uncontested_marks_pg": "cm"})
 
 
 def metric_recorded(metric):
@@ -359,80 +377,40 @@ def set_unrecorded(stats):
             UNKNOWN_ATTRS.add(attr)
 
 
-ROLE_WEIGHTS = {  # role core: attribute -> weight (Ratings.gd::ROLE_WEIGHTS)
-    "RUCK": {"ruck": 0.90, "contested": 0.10},
-    "FWD": {"goalkicking": 0.30, "pressure": 0.20, "marking": 0.15, "accuracy": 0.15, "creating": 0.12, "carry": 0.08},
-    "MID": {"contested": 0.55, "disposal": 0.13, "carry": 0.14, "pressure": 0.10, "goalkicking": 0.04, "accuracy": 0.04},
-    "DEF": {"intercept": 0.40, "pressure": 0.35, "carry": 0.15, "contested": 0.10},
+ROLE_WEIGHTS = {  # each line's skill shares (Ratings.gd::ROLE_WEIGHTS, the APR fit)
+    "RUCK": {"kicking": 0.097, "handballing": 0.018, "contested_marking": 0.081, "contested": 0.225, "pressure": 0.049, "intercept": 0.054, "carry": 0.024, "goalkicking": 0.023, "accuracy": 0.059, "creating": 0.07, "ruck": 0.187, "discipline": 0.043, "durability": 0.022, "star": 0.048},
+    "FWD": {"kicking": 0.083, "handballing": 0.03, "contested_marking": 0.032, "contested": 0.177, "pressure": 0.058, "intercept": 0.056, "carry": 0.067, "goalkicking": 0.112, "accuracy": 0.072, "creating": 0.147, "discipline": 0.049, "durability": 0.05, "star": 0.067},
+    "MID": {"kicking": 0.066, "handballing": 0.019, "contested_marking": 0.027, "contested": 0.236, "pressure": 0.082, "intercept": 0.072, "carry": 0.07, "goalkicking": 0.058, "accuracy": 0.057, "creating": 0.155, "discipline": 0.072, "durability": 0.018, "star": 0.068},
+    "DEF": {"kicking": 0.124, "handballing": 0.055, "contested_marking": 0.041, "contested": 0.161, "pressure": 0.014, "intercept": 0.174, "carry": 0.074, "goalkicking": 0.05, "accuracy": 0.002, "creating": 0.128, "ruck": 0.004, "discipline": 0.053, "durability": 0.052, "star": 0.068},
 }
+LINE_FIT = {  # each line's scale (Ratings.gd::LINE_FIT)
+    "RUCK": {"mid": 63.22, "mean": 0.5518, "slope": 145.62},
+    "FWD": {"mid": 63.2, "mean": 0.5077, "slope": 162.96},
+    "MID": {"mid": 63.19, "mean": 0.5142, "slope": 142.95},
+    "DEF": {"mid": 63.18, "mean": 0.4952, "slope": 166.95},
+}
+OVR_MIN, OVR_MAX = 30, 99
 
 
-# Position scale - see Ratings.gd::position_stretch. [p10, p50, p98] of each
-# position's raw blend -> where it lands; one for one outside that band.
-STRETCH_ANCHORS = {"MID": (41.22, 53.99, 82.62), "DEF": (40.07, 47.75, 58.86),
-                   "FWD": (36.86, 48.25, 61.42), "RUCK": (39.13, 66.27, 86.90)}
-STRETCH_TARGETS = {"MID": (37.74, 49.36, 78.04), "DEF": (43.07, 49.41, 73.72),
-                   "FWD": (38.38, 49.48, 78.04), "RUCK": (37.50, 49.36, 73.56)}
+def _round(v):
+    """GDScript round(): halves away from zero."""
+    return int(math.floor(v + 0.5)) if v >= 0 else -int(math.floor(-v + 0.5))
 
 
-# A past start's own anchors (Ratings.era_anchors); empty keeps 2026's.
-ERA_ANCHORS = {}
-
-
-def fit_era_anchors(players, min_games=12.0):
-    """Ratings.fit_era_anchors: each position's [p10, p50, p98] raw blend on
-    this season's players, then every overall rated again on them."""
-    by_role = {}
-    for p in players:
-        if p["gm"] >= min_games:
-            core = role_core(p["attr"], p["role"])
-            by_role.setdefault(p["role"], []).append(
-                0.70 * core + 0.22 * p["attr"]["star"] + 0.08 * p["attr"]["durability"])
-    ERA_ANCHORS.clear()
-    for role in STRETCH_ANCHORS:
-        vals = by_role.get(role, [])
-        if len(vals) >= 10:
-            ERA_ANCHORS[role] = (_pctile(vals, 0.10), _pctile(vals, 0.50), _pctile(vals, 0.98))
-    for p in players:
-        core = role_core(p["attr"], p["role"])
-        overall = 0.70 * core + 0.22 * p["attr"]["star"] + 0.08 * p["attr"]["durability"]
-        overall = position_stretch(overall, p["role"])
-        conf = min(1.0, p["gm"] / 14.0)
-        overall = 40.0 + (overall - 40.0) * (0.40 + 0.60 * conf)
-        p["overall"] = scale_overall(overall)
-        p["value"] = salary_value(p["overall"])
-
-
-def position_stretch(raw, role):
-    if role not in STRETCH_ANCHORS:
-        return raw
-    g10, g50, g98 = ERA_ANCHORS.get(role, STRETCH_ANCHORS[role])
-    t10, t50, t98 = STRETCH_TARGETS[role]
-    if raw <= g10:
-        return raw + (t10 - g10)
-    if raw <= g50:
-        return t10 + (raw - g10) * (t50 - t10) / (g50 - g10)
-    if raw <= g98:
-        return t50 + (raw - g50) * (t98 - t50) / (g98 - g50)
-    return t98 + (raw - g98)
-
-
-def role_core(attr, role):
-    w = ROLE_WEIGHTS[role]
-    kept = sum(v for k, v in w.items() if k not in UNKNOWN_ATTRS)
-    core = sum(v * attr[k] for k, v in w.items() if k not in UNKNOWN_ATTRS)
-    return core * sum(w.values()) / kept if kept > 0 else 0.0
-
-
-def scale_overall(raw):
-    """Match Ratings.gd::scale_overall. Best players land near 90."""
-    raw = float(raw)
-    if raw < 32.0:
-        return int(max(1, min(99, round(30.0 + (raw - 20.0) * (14.0 / 12.0)))))
-    t = (raw - 32.0) / 49.0
-    t = 0.0 if t < 0.0 else (1.2 if t > 1.2 else t)
-    eased = t ** 0.92
-    return int(max(1, min(99, round(44.0 + eased * 48.0))))
+def rate_overall(a, role, games):
+    """Match Ratings.gd::rate_overall: the line's skill shares on its APR scale,
+    then the low-games confidence shrink."""
+    w = ROLE_WEIGHTS.get(role, ROLE_WEIGHTS["MID"])
+    f = LINE_FIT.get(role, LINE_FIT["MID"])
+    kept = sum(wt for k, wt in w.items() if k not in UNKNOWN_ATTRS)
+    b = sum(wt * (float(a.get(k, 50)) - 1.0) / 98.0 for k, wt in w.items() if k not in UNKNOWN_ATTRS)
+    if kept > 0:
+        b *= sum(w.values()) / kept
+    mid = f["mid"]
+    overall = mid + f["slope"] * (b - f["mean"])
+    conf = min(1.0, games / 14.0)
+    overall = mid + (overall - mid) * (0.40 + 0.60 * conf)
+    return max(OVR_MIN, min(OVR_MAX, _round(overall)))
 
 
 def assign_secondary(p):

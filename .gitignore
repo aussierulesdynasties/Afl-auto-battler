@@ -42,3 +42,4 @@ tests/output/
 # Godot never imports captures/ or docs/ (each has a .gdignore); no sidecars there.
 captures/**/*.import
 docs/**/*.import
+tools/wheelo/cache/

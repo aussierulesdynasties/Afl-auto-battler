@@ -850,7 +850,7 @@ func _rival_letter_body() -> void:
 			"the letter gives both lists as their ratings now and in three years, no list word: %s | %s"
 			% [str(l.get("list", "")), str(l.get("my_list", ""))])
 	var risk := ClubMoves.letter_risk(GameState)
-	_check(risk.size() == 3 and risk[0].find("60 out of 100") >= 0 and risk[2].begins_with("Sacked there"),
+	_check(risk.size() == 3 and risk[0].find("%d out of 100" % ClubLife.START_CONFIDENCE) >= 0 and risk[2].begins_with("Sacked there"),
 			"the letter states the risk: %s" % str(risk))
 	_check(not GameState.offseason_open() and _undecided("FRE") > 0 and _undecided(code) > 0,
 			"the letter unanswered: the off-season waits, and neither club has settled its contracts (FRE %d, %s %d)"
@@ -980,6 +980,36 @@ func _check_joined(tag: String, from: String, year: int, their_id: String) -> vo
 			"%s: his record closes %s at %d and starts Tasmania in %d: %s" % [tag, from, year, year + 1, str(rec)])
 	_check(_news_has("You are the new senior coach of %s. %s" % [GameDB.club_name("TAS"), ClubMoves.successor_line(GameState, from, "TAS", year)]),
 			"%s: the news says he is Tasmania's coach and who replaced him" % tag)
+	# The sign-on money needs a rival's player Tasmania signed. Whether a rival
+	# lets one go depends on how the season fell (on this seed none has since
+	# the 11-14 build: Adelaide re-signs the man it let go before), so with
+	# none the best free agent young enough is signed on the terms
+	# ExpansionBuild gives, as its first call signs one.
+	if ((GameState.expansion["TAS"]["signings"]) as Array).is_empty():
+		var best := {}
+		for p in GameState.free_agents:
+			if float(p.get("age", 30.0)) < Expansion.TARGET_MAX_AGE and (best.is_empty() or int(p["overall"]) > int(best["overall"])):
+				best = p
+		# At the draft free agency has closed and the pool keeps only its unsigned under-26s,
+		# often none (#1748's copied players): then a rival's player young enough, taken off
+		# his list the way ExpansionBuild._settle takes one.
+		var from_list: Array = []
+		if best.is_empty():
+			for code in GameState.season.lists:
+				var list: Array = GameState.season.lists[code]
+				if str(code) == "TAS" or list.size() <= Contracts.min_list():
+					continue
+				for p in list:
+					if float(p.get("age", 30.0)) < Expansion.TARGET_MAX_AGE and (best.is_empty() or int(p["overall"]) > int(best["overall"])):
+						best = p
+						from_list = list
+		_check(not best.is_empty(), "%s: a player Tasmania can sign" % tag)
+		if not best.is_empty():
+			GameState.free_agents.erase(best)
+			from_list.erase(best)
+			var deal := ExpansionBuild.terms(best)
+			ExpansionBuild._sign(GameState, "TAS", best, int(deal["salary"]), int(deal["years"]))
+			(GameState.expansion["TAS"]["signings"] as Array).append(str(best["id"]))
 	var keep := GameState.save_path
 	GameState.save_path = "user://test_coach_arcs_joining.save"
 	_check(GameState.save_career() and GameState.load_career() and GameState.my_club == "TAS"

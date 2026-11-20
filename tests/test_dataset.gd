@@ -17,12 +17,13 @@ const SUITE_SEED := 1990
 ## season print did not. The real-lists print moved again that day with the
 ## 44 rule (RookieList.add_block): West Coast, at 43 of the 44, lists one of
 ## its three tied prospects and passes its picks, so the opening draft differs.
-const GOLDEN_LOAD := "9baf6f36b146d2bfafd65e07b3235c55"
+const GOLDEN_LOAD := "e6f604aedc9fbf756137094f20099015"  # moved with Canberra's name and colours (the Owls)
 ## It moved again with row 199 (2026-11-15): the off-season before the
 ## opening draft closes with the rivals signing free agents, so the lists differ;
 ## the level ladder going A-Z by club (#1633) then changed the order the clubs
-## trade and sign in during it.
-const GOLDEN_REAL := "d4fd9cfddd165faddd875f60720392cc"
+## trade and sign in during it. Both prints were redrawn by the director's
+## ratings (row 200, 2026-11-16) on top of row 199.
+const GOLDEN_REAL := "c7c47ccb082c9a1cd4ed671c2b9bf30c"
 ## A played match's floating point differs between Windows and Linux builds of
 ## Godot, so the season has one fingerprint per platform; each was taken on
 ## main before the change (Linux: run_on_github run 43024085570). Removing
@@ -30,10 +31,9 @@ const GOLDEN_REAL := "d4fd9cfddd165faddd875f60720392cc"
 ## Windows from a local run on that branch, Linux from its CI (shard 6).
 ## The game plan retune after it (bug bash 5) redrew it again: Windows from
 ## a local run, Linux from run_on_github run 43725691444 (with the 40% Controlled Tempo hold and #1613).
-## The inside-50 pass that credits goal assists (#1638) redrew it again: Windows from
-## a local run, Linux from its CI (the dataset suite's shard).
 ## The defensive-50 play (#1598) redrew it again: Windows from a local run,
 ## Linux from that PR's CI (with the synergies change, #1645).
+## The director's ratings (row 200, 2026-11-16) redrew it after that (Linux from run_on_github run 43765141166).
 ## Result keys added after the golden was taken that record who earned a
 ## call's credit, not what happened (row 144). "impact" and "plan_traits" were
 ## already in main's results, so they stay in the hash. "breeze_side" (the
@@ -50,7 +50,7 @@ const TEAM_BOOKKEEPING_KEYS := ["pressure_acts_dhalf", "tackles_i50", "poss_d50"
 		"d50_tackled", "d50_rushed", "d50_chips"]
 ## Team counts named by prefix (one key per way a defensive-50 chain ends).
 const TEAM_BOOKKEEPING_PREFIXES := ["d50_end_"]
-const GOLDEN_SEASON := {"Windows": "7eda041c71174d08c2f53f56f720d33b", "Linux": "99ec2ccd57fa84f373348b9c62b9a6d8"}
+const GOLDEN_SEASON := {"Windows": "4a60c57aa723ec9cf0c936b1592edace", "Linux": "29731d9d3aaf8306ecd99aa67c1bf4da"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and
@@ -143,8 +143,10 @@ func _load_print() -> String:
 		var c: Dictionary = GameDB.clubs[code]
 		# pattern3 (L9's anchor colour) came after this golden; today's kits repeat
 		# pattern2 in it, which _test_guernseys_by_year checks.
+		# "today" (the 3D player's picture of the current home guernsey) is art, not load data.
 		var g := GameDB.club_guernsey(code)
 		g.erase("pattern3")
+		g.erase("today")
 		out.append("%s|%s|%s|%s|%d|%s" % [code, str(c.get("name", "")), str(c.get("short", "")),
 				str(c.get("ground", "")), int(c.get("enter", 0)), str(g)])
 	out.append(str(GameDB.club_order))
@@ -705,17 +707,25 @@ func _test_real_1990() -> void:
 	_check(not roos.is_empty() and int(roos["overall"]) >= 78
 			and int(roos["overall"]) >= Ratings.honours_floor(float(roos.get("honours", 0.0))),
 			"Paul Roos, twice All-Australian, rates at least his honours floor (%d)" % int(roos.get("overall", 0)))
-	var platten: Dictionary = by_id.get("HAW_44", {})   # John Platten
-	_check(not platten.is_empty() and not bool(platten.get("rated_on_honours", false)),
-			"A star already above his floor keeps his own rating (Platten %d)" % int(platten.get("overall", 0)))
+	# Which honoured players sit under their floor moves with the ratings (row
+	# 200), so the rule is checked both ways rather than on two names.
+	var on_honours := 0
+	var own_rating := 0
+	for p in GameDB.players:
+		if float(p.get("honours", 0.0)) > 0.0:
+			if bool(p.get("rated_on_honours", false)):
+				on_honours += 1
+			elif int(p["overall"]) >= Ratings.honours_floor(float(p["honours"])):
+				own_rating += 1
+	_check(on_honours > 0, "An honoured player rated under his floor rates on his honours (%d)" % on_honours)
+	_check(own_rating > 0, "A star already above his floor keeps his own rating (%d)" % own_rating)
 	GameDB.reload()
 	var none := true
 	for p in GameDB.players:
 		if p.has("honours") or bool(p.get("rated_on_honours", false)):
 			none = false
 	_check(none, "Today's set carries no honours: a 2026 start is untouched")
-	_check(Ratings.era_anchors.is_empty() and Potential.peak_from_year == 2023,
-			"Back on 2026, positions scale on 2026's anchors again")
+	_check(Potential.peak_from_year == 2023, "Back on 2026, recent seasons count from 2026's data season again")
 	_golden("load after the 1990 set", _load_print(), GOLDEN_LOAD)
 
 

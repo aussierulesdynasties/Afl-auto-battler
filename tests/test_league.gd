@@ -182,9 +182,12 @@ func _menu(board: String, rivals: String) -> void:
 
 
 func _test_difficulty() -> void:
+	# A device that has never picked a dial.
+	GameState.set_setting("board_patience", "")
+	GameState.set_setting("rival_recruiting", "")
 	GameState.reset()
-	_check(GameState.board_patience == "fair" and GameState.rival_recruiting == "shrewd",
-			"A new career starts on the middle step of both dials, the tuned league")
+	_check(GameState.board_patience == "patient" and GameState.rival_recruiting == "shrewd",
+			"A new career starts on the Patient board (director 2026-11-17: \"Patient is the default\") and the middle rivals")
 	_menu("ruthless", "cutthroat")
 	GameState.reset()
 	_check(GameState.board_patience == "ruthless" and GameState.rival_recruiting == "cutthroat",
@@ -230,10 +233,14 @@ func _test_difficulty() -> void:
 	_check(GameState.load_career() and GameState.board_patience == "ruthless"
 			and GameState.rival_recruiting == "easygoing", "A loaded career keeps its own dials")
 	# The dials are data (data/difficulty_dials.json): both have three named
-	# steps, the middle one is today's game, and nothing but those sizes moves.
+	# steps, the middle one is the game before the dials, and nothing but those
+	# sizes moves. A new career starts on Patient and Shrewd.
+	_check(DifficultyDials.default_key("board_patience") == "patient"
+			and DifficultyDials.default_key("rival_recruiting") == DifficultyDials.order("rival_recruiting")[1],
+			"The board starts on Patient, the rivals on their middle step")
 	for dial in DifficultyDials.DIALS:
-		_check(DifficultyDials.order(dial).size() == 3 and DifficultyDials.order(dial)[1] == DifficultyDials.default_key(dial),
-				"%s has three steps and starts on the middle one" % dial)
+		_check(DifficultyDials.order(dial).size() == 3 and DifficultyDials.order(dial).has(DifficultyDials.default_key(dial)),
+				"%s has three steps and starts on one of them" % dial)
 		for key in DifficultyDials.order(dial):
 			var st := DifficultyDials.step(dial, key)
 			_check(str(st.get("label", "")) != "" and str(st.get("text", "")) != "" and not str(st["text"]).contains("%"),
@@ -262,14 +269,14 @@ func _test_difficulty() -> void:
 	odd["board_patience"] = "gone"
 	odd["rival_recruiting"] = 7
 	CareerSave.write(odd, CareerSave.read_meta(GameState.save_path), GameState.save_path)
-	_check(GameState.load_career() and GameState.board_patience == "fair" and GameState.rival_recruiting == "shrewd",
-			"A step this build does not know falls back to the middle one")
+	_check(GameState.load_career() and GameState.board_patience == "patient" and GameState.rival_recruiting == "shrewd",
+			"A step this build does not know falls back to the default one")
 	# The menu setting of a device that only ever chose Easy / Normal / Hard.
 	GameState.set_setting("board_patience", "")
 	GameState.set_setting("rival_recruiting", "")
 	GameState.set_setting("difficulty", "hard")
-	_check(GameState.new_career_dial("board_patience") == "fair" and GameState.new_career_dial("rival_recruiting") == "cutthroat",
-			"An old menu setting starts the next career on the Fair board and the matching rivals")
+	_check(GameState.new_career_dial("board_patience") == "patient" and GameState.new_career_dial("rival_recruiting") == "cutthroat",
+			"An old menu setting starts the next career on the Patient board and the matching rivals")
 	GameState.set_setting("difficulty", "normal")
 	_menu("fair", "shrewd")
 
@@ -346,7 +353,9 @@ func _test_news() -> void:
 	_check(not GameState.news.is_empty() and GameState.news.size() <= GameState.MAX_NEWS,
 			"A season fills the news feed, within its limit (%d items)" % GameState.news.size())
 	_check(kinds.has("award") and kinds.has("premiers"), "The awards and the premiers make the news")
-	_check(kinds.has("game") or kinds.has("injury") or kinds.has("development"),
+	# A round's biggest games and injuries are told as league stories, and an
+	# injury told as a story gets no plain line (_round_news), so they count.
+	_check(kinds.has("game") or kinds.has("injury") or kinds.has("development") or kinds.has("league_story"),
 			"Big games, injuries or rival development make the news (%s)" % str(kinds.keys()))
 	# Your club's own coach arc can open after the flag (a player out of
 	# contract): newest of the league's news, as above.

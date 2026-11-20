@@ -11,45 +11,47 @@ extends RefCounted
 
 ## key -> label, the stat and threshold that earn it, the roles it counts
 ## for ([] = any), what it does, and how a recruiter would put it ("scout").
-## "max" marks a bad trait (at or below).
+## "max" marks a bad trait (at or below). The thresholds were re-solved for the
+## Wheelo ratings of 2026-11-16 so each trait has as many holders on the real
+## 2026 lists as before (skills are now rated against the AFL position).
 const DEFS := {
-	"ball_magnet": {"label": "Ball magnet", "stat": "disposal", "min": 86, "roles": ["MID", "DEF"],
+	"ball_magnet": {"label": "Ball magnet", "stat": "disposal", "min": 65, "roles": ["MID", "DEF"],
 			"text": "Wins 10% more of the ball in general play.",
 			"scout": "Finds the footy all day."},
-	"bull": {"label": "Contested bull", "stat": "contested", "min": 84, "roles": ["MID", "RUCK"],
+	"bull": {"label": "Contested bull", "stat": "contested", "min": 74, "roles": ["MID", "RUCK"],
 			"text": "Wins 15% more clearances, and the side wins about one more clearance a game. Keeps the ball when tackled 10% more often.",
 			"scout": "Wins it at the coalface and gets it out."},
-	"ruck_king": {"label": "Ruck king", "stat": "ruck", "min": 84, "roles": ["RUCK"],
+	"ruck_king": {"label": "Ruck king", "stat": "ruck", "min": 63, "roles": ["RUCK"],
 			"text": "Wins 5% more of the hit-outs, and 25% more of them go to a team-mate's advantage, so the side wins more of the clearances that follow.",
 			"scout": "Dominates the hit-outs."},
-	"aerial": {"label": "Aerial threat", "stat": "marking", "min": 76, "roles": ["FWD"],
+	"aerial": {"label": "Aerial threat", "stat": "contested_marking", "min": 57, "roles": ["FWD"],
 			"text": "Marks 9% more often in marking contests all over the ground, on the lead and in a pack, and takes more spectacular marks.",
 			"scout": "A strong contested mark inside 50."},
-	"crumber": {"label": "Crumber", "stat": "goalkicking", "min": 55, "roles": ["FWD"], "small": true,
+	"crumber": {"label": "Crumber", "stat": "goalkicking", "min": 54, "roles": ["FWD"], "small": true,
 			"text": "A small forward: twice as often the one at the fall of the ball, and 12% more likely to kick a goal from any shot that is not from a mark.",
 			"scout": "Lives at the feet of the pack."},
-	"sharpshooter": {"label": "Sharpshooter", "stat": "accuracy", "min": 71, "roles": [],
+	"sharpshooter": {"label": "Sharpshooter", "stat": "accuracy", "min": 69, "roles": [],
 			"text": "Every shot is 6% more likely to be a goal.",
 			"scout": "Reliable set shot."},
-	"playmaker": {"label": "Playmaker", "stat": "creating", "min": 75, "roles": [],
+	"playmaker": {"label": "Playmaker", "stat": "creating", "min": 77, "roles": [],
 			"text": "Shots from this player's inside-50 deliveries are 5% more likely to be goals.",
 			"scout": "Sets up goals with clever ball use going inside 50."},
-	"interceptor": {"label": "Interceptor", "stat": "intercept", "min": 80, "roles": ["DEF"],
+	"interceptor": {"label": "Interceptor", "stat": "intercept", "min": 82, "roles": ["DEF"],
 			"text": "Takes 30% more intercept marks, in contests inside defensive 50, on the opposition's leads and in general play: marks many of the balls another defender would only spoil. Drawn to the loose man's job.",
 			"scout": "Reads the play and cuts off forward entries."},
-	"lockdown": {"label": "Lockdown", "stat": "pressure", "min": 64, "roles": ["DEF", "MID"],
+	"lockdown": {"label": "Lockdown", "stat": "pressure", "min": 78, "roles": ["DEF", "MID"],
 			"text": "Every shot by the player's direct opponent, from anywhere on the ground, is less likely to be a goal. A defender's opponent is the forward it is matched on: 4% less. A midfielder's is their best midfielder not already picked up, who shoots far less often: 20% less.",
 			"scout": "Can shut down a dangerous opponent."},
-	"def_forward": {"label": "Defensive forward", "stat": "pressure", "min": 44, "roles": ["FWD"], "own_role": true,
+	"def_forward": {"label": "Defensive forward", "stat": "pressure", "min": 71, "roles": ["FWD"], "own_role": true,
 			"text": "Sent to their loose defender, keeps that player out of most contests (another forward sent does it less well).",
 			"scout": "Works up the ground and keeps a loose defender honest."},
 	"engine": {"label": "Engine", "stat": "durability", "min": 91, "roles": [],
 			"text": "Tires 25% slower.",
 			"scout": "Plays big minutes and keeps going late."},
-	"big_game": {"label": "Big-game player", "stat": "star", "min": 60, "roles": [],
+	"big_game": {"label": "Big-game player", "stat": "star", "min": 77, "roles": [],
 			"text": "In the last quarter and in finals, every rating plays 5% higher in the player's own contests (not the side's team ratings).",
 			"scout": "Lifts when it matters: last quarters and finals."},
-	"hothead": {"label": "Hothead", "stat": "discipline", "max": 20, "roles": [],
+	"hothead": {"label": "Hothead", "stat": "discipline", "max": 18, "roles": [],
 			"text": "Gives away 50% more clangers and free kicks, 65% more 50-metre penalties, and is 75% more likely to be reported, on heavier charges.",
 			"scout": "Gives away too many free kicks."},
 }
@@ -92,7 +94,7 @@ const EARNED := {
 	"unicorn": {"label": "Unicorn", "text": "Plays forward, midfield and back. On the ground, fills one missing place in one synergy.",
 			"scout": "Can play anywhere on the ground."},
 	"fine_wine": {"label": "Fine Wine",
-			"text": "Ages three years slower: the decline starts three years later and is 30% gentler, and retirement comes up to three years later (40 at the latest).",
+			"text": "Lasts like the real Fine Wine players: his career length is rolled from theirs, and retirement comes up to three years later (40 at the latest).",
 			"scout": "Gets better with age.",
 			"earn": "Born with it, not trained: every real player with 60 or more games in seasons aged 32 or older, and about 1 draftee in 52."},
 }
@@ -102,7 +104,7 @@ const UNICORN_LINES := ["FWD", "MID", "DEF"]
 ## ball-winner with clean hands. Earned from the stats like any trait, but on
 ## top of the five, so it never pushes another trait or a synergy out; it does
 ## something only when it's wet.
-const WET_WEATHER := {"label": "Wet-weather player", "contested": 78, "disposal": 72,
+const WET_WEATHER := {"label": "Wet-weather player", "contested": 60, "disposal": 57,
 		"text": "In the wet: wins 10% more of the ball and makes 20% fewer clangers.",
 		"scout": "Thrives when it's greasy."}
 ## Measured to land the copy's 10% more of the ball in the wet (bug bash 5
@@ -124,7 +126,7 @@ static func wet_weather(p: Dictionary) -> bool:
 	if str(WET_NAMED.get(str(p.get("id", "")), "-")) == str(p.get("real_name", "")):
 		return true
 	var attr: Dictionary = p.get("attr", {})
-	return int(attr.get("contested", 0)) >= int(WET_WEATHER["contested"]) 			and int(attr.get("disposal", 0)) >= int(WET_WEATHER["disposal"])
+	return int(attr.get("contested", 0)) >= int(WET_WEATHER["contested"]) 			and int(Skills.disposal_of(attr, 0.0)) >= int(WET_WEATHER["disposal"])
 
 
 ## Fine Wine (director, 2026-11-13: "when a player has unnatural longevity
@@ -141,8 +143,9 @@ static func wet_weather(p: Dictionary) -> bool:
 ##
 ## The odds match the rate real draftees reached the same mark (director's
 ## choice): 54 of the 2,789 who joined a list at 21 or younger (1991 on, born by
-## 1990, played or not), 1 in 52 (docs/FINE_WINE_EVIDENCE.md). Ageing and retirement read
-## FINE_WINE_YEARS and FINE_WINE_SLOPE (Potential.age_step_for, Prospects.should_retire).
+## 1990, played or not), 1 in 52 (docs/FINE_WINE_EVIDENCE.md). A drafted one's
+## career length is rolled from the real Fine Wine careers (Growth.career_last);
+## retirement reads FINE_WINE_YEARS (Prospects.should_retire).
 const FINE_WINE_FROM_AGE := 32
 const FINE_WINE_GAMES := 60
 const FINE_WINE_DRAFTEE_ODDS := 1.0 / 52.0
@@ -210,6 +213,9 @@ static var power_tune := {}
 ## + unicorn"). Unicorn, Wet-weather player, Fine Wine and Hothead come on top.
 ## Past five, he keeps the five he clears by the most.
 const MAX_GOOD := 5
+## A small forward for Crumber marks below this contested (re-solved with the
+## thresholds above: the same share of forwards as before).
+const SMALL_MAX_CM := 37
 ## Good traits that come on top of the five.
 const ON_TOP := ["unicorn", "wet_weather", "fine_wine"]
 const LINE_NAMES := {"RUCK": "ruck", "MID": "midfield", "DEF": "defence", "FWD": "forward line"}
@@ -291,14 +297,14 @@ static func of(p: Dictionary) -> Array:
 					ok = true
 			if not ok:
 				continue
-		var v := int(attr.get(str(d["stat"]), 0))
+		var v := int(Skills.value(attr, str(d["stat"]), 0.0))
 		if d.has("max"):
 			if v <= int(d["max"]):
 				bad.append(key)
 			continue
 		if v < int(d["min"]):
 			continue
-		if bool(d.get("small", false)) and int(attr.get("marking", 0)) >= 52:
+		if bool(d.get("small", false)) and int(attr.get("contested_marking", 0)) >= SMALL_MAX_CM:
 			continue
 		good.append([key, v - int(d["min"])])
 	good.sort_custom(func(a, b): return int(a[1]) > int(b[1]))
@@ -549,9 +555,9 @@ static func near(p: Dictionary) -> Array:
 			continue
 		if not role_can_earn(p, key, roles):
 			continue
-		if bool(d.get("small", false)) and int(attr.get("marking", 0)) >= 52:
+		if bool(d.get("small", false)) and int(attr.get("contested_marking", 0)) >= SMALL_MAX_CM:
 			continue
-		var gap := int(d["min"]) - int(attr.get(str(d["stat"]), 0))
+		var gap := int(d["min"]) - int(Skills.value(attr, str(d["stat"]), 0.0))
 		if gap >= 1 and gap <= 6:
 			out.append({"key": key, "gap": gap, "stat": str(d["stat"])})
 	out.sort_custom(func(a, b): return int(a["gap"]) < int(b["gap"]))

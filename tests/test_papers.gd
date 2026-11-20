@@ -45,6 +45,7 @@ func _check(ok: bool, message: String) -> void:
 
 ## Runs one test function; it must make at least one check (tests/functions_ran.gd).
 const Ran := preload("res://tests/functions_ran.gd")
+const Press := preload("res://tests/preseason_press.gd")
 func _t(test: String, args := []) -> Variant:
 	return await Ran.one(self, test, args)
 
@@ -61,9 +62,9 @@ func _career(club := CLUB) -> void:
 ## the way, as pressing on does).
 func _to_papers() -> bool:
 	var guard := 0
-	while GameState.preseason_active() and GameState.preseason_stop() != "papers" and guard < 12:
+	while GameState.preseason_active() and GameState.preseason_stop() != "papers" and guard < 24:
 		guard += 1
-		GameState.preseason_advance()
+		Press.advance()
 	return GameState.preseason_stop() == "papers"
 
 
@@ -125,6 +126,10 @@ func _breakout_kid() -> String:
 		var best_pot := int(best.get("potential", best.get("overall", 0)))
 		if best.is_empty() or pot > best_pot or (pot == best_pot and str(p["id"]) < str(best["id"])):
 			best = p
+	# Every kid the papers could tip is already picked (St Kilda's two under the
+	# Wheelo ratings): the papers' own pick, for checks that only read the story.
+	if best.is_empty():
+		return GameState._papers_breakout()
 	return str(best.get("id", ""))
 
 
@@ -617,7 +622,7 @@ func _test_flow() -> void:
 	_check(GameState.papers_record()["order"] == order1 and str(GameState.papers_record()["kind"]) == kind1,
 			"The same career prints the same ladder and runs the same story")
 	var goal_before := (GameState.board["goal"] as Dictionary).duplicate()
-	GameState.preseason_advance()
+	Press.advance()
 	_check(not GameState.preseason_active() and GameState.board["goal"] == goal_before,
 			"Pressing on without an answer goes to Round 1, and the board's goal is as it was")
 	# The papers never touch the match: the same pre-season, with and without
@@ -628,7 +633,7 @@ func _test_flow() -> void:
 	_restore(at_papers)
 	_force("finish")
 	GameState.papers_answer(2)
-	GameState.preseason_advance()
+	Press.advance()
 	GameState.advance()
 	_check(str(GameState.season_log.back()["score"]) == sig_a,
 			"What you tell the papers does not change the first match's result")
@@ -743,7 +748,7 @@ func _test_reckoning() -> void:
 	_to_papers()
 	_force("finish")
 	GameState.papers_answer(2)
-	GameState.preseason_advance()
+	Press.advance()
 	_check(not GameState.preseason_active(), "Into the season")
 	var deck := StoryDeck.all()
 	var t := StoryDeck.by_id(deck, "media_papers_reckoning")
@@ -796,7 +801,7 @@ func _test_silence_and_sim() -> void:
 	_at_papers()
 	_force("finish")
 	var b0 := GameState.board_confidence()
-	GameState.preseason_advance()
+	Press.advance()
 	_check(GameState.board_confidence() == b0 - 3 and str(GameState.papers_record()["result"]).begins_with("You say nothing"),
 			"Saying nothing costs the board three, as on any card, and the result says so")
 	# A hands-off run goes through the papers on silence (from the papers as
@@ -819,7 +824,7 @@ func _test_saves() -> void:
 	var guard := 0
 	while GameState.preseason_week() < 5 and guard < 12:
 		guard += 1
-		GameState.preseason_advance()
+		Press.advance()
 	var week5 := _snap()
 	var w5 := GameState.preseason_week()
 	_to_papers()
@@ -832,7 +837,7 @@ func _test_saves() -> void:
 			and GameState.papers_record()["order"] == order and int(GameState.papers_record()["claim"]) > 0
 			and bool(GameState.papers_record()["answered"]),
 			"...and loads back to the same papers, the same answer, the same claim")
-	GameState.preseason_advance()
+	Press.advance()
 	_check(not GameState.preseason_active(), "...and goes on to Round 1")
 	# A pre-season saved before the papers existed (it stood mid pre-season) plays on to them.
 	_check(GameState._restore_career(week5.duplicate(true)) and GameState.preseason_week() == w5,
@@ -896,7 +901,8 @@ func _test_screen() -> void:
 	var head := scene.find_child("PapersTitle", true, false) as Control
 	_check(head is RichTextLabel and NameInk.plain(head).contains(GameDB.player_display_name(who))
 			and (head as RichTextLabel).text.contains("[color="),
-			"The breakout's name in the headline is in his club's colour")
+			"The breakout's name in the headline is in his club's colour (%s: %s)" % [
+				GameDB.player_display_name(who), (head as RichTextLabel).text if head is RichTextLabel else str(head)])
 	# Wide. (The breakout above was only read, never answered: forcing the
 	# finish story puts the papers back to an unanswered finish.)
 	_force("finish")
@@ -941,11 +947,12 @@ func _test_screen() -> void:
 					missing.append(str(order[i]))
 				elif size.x >= 900 and (note.get_global_rect().end.y > view.end.y + 0.5 or note.get_global_rect().position.y < view.position.y
 						or note.get_global_rect().end.x > view.end.x + 0.5):
-					hidden.append(str(order[i]))
+					hidden.append("%s (row %d, ends %.0f,%.0f; view ends %.0f,%.0f)" % [str(order[i]), i,
+							note.get_global_rect().end.x, note.get_global_rect().end.y, view.end.x, view.end.y])
 			_check(order.size() == 18 and missing.is_empty(), "Every club's whole blurb is under its name, %s (missing: %s)" % [what, str(missing)])
 			if size.x < 900:
 				continue
-			_check(hidden.is_empty(), "On a PC every blurb is in view without scrolling, %s (out of view: %s)" % [what, str(hidden)])
+			_check(hidden.is_empty(), "On a PC every blurb is in view without scrolling, %s (out of view: %s; ladder %s)" % [what, str(hidden), str(order)])
 			# 1920x1080 holds the whole page. At 1280x720 the story's column (the
 			# story, the fitness plan and the weeks to come) can run a line past
 			# the window for some stories; it ran 12 to 24 px past before the

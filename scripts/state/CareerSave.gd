@@ -17,7 +17,9 @@ extends RefCounted
 ## lifts the previous version to upgrade(): an older career is upgraded on
 ## load, never dropped (T5.Q24).
 ##   1 -> 2: St Kilda's club code SKN became STK.
-const VERSION := 2
+##   2 -> 3: the 16 skills (director's interview, 2026-11-15): disposal became
+##           kicking and handballing, marking contested and uncontested marking.
+const VERSION := 3
 const DEFAULT_PATH := "user://career.save"
 
 ## A reference to an entry in the player table.
@@ -300,6 +302,8 @@ static func upgrade(blob: Dictionary) -> Dictionary:
 		match v:
 			1:
 				blob = _migrate_1_to_2(blob)
+			2:
+				_migrate_skills(blob)
 			_:
 				return {}
 		v += 1
@@ -312,6 +316,31 @@ static func upgrade(blob: Dictionary) -> Dictionary:
 static func _migrate_1_to_2(blob: Dictionary) -> Dictionary:
 	migrate_club_codes(blob)
 	return blob
+
+
+## Every player's attributes to the 16 skills (Skills.migrate), and any
+## other skill-keyed table (training gains, start-of-season snapshots) renamed
+## the same way without filling. In place, so shared player dicts stay shared.
+static func _migrate_skills(v: Variant) -> void:
+	if v is Dictionary:
+		var d: Dictionary = v
+		if d.get("attr") is Dictionary:
+			Skills.migrate(d["attr"])
+		elif d.has("disposal") and d.has("contested") or d.has("marking") and d.has("contested"):
+			for pair in [["disposal", ["kicking", "handballing"]],
+					["marking", ["contested_marking", "uncontested_marking"]]]:
+				if d.has(pair[0]):
+					for k in pair[1]:
+						if not d.has(k):
+							d[k] = d[pair[0]]
+					d.erase(pair[0])
+		for val in d.values():
+			if val is Dictionary or val is Array:
+				_migrate_skills(val)
+	elif v is Array:
+		for x in v:
+			if x is Dictionary or x is Array:
+				_migrate_skills(x)
 
 
 ## Slim copies of match results for the save. Accepts a result, or arrays of
@@ -354,7 +383,8 @@ static func slim_results(v, with_box := false):
 ## a day that turned at a break (row 160), for the report's weather line.
 const REVIEW_KEYS := ["players", "roster", "team", "quarter_teams",
 		"injuries", "synergies", "duels", "duel_changes", "tactics_history", "weather",
-		"impact", "impact_by", "plan_traits", "breeze_side", "weather_start", "weather_turned_after"]
+		"impact", "impact_by", "plan_traits", "breeze_side", "weather_start", "weather_turned_after",
+		"synergy_share", "q4_legs"]
 const REVIEW_EVENT_KINDS := ["goal", "behind", "quarter", "final"]
 
 

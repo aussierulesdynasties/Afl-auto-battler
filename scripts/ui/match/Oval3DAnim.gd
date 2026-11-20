@@ -5,8 +5,10 @@ extends RefCounted
 ## and the ball, and advances his AnimationPlayer by dt: jog / idle / carry, and the two-man
 ## tackle clips (row 197).
 
-const JOG_SPEED := 6.0
+const JOG_SPEED := Oval3D.LOOP_SPEED
 const RUN_FROM := 1.4          # m/s: slower than this he stands
+const STOP_HOLD := 0.2         # s: he must be that slow this long to stand; a shorter check is part of the run
+const TURN := 9.0              # rad/s (about 520 degrees): the fastest he turns, a footballer's pivot
 ## Eyes on the ball (plan §2.6): the neck takes part of the turn and the head the rest, inside a
 ## real person's range (about 80 degrees each way, 35 up or down), so nobody turns like an owl.
 ## The carrier looks where he runs, not at the ball in his hands.
@@ -26,10 +28,19 @@ const LEAD_RATE := 1.5         # fastest the run-in plays to fit a short warning
 const SLOW := 0.6              # slowest it plays while the contact is still to come
 const CATCH_UP := 2.0          # fastest it plays when the contact has come first
 const HURRY := 2.0             # how fast the get-up plays once the play has moved on
+## Clip s from the arms meeting to the take's up_s: a tackled man is back on his feet 1.5 s
+## after the tackle (director, 2026-11-17: "1.5 would probably be the sweet spot"), so the
+## clip's own 2.7-3.1 s from contact to standing plays faster to fit (MatchDirector.TAKE_UP
+## lets him move from then).
+const UP_IN := 1.5
 const FAR := 5.0               # m: his token this far from him = the play has moved on
+const MOVE_OFF := 0.3          # m/s: his token moving this fast = the play wants him (a take ends at up_s)
+const KNOCK_UP := 0.2           # s of a scoop's clip past the touch before a ball off his hands ends it
+const KNOCK_OFF := 1.0          # m: how far off him that ball has to be by then
 const BLEND := 0.2             # s: the pose he was in eases into the clip (and the clip out)
 const GAP_CLOSE := 4.0         # m/s: after a tackle he runs back to his spot, at least this fast
 const GAP_MAX := 9.0           # m/s: and at most this fast
+const APART := 0.8             # m: on that run his hips stay this far from the man he tackled (or who tackled him)
 const REACH := 1.6             # m: MatchDirector's chase ends this close (its "chase" phase)
 const STEP := 1.0 / 30.0       # s: the takes' frame
 
@@ -53,9 +64,12 @@ var _blend: Array = []         # per player: the pose he is easing out of, {} fo
 var _back: Array = []          # per player: where a finished pair left him (INF: nowhere)
 var _face: Array = []          # per player: the way his hips faced when that pair finished
 var _gap: Array = []           # per player: his drawn spot minus his token's, closing
+var _mate: Array = []          # per player: the other man of the take he is running back from, -1 for none
 var _rate: Array = []          # per player: the rate his running clip played at last
+var _still: Array = []         # per player: s he has been slower than RUN_FROM
 var _takes := {}               # take name -> {dist: hips apart, foot: planted foot} per STEP
 var _tracks := {}              # animation name -> {bone: rotation track}, "hips": position track
+var _once: Array = []          # per player: the scoop he is in, {anim, t, t0, touch, end, yaw, at, off}, {} for none
 
 
 func _init(p_director: MatchDirector, p_players: Array) -> void:
@@ -67,8 +81,11 @@ func _init(p_director: MatchDirector, p_players: Array) -> void:
 		_blend.append({})
 		_back.append(Vector2.INF)
 		_face.append(0.0)
+		_still.append(0.0)
 		_gap.append(Vector2.ZERO)
+		_mate.append(-1)
 		_rate.append(1.0)
+		_once.append({})
 	var res = load(PAIRS)
 	if res is JSON:
 		_pairs = (res as JSON).data
@@ -142,8 +159,10 @@ func _add_look(p: Dictionary) -> void:
 		m.primary_rotation_axis = Vector3.AXIS_Y
 		m.use_angle_limitation = true
 		m.symmetry_limitation = true
-		m.primary_limit_angle = deg_to_rad(l[1] * 2.0)
-		m.secondary_limit_angle = deg_to_rad(l[2] * 2.0)
+		# With symmetry the limit is each way (Godot), so the angles go in as they are: twice them
+		# craned a ruckman's head 70 degrees back at the bounce.
+		m.primary_limit_angle = deg_to_rad(l[1])
+		m.secondary_limit_angle = deg_to_rad(l[2])
 		m.influence = l[3]
 		skel.add_child(m)
 		m.target_node = m.get_path_to(target)
@@ -207,10 +226,13 @@ func _advance(pr: Dictionary, dt: float) -> void:
 				due = _due(int(pr["who"]), int(pr["victim"]), float(ahead["left"]))
 			rate = clampf((cs - c) / maxf(due, 0.05), SLOW, LEAD_RATE)
 	else:
-		# Down: the get-up hurries when the play has gone on without them.
+		# Down and back up in UP_IN; then the take's standing tail at its own pace.
+		if c < float(pr["up"]):
+			rate = maxf(1.0, (float(pr["up"]) - cs) / UP_IN)
+		# The get-up hurries when the play has gone on without them.
 		for i in [int(pr["who"]), int(pr["victim"])]:
 			if _in[i] == pr and _drawn(i).distance_to(director.tokens[i]["pos"]) > FAR:
-				rate = HURRY
+				rate = maxf(rate, HURRY)
 	var nc := c + dt * rate
 	if c < cs and nc >= cs:
 		_hit(pr)
@@ -304,6 +326,7 @@ func _start(who: int, v: int, arrived: bool, at := Vector2.INF) -> void:
 	var pr := {"id": tackles.size(), "name": name, "who": who, "victim": v, "P": P,
 			"c0": float(best["c0"]), "c": float(best["c0"]), "cs": float(best["cs"]),
 			"len": float(_pairs[name]["length_s"]), "arrived": arrived, "rec": rec,
+			"up": float(_pairs[name].get("up_s", _pairs[name]["length_s"])),
 			# Started by frame() this frame: its clock has already been stepped past.
 			"fresh": not arrived,
 			"roles": {
@@ -311,6 +334,7 @@ func _start(who: int, v: int, arrived: bool, at := Vector2.INF) -> void:
 				v: {"anim": name + "_tacklee", "pivot": Vector3(V.x, 0.0, V.y), "w": Vector3.ZERO,
 						"dy": float(best["turn"])}}}
 	for i in [who, v]:
+		_once[i] = {}
 		_snap(i, players[i])
 		_in[i] = pr
 		_back[i] = Vector2.INF
@@ -322,9 +346,14 @@ func _start(who: int, v: int, arrived: bool, at := Vector2.INF) -> void:
 ## Pose player i for this frame. holder = the index with the ball in his hands, or -1.
 func step(i: int, p: Dictionary, holder: int, pos: Vector2, vel: Vector2, dt: float) -> void:
 	if not (_in[i] as Dictionary).is_empty():
-		_step_pair(i, p, dt)
+		_step_pair(i, p, dt, vel)
 		return
 	var node: Node3D = p["node"]
+	var o: Dictionary = _once[i]
+	if not o.is_empty() and (float(o["t"]) >= float(o["end"]) or _off_hands(i, o, holder, pos)):
+		# The clip's end (MatchDirector.SCOOPS): the jog eases in over BLEND.
+		_end_once(i)
+		o = {}
 	if _back[i] != Vector2.INF:
 		# Off the take's ground (the frame after it ends): he stands where his hips were.
 		node.transform = Transform3D(Basis(Vector3.UP, float(_face[i])), node.position)
@@ -336,31 +365,56 @@ func step(i: int, p: Dictionary, holder: int, pos: Vector2, vel: Vector2, dt: fl
 		# Back from a tackle: he runs to his spot.
 		var back := clampf(2.0 * gap.length(), GAP_CLOSE, GAP_MAX)
 		_gap[i] = gap - gap.limit_length(back * dt)
+		_round(i, pos, gap, back * dt)
 		if gap.length() > 0.05:
 			vel = vel - gap.normalized() * back
 		node.position = Vector3(pos.x + (_gap[i] as Vector2).x, 0.0, pos.y + (_gap[i] as Vector2).y)
+	if not o.is_empty():
+		# The clip carries him from where the scoop began (its own run): his token runs the
+		# same line at the same pace, and any gap left closes as from a take once it ends.
+		var t0 := float(o["t0"])
+		var k := clampf((float(o["t"]) - t0) / (float(o["touch"]) - t0), 0.0, 1.0)
+		var spot: Vector2 = (o["at"] as Vector2) + (o["off"] as Vector2) * (1.0 - k)
+		_gap[i] = spot - pos
+		node.position = Vector3(spot.x, 0.0, spot.y)
+		_step_once(i, p, o, dt)
+		return
 	var speed := vel.length()
 	var ap: AnimationPlayer = p["anim"]
 	var want := "carry" if i == holder else "idle"
 	var rate := 0.0 if i == holder else 1.0
-	if speed > RUN_FROM:
-		node.rotation.y = atan2(vel.x, vel.y)
+	_still[i] = 0.0 if speed > RUN_FROM else float(_still[i]) + dt
+	# A check in his stride (slow for under STOP_HOLD) is still running: he doesn't stand up
+	# for three frames and set off again.
+	var running: bool = speed > RUN_FROM or (float(_still[i]) < STOP_HOLD
+			and ap.current_animation in ["jog", "carry"] and dt > 0.0)
+	# He turns at a footballer's pivot, never through half a turn in one frame. dt 0 (the
+	# first draw) sets him facing.
+	var turn := TURN * dt if dt > 0.0 else PI
+	if running:
+		if speed > RUN_FROM:
+			node.rotation.y = rotate_toward(node.rotation.y, atan2(vel.x, vel.y), turn)
 		want = "carry" if i == holder else "jog"
-		rate = clampf(speed / JOG_SPEED, 0.45, 2.3)
+		rate = clampf(maxf(speed, RUN_FROM) / JOG_SPEED, 0.45, 2.3)
 	elif i != holder:
 		# Standing: face the ball (the carrier keeps his heading).
 		var to: Vector2 = (director.ball["pos"] as Vector2) - pos
 		if to.length() > 0.5:
-			node.rotation.y = atan2(to.x, to.y)
+			node.rotation.y = rotate_toward(node.rotation.y, atan2(to.x, to.y), turn)
 	if ap.current_animation != want:
-		var at := fmod(float(i) * 0.137, 0.66)
+		# Spread over the 10 s stand loop so a standing line doesn't sway in step.
+		var at := fmod(float(i) * 1.37, 10.0)
 		if ap.current_animation in ["jog", "carry"]:
 			at = ap.current_animation_position
+		if ap.current_animation in ["jog", "carry", "idle"]:
+			# Running to standing and back eases over BLEND: the capture's stride is too real to
+			# cut from mid-air to a stand in one frame.
+			_snap(i, p)
 		ap.play(want)
 		ap.seek(fmod(at, ap.current_animation_length), false)
 	if want == "carry" and rate == 0.0:
-		# Standing with the ball: the carry's first key, both legs under him (poses.carry
-		# at p = 0), not frozen mid-stride.
+		# Standing with the ball: the carry's first frame, a left foot-strike, not a
+		# flight phase.
 		ap.seek(0.0, false)
 	# A zero step leaves a freshly played pose unapplied (a standing holder kept the idle
 	# arms), so a still pose still advances by a sliver.
@@ -370,9 +424,45 @@ func step(i: int, p: Dictionary, holder: int, pos: Vector2, vel: Vector2, dt: fl
 	_look_at_ball(i, i == holder, dt)
 
 
+## A scoop at the ball: the clip at its time, facing where the ball lay when it began.
+func _step_once(i: int, p: Dictionary, o: Dictionary, dt: float) -> void:
+	o["t"] = float(o["t"]) + dt
+	var ap: AnimationPlayer = p["anim"]
+	(p["node"] as Node3D).rotation.y = float(o["yaw"])
+	if ap.current_animation != str(o["anim"]):
+		ap.play(str(o["anim"]))
+	ap.seek(minf(float(o["t"]), ap.current_animation_length), true)
+	_rate[i] = 1.0
+	_ease(i, p, dt)
+	_look_at_ball(i, false, dt)
+
+
+## Out of the scoop: like the end of a take, he is where its hips left him and eases into
+## running or standing, never a slide back.
+## Once his hands have been to it, a ball that has come off them and rolled on ends his scoop:
+## he is not left reaching down to the turf for it (seed 31: 0.6 s after a knock, director
+## 2026-11-16: "the ball never moves without a man's hands on it", nor do his hands without it).
+func _off_hands(i: int, o: Dictionary, holder: int, pos: Vector2) -> bool:
+	if holder == i or float(o["t"]) < float(o["touch"]) + KNOCK_UP:
+		return false
+	var b: Dictionary = director.ball
+	return str(b["mode"]) in ["loose", "dead"] and (b["pos"] as Vector2).distance_to(pos) > KNOCK_OFF
+
+
+func _end_once(i: int) -> void:
+	var p: Dictionary = players[i]
+	var spot: Vector2 = (_once[i] as Dictionary)["at"]
+	(p["node"] as Node3D).position = Vector3(spot.x, 0.0, spot.y)  # where his last pose was drawn
+	var hips := _hips_world(p)
+	_snap(i, p)
+	_face[i] = float((_once[i] as Dictionary)["yaw"])
+	_back[i] = Vector2(hips.origin.x, hips.origin.z)
+	_once[i] = {}
+
+
 ## A man in a pair: the take at the pair's clip time, placed by the pair (and, over the run-in,
 ## the correction from where he really was), his club ring under his hips.
-func _step_pair(i: int, p: Dictionary, dt: float) -> void:
+func _step_pair(i: int, p: Dictionary, dt: float, vel := Vector2.ZERO) -> void:
 	var pr: Dictionary = _in[i]
 	var role: Dictionary = pr["roles"][i]
 	var ap: AnimationPlayer = p["anim"]
@@ -391,7 +481,9 @@ func _step_pair(i: int, p: Dictionary, dt: float) -> void:
 	_ease(i, p, dt)
 	var hips := _rig * (p["skel"] as Skeleton3D).get_bone_global_pose(_pelvis)
 	(p["ring"] as Node3D).position = Vector3(hips.origin.x, 0.03, hips.origin.z)
-	if float(pr["c"]) >= float(pr["len"]):
+	# Up off the ground (the pair's up_s), he goes as soon as the play wants him: the rest of
+	# the clip is the two of them standing (MatchDirector.TAKE_UP lets him move from then).
+	if float(pr["c"]) >= float(pr["len"]) or (float(pr["c"]) >= float(pr["up"]) and vel.length() > MOVE_OFF):
 		_leave(i)
 
 
@@ -405,7 +497,44 @@ func _leave(i: int) -> void:
 	_snap(i, p)
 	_face[i] = _yaw_of(hips.basis)
 	_back[i] = Vector2(hips.origin.x, hips.origin.z)
+	var pr: Dictionary = _in[i]
+	_mate[i] = -1
+	if not pr.is_empty():
+		_mate[i] = int(pr["victim"]) if int(pr["who"]) == i else int(pr["who"])
 	_in[i] = {}
+
+
+## On the run back from a take he goes round the other man of it, never through him: the
+## straight line to his spot can cross the man still getting up beside him (3d view 2,
+## 2026-11-15: their hips came 0.18 m apart). `step_len` is how far he runs this frame.
+func _round(i: int, pos: Vector2, pull: Vector2, step_len: float) -> void:
+	var m := int(_mate[i])
+	if m < 0:
+		return
+	if (_gap[i] as Vector2) == Vector2.ZERO:
+		_mate[i] = -1
+		return
+	var them: Vector2
+	if _back[m] != Vector2.INF:
+		them = _back[m]
+	elif not (_in[m] as Dictionary).is_empty():
+		_mate[i] = -1  # he is in a new take: that one keeps the two apart
+		return
+	else:
+		them = (director.tokens[m]["pos"] as Vector2) + (_gap[m] as Vector2)
+	if pos.distance_to(them) < APART:
+		_mate[i] = -1  # his own spot is beside him: the director keeps those apart
+		return
+	var me: Vector2 = pos + (_gap[i] as Vector2)
+	var off := me - them
+	if off.length() >= APART:
+		return
+	var out := off.normalized() if off.length() > 0.01 else Vector2.RIGHT.rotated(float(i))
+	# Round the side he is already heading, so a run straight at him still gets past.
+	var side := Vector2(-out.y, out.x)
+	if side.dot(-pull) < 0.0:
+		side = -side
+	_gap[i] = them + out * APART + side * step_len * 0.5 - pos
 
 
 ## Hold the pose he is in now, to ease out of over BLEND (_ease).
@@ -537,6 +666,32 @@ func _look_at_ball(i: int, carrying: bool, dt: float) -> void:
 func event(i: int, kind: StringName, at: Vector2, other := -1) -> void:
 	if i < 0 or i >= _in.size():
 		return
+	if kind == &"ground_ball" and (_in[i] as Dictionary).is_empty():
+		# He goes down for the loose ball (MatchDirector "scoop"), with the clip the director
+		# chose for him: on the run at pace, or nearer and slower, gathered from a stand.
+		var node: Node3D = players[i]["node"]
+		var clip := int(director.tokens[i].get("scoop_k", MatchDirector.SCOOP_AT_PACE))
+		var sc: Dictionary = MatchDirector.SCOOPS[clip]
+		if not (players[i]["anim"] as AnimationPlayer).has_animation(str(sc["clip"])):
+			return
+		var here := Vector2(node.position.x, node.position.z)
+		var to := at - here
+		_snap(i, players[i])
+		# The clip starts where the director's touch lands (both from his token's distance).
+		var t0 := MatchDirector.scoop_from((director.tokens[i]["pos"] as Vector2).distance_to(at), clip)
+		var side := float(sc["side"])
+		var yaw := MatchDirector.scoop_yaw(to, clip) if to.length() > 0.05 else node.rotation.y
+		var fw := Vector2(sin(yaw), cos(yaw))
+		var hand := Vector2(-cos(yaw), sin(yaw))   # his right, facing fw
+		# Placed so that his hands meet the ball at the touch; his hips start where they are,
+		# and the difference eases out by the touch.
+		var spot := at - fw * MatchDirector.scoop_lead(clip) - hand * side
+		var run := maxf(float(sc["travel"]) - (float(sc["touch"]) - t0) * float(sc["run"]), 0.0)
+		_once[i] = {"anim": str(sc["clip"]), "t": t0, "t0": t0, "touch": float(sc["touch"]),
+				"end": float(sc["end"]), "yaw": yaw, "at": spot, "off": here - fw * run - spot}
+		return
+	if not (_once[i] as Dictionary).is_empty():
+		_end_once(i)
 	if kind == &"tackle" and other >= 0 and other < _in.size() and not _pairs.is_empty():
 		var pr: Dictionary = _in[i]
 		if pr.is_empty() or int(pr["who"]) != i or int(pr["victim"]) != other:

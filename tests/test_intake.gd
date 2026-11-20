@@ -35,6 +35,7 @@ func run() -> void:
 	_t("_test_real_lists_start")
 	_t("_test_rebuild_walkouts_sign")
 	_t("_test_gen_traits_rates")
+	_t("_test_copied_from_2012_on")
 	# Last: generated classes draw names from a shared counter, and a surname
 	# clash changes an international prospect's role, so running this earlier
 	# moved _test_class_tiers' comparison.
@@ -1101,7 +1102,7 @@ func _test_custom_prospect() -> void:
 	g["weaknesses"] = []
 	var pm := Prospects.make_custom(m, GameState.season_year, seed)
 	var pg := Prospects.make_custom(g, GameState.season_year, seed)
-	_check(int(pm["attr"]["marking"]) > int(pg["attr"]["marking"]) and int(pg["attr"]["goalkicking"]) > int(pm["attr"]["goalkicking"])
+	_check(int(pm["attr"]["contested_marking"]) > int(pg["attr"]["contested_marking"]) and int(pg["attr"]["goalkicking"]) > int(pm["attr"]["goalkicking"])
 			and absi(int(pm["overall"]) - int(pg["overall"])) <= 1,
 			"Strengths reshape the footballer without lifting his overall")
 
@@ -1155,12 +1156,14 @@ func _test_panel_fit() -> void:
 	# The game you play, each way: only when his football is up to it.
 	var mid: Dictionary = base.duplicate(true)
 	mid["role"] = "MID"
-	mid["attr"]["pressure"] = 62
+	# Real pressure: ten points above the average AFL carrier (PlanFit.LEAGUE).
+	var real_pressure := int((PlanFit.LEAGUE["defensive"] as Array)[0]) + 10
+	mid["attr"]["pressure"] = real_pressure
 	_check(RecruitMeeting.fit_line(mid, none, "defensive") == "Suits our pressure game.",
 			"A midfielder with real pressure suits a pressure game")
 	mid["attr"]["pressure"] = 40
 	_check(RecruitMeeting.fit_line(mid, none, "defensive") == "", "Without the pressure, no style line")
-	mid["attr"]["pressure"] = 62
+	mid["attr"]["pressure"] = real_pressure
 	_check(RecruitMeeting.fit_line(mid, none, "balanced") == "", "A balanced plan leans on no kind of player: no style line")
 	var back: Dictionary = base.duplicate(true)
 	back["role"] = "DEF"
@@ -1369,6 +1372,73 @@ func _test_real_lists_start() -> void:
 	_check(GameState.start_mode == "redraft" and not GameState.opening_draft, "A new career is a redraft unless chosen")
 
 
+## Director, 2026-11-17: a generated player is copied from a real player of a season from
+## 2012 to 2026 ("they arent based on players pre-2012", "every other year"), and each
+## copied skill is moved by its own roll of up to 5% ("10% different ... to give a
+## fingerprint", then "5%").
+func _test_copied_from_2012_on() -> void:
+	var pool: Dictionary = Prospects._copy_pool()
+	var years := {}
+	var rows := 0
+	for role in ["DEF", "MID", "FWD", "RUCK"]:
+		var got: Array = (pool.get(role, {}) as Dictionary).get("rows", [])
+		_check(got.size() > 300, "The copy pool has %s player-seasons (%d)" % [role, got.size()])
+		rows += got.size()
+		for r in got:
+			years[int(r["_year"])] = true
+	var ys := years.keys()
+	ys.sort()
+	_check(ys.size() == 15 and int(ys[0]) == 2012 and int(ys[-1]) == 2026,
+			"Every season 2012-2026 is in the copy pool and none earlier (%s, %d rows)" % [str(ys), rows])
+	# The pick: one of the 10 player-seasons of his role nearest his level by overall.
+	var pick_rng := RandomNumberGenerator.new()
+	pick_rng.seed = 41
+	var near := Prospects.copy_candidates("MID", 75.0, pick_rng)
+	var far := 0.0
+	for r in near:
+		far = maxf(far, absf(float(r["_ovr"]) - 75.0))
+	var beyond := 0
+	for r in (pool["MID"] as Dictionary)["rows"]:
+		if absf(float(r["_ovr"]) - 75.0) < far:
+			beyond += 1
+	_check(near.size() == Prospects.SHAPE_NEAREST and beyond <= Prospects.SHAPE_NEAREST,
+			"He is copied from the %d midfielders nearest a 75 (furthest %.0f away)" % [near.size(), far])
+	# Dozens of player-seasons share a whole-number overall: the draw reaches every season,
+	# not only the first in the file.
+	var drawn := {}
+	for n in 200:
+		var r := RandomNumberGenerator.new()
+		r.seed = 1000 + n
+		for c in Prospects.copy_candidates("MID", 75.3, r):
+			drawn[int(c["_year"])] = true
+	_check(drawn.size() >= 12, "Copies of a 75 come from %d of the 15 seasons" % drawn.size())
+	# The fingerprint, on a draft-class player: every skill within 5% of the copied one's.
+	var p := {"id": "copytest", "draft_year": 2030, "generated": true}
+	var seed_rng := RandomNumberGenerator.new()
+	seed_rng.seed = 41
+	var shape: Dictionary = Prospects._copy_for("MID", seed_rng, 75.0, p)
+	var d: Dictionary = near[pick_rng.randi_range(0, near.size() - 1)]
+	var within := true
+	var moved := 0
+	for key in Prospects.ATTR_KEYS:
+		var real := float(d[key])
+		var mine := float(shape[key]) + float(d["_ovr"])
+		if mine < clampf(real * 0.95, 1.0, 99.0) - 0.001 or mine > clampf(real * 1.05, 1.0, 99.0) + 0.001:
+			within = false
+		if absf(mine - real) > 0.001:
+			moved += 1
+	_check(within and moved >= Prospects.ATTR_KEYS.size() - 1,
+			"Each copied skill is moved by its own roll within 5%% (%d of %d moved)" % [moved, Prospects.ATTR_KEYS.size()])
+	var again_rng := RandomNumberGenerator.new()
+	again_rng.seed = 41
+	_check(Prospects._copy_for("MID", again_rng, 75.0, p) == shape, "The same player is copied with the same fingerprint every time")
+	var other := p.duplicate()
+	other["id"] = "copytest2"
+	var other_rng := RandomNumberGenerator.new()
+	other_rng.seed = 41
+	_check(Prospects._copy_for("MID", other_rng, 75.0, other) != shape,
+			"Two players copied from the same real player carry different fingerprints")
+
 
 ## Row 104 (4.Q10): generated players carry the special traits at the
 ## real players' rates. Eight seeded classes (career seed 9000 + year: not the seeds
@@ -1397,7 +1467,9 @@ func _test_gen_traits_rates() -> void:
 	var listed_attr := {}
 	for p in GameDB.list_additions:
 		listed_attr[str(p["id"])] = (p["attr"] as Dictionary).duplicate()
-	_check(real.size() > 600, "The real 2026 lists give the reference rates (%d players)" % real.size())
+	# Players with under 10 senior games are rated from their draft pick (projected), so
+	# about 70 fewer count here than before that rule (director 2026-11-17).
+	_check(real.size() > 590, "The real 2026 lists give the reference rates (%d players)" % real.size())
 	var bands := {}
 	var real_hot := 0
 	var real_bull := 0
@@ -1414,6 +1486,7 @@ func _test_gen_traits_rates() -> void:
 			drafted.append(p.duplicate(true))
 			for k in range(1, 6):
 				Prospects.age_player(p, y + k)
+				Growth.play_games(p, 22)   # a season of ordinary games (Growth)
 			grown.append(p)
 	var hot := 0
 	for i in range(drafted.size()):

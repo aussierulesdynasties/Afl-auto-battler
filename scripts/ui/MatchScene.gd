@@ -120,6 +120,14 @@ var _mom_meter: Control       # MomentumMeter: draws the engine's momentum
 var _mom_word: Label          # who has it, in words
 var _mom_note: Label          # first match only: what it is
 var _mom_bar: Button          # the meter (its foot is the scoreboard's, the line aside)
+## A phone's 3D picture (rules 2.105-2.107): the scoreboard panel gives way to a TV
+## score bug on the picture, and momentum to a thin line along the picture's foot.
+var _bug: ScoreBug
+var _mom_line: Button         # the line's tap (a tap still explains momentum)
+var _mom_line_meter: Control  # MomentumMeter, a few pixels tall
+var _bug_note: Label          # the first match's momentum line, over the picture
+const MOM_LINE_H := 5.0
+const MOM_LINE_TAP := 24.0
 const SCORE_BAND_PAD := 8
 ## The break is the PC sheet (four columns): player cards say their detail
 ## on one line and choices sit PC_CHOICE_H tall (a mouse, not a thumb).
@@ -183,6 +191,7 @@ func _ready() -> void:
 	_build()
 	_pitch.three_d = GameState.match_3d_on()
 	_pitch.setup(_res)
+	_sync_bug()
 	_refresh_rings()
 	# Whose first AFL goal the feed can say, if it comes today (MatchNotes).
 	if _interactive and not _is_practice(_res):
@@ -327,6 +336,9 @@ func _fit_over() -> void:
 	# sheet opened in the first frames is never resized under itself.
 	if _mom_note != null and _mom_note.visible and _mom_bar != null:
 		foot = _mom_bar.get_global_rect().end.y + SCORE_BAND_PAD
+	if _bug_mode():
+		# No scoreboard over the picture: the score is the bug on it (rule 2.107).
+		foot = _pitch.get_global_rect().position.y
 	# A phone on its side keeps the whole height; a PC's open over the oval (_dock).
 	_over.offset_top = foot - get_global_rect().position.y if _stacked else 0.0
 	_fit_docked()
@@ -540,7 +552,90 @@ func _momentum_bar() -> Control:
 	return box
 
 
+## A phone held upright with the 3D picture: the score bug and the momentum line.
+func _bug_mode() -> bool:
+	return _stacked and not _pc and _pitch != null and _pitch.three_d
+
+
+## The score bug and the momentum line on the picture, or the scoreboard panel
+## above it: one or the other, never both.
+func _sync_bug() -> void:
+	var on := _bug_mode()
+	if _board != null and is_instance_valid(_board):
+		_board.visible = not on
+	if not on:
+		for n: Node in [_bug, _mom_line, _bug_note]:
+			if n != null and is_instance_valid(n):
+				n.queue_free()
+		_bug = null
+		_mom_line = null
+		_mom_line_meter = null
+		_bug_note = null
+		_fit_over.call_deferred()
+		return
+	if _bug == null or not is_instance_valid(_bug):
+		_bug = ScoreBug.new().setup(str(_res["home"]), str(_res["away"]))
+		_mom_line = Button.new()
+		_mom_line.name = "MomentumLine"
+		_mom_line.flat = true
+		_mom_line.focus_mode = Control.FOCUS_NONE
+		_mom_line.pressed.connect(_show_momentum_info)
+		var shade := ColorRect.new()
+		shade.name = "Shade"
+		shade.color = Color(0, 0, 0, 0.55)
+		shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_mom_line.add_child(shade)
+		_mom_line_meter = MomentumMeter.new()
+		_mom_line_meter.name = "MomentumMeter"
+		_mom_line_meter.call("setup", UiKit.score_colour(str(_res["home"])), UiKit.score_colour(str(_res["away"])))
+		_mom_line_meter.custom_minimum_size = Vector2.ZERO
+		_mom_line.add_child(_mom_line_meter)
+		_bug_note = UiKit.lbl("", UiKit.SMALL, Color.WHITE)
+		_bug_note.name = "MomentumNoteOnPicture"
+		_bug_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_bug_note.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		ClubDuel.on_colour(_bug_note)
+		_bug_note.visible = false
+		# Under the bench's drawer, so its tab keeps every tap it had.
+		var at := _pitch.bench_drawer().get_index() if _pitch.bench_drawer() != null else _pitch.get_child_count()
+		for n: Control in [_mom_line, _bug, _bug_note]:
+			_pitch.add_child(n)
+			_pitch.move_child(n, at)
+		if not _pitch.resized.is_connected(_place_bug):
+			_pitch.resized.connect(_place_bug)
+	_place_bug()
+	_paint_clock()
+	_paint_momentum()
+	_fit_over.call_deferred()
+
+
+## The bug in the middle of the picture's foot, just above the momentum line,
+## which runs the picture's whole width along its bottom edge.
+func _place_bug() -> void:
+	if _bug == null or not is_instance_valid(_bug) or _pitch == null:
+		return
+	var s := _pitch.size
+	var line_h := float(UiKit.px(MOM_LINE_H))
+	var tap := float(UiKit.px(MOM_LINE_TAP))
+	_mom_line.position = Vector2(0, s.y - tap)
+	_mom_line.size = Vector2(s.x, tap)
+	var shade := _mom_line.get_node("Shade") as Control
+	shade.position = Vector2(0, tap - line_h)
+	shade.size = Vector2(s.x, line_h)
+	_mom_line_meter.position = Vector2(0, tap - line_h)
+	_mom_line_meter.size = Vector2(s.x, line_h)
+	var b := _bug.get_combined_minimum_size()
+	_bug.size = b
+	# Beside the Bench tab's pill, centred on it, as on the board he chose (rule 2.107).
+	var pill := BenchDrawer.pill_in(s)
+	_bug.position = Vector2(pill.end.x + 6.0, round(pill.get_center().y - b.y / 2.0))
+	_bug_note.size = Vector2(s.x - 16.0, 0)
+	_bug_note.position = Vector2(8.0, _bug.position.y - _bug_note.get_combined_minimum_size().y - 6.0)
+
+
 func _paint_momentum() -> void:
+	if _mom_line_meter != null and is_instance_valid(_mom_line_meter):
+		_mom_line_meter.call("show_value", _momentum)
 	if _mom_meter == null or not is_instance_valid(_mom_meter):
 		return
 	_mom_meter.call("show_value", _momentum)
@@ -556,6 +651,10 @@ func _paint_momentum() -> void:
 	if _mom_note.visible and _mom_note.modulate.a < 1.0 and absf(_momentum) >= MOMENTUM_EVEN:
 		GameState.set_setting("seen_momentum_intro", true)
 		_mom_note.modulate.a = 1.0
+	if _bug_note != null and is_instance_valid(_bug_note):
+		_bug_note.text = _mom_note.text
+		_bug_note.visible = _mom_note.visible
+		_bug_note.modulate.a = _mom_note.modulate.a
 
 
 func _show_momentum_info() -> void:
@@ -1952,6 +2051,8 @@ func _mount_one_line(c: Dictionary) -> void:
 		put.call(page, legs)
 	if not wide:
 		page.add_child(_skip_note(q, false))
+		if facts != null and facts.get_parent() == page:
+			_fit_break_facts(facts)
 		for key in order:
 			var k := str(key)
 			(row_of[key] as Button).pressed.connect(func(): _open_break_sheet(k, str(CALL_TITLES[k]), [bodies[k]], store))
@@ -2342,17 +2443,54 @@ func _quarter_view(q: int) -> Control:
 		room -= 1
 	lines = lines.slice(0, room)
 	var opp_last := _opp_last_plan()
+	var rival_at := -1
 	if opp_last != "":
 		lines = lines.slice(0, room - 1)
 		# What they played, their answer to yours, their mood (RivalRead).
+		rival_at = lines.size()
 		lines.append(RivalRead.break_line(GameState.pending_sim, _my_side))
 	if lines.is_empty():
 		lines.append("An even quarter.")
-	for t in lines:
-		var l := _say(str(t), UiKit.BODY, UiKit.TEXT)
+	for i in lines.size():
+		var l := _say(str(lines[i]), UiKit.BODY, UiKit.TEXT)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		if i == rival_at:
+			l.set_meta("rival", true)
 		v.add_child(l)
 	return v
+
+
+## A phone's break fits its sheet whatever the quarter threw up. Each fact can
+## run to two lines; when together they would push the page into scrolling,
+## the last ones give up their place, as a weather turn takes one (row 160).
+## Their plan (the rival's line) and the first fact always stay.
+func _fit_break_facts(facts: Control) -> void:
+	for i in range(2):
+		await get_tree().process_frame
+	while is_instance_valid(facts):
+		var sc: Node = facts.get_parent()
+		while sc != null and not (sc is ScrollContainer):
+			sc = sc.get_parent()
+		if sc == null:
+			return
+		var body: Control = null
+		for ch in sc.get_children():
+			if ch is Control and not (ch is ScrollBar):
+				body = ch
+				break
+		if body == null or body.get_combined_minimum_size().y <= (sc as Control).size.y + 1.0:
+			return
+		var drop: Control = null
+		var kept := 0
+		for ch in facts.get_children():
+			if (ch as Control).visible and not ch.has_meta("rival"):
+				kept += 1
+				drop = ch
+		if kept <= 1:
+			return
+		drop.visible = false
+		for i in range(2):
+			await get_tree().process_frame
 
 
 ## What a call can do about each of their players now: the defender on a key
@@ -3793,6 +3931,10 @@ func _set_clock_word(word: String) -> void:
 ## down in size, then to its shorter form, until it fits between the scores.
 ## The scores never give up room to it.
 func _paint_clock() -> void:
+	if _bug != null and is_instance_valid(_bug):
+		var words: Array = CLOCK_WORDS.get(_clock_word, [])
+		_bug.show_score(_shown_goals[0] * 6 + _shown_behinds[0], _shown_goals[1] * 6 + _shown_behinds[1],
+				_clock_text(_shown_q, _shown_min) if words.is_empty() else str(words[words.size() - 1]))
 	if _clock == null or not is_instance_valid(_clock):
 		return
 	var base := int(_clock.get_meta("fs", 17))
@@ -4790,6 +4932,7 @@ func _reflow() -> void:
 		_fit_side_panel()
 	_board = _scoreboard()
 	_place_board()
+	_sync_bug()
 	_paint_scoreboard()
 	_paint_live_stats()
 	_fit_docked.call_deferred()

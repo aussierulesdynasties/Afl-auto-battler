@@ -204,7 +204,7 @@ func _test_quarter_facts(res: Dictionary) -> void:
 	for t in all:
 		var low := str(t).to_lower()
 		for w in ADVICE:
-			if low.contains(w):
+			if _has_word(low, w):
 				bad = str(t)
 		for key in CoachReport.PLAN_NAMES:
 			if str(t).contains(str(CoachReport.PLAN_NAMES[key])) and key != "balanced":
@@ -250,7 +250,7 @@ func _test_half_time_keys() -> void:
 			for k in keys:
 				var low := str(k).to_lower()
 				for w in ADVICE:
-					if low.contains(w):
+					if _has_word(low, w):
 						bad = str(k)
 				for key in CoachReport.PLAN_NAMES:
 					if key != "balanced" and str(k).contains(str(CoachReport.PLAN_NAMES[key])):
@@ -286,7 +286,7 @@ func _test_full_time() -> void:
 			for t in f:
 				var low := str(t).to_lower()
 				for w in ADVICE:
-					if low.contains(w):
+					if _has_word(low, w):
 						bad = str(t)
 				if low.contains("pts") or low.contains("expected"):
 					bad = str(t)
@@ -575,7 +575,7 @@ func _test_report_glance() -> void:
 		for n in g["notes"]:
 			var t := str(n)
 			for w in ADVICE:
-				if t.to_lower().contains(w):
+				if _has_word(t.to_lower(), w):
 					bad = t
 		for group in ["best", "lift", "danger"]:
 			for p in g[group]:
@@ -646,7 +646,7 @@ const PALETTE := {
 	"WCE": ["#003087", "#F2A900", "#FFFFFF"],
 	"WBD": ["#BD002B", "#20539D", "#FFFFFF"],
 	"TAS": ["#2C5530", "#E8D44D", "#C2274D"],
-	"CANB": ["#1B3B6F", "#FFFFFF", "#F5B301"],
+	"CANB": ["#143868", "#F3EBD6", "#A28354"],
 }
 
 
@@ -857,8 +857,10 @@ func _test_comeback_telling() -> void:
 			_check(not str(f).contains("won the third quarter"), "No repeat of the third quarter's score (%s)" % str(f))
 		for l in [bl, line]:
 			var low := str(l).to_lower()
-			for w in ADVICE + ENGINE:
-				_check(not low.contains(w), "No advice or engine words in '%s' (%s)" % [l, w])
+			for w in ADVICE:
+				_check(not _has_word(low, w), "No advice words in '%s' (%s)" % [l, w])
+			for w in ENGINE:
+				_check(not low.contains(w), "No engine words in '%s' (%s)" % [l, w])
 	# A turn needs the quarters to add up and the bar from Headlines.
 	var fake := _hl("GEE", "MEL", [[10, 20], [6, 22], [30, 6], [20, 10]])
 	_check(ComebackTelling.turn_line(fake, 0) == "", "No quarter goals, no turn claimed")
@@ -977,3 +979,8 @@ func _test_comeback_sentences() -> void:
 	var plain := _full([[3, 2, 0, 0], [2, 2, 0, 0], [3, 2, 0, 0], [2, 2, 0, 0]], "GEE", "MEL", [none, none])
 	_check(ComebackTelling.turn_line(plain, 0) == "" and str(MatchNotes.match_factors(plain, 0)[0]).find("turned it") < 0,
 			"An ordinary game has no turn sentence")
+
+
+## `w` starts a word in `low` ("lean " is advice; "McLean was" is a name).
+func _has_word(low: String, w: String) -> bool:
+	return (" " + low.replace("(", " ").replace("\"", " ")).contains(" " + w)

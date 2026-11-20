@@ -49,6 +49,11 @@ const APPEARANCE_CSV := "res://data/player_appearance.csv"
 ## Where each 2026 player came from (a state, or INT), from his recruiting source;
 ## built by tools/build_player_origin.py. A blank state is left unset.
 var ORIGIN_CSV := "res://data/player_origin_2026.csv"
+## Who is Indigenous (director, 2026-11-17, "Add the record", for the bonding
+## deck's cultural day): the AFL Players' Association's 2026 Indigenous Player
+## Map and the AFL's academy squads, one cited row per player. A player on it
+## carries p["indigenous"]; nobody else does.
+var INDIGENOUS_CSV := "res://data/player_indigenous_2026.csv"
 ## Curated looks needed before their mix replaces Appearance.DEFAULT_SKIN_MIX.
 const MIX_FROM := 100
 
@@ -148,6 +153,11 @@ var LIST_ADDITIONS_CSV := "res://data/list_additions_2026.csv"
 ## they are rated from that record through Ratings.derive_all, like any listed
 ## player, not as draft prospects.
 var LIST_ADDITION_STATS_CSV := "res://data/list_additions_stats.csv"
+## Each rated player's season the director's way (interview 2026-11-15,
+## tools/wheelo/build.py): his AFL position, his overall (2012 on, his AFL
+## Player Rating against his position) and his 16 skills, each against his
+## position. Read over Ratings.derive_all by _apply_rating_stats.
+var RATING_STATS_CSV := "res://data/rating_stats_2026.csv"
 ## Which players who played a 2026 game were on a rookie list, not the senior
 ## list (data/list_types_2026.csv, from DraftGuru's 2026 lists, club by club):
 ## "rookie" (Category A) or "cat_b" (Category B). Everyone else in
@@ -169,7 +179,8 @@ var DEPARTURES_CSV := "res://data/departures_2026.csv"
 var club_moves := {}
 var CLUB_MOVES_CSV := "res://data/club_moves_2026.csv"
 var late_draftees := []    # generated future classes registered at runtime
-## The launch lists at their peak, for "Plays like" (PlaysLike.build_pool): taken at
+## The launch lists at their peak and the other 2012-2026 seasons, for "Plays like"
+## (PlaysLike.build_pool, add_past_seasons): the lists taken at
 ## load, before a career ages anyone, so the comparison never moves.
 var plays_like_pool := []
 var appearance := {}       # "first|last|dob" -> {skin, hair, status, club}: curated looks
@@ -178,8 +189,7 @@ var loaded := false
 ## True from a reload until a career takes the data (GameState.reset() clears it):
 ## a career mutates the player dicts in place, so only an untouched load is reused.
 var pristine := false
-## The 2026 league's mean overall. Each rollover re-anchors the league to it
-## (Prospects.renormalise_league), so ratings stay relative to the league.
+## The 2026 league's mean overall and spread.
 var baseline_overall := 0.0
 var baseline_spread := 0.0   # standard deviation of the 2026 overalls
 
@@ -249,14 +259,12 @@ func reload(dataset := Datasets.DEFAULT) -> void:
 	_apply_list_types(players)
 	_load_appearance()
 	_apply_origin(players)
-	Ratings.era_anchors = {}
+	var past_start := DATA_SEASON != int(Datasets.get_set(Datasets.DEFAULT).get("data_season", DATA_SEASON))
+	Ratings.listed_lines = Ratings.PAST_LISTED_LINES if past_start else Ratings.TODAY_LISTED_LINES
 	Ratings.set_unrecorded(Ratings.find_unrecorded(players))
 	Ratings.derive_all(players)
-	# A past start scales each position on its own data season (director
-	# 2026-11-13, "Scale each position per season"); a set on today's season
-	# (2026's, or a test copy of it) keeps 2026's.
-	if DATA_SEASON != int(Datasets.get_set(Datasets.DEFAULT).get("data_season", DATA_SEASON)):
-		Ratings.fit_era_anchors(players)
+	_rating_stats = _load_rating_stats()
+	_apply_rating_stats(players)
 	_apply_history(players)
 	for p in players:
 		Ratings.rate_on_record(p, DATA_SEASON)
@@ -277,8 +285,10 @@ func reload(dataset := Datasets.DEFAULT) -> void:
 			players_by_club[p["club"]] = []
 		players_by_club[p["club"]].append(p)
 	Prospects.forget_cache()
+	_rate_few_games(players)
 	draftees = _load_draftees()
 	list_additions = _load_list_additions()
+	_apply_indigenous(players, list_additions, draftees)
 	# List additions become real players here, so the hand-set numbers reach
 	# them too; a row that matched nobody in either list is reported.
 	_apply_ovr_overrides(list_additions)
@@ -288,6 +298,7 @@ func reload(dataset := Datasets.DEFAULT) -> void:
 	club_moves = _load_club_moves()
 	mark_unicorns(players + draftees)
 	plays_like_pool = PlaysLike.build_pool(players)
+	PlaysLike.add_past_seasons(plays_like_pool, DATA_SEASON)
 	late_draftees = []
 	# Last, so every AFL list, rating and alias above is drawn as before.
 	_load_state_leagues()
@@ -322,8 +333,10 @@ func _use_dataset(id: String, row: Dictionary) -> void:
 	DRAFTEES_CSV = str(row.get("draftees", ""))
 	HISTORY_CSV = str(row.get("history", ""))
 	ORIGIN_CSV = str(row.get("origin", ""))
+	INDIGENOUS_CSV = str(row.get("indigenous", ""))
 	LIST_ADDITIONS_CSV = str(row.get("list_additions", ""))
 	LIST_ADDITION_STATS_CSV = str(row.get("list_addition_stats", ""))
+	RATING_STATS_CSV = str(row.get("rating_stats", ""))
 	LIST_TYPES_CSV = str(row.get("list_types", ""))
 	DEPARTURES_CSV = str(row.get("departures", ""))
 	CLUB_MOVES_CSV = str(row.get("club_moves", ""))
@@ -441,6 +454,10 @@ func club_guernsey(code: String) -> Dictionary:
 	# gives the oval's discs and the colours).
 	if clubs.get(code, {}).has("kit"):
 		out["kit_cell"] = int(clubs[code]["kit"])
+	# The club's current home guernsey as the 3D match player wears it (kit_today), while the
+	# club wears clubs.csv's own guernsey (not a Legacy season's).
+	elif _today_kits().has(code) and str(clubs.get(code, {}).get("guernsey", "")) 			== str((_club_base.get(code, {}) as Dictionary).get("guernsey", clubs.get(code, {}).get("guernsey", ""))):
+		out["today"] = _today_kits()[code]
 	return out
 
 
@@ -794,6 +811,7 @@ func _load_list_additions() -> Array:
 		out.append(p)
 	if not established.is_empty():
 		Ratings.derive_all(established, players)
+		_apply_rating_stats(established)
 		for p in established:
 			# A position the list gives him is his first position, whatever
 			# one season's numbers read (Powell-Pepper is a midfielder).
@@ -801,6 +819,8 @@ func _load_list_additions() -> Array:
 			if listed in ["RUCK", "MID", "DEF", "FWD"] and listed != str(p["role"]):
 				p["role"] = listed
 				p["role2"] = Ratings.assign_secondary(p)
+				if p.has("apos"):
+					p["attr"] = Prospects.fit_attributes(p["attr"], listed, float(p["overall"]), float(p["gm"]))
 				p["overall"] = Ratings.rate_overall(p["attr"], listed, float(p["gm"]))
 				p["value"] = Ratings.salary_value(int(p["overall"]))
 			p["career"] = Career.from_source("?")
@@ -1045,6 +1065,50 @@ func _apply_origin(list: Array) -> void:
 			p["home_state"] = state_of[key]
 
 
+## Mark p["indigenous"] from data/player_indigenous_2026.csv: a listed player
+## on club, number, first and last name (as the origin file); a list addition
+## (no number on the record) on club and name; a draft-class prospect on his
+## name. A player with no row is not marked.
+func _apply_indigenous(listed: Array, additions: Array, class_rows: Array) -> void:
+	if INDIGENOUS_CSV == "" or not FileAccess.file_exists(INDIGENOUS_CSV):
+		return
+	var rows := _read_rows(INDIGENOUS_CSV)
+	if rows.size() < 2:
+		return
+	var header: Array = rows[0]
+	var idx := {}
+	for j in range(header.size()):
+		idx[str(header[j]).strip_edges()] = j
+	for key in ["club", "num", "first", "last"]:
+		if not idx.has(key):
+			push_error("GameDB: %s has no '%s' column" % [INDIGENOUS_CSV, key])
+			return
+	var full := {}
+	var by_club := {}
+	var by_name := {}
+	for i in range(1, rows.size()):
+		var cells: Array = rows[i]
+		if cells.size() < header.size():
+			continue
+		var club := str(cells[idx["club"]]).strip_edges()
+		var num := str(cells[idx["num"]]).strip_edges()
+		var name := "%s|%s" % [str(cells[idx["first"]]).strip_edges(), str(cells[idx["last"]]).strip_edges()]
+		if num != "":
+			full["%s|%s|%s" % [club, num, name]] = true
+		else:
+			by_club["%s|%s" % [club, name]] = true
+			by_name[name] = true
+	for p in listed:
+		if full.has("%s|%d|%s|%s" % [str(p["club"]), int(p["num"]), str(p["first"]), str(p["last"])]):
+			p["indigenous"] = true
+	for p in additions:
+		if by_club.has("%s|%s|%s" % [str(p["club"]), str(p["first"]), str(p["last"])]):
+			p["indigenous"] = true
+	for p in class_rows:
+		if by_name.has("%s|%s" % [str(p["first"]), str(p["last"])]):
+			p["indigenous"] = true
+
+
 ## data/player_appearance.csv: first,last,dob,club,skin (1-6),hair (a HAIR_KEYS
 ## key),status (draft / unsure / confirmed),source. Rows that don't parse are
 ## skipped with an error; a missing file just means no curated looks yet.
@@ -1075,6 +1139,55 @@ func _load_appearance() -> void:
 		counts[skin] += 1.0
 	if appearance.size() >= MIX_FROM:
 		skin_mix = counts
+
+
+## RATING_STATS_CSV keyed "club|first|last" (see there).
+var _rating_stats := {}
+
+
+func _load_rating_stats() -> Dictionary:
+	var out := {}
+	if RATING_STATS_CSV == "" or not FileAccess.file_exists(RATING_STATS_CSV):
+		return out
+	for row in _read_dicts(RATING_STATS_CSV):
+		out["%s|%s|%s" % [row.get("club", ""), row.get("first", ""), row.get("last", "")]] = row
+	return out
+
+
+## Each player the rating file names takes its skills, his AFL position (apos)
+## and its overall; his skills are then nudged together so the game's overall
+## formula (Ratings.rate_overall) gives that overall on his games, so he plays
+## to it. A player it does not name keeps what Ratings.derive_all gave him.
+## Then the director's named corrections (Ratings.ATTR_ADJUSTMENTS), unless
+## `adjust` is false (the ratings suite's uncorrected copy).
+func _apply_rating_stats(list: Array, adjust := true) -> void:
+	for p in list:
+		var row: Dictionary = _rating_stats.get("%s|%s|%s" % [p.get("club", ""), p.get("first", ""), p.get("last", "")], {})
+		if row.is_empty():
+			continue
+		var a := {}
+		for k in Skills.KEYS:
+			a[k] = clampi(int(row.get(k, 50)), 1, 99)
+		var ovr := float(row.get("ovr", p.get("overall", 60)))
+		var games := float(p.get("gm", 14))
+		var role := str(p.get("role", "MID"))
+		p["apos"] = str(row.get("apos", ""))
+		a = Prospects.fit_attributes(a, role, ovr, games)
+		# A skill his era never recorded stays at his position's average and
+		# shows as a dash (director 2026-11-15, "I never okayed invented stats").
+		for k in Ratings.unknown_attrs:
+			a[k] = 50
+		if Ratings.unknown_attrs.is_empty():
+			p.erase("attr_unrecorded")
+		else:
+			p["attr_unrecorded"] = Ratings.unknown_attrs.keys()
+		var adj := float(Ratings.ATTR_ADJUSTMENTS.get("%s|%s %s" % [p.get("club", ""), p.get("first", ""), p.get("last", "")], 1.0))
+		if adjust and adj != 1.0:
+			for k in a:
+				a[k] = clampi(int(round(float(a[k]) * adj)), 1, 99)
+		p["attr"] = a
+		p["overall"] = Ratings.rate_overall(a, role, games)
+		p["value"] = Ratings.salary_value(int(p["overall"]))
 
 
 func _read_rows(path: String) -> Array:
@@ -1382,6 +1495,41 @@ func season_kit(code: String, year: int) -> Dictionary:
 		if int(k["from"]) <= year and year <= int(k["to"]):
 			return k
 	return {}
+
+
+## Every club's current home guernsey for the 3D match player (tools/kits/kits_today.py draws
+## both from tools/kits/kits_today.txt): code -> {cell, collar, collar_cm, armholes, armholes_cm, shorts},
+## a binding's colour Color(0, 0, 0, 0) where the guernsey has none.
+const KITS_TODAY_CSV := "res://data/kits_today.csv"
+const KITS_TODAY_ATLAS := "res://assets/oval3d/kits_today.png"
+const KITS_TODAY_PER_ROW := 4
+var _kits_today = null
+var _kits_today_tex: Texture2D = null
+
+
+func _today_kits() -> Dictionary:
+	if _kits_today == null:
+		_kits_today = {}
+		if FileAccess.file_exists(KITS_TODAY_CSV):
+			for r in _read_dicts(KITS_TODAY_CSV):
+				var trim := func(c: String) -> Color: return Color.from_string(c, Color(0, 0, 0, 0)) if c != "" else Color(0, 0, 0, 0)
+				_kits_today[str(r["code"])] = {"cell": int(r["cell"]), "collar": trim.call(str(r.get("collar", ""))),
+						"collar_cm": float(str(r.get("collar_cm", "0"))), "armholes": trim.call(str(r.get("armholes", ""))),
+						"armholes_cm": float(str(r.get("armholes_cm", "0"))), "shorts": trim.call(str(r.get("shorts", ""))),
+						"number": trim.call(str(r.get("number", ""))), "number_edge": trim.call(str(r.get("number_edge", "")))}
+	return _kits_today
+
+
+## The current guernseys' atlas and its cells a row and rows (kits_today.py: 4 a row, square sides).
+func kits_today_atlas() -> Texture2D:
+	if _kits_today_tex == null and ResourceLoader.exists(KITS_TODAY_ATLAS):
+		_kits_today_tex = load(KITS_TODAY_ATLAS)
+	return _kits_today_tex
+
+
+func kits_today_grid() -> Vector2i:
+	var t := kits_today_atlas()
+	return Vector2i(KITS_TODAY_PER_ROW, maxi(1, int(t.get_height()) * KITS_TODAY_PER_ROW * 2 / int(t.get_width())) if t != null else 1)
 
 
 ## The kit atlas (loaded once; null when the file is missing).
@@ -1940,6 +2088,26 @@ func _apply_history_rows(list: Array) -> void:
 			p["history"] = hist
 
 
+## Players of under Prospects.FEW_GAMES senior games are rated from their
+## draft pick, not their few games (director 2026-11-17): projected for life.
+## Run once the lists exist (the shapes are borrowed from them); the hand-set
+## numbers are applied again on top, as for everyone.
+func _rate_few_games(list: Array) -> void:
+	var few := []
+	for p in list:
+		if bool(p.get("projected", false)) or bool(p.get("generated", false)):
+			continue
+		var g := Prospects.senior_games(p, DATA_SEASON)
+		if g < 0 or g >= Prospects.FEW_GAMES:
+			continue
+		Prospects.project_few_games(p)
+		Potential.assign(p)
+		few.append(p)
+	if not few.is_empty():
+		_apply_ovr_overrides(few)
+		_apply_potential_overrides(few)
+
+
 ## Hand-set OVR (data/ovr_overrides.csv), matched on club + first + last name.
 ## Every attribute is shifted by the same amount (capped 1-99) until the rating
 ## in his own position lands on the target, so his profile keeps its gaps. POT
@@ -2109,11 +2277,17 @@ static func set_player_ovr(p: Dictionary, target: int) -> bool:
 	return true
 
 
-## Hand-set potentials, matched on club + first + last name. An unmatched row
-## is reported rather than silently ignored, so a typo is easy to spot.
+## Hand-set potentials, matched on club + first + last name: a number, or a
+## relative row (+5% or -5%) that scales the POT he would otherwise have. An
+## unmatched row is reported rather than silently ignored, so a typo is easy to spot.
 func _apply_potential_overrides(list: Array) -> void:
 	_each_override_row(POTENTIAL_CSV, "potential", list, func(p, cell):
-		Potential.set_override(p, int(cell)))
+		var text: String = str(cell).strip_edges()
+		if (text.begins_with("+") or text.begins_with("-")) and text.ends_with("%"):
+			var mult := 1.0 + text.trim_suffix("%").to_float() / 100.0
+			Potential.set_override(p, int(round(float(p.get("potential", p["overall"])) * mult)))
+		else:
+			Potential.set_override(p, int(text)))
 
 
 func _hex(s) -> Color:

@@ -1,0 +1,1 @@
+"/c/Users/DANTE/Desktop/Godot_v4.7.2-stable_win64.exe/Godot_v4.7.2-stable_win64_console.exe" --path "C:/Users/DANTE/AppData/Local/Temp/claude/42b104df8233c568/d9709e24-758e-41a6-a6a0-86482f4b0f32/scratchpad/manuka/gd" -s close.gd --resolution 1280x720

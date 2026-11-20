@@ -97,9 +97,8 @@ func _test_league_draft_balance() -> void:
 			if str(p["real_name"]) == "Max Gawn":
 				gawn_pick = int(e["pick"])
 		_check(first_round_rucks <= 4, "Round one is not all rucks (%d)" % first_round_rucks)
-		# A club's horizon (director, 2026-10-07): a 35-year-old is a first-round
-		# pick only for a club going for the flag now; the best ruck under 30
-		# goes in the first two rounds.
+		# A club's horizon (director, 2026-10-07): the best ruck under 30 goes in
+		# the first two rounds.
 		var gawn_club := ""
 		var young_ruck_pick := 999
 		var best_young := -1
@@ -110,11 +109,19 @@ func _test_league_draft_balance() -> void:
 			if str(p["role"]) == "RUCK" and float(p.get("age", 30)) < 30.0 and int(p["overall"]) > best_young:
 				best_young = int(p["overall"])
 				young_ruck_pick = int(e["pick"])
-		_check(gawn_pick > 18 or d.club_horizon(gawn_club) == "now",
-				"Max Gawn (35) goes in round one only to a club going for the flag now (pick %d, %s)" % [gawn_pick, d.club_horizon(gawn_club)])
+		# Director 2026-11-17 ("Let Port take him"): a building club may take
+		# him in round one too; the draft AI is not changed to stop it.
+		_check(gawn_pick > 0, "Max Gawn (35) is drafted (pick %d, %s)" % [gawn_pick, d.club_horizon(gawn_club)])
 		_check(young_ruck_pick <= 36, "The best ruck under 30 goes in the first two rounds (pick %d)" % young_ruck_pick)
+		# Pick one is elite: a star now, or, for a club building (director,
+		# 2026-10-07: "building clubs favour development"), a kid with an elite
+		# ceiling. Main's own drafts take a kid first in 7 of 20 seeds.
 		var first: Dictionary = GameDB.player_by_id(str(d.pick_history[0]["player_id"]))
-		_check(int(first["overall"]) >= 88, "Pick one is an elite player (%d)" % int(first["overall"]))
+		var first_club := str(d.pick_history[0]["club"])
+		_check(int(first["overall"]) >= 88
+				or (d.club_horizon(first_club) == "build" and int(first.get("potential", 0)) >= 88),
+				"Pick one is an elite player, or an elite prospect for a club building (%s %d, POT %d, %s)"
+				% [str(first["real_name"]), int(first["overall"]), int(first.get("potential", 0)), d.club_horizon(first_club)])
 
 
 ## Rival clubs judge players through their own scouting opinion (Draft
@@ -300,75 +307,57 @@ func _test_intake_values_potential() -> void:
 func _test_rivals_train() -> void:
 	GameState.reset()
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
-	# Your players held at their season limit: they bank XP, so any attribute
-	# change would be the AI's.
-	for p in GameState.my_list:
-		p["season_start_ov"] = int(p["overall"]) - 30
 	var rival: Array = GameState.season.lists["COL"]
 	var before := {}
 	for p in rival:
 		before[str(p["id"])] = (p["attr"] as Dictionary).duplicate()
+	# Eight rounds: rivals bank XP after every game and spend it as they go.
+	# His pace (director 2026-11-17) buys a stat point every few games.
+	for i in range(8):
+		GameState.advance()
+	var trained := 0
+	for p in rival:
+		if p["attr"] != before[str(p["id"])]:
+			trained += 1
+	_check(trained > rival.size() / 2, "Rival players train after games (%d of %d)" % [trained, rival.size()])
+	# The rivals' round pays and spends only theirs: a rival game leaves your
+	# players' banks and attributes as they were.
 	var mine_attr := {}
 	var mine_xp := {}
 	for p in GameState.my_list:
 		mine_attr[str(p["id"])] = (p["attr"] as Dictionary).duplicate()
-		mine_xp[str(p["id"])] = int(p.get("xp", 0))
-	# Three rounds: rivals bank XP after every game and spend it as they go.
-	for i in range(3):
-		GameState.advance()
-	var trained := 0
-	var past_pot := 0
-	for p in rival:
-		if p["attr"] != before[str(p["id"])]:
-			trained += 1
-		# The last point bought can tip a player one over, never more.
-		if p["attr"] != before[str(p["id"])] and int(p["overall"]) > int(p["potential"]) + 1:
-			past_pot += 1
-	_check(trained > rival.size() / 2, "Rival players train after games (%d of %d)" % [trained, rival.size()])
-	_check(past_pot == 0, "Rivals never train a player well past his POT (%d)" % past_pot)
-	# Training is the only thing that spends XP, and held at the limit it
-	# cannot: every player's XP only grows, and no attribute moves - bar the
-	# ones a weekly event sets directly (patience: +2 discipline).
+		mine_xp[str(p["id"])] = float(p.get("xp", 0.0)) + float(p.get("xp_match", 0.0))
+	GameState._train_rivals([{"home": "COL", "away": "CAR", "players": {}, "label": "test"}])
 	var untouched := true
 	var earned := false
 	for p in GameState.my_list:
 		var id := str(p["id"])
-		if int(p.get("xp", 0)) < int(mine_xp[id]):
+		if not is_equal_approx(float(p.get("xp", 0.0)) + float(p.get("xp_match", 0.0)), float(mine_xp[id])):
 			untouched = false
-		for k in p["attr"]:
-			if not EVENT_ATTRS.has(k) and p["attr"][k] != mine_attr[id][k]:
-				untouched = false
-		if int(p.get("xp", 0)) > 0:
+		if p["attr"] != mine_attr[id]:
+			untouched = false
+		if p.has("xp_games") and int(p["xp_games"]) > 0:
 			earned = true
 	_check(untouched, "The AI never spends your players' XP")
 	_check(earned, "Your players still bank their XP")
 	var p0: Dictionary = (rival[0] as Dictionary).duplicate(true)
 	# Club-plan training only: a rival learning a position spends toward that
-	# (tested in test_training), and its season's cap is the project's.
-	for k in ["project", "project_year", "project_cap"]:
+	# (tested in test_training).
+	for k in ["project", "project_year"]:
 		p0.erase(k)
-	# POT prices a rival's training exactly as it prices yours: no stop at it.
+	# No stop at POT for a rival either (director 2026-11-17).
 	var at_pot := p0.duplicate(true)
 	at_pot["xp"] = 100000
 	at_pot["potential"] = int(at_pot["overall"])
 	at_pot["season_start_ov"] = int(at_pot["overall"])
 	GameState.ai_spend_xp(at_pot)
 	_check(int(at_pot["overall"]) > int(at_pot["potential"]),
-			"With XP to burn, a rival can train past his POT, at its price")
-	var capped := p0.duplicate(true)
-	capped["xp"] = 100000
-	capped["potential"] = int(capped["overall"]) + 12
-	capped["season_start_ov"] = int(capped["overall"])
-	GameState.ai_spend_xp(capped)
-	_check(int(capped["overall"]) <= int(p0["overall"]) + GameState.SEASON_TRAIN_GAIN + GameState.teach_step(capped) + 1,
-			"A rival gains at most SEASON_TRAIN_GAIN in a season, however much XP he has")
-	# Your players live under the same season limit.
+			"With XP to burn, a rival can train past his POT")
+	# No season limit for anyone (director 2026-11-17): the pace is the XP.
 	var mine: Dictionary = GameState.my_list[0]
 	mine["xp"] = 100000
 	mine["potential"] = int(mine["overall"]) + 12
-	mine["season_start_ov"] = int(mine["overall"])
 	var start := int(mine["overall"])
 	GameState.apply_plan_to(mine)
-	GameState.apply_plan_to(mine)
-	_check(int(mine["overall"]) <= start + GameState.SEASON_TRAIN_GAIN + GameState.teach_step(mine) + 1,
-			"Your player is held to the same season limit (%d -> %d)" % [start, int(mine["overall"])])
+	_check(int(mine["overall"]) > start + 3,
+			"With XP to burn your player grows past the old three-point limit too (%d -> %d)" % [start, int(mine["overall"])])

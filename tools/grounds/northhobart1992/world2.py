@@ -1,0 +1,112 @@
+# Whole North Hobart Oval, 1992: Gorringe (gor.py, local frame placed in world) + geo2.json + hand-made ground.
+# usage: blender -b --factory-startup --python world2.py -- NH MODE OUT [scale]
+#   MODE aerial | gor | tt | close | glb
+import bpy,bmesh,sys,json,math,numpy as np
+from mathutils import Matrix,Vector
+a=sys.argv[sys.argv.index('--')+1:];NH,MODE,OUT=a[0],a[1],a[2];SC=float(a[3]) if len(a)>3 else 0.25
+bpy.ops.wm.read_factory_settings(use_empty=True);sc=bpy.context.scene
+exec(open(NH+'/blib.py').read());exec(open(NH+'/gor.py').read())
+before=set(bpy.data.objects);gor_build(addobj)
+AX,NY=GOR_AX,GOR_NY
+Mg=Matrix(((AX[0],NY[0],0,GOR_F0[0]),(AX[1],NY[1],0,GOR_F0[1]),(0,0,1,0),(0,0,0,1)))
+for o in set(bpy.data.objects)-before:o.matrix_world=Mg
+seat=addobj('gor_seat',seat_faces());sm=seat.data;bpy.context.scene.collection.objects.unlink(seat)   # one seat mesh, linked to every seat (glTF: one mesh, many nodes)
+for i,(x,y,z) in enumerate(SEATS):
+    o=bpy.data.objects.new('gor_seat_%04d'%i,sm);sc.collection.objects.link(o);o.matrix_world=Mg@Matrix.Translation((x,y,z))
+G=json.load(open(NH+'/geo2.json'))
+import os
+for name,faces in G['objs'].items():
+    if name=='ryde_nab' and os.environ.get('NAB')!='1':continue
+    addobj(name,faces,double=True,uvfit=(name in('ne_board_face','ryde_nab')))
+def ground(name,pts,z,mat,ud=None,vd=None):
+    bm=bmesh.new();uvl=bm.loops.layers.uv.new();vs=[bm.verts.new((x,y,z)) for x,y in pts];f=bm.faces.new(vs)
+    bmesh.ops.triangulate(bm,faces=[f])
+    su,sv=SIZES[mat];ud=Vector(ud or (1,0,0));vd=Vector(vd or (0,1,0))
+    for f in bm.faces:
+        if f.normal.z<0:f.normal_flip()
+        for l in f.loops:p=l.vert.co;l[uvl].uv=(p.dot(ud)/su,p.dot(vd)/sv)
+    me=bpy.data.meshes.new(name);bm.to_mesh(me);bm.free();o=bpy.data.objects.new(name,me);sc.collection.objects.link(o);o.data.materials.append(TM(mat));return o
+# ground out to the outer boundary, with no field inside the fence (director 2026-11-18: "Leave field out")
+def ground_tris(name,tris,z,mat):
+    bm=bmesh.new();uvl=bm.loops.layers.uv.new();su,sv=SIZES[mat]
+    for t in tris:
+        f=bm.faces.new([bm.verts.new((x,y,z)) for x,y in t])
+        f.normal_update()
+        if f.normal.z<0:f.normal_flip()
+        for l in f.loops:p=l.vert.co;l[uvl].uv=(p.x/su,p.y/sv)
+    bmesh.ops.remove_doubles(bm,verts=bm.verts,dist=1e-4)
+    me=bpy.data.meshes.new(name);bm.to_mesh(me);bm.free();o=bpy.data.objects.new(name,me);sc.collection.objects.link(o);o.data.materials.append(TM(mat));return o
+ground_tris('ground',G['ground_tris'],0.0,'asphalt')
+W_=json.load(open(NH+'/world.json'));az,el=map(math.radians,W_['sun'])
+sv=Vector((math.sin(az)*math.cos(el),math.cos(az)*math.cos(el),math.sin(el)))
+ld=bpy.data.lights.new('sun','SUN');ld.energy=4.0;ld.angle=math.radians(0.5);lo=bpy.data.objects.new('sun',ld);sc.collection.objects.link(lo)
+lo.rotation_euler=sv.to_track_quat('Z','Y').to_euler()
+w=bpy.data.worlds.new('w');sc.world=w;w.use_nodes=True;bg=w.node_tree.nodes['Background'];bg.inputs[0].default_value=(0.55,0.65,0.8,1);bg.inputs[1].default_value=1.1
+sc.render.engine='CYCLES';sc.cycles.device='CPU';sc.view_settings.view_transform='AgX';sc.cycles.samples=24
+cd=bpy.data.cameras.new('cam');co=bpy.data.objects.new('cam',cd);sc.collection.objects.link(co);sc.camera=co;cd.clip_start=1;cd.clip_end=5000
+def look(eye,tgt,lens,Wp,Hp):
+    eye=Vector(eye);d=(Vector(tgt)-eye);co.location=eye;co.rotation_euler=d.to_track_quat('-Z','Y').to_euler()
+    cd.sensor_fit='HORIZONTAL';cd.sensor_width=36;cd.lens=lens;sc.render.resolution_x,sc.render.resolution_y=Wp,Hp
+def render(fn):sc.render.filepath=fn;bpy.ops.render.render(write_still=True)
+for _n in('gor_roof','gor_ceiling'):   # the roof is flat planes on a 0.1 m grid: weld and merge coplanar faces (same shape, far fewer vertices; keeps the GLB under 50 MB)
+    _m=bpy.data.objects[_n].data;_b=bmesh.new();_b.from_mesh(_m);bmesh.ops.remove_doubles(_b,verts=_b.verts,dist=1e-4)
+    bmesh.ops.dissolve_limit(_b,angle_limit=math.radians(0.5),verts=_b.verts,edges=_b.edges,delimit={'MATERIAL','UV'});bmesh.ops.triangulate(_b,faces=_b.faces)
+    _b.to_mesh(_m);_b.free();print('DISSOLVE',_n,len(_m.vertices))
+if MODE=='glb':
+    bpy.ops.export_scene.gltf(filepath=OUT,export_format='GLB');sys.exit(0)
+if MODE=='aerial':
+    cam=W_['cam'];p=cam['p'];U0,V0,F=cam['U0'],cam['V0'],cam['F'];cx,cy,cw,ch=cam['crop']
+    def Rm(om,ph,ka):
+        Rx=np.array([[1,0,0],[0,math.cos(om),-math.sin(om)],[0,math.sin(om),math.cos(om)]]);Ry=np.array([[math.cos(ph),0,math.sin(ph)],[0,1,0],[-math.sin(ph),0,math.cos(ph)]])
+        Rz=np.array([[math.cos(ka),-math.sin(ka),0],[math.sin(ka),math.cos(ka),0],[0,0,1]]);return Rz@Ry@Rx
+    R=Rm(*p[3:6]);C=np.array(p[:3])
+    co.matrix_world=Matrix([[*R[0],C[0]],[*R[1],C[1]],[*R[2],C[2]],[0,0,0,1]])
+    Wp,Hp=int(cw*SC),int(ch*SC);sc.render.resolution_x,sc.render.resolution_y=Wp,Hp
+    cd.sensor_fit='HORIZONTAL';cd.sensor_width=36;cd.lens=36*F*SC/Wp;cd.clip_end=5000;cd.clip_start=10
+    ppx=(U0+p[6]-cx)*SC;ppy=(V0+p[7]-cy)*SC;cd.shift_x=(Wp/2-ppx)/Wp;cd.shift_y=(ppy-Hp/2)/Wp
+    sc.view_settings.view_transform='Standard';sc.render.film_transparent=bool(os.environ.get('TRANSP'))
+    if os.environ.get('BORDER'):
+        x0,y0,x1,y1=map(float,os.environ['BORDER'].split(','));r=sc.render;r.use_border=True;r.use_crop_to_border=True
+        r.border_min_x,r.border_max_x=x0/cw,x1/cw;r.border_min_y,r.border_max_y=1-y1/ch,1-y0/ch
+    render(OUT)
+elif MODE=='top':
+    # straight down, north up, orthographic, same box as the rectified 1992 aerial (x -140..125, y -145..115, SC m/px)
+    X0,X1,Y0,Y1=-140,125,-145,115;co.location=((X0+X1)/2,(Y0+Y1)/2,300);co.rotation_euler=(0,0,0)
+    cd.type='ORTHO';cd.sensor_fit='HORIZONTAL';cd.ortho_scale=X1-X0;cd.clip_end=1000
+    sc.render.resolution_x,sc.render.resolution_y=int((X1-X0)/SC),int((Y1-Y0)/SC);sc.render.film_transparent=True
+    sc.view_settings.view_transform='Standard';render(OUT)
+elif MODE=='gor':
+    c=json.load(open(NH+'/cam_gor.json'));R=Matrix(c['R']);Cc=Vector(c['C'])
+    Rb=R.transposed()@Matrix(((1,0,0),(0,-1,0),(0,0,-1)))
+    co.matrix_world=Mg@(Matrix.Translation(Cc)@Rb.to_4x4())
+    sc.render.resolution_x,sc.render.resolution_y=int(c['W']*SC),int(c['H']*SC);cd.sensor_fit='HORIZONTAL';cd.sensor_width=36;cd.lens=36*c['f']/c['W']
+    render(OUT)
+elif MODE=='tt':
+    for k,deg in enumerate((200,290,20,110)):
+        t=math.radians(deg);look((-17.2+290*math.cos(t),-4.4+290*math.sin(t),145),(-17.2,-4.4,4),35,1600,1000);render(OUT.replace('#',str(k)))
+elif MODE=='mp4':
+    sc.render.engine='BLENDER_EEVEE';sc.frame_start,sc.frame_end=1,240;sc.render.fps=30
+    look((0,0,0),(0,0,-1),35,1280,800)
+    tg=bpy.data.objects.new('tgt',None);sc.collection.objects.link(tg);tg.location=(-17.2,-4.4,4)
+    k=co.constraints.new('TRACK_TO');k.target=tg;k.track_axis='TRACK_NEGATIVE_Z';k.up_axis='UP_Y'
+    for fr in range(1,241):
+        t=math.radians(200+360*(fr-1)/240);co.location=(-17.2+290*math.cos(t),-4.4+290*math.sin(t),145);co.keyframe_insert('location',frame=fr)
+    if OUT.endswith('.mp4'):
+        sc.render.image_settings.media_type='VIDEO';sc.render.image_settings.file_format='FFMPEG';sc.render.ffmpeg.format='MPEG4';sc.render.ffmpeg.codec='H264'
+        sc.render.ffmpeg.constant_rate_factor='HIGH'
+    else:
+        sc.render.image_settings.file_format='PNG';sc.render.use_overwrite=False;sc.render.use_placeholder=True
+    sc.render.filepath=OUT;bpy.ops.render.render(animation=True)
+elif MODE=='sb':
+    look((73.03-0.987*35,20.28-0.161*35,7.0),(73.03,20.28,8.0),40,1200,1000);render(OUT)
+elif MODE=='joins':
+    # close-ups of every stand end and join, from inside the fence looking out (eye, target, lens)
+    J=dict(se_argyle=((-35,-45,12),(-58,-80,5),35),letitia_terrace=((0,45,12),(14,80,5),35),lewis_terrace=((-60,-15,12),(-90,-35,5),35),
+           ryde_se=((10,-20,12),(10,-70,5),30),ne_board_sheds=((40,10,10),(80,12,6),35),north_terrace=((-20,25,8),(-50,50,3),35))
+    for k,(e,t,l) in J.items():look(e,t,l,1600,1000);render(OUT.replace('#',k))
+elif MODE=='close':
+    gc=Mg@Vector((20.6,-14,5.5));tg=Mg@Vector((20.6,1,6.0));look(tuple(gc),tuple(tg),30,1600,1000);render(OUT)
+elif MODE=='seats':
+    # seat-height close-ups for the seat gate: along a row from the aisle, and the SE end block from the front like the photo
+    gc=Mg@Vector((6.6,5.0,5.9));tg=Mg@Vector((11.0,4.0,4.4));look(tuple(gc),tuple(tg),28,1600,1000);render(OUT.replace('#','row'))
+    gc=Mg@Vector((4.0,-5.0,3.6));tg=Mg@Vector((3.0,6.0,5.4));look(tuple(gc),tuple(tg),35,1000,1000);render(OUT.replace('#','front'))

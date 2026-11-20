@@ -1,6 +1,7 @@
 {
   "_about": "How each ground looks in the vignettes. Looks only: nothing here reaches the match sim. length and width are the playing surface in metres (published figures). tiers: [inner offset, outer offset, inner height, outer height] beyond the fence, front to back. hill: the front tier is a grass bank with the crowd sitting on it. roof: edge (a thin dark lip), canopy (a pale roof reaching out over the top tier), closed (a roof over the whole ground). towers: mcg (the MCG's six tubular masts), masts (plain masts), none (lights on the roof). screens: 1 or 2 big screens. heritage_board: the old scoreboard at the other end. A ground not listed draws the default; a listed ground without a published length and width (Barossa Park) takes the default size. Norwood Oval: 164 x 109, afl.com.au/venues/46.",
   "_old_grounds": "Grounds the AFL has left (Legacy mode, 1990 on), as they were in the 1990s; the screens name each by its year (data/legacy/ground_names.csv). Sizes: Waverley Park 200 x 160, en.wikipedia.org/wiki/Waverley_Park; Victoria Park 160 x 130, afl.com.au (austadiums 161 x 128); Windy Hill 159 x 130, en.wikipedia.org/wiki/Windy_Hill,_Essendon; Moorabbin Oval 159 x 128, afl.com.au/venues/78; Ikon Park (Princes Park) 157 x 136, afl.com.au; Whitten Oval (Western Oval) 160 x 121, afl.com.au/venues/40 (today's figure; the 1990s oval was long and narrow); Football Park 165 x 135, en.wikipedia.org/wiki/Football_Park; Subiaco Oval 175 x 122, en.wikipedia.org/wiki/Subiaco_Oval. Lights in the 1990s: Waverley Park 4 towers (1977), Football Park 4 (1984); Victoria Park, Windy Hill, Moorabbin, Princes Park and the Western Oval none sourced, Subiaco none until 1997. Tiers and seat colours are drawn to fit, not measured.",
+  "_more_grounds": "Grounds added for rule 2.90 (every ground with an AFL premiership match since 1990, keyed by the fixture name in data/legacy/fixtures.csv, plus Macquarie Point). Sizes: York Park 170 x 140, Accor Stadium (Stadium Australia) 160 x 118, Marrara Oval 175 x 135, Traeger Park 168 x 132, North Hobart Oval 150 x 105 (all en.wikipedia.org, citing ABC 2022-06-16 ground sizes); Mars Stadium (Eureka) 160 x 129, en.wikipedia.org/wiki/Eureka_Stadium; Cazaly's Stadium 165 x 135, en.wikipedia.org/wiki/Cazalys_Stadium; Summit Park 160 x 141, en.wikipedia.org/wiki/Summit_Sport_and_Recreation_Park; Blacktown International Sportspark 159 x 139, afl.com.au/venues/6; Jiangwan Stadium 160 x 136, afl.com.au/venues/53; Sky Stadium (Wellington) 160 x 129 and Hands Oval 171 x 133, australianfootball.com; Macquarie Point Stadium 160 x 137, Macquarie Point Development Corporation footprint test-fit (Oct 2023). Searched 16, found 13: no published AFL size for the WACA before its 2002 shrink, Bruce Stadium as an oval (1995) or Riverway Stadium, so those three take the default size. Lights: WACA 6 towers (1986), York Park 5, Mars Stadium 4, Cazaly's 4 (each from its Wikipedia page); Mars Stadium's grass berm is its hill. Macquarie Point: a fixed translucent roof (macpoint.com/stadium-concept-design), so no towers. Anything not sourced takes the default; tiers are copied from an existing ground of similar size, drawn to fit, not measured.",
   "default": {
     "length": 160, "width": 136,
     "tiers": [[2.0, 26.0, 1.5, 13.0], [30.0, 52.0, 17.0, 34.0]],
@@ -108,6 +109,54 @@
     },
     "Subiaco Oval": {
       "length": 175, "width": 122, "tiers": [[2.0, 20.0, 1.4, 9.0], [24.0, 38.0, 11.0, 24.0]], "seat": "#1d2a44", "roof": "edge", "roof_colour": "#0f0f12", "towers": "none", "tower_count": 0, "screens": 1
+    },
+    "York Park": {
+      "length": 170, "width": 140, "tiers": [[2.0, 20.0, 1.4, 7.0], [24.0, 40.0, 10.0, 24.0]], "towers": "masts", "tower_count": 5
+    },
+    "WACA": {
+      "tiers": [[2.0, 20.0, 1.4, 9.0], [24.0, 38.0, 11.0, 24.0]], "towers": "masts", "tower_count": 6
+    },
+    "Accor Stadium": {
+      "length": 160, "width": 118, "tiers": [[2.0, 20.0, 1.5, 10.0], [23.0, 37.0, 13.5, 22.0], [41.0, 58.0, 25.5, 38.0]], "roof": "canopy", "roof_colour": "#d9dad6", "screens": 2
+    },
+    "Marrara Oval": {
+      "length": 175, "width": 135, "tiers": [[2.0, 16.0, 1.2, 6.0], [20.0, 32.0, 8.0, 18.0]]
+    },
+    "Mars Stadium": {
+      "length": 160, "width": 129, "tiers": [[2.0, 16.0, 1.2, 6.0], [19.0, 30.0, 7.5, 17.0]], "towers": "masts", "tower_count": 4, "hill": true
+    },
+    "Cazaly's Stadium": {
+      "length": 165, "width": 135, "tiers": [[2.0, 16.0, 1.2, 6.0], [20.0, 32.0, 8.0, 18.0]], "towers": "masts", "tower_count": 4
+    },
+    "Traeger Park": {
+      "length": 168, "width": 132, "tiers": [[2.0, 14.0, 1.2, 4.5], [17.0, 26.0, 6.0, 13.0]]
+    },
+    "North Hobart Oval": {
+      "length": 150, "width": 105, "tiers": [[2.0, 16.0, 1.2, 6.0], [19.0, 30.0, 7.5, 17.0]]
+    },
+    "Sky Stadium": {
+      "length": 160, "width": 129, "tiers": [[2.0, 18.0, 1.5, 9.0], [22.0, 34.0, 11.5, 20.0]]
+    },
+    "Jiangwan Stadium": {
+      "length": 160, "width": 136, "tiers": [[2.0, 16.0, 1.2, 6.0], [20.0, 32.0, 8.0, 18.0]]
+    },
+    "Hands Oval": {
+      "length": 171, "width": 133, "tiers": [[2.0, 16.0, 1.2, 6.0], [20.0, 32.0, 8.0, 18.0]]
+    },
+    "Bruce Stadium": {
+      "tiers": [[2.0, 18.0, 1.5, 9.0], [22.0, 34.0, 11.5, 20.0]]
+    },
+    "Blacktown International Sportspark": {
+      "length": 159, "width": 139, "tiers": [[2.0, 14.0, 1.2, 4.5], [17.0, 26.0, 6.0, 13.0]]
+    },
+    "Riverway Stadium": {
+      "tiers": [[2.0, 14.0, 1.2, 4.5], [17.0, 26.0, 6.0, 13.0]]
+    },
+    "Summit Park": {
+      "length": 160, "width": 141, "tiers": [[2.0, 14.0, 1.2, 4.5], [17.0, 26.0, 6.0, 13.0]]
+    },
+    "Macquarie Point Stadium": {
+      "length": 160, "width": 137, "tiers": [[2.0, 18.0, 1.5, 9.0], [22.0, 34.0, 11.5, 20.0]], "roof": "closed", "roof_colour": "#d8dcde", "towers": "none", "tower_count": 0
     }
   }
 }

@@ -4,17 +4,18 @@
 		"club": "CANB",
 		"controversy": false,
 		"category": "media",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["They said we'd never get a team"],
 		"text": ["Every season launch somebody dusts off the old line: Canberra asked for a team for forty years and the league kept saying no. The members still carry that chip, and they want to hear the coach carry it too."],
 		"choices": [
-			{"key": "prove", "label": "Tell them we're here to prove them wrong",
-			 "effects": [{"op": "board", "d": 5}, {"op": "culture", "strand": "ambition", "d": 2, "why": "The coach promised to prove the doubters wrong"}, {"op": "loss_sting", "chance": 20, "d": -3, "who": "side"}],
-			 "result": "The room roars. Every loss now gets measured against that promise."},
 			{"key": "good", "label": "Tell them we just want to be a good footy club",
-			 "effects": [{"op": "culture", "strand": "standards", "d": 2, "why": "The coach set out to build a good footy club"}, {"op": "board", "d": -2}],
-			 "result": "No promises on the record. The old hands wanted fire."}
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "A good footy club first"}],
+			 "result": "A quiet answer. The members wanted more fire."},
+			{"key": "prove", "label": "Tell them we're here to prove them wrong",
+			 "effects": [{"op": "culture", "strand": "ambition", "d": 1, "why": "Here to prove them wrong"}, {"op": "board", "d": 3}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "The members roared. The players feel the weight of it."}
 		]
 	},
 	{
@@ -57,17 +58,18 @@
 		"club": "CANB",
 		"controversy": false,
 		"category": "community",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["A league town"],
 		"text": ["Canberra has been a rugby league town for as long as most people remember. The club can go into the league schools and fight for the kids, or build its own patch first."],
 		"choices": [
-			{"key": "schools", "label": "Run clinics in every league school",
-			 "effects": [{"op": "board", "d": 6, "was": "members"}, {"op": "forgo_xp", "d": 6, "who": "all"}],
-			 "result": "Lunchtime clinics right across the city. The hours come out of training."},
 			{"key": "own", "label": "Look after our own clubs first",
-			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The club backed the local footy clubs"}, {"op": "board", "d": 2}, {"op": "morale", "d": -1, "who": "side"}],
-			 "result": "The local clubs feel backed. No new ground won in the league schools."}
+			 "effects": [{"op": "board", "d": 2}],
+			 "result": "Our own clubs first. They noticed."},
+			{"key": "every", "label": "Run clinics in every league school",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The list worked the schools together"}, {"op": "board", "d": 3}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "Clinics in every school. Long days for the players."}
 		]
 	},
 	{
@@ -213,17 +215,18 @@
 		"club": "CANB",
 		"controversy": false,
 		"category": "board",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["Lights that lean"],
 		"text": ["The broadcaster wants more night games, but Manuka's light towers lean in to stay under the height limit near Parliament, and the forwards swear the high ball is harder to read under them."],
 		"choices": [
-			{"key": "night", "label": "Take the night slots",
-			 "effects": [{"op": "board", "d": 6, "was": "funds"}, {"op": "forgo_xp", "d": 3, "who": "all"}],
-			 "result": "Bigger money. A week of pre-season goes on marking drills under the lights."},
 			{"key": "day", "label": "Day footy suits us",
-			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The family crowd keeps its afternoon footy"}, {"op": "board", "d": -3, "was": "funds"}],
-			 "result": "The families keep their afternoon game. The broadcast money goes elsewhere."}
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "Day footy is who we are"}],
+			 "result": "We stay a day footy club."},
+			{"key": "night", "label": "Take the night slots",
+			 "effects": [{"op": "board", "d": 3}, {"op": "culture", "strand": "ambition", "d": 1, "why": "Prime time for a young club"}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "Night games and a big audience. The forwards hate the lights."}
 		]
 	},
 	{
@@ -248,17 +251,18 @@
 		"club": "CANB",
 		"controversy": false,
 		"category": "community",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["Home of the founder"],
 		"text": ["One of the men who wrote the first rules of the game grew up on the plain where Canberra now stands. Historians want the club to tell that story at a home game this season."],
 		"choices": [
-			{"key": "tell", "label": "Tell the story, and tell the players first",
-			 "effects": [{"op": "board", "d": 4, "was": "members"}, {"op": "culture", "strand": "together", "d": 2, "why": "The group learnt the game has roots on this plain"}, {"op": "forgo_xp", "d": 2, "who": "all"}],
-			 "result": "The history is on the big screen. An afternoon of training goes to the historians."},
 			{"key": "ours", "label": "Our story starts with us",
-			 "effects": [{"op": "culture", "strand": "ambition", "d": 2, "why": "The coach says this club writes its own story"}, {"op": "board", "d": -2}],
-			 "result": "The club looks forward. The historians go to the papers."}
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "Our story starts with us"}],
+			 "result": "The group writes its own story."},
+			{"key": "tell", "label": "Tell the story, and tell the players first",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The players heard where the game began"}, {"op": "board", "d": 3}, {"op": "culture", "strand": "standards", "d": -1, "why": "History lessons ate into training"}],
+			 "result": "The historians are thrilled. A session ran short."}
 		]
 	},
 	{
@@ -284,17 +288,18 @@
 		"club": "CANB",
 		"controversy": false,
 		"category": "board",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["The bush or the suburbs"],
 		"text": ["The towns down the Hume and out through the Riverina breed footballers, and the Sydney clubs have been taking them for years. The board asks whether the academy money goes to the bush or to Canberra's own suburbs."],
 		"choices": [
-			{"key": "bush", "label": "Go to the bush",
-			 "effects": [{"op": "culture", "strand": "ambition", "d": 2, "why": "The club went after the Riverina's kids"}, {"op": "board", "d": 2}, {"op": "forgo_xp", "d": 4, "who": "side"}],
-			 "result": "Academy coaches on the road through the Riverina. They're missed at training."},
 			{"key": "suburbs", "label": "Our own suburbs first",
-			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "The club backed Canberra's own kids"}, {"op": "morale", "d": 2, "who": "side"}, {"op": "board", "d": -1}],
-			 "result": "The local clubs get the money. The bush feels forgotten."}
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "Canberra's own kids first"}],
+			 "result": "The suburbs get the academy."},
+			{"key": "bush", "label": "Go to the bush",
+			 "effects": [{"op": "board", "d": 3}, {"op": "culture", "strand": "ambition", "d": 1, "why": "Chasing the Riverina's best kids"}, {"op": "culture", "strand": "together", "d": -1, "why": "Canberra's own clubs felt passed over"}],
+			 "result": "The academy goes down the Hume. The suburbs grumble."}
 		]
 	},
 	{
@@ -355,35 +360,18 @@
 		"club": "CANB",
 		"controversy": false,
 		"category": "training",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["Boot camp across the lake"],
 		"text": ["The military college across the lake has offered three days with its instructors: early mornings, carrying logs, sleeping in tents. The leadership group is keen; the conditioning staff are not."],
 		"choices": [
-			{"key": "send", "label": "Send them",
-			 "effects": [{"op": "culture", "strand": "together", "d": 3, "why": "The group got through the army camp together"}, {"op": "running", "d": -1}, {"op": "odds", "chance": 15, "hit": [{"op": "heavy_legs", "who": "side"}], "hit_result": "The camp was still in their legs at the first bounce."}],
-			 "result": "Three days of logs and tents. They come back closer and sore."},
-			{"key": "visit", "label": "A day's visit, no camp",
-			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "The group saw how the army trains"}, {"op": "morale", "d": -2, "who": "all"}],
-			 "result": "The running stays on track. The leaders feel the club went half-hearted."}
-		]
-	},
-	{
-		"id": "canb_up_the_mountain",
-		"club": "CANB",
-		"controversy": false,
-		"category": "training",
-		"phase": ["preseason"],
-		"subject": {"kind": "club"},
-		"title": ["Up the mountain"],
-		"text": ["The Snowy Mountains are two hours away. The fitness staff want a week at altitude; the coaches want the time on the game plan."],
-		"choices": [
-			{"key": "altitude", "label": "Go to altitude",
-			 "effects": [{"op": "running", "d": 2}, {"op": "forgo_xp", "d": 3, "who": "all"}],
-			 "result": "A week up high. The fitness base grows; the plan waits."},
-			{"key": "home", "label": "Stay home and drill the plan",
-			 "effects": [{"op": "xp", "d": 4, "who": "all"}, {"op": "running", "d": -1}],
-			 "result": "The plan gets sharper. The fitness staff wanted the mountain."}
+			{"key": "day", "label": "A day's visit, no camp",
+			 "effects": [{"op": "culture", "strand": "standards", "d": 1, "why": "A day with the instructors"}],
+			 "result": "One sharp day with the instructors."},
+			{"key": "send", "label": "Send them for three days",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "Three days of logs and tents together"}, {"op": "culture", "strand": "standards", "d": 1, "why": "The army set the standard"}, {"op": "morale", "d": -3, "who": "all"}],
+			 "result": "Logs, tents and four a.m. starts. They came back tight."}
 		]
 	},
 	{
@@ -391,17 +379,18 @@
 		"club": "CANB",
 		"controversy": false,
 		"category": "health",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
 		"title": ["Smoke on the horizon"],
 		"text": ["Bushfires in the ranges have filled Canberra with smoke, and the air is poor. The club can train indoors, or go down the coast for clean air at a cost."],
 		"choices": [
-			{"key": "coast", "label": "Pack up for the coast",
-			 "effects": [{"op": "running", "d": 1}, {"op": "board", "d": -3, "was": "funds"}],
-			 "result": "Clean air and full sessions. The board pays the bill."},
 			{"key": "indoors", "label": "Indoors, and wait it out",
-			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "The club stayed with a town under smoke"}, {"op": "running", "d": -1}],
-			 "result": "The club rides it out with the town. The running falls behind."}
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "Stuck inside together"}],
+			 "result": "Indoor sessions until the air clears."},
+			{"key": "coast", "label": "Pack up for the coast",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "A week down the coast together"}, {"op": "morale", "d": 3, "who": "all"}, {"op": "board", "d": -2}],
+			 "result": "Clean air and the beach. The board paid for it."}
 		]
 	},
 	{
@@ -444,17 +433,18 @@
 		"club": "CANB",
 		"controversy": false,
 		"category": "members",
-		"phase": ["preseason"],
+		"phase": ["bonding"],
+		"per_season": 1,
 		"subject": {"kind": "club"},
-		"title": ["Thunder Day"],
+		"title": ["Owls Day"],
 		"text": ["The members want a club day: families on the lawns, players signing jumpers and the club song learnt by heart. It's how a new club makes its traditions, but it eats a training day."],
 		"choices": [
-			{"key": "tradition", "label": "Make it a tradition",
-			 "effects": [{"op": "culture", "strand": "together", "d": 2, "why": "A new club made its first tradition"}, {"op": "board", "d": 3, "was": "members"}, {"op": "forgo_xp", "d": 4, "who": "all"}],
-			 "result": "A day on the lawns. A training day gone."},
 			{"key": "short", "label": "A short signing, then train",
-			 "effects": [{"op": "xp", "d": 6, "who": "all"}, {"op": "board", "d": -2, "was": "members"}],
-			 "result": "Full work done. The members wanted the day."}
+			 "effects": [{"op": "board", "d": 2}],
+			 "result": "A quick signing, then back to work."},
+			{"key": "tradition", "label": "Make it a tradition",
+			 "effects": [{"op": "culture", "strand": "together", "d": 1, "why": "A new club made a tradition"}, {"op": "board", "d": 3}, {"op": "morale", "d": -2, "who": "all"}],
+			 "result": "Families on the lawns all day. A long day for the players."}
 		]
 	}
 ]
