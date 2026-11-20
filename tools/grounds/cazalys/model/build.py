@@ -401,7 +401,7 @@ def building(B, mb):
         if B.get('raised'):
             RP, rh = B['raised']; RP = [tuple(q) for q in RP]; re_, rsd = B['raised_eave']; RH = rh + 0.5
             ring(inset(RP, re_), 0.0, RH - rsd, B.get('raised_wall', B['wall'])); slab([tuple(q) for q in B.get('raised_slab', RP)], RH - rsd, RH)   # raised_slab: DA p11 east overhang, clerestory stays on RP
-            for cx, cy, sx, sy, ph in B.get('plant', []):   # Google Earth 3D (2026-11-21): two dark rooftop boxes on the raised roof
+            for cx, cy, sx, sy, ph in B.get('plant', []):   # two dark rooftop wells on the raised roof: seen in Google Earth 3D, plan positions from the Esri z19 aerial (2026-11-21)
                 Q = [(cx - sx / 2, cy - sy / 2), (cx + sx / 2, cy - sy / 2), (cx + sx / 2, cy + sy / 2), (cx - sx / 2, cy + sy / 2)]
                 for i in range(4): mb.wall(Q[i], Q[(i + 1) % 4], RH, RH + ph, 'roof_grey')
                 mb.cap(Q, RH + ph, 'shedp')   # light kerb, dark well inside

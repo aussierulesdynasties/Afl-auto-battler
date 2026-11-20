@@ -100,10 +100,26 @@ Aerial inconclusive at 0.28 m/px: date-to-date registration hold-outs 0.46-2.5 m
 
 ## bldg_w Google Earth 3D check (2026-11-21)
 
-Six Google Earth 3D views (ge3d_0-5: headings 60/100/140/10/90/150) against camera-matched renders. Fixed from FAILs: wall cladding dark on every face (was light grey); lower and raised fascias grey (were white); clerestory louvres dark; two rooftop wells on the raised roof, light kerb and dark well, ~3 x 2.5 m, at (-111, 1) and (-106.5, -16), positions from ge3d_4 (+-2 m). MATCH: curved west wall, grey corrugated roof, raised block with dark clerestory, ramp along the west face.
+Six Google Earth 3D views (ge3d_0-5: headings 60/100/140/10/90/150) against camera-matched renders. Fixed from FAILs: wall cladding dark on every face (was light grey); lower and raised fascias grey (were white); clerestory louvres dark; two rooftop wells on the raised roof, light kerb and dark well (positions and sizes: camera-solved recheck below). MATCH: curved west wall, grey corrugated roof, raised block with dark clerestory, ramp along the west face.
 
-## bldg_w camera-matched recheck (2026-11-21, glb 71450e3b)
+## bldg_w camera-solved recheck (2026-11-21, glb dad6e900)
 
-Camera: each GE URL (lat, lon, range, heading, tilt) converted through ll2xy, target z 8 m, vertical fov 35, 1280x478 (fitted on ge3d_4: stand and shed outlines align). Boards .claude/review/bldg_w_ge3d/sbs0-5 (photo | red model edges on photo | render; filename on each). Review renders add a green turf plane (SHOT_TURF); the GLB has no field inside the fence by design.
-Fixed: roof ribs now run front-to-back (were along the building), tile lap lines removed, tone sampled from sunlit GE roof (~190,192,198) -> roof_w (192,194,200); lower fascia navy (photo: thin light edge over a dark band); rooftop wells moved to (-120, 3) and (-106, -17.5) from the matched ge3d_1/ge3d_4 overlays.
-Per part, 3 photos each: roof/raised block ge3d_1, 3, 4; west face ge3d_0, 1, 4; south and surroundings ge3d_2, 3, 5. All regions MATCH on the matched overlays: footprint and curved west wall, lower and raised roof outline, rib direction and tone, dark clerestory, two wells, navy fascia, dark cladding, ramp along the west face, small shed to the west.
+Replaces the 71450e3b recheck: its camera (each GE URL, target z 8 m, fov 35) was a guess. Each GE view's camera is now solved with cv2.solvePnP (fov swept, ITERATIVE/SQPNP/EPNP/IPPE candidates, LM refine) from bldg_w slab corners and light-tower bases or tops; photos are 768x287 after the browser chrome crop, px below are scaled to 1280 wide. Renders are at 1536x574 (2x the photo) from the solved camera. Boards .claude/review/bldg_w_ge3d/cam_sbs0-4.jpg: photo, red render edges on the photo, render, then same-scale bldg_w crops, with rms and md5 on each.
+
+| View | Points | fov | rms px (1280) | max px (1280) |
+|---|---|---|---|---|
+| ge3d_0 | 5 | 28.0 | 3.63 | 6.05 |
+| ge3d_1 | 5 | 26.25 | 1.93 | 3.45 |
+| ge3d_2 | 5 | 18.5 | 3.52 | 4.96 |
+| ge3d_3 | 6 | 39.75 | 5.27 | 9.48 |
+| ge3d_4 | 7 | 27.5 | 3.64 | 5.07 |
+
+Under 6 points: views 0-2 see only 4 slab corners and one tower base clearly; tower t2 is left out everywhere (its GE base lands 2-6 m from the model in every view, not bldg_w). ge3d_3's slab SE corner is hidden by the main stand roof. ge3d_5 is not solved (corners ambiguous at that angle); the third photo per part comes from 0-4.
+
+Roof-level registration of the Esri z19 aerial: the three visible slab corners sit 2.1-2.45 m north of the model slab (which the solved GE cameras fit to 1-2 px), x within 0.5 m. The raised block, its two wells and the shed were traced on that aerial without removing it, so the solved GE views put the raised north end 2-4 m south of the model. Fixed: raised block and raised slab moved 2.25 m south; wells re-measured on the aerial (relative to the slab) to (-118.4, 1.85) 4.0 x 2.8 m and (-115.3, -21.85) 4.5 x 3.0 m; shed nw_tent_1 re-measured to centre (-87.75, 29.65), 9.5 x 8.3 m, axis 73 deg (was 14 x 10 m, 60 deg). Board aerial_bldg_w.jpg draws the model 2.25 m north on the aerial. GE back-projection alone scatters 2-3 m in x at roof height, so plan positions come from the aerial, the GE views confirm them.
+
+| Part | Photos | Regions |
+|---|---|---|
+| Roof and raised block | ge3d_1, 3, 4 | MATCH: slab outline, raised block extent and position, two dark wells with light kerbs, rib direction, roof tone, navy fascia |
+| West face | ge3d_0, 1, 4 | MATCH: curved west wall line, dark cladding, eave depth; ramp and balustrade sit in the eave shadow in GE (colour UNVERIFIED, see table above) |
+| South face and surroundings | ge3d_2, 3, 0 | MATCH: south slab edge, dark south clerestory band, shed position and size, ground line |
