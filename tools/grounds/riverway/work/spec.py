@@ -22,7 +22,7 @@ S = {"name": "symonds", "b0": roof[0][0], "b1": roof[-1][0], "kind": "single", "
      "seat_front": 3.0, "seat_depth": 8.0, "z_seat": [3.0, 6.6], "z_roof": [11.2, 13.4], "back_in": 1.0,
      "mats": {"seat": "conc_tread", "roof": "roof_grey", "back": "facade_back", "front": "podium", "bowl": "glass_corp"},
      "rib": 0, "solar": [[roof[0][0] + 3, roof[-1][0] - 3, 0.25, 0.8]],   # panels along the whole roof (Esri tile; tcb.jpg is older)
-     "back_zones": [[roof[0][0] - 1, 261.3, "clad_dark"]]}   # charcoal sheet south of the roof step, sandstone block north of it
+     "back_zones": [[roof[0][0] - 1, 263.0, "clad_dark"]]}   # charcoal panels south of y -11.5 (GE l090: render wall ends at crop x640), grey render north of it
 # shelters, race canopy: cream boxes on the Esri tile (render/satW.png); HOME left of AWAY seen from the field
 # light poles: west bases picked on GE l090 (work/pick.py, Z0=5), east bases from the head-and-shadow on the Esri tile; heads at 30 m from the l090 pixel rows
 TW = [{"xy": xy, "top": 30.0, "head_h": 2.0, "head_w": 3.2, "r_base": 0.35, "r_top": 0.2, "tilt": 12} for xy in
@@ -54,6 +54,16 @@ def onback(y):
 SG += [{"c": onback(y), "u": (0.0, 1.0), "w": 0.7, "h": 2.6, "z0": z0, "mat": "window_back", "out": True}
        for y, z0 in ((23.4, 3.5), (21.1, 3.5), (18.8, 3.5), (-5.9, 2.2), (-8.4, 2.2))]
 SG += [{"c": (-101.0, -26.6), "u": (0.0, 1.0), "w": 1.9, "h": 8.2, "z0": 4.3, "mat": "sign_tower", "out": True}]   # vertical name sign on the tower
+def onback2(y):   # point and tangent on the back wall where the bearing through (-95, y) meets it (works on the slanted south legs)
+    b = math.degrees(math.atan2(-95.0, y)) % 360; r = ray(BACK, b); d = np.array((math.sin(math.radians(b)), math.cos(math.radians(b))))
+    p = d * (r - S['back_in']); q = d * r
+    for A, C in zip(BACK[:-1], BACK[1:]):
+        A, C = np.array(A, float), np.array(C, float); e = C - A; t = np.dot(q - A, e) / np.dot(e, e)
+        if -1e-3 <= t <= 1 + 1e-3 and np.linalg.norm(A + t * e - q) < 0.05: u = e / np.linalg.norm(e); break
+    return tuple(round(float(v), 2) for v in p), tuple(round(float(v), 3) for v in u)
+# south back (GE l090 crop x1000-1350, about 0.08 m/px along the wall): two dark doorways at ground level, one high window by the south end
+for y, w, h, z0, mat in ((-41.0, 1.6, 2.4, 0.0, "door_back"), (-45.0, 1.6, 2.4, 0.0, "door_back"), (-58.0, 1.4, 2.6, 6.0, "window_back")):
+    c, u = onback2(y); SG.append({"c": c, "u": u, "w": w, "h": h, "z0": z0, "mat": mat, "out": True})
 SG += [{"c": onback(-4.4), "u": (0.0, 1.0), "w": 1.6, "h": 2.2, "z0": 0.0, "mat": "door_back", "out": True}]
 D = {"_note": "Riverway Stadium (Townsville), Andrew 'Roy' Symonds Grandstand, 2024. Plan from the Esri z19 tile (sat/esri_025.png); heights fitted to Google Earth 2024 views (ge/). Stadium only: stops at the outer path ring; no turf, posts, nets, ads, marquees or crowd.",
      "fence_h": 1.1, "fence_gaps": [[265.6, 272.0]], "step": 0.5, "stands": [S], "outer_r": 101.0, "towers": TW, "extras": EX, "signs": SG, "mats_ground": {"concourse": "grass_bank"}}

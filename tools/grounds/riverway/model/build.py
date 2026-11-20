@@ -82,6 +82,7 @@ def P3(b, r, z):
 def strip(mb, bs, prof, mats, rdir_out):
     """prof(b) -> list of (r, z); mats[k] = material of segment k->k+1; outward normal of segment = left of travel in (r,z)
     when rdir_out is +1 (solid on the right walking the profile)."""
+    ucum = {}   # running arc length per profile segment, so u runs on across face joints (no texture jump where r changes)
     for i in range(len(bs) - 1):
         A, B = prof(bs[i]), prof(bs[i + 1]); ba, bb = bs[i], bs[i + 1]
         for k in range(len(A) - 1):
@@ -94,9 +95,10 @@ def strip(mb, bs, prof, mats, rdir_out):
             bm = math.radians(0.5 * (ba + bb)); rad = np.array([math.sin(bm), math.cos(bm), 0.0])
             out = rdir_out * (-dz * rad + np.array([0, 0, dr]))  # left of travel
             tu, tv = TILE.get(m, (1, 1)); rm = 0.5 * (r0 + r1) if L > 1e-6 else r0
-            ua = math.radians(ba) * rm / tu; ub = math.radians(bb) * rm / tu
-            uv = [(ua, 0), (ub, 0), (ub, L / tv), (ua, L / tv)]
-            if dz < -1e-6: uv = [(ua, L / tv), (ub, L / tv), (ub, 0), (ua, 0)]   # walls going down: wall top = image top
+            ua = ucum.get(k, math.radians(ba) * rm / tu); ub = ua + math.radians(bb - ba) * rm / tu; ucum[k] = ub
+            LB = math.hypot(s1 - s0, w1 - w0)   # each side keeps its own length: no shear where the wall height changes
+            uv = [(ua, 0), (ub, 0), (ub, LB / tv), (ua, L / tv)]
+            if dz < -1e-6: uv = [(ua, L / tv), (ub, LB / tv), (ub, 0), (ua, 0)]   # walls going down: wall top = image top
             oriented(mb, [P3(ba, r0, z0), P3(bb, s0, w0), P3(bb, s1, w1), P3(ba, r1, z1)], m, out, uv)
 
 
@@ -108,7 +110,7 @@ SEAT_RNG = np.random.default_rng(7)
 AISLES = []       # aisle-stair bearings (for the seat-height proof)
 # seat colours by row from the front, in pairs (photo tb_8c29, section C): pale blue, mint, green, pale blue, dark green;
 # a run of five royal-blue seats in row 7 of the section over the race. PITCH sets the 1,015 seats the council lists.
-ROW_COLS = ['seat_paleblue'] * 2 + ['seat_mint'] * 2 + ['seat_green'] * 2 + ['seat_paleblue'] * 2 + ['seat_dkgreen'] * 2
+ROW_COLS = ['seat_paleblue'] * 2 + ['seat_mint', 'seat_teal', 'seat_green', 'seat_green'] + ['seat_greyblue'] * 2 + ['seat_dkgreen'] * 2   # front to back, tb_8c29 pixel samples
 SHORT_SECS = (0,)   # sections whose odd rows hold N-1 seats (centred); sets the total to the council's 1,015
 ROYAL_ROW = 6; RACE_B = 268.8; PITCH = 0.585
 ROW = 0.8         # tread depth (m): one row of seats
@@ -146,7 +148,7 @@ def seat(P, t, o, z, shell=None, col=None):
     tmpl = shell is not None; shell = shell if tmpl else SEATS
     col = col or SEAT_MIX[int(SEAT_RNG.choice(len(SEAT_MIX), p=SEAT_P))]
     if not tmpl: SEAT_XF.append((tuple(P), tuple(t), tuple(o), z, col))
-    P = np.array(P, float); t = np.array(t, float); o = np.array(o, float); hw = 0.22
+    P = np.array(P, float); t = np.array(t, float); o = np.array(o, float); hw = 0.19
     def X(a, d, h):
         q = P + t * a + o * d; return np.array((q[0], q[1], z + h))
     up = np.array([0, 0, 1.0]); o3 = np.array([*o, 0.0])
@@ -154,7 +156,7 @@ def seat(P, t, o, z, shell=None, col=None):
     prof = [(-0.66, 0.40), (-0.58, 0.45), (-0.36, 0.44), (-0.25, 0.52), (-0.19, 0.70), (-0.16, 0.82), (-0.165, 0.87)]
     def V(i, j):   # j = -1, 0, 1 across; the middle is dished (down on the pan, back on the backrest), the back narrows to the top
         d, h = prof[i]; w = min(1.0, max(0.0, (h - 0.45) / 0.2)); c = 1 - abs(j)
-        return X(j * hw * (1 - 0.35 * max(0.0, (h - 0.74) / 0.13) ** 2), d + 0.07 * c * w, h - 0.05 * c * (1 - w) + 0.02 * c * (h > 0.86))
+        return X(j * hw * (1 - 0.6 * max(0.0, (h - 0.55) / 0.32) ** 1.3), d + 0.07 * c * w, h - 0.05 * c * (1 - w) + 0.02 * c * (h > 0.86))
     for i in range(len(prof) - 1):
         dd, dh = prof[i + 1][0] - prof[i][0], prof[i + 1][1] - prof[i][1]
         out = -dh * o3 + dd * up

@@ -61,8 +61,8 @@ def seats(name, col, tread=(112, 114, 116), aisle=(140, 140, 138)):
 
 
 # 3D seat plastic (aerial4, drone5): teal-green, a darker moulded rim and a soft sheen down the middle. UV 0-1 per face.
-for nm, col in (('seat_plastic', (62, 150, 118)), ('seat_green', (70, 150, 112)), ('seat_teal', (48, 146, 140)), ('seat_blue', (52, 96, 160)),
-                 ('seat_paleblue', (128, 158, 182)), ('seat_mint', (130, 185, 170)), ('seat_dkgreen', (24, 98, 58))):
+for nm, col in (('seat_plastic', (62, 150, 118)), ('seat_green', (80, 140, 116)), ('seat_teal', (98, 158, 138)), ('seat_blue', (48, 84, 150)),
+                 ('seat_paleblue', (123, 156, 182)), ('seat_mint', (128, 180, 167)), ('seat_dkgreen', (10, 62, 32)), ('seat_greyblue', (92, 120, 134))):
     a = base(128, 128, col, 2, 6)   # Riverway shells: green, teal and blue (symonds-grandstand photo), moulded rim, sheen
     a[:, :8] *= 0.78; a[:, -8:] *= 0.78; a[:6] *= 0.85; a[-6:] *= 0.7
     a[:, 40:88] *= (1 + 0.10 * np.sin(np.linspace(0, math.pi, 48)))[None, :, None]
@@ -151,23 +151,24 @@ def _glass(a, pu, pv, h, w):    # upper level behind the seats (symonds photo), 
 
 
 def _back(a, pu, pv, h, w):     # stand back (GE l090): dark grey-brown render, a panel joint every 3 m, darker plinth; windows are separate panels
-    for k in range(2): a[:, int(k * 3 * pu):int(k * 3 * pu) + 3] *= 0.84
-    a[-int(0.4 * pv):] *= 0.85
+    for k in range(2): a[:, int(k * 3 * pu):int(k * 3 * pu) + 3] *= 0.84   # no plinth band: it repeated up the 14 m wall as stripes
 
 
 facade('podium', (206, 170, 138), _podium, (6.0, 2.8), 1024, 478, streaks=False)
 facade('glass_corp', (234, 216, 178), _glass, (6.0, 5.0), 1024, 853, streaks=False)
-facade('facade_back', (112, 100, 88), _back, (6.0, 3.6))
+facade('facade_back', (92, 92, 98), _back, (6.0, 3.6), streaks=False)   # grey render, GE l090 samples (90,88,95)/(80,84,95); no streaks
 # charcoal ribbed sheet cladding on the stand back south of the roof step (aerial ref/more/tcb.jpg): a rib every 0.25 m
-a = base(512, 512, (62, 66, 72), 2, 6)
-for k in range(0, 512, 32): a[:, k:k + 5] *= 1.25; a[:, k + 5:k + 8] *= 0.7
-save('clad_dark', a, (2.0, 2.0))
+# charcoal composite panels on the stand back south of y -11.5 (GE l090 samples (53,67,82), (31,53,75)): 2.4 m wide x 1.2 m high, dark joints
+a = base(512, 512, (46, 60, 76), 2, 4)
+for k in (0, 256): a[k:k + 4] *= 0.6
+a[:, 0:4] *= 0.6
+save('clad_dark', a, (2.4, 2.4))
 # stair tower: pale grey composite panels 1.2 x 1.2 m with dark joints (tcb.jpg)
-a = base(512, 512, (214, 220, 222), 2, 6)
+a = base(512, 512, (176, 192, 206), 2, 6)   # pale blue-grey (GE l090 tower face)
 for k in range(0, 512, 256): a[:, k:k + 4] *= 0.72; a[k:k + 4] *= 0.72
 weather(a, 0.05, 8, 20); save('tower_panel', a, (2.4, 2.4))
-a = base(512, 512, (186, 206, 118), 3, 10); weather(a, 0.1, 10, 20); save('shelter_wall', a, (2.0, 2.0))   # pale lime (race photo)
-a = base(512, 512, (224, 214, 160), 3, 10); a[:, ::32] *= 0.85; save('shelter_roof', a, (2.0, 2.0))
+a = base(512, 512, (150, 178, 92), 2, 4); a[:, :10] *= 0.8; a[:, -10:] *= 0.8; save('shelter_wall', a, (2.0, 2.0))   # lime panels (race photo, shade sample (122,145,83))
+a = base(512, 512, (34, 48, 26), 2, 4); a[:, ::64] *= 0.8; save('shelter_roof', a, (2.0, 2.0))   # dark olive steel roof (race photo edge (56,63,33))
 a = base(512, 512, (36, 112, 196), 3, 8); a[:, 250:256] *= 0.8; a[250:256] *= 0.8; save('sail_blue', a, (1, 1))
 # grass bank between the fence and the outer path: hand-painted turf, mown bands 3 m, clumps and worn patches
 a = base(N, N, (92, 128, 64), 6, 18); xu = N / 6.0
