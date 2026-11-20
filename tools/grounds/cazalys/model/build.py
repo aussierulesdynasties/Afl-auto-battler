@@ -284,10 +284,14 @@ def building(B, mb):
             Q = ccw(Q)
             for i in range(len(Q)): FASC.wall(Q[i], Q[(i + 1) % len(Q)], z0, z1, 'slab_white')
             mb.cap(Q, z1, B['roof']); mb.cap(Q, z0, 'slab_white', down=True)
-        mb.prism(inset(P, e), 0.0, H - sd, B['wall']); slab(P, H - sd, H)
+
+        def ring(Q, z0, z1, m):   # curved walls smooth-shaded too (lead gate 2026-11-21); FASC keeps corners over 35 deg sharp
+            Q = ccw(Q)
+            for i in range(len(Q)): FASC.wall(Q[i], Q[(i + 1) % len(Q)], z0, z1, m)
+        ring(inset(P, e), 0.0, H - sd, B['wall']); slab(P, H - sd, H)
         if B.get('raised'):
             RP, rh = B['raised']; RP = [tuple(q) for q in RP]; re_, rsd = B['raised_eave']; RH = rh + 0.5
-            mb.prism(inset(RP, re_), 0.0, RH - rsd, B.get('raised_wall', B['wall'])); slab(RP, RH - rsd, RH)
+            ring(inset(RP, re_), 0.0, RH - rsd, B.get('raised_wall', B['wall'])); slab(RP, RH - rsd, RH)
         return
     if B.get('replace'):   # satellite-traced edge replacing a run of OSM points (first..last, inclusive)
         f, l, R_ = B['replace']; i = min(range(len(P)), key=lambda k: math.dist(P[k], f)); j = min(range(len(P)), key=lambda k: math.dist(P[k], l))
