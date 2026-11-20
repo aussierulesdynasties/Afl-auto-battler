@@ -115,7 +115,10 @@ PA = np.r_[S[0]['POSITION'], G[0]['POSITION']].astype(np.float64)
 TA = np.r_[S[2], G[2] + len(S[0]['POSITION'])]
 Q, WID, SF, SB, HH, ZC, DS = unroll(PA, TA)
 nS = len(S[0]['POSITION'])
-ARMPIT_PX, ARMPIT_H = 765.0, 0.2979
+# Photo row of body y 1.62 (189 unless frame_CODE.txt moves a long guernsey up its frame)
+import os
+Y0 = float(open(f'frame_{sys.argv[3]}.txt').read()) if os.path.exists(f'frame_{sys.argv[3]}.txt') else 189.0
+ARMPIT_PX, ARMPIT_H = Y0 + 576.0, 0.2979
 masks, hw, cx, TOP = {}, {}, {}, {}
 for side in ('front', 'back'):
     al = np.array(Image.open(f'design_{CODE}_{side}.png'))[..., 3] > 127
@@ -135,7 +138,7 @@ for side in ('front', 'back'):
         hull.append(p)
     hull = np.array(hull)
     TOP[side] = (hull[:, 0], hull[:, 1])
-CHEST = 860
+CHEST = int(Y0 + 671)
 KY = hw['front'][CHEST] / 0.2429   # px per metre (the chest's quarter round = the flat front's half width)
 print('px per metre', KY)
 S_PX = 2310.0
@@ -156,6 +159,46 @@ ZM[ZM_Y < 1.15] = ZM[np.argmin(np.abs(ZM_Y - 1.15))]  # the hem's last rows are 
 BODY_HW_ARM = 452.5 / S_PX
 print('body half-widths', np.round(BODY_HW, 3))
 
+# The shoulder seam: the body guernsey's top edge across x (upper hull, so it bridges the neck like the
+# photo's TOP does). Front and back panels are sewn here, as in garment CAD: each photo's top edge is laid on
+# this ridge, and the shift fades out 6 cm below it (the armholes keep their outline).
+_rx = np.round(_gp[:, 0] / 0.005).astype(int)
+_bins = np.unique(_rx)
+_ry = np.array([_gp[_rx == b, 1].max() for b in _bins])
+_h = []
+for p_ in zip(_bins * 0.005, _ry):
+    while len(_h) >= 2 and (_h[-1][0] - _h[-2][0]) * (p_[1] - _h[-2][1]) - (_h[-1][1] - _h[-2][1]) * (p_[0] - _h[-2][0]) > 0:
+        _h.pop()
+    _h.append(p_)
+RIDGE = np.array(_h)
+
+SEAM_OVER = 0.01
+
+# The seam is only on the shoulder straps. Inside the neck opening the photo's top edge is the neckline itself,
+# not a seam, so it stays where the camera sees it (Port Adelaide 2026-11-19: lifted onto the ridge, the V came
+# out a U 4 cm too high and the back's 1870 rose 3 cm). The neck points are the ends of the front photo's
+# hull segment that bridges the neckline; the shift blends in over NECK_BLEND inside them.
+NECK_BLEND = 0.02
+def _neck_points():
+    h = np.c_[TOP['front']]
+    c = cx['front'][CHEST]
+    i = np.searchsorted(h[:, 0], c) - 1
+    return (h[i, 0] - c) / S_PX, (h[i + 1, 0] - c) / S_PX
+NECK_L, NECK_R = _neck_points()
+print('neck points (m)', round(NECK_L, 3), round(NECK_R, 3))
+
+def seam_shift(side_back, px, x, y):
+    """Rows to add to py so the photo's top edge lands on the body's shoulder ridge."""
+    ridge = np.interp(x, RIDGE[:, 0], RIDGE[:, 1])
+    top = np.where(side_back, np.interp(px, *TOP['back']), np.interp(px, *TOP['front']))
+    # the top edge goes SEAM_OVER past the ridge, so the seam itself is cloth: laid exactly on it, the
+    # strap's top read zero either side and a strap could vanish (Tasmania 2026-11-19)
+    delta = top - (Y0 + (1.62 - ridge - SEAM_OVER) * S_PX)
+    w = np.clip(1 - (ridge - y) / 0.06, 0, 1)
+    corner = np.where(x < 0, -NECK_L, NECK_R)
+    strap = np.clip((np.abs(x) - (corner - NECK_BLEND)) / NECK_BLEND, 0, 1)
+    return w * strap * delta
+
 def photo(i_w, x):
     """Welded vertex ids + x sign -> (side 0 front 1 back, px, py)."""
     return photo_from(SF[i_w], SB[i_w], DS[i_w], np.sign(x), Q[i_w])
@@ -163,27 +206,54 @@ def photo(i_w, x):
 def top_at(side, px):
     return np.interp(px, *TOP[side])
 
-def photo_from(sf, sb, ds, sg, P=None):
+def photo_from(sf, sb, ds, sg, P=None, both=False):
     """Front projection matched to the body: the photo is a ghost-mannequin shot, so a point's
     photo pixel is where the camera sees it. Top of the shoulder line beside the neck (photo row
     189) = body y 1.62; one scale, 2310 px per metre; below the armpit each row's width is fitted to
     the body's own width so the side seams meet the body's sides."""
     x, y = P[:, 0], P[:, 1]
     back = P[:, 2] < np.interp(y, ZM_Y, ZM)
-    py = 189.0 + (1.62 - y) * S_PX
+    py = Y0 + (1.62 - y) * S_PX
     row = np.clip(py, 0, 1999).astype(int)
     k = np.where(y < Y_ARMPIT, np.interp(y, BODY_Y, BODY_HW), BODY_HW_ARM)
-    pxf = cx['front'][CHEST] + x * np.where(y < Y_ARMPIT, hw['front'][np.maximum(row, 765)] / k, S_PX)
-    pxb = cx['back'][CHEST] - x * np.where(y < Y_ARMPIT, hw['back'][np.maximum(row, 765)] / k, S_PX)
-    return back, np.where(back, pxb, pxf), py
+    pxf = cx['front'][CHEST] + x * np.where(y < Y_ARMPIT, hw['front'][np.maximum(row, int(ARMPIT_PX))] / k, S_PX)
+    pxb = cx['back'][CHEST] - x * np.where(y < Y_ARMPIT, hw['back'][np.maximum(row, int(ARMPIT_PX))] / k, S_PX)
+    px = np.where(back, pxb, pxf)
+    if both:
+        return back, pxf, pxb, py + seam_shift(np.zeros_like(back), pxf, x, y), py + seam_shift(np.ones_like(back), pxb, x, y)
+    return back, px, py + seam_shift(back, px, x, y)
 
 def sample(sd, px, py):
     return nd.map_coordinates(sd, [py, px], order=1, mode='nearest')
 
-def side_dist_w(ids_w, X):
-    back, px, py = photo(ids_w, X[:, 0])
-    d = np.where(back, sample(masks['back'], px, py), sample(masks['front'], px, py))
+SIDE_SEAM = 0.04   # the side seam: front and back outlines blend over 4 cm of depth, so the two photos'
+                   # armpits meet in one line (a hard switch left a saw-tooth slit where they differ)
+
+def _side_dist_raw(ids_w):
+    P = Q[ids_w]
+    _, pxf, pxb, pyf, pyb = photo_from(None, None, None, None, P, both=True)
+    zm = np.interp(P[:, 1], ZM_Y, ZM)
+    wb = np.clip(0.5 - (P[:, 2] - zm) / SIDE_SEAM, 0, 1)
+    d = wb * sample(masks['back'], pxb, pyb) + (1 - wb) * sample(masks['front'], pxf, pyf)
     return d / KY
+
+# Where the body's side is edge-on to the photo (the armpit) the outline sits on the body's side for
+# centimetres and the test reads a few pixels either way, so the edge came out as a saw-tooth. Each
+# point's test is averaged with its neighbours' (four passes) before the cut: a straight outline stays
+# where it is, only the noise goes.
+import scipy.sparse as _spm
+_D = _side_dist_raw(np.arange(len(Q)))
+_tw = np.r_[WID[:len(S[0]['POSITION'])][S[2]], WID[len(S[0]['POSITION']):][G[2]]]
+_e = np.r_[_tw[:, [0, 1]], _tw[:, [1, 2]], _tw[:, [2, 0]]]
+_e = np.unique(np.sort(_e, 1), axis=0)
+_A = _spm.coo_matrix((np.ones(2 * len(_e)), (np.r_[_e[:, 0], _e[:, 1]], np.r_[_e[:, 1], _e[:, 0]])), shape=(len(Q), len(Q))).tocsr()
+_deg = np.maximum(np.asarray(_A.sum(1)).ravel(), 1)
+for _ in range(4):
+    _D = 0.5 * _D + 0.5 * (_A @ _D) / _deg
+D_SMOOTH = _D
+
+def side_dist_w(ids_w, X):
+    return D_SMOOTH[ids_w]
 
 # which welded id each prim vertex is
 WS = WID[:nS]; WG = WID[nS:]
@@ -311,7 +381,8 @@ for src_id, data in ((SK, S), (GU, G)):
         if k not in cut:
             a, b = k
             sa, sb = side_dist_w(np.array([wid_of(src_id, a), wid_of(src_id, b)]), P[[a, b]])
-            f = sa / (sa - sb)
+            # kept 2% from either end: a cut landing microns from a corner welds onto it and doubles an edge
+            f = min(max(sa / (sa - sb), 0.02), 0.98)
             row = mix(data, a, b, f)
             cut[k] = {SK: None, GU: None, 'row': row}
         e = cut[k]
@@ -385,11 +456,13 @@ accs = J['accessors']
 # accessor numbering).
 gone = set()
 
+FILLED = []  # corners of every hole the guernsey's fill closed
+
 def fill_small_holes(a, tri, maxlen=40):
     """Close every open loop of up to maxlen corners (holes the cut left), fanned from one corner,
     winding the same way as the triangles round it."""
     P = a['POSITION'].astype(np.float64)
-    key = np.round(P * 1e4).astype(np.int64)
+    key = np.round(P * 1e5).astype(np.int64)  # welded as the game welds (Oval3D, cut_res: 0.01 mm)
     _, w = np.unique(key, axis=0, return_inverse=True)
     w = w.ravel()
     rep = {}
@@ -418,6 +491,7 @@ def fill_small_holes(a, tri, maxlen=40):
             for k in range(1, len(loop) - 1):
                 add.append([rep[loop[0]], rep[loop[k]], rep[loop[k + 1]]])
             print('filled hole', len(loop), P[rep[loop[0]]].round(3))
+            FILLED.append(P[[rep[q] for q in loop]])
     if add:
         tri = np.r_[tri, np.array(add, np.int64)]
     return tri
@@ -478,7 +552,31 @@ def new_acc(arr, old=None, target=34962, minmax=False, sparse_ok=False):
     return len(accs) - 1
 
 
-Y_BOT = 1.62 - (1764 - 189) / S_PX      # the photo's hem
+# the photo's hem, column by column (front and back): each hem point runs down to the hem in its own
+# column, so a curved hem is copied as it is
+BOTROW = {}
+for _sd in ('front', 'back'):
+    _al = masks[_sd] > 0
+    _b = np.array([np.nonzero(_al[:, c])[0].max() if _al[:, c].any() else -1 for c in range(_al.shape[1])], float)
+    # the hem's columns only: from the lowest column outwards while the bottom edge stays smooth (under 6 px
+    # a column); past that the column cuts the side seam or the armhole, and takes the hem's last height
+    _c0 = int(np.argmax(_b))
+    _lo = _c0
+    while _lo > 0 and _b[_lo - 1] >= 0 and abs(_b[_lo - 1] - _b[_lo]) < 6:
+        _lo -= 1
+    _hi = _c0
+    while _hi < len(_b) - 1 and _b[_hi + 1] >= 0 and abs(_b[_hi + 1] - _b[_hi]) < 6:
+        _hi += 1
+    _ok = np.arange(_lo, _hi + 1)
+    BOTROW[_sd] = _b[_ok[np.clip(np.searchsorted(_ok, np.arange(len(_b))), 0, len(_ok) - 1)]]
+    print(_sd, 'hem rows', int(_b[_ok].min()), '-', int(_b[_ok].max()))
+
+
+def y_bot(h):
+    """The photo's hem height below hem point h, in its own column."""
+    back, px, _ = photo_from(None, None, None, None, P=h[None])
+    col = int(np.clip(px[0], 0, 1999))
+    return 1.62 - (BOTROW['back' if back[0] else 'front'][col] - Y0) / S_PX
 RINGS = 8
 # the photo's half-width and middle per row (both sides averaged), smoothed over 2 cm
 _k = np.ones(45) / 45
@@ -496,7 +594,7 @@ SKIN_T = None
 
 
 def target_hw(y):
-    return HW_ROW[np.clip(189.0 + (1.62 - y) * S_PX, 0, 1999).astype(int)]
+    return HW_ROW[np.clip(Y0 + (1.62 - y) * S_PX, 0, 1999).astype(int)]
 
 
 def shape_to_photo(a, t, tri):
@@ -521,6 +619,7 @@ def shape_to_photo(a, t, tri):
     print('hem edges', len(hem))
     n = len(P)
     newv = {}
+    bottom_ids = []
     rows_a = {kk: [] for kk in a}
     rows_t = [{kk: [] for kk in tt} for tt in t]
     newP = []
@@ -529,15 +628,15 @@ def shape_to_photo(a, t, tri):
         if (i, r) in newv:
             return newv[(i, r)]
         h = P[i]
-        yy = h[1] + (Y_BOT - h[1]) * r / RINGS
+        yy = h[1] + (y_bot(h) - h[1]) * r / RINGS
         x = h[0] * target_hw(np.array([yy]))[0] / max(target_hw(np.array([h[1]]))[0], 1e-6)
         # 1 cm clear of the shorts at that height, along the line from the body's middle
         band = SHP[np.abs(SHP[:, 1] - yy) < 0.01]
         zc = (band[:, 2].max() + band[:, 2].min()) / 2 if len(band) else h[2]
         d = np.array([x, h[2] - zc])
         ln = np.linalg.norm(d)
+        dirn = d / max(ln, 1e-12)
         if len(band) and ln > 1e-6:
-            dirn = d / ln
             rel = band[:, [0, 2]] - [0, zc]
             along = rel @ dirn
             perp = np.abs(rel @ np.array([-dirn[1], dirn[0]]))
@@ -553,6 +652,8 @@ def shape_to_photo(a, t, tri):
             for kk in tt:
                 rows_t[ti][kk].append(tt[kk][i])
         newv[(i, r)] = idx
+        if r == RINGS:
+            bottom_ids.append(idx)
         return idx
 
     new_tris = []
@@ -587,7 +688,8 @@ def shape_to_photo(a, t, tri):
     Adj = ((Adj + Adj.T) > 0).astype(np.float64)
     deg = np.asarray(Adj.sum(1)).ravel()
     ramp = np.clip((SMOOTH_TOP - pos[:, 1]) / 0.10, 0, 1)
-    bottom = np.abs(pos[:, 1] - Y_BOT) < 1e-6
+    bottom = np.zeros(nW, bool)
+    bottom[ww[bottom_ids]] = True
     from scipy.spatial import cKDTree
     CP = np.r_[SHP, SKIN_T[0]]
     CN = np.r_[SHN, SKIN_T[1]]
@@ -635,7 +737,10 @@ def shape_to_photo(a, t, tri):
     return a, t, tri
 
 
-for pid in (SK, GU):
+_a0 = out[SK].done()[0]
+_sp = _a0['POSITION'].astype(np.float64); _sel = (np.abs(_sp[:, 0]) < 0.16) & (_sp[:, 1] > 0.9) & (_sp[:, 1] < 1.3)
+SKIN_T = (_sp[_sel], _a0['NORMAL'][_sel].astype(np.float64))
+for pid in (GU, SK):
     p = prims[pid]
     a, t, tri = out[pid].done()
     # Vertices new to this surface (carried over from the other one, or on the cut) take this
@@ -681,8 +786,39 @@ for pid in (SK, GU):
         a['TEXCOORD_1'][:, 1] = back.astype(np.float32)
         print('guernsey uv range', a['TEXCOORD_0'].min(0), a['TEXCOORD_0'].max(0), 'back verts', back.sum())
     if pid == SK:
-        _sp = a['POSITION'].astype(np.float64); _sel = (np.abs(_sp[:, 0]) < 0.16) & (_sp[:, 1] > 0.9) & (_sp[:, 1] < 1.3)
-        SKIN_T = (_sp[_sel], a['NORMAL'][_sel].astype(np.float64))
+        # Skin under a hole the guernsey's fill closed would show through the patch (both surfaces in
+        # the same place): those skin triangles go, as the rest of the skin under the cloth already has.
+        _P = a['POSITION'].astype(np.float64)
+        _keep = np.ones(len(tri), bool)
+        for _h in FILLED:
+            _c = _h.mean(0); _r = np.sqrt(((_h - _c) ** 2).sum(1)).max()
+            _hk = {tuple(k) for k in np.round(_h * 1e5).astype(np.int64)}
+            _vk = np.round(_P * 1e5).astype(np.int64)
+            _on = np.array([tuple(k) in _hk for k in _vk[tri].reshape(-1, 3)]).reshape(-1, 3)
+            _cen = _P[tri].mean(1)
+            _in = np.sqrt(((_cen - _c) ** 2).sum(1)) < _r
+            _keep &= ~(_on.all(1) | (_in & _on.any(1)))
+        print('skin under closed holes dropped', (~_keep).sum())
+        tri = tri[_keep]
+        # Skin islands the cut left on the torso (a few triangles cut off from the body by the cloth all
+        # round, so they lie under it): they go too, or they poke through the cloth.
+        _w = np.unique(np.round(_P * 1e5).astype(np.int64), axis=0, return_inverse=True)[1].ravel()
+        _par = np.arange(_w.max() + 1)
+        def _f(x):
+            while _par[x] != x:
+                _par[x] = _par[_par[x]]; x = _par[x]
+            return x
+        for _t in _w[tri]:
+            _r0 = _f(_t[0])
+            for _q in _t[1:]:
+                _r1 = _f(_q)
+                if _r1 != _r0: _par[_r1] = _r0
+        _root = np.array([_f(_t[0]) for _t in _w[tri]])
+        _ids, _inv, _cnt = np.unique(_root, return_inverse=True, return_counts=True)
+        _cy = np.bincount(_inv, _P[tri].mean(1)[:, 1]) / _cnt
+        _isl = (_cnt[_inv] < 50) & (_cy[_inv] < 1.62)
+        print('skin islands on the torso dropped', _isl.sum(), 'tris in', ((_cnt < 50) & (_cy < 1.62)).sum(), 'pieces')
+        tri = tri[~_isl]
         # The skin's guernsey and shorts regions (COLOR_0 r, g) above the hem are cleared: the
         # guernsey is its own surface now, and skin the old staircase marked as guernsey was
         # painted in the shorts' colour.
