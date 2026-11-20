@@ -141,8 +141,10 @@ for _ in range(60):
 save('timber', a, (2.0, 0.6))
 
 # ---- facades (one tile = 6 m along x 3.6 m = one floor; image row 0 = top) ----
-def facade(name, col, draw, tile=(6.0, 3.6), w=1024, h=616):
-    a = base(h, w, col, 3, 10); pu = w / tile[0]; pv = h / tile[1]; draw(a, pu, pv, h, w); weather(a, 0.12, 12, 40); save(name, a, tile)
+def facade(name, col, draw, tile=(6.0, 3.6), w=1024, h=616, wx=True):
+    a = base(h, w, col, 3, 10); pu = w / tile[0]; pv = h / tile[1]; draw(a, pu, pv, h, w)
+    if wx: weather(a, 0.12, 12, 40)
+    save(name, a, tile)
 
 
 def _nw(a, pu, pv, h, w):     # NW stand back: grey render with a red-brick pier every 6 m and a dark vent band
@@ -168,12 +170,12 @@ def _es(a, pu, pv, h, w):     # east-south back: pale grey sheet cladding, white
 
 def _tri(a, pu, pv, h, w):     # Mars west/east backs (PTA 2017 photos): white folded triangle panels, ~1.5 x 1.2 m, dark open voids in some
     from PIL import ImageDraw
-    im = Image.new('L', (w, h), 0); d = ImageDraw.Draw(im); sx, sy = 3.0 * pu, 2.4 * pv; rr = np.random.default_rng(5)
+    im = Image.new('L', (w, h), 0); d = ImageDraw.Draw(im); sx, sy = 1.5 * pu, 1.3 * pv; rr = np.random.default_rng(5)
     for j in range(int(h / sy) + 1):
         for i in range(-1, int(w / sx) + 2):
             x0 = i * sx + (sx / 2 if j % 2 else 0); y0 = j * sy
             for tri, sh in (([(x0, y0), (x0 + sx, y0), (x0 + sx / 2, y0 + sy)], 0), ([(x0 + sx / 2, y0 + sy), (x0 + sx * 1.5, y0 + sy), (x0 + sx, y0)], 1)):
-                v = 60 if rr.random() < 0.06 else (238 if sh == 0 else 214)
+                v = 60 if rr.random() < 0.12 else int(rr.choice((240, 222, 200)))
                 d.polygon(tri, fill=v, outline=110)
     L = np.asarray(im, float)
     a[:] = np.where(L[:, :, None] < 80, np.array((52, 56, 62)), L[:, :, None] * np.array((1.0, 1.0, 1.0)) * 0.97) + fine(h, w, 3)[:, :, None]
@@ -217,7 +219,7 @@ def _boxes(a, pu, pv, h, w):  # Gunns box level: tinted glass with mullions ever
 
 
 facade('facade_nw', (176, 178, 176), _nw); facade('facade_lattice', (74, 107, 116), _lattice, (6.0, 8.9), 1024, 1520)
-facade('facade_es', (196, 198, 198), _es); facade('facade_tri', (230, 230, 228), _tri, (6.0, 12.0), 1024, 2048); facade('facade_brick', (150, 74, 52), _brick); facade('facade_gunns', (110, 132, 146), _gunns)
+facade('facade_es', (196, 198, 198), _es); facade('facade_tri', (230, 230, 228), _tri, (6.0, 12.0), 1024, 2048, False); facade('facade_brick', (150, 74, 52), _brick); facade('facade_gunns', (110, 132, 146), _gunns)
 facade('facade_cw', (226, 226, 222), _cw, (6.0, 12.0), 1024, 2048); facade('boxes_glass', (42, 52, 60), _boxes)
 a = base(512, 512, (46, 56, 66), 2, 18); a[:, 250:258] = (180, 184, 186); a[250:258] = (180, 184, 186); save('glass', a, (3.0, 3.0))
 # light tower head: 4 x 8 lamps in a white frame

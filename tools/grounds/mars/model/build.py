@@ -266,11 +266,12 @@ def roof_strip(S, bs, geo, mr):
         z = lambda r: zr0 + (zr1 - zr0) * (r - ri) / (ro - ri)
         pk = ri + 0.4 * (ro - ri); H = 2.4; o = 0.15
         if S.get('rib_under'): H, o = -2.4, -th - 0.15   # aerial: the old roofs are flat white on top, trusses hang underneath
-        A = P3(b, ri + 0.2, z(ri + 0.2) + o); K = P3(b, pk, z(pk) + o + H); Bp = P3(b, ro - 0.2, z(ro - 0.2) + o)
+        re_ = (ro - S.get('back_in', 0) - 0.4) if S.get('rib_under') else ro - 0.2   # under-trusses stop inside the back wall
+        A = P3(b, ri + 0.2, z(ri + 0.2) + o); K = P3(b, pk, z(pk) + o + H); Bp = P3(b, re_, z(re_) + o)
         mr.beam(A, K, 0.35, 0.35, 'steel_white'); mr.beam(K, Bp, 0.35, 0.35, 'steel_white')
         mr.beam(A, Bp, 0.25, 0.25, 'steel_white')
         for f in (0.2, 0.55, 0.8):
-            r1 = ri + f * (ro - ri); zt = o + ((z(r1) + H * (r1 - ri) / (pk - ri)) if r1 < pk else (z(r1) + H * (ro - r1) / (ro - pk)))
+            r1 = ri + f * (re_ - ri); zt = o + ((z(r1) + H * (r1 - ri) / (pk - ri)) if r1 < pk else (z(r1) + H * (re_ - r1) / (re_ - pk)))
             mr.beam(P3(b, r1, z(r1) + o), P3(b, r1, zt), 0.18, 0.18, 'steel_white')
     return ribs
 
