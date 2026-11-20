@@ -288,7 +288,9 @@ def building(B, mb):
         def ring(Q, z0, z1, m):   # curved walls smooth-shaded too (lead gate 2026-11-21); FASC keeps corners over 35 deg sharp
             Q = ccw(Q)
             for i in range(len(Q)): FASC.wall(Q[i], Q[(i + 1) % len(Q)], z0, z1, m)
-        W = ccw(inset(P, e, B.get('eave_n', 0.0))); slab(P, H - sd, H)
+        W = ccw(inset(P, e, B.get('eave_n', 0.0)))
+        SP = [tuple(B['slab_pt'][1]) if np.allclose(q, B['slab_pt'][0], atol=0.05) else q for q in P] if B.get('slab_pt') else P
+        slab(SP, H - sd, H)   # slab_pt: one slab corner moved (DA p11 + aerial), walls stay on the traced outline
         gy, gm = B.get('glazed_w', (-1e9, B['wall']))   # DA p11: the west face is glazed south of y = gy
         for i in range(len(W)):
             p, q = np.array(W[i]), np.array(W[(i + 1) % len(W)]); t = q - p; west = t[1] < 0 and abs(t[1]) > abs(t[0]) * 0.3   # CCW: west face runs south
@@ -381,7 +383,7 @@ def building(B, mb):
                 mb.face([(*o0, za - 0.05), (*o1, za - 0.05), (*o1, z), (*o0, z)], 'conc_kerb')
             mb.beam((*spt(s0, rw), zb + 1.0), (*spt(s1, rw), za + 1.0), 0.05, 0.05, 'steel_white')
             a_, b_ = spt(s1, 0.0), spt(tw[0], 0.0)   # DA: fair-faced blockwork wall along the face east of the flight
-            mb.wall(a_, b_, za - 0.05, tw[1], 'conc_wall')
+            mb.wall(a_, b_, za - 0.05, tw[1], 'blockwork')
         if B.get('dip_s'):   # DA p11 south elevation: the outside ground along the south face sits as low as on the west (DA design, as-built unverified)
             global DIPS; DIPS = (np.array(W), B['dip_s'])
             dd, xe, xn = B['dip_s'][0], B['dip_s'][1], B['dip_s'][4]
@@ -392,7 +394,7 @@ def building(B, mb):
                     if b_[0] > a_[0]: mb.wall(a_, b_, -dd - 0.05, 0.02, 'conc_wall')
         if B.get('raised'):
             RP, rh = B['raised']; RP = [tuple(q) for q in RP]; re_, rsd = B['raised_eave']; RH = rh + 0.5
-            ring(inset(RP, re_), 0.0, RH - rsd, B.get('raised_wall', B['wall'])); slab(RP, RH - rsd, RH)
+            ring(inset(RP, re_), 0.0, RH - rsd, B.get('raised_wall', B['wall'])); slab([tuple(q) for q in B.get('raised_slab', RP)], RH - rsd, RH)   # raised_slab: DA p11 east overhang, clerestory stays on RP
         return
     if B.get('replace'):   # satellite-traced edge replacing a run of OSM points (first..last, inclusive)
         f, l, R_ = B['replace']; i = min(range(len(P)), key=lambda k: math.dist(P[k], f)); j = min(range(len(P)), key=lambda k: math.dist(P[k], l))

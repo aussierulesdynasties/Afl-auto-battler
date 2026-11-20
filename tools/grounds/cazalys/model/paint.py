@@ -67,6 +67,12 @@ for nm, col in SEATS.items():
 # concrete treads and risers: plain grey, a dark nosing line, scuffing
 a = base(512, 512, (150, 148, 142), 5, 14); a[:10] *= 0.7; weather(a, 0.06, 10, 20, top_dark=False); save('conc_tread', a, (2.0, 0.8))
 concrete('conc_wall', (184, 180, 172))
+# fair-faced blockwork (DA p11 south elevation label): 390 x 190 blocks, 10 mm joints, stretcher bond; tone UNVERIFIED (conc_wall grey)
+a = base(256, 256, (184, 180, 172), 3, 10)
+for r in range(2):
+    a[r * 128:r * 128 + 6] *= 0.7
+    for k in range(2): x = (k * 128 + r * 64) % 256; a[r * 128:(r + 1) * 128, x:x + 6] *= 0.7
+save('blockwork', a, (0.8, 0.4))
 concrete('conc_kerb', (196, 192, 184), 1.2, 0.6, (2.4, 1.2), 0.05)
 # paving behind the fence: 1.2 m broom-finished slabs, saw joints, stains
 a = base(N, N, (176, 170, 160), 7, 22); p = N / 2.4
