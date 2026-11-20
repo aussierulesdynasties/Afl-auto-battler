@@ -93,17 +93,17 @@ def stone(col, seed, tile=2.4):
 def concrete(col, seed, tile=4.8):
     # poured concrete (terraces, decks, aprons): no formwork blocks; trowel mottling, saw cuts every 2.4 m, dark
     # water and dirt stains, pale efflorescence, small pits and chips
-    c = Canvas(tile, tile, col, seed); c.mottle(0.07, (1.2, 0.35, 0.08))
+    c = Canvas(tile, tile, col, seed); c.mottle(0.02, (1.2, 0.35, 0.08))
     for u in (0.0, 2.4): c.vline(u, 0.006, tuple(np.array(col) * 0.70), 0.8)
     for v in (0.0, 2.4): c.hline(v, 0.006, tuple(np.array(col) * 0.70), 0.8)
-    S = np.clip(c.noise(0.6) + 0.35 * c.noise(0.12) - 0.6, 0, 3); c.mul(1 - 0.22 * np.clip(S, 0, 1))
-    L = np.clip(c.noise(0.4) - 1.0, 0, 3); c.mul(1 + 0.10 * np.clip(L, 0, 1))
+    S = np.clip(c.noise(0.6) + 0.35 * c.noise(0.12) - 0.6, 0, 3); c.mul(1 - 0.03 * np.clip(S, 0, 1))  # texture pass: stain blotches cut
+    L = np.clip(c.noise(0.4) - 1.0, 0, 3); c.mul(1 + 0.02 * np.clip(L, 0, 1))
     c.streaks([0.0, 2.4], per_m=0.6, length=(0.2, 1.0), amt=0.15)
-    c.speckle(6, (0.004, 0.015), 0.25); c.speckle(0.4, (0.05, 0.25), 0.10)
+    c.speckle(6, (0.004, 0.015), 0.25); c.speckle(0.4, (0.05, 0.25), 0.02)
     c.grime_bottom(0.5, 0.14); c.grain(0.022); c.keep_mean(); return c
 
 def asphalt(col, seed, tile=6.0):
-    c = Canvas(tile, tile, col, seed); c.mottle(0.08, (2.5, 0.6, 0.1)); c.grain(0.10)
+    c = Canvas(tile, tile, col, seed); c.mottle(0.02, (2.5, 0.6, 0.1)); c.grain(0.10)
     c.speckle(3, (0.004, 0.012), 0.35, light=True); c.speckle(0.3, (0.1, 0.4), 0.15)
     c.keep_mean(); return c
 
@@ -114,7 +114,7 @@ def pavers(col, seed, tile=2.4):
     cx = np.floor(((um + off) % tile) / 0.3).astype(int)
     T = 1 + 0.03 * c.R.normal(size=(row.max() + 2, cx.max() + 2)); c.mul(T[row, cx])
     J = (((um + off) % 0.3) < 0.007) | ((vm % 0.3) < 0.007); c.a[J] *= 0.78
-    c.mottle(0.06, (1.0, 0.3)); c.speckle(1.5, (0.01, 0.04), 0.25); c.grain(0.02); c.keep_mean(); return c
+    c.mottle(0.02, (1.0, 0.3)); c.speckle(1.5, (0.01, 0.04), 0.25); c.grain(0.02); c.keep_mean(); return c
 
 def glass(col, seed, tile=6.0, pw=1.5, ph=2.4):
     # tinted glazing: each pane reflects a slightly different sky (lighter at the top), dirt at the pane foot
@@ -146,7 +146,7 @@ def timber(col, seed, tile=4.8, gaps=True):
 
 def plastic(col, seed, tile=2.0):
     # moulded plastic chairs / painted boards: sun fade blotches, scuffs, dirt in the low corners
-    c = Canvas(tile, tile, col, seed); c.mottle(0.07, (0.8, 0.25, 0.06)); c.speckle(6, (0.005, 0.02), 0.3)
+    c = Canvas(tile, tile, col, seed); c.mottle(0.02, (0.8, 0.25, 0.06)); c.speckle(6, (0.005, 0.02), 0.3)
     c.speckle(3, (0.01, 0.03), 0.15, light=True); c.grime_bottom(0.4, 0.2, band=1.0); c.grain(0.02); c.keep_mean(); return c
 
 def leaves(col, seed, tile=3.0):

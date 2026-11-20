@@ -32,7 +32,7 @@ def seats(name,pitch,grey_frac,seed,pan=(0.16,0.60,0.90,0.94)):
             rect(a,x0+2,y0+rp*pan[1],x0+sw-2,y0+rp*pan[2],back)              # seat back
             rect(a,x0+2,y0+rp*pan[2],x0+sw-2,y0+rp*pan[3],back*0.7)          # back top edge
     save(a,name,4.0,4*pitch)
-seats('seat_low',0.70,0.0,1,(0.10,0.58,0.95,0.98));seats('seat_up',0.86,0.22,2)
+seats('seat_low',0.70,0.0,1,(0.10,0.58,0.95,0.98));seats('seat_up',0.86,0.15,2,(0.10,0.58,0.95,0.98))
 # aisle steps: two steps per row, light concrete, yellow-free nosing, centre handrail
 def aisle(name,pitch):
     W=int(1.1*PPM);H=int(round(4*pitch*PPM));a=img(H,W,(204,201,196))+noise(H,int(1.1*PPM),5,5,3)[...,None]

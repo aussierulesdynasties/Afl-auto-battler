@@ -756,7 +756,7 @@ def buildings():
         faces_obj([[(*a, z0), (*b, z0), (*b, z1), (*a, z1)] for a, b in zip(pts[:-1], pts[1:])], name, mat)
     def plate(pa, pb, name, mat):
         faces_obj([[(*pa, zbot(pa[0])), (*pb, zbot(pb[0])), (*pb, ztop(pb[0])), (*pa, ztop(pa[0]))]], name, mat)
-    plate(SL, SR, 'nstand_sign_maroon', 'bank_purple')
+    plate(SL, SR, 'nstand_sign_maroon', 'maroon')
     plate(SR, SB, 'nstand_sign_white', 'white')   # sponsor panel painted out (no ads)
     faces_obj([[(*F0, zbot(F0[0]) - 0.15), (*SL, zbot(SL[0]) - 0.15), (*SL, zbot(SL[0])), (*F0, zbot(F0[0]))]], 'nstand_eave_l', 'white')
     faces_obj([[(*F1, zbot(F1[0]) - 0.3), (*F2, ZF2 - 0.3), (*F2, ZF2), (*F1, zbot(F1[0]))]], 'nstand_edge', 'white')
@@ -780,12 +780,10 @@ def buildings():
         ob.rotation_euler = (Matrix.Rotation(_m.atan2(dy, dx), 4, 'Z') @ Matrix.Rotation(_m.pi / 2, 4, 'X')
                              @ Matrix.Rotation(tilt, 4, 'Z')).to_euler()
         ob.data.materials.clear(); ob.data.materials.append(M[mat])
-    letters('Fremantle Community Bank Oval', SL, SR, 0.85, 'white', 'nstand_txt1')
-    letters('Bendigo Bank', lerp(SR, SB, 0.22), SB, 0.95, 'bendigo_ink', 'nstand_txt2')
+    letters('Fremantle Oval', SL, SR, 0.85, 'white', 'nstand_txt1')
+    pass  # texture pass: Bendigo Bank lettering removed (no sponsors)
     # Bendigo "B" mark: maroon square at the white panel's left end (a04 u 2958-2985)
-    lx = lerp(SR, SB, 0.09)
-    box((lx[0], lx[1] - 0.06, (zbot(lx[0]) + ztop(lx[0])) / 2), (0.9, 0.04, 0.8), 'nstand_logo', 'bendigo_ink',
-        rot=_m.atan2(SB[1] - SR[1], SB[0] - SR[0]))
+    pass  # Bendigo mark removed
     # front posts (a04: under the fascia at u 2710, 2905, 3075 and the ends)
     nstand_posts = [-34.0, -25.08, -15.11]
     # back wall (white panels, a04 behind the right bay) and the limestone base along the front
@@ -1454,7 +1452,7 @@ def north_boards():
         pts = dense[i0:i1 + 1] if i0 <= i1 else dense[i1:i0 + 1][::-1]   # contour runs east to west here
         q = [[(*pts[k], 0), (*pts[k + 1], 0), (*pts[k + 1], 0.9), (*pts[k], 0.9)] for k in range(len(pts) - 1)]
         faces_obj(q, f'nboard_{n_}', mat)
-        if not txt: continue
+        if True: continue   # texture pass: sponsor lettering removed, plain boards
         A, Bp = pts[0], pts[-1]; dx, dy = Bp[0] - A[0], Bp[1] - A[1]; L = math.hypot(dx, dy)
         bpy.ops.object.text_add(location=(0, 0, 0))
         ob = bpy.context.object; ob.name = f'nboard_txt_{n_}'
