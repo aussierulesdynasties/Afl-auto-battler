@@ -69,8 +69,10 @@ func _roll_through_draft() -> bool:
 	draft.auto_until_user_turn()
 	while not draft.is_finished() and guard < 4000:
 		guard += 1
-		if draft.is_user_turn() and draft.pass_block_reason() == "":
-			draft.user_pass()
+		# His pick: "Pick for me", the player the assistant would take, as a
+		# rival takes at the same pick (a coach who passes every pick is no coach).
+		if draft.is_user_turn() and draft.pick_for_me():
+			draft.auto_until_user_turn()
 			continue
 		var cand := draft._best_ai_pick(draft.current_club())
 		if cand.is_empty() or not draft._draft_pick(draft.current_club(), cand):
@@ -78,9 +80,17 @@ func _roll_through_draft() -> bool:
 		draft.auto_until_user_turn()
 	if not GameState.finish_intake_draft():
 		return false
-	# Lists are lodged after the Rookie Draft, which follows and can wait on
-	# his pick (1997 on): he passes, and a list still short is filled then
-	# (RookieList._finish), so the sizes below are the season's own.
+	# The Rookie Draft: he takes the first man left, as each rival does
+	# (RookieList._run), while he has a rookie spot to fill.
+	var rguard := 0
+	while RookieList.waiting(GameState) and rguard < 40:
+		rguard += 1
+		var left := MidseasonDraft.pool(GameState)
+		if left.is_empty() or not RookieList.choose(GameState, str(left[0]["id"])):
+			RookieList.choose(GameState, "")
+	# Lists are lodged after the Rookie Draft (1997 on), and a list still
+	# short is filled then (RookieList._finish), so the sizes below are the
+	# season's own.
 	RookieList.settle(GameState)
 	return true
 

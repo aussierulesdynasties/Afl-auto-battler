@@ -1,0 +1,11 @@
+# Fitzroy's home guernsey (1990-96) for the 3D match player, from the footyjumpers picture
+# (tools/kits/kits.txt) checked against a 1990 match photo. Format and ops: tools/kits/kits_today.py.
+# Fitzroy's colours are retired, so all are sampled from the photo: red #D91B14, blue #1A1D7E,
+# gold #F5D248. Sponsors and league logos left off; the gold FC monogram is drawn
+# (marks/fit_1990_fc.png, traced from www.footyjumpers.com/images/Fitzroy-1990.gif).
+
+# Photos: Paul Roos, round 8 1990 (media.gettyimages.com/id/52777301) and Michael Conlan 1990
+# (media.gettyimages.com/id/50937463). Read off them with the armhole bottom at 0.34: a blue yoke
+# to 0.23, red below; a plain blue V-neck to 0.175 (no trim colour, the inside of the jumper showing); the FC monogram at y 0.37-0.62,
+# 1.08 wide per unit high as in both front-on photos (x 0.356-0.644 on the 3D body). Blue shorts. Back (footyjumpers): blue yoke to 0.22, gold number.
+FIT Fitzroy-1990 | fill #D91B14; rect #1A1D7E 0 0 1 0.23; vfill #0E104A 0.175 0.16; mark #F5D248 fit_1990_fc 0.356 0.37 0.644 0.62; collar #1A1D7E 2; armholes #1A1D7E 1.5; shorts #1A1D7E | fill #D91B14; rect #1A1D7E 0 0 1 0.22; collar #1A1D7E 2; armholes #1A1D7E 1.5; number #F5D248

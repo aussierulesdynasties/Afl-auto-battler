@@ -1,0 +1,118 @@
+{
+ "brick_red": [
+  2.4,
+  1.032
+ ],
+ "brick_dark": [
+  2.4,
+  1.032
+ ],
+ "roof_grey": [
+  1.52,
+  1.52
+ ],
+ "roof_tan": [
+  1.52,
+  1.52
+ ],
+ "roof_white": [
+  1.52,
+  1.52
+ ],
+ "roof_dkgrey": [
+  1.52,
+  1.52
+ ],
+ "roof_blue": [
+  1.52,
+  1.52
+ ],
+ "gutter_brown": [
+  1.52,
+  1.52
+ ],
+ "roof_bluegrey": [
+  1.52,
+  1.52
+ ],
+ "roof_deck": [
+  2.8,
+  2.8
+ ],
+ "render_cream": [
+  2.0,
+  2.0
+ ],
+ "paint_white": [
+  2.0,
+  2.0
+ ],
+ "render_grey": [
+  2.0,
+  2.0
+ ],
+ "render_pale": [
+  2.0,
+  2.0
+ ],
+ "concrete": [
+  1.5,
+  1.5
+ ],
+ "asphalt": [
+  3,
+  3
+ ],
+ "grass": [
+  4,
+  4
+ ],
+ "court_green": [
+  3,
+  3
+ ],
+ "court_red": [
+  3,
+  3
+ ],
+ "glass": [
+  2,
+  2
+ ],
+ "seat_slats": [
+  2.0,
+  0.42
+ ],
+ "steel_white": [
+  1,
+  1
+ ],
+ "steel_galv": [
+  1,
+  1
+ ],
+ "steel_green": [
+  1,
+  1
+ ],
+ "steel_black": [
+  1,
+  1
+ ],
+ "pickets": [
+  1.15,
+  1.2
+ ],
+ "mesh": [
+  0.5,
+  0.5
+ ],
+ "roof_ribbed": [
+  4.2,
+  1.52
+ ],
+ "blind_clear": [
+  3.0,
+  4.6
+ ]
+}
