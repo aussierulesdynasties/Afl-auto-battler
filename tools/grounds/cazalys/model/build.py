@@ -319,17 +319,32 @@ def building(B, mb):
                 i0, i1, o0, o1 = wpt(y0, 0.02), wpt(y1, 0.02), wpt(y0, rw), wpt(y1, rw)
                 if y1 >= s0:   # ramp and landing deck, its outer edge face, the balustrade top rail
                     mb.face([(*i0, zr(y0)), (*o0, zr(y0)), (*o1, zr(y1)), (*i1, zr(y1))], 'conc_kerb')
-                    mb.face([(*o0, 0.0), (*o1, 0.0), (*o1, zr(y1)), (*o0, zr(y0))], 'conc_kerb')
+                    mb.face([(*o0, za - 0.05), (*o1, za - 0.05), (*o1, zr(y1)), (*o0, zr(y0))], 'conc_kerb')
                     mb.beam((*o0, zr(y0) + 1.0), (*o1, zr(y1) + 1.0), 0.05, 0.05, 'steel_white')
                     mb.beam((*o0, zr(y0) + 0.5), (*o1, zr(y1) + 0.5), 0.03, 0.03, 'steel_white')
             for y in np.arange(ya, s0, -1.5): mb.beam((*wpt(y, rw), zr(y)), (*wpt(y, rw), zr(y) + 1.0), 0.05, 0.05, 'steel_white')
-            n = max(1, round(zb / 0.175)); d = (s0 - s1) / n
-            for k in range(n):   # the south flight down from the landing to the ground
-                y0, y1 = s0 - k * d, s0 - (k + 1) * d; z = zb - (k + 1) * zb / n + zb / n
+            n = max(1, round((zb - za) / 0.175)); d = (s0 - s1) / n
+            for k in range(n):   # the south flight down from the landing to the dipped ground
+                y0, y1 = s0 - k * d, s0 - (k + 1) * d; z = zb - k * (zb - za) / n
                 i0, i1, o0, o1 = wpt(y0, 0.02), wpt(y1, 0.02), wpt(y0, rw), wpt(y1, rw)
                 mb.face([(*i0, z), (*o0, z), (*o1, z), (*i1, z)], 'conc_kerb')
-                mb.face([(*i0, 0.0), (*o0, 0.0), (*o0, z), (*i0, z)][::-1], 'conc_kerb')
-                mb.face([(*o0, 0.0), (*o1, 0.0), (*o1, z), (*o0, z)], 'conc_kerb')
+                mb.face([(*i0, za - 0.05), (*o0, za - 0.05), (*o0, z), (*i0, z)][::-1], 'conc_kerb')
+                mb.face([(*o0, za - 0.05), (*o1, za - 0.05), (*o1, z), (*o0, z)], 'conc_kerb')
+            nf = B['north_flight']; n2 = max(1, round(-za / 0.175)); d2 = (nf - ya) / n2
+            for k in range(n2):   # DA p11: the north flight climbs from the ramp foot to the higher ground north of the dip
+                y0, y1 = ya + k * d2, ya + (k + 1) * d2; z = za + (k + 1) * -za / n2
+                i0, i1, o0, o1 = wpt(y0, 0.02), wpt(y1, 0.02), wpt(y0, rw), wpt(y1, rw)
+                mb.face([(*i0, z), (*o0, z), (*o1, z), (*i1, z)][::-1], 'conc_kerb')
+                mb.face([(*i0, za - 0.05), (*o0, za - 0.05), (*o0, z), (*i0, z)], 'conc_kerb')
+                mb.face([(*o0, za - 0.05), (*o1, za - 0.05), (*o1, z), (*o0, z)], 'conc_kerb')
+        if B.get('dip_w'):   # DA p11: the outside ground falls below the model's grass along the west face (DA design, as-built unverified)
+            global DIP; DIP = (np.array(W), B['dip_w'])
+            dd, yn, yf, ys_, ye = B['dip_w'][:5]
+            for i in range(len(W)):   # the wall's plinth carried down to the dipped ground
+                p, q = np.array(W[i]), np.array(W[(i + 1) % len(W)]); t = q - p
+                if t[1] < 0 and abs(t[1]) > abs(t[0]) * 0.3:
+                    a_ = p + t * (min(p[1], yn) - p[1]) / t[1] if p[1] > yn else p; b_ = q + t * (max(q[1], ye) - q[1]) / t[1] if q[1] < ye else q
+                    if a_[1] > b_[1]: mb.wall(a_, b_, -dd - 0.05, 0.02, 'conc_wall')
         if B.get('raised'):
             RP, rh = B['raised']; RP = [tuple(q) for q in RP]; re_, rsd = B['raised_eave']; RH = rh + 0.5
             ring(inset(RP, re_), 0.0, RH - rsd, B.get('raised_wall', B['wall'])); slab(RP, RH - rsd, RH)
@@ -859,6 +874,24 @@ def boundary_seats(mb):
                 oriented(mb, [P3(ba, fence_r(ba) + 1.35, 0), P3(bb, fence_r(bb) + 1.35, 0), q[2], q[3]], 'conc_kerb', np.array([*pol(0.5 * (ba + bb), 1), 0]))
 
 
+DIP = None
+
+
+def dip(x, y):
+    """depth of the west-face dip below the model ground at (x, y); 0 outside it"""
+    if DIP is None: return 0.0
+    W, (dd, yn, yf, ys_, ye, din, dout) = DIP; P = np.array([x, y]); best = 1e9
+    for i in range(len(W)):
+        p, q = W[i], W[(i + 1) % len(W)]; t = q - p
+        if not (t[1] < 0 and abs(t[1]) > abs(t[0]) * 0.3): continue
+        u = np.clip(np.dot(P - p, t) / np.dot(t, t), 0, 1); c = p + t * u; nrm = np.array([t[1], -t[0]]) / np.linalg.norm(t)
+        dv = np.linalg.norm(P - c) * (1 if np.dot(P - c, nrm) >= 0 else -1); best = min(best, dv, key=abs)
+    if best > dout or best < -3.0: return 0.0
+    fy = np.interp(y, [ye, ys_, yf, yn], [0.0, 1.0, 1.0, 0.0])
+    fd = 1.0 if best <= din else 1.0 - (best - din) / (dout - din)
+    return dd * fy * fd
+
+
 def ground(col):
     """grass from the fence out to the perimeter, a paved ring 2.5 m wide just behind the fence"""
     mb = MB('ground'); Pm = np.array(D['perimeter'], float); bs = np.arange(0, 360.001, 1.0)
@@ -874,6 +907,15 @@ def ground(col):
         ba, bb = bs[i], bs[i + 1]; fa, fb = fence_r(ba % 360), fence_r(bb % 360)
         for r0a, r0b, r1a, r1b, m, z in ((fa, fb, fa + 2.5, fb + 2.5, 'paving', -0.01), (fa + 2.5, fb + 2.5, outer(ba), outer(bb), 'grass', -0.02)):
             q = [P3(ba, r0a, z), P3(bb, r0b, z), P3(bb, r1b, z), P3(ba, r1a, z)]
+            if m == 'grass' and DIP is not None and min(np.hypot(p[0] - DIP[0][:, 0].mean(), p[1] - DIP[0][:, 1].mean()) for p in q) < 45:
+                for j in range(4):   # finer grass over the west-face dip
+                    for k in range(int((r1a - r0a) / 0.75) + 1):
+                        b0, b1 = ba + (bb - ba) * j / 4, ba + (bb - ba) * (j + 1) / 4; nk = int((r1a - r0a) / 0.75) + 1
+                        rr = lambda b, f: (r0a + (r1a - r0a) * f) * (bb - b) / (bb - ba) + (r0b + (r1b - r0b) * f) * (b - ba) / (bb - ba)
+                        g = [P3(b0, rr(b0, k / nk), z), P3(b1, rr(b1, k / nk), z), P3(b1, rr(b1, (k + 1) / nk), z), P3(b0, rr(b0, (k + 1) / nk), z)]
+                        g = [(p[0], p[1], p[2] - dip(p[0], p[1])) for p in g]
+                        oriented(mb, g, m, UP, uv=[(p[0] / TILE[m][0], p[1] / TILE[m][1]) for p in g])
+                continue
             oriented(mb, q, m, UP, uv=[(p[0] / TILE[m][0], p[1] / TILE[m][1]) for p in q])
     mb.build(col)
 

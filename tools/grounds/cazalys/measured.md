@@ -46,5 +46,5 @@ to 2026; I have no ground photo yet to confirm the as-built heights.
 | Glazed bay, west face | DA p11: glazed from window band to floor south of board x 1233 (26.5 m from the slab NE corner), mullions ~1.1 m, framed row 1.32 m | `glazed_w` y < -17.3, texture shedg; glass tone UNVERIFIED |
 | North end wall face | DA p11 west elevation: wall starts 0.9 m further in than a 2.3 m eave (board_da_west2, x 340 vs 305 at 38.4 px/m) | north-facing wall inset 3.2 m |
 | Raised roof N/S ends | DA design 1 m (N) / 2 m (S) longer | aerial as-built (Â±0.5 m) kept: plan extents follow the aerial, heights follow the DA |
-| West ramp | DA p8 plan: 1.7 m wide (±0.2) against the wall; p11: foot y -2.2, top y -16.6 at FFL, landing to y -18.9, south stair flight to y -21.0, balustrade 1.0 m | `ramp_w`; north stair flight not built (needs the lower ground); rail/deck colour UNVERIFIED |
-| Outside ground under the ramp | DA p11: falls to ~1.3-1.5 m below FFL (0.55-0.75 m below model grass) | **OPEN**: model ground flat at -0.7 m |
+| West ramp | DA p8 plan: 1.7 m wide (±0.2) against the wall; p11: foot y -2.2, top y -16.6 at FFL, landing to y -18.9, south stair flight to y -21.0, balustrade 1.0 m | `ramp_w`; rail/deck colour UNVERIFIED |
+| Outside ground under the ramp | DA p11: falls to ~1.3-1.5 m below FFL (0.55-0.75 m below model grass) | `dip_w`: grass dipped 0.73 m under the ramp and stairs (y -2.2 to -30, fading out over 2.7-6 m from the wall), plinth carried down; north stair flight built. **Terrain: DA design, as-built unverified** |
