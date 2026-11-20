@@ -247,7 +247,30 @@ NAVYW=5.25  # navy glazed strip inside the white membrane, measured on the photo
 LOBE_IN=float(os.environ.get('LOBE_IN',0.35));LOBE_OUT=float(os.environ.get('LOBE_OUT',1.1));CAP0=float(os.environ.get('CAP0',0.94));LOBEP=float(os.environ.get('LOBEP',1.5))
 LOBE_FAR=float(os.environ.get('LOBE_FAR',LOBE_OUT));FARPOW=float(os.environ.get('FARPOW',1.0))
 ra=arange(A0,A1,0.125)
+MEMB=float(os.environ.get('MEMB',0))  # MEMB=k: one membrane per bay (lead 2026-11-20: tensile canopy spanned between its ribs and outer arch, repeated round the ring); k = arch height / bay width, measured on the photo
+def _bay(a,s):
+    for i in range(len(RI)-1):
+        r0,r1=ribat(i,s),ribat(i+1,s)
+        if r0<=a<=r1:return i,(a-r0)/(r1-r0)
+    return None,0.0
+def _hr(a,s):return hin(a)+(hout(a)-hin(a))*s
+def rp_m(a,s,dz):
+    i,ph=_bay(a,s)
+    if i is None:return None
+    a0,a1=ribat(i,s),ribat(i+1,s);ri=rin(a)-NAVYW+0.8-1.6*math.sin(math.pi*phase(a))
+    # plan: one smooth scallop per bay between the two rib-end radii
+    e0,e1=rout(RO[i]),rout(RO[i+1]);c=max(rout(RO[i]+(RO[i+1]-RO[i])*k/20) for k in range(6,15))
+    v=e0+(e1-e0)*ph;ro=v+max(0.0,c-v)*math.sqrt(max(0.0,math.sin(math.pi*ph)))
+    r=ri+(ro-ri)*s
+    # height: straight between the two rib heights (no per-angle steps), plus one even fabric dome per bay, zero at each rib
+    z0,z1=_hr(a0,s),_hr(a1,s);z=z0+(z1-z0)*ph
+    Hm=MEMB*math.radians(RO[i+1]-RO[i])*ro;H=LOBE_IN+(Hm-LOBE_IN)*s
+    z+=H*math.sqrt(max(0.0,math.sin(math.pi*ph)))+dz
+    t=math.radians(a);return Vector((r*math.cos(t)+SH[0],r*math.sin(t)+SH[1],z))
 def rp(a,s,dz=0.0):
+    if MEMB:
+        q=rp_m(a,s,dz)
+        if q is not None:return q
     ph=phase(a,s);ri=rin(a)-NAVYW+0.8-1.6*math.sin(math.pi*phase(a));ro=rout(a);r=ri+(ro-ri)*s;z=hin(a)+(hout(a)-hin(a))*s
     # inflated tube lobe: round cross-section (sqrt of sine), height grows outward, domed cap at the outer end
     A=LOBE_IN+(LOBE_FAR-LOBE_IN)*s**FARPOW if fardz(a,s,1) else LOBE_IN+(LOBE_OUT-LOBE_IN)*s  # far zone: LOBE_FAR, height kept near the outer edge (photo: flat inner membrane)
