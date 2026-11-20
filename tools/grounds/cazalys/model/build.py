@@ -487,7 +487,9 @@ def south_front(S, mb):
         q = [Q(s0, 0.06, 0.15), Q(s1, 0.06, 0.15), Q(s1, AWo + 0.3, 0.15), Q(s0, AWo + 0.3, 0.15)]
         oriented(mb, q, 'paving', UP, [(p[0] / 2.4, p[1] / 2.4) for p in q])
         oriented(mb, [Q(s0, AWo + 0.3, 0), Q(s1, AWo + 0.3, 0), Q(s1, AWo + 0.3, 0.15), Q(s0, AWo + 0.3, 0.15)], 'conc_kerb', np.array([*n, 0]))
-    for a in S['posts']:
+    if W_.get('pier'):   # wvEC: one white pier in the glass under the west box
+        pa, pw = W_['pier']; mb.beam(Q(A(pa), 0.1 + pw / 2, 0.15), Q(A(pa), 0.1 + pw / 2, GF), pw, pw, 'render_white')
+    for a in [a for a in S['posts'] if a < L - 0.3]:
         mb.beam(Q(A(a), AWo - 0.3, 0.15), Q(A(a), AWo - 0.3, GF), 0.2, 0.2, 'paint_cream', tube=True)
     eo = S['eave_o']
     for a in S['struts']:   # cream raking struts: foot on the wall at the awning, head out under the eave edge (pano solve)
