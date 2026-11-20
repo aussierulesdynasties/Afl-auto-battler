@@ -291,6 +291,10 @@ def roof_strip(S, bs, geo, mr):
         for b0, b1, f0, f1 in sol:
             if b0 <= b < b1: return 'solar_zone'
         return M['roof']
+    # u = true distance along the deck's mid line (bearing x radius is wrong on straight stands, whose polar radius grows to the ends)
+    sm = [0.0]
+    for i in range(len(bs) - 1):
+        sm.append(sm[-1] + float(np.linalg.norm(np.subtract(P3(bs[i + 1], sum(deck(bs[i + 1])) / 2, 0), P3(bs[i], sum(deck(bs[i])) / 2, 0)))))
     for i in range(len(bs) - 1):
         ba, bb = bs[i], bs[i + 1]; (ria, roa), (rib, rob) = deck(ba), deck(bb); m = roofmat(0.5 * (ba + bb))
         up = np.array([0, 0, 1.0]); dn = -up
@@ -303,7 +307,7 @@ def roof_strip(S, bs, geo, mr):
             ra0, ra1 = ria + g0 * (roa - ria), ria + g1 * (roa - ria); rb0, rb1 = rib + g0 * (rob - rib), rib + g1 * (rob - rib)
             za0, za1 = zr0 + g0 * (zr1 - zr0), zr0 + g1 * (zr1 - zr0)
             tu, tv = TILE.get(mm, (1, 1)); rm = 0.5 * (ra0 + ra1)
-            ua, ub = math.radians(ba) * rm / tu, math.radians(bb) * rm / tu
+            ua, ub = sm[i] / tu, sm[i + 1] / tu
             uv = [(ua, ra0 / tv), (ub, rb0 / tv), (ub, rb1 / tv), (ua, ra1 / tv)]
             oriented(mr, [P3(ba, ra0, za0), P3(bb, rb0, za0), P3(bb, rb1, za1), P3(ba, ra1, za1)], mm, up, uv)
             oriented(mr, [P3(ba, ra0, za0 - th), P3(bb, rb0, za0 - th), P3(bb, rb1, za1 - th), P3(ba, ra1, za1 - th)], 'roof_soffit', dn,
