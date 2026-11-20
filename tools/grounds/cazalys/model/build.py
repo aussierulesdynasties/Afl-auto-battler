@@ -487,7 +487,7 @@ def south_front(S, mb):
         quad(a0, a1, 0.08, GF + 0.6, E - 0.35, 'clubw_glass', (3.0, E - GF - 0.95))
     ax = W_.get('aw_ext')   # wvEC rays: the awning runs straight on past the SW corner instead of wrapping
     if ax:
-        ac, ex, pb = ax; pc, dc, nc = at(A(ac) + 0.01); pc = pc - dc * 0.01; z0 = GF + S['west']['aw_dz']; z1 = z0 + 0.3
+        ac, ex, pb = ax; pc, dc, nc = at(A(ac) + 0.01); pc = pc - dc * 0.01; z0 = GF + S['west']['aw_dz']; z1 = z0 + 0.3; AWo = AWf(A(ac))   # same depth as the awning at C (wvEC: fascia runs on with no step)
         P_ = lambda b, o, z: (*(pc - dc * b + nc * o), z)
         q = [P_(ex, 0, z0), P_(0, 0, z0), P_(0, AWo, z0), P_(ex, AWo, z0)]
         oriented(mb, q, 'soffit_white', np.array([0, 0, -1.0])); oriented(mb, [(x, y, z1) for x, y, _ in q], 'roof_white', UP)
