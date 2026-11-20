@@ -254,17 +254,23 @@ def _bay(a,s):
         if r0<=a<=r1:return i,(a-r0)/(r1-r0)
     return None,0.0
 def _hr(a,s):return hin(a)+(hout(a)-hin(a))*s
+if os.environ.get('EVEN'):  # every bay the same width (director 2026-11-20 photo: every bay the same puffed dome)
+    _n=len(RI)-1;RI=[RI[0]+(RI[-1]-RI[0])*k/_n for k in range(_n+1)];RO=[RO[0]+(RO[-1]-RO[0])*k/_n for k in range(_n+1)]
+SCAL=float(os.environ.get('SCAL',2.0))
+_ang=arange(A0,A1,1.0);HIN_M=sum(hin(x) for x in _ang)/len(_ang);HOUT_M=sum(hout(x) for x in _ang)/len(_ang)
+BAYW=sum(math.radians(RO[k+1]-RO[k])*rout((RO[k]+RO[k+1])/2) for k in range(len(RO)-1))/(len(RO)-1)
+print('MEMB bays',len(RO)-1,'width',round(BAYW,2),'hin',round(HIN_M,2),'hout',round(HOUT_M,2))
 def rp_m(a,s,dz):
     i,ph=_bay(a,s)
     if i is None:return None
     a0,a1=ribat(i,s),ribat(i+1,s);ri=rin(a)-NAVYW+0.8-1.6*math.sin(math.pi*phase(a))
     # plan: one smooth scallop per bay between the two rib-end radii
-    e0,e1=rout(RO[i]),rout(RO[i+1]);c=max(rout(RO[i]+(RO[i+1]-RO[i])*k/20) for k in range(6,15))
-    v=e0+(e1-e0)*ph;ro=v+max(0.0,c-v)*math.sqrt(max(0.0,math.sin(math.pi*ph)))
+    e0,e1=rout(RO[i]),rout(RO[i+1])
+    v=e0+(e1-e0)*ph;ro=v+SCAL*math.sqrt(max(0.0,math.sin(math.pi*ph)))  # same scallop depth on every bay
     r=ri+(ro-ri)*s
     # height: straight between the two rib heights (no per-angle steps), plus one even fabric dome per bay, zero at each rib
-    z0,z1=_hr(a0,s),_hr(a1,s);z=z0+(z1-z0)*ph
-    Hm=MEMB*math.radians(RO[i+1]-RO[i])*ro;H=LOBE_IN+(Hm-LOBE_IN)*s
+    z=HIN_M+(HOUT_M-HIN_M)*s  # one edge height all round: every crest level, as in the photo
+    Hm=MEMB*BAYW;H=LOBE_IN+(Hm-LOBE_IN)*s
     z+=H*math.sqrt(max(0.0,math.sin(math.pi*ph)))+dz
     t=math.radians(a);return Vector((r*math.cos(t)+SH[0],r*math.sin(t)+SH[1],z))
 def rp(a,s,dz=0.0):
@@ -458,8 +464,8 @@ for i in range(1,len(R)-1):
         tp=rp(a,1.0,-0.3);cyl(tp,Vector((tp.x,tp.y,hout(a)-POSTL)),0.35,0.35,YEL,8);continue
     t=math.radians(a);ro=rout(a)-9;g0=Vector((ro*math.cos(t)+SH[0],ro*math.sin(t)+SH[1],0));fk=Vector((g0.x,g0.y,9.0))
     cyl(g0,fk,0.45,0.4,YEL,8)
-    for da in (-0.32,0.32):
-        a2=a+da*(R[i+1]-R[i] if da>0 else R[i]-R[i-1]);cyl(fk,rp(a2,0.93,-0.6),0.35,0.3,YEL,8)
+    for da in (-0.5,0.5):  # each arm lands on the crest of its bay (lead 2026-11-20: rib tops on the crests)
+        a2=a+da*(R[i+1]-R[i] if da>0 else R[i]-R[i-1]);cyl(fk,rp(a2,1.0,-0.3),0.35,0.3,YEL,8)
 # the ground's own sign, People First Stadium (current photo, drone from the south): a flat navy panel hung on the
 # yellow columns behind the south-end stand (2.4 m out from the column feet, in front of the raking arms, as in the photo), centred on the 250 deg rib, 39 m wide, 7.33:1, bottom 8.75 m above the ground (just above the
 # concourse slab). Lettering hand-painted in handtex.py.
