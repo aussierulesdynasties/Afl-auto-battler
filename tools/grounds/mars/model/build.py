@@ -214,13 +214,35 @@ def single(S, mb, mr):
         rf, ri, ro, rs0, rb = geo(b); zb = zr1 - 0.6 - (zr1 - zr0) * (S['back_in'] / (ro - ri))
         # front wall up, seats up the rake, back wall of the bowl up to the roof, cap, facade down
         return [(rs0, 0.0), (rs0, zs0), (rb - 0.4, zs1), (rb - 0.4, zb), (rb, zb), (rb, 0.0)]
-    n = nrows(prof, bs, 1); tp, tm = terrace(prof, [M['front'], M['seat'], 'conc_wall', 'conc_wall', M['back']], [(1, n)])
+    n = nrows(prof, bs, 1); tp, tm = terrace(prof, [M['front'], M['seat'], 'conc_wall', 'conc_wall', 'boxes_glass' if S.get('nose') else M['back']], [(1, n)])
     strip(mb, bs, tp, tm, -1); seat_rows(bs, prof, 1, n, pal=S.get('pal', 'mix'))
     for b, sg in ((bs[0], -1), (bs[-1], 1)):
         endcap(mb, b, tp(b), 'conc_wall', sg)
     ribs = roof_strip(S, bs, geo, mr)
+    if S.get('nose'): nose(S, bs, geo, mr, mb)
     if S.get('brace'): bracing(S, ribs, geo, mr)
 
+def nose(S, bs, geo, mr, mb):
+    """PTA 2017 photos 13/15: the roof rolls over the back in a quarter-round nose of radius R onto a triangle-panel band,
+    which stands on columns over an open, recessed ground floor (band bottom at z 'under')"""
+    N = S['nose']; R, zu = N['R'], N['under']; zr1 = S['z_roof'][1]; M = S['mats']; up = np.array([0, 0, 1.0]); K = 8
+    for i in range(len(bs) - 1):
+        ba, bb = bs[i], bs[i + 1]; roa, rob = geo(ba)[2], geo(bb)[2]; bm = math.radians(0.5 * (ba + bb)); rad = np.array([math.sin(bm), math.cos(bm), 0.0])
+        ua, ub = math.radians(ba) * roa / 6, math.radians(bb) * rob / 6
+        for k in range(K):
+            t0, t1 = k * math.pi / 2 / K, (k + 1) * math.pi / 2 / K; tm = 0.5 * (t0 + t1)
+            pa = lambda r0, t: (r0 + R * math.sin(t), zr1 - R + R * math.cos(t))
+            (a0r, a0z), (a1r, a1z), (b0r, b0z), (b1r, b1z) = pa(roa, t0), pa(roa, t1), pa(rob, t0), pa(rob, t1)
+            oriented(mr, [P3(ba, a0r, a0z), P3(bb, b0r, b0z), P3(bb, b1r, b1z), P3(ba, a1r, a1z)], M['roof'], rad * math.sin(tm) + up * math.cos(tm),
+                     [(ua, t0 * R / 6), (ub, t0 * R / 6), (ub, t1 * R / 6), (ua, t1 * R / 6)])
+        ra, rb_ = roa + R, rob + R; zt = zr1 - R
+        tu, tv = TILE.get(M['back'], (6, 12)); va, vb = math.radians(ba) * ra / tu, math.radians(bb) * rb_ / tu
+        oriented(mb, [P3(ba, ra, zu), P3(bb, rb_, zu), P3(bb, rb_, zt), P3(ba, ra, zt)], M['back'], rad, [(va, zu / tv), (vb, zu / tv), (vb, zt / tv), (va, zt / tv)])
+        rba, rbb = geo(ba)[4], geo(bb)[4]
+        oriented(mb, [P3(ba, rba, zu), P3(bb, rbb, zu), P3(bb, rb_, zu), P3(ba, ra, zu)], 'roof_soffit', -up)
+    b = bs[0]
+    while b <= bs[-1]:
+        ro = geo(b)[2]; mr.beam(P3(b, ro + R - 0.6, 0.0), P3(b, ro + R - 0.6, zu), 0.5, 0.5, 'steel_white'); b += math.degrees(N.get('col', 6.0) / ro)
 
 def roof_strip(S, bs, geo, mr):
     """roof deck from ri (z_roof[0]) to ro (z_roof[1]), 0.5 m thick, white trusses on top every S['rib'] metres"""

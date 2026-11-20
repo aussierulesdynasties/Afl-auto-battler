@@ -170,7 +170,7 @@ def _es(a, pu, pv, h, w):     # east-south back: pale grey sheet cladding, white
 
 def _tri(a, pu, pv, h, w):     # Mars west/east backs (PTA 2017 photos): white folded triangle panels, ~1.5 x 1.2 m, dark open voids in some
     from PIL import ImageDraw
-    im = Image.new('L', (w, h), 0); d = ImageDraw.Draw(im); sx, sy = 1.5 * pu, 1.3 * pv; rr = np.random.default_rng(5)
+    im = Image.new('L', (w, h), 0); d = ImageDraw.Draw(im); sx, sy = 3.0 * pu, 2.6 * pv; rr = np.random.default_rng(5)
     for j in range(int(h / sy) + 1):
         for i in range(-1, int(w / sx) + 2):
             x0 = i * sx + (sx / 2 if j % 2 else 0); y0 = j * sy
