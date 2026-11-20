@@ -49,6 +49,39 @@ to 2026; I have no ground photo yet to confirm the as-built heights.
 | West ramp | DA p8 plan: 1.7 m wide (±0.2) against the wall; p11: foot y -2.2, top y -16.6 at FFL, landing to y -18.9, south stair flight to y -21.0, balustrade 1.0 m | `ramp_w`; rail/deck colour UNVERIFIED |
 | Outside ground under the ramp | DA p11: falls to ~1.3-1.5 m below FFL (0.55-0.75 m below model grass) | `dip_w`: grass dipped 0.73 m under the ramp and stairs (y -0.95 to -30, fading out over 1.75-3.3 m from the wall, inside the site edge), plinth carried down; north stair flight built. **Terrain: DA design, as-built unverified** |
 
+## bldg_w raised roof west edge (Wayback z19, 3.5 px/m)
+
+Roof-top edge = east edge of the shadow, the strongest bright-to-dark step in pixel profiles square to the
+wall, 9 points per date. The offsets taper north to south, so the edge is a fitted line (two-date mean), not one shift:
+NW corner 2.56 m W, SW corner 1.41 m W; the clerestory follows. The dates differ by a steady ~0.6 m (release
+registration), so no single edge fits both under 0.5 m everywhere. The y 3.4 point is left out: it lies north of where
+the shadow starts.
+
+| y (m) | 13192 offset | 3692 offset | new edge | residual 13192 | residual 3692 |
+|---|---|---|---|---|---|
+| 0.4 | 2.45 | 1.85 | 2.33 | +0.12 | -0.48 |
+| -2.5 | 2.45 | 1.85 | 2.22 | +0.23 | -0.37 |
+| -5.5 | 2.50 | 1.85 | 2.10 | +0.40 | -0.25 |
+| -8.4 | 2.45 | 1.85 | 1.99 | +0.46 | -0.14 |
+| -11.3 | 2.45 | 1.60 | 1.88 | +0.57 | -0.28 |
+| -14.3 | 2.20 | 1.55 | 1.76 | +0.44 | -0.21 |
+| -17.2 | 1.90 | 1.30 | 1.65 | +0.25 | -0.35 |
+| -20.2 | 1.60 | 1.05 | 1.53 | +0.07 | -0.48 |
+| 3.4 (left out) | -0.45 | 1.55 | 2.44 | | |
+
+## bldg_w south face (DA p11 south elevation, 40 px/m on the model ortho)
+
+| Item | Drawing / aerial | Model |
+|---|---|---|
+| Ramp along the face | foot at the west end, up to FFL, balustrade 1.0 m | `ramp_s`, 1.7 m wide; rail colour UNVERIFIED |
+| East stair flight | from the landing down to grade | `ramp_s` flight, 0.175 m risers |
+| Blockwork east of the flight | "FAIR FACED BLOCKWORK", grade to 0.2 m below FFL | `blockwork` wall to 0.5 m; 390 x 190 stretcher bond; tone UNVERIFIED |
+| Outside ground | ~1.45 m below FFL along the face | `dip_s` 0.73 m below the grass |
+| Bays west to east | glazed, then louvre / plain bays | `bays_s`; glass, louvre and plain tones UNVERIFIED |
+| Lower slab west end | DA 0.8 m past the traced corner; aerial 0.5 (13192) / 1.35 (3692) m | `slab_pt`: SW slab corner 0.8 m out, walls unchanged |
+| Raised slab east end | DA 0.8 m shorter; aerial gutter line 1.46 (13192) / 0.90 (3692) m in | `raised_slab`: east overhang 0.8 m shorter, clerestory unchanged |
+| Raised clerestory west end | DA 4.4 m further west (FAIL 5) | not built: the aerial shows bare lower roof there |
+
 ## bldg_w: UNVERIFIED items for the READY table
 
 | Item | Model now | Source | Status |
