@@ -145,6 +145,21 @@ def _shed(a, pu, pv, h, w):     # small white block building (SE): white render,
 
 
 facade('clad_grey', (200, 202, 202), _clad); facade('club', (222, 220, 214), _club, (6.0, 9.0), 1024, 1536)
+def _shedw(a, pu, pv, h, w):   # bldg_w lower wall, one tile = 6.6 m x 4.1 m (top row = eave). DA 3998/2010 p11: horizontal
+    for k in range(int(4.1 / 0.2)): a[int(k * 0.2 * pv):int(k * 0.2 * pv) + 3] *= 0.84   # profiled metal ribs; high window band 0.8 m under the eave
+    a[:int(0.8 * pv)] = np.array((58, 68, 78)) + noise(int(0.8 * pv), w, 6, 14)[:, :, None]   # TONE UNVERIFIED (no photo yet)
+    for k in range(3): a[:int(0.8 * pv), int(k * 2.2 * pu):int(k * 2.2 * pu) + 6] = (196, 198, 200)
+    a[int(0.8 * pv):int(0.8 * pv) + 5] = (196, 198, 200)
+
+
+def _shedr(a, pu, pv, h, w):   # bldg_w raised wall, one tile = 6.6 m x 5.8 m; visible 1.2 m above the low roof: windows over louvres
+    a[:int(1.2 * pv)] = np.array((58, 68, 78)) + noise(int(1.2 * pv), w, 6, 14)[:, :, None]
+    for k in range(int(0.6 * pv / 8)): a[int(0.6 * pv) + k * 8:int(0.6 * pv) + k * 8 + 4] = (150, 154, 158)   # louvre blades
+    for k in range(3): a[:int(1.2 * pv), int(k * 2.2 * pu):int(k * 2.2 * pu) + 6] = (196, 198, 200)
+    a[int(0.58 * pv):int(0.62 * pv)] = (196, 198, 200)
+
+
+facade('shedw', (200, 200, 198), _shedw, (6.6, 4.1)); facade('shedr', (200, 200, 198), _shedr, (6.6, 5.8))
 facade('gstand_back', (206, 204, 198), _gstand); facade('shed', (230, 230, 226), _shed)
 # coaches' box (photos 09-11): matt black boarding, five slit windows along the top
 a = base(512, 512, (30, 32, 36), 3, 6)

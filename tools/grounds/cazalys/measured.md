@@ -28,3 +28,13 @@ shadow bands have a ratio of 0.39 Â±0.11. The drawing gives (5.56 âˆ’ 3.92) / 3.
 
 **Caveat.** This is the approved design. The footprint and roof layout match every aerial from 2021
 to 2026; I have no ground photo yet to confirm the as-built heights.
+
+## bldg_w walls (DA p11 west elevation callouts)
+
+| Item | Source | Model |
+|---|---|---|
+| Horizontal profiled metal wall cladding | p11 callout | `shedw`, ribs every 0.2 m |
+| High window band under the eave | p11, 30 px at 36.5 px/m (wall height as scale) | 0.8 m, ±0.15 m |
+| Clerestory windows over louvres, raised roof | p11, fills the raised step | top 1.2 m visible, louvres in the lower half |
+| Mullion spacing | p11, ~80 px | 2.2 m, ±0.3 m |
+| Cladding colour | **UNVERIFIED**: no photo yet | neutral grey (200, 200, 198) placeholder |
