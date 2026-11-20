@@ -449,7 +449,7 @@ def south_front(S, mb):
     # west end: white glazed box under a raised white skillion roof
     c0, c1, zr0, zr1, cd = W_['box']; quad(c0, min(c1, L), 0.1, GF + 0.3, GF + 2.0, 'clubw_glass', (3.0, 1.7)); quad(c0, min(c1, L), 0.1, GF + 2.0, zr0 - 0.6, 'render_white')
     zs2 = lambda s_: zr1 + (zr0 - zr1) * (s_ - A(min(c1, L))) / (min(c1, L) - c0)
-    for s0, s1 in [(A(min(c1, L)), A(c0))]:
+    for s0, s1 in runs(A(min(c1, L)), A(c0)):   # follows the wrap round the SW corner (aerial)
         bo = W_['box_o']; q = [Q(s0, bo, zs2(s0)), Q(s1, bo, zs2(s1)), Q(s1, -cd, zs2(s1)), Q(s0, -cd, zs2(s0))]
         oriented(mb, [(x, y, z + 0.3) for x, y, z in q], 'roof_white', UP); oriented(mb, q, 'soffit_white', np.array([0, 0, -1.0]))
         _, _, n = at(0.5 * (s0 + s1))
@@ -457,14 +457,14 @@ def south_front(S, mb):
         oriented(mb, [Q(s0, 0.1, zr0 - 0.6), Q(s1, 0.1, zr0 - 0.6), Q(s1, 0.1, zs2(s1)), Q(s0, 0.1, zs2(s0))], 'render_white', np.array([*n, 0]))
     for af, ah in W_.get('fan', []):   # wvEC (Feb 2025): nine cream raking struts fanned on the box's white wall, counted one by one
         af, ah = min(af, L - 0.2), min(ah, L - 0.2)
-        mb.beam(Q(A(af), 0.3, GF + 2.3), Q(A(ah), W_['box_o'] * 0.8, zs2(A(ah)) - 0.05), 0.18, 0.18, 'paint_cream')
+        mb.beam(Q(A(af), 0.3, GF + 2.3), Q(A(ah), 0.3, zs2(A(ah)) - 0.05), 0.18, 0.18, 'paint_cream')
     for a0, a1 in S['upper_glass']:
         quad(a0, a1, 0.08, GF + 0.6, E - 0.35, 'clubw_glass', (3.0, E - GF - 0.95))
     for s0, s1 in runs(0.0, L):   # awning: flat white soffit, thin white fascia; stepped up west of the recess
         _, _, n = at(0.5 * (s0 + s1)); z0 = GF + (S['west']['aw_dz'] if 0.5 * (s0 + s1) < A(S['west']['recess'][0]) else 0.0); z1 = z0 + 0.3
         q = [Q(s0, 0, z0), Q(s1, 0, z0), Q(s1, AWo, z0), Q(s0, AWo, z0)]
         oriented(mb, q, 'soffit_white', np.array([0, 0, -1.0]), [(p[0] / 3.0, p[1] / 3.0) for p in q]); oriented(mb, [(x, y, z1) for x, y, _ in q], 'roof_white', UP)
-        oriented(mb, [Q(s0, AWo, z0), Q(s1, AWo, z0), Q(s1, AWo, z1), Q(s0, AWo, z1)], 'paint_white', np.array([*n, 0]))
+        oriented(mb, [Q(s0, AWo, z0), Q(s1, AWo, z0), Q(s1, AWo, z1), Q(s0, AWo, z1)], 'render_white', np.array([*n, 0]))
         q = [Q(s0, 0.06, 0.15), Q(s1, 0.06, 0.15), Q(s1, AWo + 0.3, 0.15), Q(s0, AWo + 0.3, 0.15)]
         oriented(mb, q, 'paving', UP, [(p[0] / 2.4, p[1] / 2.4) for p in q])
         oriented(mb, [Q(s0, AWo + 0.3, 0), Q(s1, AWo + 0.3, 0), Q(s1, AWo + 0.3, 0.15), Q(s0, AWo + 0.3, 0.15)], 'conc_kerb', np.array([*n, 0]))
@@ -473,7 +473,7 @@ def south_front(S, mb):
     eo = S['eave_o']
     for a in S['struts']:   # cream raking struts: foot on the wall at the awning, head out under the eave edge (pano solve)
         mb.beam(Q(A(a), 0.12, GF + 0.3), Q(A(a + S['strut_lean']), eo - 0.15, E), 0.16, 0.16, 'paint_cream')
-    for s0, s1 in runs(0.0, L):   # eave: roof edge overhang
+    for s0, s1 in runs(A(W_['box'][0]), L):   # eave: roof edge overhang (none over the west box: wvEC photo)
         _, _, n = at(0.5 * (s0 + s1))
         oriented(mb, [Q(s0, 0, E), Q(s1, 0, E), Q(s1, eo, E), Q(s0, eo, E)], 'soffit_white', np.array([0, 0, -1.0]))
         oriented(mb, [Q(s0, eo, E), Q(s1, eo, E), Q(s1, eo, E + 0.35), Q(s0, eo, E + 0.35)], 'paint_white', np.array([*n, 0]))
