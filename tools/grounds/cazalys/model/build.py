@@ -397,6 +397,51 @@ def club_front(C, mb):
 
 
 
+def south_front(S, mb):
+    """club's Mulgrave Rd (south) face, from Street View pano dxiQEa8tBLbzx8OQGPV1oA (Feb 2025): glazed ground floor under a
+    continuous white awning on cream posts, grey upper wall with glazing runs and white struts leaning west, and the white
+    skillion box at the east end beside the entrance. Distances 'a' are metres west of the SE corner"""
+    at, Q, runs, L = front_path(S['path']); A = lambda a: L - a
+    GF, AWo = S['gf'], S['aw_o']; E = S['eave']
+    def quad(a0, a1, o, z0, z1, m, tu=None):
+        for s0, s1 in runs(A(a1), A(a0)):
+            _, _, n = at(0.5 * (s0 + s1))
+            uv = None if tu is None else [(s0 / tu[0], z0 / tu[1]), (s1 / tu[0], z0 / tu[1]), (s1 / tu[0], z1 / tu[1]), (s0 / tu[0], z1 / tu[1])]
+            oriented(mb, [Q(s0, o, z0), Q(s1, o, z0), Q(s1, o, z1), Q(s0, o, z1)], m, np.array([*n, 0]), uv)
+    quad(0.0, L, 0.06, 0.0, GF, 'clubw_glass', (1.5, GF))   # Street View: dark glass shopfront the full height, mullions ~1.5 m
+    quad(0.0, L, 0.04, GF, E, 'paint_grey')
+    for a0, a1 in S['upper_glass']:
+        quad(a0, a1, 0.08, GF + 0.6, E - 0.35, 'clubw_glass', (3.0, E - GF - 0.95))
+    for s0, s1 in runs(0.0, L):   # awning: flat white soffit, thin white fascia
+        _, _, n = at(0.5 * (s0 + s1)); z0, z1 = GF, GF + 0.3
+        q = [Q(s0, 0, z0), Q(s1, 0, z0), Q(s1, AWo, z0), Q(s0, AWo, z0)]
+        oriented(mb, q, 'soffit_white', np.array([0, 0, -1.0]), [(p[0] / 3.0, p[1] / 3.0) for p in q]); oriented(mb, [(x, y, z1) for x, y, _ in q], 'roof_white', UP)
+        oriented(mb, [Q(s0, AWo, z0), Q(s1, AWo, z0), Q(s1, AWo, z1), Q(s0, AWo, z1)], 'paint_white', np.array([*n, 0]))
+        q = [Q(s0, 0.06, 0.15), Q(s1, 0.06, 0.15), Q(s1, AWo + 0.3, 0.15), Q(s0, AWo + 0.3, 0.15)]
+        oriented(mb, q, 'paving', UP, [(p[0] / 2.4, p[1] / 2.4) for p in q])
+        oriented(mb, [Q(s0, AWo + 0.3, 0), Q(s1, AWo + 0.3, 0), Q(s1, AWo + 0.3, 0.15), Q(s0, AWo + 0.3, 0.15)], 'conc_kerb', np.array([*n, 0]))
+    for a in np.arange(S['post_a0'], L, S['post_step']):
+        mb.beam(Q(A(a), AWo - 0.3, 0.15), Q(A(a), AWo - 0.3, GF), 0.2, 0.2, 'paint_cream', tube=True)
+    for a in S['struts']:   # white struts on the upper wall, foot at the awning, head leaning west to the eave
+        mb.beam(Q(A(a), 0.25, GF + 0.3), Q(A(a + S['strut_lean']), 0.25, E), 0.22, 0.22, 'paint_white')
+    for s0, s1 in runs(0.0, L):   # eave: roof edge overhang
+        _, _, n = at(0.5 * (s0 + s1))
+        oriented(mb, [Q(s0, 0, E), Q(s1, 0, E), Q(s1, 0.8, E), Q(s0, 0.8, E)], 'soffit_white', np.array([0, 0, -1.0]))
+        oriented(mb, [Q(s0, 0.8, E), Q(s1, 0.8, E), Q(s1, 0.8, E + 0.35), Q(s0, 0.8, E + 0.35)], 'paint_white', np.array([*n, 0]))
+    # the white skillion box at the east end: glass band over the awning, white upper wall, roof rising to the east
+    b0, b1, zw, ze, bd = S['box']
+    quad(b0, b1, 0.1, GF + 0.3, E + 0.1, 'clubw_glass', (3.0, E - GF))
+    for s0, s1 in runs(A(b1), A(b0)):
+        _, _, n = at(0.5 * (s0 + s1)); zs = lambda s: zw + (ze - zw) * (s - A(b1)) / (b1 - b0)
+        oriented(mb, [Q(s0, 0.1, E + 0.1), Q(s1, 0.1, E + 0.1), Q(s1, 0.1, zs(s1)), Q(s0, 0.1, zs(s0))], 'paint_white', np.array([*n, 0]))
+        q = [Q(s0, 1.0, zs(s0)), Q(s1, 1.0, zs(s1)), Q(s1, -bd, zs(s1)), Q(s0, -bd, zs(s0))]
+        oriented(mb, [(x, y, z + 0.3) for x, y, z in q], 'roof_white', UP); oriented(mb, q, 'soffit_white', np.array([0, 0, -1.0]))
+        oriented(mb, [Q(s0, 1.0, zs(s0)), Q(s1, 1.0, zs(s1)), Q(s1, 1.0, zs(s1) + 0.3), Q(s0, 1.0, zs(s0) + 0.3)], 'paint_white', np.array([*n, 0]))
+    for a, z in ((b1, zw), (b0, ze)):
+        p, d, n = at(A(a)); sg = 1 if a == b0 else -1
+        oriented(mb, [(*(p + n * 0.1), E), (*(p - n * bd), E), (*(p - n * bd), z), (*(p + n * 0.1), z)], 'paint_white', np.array([*(d * sg), 0]))
+
+
 def shelter(S, mb):
     """covered player/coach bench along the fence (OSM strip): back wall, side walls, skillion roof, two rows of seats"""
     u, v, c, L, W = axes(OSM[S['osm']]); h = S['h']; W = max(W, 2.6)
@@ -681,6 +726,7 @@ def build_all():
     grandstand(D['grandstand'], mb, mr)
     for B in D['buildings']: building(B, mx)
     club_front(D['club_front'], mx)
+    south_front(D['south_front'], mx)
     for S in D['shelters']: shelter(S, mx)
     for T in D['tents']: tent(T, mx)
     bleacher(D['bleacher'], mx); sails(D['sails'], mx); scoreboard(D['scoreboard'], mx)
