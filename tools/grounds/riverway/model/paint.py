@@ -61,7 +61,8 @@ def seats(name, col, tread=(112, 114, 116), aisle=(140, 140, 138)):
 
 
 # 3D seat plastic (aerial4, drone5): teal-green, a darker moulded rim and a soft sheen down the middle. UV 0-1 per face.
-for nm, col in (('seat_plastic', (62, 150, 118)), ('seat_green', (70, 160, 104)), ('seat_teal', (48, 146, 140)), ('seat_blue', (58, 112, 176))):
+for nm, col in (('seat_plastic', (62, 150, 118)), ('seat_green', (70, 150, 112)), ('seat_teal', (48, 146, 140)), ('seat_blue', (52, 96, 160)),
+                 ('seat_paleblue', (128, 158, 182)), ('seat_mint', (130, 185, 170)), ('seat_dkgreen', (24, 98, 58))):
     a = base(128, 128, col, 2, 6)   # Riverway shells: green, teal and blue (symonds-grandstand photo), moulded rim, sheen
     a[:, :8] *= 0.78; a[:, -8:] *= 0.78; a[:6] *= 0.85; a[-6:] *= 0.7
     a[:, 40:88] *= (1 + 0.10 * np.sin(np.linspace(0, math.pi, 48)))[None, :, None]
@@ -157,6 +158,14 @@ def _back(a, pu, pv, h, w):     # stand back (GE l090): dark grey-brown render, 
 facade('podium', (206, 170, 138), _podium, (6.0, 2.8), 1024, 478, streaks=False)
 facade('glass_corp', (234, 216, 178), _glass, (6.0, 5.0), 1024, 853, streaks=False)
 facade('facade_back', (112, 100, 88), _back, (6.0, 3.6))
+# charcoal ribbed sheet cladding on the stand back south of the roof step (aerial ref/more/tcb.jpg): a rib every 0.25 m
+a = base(512, 512, (62, 66, 72), 2, 6)
+for k in range(0, 512, 32): a[:, k:k + 5] *= 1.25; a[:, k + 5:k + 8] *= 0.7
+save('clad_dark', a, (2.0, 2.0))
+# stair tower: pale grey composite panels 1.2 x 1.2 m with dark joints (tcb.jpg)
+a = base(512, 512, (214, 220, 222), 2, 6)
+for k in range(0, 512, 256): a[:, k:k + 4] *= 0.72; a[k:k + 4] *= 0.72
+weather(a, 0.05, 8, 20); save('tower_panel', a, (2.4, 2.4))
 a = base(512, 512, (186, 206, 118), 3, 10); weather(a, 0.1, 10, 20); save('shelter_wall', a, (2.0, 2.0))   # pale lime (race photo)
 a = base(512, 512, (224, 214, 160), 3, 10); a[:, ::32] *= 0.85; save('shelter_roof', a, (2.0, 2.0))
 a = base(512, 512, (36, 112, 196), 3, 8); a[:, 250:256] *= 0.8; a[250:256] *= 0.8; save('sail_blue', a, (1, 1))
@@ -196,6 +205,9 @@ def sign(name, text, wm, hm, bg, fg, px=2048, edge=None):
     if edge: d.rectangle([0, 0, W - 1, H - 1], outline=edge, width=max(2, H // 24))
     save(name, np.asarray(im, float), (1, 1))
 sign('sign_symonds', 'Andrew \u2018Roy\u2019 Symonds Grandstand', 8.0, 0.65, (244, 244, 240), (34, 40, 72))
+im = Image.new('RGB', (2048, 460), (44, 48, 54)); d = ImageDraw.Draw(im); f = ImageFont.truetype(FNT, 250)   # tower sign, read bottom to top
+x0, y0, x1, y1 = d.textbbox((0, 0), 'Riverway Stadium', font=f); d.text(((2048 - (x1 - x0)) / 2 - x0, (460 - (y1 - y0)) / 2 - y0), 'Riverway Stadium', font=f, fill=(236, 238, 238))
+save('sign_tower', np.asarray(im.rotate(90, expand=True), float), (1, 1))
 sign('sign_home', 'HOME', 3.8, 0.42, (214, 216, 214), (40, 44, 60), 1024, (150, 152, 150))
 sign('sign_away', 'AWAY', 3.8, 0.42, (214, 216, 214), (40, 44, 60), 1024, (150, 152, 150))
 

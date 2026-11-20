@@ -86,6 +86,7 @@ def strip(mb, bs, prof, mats, rdir_out):
         A, B = prof(bs[i]), prof(bs[i + 1]); ba, bb = bs[i], bs[i + 1]
         for k in range(len(A) - 1):
             m = mats[k]
+            if callable(m): m = m(0.5 * (ba + bb))
             if m is None: continue
             (r0, z0), (r1, z1) = A[k], A[k + 1]; (s0, w0), (s1, w1) = B[k], B[k + 1]
             dr, dz = r1 - r0, z1 - z0; L = math.hypot(dr, dz)
@@ -105,6 +106,11 @@ SEAT_XF = []      # (P, t, o, z, colour) per seat, for the instanced seat files
 SEAT_MIX = ['seat_green', 'seat_teal', 'seat_blue']; SEAT_P = [0.45, 0.35, 0.20]
 SEAT_RNG = np.random.default_rng(7)
 AISLES = []       # aisle-stair bearings (for the seat-height proof)
+# seat colours by row from the front, in pairs (photo tb_8c29, section C): pale blue, mint, green, pale blue, dark green;
+# a run of five royal-blue seats in row 7 of the section over the race. PITCH sets the 1,015 seats the council lists.
+ROW_COLS = ['seat_paleblue'] * 2 + ['seat_mint'] * 2 + ['seat_green'] * 2 + ['seat_paleblue'] * 2 + ['seat_dkgreen'] * 2
+SHORT_SECS = (0,)   # sections whose odd rows hold N-1 seats (centred); sets the total to the council's 1,015
+ROYAL_ROW = 6; RACE_B = 268.8; PITCH = 0.585
 ROW = 0.8         # tread depth (m): one row of seats
 
 
@@ -133,12 +139,12 @@ def nrows(prof, bs, k):
     P = prof(0.5 * (bs[0] + bs[-1])); return max(1, int(round((P[k + 1][0] - P[k][0]) / ROW)))
 
 
-def seat(P, t, o, z, shell=None):
+def seat(P, t, o, z, shell=None, col=None):
     """one empty moulded plastic shell (2024 empty-seat photo): pan and back one curved piece, dished across its width,
     a rolled top edge; P = xy of the back of its tread, t = along the row, o = away from the pitch, z = tread top.
     Centre pedestal under the pan."""
     tmpl = shell is not None; shell = shell if tmpl else SEATS
-    col = SEAT_MIX[int(SEAT_RNG.choice(len(SEAT_MIX), p=SEAT_P))]
+    col = col or SEAT_MIX[int(SEAT_RNG.choice(len(SEAT_MIX), p=SEAT_P))]
     if not tmpl: SEAT_XF.append((tuple(P), tuple(t), tuple(o), z, col))
     P = np.array(P, float); t = np.array(t, float); o = np.array(o, float); hw = 0.22
     def X(a, d, h):
@@ -168,19 +174,34 @@ def seat_rows(bs, prof, k, n, aisle=12.0, gap=1.1):
         if b > b1 - math.degrees(2 / rf): break
         ab.append(b); s += aisle
     AISLES.extend(ab)
-    cols = []; b = b0 + math.degrees(0.6 / rf)   # one seat per column, the columns square to the front row (straight stand)
-    while b <= b1 - math.degrees(0.6 / rf):
-        if all(abs(math.radians(b - a)) * rf > gap / 2 + 0.25 for a in ab): cols.append(b)
-        b += math.degrees(0.5 / rf)
+    # per section between aisles: N seats centred on even rows, N-1 on odd rows (staggered half a seat, tb_8c29 photo);
+    # radial columns (bearing steps), so every row ends the same distance from its aisle
+    sec = [b0] + ab + [b1]
+    clr = lambda i: (0.3 if i == 0 else gap / 2 + 0.25)
+    rc = min(range(len(sec) - 1), key=lambda i: abs(0.5 * (sec[i] + sec[i + 1]) - RACE_B))
+    bc = 0.5 * (sec[rc] + sec[rc + 1])
     def row0(b):
         P = prof(b); (r0, z0), (r1, z1) = P[k], P[k + 1]; return np.array(pol(b, r0 + (r1 - r0) / n)), (r1 - r0) / n, z0, z1
-    for b in cols:
-        q0, dr, z0, z1 = row0(b); tt = np.array(row0(b + 0.05)[0]) - np.array(row0(b - 0.05)[0]); tt /= np.linalg.norm(tt)
-        oo = np.array((-tt[1], tt[0]))
-        if oo @ q0 < 0: oo = -oo
-        for j in range(n):
-            zz = z0 + (z1 - z0) * j / (n - 1) if n > 1 else z0
-            seat(tuple(q0 + oo * dr * j), tuple(tt), tuple(oo), zz)
+    for j in range(n):
+        for i in range(len(sec) - 1):
+            lo = sec[i] + math.degrees(clr(i) / rf); hi = sec[i + 1] - math.degrees(clr(i + 1 if i + 1 < len(sec) - 1 else 0) / rf)
+            last = i not in SHORT_SECS   # 'full' section: odd rows keep N seats, shifted half a seat (same half-seat step at both aisles)
+            st = math.degrees(PITCH / rf)
+            if last: hi -= st / 2
+            N0 = int(math.floor((hi - lo) / st + 1e-9)) + 1
+            N = N0 if last else N0 - (j % 2)
+            mid = 0.5 * (lo + hi) + (st / 2 if last and j % 2 else 0.0)
+            offs = [(m - (N - 1) / 2) * st for m in range(N)]
+            royal = sorted(range(N), key=lambda m: abs(mid + offs[m] - bc))[:5] if (j == ROYAL_ROW and i == rc) else []
+            for m in range(N):
+                bb = mid + offs[m]
+                q0, dr, z0, z1 = row0(bb); tt = np.array(row0(bb + 0.05)[0]) - np.array(row0(bb - 0.05)[0]); tt /= np.linalg.norm(tt)
+                oo = np.array((-tt[1], tt[0]))
+                if oo @ q0 < 0: oo = -oo
+                zz = z0 + (z1 - z0) * j / (n - 1) if n > 1 else z0
+                col = ROW_COLS[min(j, len(ROW_COLS) - 1)]
+                if m in royal: col = 'seat_blue'
+                seat(tuple(q0 + oo * dr * j), tuple(tt), tuple(oo), zz, col=col)
 
 
 def endcap(mb, b, pts, m, sign):
@@ -217,7 +238,9 @@ def single(S, mb, mr):
         sof = lambda r: zr0 - 0.5 + (r - ri) / (ro - ri) * (zr1 - zr0) - 0.05
         rk = max(rl + 0.01, ri); zk = min(zb, sof(rk)); zf = min(zk, sof(max(rl, ri)))
         return [(rs0, 0.0), (rs0, zs0), (rl, zs1), (rl, zf), (rk, zk), (rb, zb), (rb, 0.0)]
-    n = nrows(prof, bs, 1); tp, tm = terrace(prof, [M['front'], M['seat'], M.get('bowl', 'conc_wall'), 'conc_wall', 'conc_wall', M['back']], [(1, n)])
+    zones = S.get('back_zones', [])   # stretches of the back wall in another cladding: [b0, b1, mat]
+    back = lambda b: next((z[2] for z in zones if z[0] <= b < z[1]), M['back'])
+    n = nrows(prof, bs, 1); tp, tm = terrace(prof, [M['front'], M['seat'], M.get('bowl', 'conc_wall'), 'conc_wall', 'conc_wall', back], [(1, n)])
     strip(mb, bs, tp, tm, -1); seat_rows(bs, prof, 1, n)
     for b, sg in ((bs[0], -1), (bs[-1], 1)):
         endcap(mb, b, tp(b), 'conc_wall', sg)
