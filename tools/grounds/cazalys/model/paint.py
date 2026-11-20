@@ -45,14 +45,15 @@ def concrete(name, col, pu=3.0, pv=1.5, tile=(6.0, 6.0), streak=0.12):
     weather(a, streak, 16, 70); save(name, a, tile)
 
 
-def deck(name, col, pitch=0.3, tile=(6.0, 6.0), grime=18):
+def deck(name, col, pitch=0.3, tile=(6.0, 6.0), grime=18, rot=False, lap=True):
     """ribbed roof sheeting: ribs every 'pitch' m across u, a sheet lap at the top, dirt runs down the pans"""
     h = w = N; x = np.arange(w) / w * (tile[0] / pitch)
     rib = np.where((x % 1) < 0.16, 0.74, 1.0) + 0.05 * np.cos(2 * math.pi * x)
     a = np.ones((h, w, 3)) * np.array(col, float) * rib[None, :, None] + fine(h, w, 2)[:, :, None] + noise(h, w, 10, grime)[:, :, None]
-    a[0:5] *= 0.72
+    if lap: a[0:5] *= 0.72
     for _ in range(40):
         xx = R.integers(0, w); L = R.integers(h // 4, h); d = R.uniform(0.05, 0.14); a[:L, xx:xx + R.integers(3, 10)] *= 1 - d
+    if rot: a = a.transpose(1, 0, 2)   # ribs along v instead of u
     save(name, a, tile)
 
 
@@ -98,7 +99,7 @@ a[..., :3] = np.array((150, 156, 158)) + fine(H_, W_, 10)[:, :, None]; a[..., 3]
 save('mesh', a, (1.0, 1.0))
 
 # ---- roof sheeting and steel ----
-deck('roof_white', (222, 224, 224)); deck('roof_grey', (166, 170, 172)); deck('roof_soffit', (204, 206, 206), grime=12)
+deck('roof_white', (222, 224, 224)); deck('roof_grey', (166, 170, 172)); deck('roof_w', (192, 194, 200), grime=10, rot=True, lap=False); deck('roof_soffit', (204, 206, 206), grime=12)
 deck('roof_club', (188, 190, 190), pitch=0.6, grime=20)
 a = base(512, 1024, (232, 234, 232), 4, 16); xu = 1024 / 4.0
 for k in range(2): a[:, int(k * 2 * xu):int(k * 2 * xu) + 6] *= 0.7
@@ -293,7 +294,7 @@ def _cw_glass(a, pu, pv, h, w):  # sloped upper-floor glazing, one tile = 3 m x 
 facade('clubw_gf', (118, 122, 124), _cw_gf, (6.0, 4.2), 1024, 716, 0.05)
 facade('clubw_white', (234, 234, 230), _cw_white, (6.0, 8.0), 1024, 1366, 0.08)
 facade('clubw_glass', (70, 84, 96), _cw_glass, (3.0, 3.6), 512, 616, 0.02)
-for nm, col in (('paint_cream', (226, 214, 176)), ('paint_brown', (64, 52, 48)), ('bollard', (204, 160, 40)), ('paint_grey', (112, 116, 118)), ('paint_rust', (122, 60, 46)), ('render_white', (238, 238, 234))):
+for nm, col in (('paint_cream', (226, 214, 176)), ('paint_brown', (64, 52, 48)), ('bollard', (204, 160, 40)), ('paint_grey', (112, 116, 118)), ('paint_navy', (56, 66, 80)), ('paint_rust', (122, 60, 46)), ('render_white', (238, 238, 234))):
     a = base(128, 128, col, 4, 8); save(nm, a, (1.0, 1.0))
 # club forecourt (photo 12): broom-finished concrete drive with saw joints, garden mulch, shrubs, palm trunk and fronds
 a = base(256, 256, (236, 236, 232), 2, 4); yy, xx = np.ogrid[:256, :256]; a[((yy - 128) ** 2 + (xx - 128) ** 2) < 36] = (250, 248, 236); save('soffit_white', a, (3.0, 3.0))   # canopy soffit: smooth white, a downlight every 3 m

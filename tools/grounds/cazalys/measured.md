@@ -101,3 +101,9 @@ Aerial inconclusive at 0.28 m/px: date-to-date registration hold-outs 0.46-2.5 m
 ## bldg_w Google Earth 3D check (2026-11-21)
 
 Six Google Earth 3D views (ge3d_0-5: headings 60/100/140/10/90/150) against camera-matched renders. Fixed from FAILs: wall cladding dark on every face (was light grey); lower and raised fascias grey (were white); clerestory louvres dark; two rooftop wells on the raised roof, light kerb and dark well, ~3 x 2.5 m, at (-111, 1) and (-106.5, -16), positions from ge3d_4 (+-2 m). MATCH: curved west wall, grey corrugated roof, raised block with dark clerestory, ramp along the west face.
+
+## bldg_w camera-matched recheck (2026-11-21, glb 71450e3b)
+
+Camera: each GE URL (lat, lon, range, heading, tilt) converted through ll2xy, target z 8 m, vertical fov 35, 1280x478 (fitted on ge3d_4: stand and shed outlines align). Boards .claude/review/bldg_w_ge3d/sbs0-5 (photo | red model edges on photo | render; filename on each). Review renders add a green turf plane (SHOT_TURF); the GLB has no field inside the fence by design.
+Fixed: roof ribs now run front-to-back (were along the building), tile lap lines removed, tone sampled from sunlit GE roof (~190,192,198) -> roof_w (192,194,200); lower fascia navy (photo: thin light edge over a dark band); rooftop wells moved to (-120, 3) and (-106, -17.5) from the matched ge3d_1/ge3d_4 overlays.
+Per part, 3 photos each: roof/raised block ge3d_1, 3, 4; west face ge3d_0, 1, 4; south and surroundings ge3d_2, 3, 5. All regions MATCH on the matched overlays: footprint and curved west wall, lower and raised roof outline, rib direction and tone, dark clerestory, two wells, navy fascia, dark cladding, ramp along the west face, small shed to the west.
