@@ -349,6 +349,40 @@ def building(B, mb):
                 if t[1] < 0 and abs(t[1]) > abs(t[0]) * 0.3:
                     a_ = p + t * (min(p[1], yn) - p[1]) / t[1] if p[1] > yn else p; b_ = q + t * (max(q[1], ye) - q[1]) / t[1] if q[1] < ye else q
                     if a_[1] > b_[1]: mb.wall(a_, b_, -dd - 0.05, 0.02, 'conc_wall')
+        if B.get('ramp_s'):   # DA p11 south elevation / p8 plan: a ramp along the south wall rising west to east, stairs down east of its landing, a low blockwork wall beyond
+            xa, xb, rw, za, zb, s0, s1, tw = B['ramp_s']
+            def spt(x, off):   # point on the south wall face at x, pushed off it by off metres
+                for i in range(len(W)):
+                    p, q = np.array(W[i]), np.array(W[(i + 1) % len(W)]); t = q - p
+                    if t[0] > 0 and abs(t[0]) > abs(t[1]) * 0.3 and p[0] - 1e-6 <= x <= q[0] + 1e-6:
+                        u = t / np.linalg.norm(t); return p + t * (x - p[0]) / t[0] + np.array([u[1], -u[0]]) * off
+            zr = lambda x: za + (zb - za) * min(1.0, max(0.0, (x - xa) / (xb - xa)))
+            xs = list(np.linspace(xa, s0, 40))
+            for x0, x1 in zip(xs, xs[1:]):
+                i0, i1, o0, o1 = spt(x0, 0.02), spt(x1, 0.02), spt(x0, rw), spt(x1, rw)
+                mb.face([(*i0, zr(x0)), (*o0, zr(x0)), (*o1, zr(x1)), (*i1, zr(x1))], 'conc_kerb')
+                mb.face([(*o0, za - 0.05), (*o1, za - 0.05), (*o1, zr(x1)), (*o0, zr(x0))], 'conc_kerb')
+                mb.beam((*o0, zr(x0) + 1.0), (*o1, zr(x1) + 1.0), 0.05, 0.05, 'steel_white')
+                mb.beam((*o0, zr(x0) + 0.5), (*o1, zr(x1) + 0.5), 0.03, 0.03, 'steel_white')
+            for x in np.arange(xa, s0, 1.5): mb.beam((*spt(x, rw), zr(x)), (*spt(x, rw), zr(x) + 1.0), 0.05, 0.05, 'steel_white')
+            n = max(1, round((zb - za) / 0.175)); d = (s1 - s0) / n
+            for k in range(n):   # the east flight down from the landing
+                x0, x1 = s0 + k * d, s0 + (k + 1) * d; z = zb - k * (zb - za) / n
+                i0, i1, o0, o1 = spt(x0, 0.02), spt(x1, 0.02), spt(x0, rw), spt(x1, rw)
+                mb.face([(*i0, z), (*o0, z), (*o1, z), (*i1, z)], 'conc_kerb')
+                mb.face([(*i1, za - 0.05), (*i1, z), (*o1, z), (*o1, za - 0.05)], 'conc_kerb')
+                mb.face([(*o0, za - 0.05), (*o1, za - 0.05), (*o1, z), (*o0, z)], 'conc_kerb')
+            mb.beam((*spt(s0, rw), zb + 1.0), (*spt(s1, rw), za + 1.0), 0.05, 0.05, 'steel_white')
+            a_, b_ = spt(s1, 0.0), spt(tw[0], 0.0)   # DA: fair-faced blockwork wall along the face east of the flight
+            mb.wall(a_, b_, za - 0.05, tw[1], 'conc_wall')
+        if B.get('dip_s'):   # DA p11 south elevation: the outside ground along the south face sits as low as on the west (DA design, as-built unverified)
+            global DIPS; DIPS = (np.array(W), B['dip_s'])
+            dd, xe, xn = B['dip_s'][0], B['dip_s'][1], B['dip_s'][4]
+            for i in range(len(W)):   # the plinth carried down to the dipped ground
+                p, q = np.array(W[i]), np.array(W[(i + 1) % len(W)]); t = q - p
+                if t[0] > 0 and abs(t[0]) > abs(t[1]) * 0.3:
+                    a_ = p + t * (max(p[0], xe) - p[0]) / t[0]; b_ = p + t * (min(q[0], xn) - p[0]) / t[0]
+                    if b_[0] > a_[0]: mb.wall(a_, b_, -dd - 0.05, 0.02, 'conc_wall')
         if B.get('raised'):
             RP, rh = B['raised']; RP = [tuple(q) for q in RP]; re_, rsd = B['raised_eave']; RH = rh + 0.5
             ring(inset(RP, re_), 0.0, RH - rsd, B.get('raised_wall', B['wall'])); slab(RP, RH - rsd, RH)
@@ -881,7 +915,30 @@ def boundary_seats(mb):
 DIP = None
 
 
+DIPS = None
+
+
 def dip(x, y):
+    """the deeper of the west-face and south-face dips at (x, y)"""
+    return max(dip_w(x, y), dip_s(x, y))
+
+
+def dip_s(x, y):
+    """depth of the south-face dip below the model ground at (x, y); 0 outside it"""
+    if DIPS is None: return 0.0
+    W, (dd, xe, xs_, xf, xn, din, dout) = DIPS; P = np.array([x, y]); best = 1e9
+    for i in range(len(W)):
+        p, q = W[i], W[(i + 1) % len(W)]; t = q - p
+        if not (t[0] > 0 and abs(t[0]) > abs(t[1]) * 0.3): continue
+        u = np.clip(np.dot(P - p, t) / np.dot(t, t), 0, 1); c = p + t * u; nrm = np.array([t[1], -t[0]]) / np.linalg.norm(t)
+        dv = np.linalg.norm(P - c) * (1 if np.dot(P - c, nrm) >= 0 else -1); best = min(best, dv, key=abs)
+    if best > dout or best < -3.0: return 0.0
+    fx = np.interp(x, [xe, xs_, xf, xn], [0.0, 1.0, 1.0, 0.0])
+    fd = 1.0 if best <= din else 1.0 - (best - din) / (dout - din)
+    return dd * fx * fd
+
+
+def dip_w(x, y):
     """depth of the west-face dip below the model ground at (x, y); 0 outside it"""
     if DIP is None: return 0.0
     W, (dd, yn, yf, ys_, ye, din, dout) = DIP; P = np.array([x, y]); best = 1e9
