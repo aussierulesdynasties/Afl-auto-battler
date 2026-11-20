@@ -39,7 +39,7 @@ to 2026; I have no ground photo yet to confirm the as-built heights.
 | Framed panel row | 1.06 m, frames ~1.3 m | 1.06 m, 1.32 m |
 | Below floor level to outside ground | 0.70 m (section) | plinth |
 | Raised slab edge / clerestory | 0.8 m / 1.03 m, windows over louvres | 0.3+0.5 m / 1.0 m |
-| Cladding colour | **UNVERIFIED**: no photo yet | neutral grey placeholder |
+| Cladding colour | Google Earth 3D (6 views, 2026-11-21): dark navy-charcoal on every face, sunlit too; median (46,63,85) | base (56,66,80), plinth (66,72,80) |
 | Eave overhang past the wall | p10 section at 400 dpi, 44 px/m: west 2.2 m, east 2.5 m; raised slab 1.7 m W, 2.0 m E | walls inset 2.3 m from the aerial (slab) outline, raised 1.85 m; slabs 1.0 / 0.8 m deep |
 | West door | DA p11: 1.3 m wide, sill at FFL, head 2.35 m above FFL, 8.3 m south of the slab NE corner; framed, plain (unglazed) leaf | dark frame 0.1 m, plain leaf, y -0.42 to 0.88, z 0.7 to 3.05; leaf tone UNVERIFIED |
 | High window band | 0.1 m below the slab underside | moved down 0.1 m |
@@ -91,9 +91,13 @@ the shadow starts.
 | Bottom framed row north of the glazed bay | opaque framed panels | DA p11 draws frames, open or glazed not stated | UNVERIFIED: needs photo |
 | Glazed bay glass tone | dark grey-blue (58,68,78) | none | UNVERIFIED: needs photo |
 | Door leaf tone | light paint | DA p11 (plain leaf, no colour) | UNVERIFIED: needs photo |
-| Cladding colour | neutral grey | none | UNVERIFIED: needs photo |
+| Cladding colour | dark navy-charcoal (56,66,80) | Google Earth 3D ge3d_0-5 | MATCH |
 | Terrain dip at the west face | 0.73 m below the grass | DA p11 ground line (design) | DA design, as-built unverified |
 
 ## bldg_w east slab edge (2026-11-21)
 
 Aerial inconclusive at 0.28 m/px: date-to-date registration hold-outs 0.46-2.5 m, oval-anchor centre 1.1 / 1.7 m off the model on 13192 / 3692. Director: "just do the logical fix to make it look normal". The east slab edge is one straight line on the 13192 blind fit (x = -96.09 - 0.140 y): (-97.37, 9.16) to (-92.44, -26.1), no step. Ground walkway width: UNVERIFIED.
+
+## bldg_w Google Earth 3D check (2026-11-21)
+
+Six Google Earth 3D views (ge3d_0-5: headings 60/100/140/10/90/150) against camera-matched renders. Fixed from FAILs: wall cladding dark on every face (was light grey); lower and raised fascias grey (were white); clerestory louvres dark; two rooftop wells on the raised roof, light kerb and dark well, ~3 x 2.5 m, at (-111, 1) and (-106.5, -16), positions from ge3d_4 (+-2 m). MATCH: curved west wall, grey corrugated roof, raised block with dark clerestory, ramp along the west face.

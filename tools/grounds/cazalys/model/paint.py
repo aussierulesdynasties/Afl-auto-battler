@@ -160,15 +160,15 @@ def _shedw(a, pu, pv, h, w):   # bldg_w wall under the slab, one tile = 6.6 m x 
     r0, r1 = band(1.85, 2.91)   # framed panel row, frames every 1.3 m (TONE UNVERIFIED)
     a[r0:r0 + 6] = (90, 92, 96); a[r1 - 6:r1] = (90, 92, 96)
     for k in range(6): a[r0:r1, int(k * 1.32 * pu):int(k * 1.32 * pu) + 7] = (90, 92, 96)
-    r0, r1 = band(2.91, 3.6); a[r0:r1] = np.array((168, 166, 160)) + noise(r1 - r0, w, 4, 8)[:, :, None]   # plinth below floor level
+    r0, r1 = band(2.91, 3.6); a[r0:r1] = np.array((66, 72, 80)) + noise(r1 - r0, w, 4, 8)[:, :, None]   # plinth (dark, Google Earth 3D 2026-11-21) below floor level
 
 
 def _shedr(a, pu, pv, h, w):   # bldg_w raised wall, one tile = 6.6 m x 5.5 m, row 0 = slab underside; 0.9 m visible over the low roof
     r0, r1 = 0, int(0.9 * pv); a[r0:r1] = np.array((58, 68, 78)) + noise(r1 - r0, w, 6, 14)[:, :, None]
     m = (r0 + r1) // 2
-    for k in range((r1 - m) // 8): a[m + k * 8:m + k * 8 + 4] = (150, 154, 158)   # louvre blades
-    for k in range(6): a[r0:r1, int(k * 1.1 * pu):int(k * 1.1 * pu) + 5] = (196, 198, 200)
-    a[m - 2:m + 2] = (196, 198, 200)
+    for k in range((r1 - m) // 8): a[m + k * 8:m + k * 8 + 4] = (74, 84, 96)   # louvre blades (dark, Google Earth 3D 2026-11-21)
+    for k in range(6): a[r0:r1, int(k * 1.1 * pu):int(k * 1.1 * pu) + 5] = (96, 104, 114)
+    a[m - 2:m + 2] = (96, 104, 114)
 
 
 def _shedg(a, pu, pv, h, w):   # bldg_w glazed bay (DA p11, south of y -17.3): the panel band and the framed row glazed, mullions ~1.1 m
@@ -181,7 +181,7 @@ def _shedg(a, pu, pv, h, w):   # bldg_w glazed bay (DA p11, south of y -17.3): t
 
 def _shedl(a, pu, pv, h, w):   # bldg_w south face louvre bay (DA p11 south elevation): horizontal louvres from the window band down 1.6 m, framed row below
     _shedw(a, pu, pv, h, w)
-    r0, r1 = int(0.63 * pv), int(2.2 * pv); a[r0:r1] = (176, 178, 180)
+    r0, r1 = int(0.63 * pv), int(2.2 * pv); a[r0:r1] = (64, 74, 88)
     for k in range((r1 - r0) // 9): a[r0 + k * 9:r0 + k * 9 + 4] = (120, 124, 128)
 
 
@@ -193,10 +193,10 @@ def _shedgs(a, pu, pv, h, w):   # bldg_w south face glazed bay (DA p11 south ele
 
 def _shedp(a, pu, pv, h, w):   # bldg_w south face plain bay (DA p11 south elevation): plain panel from the window band to floor level, colour UNVERIFIED
     _shedw(a, pu, pv, h, w)
-    r0, r1 = int(0.63 * pv), int(2.91 * pv); a[r0:r1] = np.array((206, 206, 204)) + noise(r1 - r0, w, 3, 5)[:, :, None]
+    r0, r1 = int(0.63 * pv), int(2.91 * pv); a[r0:r1] = np.array((60, 70, 84)) + noise(r1 - r0, w, 3, 5)[:, :, None]
 
 
-facade('shedw', (200, 200, 198), _shedw, (6.6, 3.6)); facade('shedgs', (200, 200, 198), _shedgs, (1.0, 3.6), 256); facade('shedl', (200, 200, 198), _shedl, (6.6, 3.6)); facade('shedp', (200, 200, 198), _shedp, (6.6, 3.6)); facade('shedg', (200, 200, 198), _shedg, (6.6, 3.6)); facade('shedr', (200, 200, 198), _shedr, (6.6, 5.5))
+facade('shedw', (56, 66, 80), _shedw, (6.6, 3.6)); facade('shedgs', (56, 66, 80), _shedgs, (1.0, 3.6), 256); facade('shedl', (56, 66, 80), _shedl, (6.6, 3.6)); facade('shedp', (56, 66, 80), _shedp, (6.6, 3.6)); facade('shedg', (56, 66, 80), _shedg, (6.6, 3.6)); facade('shedr', (56, 66, 80), _shedr, (6.6, 5.5))
 facade('gstand_back', (206, 204, 198), _gstand); facade('shed', (230, 230, 226), _shed)
 # coaches' box (photos 09-11): matt black boarding, five slit windows along the top
 a = base(512, 512, (30, 32, 36), 3, 6)

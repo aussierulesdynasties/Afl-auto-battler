@@ -286,7 +286,7 @@ def building(B, mb):
 
         def slab(Q, z0, z1):   # caps in mb; the fascia ring in FASC, welded and smooth-shaded so the curve has no facet bands (lead gate 2026-11-21)
             Q = ccw(Q)
-            for i in range(len(Q)): FASC.wall(Q[i], Q[(i + 1) % len(Q)], z0, z1, 'slab_white')
+            for i in range(len(Q)): FASC.wall(Q[i], Q[(i + 1) % len(Q)], z0, z1, B.get('fascia', 'slab_white'))   # fascia: Google Earth 3D shows bldg_w's fascia grey
             mb.cap(Q, z1, B['roof']); mb.cap(Q, z0, 'slab_white', down=True)
 
         def ring(Q, z0, z1, m):   # curved walls smooth-shaded too (lead gate 2026-11-21); FASC keeps corners over 35 deg sharp
@@ -401,6 +401,10 @@ def building(B, mb):
         if B.get('raised'):
             RP, rh = B['raised']; RP = [tuple(q) for q in RP]; re_, rsd = B['raised_eave']; RH = rh + 0.5
             ring(inset(RP, re_), 0.0, RH - rsd, B.get('raised_wall', B['wall'])); slab([tuple(q) for q in B.get('raised_slab', RP)], RH - rsd, RH)   # raised_slab: DA p11 east overhang, clerestory stays on RP
+            for cx, cy, sx, sy, ph in B.get('plant', []):   # Google Earth 3D (2026-11-21): two dark rooftop boxes on the raised roof
+                Q = [(cx - sx / 2, cy - sy / 2), (cx + sx / 2, cy - sy / 2), (cx + sx / 2, cy + sy / 2), (cx - sx / 2, cy + sy / 2)]
+                for i in range(4): mb.wall(Q[i], Q[(i + 1) % 4], RH, RH + ph, 'roof_grey')
+                mb.cap(Q, RH + ph, 'shedp')   # light kerb, dark well inside
         return
     if B.get('setback'):   # the club: pitch-front points pushed back; the strip in front takes the sails and a terrace
         P = [(x, y - B['setback']) if y > -99.5 else (x, y) for x, y in P]
