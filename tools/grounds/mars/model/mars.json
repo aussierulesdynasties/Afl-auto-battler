@@ -257,7 +257,8 @@
    "solar": [],
    "arch": 4.0,
    "camber": 1.5,
-   "raft": 4.5
+   "raft": 4.5,
+   "open_back": 7.0
   },
   {
    "name": "new_s",
@@ -317,7 +318,8 @@
    "solar": [],
    "arch": 3.0,
    "camber": 1.2,
-   "raft": 4.5
+   "raft": 4.5,
+   "open_back": 7.0
   },
   {
    "name": "south_bank",

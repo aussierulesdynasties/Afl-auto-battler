@@ -302,10 +302,23 @@ def two_tier(S, mb, mr):
     def prof(b):
         rf, ri, ro, rs0, rb = geo(b); rl = rs0 + S['lower_back']; rbx = rl + zb0
         zb = zr1 - 0.6 - (zr1 - zr0) * (S['back_in'] / (ro - ri))
-        return [(rs0, 0.0), (rs0, zs0), (rl, zs1), (rl, zb1), (rl + 0.6, zb1), (rl + 0.6, zu0), (rb - 0.4, zu1), (rb - 0.4, zb), (rb, zb), (rb, 0.0)]
+        P = [(rs0, 0.0), (rs0, zs0), (rl, zs1), (rl, zb1), (rl + 0.6, zb1), (rl + 0.6, zu0), (rb - 0.4, zu1), (rb - 0.4, zb), (rb, zb)]
+        if not OB: return P + [(rb, 0.0)]
+        rp = rl + 0.6 + OB   # open back (2026 design render, press/wm): rake soffit down over the concourse to a clad podium
+        return P + [(rb, zu1 - 1.0), (rp, zb1 + 0.5), (rp, 0.0)]
+    OB = S.get('open_back', 0)
     n1, n5 = nrows(prof, bs, 1), nrows(prof, bs, 5)
-    tp, tm = terrace(prof, [M['front'], M['seat'], M['box'], 'conc_wall', 'conc_wall', M['seat'], 'conc_wall', 'conc_wall', M['back']], [(1, n1), (5, n5)])
+    mats = [M['front'], M['seat'], M['box'], 'conc_wall', 'conc_wall', M['seat'], 'conc_wall', 'conc_wall']
+    mats += ['steel_galv', 'conc_wall', M['back']] if OB else [M['back']]
+    tp, tm = terrace(prof, mats, [(1, n1), (5, n5)])
     strip(mb, bs, tp, tm, -1); seat_rows(bs, prof, 1, n1, pal='blue'); seat_rows(bs, prof, 5, n5, pal='fade')
+    if OB:   # raked steel columns from the concourse up to the soffit, one per rafter bay
+        b = bs[0]
+        while b <= bs[-1] + 1e-6:
+            rf, ri, ro, rs0, rb = geo(b); rp = rs0 + S['lower_back'] + 0.6 + OB; rc = rb - 2.0
+            zc = (zu1 - 1.0) + (S['box'][1] + 0.5 - (zu1 - 1.0)) * (rb - rc) / (rb - rp)
+            mr.beam(P3(b, rc - 1.0, 0.0), P3(b, rc, zc), 0.45, 0.45, 'steel_galv')
+            b += math.degrees(S.get('raft', 4.5) * 2 / rb)
     for b, sg in ((bs[0], -1), (bs[-1], 1)):
         endcap(mb, b, tp(b), 'conc_wall', sg)
     (arch_roof if S.get('arch') is not None else roof_strip)(S, bs, geo, mr)
