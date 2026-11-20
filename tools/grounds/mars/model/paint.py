@@ -65,6 +65,15 @@ a = base(128, 128, (70, 100, 90), 2, 6)
 a[:, :8] *= 0.78; a[:, -8:] *= 0.78; a[:6] *= 0.85; a[-6:] *= 0.7
 a[:, 40:88] *= (1 + 0.10 * np.sin(np.linspace(0, math.pi, 48)))[None, :, None]
 save('seat_plastic', a, (1, 1))
+# embankment grass: mown blades, darker clumps, no stripes (hand-drawn; not pitch turf)
+a = base(512, 512, (88, 122, 58), 10, 18) + noise(512, 512, 24, 16)[:, :, None]
+for _ in range(900):
+    x, y = R.integers(0, 510), R.integers(0, 506); a[y:y + 6, x:x + 1] *= R.uniform(0.75, 1.2)
+save('grass_bank', a, (3.0, 3.0))
+# Mars seat colours (press/aus_new.jpg): royal blue, grey-blue, cream (new upper tiers), white (old stands); same moulding
+for nm, col in (('seat_blue', (38, 74, 150)), ('seat_greyblue', (112, 122, 142)), ('seat_cream', (206, 196, 172)), ('seat_white', (214, 218, 222))):
+    a = base(128, 128, col, 2, 6); a[:, :8] *= 0.8; a[:, -8:] *= 0.8; a[:6] *= 0.86; a[-6:] *= 0.72
+    a[:, 40:88] *= (1 + 0.08 * np.sin(np.linspace(0, math.pi, 48)))[None, :, None]; save(nm, a, (1, 1))
 # concrete treads and risers under the seats: plain grey, a dark nosing line, scuffing
 a = base(512, 512, (138, 138, 134), 5, 14); a[:10] *= 0.7; weather(a, 0.06, 10, 20, top_dark=False); save('conc_tread', a, (2.0, 0.8))
 
@@ -120,6 +129,12 @@ weather(a, 0.16, 16, 40); save('fascia', a, (4.0, 2.0))
 # ---- steel: painted members with seams and wear ----
 for nm, col in (('steel_white', (230, 232, 230)), ('steel_galv', (150, 154, 158)), ('paint_white', (232, 232, 228))):
     a = base(256, 256, col, 6, 26); a[:, 120:126] *= 0.7; a[:, 0:4] *= 0.75; weather(a, 0.16, 18, 16); save(nm, a, (2.0, 2.0))
+# glulam timber rafters (press/aus_new.jpg): warm honey-orange, lamination lines every 45 mm along the member, grain streaks
+a = base(256, 512, (196, 128, 66), 4, 14); yy = np.arange(256)
+a *= (1 - 0.12 * ((yy % 11) < 2))[:, None, None]
+for _ in range(60):
+    y = R.integers(0, 256); a[y:y + R.integers(1, 3), R.integers(0, 300):] *= R.uniform(0.86, 0.96)
+save('timber', a, (2.0, 0.6))
 
 # ---- facades (one tile = 6 m along x 3.6 m = one floor; image row 0 = top) ----
 def facade(name, col, draw, tile=(6.0, 3.6), w=1024, h=616):

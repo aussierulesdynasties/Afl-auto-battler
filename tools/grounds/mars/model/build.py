@@ -129,7 +129,8 @@ def seat(P, t, o, z, shell=None):
     a rolled top edge; P = xy of the back of its tread, t = along the row, o = away from the pitch, z = tread top.
     Centre pedestal under the pan."""
     tmpl = shell is not None; shell = shell if tmpl else SEATS
-    if not tmpl: SEAT_XF.append((tuple(P), tuple(t), tuple(o), z))
+    col = SEAT_COL[0]
+    if not tmpl: SEAT_XF.append((tuple(P), tuple(t), tuple(o), z, col))
     P = np.array(P, float); t = np.array(t, float); o = np.array(o, float); hw = 0.22
     def X(a, d, h):
         q = P + t * a + o * d; return np.array((q[0], q[1], z + h))
@@ -143,13 +144,27 @@ def seat(P, t, o, z, shell=None):
         dd, dh = prof[i + 1][0] - prof[i][0], prof[i + 1][1] - prof[i][1]
         out = -dh * o3 + dd * up
         for j in (-1, 0):
-            oriented(shell, [V(i, j), V(i, j + 1), V(i + 1, j + 1), V(i + 1, j)], 'seat_plastic', out,
+            oriented(shell, [V(i, j), V(i, j + 1), V(i + 1, j + 1), V(i + 1, j)], 'seat_plastic' if tmpl else col, out,
                      [((j + 1) / 2, i / 6), ((j + 2) / 2, i / 6), ((j + 2) / 2, (i + 1) / 6), ((j + 1) / 2, (i + 1) / 6)])
     if tmpl: return
     oriented(POSTS,[X(-0.04, -0.45, 0.0), X(0.04, -0.45, 0.0), X(0.04, -0.45, 0.38), X(-0.04, -0.45, 0.38)], 'steel_galv', -o3)
 
 
-def seat_rows(bs, prof, k, n, aisle=12.0, gap=1.1):
+SEAT_COL = ['seat_blue']
+
+
+def seat_colour(pal, j, n, b):
+    """seat colours copied from press/aus_new.jpg and al_2026.png: 'blue' = the new lower banks (all royal blue); 'fade' =
+    the new upper tiers, blue at the front turning to grey-blue then cream at the back, scattered seat by seat; 'mix' =
+    the old stands, blue and white seats scattered about half and half"""
+    h = (math.sin(j * 12.9898 + b * 78.233) * 43758.5453) % 1.0
+    if pal == 'blue': return 'seat_blue'
+    if pal == 'mix': return 'seat_white' if h < 0.55 else 'seat_blue'
+    t = j / max(1, n - 1); pc = min(1.0, max(0.0, (t - 0.25) / 0.75)) ** 1.2; ps = 0.45 * (1 - abs(2 * t - 1) * 0.6)
+    return 'seat_cream' if h < pc else ('seat_greyblue' if h < pc + ps * (1 - pc) else 'seat_blue')
+
+
+def seat_rows(bs, prof, k, n, aisle=12.0, gap=1.1, pal='mix'):
     """3D seats on the n treads of seat segment k of a polar stand: one every 0.5 m, an aisle stair every 12 m"""
     b0, b1 = bs[0], bs[-1]; rf = prof(0.5 * (b0 + b1))[k][0]
     ab = []; s = aisle / 2
@@ -166,7 +181,7 @@ def seat_rows(bs, prof, k, n, aisle=12.0, gap=1.1):
             if b > b1 - math.degrees(0.6 / rr): break
             if all(abs(math.radians(b - a)) * rr > gap / 2 + 0.25 for a in ab):
                 a = math.radians(b); o = (math.sin(a), math.cos(a)); t = (math.cos(a), -math.sin(a))
-                seat(pol(b, rr), t, o, zz)
+                SEAT_COL[0] = seat_colour(pal, j, n, b); seat(pol(b, rr), t, o, zz)
             b += math.degrees(0.5 / rr)
 
 
@@ -201,7 +216,7 @@ def single(S, mb, mr):
         # front wall up, seats up the rake, back wall of the bowl up to the roof, cap, facade down
         return [(rs0, 0.0), (rs0, zs0), (rb - 0.4, zs1), (rb - 0.4, zb), (rb, zb), (rb, 0.0)]
     n = nrows(prof, bs, 1); tp, tm = terrace(prof, [M['front'], M['seat'], 'conc_wall', 'conc_wall', M['back']], [(1, n)])
-    strip(mb, bs, tp, tm, -1); seat_rows(bs, prof, 1, n)
+    strip(mb, bs, tp, tm, -1); seat_rows(bs, prof, 1, n, pal=S.get('pal', 'mix'))
     for b, sg in ((bs[0], -1), (bs[-1], 1)):
         endcap(mb, b, tp(b), 'conc_wall', sg)
     ribs = roof_strip(S, bs, geo, mr)
@@ -290,10 +305,61 @@ def two_tier(S, mb, mr):
         return [(rs0, 0.0), (rs0, zs0), (rl, zs1), (rl, zb1), (rl + 0.6, zb1), (rl + 0.6, zu0), (rb - 0.4, zu1), (rb - 0.4, zb), (rb, zb), (rb, 0.0)]
     n1, n5 = nrows(prof, bs, 1), nrows(prof, bs, 5)
     tp, tm = terrace(prof, [M['front'], M['seat'], M['box'], 'conc_wall', 'conc_wall', M['seat'], 'conc_wall', 'conc_wall', M['back']], [(1, n1), (5, n5)])
-    strip(mb, bs, tp, tm, -1); seat_rows(bs, prof, 1, n1); seat_rows(bs, prof, 5, n5)
+    strip(mb, bs, tp, tm, -1); seat_rows(bs, prof, 1, n1, pal='blue'); seat_rows(bs, prof, 5, n5, pal='fade')
     for b, sg in ((bs[0], -1), (bs[-1], 1)):
         endcap(mb, b, tp(b), 'conc_wall', sg)
-    roof_strip(S, bs, geo, mr)
+    (arch_roof if S.get('arch') is not None else roof_strip)(S, bs, geo, mr)
+
+
+def arch_roof(S, bs, geo, mr):
+    """Mars 2026 stands (press/aus_new.jpg): a curved steel roof whose leading edge rises S['arch'] m from the ends to
+    the middle of the stand, cambered S['camber'] m front to back, timber rafters under it every S['raft'] m on steel
+    props, and a steel rim fascia on the front edge"""
+    zr0, zr1 = S['z_roof']; th = 0.4; M = S['mats']; b0, b1 = bs[0], bs[-1]; ar = S['arch']; cb = S.get('camber', 1.0); K = 6
+    def Z(b, u):
+        t = (b - b0) / (b1 - b0); lift = -ar * (2 * t - 1) ** 2
+        return zr0 + (zr1 - zr0) * u + cb * 4 * u * (1 - u) + lift
+    def R(b, u):
+        rf, ri, ro, rs0, rb = geo(b); return ri + (ro - ri) * u
+    up = np.array([0, 0, 1.0]); dn = -up
+    for i in range(len(bs) - 1):
+        ba, bb = bs[i], bs[i + 1]; rm = 0.5 * (R(ba, 0.5) + R(bb, 0.5))
+        for k in range(K):
+            u0, u1 = k / K, (k + 1) / K
+            q = [P3(ba, R(ba, u0), Z(ba, u0)), P3(bb, R(bb, u0), Z(bb, u0)), P3(bb, R(bb, u1), Z(bb, u1)), P3(ba, R(ba, u1), Z(ba, u1))]
+            ua, ub = math.radians(ba) * rm / 6, math.radians(bb) * rm / 6
+            uv = [(ua, R(ba, u0) / 6), (ub, R(bb, u0) / 6), (ub, R(bb, u1) / 6), (ua, R(ba, u1) / 6)]
+            oriented(mr, q, M['roof'], up, uv)
+            oriented(mr, [p - np.array([0, 0, th]) for p in q], 'roof_soffit', dn, uv)
+        bm = math.radians(0.5 * (ba + bb)); rad = np.array([math.sin(bm), math.cos(bm), 0.0])
+        oriented(mr, [P3(ba, R(ba, 0), Z(ba, 0) - th - 0.5), P3(bb, R(bb, 0), Z(bb, 0) - th - 0.5), P3(bb, R(bb, 0), Z(bb, 0) + 0.3), P3(ba, R(ba, 0), Z(ba, 0) + 0.3)], 'steel_galv', -rad)
+        oriented(mr, [P3(ba, R(ba, 1), Z(ba, 1) - th - 0.3), P3(bb, R(bb, 1), Z(bb, 1) - th - 0.3), P3(bb, R(bb, 1), Z(bb, 1)), P3(ba, R(ba, 1), Z(ba, 1))], 'fascia', rad)
+    for b, sg in ((b0, -1), (b1, 1)):
+        a = math.radians(b); tan = np.array([math.cos(a), -math.sin(a), 0.0]) * sg
+        for k in range(K):
+            u0, u1 = k / K, (k + 1) / K
+            oriented(mr, [P3(b, R(b, u0), Z(b, u0) - th - 0.3), P3(b, R(b, u1), Z(b, u1) - th - 0.3), P3(b, R(b, u1), Z(b, u1) + 0.3), P3(b, R(b, u0), Z(b, u0) + 0.3)], 'steel_white', tan)
+    sp = S.get('raft', 4.5); b = b0
+    while b <= b1 + 1e-6:
+        pts = [P3(b, R(b, u), Z(b, u) - th - 0.35) for u in np.linspace(0.02, 0.98, 7)]
+        for p, q in zip(pts[:-1], pts[1:]): mr.beam(p, q, 0.25, 0.7, 'timber')
+        rf, ri, ro, rs0, rb = geo(b); um = 0.62
+        foot = P3(b, rb - 0.6, S['z_upper'][1] + 0.4); mr.beam(foot, P3(b, R(b, um), Z(b, um) - th - 0.7), 0.35, 0.35, 'steel_galv')
+        mr.beam(foot, P3(b, R(b, 0.25), Z(b, 0.25) - th - 0.7), 0.25, 0.25, 'steel_galv')
+        b += math.degrees(sp / R(b, 0.5))
+
+
+def bank(S, mb):
+    """southern viewing area (2026 'standing-room viewing embankment'; earthworks on GE 2025-12-28 at these bearings, no
+    photo of the finished bank): concrete kerb wall at the seat line, grass slope rising to z_top at the back, concrete
+    path along the crest"""
+    bs = brange(S); zt = S['z_top']
+    def prof(b):
+        rf = fence_r(b % 360); r0 = rf + S['seat_front']; rb = interp(S['back'], b)[0]
+        return [(r0, 0.0), (r0, 0.6), (rb - 2.0, zt), (rb, zt), (rb, 0.0)]
+    tp, tm = terrace(prof, ['conc_wall', 'grass_bank', 'paving', 'conc_wall'], [])
+    strip(mb, bs, tp, tm, -1)
+    for b, sg in ((bs[0], -1), (bs[-1], 1)): endcap(mb, b, tp(b), 'conc_wall', sg)
 
 
 def open_stand(S, mb):
@@ -302,7 +368,7 @@ def open_stand(S, mb):
         rf = fence_r(b % 360); rs0 = rf + S['seat_front']; rb = interp(S['back'], b)[0]
         return [(rs0, 0.0), (rs0, zs0), (rb - 0.4, zs1), (rb - 0.4, zs1 + 1.1), (rb, zs1 + 1.1), (rb, 0.0)]
     n = nrows(prof, bs, 1); tp, tm = terrace(prof, [M['front'], M['seat'], 'conc_wall', 'conc_wall', M['back']], [(1, n)])
-    strip(mb, bs, tp, tm, -1); seat_rows(bs, prof, 1, n)
+    strip(mb, bs, tp, tm, -1); seat_rows(bs, prof, 1, n, pal=S.get('pal', 'mix'))
     for b, sg in ((bs[0], -1), (bs[-1], 1)):
         endcap(mb, b, tp(b), 'conc_wall', sg)
 
@@ -313,7 +379,7 @@ def block(S, mb, mr):
         rf = fence_r(b % 360); rs0 = rf + S['front_seats'][0]; r1, r2 = interp(S['block'], b)
         return [(rs0, 0.0), (rs0, zs0), (r1, zs1), (r1, H), (r2, H), (r2, 0.0)]
     n = nrows(prof, bs, 1); tp, tm = terrace(prof, [M['front'], M['seat'], M['back'], M['roof'], M['back']], [(1, n)])
-    strip(mb, bs, tp, tm, -1); seat_rows(bs, prof, 1, n)
+    strip(mb, bs, tp, tm, -1); seat_rows(bs, prof, 1, n, pal=S.get('pal', 'mix'))
     for b, sg in ((bs[0], -1), (bs[-1], 1)):
         endcap(mb, b, tp(b), M['back'], sg)
     if 'poly' in S:   # building traced from the satellite roof, moved by the lean at its height
@@ -474,7 +540,7 @@ def build_all():
     global SEATS, POSTS
     mb = MB('stands'); mr = MB('roofs'); SEATS = MB('seats'); SEATS.smooth = True; POSTS = MB('seat_posts'); SEAT_XF.clear()
     for S in D['stands']:
-        {'single': lambda: single(S, mb, mr), 'two_tier': lambda: two_tier(S, mb, mr),
+        {'bank': lambda: bank(S, mb), 'single': lambda: single(S, mb, mr), 'two_tier': lambda: two_tier(S, mb, mr),
          'open': lambda: open_stand(S, mb), 'block': lambda: block(S, mb, mr)}[S['kind']]()
     mb.build(col); mr.build(col)
     fence(col); extras(col); SEATS.build(col); POSTS.build(col)

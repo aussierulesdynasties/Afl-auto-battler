@@ -58,32 +58,36 @@ if 'glb' in jobs:   # Blender +Y (north) becomes glTF -Z
     tm = build.MB('tmpl'); build.seat((0.0, 0.0), (1.0, 0.0), (0.0, 1.0), 0.0, shell=tm)
     tri = [tm.V[f[k]] for f in tm.F for i in range(1, len(f) - 1) for k in (0, i, i + 1)]
     (np.array(tri) @ C.T).astype('<f4').tofile(os.path.join(out, 'seat_tmpl.bin'))
-    xf = []
-    for P, t, o, z in build.SEAT_XF:
+    xf = {}
+    for P, t, o, z, col in build.SEAT_XF:   # one seats_<colour>.bin per seat colour (Oval3D.SEAT_COLOURS)
         A = np.array([[t[0], o[0], 0], [t[1], o[1], 0], [0, 0, 1.0]])
-        xf.append(np.hstack([C @ A @ C.T, (C @ np.array([P[0], P[1], z]))[:, None]]).ravel())
-    np.array(xf).astype('<f4').tofile(os.path.join(out, 'seats_seat_plastic.bin'))
-    print('seats instanced:', len(xf), 'template tris:', len(tri) // 3)
+        xf.setdefault(col, []).append(np.hstack([C @ A @ C.T, (C @ np.array([P[0], P[1], z]))[:, None]]).ravel())
+    for f in os.listdir(out):
+        if f.startswith('seats_') and f.endswith('.bin'): os.remove(os.path.join(out, f))
+    for col, X in xf.items(): np.array(X).astype('<f4').tofile(os.path.join(out, f'seats_{col}.bin'))
+    print('seats instanced:', {k: len(v) for k, v in xf.items()}, 'template tris:', len(tri) // 3)
 if 'ship' in jobs:   # later jobs film what ships: the exported GLB plus the seats rebuilt from the two .bin files
     import numpy as np
     C = np.array([[1, 0, 0], [0, 0, 1], [0, -1, 0.0]])
     for ob in [o for o in sc.objects if o.type == 'MESH']: bpy.data.objects.remove(ob)
     bpy.ops.import_scene.gltf(filepath=os.path.join(out, 'mars.glb'))
     T = np.fromfile(os.path.join(out, 'seat_tmpl.bin'), '<f4').reshape(-1, 3)
-    X = np.fromfile(os.path.join(out, 'seats_seat_plastic.bin'), '<f4').reshape(-1, 3, 4)
-    V = np.concatenate([T @ M[:, :3].T + M[:, 3] for M in X]) @ C
-    me = bpy.data.meshes.new('seats_inst'); me.from_pydata([tuple(v) for v in V], [], [(i, i + 1, i + 2) for i in range(0, len(V), 3)])
-    im = bpy.data.images.load(os.path.join(HERE, 'tex', 'seat_plastic.png')); px = np.array(im.pixels[:]).reshape(-1, 4)
-    sm = bpy.data.materials.new('seat_mean'); sm.use_nodes = True   # the game draws seats in one colour: the texture mean
-    c = px[:, :3].mean(0); c = np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)   # PNG pixels are sRGB
-    sm.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = (*c, 1)
-    print('seat mean colour (linear):', c)
-    me.materials.append(sm); me.update()
-    # shade as Godot does: SurfaceTool.generate_normals averages the normals of every corner at the same position
-    import bmesh
-    bm = bmesh.new(); bm.from_mesh(me); bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5); bm.to_mesh(me); bm.free()
-    for p in me.polygons: p.use_smooth = True
-    ob = bpy.data.objects.new('seats_inst', me); sc.collection.objects.link(ob)
+    me = None
+    for f in sorted(os.listdir(out)):   # one mesh per seats_<colour>.bin, drawn in that texture's mean colour as the game does
+        if not (f.startswith('seats_') and f.endswith('.bin')): continue
+        col = f[6:-4]; X = np.fromfile(os.path.join(out, f), '<f4').reshape(-1, 3, 4)
+        V = np.concatenate([T @ M[:, :3].T + M[:, 3] for M in X]) @ C
+        me = bpy.data.meshes.new('seats_' + col); me.from_pydata([tuple(v) for v in V], [], [(i, i + 1, i + 2) for i in range(0, len(V), 3)])
+        im = bpy.data.images.load(os.path.join(HERE, 'tex', col + '.png')); px = np.array(im.pixels[:]).reshape(-1, 4)
+        sm = bpy.data.materials.new(col + '_mean'); sm.use_nodes = True
+        c = px[:, :3].mean(0); c = np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)   # PNG pixels are sRGB
+        sm.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = (*c, 1)
+        print('seat mean colour (linear):', col, c, 'srgb', px[:, :3].mean(0))
+        me.materials.append(sm); me.update()
+        import bmesh
+        bm = bmesh.new(); bm.from_mesh(me); bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5); bm.to_mesh(me); bm.free()
+        for p in me.polygons: p.use_smooth = True
+        ob = bpy.data.objects.new('seats_' + col, me); sc.collection.objects.link(ob)
     dg = bpy.context.evaluated_depsgraph_get()
 if 'stills' in jobs:
     for az in range(0, 360, 45):

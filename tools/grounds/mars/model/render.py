@@ -23,7 +23,9 @@ co = bpy.data.objects.new('cam', cd); sc.collection.objects.link(co); sc.camera 
 argv = sys.argv[sys.argv.index('--') + 1:]
 out = os.path.abspath(argv[0])
 for spec_ in argv[1:]:
-    name, h, t, d, tx, ty, tz = spec_.split(':'); c = earthcam.cam(float(h), float(t), float(d), tz=float(tz), tx=float(tx), ty=float(ty))
+    f = spec_.split(':'); name, h, t, d, tx, ty, tz = f[:7]; c = earthcam.cam(float(h), float(t), float(d), tz=float(tz), tx=float(tx), ty=float(ty))
+    cd.angle_y = math.radians(float(f[7]) if len(f) > 7 else 35)   # optional fovy, then output size (press photo matches)
+    sc.render.resolution_x, sc.render.resolution_y = (int(f[8]), int(f[9])) if len(f) > 9 else (1920, 1080)
     R = mathutils.Matrix((c['right'], c['up'], -c['fwd'])).transposed()
     co.matrix_world = mathutils.Matrix.Translation(c['C']) @ R.to_4x4()
     sc.render.filepath = os.path.join(out, name + '.png'); bpy.ops.render.render(write_still=True)
