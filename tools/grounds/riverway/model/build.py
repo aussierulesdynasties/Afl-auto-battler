@@ -110,9 +110,9 @@ SEAT_RNG = np.random.default_rng(7)
 AISLES = []       # aisle-stair bearings (for the seat-height proof)
 # seat colours by row from the front, in pairs (photo tb_8c29, section C): pale blue, mint, green, pale blue, dark green;
 # a run of five royal-blue seats in row 7 of the section over the race. PITCH sets the 1,015 seats the council lists.
-ROW_COLS = ['seat_paleblue'] * 2 + ['seat_mint', 'seat_teal', 'seat_green', 'seat_green'] + ['seat_greyblue'] * 2 + ['seat_dkgreen'] * 2   # front to back, tb_8c29 pixel samples
+ROW_COLS = ['seat_paleblue'] * 2 + ['seat_mint', 'seat_teal', 'seat_green'] + ['seat_greyblue'] * 2 + ['seat_dkgreen'] * 2   # front to back, tb_8c29 pixel samples
 SHORT_SECS = (0,)   # sections whose odd rows hold N-1 seats (centred); sets the total to the council's 1,015
-ROYAL_ROW = 6; RACE_B = 268.8; PITCH = 0.585
+ROYAL_ROW = 5; RACE_B = 268.8; PITCH = 0.585
 ROW = 0.8         # tread depth (m): one row of seats
 
 

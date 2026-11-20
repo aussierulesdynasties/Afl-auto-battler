@@ -21,7 +21,7 @@ roof_soffit      grey sd   7.6
 roof_white       grey sd  20.6
 sail_blue        grey sd   4.4
 screen_off       grey sd  12.3
-seat_blue        grey sd   9.3
+seat_blue        grey sd   8.7
 seat_dkgreen     grey sd   5.3
 seat_green       grey sd  13.3
 seat_greyblue    grey sd  12.8
@@ -29,8 +29,8 @@ seat_mint        grey sd  18.1
 seat_paleblue    grey sd  16.7
 seat_plastic     grey sd  13.5
 seat_teal        grey sd  15.5
-shelter_roof     grey sd   2.3
-shelter_wall     grey sd   6.5
+shelter_roof     grey sd   3.1
+shelter_wall     grey sd   6.8
 sign_away        grey sd  37.4
 sign_home        grey sd  37.5
 sign_symonds     grey sd  73.8

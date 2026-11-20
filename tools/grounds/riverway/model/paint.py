@@ -61,7 +61,7 @@ def seats(name, col, tread=(112, 114, 116), aisle=(140, 140, 138)):
 
 
 # 3D seat plastic (aerial4, drone5): teal-green, a darker moulded rim and a soft sheen down the middle. UV 0-1 per face.
-for nm, col in (('seat_plastic', (62, 150, 118)), ('seat_green', (80, 140, 116)), ('seat_teal', (98, 158, 138)), ('seat_blue', (48, 84, 150)),
+for nm, col in (('seat_plastic', (62, 150, 118)), ('seat_green', (80, 140, 116)), ('seat_teal', (98, 158, 138)), ('seat_blue', (51, 81, 119)),
                  ('seat_paleblue', (123, 156, 182)), ('seat_mint', (128, 180, 167)), ('seat_dkgreen', (10, 62, 32)), ('seat_greyblue', (92, 120, 134))):
     a = base(128, 128, col, 2, 6)   # Riverway shells: green, teal and blue (symonds-grandstand photo), moulded rim, sheen
     a[:, :8] *= 0.78; a[:, -8:] *= 0.78; a[:6] *= 0.85; a[-6:] *= 0.7
@@ -167,8 +167,8 @@ save('clad_dark', a, (2.4, 2.4))
 a = base(512, 512, (176, 192, 206), 2, 6)   # pale blue-grey (GE l090 tower face)
 for k in range(0, 512, 256): a[:, k:k + 4] *= 0.72; a[k:k + 4] *= 0.72
 weather(a, 0.05, 8, 20); save('tower_panel', a, (2.4, 2.4))
-a = base(512, 512, (150, 178, 92), 2, 4); a[:, :10] *= 0.8; a[:, -10:] *= 0.8; save('shelter_wall', a, (2.0, 2.0))   # lime panels (race photo, shade sample (122,145,83))
-a = base(512, 512, (34, 48, 26), 2, 4); a[:, ::64] *= 0.8; save('shelter_roof', a, (2.0, 2.0))   # dark olive steel roof (race photo edge (56,63,33))
+a = base(512, 512, (182, 178, 82), 2, 4); a[:, :10] *= 0.8; a[:, -10:] *= 0.8; save('shelter_wall', a, (2.0, 2.0))   # lime-olive panels, sunlit g01 samples (176,172,73)-(201,191,96)
+a = base(512, 512, (234, 232, 202), 2, 4); a[:, ::64] *= 0.92; save('shelter_roof', a, (2.0, 2.0))   # cream roof: Esri top (242,244,211)-(250,250,232), g42 white
 a = base(512, 512, (36, 112, 196), 3, 8); a[:, 250:256] *= 0.8; a[250:256] *= 0.8; save('sail_blue', a, (1, 1))
 # grass bank between the fence and the outer path: hand-painted turf, mown bands 3 m, clumps and worn patches
 a = base(N, N, (92, 128, 64), 6, 18); xu = N / 6.0
