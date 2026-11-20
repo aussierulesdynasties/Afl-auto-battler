@@ -283,11 +283,22 @@ def building(B, mb):
     if B.get('setback'):   # the club: pitch-front points pushed back; the strip in front takes the sails and a terrace
         P = [(x, y - B['setback']) if y > -99.5 else (x, y) for x, y in P]
     if B.get('low'):   # Street View pano wvECTX (Feb 2025): the club's SW corner past the west box is a low white wing
-        X, Y, hl, wl = B['low']; w = clip(P, 0, X, -1)   # wl: the low wing's wall (photo: plain white render, no windows)
-        parts = [(clip(P, 0, X, 1), B['h'], B['wall']), (clip(w, 1, Y, 1), B['h'], B['wall']), (clip(w, 1, Y, -1), hl, wl)]
+        p0, p1, dp, hl, wl = B['low']   # aerial: a low strip dp deep along the edge p0->p1 (wl: plain white render, no windows)
+        p0, p1 = np.array(p0, float), np.array(p1, float); t = (p1 - p0) / np.linalg.norm(p1 - p0); nn = np.array([-t[1], t[0]])
+        if np.dot(nn, np.mean(np.array(P), 0) - p0) < 0: nn = -nn   # point the normal into the building
+        parts = [(hclip(P, nn, nn @ p0 + dp, 1), B['h'], B['wall']), (hclip(P, nn, nn @ p0 + dp, -1), hl, wl)]
     else: parts = [(P, B['h'], B['wall'])]
     for P, h, wm in parts:
         if len(P) >= 3: prism_cap(mb, dict(B, wall=wm), P, h)
+
+
+def hclip(P, n, c, sg):   # keep the side where sg*(n.p - c) >= 0
+    out = []
+    for i in range(len(P)):
+        p, q = np.array(P[i]), np.array(P[(i + 1) % len(P)]); fp, fq = sg * (n @ p - c), sg * (n @ q - c)
+        if fp >= 0: out.append(tuple(p))
+        if fp * fq < 0: out.append(tuple(p + fp / (fp - fq) * (q - p)))
+    return out
 
 
 def clip(P, ax, v, sg):   # Sutherland-Hodgman: keep the side where sg*(p[ax]-v) >= 0
