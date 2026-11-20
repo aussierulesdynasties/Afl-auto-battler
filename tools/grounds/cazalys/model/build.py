@@ -282,6 +282,25 @@ def building(B, mb):
         P = P[:i] + [tuple(q) for q in R_] + P[j + 1:]
     if B.get('setback'):   # the club: pitch-front points pushed back; the strip in front takes the sails and a terrace
         P = [(x, y - B['setback']) if y > -99.5 else (x, y) for x, y in P]
+    parts = [(P, B['h'])]
+    if B.get('low'):   # Street View pano wvECTX (Feb 2025): the club's SW corner past the west box is a low white wing
+        X, Y, hl = B['low']; w = clip(P, 0, X, -1)
+        parts = [(clip(P, 0, X, 1), B['h']), (clip(w, 1, Y, 1), B['h']), (clip(w, 1, Y, -1), hl)]
+    for P, h in parts:
+        if len(P) >= 3: prism_cap(mb, B, P, h)
+
+
+def clip(P, ax, v, sg):   # Sutherland-Hodgman: keep the side where sg*(p[ax]-v) >= 0
+    out = []
+    for i in range(len(P)):
+        p, q = P[i], P[(i + 1) % len(P)]; fp, fq = sg * (p[ax] - v), sg * (q[ax] - v)
+        if fp >= 0: out.append(p)
+        if fp * fq < 0: t = fp / (fp - fq); out.append((p[0] + t * (q[0] - p[0]), p[1] + t * (q[1] - p[1])))
+    return out
+
+
+def prism_cap(mb, B, P, h):
+    B = dict(B, h=h)
     mb.prism(P, 0.0, B['h'], B['wall'], top=B['roof'])
     poly = ccw(P)   # parapet: a 0.5 m white cap all round the roof edge
     for i in range(len(poly)):

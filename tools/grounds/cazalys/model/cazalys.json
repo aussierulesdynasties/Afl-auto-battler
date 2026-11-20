@@ -13,7 +13,7 @@
 "buildings": [
   {"name": "bldg_w", "osm": "bldg_w", "h": 8.0, "wall": "clubw_white", "roof": "roof_grey"},
   {"name": "bldg_se", "osm": "bldg_se", "h": 3.6, "wall": "shed", "roof": "roof_white"},
-  {"name": "club", "osm": "bldg_s", "h": 6.7, "wall": "club", "roof": "roof_club", "setback": 6.0, "replace": [[35.64, -104.61], [33.05, -137.75], [[35.64, -104.61], [39.6, -111.0], [35.7, -123.6], [33.0, -131.0], [25.4, -131.0], [25.4, -141.3]]]}
+  {"name": "club", "osm": "bldg_s", "h": 6.7, "low": [-42.6, -140.0, 4.3], "wall": "club", "roof": "roof_club", "setback": 6.0, "replace": [[35.64, -104.61], [33.05, -137.75], [[35.64, -104.61], [39.6, -111.0], [35.7, -123.6], [33.0, -131.0], [25.4, -131.0], [25.4, -141.3]]]}
 ],
 "shelters": [
   {"name": "bench_nw", "osm": "bldg_nw", "h": 2.8, "rows": 2, "pal": "s_teal"},
