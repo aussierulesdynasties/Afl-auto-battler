@@ -228,8 +228,9 @@ def grandstand(G, mb, mr):
     zr0, zr1 = G['z_roof']; th = 0.4
     def deck(b):
         rs0, ru0, ru1, rr = geo(b); return ru0 - G['roof_over'], rr + 0.4
-    for i in range(len(bs) - 1):
-        ba, bb = bs[i], bs[i + 1]; (ria, roa), (rib, rob) = deck(ba), deck(bb)
+    rbs = brange(G['b0'], G.get('roof_b1', G['b1']))   # roof_b1: aerial roof runs past the seating's north end
+    for i in range(len(rbs) - 1):
+        ba, bb = rbs[i], rbs[i + 1]; (ria, roa), (rib, rob) = deck(ba), deck(bb)
         tu, tv = TILE['roof_white']; rm = 0.5 * (ria + roa); ua, ub = math.radians(ba) * rm / tu, math.radians(bb) * rm / tu
         oriented(mr, [P3(ba, ria, zr0), P3(bb, rib, zr0), P3(bb, rob, zr1), P3(ba, roa, zr1)], 'roof_white', UP,
                  [(ua, ria / tv), (ub, rib / tv), (ub, rob / tv), (ua, roa / tv)])
@@ -239,7 +240,7 @@ def grandstand(G, mb, mr):
         oriented(mr, [P3(ba, ria, zr0 - 1.2), P3(bb, rib, zr0 - 1.2), P3(bb, rib, zr0 + 0.05), P3(ba, ria, zr0 + 0.05)], 'fascia', -rad)
         oriented(mr, [P3(ba, ria, zr0 - 1.2), P3(bb, rib, zr0 - 1.2), P3(bb, rib - 0.3, zr0 - th), P3(ba, ria - 0.3, zr0 - th)], 'fascia', -UP)
         oriented(mr, [P3(ba, roa, zr1 - 0.8), P3(bb, rob, zr1 - 0.8), P3(bb, rob, zr1), P3(ba, roa, zr1)], 'fascia', rad)
-    for b, sg in ((bs[0], -1), (bs[-1], 1)):
+    for b, sg in ((rbs[0], -1), (rbs[-1], 1)):
         ri, ro = deck(b); a = math.radians(b); tan = np.array([math.cos(a), -math.sin(a), 0.0]) * sg
         oriented(mr, [P3(b, ri, zr0 - 1.2), P3(b, ro, zr1 - 0.8), P3(b, ro, zr1), P3(b, ri, zr0 + 0.05)], 'fascia', tan)
     # front columns on the walkway every ~6 deg, up to the roof soffit
@@ -277,6 +278,9 @@ def axes(poly):
 def building(B, mb):
     P = [tuple(p) for p in np.array(OSM[B['osm']], float)]
     if np.allclose(P[0], P[-1]): P = P[:-1]
+    if B.get('replace'):   # satellite-traced edge replacing a run of OSM points (first..last, inclusive)
+        f, l, R_ = B['replace']; i = min(range(len(P)), key=lambda k: math.dist(P[k], f)); j = min(range(len(P)), key=lambda k: math.dist(P[k], l))
+        P = P[:i] + [tuple(q) for q in R_] + P[j + 1:]
     if B.get('eave'):   # DA 3998/2010 p10 section: roof slabs overhang the walls; the aerial outline is the slab edge
         e, sd = B['eave']; H = B['h'] + 0.5
 
@@ -384,6 +388,8 @@ def building(B, mb):
             mb.beam((*spt(s0, rw), zb + 1.0), (*spt(s1, rw), za + 1.0), 0.05, 0.05, 'steel_white')
             a_, b_ = spt(s1, 0.0), spt(tw[0], 0.0)   # DA: fair-faced blockwork wall along the face east of the flight
             mb.wall(a_, b_, za - 0.05, tw[1], 'blockwork')
+        if B.get('paving'):   # aerial (Wayback 13192 + 3692): paved walkway between the east wall and the stand
+            oriented(mb, [(*p, 0.01) for p in B['paving']], 'paving', UP, [(p[0] / 2.4, p[1] / 2.4) for p in B['paving']])
         if B.get('dip_s'):   # DA p11 south elevation: the outside ground along the south face sits as low as on the west (DA design, as-built unverified)
             global DIPS; DIPS = (np.array(W), B['dip_s'])
             dd, xe, xn = B['dip_s'][0], B['dip_s'][1], B['dip_s'][4]
@@ -396,9 +402,6 @@ def building(B, mb):
             RP, rh = B['raised']; RP = [tuple(q) for q in RP]; re_, rsd = B['raised_eave']; RH = rh + 0.5
             ring(inset(RP, re_), 0.0, RH - rsd, B.get('raised_wall', B['wall'])); slab([tuple(q) for q in B.get('raised_slab', RP)], RH - rsd, RH)   # raised_slab: DA p11 east overhang, clerestory stays on RP
         return
-    if B.get('replace'):   # satellite-traced edge replacing a run of OSM points (first..last, inclusive)
-        f, l, R_ = B['replace']; i = min(range(len(P)), key=lambda k: math.dist(P[k], f)); j = min(range(len(P)), key=lambda k: math.dist(P[k], l))
-        P = P[:i] + [tuple(q) for q in R_] + P[j + 1:]
     if B.get('setback'):   # the club: pitch-front points pushed back; the strip in front takes the sails and a terrace
         P = [(x, y - B['setback']) if y > -99.5 else (x, y) for x, y in P]
     if B.get('low'):   # Street View pano wvECTX (Feb 2025): the club's SW corner past the west box is a low white wing

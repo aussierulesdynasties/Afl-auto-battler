@@ -93,3 +93,7 @@ the shadow starts.
 | Door leaf tone | light paint | DA p11 (plain leaf, no colour) | UNVERIFIED: needs photo |
 | Cladding colour | neutral grey | none | UNVERIFIED: needs photo |
 | Terrain dip at the west face | 0.73 m below the grass | DA p11 ground line (design) | DA design, as-built unverified |
+
+## bldg_w east slab edge (2026-11-21)
+
+Aerial inconclusive at 0.28 m/px: date-to-date registration hold-outs 0.46-2.5 m, oval-anchor centre 1.1 / 1.7 m off the model on 13192 / 3692. Director: "just do the logical fix to make it look normal". The east slab edge is one straight line on the 13192 blind fit (x = -96.09 - 0.140 y): (-97.37, 9.16) to (-92.44, -26.1), no step. Ground walkway width: UNVERIFIED.
