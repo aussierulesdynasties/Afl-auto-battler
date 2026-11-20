@@ -306,6 +306,30 @@ def building(B, mb):
             fq = [(*a_, z0), (*b_, z0), (*b_, z1), (*a_, z1)]
             if np.dot(np.cross(np.array(fq[1]) - fq[0], np.array(fq[3]) - fq[0])[:2], nrm) < 0: fq = fq[::-1]
             mb.face(fq, 'paint_grey')
+        if B.get('ramp_w'):   # DA p8 plan / p11 elevation: a ramp along the west wall, balustrade on the outer edge, stairs south of its top landing
+            ya, yb, rw, za, zb, s0, s1 = B['ramp_w']
+            def wpt(y, off):   # point on the west wall face at y, pushed off it by off metres
+                for i in range(len(W)):
+                    p, q = np.array(W[i]), np.array(W[(i + 1) % len(W)]); t = q - p
+                    if t[1] < 0 and abs(t[1]) > abs(t[0]) * 0.3 and q[1] - 1e-6 <= y <= p[1] + 1e-6:
+                        u = t / np.linalg.norm(t); return p + t * (y - p[1]) / t[1] + np.array([u[1], -u[0]]) * off
+            zr = lambda y: za + (zb - za) * min(1.0, max(0.0, (ya - y) / (ya - yb)))
+            ys = list(np.linspace(ya, s1, 60))
+            for y0, y1 in zip(ys, ys[1:]):
+                i0, i1, o0, o1 = wpt(y0, 0.02), wpt(y1, 0.02), wpt(y0, rw), wpt(y1, rw)
+                if y1 >= s0:   # ramp and landing deck, its outer edge face, the balustrade top rail
+                    mb.face([(*i0, zr(y0)), (*o0, zr(y0)), (*o1, zr(y1)), (*i1, zr(y1))], 'conc_kerb')
+                    mb.face([(*o0, 0.0), (*o1, 0.0), (*o1, zr(y1)), (*o0, zr(y0))], 'conc_kerb')
+                    mb.beam((*o0, zr(y0) + 1.0), (*o1, zr(y1) + 1.0), 0.05, 0.05, 'steel_white')
+                    mb.beam((*o0, zr(y0) + 0.5), (*o1, zr(y1) + 0.5), 0.03, 0.03, 'steel_white')
+            for y in np.arange(ya, s0, -1.5): mb.beam((*wpt(y, rw), zr(y)), (*wpt(y, rw), zr(y) + 1.0), 0.05, 0.05, 'steel_white')
+            n = max(1, round(zb / 0.175)); d = (s0 - s1) / n
+            for k in range(n):   # the south flight down from the landing to the ground
+                y0, y1 = s0 - k * d, s0 - (k + 1) * d; z = zb - (k + 1) * zb / n + zb / n
+                i0, i1, o0, o1 = wpt(y0, 0.02), wpt(y1, 0.02), wpt(y0, rw), wpt(y1, rw)
+                mb.face([(*i0, z), (*o0, z), (*o1, z), (*i1, z)], 'conc_kerb')
+                mb.face([(*i0, 0.0), (*o0, 0.0), (*o0, z), (*i0, z)][::-1], 'conc_kerb')
+                mb.face([(*o0, 0.0), (*o1, 0.0), (*o1, z), (*o0, z)], 'conc_kerb')
         if B.get('raised'):
             RP, rh = B['raised']; RP = [tuple(q) for q in RP]; re_, rsd = B['raised_eave']; RH = rh + 0.5
             ring(inset(RP, re_), 0.0, RH - rsd, B.get('raised_wall', B['wall'])); slab(RP, RH - rsd, RH)
