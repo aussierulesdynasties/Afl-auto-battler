@@ -220,6 +220,54 @@ a = base(256, 256, (58, 52, 48), 2, 6)
 for k in range(0, 256, 128): a[k:k + 3] *= 0.6
 save('soffit_dark', a, (2.4, 2.4))
 
+# ---- west club building (photo 12): white render, glazed upper floor, entrance canopy, angled script sign, posters ----
+def _cw_gf(a, pu, pv, h, w):    # ground floor shopfront, one tile = 6 m x 4.2 m: grey render pilaster, dark glazing, mullions every 1.1 m
+    a[:] = np.array((118, 122, 124)) + fine(h, w, 3)[:, :, None]
+    g0, g1 = int(0.25 * pv), int(3.9 * pv); x0 = int(0.6 * pu)
+    a[g0:g1, x0:] = np.array((38, 46, 52)) + noise(g1 - g0, w - x0, 6, 14)[:, :, None]
+    for k in range(5): xx = x0 + int(k * 1.1 * pu); a[g0:g1, xx:xx + 7] = (70, 74, 78)
+    a[int(1.3 * pv):int(1.3 * pv) + 6, x0:] = (70, 74, 78)          # transom
+    a[g1:] = (60, 62, 64); a[:g0] = (128, 132, 134)
+def _cw_white(a, pu, pv, h, w):  # curved west and back walls, one tile = 6 m x 8 m: white render, dark glazing band, white band, dark ground-floor glazing
+    def gl(z0, z1, step):       # z from the top of the tile
+        r0, r1 = int(z0 * pv), int(z1 * pv); a[r0:r1] = np.array((36, 44, 52)) + noise(r1 - r0, w, 6, 14)[:, :, None]
+        for k in range(int(6 / step)): a[r0:r1, int(k * step * pu):int(k * step * pu) + 5] = (196, 198, 198)
+    gl(1.4, 3.6, 1.0); a[int(3.6 * pv):int(4.6 * pv)] = np.array((236, 236, 232)) + fine(int(4.6 * pv) - int(3.6 * pv), w, 3)[:, :, None]
+    gl(4.6, 7.7, 1.5); a[int(7.7 * pv):] = (110, 112, 114)
+def _cw_glass(a, pu, pv, h, w):  # sloped upper-floor glazing, one tile = 3 m x 3.6 m: tinted panels, slim white frames
+    a[:] = np.array((70, 84, 96)) + noise(h, w, 5, 22)[:, :, None]
+    yy = np.arange(h)[:, None] / h; a += (40 * (1 - yy))[:, :, None]           # sky reflection brighter at the top
+    a[:, :6] = (214, 216, 216); a[:, w // 2 - 3:w // 2 + 3] = (180, 184, 186); a[int(1.9 * pv):int(1.9 * pv) + 5] = (180, 184, 186)
+facade('clubw_gf', (118, 122, 124), _cw_gf, (6.0, 4.2), 1024, 716, 0.05)
+facade('clubw_white', (234, 234, 230), _cw_white, (6.0, 8.0), 1024, 1366, 0.08)
+facade('clubw_glass', (70, 84, 96), _cw_glass, (3.0, 3.6), 512, 616, 0.02)
+for nm, col in (('paint_cream', (226, 214, 176)), ('paint_brown', (64, 52, 48)), ('bollard', (204, 160, 40)), ('paint_grey', (112, 116, 118))):
+    a = base(128, 128, col, 4, 8); save(nm, a, (1.0, 1.0))
+# angled 'Cazalys' sign: dark brown inverted trapezoid (drawn on the mesh), vertical panel joints, raised white script
+SW2, SH2 = 1024, 400
+im = Image.fromarray(np.clip(base(SH2, SW2, (66, 54, 50), 2, 4), 0, 255).astype(np.uint8)); dr = ImageDraw.Draw(im)
+for k in (256, 512, 768): dr.line([k, 0, k, SH2], fill=(52, 42, 40), width=4)
+F3 = ImageFont.truetype('C:/Windows/Fonts/segoescb.ttf', 210)
+t3 = Image.new('L', (1400, 420), 0); ImageDraw.Draw(t3).text((10, 0), 'Cazalys', font=F3, fill=255); t3 = t3.crop(t3.getbbox())
+t3 = t3.rotate(14, expand=True, resample=Image.BICUBIC); t3 = t3.resize((int(SW2 * 0.62), int(t3.height * SW2 * 0.62 / t3.width)), Image.LANCZOS)
+sh3 = Image.new('RGB', t3.size, (30, 24, 22)); im.paste(sh3, ((SW2 - t3.width) // 2 + 8, (SH2 - t3.height) // 2 + 8), t3)   # relief shadow
+wt = Image.new('RGB', t3.size, (244, 242, 236)); im.paste(wt, ((SW2 - t3.width) // 2, (SH2 - t3.height) // 2), t3)
+save('sign_clubw', np.asarray(im, float), (1, 1))
+# shopfront posters (photo 12): a group of three panels, 3.3 m x 3.0 m, header strips over hand-drawn promo posters
+PW, PH = 1100, 1000; im = Image.new('RGB', (PW, PH), (26, 26, 28)); dr = ImageDraw.Draw(im)
+FB = ImageFont.truetype('C:/Windows/Fonts/ariblk.ttf', 54); FS = ImageFont.truetype('C:/Windows/Fonts/segoescb.ttf', 64); FT = ImageFont.truetype('C:/Windows/Fonts/arialbd.ttf', 40)
+body = [((140, 30, 40), (240, 210, 200), 'XMAS LUNCH'), ((40, 34, 70), (236, 200, 90), 'NEW YEAR'), ((70, 40, 110), (120, 200, 240), 'TRIVIA')]
+for i, (bg, fg, ttl) in enumerate(body):
+    x0 = 20 + i * 360; x1 = x0 + 330
+    if i == 1: dr.rectangle([x0, 20, x1, 140], fill=(44, 40, 38)); dr.text(((x0 + x1) / 2, 80), 'Cazalys', font=FS, fill=(240, 240, 236), anchor='mm')
+    else:
+        dr.rectangle([x0, 20, x1, 140], fill=(232, 212, 36)); dr.text(((x0 + x1) / 2, 80), 'CLUBSLINK', font=FB, fill=(24, 60, 30), anchor='mm')
+    dr.rectangle([x0 + 20, 170, x1 - 20, 820], fill=bg)
+    dr.rectangle([x0 + 40, 200, x1 - 40, 330], fill=tuple(min(255, c + 40) for c in bg)); dr.text(((x0 + x1) / 2, 265), ttl, font=FT, fill=fg, anchor='mm')
+    for k in range(6): dr.rectangle([x0 + 50, 380 + k * 60, x1 - 50 - (k % 3) * 40, 400 + k * 60], fill=tuple(min(255, c + 90) for c in bg))
+    dr.ellipse([x0 + 100, 700, x1 - 100, 800], fill=fg)
+a = np.asarray(im, float) + noise(PH, PW, 10, 3)[:, :, None]; save('posters_w', a, (1, 1))
+
 json.dump(TILE, open(OUT + 'tiles.json', 'w', newline=''), indent=0)
 for nm in sorted(TILE):
     g = np.asarray(Image.open(OUT + nm + '.png').convert('L'), float); print(f'{nm:16s} grey sd {g.std():5.1f}')

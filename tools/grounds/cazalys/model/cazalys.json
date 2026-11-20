@@ -18,7 +18,7 @@
              "boundary": [["s_maroon", 3], ["s_gold", 3], ["s_teal", 3]]},
 "boundary_seats": {"arcs": [[283, 360], [0, 199]], "behind": 0.9, "group": 3, "gap": 1.6, "skip": [[14, 22], [84, 98], [148, 156]]},
 "buildings": [
-  {"name": "bldg_w", "osm": "bldg_w", "h": 7.5, "wall": "clad_grey", "roof": "roof_grey"},
+  {"name": "bldg_w", "osm": "bldg_w", "kind": "club_w", "h": 8.0, "wall": "clubw_white", "roof": "roof_grey"},
   {"name": "bldg_se", "osm": "bldg_se", "h": 3.6, "wall": "shed", "roof": "roof_white"},
   {"name": "club", "osm": "bldg_s", "h": 9.0, "wall": "club", "roof": "roof_club", "setback": 6.0}
 ],
