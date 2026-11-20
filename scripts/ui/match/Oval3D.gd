@@ -93,7 +93,7 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 	_ground()
 	_posts()
 	if GROUND_MODELS.has(ground):
-		_ground_model(str(GROUND_MODELS[ground]))
+		_ground_model(str(GROUND_MODELS[ground]), home, away)
 	else:
 		_stands(home, away)
 	var scene: PackedScene = load(player_glb)
@@ -462,9 +462,10 @@ func _stands(home: String, away: String) -> void:
 
 ## A real ground's model in place of the stand, its crowd and the fence: the bowl, roof and
 ## towers from <dir>.glb, and the seats drawn as one seat many times (MultiMesh): seat_tmpl.bin
-## is the seat (36 triangles), seats_<colour>.bin a row-major 3x4 transform per seat.
-## No crowd: the seats are empty (director, 2026-11-19).
-func _ground_model(dir: String) -> void:
+## is the seat (36 triangles), seats_<colour>.bin a row-major 3x4 transform per seat. The
+## crowd sits on those seats (Oval3DCrowd.build_on_seats; the director chose "Seat the crowd in
+## the MCG", 2026-11-20, in place of the empty seats of 2026-11-19).
+func _ground_model(dir: String, home: String, away: String) -> void:
 	var base := "res://assets/grounds/%s/" % dir
 	var root := Node3D.new()
 	root.name = "Ground"
@@ -479,6 +480,7 @@ func _ground_model(dir: String) -> void:
 		st.add_vertex(Vector3(tmpl[i], tmpl[i + 1], tmpl[i + 2]))
 	st.generate_normals()
 	var seat := st.commit()
+	var seats := []
 	for f in DirAccess.get_files_at(base):
 		if not (f.begins_with("seats_") and f.ends_with(".bin")):
 			continue
@@ -488,6 +490,10 @@ func _ground_model(dir: String) -> void:
 		mm.mesh = seat
 		mm.instance_count = buf.size() / 12
 		mm.buffer = buf
+		for i in range(0, buf.size(), 12):
+			seats.append(Transform3D(Basis(Vector3(buf[i], buf[i + 4], buf[i + 8]),
+					Vector3(buf[i + 1], buf[i + 5], buf[i + 9]), Vector3(buf[i + 2], buf[i + 6], buf[i + 10])),
+					Vector3(buf[i + 3], buf[i + 7], buf[i + 11])))
 		var mi := MultiMeshInstance3D.new()
 		mi.name = f.get_basename()
 		mi.multimesh = mm
@@ -495,6 +501,13 @@ func _ground_model(dir: String) -> void:
 		mat.albedo_color = SEAT_COLOURS.get(f.get_basename().trim_prefix("seats_"), Color.GRAY)
 		mi.material_override = mat
 		root.add_child(mi)
+	var pts := PackedVector3Array()
+	for i in range(0, tmpl.size(), 3):
+		pts.append(Vector3(tmpl[i], tmpl[i + 1], tmpl[i + 2]))
+	crowd = Oval3DCrowd.new()
+	crowd.name = "Crowd"
+	root.add_child(crowd)
+	crowd.build_on_seats(seats, pts, GameDB.club_colours(home), GameDB.club_colours(away))
 
 
 ## Each seat colour as the model paints it (the mean of its seat texture).

@@ -52,6 +52,7 @@ func run() -> void:
 	_t("_test_call_lines", [res])
 	_t("_test_farewell")
 	_t("_test_match_ground")
+	_t("_test_mcg_crowd", [res])
 	_t("_test_discs_apart")
 	_t("_test_clash_kit")
 	_t("_test_label_overlap")
@@ -2097,6 +2098,75 @@ func _test_farewell() -> void:
 
 ## FL-003: the vignettes draw the MCG where the match is played there - a club's home
 ## game at its MCG home, and the Grand Final - and the plain ground everywhere else.
+## The MCG model's own seats hold the crowd (director 2026-11-20, "Seat the crowd in the MCG";
+## Bible 2.92's mix): most seats taken, 3D people within 55 m and cards beyond, each supporter
+## sitting on his seat facing the ground, and the goal cheer wired as on the plain stand.
+func _test_mcg_crowd(res: Dictionary) -> void:
+	var d := MatchDirector.new()
+	d.setup(res, res["events"])
+	var oval := Oval3D.new()
+	oval.ground = "MCG"
+	(Engine.get_main_loop() as SceneTree).root.add_child(oval)
+	oval.build(d, "COL", "GEE")
+	var crowd := oval.crowd
+	var seats := 0
+	for mi in oval.find_child("Ground", false, false).get_children():
+		if mi is MultiMeshInstance3D and str(mi.name).begins_with("seats_"):
+			seats += (mi as MultiMeshInstance3D).multimesh.instance_count
+	_check(crowd != null and crowd.get_parent().name == "Ground" and seats > 70000,
+			"The MCG has its crowd, on the model (%d seats)" % seats)
+	_check(crowd.supporters > seats * 0.88 and crowd.supporters < seats * 0.96,
+			"Most of the MCG's seats are taken, a few left empty (%d of %d)" % [crowd.supporters, seats])
+	var people := 0
+	var cards := 0
+	var carded := 0
+	for ch: Dictionary in crowd._chunks:
+		for p: MultiMeshInstance3D in ch["people"]:
+			people += 1 if p.visibility_range_end == Oval3DCrowd.MIX_D else 0
+		cards += 1 if (ch["cards"] as MultiMeshInstance3D).visibility_range_begin == Oval3DCrowd.MIX_D else 0
+		carded += (ch["cards"] as MultiMeshInstance3D).multimesh.instance_count
+	_check(cards == crowd._chunks.size() and people == cards * crowd._people_mats.size()
+			and carded == crowd.supporters and cards > Oval3DCrowd.SECTORS,
+			"Near the camera the MCG's supporters are 3D people, beyond 55 m cards (%d chunks)" % cards)
+	# He sits on the seat: his feet on the floor under it, facing away from the backrest.
+	var tmpl := FileAccess.get_file_as_bytes("res://assets/grounds/mcg/seat_tmpl.bin").to_float32_array()
+	var pts := PackedVector3Array()
+	for i in range(0, tmpl.size(), 3):
+		pts.append(Vector3(tmpl[i], tmpl[i + 1], tmpl[i + 2]))
+	var spot := Oval3DCrowd.sitting_spot(pts)
+	var lo := INF
+	var back := Vector3.ZERO
+	var nb := 0
+	for v in pts:
+		lo = minf(lo, v.y)
+	for v in pts:
+		if v.y > 0.4:
+			back += v
+			nb += 1
+	back /= float(nb)
+	var facing := spot.basis.z
+	_check(is_equal_approx(spot.origin.y, lo) and facing.dot(Vector3(spot.origin.x - back.x, 0, spot.origin.z - back.z)) > 0.0
+			and Vector2(spot.origin.x, spot.origin.z).length() < 0.15,
+			"A supporter sits on the MCG seat facing out over it (%s, facing %s)" % [spot.origin, facing])
+	# Every supporter looks in, toward the ground's middle.
+	var inward := 0
+	var n := 0
+	for ch: Dictionary in crowd._chunks:
+		var mm: MultiMesh = (ch["cards"] as MultiMeshInstance3D).multimesh
+		for i in range(0, mm.instance_count, 97):
+			var t := mm.get_instance_transform(i)
+			n += 1
+			inward += 1 if t.basis.z.normalized().dot(-Vector3(t.origin.x, 0, t.origin.z).normalized()) > 0.5 else 0
+	_check(n > 500 and inward == n, "Every supporter looks in at the ground (%d of %d sampled)" % [inward, n])
+	oval._goal_on = false
+	d.emitted = 1
+	d.flash = {"pos": Vector2.ZERO, "left": 0.9, "goal": true}
+	oval._sync_crowd(0.5)
+	_check(is_equal_approx(float(crowd._card_mat.get_shader_parameter("cheer_from")), oval._crowd_t),
+			"A goal at the MCG raises its supporters as on the plain stand")
+	oval.queue_free()
+
+
 func _test_match_ground() -> void:
 	VignetteGround.use_match({"home": "COL", "away": "GEE", "venue": ""})
 	_check(VignetteGround.venue == "MCG", "A Collingwood home game draws the MCG")
