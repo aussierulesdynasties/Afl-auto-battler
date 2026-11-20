@@ -113,7 +113,9 @@ one sun and filmic tonemapping; the turf of #1658 already varies with weather an
 stands, roofs, light towers, scoreboards, fences, signage and goal-end details, at the detail the
 cameras actually see. The stadium we have "is ok, but it was just thrown together, it wasnt borne from a
 plan" (2026-11-16): the plan first sets what a stadium needs, then today's is assessed against it,
-part by part (kept, reworked or replaced).
+part by part (kept, reworked or replaced). No ground's look is approved yet (director, 2026-11-20): a
+finished ground is flown through by the director in the ground inspector (`tools/inspect/README.md`:
+any model, in first person, very fast), he writes its fault list, the faults are fixed, then he approves it.
 
 **2c. The crowd, cheaply.** Methods compared on looks and phone cost before any is chosen: shader-
 painted seats (today), instanced cards of baked figures (impostors), animated low-poly instances, and
