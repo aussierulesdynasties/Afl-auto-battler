@@ -168,21 +168,21 @@ def build_mat(m,key):
     col=rgbn(bc);height=None
     if pat=='corrugated':  # 76 mm sine corrugation across u, streaky weathering along the fall
         height=mth('MULTIPLY',mth('ADD',mth('SINE',mth('MULTIPLY',frac_u(0.076),6.28318)),1.0),0.5)
-        col=vary(col,0.18,0.6)
-        col=shade(col,mth('ADD',mth('MULTIPLY',noise(3.0,6,scaled(4.0,0.25)),0.25),0.88))
+        col=vary(col,0.03,0.6)
+        col=shade(col,mth('ADD',mth('MULTIPLY',noise(3.0,6,scaled(4.0,0.25)),0.06),0.97))
     elif pat=='boxprofile':  # trapezoid ribs every 200 mm
         height=mth('LESS_THAN',frac_u(0.2),0.25);col=vary(col,0.06,0.8)
     elif pat=='tiles':
         height=mth('MULTIPLY',mth('ADD',mth('SINE',mth('MULTIPLY',frac_u(0.25),6.28318)),1.0),mth('FRACT',mth('DIVIDE',sep.outputs[1],0.35)))
         col=vary(col,0.15,2.0)
     elif pat in('concrete','render','paint','galv'):
-        amp={'concrete':0.12,'render':0.07,'paint':0.04,'galv':0.06}[pat]
+        amp={'concrete':0.03,'render':0.02,'paint':0.015,'galv':0.03}[pat]
         col=vary(col,amp,{'concrete':2.5,'render':1.2,'paint':0.8,'galv':3.0}[pat])
-        if pat=='concrete':col=vary(col,0.08,18.0)
+        if pat=='concrete':col=vary(col,0.05,18.0)
     elif pat=='concrete_panels':  # precast panels, a joint at every pier (4.55 m)
-        col=vary(col,0.12,2.0);col=mix(joint(0,4.55,0.006),col,rgbn([x*0.55 for x in bc]))
+        col=vary(col,0.03,2.0);col=mix(joint(0,4.55,0.006),col,rgbn([x*0.55 for x in bc]))
     elif pat=='steps':  # cast concrete, a joint every 3 m
-        col=vary(col,0.12,2.0);col=vary(col,0.07,22.0);col=mix(joint(0,3.0,0.004),col,rgbn([x*0.6 for x in bc]))
+        col=vary(col,0.03,2.0);col=vary(col,0.05,22.0);col=mix(joint(0,3.0,0.004),col,rgbn([x*0.6 for x in bc]))
     elif pat=='brick':
         br=ns.new('ShaderNodeTexBrick');L(uv.outputs[0],br.inputs['Vector']);br.inputs['Scale'].default_value=1.0
         br.inputs['Brick Width'].default_value=0.23;br.inputs['Row Height'].default_value=0.076;br.inputs['Mortar Size'].default_value=0.01
@@ -192,8 +192,8 @@ def build_mat(m,key):
     elif pat=='timber':  # weathered planks, grain along u
         col=shade(col,mth('ADD',mth('MULTIPLY',noise(2.0,8,scaled(0.6,30.0)),0.35),0.82))
     elif pat=='dirt':
-        col=vary(col,0.2,1.2);col=vary(col,0.12,12.0)
-        mr=ns.new('ShaderNodeMapRange');mr.interpolation_type='SMOOTHSTEP';mr.inputs['From Min'].default_value=0.55;mr.inputs['From Max'].default_value=0.7;L(noise(0.8,3),mr.inputs['Value']);col=mix(mr.outputs['Result'],col,rgbn([lin(x) for x in (128,124,82)]))
+        col=vary(col,0.04,1.2);col=vary(col,0.08,12.0)
+        mr=ns.new('ShaderNodeMapRange');mr.interpolation_type='SMOOTHSTEP';mr.inputs['From Min'].default_value=0.55;mr.inputs['From Max'].default_value=0.7;L(noise(0.8,3),mr.inputs['Value']);pass
     elif pat=='asphalt':
         col=vary(col,0.1,1.0);col=vary(col,0.18,60.0)
     elif pat=='board':  # black panels in a grid with grey frames
@@ -206,13 +206,13 @@ def build_mat(m,key):
         col=shade(col,mth('ADD',mth('MULTIPLY',vo.outputs['Color'],0.35),0.78));col=vary(col,0.08,20.0)
         edge=mth('LESS_THAN',ve.outputs['Distance'],0.05);col=mix(edge,col,rgbn([x*0.45 for x in bc]));height=mth('SUBTRACT',1.0,edge)
     elif pat=='worn_asphalt':  # hand-made: warm grey-brown seal, broad patchy wear, worn lighter tracks, patched darker
-        col=vary(col,0.14,0.18);col=vary(col,0.08,1.5)
+        col=vary(col,0.02,0.18);col=vary(col,0.02,1.5)
         mr=ns.new('ShaderNodeMapRange');mr.interpolation_type='SMOOTHSTEP';mr.inputs['From Min'].default_value=0.58;mr.inputs['From Max'].default_value=0.66;L(noise(0.12,3),mr.inputs['Value'])
-        col=mix(mth('MULTIPLY',mr.outputs['Result'],0.9),col,rgbn([lin(x) for x in (124,116,106)]))  # patched / oil-dark areas
+        col=mix(mth('MULTIPLY',mr.outputs['Result'],0.0),col,rgbn([lin(x) for x in (124,116,106)]))  # patched / oil-dark areas
         mw=ns.new('ShaderNodeMapRange');mw.interpolation_type='SMOOTHSTEP';mw.inputs['From Min'].default_value=0.6;mw.inputs['From Max'].default_value=0.72;L(noise(0.25,2,scaled(0.35,1.0)),mw.inputs['Value'])
-        col=mix(mth('MULTIPLY',mw.outputs['Result'],0.6),col,rgbn([lin(x) for x in (190,182,170)]))  # worn pale tracks
+        col=mix(mth('MULTIPLY',mw.outputs['Result'],0.0),col,rgbn([lin(x) for x in (190,182,170)]))  # worn pale tracks
         ag=ns.new('ShaderNodeTexVoronoi');ag.inputs['Scale'].default_value=22.0;L(uv.outputs[0],ag.inputs['Vector'])  # gravel aggregate ~2 cm
-        col=shade(col,mth('ADD',mth('MULTIPLY',ag.outputs['Color'],0.55),0.74));col=vary(col,0.14,6.0);col=vary(col,0.12,90.0)
+        col=shade(col,mth('ADD',mth('MULTIPLY',ag.outputs['Color'],0.55),0.74));col=vary(col,0.03,6.0);col=vary(col,0.10,90.0)
         ck=ns.new('ShaderNodeTexVoronoi');ck.feature='DISTANCE_TO_EDGE';ck.inputs['Scale'].default_value=0.6;L(noise(0.9,2,None) if False else uv.outputs[0],ck.inputs['Vector'])
         crack=mth('MULTIPLY',mth('LESS_THAN',ck.outputs['Distance'],0.005),mth('GREATER_THAN',noise(0.35,2),0.72))  # a few fine hairline cracks only
         col=mix(mth('MULTIPLY',crack,0.6),col,rgbn([lin(x) for x in (104,98,90)]))
@@ -220,7 +220,7 @@ def build_mat(m,key):
     elif pat=='grate':  # steel grate: bars every 40 mm in a frame
         col=mix(mth('LESS_THAN',frac_u(0.04),0.45),col,rgbn([lin(x) for x in (24,24,24)]));height=mth('LESS_THAN',frac_u(0.04),0.45)
     elif pat=='grass':
-        col=vary(col,0.15,3.0)
+        col=vary(col,0.04,3.0);col=vary(col,0.10,60.0)
     L(col,bs.inputs['Base Color'])
     if height is not None:
         bump=ns.new('ShaderNodeBump');bump.inputs['Strength'].default_value=0.6;bump.inputs['Distance'].default_value=0.02
