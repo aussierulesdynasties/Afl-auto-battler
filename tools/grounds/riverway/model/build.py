@@ -168,16 +168,19 @@ def seat_rows(bs, prof, k, n, aisle=12.0, gap=1.1):
         if b > b1 - math.degrees(2 / rf): break
         ab.append(b); s += aisle
     AISLES.extend(ab)
-    cols = []; b = b0 + math.degrees(0.6 / rf)   # one set of seat bearings for every row: seats sit in straight columns
+    cols = []; b = b0 + math.degrees(0.6 / rf)   # one seat per column, the columns square to the front row (straight stand)
     while b <= b1 - math.degrees(0.6 / rf):
         if all(abs(math.radians(b - a)) * rf > gap / 2 + 0.25 for a in ab): cols.append(b)
         b += math.degrees(0.5 / rf)
-    for j in range(n):
-        for b in cols:
-            P = prof(b); (r0, z0), (r1, z1) = P[k], P[k + 1]
-            rr = r0 + (r1 - r0) * (j + 1) / n; zz = z0 + (z1 - z0) * j / (n - 1) if n > 1 else z0
-            a = math.radians(b); o = (math.sin(a), math.cos(a)); t = (math.cos(a), -math.sin(a))
-            seat(pol(b, rr), t, o, zz)
+    def row0(b):
+        P = prof(b); (r0, z0), (r1, z1) = P[k], P[k + 1]; return np.array(pol(b, r0 + (r1 - r0) / n)), (r1 - r0) / n, z0, z1
+    for b in cols:
+        q0, dr, z0, z1 = row0(b); tt = np.array(row0(b + 0.05)[0]) - np.array(row0(b - 0.05)[0]); tt /= np.linalg.norm(tt)
+        oo = np.array((-tt[1], tt[0]))
+        if oo @ q0 < 0: oo = -oo
+        for j in range(n):
+            zz = z0 + (z1 - z0) * j / (n - 1) if n > 1 else z0
+            seat(tuple(q0 + oo * dr * j), tuple(tt), tuple(oo), zz)
 
 
 def endcap(mb, b, pts, m, sign):
@@ -350,14 +353,14 @@ def block(S, mb, mr):
 
 # ---------------- fence, concourse, towers ----------------
 def fence(col):
-    mb = MB('fence'); h = D['fence_h']; bs = np.arange(0, 360.001, 0.5)
+    mb = MB('mesh'); h = D['fence_h']; bs = np.arange(0, 360.001, 0.5)
     for i in range(len(bs) - 1):
         ba, bb = bs[i], bs[i + 1]; ra, rb = fence_r(ba), fence_r(bb)
         if any(g0 <= 0.5 * (ba + bb) <= g1 for g0, g1 in D.get('fence_gaps', [])): continue   # open to the field (player race)
         for d, sg in ((0.0, -1), (0.12, 1)):
             bm = math.radians(0.5 * (ba + bb)); rad = np.array([math.sin(bm), math.cos(bm), 0.0])
-            L = math.radians(ba) * ra / TILE.get('fence', (1, 1))[0]; L2 = math.radians(bb) * rb / TILE.get('fence', (1, 1))[0]
-            oriented(mb, [P3(ba, ra + d, 0), P3(bb, rb + d, 0), P3(bb, rb + d, h), P3(ba, ra + d, h)], 'fence', sg * rad,
+            L = math.radians(ba) * ra / TILE.get('mesh', (1, 1))[0]; L2 = math.radians(bb) * rb / TILE.get('mesh', (1, 1))[0]
+            oriented(mb, [P3(ba, ra + d, 0), P3(bb, rb + d, 0), P3(bb, rb + d, h), P3(ba, ra + d, h)], 'mesh', sg * rad,
                      [(L, 0), (L2, 0), (L2, 1), (L, 1)])
         oriented(mb, [P3(ba, ra, h), P3(bb, rb, h), P3(bb, rb + 0.12, h), P3(ba, ra + 0.12, h)], 'conc_wall', np.array([0, 0, 1.0]))
     mb.build(col)

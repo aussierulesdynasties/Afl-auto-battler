@@ -90,6 +90,12 @@ save('paving', a, (2.4, 2.4))
 a = base(512, 1024, (44, 58, 50), 3, 6); px = 1024 / 2.0   # Riverway: dark green boundary fence, posts every 2 m, top rail
 a[:40] = (70, 84, 76); a[:, :14] = (70, 84, 76); a[470:] = (96, 96, 92); weather(a, 0.06, 8, 20); save('fence', a, (2.0, 1.1))
 
+# chain-link fence (symonds photo): galvanised diamond mesh 6 cm, a post every 2 m, top and bottom rails; alpha cut-out
+h, w = 564, 1024; px = w / 2.0; yy, xx = np.mgrid[:h, :w]; q = 0.06 * px
+wire = (np.abs(((xx + yy) % q) - q / 2) > q / 2 - 1.5) | (np.abs(((xx - yy) % q) - q / 2) > q / 2 - 1.5)
+post = (xx < 0.06 * px); rail = (yy < 0.05 * px) | (yy > h - 0.04 * px)
+a = np.zeros((h, w, 4)); a[..., :3] = (168, 172, 174); a[..., :3] += fine(h, w, 4)[:, :, None]
+a[post | rail, :3] *= 0.9; a[..., 3] = np.where(wire | post | rail, 255, 0); save('mesh', a, (2.0, 1.1))
 # ---- roof sheeting: ribbed deck, ribs every 0.3 m across (u along the arc), sheet laps every 6 m down v, grime ----
 def deck(name, col, pitch=0.3, tile=(6.0, 6.0), grime=18):
     h = w = N; x = np.arange(w) / w * (tile[0] / pitch)
