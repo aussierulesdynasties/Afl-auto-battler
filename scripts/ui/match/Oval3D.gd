@@ -502,6 +502,8 @@ const SEAT_COLOURS := {
 	"seat_grey": Color(0.618, 0.618, 0.586), "seat_moss": Color(0.437, 0.594, 0.555),
 	"seat_navy": Color(0.068, 0.311, 0.484), "seat_slate": Color(0.272, 0.39, 0.488),
 	"seat_steel": Color(0.437, 0.484, 0.524),
+	"seat_green": Color(0.265, 0.609, 0.395), "seat_teal": Color(0.182, 0.556, 0.533),
+	"seat_blue": Color(0.221, 0.428, 0.672),
 }
 
 

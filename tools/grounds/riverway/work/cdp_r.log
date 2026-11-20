@@ -1,0 +1,37 @@
+ANGLE (AMD, AMD Radeon(TM) Graphics (0x000013C0) Direct3D11 vs_5_0 ps_5_0, D3D11)
+saved ge/l180.png
+saved ge/l225.png
+saved ge/l270.png
+Traceback (most recent call last):
+  File "C:\Users\DANTE\Documents\GitHub\Afl-auto-battler\.claude\worktrees\determined-swanson-f2aa5d\tools\grounds\riverway\work\cdp.py", line 37, in <module>
+    cmd('Runtime.evaluate',expression="document.querySelectorAll('#omnibox-container,#titlecard,.app-viewcard-strip,#runway-expand-button,.scene-footer-container,#minimap,.app-horizontal-widget-holder,.app-vertical-widget-holder,[role=navigation],.yHc72,#gb').forEach(e=>e.style.visibility='hidden')")
+    ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\DANTE\Documents\GitHub\Afl-auto-battler\.claude\worktrees\determined-swanson-f2aa5d\tools\grounds\riverway\work\cdp.py", line 19, in cmd
+    r=json.loads(ws.recv())
+                 ~~~~~~~^^
+  File "C:\Users\DANTE\AppData\Roaming\Python\Python314\site-packages\websocket\_core.py", line 429, in recv
+    opcode, data = self.recv_data()
+                   ~~~~~~~~~~~~~~^^
+  File "C:\Users\DANTE\AppData\Roaming\Python\Python314\site-packages\websocket\_core.py", line 457, in recv_data
+    opcode, frame = self.recv_data_frame(control_frame)
+                    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Users\DANTE\AppData\Roaming\Python\Python314\site-packages\websocket\_core.py", line 478, in recv_data_frame
+    frame = self.recv_frame()
+  File "C:\Users\DANTE\AppData\Roaming\Python\Python314\site-packages\websocket\_core.py", line 515, in recv_frame
+    return self.frame_buffer.recv_frame()
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\DANTE\AppData\Roaming\Python\Python314\site-packages\websocket\_abnf.py", line 377, in recv_frame
+    self.recv_header()
+    ~~~~~~~~~~~~~~~~^^
+  File "C:\Users\DANTE\AppData\Roaming\Python\Python314\site-packages\websocket\_abnf.py", line 331, in recv_header
+    header = self.recv_strict(2)
+  File "C:\Users\DANTE\AppData\Roaming\Python\Python314\site-packages\websocket\_abnf.py", line 420, in recv_strict
+    bytes_ = self.recv(min(16384, shortage))
+  File "C:\Users\DANTE\AppData\Roaming\Python\Python314\site-packages\websocket\_core.py", line 645, in _recv
+    return recv(self.sock, bufsize)
+  File "C:\Users\DANTE\AppData\Roaming\Python\Python314\site-packages\websocket\_socket.py", line 127, in recv
+    bytes_ = _recv()
+  File "C:\Users\DANTE\AppData\Roaming\Python\Python314\site-packages\websocket\_socket.py", line 99, in _recv
+    return sock.recv(bufsize)
+           ~~~~~~~~~^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
