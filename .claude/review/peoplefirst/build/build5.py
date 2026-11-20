@@ -235,10 +235,11 @@ if os.environ.get('FARRIBS') and os.environ.get('FARVR'):
         return _r(a)
     _FZ=(_i0,_i1,float(os.environ.get('FARDZ',0)))
     print('FARVR',[(round(RO[i],2),round(_vr(i),2),round(_CR[i],2)) for i in range(_i0,_i1)],'FARDZ',_FZ[2])
+NEARDZ=float(os.environ.get('NEARDZ',0))
 def fardz(a,s,inzone=0):
     if not _FZ:return 0.0
     i0,i1,dz=_FZ
-    if not ribat(i0,s)<=a<=ribat(i1,s):return 0.0
+    if not ribat(i0,s)<=a<=ribat(i1,s):return 0.0 if inzone else -NEARDZ*(1-math.sqrt(max(0.0,math.sin(math.pi*phase(a,s)))))*s*s  # rest of the roof: dips at the ribs, depth fitted on the director's photo (director_roof_wave_ref)
     if inzone:return 1.0
     return -dz*(1-math.sqrt(max(0.0,math.sin(math.pi*phase(a,s)))))*s*s
 SR=[0,0.03,0.06,0.09,0.12,0.15,0.18,0.21,0.24,0.28,0.32,0.36,0.40,0.45,0.50,0.55,0.60,0.65,0.70,0.75,0.80,0.84,0.88,0.92,0.95,0.975,0.99,1.0]  # dense rows: slanted far ribs cut diagonally across them
@@ -246,7 +247,36 @@ NAVYW=5.25  # navy glazed strip inside the white membrane, measured on the photo
 LOBE_IN=float(os.environ.get('LOBE_IN',0.35));LOBE_OUT=float(os.environ.get('LOBE_OUT',1.1));CAP0=float(os.environ.get('CAP0',0.94));LOBEP=float(os.environ.get('LOBEP',1.5))
 LOBE_FAR=float(os.environ.get('LOBE_FAR',LOBE_OUT));FARPOW=float(os.environ.get('FARPOW',1.0))
 ra=arange(A0,A1,0.125)
+MEMB=float(os.environ.get('MEMB',0))  # MEMB=k: one membrane per bay (lead 2026-11-20: tensile canopy spanned between its ribs and outer arch, repeated round the ring); k = arch height / bay width, measured on the photo
+def _bay(a,s):
+    for i in range(len(RI)-1):
+        r0,r1=ribat(i,s),ribat(i+1,s)
+        if r0<=a<=r1:return i,(a-r0)/(r1-r0)
+    return None,0.0
+def _hr(a,s):return hin(a)+(hout(a)-hin(a))*s
+if os.environ.get('EVEN'):  # every bay the same width (director 2026-11-20 photo: every bay the same puffed dome)
+    _n=len(RI)-1;RI=[RI[0]+(RI[-1]-RI[0])*k/_n for k in range(_n+1)];RO=[RO[0]+(RO[-1]-RO[0])*k/_n for k in range(_n+1)]
+SCAL=float(os.environ.get('SCAL',2.0))
+_ang=arange(A0,A1,1.0);HIN_M=sum(hin(x) for x in _ang)/len(_ang);HOUT_M=sum(hout(x) for x in _ang)/len(_ang)
+BAYW=sum(math.radians(RO[k+1]-RO[k])*rout((RO[k]+RO[k+1])/2) for k in range(len(RO)-1))/(len(RO)-1)
+print('MEMB bays',len(RO)-1,'width',round(BAYW,2),'hin',round(HIN_M,2),'hout',round(HOUT_M,2))
+def rp_m(a,s,dz):
+    i,ph=_bay(a,s)
+    if i is None:return None
+    a0,a1=ribat(i,s),ribat(i+1,s);ri=rin(a)-NAVYW+0.8-1.6*math.sin(math.pi*phase(a))
+    # plan: one smooth scallop per bay between the two rib-end radii
+    e0,e1=rout(RO[i]),rout(RO[i+1])
+    v=e0+(e1-e0)*ph;ro=v+SCAL*math.sqrt(max(0.0,math.sin(math.pi*ph)))  # same scallop depth on every bay
+    r=ri+(ro-ri)*s
+    # height: straight between the two rib heights (no per-angle steps), plus one even fabric dome per bay, zero at each rib
+    z=HIN_M+(HOUT_M-HIN_M)*s  # one edge height all round: every crest level, as in the photo
+    Hm=MEMB*BAYW;H=LOBE_IN+(Hm-LOBE_IN)*s
+    z+=H*math.sqrt(max(0.0,math.sin(math.pi*ph)))+dz
+    t=math.radians(a);return Vector((r*math.cos(t)+SH[0],r*math.sin(t)+SH[1],z))
 def rp(a,s,dz=0.0):
+    if MEMB:
+        q=rp_m(a,s,dz)
+        if q is not None:return q
     ph=phase(a,s);ri=rin(a)-NAVYW+0.8-1.6*math.sin(math.pi*phase(a));ro=rout(a);r=ri+(ro-ri)*s;z=hin(a)+(hout(a)-hin(a))*s
     # inflated tube lobe: round cross-section (sqrt of sine), height grows outward, domed cap at the outer end
     A=LOBE_IN+(LOBE_FAR-LOBE_IN)*s**FARPOW if fardz(a,s,1) else LOBE_IN+(LOBE_OUT-LOBE_IN)*s  # far zone: LOBE_FAR, height kept near the outer edge (photo: flat inner membrane)
@@ -406,7 +436,7 @@ for i in range(1,len(RI)-1):
 # near side: flat dark underside 1.0 m below the roof edge, from the edge in to the stand's outer wall, and the wall face
 # carried up to meet it (lead 2026-11-20 "Seats + underside"; photo: dark band just under the gutter; lower, it hid the red board)
 UNDZ=1.0
-_UA=arange(NEARW[0],NEARW[1],0.5)
+_UA=arange(NEARW[0],NEARW[1],0.125)  # same step as the roof grid, so no slice spans a rib cusp
 for _a0,_a1 in zip(_UA,_UA[1:]):
     _q2=[]
     for _a in (_a0,_a1):
@@ -414,8 +444,18 @@ for _a0,_a1 in zip(_UA,_UA[1:]):
         # inner end: never above the roof's under-surface at the wall line (r34 poked through the membrane there)
         _ri=rin(_a)-NAVYW+0.8-1.6*math.sin(math.pi*phase(_a));_sw=min(1.0,max(0.0,((_w-Vector((SH[0],SH[1],0))).length-_ri)/max(1.0,rout(_a)-_ri)))
         _zi=min(_zl,min(rp(_a,_sw+d,-0.6).z for d in (-0.06,-0.03,0.0,0.03,0.06) if 0<=_sw+d<=1)-0.4);_zl=min(_zl,rp(_a,0.97,-0.6).z-0.4)
-        _q2.append((Vector((_e.x,_e.y,_zl)),P(_a,25.0,_zi),P(_a,25.0,21.0),_zi))
-    face([bm.verts.new(v) for v in (_q2[0][0],_q2[1][0],_q2[1][1],_q2[0][1])],DARK)
+        _q2.append((Vector((_e.x,_e.y,_zl)),P(_a,25.0,_zi),P(_a,25.0,21.0),_zi,_sw))
+    # split edge-to-wall into 8 strips, each kept 0.4 m under the roof's under-surface (the rib dips sag below a straight chord)
+    _rows=[]
+    for _j,(_e2,_w2,_,_zi2,_sw2) in enumerate(_q2):
+        _a=(_a0,_a1)[_j];_r=[]
+        for _k in range(9):
+            _u=_k/8;_v=_e2.lerp(_w2,_u);_s=1.0-(1.0-_sw2)*_u
+            _dv=Vector((_v.x-SH[0],_v.y-SH[1],0));_av=math.degrees(math.atan2(_dv.y,_dv.x))%360
+            _ri2=rin(_av)-NAVYW+0.8-1.6*math.sin(math.pi*phase(_av));_s=(_dv.length-_ri2)/max(1.0,rout(_av)-_ri2)  # the roof point straight above this one
+            _r.append(Vector((_v.x,_v.y,min(_v.z,min(rp(_av+da,min(1.0,max(0.0,_s+d)),-0.6).z for d in (-0.03,0.0,0.03) for da in (-0.1,0.0,0.1))-0.4))))
+        _rows.append(_r)
+    for _k in range(8):face([bm.verts.new(v) for v in (_rows[0][_k],_rows[1][_k],_rows[1][_k+1],_rows[0][_k+1])],DARK)
     if _q2[0][3]>21.0 and _q2[1][3]>21.0:face([bm.verts.new(v) for v in (_q2[0][1],_q2[1][1],_q2[1][2],_q2[0][2])],DARK)
 R=RO  # columns and later rib users stand under the outer rib ends
 for i in range(1,len(R)-1):
@@ -424,8 +464,8 @@ for i in range(1,len(R)-1):
         tp=rp(a,1.0,-0.3);cyl(tp,Vector((tp.x,tp.y,hout(a)-POSTL)),0.35,0.35,YEL,8);continue
     t=math.radians(a);ro=rout(a)-9;g0=Vector((ro*math.cos(t)+SH[0],ro*math.sin(t)+SH[1],0));fk=Vector((g0.x,g0.y,9.0))
     cyl(g0,fk,0.45,0.4,YEL,8)
-    for da in (-0.32,0.32):
-        a2=a+da*(R[i+1]-R[i] if da>0 else R[i]-R[i-1]);cyl(fk,rp(a2,0.93,-0.6),0.35,0.3,YEL,8)
+    for da in (-0.5,0.5):  # each arm lands on the crest of its bay (lead 2026-11-20: rib tops on the crests)
+        a2=a+da*(R[i+1]-R[i] if da>0 else R[i]-R[i-1]);cyl(fk,rp(a2,1.0,-0.3),0.35,0.3,YEL,8)
 # the ground's own sign, People First Stadium (current photo, drone from the south): a flat navy panel hung on the
 # yellow columns behind the south-end stand (2.4 m out from the column feet, in front of the raking arms, as in the photo), centred on the 250 deg rib, 39 m wide, 7.33:1, bottom 8.75 m above the ground (just above the
 # concourse slab). Lettering hand-painted in handtex.py.
