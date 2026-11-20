@@ -29,12 +29,16 @@ shadow bands have a ratio of 0.39 Â±0.11. The drawing gives (5.56 âˆ’ 3.92) / 3.
 **Caveat.** This is the approved design. The footprint and roof layout match every aerial from 2021
 to 2026; I have no ground photo yet to confirm the as-built heights.
 
-## bldg_w walls (DA p11 west elevation callouts)
+## bldg_w walls (DA p11 west elevation, 37.8 px/m from the 3.92 m roof)
 
-| Item | Source | Model |
+| Band, top down | Drawing | Model |
 |---|---|---|
-| Horizontal profiled metal wall cladding | p11 callout | `shedw`, ribs every 0.2 m |
-| High window band under the eave | p11, 30 px at 36.5 px/m (wall height as scale) | 0.8 m, ±0.15 m |
-| Clerestory windows over louvres, raised roof | p11, fills the raised step | top 1.2 m visible, louvres in the lower half |
-| Mullion spacing | p11, ~80 px | 2.2 m, ±0.3 m |
-| Cladding colour | **UNVERIFIED**: no photo yet | neutral grey (200, 200, 198) placeholder |
+| Lower roof slab edge | 1.0 m | 0.5 m cap + 0.5 m white wall top |
+| High level windows | 0.53 m, mullions ~1.1 m | 0.53 m, 1.1 m |
+| Plain cladding panel | 1.32 m | horizontal ribs |
+| Framed panel row | 1.06 m, frames ~1.3 m | 1.06 m, 1.32 m |
+| Below floor level to outside ground | 0.70 m (section) | plinth |
+| Raised slab edge / clerestory | 0.8 m / 1.03 m, windows over louvres | 0.3+0.5 m / 1.0 m |
+| Cladding colour | **UNVERIFIED**: no photo yet | neutral grey placeholder |
+| Eave overhang past the wall | drawn, depth not on p11 | **OPEN**: not modelled |
+| External ramp and stairs along the west face | drawn | **OPEN**: not modelled |
