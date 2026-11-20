@@ -502,6 +502,9 @@ const SEAT_COLOURS := {
 	"seat_grey": Color(0.618, 0.618, 0.586), "seat_moss": Color(0.437, 0.594, 0.555),
 	"seat_navy": Color(0.068, 0.311, 0.484), "seat_slate": Color(0.272, 0.39, 0.488),
 	"seat_steel": Color(0.437, 0.484, 0.524),
+	"s_blue": Color(0.211, 0.28, 0.448), "s_orange": Color(0.785, 0.426, 0.158),
+	"s_grey": Color(0.64, 0.648, 0.663), "s_maroon": Color(0.443, 0.129, 0.16),
+	"s_gold": Color(0.863, 0.649, 0.129), "s_teal": Color(0.135, 0.479, 0.456),
 	# Optus: each tier's colour pushed grey-blue or tan, from the reference photos (optus_model/build.py).
 	"seat_lo_blue": Color(0.802, 0.807, 0.841), "seat_lo_tan": Color(0.892, 0.824, 0.751),
 	"seat_mid_blue": Color(0.920, 0.858, 0.794), "seat_mid_tan": Color(1.0, 0.875, 0.704),
