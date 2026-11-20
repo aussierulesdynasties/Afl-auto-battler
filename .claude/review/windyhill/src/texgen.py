@@ -9,7 +9,7 @@ def noise(s,oct=4,amp=1.0):
     for o in range(oct):
         k=2**(o+2);g=rng.standard_normal((k+1,k+1))
         im=np.array(Image.fromarray(g.astype(np.float32),'F').resize((N,N),Image.BICUBIC));out+=im/(2**o)
-    return out/np.abs(out).max()*amp
+    return out/np.abs(out).max()*amp*0.4  # texture pass: low-frequency mottle cut to 0.4x
 def tint(base,v):return np.array(base,float)[None,None,:]*(1+v[...,None])
 yy,xx=np.mgrid[0:N,0:N]
 # concrete (tile 4 m): fine aggregate + faint form joints every 2 m

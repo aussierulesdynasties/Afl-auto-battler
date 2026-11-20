@@ -3,7 +3,7 @@ import os
 import bpy, bmesh, sys, json, math
 import numpy as np
 dst = sys.argv[sys.argv.index('--') + 1]
-D = 'C:/Users/DANTE/AppData/Local/Temp/claude/b11ecf2cca45cfb5/002c0964-89cd-46e5-bf30-bd32e1451dbd/scratchpad/wh'
+import os; D = os.path.dirname(os.path.abspath(__file__)).replace(chr(92), '/')
 W = json.load(open(D + '/world.json')); G = json.load(open(D + '/geo.json'))
 bpy.ops.wm.read_factory_settings(use_empty=True)
 MATS = {}; BM = {}

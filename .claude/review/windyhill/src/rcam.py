@@ -1,7 +1,7 @@
 import bpy,sys,json,math
 from mathutils import Matrix,Vector
 a=sys.argv[sys.argv.index('--')+1:];src,out=a[0],a[1]
-D='C:/Users/DANTE/AppData/Local/Temp/claude/b11ecf2cca45cfb5/002c0964-89cd-46e5-bf30-bd32e1451dbd/scratchpad/wh'
+import os; D = os.path.dirname(os.path.abspath(__file__)).replace(chr(92), '/')
 sys.path.insert(0,D);from cam import R
 p=json.load(open(D+'/cam84.json'))['p']
 bpy.ops.wm.read_factory_settings(use_empty=True);bpy.ops.import_scene.gltf(filepath=src)
