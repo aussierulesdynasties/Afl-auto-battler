@@ -292,9 +292,17 @@ def building(B, mb):
         oriented(mb, [(*p, B['h']), (*q, B['h']), (*q, B['h'] + 0.5), (*p, B['h'] + 0.5)], 'fascia', np.array([*n, 0]))
 
 
-def front_path(F):
+def front_path(F, smooth=False):
     """arc-length frame along a facade polyline (CCW building, so outward is to the right of travel)"""
-    F = np.array(F, float); seg = np.diff(F, axis=0); Ls = np.linalg.norm(seg, axis=1); cum = np.concatenate([[0], np.cumsum(Ls)])
+    F = np.array(F, float)
+    if smooth and len(F) > 2:   # Catmull-Rom through the traced points, ~1 m steps: the glazing curves round instead of kinking
+        G = np.vstack([2 * F[0] - F[1], F, 2 * F[-1] - F[-2]]); out = []
+        for i in range(1, len(G) - 2):
+            p0, p1, p2, p3 = G[i - 1:i + 3]; n_ = max(2, int(np.linalg.norm(p2 - p1)))
+            for t in np.linspace(0, 1, n_, endpoint=False):
+                out.append(0.5 * (2 * p1 + (p2 - p0) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (-p0 + 3 * p1 - 3 * p2 + p3) * t ** 3))
+        F = np.array(out + [F[-1]])
+    seg = np.diff(F, axis=0); Ls = np.linalg.norm(seg, axis=1); cum = np.concatenate([[0], np.cumsum(Ls)])
     def at(s):
         i = int(np.clip(np.searchsorted(cum, s, 'right') - 1, 0, len(Ls) - 1)); d = seg[i] / Ls[i]
         return F[i] + d * (s - cum[i]), d, np.array([d[1], -d[0]])
@@ -311,7 +319,7 @@ def club_front(C, mb):
     'Cazalys' sign on the canopy, a covered walkway along the grey shopfront with ClubsLink poster bays, a sloped glazed
     upper floor with cream mullions curving round to the north-east, yellow bollards on the kerb, a concrete drive and a
     palm garden island"""
-    at, Q, runs, L = front_path(C['front']); at0, Q0, runs0 = at, Q, runs
+    at, Q, runs, L = front_path(C['front'], True); at0, Q0, runs0 = at, Q, runs
     ch = front_path(C['chamfer']); cat, cQ, cruns, cL = ch; GF, AWz, AWt, AWo = C['gf'], C['aw_z'], C['aw_t'], C['aw_o']
     Hg = C['glaze_top']; c0, c1, co, cz, ct = C['canopy']
     def piece(s0, s1, o, z0, z1, m, tu=None):
