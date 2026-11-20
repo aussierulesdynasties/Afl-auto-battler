@@ -168,16 +168,16 @@ def seat_rows(bs, prof, k, n, aisle=12.0, gap=1.1):
         if b > b1 - math.degrees(2 / rf): break
         ab.append(b); s += aisle
     AISLES.extend(ab)
+    cols = []; b = b0 + math.degrees(0.6 / rf)   # one set of seat bearings for every row: seats sit in straight columns
+    while b <= b1 - math.degrees(0.6 / rf):
+        if all(abs(math.radians(b - a)) * rf > gap / 2 + 0.25 for a in ab): cols.append(b)
+        b += math.degrees(0.5 / rf)
     for j in range(n):
-        b = b0 + math.degrees(0.6 / rf)
-        while True:
+        for b in cols:
             P = prof(b); (r0, z0), (r1, z1) = P[k], P[k + 1]
             rr = r0 + (r1 - r0) * (j + 1) / n; zz = z0 + (z1 - z0) * j / (n - 1) if n > 1 else z0
-            if b > b1 - math.degrees(0.6 / rr): break
-            if all(abs(math.radians(b - a)) * rr > gap / 2 + 0.25 for a in ab):
-                a = math.radians(b); o = (math.sin(a), math.cos(a)); t = (math.cos(a), -math.sin(a))
-                seat(pol(b, rr), t, o, zz)
-            b += math.degrees(0.5 / rr)
+            a = math.radians(b); o = (math.sin(a), math.cos(a)); t = (math.cos(a), -math.sin(a))
+            seat(pol(b, rr), t, o, zz)
 
 
 def endcap(mb, b, pts, m, sign):

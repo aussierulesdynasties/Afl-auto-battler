@@ -122,8 +122,10 @@ for nm, col in (('steel_white', (230, 232, 230)), ('steel_galv', (150, 154, 158)
     a = base(256, 256, col, 6, 26); a[:, 120:126] *= 0.7; a[:, 0:4] *= 0.75; weather(a, 0.16, 18, 16); save(nm, a, (2.0, 2.0))
 
 # ---- Riverway facades (one tile = 6 m along; image row 0 = top) ----
-def facade(name, col, draw, tile=(6.0, 3.6), w=1024, h=616):
-    a = base(h, w, col, 3, 10); pu = w / tile[0]; pv = h / tile[1]; draw(a, pu, pv, h, w); weather(a, 0.12, 12, 40); save(name, a, tile)
+def facade(name, col, draw, tile=(6.0, 3.6), w=1024, h=616, streaks=True):
+    a = base(h, w, col, 3, 10); pu = w / tile[0]; pv = h / tile[1]; draw(a, pu, pv, h, w)
+    if streaks: weather(a, 0.12, 12, 40)
+    save(name, a, tile)
 
 
 def _podium(a, pu, pv, h, w):   # cream render podium under the seats, 2.8 m: a joint every 3 m, darker plinth
@@ -131,10 +133,14 @@ def _podium(a, pu, pv, h, w):   # cream render podium under the seats, 2.8 m: a 
     a[-int(0.3 * pv):] *= 0.82; a[:int(0.12 * pv)] = (226, 222, 210)
 
 
-def _glass(a, pu, pv, h, w):    # corporate level behind the seats, one tile 6 x 5 m: cream wall band on top, green-tinted glass
-    a[int(1.4 * pv):int(4.4 * pv)] = np.array((44, 64, 60)) + fine(int(4.4 * pv) - int(1.4 * pv), w, 3)[:, :, None]
-    for k in range(5): a[int(1.4 * pv):int(4.4 * pv), int(k * 1.2 * pu):int(k * 1.2 * pu) + 8] = (210, 206, 192)   # mullions
-    a[int(4.4 * pv):] = (196, 188, 166)
+def _glass(a, pu, pv, h, w):    # upper level behind the seats (symonds photo), tile 6 x 5 m: cream wall, one row of windows 1.3 x 1.8 m every 1.5 m
+    y0, y1 = int(1.5 * pv), int(3.3 * pv)   # the wall shows image rows 1-5 m (its UV starts at the image bottom)
+    for k in range(4):
+        x0 = int((0.1 + k * 1.5) * pu); x1 = int((1.4 + k * 1.5) * pu)
+        a[y0:y1, x0:x1] = (196, 200, 190)                                   # pale frame
+        a[y0 + 6:y1 - 6, x0 + 6:x1 - 6] = np.array((34, 52, 48)) + fine(y1 - y0 - 12, x1 - x0 - 12, 3)[:, :, None]
+        xm = (x0 + x1) // 2; a[y0:y1, xm - 3:xm + 3] = (196, 200, 190)      # centre mullion
+    a[y1:y1 + 5] *= 0.85
 
 
 def _back(a, pu, pv, h, w):     # stand back (GE l090): dark grey-brown render, a panel joint every 3 m, darker plinth; windows are separate panels
@@ -142,8 +148,8 @@ def _back(a, pu, pv, h, w):     # stand back (GE l090): dark grey-brown render, 
     a[-int(0.4 * pv):] *= 0.85
 
 
-facade('podium', (206, 170, 138), _podium, (6.0, 2.8), 1024, 478)
-facade('glass_corp', (220, 212, 190), _glass, (6.0, 5.0), 1024, 853)
+facade('podium', (206, 170, 138), _podium, (6.0, 2.8), 1024, 478, streaks=False)
+facade('glass_corp', (234, 216, 178), _glass, (6.0, 5.0), 1024, 853, streaks=False)
 facade('facade_back', (112, 100, 88), _back, (6.0, 3.6))
 a = base(512, 512, (186, 206, 118), 3, 10); weather(a, 0.1, 10, 20); save('shelter_wall', a, (2.0, 2.0))   # pale lime (race photo)
 a = base(512, 512, (224, 214, 160), 3, 10); a[:, ::32] *= 0.85; save('shelter_roof', a, (2.0, 2.0))
