@@ -2750,6 +2750,7 @@ func _check_turf3d(oval: Oval3D) -> void:
 		_check(g.g > g.r and g.g > g.b and wet == (1.0 if look[0] == VignetteWeather.WET else 0.0)
 				and turf.env.tonemap_exposure >= 1.0,
 				"%s %s: the turf is green and the weather's sheen is set (%s, wet %.0f)" % [look[1], look[0], str(g), wet])
+	_check_sun_clock(turf)
 	turf.apply("", VignetteKickoff.DAY)
 	var before := _wear_total(turf)
 	for i in range(60):
@@ -2759,6 +2760,34 @@ func _check_turf3d(oval: Oval3D) -> void:
 	var centre = turf._bmat.get_shader_parameter("centre")
 	_check(not turf.blades.visible or Vector2(centre).distance_to(Vector2(ball.position.x, ball.position.z)) < 0.01,
 			"The standing blades are round the ball")
+
+
+## The match clock's light (plan 2a.4): Sky3D's sun over the ground, and the approved looks it
+## blends between. A winter twilight game at the MCG starts in low sun and ends under the towers.
+func _check_sun_clock(turf: Oval3DTurf) -> void:
+	var noon := Oval3DSunClock.for_match("MCG", "Round 12", VignetteKickoff.DAY).sun_at(12.3)
+	_check(absf(noon.x - 30.3) < 1.0 and (noon.y < 5.0 or noon.y > 355.0),
+			"Sky3D's sun at the MCG at noon on 30 May is 30 degrees up in the north (%.1f, %.0f)" % [noon.x, noon.y])
+	var perth := Oval3DSunClock.for_match("Optus Stadium", "Opening Round", VignetteKickoff.NIGHT)
+	var mcg := Oval3DSunClock.for_match("MCG", "Opening Round", VignetteKickoff.NIGHT)
+	_check(is_equal_approx(perth.utc, 8.0) and is_equal_approx(mcg.utc, 11.0) and mcg.month == 3,
+			"Perth keeps no daylight saving; Melbourne's March games do (%.1f, %.1f)" % [perth.utc, mcg.utc])
+	_check(Oval3DTurf.look_weights(40.0)[1] == VignetteKickoff.DAY
+			and Oval3DTurf.look_weights(8.0) == [VignetteKickoff.TWILIGHT, VignetteKickoff.TWILIGHT, 0.0]
+			and Oval3DTurf.look_weights(-10.0)[0] == VignetteKickoff.NIGHT
+			and Oval3DTurf.look_weights(-10.0, true)[0] == VignetteKickoff.TWILIGHT,
+			"High sun is the day look, low sun the late game, after dusk the night; a hot day never the night")
+	var clock := Oval3DSunClock.for_match("MCG", "Round 12", VignetteKickoff.TWILIGHT)
+	turf.follow("", clock)
+	_check(turf.env.sky != null and not turf.tower.visible and turf._shade,
+			"A winter twilight game starts in the late game's low sun with the stands' shade")
+	turf.set_hour(clock.hour_at(1, 25.0))
+	var dusk := turf.tower.visible and turf.fill.visible and turf.env.sky != null
+	turf.set_hour(clock.hour_at(4, 100.0))
+	_check(dusk and turf.env.sky == null and turf.fill.visible and not turf.tower.visible
+			and turf.env.background_mode == Environment.BG_COLOR,
+			"Through the first quarter the towers come on as the sun sets; by the last it is the night look")
+	turf.clock = null
 
 
 func _wear_total(turf: Oval3DTurf) -> float:

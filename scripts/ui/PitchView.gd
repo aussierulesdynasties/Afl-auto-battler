@@ -355,7 +355,13 @@ func _setup_3d() -> void:
 	_tv = Oval3DBroadcast.new(_oval3d)
 	# The turf and light for the day, as the flat oval and the vignettes draw it.
 	var weather := str(result.get("weather", ""))
-	_oval3d.turf.apply(weather, time_of_day(weather))
+	_sun = null
+	if time_override != "":
+		_oval3d.turf.apply(weather, time_of_day(weather))
+	else:
+		# The real sun over the ground from the bounce (plan 2a.4): the light moves with the clock.
+		_sun = Oval3DSunClock.for_match(_oval3d.ground, str(result.get("label", "")), time_of_day(weather))
+		_oval3d.turf.follow(weather, _sun)
 	_make_paint_3d()
 	_oval3d.set_ends(end_sign(period))
 	_fit_3d()
@@ -965,6 +971,8 @@ func _follow_ball() -> void:
 ## here when events are skipped, not watched) makes the change if the restart
 ## has not; the final siren never does.
 func _track_quarter(ev: Dictionary) -> void:
+	if _sun != null and _oval3d != null and ev.has("q") and ev.has("min"):
+		_oval3d.turf.set_hour(_sun.hour_at(int(ev["q"]), float(ev["min"])))
 	var kind := str(ev.get("kind", ""))
 	if kind == "quarter":
 		if _flip_pending:
@@ -2473,6 +2481,8 @@ func close_bench() -> bool:
 ## Day, twilight or night for this match (OvalStadium.time_of_day; a capture or a
 ## test may set `time_override`).
 var time_override := ""
+## The match's sun clock while the 3D oval follows it (null when a slot is forced).
+var _sun: Oval3DSunClock
 
 func time_of_day(weather := "") -> String:
 	return time_override if time_override != "" else OvalStadium.time_of_day(weather)
