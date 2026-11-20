@@ -244,7 +244,7 @@ def nose(S, bs, geo, mr, mb):
             tu, tv = TILE.get(M['back'], (6, 12)); va, vb = math.radians(ba) * ra / tu, math.radians(bb) * rb_ / tu
             oriented(mb, [P3(ba, ra, zu), P3(bb, rb_, zu), P3(bb, rb_, zt), P3(ba, ra, zt)], M['back'], rad, [(va, zu / tv), (vb, zu / tv), (vb, zt / tv), (va, zt / tv)])
         else:  # dark backing behind the open triangles
-            oriented(mb, [P3(ba, ra - 0.4, zu), P3(bb, rb_ - 0.4, zu), P3(bb, rb_ - 0.4, zt), P3(ba, ra - 0.4, zt)], 'boxes_glass', rad)
+            oriented(mb, [P3(ba, ra - 0.4, zu), P3(bb, rb_ - 0.4, zu), P3(bb, rb_ - 0.4, zt), P3(ba, ra - 0.4, zt)], 'tri_void', rad)
         rba, rbb = geo(ba)[4], geo(bb)[4]
         oriented(mb, [P3(ba, rba, zu), P3(bb, rbb, zu), P3(bb, rb_, zu), P3(ba, ra, zu)], 'roof_soffit', -up)
     if 'cell' in N: tri_band(N, bs, geo, R, zu, zr1 - R, mb)

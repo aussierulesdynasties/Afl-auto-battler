@@ -86,6 +86,7 @@ def concrete(name, col, pu=3.0, pv=1.5, tile=(6.0, 6.0)):
 
 
 concrete('conc_wall', (176, 172, 164))
+concrete('tri_void', (150, 158, 166), pu=6.0, pv=6.0, tile=(6.0, 6.0))  # what shows through the open triangles: pale grey concourse behind (photo 3.webp)
 concrete('conc_block', (168, 166, 160), pu=0.4, pv=0.2, tile=(4.0, 4.0))  # grey concrete blockwork, 400 x 200 units
 # paving: concourse concrete slabs 1.2 m, saw joints, stains
 a = base(N, N, (112, 104, 98), 7, 24); p = N / 2.4
