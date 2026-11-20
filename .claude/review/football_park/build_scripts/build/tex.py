@@ -8,7 +8,7 @@ def noise(h,w,scale,amp):
     # smooth value noise (tileable via wrap), amplitude amp (0-255 units)
     g=rng.standard_normal((max(2,h//scale),max(2,w//scale)))
     im=Image.fromarray(((g-g.min())/(np.ptp(g)+1e-9)*255).astype(np.uint8)).resize((w,h),Image.BICUBIC)
-    return (np.asarray(im,float)/255-0.5)*2*amp
+    return (np.asarray(im,float)/255-0.5)*2*amp*0.4  # texture pass: low-frequency mottle cut to 0.4x
 def fine(h,w,amp):return rng.standard_normal((h,w))*amp
 def base(h,w,c):a=np.zeros((h,w,3));a[:]=c;return a
 def save(a,name):Image.fromarray(np.clip(a,0,255).astype(np.uint8)).save(os.path.join(out,name+'.png'))
@@ -60,7 +60,7 @@ def pavers(name,c,W=1024,H=1024,n=10):
     for j in range(H//bh):
         off=(bw//2)*(j%2)
         for i in range(-1,n+1):
-            x0=i*bw+off;sh=rng.normal(0,7,3)
+            x0=i*bw+off;sh=rng.normal(0,2.5)  # texture pass: one even tone shift per paver (was 7 per channel: blotchy)
             a[j*bh:(j+1)*bh,max(0,x0):max(0,min(W,x0+bw))]=np.array(c)+sh
             a[j*bh:(j+1)*bh,max(0,x0):max(0,min(W,x0+3))]=np.array(c)*0.7
         a[j*bh:j*bh+3,:]=np.array(c)*0.7
