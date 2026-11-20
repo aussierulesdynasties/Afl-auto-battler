@@ -76,7 +76,7 @@ of the ground. Calls are paired runs (same seed, call on and off), the change on
 | 10 | A switched defender drifts off his forward | everyone has an opponent (2.44) | 25.3 m apart, within 5 m 15.7% (off: 28.9 m, 13.5%) | Man-on-man pull (as 9) |
 | 11 | Fumble then gather: the gatherer runs 3.9 m past and the ball lies alone ~0.7 s (seed 31, FRE v STK) | the nearest man scoops it | as stated (row 197 inbox) | Loose-ball pickup; the WIP on `claude/oval3d-loose-ball-wip` fails 8 match_visual checks |
 | 12 | No clean gather (down for it, picks it up) in the shipped game | | the first man knocks it on toward MatchSim's winner | Loose-ball pickup (as 11) |
-| 13 | A dead stop at the fence: 4-5 m/s to 1.1 m/s in one step, twice in four seeds | | as stated (row 197 inbox) | MatchMotion fence clamp |
+| 13 | A dead stop at the fence: 4-5 m/s to 1.1 m/s in one step, twice in four seeds | | Fixed 2026-11-20: he pulls up within his braking limit and slides along the fence (`_test_fence_pull_up`) | MatchMotion fence clamp |
 | 14 | Throw numbers at it does not put more men at the ball; it moves the team forward like Push | more of our men around the ball wherever it is (the call's own words) | men within 20 m of the ball +0.9 at most (+0.1 at stoppages); team centre 7-19 m further forward, as Push's 8-14 m | Call shape: `_structure_spot` lifts the lines forward for Surge and Push alike (`_surge_ref`); no pull toward the ball |
 
 What the calls already do (no gap): Attacking narrows the side 26-34 m in attack (about 39%; rule 2.45 asks about
@@ -85,6 +85,14 @@ narrows it 18-25 m and puts 1.9 more men within 10 m of a stoppage. Flood pulls 
 Push moves it 8-14 m forward with 2.5-2.9 fewer behind; Slow it down spreads it 16-27 m wider; Stack sets the
 lines 51 m shorter at the centre bounce (still 6-6-6, no extra men in the square). Not yet measured: what each position does
 (marks, tackles, kicks per role), which the harness does not count.
+
+**Re-measured on main, 2026-11-20** (24 matches, local): gaps 1-3 are mostly closed since the list was written: the
+team's length is IN in 10 of 12 open-play zones, its centre IN at both ends, and the men in the ball's quarter IN.
+Still OUT: the team centre in the two midfield zones (8-11 m short of real), every hull area (35-40% under), and the
+loose-ball width (gap 4, 52-63 m against 36-47 m). The harness now splits stoppages by zone (gap 5): 20.9 men in the
+ball's quarter at a stoppage in either 50 (real 23, IN) and 19.6 in midfield (real 17, NEAR). The paper's loose-ball
+width and area do not fit together (an area of 4,440 m2 cannot sit inside 89 by 40 m), so gap 4's reference is being
+checked against the paper before the sim is pushed to it.
 
 ## Step 2. The world and the look (runs beside step 1; before anything that draws the game)
 

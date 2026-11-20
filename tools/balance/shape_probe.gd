@@ -90,9 +90,17 @@ static func _scan_phases(d: MatchDirector, out: Dictionary) -> void:
 		var t := str(p.get("t", ""))
 		if t == "throwup":
 			for side in range(2):
-				_add(out, "stoppage", side, _measure_side(d, side, p["at"]))
+				_add_stoppage(out, side, _measure_side(d, side, p["at"]), p["at"])
 		elif t == "setup" and str(p.get("mode", "")) == "kickin":
 			out["_kickin_by"] = int(p.get("keep", -1))
+
+
+## A ball-up or throw-in around the ground: filed as "stoppage", and again by
+## where it is (stp_50 in either 50, stp_mid between them; Alexander 2021 counts
+## 23 men in the ball's zone at a stoppage in either 50, 17 in midfield).
+static func _add_stoppage(out: Dictionary, side: int, m: Dictionary, at: Vector2) -> void:
+	_add(out, "stoppage", side, m)
+	_add(out, "stp_50" if absf(at.x) >= 35.0 else "stp_mid", side, m)
 
 
 static func _on_contact(d: MatchDirector, c: Dictionary, out: Dictionary) -> void:
@@ -101,9 +109,11 @@ static func _on_contact(d: MatchDirector, c: Dictionary, out: Dictionary) -> voi
 	if kind == "bounce":
 		# The umpire's bounce: a centre bounce (a ball-up around the ground is a
 		# throw-up, _scan_phases).
-		var name := "centre" if d.mode == "centre" else "stoppage"
 		for side in range(2):
-			_add(out, name, side, _measure_side(d, side, at))
+			if d.mode == "centre":
+				_add(out, "centre", side, _measure_side(d, side, at))
+			else:
+				_add_stoppage(out, side, _measure_side(d, side, at), at)
 		return
 	if kind != "kick":
 		return

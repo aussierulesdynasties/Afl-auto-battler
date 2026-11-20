@@ -30,6 +30,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 PHASES = [
     ("centre", "Centre bounce (at the bounce)"),
     ("stoppage", "Ball-up or throw-in (at the throw)"),
+    ("stp_50", "Ball-up or throw-in in either 50"),
+    ("stp_mid", "Ball-up or throw-in in midfield"),
     ("kickin", "Kick-in (at the kick)"),
     ("set_shot", "Set shot (at the kick)"),
     ("att_d50", "Our ball, in our defensive 50"),

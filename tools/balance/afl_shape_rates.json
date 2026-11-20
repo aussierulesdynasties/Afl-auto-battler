@@ -360,6 +360,22 @@
     "paper": 29,
     "src": "Alexander 2019 Fig 2 (scaled)"
    }
+  },
+  "stp_50": {
+   "in_zone": {
+    "lo": 22.5,
+    "hi": 23.5,
+    "paper": 23,
+    "src": "Alexander 2021 (median)"
+   }
+  },
+  "stp_mid": {
+   "in_zone": {
+    "lo": 16.5,
+    "hi": 17.5,
+    "paper": 17,
+    "src": "Alexander 2021 (median)"
+   }
   }
  },
  "kicks": {

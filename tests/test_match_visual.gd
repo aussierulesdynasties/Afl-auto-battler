@@ -32,6 +32,7 @@ func run() -> void:
 	_t("_test_no_wrong_way_kicks", [res])
 	_t("_test_match_flow", [res])
 	_t("_test_boundary_collect", [res])
+	_t("_test_fence_pull_up")
 	_t("_test_bodies_apart", [res])
 	_t("_test_smother_at_the_kick", [res])
 	_t("_test_tactical_timeline")
@@ -679,6 +680,41 @@ func _test_bodies_apart(res: Dictionary) -> void:
 ## Playtest freeze (near the boundary): a ball resting against the fence sat
 ## where the collector's run could never reach within touching distance, and
 ## collecting had no time limit, so play stopped. It now always completes.
+## Row 201 gap 13: a man running at the fence went from 4-5 m/s to 1.1 m/s in
+## one step (the clamp halved his whole speed). He pulls up within his braking
+## limit, and on the fence he keeps his speed along it.
+func _test_fence_pull_up() -> void:
+	var dt := MatchDirector.SUBSTEP
+	var worst := 0.0
+	var reached := false
+	for start in [Vector2(70, 0), Vector2(0, 52), Vector2(55, 40), Vector2(-60, -35)]:
+		var t := MatchMotion.make_token(start, 7.0, 0.0)
+		var out := MatchMotion.fence_normal(start)
+		t["vel"] = out * 5.0
+		MatchMotion.set_goal(t, start + out * 60.0, 1.0, true)
+		var last: Vector2 = t["vel"]
+		for i in range(240):
+			MatchMotion.step(t, dt)
+			var v: Vector2 = t["vel"]
+			worst = maxf(worst, (last - v).length() / dt)
+			last = v
+		reached = reached or not MatchMotion.inside_oval(t["pos"], 2.5)
+	_check(worst <= MatchMotion.BRAKE * 1.05,
+			"A man running at the fence pulls up within his braking limit (hardest %.1f m/s2, limit %.0f)" % [worst, MatchMotion.BRAKE])
+	_check(reached, "...and he still gets to the fence")
+	# Along the fence: running round it, he keeps his pace.
+	var a := MatchMotion.clamp_to_oval(Vector2(0, 80), 1.2)
+	var r := MatchMotion.make_token(a, 7.0, 0.0)
+	var along := MatchMotion.fence_normal(a).orthogonal()
+	r["vel"] = along * 5.0
+	MatchMotion.set_goal(r, a + along * 30.0 + MatchMotion.fence_normal(a) * 3.0, 1.0, true)
+	var slowest := 99.0
+	for i in range(30):
+		MatchMotion.step(r, dt)
+		slowest = minf(slowest, (r["vel"] as Vector2).length())
+	_check(slowest > 4.0, "A man running along the fence keeps his pace (slowest %.1f m/s)" % slowest)
+
+
 func _test_boundary_collect(res: Dictionary) -> void:
 	var pv := PitchView.new()
 	pv.size = Vector2(400, 700)
