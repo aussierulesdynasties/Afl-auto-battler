@@ -162,6 +162,30 @@ def _es(a, pu, pv, h, w):     # east-south back: pale grey sheet cladding, white
     for k in range(10): a[int(0.6 * pv) + int(k * 0.07 * pv):int(0.6 * pv) + int(k * 0.07 * pv) + 3, int(1.0 * pu):int(5.0 * pu)] = (120, 126, 132)
 
 
+def _tri(a, pu, pv, h, w):     # Mars west/east backs (PTA 2017 photos): white folded triangle panels, ~1.5 x 1.2 m, dark open voids in some
+    from PIL import ImageDraw
+    im = Image.new('L', (w, h), 0); d = ImageDraw.Draw(im); sx, sy = 3.0 * pu, 2.4 * pv; rr = np.random.default_rng(5)
+    for j in range(int(h / sy) + 1):
+        for i in range(-1, int(w / sx) + 2):
+            x0 = i * sx + (sx / 2 if j % 2 else 0); y0 = j * sy
+            for tri, sh in (([(x0, y0), (x0 + sx, y0), (x0 + sx / 2, y0 + sy)], 0), ([(x0 + sx / 2, y0 + sy), (x0 + sx * 1.5, y0 + sy), (x0 + sx, y0)], 1)):
+                v = 60 if rr.random() < 0.06 else (238 if sh == 0 else 214)
+                d.polygon(tri, fill=v, outline=110)
+    L = np.asarray(im, float)
+    a[:] = np.where(L[:, :, None] < 80, np.array((52, 56, 62)), L[:, :, None] * np.array((1.0, 1.0, 1.0)) * 0.97) + fine(h, w, 3)[:, :, None]
+
+
+def _brick(a, pu, pv, h, w):   # new 2026 stand backs: red-brown brick, 0.23 x 0.086 m courses, a darker patterned header band every 1.2 m
+    ch, cw = 0.086 * pv, 0.23 * pu; rr = np.random.default_rng(7); a[:] = (182, 176, 166)
+    for j in range(int(h / ch) + 1):
+        y0 = int(j * ch); off = cw / 2 if j % 2 else 0
+        for i in range(-1, int(w / cw) + 2):
+            x0 = int(i * cw + off); c = np.array((150, 74, 52)) * rr.uniform(0.85, 1.12)
+            if (j // 3) % 14 == 0 and (i + j) % 2: c = np.array((92, 52, 40))
+            a[y0:y0 + int(ch) - 2, max(0, x0):max(0, x0 + int(cw) - 2)] = c
+        a[y0 + int(ch) - 2:y0 + int(ch)] = (182, 176, 166)
+
+
 def _gunns(a, pu, pv, h, w):  # Gunns back: blue-grey panels 1.5 x 1.2 m, a window strip, maroon base band
     for k in range(4): a[:, int(k * 1.5 * pu):int(k * 1.5 * pu) + 4] *= 0.78
     for k in range(3): a[int(k * 1.2 * pv):int(k * 1.2 * pv) + 4] *= 0.78
@@ -189,7 +213,7 @@ def _boxes(a, pu, pv, h, w):  # Gunns box level: tinted glass with mullions ever
 
 
 facade('facade_nw', (176, 178, 176), _nw); facade('facade_lattice', (74, 107, 116), _lattice, (6.0, 8.9), 1024, 1520)
-facade('facade_es', (196, 198, 198), _es); facade('facade_gunns', (110, 132, 146), _gunns)
+facade('facade_es', (196, 198, 198), _es); facade('facade_tri', (230, 230, 228), _tri, (6.0, 12.0), 1024, 2048); facade('facade_brick', (150, 74, 52), _brick); facade('facade_gunns', (110, 132, 146), _gunns)
 facade('facade_cw', (226, 226, 222), _cw, (6.0, 12.0), 1024, 2048); facade('boxes_glass', (42, 52, 60), _boxes)
 a = base(512, 512, (46, 56, 66), 2, 18); a[:, 250:258] = (180, 184, 186); a[250:258] = (180, 184, 186); save('glass', a, (3.0, 3.0))
 # light tower head: 4 x 8 lamps in a white frame

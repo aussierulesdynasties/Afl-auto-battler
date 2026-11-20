@@ -59,7 +59,7 @@
    "mats": {
     "seat": "seats_green",
     "roof": "roof_white",
-    "back": "facade_es",
+    "back": "facade_tri",
     "front": "conc_wall"
    },
    "rib": 6.0,
@@ -188,7 +188,7 @@
    "mats": {
     "seat": "seats_green",
     "roof": "roof_white",
-    "back": "facade_es",
+    "back": "facade_tri",
     "front": "conc_wall"
    },
    "rib": 6.0,
@@ -249,7 +249,7 @@
    "mats": {
     "seat": "seats_green",
     "roof": "roof_grey",
-    "back": "facade_es",
+    "back": "facade_brick",
     "front": "conc_wall",
     "box": "conc_wall"
    },
@@ -309,7 +309,7 @@
    "mats": {
     "seat": "seats_green",
     "roof": "roof_grey",
-    "back": "facade_es",
+    "back": "facade_brick",
     "front": "conc_wall",
     "box": "conc_wall"
    },
