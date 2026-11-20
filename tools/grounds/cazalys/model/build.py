@@ -479,7 +479,16 @@ def south_front(S, mb):
         mb.beam(Q(A(af), 0.3, GF + 2.3), Q(A(ah), 0.3, zs2(A(ah)) - 0.05), 0.18, 0.18, 'paint_cream')
     for a0, a1 in S['upper_glass']:
         quad(a0, a1, 0.08, GF + 0.6, E - 0.35, 'clubw_glass', (3.0, E - GF - 0.95))
-    for s0, s1 in runs(0.0, L):   # awning: flat white soffit, thin white fascia; stepped up west of the recess
+    ax = W_.get('aw_ext')   # wvEC rays: the awning runs straight on past the SW corner instead of wrapping
+    if ax:
+        ac, ex, pb = ax; pc, dc, nc = at(A(ac) + 0.01); pc = pc - dc * 0.01; z0 = GF + S['west']['aw_dz']; z1 = z0 + 0.3
+        P_ = lambda b, o, z: (*(pc - dc * b + nc * o), z)
+        q = [P_(ex, 0, z0), P_(0, 0, z0), P_(0, AWo, z0), P_(ex, AWo, z0)]
+        oriented(mb, q, 'soffit_white', np.array([0, 0, -1.0])); oriented(mb, [(x, y, z1) for x, y, _ in q], 'roof_white', UP)
+        oriented(mb, [P_(ex, AWo, z0), P_(0, AWo, z0), P_(0, AWo, z1), P_(ex, AWo, z1)], 'render_white', np.array([*nc, 0]))
+        oriented(mb, [P_(ex, 0, z0), P_(ex, AWo, z0), P_(ex, AWo, z1), P_(ex, 0, z1)], 'render_white', np.array([*(-dc), 0]))
+        mb.beam(P_(pb, AWo - 0.3, 0.15), P_(pb, AWo - 0.3, z0), 0.2, 0.2, 'paint_cream', tube=True)
+    for s0, s1 in runs(A(ax[0]) if ax else 0.0, L):   # awning: flat white soffit, thin white fascia; stepped up west of the recess
         _, _, n = at(0.5 * (s0 + s1)); z0 = GF + (S['west']['aw_dz'] if 0.5 * (s0 + s1) < A(S['west']['recess'][0]) else 0.0); z1 = z0 + 0.3
         q = [Q(s0, 0, z0), Q(s1, 0, z0), Q(s1, AWo, z0), Q(s0, AWo, z0)]
         oriented(mb, q, 'soffit_white', np.array([0, 0, -1.0]), [(p[0] / 3.0, p[1] / 3.0) for p in q]); oriented(mb, [(x, y, z1) for x, y, _ in q], 'roof_white', UP)
