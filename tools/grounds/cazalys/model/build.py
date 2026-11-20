@@ -440,6 +440,10 @@ def south_front(S, mb):
     skillion box at the east end beside the entrance. Distances 'a' are metres west of the SE corner"""
     at, Q, runs, L = front_path(S['path']); A = lambda a: L - a
     GF, AWo = S['gf'], S['aw_o']; E = S['eave']
+    pr = S.get('aw_prof')   # aerial stations [a, depth]: awning outer edge measured along the front, linear between
+    AWf = (lambda s_: float(np.interp(L - s_, [q[0] for q in pr], [q[1] for q in pr]))) if pr else (lambda s_: AWo)
+    def pieces(sa, sb, step=1.0):
+        k = max(1, int(np.ceil((sb - sa) / step))); return [(sa + (sb - sa) * i / k, sa + (sb - sa) * (i + 1) / k) for i in range(k)]
     def quad(a0, a1, o, z0, z1, m, tu=None):
         for s0, s1 in runs(A(a1), A(a0)):
             _, _, n = at(0.5 * (s0 + s1))
@@ -490,18 +494,20 @@ def south_front(S, mb):
         oriented(mb, [P_(ex, AWo, z0), P_(0, AWo, z0), P_(0, AWo, z1), P_(ex, AWo, z1)], 'render_white', np.array([*nc, 0]))
         oriented(mb, [P_(ex, 0, z0), P_(ex, AWo, z0), P_(ex, AWo, z1), P_(ex, 0, z1)], 'render_white', np.array([*(-dc), 0]))
         mb.beam(P_(pb, AWo - 0.3, 0.15), P_(pb, AWo - 0.3, z0), 0.2, 0.2, 'paint_cream', tube=True)
-    for s0, s1 in runs(A(ax[0]) if ax else 0.0, L):   # awning: flat white soffit, thin white fascia; stepped up west of the recess
+    for r0_, r1_ in runs(A(ax[0]) if ax else 0.0, L):   # awning: flat white soffit, thin white fascia; stepped up west of the recess
+      for s0, s1 in pieces(r0_, r1_):
         _, _, n = at(0.5 * (s0 + s1)); z0 = GF + (S['west']['aw_dz'] if 0.5 * (s0 + s1) < A(S['west']['recess'][0]) else 0.0); z1 = z0 + 0.3
-        q = [Q(s0, 0, z0), Q(s1, 0, z0), Q(s1, AWo, z0), Q(s0, AWo, z0)]
+        d0, d1 = AWf(s0), AWf(s1)
+        q = [Q(s0, 0, z0), Q(s1, 0, z0), Q(s1, d1, z0), Q(s0, d0, z0)]
         oriented(mb, q, 'soffit_white', np.array([0, 0, -1.0]), [(p[0] / 3.0, p[1] / 3.0) for p in q]); oriented(mb, [(x, y, z1) for x, y, _ in q], 'roof_white', UP)
-        oriented(mb, [Q(s0, AWo, z0), Q(s1, AWo, z0), Q(s1, AWo, z1), Q(s0, AWo, z1)], 'render_white', np.array([*n, 0]))
-        q = [Q(s0, 0.06, 0.15), Q(s1, 0.06, 0.15), Q(s1, AWo + 0.3, 0.15), Q(s0, AWo + 0.3, 0.15)]
+        oriented(mb, [Q(s0, d0, z0), Q(s1, d1, z0), Q(s1, d1, z1), Q(s0, d0, z1)], 'render_white', np.array([*n, 0]))
+        q = [Q(s0, 0.06, 0.15), Q(s1, 0.06, 0.15), Q(s1, d1 + 0.3, 0.15), Q(s0, d0 + 0.3, 0.15)]
         oriented(mb, q, 'paving', UP, [(p[0] / 2.4, p[1] / 2.4) for p in q])
-        oriented(mb, [Q(s0, AWo + 0.3, 0), Q(s1, AWo + 0.3, 0), Q(s1, AWo + 0.3, 0.15), Q(s0, AWo + 0.3, 0.15)], 'conc_kerb', np.array([*n, 0]))
+        oriented(mb, [Q(s0, d0 + 0.3, 0), Q(s1, d1 + 0.3, 0), Q(s1, d1 + 0.3, 0.15), Q(s0, d0 + 0.3, 0.15)], 'conc_kerb', np.array([*n, 0]))
     if W_.get('pier'):   # wvEC: one white pier in the glass under the west box
         pa, pw = W_['pier']; mb.beam(Q(A(pa), 0.1 + pw / 2, 0.15), Q(A(pa), 0.1 + pw / 2, GF), pw, pw, 'render_white')
     for a in [a for a in S['posts'] if a < L - 0.3]:
-        mb.beam(Q(A(a), AWo - 0.3, 0.15), Q(A(a), AWo - 0.3, GF), 0.2, 0.2, 'paint_cream', tube=True)
+        mb.beam(Q(A(a), AWf(A(a)) - 0.3, 0.15), Q(A(a), AWf(A(a)) - 0.3, GF), 0.2, 0.2, 'paint_cream', tube=True)
     eo = S['eave_o']
     for a in S['struts']:   # cream raking struts: foot on the wall at the awning, head out under the eave edge (pano solve)
         mb.beam(Q(A(a), 0.12, GF + 0.3), Q(A(a + S['strut_lean']), eo - 0.15, E), 0.16, 0.16, 'paint_cream')
