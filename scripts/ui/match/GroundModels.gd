@@ -96,6 +96,12 @@ const SURROUNDS := {
 	"optus": {"y": -0.03, "inner": 100.0, "colour": Color(0.45, 0.55, 0.27),
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
 			"models": ["bridges.glb"], "tint": Color(2.0, 1.4, 0.95), "building_tint": Color(1.15, 1.05, 0.98)},
+	# Marvel Stadium in Docklands: Victoria Harbour, the Southern Cross rail yards, the streets and towers
+	# round it from OpenStreetMap (tools/grounds/marvel/surrounds.py), and the Bolte Bridge's towers and
+	# deck in 3D (tools/grounds/marvel/bridges.py). Painted for the same match light as Optus's map.
+	"marvel": {"y": -0.03, "inner": 120.0, "colour": Color(0.55, 0.56, 0.52),
+			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
+			"models": ["bridges.glb"], "tint": Color(2.0, 1.4, 0.95), "building_tint": Color(1.15, 1.05, 0.98)},
 }
 
 ## Per-ground corrections to a model's materials, by material name, checked against Google Earth
@@ -120,6 +126,12 @@ const MATERIAL_FIX := {
 	},
 }
 
+## Grounds with a roof that opens: the model's node for the roof shut over the field and the node for
+## it slid back, of which instantiate() shows one. Marvel Stadium plays AFL with its roof shut (as the
+## match scenes draw it, data/grounds.json "roof": "closed"); the fly-through can open it (set_roof).
+## The shut roof casts no sun shadow: under it the ground is lit by the roof's own lights. Looks only.
+const ROOFS := {"marvel": {"shut": "roofshut", "open": "roofopen"}}
+
 ## Models that carry their colours on the vertices (glTF COLOR_0) under a tiling detail texture.
 ## Godot's glTF reader keeps the colours but does not paint with them, so the loader turns that on.
 const VERTEX_COLOURED := ["adelaide"]
@@ -134,6 +146,8 @@ const SEAT_COLOURS := {
 	"seat_mcg_white": Color(0.96, 0.88, 0.80), "seat_mcg_grey": Color(0.76, 0.70, 0.64),
 	"seat_mcg_blue": Color(0.14, 0.26, 0.46), "seat_mcg_teal": Color(0.20, 0.34, 0.44),
 	"seat_mcg_sage": Color(0.50, 0.58, 0.56),
+	# Marvel Stadium by level (tools/grounds/marvel/seats.py), from Google Earth and Street View.
+	"seat_marvel_lo": Color8(62, 80, 104), "seat_marvel_mid": Color8(62, 80, 104), "seat_marvel_up": Color8(62, 80, 104),
 	"seat_green": Color(0.314, 0.549, 0.455), "seat_teal": Color(0.384, 0.620, 0.541),
 	"seat_blue": Color(0.2, 0.318, 0.467), "seat_paleblue": Color(0.482, 0.612, 0.714),
 	"seat_mint": Color(0.502, 0.706, 0.655), "seat_dkgreen": Color(0.039, 0.243, 0.125),
@@ -247,6 +261,8 @@ static func instantiate(slug: String, base := "") -> Node3D:
 				_fix_materials(model, MATERIAL_FIX[slug])
 			root.add_child(model)
 	slice_big_meshes(root)
+	if ROOFS.has(slug):
+		set_roof(root, slug, true)
 	var fit: Array = FIT.get(slug, [0.0, 0.0])
 	_add_seats(root, dir, Vector2(float(fit[0]), float(fit[1])))
 	if SURROUNDS.has(slug):
@@ -586,6 +602,32 @@ static func _pick(src, used: PackedInt32Array):
 	for j in range(used.size()):
 		dst[j] = src[used[j]]
 	return dst
+
+
+## Shows ground `slug`'s roof shut or open (ROOFS) on `root`, a ground instantiate() built.
+static func set_roof(root: Node, slug: String, shut: bool) -> void:
+	var r: Dictionary = ROOFS.get(slug, {})
+	if r.is_empty():
+		return
+	for n in root.find_children(str(r["shut"]) + "*", "", true, false):
+		if n is Node3D:
+			n.visible = shut
+		if n is GeometryInstance3D:
+			n.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	for n in root.find_children(str(r["open"]) + "*", "", true, false):
+		if n is Node3D:
+			n.visible = not shut
+
+
+## Is ground `slug`'s roof shut on `root`?
+static func roof_shut(root: Node, slug: String) -> bool:
+	var r: Dictionary = ROOFS.get(slug, {})
+	if r.is_empty():
+		return false
+	for n in root.find_children(str(r["shut"]) + "*", "", true, false):
+		if n is Node3D:
+			return n.visible
+	return false
 
 
 ## Every seat in the model's own metres (seats_*.bin), for the crowd to sit on (Oval3DCrowd).

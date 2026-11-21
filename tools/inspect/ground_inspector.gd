@@ -472,6 +472,14 @@ func _key(e: InputEventKey) -> void:
 			_show_oval = not _show_oval
 			_set_match_parts(_show_oval)
 			_say("Match turf and goalposts " + ("shown" if _show_oval else "hidden"))
+		KEY_B:
+			# A ground whose roof opens (Marvel): shut, as matches show it, or slid back.
+			var gr: Node = oval.get_node_or_null("Ground") if oval != null else null
+			var slug := str(grounds[current].get("dir", "")) if current >= 0 else ""
+			if gr != null and GroundModels.ROOFS.has(slug):
+				var shut := not GroundModels.roof_shut(gr, slug)
+				GroundModels.set_roof(gr, slug, shut)
+				_say("Roof " + ("shut, as in a match" if shut else "open"))
 		KEY_F1:
 			help.visible = not help.visible
 		KEY_F11:
@@ -557,6 +565,7 @@ func _build_ui() -> void:
 		"R: start view    T: centre square at eye height    G: drop to the floor below",
 		"C: copy where you are (for the fault list)    P or F12: screenshot",
 		"O: show or hide the match's turf and goalposts (to check the model sits on them)",
+		"B: open or shut the roof (Marvel Stadium)",
 		"F11: full screen    F1: hide this    Drop a .glb on the window to open it",
 	])
 	help.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
