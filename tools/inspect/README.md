@@ -38,8 +38,9 @@ Drop any `.glb` file onto the window to open it.
 
 ## What it shows
 
-- **In the match** (`assets/grounds/<name>/`): the ground exactly as a match builds it (Oval3D: light,
-  turf, goalposts, model and seats). Today that is the MCG.
+- **In the match** (`assets/grounds/<slug>/`): the ground exactly as a match builds it (Oval3D and
+  GroundModels: light, turf, goalposts, the model laid on the match fence, and its seats), listed by
+  its ground name. Every ground in `GroundModels.grounds()` appears here, pieces and all.
 - **Models not in the match yet** (`tools/grounds/`, `.claude/review/`): read straight off disk, as
   authored, on the match's light, turf and goalposts. A model split for GitHub (`<name>_part1.glb`,
   `_part2` ...) loads as one ground.
