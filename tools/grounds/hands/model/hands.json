@@ -1,0 +1,340 @@
+{
+ "name": "Hands Oval",
+ "lat": -33.346195,
+ "lon": 115.6430106,
+ "half": 200,
+ "fence": [
+  0,
+  0,
+  78.09,
+  92.51,
+  -28.31
+ ],
+ "fence_h": 1.0,
+ "stands": [
+  {
+   "name": "grandstand",
+   "kind": "straight",
+   "a": [
+    -53.22,
+    69.08
+   ],
+   "b": [
+    -81.62,
+    16.48
+   ],
+   "depth": 9,
+   "z_seat": [
+    0.8,
+    6.2
+   ],
+   "mats": {
+    "front": "conc_wall",
+    "back": "clad_hands"
+   },
+   "row_cols": [
+    "seat_hands"
+   ],
+   "roof": {
+    "z_front": 9.5,
+    "z_back": 10.5,
+    "over_front": -6.0,
+    "over_back": 8.7,
+    "posts": 8.0,
+    "front_posts": false,
+    "mat": "roof_white"
+   }
+  },
+  {
+   "name": "pavilion_seats",
+   "kind": "straight",
+   "a": [
+    -88.0,
+    -10.0
+   ],
+   "b": [
+    -88.0,
+    -30.0
+   ],
+   "depth": 7.0,
+   "z_seat": [
+    0.8,
+    3.6
+   ],
+   "mats": {
+    "front": "conc_wall",
+    "back": "clad_hands"
+   },
+   "row_cols": [
+    "seat_hands"
+   ],
+   "roof": {
+    "z_front": 5.6,
+    "z_back": 6.4,
+    "over_front": 0.8,
+    "over_back": 0.3,
+    "posts": 5.0,
+    "mat": "roof_grey"
+   }
+  },
+  {
+   "name": "south_west_terraces",
+   "kind": "open",
+   "no_seats": true,
+   "b0": 205.0,
+   "b1": 250.0,
+   "seat_front": 2.0,
+   "z_seat": [
+    0.4,
+    3.0
+   ],
+   "back": [
+    [
+     205.0,
+     99.0
+    ],
+    [
+     230.0,
+     102.0
+    ],
+    [
+     250.0,
+     102.0
+    ]
+   ],
+   "mats": {
+    "front": "conc_wall",
+    "seat": "conc_tread",
+    "back": "conc_wall"
+   }
+  }
+ ],
+ "outer_r": 98,
+ "towers": [
+  {
+   "xy": [
+    -1.31,
+    90.5
+   ],
+   "top": 35.0,
+   "head_h": 3.0,
+   "head_w": 5.0,
+   "r_base": 0.45,
+   "r_top": 0.25,
+   "tilt": 15
+  },
+  {
+   "xy": [
+    -63.41,
+    49.62
+   ],
+   "top": 35.0,
+   "head_h": 3.0,
+   "head_w": 5.0,
+   "r_base": 0.45,
+   "r_top": 0.25,
+   "tilt": 15
+  },
+  {
+   "xy": [
+    84.0,
+    31.6
+   ],
+   "top": 35.0,
+   "head_h": 3.0,
+   "head_w": 5.0,
+   "r_base": 0.45,
+   "r_top": 0.25,
+   "tilt": 15
+  },
+  {
+   "xy": [
+    67.36,
+    -43.68
+   ],
+   "top": 35.0,
+   "head_h": 3.0,
+   "head_w": 5.0,
+   "r_base": 0.45,
+   "r_top": 0.25,
+   "tilt": 15
+  },
+  {
+   "xy": [
+    2.8,
+    -91.0
+   ],
+   "top": 35.0,
+   "head_h": 3.0,
+   "head_w": 5.0,
+   "r_base": 0.45,
+   "r_top": 0.25,
+   "tilt": 15
+  },
+  {
+   "xy": [
+    -106.0,
+    -42.7
+   ],
+   "top": 35.0,
+   "head_h": 3.0,
+   "head_w": 5.0,
+   "r_base": 0.45,
+   "r_top": 0.25,
+   "tilt": 15
+  }
+ ],
+ "mats_ground": {
+  "concourse": "ground_dry",
+  "path": "gravel_pale",
+  "outside": "ground_dry"
+ },
+ "_note": "Hands Oval (Bunbury, WA), first draft. Plan traced on Google satellite tiles (work/sat.png, 2026); heights estimated, not measured. Stadium only: no turf, posts, nets, signs, lettering or crowd.",
+ "fence_mat": "pickets",
+ "fence_cap": "paint_white",
+ "step": 0.5,
+ "path_w": 4,
+ "extras": {
+  "polys": [
+   {
+    "p": [
+     [
+      -61.38,
+      73.55
+     ],
+     [
+      -68.98,
+      77.65
+     ],
+     [
+      -97.38,
+      25.05
+     ],
+     [
+      -89.78,
+      20.95
+     ]
+    ],
+    "h": 8.0,
+    "mat": "clad_hands",
+    "top": "roof_white"
+   },
+   {
+    "p": [
+     [
+      -130.0,
+      11.1
+     ],
+     [
+      -98.9,
+      11.1
+     ],
+     [
+      -98.9,
+      -32.4
+     ],
+     [
+      -130.0,
+      -32.4
+     ]
+    ],
+    "h": 8.0,
+    "mat": "clad_hands",
+    "top": "roof_white"
+   },
+   {
+    "p": [
+     [
+      -98.9,
+      9.7
+     ],
+     [
+      -87.0,
+      9.7
+     ],
+     [
+      -87.0,
+      -9.9
+     ],
+     [
+      -98.9,
+      -9.9
+     ]
+    ],
+    "h": 6.0,
+    "mat": "clad_hands",
+    "top": "roof_grey"
+   }
+  ],
+  "screen": {
+   "left": [
+    99.0,
+    52.0
+   ],
+   "right": [
+    103.0,
+    42.0
+   ],
+   "z": [
+    3.0,
+    8.5
+   ],
+   "depth": 0.6
+  }
+ },
+ "paint": {
+  "seat_hands": {
+   "kind": "seat",
+   "col": [
+    40,
+    84,
+    132
+   ]
+  },
+  "clad_hands": {
+   "kind": "windows",
+   "col": [
+    222,
+    220,
+    212
+   ],
+   "every": 3.0,
+   "floor": 3.6,
+   "win": 1.8,
+   "sill": 1.0,
+   "head": 2.6
+  },
+  "roof_white": {
+   "kind": "deck",
+   "col": [
+    226,
+    228,
+    226
+   ]
+  },
+  "roof_grey": {
+   "kind": "deck",
+   "col": [
+    160,
+    164,
+    166
+   ]
+  },
+  "ground_dry": {
+   "kind": "grass",
+   "col": [
+    170,
+    150,
+    112
+   ]
+  },
+  "gravel_pale": {
+   "kind": "grass",
+   "col": [
+    206,
+    194,
+    168
+   ]
+  }
+ }
+}
