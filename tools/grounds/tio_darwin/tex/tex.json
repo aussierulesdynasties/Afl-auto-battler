@@ -1,0 +1,211 @@
+{
+ "TILE": {
+  "concrete": [
+   6,
+   6
+  ],
+  "concrete_dark": [
+   6,
+   6
+  ],
+  "walkway": [
+   4,
+   4
+  ],
+  "paving": [
+   8,
+   8
+  ],
+  "grass_out": [
+   10,
+   10
+  ],
+  "roof_grey": [
+   6,
+   12
+  ],
+  "roof_white": [
+   6,
+   12
+  ],
+  "roof_mlc": [
+   6,
+   12
+  ],
+  "roof_under": [
+   8,
+   8
+  ],
+  "glass": [
+   3,
+   3.5
+  ],
+  "glass_mlc": [
+   4.8,
+   9.6
+  ],
+  "glass_box": [
+   3,
+   3.5
+  ],
+  "clad_grey": [
+   4.8,
+   4.8
+  ],
+  "clad_cream": [
+   4.8,
+   4.8
+  ],
+  "clad_dark": [
+   4.8,
+   4.8
+  ],
+  "wall_east": [
+   4.8,
+   4.2
+  ],
+  "block_navy": [
+   4,
+   4
+  ],
+  "orange": [
+   2,
+   4
+  ],
+  "steel_white": [
+   2,
+   4
+  ],
+  "steel_dark": [
+   2,
+   4
+  ],
+  "seat_blue": [
+   0.5,
+   0.5
+  ],
+  "seat_orange": [
+   0.5,
+   0.5
+  ],
+  "seat_purple": [
+   0.5,
+   0.5
+  ],
+  "seat_red": [
+   0.5,
+   0.5
+  ],
+  "seat_teal": [
+   0.5,
+   0.5
+  ],
+  "steel_rust": [
+   2,
+   4
+  ],
+  "screen_back": [
+   2,
+   4
+  ],
+  "timber": [
+   3,
+   3
+  ],
+  "chainlink": [
+   2,
+   1.2
+  ],
+  "palisade": [
+   2.5,
+   2.1
+  ],
+  "rail_orange": [
+   2,
+   1.1
+  ],
+  "screen": [
+   1,
+   1
+  ],
+  "sign_welcome": [
+   13.0,
+   1.6
+  ],
+  "sign_welcome_tan": [
+   13.0,
+   1.6
+  ],
+  "sign_ahmat": [
+   13.0,
+   1.4
+  ],
+  "gate_bonson_front": [
+   14.3,
+   4.5
+  ],
+  "gate_ahmat_front": [
+   14.8,
+   4.5
+  ],
+  "sign_rioli": [
+   16.0,
+   1.2
+  ],
+  "sign_tower": [
+   6.2,
+   5.8
+  ],
+  "sign_sb_banner": [
+   8.6,
+   1.3
+  ],
+  "sign_sb_band": [
+   8.6,
+   0.9
+  ]
+ },
+ "std": {
+  "concrete": 14.2,
+  "concrete_dark": 10.8,
+  "walkway": 13.5,
+  "paving": 14.6,
+  "grass_out": 10.9,
+  "roof_grey": 18.2,
+  "roof_white": 19.6,
+  "roof_mlc": 18.9,
+  "roof_under": 15.8,
+  "glass": 33.8,
+  "glass_mlc": 25.7,
+  "glass_box": 28.8,
+  "clad_grey": 13.4,
+  "clad_cream": 16.7,
+  "clad_dark": 14.4,
+  "wall_east": 74.5,
+  "block_navy": 10.9,
+  "orange": 14.4,
+  "steel_white": 19.4,
+  "steel_dark": 11.0,
+  "seat_blue": 3.6,
+  "seat_orange": 3.1,
+  "seat_purple": 2.8,
+  "seat_red": 2.7,
+  "seat_teal": 2.8,
+  "steel_rust": 12.3,
+  "screen_back": 13.7,
+  "timber": 11.9,
+  "chainlink": 13.2,
+  "palisade": 15.3,
+  "rail_orange": 13.3,
+  "screen": 18.4,
+  "sign_welcome": 58.0,
+  "sign_welcome_tan": 50.4,
+  "sign_ahmat": 36.1,
+  "gate_bonson_front": 36.2,
+  "gate_ahmat_front": 27.6,
+  "sign_rioli": 23.3,
+  "sign_tower": 47.5,
+  "sign_sb_banner": 55.6,
+  "sign_sb_band": 69.9
+ }
+}
