@@ -829,6 +829,18 @@ func _possession_phases(k: int) -> Array:
 		# 2.45 m up while the marker ran in (picture_truth, traits' 2027 match).
 		return tail
 	if hb and d > 18.0:
+		if int(prev.get("side", -1)) == int(ev.get("side", -2)) and a >= 0:
+			# A handball whose receiver's next act is far off (MatchSim logs where he
+			# disposes, not where he took it): he takes it short and runs it there.
+			# It was drawn as a kick, about 28 more kicks a team a game than the
+			# match counts (row 201 gap 7).
+			var mid := (ball["pos"] as Vector2) + ((loc - (ball["pos"] as Vector2)).normalized() * HANDBALL_DISH)
+			var hshape := _flight_shape("handball", HANDBALL_DISH)
+			return [{"t": "flight", "to": mid, "dur": hshape.x, "apex": hshape.y, "recv": a, "adapt": true,
+					"hang": HANDBALL_HANG_MAX, "how": "handball", "h1": 1.0},
+					{"t": "collect", "who": a}, {"t": "possess", "who": a},
+					{"t": "hold", "who": a, "carry": loc, "run": true,
+						"max": (d - HANDBALL_DISH) / float(tokens[a]["top"]) * 1.6 + 0.5}] + tail
 		hb = false
 	var shape := _flight_shape("handball" if hb else "kick", d)
 	var flight := {"t": "flight", "to": loc, "dur": shape.x, "apex": shape.y, "recv": a,
@@ -1124,6 +1136,29 @@ func _inside50_phases(k: int) -> Array:
 			loc = spot
 			_locs[nk] = loc
 	var d := src.distance_to(loc)
+	# MatchSim logs the entry after the carrier's own disposal: when that was a
+	# handball (he was already inside 50), it goes in by hand, not by foot (row
+	# 201 gap 7: about 22 handballs a team a game were drawn as kicks).
+	var pk := _prev_real(k)
+	var by_hand := pk >= 0 and str((events[pk] as Dictionary).get("kind", "")) == "handball" \
+			and _actor_id(events[pk]) == a and recv >= 0
+	if by_hand:
+		out.append({"t": "emit"})
+		if d <= HANDBALL_REACH:
+			var hs := _flight_shape("handball", d)
+			out += [{"t": "flight", "to": loc, "dur": hs.x, "apex": hs.y, "recv": recv, "adapt": true,
+					"hang": HANDBALL_HANG_MAX, "how": "handball"}]
+		else:
+			# A short dish, and whoever takes it (a teammate, or a defender who reads it)
+			# runs it on to where MatchSim has his next act.
+			var mid := src + (loc - src).normalized() * HANDBALL_DISH
+			var hs := _flight_shape("handball", HANDBALL_DISH)
+			out += [{"t": "flight", "to": mid, "dur": hs.x, "apex": hs.y, "recv": recv, "adapt": true,
+					"hang": HANDBALL_HANG_MAX, "how": "handball"},
+					{"t": "collect", "who": recv}, {"t": "possess", "who": recv, "quiet": true},
+					{"t": "hold", "who": recv, "carry": loc, "run": true,
+						"max": (d - HANDBALL_DISH) / float(tokens[recv]["top"]) * 1.6 + 0.5}]
+		return out
 	var shape := _flight_shape("kick", d)
 	out += [{"t": "emit"},
 			{"t": "flight", "to": loc, "dur": shape.x, "apex": shape.y + 3.0, "recv": recv,

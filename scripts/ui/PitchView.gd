@@ -386,6 +386,20 @@ func _sync_3d(dt: float, wall := 0.0) -> void:
 	# 2.105), set shots from behind the goals (2.102), the ruckmen close before a ball-up
 	# (2.103) and a goal's replay (2.96).
 	_tv.frame(dt, wall)
+	if _oval3d.screens != null:
+		_oval3d.screens.frame(wall, _tv.replaying, _oval3d.camera)
+
+
+## The score on the ground's big screens (Oval3DScreens), when the 3D view is on.
+func show_score_3d(goals: Array, behinds: Array, clock: String) -> void:
+	if _oval3d != null and _oval3d.screens != null:
+		_oval3d.screens.show_score(goals, behinds, clock)
+
+
+## A goal on the ground's big screens: the GOAL card with the scorer.
+func goal_3d(side: int, who: String, num: int) -> void:
+	if _oval3d != null and _oval3d.screens != null:
+		_oval3d.screens.show_goal(side, who, num)
 
 
 ## The 3D picture is showing a replay (rule 2.96), not the live play.
