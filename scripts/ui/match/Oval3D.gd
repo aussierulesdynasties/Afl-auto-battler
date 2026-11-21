@@ -517,6 +517,8 @@ func _ground_model(slug: String, base := "", home := "", away := "") -> void:
 	Oval3DQuality.apply_model(quality, root)
 	if GroundModels.has_backdrop(slug, base):
 		_backdrop_view()
+	if turf == null:   # a bare view (the ground inspector's test): the model alone
+		return
 	turf.set_ground(slug)
 	_turf_mat.set_shader_parameter("fence_clip", GroundModels.MATCH_FENCE)
 	_apron_skirt()
@@ -548,6 +550,8 @@ func _backdrop_view() -> void:
 	_far_view = true
 	if camera != null:
 		camera.far = GroundModels.BACKDROP_FAR
+	if _env == null:   # a bare view (the ground inspector's test) has no sky to haze into
+		return
 	_env.fog_enabled = true
 	_env.fog_mode = Environment.FOG_MODE_DEPTH
 	_env.fog_depth_begin = HAZE_FROM
