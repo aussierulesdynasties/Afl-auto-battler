@@ -38,8 +38,12 @@ def _inside(pts, poly):
     return c
 
 # the scene's tower tints, so the new ones read as the same city
-_tw = bpy.data.objects['bg_bld_tower'].data
-_tints = sorted({tuple(round(v, 3) for v in d.color) for d in _tw.color_attributes['Col'].data})
+_tints = set()
+for o in bpy.data.objects:   # whatever wears the scene's tower walls
+    if o.type == 'MESH' and any(m and m.name.startswith('facade_tower') for m in o.data.materials):
+        ca = o.data.color_attributes.get('Col')
+        if ca: _tints |= {tuple(round(v, 3) for v in d.color) for d in ca.data}
+_tints = sorted(_tints)
 _rr = np.random.default_rng(11)
 
 walls = bmesh.new(); roofs = bmesh.new()
@@ -75,7 +79,10 @@ bmesh.ops.triangulate(roofs, faces=roofs.faces[:])   # concave footprints
 # named as the scene's towers (Blender adds .001), so reduce.py joins them into the scene's
 for bm_, name, mat in ((walls, 'bg_bld_tower', 'facade_tower'), (roofs, 'bg_roof_tower_metal', 'roof_tower_metal')):
     me = bpy.data.meshes.new(name); bm_.to_mesh(me); bm_.free()
-    me.materials.append(bpy.data.materials[mat])
+    mt = bpy.data.materials.get(mat) or next((m for m in bpy.data.materials if m.name.startswith(mat)), None)
+    if mt is None:   # a scene without towers: the blocks' walls and roofs
+        mt = next((m for m in bpy.data.materials if m.name.startswith('facade_block' if 'bld' in name else 'roof_block')), None)
+    me.materials.append(mt)
     o = bpy.data.objects.new(name, me); bpy.context.scene.collection.objects.link(o)
 _tbm.free()
 print('skyline towers added', added, 'already in the scene', skipped)
