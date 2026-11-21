@@ -102,7 +102,15 @@ def slab(name,vin,vout,u0,u1):
         a=vin+sg*0.0;b=vin+sg*(9.5-2.2*k);zz=lambda v:float(slab_z(np.array(abs(v))))+0.35*(k+1)
         q=[(u0+1,a,ZO+0.35*(k+1)),(u1-1,a,ZO+0.35*(k+1)),(u1-1,b,zz(b)),(u0+1,b,zz(b))]
         q2=[(x,y,z-0.3) for x,y,z in q];V=q+q2;F=[[0,1,2,3],[4,7,6,5],[0,4,5,1],[1,5,6,2],[2,6,7,3],[3,7,4,0]]
-        add(name+'_panel%d'%k,V,F,['deck2','soffit','fascia','fascia','fascia','fascia'])
+        add('roofopen_%s_%d'%(name[-1],k),V,F,['deck2','soffit','fascia','fascia','fascia','fascia'])
+    # the same three plates run out over the opening when the roof is shut (the game shows one state or
+    # the other, GroundModels.ROOFS): each covers a third of the half-span, the outer plate highest, so
+    # the two halves meet at the centreline v=0
+    for k in range(3):
+        a=sg*(0.15+vin*sg*k/3-(0.4 if k else 0.0));b=sg*(abs(vin)*(k+1)/3+0.4);z=ZO+0.35*(k+1)
+        q=[(u0+1,a,z),(u1-1,a,z),(u1-1,b,z),(u0+1,b,z)]
+        q2=[(x,y,zq-0.3) for x,y,zq in q];V=q+q2;F=[[0,1,2,3],[4,7,6,5],[0,4,5,1],[1,5,6,2],[2,6,7,3],[3,7,4,0]]
+        add('roofshut_%s_%d'%(name[-1],k),V,F,['deck2','soffit','fascia','fascia','fascia','fascia'])
 slab('slab_w',51.0,102.8,-84.3,84.0);slab('slab_e',-52.2,-103.6,-84.1,84.6)
 # ---------------- end roofs: inner edge at the opening ends (u=-+84, z ZO), outer edge on the measured arc (z ZG)
 def end_z(u,v):
@@ -125,7 +133,7 @@ def end_roof(name,ARC,sgn):
             for w in(-0.7,0.7):x,y=q+nn*w;V.append((x,y,end_z(x,y)+0.08))
         o=len(V)-28
         for k in range(13):F.append([o+2*k,o+2*k+1,o+2*k+3,o+2*k+2]);UV.append([(0,0),(1,0),(1,2),(0,2)])
-    add(name+'_channels',V,F,'riser',UV)
+    add(name+'_channels',V,F,'endrib',UV)
     out=np.array([ARC[i]-ARC[i-1] if i else ARC[1]-ARC[0] for i in range(len(ARC))]);nrm=np.stack([sgn*out[:,1],-sgn*out[:,0]],1)
     nrm=-nrm if np.mean(np.sum(nrm*(ARC-[sgn*60,0]),1))<0 else nrm;nrm/=np.linalg.norm(nrm,axis=1)[:,None]
     g0=np.c_[ARC,np.full(len(ARC),ZG)];g1=np.c_[ARC+nrm*0.9,np.full(len(ARC),ZG+0.25)];g2=np.c_[ARC+nrm*0.9,np.full(len(ARC),ZG-0.9)];g3=np.c_[ARC,np.full(len(ARC),ZG-0.9)]
