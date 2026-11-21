@@ -97,9 +97,9 @@ the renderer's time against the plain stand on High (software GPU, so ratios onl
   most grounds about 1.1 to 2 million. Low saves most at the big grounds (Optus 3.8 to 1.9 million)
   and cuts the renderer's time by a third to a half everywhere: a quarter fewer pixels, no 3D
   people in the crowd. It keeps the ground's own shadows, so its triangles fall less than its time.
-- The floor, about 1 million triangles at any ground and any level, is the 36 players and 7 umpires
-  drawn and drawn again into the shadow map, not the ground. Players' detail levels (row 197's
-  level-of-detail bodies) are the lever there, outside this page.
+- The floor, about 1 million triangles at any ground and any level, was the 36 players and 7 umpires
+  drawn and drawn again into the shadow map, not the ground. The players had no far detail levels at
+  all (below), and now do.
 - Draw calls stay under about 440 everywhere. Bruce Stadium (825 separate meshes in its model) and
   Macquarie Point are the most; merging Bruce's meshes would take it under 200.
 - Memory was the bigger risk on a cheap phone, and is now compressed. The 3D view held about 750 MB
@@ -121,6 +121,38 @@ the renderer's time against the plain stand on High (software GPU, so ratios onl
   Richmond, Hawthorn) differ by about 3 levels in 255 on average and look the same side by side; the
   grounds from the broadcast camera are indistinguishable. The table above was measured before the
   compression, so its video memory column is the old figure.
+
+## The MetaHuman footballer (row 202 2d)
+
+Matches now draw the MetaHuman body: about 79,500 triangles against the old body's 25,600. Measured
+the same way at the plain stand and the three heaviest grounds, it added about 2.7 million triangles
+a frame at every level, so Low barely helped (MCG Low 4.8 million).
+
+The cause was older than the new body. The import makes each body's far detail levels, but every
+player's body is rebuilt when a match loads (club_body, _skull, _kit_edges: guernsey cut, scalp,
+kit edges), and a rebuilt mesh keeps only its full detail. So every player was drawn whole at any
+distance and again in every shadow band, on any body. Oval3D._lodded now makes the levels again
+from the rebuilt mesh, once per body (about 0.2 s), and the hair styles likewise (they are refitted
+to the head at load). Same corners and the same look; each level is a shorter list of the same
+triangles, picked by the graphics level's mesh detail threshold (1, 2, 4).
+
+Triangles a frame, thousands (cloud, 1080 x 1240):
+
+| | Old body | MetaHuman | MetaHuman with levels |
+|---|---|---|---|
+| Plain stand, High / Low | 1,986 / 1,360 | 4,688 / 4,030 | 1,230 / 509 |
+| MCG, High / Medium / Low | 3,505 / 2,682 / 2,153 | 6,213 / 5,402 / 4,823 | 2,751 / 1,895 / 1,302 |
+| Marvel, High / Medium / Low | 3,210 / 2,376 / 2,131 | 5,917 / 5,096 / 4,800 | 2,455 / 1,588 / 1,280 |
+| Optus, High / Medium / Low | 3,768 / 3,207 / 2,176 | 6,476 / 5,928 / 4,845 | 3,014 / 2,420 / 1,325 |
+
+The renderer's GPU time falls back to the old body's or below it (MCG High 473 → 825 → 474, Low
+322 → 682 → 269, in the cloud's units). Its CPU time stays about a third above the old body's: the
+MetaHuman has more corners to skin each frame, and detail levels do not cut that. Players filmed close
+at four sizes on High and Low, with and without the levels, look the same (no skin through the
+guernsey, no lost numbers or stripes).
+
+So with this body Low is near the 1 million line again at the big grounds, and under it at the plain
+stand. The other grounds were not re-measured; they share the players, so expect the same saving.
 
 ## The budget (proposed, for the director)
 
