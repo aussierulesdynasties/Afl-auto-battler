@@ -44,7 +44,7 @@ static func measure(res: Dictionary) -> Dictionary:
 	# a switch, sampled with the rest of open play.
 	var pair := []
 	if res.has("probe_pair"):
-		out["pair"] = {"n": 0, "dist": 0.0, "within5": 0, "goal": 0.0, "def_n": 0, "def_dist": 0.0, "def_within5": 0}
+		out["pair"] = {"n": 0, "dist": 0.0, "within5": 0, "goal": 0.0, "def_n": 0, "def_dist": 0.0, "def_within5": 0, "held_n": 0, "held_dist": 0.0, "held_within5": 0}
 		pair = res["probe_pair"]
 	var next_sample := 0.0
 	var guard := 0
@@ -177,6 +177,12 @@ static func _pair_sample(d: MatchDirector, pair: Array, out: Dictionary) -> void
 		ps["def_n"] += 1
 		ps["def_dist"] += dist
 		ps["def_within5"] += 1 if dist <= 5.0 else 0
+		# ...and only while the match-up shows on the ground: he is on his man
+		# (a forward rotated out of the forward line is handed over until he is back).
+		if (bool(a.get("duel", false)) or bool(a.get("tagging", false))) and int(a["match"]) == int(b["id"]):
+			ps["held_n"] += 1
+			ps["held_dist"] += dist
+			ps["held_within5"] += 1 if dist <= 5.0 else 0
 
 
 static func _kick_sums() -> Dictionary:
