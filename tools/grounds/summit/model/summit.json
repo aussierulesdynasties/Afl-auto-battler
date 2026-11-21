@@ -1,0 +1,182 @@
+{
+ "name": "Summit Park",
+ "lat": -35.0779788,
+ "lon": 138.8934415,
+ "half": 200,
+ "fence": [
+  -1.9,
+  -0.75,
+  76.17,
+  86.34,
+  -6.45
+ ],
+ "fence_h": 1.0,
+ "stands": [],
+ "outer_r": 104,
+ "towers": [
+  {
+   "xy": [
+    -43.1,
+    79.56
+   ],
+   "top": 35.0,
+   "head_h": 3.0,
+   "head_w": 5.0,
+   "r_base": 0.45,
+   "r_top": 0.25,
+   "tilt": 15
+  },
+  {
+   "xy": [
+    73.2,
+    42.06
+   ],
+   "top": 35.0,
+   "head_h": 3.0,
+   "head_w": 5.0,
+   "r_base": 0.45,
+   "r_top": 0.25,
+   "tilt": 15
+  },
+  {
+   "xy": [
+    40.09,
+    -74.04
+   ],
+   "top": 35.0,
+   "head_h": 3.0,
+   "head_w": 5.0,
+   "r_base": 0.45,
+   "r_top": 0.25,
+   "tilt": 15
+  },
+  {
+   "xy": [
+    -87.1,
+    -50.74
+   ],
+   "top": 35.0,
+   "head_h": 3.0,
+   "head_w": 5.0,
+   "r_base": 0.45,
+   "r_top": 0.25,
+   "tilt": 15
+  }
+ ],
+ "mats_ground": {
+  "concourse": "grass_bank",
+  "path": "asphalt",
+  "outside": "ground_dry"
+ },
+ "_note": "Summit Sport and Recreation Park (Mount Barker, SA), first draft. Plan traced on Google satellite tiles (work/sat.png, 2026); heights estimated, not measured. Grass banks, no grandstand. Stadium only: no turf, posts, nets, signs, lettering or crowd.",
+ "fence_mat": "pickets",
+ "fence_cap": "paint_white",
+ "step": 0.5,
+ "path_w": 7,
+ "extras": {
+  "polys": [],
+  "boxes": [
+   {
+    "c": [
+     -62.8,
+     62.16
+    ],
+    "L": 4.5,
+    "W": 10.0,
+    "h": 3.0,
+    "a": -25,
+    "mat": "clad_sm",
+    "top": "roof_sm"
+   },
+   {
+    "c": [
+     -82.55,
+     1.88
+    ],
+    "L": 4.0,
+    "W": 5.0,
+    "h": 3.0,
+    "a": -10,
+    "mat": "clad_sm",
+    "top": "roof_sm"
+   }
+  ],
+  "buildings": [
+   {
+    "c": [
+     -86.44,
+     30.37
+    ],
+    "a": -14.2,
+    "L": 23.2,
+    "W": 31.3,
+    "h": 5.5,
+    "mat": "clad_sm",
+    "roof": "hip",
+    "rise": 3.2,
+    "roofmat": "roof_sm",
+    "ridge": "v",
+    "over": 0.8
+   }
+  ],
+  "shelters": [
+   {
+    "c": [
+     90.2,
+     19.16
+    ],
+    "a": -80,
+    "L": 66.0,
+    "W": 4.5,
+    "h": 3.0
+   }
+  ]
+ },
+ "paint": {
+  "clad_sm": {
+   "kind": "windows",
+   "col": [
+    196,
+    186,
+    168
+   ],
+   "every": 3.0,
+   "floor": 3.6,
+   "win": 1.6,
+   "sill": 1.0,
+   "head": 2.6
+  },
+  "roof_sm": {
+   "kind": "deck",
+   "col": [
+    150,
+    162,
+    172
+   ]
+  },
+  "ground_dry": {
+   "kind": "grass",
+   "col": [
+    196,
+    168,
+    116
+   ]
+  },
+  "shelter_wall": {
+   "kind": "flat",
+   "col": [
+    204,
+    204,
+    200
+   ]
+  },
+  "shelter_roof": {
+   "kind": "deck",
+   "col": [
+    232,
+    232,
+    228
+   ]
+  }
+ }
+}
