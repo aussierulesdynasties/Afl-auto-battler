@@ -98,6 +98,8 @@ def main(argv=None):
         else:
             t = time.time()
             files = autoload_reach.tracked_gd(a.root) if (a.write_baseline or not a.changed) else changed_gd(a.root, a.changed)
+            # Third-party addons (addons/) keep their authors' style; only our own GDScript is linted.
+            files = [f for f in files if not f.startswith("addons/")]
             found = gdlint_gate.run(a.root, files)
             if a.write_baseline:
                 counts = gdlint_gate.write_baseline(found)

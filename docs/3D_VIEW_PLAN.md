@@ -113,7 +113,9 @@ one sun and filmic tonemapping; the turf of #1658 already varies with weather an
 stands, roofs, light towers, scoreboards, fences, signage and goal-end details, at the detail the
 cameras actually see. The stadium we have "is ok, but it was just thrown together, it wasnt borne from a
 plan" (2026-11-16): the plan first sets what a stadium needs, then today's is assessed against it,
-part by part (kept, reworked or replaced).
+part by part (kept, reworked or replaced). No ground's look is approved yet (director, 2026-11-20): a
+finished ground is flown through by the director in the ground inspector (`tools/inspect/README.md`:
+any model, in first person, very fast), he writes its fault list, the faults are fixed, then he approves it.
 
 **2c. The crowd, cheaply.** Methods compared on looks and phone cost before any is chosen: shader-
 painted seats (today), instanced cards of baked figures (impostors), animated low-poly instances, and
@@ -190,12 +192,65 @@ In the order the asset plan sets: the action layer and the proof passage (TODO r
 full-match coverage, then the phone check at that milestone, then the 3D scenes that replace the
 vignettes. Nothing in step 4 starts before the football proof has passed and the asset plan exists.
 
-## Status
+## Status (as of 2026-11-20)
 
-| Step | State |
-|---|---|
-| Freeze | in force from 2026-11-16 |
-| 1. Football proof | harness in `tools/balance.sh shape`; spec checked (rule 2.86); gap list above; fixes next (row 201) |
-| 2. The world and the look | under way (row 202): 2a daylight, tone, night lighting and wet games chosen, skies chosen (rules 2.80-2.84); 2d body chosen: MetaHuman (2.85), shown in our match and approved (2.89), own height and weight (2.97, 2.98), faces: Tripo heads for the best 23, features for the rest (2.99); 2b every AFL ground since 1990 and Macquarie Point get their own stadium (2.90), roofed grounds lit from their roofs (2.91); 2c crowd chosen: a mix of 3D people and cards (2.92), built into the 3D view; 2e main camera chosen: the real AFL main camera in a 16:9 TV picture (2.93), after a goal one skippable replay while the players go back (2.96), set shots from behind the goals (2.102), ball-ups with close-ups of the two ruckmen (2.103) at the match's speed (2.109), the replay skipped by a tap on the picture (2.110), framed like a real TV picture with the wide shot on long kicks and centre bounces (2.111), all four built into the match, the picture filling the phone between the scoreboard and the controls (2.105), team stats under it as club-coloured bars (2.106), the scoreboard panel replaced by a TV score bug on the picture, which grows into its space (2.107); next 2b building the grounds, 2d the Tripo heads and the features, 2e the other cameras and cuts in play |
-| 3. Asset and animation plan | done (#1707) |
-| 4. Build | after 1 and 3 (rows 197, 198) |
+_Update this section whenever 3D work merges. It is the one place 3D progress is tracked; TODO.md rows hold the detail._
+
+| Step | TODO row | State | Next |
+|---|---|---|---|
+| Freeze (no new player art, no one-incident patches) | | in force since 2026-11-16 | lifts when steps 2 and 3 are done |
+| 1. Football proof | 201 | harness built (#1695), spec checked (2.86), gap list of 14 written | fix the systems on the gap list; none fixed yet |
+| 2a. Light, tone, weather, skies | 202 | chosen and built (2.80-2.84, #1693 #1694 #1696 #1701); film look over the picture (2.112, #1839) | phone costing once the foundation is together |
+| 2b. The 37 grounds | 202 | 23 of 37 have a model merged, 2 more in open PRs, 4 under way locally (table below) | land Victoria Park, Riverway, Mars and Accor; confirm the other 8; background scenes (#1878 #1892 #1897) |
+| 2c. Crowd | 202 | chosen: 3D people within 55 m, cards beyond (2.92), built | |
+| 2d. Players' look | 202 | body: MetaHuman (2.85, 2.89); builds by height and weight (2.97, 2.98); faces ruled (2.99) | the Tripo heads (director generates) and the features for everyone else |
+| 2e. Cameras | 202 | main camera, goal replay, set shots, ball-up close-ups, tap to skip, TV framing, picture layout, stat bars, score bug all ruled and built (2.93-2.111, #1818) | the other cameras and cuts in play |
+| Broadcast popups | 207 | stat card ruled (2.94, 2.95) | ask: when a card shows and for how long; the journalists' posts |
+| 3. Asset and animation plan | 203 | done (#1707), docs/3D_ASSET_PLAN.md | |
+| 4a. Proof passage | 197 | runtime in the match screen (#1601 and on); waits on 201 and 203 | after step 1 passes |
+| 4b. Animation | 198 | paused (2.78) | the clips 203 lists, on the MetaHuman body |
+| Parked | stretch | bespoke close-up supporters (2.100, parked 2026-11-18) | |
+
+### 2b: the grounds (rule 2.90)
+
+"Model" means a ground model landed on main. Work that is still in a local worktree counts too: a ground session adds its row here when it starts, not only when it merges.
+
+| Ground | State | PRs |
+|---|---|---|
+| MCG | model, instanced seats | #1843 |
+| Marvel Stadium | model | #1911 |
+| Adelaide Oval | model, 3D seats | #1856 |
+| Optus Stadium | model, roof, seats | #1867 #1880; background scene open #1897 |
+| SCG | model | #1909 |
+| GMHBA Stadium | exterior model | #1903; open: roof #1899, background scene #1878 |
+| People First Stadium | model, roof | #1853 #1860 #1868 #1889; background scene open #1892 |
+| ENGIE Stadium | texture pass | #1866 |
+| Bellerive Oval | model | #1900 |
+| Manuka Oval | model | #1865 |
+| Norwood Oval | model, textures | #1870 |
+| Waverley Park | model | #1902 |
+| Victoria Park | texture pass open | #1884 |
+| Windy Hill | model | #1885 |
+| Moorabbin Oval | model | #1910 |
+| Ikon Park | exterior model | #1852 |
+| Whitten Oval | model, textures | #1882 |
+| Football Park | model | #1886 |
+| Subiaco Oval | both era models | #1901 |
+| York Park | exterior model | #1855 |
+| WACA | model | #1864 |
+| Cazaly's Stadium | model, textures | #1891; open: west building #1898 |
+| North Hobart Oval | 1991-92 model | #1854 |
+| Bruce Stadium | model, 3D seats | #1848 |
+| Riverway Stadium | model open | #1896 |
+| Mars Stadium | model built, not yet pushed (local worktree, 2026-11-20) | |
+| Accor Stadium | model built, not yet pushed (local worktree, 2026-11-20) | |
+| Marrara Oval (TIO Darwin) | under way, not yet pushed (site data and roof scripts, 2026-11-19) | |
+| The Gabba | under way, not yet pushed (2026-11-19) | |
+| Barossa Park, Traeger Park, Sky Stadium, Jiangwan Stadium, Hands Oval, Blacktown, Summit Park, Macquarie Point | to confirm: no work found in the repo or its local worktrees | |
+
+### Open questions for the director (3D only)
+
+- Row 207: when a stat card appears and for how long; the journalists' posts (who, what, when, where).
+- Row 202 2e: the other cameras and cuts in play.
+- Design bible: how weather affects a match (its look is settled; its effect on play is not).
+
