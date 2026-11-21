@@ -67,17 +67,17 @@ of the ground. Calls are paired runs (same seed, call on and off), the change on
 | 1 | The team is too long in open play | 74-94 m with the ball, 75-87 m without, 65-97 m loose (Alexander 2019) | 107-127 m everywhere | Phase shape: `MatchDirector._structure_spot` moves each line only 15-78% of the ball's travel, so the lines stay spread |
 | 2 | The team does not follow the ball to either end | team centre 29-33 m past halfway when attacking in the forward 50; 43-47 m back defending in the back 50 | 15 m; 18 m | Phase shape (`_structure_spot`, as 1) |
 | 3 | Too few men near the ball | 15.5-19.5 of the 36 in the ball's quarter (Alexander 2021) | 11.6-15.4 | Phase shape (as 1) |
-| 4 | No squeeze on a loose ball | 36-47 m wide (Alexander 2019) | 62-67 m | A loose-ball shape: none exists; loose balls use the open-play spots |
+| 4 | No squeeze on a loose ball | 36-47 m wide (Alexander 2019) | 62-67 m. Held 2026-11-21, no change: the reference cannot be the widest pair (see below); length, area and team centre on a loose ball are IN or NEAR, and the 10th-90th percentile width (37-41 m) sits on the paper's figure | A loose-ball shape: none exists; loose balls use the open-play spots |
 | 5 | Stoppages around the ground are thin | 23 players in the ball's quarter in either 50, 17 in midfield (Alexander 2021) | 13.4 | Stoppage set-ups (`_centre_spot`, `_centre_setup`, the ball-up and throw-in spots) |
 | 6 | Kicks are short and gain little ground | 25.0 m average, ±11.8 (Spencer 2019); 25-30 m gained | 20.0 m, ±11.6; 11.2 m gained | MatchSim kick events (balance-gated) |
 | 7 | Too many kicks | 213 a team-game (Wheelo 2026) | 309 | MatchSim event count (balance-gated) |
 | 8 | Calls do not change how the side kicks | Attacking: no switch; Controlled and Slow it down: shorter, across and back (rule 2.45) | Attacking: switches stay 6%; Controlled: kicks 0.5 m longer; Slow it down: 0.2 m longer, 3 points fewer backward | MatchSim kick choice by plan (balance-gated) |
-| 9 | A tagger does not shadow his man | a tag is permanent and goes where his man goes (2.44, 2.58); no published distance | 21.7 m apart on average, within 5 m 15.6% of the time (off: 27.0 m, 6.9%) | Man-on-man pull in `_structure_spot`: only inside 35 m, at most 85% of the way |
-| 10 | A switched defender drifts off his forward | everyone has an opponent (2.44) | 25.3 m apart, within 5 m 15.7% (off: 28.9 m, 13.5%) | Man-on-man pull (as 9) |
-| 11 | Fumble then gather: the gatherer runs 3.9 m past and the ball lies alone ~0.7 s (seed 31, FRE v STK) | the nearest man scoops it | as stated (row 197 inbox) | Loose-ball pickup; the WIP on `claude/oval3d-loose-ball-wip` fails 8 match_visual checks |
-| 12 | No clean gather (down for it, picks it up) in the shipped game | | the first man knocks it on toward MatchSim's winner | Loose-ball pickup (as 11) |
-| 13 | A dead stop at the fence: 4-5 m/s to 1.1 m/s in one step, twice in four seeds | | as stated (row 197 inbox) | MatchMotion fence clamp |
-| 14 | Throw numbers at it does not put more men at the ball; it moves the team forward like Push | more of our men around the ball wherever it is (the call's own words) | men within 20 m of the ball +0.9 at most (+0.1 at stoppages); team centre 7-19 m further forward, as Push's 8-14 m | Call shape: `_structure_spot` lifts the lines forward for Surge and Push alike (`_surge_ref`); no pull toward the ball |
+| 9 | A tagger does not shadow his man | a tag is permanent and goes where his man goes (2.44, 2.58); no published distance | 21.7 m apart on average, within 5 m 15.6% of the time (off: 27.0 m, 6.9%). Re-measured on main 2026-11-20 (153 matches): 9.0 m, 45%; only while his side defends, the same. Now 8.4 m, 49%: a tagger keeps up at a run | Man-on-man pull in `_structure_spot`: only inside 35 m, at most 85% of the way |
+| 10 | A switched defender drifts off his forward | everyone has an opponent (2.44) | 25.3 m apart, within 5 m 15.7% (off: 28.9 m, 13.5%). Re-measured on main 2026-11-20: 17.7 m, 25%. Explained 2026-11-21: while his side defends and the match-up is on, 10.5 m and 48% within 5 m; the rest of the 17 m is the ball in his side's hands and the forward rotated out of the forward line (handed over until he is back, by design) | Man-on-man pull (as 9) |
+| 11 | Fumble then gather: the gatherer runs 3.9 m past and the ball lies alone ~0.7 s (seed 31, FRE v STK) | the nearest man scoops it | as stated (row 197 inbox). Fixed on main by #1838: over 4 matches the gatherer is 0.6 m from the ball when he takes it and it never lies alone over 0.5 s | Loose-ball pickup; the WIP on `claude/oval3d-loose-ball-wip` fails 8 match_visual checks |
+| 12 | No clean gather (down for it, picks it up) in the shipped game | | the first man knocks it on toward MatchSim's winner. Fixed by #1838 (as 11) | Loose-ball pickup (as 11) |
+| 13 | A dead stop at the fence: 4-5 m/s to 1.1 m/s in one step, twice in four seeds | | Fixed 2026-11-20: he pulls up within his braking limit and slides along the fence (`_test_fence_pull_up`) | MatchMotion fence clamp |
+| 14 | Throw numbers at it does not put more men at the ball; it moves the team forward like Push | more of our men around the ball wherever it is (the call's own words) | men within 20 m of the ball +0.9 at most (+0.1 at stoppages); team centre 7-19 m further forward, as Push's 8-14 m. Fixed 2026-11-21: the midfield and half-back line ring the ball with it and without it, +1.8 to +3.4 men within 20 m in open play and +2.6 at stoppages; the team centre moves 3-5 m | Call shape: `_structure_spot` lifts the lines forward for Surge and Push alike (`_surge_ref`); no pull toward the ball |
 
 What the calls already do (no gap): Attacking narrows the side 26-34 m in attack (about 39%; rule 2.45 asks about
 45%); Controlled widens it 13-24 m and shortens it 35-44 m; Defensive shortens it 29 m in midfield; Win Contest
@@ -85,6 +85,21 @@ narrows it 18-25 m and puts 1.9 more men within 10 m of a stoppage. Flood pulls 
 Push moves it 8-14 m forward with 2.5-2.9 fewer behind; Slow it down spreads it 16-27 m wider; Stack sets the
 lines 51 m shorter at the centre bounce (still 6-6-6, no extra men in the square). Not yet measured: what each position does
 (marks, tackles, kicks per role), which the harness does not count.
+
+**Re-measured on main, 2026-11-20** (24 matches, local): gaps 1-3 are mostly closed since the list was written: the
+team's length is IN in 10 of 12 open-play zones, its centre IN at both ends, and the men in the ball's quarter IN.
+Still OUT: the team centre in the two midfield zones (8-11 m short of real), every hull area (35-40% under), and the
+loose-ball width (gap 4, 52-63 m against 36-47 m). The harness now splits stoppages by zone (gap 5): 20.9 men in the
+ball's quarter at a stoppage in either 50 (real 23, IN) and 19.6 in midfield (real 17, NEAR). The paper's loose-ball
+width and area do not fit together (an area of 4,440 m2 cannot sit inside 89 by 40 m), so gap 4's reference is being
+checked against the paper before the sim is pushed to it.
+
+**Gap 4 assumption, 2026-11-21** (nobody on the project has the paper, so this is a reading, not a check): the loose-ball
+widths read off Alexander 2019's Fig 2 cannot be the widest pair across, because in every zone the same figure's area
+is larger than its length times that width allows (a loose ball in their half: 4,785-5,120 m2 inside at most 97 by 44 m).
+The likelier reading is a narrower spread measure; the sim's 10th-90th percentile width on a loose ball (36.7, 37.4,
+38.3, 40.8 m by zone) sits inside or next to the paper's 35.6-47.1 m. Squeezing the widest pair to 36-47 m would push the
+hull areas, already under real, further away, so the loose-ball shape is left as it is until someone can read the paper.
 
 ## Step 2. The world and the look (runs beside step 1; before anything that draws the game)
 
@@ -113,7 +128,9 @@ one sun and filmic tonemapping; the turf of #1658 already varies with weather an
 stands, roofs, light towers, scoreboards, fences, signage and goal-end details, at the detail the
 cameras actually see. The stadium we have "is ok, but it was just thrown together, it wasnt borne from a
 plan" (2026-11-16): the plan first sets what a stadium needs, then today's is assessed against it,
-part by part (kept, reworked or replaced).
+part by part (kept, reworked or replaced). No ground's look is approved yet (director, 2026-11-20): a
+finished ground is flown through by the director in the ground inspector (`tools/inspect/README.md`:
+any model, in first person, very fast), he writes its fault list, the faults are fixed, then he approves it.
 
 **2c. The crowd, cheaply.** Methods compared on looks and phone cost before any is chosen: shader-
 painted seats (today), instanced cards of baked figures (impostors), animated low-poly instances, and
@@ -161,6 +178,7 @@ The answers are recorded in the Director Bible and summarised here.
 - 2e ball-ups (rule 2.103): "B: ruckmen close-ups": in the wait before a ball-up the picture cuts to about a second on each ruckman, then back to the main camera just before the bounce.
 - 2e ball-up close-ups at speed (rule 2.109): "B: Sped up with the match": the close-ups run at the match's speed like everything else.
 - 2e skipping a replay (rule 2.110): "B: Tap the picture": a tap anywhere on the 3D picture skips a goal's replay; a "Replay: tap to skip" tag sits top left while it plays.
+- 2e after a mark (rule 2.113): "A: Stay on the main camera": no close-up on the man who marked in general play.
 - 2e TV framing (rule 2.111): "B: real TV top/bottom": the main camera keeps a 16:9 TV picture's top and bottom on the tall phone picture; the wide shot (with sky) on "Long kicks, After a goal, Start of each quarter"; "zoom needs to be quick but not jarringly so". Set shots are filmed from behind the kicker, as real TV does.
 - 2e the picture on the phone (rule 2.105): "A but the stats part is very ugly": the main picture fills the screen between the scoreboard and the controls, taller than a TV picture at the same zoom; team stats under it as split bars in club colours (rule 2.106: "A: bars"): disposals, marks, clearances and hit-outs ("Keep those four"). The scoreboard panel goes (rule 2.107): "we can put an on screen scoreboard like in ss2" (a TV score bug on the picture), "use the extra new space for more 3d view", and "the momentum bar stays, make it unobtrusive": a thin line along the bottom edge of the picture ("C: bottom of picture").
 
@@ -190,12 +208,73 @@ In the order the asset plan sets: the action layer and the proof passage (TODO r
 full-match coverage, then the phone check at that milestone, then the 3D scenes that replace the
 vignettes. Nothing in step 4 starts before the football proof has passed and the asset plan exists.
 
-## Status
+## Status (as of 2026-11-20)
 
-| Step | State |
-|---|---|
-| Freeze | in force from 2026-11-16 |
-| 1. Football proof | harness in `tools/balance.sh shape`; spec checked (rule 2.86); gap list above; fixes next (row 201) |
-| 2. The world and the look | under way (row 202): 2a daylight, tone, night lighting and wet games chosen, skies chosen (rules 2.80-2.84); 2d body chosen: MetaHuman (2.85), shown in our match and approved (2.89), own height and weight (2.97, 2.98), faces: Tripo heads for the best 23, features for the rest (2.99); 2b every AFL ground since 1990 and Macquarie Point get their own stadium (2.90), roofed grounds lit from their roofs (2.91); 2c crowd chosen: a mix of 3D people and cards (2.92), built into the 3D view; 2e main camera chosen: the real AFL main camera in a 16:9 TV picture (2.93), after a goal one skippable replay while the players go back (2.96), set shots from behind the goals (2.102), ball-ups with close-ups of the two ruckmen (2.103) at the match's speed (2.109), the replay skipped by a tap on the picture (2.110), framed like a real TV picture with the wide shot on long kicks and centre bounces (2.111), all four built into the match, the picture filling the phone between the scoreboard and the controls (2.105), team stats under it as club-coloured bars (2.106), the scoreboard panel replaced by a TV score bug on the picture, which grows into its space (2.107); next 2b building the grounds, 2d the Tripo heads and the features, 2e the other cameras and cuts in play |
-| 3. Asset and animation plan | done (#1707) |
-| 4. Build | after 1 and 3 (rows 197, 198) |
+_Update this section whenever 3D work merges. It is the one place 3D progress is tracked; TODO.md rows hold the detail._
+
+| Step | TODO row | State | Next |
+|---|---|---|---|
+| Freeze (no new player art, no one-incident patches) | | in force since 2026-11-16 | lifts when steps 2 and 3 are done |
+| 1. Football proof | 201 | harness built (#1695), spec checked (2.86), gap list of 14 written | fix the systems on the gap list; none fixed yet |
+| 2a. Light, tone, weather, skies | 202 | chosen and built (2.80-2.84, #1693 #1694 #1696 #1701); film look over the picture (2.112, #1839) | phone costing once the foundation is together |
+| 2b. The 37 grounds | 202 | 23 of 37 have a model merged, 2 more in open PRs, 4 under way locally (table below) | land Victoria Park, Riverway, Mars and Accor; confirm the other 8; background scenes (#1878 #1892 #1897) |
+| 2c. Crowd | 202 | chosen: 3D people within 55 m, cards beyond (2.92), built; seated on the MCG model's own seats (he chose "Seat the crowd in the MCG", 2026-11-20, #1929) | measure its cost on a phone; each other ground gets it once it loads in a match |
+| 2d. Players' look | 202 | body: MetaHuman (2.85, 2.89); builds by height and weight (2.97, 2.98); faces ruled (2.99) | the Tripo heads (director generates) and the features for everyone else |
+| 2e. Cameras | 202 | main camera, goal replay, set shots, ball-up close-ups, tap to skip, TV framing, picture layout, stat bars, score bug all ruled and built (2.93-2.111, #1818); after a mark it stays on the main camera (2.113) | the other cameras and cuts in play (free kicks, tackles, injuries) |
+| Broadcast popups | 207 | stat card ruled (2.94, 2.95) | ask: when a card shows and for how long; the journalists' posts |
+| 3. Asset and animation plan | 203 | done (#1707), docs/3D_ASSET_PLAN.md | |
+| 4a. Proof passage | 197 | runtime in the match screen (#1601 and on); waits on 201 and 203 | after step 1 passes |
+| 4b. Animation | 198 | paused (2.78) | the clips 203 lists, on the MetaHuman body |
+| Parked | stretch | bespoke close-up supporters (2.100, parked 2026-11-18) | |
+
+### 2b: the grounds (rule 2.90)
+
+"Model" means a ground model landed on main. Work that is still in a local worktree counts too: a ground session adds its row here when it starts, not only when it merges.
+
+| Ground | State | PRs |
+|---|---|---|
+| MCG | model, instanced seats | #1843 |
+| Marvel Stadium | model | #1911 |
+| Adelaide Oval | model, 3D seats; plays in a match (exported for the game by tools/grounds/adelaide) | #1856 |
+| Optus Stadium | model, roof, seats | #1867 #1880; background scene open #1897 |
+| SCG | model | #1909 |
+| GMHBA Stadium | exterior model | #1903; open: roof #1899, background scene #1878 |
+| People First Stadium | model, roof | #1853 #1860 #1868 #1889; background scene open #1892 |
+| ENGIE Stadium | texture pass | #1866 |
+| Bellerive Oval | model | #1900 |
+| Manuka Oval | model | #1865 |
+| Norwood Oval | model, textures | #1870 |
+| Waverley Park | model | #1902 |
+| Victoria Park | texture pass open | #1884 |
+| Windy Hill | model | #1885 |
+| Moorabbin Oval | model | #1910 |
+| Ikon Park | exterior model | #1852 |
+| Whitten Oval | model, textures | #1882 |
+| Football Park | model | #1886 |
+| Subiaco Oval | both era models | #1901 |
+| York Park | exterior model | #1855 |
+| WACA | model | #1864 |
+| Cazaly's Stadium | model, textures | #1891; open: west building #1898 |
+| North Hobart Oval | 1991-92 model | #1854 |
+| Bruce Stadium | model, 3D seats | #1848 |
+| Riverway Stadium | model open | #1896 |
+| Mars Stadium | model built, not yet pushed (local worktree, 2026-11-20) | |
+| Accor Stadium | model built, not yet pushed (local worktree, 2026-11-20) | |
+| Marrara Oval (TIO Darwin) | under way, not yet pushed (site data and roof scripts, 2026-11-19) | |
+| The Gabba | model, 3D seats; plays in a match (built 2026-11-19/20 on a branch that never merged; brought in from the PC) | |
+| Barossa Park, Traeger Park, Sky Stadium, Jiangwan Stadium, Hands Oval, Blacktown, Summit Park, Macquarie Point | to confirm: no work found in the repo or its local worktrees | |
+
+Machine pre-inspection of the 30 match grounds, before the director's fly-through (2026-11-21, #1950):
+[3D_PREINSPECTION.md](3D_PREINSPECTION.md). Its fixes are in; its open faults are listed there.
+
+Each ground's turf (2026-11-21, asked for by the director as part of 2b): its own mowing cut (stripes across or
+along the ground, checkerboard, diagonal or diamonds, 10-14 m bands) and grass (couch at the warm-climate grounds,
+rye in the south), `Oval3DTurf.MOWING`; the AFL markings are drawn from the ground's own size. A first draft for his
+fly-through review like the rest of the ground: curators cut a new pattern each week, so the cut is a house style.
+
+### Open questions for the director (3D only)
+
+- Row 207: when a stat card appears and for how long; the journalists' posts (who, what, when, where).
+- Row 202 2e: the other cameras and cuts in play (after a mark answered, 2.113; free kicks, tackles and injuries still open).
+- Design bible: how weather affects a match (its look is settled; its effect on play is not).
+

@@ -46,10 +46,11 @@ const DUEL_SCALE := 110.0
 ## him by default: a default match-up leaves the lines to decide on average.
 const DUEL_CENTRE := 8.0
 ## An entry's marking contest before the match-up (MatchSim.resolve_forward50):
-## an even chance, moved by the two lines (their forwards' marking against
+## a bit under even (0.45, so marks inside 50 sit at real AFL's 12.4 a team a
+## game, director 2026-11-21), moved by the two lines (their forwards' marking against
 ## your backs' intercepting, over MARK_LINES points), and a little more for
 ## an aerial specialist. The floor is the engine's own.
-const MARK_BASE := 0.5
+const MARK_BASE := 0.45
 const MARK_LINES := 240.0
 const AERIAL_EDGE := 0.06
 const MARK_FLOOR := 0.10
