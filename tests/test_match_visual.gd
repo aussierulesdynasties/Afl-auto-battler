@@ -2312,6 +2312,9 @@ func _test_ground_screens() -> void:
 			"Only a screen's face is taken for a screen, not its legs or a glass screen")
 	var plain := Oval3D.new()
 	(Engine.get_main_loop() as SceneTree).root.add_child(plain)
+	# As the ground inspector builds it (tools/inspect): the match's world first, then the model.
+	plain._environment()
+	plain._ground()
 	plain._ground_model("mcg")
 	var none := Oval3DScreens.new()
 	plain.add_child(none)

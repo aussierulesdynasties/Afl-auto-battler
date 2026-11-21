@@ -83,11 +83,18 @@ static func find_faces(oval: Node3D, ground: Node3D) -> Array:
 			continue
 		var node_hit := _is_screen_name(str(mi.name)) or _is_screen_name(str(mi.get_parent().name))
 		var xf: Transform3D = to_oval * mi.global_transform
+		# A mesh named for its screens can hold the whole scoreboard (the MCG's "screens": its
+		# frame, glass and steel too). When one of its surfaces is the screen's own material,
+		# only that surface is the face; the node's name counts only when none is.
+		var mat_hits := []
 		for s in m.get_surface_count():
 			var mat: Material = mi.get_surface_override_material(s)
 			if mat == null:
 				mat = m.surface_get_material(s)
-			var hit := node_hit or (mat != null and _is_screen_name(mat.resource_name))
+			mat_hits.append(mat != null and _is_screen_name(mat.resource_name))
+		var by_mat := mat_hits.has(true)
+		for s in m.get_surface_count():
+			var hit: bool = mat_hits[s] if by_mat else node_hit
 			if not hit:
 				continue
 			var arr: Array = m.surface_get_arrays(s)

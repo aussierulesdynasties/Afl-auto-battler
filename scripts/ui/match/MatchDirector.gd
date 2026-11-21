@@ -1501,6 +1501,12 @@ func _rest_from_ball(j: int) -> void:
 	var ymax := (MatchMotion.HALF_WID - 4.0) * sqrt(maxf(0.0,
 			1.0 - pow(r.x / (MatchMotion.HALF_LEN - 1.0), 2.0)))
 	_rests[j] = Vector2(r.x, clampf(b.y + float((events[j] as Dictionary).get("loose_across", 0.0)), -ymax, ymax))
+	# A later event already placed at the old rest spot (the ball-up or gather it waits on) moves
+	# with it, or the ball rolls to one spot and the play goes on at the other (suite match: a
+	# ball-up 2.5 m from where the smothered ball stopped).
+	for k in _locs.keys():
+		if int(k) > j and _locs[k] == r:
+			_locs[k] = _rests[j]
 
 
 ## Where event `ev` is up this ground: MatchSim's field position (metres from the middle, on
@@ -1781,7 +1787,10 @@ func _keep_off_ball() -> void:
 	if not (st == "fumble" or (st == "collect" and p.get("pace", false)) or (st == "wait" and p.has("scoop"))):
 		return
 	var bp: Vector2 = ball["pos"]
-	var his := [int(p.get("who", -1)), int(p.get("scoop", -1))]
+	# The gatherer and the man down for it are on it by right. A fumble's own man (the one it
+	# came off) is in the scrap like the rest once it is loose: he is not let run over it
+	# (suite match, 408 s: a spoiler crossed it at 2.9 m/s).
+	var his := [int(p.get("who", -1)) if st != "fumble" else -1, int(p.get("scoop", -1))]
 	for t in tokens:
 		var id := int(t["id"])
 		if id in his or not _on_feet(id) or time - float(t.get("scoop_at", -99.0)) < 1.5 * TEMPO:
@@ -2797,6 +2806,17 @@ func _done(p: Dictionary) -> bool:
 				if not p.has("_kt") and _pt >= float(p.get("_kout", INF)):
 					out = -1
 				_scrap_in(p, out)
+				if not p.has("_held"):
+					# With no spot from MatchSim the man it has gather it next comes in at the pace
+					# he takes it on the run at, as below, not flat out on a line past it with the
+					# rest: the ball rolled into one such line and he ran over it at 6.7 m/s (suite
+					# match, 1353 s), too fast for his gather to start.
+					var gk := _next_real(int(_beat.get("k", -1)))
+					var g := _actor_id(events[gk]) if gk >= 0 else -1
+					if g >= 0 and g != out and DISPOSALS.has(str((events[gk] as Dictionary).get("kind", ""))) \
+							and _on_feet(g):
+						_ease_near(g, _pace_in(g))
+						_busy[g] = true
 			if p.has("_held") and str(ball["mode"]) == "loose" and _pt < FUMBLE_HOLD_MAX:
 				if _knock_step(p):
 					return false
