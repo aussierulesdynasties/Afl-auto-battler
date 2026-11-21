@@ -7,11 +7,12 @@
 #   - has auto-merge turned on (the author asked for it to land),
 #   - is labelled "roadmap" or changes only *.md files,
 #   - has no conflict, and every check on its head has passed (or skipped).
-# It merges with --admin, which needs "GitHub Actions" on the main ruleset's bypass list
-# (Settings > Rules > Rulesets > the ruleset for main > Bypass list). Without that the merge
-# is refused, the job prints a warning and the PR waits for the queue as before.
-# A merge made with the workflow token starts no push workflows, so this then runs
-# Roadmap rebuild itself to rebuild the notes PRs the merge has left in conflict.
+# It merges with --admin using the MERGE_TOKEN secret, an admin's token: the "main merge
+# queue" ruleset lets Repository admins bypass it, and the GitHub Actions app cannot be
+# added there. Without the secret it tries the workflow token, which the ruleset refuses;
+# the job then lists the rulesets on main and stops. A MERGE_TOKEN merge starts the push
+# workflows as usual; this also runs Roadmap rebuild itself, for the notes PRs the merge
+# has left in conflict.
 name: Docs fast merge
 on:
   schedule:
@@ -35,6 +36,7 @@ jobs:
       - name: Merge ready docs-only and roadmap PRs
         env:
           GH_TOKEN: ${{ github.token }}
+          MERGE_TOKEN: ${{ secrets.MERGE_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
           set -u
@@ -63,14 +65,15 @@ jobs:
               echo "#$num ($kind): checks not all green yet ($bad of $total), waiting"
               continue
             fi
-            if gh pr merge "$num" --squash --admin; then
+            if GH_TOKEN="${MERGE_TOKEN:-$GH_TOKEN}" gh pr merge "$num" --squash --admin; then
               echo "#$num ($kind): merged past the queue"
               merged=1
               # One at a time: notes PRs edit the same TODO.md lines, so the next one
               # is rebuilt on the new main before it merges.
               break
             else
-              echo "::warning::#$num: merge refused. Add GitHub Actions to the bypass list of main's ruleset, or the PR waits for the queue."
+              if [ -n "$MERGE_TOKEN" ]; then tok="MERGE_TOKEN"; else tok="workflow token, no MERGE_TOKEN secret"; fi
+              echo "::warning::#$num: merge refused using the $tok. The PR waits for the queue."
               # Say which rulesets apply to main and whether this token may bypass each,
               # then stop: every other PR would be refused the same way.
               echo "Rulesets on main (name | source | enforcement | can bypass | rules):"
