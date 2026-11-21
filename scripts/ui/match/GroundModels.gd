@@ -362,6 +362,7 @@ static func _backdrop_materials(model: Node) -> void:
 				(mi as MeshInstance3D).set_surface_override_material(i, made[key])
 			else:
 				mat.vertex_color_use_as_albedo = true
+				mat.disable_receive_shadows = true   # past the shadow map's reach it reads blue-grey
 
 
 static func has_backdrop(slug: String, base := "") -> bool:

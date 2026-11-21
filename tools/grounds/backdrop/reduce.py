@@ -6,7 +6,7 @@ ground under the stadium. Big meshes are decimated, the trees thinned with dista
 bake scaled to tex_px, and everything cut into wedges round the ground (see SECTORS).
 Needs the scene's textures where the .blend points (//../../tex, //../../data/<ground>/prep).
 """
-import bpy, bmesh, sys, numpy as np, math
+import bpy, bmesh, sys, os, numpy as np, math
 a = sys.argv[sys.argv.index('--') + 1:]
 SRC, OUT = a[0], a[1]
 TEX = int(a[2]) if len(a) > 2 else 4096
@@ -14,6 +14,9 @@ NEAR_R = float(a[3]) if len(a) > 3 else 350.0     # trees nearer than this are a
 MID_R = 800.0
 MID_KEEP = float(a[4]) if len(a) > 4 else 0.4     # share of trees kept from NEAR_R to MID_R
 FAR_KEEP = float(a[5]) if len(a) > 5 else 0.15    # share kept past MID_R
+INNER = float(a[6]) if len(a) > 6 else 0.0         # radius round the ground left to the game's own near
+                                                    # surroundings (GroundModels.SURROUNDS "outer")
+SKYLINE = a[7] if len(a) > 7 else ''                # skyline.json from osm_skyline.py: towers added past INNER
 bpy.ops.wm.open_mainfile(filepath=SRC)
 for im in bpy.data.images:
     if im.packed_file is None and im.filepath: im.reload()
@@ -59,11 +62,24 @@ def under_stadium(x, y):
 for o in [o for o in bpy.data.objects if not o.name.startswith('bg_')]:
     bpy.data.objects.remove(o, do_unlink=True)
 
+if INNER > 0.0:   # the game draws its own ground, trees and buildings in here: nothing twice
+    for o in [o for o in bpy.data.objects if o.type == 'MESH']:
+        bm = bmesh.new(); bm.from_mesh(o.data); M = o.matrix_world
+        kill = [f for f in bm.faces if (M @ f.calc_center_median()).xy.length < INNER]
+        if kill:
+            bmesh.ops.delete(bm, geom=kill, context='FACES'); bm.to_mesh(o.data)
+        bm.free()
+    for o in [o for o in bpy.data.objects if o.type == 'MESH' and len(o.data.polygons) == 0]:
+        bpy.data.objects.remove(o, do_unlink=True)
+
 g = bpy.data.objects['bg_near_ground']
 bm = bmesh.new(); bm.from_mesh(g.data); M = g.matrix_world
 kill = [f for f in bm.faces if under_stadium(*(M @ f.calc_center_median()).xy)]
 bmesh.ops.delete(bm, geom=kill, context='FACES'); bm.to_mesh(g.data); bm.free()
 print('ground faces cut under stadium', len(kill))
+
+if SKYLINE:
+    exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'skyline.py')).read())
 
 def decimate(name, ratio):
     o = bpy.data.objects.get(name)
