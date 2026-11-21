@@ -8,7 +8,8 @@
 shader_type spatial;
 render_mode cull_disabled;
 
-uniform sampler2D albedo_tex : source_color, filter_linear_mipmap, repeat_enable;
+uniform sampler2D albedo_tex : source_color, hint_default_white, filter_linear_mipmap, repeat_enable;
+uniform bool use_vcol = false;   // the model paints with its vertex colours (Adelaide)
 uniform vec4 albedo_col : source_color = vec4(1.0);
 uniform float roughness_v = 0.85;
 uniform float metallic_v = 0.0;
@@ -35,6 +36,9 @@ vec3 sky_fix(float y) {
 
 void fragment() {
 	vec4 a = texture(albedo_tex, UV * uv_scale.xy + uv_offset.xy) * albedo_col;
+	if (use_vcol) {
+		a.rgb *= COLOR.rgb;
+	}
 	ALBEDO = a.rgb;
 	ROUGHNESS = roughness_v;
 	METALLIC = metallic_v;
