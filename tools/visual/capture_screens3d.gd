@@ -3,6 +3,7 @@ extends SceneTree
 ## ground, the oval built for Fremantle v St Kilda, a score on the screens, then each screen filmed
 ## face on and from the main camera, the GOAL card, the replay on it, and the fence signs.
 ##   godot --path . --script tools/visual/capture_screens3d.gd -- OUTDIR [W H] [GROUND ...]
+## (or [W H] [slug ...] --out OUTDIR, as the Capture workflow runs it; a ground by its model's folder)
 ## Saves OUTDIR/<slug>_<shot>.png; prints SCREENS <ground> <count> per ground.
 
 
@@ -19,8 +20,15 @@ func _snap(path: String) -> void:
 
 func _run() -> void:
 	await process_frame
-	var args := OS.get_cmdline_user_args()
-	var out := str(args[0])
+	var args := Array(OS.get_cmdline_user_args())
+	# The Capture workflow adds "--out DIR" at the end; by hand, OUTDIR comes first.
+	var out := ""
+	var at := args.find("--out")
+	if at >= 0:
+		out = str(args[at + 1])
+		args = args.slice(0, at)
+		args.push_front(out)
+	out = str(args[0])
 	DirAccess.make_dir_recursive_absolute(out)
 	var size := Vector2i(800, 450)
 	var only := []
@@ -38,6 +46,10 @@ func _run() -> void:
 	var res: Dictionary = load("res://scripts/sim/MatchSim.gd").new(Squad_.new("FRE", gdb.club_list("FRE"), true, "FRE"),
 			Squad_.new("STK", gdb.club_list("STK"), false, "STK"), 31).run()
 	var grounds: Array = only if not only.is_empty() else GroundModels.grounds()
+	for i in grounds.size():
+		for g in GroundModels.GROUNDS:
+			if str(GroundModels.GROUNDS[g]) == str(grounds[i]):
+				grounds[i] = g
 	for g in grounds:
 		var d = load("res://scripts/ui/match/MatchDirector.gd").new()
 		d.setup(res, res["events"])
