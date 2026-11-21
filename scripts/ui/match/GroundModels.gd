@@ -88,6 +88,10 @@ const VERTEX_COLOURED := ["adelaide"]
 
 ## Each seat colour as the model paints it (the mean of its seat texture; sRGB).
 const SEAT_COLOURS := {
+	# Mars Stadium (seat_blue and seat_greyblue there keep the values already here).
+	"seat_cream": Color(0.785, 0.747, 0.655), "seat_white": Color(0.815, 0.830, 0.845),
+	"seat_navyblue": Color(0.157, 0.235, 0.502), "seat_charcoal": Color(0.141, 0.165, 0.227),
+	"seat_slategrey": Color(0.361, 0.392, 0.447),
 	# Accor: aqua lower bowl (seat_teal there keeps the value already here).
 	"seat_aqua": Color(0.527, 0.719, 0.757),
 	"seat_grey": Color(0.618, 0.618, 0.586), "seat_moss": Color(0.437, 0.594, 0.555),
