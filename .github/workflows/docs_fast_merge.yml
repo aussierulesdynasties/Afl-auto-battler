@@ -71,6 +71,15 @@ jobs:
               break
             else
               echo "::warning::#$num: merge refused. Add GitHub Actions to the bypass list of main's ruleset, or the PR waits for the queue."
+              # Say which rulesets apply to main and whether this token may bypass each,
+              # then stop: every other PR would be refused the same way.
+              echo "Rulesets on main (name | source | enforcement | can bypass | rules):"
+              for id in $(gh api "repos/$GH_REPO/rulesets?includes_parents=true" --jq '.[].id'); do
+                gh api "repos/$GH_REPO/rulesets/$id" --jq \
+                  '"\(.name) | \(.source_type) \(.source) | \(.enforcement) | \(.current_user_can_bypass // "?") | \([.rules[].type] | join(","))"' \
+                  || echo "ruleset $id: not readable"
+              done
+              break
             fi
           done
           if [ "$merged" = 1 ]; then
