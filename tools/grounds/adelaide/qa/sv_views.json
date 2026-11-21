@@ -1,0 +1,6 @@
+[
+ {"name": "sv_n", "label": "360 photosphere, looking north", "cam": [5, -150, 85], "h": 0, "p": -30, "fov": 58.7},
+ {"name": "sv_e", "label": "360 photosphere, looking east", "cam": [5, -150, 85], "h": 90, "p": -30, "fov": 58.7},
+ {"name": "sv_s", "label": "360 photosphere, looking south (CBD)", "cam": [5, -150, 85], "h": 180, "p": -30, "fov": 58.7},
+ {"name": "sv_w", "label": "360 photosphere, looking west", "cam": [5, -150, 85], "h": 270, "p": -30, "fov": 58.7}
+]

@@ -96,6 +96,14 @@ const SURROUNDS := {
 	"optus": {"y": -0.03, "inner": 100.0, "colour": Color(0.45, 0.55, 0.27),
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
 			"models": ["bridges.glb"], "tint": Color(2.0, 1.4, 0.95), "building_tint": Color(1.15, 1.05, 0.98)},
+	# Adelaide Oval in the North Adelaide parklands: the River Torrens and Torrens Lake, Pennington and
+	# Creswell Gardens, the CBD's towers to the south (tools/grounds/adelaide/surrounds.py), and in 3D
+	# the Adelaide Oval footbridge, the river's other bridges and St Peter's Cathedral
+	# (tools/grounds/adelaide/landmarks.py). The map starts under the stands (inner 105 m): the model's
+	# own ground stops there, and inside it the match's turf and the model's floor take over.
+	"adelaide": {"y": -0.03, "inner": 105.0, "colour": Color(0.45, 0.55, 0.27),
+			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
+			"models": ["landmarks.glb"]},
 }
 
 ## Parts of a model drawn again from a build tool's own mesh (per vertex x, y, z, normal, colour;
@@ -167,7 +175,7 @@ const SEAT_COLOURS := {
 	"seat_bt": Color(0.135, 0.197, 0.349), "seat_mp": Color(0.219, 0.25, 0.296),
 	# Adelaide Oval's stand colours, as its model paints them (tools/grounds/adelaide/export.py).
 	"seat_ao_navy": Color8(35, 55, 77), "seat_ao_charcoal": Color8(70, 70, 75),
-	"seat_ao_slate": Color8(95, 105, 118), "seat_ao_sage": Color8(95, 118, 112),
+	"seat_ao_slate": Color8(100, 116, 114), "seat_ao_sage": Color8(95, 118, 112),
 	"seat_ao_red": Color8(150, 45, 50), "seat_ao_orange": Color8(200, 62, 36),
 	# The Gabba's seat mix (tools/grounds/gabba/mktex_hand.py, from photo g49) and its steel seat legs.
 	"seat_gabba_gold": Color8(226, 168, 30), "seat_gabba_orange": Color8(222, 120, 34),
