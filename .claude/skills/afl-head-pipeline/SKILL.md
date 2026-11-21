@@ -77,7 +77,9 @@ What each step does, and the line you must read:
 
 ## Step 4: in game, then the film
 
-1. `godot --headless --path . --import` after every head rebuild. Without it Godot films the OLD import of the glb.
+0. Director: "always use upto date assets and lighting/shaders, otherwise we are iterating in the dark". Before every
+   film: `git fetch` and merge origin/main into the branch (guernseys, grounds, lighting), keeping the local TEMP edits.
+1. `godot --headless --path . --import` after every head rebuild and every merge. Without it Godot films the OLD import of the glb.
 2. Film him jogging (needs the local FOLLOW/CLIP edits in `tools/visual/capture_builds3d.gd`, never committed):
    ```
    G=/c/Users/DANTE/Desktop/Godot_v4.7.2-stable_win64.exe/Godot_v4.7.2-stable_win64_console.exe

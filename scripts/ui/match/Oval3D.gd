@@ -1414,6 +1414,9 @@ static func socket_head(path: String, full: Mesh) -> Mesh:
 	# The body skin's own sheen (the MetaHuman body map's mean roughness, 0.73), not Tripo's 0.9: with
 	# its own, his neck read darker than the body's at the socket.
 	mat.set_shader_parameter("rough", 0.73)
+	mat.set_shader_parameter("skin_head_nrm", load("res://assets/oval3d/skin/Head_Normal.png"))
+	mat.set_shader_parameter("skin_head_srmf", load("res://assets/oval3d/skin/Head_SRMF.png"))
+	mat.set_shader_parameter("sss", float(OS.get_environment("HEAD_SSS")) if OS.has_environment("HEAD_SSS") else 0.0)  # TEMP test
 	out.surface_set_material(0, mat)
 	_socket_heads[key] = out
 	return out
@@ -1485,7 +1488,9 @@ static func _without_head(m: Mesh) -> Mesh:
 		var vs: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
 		var idx: PackedInt32Array = a[Mesh.ARRAY_INDEX]
 		var keep := PackedInt32Array()
-		if nm != HAIR_SURFACE and nm != EYE_MATERIAL:
+		if nm != HAIR_SURFACE and nm != EYE_MATERIAL and nm != "ARD_skin":
+			keep = idx  # the kit stays whole: a ring under the collar (the collar join) must not cut the jumper
+		elif nm != HAIR_SURFACE and nm != EYE_MATERIAL:
 			# 1 above the ring, 0 on it (within 1 mm), -1 below.
 			var side := PackedInt32Array()
 			side.resize(vs.size())
