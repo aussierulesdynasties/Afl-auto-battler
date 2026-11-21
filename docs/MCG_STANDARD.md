@@ -44,6 +44,7 @@ Seat colours follow the real stands tier by tier, sampled from Street View and G
 | Front rows of the middle tier | A blue band |
 | Top tier | Teal-blue |
 | Members' (north-west) top tier | Grey-green |
+| Front of the lower tier, west round to north | Mint green |
 
 Each colour is one `seats_seat_mcg_<colour>.bin` file with its entry in `GroundModels.SEAT_COLOURS`.
 
