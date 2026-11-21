@@ -120,8 +120,12 @@ elif MODE=='top':
     cam.matrix_world=mw;sc.render.resolution_x=1200;sc.render.resolution_y=1200;sc.render.resolution_percentage=100
     sun.rotation_euler=(math.radians(30),0,math.radians(160));render(os.path.join(HERE,'r_top.png'))
 elif MODE=='glb':
-    # GLB: origin at the pitch centre, north = +Y. World x,y here are the local frame axes; rotate so u (south) = -Y.
-    U=np.array([0.336,-0.942]);ang=math.atan2(-U[0],-U[1])  # rotate u-direction onto -Y
+    # GLB: origin at the pitch centre, x east, +Y north.
+    # The world frame here is already x east, y north (OpenStreetMap metres round the pitch, mv/osm/geo.json):
+    # the stadium's long axis runs at bearing 160 as the real one does (OSM pitch 158). The first build turned
+    # it onto north-south, which put the ground 20 degrees off its surroundings (2026-11-21, against Google
+    # Earth); the game lays any model on its field through GroundModels.FIT, so no turn is needed here.
+    ang=0.0
     for ob in OBJ:ob.matrix_world=Matrix.Rotation(ang,4,'Z')@ob.matrix_world
     for ob in OBJ:ob.select_set(True)
     bpy.ops.export_scene.gltf(filepath=os.environ.get('GLB_OUT',os.path.join(HERE,'marvel2.glb')),export_format='GLB',use_selection=True,export_apply=True,export_yup=True)

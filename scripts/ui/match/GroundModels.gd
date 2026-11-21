@@ -45,7 +45,7 @@ const GROUNDS := {
 ## stand up to 20 m inside Bellerive's boundary and Windy Hill's turned 6 degrees off.
 const FIT := {
 	"mcg": [0.53, 0.39, -4.2, -3.3, 87.19, 73.39],
-	"marvel": [-0.03, -0.02, 5.4, -89.8, 90.45, 75.93],
+	"marvel": [-0.02, -0.03, 5.4, 70.6, 90.45, 75.93],
 	"optus": [-30.38, 8.77, 0.0, -14.3, 88.5, 69.68],
 	"scg": [0.34, 6.68, 0.05, 85.8, 84.43, 72.25],
 	"gmhba": [-8.89, 11.85, 0.02, -69.8, 94.3, 66.01],
@@ -101,7 +101,7 @@ const SURROUNDS := {
 	# deck in 3D (tools/grounds/marvel/bridges.py). Painted for the same match light as Optus's map.
 	"marvel": {"y": -0.03, "inner": 120.0, "colour": Color(0.55, 0.56, 0.52),
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
-			"models": ["bridges.glb"], "tint": Color(2.0, 1.4, 0.95), "building_tint": Color(1.15, 1.05, 0.98)},
+			"models": ["bridges.glb"], "tint": Color(2.0, 1.4, 0.95), "building_tint": Color(1.35, 1.2, 1.02)},
 }
 
 ## Per-ground corrections to a model's materials, by material name, checked against Google Earth
@@ -129,7 +129,7 @@ const MATERIAL_FIX := {
 ## Grounds with a roof that opens: the model's node for the roof shut over the field and the node for
 ## it slid back, of which instantiate() shows one. Marvel Stadium plays AFL with its roof shut (as the
 ## match scenes draw it, data/grounds.json "roof": "closed"); the fly-through can open it (set_roof).
-## The shut roof casts no sun shadow: under it the ground is lit by the roof's own lights. Looks only.
+## Shut, the stadium casts no sun shadow: under it the ground is lit by the roof's own lights. Looks only.
 const ROOFS := {"marvel": {"shut": "roofshut", "open": "roofopen"}}
 
 ## Models that carry their colours on the vertices (glTF COLOR_0) under a tiling detail texture.
@@ -261,10 +261,10 @@ static func instantiate(slug: String, base := "") -> Node3D:
 				_fix_materials(model, MATERIAL_FIX[slug])
 			root.add_child(model)
 	slice_big_meshes(root)
-	if ROOFS.has(slug):
-		set_roof(root, slug, true)
 	var fit: Array = FIT.get(slug, [0.0, 0.0])
 	_add_seats(root, dir, Vector2(float(fit[0]), float(fit[1])))
+	if ROOFS.has(slug):
+		set_roof(root, slug, true)
 	if SURROUNDS.has(slug):
 		_add_surrounds(root, SURROUNDS[slug], dir)
 	return root
@@ -612,11 +612,16 @@ static func set_roof(root: Node, slug: String, shut: bool) -> void:
 	for n in root.find_children(str(r["shut"]) + "*", "", true, false):
 		if n is Node3D:
 			n.visible = shut
-		if n is GeometryInstance3D:
-			n.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	for n in root.find_children(str(r["open"]) + "*", "", true, false):
 		if n is Node3D:
 			n.visible = not shut
+	# Under the shut roof no sun reaches the ground: the roof's lights light it evenly, so nothing of
+	# the stadium throws a sun shadow on the field or the stands. Open, its shadows come back.
+	for n in root.find_children("*", "GeometryInstance3D", true, false):
+		var g := n as GeometryInstance3D
+		if not g.has_meta("roof_cast"):
+			g.set_meta("roof_cast", g.cast_shadow)
+		g.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if shut else g.get_meta("roof_cast")
 
 
 ## Is ground `slug`'s roof shut on `root`?
