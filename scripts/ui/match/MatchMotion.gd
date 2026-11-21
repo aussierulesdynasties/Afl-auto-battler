@@ -124,10 +124,14 @@ static func step(t: Dictionary, dt: float) -> void:
 	# Steering round the bodies ahead (avoid), within the braking limit.
 	vel += (t.get("avoid", Vector2.ZERO) as Vector2) * dt
 	vel = vel.limit_length(SPRINT)
+	vel = _fence_brake(pos, vel, float(t.get("reset", 1.0)))
 	pos += vel * dt
 	var clamped := clamp_to_oval(pos, 1.0)
 	if clamped != pos:
-		vel *= 0.5
+		# On the fence he slides along it: only the speed into it goes
+		# (row 201 gap 13: halving the whole speed each step was a dead stop).
+		var n := fence_normal(clamped)
+		vel -= n * maxf(0.0, vel.dot(n))
 		pos = clamped
 	t["pos"] = pos
 	t["vel"] = vel
@@ -326,6 +330,31 @@ static func inside_oval(p: Vector2, margin := 0.0) -> bool:
 	var ax := HALF_LEN - margin
 	var ay := HALF_WID - margin
 	return (p.x * p.x) / (ax * ax) + (p.y * p.y) / (ay * ay) <= 1.0
+
+
+## The outward normal of the fence's ellipse nearest `p`.
+static func fence_normal(p: Vector2) -> Vector2:
+	var n := Vector2(p.x / (HALF_LEN * HALF_LEN), p.y / (HALF_WID * HALF_WID))
+	return n.normalized() if n.length_squared() > 0.0 else Vector2.RIGHT
+
+
+## A man running at the fence slows within his braking limit so he pulls up
+## at it (row 201 gap 13), keeping his speed along it. `vel` is limited to the
+## speed from which he can still stop before the 1 m margin.
+const FENCE_LOOK := 12.0
+static func _fence_brake(pos: Vector2, vel: Vector2, reset: float) -> Vector2:
+	var n := fence_normal(pos)
+	var out := vel.dot(n)
+	if out <= 0.0:
+		return vel
+	# Distance to the fence (less the margin) along the normal, near enough for an ellipse this round.
+	var k := sqrt((pos.x * pos.x) / ((HALF_LEN - 1.0) * (HALF_LEN - 1.0))
+			+ (pos.y * pos.y) / ((HALF_WID - 1.0) * (HALF_WID - 1.0)))
+	var gap := (1.0 - k) * pos.length() / maxf(k, 0.001)
+	if gap > FENCE_LOOK:
+		return vel
+	var top := sqrt(2.0 * BRAKE * reset * maxf(0.0, gap))
+	return vel - n * maxf(0.0, out - top) if out > top else vel
 
 
 ## Pull `p` back inside the oval shrunk by `margin` metres.

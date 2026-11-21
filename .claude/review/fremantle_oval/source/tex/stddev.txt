@@ -1,5 +1,5 @@
 aircon               11.5  paint          52 m2
-asphalt              16.2  asphalt     21331 m2
+asphalt              14.8  asphalt     21331 m2
 balustrade           12.3  paint          32 m2
 bank_purple          11.2  paint          18 m2
 black_paint          10.6  paint         423 m2
@@ -7,7 +7,7 @@ brick_pink           17.0  brick         342 m2
 chain_see            11.6  paint          39 m2
 club_purple          11.3  paint           2 m2
 club_red             11.6  paint          29 m2
-concrete             17.6  concrete     9277 m2
+concrete              6.4  concrete     9277 m2
 corr_white_h         18.4  sheet          94 m2
 cream_boards         28.2  boards        824 m2
 cream_letters        11.1  paint           1 m2
@@ -28,7 +28,7 @@ mesh_dark            11.9  paint         305 m2
 mid_grey             11.5  render         23 m2
 mural_pink           10.9  paint           7 m2
 mural_red            12.6  paint          14 m2
-pavers                8.0  pavers       1499 m2
+pavers                6.7  pavers       1499 m2
 red_brick            17.4  brick         446 m2
 render_cream         15.8  render       1986 m2
 render_white         16.1  render       2993 m2
@@ -41,10 +41,10 @@ roof_white           19.3  sheet        1253 m2
 roof_zinc_pav         8.0  sheet         806 m2
 roof_zinc_x          14.7  sheet          60 m2
 sb_yellow            12.8  paint           4 m2
-seat_green           12.0  plastic        24 m2
-seat_navy            16.2  seats         331 m2
+seat_green            4.5  plastic        24 m2
+seat_navy             2.3  plastic       331 m2
 seat_timber          22.4  timber        748 m2
-seat_white           13.1  plastic       468 m2
+seat_white            7.3  plastic       468 m2
 shade_interior       12.2  paint          27 m2
 sign_white           10.9  paint        1322 m2
 silver               10.7  paint         115 m2
@@ -53,6 +53,6 @@ skylight             12.3  paint          38 m2
 soffit               12.0  sheet         718 m2
 solar                14.8  solar         218 m2
 steel_dark           12.5  paint         120 m2
-step_dark             9.9  concrete       62 m2
+step_dark             3.4  concrete       62 m2
 vine                 45.6  leaves         36 m2
 white_paint          10.9  paint         215 m2

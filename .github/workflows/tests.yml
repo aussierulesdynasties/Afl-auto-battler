@@ -221,6 +221,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}
         run: |
+          # A PR labelled "roadmap" edits the list itself (the Roadmap close action's
+          # own PRs, whose body names no row): it has no row of its own to name.
+          labels=$(gh api "repos/${{ github.repository }}/pulls/$PR" --jq '.labels[].name' | xargs)
+          case " $labels " in *" roadmap "*) echo "Row check skipped: label roadmap"; exit 0 ;; esac
           gh api "repos/${{ github.repository }}/pulls/$PR" --jq '.body // ""' > "$RUNNER_TEMP/body.txt"
           if ! python3 tools/roadmap_close.py --check --body-file "$RUNNER_TEMP/body.txt" --todo docs/TODO.md --todo docs/TODO_RULINGS.md 2> "$RUNNER_TEMP/err.txt"; then
             echo "::error::$(cat "$RUNNER_TEMP/err.txt")"
