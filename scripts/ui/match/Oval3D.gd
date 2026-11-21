@@ -464,14 +464,18 @@ func _stands(home: String, away: String) -> void:
 ## towers from <dir>.glb, and the seats drawn as one seat many times (MultiMesh): seat_tmpl.bin
 ## is the seat (36 triangles), seats_<colour>.bin a row-major 3x4 transform per seat.
 ## No crowd: the seats are empty (director, 2026-11-19).
-func _ground_model(dir: String) -> void:
-	var base := "res://assets/grounds/%s/" % dir
+## base is the folder holding <dir>.glb and its seat files; "" is the game's own copy. The ground
+## inspector (tools/inspect) passes a folder on disk to show a copy that is not in the game yet.
+func _ground_model(dir: String, base := "") -> void:
+	if base == "":
+		base = "res://assets/grounds/%s/" % dir
 	var root := Node3D.new()
 	root.name = "Ground"
 	root.position = GROUND_SHIFT.get(dir, Vector3.ZERO)
 	add_child(root)
-	var scene: PackedScene = load(base + dir + ".glb")
-	root.add_child(scene.instantiate())
+	var model := load_glb(base + dir + ".glb")
+	if model != null:
+		root.add_child(model)
 	var tmpl := FileAccess.get_file_as_bytes(base + "seat_tmpl.bin").to_float32_array()
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -495,6 +499,19 @@ func _ground_model(dir: String) -> void:
 		mat.albedo_color = SEAT_COLOURS.get(f.get_basename().trim_prefix("seats_"), Color.GRAY)
 		mi.material_override = mat
 		root.add_child(mi)
+
+
+## A .glb as a node: the imported copy for a file in the game, read straight off disk otherwise
+## (a model under .claude/ or a worktree, which Godot never imports). null if it cannot be read.
+static func load_glb(path: String) -> Node3D:
+	if path.begins_with("res://") and ResourceLoader.exists(path):
+		var scene: PackedScene = load(path)
+		return scene.instantiate()
+	var doc := GLTFDocument.new()
+	var state := GLTFState.new()
+	if doc.append_from_file(ProjectSettings.globalize_path(path), state) != OK:
+		return null
+	return doc.generate_scene(state) as Node3D
 
 
 ## Each seat colour as the model paints it (the mean of its seat texture).
