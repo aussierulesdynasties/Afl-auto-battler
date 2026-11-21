@@ -19,23 +19,35 @@ uniform vec3 amb_low = vec3(0.0);
 uniform vec3 amb_level = vec3(0.0);
 uniform vec3 amb_high = vec3(0.0);
 uniform vec3 amb_up = vec3(0.0);
+// The sky's reflections are not scaled by the ambient energy as its light is: amb_* x this.
+uniform float ref_scale = 1.0;
+
+vec3 sky_fix(float y) {
+	if (y < -0.5) {
+		return mix(amb_low, amb_down, (-y - 0.5) * 2.0);
+	} else if (y < 0.0) {
+		return mix(amb_level, amb_low, -y * 2.0);
+	} else if (y < 0.5) {
+		return mix(amb_level, amb_high, y * 2.0);
+	}
+	return mix(amb_high, amb_up, (y - 0.5) * 2.0);
+}
 
 void fragment() {
 	vec4 a = texture(albedo_tex, UV * uv_scale.xy + uv_offset.xy) * albedo_col;
 	ALBEDO = a.rgb;
 	ROUGHNESS = roughness_v;
 	METALLIC = metallic_v;
-	float y = (INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).y;
-	vec3 amb;
-	if (y < -0.5) {
-		amb = mix(amb_low, amb_down, (-y - 0.5) * 2.0);
-	} else if (y < 0.0) {
-		amb = mix(amb_level, amb_low, -y * 2.0);
-	} else if (y < 0.5) {
-		amb = mix(amb_level, amb_high, y * 2.0);
-	} else {
-		amb = mix(amb_high, amb_up, (y - 0.5) * 2.0);
-	}
-	// The diffuse share of the sky's light, as the engine's own (metal reflects, it does not scatter).
-	EMISSION = a.rgb * amb * (1.0 - metallic_v);
+	vec3 v = normalize(-VERTEX);
+	float n_y = (INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).y;
+	float r_y = (INV_VIEW_MATRIX * vec4(reflect(-v, NORMAL), 0.0)).y;
+	// The scattered light, for the face's direction (metal does not scatter).
+	vec3 fix = a.rgb * sky_fix(n_y) * (1.0 - metallic_v);
+	// The mirrored light, for the direction it mirrors: a face seen at a low angle, or metal,
+	// mirrors the grass below as much as it scatters it (Schlick's share, dulled by roughness).
+	vec3 f0 = mix(vec3(0.04), a.rgb, metallic_v);
+	float nv = clamp(dot(NORMAL, v), 0.0, 1.0);
+	vec3 f = f0 + (1.0 - f0) * pow(1.0 - nv, 5.0);
+	fix += f * sky_fix(r_y) * ref_scale * (1.0 - roughness_v * 0.6);
+	EMISSION = fix;
 }

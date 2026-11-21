@@ -417,9 +417,11 @@ func _light_stands() -> void:
 		var sky := stand_light(sm, e, 1.0)
 		for k in amb.size():
 			amb[k] = grey[k] - sky[k]
+	var e_amb := env.ambient_light_energy * env.ambient_light_sky_contribution
 	for m in _stand_mats:
 		for k in AMB_KEYS.size():
 			m.set_shader_parameter(AMB_KEYS[k], amb[k])
+		m.set_shader_parameter("ref_scale", 1.0 / e_amb if e_amb > 0.001 else 0.0)
 
 
 ## The sky's light (its cosine-weighted mean, as the engine lights a face from the sky) for a face
