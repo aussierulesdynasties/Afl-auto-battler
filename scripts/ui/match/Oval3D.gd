@@ -69,6 +69,8 @@ var film: MeshInstance3D  # the broadcast film look (_film)
 var anim: Oval3DAnim          # the animation session's controller (row 198)
 var umpires: Array = []        # [{node, anim, ring, role, k}]: the vignettes' umpire set
 var crowd: Oval3DCrowd
+## The ground's big screens and fence signs (Oval3DScreens): live score, GOAL card, replay.
+var screens: Oval3DScreens
 ## The ground the match is at (VignetteGround.ground_of), set before build(): its model when it
 ## has one (GroundModels), else the stand and crowd.
 var ground := ""
@@ -95,6 +97,9 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 		_ground_model(slug, "", home, away)
 	else:
 		_stands(home, away)
+	screens = Oval3DScreens.new()
+	add_child(screens)
+	screens.build(self, get_node_or_null("Ground"), Vector2(HALF_LEN + FENCE, HALF_WID + FENCE), home, away)
 	var scene: PackedScene = load(player_glb)
 	# Each club in its home guernsey, as the vignettes dress them (StoppageVignette._dress).
 	var kits := [_kit(GameDB.club_guernsey(home)), _kit(GameDB.club_guernsey(away))]

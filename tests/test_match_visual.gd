@@ -54,6 +54,7 @@ func run() -> void:
 	_t("_test_farewell")
 	_t("_test_match_ground")
 	_t("_test_ground_models")
+	_t("_test_ground_screens")
 	_t("_test_mcg_crowd", [res])
 	_t("_test_discs_apart")
 	_t("_test_clash_kit")
@@ -2192,6 +2193,48 @@ func _test_ground_models() -> void:
 			"The turf stops at the model's fence")
 	oval.queue_free()
 
+
+## The ground's big screens and fence signs (Oval3DScreens, row 202 2b): a match at a ground whose
+## model has screens lays a face over each, facing the ground, that shows the score, a goal and
+## the clock; the boards ring the fence in both clubs' colours; the inspector (no clubs) gets none.
+func _test_ground_screens() -> void:
+	var d := MatchDirector.new()
+	var res := _result(42)
+	d.setup(res, res["events"])
+	var oval := Oval3D.new()
+	oval.ground = "MCG"
+	(Engine.get_main_loop() as SceneTree).root.add_child(oval)
+	oval.build(d, "COL", "GEE")
+	var sc := oval.screens
+	_check(sc != null and sc.faces.size() == 2, "The MCG's two big screens are live (%d)" % (sc.faces.size() if sc else -1))
+	for f in sc.faces:
+		var mi := f as MeshInstance3D
+		var to_mid := -Vector3(mi.position.x, 0.0, mi.position.z).normalized()
+		_check(mi.transform.basis.z.dot(to_mid) > 0.6, "Each screen faces the ground (%s)" % mi.name)
+		_check(absf(mi.position.x) > MatchMotion.HALF_LEN, "Each screen is beyond the boundary (%s)" % mi.position)
+		var q := mi.mesh as QuadMesh
+		_check(q.size.x > 8.0 and q.size.x < 40.0 and q.size.y > 4.0 and q.size.y < 20.0,
+				"Each screen is a big screen's size (%s)" % q.size)
+	sc.show_score([7, 9], [4, 11], "Q3 18'")
+	_check(sc.goals == [7, 9] and sc.behinds == [4, 11] and sc.clock == "Q3 18'",
+			"The screens show the score and clock they are given")
+	sc.show_goal(1, "Max King", 12)
+	_check(int(sc.goal["side"]) == 1, "A goal puts the GOAL card up")
+	sc.frame(Oval3DScreens.GOAL_HOLD + 0.1, false, oval.camera)
+	_check(sc.goal.is_empty(), "The GOAL card comes down and the score is back")
+	_check(sc.signs != null and sc.signs.mesh.get_surface_count() == 2, "The fence signs ring the ground")
+	oval.queue_free()
+	_check(Oval3DScreens._is_screen_name("screen_off") and Oval3DScreens._is_screen_name("Screen2")
+			and not Oval3DScreens._is_screen_name("screen_leg") and not Oval3DScreens._is_screen_name("glass_screen"),
+			"Only a screen's face is taken for a screen, not its legs or a glass screen")
+	var plain := Oval3D.new()
+	(Engine.get_main_loop() as SceneTree).root.add_child(plain)
+	plain._ground_model("mcg")
+	var none := Oval3DScreens.new()
+	plain.add_child(none)
+	none.build(plain, plain.get_node_or_null("Ground"), GroundModels.MATCH_FENCE, "", "")
+	_check(none.faces.is_empty() and none.signs == null, "The ground inspector shows the model's own screens")
+	plain.queue_free()
 
 ## FL-003: the vignettes draw the MCG where the match is played there - a club's home
 ## game at its MCG home, and the Grand Final - and the plain ground everywhere else.
