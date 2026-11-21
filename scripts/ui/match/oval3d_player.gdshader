@@ -51,6 +51,10 @@ const float HEM_SHADOW = 0.35;     // how much the guernsey's hem darkens the sh
 const float HEM_SHADOW_M = 0.015;  // and how far down (1.5 cm)
 // The player's own number (0-99), per figure; -1 for none.
 instance uniform int number = -1;
+// Not a footballer (the cheer squad, Oval3DBanner): long trousers in this colour from the shorts
+// down, and plain shoes; alpha 0 (every player) leaves the kit as it is.
+instance uniform vec4 trousers : source_color = vec4(0.0);
+varying float leg_h;  // the body's height here, metres from his feet (as drawn, standing)
 
 // His skin's own detail, from the MetaHuman body's maps (assets/oval3d/skin): pores, knuckles,
 // veins, tendons, the shading of muscle. UV3 (CUSTOM0.xy, mh_to_glb_morph.py's uv_skin) holds
@@ -306,6 +310,7 @@ vec4 number_on_back(int n, vec3 g, vec3 base, bool mirrored, bool pic) {
 }
 
 void vertex() {
+	leg_h = VERTEX.y;
 	skin_uv = CUSTOM0.xy;
 	kit_edge = CUSTOM1;
 	kit_fore = CUSTOM2.x;
@@ -385,17 +390,24 @@ void fragment() {
 		shade = below * HEM_SHADOW * (1.0 - smoothstep(0.0, HEM_SHADOW_M, -kit_edge.z));
 	}
 	c = mix(c, shorts.rgb * (1.0 - shade), bottom);
+	float legs = 0.0;
+	if (trousers.a > 0.0) {
+		// Trousers from the shorts' hem down; the shoes under them.
+		legs = (1.0 - top) * (1.0 - smoothstep(0.80, 0.84, leg_h));
+		vec3 denim = trousers.rgb * (0.92 + 0.08 * sin(leg_h * 140.0));
+		c = mix(c, leg_h < 0.075 ? vec3(0.78, 0.78, 0.76) : denim, legs);
+	}
 	c = mix(c, jumper, top);
 	ALBEDO = c;
 	// Where bare skin shows: its own bumps and sheen. Kit and hair keep the flat cloth.
 	// (The kit as drawn: a guernsey cut past the body's old guernsey colours took the skin's sheen in patches.)
 	float bare = (1.0 - region(UV2.x)) * (1.0 - region(COLOR.a))
 		* (1.0 - region(COLOR.b + COLOR.a * step(0.02, COLOR.b))) * (1.0 - max(top, bottom))
-		* has_maps;
+		* has_maps * (1.0 - legs);
 	NORMAL_MAP = vec3(s_nrm.r, 1.0 - s_nrm.g, 1.0);
 	NORMAL_MAP_DEPTH = bare;
 	ROUGHNESS = mix(0.82, s_rough, bare);
 	// Soft skin light (oval3d_skin_light.gdshaderinc) on bare skin only: never on the guernsey or shorts.
-	skin_wrap = bare * (1.0 - top) * (1.0 - bottom);
+	skin_wrap = bare * (1.0 - top) * (1.0 - bottom) * (1.0 - legs);
 	spec_amt = 0.5;
 }

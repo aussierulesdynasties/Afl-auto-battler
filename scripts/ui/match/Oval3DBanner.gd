@@ -247,6 +247,7 @@ const SQUAD_SPOTS := [
 ]
 
 
+const SQUAD_LEGS := [Color(0.16, 0.21, 0.32), Color(0.2, 0.26, 0.38), Color(0.07, 0.07, 0.08), Color(0.33, 0.34, 0.36)]
 const SQUAD_HAIR := ["short_crop", "crew", "long", "tied_back", "curly_short", "shaggy", "shoulder_length", "buzz"]
 
 
@@ -254,14 +255,20 @@ func _build_squad(club: String, cols: Array) -> void:
 	var scene: PackedScene = load(Oval3D.player_glb)
 	if scene == null:
 		return
+	# Supporters' clothes: half in the club's guernsey, half in a plain top of its colour, with
+	# jeans, black or grey trackpants and white shoes (oval3d_player.gdshader's trousers).
 	var top: Color = cols[0]
-	var kit := oval._kit({"base": top, "design": "plain", "shorts": Color(0.1, 0.1, 0.12)})
+	var kits := [oval._kit(GameDB.club_guernsey(club)), oval._kit({"base": top, "design": "plain", "shorts": Color(0.1, 0.1, 0.12)})]
 	for i in range(SQUAD_SPOTS.size()):
 		var s: Array = SQUAD_SPOTS[i]
 		if str(s[3]) == "cheer" and oval.quality == Oval3DQuality.LOW:
 			continue     # Graphics: Low: those holding it up only (the phone budget)
-		var p: Dictionary = oval._player(scene, kit, cols, "")
+		var p: Dictionary = oval._player(scene, kits[i % 2], cols, "")
 		oval._number(p, -1)
+		var legs: Color = SQUAD_LEGS[_rng.randi() % SQUAD_LEGS.size()]
+		for mi in (p["node"] as Node3D).find_children("*", "MeshInstance3D", true, false):
+			if (mi as MeshInstance3D).has_meta("kit"):
+				(mi as GeometryInstance3D).set_instance_shader_parameter("trousers", legs)
 		oval.look(p, {"skin": _rng.randi_range(0, 4), "hair": _rng.randi_range(0, 5),
 				"hair_style": SQUAD_HAIR[_rng.randi() % SQUAD_HAIR.size()]})
 		var ring: Node3D = p["ring"]
@@ -482,6 +489,10 @@ func _move_paper(dt: float) -> void:
 			if state != 0:
 				continue
 			mm.set_instance_transform(k, xf)
+			# Still held: ragged where the strip beside it has gone.
+			var side := (1 if c > 0 and t >= float(_col_tear[c - 1]) else 0) \
+					| (2 if c < COLS - 1 and t >= float(_col_tear[c + 1]) else 0)
+			_mark(pc, k, 1.0, side)
 			continue
 		var since := t - tear
 		var brk := int(_col_break[c])
@@ -494,7 +505,8 @@ func _move_paper(dt: float) -> void:
 			mm.set_instance_transform(k, Transform3D(b, pos))
 			if state == 0:
 				pc["state"] = 1
-				mm.set_instance_custom_data(k, Color(float(c) / COLS, float(ROWS - 1 - r) / ROWS, 0.0, 0.0))
+				# Torn down both sides, and along the bottom where the strip broke.
+				_mark(pc, k, 0.0, 3 | (4 if r == brk else 0))
 			continue
 		if state < 2:
 			pc["state"] = 2
@@ -505,7 +517,7 @@ func _move_paper(dt: float) -> void:
 				pc["x"] = xf
 				pc["v"] = Vector3(_rng.randf_range(-1.2, 1.2), _rng.randf_range(0.6, 2.2), _rng.randf_range(2.0, 4.8))
 				pc["spin"] = Vector3(_rng.randf_range(-1, 1), _rng.randf_range(-1, 1), _rng.randf_range(-1, 1)).normalized() * _rng.randf_range(3.0, 8.0)
-			mm.set_instance_custom_data(k, Color(float(c) / COLS, float(ROWS - 1 - r) / ROWS, 0.0, 0.0))
+			_mark(pc, k, 0.0, 15 if bool(pc["loose"]) else (3 | (8 if r == brk - 1 else 0)))
 		if bool(pc.get("loose", false)):
 			_flutter(pc, k, dt, cell)
 			continue
@@ -525,10 +537,21 @@ func _move_paper(dt: float) -> void:
 		var twist := sin(c * 2.3) * 0.35 * minf(1.0, since * 2.0)
 		pos = top + Basis(Vector3.UP, twist) * (pos - top)
 		var bb := Basis(Vector3.UP, twist) * Basis(Vector3.RIGHT, -fold) * Basis.from_euler(crum * minf(1.0, since * 1.5))
-		if pos.y < 0.015:
+		if pos.y < 0.015 or top.y <= 0.021:
 			pos.y = 0.012 + 0.004 * float(r % 3)
 			bb = Basis(Vector3.UP, twist) * Basis(Vector3.RIGHT, -PI * 0.5) * Basis.from_euler(crum * 0.3)
+			_mark(pc, k, 0.0, int(pc.get("mask", 0)) | 16)
 		mm.set_instance_transform(k, Transform3D(bb, pos))
+
+
+## A piece's flags for the paper shader: held (the breeze ripples it) and its torn edges
+## (oval3d_banner.gdshader: 1 left, 2 right, 4 bottom, 8 top, 16 on the grass). Sent on change only.
+func _mark(pc: Dictionary, k: int, held: float, mask: int) -> void:
+	if int(pc.get("mask", -1)) == mask and float(pc.get("held", -1.0)) == held:
+		return
+	pc["mask"] = mask
+	pc["held"] = held
+	_paper.multimesh.set_instance_custom_data(k, Color(float(pc["c"]) / COLS, float(ROWS - 1 - int(pc["r"])) / ROWS, held, float(mask)))
 
 
 ## A loose scrap in the air: drifting down, turning over, then flat on the grass.
@@ -551,6 +574,7 @@ func _flutter(pc: Dictionary, k: int, dt: float, cell: Vector2) -> void:
 		o.y = 0.012 + _rng.randf() * 0.004
 		b = Basis(Vector3.UP, _rng.randf() * TAU) * Basis(Vector3.RIGHT, -PI * 0.5)
 		pc["state"] = 3
+		_mark(pc, k, 0.0, 31)
 	pc["x"] = Transform3D(b.orthonormalized(), o)
 	pc["v"] = v
 	pc["spin"] = sp * exp(-0.6 * dt)
