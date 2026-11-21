@@ -379,7 +379,7 @@ var _stand_mats: Array[ShaderMaterial] = []
 
 
 ## Gives a ground model's surfaces the stands' light (called once the model is built). Surfaces the
-## stand shader does not cover (see-through, vertex-coloured or glowing ones) keep their own.
+## stand shader does not cover (see-through or glowing ones) keep their own.
 func light_stands(model: Node) -> void:
 	var seen := {}
 	for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
@@ -387,14 +387,14 @@ func light_stands(model: Node) -> void:
 			continue
 		for i in mi.mesh.get_surface_count():
 			var m := mi.get_active_material(i) as StandardMaterial3D
-			if m == null or m.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED \
-					or m.vertex_color_use_as_albedo or m.emission_enabled or m.albedo_texture == null:
+			if m == null or m.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED or m.emission_enabled:
 				continue
 			if not seen.has(m):
 				var own := ShaderMaterial.new()
 				own.shader = STAND_SHADER
 				own.resource_name = m.resource_name    # its name still tells what it is (a screen's face)
 				own.set_shader_parameter("albedo_tex", m.albedo_texture)
+				own.set_shader_parameter("use_vcol", m.vertex_color_use_as_albedo)
 				own.set_shader_parameter("albedo_col", m.albedo_color)
 				own.set_shader_parameter("roughness_v", m.roughness)
 				own.set_shader_parameter("metallic_v", m.metallic)
