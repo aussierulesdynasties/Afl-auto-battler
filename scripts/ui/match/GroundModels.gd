@@ -213,6 +213,9 @@ static func instantiate(slug: String, base := "") -> Node3D:
 	var bd := backdrop(slug, dir)
 	if bd != null:
 		root.add_child(bd)
+		for n: String in BACKDROP_HIDES.get(slug, []):   # the model's own ground, where the scene's takes over
+			for mi in root.find_children(n + "*", "MeshInstance3D", true, false):
+				(mi as MeshInstance3D).visible = false
 	return root
 
 
@@ -339,6 +342,10 @@ static func backdrop(slug: String, base := "") -> Node3D:
 		root.add_child(model)
 	return root
 
+
+## A model's own far ground, hidden when its backdrop is drawn (the two would fight for a pixel):
+## Adelaide's model carries a 6 km grass plane.
+const BACKDROP_HIDES := {"adelaide": ["ao_ground"]}
 
 const BACKDROP_SHADER := preload("res://scripts/ui/match/oval3d_backdrop.gdshader")
 
