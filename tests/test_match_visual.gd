@@ -2239,13 +2239,13 @@ func _test_graphics_levels(res: Dictionary) -> void:
 		for ch: Dictionary in oval.crowd._chunks:
 			people += (ch["people"] as Array).size()
 		if level == Oval3DQuality.HIGH:
-			_check(people > 0 and seat_casting == slices and vp.scaling_3d_scale == 1.0
+			_check(people > 0 and seat_casting == slices and vp.scaling_3d_scale == 1.0 and vp.msaa_3d == Viewport.MSAA_4X
 					and oval.turf.blades_on and oval.crowd.mix_d == Oval3DCrowd.MIX_D,
-					"High: 3D people within 55 m, the seats cast shadows, full size (%d people batches)" % people)
+					"High: 3D people within 55 m, the seats cast shadows, full size, edges smoothed 4x (%d people batches)" % people)
 		else:
 			var first: MultiMeshInstance3D = oval.crowd._chunks[0]["cards"]
 			_check(people == 0 and first.visibility_range_begin == 0.0 and seat_casting == 0
-					and vp.scaling_3d_scale < 1.0 and not oval.turf.blades_on,
+					and vp.scaling_3d_scale < 1.0 and not oval.turf.blades_on and vp.msaa_3d == Viewport.MSAA_DISABLED,
 					"Low: every supporter a card, no seat shadows, no blades, a smaller picture (%d casting)" % seat_casting)
 		vp.queue_free()
 

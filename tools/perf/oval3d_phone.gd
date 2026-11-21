@@ -8,7 +8,7 @@ extends Node
 ## table stays on screen (screenshot it). On a PC or in the cloud (a software GPU there: only the
 ## counts, memory and the ratios of the times carry over to a phone):
 ##   godot --path . --rendering-method mobile tools/perf/Oval3DPhone.tscn -- [grounds=mcg,marvel]
-##       [levels=high,low] [size=1080x1240] [measure=5] [out=rows.json] [shots=DIR] [quit]
+##       [levels=high,low] [size=1080x1240] [measure=5] [out=rows.json] [shots=DIR] [aa=msaa2] [quit]
 ## shots=DIR saves each ground and level's last measured frame as DIR/<ground>_<level>.png.
 ## Columns: frame = wall time a frame (mean, then the worst 5%); proc = the whole frame's process
 ## time; cpu / gpu = the renderer's own measured time; draws and ktris = what the frame drew;
@@ -146,6 +146,15 @@ func _run() -> void:
 			jf.store_string(JSON.stringify({"head": head.strip_edges(), "rows": data}, " "))
 	if "quit" in OS.get_cmdline_user_args():
 		get_tree().quit()
+
+
+## aa=none|msaa2|msaa4|fxaa|msaa2+fxaa overrides the level's edge smoothing, to cost each one.
+func _aa(vp: Viewport) -> void:
+	var aa := _arg("aa", "")
+	if aa == "":
+		return
+	vp.msaa_3d = Viewport.MSAA_4X if "msaa4" in aa else (Viewport.MSAA_2X if "msaa2" in aa else Viewport.MSAA_DISABLED)
+	vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA if "fxaa" in aa else Viewport.SCREEN_SPACE_AA_DISABLED
 
 
 func _play(secs: float, acc, director, oval: Oval3D, tv: Oval3DBroadcast) -> void:
