@@ -10176,6 +10176,11 @@ func _decide_fa(p: Dictionary) -> String:
 			continue
 		var code := str(o["club"])
 		var list: Array = season.lists.get(code, [])
+		# The opening draft's picks a club has already made count toward its
+		# 44: a rival picking ahead of your first pick drafts before the first
+		# off-season's signings (choose_real_club, close_first_offseason).
+		if draft != null and draft.intake_mode:
+			list = list + (draft.club_lists.get(code, []) as Array)
 		var why_not := RookieList.add_block(list, "senior")
 		var no_spot := why_not != ""
 		if no_spot or int(o["salary"]) > _cap_room_of(code):
