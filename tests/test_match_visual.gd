@@ -2226,7 +2226,7 @@ func _test_graphics_levels(res: Dictionary) -> void:
 				seat_casting += 1 if g.cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_OFF else 0
 			elif str(g.name).begins_with("bowl"):
 				bowl_casting += 1 if g.cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_OFF else 0
-		_check(slices >= GroundModels.SEAT_SECTORS / 2 and seats > 70000 and bowl_casting > 0,
+		_check(slices >= GroundModels.SEAT_SECTORS / 2 and seats > 55000 and bowl_casting > 0,
 				"%s: the MCG's %d seats are drawn in %d slices round the bowl; the bowl casts its shade" % [level, seats, slices])
 		var people := 0
 		for ch: Dictionary in oval.crowd._chunks:
@@ -2338,7 +2338,9 @@ func _test_mcg_crowd(res: Dictionary) -> void:
 	for mi in oval.find_child("Ground", false, false).get_children():
 		if mi is MultiMeshInstance3D and str(mi.name).begins_with("seats_"):
 			seats += (mi as MultiMeshInstance3D).multimesh.instance_count
-	_check(crowd != null and crowd.get_parent().name == "Ground" and seats > 70000,
+	# About 60,000 since the seat rule (seats only on a sloped row with a floor, in the open or
+	# under at least 2.6 m of headroom) took the ones the model had floating or under a tier.
+	_check(crowd != null and crowd.get_parent().name == "Ground" and seats > 55000,
 			"The MCG has its crowd, on the model (%d seats)" % seats)
 	_check(crowd.supporters > seats * 0.88 and crowd.supporters < seats * 0.96,
 			"Most of the MCG's seats are taken, a few left empty (%d of %d)" % [crowd.supporters, seats])
