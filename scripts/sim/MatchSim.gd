@@ -2625,6 +2625,13 @@ const D50_CHIP := 0.35
 const D50_CHIP_MARK := 2.8
 const D50_CHIP_MIN := -3.0
 const D50_CHIP_MAX := 6.0
+## Ground gained by a kick and by a handball, against the chain's mean gain (row 201
+## gap 6). Every disposal gained the same, so a handball went as far as a kick and the
+## kicks averaged 18 m (real 25, Spencer 2019). With these, and the shorter run of
+## chains in Ratings.FLOW, kicks average about 24 m and a side's kicks and disposals
+## a game come back inside real AFL (217 and 351 on a 200-match screen; real 212, 367).
+const KICK_GAIN := 2.2
+const HANDBALL_GAIN := 0.2
 
 
 ## A named constant, or its audit override (tune).
@@ -3872,6 +3879,8 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		if _burst(side, "push"):
 			gain *= PUSH_GAIN
 		gain *= rng.randf_range(0.45, 1.75)
+		# A kick goes further than a handball (row 201 gap 6).
+		gain *= _tv("KICK_GAIN", KICK_GAIN) if disposal_kind == "kick" else _tv("HANDBALL_GAIN", HANDBALL_GAIN)
 		if disposal_kind == "kick":
 			if chip:
 				# Short and square: it stays in defence.
