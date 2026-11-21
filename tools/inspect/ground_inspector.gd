@@ -201,14 +201,19 @@ func _scan(worktrees: bool) -> void:
 ## name and size to one already listed (the same file in another worktree) is left out.
 func _scan_checkout(root: String, label: String, seen: Dictionary) -> void:
 	var tag := "" if label == "" else "  [%s]" % label
+	var names := {}
+	for n in GroundModels.grounds():
+		names[GroundModels.slug_for(n)] = n
 	for d: String in _subdirs(root.path_join(MATCH_ROOT)):
 		var base := root.path_join(MATCH_ROOT).path_join(d) + "/"
-		var glb := base + d + ".glb"
-		if not FileAccess.file_exists(glb) or _seen(seen, [glb]):
+		# <slug>.glb or its pieces <slug>_part1.glb ... (GroundModels.files), as the match finds them.
+		var glbs := Array(GroundModels.files(d, base))
+		if glbs.is_empty() or _seen(seen, glbs):
 			continue
-		var res_base := "res://%s/%s/" % [MATCH_ROOT, d] if label == "" else base
-		grounds.append({"name": "%s  (in the match)%s" % [d.to_upper(), tag], "kind": "match",
-				"paths": [glb], "dir": d, "base": res_base})
+		var res_base := "" if label == "" else base
+		var title := str(names.get(d, d.to_upper()))
+		grounds.append({"name": "%s  (in the match)%s" % [title, tag], "kind": "match",
+				"paths": glbs, "dir": d, "base": res_base})
 	for r in REVIEW_ROOTS:
 		var found: Array = []
 		_find_glbs(root.path_join(r), found)
