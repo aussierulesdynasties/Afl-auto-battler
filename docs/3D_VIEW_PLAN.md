@@ -263,6 +263,11 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 | The Gabba | under way, not yet pushed (2026-11-19) | |
 | Barossa Park, Traeger Park, Sky Stadium, Jiangwan Stadium, Hands Oval, Blacktown, Summit Park, Macquarie Point | to confirm: no work found in the repo or its local worktrees | |
 
+Each ground's turf (2026-11-21, asked for by the director as part of 2b): its own mowing cut (stripes across or
+along the ground, checkerboard, diagonal or diamonds, 10-14 m bands) and grass (couch at the warm-climate grounds,
+rye in the south), `Oval3DTurf.MOWING`; the AFL markings are drawn from the ground's own size. A first draft for his
+fly-through review like the rest of the ground: curators cut a new pattern each week, so the cut is a house style.
+
 ### Open questions for the director (3D only)
 
 - Row 207: when a stat card appears and for how long; the journalists' posts (who, what, when, where).

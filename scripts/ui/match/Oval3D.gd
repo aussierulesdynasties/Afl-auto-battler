@@ -470,6 +470,7 @@ func _stands(home: String, away: String) -> void:
 func _ground_model(slug: String, base := "", home := "", away := "") -> void:
 	var root := GroundModels.instantiate(slug, base)
 	add_child(root)
+	turf.set_ground(slug)
 	_turf_mat.set_shader_parameter("fence_clip", GroundModels.MATCH_FENCE)
 	if home == "":
 		return

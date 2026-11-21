@@ -2923,6 +2923,29 @@ func _check_turf3d(oval: Oval3D) -> void:
 				and turf.env.tonemap_exposure >= 1.0,
 				"%s %s: the turf is green and the weather's sheen is set (%s, wet %.0f)" % [look[1], look[0], str(g), wet])
 	turf.apply("", VignetteKickoff.DAY)
+	# Each ground's own cut and grass (Oval3DTurf.MOWING); the grass shifts the day's colour, the
+	# weather and light still set it; a ground with no row, or the game's own oval, the default.
+	var keep := turf.ground
+	var known := GroundModels.GROUNDS.values()
+	var rows_ok := true
+	for slug: String in Oval3DTurf.MOWING:
+		var m: Array = Oval3DTurf.MOWING[slug]
+		rows_ok = rows_ok and slug in known and int(m[0]) >= Oval3DTurf.ACROSS and int(m[0]) <= Oval3DTurf.DIAMONDS \
+				and float(m[1]) >= 8.0 and float(m[1]) <= 16.0 and Oval3DTurf.GRASS_TINT.has(m[2])
+	_check(rows_ok, "Every ground's cut is a real ground with a pattern, an 8-16 m band and a grass")
+	turf.set_ground("")
+	var plain: Color = turf.mat.get_shader_parameter("grass_a")
+	turf.set_ground("people_first")
+	var couch: Color = turf.mat.get_shader_parameter("grass_a")
+	_check(int(turf.mat.get_shader_parameter("mow_pattern")) == Oval3DTurf.DIAMONDS
+			and couch.g > couch.r and couch.r > plain.r and couch.b < plain.b,
+			"People First Stadium is cut in diamonds on warmer couch grass (%s from %s)" % [str(couch), str(plain)])
+	turf.set_ground("no_such_ground")
+	_check(int(turf.mat.get_shader_parameter("mow_pattern")) == Oval3DTurf.ACROSS
+			and is_equal_approx(float(turf.mat.get_shader_parameter("mow_width")), 12.0)
+			and turf.mat.get_shader_parameter("grass_a") == plain,
+			"A ground with no cut of its own takes 12 m stripes across the ground and the plain grass")
+	turf.set_ground(keep)
 	var before := _wear_total(turf)
 	for i in range(60):
 		turf._process(1.0 / 30.0)
