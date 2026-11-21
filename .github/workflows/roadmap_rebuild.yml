@@ -1,0 +1,82 @@
+# Roadmap close PRs all edit the same TODO.md lines (row 202 gets most of them), so when
+# several queue at once the first to land leaves the rest CONFLICTING, and the bot never
+# rebased them: 87 piled up by 2026-11-20 (#1915). After every push to main this rebuilds
+# each conflicting roadmap-close/pr-N branch from the new main: it re-runs
+# tools/roadmap_close.py with source PR #N's body and title, force-pushes the bot's own
+# branch, turns auto-merge back on and approves the held Tests run, as roadmap_close.yml
+# does for a new close PR. A PR whose rows are already gone (nothing left to change) is
+# closed. Only branches named roadmap-close/* with the label "roadmap" are touched.
+name: Roadmap rebuild
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: roadmap-close
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  actions: write
+  pull-requests: write
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Rebuild conflicting roadmap PRs on main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -u
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          prs=$(gh pr list --state open --label roadmap --limit 200 --json number,headRefName \
+            --jq '.[] | select(.headRefName | startswith("roadmap-close/pr-")) | "\(.number) \(.headRefName)"')
+          [ -z "$prs" ] && { echo "No open roadmap PRs."; exit 0; }
+          echo "$prs" | while read -r num branch; do
+            # GitHub works mergeability out lazily: ask again while it is UNKNOWN.
+            state=UNKNOWN
+            for _ in 1 2 3 4 5 6; do
+              state=$(gh pr view "$num" --json mergeable --jq .mergeable)
+              [ "$state" != "UNKNOWN" ] && break
+              sleep 5
+            done
+            [ "$state" = "CONFLICTING" ] || { echo "#$num: $state, left alone"; continue; }
+            src=${branch#roadmap-close/pr-}
+            gh api "repos/$GITHUB_REPOSITORY/pulls/$src" --jq '.body // ""' > "$RUNNER_TEMP/body.txt"
+            title=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$src" --jq .title)
+            git checkout -q -B "$branch" origin/main
+            ids=$(python3 tools/roadmap_close.py --body-file "$RUNNER_TEMP/body.txt" --todo docs/TODO.md \
+              --todo docs/TODO_RULINGS.md --pr "$src" --title "$title")
+            if [ -z "$ids" ] || git diff --quiet; then
+              gh pr close "$num" --comment "Nothing left to change on main for #$src (its rows are gone or already noted). Closed by the Roadmap rebuild action."
+              echo "#$num: nothing to change, closed"
+              continue
+            fi
+            case "$ids" in *,*) word="rows" ;; *) word="row" ;; esac
+            git add docs/TODO.md docs/TODO_RULINGS.md
+            git commit -q -m "Roadmap: update $word $ids (#$src)"
+            git push -q -f origin "HEAD:refs/heads/$branch"
+            gh pr merge "$num" --auto --squash || echo "::warning::#$num: could not turn auto-merge back on"
+            gh workflow run tests.yml --ref "$branch" -f changed_files='docs/TODO.md docs/TODO_RULINGS.md'
+            echo "#$num: rebuilt on $(git rev-parse --short origin/main)"
+            head=$(git rev-parse HEAD)
+            for _ in 1 2 3 4 5 6 7 8 9 10 11 12; do
+              run=$(gh run list --branch "$branch" --event pull_request --json databaseId,conclusion,headSha \
+                --jq "[.[] | select(.conclusion == \"action_required\" and .headSha == \"$head\")][0].databaseId // empty")
+              if [ -n "$run" ]; then
+                gh api -X POST "repos/$GITHUB_REPOSITORY/actions/runs/$run/approve" >/dev/null \
+                  && echo "Approved Tests run $run" \
+                  || echo "::warning::Could not approve Tests run $run; approve it by hand or #$num stays BLOCKED"
+                break
+              fi
+              sleep 10
+            done
+          done
