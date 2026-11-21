@@ -158,6 +158,21 @@ def walls(m, P, ztop_fn, zbot, col, step=2.0, kind='concrete', skip=None):
     m.add(V, F, np.tile(col, (len(V), 1)), np.r_[np.c_[L, np.full(n, zbot)], np.c_[L, zt]], kind)
 
 
+def struts(m, P, zf, sp):
+    """white steel struts in pairs leaning apart up the outside of a wall (the Riverbank stand's louvred upper
+    storeys, south gate photo): every `every` m along the wall, from z0 to the stand top, `out` m proud of it"""
+    B = densify(P, 1.0); L = np.r_[0, np.cumsum(np.linalg.norm(np.diff(B, axis=0), axis=1))]
+    flip = 1.0 if ccw(P) else -1.0
+    for s0 in np.arange(sp['every'] / 2, L[-1], sp['every']):
+        i = int(np.searchsorted(L, s0)); i = min(max(i, 1), len(B) - 1)
+        t = B[i] - B[i - 1]; t = t / (np.linalg.norm(t) + 1e-9); nrm = np.array([t[1], -t[0]]) * flip
+        base = B[i] + nrm * sp['out']; top_z = float(zf(B[i:i + 1])[0]) - 0.3
+        if top_z < sp['z0'] + 3: continue
+        for sg in (-1, 1):
+            a = (*(base + t * sg * 0.4), sp['z0']); b = (*(base + t * sg * sp['lean']), top_z)
+            box(m, a, b, sp['w'], sp['col'], 'steel')
+
+
 def box(m, a, b, w, col, kind):
     """square beam of width w from point a to point b"""
     a, b = np.array(a, float), np.array(b, float); d = b - a; d /= np.linalg.norm(d)
@@ -550,6 +565,10 @@ for st in S['stands']:
         z0 = st['open_back']['z0']
         walls(stands, P, lambda B: np.minimum(zf(B), z0), 0.0, st['wall'], kind=st.get('wall_kind', 'concrete'), skip=st.get('wall_skip'))
         open_back(stands, P, zf, z0, st)
+    elif st.get('wall_bands'):  # river (south gate photo): the outside wall in storeys, louvres and struts above
+        for z0, z1, col, kind in st['wall_bands']:
+            walls(stands, P, lambda B, z1=z1: np.minimum(zf(B), z1), z0, col, kind=kind, skip=st.get('wall_skip'))
+        struts(stands, P, zf, st['struts'])
     else:
         walls(stands, P, zf, 0.0, st['wall'], kind=st.get('wall_kind', 'concrete'), skip=st.get('wall_skip'))
 for st, PL, le in low_parts:

@@ -31,7 +31,11 @@ def mat(k):
     MATS[k] = m; return m
 
 
+# ground.ply (gen.py's flat lawn, 6 km a side) stays out: the land round the ground is GroundModels.SURROUNDS,
+# painted from OpenStreetMap (surrounds.py), which needs nothing of the model's past its walls.
 for f in sorted(glob.glob(os.path.join(SRC, '*.ply'))):
+    if os.path.basename(f) == 'ground.ply':
+        continue
     bpy.ops.wm.ply_import(filepath=f); o = bpy.context.selected_objects[0]; me = o.data
     o.name = me.name = 'ao_' + os.path.splitext(os.path.basename(f))[0]
     ca = me.color_attributes[0]; ca.name = 'Col'
@@ -60,8 +64,8 @@ for f in sorted(glob.glob(os.path.join(SRC, '*.ply'))):
 
 # The model leaves the field out (a hole in the lawn inside the boundary): a grass floor under it, 0.3 m down, so any
 # gap between the match's turf and the stands shows grass, never the sky under the world.
-me = bpy.data.meshes.new('ao_floor'); H = 160.0
-me.from_pydata([(-H, -H, -0.3), (H, -H, -0.3), (H, H, -0.3), (-H, H, -0.3)], [], [(0, 1, 2, 3)])
+me = bpy.data.meshes.new('ao_floor'); H = 107.0   # a disc just past where the surrounds' map starts (105 m)
+me.from_pydata([(H * math.cos(a * math.pi / 32), H * math.sin(a * math.pi / 32), -0.3) for a in range(64)], [], [tuple(range(64))])
 ca = me.color_attributes.new('Col', 'FLOAT_COLOR', 'POINT'); g = [pow(c / 255, 2.2) for c in (88, 104, 56)]
 for e in ca.data: e.color = (*g, 1.0)
 uv = me.uv_layers.new(); tu, tv = TILES[7]
@@ -85,7 +89,7 @@ for l in L[h + 1 + nv:h + 1 + nv + nf]:
 (np.array(tri) @ C.T).astype('<f4').tofile(os.path.join(out, 'seat_tmpl.bin'))
 D = [np.load(os.path.join(SRC, 'inst', f)) for f in ('seats.npz', 'seats_hill.npz') if os.path.exists(os.path.join(SRC, 'inst', f))]
 P, Y, CC = (np.concatenate([d[k] for d in D]) for k in ('pos', 'yaw', 'col'))   # the stands' seats and the Hill's (hill.py)
-NAME = {(35, 55, 77): 'seat_ao_navy', (70, 70, 75): 'seat_ao_charcoal', (95, 105, 118): 'seat_ao_slate',
+NAME = {(35, 55, 77): 'seat_ao_navy', (70, 70, 75): 'seat_ao_charcoal', (100, 116, 114): 'seat_ao_slate',
         (95, 118, 112): 'seat_ao_sage', (150, 45, 50): 'seat_ao_red', (200, 62, 36): 'seat_ao_orange'}
 for f in glob.glob(os.path.join(out, 'seats_*.bin')): os.remove(f)
 for key, nm in NAME.items():
