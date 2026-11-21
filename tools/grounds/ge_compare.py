@@ -10,7 +10,6 @@ the field centre}. Our camera is the same: target - d * (sin t sin h, sin t cos 
 then through the match's fit (GroundModels.fit_transform) into match metres. Looks only."""
 import json, math, os, sys
 
-FENCE = (86.3 + 6.0, 67.4 + 6.0)   # GroundModels.MATCH_FENCE
 UNDER_TURF = 0.1
 # Per ground: the model origin's lat/lon (model x east, -z north), Google Earth's field level (m above sea level)
 # and the match fit (GroundModels.FIT: centre x, centre z, floor y, long axis deg, half length, half width).
@@ -24,7 +23,7 @@ FOV = 23.5
 def to_match(g, p):
     """Model metres (x east, y up, z -north) -> match metres."""
     cx, cz, fy, ang, hl, hw = g["fit"]
-    sx, sz = FENCE[0] / hl, FENCE[1] / hw
+    sx, sz = 1.0, 1.0   # every ground plays at its own size (#1949): nothing stretched
     a = math.radians(ang)
     x, y, z = p[0] - cx, p[1] - fy, p[2] - cz
     rx, rz = x * math.cos(a) + z * math.sin(a), -x * math.sin(a) + z * math.cos(a)
