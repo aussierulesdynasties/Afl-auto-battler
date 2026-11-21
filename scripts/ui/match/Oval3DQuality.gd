@@ -27,16 +27,18 @@ const LEVELS := [LOW, MEDIUM, HIGH]
 ##   lod           mesh detail threshold (Viewport.mesh_lod_threshold): higher drops detail sooner
 ##   scale         share of the screen's pixels the 3D picture is drawn at (stretched to fit)
 ##   blades        the standing grass blades round the ball
+##   rain          drops in the air on a wet day (rule 2.83: when it rains, rain falls on screen, so
+##                 every level keeps some; High is the approved prototype's count)
 const PRESETS := {
 	HIGH: {"shadow_atlas": 4096, "shadow_filter": RenderingServer.SHADOW_QUALITY_SOFT_HIGH, "splits": 4,
 			"seat_shadows": true, "stand_shade": true, "people_d": 55.0, "lod": 1.0, "scale": 1.0,
-			"blades": true},
+			"blades": true, "rain": 40000},
 	MEDIUM: {"shadow_atlas": 2048, "shadow_filter": RenderingServer.SHADOW_QUALITY_SOFT_LOW, "splits": 4,
 			"seat_shadows": false, "stand_shade": true, "people_d": 30.0, "lod": 2.0, "scale": 1.0,
-			"blades": true},
+			"blades": true, "rain": 20000},
 	LOW: {"shadow_atlas": 2048, "shadow_filter": RenderingServer.SHADOW_QUALITY_SOFT_LOW, "splits": 2,
 			"seat_shadows": false, "stand_shade": false, "people_d": 0.0, "lod": 4.0, "scale": 0.75,
-			"blades": false},
+			"blades": false, "rain": 10000},
 }
 
 
