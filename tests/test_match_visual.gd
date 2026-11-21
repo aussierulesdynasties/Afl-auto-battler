@@ -2199,7 +2199,7 @@ func _test_ground_models() -> void:
 ## Settings > Graphics (Oval3DQuality): High is the look as built; Low draws every supporter as a
 ## card (no 3D people built), takes the seats' own shadows and the blades away, and draws the
 ## picture at three-quarter size. At every level the seats are drawn in slices round the bowl, so
-## the camera draws only those in view.
+## the camera draws only those in view. Rain falls at both, Low with fewer drops.
 func _test_graphics_levels(res: Dictionary) -> void:
 	for level in [Oval3DQuality.HIGH, Oval3DQuality.LOW]:
 		var d := MatchDirector.new()
@@ -2239,6 +2239,22 @@ func _test_graphics_levels(res: Dictionary) -> void:
 			_check(people == 0 and first.visibility_range_begin == 0.0 and seat_casting == 0
 					and vp.scaling_3d_scale < 1.0 and not oval.turf.blades_on,
 					"Low: every supporter a card, no seat shadows, no blades, a smaller picture (%d casting)" % seat_casting)
+		# A wet day (rule 2.83): rain falls at every level, fewer drops lower down; the far stands
+		# grey in it, the men look wet, the towers are on by day. A dry day after it takes all that away.
+		_check(oval.turf.rain == null and float(RenderingServer.global_shader_parameter_get("oval_wet")) == 0.0,
+				"%s: no rain and dry kit on a fine day" % level)
+		oval.turf.apply(VignetteWeather.WET, VignetteKickoff.DAY)
+		var rain: Oval3DRain = oval.turf.rain
+		_check(rain != null and rain.amount == int(Oval3DQuality.preset(level)["rain"]) and rain.get_parent() == oval
+				and oval._env.fog_enabled and float(RenderingServer.global_shader_parameter_get("oval_wet")) == 1.0
+				and oval.turf.fill.visible,
+				"%s wet: %d drops falling, haze, wet kit, the towers on" % [level, rain.amount if rain else -1])
+		_check(((rain.draw_pass_1 as QuadMesh).material as BaseMaterial3D).render_priority == Material.RENDER_PRIORITY_MAX,
+				"%s wet: the rain is drawn over the match film, not wiped by it" % level)
+		oval.turf.apply("", VignetteKickoff.DAY)
+		_check(oval.turf.rain == null and not oval._env.fog_enabled
+				and float(RenderingServer.global_shader_parameter_get("oval_wet")) == 0.0 and not oval.turf.fill.visible,
+				"%s: a fine day after a wet one has no rain, haze or wet kit" % level)
 		vp.queue_free()
 
 

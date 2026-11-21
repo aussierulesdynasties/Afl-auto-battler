@@ -4,6 +4,8 @@ extends SceneTree
 ##   --out PREFIX  (default match3d)   --size WxH (default 540x1200, a phone's shape)
 ##   --club CODE (default FRE)   --seed N (default 7)   --at a,b,c  seconds of play (default 4,12,24)
 ##   --plan KEY  the coach's game plan (e.g. defensive: the press wash shows)
+##   --weather W the day's look instead of the match's own (wet, perfect, hot, windy; looks only)
+##   --time T    day, twilight or night instead of the match's own   --quality Q  low, medium, high
 ##   --replay    instead of --at: one frame 1 s into the first goal's replay (rule 2.96)
 ##   --film N    instead of --at: N seconds of the match screen, frame by frame, for Godot's movie
 ##               writer (run with --write-movie OUT.avi --fixed-fps 30); the coach taps the picture
@@ -30,6 +32,9 @@ func _run() -> void:
 	var seed := 7
 	var at := [4.0, 12.0, 24.0]
 	var plan := ""
+	var weather := ""
+	var tod := ""
+	var quality := ""
 	var replay := false
 	var film := 0.0
 	var windows: Array = []  # [a, b] frame ranges of the film saved as PNGs
@@ -51,6 +56,12 @@ func _run() -> void:
 					windows.append([int(w.split("-")[0]), int(w.split("-")[1])])
 			"--plan":
 				plan = str(a[i + 1])
+			"--weather":
+				weather = str(a[i + 1])
+			"--time":
+				tod = str(a[i + 1])
+			"--quality":
+				quality = str(a[i + 1])
 			"--club":
 				club = str(a[i + 1])
 			"--seed":
@@ -85,6 +96,17 @@ func _run() -> void:
 	root.add_child(scene)
 	await _frames(20)
 	var pitch = scene._pitch
+	if quality != "":
+		pitch._oval3d.quality = quality
+		Oval3DQuality.apply_viewport(quality, pitch._vp3d)
+	if weather != "" or tod != "":
+		if tod != "":
+			pitch.time_override = tod
+		var w: String = weather if weather != "" else str(pitch.result.get("weather", ""))
+		pitch._oval3d.turf.apply(w, pitch.time_of_day(w))
+		await _frames(30)
+		var rn = pitch._oval3d.turf.rain
+		print("WEATHER ", w, " ", pitch.time_of_day(w), ": ", rn.amount if rn != null else 0, " drops falling")
 	print("3D on: ", pitch._oval3d != null, " viewport ", pitch._vp3d.size if pitch._vp3d else Vector2i.ZERO,
 			" pitch ", pitch.size)
 	if film > 0.0:

@@ -49,6 +49,13 @@ varying vec2 kit_uw;
 varying vec3 kit_g;  // on that skin, the nearest guernsey corner's pattern coordinates
 const float HEM_SHADOW = 0.35;     // how much the guernsey's hem darkens the shorts just under it
 const float HEM_SHADOW_M = 0.015;  // and how far down (1.5 cm)
+// A wet day (Oval3DTurf.apply sets oval_wet, 0 dry .. 1 raining): soaked cloth's colour and sheen,
+// wet hair's colour, and how much smoother wet skin reads.
+global uniform float oval_wet;
+const float WET_CLOTH = 0.8;
+const float WET_CLOTH_ROUGH = 0.55;
+const float WET_HAIR = 0.75;
+const float WET_SKIN_ROUGH = 0.7;
 // The player's own number (0-99), per figure; -1 for none.
 instance uniform int number = -1;
 
@@ -386,6 +393,11 @@ void fragment() {
 	}
 	c = mix(c, shorts.rgb * (1.0 - shade), bottom);
 	c = mix(c, jumper, top);
+	// A wet day (rule 2.83, Oval3DTurf sets oval_wet): soaked cloth goes a shade darker and
+	// holds a dull sheen; wet hair darkens; wet skin shines more. Looks only.
+	float cloth = clamp(max(top, bottom) + region(COLOR.b + COLOR.a * step(0.02, COLOR.b)), 0.0, 1.0);
+	c *= mix(1.0, mix(1.0, WET_CLOTH, cloth), oval_wet);
+	c *= mix(1.0, mix(1.0, WET_HAIR, region(UV2.x) * (1.0 - cloth)), oval_wet);
 	ALBEDO = c;
 	// Where bare skin shows: its own bumps and sheen. Kit and hair keep the flat cloth.
 	// (The kit as drawn: a guernsey cut past the body's old guernsey colours took the skin's sheen in patches.)
@@ -394,7 +406,7 @@ void fragment() {
 		* has_maps;
 	NORMAL_MAP = vec3(s_nrm.r, 1.0 - s_nrm.g, 1.0);
 	NORMAL_MAP_DEPTH = bare;
-	ROUGHNESS = mix(0.82, s_rough, bare);
+	ROUGHNESS = mix(mix(0.82, WET_CLOTH_ROUGH, oval_wet), s_rough * mix(1.0, WET_SKIN_ROUGH, oval_wet), bare);
 	// Soft skin light (oval3d_skin_light.gdshaderinc) on bare skin only: never on the guernsey or shorts.
 	skin_wrap = bare * (1.0 - top) * (1.0 - bottom);
 	spec_amt = 0.5;
