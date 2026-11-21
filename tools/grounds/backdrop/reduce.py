@@ -6,7 +6,7 @@ ground under the stadium. Big meshes are decimated, the trees thinned with dista
 bake scaled to tex_px, and everything cut into wedges round the ground (see SECTORS).
 Needs the scene's textures where the .blend points (//../../tex, //../../data/<ground>/prep).
 """
-import bpy, bmesh, sys, os, numpy as np, math
+import bpy, bmesh, sys, os, re, numpy as np, math
 a = sys.argv[sys.argv.index('--') + 1:]
 SRC, OUT = a[0], a[1]
 TEX = int(a[2]) if len(a) > 2 else 4096
@@ -113,10 +113,15 @@ if INNER > 0.0:
                 w.z = min(w.z, -5.0)
             v.co = Mi @ w
 
-# trees: clumps thinned with distance, kept ones grown so the canopy keeps its cover
-for o in [o for o in bpy.data.objects if o.name.startswith('bg_trees')]:
+# trees: clumps thinned with distance, kept ones grown so the canopy keeps its cover. With
+# BG_BUDGET (triangles for the whole backdrop) the mid and far keep shares shrink together so the
+# trees take at most 45% of it, and the other big flat meshes are decimated to fit the rest.
+BUDGET = int(os.environ.get('BG_BUDGET', '0'))
+def _tris_all(objs): return sum(tris(o) for o in objs)
+tree_objs = [o for o in bpy.data.objects if o.name.startswith('bg_trees')]
+scans = []
+for o in tree_objs:
     bm = bmesh.new(); bm.from_mesh(o.data)
-    lid = bm.faces.layers.int.new('cid') if False else None
     comps = []; seen = set()
     bm.verts.ensure_lookup_table()
     for v in bm.verts:
@@ -128,22 +133,51 @@ for o in [o for o in bpy.data.objects if o.name.startswith('bg_trees')]:
                 y = e.other_vert(x)
                 if y.index not in seen: seen.add(y.index); st.append(y)
         comps.append(c)
+    scans.append((o, bm, comps))
+zone = [0, 0, 0]
+for o, bm, comps in scans:
+    per = tris(o) / max(1, len(comps))
+    for c in comps:
+        cen = sum((v.co for v in c), c[0].co * 0) / len(c); r = math.hypot(cen.x, cen.y)
+        zone[0 if r < NEAR_R else (1 if r < MID_R else 2)] += per
+SCALE = 1.0
+if BUDGET:
+    want = 0.45 * BUDGET
+    thin = MID_KEEP * zone[1] + FAR_KEEP * zone[2]
+    if zone[0] + thin > want and thin > 0:
+        SCALE = max(0.05, (want - min(zone[0], 0.5 * want)) / thin)
+    print('tree tris near/mid/far', [int(z) for z in zone], 'keep scale', round(SCALE, 3))
+mid_k, far_k = min(1.0, MID_KEEP * SCALE), min(1.0, FAR_KEEP * SCALE)
+near_k = 1.0 if zone[0] <= 0.5 * max(1, 0.45 * BUDGET) or not BUDGET else 0.5 * 0.45 * BUDGET / zone[0]
+for o, bm, comps in scans:
     kill = []; kept = 0
     for c in comps:
         cen = sum((v.co for v in c), c[0].co * 0) / len(c)
         r = math.hypot(cen.x, cen.y)
-        keep = 1.0 if r < NEAR_R else (MID_KEEP if r < MID_R else FAR_KEEP)
+        keep = near_k if r < NEAR_R else (mid_k if r < MID_R else far_k)
         if keep < 1.0 and rng.random() > keep:
             kill.extend(c); continue
         kept += 1
-        if keep < 1.0:
-            sx = 1.3 if keep >= MID_KEEP else 1.6; sz = 1.0 if keep >= MID_KEEP else 1.15
+        if r >= NEAR_R:   # thinned: the kept ones grow to keep the canopy's cover
+            sx = 1.3 if r < MID_R else 1.6; sz = 1.0 if r < MID_R else 1.15
             base = min(v.co.z for v in c)
             for v in c:
                 d = v.co - cen
                 v.co.x = cen.x + d.x * sx; v.co.y = cen.y + d.y * sx; v.co.z = base + (v.co.z - base) * sz
     bmesh.ops.delete(bm, geom=kill, context='VERTS'); bm.to_mesh(o.data); bm.free()
     print(o.name, 'clumps', len(comps), 'kept', kept)
+
+if BUDGET:   # the rest: big flat meshes decimated (buildings stay whole: boxes do not decimate well)
+    meshes_ = [o for o in bpy.data.objects if o.type == 'MESH']
+    rest = [o for o in meshes_ if not o.name.startswith('bg_trees')]
+    flat = [o for o in rest if not re.match(r'bg_(bld|roof|clad|flash|lm_)', o.name) and tris(o) > 3000]
+    room = BUDGET - _tris_all(tree_objs) - _tris_all([o for o in rest if o not in flat])
+    have = _tris_all(flat)
+    if have > room > 0:
+        g = max(0.08, room / have)
+        for o in flat: decimate(o.name, g)
+        print('budget: flat meshes decimated to', round(g, 3))
+    print('budget: buildings', _tris_all([o for o in rest if o not in flat]), 'trees', _tris_all(tree_objs))
 
 # fewer draws: objects whose materials are the same (same images, same nodes, same settings) are
 # joined into one object with one material. All the trees share one leaf material (their kinds
@@ -243,10 +277,17 @@ for m in bpy.data.materials:
                     c[:, :3] *= k; ca.data.foreach_set('color', c.ravel())
                 print('base colour scale into vertex colours', m.name, round(k, 3))
 
-# textures: the ground bake down to TEX
-for im in bpy.data.images:
+# textures: the ground bake down to TEX; one- and two-channel images made RGBA (webp holds no grey)
+for im in list(bpy.data.images):
     if im.size[0] > TEX:
         im.scale(TEX, TEX); print('scaled', im.name)
+    if 0 < im.channels < 3 and im.size[0] > 0:
+        w, h = im.size; ch = im.channels
+        px = np.zeros(len(im.pixels), np.float32); im.pixels.foreach_get(px); px = px.reshape(-1, ch)
+        rgba = np.ones((len(px), 4), np.float32); rgba[:, :3] = px[:, :1]
+        if ch == 2: rgba[:, 3] = px[:, 1]
+        nim = bpy.data.images.new(im.name + '_rgb', w, h, alpha=True); nim.pixels.foreach_set(rgba.ravel())
+        nim.pack(); im.user_remap(nim); print('grey image made RGBA', im.name)
 
 tot = 0
 for o in bpy.context.scene.objects:
