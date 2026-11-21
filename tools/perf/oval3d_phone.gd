@@ -118,7 +118,7 @@ func _setup(st: Array) -> void:
 			skel.remove_child(m)
 	# Stand-ins for more figures (the 7 umpires are already in build()): jogging near the play.
 	while extras.size() < int(st[1]):
-		var scene: PackedScene = load("res://assets/oval3d/player_average.glb")
+		var scene: PackedScene = load(Oval3D.PLAYER_GLB)
 		var kit = oval._kit({"design": "plain", "base": Color(0.95, 0.85, 0.2), "shorts": Color(0.1, 0.1, 0.12)})
 		var p: Dictionary = oval._player(scene, kit, [Color(0.95, 0.85, 0.2)])
 		(p["anim"] as AnimationPlayer).play("jog")

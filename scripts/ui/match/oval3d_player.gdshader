@@ -355,7 +355,10 @@ void fragment() {
 	s_col.gb = min(s_col.gb, vec2(s_col.r));
 	s_col = mix(vec3(1.0), s_col, has_maps);
 	vec3 c = skin.rgb * s_col;
-	vec3 scalp_col = scalp == 1 ? skin.rgb : (scalp == 2 ? mix(skin.rgb, hair.rgb, BUZZ_COVER) : hair.rgb);
+	// Bare scalp: on a body with skin maps (the MetaHuman) the mapped skin, so it matches the
+	// forehead below it; flat skin on the plain body.
+	vec3 bare_scalp = mix(skin.rgb, c, has_maps);
+	vec3 scalp_col = scalp == 1 ? bare_scalp : (scalp == 2 ? mix(bare_scalp, hair.rgb, BUZZ_COVER) : hair.rgb);
 	c = mix(c, scalp_col, region(UV2.x));
 	// Where two kit regions meet, each field is about 0.5 and neither might pass it, which
 	// leaves a hairline of skin between guernsey and shorts. So the lower garment is drawn
@@ -388,7 +391,8 @@ void fragment() {
 	ALBEDO = c;
 	// Where bare skin shows: its own bumps and sheen. Kit and hair keep the flat cloth.
 	// (The kit as drawn: a guernsey cut past the body's old guernsey colours took the skin's sheen in patches.)
-	float bare = (1.0 - region(UV2.x)) * (1.0 - region(COLOR.a))
+	// A bare scalp (bald, or under a style's own hairline) is skin like the rest of his face.
+	float bare = (1.0 - region(UV2.x) * float(scalp != 1)) * (1.0 - region(COLOR.a))
 		* (1.0 - region(COLOR.b + COLOR.a * step(0.02, COLOR.b))) * (1.0 - max(top, bottom))
 		* has_maps;
 	NORMAL_MAP = vec3(s_nrm.r, 1.0 - s_nrm.g, 1.0);
