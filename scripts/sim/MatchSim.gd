@@ -2648,7 +2648,10 @@ const HANDBALL_GAIN := 0.2
 ## The handball roll outside the defensive 50 against Ratings.T.handball_share: shots on goal
 ## count as kicks (Champion Data), so play up the ground hands off a little more for the
 ## game's kicks and handballs to keep real AFL's split (212 kicks, 155 handballs a team).
+## With KICK_GAIN 2.45, 1,000 paired matches gave 227 kicks and 153 handballs (2026-11-21, #1998).
 const HB_ROLL := 1.15
+
+
 static func _tv(key: String, value: float) -> float:
 	return float(tune.get(key, value))
 const PRESS_RUSH_GAIN := 0.96
