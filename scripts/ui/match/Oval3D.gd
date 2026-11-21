@@ -1089,6 +1089,30 @@ static func _kit_edges(m: Mesh) -> Mesh:
 	return out
 
 
+static var _lods := {}
+## Off only for a capture that compares the players with and without their far detail levels.
+static var player_lods := true
+
+
+## `m` with its far detail levels made again. The import made them, but the body is rebuilt at
+## load (club_body, _skull, _kit_edges) and a rebuilt mesh keeps only its full detail, so every
+## player was drawn whole at any distance and in every shadow band. Same corners and attributes:
+## each level is only a shorter list of the same triangles. Once per mesh; every player shares it.
+static func _lodded(m: Mesh) -> Mesh:
+	if not player_lods:
+		return m
+	if _lods.has(m):
+		return _lods[m]
+	var am := m as ArrayMesh
+	var out: Mesh = m
+	if am != null:
+		var im := ImporterMesh.from_mesh(am)
+		im.generate_lods(60.0, 25.0, [])
+		out = im.get_mesh()
+	_lods[m] = out
+	return out
+
+
 ## The guernsey's cloth below the drawn hem line (level), which the shader paints as shorts: the
 ## mesh's hem dips up to 6 cm under that line in front and 3.6 cm behind, and the folds moulded into
 ## that strip showed as lumps under the hem (director 2026-11-17, "lumpy seams between shorts and
@@ -1811,7 +1835,7 @@ func _player(scene: PackedScene, kit: ShaderMaterial, cols: Array, club := "") -
 	# Every surface wears the kit except the boots and the eyes, which keep their own material.
 	for mi in node.find_children("*", "MeshInstance3D", true, false):
 		var m := mi as MeshInstance3D
-		m.mesh = _kit_edges(_skull(club_body(m.mesh, club)))
+		m.mesh = _lodded(_kit_edges(_skull(club_body(m.mesh, club))))
 		for s in range(m.mesh.get_surface_count()):
 			var own := m.mesh.surface_get_material(s)
 			if own == null or not own.resource_name in [BOOT_MATERIAL, EYE_MATERIAL]:
