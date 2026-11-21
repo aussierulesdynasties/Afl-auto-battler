@@ -2268,7 +2268,7 @@ func _test_ground_screens() -> void:
 	plain._ground_model("mcg")
 	var none := Oval3DScreens.new()
 	plain.add_child(none)
-	none.build(plain, plain.get_node_or_null("Ground"), GroundModels.MATCH_FENCE, "", "")
+	none.build(plain, plain.get_node_or_null("Ground"), GroundModels.match_fence(), "", "")
 	_check(none.faces.is_empty() and none.signs == null, "The ground inspector shows the model's own screens")
 	plain.queue_free()
 

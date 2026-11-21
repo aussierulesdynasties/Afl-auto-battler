@@ -108,7 +108,7 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 		_stands(home, away)
 	screens = Oval3DScreens.new()
 	add_child(screens)
-	screens.build(self, get_node_or_null("Ground"), Vector2(HALF_LEN + FENCE, HALF_WID + FENCE), home, away)
+	screens.build(self, get_node_or_null("Ground"), GroundModels.match_fence(), home, away)
 	var scene: PackedScene = load(player_glb)
 	# Each club in its home guernsey, as the vignettes dress them (StoppageVignette._dress).
 	var kits := [_kit(GameDB.club_guernsey(home)), _kit(GameDB.club_guernsey(away))]
