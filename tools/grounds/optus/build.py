@@ -11,7 +11,7 @@ from mathutils import Vector
 A=sys.argv[sys.argv.index('--')+1:];dst,blend=A[0],A[1]
 me_dir=os.path.dirname(os.path.abspath(__file__))
 here=os.path.join(me_dir,'..','..','..','.claude','review','optus','scripts')
-J=json.load(open(os.path.join(here,'geom.json')));TX=os.path.join(here,'..','tex');TI=json.load(open(os.path.join(TX,'info.json')));BH=TI['bronze_h_m'];GH=TI['glass_h_m']
+J=json.load(open(os.path.join(here,'geom.json')));TX=os.path.join(here,'..','tex');TI=json.load(open(os.path.join(TX,'info.json')));BH=TI['bronze_h_m'];GH=30.0   # glass UV height: one 30 m drop (bronze.py draws the glass), no repeat over the east dip
 FJ=json.load(open(os.path.join(me_dir,'facade.json')))
 import numpy as _np0
 def _compass(p,oc=J['oc']):return (90.0-math.degrees(math.atan2(p[1]-oc[1],p[0]-oc[0])))%360.0
@@ -72,7 +72,7 @@ flat(POD,c(6.4),DR,c(6.4),MT,TI['terrace_m'],sel=vis)
 # bronze screen, ledge, glass band
 # bronze screen: from 8.0 m up to the measured top; UV = real metres, top-anchored (texture spans 2 bays x 22 m)
 BAY2=2*arcs(DR)[N]/NB;sD=arcs(DR);ZB=8.0
-ZE=7.0
+ZE=7.0;EH=16.0   # entrance glass UV height: one 16 m drop (the east lobby is 15 m), bronze.py draws it
 # East (facade.json `lobby`): the bronze lifts over the main entrance's tall glass lobby, Google Earth 060-090.
 _lb=FJ['lobby'];_ZEi=[ZE+(_lb['top_m']-ZE)*max(0.0,min(1.0,(_lb['half_deg']+_lb['ramp_deg']-min(abs(c-_lb['centre']),360-abs(c-_lb['centre'])))/_lb['ramp_deg'])) for c in _CP]
 ZEf=lambda i:_ZEi[i%N]
@@ -125,7 +125,7 @@ gflat(POD,DRG,0.0,hid)
 lo_=[P(DRG[i],0.0) for i in range(N)];hi_=[P(DRG[i],ZEf(i)) for i in range(N)]
 for i in range(HS,HE):
     j=i+1;w=Vector((DRG[i].x+DRG[j].x,DRG[i].y+DRG[j].y,0)).normalized()
-    face([lo_[i],lo_[j],hi_[j],hi_[i]],MEN,[(sG[i]/EB,0),(sG[j]/EB,0),(sG[j]/EB,ZEf(j)/ZE),(sG[i]/EB,ZEf(i)/ZE)],w)
+    face([lo_[i],lo_[j],hi_[j],hi_[i]],MEN,[(sG[i]/EB,0),(sG[j]/EB,0),(sG[j]/EB,ZEf(j)/EH),(sG[i]/EB,ZEf(i)/EH)],w)
 flat(DR,ZEf,DRG,ZEf,MX,4,up=False,sel=hid)
 for e,sg in ((HS,1),(HE,-1)):                 # close the two ends where the podium stops (podium, recess, soffit)
     t=(POD[(e+1)%N]-POD[e]).normalized()*sg
@@ -137,7 +137,7 @@ def cyl(cx,cy,z0,z1,r,mi,n=12):
         a_,b_=ring[k],ring[(k+1)%n];w=Vector(((a_[0]+b_[0])/2-cx,(a_[1]+b_[1])/2-cy,0)).normalized()
         face([bm.verts.new((a_[0],a_[1],z0)),bm.verts.new((b_[0],b_[1],z0)),bm.verts.new((b_[0],b_[1],z1)),bm.verts.new((a_[0],a_[1],z1))],mi,[(k/n,0),((k+1)/n,0),((k+1)/n,1),(k/n,1)],w)
 for i in range(HS+K//2,HE,K//2):              # columns every half bay, front face under the bronze edge
-    q=DR[i]-Vector((DR[i].x,DR[i].y,0)).normalized()*0.55;cyl(q.x,q.y,0.0,ZEf(i),0.45,MCO)
+    q=DR[i]-Vector((DR[i].x,DR[i].y,0)).normalized()*0.55;cyl(q.x,q.y,0.0,ZEf(i),0.25,MCO)
 # true frame (camL level fit): deck on the bronze top, glass storey set back 4.5 m, soffit 44.4, white fascia to the
 # roof edge at 46.55, membrane falling to the inner edge IZ
 ZS,ZF=44.4,46.55
@@ -198,10 +198,8 @@ for bi in range(NB):
         if s_%2==0:tube(at(t0,0.2),at(t1,top(t1)),0.16,MW)
         else:tube(at(t0,top(t0)),at(t1,0.2),0.16,MW)
     tube(at(0,0.2),at(0,top(0)+0.01),0.2,MW);tube(at(1,0.2),at(1,top(1)),0.2,MW)
-    d_=DR0[i];ZC=8+(29.0-8)*1.478
-    tube(Vector((d_.x,d_.y,HB[i])),Vector((d_.x,d_.y,ZC)),0.42,MW)
-    a1=RF[(i-2)%N];a2=RF[(i+2)%N]
-    tube(Vector((d_.x,d_.y,ZC)),Vector((a1.x,a1.y,ZS-0.2)),0.28,MW);tube(Vector((d_.x,d_.y,ZC)),Vector((a2.x,a2.y,ZS-0.2)),0.28,MW)
+    # Google Earth (east and north close views): no white Y columns outside the glass, only slim white posts in the
+    # dark open strip between the glass's head and the roof's fascia (drawn in the glass texture, bronze.py).
 # bowl seating inside, turf
 FE=J['fence'];oc=Vector((FE['c'][0],FE['c'][1],0));ang=FE['ang'];U=Vector((math.cos(ang),math.sin(ang),0));Vv=Vector((-math.sin(ang),math.cos(ang),0))   # bowl front = measured fence oval
 U=Vector((math.cos(ang),math.sin(ang),0));Vv=Vector((-math.sin(ang),math.cos(ang),0))
@@ -247,7 +245,7 @@ def prism(pts,h,roofmi,wallmi,glassband=False,louvre_from=None):
         j=(i+1)%n;w=((pts[i]+pts[j])/2-cc).normalized();L=(pts[j]-pts[i]).length;ua,ub=s0/4,(s0+L)/4;s0+=L
         q=lambda z0,z1,sc=4.0:[(ua,z0/sc),(ub,z0/sc),(ub,z1/sc),(ua,z1/sc)]
         face([lo[i],lo[j],mid[j],mid[i]],wallmi,q(0,h-2.2),w)
-        if glassband:face([mid[i],mid[j],mi2[j],mi2[i]],MG,[(s0/BAYR-L/BAYR,1-3.5/GH),(s0/BAYR,1-3.5/GH),(s0/BAYR,1-2.0/GH),(s0/BAYR-L/BAYR,1-2.0/GH)],w)
+        if glassband:face([mid[i],mid[j],mi2[j],mi2[i]],MG,[(s0/BAYR-L/BAYR,1-9.5/GH),(s0/BAYR,1-9.5/GH),(s0/BAYR,1-8.0/GH),(s0/BAYR-L/BAYR,1-8.0/GH)],w)
         else:face([mid[i],mid[j],mi2[j],mi2[i]],wallmi,q(h-2.2,h-0.7),w)
         face([mi2[i],mi2[j],hi[j],hi[i]],MW,q(h-0.7,h),w)
     top=bm.faces.new(hi);top.normal_update()
