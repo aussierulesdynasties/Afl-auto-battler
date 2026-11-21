@@ -83,6 +83,8 @@ const VERTEX_COLOURED := ["adelaide"]
 
 ## Each seat colour as the model paints it (the mean of its seat texture; sRGB).
 const SEAT_COLOURS := {
+	# Accor: aqua lower bowl (seat_teal there keeps the value already here).
+	"seat_aqua": Color(0.527, 0.719, 0.757),
 	"seat_grey": Color(0.618, 0.618, 0.586), "seat_moss": Color(0.437, 0.594, 0.555),
 	"seat_navy": Color(0.068, 0.311, 0.484), "seat_slate": Color(0.272, 0.39, 0.488),
 	"seat_steel": Color(0.437, 0.484, 0.524),
