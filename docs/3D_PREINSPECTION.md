@@ -39,8 +39,8 @@ Captures: `preinspection/closeups/fixed_*.jpg`.
 2. **MCG: the top row of the top tier has no floor.** About 8% of the seats (some 5,900, at 34.5 m) sit over
    nothing: from the concourse under them you look up at seat bottoms, and in a match at supporters sitting
    on air. Seen only from below; from the field the row looks right.
-3. **SCG: a row of seats in the north-west pocket sits about 1.5 m inside the boundary**, on the apron in
-   front of the stand (about 400 seats).
+3. ~~**SCG: a row of seats in the north-west pocket sits about 1.5 m inside the boundary**~~ Fixed
+   2026-11-21 by the shared seat rule (`tools/grounds/seat_rule.gd`): 450 seats inside the fence out.
 4. **Norwood: both wing stands stand up to 8-9 m inside the boundary.** Norwood's fence is a rounded
    rectangle; the lay-out fits an ellipse, so the wings bulge in while the pockets fall away. An ellipse
    cannot fix it; it needs a fit that keeps every stand outside the fence. (`topdown_fence_*.jpg`)
