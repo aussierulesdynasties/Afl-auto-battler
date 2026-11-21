@@ -6,7 +6,7 @@ they are deep steel lattices, pale grey with a blue light box on each mast. This
 mast and boom from the model and builds them again as square lattices, with the back stay
 Google Earth shows from each mast's head down to the stand's back wall (four chords, a zigzag brace
 on every face), writing assets/grounds/mcg/trusses.bin: per vertex x, y, z, normal, colour (float32,
-glTF metres). GroundModels.PARTS hides the model's own beams and draws these instead.
+glTF metres), with the stays that hold the north roofs to their masts. GroundModels.PARTS hides the model's own beams and draws these instead.
 
     python3 tools/grounds/mcg/trusses.py
 """
@@ -118,6 +118,39 @@ def ties(tris):
             verts.append(list(p) + list(n / ln) + list(STEEL))
 
 
+def north_stays(masts, roof):
+    """The north stands' masts each hold their roof's front edge on a pair of stays (Google Earth:
+    pale tubes from each mast's head down to the front edge). The model has the masts only."""
+    P = masts.reshape(-1, 3)
+    bear = np.degrees(np.arctan2(P[:, 0], -P[:, 2])) % 360
+    R = roof.reshape(-1, 3)
+    rb = np.degrees(np.arctan2(R[:, 0], -R[:, 2])) % 360
+    rr = np.hypot(R[:, 0], R[:, 2])
+    order = np.argsort(bear)
+    groups, cur = [], [order[0]]
+    for i in range(1, len(order)):
+        if bear[order[i]] - bear[order[i - 1]] > 1.0:
+            groups.append(cur)
+            cur = []
+        cur.append(order[i])
+    groups.append(cur)
+    n = 0
+    for g in groups:
+        Q = P[g]
+        if Q[:, 1].max() - Q[:, 1].min() < 20.0:
+            continue
+        top = Q[np.argmax(Q[:, 1])]
+        b = math.degrees(math.atan2(top[0], -top[2])) % 360
+        for side in (-1.6, 1.6):
+            near = np.abs((rb - (b + side) + 180) % 360 - 180) < 0.8
+            if not near.any():
+                continue
+            k = np.where(near)[0][np.argmin(rr[near])]
+            box(top - np.array([0.0, 0.6, 0.0]), R[k], 0.32, STEEL)
+            n += 1
+    return n
+
+
 def main():
     _, meshes = load(GLB)
     tris = np.concatenate([t for name, mat, t in meshes if name == "trusses"])
@@ -142,6 +175,9 @@ def main():
         # The blue light box at the boom's tip, seen from above as a blue dash at each frame.
         d = (head - front) / np.linalg.norm(head - front)
         box(front - d * 0.5 + np.array([0, 0.9, 0]), front + d * 3.5 + np.array([0, 0.9, 0]), 1.5, NODE)
+    masts = np.concatenate([t for name, mat, t in meshes if name == "masts"])
+    roof = np.concatenate([t for name, mat, t in meshes if name == "roof"])
+    print("north stays", north_stays(masts, roof))
     a = np.array(verts, "<f4")
     a.tofile(OUT)
     print("frames", len(fr), "triangles", len(a) // 3)

@@ -111,6 +111,8 @@ const MATERIAL_FIX := {
 		"roof_white": {"metallic": 0.0, "roughness": 0.9, "albedo_color": Color(0.95, 0.92, 0.84)},
 		"roof_grey": {"metallic": 0.0, "roughness": 0.9, "albedo_color": Color(0.8, 0.8, 0.76)},
 		"roof_teal": {"albedo_color": Color(0.84, 0.86, 0.78)},
+		# The north stands' masts and ties: pale painted tubes in Google Earth, not dark galvanised.
+		"steel_galv": {"metallic": 0.0, "roughness": 0.55, "albedo_color": Color(0.9, 0.9, 0.88)},
 	},
 }
 
