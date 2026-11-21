@@ -1762,6 +1762,8 @@ const UMP_TAKE := 2.5
 ## hands onto the director's flight (let go) over UMP_LET_GO.
 const UMP_PICK := 0.3
 const UMP_LET_GO := 0.2
+## From the end of a clip to his stand.
+const UMP_BLEND_OUT := 0.4
 
 var _ump_job := -1            # the umpire taking the stoppage (index in umpires)
 var _ump_placed := false      # the umpires have been put on their first spots
@@ -1844,6 +1846,8 @@ func _move_umpires(frame_dt: float) -> void:
 		var k := int(u["k"])
 		if u.has("clip"):
 			held = _umpire_clip(u, st, dt) or held
+			continue
+		if u.has("out") and _umpire_blend_out(u, dt):
 			continue
 		var at := Vector2(node.position.x, node.position.z)
 		var want: Vector2 = spots[k][1]
@@ -1964,19 +1968,31 @@ func _bounce_in(st: Dictionary) -> float:
 	return maxf(going - _ump_step, 0.0)
 
 
-## The clip is over: back to his stand, his body left where the clip took it (the bounce runs him
-## in two metres), never snapped back to where it started.
+## The clip is over: back to his stand, blended over UMP_BLEND_OUT, his body left where the clip
+## took it (the bounce runs him in two metres): as the pose blends from the clip's to his stand,
+## he is carried forward by as much, so his hips never slide back (_umpire_blend_out).
 func _end_umpire_clip(u: Dictionary) -> void:
 	var ap: AnimationPlayer = u["anim"]
 	var skel: Skeleton3D = u["skel"]
 	var node: Node3D = u["node"]
-	var pelvis := _pelvis(u)
-	var was := skel.global_transform * skel.get_bone_global_pose(pelvis).origin
-	ap.play("idle", 0.0)
-	ap.seek(fmod(float(u["k"]) * 1.37, ap.current_animation_length), true)
-	var now := skel.global_transform * skel.get_bone_global_pose(pelvis).origin
-	node.global_position += Vector3(was.x - now.x, 0.0, was.z - now.z)
+	var hips := to_local(skel.global_transform * skel.get_bone_global_pose(_pelvis(u)).origin)
+	ap.play("idle", UMP_BLEND_OUT)
+	ap.seek(fmod(float(u["k"]) * 1.37, ap.current_animation_length), false)
+	u["out"] = {"base": node.position, "by": Vector3(hips.x - node.position.x, 0.0, hips.z - node.position.z), "t": 0.0}
 	u.erase("clip")
+
+
+## One frame of the blend out of a clip (_end_umpire_clip). False once it is over.
+func _umpire_blend_out(u: Dictionary, dt: float) -> bool:
+	var o: Dictionary = u["out"]
+	o["t"] = float(o["t"]) + dt
+	var w := clampf(float(o["t"]) / UMP_BLEND_OUT, 0.0, 1.0)
+	(u["node"] as Node3D).position = (o["base"] as Vector3) + (o["by"] as Vector3) * w
+	(u["anim"] as AnimationPlayer).advance(maxf(dt, 1e-4))
+	if w >= 1.0:
+		u.erase("out")
+		return false
+	return true
 
 
 ## Between an umpire's palms (as _hold_ball finds a player's), in the scene's frame.
