@@ -1,0 +1,15 @@
+2022_NRLGF_stadium.jpg <- https://commons.wikimedia.org/wiki/File:2022_NRLGF_stadium.jpg
+2025_NRL_Grand_Final__Stadium_.jpg <- https://commons.wikimedia.org/wiki/File:2025_NRL_Grand_Final_(Stadium).jpg
+Clouds_hovering_over_ANZ_Stadium__6801238345_.jpg <- https://commons.wikimedia.org/wiki/File:Clouds_hovering_over_ANZ_Stadium_(6801238345).jpg
+Homebush_stadium__23519455_.jpg <- https://commons.wikimedia.org/wiki/File:Homebush_stadium_(23519455).jpg
+Homebush_stadium.jpg <- https://commons.wikimedia.org/wiki/File:Homebush_stadium.jpg
+Homebush__NSW__Australia.jpg <- https://commons.wikimedia.org/wiki/File:Homebush,_NSW,_Australia.jpg
+WAC2026_Final.jpg <- https://commons.wikimedia.org/wiki/File:WAC2026_Final.jpg
+World_Cup_Telstra_stadium.jpg <- https://commons.wikimedia.org/wiki/File:World_Cup_Telstra_stadium.jpg
+Sydney_olympic_stadium_track_and_field.jpg <- https://commons.wikimedia.org/wiki/File:Sydney_olympic_stadium_track_and_field.jpg
+Stadium_Australia.jpg <- https://commons.wikimedia.org/wiki/File:Stadium_Australia.jpg
+Stadium_Australia_07-04-23.jpg <- https://commons.wikimedia.org/wiki/File:Stadium_Australia_07-04-23.jpg
+2023_NRLGF_Accor_Stadium.jpg <- https://commons.wikimedia.org/wiki/File:2023_NRLGF_Accor_Stadium.jpg
+ANZ_Cricket_Stands.jpg <- https://commons.wikimedia.org/wiki/File:ANZ_Cricket_Stands.jpg
+Panorama-TelstraStadium-Oct2005.jpg <- https://commons.wikimedia.org/wiki/File:Panorama-TelstraStadium-Oct2005.jpg
+gmaps3d_roof_from_north.png  Google Maps 3D, https://www.google.com/maps/@-33.8505,151.0635,500a,35y,50t/data=!3m1!1e3 (reference only)
