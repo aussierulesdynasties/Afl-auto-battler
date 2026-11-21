@@ -4,7 +4,7 @@ extends Node3D
 ##
 ## Screens: a ground model's screen faces (a surface whose material or node is named as a screen
 ## or scoreboard face, SCREEN_NAMES) are found when the match is built, and a flat face is laid
-## over each, a few centimetres in front, so the model's own UVs never matter. Every face shows
+## over each, just in front, so the model's own UVs never matter. Every face shows
 ## the same picture: both clubs in their colours with goals, behinds and points, and the quarter
 ## and minute under them; after a goal, a GOAL card in the scorer's colours with his number and
 ## name, and while the TV replays the goal the replay itself plays on it (the camera the TV is
@@ -17,13 +17,13 @@ extends Node3D
 
 ## A surface whose material, or the node holding it, has one of these names is a screen face.
 const SCREEN_NAMES := ["screen", "screen_off", "screens", "scorefront", "scoreboard",
-		"scoreboard_n", "north_scoreboard_mat", "south_scoreboard_mat", "board_front"]
+		"scoreboard_n", "north_scoreboard_mat", "south_scoreboard_mat", "board_front", "sbface"]
 ## Faces smaller than this (m^2) are not screens (a sign, a sliver of the frame).
 const MIN_AREA := 4.0
 ## Triangles more than this far (m) from a screen's first triangle belong to another screen.
 const SCREEN_SPAN := 30.0
-## The face is laid this far (m) in front of the model's screen.
-const LIFT := 0.06
+## The face is laid this far (m) in front of the model's screen, clear of its frame and posts.
+const LIFT := 0.3
 ## The screen picture's height in pixels; its width follows the screen's shape.
 const FACE_H := 320
 ## s (real time) the GOAL card stays up after a goal when no replay is shown.
@@ -417,20 +417,31 @@ class _Face:
 			var band := Rect2(w * 0.03, y, w * 0.94, row_h)
 			draw_rect(band, cols[0])
 			var ink: Color = Oval3DScreens.ink_on(cols[0], cols[1])
-			var nm := GameDB.club_name(code).to_upper()
+			# The score on the right, then the name in the room left of it: the club's short
+			# name on a narrow screen, shrinking only if even that will not fit.
+			var line := "%d.%d" % [goals[side], behinds[side]]
+			var pts := str(int(goals[side]) * 6 + int(behinds[side]))
+			var sfs := int(row_h * 0.62)
+			var gap := w * 0.035
+			while sfs > 12 and font.get_string_size(pts, HORIZONTAL_ALIGNMENT_LEFT, -1, sfs).x \
+					+ font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, int(sfs * 0.8)).x + gap > w * 0.52:
+				sfs -= 2
+			var pts_w := font.get_string_size(pts, HORIZONTAL_ALIGNMENT_LEFT, -1, sfs).x
+			var line_w := font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, int(sfs * 0.8)).x
+			var pts_x := w * 0.95 - pts_w
+			var line_x := pts_x - gap - line_w
+			var sb := y + row_h * 0.5 + font.get_ascent(sfs) * 0.36
+			draw_string(font, Vector2(line_x, sb), line, HORIZONTAL_ALIGNMENT_LEFT, -1, int(sfs * 0.8), ink)
+			draw_string(font, Vector2(pts_x, sb), pts, HORIZONTAL_ALIGNMENT_LEFT, -1, sfs, ink)
+			var room := line_x - gap - w * 0.06
 			var fs := int(row_h * 0.52)
-			# The name shrinks to fit beside the score.
-			var room := w * 0.50
+			var nm := GameDB.club_name(code).to_upper()
+			if font.get_string_size(nm, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > room:
+				nm = GameDB.club_short(code).to_upper()
 			while fs > 12 and font.get_string_size(nm, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > room:
 				fs -= 2
 			var base := y + row_h * 0.5 + font.get_ascent(fs) * 0.36
 			draw_string(font, Vector2(w * 0.06, base), nm, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, ink)
-			var line := "%d.%d" % [goals[side], behinds[side]]
-			var pts := str(int(goals[side]) * 6 + int(behinds[side]))
-			var sfs := int(row_h * 0.62)
-			var sb := y + row_h * 0.5 + font.get_ascent(sfs) * 0.36
-			draw_string(font, Vector2(w * 0.58, sb), line, HORIZONTAL_ALIGNMENT_CENTER, w * 0.18, int(sfs * 0.8), ink)
-			draw_string(font, Vector2(w * 0.76, sb), pts, HORIZONTAL_ALIGNMENT_RIGHT, w * 0.18, sfs, ink)
 		var cfs := int(h * 0.13)
 		while cfs > 12 and font.get_string_size(clock, HORIZONTAL_ALIGNMENT_LEFT, -1, cfs).x > w * 0.92:
 			cfs -= 2
@@ -460,6 +471,8 @@ class _Face:
 					line, HORIZONTAL_ALIGNMENT_CENTER, w, fs, ink)
 			return
 		var gfs := int(h * 0.46)
+		while gfs > 12 and font.get_string_size("GOAL", HORIZONTAL_ALIGNMENT_LEFT, -1, gfs).x > w * 0.9:
+			gfs -= 2
 		draw_string(font, Vector2(0, h * 0.55), "GOAL", HORIZONTAL_ALIGNMENT_CENTER, w, gfs, ink)
 		var who := str(goal.get("who", ""))
 		if who != "":
