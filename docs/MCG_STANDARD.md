@@ -137,5 +137,9 @@ Optus went through the same gate. What it added to the method:
 - **Bridges are models.** `SURROUNDS[...]["models"]` loads extra glbs into the ground (Optus:
   `bridges.glb`, Matagarup's two 72 m arches and the river bridges on piers).
 
-Open at Optus: the street storey is still a podium on the north, where the real ground floor is glazed
-with white columns; the glass band reads lighter and its white Y columns stronger than Google Earth shows.
+- **Second facade pass (close views).** Zoom Google Earth's facade views to a third of the frame before
+  judging a material: at full frame the Optus bronze read as brown noise, close up it is a dark base with
+  thin bright streaks, and the "white Y columns" were slim posts in a dark strip under the roof. The glass
+  band, street glazing and the north's glazed storey are drawn by `bronze.py` (`glass`, `entrance`, `storey`).
+
+Open at Optus: seat colours from Street View (stage 4), on top of the seat fix (#1991).
