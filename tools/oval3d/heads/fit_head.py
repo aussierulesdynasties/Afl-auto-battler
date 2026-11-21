@@ -30,11 +30,13 @@ HEAD_DEPTH = 0.2551  # Gawn: 0.2278 at the old fit x the photo's 1.12
 EYE_FIT = 1.7524     # Gawn's eye line on the base body after the photo's growth
 MH_Z = 0.0236        # the base body's skull middle (glTF z; Blender -y)
 EAR_BELOW_EYE = 0.015
-BAND = 0.02
+BAND = float(os.environ.get("BAND", "0.06"))  # the shape band: his neck eases onto the socket over 6 cm (director 2026-11-19, "Yes, every head": over 2 cm it left a crease)
+SKIN_BAND = float(os.environ.get("SKIN_BAND", "0.02"))  # the colour join: his skin turns to the body's over the bottom 2 cm only (the back of it is hair)
 # Per head, from the director's eye (2026-11-17, Gawn: "shrink it slightly and add some neck"):
 # HEAD_SCALE shrinks or grows the head, NECK (metres) lifts it and adds that much neck above the socket.
-HEAD_SCALE = float(os.environ.get("HEAD_SCALE", "1"))
-NECK = float(os.environ.get("NECK", "0"))
+HEAD_SCALE = float(os.environ.get("HEAD_SCALE", "0.9"))
+NECK = float(os.environ.get("NECK", "0.035"))
+# A head's own size or lift, where the director picked one (heads.json "scale": Pickett 0.8, 2026-11-18).
 
 
 def eye_line(ob):
@@ -63,6 +65,34 @@ def eye_line(ob):
     return tip[0], best[0]
 
 
+def hair_points(me):
+    """The points whose texture is under half as bright as his neck skin (the back of his neck, the 4 cm
+    above his mesh's bottom; the brighter quarter's edge, so the hair over it does not count)."""
+    img = next((i for i in bpy.data.images if i.size[0] > 0), None)
+    if img is None:
+        return set()
+    w, h = img.size
+    px = img.pixels[:]
+    uv = me.uv_layers.active.data
+    lum = {}
+    for poly in me.polygons:
+        for li in poly.loop_indices:
+            vi = me.loops[li].vertex_index
+            if vi not in lum:
+                uu, vv = uv[li].uv
+                i = (min(h - 1, max(0, int(vv * h))) * w + min(w - 1, max(0, int(uu * w)))) * 4
+                lum[vi] = (px[i] + px[i + 1] + px[i + 2]) / 3.0
+    lo = min(v.co.z for v in me.vertices)
+    neck = sorted(lum[v.index] for v in me.vertices if v.index in lum and lo < v.co.z < lo + 0.04 and v.co.y > 0.0)
+    if not neck:
+        return set()
+    ref = neck[len(neck) * 3 // 4]
+    # Behind his ears only: at his front the dark over the band is a beard, which takes the skin (Gawn).
+    out = set(i for i, l in lum.items() if l < 0.5 * ref and me.vertices[i].co.y > 0.0)
+    print("hair over the join: neck skin %.2f, %d points darker than half of it" % (ref, len(out)))
+    return out
+
+
 def fit(src, out, socket, tex_px):
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.ops.import_scene.gltf(filepath=src)
@@ -72,16 +102,51 @@ def fit(src, out, socket, tex_px):
     bpy.context.view_layer.objects.active = ob
     bpy.ops.object.parent_clear(type="CLEAR_KEEP_TRANSFORM")
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
-    tip, eye_y = eye_line(ob)
+    # MEASURE (a MetaHuman head conformed to his Tripo scan, row 202 2d): the size and place come from the
+    # scan, in the same space, exactly as the scan alone would be fitted; the MetaHuman head is what moves.
+    meas = ob
+    if os.environ.get("MEASURE"):
+        before = set(bpy.data.objects)
+        bpy.ops.import_scene.gltf(filepath=os.environ["MEASURE"])
+        meas = [o for o in bpy.data.objects if o not in before and o.type == "MESH"][0]
+        meas.parent = None
+        meas.data.transform(meas.matrix_world)
+        meas.matrix_world = Matrix()
+    tip, eye_y = eye_line(meas)
     # Blender z up = glTF y; Blender -y = glTF +z.
-    co = [v.co.copy() for v in ob.data.vertices]
-    tol = (max(c.z for c in co) - min(c.z for c in co)) / 70.0
-    band = [c for c in co if abs(c.z - eye_y) < tol]
-    depth = max(-c.y for c in band) - min(-c.y for c in band)
+    co = [v.co.copy() for v in meas.data.vertices]
+    # His depth measured on his surface, not his points (a head with few points at the back of the skull
+    # read far too shallow, Cross 2026-11-18): lines fired at him from the front and from behind, across
+    # 3 cm and 2 cm either side of the eye line; the front-most hit less the back-most.
+    from mathutils.bvhtree import BVHTree
+    hh = max(c.z for c in co) - min(c.z for c in co)
+    bvh = BVHTree.FromPolygons([c.copy() for c in co], [p.vertices[:] for p in meas.data.polygons])
+    mx0 = (min(c.x for c in co) + max(c.x for c in co)) / 2.0
+    fronts, backs = [], []
+    for i in range(-4, 5):
+        for j in range(-3, 4):
+            x, z = mx0 + j * hh / 140.0, eye_y + i * hh / 280.0
+            hf = bvh.ray_cast(Vector((x, -10.0 * hh, z)), Vector((0.0, 1.0, 0.0)))
+            hb = bvh.ray_cast(Vector((x, 10.0 * hh, z)), Vector((0.0, -1.0, 0.0)))
+            if hf[0] is not None:
+                fronts.append(-hf[0].y)
+            if hb[0] is not None:
+                backs.append(-hb[0].y)
+    depth = max(fronts) - min(backs)
     top = [c for c in co if c.z > eye_y]
     mid_fwd = (min(-c.y for c in top) + max(-c.y for c in top)) / 2.0
     mid_x = (min(c.x for c in top) + max(c.x for c in top)) / 2.0
-    s = HEAD_DEPTH / depth * HEAD_SCALE
+    if meas is not ob:  # the scan and its texture go, so his own texture is the one read below
+        imgs = {n.image for m in meas.data.materials if m and m.node_tree for n in m.node_tree.nodes if n.type == "TEX_IMAGE" and n.image}
+        bpy.data.objects.remove(meas, do_unlink=True)
+        for i in imgs:
+            bpy.data.images.remove(i)
+        ob.select_set(True)
+        bpy.context.view_layer.objects.active = ob
+    pid =os.path.splitext(os.path.basename(out))[0]
+    hj = os.path.join(os.path.dirname(out), "heads.json")
+    info = json.load(open(hj)) if os.path.exists(hj) else {}
+    s = HEAD_DEPTH / depth * float(info.get(pid, {}).get("scale", HEAD_SCALE))
     print("nose tip", tip, "eye line", eye_y, "depth", depth, "scale", s)
     ob.data.transform(Matrix.Translation(Vector((0.0, -MH_Z, EYE_FIT + NECK))) @ Matrix.Scale(s, 4)
                       @ Matrix.Translation(Vector((-mid_x, mid_fwd, -eye_y))))
@@ -101,7 +166,7 @@ def fit(src, out, socket, tex_px):
     pb = (syz * sxx - sxz * sxy) / det
     pc = sum(p.z for p in ring) / len(ring)
     plane = lambda x, y: pa * (x - cx) + pb * (y - cy) + pc
-    off = NECK  # the cut runs on the socket's own line, raised by the neck added; the band fills the gap
+    off = float(os.environ.get("OFF", "0.0"))  # TRIAL; the cut runs on the socket's own line, just under his jaw
     print("socket lean (deg): forward %.1f, sideways %.1f; at the sides %.1f cm below his ear" % (
         math.degrees(math.atan(-pb)), math.degrees(math.atan(pa)), 100 * (EYE_FIT - EAR_BELOW_EYE - pc)))
 
@@ -129,18 +194,26 @@ def fit(src, out, socket, tex_px):
     co0 = Vector((cx, cy, pc + off))
     bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:], plane_co=co0, plane_no=n,
                            clear_inner=True)
-    # His mesh is coarse low on his neck (Gawn's throat: single triangles from the cut to 5 cm up, under
-    # his beard). Every edge there longer than 6 mm is cut into 6 mm pieces, so the band stretches and
-    # takes the skin colour smoothly instead of smearing his beard down his throat.
-    near = lambda v: v.co.z - (pa * (v.co.x - cx) + pb * (v.co.y - cy) + pc + off) < 0.05
-    long_e = [e for e in bm.edges if (near(e.verts[0]) or near(e.verts[1])) and e.calc_length() > 0.006]
-    if long_e:
-        cuts = max(1, min(12, int(max(e.calc_length() for e in long_e) / 0.006)))
-        bmesh.ops.subdivide_edges(bm, edges=long_e, cuts=cuts, use_grid_fill=True)
-        print("low neck: %d long edges cut into %d pieces each" % (len(long_e), cuts + 1))
+    # (No subdividing of his low neck: cutting the long edges there also cut up his beard's cards, whose
+    # pieces then caught the light as dark shards.)
     bm.to_mesh(ob.data)
     bm.free()
     me = ob.data
+    # Matched loops (TRIAL, director 2026-11-20 "try one, if it doesnt work try the other"): his neck's
+    # bottom edge is centred on the socket ring before it is matched round the neck, so an off-centre neck
+    # is moved over, not squeezed on one side. The move fades out up the band.
+    if os.environ.get("MATCH"):
+        lowv = [v.co for v in me.vertices if v.co.z - (plane(v.co.x, v.co.y) + off) < 0.005]
+        ex = sum(c.x for c in lowv) / len(lowv)
+        ey = sum(c.y for c in lowv) / len(lowv)
+        print("neck edge off the ring centre: %.1f cm sideways, %.1f cm fore-aft" % (100 * (ex - cx), 100 * (ey - cy)))
+        for v in me.vertices:
+            u = v.co.z - (plane(v.co.x, v.co.y) + off)
+            if u < BAND:
+                w = max(0.0, min(1.0, 1.0 - u / BAND))
+                w = w * w * (3.0 - 2.0 * w)
+                v.co.x += w * (cx - ex)
+                v.co.y += w * (cy - ey)
     # His neck's bottom edge, in 5-degree steps round the neck: how high it stands over the cut and its
     # radius there. Mostly it is the cut itself, but where his mesh is open below (Gawn's throat, under his
     # beard, 2 cm short of the socket) it is the lowest skin he has, and that is what goes onto the socket.
@@ -247,7 +320,16 @@ def fit(src, out, socket, tex_px):
     # cut and the socket at its angle, and in or out by the ring's radius over his neck's, by its share.
     share = [0.0] * len(me.vertices)
     skin = [0.0] * len(me.vertices)
+    # Hair hanging over the join (Langford's nape: the back of his curls ends in points that reach the
+    # band) keeps its own colour: a point whose texture is under half as bright as his own neck skin is
+    # hair, not skin, so the band moves it but never paints it skin (painted, it showed as a pale flap).
+    dark = hair_points(me)
+    if os.environ.get("HDBG"):
+        for lo_, hi_ in ((0.0, 0.01), (0.04, 0.05), (0.08, 0.09), (0.12, 0.13)):
+            q = [w_.co for w_ in me.vertices if lo_ <= w_.co.z - (plane(w_.co.x, w_.co.y) + off) < hi_]
+            if q: print("NECK %2d cm up: centre %.1f, %.1f cm off the ring; x %.1f..%.1f" % (100*lo_, 100*(sum(c.x for c in q)/len(q)-cx), 100*(sum(c.y for c in q)/len(q)-cy), 100*(min(c.x for c in q)-cx), 100*(max(c.x for c in q)-cx)))
     rs, hs = [], []
+    HB = {}
     for v in me.vertices:
         c = v.co
         lo = step(ang(c.x, c.y), lu)
@@ -274,46 +356,30 @@ def fit(src, out, socket, tex_px):
         c.y = cy + (c.y - cy) * f
         c.z += w * (rz - pz)
         hs.append(rz - pz)
+        if os.environ.get("HDBG"): HB.setdefault(int(math.degrees(t)) // 20 * 20, []).append((rz - pz, u, f))
+        if v.index in dark:
+            continue
         share[v.index] = w
         # His skin colour over the band's bottom 70%, his own texture fading in over its top 30%: the band
         # is stretched up to three times its height onto the socket, and at his throat it is beard.
-        skin[v.index] = min(1.0, max(0.0, 1.0 - u / BAND) / 0.3)
+        # Over SKIN_BAND his texture fades smoothly to skin, the way stubble and the scan's under-jaw shadow
+        # thin out down a real neck (director 2026-11-20, "just hide the seam": over 2 cm it showed as a line
+        # from his chin to behind his ear).
+        ws = max(0.0, min(1.0, 1.0 - u / SKIN_BAND))
+        skin[v.index] = ws * ws * (3.0 - 2.0 * ws)
+    for k in sorted(HB):
+        print("HB %3d deg move %.1f..%.1f cm, squeeze x%.2f..%.2f" % (k, 100*min(h for h,_,_ in HB[k]), 100*max(h for h,_,_ in HB[k]), min(f for _,_,f in HB[k]), max(f for _,_,f in HB[k])))
     if rs:
         print("neck to socket: radius x%.2f-%.2f, height %.1f to %.1f cm" % (
             min(rs), max(rs), 100 * min(hs), 100 * max(hs)))
-    # His throat rises up from the socket to under his chin, the way the MetaHuman's own does (it stands
-    # within 10 degrees of upright from the socket's throat to its chin), instead of running diagonally
-    # forward (director 2026-11-17: "adjust the gullet around the throat ... rather than upwards"). Under
-    # the chin, any point at his front that stands further out than that line is brought back onto it;
-    # full at the front of his neck, none at his sides (75 degrees round), easing off over the 3 cm
-    # under his chin. Above the chin he is untouched.
-    eye = EYE_FIT + NECK
-    fr = [v.co for v in me.vertices if abs(v.co.x) < 0.012 and eye - 0.16 < v.co.z < eye - 0.06]
-    top_f = max(-c.y for c in fr)
-    chin = min(c.z for c in fr if -c.y > top_f - 0.01)
-    moved = 0
-    for v in me.vertices:
-        c = v.co
-        if c.z >= chin:
-            continue
-        t = ang(c.x, c.y)
-        front = math.cos(t)
-        if front <= math.cos(math.radians(75)):
-            continue
-        rr, rz = ring_at(t)
-        lim = rr + max(0.0, c.z - rz) * math.tan(math.radians(10))
-        r = math.hypot(c.x - cx, c.y - cy)
-        if r <= lim:
-            continue
-        k = (front - math.cos(math.radians(75))) / (1.0 - math.cos(math.radians(75)))
-        # Easing off over the 3 cm under his chin, so his throat curves into his jaw, no shelf.
-        e = min(1.0, (chin - c.z) / 0.03)
-        e = e * e * (3.0 - 2.0 * e)
-        f = 1.0 + min(1.0, k * 1.5) * e * (lim / r - 1.0)
-        c.x = cx + (c.x - cx) * f
-        c.y = cy + (c.y - cy) * f
-        moved += 1
-    print("throat: chin at %.3f (%.1f cm below the eyes), %d points brought back" % (chin, 100 * (eye - chin), moved))
+        # Out of line with a clean fit: his neck squeezed or spread by over a quarter, or stretched over
+        # 4 cm onto the ring. Printed for the batch report; the head is still written.
+        bad = []
+        if min(rs) < 0.75 or max(rs) > 1.25:
+            bad.append("neck width x%.2f-%.2f" % (min(rs), max(rs)))
+        if max(abs(h) for h in hs) > 0.04:
+            bad.append("neck stretched %.1f cm" % (100 * max(abs(h) for h in hs)))
+        print("CHECK %s scale %.3f %s" % (pid, s, "ok" if not bad else "LOOK: " + ", ".join(bad)))
     # The share in the vertex colour's red, the skin colour's blend in its green.
     col = me.color_attributes.new("Col", "FLOAT_COLOR", "POINT")
     for i, w in enumerate(share):
@@ -339,7 +405,13 @@ def fit(src, out, socket, tex_px):
                             acc[j] += px[i + j]
                         k += 1
             if k:
-                print("SKIN %s #%02x%02x%02x from %d" % (name, *(round(255 * acc[j] / k) for j in range(3)), k))
+                hexc = "#%02x%02x%02x" % tuple(round(255 * acc[j] / k) for j in range(3))
+                print("SKIN %s %s from %d" % (name, hexc, k))
+                if name == "cheek":
+                    # The body's neck wears his cheek's colour: always clear skin (under the back of
+                    # the neck is often hair or shadow).
+                    info.setdefault(pid, {})["skin"] = hexc
+                    json.dump(info, open(hj, "w", newline=""))
     for img in bpy.data.images:
         if img.size[0] > tex_px:
             img.scale(tex_px, tex_px)
@@ -349,8 +421,10 @@ def fit(src, out, socket, tex_px):
     print("OUT", out, "tris", sum(len(p.vertices) - 2 for p in me.polygons))
 
 
-a = sys.argv[sys.argv.index("--") + 1:]
-if a[0] == "--all":
+a = sys.argv[sys.argv.index("--") + 1:] if __name__ == "__main__" else [None]
+if a[0] is None:
+    pass
+elif a[0] == "--all":
     src_dir, out_dir, socket = a[1], a[2], a[3]
     px = int(a[4]) if len(a) > 4 else 2048
     for f in sorted(os.listdir(src_dir)):

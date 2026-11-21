@@ -67,6 +67,7 @@ uniform sampler2D skin_head_nrm : hint_normal, filter_linear_mipmap_anisotropic,
 uniform sampler2D skin_head_srmf : filter_linear_mipmap, repeat_disable;
 const vec3 BODY_MEAN = vec3(0.2715, 0.1044, 0.0605);
 const vec3 HEAD_MEAN = vec3(0.2555, 0.1074, 0.0594);
+#include "res://scripts/ui/match/oval3d_skin_light.gdshaderinc"
 varying vec2 skin_uv;
 
 const vec2 NUMBER_ACROSS = vec2(0.24, 0.76);   // about 26 cm for two digits
@@ -394,4 +395,7 @@ void fragment() {
 	NORMAL_MAP = vec3(s_nrm.r, 1.0 - s_nrm.g, 1.0);
 	NORMAL_MAP_DEPTH = bare;
 	ROUGHNESS = mix(0.82, s_rough, bare);
+	// Soft skin light (oval3d_skin_light.gdshaderinc) on bare skin only: never on the guernsey or shorts.
+	skin_wrap = bare * (1.0 - top) * (1.0 - bottom);
+	spec_amt = 0.5;
 }
