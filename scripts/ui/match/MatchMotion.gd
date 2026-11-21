@@ -12,10 +12,80 @@ extends RefCounted
 ## A token only reads a new goal after its own reaction delay, which keeps a
 ## team from moving as one rigid block.
 
-## Oval half-axes. The goal line is at +-85 m, a little inside the boundary.
-const HALF_LEN := 86.3
-const HALF_WID := 67.4
-const GOAL_X := 85.0
+## The standard oval's half-axes: MatchSim's own ground, whose goal line is at +-85 m
+## (Ratings "goal_line"), a little inside the boundary.
+const STD_HALF_LEN := 86.3
+const STD_HALF_WID := 67.4
+const STD_GOAL_X := 85.0
+## How far the goal line sits inside the boundary at the middle of the goals.
+const GOAL_IN := STD_HALF_LEN - STD_GOAL_X
+## The ground this match is played on: its half-axes and goal line (use_field). Every
+## ground plays at its own size (row 202 2b): the MCG long and wide, North Hobart small.
+## The defaults are written out, not taken from the constants above: a static var set
+## from an expression stays 0 when a tool runs with --script (VignetteGround.GOAL_Y).
+static var HALF_LEN := 86.3
+static var HALF_WID := 67.4
+static var GOAL_X := 85.0
+
+
+## Play on a ground whose boundary has these half-axes (metres); Vector2.ZERO is the
+## standard oval.
+static func use_field(half: Vector2) -> void:
+	if half.x <= 0.0 or half.y <= 0.0:
+		half = Vector2(STD_HALF_LEN, STD_HALF_WID)
+	HALF_LEN = half.x
+	HALF_WID = half.y
+	# The standard oval's own goal line exactly, so every spot on it is as it always was (gx).
+	GOAL_X = STD_GOAL_X if half.x == STD_HALF_LEN else half.x - GOAL_IN
+
+
+## The standard oval's x (MatchSim's field position, a set-up spot) on this ground.
+## Inside each 50 m arc the distance from goal is kept, so a 40 m set shot is 40 m out
+## on every ground; the centre square keeps its own 25 m either side where the ground
+## has room; between the two the ground takes up the difference. Identity on the
+## standard oval. Monotonic, odd, and +-STD_GOAL_X lands on +-GOAL_X.
+static func gx(x: float) -> float:
+	if GOAL_X == STD_GOAL_X:
+		return x
+	var a := absf(x)
+	var arc := GOAL_X - 50.0                      # this ground's 50 m line, from the centre
+	var sq := minf(25.0, arc * 25.0 / 35.0)       # the centre square's edge where it fits
+	var out: float
+	if a >= 35.0:
+		out = GOAL_X - (STD_GOAL_X - a)
+	elif a >= 25.0:
+		out = sq + (a - 25.0) / 10.0 * (arc - sq)
+	else:
+		out = a / 25.0 * sq
+	return out if x >= 0.0 else -out
+
+
+## This ground's x back on the standard oval: the inverse of gx.
+static func sx(x: float) -> float:
+	if GOAL_X == STD_GOAL_X:
+		return x
+	var a := absf(x)
+	var arc := GOAL_X - 50.0
+	var sq := minf(25.0, arc * 25.0 / 35.0)
+	var out: float
+	if a >= arc:
+		out = STD_GOAL_X - (GOAL_X - a)
+	elif a >= sq:
+		out = 25.0 + (a - sq) / maxf(arc - sq, 0.001) * 10.0
+	else:
+		out = a / maxf(sq, 0.001) * 25.0
+	return out if x >= 0.0 else -out
+
+
+## How much wider (or narrower) this ground is than the standard oval: a spot set by
+## the width of the ground (a wing, a flank, a pocket) moves out or in by this.
+static func wy() -> float:
+	return HALF_WID / STD_HALF_WID
+
+
+## A spot on the standard oval (a slot, a set-up) on this ground: x by gx, y by wy.
+static func on_ground(v: Vector2) -> Vector2:
+	return Vector2(gx(v.x), v.y * wy())
 
 const JOG_SHARE := 0.52      # structural running is a jog, not a sprint
 const ACCEL := 14.0          # m/s^2 speeding up
