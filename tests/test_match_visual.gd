@@ -3341,7 +3341,7 @@ func _test_three_d_hair(res: Dictionary) -> void:
 	var b: PackedVector3Array = (body.mesh as ArrayMesh).surface_get_arrays(hair)[Mesh.ARRAY_VERTEX] if hair >= 0 else PackedVector3Array()
 	var drawn_in := 0
 	for k in range(a.size()):
-		if absf(a[k].distance_to(b[k]) - Oval3D.SCALP_LIFT) < 0.001:
+		if absf(a[k].distance_to(b[k]) - Oval3D._scalp_lift(Oval3D.player_glb)) < 0.001:
 			drawn_in += 1
 	_check(hair >= 0 and drawn_in == a.size() and a.size() > 0,
 			"The 3D body's scalp is drawn back onto his skull under the hair (%d of %d)" % [drawn_in, a.size()])

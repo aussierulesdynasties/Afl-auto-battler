@@ -5,16 +5,17 @@ extends Node3D
 ## and ball every frame and never writes to them, so the match is the same match.
 ##
 ## Ground metres map straight to world metres: director (x, y) -> world (x, 0, y), +x towards
-## the goal side 0 attacks. The players are the vignette footballer (MPFB body, the pipeline's
-## own body), exported as assets/oval3d/player_average.glb, recoloured per club.
+## the goal side 0 attacks. The players are the MetaHuman footballer (row 202 2d, director
+## 2026-11-21 "Yes, refit hair, then switch"), assets/oval3d/player_mh.glb, at each man's build
+## (Oval3DBuild), in his club's guernsey (club_body), the Club Forge styles refitted to his head.
 
-const PLAYER_GLB := "res://assets/oval3d/player_average.glb"
-## The run, the stand and the run with the ball, from motion capture on the same rig, replacing
-## the GLB's hand-posed jog, idle and carry: a neutral run loop (frame 75 = frame 0, the travel
-## taken out), a stand-idle loop, and the run's arms swapped for a ball carrier's two-handed hold.
-const LOOPS_GLB := "res://assets/oval3d/player_loops.glb"
+const PLAYER_GLB := "res://assets/oval3d/player_mh.glb"
+## The run, the stand and the run with the ball: the MetaHuman file carries its own loops on the
+## same rig (motion capture: a neutral run loop, a stand-idle loop, and the run with a ball
+## carrier's two-handed hold), as the old body's player_loops.glb did.
+const LOOPS_GLB := PLAYER_GLB
 ## The player and loop files in use (PLAYER_GLB, LOOPS_GLB); a capture may point them at a
-## candidate body (row 202 2d: the MetaHuman footballer, which carries its own loops).
+## candidate body (the old MPFB footballer, player_average.glb, with player_loops.glb).
 static var player_glb := PLAYER_GLB
 static var loops_glb := LOOPS_GLB
 ## m/s the jog loop covers at rate 1 (14.6 m in its 2.5 s): the rate scales from this.
@@ -29,9 +30,10 @@ static var hair_glb := HAIR_GLB
 ## The scalp under each style (oval3d_player.gdshader, scalp): 0 the body's own painted crop
 ## (no look), 1 bare skin (bald, and under every style's shell, which has its own hairline),
 ## 2 clippered (buzz, and under the cuts with clippered sides). Under the dreadlocks it is his
-## hair colour (0): skin showed down the back between the locks.
+## hair colour (0): skin showed down the back between the locks. Swept back is clippered underneath:
+## on the MetaHuman its shell leaves two small gaps over the ear.
 const SCALP := {"bald": 1, "buzz": 2, "dreadlocks": 0, "undercut": 2, "curly_short": 2, "faux_hawk": 2,
-		"tied_back": 2}
+		"tied_back": 2, "swept_back": 2}
 const SCALP_UNDER_SHELL := 1
 ## The boots' own material in the GLB (export_player_glb.py, the Tripo boot): drawn as modelled.
 const BOOT_MATERIAL := "ARD_boot_real"
@@ -684,7 +686,8 @@ static func hair_shells() -> Dictionary:
 			push_error("Oval3D: %s is not on a bone in %s" % [mi.name, hair_glb])
 			continue
 		var style := str(mi.name).trim_prefix("hair_")
-		_shells[style] = {"mesh": mi.mesh, "bone": (parent as BoneAttachment3D).bone_name, "at": mi.transform}
+		var bone := (parent as BoneAttachment3D).bone_name
+		_shells[style] = {"mesh": _refit_hair(mi.mesh, mi.transform, bone), "bone": bone, "at": mi.transform}
 		var tex := hair_glb.get_base_dir().path_join("hair_tex/%s.png" % style)
 		if ResourceLoader.exists(tex):
 			_shells[style]["tex"] = load(tex)
@@ -692,9 +695,222 @@ static func hair_shells() -> Dictionary:
 	return _shells
 
 
+## The body the styles were fitted to (hair_lib, export_*_hair_glb.py): the MPFB average head.
+const HAIR_FIT_GLB := "res://assets/oval3d/player_average.glb"
+## Where each head's skull is measured from, in the head bone's space (m): about the middle of
+## the skull, the same point for both heads.
+const SKULL_MID := Vector3(0.0, 0.065, 0.01)
+## The skull's outline as radii from SKULL_MID: SKULL_AZ steps round the head, SKULL_POLAR steps
+## from the crown down to SKULL_LOW_DEG (below it every direction takes the lowest ring's radius).
+const SKULL_AZ := 48
+const SKULL_POLAR := 24
+const SKULL_LOW_DEG := 120.0
+static var _skull_radii := {}
+
+
+## A style fitted to the MPFB head, refitted to the head of the body in use (row 202 2d: the
+## MetaHuman footballer, director 2026-11-21 "Yes, refit hair, then switch"). Both skulls are
+## measured as radii from SKULL_MID in every direction; each point of the hair moves out (or in)
+## along its own direction by how far the new skull lies outside the old one there, so it keeps
+## its height above the scalp, its hairline and its fall. On the body it was made for, unchanged.
+static func _refit_hair(m: Mesh, at: Transform3D, bone: String) -> Mesh:
+	if player_glb == HAIR_FIT_GLB or not (m is ArrayMesh):
+		return m
+	var old_r := _skull_outline(HAIR_FIT_GLB, bone)
+	var new_r := _skull_outline(player_glb, bone)
+	if old_r.is_empty() or new_r.is_empty():
+		return m
+	var shift := _face_shift(bone)
+	var am := m as ArrayMesh
+	var out := ArrayMesh.new()
+	var back := at.affine_inverse()
+	for s in range(am.get_surface_count()):
+		var a := am.surface_get_arrays(s)
+		var vs: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
+		for i in range(vs.size()):
+			var q := at * vs[i] - SKULL_MID
+			var d := q.normalized()
+			var lift := _skull_at(new_r, d) - _skull_at(old_r, d)
+			vs[i] = back * (SKULL_MID + shift + q + d * lift)
+		a[Mesh.ARRAY_VERTEX] = vs
+		out.add_surface_from_arrays(am.surface_get_primitive_type(s), a)
+		out.surface_set_material(s, am.surface_get_material(s))
+	return out
+
+
+## How much higher (and further forward) the face of the body in use sits on its head bone than
+## the face the styles were fitted to, measured at the tip of the nose: the MetaHuman's sits about
+## 2 cm higher, so a style moved only outwards hung its fringe over his eyes. The skulls are
+## measured from SKULL_MID moved by it.
+static func _face_shift(bone: String) -> Vector3:
+	var key := "shift:" + player_glb + ":" + bone
+	if not _skull_radii.has(key):
+		var a := _nose_tip(HAIR_FIT_GLB, bone)
+		var b := _nose_tip(player_glb, bone)
+		_skull_radii[key] = Vector3(0.0, b.y - a.y, 0.0) if a != Vector3.INF and b != Vector3.INF else Vector3.ZERO
+	return _skull_radii[key]
+
+
+## The tip of the nose of glb's body at rest, in bone's space: the skin's foremost point on the
+## middle line of the face. Vector3.INF when the body has none.
+static func _nose_tip(glb: String, bone: String) -> Vector3:
+	var best := Vector3.INF
+	if not ResourceLoader.exists(glb):
+		return best
+	var root: Node = (load(glb) as PackedScene).instantiate()
+	var sks := root.find_children("*", "Skeleton3D", true, false)
+	var sk: Skeleton3D = sks[0] if not sks.is_empty() else null
+	var bi := sk.find_bone(bone) if sk != null else -1
+	if bi >= 0:
+		var to_bone := sk.get_bone_global_rest(bi).affine_inverse()
+		for n in root.find_children("*", "MeshInstance3D", true, false):
+			var mi := n as MeshInstance3D
+			var am := mi.mesh as ArrayMesh
+			if mi.skin == null or am == null:
+				continue
+			for s in range(am.get_surface_count()):
+				var mat := am.surface_get_material(s)
+				if mat == null or mat.resource_name != SKIN_SURFACE:
+					continue
+				for v in am.surface_get_arrays(s)[Mesh.ARRAY_VERTEX]:
+					var q: Vector3 = to_bone * (mi.transform * v)
+					if absf(q.x) < 0.006 and absf(q.y) < 0.06 and (best == Vector3.INF or q.z > best.z):
+						best = q
+	root.free()
+	return best
+
+
+## The skull of glb's body at rest, as radii from SKULL_MID (SKULL_POLAR rows of SKULL_AZ),
+## measured on its scalp (the hair region's points its bone carries alone); empty when it has
+## none. Cells the scalp does not reach take their neighbours' radius. Once per body.
+static func _skull_outline(glb: String, bone: String) -> PackedFloat32Array:
+	var key := glb + ":" + bone
+	if _skull_radii.has(key):
+		return _skull_radii[key]
+	var r := PackedFloat32Array()
+	_skull_radii[key] = r
+	if not ResourceLoader.exists(glb):
+		return r
+	var root: Node = (load(glb) as PackedScene).instantiate()
+	var sks := root.find_children("*", "Skeleton3D", true, false)
+	var sk: Skeleton3D = sks[0] if not sks.is_empty() else null
+	var bi := sk.find_bone(bone) if sk != null else -1
+	if bi < 0:
+		root.free()
+		return r
+	var to_bone := sk.get_bone_global_rest(bi).affine_inverse()
+	var mid := SKULL_MID + (Vector3.ZERO if glb == HAIR_FIT_GLB else _face_shift(bone))
+	r.resize(SKULL_AZ * SKULL_POLAR)
+	r.fill(-1.0)
+	for n in root.find_children("*", "MeshInstance3D", true, false):
+		var mi := n as MeshInstance3D
+		var am := mi.mesh as ArrayMesh
+		if mi.skin == null or am == null:
+			continue
+		for s in range(am.get_surface_count()):
+			# The scalp only: the hair region (the body's painted crop) is where a style sits, and the
+			# ears and face would read as skull. The MPFB scalp is drawn in by SCALP_LIFT (_skull).
+			var mat := am.surface_get_material(s)
+			if mat == null or mat.resource_name != HAIR_SURFACE:
+				continue
+			var lifted := _scalp_lift(glb)
+			var a := am.surface_get_arrays(s)
+			var vs: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
+			var bones = a[Mesh.ARRAY_BONES]
+			var ws = a[Mesh.ARRAY_WEIGHTS]
+			if bones == null or ws == null or vs.is_empty():
+				continue
+			var per: int = (bones as PackedInt32Array).size() / vs.size()
+			for i in range(vs.size()):
+				var w := 0.0
+				for j in range(per):
+					if bones[i * per + j] == bi:
+						w += ws[i * per + j]
+				if w < 0.95:
+					continue
+				var q: Vector3 = to_bone * (mi.transform * vs[i]) - mid
+				var k := _skull_cell(q.normalized())
+				if k >= 0:
+					r[k] = maxf(r[k], q.length() - lifted)
+	root.free()
+	# Cells no point fell in take their neighbours' radius; then one pass of smoothing.
+	for _pass in range(SKULL_AZ):
+		var empty := 0
+		var fill := r.duplicate()
+		for k in range(r.size()):
+			if r[k] >= 0.0:
+				continue
+			var sum := 0.0
+			var cnt := 0
+			for nk in _skull_round(k):
+				if r[nk] >= 0.0:
+					sum += r[nk]
+					cnt += 1
+			if cnt > 0:
+				fill[k] = sum / cnt
+			else:
+				empty += 1
+		r = fill
+		if empty == 0:
+			break
+	var smooth := r.duplicate()
+	for k in range(r.size()):
+		var sum := r[k] * 2.0
+		var nb := _skull_round(k)
+		for nk in nb:
+			sum += r[nk]
+		smooth[k] = sum / (nb.size() + 2.0)
+	_skull_radii[key] = smooth
+	return smooth
+
+
+## The cell of direction d (from SKULL_MID, in the head bone's space; +y up, +z forward).
+static func _skull_cell(d: Vector3) -> int:
+	var polar := rad_to_deg(acos(clampf(d.y, -1.0, 1.0)))
+	var row := mini(int(polar / SKULL_LOW_DEG * SKULL_POLAR), SKULL_POLAR - 1)
+	var az := fposmod(atan2(d.x, d.z), TAU) / TAU
+	return row * SKULL_AZ + mini(int(az * SKULL_AZ), SKULL_AZ - 1)
+
+
+## The cells round cell k: the same row either side (wrapping) and the rows above and below.
+static func _skull_round(k: int) -> Array:
+	var row := k / SKULL_AZ
+	var col := k % SKULL_AZ
+	var out := [row * SKULL_AZ + (col + 1) % SKULL_AZ, row * SKULL_AZ + (col + SKULL_AZ - 1) % SKULL_AZ]
+	if row > 0:
+		out.append((row - 1) * SKULL_AZ + col)
+	if row < SKULL_POLAR - 1:
+		out.append((row + 1) * SKULL_AZ + col)
+	return out
+
+
+## The skull's radius in direction d, read bilinearly between cells.
+static func _skull_at(r: PackedFloat32Array, d: Vector3) -> float:
+	var polar := rad_to_deg(acos(clampf(d.y, -1.0, 1.0)))
+	var y := clampf(polar / SKULL_LOW_DEG * SKULL_POLAR - 0.5, 0.0, SKULL_POLAR - 1.0)
+	var x := fposmod(atan2(d.x, d.z), TAU) / TAU * SKULL_AZ - 0.5
+	var r0 := int(floor(y))
+	var r1 := mini(r0 + 1, SKULL_POLAR - 1)
+	var c0 := posmod(int(floor(x)), SKULL_AZ)
+	var c1 := (c0 + 1) % SKULL_AZ
+	var fy: float = y - floor(y)
+	var fx: float = x - floor(x)
+	var top := lerpf(r[r0 * SKULL_AZ + c0], r[r0 * SKULL_AZ + c1], fx)
+	var low := lerpf(r[r1 * SKULL_AZ + c0], r[r1 * SKULL_AZ + c1], fx)
+	return lerpf(top, low, fy)
+
+
 ## How far the pipeline pushed the scalp out for the old painted crop (ard_body.OFFSET["hair"],
 ## metres). Every style now sits on his skull as hair_lib fitted it, so the lift comes off.
 const SCALP_LIFT := 0.010
+## The MetaHuman footballer's hair region stands off his skull the same way, by a little less
+## (8.5 mm at the front of the hairline, measured on player_mh.glb's middle line).
+const SCALP_LIFT_MH := 0.0085
+
+
+## How far glb's body has its hair region lifted off the skull.
+static func _scalp_lift(glb: String) -> float:
+	return SCALP_LIFT if glb == HAIR_FIT_GLB else SCALP_LIFT_MH
 ## The body's hair region, a surface of its own in the GLB (ard_body.REGIONS).
 const HAIR_SURFACE := "ARD_hair"
 static var _skulls := {}
@@ -707,6 +923,7 @@ static var _skulls := {}
 static func _skull(m: Mesh) -> Mesh:
 	if _skulls.has(m):
 		return _skulls[m]
+	var lifted := _scalp_lift(player_glb)
 	var am := m as ArrayMesh
 	var hair := -1
 	if am != null:
@@ -745,7 +962,7 @@ static func _skull(m: Mesh) -> Mesh:
 		for i in range(vs.size()):
 			k[i] = key.call(vs[i])
 			if lift.has(k[i]):
-				vs[i] -= lift[k[i]] * SCALP_LIFT
+				vs[i] -= lift[k[i]] * lifted
 		a[Mesh.ARRAY_VERTEX] = vs
 		var idx: PackedInt32Array = a[Mesh.ARRAY_INDEX]
 		for f in range(0, idx.size(), 3):
@@ -787,7 +1004,7 @@ static func _skull(m: Mesh) -> Mesh:
 			var bv: PackedVector3Array = (sh as Array)[Mesh.ARRAY_VERTEX]
 			for i in range(bv.size()):
 				if lift.has(k[i]):
-					bv[i] -= lift[k[i]] * SCALP_LIFT
+					bv[i] -= lift[k[i]] * lifted
 			(sh as Array)[Mesh.ARRAY_VERTEX] = bv
 		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, a, shapes, {}, _custom_format(am, s))
 		out.surface_set_material(s, am.surface_get_material(s))

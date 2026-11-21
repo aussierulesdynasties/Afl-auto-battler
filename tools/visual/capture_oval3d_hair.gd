@@ -1,7 +1,9 @@
 extends SceneTree
 ## Every Club Forge hair style on the 3D footballer (Oval3D.look), for the art check.
-##   godot --path . --script tools/visual/capture_oval3d_hair.gd -- OUTDIR [HAIR_GLB]
+##   godot --path . --script tools/visual/capture_oval3d_hair.gd -- OUTDIR [HAIR_GLB] [--mh] [--no-a2c]
 ## HAIR_GLB: a candidate hair set (res://...) in place of Oval3D.HAIR_GLB; only its styles show.
+## --mh: on the MetaHuman footballer (player_mh.glb), the styles refitted to its head (Oval3D._refit_hair).
+## --no-a2c: hair cards without alpha to coverage (lavapipe, the cloud renderer, drops every card with it).
 ## One footballer per style (Appearance.HAIR_STYLES) in a line on the 3D ground, standing
 ## (idle), in a plain kit, each a different skin and hair colour: line.png from the broadcast
 ## height, then head_<style>.png: front, side and back of his head at 3x, one image each.
@@ -13,21 +15,29 @@ const LOOKS := [[1, 2], [4, 0], [0, 4], [2, 1], [3, 0], [1, 5], [5, 0], [0, 3]]
 
 func _initialize() -> void:
 	_run.call_deferred()
-	create_timer(300.0).timeout.connect(func(): print("TIMEOUT"); quit(1))
+	create_timer(1500.0).timeout.connect(func(): print("TIMEOUT"); quit(1))
 
 
 func _run() -> void:
 	await process_frame
-	var args := OS.get_cmdline_user_args()
+	var args := Array(OS.get_cmdline_user_args())
+	var mh := args.has("--mh")
+	var no_a2c := args.has("--no-a2c")
+	args.erase("--mh")
+	args.erase("--no-a2c")
 	var out := str(args[0]) if args.size() > 0 else "user://oval3d_hair"
 	DirAccess.make_dir_recursive_absolute(out)
 	OS.low_processor_usage_mode = false
 	var gdb = root.get_node("GameDB")
-	var oval = load("res://scripts/ui/match/Oval3D.gd").new()
+	var O3 = load("res://scripts/ui/match/Oval3D.gd")
+	if mh:
+		O3.player_glb = "res://assets/oval3d/player_mh.glb"
+		O3.loops_glb = O3.player_glb
+	var oval = O3.new()
 	root.add_child(oval)
 	oval._environment()
 	oval._ground()
-	var scene: PackedScene = load(oval.PLAYER_GLB)
+	var scene: PackedScene = load(O3.player_glb)
 	var styles: Array = Appearance.HAIR_STYLES
 	if args.size() > 1:
 		oval.hair_glb = str(args[1])
@@ -38,6 +48,11 @@ func _run() -> void:
 		var p: Dictionary = oval._player(scene, oval._kit(gdb.club_guernsey("FRE")), gdb.club_colours("FRE"))
 		var lk: Array = LOOKS[i % LOOKS.size()]
 		oval.look(p, {"skin": lk[0], "hair": lk[1], "hair_style": styles[i]}, true)
+		if no_a2c and p.get("hair_node") is Node:
+			for hm in (p["hair_node"] as Node).find_children("*", "MeshInstance3D", true, false):
+				var hmat := ((hm as MeshInstance3D).material_override as StandardMaterial3D).duplicate()
+				hmat.alpha_antialiasing_mode = BaseMaterial3D.ALPHA_ANTIALIASING_OFF
+				(hm as MeshInstance3D).material_override = hmat
 		(p["anim"] as AnimationPlayer).advance(1e-4)
 		var nd: Node3D = p["node"]
 		nd.position = Vector3((i - (styles.size() - 1) * 0.5) * GAP, 0.0, 0.0)
