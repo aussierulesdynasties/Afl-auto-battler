@@ -1,0 +1,78 @@
+# Docs and roadmap notes skip the merge queue (director, 2026-11-21: keep the queue for code,
+# let docs-only and roadmap-note PRs skip it). The queue retests each PR on top of the latest
+# main so two code PRs cannot combine to break it; a PR that only changes Markdown cannot do
+# that, and the roadmap-close notes PRs (label "roadmap") were stuck behind it.
+#
+# Every 10 minutes, and after each Tests run, this merges straight into main any open PR that:
+#   - has auto-merge turned on (the author asked for it to land),
+#   - is labelled "roadmap" or changes only *.md files,
+#   - has no conflict, and every check on its head has passed (or skipped).
+# It merges with --admin, which needs "GitHub Actions" on the main ruleset's bypass list
+# (Settings > Rules > Rulesets > the ruleset for main > Bypass list). Without that the merge
+# is refused, the job prints a warning and the PR waits for the queue as before.
+# A merge made with the workflow token starts no push workflows, so this then runs
+# Roadmap rebuild itself to rebuild the notes PRs the merge has left in conflict.
+name: Docs fast merge
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_run:
+    workflows: [Tests]
+    types: [completed]
+  workflow_dispatch:
+concurrency:
+  group: docs-fast-merge
+  cancel-in-progress: false
+permissions:
+  contents: write
+  actions: write
+  pull-requests: write
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Merge ready docs-only and roadmap PRs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -u
+          merged=0
+          prs=$(gh pr list --state open --limit 200 --json number,isDraft,autoMergeRequest \
+            --jq '.[] | select(.isDraft | not) | select(.autoMergeRequest != null) | .number')
+          [ -z "$prs" ] && { echo "No open PR has auto-merge on."; exit 0; }
+          for num in $prs; do
+            info=$(gh pr view "$num" --json labels,files,mergeable,statusCheckRollup)
+            kind=$(echo "$info" | jq -r '
+              if any(.labels[]; .name == "roadmap") then "roadmap"
+              elif (.files | length) > 0 and all(.files[]; .path | endswith(".md")) then "docs"
+              else "code" end')
+            [ "$kind" = "code" ] && continue
+            mergeable=$(echo "$info" | jq -r .mergeable)
+            if [ "$mergeable" != "MERGEABLE" ]; then
+              echo "#$num ($kind): $mergeable, waiting"
+              continue
+            fi
+            # Every check finished green or skipped; none pending, none red.
+            bad=$(echo "$info" | jq -r '[.statusCheckRollup[] |
+              (if .__typename == "StatusContext" then .state else (.conclusion // "PENDING") end)
+              | select(. != "SUCCESS" and . != "SKIPPED" and . != "NEUTRAL")] | length')
+            total=$(echo "$info" | jq -r '.statusCheckRollup | length')
+            if [ "$total" = 0 ] || [ "$bad" != 0 ]; then
+              echo "#$num ($kind): checks not all green yet ($bad of $total), waiting"
+              continue
+            fi
+            if gh pr merge "$num" --squash --admin; then
+              echo "#$num ($kind): merged past the queue"
+              merged=1
+              # One at a time: notes PRs edit the same TODO.md lines, so the next one
+              # is rebuilt on the new main before it merges.
+              break
+            else
+              echo "::warning::#$num: merge refused. Add GitHub Actions to the bypass list of main's ruleset, or the PR waits for the queue."
+            fi
+          done
+          if [ "$merged" = 1 ]; then
+            gh workflow run roadmap_rebuild.yml --ref main || echo "::warning::could not start Roadmap rebuild"
+          fi
