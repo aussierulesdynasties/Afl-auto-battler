@@ -169,12 +169,13 @@ def paint(trees, ways):
         sd.ellipse((x - r, y - r, x + r, y + r), fill=150)
     shade = np.asarray(shade.filter(ImageFilter.GaussianBlur(2.5)), float) / 255
     arr = arr * (1.0 - 0.5 * shade)[..., None] + np.array([18.0, 6.0, -4.0]) * shade[..., None]
-    # Fine grain over everything, then fade the far edge to plain grass (the texture clamps there).
+    # Fine grain over everything, then fade the last 24 m to plain town grey (the texture clamps there, and a
+    # backdrop can take over from the 1,024 m circle).
     grain = (rng.random((SIZE, SIZE)) - 0.5) * 10
     arr += grain[..., None]
     yy, xx = np.mgrid[0:SIZE, 0:SIZE]
     r = np.hypot(xx - SIZE / 2, yy - SIZE / 2)
-    edge = np.clip((r - 900) / 120, 0, 1)[..., None]
+    edge = np.clip((r - 1000) / 24, 0, 1)[..., None]
     arr = arr * (1 - edge) + np.array(URBAN, float) * edge
     return Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8), "RGB"), trees
 
