@@ -45,14 +45,15 @@ def concrete(name, col, pu=3.0, pv=1.5, tile=(6.0, 6.0), streak=0.12):
     weather(a, streak, 16, 70); save(name, a, tile)
 
 
-def deck(name, col, pitch=0.3, tile=(6.0, 6.0), grime=18):
+def deck(name, col, pitch=0.3, tile=(6.0, 6.0), grime=18, rot=False, lap=True):
     """ribbed roof sheeting: ribs every 'pitch' m across u, a sheet lap at the top, dirt runs down the pans"""
     h = w = N; x = np.arange(w) / w * (tile[0] / pitch)
     rib = np.where((x % 1) < 0.16, 0.74, 1.0) + 0.05 * np.cos(2 * math.pi * x)
     a = np.ones((h, w, 3)) * np.array(col, float) * rib[None, :, None] + fine(h, w, 2)[:, :, None] + noise(h, w, 10, grime)[:, :, None]
-    a[0:5] *= 0.72
+    if lap: a[0:5] *= 0.72
     for _ in range(40):
         xx = R.integers(0, w); L = R.integers(h // 4, h); d = R.uniform(0.05, 0.14); a[:L, xx:xx + R.integers(3, 10)] *= 1 - d
+    if rot: a = a.transpose(1, 0, 2)   # ribs along v instead of u
     save(name, a, tile)
 
 
@@ -67,6 +68,12 @@ for nm, col in SEATS.items():
 # concrete treads and risers: plain grey, a dark nosing line, scuffing
 a = base(512, 512, (150, 148, 142), 5, 14); a[:10] *= 0.7; weather(a, 0.06, 10, 20, top_dark=False); save('conc_tread', a, (2.0, 0.8))
 concrete('conc_wall', (184, 180, 172))
+# fair-faced blockwork (DA p11 south elevation label): 390 x 190 blocks, 10 mm joints, stretcher bond; tone UNVERIFIED (conc_wall grey)
+a = base(256, 256, (184, 180, 172), 3, 10)
+for r in range(2):
+    a[r * 128:r * 128 + 6] *= 0.7
+    for k in range(2): x = (k * 128 + r * 64) % 256; a[r * 128:(r + 1) * 128, x:x + 6] *= 0.7
+save('blockwork', a, (0.8, 0.4))
 concrete('conc_kerb', (196, 192, 184), 1.2, 0.6, (2.4, 1.2), 0.05)
 # paving behind the fence: 1.2 m broom-finished slabs, saw joints, stains
 a = base(N, N, (176, 170, 160), 7, 22); p = N / 2.4
@@ -92,7 +99,7 @@ a[..., :3] = np.array((150, 156, 158)) + fine(H_, W_, 10)[:, :, None]; a[..., 3]
 save('mesh', a, (1.0, 1.0))
 
 # ---- roof sheeting and steel ----
-deck('roof_white', (222, 224, 224)); deck('roof_grey', (166, 170, 172)); deck('roof_soffit', (204, 206, 206), grime=12)
+deck('roof_white', (222, 224, 224)); deck('roof_grey', (166, 170, 172)); deck('roof_w', (192, 194, 200), grime=10, rot=True, lap=False); deck('roof_soffit', (204, 206, 206), grime=12)
 deck('roof_club', (188, 190, 190), pitch=0.6, grime=20)
 a = base(512, 1024, (232, 234, 232), 4, 16); xu = 1024 / 4.0
 for k in range(2): a[:, int(k * 2 * xu):int(k * 2 * xu) + 6] *= 0.7
@@ -103,6 +110,7 @@ for nm, col in (('steel_white', (232, 234, 232)), ('steel_galv', (152, 156, 160)
     a = base(256, 256, col, 6, 22 if lite else 8); a[:, 120:126] *= 0.7 if lite else 1.35; a[:, 0:4] *= 0.75 if lite else 1.3
     if lite: weather(a, 0.14, 16, 16)
     save(nm, a, (2.0, 2.0))
+save('slab_white', base(256, 1024, (234, 234, 230), 2, 4), (8.0, 2.0))   # bldg_w slab fascia: continuous painted concrete edge, no seams (lead gate 2026-11-21)
 # aluminium bleacher planks: 250 mm extruded boards, ribs along the plank, oxidised streaks (GE n290 NW bleacher)
 a = base(256, 512, (186, 190, 192), 4, 12)
 for k in range(0, 256, 32): a[k:k + 3] *= 0.7
@@ -145,6 +153,51 @@ def _shed(a, pu, pv, h, w):     # small white block building (SE): white render,
 
 
 facade('clad_grey', (200, 202, 202), _clad); facade('club', (222, 220, 214), _club, (6.0, 9.0), 1024, 1536)
+def _shedw(a, pu, pv, h, w):   # bldg_w wall under the slab, one tile = 6.6 m x 3.6 m, row 0 = slab underside. DA p11 at 37.8 px/m:
+    def band(z0, z1): return int(z0 * pv), int(z1 * pv)   # metres down from the slab
+    for k in range(int(3.6 / 0.2)): a[int(k * 0.2 * pv):int(k * 0.2 * pv) + 3] *= 0.86   # horizontal profiled metal cladding
+    r0, r1 = band(0.1, 0.63); a[r0:r1] = np.array((58, 68, 78)) + noise(r1 - r0, w, 6, 14)[:, :, None]   # high level windows
+    for k in range(6): a[r0:r1, int(k * 1.1 * pu):int(k * 1.1 * pu) + 5] = (196, 198, 200)
+    r0, r1 = band(1.85, 2.91)   # framed panel row, frames every 1.3 m (TONE UNVERIFIED)
+    a[r0:r0 + 6] = (90, 92, 96); a[r1 - 6:r1] = (90, 92, 96)
+    for k in range(6): a[r0:r1, int(k * 1.32 * pu):int(k * 1.32 * pu) + 7] = (90, 92, 96)
+    r0, r1 = band(2.91, 3.6); a[r0:r1] = np.array((66, 72, 80)) + noise(r1 - r0, w, 4, 8)[:, :, None]   # plinth (dark, Google Earth 3D 2026-11-21) below floor level
+
+
+def _shedr(a, pu, pv, h, w):   # bldg_w raised wall, one tile = 6.6 m x 5.5 m, row 0 = slab underside; 0.9 m visible over the low roof
+    r0, r1 = 0, int(0.9 * pv); a[r0:r1] = np.array((58, 68, 78)) + noise(r1 - r0, w, 6, 14)[:, :, None]
+    m = (r0 + r1) // 2
+    for k in range((r1 - m) // 8): a[m + k * 8:m + k * 8 + 4] = (74, 84, 96)   # louvre blades (dark, Google Earth 3D 2026-11-21)
+    for k in range(6): a[r0:r1, int(k * 1.1 * pu):int(k * 1.1 * pu) + 5] = (96, 104, 114)
+    a[m - 2:m + 2] = (96, 104, 114)
+
+
+def _shedg(a, pu, pv, h, w):   # bldg_w glazed bay (DA p11, south of y -17.3): the panel band and the framed row glazed, mullions ~1.1 m
+    _shedw(a, pu, pv, h, w)
+    for z0, z1, step in ((0.63, 1.85, 1.1), (1.85, 2.91, 1.32)):
+        r0, r1 = int(z0 * pv), int(z1 * pv); a[r0:r1] = np.array((58, 68, 78)) + noise(r1 - r0, w, 6, 14)[:, :, None]
+        for k in range(int(6.6 / step) + 1): a[r0:r1, int(k * step * pu):int(k * step * pu) + 6] = (90, 92, 96)
+        a[r1 - 6:r1] = (90, 92, 96)
+
+
+def _shedl(a, pu, pv, h, w):   # bldg_w south face louvre bay (DA p11 south elevation): horizontal louvres from the window band down 1.6 m, framed row below
+    _shedw(a, pu, pv, h, w)
+    r0, r1 = int(0.63 * pv), int(2.2 * pv); a[r0:r1] = (64, 74, 88)
+    for k in range((r1 - r0) // 9): a[r0 + k * 9:r0 + k * 9 + 4] = (120, 124, 128)
+
+
+def _shedgs(a, pu, pv, h, w):   # bldg_w south face glazed bay (DA p11 south elevation): one ~1 m bay per tile, window band, a transom, tall glazing to floor level
+    _shedw(a, pu, pv, h, w)
+    r0, r1 = int(0.63 * pv), int(2.91 * pv); a[r0:r1] = np.array((58, 68, 78)) + noise(r1 - r0, w, 6, 14)[:, :, None]
+    a[:int(2.91 * pv), :6] = (90, 92, 96); a[r0:r0 + 6] = (90, 92, 96); a[r1 - 6:r1] = (90, 92, 96)
+
+
+def _shedp(a, pu, pv, h, w):   # bldg_w south face plain bay (DA p11 south elevation): plain panel from the window band to floor level, colour UNVERIFIED
+    _shedw(a, pu, pv, h, w)
+    r0, r1 = int(0.63 * pv), int(2.91 * pv); a[r0:r1] = np.array((60, 70, 84)) + noise(r1 - r0, w, 3, 5)[:, :, None]
+
+
+facade('shedw', (56, 66, 80), _shedw, (6.6, 3.6)); facade('shedgs', (56, 66, 80), _shedgs, (1.0, 3.6), 256); facade('shedl', (56, 66, 80), _shedl, (6.6, 3.6)); facade('shedp', (56, 66, 80), _shedp, (6.6, 3.6)); facade('shedg', (56, 66, 80), _shedg, (6.6, 3.6)); facade('shedr', (56, 66, 80), _shedr, (6.6, 5.5))
 facade('gstand_back', (206, 204, 198), _gstand); facade('shed', (230, 230, 226), _shed)
 # coaches' box (photos 09-11): matt black boarding, five slit windows along the top
 a = base(512, 512, (30, 32, 36), 3, 6)
@@ -219,6 +272,104 @@ save('shutter', a, (2.0, 2.0))
 a = base(256, 256, (58, 52, 48), 2, 6)
 for k in range(0, 256, 128): a[k:k + 3] *= 0.6
 save('soffit_dark', a, (2.4, 2.4))
+
+# ---- west club building (photo 12): white render, glazed upper floor, entrance canopy, angled script sign, posters ----
+def _cw_gf(a, pu, pv, h, w):    # ground floor shopfront, one tile = 6 m x 4.2 m: grey render pilaster, dark glazing, mullions every 1.1 m
+    a[:] = np.array((118, 122, 124)) + fine(h, w, 3)[:, :, None]
+    g0, g1 = int(0.25 * pv), int(3.9 * pv); x0 = int(0.6 * pu)
+    a[g0:g1, x0:] = np.array((38, 46, 52)) + noise(g1 - g0, w - x0, 6, 14)[:, :, None]
+    for k in range(5): xx = x0 + int(k * 1.1 * pu); a[g0:g1, xx:xx + 7] = (70, 74, 78)
+    a[int(1.3 * pv):int(1.3 * pv) + 6, x0:] = (70, 74, 78)          # transom
+    a[g1:] = (60, 62, 64); a[:g0] = (128, 132, 134)
+def _cw_white(a, pu, pv, h, w):  # curved west and back walls, one tile = 6 m x 8 m: white render, dark glazing band, white band, dark ground-floor glazing
+    def gl(z0, z1, step):       # z from the top of the tile
+        r0, r1 = int(z0 * pv), int(z1 * pv); a[r0:r1] = np.array((36, 44, 52)) + noise(r1 - r0, w, 6, 14)[:, :, None]
+        for k in range(int(6 / step)): a[r0:r1, int(k * step * pu):int(k * step * pu) + 5] = (196, 198, 198)
+    gl(1.4, 3.6, 1.0); a[int(3.6 * pv):int(4.6 * pv)] = np.array((236, 236, 232)) + fine(int(4.6 * pv) - int(3.6 * pv), w, 3)[:, :, None]
+    gl(4.6, 7.7, 1.5); a[int(7.7 * pv):] = (110, 112, 114)
+def _cw_glass(a, pu, pv, h, w):  # sloped upper-floor glazing, one tile = 3 m x 3.6 m: tinted panels, slim white frames
+    a[:] = np.array((70, 84, 96)) + noise(h, w, 5, 22)[:, :, None]
+    yy = np.arange(h)[:, None] / h; a += (40 * (1 - yy))[:, :, None]           # sky reflection brighter at the top
+    a[:, :6] = (214, 216, 216); a[:, w // 2 - 3:w // 2 + 3] = (180, 184, 186); a[int(1.9 * pv):int(1.9 * pv) + 5] = (180, 184, 186)
+facade('clubw_gf', (118, 122, 124), _cw_gf, (6.0, 4.2), 1024, 716, 0.05)
+facade('clubw_white', (234, 234, 230), _cw_white, (6.0, 8.0), 1024, 1366, 0.08)
+facade('clubw_glass', (70, 84, 96), _cw_glass, (3.0, 3.6), 512, 616, 0.02)
+for nm, col in (('paint_cream', (226, 214, 176)), ('paint_brown', (64, 52, 48)), ('bollard', (204, 160, 40)), ('paint_grey', (112, 116, 118)), ('paint_navy', (56, 66, 80)), ('paint_rust', (122, 60, 46)), ('render_white', (238, 238, 234))):
+    a = base(128, 128, col, 4, 8); save(nm, a, (1.0, 1.0))
+# club forecourt (photo 12): broom-finished concrete drive with saw joints, garden mulch, shrubs, palm trunk and fronds
+a = base(256, 256, (236, 236, 232), 2, 4); yy, xx = np.ogrid[:256, :256]; a[((yy - 128) ** 2 + (xx - 128) ** 2) < 36] = (250, 248, 236); save('soffit_white', a, (3.0, 3.0))   # canopy soffit: smooth white, a downlight every 3 m
+concrete('conc_drive', (176, 174, 168), 4.0, 4.0, (8.0, 8.0), 0.04)
+save('mulch', base(256, 256, (92, 64, 44), 14, 18), (2.0, 2.0))
+a = base(256, 256, (58, 104, 44), 22, 30); a[R.random((256, 256)) < 0.08] *= 0.6; save('shrub', a, (1.5, 1.5))
+a = base(128, 128, (120, 108, 92), 6, 10); a[::12] *= 0.8; save('palm_trunk', a, (1.0, 1.0))
+# palm frond (photo 12): RGBA, a pinnate blade along v (base at v=0), a pale rib, ~40 drooping leaflet pairs, open between
+FW, FH = 256, 1024; im = Image.new('RGBA', (FW, FH), (0, 0, 0, 0)); dr = ImageDraw.Draw(im)
+for k in range(40):
+    y = FH - 40 - k * (FH - 80) / 40; L_ = (FW / 2 - 6) * math.sin(math.pi * (0.12 + 0.85 * k / 40)) ** 0.7
+    g = tuple(int(c) for c in (np.array((54, 104, 40)) * R.uniform(0.8, 1.15)))
+    for sg in (-1, 1): dr.line([FW / 2, y, FW / 2 + sg * L_, y - 0.55 * L_], fill=g + (255,), width=7)
+dr.line([FW / 2, FH - 10, FW / 2, 30], fill=(150, 150, 96, 255), width=6)
+a = np.asarray(im, float); save('palm_frond', a, (1.0, 1.0))
+# angled 'Cazalys' sign: dark brown inverted trapezoid (drawn on the mesh), vertical panel joints, raised white script
+SW2, SH2 = 1024, 400
+im = Image.fromarray(np.clip(base(SH2, SW2, (66, 54, 50), 2, 4), 0, 255).astype(np.uint8)); dr = ImageDraw.Draw(im)
+for k in (256, 512, 768): dr.line([k, 0, k, SH2], fill=(52, 42, 40), width=4)
+F3 = ImageFont.truetype('C:/Windows/Fonts/segoescb.ttf', 210)
+t3 = Image.new('L', (1400, 420), 0); ImageDraw.Draw(t3).text((10, 0), 'Cazalys', font=F3, fill=255); t3 = t3.crop(t3.getbbox())
+t3 = t3.rotate(14, expand=True, resample=Image.BICUBIC); t3 = t3.resize((int(SW2 * 0.62), int(t3.height * SW2 * 0.62 / t3.width)), Image.LANCZOS)
+sh3 = Image.new('RGB', t3.size, (30, 24, 22)); im.paste(sh3, ((SW2 - t3.width) // 2 + 8, (SH2 - t3.height) // 2 + 8), t3)   # relief shadow
+wt = Image.new('RGB', t3.size, (244, 242, 236)); im.paste(wt, ((SW2 - t3.width) // 2, (SH2 - t3.height) // 2), t3)
+save('sign_clubw', np.asarray(im, float), (1, 1))
+# shopfront posters (photo 12): a group of three panels, 3.3 m x 3.0 m, header strips over hand-drawn promo posters
+PW, PH = 1100, 1000; im = Image.new('RGB', (PW, PH), (26, 26, 28)); dr = ImageDraw.Draw(im)
+FB = ImageFont.truetype('C:/Windows/Fonts/ariblk.ttf', 54); FS = ImageFont.truetype('C:/Windows/Fonts/segoescb.ttf', 64); FT = ImageFont.truetype('C:/Windows/Fonts/arialbd.ttf', 40)
+body = [((140, 30, 40), (240, 210, 200), 'XMAS LUNCH'), ((40, 34, 70), (236, 200, 90), 'NEW YEAR'), ((70, 40, 110), (120, 200, 240), 'TRIVIA')]
+for i, (bg, fg, ttl) in enumerate(body):
+    x0 = 20 + i * 360; x1 = x0 + 330
+    if i == 1: dr.rectangle([x0, 20, x1, 140], fill=(44, 40, 38)); dr.text(((x0 + x1) / 2, 80), 'Cazalys', font=FS, fill=(240, 240, 236), anchor='mm')
+    else:
+        dr.rectangle([x0, 20, x1, 140], fill=(232, 212, 36)); dr.text(((x0 + x1) / 2, 80), 'CLUBSLINK', font=FB, fill=(24, 60, 30), anchor='mm')
+    dr.rectangle([x0 + 20, 170, x1 - 20, 820], fill=bg)
+    dr.rectangle([x0 + 40, 200, x1 - 40, 330], fill=tuple(min(255, c + 40) for c in bg)); dr.text(((x0 + x1) / 2, 265), ttl, font=FT, fill=fg, anchor='mm')
+    for k in range(6): dr.rectangle([x0 + 50, 380 + k * 60, x1 - 50 - (k % 3) * 40, 400 + k * 60], fill=tuple(min(255, c + 90) for c in bg))
+    dr.ellipse([x0 + 100, 700, x1 - 100, 800], fill=fg)
+a = np.asarray(im, float) + noise(PH, PW, 10, 3)[:, :, None]; save('posters_w', a, (1, 1))
+
+# Mulgrave Rd lettering on the ground-floor glazing (Street View Feb 2025, pano dxiQEa8t zoomed): two lines of upright gold
+# caps, 'CAIRNS AUSTRALIAN' over 'FOOTBALL LEAGUE' (second line 4-91% of the first). One tile = the 6.2 m x 1.2 m panel.
+LW, LH = 2048, 400; im = Image.new('RGBA', (LW, LH), (0, 0, 0, 0)); FL = ImageFont.truetype('C:/Windows/Fonts/arialbd.ttf', 200)
+def line(txt, x0, x1, y0, y1):
+    t = Image.new('L', (2600, 260), 0); ImageDraw.Draw(t).text((10, 0), txt, font=FL, fill=255); t = t.crop(t.getbbox())
+    t = t.resize((x1 - x0, y1 - y0), Image.LANCZOS)
+    im.paste(Image.new('RGBA', t.size, (92, 74, 44, 255)), (x0 + 5, y0 + 5), t)        # letter returns, read as a dark edge
+    im.paste(Image.new('RGBA', t.size, (184, 156, 98, 255)), (x0, y0), t)
+line('CAIRNS AUSTRALIAN', 10, LW - 14, 14, 180); line('FOOTBALL LEAGUE', 10 + int(0.04 * LW), int(0.91 * LW), 214, 380)
+save('sign_cafl', np.asarray(im, float), (1, 1))
+# club logo on the grey upper wall (same pano): white 'Cazalys' script with a dark outline, then 'meet drink' over
+# 'eat play' in orange, blue, green and red lower case. One tile = the 5.8 m x 1.75 m logo.
+GW, GH = 2048, 618; im = Image.new('RGBA', (GW, GH), (0, 0, 0, 0)); FSc = ImageFont.truetype('C:/Windows/Fonts/segoescb.ttf', 400)
+t = Image.new('L', (2400, 700), 0); ImageDraw.Draw(t).text((10, 0), 'Cazalys', font=FSc, fill=255); t = t.crop(t.getbbox())
+t = t.rotate(8, expand=True, resample=Image.BICUBIC); t = t.resize((int(0.6 * GW), GH - 20), Image.LANCZOS)
+from PIL import ImageFilter
+im.paste(Image.new('RGBA', t.size, (48, 50, 54, 255)), (8, 8), t.filter(ImageFilter.MaxFilter(9)))
+im.paste(Image.new('RGBA', t.size, (246, 246, 242, 255)), (8, 8), t)
+FTg = ImageFont.truetype('C:/Windows/Fonts/arialbd.ttf', 150); dg = ImageDraw.Draw(im)
+def words(ws, x, y):
+    for w, c in ws:
+        dg.text((x, y), w, font=FTg, fill=(*c, 255)); x += dg.textlength(w, font=FTg) + 6
+words([('meet', (236, 120, 36)), ('drink', (40, 104, 196))], int(0.50 * GW), int(0.50 * GH))
+words([('eat', (64, 168, 72)), ('play', (214, 50, 44))], int(0.60 * GW), int(0.74 * GH))
+save('sign_clublogo', np.asarray(im, float), (1, 1))
+
+# west wing logo (pano mIsaus, Feb 2025): the plain white 'Cazalys' script alone on the grey wall, rising to the right
+im = Image.new('RGBA', (GW, GH), (0, 0, 0, 0)); t = Image.new('L', (2400, 700), 0); ImageDraw.Draw(t).text((10, 0), 'Cazalys', font=FSc, fill=255)
+t = t.crop(t.getbbox()).rotate(8, expand=True, resample=Image.BICUBIC).resize((GW - 20, GH - 20), Image.LANCZOS)
+im.paste(Image.new('RGBA', t.size, (246, 246, 242, 255)), (10, 10), t); save('sign_clublogo2', np.asarray(im, float), (1, 1))
+
+# bare red earth behind the west end, where the old west_north terrace was (GE 3D 2026: sunlit median ~(165, 130, 115)): blotchy soil, tyre-flattened patches, small stones
+a = base(512, 512, (165, 128, 110), 10, 22); a += noise(512, 512, 40, 14)[:, :, None] * np.array([1.0, 0.8, 0.7])
+st = R.random((512, 512)) > 0.992; a[st] = a[st] * 0.75 + np.array([200, 190, 178]) * 0.25
+save('earth', a, (4.0, 4.0))
 
 json.dump(TILE, open(OUT + 'tiles.json', 'w', newline=''), indent=0)
 for nm in sorted(TILE):
