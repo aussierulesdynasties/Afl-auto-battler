@@ -1228,7 +1228,11 @@ func _pass_phases(k: int) -> Array:
 	var r := _actor_id(nev)
 	if r < 0:
 		return out
-	var to: Vector2 = _loc(nk) if str(nev.get("kind", "")) == "receive" else (tokens[r]["pos"] as Vector2)
+	# A pass marked on the lead, or cut off by the other side (a rebound), comes down where the
+	# log has it, and he runs to it: at the interceptor's own feet it carried 15-21 m past the
+	# spot on a ground shorter than the standard oval (MCG, suite match).
+	var to: Vector2 = _loc(nk) if str(nev.get("kind", "")) in ["receive", "rebound"] \
+			else (tokens[r]["pos"] as Vector2)
 	var d := (ball["pos"] as Vector2).distance_to(to)
 	var shape := _flight_shape("handball" if bool(events[k].get("hand", false)) else "kick", d)
 	out.append({"t": "flight", "to": to, "dur": shape.x, "apex": shape.y, "recv": r,
@@ -1767,6 +1771,9 @@ func _pass_line(lines: Dictionary, id: int, rest: Vector2, through := false) -> 
 		if pos.distance_to(aim) > 0.01:
 			dir = (aim - pos).normalized()
 	var goal := aim + dir * RUN_THROUGH
+	# Run-through past a ball near the fence ends inside it: a line out past the fence pinned
+	# him against it, standing still beside the ball (suite match at the MCG's own size).
+	goal = MatchMotion.clamp_to_oval(goal, 2.0)
 	lines[id] = [goal, rest, through]
 	return goal
 
@@ -2888,6 +2895,14 @@ func _log_arrival(k: int) -> void:
 		# A set-shot mark stands on its band's spot (T2.24), and a set shot
 		# that falls short drops in front of goal from there, not at the logged fp.
 		want = (_locs[k] as Vector2).x
+	else:
+		# The disposal off a set-shot mark (a pass from the pocket) goes from where the mark
+		# stands, its band's spot, which the log gives the same fp as the mark.
+		var pk := _prev_real(k)
+		if pk >= 0 and (events[pk] as Dictionary).has("band") and _locs.has(pk) \
+				and is_equal_approx(float((events[pk] as Dictionary).get("fp", 0.0)), float(ev.get("fp", 0.0))) \
+				and int((events[pk] as Dictionary).get("side", -1)) == int(ev.get("side", -2)):
+			want = (_locs[pk] as Vector2).x
 	if arrivals.size() >= 4000:
 		arrivals.pop_front()
 	arrivals.append({"idx": k, "kind": kind, "pos": ball["pos"], "want_x": want})

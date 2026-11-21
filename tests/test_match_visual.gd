@@ -2205,8 +2205,9 @@ func _test_ground_models() -> void:
 	MatchMotion.use_field(Vector2.ZERO)
 	_check(MatchMotion.HALF_LEN == MatchMotion.STD_HALF_LEN and MatchMotion.gx(37.3) == 37.3,
 			"A ground with no size of its own plays on the standard oval, every spot as before")
-	_check(GroundModels.field_for("Adelaide Oval").is_equal_approx(Vector2(83.5, 62.0)),
-			"A ground with no model plays at its published size (Adelaide Oval 167 x 124)")
+	# (Adelaide Oval has had a model in matches since #1948; Victoria Park has none.)
+	_check(GroundModels.field_for("Victoria Park").is_equal_approx(Vector2(80.0, 65.0)),
+			"A ground with no model plays at its published size (Victoria Park 160 x 130)")
 	for code in GameDB.clubs.keys():
 		var home := VignetteGround.ground_of({"home": code})
 		if GroundModels.GROUNDS.has(GameDB.ground_key(home)):
