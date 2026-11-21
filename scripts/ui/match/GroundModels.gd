@@ -90,6 +90,12 @@ const FIT := {
 const SURROUNDS := {
 	"mcg": {"y": -0.03, "inner": 140.0, "colour": Color(0.45, 0.55, 0.27),
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin"},
+	# Optus Stadium on the Burswood peninsula: the Swan River, Perth Water, the parks and plaza from
+	# OpenStreetMap (tools/grounds/optus/surrounds.py), and its bridges in 3D, Matagarup's arches
+	# included (`models`, tools/grounds/optus/bridges.py).
+	"optus": {"y": -0.03, "inner": 100.0, "colour": Color(0.45, 0.55, 0.27),
+			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
+			"models": ["bridges.glb"], "tint": Color(2.0, 1.4, 0.95), "building_tint": Color(1.15, 1.05, 0.98)},
 }
 
 ## Parts of a model drawn again from a build tool's own mesh (per vertex x, y, z, normal, colour;
@@ -113,6 +119,16 @@ const MATERIAL_FIX := {
 		"roof_teal": {"albedo_color": Color(0.72, 0.86, 0.8)},
 		# The north stands' masts and ties: pale painted tubes in Google Earth, not dark galvanised.
 		"steel_galv": {"metallic": 0.0, "roughness": 0.55, "albedo_color": Color(0.9, 0.9, 0.88)},
+	},
+	# Optus (2026-11-21, against Google Earth): the white PTFE roof is matte; built at roughness 0.6 it
+	# took the sky's blue from every angle. The bronze fins are anodised aluminium: a soft metal sheen
+	# that catches low sun (tools/grounds/optus/bronze.py draws them).
+	"optus": {
+		"roof": {"metallic": 0.0, "roughness": 0.95, "albedo_color": Color(0.97, 0.96, 0.93)},
+		"bronze": {"metallic": 0.12, "roughness": 0.55},
+		"sign_a": {"metallic": 0.12, "roughness": 0.55},
+		# The glass storeys read mid grey-green from outside in daylight, not sky blue.
+		"glass": {"metallic": 0.1, "roughness": 0.3},
 	},
 }
 
@@ -299,6 +315,8 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
 		mm.disable_receive_shadows = true
 		mm.texture_repeat = false
 		mm.roughness = 1.0
+		# `tint` brings the painted map to Google Earth's colours under the match light (Optus).
+		mm.albedo_color = s.get("tint", Color.WHITE)
 		var g := MeshInstance3D.new()
 		g.name = "Surrounds"
 		g.mesh = mesh
@@ -309,7 +327,15 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
 		if s.has("trees") and FileAccess.file_exists(dir + str(s["trees"])):
 			_add_trees(root, FileAccess.get_file_as_bytes(dir + str(s["trees"])).to_float32_array(), y)
 		if s.has("buildings") and FileAccess.file_exists(dir + str(s["buildings"])):
-			_add_buildings(root, FileAccess.get_file_as_bytes(dir + str(s["buildings"])).to_float32_array(), y)
+			_add_buildings(root, FileAccess.get_file_as_bytes(dir + str(s["buildings"])).to_float32_array(), y,
+					s.get("building_tint", s.get("tint", Color.WHITE)))
+		for m in s.get("models", []):
+			var extra := load_glb(dir + str(m))
+			if extra != null:
+				extra.name = str(m).get_basename()
+				for gi in extra.find_children("*", "GeometryInstance3D", true, false):
+					(gi as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+				root.add_child(extra)
 		return
 	var noise := FastNoiseLite.new()
 	noise.frequency = 0.02
@@ -407,7 +433,7 @@ static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float) -> void:
 ## The map's buildings round the ground (point count, height, then the footprint's x, z): plain
 ## walls in a pale render or brick and a flat roof each, as one mesh. Seen past the stands and
 ## from a fly-through, they set the MCG in its city rather than on a plain.
-static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float) -> void:
+static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float, tint := Color.WHITE) -> void:
 	var v := PackedVector3Array()
 	var nrm := PackedVector3Array()
 	var col := PackedColorArray()
@@ -456,6 +482,7 @@ static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float) -> v
 	var mat := StandardMaterial3D.new()
 	mat.resource_name = "city"
 	mat.vertex_color_use_as_albedo = true
+	mat.albedo_color = tint
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	mat.roughness = 0.95
 	mat.disable_receive_shadows = true
