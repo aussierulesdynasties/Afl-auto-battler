@@ -627,13 +627,50 @@ func _draw_3d() -> void:
 	if _replaying():
 		# Names and captions follow the live play, not the replayed bodies: none on a replay.
 		_draw_replay_tag()
+	else:
+		_layout_3d()
+		var tr := token_radius()
+		_draw_role_labels(tr)
+		_draw_caption(tr)
+		_draw_press_banner()
+		_draw_tip()
+	_draw_sting()
+
+
+## The replay's sting (Oval3DBroadcast.sting()), as Seven's and Fox Footy's coverage go into
+## and out of a replay: a slanted band in the scoring club's colours sweeps across the picture,
+## left to right, covering it whole at its middle, where the picture cuts. "REPLAY" rides on it
+## going in; nothing going out.
+func _draw_sting() -> void:
+	var p := _tv.sting() if _tv != null else -1.0
+	if p < 0.0:
 		return
-	_layout_3d()
-	var tr := token_radius()
-	_draw_role_labels(tr)
-	_draw_caption(tr)
-	_draw_press_banner()
-	_draw_tip()
+	var w := size.x
+	var h := size.y
+	var slant := h * 0.25
+	var half := w * 0.5 + slant + w * 0.08
+	var stripe := w * 0.035
+	var off := half + slant + 2.0 * stripe  # just off the picture at the start and the end
+	var c := lerpf(-off, w + off, smoothstep(0.0, 1.0, p))
+	var code := home_code if _tv.replay_side == 0 else away_code
+	var cols := GameDB.club_colours(code) if code != "" else [UiKit.BG, UiKit.TEXT, UiKit.TEXT]
+	var body: Color = cols[0]
+	var edge: Color = cols[1]
+	var band := PackedVector2Array([Vector2(c - half + slant, 0.0), Vector2(c + half + slant, 0.0),
+			Vector2(c + half - slant, h), Vector2(c - half - slant, h)])
+	for sgn in [-1.0, 1.0]:
+		var x: float = c + sgn * (half + stripe * 0.5)
+		draw_colored_polygon(PackedVector2Array([Vector2(x - stripe + slant, 0.0), Vector2(x + stripe + slant, 0.0),
+				Vector2(x + stripe - slant, h), Vector2(x - stripe - slant, h)]), edge)
+	draw_colored_polygon(band, body)
+	if _tv.replaying == (p >= 0.5):
+		# Going in (live before the cut, the replay after): the word rides the band.
+		var fs := UiKit.px(UiKit.RATING)
+		var word := "REPLAY"
+		var tw := UiKit.DISPLAY.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		var ink := Color.BLACK if body.get_luminance() > 0.55 else Color.WHITE
+		draw_string(UiKit.DISPLAY, Vector2(c - tw * 0.5, h * 0.5 + fs * 0.36), word,
+				HORIZONTAL_ALIGNMENT_LEFT, -1, fs, ink)
 
 
 # ---------------------------------------------------------------------------
@@ -712,7 +749,7 @@ func _process(delta: float) -> void:
 		# after a mark) play at double the watching speed (rule 2.93). The centre
 		# bounce waits for a goal's replay to end (rule 2.96).
 		var out := []
-		if not (_tv != null and _tv.replaying and director.bounce_next()):
+		if not (_tv != null and _tv.on_replay() and director.bounce_next()):
 			out = director.advance(delta * speed * (MatchDirector.PAUSE_PLAY if director.pausing() else 1.0))
 		for ev in out:
 			_track_quarter(ev)
@@ -745,7 +782,7 @@ func _process(delta: float) -> void:
 	_update_camera(delta)
 	if _oval3d != null:
 		_sync_3d(delta * speed if playing else 0.0, delta if playing or _siren_replay else 0.0)
-		if _siren_replay and not _tv.replaying:
+		if _siren_replay and not _tv.on_replay():
 			_siren_replay = false
 			finished.emit()
 		_paint_ground_3d()
@@ -789,7 +826,7 @@ func set_marks(next: Dictionary) -> void:
 ## does nothing here.
 func _gui_input(e: InputEvent) -> void:
 	if e is InputEventMouseButton and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
-		if (e as InputEventMouseButton).pressed and _replaying():
+		if (e as InputEventMouseButton).pressed and _tv != null and _tv.on_replay():
 			# A tap anywhere on the picture skips the replay (rule 2.96).
 			skip_replay()
 			accept_event()

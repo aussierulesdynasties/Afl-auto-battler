@@ -3220,6 +3220,9 @@ func _test_three_d_cameras(res: Dictionary) -> void:
 	var goals := 0
 	var held := 0
 	var moved_in_hold := 0
+	var sting_in := 0
+	var sting_out := 0
+	var ends := 0  # replays that ran to their end (not the tapped one)
 	var was_replay := false
 	var tv: Oval3DBroadcast = pv._tv
 	var goals_seen := {}
@@ -3235,6 +3238,13 @@ func _test_three_d_cameras(res: Dictionary) -> void:
 			moved_in_hold += 1 if pv.director.time != t0 else 0
 		if not pv.playing:
 			break
+		# The sting covers the picture whole at its middle: the cut in and out happens there.
+		var mid := tv.sting() >= 0.5 and tv.sting() < 0.55
+		if tv.replaying and not was_replay:
+			sting_in += 1 if mid else 0
+		if was_replay and not tv.replaying:
+			sting_out += 1 if mid else 0
+			ends += 1
 		if tv.replaying and not was_replay:
 			replays += 1
 			if replays == 2:
@@ -3242,7 +3252,7 @@ func _test_three_d_cameras(res: Dictionary) -> void:
 				# live again at once.
 				var why: String = await Tap.tap_at(pv, pv.size * 0.5)
 				pv._process(1.0 / 60.0)
-				skipped += 1 if why == "" and not tv.replaying and tv.shot == "main" else 0
+				skipped += 1 if why == "" and not tv.replaying and tv.shot == "main" and tv.sting() < 0.0 else 0
 		was_replay = tv.replaying
 		if tv.replaying:
 			continue
@@ -3306,7 +3316,10 @@ func _test_three_d_cameras(res: Dictionary) -> void:
 			"Ball-ups show the ruckmen close, from a wing camera (%d ruckmen, %d from the wing)" % [closes.size(), close_ok])
 	_check(goals > 0 and replays >= mini(goals, 2) and replays <= goals,
 			"A goal gets one replay (%d goals, %d replays)" % [goals, replays])
-	_check(skipped == 1, "A tap on the picture skips the replay: live again at once")
+	_check(skipped == 1, "A tap on the picture skips the replay: live again at once, with no sting")
+	_check(replays > 0 and sting_in == replays and ends > 0 and sting_out == ends,
+			"Into and out of a replay the picture cuts under the sting's full cover (%d of %d in, %d of %d out)"
+			% [sting_in, replays, sting_out, ends])
 	_check(moved_in_hold == 0, "The centre bounce waits for the replay (%d of %d held frames moved on)" % [moved_in_hold, held])
 	_check(goals_eyes.size() == 1 and goals_eyes.has(snappedf(MatchMotion.HALF_LEN + 25.0, 0.1)),
 			"The goals camera stands 25 m behind a goal line, on the ground's middle (%s)" % [goals_eyes.keys()])
