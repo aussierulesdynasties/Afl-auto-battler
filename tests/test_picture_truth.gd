@@ -91,7 +91,8 @@ func _test_the_measures_catch_a_fault() -> void:
 	nobody["holder"] = 99
 	_check(Truth.ball_fault(nobody, held, toks, h, 0.0) != "", "A ball held by nobody is caught")
 	var hang := {"mode": "dead", "holder": -1, "pos": Vector2(20, 5), "h": 3.0}
-	_check(Truth.ball_fault(hang, hang, toks, h, 0.0) != "", "A ball hanging three metres up, still, is caught")
+	_check(Truth.ball_fault(hang, hang, toks, h, 2.0 * h) != "", "A ball hanging three metres up, still for two frames, is caught")
+	_check(Truth.ball_fault(hang, hang, toks, h, h) == "", "One still frame up off the ground alone is not a hang (two drops through the same height)")
 	var fall := hang.duplicate()
 	fall["h"] = 1.5
 	_check(Truth.ball_fault(fall, hang, toks, h, 0.0) == "", "A ball dropping to the ground passes")

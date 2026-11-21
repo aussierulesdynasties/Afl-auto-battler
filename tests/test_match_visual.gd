@@ -32,6 +32,7 @@ func run() -> void:
 	_t("_test_no_wrong_way_kicks", [res])
 	_t("_test_match_flow", [res])
 	_t("_test_boundary_collect", [res])
+	_t("_test_fence_pull_up")
 	_t("_test_bodies_apart", [res])
 	_t("_test_smother_at_the_kick", [res])
 	_t("_test_tactical_timeline")
@@ -679,6 +680,41 @@ func _test_bodies_apart(res: Dictionary) -> void:
 ## Playtest freeze (near the boundary): a ball resting against the fence sat
 ## where the collector's run could never reach within touching distance, and
 ## collecting had no time limit, so play stopped. It now always completes.
+## Row 201 gap 13: a man running at the fence went from 4-5 m/s to 1.1 m/s in
+## one step (the clamp halved his whole speed). He pulls up within his braking
+## limit, and on the fence he keeps his speed along it.
+func _test_fence_pull_up() -> void:
+	var dt := MatchDirector.SUBSTEP
+	var worst := 0.0
+	var reached := false
+	for start in [Vector2(70, 0), Vector2(0, 52), Vector2(55, 40), Vector2(-60, -35)]:
+		var t := MatchMotion.make_token(start, 7.0, 0.0)
+		var out := MatchMotion.fence_normal(start)
+		t["vel"] = out * 5.0
+		MatchMotion.set_goal(t, start + out * 60.0, 1.0, true)
+		var last: Vector2 = t["vel"]
+		for i in range(240):
+			MatchMotion.step(t, dt)
+			var v: Vector2 = t["vel"]
+			worst = maxf(worst, (last - v).length() / dt)
+			last = v
+		reached = reached or not MatchMotion.inside_oval(t["pos"], 2.5)
+	_check(worst <= MatchMotion.BRAKE * 1.05,
+			"A man running at the fence pulls up within his braking limit (hardest %.1f m/s2, limit %.0f)" % [worst, MatchMotion.BRAKE])
+	_check(reached, "...and he still gets to the fence")
+	# Along the fence: running round it, he keeps his pace.
+	var a := MatchMotion.clamp_to_oval(Vector2(0, 80), 1.2)
+	var r := MatchMotion.make_token(a, 7.0, 0.0)
+	var along := MatchMotion.fence_normal(a).orthogonal()
+	r["vel"] = along * 5.0
+	MatchMotion.set_goal(r, a + along * 30.0 + MatchMotion.fence_normal(a) * 3.0, 1.0, true)
+	var slowest := 99.0
+	for i in range(30):
+		MatchMotion.step(r, dt)
+		slowest = minf(slowest, (r["vel"] as Vector2).length())
+	_check(slowest > 4.0, "A man running along the fence keeps his pace (slowest %.1f m/s)" % slowest)
+
+
 func _test_boundary_collect(res: Dictionary) -> void:
 	var pv := PitchView.new()
 	pv.size = Vector2(400, 700)
@@ -1601,7 +1637,7 @@ func _test_flood_shape(res: Dictionary) -> void:
 					n += 1
 		return n
 	var plain: int = behind.call([])
-	var other: int = behind.call(["surge"])
+	var other: int = behind.call(["push"])   # a call made with the ball only (Throw numbers at it goes to the ball both ways: gap 14)
 	var flood: int = behind.call(["flood"])
 	_check(flood >= plain + 6,
 			"Flooding puts more players behind the ball on the opposition's entries (%d against %d over three entries)" % [flood, plain])
@@ -1907,11 +1943,22 @@ func _test_call_shapes(res: Dictionary) -> void:
 	_check(centre_ok and bu >= 0 and int(pack_ctn[0]) > int(pack_bal[0]) and int(pack_ctn[0]) >= 3 + MatchDirector.CONTEST_PACK and int(pack_ctn[1]) == int(pack_bal[1]),
 			"Win Contest sends extra numbers to every stoppage: a stacked centre bounce, a ball-up pack of %d against %d (the other side's %d unchanged)" % [int(pack_ctn[0]), int(pack_bal[0]), int(pack_ctn[1])])
 	d._tac[0] = {}
-	# Throw numbers at it: numbers ahead of the ball with it, the backs high without it.
+	# Throw numbers at it (row 201 gap 14): more men at the ball wherever it is,
+	# with it and without it, not the whole side lifted forward like Push.
 	var sg_has: Dictionary = stand.call({"plan": "balanced", "bursts": ["surge"]}, 0)
 	var sg_not: Dictionary = stand.call({"plan": "balanced", "bursts": ["surge"]}, 1)
-	_check(int(sg_has["ahead"]) >= int(bal_has["ahead"]) + 6 and same.call(sg_not, bal_not),
-			"Throw numbers at it puts at least six more players ahead of the ball with it (%d against %d over three balls), a flood in reverse, and only with it" % [int(sg_has["ahead"]), int(bal_has["ahead"])])
+	var near20 := func(st: Dictionary) -> int:
+		var k := 0
+		var per := int((st["pos"] as Array).size() / balls.size())
+		for i in range((st["pos"] as Array).size()):
+			if ((st["pos"] as Array)[i] as Vector2).distance_to(balls[i / per]) <= 20.0:
+				k += 1
+		return k
+	_check(int(near20.call(sg_has)) >= int(near20.call(bal_has)) + 6 and int(near20.call(sg_not)) >= int(near20.call(bal_not)) + 6,
+			"Throw numbers at it puts at least six more men within 20 m of the ball over three balls, with it (%d against %d) and without it (%d against %d)" % [
+				int(near20.call(sg_has)), int(near20.call(bal_has)), int(near20.call(sg_not)), int(near20.call(bal_not))])
+	_check(absf(float(sg_has["deep"]) - float(bal_has["deep"])) < 8.0,
+			"...without lifting the whole side forward like Push (its centre %.1f m against %.1f)" % [float(sg_has["deep"]), float(bal_has["deep"])])
 	# Slow it down: deeper both ways, wider with the ball.
 	var hd_has: Dictionary = stand.call({"plan": "balanced", "bursts": ["hold"]}, 0)
 	var hd_not: Dictionary = stand.call({"plan": "balanced", "bursts": ["hold"]}, 1)
