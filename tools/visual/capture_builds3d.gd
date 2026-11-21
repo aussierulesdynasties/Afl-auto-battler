@@ -47,6 +47,11 @@ func _run() -> void:
 	_gen = str(args[2]) if args.size() > 2 and str(args[2]).begins_with("gen") else ""
 	if args.size() > 2 and str(args[2]) == "heads":
 		_lineup_men = LINEUP_HEADS
+		# LINEUP="MEL:Changkuoth:Jiath,MEL:Jake:Bowey" films those men instead of the four above.
+		if OS.get_environment("LINEUP") != "":
+			_lineup_men = []
+			for m in OS.get_environment("LINEUP").split(","):
+				_lineup_men.append(m.split(":"))
 	DirAccess.make_dir_recursive_absolute(out)
 	OS.low_processor_usage_mode = false
 	root.content_scale_mode = Window.CONTENT_SCALE_MODE_DISABLED
@@ -61,8 +66,15 @@ func _run() -> void:
 	var heads := args.size() > 2 and str(args[2]) == "heads"
 	_home = "MEL" if heads and mode == "match" else "FRE"
 	_away = "FRE" if heads and mode == "match" else "STK"
-	_follow = "MEL_11" if heads and mode == "match" else ""
-	var res: Dictionary = load("res://scripts/sim/MatchSim.gd").new(Squad_.new(_home, gdb.club_list(_home), true, _home),
+	_follow = (OS.get_environment("FOLLOW") if OS.get_environment("FOLLOW") != "" else "MEL_11") if heads and mode == "match" else ""  # TEMP FOLLOW: the collar-join film of Cross
+	var home_list: Array = gdb.club_list(_home)
+	if _follow != "":  # TEMP FOLLOW: the followed man always makes the side (a copy of him rated top for selection only)
+		home_list = home_list.duplicate()
+		for i in range(home_list.size()):
+			if str(home_list[i].get("id", "")) == _follow:
+				home_list[i] = home_list[i].duplicate()
+				home_list[i]["overall"] = 99.0
+	var res: Dictionary = load("res://scripts/sim/MatchSim.gd").new(Squad_.new(_home, home_list, true, _home),
 			Squad_.new(_away, gdb.club_list(_away), false, _away), 31).run()
 	_make_clouds()
 	await _clouds.changed
@@ -133,6 +145,8 @@ func _lineup(out: String, res: Dictionary, gdb, flat: bool) -> void:
 		views["head%d_b" % i] = [h + Vector3(1.8, 1.2, -2.1), h, 0.5]
 		# His head and neck side on, level with his throat, 0.6 m across: the line from his collar to his chin.
 		views["head%d_p" % i] = [h + Vector3(0.9, -0.1, 0.0), h + Vector3(0, -0.1, 0), 0.6]
+		# Up under his chin from in front, 0.35 m across: the join under a beard, where the ground could show through.
+		views["head%d_u" % i] = [h + Vector3(0, -0.75, 1.3), h + Vector3(0, -0.12, 0), 0.35]
 		# His whole body alone from the front and the side, a 2.4 m tall frame (4.27 m wide at 16:9), my
 		# own check of the kit and shape.
 		var at: Vector3 = (men[i]["node"] as Node3D).global_position + Vector3(0, 1.1, 0)
@@ -141,6 +155,31 @@ func _lineup(out: String, res: Dictionary, gdb, flat: bool) -> void:
 		# The same two frames with nobody in them, so his outline can be cut out and measured.
 		views["body%d_bg" % i] = [at + Vector3(0, 0.0, 6.0), at, 4.27, -1]
 		views["body%d_s_bg" % i] = [at + Vector3(6.0, 0.0, 0.0), at, 4.27, -1]
+		# His shorts alone from the front, the side and behind, 1.0 m across at his hips: how they hang.
+		var hip: Vector3 = skel.global_transform * skel.get_bone_global_pose(skel.find_bone("pelvis")).origin + Vector3(0, -0.12, 0)
+		views["shorts%d" % i] = [hip + Vector3(0, 0.0, 3.0), hip, 1.0, i]
+		views["shorts%d_s" % i] = [hip + Vector3(3.0, 0.0, 0.0), hip, 1.0, i]
+		views["shorts%d_b" % i] = [hip + Vector3(0, 0.0, -3.0), hip, 1.0, i]
+	if OS.get_environment("CLIP") != "":  # TEMP CLIP: the collar-join film, each man jogging, his head and neck close
+		for i in range(men.size()):
+			var ap2: AnimationPlayer = men[i]["anim"]
+			ap2.play("jog")
+			ap2.pause()
+			var sk: Skeleton3D = men[i]["skel"]
+			for ang in [["q", Vector3(2.1, 0.0, 2.1)], ["p", Vector3(3.0, -0.1, 0.0)], ["b", Vector3(-1.8, 0.6, -2.4)]]:
+				for k in range(90):
+					ap2.seek(k / 30.0, true)
+					for j in range(men.size()):
+						(men[j]["node"] as Node3D).visible = j == i
+					await process_frame
+					var hb: Vector3 = sk.global_transform * sk.get_bone_global_pose(sk.find_bone("head")).origin + Vector3(0, -0.03, 0)
+					cam.global_position = hb + ang[1]
+					cam.look_at(hb, Vector3.UP)
+					cam.fov = rad_to_deg(2.0 * atan(0.8 * 0.5 / ang[1].length()))
+					await RenderingServer.frame_post_draw
+					root.get_viewport().get_texture().get_image().save_png(out.path_join("clip%d_%s_%03d.png" % [i, ang[0], k]))
+		print("CLIP done")
+		return
 	for v in views:
 		var eye: Vector3 = views[v][0]
 		var aim: Vector3 = views[v][1]
@@ -266,6 +305,10 @@ func _look(oval, expo: float) -> void:
 	oval._sun.light_energy = 1.15
 	oval._sun.light_color = Color(1.0, 0.95, 0.86)
 	oval._sun.directional_shadow_max_distance = 320.0
+	if OS.has_environment("SUN_ANGLE"):  # TEMP test
+		oval._sun.light_angular_distance = float(OS.get_environment("SUN_ANGLE"))
+	if OS.has_environment("SHADOW_DIST"):  # TEMP test
+		oval._sun.directional_shadow_max_distance = float(OS.get_environment("SHADOW_DIST"))
 	env.tonemap_mode = Environment.TONE_MAPPER_AGX
 	env.tonemap_exposure = expo
 	env.adjustment_enabled = true
