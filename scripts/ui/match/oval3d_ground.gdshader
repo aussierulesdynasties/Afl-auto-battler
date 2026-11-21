@@ -34,6 +34,10 @@ uniform float saturation = 0.72;
 // Wear over the ground: R thin grass, G churned; UV 0..1 across the whole plane.
 uniform sampler2D wear_map : filter_linear, repeat_disable;
 uniform vec2 wear_half = vec2(93.3, 74.4);
+// A ground's model stands round the turf (GroundModels): the turf stops at its fence, half
+// length and width here, so the plane's square corners never show over the model's own
+// ground. (0, 0): the plane is drawn whole.
+uniform vec2 fence_clip = vec2(0.0);
 
 // The ground's own metres (the oval turns half a turn when the sides change ends; the
 // stripes and the wear turn with it) and the camera in the same frame.
@@ -67,6 +71,9 @@ vec2 blade_uv(vec2 p, float lean, float tile) {
 
 void fragment() {
 	vec2 p = wpos.xz;
+	if (fence_clip.x > 0.0 && length(p / fence_clip) > 1.0) {
+		discard;
+	}
 	float e = length(p / half_size);
 	// Which way you look across the ground, flat.
 	vec3 view_w = normalize(wpos - cam_local);
