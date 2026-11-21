@@ -3272,6 +3272,18 @@ func _test_vignettes_setting() -> void:
 			await _settle()
 			_check(tapped == "" and not _state.battery_saver() and Engine.max_fps == _state.FPS_NORMAL,
 					"Battery saver Off puts it back to 60 (%s)" % tapped)
+			# Graphics: a real tap on Low keeps it for the next 3D match; High is the look as built.
+			_check(_state.graphics_quality() == Oval3DQuality.HIGH, "Graphics starts at High")
+			var low: Button = sheet.find_child("SettingsGraphics_low", true, false)
+			tapped = await Tap.tap(low) if low != null else "missing"
+			await _settle()
+			_check(tapped == "" and _state.graphics_quality() == Oval3DQuality.LOW,
+					"Graphics Low takes a real tap (%s)" % tapped)
+			var high: Button = sheet.find_child("SettingsGraphics_high", true, false)
+			tapped = await Tap.tap(high) if high != null else "missing"
+			await _settle()
+			_check(tapped == "" and _state.graphics_quality() == Oval3DQuality.HIGH,
+					"Graphics High puts the full look back (%s)" % tapped)
 		host.queue_free()
 		await _settle()
 		# A reload: a fresh read of the settings file, and a fresh career state.

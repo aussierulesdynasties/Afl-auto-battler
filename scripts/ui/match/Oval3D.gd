@@ -75,6 +75,8 @@ var screens: Oval3DScreens
 ## The ground the match is at (VignetteGround.ground_of), set before build(): its model when it
 ## has one (GroundModels), else the stand and crowd.
 var ground := ""
+## Graphics quality (Oval3DQuality: low, medium or high), set before build(). Looks only.
+var quality := Oval3DQuality.HIGH
 var _turf_mat: ShaderMaterial  # the turf's paint (oval3d_ground.gdshader)
 var _crowd_t := 0.0           # s of match the crowd has run (its idle and cheer clock)
 var _goal_on := false          # the director was showing a goal last frame
@@ -423,8 +425,8 @@ func _environment() -> void:
 	# filter samples and a finer map make it a smooth band (a phone cost to measure).
 	sun.directional_shadow_max_distance = 160.0
 	sun.shadow_normal_bias = 2.0
-	RenderingServer.directional_shadow_atlas_set_size(4096, true)
-	RenderingServer.directional_soft_shadow_filter_set_quality(RenderingServer.SHADOW_QUALITY_SOFT_HIGH)
+	# High: a 4096 map, the soft filter at its best; Medium and Low draw less (Oval3DQuality).
+	Oval3DQuality.apply_shadows(quality)
 	add_child(sun)
 	_sun = sun
 
@@ -479,6 +481,7 @@ func _posts() -> void:
 func _stands(home: String, away: String) -> void:
 	crowd = Oval3DCrowd.new()
 	crowd.name = "Crowd"
+	crowd.mix_d = float(Oval3DQuality.preset(quality)["people_d"])
 	add_child(crowd)
 	crowd.build(HALF_LEN + FENCE, HALF_WID + FENCE, STAND_DEPTH, STAND_RISE,
 			GameDB.club_colours(home), GameDB.club_colours(away))
@@ -511,6 +514,7 @@ func _stands(home: String, away: String) -> void:
 func _ground_model(slug: String, base := "", home := "", away := "") -> void:
 	var root := GroundModels.instantiate(slug, base)
 	add_child(root)
+	Oval3DQuality.apply_model(quality, root)
 	turf.set_ground(slug)
 	_turf_mat.set_shader_parameter("fence_clip", GroundModels.MATCH_FENCE)
 	_apron_skirt()
@@ -521,6 +525,7 @@ func _ground_model(slug: String, base := "", home := "", away := "") -> void:
 		return
 	crowd = Oval3DCrowd.new()
 	crowd.name = "Crowd"
+	crowd.mix_d = float(Oval3DQuality.preset(quality)["people_d"])
 	root.add_child(crowd)
 	crowd.build_on_seats(seats, GroundModels.seat_points(slug, base),
 			GameDB.club_colours(home), GameDB.club_colours(away))

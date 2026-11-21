@@ -739,6 +739,17 @@ func set_match_3d_on(on: bool) -> void:
 	set_setting("match_3d", on)
 
 
+## Graphics (Oval3DQuality): how much detail the 3D oval draws, low, medium or high. High, the
+## look as built, unless chosen. Looks only: the match plays the same at every level.
+func graphics_quality() -> String:
+	return Oval3DQuality.valid(str(get_setting("graphics", Oval3DQuality.HIGH)))
+
+
+func set_graphics_quality(level: String) -> void:
+	if level in Oval3DQuality.LEVELS:
+		set_setting("graphics", level)
+
+
 ## How fast a watched match starts (1x, 2x, 4x or 8x). 4x by default.
 func match_speed() -> float:
 	var s := float(get_setting("match_speed", 4.0))

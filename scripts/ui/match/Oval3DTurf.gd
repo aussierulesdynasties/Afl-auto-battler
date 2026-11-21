@@ -76,6 +76,7 @@ const BLADE_COUNT := 36000
 const BLADE_SPAN := 16.0      # m: the square of standing blades round the ball
 const BLADE_NEAR := 32.0      # m: farther than this from the ball the camera can't see a blade
 var blades: MultiMeshInstance3D
+var blades_on := true          # the graphics level keeps them (Oval3DQuality)
 var _bmat: ShaderMaterial
 var _clouds: NoiseTexture2D
 const SKY_SHADER := preload("res://scripts/ui/match/oval3d_sky.gdshader")
@@ -247,6 +248,18 @@ func apply(p_weather: String, p_slot: String) -> void:
 	env.tonemap_exposure = exposure
 	_sky_view()
 	_tone_to_film()
+	_quality()
+
+
+## The graphics level's cuts to this look (Oval3DQuality): the sun's shadow bands, whether a
+## late game's plain stand shades the wing, the standing blades. High keeps the look as built.
+func _quality() -> void:
+	var level := str(oval.get("quality")) if oval.get("quality") != null else ""
+	var p := Oval3DQuality.preset(level)
+	Oval3DQuality.apply_sun(level, sun)
+	if not bool(p["stand_shade"]):
+		_stand_shade(false)
+	blades_on = bool(p["blades"])
 
 
 ## The match film (Oval3D._film) applies the tone itself, after its own look, so the club rings
@@ -479,7 +492,7 @@ func _follow_blades() -> void:
 		return
 	var c := Vector2(ball.position.x, ball.position.z)
 	var cam_local := oval.to_local(cam.global_position)
-	blades.visible = cam_local.distance_to(Vector3(c.x, 0.0, c.y)) < BLADE_NEAR
+	blades.visible = blades_on and cam_local.distance_to(Vector3(c.x, 0.0, c.y)) < BLADE_NEAR
 	if not blades.visible:
 		return
 	_bmat.set_shader_parameter("centre", c)

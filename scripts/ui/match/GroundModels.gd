@@ -13,6 +13,11 @@ extends RefCounted
 const DIR := "res://assets/grounds/"
 ## The match's boundary fence: half its length and width (Oval3D: the playing surface plus FENCE).
 const MATCH_FENCE := Vector2(MatchMotion.HALF_LEN + 6.0, MatchMotion.HALF_WID + 6.0)
+## A model mesh bigger than SLICE_OVER triangles is cut into SLICES pieces round the bowl (slice_big_meshes).
+const SLICE_OVER := 200000
+const SLICES := 32
+## A ground's seats are drawn in this many slices round the bowl, so only those in view are drawn.
+const SEAT_SECTORS := 48
 ## The model sits this far under the match's turf, so its own grass never fights the turf for a pixel.
 const UNDER_TURF := 0.1
 
@@ -196,8 +201,105 @@ static func instantiate(slug: String, base := "") -> Node3D:
 			if slug in VERTEX_COLOURED:
 				_paint_vertex_colours(model)
 			root.add_child(model)
-	_add_seats(root, dir)
+	slice_big_meshes(root)
+	var fit: Array = FIT.get(slug, [0.0, 0.0])
+	_add_seats(root, dir, Vector2(float(fit[0]), float(fit[1])))
 	return root
+
+
+## A model mesh of more than SLICE_OVER triangles (Marvel's seats, a million each; Moorabbin's
+## Huggins Stand; People First's two halves) is cut into SLICES pieces by bearing round its own
+## middle, the same triangles and materials, so the camera draws only the pieces in its view
+## instead of the whole bowl every frame. The picture is unchanged.
+static func slice_big_meshes(root: Node) -> void:
+	for mi: MeshInstance3D in root.find_children("*", "MeshInstance3D", true, false):
+		if mi.mesh == null or mi.skin != null:
+			continue
+		var tris := 0
+		for si in range(mi.mesh.get_surface_count()):
+			tris += mi.mesh.surface_get_array_index_len(si) / 3
+		if tris <= SLICE_OVER:
+			continue
+		var pieces := _slices(mi.mesh)
+		var parent := mi.get_parent()
+		for k in range(pieces.size()):
+			var piece := MeshInstance3D.new()
+			piece.name = "%s_slice%d" % [mi.name, k]
+			piece.mesh = pieces[k]
+			piece.transform = mi.transform
+			piece.material_override = mi.material_override
+			piece.cast_shadow = mi.cast_shadow
+			parent.add_child(piece)
+		parent.remove_child(mi)
+		mi.queue_free()
+
+
+## The mesh's triangles sorted into SLICES meshes by the bearing of each triangle's first corner
+## from the middle of the mesh's box; each piece keeps only the corners it uses.
+static func _slices(mesh: Mesh) -> Array:
+	var mid := mesh.get_aabb().get_center()
+	var meshes := []
+	for k in range(SLICES):
+		meshes.append(ArrayMesh.new())
+	for si in range(mesh.get_surface_count()):
+		var arr := mesh.surface_get_arrays(si)
+		var verts: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+		var idx: PackedInt32Array = arr[Mesh.ARRAY_INDEX]
+		if idx.is_empty():
+			idx.resize(verts.size())
+			for i in range(verts.size()):
+				idx[i] = i
+		var per := []
+		for k in range(SLICES):
+			per.append(PackedInt32Array())
+		for t in range(0, idx.size() - 2, 3):
+			var v := verts[idx[t]]
+			var k := int(fposmod(atan2(v.z - mid.z, v.x - mid.x), TAU) / TAU * SLICES) % SLICES
+			per[k].append(idx[t])
+			per[k].append(idx[t + 1])
+			per[k].append(idx[t + 2])
+		var remap := PackedInt32Array()
+		remap.resize(verts.size())
+		var mat := mesh.surface_get_material(si)
+		for k in range(SLICES):
+			var tri: PackedInt32Array = per[k]
+			if tri.is_empty():
+				continue
+			remap.fill(-1)
+			var used := PackedInt32Array()
+			for j in range(tri.size()):
+				var o := tri[j]
+				if remap[o] < 0:
+					remap[o] = used.size()
+					used.append(o)
+				tri[j] = remap[o]
+			var out := []
+			out.resize(Mesh.ARRAY_MAX)
+			for a in [Mesh.ARRAY_VERTEX, Mesh.ARRAY_NORMAL, Mesh.ARRAY_TEX_UV, Mesh.ARRAY_TEX_UV2, Mesh.ARRAY_COLOR]:
+				if arr[a] != null and arr[a].size() == verts.size():
+					out[a] = _pick(arr[a], used)
+			if arr[Mesh.ARRAY_TANGENT] != null and arr[Mesh.ARRAY_TANGENT].size() == verts.size() * 4:
+				var tan: PackedFloat32Array = arr[Mesh.ARRAY_TANGENT]
+				var nt := PackedFloat32Array()
+				nt.resize(used.size() * 4)
+				for j in range(used.size()):
+					for c in range(4):
+						nt[j * 4 + c] = tan[used[j] * 4 + c]
+				out[Mesh.ARRAY_TANGENT] = nt
+			out[Mesh.ARRAY_INDEX] = tri
+			var am: ArrayMesh = meshes[k]
+			am.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, out)
+			am.surface_set_material(am.get_surface_count() - 1, mat)
+	return meshes.filter(func(m: ArrayMesh) -> bool: return m.get_surface_count() > 0)
+
+
+## The entries of a per-corner array at the corners `used`, in that order.
+static func _pick(src, used: PackedInt32Array):
+	var dst = src.duplicate()
+	dst.resize(used.size())
+	for j in range(used.size()):
+		dst[j] = src[used[j]]
+	return dst
 
 
 ## Every seat in the model's own metres (seats_*.bin), for the crowd to sit on (Oval3DCrowd).
@@ -259,7 +361,7 @@ static func _is_sheet(seat: Mesh) -> bool:
 	return area > 0.0 and sum.length() > 0.3 * area
 
 
-static func _add_seats(root: Node3D, dir: String) -> void:
+static func _add_seats(root: Node3D, dir: String, mid: Vector2) -> void:
 	var shared: Mesh = null
 	if FileAccess.file_exists(dir + "seat_tmpl.bin"):
 		shared = _seat_mesh(dir + "seat_tmpl.bin")
@@ -272,33 +374,46 @@ static func _add_seats(root: Node3D, dir: String) -> void:
 			seat = _seat_mesh(dir + "seat_tmpl_%s.bin" % colour)
 		if seat == null:
 			continue
-		root.add_child(_instances(seat, dir + f, colour))
+		_instances(root, seat, dir + f, colour, mid)
 	if FileAccess.file_exists(dir + "leg_tmpl.bin"):
 		var leg := _seat_mesh(dir + "leg_tmpl.bin")
 		for f in DirAccess.get_files_at(dir):
 			if f.begins_with("legs_") and f.ends_with(".bin"):
-				root.add_child(_instances(leg, dir + f, f.get_basename().trim_prefix("legs_")))
+				_instances(root, leg, dir + f, f.get_basename().trim_prefix("legs_"), mid)
 
 
-## One MultiMesh of `mesh` at every transform in the .bin at `path`, flat in SEAT_COLOURS[colour].
-static func _instances(mesh: Mesh, path: String, colour: String) -> MultiMeshInstance3D:
+## Batches of `mesh` at every transform in the .bin at `path`, flat in SEAT_COLOURS[colour], added
+## to `root`: one batch a slice of the bowl (SEAT_SECTORS round it, by bearing from `mid`), so the
+## camera draws only the slices in its view, not every seat in the ground.
+static func _instances(root: Node3D, mesh: Mesh, path: String, colour: String, mid: Vector2) -> void:
 	var buf := FileAccess.get_file_as_bytes(path).to_float32_array()
-	var mm := MultiMesh.new()
-	mm.transform_format = MultiMesh.TRANSFORM_3D
-	mm.mesh = mesh
-	mm.instance_count = buf.size() / 12
-	mm.buffer = buf
-	var mi := MultiMeshInstance3D.new()
-	mi.name = path.get_file().get_basename()
-	mi.multimesh = mm
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = SEAT_COLOURS.get(colour, Color.GRAY)
 	# A seat drawn as one open sheet (the ground kit's moulded shell, wound the other way to
 	# Godot's front face) is seen from both sides; a closed seat keeps back faces culled.
 	if _is_sheet(mesh):
 		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-	mi.material_override = mat
-	return mi
+	var per := []
+	for i in range(SEAT_SECTORS):
+		per.append(PackedFloat32Array())
+	for i in range(0, buf.size() - 11, 12):
+		var th := fposmod(atan2(buf[i + 11] - mid.y, buf[i + 3] - mid.x), TAU)
+		var k := int(th / TAU * SEAT_SECTORS) % SEAT_SECTORS
+		per[k].append_array(buf.slice(i, i + 12))
+	for k in range(SEAT_SECTORS):
+		if per[k].is_empty():
+			continue
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = mesh
+		mm.instance_count = per[k].size() / 12
+		mm.buffer = per[k]
+		var mi := MultiMeshInstance3D.new()
+		mi.name = "%s_%d" % [path.get_file().get_basename(), k]
+		mi.multimesh = mm
+		mi.material_override = mat
+		mi.set_meta("seats", true)
+		root.add_child(mi)
 
 
 ## Every material on `model` paints with its vertex colours (linear, as glTF stores them).

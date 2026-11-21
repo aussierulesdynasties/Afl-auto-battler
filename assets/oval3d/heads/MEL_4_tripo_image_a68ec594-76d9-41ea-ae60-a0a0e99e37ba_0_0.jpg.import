@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bm45c5g0o8ns"
-path="res://.godot/imported/MEL_4_tripo_image_a68ec594-76d9-41ea-ae60-a0a0e99e37ba_0_0.jpg-68fe9a4f9fc30d758d11dd4975842e78.ctex"
+path.s3tc="res://.godot/imported/MEL_4_tripo_image_a68ec594-76d9-41ea-ae60-a0a0e99e37ba_0_0.jpg-68fe9a4f9fc30d758d11dd4975842e78.s3tc.ctex"
+path.etc2="res://.godot/imported/MEL_4_tripo_image_a68ec594-76d9-41ea-ae60-a0a0e99e37ba_0_0.jpg-68fe9a4f9fc30d758d11dd4975842e78.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "8b29d4cae71f73c183a5f37c2ce5cc02"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/oval3d/heads/MEL_4_tripo_image_a68ec594-76d9-41ea-ae60-a0a0e99e37ba_0_0.jpg"
-dest_files=["res://.godot/imported/MEL_4_tripo_image_a68ec594-76d9-41ea-ae60-a0a0e99e37ba_0_0.jpg-68fe9a4f9fc30d758d11dd4975842e78.ctex"]
+dest_files=["res://.godot/imported/MEL_4_tripo_image_a68ec594-76d9-41ea-ae60-a0a0e99e37ba_0_0.jpg-68fe9a4f9fc30d758d11dd4975842e78.s3tc.ctex", "res://.godot/imported/MEL_4_tripo_image_a68ec594-76d9-41ea-ae60-a0a0e99e37ba_0_0.jpg-68fe9a4f9fc30d758d11dd4975842e78.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

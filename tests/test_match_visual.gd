@@ -56,6 +56,7 @@ func run() -> void:
 	_t("_test_ground_models")
 	_t("_test_ground_screens")
 	_t("_test_mcg_crowd", [res])
+	_t("_test_graphics_levels", [res])
 	_t("_test_discs_apart")
 	_t("_test_clash_kit")
 	_t("_test_label_overlap")
@@ -2193,6 +2194,52 @@ func _test_ground_models() -> void:
 	_check(oval._turf_mat.get_shader_parameter("fence_clip") == GroundModels.MATCH_FENCE,
 			"The turf stops at the model's fence")
 	oval.queue_free()
+
+
+## Settings > Graphics (Oval3DQuality): High is the look as built; Low draws every supporter as a
+## card (no 3D people built), takes the seats' own shadows and the blades away, and draws the
+## picture at three-quarter size. At every level the seats are drawn in slices round the bowl, so
+## the camera draws only those in view.
+func _test_graphics_levels(res: Dictionary) -> void:
+	for level in [Oval3DQuality.HIGH, Oval3DQuality.LOW]:
+		var d := MatchDirector.new()
+		d.setup(res, res["events"])
+		var vp := SubViewport.new()
+		vp.own_world_3d = true
+		(Engine.get_main_loop() as SceneTree).root.add_child(vp)
+		var oval := Oval3D.new()
+		oval.ground = "MCG"
+		oval.quality = level
+		Oval3DQuality.apply_viewport(level, vp)
+		vp.add_child(oval)
+		oval.build(d, "COL", "GEE")
+		oval.turf.apply("", VignetteKickoff.DAY)
+		var slices := 0
+		var seats := 0
+		var seat_casting := 0
+		var bowl_casting := 0
+		for g: GeometryInstance3D in oval.find_child("Ground", false, false).find_children("*", "GeometryInstance3D", true, false):
+			if g.has_meta("seats"):
+				slices += 1
+				seats += (g as MultiMeshInstance3D).multimesh.instance_count
+				seat_casting += 1 if g.cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_OFF else 0
+			elif str(g.name).begins_with("bowl"):
+				bowl_casting += 1 if g.cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_OFF else 0
+		_check(slices >= GroundModels.SEAT_SECTORS / 2 and seats > 70000 and bowl_casting > 0,
+				"%s: the MCG's %d seats are drawn in %d slices round the bowl; the bowl casts its shade" % [level, seats, slices])
+		var people := 0
+		for ch: Dictionary in oval.crowd._chunks:
+			people += (ch["people"] as Array).size()
+		if level == Oval3DQuality.HIGH:
+			_check(people > 0 and seat_casting == slices and vp.scaling_3d_scale == 1.0
+					and oval.turf.blades_on and oval.crowd.mix_d == Oval3DCrowd.MIX_D,
+					"High: 3D people within 55 m, the seats cast shadows, full size (%d people batches)" % people)
+		else:
+			var first: MultiMeshInstance3D = oval.crowd._chunks[0]["cards"]
+			_check(people == 0 and first.visibility_range_begin == 0.0 and seat_casting == 0
+					and vp.scaling_3d_scale < 1.0 and not oval.turf.blades_on,
+					"Low: every supporter a card, no seat shadows, no blades, a smaller picture (%d casting)" % seat_casting)
+		vp.queue_free()
 
 
 ## The ground's big screens and fence signs (Oval3DScreens, row 202 2b): a match at a ground whose

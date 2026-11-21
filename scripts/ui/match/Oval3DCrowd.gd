@@ -27,6 +27,9 @@ const PERSON_D := 0.65
 const CARD_FWD := 0.5
 
 var supporters := 0
+## m from the camera within which a supporter is a 3D person (Oval3DQuality's people_d; MIX_D,
+## the ruled mix, at High). 0: every supporter a card, and no 3D people are built at all.
+var mix_d := MIX_D
 var _people_mats: Array = []
 var _card_mat: ShaderMaterial
 var _chunks: Array = []      # [{people: [MultiMeshInstance3D per body], cards: MultiMeshInstance3D}]
@@ -231,7 +234,7 @@ func _supporter(cs: Oval3DCrowdSet, rng: RandomNumberGenerator, at: Transform3D,
 
 
 ## Each chunk of seats as its draws: 3D people (one batch per body, each body has its own
-## table) shown within MIX_D, and cards (every body in one batch, the body's atlas row in the
+## table) shown within mix_d, and cards (every body in one batch, the body's atlas row in the
 ## seat's fourth number) beyond.
 func _chunked(cs: Oval3DCrowdSet, per: Array) -> void:
 	var card := _card_mesh()
@@ -239,13 +242,14 @@ func _chunked(cs: Oval3DCrowdSet, per: Array) -> void:
 		if list.is_empty():
 			continue
 		var chunk := {"people": []}
-		for bi in range(cs.bodies.size()):
-			var mine: Array = list.filter(func(e): return e[2] == bi)
-			var p := _batch(cs.bodies[bi]["mesh"], _people_mats[bi], mine, -1)
-			p.visibility_range_end = MIX_D
-			chunk["people"].append(p)
+		if mix_d > 0.0:
+			for bi in range(cs.bodies.size()):
+				var mine: Array = list.filter(func(e): return e[2] == bi)
+				var p := _batch(cs.bodies[bi]["mesh"], _people_mats[bi], mine, -1)
+				p.visibility_range_end = mix_d
+				chunk["people"].append(p)
 		var c := _batch(card, _card_mat, list, cs.bodies.size())
-		c.visibility_range_begin = MIX_D
+		c.visibility_range_begin = mix_d
 		chunk["cards"] = c
 		_chunks.append(chunk)
 
