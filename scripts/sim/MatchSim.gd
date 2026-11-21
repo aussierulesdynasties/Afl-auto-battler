@@ -4597,12 +4597,23 @@ func _run_and_carry(side: int, carrier, gained: float, pressed: bool, is_kick_in
 ## angle), "free" for a free kick, "lead" for a played-on mark, "" otherwise.
 ## A general-play shot is logged only when the sim plays one out: an unmarked
 ## entry that scores nothing is not told apart from no shot at all.
-func _shot(side: int, shooter, set_shot: bool, result: String, metres := -1.0, spot := "") -> void:
+## A shot on goal is a kick, so it is a disposal as Champion Data counts it, and a goal is an
+## effective one (a behind or a miss is not). `counted`: the caller already counted the kick
+## (a crumb off a pack, counted as he gathers and snaps).
+func _shot(side: int, shooter, set_shot: bool, result: String, metres := -1.0, spot := "",
+		counted := false) -> void:
 	if shooter == null:
 		return
 	shot_log.append([side, 1 if set_shot else 0, metres if set_shot else -1.0, result, spot if set_shot else ""])
 	_t(side, "shots")
 	_p(shooter, "shots")
+	if not counted:
+		_t(side, "disposals")
+		_t(side, "kicks")
+		_p(shooter, "disposals")
+		_p(shooter, "kicks")
+	if result == "goal":
+		_effective(side, shooter)
 	if set_shot:
 		_p(shooter, "set_shots")
 		if result == "goal":
@@ -6761,10 +6772,10 @@ const PASS_GAIN := 15.0
 ## A set shot's result: a goal, a behind or the defence rebounds it. Shared by
 ## the three calls; `crumb` marks a snap off the deck.
 func _set_result(side: int, kicker: Dictionary, assist, defender: Dictionary, goal_p: float,
-		behind_p: float, crumb: bool, spot := "") -> Dictionary:
+		behind_p: float, crumb: bool, spot := "", counted := false) -> Dictionary:
 	var roll := rng.randf()
 	_shot(side, kicker, not crumb, "goal" if roll < goal_p else ("behind" if roll < goal_p + behind_p else ""),
-			float(Ratings.T["goal_line"]) - (fp if side == 0 else -fp), spot)
+			float(Ratings.T["goal_line"]) - (fp if side == 0 else -fp), spot, counted)
 	if roll < goal_p:
 		_t(side, "goals")
 		_p(kicker, "goals")
@@ -6893,7 +6904,7 @@ func _bomb(side: int, shooter: Dictionary, defender: Dictionary) -> Dictionary:
 		_p(crumber, "kicks")
 		var snap := shot_chance(side, crumber, false, false) * CRUMB_SNAP
 		var bh: float = float(_rates()["inside50_behind"]) * (0.80 + 0.40 * _a(crumber, "goalkicking") / 100.0)
-		return _set_result(side, crumber, null, back, snap, bh, true)
+		return _set_result(side, crumber, null, back, snap, bh, true, "", true)
 	if rng.randf() < PACK_RUSHED:
 		# Rushed through for a behind: no one's shot.
 		_scored(side, 1, null)
