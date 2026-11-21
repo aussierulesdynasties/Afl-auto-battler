@@ -519,7 +519,7 @@ func _move_paper(dt: float) -> void:
 				pc["spin"] = Vector3(_rng.randf_range(-1, 1), _rng.randf_range(-1, 1), _rng.randf_range(-1, 1)).normalized() * _rng.randf_range(3.0, 8.0)
 			_mark(pc, k, 0.0, 15 if bool(pc["loose"]) else (3 | (8 if r == brk - 1 else 0)))
 		if bool(pc.get("loose", false)):
-			_flutter(pc, k, dt, cell)
+			_flutter(pc, k, dt)
 			continue
 		# The strip below the break goes as a sheet: its torn top carried forward with the men and
 		# dropping, the rest of it folding forward under it, until it lies on the grass.
@@ -555,7 +555,7 @@ func _mark(pc: Dictionary, k: int, held: float, mask: int) -> void:
 
 
 ## A loose scrap in the air: drifting down, turning over, then flat on the grass.
-func _flutter(pc: Dictionary, k: int, dt: float, cell: Vector2) -> void:
+func _flutter(pc: Dictionary, k: int, dt: float) -> void:
 	var mm := _paper.multimesh
 	if int(pc["state"]) == 3:
 		return
