@@ -56,6 +56,7 @@ func run() -> void:
 	_t("_test_ground_models")
 	_t("_test_ground_screens")
 	_t("_test_mcg_crowd", [res])
+	_t("_test_crowd_attendance")
 	_t("_test_graphics_levels", [res])
 	_t("_test_discs_apart")
 	_t("_test_clash_kit")
@@ -3784,3 +3785,62 @@ func _test_free_taker_kicks() -> void:
 	_check(frees > 10 and taken > 10, "Seed 31 pays frees and their takers kick them (%d paid, %d taken)" % [frees, taken])
 	_check(not_taken.is_empty(), "Every free's taker has the ball and kicks it himself (%d not: %s)" % [not_taken.size(), not_taken.slice(0, 5)])
 	_check(far.is_empty(), "No kick leaves with its kicker more than 1.5 m from the ball (%d: %s)" % [far.size(), far.slice(0, 5)])
+
+
+## The crowd fills to the match's attendance (MatchAttendance, fitted to real AFL crowds): a big
+## fixture fills more than a small one, a Grand Final sells out, a crowd never passes the ground's
+## capacity, the same match always draws the same crowd, and the stands fill the way a real ground
+## does (cheer squads full, the lower rows before the upper). Looks only: the sim never reads it.
+func _test_crowd_attendance() -> void:
+	var big := MatchAttendance.crowd("MCG", "COL", "CAR", "night", "Round 3", 11)
+	var small := MatchAttendance.crowd("MCG", "MEL", "GCS", "day", "Round 14", 11)
+	_check(big > 60000 and small < 45000 and small > 10000,
+			"A Collingwood-Carlton night at the MCG draws far more than Melbourne-Gold Coast by day (%d v %d)" % [big, small])
+	var cap := MatchAttendance.capacity("MCG")
+	_check(MatchAttendance.crowd("MCG", "GEE", "SYD", "day", "Grand Final", 5) >= int(cap * 0.95),
+			"A Grand Final sells out the MCG")
+	var over := 0
+	var grounds := ["MCG", "Adelaide Oval", "SCG", "York Park", "Waverley Park", "Accor Stadium", "Summit Park"]
+	for g: String in grounds:
+		for k in range(60):
+			var n := MatchAttendance.crowd(g, "COL", "CAR", "night", "Preliminary Final 1", k)
+			over += 1 if n > MatchAttendance.capacity(g) or n <= 0 else 0
+	_check(over == 0, "No crowd passes its ground's capacity, at grounds with and without real crowds (%d over)" % over)
+	_check(MatchAttendance.crowd("Adelaide Oval", "ADE", "PAD", "night", "Round 8", 3)
+			== MatchAttendance.crowd("Adelaide Oval", "ADE", "PAD", "night", "Round 8", 3)
+			and MatchAttendance.crowd("Nowhere", "ADE", "PAD", "night", "Round 8", 3) == 0
+			and MatchAttendance.fill("Nowhere", 0) < 0.0,
+			"The same match always draws the same crowd; an unknown ground none")
+	var sim_reads := 0
+	for f: String in DirAccess.get_files_at("res://scripts/sim"):
+		if f.ends_with(".gd") and FileAccess.get_file_as_string("res://scripts/sim/" + f).contains("MatchAttendance"):
+			sim_reads += 1
+	_check(sim_reads == 0, "The match sim never reads the crowd")
+	# The stands: a synthetic ground of 40 rows round an oval, filled to 30%.
+	var crowd := Oval3DCrowd.new()
+	crowd.fill = 0.3
+	var pos := []
+	for r in range(40):
+		for k in range(400):
+			var th := TAU * k / 400.0
+			pos.append(Vector3(cos(th) * (90.0 + r), 1.0 + r * 0.5, sin(th) * (75.0 + r)))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 1
+	var lay := crowd._layout(rng, pos, "")
+	var taken: Array = crowd._taken(rng, pos, lay)
+	var low := 0
+	var high := 0
+	var squad := 0
+	var squad_n := 0
+	for i in range(pos.size()):
+		var p: Vector3 = pos[i]
+		low += 1 if taken[i] and i < 400 * 10 else 0
+		high += 1 if taken[i] and i >= 400 * 30 else 0
+		if p.y <= float(lay["low"]) and absf(atan2(p.z, p.x)) < Oval3DCrowd.SQUAD_W:
+			squad_n += 1
+			squad += 1 if taken[i] else 0
+	_check(absi(taken.count(true) - 4800) <= 1 and crowd.census["taken"] == taken.count(true),
+			"The stands fill to the crowd's share exactly (%d of %d)" % [taken.count(true), pos.size()])
+	_check(low > high * 3 and squad == squad_n and squad_n > 0,
+			"A part-full ground fills its lower rows first (%d v %d) and its cheer squad's rows are full (%d of %d)" % [low, high, squad, squad_n])
+	crowd.free()

@@ -355,10 +355,12 @@ func _setup_3d() -> void:
 	_vp3d.add_child(_oval3d)
 	# The ground the match is at: its real model where one is in the game (GroundModels.GROUNDS).
 	_oval3d.ground = VignetteGround.ground_of(result)
+	var weather := str(result.get("weather", ""))
+	# How many came (MatchAttendance: fitted to real AFL crowds); the stands fill to it.
+	_oval3d.attendance = MatchAttendance.of_match(result, _oval3d.ground, time_of_day(weather))
 	_oval3d.build(director, home_code, away_code)
 	_tv = Oval3DBroadcast.new(_oval3d)
 	# The turf and light for the day, as the flat oval and the vignettes draw it.
-	var weather := str(result.get("weather", ""))
 	_oval3d.turf.apply(weather, time_of_day(weather))
 	_make_paint_3d()
 	_oval3d.set_ends(end_sign(period))

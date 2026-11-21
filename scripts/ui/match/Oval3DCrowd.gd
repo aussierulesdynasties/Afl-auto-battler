@@ -16,7 +16,18 @@ const CROWD_SET := "res://assets/oval3d/crowd_set.res"
 const ROWS := 42
 const SEAT := 0.55           # m between neighbours along a row
 const AISLE_EVERY := 28      # seats between aisles (an aisle is two seats wide)
-const EMPTY := 0.08          # share of seats left empty
+const EMPTY := 0.08          # share of seats left empty when no crowd figure is given
+## How a ground fills (_taken): each seat's draw, from its height up the stand (FILL_HIGH from
+## the front row to the back), the wing over the ends (FILL_WING), the home end over the away
+## (FILL_HOME), its bay's own draw (FILL_BAY, FILL_BAY_TOP in the upper tier, so whole bays up
+## there close), the members' reserve (FILL_MEMBERS) and each seat's own chance (FILL_SEAT).
+const FILL_HIGH := 1.0
+const FILL_WING := 0.35
+const FILL_HOME := 0.08
+const FILL_BAY := 0.25
+const FILL_BAY_TOP := 0.8
+const FILL_MEMBERS := 0.6
+const FILL_SEAT := 0.45
 const NEUTRAL := 0.08        # share of supporters in neither club's colours (general stands)
 const SECTORS := 96          # chunks round the ground (each also split front rows / back rows)
 const SEAT_TIERS := 3        # a real ground's chunks: each sector also split low / middle / high
@@ -61,7 +72,10 @@ const ZONE_MEMBERS := 2
 var supporters := 0
 ## How many of each kind sit where (for the tests and the QA sheet): home, away, nobody's, and
 ## in the cheer squads and the members' reserve.
-var census := {"home": 0, "away": 0, "neutral": 0, "squad": 0, "members": 0}
+var census := {"home": 0, "away": 0, "neutral": 0, "squad": 0, "members": 0, "seats": 0, "taken": 0}
+## The share of the seats taken, set before build (MatchAttendance.fill: the match's crowd over
+## the ground's capacity).
+var fill := 1.0 - EMPTY
 var _react: Array = []        # the last four reactions: Vector4(when, side, kind, share)
 ## m from the camera within which a supporter is a 3D person (Oval3DQuality's people_d; MIX_D,
 ## the ruled mix, at High). 0: every supporter a card, and no 3D people are built at all.
@@ -109,9 +123,11 @@ func build_on_seats(seats: Array, tmpl: PackedVector3Array, home: Array, away: A
 	var per := []
 	for i in range(SECTORS * SEAT_TIERS):
 		per.append([])
-	for t: Transform3D in seats:
-		if rng.randf() < EMPTY:
+	var taken := _taken(rng, seats.map(func(t: Transform3D) -> Vector3: return to_field * (t * spot).origin), lay)
+	for si in range(seats.size()):
+		if not taken[si]:
 			continue
+		var t: Transform3D = seats[si]
 		var at := t * spot
 		var th := fposmod(atan2(at.origin.z, at.origin.x), TAU)
 		var sector := int(th / TAU * SECTORS) % SECTORS
@@ -135,6 +151,48 @@ func _layout(rng: RandomNumberGenerator, pos: Array, slug: String) -> Dictionary
 	var members: Array = MEMBERS.get(slug, [])
 	return {"low": low, "bays": bays, "members": [deg_to_rad(members[0]), deg_to_rad(members[1])] if members.size() == 2 else [],
 			"y0": ys[0] if ys.size() > 0 else 0.0, "y1": ys[ys.size() - 1] if ys.size() > 0 else 1.0}
+
+
+## Which seats are taken (pos: each seat in the ground's frame), so that fill of them are: the
+## crowd fills a ground the way a real one does. The cheer squads' rows are always full and the
+## members' reserve fills first; then the lower rows before the upper ones, the wings before the
+## pockets and ends, and the home end a touch before the away end. The upper tier empties in whole
+## bays (a closed section), the rest in scattered seats. Every seat scores its draw on all of that
+## and the best-scored fill of them are taken, so the share is exact.
+func _taken(rng: RandomNumberGenerator, pos: Array, lay: Dictionary) -> Array:
+	var bays := PackedFloat32Array()
+	for i in range(SECTORS * SEAT_TIERS):
+		bays.append(rng.randf_range(-1.0, 1.0))
+	var y0: float = lay["y0"]
+	var span := maxf(0.01, float(lay["y1"]) - y0)
+	var m: Array = lay["members"]
+	var scores := PackedFloat32Array()
+	scores.resize(pos.size())
+	for i in range(pos.size()):
+		var p: Vector3 = pos[i]
+		var th := atan2(p.z, p.x)
+		var h := clampf((p.y - y0) / span, 0.0, 1.0)
+		var tier := clampi(int(h * SEAT_TIERS), 0, SEAT_TIERS - 1)
+		var sector := int(fposmod(th, TAU) / TAU * SECTORS) % SECTORS
+		var sc := -FILL_HIGH * h + FILL_WING * absf(sin(th)) + FILL_HOME * cos(th) \
+				+ bays[sector * SEAT_TIERS + tier] * (FILL_BAY_TOP if tier == SEAT_TIERS - 1 else FILL_BAY) \
+				+ rng.randf() * FILL_SEAT
+		if p.y <= float(lay["low"]) and (absf(th) < SQUAD_W or absf(wrapf(th - PI, -PI, PI)) < SQUAD_W):
+			sc += 100.0
+		elif m.size() == 2 and th >= float(m[0]) and th <= float(m[1]):
+			sc += FILL_MEMBERS
+		scores[i] = sc
+	var sorted := scores.duplicate()
+	sorted.sort()
+	var want := clampi(int(round(clampf(fill, 0.0, 1.0) * pos.size())), 0, pos.size())
+	var cut := sorted[pos.size() - want] if want > 0 and want < pos.size() else (-INF if want >= pos.size() else INF)
+	var out := []
+	out.resize(pos.size())
+	for i in range(pos.size()):
+		out[i] = scores[i] >= cut
+	census["seats"] = pos.size()
+	census["taken"] = out.count(true)
+	return out
 
 
 ## A supporter's side and zone at p (the ground's frame) as the shaders read it (side + 4 x zone):
@@ -384,7 +442,7 @@ func _seat(cs: Oval3DCrowdSet, a0: float, b0: float, pitch: float, rise: float) 
 		var n := int(L / SEAT)
 		var j := 0
 		for k in range(n):
-			if k % AISLE_EVERY < 2 or rng.randf() < EMPTY:
+			if k % AISLE_EVERY < 2 or rng.randf() > fill:
 				continue
 			var at := (float(k) + (0.5 if r % 2 == 1 else 0.0)) * L / n
 			while j < N and acc[j + 1] < at:

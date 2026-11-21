@@ -75,6 +75,9 @@ var screens: Oval3DScreens
 ## The ground the match is at (VignetteGround.ground_of), set before build(): its model when it
 ## has one (GroundModels), else the stand and crowd.
 var ground := ""
+## The match's crowd (MatchAttendance.crowd), set before build(): the stands fill to its share of
+## the ground's capacity. 0: the old fixed fill (every match the same). Looks only.
+var attendance := 0
 ## Graphics quality (Oval3DQuality: low, medium or high), set before build(). Looks only.
 var quality := Oval3DQuality.HIGH
 var _turf_mat: ShaderMaterial  # the turf's paint (oval3d_ground.gdshader)
@@ -484,6 +487,9 @@ func _posts() -> void:
 func _stands(home: String, away: String) -> void:
 	crowd = Oval3DCrowd.new()
 	crowd.name = "Crowd"
+	var share := MatchAttendance.fill(ground, attendance)
+	if share >= 0.0:
+		crowd.fill = share
 	crowd.mix_d = float(Oval3DQuality.preset(quality)["people_d"])
 	add_child(crowd)
 	crowd.build(HALF_LEN + FENCE, HALF_WID + FENCE, STAND_DEPTH, STAND_RISE,
@@ -529,6 +535,9 @@ func _ground_model(slug: String, base := "", home := "", away := "") -> void:
 		return
 	crowd = Oval3DCrowd.new()
 	crowd.name = "Crowd"
+	var share := MatchAttendance.fill(ground, attendance)
+	if share >= 0.0:
+		crowd.fill = share
 	crowd.mix_d = float(Oval3DQuality.preset(quality)["people_d"])
 	root.add_child(crowd)
 	crowd.build_on_seats(seats, GroundModels.seat_points(slug, base),
