@@ -52,6 +52,7 @@ func run() -> void:
 	_t("_test_call_lines", [res])
 	_t("_test_farewell")
 	_t("_test_match_ground")
+	_t("_test_ground_models")
 	_t("_test_discs_apart")
 	_t("_test_clash_kit")
 	_t("_test_label_overlap")
@@ -2095,6 +2096,55 @@ func _test_farewell() -> void:
 	v.free()
 
 
+## Row 202 2b: every ground with a 3D model plays in it. Each model's files are in the game,
+## every club's home ground and the Grand Final resolve to theirs, and each is laid so its
+## measured boundary fence meets the match's fence, end to end and wing to wing.
+func _test_ground_models() -> void:
+	for g in GroundModels.grounds():
+		var slug := GroundModels.slug_for(g)
+		_check(slug != "" and GroundModels.FIT.has(slug), "%s has a model and its measured fence" % g)
+		var files := GroundModels.files(slug)
+		_check(files.size() > 0, "%s's model is in assets/grounds/%s" % [g, slug])
+		for f in files:
+			_check(ResourceLoader.exists(f), "%s is imported (%s)" % [g, f])
+		var f: Array = GroundModels.FIT[slug]
+		var t := GroundModels.fit_transform(slug)
+		var c := Vector3(float(f[0]), float(f[2]), float(f[1]))
+		var a := deg_to_rad(float(f[3]))
+		var along := Vector3(cos(a), 0.0, sin(a))
+		var across := Vector3(-sin(a), 0.0, cos(a))
+		var end := t * (c + along * float(f[4]))
+		var wing := t * (c + across * float(f[5]))
+		_check(end.distance_to(Vector3(GroundModels.MATCH_FENCE.x, -GroundModels.UNDER_TURF, 0.0)) < 0.01
+				or end.distance_to(Vector3(-GroundModels.MATCH_FENCE.x, -GroundModels.UNDER_TURF, 0.0)) < 0.01,
+				"%s's fence meets the match's fence behind the goals (%s)" % [g, end])
+		_check(absf(absf(wing.z) - GroundModels.MATCH_FENCE.y) < 0.01 and absf(wing.x) < 0.01,
+				"%s's fence meets the match's fence on the wing (%s)" % [g, wing])
+		var s := GroundModels.stretch(slug)
+		_check(s.x > 0.8 and s.x < 1.25 and s.y > 0.8 and s.y < 1.25, "%s is stretched at most a quarter to fit (%s)" % [g, s])
+	for code in GameDB.clubs.keys():
+		var home := VignetteGround.ground_of({"home": code})
+		if GroundModels.GROUNDS.has(GameDB.ground_key(home)):
+			_check(GroundModels.slug_for(home) != "", "%s's home ground (%s) plays in its model" % [code, home])
+	_check(GroundModels.slug_for("MCG") == "mcg", "The Grand Final at the MCG plays in the MCG")
+	_check(GroundModels.slug_for("Carrara") == "people_first", "A ground's other names find its model (Carrara)")
+	_check(GroundModels.slug_for("Alan Ray Oval") == "", "A ground without a model keeps the stand")
+	# Built in a match: the model in place of the stand and crowd, the turf stopping at its fence.
+	var d := MatchDirector.new()
+	var res := _result(42)
+	d.setup(res, res["events"])
+	var oval := Oval3D.new()
+	oval.ground = "Engie Stadium"
+	(Engine.get_main_loop() as SceneTree).root.add_child(oval)
+	oval.build(d, str(res.get("home", "ADE")), str(res.get("away", "MEL")))
+	var model: Node3D = oval.get_node_or_null("Ground")
+	_check(model != null and model.find_children("*", "MeshInstance3D", true, false).size() > 0 and oval.crowd == null,
+			"A match at Engie Stadium plays in its model, with no stand or crowd")
+	_check(oval._turf_mat.get_shader_parameter("fence_clip") == GroundModels.MATCH_FENCE,
+			"The turf stops at the model's fence")
+	oval.queue_free()
+
+
 ## FL-003: the vignettes draw the MCG where the match is played there - a club's home
 ## game at its MCG home, and the Grand Final - and the plain ground everywhere else.
 func _test_match_ground() -> void:
@@ -2788,7 +2838,11 @@ func _test_three_d_view(res: Dictionary) -> void:
 	(Engine.get_main_loop() as SceneTree).root.add_child(pv)
 	var seen := []
 	pv.event_played.connect(func(ev): seen.append(ev))
-	pv.setup(res)
+	# At a ground with no model yet (Barossa Park), so the stand and its crowd are built and
+	# checked; the grounds with models are _test_ground_models'. The ground never changes the match.
+	var at_stand := res.duplicate()
+	at_stand["venue"] = "Barossa Park"
+	pv.setup(at_stand)
 	var oval: Oval3D = pv._oval3d
 	_check(oval != null and oval.players.size() == pv.director.tokens.size(),
 			"The 3D oval puts a footballer on every token (%d)" % (oval.players.size() if oval else -1))
