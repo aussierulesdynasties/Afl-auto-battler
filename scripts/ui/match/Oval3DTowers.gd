@@ -91,7 +91,7 @@ func build(p_slug: String, model: Node3D, oval: Node3D) -> void:
 		var far := 0.0
 		for i in 32:
 			var a := TAU * i / 32.0
-			var p := Vector3(cos(a) * GroundModels.MATCH_FENCE.x, 0.0, sin(a) * GroundModels.MATCH_FENCE.y)
+			var p := Vector3(cos(a) * GroundModels.match_fence().x, 0.0, sin(a) * GroundModels.match_fence().y)
 			widest = maxf(widest, rad_to_deg((p - b).angle_to(target - b)))
 			far = maxf(far, b.distance_to(p))
 		s.spot_angle = minf(widest + 6.0, 89.0)
@@ -267,7 +267,7 @@ func _roof_lights(model: Node3D, oval: Node3D) -> MultiMeshInstance3D:
 	var best := []
 	best.resize(BUCKETS)
 	var to_oval := oval.global_transform.affine_inverse()
-	var f := GroundModels.MATCH_FENCE
+	var f: Vector2 = GroundModels.match_fence()
 	for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
 		if mi.mesh == null or not str(mi.name).to_lower().begins_with("roof"):
 			continue

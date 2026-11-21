@@ -262,8 +262,52 @@ def brick_tower(m, P, bt, col):
         m.add(quad, [(0, 1, 2, 3), (3, 2, 1, 0)], [col] * 4, [(k * bt['w'], 0), ((k + 1) * bt['w'], 0), ((k + 1) * bt['w'], H), (k * bt['w'], H)], 'brick')
     m.add([(q[0], q[1], H) for q in Q], [(0, 1, 2, 3), (3, 2, 1, 0)], [(150, 146, 140)] * 4, [(0, 0), (bt['w'], 0), (bt['w'], bt['w']), (0, bt['w'])], 'concrete')
 
+def parapet(m, P, zf, col=(206, 204, 198), h=1.1, step=2.0):
+    """a 1.1 m upstand on every raised edge that does not face the pitch (stand ends and backs), so no seat or deck sits
+    on the lip of a drop (director 2026-11-21: "chairs right on the edge of the chasm, no barrier")"""
+    B = densify(P, step); B = np.r_[B, B[:1]]; zt = zf(B); flip = not ccw(P); run = 0.0
+    for i in range(len(B) - 1):
+        a, b = B[i], B[i + 1]; mid = (a + b) / 2; e = b - a; L = np.linalg.norm(e)
+        nrm = np.array([e[1], -e[0]]) / (L + 1e-9)
+        if flip: nrm = -nrm
+        if nrm @ (mid - PC) / (np.linalg.norm(mid - PC) + 1e-9) < -0.3 or min(zt[i], zt[i + 1]) < 3.0: run += L; continue
+        q = [(a[0], a[1], zt[i]), (b[0], b[1], zt[i + 1]), (b[0], b[1], zt[i + 1] + h), (a[0], a[1], zt[i] + h)]
+        m.add(q, [(0, 1, 2, 3), (3, 2, 1, 0)], [col] * 4, [(run, 0), (run + L, 0), (run + L, h), (run, h)], 'concrete')
+        run += L
+
+
+def front_skin(m, P, zf, col=(46, 48, 52), step=2.0):
+    """the bowl's front wall at the fence, dark as in the photos (riverbank_2026, west_stands_2023: a dark wall carrying
+    the LED boards), laid 2 cm proud of the stand's own wall on every pitch-facing edge"""
+    B = densify(P, step); B = np.r_[B, B[:1]]; zt = zf(B); flip = not ccw(P); run = 0.0
+    for i in range(len(B) - 1):
+        a, b = B[i], B[i + 1]; mid = (a + b) / 2; e = b - a; L = np.linalg.norm(e)
+        nrm = np.array([e[1], -e[0]]) / (L + 1e-9)
+        if flip: nrm = -nrm
+        if nrm @ (mid - PC) / (np.linalg.norm(mid - PC) + 1e-9) > -0.5: run += L; continue
+        o = nrm * 0.02; pa, pb = a + o, b + o; za, zb_ = min(zt[i], 2.0), min(zt[i + 1], 2.0)
+        m.add([(pa[0], pa[1], 0.0), (pb[0], pb[1], 0.0), (pb[0], pb[1], zb_), (pa[0], pa[1], za)], [(0, 1, 2, 3), (3, 2, 1, 0)],
+              [col] * 4, [(run, 0), (run + L, 0), (run + L, zb_), (run, za)], 'plain')
+        run += L
+
+
+def corner_poly(st):
+    """the lower bowl running round a corner between two stands (Esri plan: the seating is continuous at the south
+    pockets): the ring from the fence out to 'depth' metres between the angles 'a' (degrees from the centre), minus the
+    stands either side"""
+    from shapely.geometry import Polygon
+    from shapely.ops import unary_union
+    a0, a1 = np.radians(st['a']); A = np.linspace(a0, a1, 40)
+    wedge = Polygon([tuple(PC)] + [tuple(PC + 400 * np.array([math.cos(a), math.sin(a)])) for a in A])
+    ring = Polygon(PITCH).buffer(st['depth'], 64).difference(Polygon(PITCH))
+    others = unary_union([Polygon(way(x['way'])).buffer(0.02) for x in SPEC['stands'] if 'way' in x])
+    g = ring.intersection(wedge).difference(others)
+    if g.geom_type != 'Polygon': g = max(g.geoms, key=lambda q: q.area)
+    return np.array(g.simplify(0.05).exterior.coords)
+
 def stand_poly(st):
     """stand outline; traced notches at corners (way_drop) stepped the seat edge and wall top, so the back runs straight there"""
+    if 'a' in st: return corner_poly(st)
     P = way(st['way'])
     if st.get('way_drop'): P = P[[i for i in range(len(P)) if i not in st['way_drop']]]
     return P
@@ -344,6 +388,26 @@ SHELL = [(0.30, 0.34), (0.32, 0.43), (0.66, 0.40), (0.72, 0.56), (0.78, 0.84)]
 TREAD = (122, 120, 115)
 
 SEAT_INST = []
+SEAT_DROPPED = [0]
+ROOF_GUARD = []   # (outline polygon, roof height function) for every roof, filled by the roof loop before any seat is placed
+SEAT_HEAD = 2.6   # metres from a row's tread to the roof's underside: less and nobody could sit there (director 2026-11-21)
+
+def seat_ok(q, z0, z1):
+    """a seat is real only on a raked row (a flat deck is a concourse, not seating), and only where a person fits: under a
+    roof with SEAT_HEAD of headroom, or in the open pitch-side of every roof. A seat behind a roof (the roof between it and
+    the pitch) is outside the bowl"""
+    from shapely.geometry import Point, LineString
+    if z1 - z0 < 0.08: return False
+    pt = Point(q[0], q[1]); ray = None
+    for poly, rz, hang in ROOF_GUARD:
+        if poly.contains(pt):
+            under = rz(np.array([q]))[0] - 0.3
+            if hang and poly.exterior.distance(pt) < hang[0]: under = under + 0.3 - hang[1]
+            if under - z1 < SEAT_HEAD: return False
+        else:
+            ray = ray or LineString([tuple(q), tuple(PC)])
+            if poly.intersects(ray): return False
+    return True
 def seat_shell():
     """one closed moulded seat (pan and back with 25 mm thickness) in seat-local metres: x across, y away from the pitch, z up;
     closed so it reads as a solid seat from below and from behind as well as from the front"""
@@ -391,13 +455,6 @@ def seat_rows(m, P, zfn, bands):
                     t = qb - qa; t /= np.linalg.norm(t); nv = np.array([t[1], -t[0]])
                     if seg_dist((q + nv * 0.3)[None], PITCH)[0] < seg_dist((q - nv * 0.3)[None], PITCH)[0]: nv = -nv
                     zz = zfn(np.array([q, q + nv * ROW])); return q, t, nv, zz[0], max(zz[1], zz[0])
-                n = int(ln.length // PITCH_S); hw = PITCH_S / 2
-                V = []; UV = []                                       # riser and tread all along the row, aisles included: one strip
-                for x in np.linspace(0, ln.length, n + 2):
-                    q, t, nv, z0, z1 = frame(x); c = q + nv * ROW
-                    V += [(q[0], q[1], z0), (q[0], q[1], z1), (c[0], c[1], z1)]; UV += [(x, z0), (x, z1), (x, z1 + ROW)]
-                F = [f for i in range(n + 1) for f in ((3 * i, 3 * i + 3, 3 * i + 4, 3 * i + 1), (3 * i + 1, 3 * i + 4, 3 * i + 5, 3 * i + 2))]
-                m.add(V, F, [TREAD] * len(V), UV, 'concrete')
                 # seats in blocks between aisles; each block starts at its aisle edge so the aisles run straight up the rake
                 ss = np.arange(0, ln.length, 0.05); Q = np.array([ln.interpolate(x).coords[0] for x in ss])
                 w = np.unwrap(np.arctan2(Q[:, 1] - PC[1], Q[:, 0] - PC[0])) * 90.0
@@ -409,11 +466,26 @@ def seat_rows(m, P, zfn, bands):
                 if st0 is not None: runs.append((st0, ln.length))
                 for ra, rb in runs:
                     k = int((rb - ra) // PITCH_S)
+                    if k < 1: continue
+                    blk = []
                     for i in range(k):
                         s0 = ra + (rb - ra - k * PITCH_S) / 2 + (i + 0.5) * PITCH_S
                         q, t, nv, z0, z1 = frame(s0)
-                        # instanced: one seat shell (seat_shell) placed at q, z1, local +y along nv (away from the pitch)
+                        blk.append((q, nv, z0, z1))
+                    # a block-row is seated only if every seat in it is real (seat_ok): raked, under the roof with
+                    # headroom or in the open in front of it, never behind a roof. Otherwise the whole block-row goes,
+                    # so a tier ends in a clean step at an aisle, not a ragged edge
+                    if not all(seat_ok(q, z0, z1) for q, nv, z0, z1 in blk): SEAT_DROPPED[0] += k; continue
+                    for q, nv, z0, z1 in blk:  # instanced: one seat shell placed at q, z1, local +y along nv (away from the pitch)
                         SEAT_INST.append((q[0], q[1], z1, math.atan2(-nv[0], nv[1]), *col))
+                    # riser and tread under this block and half of each aisle beside it
+                    a_, b_ = max(0.0, ra - 0.7), min(ln.length, rb + 0.7); n = max(1, int((b_ - a_) // PITCH_S))
+                    V = []; UV = []
+                    for x in np.linspace(a_, b_, n + 1):
+                        q, t, nv, z0, z1 = frame(x); c = q + nv * ROW
+                        V += [(q[0], q[1], z0), (q[0], q[1], z1), (c[0], c[1], z1)]; UV += [(x, z0), (x, z1), (x, z1 + ROW)]
+                    F = [f for i in range(n) for f in ((3 * i, 3 * i + 3, 3 * i + 4, 3 * i + 1), (3 * i + 1, 3 * i + 4, 3 * i + 5, 3 * i + 2))]
+                    m.add(V, F, [TREAD] * len(V), UV, 'concrete')
             dk += ROW
 
 # ---------------------------------------------------------------- build
@@ -461,6 +533,7 @@ for st in S['stands']:
     stands.add(np.c_[V, z], T, C, arc_uv(V, d), ['concrete' if k == 'seats' else k for k in band_kind(st['bands'], d)])  # under the stepped treads
     seat_jobs.append((P, lambda B, st=st: stand_z(st, B[:, :2]), st['bands']))
     zf = lambda B, st=st: stand_z(st, B[:, :2])
+    parapet(stands, P, zf); front_skin(stands, P, zf)
     wb = st.get('wall_h')
     if wb:
         walls(stands, P, lambda B: np.minimum(zf(B), wb), 0.0, st['wall'], kind=st.get('wall_kind', 'concrete'))
@@ -486,15 +559,6 @@ for st, PL, le in low_parts:
     seat_jobs.append((PL, zl, st['bands']))
     walls(stands, PL, zl, 0.0, st['wall'], kind=st.get('wall_kind', 'concrete'))
 stands.save('stands')
-for i_, (P_, zfn_, bands_) in enumerate(seat_jobs):   # one file per stand (and the Hill's low seats), each well under 50 MB
-    seats = Mesh(); n0 = len(SEAT_INST); seat_rows(seats, P_, zfn_, bands_)
-    seats.save_bin('seats_%d' % i_); print('seats_%d' % i_, len(seats.f), 'tread faces', len(SEAT_INST) - n0, 'seats')
-# the seats themselves: one shell, instanced (render.py: Geometry Nodes; game: MultiMesh), as on the MCG
-os.makedirs(os.path.join(OUT, 'inst'), exist_ok=True)
-_sv, _sf, _suv = seat_shell(); _sh = Mesh(); _sh.add(_sv, _sf, [(255, 255, 255)] * len(_sv), _suv, 'seats'); _sh.save('inst/seat_shell')
-_I = np.array(SEAT_INST, np.float32)
-np.savez_compressed(os.path.join(OUT, 'inst', 'seats.npz'), pos=_I[:, :3], yaw=_I[:, 3], col=_I[:, 4:7].astype(np.uint8))
-print('seat instances', len(_I))
 
 for blk in S.get('blocks', []):
     m = Mesh(); P = way(blk['way']) if 'way' in blk else np.array(blk['poly'], float)
@@ -619,16 +683,18 @@ for rf in S['roofs']:
     m.add(np.c_[V, z - 0.3], [tuple(f[::-1]) for f in T], [rf['under']] * len(V), uv, 'roof')
     # back closure: on edges facing away from the pitch, a wall from the stand top (or ground) up to the roof edge
     if rf.get('back'):
-        sp = {x['way']: x for x in S['stands']}[rf['stand']]; SP = stand_poly(sp); spath = Path(SP)
+        sp = {x.get('way'): x for x in S['stands']}[rf['stand']]; SP = stand_poly(sp); spath = Path(SP)
         B = densify(P, 1.5); B = np.r_[B, B[:1]]; zt = roofz(B[:, :2])
         inside = spath.contains_points(B)
-        zb = np.where(inside, interp(sp['profile'], seg_dist(B, PITCH)), 0.0)
+        ztop = max(z for _, z in sp['profile'])
+        # where the roof's back edge overhangs the stand, the wall starts at the stand's top: the gap between the top
+        # rows and the roof is closed from inside (back_west_2023: a white panel band under the roof's back edge)
+        zb = np.where(inside, interp(sp['profile'], seg_dist(B, PITCH)), 0.0 if rf.get('back_ground', True) else ztop)
         zb = np.minimum(zb, zt - 0.3)
         for i in range(len(B) - 1):
             a, b = B[i], B[i + 1]; mid = (a + b) / 2; e = b - a; nrm = np.array([e[1], -e[0]])
             if not ccw(P): nrm = -nrm  # outward side of the roof outline (right-hand normal of a ccw ring)
             if nrm @ (mid - PC) / (np.linalg.norm(nrm) * np.linalg.norm(mid - PC) + 1e-9) < 0.5: continue
-            if not rf.get('back_ground', True) and not (inside[i] and inside[i + 1]): continue
             Vq = [(a[0], a[1], zb[i]), (b[0], b[1], zb[i + 1]), (b[0], b[1], zt[i + 1] - 0.2), (a[0], a[1], zt[i] - 0.2)]
             L0 = i * 1.5; m.add(Vq, [(0, 1, 2, 3), (3, 2, 1, 0)], [rf['back']] * 4,
                                 [(L0, zb[i]), (L0 + 1.5, zb[i + 1]), (L0 + 1.5, zt[i + 1]), (L0, zt[i])], rf.get('back_kind', 'glass'))
@@ -641,7 +707,7 @@ for rf in S['roofs']:
             if nrm @ (mid - PC) / (np.linalg.norm(nrm) * np.linalg.norm(mid - PC) + 1e-9) < 0.5: continue
             box(m, (a[0], a[1], zt[i] - 0.2), (b[0], b[1], zt[i + 1] - 0.2), tr['tube'], tr['col'], 'steel'); bk.append(i)
         bk = np.array(bk); BA = (np.arctan2(B[bk, 1] - PC[1], B[bk, 0] - PC[0]) - rf['amid'] + math.pi) % (2 * math.pi) - math.pi
-        sp = {x['way']: x for x in S['stands']}[rf['stand']]
+        sp = {x.get('way'): x for x in S['stands']}[rf['stand']]
         for f in rf['valleys'][1:-1]:
             j = bk[int(np.argmin(abs(BA - (a0 + f * (a1 - a0)))))]; c = B[j]
             t = B[min(j + 1, len(B) - 1)] - B[max(j - 1, 0)]; t /= np.linalg.norm(t)
@@ -672,7 +738,20 @@ for rf in S['roofs']:
                                                  (za - eb['glass'], zb_ - eb['glass'], eb['band'], eb['col'], 'concrete')):
                 Vq = [(ai[0], ai[1], top_a - h), (bi[0], bi[1], top_b - h), (bi[0], bi[1], top_b), (ai[0], ai[1], top_a)]
                 m.add(Vq, [(0, 1, 2, 3), (3, 2, 1, 0)], [col] * 4, [(L0, 0), (L0 + 1, 0), (L0 + 1, h), (L0, h)], kind)
+    from shapely.geometry import Polygon as _Poly
+    eb = rf.get('eyebrow')  # the louvre and eyebrow band hang under the rim: no seat under them either
+    ROOF_GUARD.append((_Poly(P).buffer(0), roofz, (eb['inset'] + 0.6, 0.3 + eb['tube'] + eb['glass'] + eb['band']) if eb else None))
     m.save('roof_' + rf['name'])
+
+for i_, (P_, zfn_, bands_) in enumerate(seat_jobs):   # one file per stand (and the Hill's low seats), each well under 50 MB
+    seats = Mesh(); n0 = len(SEAT_INST); seat_rows(seats, P_, zfn_, bands_)
+    print('job', i_, 'faces', len(seats.f)); seats.save_bin('seats_%d' % i_) if seats.f else None; print('seats_%d' % i_, len(seats.f), 'tread faces', len(SEAT_INST) - n0, 'seats')
+# the seats themselves: one shell, instanced (render.py: Geometry Nodes; game: MultiMesh), as on the MCG
+os.makedirs(os.path.join(OUT, 'inst'), exist_ok=True)
+_sv, _sf, _suv = seat_shell(); _sh = Mesh(); _sh.add(_sv, _sf, [(255, 255, 255)] * len(_sv), _suv, 'seats'); _sh.save('inst/seat_shell')
+_I = np.array(SEAT_INST, np.float32)
+np.savez_compressed(os.path.join(OUT, 'inst', 'seats.npz'), pos=_I[:, :3], yaw=_I[:, 3], col=_I[:, 4:7].astype(np.uint8))
+print('seat instances', len(_I), 'block-row seats dropped by seat_ok', SEAT_DROPPED[0])
 
 # light towers (close/east_gate_2023, riverbank_2026, east_stands_2023): tapered white shaft, collar ring, a neck that
 # kinks away from the pitch to a pointed tip, and a lamp frame hinged at the kink leaning over the pitch (a V in side
