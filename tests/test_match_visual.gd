@@ -2214,6 +2214,14 @@ func _test_graphics_levels(res: Dictionary) -> void:
 		vp.add_child(oval)
 		oval.build(d, "COL", "GEE")
 		oval.turf.apply("", VignetteKickoff.DAY)
+		# The body is rebuilt at load (guernsey cut, scalp, kit edges); its far detail levels are
+		# made again, or every player is drawn whole at any distance and in every shadow band.
+		var body: MeshInstance3D = null
+		for mi in (oval.players[0]["node"] as Node3D).find_children("*", "MeshInstance3D", true, false):
+			if mi.has_meta("kit"):
+				body = mi
+		var lods: Array = RenderingServer.mesh_get_surface(body.mesh.get_rid(), 0).get("lods", []) if body else []
+		_check(lods.size() >= 2, "%s: a player's body keeps its far detail levels (%d)" % [level, lods.size()])
 		var slices := 0
 		var seats := 0
 		var seat_casting := 0
