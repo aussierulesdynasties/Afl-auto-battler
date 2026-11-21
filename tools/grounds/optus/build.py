@@ -78,13 +78,16 @@ _lb=FJ['lobby'];_ZEi=[ZE+(_lb['top_m']-ZE)*max(0.0,min(1.0,(_lb['half_deg']+_lb[
 ZEf=lambda i:_ZEi[i%N]
 zv=lambda i:ZEf(i) if HS<i<HE else ZB      # bronze comes down to the clerestory head on the entrance side
 # o2 (2026-11-19): from segment 53 westward a dark glazed strip runs under the bronze: bronze ends 12.5 m at 57, 13.5 m from 63
-ZGK=[(52,ZB),(57,12.5),(63,13.5),(143,13.5)];import numpy as _np
-ZG=lambda i:float(_np.interp(i,[k[0] for k in ZGK],[k[1] for k in ZGK])) if 52<=i<=143 else (ZEf(i) if HS<i<HE else ZB)
-MXG=mat('dark',0.2,0.1)
-for i in range(52,144):   # 143->144 too: the strip closes the bronze's drop to 8 m at the hidden-arc start (was a see-through triangle)
-    j=i+1;w=Vector((DR[i].x+DR[j].x,DR[i].y+DR[j].y,0)).normalized()
+# Google Earth 000 and 330 (2026-11-21): the same glazed storey, dark blue glass and white posts, runs on round the north
+# and north-west on the podium, so the bronze stands at 12.5 m there too (was 8 m with a 1.6 m dark recess).
+ZGK=[(57,12.5),(63,13.5),(143,13.5)];import numpy as _np
+ZG=lambda i:float(_np.interp(i,[k[0] for k in ZGK],[k[1] for k in ZGK])) if 57<=i<=143 else (ZEf(i) if HS<i<HE else 12.5)
+MXG=mat('storey',0.2,0.1);ZST,SH=13.5,6.0   # storey.png: image top at 13.5 m, 6 m drop, 2 bays wide (bronze.py)
+for i in list(range(HE,N))+list(range(0,144)):   # 143->144 and 367->368 too: the strip closes the bronze's step down at both hidden-arc ends
+    j=(i+1)%N;w=Vector((DR[i].x+DR[j].x,DR[i].y+DR[j].y,0)).normalized()
     vs_=[P(DR[i],zv(i)),P(DR[j],zv(j))]+([P(DR[j],ZG(j))] if ZG(j)>zv(j)+1e-6 else [])+[P(DR[i],ZG(i))]
-    face(vs_,MXG,[(0,0),(0.4,0),(0.4,0.4),(0,0.4)],w)
+    uv_=[(v.co.z,(sD[i] if k in (0,len(vs_)-1) else sD[i+1])/BAY2) for k,v in enumerate(vs_)]
+    face(vs_,MXG,[(u_,1-(ZST-z_)/SH) for z_,u_ in uv_],w)
 _zv=zv;zv=lambda i:max(_zv(i),ZG(i))
 for a_,b_ in ((HS,HS+1),(HE-1,HE)):            # entrance-side ends: bronze bottom steps 8 m <-> 7 m in one segment over a 7 m soffit; close the triangle
     w=Vector((DR[a_].x+DR[b_].x,DR[a_].y+DR[b_].y,0)).normalized()
