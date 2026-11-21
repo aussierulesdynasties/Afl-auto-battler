@@ -142,3 +142,20 @@ Optus went through the same gate. What it added to the method:
   band, street glazing and the north's glazed storey are drawn by `bronze.py` (`glass`, `entrance`, `storey`).
 
 Open at Optus: seat colours from Street View (stage 4), on top of the seat fix (#1991).
+
+## Adelaide Oval (third ground to the standard, 2026-11-21)
+
+- **The compare tool is in the repo.** `tools/grounds/ge_compare.py` plans each view's Google Earth URL and
+  our matching camera through the ground's FIT, `tools/grounds/ge_shoot.js` takes the Google Earth shots,
+  and `ge_compare.py sheet` lays the pairs side by side. Views live with the ground
+  (`tools/grounds/adelaide/qa/views.json`); a view with `cam` is a fixed camera for a photosphere or Street
+  View picture supplied by hand. Grounds now play at their own size (#1949), so the camera needs no stretch.
+- **Street View at Adelaide is a drone photosphere.** Asking Google Maps for a panorama at the field centre
+  returns a 360 drone sphere taken above the Riverbank Stand (April 2021); `qa/sv_views.json` matches it
+  looking north, east, south and west.
+- **No tint where the map is painted for the light.** Optus's `tint` made Adelaide's parklands yellow;
+  Adelaide's map is painted in Google Earth's colours with no tint.
+- **The model's own ground stops under its stands.** Adelaide's 6 km lawn is out of the export; its floor is
+  a 107 m disc and the map starts at 105 m, outside the turf (a map under the turf flickered through it).
+- **Park trees.** OpenStreetMap maps most of the parklands' street trees; the other parks are filled to a
+  tree per 260 m² of open grass. Park 26, which holds the ground and its open ovals, is left as mapped.
