@@ -14,7 +14,8 @@ instance uniform vec4 skin : source_color = vec4(0.76, 0.57, 0.45, 1.0);
 instance uniform vec4 hair : source_color = vec4(0.15, 0.10, 0.07, 1.0);
 // The scalp under his style (Oval3D.SCALP): 0 hair colour (the body's own painted crop, no
 // look), 1 bare skin (bald, and under a style's shell: the shell has its own hairline),
-// 2 clippered (buzz: the skin through the hair).
+// 2 clippered (buzz: the skin through the hair), 3 under a style on the MetaHuman (bare at the
+// forehead's hairline, hair colour behind it).
 instance uniform int scalp = 0;
 const float BUZZ_COVER = 0.55;
 uniform vec4 shorts : source_color;
@@ -74,6 +75,11 @@ const vec2 NUMBER_UP = vec2(0.485, 0.875);     // where 2026 match backs carry i
 // The same spot on a picture kit, whose coordinates are the photo's own pixels (row 189 the shoulder line, 2310 px a metre).
 const vec2 NUMBER_ACROSS_PIC = vec2(0.3525, 0.6525);
 const vec2 NUMBER_UP_PIC = vec2(0.5425, 0.818);
+
+// Hair colour under a style, in the shade its own strands sit in (scalp 3).
+const float UNDER_STYLE_SHADE = 0.6;
+// How much of its green skin facing the ground gives back (see the bounce, fragment()).
+const float GROUND_GREEN_CUT = 0.72;
 
 float region(float f) {
 	float aa = max(fwidth(f), 1e-3);
@@ -358,7 +364,11 @@ void fragment() {
 	// Bare scalp: on a body with skin maps (the MetaHuman) the mapped skin, so it matches the
 	// forehead below it; flat skin on the plain body.
 	vec3 bare_scalp = mix(skin.rgb, c, has_maps);
-	vec3 scalp_col = scalp == 1 ? bare_scalp : (scalp == 2 ? mix(bare_scalp, hair.rgb, BUZZ_COVER) : hair.rgb);
+	// 3: under a style on the MetaHuman, bare at his forehead's hairline, his hair colour behind it
+	// (UV2.y, Oval3D._mark_behind_hairline), so a gap between the style's locks reads as hair.
+	float behind = scalp == 3 ? UV2.y : 1.0;
+	vec3 scalp_col = scalp == 1 ? bare_scalp : (scalp == 2 ? mix(bare_scalp, hair.rgb, BUZZ_COVER)
+			: (scalp == 3 ? mix(bare_scalp, hair.rgb * UNDER_STYLE_SHADE, behind) : hair.rgb));
 	c = mix(c, scalp_col, region(UV2.x));
 	// Where two kit regions meet, each field is about 0.5 and neither might pass it, which
 	// leaves a hairline of skin between guernsey and shorts. So the lower garment is drawn
@@ -392,7 +402,7 @@ void fragment() {
 	// Where bare skin shows: its own bumps and sheen. Kit and hair keep the flat cloth.
 	// (The kit as drawn: a guernsey cut past the body's old guernsey colours took the skin's sheen in patches.)
 	// A bare scalp (bald, or under a style's own hairline) is skin like the rest of his face.
-	float bare = (1.0 - region(UV2.x) * float(scalp != 1)) * (1.0 - region(COLOR.a))
+	float bare = (1.0 - region(UV2.x) * float(scalp != 1) * behind) * (1.0 - region(COLOR.a))
 		* (1.0 - region(COLOR.b + COLOR.a * step(0.02, COLOR.b))) * (1.0 - max(top, bottom))
 		* has_maps;
 	NORMAL_MAP = vec3(s_nrm.r, 1.0 - s_nrm.g, 1.0);
@@ -402,4 +412,10 @@ void fragment() {
 	// (eyes, nostrils, jaw) took the cool fill light and read olive green. A little of his skin's
 	// own colour, warmed, fills them.
 	EMISSION = c * vec3(0.12, 0.05, 0.03) * bare;
+	// The grass's bounce (rule 2.80) lights whatever faces down, green: under his brows, nose
+	// and jaw that stained the skin. Skin facing the ground gives back less green, so the bounce
+	// lights it as the sky does.
+	vec3 wn = (INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).xyz;
+	float down = clamp(-wn.y * 1.5 + 0.2, 0.0, 1.0) * bare;
+	ALBEDO *= mix(vec3(1.0), vec3(1.05, GROUND_GREEN_CUT, 0.95), down);
 }

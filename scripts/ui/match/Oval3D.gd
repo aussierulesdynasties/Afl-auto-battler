@@ -34,6 +34,10 @@ static var hair_glb := HAIR_GLB
 const SCALP := {"bald": 1, "buzz": 2, "dreadlocks": 0, "undercut": 2, "curly_short": 2, "faux_hawk": 2,
 		"tied_back": 2}
 const SCALP_UNDER_SHELL := 1
+## On the MetaHuman the scalp under a style is bare skin at his forehead's hairline and his hair
+## colour behind it (3, _mark_behind_hairline): the refitted shells leave it showing in places
+## (over the ear, between locks), where bare skin read as bald patches.
+const SCALP_UNDER_SHELL_MH := 3
 ## The boots' own material in the GLB (export_player_glb.py, the Tripo boot): drawn as modelled.
 const BOOT_MATERIAL := "ARD_boot_real"
 ## The eyes' material name in the GLB (a MetaHuman body's eyeballs, coloured by their vertex
@@ -721,18 +725,33 @@ static func _refit_hair(m: Mesh, at: Transform3D, bone: String) -> Mesh:
 		return m
 	var shift := _face_shift(bone)
 	var nose := _nose_tip(player_glb, bone)
+	var face := _face_front(player_glb, bone)
+	var neck := _neck_outline(player_glb, bone)
 	var am := m as ArrayMesh
 	var out := ArrayMesh.new()
 	var back := at.affine_inverse()
 	for s in range(am.get_surface_count()):
 		var a := am.surface_get_arrays(s)
 		var vs: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
+		var on_face := PackedByteArray()
+		on_face.resize(vs.size())
 		for i in range(vs.size()):
 			var q := at * vs[i] - SKULL_MID
 			var d := q.normalized()
 			var lift := _skull_at(new_r, d) - _skull_at(old_r, d)
-			vs[i] = back * _clear_eyes(SKULL_MID + shift + q + d * lift, nose)
+			var p := SKULL_MID + shift + q + d * lift
+			on_face[i] = 1 if _on_face(p, nose, face) or _on_cheek(p, nose, neck) else 0
+			vs[i] = back * _clear_neck(_clear_eyes(p, nose), nose, neck)
 		a[Mesh.ARRAY_VERTEX] = vs
+		# A lock that would lie on or through his face below his nose goes (see _on_face).
+		var idx = a[Mesh.ARRAY_INDEX]
+		if idx is PackedInt32Array:
+			var kept := PackedInt32Array()
+			for f in range(0, idx.size(), 3):
+				if on_face[idx[f]] + on_face[idx[f + 1]] + on_face[idx[f + 2]] == 0:
+					kept.append_array([idx[f], idx[f + 1], idx[f + 2]])
+			if kept.size() > 0:
+				a[Mesh.ARRAY_INDEX] = kept
 		out.add_surface_from_arrays(am.surface_get_primitive_type(s), a)
 		out.surface_set_material(s, am.surface_get_material(s))
 	return out
@@ -783,9 +802,18 @@ static func _nose_tip(glb: String, bone: String) -> Vector3:
 ## Hair in front of his face is kept off his eyes: below BROW_OVER_NOSE above the tip of his nose
 ## (the brows), a fringe or a lock hanging over the face is drawn up towards the brows, the lower
 ## the more, so it ends just above the eyes instead of across them (the passed side part, long
-## and curly styles hung over an eye). Behind the face (the sides, the back) nothing moves.
+## and curly styles hung over an eye). Lower down, from his nose to his chin, a lock that would
+## lie on or through his face goes (_on_face). Behind the face (the sides, the back) nothing moves.
 const BROW_OVER_NOSE := 0.085
 const FRINGE_KEEP := 0.25
+## Below this height over the tip of his nose (m) a lock on his face goes; above it, it goes up.
+const UNDER_EYES := 0.0
+## Beside his eyes, how high over the tip of his nose (m) a lock on his cheek goes.
+const CHEEK_TOP := 0.06
+## Half his face's width (m).
+const FACE_HALF := 0.09
+## The face's front, in cells this wide (m) across and up.
+const FACE_CELL := 0.005
 
 
 static func _clear_eyes(p: Vector3, nose: Vector3) -> Vector3:
@@ -794,10 +822,138 @@ static func _clear_eyes(p: Vector3, nose: Vector3) -> Vector3:
 	var brow := nose.y + BROW_OVER_NOSE
 	if p.y >= brow:
 		return p
-	# In front of the face: from 4 cm behind the tip of his nose forwards, and across the face only.
-	var front := smoothstep(nose.z - 0.045, nose.z - 0.02, p.z) * (1.0 - smoothstep(0.05, 0.075, absf(p.x)))
+	if p.y < nose.y + UNDER_EYES:
+		return p
+	# In front of his eyes only (they sit about 3 cm behind the tip of his nose): a lock down the
+	# side of his face, over the cheek, stays where it hangs.
+	var front := smoothstep(nose.z - 0.04, nose.z - 0.028, p.z) * (1.0 - smoothstep(0.045, 0.06, absf(p.x)))
 	var lifted := brow - (brow - p.y) * FRINGE_KEEP
 	return Vector3(p.x, lerpf(p.y, lifted, front), p.z)
+
+
+## A point of a style that lies on or through his face below his nose (the shoulder-length
+## style's front locks, refitted to the MetaHuman's fuller face, streaked his cheeks and jaw):
+## within his face's width, less than 3.5 cm behind its front there.
+static func _on_face(p: Vector3, nose: Vector3, face: Dictionary) -> bool:
+	if nose == Vector3.INF or absf(p.x) >= FACE_HALF:
+		return false
+	# Below his nose across his face; up to his cheekbones beside his eyes (a lock lying on his
+	# cheek in front of the ear).
+	var top := nose.y + (CHEEK_TOP if absf(p.x) > 0.055 else UNDER_EYES)
+	if p.y >= top:
+		return false
+	var zf: float = face.get(Vector2i(int(floor(p.x / FACE_CELL)), int(floor(p.y / FACE_CELL))), -INF)
+	return zf != -INF and p.z > zf - 0.035
+
+
+## A point of a style lying on his cheek or jaw in front of his ear (the same locks, from the
+## side): below his cheekbones, on the front half of his head, within 1 cm of his skin.
+static func _on_cheek(p: Vector3, nose: Vector3, neck: Dictionary) -> bool:
+	if nose == Vector3.INF or p.y >= nose.y + CHEEK_TOP or p.y < nose.y - 0.12:
+		return false
+	var bearing := atan2(p.x, p.z)
+	if absf(bearing) > deg_to_rad(100.0):
+		return false
+	var k := Vector2i(int(floor(p.y / NECK_ROW)), int(fposmod(bearing, TAU) / TAU * NECK_AZ) % NECK_AZ)
+	var out: float = neck.get(k, -1.0)
+	return out > 0.0 and Vector2(p.x, p.z).length() < out + 0.01
+
+
+## The front of the face of glb's body at rest, in bone's space: the skin's foremost z in each
+## FACE_CELL square across and up (Vector2i -> float). Once per body.
+static func _face_front(glb: String, bone: String) -> Dictionary:
+	var key := "face:" + glb + ":" + bone
+	if _skull_radii.has(key):
+		return _skull_radii[key]
+	var out := {}
+	_skull_radii[key] = out
+	if not ResourceLoader.exists(glb):
+		return out
+	var root: Node = (load(glb) as PackedScene).instantiate()
+	var sks := root.find_children("*", "Skeleton3D", true, false)
+	var sk: Skeleton3D = sks[0] if not sks.is_empty() else null
+	var bi := sk.find_bone(bone) if sk != null else -1
+	if bi >= 0:
+		var to_bone := sk.get_bone_global_rest(bi).affine_inverse()
+		for n in root.find_children("*", "MeshInstance3D", true, false):
+			var mi := n as MeshInstance3D
+			var am := mi.mesh as ArrayMesh
+			if mi.skin == null or am == null:
+				continue
+			for s in range(am.get_surface_count()):
+				var mat := am.surface_get_material(s)
+				if mat == null or mat.resource_name != SKIN_SURFACE:
+					continue
+				for v in am.surface_get_arrays(s)[Mesh.ARRAY_VERTEX]:
+					var q: Vector3 = to_bone * (mi.transform * v)
+					if absf(q.x) > FACE_HALF + 0.01 or q.y < -0.16 or q.y > 0.2 or q.z < 0.0:
+						continue
+					var c := Vector2i(int(floor(q.x / FACE_CELL)), int(floor(q.y / FACE_CELL)))
+					out[c] = maxf(out.get(c, -INF), q.z)
+	root.free()
+	return out
+
+
+## Below his nose, hair stays outside his jaw, neck and collar (the longer styles, fitted to the
+## old body's slimmer neck, ran their locks through the MetaHuman's): each point inside the body's
+## outline round the neck, at its height and bearing, moves out to NECK_CLEAR past it.
+const NECK_CLEAR := 0.006
+const NECK_ROW := 0.01
+const NECK_AZ := 24
+
+
+static func _clear_neck(p: Vector3, nose: Vector3, neck: Dictionary) -> Vector3:
+	if nose == Vector3.INF or p.y >= nose.y or neck.is_empty():
+		return p
+	var h := Vector2(p.x, p.z)
+	var r := h.length()
+	if r < 1e-4:
+		return p
+	var k := Vector2i(int(floor(p.y / NECK_ROW)), int(fposmod(atan2(p.x, p.z), TAU) / TAU * NECK_AZ) % NECK_AZ)
+	var out: float = neck.get(k, -1.0)
+	if out < 0.0 or r >= out + NECK_CLEAR:
+		return p
+	var to := h / r * (out + NECK_CLEAR)
+	return Vector3(to.x, p.y, to.y)
+
+
+## The outline of glb's body round the head bone's vertical axis, from his cheekbones down to his
+## shoulders: the outermost skin or kit in each NECK_ROW band and NECK_AZ bearing
+## (Vector2i(row, bearing) -> radius, m). Once per body.
+static func _neck_outline(glb: String, bone: String) -> Dictionary:
+	var key := "neck:" + glb + ":" + bone
+	if _skull_radii.has(key):
+		return _skull_radii[key]
+	var out := {}
+	_skull_radii[key] = out
+	if not ResourceLoader.exists(glb):
+		return out
+	var root: Node = (load(glb) as PackedScene).instantiate()
+	var sks := root.find_children("*", "Skeleton3D", true, false)
+	var sk: Skeleton3D = sks[0] if not sks.is_empty() else null
+	var bi := sk.find_bone(bone) if sk != null else -1
+	if bi >= 0:
+		var to_bone := sk.get_bone_global_rest(bi).affine_inverse()
+		for n in root.find_children("*", "MeshInstance3D", true, false):
+			var mi := n as MeshInstance3D
+			var am := mi.mesh as ArrayMesh
+			if mi.skin == null or am == null:
+				continue
+			for s in range(am.get_surface_count()):
+				var mat := am.surface_get_material(s)
+				if mat == null or mat.resource_name in [HAIR_SURFACE, EYE_MATERIAL]:
+					continue
+				for v in am.surface_get_arrays(s)[Mesh.ARRAY_VERTEX]:
+					var q: Vector3 = to_bone * (mi.transform * v)
+					if q.y > 0.12 or q.y < -0.3:
+						continue
+					var r := Vector2(q.x, q.z).length()
+					if r > 0.25:
+						continue
+					var k := Vector2i(int(floor(q.y / NECK_ROW)), int(fposmod(atan2(q.x, q.z), TAU) / TAU * NECK_AZ) % NECK_AZ)
+					out[k] = maxf(out.get(k, -1.0), r)
+	root.free()
+	return out
 
 
 ## The skull of glb's body at rest, as radii from SKULL_MID (SKULL_POLAR rows of SKULL_AZ),
@@ -936,6 +1092,42 @@ const HAIR_SURFACE := "ARD_hair"
 static var _skulls := {}
 
 
+## On the MetaHuman, how far behind his hairline each point of his scalp lies, into the hair
+## region's spare UV2.y (oval3d_player.gdshader, scalp 3): 0 on his forehead's hairline, where
+## a style's own hairline sits higher and his skin shows; 1 over the ears, the sides and the
+## back, where a gap between a style's locks shows his hair colour, not a bald patch.
+static func _mark_behind_hairline(a: Array) -> void:
+	var rest := _head_rest(player_glb)
+	if rest == Transform3D():
+		return
+	var to_head := rest.affine_inverse()
+	var mid := SKULL_MID + _face_shift("head")
+	var vs: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
+	var u2: PackedVector2Array = a[Mesh.ARRAY_TEX_UV2]
+	if u2.size() != vs.size():
+		return
+	for i in range(vs.size()):
+		var d := (to_head * vs[i] - mid).normalized()
+		u2[i].y = 1.0 - smoothstep(0.3, 0.55, d.z)
+	a[Mesh.ARRAY_TEX_UV2] = u2
+
+
+## The head bone's rest in glb's body (its skeleton's space); identity when it has none.
+static func _head_rest(glb: String) -> Transform3D:
+	var key := "rest:" + glb
+	if not _skull_radii.has(key):
+		var t := Transform3D()
+		if ResourceLoader.exists(glb):
+			var root: Node = (load(glb) as PackedScene).instantiate()
+			var sks := root.find_children("*", "Skeleton3D", true, false)
+			if not sks.is_empty() and (sks[0] as Skeleton3D).find_bone("head") >= 0:
+				var sk := sks[0] as Skeleton3D
+				t = sk.get_bone_global_rest(sk.find_bone("head"))
+			root.free()
+		_skull_radii[key] = t
+	return _skull_radii[key]
+
+
 ## The body mesh with the scalp back on his skull: every vertex at a hair-region corner (the
 ## pipeline lifted exactly those, in every surface they share) drawn in by SCALP_LIFT, and the
 ## normals round it recomputed, welded across surfaces, so the old ledge's light goes with it.
@@ -957,6 +1149,8 @@ static func _skull(m: Mesh) -> Mesh:
 	var surfs := []
 	for s in range(am.get_surface_count()):
 		surfs.append(am.surface_get_arrays(s))
+	if player_glb != HAIR_FIT_GLB:
+		_mark_behind_hairline(surfs[hair])
 	var key := func(v: Vector3) -> Vector3i:
 		return Vector3i((v * 1e5).round())
 	# The lift's direction per corner: the normal of the hair region's own faces round it. They
@@ -1781,7 +1975,8 @@ static func _hair_material(i: int, tex: Texture2D = null) -> StandardMaterial3D:
 ## style's hair bare skin, as the hair has its own hairline (the body's painted crop would show
 ## as a band under it); no hair, the painted crop.
 static func scalp_for(style: String) -> int:
-	return int(SCALP.get(style, SCALP_UNDER_SHELL if hair_shells().has(style) else 0))
+	var under := SCALP_UNDER_SHELL if player_glb == HAIR_FIT_GLB else SCALP_UNDER_SHELL_MH
+	return int(SCALP.get(style, under if hair_shells().has(style) else 0))
 
 
 static var _loops := {}
