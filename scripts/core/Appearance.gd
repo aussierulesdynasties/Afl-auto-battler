@@ -74,12 +74,17 @@ static func _pick(roll: float, weights: Array) -> int:
 # is read by the sim. Dominant foot, number and nickname are not looks and
 # live on the player.
 # ---------------------------------------------------------------------------
-const HAIR_STYLES := ["bald", "buzz", "short_crop", "crew", "side_part", "textured_short",
-		"messy_medium", "swept_back", "mullet", "mullet_long", "curly_short", "curly_medium",
+const HAIR_STYLES := ["bald", "buzz", "short_crop", "crew", "swept_back", "mullet", "curly_short",
 		"afro", "long", "tied_back", "dreadlocks",
 		# The 3D oval's downloaded cuts (director 2026-11-15, "all"): added at the end, ids are saves.
-		"fringe", "spiked", "short_spikes", "twists", "quiff", "slicked_side", "short_quiff", "wavy",
-		"tight_curls", "shaggy", "surfer", "high_top", "faux_hawk", "undercut", "shoulder_length"]
+		"short_spikes", "quiff", "slicked_side", "tight_curls", "shaggy", "surfer", "faux_hawk", "undercut",
+		"shoulder_length"]
+## Cuts folded into a near twin (director 2026-11-21: "most of the cuts are pretty similar to one
+## another, we would do well to consolidate the options and remove the weaker ones"). A save or
+## generated player with one of these wears its twin (full()); ids stay here so old saves load.
+const HAIR_RETIRED := {"textured_short": "crew", "spiked": "short_spikes", "twists": "short_spikes",
+		"high_top": "short_spikes", "short_quiff": "quiff", "messy_medium": "shaggy", "curly_medium": "shaggy",
+		"fringe": "surfer", "wavy": "surfer", "mullet_long": "long", "side_part": "slicked_side"}
 const BEARDS := ["clean", "stubble_light", "stubble_heavy", "moustache", "short_beard",
 		"full_beard", "goatee", "beard_moustache"]
 const BOOTS := ["classic", "modern"]
@@ -95,9 +100,10 @@ const BASE_LOOK := {"hair_style": "short_crop", "beard": "clean", "beard_colour"
 		"tattoos": [], "bandage": 0}
 
 ## How often generated players have each, so a league doesn't look uniform.
-const HAIR_STYLE_MIX := {"bald": 4.0, "buzz": 12.0, "short_crop": 22.0, "crew": 10.0, "side_part": 6.0,
-		"textured_short": 12.0, "messy_medium": 8.0, "swept_back": 5.0, "mullet": 6.0, "mullet_long": 2.0,
-		"curly_short": 5.0, "curly_medium": 3.0, "afro": 1.5, "long": 2.0, "tied_back": 1.5}
+## The retired cuts' shares went to their twins (HAIR_RETIRED).
+const HAIR_STYLE_MIX := {"bald": 4.0, "buzz": 12.0, "short_crop": 22.0, "crew": 22.0, "slicked_side": 6.0,
+		"shaggy": 11.0, "swept_back": 5.0, "mullet": 6.0, "curly_short": 5.0, "afro": 1.5, "long": 4.0,
+		"tied_back": 1.5}
 const BEARD_MIX := {"clean": 46.0, "stubble_light": 18.0, "stubble_heavy": 12.0, "moustache": 4.0,
 		"short_beard": 9.0, "full_beard": 5.0, "goatee": 2.0, "beard_moustache": 4.0}
 
@@ -114,7 +120,9 @@ static func full(colours: Dictionary, id: String, generated_player: bool, chosen
 	if generated_player:
 		out.merge(_variety(id), true)
 	for k in chosen:
-		if valid(k, chosen[k]):
+		if k == "hair_style" and HAIR_RETIRED.has(str(chosen[k])):
+			out[k] = HAIR_RETIRED[str(chosen[k])]
+		elif valid(k, chosen[k]):
 			out[k] = chosen[k].duplicate(true) if chosen[k] is Array else chosen[k]
 	if int(out["beard_colour"]) < 0:
 		out["beard_colour"] = int(out["hair"])

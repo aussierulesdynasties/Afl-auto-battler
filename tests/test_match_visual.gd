@@ -3410,7 +3410,7 @@ func _wears(p: Dictionary, l: Dictionary) -> bool:
 				return false
 	var shell: Dictionary = Oval3D.hair_shells().get(style, {})
 	if shell.is_empty():
-		return not p.has("hair_node") and _scalp(p) == int(Oval3D.SCALP.get(style, -1))
+		return not p.has("hair_node") and Oval3D.SCALP.has(style) and _scalp(p) == Oval3D.scalp_for(style)
 	var on: BoneAttachment3D = p.get("hair_node")
 	if on == null or on.get_parent() != p["skel"] or on.bone_name != str(shell["bone"]) or on.get_child_count() != 1:
 		return false

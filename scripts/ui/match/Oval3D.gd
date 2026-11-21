@@ -38,6 +38,9 @@ const SCALP_UNDER_SHELL := 1
 ## colour behind it (3, _mark_behind_hairline): the refitted shells leave it showing in places
 ## (over the ear, between locks), where bare skin read as bald patches.
 const SCALP_UNDER_SHELL_MH := 3
+## A clippered scalp (2) on the MetaHuman: bare at his forehead's hairline, clippered behind it.
+## Clippered right down to the brows read as a dark band across the forehead.
+const SCALP_CLIPPERED_MH := 4
 ## The boots' own material in the GLB (export_player_glb.py, the Tripo boot): drawn as modelled.
 const BOOT_MATERIAL := "ARD_boot_real"
 ## The eyes' material name in the GLB (a MetaHuman body's eyeballs, coloured by their vertex
@@ -648,6 +651,7 @@ func look(p: Dictionary, l: Dictionary, any_shell := false) -> void:
 	var skin: Color = Appearance.SKIN[clampi(int(l.get("skin", 1)), 0, Appearance.SKIN.size() - 1)]
 	var hair_i := clampi(int(l.get("hair", 1)), 0, Appearance.HAIR.size() - 1)
 	var style := str(l.get("hair_style", VignetteFigures.HAIR_BASE))
+	style = str(Appearance.HAIR_RETIRED.get(style, style))
 	if not Appearance.HAIR_STYLES.has(style) and not (any_shell and hair_shells().has(style)):
 		style = VignetteFigures.HAIR_BASE
 	for mi in (p["node"] as Node3D).find_children("*", "MeshInstance3D", true, false):
@@ -840,8 +844,15 @@ static func _clear_eyes(p: Vector3, nose: Vector3) -> Vector3:
 ## style's front locks, refitted to the MetaHuman's fuller face, streaked his cheeks and jaw):
 ## within his face's width, less than 3.5 cm behind its front there.
 static func _on_face(p: Vector3, nose: Vector3, face: Dictionary) -> bool:
-	if nose == Vector3.INF or absf(p.x) >= FACE_HALF:
+	if nose == Vector3.INF:
 		return false
+	if absf(p.x) >= FACE_HALF:
+		# Beside his eyes, a side lock reaching forward past his temple: from the side it hung in
+		# front of his eye (long).
+		if absf(p.x) > FACE_HALF + 0.04 or p.y < nose.y or p.y >= nose.y + BROW_OVER_NOSE:
+			return false
+		var row: float = face.get(Vector2i(FACE_ROW, int(floor(p.y / FACE_CELL))), -INF)
+		return row != -INF and p.z > row - TEMPLE_BACK
 	# Below his nose across his face; up to his cheekbones beside his eyes (a lock lying on his
 	# cheek in front of the ear).
 	var top := nose.y + (CHEEK_TOP if absf(p.x) > 0.055 else UNDER_EYES)
@@ -853,6 +864,12 @@ static func _on_face(p: Vector3, nose: Vector3, face: Dictionary) -> bool:
 
 ## A point of a style lying on his cheek or jaw in front of his ear (the same locks, from the
 ## side): below his cheekbones, on the front half of his head, within 1 cm of his skin.
+## The face's rows (_face_front): the key column holding each row's foremost point.
+const FACE_ROW := 99999
+## How far behind the face's foremost point a side lock beside his eyes may reach.
+const TEMPLE_BACK := 0.035
+
+
 static func _on_cheek(p: Vector3, nose: Vector3, neck: Dictionary) -> bool:
 	if nose == Vector3.INF or p.y >= nose.y + CHEEK_TOP or p.y < nose.y - 0.12:
 		return false
@@ -895,6 +912,9 @@ static func _face_front(glb: String, bone: String) -> Dictionary:
 						continue
 					var c := Vector2i(int(floor(q.x / FACE_CELL)), int(floor(q.y / FACE_CELL)))
 					out[c] = maxf(out.get(c, -INF), q.z)
+					# The row's foremost point (_on_face, beside his eyes).
+					var r := Vector2i(FACE_ROW, c.y)
+					out[r] = maxf(out.get(r, -INF), q.z)
 	root.free()
 	return out
 
@@ -1097,11 +1117,14 @@ const HAIR_SURFACE := "ARD_hair"
 static var _skulls := {}
 
 
-## On the MetaHuman, how far behind his hairline each point of his scalp lies, into the hair
-## region's spare UV2.y (oval3d_player.gdshader, scalp 3): 0 on his forehead's hairline, where
-## a style's own hairline sits higher and his skin shows; 1 over the ears, the sides and the
-## back, where a gap between a style's locks shows his hair colour, not a bald patch.
-static func _mark_behind_hairline(a: Array) -> void:
+## On the MetaHuman, how far forward each point of his scalp faces, into the hair region's spare
+## UV2.y (oval3d_player.gdshader, scalp 3 and 4): the forward part of its direction from the
+## skull's middle, 1 straight out of his forehead, 0 over his crown and ears, -1 at the back. The
+## shader puts each mode's hairline on it: under a style (3) his skin shows up to where the
+## style's own hairline sits, a clippered cut (4) starts where hair grows.
+## every_vertex false: only the corners that carry some of the hair region (UV2.x), as the face's
+## along the scalp's edge do; the rest keep the kit's own UV2.y.
+static func _mark_behind_hairline(a: Array, every_vertex := true) -> void:
 	var rest := _head_rest(player_glb)
 	if rest == Transform3D():
 		return
@@ -1112,8 +1135,8 @@ static func _mark_behind_hairline(a: Array) -> void:
 	if u2.size() != vs.size():
 		return
 	for i in range(vs.size()):
-		var d := (to_head * vs[i] - mid).normalized()
-		u2[i].y = 1.0 - smoothstep(0.3, 0.55, d.z)
+		if every_vertex or u2[i].x > 0.0:
+			u2[i].y = (to_head * vs[i] - mid).normalized().z
 	a[Mesh.ARRAY_TEX_UV2] = u2
 
 
@@ -1155,7 +1178,10 @@ static func _skull(m: Mesh) -> Mesh:
 	for s in range(am.get_surface_count()):
 		surfs.append(am.surface_get_arrays(s))
 	if player_glb != HAIR_FIT_GLB:
-		_mark_behind_hairline(surfs[hair])
+		# The face's corners along the scalp's edge too: left with the kit's UV2.y, they drew a
+		# dotted line of clippered hair round a buzz cut's hairline.
+		for s in range(surfs.size()):
+			_mark_behind_hairline(surfs[s], s == hair)
 	var key := func(v: Vector3) -> Vector3i:
 		return Vector3i((v * 1e5).round())
 	# The lift's direction per corner: the normal of the hair region's own faces round it. They
@@ -2057,8 +2083,9 @@ static func _hair_material(i: int, tex: Texture2D = null) -> StandardMaterial3D:
 ## style's hair bare skin, as the hair has its own hairline (the body's painted crop would show
 ## as a band under it); no hair, the painted crop.
 static func scalp_for(style: String) -> int:
-	var under := SCALP_UNDER_SHELL if player_glb == HAIR_FIT_GLB else SCALP_UNDER_SHELL_MH
-	return int(SCALP.get(style, under if hair_shells().has(style) else 0))
+	var mh := player_glb != HAIR_FIT_GLB
+	var s := int(SCALP.get(style, (SCALP_UNDER_SHELL_MH if mh else SCALP_UNDER_SHELL) if hair_shells().has(style) else 0))
+	return SCALP_CLIPPERED_MH if mh and s == 2 else s
 
 
 static var _loops := {}

@@ -15,9 +15,14 @@ instance uniform vec4 hair : source_color = vec4(0.15, 0.10, 0.07, 1.0);
 // The scalp under his style (Oval3D.SCALP): 0 hair colour (the body's own painted crop, no
 // look), 1 bare skin (bald, and under a style's shell: the shell has its own hairline),
 // 2 clippered (buzz: the skin through the hair), 3 under a style on the MetaHuman (bare at the
-// forehead's hairline, hair colour behind it).
+// forehead's hairline, hair colour behind it), 4 clippered on the MetaHuman (bare at the
+// forehead's hairline, clippered behind it: a buzz or undercut's sides start where hair grows).
 instance uniform int scalp = 0;
 const float BUZZ_COVER = 0.55;
+// A clippered cut's hairline on the MetaHuman (4): how far forward his scalp faces (UV2.y) where
+// the clippered hair fades into his forehead's skin.
+const float HAIRLINE_FROM = 0.45;
+const float HAIRLINE_TO = 0.6;
 uniform vec4 shorts : source_color;
 uniform vec4 boot : source_color = vec4(0.06, 0.06, 0.07, 1.0);
 // The club's kit (GameDB.club_guernsey) as the vignettes' figure material takes it, one kit.
@@ -367,9 +372,12 @@ void fragment() {
 	vec3 bare_scalp = mix(skin.rgb, c, has_maps);
 	// 3: under a style on the MetaHuman, bare at his forehead's hairline, his hair colour behind it
 	// (UV2.y, Oval3D._mark_behind_hairline), so a gap between the style's locks reads as hair.
-	float behind = scalp == 3 ? UV2.y : 1.0;
-	vec3 scalp_col = scalp == 1 ? bare_scalp : (scalp == 2 ? mix(bare_scalp, hair.rgb, BUZZ_COVER)
-			: (scalp == 3 ? mix(bare_scalp, hair.rgb * UNDER_STYLE_SHADE, behind) : hair.rgb));
+	float behind = scalp == 3 ? 1.0 - smoothstep(0.3, 0.55, UV2.y)
+			: (scalp == 4 ? 1.0 - smoothstep(HAIRLINE_FROM, HAIRLINE_TO, UV2.y) : 1.0);
+	vec3 clippered = mix(bare_scalp, hair.rgb, BUZZ_COVER);
+	vec3 scalp_col = scalp == 1 ? bare_scalp : (scalp == 2 ? clippered
+			: (scalp == 3 ? mix(bare_scalp, hair.rgb * UNDER_STYLE_SHADE, behind)
+			: (scalp == 4 ? mix(bare_scalp, clippered, behind) : hair.rgb)));
 	c = mix(c, scalp_col, region(UV2.x));
 	// Where two kit regions meet, each field is about 0.5 and neither might pass it, which
 	// leaves a hairline of skin between guernsey and shorts. So the lower garment is drawn
