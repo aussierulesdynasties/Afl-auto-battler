@@ -31,20 +31,22 @@ func _run() -> void:
 	cam.global_position = oval.to_global(Vector3(10.0, 22.0, -25.0))
 	cam.look_at(oval.to_global(Vector3(0.0, 0.0, -45.0)), Vector3.UP)
 	var turf = oval.turf
+	# By path, after the autoloads exist (Oval3DTurf reaches GameDB).
+	var Turf = load("res://scripts/ui/match/Oval3DTurf.gd")
 	turf.follow("", Oval3DSunClock.for_match("MCG", "Round 12", "day"))
 	for slot in ["day", "twilight"]:
 		var look: Dictionary = turf._looks[slot]
-		var own: float = rad_to_deg(Oval3DTurf._sun_height(look["sun"]))
-		Oval3DTurf.forced_open = 1.0
+		var own: float = rad_to_deg(Turf._sun_height(look["sun"]))
+		Turf.forced_open = 1.0
 		turf._write(look, look, 0.0, own)
 		var target := await _lum()
 		var line := "%s own %.0f target %.1f:" % [slot, own, target]
-		for alt in Oval3DTurf.OPEN_ALTS:
+		for alt in Turf.OPEN_ALTS:
 			var lo := 0.3
 			var hi := 4.0
 			for i in range(7):
 				var k := sqrt(lo * hi)
-				Oval3DTurf.forced_open = k
+				Turf.forced_open = k
 				turf._write(look, look, 0.0, alt)
 				if await _lum() < target:
 					lo = k
@@ -52,7 +54,7 @@ func _run() -> void:
 					hi = k
 			line += " %.0f:%.2f" % [alt, sqrt(lo * hi)]
 		print(line)
-	Oval3DTurf.forced_open = -1.0
+	Turf.forced_open = -1.0
 	quit()
 
 
