@@ -102,12 +102,25 @@ the renderer's time against the plain stand on High (software GPU, so ratios onl
   level-of-detail bodies) are the lever there, outside this page.
 - Draw calls stay under about 440 everywhere. Bruce Stadium (825 separate meshes in its model) and
   Macquarie Point are the most; merging Bruce's meshes would take it under 200.
-- Memory is the bigger risk on a cheap phone. The 3D view holds about 700 MB of video memory before
-  any ground loads, most of it textures: the guernsey atlas (assets/oval3d/kits_today.png, 8192 x
-  5120, stored uncompressed, about 210 MB with its mipmaps), the Tripo head photos (2048, uncompressed)
-  and the player body. Every ground's model keeps its textures uncompressed too
-  (embedded_image_handling=3, #1931); Whitten Oval's add about 440 MB. Compressing them is the next
-  step (a separate change, checked against captures before it goes to the director).
+- Memory was the bigger risk on a cheap phone, and is now compressed. The 3D view held about 750 MB
+  of video memory before any ground loaded, most of it textures stored uncompressed: the guernsey
+  atlas (assets/oval3d/kits_today.png, 8192 x 5120, about 210 MB with its mipmaps) and the Tripo head
+  photos. Every ground's model kept its textures uncompressed too (embedded_image_handling=3, #1931);
+  Whitten Oval's added about 440 MB. Now the atlas and heads are GPU-compressed (ASTC on a phone,
+  high quality) and the grounds' textures are stored as Basis Universal. Measured on High:
+
+  | | Before | After |
+  |---|---|---|
+  | Plain stand | 751 MB | 591 MB |
+  | MCG | 821 MB | 661 MB |
+  | Marvel | 865 MB | 640 MB |
+  | Optus | 878 MB | 640 MB |
+  | Whitten | 1,189 MB | 719 MB |
+
+  The guernseys filmed close at chest height (capture_guernseys3d.gd: Collingwood, West Coast,
+  Richmond, Hawthorn) differ by about 3 levels in 255 on average and look the same side by side; the
+  grounds from the broadcast camera are indistinguishable. The table above was measured before the
+  compression, so its video memory column is the old figure.
 
 ## The budget (proposed, for the director)
 
@@ -120,8 +133,8 @@ published guidance for low-end Android GPUs (Mali-G52 and Adreno 610 class):
 - The open question O19 (match view worst 5% of frames under 33 ms) is the frame-time target.
 
 Against that, Low is at or just over the triangle line at most grounds (1.0 to 1.2 million, the
-players' floor) and up to 2.2 million at the eight heaviest; every ground is near the memory line
-until the textures are compressed. The phone run decides whether that matters.
+players' floor) and up to 2.2 million at the eight heaviest; with the textures compressed every
+ground's video memory is 590 to 720 MB. The phone run decides whether that is enough.
 
 ## What needs a phone
 
