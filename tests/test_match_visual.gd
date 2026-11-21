@@ -67,6 +67,7 @@ func run() -> void:
 	_t("_test_plan_tint_every_quarter")
 	_t("_test_three_d_view", [res])
 	_t("_test_three_d_hair", [res])
+	_t("_test_three_d_numbers")
 	await _t("_test_three_d_cameras", [res])
 	_t("_test_contacts", [res])
 	_t("_test_umpire_stoppages", [res])
@@ -2229,6 +2230,29 @@ func _test_ground_models() -> void:
 			and GroundModels.stretch("engie").is_equal_approx(Vector2.ONE),
 			"The turf stops at the model's fence")
 	oval.queue_free()
+
+
+## Guernsey numbers on the 3D player (row 202 2d): the digits are read from one padded layer each,
+## with mipmaps, so a number a dozen pixels tall on the main camera holds its shape instead of
+## breaking into stray texels (tools/visual/capture_oval3d_numbers.gd shows each shot and level).
+func _test_three_d_numbers() -> void:
+	var layers := Oval3D.digit_layers()
+	var sized := layers.size() == 10
+	for im: Image in layers:
+		sized = sized and im.get_size() == Vector2i(96, 128) and im.has_mipmaps()
+	_check(sized, "The 3D numbers' digits: ten padded layers with mipmaps")
+	var inked := Rect2i()
+	var four: Image = layers[4]
+	for y in range(four.get_height()):
+		for x in range(four.get_width()):
+			if four.get_pixel(x, y).g > 0.0:
+				inked = Rect2i(x, y, 1, 1) if inked.size == Vector2i.ZERO else inked.expand(Vector2i(x, y))
+	_check(inked.size.x > 40 and Rect2i(16, 16, 65, 97).encloses(inked),
+			"A digit's layer is inked inside a clear margin (%s)" % inked)
+	var oval := Oval3D.new()
+	var m: ShaderMaterial = oval._kit(GameDB.club_guernsey("RIC"))
+	_check(m.get_shader_parameter("digits_arr") == Oval3D.digits_3d(), "Every kit reads its numbers from the mipmapped digits")
+	oval.free()
 
 
 ## Settings > Graphics (Oval3DQuality): High is the look as built; Low draws every supporter as a
