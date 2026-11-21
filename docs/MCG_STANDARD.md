@@ -172,5 +172,22 @@ straight down, into the bowl). What it added to the method:
   `tools/grounds/marvel/surrounds.py` (Victoria Harbour, the Southern Cross yards, the streets, the towers
   to their mapped heights) and `bridges.py` (the Bolte Bridge's 140 m towers and deck, 1.35 km west).
 
-Open at Marvel: the east office blocks' cladding still reads darker than Google Earth in shade; the
-surrounding towers are plain blocks (every ground's surroundings are, so far).
+Close-up pass (2026-11-21, same day), what a harsh look found and fixed:
+
+- The land round the ground was orange: the map took Optus's warm `tint` (2.0, 1.4, 0.95), but
+  Marvel's map is already painted grey. Measured against Google Earth's top view (rail yards, water)
+  it now takes (0.86, 0.84, 0.82). Check a copied setting against your own map's colours.
+- The bowl's top band (over the braces, under the MARVEL STADIUM letters) shared the undersides'
+  texture, painted warm for the dim light under a roof, and read khaki outside. It is its own dark
+  blue now (`upperwall`). A texture tuned for one light must not be shared with a face in another.
+- The east office boxes are pale with a spandrel band and fins over ribbon glazing, on an open
+  colonnade (`office`, `undercroft`), as Google Earth's close views show; the corner blocks a muted blue.
+- Inside: the aisle stairs read as white ladders (the treads were the outside's white concrete; now
+  a mid grey `tread`), and the middle and top tiers' fronts carry dark ribbon screens.
+- The surrounding towers: `building_style: "towers"` draws them as blue-grey glass curtain walls
+  (a mullion every 1.5 m, a slab every floor) or concrete with rows of windows, in one shader that
+  fades the pattern with distance (GroundModels.TOWER_SHADER); same mesh, same draw call.
+
+Still open at Marvel: from above, building roofs read paler than Google Earth's under the match sun;
+the Street View panoramas inside the bowl could not be reached headless, so the inside was checked
+against Google Earth's 3D from the centre (low detail) and the known look of the ground.

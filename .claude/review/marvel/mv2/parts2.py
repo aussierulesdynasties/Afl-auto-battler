@@ -187,7 +187,7 @@ def cl(z):return np.minimum(z,RU-0.4) if np.ndim(z) else np.minimum(np.full(K,z)
 prof=[(-4,ZP),(-4,13.2),(0,13.2),(0,14.3),(-0.6,14.3),(-0.6,21.4),(0,21.4),(0,24.9),(-0.4,24.9),(-0.4,26.3),(0,26.3),(0,27.7),
       (-3,27.7),(-3,33.9),(0,33.9),(0,36.5),(-5,36.5),(-5,None)]
 mats=['glass','soffit','silver','soffit',segm('curtain','curtain'),'soffit','silver','soffit','glass','soffit','silver','soffit',
-      'glass','soffit','silver','silver','soffit']
+      'glass','soffit','silver','silver','upperwall']  # the band over the braces up to the roof: dark blue (Google Earth c_ne)
 rings=[ring(o,RU if z is None else cl(z)) for o,z in prof]
 loft('bowl_wall',rings,mats)
 # white round columns in front of the shopfront, one every 8 m of perimeter (none behind the west podium)
@@ -265,19 +265,21 @@ def seat_row(R,AA,pitch=0.5,aisle=1.2):
         w0=np.array(wv(p));w1=np.array(wv(p*np.array([0.99,0.99,1.0])))  # inward = towards the pitch centre
         dv=w1[:2]-w0[:2];dv/=np.linalg.norm(dv)+1e-12;SEATS.append([round(float(w0[0]),3),round(float(w0[1]),3),round(float(w0[2]),3),round(float(dv[0]),4),round(float(dv[1]),4)])
         s+=pitch
-def tier(name,f0,f1,zf,zb,lip=1.1):
+def tier(name,f0,f1,zf,zb,lip=1.1,front='concrete'):
     a=rp+D*f0;b=rp+D*f1;c=np.cos(TH);s=np.sin(TH)
     P=lambda r,z:np.stack([r*c,r*s,np.full(K,z) if np.ndim(z)==0 else z],1)
     # stepped concrete rows (0.8 m treads) with a real seat on each row (pan + back, 0.44 m wide, 0.5 m pitch, 1.2 m aisle every 24)
     n=max(1,int(round(np.mean(b-a)/0.8)));zz=lambda i:zf+(np.asarray(zb)-zf)*i/n;rr=lambda i:a+(b-a)*i/n
-    rings=[P(a,zf-lip-0.6),P(a,zf)];mats=['concrete'];AA=aisle_angles(P(a+(b-a)*0.55/n,zf))
+    # the treads a mid grey: as white concrete the aisle stairs read as bright ladders between the seats
+    rings=[P(a,zf-lip-0.6),P(a,zf)];mats=[front];AA=aisle_angles(P(a+(b-a)*0.55/n,zf))
     for i in range(n):
-        rings+=[P(rr(i+1),zz(i)),P(rr(i+1),zz(i+1))];mats+=['concrete','riser']
+        rings+=[P(rr(i+1),zz(i)),P(rr(i+1),zz(i+1))];mats+=['tread','riser']
         rs=rr(i)+(rr(i+1)-rr(i))*0.55;seat_row(P(rs,zz(i)),AA)
     rings+=[P(b,np.asarray(zb)-1.0),P(a,zf-lip-0.6)];mats+=['concrete','soffit']
     loft(name,rings,mats)
-tier('tier1',0.0,0.62,FL+1.4,FL+12.0);tier('tier2',0.40,0.80,FL+15.0,FL+23.0);_b3=rp+D*1.0;_rt=np.array([roof_top(r*math.cos(t),r*math.sin(t)) for r,t in zip(_b3,TH)])
-tier('tier3',0.62,1.0,FL+26.5,np.minimum(FL+37.0,_rt-1.5))  # back row stays under the roof (ends at 33-38 m)
+# the middle and top tiers' fronts carry the ribbon screens that run right round the bowl
+tier('tier1',0.0,0.62,FL+1.4,FL+12.0);tier('tier2',0.40,0.80,FL+15.0,FL+23.0,front='ribbon');_b3=rp+D*1.0;_rt=np.array([roof_top(r*math.cos(t),r*math.sin(t)) for r,t in zip(_b3,TH)])
+tier('tier3',0.62,1.0,FL+26.5,np.minimum(FL+37.0,_rt-1.5),front='ribbon')  # back row stays under the roof (ends at 33-38 m)
 # ---------------- corner complexes (west measured: satellite lean + aerial, mv/sz.py, mv/vert.py); east = 180-degree twin
 def face_v(u,o=0.0):
     vv=np.linspace(0,130,2600);thv=np.arctan2(vv,u);j=np.where(np.hypot(u,vv)<=se_r(thv,OA,OB,ON)+o)[0];return vv[j[-1]] if len(j) else 0.0
@@ -314,12 +316,13 @@ def lean(q,z):return [(u+0.1738*z,v+0.0805*z) for u,v in q]
 NEB=[(-120.3,-59.1),(-125.6,-66.7),(-93.9,-88.9),(-88.6,-81.3)]
 prism('cornerNE_block',lean(NEB,33.0),0.0,33.0,'louvre','concrete')
 _c=np.mean(lean([(-106.4,-78.3)],37.0),0);rbox('cornerNE_plant',tuple(_c),9.0,7.5,math.atan2(-0.574,0.819),33.0,37.0,'silver','concrete')
-# B: office block north of the deck: roof u -55..-21, v -107..-125 (north half), out to -131 south of u -40; z 24
+# B: office block north of the deck (Google Earth c_e, c_ne: pale boxes, a spandrel band and a ribbon of
+# glass behind fins every storey, over an open ground floor of slim columns): roof u -55..-21, v -107..-125 (north half), out to -131 south of u -40; z 24
 for nm,q in(('eastB_n',[(-55.0,-107.0),(-55.0,-125.0),(-40.0,-125.0),(-40.0,-107.0)]),('eastB_s',[(-40.0,-107.0),(-40.0,-131.0),(-21.0,-131.0),(-21.0,-107.0)])):
-    f=lean(q,24.0);prism(nm+'_lo',f,0.0,9.0,'glass','concrete');prism(nm,f,9.0,24.0,'louvre','concrete')
+    f=lean(q,24.0);prism(nm+'_lo',f,0.0,9.0,'undercroft','concrete');prism(nm,f,9.0,24.0,'office','concrete')
 # D: office block south of the deck: roof u 10..47.5, east edge v -127.5 at u 12 to -124.4 at u 47.5; z 24
 q=[(10.0,-107.0),(10.0,-131.3),(47.5,-124.6),(47.5,-107.0)];f=lean(q,24.0)
-prism('eastD_lo',f,0.0,9.0,'glass','concrete');prism('eastD',f,9.0,24.0,'louvre','concrete')
+prism('eastD_lo',f,0.0,9.0,'undercroft','concrete');prism('eastD',f,9.0,24.0,'office','concrete')
 # roof plant on B and D (the dark grilles in the satellite)
 for nm,q,z in(('eastB_plant',[(-54.0,-109.0),(-54.0,-117.0),(-47.0,-117.0),(-47.0,-109.0)],24.0),('eastB_plant2',[(-38.0,-108.5),(-38.0,-123.0),(-22.5,-123.0),(-22.5,-108.5)],24.0),
                 ('eastD_plant',[(11.0,-110.0),(11.0,-124.0),(28.0,-124.0),(28.0,-110.0)],24.0),('eastD_plant2',[(32.0,-107.5),(32.0,-116.0),(44.5,-116.0),(44.5,-107.5)],24.0)):
