@@ -8,8 +8,9 @@ extends Node
 ## table stays on screen (screenshot it). On a PC or in the cloud (a software GPU there: only the
 ## counts, memory and the ratios of the times carry over to a phone):
 ##   godot --path . --rendering-method mobile tools/perf/Oval3DPhone.tscn -- [grounds=mcg,marvel]
-##       [levels=high,low] [size=1080x1240] [measure=5] [out=rows.json] [shots=DIR] [quit]
+##       [levels=high,low] [size=1080x1240] [measure=5] [slot=night] [out=rows.json] [shots=DIR] [quit]
 ## shots=DIR saves each ground and level's last measured frame as DIR/<ground>_<level>.png.
+## slot= day (default), twilight or night: the time of day measured (a night game adds the towers).
 ## Columns: frame = wall time a frame (mean, then the worst 5%); proc = the whole frame's process
 ## time; cpu / gpu = the renderer's own measured time; draws and ktris = what the frame drew;
 ## mem = the game's memory and the video memory in use, MB; load = s to build the scene.
@@ -93,7 +94,7 @@ func _run() -> void:
 			Oval3DQuality.apply_viewport(level, vp)
 			add_child(oval)
 			oval.build(director, "FRE", "STK")
-			oval.turf.apply("", VignetteKickoff.DAY)
+			oval.turf.apply("", _arg("slot", VignetteKickoff.DAY))
 			var tv := Oval3DBroadcast.new(oval)
 			var load_s := (Time.get_ticks_usec() - t0) / 1e6
 			await _play(WARM, null, director, oval, tv)

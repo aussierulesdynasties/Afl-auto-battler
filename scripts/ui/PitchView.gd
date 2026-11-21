@@ -365,7 +365,7 @@ func _setup_3d() -> void:
 	else:
 		# The real sun over the ground from the bounce (plan 2a.4): the light moves with the clock.
 		_sun = Oval3DSunClock.for_match(_oval3d.ground, str(result.get("label", "")), time_of_day(weather))
-		_oval3d.turf.follow(weather, _sun)
+		_oval3d.turf.follow_clock(weather, _sun)
 	_make_paint_3d()
 	_oval3d.set_ends(end_sign(period))
 	_fit_3d()

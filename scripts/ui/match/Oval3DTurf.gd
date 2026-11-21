@@ -193,24 +193,27 @@ func apply(p_weather: String, p_slot: String) -> void:
 	var wet := weather == VignetteWeather.WET
 	var hot := weather == VignetteWeather.HOT
 	var d := VignetteKickoff.daylight(slot)
-	var g: Array = VignetteWeather.grass(weather, VignetteGround.GRASS, slot)
+	# Under a ground's own towers the grass is lit as brightly as by day (a broadcast's turf is the
+	# same green at night), so it takes the day's colours; the old night light kept the darker set.
+	var turf_slot := VignetteKickoff.DAY if slot == VignetteKickoff.NIGHT and _towers() != null else slot
+	var g: Array = VignetteWeather.grass(weather, VignetteGround.GRASS, turf_slot)
 	if wet:
 		# The flat views darken wet turf to show the wet; here the sheen shows it, so the
 		# colour goes half as dark (fully, the lit ground reads near black).
 		# The flat views' wet palette turns blue-grey under lights; soaked turf is the same
 		# green, darker. So the dry colour, a shade darker and greyer (measured: without the grey, soaked turf under
 		# lights goes neon once the sheen is kept to the puddles).
-		var dry: Array = VignetteWeather.grass("", VignetteGround.GRASS, slot)
-		var grey := 0.2 if slot == VignetteKickoff.DAY else 0.3
+		var dry: Array = VignetteWeather.grass("", VignetteGround.GRASS, turf_slot)
+		var grey := 0.2 if turf_slot == VignetteKickoff.DAY else 0.3
 		g = dry.map(func(c: Color) -> Color:
 			var l := c.get_luminance()
 			return c.lerp(Color(l, l, l), grey) * 0.95)
 	mat.set_shader_parameter("grass_a", g[0] * _tint)
 	mat.set_shader_parameter("grass_b", g[1] * _tint)
-	var apron: Color = VignetteWeather.grass(weather, [VignetteGround.APRON], slot)[0]
+	var apron: Color = VignetteWeather.grass(weather, [VignetteGround.APRON], turf_slot)[0]
 	mat.set_shader_parameter("apron_col", apron * _tint)
 	var worn: Color = VignetteGround.WORN[1]
-	mat.set_shader_parameter("worn_col", VignetteWeather.daylit(Color(worn.r, worn.g, worn.b), slot))
+	mat.set_shader_parameter("worn_col", VignetteWeather.daylit(Color(worn.r, worn.g, worn.b), turf_slot))
 	mat.set_shader_parameter("wet", 1.0 if wet else 0.0)
 	mat.set_shader_parameter("hot", 1.0 if hot else 0.0)
 	mat.set_shader_parameter("wind", VignetteWeather.wind(weather))
@@ -221,7 +224,7 @@ func apply(p_weather: String, p_slot: String) -> void:
 	# A hot day's ground is still a watered AFL ground: the fine day's green with some dried
 	# patches (the full straw look goes lime under the TV tone, rule 2.81; approved hot sky, 2.84).
 	if hot:
-		g = VignetteWeather.grass("", VignetteGround.GRASS, slot)
+		g = VignetteWeather.grass("", VignetteGround.GRASS, turf_slot)
 		mat.set_shader_parameter("grass_a", g[0] * _tint)
 		mat.set_shader_parameter("grass_b", g[1] * _tint)
 		mat.set_shader_parameter("hot", 0.4)
@@ -238,6 +241,7 @@ func apply(p_weather: String, p_slot: String) -> void:
 	sun.light_angular_distance = 0.0
 	sun.directional_shadow_max_distance = 160.0
 	_stand_shade(false)
+	sun.visible = true
 	if slot == VignetteKickoff.NIGHT:
 		_night(wet)
 	else:
@@ -247,6 +251,7 @@ func apply(p_weather: String, p_slot: String) -> void:
 			_late_game()
 		if wet:
 			_cloud_light()
+	_set_towers(TOWERS_ON.get(slot, 0.0))
 	# The exposure, set by the brightness of open grass (rule 2.81): each look's grass near a fine
 	# day's, as a broadcast camera opens up in poorer light.
 	var exposure: float = EXPOSURE[slot]
@@ -309,6 +314,41 @@ const EXPOSURE_WET := {"day": 1.83, "twilight": 1.83, "night": 1.84}
 
 ## Night: the towers, high and cool white from behind the far wing, a weaker set from the other
 ## side, under one dark sky colour (rule 2.80's sky light is the daylight).
+## How far a ground's own towers are up in each look (Oval3DTowers): full at night; at a late
+## game they are already on, as at every twilight match, their heads lit and a little light on
+## the ground under the low sun.
+const TOWERS_ON := {"day": 0.0, "twilight": 0.12, "night": 1.0}
+var _tower_level := 0.0
+
+
+## The ground's towers, when it has them (Oval3DTowers.banks); null otherwise.
+func _towers() -> Oval3DTowers:
+	var t = oval.get("towers")
+	return t if t is Oval3DTowers and not (t as Oval3DTowers).banks.is_empty() else null
+
+
+func _set_towers(k: float) -> void:
+	_tower_level = k
+	var t := _towers()
+	if t != null:
+		t.set_level(k)
+
+
+## The night's light from the ground's own towers (Oval3DTowers): they light the ground and throw
+## the men's shadows, so the old night light is off.
+func _tower_night(wet: bool) -> void:
+	fill.visible = false
+	fill.light_energy = 0.0
+	sun.light_energy = 0.0
+	sun.shadow_enabled = false
+	sun.visible = false
+	# The stands and the roof catch the spill from the towers and the stands' own lights.
+	env.ambient_light_color = Color(0.42, 0.46, 0.5)
+	env.ambient_light_energy = 0.3
+	if wet:
+		env.ambient_light_energy *= 1.1
+
+
 func _night(wet: bool) -> void:
 	env.sky = null
 	env.background_mode = Environment.BG_COLOR
@@ -331,6 +371,8 @@ func _night(wet: bool) -> void:
 		sun.light_energy *= 0.85
 		sun.light_color = sun.light_color.lerp(Color(0.85, 0.9, 1.0), 0.5)
 		env.ambient_light_energy *= 1.1
+	if _towers() != null:
+		_tower_night(wet)
 
 
 ## Rule 2.80, sky light: the sky lights the ground and the men (ambient and reflections from it),
@@ -604,7 +646,7 @@ const SKY_COLOURS := ["zenith", "horizon", "seen_zenith", "seen_horizon", "cloud
 
 ## Follow the match's own sun from its kick-off: the weather's day, late-game and night looks are
 ## set up once, and set_hour blends between them.
-func follow(p_weather: String, p_clock: Oval3DSunClock) -> void:
+func follow_clock(p_weather: String, p_clock: Oval3DSunClock) -> void:
 	clock = p_clock
 	_looks.clear()
 	for s in VignetteKickoff.SLOTS:
@@ -649,7 +691,8 @@ static func look_weights(alt: float, no_night := false) -> Array:
 
 ## What one look sets, read back after apply().
 func _snap() -> Dictionary:
-	var s := {"turf": {}, "env": {}, "shade": _shade, "exposure": _exposure,
+	var s := {"turf": {}, "env": {}, "shade": _shade, "exposure": _exposure, "towers": _tower_level,
+			"sun_on": sun.visible, "sun_shadow": sun.shadow_enabled,
 			"sun": _light(sun), "fill": _light(fill), "fill_on": fill.visible}
 	for k in TURF_KEYS:
 		s["turf"][k] = mat.get_shader_parameter(k)
@@ -738,12 +781,16 @@ func _write(a: Dictionary, b: Dictionary, t: float, alt: float) -> void:
 	_stand_shade(a["shade"] if t < 0.5 else b["shade"])
 	var exposure: float = lerpf(a["exposure"], b["exposure"], t)
 	tower.visible = false
+	sun.visible = true
+	_set_towers(lerpf(float(a.get("towers", 0.0)), float(b.get("towers", 0.0)), t))
 	if night:
 		# The night look itself (rule 2.82).
 		for k in ENV_KEYS:
 			env.set(k, a["env"][k])
 		env.sky = null
 		_set_light(sun, a["sun"], 1.0)
+		sun.visible = a.get("sun_on", true)
+		sun.shadow_enabled = a.get("sun_shadow", true)
 		fill.visible = a["fill_on"]
 		_set_light(fill, a["fill"], 1.0)
 	else:
@@ -768,7 +815,7 @@ func _write(a: Dictionary, b: Dictionary, t: float, alt: float) -> void:
 			else:
 				_set_light(sun, b["sun"], t)
 				_set_light(tower, day_sun, up)
-			sun.shadow_enabled = true
+			sun.shadow_enabled = sun.light_energy > 0.01
 			tower.shadow_enabled = false
 			tower.visible = true
 			fill.visible = true

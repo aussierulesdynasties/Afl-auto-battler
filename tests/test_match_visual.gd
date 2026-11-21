@@ -54,6 +54,7 @@ func run() -> void:
 	_t("_test_farewell")
 	_t("_test_match_ground")
 	_t("_test_ground_models")
+	_t("_test_night_towers")
 	_t("_test_ground_screens")
 	_t("_test_mcg_crowd", [res])
 	_t("_test_graphics_levels", [res])
@@ -2150,6 +2151,53 @@ func _test_farewell() -> void:
 ## Row 202 2b: every ground with a 3D model plays in it. Each model's files are in the game,
 ## every club's home ground and the Grand Final resolve to theirs, and each is laid so its
 ## measured boundary fence meets the match's fence, end to end and wing to wing.
+## A night game at the MCG under its own towers (rule 2.82, Oval3DTowers): the six towers found
+## in the model's lamp banks, every one lighting, the men alone throwing their shadows, as many
+## shadowed beams as the graphics level allows; off by day, heads lit at a twilight game.
+func _test_night_towers() -> void:
+	var pts := PackedVector3Array()
+	for a in [10.0, 130.0, 250.0]:
+		for k in range(10):
+			var r := deg_to_rad(a + k * 0.5)
+			pts.append(Vector3(cos(r) * 140.0, 70.0, sin(r) * 120.0))
+	pts.append(Vector3(0.0, 3.0, -120.0))   # a gate lamp on a wall: no tower
+	_check(Oval3DTowers.bank_middles(pts).size() == 3, "Lamps group into a bank per tower; a low lamp is no tower")
+	for level in [Oval3DQuality.HIGH, Oval3DQuality.LOW]:
+		var d := MatchDirector.new()
+		var res := _result(42)
+		d.setup(res, res["events"])
+		var oval := Oval3D.new()
+		oval.ground = "MCG"
+		oval.quality = level
+		(Engine.get_main_loop() as SceneTree).root.add_child(oval)
+		oval.build(d, str(res.get("home", "ADE")), str(res.get("away", "MEL")))
+		var t: Oval3DTowers = oval.towers
+		_check(t != null and t.banks.size() == 6, "The MCG's six light towers come from its model (%d)" % (t.banks.size() if t else -1))
+		if t == null or t.banks.is_empty():
+			oval.queue_free()
+			continue
+		oval.turf.apply("", VignetteKickoff.NIGHT)
+		var lit := t.spots.filter(func(s): return s.visible and s.light_energy > 0.0).size()
+		var shadowed := t.beams.filter(func(b): return b.visible and b.shadow_enabled).size()
+		var want := int(Oval3DQuality.preset(level)["tower_shadows"])
+		_check(lit == 6 and shadowed == want and not oval._sun.visible,
+				"At night (%s) all six towers light the ground, %d throw shadows, the old night light is off (%d, %d)" % [level, want, lit, shadowed])
+		var men_only := true
+		for b in t.beams:
+			men_only = men_only and b.shadow_caster_mask == Oval3DTowers.SHADOW_LAYER
+		var p0: Node3D = oval.players[0]["node"]
+		var on_layer := false
+		for g in p0.find_children("*", "GeometryInstance3D", true, false):
+			on_layer = on_layer or (g.layers & Oval3DTowers.SHADOW_LAYER) != 0
+		_check(men_only and on_layer, "Only the men throw the towers' shadows, not the stadium")
+		oval.turf.apply("", VignetteKickoff.TWILIGHT)
+		_check(t.level > 0.0 and t.beams.all(func(b): return not b.visible) and oval._sun.visible,
+				"At a twilight game the towers are on but the sun still throws the shadows")
+		oval.turf.apply("", VignetteKickoff.DAY)
+		_check(t.level == 0.0 and t.spots.all(func(s): return not s.visible), "By day the towers are off")
+		oval.queue_free()
+
+
 func _test_ground_models() -> void:
 	for g in GroundModels.grounds():
 		var slug := GroundModels.slug_for(g)
@@ -3064,7 +3112,7 @@ func _check_sun_clock(turf: Oval3DTurf) -> void:
 			and Oval3DTurf.look_weights(-10.0, true)[0] == VignetteKickoff.TWILIGHT,
 			"High sun is the day look, low sun the late game, after dusk the night; a hot day never the night")
 	var clock := Oval3DSunClock.for_match("MCG", "Round 12", VignetteKickoff.TWILIGHT)
-	turf.follow("", clock)
+	turf.follow_clock("", clock)
 	_check(turf.env.sky != null and not turf.tower.visible and turf._shade,
 			"A winter twilight game starts in the late game's low sun with the stands' shade")
 	turf.set_hour(clock.hour_at(1, 25.0))

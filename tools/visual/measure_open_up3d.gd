@@ -33,7 +33,7 @@ func _run() -> void:
 	var turf = oval.turf
 	# By path, after the autoloads exist (Oval3DTurf reaches GameDB).
 	var Turf = load("res://scripts/ui/match/Oval3DTurf.gd")
-	turf.follow("", Oval3DSunClock.for_match("MCG", "Round 12", "day"))
+	turf.follow_clock("", Oval3DSunClock.for_match("MCG", "Round 12", "day"))
 	for slot in ["day", "twilight"]:
 		var look: Dictionary = turf._looks[slot]
 		var own: float = rad_to_deg(Turf._sun_height(look["sun"]))

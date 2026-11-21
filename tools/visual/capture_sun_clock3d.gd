@@ -1,7 +1,8 @@
 extends SceneTree
 ## The match clock's light (Oval3DTurf.follow, plan 2a.4): Sky3D's real sun over the ground as a
 ## match goes on, from the wing camera in a 16:9 TV picture.
-##   godot --path . --script tools/visual/capture_sun_clock3d.gd -- OUTDIR [AT]
+##   godot --path . --script tools/visual/capture_sun_clock3d.gd -- OUTDIR [AT] [GROUND]
+## GROUND plays it in a ground's model (default: the game's own oval), e.g. "MCG" for its towers.
 ## A seeded Fremantle v St Kilda match played to AT seconds (default 14), then the same moment at
 ## each point of three matches' clocks: a winter twilight game at the MCG (bounce to the final
 ## siren, the sun setting in the first quarter), a winter day game there (the low sun of the last
@@ -27,6 +28,7 @@ func _run() -> void:
 	var args := OS.get_cmdline_user_args()
 	var out := str(args[0]) if args.size() > 0 else "user://sun_clock3d"
 	var at := float(args[1]) if args.size() > 1 else 14.0
+	var ground := str(args[2]) if args.size() > 2 else ""
 	DirAccess.make_dir_recursive_absolute(out)
 	OS.low_processor_usage_mode = false
 	var gdb = root.get_node("GameDB")
@@ -40,6 +42,7 @@ func _run() -> void:
 	var d = load("res://scripts/ui/match/MatchDirector.gd").new()
 	d.setup(res, res["events"])
 	var oval = load("res://scripts/ui/match/Oval3D.gd").new()
+	oval.ground = ground
 	root.add_child(oval)
 	oval.build(d, "FRE", "STK")
 	var played := 0.0
@@ -55,7 +58,7 @@ func _run() -> void:
 		await _save(out, "approved_%s" % slot)
 	for m in MATCHES:
 		var clock := Oval3DSunClock.for_match(m[0], m[1], m[2])
-		oval.turf.follow("", clock)
+		oval.turf.follow_clock("", clock)
 		# A new sky's light map takes a few frames to fill the first time it is drawn.
 		for i in range(30):
 			await process_frame
