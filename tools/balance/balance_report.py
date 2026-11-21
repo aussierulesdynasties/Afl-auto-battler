@@ -14,9 +14,10 @@ MAP = {"disposals": "disposals", "kicks": "kicks", "handballs": "handballs",
        "marks": "marks", "contested_marks": "contested_marks", "tackles": "tackles",
        "inside50": "inside_50s", "clearances": "clearances", "hitouts": "hitouts",
        "frees_for": "frees_for", "goals": "goals", "behinds": "behinds",
-       "rebound50": "rebound_50s", "rebounds": "rebound_50s"}
+       "rebound50": "rebound_50s", "rebounds": "rebound_50s",
+       "goal_assists": "goal_assists", "marks_inside_50": "marks_inside_50"}
 EXTRA = ["score", "clangers", "intercepts", "one_percenters", "metres_gained", "strength", "draftees",
-         "contested_possessions", "ground_ball_gets", "pressure_acts", "ball_ups", "throw_ins", "stoppages"]
+         "contested_possessions", "ground_ball_gets", "pressure_acts", "i50_pass_goals", "ball_ups", "throw_ins", "stoppages"]
 # Real weather against a perfect day, AFL 2016-25 without 2020 (afl_weather_rates.json,
 # built by build_weather_rates.py from AFL Tables match totals and Open-Meteo weather at
 # the ground). Shown for a paired run when B is a weather arm and A is not, so it reads
