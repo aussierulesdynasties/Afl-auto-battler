@@ -277,13 +277,13 @@ func _test_fades(res: Dictionary) -> void:
 	# The corridor runs at full strength from the side's defensive 50 to the goal
 	# square (its soft ends lie outside those), and nothing in front of the 50.
 	var ce := func(x: float) -> float: return PitchView.corridor_end(x)
-	_check(is_equal_approx(float(ce.call(MatchDirector.CORRIDOR_FROM)), 1.0) and is_equal_approx(float(ce.call(0.0)), 1.0)
-			and is_equal_approx(float(ce.call(MatchDirector.CORRIDOR_TO)), 1.0)
-			and float(ce.call(MatchDirector.CORRIDOR_FROM - PitchView.MARK_END_FEATHER)) == 0.0
-			and float(ce.call(MatchDirector.CORRIDOR_TO + PitchView.MARK_END_FEATHER)) == 0.0
-			and is_equal_approx(MatchDirector.CORRIDOR_FROM, -(MatchMotion.GOAL_X - 50.0))
-			and is_equal_approx(MatchDirector.CORRIDOR_TO, MatchMotion.GOAL_X - 9.0),
-			"The corridor is at full strength from the defensive 50 (%.0f m) to the goal square (%.0f m)" % [MatchDirector.CORRIDOR_FROM, MatchDirector.CORRIDOR_TO])
+	_check(is_equal_approx(float(ce.call(MatchDirector.corridor_from())), 1.0) and is_equal_approx(float(ce.call(0.0)), 1.0)
+			and is_equal_approx(float(ce.call(MatchDirector.corridor_to())), 1.0)
+			and float(ce.call(MatchDirector.corridor_from() - PitchView.MARK_END_FEATHER)) == 0.0
+			and float(ce.call(MatchDirector.corridor_to() + PitchView.MARK_END_FEATHER)) == 0.0
+			and is_equal_approx(MatchDirector.corridor_from(), -(MatchMotion.GOAL_X - 50.0))
+			and is_equal_approx(MatchDirector.corridor_to(), MatchMotion.GOAL_X - 9.0),
+			"The corridor is at full strength from the defensive 50 (%.0f m) to the goal square (%.0f m)" % [MatchDirector.corridor_from(), MatchDirector.corridor_to()])
 	_check(is_equal_approx(PitchView.MARK_ALPHA, PitchView.PRESS_ZONE_ALPHA * MatchDirector.PRESS_ZONE_STANDING),
 			"The markings are laid at the press wash's faint strength (%.2f)" % PitchView.MARK_ALPHA)
 	pv.free()
