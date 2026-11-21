@@ -398,4 +398,8 @@ void fragment() {
 	NORMAL_MAP = vec3(s_nrm.r, 1.0 - s_nrm.g, 1.0);
 	NORMAL_MAP_DEPTH = bare;
 	ROUGHNESS = mix(0.82, s_rough, bare);
+	// Skin lets light through and stays warm in its own shade; without it a pale face's creases
+	// (eyes, nostrils, jaw) took the cool fill light and read olive green. A little of his skin's
+	// own colour, warmed, fills them.
+	EMISSION = c * vec3(0.12, 0.05, 0.03) * bare;
 }
