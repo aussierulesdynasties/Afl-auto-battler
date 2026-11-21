@@ -62,10 +62,14 @@ def under_stadium(x, y):
 for o in [o for o in bpy.data.objects if not o.name.startswith('bg_')]:
     bpy.data.objects.remove(o, do_unlink=True)
 
+SEAMED = ('bg_near_ground', 'bg_far_terrain')
 if INNER > 0.0:   # the game draws its own ground, trees and buildings in here: nothing twice
     for o in [o for o in bpy.data.objects if o.type == 'MESH']:
         bm = bmesh.new(); bm.from_mesh(o.data); M = o.matrix_world
-        kill = [f for f in bm.faces if (M @ f.calc_center_median()).xy.length < INNER]
+        if o.name in SEAMED:   # the ground keeps every face reaching past the circle: no gap at the seam
+            kill = [f for f in bm.faces if max((M @ v.co).xy.length for v in f.verts) < INNER]
+        else:
+            kill = [f for f in bm.faces if (M @ f.calc_center_median()).xy.length < INNER]
         if kill:
             bmesh.ops.delete(bm, geom=kill, context='FACES'); bm.to_mesh(o.data)
         bm.free()
@@ -92,6 +96,22 @@ DECIMATE = {'bg_near_ground': 0.3, 'bg_far_terrain': 0.15, 'bg_far_water': 0.03,
             'bg_rails': 0.3, 'bg_road_kerbs': 0.25, 'bg_roads': 0.4, 'bg_road_lines': 0.4, 'bg_shore': 0.5}
 for n, r in DECIMATE.items():
     decimate(n, r)
+
+# the seam with the game's own ground (a flat disc at z 0 out to INNER): the scene's ground ends on
+# the circle at the disc's height, and the coarse far terrain inside it sinks out of sight
+if INNER > 0.0:
+    for n in SEAMED:
+        o = bpy.data.objects.get(n)
+        if o is None: continue
+        Mi = o.matrix_world.inverted(); M = o.matrix_world
+        for v in o.data.vertices:
+            w = M @ v.co; r = w.xy.length
+            if r >= INNER: continue
+            if n == 'bg_near_ground':
+                k = INNER / max(r, 1e-3); w.x *= k; w.y *= k; w.z = -0.1
+            else:
+                w.z = min(w.z, -5.0)
+            v.co = Mi @ w
 
 # trees: clumps thinned with distance, kept ones grown so the canopy keeps its cover
 for o in [o for o in bpy.data.objects if o.name.startswith('bg_trees')]:
