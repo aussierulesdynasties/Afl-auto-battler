@@ -211,6 +211,7 @@ var _looks := {}
 ## a real 3D ground (Oval3D), rendered at the screen's own pixels and shown in place of the
 ## flat drawing. Settings > Match view; the match screen sets it before setup().
 var three_d := false
+var graphics := Oval3DQuality.HIGH   # Settings > Graphics (Oval3DQuality), read at each new match
 var _oval3d: Oval3D = null
 var _vp3d: SubViewport = null
 var _view3d: TextureRect = null
@@ -348,6 +349,9 @@ func _setup_3d() -> void:
 	if _figs != null:
 		_figs.visible = false
 	_oval3d = Oval3D.new()
+	# Settings > Graphics: how much detail the 3D picture draws (looks only, Oval3DQuality).
+	_oval3d.quality = graphics
+	Oval3DQuality.apply_viewport(graphics, _vp3d)
 	_vp3d.add_child(_oval3d)
 	# The ground the match is at: its real model where one is in the game (GroundModels.GROUNDS).
 	_oval3d.ground = VignetteGround.ground_of(result)

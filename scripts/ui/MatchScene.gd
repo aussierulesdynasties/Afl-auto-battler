@@ -190,6 +190,7 @@ func _ready() -> void:
 	add_child(_crowd)
 	_build()
 	_pitch.three_d = GameState.match_3d_on()
+	_pitch.graphics = GameState.graphics_quality()
 	_pitch.setup(_res)
 	_sync_bug()
 	_refresh_rings()
