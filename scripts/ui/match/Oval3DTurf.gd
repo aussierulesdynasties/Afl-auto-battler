@@ -46,6 +46,7 @@ const MOWING := {
 	"jiangwan": [CHECKER, 12.0, "couch"], "hands": [ACROSS, 10.0, "couch"],
 	"blacktown": [ACROSS, 12.0, "couch"], "summit": [ACROSS, 10.0, "rye"], "macpoint": [DIAMONDS, 12.0, "rye"],
 	"adelaide": [CHECKER, 12.0, "rye"], "gabba": [ACROSS, 12.0, "couch"],
+	"traeger": [ACROSS, 10.0, "couch"],
 }
 ## How each grass shifts the day's turf colours (multiplied in, so weather and light still set them).
 const GRASS_TINT := {
