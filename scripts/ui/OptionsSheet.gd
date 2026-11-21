@@ -87,6 +87,10 @@ static func open(host: Control, in_career: bool, quit := false) -> Control:
 			func(k):
 				GameState.set_match_figures_on(k == "figures")
 				GameState.set_match_3d_on(k == "3d"))
+	_row(v, "Graphics", "SettingsGraphics",
+			[["low", "Low"], ["medium", "Medium"], ["high", "High"]], GameState.graphics_quality(),
+			"How much detail the 3D oval draws. Low keeps a weaker phone smooth: fewer shadows, every supporter a flat card. The match plays the same.",
+			func(k): GameState.set_graphics_quality(k))
 	_row(v, "Centre ball-up scene every match", "SettingsBounceScene", [["off", "Off"], ["on", "On"]],
 			"on" if GameState.bounce_scene_every_match() else "off",
 			"For playtesting. The centre ball-up call comes at the first centre ball-up of every last quarter you coach, whatever the score.",

@@ -38,17 +38,22 @@ const BOOT_MATERIAL := "ARD_boot_real"
 ## The eyes' material name in the GLB (a MetaHuman body's eyeballs, coloured by their vertex
 ## colour): drawn as modelled, never in the kit.
 const EYE_MATERIAL := "ARD_eye"
-const HALF_LEN := MatchMotion.HALF_LEN
-const HALF_WID := MatchMotion.HALF_WID
-const GOAL_X := MatchMotion.GOAL_X
 const GOAL_GAP := 6.4
 const GOAL_H := 12.0
 const BEHIND_H := 6.5
 const FENCE := 6.0
 const STAND_DEPTH := 34.0
 const STAND_RISE := 24.0
-const LOOK_X := 78.0           # m: the camera follows the ball this far towards each goal
-const LOOK_Z := 55.0           # ...and this far out to each wing (the man on the ball stays in view)
+## The camera follows the ball to 7 m short of each goal line, and to 12.4 m inside each
+## wing's boundary (the man on the ball stays in view): 78 m and 55 m on the standard oval.
+static func look_x() -> float:
+	return MatchMotion.GOAL_X - 7.0
+
+
+static func look_z() -> float:
+	return MatchMotion.HALF_WID - 12.4
+
+
 const BODY_GAP := 0.6         # m between two players' centres, drawn
 const UMP_BODY_GAP := 0.7     # m from an umpire's hips to a player's centre, drawn
 ## The digits the vignettes print numbers with (R fill, G outline), shared so both read alike.
@@ -75,6 +80,8 @@ var screens: Oval3DScreens
 ## The ground the match is at (VignetteGround.ground_of), set before build(): its model when it
 ## has one (GroundModels), else the stand and crowd.
 var ground := ""
+## Graphics quality (Oval3DQuality: low, medium or high), set before build(). Looks only.
+var quality := Oval3DQuality.HIGH
 var _turf_mat: ShaderMaterial  # the turf's paint (oval3d_ground.gdshader)
 var _crowd_t := 0.0           # s of match the crowd has run (its idle and cheer clock)
 var _goal_on := false          # the director was showing a goal last frame
@@ -90,6 +97,9 @@ var _settle_t := 0.0           # s since it came out of his hands or the air
 
 func build(p_director: MatchDirector, home: String, away: String) -> void:
 	director = p_director
+	# The ground at its own size (MatchDirector.setup sets the same for a match's own ground).
+	if ground != "":
+		MatchMotion.use_field(GroundModels.field_for(ground))
 	_environment()
 	_ground()
 	_posts()
@@ -100,7 +110,7 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 		_stands(home, away)
 	screens = Oval3DScreens.new()
 	add_child(screens)
-	screens.build(self, get_node_or_null("Ground"), Vector2(HALF_LEN + FENCE, HALF_WID + FENCE), home, away)
+	screens.build(self, get_node_or_null("Ground"), GroundModels.match_fence(), home, away)
 	var scene: PackedScene = load(player_glb)
 	# Each club in its home guernsey, as the vignettes dress them (StoppageVignette._dress).
 	var kits := [_kit(GameDB.club_guernsey(home)), _kit(GameDB.club_guernsey(away))]
@@ -236,7 +246,7 @@ func sync(dt: float) -> void:
 	_umpire_let_go(dt)
 	# Followed to within a few metres of each goal line: a kick-in or a shot at the camera's own
 	# end stays in view (aim_end stops looking ahead there).
-	var target := Vector3(clampf(bp.x, -LOOK_X, LOOK_X), 0.0, clampf(bp.y, -LOOK_Z, LOOK_Z))
+	var target := Vector3(clampf(bp.x, -look_x(), look_x()), 0.0, clampf(bp.y, -look_z(), look_z()))
 	_look = target if dt <= 0.0 else _look.lerp(target, clampf(dt * 1.5, 0.0, 1.0))
 
 
@@ -379,7 +389,7 @@ func aim_end(height: float, back: float) -> void:
 	# behind-the-goals angle: from the usual height the goal posts stand in front of the play;
 	# from above they are short uprights at its edge. (A wing camera loses the ball off a
 	# portrait screen's narrow width.)
-	var near := clampf((-at.x - (LOOK_X - 20.0)) / 20.0, 0.0, 1.0)
+	var near := clampf((-at.x - (look_x() - 20.0)) / 20.0, 0.0, 1.0)
 	camera.global_position = Vector3(at.x - back * lerpf(1.0, 0.55, near),
 			height * lerpf(1.0, 2.4, near), at.z * 0.6)
 	# 12 m ahead of the ball up the ground; none from the high angle.
@@ -423,8 +433,8 @@ func _environment() -> void:
 	# filter samples and a finer map make it a smooth band (a phone cost to measure).
 	sun.directional_shadow_max_distance = 160.0
 	sun.shadow_normal_bias = 2.0
-	RenderingServer.directional_shadow_atlas_set_size(4096, true)
-	RenderingServer.directional_soft_shadow_filter_set_quality(RenderingServer.SHADOW_QUALITY_SOFT_HIGH)
+	# High: a 4096 map, the soft filter at its best; Medium and Low draw less (Oval3DQuality).
+	Oval3DQuality.apply_shadows(quality)
 	add_child(sun)
 	_sun = sun
 
@@ -432,12 +442,12 @@ func _environment() -> void:
 func _ground() -> void:
 	var mi := MeshInstance3D.new()
 	var pm := PlaneMesh.new()
-	pm.size = Vector2(2.0 * (HALF_LEN + FENCE + 1.0), 2.0 * (HALF_WID + FENCE + 1.0))
+	pm.size = Vector2(2.0 * (MatchMotion.HALF_LEN + FENCE + 1.0), 2.0 * (MatchMotion.HALF_WID + FENCE + 1.0))
 	mi.mesh = pm
 	var sm := ShaderMaterial.new()
 	sm.shader = load("res://scripts/ui/match/oval3d_ground.gdshader")
-	sm.set_shader_parameter("half_size", Vector2(HALF_LEN, HALF_WID))
-	sm.set_shader_parameter("goal_x", GOAL_X)
+	sm.set_shader_parameter("half_size", Vector2(MatchMotion.HALF_LEN, MatchMotion.HALF_WID))
+	sm.set_shader_parameter("goal_x", MatchMotion.GOAL_X)
 	mi.material_override = sm
 	add_child(mi)
 	_turf_mat = sm
@@ -461,7 +471,7 @@ func _posts() -> void:
 			cm.height = GOAL_H if goal else BEHIND_H
 			post.mesh = cm
 			post.material_override = white
-			post.position = Vector3(end * GOAL_X, cm.height * 0.5, k * GOAL_GAP)
+			post.position = Vector3(end * MatchMotion.GOAL_X, cm.height * 0.5, k * GOAL_GAP)
 			add_child(post)
 			var p := MeshInstance3D.new()
 			var pc := CylinderMesh.new()
@@ -470,7 +480,7 @@ func _posts() -> void:
 			pc.height = 2.8
 			p.mesh = pc
 			p.material_override = pad
-			p.position = Vector3(end * GOAL_X, 1.4, k * GOAL_GAP)
+			p.position = Vector3(end * MatchMotion.GOAL_X, 1.4, k * GOAL_GAP)
 			add_child(p)
 
 
@@ -479,8 +489,9 @@ func _posts() -> void:
 func _stands(home: String, away: String) -> void:
 	crowd = Oval3DCrowd.new()
 	crowd.name = "Crowd"
+	crowd.mix_d = float(Oval3DQuality.preset(quality)["people_d"])
 	add_child(crowd)
-	crowd.build(HALF_LEN + FENCE, HALF_WID + FENCE, STAND_DEPTH, STAND_RISE,
+	crowd.build(MatchMotion.HALF_LEN + FENCE, MatchMotion.HALF_WID + FENCE, STAND_DEPTH, STAND_RISE,
 			GameDB.club_colours(home), GameDB.club_colours(away))
 	# The fence: a low white wall at the foot of the stand.
 	var fence := MeshInstance3D.new()
@@ -492,7 +503,7 @@ func _stands(home: String, away: String) -> void:
 	fm.cap_top = false
 	fm.cap_bottom = false
 	fence.mesh = fm
-	fence.scale = Vector3(HALF_LEN + FENCE, 1.0, HALF_WID + FENCE)
+	fence.scale = Vector3(MatchMotion.HALF_LEN + FENCE, 1.0, MatchMotion.HALF_WID + FENCE)
 	fence.position.y = 0.6
 	var fmat := StandardMaterial3D.new()
 	fmat.albedo_color = Color(0.92, 0.92, 0.9)
@@ -511,8 +522,9 @@ func _stands(home: String, away: String) -> void:
 func _ground_model(slug: String, base := "", home := "", away := "") -> void:
 	var root := GroundModels.instantiate(slug, base)
 	add_child(root)
+	Oval3DQuality.apply_model(quality, root)
 	turf.set_ground(slug)
-	_turf_mat.set_shader_parameter("fence_clip", GroundModels.MATCH_FENCE)
+	_turf_mat.set_shader_parameter("fence_clip", GroundModels.match_fence())
 	_apron_skirt()
 	if home == "":
 		return
@@ -521,6 +533,7 @@ func _ground_model(slug: String, base := "", home := "", away := "") -> void:
 		return
 	crowd = Oval3DCrowd.new()
 	crowd.name = "Crowd"
+	crowd.mix_d = float(Oval3DQuality.preset(quality)["people_d"])
 	root.add_child(crowd)
 	crowd.build_on_seats(seats, GroundModels.seat_points(slug, base),
 			GameDB.club_colours(home), GameDB.club_colours(away))
@@ -537,7 +550,7 @@ const SKIRT_DROP := 0.3
 ## as a white strip at the foot of the fence. A ring of the turf's apron, from just inside the
 ## match's fence to SKIRT_OUT past it, lies under the model's ground and fills that gap with grass.
 func _apron_skirt() -> void:
-	var f := GroundModels.MATCH_FENCE
+	var f := GroundModels.match_fence()
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	st.set_normal(Vector3.UP)
@@ -1204,6 +1217,7 @@ static var _headless := {}
 static var _heads_info = null
 static var _socket := {}
 static var _socket_heads := {}
+static var _skin_maps := {}
 
 
 ## Put his own head on figure p if there is one; otherwise leave the MetaHuman head.
@@ -1370,8 +1384,12 @@ static func socket_head(path: String, full: Mesh) -> Mesh:
 	var ring_i := []
 	for q in ring:
 		ring_i.append(nearest.call(q))
+	# The body's skin on each ring point as oval3d_player.gdshader draws it: colour over his skin, and sheen.
+	var ring_look := _ring_skin(ba, bv.size(), ring_i)
 	var hv: PackedVector3Array = head_arr[Mesh.ARRAY_VERTEX]
 	var hn: PackedVector3Array = head_arr[Mesh.ARRAY_NORMAL]
+	var look := PackedFloat32Array()
+	look.resize(hv.size() * 4)
 	var hc := PackedColorArray()
 	if head_arr[Mesh.ARRAY_COLOR] != null:
 		hc = head_arr[Mesh.ARRAY_COLOR]
@@ -1391,15 +1409,26 @@ static func socket_head(path: String, full: Mesh) -> Mesh:
 			weights[i * per + k] = bw[j * per + k]
 		share[i] = hc[i].r if hc.size() == hv.size() else 0.0
 		at.append(_socket_at(_socket_angle(hv[i], socket()["centre"])) if share[i] > 0.0 else [])
-		# On the socket his neck faces the way the body's skin does there, easing back to his own going
-		# up the band, so the light runs across the join without a line.
+		# Every point (a triangle reaching up out of the band still blends inside it) gets the body's skin
+		# at the ring below it, so his neck's band meets the body in the body's own colour and sheen.
+		var la: Array = at[i] if share[i] > 0.0 else _socket_at(_socket_angle(hv[i], socket()["centre"]))
+		var lc: Color = (ring_look[la[0]] as Color).lerp(ring_look[la[1]], la[2])
+		for k in range(4):
+			look[i * 4 + k] = lc[k]
+		# Over the band's bottom half his neck faces the way the body's skin does at the socket, easing back
+		# to his own over its top half, so the light runs across the join without a line (his neck's first
+		# row of triangles is tall: eased from the very edge, it turned 10 degrees away within it).
 		if share[i] > 0.0:
 			var aa: Array = at[i]
 			var rn: Vector3 = bn[ring_i[aa[0]]].lerp(bn[ring_i[aa[1]]], aa[2]).normalized()
-			hn[i] = hn[i].lerp(rn, share[i]).normalized()
+			hn[i] = hn[i].lerp(rn, minf(1.0, share[i] * 2.0)).normalized()
 		# On the socket itself he bends exactly as the body's edge does between its two ring points: their
 		# bone weights blended by where he sits between them, so no gap opens along the join.
 		if share[i] >= 0.999:
+			# Tucked 3 mm down and 1.5 mm in, inside the body's neck: edge laid on edge leaves pinholes
+			# the ground shows through; tucked under, the body's skin overlaps it.
+			var out_dir := Vector3(hv[i].x - socket()["centre"].x, 0.0, hv[i].z - socket()["centre"].z).normalized()
+			hv[i] += Vector3(0.0, -0.003, 0.0) - out_dir * 0.0015
 			var ab: Array = at[i]
 			var mix := {}
 			for e in [[ring_i[ab[0]], 1.0 - ab[2]], [ring_i[ab[1]], ab[2]]]:
@@ -1421,6 +1450,7 @@ static func socket_head(path: String, full: Mesh) -> Mesh:
 	head_arr[Mesh.ARRAY_BONES] = bones
 	head_arr[Mesh.ARRAY_WEIGHTS] = weights
 	head_arr[Mesh.ARRAY_TANGENT] = null
+	head_arr[Mesh.ARRAY_CUSTOM0] = look
 	# Each build morph: the band moves as the socket's points do, by its share.
 	var shapes := []
 	var out := ArrayMesh.new()
@@ -1429,7 +1459,9 @@ static func socket_head(path: String, full: Mesh) -> Mesh:
 	for b in range(am.get_blend_shape_count()):
 		out.add_blend_shape(am.get_blend_shape_name(b))
 		var sv: PackedVector3Array = body_shapes[b][Mesh.ARRAY_VERTEX]
+		var sn = body_shapes[b][Mesh.ARRAY_NORMAL]
 		var mv := PackedVector3Array(hv)
+		var mn := PackedVector3Array(hn)
 		for i in range(hv.size()):
 			if share[i] <= 0.0:
 				continue
@@ -1437,12 +1469,19 @@ static func socket_head(path: String, full: Mesh) -> Mesh:
 			var d0: Vector3 = sv[ring_i[a[0]]] - bv[ring_i[a[0]]]
 			var d1: Vector3 = sv[ring_i[a[1]]] - bv[ring_i[a[1]]]
 			mv[i] += d0.lerp(d1, a[2]) * share[i]
+			# The build turns the body's skin at the socket too: his band turns with it, as far as it
+			# follows the body's facing (its bottom half fully).
+			if sn is PackedVector3Array and (sn as PackedVector3Array).size() == bv.size():
+				var t0: Vector3 = sn[ring_i[a[0]]] - bn[ring_i[a[0]]]
+				var t1: Vector3 = sn[ring_i[a[1]]] - bn[ring_i[a[1]]]
+				mn[i] = (hn[i] + t0.lerp(t1, a[2]) * minf(1.0, share[i] * 2.0)).normalized()
 		var sh := []
 		sh.resize(Mesh.ARRAY_MAX)
 		sh[Mesh.ARRAY_VERTEX] = mv
-		sh[Mesh.ARRAY_NORMAL] = hn
+		sh[Mesh.ARRAY_NORMAL] = mn
 		shapes.append(sh)
 	var flags := am.surface_get_format(skin_s) & Mesh.ARRAY_FLAG_USE_8_BONE_WEIGHTS
+	flags |= Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT
 	out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, head_arr, shapes, {}, flags)
 	var mat := ShaderMaterial.new()
 	mat.shader = HEAD_SHADER
@@ -1451,9 +1490,58 @@ static func socket_head(path: String, full: Mesh) -> Mesh:
 	# The body skin's own sheen (the MetaHuman body map's mean roughness, 0.73), not Tripo's 0.9: with
 	# its own, his neck read darker than the body's at the socket.
 	mat.set_shader_parameter("rough", 0.73)
+	mat.set_shader_parameter("skin_head_nrm", load("res://assets/oval3d/skin/Head_Normal.png"))
+	mat.set_shader_parameter("skin_head_srmf", load("res://assets/oval3d/skin/Head_SRMF.png"))
+	mat.set_shader_parameter("sss", float(OS.get_environment("HEAD_SSS")) if OS.has_environment("HEAD_SSS") else 0.0)  # TEMP test
 	out.surface_set_material(0, mat)
 	_socket_heads[key] = out
 	return out
+
+
+## The body's bare skin at each ring point, as oval3d_player.gdshader draws it: rgb the colour over his
+## skin (the MetaHuman map over its mean, green and blue held to red), a the sheen (the SRMF map's
+## roughness). Read from the maps at the ring's own skin coordinates (CUSTOM0: u 0..1 head, 1..2 body),
+## averaged over a 3x3 patch of a 512 px copy so one pore doesn't set it. ba: the body skin's arrays.
+static func _ring_skin(ba: Array, nverts: int, ring_i: Array) -> Array:
+	var out := []
+	var uv = ba[Mesh.ARRAY_CUSTOM0]
+	var stride := (uv as PackedFloat32Array).size() / maxi(1, nverts) if uv is PackedFloat32Array else 0
+	for j in ring_i:
+		var c := Color(1, 1, 1, 0.73)
+		if stride >= 2:
+			var u: float = uv[int(j) * stride]
+			var v: float = uv[int(j) * stride + 1]
+			var part := "Body" if u >= 1.0 else "Head"
+			var mean := Vector3(0.2715, 0.1044, 0.0605) if u >= 1.0 else Vector3(0.2555, 0.1074, 0.0594)
+			var col := _skin_map(part, "Basecolor")
+			var srmf := _skin_map(part, "SRMF")
+			var sum := Vector3.ZERO
+			var r := 0.0
+			for dx in range(-1, 2):
+				for dy in range(-1, 2):
+					var x := clampi(int(fposmod(u, 1.0) * 512.0) + dx, 0, 511)
+					var y := clampi(int(v * 512.0) + dy, 0, 511)
+					var p := col.get_pixel(x, y).srgb_to_linear()
+					sum += Vector3(p.r, p.g, p.b)
+					r += srmf.get_pixel(x, y).g
+			var s := sum / 9.0 / mean
+			s.y = minf(s.y, s.x)
+			s.z = minf(s.z, s.x)
+			c = Color(s.x, s.y, s.z, r / 9.0)
+		out.append(c)
+	return out
+
+
+## A MetaHuman skin map (assets/oval3d/skin) as a 512 px image the CPU can read, once each.
+static func _skin_map(part: String, map: String) -> Image:
+	var key := part + map
+	if not _skin_maps.has(key):
+		var img := (load("res://assets/oval3d/skin/%s_%s.png" % [part, map]) as Texture2D).get_image()
+		if img.is_compressed():
+			img.decompress()
+		img.resize(512, 512, Image.INTERPOLATE_BILINEAR)
+		_skin_maps[key] = img
+	return _skin_maps[key]
 
 
 ## The body with the MetaHuman head taken off at the socket: every triangle above the ring (its corners
@@ -1476,7 +1564,9 @@ static func _without_head(m: Mesh) -> Mesh:
 		var vs: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
 		var idx: PackedInt32Array = a[Mesh.ARRAY_INDEX]
 		var keep := PackedInt32Array()
-		if nm != HAIR_SURFACE and nm != EYE_MATERIAL:
+		if nm != HAIR_SURFACE and nm != EYE_MATERIAL and nm != "ARD_skin":
+			keep = idx  # the kit stays whole: a ring under the collar (the collar join) must not cut the jumper
+		elif nm != HAIR_SURFACE and nm != EYE_MATERIAL:
 			# 1 above the ring, 0 on it (within 1 mm), -1 below.
 			var side := PackedInt32Array()
 			side.resize(vs.size())
@@ -1760,8 +1850,8 @@ func _add_umpires(scene: PackedScene) -> void:
 ## along the ground and y across it, so the axes swap and scale to MatchMotion's half-lengths.
 func _umpire_spots() -> Array:
 	var bp: Vector2 = director.ball["pos"]
-	var sx := HALF_LEN / VignetteGround.L
-	var sy := HALF_WID / VignetteGround.A
+	var sx := MatchMotion.HALF_LEN / VignetteGround.L
+	var sy := MatchMotion.HALF_WID / VignetteGround.A
 	var out := []
 	for u in VignetteExtras.umpires(Vector2(bp.y / sy, bp.x / sx)):
 		var v: Vector2 = u["oval"]
@@ -1856,7 +1946,7 @@ func _stoppage_mark(st: Dictionary) -> Array:
 		"throwup":
 			return [at - Vector2(0.0, 0.6), Vector2(0.0, 1.0)]
 		_:
-			var out := Vector2(at.x / (HALF_LEN * HALF_LEN), at.y / (HALF_WID * HALF_WID))
+			var out := Vector2(at.x / (MatchMotion.HALF_LEN * MatchMotion.HALF_LEN), at.y / (MatchMotion.HALF_WID * MatchMotion.HALF_WID))
 			out = out.normalized() if out.length() > 0.0 else Vector2(0.0, 1.0)
 			return [at + out * 0.6, out]
 
