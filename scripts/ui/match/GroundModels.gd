@@ -89,6 +89,18 @@ const SURROUNDS := {
 	"mcg": {"y": -0.03, "inner": 140.0, "colour": Color(0.45, 0.55, 0.27)},
 }
 
+## Per-ground corrections to a model's materials, by material name, checked against Google Earth
+## (MCG, 2026-11-21): the MCG's roof sheeting is matte grey from above. Built glossy and part metal,
+## it mirrored the blue sky and read white-blue where the real roof reads warm grey; the tints bring
+## its sunlit tops to Google Earth's colours (north 189,188,181, east 148,150,145).
+const MATERIAL_FIX := {
+	"mcg": {
+		"roof_white": {"metallic": 0.0, "roughness": 0.9, "albedo_color": Color(0.95, 0.92, 0.84)},
+		"roof_grey": {"metallic": 0.0, "roughness": 0.9, "albedo_color": Color(0.8, 0.8, 0.76)},
+		"roof_teal": {"albedo_color": Color(0.84, 0.86, 0.78)},
+	},
+}
+
 ## Models that carry their colours on the vertices (glTF COLOR_0) under a tiling detail texture.
 ## Godot's glTF reader keeps the colours but does not paint with them, so the loader turns that on.
 const VERTEX_COLOURED := ["adelaide"]
@@ -209,6 +221,8 @@ static func instantiate(slug: String, base := "") -> Node3D:
 		if model != null:
 			if slug in VERTEX_COLOURED:
 				_paint_vertex_colours(model)
+			if MATERIAL_FIX.has(slug):
+				_fix_materials(model, MATERIAL_FIX[slug])
 			root.add_child(model)
 	slice_big_meshes(root)
 	var fit: Array = FIT.get(slug, [0.0, 0.0])
@@ -482,6 +496,25 @@ static func _instances(root: Node3D, mesh: Mesh, path: String, colour: String, m
 		mi.material_override = mat
 		mi.set_meta("seats", true)
 		root.add_child(mi)
+
+
+## MATERIAL_FIX: each named material on `model` gets its own copy with the listed values.
+static func _fix_materials(model: Node, fixes: Dictionary) -> void:
+	var done := {}
+	for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+		if mi.mesh == null:
+			continue
+		for i in mi.mesh.get_surface_count():
+			var m := mi.get_active_material(i) as StandardMaterial3D
+			if m == null or not fixes.has(m.resource_name):
+				continue
+			if not done.has(m):
+				var own := m.duplicate() as StandardMaterial3D
+				var f: Dictionary = fixes[m.resource_name]
+				for k: String in f:
+					own.set(k, f[k])
+				done[m] = own
+			mi.set_surface_override_material(i, done[m])
 
 
 ## Every material on `model` paints with its vertex colours (linear, as glTF stores them).
