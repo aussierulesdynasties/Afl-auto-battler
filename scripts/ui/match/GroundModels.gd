@@ -199,7 +199,71 @@ static func instantiate(slug: String, base := "") -> Node3D:
 				_paint_vertex_colours(model)
 			root.add_child(model)
 	_add_seats(root, dir)
+	var bd := backdrop(slug, dir)
+	if bd != null:
+		root.add_child(bd)
 	return root
+
+
+## How far a camera sees when the ground has its surroundings (backdrop()): the city skyline and
+## the hills. Without them the match view stops at 900 m.
+const BACKDROP_FAR := 7000.0
+
+
+## The ground's surroundings past its own street (row 202 2b, the background scenes): the park,
+## the streets, the houses, the trees and the skyline, built in Blender round the stadium model in
+## the model's own metres (.claude/review/<ground>_bg) and cut down for a phone by
+## tools/grounds/backdrop/reduce.py into <slug>_backdrop.glb (or _backdrop_part1.glb ...). Laid
+## with the model (it is the model's child), so it fits wherever the model fits. Looks only: it
+## casts no shadow into the stadium and nothing in play reads it. null when the ground has none.
+static func backdrop(slug: String, base := "") -> Node3D:
+	var dir := base if base != "" else DIR + slug + "/"
+	var paths := files(slug + "_backdrop", dir)
+	if paths.is_empty():
+		return null
+	var root := Node3D.new()
+	root.name = "Backdrop"
+	for path in paths:
+		var model := load_glb(path)
+		if model == null:
+			continue
+		for gi in model.find_children("*", "GeometryInstance3D", true, false):
+			(gi as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_backdrop_materials(model)
+		root.add_child(model)
+	return root
+
+
+const BACKDROP_SHADER := preload("res://scripts/ui/match/oval3d_backdrop.gdshader")
+
+
+## The scene's materials as Blender drew them: the trees and everything else tinted by their
+## vertex colours; the walls and roofs (facade_*, roof_*) through oval3d_backdrop.gdshader, which
+## leaves their glass and frames untinted. Materials are shared, so each is made once.
+static func _backdrop_materials(model: Node) -> void:
+	var made := {}
+	for mi in model.find_children("*", "MeshInstance3D", true, false):
+		var mesh: Mesh = (mi as MeshInstance3D).mesh
+		if mesh == null:
+			continue
+		for i in mesh.get_surface_count():
+			var mat := mesh.surface_get_material(i) as BaseMaterial3D
+			if mat == null:
+				continue
+			var key := mat.resource_name
+			if key.begins_with("facade_") or key.begins_with("roof_"):
+				if not made.has(key):
+					var sm := ShaderMaterial.new()
+					sm.shader = BACKDROP_SHADER
+					sm.set_shader_parameter("tex", mat.albedo_texture)
+					made[key] = sm
+				(mi as MeshInstance3D).set_surface_override_material(i, made[key])
+			else:
+				mat.vertex_color_use_as_albedo = true
+
+
+static func has_backdrop(slug: String, base := "") -> bool:
+	return not files(slug + "_backdrop", base if base != "" else DIR + slug + "/").is_empty()
 
 
 ## Every seat in the model's own metres (seats_*.bin), for the crowd to sit on (Oval3DCrowd).

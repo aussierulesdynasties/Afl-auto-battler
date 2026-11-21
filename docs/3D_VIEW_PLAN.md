@@ -217,7 +217,7 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 | Freeze (no new player art, no one-incident patches) | | in force since 2026-11-16 | lifts when steps 2 and 3 are done |
 | 1. Football proof | 201 | harness built (#1695), spec checked (2.86), gap list of 14 written | fix the systems on the gap list; none fixed yet |
 | 2a. Light, tone, weather, skies | 202 | chosen and built (2.80-2.84, #1693 #1694 #1696 #1701); film look over the picture (2.112, #1839) | phone costing once the foundation is together |
-| 2b. The 37 grounds | 202 | 23 of 37 have a model merged, 2 more in open PRs, 4 under way locally (table below) | land Victoria Park, Riverway, Mars and Accor; confirm the other 8; background scenes (#1878 #1892 #1897) |
+| 2b. The 37 grounds | 202 | 23 of 37 have a model merged, 2 more in open PRs, 4 under way locally (table below) | land Victoria Park, Riverway, Mars and Accor; confirm the other 8; background scenes (#1878 #1892 #1897): the MCG's and GMHBA's play in matches, cut down for the phone (tools/grounds/backdrop; not yet reviewed), Optus and People First's scene files still to find |
 | 2c. Crowd | 202 | chosen: 3D people within 55 m, cards beyond (2.92), built; seated on the MCG model's own seats (he chose "Seat the crowd in the MCG", 2026-11-20, #1929) | measure its cost on a phone; each other ground gets it once it loads in a match |
 | 2d. Players' look | 202 | body: MetaHuman (2.85, 2.89); builds by height and weight (2.97, 2.98); faces ruled (2.99) | the Tripo heads (director generates) and the features for everyone else |
 | 2e. Cameras | 202 | main camera, goal replay, set shots, ball-up close-ups, tap to skip, TV framing, picture layout, stat bars, score bug all ruled and built (2.93-2.111, #1818); after a mark it stays on the main camera (2.113) | the other cameras and cuts in play (free kicks, tackles, injuries) |
@@ -233,12 +233,12 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 
 | Ground | State | PRs |
 |---|---|---|
-| MCG | model, instanced seats | #1843 |
+| MCG | model, instanced seats | #1843; background scene (Yarra Park, the city) plays in matches (not yet reviewed) |
 | Marvel Stadium | model | #1911 |
 | Adelaide Oval | model, 3D seats; plays in a match (exported for the game by tools/grounds/adelaide) | #1856 |
 | Optus Stadium | model, roof, seats | #1867 #1880; background scene open #1897 |
 | SCG | model | #1909 |
-| GMHBA Stadium | exterior model | #1903; open: roof #1899, background scene #1878 |
+| GMHBA Stadium | exterior model | #1903; open: roof #1899; background scene #1878 plays in matches (not yet reviewed) |
 | People First Stadium | model, roof | #1853 #1860 #1868 #1889; background scene open #1892 |
 | ENGIE Stadium | texture pass | #1866 |
 | Bellerive Oval | model | #1900 |
