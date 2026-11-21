@@ -70,6 +70,10 @@ A ground's named materials can be corrected without rebuilding the model, throug
   Before this fix it mirrored the sky and read white-blue from above.
 - **Roof undersides:** grey with a faint green tint (director), through the stand shader.
 
+A big model mesh is cut into slices after loading (`slice_big_meshes`). Each slice keeps the
+instance's active material, so a material fix reaches the slices too. Before this, the MCG bowl's
+low roofs kept their glossy material and read white from above.
+
 ## Surroundings
 
 The ground round the stadium comes from OpenStreetMap, never from aerial imagery. It is built by
