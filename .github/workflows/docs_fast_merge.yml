@@ -21,7 +21,7 @@ on:
     types: [completed]
   workflow_dispatch:
 concurrency:
-  group: docs-fast-merge
+  group: docs-fast-merge-${{ github.ref }}
   cancel-in-progress: false
 permissions:
   contents: write
