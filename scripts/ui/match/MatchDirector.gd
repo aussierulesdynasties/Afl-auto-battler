@@ -1394,6 +1394,22 @@ func _rest_spot(j: int) -> Vector2:
 	return r
 
 
+## The ball came loose across the ground from where the log's spot planned it
+## (the kick went to where its receiver had run, along the fence): MatchSim's
+## roll across is from where it really came loose, never a 30 m slide back to the
+## planned line in a third of a second (picture truth, 2026-11-21: 32 m in a tick).
+const REST_ACROSS_SLACK := 8.0
+func _rest_from_ball(j: int) -> void:
+	var r := _rest_spot(j)
+	var b: Vector2 = ball["pos"]
+	var at := _loc(j)
+	if absf(b.y - at.y) <= REST_ACROSS_SLACK:
+		return
+	var ymax := (MatchMotion.HALF_WID - 4.0) * sqrt(maxf(0.0,
+			1.0 - pow(r.x / (MatchMotion.HALF_LEN - 1.0), 2.0)))
+	_rests[j] = Vector2(r.x, clampf(b.y + float((events[j] as Dictionary).get("loose_across", 0.0)), -ymax, ymax))
+
+
 func _loc(k: int) -> Vector2:
 	if _locs.has(k):
 		return _locs[k]
@@ -2443,6 +2459,7 @@ func _enter(p: Dictionary) -> void:
 			var rate := 3.0
 			var spot := bk >= 0 and (events[bk] as Dictionary).has("loose_to")
 			if spot:
+				_rest_from_ball(bk)
 				way = _rest_spot(bk) - (ball["pos"] as Vector2)
 				rate = _loose_rate(bk)
 				p["_held"] = float((events[bk] as Dictionary).get("loose_s", 0.0)) * TEMPO
