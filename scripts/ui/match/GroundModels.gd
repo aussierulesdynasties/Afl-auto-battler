@@ -256,7 +256,7 @@ static func instantiate(slug: String, base := "") -> Node3D:
 ## nothing it would not be lit by (it takes the sun, the sky and the stands' shade).
 static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
 	var inner: float = s["inner"]
-	var outer := 2500.0
+	var outer: float = s.get("outer", 2500.0)
 	var y: float = s["y"]
 	var n := 96
 	var map: Texture2D = null
