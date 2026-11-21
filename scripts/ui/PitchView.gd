@@ -1445,7 +1445,7 @@ func _draw() -> void:
 	var fifty := UiKit.BOLD.get_string_size("50", HORIZONTAL_ALIGNMENT_LEFT, -1, fifty_fs)
 	var fifties: Array[Vector2] = []
 	for sgn in [-1.0, 1.0]:
-		var goal := _w2s_flat(Vector2(sgn * GOAL_LINE_M, 0.0))
+		var goal := _w2s_flat(Vector2(sgn * MatchMotion.GOAL_X, 0.0))
 		var rad := 50.0 * s
 		var span := _arc_span(c, a, b, goal, rad)
 		# The goal square a side kicks to wears that side's colour (director,
@@ -1806,8 +1806,8 @@ func _draw_marks(tr: float) -> int:
 func _draw_corridor(side: int, base: Color, a: float, half: float) -> void:
 	var dir := MatchDirector._dir(side)
 	# Full strength over the whole corridor; the soft ends lie outside it.
-	var x0 := MatchDirector.CORRIDOR_FROM - MARK_END_FEATHER
-	var x1 := MatchDirector.CORRIDOR_TO + MARK_END_FEATHER
+	var x0 := MatchDirector.corridor_from() - MARK_END_FEATHER
+	var x1 := MatchDirector.corridor_to() + MARK_END_FEATHER
 	var ys := [-half - MARK_SIDE_FEATHER, -half, half, half + MARK_SIDE_FEATHER]
 	var yk := [0.0, 1.0, 1.0, 0.0]
 	var n := 24
@@ -1836,8 +1836,8 @@ func _draw_corridor(side: int, base: Color, a: float, half: float) -> void:
 ## nothing over MARK_END_FEATHER beyond each end (lead's check, 2026-10-18: with
 ## the ease inside, the shade only read from the centre square).
 static func corridor_end(x: float) -> float:
-	var x0 := MatchDirector.CORRIDOR_FROM
-	var x1 := MatchDirector.CORRIDOR_TO
+	var x0 := MatchDirector.corridor_from()
+	var x1 := MatchDirector.corridor_to()
 	return smoothstep(x0 - MARK_END_FEATHER, x0, x) * (1.0 - smoothstep(x1, x1 + MARK_END_FEATHER, x))
 
 

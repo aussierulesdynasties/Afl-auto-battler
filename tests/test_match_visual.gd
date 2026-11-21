@@ -19,6 +19,7 @@ func run() -> void:
 	var res := _result(42)
 	_t("_test_sim_untouched", [res])
 	_t("_test_full_playback", [res])
+	_t("_test_every_ground_size", [res])
 	_t("_test_open_play_shots", [res])
 	_t("_test_speed_sequencing", [res])
 	_t("_test_rng_isolation", [res])
@@ -148,10 +149,30 @@ func _test_sim_untouched(res: Dictionary) -> void:
 
 
 func _test_full_playback(res: Dictionary) -> void:
+	_full_playback(res, "")
+
+
+## Row 202 2b: a match plays as well on the smallest, the narrowest and the longest grounds
+## (Windy Hill 145 m long, North Hobart 109 m wide, Bruce 197 m long) as on the MCG: nobody off
+## the oval, nobody jumping, the ball at every logged spot as this ground places it.
+func _test_every_ground_size(res: Dictionary) -> void:
+	# The first half of the match at each (a whole match at three grounds is minutes of the suite).
+	var half: Array = (res["events"] as Array).slice(0, (res["events"] as Array).size() / 2)
+	for g in ["Windy Hill", "North Hobart Oval", "Bruce Stadium"]:
+		var at := res.duplicate()
+		at["venue"] = g
+		at["events"] = half
+		_full_playback(at, " at %s" % g, 400)
+		_check(is_equal_approx(MatchMotion.HALF_LEN, GroundModels.field_for(g).x),
+				"The match at %s is played at its own size (%.0f x %.0f m)" % [g, MatchMotion.HALF_LEN * 2.0, MatchMotion.HALF_WID * 2.0])
+	MatchMotion.use_field(GroundModels.field_for(VignetteGround.ground_of(res)))
+
+
+func _full_playback(res: Dictionary, at: String, min_arrivals := 800) -> void:
 	var played := _play(res, res["events"], 1.0 / 60.0 * 4.0)
 	var d: MatchDirector = played["director"]
 	var out: Array = played["out"]
-	_check(not played["stalled"], "Playback reaches the end of the log")
+	_check(not played["stalled"], "Playback reaches the end of the log" + at)
 	_check(out.size() == (res["events"] as Array).size(), "All %d events released (%d)" % [
 			(res["events"] as Array).size(), out.size()])
 	var in_order := true
@@ -159,12 +180,12 @@ func _test_full_playback(res: Dictionary) -> void:
 		if not is_same(out[i], res["events"][i]):
 			in_order = false
 			break
-	_check(in_order, "Events are released in log order, as the same dictionaries")
-	_check(int(played["nan"]) == 0, "No NaN positions (%d)" % int(played["nan"]))
-	_check(int(played["outside"]) == 0, "Every player stays on the oval (%d outside)" % int(played["outside"]))
+	_check(in_order, "Events are released in log order, as the same dictionaries" + at)
+	_check(int(played["nan"]) == 0, ("No NaN positions (%d)" % int(played["nan"])) + at)
+	_check(int(played["outside"]) == 0, ("Every player stays on the oval (%d outside)" % int(played["outside"])) + at)
 	# 4x at 60 fps: a sprinter covers well under 2 m a frame. More would be a
 	# visible jump.
-	_check(float(played["max_step"]) < 2.2, "No player jumps (largest frame step %.2f m)" % float(played["max_step"]))
+	_check(float(played["max_step"]) < 2.2, ("No player jumps (largest frame step %.2f m)" % float(played["max_step"])) + at)
 	var arrivals: Array = d.arrivals
 	var close := 0
 	var worst := 0.0
@@ -173,17 +194,17 @@ func _test_full_playback(res: Dictionary) -> void:
 		worst = maxf(worst, err)
 		if err <= 3.0:
 			close += 1
-	_check(arrivals.size() > 800, "Arrivals are logged (%d)" % arrivals.size())
+	_check(arrivals.size() > min_arrivals, ("Arrivals are logged (%d)" % arrivals.size()) + at)
 	_check(float(close) >= 0.99 * float(arrivals.size()),
-			"The ball is at the logged spot when the event is released (%d of %d within 3 m)" % [close, arrivals.size()])
-	_check(worst < 15.0, "No release far from the logged spot (worst %.1f m)" % worst)
+			("The ball is at the logged spot when the event is released (%d of %d within 3 m)" % [close, arrivals.size()]) + at)
+	_check(worst < 15.0, ("No release far from the logged spot (worst %.1f m)" % worst) + at)
 	var scores := 0
 	for a in arrivals:
 		if str(a["kind"]) == "goal" or str(a["kind"]) == "behind":
 			scores += 1
-			if absf((a["pos"] as Vector2).x) < 84.0:
+			if absf((a["pos"] as Vector2).x) < MatchMotion.GOAL_X - 1.0:
 				scores -= 1000
-	_check(scores > 0, "Every goal and behind is released at the goal line")
+	_check(scores > 0, "Every goal and behind is released at the goal line" + at)
 
 
 func _test_speed_sequencing(res: Dictionary) -> void:
@@ -2145,9 +2166,10 @@ func _test_farewell() -> void:
 	v.free()
 
 
-## Row 202 2b: every ground with a 3D model plays in it. Each model's files are in the game,
-## every club's home ground and the Grand Final resolve to theirs, and each is laid so its
-## measured boundary fence meets the match's fence, end to end and wing to wing.
+## Row 202 2b: every ground with a 3D model plays in it, at its own size. Each model's files are
+## in the game, every club's home ground and the Grand Final resolve to theirs, and on its own
+## field (GroundModels.field) each is laid unstretched with its measured boundary fence on the
+## match's fence, end to end and wing to wing.
 func _test_ground_models() -> void:
 	for g in GroundModels.grounds():
 		var slug := GroundModels.slug_for(g)
@@ -2156,6 +2178,8 @@ func _test_ground_models() -> void:
 		_check(files.size() > 0, "%s's model is in assets/grounds/%s" % [g, slug])
 		for f in files:
 			_check(ResourceLoader.exists(f), "%s is imported (%s)" % [g, f])
+		MatchMotion.use_field(GroundModels.field_for(g))
+		var fence := GroundModels.match_fence()
 		var f: Array = GroundModels.FIT[slug]
 		var t := GroundModels.fit_transform(slug)
 		var c := Vector3(float(f[0]), float(f[2]), float(f[1]))
@@ -2164,13 +2188,23 @@ func _test_ground_models() -> void:
 		var across := Vector3(-sin(a), 0.0, cos(a))
 		var end := t * (c + along * float(f[4]))
 		var wing := t * (c + across * float(f[5]))
-		_check(end.distance_to(Vector3(GroundModels.MATCH_FENCE.x, -GroundModels.UNDER_TURF, 0.0)) < 0.01
-				or end.distance_to(Vector3(-GroundModels.MATCH_FENCE.x, -GroundModels.UNDER_TURF, 0.0)) < 0.01,
+		_check(end.distance_to(Vector3(fence.x, -GroundModels.UNDER_TURF, 0.0)) < 0.01
+				or end.distance_to(Vector3(-fence.x, -GroundModels.UNDER_TURF, 0.0)) < 0.01,
 				"%s's fence meets the match's fence behind the goals (%s)" % [g, end])
-		_check(absf(absf(wing.z) - GroundModels.MATCH_FENCE.y) < 0.01 and absf(wing.x) < 0.01,
+		_check(absf(absf(wing.z) - fence.y) < 0.01 and absf(wing.x) < 0.01,
 				"%s's fence meets the match's fence on the wing (%s)" % [g, wing])
 		var s := GroundModels.stretch(slug)
-		_check(s.x > 0.8 and s.x < 1.25 and s.y > 0.8 and s.y < 1.25, "%s is stretched at most a quarter to fit (%s)" % [g, s])
+		_check(s.is_equal_approx(Vector2.ONE), "%s plays at its own size, not stretched (%s)" % [g, s])
+		_check(is_equal_approx(MatchMotion.GOAL_X, MatchMotion.HALF_LEN - MatchMotion.GOAL_IN)
+				and is_equal_approx(MatchMotion.gx(MatchMotion.STD_GOAL_X), MatchMotion.GOAL_X)
+				and is_equal_approx(MatchMotion.gx(MatchMotion.STD_GOAL_X - 40.0), MatchMotion.GOAL_X - 40.0)
+				and is_equal_approx(MatchMotion.sx(MatchMotion.gx(20.0)), 20.0),
+				"%s: the sim's goal line is its goal line and a 40 m shot is 40 m out" % g)
+	MatchMotion.use_field(Vector2.ZERO)
+	_check(MatchMotion.HALF_LEN == MatchMotion.STD_HALF_LEN and MatchMotion.gx(37.3) == 37.3,
+			"A ground with no size of its own plays on the standard oval, every spot as before")
+	_check(GroundModels.field_for("Adelaide Oval").is_equal_approx(Vector2(83.5, 62.0)),
+			"A ground with no model plays at its published size (Adelaide Oval 167 x 124)")
 	for code in GameDB.clubs.keys():
 		var home := VignetteGround.ground_of({"home": code})
 		if GroundModels.GROUNDS.has(GameDB.ground_key(home)):
@@ -2189,7 +2223,8 @@ func _test_ground_models() -> void:
 	var model: Node3D = oval.get_node_or_null("Ground")
 	_check(model != null and model.find_children("*", "MeshInstance3D", true, false).size() > 0 and oval.crowd == null,
 			"A match at Engie Stadium plays in its model, with no stand or crowd")
-	_check(oval._turf_mat.get_shader_parameter("fence_clip") == GroundModels.MATCH_FENCE,
+	_check(oval._turf_mat.get_shader_parameter("fence_clip") == GroundModels.match_fence()
+			and GroundModels.stretch("engie").is_equal_approx(Vector2.ONE),
 			"The turf stops at the model's fence")
 	oval.queue_free()
 

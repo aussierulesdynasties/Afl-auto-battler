@@ -391,8 +391,8 @@ func _load_body(vat_dir: String, gdb) -> Dictionary:
 ## split into chunks round the ground and front/back so the far ones can drop to cards.
 func _seat_crowd(oval, bodies: Array, weights: PackedFloat32Array, card: Mesh) -> void:
 	var O = oval.get_script()
-	var A: float = O.HALF_LEN + O.FENCE
-	var B: float = O.HALF_WID + O.FENCE
+	var A: float = MatchMotion.HALF_LEN + O.FENCE
+	var B: float = MatchMotion.HALF_WID + O.FENCE
 	var pitch: float = O.STAND_DEPTH / ROWS
 	var rise: float = (O.STAND_RISE - 1.2) / ROWS
 	_terrace_mesh(oval, A, B, pitch, rise)
@@ -537,8 +537,8 @@ func _quad(st: SurfaceTool, q: Array, n: Vector3, c: Color) -> void:
 ## a little to one side, so a dozen seated supporters fill the frame (pose, bench, clipping).
 func _aim_stand(oval) -> void:
 	var O = oval.get_script()
-	var A: float = O.HALF_LEN + O.FENCE
-	var B: float = O.HALF_WID + O.FENCE
+	var A: float = MatchMotion.HALF_LEN + O.FENCE
+	var B: float = MatchMotion.HALF_WID + O.FENCE
 	var rise: float = (O.STAND_RISE - 1.2) / ROWS
 	var to_sun: Vector3 = oval._sun.global_basis.z
 	var th := atan2(to_sun.z / B, to_sun.x / A)

@@ -38,17 +38,22 @@ const BOOT_MATERIAL := "ARD_boot_real"
 ## The eyes' material name in the GLB (a MetaHuman body's eyeballs, coloured by their vertex
 ## colour): drawn as modelled, never in the kit.
 const EYE_MATERIAL := "ARD_eye"
-const HALF_LEN := MatchMotion.HALF_LEN
-const HALF_WID := MatchMotion.HALF_WID
-const GOAL_X := MatchMotion.GOAL_X
 const GOAL_GAP := 6.4
 const GOAL_H := 12.0
 const BEHIND_H := 6.5
 const FENCE := 6.0
 const STAND_DEPTH := 34.0
 const STAND_RISE := 24.0
-const LOOK_X := 78.0           # m: the camera follows the ball this far towards each goal
-const LOOK_Z := 55.0           # ...and this far out to each wing (the man on the ball stays in view)
+## The camera follows the ball to 7 m short of each goal line, and to 12.4 m inside each
+## wing's boundary (the man on the ball stays in view): 78 m and 55 m on the standard oval.
+static func look_x() -> float:
+	return MatchMotion.GOAL_X - 7.0
+
+
+static func look_z() -> float:
+	return MatchMotion.HALF_WID - 12.4
+
+
 const BODY_GAP := 0.6         # m between two players' centres, drawn
 const UMP_BODY_GAP := 0.7     # m from an umpire's hips to a player's centre, drawn
 ## The digits the vignettes print numbers with (R fill, G outline), shared so both read alike.
@@ -88,6 +93,9 @@ var _settle_t := 0.0           # s since it came out of his hands or the air
 
 func build(p_director: MatchDirector, home: String, away: String) -> void:
 	director = p_director
+	# The ground at its own size (MatchDirector.setup sets the same for a match's own ground).
+	if ground != "":
+		MatchMotion.use_field(GroundModels.field_for(ground))
 	_environment()
 	_ground()
 	_posts()
@@ -231,7 +239,7 @@ func sync(dt: float) -> void:
 	_umpire_let_go(dt)
 	# Followed to within a few metres of each goal line: a kick-in or a shot at the camera's own
 	# end stays in view (aim_end stops looking ahead there).
-	var target := Vector3(clampf(bp.x, -LOOK_X, LOOK_X), 0.0, clampf(bp.y, -LOOK_Z, LOOK_Z))
+	var target := Vector3(clampf(bp.x, -look_x(), look_x()), 0.0, clampf(bp.y, -look_z(), look_z()))
 	_look = target if dt <= 0.0 else _look.lerp(target, clampf(dt * 1.5, 0.0, 1.0))
 
 
@@ -374,7 +382,7 @@ func aim_end(height: float, back: float) -> void:
 	# behind-the-goals angle: from the usual height the goal posts stand in front of the play;
 	# from above they are short uprights at its edge. (A wing camera loses the ball off a
 	# portrait screen's narrow width.)
-	var near := clampf((-at.x - (LOOK_X - 20.0)) / 20.0, 0.0, 1.0)
+	var near := clampf((-at.x - (look_x() - 20.0)) / 20.0, 0.0, 1.0)
 	camera.global_position = Vector3(at.x - back * lerpf(1.0, 0.55, near),
 			height * lerpf(1.0, 2.4, near), at.z * 0.6)
 	# 12 m ahead of the ball up the ground; none from the high angle.
@@ -427,12 +435,12 @@ func _environment() -> void:
 func _ground() -> void:
 	var mi := MeshInstance3D.new()
 	var pm := PlaneMesh.new()
-	pm.size = Vector2(2.0 * (HALF_LEN + FENCE + 1.0), 2.0 * (HALF_WID + FENCE + 1.0))
+	pm.size = Vector2(2.0 * (MatchMotion.HALF_LEN + FENCE + 1.0), 2.0 * (MatchMotion.HALF_WID + FENCE + 1.0))
 	mi.mesh = pm
 	var sm := ShaderMaterial.new()
 	sm.shader = load("res://scripts/ui/match/oval3d_ground.gdshader")
-	sm.set_shader_parameter("half_size", Vector2(HALF_LEN, HALF_WID))
-	sm.set_shader_parameter("goal_x", GOAL_X)
+	sm.set_shader_parameter("half_size", Vector2(MatchMotion.HALF_LEN, MatchMotion.HALF_WID))
+	sm.set_shader_parameter("goal_x", MatchMotion.GOAL_X)
 	mi.material_override = sm
 	add_child(mi)
 	_turf_mat = sm
@@ -456,7 +464,7 @@ func _posts() -> void:
 			cm.height = GOAL_H if goal else BEHIND_H
 			post.mesh = cm
 			post.material_override = white
-			post.position = Vector3(end * GOAL_X, cm.height * 0.5, k * GOAL_GAP)
+			post.position = Vector3(end * MatchMotion.GOAL_X, cm.height * 0.5, k * GOAL_GAP)
 			add_child(post)
 			var p := MeshInstance3D.new()
 			var pc := CylinderMesh.new()
@@ -465,7 +473,7 @@ func _posts() -> void:
 			pc.height = 2.8
 			p.mesh = pc
 			p.material_override = pad
-			p.position = Vector3(end * GOAL_X, 1.4, k * GOAL_GAP)
+			p.position = Vector3(end * MatchMotion.GOAL_X, 1.4, k * GOAL_GAP)
 			add_child(p)
 
 
@@ -475,7 +483,7 @@ func _stands(home: String, away: String) -> void:
 	crowd = Oval3DCrowd.new()
 	crowd.name = "Crowd"
 	add_child(crowd)
-	crowd.build(HALF_LEN + FENCE, HALF_WID + FENCE, STAND_DEPTH, STAND_RISE,
+	crowd.build(MatchMotion.HALF_LEN + FENCE, MatchMotion.HALF_WID + FENCE, STAND_DEPTH, STAND_RISE,
 			GameDB.club_colours(home), GameDB.club_colours(away))
 	# The fence: a low white wall at the foot of the stand.
 	var fence := MeshInstance3D.new()
@@ -487,7 +495,7 @@ func _stands(home: String, away: String) -> void:
 	fm.cap_top = false
 	fm.cap_bottom = false
 	fence.mesh = fm
-	fence.scale = Vector3(HALF_LEN + FENCE, 1.0, HALF_WID + FENCE)
+	fence.scale = Vector3(MatchMotion.HALF_LEN + FENCE, 1.0, MatchMotion.HALF_WID + FENCE)
 	fence.position.y = 0.6
 	var fmat := StandardMaterial3D.new()
 	fmat.albedo_color = Color(0.92, 0.92, 0.9)
@@ -507,7 +515,7 @@ func _ground_model(slug: String, base := "", home := "", away := "") -> void:
 	var root := GroundModels.instantiate(slug, base)
 	add_child(root)
 	turf.set_ground(slug)
-	_turf_mat.set_shader_parameter("fence_clip", GroundModels.MATCH_FENCE)
+	_turf_mat.set_shader_parameter("fence_clip", GroundModels.match_fence())
 	_apron_skirt()
 	if home == "":
 		return
@@ -532,7 +540,7 @@ const SKIRT_DROP := 0.3
 ## as a white strip at the foot of the fence. A ring of the turf's apron, from just inside the
 ## match's fence to SKIRT_OUT past it, lies under the model's ground and fills that gap with grass.
 func _apron_skirt() -> void:
-	var f := GroundModels.MATCH_FENCE
+	var f := GroundModels.match_fence()
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	st.set_normal(Vector3.UP)
@@ -1755,8 +1763,8 @@ func _add_umpires(scene: PackedScene) -> void:
 ## along the ground and y across it, so the axes swap and scale to MatchMotion's half-lengths.
 func _umpire_spots() -> Array:
 	var bp: Vector2 = director.ball["pos"]
-	var sx := HALF_LEN / VignetteGround.L
-	var sy := HALF_WID / VignetteGround.A
+	var sx := MatchMotion.HALF_LEN / VignetteGround.L
+	var sy := MatchMotion.HALF_WID / VignetteGround.A
 	var out := []
 	for u in VignetteExtras.umpires(Vector2(bp.y / sy, bp.x / sx)):
 		var v: Vector2 = u["oval"]
@@ -1851,7 +1859,7 @@ func _stoppage_mark(st: Dictionary) -> Array:
 		"throwup":
 			return [at - Vector2(0.0, 0.6), Vector2(0.0, 1.0)]
 		_:
-			var out := Vector2(at.x / (HALF_LEN * HALF_LEN), at.y / (HALF_WID * HALF_WID))
+			var out := Vector2(at.x / (MatchMotion.HALF_LEN * MatchMotion.HALF_LEN), at.y / (MatchMotion.HALF_WID * MatchMotion.HALF_WID))
 			out = out.normalized() if out.length() > 0.0 else Vector2(0.0, 1.0)
 			return [at + out * 0.6, out]
 

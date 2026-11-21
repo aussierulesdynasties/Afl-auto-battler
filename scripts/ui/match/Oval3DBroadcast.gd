@@ -53,7 +53,10 @@ const CLOSE_WIDTH := 3.2      # m across the picture at a ruckman, close
 const CLOSE_SMOOTH := 0.3     # s
 const CLOSE_AIM_Y := 1.2      # m: his chest
 const CLOSE_FROM := [2.15, 3.63, 4.95]  # director s into the pack: ruck one, ruck two, back wide
-const WING_50 := MatchMotion.HALF_LEN - 50.0  # m along the wing to the 50 m line cameras
+## m along the wing to the 50 m line cameras.
+static func wing_50() -> float:
+	return MatchMotion.HALF_LEN - 50.0
+
 const CLEAR := 0.5            # m: a man nearer the sight line than this blocks the close-up
 const REPLAY_RATE := 0.5      # the replay plays at half real speed
 const REPLAY_BEFORE := 0.58   # director s of the replay before the kick
@@ -221,8 +224,8 @@ func _clear_eye(who: int) -> Vector3:
 	var at: Vector3 = ((oval.players[who] as Dictionary)["node"] as Node3D).global_position
 	var a2 := Vector2(at.x, at.z)
 	var side := signf(at.x) if at.x != 0.0 else 1.0
-	var eyes := [main_eye(), main_eye() + Vector3(side * WING_50, 0.0, 0.0),
-			main_eye() - Vector3(side * WING_50, 0.0, 0.0)]
+	var eyes := [main_eye(), main_eye() + Vector3(side * wing_50(), 0.0, 0.0),
+			main_eye() - Vector3(side * wing_50(), 0.0, 0.0)]
 	for eye in eyes:
 		var e2 := Vector2((eye as Vector3).x, (eye as Vector3).z)
 		var clear := true

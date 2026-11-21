@@ -11,8 +11,8 @@ extends RefCounted
 ## Seat legs drawn the same way (leg_tmpl.bin, legs_<colour>.bin) are part of the stand: nobody sits on them.
 
 const DIR := "res://assets/grounds/"
-## The match's boundary fence: half its length and width (Oval3D: the playing surface plus FENCE).
-const MATCH_FENCE := Vector2(MatchMotion.HALF_LEN + 6.0, MatchMotion.HALF_WID + 6.0)
+## How far the fence stands outside the boundary line (Oval3D.FENCE).
+const FENCE := 6.0
 ## The model sits this far under the match's turf, so its own grass never fights the turf for a pixel.
 const UNDER_TURF := 0.1
 
@@ -126,14 +126,50 @@ static func slug_for(ground: String) -> String:
 	return str(GROUNDS.get(db.ground_key(ground), "")) if db != null else ""
 
 
+## The match's boundary fence now: half its length and width (the playing surface plus FENCE).
+static func match_fence() -> Vector2:
+	return Vector2(MatchMotion.HALF_LEN + FENCE, MatchMotion.HALF_WID + FENCE)
+
+
+## The playing surface of the model `slug`, half its length and width: its own fence (FIT)
+## less FENCE, so the model is laid at its own size with nothing stretched. Vector2.ZERO when
+## the model has no measured fence.
+static func field(slug: String) -> Vector2:
+	if not FIT.has(slug):
+		return Vector2.ZERO
+	var f: Array = FIT[slug]
+	return Vector2(float(f[4]) - FENCE, float(f[5]) - FENCE)
+
+
+static var _published := {}   # data/grounds.json's grounds, read once (not VignetteGround: no autoloads here)
+
+
+## The playing surface a match at `ground` is played on, half its length and width: its model's
+## (field) where it has one, else its published size (data/grounds.json, as the vignettes draw
+## it), else Vector2.ZERO, the standard oval (MatchMotion.use_field).
+static func field_for(ground: String) -> Vector2:
+	if ground == "":
+		return Vector2.ZERO
+	var slug := slug_for(ground)
+	if slug != "" and FIT.has(slug):
+		return field(slug)
+	if _published.is_empty():
+		var parsed = JSON.parse_string(FileAccess.get_file_as_string("res://data/grounds.json"))
+		_published = (parsed as Dictionary).get("grounds", {}) if parsed is Dictionary else {"": {}}
+	var own: Dictionary = _published.get(ground, {})
+	if not (own.has("length") and own.has("width")):
+		return Vector2.ZERO
+	return Vector2(float(own["length"]), float(own["width"])) * 0.5
+
+
 ## Every ground that has a model, by its name.
 static func grounds() -> Array:
 	return GROUNDS.keys()
 
 
 ## How the model is laid on the match ground: its fence centre to the middle, its arena floor just
-## under the turf, its long axis along the ground (x), and stretched across the ground so its fence
-## meets the match's fence (how far each way: stretch()).
+## under the turf, its long axis along the ground (x), and scaled so its fence meets the match's
+## fence (stretch(): none when the match is on the model's own field, as it always is in play).
 static func fit_transform(slug: String) -> Transform3D:
 	if not FIT.has(slug):
 		return Transform3D.IDENTITY
@@ -144,10 +180,13 @@ static func fit_transform(slug: String) -> Transform3D:
 	return Transform3D(basis, -(basis * centre) - Vector3(0.0, UNDER_TURF, 0.0))
 
 
-## How much the model is stretched along (x) and across (y) the ground to meet the match's fence.
+## How much the model is stretched along (x) and across (y) the ground to meet the match's fence:
+## none (1, 1) when the match is played on the model's own field (MatchMotion.use_field(field())),
+## as every match and the fly-through are.
 static func stretch(slug: String) -> Vector2:
-	var f: Array = FIT.get(slug, [0, 0, 0, 0, MATCH_FENCE.x, MATCH_FENCE.y])
-	return Vector2(MATCH_FENCE.x / float(f[4]), MATCH_FENCE.y / float(f[5]))
+	var fence := match_fence()
+	var f: Array = FIT.get(slug, [0, 0, 0, 0, fence.x, fence.y])
+	return Vector2(fence.x / float(f[4]), fence.y / float(f[5]))
 
 
 ## The model's glb files: <slug>.glb, or its pieces <slug>_part1.glb, _part2.glb ...

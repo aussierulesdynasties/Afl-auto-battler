@@ -332,6 +332,10 @@ func _load(i: int) -> void:
 	var ok := true
 	# The match's world under every ground: its light, turf and goalposts (Oval3D), so a model not
 	# yet in the match is seen against the oval it will sit on (O hides the turf and posts).
+	# At the ground's own size, as a match there is played (GroundModels.field: its fence less
+	# the run-off), so its model sits unstretched on the turf; any other model on the standard oval.
+	var own := GroundModels.field(str(g.get("dir", ""))) if g["kind"] in ["match", "seated"] else Vector2.ZERO
+	MatchMotion.use_field(own)
 	oval = OVAL3D.new()
 	oval.name = "Oval"
 	stage.add_child(oval)

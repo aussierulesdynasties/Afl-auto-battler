@@ -61,7 +61,8 @@ static func measure(res: Dictionary) -> Dictionary:
 			if d.mode == "open" and str(d.ball["mode"]) in ["held", "flight", "carry", "loose"]:
 				var bp: Vector2 = d.ball["pos"]
 				for side in range(2):
-					var xs := bp.x * MatchDirector._dir(side)
+					# The zones are the standard oval's: the ball put back there from this ground.
+					var xs := MatchMotion.sx(bp.x * MatchDirector._dir(side))
 					var zone := ""
 					for z in ZONES:
 						if xs >= float(z[0]) and xs < float(z[1]):

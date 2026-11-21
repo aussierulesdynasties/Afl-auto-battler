@@ -102,7 +102,7 @@ func _run() -> void:
 	var zs := -1.0 if oval.ball.global_position.z < 0.0 else 1.0
 	if _env("WING", 0.0) != 0.0:
 		zs = signf(_env("WING", 0.0))
-	var seat := Vector3(oval.ball.global_position.x * 0.0, y, zs * (O.HALF_WID + O.FENCE + dd))
+	var seat := Vector3(oval.ball.global_position.x * 0.0, y, zs * (MatchMotion.HALF_WID + O.FENCE + dd))
 	var inward := Vector3(0, 0, -zs)
 	# Empty the seats between the camera and him, and his neighbours, so nothing of today's crowd
 	# stands in the foreground but him.

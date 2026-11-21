@@ -192,7 +192,7 @@ func _boundary_fits(cam: Camera3D) -> bool:
 	var m := 0.01
 	for k in range(36):
 		var a := TAU * float(k) / 36.0
-		var p := Vector3(cos(a) * float(OV.HALF_LEN), 0.0, sin(a) * float(OV.HALF_WID))
+		var p := Vector3(cos(a) * float(MatchMotion.HALF_LEN), 0.0, sin(a) * float(MatchMotion.HALF_WID))
 		var s := cam.unproject_position(p)
 		if cam.is_position_behind(p) or s.x < W * m or s.x > W * (1.0 - m) or s.y < H * m or s.y > H * (1.0 - m):
 			return false
