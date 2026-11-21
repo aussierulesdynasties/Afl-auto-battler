@@ -88,7 +88,39 @@ func _ready() -> void:
 	if args.has("check"):
 		_check.call_deferred(str(args.get("ground", "")).to_lower())
 		return
+	if args.has("views"):
+		_views.call_deferred(pick, str(args["views"]))
+		return
 	_load(pick)
+
+
+## --views=<file>: one view a line, "name x y z facing looking" as the C key copies them (the fault list's
+## positions), each saved to user://inspection/views/<name>.png, then quit. The QA pass re-shoots every fault
+## position after a fix with it.
+func _views(pick: int, path: String) -> void:
+	var dir := SHOTS + "/views"
+	DirAccess.make_dir_recursive_absolute(dir)
+	await _load(pick)
+	help.visible = false
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f == null:
+		print("views: cannot read ", path)
+		get_tree().quit(1)
+		return
+	while not f.eof_reached():
+		var w := f.get_line().strip_edges().split(" ", false)
+		if w.size() < 6 or w[0].begins_with("#"):
+			continue
+		camera.global_position = Vector3(float(w[1]), float(w[2]), float(w[3]))
+		yaw = -deg_to_rad(float(w[4]))
+		pitch = deg_to_rad(float(w[5]))
+		camera.global_basis = Basis.from_euler(Vector3(pitch, yaw, 0.0))
+		for _f in 4:
+			await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png("%s/%s.png" % [dir, w[0]])
+		print("view ", w[0])
+	get_tree().quit(0)
 
 
 ## Every ground loaded in turn: a line each, OK or not, and its start view saved.
@@ -332,6 +364,10 @@ func _load(i: int) -> void:
 	var ok := true
 	# The match's world under every ground: its light, turf and goalposts (Oval3D), so a model not
 	# yet in the match is seen against the oval it will sit on (O hides the turf and posts).
+	# At the ground's own size, as a match there is played (GroundModels.field: its fence less
+	# the run-off), so its model sits unstretched on the turf; any other model on the standard oval.
+	var own := GroundModels.field(str(g.get("dir", ""))) if g["kind"] in ["match", "seated"] else Vector2.ZERO
+	MatchMotion.use_field(own)
 	oval = OVAL3D.new()
 	oval.name = "Oval"
 	stage.add_child(oval)
