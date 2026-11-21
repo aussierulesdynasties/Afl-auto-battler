@@ -264,14 +264,24 @@ def main():
         for key, nk, lab in (("dist", "n", "Distance to his man (m)"), ("within5", "n", "Share of time within 5 m"),
                              ("goal", "n", "Distance to the goal he defends (m)"),
                              ("def_dist", "def_n", "Distance to his man, his side defending (m)"),
-                             ("def_within5", "def_n", "Share within 5 m, his side defending")):
+                             ("def_within5", "def_n", "Share within 5 m, his side defending"),
+                             ("held_dist", "held_n", "Distance, his side defending, match-up on (m)"),
+                             ("held_within5", "held_n", "Share within 5 m, his side defending, match-up on")):
             d = [b[key] / b[nk] - a[key] / a[nk] for a, b in zip(pa, pb) if a.get(nk) and b.get(nk)]
             av = [a[key] / a[nk] for a in pa if a.get(nk)]
-            if not av:
+            bv = [b[key] / b[nk] for b in pb if b.get(nk)]
+            if not bv:
                 continue
-            mu, sd = mean_sd(d)
-            print(f"| {lab} | {fmt(mean_sd(av)[0], 2)} | {fmt(mean_sd(av)[0] + mu, 2)} | {mu:+.2f} |"
-                  f" {sd / math.sqrt(max(1, len(d))):.2f} |")
+            # Each arm's own mean over the matches that have the measure (the match-up rows
+            # exist in A only where its own match-ups happen to pair these two); B-A over
+            # the matches both have, and only when most of them do.
+            a_txt = fmt(mean_sd(av)[0], 2) if av else "-"
+            if len(d) * 2 >= len(pb):
+                mu, sd = mean_sd(d)
+                diff = f"{mu:+.2f} | {sd / math.sqrt(max(1, len(d))):.2f}"
+            else:
+                diff = "- | -"
+            print(f"| {lab} | {a_txt} | {fmt(mean_sd(bv)[0], 2)} | {diff} |")
         print()
     ta = [A[i]["shape"]["tag"][A[i].get("called", i % 2)] for i in pairs]
     tb = [B[i]["shape"]["tag"][B[i].get("called", i % 2)] for i in pairs]
