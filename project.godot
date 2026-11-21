@@ -49,6 +49,10 @@ window/stretch/aspect="expand"
 ; SCREEN_PORTRAIT: a phone plays in portrait only (director, 2026-11-05: "Drop landscape").
 window/handheld/orientation=1
 
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/openvat_animated/plugin.cfg", "res://addons/sky_3d/plugin.cfg")
+
 [input_devices]
 
 pointing/emulate_touch_from_mouse=true
