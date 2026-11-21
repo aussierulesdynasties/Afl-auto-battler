@@ -87,6 +87,18 @@ The ground round the stadium comes from OpenStreetMap, never from aerial imagery
 To place a map on the model, line up the AFL pitch's centre in OpenStreetMap with the model's 0, 0.
 For the MCG, that centre is 25.3 m east and 23.5 m south of lat -37.81977, lon 144.98316.
 
+## Model parts rebuilt without the model's source
+
+The model's source (`build.py`) is on the director's PC. A part that needs rebuilding can still be
+replaced from the cloud: a tool reads the part from the `.glb`, builds it again, and writes a mesh
+(per vertex position, normal and colour). `GroundModels.PARTS` hides the model's own node and draws
+the new mesh instead. The MCG has two:
+
+- **Roof trusses** (`tools/grounds/mcg/trusses.py`): square lattices, 2 m wide for the masts and
+  1.6 m for the booms and back stays, in pale steel, with a blue light box at each boom's tip.
+- **Slab edges** (`tools/grounds/mcg/ledges.py`): a ledge 0.45 m deep at every floor, 3.6 m apart,
+  on every outside wall.
+
 ## Stages
 
 1. References and plan.
