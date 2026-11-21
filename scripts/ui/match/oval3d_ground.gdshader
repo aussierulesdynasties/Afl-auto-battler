@@ -37,6 +37,17 @@ uniform float stripe_amount = 0.16;
 uniform int mow_pattern = 0;
 uniform float mow_width = 12.0;
 uniform float saturation = 0.72;
+// The colour uniforms above are source_color, so Godot hands them over already linear; this
+// shader was written for sRGB and converted them to linear a second time (lin below), which
+// takes the red out of the grass (open grass drew near (2, 49, 4)). `true_colour` 1 reads them
+// as the sRGB they are, and `turf_gain` brings the now lighter turf to the broadcast's brightness
+// (Oval3DTurf.TURF_GAIN). 0 is the look as approved (rule 2.81) until the director picks.
+uniform float true_colour = 0.0;
+uniform float turf_gain = 1.0;
+// Broadcast turf is a yellower green than the flat views' palette (TV open grass about
+// (70, 120, 40)): with true_colour, the grass's colour times this (sRGB).
+uniform vec3 turf_warm = vec3(1.08, 1.0, 0.76);
+vec3 to_srgb(vec3 c) { return true_colour > 0.5 ? pow(max(c, vec3(0.0)), vec3(1.0 / 2.2)) : c; }
 // Wear over the ground: R thin grass, G churned; UV 0..1 across the whole plane.
 uniform sampler2D wear_map : filter_linear, repeat_disable;
 uniform vec2 wear_half = vec2(93.3, 74.4);
@@ -118,10 +129,11 @@ void fragment() {
 		vec2 m2 = mow_pass(p, d1, -n1, look, mw);
 		stripe = clamp(0.5 + (m1.x - 0.5) * 0.6 + (m2.x - 0.5) * 0.6, 0.0, 1.0);
 	}
-	vec3 grass = mix(grass_a, grass_b, stripe);
+	vec3 grass = mix(to_srgb(grass_a), to_srgb(grass_b), stripe);
 	// The flat views' turf colours are strong; lit in 3D they go neon. Turf on a broadcast
 	// is a muted green (red about 0.6 of green): take a quarter of the colour toward grey.
 	grass = mix(vec3(dot(grass, vec3(0.3, 0.59, 0.11))), grass, saturation);
+	grass *= mix(vec3(1.0), turf_warm, true_colour);
 	grass *= 1.0 + stripe_amount * (stripe - 0.5) * (1.0 - 0.5 * wet);
 
 	// The blades: the tile at its own size, and again larger and offset so it never repeats
@@ -154,15 +166,15 @@ void fragment() {
 	float gust = texture(patches_tex, (p - wind_dir * TIME * 6.0) / 40.0).g;
 	grass *= 1.0 + wind * 0.12 * (gust - 0.5) * 2.0;
 
-	vec3 col = e > 1.0 ? apron_col * (0.86 + 0.28 * broad) * blade : grass;
+	vec3 col = e > 1.0 ? to_srgb(apron_col) * mix(vec3(1.0), turf_warm, true_colour) * (0.86 + 0.28 * broad) * blade : grass;
 
 	// Wear: thin pale grass where play has been; churned to mud in the wet.
 	vec2 wuv = p / (2.0 * wear_half) + 0.5;
 	vec4 w = texture(wear_map, wuv);
 	float thin = w.r * (0.75 + 0.5 * clump);
 	float churn = w.g * (0.6 + 0.8 * clump);
-	col = mix(col, worn_col * mix(vec3(1.0), blade, 0.6), clamp(thin, 0.0, 1.0) * (1.0 - 0.6 * wet));
-	col = mix(col, mud_col * (0.8 + 0.2 * speck), clamp(churn * wet, 0.0, 0.8));
+	col = mix(col, to_srgb(worn_col) * mix(vec3(1.0), blade, 0.6), clamp(thin, 0.0, 1.0) * (1.0 - 0.6 * wet));
+	col = mix(col, to_srgb(mud_col) * (0.8 + 0.2 * speck), clamp(churn * wet, 0.0, 0.8));
 
 	float ink = 0.0;
 	// Boundary: the ellipse's distance, approximately, in metres.
@@ -196,7 +208,7 @@ void fragment() {
 	// Paint on worn or muddy turf is broken up, not a clean line.
 	ink *= 1.0 - 0.55 * clamp(churn * wet + thin * 0.5, 0.0, 1.0) * step(1.0, speck);
 	col = mix(col, vec3(0.96, 0.96, 0.93), ink * 0.92);
-	ALBEDO = lin(col);
+	ALBEDO = lin(col) * mix(1.0, turf_gain, true_colour);
 	// Dry turf is matte; wet blades hold a film of water that catches the lights. Paint and
 	// mud lie flat; the blades' normals give the grain its light and shade.
 	// Water sits in patches (the low spots): the sheen there, the rest just dark and damp.
