@@ -55,6 +55,7 @@ func run() -> void:
 	_t("_test_match_ground")
 	_t("_test_ground_models")
 	_t("_test_ground_screens")
+	_t("_test_stand_light")
 	_t("_test_mcg_crowd", [res])
 	_t("_test_discs_apart")
 	_t("_test_clash_kit")
@@ -2198,6 +2199,42 @@ func _test_ground_models() -> void:
 ## The ground's big screens and fence signs (Oval3DScreens, row 202 2b): a match at a ground whose
 ## model has screens lays a face over each, facing the ground, that shows the score, a goal and
 ## the clock; the boards ring the fence in both clubs' colours; the inspector (no clubs) gets none.
+## The stands' light (director, 2026-11-21: roof undersides "grey, a faint green tint"): the model's
+## surfaces take the stand shader; a face turned up keeps the sky's light, one turned down loses the
+## grass's green; at night nothing changes; the men and the turf keep their own materials.
+func _test_stand_light() -> void:
+	var d := MatchDirector.new()
+	var res := _result(42)
+	d.setup(res, res["events"])
+	var oval := Oval3D.new()
+	oval.ground = "MCG"
+	(Engine.get_main_loop() as SceneTree).root.add_child(oval)
+	oval.build(d, "COL", "GEE")
+	var stand := 0
+	var other := 0
+	for mi: MeshInstance3D in oval.find_children("*", "MeshInstance3D", true, false):
+		if mi.mesh == null or not oval.get_node("Ground").is_ancestor_of(mi):
+			continue
+		for i in mi.mesh.get_surface_count():
+			var m := mi.get_active_material(i) as ShaderMaterial
+			if m != null and m.shader == Oval3DTurf.STAND_SHADER:
+				stand += 1
+				_check(m.resource_name != "", "A stand surface keeps its material's name")
+			else:
+				other += 1
+	_check(stand > 50, "The MCG's surfaces take the stands' light (%d, %d others)" % [stand, other])
+	var sm: ShaderMaterial = oval.turf.env.sky.sky_material
+	var grey: Array = oval.turf.stand_light(sm, 1.0, Oval3DTurf.STAND_GREEN)
+	var sky: Array = oval.turf.stand_light(sm, 1.0, 1.0)
+	_check((grey[4] - sky[4]).length() < 0.002, "A face turned up is lit as before (%s)" % (grey[4] - sky[4]))
+	var down: Vector3 = grey[0] - sky[0]
+	_check(down.y < -0.02 and down.x > 0.0, "A face turned down loses the grass's green (%s)" % down)
+	oval.turf.apply("", VignetteKickoff.NIGHT)
+	var m0: ShaderMaterial = oval.turf._stand_mats[0]
+	_check(m0.get_shader_parameter("amb_down") == Vector3.ZERO, "At night the stands' light is unchanged")
+	oval.queue_free()
+
+
 func _test_ground_screens() -> void:
 	var d := MatchDirector.new()
 	var res := _result(42)
