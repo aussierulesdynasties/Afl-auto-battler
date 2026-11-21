@@ -221,7 +221,7 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 | 2c. Crowd | 202 | chosen: 3D people within 55 m, cards beyond (2.92), built; seated on the MCG model's own seats (he chose "Seat the crowd in the MCG", 2026-11-20, #1929) | measure its cost on a phone; each other ground gets it once it loads in a match |
 | 2d. Players' look | 202 | body: MetaHuman (2.85, 2.89); builds by height and weight (2.97, 2.98); faces ruled (2.99) | the Tripo heads (director generates) and the features for everyone else |
 | 2e. Cameras | 202 | main camera, goal replay, set shots, ball-up close-ups, tap to skip, TV framing, picture layout, stat bars, score bug all ruled and built (2.93-2.111, #1818); after a mark it stays on the main camera (2.113) | the other cameras and cuts in play (free kicks, tackles, injuries) |
-| Broadcast popups | 207 | stat card ruled (2.94, 2.95) | ask: when a card shows and for how long; the journalists' posts |
+| Broadcast popups | 207 | stat card ruled (2.94, 2.95); built for each goal's kicker, 5 s over the picture's foot (2026-11-21) | the journalists' posts; cards at other moments if he wants them |
 | 3. Asset and animation plan | 203 | done (#1707), docs/3D_ASSET_PLAN.md | |
 | 4a. Proof passage | 197 | runtime in the match screen (#1601 and on); waits on 201 and 203 | after step 1 passes |
 | 4b. Animation | 198 | paused (2.78) | the clips 203 lists, on the MetaHuman body |

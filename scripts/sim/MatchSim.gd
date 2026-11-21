@@ -1420,6 +1420,20 @@ func _effective(side: int, player) -> void:
 	_p(player, "effective_disposals")
 
 
+## The numbers a TV stat card can show (rule 2.95), for one player as they stand now,
+## with his role in this match: {role, disposals, effective_disposals, goals, ...} as ints.
+const CARD_KEYS := ["disposals", "effective_disposals", "goals", "score_involvements", "marks",
+		"tackles", "clearances", "contested_possessions", "inside50", "intercepts", "rebounds",
+		"spoils", "contested_marks", "hitouts"]
+
+func card_line(player: Dictionary) -> Dictionary:
+	var st: Dictionary = player_stats.get(str(player.get("id", "")), {})
+	var out := {"role": str(player.get("role", "MID"))}
+	for k in CARD_KEYS:
+		out[k] = int(round(float(st.get(k, 0.0))))
+	return out
+
+
 ## Disposal efficiency, 0-100: the share of disposals that kept the ball.
 static func disposal_efficiency(st: Dictionary) -> int:
 	var d := float(st.get("disposals", 0.0))
@@ -1522,6 +1536,11 @@ func _emit(kind: String, side: int, fp: float, actor, text: String) -> void:
 			for k in ["passer_id", "to_id"]:
 				if _set_choice.has(k):
 					events[events.size() - 1][k] = str(_set_choice[k])
+	# A goal carries its kicker's numbers as they stand at that goal, for the TV
+	# stat card over the 3D picture (row 207, rules 2.94-2.95). Read only: it
+	# draws nothing and changes nothing in the match.
+	if kind == "goal" and actor != null:
+		events[events.size() - 1]["card"] = card_line(actor)
 	# A score from a turnover: whose intercept it came from.
 	if (kind == "goal" or kind == "behind") and not _chain_from.is_empty() \
 			and int(_chain_from["side"]) == side:
