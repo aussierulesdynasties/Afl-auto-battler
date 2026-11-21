@@ -513,6 +513,10 @@ const SEAT_COLOURS := {
 	"seat_lo_blue": Color(0.802, 0.807, 0.841), "seat_lo_tan": Color(0.892, 0.824, 0.751),
 	"seat_mid_blue": Color(0.920, 0.858, 0.794), "seat_mid_tan": Color(1.0, 0.875, 0.704),
 	"seat_up_blue": Color(0.653, 0.705, 0.782), "seat_up_tan": Color(0.743, 0.722, 0.693),
+	# First-draft grounds built with tools/grounds/kit (each printed by its build).
+	"seat_barossa": Color(0.197, 0.212, 0.235), "seat_hands": Color(0.151, 0.319, 0.502),
+	"seat_sky_gold": Color(0.778, 0.609, 0.197), "seat_sky_grey": Color(0.266, 0.281, 0.304),
+	"seat_bt": Color(0.135, 0.197, 0.349), "seat_mp": Color(0.219, 0.25, 0.296),
 }
 
 
