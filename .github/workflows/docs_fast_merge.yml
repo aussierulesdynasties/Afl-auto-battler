@@ -1,90 +1,28 @@
-# Docs and roadmap notes skip the merge queue (director, 2026-11-21: keep the queue for code,
-# let docs-only and roadmap-note PRs skip it). The queue retests each PR on top of the latest
-# main so two code PRs cannot combine to break it; a PR that only changes Markdown cannot do
-# that, and the roadmap-close notes PRs (label "roadmap") were stuck behind it.
-#
-# Every 10 minutes, and after each Tests run, this merges straight into main any open PR that:
-#   - has auto-merge turned on (the author asked for it to land),
-#   - is labelled "roadmap" or changes only *.md files,
-#   - has no conflict, and every check on its head has passed (or skipped).
-# It merges with --admin using the MERGE_TOKEN secret, an admin's token: the "main merge
-# queue" ruleset lets Repository admins bypass it, and the GitHub Actions app cannot be
-# added there. Without the secret it tries the workflow token, which the ruleset refuses;
-# the job then lists the rulesets on main and stops. A MERGE_TOKEN merge starts the push
-# workflows as usual; this also runs Roadmap rebuild itself, for the notes PRs the merge
-# has left in conflict.
+# One-off on a throwaway branch (never merged): widen the main merge queue to build and
+# merge up to 5 PRs at once (director, 2026-11-21). Dispatched from this branch only.
 name: Docs fast merge
 on:
-  schedule:
-    - cron: "*/10 * * * *"
-  workflow_run:
-    workflows: [Tests]
-    types: [completed]
   workflow_dispatch:
-concurrency:
-  group: docs-fast-merge-${{ github.ref }}
-  cancel-in-progress: false
 permissions:
-  contents: write
-  actions: write
-  pull-requests: write
+  contents: read
 jobs:
-  merge:
+  tune:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
     steps:
-      - name: Merge ready docs-only and roadmap PRs
+      - name: Set merge queue group size to 5
         env:
-          GH_TOKEN: ${{ github.token }}
-          MERGE_TOKEN: ${{ secrets.MERGE_TOKEN }}
+          GH_TOKEN: ${{ secrets.MERGE_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
-          set -u
-          merged=0
-          prs=$(gh pr list --state open --limit 200 --json number,isDraft,autoMergeRequest \
-            --jq '.[] | select(.isDraft | not) | select(.autoMergeRequest != null) | .number')
-          [ -z "$prs" ] && { echo "No open PR has auto-merge on."; exit 0; }
-          for num in $prs; do
-            info=$(gh pr view "$num" --json labels,files,mergeable,statusCheckRollup)
-            kind=$(echo "$info" | jq -r '
-              if any(.labels[]; .name == "roadmap") then "roadmap"
-              elif (.files | length) > 0 and all(.files[]; .path | endswith(".md")) then "docs"
-              else "code" end')
-            [ "$kind" = "code" ] && continue
-            mergeable=$(echo "$info" | jq -r .mergeable)
-            if [ "$mergeable" != "MERGEABLE" ]; then
-              echo "#$num ($kind): $mergeable, waiting"
-              continue
-            fi
-            # Every check finished green or skipped; none pending, none red.
-            bad=$(echo "$info" | jq -r '[.statusCheckRollup[] |
-              (if .__typename == "StatusContext" then .state else (.conclusion // "PENDING") end)
-              | select(. != "SUCCESS" and . != "SKIPPED" and . != "NEUTRAL")] | length')
-            total=$(echo "$info" | jq -r '.statusCheckRollup | length')
-            if [ "$total" = 0 ] || [ "$bad" != 0 ]; then
-              echo "#$num ($kind): checks not all green yet ($bad of $total), waiting"
-              continue
-            fi
-            if GH_TOKEN="${MERGE_TOKEN:-$GH_TOKEN}" gh pr merge "$num" --squash --admin; then
-              echo "#$num ($kind): merged past the queue"
-              merged=1
-              # One at a time: notes PRs edit the same TODO.md lines, so the next one
-              # is rebuilt on the new main before it merges.
-              break
-            else
-              if [ -n "$MERGE_TOKEN" ]; then tok="MERGE_TOKEN"; else tok="workflow token, no MERGE_TOKEN secret"; fi
-              echo "::warning::#$num: merge refused using the $tok. The PR waits for the queue."
-              # Say which rulesets apply to main and whether this token may bypass each,
-              # then stop: every other PR would be refused the same way.
-              echo "Rulesets on main (name | source | enforcement | can bypass | rules):"
-              for id in $(gh api "repos/$GH_REPO/rulesets?includes_parents=true" --jq '.[].id'); do
-                gh api "repos/$GH_REPO/rulesets/$id" --jq \
-                  '"\(.name) | \(.source_type) \(.source) | \(.enforcement) | \(.current_user_can_bypass // "?") | \([.rules[].type] | join(","))"' \
-                  || echo "ruleset $id: not readable"
-              done
-              break
-            fi
-          done
-          if [ "$merged" = 1 ]; then
-            gh workflow run roadmap_rebuild.yml --ref main || echo "::warning::could not start Roadmap rebuild"
-          fi
+          set -eu
+          id=$(gh api "repos/$GH_REPO/rulesets" --jq '.[] | select(.name == "main merge queue") | .id')
+          echo "ruleset $id"
+          gh api "repos/$GH_REPO/rulesets/$id" > before.json
+          echo "before:"; jq -c '.rules[] | select(.type == "merge_queue") | .parameters' before.json
+          jq '{name, target, enforcement, conditions, bypass_actors,
+               rules: [.rules[] | if .type == "merge_queue"
+                 then .parameters += {max_entries_to_build: 5, max_entries_to_merge: 5, min_entries_to_merge: 1}
+                 else . end]}' before.json > body.json
+          gh api -X PUT "repos/$GH_REPO/rulesets/$id" --input body.json > /dev/null
+          echo "after:"
+          gh api "repos/$GH_REPO/rulesets/$id" --jq '(.rules[] | select(.type == "merge_queue") | .parameters | tostring), ("bypass: " + ([.bypass_actors[] | "\(.actor_type):\(.bypass_mode)"] | join(", ")))'
