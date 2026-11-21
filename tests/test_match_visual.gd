@@ -66,6 +66,7 @@ func run() -> void:
 	_t("_test_three_d_hair", [res])
 	await _t("_test_three_d_cameras", [res])
 	_t("_test_contacts", [res])
+	_t("_test_umpire_stoppages", [res])
 	_t("_test_free_taker_kicks")
 	GameState.replay_seed = 0
 	print(Ran.line("Match visual", self))
@@ -3447,6 +3448,104 @@ func _test_contacts(res: Dictionary) -> void:
 	_check(bad.is_empty(), "Every touch names a real player (or the umpire for a bounce) and a spot: %s" % [bad.slice(0, 5)])
 	_check(int(kinds.get(&"kick", 0)) > int(kinds.get(&"goal_celebrate", 0)) and int(kinds.get(&"goal_celebrate", 0)) > 0,
 			"Goals are celebrated, and fewer times than the ball is kicked (%s)" % [kinds])
+
+
+## The umpires at stoppages on the 3D oval (row 197; the field umpire passed, rule 2.75): at a
+## centre bounce the field umpire has the ball and bounces it with his clip, the ball leaving his
+## hands and on the turf at the director's bounce; at a ball-up a field umpire, and at a throw-in
+## the boundary umpire on that wing, has it in his hands until it goes up. A ball an umpire holds
+## sits between his palms and never jumps. The 3D umpires change nothing in the play: the feed's
+## times are the flat oval's (_test_three_d_view).
+func _test_umpire_stoppages(res: Dictionary) -> void:
+	# Through the match view, as a match is watched: its goal replays (the play holding for
+	# them, rule 2.96) and the ends changing at the breaks cut away from the live picture.
+	var pv := PitchView.new()
+	pv.size = Vector2(360, 640)
+	pv.three_d = true
+	(Engine.get_main_loop() as SceneTree).root.add_child(pv)
+	var at_stand := res.duplicate()
+	at_stand["venue"] = "Alan Ray Oval"
+	pv.setup(at_stand)
+	var oval: Oval3D = pv._oval3d
+	var d: MatchDirector = pv.director
+	pv.set_speed(1.0)
+	pv.play()
+	var dt := 1.0 / 30.0
+	var bounces := 0          # centre bounces
+	var bounced := 0          # ...the umpire bounced with his clip, the ball on the turf as it went up
+	var bounce_off := []      # [height, metres off the spot] where his bounce wasn't on the turf
+	var ups := {"throwup": 0, "throwin": 0}
+	var held := {"throwup": 0, "throwin": 0}
+	var gap := 0.0
+	var jump := 0.0
+	var last := Vector3.INF
+	var last_hands := Vector3.INF
+	var held_prev := false
+	var in_stop := ""
+	var was_flying := false
+	var clip_bounce := false
+	var closest := INF        # the nearest any player comes to the bouncing umpire (pelvis to feet)
+	var frames := 0
+	while d.time < 420.0 and frames < 30000 and pv.playing:
+		pv._process(dt)
+		frames += 1
+		var st: Dictionary = d.stoppage_now()
+		var kind := str(st.get("kind", ""))
+		if kind != in_stop:
+			if ups.has(kind):
+				ups[kind] += 1
+			in_stop = kind
+		var job: Dictionary = oval.umpires[oval._ump_job] if oval._ump_job >= 0 else {}
+		var c: Dictionary = job.get("clip", {})
+		if oval._ump_ball and ups.has(kind) and int(held[kind]) < int(ups[kind]):
+			held[kind] += 1
+		if str(c.get("kind", "")) == "bounce":
+			clip_bounce = true
+			if not pv._replaying():
+				var skel: Skeleton3D = job["skel"]
+				var pelvis: Vector3 = skel.global_transform * skel.get_bone_global_pose(maxi(skel.find_bone("pelvis"), 0)).origin
+				for p in oval.players:
+					var pn: Vector3 = (p["node"] as Node3D).global_position
+					closest = minf(closest, Vector2(pn.x, pn.z).distance_to(Vector2(pelvis.x, pelvis.z)))
+		var flying := str(d.ball.get("mode", "")) == "flight"
+		if flying and not was_flying and absf(float(d.ball.get("h0", 0.0)) - 0.4) < 0.01:
+			bounces += 1
+			# The frame the director's bounce goes up: where the 3D ball was the frame before.
+			var spot: Vector2 = d.ball["from"]
+			var local := oval.to_local(last) if last.is_finite() else Vector3.INF
+			var off := Vector2(local.x, local.z).distance_to(spot) if last.is_finite() else INF
+			if clip_bounce and last.is_finite() and local.y < 0.5 and off < 0.8:
+				bounced += 1
+			else:
+				bounce_off.append([snappedf(local.y, 0.01) if last.is_finite() else -1.0, snappedf(off, 0.01), clip_bounce])
+			clip_bounce = false
+		was_flying = flying
+		var now := oval.ball.global_position
+		var hands := oval._umpire_hands(job) if not job.is_empty() else now
+		var live := not pv._replaying()
+		if live and oval._ump_ball and held_prev and not job.is_empty() \
+				and not (str(c.get("kind", "")) == "bounce" and float(c["t"]) >= Oval3D.UMP_T_REL):
+			# (Out of his hands at a bounce, it is thrown at the turf: that is no jump.) A jump is
+			# the ball moving other than with his hands: taking it from the turf, it comes up to
+			# them over a few frames.
+			if oval._ump_pick < 0.0:
+				gap = maxf(gap, hands.distance_to(now))
+			jump = maxf(jump, (now - last).distance_to(hands - last_hands))
+		last = now
+		last_hands = hands
+		held_prev = oval._ump_ball and live
+	_check(bounces >= 2 and bounced >= bounces - 1,
+			"At a centre bounce the umpire bounces it: the ball from his hands to the turf as it goes up (%d of %d; off: %s)"
+			% [bounced, bounces, str(bounce_off)])
+	_check(int(ups["throwup"]) >= 3 and int(held["throwup"]) * 10 >= int(ups["throwup"]) * 7,
+			"At a ball-up a field umpire has the ball until he throws it up (%d of %d)" % [held["throwup"], ups["throwup"]])
+	_check(int(ups["throwin"]) == 0 or int(held["throwin"]) >= 1,
+			"At a throw-in the boundary umpire has the ball (%d of %d)" % [held["throwin"], ups["throwin"]])
+	_check(closest >= Oval3D.UMP_BODY_GAP - 0.05,
+			"No player is drawn through the umpire as he bounces it (nearest %.2f m from his hips)" % closest)
+	_check(gap < 0.02 and jump < 0.6,
+			"A ball an umpire holds is between his palms (%.3f m) and never jumps from them (%.2f m in a frame)" % [gap, jump])
+	pv.queue_free()
 
 
 ## A free kick is taken by the man it is paid to, with the ball in his hands,
