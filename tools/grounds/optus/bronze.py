@@ -14,7 +14,8 @@ into assets/grounds/optus/optus.glb:
 - `sign_a`: the bronze behind every name sign (tools/grounds/optus/facade.json: 19 segments wide, 32 m down
   from the bronze's top), with the letters lifted from #1867's sign (white OPTUS STADIUM, yellow "yes") set
   6 m under the top, as on the real drum.
-- `glass`: the glass band over the bronze (no white Y columns outside, Google Earth) and `entrance`: the street glazing.
+- `glass`: the glass band over the bronze (no white Y columns outside, Google Earth) `entrance`: the street glazing,
+  and `storey`: the glazed storey under the bronze round the north and west (also saved as tex/storey.png for build.py).
 
     python3 tools/grounds/optus/bronze.py [--old-sign sign_a.png] [--preview out.png]
 """
@@ -224,6 +225,20 @@ def entrance():
     return Image.fromarray(img.clip(0, 255).astype(np.uint8), "RGB")
 
 
+def storey():
+    """The glazed storey under the bronze round the north and west (Google Earth 000, 330): dark blue glass with sky
+    caught low, slim white posts four to a tile (2 bays, about 8 m apart), a white head rail; image top at 13.5 m, 6 m."""
+    w, h = 1024, 192
+    d = (np.arange(h)[:, None] + 0.5) / h * 6.0 * np.ones((1, w))
+    u = (np.arange(w)[None, :] + 0.5) / w * np.ones((h, 1))
+    img = np.array((44, 58, 78), float) * (0.9 + 0.35 * (d / 6.0))[..., None]
+    img *= (1.0 + 0.06 * _noise(h, w, (4, 24), 5))[..., None]
+    img[np.abs(((u * 16) % 1) - 0.5) > 0.5 - 0.05 / 2.0] = (70, 86, 104)        # mullions
+    img[np.abs(((u * 4) % 1) - 0.5) > 0.5 - 0.3 / 8.1] = (226, 228, 226)        # posts
+    img[d < 0.25] = (222, 224, 222)
+    return Image.fromarray(img.clip(0, 255).astype(np.uint8), "RGB")
+
+
 def png(im):
     b = io.BytesIO()
     im.save(b, "PNG", optimize=True)
@@ -236,7 +251,7 @@ def main():
     src = sys.argv[sys.argv.index("--old-sign") + 1] if "--old-sign" in sys.argv else None
     old = Image.open(src) if src else Image.open(io.BytesIO(_view_bytes(
         js, bn, next(im for im in js["images"] if im["name"] == "sign_a")["bufferView"])))
-    new = {"bronze": tile(), "sign_a": sign(old), "glass": glass(), "entrance": entrance()}
+    new = {"bronze": tile(), "sign_a": sign(old), "glass": glass(), "entrance": entrance(), "storey": storey()}
     if "--preview" in sys.argv:
         p = sys.argv[sys.argv.index("--preview") + 1]
         for n, im in new.items():
