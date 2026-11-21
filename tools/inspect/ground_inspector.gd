@@ -218,6 +218,13 @@ func _scan_checkout(root: String, label: String, seen: Dictionary) -> void:
 			var rel: String = str(g["paths"][0]).trim_prefix(root + "/")
 			g["name"] = "%s%s  (%s)%s" % [g["stem"], g["parts_note"], rel.get_base_dir(), tag]
 			g["kind"] = "model"
+			# A draft with its seats beside it (seat_tmpl.bin, seats_<colour>.bin) is built the way a
+			# match builds a ground, seats and all.
+			var folder := str(g["paths"][0]).get_base_dir() + "/"
+			if g["paths"].size() == 1 and FileAccess.file_exists(folder + "seat_tmpl.bin"):
+				g["kind"] = "seated"
+				g["dir"] = g["stem"]
+				g["base"] = folder
 			grounds.append(g)
 
 
@@ -331,7 +338,7 @@ func _load(i: int) -> void:
 	oval.add_child(ball_marker)
 	oval.ball = ball_marker
 	_match_parts = oval.get_children().filter(func(n): return n is MeshInstance3D and n != ball_marker)
-	if g["kind"] == "match":
+	if g["kind"] in ["match", "seated"]:
 		oval._ground_model(str(g["dir"]), str(g["base"]))
 		ok = oval.get_node("Ground").get_child_count() > 0
 	else:
@@ -370,8 +377,10 @@ func _frame_start() -> void:
 	if r < 1.0:
 		c = Vector3.ZERO
 		r = 120.0
-	if grounds[current]["kind"] == "match":
+	if grounds[current]["kind"] in ["match", "seated"]:
+		# Centred on the fence; framed on the stands, not on a wide terrain disc round them.
 		c = Vector3.ZERO
+		r = minf(r, 190.0)
 	# Off the middle of the wing, so a light tower on the axis does not stand in the way.
 	var at := c + Vector3(r * 0.4, r * 0.45, r * 1.0)
 	start_view = Transform3D(Basis.IDENTITY, at).looking_at(c, Vector3.UP)
