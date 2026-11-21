@@ -234,7 +234,7 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 | Ground | State | PRs |
 |---|---|---|
 | MCG | model, instanced seats | #1843 |
-| Marvel Stadium | model | #1911 |
+| Marvel Stadium | rebuilt to the MCG standard (true bearing, instanced seats, shut roof, Docklands surrounds) | #1911, this PR |
 | Adelaide Oval | model, 3D seats; plays in a match (exported for the game by tools/grounds/adelaide) | #1856 |
 | Optus Stadium | rebuilt to the MCG standard (docs/MCG_STANDARD.md): bronze ribbon re-shaped and redrawn, matte roof, surroundings and bridges | #1867 #1880; rebuild PR from the Optus thread (2026-11-21) |
 | SCG | model | #1909 |

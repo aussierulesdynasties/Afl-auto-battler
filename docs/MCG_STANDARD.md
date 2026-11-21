@@ -143,3 +143,34 @@ Optus went through the same gate. What it added to the method:
   band, street glazing and the north's glazed storey are drawn by `bronze.py` (`glass`, `entrance`, `storey`).
 
 Open at Optus: seat colours from Street View (stage 4), on top of the seat fix (#1991).
+
+## Marvel Stadium, the third ground (2026-11-21)
+
+Marvel went through the same gate against Google Earth (obliques from eight sides, twelve facade views,
+straight down, into the bowl). What it added to the method:
+
+- **Check the bearing first.** The first model had been turned so its long axis ran north-south; the
+  real ground runs at bearing 160 (OpenStreetMap pitch 158). Side by side with Google Earth every facade
+  read about 20 degrees off. The model is now exported in its measured frame (x east, y north) and
+  `GroundModels.FIT` turns it onto the field. Compare a model's long axis with OpenStreetMap's pitch
+  before anything else.
+- **Seats drawn once, many times.** The baked 3D seats (two meshes of a million triangles) became
+  `seat_tmpl.bin` plus one `seats_seat_marvel_<level>.bin` per level (`tools/grounds/marvel/seats.py`),
+  then `seat_check.gd --write` (55,890 of 57,535 kept: 954 inside the fence, 669 without headroom).
+  The crowd now sits on them.
+- **A roof that opens.** `GroundModels.ROOFS` names a model's shut and open roof nodes; a match shows
+  Marvel shut, as the match scenes draw it (data/grounds.json). Shut, nothing of the stadium throws a
+  sun shadow: the roof's lights light the field evenly. The fly-through's B key opens it, and
+  `PREINSPECT_ROOF=open` renders it open for Google Earth (which shows it open).
+- **Colours by mean, detail kept.** `tools/grounds/marvel/retint.py` moves each hand-made texture's mean
+  to Google Earth's (pale grey-green trusses, light end roofs, blue-grey cladding, grey paving) and keeps
+  each pixel's difference from the mean. Undersides face the match light's dim blue-violet, so they are
+  painted warm and green to render the grey with a faint green tint.
+- **Broadcast checks clip like the broadcast.** The main and goal cameras sit inside the stand and draw
+  nothing nearer than 20 m (`Oval3DBroadcast.NEAR`); `PREINSPECT_NEAR=20` renders what they see.
+- **Surroundings** from OpenStreetMap in nine tiles (the API's node limit in a city):
+  `tools/grounds/marvel/surrounds.py` (Victoria Harbour, the Southern Cross yards, the streets, the towers
+  to their mapped heights) and `bridges.py` (the Bolte Bridge's 140 m towers and deck, 1.35 km west).
+
+Open at Marvel: the east office blocks' cladding still reads darker than Google Earth in shade; the
+surrounding towers are plain blocks (every ground's surroundings are, so far).
