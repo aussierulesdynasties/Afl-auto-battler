@@ -234,7 +234,7 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 |---|---|---|
 | MCG | model, instanced seats | #1843 |
 | Marvel Stadium | model | #1911 |
-| Adelaide Oval | model, 3D seats | #1856 |
+| Adelaide Oval | model, 3D seats; plays in a match (exported for the game by tools/grounds/adelaide) | #1856 |
 | Optus Stadium | model, roof, seats | #1867 #1880; background scene open #1897 |
 | SCG | model | #1909 |
 | GMHBA Stadium | exterior model | #1903; open: roof #1899, background scene #1878 |
@@ -260,7 +260,7 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 | Mars Stadium | model built, not yet pushed (local worktree, 2026-11-20) | |
 | Accor Stadium | model built, not yet pushed (local worktree, 2026-11-20) | |
 | Marrara Oval (TIO Darwin) | under way, not yet pushed (site data and roof scripts, 2026-11-19) | |
-| The Gabba | under way, not yet pushed (2026-11-19) | |
+| The Gabba | model, 3D seats; plays in a match (built 2026-11-19/20 on a branch that never merged; brought in from the PC) | |
 | Barossa Park, Traeger Park, Sky Stadium, Jiangwan Stadium, Hands Oval, Blacktown, Summit Park, Macquarie Point | to confirm: no work found in the repo or its local worktrees | |
 
 Machine pre-inspection of the 30 match grounds, before the director's fly-through (2026-11-21, #1950):

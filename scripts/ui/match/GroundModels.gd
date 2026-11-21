@@ -8,6 +8,7 @@ extends RefCounted
 ## is split under GitHub's 50 MB, plus optionally its seats drawn as one seat many times
 ## (MultiMesh): seat_tmpl.bin (or seat_tmpl_<colour>.bin for that colour) is the seat as float32
 ## triangles, seats_<colour>.bin a row-major 3x4 transform per seat, in the model's own metres.
+## Seat legs drawn the same way (leg_tmpl.bin, legs_<colour>.bin) are part of the stand: nobody sits on them.
 
 const DIR := "res://assets/grounds/"
 ## The match's boundary fence: half its length and width (Oval3D: the playing surface plus FENCE).
@@ -32,7 +33,7 @@ const GROUNDS := {
 	"Riverway Stadium": "riverway", "Barossa Park": "barossa", "Sky Stadium": "sky",
 	"Jiangwan Stadium": "jiangwan", "Hands Oval": "hands",
 	"Blacktown International Sportspark": "blacktown", "Summit Park": "summit",
-	"Macquarie Point Stadium": "macpoint",
+	"Macquarie Point Stadium": "macpoint", "Adelaide Oval": "adelaide", "The Gabba": "gabba",
 }
 
 ## Each model's boundary fence, measured off the model (tools/grounds/fit_fence.py: an ellipse
@@ -75,7 +76,15 @@ const FIT := {
 	"blacktown": [0.0, 0.0, 0.0, 79.9, 86.29, 72.12],
 	"summit": [-1.9, 0.75, 0.0, -83.5, 86.34, 76.17],
 	"macpoint": [0.0, 0.0, 0.0, 35.0, 85.0, 72.0],
+	# Adelaide Oval's model (#1856) exported for the game by tools/grounds/adelaide/export.py, and the
+	# Gabba's model (tools/grounds/gabba), measured the same way.
+	"adelaide": [-0.4, 1.37, 0.0, -102.0, 91.36, 65.7],
+	"gabba": [2.47, 3.47, 0.0, 175.0, 86.88, 73.71],
 }
+
+## Models that carry their colours on the vertices (glTF COLOR_0) under a tiling detail texture.
+## Godot's glTF reader keeps the colours but does not paint with them, so the loader turns that on.
+const VERTEX_COLOURED := ["adelaide"]
 
 ## Each seat colour as the model paints it (the mean of its seat texture; sRGB).
 const SEAT_COLOURS := {
@@ -101,6 +110,14 @@ const SEAT_COLOURS := {
 	"seat_barossa": Color(0.197, 0.212, 0.235), "seat_hands": Color(0.151, 0.319, 0.502),
 	"seat_sky_gold": Color(0.778, 0.609, 0.197), "seat_sky_grey": Color(0.266, 0.281, 0.304),
 	"seat_bt": Color(0.135, 0.197, 0.349), "seat_mp": Color(0.219, 0.25, 0.296),
+	# Adelaide Oval's stand colours, as its model paints them (tools/grounds/adelaide/export.py).
+	"seat_ao_navy": Color8(35, 55, 77), "seat_ao_charcoal": Color8(70, 70, 75),
+	"seat_ao_slate": Color8(95, 105, 118), "seat_ao_sage": Color8(95, 118, 112),
+	"seat_ao_red": Color8(150, 45, 50), "seat_ao_orange": Color8(200, 62, 36),
+	# The Gabba's seat mix (tools/grounds/gabba/mktex_hand.py, from photo g49) and its steel seat legs.
+	"seat_gabba_gold": Color8(226, 168, 30), "seat_gabba_orange": Color8(222, 120, 34),
+	"seat_gabba_white": Color8(236, 236, 230), "seat_gabba_blue": Color8(34, 64, 152),
+	"gabba_steel": Color(0.45, 0.46, 0.47),
 }
 
 
@@ -181,6 +198,8 @@ static func instantiate(slug: String, base := "") -> Node3D:
 	for path in files(slug, dir):
 		var model := load_glb(path)
 		if model != null:
+			if slug in VERTEX_COLOURED:
+				_paint_vertex_colours(model)
 			root.add_child(model)
 	slice_big_meshes(root)
 	var fit: Array = FIT.get(slug, [0.0, 0.0])
@@ -355,33 +374,55 @@ static func _add_seats(root: Node3D, dir: String, mid: Vector2) -> void:
 			seat = _seat_mesh(dir + "seat_tmpl_%s.bin" % colour)
 		if seat == null:
 			continue
-		var buf := FileAccess.get_file_as_bytes(dir + f).to_float32_array()
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = SEAT_COLOURS.get(colour, Color.GRAY)
-		# A seat drawn as one open sheet (the ground kit's moulded shell, wound the other way to
-		# Godot's front face) is seen from both sides; a closed seat keeps back faces culled.
-		if _is_sheet(seat):
-			mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-		# One batch a slice of the bowl (SEAT_SECTORS round it, by the seat's bearing from the
-		# middle), so the camera draws only the slices in its view, not every seat in the ground.
-		var per := []
-		for i in range(SEAT_SECTORS):
-			per.append(PackedFloat32Array())
-		for i in range(0, buf.size() - 11, 12):
-			var th := fposmod(atan2(buf[i + 11] - mid.y, buf[i + 3] - mid.x), TAU)
-			var k := int(th / TAU * SEAT_SECTORS) % SEAT_SECTORS
-			per[k].append_array(buf.slice(i, i + 12))
-		for k in range(SEAT_SECTORS):
-			if per[k].is_empty():
-				continue
-			var mm := MultiMesh.new()
-			mm.transform_format = MultiMesh.TRANSFORM_3D
-			mm.mesh = seat
-			mm.instance_count = per[k].size() / 12
-			mm.buffer = per[k]
-			var mi := MultiMeshInstance3D.new()
-			mi.name = "%s_%d" % [f.get_basename(), k]
-			mi.multimesh = mm
-			mi.material_override = mat
-			mi.set_meta("seats", true)
-			root.add_child(mi)
+		_instances(root, seat, dir + f, colour, mid)
+	if FileAccess.file_exists(dir + "leg_tmpl.bin"):
+		var leg := _seat_mesh(dir + "leg_tmpl.bin")
+		for f in DirAccess.get_files_at(dir):
+			if f.begins_with("legs_") and f.ends_with(".bin"):
+				_instances(root, leg, dir + f, f.get_basename().trim_prefix("legs_"), mid)
+
+
+## Batches of `mesh` at every transform in the .bin at `path`, flat in SEAT_COLOURS[colour], added
+## to `root`: one batch a slice of the bowl (SEAT_SECTORS round it, by bearing from `mid`), so the
+## camera draws only the slices in its view, not every seat in the ground.
+static func _instances(root: Node3D, mesh: Mesh, path: String, colour: String, mid: Vector2) -> void:
+	var buf := FileAccess.get_file_as_bytes(path).to_float32_array()
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = SEAT_COLOURS.get(colour, Color.GRAY)
+	# A seat drawn as one open sheet (the ground kit's moulded shell, wound the other way to
+	# Godot's front face) is seen from both sides; a closed seat keeps back faces culled.
+	if _is_sheet(mesh):
+		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var per := []
+	for i in range(SEAT_SECTORS):
+		per.append(PackedFloat32Array())
+	for i in range(0, buf.size() - 11, 12):
+		var th := fposmod(atan2(buf[i + 11] - mid.y, buf[i + 3] - mid.x), TAU)
+		var k := int(th / TAU * SEAT_SECTORS) % SEAT_SECTORS
+		per[k].append_array(buf.slice(i, i + 12))
+	for k in range(SEAT_SECTORS):
+		if per[k].is_empty():
+			continue
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = mesh
+		mm.instance_count = per[k].size() / 12
+		mm.buffer = per[k]
+		var mi := MultiMeshInstance3D.new()
+		mi.name = "%s_%d" % [path.get_file().get_basename(), k]
+		mi.multimesh = mm
+		mi.material_override = mat
+		mi.set_meta("seats", true)
+		root.add_child(mi)
+
+
+## Every material on `model` paints with its vertex colours (linear, as glTF stores them).
+static func _paint_vertex_colours(model: Node) -> void:
+	for mi in model.find_children("*", "MeshInstance3D", true, false):
+		var mesh: Mesh = (mi as MeshInstance3D).mesh
+		if mesh == null:
+			continue
+		for i in mesh.get_surface_count():
+			var mat := mesh.surface_get_material(i) as BaseMaterial3D
+			if mat != null:
+				mat.vertex_color_use_as_albedo = true
