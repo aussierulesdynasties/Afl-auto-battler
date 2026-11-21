@@ -55,11 +55,11 @@ static func crowd(ground: String, home: String, away: String, slot: String, labe
 	lv += float((d.get("away", {}) as Dictionary).get(away, 0.0))
 	var st := str((d.get("state", {}) as Dictionary).get(ground, ""))
 	var cs: Dictionary = d.get("club_state", {})
-	var hs := str(cs.get(home, "VIC")) == st
-	var as_ := str(cs.get(away, "VIC")) == st
-	if hs and as_:
+	var home_local := str(cs.get(home, "VIC")) == st
+	var away_local := str(cs.get(away, "VIC")) == st
+	if home_local and away_local:
 		lv += float(d.get("derby", 0.0))
-	elif not hs and not as_:
+	elif not home_local and not away_local:
 		lv += float(d.get("neutral", 0.0))
 	lv += float((d.get("slot", {}) as Dictionary).get(slot, 0.0))
 	for week: String in (d.get("finals", {}) as Dictionary):
