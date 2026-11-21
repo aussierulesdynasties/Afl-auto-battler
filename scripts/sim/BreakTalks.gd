@@ -108,10 +108,10 @@ static func gate_texts(kind: String, e: int, who := "") -> Array:
 	var down := absi(size_pct(kind, "backfire"))
 	if kind == "speech":
 		return ["%s odds we lift for the quarter\nThe lift: %s to %s on all of us" % [_pc(up), lo, hi],
-				"%s odds it backfires\nThen we all play %d%% below ourselves" % [_pc(float(o["backfire"])), down]]
+				"%s odds it backfires\nOur whole side then plays %d%% below itself" % [_pc(float(o["backfire"])), down]]
 	var name := who if who != "" else "He"
 	return ["%s odds %s lifts for the quarter\nThe lift: %s to %s on his game" % [_pc(up), name, lo, hi],
-			"%s odds it backfires\nThen %s plays %d%% below himself" % [_pc(float(o["backfire"])), name, down]]
+			"%s odds it backfires\nHe then plays %d%% below himself" % [_pc(float(o["backfire"])), down]]
 
 
 ## Where the edge comes from, in words: "Edge +2: his opinion of you, 76 out of 100".
