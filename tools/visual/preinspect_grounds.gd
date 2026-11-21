@@ -229,9 +229,17 @@ func _measure(slug: String, ground: Node3D) -> Dictionary:
 	var buried := []
 	var in_fence := []
 	var n := 0
+	# Probe under the middle of the seat's pan, not at its origin (a kit seat's origin is the back
+	# edge of its tread, right on the riser, where a ray slips down the crack).
+	var mid := Vector3.ZERO
+	var pts := GroundModels.seat_points(slug)
+	for q in pts:
+		mid += q
+	mid = mid / maxf(1.0, pts.size())
+	mid.y = 0.0
 	for i in range(0, seats.size(), step):
 		var t: Transform3D = ground.global_transform * seats[i]
-		var p := t.origin
+		var p := t * mid
 		n += 1
 		if _inside(p):
 			in_fence.append([snappedf(p.x, 0.1), snappedf(p.y, 0.1), snappedf(p.z, 0.1)])
