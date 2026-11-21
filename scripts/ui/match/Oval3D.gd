@@ -93,7 +93,7 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 	_ground()
 	_posts()
 	if GROUND_MODELS.has(ground):
-		_ground_model(str(GROUND_MODELS[ground]), home, away)
+		_ground_model(str(GROUND_MODELS[ground]), "", home, away)
 	else:
 		_stands(home, away)
 	var scene: PackedScene = load(player_glb)
@@ -462,17 +462,22 @@ func _stands(home: String, away: String) -> void:
 
 ## A real ground's model in place of the stand, its crowd and the fence: the bowl, roof and
 ## towers from <dir>.glb, and the seats drawn as one seat many times (MultiMesh): seat_tmpl.bin
-## is the seat (36 triangles), seats_<colour>.bin a row-major 3x4 transform per seat. The
-## crowd sits on those seats (Oval3DCrowd.build_on_seats; the director chose "Seat the crowd in
-## the MCG", 2026-11-20, in place of the empty seats of 2026-11-19).
-func _ground_model(dir: String, home: String, away: String) -> void:
-	var base := "res://assets/grounds/%s/" % dir
+## is the seat (36 triangles), seats_<colour>.bin a row-major 3x4 transform per seat. With home
+## and away given, the crowd sits on those seats (Oval3DCrowd.build_on_seats; the director chose
+## "Seat the crowd in the MCG", 2026-11-20, in place of the empty seats of 2026-11-19); without
+## them the seats stay empty.
+## base is the folder holding <dir>.glb and its seat files; "" is the game's own copy. The ground
+## inspector (tools/inspect) passes a folder on disk to show a copy that is not in the game yet.
+func _ground_model(dir: String, base := "", home := "", away := "") -> void:
+	if base == "":
+		base = "res://assets/grounds/%s/" % dir
 	var root := Node3D.new()
 	root.name = "Ground"
 	root.position = GROUND_SHIFT.get(dir, Vector3.ZERO)
 	add_child(root)
-	var scene: PackedScene = load(base + dir + ".glb")
-	root.add_child(scene.instantiate())
+	var model := load_glb(base + dir + ".glb")
+	if model != null:
+		root.add_child(model)
 	var tmpl := FileAccess.get_file_as_bytes(base + "seat_tmpl.bin").to_float32_array()
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -501,6 +506,8 @@ func _ground_model(dir: String, home: String, away: String) -> void:
 		mat.albedo_color = SEAT_COLOURS.get(f.get_basename().trim_prefix("seats_"), Color.GRAY)
 		mi.material_override = mat
 		root.add_child(mi)
+	if home == "":
+		return
 	var pts := PackedVector3Array()
 	for i in range(0, tmpl.size(), 3):
 		pts.append(Vector3(tmpl[i], tmpl[i + 1], tmpl[i + 2]))
@@ -508,6 +515,19 @@ func _ground_model(dir: String, home: String, away: String) -> void:
 	crowd.name = "Crowd"
 	root.add_child(crowd)
 	crowd.build_on_seats(seats, pts, GameDB.club_colours(home), GameDB.club_colours(away))
+
+
+## A .glb as a node: the imported copy for a file in the game, read straight off disk otherwise
+## (a model under .claude/ or a worktree, which Godot never imports). null if it cannot be read.
+static func load_glb(path: String) -> Node3D:
+	if path.begins_with("res://") and ResourceLoader.exists(path):
+		var scene: PackedScene = load(path)
+		return scene.instantiate()
+	var doc := GLTFDocument.new()
+	var state := GLTFState.new()
+	if doc.append_from_file(ProjectSettings.globalize_path(path), state) != OK:
+		return null
+	return doc.generate_scene(state) as Node3D
 
 
 ## Each seat colour as the model paints it (the mean of its seat texture).
