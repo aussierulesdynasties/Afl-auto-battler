@@ -66,6 +66,20 @@ var _ball_box := Rect2()
 ## metres: the shot backs off until the stand fills the top (StoppageVignette._solve), which a
 ## phone's picture needed up to about 38 m for (decision_scenes, 2026-11-16).
 const LOOK_ROOM := 35.0
+## A duel or a hot hand's scene stands no nearer the goal line than this (metres, the goal
+## square's depth): from inside the square the only camera with room looks at the goals,
+## with nobody behind the men and no ground for the umpire (#1638: a forward 2 m out left
+## the phone's picture with no umpire and no players).
+const DUEL_DEEP := 9.0
+
+
+## Where a duel or a hot hand's scene stands for a man the live oval has at `p`: there,
+## kept inside the boundary and out of the goal square (DUEL_DEEP).
+static func stage_spot(p: Vector2) -> Vector2:
+	var here := VignetteExtras.keep_in(p)
+	var deep := VignetteGround.GOAL_Y - DUEL_DEEP
+	here.y = clampf(here.y, -deep, deep)
+	return here
 
 
 static func has_scene(k: String) -> bool:
@@ -115,7 +129,7 @@ func setup_decision(sim: MatchSim, my_side: int, moment: Dictionary, shown := {}
 	# interchange gate, wherever he was; the set shot stands where the call says he marked.
 	var about := str(moment.get("player_id", ""))
 	if kind in ["duel", "hot"] and live_spots.has(about):
-		var here: Vector2 = VignetteExtras.keep_in(live_spots[about])
+		var here: Vector2 = stage_spot(live_spots[about])
 		var others := []
 		for id in live_spots:
 			if str(id) != about:
@@ -129,7 +143,7 @@ func setup_decision(sim: MatchSim, my_side: int, moment: Dictionary, shown := {}
 	# 14 m up he stood 2.6 m from it and was left off the ground (decision_scenes, 2026-11-16).
 	var near_umpire := Vector2(7.0, 6.0)
 	if kind != "tired":
-		near_umpire = _to_scene.affine_inverse() * Vector2(-2.0, 22.0) - focus
+		near_umpire = _umpire_behind(focus)
 	match kind:
 		"tired":
 			# He walks in off the wing, out on his feet; his replacement is up off the bench,
@@ -393,6 +407,18 @@ func _named() -> Array:
 ## The cast watch the men the call is about.
 func _cast_focus() -> Vector2:
 	return Vector2(0.0, 0.5)
+
+
+## The field umpire's spot behind the men (from the focus, oval metres): 22 m up the
+## picture, or, when that is past the goal line (a camera looking at the goals), as far up
+## as the ground goes.
+func _umpire_behind(focus: Vector2) -> Vector2:
+	var back := _to_scene.affine_inverse()
+	for up in [22.0, 18.0, 14.0, 10.0, 8.0]:
+		var p: Vector2 = back * Vector2(-2.0, up)
+		if VignetteExtras.has_room(p, Vector2.UP, 0.0):
+			return p - focus
+	return back * Vector2(-2.0, 22.0) - focus
 
 
 ## The cast keep off the scene's own ground: the few metres round its men, and at a set
