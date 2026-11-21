@@ -208,7 +208,7 @@ In the order the asset plan sets: the action layer and the proof passage (TODO r
 full-match coverage, then the phone check at that milestone, then the 3D scenes that replace the
 vignettes. Nothing in step 4 starts before the football proof has passed and the asset plan exists.
 
-## Status (as of 2026-11-20)
+## Status (as of 2026-11-21)
 
 _Update this section whenever 3D work merges. It is the one place 3D progress is tracked; TODO.md rows hold the detail._
 
@@ -217,7 +217,7 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 | Freeze (no new player art, no one-incident patches) | | in force since 2026-11-16 | lifts when steps 2 and 3 are done |
 | 1. Football proof | 201 | harness built (#1695), spec checked (2.86), gap list of 14 written | fix the systems on the gap list; none fixed yet |
 | 2a. Light, tone, weather, skies | 202 | chosen and built (2.80-2.84, #1693 #1694 #1696 #1701); film look over the picture (2.112, #1839) | phone costing once the foundation is together |
-| 2b. The 37 grounds | 202 | 23 of 37 have a model merged, 2 more in open PRs, 4 under way locally (table below) | land Victoria Park, Riverway, Mars and Accor; confirm the other 8; background scenes (#1878 #1892 #1897) |
+| 2b. The 37 grounds | 202 | 32 have a model that plays in a match; Mars, Accor, Traeger, TIO and Victoria Park in open PRs; background scenes built for 11 grounds, none in a match yet (full list: [3D_INVENTORY.md](3D_INVENTORY.md)) | land the open PRs; wire background scenes into matches |
 | 2c. Crowd | 202 | chosen: 3D people within 55 m, cards beyond (2.92), built; seated on the MCG model's own seats (he chose "Seat the crowd in the MCG", 2026-11-20, #1929) | measure its cost on a phone; each other ground gets it once it loads in a match |
 | 2d. Players' look | 202 | body: MetaHuman (2.85, 2.89); builds by height and weight (2.97, 2.98); faces ruled (2.99) | the Tripo heads (director generates) and the features for everyone else |
 | 2e. Cameras | 202 | main camera, goal replay, set shots, ball-up close-ups, tap to skip, TV framing, picture layout, stat bars, score bug all ruled and built (2.93-2.111, #1818); after a mark it stays on the main camera (2.113) | the other cameras and cuts in play (free kicks, tackles, injuries) |
@@ -236,10 +236,10 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 | MCG | model, instanced seats | #1843 |
 | Marvel Stadium | model | #1911 |
 | Adelaide Oval | model, 3D seats; plays in a match (exported for the game by tools/grounds/adelaide) | #1856 |
-| Optus Stadium | model, roof, seats | #1867 #1880; background scene open #1897 |
+| Optus Stadium | model, roof, seats; background scene (not in a match) | #1867 #1880 #1897 |
 | SCG | model | #1909 |
-| GMHBA Stadium | exterior model | #1903; open: roof #1899, background scene #1878 |
-| People First Stadium | model, roof | #1853 #1860 #1868 #1889; background scene open #1892 |
+| GMHBA Stadium | exterior model; background scene (not in a match) | #1903 #1878; open: Selwood Stand roof #1924 |
+| People First Stadium | model, roof; background scene (not in a match) | #1853 #1860 #1868 #1889 #1892 |
 | ENGIE Stadium | texture pass | #1866 |
 | Bellerive Oval | model | #1900 |
 | Manuka Oval | model | #1865 |
@@ -257,12 +257,13 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 | Cazaly's Stadium | model, textures | #1891; open: west building #1898 |
 | North Hobart Oval | 1991-92 model | #1854 |
 | Bruce Stadium | model, 3D seats | #1848 |
-| Riverway Stadium | model open | #1896 |
-| Mars Stadium | model built, not yet pushed (local worktree, 2026-11-20) | |
-| Accor Stadium | model built, not yet pushed (local worktree, 2026-11-20) | |
-| Marrara Oval (TIO Darwin) | under way, not yet pushed (site data and roof scripts, 2026-11-19) | |
+| Riverway Stadium | model | #1896 |
+| Mars Stadium | model open | #1920 |
+| Accor Stadium | model open | #1921 |
+| Marrara Oval (TIO Darwin) | model open | #1918 |
+| Traeger Park | model open | #1919 |
 | The Gabba | model, 3D seats; plays in a match (built 2026-11-19/20 on a branch that never merged; brought in from the PC) | |
-| Barossa Park, Traeger Park, Sky Stadium, Jiangwan Stadium, Hands Oval, Blacktown, Summit Park, Macquarie Point | to confirm: no work found in the repo or its local worktrees | |
+| Barossa Park, Sky Stadium, Jiangwan Stadium, Hands Oval, Blacktown, Summit Park, Macquarie Point | model; plays in a match (`tools/grounds/<g>/model`) | |
 
 Machine pre-inspection of the 30 match grounds, before the director's fly-through (2026-11-21, #1950):
 [3D_PREINSPECTION.md](3D_PREINSPECTION.md). Its fixes are in; its open faults are listed there.
