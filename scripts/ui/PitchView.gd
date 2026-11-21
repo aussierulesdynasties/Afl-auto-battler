@@ -664,13 +664,20 @@ func _draw_sting() -> void:
 				Vector2(x + stripe - slant, h), Vector2(x - stripe - slant, h)]), edge)
 	draw_colored_polygon(band, body)
 	if _tv.replaying == (p >= 0.5):
-		# Going in (live before the cut, the replay after): the word rides the band.
-		var fs := UiKit.px(UiKit.RATING)
+		# Going in (live before the cut, the replay after): the word drifts across the middle
+		# of the picture, more slowly than the band, and shows while the band is behind it.
+		var fs := UiKit.px(UiKit.H1 * 2)
 		var word := "REPLAY"
 		var tw := UiKit.DISPLAY.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-		var ink := Color.BLACK if body.get_luminance() > 0.55 else Color.WHITE
-		draw_string(UiKit.DISPLAY, Vector2(c - tw * 0.5, h * 0.5 + fs * 0.36), word,
-				HORIZONTAL_ALIGNMENT_LEFT, -1, fs, ink)
+		var x := lerpf(w * 0.42, w * 0.58, p) - tw * 0.5
+		var y := h * 0.5
+		var inside := true
+		for corner in [Vector2(x, y - fs * 0.6), Vector2(x + tw, y - fs * 0.6), Vector2(x, y + fs * 0.2),
+				Vector2(x + tw, y + fs * 0.2)]:
+			inside = inside and Geometry2D.is_point_in_polygon(corner, band)
+		if inside:
+			var ink := Color.BLACK if body.get_luminance() > 0.55 else Color.WHITE
+			draw_string(UiKit.DISPLAY, Vector2(x, y + fs * 0.36), word, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, ink)
 
 
 # ---------------------------------------------------------------------------
