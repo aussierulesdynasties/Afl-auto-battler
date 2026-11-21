@@ -113,10 +113,10 @@ const MATERIAL_FIX := {
 	# that catches low sun (tools/grounds/optus/bronze.py draws them).
 	"optus": {
 		"roof": {"metallic": 0.0, "roughness": 0.95, "albedo_color": Color(0.97, 0.96, 0.93)},
-		"bronze": {"metallic": 0.3, "roughness": 0.45},
-		"sign_a": {"metallic": 0.3, "roughness": 0.45},
+		"bronze": {"metallic": 0.12, "roughness": 0.55},
+		"sign_a": {"metallic": 0.12, "roughness": 0.55},
 		# The glass storeys read mid grey-green from outside in daylight, not sky blue.
-		"glass": {"albedo_color": Color(0.66, 0.72, 0.7), "metallic": 0.1, "roughness": 0.3},
+		"glass": {"metallic": 0.1, "roughness": 0.3},
 	},
 }
 
