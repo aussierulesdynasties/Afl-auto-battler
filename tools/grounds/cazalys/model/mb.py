@@ -21,7 +21,7 @@ def mat(name):
     o = SPECIAL.get(name, {})
     b.inputs['Roughness'].default_value = o.get('rough', 0.85)
     b.inputs['Metallic'].default_value = o.get('metal', 0.0)
-    if name in ('pickets', 'mesh'):
+    if name in ('pickets', 'mesh', 'palm_frond', 'sign_cafl', 'sign_clublogo', 'sign_clublogo2'):
         nt.links.new(t.outputs['Alpha'], b.inputs['Alpha'])
         for attr, val in (('blend_method', 'CLIP'), ('surface_render_method', 'DITHERED')):
             try:
@@ -103,14 +103,15 @@ class MB:
         poly = [(c[0] + r * math.cos(2 * math.pi * k / n), c[1] + r * math.sin(2 * math.pi * k / n)) for k in range(n)]
         s.prism(poly, z0, z1, m, top=top)
 
-    def beam(s, p, q, w, h, m):  # rectangular member from 3D p to q
+    def beam(s, p, q, w, h, m, tube=False):  # rectangular member from 3D p to q (tube: 12-sided round post)
         p = np.array(p, float); q = np.array(q, float); d = q - p; d /= np.linalg.norm(d)
         a = np.cross(d, [0, 0, 1.0])
         a = a / np.linalg.norm(a) if np.linalg.norm(a) > 1e-6 else np.array([1.0, 0, 0])
         b = np.cross(a, d); cs = [(-1, -1), (1, -1), (1, 1), (-1, 1)]
+        if tube: cs = [(math.cos(2 * math.pi * k / 12) * 1.0, math.sin(2 * math.pi * k / 12) * 1.0) for k in range(12)]
         P = [p + a * x * w / 2 + b * y * h / 2 for x, y in cs]; Q = [q + a * x * w / 2 + b * y * h / 2 for x, y in cs]
-        for i in range(4):
-            j = (i + 1) % 4; s.face([P[i], P[j], Q[j], Q[i]], m)
+        for i in range(len(cs)):
+            j = (i + 1) % len(cs); s.face([P[i], P[j], Q[j], Q[i]], m)
         s.face(P[::-1], m); s.face(Q, m)
 
     def build(s, col=None):
@@ -141,6 +142,7 @@ class MB:
             import bmesh
             bm = bmesh.new(); bm.from_mesh(me); bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-4); bm.to_mesh(me); bm.free()
             for poly in me.polygons: poly.use_smooth = True
+            if getattr(s, 'sharp', None): me.set_sharp_from_angle(angle=math.radians(s.sharp))   # curved fascias: smooth along the curve, hard at corners
         ob = bpy.data.objects.new(s.name, me)
         (col or bpy.context.scene.collection).objects.link(ob)
         return ob
