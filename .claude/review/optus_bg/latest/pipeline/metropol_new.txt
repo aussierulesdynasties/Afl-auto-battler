@@ -1,0 +1,17 @@
+    # Crown Metropol (#1294, OSM 52 m): the curved white hotel with stepped balconies. p5 (seen from the NW) shows
+    # its east end rising as a ~45 deg terraced slope to a flat top, the west arm full height, its far end one step down.
+    i_m = find(446, -1092, 52, r=12); drop.add(i_m); Q = [tuple(p) for p in BL[i_m]['p']]
+    def clipx(poly, x0, keep_le):
+        out = []
+        for a, b in zip(poly, poly[1:] + poly[:1]):
+            ia = (a[0] <= x0) if keep_le else (a[0] >= x0); ib = (b[0] <= x0) if keep_le else (b[0] >= x0)
+            if ia: out.append(a)
+            if ia != ib: t = (x0 - a[0]) / (b[0] - a[0]); out.append((x0, a[1] + t * (b[1] - a[1])))
+        return out
+    xe, xw = max(p[0] for p in Q), min(p[0] for p in Q)
+    zb = gz(Q); FH = 3.45; NF = int(round(52.0 / FH)); ztop = zb
+    for k in range(NF):
+        P = clipx(Q, xe - k * FH, True); P = clipx(P, xw + max(0, k - (NF - 3)) * 8.0, False)
+        if len(P) < 3: break
+        P = ccw(P); wall_ring('metropol', P, zb + k * FH, zb + (k + 1) * FH, v_off=zb); cap('white', P, zb + (k + 1) * FH); ztop = zb + (k + 1) * FH
+    ax = np.array([1.0, 0.0])

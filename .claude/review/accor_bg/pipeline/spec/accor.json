@@ -1,0 +1,421 @@
+{
+ "name": "accor",
+ "lat": -33.847086,
+ "lon": 151.0634,
+ "seed": 11,
+ "clear_r_m": 170,
+ "near_half_m": 1500,
+ "near_step_m": 7.5,
+ "far_half_m": 30000,
+ "far_step_m": 250,
+ "ground_m_per_px": 1.5,
+ "tree_r_m": 1500,
+ "street_trees": 12,
+ "rivers_dry": false,
+ "glb": "ground/accor.glb",
+ "palette": {
+  "ground_default": [
+   132,
+   140,
+   100
+  ],
+  "spinifex": [
+   78,
+   112,
+   60
+  ],
+  "lawn": [
+   100,
+   138,
+   70
+  ],
+  "yard": [
+   118,
+   138,
+   88
+  ],
+  "rock": [
+   120,
+   116,
+   108
+  ],
+  "sand": [
+   214,
+   200,
+   166
+  ],
+  "water": [
+   62,
+   92,
+   96
+  ],
+  "road": [
+   78,
+   80,
+   80
+  ],
+  "path": [
+   196,
+   190,
+   176
+  ],
+  "ballast": [
+   128,
+   118,
+   104
+  ],
+  "paved": [
+   129,
+   112,
+   104
+  ],
+  "parking": [
+   96,
+   96,
+   94
+  ],
+  "walls_house": [
+   [
+    224,
+    214,
+    196
+   ],
+   [
+    198,
+    170,
+    140
+   ],
+   [
+    176,
+    120,
+    96
+   ],
+   [
+    226,
+    222,
+    212
+   ]
+  ],
+  "walls_block": [
+   [
+    232,
+    230,
+    222
+   ],
+   [
+    204,
+    198,
+    184
+   ],
+   [
+    184,
+    190,
+    196
+   ],
+   [
+    214,
+    206,
+    190
+   ]
+  ],
+  "walls_tower": [
+   [
+    226,
+    228,
+    226
+   ],
+   [
+    150,
+    176,
+    190
+   ],
+   [
+    96,
+    124,
+    140
+   ],
+   [
+    206,
+    200,
+    188
+   ]
+  ],
+  "roofs_house": [
+   [
+    150,
+    86,
+    66
+   ],
+   [
+    96,
+    100,
+    104
+   ],
+   [
+    196,
+    196,
+    190
+   ],
+   [
+    128,
+    74,
+    58
+   ],
+   [
+    70,
+    76,
+    84
+   ]
+  ],
+  "roofs_flat": [
+   [
+    222,
+    224,
+    220
+   ],
+   [
+    176,
+    178,
+    176
+   ],
+   [
+    150,
+    152,
+    150
+   ]
+  ],
+  "far_flat": [
+   112,
+   134,
+   92
+  ],
+  "far_veg": [
+   70,
+   96,
+   62
+  ],
+  "far_steep": [
+   60,
+   88,
+   56
+  ],
+  "haze": [
+   194,
+   204,
+   214
+  ],
+  "sky_top": [
+   64,
+   124,
+   192
+  ],
+  "sky_hor": [
+   196,
+   212,
+   226
+  ],
+  "track": [
+   70,
+   64,
+   60
+  ],
+  "paved_pavers": [
+   129,
+   112,
+   104
+  ],
+  "tower_steel": [
+   176,
+   188,
+   198
+  ]
+ },
+ "cover": [
+  [
+   "landuse",
+   "residential",
+   "yard"
+  ],
+  [
+   "landuse",
+   "commercial|retail|industrial|construction",
+   "paved"
+  ],
+  [
+   "landuse",
+   "railway",
+   "ballast"
+  ],
+  [
+   "amenity",
+   "parking",
+   "parking"
+  ],
+  [
+   "leisure",
+   "park|pitch|golf_course|garden|recreation_ground|common",
+   "lawn"
+  ],
+  [
+   "landuse",
+   "grass|recreation_ground|cemetery",
+   "lawn"
+  ],
+  [
+   "natural",
+   "wood|scrub",
+   "spinifex"
+  ],
+  [
+   "natural",
+   "water",
+   "water"
+  ],
+  [
+   "leisure",
+   "pitch",
+   "lawn"
+  ],
+  [
+   "natural",
+   "wetland",
+   "spinifex"
+  ],
+  [
+   "leisure",
+   "golf_course",
+   "lawn"
+  ],
+  [
+   "landuse",
+   "island_fill",
+   "yard"
+  ]
+ ],
+ "tree_fill": [
+  [
+   "leisure",
+   "park|garden|common",
+   420
+  ],
+  [
+   "landuse",
+   "grass",
+   800
+  ],
+  [
+   "natural",
+   "wood",
+   60
+  ],
+  [
+   "landuse",
+   "residential",
+   1700
+  ],
+  [
+   "leisure",
+   "pitch",
+   0
+  ],
+  [
+   "leisure",
+   "stadium",
+   0
+  ]
+ ],
+ "tree_kinds": [
+  "red_gum",
+  "paperbark",
+  "ghost_gum"
+ ],
+ "levels_default": {
+  "*": 5,
+  "house": 4.5,
+  "residential": 4.5,
+  "detached": 4.5,
+  "terrace": 7,
+  "semidetached_house": 6,
+  "apartments": 24,
+  "commercial": 8,
+  "office": 30,
+  "retail": 7,
+  "industrial": 8,
+  "warehouse": 9,
+  "school": 7,
+  "university": 14,
+  "hospital": 20,
+  "stadium": 40,
+  "train_station": 10,
+  "hotel": 40
+ },
+ "haze_m": 18000,
+ "road_mesh": true,
+ "paint_poly": [
+  [
+   "paved",
+   [
+    [
+     -185.7,
+     500.0
+    ],
+    [
+     0.0,
+     500.0
+    ],
+    [
+     257.1,
+     -0.0
+    ],
+    [
+     300.0,
+     -64.3
+    ],
+    [
+     -100.0,
+     -242.9
+    ],
+    [
+     -171.4,
+     -128.6
+    ],
+    [
+     -178.6,
+     7.1
+    ],
+    [
+     -142.9,
+     100.0
+    ],
+    [
+     -78.6,
+     185.7
+    ],
+    [
+     -14.3,
+     264.3
+    ],
+    [
+     -14.3,
+     350.0
+    ],
+    [
+     -57.1,
+     407.1
+    ],
+    [
+     -185.7,
+     421.4
+    ]
+   ]
+  ]
+ ],
+ "extra_py": [
+  "accor_towers.py",
+  "accor_landmarks.py",
+  "accor_halls.py",
+  "accor_annex.py"
+ ],
+ "pave_tile_m": 40.0,
+ "pave_rot_deg": -52.5
+}

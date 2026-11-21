@@ -1,0 +1,55 @@
+17:10:05 - tripo_addon - [task.py:21] - INFO - WebSocket server started on port 60600
+17:10:05 - tripo_addon - [ws_server.py:202] - WARNING - Port 60600 in use; will retry every 3.0s
+00:03.344  blend            | Read blend: "D:\Temp\claude\b5e56bf702cd3703\4ee81fc3-6cf4-400f-9ad6-28a5df4e19ee\scratchpad\proto\out\mcg\scene.blend"
+D:\Temp\claude\b5e56bf702cd3703\4ee81fc3-6cf4-400f-9ad6-28a5df4e19ee\scratchpad\proto\render.py:29: DeprecationWarning: 'World.use_nodes' is expected to be removed in Blender 6.0
+  world = bpy.data.worlds.new("sky"); sc.world = world; world.use_nodes = True
+00:07.406  render           | Saved: 'D:\Temp\claude\b5e56bf702cd3703\4ee81fc3-6cf4-400f-9ad6-28a5df4e19ee\scratchpad\proto\out\mcg\chk\orbit_030.png'
+00:08.469  render           | Saved: 'D:\Temp\claude\b5e56bf702cd3703\4ee81fc3-6cf4-400f-9ad6-28a5df4e19ee\scratchpad\proto\out\mcg\chk\orbit_060.png'
+00:09.469  render           | Saved: 'D:\Temp\claude\b5e56bf702cd3703\4ee81fc3-6cf4-400f-9ad6-28a5df4e19ee\scratchpad\proto\out\mcg\chk\orbit_090.png'
+00:10.219  render           | Saved: 'D:\Temp\claude\b5e56bf702cd3703\4ee81fc3-6cf4-400f-9ad6-28a5df4e19ee\scratchpad\proto\out\mcg\chk\orbit_120.png'
+00:11.250  render           | Saved: 'D:\Temp\claude\b5e56bf702cd3703\4ee81fc3-6cf4-400f-9ad6-28a5df4e19ee\scratchpad\proto\out\mcg\chk\orbit_180.png'
+[INFO ] services.locationservice ...............: Not adding link to MakeHuman user data, since neither explicit path nor auto-discovery is set in preferences.
+[INFO ] mpfb.init ..............................: Build info 20260722
+[INFO ] mpfb.init ..............................: MPFB initialization has finished.
+[Tripo3D] Log file: D:\Temp\tripo3d_blender_bridge.log
+BlenderMCP addon registered
+register_class(...):
+Info: Registering panel class: 'BLENDERMCP_PT_Panel', bl_idname 'BLENDERMCP_PT_Panel' has been registered before, unregistering previous
+register_class(...):
+Info: Registering operator class: 'BLENDERMCP_OT_SetFreeTrialHyper3DAPIKey', bl_idname 'blendermcp.set_hyper3d_free_trial_api_key' has been registered before, unregistering previous
+register_class(...):
+Info: Registering operator class: 'BLENDERMCP_OT_StartServer', bl_idname 'blendermcp.start_server' has been registered before, unregistering previous
+register_class(...):
+Info: Registering operator class: 'BLENDERMCP_OT_StopServer', bl_idname 'blendermcp.stop_server' has been registered before, unregistering previous
+register_class(...):
+Info: Registering operator class: 'BLENDERMCP_OT_OpenTerms', bl_idname 'blendermcp.open_terms' has been registered before, unregistering previous
+register_class(...):
+Info: Registering operator class: 'BLENDERMCP_OT_CheckAddonUpdate', bl_idname 'blendermcp.check_addon_update' has been registered before, unregistering previous
+register_class(...):
+Info: Registering operator class: 'BLENDERMCP_OT_UpdateAddon', bl_idname 'blendermcp.update_addon' has been registered before, unregistering previous
+register_class(...):
+Info: Registering operator class: 'BLENDERMCP_OT_PremiumActivate', bl_idname 'blendermcp.premium_activate' has been registered before, unregistering previous
+register_class(...):
+Info: Registering operator class: 'BLENDERMCP_OT_PremiumDeactivate', bl_idname 'blendermcp.premium_deactivate' has been registered before, unregistering previous
+register_class(...):
+Info: Registering operator class: 'BLENDERMCP_OT_PremiumRefresh', bl_idname 'blendermcp.premium_refresh' has been registered before, unregistering previous
+register_class(...):
+Info: Registering operator class: 'BLENDERMCP_OT_PremiumOpenAccount', bl_idname 'blendermcp.premium_open_account' has been registered before, unregistering previous
+BlenderMCP addon registered
+RENDERED 1
+17:10:13 - tripo_addon - [ws_server.py:101] - INFO - Stopping WebSocket server...
+17:10:13 - tripo_addon - [task.py:27] - INFO - WebSocket server stop requested
+17:10:13 - tripo_addon - [ws_server.py:88] - INFO - Event loop closed
+Traceback (most recent call last):
+  File "C:\Program Files\Blender Foundation\Blender 5.2\5.2\scripts\modules\addon_utils.py", line 595, in disable
+    mod.unregister()
+    ~~~~~~~~~~~~~~^^
+  File "C:\Users\DANTE\AppData\Roaming\Blender Foundation\Blender\5.2\scripts\addons\addon.py", line 6401, in unregister
+    bpy.utils.unregister_class(BLENDERMCP_PT_Panel)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: unregister_class(...):, missing bl_rna attribute from '_RNAMeta' instance (may not be registered)
+Exception in module unregister(): 'C:\\Users\\DANTE\\AppData\\Roaming\\Blender Foundation\\Blender\\5.2\\scripts\\addons\\addon.py'
+BlenderMCP addon unregistered
+Blender 5.2.2 LTS (hash d13f752e3b9c built 2026-09-15 01:37:04)
+
+Blender quit

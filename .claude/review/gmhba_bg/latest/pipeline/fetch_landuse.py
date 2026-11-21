@@ -1,0 +1,31 @@
+"""OSM urban land use (residential/industrial/commercial/retail) within the far extent, rasterised to the 30 m grid of
+sat_far.png -> data/gmhba/urban_osm.npy (bool, row 0 = north). usage: fetch_landuse.py spec.json half_m m_per_px"""
+import sys, os, json, math, urllib.request, urllib.parse, numpy as np
+from PIL import Image, ImageDraw
+spec = json.load(open(sys.argv[1])); R = float(sys.argv[2]); S = float(sys.argv[3])
+lat0, lon0 = spec['lat'], spec['lon']; KX = 111320 * math.cos(math.radians(lat0)); KY = 110540
+D = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', spec['name']); C = os.path.join(D, 'landuse_osm.json')
+if not os.path.exists(C):
+    b = (lat0 - R / KY, lon0 - R / KX, lat0 + R / KY, lon0 + R / KX)
+    q = '[out:json][timeout:180];(way["landuse"~"^(residential|industrial|commercial|retail)$"](%f,%f,%f,%f);relation["landuse"~"^(residential|industrial|commercial|retail)$"](%f,%f,%f,%f););out geom;' % (b + b)
+    r = urllib.request.urlopen(urllib.request.Request('https://overpass-api.de/api/interpreter', urllib.parse.urlencode({'data': q}).encode(), headers={'User-Agent': 'scene-reference/0.1'}), timeout=240).read()
+    open(C, 'wb').write(r)
+el = json.load(open(C))['elements']; N = int(2 * R / S)
+im = Image.new('L', (N, N)); dr = ImageDraw.Draw(im)
+def px(g): return [((p['lon'] - lon0) * KX / S + N / 2, N / 2 - (p['lat'] - lat0) * KY / S) for p in g]
+n = 0
+for e in el:
+    rings = [e['geometry']] if e['type'] == 'way' else [m['geometry'] for m in e.get('members', []) if m.get('role') == 'outer' and 'geometry' in m]
+    for g in rings:
+        if len(g) >= 3: dr.polygon(px(g), fill=255); n += 1
+u = np.asarray(im) > 0; np.save(os.path.join(D, 'urban_osm.npy'), u)
+print('urban polygons', n, 'cover %', round(float(u.mean() * 100), 1))
+# industrial / commercial / retail on their own mask: big sheet-metal roofs, painted roof by roof in py_mk_paddocks
+im2 = Image.new('L', (N, N)); dr2 = ImageDraw.Draw(im2); n2 = 0
+for e in el:
+    if e.get('tags', {}).get('landuse') not in ('industrial', 'commercial', 'retail'): continue
+    rings = [e['geometry']] if e['type'] == 'way' else [m['geometry'] for m in e.get('members', []) if m.get('role') == 'outer' and 'geometry' in m]
+    for g in rings:
+        if len(g) >= 3: dr2.polygon(px(g), fill=255); n2 += 1
+ind = np.asarray(im2) > 0; np.save(os.path.join(D, 'industrial_osm.npy'), ind)
+print('industrial polygons', n2, 'cover %', round(float(ind.mean() * 100), 1))

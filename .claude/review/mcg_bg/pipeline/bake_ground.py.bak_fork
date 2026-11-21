@@ -1,0 +1,46 @@
+"""Bake tex/ground_detail.png (one tile = 4 m, x1.21 lift) into the scene's ground.png -> data/<name>/prep/ground_baked.png.
+Usage: python -E bake_ground.py mcg [px]. Multiplies in linear light like Blender did, re-encodes sRGB. Prints grey std."""
+import os, sys, json
+import numpy as np
+from PIL import Image, ImageFilter
+Image.MAX_IMAGE_PIXELS = None
+H = os.path.dirname(os.path.abspath(__file__)); name = sys.argv[1]; S = int(sys.argv[2]) if len(sys.argv) > 2 else 8192
+D = os.path.join(H, 'data', name, 'prep'); NE = json.load(open(os.path.join(D, 'meta.json')))['near']
+def dec(a): a = a / 255.0; return np.where(a <= 0.04045, a / 12.92, ((a + 0.055) / 1.055) ** 2.4)
+def enc(v): v = np.clip(v, 0, 1); return 255 * np.where(v <= 0.0031308, 12.92 * v, 1.055 * v ** (1 / 2.4) - 0.055)
+g = Image.open(os.path.join(D, 'ground.png')).convert('RGB').resize((S, S), Image.BICUBIC)
+tiles = 2 * NE / 4.0; ppt = S / tiles   # output px per detail tile
+det = Image.open(os.path.join(H, 'tex', 'ground_detail.png')).convert('RGB'); DS = det.size[0]
+# pre-filter the tile (wrapped) to the output footprint, as texture filtering would
+sig = max(0.0, DS / ppt / 2); big = Image.fromarray(np.tile(np.asarray(det), (3, 3, 1)))
+det = np.asarray(big.filter(ImageFilter.GaussianBlur(sig)), np.float32)[DS:2 * DS, DS:2 * DS]
+dl = dec(det)
+c = (np.arange(S) + 0.5) / S * tiles
+fx = (c % 1.0) * DS - 0.5                      # u -> column
+fy = ((1.0 - (c % 1.0)) * DS - 0.5)            # rows run down: v = 1 - row
+i0 = np.floor(fx).astype(int); ax = (fx - i0)[None, :, None]
+out = np.empty((S, S, 3), np.uint8); ga = np.asarray(g)
+# road pixels: ground.png colour within the prep grain envelope (x0.85..1.15, same hue) of the spec's road colour
+RC = np.array(json.load(open(os.path.join(H, 'spec', name + '.json')))['palette']['road'], np.float32)
+g0 = np.asarray(Image.open(os.path.join(D, 'ground.png')).convert('RGB'), np.float32); q = g0 / RC
+rm = ((q.min(2) > 0.85) & (q.max(2) < 1.15) & (q.max(2) - q.min(2) < 0.06)).astype(np.uint8) * 255
+rm = Image.fromarray(rm).filter(ImageFilter.MedianFilter(3)).resize((S, S), Image.BILINEAR)
+RM = np.asarray(rm, np.float32) / 255.0; print('road px %.1f%%' % (100 * RM.mean()))
+# road_asphalt.png: one 512 px tile = 8 m, multiplier lifted so its mean (linear) is 1: the road keeps its colour on average
+rt = 2 * NE / 8.0; rppt = S / rt; ra = Image.open(os.path.join(H, 'tex', 'road_asphalt.png')).convert('RGB'); RS = ra.size[0]
+rsig = max(0.0, RS / rppt / 2); rbig = Image.fromarray(np.tile(np.asarray(ra), (3, 3, 1)))
+ral = dec(np.asarray(rbig.filter(ImageFilter.GaussianBlur(rsig)), np.float32)[RS:2 * RS, RS:2 * RS]); ral = ral / ral.mean()
+rc_ = (np.arange(S) + 0.5) / S * rt; rfx = (rc_ % 1.0) * RS - 0.5; rfy = (1.0 - (rc_ % 1.0)) * RS - 0.5
+ri0 = np.floor(rfx).astype(int); rax = (rfx - ri0)[None, :, None]
+for r0 in range(0, S, 512):
+    rr = np.arange(r0, min(S, r0 + 512)); j0 = np.floor(fy[rr]).astype(int); ay = (fy[rr] - j0)[:, None, None]
+    J0, J1 = j0 % DS, (j0 + 1) % DS; I0, I1 = i0 % DS, (i0 + 1) % DS
+    d = (dl[J0][:, I0] * (1 - ax) + dl[J0][:, I1] * ax) * (1 - ay) + (dl[J1][:, I0] * (1 - ax) + dl[J1][:, I1] * ax) * ay
+    rj0 = np.floor(rfy[rr]).astype(int); ray = (rfy[rr] - rj0)[:, None, None]
+    K0, K1 = rj0 % RS, (rj0 + 1) % RS; L0, L1 = ri0 % RS, (ri0 + 1) % RS
+    e = (ral[K0][:, L0] * (1 - rax) + ral[K0][:, L1] * rax) * (1 - ray) + (ral[K1][:, L0] * (1 - rax) + ral[K1][:, L1] * rax) * ray
+    m_ = RM[rr][..., None]; e = 1 + (e - 1) * m_
+    out[rr] = np.round(enc(dec(ga[rr].astype(np.float32)) * d * 1.21 * e)).astype(np.uint8)
+p = os.path.join(D, 'ground_baked.png'); Image.fromarray(out).save(p, optimize=False)
+gr = out[::4, ::4].astype(np.float32) @ np.array([0.299, 0.587, 0.114])
+print(p, S, 'px, %.3f m/px' % (2 * NE / S), 'grey std %.1f' % gr.std(), 'MB %.1f' % (os.path.getsize(p) / 1e6))

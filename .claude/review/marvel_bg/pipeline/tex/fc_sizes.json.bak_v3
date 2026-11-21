@@ -1,0 +1,94 @@
+{
+ "glass_dark": [
+  6.0,
+  14.4
+ ],
+ "glass_teal": [
+  6.0,
+  14.4
+ ],
+ "glass_bronze": [
+  6.0,
+  14.4
+ ],
+ "glass_grey": [
+  12.0,
+  14.4
+ ],
+ "concrete": [
+  12.0,
+  12.8
+ ],
+ "brick": [
+  12.0,
+  12.8
+ ],
+ "panel": [
+  8.0,
+  13.6
+ ],
+ "cladding": [
+  8.0,
+  8.0
+ ],
+ "carpark": [
+  32.0,
+  3.0
+ ],
+ "plant": [
+  3.0,
+  3.0
+ ],
+ "rail_bed": [
+  3.2,
+  2.6
+ ],
+ "glass_navy_a": [
+  6.0,
+  14.4
+ ],
+ "glass_navy_b": [
+  9.0,
+  15.2
+ ],
+ "glass_slate_a": [
+  6.0,
+  14.4
+ ],
+ "glass_slate_b": [
+  9.0,
+  15.2
+ ],
+ "glass_green_a": [
+  6.0,
+  14.4
+ ],
+ "glass_green_b": [
+  9.0,
+  15.2
+ ],
+ "glass_blue_a": [
+  6.0,
+  14.4
+ ],
+ "glass_blue_b": [
+  9.0,
+  15.2
+ ],
+ "glass_smoke_a": [
+  6.0,
+  14.4
+ ],
+ "glass_smoke_b": [
+  9.0,
+  15.2
+ ],
+ "glass_silver_a": [
+  6.0,
+  14.4
+ ],
+ "glass_silver_b": [
+  9.0,
+  15.2
+ ]
+}

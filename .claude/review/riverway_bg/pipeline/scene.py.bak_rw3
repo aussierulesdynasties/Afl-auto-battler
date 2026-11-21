@@ -1,0 +1,700 @@
+"""Build a stadium background scene in Blender from prep output.
+    blender -b -P scene.py -- spec.json
+Frame: x east, y north, z up, origin = oval centre at ground level. Saves out/<name>/scene.blend (with the
+ground model for renders) and out/<name>/scene_bg.glb (the background only).
+"""
+import bpy, bmesh, json, math, os, sys
+import numpy as np
+from mathutils import Vector
+
+SP = os.path.abspath(sys.argv[sys.argv.index('--') + 1])
+HERE = os.path.dirname(os.path.dirname(SP)) if os.path.basename(os.path.dirname(SP)) == 'spec' else os.path.dirname(SP)
+spec = json.load(open(SP))
+name = spec['name']; PAL = spec['palette']
+D = os.path.join(HERE, 'data', name, 'prep'); OUT = os.path.join(HERE, 'out', name); os.makedirs(OUT, exist_ok=True)
+meta = json.load(open(os.path.join(D, 'meta.json')))
+rng = np.random.default_rng(spec.get('seed', 1))
+bpy.ops.wm.read_factory_settings(use_empty=True)
+sc = bpy.context.scene
+def srgb(c): return [((v / 255) / 12.92 if v / 255 <= 0.04045 else ((v / 255 + 0.055) / 1.055) ** 2.4) for v in c]
+def lin(c): return np.array(srgb(c), np.float32)
+
+near = np.load(os.path.join(D, 'near_h.npy')); far = np.load(os.path.join(D, 'far_h.npy'))
+NE, NS, FA, FS = meta['near'], meta['near_step'], meta['far'], meta['far_step']
+R0 = spec['clear_r_m']
+def samp(G, half, step, X, Y):
+    fx = (np.asarray(X) + half) / step; fy = (np.asarray(Y) + half) / step
+    i = np.clip(np.floor(fx).astype(int), 0, G.shape[1] - 2); j = np.clip(np.floor(fy).astype(int), 0, G.shape[0] - 2)
+    ax = np.clip(fx - i, 0, 1); ay = np.clip(fy - j, 0, 1)
+    return G[j, i] * (1 - ax) * (1 - ay) + G[j, i + 1] * ax * (1 - ay) + G[j + 1, i] * (1 - ax) * ay + G[j + 1, i + 1] * ax * ay
+def height(X, Y):
+    X = np.asarray(X, float); Y = np.asarray(Y, float)
+    inside = (np.abs(X) < NE) & (np.abs(Y) < NE)
+    return np.where(inside, samp(near, NE, NS, X, Y), samp(far, FA, FS, X, Y))
+
+def mk_obj(nm, verts, faces, mat=None):
+    me = bpy.data.meshes.new(nm)
+    me.from_pydata([tuple(v) for v in verts] if not isinstance(verts, np.ndarray) else verts.tolist(), [], faces)
+    me.validate(); me.update()
+    ob = bpy.data.objects.new(nm, me); sc.collection.objects.link(ob)
+    if mat: me.materials.append(mat)
+    return ob
+def set_corner_col(me, cols):  # cols: per-loop RGBA float array
+    ca = me.color_attributes.new('Col', 'FLOAT_COLOR', 'CORNER')
+    ca.data.foreach_set('color', np.asarray(cols, np.float32).ravel())
+def set_uv(me, uvs):
+    uv = me.uv_layers.new(name='UVMap'); uv.data.foreach_set('uv', np.asarray(uvs, np.float32).ravel())
+def set_uv_box(me, scale):   # UV = object position x scale, projected on each face's dominant axis
+    co = np.zeros(len(me.vertices) * 3); me.vertices.foreach_get('co', co); co = co.reshape(-1, 3)
+    vi = np.zeros(len(me.loops), int); me.loops.foreach_get('vertex_index', vi)
+    nr = np.zeros(len(me.polygons) * 3); me.polygons.foreach_get('normal', nr); nr = np.abs(nr.reshape(-1, 3))
+    tot = np.zeros(len(me.polygons), int); me.polygons.foreach_get('loop_total', tot)
+    ax = np.repeat(np.argmax(nr, 1), tot); p = co[vi]
+    u = np.where(ax == 0, p[:, 1], p[:, 0]); v = np.where(ax == 2, p[:, 1], p[:, 2])
+    set_uv(me, np.stack([u, v], 1) * scale)
+
+def mat_vcol(nm, rough=0.85):
+    m = bpy.data.materials.new(nm); m.use_nodes = True
+    nt = m.node_tree; b = nt.nodes['Principled BSDF']
+    ca = nt.nodes.new('ShaderNodeVertexColor'); ca.layer_name = 'Col'
+    nt.links.new(ca.outputs['Color'], b.inputs['Base Color']); b.inputs['Roughness'].default_value = rough
+    return m
+def mat_img(nm, path, rough=0.9):
+    m = bpy.data.materials.new(nm); m.use_nodes = True
+    nt = m.node_tree; b = nt.nodes['Principled BSDF']
+    t = nt.nodes.new('ShaderNodeTexImage'); t.image = bpy.data.images.load(path)
+    nt.links.new(t.outputs['Color'], b.inputs['Base Color']); b.inputs['Roughness'].default_value = rough
+    return m
+def mat_facade(nm, path, rough_wall=0.8):
+    """facade: glass where the texture alpha is 1, the building's own colour (vertex colour) elsewhere."""
+    m = bpy.data.materials.new(nm); m.use_nodes = True
+    nt = m.node_tree; b = nt.nodes['Principled BSDF']
+    t = nt.nodes.new('ShaderNodeTexImage'); t.image = bpy.data.images.load(path)
+    ca = nt.nodes.new('ShaderNodeVertexColor'); ca.layer_name = 'Col'
+    mul = nt.nodes.new('ShaderNodeMix'); mul.data_type = 'RGBA'; mul.blend_type = 'MULTIPLY'; mul.inputs[0].default_value = 1
+    nt.links.new(ca.outputs['Color'], mul.inputs[6]); nt.links.new(t.outputs['Color'], mul.inputs[7])
+    mix = nt.nodes.new('ShaderNodeMix'); mix.data_type = 'RGBA'
+    nt.links.new(t.outputs['Alpha'], mix.inputs[0]); nt.links.new(mul.outputs[2], mix.inputs[6]); nt.links.new(t.outputs['Color'], mix.inputs[7])
+    nt.links.new(mix.outputs[2], b.inputs['Base Color'])
+    rm = nt.nodes.new('ShaderNodeMapRange'); rm.inputs['To Min'].default_value = rough_wall; rm.inputs['To Max'].default_value = 0.13
+    nt.links.new(t.outputs['Alpha'], rm.inputs['Value']); nt.links.new(rm.outputs['Result'], b.inputs['Roughness'])
+    return m
+
+# ---------- near terrain ----------
+n = near.shape[0]
+g = np.arange(n) * NS - NE
+X, Y = np.meshgrid(g, g)
+Z = near.copy(); Z[np.hypot(X, Y) < R0 + 5] -= 0.15
+# the model's own flat ground (apron) box: sink the terrain under it so no corner pokes through
+if spec.get('pad_box_m'):
+    hx, hy = spec['pad_box_m']; Z[(np.abs(X) < hx + NS) & (np.abs(Y) < hy + NS)] = np.minimum(Z[(np.abs(X) < hx + NS) & (np.abs(Y) < hy + NS)], -0.3)
+V = np.stack([X.ravel(), Y.ravel(), Z.ravel()], 1)
+ii = np.arange(n - 1)
+I, J = np.meshgrid(ii, ii)
+a = (J * n + I).ravel()
+F = np.stack([a, a + 1, a + n + 1, a + n], 1)
+# one texture only (glTF carries one base colour image): ground.png x ground_detail.png (4 m tile, x1.21 lift),
+# baked by bake_ground.py into prep/ground_baked.png
+_gb = os.path.join(D, 'ground_baked.png'); assert os.path.exists(_gb), 'run bake_ground.py ' + name + ' first'
+gm = mat_img('ground', _gb, 0.8)
+ob = mk_obj('bg_near_ground', V, F.tolist(), gm)
+loops = F.ravel()
+uv = np.stack([(V[loops, 0] + NE) / (2 * NE), (V[loops, 1] + NE) / (2 * NE)], 1)
+set_uv(ob.data, uv)
+for p in ob.data.polygons: p.use_smooth = True
+
+# ---------- far terrain (outside the near square), vertex colours by slope, haze by distance ----------
+m = far.shape[0]
+gf = np.arange(m) * FS - FA
+XF, YF = np.meshgrid(gf, gf)
+ZF = far.copy()
+gy_, gx_ = np.gradient(ZF, FS); slope = np.hypot(gx_, gy_)
+VF = np.stack([XF.ravel(), YF.ravel(), ZF.ravel()], 1)
+ii = np.arange(m - 1); I, J = np.meshgrid(ii, ii)
+a = (J * m + I).ravel()
+FF = np.stack([a, a + 1, a + m + 1, a + m], 1)
+cx = (VF[FF[:, 0], 0] + VF[FF[:, 2], 0]) / 2; cy = (VF[FF[:, 0], 1] + VF[FF[:, 2], 1]) / 2
+FF = FF[(np.abs(cx) > NE - 1) | (np.abs(cy) > NE - 1)]
+noise = rng.random(VF.shape[0])
+vc = (lin(PAL['far_flat'])[None] * (1 - noise[:, None] * 0.5) + lin(PAL['far_veg'])[None] * noise[:, None] * 0.5)
+st = np.clip((slope.ravel() - 0.12) / 0.2, 0, 1)[:, None]
+vc = vc * (1 - st) + lin(PAL['far_steep'])[None] * st
+d = np.hypot(VF[:, 0], VF[:, 1])
+hz = (1 - np.exp(-d / spec.get('haze_m', 22000)))[:, None] * 0.85
+vc = vc * (1 - hz) + lin(PAL['haze'])[None] * hz
+ob = mk_obj('bg_far_terrain', VF, FF.tolist(), mat_vcol('far', 0.95))
+lp = FF.ravel()
+set_corner_col(ob.data, np.concatenate([vc[lp], np.ones((len(lp), 1))], 1))
+for p in ob.data.polygons: p.use_smooth = True
+
+# ---------- bridges: deck slab with parapets, top at the higher end of the way ----------
+BRP = os.path.join(D, 'bridges.json')
+if os.path.exists(BRP):
+    verts, faces, cols = [], [], []
+    deck_c = lin((204, 204, 199)); rail_c = lin((189, 194, 201))
+    def box_strip(P, z, w, th, c):
+        # one quad strip per segment: top, two sides, bottom
+        for (x1, y1), (x2, y2) in zip(P, P[1:]):
+            L = math.hypot(x2 - x1, y2 - y1)
+            if L < 0.1: continue
+            nx, ny = -(y2 - y1) / L * w / 2, (x2 - x1) / L * w / 2
+            q = [(x1 + nx, y1 + ny), (x2 + nx, y2 + ny), (x2 - nx, y2 - ny), (x1 - nx, y1 - ny)]
+            s0 = len(verts)
+            for qx, qy in q: verts.append((qx, qy, z))
+            for qx, qy in q: verts.append((qx, qy, z - th))
+            for f in ((0, 3, 2, 1), (4, 5, 6, 7), (0, 1, 5, 4), (2, 3, 7, 6), (1, 2, 6, 5), (3, 0, 4, 7)):
+                faces.append(tuple(s0 + i for i in f)); cols.extend([c] * 4)
+    for b in json.load(open(BRP)):
+        P = np.array(b['p'], float)
+        if b.get('rail'): continue   # rail bridges are drawn as track
+        if b['w'] <= 6 and np.hypot(*np.diff(P, axis=0).T).sum() < 30: continue   # stair/ramp stubs
+        ends = height(P[[0, -1], 0], P[[0, -1], 1])
+        z = max(float(ends.max()), 0.0 if np.hypot(*P.mean(0)) < R0 + 60 else float(ends.max())) + 0.3
+        if b['w'] <= 6:   # footbridge: draw only where it spans a drop (>2 m under its ends); on flat ground it is a path
+            t_ = np.linspace(0, 1, 40)[:, None]; S_ = np.concatenate([P[i] * (1 - t_) + P[i + 1] * t_ for i in range(len(P) - 1)])
+            if float(ends.max()) - float(height(S_[:, 0], S_[:, 1]).min()) < 2.0: continue
+        w = b['w']
+        if b['w'] <= 6:   # footbridge deck: straight ramp between its two end heights, square piers every 25 m down to the ground
+            e0, e1 = float(ends[0]) + 0.3, float(ends[1]) + 0.3; cum = np.concatenate([[0], np.cumsum(np.hypot(*np.diff(P, axis=0).T))]); tot = max(cum[-1], 1e-6)
+            for i in range(len(P) - 1):
+                za, zb = e0 + (e1 - e0) * cum[i] / tot, e0 + (e1 - e0) * cum[i + 1] / tot
+                d_ = P[i + 1] - P[i]; L = np.hypot(*d_)
+                if L < 0.1: continue
+                nx, ny = -d_[1] / L * w / 2, d_[0] / L * w / 2; s0 = len(verts)
+                for (qx, qy), zz in zip([(P[i][0] + nx, P[i][1] + ny), (P[i + 1][0] + nx, P[i + 1][1] + ny), (P[i + 1][0] - nx, P[i + 1][1] - ny), (P[i][0] - nx, P[i][1] - ny)], (za, zb, zb, za)): verts.append((qx, qy, zz))
+                for (qx, qy), zz in zip([(P[i][0] + nx, P[i][1] + ny), (P[i + 1][0] + nx, P[i + 1][1] + ny), (P[i + 1][0] - nx, P[i + 1][1] - ny), (P[i][0] - nx, P[i][1] - ny)], (za, zb, zb, za)): verts.append((qx, qy, zz - 1.0))
+                for f in ((0, 3, 2, 1), (4, 5, 6, 7), (0, 1, 5, 4), (2, 3, 7, 6), (1, 2, 6, 5), (3, 0, 4, 7)): faces.append(tuple(s0 + k for k in f)); cols.extend([deck_c] * 4)
+            for d in np.arange(12.5, tot - 5, 25.0):
+                k = int(np.searchsorted(cum, d)) - 1; k = min(max(k, 0), len(P) - 2); t = (d - cum[k]) / max(cum[k + 1] - cum[k], 1e-6)
+                px, py = P[k] + (P[k + 1] - P[k]) * t; zt = e0 + (e1 - e0) * d / tot - 1.0; zg = float(height(np.array([px]), np.array([py]))[0])
+                if zt - zg < 1.0: continue
+                s0 = len(verts)
+                for zz in (zt, zg - 0.5):
+                    for ox, oy in ((-0.4, -0.4), (0.4, -0.4), (0.4, 0.4), (-0.4, 0.4)): verts.append((px + ox, py + oy, zz))
+                for f in ((0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)): faces.append(tuple(s0 + k2 for k2 in f)); cols.extend([deck_c] * 4)
+            for sd in (-1, 1):   # railings 1.1 m on each edge, following the ramp
+                for i in range(len(P) - 1):
+                    d_ = P[i + 1] - P[i]; L = np.hypot(*d_)
+                    if L < 0.1: continue
+                    o = sd * np.array([-d_[1], d_[0]]) / L * (w / 2 - 0.1); za, zb = e0 + (e1 - e0) * cum[i] / tot, e0 + (e1 - e0) * cum[i + 1] / tot; s0 = len(verts)
+                    for (qx, qy), zz in zip([P[i] + o, P[i + 1] + o, P[i + 1] + o, P[i] + o], (za, zb, zb + 1.1, za + 1.1)): verts.append((qx, qy, zz))
+                    faces.append((s0, s0 + 1, s0 + 2, s0 + 3)); cols.extend([rail_c] * 4)
+            continue
+        box_strip(P, z, w, 1.4, deck_c)
+        for sd in (-1, 1):   # parapets 1.1 m, 0.25 m thick, on each edge
+            Q = []
+            for i in range(len(P)):
+                a_ = P[max(i - 1, 0)]; b_ = P[min(i + 1, len(P) - 1)]
+                d_ = b_ - a_; L = max(np.hypot(*d_), 1e-6)
+                Q.append(P[i] + sd * np.array([-d_[1], d_[0]]) / L * (w / 2 - 0.125))
+            box_strip(np.array(Q), z + 1.1, 0.25, 1.1, rail_c)
+    if faces:
+        ob = mk_obj('bg_bridges', verts, faces, mat_vcol('bridge', 0.8))
+        set_corner_col(ob.data, np.concatenate([np.array(cols), np.ones((len(cols), 1))], 1))
+
+# ---------- rails: sleeper bed + two steel rails draped on the terrain (broad gauge 1.6 m) ----------
+RLP = os.path.join(D, 'rails.json')
+if spec.get('rail_geo') and os.path.exists(RLP):
+    verts, faces, cols = [], [], []
+    bed_c = lin(tuple(PAL.get('track', (70, 64, 60)))); steel_c = lin((168, 170, 172))
+    def drape_strip(P, off, w, lift, c):
+        # flat ribbon offset sideways by off, w wide, lift above terrain; P densified to <=4 m
+        n = len(P); L_ = []
+        for i in range(n):
+            a_ = P[max(i - 1, 0)]; b_ = P[min(i + 1, n - 1)]
+            d_ = b_ - a_; L = max(np.hypot(*d_), 1e-6); L_.append(np.array([-d_[1], d_[0]]) / L)
+        N_ = np.array(L_); C = P + N_ * off
+        A = C + N_ * w / 2; B = C - N_ * w / 2
+        zc = np.max([height(C[:, 0] + N_[:, 0] * o, C[:, 1] + N_[:, 1] * o) for o in (-1.6, 0, 1.6)], 0)
+        if RF is not None:   # in the cutting the track bed sits on the smoothed floor, never draped up a bank
+            fl = samp(np.nan_to_num(RF, nan=-1e4), NE, NS, C[:, 0], C[:, 1])
+            zc = np.where(fl > -100, fl, zc)
+        za = zc + lift; zb = zc + lift
+        s0 = len(verts)
+        for i in range(n):
+            verts.append((A[i, 0], A[i, 1], float(za[i]))); verts.append((B[i, 0], B[i, 1], float(zb[i])))
+        for i in range(n - 1):
+            faces.append((s0 + 2 * i, s0 + 2 * i + 1, s0 + 2 * i + 3, s0 + 2 * i + 2)); cols.extend([c] * 4)
+    RF = np.load(os.path.join(D, 'rail_floor.npy')) if os.path.exists(os.path.join(D, 'rail_floor.npy')) else None
+    KE = spec.get('rail_cut', {}).get('keep_ellipse')
+    CM = np.load(os.path.join(D, 'rail_cm.npy')) if os.path.exists(os.path.join(D, 'rail_cm.npy')) else None
+    KFP = os.path.join(D, 'footprint.json')
+    KF = np.array(json.load(open(KFP))) if spec.get('rail_cut', {}).get('keep_footprint') and os.path.exists(KFP) else None
+    for pts in json.load(open(RLP)):
+        P = np.array(pts, float); Q = [P[0]]
+        for p2 in P[1:]:
+            k = max(1, int(math.ceil(np.hypot(*(p2 - Q[-1])) / 4.0)))
+            for j in range(1, k + 1): Q.append(Q[-1] + (p2 - Q[-1]) * (1.0 / (k - j + 1)))
+        Q = np.array(Q)
+        if KF is not None or KE:   # tracks under the ground model are hidden by it: split them out
+            if KF is not None: ok = np.hypot(Q[:, 0], Q[:, 1]) > KF[((np.degrees(np.arctan2(Q[:, 1], Q[:, 0])) % 360) // 2).astype(int)] + 1.0
+            else: ex, ey, ea, eb = KE; ok = np.hypot((Q[:, 0] - ex) / ea, (Q[:, 1] - ey) / eb) > 1.04
+            if CM is not None:   # never on a bank: only where the cutting floor is flat, or wholly outside the cutting
+                cmq = samp(CM, NE, NS, Q[:, 0], Q[:, 1]); ok &= ~((cmq > 0.02) & (cmq < 0.92))
+            runs = np.split(np.arange(len(Q)), np.where(np.diff(ok.astype(int)) != 0)[0] + 1)
+            segs = [Q[r_] for r_ in runs if ok[r_[0]] and len(r_) > 1 and np.hypot(*np.diff(Q[r_], axis=0).T).sum() > 30]
+        else: segs = [Q]
+        for Q in segs:
+            drape_strip(Q, 0, 2.8, 0.2, bed_c)
+            for sd in (-0.8, 0.8): drape_strip(Q, sd, 0.18, 0.32, steel_c)
+        continue
+        drape_strip(Q, 0, 2.8, 0.2, bed_c)
+        for sd in (-0.8, 0.8): drape_strip(Q, sd, 0.18, 0.32, steel_c)
+    if faces:
+        ob = mk_obj('bg_rails', verts, faces, mat_vcol('rails', 0.6))
+        set_corner_col(ob.data, np.concatenate([np.array(cols), np.ones((len(cols), 1))], 1))
+
+# ---------- buildings ----------
+BL = json.load(open(os.path.join(D, 'buildings.json')))
+def build_class(cls, tex, tw, th, sel=None, vnorm=False, tag=None):
+    verts, faces, cols, uvs = [], [], [], []
+    RF = {'metal': [[], [], [], []], 'tile': [[], [], [], []]}   # roof meshes: verts, faces, cols, uvs
+    walls = [lin(c) for c in PAL['walls_' + cls]]
+    roofs = [lin(c) for c in PAL['roofs_' + ('house' if cls == 'house' else 'flat')]]
+    for b in BL:
+        if b['c'] != cls or (sel is not None and not sel(b)): continue
+        P = np.array(b['p'], float)
+        cxy = P.mean(0)
+        base = float(height(cxy[0], cxy[1])) - 1.0
+        h = b['h']
+        wc = walls[b['wall'] % len(walls)] * (1 + 0.06 * (rng.random() - 0.5))
+        rc = roofs[b['roof'] % len(roofs)] * (1 + 0.08 * (rng.random() - 0.5))
+        pitched = cls == 'house' and len(P) <= 8
+        rh = min(2.6, math.sqrt(abs(b.get('a', 150))) / 5) if pitched else 0
+        top = base + 1.0 + h - rh
+        k = len(P); s0 = len(verts)
+        for x, y in P: verts.append((x, y, base))
+        for x, y in P: verts.append((x, y, top))
+        per = 0.0
+        for i in range(k):
+            j = (i + 1) % k
+            L = float(np.hypot(*(P[j] - P[i])))
+            faces.append((s0 + i, s0 + j, s0 + k + j, s0 + k + i))
+            cols += [wc] * 4
+            u0, u1 = per / tw, (per + L) / tw
+            v0, v1 = (-1.0 / th, (top - base - 1.0) / th) if not vnorm else (-1.0 / (top - base - 1.0), 1.0)
+            uvs += [(u0, v0), (u1, v0), (u1, v1), (u0, v1)]
+            per += L
+        # roof: own mesh, hand-made texture, planar UVs along the building's longest side (one tile = 3.04 m)
+        E = np.diff(np.vstack([P, P[:1]]), axis=0); e = E[np.argmax(np.hypot(E[:, 0], E[:, 1]))]; th_ = math.atan2(e[1], e[0])
+        ct, st = math.cos(th_), math.sin(th_)
+        src = b.get('roof_c'); kind = 'metal' if spec.get('all_metal_roofs') else 'tile' if (cls == 'house' and PAL['roofs_house'][b['roof'] % len(PAL['roofs_house'])][0] > 1.3 * PAL['roofs_house'][b['roof'] % len(PAL['roofs_house'])][1]) else 'metal'
+        rv, rf, rcl, ruv = RF[kind]; r0 = len(rv)
+        RT = 3.0 if spec.get('all_metal_roofs') else 3.04
+        def ruv_(x, y): return ((x * ct + y * st) / RT, (-x * st + y * ct) / RT)
+        for x, y in P: rv.append((x, y, top)); ruv.append(ruv_(x, y))
+        if pitched:
+            rv.append((cxy[0], cxy[1], top + rh)); ruv.append(ruv_(cxy[0], cxy[1]))
+            for i in range(k):
+                rf.append((r0 + i, r0 + (i + 1) % k, r0 + k)); rcl += [rc] * 3
+        else:
+            rf.append(tuple(r0 + i for i in range(k))); rcl += [rc] * k
+    if not faces: return
+    tg = tag or cls
+    ob = mk_obj('bg_bld_' + tg, verts, faces, mat_facade('facade_' + tg, os.path.join(HERE, 'tex', tex)))
+    set_corner_col(ob.data, np.concatenate([np.array(cols), np.ones((len(cols), 1))], 1))
+    set_uv(ob.data, uvs)
+    for kind, (rv, rf, rcl, ruv) in RF.items():
+        if not rf: continue
+        rtex = 'rw/roof_metal_rib.png' if spec.get('all_metal_roofs') else 'roof_%s.png' % kind
+        ro = mk_obj('bg_roof_%s_%s' % (tg, kind), rv, rf, mat_facade('roof_%s_%s' % (tg, kind), os.path.join(HERE, 'tex', rtex)))
+        set_corner_col(ro.data, np.concatenate([np.array(rcl), np.ones((len(rcl), 1))], 1))
+        set_uv(ro.data, [ruv[i] for f_ in rf for i in f_])
+for b in BL:
+    P = np.array(b['p']); x, y = P[:, 0], P[:, 1]
+    b['a'] = 0.5 * abs(np.dot(x, np.roll(y, -1)) - np.dot(y, np.roll(x, -1)))
+exec(open(os.path.join(HERE, 'landmarks.py'), encoding='utf-8').read())   # hand-built landmarks replace their generic boxes
+if spec.get('rw_facades'):
+    _CM = json.load(open(os.path.join(HERE, 'tex', 'rw', 'com.json')))
+    for _i, _b in enumerate(BL): _b['_i'] = _i
+    for _k in range(4): build_class('house', 'rw/queens_%d.png' % _k, 3.6, 1.0, sel=lambda b, k=_k: b['_i'] % 4 == k, vnorm=True, tag='house%d' % _k)
+    _big = [b for b in BL if b['c'] == 'block' and b['a'] > 600]
+    for _n, _b in enumerate(_big):   # every big building its own facade
+        _m = _CM[_n % len(_CM)]; build_class('block', 'rw/com_%d.png' % (_n % len(_CM)), _m['tw'], _m['th'], sel=lambda b, i=_b['_i']: b['_i'] == i, tag='big%d' % _n)
+    print('big buildings', len(_big), 'unique facades', min(len(_big), len(_CM)))
+    for _k in range(12):   # small blocks: 12 shared facades from the end of the set
+        _j = len(_CM) - 1 - _k; _m = _CM[_j]
+        build_class('block', 'rw/com_%d.png' % _j, _m['tw'], _m['th'], sel=lambda b, k=_k: b['a'] <= 600 and b['_i'] % 12 == k, tag='blk%d' % _k)
+else:
+    build_class('house', 'wall.png', 3.6, 3.2)
+    build_class('block', 'wall.png', 3.6, 3.2)
+build_class('tower', 'tower.png', 3.0, 3.6)
+print('buildings built')
+
+# ---------- trees ----------
+KIND = {  # canopy radius, canopy centre height, squash, trunk height, trunk radius, canopy rgb, trunk rgb, ico subdiv
+ 'ghost_gum': (4.6, 6.8, 0.7, 4.0, 0.22, (132, 140, 96), (236, 230, 218), 1),
+ 'red_gum': (7.0, 10.0, 0.6, 5.5, 0.45, (112, 122, 86), (160, 152, 140), 1),
+ 'mulga': (1.5, 1.7, 0.7, 0.9, 0.1, (134, 132, 94), (96, 76, 60), 1),
+ 'elm': (6.5, 14.0, 0.85, 7.0, 0.5, (72, 98, 54), (76, 64, 54), 1),
+ 'plane': (5.5, 12.0, 0.9, 6.5, 0.4, (86, 110, 60), (150, 140, 120), 1),
+ 'paperbark': (4.2, 8.0, 0.8, 4.5, 0.3, (88, 112, 70), (206, 198, 184), 1),
+}
+for _k, _v in spec.get('tree_kinds_extra', {}).items(): KIND[_k] = tuple(tuple(x) if isinstance(x, list) else x for x in _v)
+TR = json.load(open(os.path.join(D, 'trees.json')))
+TR = np.array(TR, float)
+r = np.hypot(TR[:, 0], TR[:, 1])
+cap = spec.get('tree_cap', 30000)
+near_keep = r < 700
+p_far = max(0.0, min(1.0, (cap - near_keep.sum()) / max(1, (~near_keep).sum())))
+TR = TR[near_keep | (rng.random(len(TR)) < p_far)]
+print('trees kept', len(TR))
+kinds = spec['tree_kinds']
+for ki, kn in enumerate(kinds):
+    cr, ch, sq, th_, tr_, ccol, tcol, sub = KIND[kn]
+    bm = bmesh.new(); bmesh.ops.create_icosphere(bm, subdivisions=sub, radius=1.0)
+    cv = np.array([v.co[:] for v in bm.verts]); cf = [[v.index for v in f.verts] for f in bm.faces]; bm.free()
+    cv = cv + rng.normal(0, 0.12, cv.shape)  # lumpy canopy
+    tv = []; tf = []
+    for i in range(6):
+        a0 = 2 * math.pi * i / 6; tv += [(math.cos(a0), math.sin(a0), 0), (math.cos(a0), math.sin(a0), 1)]
+    for i in range(6):
+        j = (i + 1) % 6; tf.append((2 * i, 2 * j, 2 * j + 1, 2 * i + 1))
+    tv = np.array(tv)
+    sel = TR[TR[:, 2] == ki]
+    verts, faces, cols = [], [], []
+    for x, y, _ in sel:
+        s = rng.uniform(0.75, 1.25); z0 = float(height(x, y)) - 0.2
+        rot = rng.uniform(0, 2 * math.pi); c, sn = math.cos(rot), math.sin(rot)
+        o = len(verts)
+        T = tv * [tr_ * s, tr_ * s, th_ * s + 0.5 * cr * s] + [x, y, z0]
+        verts += T.tolist(); faces += [tuple(o + q for q in f) for f in tf]
+        cols += [lin(tcol)] * (4 * len(tf))
+        tint = lin(ccol) * (1 + 0.16 * (rng.random() - 0.5))
+        for bi in range(4):
+            o = len(verts)
+            br = cr * s * rng.uniform(0.45, 0.62)
+            off = rng.normal(0, 0.5 * cr * s, 2); dz = rng.uniform(-0.45, 0.3) * cr * s
+            Cv = cv * [br, br, br * sq]
+            Cv = np.stack([Cv[:, 0] * c - Cv[:, 1] * sn, Cv[:, 0] * sn + Cv[:, 1] * c, Cv[:, 2]], 1) + [x + off[0], y + off[1], z0 + ch * s + dz]
+            verts += Cv.tolist(); faces += [tuple(o + q for q in f) for f in cf]
+            cols += [tint * rng.uniform(0.92, 1.08)] * (3 * len(cf))
+    if not faces: continue
+    tm = mat_vcol('tree_' + kn, 0.9); nt = tm.node_tree; b = nt.nodes['Principled BSDF']; vc = b.inputs['Base Color'].links[0].from_socket
+    # leaf clumps (hand-made tex/leaf_clumps.png, tex_bake.py): cells ~0.35 m darken their edges and bump the crown so it reads as foliage
+    lt = nt.nodes.new('ShaderNodeTexImage'); lt.image = bpy.data.images.load(os.path.join(HERE, 'tex', 'leaf_clumps.png'))
+    mx = nt.nodes.new('ShaderNodeMix'); mx.data_type = 'RGBA'; mx.blend_type = 'MULTIPLY'; mx.inputs['Factor'].default_value = 1.0
+    nt.links.new(vc, mx.inputs[6]); nt.links.new(lt.outputs['Color'], mx.inputs[7]); nt.links.new(mx.outputs[2], b.inputs['Base Color'])
+    ln = nt.nodes.new('ShaderNodeTexImage'); ln.image = bpy.data.images.load(os.path.join(HERE, 'tex', 'leaf_normal.png')); ln.image.colorspace_settings.name = 'Non-Color'
+    nm_ = nt.nodes.new('ShaderNodeNormalMap'); nm_.uv_map = 'UVMap'
+    nt.links.new(ln.outputs['Color'], nm_.inputs['Color']); nt.links.new(nm_.outputs['Normal'], b.inputs['Normal'])
+    ob = mk_obj('bg_trees_' + kn, verts, faces, tm)
+    ob.data.polygons.foreach_set('use_smooth', [True] * len(ob.data.polygons))
+    set_uv_box(ob.data, 2.8 / 8)   # leaf_clumps.png tile = 8 cells of 1/2.8 m
+    cl = []
+    for f in faces: pass
+    cols = np.array(cols) * 1.15   # texture stores the clump multiplier / 1.15; the x1.15 lives in the vertex colours
+    if cols.max() > 1: print('WARN tree colour over 1', kn, cols.max())
+    set_corner_col(ob.data, np.concatenate([np.clip(cols, 0, 1), np.ones((len(cols), 1))], 1))
+print('trees built')
+
+# ---------- roads and car parks: asphalt surfaces (road_asphalt.png, 512 px = 7.2 m) and white lines ----------
+if spec.get('road_mesh'):
+    from mathutils.geometry import tessellate_polygon
+    lat0, lon0 = spec['lat'], spec['lon']; KX = 111320 * math.cos(math.radians(lat0)); KY = 110540
+    def _xy(p): return ((p['lon'] - lon0) * KX, (p['lat'] - lat0) * KY)
+    _FP = np.array(json.load(open(os.path.join(D, 'footprint.json'))))
+    def _outside(Q, pad=1.0):   # True where a point is clear of the ground model's footprint
+        b = ((np.degrees(np.arctan2(Q[:, 1], Q[:, 0])) % 360) // (360 / len(_FP))).astype(int) % len(_FP)
+        return np.hypot(Q[:, 0], Q[:, 1]) > _FP[b] + pad
+    def _dens(P, step):
+        Q = [P[0]]
+        for p2 in P[1:]:
+            k = max(1, int(math.ceil(np.hypot(*(p2 - Q[-1])) / step))); a = Q[-1]
+            for j in range(1, k + 1): Q.append(a + (p2 - a) * (j / k))
+        return np.array(Q)
+    def _tint(rgb, fn): return os.path.join(HERE, 'tex', fn)   # made by mk_road_tex.py (Blender has no PIL)
+    TILE = 104.0   # one seamless tile: asphalt at 8 m mixed with a rotated 20.8 m sample (mk_road_tex.py)
+    from mathutils import noise as _nz
+    def _mottle(me, co):   # 40 m noise (2 octaves, roughness 0.5) ramped 0.85-1.0 into vertex colour; glTF multiplies COLOR_0 into the base colour
+        vi = np.zeros(len(me.loops), int); me.loops.foreach_get('vertex_index', vi); P_ = co[vi]
+        n = np.array([_nz.noise(Vector((x / 40.0, y / 40.0, 0.5))) + 0.5 * _nz.noise(Vector((x / 20.0, y / 20.0, 7.5))) for x, y in P_[:, :2]]) / 1.5
+        v = 0.85 + 0.15 * np.clip(n * 0.5 + 0.5, 0, 1)
+        set_corner_col(me, np.stack([v, v, v, np.ones_like(v)], 1))
+    def mat_img_vc(nm, path, rough):
+        m = mat_img(nm, path, rough); nt = m.node_tree; b = nt.nodes['Principled BSDF']; t = [x for x in nt.nodes if x.type == 'TEX_IMAGE'][0]
+        ca = nt.nodes.new('ShaderNodeVertexColor'); ca.layer_name = 'Col'
+        mul = nt.nodes.new('ShaderNodeMix'); mul.data_type = 'RGBA'; mul.blend_type = 'MULTIPLY'; mul.inputs[0].default_value = 1
+        nt.links.new(t.outputs['Color'], mul.inputs[6]); nt.links.new(ca.outputs['Color'], mul.inputs[7]); nt.links.new(mul.outputs[2], b.inputs['Base Color'])
+        return m
+    m_road = mat_img_vc('road_asphalt', _tint(PAL['road'], 'road_asphalt_road.png'), 0.92)
+    m_park = mat_img_vc('park_asphalt', _tint(PAL['parking'], 'road_asphalt_park.png'), 0.92)
+    m_line = mat_vcol('road_lines', 0.7); LC = list(lin((236, 236, 230))) + [1.0]
+    WDR = {'motorway': 22, 'trunk': 18, 'primary': 16, 'secondary': 13, 'tertiary': 11, 'residential': 8, 'unclassified': 8, 'service': 5}
+    TWO = ('secondary', 'tertiary', 'residential', 'unclassified')
+    els = json.load(open(os.path.join(HERE, 'data', name, 'osm.json'), encoding='utf-8'))['elements']
+    roads = []
+    for el in els:
+        t = el.get('tags', {}); hw = t.get('highway')
+        if el.get('type') != 'way' or hw not in WDR: continue
+        if t.get('tunnel', 'no') != 'no' or (t.get('bridge') and t.get('bridge') != 'no') or t.get('area') == 'yes': continue
+        P = np.array([_xy(p) for p in (el.get('geometry') or []) if p], float)
+        if len(P) < 2 or np.abs(P).max() > NE - 5: P = P[(np.abs(P) < NE - 5).all(1)] if len(P) else P
+        if len(P) < 2: continue
+        two = hw in TWO and t.get('oneway', 'no') == 'no' and t.get('lanes', '2') == '2'
+        roads.append((_dens(P, 1.5), WDR[hw], two))
+    # coverage hash: every road centreline sample, so lines stop where another road crosses (junctions)
+    CELL = 12.0; H_ = {}
+    for ri, (Q, w, _) in enumerate(roads):
+        T = np.gradient(Q, axis=0); T = T / np.maximum(np.hypot(T[:, 0], T[:, 1]), 1e-6)[:, None]
+        for q, tq in zip(Q, T): H_.setdefault((int(q[0] // CELL), int(q[1] // CELL)), []).append((ri, q[0], q[1], w, tq[0], tq[1]))
+    def _clear(ri, x, y, tx, ty):   # a crossing road (more than 30 deg off this one's heading) blanks the lines near it
+        cx, cy = int(x // CELL), int(y // CELL)
+        for i in (-1, 0, 1):
+            for j in (-1, 0, 1):
+                for rj, qx, qy, w, ux, uy in H_.get((cx + i, cy + j), ()):
+                    if rj != ri and abs(tx * ux + ty * uy) < 0.866 and math.hypot(x - qx, y - qy) < w / 2 + 1.5: return False
+        return True
+    def _ribbon(Q, off, w, lift, V, F, UV=None):
+        n = len(Q); N_ = []
+        for i in range(n):
+            d_ = Q[min(i + 1, n - 1)] - Q[max(i - 1, 0)]; L = max(np.hypot(*d_), 1e-6); N_.append(np.array([-d_[1], d_[0]]) / L)
+        N_ = np.array(N_); C = Q + N_ * off; m = max(1, int(math.ceil(w / 1.5))); s0 = len(V)   # a column every 1.5 m across, so the strip follows the ground's crown
+        for k in range(m + 1):
+            X = C + N_ * (w / 2 - w * k / m); z = height(X[:, 0], X[:, 1]) + lift
+            V.extend((float(X[i, 0]), float(X[i, 1]), float(z[i])) for i in range(n))
+        for k in range(m):
+            for i in range(n - 1):
+                F.append((s0 + k * n + i, s0 + (k + 1) * n + i, s0 + (k + 1) * n + i + 1, s0 + k * n + i + 1))
+    def _runs(ok):
+        return [r for r in np.split(np.arange(len(ok)), np.where(np.diff(ok.astype(int)) != 0)[0] + 1) if ok[r[0]] and len(r) > 1]
+    RV, RF_, LV, LF = [], [], [], []
+    for ri, (Q, w, two) in enumerate(roads):
+        ok = _outside(Q)
+        for r in _runs(ok): _ribbon(Q[r], 0, w, 0.04, RV, RF_)
+        if not two: continue
+        Ql = _dens(Q, 0.5); Tl = np.gradient(Ql, axis=0); Tl = Tl / np.maximum(np.hypot(Tl[:, 0], Tl[:, 1]), 1e-6)[:, None]
+        okl = _outside(Ql, 2.0) & np.array([_clear(ri, x, y, a, b) for (x, y), (a, b) in zip(Ql, Tl)])
+        for sd in (-1, 1):   # edge lines 0.1 m wide, 0.3 m inside each edge
+            for r in _runs(okl): _ribbon(Ql[r], sd * (w / 2 - 0.35), 0.10, 0.06, LV, LF)
+        s = np.concatenate([[0], np.cumsum(np.hypot(*np.diff(Ql, axis=0).T))])   # centre: 3 m dash, 9 m gap
+        for r in _runs(okl & ((s % 12.0) < 3.0)): _ribbon(Ql[r], 0, 0.10, 0.06, LV, LF)
+    if RF_:
+        ob = mk_obj('bg_roads', RV, RF_, m_road); co = np.array(RV); ob.data.polygons.foreach_set('use_smooth', [True] * len(ob.data.polygons))
+        vi = np.zeros(len(ob.data.loops), int); ob.data.loops.foreach_get('vertex_index', vi); set_uv(ob.data, co[vi, :2] / TILE); _mottle(ob.data, co)
+    if LF:
+        ob = mk_obj('bg_road_lines', LV, LF, m_line); set_corner_col(ob.data, np.tile(LC, (len(LF) * 4, 1)))
+    # car parks: OSM amenity=parking plus the spec's traced parking, a 1 m grid inside each outline draped on the terrain
+    polys = []
+    for el in els:
+        t = el.get('tags', {})
+        if el.get('type') == 'way' and t.get('amenity') == 'parking' and t.get('parking', 'surface') == 'surface':
+            g = [_xy(p) for p in (el.get('geometry') or []) if p]
+            if len(g) > 3: polys.append(np.array(g))
+    polys += [np.array(p, float) for k, p in spec.get('paint_poly', []) if k == 'parking']
+    def _clipsq(poly, x, y):   # the polygon clipped to the 1 m square at (x, y) (Sutherland-Hodgman, square is convex)
+        out = [tuple(q) for q in poly]
+        for ax, sg, c in ((0, 1, x), (0, -1, x + 1), (1, 1, y), (1, -1, y + 1)):
+            if not out: break
+            inp, out = out, []
+            for k in range(len(inp)):
+                a, b = inp[k - 1], inp[k]; ia = (a[ax] - c) * sg >= 0; ib = (b[ax] - c) * sg >= 0
+                if ia != ib:
+                    t = (c - a[ax]) / (b[ax] - a[ax]); out.append((a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t))
+                if ib: out.append(b)
+        return out
+    def _drape(polys, mat, nm, tile, lift):   # 1 m grid inside each outline; edge cells cut to the true outline
+        PV, PF = [], []
+        for poly in polys:
+            x0, y0 = np.floor(poly.min(0)); x1, y1 = np.ceil(poly.max(0))
+            xs = np.arange(x0, x1 + 1); ys = np.arange(y0, y1 + 1); GX, GY = np.meshgrid(xs, ys)
+            px, py = GX.ravel(), GY.ravel(); ins = np.zeros(len(px), bool); j = len(poly) - 1
+            for i in range(len(poly)):   # even-odd ray test
+                xi, yi = poly[i]; xj, yj = poly[j]
+                ins ^= ((yi > py) != (yj > py)) & (px < (xj - xi) * (py - yi) / ((yj - yi) or 1e-9) + xi); j = i
+            ins = ins.reshape(GX.shape)
+            q = ins[:-1, :-1] & ins[1:, :-1] & ins[:-1, 1:] & ins[1:, 1:]
+            E = _dens(np.vstack([poly, poly[:1]]), 0.25); edge = set(zip((np.floor(E[:, 0]) - x0).astype(int), (np.floor(E[:, 1]) - y0).astype(int)))
+            part = (ins[:-1, :-1] | ins[1:, :-1] | ins[:-1, 1:] | ins[1:, 1:]) & ~q   # cells the outline only grazes at a corner
+            edge |= set(zip(*np.nonzero(part.T)))
+            for ii, jj in edge:
+                if 0 <= jj < q.shape[0] and 0 <= ii < q.shape[1]: q[jj, ii] = False
+            if q.any():
+                Z = height(GX, GY) + lift; idx = -np.ones(GX.shape, int); used = np.zeros(GX.shape, bool)
+                used[:-1, :-1] |= q; used[1:, :-1] |= q; used[:-1, 1:] |= q; used[1:, 1:] |= q
+                s0 = len(PV); idx[used] = s0 + np.arange(used.sum())
+                PV.extend(zip(GX[used], GY[used], Z[used]))
+                jj_, ii_ = np.nonzero(q)
+                PF.extend(zip(idx[jj_, ii_], idx[jj_, ii_ + 1], idx[jj_ + 1, ii_ + 1], idx[jj_ + 1, ii_]))
+            for ii, jj in edge:   # boundary cells: the outline clipped to the cell, vertices on the true outline
+                c = _clipsq(poly, x0 + ii, y0 + jj)
+                c = [v for k, v in enumerate(c) if math.hypot(v[0] - c[k - 1][0], v[1] - c[k - 1][1]) > 1e-4]   # drop repeated points
+                if len(c) < 3: continue
+                C = np.array(c); z = height(C[:, 0], C[:, 1]) + lift; s0 = len(PV)
+                PV.extend(zip(C[:, 0], C[:, 1], z))
+                T = tessellate_polygon([[Vector((a, b, 0)) for a, b in c]]) or [(0, k, k + 1) for k in range(1, len(c) - 1)]
+                for tri in T: PF.append(tuple(s0 + t for t in tri))
+        if PF:
+            ob = mk_obj(nm, [tuple(map(float, v)) for v in PV], [tuple(map(int, f)) for f in PF], mat); co = np.array(PV, float); ob.data.polygons.foreach_set('use_smooth', [True] * len(ob.data.polygons))
+            vi = np.zeros(len(ob.data.loops), int); ob.data.loops.foreach_get('vertex_index', vi); set_uv(ob.data, co[vi, :2] / tile)
+            if mat is m_park: _mottle(ob.data, co)
+        return PF
+    PF = _drape(polys, m_park, 'bg_carparks', TILE, 0.02)   # 2 cm under the roads (0.04) so they never fight
+    m_pave = mat_img('plaza_pavers', _tint(None, 'pavers_paved.png'), 0.9); m_pave.node_tree.nodes['Principled BSDF'].inputs['Specular IOR Level'].default_value = 0.3
+    PF2 = _drape([np.array(p, float) for k, p in spec.get('paint_poly', []) if k == 'paved'], m_pave, 'bg_paved', 6.0, 0.03)
+    print('paved faces', len(PF2))
+    if spec.get('rw_water'):   # river: own surface, painted colour map (bank edge lighter) + ripple normal; lagoon pool
+        m_w = bpy.data.materials.new('river_water'); m_w.use_nodes = True; nt = m_w.node_tree; bs = nt.nodes['Principled BSDF']
+        tc = nt.nodes.new('ShaderNodeTexImage'); tc.image = bpy.data.images.load(os.path.join(HERE, 'data', name, 'prep', 'water_col.png'))
+        nt.links.new(tc.outputs['Color'], bs.inputs['Base Color'])
+        co_ = nt.nodes.new('ShaderNodeTexCoord'); mp = nt.nodes.new('ShaderNodeMapping'); mp.inputs['Scale'].default_value = (1 / 8.0, 1 / 8.0, 1)
+        nt.links.new(co_.outputs['Object'], mp.inputs['Vector'])
+        tn = nt.nodes.new('ShaderNodeTexImage'); tn.image = bpy.data.images.load(os.path.join(HERE, 'tex', 'rw', 'water_ripple_n.png')); tn.image.colorspace_settings.name = 'Non-Color'
+        nt.links.new(mp.outputs['Vector'], tn.inputs['Vector'])
+        nm_ = nt.nodes.new('ShaderNodeNormalMap'); nm_.inputs['Strength'].default_value = 0.35
+        nt.links.new(tn.outputs['Color'], nm_.inputs['Color']); nt.links.new(nm_.outputs['Normal'], bs.inputs['Normal'])
+        bs.inputs['Roughness'].default_value = 0.5; bs.inputs['Specular IOR Level'].default_value = 0.2
+        WP = []
+        for el in els:
+            t = el.get('tags', {})
+            if el.get('type') != 'way' or t.get('natural') != 'water': continue
+            P = np.array([_xy(p) for p in (el.get('geometry') or []) if p], float)
+            if len(P) < 4: continue
+            P = P[:-1] if np.allclose(P[0], P[-1]) else P
+            P = np.clip(P, -NE + 2, NE - 2); WP.append(P)
+        WF = _drape(WP, m_w, 'bg_river', 2 * NE, 0.06); print('water faces', len(WF))
+        m_pool = mat_img('lagoon_pool', os.path.join(HERE, 'tex', 'rw', 'pool.png'), 0.15)
+        LF_ = _drape([np.array(p, float) for k, p in spec.get('paint_poly', []) if k == 'lagoon'], m_pool, 'bg_lagoon', 8.0, 0.06); print('lagoon faces', len(LF_))
+    print('roads', len(roads), 'road faces', len(RF_), 'line faces', len(LF), 'car park faces', len(PF))
+
+# ---------- export background, then add the ground model for renders ----------
+bpy.ops.export_scene.gltf(filepath=os.path.join(OUT, 'scene_bg.glb'), export_format='GLB', use_selection=False)
+glb = os.path.normpath(os.path.join(HERE, spec['glb']))
+if os.path.exists(glb): bpy.ops.import_scene.gltf(filepath=glb)
+FO = os.path.join(D, 'fence_mask.npy')
+if spec.get('trim_base') and os.path.exists(FO):   # the model's square base stops at its fence (scene copy only, the GLB is untouched)
+    FM = np.load(FO); FN = FM.shape[0]
+    _p = np.pad(FM, 8, mode='edge'); _dil = np.zeros_like(FM); _ero = np.ones_like(FM)
+    for di in range(-8, 9, 2):
+        for dj in range(-8, 9, 2):
+            sh = _p[8 + di:8 + di + FN, 8 + dj:8 + dj + FN]; _dil |= sh; _ero &= sh
+    FB = _dil & ~_ero
+    for o in [o for o in bpy.data.objects if o.type == 'MESH' and o.name.split('.')[0] in spec['trim_base']]:
+        bm = bmesh.new(); bm.from_mesh(o.data); M = o.matrix_world
+        def _band(p):   # within ~4 m of the trim line: refine there so the cut edge follows the mask, not a 3 m sawtooth
+            i, j = int((260 - p.y) / 0.5), int((p.x + 260) / 0.5)
+            return 0 <= i < FN and 0 <= j < FN and FB[i, j]
+        for _ in range(16):   # split long fan triangles (UVs interpolate) so the cut follows the mask, not a face centre
+            long_ = []
+            for e in bm.edges:
+                a_, b_ = M @ e.verts[0].co, M @ e.verts[1].co; L_ = (a_ - b_).length
+                if L_ > 3.0 or (L_ > 0.6 and _band((a_ + b_) / 2)): long_.append(e)
+            if not long_: break
+            bmesh.ops.subdivide_edges(bm, edges=long_, cuts=1, use_grid_fill=False)
+            bmesh.ops.triangulate(bm, faces=bm.faces[:])
+        kill = []
+        for f in bm.faces:
+            c = M @ f.calc_center_median(); i, j = int((260 - c.y) / 0.5), int((c.x + 260) / 0.5)
+            if not (0 <= i < FN and 0 <= j < FN and FM[i, j]): kill.append(f)
+        bmesh.ops.delete(bm, geom=kill, context='FACES'); bm.to_mesh(o.data); bm.free()
+        print('trimmed', o.name, len(kill), 'faces')
+# courts as real geometry: slab per group (hand-made grain), white lines at ITF dimensions, net (no ground paint blur)
+CJ = os.path.join(D, 'courts.json')
+if os.path.exists(CJ):
+    cj = json.load(open(CJ))
+    def court_mat(nm, rgb):
+        m = bpy.data.materials.new(nm); m.use_nodes = True; nt = m.node_tree; b = nt.nodes['Principled BSDF']
+        gt = nt.nodes.new('ShaderNodeTexImage'); gt.image = bpy.data.images.load(os.path.join(HERE, 'tex', 'court_grain.png'))   # tex_bake.py, 0.25 m tile
+        mx = nt.nodes.new('ShaderNodeMix'); mx.data_type = 'RGBA'; mx.blend_type = 'MULTIPLY'; mx.inputs['Factor'].default_value = 1.0
+        fc = [1.25 * c for c in srgb(rgb)]
+        if max(fc) > 1: print('WARN court colour over 1, clamped', nm, fc)
+        mx.inputs[6].default_value = (*[min(1.0, c) for c in fc], 1); nt.links.new(gt.outputs['Color'], mx.inputs[7])   # grain stored / 1.25
+        nt.links.new(mx.outputs[2], b.inputs['Base Color']); b.inputs['Roughness'].default_value = 0.75
+        return m
+    mats = {k: court_mat('court_' + k, v) for k, v in cj['pal'].items()}
+    for k, hull in cj['slabs']:
+        H = np.array(hull, float); z = height(H[:, 0], H[:, 1]).max() + 0.04
+        V = [(x, y, z) for x, y in H] + [(H[:, 0].mean(), H[:, 1].mean(), z)]; c = len(H)
+        set_uv_box(mk_obj('bg_court_slab_' + k, V, [[c, i, (i + 1) % c] for i in range(c)], mats[k]).data, 4.0)   # grain tile 0.25 m
+    white = bpy.data.materials.new('court_line'); white.use_nodes = True; white.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = (0.86, 0.86, 0.84, 1)
+    net = bpy.data.materials.new('court_net'); net.use_nodes = True; nb = net.node_tree.nodes['Principled BSDF']
+    nb.inputs['Base Color'].default_value = (0.02, 0.02, 0.02, 1); nb.inputs['Alpha'].default_value = 0.55
+    LV, LF, NV, NF = [], [], [], []
+    def seg(cx, cy, ux, uy, x0, y0, x1, y1, z, w=0.05):
+        wx, wy = -uy, ux; P0 = (cx + ux * x0 + wx * y0, cy + uy * x0 + wy * y0); P1 = (cx + ux * x1 + wx * y1, cy + uy * x1 + wy * y1)
+        dx, dy = P1[0] - P0[0], P1[1] - P0[1]; L = math.hypot(dx, dy); nx, ny = -dy / L * w / 2, dx / L * w / 2; n = len(LV)
+        LV.extend([(P0[0] + nx, P0[1] + ny, z), (P1[0] + nx, P1[1] + ny, z), (P1[0] - nx, P1[1] - ny, z), (P0[0] - nx, P0[1] - ny, z)]); LF.append([n, n + 1, n + 2, n + 3])
+    nc = 0
+    for k, cx, cy, ang, L_, W_ in cj['courts']:
+        if L_ < 23.5 or W_ < 10.8: continue   # OSM box smaller than a doubles court: no lines rather than wrong ones
+        ux, uy = math.cos(ang), math.sin(ang); z = float(height(np.array([cx]), np.array([cy]))[0]) + 0.05; nc += 1
+        X, Y, SY, SV = 11.885, 5.485, 4.115, 6.40
+        for a, b, c_, d in [(-X, -Y, X, -Y), (-X, Y, X, Y), (-X, -Y, -X, Y), (X, -Y, X, Y), (-X, -SY, X, -SY), (-X, SY, X, SY),
+                            (-SV, -SY, -SV, SY), (SV, -SY, SV, SY), (-SV, 0, SV, 0), (-X, 0, -X + 0.1, 0), (X - 0.1, 0, X, 0)]:
+            seg(cx, cy, ux, uy, a, b, c_, d, z)
+        wx, wy = -uy, ux; n = len(NV)   # net: 0.914 m at the centre strap, posts 0.914 m outside the doubles lines
+        for yy, hh in [(-Y - 0.914, 1.07), (0, 0.914), (Y + 0.914, 1.07)]:
+            NV.extend([(cx + wx * yy, cy + wy * yy, z), (cx + wx * yy, cy + wy * yy, z + hh)])
+        NF.extend([[n, n + 2, n + 3, n + 1], [n + 2, n + 4, n + 5, n + 3]])
+    for cx, cy, ang, L_, W_ in cj.get('hockey', []):   # FIH pitch 91.4 x 55 m on a run-off slab (the OSM box)
+        ux, uy = math.cos(ang), math.sin(ang); wx, wy = -uy, ux; z0 = float(height(np.array([cx]), np.array([cy]))[0])
+        def quad(hl, hw, z, nm, mat):
+            V = [(cx + ux * a * hl + wx * b * hw, cy + uy * a * hl + wy * b * hw, z) for a, b in [(-1, -1), (1, -1), (1, 1), (-1, 1)]]
+            mk_obj(nm, V, [[0, 1, 2, 3]], mat)
+        quad(L_ / 2, W_ / 2, z0 + 0.04, 'bg_hockey_runoff', mats['turf_runoff'])
+        HX, HY = 45.7, 27.5; quad(HX, HY, z0 + 0.05, 'bg_hockey_field', mats['turf_blue']); z = z0 + 0.06
+        for a, b, c_, d in [(-HX, -HY, HX, -HY), (-HX, HY, HX, HY), (-HX, -HY, -HX, HY), (HX, -HY, HX, HY), (0, -HY, 0, HY),
+                            (-HX + 22.9, -HY, -HX + 22.9, HY), (HX - 22.9, -HY, HX - 22.9, HY)]:
+            seg(cx, cy, ux, uy, a, b, c_, d, z, 0.075)
+        for sgn in (-1, 1):   # shooting circle: 14.63 m quarter arcs from each post (1.83 m off centre) joined by 3.66 m; dashed 5 m line
+            for r, dash in [(14.63, False), (19.63, True)]:
+                pts = [(sgn * (HX - r * math.cos(t)), -1.83 - r * math.sin(t)) for t in np.linspace(math.pi / 2, 0, 16)] +                       [(sgn * (HX - r * math.cos(t)), 1.83 + r * math.sin(t)) for t in np.linspace(0, math.pi / 2, 16)]
+                for i, ((a, b), (c_, d)) in enumerate(zip(pts, pts[1:])):
+                    if dash and i % 3: continue
+                    seg(cx, cy, ux, uy, a, b, c_, d, z, 0.075)
+        print('hockey pitch', round(L_, 1), round(W_, 1))
+    if LV: mk_obj('bg_court_lines', LV, LF, white)
+    if NV: mk_obj('bg_court_nets', NV, NF, net)
+    print('courts', len(cj['slabs']), 'slabs', nc, 'lined')
+# AFL ovals outside the model: OSM outline = boundary line; AFL Laws markings (centre square 50 m, circles 3 m / 10 m with the
+# dividing line parallel to the goal lines, goal squares 9 x 6.4 m, 50 m arcs from the centre of each goal line); goal and behind posts 6.4 m apart, no nets
+OJ = os.path.join(D, 'ovals.json')
+if os.path.exists(OJ):
+    ovs = json.load(open(OJ))
+    wm = bpy.data.materials.new('oval_line'); wm.use_nodes = True; wm.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = (0.86, 0.86, 0.84, 1)
+    pm = bpy.data.materials.new('oval_post'); pm.use_nodes = True; pm.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = (0.9, 0.9, 0.88, 1)
+    OLV, OLF, PV, PF = [], [], [], []
+    def wseg(P0, P1, z, w=0.10):
+        dx, dy = P1[0] - P0[0], P1[1] - P0[1]; L = math.hypot(dx, dy)
+        if L < 1e-6: return
+        if L > 3.0:   # split so the line follows the ground between terrain grid points
+            k = int(math.ceil(L / 3.0))
+            for i in range(k): wseg((P0[0] + dx * i / k, P0[1] + dy * i / k), (P0[0] + dx * (i + 1) / k, P0[1] + dy * (i + 1) / k), z, w)
+            return
+        nx, ny = -dy / L * w / 2, dx / L * w / 2; n = len(OLV)
+        z0_, z1_ = (float(v) + 0.08 for v in height(np.array([P0[0], P1[0]]), np.array([P0[1], P1[1]])))   # draped: ground height at each end
+        OLV.extend([(P0[0] + nx, P0[1] + ny, z0_), (P1[0] + nx, P1[1] + ny, z1_), (P1[0] - nx, P1[1] - ny, z1_), (P0[0] - nx, P0[1] - ny, z0_)]); OLF.append([n, n + 1, n + 2, n + 3])
+    def inside(x, y, poly):
+        c = False; n = len(poly)
+        for i in range(n):
+            (x1, y1), (x2, y2) = poly[i], poly[(i + 1) % n]
+            if (y1 > y) != (y2 > y) and x < x1 + (y - y1) * (x2 - x1) / (y2 - y1): c = not c
+        return c
+    def post(x, y, z, h, r=0.15):
+        n = len(PV); k = 8
+        for zz in (z, z + h):
+            PV.extend([(x + r * math.cos(2 * math.pi * i / k), y + r * math.sin(2 * math.pi * i / k), zz) for i in range(k)])
+        PF.extend([[n + i, n + (i + 1) % k, n + k + (i + 1) % k, n + k + i] for i in range(k)]); PF.append([n + k + i for i in range(k)])
+    for (cx, cy, ang, L_, W_), poly in ovs:
+        ux, uy = math.cos(ang), math.sin(ang); wx, wy = -uy, ux
+        z = float(height(np.array([cx]), np.array([cy]))[0]) + 0.03
+        def W(a, b): return (cx + ux * a + wx * b, cy + uy * a + wy * b)
+        def L(a, b, c_, d): wseg(W(a, b), W(c_, d), z)
+        for i in range(len(poly)): wseg(poly[i], poly[(i + 1) % len(poly)], z)   # boundary line
+        hl = L_ / 2
+        for a, b, c_, d in [(-25, -25, 25, -25), (25, -25, 25, 25), (25, 25, -25, 25), (-25, 25, -25, -25), (0, -5, 0, 5)]: L(a, b, c_, d)
+        for r in (1.5, 5.0):
+            pts = [(r * math.cos(t), r * math.sin(t)) for t in np.linspace(0, 2 * math.pi, 33)]
+            for (a, b), (c_, d) in zip(pts, pts[1:]): L(a, b, c_, d)
+        for sg in (-1, 1):
+            g = sg * hl
+            for a, b, c_, d in [(g, -3.2, g - sg * 9, -3.2), (g - sg * 9, -3.2, g - sg * 9, 3.2), (g - sg * 9, 3.2, g, 3.2), (g, -9.6, g, 9.6)]: L(a, b, c_, d)
+            arc = [(g - sg * 50 * math.cos(t), 50 * math.sin(t)) for t in np.linspace(-math.pi / 2, math.pi / 2, 61)]
+            for (a, b), (c_, d) in zip(arc, arc[1:]):
+                if inside(*W(a, b), poly) and inside(*W(c_, d), poly): L(a, b, c_, d)
+            for b, h in [(-9.6, 6.5), (-3.2, 12.0), (3.2, 12.0), (9.6, 6.5)]: post(*W(g, b), z - 0.03, h)
+        print('afl oval', round(cx), round(cy), 'length', round(L_, 1), 'width', round(W_, 1))
+    if OLV: mk_obj('bg_oval_lines', OLV, OLF, wm)
+    if PV: mk_obj('bg_oval_posts', PV, PF, pm)
+bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, 'scene.blend'))
+print('SAVED', OUT)

@@ -1,0 +1,56 @@
+import json
+m=json.load(open('spec/mcg.json'))
+s={k:m[k] for k in m if k not in ('rail_cut','rail_geo','landmarks')}
+s.update(name='mars',lat=-37.539307,lon=143.848166,seed=11,clear_r_m=130,near_half_m=1500,tree_r_m=1500,street_trees=12,glb='ground/mars.glb',haze_m=18000,road_mesh=True)
+P=s['palette']
+P.update(ground_default=[128,136,92],lawn=[104,136,66],yard=[118,138,84],sand=[196,184,156],water=[64,88,92],
+ road=[80,80,80],path=[190,186,176],paved=[150,148,140],fairway=[62,96,46],parking=[98,98,96],
+ walls_house=[[176,96,72],[226,222,212],[196,170,136],[150,84,64]],
+ walls_block=[[232,230,222],[204,198,184],[176,104,80],[214,206,190]],
+ walls_tower=[[226,228,226],[150,176,190],[96,124,140],[206,200,188]],
+ roofs_house=[[176,96,66],[108,112,112],[196,198,192],[146,80,58],[78,84,90]],
+ roofs_flat=[[214,216,212],[176,178,176],[150,152,150],[78,82,86],[140,78,56]],
+ far_flat=[132,140,96],far_veg=[66,92,58],far_steep=[60,84,56],haze=[190,204,216],sky_top=[64,124,192],sky_hor=[196,212,226])
+s['cover']=m['cover']+[['natural','wetland','reeds'],['landuse','island_fill','reeds'],['leisure','golf_course','fairway']]
+s['tree_kinds']=['red_gum','ghost_gum','paperbark']
+s['levels_default'].update({'*':5,'house':4.5,'residential':4.5,'detached':4.5,'apartments':10,'commercial':7,'office':10,'retail':7,'industrial':8,'warehouse':9,'school':7,'stadium':20})
+json.dump(s,open('spec/mars.json','w'),indent=1)
+# traced from the satellite (reference only): sand quarry east of the rail, its two pit ponds
+P['quarry']=[208,192,160]; P['reeds']=[108,80,62]; P['pit_water']=[150,180,150]
+s['skip_buildings']=[55226532]; P['athletics']=[176,84,66]
+s['concourse_from_aerial']=True
+# traced 2026-11-20 on the ALIGNED aerial (sat.png = sat_raw shifted 6 m W / 35 m N to match the scene, measured by
+# ortho edge correlation), metre grid gridcrop 1.87 px/m: sand pit + dirt haul corridor, the tree strip between them, two ponds
+s['paint_poly']=[
+ ['quarry',[[441.4,306.4],[666.0,277.0],[652.7,25.7],[620.6,-1.1],[457.5,31.0],[428.1,15.0],[374.6,-81.3],[321.1,-188.2],[305.1,-215.0],[294.4,-134.8],[283.7,-17.1],[257.0,31.0],[326.5,57.7],[347.9,223.5],[401.3,266.3]]],
+ ['spinifex',[[438.8,97.9],[428.1,31.0],[401.3,-6.4],[363.9,4.3],[379.9,79.1]]],
+ ['pit_water',[[470.9,148.7],[524.3,148.7],[537.7,100.5],[519.0,57.8],[476.2,57.8],[468.2,100.5]]],
+ ['pit_water',[[438.8,15.0],[465.5,4.3],[449.5,-81.3],[433.4,-140.1],[379.9,-134.8],[374.6,-102.7],[401.3,-38.5]]]]
+json.dump(s,open('spec/mars.json','w'),indent=1)
+# 2026-11-21 fixes vs the aligned aerial (ortho overlay, 8 failed regions)
+s['msbf_shift']=[-6,35]          # MS footprints sit on the same imagery as sat_raw: same correction as sat.png (measured: sheds/hall land on their roofs)
+s['fence_clear']=True            # skip buildings under the ground model's outline (+3 m), not a 130 m circle (lost the south buildings)
+s['split_big_roofs']=True        # >4000 m2 blocks split in ~25 m strips, each strip its own aerial roof colour (industrial halls)
+s['cycle_asphalt']=True; P['cycleway']=[150,136,126]   # 2026 shared paths: grey measured on the aerial along way 1209
+# 2026 athletics track (OSM way 1579311207, newer than the aerial): standard 400 m, 8 lanes (84.39 m straights, r 36.5+9.76),
+# centre and axis fitted to the OSM outline (centre 42.5,-217.4; axis 126.8 deg). Old aerial's shed inside it is gone.
+P['athletics']=[52,98,160]
+s['track_poly']=[[54.2, -155.9], [50.3, -151.3], [45.8, -147.3], [40.8, -143.9], [35.4, -141.1], [29.7, -139.1], [23.8, -137.9], [17.7, -137.4], [11.7, -137.7], [5.7, -138.9], [-0.0, -140.7], [-5.5, -143.4], [-10.5, -146.7], [-15.1, -150.6], [-19.2, -155.1], [-22.6, -160.1], [-25.3, -165.5], [-27.3, -171.2], [-28.6, -177.1], [-29.1, -183.1], [-28.7, -189.2], [-27.6, -195.1], [-25.7, -200.9], [-23.1, -206.3], [-19.8, -211.4], [30.8, -278.9], [34.7, -283.5], [39.2, -287.6], [44.2, -291.0], [49.6, -293.7], [55.3, -295.8], [61.2, -297.0], [67.3, -297.5], [73.3, -297.1], [79.3, -296.0], [85.0, -294.2], [90.5, -291.5], [95.5, -288.2], [100.1, -284.3], [104.2, -279.8], [107.6, -274.8], [110.3, -269.4], [112.4, -263.7], [113.6, -257.8], [114.1, -251.7], [113.7, -245.7], [112.6, -239.8], [110.7, -234.0], [108.1, -228.5], [104.8, -223.5]]
+s['clear_polys']=[s['track_poly']]
+# north car park: one sealed surface between the hall and the stadium plaza (aerial: all paved bar the OSM garden islands)
+s['paint_poly'].append(['parking',[[-66,106],[-66,166],[-22,170],[-12,181],[85,181],[85,106]]])
+# road-rail strip (OSM park 149775386): dry grass, lawn palette x aerial ratio (87,79,57)/(102,100,68)
+P['dry_grass']=[89,107,55]; s['paint_at']=s.get('paint_at',[])+[[148,88,'dry_grass']]
+json.dump(s,open('spec/mars.json','w'),indent=1)
+# 2026 athletics-centre buildings (newer than the aerial), placed against track_poly from drone photos
+# refs_mars/r22 (2026, looking N over the track) and r16 (looking S from the stadium):
+# grandstand: white roof with a solar strip, along the SW straight, ~8 m gap, ~75 x 22 m;
+# service building: grey roof, white walls, north half of the NE straight, ~55 x 18 m. Marquee = temporary, left out.
+import math as _m
+_u=(0.613,-0.790); _n=(-0.790,-0.613)
+def _rect(c,L,W):
+    return [[round(c[0]+sx*_u[0]*L/2+sy*_n[0]*W/2,2),round(c[1]+sx*_u[1]*L/2+sy*_n[1]*W/2,2)] for sx,sy in ((-1,-1),(1,-1),(1,1),(-1,1))]
+_gs=(5.5+_n[0]*19,-245.2+_n[1]*19)
+_sv=(79.5-_n[0]*17-_u[0]*15,-189.7-_n[1]*17-_u[1]*15)
+s['extra_buildings']=[dict(p=_rect(_gs,75,22),h=9.0,roof=0,wall=0),dict(p=_rect(_sv,55,18),h=7.0,roof=2,wall=0)]
+json.dump(s,open("spec/mars.json","w"),indent=1)

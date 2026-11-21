@@ -1,0 +1,3 @@
+Vicmap Elevation - Contour Line (1 to 5 metres) covering Metropolitan Melbourne, WFS open-data-platform:el_contour_1to5m (opendata.maps.vic.gov.au), fetched 2026-11-20, bbox 144.9640,-37.8355,145.0029,-37.8045.
+Licence CC BY 4.0 (discover.data.vic.gov.au listing; data.gov.au lists CC BY 3.0 AU). Attribution: (c) State of Victoria (Department of Energy, Environment and Climate Action).
+Altitudes are metres AHD; 1 m contours stated +-0.5 m.

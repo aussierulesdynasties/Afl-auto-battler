@@ -1,0 +1,185 @@
+17:09:40 - tripo_addon - [task.py:21] - INFO - WebSocket server started on port 60600
+17:09:40 - tripo_addon - [ws_server.py:202] - WARNING - Port 60600 in use; will retry every 3.0s
+17:09:40 - tripo_addon - [ws_server.py:101] - INFO - Stopping WebSocket server...
+17:09:40 - tripo_addon - [task.py:27] - INFO - WebSocket server stop requested
+17:09:40 - tripo_addon - [ws_server.py:88] - INFO - Event loop closed
+Traceback (most recent call last):
+  File "C:\Program Files\Blender Foundation\Blender 5.2\5.2\scripts\modules\addon_utils.py", line 595, in disable
+    mod.unregister()
+    ~~~~~~~~~~~~~~^^
+  File "C:\Users\DANTE\AppData\Roaming\Blender Foundation\Blender\5.2\scripts\addons\addon.py", line 6401, in unregister
+    bpy.utils.unregister_class(BLENDERMCP_PT_Panel)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: unregister_class(...):, missing bl_rna attribute from '_RNAMeta' instance (may not be registered)
+D:\Temp\claude\b5e56bf702cd3703\4ee81fc3-6cf4-400f-9ad6-28a5df4e19ee\scratchpad\proto\scene.py:63: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  m = bpy.data.materials.new(nm); m.use_nodes = True
+D:\Temp\claude\b5e56bf702cd3703\4ee81fc3-6cf4-400f-9ad6-28a5df4e19ee\scratchpad\proto\scene.py:57: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  m = bpy.data.materials.new(nm); m.use_nodes = True
+<string>:6: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+<string>:166: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+<string>:167: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+D:\Temp\claude\b5e56bf702cd3703\4ee81fc3-6cf4-400f-9ad6-28a5df4e19ee\scratchpad\proto\scene.py:78: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  m = bpy.data.materials.new(nm); m.use_nodes = True
+[INFO ] services.locationservice ...............: Not adding link to MakeHuman user data, since neither explicit path nor auto-discovery is set in preferences.
+[INFO ] mpfb.init ..............................: Build info 20260722
+[INFO ] mpfb.init ..............................: MPFB initialization has finished.
+[Tripo3D] Log file: D:\Temp\tripo3d_blender_bridge.log
+BlenderMCP addon registered
+register_class(...):
+Info: Registering panel class: 'BLENDERMCP_PT_Panel', bl_idname 'BLENDERMCP_PT_Panel' has been registered before, unregistering previous
+register_class(...):
+Info: Registering operator class: 'BLENDERMCP_OT_SetFreeTrialHyper3DAPIKey', bl_idname 'blendermcp.set_hyper3d_free_trial_api_key' has been registered before, unregistering previous
+register_class(...):
+Info: Registering operator class: 'BLENDERMCP_OT_StartServer', bl_idname 'blendermcp.start_server' has been registered before, unregistering previous
+register_class(...):
+Info: Registering operator class: 'BLENDERMCP_OT_StopServer', bl_idname 'blendermcp.stop_server' has been registered before, unregistering previous
+register_class(...):
+Info: Registering operator class: 'BLENDERMCP_OT_OpenTerms', bl_idname 'blendermcp.open_terms' has been registered before, unregistering previous
+register_class(...):
+Info: Registering operator class: 'BLENDERMCP_OT_CheckAddonUpdate', bl_idname 'blendermcp.check_addon_update' has been registered before, unregistering previous
+register_class(...):
+Info: Registering operator class: 'BLENDERMCP_OT_UpdateAddon', bl_idname 'blendermcp.update_addon' has been registered before, unregistering previous
+register_class(...):
+Info: Registering operator class: 'BLENDERMCP_OT_PremiumActivate', bl_idname 'blendermcp.premium_activate' has been registered before, unregistering previous
+register_class(...):
+Info: Registering operator class: 'BLENDERMCP_OT_PremiumDeactivate', bl_idname 'blendermcp.premium_deactivate' has been registered before, unregistering previous
+register_class(...):
+Info: Registering operator class: 'BLENDERMCP_OT_PremiumRefresh', bl_idname 'blendermcp.premium_refresh' has been registered before, unregistering previous
+register_class(...):
+Info: Registering operator class: 'BLENDERMCP_OT_PremiumOpenAccount', bl_idname 'blendermcp.premium_open_account' has been registered before, unregistering previous
+BlenderMCP addon registered
+Exception in module unregister(): 'C:\\Users\\DANTE\\AppData\\Roaming\\Blender Foundation\\Blender\\5.2\\scripts\\addons\\addon.py'
+BlenderMCP addon unregistered
+banks 186 faces
+landmark spire
+landmark shrine axis [-0.37  0.93]
+landmarks built; generic boxes dropped 3
+buildings built
+trees kept 18112
+trees built
+INFO Draco is available, use library at C:\Program Files\Blender Foundation\Blender 5.2\5.2\scripts\addons_core\io_scene_gltf2\bf_intern_draco_bridge.dll
+INFO MeshOptimizer is available, use library at C:\Program Files\Blender Foundation\Blender 5.2\5.2\scripts\addons_core\io_scene_gltf2\bf_intern_meshopt_bridge.dll
+17:09:51 | INFO: Starting glTF 2.0 export
+17:09:51 | INFO: Extracting primitive: bg_banks
+17:09:51 | INFO: Primitives created: 1
+17:09:51 | INFO: Extracting primitive: bg_bld_block_apart
+17:09:51 | INFO: Primitives created: 1
+17:09:51 | INFO: Extracting primitive: bg_bld_block_brick
+17:09:51 | INFO: Primitives created: 1
+17:09:51 | INFO: Extracting primitive: bg_bld_block_clad
+17:09:51 | INFO: Primitives created: 1
+17:09:51 | INFO: Extracting primitive: bg_bld_block_office
+17:09:51 | INFO: Primitives created: 1
+17:09:51 | INFO: Extracting primitive: bg_bld_house
+17:09:51 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+17:09:52 | INFO: Primitives created: 1
+17:09:52 | INFO: Extracting primitive: bg_bld_tower
+17:09:52 | INFO: Primitives created: 1
+17:09:52 | INFO: Extracting primitive: bg_bld_tower_apart
+17:09:52 | INFO: Primitives created: 1
+17:09:52 | INFO: Extracting primitive: bg_bld_tower_brick
+17:09:52 | INFO: Primitives created: 1
+17:09:52 | INFO: Extracting primitive: bg_bld_tower_clad
+17:09:52 | INFO: Primitives created: 1
+17:09:52 | INFO: Extracting primitive: bg_bld_tower_far
+17:09:52 | INFO: Primitives created: 1
+17:09:52 | INFO: Extracting primitive: bg_bridges
+17:09:52 | INFO: Primitives created: 1
+17:09:52 | INFO: Extracting primitive: bg_far_terrain
+17:09:52 | INFO: Primitives created: 1
+17:09:52 | INFO: Extracting primitive: bg_lm_shrine_roof
+17:09:52 | INFO: Primitives created: 1
+17:09:52 | INFO: Extracting primitive: bg_lm_stone
+17:09:52 | INFO: Primitives created: 1
+17:09:52 | INFO: Extracting primitive: bg_lm_veil
+17:09:52 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+17:09:52 | INFO: Primitives created: 1
+17:09:52 | INFO: Extracting primitive: bg_lm_white
+17:09:52 | INFO: Primitives created: 1
+17:09:52 | INFO: Extracting primitive: bg_near_ground
+17:09:53 | INFO: Primitives created: 1
+17:09:53 | INFO: Extracting primitive: bg_rails
+17:09:53 | INFO: Primitives created: 1
+17:09:53 | INFO: Extracting primitive: bg_roof_block_apart_big
+17:09:53 | INFO: Primitives created: 1
+17:09:53 | INFO: Extracting primitive: bg_roof_block_apart_metal
+17:09:53 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+17:09:53 | INFO: Primitives created: 1
+17:09:53 | INFO: Extracting primitive: bg_roof_block_brick_big
+17:09:53 | INFO: Primitives created: 1
+17:09:53 | INFO: Extracting primitive: bg_roof_block_brick_metal
+17:09:53 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+17:09:53 | INFO: Primitives created: 1
+17:09:53 | INFO: Extracting primitive: bg_roof_block_clad_big
+17:09:53 | INFO: Primitives created: 1
+17:09:53 | INFO: Extracting primitive: bg_roof_block_clad_metal
+17:09:54 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+17:09:54 | INFO: Primitives created: 1
+17:09:54 | INFO: Extracting primitive: bg_roof_block_office_big
+17:09:54 | INFO: Primitives created: 1
+17:09:54 | INFO: Extracting primitive: bg_roof_block_office_metal
+17:09:54 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+17:09:54 | INFO: Primitives created: 1
+17:09:54 | INFO: Extracting primitive: bg_roof_house_metal
+17:09:54 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+17:09:54 | INFO: Primitives created: 1
+17:09:54 | INFO: Extracting primitive: bg_roof_house_tile
+17:09:54 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+17:09:54 | INFO: Primitives created: 1
+17:09:54 | INFO: Extracting primitive: bg_roof_tower_apart_big
+17:09:54 | INFO: Primitives created: 1
+17:09:54 | INFO: Extracting primitive: bg_roof_tower_apart_metal
+17:09:54 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+17:09:54 | INFO: Primitives created: 1
+17:09:54 | INFO: Extracting primitive: bg_roof_tower_big
+17:09:54 | INFO: Primitives created: 1
+17:09:54 | INFO: Extracting primitive: bg_roof_tower_brick_metal
+17:09:54 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+17:09:54 | INFO: Primitives created: 1
+17:09:54 | INFO: Extracting primitive: bg_roof_tower_clad_big
+17:09:54 | INFO: Primitives created: 1
+17:09:54 | INFO: Extracting primitive: bg_roof_tower_far_big
+17:09:54 | INFO: Primitives created: 1
+17:09:54 | INFO: Extracting primitive: bg_roof_tower_far_metal
+17:09:54 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+17:09:54 | INFO: Primitives created: 1
+17:09:54 | INFO: Extracting primitive: bg_roof_tower_metal
+17:09:54 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+17:09:54 | INFO: Primitives created: 1
+17:09:54 | INFO: Extracting primitive: bg_trackbed
+17:09:54 | INFO: Primitives created: 1
+17:09:54 | INFO: Extracting primitive: bg_trees_elm
+17:09:54 | INFO: Primitives created: 1
+17:09:55 | INFO: Extracting primitive: bg_trees_plane
+17:09:55 | INFO: Primitives created: 1
+17:09:55 | INFO: Extracting primitive: bg_trees_red_gum
+17:09:56 | INFO: Primitives created: 1
+17:09:56 | INFO: Finished glTF 2.0 export in 4.650381565093994 s
+
+17:09:56 | INFO: Data are loaded, start creating Blender stuff
+17:09:56 | INFO: Blender create Mesh node bowl
+17:09:57 | INFO: Blender create Mesh node canopy
+17:09:57 | INFO: Blender create Mesh node masts
+17:09:57 | INFO: Blender create Mesh node plaza
+17:09:57 | INFO: Blender create Mesh node roof
+17:09:57 | INFO: Blender create Mesh node screens
+17:09:57 | INFO: Blender create Mesh node towers
+17:09:57 | INFO: Blender create Mesh node trusses
+17:09:57 | INFO: glTF import finished in 0.82s
+D:\Temp\claude\b5e56bf702cd3703\4ee81fc3-6cf4-400f-9ad6-28a5df4e19ee\scratchpad\proto\scene.py:550: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  wm = bpy.data.materials.new('oval_line'); wm.use_nodes = True; wm.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = (0.86, 0.86, 0.84, 1)
+D:\Temp\claude\b5e56bf702cd3703\4ee81fc3-6cf4-400f-9ad6-28a5df4e19ee\scratchpad\proto\scene.py:551: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  pm = bpy.data.materials.new('oval_post'); pm.use_nodes = True; pm.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = (0.9, 0.9, 0.88, 1)
+seats seat_grey 5923
+seats seat_moss 17198
+seats seat_navy 44866
+seats seat_slate 3684
+seats seat_steel 1765
+afl oval 411 -235 length 166.3 width 135.8
+afl oval 356 -709 length 164.4 width 120.0
+afl oval -191 -512 length 172.6 width 147.8
+Info: Saved as "scene.blend"
+SAVED D:\Temp\claude\b5e56bf702cd3703\4ee81fc3-6cf4-400f-9ad6-28a5df4e19ee\scratchpad\proto\out\mcg
+Blender 5.2.2 LTS (hash d13f752e3b9c built 2026-09-15 01:37:04)
+
+Blender quit

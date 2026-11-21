@@ -1,0 +1,17 @@
+# ---------- Optus west pavilion: glazed walls under a curved ribbed metal roof (aerial: grey barrel roof) ----------
+if 'opt_pav' in LM:
+    i_p = find(-125, -166, r=12); drop.add(i_p); P = ccw([tuple(p) for p in BL[i_p]['p']]); z0 = gz(P)
+    A = np.array(P); c = A.mean(0); E = np.diff(np.vstack([A, A[:1]]), axis=0); e = E[np.argmax(np.hypot(E[:, 0], E[:, 1]))]
+    ax = e / np.hypot(*e); nx = np.array([-ax[1], ax[0]])
+    s = (A - c) @ ax; t = (A - c) @ nx; L0, L1, W0, W1 = s.min(), s.max(), t.min(), t.max()
+    hw = 4.5; wall_ring('atrium', P, z0, z0 + 1.0 + hw)
+    ze = z0 + 1.0 + hw; rise = min(4.0, 0.22 * (W1 - W0)); NS = 12
+    V, F, U = bk('roofcap'); n0 = len(V)
+    for j in range(NS + 1):
+        f = j / NS; tt = W0 - 0.6 + f * (W1 - W0 + 1.2); z = ze + rise * math.sin(math.pi * f)
+        for ss in (L0 - 0.6, L1 + 0.6):
+            p = c + ax * ss + nx * tt; V.append((p[0], p[1], z)); U.append((ss / 3.04, f * (W1 - W0) / 3.04))
+    for j in range(NS):
+        a = n0 + 2 * j; F.append((a, a + 1, a + 3, a + 2))
+    print('landmark pavilion', round(L1 - L0, 1), 'x', round(W1 - W0, 1), 'rise', round(rise, 1))
+

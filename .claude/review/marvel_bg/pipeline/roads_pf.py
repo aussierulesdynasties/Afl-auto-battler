@@ -1,0 +1,162 @@
+# ---------- roads and car parks: asphalt surfaces (road_asphalt.png, 512 px = 7.2 m) and white lines ----------
+if spec.get('road_mesh'):
+    from mathutils.geometry import tessellate_polygon
+    lat0, lon0 = spec['lat'], spec['lon']; KX = 111320 * math.cos(math.radians(lat0)); KY = 110540
+    def _xy(p): return ((p['lon'] - lon0) * KX, (p['lat'] - lat0) * KY)
+    _FP = np.array(json.load(open(os.path.join(D, 'footprint.json'))))
+    def _outside(Q, pad=1.0):   # True where a point is clear of the ground model's footprint
+        b = ((np.degrees(np.arctan2(Q[:, 1], Q[:, 0])) % 360) // (360 / len(_FP))).astype(int) % len(_FP)
+        return np.hypot(Q[:, 0], Q[:, 1]) > _FP[b] + pad
+    def _dens(P, step):
+        Q = [P[0]]
+        for p2 in P[1:]:
+            k = max(1, int(math.ceil(np.hypot(*(p2 - Q[-1])) / step))); a = Q[-1]
+            for j in range(1, k + 1): Q.append(a + (p2 - a) * (j / k))
+        return np.array(Q)
+    def _tint(rgb, fn): return os.path.join(HERE, 'tex', fn)   # made by mk_road_tex.py (Blender has no PIL)
+    TILE = 104.0   # one seamless tile: asphalt at 8 m mixed with a rotated 20.8 m sample (mk_road_tex.py)
+    from mathutils import noise as _nz
+    def _mottle(me, co):   # 40 m noise (2 octaves, roughness 0.5) ramped 0.85-1.0 into vertex colour; glTF multiplies COLOR_0 into the base colour
+        vi = np.zeros(len(me.loops), int); me.loops.foreach_get('vertex_index', vi); P_ = co[vi]
+        n = np.array([_nz.noise(Vector((x / 40.0, y / 40.0, 0.5))) + 0.5 * _nz.noise(Vector((x / 20.0, y / 20.0, 7.5))) for x, y in P_[:, :2]]) / 1.5
+        v = 0.85 + 0.15 * np.clip(n * 0.5 + 0.5, 0, 1)
+        set_corner_col(me, np.stack([v, v, v, np.ones_like(v)], 1))
+    def mat_img_vc(nm, path, rough):
+        m = mat_img(nm, path, rough); nt = m.node_tree; b = nt.nodes['Principled BSDF']; t = [x for x in nt.nodes if x.type == 'TEX_IMAGE'][0]
+        ca = nt.nodes.new('ShaderNodeVertexColor'); ca.layer_name = 'Col'
+        mul = nt.nodes.new('ShaderNodeMix'); mul.data_type = 'RGBA'; mul.blend_type = 'MULTIPLY'; mul.inputs[0].default_value = 1
+        nt.links.new(t.outputs['Color'], mul.inputs[6]); nt.links.new(ca.outputs['Color'], mul.inputs[7]); nt.links.new(mul.outputs[2], b.inputs['Base Color'])
+        return m
+    m_road = mat_img_vc('road_asphalt', _tint(PAL['road'], 'road_asphalt_road.png'), 0.92)
+    m_park = mat_img_vc('park_asphalt', _tint(PAL['parking'], 'road_asphalt_park.png'), 0.92)
+    m_line = mat_vcol('road_lines', 0.7); LC = list(lin((236, 236, 230))) + [1.0]
+    WDR = {'motorway': 22, 'trunk': 18, 'primary': 16, 'secondary': 13, 'tertiary': 11, 'residential': 8, 'unclassified': 8, 'service': 5}
+    TWO = ('secondary', 'tertiary', 'residential', 'unclassified')
+    els = json.load(open(os.path.join(HERE, 'data', name, 'osm.json'), encoding='utf-8'))['elements']
+    roads = []; SERV = []
+    for el in els:
+        t = el.get('tags', {}); hw = t.get('highway')
+        if el.get('type') != 'way' or hw not in WDR: continue
+        if t.get('tunnel', 'no') != 'no' or (t.get('bridge') and t.get('bridge') != 'no') or t.get('area') == 'yes': continue
+        P = np.array([_xy(p) for p in (el.get('geometry') or []) if p], float)
+        if len(P) < 2 or np.abs(P).max() > NE - 5: P = P[(np.abs(P) < NE - 5).all(1)] if len(P) else P
+        if len(P) < 2: continue
+        two = hw in TWO and t.get('oneway', 'no') == 'no' and t.get('lanes', '2') == '2'
+        roads.append((_dens(P, 1.5), WDR[hw], two)); SERV.append(hw == 'service')
+    # coverage hash: every road centreline sample, so lines stop where another road crosses (junctions)
+    CELL = 12.0; H_ = {}
+    for ri, (Q, w, _) in enumerate(roads):
+        T = np.gradient(Q, axis=0); T = T / np.maximum(np.hypot(T[:, 0], T[:, 1]), 1e-6)[:, None]
+        for q, tq in zip(Q, T): H_.setdefault((int(q[0] // CELL), int(q[1] // CELL)), []).append((ri, q[0], q[1], w, tq[0], tq[1]))
+    def _clear(ri, x, y, tx, ty):   # a crossing road (more than 30 deg off this one's heading) blanks the lines near it
+        cx, cy = int(x // CELL), int(y // CELL)
+        for i in (-1, 0, 1):
+            for j in (-1, 0, 1):
+                for rj, qx, qy, w, ux, uy in H_.get((cx + i, cy + j), ()):
+                    if rj != ri and abs(tx * ux + ty * uy) < 0.866 and math.hypot(x - qx, y - qy) < w / 2 + 1.5: return False
+        return True
+    def _ribbon(Q, off, w, lift, V, F, UV=None):
+        n = len(Q); N_ = []
+        for i in range(n):
+            d_ = Q[min(i + 1, n - 1)] - Q[max(i - 1, 0)]; L = max(np.hypot(*d_), 1e-6); N_.append(np.array([-d_[1], d_[0]]) / L)
+        N_ = np.array(N_); C = Q + N_ * off; m = max(1, int(math.ceil(w / 1.5))); s0 = len(V)   # a column every 1.5 m across, so the strip follows the ground's crown
+        for k in range(m + 1):
+            X = C + N_ * (w / 2 - w * k / m); z = height(X[:, 0], X[:, 1]) + lift
+            V.extend((float(X[i, 0]), float(X[i, 1]), float(z[i])) for i in range(n))
+        for k in range(m):
+            for i in range(n - 1):
+                F.append((s0 + k * n + i, s0 + (k + 1) * n + i, s0 + (k + 1) * n + i + 1, s0 + k * n + i + 1))
+    def _runs(ok):
+        return [r for r in np.split(np.arange(len(ok)), np.where(np.diff(ok.astype(int)) != 0)[0] + 1) if ok[r[0]] and len(r) > 1]
+    RV, RF_, LV, LF = [], [], [], []; DK = []; KV, KF = [], []
+    for ri, (Q, w, two) in enumerate(roads):
+        ok = _outside(Q)
+        _v0 = len(RV)
+        for r in _runs(ok): _ribbon(Q[r], 0, w, 0.04, RV, RF_)
+        if SERV[ri]: DK.append((_v0, len(RV)))
+        if SERV[ri]: continue
+        for sd in (-1, 1):   # kerb and gutter: 0.35 m light concrete strip at each edge
+            for r in _runs(ok): _ribbon(Q[r], sd * (w / 2 + 0.1), 0.35, 0.12, KV, KF)
+        Ql = _dens(Q, 0.5); Tl = np.gradient(Ql, axis=0); Tl = Tl / np.maximum(np.hypot(Tl[:, 0], Tl[:, 1]), 1e-6)[:, None]
+        okl = _outside(Ql, 2.0) & np.array([_clear(ri, x, y, a, b) for (x, y), (a, b) in zip(Ql, Tl)])
+        for sd in (-1, 1):   # edge lines 0.1 m wide, 0.3 m inside each edge
+            for r in _runs(okl): _ribbon(Ql[r], sd * (w / 2 - 0.35), 0.10, 0.06, LV, LF)
+        s = np.concatenate([[0], np.cumsum(np.hypot(*np.diff(Ql, axis=0).T))])   # centre: 3 m dash, 9 m gap
+        if two:
+            for r in _runs(okl & ((s % 12.0) < 3.0)): _ribbon(Ql[r], 0, 0.10, 0.06, LV, LF)
+        else:   # multi-lane: 3.5 m lanes, dashed lane lines between them
+            nl_ = max(2, int(round((w - 1.0) / 3.5)))
+            for li in range(1, nl_):
+                for r in _runs(okl & ((s % 12.0) < 3.0)): _ribbon(Ql[r], -w / 2 + 0.5 + li * (w - 1.0) / nl_, 0.10, 0.06, LV, LF)
+    if RF_:
+        ob = mk_obj('bg_roads', RV, RF_, m_road); co = np.array(RV); ob.data.polygons.foreach_set('use_smooth', [True] * len(ob.data.polygons))
+        vi = np.zeros(len(ob.data.loops), int); ob.data.loops.foreach_get('vertex_index', vi); set_uv(ob.data, co[vi, :2] / TILE); _mottle(ob.data, co)
+        _f = np.ones(len(RV))
+        for a_, b_ in DK: _f[a_:b_] = 0.6
+        _cc = np.zeros(len(ob.data.loops) * 4); ob.data.color_attributes['Col'].data.foreach_get('color', _cc); _cc = _cc.reshape(-1, 4)
+        _cc[:, :3] *= _f[vi][:, None]; ob.data.color_attributes['Col'].data.foreach_set('color', _cc.ravel())
+    if LF:
+        ob = mk_obj('bg_road_lines', LV, LF, m_line); set_corner_col(ob.data, np.tile(LC, (len(LF) * 4, 1)))
+    if KF:
+        ob = mk_obj('bg_kerbs', KV, KF, m_line); set_corner_col(ob.data, np.tile(list(lin((168, 164, 156))) + [1.0], (len(KF) * 4, 1)))
+    # car parks: OSM amenity=parking plus the spec's traced parking, a 1 m grid inside each outline draped on the terrain
+    polys = []
+    for el in els:
+        t = el.get('tags', {})
+        if el.get('type') == 'way' and t.get('amenity') == 'parking' and t.get('parking', 'surface') == 'surface':
+            g = [_xy(p) for p in (el.get('geometry') or []) if p]
+            if len(g) > 3: polys.append(np.array(g))
+    polys += [np.array(p, float) for k, p in spec.get('paint_poly', []) if k == 'parking']
+    def _clipsq(poly, x, y):   # the polygon clipped to the 1 m square at (x, y) (Sutherland-Hodgman, square is convex)
+        out = [tuple(q) for q in poly]
+        for ax, sg, c in ((0, 1, x), (0, -1, x + 1), (1, 1, y), (1, -1, y + 1)):
+            if not out: break
+            inp, out = out, []
+            for k in range(len(inp)):
+                a, b = inp[k - 1], inp[k]; ia = (a[ax] - c) * sg >= 0; ib = (b[ax] - c) * sg >= 0
+                if ia != ib:
+                    t = (c - a[ax]) / (b[ax] - a[ax]); out.append((a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t))
+                if ib: out.append(b)
+        return out
+    def _drape(polys, mat, nm, tile, lift):   # 1 m grid inside each outline; edge cells cut to the true outline
+        PV, PF = [], []
+        for poly in polys:
+            x0, y0 = np.floor(poly.min(0)); x1, y1 = np.ceil(poly.max(0))
+            xs = np.arange(x0, x1 + 1); ys = np.arange(y0, y1 + 1); GX, GY = np.meshgrid(xs, ys)
+            px, py = GX.ravel(), GY.ravel(); ins = np.zeros(len(px), bool); j = len(poly) - 1
+            for i in range(len(poly)):   # even-odd ray test
+                xi, yi = poly[i]; xj, yj = poly[j]
+                ins ^= ((yi > py) != (yj > py)) & (px < (xj - xi) * (py - yi) / ((yj - yi) or 1e-9) + xi); j = i
+            ins = ins.reshape(GX.shape)
+            q = ins[:-1, :-1] & ins[1:, :-1] & ins[:-1, 1:] & ins[1:, 1:]
+            E = _dens(np.vstack([poly, poly[:1]]), 0.25); edge = set(zip((np.floor(E[:, 0]) - x0).astype(int), (np.floor(E[:, 1]) - y0).astype(int)))
+            part = (ins[:-1, :-1] | ins[1:, :-1] | ins[:-1, 1:] | ins[1:, 1:]) & ~q   # cells the outline only grazes at a corner
+            edge |= set(zip(*np.nonzero(part.T)))
+            for ii, jj in edge:
+                if 0 <= jj < q.shape[0] and 0 <= ii < q.shape[1]: q[jj, ii] = False
+            if q.any():
+                Z = height(GX, GY) + lift; idx = -np.ones(GX.shape, int); used = np.zeros(GX.shape, bool)
+                used[:-1, :-1] |= q; used[1:, :-1] |= q; used[:-1, 1:] |= q; used[1:, 1:] |= q
+                s0 = len(PV); idx[used] = s0 + np.arange(used.sum())
+                PV.extend(zip(GX[used], GY[used], Z[used]))
+                jj_, ii_ = np.nonzero(q)
+                PF.extend(zip(idx[jj_, ii_], idx[jj_, ii_ + 1], idx[jj_ + 1, ii_ + 1], idx[jj_ + 1, ii_]))
+            for ii, jj in edge:   # boundary cells: the outline clipped to the cell, vertices on the true outline
+                c = _clipsq(poly, x0 + ii, y0 + jj)
+                c = [v for k, v in enumerate(c) if math.hypot(v[0] - c[k - 1][0], v[1] - c[k - 1][1]) > 1e-4]   # drop repeated points
+                if len(c) < 3: continue
+                C = np.array(c); z = height(C[:, 0], C[:, 1]) + lift; s0 = len(PV)
+                PV.extend(zip(C[:, 0], C[:, 1], z))
+                T = tessellate_polygon([[Vector((a, b, 0)) for a, b in c]]) or [(0, k, k + 1) for k in range(1, len(c) - 1)]
+                for tri in T: PF.append(tuple(s0 + t for t in tri))
+        if PF:
+            ob = mk_obj(nm, [tuple(map(float, v)) for v in PV], [tuple(map(int, f)) for f in PF], mat); co = np.array(PV, float); ob.data.polygons.foreach_set('use_smooth', [True] * len(ob.data.polygons))
+            vi = np.zeros(len(ob.data.loops), int); ob.data.loops.foreach_get('vertex_index', vi); set_uv(ob.data, co[vi, :2] / tile)
+            if mat is m_park: _mottle(ob.data, co)
+        return PF
+    PF = _drape(polys, m_park, 'bg_carparks', TILE, 0.02)   # 2 cm under the roads (0.04) so they never fight
+    m_pave = mat_img('plaza_pavers', _tint(None, 'pavers_paved.png'), 0.9); m_pave.node_tree.nodes['Principled BSDF'].inputs['Specular IOR Level'].default_value = 0.3
+    PF2 = _drape([np.array(p, float) for k, p in spec.get('paint_poly', []) if k == 'paved'], m_pave, 'bg_paved', 6.0, 0.03)
+    print('paved faces', len(PF2))
+    print('roads', len(roads), 'road faces', len(RF_), 'line faces', len(LF), 'car park faces', len(PF))
+

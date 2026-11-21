@@ -1,0 +1,37 @@
+"""Hand-made ground pass on prep/ground_baked.png (no photo pixels):
+grass: two-scale repeat break (45 m, 160 m) everywhere, mowing stripes (8 m) on open grass near the ground;
+water: darker channel down the middle, muddy-olive banks 0-3 m, slow ripple tone. usage: post_ground.py name"""
+import os, sys, json
+import numpy as np
+from PIL import Image
+from scipy import ndimage as ndi
+Image.MAX_IMAGE_PIXELS = None
+H = os.path.dirname(os.path.abspath(__file__)); name = sys.argv[1]
+D = os.path.join(H, 'data', name, 'prep'); NE = json.load(open(os.path.join(D, 'meta.json')))['near']
+spec = json.load(open(os.path.join(H, 'spec', name + '.json'))); P = spec['palette']
+B = np.asarray(Image.open(os.path.join(D, 'ground_baked.png')).convert('RGB')).astype(np.float32); S = B.shape[0]; mpp = 2 * NE / S
+G = np.asarray(Image.open(os.path.join(D, 'ground.png')).convert('RGB').resize((S, S), Image.NEAREST)).astype(np.int16)
+def near(c, t): return (np.abs(G - np.array(c)).sum(2) < t)
+grass = near(P['ground_default'], 14) | near(P['lawn'], 14) | near(P['yard'], 14) | near(P['spinifex'], 14)
+water = near(P['water'], 14)
+rng = np.random.default_rng(3)
+def lowf(cell_m):
+    k = max(2, int(S * mpp / cell_m)); n = rng.random((k, k))
+    return np.asarray(Image.fromarray((n * 255).astype(np.uint8)).resize((S, S), Image.BICUBIC), np.float32) / 255 - 0.5
+rb = 1 + 0.10 * lowf(45) + 0.08 * lowf(160)
+yy, xx = (np.mgrid[0:S, 0:S] + 0.5) * mpp - NE; yy = -yy           # rows run north -> south
+r = np.hypot(xx, yy)
+dg = ndi.distance_transform_edt(grass) * mpp                        # metres to the nearest non-grass
+stripe = np.where(((xx * 0.94 + yy * 0.34) // 8) % 2 == 0, 1.05, 0.95)
+mow = (dg > 4) & (r < spec.get('mow_r_m', 450))
+F = np.ones((S, S), np.float32); F[grass] = rb[grass]; F[mow] *= stripe[mow]
+B *= F[..., None]
+dw = ndi.distance_transform_edt(water) * mpp
+bank = water & (dw < 3); chan = np.clip((dw - 3) / 10, 0, 1)
+rip = 1 + 0.07 * lowf(30) + 0.05 * lowf(90)
+W = np.where(water, (1 - 0.32 * chan) * rip, 1)
+B *= W[..., None]
+bc = np.array([96, 104, 70], np.float32); t = (1 - dw / 3)[..., None] * 0.7
+B = np.where(bank[..., None], B * (1 - t) + bc * t, B)
+Image.fromarray(np.clip(B, 0, 255).astype(np.uint8)).save(os.path.join(D, 'ground_baked.png'))
+print('post_ground grass %.1f%% mow %.1f%% water %.2f%%' % (grass.mean() * 100, mow.mean() * 100, water.mean() * 100))

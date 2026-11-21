@@ -1,0 +1,1 @@
+{"out": "seatchk", "res": [1280, 720], "samples": 16, "sun": {"az": 110, "el": 45, "power": 4.5}, "sky": [[0.0, [0.77, 0.84, 0.89]], [0.45, [0.25, 0.49, 0.77]]], "views": [{"name": "ring", "orbit": {"r": 520, "z": 190, "look": [0, 0, 10], "frames": 4, "start_deg": 0, "fov_h": 60}}, {"name": "close", "cam": [0, -60, 45], "look": [0, -120, 20], "fov_h": 70}]}

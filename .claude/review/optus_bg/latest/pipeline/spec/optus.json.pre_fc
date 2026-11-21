@@ -1,0 +1,524 @@
+{
+ "name": "optus",
+ "lat": -31.951064,
+ "lon": 115.889206,
+ "seed": 7,
+ "clear_r_m": 190,
+ "near_half_m": 1500,
+ "near_step_m": 7.5,
+ "far_half_m": 30000,
+ "far_step_m": 250,
+ "ground_m_per_px": 1.5,
+ "tree_r_m": 1500,
+ "street_trees": 16,
+ "rivers_dry": false,
+ "open_mix": [
+  "lawn",
+  0.35,
+  0.75
+ ],
+ "glb": "../glb/optus.glb",
+ "palette": {
+  "ground_default": [
+   150,
+   148,
+   96
+  ],
+  "spinifex": [
+   158,
+   150,
+   104
+  ],
+  "lawn": [
+   112,
+   138,
+   70
+  ],
+  "yard": [
+   176,
+   164,
+   124
+  ],
+  "rock": [
+   150,
+   136,
+   112
+  ],
+  "sand": [
+   222,
+   206,
+   170
+  ],
+  "water": [
+   62,
+   98,
+   104
+  ],
+  "road": [
+   86,
+   86,
+   84
+  ],
+  "path": [
+   206,
+   194,
+   168
+  ],
+  "ballast": [
+   140,
+   128,
+   110
+  ],
+  "paved": [
+   186,
+   180,
+   168
+  ],
+  "plaza": [
+   198,
+   162,
+   140
+  ],
+  "parking": [
+   96,
+   95,
+   92
+  ],
+  "walls_house": [
+   [
+    214,
+    204,
+    184
+   ],
+   [
+    196,
+    170,
+    132
+   ],
+   [
+    168,
+    98,
+    70
+   ],
+   [
+    226,
+    222,
+    210
+   ]
+  ],
+  "walls_block": [
+   [
+    214,
+    212,
+    204
+   ],
+   [
+    184,
+    168,
+    136
+   ],
+   [
+    160,
+    150,
+    138
+   ],
+   [
+    200,
+    190,
+    172
+   ]
+  ],
+  "walls_tower": [
+   [
+    74,
+    92,
+    108
+   ],
+   [
+    196,
+    200,
+    206
+   ],
+   [
+    96,
+    118,
+    130
+   ],
+   [
+    160,
+    168,
+    174
+   ],
+   [
+    212,
+    206,
+    194
+   ]
+  ],
+  "roofs_house": [
+   [
+    176,
+    104,
+    76
+   ],
+   [
+    150,
+    152,
+    150
+   ],
+   [
+    120,
+    124,
+    126
+   ],
+   [
+    196,
+    196,
+    190
+   ]
+  ],
+  "roofs_flat": [
+   [
+    222,
+    224,
+    220
+   ],
+   [
+    150,
+    150,
+    146
+   ],
+   [
+    176,
+    172,
+    162
+   ]
+  ],
+  "far_flat": [
+   178,
+   162,
+   120
+  ],
+  "far_veg": [
+   104,
+   112,
+   76
+  ],
+  "far_steep": [
+   96,
+   104,
+   72
+  ],
+  "haze": [
+   196,
+   204,
+   212
+  ],
+  "sky_top": [
+   64,
+   122,
+   190
+  ],
+  "sky_hor": [
+   196,
+   210,
+   222
+  ],
+  "track": [
+   72,
+   66,
+   60
+  ],
+  "bed": [
+   78,
+   88,
+   52
+  ],
+  "turf": [
+   96,
+   146,
+   60
+  ]
+ },
+ "cover": [
+  [
+   "leisure",
+   "stadium",
+   "plaza"
+  ],
+  [
+   "highway",
+   "pedestrian",
+   "plaza"
+  ],
+  [
+   "area",
+   "yes",
+   "path"
+  ],
+  [
+   "landuse",
+   "construction",
+   "sand"
+  ],
+  [
+   "landuse",
+   "commercial|retail|industrial",
+   "paved"
+  ],
+  [
+   "landuse",
+   "residential",
+   "yard"
+  ],
+  [
+   "landuse",
+   "railway",
+   "ballast"
+  ],
+  [
+   "amenity",
+   "parking",
+   "parking"
+  ],
+  [
+   "leisure",
+   "park|pitch|golf_course|garden|recreation_ground|common|nature_reserve",
+   "lawn"
+  ],
+  [
+   "landuse",
+   "grass|recreation_ground|cemetery|meadow",
+   "lawn"
+  ],
+  [
+   "natural",
+   "wood|scrub|heath|grassland|wetland",
+   "spinifex"
+  ],
+  [
+   "natural",
+   "sand|beach",
+   "sand"
+  ],
+  [
+   "natural",
+   "water",
+   "water"
+  ],
+  [
+   "leisure",
+   "pitch",
+   "lawn"
+  ],
+  [
+   "leisure",
+   "garden",
+   "bed"
+  ]
+ ],
+ "tree_fill": [
+  [
+   "leisure",
+   "park|garden|common",
+   420
+  ],
+  [
+   "landuse",
+   "grass",
+   900
+  ],
+  [
+   "natural",
+   "wood",
+   60
+  ],
+  [
+   "natural",
+   "scrub|wetland",
+   300
+  ],
+  [
+   "landuse",
+   "residential",
+   1500
+  ],
+  [
+   "leisure",
+   "pitch",
+   0
+  ],
+  [
+   "leisure",
+   "stadium",
+   0
+  ]
+ ],
+ "tree_kinds": [
+  "ghost_gum",
+  "red_gum",
+  "plane"
+ ],
+ "levels_default": {
+  "*": 6,
+  "house": 5,
+  "residential": 5,
+  "detached": 5,
+  "terrace": 6,
+  "semidetached_house": 6,
+  "apartments": 14,
+  "commercial": 10,
+  "office": 20,
+  "retail": 7,
+  "industrial": 9,
+  "warehouse": 9,
+  "school": 8,
+  "university": 12,
+  "hospital": 18,
+  "stadium": 28,
+  "train_station": 9
+ },
+ "paint_poly": [
+  [
+   "plaza",
+   [
+    [
+     118,
+     105
+    ],
+    [
+     140,
+     122
+    ],
+    [
+     175,
+     118
+    ],
+    [
+     205,
+     100
+    ],
+    [
+     232,
+     82
+    ],
+    [
+     238,
+     45
+    ],
+    [
+     215,
+     12
+    ],
+    [
+     185,
+     0
+    ],
+    [
+     160,
+     -18
+    ],
+    [
+     140,
+     -40
+    ],
+    [
+     126,
+     -30
+    ],
+    [
+     122,
+     40
+    ]
+   ]
+  ]
+ ],
+ "landmarks": [
+  "crown",
+  "opt_pav"
+ ],
+ "flatten": [
+  [
+   390,
+   640,
+   -1175,
+   -875
+  ]
+ ],
+ "cover_from_aerial": true,
+ "aerial_classes": {
+  "ground": [
+   190,
+   172,
+   134
+  ],
+  "concrete": [
+   188,
+   182,
+   172
+  ],
+  "asphalt": [
+   92,
+   92,
+   90
+  ],
+  "sand": [
+   222,
+   206,
+   170
+  ],
+  "brick_light": [
+   204,
+   150,
+   138
+  ],
+  "brick_dark": [
+   214,
+   178,
+   152
+  ],
+  "bed": [
+   78,
+   88,
+   52
+  ],
+  "dry_grass": [
+   150,
+   148,
+   96
+  ],
+  "lawn": [
+   104,
+   132,
+   62
+  ],
+  "turf": [
+   96,
+   146,
+   60
+  ],
+  "court": [
+   62,
+   104,
+   150
+  ]
+ },
+ "aerial_paving_only": true,
+ "forecourt_tones": [
+  [
+   190,
+   136,
+   118
+  ],
+  [
+   206,
+   186,
+   162
+  ],
+  [
+   168,
+   154,
+   142
+  ]
+ ]
+}

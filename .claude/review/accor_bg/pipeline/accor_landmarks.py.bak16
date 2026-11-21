@@ -1,0 +1,117 @@
+# Accor surroundings landmarks (exec'd by scene.py via spec extra_py; shares BL, height, mk_obj, set_uv, mat_img, HERE).
+# Positions: OSM centres (_find_lm.py). Sizes: Google search 2026-11-20.
+#   Afterpay Arena (ex-SuperDome) way 4987356: masts 42 m, roof 33-39 m, glass curtain wall, ring of white masts.
+#   The Dome (Showground) way 35029897: 97 m diameter, 42 m high, white ribbed.
+#   Olympic Park station way 19003982: row of curved shell vaults over the platforms.
+def _accor_landmarks():
+    def _lm_drop(cx, cy, r):
+        k = [i for i, b in enumerate(BL) if math.hypot(*(np.mean(b['p'], 0) - (cx, cy))) < r]
+        P = max((BL[i] for i in k), key=lambda b: b.get('a', 0))['p'] if k else None
+        BL[:] = [b for i, b in enumerate(BL) if i not in k]; return P
+    _LMO = {}
+    def _acc(key): return _LMO.setdefault(key, [[], [], []])
+    def _quadm(key, a, b, c, d, uv):
+        V, F, U = _acc(key); n = len(V); V += [a, b, c, d]; F.append((n, n + 1, n + 2, n + 3)); U += uv
+    def _beam2(key, a, b, w):
+        a, b = np.array(a, float), np.array(b, float); d = b - a; L = np.linalg.norm(d)
+        if L < 1e-6: return
+        d /= L; up = np.array([0, 0, 1.0]) if abs(d[2]) < 0.9 else np.array([1.0, 0, 0])
+        s = np.cross(d, up); s /= np.linalg.norm(s); t = np.cross(d, s); h = w / 2
+        C = [s * h + t * h, -s * h + t * h, -s * h - t * h, s * h - t * h]
+        for i in range(4):
+            j = (i + 1) % 4; _quadm(key, tuple(a + C[i]), tuple(a + C[j]), tuple(b + C[j]), tuple(b + C[i]), [(0, 0), (1, 0), (1, 1), (0, 1)])
+
+    # ---- Afterpay Arena: OSM outline, 20 m glass wall, ribbed roof rising 30 -> 36 m, 12 masts to 42 m ----
+    P = _lm_drop(-134, 304, 60)
+    if P is not None:
+        P = np.array(P, float); c = P.mean(0); z0 = float(height([c[0]], [c[1]])[0]); per = 0.0
+        for i in range(len(P)):
+            a, b = P[i], P[(i + 1) % len(P)]; L = float(np.hypot(*(b - a)))
+            _quadm('glass', (a[0], a[1], z0), (b[0], b[1], z0), (b[0], b[1], z0 + 20), (a[0], a[1], z0 + 20),
+                   [(per / 6, 0), ((per + L) / 6, 0), ((per + L) / 6, 20 / 8), (per / 6, 20 / 8)]); per += L
+        R = [c + (p - c) * 1.04 for p in P]; rings = 16
+        for k in range(rings):
+            f0, f1 = 1 - k / rings, 1 - (k + 1) / rings
+            z_0, z_1 = z0 + 26 + 13 * (1 - f0 ** 2), z0 + 26 + 13 * (1 - f1 ** 2)
+            for i in range(len(R)):
+                p, q = R[i], R[(i + 1) % len(R)]
+                A, B = c + (p - c) * f0, c + (q - c) * f0; Cc, D = c + (q - c) * f1, c + (p - c) * f1
+                _quadm('roof', (*A, z_0), (*B, z_0), (*Cc, z_1), (*D, z_1), [(A[0] / 8, A[1] / 8), (B[0] / 8, B[1] / 8), (Cc[0] / 8, Cc[1] / 8), (D[0] / 8, D[1] / 8)])
+        for i in range(len(R)):   # fascia 20 -> 30 m
+            p, q = R[i], R[(i + 1) % len(R)]
+            _quadm('roof', (*p, z0 + 20), (*q, z0 + 20), (*q, z0 + 26), (*p, z0 + 26), [(0, 0), (1, 0), (1, 1.2), (0, 1.2)])
+        # 18 spike masts evenly round the roof edge: legs 3 m apart at the base (26 m), apex 42 m leaning 6 m outward (photos)
+        Rn = np.array(R); per_ = np.r_[0, np.cumsum(np.hypot(*np.diff(np.vstack([Rn, Rn[:1]]), axis=0).T))]; tot = per_[-1]
+        for m in range(18):
+            d_ = tot * (m + 0.5) / 18; i_ = int(np.searchsorted(per_, d_) - 1); t_ = (d_ - per_[i_]) / (per_[i_ + 1] - per_[i_])
+            e = Rn[i_] + (Rn[(i_ + 1) % len(Rn)] - Rn[i_]) * t_; tg = Rn[(i_ + 1) % len(Rn)] - Rn[i_]; tg /= np.linalg.norm(tg)
+            out = (e - c) / np.linalg.norm(e - c); top = (e[0] + out[0] * 6, e[1] + out[1] * 6, z0 + 42)
+            for d in (-1.5, 1.5): f_ = e + tg * d; _beam2('white', (f_[0], f_[1], z0 + 26), top, 0.7)
+            for f in (0.7, 0.4): q = c + (e - c) * f; _beam2('white', top, (q[0], q[1], z0 + 26 + 13 * (1 - f ** 2)), 0.12)
+            g_ = e + out * 18; _beam2('white', top, (g_[0], g_[1], z0 + 12), 0.12)
+        for i in range(len(R)):   # raised flat lantern over the centre (f < 0.35), 2 m upstand
+            p, q = R[i], R[(i + 1) % len(R)]; A, B = c + (p - c) * 0.35, c + (q - c) * 0.35; zt = z0 + 26 + 13 * (1 - 0.35 ** 2)
+            _quadm('roof', (*A, zt), (*B, zt), (*B, zt + 2), (*A, zt + 2), [(0, 0), (1, 0), (1, 0.25), (0, 0.25)])
+            _quadm('roof', (*A, zt + 2), (*B, zt + 2), (c[0], c[1], zt + 2), (c[0], c[1], zt + 2), [(A[0] / 8, A[1] / 8), (B[0] / 8, B[1] / 8), (c[0] / 8, c[1] / 8), (c[0] / 8, c[1] / 8)])
+        for i in range(len(P)):   # low canopy ring at 12 m, 10 m deep, round the glass wall
+            p, q = P[i], P[(i + 1) % len(P)]; po, qo = c + (p - c) * (1 + 10 / np.linalg.norm(p - c)), c + (q - c) * (1 + 10 / np.linalg.norm(q - c))
+            _quadm('roof', (*p, z0 + 12), (*q, z0 + 12), (*qo, z0 + 11), (*po, z0 + 11), [(p[0] / 8, p[1] / 8), (q[0] / 8, q[1] / 8), (qo[0] / 8, qo[1] / 8), (po[0] / 8, po[1] / 8)])
+        print('landmark arena', len(P), 'pts')
+
+    # ---- The Dome: 97 m diameter, 42 m high, white ribbed ----
+    P = _lm_drop(434, 148, 35)
+    if P is not None:
+        c = np.mean(P, 0); z0 = float(height([c[0]], [c[1]])[0]); Rr, H, NA, NB = 48.5, 42.0, 48, 12
+        def dp(i, j):
+            th = 2 * math.pi * i / NA; ph = (math.pi / 2) * j / NB
+            ph = ph * (72 / 90); r_ = Rr * math.cos(ph)   # drum 0-12 m, shallow dome to the lantern ring (aerial: lantern cap on top)
+            return (c[0] + r_ * math.cos(th), c[1] + r_ * math.sin(th), z0 + 12 + 25 * math.sin(ph) / math.sin(math.radians(72)))
+        for i in range(NA):
+            for j in range(NB):
+                u0, u1 = i * 2 * math.pi * Rr / NA / 8, (i + 1) * 2 * math.pi * Rr / NA / 8
+                _quadm('dome', dp(i, j), dp(i + 1, j), dp(i + 1, j + 1), dp(i, j + 1), [(u0, j / 5), (u1, j / 5), (u1, (j + 1) / 5), (u0, (j + 1) / 5)])
+        for i in range(NA):   # drum wall and lantern (r 8.4 m, 38 -> 42 m)
+            t0, t1 = 2 * math.pi * i / NA, 2 * math.pi * (i + 1) / NA
+            for (rr, za, zb, km) in ((Rr, z0, z0 + 12, 'drum'), (15.0, z0 + 37, z0 + 40, 'glass')):
+                p0 = (c[0] + rr * math.cos(t0), c[1] + rr * math.sin(t0)); p1 = (c[0] + rr * math.cos(t1), c[1] + rr * math.sin(t1))
+                _quadm(km, (*p0, za), (*p1, za), (*p1, zb), (*p0, zb), [(0, 0), (1, 0), (1, 1), (0, 1)] if km == 'drum' else [(0, 0), (0.3, 0), (0.3, 0.4), (0, 0.4)])
+            p0 = (c[0] + 16.5 * math.cos(t0), c[1] + 16.5 * math.sin(t0)); p1 = (c[0] + 16.5 * math.cos(t1), c[1] + 16.5 * math.sin(t1))
+            _quadm('white', (*p0, z0 + 40), (*p1, z0 + 40), (c[0], c[1], z0 + 42), (c[0], c[1], z0 + 42), [(0, 0), (1, 0), (1, 1), (0, 1)])
+            _quadm('white', (*p0, z0 + 39.4), (*p1, z0 + 39.4), (*p1, z0 + 40), (*p0, z0 + 40), [(0, 0), (1, 0), (1, 1), (0, 1)])
+        for i in range(16):   # white pilasters on the drum
+            t = 2 * math.pi * i / 16; q = (c[0] + (Rr + 0.6) * math.cos(t), c[1] + (Rr + 0.6) * math.sin(t)); _beam2('white', (*q, z0), (*q, z0 + 13), 1.4)
+        print('landmark dome')
+
+    # ---- Olympic Park station: curved shell vaults along the long axis ----
+    P = _lm_drop(561, 59, 40)
+    if P is not None:
+        P = np.array(P, float); c = P.mean(0); z0 = float(height([c[0]], [c[1]])[0])
+        w, v = np.linalg.eigh(np.cov((P - c).T)); ax = v[:, 1]; nx = v[:, 0]
+        L = float(np.ptp((P - c) @ ax)); W = float(np.ptp((P - c) @ nx)); NV = 18; seg = L / NV
+        for k in range(NV):
+            s0 = -L / 2 + k * seg + 0.6; s1 = s0 + seg - 1.2      # separate shells, 1.2 m gap (aerial: 18 distinct vaults)
+            for g in range(6):
+              sa, sb = s0 + (s1 - s0) * g / 6, s0 + (s1 - s0) * (g + 1) / 6
+              for e in range(16):
+                a0, a1 = math.pi * e / 16, math.pi * (e + 1) / 16
+                def sp(s, a): t_ = (s - s0) / (s1 - s0); q = c + ax * s + nx * (-W / 2 * math.cos(a)); return (q[0], q[1], z0 + 8 + (9 + 3 * math.sin(math.pi * t_)) * math.sin(a) + 1.5 * math.sin(math.pi * t_))
+                _quadm('stshell', sp(sa, a0), sp(sb, a0), sp(sb, a1), sp(sa, a1), [(sa / 8, a0 * W / 16), (sb / 8, a0 * W / 16), (sb / 8, a1 * W / 16), (sa / 8, a1 * W / 16)])
+            for side in (-1, 1):
+                q = c + ax * (s0 + 2) + nx * (side * W / 2); _beam2('white', (q[0], q[1], z0), (q[0], q[1], z0 + 8), 0.6)
+        print('landmark station', round(L), round(W))
+
+    _MATS = {'glass': mat_img('acc_glass', os.path.join(HERE, 'tex', 'acc_glass.png'), 0.15),
+             'roof': mat_img('acc_roof_arena', os.path.join(HERE, 'tex', 'acc_roof_arena.png'), 0.5),
+             'dome': mat_img('acc_dome', os.path.join(HERE, 'tex', 'acc_dome.png'), 0.5),
+             'shell': mat_img('acc_shell', os.path.join(HERE, 'tex', 'acc_shell.png'), 0.45),
+             'stshell': mat_img('acc_station', os.path.join(HERE, 'tex', 'acc_station.png'), 0.35),
+             'drum': mat_img('acc_drum', os.path.join(HERE, 'tex', 'acc_drum.png'), 0.3),
+             'white': mat_img('acc_white', os.path.join(HERE, 'tex', 'lm_white.png'), 0.5)}
+    for _k, (_V, _F, _U) in _LMO.items():
+        _ob = mk_obj('bg_acc_lm_' + _k, _V, _F, _MATS[_k]); set_uv(_ob.data, [_U[i] for f_ in _F for i in f_])
+        if _k == 'roof':   # weld and smooth the arena roof (flat facets showed a radial crease); fascia stays sharp at 40 deg
+            import bmesh; _bm = bmesh.new(); _bm.from_mesh(_ob.data); bmesh.ops.remove_doubles(_bm, verts=_bm.verts, dist=0.05)
+            [setattr(f, 'smooth', True) for f in _bm.faces]; [setattr(e, 'smooth', not (e.is_manifold and e.calc_face_angle(0) > 0.7)) for e in _bm.edges]
+            _bm.to_mesh(_ob.data); _bm.free()
+
+_accor_landmarks()

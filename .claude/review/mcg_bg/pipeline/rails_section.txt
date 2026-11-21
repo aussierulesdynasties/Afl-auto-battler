@@ -1,0 +1,73 @@
+# ---------- rails: continuous tracks from merged OSM ways (rail_geo.py), checked top-down on the aerial (rail_check.py) ----------
+# per track: ballast shoulder 8 m wide (flush at the edges, 0.12 m crown; neighbours < 6 m apart overlap into one bed),
+# sleeper bed 3.2 m (concrete sleepers every 0.65 m, tex/track_bed.png), two steel rails at 1.6 m gauge, contact wire 5.6 m up;
+# portal gantries where the aerial shows them (data prep/gantries.json), masts every 37 m on the other lines
+RLP = os.path.join(D, 'rails.json')
+if spec.get('rail_geo') and os.path.exists(RLP):
+    sys.path.insert(0, HERE); import rail_geo
+    RF = np.load(os.path.join(D, 'rail_floor.npy')) if os.path.exists(os.path.join(D, 'rail_floor.npy')) else None
+    KE = spec.get('rail_cut', {}).get('keep_ellipse')
+    KFP = os.path.join(D, 'footprint.json')
+    KF = np.array(json.load(open(KFP))) if spec.get('rail_cut', {}).get('keep_footprint') and os.path.exists(KFP) else None
+    GP = os.path.join(D, 'gantries.json')
+    PLAN = rail_geo.plan(json.load(open(RLP)), KF, KE, json.load(open(GP)) if os.path.exists(GP) else None)
+    def zfloor(X, Y):
+        z = height(X, Y)
+        if RF is not None:   # in the cutting the track sits on the smoothed floor, never draped up a bank
+            fl = samp(np.nan_to_num(RF, nan=-1e4), NE, NS, X, Y); z = np.where(fl > -100, fl, z)
+        return z
+    balv, balf, baluv = [], [], []; bedv, bedf, beduv = [], [], []; verts, faces, cols = [], [], []
+    head_c = lin((205, 207, 210)); web_c = lin((92, 84, 78)); steel_c = lin((120, 122, 124)); wire_c = lin((38, 38, 40))
+    def strip(C, N_, offs, lifts, zc, V, F, UV=None, uvf=None, col=None):
+        n = len(C); m = len(offs); s0 = len(V)
+        for i in range(n):
+            for o, l in zip(offs, lifts):
+                p = C[i] + N_[i] * o; V.append((p[0], p[1], float(zc[i] + l)))
+        for i in range(n - 1):
+            for j in range(m - 1):
+                f = (s0 + i * m + j, s0 + i * m + j + 1, s0 + (i + 1) * m + j + 1, s0 + (i + 1) * m + j); F.append(f)
+                if UV is not None: UV.extend([uvf(V[k]) if callable(uvf) else uvf[(k - s0)] for k in f])
+                if col is not None: cols.extend([col[j] if isinstance(col, list) else col] * 4)
+    def box(p0, p1, z0, z1, w, c):   # box from p0 to p1 (plan), w wide, z0..z1
+        d = np.array(p1, float) - np.array(p0, float); L = max(np.hypot(*d), 1e-6); n = np.array([-d[1], d[0]]) / L * w / 2
+        s0 = len(verts)
+        for z in (z0, z1):
+            for q in (p0 - n, p1 - n, p1 + n, p0 + n): verts.append((q[0], q[1], z))
+        for f in ((0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7), (4, 5, 6, 7)):
+            faces.append(tuple(s0 + k for k in f)); cols.extend([c] * 4)
+    for k, Q in enumerate(PLAN['tracks']):
+        T = rail_geo.tangents(Q); N_ = np.stack([-T[:, 1], T[:, 0]], 1)
+        zc = np.max([zfloor(Q[:, 0] + N_[:, 0] * o, Q[:, 1] + N_[:, 1] * o) for o in (-1.6, 0, 1.6)], 0)
+        e = 0.002 * (k % 5)   # neighbours overlap: tiny stagger, same world-planar texture so the join is invisible
+        strip(Q, N_, (-4.0, -3.0, 3.0, 4.0), (0.0 + e, 0.12 + e, 0.12 + e, 0.0 + e), zc, balv, balf, baluv, lambda v: (v[0] / 4.0, v[1] / 4.0))
+        dist = np.concatenate([[0], np.cumsum(np.hypot(*np.diff(Q, axis=0).T))]) / 5.2
+        uvb = []
+        for i in range(len(Q)): uvb += [(0.152, dist[i]), (0.848, dist[i])]
+        strip(Q, N_, (-1.6, 1.6), (0.15, 0.15), zc, bedv, bedf, beduv, uvb)
+        for sd in (-0.8, 0.8):   # steel rail: bright worn head on a dark web, standing 0.17 m off the sleepers
+            strip(Q, N_, (sd - 0.035, sd + 0.035), (0.32, 0.32), zc, verts, faces, col=head_c)
+            strip(Q, N_, (sd - 0.035, sd - 0.035), (0.32, 0.15), zc, verts, faces, col=web_c) if False else None
+            for o in (sd - 0.035, sd + 0.035):
+                s0 = len(verts)
+                for i in range(len(Q)):
+                    p = Q[i] + N_[i] * o; verts.append((p[0], p[1], float(zc[i] + 0.32))); verts.append((p[0], p[1], float(zc[i] + 0.15)))
+                for i in range(len(Q) - 1):
+                    faces.append((s0 + 2 * i, s0 + 2 * i + 1, s0 + 2 * i + 3, s0 + 2 * i + 2)); cols.extend([web_c] * 4)
+        if spec.get('rail_masts', True): strip(Q, N_, (-0.02, 0.02), (5.6, 5.6), zc, verts, faces, col=wire_c)
+    if spec.get('rail_masts', True):
+        for a, b, t in PLAN['portals']:   # lattice portal: two posts, twin-chord beam 7.6-8.0 m
+            za, zb = float(zfloor(*a)), float(zfloor(*b)); zt = max(za, zb)
+            for p, z in ((a, za), (b, zb)): box(p - t * 0.18, p + t * 0.18, z, zt + 8.0, 0.35, steel_c)
+            box(a, b, zt + 7.85, zt + 8.0, 0.12, steel_c); box(a, b, zt + 7.25, zt + 7.4, 0.12, steel_c)
+            box(a + t * 0.6, b + t * 0.6, zt + 7.85, zt + 8.0, 0.08, steel_c)
+        for p, c, t in PLAN['cants']:   # single mast, arm out over the track
+            z = float(zfloor(*p)); box(p - t * 0.15, p + t * 0.15, z, z + 7.0, 0.3, steel_c); box(p, c, z + 6.4, z + 6.55, 0.1, steel_c)
+    print('rails: %d ways -> %d lines -> %d visible tracks, %d portals, %d masts' % (PLAN['n_ways'], PLAN['n_merged'], len(PLAN['tracks']), len(PLAN['portals']), len(PLAN['cants'])))
+    if balf:
+        ob = mk_obj('bg_ballast', balv, balf, mat_img('ballast', os.path.join(HERE, 'tex', 'track_ballast.png'), 0.97)); set_uv(ob.data, baluv)
+    if bedf:
+        ob = mk_obj('bg_trackbed', bedv, bedf, mat_img('trackbed', os.path.join(HERE, 'tex', 'track_bed.png'), 0.95)); set_uv(ob.data, beduv)
+    if faces:
+        ob = mk_obj('bg_rails', verts, faces, mat_vcol('rails', 0.35))
+        set_corner_col(ob.data, np.concatenate([np.array(cols), np.ones((len(cols), 1))], 1))
+

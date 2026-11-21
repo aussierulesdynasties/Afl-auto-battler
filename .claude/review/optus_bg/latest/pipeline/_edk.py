@@ -1,0 +1,5 @@
+p='fc_scene.py';s=open(p,newline='').read()
+s=s.replace("    from skimage import color as _skc3\n    from matplotlib.path import Path as _MP3\n","    from PIL import Image as _PI3\n    def _pip(P, X, Y):\n        r = np.zeros(X.shape, bool); n = len(P)\n        for i in range(n):\n            (x1, y1), (x2, y2) = P[i], P[(i + 1) % n]\n            c = ((y1 > Y) != (y2 > Y)) & (X < (x2 - x1) * (Y - y1) / ((y2 - y1) or 1e-9) + x1); r ^= c\n        return r\n")
+s=s.replace("_Lk = _skc3.rgb2lab(np.asarray(__import__('PIL.Image', fromlist=['Image']).open(os.path.join(HERE, 'data', 'optus', 'sat_hi_plaza.png')).convert('RGB')) / 255.0)[..., 0]","_Lk = np.asarray(_PI3.open(os.path.join(HERE, 'data', 'optus', 'sat_hi_plaza.png')).convert('L'), np.float32) / 2.55")
+s=s.replace("        _mp = _MP3(_P); _ys","        _ys").replace("_in = _mp.contains_points(np.column_stack([_X.ravel(), _Y.ravel()])).reshape(_Lk.shape) & (_Lk < 30)","_in = _pip(_P, _X, _Y) & (_Lk < 25)")
+open(p,'w',newline='').write(s)

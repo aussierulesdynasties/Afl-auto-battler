@@ -1,0 +1,226 @@
+{
+ "glass_dark": [
+  6.0,
+  14.4
+ ],
+ "glass_teal": [
+  6.0,
+  14.4
+ ],
+ "glass_bronze": [
+  6.0,
+  14.4
+ ],
+ "glass_grey": [
+  12.0,
+  14.4
+ ],
+ "concrete": [
+  12.0,
+  13.6
+ ],
+ "brick": [
+  12.0,
+  13.6
+ ],
+ "panel": [
+  8.0,
+  13.6
+ ],
+ "cladding": [
+  8.0,
+  8.0
+ ],
+ "carpark": [
+  32.0,
+  3.0
+ ],
+ "plant": [
+  3.0,
+  3.0
+ ],
+ "rail_bed": [
+  4.4,
+  2.6
+ ],
+ "glass_navy_a": [
+  6.0,
+  14.4
+ ],
+ "glass_navy_b": [
+  9.0,
+  15.2
+ ],
+ "glass_slate_a": [
+  6.0,
+  14.4
+ ],
+ "glass_slate_b": [
+  9.0,
+  15.2
+ ],
+ "glass_green_a": [
+  6.0,
+  14.4
+ ],
+ "glass_green_b": [
+  9.0,
+  15.2
+ ],
+ "glass_blue_a": [
+  6.0,
+  14.4
+ ],
+ "glass_blue_b": [
+  9.0,
+  15.2
+ ],
+ "glass_smoke_a": [
+  6.0,
+  14.4
+ ],
+ "glass_smoke_b": [
+  9.0,
+  15.2
+ ],
+ "glass_navy_c": [
+  6.0,
+  14.8
+ ],
+ "glass_navy_d": [
+  10.5,
+  15.6
+ ],
+ "glass_navy_e": [
+  9.2,
+  14.0
+ ],
+ "glass_slate_c": [
+  6.0,
+  14.8
+ ],
+ "glass_slate_d": [
+  10.5,
+  15.6
+ ],
+ "glass_slate_e": [
+  9.2,
+  14.0
+ ],
+ "glass_green_c": [
+  6.0,
+  14.8
+ ],
+ "glass_green_d": [
+  10.5,
+  15.6
+ ],
+ "glass_green_e": [
+  9.2,
+  14.0
+ ],
+ "glass_blue_c": [
+  6.0,
+  14.8
+ ],
+ "glass_blue_d": [
+  10.5,
+  15.6
+ ],
+ "glass_blue_e": [
+  9.2,
+  14.0
+ ],
+ "glass_smoke_c": [
+  6.0,
+  14.8
+ ],
+ "glass_smoke_d": [
+  10.5,
+  15.6
+ ],
+ "glass_smoke_e": [
+  9.2,
+  14.0
+ ],
+ "glass_teal_c": [
+  6.0,
+  14.8
+ ],
+ "glass_teal_d": [
+  10.5,
+  15.6
+ ],
+ "glass_teal_e": [
+  9.2,
+  14.0
+ ],
+ "glass_bronze_c": [
+  6.0,
+  14.8
+ ],
+ "glass_bronze_d": [
+  10.5,
+  15.6
+ ],
+ "glass_bronze_e": [
+  9.2,
+  14.0
+ ],
+ "glass_ink_c": [
+  6.0,
+  14.8
+ ],
+ "glass_ink_d": [
+  10.5,
+  15.6
+ ],
+ "glass_ink_e": [
+  9.2,
+  14.0
+ ],
+ "banded_a": [
+  12.0,
+  14.4
+ ],
+ "banded_b": [
+  16.0,
+  13.2
+ ],
+ "banded_c": [
+  10.0,
+  16.0
+ ],
+ "parapet": [
+  6.0,
+  1.2
+ ],
+ "tw_bluegreen": [
+  12.0,
+  14.8
+ ],
+ "tw_charcoal": [
+  12.0,
+  14.8
+ ],
+ "tw_bronze": [
+  12.0,
+  14.8
+ ],
+ "tw_curtain": [
+  12.0,
+  14.4
+ ],
+ "tw_sandstone": [
+  12.0,
+  14.0
+ ],
+ "tw_white": [
+  12.0,
+  14.0
+ ],
+ "tw_fins": [
+  12.0,
+  14.4
+ ]
+}

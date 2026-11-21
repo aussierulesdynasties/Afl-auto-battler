@@ -1,0 +1,75 @@
+02:37:46 - tripo_addon - [task.py:21] - INFO - WebSocket server started on port 60600
+02:37:46 - tripo_addon - [ws_server.py:202] - WARNING - Port 60600 in use; will retry every 3.0s
+02:37:46 - tripo_addon - [ws_server.py:101] - INFO - Stopping WebSocket server...
+02:37:46 - tripo_addon - [task.py:27] - INFO - WebSocket server stop requested
+02:37:46 - tripo_addon - [ws_server.py:88] - INFO - Event loop closed
+Traceback (most recent call last):
+  File "C:\Program Files\Blender Foundation\Blender 5.2\5.2\scripts\modules\addon_utils.py", line 595, in disable
+    mod.unregister()
+    ~~~~~~~~~~~~~~^^
+  File "C:\Users\DANTE\AppData\Roaming\Blender Foundation\Blender\5.2\scripts\addons\addon.py", line 6401, in unregister
+    bpy.utils.unregister_class(BLENDERMCP_PT_Panel)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: unregister_class(...):, missing bl_rna attribute from '_RNAMeta' instance (may not be registered)
+D:\Temp\claude\b5e56bf702cd3703\4ee81fc3-6cf4-400f-9ad6-28a5df4e19ee\scratchpad\proto\rails_only.py:63: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  m = bpy.data.materials.new(nm); m.use_nodes = True
+D:\Temp\claude\b5e56bf702cd3703\4ee81fc3-6cf4-400f-9ad6-28a5df4e19ee\scratchpad\proto\rails_only.py:57: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  m = bpy.data.materials.new(nm); m.use_nodes = True
+D:\Temp\claude\b5e56bf702cd3703\4ee81fc3-6cf4-400f-9ad6-28a5df4e19ee\scratchpad\proto\rails_only.py:331: DeprecationWarning: 'World.use_nodes' is expected to be removed in Blender 6.0
+  w = bpy.data.worlds.new('w'); sc.world = w; w.use_nodes = True; w.node_tree.nodes['Background'].inputs[0].default_value = (0.55, 0.65, 0.8, 1); w.node_tree.nodes['Background'].inputs[1].default_value = 0.8
+01:42.297  render           | Saved: 'D:\Temp\claude\b5e56bf702cd3703\4ee81fc3-6cf4-400f-9ad6-28a5df4e19ee\scratchpad\proto\out\mcg\rails\ro_top_mcg.png'
+01:44.375  render           | Saved: 'D:\Temp\claude\b5e56bf702cd3703\4ee81fc3-6cf4-400f-9ad6-28a5df4e19ee\scratchpad\proto\out\mcg\rails\ro_top_west.png'
+01:46.375  render           | Saved: 'D:\Temp\claude\b5e56bf702cd3703\4ee81fc3-6cf4-400f-9ad6-28a5df4e19ee\scratchpad\proto\out\mcg\rails\ro_top_rich.png'
+01:48.000  render           | Saved: 'D:\Temp\claude\b5e56bf702cd3703\4ee81fc3-6cf4-400f-9ad6-28a5df4e19ee\scratchpad\proto\out\mcg\rails\ro_top_seam.png'
+01:49.500  render           | Saved: 'D:\Temp\claude\b5e56bf702cd3703\4ee81fc3-6cf4-400f-9ad6-28a5df4e19ee\scratchpad\proto\out\mcg\rails\ro_eye17.png'
+01:51.594  render           | Saved: 'D:\Temp\claude\b5e56bf702cd3703\4ee81fc3-6cf4-400f-9ad6-28a5df4e19ee\scratchpad\proto\out\mcg\rails\ro_eye30.png'
+[INFO ] services.locationservice ...............: Not adding link to MakeHuman user data, since neither explicit path nor auto-discovery is set in preferences.
+[INFO ] mpfb.init ..............................: Build info 20260722
+[INFO ] mpfb.init ..............................: MPFB initialization has finished.
+[Tripo3D] Log file: D:\Temp\tripo3d_blender_bridge.log
+BlenderMCP addon registered
+register_class(...):
+Info: Registering panel class: 'BLENDERMCP_PT_Panel', bl_idname 'BLENDERMCP_PT_Panel' has been registered before, unregistering previous
+register_class(...):
+Info: Registering operator class: 'BLENDERMCP_OT_SetFreeTrialHyper3DAPIKey', bl_idname 'blendermcp.set_hyper3d_free_trial_api_key' has been registered before, unregistering previous
+register_class(...):
+Info: Registering operator class: 'BLENDERMCP_OT_StartServer', bl_idname 'blendermcp.start_server' has been registered before, unregistering previous
+register_class(...):
+Info: Registering operator class: 'BLENDERMCP_OT_StopServer', bl_idname 'blendermcp.stop_server' has been registered before, unregistering previous
+register_class(...):
+Info: Registering operator class: 'BLENDERMCP_OT_OpenTerms', bl_idname 'blendermcp.open_terms' has been registered before, unregistering previous
+register_class(...):
+Info: Registering operator class: 'BLENDERMCP_OT_CheckAddonUpdate', bl_idname 'blendermcp.check_addon_update' has been registered before, unregistering previous
+register_class(...):
+Info: Registering operator class: 'BLENDERMCP_OT_UpdateAddon', bl_idname 'blendermcp.update_addon' has been registered before, unregistering previous
+register_class(...):
+Info: Registering operator class: 'BLENDERMCP_OT_PremiumActivate', bl_idname 'blendermcp.premium_activate' has been registered before, unregistering previous
+register_class(...):
+Info: Registering operator class: 'BLENDERMCP_OT_PremiumDeactivate', bl_idname 'blendermcp.premium_deactivate' has been registered before, unregistering previous
+register_class(...):
+Info: Registering operator class: 'BLENDERMCP_OT_PremiumRefresh', bl_idname 'blendermcp.premium_refresh' has been registered before, unregistering previous
+register_class(...):
+Info: Registering operator class: 'BLENDERMCP_OT_PremiumOpenAccount', bl_idname 'blendermcp.premium_open_account' has been registered before, unregistering previous
+BlenderMCP addon registered
+Exception in module unregister(): 'C:\\Users\\DANTE\\AppData\\Roaming\\Blender Foundation\\Blender\\5.2\\scripts\\addons\\addon.py'
+BlenderMCP addon unregistered
+formation: 625404 fine verts, 317081 bed faces, 6158 coarse cells replaced
+rail grade: 0 near-grid vertices set to the track profile
+banks 17 faces
+formation faces: bed/flat 531671, batter 84129, wall 0
+rails: 138 tram lines, corridor fill True
+rails: 177 ways -> 47 lines -> 70 visible tracks, 95 portals, 4 masts
+clearance: 96 crossings, min 6.25 m, under 6.2: 0
+SHOT top_mcg
+SHOT top_west
+SHOT top_rich
+SHOT top_seam
+SHOT eye17
+RAY 1100 600 True (-116.35, -136.53, -5.33) bg_ballast
+RAY 1180 650 True (-122.21, -130.69, -4.99) bg_ballast
+RAY 1060 560 True (-107.39, -145.73, -5.58) bg_rails
+RAY 40 545 True (-118.61, -121.08, -3.74) bg_ballast
+SHOT eye30
+Blender 5.2.2 LTS (hash d13f752e3b9c built 2026-09-15 01:37:04)
+
+Blender quit

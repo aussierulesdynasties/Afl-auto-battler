@@ -1,0 +1,1 @@
+{"out":"stills","res":[1280,720],"samples":24,"sky":[[0.0,[0.77,0.84,0.89]],[0.45,[0.25,0.49,0.77]]],"sun":{"az":110,"el":45,"power":4.5,"shadow":false},"views":[{"name":"eastnoshadow","orbit":{"r":110,"z":55,"look":[130,-20,3],"frames":1,"start_deg":-60,"fov_h":50}}]}

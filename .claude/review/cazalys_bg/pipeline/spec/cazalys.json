@@ -1,0 +1,452 @@
+{
+ "name": "cazalys",
+ "lat": -16.9356941,
+ "lon": 145.7490634,
+ "seed": 11,
+ "clear_r_m": 150,
+ "near_half_m": 1500,
+ "near_step_m": 7.5,
+ "far_half_m": 30000,
+ "far_step_m": 100,
+ "ground_m_per_px": 1.5,
+ "tree_r_m": 1500,
+ "street_trees": 12,
+ "rivers_dry": false,
+ "glb": "ground/cazalys.glb",
+ "palette": {
+  "ground_default": [
+   120,
+   138,
+   96
+  ],
+  "spinifex": [
+   78,
+   112,
+   60
+  ],
+  "lawn": [
+   92,
+   140,
+   62
+  ],
+  "yard": [
+   112,
+   140,
+   84
+  ],
+  "rock": [
+   120,
+   116,
+   108
+  ],
+  "sand": [
+   214,
+   200,
+   166
+  ],
+  "water": [
+   58,
+   96,
+   98
+  ],
+  "road": [
+   78,
+   80,
+   80
+  ],
+  "path": [
+   196,
+   190,
+   176
+  ],
+  "ballast": [
+   128,
+   118,
+   104
+  ],
+  "paved": [
+   184,
+   182,
+   174
+  ],
+  "parking": [
+   96,
+   96,
+   94
+  ],
+  "walls_house": [
+   [
+    236,
+    232,
+    220
+   ],
+   [
+    226,
+    222,
+    212
+   ],
+   [
+    204,
+    208,
+    206
+   ],
+   [
+    240,
+    240,
+    236
+   ]
+  ],
+  "walls_block": [
+   [
+    232,
+    230,
+    222
+   ],
+   [
+    204,
+    198,
+    184
+   ],
+   [
+    184,
+    190,
+    196
+   ],
+   [
+    214,
+    206,
+    190
+   ]
+  ],
+  "walls_tower": [
+   [
+    226,
+    228,
+    226
+   ],
+   [
+    150,
+    176,
+    190
+   ],
+   [
+    96,
+    124,
+    140
+   ],
+   [
+    206,
+    200,
+    188
+   ]
+  ],
+  "roofs_house": [
+   [
+    214,
+    216,
+    214
+   ],
+   [
+    190,
+    194,
+    194
+   ],
+   [
+    228,
+    228,
+    222
+   ],
+   [
+    166,
+    172,
+    172
+   ],
+   [
+    200,
+    204,
+    200
+   ],
+   [
+    150,
+    156,
+    158
+   ]
+  ],
+  "roofs_flat": [
+   [
+    200,
+    202,
+    198
+   ],
+   [
+    170,
+    172,
+    170
+   ],
+   [
+    148,
+    152,
+    152
+   ],
+   [
+    188,
+    180,
+    166
+   ]
+  ],
+  "far_flat": [
+   99,
+   142,
+   79
+  ],
+  "far_veg": [
+   49,
+   90,
+   52
+  ],
+  "far_steep": [
+   41,
+   79,
+   47
+  ],
+  "haze": [
+   178,
+   196,
+   206
+  ],
+  "sky_top": [
+   64,
+   124,
+   192
+  ],
+  "sky_hor": [
+   196,
+   212,
+   226
+  ],
+  "track": [
+   70,
+   64,
+   60
+  ]
+ },
+ "cover": [
+  [
+   "landuse",
+   "residential",
+   "yard"
+  ],
+  [
+   "landuse",
+   "commercial|retail|industrial|construction",
+   "yard"
+  ],
+  [
+   "landuse",
+   "railway",
+   "ballast"
+  ],
+  [
+   "amenity",
+   "parking",
+   "parking"
+  ],
+  [
+   "leisure",
+   "park|pitch|golf_course|garden|recreation_ground|common",
+   "lawn"
+  ],
+  [
+   "landuse",
+   "grass|recreation_ground|cemetery",
+   "lawn"
+  ],
+  [
+   "natural",
+   "wood|scrub",
+   "spinifex"
+  ],
+  [
+   "natural",
+   "water",
+   "water"
+  ],
+  [
+   "leisure",
+   "pitch",
+   "lawn"
+  ],
+  [
+   "natural",
+   "wetland",
+   "spinifex"
+  ],
+  [
+   "leisure",
+   "golf_course",
+   "lawn"
+  ],
+  [
+   "landuse",
+   "island_fill",
+   "yard"
+  ]
+ ],
+ "tree_fill": [
+  [
+   "leisure",
+   "park|garden|common",
+   420
+  ],
+  [
+   "landuse",
+   "grass",
+   800
+  ],
+  [
+   "natural",
+   "wood",
+   60
+  ],
+  [
+   "landuse",
+   "residential",
+   1700
+  ],
+  [
+   "leisure",
+   "pitch",
+   0
+  ],
+  [
+   "leisure",
+   "stadium",
+   0
+  ]
+ ],
+ "tree_kinds": [
+  "raintree",
+  "fig",
+  "palm",
+  "palm",
+  "paperbark"
+ ],
+ "levels_default": {
+  "*": 5,
+  "house": 4.5,
+  "residential": 4.5,
+  "detached": 4.5,
+  "terrace": 7,
+  "semidetached_house": 6,
+  "apartments": 12,
+  "commercial": 8,
+  "office": 14,
+  "retail": 7,
+  "industrial": 8,
+  "warehouse": 9,
+  "school": 7,
+  "university": 14,
+  "hospital": 20,
+  "stadium": 24,
+  "train_station": 10
+ },
+ "haze_m": 30000,
+ "paint_poly": [
+  [
+   "parking",
+   [
+    [
+     39.9,
+     -115.24
+    ],
+    [
+     41.39,
+     -126.85
+    ],
+    [
+     70.01,
+     -118.6
+    ],
+    [
+     114.66,
+     -105.08
+    ],
+    [
+     163.62,
+     -79.31
+    ],
+    [
+     166.66,
+     -64.28
+    ],
+    [
+     140.54,
+     -26.34
+    ],
+    [
+     126.97,
+     -27.32
+    ],
+    [
+     96.6,
+     -42.63
+    ],
+    [
+     41.56,
+     -102.29
+    ]
+   ]
+  ],
+  [
+   "paved",
+   [
+    [
+     26,
+     -153
+    ],
+    [
+     56,
+     -153
+    ],
+    [
+     56,
+     -98
+    ],
+    [
+     37,
+     -98
+    ],
+    [
+     31.5,
+     -113
+    ],
+    [
+     29.6,
+     -121.7
+    ],
+    [
+     31.36,
+     -130.19
+    ],
+    [
+     24.6,
+     -140.8
+    ],
+    [
+     20,
+     -143
+    ]
+   ]
+  ]
+ ],
+ "road_mesh": true,
+ "facade_atlas": "facades.png",
+ "mid_half_m": 12000,
+ "mid_step_m": 40,
+ "roof_tex": {
+  "shed": "roof_shed_cz.png"
+ },
+ "mow_r_m": 450,
+ "river_w_m": 15,
+ "aerial_paint": true
+}
