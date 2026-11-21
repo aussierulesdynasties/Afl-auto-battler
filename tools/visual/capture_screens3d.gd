@@ -23,10 +23,10 @@ func _run() -> void:
 	var args := Array(OS.get_cmdline_user_args())
 	# The Capture workflow adds "--out DIR" at the end; by hand, OUTDIR comes first.
 	var out := ""
-	var at := args.find("--out")
-	if at >= 0:
-		out = str(args[at + 1])
-		args = args.slice(0, at)
+	var oi := args.find("--out")
+	if oi >= 0:
+		out = str(args[oi + 1])
+		args = args.slice(0, oi)
 		args.push_front(out)
 	out = str(args[0])
 	DirAccess.make_dir_recursive_absolute(out)
