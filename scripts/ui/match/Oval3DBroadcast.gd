@@ -16,6 +16,17 @@ extends RefCounted
 ## kick of 40 m or more is in the air, and while the players walk back for a centre bounce (after
 ## a goal, once its replay is over, and at the start of each quarter), then back in for the
 ## bounce. Each zoom is quick but eased, half a second of real time at any match speed.
+## Within the TV picture the operator works the zoom as real TV does (Seven and Fox, 2025, measured
+## in rule 2.111: 19-42 m across a 16:9 picture at a contest, up to about 60 m in open play; the
+## MCG's stand cameras "closely follow or anticipate the play", MKTG 2021): tight, 34 m across the
+## TV picture, while bodies crowd the ball (7 or more men within 9 m of it, a ball-up's pack, a
+## centre bounce), out to 50 m as play spreads, and wide enough for a short kick's flight to its
+## target. The zoom moves like an operator's hand: eased in and out, about 0.6 s of real time.
+## The aim leads the ball, as an operator gives play room to run into: it looks where the ball is
+## going (its speed over the last fifth of a second, 0.6 s ahead, at most 30% of the TV picture's
+## width). Over a match at 4x the ball then sits a little behind the picture's middle on its way
+## (13% of the half-width), where the half-second smoothing alone left it 27% ahead, trailing the
+## play, and nearer the edge (in the picture 99.8% of frames, was 98.3%).
 ##
 ## A set shot (rule 2.102, "do what happens IRL") cuts live to the camera behind the goals at the
 ## far end, behind the kicker's back (15 m up, 25 m back from that goal line), from when the man who
@@ -60,6 +71,17 @@ const REPLAY_BEFORE := 0.58   # director s of the replay before the kick
 const REPLAY_AFTER := 0.23    # ...and after the ball reaches the goals
 const LONG_KICK := 40.0       # m: a kick at least this long is watched on the wide shot
 const ZOOM_S := 0.5           # real s a zoom takes, in or out
+const TV_TIGHT := 34.0        # m across a 16:9 TV picture at a contest (real: 19-42)
+const TV_OPEN := 50.0         # ...in open play (real: up to about 60)
+const CROWD_R := 9.0          # m: men this near the ball crowd it
+const CROWD_LO := 3           # this many crowding men or fewer: the open width
+const CROWD_HI := 7           # ...this many or more: the tight width
+const CROWD_SMOOTH := 1.0     # s of play the crowd count is averaged over
+const FLIGHT_EDGE := 14.0     # m: a short kick in the air keeps this much more than its length in shot
+const ZOOM_W := 7.0           # rad/s: the operator's zoom hand (critically damped; ~0.6 s to settle)
+const LEAD_S := 0.6           # s ahead the aim leads the ball
+const LEAD_MAX := 0.3         # ...at most this share of the TV picture's width
+const VEL_S := 0.2            # s the ball's speed is measured over
 const CUT := 8.0              # m: a ball moved further than this in one frame was put back (a
                               # bounce after a goal, the change of ends); the camera goes straight there
 
@@ -87,6 +109,11 @@ var _after_siren: Array = []  # the deciding behind's clip, for after the siren
 var replaying := false        # the picture shows a replay
 var _kick_wide := false       # a long kick's zoom out still running (rule 2.111)
 var _zoom := 1.0              # 0 the normal TV-height shot, 1 the wide shot (rule 2.111)
+var tv_width := TV_OPEN       # m across the 16:9 TV picture the main camera is zoomed to now
+var _tv_vel := 0.0            # m/s the zoom is moving (the operator's hand)
+var _crowd: Array = []        # [[t, men crowding the ball]] over the last CROWD_SMOOTH s
+var _ball_trail: Array = []   # [[t, world ball]] over the last VEL_S s
+var lead_s := LEAD_S          # s ahead the aim leads the ball (a tool may try others)
 
 
 func _init(p_oval: Oval3D) -> void:
@@ -114,13 +141,20 @@ func frame(dt: float, wall := 0.0) -> void:
 	var aim := Vector3(bp.x, AIM_Y, bp.z)
 	if dt <= 0.0 or bp.distance_to(_last_ball) > CUT:
 		_trail.clear()
+		_ball_trail.clear()
+		_crowd.clear()
 	_last_ball = bp
-	var main_aim := _smooth(_trail, aim, MAIN_SMOOTH)
+	var want_tv := _tv_want()
+	var main_aim := _smooth(_trail, aim + _lead(bp, want_tv), MAIN_SMOOTH)
 	_set_shot(dt)
 	if replaying:
 		_play_replay(0.0)
 		return
 	_set_close()
+	if _close_who >= 0 or shot == "goals":
+		# Off the main camera, its operator sets his zoom for when the picture comes back.
+		tv_width = want_tv
+		_tv_vel = 0.0
 	if _close_who >= 0:
 		var gp := ((oval.players[_close_who] as Dictionary)["node"] as Node3D).global_position
 		_shoot(_close_eye, _smooth(_close_trail, Vector3(gp.x, CLOSE_AIM_Y, gp.z), CLOSE_SMOOTH), CLOSE_WIDTH)
@@ -137,7 +171,15 @@ func frame(dt: float, wall := 0.0) -> void:
 		# speed the picture is fully wide just after the ball lands, then eases back in.
 		var want := 1.0 if _kick_wide or _wide() else 0.0
 		if dt > 0.0:  # paused or placed at once: the zoom holds
-			_zoom = move_toward(_zoom, want, (wall if wall > 0.0 else dt) / ZOOM_S)
+			var real := wall if wall > 0.0 else dt
+			_zoom = move_toward(_zoom, want, real / ZOOM_S)
+			# The operator's hand on the zoom: a critically damped spring, eased at both ends.
+			var acc := ZOOM_W * ZOOM_W * (want_tv - tv_width) - 2.0 * ZOOM_W * _tv_vel
+			_tv_vel += acc * real
+			tv_width += _tv_vel * real
+		elif _trail.size() <= 1:
+			tv_width = want_tv
+			_tv_vel = 0.0
 		_tv_height(smoothstep(0.0, 1.0, _zoom))
 
 
@@ -157,12 +199,55 @@ func _wide() -> bool:
 	return str((d._phases[d._pi] as Dictionary).get("t", "")) == "setup"
 
 
+## How wide the operator wants the TV picture now (metres across a 16:9 picture where it aims):
+## tight while men crowd the ball, open as play spreads, and a short kick's whole flight in shot.
+func _tv_want() -> float:
+	var d = oval.director
+	var b: Dictionary = d.ball
+	var bp: Vector2 = b["pos"]
+	var n := 0
+	for t in d.tokens:
+		if (t["pos"] as Vector2).distance_to(bp) < CROWD_R:
+			n += 1
+	var stop: Dictionary = d.stoppage_now()
+	if not d.ballup_now().is_empty() or float(stop.get("in", INF)) < 1.5:
+		_crowd.clear()  # the pack at a ball-up, the centre square at the bounce: tight at once
+		n = CROWD_HI
+	_crowd.append([_t, float(n)])
+	while _crowd.size() > 1 and _t - float(_crowd[0][0]) > CROWD_SMOOTH:
+		_crowd.pop_front()
+	var mean := 0.0
+	for c in _crowd:
+		mean += float(c[1])
+	mean /= float(_crowd.size())
+	var f := clampf((mean - CROWD_LO) / float(CROWD_HI - CROWD_LO), 0.0, 1.0)
+	var w := lerpf(TV_OPEN, TV_TIGHT, smoothstep(0.0, 1.0, f))
+	if str(b.get("mode", "")) == "flight":
+		w = maxf(w, minf((b["from"] as Vector2).distance_to(b["to"]) + FLIGHT_EDGE, MAIN_WIDTH))
+	return w
+
+
+## Where the aim leads the ball (world metres): its speed over the last VEL_S s, LEAD_S ahead,
+## at most LEAD_MAX of a TV picture `tv_w` wide; nothing up or down.
+func _lead(bp: Vector3, tv_w: float) -> Vector3:
+	_ball_trail.append([_t, bp])
+	while _ball_trail.size() > 2 and _t - float(_ball_trail[1][0]) >= VEL_S:
+		_ball_trail.pop_front()
+	var span := _t - float(_ball_trail[0][0])
+	if span <= 0.0:
+		return Vector3.ZERO
+	var v: Vector3 = (bp - (_ball_trail[0][1] as Vector3)) / span
+	v.y = 0.0
+	return (v * lead_s).limit_length(LEAD_MAX * tv_w)
+
+
 ## The main camera, aimed and zoomed for the wide shot, narrowed to the TV picture's height:
-## `wide` 0 is a 16:9 picture's top and bottom on the phone's taller picture, 1 the wide shot.
+## `wide` 0 is a 16:9 picture `tv_width` across, its top and bottom on the phone's taller
+## picture; 1 the wide shot.
 func _tv_height(wide: float) -> void:
 	var vs := camera.get_viewport().get_visible_rect().size
 	var tw := tan(deg_to_rad(camera.fov) * 0.5)
-	var tv := tw * 9.0 / 16.0 * vs.x / vs.y  # the TV picture's half-height, as a half-width here
+	var tv := tw * tv_width / MAIN_WIDTH * 9.0 / 16.0 * vs.x / vs.y  # the TV picture's half-height, as a half-width here
 	camera.fov = rad_to_deg(2.0 * atan(lerpf(tv, tw, wide)))
 
 
@@ -322,6 +407,7 @@ func skip_replay() -> void:
 	oval.umpires_after_cut()
 	shot = "main"
 	_trail.clear()
+	_ball_trail.clear()
 	_zoom = 1.0  # rule 2.111: back from the replay on the ground and crowd, then in for the bounce
 
 
