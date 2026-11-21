@@ -14,6 +14,7 @@ const AISLE_EVERY := 28      # seats between aisles (an aisle is two seats wide)
 const EMPTY := 0.08          # share of seats left empty
 const NEUTRAL := 0.12        # share of supporters in neither club's colours
 const SECTORS := 96          # chunks round the ground (each also split front rows / back rows)
+const SEAT_TIERS := 3        # a real ground's chunks: each sector also split low / middle / high
 const MIX_D := 55.0          # m from the camera: 3D people nearer, cards beyond
 const BASE_Y := 1.2          # m: the front row's step, level with the fence top
 ## The bench: SEAT_H high, from SEAT_F to SEAT_B m back from the row's front edge; the
@@ -38,6 +39,87 @@ func build(a: float, b: float, depth: float, rise_to: float, home: Array, away: 
 	var pitch := depth / ROWS
 	var rise := (rise_to - BASE_Y) / ROWS
 	_terrace(a, b, pitch, rise)
+	_materials(cs, home, away)
+	_seat(cs, a, b, pitch, rise)
+
+
+## A real ground's crowd (row 202 2b/2c): a supporter on most of the model's own seats, the same
+## mix as the stand (3D people within MIX_D, cards beyond), and the same colours and cheer.
+## seats are the ground's seat transforms (each seat's origin and turn, in this node's space);
+## tmpl the seat's triangles (seat_tmpl.bin), from which sitting_spot finds where he sits.
+func build_on_seats(seats: Array, tmpl: PackedVector3Array, home: Array, away: Array) -> void:
+	var cs: Oval3DCrowdSet = load(CROWD_SET)
+	_materials(cs, home, away)
+	var spot := sitting_spot(tmpl)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 2026
+	var home_share := []
+	for s in range(SECTORS):
+		home_share.append(rng.randf_range(0.4, 0.8))
+	# Tiers by height: the lowest third of the seats, the middle and the top each draw apart, so
+	# a near chunk is never a strip from the fence to the roof.
+	var ys := PackedFloat32Array()
+	for t: Transform3D in seats:
+		ys.append(t.origin.y)
+	ys.sort()
+	var cuts := [ys[ys.size() / 3], ys[ys.size() * 2 / 3]] if ys.size() > 2 else [INF, INF]
+	var per := []
+	for i in range(SECTORS * SEAT_TIERS):
+		per.append([])
+	for t: Transform3D in seats:
+		if rng.randf() < EMPTY:
+			continue
+		var at := t * spot
+		var th := fposmod(atan2(at.origin.z, at.origin.x), TAU)
+		var sector := int(th / TAU * SECTORS) % SECTORS
+		var tier := 0 if at.origin.y < cuts[0] else (1 if at.origin.y < cuts[1] else 2)
+		per[sector * SEAT_TIERS + tier].append(_supporter(cs, rng, at, home_share[sector]))
+	_chunked(cs, per)
+
+
+## Where a supporter sits on a seat, in the seat's own space, from its triangles: his origin on
+## the floor under the seat (its lowest point), PERSON_D - SEAT_F - (SEAT_B - SEAT_F) / 2 behind
+## the pan's middle as on the stand, facing out over the pan, away from the backrest.
+static func sitting_spot(tmpl: PackedVector3Array) -> Transform3D:
+	var lo := INF
+	var hi := -INF
+	for v in tmpl:
+		lo = minf(lo, v.y)
+		hi = maxf(hi, v.y)
+	# The pan: the points halfway between the floor and the backrest's top; the backrest: the
+	# points at its top. Out over the pan, away from the backrest, is the way he faces.
+	var pan := Vector3.ZERO
+	var n_pan := 0
+	var back := Vector3.ZERO
+	var n_back := 0
+	var pan_y := lo + (hi - lo) * 0.5
+	for v in tmpl:
+		if absf(v.y - pan_y) < (hi - lo) * 0.06:
+			pan += v
+			n_pan += 1
+		elif v.y > hi - (hi - lo) * 0.06:
+			back += v
+			n_back += 1
+	pan /= maxf(1.0, float(n_pan))
+	back /= maxf(1.0, float(n_back))
+	var front := Vector3(pan.x - back.x, 0.0, pan.z - back.z)
+	front = front.normalized() if front.length() > 0.001 else Vector3.BACK
+	# Front to back, the pan's middle is halfway between its front edge and its back edge.
+	var near := INF
+	var far := -INF
+	for v in tmpl:
+		if absf(v.y - pan_y) < (hi - lo) * 0.06:
+			near = minf(near, v.dot(front))
+			far = maxf(far, v.dot(front))
+	if near < far:
+		pan += front * ((near + far) * 0.5 - pan.dot(front))
+	var behind := PERSON_D - (SEAT_F + SEAT_B) * 0.5
+	var origin := Vector3(pan.x, lo, pan.z) - front * behind
+	# The bodies face +Z (the stand turns them with looking_at the way out, -Z).
+	return Transform3D(Basis.looking_at(-front, Vector3.UP), origin)
+
+
+func _materials(cs: Oval3DCrowdSet, home: Array, away: Array) -> void:
 	for body: Dictionary in cs.bodies:
 		var pm := ShaderMaterial.new()
 		pm.shader = preload("res://scripts/ui/match/oval3d_crowd_people.gdshader")
@@ -64,7 +146,6 @@ func build(a: float, b: float, depth: float, rise_to: float, home: Array, away: 
 	_card_mat.set_shader_parameter("cheer_dur", cs.cheer_s)
 	_card_mat.set_shader_parameter("cheer_len", cs.cheer_s + 1.0)
 	_colours(_card_mat, home, away)
-	_seat(cs, a, b, pitch, rise)
 
 
 ## The match clock (s), which every supporter's idle and cheer run on.
@@ -95,9 +176,6 @@ func _seat(cs: Oval3DCrowdSet, a0: float, b0: float, pitch: float, rise: float) 
 	var home_share := []
 	for s in range(SECTORS):
 		home_share.append(rng.randf_range(0.4, 0.8))
-	var wsum := 0.0
-	for body: Dictionary in cs.bodies:
-		wsum += float(body["share"])
 	var per := []
 	for i in range(SECTORS * 2):
 		per.append([])
@@ -128,22 +206,38 @@ func _seat(cs: Oval3DCrowdSet, a0: float, b0: float, pitch: float, rise: float) 
 			var th := TAU * (float(j) + (at - acc[j]) / maxf(0.0001, acc[j + 1] - acc[j])) / N
 			var pos := Vector3(a * cos(th), y, b * sin(th))
 			var outward := Vector3(cos(th) / a, 0.0, sin(th) / b).normalized()
-			var basis := Basis(Vector3.UP, rng.randf_range(-0.2, 0.2)) * Basis.looking_at(outward, Vector3.UP)
-			basis = basis.scaled(Vector3.ONE * rng.randf_range(0.92, 1.06))
 			var sector := int(th / TAU * SECTORS) % SECTORS
-			var side := 0.5 if rng.randf() < NEUTRAL else (0.0 if rng.randf() < home_share[sector] else 1.0)
-			var pick := rng.randf() * wsum
-			var bi := 0
-			while bi < cs.bodies.size() - 1 and pick >= float(cs.bodies[bi]["share"]):
-				pick -= float(cs.bodies[bi]["share"])
-				bi += 1
-			per[sector * 2 + (0 if r < ROWS / 2 else 1)].append(
-					[Transform3D(basis, pos), Color(rng.randf(), side, rng.randf(), rng.randf()), bi])
-			supporters += 1
+			per[sector * 2 + (0 if r < ROWS / 2 else 1)].append(_supporter(cs, rng,
+					Transform3D(Basis.looking_at(outward, Vector3.UP), pos), home_share[sector]))
+	_chunked(cs, per)
+
+
+## One supporter at a seat's spot: turned a touch and sized a little either way, in his club's
+## colours (most of a sector lean to the home side, a few to neither), on a body picked by share.
+func _supporter(cs: Oval3DCrowdSet, rng: RandomNumberGenerator, at: Transform3D, home_share: float) -> Array:
+	var basis := Basis(Vector3.UP, rng.randf_range(-0.2, 0.2)) * at.basis
+	basis = basis.scaled(Vector3.ONE * rng.randf_range(0.92, 1.06))
+	var side := 0.5 if rng.randf() < NEUTRAL else (0.0 if rng.randf() < home_share else 1.0)
+	var wsum := 0.0
+	for body: Dictionary in cs.bodies:
+		wsum += float(body["share"])
+	var pick := rng.randf() * wsum
+	var bi := 0
+	while bi < cs.bodies.size() - 1 and pick >= float(cs.bodies[bi]["share"]):
+		pick -= float(cs.bodies[bi]["share"])
+		bi += 1
+	supporters += 1
+	return [Transform3D(basis, at.origin), Color(rng.randf(), side, rng.randf(), rng.randf()), bi]
+
+
+## Each chunk of seats as its draws: 3D people (one batch per body, each body has its own
+## table) shown within MIX_D, and cards (every body in one batch, the body's atlas row in the
+## seat's fourth number) beyond.
+func _chunked(cs: Oval3DCrowdSet, per: Array) -> void:
 	var card := _card_mesh()
 	for list: Array in per:
-		# 3D people: one batch per body (each body has its own table). Cards: every body in one
-		# batch, the body's atlas row in the seat's fourth number.
+		if list.is_empty():
+			continue
 		var chunk := {"people": []}
 		for bi in range(cs.bodies.size()):
 			var mine: Array = list.filter(func(e): return e[2] == bi)

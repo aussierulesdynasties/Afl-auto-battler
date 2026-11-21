@@ -50,7 +50,11 @@ static func lying(ball: Dictionary, prev: Dictionary) -> bool:
 
 ## The ball is in a player's hands, or on its way somewhere, or on the ground
 ## for no longer than it takes a player to get to it (`still`, match seconds).
-static func ball_fault(ball: Dictionary, prev: Dictionary, tokens: Array, _h: float, still: float) -> String:
+## A ball off the ground is hanging only when it has not moved for two frames
+## running (`still` over one frame's `h`): one frame alone can catch two drops
+## through the same height at the same spot (seed 2026-11-21: a ball dropped,
+## picked up and dropped again at a ball-up, sampled at 0.43 m both times).
+static func ball_fault(ball: Dictionary, prev: Dictionary, tokens: Array, h: float, still: float) -> String:
 	var mode := str(ball.get("mode", ""))
 	if not MODES.has(mode):
 		return "the ball is '%s'" % mode
@@ -72,7 +76,7 @@ static func ball_fault(ball: Dictionary, prev: Dictionary, tokens: Array, _h: fl
 			return "the held ball is %.2f m from its holder" % gap
 		return ""
 	if not prev.is_empty() and lying(ball, prev) and height > HOVER_HEIGHT \
-			and absf(height - float(prev.get("h", 0.0))) < 0.001:
+			and absf(height - float(prev.get("h", 0.0))) < 0.001 and still > h * 1.5:
 		return "the ball hangs %.2f m up without moving (%s)" % [height, mode]
 	if still > LYING_LIMIT:
 		return "the ball has lain still for %.1f match seconds with nobody on it (%s)" % [still, mode]

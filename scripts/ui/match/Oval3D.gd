@@ -50,6 +50,7 @@ const STAND_RISE := 24.0
 const LOOK_X := 78.0           # m: the camera follows the ball this far towards each goal
 const LOOK_Z := 55.0           # ...and this far out to each wing (the man on the ball stays in view)
 const BODY_GAP := 0.6         # m between two players' centres, drawn
+const UMP_BODY_GAP := 0.7     # m from an umpire's hips to a player's centre, drawn
 ## The digits the vignettes print numbers with (R fill, G outline), shared so both read alike.
 const DIGITS := preload("res://assets/vignette/figures_digits.png")
 ## A Sherrin is about 0.29 m end to end and 0.18 m across.
@@ -69,12 +70,12 @@ var film: MeshInstance3D  # the broadcast film look (_film)
 var anim: Oval3DAnim          # the animation session's controller (row 198)
 var umpires: Array = []        # [{node, anim, ring, role, k}]: the vignettes' umpire set
 var crowd: Oval3DCrowd
-## The ground's model (assets/grounds/<dir>), set before build(); "" keeps the stand and crowd.
+## The ground's big screens and fence signs (Oval3DScreens): live score, GOAL card, replay.
+var screens: Oval3DScreens
+## The ground the match is at (VignetteGround.ground_of), set before build(): its model when it
+## has one (GroundModels), else the stand and crowd.
 var ground := ""
-const GROUND_MODELS := {"MCG": "mcg"}
-## Where each model's fence centre and arena floor sit in its own metres (measured off the bowl;
-## the MCG's floor is 4.2 m below its street).
-const GROUND_SHIFT := {"mcg": Vector3(-0.45, 4.2, -0.45)}
+var _turf_mat: ShaderMaterial  # the turf's paint (oval3d_ground.gdshader)
 var _crowd_t := 0.0           # s of match the crowd has run (its idle and cheer clock)
 var _goal_on := false          # the director was showing a goal last frame
 var _look := Vector3.ZERO
@@ -92,10 +93,14 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 	_environment()
 	_ground()
 	_posts()
-	if GROUND_MODELS.has(ground):
-		_ground_model(str(GROUND_MODELS[ground]))
+	var slug := GroundModels.slug_for(ground) if ground != "" else ""
+	if slug != "":
+		_ground_model(slug, "", home, away)
 	else:
 		_stands(home, away)
+	screens = Oval3DScreens.new()
+	add_child(screens)
+	screens.build(self, get_node_or_null("Ground"), Vector2(HALF_LEN + FENCE, HALF_WID + FENCE), home, away)
 	var scene: PackedScene = load(player_glb)
 	# Each club in its home guernsey, as the vignettes dress them (StoppageVignette._dress).
 	var kits := [_kit(GameDB.club_guernsey(home)), _kit(GameDB.club_guernsey(away))]
@@ -175,6 +180,8 @@ func sync(dt: float) -> void:
 		# a player it is in his hands; otherwise it lies on the turf.
 		holder = _nearest(director.ball["pos"], 1.0)
 		resting = holder < 0
+	# The umpires first: the players are drawn clear of where they are this frame (_spaced).
+	_move_umpires(dt)
 	var at := _spaced()
 	for i in range(players.size()):
 		var t: Dictionary = director.tokens[i]
@@ -187,10 +194,16 @@ func sync(dt: float) -> void:
 		var node: Node3D = p["node"]
 		node.position = Vector3(pos.x, 0.0, pos.y)
 		anim.step(i, p, holder, pos, vel, dt)
-	_move_umpires(dt)
 	var bp: Vector2 = director.ball["pos"]
 	var h := float(director.ball.get("h", 0.0))
-	if holder >= 0 and holder < players.size():
+	if _ump_ball:
+		# An umpire has it: never a player standing within a metre of it.
+		holder = -1
+	if _umpire_ball(dt):
+		_in_hands = true
+		_on_turf = false
+		_drop_t = -1.0
+	elif holder >= 0 and holder < players.size():
 		_hold_ball(players[holder])
 		_in_hands = true
 		_on_turf = false
@@ -220,6 +233,7 @@ func sync(dt: float) -> void:
 			_on_turf = false
 		else:
 			_roll_ball(moved, dt)
+	_umpire_let_go(dt)
 	# Followed to within a few metres of each goal line: a kick-in or a shot at the camera's own
 	# end stays in view (aim_end stops looking ahead there).
 	var target := Vector3(clampf(bp.x, -LOOK_X, LOOK_X), 0.0, clampf(bp.y, -LOOK_Z, LOOK_Z))
@@ -243,7 +257,25 @@ func _spaced() -> Array:
 				var push := dir * (BODY_GAP - dist) * 0.5
 				at[i] -= push
 				at[j] += push
+	# An umpire is a body too (his hips where his clip has them: the bounce runs him two metres
+	# in): no player is drawn through him; the player gives way, the umpire keeps his mark.
+	for u in umpires:
+		var skel: Skeleton3D = u["skel"]
+		var hips := to_local(skel.global_transform * skel.get_bone_global_pose(_pelvis(u)).origin)
+		var c := Vector2(hips.x, hips.z)
+		for i in range(at.size()):
+			var gap: Vector2 = at[i] - c
+			var dist := gap.length()
+			if dist < UMP_BODY_GAP:
+				at[i] = c + (gap / dist if dist > 0.001 else Vector2.RIGHT.rotated(float(i))) * UMP_BODY_GAP
 	return at
+
+
+## His pelvis bone (cached on the umpire's entry).
+func _pelvis(u: Dictionary) -> int:
+	if not u.has("pelvis"):
+		u["pelvis"] = maxi((u["skel"] as Skeleton3D).find_bone("pelvis"), 0)
+	return int(u["pelvis"])
 
 
 func _nearest(at: Vector2, within: float) -> int:
@@ -319,6 +351,14 @@ func _sync_crowd(dt: float) -> void:
 ## camera stays put, so the home side then attacks the other way up the screen.
 func set_ends(sign: float) -> void:
 	rotation.y = 0.0 if sign > 0.0 else PI
+	umpires_after_cut()
+
+
+## The picture has cut away from the live play (a goal's replay, the ends changing at a
+## break): on the next live frame the umpires are on their spots, the field umpire on his mark
+## for the coming stoppage, instead of a run the picture never showed.
+func umpires_after_cut() -> void:
+	_ump_cut = true
 
 
 func _world(v: Vector3) -> Vector3:
@@ -400,6 +440,7 @@ func _ground() -> void:
 	sm.set_shader_parameter("goal_x", GOAL_X)
 	mi.material_override = sm
 	add_child(mi)
+	_turf_mat = sm
 	turf = Oval3DTurf.new(self, sm, _env, _sun, pm.size * 0.5)
 	add_child(turf)
 	turf.apply("", VignetteKickoff.DAY)
@@ -460,60 +501,71 @@ func _stands(home: String, away: String) -> void:
 	add_child(fence)
 
 
-## A real ground's model in place of the stand, its crowd and the fence: the bowl, roof and
-## towers from <dir>.glb, and the seats drawn as one seat many times (MultiMesh): seat_tmpl.bin
-## is the seat (36 triangles), seats_<colour>.bin a row-major 3x4 transform per seat.
-## No crowd: the seats are empty (director, 2026-11-19).
-func _ground_model(dir: String) -> void:
-	var base := "res://assets/grounds/%s/" % dir
-	var root := Node3D.new()
-	root.name = "Ground"
-	root.position = GROUND_SHIFT.get(dir, Vector3.ZERO)
+## A real ground's model in place of the stand, its crowd and the fence (GroundModels: the
+## model and its seats, laid so its fence meets the match's). With home and away given, the
+## crowd sits on the model's seats (Oval3DCrowd.build_on_seats; the director chose "Seat the
+## crowd in the MCG", 2026-11-20); without them, or at a ground with no seat files, the seats
+## stay empty. base is the folder holding the model and its seat files; "" is the game's own
+## copy. The ground inspector (tools/inspect) passes a folder on disk to show a copy that is
+## not in the game yet.
+func _ground_model(slug: String, base := "", home := "", away := "") -> void:
+	var root := GroundModels.instantiate(slug, base)
 	add_child(root)
-	var scene: PackedScene = load(base + dir + ".glb")
-	root.add_child(scene.instantiate())
-	var tmpl := FileAccess.get_file_as_bytes(base + "seat_tmpl.bin").to_float32_array()
+	turf.set_ground(slug)
+	_turf_mat.set_shader_parameter("fence_clip", GroundModels.MATCH_FENCE)
+	_apron_skirt()
+	if home == "":
+		return
+	var seats := GroundModels.seat_transforms(slug, base)
+	if seats.is_empty():
+		return
+	crowd = Oval3DCrowd.new()
+	crowd.name = "Crowd"
+	root.add_child(crowd)
+	crowd.build_on_seats(seats, GroundModels.seat_points(slug, base),
+			GameDB.club_colours(home), GameDB.club_colours(away))
+
+
+## How far past the match's fence the apron skirt runs, and how far under the turf it lies (under
+## the model's own ground, GroundModels.UNDER_TURF, so wherever the model has ground, that shows).
+const SKIRT_OUT := 8.0
+const SKIRT_DROP := 0.3
+
+
+## Where a model's own fence runs outside the match's (a metre or a few on part of the lap) it has
+## no ground drawn between the turf's edge and its wall, and the sky under the world showed through
+## as a white strip at the foot of the fence. A ring of the turf's apron, from just inside the
+## match's fence to SKIRT_OUT past it, lies under the model's ground and fills that gap with grass.
+func _apron_skirt() -> void:
+	var f := GroundModels.MATCH_FENCE
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	for i in range(0, tmpl.size(), 3):
-		st.add_vertex(Vector3(tmpl[i], tmpl[i + 1], tmpl[i + 2]))
-	st.generate_normals()
-	var seat := st.commit()
-	for f in DirAccess.get_files_at(base):
-		if not (f.begins_with("seats_") and f.ends_with(".bin")):
-			continue
-		var buf := FileAccess.get_file_as_bytes(base + f).to_float32_array()
-		var mm := MultiMesh.new()
-		mm.transform_format = MultiMesh.TRANSFORM_3D
-		mm.mesh = seat
-		mm.instance_count = buf.size() / 12
-		mm.buffer = buf
-		var mi := MultiMeshInstance3D.new()
-		mi.name = f.get_basename()
-		mi.multimesh = mm
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = SEAT_COLOURS.get(f.get_basename().trim_prefix("seats_"), Color.GRAY)
-		mi.material_override = mat
-		root.add_child(mi)
+	st.set_normal(Vector3.UP)
+	var n := 180
+	for i in n:
+		var a0 := TAU * i / n
+		var a1 := TAU * (i + 1) / n
+		var p := [Vector3(cos(a0) * f.x * 0.97, 0.0, sin(a0) * f.y * 0.97),
+				Vector3(cos(a1) * f.x * 0.97, 0.0, sin(a1) * f.y * 0.97),
+				Vector3(cos(a1) * (f.x + SKIRT_OUT), 0.0, sin(a1) * (f.y + SKIRT_OUT)),
+				Vector3(cos(a0) * (f.x + SKIRT_OUT), 0.0, sin(a0) * (f.y + SKIRT_OUT))]
+		for k in [0, 1, 2, 0, 2, 3]:
+			st.add_vertex(p[k])
+	var mi := MeshInstance3D.new()
+	mi.name = "ApronSkirt"
+	mi.mesh = st.commit()
+	mi.position.y = -SKIRT_DROP
+	var sm := _turf_mat.duplicate() as ShaderMaterial
+	sm.set_shader_parameter("fence_clip", Vector2.ZERO)
+	mi.material_override = sm
+	add_child(mi)
+	turf.follow(sm)
 
 
-## Each seat colour as the model paints it (the mean of its seat texture).
-const SEAT_COLOURS := {
-	"seat_grey": Color(0.618, 0.618, 0.586), "seat_moss": Color(0.437, 0.594, 0.555),
-	"seat_navy": Color(0.068, 0.311, 0.484), "seat_slate": Color(0.272, 0.39, 0.488),
-	"seat_steel": Color(0.437, 0.484, 0.524),
-	"seat_blue": Color(0.144, 0.282, 0.572), "seat_cream": Color(0.785, 0.747, 0.655),
-	"seat_white": Color(0.815, 0.830, 0.845), "seat_greyblue": Color(0.427, 0.465, 0.541),
-	"seat_navyblue": Color(0.157, 0.235, 0.502), "seat_charcoal": Color(0.141, 0.165, 0.227),
-	"seat_slategrey": Color(0.361, 0.392, 0.447),
-	"s_blue": Color(0.211, 0.28, 0.448), "s_orange": Color(0.785, 0.426, 0.158),
-	"s_grey": Color(0.64, 0.648, 0.663), "s_maroon": Color(0.443, 0.129, 0.16),
-	"s_gold": Color(0.863, 0.649, 0.129), "s_teal": Color(0.135, 0.479, 0.456),
-	# Optus: each tier's colour pushed grey-blue or tan, from the reference photos (optus_model/build.py).
-	"seat_lo_blue": Color(0.802, 0.807, 0.841), "seat_lo_tan": Color(0.892, 0.824, 0.751),
-	"seat_mid_blue": Color(0.920, 0.858, 0.794), "seat_mid_tan": Color(1.0, 0.875, 0.704),
-	"seat_up_blue": Color(0.653, 0.705, 0.782), "seat_up_tan": Color(0.743, 0.722, 0.693),
-}
+## A .glb as a node (GroundModels.load_glb): the imported copy for a file in the game, read
+## straight off disk otherwise. null if it cannot be read.
+static func load_glb(path: String) -> Node3D:
+	return GroundModels.load_glb(path)
 
 
 ## One kit material per club: the region fields in the mesh pick skin, hair, guernsey,
@@ -1719,24 +1771,145 @@ func _umpire_spots() -> Array:
 
 ## Each umpire runs toward his spot for where the ball is now (at most UMP_SPEED), jogging
 ## while he moves and facing the ball when he stands. Goal umpires stay on their lines.
+## At a stoppage one of them takes the ball (_stoppage_umpire): the field umpire nearest the
+## centre for a centre bounce, the nearest field umpire for a ball-up, the boundary umpire on
+## that wing for a throw-in. He goes to his mark (_stoppage_mark), has the ball in his hands
+## (_umpire_ball) and puts it in play with the bounce clip the director passed (rule 2.75):
+## the whole clip for a centre bounce, timed so the ball hits the turf on the bounce; only its
+## lift of the ball, at speed, for a ball-up or a throw-in (no throw clip exists yet).
 const UMP_SPEED := 7.0
+## The umpire taking a stoppage runs to his mark at a sprint.
+const UMP_SPRINT := 8.5
 const UMP_RUN_FROM := 1.4
+const UMP_CLIP := "umpire_bounce_01"
+## umpire_bounce_01, measured (tools/oval3d/probe_umpire_clip.gd): the ball leaves his hands at
+## T_REL and is on the turf at T_HIT, BOUNCE_REACH metres in front of where he started.
+const UMP_T_REL := 1.87
+const UMP_T_HIT := 1.96
+const UMP_BOUNCE_REACH := 2.4
+## Up to here (the ball lifted to his chest) he may stand and wait for a late set-up.
+const UMP_T_HOLD := 0.4
+## The latest a bounce clip starts: the ball overhead, about to come down (after a cut).
+const UMP_T_LATEST := 1.6
+## A set-up's estimated time left, as the bounce clip trusts it (_bounce_in).
+const UMP_SETUP_TRUST := 0.7
+## How much quicker than a turn in play he squares up within 3 m of his mark.
+const UMP_SQUARE := 3.0
+## A ball-up or throw-in: the lift of the ball from his chest, played at UMP_LIFT_RATE.
+const UMP_T_LIFT := 0.45
+const UMP_LIFT_RATE := 2.0
+## On his mark within this many metres; the ball comes to his hands within UMP_TAKE of it.
+const UMP_SET := 0.3
+const UMP_TAKE := 2.5
+## The ball goes from where it was to his hands (picked up) over UMP_PICK seconds, and from his
+## hands onto the director's flight (let go) over UMP_LET_GO.
+const UMP_PICK := 0.3
+const UMP_LET_GO := 0.2
+## From the end of a clip to his stand.
+const UMP_BLEND_OUT := 0.4
+
+var _ump_job := -1            # the umpire taking the stoppage (index in umpires)
+var _ump_placed := false      # the umpires have been put on their first spots
+var _ump_cut := false         # the picture has just cut away (umpires_after_cut)
+var _ump_snapped := false     # ...and this frame the umpires were put on their spots
+var _ump_time := -1.0         # the director's time last frame
+var _ump_step := 1.0 / 30.0   # the director seconds of the last frame that moved
+var _ump_ball := false        # the ball is in his hands this frame
+var _ump_pick := -1.0         # seconds since he took it (the pick-up blend)
+var _ump_from := Vector3.ZERO # where the ball was when he took it
+var _ump_off := Vector3.ZERO  # let go: his hands less the director's ball, easing out
+var _ump_off_t := -1.0
+var _ump_hit_from := Vector3.ZERO  # a bounce: where the ball left his hands
 
 
-func _move_umpires(dt: float) -> void:
+## The umpire who takes stoppage `st` (director.stoppage_now), -1 for none. Kept for the whole
+## stoppage once chosen; a clip being played keeps its man until it ends.
+func _stoppage_umpire(st: Dictionary) -> int:
+	if st.is_empty():
+		return -1
+	if _ump_job >= 0:
+		return _ump_job
+	var at: Vector2 = st["at"]
+	var want := "boundary" if str(st["kind"]) == "throwin" else "field"
+	var best := -1
+	var best_d := INF
+	for u in umpires:
+		if str(u["role"]) != want or (u as Dictionary).has("clip"):
+			continue
+		var n: Node3D = u["node"]
+		var d := Vector2(n.position.x, n.position.z).distance_to(at)
+		if d < best_d:
+			best_d = d
+			best = int(u["k"])
+	return best
+
+
+## [mark, facing] for the umpire taking stoppage `st`: a centre bounce from BOUNCE_REACH back
+## across the ground (the rucks come in from up and down the ground, never through his run); a
+## ball-up just off the ball; a throw-in just over the line, his back to the play, as the boundary
+## umpires throw it in.
+func _stoppage_mark(st: Dictionary) -> Array:
+	var at: Vector2 = st["at"]
+	match str(st["kind"]):
+		"bounce":
+			return [at - Vector2(0.0, UMP_BOUNCE_REACH), Vector2(0.0, 1.0)]
+		"throwup":
+			return [at - Vector2(0.0, 0.6), Vector2(0.0, 1.0)]
+		_:
+			var out := Vector2(at.x / (HALF_LEN * HALF_LEN), at.y / (HALF_WID * HALF_WID))
+			out = out.normalized() if out.length() > 0.0 else Vector2(0.0, 1.0)
+			return [at + out * 0.6, out]
+
+
+func _move_umpires(frame_dt: float) -> void:
 	if umpires.is_empty():
 		return
+	# The umpires move in the director's time, as the players do: double speed through real
+	# footy's pauses (rule 2.93), still while the play is held for a replay (rule 2.96).
+	var dt := clampf(director.time - _ump_time, 0.0, 0.5) if _ump_time >= 0.0 else frame_dt
+	_ump_time = director.time
+	if dt > 0.0:
+		_ump_step = dt
 	var spots := _umpire_spots()
 	var bp: Vector2 = director.ball["pos"]
+	var st: Dictionary = director.stoppage_now()
+	var flying := str(director.ball.get("mode", "")) == "flight"
+	if st.is_empty() and (_ump_job < 0 or not (umpires[_ump_job] as Dictionary).has("clip")):
+		_ump_job = -1
+	if not st.is_empty():
+		_ump_job = _stoppage_umpire(st)
+	var held := false
+	var first := (not _ump_placed or _ump_cut) and not st.is_empty()
+	_ump_placed = _ump_placed or first
+	_ump_cut = false
+	_ump_snapped = first
 	for u in umpires:
 		var node: Node3D = u["node"]
 		var ap: AnimationPlayer = u["anim"]
+		var k := int(u["k"])
+		if u.has("clip"):
+			held = _umpire_clip(u, st, dt) or held
+			continue
+		if u.has("out") and _umpire_blend_out(u, dt):
+			continue
 		var at := Vector2(node.position.x, node.position.z)
-		var want: Vector2 = spots[int(u["k"])][1]
+		var want: Vector2 = spots[k][1]
+		var face := Vector2.ZERO
+		var job := k == _ump_job and not st.is_empty()
+		if job:
+			var m := _stoppage_mark(st)
+			want = m[0]
+			face = m[1]
+		if first:
+			# The first picture (the opening bounce), or the first after a cut: everyone already
+			# on his spot.
+			at = want
+			if face != Vector2.ZERO:
+				node.rotation.y = atan2(face.x, face.y)
 		var step := want - at
 		var vel := Vector2.ZERO
 		if dt > 0.0 and step.length() > 0.05:
-			var move := step.limit_length(UMP_SPEED * dt)
+			var move := step.limit_length((UMP_SPRINT if job else UMP_SPEED) * dt)
 			at += move
 			vel = move / dt
 		node.position = Vector3(at.x, 0.0, at.y)
@@ -1745,18 +1918,200 @@ func _move_umpires(dt: float) -> void:
 		var rate := 1.0
 		# Turning at a pivot's pace, as the players do (Oval3DAnim.TURN).
 		var turn := Oval3DAnim.TURN * dt if dt > 0.0 else PI
-		if speed > UMP_RUN_FROM:
+		var on_mark := job and at.distance_to(want) < UMP_SET
+		if job and at.distance_to(want) < 3.0:
+			# Squaring up on his mark: quicker than a turn in play, so he is set in time.
+			turn *= UMP_SQUARE
+		if speed > UMP_RUN_FROM and not on_mark:
 			node.rotation.y = rotate_toward(node.rotation.y, atan2(vel.x, vel.y), turn)
 			clip = "jog"
 			rate = clampf(speed / LOOP_SPEED, 0.45, 2.3)
 		else:
-			var to := bp - at
-			if to.length() > 0.5:
+			var to := face if face != Vector2.ZERO else bp - at
+			if to.length() > 0.5 or face != Vector2.ZERO:
 				node.rotation.y = rotate_toward(node.rotation.y, atan2(to.x, to.y), turn)
+		var ball_near := bp.distance_to(st["at"]) < UMP_TAKE if job else false
+		if on_mark and ball_near and not flying:
+			# On his mark with the ball: it is in his hands, held at his chest (the clip's
+			# first frame) until he puts it in play.
+			held = true
+			if ap.current_animation != UMP_CLIP:
+				ap.play(UMP_CLIP, 0.25)
+			ap.seek(0.0, false)
+			ap.advance(maxf(dt, 1e-4))
+			var going := _bounce_in(st)
+			var squared := face == Vector2.ZERO or absf(angle_difference(node.rotation.y, atan2(face.x, face.y))) < 0.3
+			if str(st["kind"]) == "bounce" and is_finite(going) and squared:
+				# The bounce is coming: the clip starts, and keeps time with it (_umpire_clip).
+				# With less time than the whole wind-up (a set-up takes about a second once the
+				# ball is back), he starts into it, the ball already lifted.
+				var t0 := clampf(UMP_T_HIT - going, 0.0, UMP_T_LATEST)
+				u["clip"] = {"kind": "bounce", "t": t0, "rate": 1.0,
+						"end": ap.current_animation_length, "at": st["at"]}
+				ap.seek(t0, true)
+			continue
 		if ap.current_animation != clip:
 			ap.play(clip, 0.2)
-			ap.seek(fmod(float(u["k"]) * 1.37, ap.current_animation_length), false)
+			ap.seek(fmod(float(k) * 1.37, ap.current_animation_length), false)
 		ap.advance(maxf(dt * rate, 1e-4))
+	# The ball left the job umpire's hands this frame (a ball-up or throw-in going up): his
+	# arms lift it, at speed.
+	if not held and _ump_ball and _ump_job >= 0 and flying:
+		var u: Dictionary = umpires[_ump_job]
+		if not u.has("clip"):
+			u["clip"] = {"kind": "lift", "t": 0.0, "rate": UMP_LIFT_RATE, "end": UMP_T_LIFT}
+	_umpire_ball_state(held)
+
+
+## One frame of an umpire's one-off clip (a bounce, or the lift of a ball-up or throw-in). True
+## while the ball is still his (in his hands, or on its way from them to the turf at a bounce).
+func _umpire_clip(u: Dictionary, st: Dictionary, dt: float) -> bool:
+	var c: Dictionary = u["clip"]
+	var ap: AnimationPlayer = u["anim"]
+	var before := float(c["t"])
+	var bouncing := str(c["kind"]) == "bounce"
+	var rate := float(c["rate"])
+	if bouncing and before < UMP_T_HIT:
+		# Keeping time with the director's bounce (its set-up time is an estimate that firms as
+		# the players reach their spots): the ball is on the turf when he bounces it. While it is
+		# still far off he holds the ball at his chest, before the run in.
+		var going := _bounce_in(st)
+		var need := UMP_T_HIT - before
+		rate = clampf(need / maxf(going, 0.02), 0.0 if before < UMP_T_HOLD else 0.3, 5.0)
+	elif bouncing:
+		# After the ball hits the turf, the follow-through runs at the take's own speed.
+		rate = 1.0
+	c["t"] = before + dt * rate
+	if float(c["t"]) >= float(c["end"]):
+		_end_umpire_clip(u)
+		return false
+	# Advanced, never sought: a seek would leave the blend in from his stand where it was.
+	ap.advance(float(c["t"]) - before)
+	if not bouncing:
+		return false
+	if float(c["t"]) < UMP_T_REL:
+		return true
+	if before < UMP_T_REL:
+		_ump_hit_from = _umpire_hands(u)
+	# Out of his hands and onto the turf where the director bounces it, and there until the
+	# director's bounce takes it up (a frame or two when his clip runs ahead of it).
+	return str(director.ball.get("mode", "")) != "flight"
+
+
+## Director seconds to the bounce of stoppage `st` for the umpire's clip to keep time with, less
+## one frame: exact in the wait before it; while the players set, the estimate cut by
+## UMP_SETUP_TRUST (a set-up mostly ends sooner than its estimate, and the clip slows more
+## gracefully than it hurries).
+func _bounce_in(st: Dictionary) -> float:
+	if str(st.get("kind", "")) != "bounce":
+		return 0.0
+	var going := float(st["in"])
+	going = going if bool(st.get("sure", false)) else going * UMP_SETUP_TRUST
+	# Aimed a frame early: the last picture before the bounce has the ball on the turf.
+	return maxf(going - _ump_step, 0.0)
+
+
+## The clip is over: back to his stand, blended over UMP_BLEND_OUT, his body left where the clip
+## took it (the bounce runs him in two metres): as the pose blends from the clip's to his stand,
+## he is carried forward by as much, so his hips never slide back (_umpire_blend_out).
+func _end_umpire_clip(u: Dictionary) -> void:
+	var ap: AnimationPlayer = u["anim"]
+	var skel: Skeleton3D = u["skel"]
+	var node: Node3D = u["node"]
+	var hips := to_local(skel.global_transform * skel.get_bone_global_pose(_pelvis(u)).origin)
+	ap.play("idle", UMP_BLEND_OUT)
+	ap.seek(fmod(float(u["k"]) * 1.37, ap.current_animation_length), false)
+	u["out"] = {"base": node.position, "by": Vector3(hips.x - node.position.x, 0.0, hips.z - node.position.z), "t": 0.0}
+	u.erase("clip")
+
+
+## One frame of the blend out of a clip (_end_umpire_clip). False once it is over.
+func _umpire_blend_out(u: Dictionary, dt: float) -> bool:
+	var o: Dictionary = u["out"]
+	o["t"] = float(o["t"]) + dt
+	var w := clampf(float(o["t"]) / UMP_BLEND_OUT, 0.0, 1.0)
+	(u["node"] as Node3D).position = (o["base"] as Vector3) + (o["by"] as Vector3) * w
+	(u["anim"] as AnimationPlayer).advance(maxf(dt, 1e-4))
+	if w >= 1.0:
+		u.erase("out")
+		return false
+	return true
+
+
+## Between an umpire's palms (as _hold_ball finds a player's), in the scene's frame.
+func _umpire_hands(u: Dictionary) -> Vector3:
+	var palms := _umpire_palms(u)
+	return (palms[0] + palms[1]) * 0.5
+
+
+func _umpire_palms(u: Dictionary) -> Array:
+	var skel: Skeleton3D = u["skel"]
+	var gt := skel.global_transform
+	var out := []
+	for k in range(2):
+		var pose := skel.get_bone_global_pose(u["hands"][k])
+		out.append(gt * (pose.origin + pose.basis.y.normalized() * float(u["hand_len"][k]) * 0.6))
+	return out
+
+
+## Whether the job umpire has the ball this frame, and the blends in and out of his hands.
+func _umpire_ball_state(held: bool) -> void:
+	if held and not _ump_ball:
+		# Just after a cut he has it already; in play he takes it over UMP_PICK.
+		_ump_pick = -1.0 if _ump_snapped else 0.0
+		_ump_from = ball.global_position if ball != null else Vector3.ZERO
+	if not held and _ump_ball and ball != null:
+		_ump_off_t = 0.0
+		_ump_off = ball.global_position
+	_ump_ball = held
+
+
+## Just after an umpire lets the ball go, the gap between his hands and the director's ball
+## (already placed this frame) eases out over UMP_LET_GO: it leaves his hands, never jumps.
+func _umpire_let_go(dt: float) -> void:
+	if _ump_off_t < 0.0 or dt <= 0.0 or _ump_ball:
+		return
+	if _ump_off_t == 0.0:
+		_ump_off = _ump_off - ball.global_position
+	_ump_off_t += dt
+	var u := clampf(_ump_off_t / UMP_LET_GO, 0.0, 1.0)
+	ball.global_position += _ump_off * (1.0 - u) * (1.0 - u)
+	if u >= 1.0:
+		_ump_off_t = -1.0
+
+
+## Puts the ball where the umpire has it (his hands, or falling from them to the turf at a
+## bounce) and returns true; false when no umpire has it.
+func _umpire_ball(dt: float) -> bool:
+	if not _ump_ball or _ump_job < 0:
+		return false
+	var u: Dictionary = umpires[_ump_job]
+	var c: Dictionary = u.get("clip", {})
+	var want := _umpire_hands(u)
+	if str(c.get("kind", "")) == "bounce" and float(c["t"]) >= UMP_T_REL:
+		var at: Vector2 = c["at"]
+		var turf := global_transform * Vector3(at.x, BALL_R, at.y)
+		var f := clampf((float(c["t"]) - UMP_T_REL) / (UMP_T_HIT - UMP_T_REL), 0.0, 1.0)
+		var st: Dictionary = director.stoppage_now()
+		if str(st.get("kind", "")) == "bounce" and float(st["in"]) <= _ump_step * 1.05:
+			# The director bounces it next frame: it is on the turf now.
+			f = 1.0
+		want = _ump_hit_from.lerp(turf, f)
+		_ump_pick = -1.0
+	if _ump_pick >= 0.0 and dt > 0.0:
+		_ump_pick += dt
+		var f := clampf(_ump_pick / UMP_PICK, 0.0, 1.0)
+		want = _ump_from.lerp(want, f * f * (3.0 - 2.0 * f))
+		if f >= 1.0:
+			_ump_pick = -1.0
+	ball.global_position = want
+	if str(c.get("kind", "")) != "bounce" or float(c["t"]) < UMP_T_REL:
+		# Its long axis across his hands, as a player holds it.
+		var palms := _umpire_palms(u)
+		var across: Vector3 = palms[1] - palms[0]
+		if across.length() > 0.01 and absf(across.normalized().dot(Vector3.UP)) < 0.99:
+			ball.look_at(ball.global_position + across, Vector3.UP)
+	return true
 
 
 func _mat(c: Color) -> StandardMaterial3D:

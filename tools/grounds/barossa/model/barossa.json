@@ -1,0 +1,322 @@
+{
+ "name": "Barossa Park",
+ "lat": -34.5984014,
+ "lon": 138.8858792,
+ "half": 200,
+ "fence": [
+  0,
+  0,
+  65.98,
+  85.63,
+  17.29
+ ],
+ "fence_h": 1.0,
+ "stands": [
+  {
+   "name": "south_a",
+   "kind": "straight",
+   "a": [
+    -58.7,
+    -69.8
+   ],
+   "b": [
+    -39.9,
+    -87.9
+   ],
+   "depth": 8.0,
+   "z_seat": [
+    0.6,
+    3.6
+   ],
+   "mats": {
+    "front": "conc_wall",
+    "back": "clad_back"
+   },
+   "row_cols": [
+    "seat_barossa"
+   ],
+   "roof": {
+    "z_front": 6.2,
+    "z_back": 5.4,
+    "over_front": 1.8,
+    "over_back": 1.5,
+    "posts": 6.5,
+    "mat": "roof_solar"
+   }
+  },
+  {
+   "name": "south_b",
+   "kind": "straight",
+   "a": [
+    -39.2,
+    -90.1
+   ],
+   "b": [
+    -15.8,
+    -100.4
+   ],
+   "depth": 7.0,
+   "z_seat": [
+    0.6,
+    3.2
+   ],
+   "mats": {
+    "front": "conc_wall",
+    "back": "clad_back"
+   },
+   "row_cols": [
+    "seat_barossa"
+   ],
+   "roof": {
+    "z_front": 6.0,
+    "z_back": 5.2,
+    "over_front": 1.8,
+    "over_back": 1.5,
+    "posts": 6.5,
+    "mat": "roof_solar"
+   }
+  },
+  {
+   "name": "north_east",
+   "kind": "straight",
+   "a": [
+    54.9,
+    52.7
+   ],
+   "b": [
+    64.5,
+    35.6
+   ],
+   "depth": 8.5,
+   "z_seat": [
+    0.6,
+    3.8
+   ],
+   "mats": {
+    "front": "conc_wall",
+    "back": "clad_back"
+   },
+   "row_cols": [
+    "seat_barossa"
+   ],
+   "roof": {
+    "z_front": 6.4,
+    "z_back": 5.6,
+    "over_front": 1.5,
+    "over_back": 2.5,
+    "posts": 6.0,
+    "mat": "roof_solar"
+   }
+  }
+ ],
+ "outer_r": 92,
+ "towers": [
+  {
+   "xy": [
+    27.0,
+    75.0
+   ],
+   "top": 38.0,
+   "head_h": 3.0,
+   "head_w": 5.0,
+   "r_base": 0.45,
+   "r_top": 0.25,
+   "tilt": 15
+  },
+  {
+   "xy": [
+    -40.0,
+    -78.5
+   ],
+   "top": 38.0,
+   "head_h": 3.0,
+   "head_w": 5.0,
+   "r_base": 0.45,
+   "r_top": 0.25,
+   "tilt": 15
+  },
+  {
+   "xy": [
+    -53.6,
+    64.42
+   ],
+   "top": 38.0,
+   "head_h": 3.0,
+   "head_w": 5.0,
+   "r_base": 0.45,
+   "r_top": 0.25,
+   "tilt": 15
+  },
+  {
+   "xy": [
+    66.5,
+    -43.0
+   ],
+   "top": 38.0,
+   "head_h": 3.0,
+   "head_w": 5.0,
+   "r_base": 0.45,
+   "r_top": 0.25,
+   "tilt": 15
+  }
+ ],
+ "mats_ground": {
+  "concourse": "paving",
+  "path": "asphalt"
+ },
+ "_note": "Barossa Park (Lyndoch, SA), first draft. Plan traced on Google satellite tiles (work/sat.png, 2026); heights estimated, not measured. Stadium only: no turf, posts, nets, signs, lettering or crowd.",
+ "fence_mat": "pickets",
+ "fence_cap": "paint_white",
+ "step": 0.5,
+ "path_w": 9,
+ "extras": {
+  "polys": [
+   {
+    "p": [
+     [
+      -90.84,
+      78.01
+     ],
+     [
+      -65.59,
+      74.01
+     ],
+     [
+      -73.84,
+      24.76
+     ],
+     [
+      -96.59,
+      32.76
+     ]
+    ],
+    "h": 10.0,
+    "mat": "clad_pav",
+    "top": "roof_white"
+   },
+   {
+    "p": [
+     [
+      -102.59,
+      55.51
+     ],
+     [
+      -94.34,
+      59.26
+     ],
+     [
+      -93.59,
+      24.76
+     ],
+     [
+      -100.84,
+      24.76
+     ]
+    ],
+    "h": 7.0,
+    "mat": "clad_pav",
+    "top": "roof_white"
+   },
+   {
+    "p": [
+     [
+      -100.84,
+      28.76
+     ],
+     [
+      -76.84,
+      28.76
+     ],
+     [
+      -76.84,
+      15.26
+     ],
+     [
+      -96.84,
+      15.26
+     ]
+    ],
+    "h": 7.5,
+    "mat": "glass",
+    "top": "roof_white"
+   }
+  ],
+  "boxes": [
+   {
+    "c": [
+     -73.74,
+     -24.58
+    ],
+    "L": 9.0,
+    "W": 21.0,
+    "h": 4.0,
+    "a": -18,
+    "mat": "clad_pav",
+    "top": "roof_white"
+   }
+  ]
+ },
+ "paint": {
+  "seat_barossa": {
+   "kind": "seat",
+   "col": [
+    52,
+    56,
+    62
+   ]
+  },
+  "clad_back": {
+   "kind": "clad",
+   "col": [
+    96,
+    100,
+    104
+   ]
+  },
+  "clad_pav": {
+   "kind": "windows",
+   "col": [
+    214,
+    214,
+    208
+   ],
+   "every": 3.0,
+   "floor": 3.6,
+   "win": 2.2,
+   "sill": 0.9,
+   "head": 2.8,
+   "win_col": [
+    46,
+    58,
+    66
+   ]
+  },
+  "glass": {
+   "kind": "glass",
+   "col": [
+    52,
+    70,
+    82
+   ],
+   "mull": 1.5
+  },
+  "roof_white": {
+   "kind": "deck",
+   "col": [
+    222,
+    224,
+    222
+   ]
+  },
+  "roof_solar": {
+   "kind": "deck",
+   "col": [
+    52,
+    66,
+    104
+   ],
+   "pitch": 1.0,
+   "grime": 8
+  }
+ }
+}

@@ -228,8 +228,9 @@ def grandstand(G, mb, mr):
     zr0, zr1 = G['z_roof']; th = 0.4
     def deck(b):
         rs0, ru0, ru1, rr = geo(b); return ru0 - G['roof_over'], rr + 0.4
-    for i in range(len(bs) - 1):
-        ba, bb = bs[i], bs[i + 1]; (ria, roa), (rib, rob) = deck(ba), deck(bb)
+    rbs = brange(G['b0'], G.get('roof_b1', G['b1']))   # roof_b1: aerial roof runs past the seating's north end
+    for i in range(len(rbs) - 1):
+        ba, bb = rbs[i], rbs[i + 1]; (ria, roa), (rib, rob) = deck(ba), deck(bb)
         tu, tv = TILE['roof_white']; rm = 0.5 * (ria + roa); ua, ub = math.radians(ba) * rm / tu, math.radians(bb) * rm / tu
         oriented(mr, [P3(ba, ria, zr0), P3(bb, rib, zr0), P3(bb, rob, zr1), P3(ba, roa, zr1)], 'roof_white', UP,
                  [(ua, ria / tv), (ub, rib / tv), (ub, rob / tv), (ua, roa / tv)])
@@ -239,7 +240,7 @@ def grandstand(G, mb, mr):
         oriented(mr, [P3(ba, ria, zr0 - 1.2), P3(bb, rib, zr0 - 1.2), P3(bb, rib, zr0 + 0.05), P3(ba, ria, zr0 + 0.05)], 'fascia', -rad)
         oriented(mr, [P3(ba, ria, zr0 - 1.2), P3(bb, rib, zr0 - 1.2), P3(bb, rib - 0.3, zr0 - th), P3(ba, ria - 0.3, zr0 - th)], 'fascia', -UP)
         oriented(mr, [P3(ba, roa, zr1 - 0.8), P3(bb, rob, zr1 - 0.8), P3(bb, rob, zr1), P3(ba, roa, zr1)], 'fascia', rad)
-    for b, sg in ((bs[0], -1), (bs[-1], 1)):
+    for b, sg in ((rbs[0], -1), (rbs[-1], 1)):
         ri, ro = deck(b); a = math.radians(b); tan = np.array([math.cos(a), -math.sin(a), 0.0]) * sg
         oriented(mr, [P3(b, ri, zr0 - 1.2), P3(b, ro, zr1 - 0.8), P3(b, ro, zr1), P3(b, ri, zr0 + 0.05)], 'fascia', tan)
     # front columns on the walkway every ~6 deg, up to the roof soffit
@@ -277,8 +278,187 @@ def axes(poly):
 def building(B, mb):
     P = [tuple(p) for p in np.array(OSM[B['osm']], float)]
     if np.allclose(P[0], P[-1]): P = P[:-1]
+    if B.get('replace'):   # satellite-traced edge replacing a run of OSM points (first..last, inclusive)
+        f, l, R_ = B['replace']; i = min(range(len(P)), key=lambda k: math.dist(P[k], f)); j = min(range(len(P)), key=lambda k: math.dist(P[k], l))
+        P = P[:i] + [tuple(q) for q in R_] + P[j + 1:]
+    if B.get('eave'):   # DA 3998/2010 p10 section: roof slabs overhang the walls; the aerial outline is the slab edge
+        e, sd = B['eave']; H = B['h'] + 0.5
+
+        def slab(Q, z0, z1):   # caps in mb; the fascia ring in FASC, welded and smooth-shaded so the curve has no facet bands (lead gate 2026-11-21)
+            Q = ccw(Q)
+            for i in range(len(Q)): FASC.wall(Q[i], Q[(i + 1) % len(Q)], z0, z1, B.get('fascia', 'slab_white'))   # fascia: Google Earth 3D shows bldg_w's fascia grey
+            mb.cap(Q, z1, B['roof']); mb.cap(Q, z0, 'slab_white', down=True)
+
+        def ring(Q, z0, z1, m):   # curved walls smooth-shaded too (lead gate 2026-11-21); FASC keeps corners over 35 deg sharp
+            Q = ccw(Q)
+            for i in range(len(Q)): FASC.wall(Q[i], Q[(i + 1) % len(Q)], z0, z1, m)
+        W = ccw(inset(P, e, B.get('eave_n', 0.0)))
+        SP = [tuple(B['slab_pt'][1]) if np.allclose(q, B['slab_pt'][0], atol=0.05) else q for q in P] if B.get('slab_pt') else P
+        slab(SP, H - sd, H)   # slab_pt: one slab corner moved (DA p11 + aerial), walls stay on the traced outline
+        gy, gm = B.get('glazed_w', (-1e9, B['wall']))   # DA p11: the west face is glazed south of y = gy
+        for i in range(len(W)):
+            p, q = np.array(W[i]), np.array(W[(i + 1) % len(W)]); t = q - p; west = t[1] < 0 and abs(t[1]) > abs(t[0]) * 0.3   # CCW: west face runs south
+            if west and (p[1] - gy) * (q[1] - gy) < 0:
+                c = p + t * (gy - p[1]) / t[1]; FASC.wall(p, c, 0.0, H - sd, B['wall']); FASC.wall(c, q, 0.0, H - sd, gm)
+            elif t[0] > 0 and abs(t[0]) > abs(t[1]) * 0.3 and B.get('bays_s'):   # DA p11 south elevation: the south face in bays, west to east (x end, material)
+                a0 = p
+                for xe, m in B['bays_s']:
+                    if xe <= a0[0] + 1e-6: continue
+                    b0 = p + t * (min(xe, q[0]) - p[0]) / t[0]; FASC.wall(a0, b0, 0.0, H - sd, m); a0 = b0
+                    if a0[0] >= q[0] - 1e-6: break
+                if a0[0] < q[0] - 1e-6: FASC.wall(a0, q, 0.0, H - sd, B['wall'])
+            else: FASC.wall(p, q, 0.0, H - sd, gm if west and (p[1] + q[1]) / 2 < gy else B['wall'])
+        for y0, y1, z0, z1 in B.get('doors_w', []):   # doors on the west face, DA p11 elevation: (south y, north y, sill z, head z)
+            hits = []
+            for i in range(len(W)):
+                p, q = np.array(W[i]), np.array(W[(i + 1) % len(W)])
+                if min(p[1], q[1]) <= (y0 + y1) / 2 <= max(p[1], q[1]) and abs(q[1] - p[1]) > 1e-6: hits.append((p, q))
+            p, q = min(hits, key=lambda h: h[0][0] + h[1][0]); t = (q - p) / np.linalg.norm(q - p); nrm = np.array([t[1], -t[0]])
+            at = lambda y, o: p + (q - p) * (y - p[1]) / (q[1] - p[1]) + nrm * o
+            sg = 1 if y1 > y0 else -1
+            for (ya_, yb_, za_, zb_, o, m) in ((y0, y1, z0, z1, 0.03, 'paint_grey'), (y0 + 0.1 * sg, y1 - 0.1 * sg, z0, z1 - 0.1, 0.045, 'paint_white')):   # DA p11: dark frame, plain solid leaf inside it
+                a_, b_ = at(ya_, o), at(yb_, o)
+                fq = [(*a_, za_), (*b_, za_), (*b_, zb_), (*a_, zb_)]
+                if np.dot(np.cross(np.array(fq[1]) - fq[0], np.array(fq[3]) - fq[0])[:2], nrm) < 0: fq = fq[::-1]
+                mb.face(fq, m)
+        if B.get('ramp_w'):   # DA p8 plan / p11 elevation: a ramp along the west wall, balustrade on the outer edge, stairs south of its top landing
+            ya, yb, rw, za, zb, s0, s1 = B['ramp_w']
+            def wpt(y, off):   # point on the west wall face at y, pushed off it by off metres
+                for i in range(len(W)):
+                    p, q = np.array(W[i]), np.array(W[(i + 1) % len(W)]); t = q - p
+                    if t[1] < 0 and abs(t[1]) > abs(t[0]) * 0.3 and q[1] - 1e-6 <= y <= p[1] + 1e-6:
+                        u = t / np.linalg.norm(t); return p + t * (y - p[1]) / t[1] + np.array([u[1], -u[0]]) * off
+            zr = lambda y: za + (zb - za) * min(1.0, max(0.0, (ya - y) / (ya - yb)))
+            ys = list(np.linspace(ya, s1, 60))
+            for y0, y1 in zip(ys, ys[1:]):
+                if y0 <= s0: continue
+                y1 = max(y1, s0); i0, i1, o0, o1 = wpt(y0, 0.02), wpt(y1, 0.02), wpt(y0, rw), wpt(y1, rw)
+                if True:   # ramp and landing deck, its outer edge face, the balustrade top rail
+                    mb.face([(*i0, zr(y0)), (*o0, zr(y0)), (*o1, zr(y1)), (*i1, zr(y1))], 'conc_kerb')
+                    mb.face([(*o0, za - 0.05), (*o1, za - 0.05), (*o1, zr(y1)), (*o0, zr(y0))], 'conc_kerb')
+                    mb.beam((*o0, zr(y0) + 1.0), (*o1, zr(y1) + 1.0), 0.05, 0.05, 'steel_white')
+                    mb.beam((*o0, zr(y0) + 0.5), (*o1, zr(y1) + 0.5), 0.03, 0.03, 'steel_white')
+            for y in np.arange(ya, s0, -1.5): mb.beam((*wpt(y, rw), zr(y)), (*wpt(y, rw), zr(y) + 1.0), 0.05, 0.05, 'steel_white')
+            n = max(1, round((zb - za) / 0.175)); d = (s0 - s1) / n
+            for k in range(n):   # the south flight down from the landing to the dipped ground
+                y0, y1 = s0 - k * d, s0 - (k + 1) * d; z = zb - k * (zb - za) / n
+                i0, i1, o0, o1 = wpt(y0, 0.02), wpt(y1, 0.02), wpt(y0, rw), wpt(y1, rw)
+                mb.face([(*i0, z), (*o0, z), (*o1, z), (*i1, z)], 'conc_kerb')
+                mb.face([(*i0, za - 0.05), (*o0, za - 0.05), (*o0, z), (*i0, z)][::-1], 'conc_kerb')
+                mb.face([(*o0, za - 0.05), (*o1, za - 0.05), (*o1, z), (*o0, z)], 'conc_kerb')
+            nf = B['north_flight']; n2 = max(1, round(-za / 0.175)); d2 = (nf - ya) / n2
+            for k in range(n2 - 1):   # DA p11 (the top tread is the ground itself): the north flight climbs from the ramp foot to the higher ground north of the dip
+                y0, y1 = ya + k * d2, ya + (k + 1) * d2; z = za + (k + 1) * -za / n2
+                i0, i1, o0, o1 = wpt(y0, 0.02), wpt(y1, 0.02), wpt(y0, rw), wpt(y1, rw)
+                mb.face([(*i0, z), (*o0, z), (*o1, z), (*i1, z)][::-1], 'conc_kerb')
+                mb.face([(*i0, za - 0.05), (*o0, za - 0.05), (*o0, z), (*i0, z)], 'conc_kerb')
+                mb.face([(*i1, za - 0.05), (*o1, za - 0.05), (*o1, z), (*i1, z)][::-1], 'conc_kerb')
+                mb.face([(*o0, za - 0.05), (*o1, za - 0.05), (*o1, z), (*o0, z)], 'conc_kerb')
+        if B.get('dip_w'):   # DA p11: the outside ground falls below the model's grass along the west face (DA design, as-built unverified)
+            global DIP; DIP = (np.array(W), B['dip_w'])
+            dd, yn, yf, ys_, ye = B['dip_w'][:5]
+            for i in range(len(W)):   # the wall's plinth carried down to the dipped ground
+                p, q = np.array(W[i]), np.array(W[(i + 1) % len(W)]); t = q - p
+                if t[1] < 0 and abs(t[1]) > abs(t[0]) * 0.3:
+                    a_ = p + t * (min(p[1], yn) - p[1]) / t[1] if p[1] > yn else p; b_ = q + t * (max(q[1], ye) - q[1]) / t[1] if q[1] < ye else q
+                    if a_[1] > b_[1]: mb.wall(a_, b_, -dd - 0.05, 0.02, 'conc_wall')
+        if B.get('ramp_s'):   # DA p11 south elevation / p8 plan: a ramp along the south wall rising west to east, stairs down east of its landing, a low blockwork wall beyond
+            xa, xb, rw, za, zb, s0, s1, tw = B['ramp_s']
+            def spt(x, off):   # point on the south wall face at x, pushed off it by off metres
+                for i in range(len(W)):
+                    p, q = np.array(W[i]), np.array(W[(i + 1) % len(W)]); t = q - p
+                    if t[0] > 0 and abs(t[0]) > abs(t[1]) * 0.3 and p[0] - 1e-6 <= x <= q[0] + 1e-6:
+                        u = t / np.linalg.norm(t); return p + t * (x - p[0]) / t[0] + np.array([u[1], -u[0]]) * off
+            zr = lambda x: za + (zb - za) * min(1.0, max(0.0, (x - xa) / (xb - xa)))
+            xs = list(np.linspace(xa, s0, 40))
+            for x0, x1 in zip(xs, xs[1:]):
+                i0, i1, o0, o1 = spt(x0, 0.02), spt(x1, 0.02), spt(x0, rw), spt(x1, rw)
+                mb.face([(*i0, zr(x0)), (*o0, zr(x0)), (*o1, zr(x1)), (*i1, zr(x1))], 'conc_kerb')
+                mb.face([(*o0, za - 0.05), (*o1, za - 0.05), (*o1, zr(x1)), (*o0, zr(x0))], 'conc_kerb')
+                mb.beam((*o0, zr(x0) + 1.0), (*o1, zr(x1) + 1.0), 0.05, 0.05, 'steel_white')
+                mb.beam((*o0, zr(x0) + 0.5), (*o1, zr(x1) + 0.5), 0.03, 0.03, 'steel_white')
+            for x in np.arange(xa, s0, 1.5): mb.beam((*spt(x, rw), zr(x)), (*spt(x, rw), zr(x) + 1.0), 0.05, 0.05, 'steel_white')
+            n = max(1, round((zb - za) / 0.175)); d = (s1 - s0) / n
+            for k in range(n):   # the east flight down from the landing
+                x0, x1 = s0 + k * d, s0 + (k + 1) * d; z = zb - k * (zb - za) / n
+                i0, i1, o0, o1 = spt(x0, 0.02), spt(x1, 0.02), spt(x0, rw), spt(x1, rw)
+                mb.face([(*i0, z), (*o0, z), (*o1, z), (*i1, z)], 'conc_kerb')
+                mb.face([(*i1, za - 0.05), (*i1, z), (*o1, z), (*o1, za - 0.05)], 'conc_kerb')
+                mb.face([(*o0, za - 0.05), (*o1, za - 0.05), (*o1, z), (*o0, z)], 'conc_kerb')
+            mb.beam((*spt(s0, rw), zb + 1.0), (*spt(s1, rw), za + 1.0), 0.05, 0.05, 'steel_white')
+            a_, b_ = spt(s1, 0.0), spt(tw[0], 0.0)   # DA: fair-faced blockwork wall along the face east of the flight
+            mb.wall(a_, b_, za - 0.05, tw[1], 'blockwork')
+        if B.get('paving'):   # aerial (Wayback 13192 + 3692): paved walkway between the east wall and the stand
+            oriented(mb, [(*p, 0.01) for p in B['paving']], 'paving', UP, [(p[0] / 2.4, p[1] / 2.4) for p in B['paving']])
+        if B.get('dip_s'):   # DA p11 south elevation: the outside ground along the south face sits as low as on the west (DA design, as-built unverified)
+            global DIPS; DIPS = (np.array(W), B['dip_s'])
+            dd, xe, xn = B['dip_s'][0], B['dip_s'][1], B['dip_s'][4]
+            for i in range(len(W)):   # the plinth carried down to the dipped ground
+                p, q = np.array(W[i]), np.array(W[(i + 1) % len(W)]); t = q - p
+                if t[0] > 0 and abs(t[0]) > abs(t[1]) * 0.3:
+                    a_ = p + t * (max(p[0], xe) - p[0]) / t[0]; b_ = p + t * (min(q[0], xn) - p[0]) / t[0]
+                    if b_[0] > a_[0]: mb.wall(a_, b_, -dd - 0.05, 0.02, 'conc_wall')
+        if B.get('raised'):
+            RP, rh = B['raised']; RP = [tuple(q) for q in RP]; re_, rsd = B['raised_eave']; RH = rh + 0.5
+            ring(inset(RP, re_), 0.0, RH - rsd, B.get('raised_wall', B['wall'])); slab([tuple(q) for q in B.get('raised_slab', RP)], RH - rsd, RH)   # raised_slab: DA p11 east overhang, clerestory stays on RP
+            for cx, cy, sx, sy, ph in B.get('plant', []):   # two dark rooftop wells on the raised roof: seen in Google Earth 3D, plan positions from the Esri z19 aerial (2026-11-21)
+                Q = [(cx - sx / 2, cy - sy / 2), (cx + sx / 2, cy - sy / 2), (cx + sx / 2, cy + sy / 2), (cx - sx / 2, cy + sy / 2)]
+                for i in range(4): mb.wall(Q[i], Q[(i + 1) % 4], RH, RH + ph, 'roof_grey')
+                mb.cap(Q, RH + ph, 'shedp')   # light kerb, dark well inside
+        return
     if B.get('setback'):   # the club: pitch-front points pushed back; the strip in front takes the sails and a terrace
         P = [(x, y - B['setback']) if y > -99.5 else (x, y) for x, y in P]
+    if B.get('low'):   # Street View pano wvECTX (Feb 2025): the club's SW corner past the west box is a low white wing
+        p0, p1, dp, hl, wl = B['low']   # aerial: a low strip dp deep along the edge p0->p1 (wl: plain white render, no windows)
+        p0, p1 = np.array(p0, float), np.array(p1, float); t = (p1 - p0) / np.linalg.norm(p1 - p0); nn = np.array([-t[1], t[0]])
+        if np.dot(nn, np.mean(np.array(P), 0) - p0) < 0: nn = -nn   # point the normal into the building
+        parts = [(hclip(P, nn, nn @ p0 + dp, 1), B['h'], B['wall']), (hclip(P, nn, nn @ p0 + dp, -1), hl, wl)]
+    else: parts = [(P, B['h'], B['wall'])]
+    for P, h, wm in parts:
+        if len(P) >= 3: prism_cap(mb, dict(B, wall=wm), P, h)
+    if B.get('raised'):   # DA 3998/2010 section: a raised roof over the warm-up hall (footprint from the aerial)
+        RP, rh = B['raised']; prism_cap(mb, dict(B, wall=B.get('raised_wall', B['wall'])), [tuple(q) for q in RP], rh)
+    if B.get('low'):   # wvEC photo: the main block's wall above the low strip is white render, not the club cladding
+        M = parts[0][0]; c = nn @ p0 + dp
+        for i in range(len(M)):
+            a, b_ = np.array(M[i], float), np.array(M[(i + 1) % len(M)], float)
+            if abs(nn @ a - c) < 0.05 and abs(nn @ b_ - c) < 0.05 and np.linalg.norm(b_ - a) > 0.1:
+                a, b_ = a - nn * 0.03, b_ - nn * 0.03
+                oriented(mb, [(*a, hl), (*b_, hl), (*b_, B['h']), (*a, B['h'])], 'render_white', np.array([*(-nn), 0]))
+
+
+def inset(P, d, north=0.0):   # polygon offset d metres inward (CCW: inward is left of travel); mitred corners; north: extra inset on north-facing edges
+    P = ccw(P); n = len(P); L = []
+    for i in range(n):
+        p, q = np.array(P[i], float), np.array(P[(i + 1) % n], float); t = (q - p) / np.linalg.norm(q - p)
+        L.append((p + np.array([-t[1], t[0]]) * (d + (north if -t[0] > 0.7 else 0.0)), t))
+    out = []
+    for i in range(n):
+        (a, ta), (b, tb) = L[i - 1], L[i]; M = np.array([ta, -tb]).T
+        out.append(tuple(b) if abs(np.linalg.det(M)) < 1e-6 else tuple(a + ta * np.linalg.solve(M, b - a)[0]))
+    return out
+
+
+def hclip(P, n, c, sg):   # keep the side where sg*(n.p - c) >= 0
+    out = []
+    for i in range(len(P)):
+        p, q = np.array(P[i]), np.array(P[(i + 1) % len(P)]); fp, fq = sg * (n @ p - c), sg * (n @ q - c)
+        if fp >= 0: out.append(tuple(p))
+        if fp * fq < 0: out.append(tuple(p + fp / (fp - fq) * (q - p)))
+    return out
+
+
+def clip(P, ax, v, sg):   # Sutherland-Hodgman: keep the side where sg*(p[ax]-v) >= 0
+    out = []
+    for i in range(len(P)):
+        p, q = P[i], P[(i + 1) % len(P)]; fp, fq = sg * (p[ax] - v), sg * (q[ax] - v)
+        if fp >= 0: out.append(p)
+        if fp * fq < 0: t = fp / (fp - fq); out.append((p[0] + t * (q[0] - p[0]), p[1] + t * (q[1] - p[1])))
+    return out
+
+
+def prism_cap(mb, B, P, h):
+    B = dict(B, h=h)
     mb.prism(P, 0.0, B['h'], B['wall'], top=B['roof'])
     poly = ccw(P)   # parapet: a 0.5 m white cap all round the roof edge
     for i in range(len(poly)):
@@ -287,6 +467,209 @@ def building(B, mb):
         oriented(mb, [(*a, B['h']), (*b_, B['h']), (*b_, B['h'] + 0.5), (*a, B['h'] + 0.5)], 'fascia', np.array([*(-n), 0]))
         oriented(mb, [(*p, B['h'] + 0.5), (*q, B['h'] + 0.5), (*b_, B['h'] + 0.5), (*a, B['h'] + 0.5)], 'paint_white', UP)
         oriented(mb, [(*p, B['h']), (*q, B['h']), (*q, B['h'] + 0.5), (*p, B['h'] + 0.5)], 'fascia', np.array([*n, 0]))
+
+
+def front_path(F, smooth=False):
+    """arc-length frame along a facade polyline (CCW building, so outward is to the right of travel)"""
+    F = np.array(F, float)
+    if smooth and len(F) > 2:   # Catmull-Rom through the traced points, ~1 m steps: the glazing curves round instead of kinking
+        G = np.vstack([2 * F[0] - F[1], F, 2 * F[-1] - F[-2]]); out = []
+        for i in range(1, len(G) - 2):
+            p0, p1, p2, p3 = G[i - 1:i + 3]; n_ = max(2, int(np.linalg.norm(p2 - p1)))
+            for t in np.linspace(0, 1, n_, endpoint=False):
+                out.append(0.5 * (2 * p1 + (p2 - p0) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (-p0 + 3 * p1 - 3 * p2 + p3) * t ** 3))
+        F = np.array(out + [F[-1]])
+    seg = np.diff(F, axis=0); Ls = np.linalg.norm(seg, axis=1); cum = np.concatenate([[0], np.cumsum(Ls)])
+    def at(s):
+        i = int(np.clip(np.searchsorted(cum, s, 'right') - 1, 0, len(Ls) - 1)); d = seg[i] / Ls[i]
+        return F[i] + d * (s - cum[i]), d, np.array([d[1], -d[0]])
+    def Q(s, o, z):
+        p, d, n = at(s); return (*(p + n * o), z)
+    def runs(s0, s1):   # split [s0, s1] at the polyline corners
+        cuts = [s0] + [c for c in cum[1:-1] if s0 < c < s1] + [s1]; return list(zip(cuts[:-1], cuts[1:]))
+    return at, Q, runs, cum[-1]
+
+
+def club_front(C, mb):
+    """club entrance (Commons photo 12, Kerry Raymond 2018 photo, Andrew Watson 2013 set): on the club's east face by the
+    Mulgrave Rd corner. A flat white entrance canopy on three cream posts (outer two rise through it), the tilted brown
+    'Cazalys' sign on the canopy, a covered walkway along the grey shopfront with ClubsLink poster bays, a sloped glazed
+    upper floor with cream mullions curving round to the north-east, yellow bollards on the kerb, a concrete drive and a
+    palm garden island"""
+    at, Q, runs, L = front_path(C['front'], True); at0, Q0, runs0 = at, Q, runs
+    ch = front_path(C['chamfer']); cat, cQ, cruns, cL = ch; GF, AWz, AWt, AWo = C['gf'], C['aw_z'], C['aw_t'], C['aw_o']
+    Hg = C['glaze_top']; c0, c1, co, cz, ct = C['canopy']
+    def piece(s0, s1, o, z0, z1, m, tu=None):
+        for a, b in runs(s0, s1):
+            _, _, n = at(0.5 * (a + b))
+            uv = None if tu is None else [(a / tu[0], z0 / tu[1]), (b / tu[0], z0 / tu[1]), (b / tu[0], z1 / tu[1]), (a / tu[0], z1 / tu[1])]
+            oriented(mb, [Q(a, o, z0), Q(b, o, z0), Q(b, o, z1), Q(a, o, z1)], m, np.array([*n, 0]), uv)
+    def slab(s0, s1, o0, o1, z0, z1, top, side, fr=None):
+        at, Q, runs = fr or (at0, Q0, runs0)
+        for a, b in runs(s0, s1):
+            _, _, n = at(0.5 * (a + b))
+            q = [Q(a, o0, z0), Q(b, o0, z0), Q(b, o1, z0), Q(a, o1, z0)]
+            oriented(mb, q, 'soffit_white', np.array([0, 0, -1.0]), [(p[0] / 3.0, p[1] / 3.0) for p in q]); oriented(mb, [(x, y, z1) for x, y, _ in q], top, UP)
+            oriented(mb, [Q(a, o1, z0), Q(b, o1, z0), Q(b, o1, z1), Q(a, o1, z1)], side, np.array([*n, 0]))
+        for s_, sg in ((s0, -1), (s1, 1)):
+            _, d, _ = at(s_); oriented(mb, [Q(s_, o0, z0), Q(s_, o1, z0), Q(s_, o1, z1), Q(s_, o0, z1)], side, np.array([*(d * sg), 0]))
+    # ground floor: grey shopfront the whole way
+    piece(0.0, L, 0.06, 0.0, GF, 'clubw_gf', (6.0, 4.2))
+    mb.prism([tuple(q) for q in C['lobby']['poly']], 0.0, C['lobby']['h'], 'club', top='roof_white')   # the low white block at the corner (photo 12: sky above the canopy)
+    # upper floor right of the canopy: glazing leaning out (foot 1.2 m in, head 0.4 m out), cream mullions, white head band
+    g0 = 0.0
+    for a, b in runs(g0, L):
+        _, _, n = at(0.5 * (a + b))
+        oriented(mb, [Q(a, -1.2, AWz + AWt), Q(b, -1.2, AWz + AWt), Q(b, 0.4, Hg), Q(a, 0.4, Hg)], 'clubw_glass', np.array([*n, 0.4]),
+                 [(a / 3.0, 0), (b / 3.0, 0), (b / 3.0, 1), (a / 3.0, 1)])
+        oriented(mb, [Q(a, 0.4, Hg), Q(b, 0.4, Hg), Q(b, 0.4, Hg + 0.4), Q(a, 0.4, Hg + 0.4)], 'paint_white', np.array([*n, 0]))
+    for s_ in np.arange(g0 + 0.1, L, C['mullion']):
+        mb.beam(Q(s_, -1.0, AWz + AWt), Q(s_, 0.5, Hg), 0.14, 0.14, 'paint_cream')
+    _, d1, _ = at(L)
+    oriented(mb, [Q(L, -1.2, AWz + AWt), Q(L, 0.4, AWz + AWt), Q(L, 0.4, Hg + 0.4), Q(L, -1.2, Hg + 0.4)], 'paint_white', np.array([*d1, 0]))
+    # covered walkway along the shopfront: flat white soffit, thin white fascia
+    slab(0.0, L, 0.0, AWo, AWz, AWz + AWt, 'roof_white', 'paint_white')
+    # entrance canopy: flat wedge off the cut-off corner (lobby doors face south-east), a touch higher than the walkway
+    # photo 12: a flat wedge, deep at the right (south) end and tapering to a point at the left; polygon in chamfer (s, o)
+    W_ = ccw([tuple(cQ(s_, o_, 0)[:2]) for s_, o_ in C['canopy_poly']])
+    for t in earclip(W_):
+        oriented(mb, [(x, y, cz) for x, y in t], 'soffit_white', np.array([0, 0, -1.0]), [(x / 3.0, y / 3.0) for x, y in t])
+        oriented(mb, [(x, y, cz + ct) for x, y in t], 'roof_white', UP)
+    for i in range(len(W_)):
+        (x0, y0), (x1, y1) = W_[i], W_[(i + 1) % len(W_)]; nn = np.array([y1 - y0, -(x1 - x0), 0]); nn /= np.linalg.norm(nn) + 1e-9
+        oriented(mb, [(x0, y0, cz), (x1, y1, cz), (x1, y1, cz + ct), (x0, y0, cz + ct)], 'paint_white', nn)
+    for s_, top in C['posts']:
+        mb.beam(cQ(s_, co - 0.7, 0), cQ(s_ - 0.04 * top, co - 0.7, top), 0.32, 0.32, 'paint_cream', tube=True)   # photo 12: every post leans a little to the south-west
+    # the tilted sign on the canopy: inverted trapezoid, tipped back, turned toward the Mulgrave Rd approach
+    sc, so, sw0, sw1, sh, tb, turn = C['sign']; z0 = cz + ct; z1 = z0 + sh
+    p0, d, n = cat(sc); ts = math.radians(turn); ds = d * math.cos(ts) + n * math.sin(ts); ns = n * math.cos(ts) - d * math.sin(ts)
+    cc = p0 + n * so; F_ = lambda a, b, z: (*(cc + ds * a + ns * b), z)
+    fr = [F_(-sw0 / 2, 0, z0), F_(sw0 / 2, 0, z0), F_(sw1 / 2, -tb, z1), F_(-sw1 / 2, -tb, z1)]
+    e = (sw1 - sw0) / 2 / sw1
+    oriented(mb, fr, 'sign_clubw', np.array([*ns, 0]), [(e, 0), (1 - e, 0), (1, 1), (0, 1)])
+    bk = [tuple(np.array(p) - np.array([*ns, 0]) * 0.25) for p in fr]
+    oriented(mb, bk, 'paint_brown', np.array([*(-ns), 0]))
+    for i in range(4):
+        j = (i + 1) % 4; mb.face([fr[i], fr[j], bk[j], bk[i]], 'paint_brown'); mb.face([fr[i], bk[i], bk[j], fr[j]], 'paint_brown')
+    # poster bays: ClubsLink bays of three posters, a grey pilaster before each bay
+    for s_ in C['bays']:
+        for a, b in runs(s_, s_ + 3.3):
+            _, _, n = at(0.5 * (a + b))
+            oriented(mb, [Q(a, 0.09, 0.4), Q(b, 0.09, 0.4), Q(b, 0.09, 3.4), Q(a, 0.09, 3.4)], 'posters_w', np.array([*n, 0]),
+                     [((a - s_) / 3.3, 0), ((b - s_) / 3.3, 0), ((b - s_) / 3.3, 1), ((a - s_) / 3.3, 1)])
+        p, d, n = at(s_ - 0.6); mb.box(tuple(p + n * 0.15), 0.5, 0.3, GF, math.degrees(math.atan2(d[1], d[0])), 'paint_grey')
+    # footpath under the walkway and canopy: raised concrete, kerb at the drive edge, yellow bollards along the kerb
+    for a, b in runs(0.0, L):
+        q = [Q(a, 0.06, 0.15), Q(b, 0.06, 0.15), Q(b, AWo + 0.3, 0.15), Q(a, AWo + 0.3, 0.15)]
+        oriented(mb, q, 'paving', UP, [(p[0] / 2.4, p[1] / 2.4) for p in q])
+    piece(0.0, L, AWo + 0.3, 0.0, 0.15, 'conc_kerb')
+    do = C.get('door_o', 0.08); oriented(mb, [cQ(0, do, 0), cQ(cL, do, 0), cQ(cL, do, GF), cQ(0, do, GF)], 'clubw_gf', np.array([*cat(1)[2], 0]), [(0, 0), (cL / 6.0, 0), (cL / 6.0, 1), (0, 1)])   # entrance doors under the canopy
+    q = [cQ(c0, 0.06, 0.15), cQ(c1, 0.06, 0.15), cQ(c1, co + 0.3, 0.15), cQ(c0, co + 0.3, 0.15)]   # paving under the canopy
+    oriented(mb, q, 'paving', UP, [(p[0] / 2.4, p[1] / 2.4) for p in q])
+    for a, b in cruns(c0, c1):
+        _, _, n = cat(0.5 * (a + b)); oriented(mb, [cQ(a, co + 0.3, 0), cQ(b, co + 0.3, 0), cQ(b, co + 0.3, 0.15), cQ(a, co + 0.3, 0.15)], 'conc_kerb', np.array([*n, 0]))
+    for s_ in C['bollards']:
+        mb.cyl(Q(s_, AWo, 0.15)[:2], 0.09, 0.15, 1.15, 'bollard', n=10, top='bollard')
+    # drive, garden island and car park sit outside the stadium fence: background scene (stadium-only rule)
+
+
+
+def south_front(S, mb):
+    """club's Mulgrave Rd (south) face, from Street View pano dxiQEa8tBLbzx8OQGPV1oA (Feb 2025): glazed ground floor under a
+    continuous white awning on cream posts, grey upper wall with glazing runs and white struts leaning west, and the white
+    skillion box at the east end beside the entrance. Distances 'a' are metres west of the SE corner"""
+    at, Q, runs, L = front_path(S['path']); A = lambda a: L - a
+    GF, AWo = S['gf'], S['aw_o']; E = S['eave']
+    pr = S.get('aw_prof')   # aerial stations [a, depth]: awning outer edge measured along the front, linear between
+    AWf = (lambda s_: float(np.interp(L - s_, [q[0] for q in pr], [q[1] for q in pr]))) if pr else (lambda s_: AWo)
+    def pieces(sa, sb, step=1.0):
+        k = max(1, int(np.ceil((sb - sa) / step))); return [(sa + (sb - sa) * i / k, sa + (sb - sa) * (i + 1) / k) for i in range(k)]
+    def quad(a0, a1, o, z0, z1, m, tu=None):
+        for s0, s1 in runs(A(a1), A(a0)):
+            _, _, n = at(0.5 * (s0 + s1))
+            uv = None if tu is None else [(s0 / tu[0], z0 / tu[1]), (s1 / tu[0], z0 / tu[1]), (s1 / tu[0], z1 / tu[1]), (s0 / tu[0], z1 / tu[1])]
+            oriented(mb, [Q(s0, o, z0), Q(s1, o, z0), Q(s1, o, z1), Q(s0, o, z1)], m, np.array([*n, 0]), uv)
+    def decal(a0, a1, o, z0, z1, m):   # one texture stretched over [a0, a1], left edge at the west end
+        sw, se = A(a1), A(a0)
+        for s0, s1 in runs(sw, se):
+            _, _, n = at(0.5 * (s0 + s1)); u0, u1 = (s0 - sw) / (se - sw), (s1 - sw) / (se - sw)
+            oriented(mb, [Q(s0, o, z0), Q(s1, o, z0), Q(s1, o, z1), Q(s0, o, z1)], m, np.array([*n, 0]), [(u0, 0), (u1, 0), (u1, 1), (u0, 1)])
+    for k, m in (('lettering', 'sign_cafl'), ('logo', 'sign_clublogo')):   # Street View zoomed: gold caps on the glass, club logo on the wall
+        a0, a1, o, z0, z1 = S[k]; decal(a0, a1, o, z0, z1, m)
+    quad(0.0, L, 0.06, 0.0, GF, 'clubw_glass', (1.5, GF))   # Street View: dark glass shopfront the full height, mullions ~1.5 m
+    W_ = S['west']; r0, r1 = W_['recess']
+    for a0, a1 in W_.get('gf_wall', []):   # wvEC photo: solid grey ground-floor wall between the box and the glass doors
+        quad(a0, a1, 0.09, 0.0, GF, 'paint_grey')
+    quad(0.0, r0, 0.04, GF, E, 'paint_grey'); cw = min(W_['box'][1], L); quad(r1, cw, 0.04, GF, E, 'paint_grey')
+    if cw < L: quad(cw, L, 0.04, GF, E, 'render_white')   # wvEC photo: past the box wrap the NW return is white render
+    # west wing (pano mIsaus, Feb 2025): recessed upper bay, red-brown wall behind cream mullions
+    rd = W_['recess_d']; quad(r0, r1, -rd, GF, E, 'paint_rust')
+    for a in (r0, r1):
+        p, d, n = at(A(a)); oriented(mb, [(*(p + n * 0.04), GF), (*(p - n * rd), GF), (*(p - n * rd), E), (*(p + n * 0.04), E)], 'paint_grey', np.array([*d, 0]))
+    for a in np.arange(r0 + W_['mull'], r1 - 0.2, W_['mull']):
+        mb.beam(Q(A(a), -rd + 0.1, GF), Q(A(a), -rd + 0.1, E), 0.14, 0.14, 'paint_cream')
+    for a0, a1 in W_['upper_glass']:
+        quad(a0, a1, 0.08, GF + 0.6, E - 0.35, 'clubw_glass', (3.0, E - GF - 0.95))
+    a0, a1, o, z0, z1 = W_['logo']; decal(a0, a1, o, z0, z1, 'sign_clublogo2')
+    # west end: white glazed box under a raised white skillion roof
+    c0, c1, zr0, zr1, cd = W_['box']; quad(c0, min(c1, L), 0.1, GF + 0.3, GF + 2.0, 'clubw_glass', (3.0, 1.7)); quad(c0, min(c1, L), 0.1, GF + 2.0, zr0 - 0.6, 'render_white')
+    zs2 = lambda s_: zr1 + (zr0 - zr1) * (s_ - A(min(c1, L))) / (min(c1, L) - c0)
+    for s0, s1 in runs(A(min(c1, L)), A(c0)):   # follows the wrap round the SW corner (aerial)
+        bo = W_['box_o']; q = [Q(s0, bo, zs2(s0)), Q(s1, bo, zs2(s1)), Q(s1, -cd, zs2(s1)), Q(s0, -cd, zs2(s0))]
+        oriented(mb, [(x, y, z + 0.3) for x, y, z in q], 'roof_white', UP); oriented(mb, q, 'soffit_white', np.array([0, 0, -1.0]))
+        _, _, n = at(0.5 * (s0 + s1))
+        oriented(mb, [q[0], q[1], (*q[1][:2], q[1][2] + 0.3), (*q[0][:2], q[0][2] + 0.3)], 'render_white', np.array([*n, 0]))
+        oriented(mb, [Q(s0, 0.1, zr0 - 0.6), Q(s1, 0.1, zr0 - 0.6), Q(s1, 0.1, zs2(s1)), Q(s0, 0.1, zs2(s0))], 'render_white', np.array([*n, 0]))
+    for af, ah in W_.get('fan', []):   # wvEC (Feb 2025): nine cream raking struts fanned on the box's white wall, counted one by one
+        af, ah = min(af, L - 0.2), min(ah, L - 0.2)
+        mb.beam(Q(A(af), 0.3, GF + 2.3), Q(A(ah), 0.3, zs2(A(ah)) - 0.05), 0.18, 0.18, 'paint_cream')
+    for a0, a1 in S['upper_glass']:
+        quad(a0, a1, 0.08, GF + 0.6, E - 0.35, 'clubw_glass', (3.0, E - GF - 0.95))
+    ax = W_.get('aw_ext')   # wvEC rays: the awning runs straight on past the SW corner instead of wrapping
+    if ax:
+        ac, ex, pb = ax; pc, dc, nc = at(A(ac) + 0.01); pc = pc - dc * 0.01; z0 = GF + S['west']['aw_dz']; z1 = z0 + 0.3; AWo = AWf(A(ac))   # same depth as the awning at C (wvEC: fascia runs on with no step)
+        P_ = lambda b, o, z: (*(pc - dc * b + nc * o), z)
+        q = [P_(ex, 0, z0), P_(0, 0, z0), P_(0, AWo, z0), P_(ex, AWo, z0)]
+        oriented(mb, q, 'soffit_white', np.array([0, 0, -1.0])); oriented(mb, [(x, y, z1) for x, y, _ in q], 'roof_white', UP)
+        oriented(mb, [P_(ex, AWo, z0), P_(0, AWo, z0), P_(0, AWo, z1), P_(ex, AWo, z1)], 'render_white', np.array([*nc, 0]))
+        oriented(mb, [P_(ex, 0, z0), P_(ex, AWo, z0), P_(ex, AWo, z1), P_(ex, 0, z1)], 'render_white', np.array([*(-dc), 0]))
+        mb.beam(P_(pb, AWo - 0.3, 0.15), P_(pb, AWo - 0.3, z0), 0.2, 0.2, 'paint_cream', tube=True)
+    for r0_, r1_ in runs(A(ax[0]) if ax else 0.0, L):   # awning: flat white soffit, thin white fascia; stepped up west of the recess
+      for s0, s1 in pieces(r0_, r1_):
+        _, _, n = at(0.5 * (s0 + s1)); z0 = GF + (S['west']['aw_dz'] if 0.5 * (s0 + s1) < A(S['west']['recess'][0]) else 0.0); z1 = z0 + 0.3
+        d0, d1 = AWf(s0), AWf(s1)
+        q = [Q(s0, 0, z0), Q(s1, 0, z0), Q(s1, d1, z0), Q(s0, d0, z0)]
+        oriented(mb, q, 'soffit_white', np.array([0, 0, -1.0]), [(p[0] / 3.0, p[1] / 3.0) for p in q]); oriented(mb, [(x, y, z1) for x, y, _ in q], 'roof_white', UP)
+        oriented(mb, [Q(s0, d0, z0), Q(s1, d1, z0), Q(s1, d1, z1), Q(s0, d0, z1)], 'render_white', np.array([*n, 0]))
+        q = [Q(s0, 0.06, 0.15), Q(s1, 0.06, 0.15), Q(s1, d1 + 0.3, 0.15), Q(s0, d0 + 0.3, 0.15)]
+        oriented(mb, q, 'paving', UP, [(p[0] / 2.4, p[1] / 2.4) for p in q])
+        oriented(mb, [Q(s0, d0 + 0.3, 0), Q(s1, d1 + 0.3, 0), Q(s1, d1 + 0.3, 0.15), Q(s0, d0 + 0.3, 0.15)], 'conc_kerb', np.array([*n, 0]))
+    if W_.get('pier'):   # wvEC: one white pier in the glass under the west box
+        pa, pw = W_['pier']; mb.beam(Q(A(pa), 0.1 + pw / 2, 0.15), Q(A(pa), 0.1 + pw / 2, GF), pw, pw, 'render_white')
+    for a in [a for a in S['posts'] if a < L - 0.3]:
+        mb.beam(Q(A(a), AWf(A(a)) - 0.3, 0.15), Q(A(a), AWf(A(a)) - 0.3, GF), 0.2, 0.2, 'paint_cream', tube=True)
+    eo = S['eave_o']
+    for a in S['struts']:   # cream raking struts: foot on the wall at the awning, head out under the eave edge (pano solve)
+        mb.beam(Q(A(a), 0.12, GF + 0.3), Q(A(a + S['strut_lean']), eo - 0.15, E), 0.16, 0.16, 'paint_cream')
+    for s0, s1 in runs(A(W_['box'][0]), L):   # eave: roof edge overhang (none over the west box: wvEC photo)
+        _, _, n = at(0.5 * (s0 + s1))
+        oriented(mb, [Q(s0, 0, E), Q(s1, 0, E), Q(s1, eo, E), Q(s0, eo, E)], 'soffit_white', np.array([0, 0, -1.0]))
+        oriented(mb, [Q(s0, eo, E), Q(s1, eo, E), Q(s1, eo, E + 0.35), Q(s0, eo, E + 0.35)], 'paint_white', np.array([*n, 0]))
+    # the white skillion box at the east end: glass band over the awning, white upper wall, roof rising to the east
+    b0, b1, zw, ze, bd = S['box']; zg = S['box_glaze']; ow, oe = S['box_overhang']   # photo-solved: glass to 7.4, roof past both ends
+    quad(b0, b1, 0.1, GF + 0.3, zg, 'clubw_glass', (3.0, zg - GF))
+    zs = lambda s: zw + (ze - zw) * (s - A(b1)) / (b1 - b0)
+    for s0, s1 in runs(A(b1), A(b0)):
+        _, _, n = at(0.5 * (s0 + s1))
+        oriented(mb, [Q(s0, 0.1, zg), Q(s1, 0.1, zg), Q(s1, 0.1, zs(s1)), Q(s0, 0.1, zs(s0))], 'paint_white', np.array([*n, 0]))
+    for s0, s1 in [(A(b1 + ow), A(b0 - oe))]:
+        _, _, n = at(0.5 * (s0 + s1))
+        q = [Q(s0, 1.0, zs(s0)), Q(s1, 1.0, zs(s1)), Q(s1, -bd, zs(s1)), Q(s0, -bd, zs(s0))]
+        oriented(mb, [(x, y, z + 0.3) for x, y, z in q], 'roof_white', UP); oriented(mb, q, 'soffit_white', np.array([0, 0, -1.0]))
+        oriented(mb, [Q(s0, 1.0, zs(s0)), Q(s1, 1.0, zs(s1)), Q(s1, 1.0, zs(s1) + 0.3), Q(s0, 1.0, zs(s0) + 0.3)], 'paint_white', np.array([*n, 0]))
+    for a, z in ((b1, zw), (b0, ze)):
+        p, d, n = at(A(a)); sg = 1 if a == b0 else -1
+        oriented(mb, [(*(p + n * 0.1), E), (*(p - n * bd), E), (*(p - n * bd), z), (*(p + n * 0.1), z)], 'paint_white', np.array([*(d * sg), 0]))
 
 
 def shelter(S, mb):
@@ -545,6 +928,47 @@ def boundary_seats(mb):
                 oriented(mb, [P3(ba, fence_r(ba) + 1.35, 0), P3(bb, fence_r(bb) + 1.35, 0), q[2], q[3]], 'conc_kerb', np.array([*pol(0.5 * (ba + bb), 1), 0]))
 
 
+DIP = None
+
+
+DIPS = None
+
+
+def dip(x, y):
+    """the deeper of the west-face and south-face dips at (x, y)"""
+    return max(dip_w(x, y), dip_s(x, y))
+
+
+def dip_s(x, y):
+    """depth of the south-face dip below the model ground at (x, y); 0 outside it"""
+    if DIPS is None: return 0.0
+    W, (dd, xe, xs_, xf, xn, din, dout) = DIPS; P = np.array([x, y]); best = 1e9
+    for i in range(len(W)):
+        p, q = W[i], W[(i + 1) % len(W)]; t = q - p
+        if not (t[0] > 0 and abs(t[0]) > abs(t[1]) * 0.3): continue
+        u = np.clip(np.dot(P - p, t) / np.dot(t, t), 0, 1); c = p + t * u; nrm = np.array([t[1], -t[0]]) / np.linalg.norm(t)
+        dv = np.linalg.norm(P - c) * (1 if np.dot(P - c, nrm) >= 0 else -1); best = min(best, dv, key=abs)
+    if best > dout or best < -3.0: return 0.0
+    fx = np.interp(x, [xe, xs_, xf, xn], [0.0, 1.0, 1.0, 0.0])
+    fd = 1.0 if best <= din else 1.0 - (best - din) / (dout - din)
+    return dd * fx * fd
+
+
+def dip_w(x, y):
+    """depth of the west-face dip below the model ground at (x, y); 0 outside it"""
+    if DIP is None: return 0.0
+    W, (dd, yn, yf, ys_, ye, din, dout) = DIP; P = np.array([x, y]); best = 1e9
+    for i in range(len(W)):
+        p, q = W[i], W[(i + 1) % len(W)]; t = q - p
+        if not (t[1] < 0 and abs(t[1]) > abs(t[0]) * 0.3): continue
+        u = np.clip(np.dot(P - p, t) / np.dot(t, t), 0, 1); c = p + t * u; nrm = np.array([t[1], -t[0]]) / np.linalg.norm(t)
+        dv = np.linalg.norm(P - c) * (1 if np.dot(P - c, nrm) >= 0 else -1); best = min(best, dv, key=abs)
+    if best > dout or best < -3.0: return 0.0
+    fy = np.interp(y, [ye, ys_, yf, yn], [0.0, 1.0, 1.0, 0.0])
+    fd = 1.0 if best <= din else 1.0 - (best - din) / (dout - din)
+    return dd * fy * fd
+
+
 def ground(col):
     """grass from the fence out to the perimeter, a paved ring 2.5 m wide just behind the fence"""
     mb = MB('ground'); Pm = np.array(D['perimeter'], float); bs = np.arange(0, 360.001, 1.0)
@@ -560,6 +984,22 @@ def ground(col):
         ba, bb = bs[i], bs[i + 1]; fa, fb = fence_r(ba % 360), fence_r(bb % 360)
         for r0a, r0b, r1a, r1b, m, z in ((fa, fb, fa + 2.5, fb + 2.5, 'paving', -0.01), (fa + 2.5, fb + 2.5, outer(ba), outer(bb), 'grass', -0.02)):
             q = [P3(ba, r0a, z), P3(bb, r0b, z), P3(bb, r1b, z), P3(ba, r1a, z)]
+            E = D.get('earth')   # bare earth behind the west end (GE 3D 2026): earth from behind the paving ring out to the measured back line, grass beyond
+            if m == 'grass' and E and E['b0'] <= ba and bb <= E['b1']:
+                bk = lambda b: float(np.interp(b, [k[0] for k in E['back']], [k[1] for k in E['back']]))
+                ea, eb = min(bk(ba), r1a), min(bk(bb), r1b)
+                for g, mm in (([P3(ba, r0a, z), P3(bb, r0b, z), P3(bb, eb, z), P3(ba, ea, z)], 'earth'), ([P3(ba, ea, z), P3(bb, eb, z), P3(bb, r1b, z), P3(ba, r1a, z)], 'grass')):
+                    oriented(mb, g, mm, UP, uv=[(p[0] / TILE[mm][0], p[1] / TILE[mm][1]) for p in g])
+                continue
+            if m == 'grass' and DIP is not None and min(np.hypot(p[0] - DIP[0][:, 0].mean(), p[1] - DIP[0][:, 1].mean()) for p in q) < 45:
+                for j in range(4):   # finer grass over the west-face dip
+                    for k in range(int((r1a - r0a) / 0.75) + 1):
+                        b0, b1 = ba + (bb - ba) * j / 4, ba + (bb - ba) * (j + 1) / 4; nk = int((r1a - r0a) / 0.75) + 1
+                        rr = lambda b, f: (r0a + (r1a - r0a) * f) * (bb - b) / (bb - ba) + (r0b + (r1b - r0b) * f) * (b - ba) / (bb - ba)
+                        g = [P3(b0, rr(b0, k / nk), z), P3(b1, rr(b1, k / nk), z), P3(b1, rr(b1, (k + 1) / nk), z), P3(b0, rr(b0, (k + 1) / nk), z)]
+                        g = [(p[0], p[1], p[2] - dip(p[0], p[1])) for p in g]
+                        oriented(mb, g, m, UP, uv=[(p[0] / TILE[m][0], p[1] / TILE[m][1]) for p in g])
+                continue
             oriented(mb, q, m, UP, uv=[(p[0] / TILE[m][0], p[1] / TILE[m][1]) for p in q])
     mb.build(col)
 
@@ -567,18 +1007,21 @@ def ground(col):
 def build_all():
     clear(); col = bpy.context.scene.collection
     global POSTS
+    global FASC; FASC = MB('fascia_smooth'); FASC.smooth = True; FASC.sharp = 35
     mb = MB('stands'); mr = MB('roofs'); mx = MB('extras'); POSTS = MB('seat_posts'); SEATS.clear(); SEAT_XF.clear(); AISLES.clear()
     RNG.bit_generator.state = np.random.default_rng(7).bit_generator.state
     for S in D['terraces']: open_terrace(S, mb)
     grandstand(D['grandstand'], mb, mr)
     for B in D['buildings']: building(B, mx)
+    club_front(D['club_front'], mx)
+    south_front(D['south_front'], mx)
     for S in D['shelters']: shelter(S, mx)
     for T in D['tents']: tent(T, mx)
     bleacher(D['bleacher'], mx); sails(D['sails'], mx); scoreboard(D['scoreboard'], mx)
     for C in D['coach_box']: coach_box(C, mx)
     gate(D['gate'], mx)
     boundary_seats(mx)
-    mb.build(col); mr.build(col); mx.build(col); fence(col)
+    mb.build(col); mr.build(col); mx.build(col); FASC.build(col); fence(col)
     for c_, m_ in SEATS.items():
         m_.M = [c_ if x == 'seat' else x for x in m_.M]; m_.build(col)
     POSTS.build(col)

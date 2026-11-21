@@ -422,6 +422,60 @@ func bounce_next() -> bool:
 			and str((_phases[_pi + 1] as Dictionary).get("t", "")) == "bounce")
 
 
+## The stoppage being set right now, for the 3D umpires: {kind, at, in} with `kind` "bounce" (a
+## centre bounce), "throwup" (a ball-up around the ground) or "throwin" (at the boundary line),
+## `at` where the umpire puts the ball in play (for a throw-in, the spot on the line), and `in`
+## the director seconds until the ball goes up (at a centre bounce, an estimate while the players
+## set, _setup_left; INF while the ball is still coming back; elsewhere INF until it goes), 0 once
+## it is up; `sure` once that time is exact (the wait before it). After a goal and at a break, the centre bounce that follows. {} when no stoppage is
+## coming. Read-only.
+func stoppage_now() -> Dictionary:
+	if _beat.is_empty() or _pi >= _phases.size():
+		return {}
+	var kind := str(_beat.get("kind", ""))
+	for j in range(_pi, _phases.size()):
+		var p: Dictionary = _phases[j]
+		var t := str(p.get("t", ""))
+		if t == "bounce" or t == "throwup":
+			var left := INF
+			if j == _pi:
+				left = 0.0
+			elif j == _pi + 1 and str((_phases[_pi] as Dictionary).get("t", "")) == "wait":
+				left = maxf(0.0, float((_phases[_pi] as Dictionary).get("dur", 0.0)) - _pt)
+			elif j == _pi + 2 and str((_phases[_pi] as Dictionary).get("t", "")) == "setup":
+				left = _setup_left(_phases[_pi]) + float((_phases[_pi + 1] as Dictionary).get("dur", 0.0))
+			return {"kind": "bounce" if t == "bounce" else "throwup", "at": p["at"], "in": left,
+					"sure": j <= _pi + 1}
+		if t == "pack" and kind == "throwin":
+			return {"kind": "throwin", "at": p.get("line", p["at"]), "in": INF}
+	# A goal kicked, or a quarter's break: a centre bounce comes next, and the umpires head
+	# back for it as the players celebrate or rest.
+	if kind == "quarter" or (kind == "goal" and _phases.slice(0, _pi + 1).any(
+			func(q): return str(q.get("t", "")) == "emit")):
+		return {"kind": "bounce", "at": Vector2.ZERO, "in": INF}
+	return {}
+
+
+## About how many director seconds set-up `p` (the current phase) has left, by _done's own test:
+## its least time, and the time the slowest man it waits for needs to get within SETUP_NEAR of his
+## spot at his pace now (the SETUP_STRAGGLERS slowest are not waited for), at most its cap. An
+## estimate, for the 3D umpire's wind-up; play never reads it.
+func _setup_left(p: Dictionary) -> float:
+	if str(ball["mode"]) == "carry":
+		return INF
+	var etas := []
+	var layout: Dictionary = p["layout"]
+	for id in layout:
+		var t: Dictionary = tokens[id]
+		var d := (t["pos"] as Vector2).distance_to(layout[id]) - SETUP_NEAR
+		if d > 0.0:
+			etas.append(d / maxf((t["vel"] as Vector2).length(), 2.0))
+	etas.sort()
+	var slow := float(etas[etas.size() - 1 - SETUP_STRAGGLERS]) if etas.size() > SETUP_STRAGGLERS else 0.0
+	var cap := maxf(0.0, float(p["max"]) - _pt)
+	return minf(maxf(maxf(0.0, float(p["min"]) - _pt), slow), cap)
+
+
 ## The ball-up being set right now, for the TV picture (rule 2.103: a close-up on each ruckman
 ## before the umpire throws it up): {rucks, t, min} with `rucks` the two sides' ruckmen nearest
 ## the ball (side 0's first; -1 for a side with none up), `t` the director seconds the pack has
@@ -940,7 +994,7 @@ func _throwin_phases(k: int) -> Array:
 	if winner >= 0 and not members.has(winner):
 		members.append(winner)
 	var extra := _pack_n(0) + _pack_n(1) - 6
-	out += [{"t": "pack", "at": infield, "members": members, "min": STOPPAGE_WAIT, "max": STOPPAGE_WAIT + 0.5 + PACK_EXTRA_WAIT * extra,
+	out += [{"t": "pack", "at": infield, "line": at, "members": members, "min": STOPPAGE_WAIT, "max": STOPPAGE_WAIT + 0.5 + PACK_EXTRA_WAIT * extra,
 				"need": 4 + extra,
 				"mode": "stoppage", "winner": winner, "pause": true},
 			{"t": "emit", "log": true}]
@@ -1138,7 +1192,7 @@ func _pass_phases(k: int) -> Array:
 		return out
 	var to: Vector2 = _loc(nk) if str(nev.get("kind", "")) == "receive" else (tokens[r]["pos"] as Vector2)
 	var d := (ball["pos"] as Vector2).distance_to(to)
-	var shape := _flight_shape("kick", d)
+	var shape := _flight_shape("handball" if bool(events[k].get("hand", false)) else "kick", d)
 	out.append({"t": "flight", "to": to, "dur": shape.x, "apex": shape.y, "recv": r,
 			"adapt": true, "h1": 2.4, "mode": "open"})
 	return out
@@ -1392,6 +1446,22 @@ func _rest_spot(j: int) -> Vector2:
 	var r := Vector2(x, clampf(at.y + float(ev.get("loose_across", 0.0)), -ymax, ymax))
 	_rests[j] = r
 	return r
+
+
+## The ball came loose across the ground from where the log's spot planned it
+## (the kick went to where its receiver had run, along the fence): MatchSim's
+## roll across is from where it really came loose, never a 30 m slide back to the
+## planned line in a third of a second (picture truth, 2026-11-21: 32 m in a tick).
+const REST_ACROSS_SLACK := 8.0
+func _rest_from_ball(j: int) -> void:
+	var r := _rest_spot(j)
+	var b: Vector2 = ball["pos"]
+	var at := _loc(j)
+	if absf(b.y - at.y) <= REST_ACROSS_SLACK:
+		return
+	var ymax := (MatchMotion.HALF_WID - 4.0) * sqrt(maxf(0.0,
+			1.0 - pow(r.x / (MatchMotion.HALF_LEN - 1.0), 2.0)))
+	_rests[j] = Vector2(r.x, clampf(b.y + float((events[j] as Dictionary).get("loose_across", 0.0)), -ymax, ymax))
 
 
 func _loc(k: int) -> Vector2:
@@ -2443,6 +2513,7 @@ func _enter(p: Dictionary) -> void:
 			var rate := 3.0
 			var spot := bk >= 0 and (events[bk] as Dictionary).has("loose_to")
 			if spot:
+				_rest_from_ball(bk)
 				way = _rest_spot(bk) - (ball["pos"] as Vector2)
 				rate = _loose_rate(bk)
 				p["_held"] = float((events[bk] as Dictionary).get("loose_s", 0.0)) * TEMPO
@@ -3077,6 +3148,8 @@ func _refresh_structure() -> void:
 				u = maxf(u, CORRIDOR_INTO)   # into the lanes smartly when the ball is won
 			if _plan_of(side) == "contest" and not crash and (str(t["role"]) in ["MID", "RUCK"] or (_shadow[side] as Array).has(id)):
 				u = maxf(u, CONTEST_HUNT)   # Win Contest: the ring hunts the ball
+			if (bool(t.get("tagging", false)) or (side != _poss and bool(t.get("duel", false)))) and int(t["match"]) >= 0:
+				u = 1.0   # a tag or a set match-up keeps up with his man at a run (row 201 gaps 9-10: 9 and 18 m off him)
 			if _ring_at.is_finite() and (t["pos"] as Vector2).distance_to(_ring_at) < CONTEST_KEEP:
 				u = 1.0   # out of the way of the pack's ring, smartly
 			# Throw numbers at it: the engine's legs go 1.3 times as fast
@@ -3264,8 +3337,8 @@ func _structure_spot(t: Dictionary, ball_p: Vector2, poss: int) -> Vector2:
 			width = maxf(width, HOLD_WIDTH)
 			pull *= CONTROL_PULL
 	var hb_line := slot == "CHB" or slot == "HBL" or slot == "HBR"
-	if has and (_burst_on(side, "surge") or _burst_on(side, "push")):
-		# Throw numbers at it, and Push numbers forward (row 151): the midfield and the half-back line run past
+	if has and _burst_on(side, "push"):
+		# Push numbers forward (row 151): the midfield and the half-back line run past
 		# the ball, the forwards stay ahead of it and the back pockets come up,
 		# so the numbers are ahead of it. They run to where the chain is going
 		# (the furthest lead already on), not where the ball is now, so a
@@ -3386,7 +3459,29 @@ func _structure_spot(t: Dictionary, ball_p: Vector2, poss: int) -> Vector2:
 			var half := slot == "CHF" or slot == "HFL" or slot == "HFR"
 			var behind := ball_p.x - dir * FLOOD_HALF_BEHIND
 			world.x = lerpf(world.x, behind, FLOOD_HALF_SHARE if half else FLOOD_PUSH)
+	if _burst_on(side, "surge") and (mid or hb_line) and not bool(t.get("tagging", false)) \
+			and not (has and _plan_of(side) == "attacking"):
+		# Throw numbers at it (row 201 gap 14): the midfield and the half-back
+		# line go to the ball wherever it is, with it or without it, each on his
+		# own side of it round a ring (an edge at every contest, as MatchSim
+		# plays the call), a little ahead of it with the ball and goal-side of it
+		# without. The forwards and the backs keep their shape, and Attack
+		# Corridor's lanes hold with the ball.
+		var sang := deg_to_rad(float(SURGE_ANGLE.get(slot, 0.0)))
+		var lean := SURGE_LEAN if has else -SURGE_LEAN
+		var ring := ball_p + Vector2((cos(sang) * SURGE_RING + lean) * dir, sin(sang) * SURGE_RING)
+		world = world.lerp(ring + (t["jitter"] as Vector2) * 0.3 + drift * 0.5, SURGE_PULL)
 	return _keep_in(world)
+
+
+## Throw numbers at it: the ring its midfield and half-back line make round the
+## ball (metres from it), how far ahead of it (goal-side without the ball), and
+## how far each comes from his own spot to it.
+const SURGE_RING := 11.0
+const SURGE_LEAN := 4.0
+const SURGE_PULL := 0.85
+const SURGE_ANGLE := {"C": 0.0, "RR": 50.0, "RV": -50.0, "R": 180.0, "WR": 95.0, "WL": -95.0,
+		"CHB": 160.0, "HBR": 130.0, "HBL": -130.0}
 
 
 ## Real AFL team shape by phase (row 201, rule 2.86; tools/balance/afl_shape_rates.json,
@@ -3611,10 +3706,10 @@ func _flooding(side: int) -> bool:
 #   the ball, the rest PACK_RING round it, the crash outside that. The engine
 #   gives the plan no edge in a marking contest, so neither does the oval.
 # - Throw numbers at it (an edge at the contest, more shots, faster legs, more
-#   goals against when the other side gets out): with the ball the midfield
-#   and the half-back line run past where the chain is going, the forwards
-#   stay ahead of it and the back pockets come up, a flood in reverse; it
-#   moves quicker. (Without the ball it keeps its usual shape.)
+#   goals against when the other side gets out): the midfield and the
+#   half-back line go to the ball wherever it is, with it or without it, on a
+#   ring round it (SURGE_RING); it moves quicker. (Row 201 gap 14: it used to
+#   lift the side forward like Push and put no more men at the ball.)
 # - Slow it down (less pressure felt, fewer clangers, fewer metres and fewer
 #   shots at both ends): the side sits deeper, spreads wide with the ball and
 #   moves slower, its leads shorter and slower. Its carriers hold the ball no
@@ -3766,7 +3861,7 @@ func _pack_n(side: int) -> int:
 	return 3 + (CONTEST_PACK if _plan_of(side) == "contest" else 0)
 
 
-## Throw numbers at it: how far up the ground (from `side`'s own end) its
+## Push numbers forward: how far up the ground (from `side`'s own end) its
 ## chain is going, the furthest lead already on, or the ball when none is.
 func _surge_ref(side: int, bx: float) -> float:
 	var out := bx

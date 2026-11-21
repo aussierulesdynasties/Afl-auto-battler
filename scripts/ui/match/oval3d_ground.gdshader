@@ -4,9 +4,11 @@
 // across them, 50 m arcs from the centre of each goal, goal squares (9 m by 6.4 m), goal lines.
 // Grass blades are 2-3 cm: a pixel or two from the broadcast cameras, so the turf is shading,
 // not geometry. What reads on TV and is drawn here:
-//   mown stripes  bands 12 m wide, mowed across the ground in alternate directions; a band is
-//                 light when you look the way its blades lean and dark looking into them, so the
-//                 stripes swap as the camera moves round and fade looking along them;
+//   mown stripes  bands (12 m by default), mowed in alternate directions; a band is light when
+//                 you look the way its blades lean and dark looking into them, so the stripes
+//                 swap as the camera moves round and fade looking along them. Each ground has its
+//                 own cut (Oval3DTurf.MOWING): across the ground, along it, a checkerboard (cut
+//                 both ways), diagonal bands, or diamonds (both diagonals);
 //   variation     broad patches (metres) and fine speckle (centimetres, faded out before it
 //                 can shimmer) so the green is never flat;
 //   wear          a map over the ground (Oval3DTurf): thin pale grass where play has been, mud
@@ -30,10 +32,18 @@ uniform float hot = 0.0;        // 0 .. 1 dried out
 uniform float wind = 0.0;       // 0 calm .. 1 strong breeze
 uniform vec2 wind_dir = vec2(1.0, 0.0);
 uniform float stripe_amount = 0.16;
+// The ground's cut (Oval3DTurf.MOWING): 0 across the ground, 1 along it, 2 checkerboard,
+// 3 diagonal, 4 diamonds; the bands' width in metres.
+uniform int mow_pattern = 0;
+uniform float mow_width = 12.0;
 uniform float saturation = 0.72;
 // Wear over the ground: R thin grass, G churned; UV 0..1 across the whole plane.
 uniform sampler2D wear_map : filter_linear, repeat_disable;
 uniform vec2 wear_half = vec2(93.3, 74.4);
+// A ground's model stands round the turf (GroundModels): the turf stops at its fence, half
+// length and width here, so the plane's square corners never show over the model's own
+// ground. (0, 0): the plane is drawn whole.
+uniform vec2 fence_clip = vec2(0.0);
 
 // The ground's own metres (the oval turns half a turn when the sides change ends; the
 // stripes and the wear turn with it) and the camera in the same frame.
@@ -60,27 +70,54 @@ float paint(float d, float w) {
 
 vec3 lin(vec3 c) { return pow(c, vec3(2.2)); }
 
-// The blade tile's own frame: u across the ground (x), v along the mower's run (z).
-vec2 blade_uv(vec2 p, float lean, float tile) {
-	return vec2(p.x, p.y * lean) / tile;
+// The blade tile's own frame: u across the band (n), v along the mower's run (d).
+vec2 blade_uv(vec2 p, vec2 n, vec2 d, float lean, float tile) {
+	return vec2(dot(p, n), dot(p, d) * lean) / tile;
+}
+
+// One pass of the mower: bands w wide across n, each run along d (+ or -, band to band).
+// x: how light the band reads from this look (0 dark .. 1 light, 0.5 at the soft band edges);
+// y: the band's lean (+1 or -1).
+vec2 mow_pass(vec2 p, vec2 n, vec2 d, vec2 look, float w) {
+	float a = dot(p, n) / w;
+	float lean = mod(floor(a), 2.0) < 1.0 ? 1.0 : -1.0;
+	float s = 0.5 + 0.5 * lean * dot(look, d);
+	float edge = smoothstep(0.0, 0.6, min(fract(a), 1.0 - fract(a)) * w);
+	return vec2(mix(0.5, s, edge), lean);
 }
 
 void fragment() {
 	vec2 p = wpos.xz;
+	if (fence_clip.x > 0.0 && length(p / fence_clip) > 1.0) {
+		discard;
+	}
 	float e = length(p / half_size);
 	// Which way you look across the ground, flat.
 	vec3 view_w = normalize(wpos - cam_local);
 	vec2 look = normalize(view_w.xz + vec2(1e-4));
 
-	// Mown stripes: bands along the ground, each mowed across it (+z or -z); the blades in a
-	// band lean the way its mower ran (the tile is flipped band to band).
-	float band = floor(p.x / 12.0);
-	float lean = mod(band, 2.0) < 1.0 ? 1.0 : -1.0;
-	// Looking with the lean shows the blades' lit backs (light), into it their shaded tips.
-	float facing = lean * look.y;
-	float stripe = 0.5 + 0.5 * facing;
-	float edge = smoothstep(0.0, 0.6, min(fract(p.x / 12.0), 1.0 - fract(p.x / 12.0)) * 12.0);
-	stripe = mix(0.5, stripe, edge);
+	// Mown stripes: the blades in a band lean the way its mower ran (the tile is flipped band to
+	// band). Looking with the lean shows the blades' lit backs (light), into it their shaded tips.
+	// The first pass sets the blades' grain; a second pass (checkerboard, diamonds) lays its
+	// bands over it, so each square reads as one of four shades.
+	const float R = 0.70710678;
+	vec2 n1 = vec2(1.0, 0.0);
+	vec2 d1 = vec2(0.0, 1.0);
+	if (mow_pattern == 1) {
+		n1 = vec2(0.0, 1.0);
+		d1 = vec2(1.0, 0.0);
+	} else if (mow_pattern >= 3) {
+		n1 = vec2(R, R);
+		d1 = vec2(-R, R);
+	}
+	float mw = max(mow_width, 1.0);
+	vec2 m1 = mow_pass(p, n1, d1, look, mw);
+	float stripe = m1.x;
+	float lean = m1.y;
+	if (mow_pattern == 2 || mow_pattern == 4) {
+		vec2 m2 = mow_pass(p, d1, -n1, look, mw);
+		stripe = clamp(0.5 + (m1.x - 0.5) * 0.6 + (m2.x - 0.5) * 0.6, 0.0, 1.0);
+	}
 	vec3 grass = mix(grass_a, grass_b, stripe);
 	// The flat views' turf colours are strong; lit in 3D they go neon. Turf on a broadcast
 	// is a muted green (red about 0.6 of green): take a quarter of the colour toward grey.
@@ -89,12 +126,15 @@ void fragment() {
 
 	// The blades: the tile at its own size, and again larger and offset so it never repeats
 	// visibly; mipmaps average them to the right grain at any distance.
-	vec2 buv = blade_uv(p, lean, blade_tile);
+	vec2 buv = blade_uv(p, n1, d1, lean, blade_tile);
 	vec3 bl = texture(blades_tex, buv).rgb * 2.0;
-	vec3 bl2 = texture(blades_tex, blade_uv(p + vec2(3.7, 1.3), lean, blade_tile * 3.1)).rgb * 2.0;
+	vec3 bl2 = texture(blades_tex, blade_uv(p + vec2(3.7, 1.3), n1, d1, lean, blade_tile * 3.1)).rgb * 2.0;
 	vec3 blade = 1.0 + (mix(bl, bl2, 0.3) - 1.0) * blade_contrast;
 	vec3 nb = texture(blades_n, buv).rgb;
 	nb.y = lean > 0.0 ? nb.y : 1.0 - nb.y;
+	// The tile's normals are in the band's frame (n, d); the plane's are in the ground's (x, z).
+	vec2 nt = nb.xy * 2.0 - 1.0;
+	nb.xy = (n1 * nt.x + d1 * nt.y) * 0.5 + 0.5;
 
 	// Variation: broad patches, then clumps, then mottle.
 	vec3 pa = texture(patches_tex, p / 90.0).rgb;
