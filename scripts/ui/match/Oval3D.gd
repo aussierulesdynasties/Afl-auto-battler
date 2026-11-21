@@ -17,7 +17,8 @@ const LOOPS_GLB := "res://assets/oval3d/player_loops.glb"
 ## candidate body (row 202 2d: the MetaHuman footballer, which carries its own loops).
 static var player_glb := PLAYER_GLB
 static var loops_glb := LOOPS_GLB
-## m/s the jog loop covers at rate 1 (14.6 m in its 2.5 s): the rate scales from this.
+## m/s the old body's jog loop was taken to cover at rate 1; the rate now scales from the pace
+## measured off each body's own loop (Oval3DAnim.loop_speed), this only when it cannot be read.
 const LOOP_SPEED := 5.83
 ## Club Forge's hair styles on the same rig, one mesh per style on the head bone
 ## (tools/oval3d/export_hair_glb.py: the pipeline's own procedural shells, hair_lib.py).
@@ -2015,7 +2016,7 @@ func _move_umpires(frame_dt: float) -> void:
 		if speed > UMP_RUN_FROM and not on_mark:
 			node.rotation.y = rotate_toward(node.rotation.y, atan2(vel.x, vel.y), turn)
 			clip = "jog"
-			rate = clampf(speed / LOOP_SPEED, 0.45, 2.3)
+			rate = clampf(speed / anim.loop_speed("jog", u), Oval3DAnim.RATE_MIN, Oval3DAnim.RATE_MAX)
 		else:
 			var to := face if face != Vector2.ZERO else bp - at
 			if to.length() > 0.5 or face != Vector2.ZERO:
