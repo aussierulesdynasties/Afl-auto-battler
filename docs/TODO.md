@@ -95,7 +95,7 @@ Every switch went on for good in #1072 and #1074 (director 2026-11-06: "i dont w
 - 59 Banner text and music: he supplies originals (placeholders in `data/banners.json`, empty playlist).
 - 56 Public demo page: rights to real names and a licence register come first.
 - 32 Web build parity: saves carried between devices pending his answer.
-- 113 Each club's real 2026 National Draft picks: done 2026-11-21 (draft held 19-20 November). New career offers real lists before or after the draft (the person chose "Both"); data/national_draft_2026.csv, docs/research/NATIONAL_DRAFT_2026.md. Open: the rookie draft (23 November) and the night's pick swaps are not in the data.
+- 113 Each club's real 2026 National Draft picks, with sources (parked, director 2026-11-10: "the draft hasnt happened yet so park it for now"). The rest shipped as the Real lists start (#569, #1172): real lists, the real 2026 class with ties, the 2026 National Draft, then 2027. Today the opening draft runs in reverse 2026 ladder order (GameState.gd begin_real_lists). Blocked until the real 2026 National Draft has happened.
 
 ## F. Later (1.x or after 1.0, unassigned)
 
