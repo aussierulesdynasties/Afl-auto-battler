@@ -128,7 +128,7 @@ const SEAT_COLOURS := {
 	# middle tiers, a blue band along the front of the middle tier, teal-blue top tier
 	# (grey-green in the Members' north-west).
 	"seat_mcg_white": Color(0.96, 0.88, 0.80), "seat_mcg_grey": Color(0.76, 0.70, 0.64),
-	"seat_mcg_blue": Color(0.14, 0.26, 0.46), "seat_mcg_teal": Color(0.20, 0.34, 0.44),
+	"seat_mcg_blue": Color(0.18, 0.32, 0.52), "seat_mcg_teal": Color(0.42, 0.64, 0.66),
 	"seat_mcg_sage": Color(0.50, 0.58, 0.56),
 	"seat_green": Color(0.314, 0.549, 0.455), "seat_teal": Color(0.384, 0.620, 0.541),
 	"seat_blue": Color(0.2, 0.318, 0.467), "seat_paleblue": Color(0.482, 0.612, 0.714),
