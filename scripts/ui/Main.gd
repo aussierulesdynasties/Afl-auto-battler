@@ -666,6 +666,7 @@ func _show_setup() -> void:
 			func(k): return (_after_draft_line() if k == "after"
 					else "The lists stand as they were before the draft. You run your club through the 2026 National Draft, with every real draftee in the pool."),
 			func(k): _pick_after_draft = k == "after")
+	_draft_row.name = "DraftTiming"
 	_draft_row.visible = _shows_draft_row()
 	form.add_child(_draft_row)
 	# A challenge start (ruling 115): one rule, said here before you begin.
