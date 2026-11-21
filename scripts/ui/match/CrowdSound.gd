@@ -1,8 +1,10 @@
 class_name CrowdSound
 extends Node
-## FL-004: the crowd at a match you watch (assets/audio/crowd, generated, original).
-## A low murmur under everything, a roar for a goal, a lift for a behind and the
-## siren at the end of every quarter - each said once, when the pitch shows it,
+## FL-004: the crowd at a match you watch (assets/audio/crowd: tools/audio/build_crowd.py).
+## A murmur under everything, a roar for a goal, a groan for a behind, "BALL!" for
+## a tackle paid as holding the ball, the ground's siren at the end of every
+## quarter with the crowd rising under it, and the roar as your side runs through
+## the banner - each said once, when the pitch shows it,
 ## never when the match is skipped through, and never two at once (a roar isn't
 ## cut off by a behind). Presentation only: muted, the match tells you exactly
 ## the same, and nothing here is read by the match.
@@ -19,6 +21,7 @@ extends Node
 const BED_DB := -14.0
 const ROAR_DB := -6.0
 const LIFT_DB := -9.0
+const BALL_DB := -9.0
 const SIREN_DB := -6.0
 ## The visitors' supporters are the smaller crowd: their sounds sit this far under.
 const AWAY_DB := -4.0
@@ -29,7 +32,7 @@ const RUN_CAP := 4
 const BED_STEP_DB := 1.0
 const HOME := 0
 const DIR := "res://assets/audio/crowd/"
-const FILES := ["crowd_goal.wav", "crowd_behind.wav", "crowd_siren.wav"]
+const FILES := ["crowd_goal.wav", "crowd_behind.wav", "crowd_ball.wav", "crowd_siren.wav"]
 
 ## Every sound started, in order: {kind, side, q, run, db, file, gap_ms}.
 ## gap_ms is -1.0 when the caller gave no time for the event being shown.
@@ -82,8 +85,9 @@ static func bed_db(side: int, run: int) -> float:
 	return BED_DB + step * float(clampi(run, 1, RUN_CAP) - 1)
 
 
-## A football event as the pitch shows it: "goal", "behind" or "quarter" (the
-## end of quarter `q`). `side` is 0 for the home side. `shown_usec` is
+## A football event as the pitch shows it: "goal", "behind", "ball" (a tackle
+## paid as holding the ball: `side` is the tackler's) or "quarter" (the end of
+## quarter `q`). `side` is 0 for the home side. `shown_usec` is
 ## Time.get_ticks_usec() when the pitch showed it. A goal that was skipped past
 ## (`audible` false) still counts toward the run, without a sound.
 func event(kind: String, side: int = HOME, shown_usec: int = -1, audible: bool = true, q: int = 0) -> void:
@@ -100,6 +104,9 @@ func event(kind: String, side: int = HOME, shown_usec: int = -1, audible: bool =
 	elif kind == "behind":
 		if audible:
 			_play("behind", "crowd_behind.wav", LIFT_DB + (0.0 if side == HOME else AWAY_DB), false, side, q, shown_usec)
+	elif kind == "ball":
+		if audible:
+			_play("ball", "crowd_ball.wav", BALL_DB + (0.0 if side == HOME else AWAY_DB), false, side, q, shown_usec)
 	elif kind == "quarter":
 		if q > 4:
 			_extra_time = true
@@ -118,6 +125,12 @@ func full_time(shown_usec: int = -1) -> void:
 	if _sirens.has(4) and not _extra_time:
 		return
 	_play("siren", "crowd_siren.wav", SIREN_DB, true, -1, 5 if _extra_time else 4, shown_usec)
+
+
+## Your side runs through the banner: their supporters' roar (the pre-match
+## scene; `home` false when your side is the visitors).
+func run_through(home := true) -> void:
+	_play("run_through", "crowd_goal.wav", ROAR_DB + (0.0 if home else AWAY_DB), true, HOME if home else 1 - HOME, 0, -1)
 
 
 ## What's playing now (tests): the cue's file, or "".
