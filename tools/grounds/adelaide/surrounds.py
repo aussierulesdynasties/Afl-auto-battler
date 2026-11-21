@@ -402,8 +402,31 @@ def building_height(t):
             "industrial": 7.0, "roof": 0.0, "train_station": 7.0, "hotel": 40.0}.get(t.get("building"), 8.0)
 
 
+NAMED = {"red": (150, 70, 56), "white": (232, 230, 224), "silver": (190, 192, 194), "grey": (150, 150, 150),
+         "gray": (150, 150, 150), "black": (50, 50, 52), "brown": (120, 84, 60), "green": (90, 120, 90),
+         "beige": (214, 200, 170), "yellow": (220, 200, 120), "blue": (90, 110, 140)}
+# Untagged roofs round North Adelaide (Google Earth): terracotta tile, grey and pale galvanised iron on houses;
+# pale membrane and grey metal on the big flat roofs.
+HOUSE_ROOFS = [(150, 78, 60), (128, 70, 58), (120, 122, 124), (168, 168, 164), (96, 96, 98)]
+FLAT_ROOFS = [(196, 196, 192), (170, 170, 168), (150, 152, 152), (214, 212, 206)]
+HOUSE_WALLS = [(214, 200, 176), (196, 150, 118), (224, 218, 204), (176, 120, 92)]
+CITY_WALLS = [(200, 200, 196), (168, 176, 182), (214, 210, 200), (140, 150, 160), (186, 176, 160)]
+
+
+def _colour(v):
+    if not v:
+        return None
+    v = v.strip().lower()
+    if v.startswith("#") and len(v) == 7:
+        return tuple(int(v[i:i + 2], 16) for i in (1, 3, 5))
+    return NAMED.get(v)
+
+
 def building_list(ways, st):
-    out = []
+    """The footprints (as GroundModels reads them) and, in the same order, each one's wall and roof colour
+    (6 bytes: OSM building:colour / roof:colour where mapped, else a palette by kind)."""
+    out, cols = [], []
+    rng = np.random.default_rng(5)
     for t, p in ways:
         if "building" not in t or len(p) < 4 or p[0] != p[-1] or t.get("layer", "0").startswith("-"):
             continue
@@ -422,7 +445,11 @@ def building_list(ways, st):
         out.append(h)
         for x, z in pts:
             out += [x, z]
-    return np.array(out, "<f4")
+        house = t.get("building") in ("house", "terrace", "detached", "semidetached_house", "garage", "shed") or h < 9
+        wall = _colour(t.get("building:colour")) or (HOUSE_WALLS if house else CITY_WALLS)[rng.integers(4 if house else 5)]
+        roof = _colour(t.get("roof:colour")) or (HOUSE_ROOFS if house else FLAT_ROOFS)[rng.integers(5 if house else 4)]
+        cols += list(wall) + list(roof)
+    return np.array(out, "<f4"), np.array(cols, np.uint8)
 
 
 def main():
@@ -449,8 +476,9 @@ def main():
     im.save(os.path.join(OUT, "surrounds.webp"), quality=88, method=6)
     t = tree_list(trees, st)
     t.tofile(os.path.join(OUT, "trees.bin"))
-    b = building_list(ways, st)
+    b, bc = building_list(ways, st)
     b.tofile(os.path.join(OUT, "buildings.bin"))
+    bc.tofile(os.path.join(OUT, "buildings_col.bin"))
     print("surrounds.webp", im.size, "trees", len(t), "building floats", len(b))
 
 
