@@ -12,6 +12,7 @@ config/name="Aussie Rules Dynasties"
 config/description="Build an Australian rules football dynasty: shape your list, coach the season and carry the club through the years."
 config/version="1.0.20"
 run/main_scene="res://scenes/Main.tscn"
+run/main_scene.perf_probe="res://tools/perf/Oval3DPhone.tscn"
 config/features=PackedStringArray("4.7")
 config/icon="res://assets/ui/app_icon/app_icon_512.png"
 config/windows_native_icon="res://assets/ui/app_icon/app_icon.ico"
