@@ -60,6 +60,8 @@ const REPLAY_BEFORE := 0.58   # director s of the replay before the kick
 const REPLAY_AFTER := 0.23    # ...and after the ball reaches the goals
 const LONG_KICK := 40.0       # m: a kick at least this long is watched on the wide shot
 const ZOOM_S := 0.5           # real s a zoom takes, in or out
+const INCIDENT_WIDTH := 8.0  # m across the picture at a tackle that stops play (incident_cuts)
+const INCIDENT_WARP := 3.0   # m: the most a tackle clip may carry its tackler for a close cut
 const CUT := 8.0              # m: a ball moved further than this in one frame was put back (a
                               # bounce after a goal, the change of ends); the camera goes straight there
 
@@ -87,6 +89,15 @@ var _after_siren: Array = []  # the deciding behind's clip, for after the siren
 var replaying := false        # the picture shows a replay
 var _kick_wide := false       # a long kick's zoom out still running (rule 2.111)
 var _zoom := 1.0              # 0 the normal TV-height shot, 1 the wide shot (rule 2.111)
+## PROPOSED, off until the director picks (row 202, 2e): a tackle that stops play (held to a
+## ball-up, or a holding-the-ball or dropped-ball free) cuts to the nearest clear wing camera,
+## INCIDENT_WIDTH across on the two men, from the moment it lands until they are back on their
+## feet (MatchDirector.TAKE_UP), then back to the main camera. A tackle that spills the ball
+## free stays on the main camera: real TV does not cut away from live play.
+var incident_cuts := false
+var _inc := {}                # {who, victim, t0}: the tackle the picture is on; {} none
+var _inc_eye := Vector3.ZERO
+var _inc_trail: Array = []
 
 
 func _init(p_oval: Oval3D) -> void:
@@ -121,9 +132,16 @@ func frame(dt: float, wall := 0.0) -> void:
 		_play_replay(0.0)
 		return
 	_set_close()
+	_set_incident()
 	if _close_who >= 0:
 		var gp := ((oval.players[_close_who] as Dictionary)["node"] as Node3D).global_position
 		_shoot(_close_eye, _smooth(_close_trail, Vector3(gp.x, CLOSE_AIM_Y, gp.z), CLOSE_SMOOTH), CLOSE_WIDTH)
+	elif not _inc.is_empty() and shot == "main":
+		# The hips as drawn: a tackle clip carries the bodies off their nodes (root motion).
+		var a := oval.global_transform * oval.anim._hips_world(oval.players[int(_inc["who"])]).origin
+		var b := oval.global_transform * oval.anim._hips_world(oval.players[int(_inc["victim"])]).origin
+		var mid := (a + b) * 0.5
+		_shoot(_inc_eye, _smooth(_inc_trail, Vector3(mid.x, 0.6, mid.z), CLOSE_SMOOTH), INCIDENT_WIDTH)
 	elif shot == "goals":
 		_goals_shot(signf((oval.global_transform * Vector3(_end_x, 0.0, 0.0)).x))
 	else:
@@ -213,6 +231,46 @@ func _set_close() -> void:
 		_close_eye = _clear_eye(who)
 		_close_trail.clear()
 	_close_who = who
+
+
+## The tackle the picture cuts to (incident_cuts): it lands (the director's "down") on a free
+## paid off it, or a tackle held to a ball-up; it holds until both men are up.
+func _set_incident() -> void:
+	var d = oval.director
+	if not incident_cuts:
+		_inc = {}
+		return
+	if not _inc.is_empty() and (d.time - float(_inc["t0"]) >= d.TAKE_UP
+			or not _paired(int(_inc["who"]), int(_inc["victim"]))):
+		_inc = {}
+	if d._beat.is_empty() or d._pi >= d._phases.size():
+		return
+	var p: Dictionary = d._phases[d._pi]
+	if str(p.get("t", "")) != "down" or not p.get("_entered", false):
+		return
+	var k := int(d._beat["k"])
+	if not _inc.is_empty() and int(_inc["k"]) == k:
+		return
+	var kind := str(d._beat.get("kind", ""))
+	var stops := kind == "free"
+	if kind == "tackle":
+		var nk: int = d._next_real(k)
+		stops = nk >= 0 and str((d.events[nk] as Dictionary).get("kind", "")) == "ballup"
+	if not stops or not _paired(int(p["who"]), int(p["victim"])):
+		return
+	_inc = {"k": k, "who": int(p["who"]), "victim": int(p["victim"]), "t0": d.time}
+	_inc_eye = _clear_eye(int(p["victim"]))
+	_inc_trail.clear()
+
+
+## Both men are in the same tackle clip, drawn where the director has them (a tackle the
+## clip had to carry its tackler far to reach is not one to look at close).
+func _paired(who: int, victim: int) -> bool:
+	var a: Array = oval.anim._in
+	var pr: Dictionary = a[who]
+	if pr.is_empty() or a[victim] != pr:
+		return false
+	return float((pr["rec"] as Dictionary).get("warp_m", 0.0)) <= INCIDENT_WARP
 
 
 ## The first wing camera (the centre one, then the nearer 50 m one, then the other) with a clear
