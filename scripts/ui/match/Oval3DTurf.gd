@@ -105,12 +105,26 @@ func _make_blades() -> void:
 	_copy_look()
 
 
-## The standing blades take the turf's colours and weather.
+## The standing blades take the turf's colours and weather; so does any other piece of turf
+## (Oval3D's apron skirt round a ground model), whole.
 func _copy_look() -> void:
+	for f in _followers:
+		for u in mat.shader.get_shader_uniform_list():
+			if str(u["name"]) != "fence_clip":
+				f.set_shader_parameter(u["name"], mat.get_shader_parameter(u["name"]))
 	if _bmat == null:
 		return
 	for k in ["grass_a", "grass_b", "wet", "hot", "wind", "wind_dir"]:
 		_bmat.set_shader_parameter(k, mat.get_shader_parameter(k))
+
+
+var _followers: Array[ShaderMaterial] = []
+
+
+## Another piece of turf, painted as the turf is from now on.
+func follow(m: ShaderMaterial) -> void:
+	_followers.append(m)
+	_copy_look()
 
 
 ## The day's look: weather "perfect", "wet", "windy" or "hot" (anything else is perfect);
