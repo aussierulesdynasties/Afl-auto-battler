@@ -301,7 +301,9 @@ func _test_assistant() -> void:
 		if on_by.has(pid):
 			var f2 := on._on_ground(1, str(on_by[pid]))
 			gain += Matchups.mark_chance(f2, p) - Matchups.mark_chance(f2, cur)
-		better = better or gain > 0.0
+		# The engine's own threshold: a swap that only trades the two forwards'
+		# chances (a float-noise gain) is no reason to move (REMATCH_MIN_GAIN).
+		better = better or gain > MatchSim.REMATCH_MIN_GAIN
 	on._assistant_calls(0)
 	_check((str((on.duels[0] as Dictionary).get(fid, "")) != beaten) == better,
 			"Your assistant moves a key defender who lost three of four contests last quarter when a better match-up exists")
