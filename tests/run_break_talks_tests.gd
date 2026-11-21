@@ -4,6 +4,8 @@ extends SceneTree
 ## sim's once-a-break sit-down and half-time speech, rival clubs making the
 ## same calls, and the break screen on a phone with real taps. The checks live
 ## in tests/break_talks_body.gd, loaded by path once the autoloads exist.
+## Seeded by design: the body pins every seed itself (MatchSim seed 4242 for the rules,
+## replay_seed 2027 for the match on the phone).
 
 
 func _initialize() -> void:
