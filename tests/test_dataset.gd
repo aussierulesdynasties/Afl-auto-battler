@@ -34,6 +34,8 @@ const GOLDEN_REAL := "c7c47ccb082c9a1cd4ed671c2b9bf30c"
 ## The defensive-50 play (#1598) redrew it again: Windows from a local run,
 ## Linux from that PR's CI (with the synergies change, #1645).
 ## The director's ratings (row 200, 2026-11-16) redrew it after that (Linux from run_on_github run 43765141166).
+## Marks inside 50 back to real AFL (#1638, 2026-11-21) redrew it again: Linux from a local
+## run of Godot 4.7.2; the Windows value is still the one before it (take it on a Windows run).
 ## Result keys added after the golden was taken that record who earned a
 ## call's credit, not what happened (row 144). "impact" and "plan_traits" were
 ## already in main's results, so they stay in the hash. "breeze_side" (the
@@ -50,7 +52,7 @@ const TEAM_BOOKKEEPING_KEYS := ["pressure_acts_dhalf", "tackles_i50", "poss_d50"
 		"d50_tackled", "d50_rushed", "d50_chips"]
 ## Team counts named by prefix (one key per way a defensive-50 chain ends).
 const TEAM_BOOKKEEPING_PREFIXES := ["d50_end_"]
-const GOLDEN_SEASON := {"Windows": "4a60c57aa723ec9cf0c936b1592edace", "Linux": "29731d9d3aaf8306ecd99aa67c1bf4da"}
+const GOLDEN_SEASON := {"Windows": "4a60c57aa723ec9cf0c936b1592edace", "Linux": "a8896102a27b706f2699c31257b5fc25"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and
