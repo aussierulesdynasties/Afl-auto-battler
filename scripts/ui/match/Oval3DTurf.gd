@@ -385,7 +385,8 @@ func _late_game() -> void:
 ## grass green. So the model's surfaces (oval3d_stand.gdshader) take the sky's light as if that
 ## grass were grey, keeping STAND_GREEN of its colour: faces turned up are lit as before, faces
 ## turned down go grey. At night the light is one colour already, so nothing changes. The men, the
-## turf, the goalposts and the seats keep the sky's own light.
+## turf, the goalposts and the seats keep the sky's own light, and so does the land round a ground
+## (GroundModels' surrounds, meta open_ground): it lies in the open under the sky like the turf.
 const STAND_GREEN := 0.15    # how much of the grass's colour the stands' grey keeps
 const STAND_SHADER := preload("res://scripts/ui/match/oval3d_stand.gdshader")
 const AMB_KEYS := ["amb_down", "amb_low", "amb_level", "amb_high", "amb_up"]
@@ -397,7 +398,7 @@ var _stand_mats: Array[ShaderMaterial] = []
 func light_stands(model: Node) -> void:
 	var seen := {}
 	for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
-		if mi.mesh == null:
+		if mi.mesh == null or mi.has_meta("open_ground"):
 			continue
 		for i in mi.mesh.get_surface_count():
 			var m := mi.get_active_material(i) as StandardMaterial3D
