@@ -2304,13 +2304,47 @@ func _test_mcg_crowd(res: Dictionary) -> void:
 			n += 1
 			inward += 1 if t.basis.z.normalized().dot(-Vector3(t.origin.x, 0, t.origin.z).normalized()) > 0.5 else 0
 	_check(n > 500 and inward == n, "Every supporter looks in at the ground (%d of %d sampled)" % [inward, n])
-	oval._goal_on = false
-	d.emitted = 1
-	d.flash = {"pos": Vector2.ZERO, "left": 0.9, "goal": true}
-	oval._sync_crowd(0.5)
-	_check(is_equal_approx(float(crowd._card_mat.get_shader_parameter("cheer_from")), oval._crowd_t),
+	var r := _crowd_goal(oval)
+	_check(r.size() > 0 and is_equal_approx(r[-1].x, oval._crowd_t),
 			"A goal at the MCG raises its supporters as on the plain stand")
+	# Brought up to standard (2026-11-21): each club's cheer squad behind its goal, the away
+	# supporters gathered toward their end, the MCC members' reserve in its own clothes.
+	var c := crowd.census
+	_check(int(c["squad"]) > 300 and int(c["members"]) > 2000 and int(c["away"]) > crowd.supporters * 0.2
+			and int(c["home"]) > int(c["away"]) and int(c["neutral"]) > 0,
+			"The MCG crowd has its cheer squads, members and both clubs' supporters (%s)" % str(c))
 	oval.queue_free()
+
+
+## A goal in the director's events shown to the oval's crowd: the reactions it set ([] if none).
+func _crowd_goal(oval: Oval3D) -> Array:
+	var d := oval.director
+	var k := -1
+	for i in range(d.events.size()):
+		if str((d.events[i] as Dictionary).get("kind", "")) == "goal":
+			k = i
+			break
+	if k < 0:
+		return []
+	var keep := d.emitted
+	oval._crowd_seen = k
+	d.emitted = k + 1
+	oval._sync_crowd(0.5)
+	d.emitted = keep
+	oval._crowd_seen = keep
+	var side := float((d.events[k] as Dictionary).get("side", 0))
+	var people: PackedVector4Array = oval.crowd._people_mats[0].get_shader_parameter("react")
+	var cards: PackedVector4Array = oval.crowd._card_mat.get_shader_parameter("react")
+	var out := []
+	for v in people:
+		if v.x > -50.0:
+			out.append(v)
+	# The scorers' supporters rise (the cheer), people and cards alike; a few of the others hold
+	# their heads.
+	if out.size() < 2 or cards != people or out[-2] != Vector4(oval._crowd_t, side, Oval3DCrowd.CHEER, out[-2].w) \
+			or out[-1] != Vector4(oval._crowd_t, 1.0 - side, Oval3DCrowd.HEAD, out[-1].w):
+		return []
+	return out.slice(0, out.size() - 1)
 
 
 func _test_match_ground() -> void:
@@ -2934,22 +2968,34 @@ func _check_crowd3d(oval: Oval3D) -> void:
 	_check(crowd._card_mat.get_shader_parameter("atlas") != null
 			and crowd._people_mats[0].get_shader_parameter("pos_tex") != null,
 			"The crowd's baked bodies and card pictures loaded")
-	var d := oval.director
-	var k := d.emitted
-	d.emitted = 1
-	var side := int((d.events[0] as Dictionary).get("side", 0))
-	var old_flash := d.flash
-	d.flash = {"pos": Vector2.ZERO, "left": 0.9, "goal": true}
-	oval._goal_on = false
-	oval._sync_crowd(0.5)
-	var m: ShaderMaterial = crowd._people_mats[0]
-	_check(is_equal_approx(float(m.get_shader_parameter("cheer_from")), oval._crowd_t)
-			and int(m.get_shader_parameter("cheer_side")) == side
-			and is_equal_approx(float(crowd._card_mat.get_shader_parameter("cheer_from")), oval._crowd_t),
+	var r := _crowd_goal(oval)
+	_check(r.size() > 0 and is_equal_approx(r[-1].x, oval._crowd_t) and r[-1].w > 0.5,
 			"A goal shown sets the scoring side's supporters cheering, people and cards")
-	d.flash = old_flash
-	d.emitted = k
-	oval._goal_on = false
+	# A near miss: the kicker's supporters hold their heads.
+	var behind := {"kind": "behind", "side": 1}
+	oval.crowd.on_event(behind, 9.0)
+	var last := Vector4.ZERO
+	for v: Vector4 in oval.crowd._people_mats[0].get_shader_parameter("react"):
+		last = v if v.x == 9.0 else last
+	_check(last == Vector4(9.0, 1.0, Oval3DCrowd.HEAD, last.w) and last.w > 0.2,
+			"A behind has the kicker's supporters hold their heads (%s)" % str(last))
+	# Each body knows its arms, shins, neck and scalp, so supporters dress their own way.
+	var cs: Oval3DCrowdSet = load(Oval3DCrowd.CROWD_SET)
+	var parted := 0
+	var scarved := 0
+	for body: Dictionary in cs.bodies:
+		var dr := Oval3DCrowdDress.dress(body)
+		var uv: PackedVector2Array = (dr["mesh"] as ArrayMesh).surface_get_arrays(0)[Mesh.ARRAY_TEX_UV]
+		var seen := {}
+		for v in uv:
+			seen[int(v.y + 0.5)] = true
+		parted += 1 if seen.has(Oval3DCrowdDress.ARM) and (dr["head"] as Vector2i).y > 30 \
+				and (dr["pump"] as Vector2i).y > 30 else 0
+		scarved += 1 if seen.has(Oval3DCrowdDress.NECK) else 0
+	# Every adult can wear a scarf (the girl's collar is under her hair: she goes without).
+	_check(parted == cs.bodies.size() and scarved >= cs.bodies.size() - 1,
+			"Every crowd body is dressed by its parts, with its two sitting reactions (%d of %d, %d with a scarf)"
+			% [parted, cs.bodies.size(), scarved])
 
 
 func _check_turf3d(oval: Oval3D) -> void:

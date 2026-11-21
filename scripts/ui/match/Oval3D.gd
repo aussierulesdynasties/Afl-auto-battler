@@ -77,7 +77,7 @@ var screens: Oval3DScreens
 var ground := ""
 var _turf_mat: ShaderMaterial  # the turf's paint (oval3d_ground.gdshader)
 var _crowd_t := 0.0           # s of match the crowd has run (its idle and cheer clock)
-var _goal_on := false          # the director was showing a goal last frame
+var _crowd_seen := 0          # the director's events the crowd has reacted to
 var _look := Vector3.ZERO
 var _in_hands := false         # the ball was drawn in a man's hands last frame
 var _drop_from := Vector3.ZERO # where it left his hands
@@ -332,18 +332,21 @@ func _hold_ball(p: Dictionary) -> void:
 		ball.look_at(ball.position + across, Vector3.UP)
 
 
-## The crowd's clock, and a goal the moment the director shows one: the scoring side's
-## supporters rise.
+## The crowd's clock, and each moment the director shows, as he shows it: the crowd reacts to
+## goals, near misses, big marks and tackles and the final siren (Oval3DCrowd.on_event). A jump of
+## many events at once (a skip ahead) is let pass, all but the last.
 func _sync_crowd(dt: float) -> void:
 	_crowd_t += dt
 	if crowd == null:
 		return
 	crowd.set_now(_crowd_t)
-	var goal := not director.flash.is_empty() and bool(director.flash.get("goal", false))
-	if goal and not _goal_on and director.emitted > 0:
-		var ev: Dictionary = director.events[director.emitted - 1]
-		crowd.cheer(int(ev.get("side", 0)), _crowd_t)
-	_goal_on = goal
+	if director.emitted < _crowd_seen:
+		_crowd_seen = director.emitted
+	if director.emitted - _crowd_seen > 4:
+		_crowd_seen = director.emitted - 1
+	while _crowd_seen < director.emitted:
+		crowd.on_event(director.events[_crowd_seen], _crowd_t)
+		_crowd_seen += 1
 
 
 ## The sides change ends: +1 when the home side kicks to the far end of the camera's ground
@@ -481,7 +484,8 @@ func _stands(home: String, away: String) -> void:
 	crowd.name = "Crowd"
 	add_child(crowd)
 	crowd.build(HALF_LEN + FENCE, HALF_WID + FENCE, STAND_DEPTH, STAND_RISE,
-			GameDB.club_colours(home), GameDB.club_colours(away))
+			GameDB.club_colours(home), GameDB.club_colours(away),
+			GameDB.club_guernsey(home), GameDB.club_guernsey(away))
 	# The fence: a low white wall at the foot of the stand.
 	var fence := MeshInstance3D.new()
 	var fm := CylinderMesh.new()
@@ -523,7 +527,8 @@ func _ground_model(slug: String, base := "", home := "", away := "") -> void:
 	crowd.name = "Crowd"
 	root.add_child(crowd)
 	crowd.build_on_seats(seats, GroundModels.seat_points(slug, base),
-			GameDB.club_colours(home), GameDB.club_colours(away))
+			GameDB.club_colours(home), GameDB.club_colours(away),
+			GameDB.club_guernsey(home), GameDB.club_guernsey(away), root.transform, slug)
 
 
 ## How far past the match's fence the apron skirt runs, and how far under the turf it lies (under
