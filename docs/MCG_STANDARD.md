@@ -94,3 +94,29 @@ For the MCG, that centre is 25.3 m east and 23.5 m south of lat -37.81977, lon 1
 4. Seating.
 5. Textures and materials.
 6. Surrounds (Yarra Park, the rail yards) and screens.
+
+## Optus Stadium, the second ground (2026-11-21)
+
+Optus went through the same gate. What it added to the method:
+
+- **Cameras in the model's own frame.** `PREINSPECT_MODEL_FRAME=1` makes `preinspect_look.gd` read
+  `x east, y north, z up` positions, so a Google Earth view's camera goes in unchanged
+  (`PREINSPECT_SIZE=1280x720`). Optus's model 0, 0 is lat -31.9510758, lon 115.8893142 (its drum lines
+  up with OpenStreetMap way 695799456); the field's centre is at -30.38, -8.78.
+- **Rendering in the cloud.** The mobile renderer runs on Mesa's software Vulkan (`mesa-vulkan-drivers`,
+  `VK_ICD_FILENAMES=.../lvp_icd.json`) under `xvfb-run`, about a minute a ground plus seconds a view.
+- **Read the facade close.** Twelve views every 30 degrees, 260 m out at tilt 80, found what the four
+  wide views hid: #1867 had the bronze low from the south-east to the west, where the real ribbon is tall
+  in the north and south and dips over the east lobby and the west. Its profile is
+  `tools/grounds/optus/facade.json`; `tools/grounds/optus/build.py` rebuilds the model from it.
+- **Signature material first.** The bronze fins (`tools/grounds/optus/bronze.py`) are drawn from the
+  director's photo: 0.31 m fins in runs of 1 to 7 m, bronze to sand with the odd copper-red, thin
+  pale-blue slivers, a soft drift of tone, metal sheen through `MATERIAL_FIX`.
+- **The match light cools the map.** A painted map under the match light lost most of its red. Optus's
+  map takes a `tint` (2.0, 1.4, 0.95) and colours worked back from the measured response, so lawns, river
+  and paving render as Google Earth shows them.
+- **Bridges are models.** `SURROUNDS[...]["models"]` loads extra glbs into the ground (Optus:
+  `bridges.glb`, Matagarup's two 72 m arches and the river bridges on piers).
+
+Open at Optus: the street storey is still a podium on the north, where the real ground floor is glazed
+with white columns; the glass band reads lighter and its white Y columns stronger than Google Earth shows.
