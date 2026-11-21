@@ -178,6 +178,7 @@ The answers are recorded in the Director Bible and summarised here.
 - 2e ball-ups (rule 2.103): "B: ruckmen close-ups": in the wait before a ball-up the picture cuts to about a second on each ruckman, then back to the main camera just before the bounce.
 - 2e ball-up close-ups at speed (rule 2.109): "B: Sped up with the match": the close-ups run at the match's speed like everything else.
 - 2e skipping a replay (rule 2.110): "B: Tap the picture": a tap anywhere on the 3D picture skips a goal's replay; a "Replay: tap to skip" tag sits top left while it plays.
+- 2e after a mark (rule 2.113): "A: Stay on the main camera": no close-up on the man who marked in general play.
 - 2e TV framing (rule 2.111): "B: real TV top/bottom": the main camera keeps a 16:9 TV picture's top and bottom on the tall phone picture; the wide shot (with sky) on "Long kicks, After a goal, Start of each quarter"; "zoom needs to be quick but not jarringly so". Set shots are filmed from behind the kicker, as real TV does.
 - 2e the picture on the phone (rule 2.105): "A but the stats part is very ugly": the main picture fills the screen between the scoreboard and the controls, taller than a TV picture at the same zoom; team stats under it as split bars in club colours (rule 2.106: "A: bars"): disposals, marks, clearances and hit-outs ("Keep those four"). The scoreboard panel goes (rule 2.107): "we can put an on screen scoreboard like in ss2" (a TV score bug on the picture), "use the extra new space for more 3d view", and "the momentum bar stays, make it unobtrusive": a thin line along the bottom edge of the picture ("C: bottom of picture").
 
@@ -219,7 +220,7 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 | 2b. The 37 grounds | 202 | 23 of 37 have a model merged, 2 more in open PRs, 4 under way locally (table below) | land Victoria Park, Riverway, Mars and Accor; confirm the other 8; background scenes (#1878 #1892 #1897) |
 | 2c. Crowd | 202 | chosen: 3D people within 55 m, cards beyond (2.92), built; seated on the MCG model's own seats (he chose "Seat the crowd in the MCG", 2026-11-20, #1929) | measure its cost on a phone; each other ground gets it once it loads in a match |
 | 2d. Players' look | 202 | body: MetaHuman (2.85, 2.89); builds by height and weight (2.97, 2.98); faces ruled (2.99) | the Tripo heads (director generates) and the features for everyone else |
-| 2e. Cameras | 202 | main camera, goal replay, set shots, ball-up close-ups, tap to skip, TV framing, picture layout, stat bars, score bug all ruled and built (2.93-2.111, #1818) | the other cameras and cuts in play |
+| 2e. Cameras | 202 | main camera, goal replay, set shots, ball-up close-ups, tap to skip, TV framing, picture layout, stat bars, score bug all ruled and built (2.93-2.111, #1818); after a mark it stays on the main camera (2.113) | the other cameras and cuts in play (free kicks, tackles, injuries) |
 | Broadcast popups | 207 | stat card ruled (2.94, 2.95) | ask: when a card shows and for how long; the journalists' posts |
 | 3. Asset and animation plan | 203 | done (#1707), docs/3D_ASSET_PLAN.md | |
 | 4a. Proof passage | 197 | runtime in the match screen (#1601 and on); waits on 201 and 203 | after step 1 passes |
@@ -274,6 +275,6 @@ fly-through review like the rest of the ground: curators cut a new pattern each 
 ### Open questions for the director (3D only)
 
 - Row 207: when a stat card appears and for how long; the journalists' posts (who, what, when, where).
-- Row 202 2e: the other cameras and cuts in play.
+- Row 202 2e: the other cameras and cuts in play (after a mark answered, 2.113; free kicks, tackles and injuries still open).
 - Design bible: how weather affects a match (its look is settled; its effect on play is not).
 
