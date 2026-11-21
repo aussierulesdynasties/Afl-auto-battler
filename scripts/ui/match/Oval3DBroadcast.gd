@@ -317,6 +317,9 @@ func skip_replay() -> void:
 		return
 	replaying = false
 	_replay = []
+	# Off the live picture for the replay: the umpires go to where the live play has them now
+	# (the field umpire on his mark for the centre bounce the play held for).
+	oval.umpires_after_cut()
 	shot = "main"
 	_trail.clear()
 	_zoom = 1.0  # rule 2.111: back from the replay on the ground and crowd, then in for the bounce

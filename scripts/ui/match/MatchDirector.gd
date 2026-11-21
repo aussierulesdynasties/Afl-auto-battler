@@ -422,6 +422,60 @@ func bounce_next() -> bool:
 			and str((_phases[_pi + 1] as Dictionary).get("t", "")) == "bounce")
 
 
+## The stoppage being set right now, for the 3D umpires: {kind, at, in} with `kind` "bounce" (a
+## centre bounce), "throwup" (a ball-up around the ground) or "throwin" (at the boundary line),
+## `at` where the umpire puts the ball in play (for a throw-in, the spot on the line), and `in`
+## the director seconds until the ball goes up (at a centre bounce, an estimate while the players
+## set, _setup_left; INF while the ball is still coming back; elsewhere INF until it goes), 0 once
+## it is up; `sure` once that time is exact (the wait before it). After a goal and at a break, the centre bounce that follows. {} when no stoppage is
+## coming. Read-only.
+func stoppage_now() -> Dictionary:
+	if _beat.is_empty() or _pi >= _phases.size():
+		return {}
+	var kind := str(_beat.get("kind", ""))
+	for j in range(_pi, _phases.size()):
+		var p: Dictionary = _phases[j]
+		var t := str(p.get("t", ""))
+		if t == "bounce" or t == "throwup":
+			var left := INF
+			if j == _pi:
+				left = 0.0
+			elif j == _pi + 1 and str((_phases[_pi] as Dictionary).get("t", "")) == "wait":
+				left = maxf(0.0, float((_phases[_pi] as Dictionary).get("dur", 0.0)) - _pt)
+			elif j == _pi + 2 and str((_phases[_pi] as Dictionary).get("t", "")) == "setup":
+				left = _setup_left(_phases[_pi]) + float((_phases[_pi + 1] as Dictionary).get("dur", 0.0))
+			return {"kind": "bounce" if t == "bounce" else "throwup", "at": p["at"], "in": left,
+					"sure": j <= _pi + 1}
+		if t == "pack" and kind == "throwin":
+			return {"kind": "throwin", "at": p.get("line", p["at"]), "in": INF}
+	# A goal kicked, or a quarter's break: a centre bounce comes next, and the umpires head
+	# back for it as the players celebrate or rest.
+	if kind == "quarter" or (kind == "goal" and _phases.slice(0, _pi + 1).any(
+			func(q): return str(q.get("t", "")) == "emit")):
+		return {"kind": "bounce", "at": Vector2.ZERO, "in": INF}
+	return {}
+
+
+## About how many director seconds set-up `p` (the current phase) has left, by _done's own test:
+## its least time, and the time the slowest man it waits for needs to get within SETUP_NEAR of his
+## spot at his pace now (the SETUP_STRAGGLERS slowest are not waited for), at most its cap. An
+## estimate, for the 3D umpire's wind-up; play never reads it.
+func _setup_left(p: Dictionary) -> float:
+	if str(ball["mode"]) == "carry":
+		return INF
+	var etas := []
+	var layout: Dictionary = p["layout"]
+	for id in layout:
+		var t: Dictionary = tokens[id]
+		var d := (t["pos"] as Vector2).distance_to(layout[id]) - SETUP_NEAR
+		if d > 0.0:
+			etas.append(d / maxf((t["vel"] as Vector2).length(), 2.0))
+	etas.sort()
+	var slow := float(etas[etas.size() - 1 - SETUP_STRAGGLERS]) if etas.size() > SETUP_STRAGGLERS else 0.0
+	var cap := maxf(0.0, float(p["max"]) - _pt)
+	return minf(maxf(maxf(0.0, float(p["min"]) - _pt), slow), cap)
+
+
 ## The ball-up being set right now, for the TV picture (rule 2.103: a close-up on each ruckman
 ## before the umpire throws it up): {rucks, t, min} with `rucks` the two sides' ruckmen nearest
 ## the ball (side 0's first; -1 for a side with none up), `t` the director seconds the pack has
@@ -952,7 +1006,7 @@ func _throwin_phases(k: int) -> Array:
 	if winner >= 0 and not members.has(winner):
 		members.append(winner)
 	var extra := _pack_n(0) + _pack_n(1) - 6
-	out += [{"t": "pack", "at": infield, "members": members, "min": STOPPAGE_WAIT, "max": STOPPAGE_WAIT + 0.5 + PACK_EXTRA_WAIT * extra,
+	out += [{"t": "pack", "at": infield, "line": at, "members": members, "min": STOPPAGE_WAIT, "max": STOPPAGE_WAIT + 0.5 + PACK_EXTRA_WAIT * extra,
 				"need": 4 + extra,
 				"mode": "stoppage", "winner": winner, "pause": true},
 			{"t": "emit", "log": true}]
@@ -1173,7 +1227,7 @@ func _pass_phases(k: int) -> Array:
 		return out
 	var to: Vector2 = _loc(nk) if str(nev.get("kind", "")) == "receive" else (tokens[r]["pos"] as Vector2)
 	var d := (ball["pos"] as Vector2).distance_to(to)
-	var shape := _flight_shape("kick", d)
+	var shape := _flight_shape("handball" if bool(events[k].get("hand", false)) else "kick", d)
 	out.append({"t": "flight", "to": to, "dur": shape.x, "apex": shape.y, "recv": r,
 			"adapt": true, "h1": 2.4, "mode": "open"})
 	return out

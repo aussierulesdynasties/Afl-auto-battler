@@ -653,7 +653,7 @@ func _test_live_spots() -> void:
 		if str(kind) in ["duel", "hot"]:
 			var about := str(_moment(sim, me, str(kind)).get("player_id", ""))
 			_check(live.has(about), "%s: the oval has the man the call is about" % kind)
-			var here: Vector2 = X.keep_in(live.get(about, Vector2.ZERO))
+			var here: Vector2 = vig.call("stage_spot", live.get(about, Vector2.ZERO))
 			var others := []
 			for id in live:
 				if str(id) != about:

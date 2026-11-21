@@ -54,6 +54,7 @@ func run() -> void:
 	_t("_test_farewell")
 	_t("_test_match_ground")
 	_t("_test_ground_models")
+	_t("_test_ground_screens")
 	_t("_test_mcg_crowd", [res])
 	_t("_test_discs_apart")
 	_t("_test_clash_kit")
@@ -66,6 +67,7 @@ func run() -> void:
 	_t("_test_three_d_hair", [res])
 	await _t("_test_three_d_cameras", [res])
 	_t("_test_contacts", [res])
+	_t("_test_umpire_stoppages", [res])
 	_t("_test_free_taker_kicks")
 	GameState.replay_seed = 0
 	print(Ran.line("Match visual", self))
@@ -2193,6 +2195,48 @@ func _test_ground_models() -> void:
 	oval.queue_free()
 
 
+## The ground's big screens and fence signs (Oval3DScreens, row 202 2b): a match at a ground whose
+## model has screens lays a face over each, facing the ground, that shows the score, a goal and
+## the clock; the boards ring the fence in both clubs' colours; the inspector (no clubs) gets none.
+func _test_ground_screens() -> void:
+	var d := MatchDirector.new()
+	var res := _result(42)
+	d.setup(res, res["events"])
+	var oval := Oval3D.new()
+	oval.ground = "MCG"
+	(Engine.get_main_loop() as SceneTree).root.add_child(oval)
+	oval.build(d, "COL", "GEE")
+	var sc := oval.screens
+	_check(sc != null and sc.faces.size() == 2, "The MCG's two big screens are live (%d)" % (sc.faces.size() if sc else -1))
+	for f in sc.faces:
+		var mi := f as MeshInstance3D
+		var to_mid := -Vector3(mi.position.x, 0.0, mi.position.z).normalized()
+		_check(mi.transform.basis.z.dot(to_mid) > 0.6, "Each screen faces the ground (%s)" % mi.name)
+		_check(absf(mi.position.x) > MatchMotion.HALF_LEN, "Each screen is beyond the boundary (%s)" % mi.position)
+		var q := mi.mesh as QuadMesh
+		_check(q.size.x > 8.0 and q.size.x < 40.0 and q.size.y > 4.0 and q.size.y < 20.0,
+				"Each screen is a big screen's size (%s)" % q.size)
+	sc.show_score([7, 9], [4, 11], "Q3 18'")
+	_check(sc.goals == [7, 9] and sc.behinds == [4, 11] and sc.clock == "Q3 18'",
+			"The screens show the score and clock they are given")
+	sc.show_goal(1, "Max King", 12)
+	_check(int(sc.goal["side"]) == 1, "A goal puts the GOAL card up")
+	sc.frame(Oval3DScreens.GOAL_HOLD + 0.1, false, oval.camera)
+	_check(sc.goal.is_empty(), "The GOAL card comes down and the score is back")
+	_check(sc.signs != null and sc.signs.mesh.get_surface_count() == 2, "The fence signs ring the ground")
+	oval.queue_free()
+	_check(Oval3DScreens._is_screen_name("screen_off") and Oval3DScreens._is_screen_name("Screen2")
+			and not Oval3DScreens._is_screen_name("screen_leg") and not Oval3DScreens._is_screen_name("glass_screen"),
+			"Only a screen's face is taken for a screen, not its legs or a glass screen")
+	var plain := Oval3D.new()
+	(Engine.get_main_loop() as SceneTree).root.add_child(plain)
+	plain._ground_model("mcg")
+	var none := Oval3DScreens.new()
+	plain.add_child(none)
+	none.build(plain, plain.get_node_or_null("Ground"), GroundModels.MATCH_FENCE, "", "")
+	_check(none.faces.is_empty() and none.signs == null, "The ground inspector shows the model's own screens")
+	plain.queue_free()
+
 ## FL-003: the vignettes draw the MCG where the match is played there - a club's home
 ## game at its MCG home, and the Grand Final - and the plain ground everywhere else.
 ## The MCG model's own seats hold the crowd (director 2026-11-20, "Seat the crowd in the MCG";
@@ -2923,6 +2967,29 @@ func _check_turf3d(oval: Oval3D) -> void:
 				and turf.env.tonemap_exposure >= 1.0,
 				"%s %s: the turf is green and the weather's sheen is set (%s, wet %.0f)" % [look[1], look[0], str(g), wet])
 	turf.apply("", VignetteKickoff.DAY)
+	# Each ground's own cut and grass (Oval3DTurf.MOWING); the grass shifts the day's colour, the
+	# weather and light still set it; a ground with no row, or the game's own oval, the default.
+	var keep := turf.ground
+	var known := GroundModels.GROUNDS.values()
+	var rows_ok := true
+	for slug: String in Oval3DTurf.MOWING:
+		var m: Array = Oval3DTurf.MOWING[slug]
+		rows_ok = rows_ok and slug in known and int(m[0]) >= Oval3DTurf.ACROSS and int(m[0]) <= Oval3DTurf.DIAMONDS \
+				and float(m[1]) >= 8.0 and float(m[1]) <= 16.0 and Oval3DTurf.GRASS_TINT.has(m[2])
+	_check(rows_ok, "Every ground's cut is a real ground with a pattern, an 8-16 m band and a grass")
+	turf.set_ground("")
+	var plain: Color = turf.mat.get_shader_parameter("grass_a")
+	turf.set_ground("people_first")
+	var couch: Color = turf.mat.get_shader_parameter("grass_a")
+	_check(int(turf.mat.get_shader_parameter("mow_pattern")) == Oval3DTurf.DIAMONDS
+			and couch.g > couch.r and couch.r > plain.r and couch.b < plain.b,
+			"People First Stadium is cut in diamonds on warmer couch grass (%s from %s)" % [str(couch), str(plain)])
+	turf.set_ground("no_such_ground")
+	_check(int(turf.mat.get_shader_parameter("mow_pattern")) == Oval3DTurf.ACROSS
+			and is_equal_approx(float(turf.mat.get_shader_parameter("mow_width")), 12.0)
+			and turf.mat.get_shader_parameter("grass_a") == plain,
+			"A ground with no cut of its own takes 12 m stripes across the ground and the plain grass")
+	turf.set_ground(keep)
 	var before := _wear_total(turf)
 	for i in range(60):
 		turf._process(1.0 / 30.0)
@@ -3447,6 +3514,104 @@ func _test_contacts(res: Dictionary) -> void:
 	_check(bad.is_empty(), "Every touch names a real player (or the umpire for a bounce) and a spot: %s" % [bad.slice(0, 5)])
 	_check(int(kinds.get(&"kick", 0)) > int(kinds.get(&"goal_celebrate", 0)) and int(kinds.get(&"goal_celebrate", 0)) > 0,
 			"Goals are celebrated, and fewer times than the ball is kicked (%s)" % [kinds])
+
+
+## The umpires at stoppages on the 3D oval (row 197; the field umpire passed, rule 2.75): at a
+## centre bounce the field umpire has the ball and bounces it with his clip, the ball leaving his
+## hands and on the turf at the director's bounce; at a ball-up a field umpire, and at a throw-in
+## the boundary umpire on that wing, has it in his hands until it goes up. A ball an umpire holds
+## sits between his palms and never jumps. The 3D umpires change nothing in the play: the feed's
+## times are the flat oval's (_test_three_d_view).
+func _test_umpire_stoppages(res: Dictionary) -> void:
+	# Through the match view, as a match is watched: its goal replays (the play holding for
+	# them, rule 2.96) and the ends changing at the breaks cut away from the live picture.
+	var pv := PitchView.new()
+	pv.size = Vector2(360, 640)
+	pv.three_d = true
+	(Engine.get_main_loop() as SceneTree).root.add_child(pv)
+	var at_stand := res.duplicate()
+	at_stand["venue"] = "Alan Ray Oval"
+	pv.setup(at_stand)
+	var oval: Oval3D = pv._oval3d
+	var d: MatchDirector = pv.director
+	pv.set_speed(1.0)
+	pv.play()
+	var dt := 1.0 / 30.0
+	var bounces := 0          # centre bounces
+	var bounced := 0          # ...the umpire bounced with his clip, the ball on the turf as it went up
+	var bounce_off := []      # [height, metres off the spot] where his bounce wasn't on the turf
+	var ups := {"throwup": 0, "throwin": 0}
+	var held := {"throwup": 0, "throwin": 0}
+	var gap := 0.0
+	var jump := 0.0
+	var last := Vector3.INF
+	var last_hands := Vector3.INF
+	var held_prev := false
+	var in_stop := ""
+	var was_flying := false
+	var clip_bounce := false
+	var closest := INF        # the nearest any player comes to the bouncing umpire (pelvis to feet)
+	var frames := 0
+	while d.time < 420.0 and frames < 30000 and pv.playing:
+		pv._process(dt)
+		frames += 1
+		var st: Dictionary = d.stoppage_now()
+		var kind := str(st.get("kind", ""))
+		if kind != in_stop:
+			if ups.has(kind):
+				ups[kind] += 1
+			in_stop = kind
+		var job: Dictionary = oval.umpires[oval._ump_job] if oval._ump_job >= 0 else {}
+		var c: Dictionary = job.get("clip", {})
+		if oval._ump_ball and ups.has(kind) and int(held[kind]) < int(ups[kind]):
+			held[kind] += 1
+		if str(c.get("kind", "")) == "bounce":
+			clip_bounce = true
+			if not pv._replaying():
+				var skel: Skeleton3D = job["skel"]
+				var pelvis: Vector3 = skel.global_transform * skel.get_bone_global_pose(maxi(skel.find_bone("pelvis"), 0)).origin
+				for p in oval.players:
+					var pn: Vector3 = (p["node"] as Node3D).global_position
+					closest = minf(closest, Vector2(pn.x, pn.z).distance_to(Vector2(pelvis.x, pelvis.z)))
+		var flying := str(d.ball.get("mode", "")) == "flight"
+		if flying and not was_flying and absf(float(d.ball.get("h0", 0.0)) - 0.4) < 0.01:
+			bounces += 1
+			# The frame the director's bounce goes up: where the 3D ball was the frame before.
+			var spot: Vector2 = d.ball["from"]
+			var local := oval.to_local(last) if last.is_finite() else Vector3.INF
+			var off := Vector2(local.x, local.z).distance_to(spot) if last.is_finite() else INF
+			if clip_bounce and last.is_finite() and local.y < 0.5 and off < 0.8:
+				bounced += 1
+			else:
+				bounce_off.append([snappedf(local.y, 0.01) if last.is_finite() else -1.0, snappedf(off, 0.01), clip_bounce])
+			clip_bounce = false
+		was_flying = flying
+		var now := oval.ball.global_position
+		var hands := oval._umpire_hands(job) if not job.is_empty() else now
+		var live := not pv._replaying()
+		if live and oval._ump_ball and held_prev and not job.is_empty() \
+				and not (str(c.get("kind", "")) == "bounce" and float(c["t"]) >= Oval3D.UMP_T_REL):
+			# (Out of his hands at a bounce, it is thrown at the turf: that is no jump.) A jump is
+			# the ball moving other than with his hands: taking it from the turf, it comes up to
+			# them over a few frames.
+			if oval._ump_pick < 0.0:
+				gap = maxf(gap, hands.distance_to(now))
+			jump = maxf(jump, (now - last).distance_to(hands - last_hands))
+		last = now
+		last_hands = hands
+		held_prev = oval._ump_ball and live
+	_check(bounces >= 2 and bounced >= bounces - 1,
+			"At a centre bounce the umpire bounces it: the ball from his hands to the turf as it goes up (%d of %d; off: %s)"
+			% [bounced, bounces, str(bounce_off)])
+	_check(int(ups["throwup"]) >= 3 and int(held["throwup"]) * 10 >= int(ups["throwup"]) * 7,
+			"At a ball-up a field umpire has the ball until he throws it up (%d of %d)" % [held["throwup"], ups["throwup"]])
+	_check(int(ups["throwin"]) == 0 or int(held["throwin"]) >= 1,
+			"At a throw-in the boundary umpire has the ball (%d of %d)" % [held["throwin"], ups["throwin"]])
+	_check(closest >= Oval3D.UMP_BODY_GAP - 0.05,
+			"No player is drawn through the umpire as he bounces it (nearest %.2f m from his hips)" % closest)
+	_check(gap < 0.02 and jump < 0.6,
+			"A ball an umpire holds is between his palms (%.3f m) and never jumps from them (%.2f m in a frame)" % [gap, jump])
+	pv.queue_free()
 
 
 ## A free kick is taken by the man it is paid to, with the ball in his hands,
