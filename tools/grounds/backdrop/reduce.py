@@ -149,6 +149,25 @@ for o in [o for o in bpy.data.objects if o.name.startswith('bg_trees')]:
 # joined into one object with one material. All the trees share one leaf material (their kinds
 # differ only in shape and vertex colour). Joined before slicing, so each family is cut once.
 import re
+# fewer looks, fewer draws: a family drawn in several texture variants (bg_bld_house_v0..v7) keeps
+# only VARIANTS of them (each building keeps its own vertex colour, so the street still varies);
+# small numbered things (netball courts, pool parts) and the towers share one
+VARIANTS = int(os.environ.get('BG_VARIANTS', '0'))
+if VARIANTS > 0:
+    for o in bpy.data.objects:
+        m_ = re.match(r'^(bg_netball|bg_pool)_(\d+)$', o.name)
+        if m_: o.name = '%s_v%s' % m_.groups()
+    fams = {}
+    for o in [o for o in bpy.data.objects if o.type == 'MESH' and len(o.data.materials) == 1]:
+        m_ = re.match(r'^(.+)_v(\d+)$', o.name)
+        if m_: fams.setdefault(m_.group(1), []).append((int(m_.group(2)), o))
+    for f, vs in fams.items():
+        vs.sort(key=lambda t: t[0])
+        keep = VARIANTS if f in ('bg_bld_house', 'bg_bld_block') else 1
+        for i, (_, o) in enumerate(vs):
+            o.data.materials[0] = vs[i % keep][1].data.materials[0]
+        print('variants', f, len(vs), '->', min(keep, len(vs)))
+
 def msig(m):
     if m is None or not m.node_tree: return None
     nt = m.node_tree; b = [n for n in nt.nodes if n.type == 'BSDF_PRINCIPLED']
@@ -193,7 +212,7 @@ def slice_obj(o, rings=True):
         bmesh.ops.delete(b2, geom=[f for f in b2.faces if f.index not in keep], context='FACES')
         b2.to_mesh(cp.data); b2.free()
     bpy.data.objects.remove(o, do_unlink=True)
-for o in [o for o in bpy.data.objects if o.type == 'MESH' and o.name != 'bg_far_terrain' and len(o.data.polygons) > 30000]:
+for o in [o for o in bpy.data.objects if o.type == 'MESH' and o.name not in ('bg_far_terrain', 'bg_road_kerbs') and len(o.data.polygons) > int(os.environ.get('BG_SLICE', '30000'))]:
     slice_obj(o, rings=o.name.startswith('bg_trees') or o.name.startswith('bg_bld') or o.name.startswith('bg_roof'))
 
 # materials: no roughness or metal maps (the backdrop is seen from 200 m and more; the walls' glass
