@@ -76,9 +76,11 @@ The ground round the stadium comes from OpenStreetMap, never from aerial imagery
 `tools/grounds/mcg/surrounds.py` and loaded through `GroundModels.SURROUNDS`. Three parts make it up:
 
 - **A painted map:** 2,048 m a side at 1 m a pixel, VRAM-compressed. It shows the grass, paths, car
-  parks, roads, rail ballast, flat roofs and the shade under each tree. Its colours are painted warm
-  and light, because the match light's blue sky fill cools them.
-- **Every mapped tree:** a lumpy canopy and a trunk, drawn as batches in 250 m blocks, with no
+  parks, roads, rail ballast, flat roofs and the shade under each tree. Its colours are Google
+  Earth's. The map, trees and buildings take no sun shadow: past the shadow map's 160 m, the Mobile
+  renderer drew them as if in shade (blue-grey), and the trees' shade is painted in instead.
+- **Every mapped tree, plus fill:** OpenStreetMap maps only some of the parks' trees, so each park
+  is filled to Google Earth's density (one tree per 190 m² of open grass). Each is a lumpy canopy and a trunk, drawn as batches in 250 m blocks, with no
   shadows.
 - **Buildings:** the map's footprints extruded to their tagged height, as one mesh.
 
