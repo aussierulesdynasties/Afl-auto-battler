@@ -2838,10 +2838,10 @@ func _test_three_d_view(res: Dictionary) -> void:
 	(Engine.get_main_loop() as SceneTree).root.add_child(pv)
 	var seen := []
 	pv.event_played.connect(func(ev): seen.append(ev))
-	# At a ground with no model yet (Barossa Park), so the stand and its crowd are built and
+	# At a ground with no model (one the game has no look for), so the stand and its crowd are built and
 	# checked; the grounds with models are _test_ground_models'. The ground never changes the match.
 	var at_stand := res.duplicate()
-	at_stand["venue"] = "Barossa Park"
+	at_stand["venue"] = "Alan Ray Oval"
 	pv.setup(at_stand)
 	var oval: Oval3D = pv._oval3d
 	_check(oval != null and oval.players.size() == pv.director.tokens.size(),

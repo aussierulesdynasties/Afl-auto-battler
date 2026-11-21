@@ -24,7 +24,10 @@ const GROUNDS := {
 	"Ikon Park": "ikon_park", "Whitten Oval": "whitten", "Football Park": "football_park",
 	"Subiaco Oval": "subiaco", "WACA": "waca", "York Park": "york_park",
 	"Cazaly's Stadium": "cazalys", "North Hobart Oval": "north_hobart", "Bruce Stadium": "bruce",
-	"Riverway Stadium": "riverway",
+	"Riverway Stadium": "riverway", "Barossa Park": "barossa", "Sky Stadium": "sky",
+	"Jiangwan Stadium": "jiangwan", "Hands Oval": "hands",
+	"Blacktown International Sportspark": "blacktown", "Summit Park": "summit",
+	"Macquarie Point Stadium": "macpoint",
 }
 
 ## Each model's boundary fence, measured off the model (tools/grounds/fit_fence.py: an ellipse
@@ -56,6 +59,15 @@ const FIT := {
 	"north_hobart": [-6.71, 0.91, 0.0, -43.8, 81.59, 60.47],
 	"bruce": [21.36, -39.57, 0.4, -56.7, 104.51, 64.28],
 	"riverway": [-0.41, 1.12, 0.0, -89.9, 86.05, 72.72],
+	# The seven first drafts (#1930) are built round their fence: centre at the origin (Summit
+	# 2 m off), floor 0. Jiangwan is a running-track stadium; its boundary was placed by judgement.
+	"barossa": [0.0, 0.0, 0.0, 72.7, 85.63, 65.98],
+	"sky": [0.0, 0.0, 0.0, -77.7, 81.66, 63.74],
+	"jiangwan": [0.0, 0.0, 0.0, 63.0, 84.0, 63.0],
+	"hands": [0.0, 0.0, 0.0, -61.7, 92.51, 78.09],
+	"blacktown": [0.0, 0.0, 0.0, 79.9, 86.29, 72.12],
+	"summit": [-1.9, 0.75, 0.0, -83.5, 86.34, 76.17],
+	"macpoint": [0.0, 0.0, 0.0, 35.0, 85.0, 72.0],
 }
 
 ## Each seat colour as the model paints it (the mean of its seat texture; sRGB).
@@ -78,6 +90,10 @@ const SEAT_COLOURS := {
 	# (their glb material colours, linear -> sRGB).
 	"seat_plastic": Color(0.255, 0.365, 0.33),
 	"seat_scg_teal": Color(0.125, 0.443, 0.427), "seat_scg_maroon": Color(0.443, 0.125, 0.163),
+	# The seven first drafts (#1930; Jiangwan and Summit have no seats).
+	"seat_barossa": Color(0.197, 0.212, 0.235), "seat_hands": Color(0.151, 0.319, 0.502),
+	"seat_sky_gold": Color(0.778, 0.609, 0.197), "seat_sky_grey": Color(0.266, 0.281, 0.304),
+	"seat_bt": Color(0.135, 0.197, 0.349), "seat_mp": Color(0.219, 0.25, 0.296),
 }
 
 
