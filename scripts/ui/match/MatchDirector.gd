@@ -1394,6 +1394,22 @@ func _rest_spot(j: int) -> Vector2:
 	return r
 
 
+## The ball came loose across the ground from where the log's spot planned it
+## (the kick went to where its receiver had run, along the fence): MatchSim's
+## roll across is from where it really came loose, never a 30 m slide back to the
+## planned line in a third of a second (picture truth, 2026-11-21: 32 m in a tick).
+const REST_ACROSS_SLACK := 8.0
+func _rest_from_ball(j: int) -> void:
+	var r := _rest_spot(j)
+	var b: Vector2 = ball["pos"]
+	var at := _loc(j)
+	if absf(b.y - at.y) <= REST_ACROSS_SLACK:
+		return
+	var ymax := (MatchMotion.HALF_WID - 4.0) * sqrt(maxf(0.0,
+			1.0 - pow(r.x / (MatchMotion.HALF_LEN - 1.0), 2.0)))
+	_rests[j] = Vector2(r.x, clampf(b.y + float((events[j] as Dictionary).get("loose_across", 0.0)), -ymax, ymax))
+
+
 func _loc(k: int) -> Vector2:
 	if _locs.has(k):
 		return _locs[k]
@@ -2443,6 +2459,7 @@ func _enter(p: Dictionary) -> void:
 			var rate := 3.0
 			var spot := bk >= 0 and (events[bk] as Dictionary).has("loose_to")
 			if spot:
+				_rest_from_ball(bk)
 				way = _rest_spot(bk) - (ball["pos"] as Vector2)
 				rate = _loose_rate(bk)
 				p["_held"] = float((events[bk] as Dictionary).get("loose_s", 0.0)) * TEMPO
@@ -3077,6 +3094,8 @@ func _refresh_structure() -> void:
 				u = maxf(u, CORRIDOR_INTO)   # into the lanes smartly when the ball is won
 			if _plan_of(side) == "contest" and not crash and (str(t["role"]) in ["MID", "RUCK"] or (_shadow[side] as Array).has(id)):
 				u = maxf(u, CONTEST_HUNT)   # Win Contest: the ring hunts the ball
+			if (bool(t.get("tagging", false)) or (side != _poss and bool(t.get("duel", false)))) and int(t["match"]) >= 0:
+				u = 1.0   # a tag or a set match-up keeps up with his man at a run (row 201 gaps 9-10: 9 and 18 m off him)
 			if _ring_at.is_finite() and (t["pos"] as Vector2).distance_to(_ring_at) < CONTEST_KEEP:
 				u = 1.0   # out of the way of the pack's ring, smartly
 			# Throw numbers at it: the engine's legs go 1.3 times as fast
@@ -3264,8 +3283,8 @@ func _structure_spot(t: Dictionary, ball_p: Vector2, poss: int) -> Vector2:
 			width = maxf(width, HOLD_WIDTH)
 			pull *= CONTROL_PULL
 	var hb_line := slot == "CHB" or slot == "HBL" or slot == "HBR"
-	if has and (_burst_on(side, "surge") or _burst_on(side, "push")):
-		# Throw numbers at it, and Push numbers forward (row 151): the midfield and the half-back line run past
+	if has and _burst_on(side, "push"):
+		# Push numbers forward (row 151): the midfield and the half-back line run past
 		# the ball, the forwards stay ahead of it and the back pockets come up,
 		# so the numbers are ahead of it. They run to where the chain is going
 		# (the furthest lead already on), not where the ball is now, so a
@@ -3386,7 +3405,29 @@ func _structure_spot(t: Dictionary, ball_p: Vector2, poss: int) -> Vector2:
 			var half := slot == "CHF" or slot == "HFL" or slot == "HFR"
 			var behind := ball_p.x - dir * FLOOD_HALF_BEHIND
 			world.x = lerpf(world.x, behind, FLOOD_HALF_SHARE if half else FLOOD_PUSH)
+	if _burst_on(side, "surge") and (mid or hb_line) and not bool(t.get("tagging", false)) \
+			and not (has and _plan_of(side) == "attacking"):
+		# Throw numbers at it (row 201 gap 14): the midfield and the half-back
+		# line go to the ball wherever it is, with it or without it, each on his
+		# own side of it round a ring (an edge at every contest, as MatchSim
+		# plays the call), a little ahead of it with the ball and goal-side of it
+		# without. The forwards and the backs keep their shape, and Attack
+		# Corridor's lanes hold with the ball.
+		var sang := deg_to_rad(float(SURGE_ANGLE.get(slot, 0.0)))
+		var lean := SURGE_LEAN if has else -SURGE_LEAN
+		var ring := ball_p + Vector2((cos(sang) * SURGE_RING + lean) * dir, sin(sang) * SURGE_RING)
+		world = world.lerp(ring + (t["jitter"] as Vector2) * 0.3 + drift * 0.5, SURGE_PULL)
 	return _keep_in(world)
+
+
+## Throw numbers at it: the ring its midfield and half-back line make round the
+## ball (metres from it), how far ahead of it (goal-side without the ball), and
+## how far each comes from his own spot to it.
+const SURGE_RING := 11.0
+const SURGE_LEAN := 4.0
+const SURGE_PULL := 0.85
+const SURGE_ANGLE := {"C": 0.0, "RR": 50.0, "RV": -50.0, "R": 180.0, "WR": 95.0, "WL": -95.0,
+		"CHB": 160.0, "HBR": 130.0, "HBL": -130.0}
 
 
 ## Real AFL team shape by phase (row 201, rule 2.86; tools/balance/afl_shape_rates.json,
@@ -3611,10 +3652,10 @@ func _flooding(side: int) -> bool:
 #   the ball, the rest PACK_RING round it, the crash outside that. The engine
 #   gives the plan no edge in a marking contest, so neither does the oval.
 # - Throw numbers at it (an edge at the contest, more shots, faster legs, more
-#   goals against when the other side gets out): with the ball the midfield
-#   and the half-back line run past where the chain is going, the forwards
-#   stay ahead of it and the back pockets come up, a flood in reverse; it
-#   moves quicker. (Without the ball it keeps its usual shape.)
+#   goals against when the other side gets out): the midfield and the
+#   half-back line go to the ball wherever it is, with it or without it, on a
+#   ring round it (SURGE_RING); it moves quicker. (Row 201 gap 14: it used to
+#   lift the side forward like Push and put no more men at the ball.)
 # - Slow it down (less pressure felt, fewer clangers, fewer metres and fewer
 #   shots at both ends): the side sits deeper, spreads wide with the ball and
 #   moves slower, its leads shorter and slower. Its carriers hold the ball no
@@ -3766,7 +3807,7 @@ func _pack_n(side: int) -> int:
 	return 3 + (CONTEST_PACK if _plan_of(side) == "contest" else 0)
 
 
-## Throw numbers at it: how far up the ground (from `side`'s own end) its
+## Push numbers forward: how far up the ground (from `side`'s own end) its
 ## chain is going, the furthest lead already on, or the ball when none is.
 func _surge_ref(side: int, bx: float) -> float:
 	var out := bx

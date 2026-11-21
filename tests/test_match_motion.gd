@@ -685,9 +685,8 @@ func _test_call_visibility(results: Array) -> void:
 	var cases := [["Attack Corridor (in possession, spread across)", "attacking", [], "has.spread", -1.0],
 			["Controlled Tempo (in possession, front to back)", "controlled", [], "has.span", -1.0],
 			["Win Contest (at a stoppage, the median player from the ball)", "contest", [], "stop.med_rad", -1.0],
-			["Throw numbers at it (in possession, centroid up the ground from the ball)", "balanced", ["surge"], "has.cen_ball", 1.0],
-			["Throw numbers at it (in possession, median player from the ball)", "balanced", ["surge"], "has.med_ball", 1.0],
-			["Throw numbers at it (in possession, centroid from Melbourne's)", "balanced", ["surge"], "has.cen_opp", 1.0],
+			["Throw numbers at it (open play, the median player's distance from the ball)", "balanced", ["surge"], "open.med_rad.mean", -1.0],
+			["Throw numbers at it (at a stoppage, the median player from the ball)", "balanced", ["surge"], "stop.med_rad", -1.0],
 			["Slow it down (in possession, centroid from the ball)", "balanced", ["hold"], "has.cen_ball", -1.0],
 			["Slow it down (in possession, median player from the ball)", "balanced", ["hold"], "has.med_ball", -1.0],
 			["Slow it down (in possession, centroid from Melbourne's)", "balanced", ["hold"], "has.cen_opp", -1.0],
@@ -763,9 +762,9 @@ func _test_call_visibility(results: Array) -> void:
 	var off: Dictionary = _shape_of(_with_call(res, "balanced", ["surge"]), 120)
 	var off_bal: Dictionary = _shape_of(_with_call(res, "balanced", []), 120)
 	MatchDirector.debug_no_press_shape = false
-	_check(absf(float(off.get("has.cen_ball", 0.0)) - float(off_bal.get("has.cen_ball", 0.0))) < 0.5,
-			"With the shapes off (capture --noshape), Throw numbers at it measures as Balanced (%.1f against %.1f)" % [
-				float(off.get("has.cen_ball", 0.0)), float(off_bal.get("has.cen_ball", 0.0))])
+	_check(absf(float(off.get("open.med_rad.mean", 0.0)) - float(off_bal.get("open.med_rad.mean", 0.0))) < 0.5,
+			"With the shapes off (capture --noshape), Throw numbers at it measures as Balanced (%.1f against %.1f m from the ball)" % [
+				float(off.get("open.med_rad.mean", 0.0)), float(off_bal.get("open.med_rad.mean", 0.0))])
 
 
 ## `res`'s first 260 events with Fremantle (side 0) on `plan` and `bursts`.

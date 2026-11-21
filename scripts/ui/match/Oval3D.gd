@@ -92,7 +92,7 @@ func build(p_director: MatchDirector, home: String, away: String) -> void:
 	_posts()
 	var slug := GroundModels.slug_for(ground) if ground != "" else ""
 	if slug != "":
-		_ground_model(slug)
+		_ground_model(slug, "", home, away)
 	else:
 		_stands(home, away)
 	var scene: PackedScene = load(player_glb)
@@ -461,13 +461,26 @@ func _stands(home: String, away: String) -> void:
 
 
 ## A real ground's model in place of the stand, its crowd and the fence (GroundModels: the
-## model and its seats, laid so its fence meets the match's). No crowd: the seats are empty
-## (director, 2026-11-19).
-## base is the folder holding the model and its seat files; "" is the game's own copy. The ground
-## inspector (tools/inspect) passes a folder on disk to show a copy that is not in the game yet.
-func _ground_model(slug: String, base := "") -> void:
-	add_child(GroundModels.instantiate(slug, base))
+## model and its seats, laid so its fence meets the match's). With home and away given, the
+## crowd sits on the model's seats (Oval3DCrowd.build_on_seats; the director chose "Seat the
+## crowd in the MCG", 2026-11-20); without them, or at a ground with no seat files, the seats
+## stay empty. base is the folder holding the model and its seat files; "" is the game's own
+## copy. The ground inspector (tools/inspect) passes a folder on disk to show a copy that is
+## not in the game yet.
+func _ground_model(slug: String, base := "", home := "", away := "") -> void:
+	var root := GroundModels.instantiate(slug, base)
+	add_child(root)
 	_turf_mat.set_shader_parameter("fence_clip", GroundModels.MATCH_FENCE)
+	if home == "":
+		return
+	var seats := GroundModels.seat_transforms(slug, base)
+	if seats.is_empty():
+		return
+	crowd = Oval3DCrowd.new()
+	crowd.name = "Crowd"
+	root.add_child(crowd)
+	crowd.build_on_seats(seats, GroundModels.seat_points(slug, base),
+			GameDB.club_colours(home), GameDB.club_colours(away))
 
 
 ## A .glb as a node (GroundModels.load_glb): the imported copy for a file in the game, read

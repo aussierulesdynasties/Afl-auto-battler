@@ -72,12 +72,12 @@ of the ground. Calls are paired runs (same seed, call on and off), the change on
 | 6 | Kicks are short and gain little ground | 25.0 m average, ±11.8 (Spencer 2019); 25-30 m gained | 20.0 m, ±11.6; 11.2 m gained | MatchSim kick events (balance-gated) |
 | 7 | Too many kicks | 213 a team-game (Wheelo 2026) | 309 | MatchSim event count (balance-gated) |
 | 8 | Calls do not change how the side kicks | Attacking: no switch; Controlled and Slow it down: shorter, across and back (rule 2.45) | Attacking: switches stay 6%; Controlled: kicks 0.5 m longer; Slow it down: 0.2 m longer, 3 points fewer backward | MatchSim kick choice by plan (balance-gated) |
-| 9 | A tagger does not shadow his man | a tag is permanent and goes where his man goes (2.44, 2.58); no published distance | 21.7 m apart on average, within 5 m 15.6% of the time (off: 27.0 m, 6.9%) | Man-on-man pull in `_structure_spot`: only inside 35 m, at most 85% of the way |
-| 10 | A switched defender drifts off his forward | everyone has an opponent (2.44) | 25.3 m apart, within 5 m 15.7% (off: 28.9 m, 13.5%) | Man-on-man pull (as 9) |
-| 11 | Fumble then gather: the gatherer runs 3.9 m past and the ball lies alone ~0.7 s (seed 31, FRE v STK) | the nearest man scoops it | as stated (row 197 inbox) | Loose-ball pickup; the WIP on `claude/oval3d-loose-ball-wip` fails 8 match_visual checks |
-| 12 | No clean gather (down for it, picks it up) in the shipped game | | the first man knocks it on toward MatchSim's winner | Loose-ball pickup (as 11) |
-| 13 | A dead stop at the fence: 4-5 m/s to 1.1 m/s in one step, twice in four seeds | | as stated (row 197 inbox) | MatchMotion fence clamp |
-| 14 | Throw numbers at it does not put more men at the ball; it moves the team forward like Push | more of our men around the ball wherever it is (the call's own words) | men within 20 m of the ball +0.9 at most (+0.1 at stoppages); team centre 7-19 m further forward, as Push's 8-14 m | Call shape: `_structure_spot` lifts the lines forward for Surge and Push alike (`_surge_ref`); no pull toward the ball |
+| 9 | A tagger does not shadow his man | a tag is permanent and goes where his man goes (2.44, 2.58); no published distance | 21.7 m apart on average, within 5 m 15.6% of the time (off: 27.0 m, 6.9%). Re-measured on main 2026-11-20 (153 matches): 9.0 m, 45%; only while his side defends, the same. Now 8.4 m, 49%: a tagger keeps up at a run | Man-on-man pull in `_structure_spot`: only inside 35 m, at most 85% of the way |
+| 10 | A switched defender drifts off his forward | everyone has an opponent (2.44) | 25.3 m apart, within 5 m 15.7% (off: 28.9 m, 13.5%). Re-measured on main 2026-11-20: 17.7 m, 25%. Now 17.3 m, 25.5%; still open | Man-on-man pull (as 9) |
+| 11 | Fumble then gather: the gatherer runs 3.9 m past and the ball lies alone ~0.7 s (seed 31, FRE v STK) | the nearest man scoops it | as stated (row 197 inbox). Fixed on main by #1838: over 4 matches the gatherer is 0.6 m from the ball when he takes it and it never lies alone over 0.5 s | Loose-ball pickup; the WIP on `claude/oval3d-loose-ball-wip` fails 8 match_visual checks |
+| 12 | No clean gather (down for it, picks it up) in the shipped game | | the first man knocks it on toward MatchSim's winner. Fixed by #1838 (as 11) | Loose-ball pickup (as 11) |
+| 13 | A dead stop at the fence: 4-5 m/s to 1.1 m/s in one step, twice in four seeds | | Fixed 2026-11-20: he pulls up within his braking limit and slides along the fence (`_test_fence_pull_up`) | MatchMotion fence clamp |
+| 14 | Throw numbers at it does not put more men at the ball; it moves the team forward like Push | more of our men around the ball wherever it is (the call's own words) | men within 20 m of the ball +0.9 at most (+0.1 at stoppages); team centre 7-19 m further forward, as Push's 8-14 m. Fixed 2026-11-21: the midfield and half-back line ring the ball with it and without it, +1.8 to +3.4 men within 20 m in open play and +2.6 at stoppages; the team centre moves 3-5 m | Call shape: `_structure_spot` lifts the lines forward for Surge and Push alike (`_surge_ref`); no pull toward the ball |
 
 What the calls already do (no gap): Attacking narrows the side 26-34 m in attack (about 39%; rule 2.45 asks about
 45%); Controlled widens it 13-24 m and shortens it 35-44 m; Defensive shortens it 29 m in midfield; Win Contest
@@ -85,6 +85,14 @@ narrows it 18-25 m and puts 1.9 more men within 10 m of a stoppage. Flood pulls 
 Push moves it 8-14 m forward with 2.5-2.9 fewer behind; Slow it down spreads it 16-27 m wider; Stack sets the
 lines 51 m shorter at the centre bounce (still 6-6-6, no extra men in the square). Not yet measured: what each position does
 (marks, tackles, kicks per role), which the harness does not count.
+
+**Re-measured on main, 2026-11-20** (24 matches, local): gaps 1-3 are mostly closed since the list was written: the
+team's length is IN in 10 of 12 open-play zones, its centre IN at both ends, and the men in the ball's quarter IN.
+Still OUT: the team centre in the two midfield zones (8-11 m short of real), every hull area (35-40% under), and the
+loose-ball width (gap 4, 52-63 m against 36-47 m). The harness now splits stoppages by zone (gap 5): 20.9 men in the
+ball's quarter at a stoppage in either 50 (real 23, IN) and 19.6 in midfield (real 17, NEAR). The paper's loose-ball
+width and area do not fit together (an area of 4,440 m2 cannot sit inside 89 by 40 m), so gap 4's reference is being
+checked against the paper before the sim is pushed to it.
 
 ## Step 2. The world and the look (runs beside step 1; before anything that draws the game)
 
@@ -202,7 +210,7 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 | 1. Football proof | 201 | harness built (#1695), spec checked (2.86), gap list of 14 written | fix the systems on the gap list; none fixed yet |
 | 2a. Light, tone, weather, skies | 202 | chosen and built (2.80-2.84, #1693 #1694 #1696 #1701); film look over the picture (2.112, #1839) | phone costing once the foundation is together |
 | 2b. The 37 grounds | 202 | 23 of 37 have a model merged, 2 more in open PRs, 4 under way locally (table below) | land Victoria Park, Riverway, Mars and Accor; confirm the other 8; background scenes (#1878 #1892 #1897) |
-| 2c. Crowd | 202 | chosen: 3D people within 55 m, cards beyond (2.92), built | |
+| 2c. Crowd | 202 | chosen: 3D people within 55 m, cards beyond (2.92), built; seated on the MCG model's own seats (he chose "Seat the crowd in the MCG", 2026-11-20, #1929) | measure its cost on a phone; each other ground gets it once it loads in a match |
 | 2d. Players' look | 202 | body: MetaHuman (2.85, 2.89); builds by height and weight (2.97, 2.98); faces ruled (2.99) | the Tripo heads (director generates) and the features for everyone else |
 | 2e. Cameras | 202 | main camera, goal replay, set shots, ball-up close-ups, tap to skip, TV framing, picture layout, stat bars, score bug all ruled and built (2.93-2.111, #1818) | the other cameras and cuts in play |
 | Broadcast popups | 207 | stat card ruled (2.94, 2.95) | ask: when a card shows and for how long; the journalists' posts |

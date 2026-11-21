@@ -32,6 +32,7 @@ func run() -> void:
 	_t("_test_no_wrong_way_kicks", [res])
 	_t("_test_match_flow", [res])
 	_t("_test_boundary_collect", [res])
+	_t("_test_fence_pull_up")
 	_t("_test_bodies_apart", [res])
 	_t("_test_smother_at_the_kick", [res])
 	_t("_test_tactical_timeline")
@@ -53,6 +54,7 @@ func run() -> void:
 	_t("_test_farewell")
 	_t("_test_match_ground")
 	_t("_test_ground_models")
+	_t("_test_mcg_crowd", [res])
 	_t("_test_discs_apart")
 	_t("_test_clash_kit")
 	_t("_test_label_overlap")
@@ -680,6 +682,41 @@ func _test_bodies_apart(res: Dictionary) -> void:
 ## Playtest freeze (near the boundary): a ball resting against the fence sat
 ## where the collector's run could never reach within touching distance, and
 ## collecting had no time limit, so play stopped. It now always completes.
+## Row 201 gap 13: a man running at the fence went from 4-5 m/s to 1.1 m/s in
+## one step (the clamp halved his whole speed). He pulls up within his braking
+## limit, and on the fence he keeps his speed along it.
+func _test_fence_pull_up() -> void:
+	var dt := MatchDirector.SUBSTEP
+	var worst := 0.0
+	var reached := false
+	for start in [Vector2(70, 0), Vector2(0, 52), Vector2(55, 40), Vector2(-60, -35)]:
+		var t := MatchMotion.make_token(start, 7.0, 0.0)
+		var out := MatchMotion.fence_normal(start)
+		t["vel"] = out * 5.0
+		MatchMotion.set_goal(t, start + out * 60.0, 1.0, true)
+		var last: Vector2 = t["vel"]
+		for i in range(240):
+			MatchMotion.step(t, dt)
+			var v: Vector2 = t["vel"]
+			worst = maxf(worst, (last - v).length() / dt)
+			last = v
+		reached = reached or not MatchMotion.inside_oval(t["pos"], 2.5)
+	_check(worst <= MatchMotion.BRAKE * 1.05,
+			"A man running at the fence pulls up within his braking limit (hardest %.1f m/s2, limit %.0f)" % [worst, MatchMotion.BRAKE])
+	_check(reached, "...and he still gets to the fence")
+	# Along the fence: running round it, he keeps his pace.
+	var a := MatchMotion.clamp_to_oval(Vector2(0, 80), 1.2)
+	var r := MatchMotion.make_token(a, 7.0, 0.0)
+	var along := MatchMotion.fence_normal(a).orthogonal()
+	r["vel"] = along * 5.0
+	MatchMotion.set_goal(r, a + along * 30.0 + MatchMotion.fence_normal(a) * 3.0, 1.0, true)
+	var slowest := 99.0
+	for i in range(30):
+		MatchMotion.step(r, dt)
+		slowest = minf(slowest, (r["vel"] as Vector2).length())
+	_check(slowest > 4.0, "A man running along the fence keeps his pace (slowest %.1f m/s)" % slowest)
+
+
 func _test_boundary_collect(res: Dictionary) -> void:
 	var pv := PitchView.new()
 	pv.size = Vector2(400, 700)
@@ -1602,7 +1639,7 @@ func _test_flood_shape(res: Dictionary) -> void:
 					n += 1
 		return n
 	var plain: int = behind.call([])
-	var other: int = behind.call(["surge"])
+	var other: int = behind.call(["push"])   # a call made with the ball only (Throw numbers at it goes to the ball both ways: gap 14)
 	var flood: int = behind.call(["flood"])
 	_check(flood >= plain + 6,
 			"Flooding puts more players behind the ball on the opposition's entries (%d against %d over three entries)" % [flood, plain])
@@ -1908,11 +1945,22 @@ func _test_call_shapes(res: Dictionary) -> void:
 	_check(centre_ok and bu >= 0 and int(pack_ctn[0]) > int(pack_bal[0]) and int(pack_ctn[0]) >= 3 + MatchDirector.CONTEST_PACK and int(pack_ctn[1]) == int(pack_bal[1]),
 			"Win Contest sends extra numbers to every stoppage: a stacked centre bounce, a ball-up pack of %d against %d (the other side's %d unchanged)" % [int(pack_ctn[0]), int(pack_bal[0]), int(pack_ctn[1])])
 	d._tac[0] = {}
-	# Throw numbers at it: numbers ahead of the ball with it, the backs high without it.
+	# Throw numbers at it (row 201 gap 14): more men at the ball wherever it is,
+	# with it and without it, not the whole side lifted forward like Push.
 	var sg_has: Dictionary = stand.call({"plan": "balanced", "bursts": ["surge"]}, 0)
 	var sg_not: Dictionary = stand.call({"plan": "balanced", "bursts": ["surge"]}, 1)
-	_check(int(sg_has["ahead"]) >= int(bal_has["ahead"]) + 6 and same.call(sg_not, bal_not),
-			"Throw numbers at it puts at least six more players ahead of the ball with it (%d against %d over three balls), a flood in reverse, and only with it" % [int(sg_has["ahead"]), int(bal_has["ahead"])])
+	var near20 := func(st: Dictionary) -> int:
+		var k := 0
+		var per := int((st["pos"] as Array).size() / balls.size())
+		for i in range((st["pos"] as Array).size()):
+			if ((st["pos"] as Array)[i] as Vector2).distance_to(balls[i / per]) <= 20.0:
+				k += 1
+		return k
+	_check(int(near20.call(sg_has)) >= int(near20.call(bal_has)) + 6 and int(near20.call(sg_not)) >= int(near20.call(bal_not)) + 6,
+			"Throw numbers at it puts at least six more men within 20 m of the ball over three balls, with it (%d against %d) and without it (%d against %d)" % [
+				int(near20.call(sg_has)), int(near20.call(bal_has)), int(near20.call(sg_not)), int(near20.call(bal_not))])
+	_check(absf(float(sg_has["deep"]) - float(bal_has["deep"])) < 8.0,
+			"...without lifting the whole side forward like Push (its centre %.1f m against %.1f)" % [float(sg_has["deep"]), float(bal_has["deep"])])
 	# Slow it down: deeper both ways, wider with the ball.
 	var hd_has: Dictionary = stand.call({"plan": "balanced", "bursts": ["hold"]}, 0)
 	var hd_not: Dictionary = stand.call({"plan": "balanced", "bursts": ["hold"]}, 1)
@@ -2147,6 +2195,80 @@ func _test_ground_models() -> void:
 
 ## FL-003: the vignettes draw the MCG where the match is played there - a club's home
 ## game at its MCG home, and the Grand Final - and the plain ground everywhere else.
+## The MCG model's own seats hold the crowd (director 2026-11-20, "Seat the crowd in the MCG";
+## Bible 2.92's mix): most seats taken, 3D people within 55 m and cards beyond, each supporter
+## sitting on his seat facing the ground, and the goal cheer wired as on the plain stand.
+func _test_mcg_crowd(res: Dictionary) -> void:
+	var d := MatchDirector.new()
+	d.setup(res, res["events"])
+	var oval := Oval3D.new()
+	oval.ground = "MCG"
+	(Engine.get_main_loop() as SceneTree).root.add_child(oval)
+	oval.build(d, "COL", "GEE")
+	var crowd := oval.crowd
+	var seats := 0
+	for mi in oval.find_child("Ground", false, false).get_children():
+		if mi is MultiMeshInstance3D and str(mi.name).begins_with("seats_"):
+			seats += (mi as MultiMeshInstance3D).multimesh.instance_count
+	_check(crowd != null and crowd.get_parent().name == "Ground" and seats > 70000,
+			"The MCG has its crowd, on the model (%d seats)" % seats)
+	_check(crowd.supporters > seats * 0.88 and crowd.supporters < seats * 0.96,
+			"Most of the MCG's seats are taken, a few left empty (%d of %d)" % [crowd.supporters, seats])
+	var people := 0
+	var cards := 0
+	var carded := 0
+	for ch: Dictionary in crowd._chunks:
+		for p: MultiMeshInstance3D in ch["people"]:
+			people += 1 if p.visibility_range_end == Oval3DCrowd.MIX_D else 0
+		cards += 1 if (ch["cards"] as MultiMeshInstance3D).visibility_range_begin == Oval3DCrowd.MIX_D else 0
+		carded += (ch["cards"] as MultiMeshInstance3D).multimesh.instance_count
+	_check(cards == crowd._chunks.size() and people == cards * crowd._people_mats.size()
+			and carded == crowd.supporters and cards > Oval3DCrowd.SECTORS,
+			"Near the camera the MCG's supporters are 3D people, beyond 55 m cards (%d chunks)" % cards)
+	# He sits on the seat: his feet on the floor under it, facing away from the backrest.
+	var tmpl := FileAccess.get_file_as_bytes("res://assets/grounds/mcg/seat_tmpl.bin").to_float32_array()
+	var pts := PackedVector3Array()
+	for i in range(0, tmpl.size(), 3):
+		pts.append(Vector3(tmpl[i], tmpl[i + 1], tmpl[i + 2]))
+	var spot := Oval3DCrowd.sitting_spot(pts)
+	var lo := INF
+	var back := Vector3.ZERO
+	var nb := 0
+	for v in pts:
+		lo = minf(lo, v.y)
+	for v in pts:
+		if v.y > 0.4:
+			back += v
+			nb += 1
+	back /= float(nb)
+	var facing := spot.basis.z
+	_check(is_equal_approx(spot.origin.y, lo) and facing.dot(Vector3(spot.origin.x - back.x, 0, spot.origin.z - back.z)) > 0.0
+			and Vector2(spot.origin.x, spot.origin.z).length() < 0.15,
+			"A supporter sits on the MCG seat facing out over it (%s, facing %s)" % [spot.origin, facing])
+	# Every supporter looks in, toward the ground's middle (read from the seat files: a headless
+	# MultiMesh keeps no transforms to read back).
+	var inward := 0
+	var n := 0
+	for f in DirAccess.get_files_at("res://assets/grounds/mcg/"):
+		if not (f.begins_with("seats_") and f.ends_with(".bin")):
+			continue
+		var buf := FileAccess.get_file_as_bytes("res://assets/grounds/mcg/" + f).to_float32_array()
+		for i in range(0, buf.size(), 12 * 97):
+			var t := Transform3D(Basis(Vector3(buf[i], buf[i + 4], buf[i + 8]),
+					Vector3(buf[i + 1], buf[i + 5], buf[i + 9]), Vector3(buf[i + 2], buf[i + 6], buf[i + 10])),
+					Vector3(buf[i + 3], buf[i + 7], buf[i + 11])) * spot
+			n += 1
+			inward += 1 if t.basis.z.normalized().dot(-Vector3(t.origin.x, 0, t.origin.z).normalized()) > 0.5 else 0
+	_check(n > 500 and inward == n, "Every supporter looks in at the ground (%d of %d sampled)" % [inward, n])
+	oval._goal_on = false
+	d.emitted = 1
+	d.flash = {"pos": Vector2.ZERO, "left": 0.9, "goal": true}
+	oval._sync_crowd(0.5)
+	_check(is_equal_approx(float(crowd._card_mat.get_shader_parameter("cheer_from")), oval._crowd_t),
+			"A goal at the MCG raises its supporters as on the plain stand")
+	oval.queue_free()
+
+
 func _test_match_ground() -> void:
 	VignetteGround.use_match({"home": "COL", "away": "GEE", "venue": ""})
 	_check(VignetteGround.venue == "MCG", "A Collingwood home game draws the MCG")
@@ -2761,7 +2883,7 @@ func _check_crowd3d(oval: Oval3D) -> void:
 			people += 1 if p.visibility_range_end == Oval3DCrowd.MIX_D and p.visibility_range_begin == 0.0 else 0
 		var c: MultiMeshInstance3D = ch["cards"]
 		cards += 1 if c.visibility_range_begin == Oval3DCrowd.MIX_D and c.visibility_range_end == 0.0 else 0
-	_check(crowd._chunks.size() == Oval3DCrowd.SECTORS * 2 and cards == crowd._chunks.size()
+	_check(crowd._chunks.size() >= Oval3DCrowd.SECTORS * 2 and cards == crowd._chunks.size()
 			and people == cards * crowd._people_mats.size(),
 			"Near the camera the supporters are 3D people, beyond 55 m cards (%d people batches, %d card batches)"
 			% [people, cards])

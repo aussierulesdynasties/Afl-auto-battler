@@ -179,6 +179,42 @@ static func instantiate(slug: String, base := "") -> Node3D:
 	return root
 
 
+## Every seat in the model's own metres (seats_*.bin), for the crowd to sit on (Oval3DCrowd).
+static func seat_transforms(slug: String, base := "") -> Array:
+	var dir := base if base != "" else DIR + slug + "/"
+	var seats := []
+	if not DirAccess.dir_exists_absolute(dir):
+		return seats
+	for f in DirAccess.get_files_at(dir):
+		if not (f.begins_with("seats_") and f.ends_with(".bin")):
+			continue
+		var buf := FileAccess.get_file_as_bytes(dir + f).to_float32_array()
+		for i in range(0, buf.size() - 11, 12):
+			seats.append(Transform3D(Basis(Vector3(buf[i], buf[i + 4], buf[i + 8]),
+					Vector3(buf[i + 1], buf[i + 5], buf[i + 9]), Vector3(buf[i + 2], buf[i + 6], buf[i + 10])),
+					Vector3(buf[i + 3], buf[i + 7], buf[i + 11])))
+	return seats
+
+
+## The seat's points (seat_tmpl.bin, else the first seat_tmpl_<colour>.bin): where a supporter sits.
+static func seat_points(slug: String, base := "") -> PackedVector3Array:
+	var dir := base if base != "" else DIR + slug + "/"
+	var path := dir + "seat_tmpl.bin"
+	if not FileAccess.file_exists(path):
+		path = ""
+		for f in DirAccess.get_files_at(dir):
+			if f.begins_with("seat_tmpl_") and f.ends_with(".bin"):
+				path = dir + f
+				break
+	var pts := PackedVector3Array()
+	if path == "":
+		return pts
+	var tmpl := FileAccess.get_file_as_bytes(path).to_float32_array()
+	for i in range(0, tmpl.size() - 2, 3):
+		pts.append(Vector3(tmpl[i], tmpl[i + 1], tmpl[i + 2]))
+	return pts
+
+
 static func _seat_mesh(path: String) -> Mesh:
 	var tmpl := FileAccess.get_file_as_bytes(path).to_float32_array()
 	var st := SurfaceTool.new()
