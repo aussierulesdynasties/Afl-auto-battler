@@ -70,6 +70,21 @@ A ground's named materials can be corrected without rebuilding the model, throug
   Before this fix it mirrored the sky and read white-blue from above.
 - **Roof undersides:** grey with a faint green tint (director), through the stand shader.
 
+## Surroundings
+
+The ground round the stadium comes from OpenStreetMap, never from aerial imagery. It is built by
+`tools/grounds/mcg/surrounds.py` and loaded through `GroundModels.SURROUNDS`. Three parts make it up:
+
+- **A painted map:** 2,048 m a side at 1 m a pixel, VRAM-compressed. It shows the grass, paths, car
+  parks, roads, rail ballast, flat roofs and the shade under each tree. Its colours are painted warm
+  and light, because the match light's blue sky fill cools them.
+- **Every mapped tree:** a lumpy canopy and a trunk, drawn as batches in 250 m blocks, with no
+  shadows.
+- **Buildings:** the map's footprints extruded to their tagged height, as one mesh.
+
+To place a map on the model, line up the AFL pitch's centre in OpenStreetMap with the model's 0, 0.
+For the MCG, that centre is 25.3 m east and 23.5 m south of lat -37.81977, lon 144.98316.
+
 ## Stages
 
 1. References and plan.
