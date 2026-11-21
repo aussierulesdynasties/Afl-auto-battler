@@ -30,10 +30,9 @@ static var hair_glb := HAIR_GLB
 ## The scalp under each style (oval3d_player.gdshader, scalp): 0 the body's own painted crop
 ## (no look), 1 bare skin (bald, and under every style's shell, which has its own hairline),
 ## 2 clippered (buzz, and under the cuts with clippered sides). Under the dreadlocks it is his
-## hair colour (0): skin showed down the back between the locks. Swept back is clippered underneath:
-## on the MetaHuman its shell leaves two small gaps over the ear.
+## hair colour (0): skin showed down the back between the locks.
 const SCALP := {"bald": 1, "buzz": 2, "dreadlocks": 0, "undercut": 2, "curly_short": 2, "faux_hawk": 2,
-		"tied_back": 2, "swept_back": 2}
+		"tied_back": 2}
 const SCALP_UNDER_SHELL := 1
 ## The boots' own material in the GLB (export_player_glb.py, the Tripo boot): drawn as modelled.
 const BOOT_MATERIAL := "ARD_boot_real"
@@ -721,6 +720,7 @@ static func _refit_hair(m: Mesh, at: Transform3D, bone: String) -> Mesh:
 	if old_r.is_empty() or new_r.is_empty():
 		return m
 	var shift := _face_shift(bone)
+	var nose := _nose_tip(player_glb, bone)
 	var am := m as ArrayMesh
 	var out := ArrayMesh.new()
 	var back := at.affine_inverse()
@@ -731,7 +731,7 @@ static func _refit_hair(m: Mesh, at: Transform3D, bone: String) -> Mesh:
 			var q := at * vs[i] - SKULL_MID
 			var d := q.normalized()
 			var lift := _skull_at(new_r, d) - _skull_at(old_r, d)
-			vs[i] = back * (SKULL_MID + shift + q + d * lift)
+			vs[i] = back * _clear_eyes(SKULL_MID + shift + q + d * lift, nose)
 		a[Mesh.ARRAY_VERTEX] = vs
 		out.add_surface_from_arrays(am.surface_get_primitive_type(s), a)
 		out.surface_set_material(s, am.surface_get_material(s))
@@ -778,6 +778,26 @@ static func _nose_tip(glb: String, bone: String) -> Vector3:
 						best = q
 	root.free()
 	return best
+
+
+## Hair in front of his face is kept off his eyes: below BROW_OVER_NOSE above the tip of his nose
+## (the brows), a fringe or a lock hanging over the face is drawn up towards the brows, the lower
+## the more, so it ends just above the eyes instead of across them (the passed side part, long
+## and curly styles hung over an eye). Behind the face (the sides, the back) nothing moves.
+const BROW_OVER_NOSE := 0.085
+const FRINGE_KEEP := 0.25
+
+
+static func _clear_eyes(p: Vector3, nose: Vector3) -> Vector3:
+	if nose == Vector3.INF:
+		return p
+	var brow := nose.y + BROW_OVER_NOSE
+	if p.y >= brow:
+		return p
+	# In front of the face: from 4 cm behind the tip of his nose forwards, and across the face only.
+	var front := smoothstep(nose.z - 0.045, nose.z - 0.02, p.z) * (1.0 - smoothstep(0.05, 0.075, absf(p.x)))
+	var lifted := brow - (brow - p.y) * FRINGE_KEEP
+	return Vector3(p.x, lerpf(p.y, lifted, front), p.z)
 
 
 ## The skull of glb's body at rest, as radii from SKULL_MID (SKULL_POLAR rows of SKULL_AZ),
@@ -1740,7 +1760,12 @@ static func _hair_material(i: int, tex: Texture2D = null) -> StandardMaterial3D:
 	if not _hair_mats.has(key):
 		var m := StandardMaterial3D.new()
 		m.albedo_color = Appearance.HAIR[i]
-		m.roughness = 0.9
+		# A soft sheen and a light rim, so dark hair shows its shape (a matte black shell read as a
+		# flat cap in the sun).
+		m.roughness = 0.85
+		m.rim_enabled = true
+		m.rim = 0.3
+		m.rim_tint = 0.6
 		# Strand cards are one face thick: draw both sides, or the long styles show slits.
 		m.cull_mode = BaseMaterial3D.CULL_DISABLED
 		if tex != null:
