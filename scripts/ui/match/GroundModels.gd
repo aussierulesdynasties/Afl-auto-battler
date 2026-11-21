@@ -77,6 +77,13 @@ const FIT := {
 	"gabba": [2.47, 3.47, 0.0, 175.0, 86.88, 73.71],
 }
 
+## The land round a model that ends at its own street (in the model's metres): the ring from
+## `inner` (under the model's paving) out past the horizon, at `y` just under its street, so the
+## stadium does not stand on an island in an empty world. The MCG stands in Yarra Park.
+const SURROUNDS := {
+	"mcg": {"y": -0.03, "inner": 140.0, "colour": Color(0.45, 0.55, 0.27)},
+}
+
 ## Models that carry their colours on the vertices (glTF COLOR_0) under a tiling detail texture.
 ## Godot's glTF reader keeps the colours but does not paint with them, so the loader turns that on.
 const VERTEX_COLOURED := ["adelaide"]
@@ -197,7 +204,66 @@ static func instantiate(slug: String, base := "") -> Node3D:
 				_paint_vertex_colours(model)
 			root.add_child(model)
 	_add_seats(root, dir)
+	if SURROUNDS.has(slug):
+		_add_surrounds(root, SURROUNDS[slug])
 	return root
+
+
+## A flat ring of parkland round the model (SURROUNDS): grass with a broad mottle, unlit by
+## nothing it would not be lit by (it takes the sun, the sky and the stands' shade).
+static func _add_surrounds(root: Node3D, s: Dictionary) -> void:
+	var inner: float = s["inner"]
+	var outer := 2500.0
+	var y: float = s["y"]
+	var n := 96
+	var v := PackedVector3Array()
+	var uv := PackedVector2Array()
+	var nrm := PackedVector3Array()
+	var idx := PackedInt32Array()
+	for i in n + 1:
+		var a := TAU * i / n
+		var d := Vector3(cos(a), 0.0, sin(a))
+		for r: float in [inner, 400.0, outer]:
+			var p := d * r + Vector3(0.0, y, 0.0)
+			v.append(p)
+			uv.append(Vector2(p.x, p.z) / 60.0)
+			nrm.append(Vector3.UP)
+	for i in n:
+		for k in 2:
+			var a0 := i * 3 + k
+			var b0 := (i + 1) * 3 + k
+			idx.append_array([a0, a0 + 1, b0, a0 + 1, b0 + 1, b0])
+	var arr := []
+	arr.resize(Mesh.ARRAY_MAX)
+	arr[Mesh.ARRAY_VERTEX] = v
+	arr[Mesh.ARRAY_TEX_UV] = uv
+	arr[Mesh.ARRAY_NORMAL] = nrm
+	arr[Mesh.ARRAY_INDEX] = idx
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	var noise := FastNoiseLite.new()
+	noise.frequency = 0.02
+	noise.seed = 7
+	var tex := NoiseTexture2D.new()
+	tex.noise = noise
+	tex.seamless = true
+	tex.width = 256
+	tex.height = 256
+	var grad := Gradient.new()
+	var c: Color = s["colour"]
+	grad.set_color(0, c.darkened(0.18))
+	grad.set_color(1, c.lightened(0.1))
+	tex.color_ramp = grad
+	var mat := StandardMaterial3D.new()
+	mat.resource_name = "surrounds"
+	mat.albedo_texture = tex
+	mat.roughness = 1.0
+	var mi := MeshInstance3D.new()
+	mi.name = "Surrounds"
+	mi.mesh = mesh
+	mi.material_override = mat
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	root.add_child(mi)
 
 
 ## Every seat in the model's own metres (seats_*.bin), for the crowd to sit on (Oval3DCrowd).
