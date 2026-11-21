@@ -44,7 +44,7 @@ static func measure(res: Dictionary) -> Dictionary:
 	# a switch, sampled with the rest of open play.
 	var pair := []
 	if res.has("probe_pair"):
-		out["pair"] = {"n": 0, "dist": 0.0, "within5": 0, "goal": 0.0}
+		out["pair"] = {"n": 0, "dist": 0.0, "within5": 0, "goal": 0.0, "def_n": 0, "def_dist": 0.0, "def_within5": 0}
 		pair = res["probe_pair"]
 	var next_sample := 0.0
 	var guard := 0
@@ -172,6 +172,11 @@ static func _pair_sample(d: MatchDirector, pair: Array, out: Dictionary) -> void
 	ps["within5"] += 1 if dist <= 5.0 else 0
 	var own_goal := Vector2(-MatchMotion.GOAL_X * MatchDirector._dir(int(a["side"])), 0.0)
 	ps["goal"] += (a["pos"] as Vector2).distance_to(own_goal)
+	# The same, only while our man's side is defending (the other side has the ball).
+	if d._poss != int(a["side"]):
+		ps["def_n"] += 1
+		ps["def_dist"] += dist
+		ps["def_within5"] += 1 if dist <= 5.0 else 0
 
 
 static func _kick_sums() -> Dictionary:

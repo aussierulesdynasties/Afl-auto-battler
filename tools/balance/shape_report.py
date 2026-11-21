@@ -261,10 +261,14 @@ def main():
               " their best forward (in the no-switch arm, the same defender).\n")
         print("| measure | A | B | B-A | se |")
         print("|---|---|---|---|---|")
-        for key, lab in (("dist", "Distance to his man (m)"), ("within5", "Share of time within 5 m"),
-                         ("goal", "Distance to the goal he defends (m)")):
-            d = [b[key] / b["n"] - a[key] / a["n"] for a, b in zip(pa, pb) if a["n"] and b["n"]]
-            av = [a[key] / a["n"] for a in pa if a["n"]]
+        for key, nk, lab in (("dist", "n", "Distance to his man (m)"), ("within5", "n", "Share of time within 5 m"),
+                             ("goal", "n", "Distance to the goal he defends (m)"),
+                             ("def_dist", "def_n", "Distance to his man, his side defending (m)"),
+                             ("def_within5", "def_n", "Share within 5 m, his side defending")):
+            d = [b[key] / b[nk] - a[key] / a[nk] for a, b in zip(pa, pb) if a.get(nk) and b.get(nk)]
+            av = [a[key] / a[nk] for a in pa if a.get(nk)]
+            if not av:
+                continue
             mu, sd = mean_sd(d)
             print(f"| {lab} | {fmt(mean_sd(av)[0], 2)} | {fmt(mean_sd(av)[0] + mu, 2)} | {mu:+.2f} |"
                   f" {sd / math.sqrt(max(1, len(d))):.2f} |")
