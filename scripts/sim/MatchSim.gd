@@ -4231,11 +4231,13 @@ func resolve_forward50(side: int, fp: float, feeder) -> Dictionary:
 	# give it off to a teammate in a better spot, a kick to a lead or a
 	# handball to a runner. The giver's Creating decides how often he looks
 	# for it; his ball use and their reading decide whether it gets there.
+	var gave := false  # the man who shoots took a teammate's give, his possession counted there
 	if not ground_lost and (marked or not spoilt):
 		var give := _i50_give(side, fp, shooter, defender, marked, crumbed)
 		if give.has("turnover"):
 			return give["turnover"]
 		if not give.is_empty():
+			gave = true
 			setter = shooter
 			shooter = give["to"]
 			marked = bool(give["marked"])
@@ -4298,6 +4300,10 @@ func resolve_forward50(side: int, fp: float, feeder) -> Dictionary:
 
 	var roll := rng.randf()
 	if roll < goal_p + behind_p or not set_shot.is_empty():
+		# His shot is a disposal (_shot), so the ball he shoots with is a possession: a
+		# mark is uncontested, the ball won at ground level contested, as a give counts them.
+		if not gave:
+			_gain(side, shooter, "up" if marked else "gb")
 		_shot(side, shooter, not set_shot.is_empty(), "goal" if roll < goal_p else ("behind" if roll < goal_p + behind_p else ""),
 				float(set_shot.get("metres", -1.0)), str(set_shot.get("key", "")))
 	if roll < goal_p:
@@ -4650,6 +4656,12 @@ func _shot(side: int, shooter, set_shot: bool, result: String, metres := -1.0, s
 		_t(side, "kicks")
 		_p(shooter, "disposals")
 		_p(shooter, "kicks")
+		# Every disposal is a possession: the ball he shoots with came from a mark or a
+		# free kick where no possession was counted, so it counts here, uncontested.
+		var st: Dictionary = player_stats[str(shooter["id"])]
+		if float(st.get("contested_possessions", 0.0)) + float(st.get("uncontested_possessions", 0.0)) \
+				< float(st.get("disposals", 0.0)):
+			_gain(side, shooter, "up")
 	if result == "goal":
 		_effective(side, shooter)
 	if set_shot:
