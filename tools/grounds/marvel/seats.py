@@ -17,8 +17,7 @@ OUT = os.path.join(ROOT, "assets", "grounds", "marvel")
 
 J = json.load(open(SRC))
 C0 = np.array(J.get("C", [2.32, 0.64, 0.0]))
-U = np.array([0.336, -0.942])
-ANG = math.atan2(-U[0], -U[1])  # build2.py glb: the u direction (south) onto -Y
+ANG = 0.0  # build2.py glb exports the frame as it is: x east, y north
 
 # The seat as build2.py drew it (x along the row, y towards the pitch, z up; origin on the tread):
 # pan, back and pedestal, 0.44 m wide.
@@ -41,7 +40,7 @@ def template() -> np.ndarray:
 
 
 def to_gltf(p: np.ndarray) -> np.ndarray:
-    """Blender world (after - C0) rotated by ANG about Z, then to glTF axes."""
+    """Blender world (after - C0), rotated by ANG about Z, then to glTF axes."""
     c, s = math.cos(ANG), math.sin(ANG)
     x = c * p[:, 0] - s * p[:, 1]
     y = s * p[:, 0] + c * p[:, 1]

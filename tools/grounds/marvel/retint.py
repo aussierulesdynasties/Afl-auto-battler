@@ -17,16 +17,24 @@ TEX = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..",
 
 # Google Earth, 2026-11-21 (obl_* and ext_* sheets): the arch trusses and the space trusses are pale
 # grey-green, not teal; the end roofs read nearly as light as the side roofs; the side roofs a warm
-# light grey; the facade's cladding blue-grey, lighter than navy; the forecourt paving grey.
+# light grey; the facade's cladding light blue-grey, with far less panel-to-panel tone than the hand
+# painting had (CONTRAST); the forecourt paving grey.
 TARGET = {
     "teal": (196, 208, 202),
     "endroof": (196, 196, 190),
     "deck": (206, 206, 199),
-    "navy": (74, 88, 110),
-    "slate": (104, 112, 126),
+    "navy": (108, 120, 138),
+    "slate": (130, 138, 150),
     "paving": (150, 146, 136),
-    "soffit": (118, 122, 116),
+    # Undersides face down, where the match light is a dim blue-violet (measured under the shut roof:
+    # a (118, 122, 116) map rendered (49, 49, 69)). Painted warm and green so they render the grey with
+    # a faint green the director set for roof undersides (2026-11-21), about (85, 90, 82).
+    "soffit": (196, 200, 172),
 }
+
+
+# How much of each texture's own variation is kept (1 = all).
+CONTRAST = {"navy": 0.5, "slate": 0.45}
 
 
 def retint(name, target, src=None, out=None):
@@ -36,7 +44,7 @@ def retint(name, target, src=None, out=None):
         Image.open(path).save(orig)
     a = np.asarray(Image.open(orig).convert("RGB"), float)
     m = a.reshape(-1, 3).mean(0)
-    b = np.clip(a - m + np.array(target, float), 0, 255).astype(np.uint8)
+    b = np.clip((a - m) * CONTRAST.get(name, 1.0) + np.array(target, float), 0, 255).astype(np.uint8)
     Image.fromarray(b, "RGB").save(os.path.join(TEX, "%s.png" % (out or name)))
     print(out or name, m.round(), "->", target)
 
