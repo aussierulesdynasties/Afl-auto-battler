@@ -5,9 +5,10 @@ extends SceneTree
 ## aisle stair through a seated supporter's head, none is inside the boundary fence, none is
 ## left alone on a ledge. A rebuilt ground that breaks it is fixed by
 ## `tools/grounds/seat_check.gd -- --write <slug>` (or at its generator). Looks only.
+## Seeded by design: it measures the seat files against the models, nothing random runs.
 
 const SeatRule := preload("res://tools/grounds/seat_rule.gd")
-## Grounds whose own pull request is still taking their bad seats out (MCG #1984, Adelaide #1974);
+## Grounds whose own pull request is still taking their bad seats out (MCG #1987, Adelaide #1974);
 ## each leaves this list when that lands and seat_check has been run on it.
 const PENDING := ["mcg", "adelaide"]
 
