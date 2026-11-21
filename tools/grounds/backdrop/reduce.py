@@ -177,7 +177,47 @@ if BUDGET:   # the rest: big flat meshes decimated (buildings stay whole: boxes 
         g = max(0.08, room / have)
         for o in flat: decimate(o.name, g)
         print('budget: flat meshes decimated to', round(g, 3))
-    print('budget: buildings', _tris_all([o for o in rest if o not in flat]), 'trees', _tris_all(tree_objs))
+    blds = [o for o in rest if o not in flat]
+    if _tris_all(blds) > 0.35 * BUDGET:   # too many houses: far ones go, each wall with its own roof
+        from mathutils.kdtree import KDTree
+        def comps_of(o):
+            bm = bmesh.new(); bm.from_mesh(o.data); bm.transform(o.matrix_world)
+            seen = set(); out = []
+            bm.faces.ensure_lookup_table()
+            for f in bm.faces:
+                if f.index in seen: continue
+                st = [f]; c = []; seen.add(f.index)
+                while st:
+                    x = st.pop(); c.append(x.index)
+                    for e in x.edges:
+                        for y in e.link_faces:
+                            if y.index not in seen: seen.add(y.index); st.append(y)
+                cen = sum((bm.faces[i].calc_center_median() for i in c), bm.faces[c[0]].calc_center_median() * 0) / len(c)
+                out.append((c, cen))
+            bm.free(); return out
+        walls = [(o, comps_of(o)) for o in blds if re.match(r'bg_(bld|clad|flash)', o.name)]
+        roofs = [(o, comps_of(o)) for o in blds if o.name.startswith('bg_roof')]
+        far_t = sum(len(c) for o, cs in walls + roofs for c, cen in cs if cen.xy.length > 600.0)
+        over = _tris_all(blds) - 0.35 * BUDGET
+        keep = max(0.1, 1.0 - over / max(1, far_t * 2))   # faces ~ two triangles
+        kd = KDTree(sum(len(cs) for o, cs in walls)); allw = []
+        for o, cs in walls:
+            for c, cen in cs:
+                drop = cen.xy.length > 600.0 and rng.random() > keep
+                kd.insert((cen.x, cen.y, 0.0), len(allw)); allw.append(drop)
+        kd.balance()
+        def cut(o, cs, drops):
+            kill = set(i for (c, cen), d in zip(cs, drops) if d for i in c)
+            if not kill: return
+            bm = bmesh.new(); bm.from_mesh(o.data); bm.faces.ensure_lookup_table()
+            bmesh.ops.delete(bm, geom=[bm.faces[i] for i in kill], context='FACES'); bm.to_mesh(o.data); bm.free()
+        i = 0
+        for o, cs in walls:
+            cut(o, cs, allw[i:i + len(cs)]); i += len(cs)
+        for o, cs in roofs:
+            cut(o, cs, [allw[kd.find((cen.x, cen.y, 0.0))[1]] if allw else False for c, cen in cs])
+        print('budget: far buildings kept', round(keep, 3))
+    print('budget: buildings', _tris_all(blds), 'trees', _tris_all(tree_objs))
 
 # fewer draws: objects whose materials are the same (same images, same nodes, same settings) are
 # joined into one object with one material. All the trees share one leaf material (their kinds
@@ -281,7 +321,7 @@ for m in bpy.data.materials:
 for im in list(bpy.data.images):
     if im.size[0] > TEX:
         im.scale(TEX, TEX); print('scaled', im.name)
-    if 0 < im.channels < 3 and im.size[0] > 0:
+    if im.size[0] > 0 and (im.channels < 3 or im.depth in (8, 16)):   # grey files (depth 8/16)
         w, h = im.size; ch = im.channels
         px = np.zeros(len(im.pixels), np.float32); im.pixels.foreach_get(px); px = px.reshape(-1, ch)
         rgba = np.ones((len(px), 4), np.float32); rgba[:, :3] = px[:, :1]
