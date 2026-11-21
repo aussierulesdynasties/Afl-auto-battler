@@ -44,6 +44,7 @@ Seat colours follow the real stands tier by tier, sampled from Street View and G
 | Front rows of the middle tier | A blue band |
 | Top tier | Teal-blue |
 | Members' (north-west) top tier | Grey-green |
+| Front of the lower tier, west round to north | Mint green |
 
 Each colour is one `seats_seat_mcg_<colour>.bin` file with its entry in `GroundModels.SEAT_COLOURS`.
 
@@ -70,20 +71,38 @@ A ground's named materials can be corrected without rebuilding the model, throug
   Before this fix it mirrored the sky and read white-blue from above.
 - **Roof undersides:** grey with a faint green tint (director), through the stand shader.
 
+A big model mesh is cut into slices after loading (`slice_big_meshes`). Each slice keeps the
+instance's active material, so a material fix reaches the slices too. Before this, the MCG bowl's
+low roofs kept their glossy material and read white from above.
+
 ## Surroundings
 
 The ground round the stadium comes from OpenStreetMap, never from aerial imagery. It is built by
 `tools/grounds/mcg/surrounds.py` and loaded through `GroundModels.SURROUNDS`. Three parts make it up:
 
 - **A painted map:** 2,048 m a side at 1 m a pixel, VRAM-compressed. It shows the grass, paths, car
-  parks, roads, rail ballast, flat roofs and the shade under each tree. Its colours are painted warm
-  and light, because the match light's blue sky fill cools them.
-- **Every mapped tree:** a lumpy canopy and a trunk, drawn as batches in 250 m blocks, with no
+  parks, roads, rail ballast, flat roofs and the shade under each tree. Its colours are Google
+  Earth's. The map, trees and buildings take no sun shadow: past the shadow map's 160 m, the Mobile
+  renderer drew them as if in shade (blue-grey), and the trees' shade is painted in instead.
+- **Every mapped tree, plus fill:** OpenStreetMap maps only some of the parks' trees, so each park
+  is filled to Google Earth's density (one tree per 190 m² of open grass). Each is a lumpy canopy and a trunk, drawn as batches in 250 m blocks, with no
   shadows.
 - **Buildings:** the map's footprints extruded to their tagged height, as one mesh.
 
 To place a map on the model, line up the AFL pitch's centre in OpenStreetMap with the model's 0, 0.
 For the MCG, that centre is 25.3 m east and 23.5 m south of lat -37.81977, lon 144.98316.
+
+## Model parts rebuilt without the model's source
+
+The model's source (`build.py`) is on the director's PC. A part that needs rebuilding can still be
+replaced from the cloud: a tool reads the part from the `.glb`, builds it again, and writes a mesh
+(per vertex position, normal and colour). `GroundModels.PARTS` hides the model's own node and draws
+the new mesh instead. The MCG has two:
+
+- **Roof trusses** (`tools/grounds/mcg/trusses.py`): square lattices, 2 m wide for the masts and
+  1.6 m for the booms and back stays, in pale steel, with a blue light box at each boom's tip.
+- **Slab edges** (`tools/grounds/mcg/ledges.py`): a ledge 0.45 m deep at every floor, 3.6 m apart,
+  on every outside wall.
 
 ## Stages
 
