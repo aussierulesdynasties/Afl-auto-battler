@@ -109,9 +109,12 @@ const VERTEX_COLOURED := ["adelaide"]
 const SEAT_COLOURS := {
 	# Accor: aqua lower bowl (seat_teal there keeps the value already here).
 	"seat_aqua": Color(0.527, 0.719, 0.757),
-	"seat_grey": Color(0.618, 0.618, 0.586), "seat_moss": Color(0.437, 0.594, 0.555),
-	"seat_navy": Color(0.068, 0.311, 0.484), "seat_slate": Color(0.272, 0.39, 0.488),
-	"seat_steel": Color(0.437, 0.484, 0.524),
+	# MCG, by tier from Street View on the ground and Google Earth: white and light grey lower and
+	# middle tiers, a blue band along the front of the middle tier, teal-blue top tier
+	# (grey-green in the Members' north-west).
+	"seat_mcg_white": Color(0.96, 0.88, 0.80), "seat_mcg_grey": Color(0.76, 0.70, 0.64),
+	"seat_mcg_blue": Color(0.14, 0.26, 0.46), "seat_mcg_teal": Color(0.20, 0.34, 0.44),
+	"seat_mcg_sage": Color(0.50, 0.58, 0.56),
 	"seat_green": Color(0.314, 0.549, 0.455), "seat_teal": Color(0.384, 0.620, 0.541),
 	"seat_blue": Color(0.2, 0.318, 0.467), "seat_paleblue": Color(0.482, 0.612, 0.714),
 	"seat_mint": Color(0.502, 0.706, 0.655), "seat_dkgreen": Color(0.039, 0.243, 0.125),
