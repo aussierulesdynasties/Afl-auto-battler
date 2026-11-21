@@ -36,12 +36,15 @@ Captures: `preinspection/closeups/fixed_*.jpg`.
 1. **WACA: the scoreboard stands on the ground.** Its legs are about 5 m inside the boundary, between the
    east goal and behind posts, and the board is 20 m tall. The scoreboard shares its pieces with the rest of
    the model, so moving it is a model edit, not a lay-out fix. (`open_mcg_toprow_scg_pocket_waca_board.jpg`)
-2. ~~**MCG: the top row of the top tier has no floor.**~~ Fixed 2026-11-21 (MCG review): the seat file
-   carried rows past the back of the south (Great Southern) stand's top tier, up to 15 m of seats in the
-   air. 4,568 seats with no floor under them were taken out of `seats_seat_navy.bin` and
-   `seats_seat_moss.bin` (73,436 to 68,868). From the field the stand still reads full. Left: about 130
-   seats (of 4,050 checked) that sit 1-3 m above the floor the rays find, mostly under the upper tiers'
-   overhang on the east side, where they cannot be seen.
+2. ~~**MCG: the top row of the top tier has no floor.**~~ Fixed 2026-11-21 (MCG review). The seat
+   file carried rows past the back of the south (Great Southern) stand's top tier, up to 15 m of seats
+   in the air: 4,568 seats with no floor under them were taken out. The seat generator
+   (`build.py` `seats3d()` on branch claude/mcg-exterior-87e394) never checks headroom either, and
+   the roof's back edge sat on the east and south top rows (seated supporters' heads came through
+   the roof), with a row jammed under the first tier's overhang all round: 6,079 more seats with
+   less than 1.2 m above them were taken out. 73,436 seats to 62,789. From the field the stands still
+   read full. Left: about 130 seats (of 4,050 checked) 1-3 m above the floor the rays find, under the
+   east upper tiers' overhang, where they cannot be seen.
 3. **SCG: a row of seats in the north-west pocket sits about 1.5 m inside the boundary**, on the apron in
    front of the stand (about 400 seats).
 4. **Norwood: both wing stands stand up to 8-9 m inside the boundary.** Norwood's fence is a rounded
