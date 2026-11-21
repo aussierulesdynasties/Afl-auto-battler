@@ -1276,6 +1276,7 @@ func _show_coach_box() -> void:
 		rep.add_child(played)
 		rep.add_child(_quarter_view(q - 1))
 		var did := MatchNotes.calls_lines(_res, _my_side, q - 1) \
+				+ MatchNotes.talk_lines(_res, _my_side, q - 1) \
 				+ MatchNotes.tag_drop_lines(_res, _my_side, q - 1) \
 				+ MatchNotes.lasting_moment_lines(_res, q - 1)
 		if not did.is_empty():
@@ -1316,6 +1317,8 @@ func _show_coach_box() -> void:
 		"pep": str((sim.tactics[_my_side] as Dictionary).get("pep", "steady")) if q == 1 else "steady",
 	}
 	calls["defence"] = MatchNotes.defence_key(str(calls["interceptor_id"]) != "", str(calls["minder_id"]) != "")
+	# Who you sit down with at this break (BreakTalks): kept once the dice are rolled.
+	calls["sit_id"] = str(sim.talk_now(_my_side, "sit").get("id", ""))
 	var loose_was := str(calls["interceptor_id"])
 	# A tag or a minder you change here is yours from then on: the assistant
 	# stops making that call at the breaks (MatchSim._assistant_calls).
@@ -1679,6 +1682,14 @@ func _show_coach_box() -> void:
 	col_a.add_child(pep_note)
 	sync_pep.call(str(calls["pep"]))
 
+	# Quarter-break talks (director, 2026-11-21): sit down with one player at
+	# every break, and speak to the group at half time. Each rolls two dice on a
+	# tap; the gate says the odds and where the edge on the dice comes from.
+	if q > 1:
+		col_a.add_child(_sit_block(sim, calls))
+		if q == 3:
+			col_a.add_child(_speech_block(sim))
+
 	if wide:
 		def_block.get_parent().remove_child(def_block)
 		tail.add_child(def_block)
@@ -1765,7 +1776,8 @@ func _show_coach_box() -> void:
 # ---------------------------------------------------------------------------
 ## What a call's sheet is headed, and what its row says it is.
 const CALL_TITLES := {"plan": "Game plan", "pep": "Pep talk", "tag": "Tag",
-		"def": "Defensive set-up", "pt": "Play through"}
+		"def": "Defensive set-up", "pt": "Play through", "sit": "Sit down with a player",
+		"speech": "Half-time speech"}
 const CALL_ROW_LABELS := {"pt": "Play through (forward, midfield, back)"}
 
 
@@ -1916,6 +1928,8 @@ func _mount_one_line(c: Dictionary) -> void:
 		through.append(take.call("FocusPicker_" + str(slot), true))
 	body.call("pt", through)
 	body.call("def", [take.call("DefenceBlock")])
+	body.call("sit", [take.call("SitBlock")])
+	body.call("speech", [take.call("SpeechBlock")])
 	((c["who_hook"] as Array)[0] as Callable).call()
 
 	# The rows: what each call is, and its answer now.
@@ -2216,7 +2230,157 @@ func _call_answer(key: String, calls: Dictionary, c: Dictionary) -> String:
 				any_through = any_through or str(calls[slot]) != ""
 				who_through.append(named.call(str(calls[slot]), "no one"))
 			return ", ".join(who_through) if any_through else "No one"
+		"sit":
+			var st := sim.talk_now(_my_side, "sit")
+			if not st.is_empty():
+				return "%s: %s" % [named.call(str(st["id"]), "our player"), str(TALK_WORDS[str(st["band"])])]
+			if str(calls.get("sit_id", "")) != "":
+				return "%s, dice not rolled" % named.call(str(calls["sit_id"]), "our player")
+			return "Nobody yet"
+		"speech":
+			var sp := sim.talk_now(_my_side, "speech")
+			if not sp.is_empty():
+				return "Given: %s" % str(TALK_WORDS[str(sp["band"])])
+			return "Not given yet"
 	return ""
+
+
+## A talk's outcome as a row says it (BreakTalks bands).
+const TALK_WORDS := {"big": "a big lift", "lift": "a lift", "small": "a small lift",
+		"none": "no change", "backfire": "it backfired"}
+
+
+## The sit-down (BreakTalks): one of ours, once a break. Pick him, read the
+## odds and the edge, then tap to roll; the dice land on the sim's roll.
+func _sit_block(sim: MatchSim, calls: Dictionary) -> Control:
+	var mine := _roster_side(_my_side).filter(func(r): return sim.talk_ok(_my_side, str(r["id"])))
+	var sq: Squad = sim.squads[_my_side]
+	var edge_box := UiKit.vbox(2)
+	edge_box.name = "SitEdge"
+	var gc := UiKit.vbox(2)
+	gc.name = "SitGainCost"
+	var go := UiKit.btn("Sit down", UiKit.BODY)
+	go.name = "SitDown"
+	go.custom_minimum_size = Vector2(0, 48)
+	go.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var dice := TalkDice.new()
+	dice.name = "SitDice"
+	dice.edge = UiKit.club_vivid(str(GameState.my_club), UiKit.SURFACE)
+	var said := UiKit.lbl("", UiKit.BODY, UiKit.TEXT, true)
+	said.name = "SitResult"
+	said.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	said.visible = false
+	var sync := func(id: String) -> void:
+		var who := _surname(GameDB.player_display_name_by_id(id, "")) if id != "" else ""
+		_talk_edge_lines(edge_box, "sit", sq, sim.talk_edge(_my_side, "sit", id), sim.talk_trust(_my_side, id))
+		edge_box.visible = id != ""
+		gc.visible = id != ""
+		if id != "":
+			_gain_cost_rows(gc, BreakTalks.gate_texts("sit", sim.talk_edge(_my_side, "sit", id), who), "Sit")
+		go.text = "Sit down with %s" % who if id != "" else "Pick a player first"
+		go.disabled = id == "" or not sim.can_sit_down(_my_side)
+	var pick := _player_choice("SitPicker", "Nobody", mine, _in_the_game(mine, 4), calls, "sit_id",
+			"Sit down with", sync)
+	var block := _call_block("Sit down with a player", pick)
+	block.name = "SitBlock"
+	var ask := UiKit.lbl("One player, once a break. Two dice say how it lands.", UiKit.BODY, UiKit.TEXT, true)
+	ask.name = "SitQuestion"
+	ask.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	block.add_child(ask)
+	block.move_child(ask, 1)
+	for n in [edge_box, gc, go, dice, said]:
+		block.add_child(n)
+	var finish := func(t: Dictionary, animate: bool) -> void:
+		go.visible = false
+		for b in pick.find_children("*", "Button", true, false):
+			(b as Button).disabled = true
+		var line := BreakTalks.result_line("sit", str(t["band"]), _surname(GameDB.player_display_name_by_id(str(t["id"]), "He")))
+		var land := func() -> void:
+			said.text = line
+			said.visible = true
+			if _break_refresh.is_valid():
+				_break_refresh.call()
+		if animate:
+			dice.roll(t["dice"], land)
+		else:
+			dice.show_faces(t["dice"])
+			land.call()
+	go.pressed.connect(func():
+		var t := sim.sit_down(_my_side, str(calls["sit_id"]))
+		if not t.is_empty():
+			finish.call(t, true))
+	sync.call(str(calls["sit_id"]))
+	var done := sim.talk_now(_my_side, "sit")
+	if not done.is_empty():
+		finish.call(done, false)
+	return block
+
+
+## The half-time speech (BreakTalks): the whole group, once, at half time.
+func _speech_block(sim: MatchSim) -> Control:
+	var sq: Squad = sim.squads[_my_side]
+	var e := sim.talk_edge(_my_side, "speech")
+	var block := UiKit.vbox(4 if _pc_break else 6)
+	block.name = "SpeechBlock"
+	block.add_child(_call_heading("Half-time speech"))
+	var ask := UiKit.lbl("The whole group, once, at half time. Two dice say how it lands.", UiKit.BODY, UiKit.TEXT, true)
+	ask.name = "SpeechQuestion"
+	ask.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	block.add_child(ask)
+	var edge_box := UiKit.vbox(2)
+	edge_box.name = "SpeechEdge"
+	_talk_edge_lines(edge_box, "speech", sq, e, sim.talk_trust(_my_side))
+	block.add_child(edge_box)
+	var gc := UiKit.vbox(2)
+	gc.name = "SpeechGainCost"
+	_gain_cost_rows(gc, BreakTalks.gate_texts("speech", e), "Speech")
+	block.add_child(gc)
+	var go := UiKit.btn("Give the speech", UiKit.BODY)
+	go.name = "GiveSpeech"
+	go.custom_minimum_size = Vector2(0, 48)
+	go.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	block.add_child(go)
+	var dice := TalkDice.new()
+	dice.name = "SpeechDice"
+	dice.edge = UiKit.club_vivid(str(GameState.my_club), UiKit.SURFACE)
+	block.add_child(dice)
+	var said := UiKit.lbl("", UiKit.BODY, UiKit.TEXT, true)
+	said.name = "SpeechResult"
+	said.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	said.visible = false
+	block.add_child(said)
+	var finish := func(t: Dictionary, animate: bool) -> void:
+		go.visible = false
+		var land := func() -> void:
+			said.text = BreakTalks.result_line("speech", str(t["band"]))
+			said.visible = true
+			if _break_refresh.is_valid():
+				_break_refresh.call()
+		if animate:
+			dice.roll(t["dice"], land)
+		else:
+			dice.show_faces(t["dice"])
+			land.call()
+	go.pressed.connect(func():
+		var t := sim.give_speech(_my_side)
+		if not t.is_empty():
+			finish.call(t, true))
+	var done := sim.talk_now(_my_side, "speech")
+	if not done.is_empty():
+		finish.call(done, false)
+	return block
+
+
+## Where a talk's edge on the dice comes from, one line each, under its total.
+func _talk_edge_lines(box: VBoxContainer, kind: String, sq: Squad, e: int, trust: int) -> void:
+	UiKit.clear(box)
+	var head := UiKit.lbl("Edge on the dice: %+d" % e if e != 0 else "Edge on the dice: none", UiKit.SECONDARY, UiKit.TEXT, true)
+	head.name = kind.capitalize() + "EdgeTotal"
+	box.add_child(head)
+	for l in BreakTalks.edge_lines(kind, sq.talk_manage, sq.talk_arch, trust):
+		var w := UiKit.lbl(str(l), UiKit.SECONDARY, UiKit.TEXT)
+		w.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		box.add_child(w)
 
 
 ## The players a call's answer names (by id), so its row can ink a surname two
@@ -2232,6 +2396,8 @@ func _answer_ids(key: String, calls: Dictionary, c: Dictionary) -> Array:
 		"pt":
 			for slot in MatchNotes.FOCUS_ORDER:
 				ids.append(str(calls[slot]))
+		"sit":
+			ids = [str(calls.get("sit_id", ""))]
 	return ids.filter(func(i): return str(i) != "")
 
 

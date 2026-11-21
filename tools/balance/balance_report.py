@@ -1181,6 +1181,35 @@ def tag_section(A, B):
         print(f"Tagging side wins {100 * sum(wins) / len(wins):.1f}%.")
 
 
+def talks_section(A, B):
+    """Quarter-break talks (--talks off|one|all): the margin and win share of
+    side i % 2 (the talking side under "one"), paired A against B."""
+    common = [i for i in A if "talks" in A[i] and (not B or (i in B and "talks" in B[i]))]
+    if not common:
+        return
+    print("\n## Break talks (side i % 2)\n")
+    print("| | A | B | B-A | se |")
+    print("|---|---|---|---|---|")
+    a = [A[i]["talks"]["margin"] for i in common]
+    rows = [("margin", a, [B[i]["talks"]["margin"] for i in common] if B else None)]
+    win = lambda m: [100.0 if x > 0 else (50.0 if x == 0 else 0.0) for x in m]
+    rows.append(("win %", win(a), win(rows[0][2]) if B else None))
+    for name, xa, xb in rows:
+        if xb is None:
+            print(f"| {name} | {st.mean(xa):.2f} | - | - | - |")
+            continue
+        d = [y - x for x, y in zip(xa, xb)]
+        se = st.stdev(d) / math.sqrt(len(d)) if len(d) > 1 else 0.0
+        print(f"| {name} | {st.mean(xa):.2f} | {st.mean(xb):.2f} | {st.mean(d):+.2f} | {se:.2f} |")
+    src = B if B else A
+    tally = {}
+    for i in common:
+        for k, n in src[i]["talks"]["bands"].items():
+            tally[k] = tally.get(k, 0) + n
+    if tally:
+        print("\nRolls (kind_band_side): " + ", ".join(f"{k} {v}" for k, v in sorted(tally.items())))
+
+
 def year_ref(o):
     """The real per-team-match rates to mark against, and their label: 2026
     (afl_team_rates.json), or a past season's (afl_year_rates.json, legacy row 142 L5)
@@ -1338,6 +1367,7 @@ def main():
     type_report(A, B)
     reb_route_section(A, B)
     tackle_section(A, B)
+    talks_section(A, B)
     pressure_section(A, B)
     legs_section(A, B)
     tag_section(A, B)

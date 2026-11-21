@@ -181,6 +181,16 @@ var _loose_was := [{}, {}]
 ## moment_side gets them, and they draw from their own RNG, so simulated
 ## matches (moment_side -1) never see one.
 var moment_side := -1
+## Quarter-break talks (BreakTalks, director 2026-11-21): every talk so far,
+## oldest first: {kind "sit"|"speech", side, q (the quarter it lifts), id ("" for
+## a speech), dice [a, b], edge, band, lift}. A side that has nobody at the
+## break (an AI club; your club in a match you sim) has its talks made for it
+## at the siren (_auto_talks); the coach makes his own (sit_down, give_speech).
+var talk_log: Array = []
+## Each player's lift for the quarter in play, from the talks (id -> fit).
+var _talk_lift := {}
+## Sides that make no talks (a balance arm's switch; never set in the game).
+var talks_off := [false, false]
 var moment_rng := RandomNumberGenerator.new()
 ## Stat credits that must not disturb the match's own random sequence (who a
 ## free kick was paid to): results are identical with or without them.
@@ -4924,9 +4934,16 @@ func end_quarter() -> Dictionary:
 	_emit("quarter", -1, fp, null, "End of Q%d · %s %d.%d (%d) · %s %d.%d (%d)" % [
 		quarter, squads[0].name, goals(0), behinds(0), score(0),
 		squads[1].name, goals(1), behinds(1), score(1)])
+	# A talk lifts one quarter only.
+	_talk_lift.clear()
+	_fit_cache.clear()
 	current_quarter += 1
 	if quarter == 3:
 		_three_quarter_sub()
+	if quarter < 4:
+		for side in range(2):
+			if moment_side != side and not bool(talks_off[side]):
+				_auto_talks(side)
 	if quarter < 4:
 		for side in range(2):
 			if _assisted(side):
@@ -4939,6 +4956,119 @@ func end_quarter() -> Dictionary:
 		else:
 			_emit_full_time("Full time")
 	return result()
+
+
+# ---------------------------------------------------------------------------
+# Quarter-break talks (BreakTalks, director 2026-11-21)
+# ---------------------------------------------------------------------------
+## True at a break the coach can still sit down with a player: quarter, half
+## and three-quarter time, once each.
+func can_sit_down(side: int) -> bool:
+	return _at_talk_break() and _talk_at(side, "sit").is_empty()
+
+
+## True at half time before the side's speech.
+func can_speak(side: int) -> bool:
+	return _at_talk_break() and current_quarter == 3 and _talk_at(side, "speech").is_empty()
+
+
+func _at_talk_break() -> bool:
+	return not _q_active and current_quarter >= 2 and current_quarter <= 4
+
+
+## This break's talk of a kind for a side, {} before it is made.
+func talk_now(side: int, kind: String) -> Dictionary:
+	return _talk_at(side, kind)
+
+
+func _talk_at(side: int, kind: String) -> Dictionary:
+	for t in talk_log:
+		if int(t["side"]) == side and str(t["kind"]) == kind and int(t["q"]) == current_quarter:
+			return t
+	return {}
+
+
+## The edge a talk has (BreakTalks.edge): a sit-down with `id`, or the speech
+## when `id` is "".
+func talk_edge(side: int, kind: String, id := "") -> int:
+	var sq: Squad = squads[side]
+	return BreakTalks.edge(kind, sq.talk_manage, sq.talk_arch, talk_trust(side, id))
+
+
+## His trust in his coach (Trust.gd), or the group's average for "": your club's
+## players only; a rival's are neutral to theirs.
+func talk_trust(side: int, id := "") -> int:
+	var sq: Squad = squads[side]
+	if not sq.talk_trust or CoachEffects.relations.is_empty():
+		return 0
+	if id != "":
+		return Trust.value(CoachEffects.relations, Trust.player_key(id))
+	var total := 0
+	var n := 0
+	for p in sq.ground + sq.bench:
+		total += Trust.value(CoachEffects.relations, Trust.player_key(str(p["id"])))
+		n += 1
+	return roundi(float(total) / float(n)) if n > 0 else 0
+
+
+## Who can be sat down with: anyone of the side still in the match.
+func talk_ok(side: int, id: String) -> bool:
+	for p in (squads[side] as Squad).ground + (squads[side] as Squad).bench:
+		if str(p["id"]) == id:
+			return true
+	return false
+
+
+## Sit down with one player: the dice roll now, and the lift is his for the
+## next quarter. {} when the break has had its sit-down or he is not there.
+func sit_down(side: int, id: String) -> Dictionary:
+	if not can_sit_down(side) or not talk_ok(side, id):
+		return {}
+	return _talk(side, "sit", id)
+
+
+## The half-time speech: the dice roll now, and the lift is everyone's.
+func give_speech(side: int) -> Dictionary:
+	if not can_speak(side):
+		return {}
+	return _talk(side, "speech", "")
+
+
+func _talk(side: int, kind: String, id: String) -> Dictionary:
+	# Its own dice, seeded by the match, the break, the side and the kind: the
+	# match's own streams draw nothing, and a replay rolls the same.
+	var dice_rng := RandomNumberGenerator.new()
+	dice_rng.seed = hash("talk|%d|%d|%d|%s" % [_clanger_seed, current_quarter, side, kind])
+	var dice := [dice_rng.randi_range(1, 6), dice_rng.randi_range(1, 6)]
+	var e := talk_edge(side, kind, id)
+	var key := BreakTalks.band(dice, e)
+	var lift := BreakTalks.lift(kind, key)
+	var t := {"kind": kind, "side": side, "q": current_quarter, "id": id, "dice": dice,
+			"edge": e, "band": key, "lift": lift}
+	talk_log.append(t)
+	var who: Array = []
+	if kind == "sit":
+		who = [id]
+	else:
+		for p in (squads[side] as Squad).ground + (squads[side] as Squad).bench:
+			who.append(str(p["id"]))
+	for pid in who:
+		_talk_lift[pid] = float(_talk_lift.get(pid, 0.0)) + lift
+	_fit_cache.clear()
+	return t
+
+
+## A side with nobody at the break: its coach sits down with his best player on
+## the ground (by rating) and speaks at half time. Every club gets the same.
+func _auto_talks(side: int) -> void:
+	var best := {}
+	for p in (squads[side] as Squad).ground:
+		if best.is_empty() or int(p.get("overall", 0)) > int(best.get("overall", 0)):
+			best = p
+	if not best.is_empty():
+		sit_down(side, str(best["id"]))
+	if can_speak(side):
+		give_speech(side)
 
 
 ## True once a finals match is level after four quarters and extra time has
@@ -5345,6 +5475,7 @@ func result() -> Dictionary:
 		"home": squads[0].code,
 		"away": squads[1].code,
 		"tactics_history": tactics_history.duplicate(true),
+		"talks": talk_log.duplicate(true),
 		"weather": weather,
 		# The day's turn at a break, once played (row 160): where it started and
 		# which break it turned at; "" and 0 for a day that held.
@@ -5428,7 +5559,7 @@ func fit(p: Dictionary) -> float:
 	var f := FIT_BASE + FIT_SLOPE * e / 100.0
 	if (current_quarter >= 4 or finals_mode) and _trait(p, "big_game"):
 		f += 0.05
-	f += ClubLife.form(p) + float(_arch_form.get(id, 0.0))
+	f += ClubLife.form(p) + float(_arch_form.get(id, 0.0)) + float(_talk_lift.get(id, 0.0))
 	f -= float(_fam_cut.get(id, 0.0))
 	_fit_cache[id] = [e, f]
 	return f
