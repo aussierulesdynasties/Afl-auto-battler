@@ -30,20 +30,19 @@ SIZE = 2048            # pixels a side, 1 m each, centred on the field
 # Inside the model's own plaza nothing is painted: the model draws it.
 MODEL_R = 150.0
 
-BASE = (172, 162, 94)          # Yarra Park's dry summer grass, as Google Earth shows it; every colour here is
-                               # painted warm and light against the match light's blue sky fill
-LAWN = (160, 160, 88)
-PITCH = (118, 150, 72)
-ASPHALT = (112, 110, 106)
-PARKING = (128, 124, 118)
-PATH = (206, 194, 170)
-PAVED = (196, 188, 172)
-BALLAST = (138, 124, 106)
+BASE = (116, 124, 82)          # Yarra Park's dry summer grass, as Google Earth shows it
+LAWN = (108, 124, 76)
+PITCH = (92, 124, 62)
+ASPHALT = (96, 96, 96)
+PARKING = (112, 110, 106)
+PATH = (170, 164, 148)
+PAVED = (160, 156, 146)
+BALLAST = (120, 110, 98)
 RAIL = (70, 62, 56)
-ROOF = (176, 172, 164)
+ROOF = (146, 144, 140)
 WATER = (70, 92, 96)
-URBAN = (164, 156, 136)        # houses and their gardens (East Melbourne, Richmond)
-WOOD = (96, 112, 60)
+URBAN = (118, 120, 108)        # houses and their gardens (East Melbourne, Richmond)
+WOOD = (78, 98, 56)
 
 WIDTH = {"motorway": 16, "trunk": 14, "primary": 13, "secondary": 11, "tertiary": 9,
          "residential": 7, "unclassified": 6, "service": 4.5, "living_street": 5,
@@ -156,16 +155,20 @@ def paint(trees, ways):
     for t, p in ways:
         if "building" in t and len(p) > 2 and t.get("building") not in ("roof",):
             d.polygon(poly(p), fill=ROOF)
-    # Under every tree its canopy's shade (the 3D tree stands on it).
+    # The parks' unmapped trees: OpenStreetMap has only some of them (Yarra Park reads half as
+    # dense as Google Earth), so each park is filled to PARK_DENSITY on its open grass.
+    trees = trees + fill_parks(im, trees, ways)
+    # Under every tree its canopy's shade (the 3D tree stands on it): darker and browner, the bare
+    # ground under Yarra Park's elms and gums.
     arr = np.asarray(im, float)
     shade = Image.new("L", (SIZE, SIZE), 0)
     sd = ImageDraw.Draw(shade)
     for e, n in trees:
         x, y = px(e, n)
-        r = 4.5
+        r = 6.0
         sd.ellipse((x - r, y - r, x + r, y + r), fill=150)
     shade = np.asarray(shade.filter(ImageFilter.GaussianBlur(2.5)), float) / 255
-    arr *= (1.0 - 0.45 * shade)[..., None]
+    arr = arr * (1.0 - 0.5 * shade)[..., None] + np.array([18.0, 6.0, -4.0]) * shade[..., None]
     # Fine grain over everything, then fade the far edge to plain grass (the texture clamps there).
     grain = (rng.random((SIZE, SIZE)) - 0.5) * 10
     arr += grain[..., None]
@@ -173,7 +176,66 @@ def paint(trees, ways):
     r = np.hypot(xx - SIZE / 2, yy - SIZE / 2)
     edge = np.clip((r - 900) / 120, 0, 1)[..., None]
     arr = arr * (1 - edge) + np.array(URBAN, float) * edge
-    return Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8), "RGB")
+    return Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8), "RGB"), trees
+
+
+# Trees a square metre in a park's open grass once filled (Google Earth's Yarra Park: a canopy
+# every 14 m or so), never nearer than TREE_GAP to another tree or 3 m to a path, road or roof.
+PARK_DENSITY = 1.0 / 190.0
+TREE_GAP = 9.5
+
+
+def fill_parks(im, trees, ways):
+    a = np.asarray(im, int)
+    # Open grass: green over blue (paths, asphalt, roofs, ballast and water are grey or brown).
+    grass = (a[..., 1] - a[..., 2] > 40) & (a[..., 1] >= a[..., 0] - 30)
+    nog = Image.new("L", (SIZE, SIZE), 0)
+    nd = ImageDraw.Draw(nog)
+    for t, p in ways:
+        if t.get("leisure") == "pitch" and len(p) > 2:
+            nd.polygon([px(*q) for q in p], fill=255)
+    grass &= np.asarray(nog) == 0
+    # 3 m clear of anything that is not grass.
+    clear = np.asarray(Image.fromarray((~grass * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(7))) == 0
+    rng = np.random.default_rng(23)
+    have = np.array([model_xz(*e) for e in trees]) if trees else np.zeros((0, 2))
+    cell = {}
+
+    def key(x, z):
+        return (int(x // TREE_GAP), int(z // TREE_GAP))
+
+    for x, z in have:
+        cell.setdefault(key(x, z), []).append((x, z))
+    added = []
+    for t, p in ways:
+        if t.get("leisure") not in ("park", "garden") or len(p) < 4:
+            continue
+        poly = [model_xz(*q) for q in p]
+        if max(max(abs(x), abs(z)) for x, z in poly) > 950:
+            continue
+        mask = Image.new("L", (SIZE, SIZE), 0)
+        ImageDraw.Draw(mask).polygon([(x + SIZE / 2, z + SIZE / 2) for x, z in poly], fill=255)
+        ys, xs = np.nonzero((np.asarray(mask) > 0) & clear)
+        if len(xs) == 0:
+            continue
+        want = int(len(xs) * PARK_DENSITY)
+        inside = sum(1 for x, z in have if mask.getpixel((int(x + SIZE / 2), int(z + SIZE / 2))) if 0 <= x + SIZE / 2 < SIZE and 0 <= z + SIZE / 2 < SIZE)
+        for _ in range(want * 12):
+            if inside >= want:
+                break
+            k = rng.integers(len(xs))
+            x, z = xs[k] - SIZE / 2 + rng.random(), ys[k] - SIZE / 2 + rng.random()
+            if math.hypot(x, z) < MODEL_R + 10:
+                continue
+            cx, cz = key(x, z)
+            near = [q for i in (-1, 0, 1) for j in (-1, 0, 1) for q in cell.get((cx + i, cz + j), [])]
+            if any((qx - x) ** 2 + (qz - z) ** 2 < TREE_GAP ** 2 for qx, qz in near):
+                continue
+            cell.setdefault((cx, cz), []).append((x, z))
+            added.append((x, z))
+            inside += 1
+    # Back to east/north metres, as the mapped trees are.
+    return [(x + PITCH_E, -z + PITCH_N) for x, z in added]
 
 
 def _area(p):
@@ -188,8 +250,8 @@ def tree_list(trees):
         x, z = model_xz(e, n)
         if math.hypot(x, z) < MODEL_R or abs(x) > 950 or abs(z) > 950:
             continue
-        h = rng.uniform(9.0, 17.0)
-        out.append((x, z, h, h * rng.uniform(0.32, 0.42), rng.uniform(0.0, 1.0)))
+        h = rng.uniform(10.0, 18.0)
+        out.append((x, z, h, h * rng.uniform(0.42, 0.55), rng.uniform(0.0, 1.0)))
     return np.array(out, "<f4")
 
 
@@ -229,7 +291,7 @@ def main():
     if not os.path.exists(path):
         fetch(path)
     trees, ways = load(path)
-    im = paint(trees, ways)
+    im, trees = paint(trees, ways)
     im.save(os.path.join(OUT, "surrounds.webp"), quality=88, method=6)
     t = tree_list(trees)
     t.tofile(os.path.join(OUT, "trees.bin"))

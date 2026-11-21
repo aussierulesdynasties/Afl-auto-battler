@@ -280,6 +280,9 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
 		var mm := StandardMaterial3D.new()
 		mm.resource_name = "surrounds"
 		mm.albedo_texture = map
+		# The sun's shadow map reaches 160 m from the camera; past it, on the Mobile renderer, the
+		# land read as if in shade (blue-grey). Its trees' shade is painted into the map instead.
+		mm.disable_receive_shadows = true
 		mm.texture_repeat = false
 		mm.roughness = 1.0
 		var g := MeshInstance3D.new()
@@ -287,6 +290,7 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
 		g.mesh = mesh
 		g.material_override = mm
 		g.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		g.set_meta("open_ground", true)
 		root.add_child(g)
 		if s.has("trees") and FileAccess.file_exists(dir + str(s["trees"])):
 			_add_trees(root, FileAccess.get_file_as_bytes(dir + str(s["trees"])).to_float32_array(), y)
@@ -330,8 +334,8 @@ const TREE_BLOCK := 250.0
 static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float) -> void:
 	var canopy := _canopy_mesh()
 	var trunk := CylinderMesh.new()
-	trunk.top_radius = 0.18
-	trunk.bottom_radius = 0.28
+	trunk.top_radius = 0.022
+	trunk.bottom_radius = 0.035
 	trunk.height = 1.0
 	trunk.radial_segments = 5
 	trunk.rings = 0
@@ -340,12 +344,14 @@ static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float) -> void:
 	var leaf := StandardMaterial3D.new()
 	leaf.resource_name = "tree_leaf"
 	leaf.vertex_color_use_as_albedo = true
-	leaf.albedo_color = Color(0.5, 0.54, 0.26)
+	leaf.albedo_color = Color(0.27, 0.34, 0.19)
 	leaf.roughness = 1.0
+	leaf.disable_receive_shadows = true
 	var bark := StandardMaterial3D.new()
 	bark.resource_name = "tree_bark"
 	bark.albedo_color = Color(0.33, 0.29, 0.24)
 	bark.roughness = 1.0
+	bark.disable_receive_shadows = true
 	var blocks := {}
 	for i in range(0, buf.size() - 4, 5):
 		var key := Vector2i(floori(buf[i] / TREE_BLOCK), floori(buf[i + 1] / TREE_BLOCK))
@@ -369,12 +375,12 @@ static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float) -> void:
 			var r: float = buf[i + 3]
 			var at := Vector3(buf[i], y, buf[i + 1])
 			var turn := Basis(Vector3.UP, buf[i + 4] * TAU)
-			var crown := h - r * 0.9
+			var crown := h - r * 1.1
 			leaves.set_instance_transform(j, Transform3D(turn.scaled(Vector3(r, r * 0.85, r)), at + Vector3(0, crown, 0)))
 			# Eucalypt grey-green to elm green, a little lighter or darker tree to tree.
 			var shade: float = buf[i + 4]
 			leaves.set_instance_color(j, Color(0.92, 0.95, 0.9).lerp(Color(1.1, 1.08, 0.95), shade) * (0.85 + 0.3 * fposmod(shade * 7.3, 1.0)))
-			stems.set_instance_transform(j, Transform3D(Basis().scaled(Vector3(1, crown, 1)), at + Vector3(0, crown * 0.5, 0)))
+			stems.set_instance_transform(j, Transform3D(Basis().scaled(Vector3(h, crown, h)), at + Vector3(0, crown * 0.5, 0)))
 		for pair in [[leaves, leaf, "Trees"], [stems, bark, "Trunks"]]:
 			var mi := MultiMeshInstance3D.new()
 			mi.name = "%s_%d_%d" % [pair[2], key.x, key.y]
@@ -438,28 +444,44 @@ static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float) -> v
 	mat.vertex_color_use_as_albedo = true
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	mat.roughness = 0.95
+	mat.disable_receive_shadows = true
 	var mi := MeshInstance3D.new()
 	mi.name = "Buildings"
 	mi.mesh = mesh
 	mi.material_override = mat
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.set_meta("open_ground", true)
 	root.add_child(mi)
 
 
-## A rounded canopy, radius about 1, lumpy so a park of them does not read as balls.
+## A canopy of about radius 1: two lumpy lobes, one high and one off to the side, so a park of them
+## reads as gums and elms rather than balls on sticks.
 static func _canopy_mesh() -> ArrayMesh:
 	var sphere := SphereMesh.new()
 	sphere.radius = 1.0
 	sphere.height = 2.0
-	sphere.radial_segments = 8
+	sphere.radial_segments = 7
 	sphere.rings = 4
-	var arr := sphere.get_mesh_arrays()
-	var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
-	for k in v.size():
-		var p := v[k]
-		var bump := 1.0 + 0.16 * sin(p.x * 5.1 + p.y * 3.7) * cos(p.z * 4.3 - p.y * 2.9)
-		v[k] = Vector3(p.x * bump, maxf(p.y, -0.55) * bump, p.z * bump)
+	var src := sphere.get_mesh_arrays()
+	var v := PackedVector3Array()
+	var nrm := PackedVector3Array()
+	var idx := PackedInt32Array()
+	for lobe: Array in [[Vector3(0.0, 0.1, 0.0), 0.82], [Vector3(0.42, -0.12, 0.2), 0.62], [Vector3(-0.38, -0.05, -0.28), 0.58]]:
+		var at: Vector3 = lobe[0]
+		var r: float = lobe[1]
+		var base := v.size()
+		for k in (src[Mesh.ARRAY_VERTEX] as PackedVector3Array).size():
+			var p: Vector3 = src[Mesh.ARRAY_VERTEX][k]
+			var bump := 1.0 + 0.18 * sin(p.x * 5.1 + p.y * 3.7 + at.x * 9.0) * cos(p.z * 4.3 - p.y * 2.9)
+			v.append(at + Vector3(p.x, maxf(p.y, -0.5), p.z) * r * bump)
+			nrm.append(src[Mesh.ARRAY_NORMAL][k])
+		for k in (src[Mesh.ARRAY_INDEX] as PackedInt32Array):
+			idx.append(base + k)
+	var arr := []
+	arr.resize(Mesh.ARRAY_MAX)
 	arr[Mesh.ARRAY_VERTEX] = v
+	arr[Mesh.ARRAY_NORMAL] = nrm
+	arr[Mesh.ARRAY_INDEX] = idx
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
 	return mesh
