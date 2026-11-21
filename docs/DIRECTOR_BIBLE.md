@@ -399,6 +399,8 @@ Source tags: DB = DESIGN_BIBLE; RM26/27/28/29/30/32 = roadmap chapters 26, 27, 2
 
 **2.113** After a mark in general play the picture stays on the main camera (2026-11-21; row 202, 2e). Real coverage usually cuts to a tight close-up of the man who marked while he decides (ABC News, 11 Jul 2020), a shot coaches criticise because it hides his options. Shown the same Fremantle v St Kilda marks at Optus Stadium in the game's match view at 4x and 1x (A stay on the main camera; B about 8 m around the man who marked while he holds the ball, back to the main camera as he plays on: 0.9 s at 1x, a quarter of a second at 4x), he chose "A: Stay on the main camera".
 
+**2.114** Through the banner in the 3D view, and banner words are milestones only (2026-11-21; row 202). He asked for "a 'running through the banners' scene, similar to our existing vignette but in the new 3d view", then: "the plan for banner text is simply milestone stuff / no jokes for now, no rhymes". On the 3D picture the run-through plays on the match's own ground before the first bounce (scripts/ui/match/Oval3DBanner.gd): the cheer squad holds the banner up on the far wing, your side bursts through, the crepe tears, the crowd rises, cut as the TV does (the wide, front-on, alongside); a tap ends it. data/banners.json's milestone set holds plain words (a debut, 50 to 350 games on the approved "200 games. Take a bow, {display_name}." pattern, a club milestone, a last game); every other set stays the club's name (rule 6.66).
+
 ---
 
 ## 2.S Superseded and cut

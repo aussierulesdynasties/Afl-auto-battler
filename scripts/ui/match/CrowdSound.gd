@@ -108,6 +108,12 @@ func event(kind: String, side: int = HOME, shown_usec: int = -1, audible: bool =
 			_play("siren", "crowd_siren.wav", SIREN_DB, true, -1, q, shown_usec)
 
 
+## Through the banner: the roar as your side bursts through, at a goal's volume. Not a goal:
+## the run of goals is untouched.
+func run_out(side: int = HOME) -> void:
+	_play("run_out", "crowd_goal.wav", ROAR_DB + (0.0 if side == HOME else AWAY_DB), true, side, 0, -1)
+
+
 ## Full time: the siren, once. The fourth quarter's siren is the full-time
 ## siren when it has just gone; a match skipped to its end, or one that went to
 ## extra time, gets its siren here.

@@ -208,6 +208,8 @@ func _ready() -> void:
 		# as Skip to full time before the first bounce.
 		GameState.match_way_live = "watch"
 		_on_skip.call_deferred()
+	elif _interactive and _banner_first():
+		pass
 	elif _interactive:
 		_show_coach_box()
 	elif _review:
@@ -218,6 +220,32 @@ func _ready() -> void:
 			if not _finished:
 				_pitch.play()
 				_sync_controls())
+
+
+## Through the banner on the 3D ground before the first bounce (Oval3DBanner), once a match: on
+## the 3D picture the run-through plays here, on the match's own ground, instead of the flat
+## pre-match vignette (MatchKickoff). The calls open when it ends. False when it doesn't play.
+static var _banner_played := ""
+
+
+func _banner_first() -> bool:
+	if not _pitch.three_d or not GameState.vignettes_on():
+		return false
+	var m: Dictionary = GameState.pending_match
+	var key := "%d|%s|%s|%s" % [GameState.season_year, str(m.get("label", "")), str(m.get("home", "")), str(m.get("away", ""))]
+	if key == _banner_played:
+		return false     # back from Change the side: it has run already
+	var opp := str(m["away"]) if str(m["home"]) == GameState.my_club else str(m["home"])
+	var text := PreMatchVignette.banner_text(GameState.my_club, opp, str(m.get("label", "")), GameState.banner_context(m))
+	if not _pitch.run_banner(text, _my_side):
+		return false
+	_banner_played = key
+	_set_clock_word("pre")
+	_pitch.banner_burst.connect(func(): _crowd.run_out(_my_side), CONNECT_ONE_SHOT)
+	_pitch.banner_done.connect(func():
+		if _interactive and not _finished:
+			_show_coach_box(), CONNECT_ONE_SHOT)
+	return true
 
 
 func _build() -> void:
