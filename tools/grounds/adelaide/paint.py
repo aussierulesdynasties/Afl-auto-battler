@@ -46,11 +46,9 @@ def save(kind, a, tile, rgb=None):
 
 # 0 plain painted surfaces: sheets 2.4 x 1.2 m, each faded its own way, chalky patches
 t = (9.6, 9.6); a = 0.9 * cells(N, t, 2.4, 1.2, 0.07) + noise(N, 8, 0.12) + grain(N, 0.015); save(0, a, t)
-# 1 the Hill's north seat terraces, drawn as rows on the terrace (no 3D seats there): rows 0.8 m deep, a seat 0.5 m
-# wide with a gap, back and pan in the seat colour, the concrete tread between rows pale
-t = (4.0, 3.2); ys, xs = np.mgrid[0:N, 0:N] / N; u = xs * 4.0; v = ys * 3.2; fv = (v % 0.8) / 0.8; fu = (u % 0.5) / 0.5
-seat = (fu > 0.06) & (fu < 0.94) & (fv > 0.35) & (fv < 0.9)
-a = np.where(seat, np.where(fv > 0.7, 0.75, 1.0), 1.9) * (1 + noise(N, 6, 0.05) + grain(N, 0.02)) * 0.5; save(1, a, t)
+# (the Hill's old painted seat rows, kind 1 until 2026-11-21: still drawn so the random stream, and every texture
+# after it, stays as it was; kind 1 is now the paving, painted at the end)
+_ = noise(N, 6, 0.05) + grain(N, 0.02)
 # 2 concrete: 4 x 3 m panels, each cast its own tone, dark joints, mottle, aggregate, rain runs
 t = (16.0, 12.0); a = 0.88 * cells(N, t, 4.0, 3.0, 0.09) * (1 + noise(N, 10, 0.25)) * (1 + grain(N, 0.06))
 a = joints(streaks(a, 40, 0.2), t, 4.0, 3.0); save(2, a, t)
@@ -91,4 +89,8 @@ t = (7.2, 7.2); a = 0.9 * cells(N, t, 1.2, 0.6, 0.07) * (1 + noise(N, 8, 0.1)) *
 t = (12.0, 12.0); a = 0.92 + noise(N, 6, 0.25) + grain(N, 0.06); save(12, a, t)
 # 13 scoreboard board: painted panels 1.2 x 0.55 m, dark joints, faded unevenly
 t = (4.8, 4.4); a = 0.9 * cells(N, t, 1.2, 0.55, 0.05) * (1 + noise(N, 6, 0.06)); a = joints(a, t, 1.2, 0.55, 0.6); save(13, a, t)
+# 1 paving (the Hill concourse and paths; kind 1 was the painted Hill seat rows, now real seats): 400 x 400 mm pale concrete pavers, stack bond, each its own tone, fine
+# sand joints, light wear; no streaks (director 2026-11-21: "terrible texture work")
+t = (4.8, 4.8); a = 0.92 * cells(N, t, 0.4, 0.4, 0.05) * (1 + noise(N, 12, 0.05)) * (1 + grain(N, 0.025))
+a = joints(a, t, 0.4, 0.4, 0.78, 1); save(1, a, t)
 json.dump(TILES, open(os.path.join(OUT, 'tiles.json'), 'w'), indent=1); print('painted', sorted(TILES))
