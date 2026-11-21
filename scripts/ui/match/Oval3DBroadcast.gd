@@ -89,12 +89,12 @@ var _after_siren: Array = []  # the deciding behind's clip, for after the siren
 var replaying := false        # the picture shows a replay
 var _kick_wide := false       # a long kick's zoom out still running (rule 2.111)
 var _zoom := 1.0              # 0 the normal TV-height shot, 1 the wide shot (rule 2.111)
-## PROPOSED, off until the director picks (row 202, 2e): a tackle that stops play (held to a
+## Chosen 2026-11-21 ("B: close cut", row 202, 2e): a tackle that stops play (held to a
 ## ball-up, or a holding-the-ball or dropped-ball free) cuts to the nearest clear wing camera,
 ## INCIDENT_WIDTH across on the two men, from the moment it lands until they are back on their
 ## feet (MatchDirector.TAKE_UP), then back to the main camera. A tackle that spills the ball
 ## free stays on the main camera: real TV does not cut away from live play.
-var incident_cuts := false
+var incident_cuts := true
 var _inc := {}                # {who, victim, t0}: the tackle the picture is on; {} none
 var _inc_eye := Vector3.ZERO
 var _inc_trail: Array = []

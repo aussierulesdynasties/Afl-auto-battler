@@ -3255,6 +3255,8 @@ func _test_three_d_cameras(res: Dictionary) -> void:
 				var t: Dictionary = pv.director.tokens[tv._close_who]
 				close_ok += 1 if str(t["role"]) == "RUCK" and is_equal_approx(tv._close_eye.y, 15.0) else 0
 			continue
+		if not tv._inc.is_empty() and tv.shot == "main":
+			continue  # close on a tackle that stopped play (_test_tackle_cuts)
 		if tv.shot != last:
 			if tv.shot == "goals":
 				cuts += 1
@@ -3796,8 +3798,8 @@ func _test_tackled_frees() -> void:
 	_check(got >= tackled - 1, "...and the man paid it has the ball before play goes on (%d of %d)" % [got, tackled])
 
 
-## The proposed close cut on a tackle that stops play (Oval3DBroadcast.incident_cuts, off until
-## the director picks): only with both men in one tackle clip, from a wing camera, and only on a
+## The close cut on a tackle that stops play (Oval3DBroadcast.incident_cuts, chosen
+## 2026-11-21): only with both men in one tackle clip, from a wing camera, and only on a
 ## tackle held to a ball-up or paid as a free; never on one that spills the ball free.
 func _test_tackle_cuts(res: Dictionary) -> void:
 	var pv := PitchView.new()
@@ -3806,8 +3808,7 @@ func _test_tackle_cuts(res: Dictionary) -> void:
 	(Engine.get_main_loop() as SceneTree).root.add_child(pv)
 	pv.setup(res)
 	var tv: Oval3DBroadcast = pv._tv
-	_check(not tv.incident_cuts, "The tackle close-up is off until the director picks it")
-	tv.incident_cuts = true
+	_check(tv.incident_cuts, "Tackles that stop play cut close (chosen 2026-11-21: B, close cut)")
 	pv.set_speed(4.0)
 	pv.play()
 	var frames := 0
