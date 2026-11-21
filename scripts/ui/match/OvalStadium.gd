@@ -135,10 +135,12 @@ func draw_stands(ci: CanvasItem, view: Rect2, c: Vector2, s: float, colours: Arr
 ## The turf: the replay's grass and its mown stripes, the worn patches at the
 ## goal squares and the centre, then the light over it (`light`, PitchView's).
 func draw_turf(ci: CanvasItem, c: Vector2, s: float, weather: String, tod: String, light: Texture2D) -> void:
-	var key := weather + "|" + tod
+	# The ground's size is in the key: the next match may be at a ground of another size.
+	var key := "%s|%s|%s|%s" % [weather, tod, MatchMotion.HALF_LEN, MatchMotion.HALF_WID]
 	if _turf == null or key != _turf_key:
 		_turf_key = key
 		_turf = _turf_mesh(grass(weather, tod))
+		_lit = null
 	var xf := Transform2D(0.0, Vector2(s, s), 0.0, c)
 	ci.draw_mesh(_turf, null, xf)
 	if _lit == null:
@@ -327,7 +329,7 @@ static func _turf_mesh(cols: Array) -> ArrayMesh:
 		n += 1
 	var worn: Array = VignetteGround.WORN
 	for end in [-1.0, 1.0]:
-		var gx: float = PitchView.GOAL_LINE_M * end
+		var gx: float = MatchMotion.GOAL_X * end
 		b.ellipse(Vector2(gx - 3.5 * end, 0.0), 5.0, 4.2, 24, worn[0])
 		b.ellipse(Vector2(gx - 2.6 * end, 0.4), 2.8, 2.4, 18, worn[1])
 	b.ellipse(Vector2.ZERO, 3.2, 4.0, 24, worn[0])
