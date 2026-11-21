@@ -11,8 +11,11 @@ extends SceneTree
 ## Saves OUTDIR/<slug>/<shot>.png and OUTDIR/<slug>/measure.json; prints one MEASURE line per ground.
 ## Looks only: nothing here changes a match.
 
-const FX := GroundModels.MATCH_FENCE.x
-const FZ := GroundModels.MATCH_FENCE.y
+## The match's fence at the ground being filmed (it plays at its own size: GroundModels.field).
+static var FX: float:
+	get: return GroundModels.match_fence().x
+static var FZ: float:
+	get: return GroundModels.match_fence().y
 
 
 func _shots() -> Array:
