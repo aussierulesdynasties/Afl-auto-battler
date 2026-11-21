@@ -23,8 +23,10 @@ photo's design as a picture. Run from a work folder holding `ref/CODE_front.png`
 4. Capture (`tools/visual/capture_guernseys3d.gd -- OUT ESS [rest|idle]`) and board it:
    `python board.py ESS OUT board_ESS.png` (photo | model | 50% overlay, front and back).
 
-Done for: ESS. The game still loads one body (player_mh.glb) for every club; a per-club guernsey
-in the game is not built yet.
+Done for all 18 clubs and Tasmania (cuts in assets/oval3d/cuts/<CODE>.res, loaded by
+Oval3D.club_body for the MetaHuman body). Sydney and the Western Bulldogs have their own fixes in
+club_fixes/syd_*.py and wbd_*.py. The match view still draws the MPFB placeholder body, so the cuts
+show only where a capture or view loads player_mh.glb.
 
 ## Flat pattern (director 2026-11-19, "Yes, all clubs"; done for NTH and STK)
 

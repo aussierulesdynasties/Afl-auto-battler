@@ -94,8 +94,8 @@ Each success has its failure (study §2.5). Left-footers use a mirror that swaps
 
 | Item | Have | Order |
 |---|---|---|
-| Field umpire: run, bounce, ball-up, every signal (holding the ball, free, 50, play on, advantage, ball-up call) | umpire_bounce_01 | A bounce, B the rest |
-| Boundary umpire: run the line, throw-in over the head, out on the full signal | none | B |
+| Field umpire: run, bounce, ball-up, every signal (holding the ball, free, 50, play on, advantage, ball-up call) | umpire_bounce_01, played at every centre bounce (the ball from his hands to the turf on the director's bounce); its lift of the ball stands in for the ball-up throw | A bounce, B the rest |
+| Boundary umpire: run the line, throw-in over the head, out on the full signal | none (he goes to the line and holds the ball, his back to the play; the bounce clip's lift stands in for the throw) | B |
 | Goal umpire: goal (two fingers, two flags), behind (one), touched, flag waving | none | B |
 | Man on the mark (arms up, standing still), walk back, protected zone | none | B |
 

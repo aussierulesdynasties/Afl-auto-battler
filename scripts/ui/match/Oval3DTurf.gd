@@ -19,8 +19,44 @@ const BLADES := preload("res://assets/oval3d/turf/blades.png")
 const BLADES_N := preload("res://assets/oval3d/turf/blades_n.png")
 const PATCHES := preload("res://assets/oval3d/turf/patches.png")
 
+## Each ground's cut and grass (row 202 2b; looks only). Curators cut a fresh pattern before
+## every televised match, so no ground has one fixed cut; this is the cut each ground shows in
+## the game, a first draft for the director's review. [pattern, band width m, grass]:
+## pattern across (bands across the ground, the mower running wing to wing), along, checker
+## (cut both ways), diagonal, diamonds (both diagonals); grass couch (the warm-climate grounds:
+## a touch warmer and yellower) or rye (the southern grounds: a touch deeper and cooler;
+## Adelaide Oval's surface is rye, InDaily 2025). A ground not listed takes DEFAULT_MOW.
+const ACROSS := 0
+const ALONG := 1
+const CHECKER := 2
+const DIAGONAL := 3
+const DIAMONDS := 4
+const DEFAULT_MOW := [ACROSS, 12.0, ""]
+const MOWING := {
+	"mcg": [ACROSS, 12.0, "rye"], "marvel": [ACROSS, 10.0, "rye"], "optus": [CHECKER, 12.0, "couch"],
+	"scg": [DIAGONAL, 10.0, "couch"], "gmhba": [ACROSS, 12.0, "rye"],
+	"people_first": [DIAMONDS, 12.0, "couch"], "engie": [CHECKER, 12.0, "couch"],
+	"bellerive": [ALONG, 12.0, "rye"], "manuka": [ACROSS, 12.0, "rye"], "norwood": [ACROSS, 10.0, "rye"],
+	"waverley_park": [ACROSS, 14.0, "rye"], "windy_hill": [ACROSS, 10.0, "rye"],
+	"moorabbin": [ACROSS, 10.0, "rye"], "ikon_park": [ACROSS, 12.0, "rye"], "whitten": [ALONG, 12.0, "rye"],
+	"football_park": [ACROSS, 14.0, "rye"], "subiaco": [ACROSS, 12.0, "couch"], "waca": [ACROSS, 12.0, "couch"],
+	"york_park": [CHECKER, 10.0, "rye"], "cazalys": [ACROSS, 10.0, "couch"],
+	"north_hobart": [ACROSS, 10.0, "rye"], "bruce": [ACROSS, 12.0, "rye"],
+	"riverway": [DIAGONAL, 12.0, "couch"], "barossa": [ACROSS, 10.0, "rye"], "sky": [ALONG, 12.0, "rye"],
+	"jiangwan": [CHECKER, 12.0, "couch"], "hands": [ACROSS, 10.0, "couch"],
+	"blacktown": [ACROSS, 12.0, "couch"], "summit": [ACROSS, 10.0, "rye"], "macpoint": [DIAMONDS, 12.0, "rye"],
+}
+## How each grass shifts the day's turf colours (multiplied in, so weather and light still set them).
+const GRASS_TINT := {
+	"couch": Color(1.05, 1.0, 0.88),
+	"rye": Color(0.96, 1.0, 1.04),
+}
+
 var oval: Node3D
 var mat: ShaderMaterial
+var ground := ""                # the ground's slug (GroundModels); "" the game's own oval
+var _tint := Color(1, 1, 1)
+var _applied := false
 var env: Environment
 var sun: DirectionalLight3D
 var fill: DirectionalLight3D
@@ -119,6 +155,19 @@ func _copy_look() -> void:
 		_bmat.set_shader_parameter(k, mat.get_shader_parameter(k))
 
 
+## The ground's own cut and grass (MOWING), from its GroundModels slug; "" the default.
+func set_ground(slug: String) -> void:
+	ground = slug
+	var m: Array = MOWING.get(slug, DEFAULT_MOW)
+	mat.set_shader_parameter("mow_pattern", int(m[0]))
+	mat.set_shader_parameter("mow_width", float(m[1]))
+	_tint = GRASS_TINT.get(m[2], Color(1, 1, 1))
+	if _applied:
+		apply(weather, slot)
+	else:
+		_copy_look()
+
+
 var _followers: Array[ShaderMaterial] = []
 
 
@@ -133,6 +182,7 @@ func follow(m: ShaderMaterial) -> void:
 func apply(p_weather: String, p_slot: String) -> void:
 	weather = p_weather
 	slot = p_slot if p_slot in VignetteKickoff.SLOTS else VignetteKickoff.NIGHT
+	_applied = true
 	var wet := weather == VignetteWeather.WET
 	var hot := weather == VignetteWeather.HOT
 	var d := VignetteKickoff.daylight(slot)
@@ -148,10 +198,10 @@ func apply(p_weather: String, p_slot: String) -> void:
 		g = dry.map(func(c: Color) -> Color:
 			var l := c.get_luminance()
 			return c.lerp(Color(l, l, l), grey) * 0.95)
-	mat.set_shader_parameter("grass_a", g[0])
-	mat.set_shader_parameter("grass_b", g[1])
+	mat.set_shader_parameter("grass_a", g[0] * _tint)
+	mat.set_shader_parameter("grass_b", g[1] * _tint)
 	var apron: Color = VignetteWeather.grass(weather, [VignetteGround.APRON], slot)[0]
-	mat.set_shader_parameter("apron_col", apron)
+	mat.set_shader_parameter("apron_col", apron * _tint)
 	var worn: Color = VignetteGround.WORN[1]
 	mat.set_shader_parameter("worn_col", VignetteWeather.daylit(Color(worn.r, worn.g, worn.b), slot))
 	mat.set_shader_parameter("wet", 1.0 if wet else 0.0)
@@ -165,8 +215,8 @@ func apply(p_weather: String, p_slot: String) -> void:
 	# patches (the full straw look goes lime under the TV tone, rule 2.81; approved hot sky, 2.84).
 	if hot:
 		g = VignetteWeather.grass("", VignetteGround.GRASS, slot)
-		mat.set_shader_parameter("grass_a", g[0])
-		mat.set_shader_parameter("grass_b", g[1])
+		mat.set_shader_parameter("grass_a", g[0] * _tint)
+		mat.set_shader_parameter("grass_b", g[1] * _tint)
 		mat.set_shader_parameter("hot", 0.4)
 	_copy_look()
 
