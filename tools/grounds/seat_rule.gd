@@ -93,9 +93,11 @@ func check(slug: String, parent: Node, write := false) -> Dictionary:
 		mid += q
 	mid = mid / maxf(1.0, pts.size())
 	mid.y = 0.0
+	# Every match is played on the model's own field (#1949), so the fence is the model's own.
+	MatchMotion.use_field(GroundModels.field(slug))
 	var fit := GroundModels.fit_transform(slug)
-	var fx := GroundModels.MATCH_FENCE.x
-	var fz := GroundModels.MATCH_FENCE.y
+	var fx := GroundModels.match_fence().x
+	var fz := GroundModels.match_fence().y
 	# Every seat file, every seat: its spot, its floor and what stands over it.
 	var files := _seat_files(dir)
 	var bufs := {}
