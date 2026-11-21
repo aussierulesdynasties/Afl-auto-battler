@@ -43,8 +43,9 @@ Captures: `preinspection/closeups/fixed_*.jpg`.
    the roof's back edge sat on the east and south top rows (seated supporters' heads came through
    the roof), with a row jammed under the first tier's overhang all round: 6,079 more seats with
    less than 1.2 m above them were taken out. 73,436 seats to 62,789. From the field the stands still
-   read full. Left: about 130 seats (of 4,050 checked) 1-3 m above the floor the rays find, under the
-   east upper tiers' overhang, where they cannot be seen.
+   read full. Since then (MCG flagship, stage 4): 829 more seats more than 0.8 m above any floor and
+   2,150 with less than 2.6 m of headroom were taken out, to 59,810 (the seat rule in
+   docs/MCG_STANDARD.md).
 3. **SCG: a row of seats in the north-west pocket sits about 1.5 m inside the boundary**, on the apron in
    front of the stand (about 400 seats).
 4. **Norwood: both wing stands stand up to 8-9 m inside the boundary.** Norwood's fence is a rounded
