@@ -325,7 +325,7 @@ def box(x0,x1,y0,y1,z0,z1,mi,top=None):
         face(vs,mi,[((v.x+v.y)/4,v.z/4) for v in vs])
     face([P8(x0,y0,z1),P8(x0,y1,z1),P8(x1,y1,z1),P8(x1,y0,z1)],top if top is not None else mi,[(x0/4,y0/4),(x0/4,y1/4),(x1/4,y1/4),(x1/4,y0/4)])
 # storey front x -119.2, y 5.5..33.5 (f08 solved camera back-projection)
-box(-119.2,-110.0,3.8,20.5,19.6,26.4,HCLAD,STEEL)
+box(-119.2,-110.0,3.8,26.8,19.6,26.4,HCLAD,STEEL)   # north face y 26.8 on the Esri aerial (was 20.5; south face 3.7 already matched)
 box(-114.0,-110.0,BY0-3.0,BY0+1.0,0,25.2,CONC)  # concrete tower top 25.2 (f08)          # parapet band
 for (yy,xx) in((9,-116),(15,-114),(21,-117),(27,-114)):box(xx-1.6,xx+1.6,yy-1.6,yy+1.6,25.5,27.3,STEEL)  # roof plant
 # glazed entry under the wedge, set back to the old glazing line
