@@ -108,9 +108,9 @@ const PARTS := {
 ## its sunlit tops to Google Earth's colours (north 189,188,181, east 148,150,145).
 const MATERIAL_FIX := {
 	"mcg": {
-		"roof_white": {"metallic": 0.0, "roughness": 0.9, "albedo_color": Color(0.95, 0.92, 0.84)},
+		"roof_white": {"metallic": 0.0, "roughness": 0.9, "albedo_color": Color(0.84, 0.84, 0.8)},
 		"roof_grey": {"metallic": 0.0, "roughness": 0.9, "albedo_color": Color(0.8, 0.8, 0.76)},
-		"roof_teal": {"albedo_color": Color(0.84, 0.86, 0.78)},
+		"roof_teal": {"albedo_color": Color(0.72, 0.86, 0.8)},
 		# The north stands' masts and ties: pale painted tubes in Google Earth, not dark galvanised.
 		"steel_galv": {"metallic": 0.0, "roughness": 0.55, "albedo_color": Color(0.9, 0.9, 0.88)},
 	},
@@ -514,7 +514,7 @@ static func slice_big_meshes(root: Node) -> void:
 			tris += mi.mesh.surface_get_array_index_len(si) / 3
 		if tris <= SLICE_OVER:
 			continue
-		var pieces := _slices(mi.mesh)
+		var pieces := _slices(mi.mesh, mi)
 		var parent := mi.get_parent()
 		for k in range(pieces.size()):
 			var piece := MeshInstance3D.new()
@@ -529,8 +529,9 @@ static func slice_big_meshes(root: Node) -> void:
 
 
 ## The mesh's triangles sorted into SLICES meshes by the bearing of each triangle's first corner
-## from the middle of the mesh's box; each piece keeps only the corners it uses.
-static func _slices(mesh: Mesh) -> Array:
+## from the middle of the mesh's box; each piece keeps only the corners it uses. With `src_mi`, each
+## surface keeps that instance's override (MATERIAL_FIX), not only the mesh's own material.
+static func _slices(mesh: Mesh, src_mi: MeshInstance3D = null) -> Array:
 	var mid := mesh.get_aabb().get_center()
 	var meshes := []
 	for k in range(SLICES):
@@ -554,7 +555,7 @@ static func _slices(mesh: Mesh) -> Array:
 			per[k].append(idx[t + 2])
 		var remap := PackedInt32Array()
 		remap.resize(verts.size())
-		var mat := mesh.surface_get_material(si)
+		var mat := src_mi.get_active_material(si) if src_mi != null else mesh.surface_get_material(si)
 		for k in range(SLICES):
 			var tri: PackedInt32Array = per[k]
 			if tri.is_empty():
