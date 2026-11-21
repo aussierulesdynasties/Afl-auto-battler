@@ -29,16 +29,23 @@ const LEVELS := [LOW, MEDIUM, HIGH]
 ##   blades        the standing grass blades round the ball
 ##   rain          drops in the air on a wet day (rule 2.83: when it rains, rain falls on screen, so
 ##                 every level keeps some; High is the approved prototype's count)
+##   msaa          edge smoothing (Viewport.msaa_3d): each pixel's edge sampled 4 or 2 times, so a
+##                 player's outline, a line or a post is not a staircase. Multisampling, not FXAA:
+##                 FXAA blurs the whole picture, guernsey numbers and the boards' names with it.
+##                 On a phone's tiled GPU the extra samples stay on the chip, so it is cheap, and
+##                 it is what the hair's alpha-to-coverage cards need to draw soft strand ends.
+##                 Low has none: its picture is drawn at three-quarter size and stretched,
+##                 which softens the edges anyway.
 const PRESETS := {
 	HIGH: {"shadow_atlas": 4096, "shadow_filter": RenderingServer.SHADOW_QUALITY_SOFT_HIGH, "splits": 4,
 			"seat_shadows": true, "stand_shade": true, "people_d": 55.0, "lod": 1.0, "scale": 1.0,
-			"blades": true, "rain": 40000},
+			"blades": true, "rain": 40000, "msaa": Viewport.MSAA_4X},
 	MEDIUM: {"shadow_atlas": 2048, "shadow_filter": RenderingServer.SHADOW_QUALITY_SOFT_LOW, "splits": 4,
 			"seat_shadows": false, "stand_shade": true, "people_d": 30.0, "lod": 2.0, "scale": 1.0,
-			"blades": true, "rain": 20000},
+			"blades": true, "rain": 20000, "msaa": Viewport.MSAA_2X},
 	LOW: {"shadow_atlas": 2048, "shadow_filter": RenderingServer.SHADOW_QUALITY_SOFT_LOW, "splits": 2,
 			"seat_shadows": false, "stand_shade": false, "people_d": 0.0, "lod": 4.0, "scale": 0.75,
-			"blades": false, "rain": 10000},
+			"blades": false, "rain": 10000, "msaa": Viewport.MSAA_DISABLED},
 }
 
 
@@ -58,13 +65,16 @@ static func apply_shadows(level: String) -> void:
 	RenderingServer.directional_soft_shadow_filter_set_quality(int(p["shadow_filter"]))
 
 
-## The 3D picture's viewport: its mesh detail and how many of its pixels are drawn.
+## The 3D picture's viewport: its mesh detail, how many of its pixels are drawn and how its
+## edges are smoothed.
 static func apply_viewport(level: String, vp: Viewport) -> void:
 	var p := preset(level)
 	vp.mesh_lod_threshold = float(p["lod"])
 	var s := float(p["scale"])
 	vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
 	vp.scaling_3d_scale = s
+	vp.msaa_3d = int(p["msaa"]) as Viewport.MSAA
+	vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_DISABLED
 
 
 ## A ground's seats cast shadows or not, by the level: the seat batches (GroundModels) and a
