@@ -285,6 +285,21 @@ for w, s0, z0, s1, z1 in SB_WORDS:
     if w == 'ND':
         sb_dot(s0 + 0.08, z0 - 0.14); sb_dot(s0 + 0.22, z0 - 0.14)
 wallq(S_TW, T_B, 0, T_B, zb, Z_CORN, SB_TOWER, 'timber')
+# the back (what the Hill sees): cream weatherboard in bays between green pilasters, a green plinth and trim bands,
+# two rows of small sash windows in each bay (the heritage board's back, as its face's green and cream)
+_tb = T_B + 0.03
+wallq(S_TW, _tb, 0, _tb, zb, zb + 1.0, SB_GREEN, 'plain')
+for _z in (Z_VER - 0.15, Z_CORN - 0.45):
+    wallq(S_TW, _tb, 0, _tb, _z, _z + 0.3, SB_GREEN, 'plain')
+_bays = np.linspace(0, S_TW, 6)
+for _s in _bays:
+    wallq(min(_s + 0.2, S_TW), _tb + 0.02, max(_s - 0.2, 0), _tb + 0.02, zb, Z_CORN, SB_GREEN, 'plain')
+for _a, _b in zip(_bays[:-1], _bays[1:]):
+    for _zw in (zb + 4.6, zb + 8.0):
+        for _k in (0.3, 0.62):
+            _c = _a + (_b - _a) * _k
+            wallq(_c + 0.5, _tb + 0.02, _c - 0.5, _tb + 0.02, _zw - 0.1, _zw + 1.6, SB_CREAM, 'plain')
+            wallq(_c + 0.38, _tb + 0.04, _c - 0.38, _tb + 0.04, _zw, _zw + 1.5, (40, 46, 50), 'plain')
 wallq(0, T_B, 0, T_F, zb, Z_CORN, SB_TOWER, 'timber')
 wallq(0, T_F, S_TW, T_F, zb, Z_VER, (60, 64, 58), 'plain')        # wall behind the verandah
 # tower: brick base to the verandah roof, cream weatherboard above (c01, c09)
@@ -391,7 +406,7 @@ for (x0, x1, za, zb_) in ((-SWID / 2, SWID / 2, Z0, Z0 + 0.35), (-SWID / 2, SWID
                           (-SWID / 2, -SWID / 2 + 0.35, Z0, Z1), (SWID / 2 - 0.35, SWID / 2, Z0, Z1)):
     solid(m, SC_C + SU * (x0 + x1) / 2 - SN * 0.1, SU, SN, x1 - x0, 0.2, za, zb_, (34, 36, 38), 'steel')
 m.quad((*(SC_C - SU * (SWID / 2 - 0.35) - SN * 0.02), Z0 + 0.35), (*(SC_C + SU * (SWID / 2 - 0.35) - SN * 0.02), Z0 + 0.35),
-       (*(SC_C + SU * (SWID / 2 - 0.35) - SN * 0.02), Z1 - 0.35), (*(SC_C - SU * (SWID / 2 - 0.35) - SN * 0.02), Z1 - 0.35), SCREEN, 'glass')
+       (*(SC_C + SU * (SWID / 2 - 0.35) - SN * 0.02), Z1 - 0.35), (*(SC_C - SU * (SWID / 2 - 0.35) - SN * 0.02), Z1 - 0.35), SCREEN, 'plain')   # matte: a switched-off LED face, not glass (glass mirrored the sky purple)
 for x in np.arange(-SWID / 2 + 1.0, SWID / 2 - 0.5, 2.4):       # back panels
     m.quad((*(SC_C + SU * x + SN * 1.82), Z0 + 0.6), (*(SC_C + SU * (x + 2.0) + SN * 1.82), Z0 + 0.6),
            (*(SC_C + SU * (x + 2.0) + SN * 1.82), Z1 - 0.6), (*(SC_C + SU * x + SN * 1.82), Z1 - 0.6), (52, 54, 56), 'fins')

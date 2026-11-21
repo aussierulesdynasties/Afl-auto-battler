@@ -103,7 +103,7 @@ const SURROUNDS := {
 	# own ground stops there, and inside it the match's turf and the model's floor take over.
 	"adelaide": {"y": -0.03, "inner": 105.0, "colour": Color(0.45, 0.55, 0.27),
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
-			"models": ["landmarks.glb"]},
+			"models": ["landmarks.glb"], "building_colours": "buildings_col.bin"},
 }
 
 ## Parts of a model drawn again from a build tool's own mesh (per vertex x, y, z, normal, colour;
@@ -374,8 +374,13 @@ static func _add_surrounds(root: Node3D, s: Dictionary, dir := "") -> void:
 		if s.has("trees") and FileAccess.file_exists(dir + str(s["trees"])):
 			_add_trees(root, FileAccess.get_file_as_bytes(dir + str(s["trees"])).to_float32_array(), y)
 		if s.has("buildings") and FileAccess.file_exists(dir + str(s["buildings"])):
+			# `building_colours`: each building's wall and roof colour (6 bytes, the map's order), from
+			# OpenStreetMap's building:colour and roof:colour where mapped (Adelaide).
+			var bcol := PackedByteArray()
+			if s.has("building_colours") and FileAccess.file_exists(dir + str(s["building_colours"])):
+				bcol = FileAccess.get_file_as_bytes(dir + str(s["building_colours"]))
 			_add_buildings(root, FileAccess.get_file_as_bytes(dir + str(s["buildings"])).to_float32_array(), y,
-					s.get("building_tint", s.get("tint", Color.WHITE)))
+					s.get("building_tint", s.get("tint", Color.WHITE)), bcol)
 		for m in s.get("models", []):
 			var extra := load_glb(dir + str(m))
 			if extra != null:
@@ -480,7 +485,8 @@ static func _add_trees(root: Node3D, buf: PackedFloat32Array, y: float) -> void:
 ## The map's buildings round the ground (point count, height, then the footprint's x, z): plain
 ## walls in a pale render or brick and a flat roof each, as one mesh. Seen past the stands and
 ## from a fly-through, they set the MCG in its city rather than on a plain.
-static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float, tint := Color.WHITE) -> void:
+static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float, tint := Color.WHITE,
+		colours := PackedByteArray()) -> void:
 	var v := PackedVector3Array()
 	var nrm := PackedVector3Array()
 	var col := PackedColorArray()
@@ -498,6 +504,10 @@ static func _add_buildings(root: Node3D, buf: PackedFloat32Array, y: float, tint
 		b += 1
 		var wall: Color = WALLS[b % WALLS.size()]
 		var roof := wall.darkened(0.18)
+		if colours.size() >= b * 6:
+			var o := (b - 1) * 6
+			wall = Color8(colours[o], colours[o + 1], colours[o + 2])
+			roof = Color8(colours[o + 3], colours[o + 4], colours[o + 5])
 		# Walls face out whichever way round the footprint was drawn.
 		var ccw := 0.0
 		for k in n:
