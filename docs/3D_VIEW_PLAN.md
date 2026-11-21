@@ -236,7 +236,7 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 | MCG | model, instanced seats | #1843 |
 | Marvel Stadium | model | #1911 |
 | Adelaide Oval | model, 3D seats; plays in a match (exported for the game by tools/grounds/adelaide) | #1856 |
-| Optus Stadium | model, roof, seats | #1867 #1880; background scene open #1897 |
+| Optus Stadium | rebuilt to the MCG standard (docs/MCG_STANDARD.md): bronze ribbon re-shaped and redrawn, matte roof, surroundings and bridges | #1867 #1880; rebuild PR from the Optus thread (2026-11-21) |
 | SCG | model | #1909 |
 | GMHBA Stadium | exterior model | #1903; open: roof #1899, background scene #1878 |
 | People First Stadium | model, roof | #1853 #1860 #1868 #1889; background scene open #1892 |
