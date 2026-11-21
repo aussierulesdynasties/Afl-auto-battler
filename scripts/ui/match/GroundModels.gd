@@ -92,6 +92,16 @@ const SURROUNDS := {
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin"},
 }
 
+## Parts of a model drawn again from a build tool's own mesh (per vertex x, y, z, normal, colour;
+## float32, the model's metres), the model's own nodes named in `hide` left out. The MCG's roof
+## trusses are deep pale lattices from Google Earth, not the model's single blue beams
+## (tools/grounds/mcg/trusses.py), and its outside walls get a slab edge at every floor
+## (tools/grounds/mcg/ledges.py).
+const PARTS := {
+	"mcg": [{"mesh": "trusses.bin", "hide": ["trusses"], "name": "Trusses"},
+			{"mesh": "ledges.bin", "name": "SlabEdges"}],
+}
+
 ## Per-ground corrections to a model's materials, by material name, checked against Google Earth
 ## (MCG, 2026-11-21): the MCG's roof sheeting is matte grey from above. Built glossy and part metal,
 ## it mirrored the blue sky and read white-blue where the real roof reads warm grey; the tints bring
@@ -229,6 +239,8 @@ static func instantiate(slug: String, base := "") -> Node3D:
 				_paint_vertex_colours(model)
 			if MATERIAL_FIX.has(slug):
 				_fix_materials(model, MATERIAL_FIX[slug])
+			for part: Dictionary in PARTS.get(slug, []):
+				_add_part(model, dir, part)
 			root.add_child(model)
 	slice_big_meshes(root)
 	var fit: Array = FIT.get(slug, [0.0, 0.0])
@@ -697,6 +709,49 @@ static func _instances(root: Node3D, mesh: Mesh, path: String, colour: String, m
 
 
 ## MATERIAL_FIX: each named material on `model` gets its own copy with the listed values.
+## One PARTS entry: its mesh added to the model, the nodes it replaces taken out.
+static func _add_part(model: Node, dir: String, part: Dictionary) -> void:
+	if not FileAccess.file_exists(dir + str(part["mesh"])):
+		return
+	for n: String in part.get("hide", []):
+		var old := model.find_child(n, true, false)
+		if old != null:
+			old.get_parent().remove_child(old)
+			old.queue_free()
+	var buf := FileAccess.get_file_as_bytes(dir + str(part["mesh"])).to_float32_array()
+	var v := PackedVector3Array()
+	var nrm := PackedVector3Array()
+	var col := PackedColorArray()
+	# Godot fronts a triangle wound clockwise; the tools write them either way, with the normal.
+	for t in range(0, buf.size() - 26, 27):
+		var p := [Vector3(buf[t], buf[t + 1], buf[t + 2]), Vector3(buf[t + 9], buf[t + 10], buf[t + 11]),
+				Vector3(buf[t + 18], buf[t + 19], buf[t + 20])]
+		var n := Vector3(buf[t + 3], buf[t + 4], buf[t + 5])
+		var order := [0, 1, 2] if (p[1] - p[0]).cross(p[2] - p[0]).dot(n) < 0.0 else [0, 2, 1]
+		for k: int in order:
+			var i: int = t + k * 9
+			v.append(p[k])
+			nrm.append(Vector3(buf[i + 3], buf[i + 4], buf[i + 5]))
+			col.append(Color(buf[i + 6], buf[i + 7], buf[i + 8]))
+	var arr := []
+	arr.resize(Mesh.ARRAY_MAX)
+	arr[Mesh.ARRAY_VERTEX] = v
+	arr[Mesh.ARRAY_NORMAL] = nrm
+	arr[Mesh.ARRAY_COLOR] = col
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	var mat := StandardMaterial3D.new()
+	mat.resource_name = "steel_truss"
+	mat.vertex_color_use_as_albedo = true
+	mat.roughness = 0.6
+	mat.metallic = 0.2
+	mesh.surface_set_material(0, mat)
+	var mi := MeshInstance3D.new()
+	mi.name = str(part.get("name", "Part"))
+	mi.mesh = mesh
+	model.add_child(mi)
+
+
 static func _fix_materials(model: Node, fixes: Dictionary) -> void:
 	var done := {}
 	for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
