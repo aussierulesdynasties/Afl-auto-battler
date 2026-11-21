@@ -35,7 +35,9 @@ const GROUNDS := {
 ## fitted to where a level line 0.5 m above the arena floor first meets the model, looking out
 ## from the middle): [centre x, centre z, arena floor y, long axis in degrees from +x towards +z,
 ## half length, half width], in the model's own metres. The MCG's floor is the 4.2 m its loader
-## was built on (#1843); its drain line sits a metre lower.
+## was built on (#1843); its drain line sits a metre lower. Bellerive and Windy Hill were refitted to
+## the fence the game draws (tools/visual/preinspect_grounds.gd, 2026-11-21): the first fits left a
+## stand up to 20 m inside Bellerive's boundary and Windy Hill's turned 6 degrees off.
 const FIT := {
 	"mcg": [0.53, 0.39, -4.2, -3.3, 87.19, 73.39],
 	"marvel": [-0.03, -0.02, 5.4, -89.8, 90.45, 75.93],
@@ -44,11 +46,11 @@ const FIT := {
 	"gmhba": [-8.89, 11.85, 0.02, -69.8, 94.3, 66.01],
 	"people_first": [-0.72, 0.04, 0.02, -72.6, 89.11, 72.26],
 	"engie": [20.64, -43.32, 0.0, -41.1, 92.14, 76.44],
-	"bellerive": [9.8, -2.07, -0.02, 60.9, 89.19, 76.4],
+	"bellerive": [0.31, -0.64, -0.02, 68.7, 86.9, 66.77],
 	"manuka": [5.93, 8.15, 0.03, -82.9, 85.94, 73.1],
 	"norwood": [1.96, -3.15, 0.0, 88.3, 88.73, 63.59],
 	"waverley_park": [-1.08, 5.64, 0.0, -34.6, 92.9, 71.99],
-	"windy_hill": [5.29, -13.0, 0.05, 7.2, 78.68, 69.84],
+	"windy_hill": [6.01, -11.01, 0.05, 1.4, 78.42, 67.69],
 	"moorabbin": [0.88, -2.15, 0.0, -57.5, 86.73, 69.48],
 	"ikon_park": [44.35, -22.32, 0.0, 10.1, 84.68, 73.85],
 	"whitten": [146.34, -76.06, 0.0, -82.1, 96.9, 72.28],
@@ -244,6 +246,19 @@ static func _seat_mesh(path: String) -> Mesh:
 	return st.commit()
 
 
+## True when a seat mesh is an open sheet rather than a closed solid: a closed one's faces,
+## weighted by area, point every way and cancel out; a sheet's mostly point one way.
+static func _is_sheet(seat: Mesh) -> bool:
+	var f := seat.get_faces()
+	var sum := Vector3.ZERO
+	var area := 0.0
+	for i in range(0, f.size() - 2, 3):
+		var n := (f[i + 1] - f[i]).cross(f[i + 2] - f[i])
+		sum += n
+		area += n.length()
+	return area > 0.0 and sum.length() > 0.3 * area
+
+
 static func _add_seats(root: Node3D, dir: String) -> void:
 	var shared: Mesh = null
 	if FileAccess.file_exists(dir + "seat_tmpl.bin"):
@@ -278,6 +293,10 @@ static func _instances(mesh: Mesh, path: String, colour: String) -> MultiMeshIns
 	mi.multimesh = mm
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = SEAT_COLOURS.get(colour, Color.GRAY)
+	# A seat drawn as one open sheet (the ground kit's moulded shell, wound the other way to
+	# Godot's front face) is seen from both sides; a closed seat keeps back faces culled.
+	if _is_sheet(mesh):
+		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	mi.material_override = mat
 	return mi
 

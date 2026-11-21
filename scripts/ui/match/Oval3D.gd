@@ -471,6 +471,7 @@ func _ground_model(slug: String, base := "", home := "", away := "") -> void:
 	var root := GroundModels.instantiate(slug, base)
 	add_child(root)
 	_turf_mat.set_shader_parameter("fence_clip", GroundModels.MATCH_FENCE)
+	_apron_skirt()
 	if home == "":
 		return
 	var seats := GroundModels.seat_transforms(slug, base)
@@ -481,6 +482,42 @@ func _ground_model(slug: String, base := "", home := "", away := "") -> void:
 	root.add_child(crowd)
 	crowd.build_on_seats(seats, GroundModels.seat_points(slug, base),
 			GameDB.club_colours(home), GameDB.club_colours(away))
+
+
+## How far past the match's fence the apron skirt runs, and how far under the turf it lies (under
+## the model's own ground, GroundModels.UNDER_TURF, so wherever the model has ground, that shows).
+const SKIRT_OUT := 8.0
+const SKIRT_DROP := 0.3
+
+
+## Where a model's own fence runs outside the match's (a metre or a few on part of the lap) it has
+## no ground drawn between the turf's edge and its wall, and the sky under the world showed through
+## as a white strip at the foot of the fence. A ring of the turf's apron, from just inside the
+## match's fence to SKIRT_OUT past it, lies under the model's ground and fills that gap with grass.
+func _apron_skirt() -> void:
+	var f := GroundModels.MATCH_FENCE
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	st.set_normal(Vector3.UP)
+	var n := 180
+	for i in n:
+		var a0 := TAU * i / n
+		var a1 := TAU * (i + 1) / n
+		var p := [Vector3(cos(a0) * f.x * 0.97, 0.0, sin(a0) * f.y * 0.97),
+				Vector3(cos(a1) * f.x * 0.97, 0.0, sin(a1) * f.y * 0.97),
+				Vector3(cos(a1) * (f.x + SKIRT_OUT), 0.0, sin(a1) * (f.y + SKIRT_OUT)),
+				Vector3(cos(a0) * (f.x + SKIRT_OUT), 0.0, sin(a0) * (f.y + SKIRT_OUT))]
+		for k in [0, 1, 2, 0, 2, 3]:
+			st.add_vertex(p[k])
+	var mi := MeshInstance3D.new()
+	mi.name = "ApronSkirt"
+	mi.mesh = st.commit()
+	mi.position.y = -SKIRT_DROP
+	var sm := _turf_mat.duplicate() as ShaderMaterial
+	sm.set_shader_parameter("fence_clip", Vector2.ZERO)
+	mi.material_override = sm
+	add_child(mi)
+	turf.follow(sm)
 
 
 ## A .glb as a node (GroundModels.load_glb): the imported copy for a file in the game, read

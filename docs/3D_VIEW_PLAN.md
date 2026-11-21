@@ -263,6 +263,9 @@ _Update this section whenever 3D work merges. It is the one place 3D progress is
 | The Gabba | model, 3D seats; plays in a match (built 2026-11-19/20 on a branch that never merged; brought in from the PC) | |
 | Barossa Park, Traeger Park, Sky Stadium, Jiangwan Stadium, Hands Oval, Blacktown, Summit Park, Macquarie Point | to confirm: no work found in the repo or its local worktrees | |
 
+Machine pre-inspection of the 30 match grounds, before the director's fly-through (2026-11-21, #1950):
+[3D_PREINSPECTION.md](3D_PREINSPECTION.md). Its fixes are in; its open faults are listed there.
+
 ### Open questions for the director (3D only)
 
 - Row 207: when a stat card appears and for how long; the journalists' posts (who, what, when, where).
