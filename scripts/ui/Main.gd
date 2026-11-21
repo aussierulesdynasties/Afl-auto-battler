@@ -41,6 +41,11 @@ var _pick_start := "redraft"
 var _pick_challenge := "none"
 var _pick_goal := ""
 var _start_row: VBoxContainer
+## Real 2026 lists before or after the real 2026 National Draft (the person,
+## 2026-11-21: "Both, chosen at New career"): false = you run your club
+## through the draft, true = every real pick is already on his club.
+var _pick_after_draft := false
+var _draft_row: VBoxContainer
 var _challenge_row: VBoxContainer
 var _goal_row: VBoxContainer
 var _start_btn: Button
@@ -654,6 +659,15 @@ func _show_setup() -> void:
 	(_start_row.get_node("StartModeNote") as Label).visible = _past_start()
 	_start_row.visible = _pick_future == 0
 	form.add_child(_start_row)
+	# Today's real lists: before the real 2026 National Draft, or after it.
+	_draft_row = _choice("2026 draft", "DraftTiming",
+			[["before", "Before the draft"], ["after", "After the draft"]],
+			"after" if _pick_after_draft else "before",
+			func(k): return (_after_draft_line() if k == "after"
+					else "The lists stand as they were before the draft. You run your club through the 2026 National Draft, with every real draftee in the pool."),
+			func(k): _pick_after_draft = k == "after")
+	_draft_row.visible = _shows_draft_row()
+	form.add_child(_draft_row)
 	# A challenge start (ruling 115): one rule, said here before you begin.
 	_challenge_row = _choice("Challenge", "Challenge",
 			[["none", "None"], ["youth", "Youth only"], ["rebuild", "Rebuild"], ["goal", "Your goal"]],
@@ -765,6 +779,8 @@ const GOAL_BUTTONS := {"flag_homegrown": "Home-grown flag", "coach_300": "300 ga
 func _on_pick_start(k: String) -> void:
 	_pick_start = k
 	_sim_ahead_ok = false
+	if is_instance_valid(_draft_row):
+		_draft_row.visible = _shows_draft_row()
 	if k != "real" and _pick_challenge == "rebuild":
 		_pick_challenge = "none"
 		(_challenge_row.get_meta("select") as Callable).call("none")
@@ -779,6 +795,8 @@ func _on_pick_challenge(k: String) -> void:
 	if k == "rebuild" and _pick_start != "real":
 		_pick_start = "real"
 		(_start_row.get_meta("select") as Callable).call("real")
+	if is_instance_valid(_draft_row):
+		_draft_row.visible = _shows_draft_row()
 	if is_instance_valid(_goal_row):
 		_goal_row.visible = k == "goal"
 	_show_forged_row()
@@ -845,6 +863,17 @@ func _canberra_line(k: String) -> String:
 	if k == "yes":
 		return ("2027 to 2029 play out without you, every club run by its own staff: Tasmania join in 2028 and Canberra build their first list. You then choose any of the %d clubs and start in 2030. Take Canberra and you build their list with the same new-club picks and cap room a rival coach gets." % (n + 2)) + fixed
 	return "You start in 2027, or take Tasmania and start in 2028, when they join. The league stays at %d clubs." % (n + 1) + fixed
+
+
+## The before-or-after-the-draft row: today's real lists only, while the data
+## holds the real draft.
+func _shows_draft_row() -> bool:
+	return _today_start() and _pick_start == "real" and not GameDB.national_draft.is_empty()
+
+
+## "After the draft" in one line, with the count of the real picks.
+func _after_draft_line() -> String:
+	return "All %d players taken in the real 2026 National Draft start on the club that picked them. The opening draft is left with the prospects nobody took." % GameDB.national_draft.size()
 
 
 ## The real-lists start: with Canberra (and no Rebuild) the career starts in
@@ -1020,6 +1049,7 @@ func _start_new_career() -> void:
 	# save replaces it: backing out of Choose your club must not cost the player
 	# the career they had (reset() clears memory only).
 	GameState.reset(_pick_dataset)
+	GameState.real_after_draft = _pick_after_draft and _shows_draft_row()
 	if _past_start():
 		# A past season: its clubs on their real lists, or a League redraft of
 		# its clubs, straight to Choose your club.
