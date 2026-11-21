@@ -1,0 +1,12 @@
+f01_20130A-GMHBA-PTFE-2024-FA-06-lo-1.jpg https://fabritecture.com/wp-content/uploads/2024/06/20130A-GMHBA-PTFE-2024-FA-06-lo-1.jpg
+f02_20130A-GMHBA-PTFE-2024-FA-07-lo-1.jpg https://fabritecture.com/wp-content/uploads/2024/06/20130A-GMHBA-PTFE-2024-FA-07-lo-1.jpg
+f03_20130A-GMHBA-PTFE-2024-FA-08-lo-1.jpg https://fabritecture.com/wp-content/uploads/2024/06/20130A-GMHBA-PTFE-2024-FA-08-lo-1.jpg
+f04_20130A-GMHBA-PTFE-2024-FA-09-lo-2.jpg https://fabritecture.com/wp-content/uploads/2024/06/20130A-GMHBA-PTFE-2024-FA-09-lo-2.jpg
+f05_20130A-GMHBA-PTFE-2024-FA-09-scaled.jpg https://fabritecture.com/wp-content/uploads/2024/06/20130A-GMHBA-PTFE-2024-FA-09-scaled.jpg
+f06_20130A-GMHBA-PTFE-2024-FA-10-lo-1.jpg https://fabritecture.com/wp-content/uploads/2024/06/20130A-GMHBA-PTFE-2024-FA-10-lo-1.jpg
+f07_20130A-GMHBA-PTFE-2024-FA-11-lo-1.jpg https://fabritecture.com/wp-content/uploads/2024/06/20130A-GMHBA-PTFE-2024-FA-11-lo-1.jpg
+f08_KP_masterplan.jpg https://www.bay939.com.au/wp-content/uploads/sites/31/2024/03/Kardinia-Park-Masterplan.jpg
+sv_north_h154.jpg Google Street View Oct 2024 pano CnTTJUsgEUicQm5j4SmSwQ @-38.1552839,144.3531762 heading 154 fov 20
+sv_west_h95_apr2026.jpg  Google Street View Apr 2026, pano VGY6RNadpFpvho6HBM1sQw, -38.1578823,144.3527369 heading 95 pitch 12 fov 75 (screenshot 1280x585)
+sv_nw_h130_apr2026.jpg  Google Street View Apr 2026, pano Q17i050eO_k8WWJGK1pOVw, -38.1572056,144.3528939 heading 130 pitch 10 fov 80
+sv_w_h90_apr2026.jpg  Google Street View Apr 2026, pano dViaoIYdBZlobwKno5HypQ, -38.1574724,144.3529837 heading 90 pitch 15 fov 90
