@@ -14,11 +14,12 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, 'model')
 G = json.load(open(os.path.join(ROOT, 'osm/geo.json'), encoding='utf-8'))
 KIND = {'plain': 0, 'seats': 1, 'concrete': 2, 'roof': 3, 'steel': 4, 'glass': 5, 'brick': 6, 'grass': 7, 'fins': 8,
-        'timber': 9, 'copper': 10, 'stone': 11, 'turf': 12, 'board': 13}
+        'timber': 9, 'copper': 10, 'stone': 11, 'turf': 12, 'board': 13, 'paving': 1}   # paving takes kind 1: the Hill's painted seat rows are gone (real seats), and the alpha byte holds kind*20 only up to 12
 
 # material colours (daylight, read from the photos)
 SEAT = (88, 112, 116); PAVE = (184, 180, 170); TURF = (96, 128, 58); DIRT = (128, 110, 82); RAIL = (170, 172, 172)
 SB_BOARD = (30, 38, 34); SB_GREEN = (104, 132, 96); SB_CREAM = (222, 210, 168); SB_TOWER = (214, 204, 168)
+WORN_TURF = (112, 120, 66)   # c00: the patch is worn grass, not a garden bed
 SB_BRICK = (150, 78, 58); SB_ROOF = (118, 62, 50); BLACK = (24, 24, 26); STEEL = (70, 72, 74); SCREEN = (14, 16, 20)
 
 
@@ -125,7 +126,43 @@ if np.sum(P[:-1, 0] * P[1:, 1] - P[1:, 0] * P[:-1, 1]) < 0: P = P[::-1]
 V, T = fill(P, 1.0)
 z, df = seat_z(V)
 a = np.unwrap(np.arctan2(V[:, 1], V[:, 0])); r = np.linalg.norm(V, axis=1)
-m.add(np.c_[V, z], T, [SEAT] * len(V), np.c_[a * 95.0, df], 'seats')
+m.add(np.c_[V, z], T, [(122, 120, 115)] * len(V), np.c_[a * 95.0, df], 'concrete')   # under the stepped treads
+# real seats (director 2026-11-21: "are these meant to be chairs?" - the painted rows are gone): rows every 0.8 m back
+# from the front wall, each seat its own instanced shell on a stepped concrete tread, aisles every 12 m, as gen.py does
+# for the stands. Seat colour: the sage green-grey of the photos (c07, c11)
+from shapely.geometry import Polygon as _Poly, LineString as _LS
+ROW, PITCH_S = 0.8, 0.5; HILL_SEATS = []; _ter = _Poly(P).buffer(-0.3); _fr = _LS(FRONT)
+dk = 0.4
+while dk < 16.0:
+    ring = _fr.buffer(dk, 32); ln_all = ring.exterior.intersection(_ter)
+    for ln in getattr(ln_all, 'geoms', [ln_all]):
+        if ln.geom_type != 'LineString' or ln.length < 2.0: continue
+        def frame(s0):
+            q = np.array(ln.interpolate(s0).coords[0]); qa = np.array(ln.interpolate(max(0, s0 - 0.05)).coords[0])
+            qb = np.array(ln.interpolate(min(ln.length, s0 + 0.05)).coords[0]); t = qb - qa; t /= np.linalg.norm(t)
+            nv = np.array([t[1], -t[0]])
+            if _fr.distance(_Point(*(q + nv * 0.3))) < _fr.distance(_Point(*(q - nv * 0.3))): nv = -nv
+            zz = seat_z(np.array([q, q + nv * ROW]))[0]; return q, nv, zz[0], max(zz[1], zz[0])
+        from shapely.geometry import Point as _Point
+        # blocks between aisles 1.2 m wide every 12 m along the row
+        L = ln.length; nb = max(1, int(round(L / 12.0))); edges = np.linspace(0, L, nb + 1)
+        for i in range(nb):
+            ra, rb = edges[i] + (0.6 if i > 0 else 0.2), edges[i + 1] - (0.6 if i < nb - 1 else 0.2)
+            k = int((rb - ra) // PITCH_S)
+            if k < 1: continue
+            for j in range(k):
+                q, nv, z0, z1 = frame(ra + (rb - ra - k * PITCH_S) / 2 + (j + 0.5) * PITCH_S)
+                HILL_SEATS.append((q[0], q[1], z1, math.atan2(-nv[0], nv[1]), 95, 118, 112))
+            a_, b_ = max(0.0, ra - 0.6), min(L, rb + 0.6); n = max(1, int((b_ - a_) // PITCH_S)); Vt = []; UVt = []
+            for x in np.linspace(a_, b_, n + 1):
+                q, nv, z0, z1 = frame(x); c = q + nv * ROW
+                Vt += [(q[0], q[1], z0), (q[0], q[1], z1), (c[0], c[1], z1)]; UVt += [(x, z0), (x, z1), (x, z1 + ROW)]
+            Ft = [f for i2 in range(n) for f in ((3 * i2, 3 * i2 + 3, 3 * i2 + 4, 3 * i2 + 1), (3 * i2 + 1, 3 * i2 + 4, 3 * i2 + 5, 3 * i2 + 2))]
+            m.add(Vt, Ft, [(122, 120, 115)] * len(Vt), UVt, 'concrete')
+    dk += ROW
+_HS = np.array(HILL_SEATS, np.float32); os.makedirs(os.path.join(OUT, 'inst'), exist_ok=True)
+np.savez_compressed(os.path.join(OUT, 'inst', 'seats_hill.npz'), pos=_HS[:, :3], yaw=_HS[:, 3], col=_HS[:, 4:7].astype(np.uint8))
+print('hill seats', len(_HS))
 # side ends of the terrace: concrete walls down to the ground
 for a_, b_ in ((BACK[0], FRONT[-1]), (BACK[-1], FRONT[0])):
     L = densify(np.array([a_, b_, b_]), 0.5); L = np.r_[L, [b_]]
@@ -161,17 +198,21 @@ WORN = [[(-19.5, 107.0), (4.0, 106.5), (1.5, 110.5), (-4.0, 117.0), (-12.5, 117.
 PATHS = [[(0.5, 106.5), (5.5, 106.5), (13.0, 120.0), (8.0, 121.5)],                                          # path to the north gate
          [(-62.0, 98.0), (-59.0, 97.0), (-53.5, 91.0), (-55.0, 89.5)]]                                         # NW diagonal path
 def zone(V):
-    k = np.array(['concrete'] * len(V), object); C = np.tile(PAVE, (len(V), 1)).astype(float)
-    for polys, kk, col in ((GRASS, 'turf', TURF), (WORN, 'turf', DIRT), (PATHS, 'concrete', PAVE)):
+    k = np.array(['paving'] * len(V), object); C = np.tile(PAVE, (len(V), 1)).astype(float)
+    for polys, kk, col in ((GRASS, 'turf', TURF), (WORN, 'turf', WORN_TURF), (PATHS, 'paving', PAVE)):
         for poly in polys:
             q = Path(np.r_[poly, poly[:1]]).contains_points(V); k[q] = kk; C[q] = col
     dB = seg_dist(V, densify(np.r_[BACK, BACK[-1:]], 0.5))
-    q = dB < 4.8; k[q] = 'concrete'; C[q] = PAVE      # concourse behind the seat rail, about 5 m wide
+    q = dB < 4.8; k[q] = 'paving'; C[q] = PAVE      # concourse behind the seat rail, about 5 m wide
     return list(k), C
 extra = np.concatenate([densify(np.r_[p, p[:1]], 0.5) for p in GRASS + WORN + PATHS])
 _bd = densify(np.r_[BACK, BACK[-1:]], 0.4); _bn = _bd / np.linalg.norm(_bd, axis=1)[:, None]   # concourse edge as a mesh line
 extra = np.r_[extra, _bd + _bn * 4.8]
 V, T = fill(HILL, 1.0, extra)
+# concrete kerb round every grass patch (c07, c09: the patches are edged), 0.15 m up, 0.2 m wide
+for poly in GRASS + WORN:
+    Lk = densify(np.r_[poly, poly[:1]], 0.5); Lk = np.r_[Lk, Lk[:1]]
+    strip_wall(m, Lk, lambda Q: hill_z(Q) - 0.05, lambda Q: hill_z(Q) + 0.15, (196, 192, 182), 'concrete')
 k, C = zone(V)
 # a triangle takes the zone of its centroid: split vertices so patch edges stay crisp
 Vc = V[T].mean(1); kc, Cc = zone(Vc)
@@ -180,21 +221,26 @@ m.add(np.c_[VV, zz], [(3 * i, 3 * i + 1, 3 * i + 2) for i in range(len(T))], np.
       VV, [x for x in kc for _ in range(3)])
 # grass batter outside the palisade down to the parkland lawn (z 0), 5 m wide
 FENCE = np.r_[densify(OUTER[:11], 0.5), OUTER[10:11]]
+EDGE = np.r_[densify(OUTER[:19], 0.5), OUTER[18:19]]   # the whole outer edge (the fence line, the scoreboard's back, the east end): the Hill is a mound, grassed down to the parkland all round (director 2026-11-21: nothing floating)
 def outward(L):
     d = np.gradient(L, axis=0); nrm = np.c_[d[:, 1], -d[:, 0]]; nrm /= np.linalg.norm(nrm, axis=1)[:, None]
     mid = L + nrm; return nrm if np.mean(Path(HILL).contains_points(mid)) < 0.5 else -nrm
-nb = outward(FENCE); Lo = FENCE + nb * 5.0; nL = len(FENCE)
-Vb = np.r_[np.c_[FENCE, hill_z(FENCE)], np.c_[Lo, np.zeros(nL)]]
+from scipy.ndimage import gaussian_filter1d as _g1
+nb = outward(EDGE); nb = np.c_[_g1(nb[:, 0], 4, mode='nearest'), _g1(nb[:, 1], 4, mode='nearest')]
+nb /= np.linalg.norm(nb, axis=1)[:, None]; Lo = EDGE + nb * 8.0; nL = len(EDGE)   # 8 m: a 1-in-2 grass bank
+Vb = np.r_[np.c_[EDGE, hill_z(EDGE) - 0.02], np.c_[Lo, np.full(nL, -0.05)]]
 Fb = [(i, nL + i, nL + i + 1, i + 1) for i in range(nL - 1)]
-if np.cross(np.r_[FENCE[1] - FENCE[0], 0], np.r_[Lo[0] - FENCE[0], 0])[2] > 0: Fb = [f[::-1] for f in Fb]
-m.add(Vb, Fb, [TURF] * len(Vb), np.r_[FENCE, Lo], 'turf')
+Fb += [f[::-1] for f in Fb]   # both faces: the bank must never read as a slab edge from any side
+m.add(Vb, Fb, [TURF] * len(Vb), np.r_[EDGE, Lo], 'turf')
 # black palisade fence, 1.8 m (c00, c01)
 strip_wall(m, FENCE, hill_z, lambda Q: hill_z(Q) + 1.8, BLACK, 'fins')
 
 # NW corner: covered viewing shelter (photo c07 is taken from under it) and the long white rail (Esri plan)
 SH = [(-79.0, 79.4), (-66.3, 75.0), (-65.4, 77.6), (-78.1, 82.0)]
 zsh = float(hill_z(np.array([(-72.0, 78.5)]))[0])
-m.quad(*[(*p, zsh + 2.7) for p in SH], (64, 66, 68), 'steel')
+_Q = [(*p, zsh + 2.7) for p in SH] + [(*p, zsh + 2.95) for p in SH]   # a roof slab 0.25 m thick, not a sheet
+_F = [(0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7), (4, 5, 6, 7), (3, 2, 1, 0)]
+m.add(_Q, _F + [f[::-1] for f in _F], [(64, 66, 68)] * 8, [(q[0], q[1]) for q in _Q], 'steel')
 for p in (SH[2], SH[3], (np.add(SH[2], SH[3]) / 2)):
     beam(m, (*p, zsh), (*p, zsh + 2.7), 0.2, (64, 66, 68), 'steel')
 RL = densify(np.array([(-74.6, 86.2), (-60.9, 80.6), (-60.9, 80.6)]), 2.0)
@@ -326,21 +372,36 @@ beam(m, W(18.2, 1.5, Z_PAR), W(18.2, 1.5, zb + 16.2), 0.07, (220, 220, 216), 'st
 # raking strut behind the tower (c01, c09)
 beam(m, W(LS - 1.2, T_B, Z_CORN - 3.0), W(LS - 1.2, LT, zb), 0.45, SB_CREAM, 'plain')
 # amenities box behind the tower's east end: s 19.1-21.8 (c11 face-on), t 4.3-10.2 and 3.0 m high (c09 back-projected)
-box3(m, (SB[0] + U * 20.45 + N * 7.25), U, N, 2.7, 5.9, 0.0, zb + 3.0, (44, 46, 48), 'fins', top=(150, 150, 146))
+box3(m, (SB[0] + U * 20.45 + N * 7.25), U, N, 2.7, 5.9, zb - 0.1, zb + 3.0, (118, 116, 110), 'concrete', top=(150, 150, 146))
 
 # ---------------------------------------------------------------- big screen (Esri shadow + photo fit; c00, c09, c11)
 # frame corners fitted to c09 (4 corners) and c11 (east edge), max 10 px; heading east-west as the Esri shadow edge
 SC_C = np.array([-0.1, 122.29]); _a = 0.0; SU = np.array([math.cos(_a), math.sin(_a)]); SN = np.array([-SU[1], SU[0]])
 zs = float(hill_z(SC_C[None])[0]); Z0, Z1, SWID = 6.63, 16.62, 19.08
-box3(m, SC_C + SN * 0.6, SU, SN, SWID, 1.2, Z0, Z1, STEEL, 'steel')
-m.quad((*(SC_C - SU * SWID / 2 - SN * 0.01), Z0 + 0.25), (*(SC_C + SU * SWID / 2 - SN * 0.01), Z0 + 0.25),
-       (*(SC_C + SU * SWID / 2 - SN * 0.01), Z1 - 0.25), (*(SC_C - SU * SWID / 2 - SN * 0.01), Z1 - 0.25), SCREEN, 'plain')
+def solid(m, c, u, n, su, sn, z0, z1, col, kind):
+    """closed box, every face drawn both ways: reads as a solid from any side, never as a sheet"""
+    c = np.asarray(c, float); P = [c - u * su / 2 - n * sn / 2, c + u * su / 2 - n * sn / 2, c + u * su / 2 + n * sn / 2, c - u * su / 2 + n * sn / 2]
+    Q = [(*p, z0) for p in P] + [(*p, z1) for p in P]
+    F = [(0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7), (4, 5, 6, 7), (3, 2, 1, 0)]
+    m.add(Q, F + [f[::-1] for f in F], [col] * 8, [(q[0], q[2] + q[1]) for q in Q], kind)
+# the screen: a 1.8 m deep steel cabinet (c00 side view), a dark bezel standing 0.2 m proud round the face, the face
+# itself recessed in it, louvred service panels on the back
+solid(m, SC_C + SN * 0.9, SU, SN, SWID, 1.8, Z0, Z1, STEEL, 'steel')
+for (x0, x1, za, zb_) in ((-SWID / 2, SWID / 2, Z0, Z0 + 0.35), (-SWID / 2, SWID / 2, Z1 - 0.35, Z1),
+                          (-SWID / 2, -SWID / 2 + 0.35, Z0, Z1), (SWID / 2 - 0.35, SWID / 2, Z0, Z1)):
+    solid(m, SC_C + SU * (x0 + x1) / 2 - SN * 0.1, SU, SN, x1 - x0, 0.2, za, zb_, (34, 36, 38), 'steel')
+m.quad((*(SC_C - SU * (SWID / 2 - 0.35) - SN * 0.02), Z0 + 0.35), (*(SC_C + SU * (SWID / 2 - 0.35) - SN * 0.02), Z0 + 0.35),
+       (*(SC_C + SU * (SWID / 2 - 0.35) - SN * 0.02), Z1 - 0.35), (*(SC_C - SU * (SWID / 2 - 0.35) - SN * 0.02), Z1 - 0.35), SCREEN, 'glass')
+for x in np.arange(-SWID / 2 + 1.0, SWID / 2 - 0.5, 2.4):       # back panels
+    m.quad((*(SC_C + SU * x + SN * 1.82), Z0 + 0.6), (*(SC_C + SU * (x + 2.0) + SN * 1.82), Z0 + 0.6),
+           (*(SC_C + SU * (x + 2.0) + SN * 1.82), Z1 - 0.6), (*(SC_C + SU * x + SN * 1.82), Z1 - 0.6), (52, 54, 56), 'fins')
 for x in (-7.0, 0.0, 7.0):                       # three leg frames with braces (c00)
-    for t in (0.2, 1.0):
+    for t in (0.3, 1.5):
         beam(m, (*(SC_C + SU * x + SN * t), zs), (*(SC_C + SU * x + SN * t), Z0), 0.45, STEEL, 'steel')
-    beam(m, (*(SC_C + SU * x + SN * 0.2), zs), (*(SC_C + SU * (x + 2.0) + SN * 0.6), Z0), 0.2, STEEL, 'steel')
+    beam(m, (*(SC_C + SU * x + SN * 0.3), zs), (*(SC_C + SU * (x + 2.0) + SN * 1.5), Z0), 0.2, STEEL, 'steel')
+    solid(m, SC_C + SU * x + SN * 0.9, SU, SN, 1.0, 2.0, zs - 0.2, zs + 0.3, (150, 150, 146), 'concrete')   # footing
 # paved apron under the screen
-ap = SC_C + np.array([[-10.5, -2.5], [10.5, -2.5], [10.5, 1.9], [-10.5, 1.9]])
-m.quad(*[(*p, zs + 0.02) for p in ap], PAVE, 'concrete')
+ap = SC_C + np.array([[-10.5, -2.5], [10.5, -2.5], [10.5, 2.6], [-10.5, 2.6]])
+m.quad(*[(*p, zs + 0.02) for p in ap], PAVE, 'paving')
 m.save('hill')
 print('hill', len(m.v), 'verts', len(m.f), 'faces', 'base z', round(zb, 2), 'screen z', round(zs, 2))
