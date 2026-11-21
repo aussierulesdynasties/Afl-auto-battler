@@ -67,13 +67,13 @@ of the ground. Calls are paired runs (same seed, call on and off), the change on
 | 1 | The team is too long in open play | 74-94 m with the ball, 75-87 m without, 65-97 m loose (Alexander 2019) | 107-127 m everywhere | Phase shape: `MatchDirector._structure_spot` moves each line only 15-78% of the ball's travel, so the lines stay spread |
 | 2 | The team does not follow the ball to either end | team centre 29-33 m past halfway when attacking in the forward 50; 43-47 m back defending in the back 50 | 15 m; 18 m | Phase shape (`_structure_spot`, as 1) |
 | 3 | Too few men near the ball | 15.5-19.5 of the 36 in the ball's quarter (Alexander 2021) | 11.6-15.4 | Phase shape (as 1) |
-| 4 | No squeeze on a loose ball | 36-47 m wide (Alexander 2019) | 62-67 m | A loose-ball shape: none exists; loose balls use the open-play spots |
+| 4 | No squeeze on a loose ball | 36-47 m wide (Alexander 2019) | 62-67 m. Held 2026-11-21, no change: the reference cannot be the widest pair (see below); length, area and team centre on a loose ball are IN or NEAR, and the 10th-90th percentile width (37-41 m) sits on the paper's figure | A loose-ball shape: none exists; loose balls use the open-play spots |
 | 5 | Stoppages around the ground are thin | 23 players in the ball's quarter in either 50, 17 in midfield (Alexander 2021) | 13.4 | Stoppage set-ups (`_centre_spot`, `_centre_setup`, the ball-up and throw-in spots) |
 | 6 | Kicks are short and gain little ground | 25.0 m average, ±11.8 (Spencer 2019); 25-30 m gained | 20.0 m, ±11.6; 11.2 m gained | MatchSim kick events (balance-gated) |
 | 7 | Too many kicks | 213 a team-game (Wheelo 2026) | 309 | MatchSim event count (balance-gated) |
 | 8 | Calls do not change how the side kicks | Attacking: no switch; Controlled and Slow it down: shorter, across and back (rule 2.45) | Attacking: switches stay 6%; Controlled: kicks 0.5 m longer; Slow it down: 0.2 m longer, 3 points fewer backward | MatchSim kick choice by plan (balance-gated) |
 | 9 | A tagger does not shadow his man | a tag is permanent and goes where his man goes (2.44, 2.58); no published distance | 21.7 m apart on average, within 5 m 15.6% of the time (off: 27.0 m, 6.9%). Re-measured on main 2026-11-20 (153 matches): 9.0 m, 45%; only while his side defends, the same. Now 8.4 m, 49%: a tagger keeps up at a run | Man-on-man pull in `_structure_spot`: only inside 35 m, at most 85% of the way |
-| 10 | A switched defender drifts off his forward | everyone has an opponent (2.44) | 25.3 m apart, within 5 m 15.7% (off: 28.9 m, 13.5%). Re-measured on main 2026-11-20: 17.7 m, 25%. Now 17.3 m, 25.5%; still open | Man-on-man pull (as 9) |
+| 10 | A switched defender drifts off his forward | everyone has an opponent (2.44) | 25.3 m apart, within 5 m 15.7% (off: 28.9 m, 13.5%). Re-measured on main 2026-11-20: 17.7 m, 25%. Explained 2026-11-21: while his side defends and the match-up is on, 10.5 m and 48% within 5 m; the rest of the 17 m is the ball in his side's hands and the forward rotated out of the forward line (handed over until he is back, by design) | Man-on-man pull (as 9) |
 | 11 | Fumble then gather: the gatherer runs 3.9 m past and the ball lies alone ~0.7 s (seed 31, FRE v STK) | the nearest man scoops it | as stated (row 197 inbox). Fixed on main by #1838: over 4 matches the gatherer is 0.6 m from the ball when he takes it and it never lies alone over 0.5 s | Loose-ball pickup; the WIP on `claude/oval3d-loose-ball-wip` fails 8 match_visual checks |
 | 12 | No clean gather (down for it, picks it up) in the shipped game | | the first man knocks it on toward MatchSim's winner. Fixed by #1838 (as 11) | Loose-ball pickup (as 11) |
 | 13 | A dead stop at the fence: 4-5 m/s to 1.1 m/s in one step, twice in four seeds | | Fixed 2026-11-20: he pulls up within his braking limit and slides along the fence (`_test_fence_pull_up`) | MatchMotion fence clamp |
@@ -93,6 +93,13 @@ loose-ball width (gap 4, 52-63 m against 36-47 m). The harness now splits stoppa
 ball's quarter at a stoppage in either 50 (real 23, IN) and 19.6 in midfield (real 17, NEAR). The paper's loose-ball
 width and area do not fit together (an area of 4,440 m2 cannot sit inside 89 by 40 m), so gap 4's reference is being
 checked against the paper before the sim is pushed to it.
+
+**Gap 4 assumption, 2026-11-21** (nobody on the project has the paper, so this is a reading, not a check): the loose-ball
+widths read off Alexander 2019's Fig 2 cannot be the widest pair across, because in every zone the same figure's area
+is larger than its length times that width allows (a loose ball in their half: 4,785-5,120 m2 inside at most 97 by 44 m).
+The likelier reading is a narrower spread measure; the sim's 10th-90th percentile width on a loose ball (36.7, 37.4,
+38.3, 40.8 m by zone) sits inside or next to the paper's 35.6-47.1 m. Squeezing the widest pair to 36-47 m would push the
+hull areas, already under real, further away, so the loose-ball shape is left as it is until someone can read the paper.
 
 ## Step 2. The world and the look (runs beside step 1; before anything that draws the game)
 
