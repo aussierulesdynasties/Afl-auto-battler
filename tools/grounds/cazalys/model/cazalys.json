@@ -2,6 +2,7 @@
 "_": "Cazaly's Stadium, Cairns (2022-24). Plan from the Esri tile and OSM (work/osm_xy.json), heights from GE captures and the Commons photos. x east, y north, metres; bearings cw from north.",
 "step": 0.5,
 "fence_h": 1.1,
+"earth": {"_": "bare red earth from the fence ring out to the bldg_w east wall, the old west_north terrace ground north to the shed (GE 3D 2026 views 1, 4)", "b0": 252.4, "b1": 290.0, "back": [[252.4, 100.0], [290.0, 100.0]]},
 "terraces": [
   {"name": "west_south", "b0": 202.0, "b1": 225.6, "front": 1.2, "z_seat": [0.5, 3.4], "back": [[202, 94.5], [212, 92.0], [225.6, 88.5]], "pal": "gstand"}
 ],

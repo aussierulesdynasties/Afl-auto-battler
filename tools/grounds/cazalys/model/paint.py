@@ -366,6 +366,11 @@ im = Image.new('RGBA', (GW, GH), (0, 0, 0, 0)); t = Image.new('L', (2400, 700), 
 t = t.crop(t.getbbox()).rotate(8, expand=True, resample=Image.BICUBIC).resize((GW - 20, GH - 20), Image.LANCZOS)
 im.paste(Image.new('RGBA', t.size, (246, 246, 242, 255)), (10, 10), t); save('sign_clublogo2', np.asarray(im, float), (1, 1))
 
+# bare red earth behind the west end, where the old west_north terrace was (GE 3D 2026: sunlit median ~(165, 130, 115)): blotchy soil, tyre-flattened patches, small stones
+a = base(512, 512, (165, 128, 110), 10, 22); a += noise(512, 512, 40, 14)[:, :, None] * np.array([1.0, 0.8, 0.7])
+st = R.random((512, 512)) > 0.992; a[st] = a[st] * 0.75 + np.array([200, 190, 178]) * 0.25
+save('earth', a, (4.0, 4.0))
+
 json.dump(TILE, open(OUT + 'tiles.json', 'w', newline=''), indent=0)
 for nm in sorted(TILE):
     g = np.asarray(Image.open(OUT + nm + '.png').convert('L'), float); print(f'{nm:16s} grey sd {g.std():5.1f}')

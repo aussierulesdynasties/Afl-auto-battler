@@ -984,6 +984,13 @@ def ground(col):
         ba, bb = bs[i], bs[i + 1]; fa, fb = fence_r(ba % 360), fence_r(bb % 360)
         for r0a, r0b, r1a, r1b, m, z in ((fa, fb, fa + 2.5, fb + 2.5, 'paving', -0.01), (fa + 2.5, fb + 2.5, outer(ba), outer(bb), 'grass', -0.02)):
             q = [P3(ba, r0a, z), P3(bb, r0b, z), P3(bb, r1b, z), P3(ba, r1a, z)]
+            E = D.get('earth')   # bare earth behind the west end (GE 3D 2026): earth from behind the paving ring out to the measured back line, grass beyond
+            if m == 'grass' and E and E['b0'] <= ba and bb <= E['b1']:
+                bk = lambda b: float(np.interp(b, [k[0] for k in E['back']], [k[1] for k in E['back']]))
+                ea, eb = min(bk(ba), r1a), min(bk(bb), r1b)
+                for g, mm in (([P3(ba, r0a, z), P3(bb, r0b, z), P3(bb, eb, z), P3(ba, ea, z)], 'earth'), ([P3(ba, ea, z), P3(bb, eb, z), P3(bb, r1b, z), P3(ba, r1a, z)], 'grass')):
+                    oriented(mb, g, mm, UP, uv=[(p[0] / TILE[mm][0], p[1] / TILE[mm][1]) for p in g])
+                continue
             if m == 'grass' and DIP is not None and min(np.hypot(p[0] - DIP[0][:, 0].mean(), p[1] - DIP[0][:, 1].mean()) for p in q) < 45:
                 for j in range(4):   # finer grass over the west-face dip
                     for k in range(int((r1a - r0a) / 0.75) + 1):
