@@ -1,0 +1,159 @@
+# Merged toward open rows
+
+What has landed toward each open row of docs/TODO.md and docs/TODO_RULINGS.md, one line per merged PR, oldest first. tools/roadmap_close.py writes it from a PR's "Part of row N" line after the merge. A reference, not a must-read: read a row's lines when you pick that row up.
+
+- 142: Merged #1523: Legacy L8: every season's rollover 1990-2026 (real drafts, new clubs, Fitzroy, Bears or Lions).
+- 142: Merged #1548: Legacy: real careers go into both drafts, building clubs fit their spots, no real man twice.
+- 142: Merged #1631: Legacy lists and money: real retirements, next season's books, era pay by list size.
+- 142: Merged #1639: CI: list_turnover runs with the long suites.
+- 142: Merged #1649: Legacy: no invented stats, real positions and sourced heights.
+- 142: Merged #1711: Legacy: Fitzroy has no seat at the draft after the merger; legacy_players checks the men owed a list.
+- 142: Merged #1734: Board: a new career starts on the Patient board.
+- 142: Merged #1744: Long tests: never reappoint a sacked coach; 2000 at Geelong, 2010 at Carlton.
+- 142: Merged #1749: Board approval starts at 80.
+- 200: Merged #1659: Ratings from the real record: 16 skills on Wheelo stats, APR overall, tackler mix (part of row 200).
+- 200: Merged #1692: Pre-2012 ratings: league counts, the director's weights, ranked on 2012-25 (part of row 200).
+- 200: Merged #1709: Matchday: a phone's quarter break fits its sheet after #1659's matches.
+- 200: Merged #1710: Nightly: #1659 follow-ups (career pin, draft variant, trade-table bids).
+- 200: Merged #1748: Generated players copy a real 2012-2026 player with a 5% fingerprint; plays like names any 2012-2026 player.
+- 197: Merged #1599: 3D oval phone test: process-time column and the real 3D size (row 197).
+- 197: Merged #1601: 3D oval in the match screen: Settings > Match view > 3D oval (row 197).
+- 197: Merged #1602: 3D oval: the flat oval's overlays on the 3D view (row 197).
+- 197: Merged #1605: 3D oval: anim_event hook at each touch of the ball (row 197).
+- 197: Merged #1610: 3D oval: bake the 14 mocap clips into the player GLB (row 197).
+- 197: Merged #1606: 3D oval: real boots on the 3D footballer (row 197).
+- 197: Merged #1619: 3D oval: re-bake the 23 fixed mocap clips (row 197).
+- 197: Merged #1625: 3D oval: the Tripo boot, and bump_contest_01 baked (row 197).
+- 197: Merged #1628: 3D oval: bake 3d view 2's 26 clips, real-speed retimes (row 197).
+- 197: Merged #1634: 3D oval: guernsey designs and back numbers draw again (row 197).
+- 197: Merged #1637: Director bible 2.75: 3D oval guernseys and umpire pass (row 197).
+- 197: Merged #1648: 3D oval: two-man tackle takes in play (row 197).
+- 197: Merged #1658: 3D match view: real turf for every weather and time of day.
+- 197: Merged #1671: Match view: bodies go round each other, never through.
+- 197: Merged #1674: Tests: pool the far-collector pause gate over four seeds (main is red on seed 42).
+- 197: Merged #1686: 3D oval: a free's taker has the ball and kicks it; every kick leaves the kicker's boot.
+- 197: Merged #1687: 3D oval: a loose ball comes the free taker's and the shooter's way.
+- 197: Merged #1688: 3D oval: a man's earliest touch comes first in the leads (free taker, shooter, receivers, presser).
+- 197: Merged #1657: 3D oval: spilled ball scooped on the run, loose balls contested by the nearest men (row 197).
+- 197: Merged #1728: 3D oval: a tackled man is up 1.5 s after the tackle.
+- 197: Merged #1777: Every club's 2026 home guernsey on the 3D player, from its shop photo.
+- 197: Merged #1787: Guernseys: smooth armholes, West Coast eagle's white eye.
+- 197: Merged #1792: Guernsey notes 1-8: eight 2026 guernseys copied from their photos, numbers in club colours.
+- 197: Merged #1795: Guernseys: armhole edges follow the smooth curve, no triangle teeth.
+- 197: Merged #1793: Guernsey notes 9-16: photo hem on the player's hem, smooth cloth under it, Geelong, Fremantle, Essendon, Collingwood, Lions, Adelaide.
+- 197: Merged #1805: Legacy guernseys: Hawthorn, Melbourne, North, Port, Richmond, 73 home designs from their photos.
+- 197: Merged #1802: Tasmania and Canberra guernseys on the 3D player.
+- 197: Merged #1808: Hawthorn 2019 legacy guernsey: cite real 2019 match photos.
+- 197: Merged #1810: Legacy guernseys: ADE, BRL, CAR, COL, FIT home designs 1990-2025 on the 3D player.
+- 197: Merged #1813: Legacy guernseys STK, SYD, WBD, WCE: home designs 1990-2025 copied from their photos (row 197).
+- 197: Merged #1821: Legacy guernseys ESS, FRE, GCS, GEE, GWS: home designs 1990-2025 copied from their photos (row 197).
+- 197: Merged #1823: Guernsey armholes re-cut smooth in the model.
+- 197: Merged #1834: Guernsey copied from the Essendon photo: pipeline, seam split at the depth-middle, singlet out of the skin.
+- 197: Merged #1842: North Melbourne and St Kilda guernseys on a flat pattern.
+- 197: Merged #1952: 3D oval: the umpires take the stoppages (bounce, ball-up, throw-in) (row 197).
+- 198: Merged #1595: Ruling: AFL motion comes from his footage, cut here and converted with Rokoko (rule 2.74).
+- 198: Merged #1596: Plan: engine notes from the 3D oval mock; phone frame time measured first; decisions recorded.
+- 198: Merged #1689: 3D oval: run, carry and stand from motion capture.
+- 201: Merged #1691: Research: free DFS Australia data and the AIFL engine, for the football proof.
+- 201: Merged #1695: Row 201: team-shape harness against real AFL, and the gap list.
+- 201: Merged #1702: Row 201: real AFL within 10% is the shape pass mark (rule 2.86).
+- 201: Merged #1730: Row 201: real AFL shape by phase, set match-ups, fast pauses.
+- 201: Merged #1752: Row 201: 3D oval films of each coach's call.
+- 201: Merged #1926: Row 201 gaps 13, 14, 9-10: no dead stop at the fence; Throw numbers at it rings the ball.
+- 201: Merged #1937: Row 201 gaps 4 and 10: match-up measured while it holds; both gaps explained in the plan.
+- 202: Merged #1693: 3D view: sky light and the TV broadcast tone (rules 2.80, 2.81).
+- 202: Merged #1694: 3D view: night games lit by four towers (rule 2.82).
+- 202: Merged #1696: 3D view: wet games under cloud, rain falling on screen (rule 2.83).
+- 202: Merged #1701: 3D view: skies for every weather and time of day (rule 2.84).
+- 202: Merged #1719: Director Bible 2.87: the 3D crowd's men, women and children.
+- 202: Merged #1721: Director Bible 2.88: broadcast-style match camera; crowd characters stretch goal.
+- 202: Merged #1727: Director Bible 2.90-2.91: 3D stadiums for every AFL ground since 1990; roofed grounds lit from the roof (row 202, 2b).
+- 202: Merged #1729: 3D crowd options prototype: capture script and shaders (row 202, 2c).
+- 202: Merged #1732: Director Bible 2.92: the 3D crowd is a mix of 3D people and cards (row 202, 2c).
+- 202: Merged #1735: Grounds: the other AFL grounds since 1990 and Macquarie Point get their own entry (row 202, 2b).
+- 202: Merged #1740: Director Bible 2.93: the main camera is the real AFL main camera, TV-shaped (row 202, 2e).
+- 202: Merged #1750: 3D view: the mix crowd in the stands, the scoring side rises for a goal (row 202, 2c).
+- 202: Merged #1757: Row 202 2e: after a goal, one skippable replay (rule 2.96).
+- 202: Merged #1760: Row 202 2e: only the deciding behind gets a replay (rule 2.96).
+- 202: Merged #1765: Row 202: the close-up supporters are MetaHumans, no kid (rule 2.100).
+- 202: Merged #1769: Row 202 2e: ball-ups get close-ups of the two ruckmen (rule 2.103).
+- 202: Merged #1764: Row 202 2d: every man at his own height and weight; Bible 2.97-2.99.
+- 202: Merged #1772: Row 202: the woman supporter is the Vivian face (rule 2.104).
+- 202: Merged #1774: Row 202 2e: the 3D picture fills the phone between scoreboard and controls (rule 2.105).
+- 202: Merged #1775: Row 202 2e: team stats as club-coloured bars; scoreboard becomes a TV score bug (rules 2.106-2.107).
+- 202: Merged #1778: Row 202 2e: the stats strip holds disposals, marks, clearances and hit-outs (rule 2.106).
+- 202: Merged #1780: Row 202 2d: neck socket on the body, every head fitted onto it.
+- 202: Merged #1784: Row 202 2d: Gawn's throat rises upward, smaller head, join closed.
+- 202: Merged #1783: Row 202: supporter knitwear in any club's colours (rule 2.108); smooth supporter hair.
+- 202: Merged #1786: Row 202 2e: the score bug and momentum line on the 3D picture (rule 2.107).
+- 202: Merged #1791: Row 202: smooth supporter skin and lashes (mipmaps, 2x supersampling).
+- 202: Merged #1796: Row 202: close-up supporter skin sheen and finer sun shadow (capture).
+- 202: Merged #1804: Row 202 2e: the chosen cameras in the real match.
+- 202: Merged #1814: Close-up capture: supporter clips play at real speed.
+- 202: Merged #1818: Row 202 2e: TV framing with the wide shot at times (rule 2.111).
+- 202: Merged #1829: Park the bespoke close-up supporters as a stretch goal.
+- 202: Merged #1839: 3D oval: the broadcast film look over the whole picture (rule 2.112).
+- 202: Merged #1843: 3D oval: MCG model loader, instanced seats (row 202 2b).
+- 202: Merged #1847: Fremantle Oval exterior model, passed by the director (row 202 2b).
+- 202: Merged #1846: Leederville Oval: real 3D empty seats on thin steel posts (row 202 2b).
+- 202: Merged #1848: Row 202 2b: Bruce Stadium model with real 3D empty seats.
+- 202: Merged #1853: People First Stadium model (row 202 2b), passed by the director.
+- 202: Merged #1852: Ikon Park exterior model, passed by the lead (row 202 2b).
+- 202: Merged #1854: North Hobart Oval 1991-92 ground model (row 202 2b).
+- 202: Merged #1856: Adelaide Oval model with real 3D empty seats (row 202 2b).
+- 202: Merged #1855: York Park exterior model, passed by the director (row 202 2b).
+- 202: Merged #1860: People First Stadium: even membrane roof bays (row 202 2b).
+- 202: Merged #1864: WACA texture pass: hand-painted facades, own signs, no sponsors.
+- 202: Merged #1865: Manuka texture pass: roof sheeting and wall panels.
+- 202: Merged #1866: ENGIE texture pass: render wall panels and paving joints.
+- 202: Merged #1868: People First glb under 50 MB (row 202 2b).
+- 202: Merged #1870: Norwood Oval: model and hand-painted texture pass.
+- 202: Merged #1875: Albury Sports Ground: texture pass.
+- 202: Merged #1867: Optus Stadium: even roof band, 3D empty seats, texture pass.
+- 202: Merged #1877: Brighton Homes Arena: hand texture pass.
+- 202: Merged #1880: Oval3D: Optus seat colours.
+- 202: Merged #1882: Whitten Oval: model and texture pass.
+- 202: Merged #1886: Football Park: texture pass.
+- 202: Merged #1888: Fremantle Oval: texture pass.
+- 202: Merged #1891: Cazaly's Stadium (Cairns): ground model, hand-painted textures and signs.
+- 202: Merged #1889: People First: upper-tier seat mix matches the photo.
+- 202: Merged #1885: Windy Hill: texture pass.
+- 202: Merged #1901: Subiaco Oval: land both passed era models (1997 and about 2000).
+- 202: Merged #1902: Waverley Park: land the passed ground model.
+- 202: Merged #1900: Bellerive Oval: land the passed ground model.
+- 202: Merged #1903: GMHBA Stadium: land the passed exterior model.
+- 202: Merged #1911: Marvel ground model, glb split under 45 MB (row 202 2b).
+- 202: Merged #1909: SCG ground model, glb split under 45 MB (row 202 2b).
+- 202: Merged #1910: Moorabbin ground model, glb split under 45 MB (row 202 2b).
+- 202: Merged #1927: Ground inspector: fly through any stadium model in first person (row 202 2b).
+- 202: Merged #1967: Player heads: save work in progress (not gated).
+- 202: Merged #1971: 3D turf: one goal line between the behind posts, not the boundary curve too (row 202 2b).
+- 202: Merged #1896: Riverway Stadium: ground model, hand-made textures, review boards.
+- 202: Merged #1884: Victoria Park: texture pass.
+- 202: Merged #1892: People First background scene v9 (row 202 2b).
+- 202: Merged #1897: Row 202 2b: Optus Stadium background scene (pipeline, textures, orbit frames).
+- 202: Merged #1930: First drafts of the 7 untouched grounds (Barossa, Sky, Jiangwan, Hands, Blacktown, Summit, Macquarie Point).
+- 202: Merged #1929: 3D oval: the crowd sits on the MCG model's own seats (row 202 2b/2c).
+- 202: Merged #1936: Ground inspector: drafts load with their seats (row 202 2b).
+- 202: Merged #1931: Every ground with a model plays in it: 30 stadiums in the match view (row 202 2b).
+- 202: Merged #1943: Ground inspector: every match ground through GroundModels, by name (row 202 2b).
+- 202: Merged #1950: Grounds pre-inspection: Bellerive and Windy Hill on their fence, kit seats visible, no sky at the fence foot; the report.
+- 202: Merged #1878: Row 202 2b: GMHBA background scene (pipeline, textures, orbit proof).
+- 202: Merged #1898: Cazaly's: west club building copied from the photo.
+- 202: Merged #1946: Sydney and Western Bulldogs guernseys cut to their photos on the 3D player (row 202 2d).
+- 202: Merged #1951: 3D turf: every ground mown its own way, couch or rye (row 202 2b).
+- 202: Merged #1948: Adelaide Oval and the Gabba play in a match (row 202 2b).
+- 202: Merged #1947: 3D match: live big screens (score, GOAL card, replay) and club boards round the fence (row 202 2b).
+- 202: Merged #1965: Director Bible 2.113: after a mark the picture stays on the main camera (row 202, 2e).
+- 202: Merged #1962: 3D turf: Adelaide Oval and the Gabba mown their own way (row 202 2b).
+- 202: Merged #1917: MCG exterior: real 3D empty seats, gates, NW block (row 202 2b).
+- 202: Merged #1919: Traeger Park (Alice Springs): model and texture pass (row 202 2b, WIP).
+- 202: Merged #1921: Accor Stadium: model, build scripts and reference photos (row 202 2b, WIP).
+- 202: Merged #1953: 3D view phone budget: every ground at three graphics levels; Settings > Graphics; seats and giant meshes drawn only in view; textures compressed (row 202).
+- 202: Merged #1918: TIO Stadium (Marrara, Darwin): model with real 3D seats (row 202 2b, WIP).
+- 207: Merged #1725: Director Bible 2.94-2.95: stat popups over the picture, the short line card (row 207).
+- 204: Merged #1718: Training and potential: his design, and the silent corrections (row 204).
+- 6.58: Merged #1647: 3D oval: Club Forge hair from free packs, 31 styles (director: Pass).
+- 202: Merged #1974: Adelaide Oval: no seat outside the bowl, under the roof or on a flat deck; the Hill's real seats; the director's fault list (row 202 2b).
+- 202: Merged #1949: Every ground plays at its own size: nothing stretched (row 202 2b).
+- 202: Merged #1924: GMHBA: Joel Selwood Stand roof copied from the photos.
