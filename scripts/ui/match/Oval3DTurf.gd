@@ -248,6 +248,7 @@ func apply(p_weather: String, p_slot: String) -> void:
 	env.tonemap_exposure = exposure
 	_sky_view()
 	_tone_to_film()
+	_light_stands()
 
 
 ## The match film (Oval3D._film) applies the tone itself, after its own look, so the club rings
@@ -362,6 +363,110 @@ func _late_game() -> void:
 	_stand_shade(true)
 	_sky_look({"cover": 0.4, "cloud_lit": Color(1.0, 0.93, 0.82), "cloud_dark": Color(0.56, 0.57, 0.64), "sun_halo": 0.55,
 			"cloud_sun": 0.8, "target": 0.8})
+
+
+## The light on a ground's model (director, 2026-11-21: roof undersides "grey, a faint green
+## tint"). The sky's light map is the view from the centre square: below the horizon it is all
+## sunlit grass, right for the men and the turf. A stand is not on the grass: a roof's underside, a
+## tier's soffit or a canopy outside the ground faces seats, concrete and paving, yet took the full
+## grass green. So the model's surfaces (oval3d_stand.gdshader) take the sky's light as if that
+## grass were grey, keeping STAND_GREEN of its colour: faces turned up are lit as before, faces
+## turned down go grey. At night the light is one colour already, so nothing changes. The men, the
+## turf, the goalposts and the seats keep the sky's own light.
+const STAND_GREEN := 0.15    # how much of the grass's colour the stands' grey keeps
+const STAND_SHADER := preload("res://scripts/ui/match/oval3d_stand.gdshader")
+const AMB_KEYS := ["amb_down", "amb_low", "amb_level", "amb_high", "amb_up"]
+var _stand_mats: Array[ShaderMaterial] = []
+
+
+## Gives a ground model's surfaces the stands' light (called once the model is built). Surfaces the
+## stand shader does not cover (see-through or glowing ones) keep their own.
+func light_stands(model: Node) -> void:
+	var seen := {}
+	for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+		if mi.mesh == null:
+			continue
+		for i in mi.mesh.get_surface_count():
+			var m := mi.get_active_material(i) as StandardMaterial3D
+			if m == null or m.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED or m.emission_enabled:
+				continue
+			if not seen.has(m):
+				var own := ShaderMaterial.new()
+				own.shader = STAND_SHADER
+				own.resource_name = m.resource_name    # its name still tells what it is (a screen's face)
+				own.set_shader_parameter("albedo_tex", m.albedo_texture)
+				own.set_shader_parameter("use_vcol", m.vertex_color_use_as_albedo)
+				own.set_shader_parameter("albedo_col", m.albedo_color)
+				own.set_shader_parameter("roughness_v", m.roughness)
+				own.set_shader_parameter("metallic_v", m.metallic)
+				own.set_shader_parameter("uv_scale", m.uv1_scale)
+				own.set_shader_parameter("uv_offset", m.uv1_offset)
+				seen[m] = own
+				_stand_mats.append(own)
+			mi.set_surface_override_material(i, seen[m])
+	_light_stands()
+
+
+func _light_stands() -> void:
+	if _stand_mats.is_empty():
+		return
+	var amb: Array = [Vector3.ZERO, Vector3.ZERO, Vector3.ZERO, Vector3.ZERO, Vector3.ZERO]
+	if env.ambient_light_source == Environment.AMBIENT_SOURCE_SKY and env.sky != null:
+		var sm: ShaderMaterial = env.sky.sky_material
+		var e := env.ambient_light_energy * env.ambient_light_sky_contribution
+		var grey := stand_light(sm, e, STAND_GREEN)
+		var sky := stand_light(sm, e, 1.0)
+		for k in amb.size():
+			amb[k] = grey[k] - sky[k]
+	var e_amb := env.ambient_light_energy * env.ambient_light_sky_contribution
+	for m in _stand_mats:
+		for k in AMB_KEYS.size():
+			m.set_shader_parameter(AMB_KEYS[k], amb[k])
+		m.set_shader_parameter("ref_scale", 1.0 / e_amb if e_amb > 0.001 else 0.0)
+
+
+## The sky's light (its cosine-weighted mean, as the engine lights a face from the sky) for a face
+## turned straight down, half down, level, half up and straight up, with the grass below the
+## horizon keeping `green` of its colour (1 as it is). The sky as oval3d_sky.gdshader draws its light map.
+func stand_light(sm: ShaderMaterial, scale := 1.0, green := 1.0) -> Array:
+	var zenith: Color = _sky_param(sm, "zenith")
+	var horizon: Color = _sky_param(sm, "horizon")
+	var bowl: Color = _sky_param(sm, "bowl")
+	var grass: Color = _sky_param(sm, "grass")
+	var bowl_top: float = _sky_param(sm, "bowl_top")
+	var energy: float = _sky_param(sm, "energy")
+	var g_energy: float = _sky_param(sm, "grass_energy")
+	var gl := grass.get_luminance()
+	var grey := Color(gl, gl, gl).lerp(grass, green)
+	var out := []
+	for ny in [-1.0, -0.5, 0.0, 0.5, 1.0]:
+		var n := Vector3(sqrt(1.0 - ny * ny), ny, 0.0)
+		var sum := Color(0, 0, 0)
+		var wsum := 0.0
+		# Directions over the sphere on an even grid of height and bearing (area-even in height).
+		for iy in 48:
+			var y := -1.0 + (iy + 0.5) * 2.0 / 48.0
+			var r := sqrt(1.0 - y * y)
+			for ia in 48:
+				var az := TAU * (ia + 0.5) / 48.0
+				var d := Vector3(r * cos(az), y, r * sin(az))
+				var w := d.dot(n)
+				if w <= 0.0:
+					continue
+				var up := horizon.lerp(zenith, smoothstep(bowl_top, 0.75, y))
+				var c := bowl.lerp(up, smoothstep(bowl_top - 0.02, bowl_top + 0.02, y))
+				c = (grey * g_energy).lerp(c, smoothstep(-0.02, 0.02, y))
+				sum += c * w
+				wsum += w
+		var e := sum / wsum * energy * scale
+		out.append(Vector3(e.r, e.g, e.b))
+	return out
+
+
+## A sky shader setting, or the shader's own default when the look leaves it unset.
+func _sky_param(sm: ShaderMaterial, key: String) -> Variant:
+	var v: Variant = sm.get_shader_parameter(key)
+	return v if v != null else RenderingServer.shader_get_parameter_default(sm.shader.get_rid(), key)
 
 
 ## A wet day (rule 2.83): the sky is cloud, grey light from all round, the sun only a soft
