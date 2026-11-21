@@ -3654,6 +3654,8 @@ func _on_event(ev: Dictionary) -> void:
 	_call_feed(event_index, ev)
 	if str(ev.get("kind", "")) == "goal":
 		_flash_score(int(ev.get("side", 0)))
+		if not _skipping and _pitch != null:
+			_pitch.goal_3d(int(ev.get("side", 0)), str(ev.get("name", "")), int(ev.get("num", 0)))
 		_track_run(int(ev.get("side", 0)))
 	_queue_broadcast(ev, event_index)
 
@@ -3936,6 +3938,10 @@ func _paint_clock() -> void:
 		var words: Array = CLOCK_WORDS.get(_clock_word, [])
 		_bug.show_score(_shown_goals[0] * 6 + _shown_behinds[0], _shown_goals[1] * 6 + _shown_behinds[1],
 				_clock_text(_shown_q, _shown_min) if words.is_empty() else str(words[words.size() - 1]))
+	if _pitch != null:
+		var words3d: Array = CLOCK_WORDS.get(_clock_word, [])
+		_pitch.show_score_3d(_shown_goals, _shown_behinds,
+				_clock_text(_shown_q, _shown_min) if words3d.is_empty() else str(words3d[0]))
 	if _clock == null or not is_instance_valid(_clock):
 		return
 	var base := int(_clock.get_meta("fs", 17))
