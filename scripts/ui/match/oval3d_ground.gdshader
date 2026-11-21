@@ -168,7 +168,12 @@ void fragment() {
 	// Boundary: the ellipse's distance, approximately, in metres.
 	vec2 g = 2.0 * p / (half_size * half_size);
 	float db = (dot(p / half_size, p / half_size) - 1.0) / max(length(g), 1e-4);
-	ink = max(ink, paint(db, line_w * 1.4));
+	// Between the behind posts the boundary is the straight goal line (drawn below), as on every
+	// AFL ground: the curve stops at the behind posts, so it never runs a second line behind it.
+	bool mouth = abs(p.y) < 9.6 && abs(p.x) > goal_x - 3.0;
+	if (!mouth) {
+		ink = max(ink, paint(db, line_w * 1.4));
+	}
 	if (e < 1.0) {
 		float sq = max(abs(p.x), abs(p.y)) - 25.0;
 		ink = max(ink, paint(sq, line_w));
@@ -180,7 +185,7 @@ void fragment() {
 		ink = max(ink, paint(length(p - vec2(-goal_x, 0.0)) - 50.0, line_w));
 		for (int s = -1; s <= 1; s += 2) {
 			float gx = float(s) * goal_x;
-			if (abs(p.y) < 9.6) ink = max(ink, paint(p.x - gx, line_w));
+			if (abs(p.y) < 9.6) ink = max(ink, paint(p.x - gx, line_w * 1.4));
 			float inside = float(s) * (gx - p.x);
 			if (inside > 0.0 && inside < 9.0) {
 				ink = max(ink, paint(abs(p.y) - 3.2, line_w));
