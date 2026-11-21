@@ -2638,11 +2638,17 @@ const D50_CHIP_MAX := 6.0
 ## kicks averaged 18 m (real 25, Spencer 2019). With these, and the shorter run of
 ## chains in Ratings.FLOW, kicks average about 24 m and a side's kicks and disposals
 ## a game come back inside real AFL (217 and 351 on a 200-match screen; real 212, 367).
-const KICK_GAIN := 2.2
+## Shots on goal counted as kicks (2026-11-21) moved some kicks up the ground to
+## handballs (HB_ROLL); kicks gain 2.45 so the side still gets the ball inside 50 as often.
+const KICK_GAIN := 2.45
 const HANDBALL_GAIN := 0.2
 
 
 ## A named constant, or its audit override (tune).
+## The handball roll outside the defensive 50 against Ratings.T.handball_share: shots on goal
+## count as kicks (Champion Data), so play up the ground hands off a little more for the
+## game's kicks and handballs to keep real AFL's split (212 kicks, 155 handballs a team).
+const HB_ROLL := 1.15
 static func _tv(key: String, value: float) -> float:
 	return float(tune.get(key, value))
 const PRESS_RUSH_GAIN := 0.96
@@ -3664,7 +3670,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		# A kick-in is kicked: no handball roll for its first disposal.
 		var hb_roll := not (from_kick_in and touches == 1) \
 				and rng.randf() < float(T["handball_share"]) * hb_bias \
-				* (_tv("D50_HANDBALL", D50_HANDBALL) if in_d50 else 1.0)
+				* (_tv("D50_HANDBALL", D50_HANDBALL) if in_d50 else _tv("HB_ROLL", HB_ROLL))
 		if hb_roll and not chip and not keep:
 			_t(side, "handballs")
 			_p(carrier, "handballs")
