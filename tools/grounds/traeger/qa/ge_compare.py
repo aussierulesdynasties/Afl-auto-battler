@@ -25,14 +25,26 @@ GROUNDS = {
                   "fit": [0.31, -0.64, -0.02, 68.7, 86.9, 66.77]},
     # Traeger: the model's origin is the OSM pitch's centre (tools/grounds/traeger/scene/geo.py); Google Earth's
     # field level is 573 m (its status bar's elevation with the pointer on the oval; the DEM says 576).
-    "traeger": {"lat": -23.7097309, "lon": 133.8759053, "ge_alt": 573.0,
+    # Its model is laid in its own frame, turned 25.4 degrees off north (tools/grounds/traeger/align.json):
+    # "w2m" takes a view's north-up east/north into that frame before the match fit.
+    "traeger": {"lat": -23.7097309, "lon": 133.8759053, "ge_alt": 573.0, "w2m": "traeger",
                 "fit": [3.62, -8.97, -0.05, -90.9, 93.26, 73.2]},
 }
+
+
+def _w2m(name):
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "scene"))
+    import geo
+    return lambda e, n: tuple(float(v) for v in geo.to_model(e, n))
 FOV = float(__import__("os").environ.get("GE_FOV", "23.5"))
 
 
 def to_match(g, p):
-    """Model metres (x east, y up, z -north) -> match metres."""
+    """Metres (x east, y up, z -north) from the origin -> match metres (through the model's own frame first,
+    where it has one)."""
+    if g.get("w2m"):
+        x, y = _w2m(g["w2m"])(p[0], -p[2])
+        p = (x, p[1], -y)
     cx, cz, fy, ang, hl, hw = g["fit"]
     sx, sz = 1.0, 1.0   # every ground plays at its own size (#1949): nothing stretched
     a = math.radians(ang)

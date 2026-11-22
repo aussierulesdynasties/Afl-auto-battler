@@ -1,0 +1,53 @@
+[
+ {
+  "name": "c_stand",
+  "h": 0,
+  "t": 0,
+  "d": 200,
+  "at": [
+   -60,
+   50,
+   0
+  ],
+  "label": "the grandstand and clubrooms, straight down",
+  "solve": "none"
+ },
+ {
+  "name": "c_sheds",
+  "h": 0,
+  "t": 0,
+  "d": 200,
+  "at": [
+   -12,
+   -128,
+   0
+  ],
+  "label": "the south sheds, straight down",
+  "solve": "none"
+ },
+ {
+  "name": "c_board",
+  "h": 0,
+  "t": 0,
+  "d": 160,
+  "at": [
+   55,
+   70,
+   0
+  ],
+  "label": "the scoreboard and north-east corner, straight down",
+  "solve": "none"
+ },
+ {
+  "name": "o_stand",
+  "h": 270,
+  "t": 55,
+  "d": 260,
+  "at": [
+   -60,
+   50,
+   0
+  ],
+  "label": "the grandstand from the field"
+ }
+]

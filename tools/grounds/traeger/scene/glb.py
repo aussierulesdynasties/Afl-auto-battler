@@ -8,13 +8,17 @@ Positions are glTF metres (x east, y up, z south). Nothing here reads back into 
 """
 import io
 import json
+import math
 import struct
 
 import numpy as np
 
 
 class Glb:
-    def __init__(self):
+    def __init__(self, frame=None):
+        """frame: (rotation about y in radians, x, z), the node transform every mesh takes (geo.model_frame():
+        the scene is built north-up and laid into the stadium model's own frame)."""
+        self.frame = frame
         self.bin = bytearray()
         self.j = {"asset": {"version": "2.0", "generator": "afl traeger scene"}, "scene": 0,
                   "scenes": [{"nodes": []}], "nodes": [], "meshes": [], "materials": [], "accessors": [],
@@ -79,7 +83,12 @@ class Glb:
         ind = self._acc(F.reshape(-1).astype("<u4" if idx_t == 5125 else "<u2"), idx_t, "SCALAR", 34963)
         self.j["meshes"].append({"name": name, "primitives": [{"attributes": attrs, "indices": ind,
                                                                "material": mat}]})
-        self.j["nodes"].append({"name": name, "mesh": len(self.j["meshes"]) - 1})
+        node = {"name": name, "mesh": len(self.j["meshes"]) - 1}
+        if self.frame is not None:
+            phi, tx, tz = self.frame
+            node["rotation"] = [0.0, math.sin(phi / 2), 0.0, math.cos(phi / 2)]
+            node["translation"] = [tx, 0.0, tz]
+        self.j["nodes"].append(node)
         self.j["scenes"][0]["nodes"].append(len(self.j["nodes"]) - 1)
 
     def save(self, path):

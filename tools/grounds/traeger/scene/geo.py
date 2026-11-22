@@ -6,6 +6,7 @@
 - Colour: Sentinel-2 L2A true colour (10 m), scene S2B_53KLP_20251029 (late October 2025, cloud free),
   read from the open sentinel-cogs bucket. Contains modified Copernicus Sentinel data 2025.
 """
+import json
 import math
 import os
 import urllib.request
@@ -20,6 +21,33 @@ CACHE = os.environ.get("TRAEGER_CACHE", "/tmp/traeger_cache")
 DEM_Z = 13
 S2 = ("https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/53/K/LP/2025/10/"
       "S2B_53KLP_20251029_0_L2A/")
+
+
+# The stadium model's own frame (tools/grounds/traeger/align.json, its f2w.py): the model was built round the oval,
+# turned 25.4 degrees from north and moved off OpenStreetMap's pitch centre. The scene is built north-up here
+# (east, north) and laid into the model's frame by its glTF node transform (model_frame()).
+_ALIGN = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "align.json")))["s"]
+
+
+def to_model(e, n):
+    """North-up east/north -> the model's frame (x, -z)."""
+    c, s = math.cos(_ALIGN[0]), math.sin(_ALIGN[0])
+    x, y = np.asarray(e, float) - _ALIGN[1], np.asarray(n, float) - _ALIGN[2]
+    return c * x + s * y, -s * x + c * y
+
+
+def from_model(x, y):
+    """The model's frame (x, -z) -> north-up east/north."""
+    c, s = math.cos(_ALIGN[0]), math.sin(_ALIGN[0])
+    x, y = np.asarray(x, float), np.asarray(y, float)
+    return c * x - s * y + _ALIGN[1], s * x + c * y + _ALIGN[2]
+
+
+def model_frame():
+    """The glTF node transform (rotation about y, x, z) that lays a north-up scene into the model's frame."""
+    c, s = math.cos(_ALIGN[0]), math.sin(_ALIGN[0])
+    tx, ty = _ALIGN[1], _ALIGN[2]
+    return -_ALIGN[0], -(c * tx + s * ty), -s * tx + c * ty
 
 
 def latlon(e, n):
