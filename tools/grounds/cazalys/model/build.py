@@ -207,8 +207,8 @@ def open_terrace(S, mb):
 
 
 def grandstand(G, mb, mr):
-    """lower terrace from the fence, a walkway, the upper tier under a flat white cantilever roof, the glazed corporate
-    level at the back of the upper tier, the concourse building behind; four pyramid masts on the roof (Fosnez photo)"""
+    """lower terrace from the fence, a walkway, the upper tier under the folded white roof (gs_roof), the glazed corporate
+    level at the back of the upper tier, the concourse building behind"""
     bs = brange(G['b0'], G['b1']); zl0, zl1 = G['z_lower']; zu0, zu1 = G['z_upper']; zg = G['z_glaze']
     def geo(b):
         rs0 = fence_r(b % 360) + G['front']; ru0 = interp(G['upper_front'], b)[0]; ru1 = interp(G['upper_back'], b)[0]
@@ -224,40 +224,73 @@ def grandstand(G, mb, mr):
         ab = seat_rows(bs, prof, k, n, G['pal']); aisle_stairs(mb, ab, prof, k, n)
     for b, sg in ((bs[0], -1), (bs[-1], 1)):
         endcap(mb, b, tp(b), 'conc_wall', sg)
-    # roof: deck from the upper-tier front (less the overhang) to the rear, rising 1 m; fascia 1.2 m deep all round
-    zr0, zr1 = G['z_roof']; th = 0.4
-    def deck(b):
-        rs0, ru0, ru1, rr = geo(b); return ru0 - G['roof_over'], rr + 0.4
-    rbs = brange(G['b0'], G.get('roof_b1', G['b1']))   # roof_b1: aerial roof runs past the seating's north end
-    for i in range(len(rbs) - 1):
-        ba, bb = rbs[i], rbs[i + 1]; (ria, roa), (rib, rob) = deck(ba), deck(bb)
-        tu, tv = TILE['roof_white']; rm = 0.5 * (ria + roa); ua, ub = math.radians(ba) * rm / tu, math.radians(bb) * rm / tu
-        oriented(mr, [P3(ba, ria, zr0), P3(bb, rib, zr0), P3(bb, rob, zr1), P3(ba, roa, zr1)], 'roof_white', UP,
-                 [(ua, ria / tv), (ub, rib / tv), (ub, rob / tv), (ua, roa / tv)])
-        oriented(mr, [P3(ba, ria, zr0 - th), P3(bb, rib, zr0 - th), P3(bb, rob, zr1 - th), P3(ba, roa, zr1 - th)], 'roof_soffit', -UP,
-                 [(ua, ria / tv), (ub, rib / tv), (ub, rob / tv), (ua, roa / tv)])
+    gs_roof(G, mr, bs, geo)
+
+
+def gs_roof(G, mr, bs, geo):
+    """the grandstand roof as built (Google Earth 3D, top-down view gr_top and obliques gr_*, 2026-11-22; Commons 2022
+    photos 3 and 11): one plane sheet with straight edges traced from above, the rear stepping out round the south notch,
+    rising 1 m to the back; a light walkway strip across it to a camera cage at the front edge; three short masts on
+    top, each a star of round ties down to the sheet, linked into a W along the front"""
+    R = G['roof_poly']; P = ccw([tuple(p) for p in R['poly']]); zf, zr = G['z_roof']; th = 0.45
+    f0, f1 = np.array(R['front'][0], float), np.array(R['front'][1], float); tf = (f1 - f0) / np.linalg.norm(f1 - f0)
+    nb = np.array([-tf[1], tf[0]])   # into the roof, away from the field
+    if np.dot(nb, np.mean(np.array(P), 0) - f0) < 0: nb = -nb
+    Dp = max(nb @ (np.array(p) - f0) for p in P)
+    ZZ = lambda p: zf + (zr - zf) * (nb @ (np.array(p[:2], float) - f0)) / Dp
+    tu, tv = TILE['roof_gs']; ru = np.array([nb[0], nb[1]])   # sheeting ribs run front to back
+    for tri in earclip(P):
+        q = [(x, y, ZZ((x, y))) for x, y in tri]; uv = [((np.array((x, y)) @ tf) / tu, (np.array((x, y)) @ ru) / tv) for x, y in tri]
+        oriented(mr, q, 'roof_gs', UP, uv)
+        oriented(mr, [(x, y, zz - th) for x, y, zz in q], 'roof_soffit', -UP, uv)
+    for i in range(len(P)):   # fascia band all round, deeper along the front
+        a, b = np.array(P[i]), np.array(P[(i + 1) % len(P)])
+        n = np.array([b[1] - a[1], a[0] - b[0]]); n /= np.linalg.norm(n); dz = 0.9 if n @ nb < -0.95 else 0.6
+        oriented(mr, [(*a, ZZ(a) - dz), (*b, ZZ(b) - dz), (*b, ZZ(b) + 0.06), (*a, ZZ(a) + 0.06)], 'fascia', np.array([*n, 0]))
+        ai, bi = a - n * 0.25, b - n * 0.25
+        oriented(mr, [(*a, ZZ(a) - dz), (*b, ZZ(b) - dz), (*bi, ZZ(bi) - th), (*ai, ZZ(ai) - th)], 'fascia', -UP)
+    w0, w1 = np.array(R['walkway'][0], float), np.array(R['walkway'][1], float); tw = (w1 - w0) / np.linalg.norm(w1 - w0)
+    nw = np.array([-tw[1], tw[0]]); hw = 0.45   # GE gr_sw: a pale strip 0.9 m wide with a low rail on one side
+    q = [w0 - nw * hw, w1 - nw * hw, w1 + nw * hw, w0 + nw * hw]
+    mr.face([(*p, ZZ(p) + 0.12) for p in q], 'conc_kerb')
+    for p_, r_ in ((q[0], q[1]), (q[3], q[2])): mr.face([(*p_, ZZ(p_)), (*r_, ZZ(r_)), (*r_, ZZ(r_) + 0.12), (*p_, ZZ(p_) + 0.12)], 'conc_kerb')
+    for t in np.arange(0.0, np.linalg.norm(w1 - w0), 2.0):
+        p = w0 + tw * t + nw * hw; mr.beam((*p, ZZ(p)), (*p, ZZ(p) + 1.0), 0.05, 0.05, 'steel_galv')
+    mr.beam((*(w0 + nw * hw), ZZ(w0) + 1.0), (*(w1 + nw * hw), ZZ(w1) + 1.0), 0.05, 0.05, 'steel_galv')
+    c, (L, Wd, Hc) = np.array(R['cage'][0], float), R['cage'][1]   # camera cage on the front edge: an open galvanised frame
+    cr = [c + tf * su * L / 2 + nb * sv * Wd / 2 for su, sv in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
+    for k in range(4):
+        p, r_ = cr[k], cr[(k + 1) % 4]
+        mr.beam((*p, ZZ(p)), (*p, ZZ(p) + Hc), 0.1, 0.1, 'steel_galv')
+        for zz in (0.15, Hc / 2, Hc): mr.beam((*p, ZZ(p) + zz), (*r_, ZZ(r_) + zz), 0.06, 0.06, 'steel_galv')
+    mr.face([(*p, ZZ(p) + 0.15) for p in cr], 'mesh'); mr.face([(*p, ZZ(p) + 0.15) for p in cr[::-1]], 'mesh')
+    # rear wall: the corporate level's dark glazing band under the roof (GE gr_sw), closing the wall up to the soffit
+    zg = G['z_glaze']
+    for i in range(len(bs) - 1):
+        ba, bb = bs[i], bs[i + 1]; ra, rb = geo(ba)[3] + 0.03, geo(bb)[3] + 0.03; pa, pb = P3(ba, ra, 0), P3(bb, rb, 0)
         bm = math.radians(0.5 * (ba + bb)); rad = np.array([math.sin(bm), math.cos(bm), 0.0])
-        oriented(mr, [P3(ba, ria, zr0 - 1.2), P3(bb, rib, zr0 - 1.2), P3(bb, rib, zr0 + 0.05), P3(ba, ria, zr0 + 0.05)], 'fascia', -rad)
-        oriented(mr, [P3(ba, ria, zr0 - 1.2), P3(bb, rib, zr0 - 1.2), P3(bb, rib - 0.3, zr0 - th), P3(ba, ria - 0.3, zr0 - th)], 'fascia', -UP)
-        oriented(mr, [P3(ba, roa, zr1 - 0.8), P3(bb, rob, zr1 - 0.8), P3(bb, rob, zr1), P3(ba, roa, zr1)], 'fascia', rad)
-    for b, sg in ((rbs[0], -1), (rbs[-1], 1)):
-        ri, ro = deck(b); a = math.radians(b); tan = np.array([math.cos(a), -math.sin(a), 0.0]) * sg
-        oriented(mr, [P3(b, ri, zr0 - 1.2), P3(b, ro, zr1 - 0.8), P3(b, ro, zr1), P3(b, ri, zr0 + 0.05)], 'fascia', tan)
-    # front columns on the walkway every ~6 deg, up to the roof soffit
+        oriented(mr, [P3(ba, ra, zg - 2.4), P3(bb, rb, zg - 2.4), P3(bb, rb, ZZ(pb) - th), P3(ba, ra, ZZ(pa) - th)], 'gstand_back', rad)
+    # the south block under the roof's rear step (GE gr_nw/gr_sw: the rear wall follows the roof edge round the notch,
+    # 0.8 m in from the fascia): pale cladding, the same dark band under the roof
+    n1, n2, sc = [np.array(p, float) for p in R['block']]
+    for a, b in ((n1, n2), (n2, sc)):
+        t = (b - a) / np.linalg.norm(b - a); n = np.array([t[1], -t[0]])
+        if n @ (a - np.mean(np.array(P), 0)) < 0: n = -n
+        a_, b_ = a - n * 0.8 + t * 0.8, b - n * 0.8 - t * 0.8
+        oriented(mr, [(*a_, 0.0), (*b_, 0.0), (*b_, zg - 2.4), (*a_, zg - 2.4)], 'clad_grey', np.array([*n, 0]))
+        oriented(mr, [(*a_, zg - 2.4), (*b_, zg - 2.4), (*b_, ZZ(b_) - th), (*a_, ZZ(a_) - th)], 'gstand_back', np.array([*n, 0]))
+    # front columns on the walkway, up to the soffit (photo 11: slim white posts at the upper tier's front)
     b = bs[0] + 1.0
     while b < bs[-1] - 0.5:
-        rs0, ru0, ru1, rr = geo(b); mr.beam(P3(b, ru0 - 0.4, zl1), P3(b, ru0 - 0.4, zr0 - th), 0.3, 0.3, 'steel_white'); b += 6.6
-    # pyramid masts: four legs from the roof to an apex mast_h above, two stays from the apex to the front fascia
-    for M in G['masts']:
-        b = M['b']; rs0, ru0, ru1, rr = geo(b); rc = ru0 + 9.0; zc = zr0 + (zr1 - zr0) * (rc - deck(b)[0]) / (deck(b)[1] - deck(b)[0])
-        apex = P3(b, rc, zc + G['mast_h']); db = math.degrees(4.0 / rc)
-        for bb_, rr_ in ((b - db, rc - 4), (b + db, rc - 4), (b - db, rc + 4), (b + db, rc + 4)):
-            mr.beam(P3(bb_, rr_, zc), apex, 0.28, 0.28, 'steel_white')
-        mr.beam(P3(b - db, rc - 4, zc + 0.2), P3(b + db, rc - 4, zc + 0.2), 0.2, 0.2, 'steel_white')
-        mr.beam(P3(b - db, rc + 4, zc + 0.2), P3(b + db, rc + 4, zc + 0.2), 0.2, 0.2, 'steel_white')
-        dbf = math.degrees(7.0 / ru0); rf_ = deck(b)[0] + 0.3
-        for bb_ in (b - dbf, b + dbf):
-            mr.beam(apex, P3(bb_, rf_, zr0 + 0.05), 0.08, 0.08, 'steel_galv')
+        rs0, ru0, ru1, rr = geo(b); p = P3(b, ru0 - 0.4, G['z_lower'][1]); mr.beam(p, (p[0], p[1], ZZ(p) - th), 0.3, 0.3, 'steel_white'); b += 6.6
+    # masts and ties (GE top-down: three stars; photo 3: round white tubes, the peaks ~3.5 m over the roof)
+    on = lambda q: (q[0], q[1], ZZ(q) + 0.05)
+    for M in R['masts']:
+        c = M['at']; top = (c[0], c[1], ZZ(c) + R['mast_h'])
+        mr.beam(on(c), top, 0.6, 0.6, 'steel_white', tube=True)
+        for q in M['ties']:
+            mr.beam(top, on(q), 0.42, 0.42, 'steel_white', tube=True)   # GE: the ties read as broad silver members
+            mr.cyl(q, 0.35, ZZ(q) - 0.05, ZZ(q) + 0.25, 'steel_white', n=8, top='steel_white')   # tie shoe on the roof
 
 
 # ---------------- straight pieces ----------------
@@ -1001,6 +1034,10 @@ def ground(col):
                         oriented(mb, g, m, UP, uv=[(p[0] / TILE[m][0], p[1] / TILE[m][1]) for p in g])
                 continue
             oriented(mb, q, m, UP, uv=[(p[0] / TILE[m][0], p[1] / TILE[m][1]) for p in q])
+    for A in D.get('paved', []):   # paved concourse and forecourt over the grass (aerial + GE 3D)
+        m = A['mat']
+        for tri in earclip(ccw([tuple(p) for p in A['poly']])):
+            g = [(x, y, -0.005) for x, y in tri]; oriented(mb, g, m, UP, uv=[(p[0] / TILE[m][0], p[1] / TILE[m][1]) for p in g])
     mb.build(col)
 
 
