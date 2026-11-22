@@ -162,12 +162,12 @@
   "ge_alt_source": "GE status bar at the field centre, shape audit 2026-11-22 (+-1 m); confirm with --level"
  },
  "scg": {
-  "lat": -33.8916083,
-  "lon": 151.2246417,
+  "lat": -33.8916,
+  "lon": 151.2248,
   "ge_alt": 38.0,
-  "source": "shape audit 2026-11-22 (register on a 600 m straight-down GE shot)",
-  "turn_deg": -10.15,
-  "note": "lining-up ambiguous between turns of about +10 and -10 deg (near-round bowl); origin +-5 m; re-measure",
+  "source": "SCG thread register 2026-11-22: the origin the rebuilt model (PR #2017) is built on, north-up; register on a fresh 600 m straight-down GE shot gives shift 0.0/0.0 m, turn -0.2 deg, PASS; outline median 1.09 m",
+  "turn_deg": 0.0,
+  "note": "the audit's -10.15 deg came from an ambiguous lining-up on the near-round bowl and was wrong",
   "ge_alt_source": "GE status bar at the field centre, shape audit 2026-11-22 (+-1 m); confirm with --level"
  },
  "sky": {
