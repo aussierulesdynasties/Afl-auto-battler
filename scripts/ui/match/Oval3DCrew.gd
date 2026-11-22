@@ -312,3 +312,51 @@ static func field_number(seed: int, k: int) -> int:
 		pool[i] = pool[j]
 		pool[j] = t
 	return int(pool[k % pool.size()])
+
+
+const FLAG_SHADER := preload("res://scripts/ui/match/oval3d_flag.gdshader")
+## The flag stick: plain white-painted dowel.
+const FLAG_STICK := Color(0.9, 0.9, 0.88)
+
+
+## A goal umpire's two flags, one in each hand (crew_flag_stick + crew_flag_cloth), each closed
+## in his fist by an Oval3DGrip; hidden, with the grips off, until he draws them. Returns
+## {"r": {"node", "cloth", "grip", "on"}, "l": ...}; cloth carries the flag shader (furl, air).
+static func flags(skel: Skeleton3D, glb: String) -> Dictionary:
+	var all := pieces(glb)
+	if not all.has("crew_flag_stick") or not all.has("crew_flag_cloth"):
+		return {}
+	var out := {}
+	var stick_m := ShaderMaterial.new()
+	stick_m.shader = FLAG_SHADER
+	stick_m.set_shader_parameter("stick", true)
+	stick_m.set_shader_parameter("cloth_colour", FLAG_STICK)
+	for side in ["r", "l"]:
+		var grip := Oval3DGrip.new()
+		grip.name = "flag_grip_" + side
+		grip.side = side
+		grip.active = false
+		skel.add_child(grip)
+		var on := BoneAttachment3D.new()
+		on.bone_name = "hand_" + side
+		skel.add_child(on)
+		var flag := Node3D.new()
+		flag.name = "flag_" + side
+		flag.transform = grip.held_at(skel)
+		flag.visible = false
+		on.add_child(flag)
+		var stick := MeshInstance3D.new()
+		stick.mesh = (all["crew_flag_stick"] as Dictionary)["mesh"]
+		stick.material_override = stick_m
+		flag.add_child(stick)
+		var cloth := MeshInstance3D.new()
+		cloth.mesh = (all["crew_flag_cloth"] as Dictionary)["mesh"]
+		var m := ShaderMaterial.new()
+		m.shader = FLAG_SHADER
+		m.set_shader_parameter("seed", 3.1 if side == "r" else 0.7)
+		cloth.material_override = m
+		# The vertex shader moves the cloth well off its flat rest: keep it from being culled.
+		cloth.extra_cull_margin = 0.6
+		flag.add_child(cloth)
+		out[side] = {"node": flag, "cloth": m, "grip": grip, "on": on}
+	return out

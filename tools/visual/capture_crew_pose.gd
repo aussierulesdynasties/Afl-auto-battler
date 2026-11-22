@@ -2,6 +2,8 @@ extends SceneTree
 ## A goal umpire held at chosen moments of his clips (row 202), filmed close from the front and
 ## from three-quarters: for checking his clothes and hands at each key pose in the game itself.
 ##   godot --path . --rendering-method mobile --script tools/visual/capture_crew_pose.gd -- OUTDIR CLIP T1,T2,...
+## With CREW_FLAGS=furl,air he holds both flags, the cloth furled (0) to open (1), in still air
+## (0) to streaming (1).
 ## Saves OUTDIR/<clip>_<t>_<front|quarter|back>.png.
 
 const DT := 1.0 / 30.0
@@ -60,6 +62,17 @@ func _run() -> void:
 	var n: Node3D = u["node"]
 	n.rotation.y = atan2(-n.position.x, -n.position.z)
 	print("POSE clips: ", ap.get_animation_list().has(clip))
+	# CREW_FLAGS=furl,air: both flags in his hands, the cloth set so.
+	var fl := OS.get_environment("CREW_FLAGS")
+	if fl != "":
+		var fa := fl.split(",")
+		var crew = load("res://scripts/ui/match/Oval3DCrew.gd")
+		var flags: Dictionary = crew.flags(u["skel"], crew.glb_for(oval.player_glb))
+		for s in flags.values():
+			(s["node"] as Node3D).visible = true
+			s["grip"].active = true
+			(s["cloth"] as ShaderMaterial).set_shader_parameter("furl", float(fa[0]))
+			(s["cloth"] as ShaderMaterial).set_shader_parameter("air", float(fa[1]))
 	for t in times:
 		ap.play(clip, 0.0)
 		ap.seek(float(t), true)
