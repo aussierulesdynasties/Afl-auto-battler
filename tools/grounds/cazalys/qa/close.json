@@ -1,0 +1,170 @@
+[
+ {
+  "name": "cg_front",
+  "h": 239,
+  "t": 70,
+  "d": 90,
+  "at": [
+   -81.4,
+   -48.9,
+   8
+  ],
+  "label": "grandstand from the field"
+ },
+ {
+  "name": "cg_roof",
+  "h": 239,
+  "t": 45,
+  "d": 110,
+  "at": [
+   -85.7,
+   -51.5,
+   12
+  ],
+  "label": "grandstand roof from above"
+ },
+ {
+  "name": "cg_n",
+  "h": 189,
+  "t": 72,
+  "d": 80,
+  "at": [
+   -86.5,
+   -31.5,
+   6
+  ],
+  "label": "grandstand north end"
+ },
+ {
+  "name": "cw_terr",
+  "h": 213,
+  "t": 72,
+  "d": 80,
+  "at": [
+   -50.1,
+   -77.2,
+   3
+  ],
+  "label": "south-west terraces"
+ },
+ {
+  "name": "cc_face",
+  "h": 180,
+  "t": 74,
+  "d": 80,
+  "at": [
+   0,
+   -112,
+   4
+  ],
+  "label": "club field face"
+ },
+ {
+  "name": "cc_roof",
+  "h": 180,
+  "t": 40,
+  "d": 120,
+  "at": [
+   0,
+   -125,
+   6
+  ],
+  "label": "club roof from above"
+ },
+ {
+  "name": "cc_west",
+  "h": 225,
+  "t": 70,
+  "d": 90,
+  "at": [
+   -45,
+   -130,
+   4
+  ],
+  "label": "club west end and grandstand"
+ },
+ {
+  "name": "cl_tower",
+  "h": 225,
+  "t": 80,
+  "d": 70,
+  "at": [
+   -47,
+   -84,
+   34
+  ],
+  "label": "light tower head SW"
+ },
+ {
+  "name": "cl_tower2",
+  "h": 60,
+  "t": 80,
+  "d": 70,
+  "at": [
+   80.8,
+   23.8,
+   34
+  ],
+  "label": "light tower head E"
+ },
+ {
+  "name": "cb_north",
+  "h": 340,
+  "t": 72,
+  "d": 90,
+  "at": [
+   -45,
+   75,
+   3
+  ],
+  "label": "north bleachers"
+ },
+ {
+  "name": "cb_board",
+  "h": 20,
+  "t": 74,
+  "d": 70,
+  "at": [
+   26,
+   86,
+   6
+  ],
+  "label": "scoreboard"
+ },
+ {
+  "name": "cs_solar",
+  "h": 135,
+  "t": 55,
+  "d": 140,
+  "at": [
+   95,
+   -90,
+   3
+  ],
+  "label": "solar car park"
+ },
+ {
+  "name": "cn_gate",
+  "h": 0,
+  "t": 70,
+  "d": 90,
+  "at": [
+   -10,
+   128,
+   4
+  ],
+  "label": "north gate"
+ },
+ {
+  "name": "ce_east",
+  "h": 90,
+  "t": 72,
+  "d": 90,
+  "at": [
+   95,
+   0,
+   3
+  ],
+  "label": "east side, marquee"
+ }
+]

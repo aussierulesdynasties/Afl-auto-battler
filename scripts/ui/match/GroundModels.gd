@@ -106,6 +106,16 @@ const SURROUNDS := {
 			# Geelong's walls in Google Earth: red and brown brick, cream render, grey block, weatherboard.
 			"walls": [Color(0.62, 0.42, 0.34), Color(0.74, 0.7, 0.62), Color(0.55, 0.53, 0.5), Color(0.68, 0.5, 0.4),
 					Color(0.8, 0.78, 0.72), Color(0.6, 0.6, 0.6), Color(0.52, 0.36, 0.3)]},
+	# Cazaly's: Westcourt and Parramatta Park, Mulgrave Road, Moody Creek (tools/grounds/cazalys/surr/surrounds.py),
+	# laid on the model's origin (the OSM pitch's centroid); the ranges and the sea are its backdrop (surr/backdrop.py).
+	"cazalys": {"y": -0.04, "inner": 95.0, "colour": Color(0.41, 0.47, 0.28),
+			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
+			# Westcourt in Google Earth: white and cream weatherboard Queenslanders, pastel and grey render, some brick.
+			"walls": [Color(0.9, 0.9, 0.86), Color(0.86, 0.82, 0.7), Color(0.74, 0.8, 0.78), Color(0.9, 0.9, 0.86),
+					Color(0.62, 0.44, 0.35), Color(0.7, 0.7, 0.68), Color(0.82, 0.78, 0.66)],
+			# Its iron roofs from above: zincalume, off-white and grey Colorbond, a few green, red and blue.
+			"roofs": [Color(0.6, 0.6, 0.58), Color(0.72, 0.72, 0.69), Color(0.42, 0.43, 0.44), Color(0.6, 0.6, 0.58),
+					Color(0.32, 0.42, 0.35), Color(0.52, 0.27, 0.22), Color(0.72, 0.72, 0.69), Color(0.36, 0.42, 0.52)]},
 	"mcg": {"y": -0.03, "inner": 140.0, "colour": Color(0.45, 0.55, 0.27),
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin"},
 }
@@ -786,7 +796,7 @@ static func _pick(src, used: PackedInt32Array):
 const BACKDROP_FAR := 7000.0
 ## Grounds whose backdrop runs further, [camera far, haze end] in m: Bellerive's reaches kunanyi /
 ## Mount Wellington, 11 km across the Derwent, which a Hobart crowd sees clearly, blue with the distance.
-const BACKDROP_RANGE := {"bellerive": [20000.0, 60000.0]}
+const BACKDROP_RANGE := {"bellerive": [20000.0, 60000.0], "cazalys": [56000.0, 150000.0]}
 
 
 static func backdrop_far(slug: String) -> float:
@@ -816,7 +826,7 @@ static func backdrop(slug: String, base := "") -> Node3D:
 			continue
 		for gi in model.find_children("*", "GeometryInstance3D", true, false):
 			(gi as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		_backdrop_materials(model)
+		_backdrop_materials(model, dir + slug + "_plain.webp")
 		root.add_child(model)
 	return root
 
@@ -826,16 +836,30 @@ static func backdrop(slug: String, base := "") -> Node3D:
 const BACKDROP_HIDES := {"adelaide": ["ao_ground"]}
 
 const BACKDROP_SHADER := preload("res://scripts/ui/match/oval3d_backdrop.gdshader")
+const TERRAIN_SHADER := preload("res://scripts/ui/match/oval3d_terrain.gdshader")
 
 
 ## The scene's materials as Blender drew them: the trees and everything else tinted by their
 ## vertex colours; the walls and roofs (facade_*, roof_*) through oval3d_backdrop.gdshader, which
 ## leaves their glass and frames untinted. Materials are shared, so each is made once.
-static func _backdrop_materials(model: Node) -> void:
+static func _backdrop_materials(model: Node, plain := "") -> void:
 	var made := {}
 	for mi in model.find_children("*", "MeshInstance3D", true, false):
 		var mesh: Mesh = (mi as MeshInstance3D).mesh
 		if mesh == null:
+			continue
+		# A land mesh with its light already in its vertex colours (Cazaly's ranges, hill-shaded as
+		# Google Earth shows them): drawn as coloured, so the sky's blue fill does not turn the
+		# rainforest navy.
+		if String(mi.name).begins_with("terrain_shaded"):
+			if not made.has("terrain_shaded"):
+				var tm := ShaderMaterial.new()
+				tm.shader = TERRAIN_SHADER
+				if plain != "" and ResourceLoader.exists(plain):
+					tm.set_shader_parameter("plain", load(plain))
+					tm.set_shader_parameter("has_plain", true)
+				made["terrain_shaded"] = tm
+			(mi as MeshInstance3D).material_override = made["terrain_shaded"]
 			continue
 		for i in mesh.get_surface_count():
 			var mat := mesh.surface_get_material(i) as BaseMaterial3D
