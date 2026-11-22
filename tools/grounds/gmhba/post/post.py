@@ -309,9 +309,10 @@ for n, f in enumerate(pans):
     row = int(round(z / 0.3))
     for i in range(k):
         q = mid + along * (-L / 2 + (i + 0.5) * L / k)
-        # Google Earth: slate navy seats all round, pale grey in the Reg Hickey Stand (east).
+        # Google Earth: slate navy seats all round, pale grey in the Reg Hickey Stand (east) and the
+        # south-east corner.
         aq = ang(q[0], q[1])
-        col = 'white' if (aq >= 285 or aq < 25) else 'blue'
+        col = 'white' if (aq >= 277 or aq < 25) else 'blue'
         # glTF frame: x east, y up, z south. Seat local x along the row, y up, +z its back.
         X = np.array([along[0], 0.0, -along[1]])
         Z = np.array([back[0], 0.0, -back[1]])
@@ -450,6 +451,259 @@ for piece in new_faces:
         l[uvl].uv = (q[0], 1.0 - q[1])
     n_rh += 1
 print('rhend faces', len(rh), '->', n_rh)
+# The fins screen at the west side's south end: grey fins 0.22 m wide every 0.48 m (the image's 17.6 a width,
+# 8.5 m an image width), 0.3 m deep, over the dark openings.
+S_FIN = slot(mat('fin', 'fin_grey.png', 0.6))
+fin_us = [(33.5 + 29.0 * k) / 512.0 for k in range(-1, 18)]
+n_fins = isoline_boxes(names.index('fins'), fin_us, 0.22, 0.3, outward, -10.0, 10.0, S_FIN)
+retex('fins', 'fins_backing.png')
+
+# The south-east corner between the Joel Selwood and Reg Hickey stands (Google Earth, from above and from
+# the ground): past the lower tier's 7 rows a 1.5 m walkway, then an upper rake rising to the line of the
+# two stands' backs (13.3 m at the Reg Hickey end), a back wall and a 5 m concourse to the street wall, with
+# the big screen standing at the back. The source model had a grass yard there at ground level.
+S_TREAD = names.index('tread')
+S_AISLE = names.index('aisle')
+S_WALL = names.index('wall')
+S_PAVE = names.index('pave')
+inner_w, outer_w = [], []
+for f in bm.faces:
+    if f.material_index not in (S_WALL, S_EAST) or abs(f.normal.z) > 0.1:
+        continue
+    zs = [v.co.z for v in f.verts]
+    c = f.calc_center_median()
+    a = ang(c.x, c.y)
+    if not 276.0 < a < 297.0:
+        continue
+    r = math.hypot(c.x - PC[0], c.y - PC[1])
+    if abs(max(zs) - 4.0) < 0.05 and r < 100.0:
+        inner_w.append((a, r))
+    elif abs(max(zs) - 7.5) < 0.05 and r > 105.0:
+        outer_w.append((a, r))
+inner_w.sort()
+outer_w.sort()
+A0, A1 = 277.6, 294.2
+
+
+def r_in(a):
+    return float(np.interp(a, [q[0] for q in inner_w], [q[1] for q in inner_w]))
+
+
+def r_out(a):
+    return float(np.interp(a, [q[0] for q in outer_w], [q[1] for q in outer_w]))
+
+
+Z0, WALK, DEPTH, RISE = 4.0, 1.5, 0.8, 0.42
+# The yard's grass becomes the concourse's paving.
+for f in bm.faces:
+    if f.material_index == names.index('turf'):
+        c = f.calc_center_median()
+        if 272.0 < ang(c.x, c.y) < 300.0 and math.hypot(c.x - PC[0], c.y - PC[1]) > 85.0:
+            f.material_index = S_PAVE
+
+
+def quad(ps, mat_slot, uvs=None):
+    f = bm.faces.new([bm.verts.new(p) for p in ps])
+    f.material_index = mat_slot
+    if uvs is None:
+        uvs = [(p.x / 2.0, p.y / 2.0) for p in ps] if abs(f.normal.z) > 0.5 else \
+              [((p.x + p.y) / 2.0, p.z / 2.0) for p in ps]
+    for l, uvq in zip(f.loops, uvs):
+        l[uvl].uv = uvq
+    return f
+
+
+def rows_at(a):
+    # Google Earth from above and from the ground: the upper rake is about 1.5 times the lower tier's depth,
+    # 14 rows (9.9 m), well under the two stands beside it.
+    return max(0, min(14, int((r_out(a) - 5.0 - r_in(a) - WALK) // DEPTH)))
+
+
+arc_aisles = []
+step = 0.5
+angs = list(np.arange(A0, A1 + 1e-6, step))
+# Radial aisles every ~12 m along the walkway, 1.2 m wide.
+L = 0.0
+for i in range(len(angs) - 1):
+    L += math.radians(step) * r_in(angs[i])
+    if L > 8.0 and angs[i] < A1 - 2:
+        arc_aisles.append(angs[i])
+        L = 0.0
+n_corner_seats = 0
+top_line = []
+for i in range(len(angs) - 1):
+    a, b = angs[i], angs[i + 1]
+    ra, rb = r_in(a), r_in(b)
+    # The walkway.
+    quad([at(a, ra, Z0), at(b, rb, Z0), at(b, rb + WALK, Z0), at(a, ra + WALK, Z0)], S_TREAD)
+    k = min(rows_at(a), rows_at(b))
+    in_aisle = any(abs((a + b) / 2 - q) < math.degrees(0.6 / ra) for q in arc_aisles)
+    for j in range(k):
+        r0a, r0b = ra + WALK + j * DEPTH, rb + WALK + j * DEPTH
+        z1 = Z0 + (j + 1) * RISE
+        # Riser, then tread.
+        quad([at(a, r0a, z1 - RISE), at(b, r0b, z1 - RISE), at(b, r0b, z1), at(a, r0a, z1)], S_TREAD)
+        quad([at(a, r0a, z1), at(b, r0b, z1), at(b, r0b + DEPTH, z1), at(a, r0a + DEPTH, z1)],
+             S_AISLE if in_aisle else S_TREAD)
+        if in_aisle:
+            continue
+        # Seats one each 0.5 m along the row, facing the ground.
+        rm = (r0a + r0b) / 2 + 0.4
+        am, bm_ = a, b
+        span = math.radians(bm_ - am) * rm
+        nseat = max(1, int(round(span / 0.5)))
+        for s_ in range(nseat):
+            aq = am + (bm_ - am) * (s_ + 0.5) / nseat
+            q = at(aq, rm, 0.0)
+            back = Vector((q.x - PC[0], q.y - PC[1], 0.0)).normalized()
+            along = Vector((-back.y, back.x, 0.0))
+            X = np.array([along.x, 0.0, -along.y])
+            Z = np.array([back.x, 0.0, -back.y])
+            Y = np.array([0.0, 1.0, 0.0])
+            if np.dot(np.cross(X, Y), Z) < 0:
+                X = -X
+            o = np.array([q.x, z1 + 0.405, -q.y])
+            seats['white'].append([X[0], Y[0], Z[0], o[0], X[1], Y[1], Z[1], o[1], X[2], Y[2], Z[2], o[2]])
+            n_corner_seats += 1
+    ztop = Z0 + k * RISE
+    rta, rtb = ra + WALK + k * DEPTH, rb + WALK + k * DEPTH
+    top_line.append((a, rta, ztop))
+    # The back: a parapet 1.1 m over the top row, its wall down to the concourse, and the concourse paving.
+    quad([at(a, rta, ztop), at(b, rtb, ztop), at(b, rtb, ztop + 1.1), at(a, rta, ztop + 1.1)], S_WALL)
+    quad([at(a, rta + 0.25, ztop + 1.1), at(b, rtb + 0.25, ztop + 1.1), at(b, rtb + 0.25, 0.3), at(a, rta + 0.25, 0.3)], S_WALL)
+    quad([at(a, rta, ztop + 1.1), at(b, rtb, ztop + 1.1), at(b, rtb + 0.25, ztop + 1.1), at(a, rta + 0.25, ztop + 1.1)], S_WALL)
+# The rake's two ends: stepped side walls down to the ground.
+for a in (A0, angs[-1]):
+    k = rows_at(a)
+    ra = r_in(a)
+    prof = [(ra, 0.3), (ra, Z0)] + [(ra + WALK + j * DEPTH, Z0 + (j + 1) * RISE) for j in range(k)]
+    for j in range(len(prof) - 1):
+        r0, z0_ = prof[j]
+        r1, z1_ = prof[j + 1]
+        r1e = r1 if j == len(prof) - 2 else r1
+        quad([at(a, r0, 0.3), at(a, r1e + (DEPTH if j == len(prof) - 2 and j > 0 else 0.0), 0.3),
+              at(a, r1e + (DEPTH if j == len(prof) - 2 and j > 0 else 0.0), max(z0_, z1_)), at(a, r0, max(z0_, z1_))], S_WALL)
+# A handrail along the walkway's front edge: a 50 mm rail 1.0 m up on posts every ~2 m.
+rail = [at(a, r_in(a) + 0.15, Z0 + 1.0) for a in angs]
+for p0, p1 in zip(rail, rail[1:]):
+    tube(p0, p1, 0.03, 6)
+for i in range(0, len(angs), 4):
+    tube(at(angs[i], r_in(angs[i]) + 0.15, Z0), rail[i], 0.03, 6)
+print('south-east corner: seats', n_corner_seats, 'aisles', len(arc_aisles), 'rows', rows_at(A0), '-', rows_at(A1))
+
+# The big screen stands at the back of that rake (Google Earth): it moves back and up from the grass,
+# on two columns, its base 0.5 m over the parapet.
+scr = [f for f in bm.faces if f.material_index == names.index('screen')]
+if scr:
+    sv = {v for f in scr for v in f.verts}
+    c = sum((v.co for v in sv), Vector()) / len(sv)
+    a_s = ang(c.x, c.y)
+    _, rt, zt = min(top_line, key=lambda q: abs(q[0] - a_s))
+    zmin = min(v.co.z for v in sv)
+    dst = at(a_s, rt + 1.2, 0.0)
+    mv = Vector((dst.x - c.x, dst.y - c.y, zt + 1.1 + 0.5 - zmin))
+    for v in sv:
+        v.co += mv
+    SCREEN_LIFT = mv
+# The scoreboard: its red casing stands 0.4 m proud of the screen, 0.62 m wide at the sides and 0.81 m top
+# and bottom (the painted border: 25/724 and 32/384 of the image).
+S_RED = slot(mat('casing', 'frame_red.png', 0.5))
+S_HEAD = slot(mat('lamphead', 'lamphead.png', 0.6))
+n_case = 0
+scr = [f for f in bm.faces if f.material_index == names.index('screen')]
+if scr:
+    pts = [(l.vert.co.copy(), l[uvl].uv.x, 1.0 - l[uvl].uv.y) for f in scr for l in f.loops]
+
+    def corner(u, v):
+        return min(pts, key=lambda q: (q[1] - u) ** 2 + (q[2] - v) ** 2)[0]
+    TL, TR, BL, BR = corner(0, 0), corner(1, 0), corner(0, 1), corner(1, 1)
+    o = -outward(scr[0]) * 0.4   # toward the ground
+
+    def P(u, v):
+        return (TL.lerp(TR, u)).lerp(BL.lerp(BR, u), v)
+    bu, bv = 25.0 / 724.0, 32.0 / 384.0
+    for (u0, v0, u1, v1) in ((0, 0, 1, bv), (0, 1 - bv, 1, 1), (0, bv, bu, 1 - bv), (1 - bu, bv, 1, 1 - bv)):
+        q = [P(u0, v1), P(u1, v1), P(u1, v0), P(u0, v0)]
+        box(q + [c + o for c in q], S_RED)
+        n_case += 1
+    # Its back and sides, so the board is a box and not a sheet seen from behind.
+    back = outward(scr[0]) * 0.6
+    q = [P(0, 1), P(1, 1), P(1, 0), P(0, 0)]
+    box([c + back for c in q] + q, S_HEAD)
+retex('screen', 'screen_plain.png')
+
+# Light towers (Google Earth, all four): the head is an open inverted triangle, two white legs flaring from
+# 52 m to the top at 74.7 m, and its floodlights fill the frame between the legs from 57 m to the top in
+# rows 1.3 m apart, each row a grey rail carrying 0.6 m lamps 0.68 m apart, aimed down at the ground. The source
+# model's three lamp boxes (a painted grid of circles on every face, top and bottom included) go.
+S_LAMP = names.index('lamp')
+old = [f for f in bm.faces if f.material_index == S_LAMP]
+lamp_cs = [f.calc_center_median() for f in old]
+bmesh.ops.delete(bm, geom=old, context='FACES')
+towers = []
+for c in lamp_cs:
+    if not any(math.hypot(c.x - t.x, c.y - t.y) < 10.0 for t in towers):
+        towers.append(c)
+S_TOWER = names.index('tower')
+
+
+def lamp(p, n, rad=0.3, depth=0.5, sides=10):
+    u = n.cross(Vector((0, 0, 1))).normalized()
+    w = n.cross(u)
+    r0 = [bm.verts.new(p + (u * math.cos(2 * math.pi * k / sides) + w * math.sin(2 * math.pi * k / sides)) * rad)
+          for k in range(sides)]
+    r1 = [bm.verts.new(v.co + n * depth) for v in r0]
+    for k in range(sides):
+        bm.faces.new((r0[k], r0[(k + 1) % sides], r1[(k + 1) % sides], r1[k])).material_index = S_HEAD
+    bm.faces.new(r0[::-1]).material_index = S_HEAD
+    glass = bm.faces.new(r1)
+    glass.material_index = S_LAMP
+    for l in glass.loops:
+        d = l.vert.co - (p + n * depth)
+        l[uvl].uv = (0.5 + d.dot(u) / (2 * rad), 0.5 + d.dot(w) / (2 * rad))
+
+
+n_lamps = 0
+for tc in towers:
+    hv = [v.co.copy() for v in bm.verts if v.link_faces and all(f.material_index == S_TOWER for f in v.link_faces)
+          and math.hypot(v.co.x - tc.x, v.co.y - tc.y) < 9.0 and 51.5 < v.co.z < 75.0]
+    top = np.array([[v.x, v.y] for v in hv if v.z > 72.0])
+    cxy = top.mean(0)
+    _, _, vt = np.linalg.svd(top - cxy)
+    t = Vector((vt[0][0], vt[0][1], 0.0))
+    n = Vector((PC[0] - cxy[0], PC[1] - cxy[1], 0.0)).normalized()
+    n = (n - t * n.dot(t)).normalized()          # toward the ground, square to the frame
+    c0 = Vector((cxy[0], cxy[1], 0.0))
+    # Each leg's inner edge as a line t(z), and the frame's front face (furthest toward the ground).
+    L = [((v - c0).dot(t), v.z) for v in hv]
+    front = max((v - c0).dot(n) for v in hv)
+    back = min((v - c0).dot(n) for v in hv)
+    zs = sorted({round(z, 1) for _, z in L if 52.0 <= z <= 72.0})
+    lft = [(z, max(tt for tt, zz in L if abs(zz - z) < 0.06 and tt < 0)) for z in zs]
+    rgt = [(z, min(tt for tt, zz in L if abs(zz - z) < 0.06 and tt > 0)) for z in zs]
+    fl = np.polyfit([z for z, _ in lft], [q for _, q in lft], 1)
+    fr = np.polyfit([z for z, _ in rgt], [q for _, q in rgt], 1)
+    mid = (front + back) / 2
+    aim = (n * math.cos(math.radians(30)) - Vector((0, 0, math.sin(math.radians(30))))).normalized()
+    z = 55.6
+    while z < 73.6:
+        a, b = np.polyval(fl, z), np.polyval(fr, z)
+        # The rail: a 0.3 m x 0.3 m grey bar between the legs, at the frame's middle depth.
+        p0 = c0 + t * a + n * mid + Vector((0, 0, z))
+        p1 = c0 + t * b + n * mid + Vector((0, 0, z))
+        hw = n * 0.15
+        hz = Vector((0, 0, 0.15))
+        box([p0 - hw - hz, p1 - hw - hz, p1 + hw - hz, p0 + hw - hz, p0 - hw + hz, p1 - hw + hz, p1 + hw + hz, p0 + hw + hz], S_HEAD)
+        k = int((b - a - 0.3) // 0.68)
+        for i in range(k):
+            q = c0 + t * (a + 0.15 + (b - a - 0.3) * (i + 0.5) / k) + n * (mid + 0.15) + Vector((0, 0, z + 0.45))
+            lamp(q, aim)
+            n_lamps += 1
+        z += 1.3
+retex('lamp', 'lamp_glass.png')
+retex('beige', 'beige_grey.png')
+heads = towers
+print('fins', n_fins, 'scoreboard casing', n_case, 'lamp heads', len(heads), 'lamps', n_lamps)
 bm.to_mesh(me)
 bm.free()
 outdir = os.path.dirname(os.path.abspath(OUT))
