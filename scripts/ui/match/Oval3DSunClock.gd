@@ -28,6 +28,7 @@ var utc := 10.0         # hours, daylight saving included
 var month := 6
 var day := 1
 var kickoff := 13.75    # local hours
+var axis := 90.0        # compass bearing of the ground's +x end (data/ground_places.json "axis")
 
 
 ## The sun clock for a match: its ground, its round's label ("Round 7", "Grand Final") and its
@@ -42,7 +43,22 @@ static func for_match(ground: String, round_label: String, slot: String) -> Oval
 	c.day = md[1]
 	c.utc = float(p.get("utc", 10.0)) + (1.0 if daylight_saving(str(p.get("dst", "none")), c.month, c.day) else 0.0)
 	c.kickoff = float(KICKOFF.get(slot, KICKOFF["night"]))
+	c.axis = axis_for(ground)
 	return c
+
+
+## The compass bearing of a ground's +x end, as the match lays it: the ground's true long axis
+## (data/ground_places.json "axis", from the map), on whichever side its model's +x end faces (a
+## model is laid x east, z south and turned by GroundModels.FIT's angle, so its +x end faces
+## 90 + that angle). A model a little off true north, or rebuilt, still gets the true bearing.
+static func axis_for(ground: String) -> float:
+	var a := float(place(ground).get("axis", 90.0))
+	var slug := GroundModels.slug_for(ground) if ground != "" else ""
+	if GroundModels.FIT.has(slug):
+		var m := 90.0 + float(GroundModels.FIT[slug][3])
+		if absf(angle_difference(deg_to_rad(m), deg_to_rad(a))) > PI * 0.5:
+			a += 180.0
+	return fposmod(a, 360.0)
 
 
 ## A ground's place (data/ground_places.json), or the default's.
@@ -112,3 +128,21 @@ func sun_at(hour: float) -> Vector2:
 	tod.free()
 	# Sky3D keeps the zenith angle in y and the azimuth from the north, westward negative, in x.
 	return Vector2(90.0 - rad_to_deg(c.y), fposmod(rad_to_deg(c.x), 360.0))
+
+
+## The light's turn for the sun `alt` degrees up at compass bearing `az` over a ground whose +x
+## end faces `axis`, in the ground's own frame (Oval3D's: x along the ground, z across it, the
+## models laid x east, z south before they are turned to it). So the sun stands where it really
+## does over each ground: in the north at every Australian ground, whichever way the ground lies.
+static func sun_basis(alt: float, az: float, p_axis: float) -> Basis:
+	var phi := deg_to_rad(az - p_axis)
+	var e := deg_to_rad(clampf(alt, -89.0, 89.0))
+	var to_sun := Vector3(cos(phi) * cos(e), sin(e), sin(phi) * cos(e))
+	return Basis.looking_at(-to_sun, Vector3.UP)
+
+
+## The light's turn for the real sun at a local hour, `alt` replacing its height when given (a
+## look keeps its own height where its brightness was measured at it).
+func basis_at(hour: float, alt := NAN) -> Basis:
+	var s := sun_at(hour)
+	return sun_basis(s.x if is_nan(alt) else alt, s.y, axis)

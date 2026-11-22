@@ -56,6 +56,7 @@ func run() -> void:
 	_t("_test_match_ground")
 	_t("_test_ground_models")
 	_t("_test_night_towers")
+	_t("_test_sun_bearing")
 	_t("_test_ground_screens")
 	_t("_test_stand_light")
 	_t("_test_mcg_crowd", [res])
@@ -2172,6 +2173,52 @@ func _test_farewell() -> void:
 	_check(past.is_empty(), "No farewell frame past the end of its move (%s)" % str(past.slice(0, 3)))
 	StoppageVignette.log_frames = false
 	v.free()
+
+
+## The real sun over every ground (Oval3DSunClock.sun_basis): each ground's bearing is known and
+## agrees with its model's own axis (models are laid x east, z south) but for the three turned off
+## true north; and the light comes out of the north at an Australian ground, whichever way the
+## ground lies, so its north side is the sunlit one.
+func _test_sun_bearing() -> void:
+	var places: Dictionary = Oval3DSunClock.place("MCG")
+	_check(places.has("axis"), "The MCG's bearing is known (%s)" % str(places))
+	var off_true := ["marvel", "ikon_park", "blacktown"]
+	var bad := []
+	for g in GroundModels.GROUNDS:
+		var slug: String = GroundModels.GROUNDS[g]
+		var p := Oval3DSunClock.place(g)
+		if not p.has("axis"):
+			bad.append(g + " has no bearing")
+			continue
+		if GroundModels.FIT.has(slug):
+			var model := fposmod(90.0 + float(GroundModels.FIT[slug][3]), 360.0)
+			var axis := Oval3DSunClock.axis_for(g)
+			var off := absf(angle_difference(deg_to_rad(model), deg_to_rad(axis)))
+			if off > deg_to_rad(30.0 if slug in off_true else 10.0):
+				bad.append("%s %.1f, its model %.1f" % [g, axis, model])
+	_check(bad.is_empty(), "Every ground's bearing faces its model's +x end, within 10 degrees (%s)" % str(bad))
+	# North in a ground's frame, for a sun due north 30 degrees up: the light travels due south.
+	for axis in [0.0, 75.7, 86.7, 180.0, 335.3]:
+		var fwd := -Oval3DSunClock.sun_basis(30.0, 0.0, axis).z
+		var south := Vector3(cos(deg_to_rad(180.0 - axis)), 0.0, sin(deg_to_rad(180.0 - axis)))
+		_check(Vector3(fwd.x, 0.0, fwd.z).normalized().dot(south) > 0.999 and fwd.y < -0.49,
+				"A sun due north over a ground lying %.0f degrees shines due south (%s)" % [axis, str(fwd)])
+	# A day and a late game at Optus and at Marvel: the light comes from the north half of the sky.
+	for g in ["Optus Stadium", "Marvel Stadium", "MCG"]:
+		var oval := Oval3D.new()
+		oval.ground = g
+		(Engine.get_main_loop() as SceneTree).root.add_child(oval)
+		oval._environment()
+		oval._ground()
+		var axis := Oval3DSunClock.axis_for(g)
+		for slot in [VignetteKickoff.DAY, VignetteKickoff.TWILIGHT]:
+			oval.turf.apply("", slot)
+			var fwd: Vector3 = -oval._sun.basis.z
+			var phi := atan2(-fwd.z, -fwd.x)   # the way to the sun, from the ground's +x end
+			var bearing := fposmod(axis + rad_to_deg(phi), 360.0)
+			_check(bearing > 270.0 or bearing < 90.0,
+					"At %s (%s) the sun is in the north (bearing %.0f)" % [g, slot, bearing])
+		oval.queue_free()
 
 
 ## A night game at the MCG under its own towers (rule 2.82, Oval3DTowers): the six towers found

@@ -405,6 +405,28 @@ func _night(wet: bool) -> void:
 		_tower_night(wet)
 
 
+## The sun's turn for this look, `alt` degrees up (the look's own height, where its brightness
+## was measured) at the compass bearing the real sun has over this ground at the look's bounce:
+## the match's own clock when it follows one, else the ground's place mid-season. The sun is in
+## the north at every Australian ground, so the north side of a stadium is the sunlit one
+## (Oval3DSunClock.sun_basis; each ground's bearing in data/ground_places.json).
+func _real_sun(alt: float) -> Basis:
+	var c := clock if clock != null else Oval3DSunClock.for_match(_ground_name(), "", slot)
+	var h := float(Oval3DSunClock.KICKOFF.get(slot, c.kickoff)) if clock != null else c.kickoff
+	return c.basis_at(h, alt)
+
+
+## The ground's name as the clock knows it: Oval3D's ground, or the name of the model it shows.
+func _ground_name() -> String:
+	var g := str(oval.get("ground")) if oval != null and oval.get("ground") != null else ""
+	if g != "" or ground == "":
+		return g
+	for name in GroundModels.GROUNDS:
+		if GroundModels.GROUNDS[name] == ground:
+			return name
+	return ""
+
+
 ## Rule 2.80, sky light: the sky lights the ground and the men (ambient and reflections from it),
 ## the grass bounces light up and the stands round the ground darken the sides. Rule 2.84: the
 ## sky you see for the weather. Values copied from the approved prototype (capture_look3d.gd).
@@ -422,7 +444,7 @@ func _sky_light(hot: bool) -> void:
 	env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 	if hot:
 		# The sun high and hard, the sky pale with glare, cloudless.
-		sun.rotation_degrees = Vector3(-68.0, -35.0, 0.0)
+		sun.basis = _real_sun(68.0)
 		sm.set_shader_parameter("energy", 1.2)
 		sm.set_shader_parameter("zenith", Color(0.35, 0.55, 0.85))
 		sm.set_shader_parameter("horizon", Color(0.82, 0.86, 0.9))
@@ -432,7 +454,7 @@ func _sky_light(hot: bool) -> void:
 				"seen_zenith": Color(0.2, 0.42, 0.82, 1.0), "sky_curve": 0.45})
 	else:
 		# A fine winter's day: blue, a few fair-weather clouds, the sun's glare round it.
-		sun.rotation_degrees = Vector3(-52.0, -35.0, 0.0)
+		sun.basis = _real_sun(52.0)
 		sm.set_shader_parameter("energy", 1.4)
 		sun.light_energy = 1.15
 		sun.light_color = Color(1.0, 0.95, 0.86)
@@ -440,15 +462,14 @@ func _sky_light(hot: bool) -> void:
 				"sun_halo": 0.35})
 
 
-## Rule 2.80's late game ("C late games"): the sun 22 degrees up behind the near stand (about
-## 4.30 pm in winter), so the stand's top, 24 m up and 34 m back from the fence, shades about 25 m
-## of the near wing; the clouds warm on the sun's side (the approved late-game sky, rule 2.84).
+## Rule 2.80's late game ("C late games"): the sun 22 degrees up (about 4.30 pm in winter), so a
+## stand's top, 24 m up and 34 m back from the fence, shades about 25 m of the wing below it; the
+## clouds warm on the sun's side (the approved late-game sky, rule 2.84). The sun stands where it
+## really does over the ground at a twilight bounce (_real_sun): low in the north-west in winter.
 func _late_game() -> void:
 	var sm: ShaderMaterial = env.sky.sky_material
 	sun.light_energy = 1.2
-	var e := deg_to_rad(22.0)
-	var h := Vector3(0.3, 0.0, -1.0).normalized()
-	sun.global_basis = Basis.looking_at(h * cos(e) + Vector3(0.0, -sin(e), 0.0), Vector3.UP)
+	sun.basis = _real_sun(22.0)
 	sun.light_color = Color(1.0, 0.9, 0.76)
 	sun.directional_shadow_max_distance = 320.0
 	_stand_shade(true)
@@ -575,7 +596,7 @@ func _cloud_light() -> void:
 	sun.light_energy = 0.45
 	sun.light_color = Color(0.95, 0.97, 1.0)
 	sun.light_angular_distance = 12.0
-	sun.global_basis = Basis.looking_at(Vector3(0.2, -1.0, 0.35).normalized(), Vector3.UP)
+	sun.basis = Basis.looking_at(Vector3(0.2, -1.0, 0.35).normalized(), Vector3.UP)
 	sun.directional_shadow_max_distance = 160.0
 	_stand_shade(false)
 	env.adjustment_color_correction = null
@@ -981,12 +1002,10 @@ func _sun_up(a: Dictionary, b: Dictionary, t: float, alt: float) -> Dictionary:
 	var qa: Quaternion = (a["basis"] as Basis).get_rotation_quaternion()
 	var qb: Quaternion = (b["basis"] as Basis).get_rotation_quaternion()
 	var basis := Basis(qa.slerp(qb, t))
-	if weather != VignetteWeather.WET and alt > -900.0:
-		var dir := -basis.z
-		var flat := Vector3(dir.x, 0.0, dir.z)
-		if flat.length() > 0.01:
-			var e := deg_to_rad(clampf(alt, SUN_LOW, SUN_HIGH))
-			basis = Basis.looking_at(flat.normalized() * cos(e) + Vector3(0.0, -sin(e), 0.0), Vector3.UP)
+	if weather != VignetteWeather.WET and alt > -900.0 and clock != null:
+		# The real sun: its height on the clock (kept between SUN_LOW and SUN_HIGH) and its
+		# bearing over the ground.
+		basis = clock.basis_at(hour, clampf(alt, SUN_LOW, SUN_HIGH))
 	s["basis"] = basis
 	return s
 
