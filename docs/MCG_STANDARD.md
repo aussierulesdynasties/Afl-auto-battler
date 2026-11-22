@@ -44,6 +44,7 @@ Seat colours follow the real stands tier by tier, sampled from Street View and G
 | Front rows of the middle tier | A blue band |
 | Top tier | Teal-blue |
 | Members' (north-west) top tier | Grey-green |
+| Front of the lower tier, west round to north | Mint green |
 
 Each colour is one `seats_seat_mcg_<colour>.bin` file with its entry in `GroundModels.SEAT_COLOURS`.
 
@@ -60,14 +61,6 @@ width set by that material's metres per u (measured from the model's UVs). The d
   3 m x 1.5 m and rain streaks.
 - **Glass:** mullions every 1.5 m and transoms every 3.6 m, a sky reflection at the top of each run,
   and a slab shadow under each floor.
-
-- **No painted-on geometry (director, 2026-11-22).** Arches, doorways, recesses, struts, window reveals,
-  frames, sills, pilasters and mouldings are always modelled with real depth: an opening is cut through the
-  wall with reveals and something behind it, and a frame or trim stands proud with its own top, underside
-  and ends. A dark shape or a coloured strip laid a few centimetres off a wall is never an arch or a window.
-  A texture may only carry detail too small to see in depth from the stands or the broadcast camera (brick
-  coursing, panel joints, mullions on flat curtain glass). Adelaide's arcade, its scoreboard door, windows and
-  louvres were rebuilt to this rule on 2026-11-22.
 
 ## Materials
 
@@ -120,50 +113,3 @@ the new mesh instead. The MCG has two:
 4. Seating.
 5. Textures and materials.
 6. Surrounds (Yarra Park, the rail yards) and screens.
-
-## Optus Stadium, the second ground (2026-11-21)
-
-Optus went through the same gate. What it added to the method:
-
-- **Cameras in the model's own frame.** `PREINSPECT_MODEL_FRAME=1` makes `preinspect_look.gd` read
-  `x east, y north, z up` positions, so a Google Earth view's camera goes in unchanged
-  (`PREINSPECT_SIZE=1280x720`). Optus's model 0, 0 is lat -31.9510758, lon 115.8893142 (its drum lines
-  up with OpenStreetMap way 695799456); the field's centre is at -30.38, -8.78.
-- **Rendering in the cloud.** The mobile renderer runs on Mesa's software Vulkan (`mesa-vulkan-drivers`,
-  `VK_ICD_FILENAMES=.../lvp_icd.json`) under `xvfb-run`, about a minute a ground plus seconds a view.
-- **Read the facade close.** Twelve views every 30 degrees, 260 m out at tilt 80, found what the four
-  wide views hid: #1867 had the bronze low from the south-east to the west, where the real ribbon is tall
-  in the north and south and dips over the east lobby and the west. Its profile is
-  `tools/grounds/optus/facade.json`; `tools/grounds/optus/build.py` rebuilds the model from it.
-- **Signature material first.** The bronze fins (`tools/grounds/optus/bronze.py`) are drawn from the
-  director's photo: 0.31 m fins in runs of 1 to 7 m, bronze to sand with the odd copper-red, thin
-  pale-blue slivers, a soft drift of tone, metal sheen through `MATERIAL_FIX`.
-- **The match light cools the map.** A painted map under the match light lost most of its red. Optus's
-  map takes a `tint` (2.0, 1.4, 0.95) and colours worked back from the measured response, so lawns, river
-  and paving render as Google Earth shows them.
-- **Bridges are models.** `SURROUNDS[...]["models"]` loads extra glbs into the ground (Optus:
-  `bridges.glb`, Matagarup's two 72 m arches and the river bridges on piers).
-
-- **Second facade pass (close views).** Zoom Google Earth's facade views to a third of the frame before
-  judging a material: at full frame the Optus bronze read as brown noise, close up it is a dark base with
-  thin bright streaks, and the "white Y columns" were slim posts in a dark strip under the roof. The glass
-  band, street glazing and the north's glazed storey are drawn by `bronze.py` (`glass`, `entrance`, `storey`).
-
-Open at Optus: seat colours from Street View (stage 4), on top of the seat fix (#1991).
-
-## Adelaide Oval (third ground to the standard, 2026-11-21)
-
-- **The compare tool is in the repo.** `tools/grounds/ge_compare.py` plans each view's Google Earth URL and
-  our matching camera through the ground's FIT, `tools/grounds/ge_shoot.js` takes the Google Earth shots,
-  and `ge_compare.py sheet` lays the pairs side by side. Views live with the ground
-  (`tools/grounds/adelaide/qa/views.json`); a view with `cam` is a fixed camera for a photosphere or Street
-  View picture supplied by hand. Grounds now play at their own size (#1949), so the camera needs no stretch.
-- **Street View at Adelaide is a drone photosphere.** Asking Google Maps for a panorama at the field centre
-  returns a 360 drone sphere taken above the Riverbank Stand (April 2021); `qa/sv_views.json` matches it
-  looking north, east, south and west.
-- **No tint where the map is painted for the light.** Optus's `tint` made Adelaide's parklands yellow;
-  Adelaide's map is painted in Google Earth's colours with no tint.
-- **The model's own ground stops under its stands.** Adelaide's 6 km lawn is out of the export; its floor is
-  a 107 m disc and the map starts at 105 m, outside the turf (a map under the turf flickered through it).
-- **Park trees.** OpenStreetMap maps most of the parklands' street trees; the other parks are filled to a
-  tree per 260 m² of open grass. Park 26, which holds the ground and its open ovals, is left as mapped.
