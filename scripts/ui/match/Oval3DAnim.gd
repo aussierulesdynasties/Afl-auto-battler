@@ -329,8 +329,13 @@ func frame(dt: float) -> void:
 			# A tackler the director has slowed as he arrives would stand (under RUN_FROM) and
 			# wait for the take: the take starts then instead, its run-in carrying him in
 			# (director 2026-11-22: "the tackler is standing by idly waiting for the tackle").
-			var slowing := (_pace[who] as Vector2).length() < RUN_FROM and due <= need + CLOSE_EARLY
-			if due <= need or slowing:
+			# Not in a chase-down: there he sets off from a stand and runs the carrier down.
+			var slowing := (_pace[who] as Vector2).length() < RUN_FROM and due <= need + CLOSE_EARLY \
+					and not director.chasing_down()
+			# A chase-down's tackler is still getting going: the take waits until he is running
+			# (the carrier is getting away from him, so the reach estimate from a stand is early).
+			var setting_off := director.chasing_down() and (_pace[who] as Vector2).length() < RUN_FROM
+			if (due <= need or slowing) and not setting_off:
 				_start(who, v, false)
 	var seen := {}
 	for pr in _in:

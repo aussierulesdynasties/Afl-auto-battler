@@ -75,6 +75,8 @@ func _run() -> void:
 		t += DT
 		if tv != null:
 			tv.frame(DT, t)
+		if d.chasing_down() and not d.tackle_ahead().is_empty():
+			print("FILM chase-down t=%.2f who=%d victim=%d" % [t, int(d.tackle_ahead()["who"]), int(d.tackle_ahead()["victim"])])
 		for k in range(moments.size()):
 			var m: Dictionary = moments[k]
 			if t < float(m["t"]) - BEFORE or t > float(m["t"]) + AFTER:

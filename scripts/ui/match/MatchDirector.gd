@@ -1124,13 +1124,16 @@ func _fifty_phases(k: int) -> Array:
 	return out
 
 
-## A chase-down tackle (_enter "chase"): the tackler is more than RUN_DOWN_GAP m behind the
+## A chase-down tackle (_enter "chase"): the tackler is RUN_DOWN_GAP to RUN_DOWN_FAR m behind the
 ## carrier, within ~50 deg of the carrier's line to his own goal. The carrier takes off for it at
-## RUN_DOWN_CARRIER urgency and is run down within RUN_DOWN_MAX s.
-const RUN_DOWN_GAP := 4.0
+## RUN_DOWN_CARRIER of the tackler's top pace, both near flat out, so the gap closes slowly (a
+## 2.5 m start runs ~2 s), and he is run down within RUN_DOWN_MAX s. Over 1,200 s of seed 31 the
+## tacklers start 1.8-4.3 m off (26 of 30), so this is the gap a run-down starts from.
+const RUN_DOWN_GAP := 2.2
+const RUN_DOWN_FAR := 10.0
 const RUN_DOWN_BEHIND := 0.65
-const RUN_DOWN_CARRIER := 0.35
-const RUN_DOWN_MAX := 3.5
+const RUN_DOWN_CARRIER := 0.85
+const RUN_DOWN_MAX := 4.5
 
 
 ## Whether the tackle being run down now is a chase-down from behind (the crowd calls "Ball!").
@@ -2601,10 +2604,13 @@ func _enter(p: Dictionary) -> void:
 			var att := Vector2(MatchMotion.GOAL_X * _dir(int(vt["side"])), 0.0) - (vt["pos"] as Vector2)
 			var behind := gap.normalized().dot(att.normalized()) if gap.length() > 0.01 and att.length() > 0.01 else 0.0
 			p["_geo"] = [gap.length(), behind]
-			if p.get("run_down", false) and gap.length() > RUN_DOWN_GAP and behind > RUN_DOWN_BEHIND:
+			if p.get("run_down", false) and gap.length() > RUN_DOWN_GAP and gap.length() < RUN_DOWN_FAR and behind > RUN_DOWN_BEHIND:
 				p["chasing"] = true
 				p["max"] = RUN_DOWN_MAX
-				MatchMotion.set_goal(vt, (vt["pos"] as Vector2) + att.normalized() * 30.0, RUN_DOWN_CARRIER, true)
+				# His urgency for RUN_DOWN_CARRIER of the tackler's top (MatchMotion.step's pace).
+				var want := RUN_DOWN_CARRIER * float(tk0["top"]) / maxf(float(vt["top"]), 0.1)
+				var u := clampf((want - MatchMotion.JOG_SHARE) / (1.0 - MatchMotion.JOG_SHARE), 0.0, 1.0)
+				MatchMotion.set_goal(vt, (vt["pos"] as Vector2) + att.normalized() * 30.0, u, true)
 			else:
 				p["chasing"] = false
 				MatchMotion.set_goal(vt, vt["pos"], 0.2, true)

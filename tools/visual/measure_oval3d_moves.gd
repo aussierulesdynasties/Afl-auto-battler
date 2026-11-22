@@ -47,6 +47,8 @@ func _run() -> void:
 	var drops := []     # [real s from hands to boot, m fallen, the g that implies]
 	var moving_t := {}  # player -> last time he was drawn moving
 	var in_take := {}   # player -> in a two-man take now
+	var chase_from := -1.0
+	var chases := []     # s each chase-down ran
 	var run_downs := []  # [t, tackler, carrier, tackler's drawn pace, carrier's] of each chase-down take
 	var idle := []      # s each tackler stood still before his take began
 	while t < secs:
@@ -62,6 +64,14 @@ func _run() -> void:
 				touched[who] = [kind, t, not o0.is_empty() and str(o0.get("how", "")) == kind]
 		oval.sync(DT)
 		t += DT
+		var cd: bool = anim.director.chasing_down()
+		if cd and chase_from < 0.0:
+			chase_from = t
+		elif not cd and chase_from >= 0.0:
+			chases.append(t - chase_from)
+			if OS.get_environment("MOVES_EACH") != "":
+				print("  chase-down %.2f to %.2f" % [chase_from, t])
+			chase_from = -1.0
 		for who in range(anim.players.size()):
 			var o: Dictionary = anim._once[who]
 			# The tackler's run-in: how long he stood (the idle clip) before the take began.
@@ -144,6 +154,7 @@ func _run() -> void:
 		print("MOVES drop hand to boot: %d kicks, fall median %.3f s (p10 %.3f p90 %.3f), height median %.2f m, implied g median %.1f m/s2 (p10 %.1f p90 %.1f; real 9.8)" % [
 				drops.size(), ts[ts.size() / 2], ts[int(ts.size() * 0.1)], ts[int(ts.size() * 0.9)], hs[hs.size() / 2],
 				gs[gs.size() / 2], gs[int(gs.size() * 0.1)], gs[int(gs.size() * 0.9)]])
+	print("MOVES chase-downs run: %s s" % str(chases.map(func(c): return snappedf(c, 0.01))))
 	print("MOVES chase-down tackles from behind: %d of %d takes %s" % [run_downs.size(), idle.size(),
 			str(run_downs.map(func(r): return "t=%.1f %d on %d at %.1f vs %.1f m/s" % r))])
 	idle.sort()
