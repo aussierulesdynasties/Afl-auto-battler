@@ -131,9 +131,9 @@ Optus went through the same gate. What it added to the method:
 - **Signature material first.** The bronze fins (`tools/grounds/optus/bronze.py`) are drawn from the
   director's photo: 0.31 m fins in runs of 1 to 7 m, bronze to sand with the odd copper-red, thin
   pale-blue slivers, a soft drift of tone, metal sheen through `MATERIAL_FIX`.
-- **The match light cools the map.** A painted map under the match light lost most of its red. Optus's
-  map takes a `tint` (2.0, 1.4, 0.95) and colours worked back from the measured response, so lawns, river
-  and paving render as Google Earth shows them.
+- **Check the map under the current light.** A painted map once needed a `tint` to survive the match
+  light; after the stand lighting changed on main (2026-11-22) the same tint washed it yellow, so Optus's
+  `tint` and `building_tint` are white now. Re-check a map's colours whenever the lighting changes.
 - **Bridges are models.** `SURROUNDS[...]["models"]` loads extra glbs into the ground (Optus:
   `bridges.glb`, Matagarup's two 72 m arches and the river bridges on piers).
 
