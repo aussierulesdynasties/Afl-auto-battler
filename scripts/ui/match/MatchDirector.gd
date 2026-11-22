@@ -459,7 +459,7 @@ func stoppage_now() -> Dictionary:
 	return {}
 
 
-## The free kick being taken right now, for the 3D umpires: {at, k} with `at` its mark (where
+## The free kick being taken right now, for the 3D umpires: {at, k, kind} with `at` its mark (where
 ## the ball is, in the taker's hands or on its way there) and `k` the free's event. From when
 ## the umpire pays it until the ball leaves the taker's boot or he plays on; {} otherwise.
 ## Read-only.
@@ -472,7 +472,7 @@ func free_now() -> Dictionary:
 		if not _phases.slice(0, mini(_pi + 1, _phases.size())).any(
 				func(q): return str(q.get("t", "")) == "emit"):
 			return {}
-		return {"at": _loc(k), "k": k}
+		return {"at": _loc(k), "k": k, "kind": kind}
 	var pk := _prev_real(k)
 	if pk < 0 or not str((events[pk] as Dictionary).get("kind", "")) in FREE_KINDS:
 		return {}
@@ -481,7 +481,7 @@ func free_now() -> Dictionary:
 	var at: Vector2 = _locs[pk]
 	if (ball["pos"] as Vector2).distance_to(at) > FREE_PLAY_ON:
 		return {}
-	return {"at": at, "k": pk}
+	return {"at": at, "k": pk, "kind": str((events[pk] as Dictionary).get("kind", ""))}
 
 
 ## The kinds of free kick (MatchSim's log), and how far the ball may be off a free's mark
