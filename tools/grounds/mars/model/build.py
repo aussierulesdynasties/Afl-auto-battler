@@ -1,14 +1,31 @@
 # Mars Stadium, Ballarat (finished 2026 ground), built from model/mars.json.
 # Runs inside Blender: import build; build.build_all(). Local frame: x east, y north, z up from the field, metres.
-# Each stand is a run of polar sections (every 0.5 deg) between its bearings; the fence is the ellipse fitted to the
-# grass edge on the Esri tile (work/fence.json).
+# Each stand is a run of sections (every 0.5 deg) between its bearings. The fence is one smooth curve fitted to
+# Google Earth's straight-down trace (qa/trace.py, qa/fit.py -> qa/fence_curve.json), and every ring is an exact
+# offset of it: pol(b, r) is the fence point on bearing b moved r - fence_r(b) along the fence's outward normal.
 import bpy, math, json, os, sys
 import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__)); SP = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 from mb import MB, TILE
 D = json.load(open(os.path.join(HERE, 'mars.json')))
-FR = np.array(json.load(open(os.path.join(SP, 'work', 'fence.json')))['fr'] + [json.load(open(os.path.join(SP, 'work', 'fence.json')))['fr'][0]])
+
+
+def _fence():
+    """the fence curve, densely, by bearing from the model origin: radius and outward normal angle"""
+    C = json.load(open(os.path.join(SP, 'qa', 'fence_curve.json'))); c = np.array(C['coef']); fc = C['centre']
+    t = np.radians(np.arange(0, 360, 0.02)); k = (len(c) - 1) // 2
+    r = c[0] + sum(c[2 * j - 1] * np.cos(j * t) + c[2 * j] * np.sin(j * t) for j in range(1, k + 1))
+    x, y = fc[0] + r * np.sin(t), fc[1] + r * np.cos(t)
+    dx, dy = np.gradient(np.concatenate([x[-1:], x, x[:1]]))[1:-1], np.gradient(np.concatenate([y[-1:], y, y[:1]]))[1:-1]
+    nang = np.arctan2(-dy, dx)                       # clockwise curve: (-dy, dx) points out; angle from north = atan2(e, n)
+    b = np.degrees(np.arctan2(x, y)) % 360; o = np.argsort(b); b, R = b[o], np.hypot(x, y)[o]; nang = np.unwrap(nang[o])
+    b = np.concatenate([b[-1:] - 360, b, b[:1] + 360]); R = np.concatenate([R[-1:], R, R[:1]])
+    nang = np.concatenate([nang[-1:] - 2 * np.pi, nang, nang[:1] + 2 * np.pi])
+    return b, R, nang
+
+
+FB, FR, FN = _fence()
 OSM = json.load(open(os.path.join(SP, 'work', 'osm_xy.json')))
 
 
@@ -45,16 +62,35 @@ def clear():
 
 
 def pol(b, r):
-    a = math.radians(b); return (r * math.sin(a), r * math.cos(a))
+    """the point r - fence_r(b) out from the fence along its normal, starting at the fence's point on bearing b: so a
+    ring at a fixed distance from the fence (r = fence_r(b) + d) is an exact offset of the fence curve"""
+    b = b % 360; a = math.radians(b); rf = float(np.interp(b, FB, FR)); n = float(np.interp(b, FB, FN)); d = r - rf
+    return (rf * math.sin(a) + d * math.sin(n), rf * math.cos(a) + d * math.cos(n))
 
 
 def fence_r(b):
-    """radius from the origin to the fence along bearing b (traced grass edge, one value per degree)"""
-    return float(np.interp(b % 360, np.arange(361), FR))
+    """radius from the origin to the fence along bearing b (the fitted Google Earth curve)"""
+    return float(np.interp(b % 360, FB, FR))
+
+
+def _rings():
+    """a stand with 'ring': [front, back] has its roof's front and back edges at those distances out from the fence
+    (measured in Google Earth's straight-down tiles, qa/rings.py), replacing its traced 'roof' table, over the
+    table's own bearings: exact offsets of the fence curve"""
+    for S in D['stands']:
+        if 'ring' not in S: continue
+        b0, b1 = S['roof'][0][0], S['roof'][-1][0]; f, k = S['ring'][:2]; t = S['roof']
+        # back None: the back edge cannot be read straight down (the north roof runs into the clubrooms' roof), so
+        # the traced table's back is kept
+        S['roof'] = [[float(b), fence_r(b) + f, fence_r(b) + k if k is not None else interp(t, b)[1]]
+                     for b in np.arange(b0, b1 + 1e-6, 0.5)]
 
 
 def interp(tab, b):
     t = np.array(tab, float); return [float(np.interp(b, t[:, 0], t[:, k])) for k in range(1, t.shape[1])]
+
+
+_rings()
 
 
 def oriented(mb, q, m, out, uv=None):

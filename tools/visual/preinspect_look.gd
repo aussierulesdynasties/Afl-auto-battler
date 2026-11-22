@@ -3,6 +3,8 @@ extends SceneTree
 ## pre-inspection measured (preinspect_grounds.gd).
 ##   godot --path . --rendering-method mobile --script tools/visual/preinspect_look.gd -- OUTDIR GROUND NAME:px,py,pz,tx,ty,tz[,fov] ...
 ## Positions are the match's metres. PREINSPECT_NO_CROWD=1 hides the crowd (the seats as the fly-through shows them). Saves OUTDIR/<slug>_<NAME>.png. Looks only.
+## PREINSPECT_SUN=pitch,yaw turns the sun. PREINSPECT_MODEL_FRAME=1 reads positions in the model's own frame instead (x east, y north, z up, metres), the frame
+## Google Earth views are worked out in (docs/MCG_STANDARD.md); PREINSPECT_SIZE=WxH sets the picture (default 960x540).
 
 
 func _initialize() -> void:
@@ -16,7 +18,8 @@ func _run() -> void:
 	var out := str(args[0])
 	DirAccess.make_dir_recursive_absolute(out)
 	var g := str(args[1])
-	root.size = Vector2i(960, 540)
+	var sz := OS.get_environment("PREINSPECT_SIZE").split("x")
+	root.size = Vector2i(int(sz[0]), int(sz[1])) if sz.size() == 2 else Vector2i(960, 540)
 	root.content_scale_mode = Window.CONTENT_SCALE_MODE_DISABLED
 	OS.low_processor_usage_mode = false
 	var gdb = root.get_node("GameDB")
@@ -36,14 +39,27 @@ func _run() -> void:
 	if OS.get_environment("PREINSPECT_NO_CROWD") != "":
 		for c in oval.find_children("Crowd", "", true, false):
 			c.visible = false
+	# PREINSPECT_SUN=pitch,yaw (degrees, the match frame) turns the sun, to compare a face's colour lit as Google Earth's
+	# capture lit it rather than in the match's own light.
+	var sun_env := OS.get_environment("PREINSPECT_SUN").split_floats(",")
+	if sun_env.size() == 2:
+		for l in oval.find_children("*", "DirectionalLight3D", true, false):
+			(l as DirectionalLight3D).rotation_degrees = Vector3(sun_env[0], sun_env[1], 0.0)
 	var cam: Camera3D = oval.camera
+	var model_frame := OS.get_environment("PREINSPECT_MODEL_FRAME") != ""
+	var ground := oval.find_child("Ground", true, false) as Node3D
 	cam.far = 3000.0
 	cam.near = 0.05
 	for spec in args.slice(2):
 		var parts := str(spec).split(":")
 		var v := parts[1].split_floats(",")
-		cam.global_position = Vector3(v[0], v[1], v[2])
-		cam.look_at(Vector3(v[3], v[4], v[5]), Vector3.UP)
+		var pos := Vector3(v[0], v[1], v[2])
+		var tgt := Vector3(v[3], v[4], v[5])
+		if model_frame and ground != null:
+			pos = ground.global_transform * Vector3(pos.x, pos.z, -pos.y)
+			tgt = ground.global_transform * Vector3(tgt.x, tgt.z, -tgt.y)
+		cam.global_position = pos
+		cam.look_at(tgt, Vector3.UP if absf((tgt - pos).normalized().y) < 0.999 else Vector3.FORWARD)
 		cam.fov = v[6] if v.size() > 6 else 60.0
 		for i in 8:
 			await process_frame

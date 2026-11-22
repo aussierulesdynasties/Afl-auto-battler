@@ -53,7 +53,7 @@
    ],
    "z_roof": [
     15.0,
-    16.4
+    11.3
    ],
    "back_in": 1.5,
    "mats": {
@@ -84,7 +84,11 @@
      303.5
     ],
     "fwd": 3.2
-   }
+   },
+   "ring": [
+    1.45,
+    23.15
+   ]
   },
   {
    "name": "north",
@@ -135,7 +139,7 @@
     3.9
    ],
    "z_roof": [
-    8.5,
+    7.2,
     11.0
    ],
    "back_in": 1.5,
@@ -151,7 +155,11 @@
    "rib_under": 1,
    "rows": 8,
    "back_rel": 13.7,
-   "club": 1
+   "club": 1,
+   "ring": [
+    0.15,
+    null
+   ]
   },
   {
    "name": "east",
@@ -207,7 +215,7 @@
     4.9
    ],
    "z_roof": [
-    8.0,
+    6.8,
     8.5
    ],
    "back_in": 1.0,
@@ -231,7 +239,11 @@
     "fold": 0.35,
     "dark": 0.4
    },
-   "rows": 10
+   "rows": 10,
+   "ring": [
+    2.2,
+    10.45
+   ]
   },
   {
    "name": "new_se",
@@ -439,33 +451,36 @@
  ],
  "towers": [
   {
+   "name": "E",
    "xy": [
-    47.3,
-    97.1
+    90.93,
+    14.78
    ],
-   "top": 46,
+   "top": 40.8,
    "head_h": 6.2,
    "head_w": 7.5,
    "tiers": 3,
    "tilt": 14
   },
   {
+   "name": "W",
    "xy": [
-    -77.3,
-    69.6
+    -105.15,
+    -32.38
    ],
-   "top": 46,
+   "top": 40.8,
    "head_h": 6.2,
    "head_w": 7.5,
    "tiers": 3,
    "tilt": 14
   },
   {
+   "name": "NW",
    "xy": [
-    -91.8,
-    -46.8
+    -56.51,
+    70.4
    ],
-   "top": 46,
+   "top": 40.8,
    "head_h": 6.2,
    "head_w": 7.5,
    "tiers": 3,
@@ -596,5 +611,7 @@
   "h": 7.0,
   "z0": 7.5,
   "depth": 1.2
- }
+ },
+ "_towers_note": "Three towers, counted and placed from Google Earth straight-down tiles by parallax (qa/towers.py): lamp-head centres 37.7 m up (W, four tiles; published 37 m), the mast 0.9 m behind each head.",
+ "_rings_note": "ring [front, back]: the roof edges as distances out from the fence curve, read in Google Earth straight-down tiles (qa/rings.py) with the roof heights read off matched oblique views (qa/heights.py), iterated until both settle (west 1.45/23.15 m at 15.0/11.3 m; east front 2.2 m at 6.8 m; north front 0.15 m at 7.2 m). Back edges marked null or heights not listed could not be read and keep the traced values."
 }

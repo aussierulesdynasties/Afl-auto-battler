@@ -81,9 +81,9 @@ const FIT := {
 	# Gabba's model (tools/grounds/gabba), measured the same way.
 	"adelaide": [-0.4, 1.37, 0.0, -102.0, 91.36, 65.7],
 	"gabba": [2.47, 3.47, 0.0, 175.0, 86.88, 73.71],
-	# Mars Stadium (tools/grounds/mars): its fence is the OSM pitch outline, 171 x 138 m round the published
-	# 160 x 129 m boundary.
-	"mars": [-4.18, 4.88, 0.0, -55.3, 85.24, 68.99],
+	# Mars Stadium (tools/grounds/mars): its fence is one smooth curve fitted to Google Earth's straight-down
+	# trace (qa/fit.py, 0.22 m rms), 169.4 x 139.0 m; this ellipse fits it to 0.45 m rms.
+	"mars": [-5.4, 5.43, 0.0, -58.1, 84.07, 69.23],
 }
 
 ## The land round a model that ends at its own street (in the model's metres): the ring from
