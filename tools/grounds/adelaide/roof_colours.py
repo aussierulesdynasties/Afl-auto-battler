@@ -7,7 +7,8 @@ by the west face terracotta where Google Earth shows white and grey iron).
   python3 tools/grounds/adelaide/roof_colours.py read  # needs shapely (the bpy env has it) <workdir> [osm files as surrounds.py takes them]
 
 `read` writes roof_colours.json beside this file: OSM way id -> the median colour of the roof inside its footprint
-(shrunk 1 m, green tree pixels left out), one number per building, no imagery. surrounds.py uses it before its palette.
+(shrunk 1 m, green tree pixels left out), one number per building, no imagery; and pitch_colours.json, each sports
+pitch's surface the same way (Memorial Drive's grass courts are tagged as hard ones). surrounds.py uses it before its palette.
 The camera is ge_compare.py's, measured 2026-11-22: 35 degrees vertical over the 1000 px window, the 720-row crop
 centred on it; a roof h metres up sits F / (range - h) pixels a metre from the shot's centre."""
 import json, math, os, sys
@@ -55,9 +56,10 @@ def read(work, osm):
     extra = osm[1:] if len(osm) > 1 else [p for p in (["/tmp/adelaide_cbd_%d.osm" % i for i in range(len(S.CBD_TILES))]
                                                         + ["/tmp/adelaide_rel_%d.osm" % r for r in S.RELATIONS]) if os.path.exists(p)]
     _, ways = S.load(path, extra)
-    out = {}
+    out = {}; pitches = {}
     for t, p in ways:
-        if "building" not in t or "_id" not in t or len(p) < 4 or p[0] != p[-1]:
+        pitch = t.get("leisure") == "pitch"   # a pitch's own surface colour too (grass tennis courts tagged as hard ones)
+        if not ("building" in t or pitch) or "_id" not in t or len(p) < 4 or p[0] != p[-1]:
             continue
         a = np.array(p[:-1], float)
         if np.hypot(*a.mean(0)) > REACH:
@@ -65,7 +67,7 @@ def read(work, osm):
         g = Polygon(a).buffer(-1.0)
         if g.is_empty or g.area < 12:
             continue
-        h = S.building_height(t)
+        h = 0.0 if pitch else S.building_height(t)
         k = F / (RANGE - h)
         best = None
         for i, (ce, cn) in enumerate(C):   # the shot whose centre is nearest, if the roof is wholly in its crop
@@ -90,12 +92,16 @@ def read(work, osm):
         c = im[np.asarray(mk, bool)]
         if len(c) < 6:
             continue
+        if pitch:
+            pitches[t["_id"]] = [int(v) for v in np.median(c, axis=0)]
+            continue
         leaf = (c[:, 1] > c[:, 0] + 12) & (c[:, 1] > c[:, 2] + 12)   # tree crowns over the roof
         if (~leaf).sum() < 6:
             continue
         out[t["_id"]] = [int(v) for v in np.median(c[~leaf], axis=0)]
     json.dump(out, open(os.path.join(HERE, "roof_colours.json"), "w"), separators=(",", ":"), sort_keys=True)
-    print(len(out), "roof colours from", len(shots), "shots")
+    json.dump(pitches, open(os.path.join(HERE, "pitch_colours.json"), "w"), separators=(",", ":"), sort_keys=True)
+    print(len(out), "roof colours and", len(pitches), "pitch colours from", len(shots), "shots")
 
 
 if __name__ == "__main__":
