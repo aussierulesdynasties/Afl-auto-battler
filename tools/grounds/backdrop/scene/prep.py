@@ -643,7 +643,7 @@ if os.path.exists(_SP):
         px = _SA[y0:y1, x0:x1][np.asarray(mk) > 0]
         if len(px) > 20:
             md = np.median(px, 0)
-            _cap = 160.0 if (spec.get('real') and b['c'] == 'block') else 185.0   # flat roofs: the aerial's glare off membrane is not their colour
+            _cap = 135.0 if (spec.get('real') and b['c'] == 'block') else 185.0   # flat roofs: the aerial's glare off membrane is not their colour
             if not (md[1] > md[0] + 6 and md[1] >= md[2]): b['roof_c'] = [int(v * min(1.0, _cap / max(md))) for v in md]   # tree-covered roofs keep the palette
 json.dump(BLD, open(os.path.join(OUT, 'buildings.json'), 'w'))
 print('buildings', len(BLD), 'towers', sum(b['c'] == 'tower' for b in BLD))
@@ -677,12 +677,13 @@ for el in js:
     if el['type'] != 'way': continue
     pts = ring(el)
     if len(pts) < 2: continue
-    if 'building' in t and len(pts) > 2: md.polygon(P(pts), fill=0); md.line(P(pts + pts[:1]), fill=0, width=max(1, int(8 / PX))); rd.polygon(P(pts), fill=255); rd.line(P(pts + pts[:1]), fill=255, width=max(1, int(8 / PX)))   # director 2026-11-20: crowns clear of roofs
+    if 'building' in t and len(pts) > 2: md.polygon(P(pts), fill=0); md.line(P(pts + pts[:1]), fill=0, width=max(1, int((3 if spec.get('real') else 8) / PX))); rd.polygon(P(pts), fill=255); rd.line(P(pts + pts[:1]), fill=255, width=max(1, int(8 / PX)))   # director 2026-11-20: crowns clear of roofs
     if not (t.get('tunnel', 'no') != 'no' or t.get('location') == 'underground' or t.get('covered') == 'yes') and (t.get('highway') in ('motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'residential', 'service', 'unclassified') or t.get('railway')):
         _hw = t.get('highway'); _dl = {'motorway': 4, 'trunk': 4, 'primary': 4, 'secondary': 4}.get(_hw, 2)
         try: _ln = int(str(t.get('lanes', _dl)).split(';')[0])
         except Exception: _ln = _dl
         _w = 14 if t.get('railway') else _ln * 7.5   # director 2026-11-20: clear the full road width (4 lanes ~ 30 m)
+        if spec.get('real') and not t.get('railway'): _w = _ln * 3.5 + 1.5   # real place: the aerial's crowns stand on the verges, so only the carriageway is clear
         md.line(P(pts), fill=0, width=max(1, int(_w / PX))); rd.line(P(pts), fill=255, width=max(1, int(_w / PX)))
 mv = np.asarray(mask).astype(np.float32)   # stores 40000 / (m^2 per tree), 0 = no trees
 cell = 6.0
@@ -699,7 +700,8 @@ if CAN is not None:   # inside the satellite's extent a tree stands where the tr
     _cs = np.cumsum(np.cumsum(np.pad(CAN.astype(np.float32), ((1, 0), (1, 0))), 0), 1); _r = int(3 / _m)
     _i0 = np.clip(_ci - _r, 0, CAN.shape[0]); _i1 = np.clip(_ci + _r, 0, CAN.shape[0]); _j0 = np.clip(_cj - _r, 0, CAN.shape[1]); _j1 = np.clip(_cj + _r, 0, CAN.shape[1])
     _frac = (_cs[_i1, _j1] - _cs[_i0, _j1] - _cs[_i1, _j0] + _cs[_i0, _j0]) / np.maximum(1, (_i1 - _i0) * (_j1 - _j0))
-    keep = np.where(_in, (_frac > 0.45) & (v > 0) & (np.hypot(GX, GY) > skip_r), keep)
+    _ft = 0.3 if spec.get('real') else 0.45   # real place: a garden tree's 5 m crown fills a third of its 6 m cell
+    keep = np.where(_in, (_frac > _ft) & (v > 0) & (np.hypot(GX, GY) > skip_r), keep)
     print('canopy trees', int((_in & keep).sum()))
 for x, y in zip(GX[keep], GY[keep]): TR.append([round(float(x), 1), round(float(y), 1)])
 # street trees along residential streets
@@ -724,6 +726,16 @@ _RD = np.asarray(rdm); _n0 = len(TR)
 TR = [q for q in TR if not (abs(q[0]) < NEAR and abs(q[1]) < NEAR and _RD[min(N - 1, int((NEAR - q[1]) / PX)), min(N - 1, int((q[0] + NEAR) / PX))])]
 print('mapped trees on roads removed', _n0 - len(TR))
 TR = [[x, y, int(rng.integers(0, len(spec['tree_kinds'])))] for x, y in TR if abs(x) < NEAR and abs(y) < NEAR]
+if spec.get('real') and CAN is not None:   # real place: each crown takes the aerial's colour where it stands
+    _SAt = np.asarray(Image.open(os.path.join(HERE, 'data', spec['name'], 'sat.png')).convert('RGB')).astype(np.float32)
+    _sj = json.load(open(os.path.join(HERE, 'data', spec['name'], 'sat.json'))); _h, _m = _sj['half_m'], _sj['m_per_px']; _r = max(1, int(4 / _m))
+    for q in TR:
+        i_, j_ = int((_h - q[1]) / _m), int((q[0] + _h) / _m)
+        if not (_r <= i_ < CAN.shape[0] - _r and _r <= j_ < CAN.shape[1] - _r): q += [-1, -1, -1]; continue
+        cm = CAN[i_ - _r:i_ + _r + 1, j_ - _r:j_ + _r + 1]
+        if cm.sum() < 4: q += [-1, -1, -1]; continue
+        c_ = np.median(_SAt[i_ - _r:i_ + _r + 1, j_ - _r:j_ + _r + 1][cm], 0) * 1.3   # the aerial's crowns sit in their own shade
+        q += [int(min(200, v)) for v in c_]
 json.dump(TR, open(os.path.join(OUT, 'trees.json'), 'w'))
 json.dump(dict(base=base, near=NEAR, near_step=NS, far=FAR, far_step=FS), open(os.path.join(OUT, 'meta.json'), 'w'))
 print('trees', len(TR))

@@ -49,3 +49,18 @@ Fixes found in QA (2026-11-22): the terrain tiles carry single-cell spikes (a 30
 2.5 km at York Park), so `prep.py` gives any cell above or below all 8 neighbours by more than a cliff (25 m at
 zoom 14, 60 m at zoom 12) their median; Barossa, Summit and Bruce paint untagged open land as paddock, not the
 town verge's grey-green; an inland ground's sea plane drops below the land (`scene.py`).
+
+### A closed ground in its own era (Subiaco 2018, Football Park 2013)
+
+The model is the stadium as it stood, so its surroundings are the place as it was then, not today's:
+
+1. `python3 ohsome_snap.py $WORK/data/<g>/osm.json $WORK/data/<g>/osm_<year>.json <date>`: OpenStreetMap as it
+   was on that date (ohsome API, HeiGIT; the full-history route, as the snapshot route is refused from the cloud).
+2. `SAT_RELEASE=<id> python3 sat_fetch.py spec/<g>.json 1500 1.0` then copy `sat.png` to `sat_<year>.png` (today's
+   copied first to `sat_now.png`): an Esri World Imagery Wayback release from the era
+   (waybackconfig.json lists them; 8249 = 2018-06-06). Sampled for colours only, never shipped.
+3. `python3 era_merge.py <g> <year>`: the era's map, plus today's buildings that were only mapped later. A
+   house-sized one stays unless the era's aerial shows plants or bare sand there; a big one must match today's roof.
+4. `SAT_RELEASE=<id> BG_REAL=1 bash run1.sh <g>`.
+
+Check from straight above against the era's aerial with `capture_backdrop.gd ... nofog "shot=top:0.01,560,0:0,0,0:94"`.

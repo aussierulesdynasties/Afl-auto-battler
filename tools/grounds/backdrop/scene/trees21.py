@@ -23,6 +23,8 @@ SPECIES = {
  'shrub':       (0.27, (0.6, 1.4), (90, 108, 66), (90, 76, 60)),        # wattle, bottlebrush, yard shrubs: low, no clear trunk
 }
 _names = list(SPECIES); _w = np.array([SPECIES[k][0] for k in _names]); _w /= _w.sum()
+if spec.get('real'):   # real place: the trace finds trees, not shrubs; Perth/Adelaide/Melbourne streets are gums, planes and elms
+    _w = np.array([SPECIES[k][0] if k in ('sugar_gum', 'lemon_gum', 'elm', 'plane') else 0.0 for k in _names]); _w /= _w.sum()
 _pick = rng.choice(len(_names), size=len(TR), p=_w)
 G = {k: ([], [], []) for k in _names}   # verts, faces, cols
 def _put(k, V, F, c):
@@ -55,10 +57,12 @@ def _flush():
 def _trunk(k, x, y, z, r, h, col, lean=(0, 0)):
     if _LOD == 2: return
     V = TRK * [r, r, h]; V[6:, :] = V[6:, :]; V[1::2, 0] += lean[0]; V[1::2, 1] += lean[1]; _put(k, V + [x, y, z], TRKF, col)
-for (x, y, _k), si in zip(TR, _pick):
+for _t, si in zip(TR, _pick):
+    x, y = _t[0], _t[1]
     _flush(); _d = math.hypot(x, y); _LOD = 0 if _d < LOD_MID else (1 if _d < LOD_FAR else 2)
     k = _names[si]; _, (s0, s1), cc, bc = SPECIES[k]; s = rng.uniform(s0, s1); z0 = float(height(x, y)) - 0.2; a = rng.uniform(0, 2 * math.pi)
     jit = rng.uniform(0.86, 1.14); hue = rng.uniform(-0.05, 0.05)
+    if len(_t) >= 6 and _t[3] >= 0: cc = tuple(_t[3:6])   # real place: the crown's colour from the aerial
     col = lin(cc) * jit * np.array([1 + hue, 1, 1 - hue], np.float32); bark = lin(bc) * rng.uniform(0.9, 1.1)
     if k == 'sugar_gum':   # forked trunk, 5-7 flattened clumps spread wide and at different heights
         H = 7.5 * s; _trunk(k, x, y, z0, 0.38 * s, H * 0.75, bark)
