@@ -1039,6 +1039,19 @@ for st in S['stands']:
         if zn.get('fronts'): tier_parts(stands, G_z, zn['fronts'])
     seat_jobs.append((G_base, lambda B, st=st: stand_z(st, B[:, :2]), st['bands']))
     if st.get('fronts'): tier_parts(stands, G_base, st['fronts'])
+    for ov in st.get('over', []):   # a tier whose front rows overhang the rows below it (east, 2017 photo sphere):
+        # its own raked top and soffit between two distances from the pitch; behind d1 the main profile carries on
+        d0_, d1_ = ov['d']; pg_ = _Pg(PITCH)
+        R_ = G_base.intersection(pg_.buffer(d1_, 64).difference(pg_.buffer(d0_, 64)))
+        for r_ in getattr(R_, 'geoms', [R_]):
+            if r_.geom_type != 'Polygon' or r_.area < 1.0: continue
+            PR = np.array(r_.exterior.coords)[:-1]
+            dsr = sorted(set([k for k, _ in ov['profile']] + [k for k, _ in ov['under']] + [x for b in ov['bands'] for x in (b[0] - 0.05, b[0] + 0.05)]))
+            Vr, Tr = fill(PR, 1.0, iso_rings(PR, [x for x in dsr if d0_ < x < d1_], 1.0)); dr = seg_dist(Vr, PITCH)
+            stands.add(np.c_[Vr, interp(ov['profile'], dr)], Tr, band_colour(ov['bands'], dr), arc_uv(Vr, dr), ['concrete' if k == 'seats' else k for k in band_kind(ov['bands'], dr)])
+            stands.add(np.c_[Vr, interp(ov['under'], dr)], [t[::-1] for t in Tr], np.tile(np.array(ov['soffit'], float), (len(Vr), 1)), arc_uv(Vr, dr), 'concrete')
+        seat_jobs.append((G_base, lambda B, ov=ov: interp(ov['profile'], seg_dist(B[:, :2], PITCH)), ov['bands']))
+        if ov.get('fronts'): tier_parts(stands, G_base, ov['fronts'])
     zf = lambda B, st=st: stand_z(st, B[:, :2])
     parapet(stands, P, zf); front_skin(stands, P, zf)
     wb = st.get('wall_h')
