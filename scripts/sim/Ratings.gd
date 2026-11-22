@@ -45,7 +45,7 @@ const T := {
 ## to T for these keys does not reach a match until FLOW is updated too
 ## (tests/test_match_flow.gd checks every key here still exists in T).
 const FLOW := {
-	"chains_per_game": 275,
+	"chains_per_game": 255,         # 275 before kicks went longer (row 201 gap 6)
 	"max_touches_per_chain": 10,
 	"metres_gain_mean": 11.3,
 	"tackle_retention": 0.25,

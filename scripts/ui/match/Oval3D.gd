@@ -533,6 +533,7 @@ func _ground_model(slug: String, base := "", home := "", away := "") -> void:
 	add_child(root)
 	Oval3DQuality.apply_model(quality, root)
 	turf.set_ground(slug)
+	turf.light_stands(root)
 	_turf_mat.set_shader_parameter("fence_clip", GroundModels.match_fence())
 	_apron_skirt()
 	if home == "":
@@ -2384,8 +2385,12 @@ const UMP_LIFT_RATE := 2.0
 const UMP_SET := 0.3
 const UMP_TAKE := 2.5
 ## The ball goes from where it was to his hands (picked up) over UMP_PICK seconds, and from his
-## hands onto the director's flight (let go) over UMP_LET_GO.
+## hands onto the director's flight (let go) over UMP_LET_GO. Picked up, it moves with his hands
+## while the gap closes: blended from where it lay, a ball-up's ball lagged his hands as the lift
+## clip started and jumped up to 0.66 m in a frame (test_match_visual, 2026-11-21).
 const UMP_PICK := 0.3
+## ...or longer for a ball further off: the gap closes at most this many metres a match second.
+const UMP_PICK_RATE := 3.0
 const UMP_LET_GO := 0.2
 ## From the end of a clip to his stand.
 const UMP_BLEND_OUT := 0.4
@@ -2398,7 +2403,8 @@ var _ump_time := -1.0         # the director's time last frame
 var _ump_step := 1.0 / 30.0   # the director seconds of the last frame that moved
 var _ump_ball := false        # the ball is in his hands this frame
 var _ump_pick := -1.0         # seconds since he took it (the pick-up blend)
-var _ump_from := Vector3.ZERO # where the ball was when he took it
+var _ump_pick_len := UMP_PICK # ...and how long it takes
+var _ump_from := Vector3.ZERO # the ball's gap from his hands when he took it
 var _ump_off := Vector3.ZERO  # let go: his hands less the director's ball, easing out
 var _ump_off_t := -1.0
 var _ump_hit_from := Vector3.ZERO  # a bounce: where the ball left his hands
@@ -2641,7 +2647,12 @@ func _umpire_ball_state(held: bool) -> void:
 	if held and not _ump_ball:
 		# Just after a cut he has it already; in play he takes it over UMP_PICK.
 		_ump_pick = -1.0 if _ump_snapped else 0.0
-		_ump_from = ball.global_position if ball != null else Vector3.ZERO
+		_ump_from = Vector3.ZERO
+		_ump_pick_len = UMP_PICK
+		if _ump_job >= 0 and ball != null:
+			var hands := _umpire_hands(umpires[_ump_job])
+			_ump_from = ball.global_position - hands  # the gap from his hands
+			_ump_pick_len = maxf(UMP_PICK, _ump_from.length() / UMP_PICK_RATE)
 	if not held and _ump_ball and ball != null:
 		_ump_off_t = 0.0
 		_ump_off = ball.global_position
@@ -2682,8 +2693,10 @@ func _umpire_ball(dt: float) -> bool:
 		_ump_pick = -1.0
 	if _ump_pick >= 0.0 and dt > 0.0:
 		_ump_pick += dt
-		var f := clampf(_ump_pick / UMP_PICK, 0.0, 1.0)
-		want = _ump_from.lerp(want, f * f * (3.0 - 2.0 * f))
+		var f := clampf(_ump_pick / _ump_pick_len, 0.0, 1.0)
+		# The gap it started at eases shut while it moves with his hands: a hand moving fast
+		# as the clip starts never leaves the ball behind.
+		want += _ump_from * (1.0 - f * f * (3.0 - 2.0 * f))
 		if f >= 1.0:
 			_ump_pick = -1.0
 	ball.global_position = want

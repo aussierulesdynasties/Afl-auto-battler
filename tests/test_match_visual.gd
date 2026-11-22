@@ -56,6 +56,7 @@ func run() -> void:
 	_t("_test_match_ground")
 	_t("_test_ground_models")
 	_t("_test_ground_screens")
+	_t("_test_stand_light")
 	_t("_test_mcg_crowd", [res])
 	_t("_test_graphics_levels", [res])
 	_t("_test_discs_apart")
@@ -73,6 +74,8 @@ func run() -> void:
 	_t("_test_feet_planted", [res])
 	_t("_test_umpire_stoppages", [res])
 	_t("_test_free_taker_kicks")
+	_t("_test_tackled_frees")
+	_t("_test_tackle_cuts", [res])
 	GameState.replay_seed = 0
 	print(Ran.line("Match visual", self))
 
@@ -2259,7 +2262,7 @@ func _test_three_d_numbers() -> void:
 ## Settings > Graphics (Oval3DQuality): High is the look as built; Low draws every supporter as a
 ## card (no 3D people built), takes the seats' own shadows and the blades away, and draws the
 ## picture at three-quarter size. At every level the seats are drawn in slices round the bowl, so
-## the camera draws only those in view.
+## the camera draws only those in view. Rain falls at both, Low with fewer drops.
 func _test_graphics_levels(res: Dictionary) -> void:
 	for level in [Oval3DQuality.HIGH, Oval3DQuality.LOW]:
 		var d := MatchDirector.new()
@@ -2285,7 +2288,7 @@ func _test_graphics_levels(res: Dictionary) -> void:
 				seat_casting += 1 if g.cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_OFF else 0
 			elif str(g.name).begins_with("bowl"):
 				bowl_casting += 1 if g.cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_OFF else 0
-		_check(slices >= GroundModels.SEAT_SECTORS / 2 and seats > 70000 and bowl_casting > 0,
+		_check(slices >= GroundModels.SEAT_SECTORS / 2 and seats > 55000 and bowl_casting > 0,
 				"%s: the MCG's %d seats are drawn in %d slices round the bowl; the bowl casts its shade" % [level, seats, slices])
 		var people := 0
 		for ch: Dictionary in oval.crowd._chunks:
@@ -2299,12 +2302,64 @@ func _test_graphics_levels(res: Dictionary) -> void:
 			_check(people == 0 and first.visibility_range_begin == 0.0 and seat_casting == 0
 					and vp.scaling_3d_scale < 1.0 and not oval.turf.blades_on,
 					"Low: every supporter a card, no seat shadows, no blades, a smaller picture (%d casting)" % seat_casting)
+		# A wet day (rule 2.83): rain falls at every level, fewer drops lower down; the far stands
+		# grey in it, the men look wet, the towers are on by day. A dry day after it takes all that away.
+		_check(oval.turf.rain == null and float(RenderingServer.global_shader_parameter_get("oval_wet")) == 0.0,
+				"%s: no rain and dry kit on a fine day" % level)
+		oval.turf.apply(VignetteWeather.WET, VignetteKickoff.DAY)
+		var rain: Oval3DRain = oval.turf.rain
+		_check(rain != null and rain.amount == int(Oval3DQuality.preset(level)["rain"]) and rain.get_parent() == oval
+				and oval._env.fog_enabled and float(RenderingServer.global_shader_parameter_get("oval_wet")) == 1.0
+				and oval.turf.fill.visible,
+				"%s wet: %d drops falling, haze, wet kit, the towers on" % [level, rain.amount if rain else -1])
+		_check(((rain.draw_pass_1 as QuadMesh).material as BaseMaterial3D).render_priority == Material.RENDER_PRIORITY_MAX,
+				"%s wet: the rain is drawn over the match film, not wiped by it" % level)
+		oval.turf.apply("", VignetteKickoff.DAY)
+		_check(oval.turf.rain == null and not oval._env.fog_enabled
+				and float(RenderingServer.global_shader_parameter_get("oval_wet")) == 0.0 and not oval.turf.fill.visible,
+				"%s: a fine day after a wet one has no rain, haze or wet kit" % level)
 		vp.queue_free()
 
 
 ## The ground's big screens and fence signs (Oval3DScreens, row 202 2b): a match at a ground whose
 ## model has screens lays a face over each, facing the ground, that shows the score, a goal and
 ## the clock; the boards ring the fence in both clubs' colours; the inspector (no clubs) gets none.
+## The stands' light (director, 2026-11-21: roof undersides "grey, a faint green tint"): the model's
+## surfaces take the stand shader; a face turned up keeps the sky's light, one turned down loses the
+## grass's green; at night nothing changes; the men and the turf keep their own materials.
+func _test_stand_light() -> void:
+	var d := MatchDirector.new()
+	var res := _result(42)
+	d.setup(res, res["events"])
+	var oval := Oval3D.new()
+	oval.ground = "MCG"
+	(Engine.get_main_loop() as SceneTree).root.add_child(oval)
+	oval.build(d, "COL", "GEE")
+	var stand := 0
+	var other := 0
+	for mi: MeshInstance3D in oval.find_children("*", "MeshInstance3D", true, false):
+		if mi.mesh == null or not oval.get_node("Ground").is_ancestor_of(mi):
+			continue
+		for i in mi.mesh.get_surface_count():
+			var m := mi.get_active_material(i) as ShaderMaterial
+			if m != null and m.shader == Oval3DTurf.STAND_SHADER:
+				stand += 1
+				_check(m.resource_name != "", "A stand surface keeps its material's name")
+			else:
+				other += 1
+	_check(stand > 50, "The MCG's surfaces take the stands' light (%d, %d others)" % [stand, other])
+	var sm: ShaderMaterial = oval.turf.env.sky.sky_material
+	var grey: Array = oval.turf.stand_light(sm, 1.0, Oval3DTurf.STAND_GREEN)
+	var sky: Array = oval.turf.stand_light(sm, 1.0, 1.0)
+	_check((grey[4] - sky[4]).length() < 0.002, "A face turned up is lit as before (%s)" % (grey[4] - sky[4]))
+	var down: Vector3 = grey[0] - sky[0]
+	_check(down.y < -0.02 and down.x > 0.0, "A face turned down loses the grass's green (%s)" % down)
+	oval.turf.apply("", VignetteKickoff.NIGHT)
+	var m0: ShaderMaterial = oval.turf._stand_mats[0]
+	_check(m0.get_shader_parameter("amb_down") == Vector3.ZERO, "At night the stands' light is unchanged")
+	oval.queue_free()
+
+
 func _test_ground_screens() -> void:
 	var d := MatchDirector.new()
 	var res := _result(42)
@@ -2361,7 +2416,9 @@ func _test_mcg_crowd(res: Dictionary) -> void:
 	for mi in oval.find_child("Ground", false, false).get_children():
 		if mi is MultiMeshInstance3D and str(mi.name).begins_with("seats_"):
 			seats += (mi as MultiMeshInstance3D).multimesh.instance_count
-	_check(crowd != null and crowd.get_parent().name == "Ground" and seats > 70000,
+	# About 60,000 since the seat rule (seats only on a sloped row with a floor, in the open or
+	# under at least 2.6 m of headroom) took the ones the model had floating or under a tier.
+	_check(crowd != null and crowd.get_parent().name == "Ground" and seats > 55000,
 			"The MCG has its crowd, on the model (%d seats)" % seats)
 	_check(crowd.supporters > seats * 0.88 and crowd.supporters < seats * 0.96,
 			"Most of the MCG's seats are taken, a few left empty (%d of %d)" % [crowd.supporters, seats])
@@ -3280,6 +3337,9 @@ func _test_three_d_cameras(res: Dictionary) -> void:
 	var goals := 0
 	var held := 0
 	var moved_in_hold := 0
+	var sting_in := 0
+	var sting_out := 0
+	var ends := 0  # replays that ran to their end (not the tapped one)
 	var was_replay := false
 	var tv: Oval3DBroadcast = pv._tv
 	var goals_seen := {}
@@ -3295,6 +3355,13 @@ func _test_three_d_cameras(res: Dictionary) -> void:
 			moved_in_hold += 1 if pv.director.time != t0 else 0
 		if not pv.playing:
 			break
+		# The sting covers the picture whole at its middle: the cut in and out happens there.
+		var mid := tv.sting() >= 0.5 and tv.sting() < 0.55
+		if tv.replaying and not was_replay:
+			sting_in += 1 if mid else 0
+		if was_replay and not tv.replaying:
+			sting_out += 1 if mid else 0
+			ends += 1
 		if tv.replaying and not was_replay:
 			replays += 1
 			if replays == 2:
@@ -3302,7 +3369,7 @@ func _test_three_d_cameras(res: Dictionary) -> void:
 				# live again at once.
 				var why: String = await Tap.tap_at(pv, pv.size * 0.5)
 				pv._process(1.0 / 60.0)
-				skipped += 1 if why == "" and not tv.replaying and tv.shot == "main" else 0
+				skipped += 1 if why == "" and not tv.replaying and tv.shot == "main" and tv.sting() < 0.0 else 0
 		was_replay = tv.replaying
 		if tv.replaying:
 			continue
@@ -3313,6 +3380,8 @@ func _test_three_d_cameras(res: Dictionary) -> void:
 				var t: Dictionary = pv.director.tokens[tv._close_who]
 				close_ok += 1 if str(t["role"]) == "RUCK" and is_equal_approx(tv._close_eye.y, 15.0) else 0
 			continue
+		if not tv._inc.is_empty() and tv.shot == "main":
+			continue  # close on a tackle that stopped play (_test_tackle_cuts)
 		if tv.shot != last:
 			if tv.shot == "goals":
 				cuts += 1
@@ -3366,7 +3435,10 @@ func _test_three_d_cameras(res: Dictionary) -> void:
 			"Ball-ups show the ruckmen close, from a wing camera (%d ruckmen, %d from the wing)" % [closes.size(), close_ok])
 	_check(goals > 0 and replays >= mini(goals, 2) and replays <= goals,
 			"A goal gets one replay (%d goals, %d replays)" % [goals, replays])
-	_check(skipped == 1, "A tap on the picture skips the replay: live again at once")
+	_check(skipped == 1, "A tap on the picture skips the replay: live again at once, with no sting")
+	_check(replays > 0 and sting_in == replays and ends > 0 and sting_out == ends,
+			"Into and out of a replay the picture cuts under the sting's full cover (%d of %d in, %d of %d out)"
+			% [sting_in, replays, sting_out, ends])
 	_check(moved_in_hold == 0, "The centre bounce waits for the replay (%d of %d held frames moved on)" % [moved_in_hold, held])
 	_check(goals_eyes.size() == 1 and goals_eyes.has(snappedf(MatchMotion.HALF_LEN + 25.0, 0.1)),
 			"The goals camera stands 25 m behind a goal line, on the ground's middle (%s)" % [goals_eyes.keys()])
@@ -3751,6 +3823,7 @@ func _test_umpire_stoppages(res: Dictionary) -> void:
 			if oval._ump_pick < 0.0:
 				gap = maxf(gap, hands.distance_to(now))
 			jump = maxf(jump, (now - last).distance_to(hands - last_hands))
+			if (now - last).distance_to(hands - last_hands) > 0.3: print("JUMPDBG t=%.2f k=%s kind=%s clip=%s pick=%.2f ph=%s" % [d.time, d._beat.get("k", -1), kind, str(c.get("kind", "")), oval._ump_pick, str((d._phases[d._pi] as Dictionary).get("t","")) if d._pi < d._phases.size() else ""])
 		last = now
 		last_hands = hands
 		held_prev = oval._ump_ball and live
@@ -3845,3 +3918,97 @@ func _test_free_taker_kicks() -> void:
 	_check(frees > 10 and taken > 10, "Seed 31 pays frees and their takers kick them (%d paid, %d taken)" % [frees, taken])
 	_check(not_taken.is_empty(), "Every free's taker has the ball and kicks it himself (%d not: %s)" % [not_taken.size(), not_taken.slice(0, 5)])
 	_check(far.is_empty(), "No kick leaves with its kicker more than 1.5 m from the ball (%d: %s)" % [far.size(), far.slice(0, 5)])
+
+
+## Holding the ball and dropping it are paid off a tackle (row 202, 2e, 2026-11-21): the man
+## paid the free runs down the man caught (the director's chase), the tackle lands on him
+## (a "tackle" contact, so the 3D tackle clips play), and the tackler then has the ball.
+func _test_tackled_frees() -> void:
+	var res := MatchSim.new(Squad.new("FRE", GameDB.club_list("FRE"), true, "FRE"),
+			Squad.new("STK", GameDB.club_list("STK"), false, "STK"), 31).run()
+	var evs: Array = res["events"]
+	var d := MatchDirector.new()
+	d.setup(res, evs)
+	d.want_contacts = true
+	var tackled := 0
+	var right := 0
+	var hit := 0
+	var got := 0
+	var last_k := -1
+	var want := {}   # the tackled free being played: {k, who, victim}
+	var guard := 0
+	while not d.idle() and guard < 200000:
+		guard += 1
+		d.advance(0.05)
+		var k := int(d._beat.get("k", -1))
+		if k == last_k:
+			for c in d.contacts:
+				if not want.is_empty() and str(c["kind"]) == "tackle" and int(c["who"]) == int(want["who"]) \
+						and int(c["other"]) == int(want["victim"]):
+					hit += 1
+			d.contacts.clear()
+			continue
+		if not want.is_empty():
+			got += 1 if str(d.ball["mode"]) == "held" and int(d.ball["holder"]) == int(want["who"]) else 0
+			want = {}
+		last_k = k
+		var ev: Dictionary = evs[k]
+		if str(ev.get("kind", "")) != "free" or not str(ev.get("free_cause", "")) in ["holding_ball", "incorrect_disposal"]:
+			continue
+		var v := d._tackled_for(k)
+		if v < 0:
+			continue
+		tackled += 1
+		var ts := (d._phases as Array).map(func(q): return str((q as Dictionary).get("t", "")))
+		right += 1 if ts.has("chase") and ts.has("down") and ts.find("down") < ts.find("emit") else 0
+		want = {"k": k, "who": d._actor_id(ev), "victim": v}
+		# The beat can start and land its tackle within one step.
+		for c in d.contacts:
+			if str(c["kind"]) == "tackle" and int(c["who"]) == int(want["who"]) and int(c["other"]) == v:
+				hit += 1
+		d.contacts.clear()
+	_check(tackled >= 5 and right == tackled,
+			"A holding-the-ball or dropped-ball free is run down and tackled before it is paid (%d of %d)" % [right, tackled])
+	_check(hit == tackled, "Each tackled free lands its tackle on the man caught (%d of %d)" % [hit, tackled])
+	_check(got >= tackled - 1, "...and the man paid it has the ball before play goes on (%d of %d)" % [got, tackled])
+
+
+## The close cut on a tackle that stops play (Oval3DBroadcast.incident_cuts, chosen
+## 2026-11-21): only with both men in one tackle clip, from a wing camera, and only on a
+## tackle held to a ball-up or paid as a free; never on one that spills the ball free.
+func _test_tackle_cuts(res: Dictionary) -> void:
+	var pv := PitchView.new()
+	pv.size = Vector2(360, 480)
+	pv.three_d = true
+	(Engine.get_main_loop() as SceneTree).root.add_child(pv)
+	pv.setup(res)
+	var tv: Oval3DBroadcast = pv._tv
+	_check(tv.incident_cuts, "Tackles that stop play cut close (chosen 2026-11-21: B, close cut)")
+	pv.set_speed(4.0)
+	pv.play()
+	var frames := 0
+	var ok := 0
+	var cut_ks := {}
+	var wrong := []
+	for i in range(9000):
+		pv._process(1.0 / 60.0)
+		if not pv.playing:
+			break
+		if tv._inc.is_empty() or tv.replaying or tv._close_who >= 0 or tv.shot != "main":
+			continue
+		frames += 1
+		var k := int(tv._inc["k"])
+		cut_ks[k] = true
+		var ev: Dictionary = pv.director.events[k]
+		var kind := str(ev.get("kind", ""))
+		var nk: int = pv.director._next_real(k)
+		var stops := kind == "free" or (kind == "tackle" and nk >= 0
+				and str((pv.director.events[nk] as Dictionary).get("kind", "")) == "ballup")
+		if stops and tv._paired(int(tv._inc["who"]), int(tv._inc["victim"])) \
+				and is_equal_approx(pv._oval3d.camera.global_position.y, Oval3DBroadcast.EYE_UP):
+			ok += 1
+		elif wrong.size() < 3:
+			wrong.append(k)
+	_check(cut_ks.size() >= 2 and frames > 0 and ok == frames,
+			"Tackles that stop play cut close from a wing camera, both men in the clip (%d tackles, %d of %d frames; wrong: %s)" % [cut_ks.size(), ok, frames, wrong])
+	pv.free()
