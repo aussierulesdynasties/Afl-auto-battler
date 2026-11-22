@@ -22,7 +22,7 @@ def mat(name,rough=0.8,metal=0.0):
     t=nt.nodes.new('ShaderNodeTexImage');t.image=bpy.data.images.load(os.path.join(TX,name+'.png'))
     nt.links.new(t.outputs['Color'],b.inputs['Base Color']);b.inputs['Roughness'].default_value=rough;b.inputs['Metallic'].default_value=metal
     m.use_backface_culling=False;me.materials.append(m);return len(me.materials)-1
-MB=mat('bronze',0.55,0.3);MG=mat('glass',0.15,0.2);MS=mat('seats');MR=mat('roof',0.6);MW=mat('white',0.5);MU=mat('under')
+MB=mat('bronze',0.55,0.3);MG=mat('glass',0.3,0.0);MS=mat('seats');MR=mat('roof',0.6);MW=mat('white',0.5);MU=mat('under')
 MC=mat('concrete');MT=mat('terrace');MP=mat('plaza');MD=mat('deck');MK=mat('clad',0.4,0.4);MKL=mat('clad',0.85,0.0);MX=mat('dark')
 MPW=mat('podwall');MLV=mat('louvre',0.5);MBN=mat('bench');MAI=mat('aisle');MRS=mat('riser')
 bm=bmesh.new();uv=bm.loops.layers.uv.new('UVMap')

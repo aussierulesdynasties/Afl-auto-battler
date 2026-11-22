@@ -1,9 +1,8 @@
 """Optus Stadium's bronze cladding, redrawn (Optus rebuild to the MCG standard, stage 3).
 
-The facade's signature: horizontal anodised-aluminium fins in mixed bronze, copper, chocolate and
-sand tones, in runs of 1 to 6 m, with the odd deep copper-red run and thin pale-blue slivers lit
-through the gaps; soft diagonal drifts of lighter and darker tone across the whole drum (the
-director's sunset photo, /mnt/project-files/optus-rebuild/ref_facade_sunset.jpg, and Google Earth).
+The facade's signature: horizontal anodised-aluminium fins (geometry, build.py) over a dark charcoal-slate base,
+crossed by long thin streaks one fin high, 6-13 m long, in pale grey-white and terracotta copper-red (measured on
+Google Earth's east and south views, 2026-11-23).
 
 Draws one pattern in metres round the drum (s, along the facade from segment 0) and down from the
 bronze's top (d), so the plain bronze and the two name signs join without a seam, and writes them
@@ -44,47 +43,54 @@ SIGN_DROP = 32.0
 LETTERS_D = 6.0            # the letters' middle, metres under the bronze's top
 OLD_SIGN = (37.28464798665914, 32.0)   # #1867's sign_a in metres (its letters are lifted from it)
 
-# The fin colours (sRGB) and how often each is drawn; the low-frequency drift picks lighter or darker.
-# Google Earth's north and east close views (2026-11-21): a dark chocolate base with long, thin, high-contrast runs of
-# copper, salmon and pale pinkish sand, so the fins still read as streaks from across the river.
-# 2026-11-22 (third pass, against Google Earth's facade views at range): the anodised fins mirror the sky, so from
-# the air they read slate grey-blue with thin warm streaks, on the lit side and the shaded side alike. The match light
-# has no sky for a metal to mirror (a flat background colour), so the fins carry what they show: a slate base and
-# runs of warm bronze, copper and pale sand. The first passes' dark chocolate rendered near black in shade and brick
-# red in sun, nothing like the real facade from across the river.
-TONES = np.array([
-    (72, 86, 96), (82, 95, 104), (96, 102, 106), (108, 100, 96), (118, 100, 94),
-    (130, 106, 96), (146, 118, 106), (170, 150, 138), (196, 188, 182),
-], float)
-COPPER_RED = np.array([(140, 100, 90), (150, 108, 96), (128, 90, 80)], float)
-BLUE = np.array((128, 190, 222), float)
+# The fin colours (sRGB). Measured 2026-11-23 on Google Earth's east view (f000, lit, 0.066 m a pixel) and south view
+# (f270, shade): a dark charcoal-slate base, nearly uniform, crossed by long thin streaks one fin high, 6-13 m long:
+# pale grey-white ones and terracotta copper-red ones. No mid-tone runs and no blue: the earlier passes drew short runs
+# across the whole tone scale, which read as brickwork (PC GPU capture 2026-11-22).
+BASE = np.array([(54, 57, 60), (60, 62, 64), (66, 66, 66), (62, 59, 57)], float)
+PALE = np.array([(168, 170, 170), (184, 184, 182), (150, 152, 154)], float)
+COPPER_RED = np.array([(150, 92, 80), (162, 104, 90), (134, 84, 74)], float)
+P_PALE, P_RED = 0.13, 0.08   # the share of each fin row's length that is a streak of each kind
 
 
 def _layout(seed=5):
-    """Per row: run boundaries in s over one tile (periodic), and each run's tone, red and blue flags."""
+    """Per row: run boundaries in s over one tile (periodic), and each run's kind (0 base, 1 pale, 2 red) and tone."""
     rng = np.random.default_rng(seed)
     rows = []
     for _ in range(ROWS):
-        cuts = [rng.uniform(0, 3)]
-        while cuts[-1] < BAY2 + cuts[0]:
-            cuts.append(cuts[-1] + rng.choice([rng.uniform(0.8, 2.2), rng.uniform(2.0, 4.5), rng.uniform(4.0, 7.0)],
-                                              p=[0.45, 0.4, 0.15]))
-        # The last run wraps round to meet the first.
-        cuts = np.array(cuts[:-1] + [cuts[0] + BAY2])
+        cuts = [rng.uniform(0, 6)]
+        kinds = []
+        while True:
+            # Base runs between streaks; a streak mostly 6-13 m long (Google Earth), now and then a short one.
+            # Run odds chosen so the streaks cover P_PALE and P_RED of the length (checked by shares()).
+            kind = int(rng.choice(3, p=[0.748, 0.156, 0.096]))
+            kinds.append(kind)
+            ln = rng.uniform(6.0, 13.0) if kind and rng.random() < 0.75 else (rng.uniform(1.5, 5.0) if kind else rng.uniform(4.0, 16.0))
+            nxt = cuts[-1] + ln
+            if nxt >= BAY2 + cuts[0]:
+                break
+            cuts.append(nxt)
+        cuts = np.array(cuts + [cuts[0] + BAY2])   # the last run wraps round to meet the first
         n = len(cuts) - 1
         rows.append({
             "cuts": cuts,
-            # Most runs sit back in the dark base; under half catch the light as copper, salmon or sand streaks.
-            "jit": np.where(rng.random(n) < 0.58, rng.normal(-2.4, 0.6, n), rng.normal(1.9, 1.3, n)),           # each run's own step up or down the tone scale
-            "red": rng.random(n) < 0.08,
-            "red_i": rng.integers(0, len(COPPER_RED), n),
-            "blue": rng.random(n) < 0.015,
-            "shine": rng.uniform(-0.05, 0.05, n),
+            "kind": np.array(kinds[:n]),
+            "tone": rng.integers(0, 3, n),
+            "base": rng.integers(0, len(BASE), n),
+            "shine": rng.uniform(-0.04, 0.04, n),
         })
     return rows
 
 
 ROWS_L = _layout()
+
+
+def shares():
+    """The share of fin length that is base, pale and red streak, over one tile."""
+    t = np.zeros(3)
+    for L in ROWS_L:
+        np.add.at(t, L["kind"], np.diff(L["cuts"]))
+    return t / t.sum()
 
 
 def drift(s, d):
@@ -110,35 +116,24 @@ def colour(s, d):
         L = ROWS_L[ri]
         ss = S[m]
         ss = np.where(ss < L["cuts"][0], ss + BAY2, ss)
-        k = np.clip(np.searchsorted(L["cuts"], ss, side="right") - 1, 0, len(L["jit"]) - 1)
-        level = 3.0 + 1.1 * drift(ss, D[m]) + L["jit"][k]
-        lo = np.clip(np.floor(level).astype(int), 0, len(TONES) - 2)
-        f = np.clip(level - lo, 0, 1)[:, None]
-        c = TONES[lo] * (1 - f) + TONES[lo + 1] * f
-        c = np.where(L["red"][k][:, None], COPPER_RED[L["red_i"][k]], c)
+        k = np.clip(np.searchsorted(L["cuts"], ss, side="right") - 1, 0, len(L["kind"]) - 1)
+        kind = L["kind"][k][:, None]
+        c = BASE[L["base"][k]] * (1.0 + 0.06 * drift(ss, D[m]))[:, None]
+        c = np.where(kind == 1, PALE[L["tone"][k]], c)
+        c = np.where(kind == 2, COPPER_RED[L["tone"][k]], c)
         c = c * (1.0 + L["shine"][k][:, None])
         # Along each run a slight fall-off from its middle (the fin's curvature catching the light).
-        a0 = L["cuts"][k]
-        a1 = L["cuts"][k + 1]
-        u = (ss - a0) / np.maximum(a1 - a0, 1e-3)
-        c = c * (1.0 + 0.05 * np.sin(np.pi * u))[:, None]
+        u = (ss - L["cuts"][k]) / np.maximum(L["cuts"][k + 1] - L["cuts"][k], 1e-3)
+        c = c * (1.0 + 0.04 * np.sin(np.pi * u))[:, None]
+        # Fin profile, gentle: the fins are geometry (build.py), so the texture only darkens the gap under each.
         tt = t[m][:, None]
-        # Fin profile: a bright lip, the face, and the dark gap under it.
-        prof = np.where(tt < 0.07, 1.16, np.where(tt > 0.86, 0.38, 1.0 - 0.10 * tt))
-        # A lit run catches the light on its upper face only; its lower half falls back to the dark base, so each
-        # streak reads thin, as on the drum.
-        lit = (L["jit"][k] > 0) & (tt[:, 0] > 0.5) & ~L["red"][k]
-        c = np.where(lit[:, None], TONES[1] * (1.0 + L["shine"][k][:, None]), c)
-        c = c * prof
-        # Pale-blue slivers: the light strip in the gap, thin and short.
-        blue = L["blue"][k] & (tt[:, 0] > 0.64) & (tt[:, 0] < 0.9) & (u > 0.1) & (u < 0.9)
-        c = np.where(blue[:, None], BLUE, c)
+        c = c * np.where(tt > 0.86, 0.75, 1.0)
         out[m] = c
     # Brushed grain along the fins.
     grain = rng.normal(0, 1, (S.shape[0], max(8, S.shape[1] // 24)))
     grain = np.asarray(Image.fromarray(((grain * 20) + 128).clip(0, 255).astype(np.uint8)).resize(
         (S.shape[1], S.shape[0]), Image.BILINEAR), float) / 128.0 - 1.0
-    out *= (1.0 + 0.035 * grain)[..., None]
+    out *= (1.0 + 0.03 * grain)[..., None]
     return np.clip(out, 0, 255).astype(np.uint8)
 
 
