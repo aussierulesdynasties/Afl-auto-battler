@@ -17,12 +17,16 @@ FJ=json.load(open(os.path.join(me_dir,'facade.json')))
 import numpy as _np0
 bpy.ops.wm.read_factory_settings(use_empty=True)
 me=bpy.data.meshes.new('optus');ob=bpy.data.objects.new('optus',me);bpy.context.scene.collection.objects.link(ob)
-def mat(name,rough=0.8,metal=0.0):
+def mat(name,rough=0.8,metal=0.0,mr=None):
     m=bpy.data.materials.new(name);m.use_nodes=True;nt=m.node_tree;b=nt.nodes['Principled BSDF']
     t=nt.nodes.new('ShaderNodeTexImage');t.image=bpy.data.images.load(os.path.join(TX,name+'.png'))
     nt.links.new(t.outputs['Color'],b.inputs['Base Color']);b.inputs['Roughness'].default_value=rough;b.inputs['Metallic'].default_value=metal
+    if mr:   # a metal-roughness map (glTF: green roughness, blue metalness), bronze.py
+        q=nt.nodes.new('ShaderNodeTexImage');q.image=bpy.data.images.load(os.path.join(TX,mr+'.png'));q.image.colorspace_settings.name='Non-Color'
+        sp=nt.nodes.new('ShaderNodeSeparateColor');nt.links.new(q.outputs['Color'],sp.inputs['Color'])
+        nt.links.new(sp.outputs['Green'],b.inputs['Roughness']);nt.links.new(sp.outputs['Blue'],b.inputs['Metallic'])
     m.use_backface_culling=False;me.materials.append(m);return len(me.materials)-1
-MB=mat('bronze',0.55,0.3);MG=mat('glass',0.3,0.0);MS=mat('seats');MR=mat('roof',0.6);MW=mat('white',0.5);MU=mat('under')
+MB=mat('bronze',0.55,0.3,'bronze_mr');MG=mat('glass',0.3,0.0);MS=mat('seats');MR=mat('roof',0.6);MW=mat('white',0.5);MU=mat('under')
 MC=mat('concrete');MT=mat('terrace');MP=mat('plaza');MD=mat('deck');MK=mat('clad',0.4,0.4);MKL=mat('clad',0.85,0.0);MX=mat('dark')
 MPW=mat('podwall');MLV=mat('louvre',0.5);MBN=mat('bench');MAI=mat('aisle');MRS=mat('riser')
 bm=bmesh.new();uv=bm.loops.layers.uv.new('UVMap')
@@ -131,7 +135,7 @@ def _sign_at(c,w):
 SG={'sign_a_%d'%k:_sign_at(float(c),FJ['sign_segments']*2) for k,c in enumerate(NAMES)}
 TI['signs']=SG
 c=lambda z:(lambda i:z)
-MEN=mat('entrance',0.12,0.1);MCO=mat('column',0.5);MXG=mat('storey',0.2,0.1);SMA=mat('sign_a',0.55,0.3)
+MEN=mat('entrance',0.12,0.1);MCO=mat('column',0.5);MXG=mat('storey',0.2,0.1);SMA=mat('sign_a',0.55,0.3,'sign_a_mr')
 def quad_strip(A,B,mi,uvA,uvB,want,sel=None):
     """faces between two rows of verts A[i], B[i] (closed ring)"""
     for i in range(N):

@@ -53,6 +53,7 @@ PALE = np.array([(185, 187, 187), (202, 202, 200), (165, 167, 169)], float)
 # Google Earth's), Google Earth's brightness over our capture's at 236 facade hovers 18-30 m up
 # on the 12 matched views, both lit by Google Earth's sun (survey/sun.json); the hue gap is Google Earth's haze.
 COPPER_RED = np.array([(165, 101, 88), (178, 114, 99), (147, 92, 81)], float)
+BASE_RM, STREAK_RM = (0.55, 0.3), (0.4, 0.75)   # (roughness, metalness): the base as before, the streaks metal
 P_PALE, P_RED = 0.13, 0.08   # the share of each fin row's length that is a streak of each kind
 
 
@@ -103,14 +104,15 @@ def drift(s, d):
     return (0.55 * np.sin(a + 2 * b + 0.7) + 0.3 * np.sin(2 * a - b + 2.1) + 0.25 * np.sin(3 * a + 3 * b + 4.0)) / 1.1
 
 
-def colour(s, d):
-    """sRGB (H, W, 3) for arrays s (W) and d (H) in metres."""
+def colour(s, d, finish=False):
+    """sRGB (H, W, 3) for arrays s (W) and d (H) in metres; finish=True gives the metal-roughness map instead."""
     s = np.mod(s, BAY2)
     S, D = np.meshgrid(s, np.mod(d, BH))
     pitch = BH / ROWS
     r = (D // pitch).astype(int) % ROWS
     t = (D % pitch) / pitch                      # 0 at the fin's top edge, 1 at its foot
     out = np.zeros(S.shape + (3,), float)
+    kinds = np.zeros(S.shape, int)
     rng = np.random.default_rng(9)
     for ri in range(ROWS):
         m = r == ri
@@ -132,19 +134,29 @@ def colour(s, d):
         tt = t[m][:, None]
         c = c * np.where(tt > 0.86, 0.75, 1.0)
         out[m] = c
+        kinds[m] = kind[:, 0]
     # Brushed grain along the fins.
     grain = rng.normal(0, 1, (S.shape[0], max(8, S.shape[1] // 24)))
     grain = np.asarray(Image.fromarray(((grain * 20) + 128).clip(0, 255).astype(np.uint8)).resize(
         (S.shape[1], S.shape[0]), Image.BILINEAR), float) / 128.0 - 1.0
     out *= (1.0 + 0.03 * grain)[..., None]
+    if finish:
+        # glTF metal-roughness: green roughness, blue metalness. The streaks are bright anodised runs that catch the
+        # sun: lit, they stand out as on Google Earth's lit views (p90/p50 1.5); in shade they all but vanish
+        # (Google Earth 1.1). A matte streak kept its 1.6 in shade, so the streaks are metal and the base less so.
+        mr = np.zeros(S.shape + (3,), np.uint8)
+        mr[..., 0] = 255
+        mr[..., 1] = np.where(kinds > 0, STREAK_RM[0], BASE_RM[0]) * 255
+        mr[..., 2] = np.where(kinds > 0, STREAK_RM[1], BASE_RM[1]) * 255
+        return mr
     return np.clip(out, 0, 255).astype(np.uint8)
 
 
-def tile():
+def tile(finish=False):
     w, h = int(round(BAY2 * PX)), int(round(BH * PX))
     s = (np.arange(w) + 0.5) / w * BAY2
     d = (np.arange(h) + 0.5) / h * BH
-    return Image.fromarray(colour(s, d), "RGB")
+    return Image.fromarray(colour(s, d, finish), "RGB")
 
 
 def letters(old):
@@ -163,6 +175,14 @@ def letters(old):
     mi = mi.resize(size, Image.LANCZOS).filter(ImageFilter.GaussianBlur(0.6))
     ci = ci.resize(size, Image.LANCZOS)
     return np.asarray(mi, float)[..., None] / 255.0, np.asarray(ci, float)
+
+
+def sign_finish():
+    """The metal-roughness map under the name sign (the letters keep the bronze's finish under them)."""
+    w, h = int(round(SIGN_W * PX)), int(round(SIGN_DROP * PX))
+    s = 7.3 + (np.arange(w) + 0.5) / w * SIGN_W
+    d = (np.arange(h) + 0.5) / h * SIGN_DROP
+    return Image.fromarray(colour(s, d, True), "RGB")
 
 
 def sign(old):
@@ -267,12 +287,16 @@ def main():
     src = sys.argv[sys.argv.index("--old-sign") + 1] if "--old-sign" in sys.argv else None
     old = Image.open(src) if src else Image.open(io.BytesIO(_view_bytes(
         js, bn, next(im for im in js["images"] if im["name"] == "sign_a")["bufferView"])))
-    new = {"bronze": tile(), "sign_a": sign(old), "glass": glass(), "entrance": entrance(), "storey": storey(), "roof": roof(), "steel": steel()}
+    new = {"bronze": tile(), "sign_a": sign(old), "glass": glass(), "entrance": entrance(), "storey": storey(), "roof": roof(), "steel": steel(),
+           "bronze_mr": tile(True), "sign_a_mr": sign_finish()}
     if "--preview" in sys.argv:
         p = sys.argv[sys.argv.index("--preview") + 1]
         for n, im in new.items():
             im.save(p.replace(".png", "_%s.png" % n))
         return
+    # build.py reads the finish maps from tex/ (it needs them to give the materials their metal-roughness texture).
+    for n in ("bronze_mr", "sign_a_mr"):
+        new[n].save(os.path.join(REPO, ".claude", "review", "optus", "tex", n + ".png"))
     replace_images(GLB, {n: png(im) for n, im in new.items() if n in names})
     print({n: im.size for n, im in new.items()})
 
