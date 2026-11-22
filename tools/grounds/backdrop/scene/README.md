@@ -25,8 +25,25 @@ Setup: `pip install bpy==5.2.4 scipy`; a working folder `$WORK` with `proto/` = 
 (= `placements.json`), `glb/<ground>.glb` (a model in parts joined with `join_parts.py`), and
 `data/<ground>/osm.json` from `osm_fetch.py`. About 2 minutes a ground on 4 cores.
 
-Map data (c) OpenStreetMap contributors, ODbL. Terrain: AWS Terrain Tiles. The Esri aerial is reference only:
-nothing from it is drawn except a median colour for a roof or car park.
+Map data (c) OpenStreetMap contributors, ODbL. Building heights: Overture Maps Foundation buildings (ODbL, from
+OpenStreetMap and others). Terrain: AWS Terrain Tiles. Ground colour variation: Digital Earth Australia Sentinel-2
+analysis-ready data, CC BY 4.0, contains modified Copernicus Sentinel data. The Esri aerial is reference only:
+nothing from it is drawn except a median colour per roof, car park or mapped patch of ground, and where its trees are.
+
+Real place (`BG_REAL=1 bash run1.sh <ground>`, 2026-11-22): the surroundings built as the real place, ground by
+ground against Google Earth.
+- `overture.py`, `overture_parts.py <ground> lat lon`: Overture building heights (and parts) to `$WORK/overture/`;
+  `prep.py` takes a building's height from it when OpenStreetMap has none.
+- `s2.py <ground> lat lon`: the median of ten clear footy-season Sentinel-2 scenes, 10 m, to `$WORK/s2/`.
+- `prep.py`: every patch of soft ground bounded by roads, paths, buildings, mapped areas or a change of cover takes
+  the median colour of the aerial's open ground inside it (no trees, roofs, pools or shade), so edges stay crisp;
+  inside big patches Sentinel-2 adds the light and dark (a dry corner of a park reads dry). No random wear.
+  Lots mapped as one outline but built as a tower on a podium are split (`real_lm.json` "split").
+- `towers_real.py`: towers with a modelled floor slab every storey and a column every ~4.5 m, never painted windows.
+- `real_lm.py` / `real_lm.json`: landmarks per ground (another ground's own model across the river, an arch bridge
+  modelled from Google Earth).
+- `scene.py`: near ground stands 2 m clear of the sea plane except on mapped water; at 0.5 m the river drew through
+  low parks from a distance (the depth test lost).
 
 Fixes found in QA (2026-11-22): the terrain tiles carry single-cell spikes (a 300 m cone beside the WACA, up to
 2.5 km at York Park), so `prep.py` gives any cell above or below all 8 neighbours by more than a cliff (25 m at
