@@ -114,35 +114,20 @@ the new mesh instead. The MCG has two:
 5. Textures and materials.
 6. Surrounds (Yarra Park, the rail yards) and screens.
 
-## Optus Stadium, the second ground (2026-11-21)
+## Method notes from the Optus and Marvel passes (2026-11-21)
 
-Optus went through the same gate. What it added to the method:
+The Optus rebuild is in its own PR; these are the tools it added that the other grounds use.
 
 - **Cameras in the model's own frame.** `PREINSPECT_MODEL_FRAME=1` makes `preinspect_look.gd` read
   `x east, y north, z up` positions, so a Google Earth view's camera goes in unchanged
-  (`PREINSPECT_SIZE=1280x720`). Optus's model 0, 0 is lat -31.9510758, lon 115.8893142 (its drum lines
-  up with OpenStreetMap way 695799456); the field's centre is at -30.38, -8.78.
+  (`PREINSPECT_SIZE=1280x720`).
 - **Rendering in the cloud.** The mobile renderer runs on Mesa's software Vulkan (`mesa-vulkan-drivers`,
   `VK_ICD_FILENAMES=.../lvp_icd.json`) under `xvfb-run`, about a minute a ground plus seconds a view.
-- **Read the facade close.** Twelve views every 30 degrees, 260 m out at tilt 80, found what the four
-  wide views hid: #1867 had the bronze low from the south-east to the west, where the real ribbon is tall
-  in the north and south and dips over the east lobby and the west. Its profile is
-  `tools/grounds/optus/facade.json`; `tools/grounds/optus/build.py` rebuilds the model from it.
-- **Signature material first.** The bronze fins (`tools/grounds/optus/bronze.py`) are drawn from the
-  director's photo: 0.31 m fins in runs of 1 to 7 m, bronze to sand with the odd copper-red, thin
-  pale-blue slivers, a soft drift of tone, metal sheen through `MATERIAL_FIX`.
-- **The match light cools the map.** A painted map under the match light lost most of its red. Optus's
-  map takes a `tint` (2.0, 1.4, 0.95) and colours worked back from the measured response, so lawns, river
-  and paving render as Google Earth shows them.
-- **Bridges are models.** `SURROUNDS[...]["models"]` loads extra glbs into the ground (Optus:
-  `bridges.glb`, Matagarup's two 72 m arches and the river bridges on piers).
-
-- **Second facade pass (close views).** Zoom Google Earth's facade views to a third of the frame before
-  judging a material: at full frame the Optus bronze read as brown noise, close up it is a dark base with
-  thin bright streaks, and the "white Y columns" were slim posts in a dark strip under the roof. The glass
-  band, street glazing and the north's glazed storey are drawn by `bronze.py` (`glass`, `entrance`, `storey`).
-
-Open at Optus: seat colours from Street View (stage 4), on top of the seat fix (#1991).
+- **Read the facade close.** Use views every 30 degrees at close range before judging a facade's shape;
+  zoom Google Earth's views to a third of the frame before judging a material.
+- **The match light changes the map.** A painted map can take a `tint` in SURROUNDS, worked back from
+  the measured response, so lawns, water and paving render as Google Earth shows them.
+- **Bridges and landmarks are models.** `SURROUNDS[...]["models"]` loads extra glbs into the ground.
 
 ## Marvel Stadium, the third ground (2026-11-21)
 
@@ -174,7 +159,7 @@ straight down, into the bowl). What it added to the method:
 
 Close-up pass (2026-11-21, same day), what a harsh look found and fixed:
 
-- The land round the ground was orange: the map took Optus's warm `tint` (2.0, 1.4, 0.95), but
+- The land round the ground was orange: the map took a warm `tint` (2.0, 1.4, 0.95) copied from Optus, but
   Marvel's map is already painted grey. Measured against Google Earth's top view (rail yards, water)
   it now takes (0.86, 0.84, 0.82). Check a copied setting against your own map's colours.
 - The bowl's top band (over the braces, under the MARVEL STADIUM letters) shared the undersides'
