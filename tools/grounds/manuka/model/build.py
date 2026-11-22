@@ -414,7 +414,8 @@ def scoreboard(col):
     """The heritage scoreboard from the MCG: a white-painted box (OSM footprint), its face to the field framed with
     pilasters and a cornice standing proud, black name boards set back into it in three tiers, the lettering band
     on the frieze, a clock in a small pediment on top."""
-    S = D['scoreboard']; mb = MB('scoreboard')
+    # (named fingleton_board, not scoreboard: a hand-worked board, so the match lays no live face over it)
+    S = D['scoreboard']; mb = MB('fingleton_board')
     P = [np.array(p) for p in G['1290130248'][:-1]]
     # the long sides of the OSM rectangle: the face is the one nearer the field
     e0 = P[1] - P[0]; e1 = P[2] - P[1]
@@ -429,32 +430,38 @@ def scoreboard(col):
     if np.dot(n_, C - a) < 0: n_ = -n_
     dep = np.linalg.norm(d - a); H = S['h']
     F = lambda s, z, o=0.0: (*(a + u * s + n_ * o), z)
-    mb.prism([tuple(a), tuple(b), tuple(c), tuple(d)], 0.0, H, 'scoreboard_white', top='roof_grey')
+    # The body stands 0.25 m back from the face; the face is a white frame (rails and mullions with depth) round the
+    # recessed black name boards.
+    ang = math.degrees(math.atan2(u[1], u[0]))
+    R = 0.25
+    mb.prism([tuple(a - n_ * R), tuple(b - n_ * R), tuple(c), tuple(d)], 0.0, H, 'scoreboard_white', top='roof_grey')
+    tiers = ((1.6, 3.6), (4.0, 5.9), (6.2, 7.7))
+    rails = [(0.0, tiers[0][0])] + [(tiers[i][1], tiers[i + 1][0]) for i in range(2)] + [(tiers[-1][1], H)]
+    for z0, z1 in rails:
+        mb.box(tuple(a + u * Lf / 2 - n_ * (R / 2)), Lf, R, z1 - z0, ang, 'scoreboard_white', z0=z0)
+    bays = np.linspace(0.55, Lf - 0.55, 6)
+    edges = [(0.0, bays[0] + 0.3)] + [(q - 0.3, q + 0.3) for q in bays[1:-1]] + [(bays[-1] - 0.3, Lf)]
+    for s0, s1 in edges:
+        mb.box(tuple(a + u * (s0 + s1) / 2 - n_ * (R / 2)), s1 - s0, R, tiers[-1][1] - tiers[0][0], ang, 'scoreboard_white',
+               z0=tiers[0][0])
     # cornice and plinth standing proud
     for z0, z1, o in ((H - 0.6, H, 0.35), (0.0, 0.6, 0.15)):
-        mb.box(tuple(a + u * Lf / 2 + n_ * (o / 2)), Lf + 0.5, o + 0.02, z1 - z0, math.degrees(math.atan2(u[1], u[0])), 'scoreboard_white', z0=z0)
-    # pilasters
-    for s in np.linspace(0.3, Lf - 0.3, 6):
-        mb.box(tuple(a + u * s + n_ * 0.12), 0.5, 0.24, H - 1.2, math.degrees(math.atan2(u[1], u[0])), 'scoreboard_white', z0=0.6)
-    # name boards: three tiers, each bay recessed 0.25 m, black with white rails
-    bays = np.linspace(0.55, Lf - 0.55, 6)
-    for z0, z1 in ((1.6, 3.6), (4.0, 5.9), (6.2, 7.7)):
+        mb.box(tuple(a + u * Lf / 2 + n_ * (o / 2)), Lf + 0.5, o + 0.02, z1 - z0, ang, 'scoreboard_white', z0=z0)
+    # pilasters, stopping under the name band
+    for q in np.linspace(0.3, Lf - 0.3, 6):
+        mb.box(tuple(a + u * q + n_ * 0.12), 0.5, 0.24, H - 1.35 - 0.6, ang, 'scoreboard_white', z0=0.6)
+    # name boards: three tiers of black boards with white rails, in the recess
+    for z0, z1 in tiers:
         for s0, s1 in zip(bays, bays[1:]):
             s0 += 0.3; s1 -= 0.3
-            mb.face([F(s0, z0, -0.25), F(s1, z0, -0.25), F(s1, z1, -0.25), F(s0, z1, -0.25)], 'board_black',
+            mb.face([F(s0, z0, -R + 0.01), F(s1, z0, -R + 0.01), F(s1, z1, -R + 0.01), F(s0, z1, -R + 0.01)], 'board_black',
                     uv=[(0, 0), (1, 0), (1, 1), (0, 1)])
-            for (p0, p1, q0, q1) in ((s0, s1, z0, z0), (s0, s1, z1, z1)):
-                pass
-            mb.face([F(s0, z0, 0), F(s0, z0, -0.25), F(s0, z1, -0.25), F(s0, z1, 0)], 'scoreboard_white')
-            mb.face([F(s1, z1, 0), F(s1, z1, -0.25), F(s1, z0, -0.25), F(s1, z0, 0)], 'scoreboard_white')
-            mb.face([F(s0, z1, 0), F(s0, z1, -0.25), F(s1, z1, -0.25), F(s1, z1, 0)], 'scoreboard_white')
-            mb.face([F(s1, z0, 0), F(s1, z0, -0.25), F(s0, z0, -0.25), F(s0, z0, 0)], 'scoreboard_white')
     # the name band and the clock pediment
     mb.face([F(1.0, H - 1.25, 0.02), F(Lf - 1.0, H - 1.25, 0.02), F(Lf - 1.0, H - 0.7, 0.02), F(1.0, H - 0.7, 0.02)], 'sb_lettering',
             uv=[(0, 0), (1, 0), (1, 1), (0, 1)])
     cm = a + u * Lf / 2 + n_ * 0.1 - n_ * 1.0
     mb.box(tuple(cm), 2.6, 2.0, S['clock'], math.degrees(math.atan2(u[1], u[0])), 'scoreboard_white', z0=H, mtop='roof_grey')
-    k = 24; r = 0.8; cz = H + S['clock'] / 2 + 0.1; cc = a + u * Lf / 2 + n_ * 0.02
+    k = 24; r = 0.8; cz = H + S['clock'] / 2 + 0.1; cc = a + u * Lf / 2 + n_ * 0.12   # on the pediment's face (0.1)
     ring = [(*(cc + u * r * math.cos(2 * math.pi * i / k)), cz + r * math.sin(2 * math.pi * i / k)) for i in range(k)]
     centre = (*(cc + n_ * 0.03), cz)
     keep = np.dot(np.cross(np.append(u, 0.0), [0, 0, 1.0])[:2], n_) > 0

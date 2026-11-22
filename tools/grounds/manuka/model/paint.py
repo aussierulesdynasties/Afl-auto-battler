@@ -46,8 +46,13 @@ class T:
                 s.a[y0:y1, x0:min(x1, s.w)] *= np.linspace(mul, 1.0, y1 - y0)[:, None, None]
     def grime_bottom(s, z1, mul=0.82):
         y = s.Y(z1); s.a[y:] *= np.linspace(1.0, mul, s.h - y)[:, None, None]
-    def save(s, name):
-        Image.fromarray(np.clip(s.a, 0, 255).astype(np.uint8)).save(OUT + name + '.png'); TILE[name] = (s.W, s.H)
+    def save(s, name, alpha=None):
+        im = np.clip(s.a, 0, 255).astype(np.uint8)
+        if alpha is not None:   # glass: a real alpha channel, so the panes are see-through and the rails solid
+            im = np.dstack([im, np.clip(alpha * 255, 0, 255).astype(np.uint8)])
+        Image.fromarray(im).save(OUT + name + '.png'); TILE[name] = (s.W, s.H)
+    def mask(s, u0, u1, z0, z1, a, val):
+        a[max(0, s.Y(z1)):s.Y(z0), max(0, s.X(u0)):min(s.w, s.X(u1))] = val
 
 
 def sd(name):
@@ -101,10 +106,17 @@ t = T(1.0, 1.0, (52, 54, 58), n=4, bl=(0.5, 6)); t.save('steel_dark')
 t = T(3.0, 6.0, (196, 200, 202), n=3, bl=(1.5, 7)); t.hl(3.0, 0.04, mul=0.88); t.streaks(10, 0, 6); t.save('tower')
 t = T(1.0, 1.0, (240, 240, 232), n=3, bl=(0.5, 5)); t.save('lamp_face')
 # ---- glass
-t = T(3.0, 1.0, (170, 196, 206), n=3, bl=(0.8, 5)); t.hl(0.97, 0.06, (210, 214, 216)); t.save('glass_rail')
+# The balustrade: tinted panes (40 % opaque) between stainless posts every 1.5 m, a handrail along the top.
+t = T(3.0, 1.0, (170, 196, 206), n=3, bl=(0.8, 5)); t.hl(0.97, 0.06, (210, 214, 216))
+for u in (0.0, 1.5, 3.0): t.vl(u, 0.05, col=(200, 204, 206))
+al = np.full((t.h, t.w), 0.4); t.mask(0, 3.0, 0.94, 1.0, al, 1.0)
+for u in (0.0, 1.5, 3.0): t.mask(u - 0.025, u + 0.025, 0, 1.0, al, 1.0)
+t.save('glass_rail', al)
 t = T(4.0, 4.0, (196, 214, 222), n=3, bl=(1, 5))
 for u in np.arange(0, 4, 1.0): t.vl(u, 0.06, col=(230, 232, 232))
-t.save('canopy_glass')
+al = np.full((t.h, t.w), 0.45)
+for u in np.arange(0, 4.01, 1.0): t.mask(u - 0.03, u + 0.03, 0, 4.0, al, 1.0)
+t.save('canopy_glass', al)
 t = T(6.0, 3.0, (44, 54, 64), n=3, bl=(1.5, 5))
 for u in np.arange(0, 6, 1.5): t.vl(u, 0.07, col=(120, 126, 132))
 t.a[:t.h // 3] *= 1.25; t.save('box_glass')

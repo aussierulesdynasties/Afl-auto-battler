@@ -341,6 +341,7 @@ static func instantiate(slug: String, base := "") -> Node3D:
 				_paint_vertex_colours(model)
 			if MATERIAL_FIX.has(slug):
 				_fix_materials(model, MATERIAL_FIX[slug])
+			_plain_alpha(model)
 			for part: Dictionary in PARTS.get(slug, []):
 				_add_part(model, dir, part)
 			root.add_child(model)
@@ -1022,6 +1023,18 @@ static func _add_part(model: Node, dir: String, part: Dictionary) -> void:
 	mi.name = str(part.get("name", "Part"))
 	mi.mesh = mesh
 	model.add_child(mi)
+
+
+## Glass and other see-through materials drawn with plain alpha. The glTF importer gives a blended
+## material a depth pre-pass, and the mobile renderer draws such a surface black where it stands in
+## shade (Manuka's glass balustrades under the stand roofs, 2026-11-22).
+static func _plain_alpha(model: Node) -> void:
+	for mi in model.find_children("*", "MeshInstance3D", true, false):
+		var mesh: Mesh = (mi as MeshInstance3D).mesh
+		for i in (mesh.get_surface_count() if mesh != null else 0):
+			var mat := mesh.surface_get_material(i) as BaseMaterial3D
+			if mat != null and mat.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_DEPTH_PRE_PASS:
+				mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 
 
 static func _fix_materials(model: Node, fixes: Dictionary) -> void:

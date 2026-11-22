@@ -129,6 +129,8 @@ def main():
         blds.append({"id": wid, "src": "osm", "tags": t, "ring": [list(map(float, q)) for q in ring]})
     otree = STRtree(osm_polys)
     for f in act_layer("ACTGOV_BUILDING_FOOTPRINTS"):
+        if f["properties"].get("CURRENT_LIFECYCLE_STAGE") == "PROPOSED":
+            continue                # not built (Griffith's community centre site is bare ground in Google Earth)
         for ring in rings(f["geometry"]):
             pg = Polygon(ring)
             if not pg.is_valid:
