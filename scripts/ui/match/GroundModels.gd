@@ -102,6 +102,12 @@ const SURROUNDS := {
 	"marvel": {"y": -0.03, "inner": 120.0, "colour": Color(0.55, 0.56, 0.52),
 			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
 			"models": ["bridges.glb"], "tint": Color(0.86, 0.84, 0.82), "building_tint": Color.WHITE, "building_style": "towers"},
+	# The SCG in Moore Park: the park's dry grass and avenues of figs, Tramway Oval, the Entertainment
+	# Quarter, Paddington's streets and Allianz Stadium's concourse from OpenStreetMap
+	# (tools/grounds/scg/surrounds.py), and Allianz Stadium itself in 3D (tools/grounds/scg/allianz.py). Painted for the same match light as Marvel's map.
+	"scg": {"y": -0.03, "inner": 120.0, "colour": Color(0.55, 0.56, 0.48),
+			"map": "surrounds.webp", "span": 2048.0, "trees": "trees.bin", "buildings": "buildings.bin",
+			"models": ["allianz.glb"], "tint": Color(0.86, 0.84, 0.82), "building_tint": Color(0.8, 0.8, 0.78)},
 }
 
 ## Parts of a model drawn again from a build tool's own mesh (per vertex x, y, z, normal, colour;
@@ -138,6 +144,22 @@ const MATERIAL_FIX := {
 		"sign_a": {"metallic": 0.12, "roughness": 0.55},
 		# The glass storeys read mid grey-green from outside in daylight, not sky blue.
 		"glass": {"metallic": 0.1, "roughness": 0.3},
+	},
+	# SCG (2026-11-22, against Google Earth): the roofs are matte pale grey, not glossy white that takes
+	# the sky's blue; the heritage stands' roofs a pale weathered sage, not bright green; the glass
+	# blue-grey behind pale mullions, not deep blue.
+	"scg": {
+		"roof": {"metallic": 0.0, "roughness": 0.95, "albedo_color": Color(0.84, 0.83, 0.8)},
+		"fascia": {"metallic": 0.0, "roughness": 0.9},
+		"hroof": {"metallic": 0.0, "roughness": 0.85, "albedo_color": Color(2.0, 1.2, 1.75)},
+		"hgreen": {"albedo_color": Color(2.0, 1.2, 1.75)},
+		"glasst": {"metallic": 0.0, "roughness": 0.4, "albedo_color": Color(1.05, 0.68, 0.46)},
+		"glass": {"metallic": 0.0, "roughness": 0.35, "albedo_color": Color(1.15, 1.1, 1.0)},
+		"glassd": {"metallic": 0.0, "roughness": 0.35, "albedo_color": Color(1.2, 1.15, 1.05)},
+		"glassroof": {"metallic": 0.0, "roughness": 0.4},
+		# The concourse paving round the stands: weathered concrete, not near-white.
+		"conc": {"metallic": 0.0, "roughness": 1.0, "albedo_color": Color(0.7, 0.69, 0.66)},
+		"podium": {"roughness": 0.95, "albedo_color": Color(0.88, 0.88, 0.86)},
 	},
 }
 
@@ -179,7 +201,9 @@ const SEAT_COLOURS := {
 	# York Park's teal-green plastic (york_park/model/paint.py), the SCG's two seat colours
 	# (their glb material colours, linear -> sRGB).
 	"seat_plastic": Color(0.255, 0.365, 0.33),
-	"seat_scg_teal": Color(0.125, 0.443, 0.427), "seat_scg_maroon": Color(0.443, 0.125, 0.163),
+	# The SCG's teal: lighter and greener than its glb material, as the seats read in Google Earth
+	# and photos of the ground in daylight (2026-11-22).
+	"seat_scg_teal": Color(0.22, 0.55, 0.49), "seat_scg_maroon": Color(0.443, 0.125, 0.163),
 	# The seven first drafts (#1930; Jiangwan and Summit have no seats).
 	"seat_barossa": Color(0.197, 0.212, 0.235), "seat_hands": Color(0.151, 0.319, 0.502),
 	"seat_sky_gold": Color(0.778, 0.609, 0.197), "seat_sky_grey": Color(0.266, 0.281, 0.304),
