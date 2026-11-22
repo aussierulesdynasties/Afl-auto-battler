@@ -1,8 +1,10 @@
 # TIO Traeger Park: the background scene
 
 Everything round the stadium model (`assets/grounds/traeger/traeger.glb`), out to the horizon, built from open
-data and measured off Google Earth. Model metres: x east, y up, z south, origin at the OSM pitch's centre
-(lat -23.7097309, lon 133.8759053), the field's level at 0.
+data and measured off Google Earth. Built north-up in metres (x east, y up, z south, origin at the OSM pitch's
+centre, lat -23.7097309, lon 133.8759053, the field's level at 0), then laid into the stadium model's own frame,
+which is turned 25.4 degrees to the oval and moved off that centre (`../align.json`): every mesh node carries
+that transform (`geo.model_frame()`).
 
 | Part | File | Script | What it is |
 |---|---|---|---|

@@ -66,7 +66,7 @@ def main(out):
         Nrm = -Nrm
     img = geo.s2_local("TCI", R_OUT, TEX)
     img = grade.grade(img)
-    w = glb.Glb()
+    w = glb.Glb(frame=geo.model_frame())
     m = w.material("far_land", image=glb.jpeg(Image.fromarray(img), 90))
     col = np.full((len(P), 4), 255, np.uint8)
     w.mesh("far_land", P, Nrm, F, m, uv=uv, col=col)

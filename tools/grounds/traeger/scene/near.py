@@ -11,7 +11,8 @@
   Google Earth's straight-down views (MOSAIC: the mosaic of them, 0.5 m a pixel, see qa/README).
 - Gums: every canopy in those views (canopy.py) stood up as a tree (trees.py).
 
-Model metres (x east, y up, z south), the field's level at 0. Looks only. Map data (c) OpenStreetMap
+Built north-up (x east, y up, z south, from OpenStreetMap's pitch centre), the field's level at 0, and laid into
+the stadium model's own frame (turned 25.4 degrees to the oval) by the glTF nodes' transform (geo.model_frame). Looks only. Map data (c) OpenStreetMap
 contributors (ODbL); Microsoft Global ML Building Footprints (ODbL); Contains modified Copernicus Sentinel
 data 2025. Needs shapely.
 """
@@ -82,7 +83,9 @@ def model_mask():
     for name, g in sc.geometry.items():
         if name.startswith("ground") or name.startswith("fence"):
             continue
-        v = g.vertices
+        v = g.vertices.copy()
+        e, n = geo.from_model(v[:, 0], -v[:, 2])         # the model's frame -> north-up
+        v[:, 0], v[:, 2] = e, -n
         f = g.faces[(v[g.faces][:, :, 1].max(1) > 1.0) & (v[g.faces][:, :, 1].min(1) < 30.0)]
         tri = np.stack([v[f][:, :, 0] + 250, v[f][:, :, 2] + 250], -1)
         for t in np.round(tri).astype(np.int32):
@@ -99,10 +102,30 @@ def on_field(e, n, margin=6.0):
     """Inside the playing surface's ellipse, or within margin of its edge (no gum there)."""
     cx, cz, _, ang, hl, hw = FIT
     a = math.radians(ang)
-    dx, dz = e - cx, -n - cz
+    x, y = geo.to_model(e, n)                           # FIT is in the model's frame
+    dx, dz = float(x) - cx, -float(y) - cz
     rx = dx * math.cos(a) + dz * math.sin(a)
     rz = -dx * math.sin(a) + dz * math.cos(a)
     return (rx / (hl + margin)) ** 2 + (rz / (hw + margin)) ** 2 < 1.0
+
+
+def under_turf(e, n, margin=2.0):
+    """Inside both the match's field (FIT) and the traced boundary (../measure/outline_model.json), margin m in."""
+    import json
+    O = json.load(open(os.path.join(HERE, "..", "measure", "outline_model.json")))
+    B = np.array(O["boundary"], float)
+    x, y = geo.to_model(e, n)
+    c = B.mean(0)
+    tb = np.arctan2(-B[:, 1] - (-c[1]), B[:, 0] - c[0])
+    rb = np.hypot(B[:, 0] - c[0], B[:, 1] - c[1])
+    o = np.argsort(tb)
+    tb, rb = tb[o], rb[o]
+    tb, rb = np.r_[tb - 2 * np.pi, tb, tb + 2 * np.pi], np.r_[rb, rb, rb]
+    t = np.arctan2(y + c[1], x - c[0])
+    r = np.hypot(x - c[0], y + c[1])
+    inside_b = r < np.interp(t, tb, rb) - margin
+    inside_f = np.array([on_field(a, b, -margin) for a, b in zip(np.ravel(e), np.ravel(n))]).reshape(np.shape(e))
+    return inside_b & inside_f
 
 
 def in_model(mask, p):
@@ -153,7 +176,11 @@ def ground(land, maps):
             F.append(np.stack([a, cm, a1], -1))
             F.append(np.stack([a1, cm, c1], -1))
     F = np.concatenate(F)
-    # centre disc
+    # no ground under the playing surface: the match's turf covers it, and from a high camera the two, 0.12 m
+    # apart, fought for the pixels in bands across the field
+    e, n = P[:, 0], -P[:, 2]
+    under = under_turf(e, n)
+    F = F[~under[F].all(1)]
     Nrm = glb.grid_normals(P, F)
     if Nrm[:, 1].mean() < 0:
         F = F[:, ::-1]
@@ -215,7 +242,7 @@ def main(path, mosaic):
         img = paint.shade(cv, img, [(e, n, h, rad) for e, n, h, rad in tl])
         maps.append((name, cv, Image.fromarray(np.clip(img, 0, 255).astype(np.uint8))))
     P, Nrm, F, fi, uvs = ground(land, [(n_, cv) for n_, cv, _ in maps])
-    w = glb.Glb()
+    w = glb.Glb(frame=geo.model_frame())
     for k, (name, cv, im) in enumerate(maps):
         sel = F[fi == k]
         used = np.unique(sel)

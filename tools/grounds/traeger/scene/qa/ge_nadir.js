@@ -19,22 +19,28 @@ const fs=require('fs'); const cp=require('child_process');
         await p.goto(url, {timeout:90000});
         await p.waitForTimeout(40000);
         await p.keyboard.press('Escape');
+        const popups = async () => {
+          for (let k=0;k<3;k++) {
+            const tmp=`${outd}/_tmp_${from}.png`;
+            await p.screenshot({path: tmp});
+            const r=cp.execSync(`python3 ${path.join(__dirname, 'find_popup.py')} ${tmp}`).toString().trim();
+            if (!r) break;
+            for (const xy of r.split(' ')) { const [x,y]=xy.split(',').map(Number); await p.mouse.click(x,y); await p.waitForTimeout(700); }
+          }
+        };
+        await popups();     // a popup over the basemap panel's close button keeps the panel open
         // Basemap settings (Ctrl+B): "Clean" (no place names or pins, which would be traced as ground)
         // and 3D buildings off (flat imagery with no lean); then close the panel and let the tiles load.
         await p.keyboard.press('Control+b'); await p.waitForTimeout(2500);
         await p.mouse.click(288,396); await p.waitForTimeout(800);
         await p.mouse.click(273,840); await p.waitForTimeout(800);
         await p.mouse.click(296,131); await p.waitForTimeout(8000);
-        for (let k=0;k<3;k++) {
-          const tmp=`${outd}/_tmp_${from}.png`;
-          await p.screenshot({path: tmp});
-          const r=cp.execSync(`python3 ${path.join(__dirname, 'find_popup.py')} ${tmp}`).toString().trim();
-          if (!r) break;
-          for (const xy of r.split(' ')) { const [x,y]=xy.split(',').map(Number); await p.mouse.click(x,y); await p.waitForTimeout(700); }
-        }
+        await popups();
         await p.waitForTimeout(2500);
         const buf = await p.screenshot({path: `${outd}/${v.name}.png`});
-        ok = buf.length > parseInt(process.env.MIN_BYTES||'1800000');
+        // the panel still open (a white column down the left) spoils the shot as surely as the globe does
+        const panel = parseFloat(cp.execSync(`python3 -c "import sys,numpy as n;from PIL import Image;a=n.asarray(Image.open(sys.argv[1]).convert('L'))[150:800,0:360];print((a>235).mean())" ${outd}/${v.name}.png`).toString());
+        ok = buf.length > parseInt(process.env.MIN_BYTES||'1800000') && panel < 0.3;
         console.log('shot', v.name, buf.length, ok);
       } catch(e){ console.log('fail',v.name,e.message); }
       await p.close();
