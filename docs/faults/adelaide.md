@@ -64,8 +64,17 @@ Still short (2026-11-22): the entrance glass band's lettering is unreadable in G
 invented); the east names' places along the stand are read from one
 oblique photo (to within a few metres); the stands hold 38,200 seats plus the Hill's 2,900, short of the real ground,
 the roof petals' valleys read softer than the real membrane;
-the lawns are a flat bright green where Google Earth's are muted and mottled, and from the south the Riverbank's back
-reads as a plain grey drum. Fixed from Google Earth (2026-11-22, calibrated straight-down shots, no imagery kept): each
+the lawns are a flat bright green where Google Earth's are muted and mottled. The Riverbank's back is rebuilt from
+Google Earth's own height readings (2026-11-22, the status bar under the mouse on calibrated south views): it was one
+grey drum 31.5 m tall out to the street; it is now a back wall behind the top rows (a grey band from the deck to 27 m, a
+dark band with mullions to the 32.5 m top rail), a deck at 22 m under the roof's overhang, white columns leaning from the
+deck to the roof's back edge every 10 m, and the glazed podium (a red-brown base, glass to 14 m, a grey fascia to 21 m)
+on its traced line, 3 to 6 m inside OSM's, with the dark glass box and lift tower at its west end (26 m and 28 m) and the
+dark tower standing clear at its east end (28 m). Still open there: Google Earth puts that back wall about 41 m from the
+boundary, where our top rows run to 52 m, so the real deck under the roof is about 11 m deeper and the columns lean
+further; Google Earth's heights under the roofs drape (seats there read 8 m too high and flat), so the upper tier's
+depth needs a section drawing or the centre photo sphere before the seats move. The plaza south of the stand is 3 m
+above the turf in Google Earth and flat with it here, and the white shade sail on the deck is not built. Fixed from Google Earth (2026-11-22, calibrated straight-down shots, no imagery kept): each
 nearby roof's and sports pitch's colour (`roof_colours.py`: no more salmon sheds, Memorial Drive's grass courts no
 longer blue); the trees stand where Google Earth shows canopy (`ge_trees.py`, replacing the random park fill); the
 grass courts, No. 2 oval's square and the practice nets and wickets that OSM leaves out are traced (`surrounds.py`

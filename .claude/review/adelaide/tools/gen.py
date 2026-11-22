@@ -422,9 +422,10 @@ def corner_poly(st):
 def stand_poly(st):
     """stand outline; traced notches at corners (way_drop) stepped the seat edge and wall top, so the back runs straight there"""
     if 'a' in st: return corner_poly(st)
-    P = way(st['way'])
-    if st.get('way_drop'): P = P[[i for i in range(len(P)) if i not in st['way_drop']]]
-    return P
+    P = way(st['way']); keep = [i for i in range(len(P)) if i not in st.get('way_drop', [])]
+    bs = st.get('back_swap')   # a stretch of the OSM outline replaced by points traced off Google Earth (straight down)
+    if bs: return np.r_[P[[i for i in keep if i <= bs['from']]], np.array(bs['pts'], float), P[[i for i in keep if i >= bs['to']]]]
+    return P[keep]
 
 
 def stand_z(st, V):
@@ -864,6 +865,12 @@ def tier_parts(m, G_, parts, rng=None):
                 mc = pt.get('mull_col', (58, 60, 64))
                 for s in np.arange(pt['mull'] / 2, L, pt['mull']): prism(m, run, s - 0.05, s + 0.05, -0.07, 0, pt['z'][0], pt['z'][1], mc, 'steel', 'fel')
                 for z in pt.get('transoms', []): prism(m, run, 0, L, -0.06, 0, z - 0.04, z + 0.04, mc, 'steel', 'ftu')
+            elif t == 'outwall':   # a stand's outside wall facing away from the pitch, in storeys (Riverbank, Google
+                # Earth 2026-11-22: a grey band on the deck, a dark glass band above it to the top rail), mullions on glass
+                for z0, z1, col, kind in pt['bands']:
+                    prism(m, run, 0, L, 0, e1, z0, z1, col, kind, 'btu')
+                    if pt.get('mull') and z0 >= pt.get('mull_z', z0):
+                        for s in np.arange(pt['mull'] / 2, L, pt['mull']): prism(m, run, s - 0.06, s + 0.06, e1, e1 + 0.08, z0, z1, pt.get('mull_col', (70, 74, 80)), 'steel', 'bel')
             elif t == 'rail':   # glass balustrade with a steel top rail
                 prism(m, run, 0, L, 0, 0.03, pt['z'][0], pt['z'][1] - 0.05, pt.get('col', (150, 170, 176)), 'glass', 'fb')
                 prism(m, run, 0, L, -0.03, 0.06, pt['z'][1] - 0.05, pt['z'][1], (190, 192, 194), 'steel', 'ftu')
@@ -1064,7 +1071,7 @@ for st in S['stands']:
     elif st.get('wall_bands'):  # river (south gate photo): the outside wall in storeys, louvres and struts above
         for z0, z1, col, kind in st['wall_bands']:
             walls(stands, P, lambda B, z1=z1: np.minimum(zf(B), z1), z0, col, kind=kind, skip=st.get('wall_skip'))
-        struts(stands, P, zf, st['struts'])
+        if st.get('struts'): struts(stands, P, zf, st['struts'])
     else:
         walls(stands, P, zf, 0.0, st['wall'], kind=st.get('wall_kind', 'concrete'), skip=st.get('wall_skip'))
 for st, PL, le in low_parts:
@@ -1081,7 +1088,7 @@ for blk in S.get('blocks', []):
     if 'way' not in blk: P = np.r_[P, P[:1]]
     V, T = fill(P, 3.0)
     m.add(np.c_[V, np.full(len(V), blk['h'])], T, [blk['top']] * len(V), kind='concrete')
-    walls(m, P, lambda B, h=blk['h']: np.full(len(B), h), 0.0, blk['wall'])
+    walls(m, P, lambda B, h=blk['h']: np.full(len(B), h), 0.0, blk['wall'], kind=blk.get('kind', 'concrete'))
     m.save('block_' + blk['name'])
 
 # roofs: heightfield over the roof footprint, lobes along the stand
@@ -1215,6 +1222,25 @@ for rf in S['roofs']:
             L0 = i * 1.5; m.add(Vq, [(0, 1, 2, 3), (3, 2, 1, 0)], [rf['back']] * 4,
                                 [(L0, zb[i]), (L0 + 1.5, zb[i + 1]), (L0 + 1.5, zt[i + 1]), (L0, zt[i])], rf.get('back_kind', 'glass'))
     # white edge tube along the roof's back edge, and a branching prop at each valley (close/back_west_2023.jpg)
+    # columns from the deck behind the stand up to the roof's back edge, leaning out with it (Google Earth 2026-11-22:
+    # the Riverbank roof overhangs its podium deck on slim white columns about every 10 m)
+    if rf.get('cols'):
+        cs_ = rf['cols']; sp = {x.get('way'): x for x in S['stands']}[rf['stand']]
+        B = densify(P, 0.5); B = np.r_[B, B[:1]]; L = 0.0; nxt = cs_['every'] / 2
+        for i in range(len(B) - 1):
+            a, b = B[i], B[i + 1]; e = b - a; mid = (a + b) / 2; nrm = np.array([e[1], -e[0]])
+            if not ccw(P): nrm = -nrm
+            ok = nrm @ (mid - PC) / (np.linalg.norm(nrm) * np.linalg.norm(mid - PC) + 1e-9) >= 0.5
+            L += np.linalg.norm(e)
+            if not ok: nxt = L + cs_['every'] / 2; continue
+            if L < nxt: continue
+            nxt += cs_['every']
+            u = mid - PC; u /= np.linalg.norm(u); top = mid - u * cs_['inset']; zt_ = float(roofz(top[None])[0]) - 0.3
+            Q = PC + np.outer(rs, u); dq = np.maximum.accumulate(seg_dist(Q, PITCH))
+            if dq.max() < cs_['base_d']: continue
+            base = PC + u * np.interp(cs_['base_d'], dq, rs); zb_ = float(interp(sp['profile'], [cs_['base_d']])[0])
+            if zt_ < zb_ + 3: continue
+            box(m, (base[0], base[1], zb_), (top[0], top[1], zt_), cs_['w'], cs_['col'], 'steel')
     if rf.get('trees'):
         tr = rf['trees']; B = densify(P, 1.0); B = np.r_[B, B[:1]]; zt = roofz(B[:, :2]); bk = []
         for i in range(len(B) - 1):

@@ -1,17 +1,17 @@
 names built: ['SIR DONALD BRADMAN PAVILION', 'CHAPPELL STAND', 'SIR EDWIN SMITH STAND', 'GAVIN WANGANEEN STAND', 'JACK OATEY STAND', 'MAX BASHEER STAND', 'FOS WILLIAMS STAND', 'RIVERBANK STAND']
-job 0 faces 3356
-seats_0 3356 tread faces 1482 seats
-job 1 faces 21606
-seats_1 21606 tread faces 9755 seats
+job 0 faces 2718
+seats_0 2718 tread faces 1180 seats
+job 1 faces 20898
+seats_1 20898 tread faces 9323 seats
 job 2 faces 29650
 seats_2 29650 tread faces 13364 seats
-job 3 faces 27922
-seats_3 27922 tread faces 12894 seats
+job 3 faces 26912
+seats_3 26912 tread faces 12267 seats
 job 4 faces 302
 seats_4 302 tread faces 123 seats
 job 5 faces 136
 seats_5 136 tread faces 64 seats
 job 6 faces 1268
 seats_6 1268 tread faces 575 seats
-seat instances 38257 block-row seats dropped by seat_ok 1158
+seat instances 36896 block-row seats dropped by seat_ok 1158
 ok /home/user/Afl-auto-battler/.claude/review/adelaide/model
