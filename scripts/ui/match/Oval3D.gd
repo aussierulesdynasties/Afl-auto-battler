@@ -711,7 +711,7 @@ func _spare(side: int) -> Dictionary:
 ## The interchange gate in the director's ground (the oval turns at a change of ends; the gate
 ## stays on the wing across from the main camera, where the benches face it).
 func _gate() -> Vector2:
-	var l := to_local(Vector3(0.0, 0.0, -(HALF_WID + GATE_OUT)))
+	var l := to_local(Vector3(0.0, 0.0, -(MatchMotion.HALF_WID + GATE_OUT)))
 	return Vector2(l.x, l.z)
 
 
