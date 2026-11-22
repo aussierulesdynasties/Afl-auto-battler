@@ -43,3 +43,7 @@ tests/output/
 captures/**/*.import
 docs/**/*.import
 tools/wheelo/cache/
+
+# textures Godot extracts from the background scenes on import (row 202 2b)
+assets/grounds/*/*_backdrop_part*_*.webp
+assets/grounds/*/*_backdrop_part*_*.webp.import

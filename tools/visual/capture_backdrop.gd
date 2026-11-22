@@ -3,7 +3,7 @@ extends SceneTree
 ## outside, built as a match builds it, with the triangles and draw calls each shot draws.
 ##   godot --path . --rendering-method mobile --script tools/visual/capture_backdrop.gd -- OUTDIR GROUND [slot] [nobackdrop]
 ## slot: day (default), twilight or night. nobackdrop hides the surroundings (the before picture).
-## The picture is the phone's (1080 x 1240); wide makes it 1280 x 720.
+## The picture is the phone's (1080 x 1240); wide makes it 1280 x 720; quick takes three of the shots.
 ## Saves OUTDIR/<slug>_<shot>.png and prints one "SHOT name tris draws" line per shot. Looks only.
 
 const L := 86.3   # MatchMotion.HALF_LEN
@@ -21,7 +21,7 @@ func _shots() -> Array:
 	var eye: Vector3 = b.main_eye()
 	var up: float = b.EYE_UP
 	var back: float = b.EYE_BACK
-	var w50: float = b.WING_50
+	var w50: float = b.wing_50()
 	return [
 		["main_far_wing", eye, Vector3(0, 1, -W), 57.0],
 		["main_wide", eye, Vector3(0, 1, -W * 0.3), 150.0],
@@ -43,7 +43,7 @@ func _run() -> void:
 	var out := str(args[0])
 	DirAccess.make_dir_recursive_absolute(out)
 	var g := str(args[1])
-	var slot := str(args[2]) if args.size() > 2 else "day"
+	var slot := str(args[2]) if args.size() > 2 and str(args[2]) in ["day", "twilight", "night"] else "day"
 	var hide := "nobackdrop" in args
 	# The phone's match picture (portrait, rule: mobile first); "wide" for a 16:9 check.
 	root.size = Vector2i(1280, 720) if "wide" in args else Vector2i(1080, 1240)
@@ -69,7 +69,10 @@ func _run() -> void:
 		for b in oval.find_children("Backdrop", "", true, false):
 			b.visible = false
 	var cam: Camera3D = oval.camera
+	var quick := "quick" in args   # three shots: the broadcast wide shot and two from outside
 	for s in _shots():
+		if quick and not (s[0] in ["main_wide", "outside_park", "outside_high"]):
+			continue
 		# The broadcast cameras draw nothing nearer than 20 m (Oval3DBroadcast.NEAR, rule 2.101):
 		# their mounts are in the stand.
 		cam.near = 20.0 if float(s[3]) > 0.0 else 1.0

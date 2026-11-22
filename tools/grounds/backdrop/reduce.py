@@ -22,13 +22,28 @@ for im in bpy.data.images:
     if im.packed_file is None and im.filepath: im.reload()
     if im.size[0] == 0: print("MISSING", im.name)
 rng = np.random.default_rng(7)
+# BG_YAW (degrees): the scene was built north-up round a copy of the model turned by this much to sit on the
+# real map (tools/grounds/backdrop/place.py); turn everything back so the backdrop lies in the model's own frame.
+YAW = float(os.environ.get('BG_YAW', '0'))
+if YAW:
+    import mathutils
+    RZ = mathutils.Matrix.Rotation(math.radians(-YAW), 4, 'Z')
+    for o in bpy.data.objects:
+        if o.parent is None: o.matrix_world = RZ @ o.matrix_world
+    bpy.ops.object.select_all(action='SELECT')
+    bpy.context.view_layer.objects.active = next(o for o in bpy.data.objects if o.type == 'MESH')
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True, isolate_users=True)
+    print('turned back by', YAW)
 
 def tris(o): return sum(len(p.vertices) - 2 for p in o.data.polygons)
 
 # the stadium's footprint: the convex hull of the stadium model (its plaza is its outermost ground), drawn 4 m
 # smaller so the scene's ground runs a little under the plaza's edge. The scene's ground inside it
 # would lie over the arena.
-MODEL = [o for o in bpy.data.objects if o.type == 'MESH' and not o.name.startswith('bg_')]
+# BG_HULL_SKIP: model parts left out of the footprint, because the game hides them where the backdrop is drawn
+# (GroundModels.BACKDROP_HIDES: the ground kit's 240 m concourse disc).
+SKIP = tuple(n for n in os.environ.get('BG_HULL_SKIP', '').split(',') if n)
+MODEL = [o for o in bpy.data.objects if o.type == 'MESH' and not o.name.startswith('bg_') and not (SKIP and o.name.startswith(SKIP))]
 HULL = None
 if MODEL:
     P = set()
