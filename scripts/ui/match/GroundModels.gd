@@ -50,7 +50,10 @@ const FIT := {
 	"scg": [0.34, 6.68, 0.05, 85.8, 84.43, 72.25],
 	"gmhba": [-8.89, 11.85, 0.02, -69.8, 94.3, 66.01],
 	"people_first": [-0.72, 0.04, 0.02, -72.6, 89.11, 72.26],
-	"engie": [20.64, -43.32, 0.0, -41.1, 92.14, 76.44],
+	# ENGIE: an ellipse through OSM's pitch outline (the fence) gives the centre and axis; its halves are
+	# a 162 x 126 m field plus FENCE, a metre inside the real 164 x 128 so the fence clears the stands
+	# where the real one runs straight (tools/grounds/engie, 2026-11-22).
+	"engie": [-1.14, -1.89, 0.0, -43.6, 87.0, 69.0],
 	"bellerive": [0.31, -0.64, -0.02, 68.7, 86.9, 66.77],
 	"manuka": [5.93, 8.15, 0.03, -82.9, 85.94, 73.1],
 	"norwood": [1.96, -3.15, 0.0, 88.3, 88.73, 63.59],
@@ -150,6 +153,10 @@ const SEAT_COLOURS := {
 	"seat_lo_blue": Color(0.802, 0.807, 0.841), "seat_lo_tan": Color(0.892, 0.824, 0.751),
 	"seat_mid_blue": Color(0.920, 0.858, 0.794), "seat_mid_tan": Color(1.0, 0.875, 0.704),
 	"seat_up_blue": Color(0.653, 0.705, 0.782), "seat_up_tan": Color(0.743, 0.722, 0.693),
+	# ENGIE Stadium: red tip-up seats on black shells with the odd orange one under the roofs, orange with
+	# some red at the open north-east end (a photo sphere in the stands, Jan 2019).
+	"seat_engie_red": Color8(206, 44, 40), "seat_engie_orange": Color8(232, 112, 36),
+	"seat_engie_shell": Color8(34, 34, 36),
 	# York Park's teal-green plastic (york_park/model/paint.py), the SCG's two seat colours
 	# (their glb material colours, linear -> sRGB).
 	"seat_plastic": Color(0.255, 0.365, 0.33),
